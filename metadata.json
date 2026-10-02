@@ -1,0 +1,6 @@
+{
+  "name": "საგანძურის სკოლა",
+  "description": "ქართული გალობისა და სიმღერის სასწავლო აპლიკაცია",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <script>
+      (function() {
+        // 1. Mock Vite HMR WebSocket so @vite/client connects cleanly without errors when HMR is disabled in cloud runner
+        if (typeof window !== 'undefined' && window.WebSocket) {
+          const RealWebSocket = window.WebSocket;
+          const MockWebSocket = function(url, protocols) {
+            const isViteHmr = protocols === 'vite-hmr' || (Array.isArray(protocols) && protocols.includes('vite-hmr'));
+            if (!isViteHmr) {
+              return protocols !== undefined ? new RealWebSocket(url, protocols) : new RealWebSocket(url);
+            }
+            const listeners = {};
+            const mock = {
+              url,
+              readyState: 1, // OPEN
+              OPEN: 1,
+              CONNECTING: 0,
+              CLOSING: 2,
+              CLOSED: 3,
+              send: function() {},
+              close: function() {
+                mock.readyState = 3;
+                emit('close', { type: 'close' });
+              },
+              addEventListener: function(event, fn) {
+                listeners[event] = listeners[event] || [];
+                listeners[event].push(fn);
+              },
+              removeEventListener: function(event, fn) {
+                if (!listeners[event]) return;
+                listeners[event] = listeners[event].filter(function(cb) { return cb !== fn; });
+              },
+              dispatchEvent: function(event) {
+                emit(event.type, event);
+                return true;
+              }
+            };
+            function emit(event, data) {
+              if (listeners[event]) {
+                listeners[event].slice().forEach(function(fn) {
+                  try { fn(data); } catch(e) {}
+                });
+              }
+            }
+            setTimeout(function() {
+              emit('open', { type: 'open' });
+            }, 0);
+            return mock;
+          };
+          MockWebSocket.prototype = RealWebSocket.prototype;
+          MockWebSocket.OPEN = RealWebSocket.OPEN;
+          MockWebSocket.CONNECTING = RealWebSocket.CONNECTING;
+          MockWebSocket.CLOSING = RealWebSocket.CLOSING;
+          MockWebSocket.CLOSED = RealWebSocket.CLOSED;
+          window.WebSocket = MockWebSocket;
+        }
+
+        // 2. Comprehensive console & event filters for Vite logs
+        const origError = console.error;
+        const origWarn = console.warn;
+        console.error = function(...args) {
+          const msg = args.map(a => String(a && a.message ? a.message : a || '')).join(' ');
+          if (msg.includes('[vite]') || msg.includes('vite-hmr') || msg.includes('WebSocket')) {
+            return;
+          }
+          origError.apply(console, args);
+        };
+        console.warn = function(...args) {
+          const msg = args.map(a => String(a && a.message ? a.message : a || '')).join(' ');
+          if (msg.includes('[vite]') || msg.includes('vite-hmr') || msg.includes('WebSocket')) {
+            return;
+          }
+          origWarn.apply(console, args);
+        };
+        window.addEventListener('error', function(e) {
+          const msg = String(e && e.message ? e.message : '');
+          const fn = String(e && e.filename ? e.filename : '');
+          if (msg.includes('[vite]') || msg.includes('WebSocket') || fn.includes('@vite')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          }
+        }, true);
+        window.addEventListener('unhandledrejection', function(e) {
+          const msg = String(e && e.reason && e.reason.message ? e.reason.message : e && e.reason ? e.reason : '');
+          if (msg.includes('[vite]') || msg.includes('WebSocket')) {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+          }
+        }, true);
+      })();
+    </script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>საგანძურის სკოლა</title>
+    <meta name="description" content="ქართული გალობისა და სიმღერის სასწავლო აპლიკაცია" />
+    <meta name="theme-color" content="#fcf9f5" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+    <meta name="apple-mobile-web-app-title" content="საგანძური" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta property="og:title" content="საგანძურის სკოლა" />
+    <meta property="og:description" content="ქართული გალობისა და სიმღერის სასწავლო აპლიკაცია" />
+    <meta property="og:type" content="website" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Georgian:wght@600;700;800;900&family=Noto+Serif+Georgian:wght@700;800;900&display=swap" rel="stylesheet">
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
