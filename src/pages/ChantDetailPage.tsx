@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Play, Pause, ArrowLeft, RefreshCw, Sparkles, Check, Download, Music, ExternalLink, Video, RotateCcw, RotateCw, Repeat, Minus, Plus, Gauge, Music2, ChevronRight } from 'lucide-react';
 import * as Tone from 'tone';
+import soundTouchProcessorUrl from '@soundtouchjs/audio-worklet/processor?url';
 import { useNavigation } from '../context';
 import { TSIRVA_CHANTS } from '../data/tsirvaChants';
 import { getChantMedia, CHANT_MEDIA_REGISTRY, DEFAULT_LYRICS } from '../data/chantMediaRegistry';
@@ -29,7 +30,81 @@ const SEEK_STEP = 5; // seconds
 
 const SPEED_STEPS = [0.5, 0.6, 0.7, 0.75, 0.8, 0.9, 1, 1.1, 1.25, 1.5, 1.75, 2, 2.5];
 
-// Compact pill: [icon] − value + ; tapping the value resets it
+// Pitch stage: input → dry (pitch 0) / wet (shifted) → output, crossfaded on change.
+// Wet path is SoundTouch (WSOLA), which stays clean on low male voices; Tone.PitchShift's
+// short delay-line grains made them buzz and double when shifted down. Falls back to
+// Tone.PitchShift only if the browser can't load the AudioWorklet.
+let soundTouchModule: Promise<void> | null = null;
+const loadSoundTouch = (rawCtx: AudioContext) => {
+  if (!soundTouchModule) {
+    soundTouchModule = rawCtx.audioWorklet.addModule(soundTouchProcessorUrl).catch(err => {
+      soundTouchModule = null;
+      throw err;
+    });
+  }
+  return soundTouchModule;
+};
+
+interface PitchStage {
+  input: Tone.Gain;
+  setPitch: (semitones: number) => void;
+  dispose: () => void;
+}
+
+const createPitchStage = async (output: Tone.InputNode, semitones: number): Promise<PitchStage> => {
+  const ctx = Tone.getContext();
+  const input = new Tone.Gain(1);
+  const dry = new Tone.Gain(semitones === 0 ? 1 : 0).connect(output);
+  const wet = new Tone.Gain(semitones === 0 ? 0 : 1).connect(output);
+  input.connect(dry);
+
+  let setShift: (n: number) => void;
+  let disposeShifter: () => void;
+  try {
+    await loadSoundTouch(ctx.rawContext as AudioContext);
+    const st = ctx.createAudioWorkletNode('soundtouch-processor', {
+      numberOfInputs: 1,
+      numberOfOutputs: 1,
+      outputChannelCount: [2],
+      processorOptions: { sampleBufferType: 'circular' },
+    });
+    const semitoneParam = st.parameters.get('pitchSemitones')!;
+    semitoneParam.value = semitones;
+    input.connect(st);
+    Tone.connect(st, wet);
+    setShift = n => { semitoneParam.value = n; };
+    disposeShifter = () => {
+      try { st.disconnect(); } catch (_) {}
+      st.port.close();
+    };
+  } catch (err) {
+    console.warn('SoundTouch unavailable, using Tone.PitchShift:', err);
+    const ps = new Tone.PitchShift({ pitch: semitones, windowSize: 0.1, feedback: 0 }).connect(wet);
+    input.connect(ps);
+    setShift = n => { ps.pitch = n; };
+    disposeShifter = () => ps.dispose();
+  }
+
+  return {
+    input,
+    setPitch: n => {
+      if (n !== 0) setShift(n);
+      dry.gain.rampTo(n === 0 ? 1 : 0, 0.03);
+      wet.gain.rampTo(n === 0 ? 0 : 1, 0.03);
+    },
+    dispose: () => {
+      disposeShifter();
+      input.dispose();
+      dry.dispose();
+      wet.dispose();
+    },
+  };
+};
+
+// Compact card: label on top, [−] value [+] below; tapping the value resets it
+const stepBtn =
+  'w-9 h-9 shrink-0 rounded-full flex items-center justify-center bg-white text-slate-700 shadow-xs ring-1 ring-slate-200 hover:ring-amber-300 active:scale-90 transition-all disabled:opacity-30 disabled:active:scale-100 cursor-pointer';
+
 const Stepper: React.FC<{
   icon: React.ReactNode;
   label: string;
@@ -41,25 +116,25 @@ const Stepper: React.FC<{
   minusDisabled?: boolean;
   plusDisabled?: boolean;
 }> = ({ icon, label, value, isDefault, onMinus, onPlus, onReset, minusDisabled, plusDisabled }) => (
-  <div className="flex-1 min-w-0 flex items-center justify-between h-10 pl-2 pr-0.5 rounded-full bg-slate-50 border border-slate-200/80" title={label}>
-    <span className="flex items-center gap-1 text-[11px] font-bold text-slate-500 shrink-0">
+  <div className="flex-1 min-w-0 flex flex-col gap-1 px-1.5 pt-1.5 pb-1.5 rounded-2xl bg-slate-50 border border-slate-200/80">
+    <span className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-500 leading-none">
       {icon}
-      <span className="hidden min-[400px]:inline">{label}</span>
+      {label}
     </span>
-    <div className="flex items-center">
+    <div className="flex items-center justify-between gap-1">
       <button
         type="button"
         onClick={() => { triggerHaptic(5); onMinus(); }}
         disabled={minusDisabled}
-        className="w-7 h-7 rounded-full flex items-center justify-center text-slate-600 hover:bg-white active:scale-90 transition-all disabled:opacity-30"
+        className={stepBtn}
         aria-label={`${label} −`}
       >
-        <Minus className="w-3.5 h-3.5 stroke-[2.5]" />
+        <Minus className="w-4 h-4 stroke-[2.5]" />
       </button>
       <button
         type="button"
         onClick={() => { triggerHaptic(5); onReset(); }}
-        className={`min-w-[2.5rem] text-center font-mono text-[12px] font-black transition-colors ${isDefault ? 'text-slate-700' : 'text-amber-700'}`}
+        className={`flex-1 min-w-0 h-9 text-center font-mono text-sm font-black transition-colors cursor-pointer ${isDefault ? 'text-slate-700' : 'text-amber-700'}`}
         title="საწყისზე დაბრუნება"
       >
         {value}
@@ -68,10 +143,10 @@ const Stepper: React.FC<{
         type="button"
         onClick={() => { triggerHaptic(5); onPlus(); }}
         disabled={plusDisabled}
-        className="w-7 h-7 rounded-full flex items-center justify-center text-slate-600 hover:bg-white active:scale-90 transition-all disabled:opacity-30"
+        className={stepBtn}
         aria-label={`${label} +`}
       >
-        <Plus className="w-3.5 h-3.5 stroke-[2.5]" />
+        <Plus className="w-4 h-4 stroke-[2.5]" />
       </button>
     </div>
   </div>
@@ -148,7 +223,8 @@ export const ChantDetailPage: React.FC<ChantDetailPageProps> = ({ chantId: chant
   const audioElementsRef = useRef<(HTMLAudioElement | null)[]>([]);
   const mediaSourcesRef = useRef<(MediaElementAudioSourceNode | null)[]>([]);
   const channelsRef = useRef<(Tone.Channel | null)[]>([]);
-  const pitchShiftRef = useRef<Tone.PitchShift | null>(null);
+  const pitchShiftRef = useRef<PitchStage | null>(null);
+  const pitchShiftValRef = useRef(pitchShiftVal);
   const analyserRef = useRef<AnalyserNode | null>(null);
   const [analyserNode, setAnalyserNode] = useState<AnalyserNode | null>(null);
   const currentTimeRef = useRef<number>(0);
@@ -259,15 +335,13 @@ export const ChantDetailPage: React.FC<ChantDetailPageProps> = ({ chantId: chant
         analyserRef.current = analyser;
         setAnalyserNode(analyser);
 
-        // Master PitchShift (windowSize 0.05s provides clean, pure pitch shifting without wavy vibrato or granular flutter)
-        const pitchShift = new Tone.PitchShift({
-          pitch: pitchShiftVal,
-          windowSize: 0.05,
-          feedback: 0,
-        }).connect(limiter);
-
-        // When pitch is 0, 100% dry master bypass for bit-perfect original studio sound
-        pitchShift.wet.value = pitchShiftVal === 0 ? 0 : 1;
+        // Master pitch stage (pitch 0 = untouched dry signal)
+        const pitchShift = await createPitchStage(limiter, pitchShiftValRef.current);
+        if (isCancelled) {
+          pitchShift.dispose();
+          limiter.dispose();
+          return;
+        }
         pitchShiftRef.current = pitchShift;
 
         const newAudios: HTMLAudioElement[] = [];
@@ -319,7 +393,7 @@ export const ChantDetailPage: React.FC<ChantDetailPageProps> = ({ chantId: chant
             const sourceNode = rawCtx.createMediaElementSource(audio);
             const channel = new Tone.Channel({ volume: 0, mute: false });
             Tone.connect(sourceNode, channel);
-            channel.connect(pitchShift);
+            channel.connect(pitchShift.input);
 
             newAudios.push(audio);
             newSources.push(sourceNode);
@@ -472,19 +546,11 @@ export const ChantDetailPage: React.FC<ChantDetailPageProps> = ({ chantId: chant
   }, [playbackSpeed]);
 
   // 2. PITCH CONTROL ONLY (-7 to +7 Semitones):
-  // Updates Tone.PitchShift independently without affecting playback speed/tempo!
+  // Updates the pitch stage independently without affecting playback speed/tempo!
   // When pitch = 0: 100% dry master bypass (zero latency, pristine studio sound)
   useEffect(() => {
-    if (pitchShiftRef.current) {
-      if (pitchShiftVal === 0) {
-        pitchShiftRef.current.wet.rampTo(0, 0.015);
-        pitchShiftRef.current.pitch = 0;
-      } else {
-        pitchShiftRef.current.windowSize = 0.05;
-        pitchShiftRef.current.pitch = pitchShiftVal;
-        pitchShiftRef.current.wet.rampTo(1, 0.015);
-      }
-    }
+    pitchShiftValRef.current = pitchShiftVal;
+    pitchShiftRef.current?.setPitch(pitchShiftVal);
   }, [pitchShiftVal]);
 
   // Playback Toggle
