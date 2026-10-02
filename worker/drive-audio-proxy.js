@@ -7,6 +7,7 @@
 // Sites allowed to use this Worker (add the published site address here)
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
+  'https://sagandzuris-skola.pages.dev',
 ];
 
 const CACHE_SECONDS = 7 * 24 * 60 * 60; // keep files at Cloudflare for a week, so Drive is rarely hit
