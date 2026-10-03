@@ -3,9 +3,14 @@ import { usePWAInstall } from '../hooks/usePWAInstall';
 import { Download, X, Share } from 'lucide-react';
 import { triggerHaptic } from '../utils/haptics';
 
-export const PWAInstallButton: React.FC = () => {
+// compact: header-sized button whose label only shows from the sm breakpoint up
+export const PWAInstallButton: React.FC<{ compact?: boolean }> = ({ compact = false }) => {
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const [showIOSGuide, setShowIOSGuide] = useState(false);
+  const buttonClass = compact
+    ? 'inline-flex items-center justify-center gap-1.5 h-9 px-2.5 sm:px-3 rounded-xl transition-all text-[13px] font-black cursor-pointer select-none active:scale-95 shadow-xs bg-gradient-to-b from-amber-600 to-[#85502c] text-white hover:brightness-105 shrink-0'
+    : 'inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all text-xs font-black cursor-pointer select-none active:scale-95 shadow-2xs bg-gradient-to-r from-amber-600 to-[#85502c] text-white border-amber-700 hover:brightness-105 shrink-0';
+  const label = <span className={compact ? 'hidden sm:inline tracking-tight' : 'tracking-tight'}>დაყენება</span>;
 
   // If already running as an installed PWA, hide the button
   if (isInstalled) {
@@ -27,11 +32,11 @@ export const PWAInstallButton: React.FC = () => {
     return (
       <button
         onClick={handleInstallClick}
-        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all text-xs font-black cursor-pointer select-none active:scale-95 shadow-2xs bg-gradient-to-r from-amber-600 to-[#85502c] text-white border-amber-700 hover:brightness-105 shrink-0"
+        className={buttonClass}
         title="აპლიკაციის დაყენება"
       >
         <Download className="w-3.5 h-3.5 text-amber-100 shrink-0" />
-        <span className="tracking-tight">დაყენება</span>
+        {label}
       </button>
     );
   }
@@ -42,11 +47,11 @@ export const PWAInstallButton: React.FC = () => {
       <>
         <button
           onClick={handleIOSClick}
-          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl border transition-all text-xs font-black cursor-pointer select-none active:scale-95 shadow-2xs bg-gradient-to-r from-amber-600 to-[#85502c] text-white border-amber-700 hover:brightness-105 shrink-0"
+          className={buttonClass}
           title="აპლიკაციის დაყენება"
         >
           <Download className="w-3.5 h-3.5 text-amber-100 shrink-0" />
-          <span className="tracking-tight">დაყენება</span>
+          {label}
         </button>
 
         {showIOSGuide && (

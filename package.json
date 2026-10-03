@@ -13,6 +13,7 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@breezystack/lamejs": "^1.2.7",
     "@google/genai": "^2.4.0",
     "@soundtouchjs/audio-worklet": "^2.1.1",
     "@tailwindcss/vite": "^4.3.3",

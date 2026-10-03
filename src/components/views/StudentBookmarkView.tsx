@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import {
   Activity,
+  CalendarClock,
   CalendarDays,
+  CalendarPlus,
+  CircleCheck,
   ChevronLeft,
   ChevronRight,
   ChevronDown,
@@ -14,15 +17,15 @@ import {
 import confetti from 'canvas-confetti';
 import { auth, db, handleFirestoreError, OperationType } from '../../firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { TSIRVA_CHANTS } from '../../data/tsirvaChants';
+import { ALL_CHANTS } from '../../data/gelatiBookChants';
 import { filterValidVariants } from '../../utils/variantValidation';
 import { loadGuestData, saveGuestVariants } from '../../utils/localStorageSync';
-import { useNavigation } from '../../context';
+import { useNavigation, useModal } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 
 const VARIANT_ORDER_MAP: { [variantId: string]: number } = {};
 let orderIndex = 0;
-TSIRVA_CHANTS.forEach(chant => {
+ALL_CHANTS.forEach(chant => {
   chant.variants.forEach(variant => {
     VARIANT_ORDER_MAP[variant.id] = orderIndex++;
   });
@@ -94,6 +97,17 @@ interface StudentProfile {
 const MONTH_NAMES_GE = [
   'იანვარი', 'თებერვალი', 'მარტი', 'აპრილი', 'მაისი', 'ივნისი',
   'ივლისი', 'აგვისტო', 'სექტემბერი', 'ოქტომბერი', 'ნოემბერი', 'დეკემბერი'
+];
+
+// Genitive forms ("ოქტომბრის სტატისტიკა", not "ოქტომბერიის")
+const MONTH_GENITIVE_GE = [
+  'იანვრის', 'თებერვლის', 'მარტის', 'აპრილის', 'მაისის', 'ივნისის',
+  'ივლისის', 'აგვისტოს', 'სექტემბრის', 'ოქტომბრის', 'ნოემბრის', 'დეკემბრის'
+];
+
+// Indexed by Date.getDay() (0 = Sunday)
+const WEEKDAY_FULL_GE = [
+  'კვირა', 'ორშაბათი', 'სამშაბათი', 'ოთხშაბათი', 'ხუთშაბათი', 'პარასკევი', 'შაბათი'
 ];
 
 const DAYS_OF_WEEK = [
@@ -546,8 +560,10 @@ interface StudentBookmarkViewProps {
 
 // "დამოუკიდებელი სამუშაო" COMPONENT ONLY
 export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack, onGoToGaloba }) => {
+  const { openModal } = useModal();
   const [profile, setProfile] = useState<StudentProfile>({ firstName: '', lastName: '' });
   const [completedSessions, setCompletedSessions] = useState<{ [key: string]: boolean }>({});
+  const [isLoaded, setIsLoaded] = useState<boolean>(false);
 
   const today = new Date();
   const [currentYear, setCurrentYear] = useState<number>(today.getFullYear());
@@ -559,6 +575,7 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
     if (!user) {
       setProfile({ firstName: '', lastName: '' });
       setCompletedSessions({});
+      setIsLoaded(true);
       return;
     }
 
@@ -581,12 +598,14 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
         setProfile({ firstName: '', lastName: '' });
         setCompletedSessions({});
       }
+      setIsLoaded(true);
     }, (error) => {
       if (error?.code === 'permission-denied') {
         console.warn('Firestore subscription permission denied (typically due to sign out).');
       } else {
         handleFirestoreError(error, OperationType.GET, `students/${user.uid}`);
       }
+      setIsLoaded(true);
     });
 
     return () => unsubscribe();
@@ -601,9 +620,22 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
       .filter(s => AVAILABLE_HOURS.includes(s));
   };
 
+  const getDayIdForDate = (date: Date): string => {
+    const dayObj = DAYS_OF_WEEK.find(item => item.dayIndex === date.getDay());
+    return dayObj ? dayObj.id : 'ორშ';
+  };
+
+  const toDateKey = (date: Date): string => {
+    const monthStr = String(date.getMonth() + 1).padStart(2, '0');
+    const dayStr = String(date.getDate()).padStart(2, '0');
+    return `${date.getFullYear()}-${monthStr}-${dayStr}`;
+  };
+
   const handleToggleCompleted = async (dateKey: string, hour: string) => {
     const user = auth.currentUser;
     if (!user) return;
+
+    triggerHaptic(10);
 
     const sessionKey = `${dateKey}_${hour}`;
     const nextCompleted = {
@@ -643,6 +675,15 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
     }
   };
 
+  const handleGoToToday = () => {
+    setCurrentYear(today.getFullYear());
+    setCurrentMonth(today.getMonth());
+  };
+
+  const isViewingCurrentMonth = currentYear === today.getFullYear() && currentMonth === today.getMonth();
+  const todayKey = toDateKey(today);
+  const hasAnySchedule = DAYS_OF_WEEK.some(day => getSelectedHoursForDay(day.id).length > 0);
+
   const firstDayOfMonth = new Date(currentYear, currentMonth, 1);
   const daysInMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
   const startDayOfWeek = (firstDayOfMonth.getDay() + 6) % 7;
@@ -655,6 +696,8 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
     completedCount: number;
     isFullyCompleted: boolean;
     isPartiallyCompleted: boolean;
+    isMissed: boolean;
+    isPast: boolean;
     isToday: boolean;
   } | null> = [];
 
@@ -664,16 +707,12 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
 
   let monthPlannedHours = 0;
   let monthActualWorkedHours = 0;
+  let monthMissedHours = 0;
 
   for (let d = 1; d <= daysInMonth; d++) {
     const dayDate = new Date(currentYear, currentMonth, d);
-    const dayOfWeekIndex = dayDate.getDay();
-    const dayObj = DAYS_OF_WEEK.find(item => item.dayIndex === dayOfWeekIndex);
-    const dayId = dayObj ? dayObj.id : 'ორშ';
-
-    const monthStr = String(currentMonth + 1).padStart(2, '0');
-    const dayStr = String(d).padStart(2, '0');
-    const dateKey = `${currentYear}-${monthStr}-${dayStr}`;
+    const dayId = getDayIdForDate(dayDate);
+    const dateKey = toDateKey(dayDate);
 
     const scheduled = getSelectedHoursForDay(dayId);
     monthPlannedHours += scheduled.length;
@@ -687,9 +726,16 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
       }
     });
 
-    const isToday = today.getFullYear() === currentYear && today.getMonth() === currentMonth && today.getDate() === d;
+    // YYYY-MM-DD keys compare correctly as plain strings
+    const isPast = dateKey < todayKey;
+    const isToday = dateKey === todayKey;
     const isFullyCompleted = scheduled.length > 0 && completedCount === scheduled.length;
     const isPartiallyCompleted = scheduled.length > 0 && completedCount > 0 && completedCount < scheduled.length;
+    const isMissed = isPast && scheduled.length > 0 && completedCount === 0;
+
+    if (isPast) {
+      monthMissedHours += scheduled.length - completedCount;
+    }
 
     calendarDays.push({
       dayNum: d,
@@ -699,151 +745,254 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
       completedCount,
       isFullyCompleted,
       isPartiallyCompleted,
+      isMissed,
+      isPast,
       isToday
     });
   }
+
+  const monthRemainingHours = Math.max(0, monthPlannedHours - monthActualWorkedHours - monthMissedHours);
 
   const progressPercent = monthPlannedHours > 0
     ? Math.min(100, Math.round((monthActualWorkedHours / monthPlannedHours) * 100))
     : 0;
 
+  // Nearest upcoming session that is not marked yet (looks two weeks ahead from today)
+  const nextSession = (() => {
+    for (let offset = 0; offset < 14; offset++) {
+      const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset);
+      const dateKey = toDateKey(date);
+      const hour = getSelectedHoursForDay(getDayIdForDate(date)).find(h => {
+        if (completedSessions[`${dateKey}_${h}`]) return false;
+        return offset > 0 || parseInt(h, 10) >= today.getHours();
+      });
+      if (hour) return { date, hour, offset };
+    }
+    return null;
+  })();
+
+  const nextSessionLabel = nextSession
+    ? nextSession.offset === 0
+      ? 'დღეს'
+      : nextSession.offset === 1
+        ? 'ხვალ'
+        : `${WEEKDAY_FULL_GE[nextSession.date.getDay()]}, ${nextSession.date.getDate()} ${MONTH_NAMES_GE[nextSession.date.getMonth()]}`
+    : '';
+
   const radius = 42;
   const circumference = 2 * Math.PI * radius;
   const strokeDashoffset = circumference - (progressPercent / 100) * circumference;
 
+  const statRows = [
+    { label: 'შესრულებული', value: monthActualWorkedHours, dot: 'bg-emerald-500', text: 'text-emerald-800' },
+    { label: 'გამოტოვებული', value: monthMissedHours, dot: 'bg-rose-400', text: 'text-rose-700' },
+    { label: 'დარჩენილი', value: monthRemainingHours, dot: 'bg-amber-400', text: 'text-amber-900' },
+  ];
+
   return (
     <div className="w-full max-w-lg mx-auto space-y-4 animate-in fade-in duration-200">
       {/* REAL MONTHLY STATISTICS GAUGE */}
-      <div className="relative overflow-hidden bg-gradient-to-b from-amber-50/90 via-white to-amber-50/40 border border-amber-200/80 rounded-2xl p-4 sm:p-5 shadow-xs flex flex-col items-center justify-center space-y-2 text-center">
-        <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-36 h-36 bg-amber-400/15 rounded-full blur-xl pointer-events-none"></div>
+      <div className="relative overflow-hidden bg-gradient-to-b from-amber-50/90 via-white to-amber-50/40 border border-amber-200/80 rounded-2xl p-4 sm:p-5 shadow-xs space-y-3">
+        <div className="absolute -top-10 left-10 w-36 h-36 bg-amber-400/15 rounded-full blur-xl pointer-events-none"></div>
 
-        <div className="w-full flex items-center justify-between border-b border-amber-100/80 pb-2 z-10">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <div className="w-6 h-6 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-800 shadow-2xs shrink-0">
-              <Activity className="w-3.5 h-3.5 text-[#85502c]" />
+        <div className="relative w-full flex items-center justify-between gap-2 border-b border-amber-100/80 pb-2.5">
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-800 shadow-2xs shrink-0">
+              <Activity className="w-4 h-4 text-[#85502c]" />
             </div>
-            <h3 className="text-xs sm:text-sm font-black text-slate-800 tracking-tight truncate">
-              {MONTH_NAMES_GE[currentMonth]}ის დამოუკიდებლად მუშაობის სტატისტიკა
+            <h3 className="text-sm sm:text-base font-black text-slate-800 tracking-tight leading-snug">
+              {MONTH_GENITIVE_GE[currentMonth]} სტატისტიკა
             </h3>
           </div>
 
-          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border shadow-2xs shrink-0 ml-1 ${
-            progressPercent >= 100 
-              ? 'bg-emerald-100 text-emerald-800 border-emerald-300' 
-              : progressPercent > 0 
-                ? 'bg-amber-100 text-amber-900 border-amber-300'
-                : 'bg-slate-100 text-slate-600 border-slate-200'
-          }`}>
-            {progressPercent >= 100 ? '🎉 100%' : `${progressPercent}%`}
-          </span>
-        </div>
-
-        <div className="relative w-28 h-28 sm:w-32 sm:h-32 my-1 flex items-center justify-center z-10">
-          <svg className="w-28 h-28 sm:w-32 sm:h-32 -rotate-90 transform drop-shadow-sm" viewBox="0 0 100 100">
-            <defs>
-              <linearGradient id="bookmarkViewGoldProgress" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stopColor="#f59e0b" />
-                <stop offset="50%" stopColor="#d97706" />
-                <stop offset="100%" stopColor="#9a3412" />
-              </linearGradient>
-            </defs>
-
-            <circle
-              cx="50"
-              cy="50"
-              r={radius}
-              className="stroke-amber-100/90"
-              strokeWidth="8"
-              fill="transparent"
-            />
-            <circle
-              cx="50"
-              cy="50"
-              r={radius}
-              stroke="url(#bookmarkViewGoldProgress)"
-              strokeWidth="8"
-              strokeDasharray={circumference}
-              strokeDashoffset={strokeDashoffset}
-              strokeLinecap="round"
-              fill="transparent"
-              className="transition-all duration-1000 ease-out"
-            />
-          </svg>
-
-          <div className="absolute inset-0 flex flex-col items-center justify-center select-none">
-            <div className="flex items-baseline justify-center font-black tracking-tight leading-none">
-              <span className="text-2xl sm:text-3xl text-slate-900">{monthActualWorkedHours}</span>
-              <span className="text-base sm:text-lg text-amber-700 font-bold mx-0.5">/</span>
-              <span className="text-lg sm:text-xl text-slate-500 font-extrabold">{monthPlannedHours}</span>
-            </div>
-            <span className="text-[10px] font-black text-[#85502c] uppercase tracking-wider mt-1 flex items-center gap-0.5">
-              <CheckCheck className="w-3 h-3 text-amber-700" />
-              შესრულება
+          {(!isLoaded || hasAnySchedule) && (
+            <span className={`text-xs font-black px-2.5 py-1 rounded-full border shadow-2xs shrink-0 ${
+              progressPercent >= 100
+                ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                : progressPercent > 0
+                  ? 'bg-amber-100 text-amber-900 border-amber-300'
+                  : 'bg-slate-100 text-slate-600 border-slate-200'
+            }`}>
+              {progressPercent >= 100 ? '🎉 100%' : `${progressPercent}%`}
             </span>
-          </div>
+          )}
         </div>
+
+        {isLoaded && !hasAnySchedule ? (
+          <div className="relative flex flex-col items-center text-center gap-2.5 py-3">
+            <div className="w-12 h-12 rounded-2xl bg-amber-100 border border-amber-300/80 flex items-center justify-center">
+              <CalendarClock className="w-6 h-6 text-[#85502c]" />
+            </div>
+            <p className="text-sm font-bold text-slate-800">
+              ჯერ არ გაქვს არჩეული მეცადინეობის საათები
+            </p>
+            <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
+              პროფილში მონიშნე, კვირის რომელ დღეებსა და საათებში იმეცადინებ — აქ კალენდარი და სტატისტიკა გამოჩნდება.
+            </p>
+            <button
+              type="button"
+              onClick={() => openModal('profile')}
+              className="mt-1 inline-flex items-center gap-2 h-10 px-5 rounded-xl bg-gradient-to-r from-amber-700 via-amber-800 to-amber-900 text-white font-black text-sm shadow-xs hover:brightness-110 active:scale-98 transition-all cursor-pointer border border-amber-900"
+            >
+              <CalendarPlus className="w-4 h-4" />
+              <span>განრიგის დაყენება</span>
+            </button>
+          </div>
+        ) : (
+          <>
+            <div className="relative flex flex-wrap items-center justify-center gap-x-6 gap-y-3">
+              <div className="relative w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center shrink-0">
+                <svg className="w-28 h-28 sm:w-32 sm:h-32 -rotate-90 transform drop-shadow-sm" viewBox="0 0 100 100">
+                  <defs>
+                    <linearGradient id="bookmarkViewGoldProgress" x1="0%" y1="0%" x2="100%" y2="100%">
+                      <stop offset="0%" stopColor="#f59e0b" />
+                      <stop offset="50%" stopColor="#d97706" />
+                      <stop offset="100%" stopColor="#9a3412" />
+                    </linearGradient>
+                  </defs>
+
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r={radius}
+                    className="stroke-amber-100"
+                    strokeWidth="8"
+                    fill="transparent"
+                  />
+                  <circle
+                    cx="50"
+                    cy="50"
+                    r={radius}
+                    stroke="url(#bookmarkViewGoldProgress)"
+                    strokeWidth="8"
+                    strokeDasharray={circumference}
+                    strokeDashoffset={strokeDashoffset}
+                    strokeLinecap="round"
+                    fill="transparent"
+                    className="transition-all duration-1000 ease-out"
+                  />
+                </svg>
+
+                <div className="absolute inset-0 flex flex-col items-center justify-center select-none">
+                  <div className="flex items-baseline justify-center font-black tracking-tight leading-none">
+                    <span className="text-2xl sm:text-3xl text-slate-900">{monthActualWorkedHours}</span>
+                    <span className="text-base sm:text-lg text-amber-700 font-bold mx-0.5">/</span>
+                    <span className="text-lg sm:text-xl text-slate-500 font-extrabold">{monthPlannedHours}</span>
+                  </div>
+                  <span className="text-[10px] font-bold text-slate-500 mt-1">
+                    საათი
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex-1 min-w-[170px] max-w-[240px] space-y-1.5">
+                {statRows.map(row => (
+                  <div
+                    key={row.label}
+                    className="flex items-center justify-between gap-3 px-3 py-1.5 rounded-xl bg-white/80 border border-slate-200/70 shadow-2xs"
+                  >
+                    <span className="flex items-center gap-2 text-xs font-bold text-slate-600">
+                      <span className={`w-2 h-2 rounded-full ${row.dot}`}></span>
+                      {row.label}
+                    </span>
+                    <span className={`text-sm font-black ${row.text}`}>{row.value}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {nextSession && (
+              <div className="relative flex flex-wrap items-center justify-center gap-x-2 gap-y-0.5 pt-2.5 border-t border-amber-100/80 text-xs sm:text-sm text-center">
+                <span className="flex items-center gap-1.5 font-semibold text-slate-500 whitespace-nowrap">
+                  <CalendarClock className="w-4 h-4 text-amber-700 shrink-0" />
+                  შემდეგი მეცადინეობა:
+                </span>
+                <span className="font-black text-slate-800 whitespace-nowrap">
+                  {nextSessionLabel} · {nextSession.hour}
+                </span>
+              </div>
+            )}
+          </>
+        )}
       </div>
 
       {/* REAL MONTHLY INTERACTIVE CALENDAR */}
       <div className="bg-white/95 backdrop-blur-md rounded-2xl border border-amber-200/70 shadow-xs overflow-hidden transition-all">
-        <div 
+        <div
           onClick={() => setIsCalendarOpen(!isCalendarOpen)}
-          className="flex items-center justify-between p-2.5 sm:p-3 bg-gradient-to-r from-amber-50/80 via-white to-amber-50/80 hover:bg-amber-50 cursor-pointer select-none transition-colors border-b border-transparent"
+          className="flex flex-wrap items-center justify-between gap-2 p-2.5 sm:p-3 bg-gradient-to-r from-amber-50/80 via-white to-amber-50/80 hover:bg-amber-50 cursor-pointer select-none transition-colors"
         >
-          <div className="flex items-center gap-2">
-            <div className="w-6 h-6 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-800">
-              <CalendarDays className="w-3.5 h-3.5 text-[#85502c]" />
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-800 shrink-0">
+              <CalendarDays className="w-4 h-4 text-[#85502c]" />
             </div>
-            <div className="flex items-center gap-1.5">
-              <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+            <div className="flex items-center gap-1.5 min-w-0">
+              <h3 className="text-sm sm:text-base font-black text-slate-800 whitespace-nowrap">
                 {MONTH_NAMES_GE[currentMonth]} {currentYear}
               </h3>
-              <span className="text-[10px] text-slate-400 font-medium">
-                {isCalendarOpen ? '' : '• კალენდრის გახსნა'}
-              </span>
+              {!isCalendarOpen && (
+                <span className="text-[11px] text-slate-400 font-medium whitespace-nowrap">
+                  • კალენდრის გახსნა
+                </span>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-1.5">
-            <div className="flex items-center gap-1" onClick={(e) => e.stopPropagation()}>
+          <div className="flex items-center gap-1.5 ml-auto">
+            <div className="flex items-center gap-1.5" onClick={(e) => e.stopPropagation()}>
+              {!isViewingCurrentMonth && (
+                <button
+                  type="button"
+                  onClick={handleGoToToday}
+                  className="h-9 px-3 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 border border-amber-300 text-xs font-black transition-all cursor-pointer shadow-2xs active:scale-95"
+                  title="მიმდინარე თვეზე დაბრუნება"
+                >
+                  დღეს
+                </button>
+              )}
               <button
                 type="button"
                 onClick={handlePrevMonth}
-                className="p-1 rounded-lg bg-white hover:bg-amber-100 text-slate-700 border border-amber-200 transition-all cursor-pointer shadow-2xs active:scale-95"
+                className="w-9 h-9 flex items-center justify-center rounded-xl bg-white hover:bg-amber-100 text-slate-700 border border-amber-200 transition-all cursor-pointer shadow-2xs active:scale-95"
                 title="წინა თვე"
+                aria-label="წინა თვე"
               >
-                <ChevronLeft className="w-3 h-3" />
+                <ChevronLeft className="w-4 h-4" />
               </button>
               <button
                 type="button"
                 onClick={handleNextMonth}
-                className="p-1 rounded-lg bg-white hover:bg-amber-100 text-slate-700 border border-amber-200 transition-all cursor-pointer shadow-2xs active:scale-95"
+                className="w-9 h-9 flex items-center justify-center rounded-xl bg-white hover:bg-amber-100 text-slate-700 border border-amber-200 transition-all cursor-pointer shadow-2xs active:scale-95"
                 title="შემდეგი თვე"
+                aria-label="შემდეგი თვე"
               >
-                <ChevronRight className="w-3 h-3" />
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
 
-            <div className={`p-1 rounded-lg text-slate-400 hover:text-amber-800 transition-transform duration-200 ${isCalendarOpen ? 'rotate-180 text-amber-700' : ''}`}>
-              <ChevronDown className="w-4 h-4" />
+            <div
+              className={`w-9 h-9 flex items-center justify-center rounded-xl text-slate-400 hover:text-amber-800 transition-transform duration-200 ${isCalendarOpen ? 'rotate-180 text-amber-700' : ''}`}
+              title={isCalendarOpen ? 'კალენდრის დაკეცვა' : 'კალენდრის გახსნა'}
+            >
+              <ChevronDown className="w-5 h-5" />
             </div>
           </div>
         </div>
 
         {isCalendarOpen && (
-          <div className="p-2.5 sm:p-3 pt-1 border-t border-amber-100/70 space-y-1.5 animate-in fade-in slide-in-from-top-1 duration-150">
-            <div className="grid grid-cols-7 gap-1 text-center">
+          <div className="p-2.5 sm:p-3 border-t border-amber-100/70 space-y-2 animate-in fade-in slide-in-from-top-1 duration-150">
+            <div className="grid grid-cols-7 gap-1 sm:gap-1.5 text-center">
               {DAYS_OF_WEEK.map(day => (
-                <span key={day.id} className="text-[9px] sm:text-[10px] font-extrabold text-slate-400 py-0">
+                <span key={day.id} className="text-[10px] sm:text-[11px] font-extrabold text-slate-400">
                   {day.short}
                 </span>
               ))}
             </div>
 
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7 gap-1 sm:gap-1.5">
               {calendarDays.map((dayItem, index) => {
                 if (!dayItem) {
-                  return <div key={`empty-${index}`} className="min-h-[42px] sm:min-h-[46px] rounded-xl bg-slate-50/20"></div>;
+                  return <div key={`empty-${index}`} className="min-h-[48px] sm:min-h-[56px]"></div>;
                 }
 
                 const hasSchedule = dayItem.scheduledHours.length > 0;
@@ -851,33 +1000,42 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
                 return (
                   <div
                     key={dayItem.dateKey}
-                    className={`min-h-[42px] sm:min-h-[46px] rounded-xl transition-all relative flex flex-col items-center justify-between p-1 border select-none ${
+                    className={`min-h-[48px] sm:min-h-[56px] rounded-xl transition-all relative flex flex-col items-center gap-1 p-0.5 sm:p-1 border select-none ${
                       dayItem.isFullyCompleted
-                        ? 'bg-emerald-50/90 border-emerald-300/90 shadow-2xs ring-1 ring-emerald-200'
+                        ? 'bg-emerald-50/90 border-emerald-300/90 shadow-2xs'
                         : dayItem.isPartiallyCompleted
                           ? 'bg-amber-50/80 border-amber-300/90 shadow-2xs'
-                          : hasSchedule
-                            ? 'bg-amber-50/40 border-amber-200/90 shadow-2xs'
-                            : 'bg-slate-50/40 border-slate-200/60'
-                    }`}
+                          : dayItem.isMissed
+                            ? 'bg-rose-50/70 border-rose-200'
+                            : hasSchedule
+                              ? 'bg-amber-50/40 border-amber-200/90 shadow-2xs'
+                              : dayItem.isPast
+                                ? 'bg-slate-50/30 border-slate-100'
+                                : 'bg-slate-50/50 border-slate-200/60'
+                    } ${dayItem.isToday ? 'ring-2 ring-amber-500 ring-offset-1 ring-offset-white' : ''}`}
                   >
-                    <div className="w-full flex items-center justify-center">
-                      <span className={`text-[10px] sm:text-[11px] leading-none font-bold ${
-                        dayItem.isToday 
-                          ? 'text-amber-800 underline decoration-amber-600 decoration-2 font-black' 
-                          : hasSchedule 
-                            ? 'text-slate-800' 
-                            : 'text-slate-400'
-                      }`}>
-                        {dayItem.dayNum}
-                      </span>
-                    </div>
+                    {dayItem.isFullyCompleted && (
+                      <CircleCheck className="absolute top-0.5 right-0.5 w-3 h-3 text-emerald-600 hidden sm:block" />
+                    )}
 
-                    {hasSchedule ? (
-                      <div className="w-full flex flex-col gap-0.5 mt-0.5">
+                    <span className={`mt-0.5 min-w-5 h-5 px-1 rounded-full flex items-center justify-center text-[11px] sm:text-xs leading-none font-bold ${
+                      dayItem.isToday
+                        ? 'bg-amber-600 text-white font-black'
+                        : hasSchedule
+                          ? 'text-slate-800'
+                          : dayItem.isPast
+                            ? 'text-slate-300'
+                            : 'text-slate-400'
+                    }`}>
+                      {dayItem.dayNum}
+                    </span>
+
+                    {hasSchedule && (
+                      <div className="w-full flex flex-col gap-0.5 sm:gap-1">
                         {dayItem.scheduledHours.map(hour => {
                           const sessionKey = `${dayItem.dateKey}_${hour}`;
                           const isCompleted = Boolean(completedSessions[sessionKey]);
+                          const isMissedHour = dayItem.isPast && !isCompleted;
 
                           return (
                             <button
@@ -887,27 +1045,54 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
                                 e.stopPropagation();
                                 handleToggleCompleted(dayItem.dateKey, hour);
                               }}
+                              aria-pressed={isCompleted}
+                              aria-label={`${dayItem.dayNum} ${MONTH_NAMES_GE[currentMonth]}, ${hour}`}
                               title={`${dayItem.dayNum} ${MONTH_NAMES_GE[currentMonth]}: ${hour} (${isCompleted ? 'დააჭირეთ გასაუქმებლად' : 'დააჭირეთ შესასრულებლად'})`}
-                              className={`w-full py-0.5 px-0.5 rounded-md text-[8.5px] sm:text-[9.5px] font-black leading-tight transition-all flex items-center justify-center gap-0.5 cursor-pointer border shadow-2xs ${
+                              className={`w-full py-0.5 sm:py-1 rounded-md sm:rounded-lg text-[10px] sm:text-[11px] font-black leading-tight tracking-tight transition-all flex items-center justify-center gap-0.5 cursor-pointer border active:scale-95 ${
                                 isCompleted
-                                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 scale-[1.02]'
-                                  : 'bg-white text-amber-950 border-amber-300/90 hover:bg-amber-100/80 hover:border-amber-400 active:scale-95'
+                                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 shadow-2xs'
+                                  : isMissedHour
+                                    ? 'bg-white text-rose-700 border-rose-300 border-dashed hover:bg-rose-50'
+                                    : 'bg-white text-amber-950 border-amber-300/90 hover:bg-amber-100/80 hover:border-amber-400 shadow-2xs'
                               }`}
                             >
                               {isCompleted && (
-                                <Check className="w-2 h-2 stroke-[3] shrink-0 text-white" />
+                                <Check className="w-2.5 h-2.5 stroke-[3] shrink-0 text-white hidden sm:block" />
                               )}
-                              <span className="tracking-tight whitespace-nowrap">{hour}</span>
+                              <span className="whitespace-nowrap">{hour}</span>
                             </button>
                           );
                         })}
                       </div>
-                    ) : (
-                      <div className="w-full h-1"></div>
                     )}
                   </div>
                 );
               })}
+            </div>
+
+            {/* Legend + hint */}
+            <div className="pt-2 border-t border-slate-100 space-y-1.5">
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[11px] font-bold text-slate-500">
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded bg-emerald-600"></span>
+                  შესრულდა
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded bg-white border border-amber-300"></span>
+                  დაგეგმილი
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded bg-white border border-dashed border-rose-300"></span>
+                  გამოტოვებული
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded-full bg-amber-600"></span>
+                  დღეს
+                </span>
+              </div>
+              <p className="text-center text-[11px] text-slate-400">
+                იმეცადინე? დააჭირე საათს და მოინიშნება შესრულებულად.
+              </p>
             </div>
           </div>
         )}

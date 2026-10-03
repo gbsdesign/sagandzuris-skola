@@ -22,17 +22,50 @@ export const MANERA_ITEMS: ManeraItemType[] = [
   { num: '9', title: 'სწორი შინაგანი დგომა', defaultEff: '', advice: 'ბგერები უნდა ჟღერდეს თვითრწმენით, თქვენი პიროვნული სიღრმიდან.' }
 ];
 
-export const HABIT_ITEMS: HabitItemType[] = [
-  { id: 'habit_1', label: '🔸️ დილა საღამოს ლოცვები. კითხვა ყოველდღე' },
-  { id: 'habit_2', label: '🔸️ სახარება კითხვა ყოველდღე' },
-  { id: 'habit_3', label: '🔸️ სამოციქულო კითხვა ყოველდღე' },
-  { id: 'habit_4', label: '🔸️ სულიერი ლიტერატურა დღეში 3-5 გვერდი მაინც' },
-  { id: 'habit_5', label: '🔸️ იესოს ლოცვა (რაც ხშირად მით უკეთესი)' },
-  { id: 'habit_6', label: '🔸️ ფსალმუნები კითხვა (სასურველია ყოველდღე 1 კანონი ან დიდება მაინც)' },
-  { id: 'habit_7', label: '🔸️ დაუჯდომლები თვეში 2-3 ჯერ მაინც' },
-  { id: 'habit_8', label: '🔸️ სამადლობელი პარაკლისი თვეში 2-3 ჯერ მაინც' },
-  { id: 'habit_9', label: '◽️ აღსარება' },
-  { id: 'habit_10', label: '◽️ ზიარება' },
-  { id: 'habit_11', label: '🔸️ წირვაზე დასწრება ყოველკვირას' },
-  { id: 'habit_12', label: '🔸️ ლოცვაზე დასწრება ყოველკვირას' },
+export interface HabitGroupType {
+  id: string;
+  title: string;
+  items: HabitItemType[];
+}
+
+// Ids stay fixed: students' saved marks are keyed by them.
+export const HABIT_GROUPS: HabitGroupType[] = [
+  {
+    id: 'daily',
+    title: 'ყოველდღე',
+    items: [
+      { id: 'habit_1', label: 'დილის და საღამოს ლოცვების კითხვა' },
+      { id: 'habit_2', label: 'სახარების კითხვა' },
+      { id: 'habit_3', label: 'სამოციქულოს კითხვა' },
+      { id: 'habit_4', label: 'სულიერი ლიტერატურა — დღეში 3–5 გვერდი მაინც' },
+      { id: 'habit_5', label: 'იესოს ლოცვა — რაც უფრო ხშირად, მით უკეთესი' },
+      { id: 'habit_6', label: 'ფსალმუნების კითხვა — სასურველია 1 კანონი ან დიდება მაინც' },
+    ],
+  },
+  {
+    id: 'weekly',
+    title: 'ყოველკვირა',
+    items: [
+      { id: 'habit_11', label: 'წირვაზე დასწრება' },
+      { id: 'habit_12', label: 'ლოცვაზე დასწრება' },
+    ],
+  },
+  {
+    id: 'monthly',
+    title: 'თვეში 2–3-ჯერ მაინც',
+    items: [
+      { id: 'habit_7', label: 'დაუჯდომლები' },
+      { id: 'habit_8', label: 'სამადლობელი პარაკლისი' },
+    ],
+  },
+  {
+    id: 'sacraments',
+    title: 'საიდუმლოები',
+    items: [
+      { id: 'habit_9', label: 'აღსარება' },
+      { id: 'habit_10', label: 'ზიარება' },
+    ],
+  },
 ];
+
+export const HABIT_ITEMS: HabitItemType[] = HABIT_GROUPS.flatMap((group) => group.items);

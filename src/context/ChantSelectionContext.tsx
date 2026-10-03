@@ -5,6 +5,7 @@ import { useAuth } from './AuthContext';
 import { useModal } from './ModalContext';
 import { filterValidVariants } from '../utils/variantValidation';
 import { triggerHaptic } from '../utils/haptics';
+import { getHabitsWeekKey } from '../utils/habitsWeek';
 import { ChantItem, ChantVariant } from '../data/tsirvaChants';
 
 export interface SelectedChantVariant {
@@ -39,17 +40,27 @@ export const ChantSelectionProvider: React.FC<{ children: React.ReactNode }> = (
   const { openModal } = useModal();
   const [selectedChantVariants, setSelectedChantVariants] = useState<Record<string, SelectedChantVariant>>({});
   const [maneraStats, setManeraStats] = useState<Record<string, string>>({});
-  const [habitsStats, setHabitsStats] = useState<Record<string, boolean>>({});
+  const [storedHabits, setStoredHabits] = useState<Record<string, boolean>>({});
+  const [habitsWeek, setHabitsWeek] = useState('');
+
+  // Marks saved in an earlier week are hidden: the checklist starts over every Sunday 09:00.
+  const habitsStats = habitsWeek === getHabitsWeekKey() ? storedHabits : {};
 
   const saveHabitsToFirestore = (nextStats: Record<string, boolean>) => {
     if (!user) {
       openModal('chvevebi');
       return;
     }
-    setHabitsStats(nextStats);
+    const weekKey = getHabitsWeekKey();
+    setStoredHabits(nextStats);
+    setHabitsWeek(weekKey);
     triggerHaptic(15);
     const userDocRef = doc(db, 'students', user.uid);
-    setDoc(userDocRef, { habitsStats: nextStats }, { mergeFields: ['habitsStats'] }).catch((err) => {
+    setDoc(
+      userDocRef,
+      { habitsStats: nextStats, habitsWeek: weekKey },
+      { mergeFields: ['habitsStats', 'habitsWeek'] }
+    ).catch((err) => {
       console.warn('Firestore habits sync note:', err);
     });
   };
@@ -187,7 +198,8 @@ export const ChantSelectionProvider: React.FC<{ children: React.ReactNode }> = (
     if (!user) {
       setSelectedChantVariants({});
       setManeraStats({});
-      setHabitsStats({});
+      setStoredHabits({});
+      setHabitsWeek('');
       return;
     }
 
@@ -206,7 +218,17 @@ export const ChantSelectionProvider: React.FC<{ children: React.ReactNode }> = (
             setManeraStats(data.maneraStats);
           }
           if (data?.habitsStats) {
-            setHabitsStats(data.habitsStats);
+            setStoredHabits(data.habitsStats);
+            if (data.habitsWeek) {
+              setHabitsWeek(data.habitsWeek);
+            } else {
+              // Marks saved before the weekly reset existed count as this week's, so nobody loses them on deploy.
+              const weekKey = getHabitsWeekKey();
+              setHabitsWeek(weekKey);
+              setDoc(userDocRef, { habitsWeek: weekKey }, { mergeFields: ['habitsWeek'] }).catch((err) =>
+                console.warn('Firestore habits week note:', err)
+              );
+            }
           }
         } else {
           // Initialize new student doc

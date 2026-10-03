@@ -1,6 +1,7 @@
-import { TSIRVA_CHANTS, ChantItem, ChantVariant } from './tsirvaChants';
-import { GEORGIA_REGIONS, SongItem, RegionData } from './songsData';
-import { MTKMELI_REGIONS, PoemItem, MtkmeliRegionData } from './mtkmeliData';
+import { ChantItem, ChantVariant } from './tsirvaChants';
+import { ALL_CHANTS } from './gelatiBookChants';
+import { FOLK_SONGS, getFolkRegion } from './songsData';
+import { MTKMELI_AUTHORS } from './mtkmeliData';
 import { INSTRUMENTS_LIST, InstrumentItem } from './instrumentsData';
 import { MANERA_ITEMS, HABIT_ITEMS, ManeraItemType, HabitItemType } from './habitsAndManera';
 
@@ -19,7 +20,7 @@ export const getAllRegistryItems = (): Map<string, DataRegistryItem> => {
   if (lookupCache.size > 0) return lookupCache;
 
   // 1. Chants
-  TSIRVA_CHANTS.forEach((chant) => {
+  ALL_CHANTS.forEach((chant) => {
     chant.variants.forEach((v) => {
       lookupCache.set(v.id, {
         id: v.id,
@@ -32,27 +33,26 @@ export const getAllRegistryItems = (): Map<string, DataRegistryItem> => {
   });
 
   // 2. Songs
-  GEORGIA_REGIONS.forEach((region) => {
-    region.topSongs.forEach((song) => {
-      lookupCache.set(song.id, {
-        id: song.id,
-        title: song.title,
-        category: 'song',
-        code: song.regionCode,
-        regionOrAuthor: region.nameGe,
-      });
+  FOLK_SONGS.forEach((song) => {
+    const region = getFolkRegion(song.region);
+    lookupCache.set(song.id, {
+      id: song.id,
+      title: song.title,
+      category: 'song',
+      code: region.regionCode,
+      regionOrAuthor: region.nameGe,
     });
   });
 
   // 3. Poems
-  MTKMELI_REGIONS.forEach((region) => {
-    region.poems.forEach((poem) => {
-      lookupCache.set(poem.id, {
-        id: poem.id,
-        title: poem.title,
+  MTKMELI_AUTHORS.forEach((author) => {
+    author.works.forEach((work) => {
+      lookupCache.set(work.id, {
+        id: work.id,
+        title: work.title,
         category: 'poem',
-        code: poem.regionCode,
-        regionOrAuthor: poem.author || region.nameGe,
+        code: getFolkRegion(author.region).regionCode,
+        regionOrAuthor: author.name,
       });
     });
   });

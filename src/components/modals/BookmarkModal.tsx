@@ -21,15 +21,15 @@ export const BookmarkModal: React.FC<BookmarkModalProps> = ({ isOpen, onClose })
     >
       <SwipeToDismiss
         onDismiss={onClose}
-        className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto bg-slate-50/95 backdrop-blur-md rounded-3xl p-3 sm:p-5 shadow-2xl border border-amber-200/90 space-y-3 animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-lg max-h-[92dvh] overflow-y-auto bg-slate-50/95 backdrop-blur-md rounded-3xl p-3 sm:p-5 shadow-2xl border border-amber-200/90 space-y-3 animate-in zoom-in-95 duration-200"
       >
         {/* Modal Top Bar with Close Button */}
         <div className="flex items-center justify-between pb-2 border-b border-amber-200/70">
           <div className="flex items-center gap-2">
-            <div className="w-7 h-7 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-800 shadow-2xs">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-800 shadow-2xs">
               <Bookmark className="w-4 h-4 text-[#85502c] fill-amber-500/30" />
             </div>
-            <h3 className="text-xs sm:text-sm font-bold text-slate-800">
+            <h3 className="text-sm sm:text-base font-black text-slate-800">
               დამოუკიდებელი სამუშაო
             </h3>
           </div>
@@ -37,8 +37,9 @@ export const BookmarkModal: React.FC<BookmarkModalProps> = ({ isOpen, onClose })
           <button
             type="button"
             onClick={onClose}
-            className="p-1.5 rounded-xl hover:bg-slate-200/80 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer border border-transparent hover:border-slate-300 shadow-2xs"
+            className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-200/80 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer border border-transparent hover:border-slate-300 shadow-2xs"
             title="დახურვა"
+            aria-label="დახურვა"
           >
             <X className="w-4 h-4" />
           </button>

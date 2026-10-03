@@ -1,28 +1,18 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, ArrowLeft, RefreshCw, Sparkles, Check, Download, Music, ExternalLink, Video, RotateCcw, RotateCw, Repeat, Minus, Plus, Gauge, Music2, ChevronRight } from 'lucide-react';
+import { Play, Pause, ArrowLeft, RefreshCw, Sparkles, Check, Download, CloudDownload, Headphones, Music, ExternalLink, Video, RotateCcw, RotateCw, Repeat, Gauge, Music2, ChevronRight } from 'lucide-react';
 import * as Tone from 'tone';
 import soundTouchProcessorUrl from '@soundtouchjs/audio-worklet/processor?url';
 import { useNavigation } from '../context';
-import { TSIRVA_CHANTS } from '../data/tsirvaChants';
-import { getChantMedia, CHANT_MEDIA_REGISTRY, DEFAULT_LYRICS } from '../data/chantMediaRegistry';
+import { ALL_CHANTS } from '../data/gelatiBookChants';
+import { variantName } from '../data/tsirvaChants';
+import { getChantMedia, type ChantMediaItem } from '../data/chantMediaRegistry';
 import { triggerHaptic } from '../utils/haptics';
 import { isAudioCached, cacheAudio } from '../utils/audioCache';
 import { getAudioArrayBufferFromIdb } from '../utils/audioIdb';
 import { ChantWaveformSeekBar } from '../components/ChantWaveformSeekBar';
-
-const MHOLOD_SHOBILI_TRACKS = [
-  '/audio/mholod-shobilo/voice1.mp3?v=sync3',      // Track 0: Voice 1 (1 ხმა)
-  '/audio/mholod-shobilo/voice2.mp3?v=sync3',      // Track 1: Voice 2 (2 ხმა)
-  '/audio/mholod-shobilo/voice3.mp3?v=sync3',      // Track 2: Voice 3 (3 ხმა)
-  '/audio/mholod-shobilo/all_voices.mp3?v=sync3',  // Track 3: სამივე ხმა ერთად (Full Mix)
-];
-
-const WMIDAO_GHMERTO_TRACKS = [
-  '/audio/wmidao-ghmerto/voice1.mp3?v=sync5',      // Track 0: Voice 1 (1 ხმა)
-  '/audio/wmidao-ghmerto/voice2.mp3?v=sync5',      // Track 1: Voice 2 (2 ხმა)
-  '/audio/wmidao-ghmerto/voice3.mp3?v=sync5',      // Track 2: Voice 3 (3 ხმა)
-  '/audio/wmidao-ghmerto/all_voices.mp3?v=sync5',  // Track 3: სამივე ხმა ერთად (Full Mix)
-];
+import { Stepper } from '../components/Stepper';
+import { BookScorePlayer } from '../components/BookScorePlayer';
+import { saveBlob } from '../utils/chantSynth';
 
 const SPEED_KEY = 'sagandzuri_player_speed';
 const PITCH_KEY = 'sagandzuri_player_pitch';
@@ -101,57 +91,6 @@ const createPitchStage = async (output: Tone.InputNode, semitones: number): Prom
   };
 };
 
-// Compact card: label on top, [−] value [+] below; tapping the value resets it
-const stepBtn =
-  'w-9 h-9 shrink-0 rounded-full flex items-center justify-center bg-white text-slate-700 shadow-xs ring-1 ring-slate-200 hover:ring-amber-300 active:scale-90 transition-all disabled:opacity-30 disabled:active:scale-100 cursor-pointer';
-
-const Stepper: React.FC<{
-  icon: React.ReactNode;
-  label: string;
-  value: string;
-  isDefault: boolean;
-  onMinus: () => void;
-  onPlus: () => void;
-  onReset: () => void;
-  minusDisabled?: boolean;
-  plusDisabled?: boolean;
-}> = ({ icon, label, value, isDefault, onMinus, onPlus, onReset, minusDisabled, plusDisabled }) => (
-  <div className="flex-1 min-w-0 flex flex-col gap-1 px-1.5 pt-1.5 pb-1.5 rounded-2xl bg-slate-50 border border-slate-200/80">
-    <span className="flex items-center justify-center gap-1 text-[10px] font-bold text-slate-500 leading-none">
-      {icon}
-      {label}
-    </span>
-    <div className="flex items-center justify-between gap-1">
-      <button
-        type="button"
-        onClick={() => { triggerHaptic(5); onMinus(); }}
-        disabled={minusDisabled}
-        className={stepBtn}
-        aria-label={`${label} −`}
-      >
-        <Minus className="w-4 h-4 stroke-[2.5]" />
-      </button>
-      <button
-        type="button"
-        onClick={() => { triggerHaptic(5); onReset(); }}
-        className={`flex-1 min-w-0 h-9 text-center font-mono text-sm font-black transition-colors cursor-pointer ${isDefault ? 'text-slate-700' : 'text-amber-700'}`}
-        title="საწყისზე დაბრუნება"
-      >
-        {value}
-      </button>
-      <button
-        type="button"
-        onClick={() => { triggerHaptic(5); onPlus(); }}
-        disabled={plusDisabled}
-        className={stepBtn}
-        aria-label={`${label} +`}
-      >
-        <Plus className="w-4 h-4 stroke-[2.5]" />
-      </button>
-    </div>
-  </div>
-);
-
 const readStoredNumber =(key: string, fallback: number, min: number, max: number) => {
   try {
     const val = parseFloat(localStorage.getItem(key) ?? '');
@@ -167,32 +106,99 @@ interface ChantDetailPageProps {
   inline?: boolean; // rendered inside the chant list instead of as its own page
 }
 
-export const ChantDetailPage: React.FC<ChantDetailPageProps> = ({ chantId: chantIdProp, variantId: variantIdProp, inline = false }) => {
+// A recording that isn't a chant variant (folk songs): media and titles are passed in directly
+interface RecordingProps {
+  media?: ChantMediaItem;
+  title?: string;
+  subtitle?: string;
+}
+
+// Variants without their own recording show a notice instead of the player;
+// book versions show their sheet music + synthesizer under it
+const NoRecording: React.FC<{ inline: boolean; onBack: () => void; children?: React.ReactNode }> = ({ inline, onBack, children }) => (
+  <div className={inline ? 'w-full pt-1 space-y-3' : 'bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm w-full max-w-md mx-auto space-y-3'}>
+    {!inline && (
+      <button
+        type="button"
+        onClick={onBack}
+        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 hover:border-amber-400 bg-slate-50 hover:bg-amber-50 text-slate-700 transition-all text-xs font-semibold cursor-pointer active:scale-95"
+      >
+        <ArrowLeft className="w-3.5 h-3.5" />
+        <span>უკან დაბრუნება</span>
+      </button>
+    )}
+    {children ? (
+      <p className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-[11px] font-semibold text-slate-500">
+        <Music className="w-4 h-4 text-slate-300 shrink-0" />
+        ჩანაწერი ჯერ არ არის — მოისმინეთ ნოტები სინთეზატორით
+      </p>
+    ) : (
+      <div className="flex flex-col items-center text-center gap-1.5 py-5 px-3 rounded-xl bg-slate-50 border border-dashed border-slate-200">
+        <Music className="w-6 h-6 text-slate-300" />
+        <p className="text-xs font-bold text-slate-600">ამ ვარიანტის ჩანაწერი ჯერ არ არის დამატებული</p>
+        <p className="text-[11px] text-slate-400">მალე დაემატება</p>
+      </div>
+    )}
+    {children}
+  </div>
+);
+
+export const ChantDetailPage: React.FC<ChantDetailPageProps> = props => {
+  const { navigateTo } = useNavigation();
+  const chantId = props.chantId || localStorage.getItem('selectedChantId') || 'chant-1';
+  const variantId = props.variantId || localStorage.getItem('selectedVariantId') || 'v-1-1';
+  const chant = ALL_CHANTS.find(c => c.id === chantId);
+  const variant = chant?.variants?.find(v => v.id === variantId);
+  const inline = Boolean(props.inline);
+  const score = variant?.bookNums?.length ? (
+    <BookScorePlayer nums={variant.bookNums} book={variant.book} page={variant.page} source={variant.source} title={chant?.title} name={variantName(variant)} />
+  ) : null;
+
+  if (!getChantMedia(chantId, variant?.code)) {
+    return <NoRecording inline={inline} onBack={() => navigateTo('galoba')}>{score}</NoRecording>;
+  }
+  if (!inline) {
+    return (
+      <>
+        <ChantPlayer {...props} />
+        {score && <div className="w-full max-w-md mx-auto mt-3">{score}</div>}
+      </>
+    );
+  }
+  // inline: the recording (amber card) and the synthesizer (its own indigo card) stay visibly apart
+  return (
+    <div className="w-full flex flex-col gap-3 pt-1">
+      <section className="w-full rounded-xl border border-amber-200 bg-amber-50/40 p-2.5 flex flex-col gap-2.5">
+        <div className="flex items-center gap-2 px-0.5">
+          <Headphones className="w-5 h-5 text-amber-600 shrink-0" />
+          <span className="text-sm sm:text-base font-black text-amber-900">ხმიანი ჩანაწერი</span>
+        </div>
+        <ChantPlayer {...props} />
+      </section>
+      {score}
+    </div>
+  );
+};
+
+export const ChantPlayer: React.FC<ChantDetailPageProps & RecordingProps> = ({ chantId: chantIdProp, variantId: variantIdProp, inline = false, media, title, subtitle }) => {
   const { navigateTo } = useNavigation();
 
   // Selected chant/variant: from props when inline, otherwise from localStorage
   const chantId = chantIdProp || localStorage.getItem('selectedChantId') || 'chant-1';
   const variantId = variantIdProp || localStorage.getItem('selectedVariantId') || 'v-1-1';
 
-  const chant = TSIRVA_CHANTS.find(c => c.id === chantId);
+  const chant = ALL_CHANTS.find(c => c.id === chantId);
   const variant = chant?.variants?.find(v => v.id === variantId);
 
-  const mediaItem = getChantMedia(chantId, chant?.title, variant?.code, variant?.label);
+  // Always bound: ChantDetailPage renders the player only for variants that have media
+  const mediaItem = media ?? getChantMedia(chantId, variant?.code)!;
+  const displayTitle = title ?? chant?.title;
+  const displaySubtitle = subtitle ?? variant?.label;
 
-  const isMholodShobili = Boolean(chant?.title?.includes('მხოლოდ'));
-  const isWmidaoGhmerto = Boolean(
-    chant?.title?.includes('წმიდაო') || 
-    chant?.title?.includes('წმინდაო') || 
-    variant?.chantName?.includes('წმიდაო') ||
-    variant?.fullTitle?.includes('წმიდაო')
-  );
-  const activeTracks = mediaItem?.tracks || (isWmidaoGhmerto ? WMIDAO_GHMERTO_TRACKS : MHOLOD_SHOBILI_TRACKS);
-
-  // Fallback for chants the registry lookup misses
-  const fallbackMedia = isWmidaoGhmerto ? CHANT_MEDIA_REGISTRY['7'] : isMholodShobili ? CHANT_MEDIA_REGISTRY['3'] : undefined;
-  const notes = mediaItem?.notes.length ? mediaItem.notes : fallbackMedia?.notes ?? [];
-  const lyrics = mediaItem?.lyrics ?? fallbackMedia?.lyrics ?? DEFAULT_LYRICS;
-  const notesTitle = mediaItem?.title || fallbackMedia?.title || 'notebi';
+  const activeTracks = mediaItem.tracks;
+  const notes = mediaItem.notes;
+  const lyrics = mediaItem.lyrics;
+  const notesTitle = mediaItem.title;
 
   // Audio Engine State
   const [isPlaying, setIsPlaying] = useState(false);
@@ -201,16 +207,18 @@ export const ChantDetailPage: React.FC<ChantDetailPageProps> = ({ chantId: chant
   const [pitchShiftVal, setPitchShiftVal] = useState<number>(() => Math.round(readStoredNumber(PITCH_KEY, 0, -7, 7))); // Semitones (-7 to 7)
   const [isLoopEnabled, setIsLoopEnabled] = useState(false);
   const [currentTime, setCurrentTime] = useState<number>(0);
-  const [duration, setDuration] = useState<number>(mediaItem?.duration ?? fallbackMedia?.duration ?? 153);
+  const [duration, setDuration] = useState<number>(mediaItem.duration ?? 153);
   const [loopStart, setLoopStart] = useState<number | null>(null);
   const [loopEnd, setLoopEnd] = useState<number | null>(null);
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
 
   // 3 Voices state + dedicated 'სამივე' mode
-  const [isAllVoicesActive, setIsAllVoicesActive] = useState(true);
-  const [voice1Active, setVoice1Active] = useState(false);
-  const [voice2Active, setVoice2Active] = useState(false);
-  const [voice3Active, setVoice3Active] = useState(false);
+  // Recordings without a full mix start on their separate voices
+  const hasMix = mediaItem.availableVoices.all;
+  const [isAllVoicesActive, setIsAllVoicesActive] = useState(hasMix);
+  const [voice1Active, setVoice1Active] = useState(!hasMix && mediaItem.availableVoices.voice1);
+  const [voice2Active, setVoice2Active] = useState(!hasMix && mediaItem.availableVoices.voice2);
+  const [voice3Active, setVoice3Active] = useState(!hasMix && mediaItem.availableVoices.voice3);
   // Per-voice volume (0-1), applied in individual voices mode
   const [voiceVolumes, setVoiceVolumes] = useState<number[]>([1, 1, 1]);
 
@@ -221,6 +229,8 @@ export const ChantDetailPage: React.FC<ChantDetailPageProps> = ({ chantId: chant
   // Native Audio Engine References (100% C++ Hardware Sonic/WSOLA Engine)
   // Completely eliminates Tone.GrainPlayer's granular chopper vibrations, flutter, and offset multiplication jumping bugs
   const audioElementsRef = useRef<(HTMLAudioElement | null)[]>([]);
+  // Per-track lengths: songs' separate voices can be shorter than the full mix
+  const trackDurationsRef = useRef<number[]>([]);
   const mediaSourcesRef = useRef<(MediaElementAudioSourceNode | null)[]>([]);
   const channelsRef = useRef<(Tone.Channel | null)[]>([]);
   const pitchShiftRef = useRef<PitchStage | null>(null);
@@ -313,6 +323,7 @@ export const ChantDetailPage: React.FC<ChantDetailPageProps> = ({ chantId: chant
           } catch (_) {}
         });
         audioElementsRef.current = [];
+        trackDurationsRef.current = [];
         mediaSourcesRef.current = [];
         channelsRef.current.forEach(ch => { try { ch?.dispose(); } catch (_) {} });
         channelsRef.current = [];
@@ -378,8 +389,10 @@ export const ChantDetailPage: React.FC<ChantDetailPageProps> = ({ chantId: chant
           }
 
           const updateDur = () => {
-            if (audio.duration && !isNaN(audio.duration) && audio.duration > 0) {
-              setDuration(Math.round(audio.duration));
+            if (audio.duration && !isNaN(audio.duration) && audio.duration > 0 && isFinite(audio.duration)) {
+              const ds = trackDurationsRef.current;
+              ds[i] = audio.duration;
+              setDuration(Math.round(hasMix && ds[3] ? ds[3] : Math.max(...ds.filter(Boolean))));
             }
           };
           audio.onloadedmetadata = updateDur;
@@ -607,8 +620,8 @@ export const ChantDetailPage: React.FC<ChantDetailPageProps> = ({ chantId: chant
     if (!('mediaSession' in navigator)) return;
     const ms = navigator.mediaSession;
     ms.metadata = new MediaMetadata({
-      title: chant?.title || 'წმიდაო ღმერთო',
-      artist: variant?.label || 'საგანძურის სკოლა',
+      title: displayTitle || 'წმიდაო ღმერთო',
+      artist: displaySubtitle || 'საგანძურის სკოლა',
       album: 'საგანძურის სკოლა',
       artwork: [{ src: '/pwa-512x512.png', sizes: '512x512', type: 'image/png' }],
     });
@@ -631,7 +644,7 @@ export const ChantDetailPage: React.FC<ChantDetailPageProps> = ({ chantId: chant
       ms.metadata = null;
       ms.playbackState = 'none';
     };
-  }, [chant?.title, variant?.label]);
+  }, [displayTitle, displaySubtitle]);
 
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;
@@ -731,13 +744,49 @@ export const ChantDetailPage: React.FC<ChantDetailPageProps> = ({ chantId: chant
   const voiceActive = [voice1Active, voice2Active, voice3Active];
   const voiceSetters = [setVoice1Active, setVoice2Active, setVoice3Active];
 
+  // MP3 download of the recording itself: the offline copy if there is one, otherwise the network
+  const [mp3MenuOpen, setMp3MenuOpen] = useState(false);
+  const [savingTrack, setSavingTrack] = useState<number | null>(null);
+  const [saveFailed, setSaveFailed] = useState(false);
+  const mp3MenuRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!mp3MenuOpen) return;
+    const close = (e: PointerEvent) => { if (!mp3MenuRef.current?.contains(e.target as Node)) setMp3MenuOpen(false); };
+    document.addEventListener('pointerdown', close);
+    return () => document.removeEventListener('pointerdown', close);
+  }, [mp3MenuOpen]);
+  const TRACK_LABELS = ['I ხმა', 'II ხმა', 'III ხმა', 'სამივე ხმა'];
+  const mp3Tracks = [3, 0, 1, 2].filter(i => activeTracks[i] && (i === 3 ? mediaItem.availableVoices.all : voiceAvailable[i]));
+  const handleSaveMp3 = async (i: number) => {
+    const url = activeTracks[i];
+    if (!url) return;
+    setMp3MenuOpen(false);
+    setSaveFailed(false);
+    setSavingTrack(i);
+    try {
+      let buf = await getAudioArrayBufferFromIdb(url);
+      if (!buf) {
+        const res = await fetch(url);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        buf = await res.arrayBuffer();
+      }
+      const versionName = variant?.version !== undefined ? variantName(variant) : displaySubtitle;
+      saveBlob(new Blob([buf], { type: 'audio/mpeg' }), `${[displayTitle, versionName, TRACK_LABELS[i]].filter(Boolean).join(' — ')}.mp3`);
+    } catch (err) {
+      console.error('MP3 download failed:', err);
+      setSaveFailed(true);
+    } finally {
+      setSavingTrack(null);
+    }
+  };
+
   const roundBtn = 'h-9 rounded-full border border-slate-200 bg-white hover:bg-amber-50 hover:border-amber-300 text-slate-600 text-[11px] font-bold flex items-center justify-center gap-0.5 transition-all cursor-pointer active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed';
 
   return (
     <div
       className={
         inline
-          ? 'w-full flex flex-col gap-3 pt-1'
+          ? 'w-full flex flex-col gap-3'
           : 'bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-5 shadow-sm flex flex-col w-full max-w-md mx-auto gap-3'
       }
     >
@@ -765,23 +814,23 @@ export const ChantDetailPage: React.FC<ChantDetailPageProps> = ({ chantId: chant
           {/* Title Details */}
           <div className="text-center space-y-0.5">
             <h2 className="text-base sm:text-lg font-black text-slate-800 tracking-tight leading-snug">
-              {chant?.title || 'წმიდაო ღმერთო'}
+              {displayTitle || 'წმიდაო ღმერთო'}
             </h2>
             <p className="text-[11px] sm:text-xs text-amber-700 font-bold flex items-center justify-center gap-1">
               <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              {variant?.label || 'გელათის სკოლა'}
+              {displaySubtitle || 'გელათის სკოლა'}
             </p>
           </div>
         </>
       )}
 
       {/* Transport: repeat · −5 · play · +5 · offline · video */}
-      <div className="flex items-center justify-center gap-2">
+      <div className="relative flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
         <button
           type="button"
           onClick={handleLoopButton}
           disabled={isLoading}
-          className={`${roundBtn} px-2.5 whitespace-nowrap ${
+          className={`${roundBtn} px-2 sm:px-2.5 whitespace-nowrap ${
             loopStage === 2
               ? '!bg-amber-500 !border-amber-500 !text-white shadow-sm'
               : loopStage === 1
@@ -796,7 +845,7 @@ export const ChantDetailPage: React.FC<ChantDetailPageProps> = ({ chantId: chant
           {loopStage === 2 && <span>A–B</span>}
         </button>
 
-        <button type="button" onClick={() => handleSkip(-SEEK_STEP)} disabled={isLoading} className={`${roundBtn} px-2.5`} aria-label={`${SEEK_STEP} წამით უკან`} title={`${SEEK_STEP} წამით უკან`}>
+        <button type="button" onClick={() => handleSkip(-SEEK_STEP)} disabled={isLoading} className={`${roundBtn} px-2 sm:px-2.5`} aria-label={`${SEEK_STEP} წამით უკან`} title={`${SEEK_STEP} წამით უკან`}>
           <RotateCcw className="w-4 h-4" />
           <span>{SEEK_STEP}</span>
         </button>
@@ -819,27 +868,51 @@ export const ChantDetailPage: React.FC<ChantDetailPageProps> = ({ chantId: chant
           )}
         </button>
 
-        <button type="button" onClick={() => handleSkip(SEEK_STEP)} disabled={isLoading} className={`${roundBtn} px-2.5`} aria-label={`${SEEK_STEP} წამით წინ`} title={`${SEEK_STEP} წამით წინ`}>
+        <button type="button" onClick={() => handleSkip(SEEK_STEP)} disabled={isLoading} className={`${roundBtn} px-2 sm:px-2.5`} aria-label={`${SEEK_STEP} წამით წინ`} title={`${SEEK_STEP} წამით წინ`}>
           <RotateCw className="w-4 h-4" />
           <span>{SEEK_STEP}</span>
         </button>
 
-        <button
-          type="button"
-          onClick={handleDownloadStems}
-          disabled={isDownloading || allCached}
-          className={`${roundBtn} w-9 ${allCached ? '!bg-emerald-50 !text-emerald-700 !border-emerald-200 disabled:!opacity-100' : ''}`}
-          title={allCached ? 'შენახულია ოფლაინ' : 'ოფლაინ ჩამოტვირთვა'}
-          aria-label={allCached ? 'შენახულია ოფლაინ' : 'ოფლაინ ჩამოტვირთვა'}
-        >
-          {isDownloading ? (
-            <RefreshCw className="w-4 h-4 animate-spin text-amber-600" />
-          ) : allCached ? (
-            <Check className="w-4 h-4 stroke-[3]" />
-          ) : (
-            <Download className="w-4 h-4" />
+        {/* one download menu: MP3 files of the recording + saving it for offline listening */}
+        <div ref={mp3MenuRef}>
+          <button
+            type="button"
+            onClick={() => { triggerHaptic(10); setMp3MenuOpen(o => !o); }}
+            disabled={!validTracks.length || savingTrack !== null}
+            className={`${roundBtn} w-9 ${allCached ? '!text-emerald-700 !border-emerald-200' : ''}`}
+            title="ჩამოტვირთვა (MP3 / ოფლაინ)"
+            aria-label="ჩამოტვირთვა"
+          >
+            {savingTrack !== null || isDownloading ? <RefreshCw className="w-4 h-4 animate-spin text-amber-600" /> : <Download className="w-4 h-4" />}
+          </button>
+          {mp3MenuOpen && (
+            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 z-30 w-60 max-w-full rounded-xl border border-amber-200 bg-white shadow-lg py-1 overflow-hidden">
+              {mp3Tracks.map(i => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => handleSaveMp3(i)}
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-amber-50 cursor-pointer"
+                >
+                  <Music2 className={`w-4 h-4 ${i === 3 ? 'text-amber-600' : 'text-slate-400'}`} /> MP3 · {TRACK_LABELS[i]}
+                </button>
+              ))}
+              {mp3Tracks.length > 0 && (
+                <p className="px-3 pt-0.5 pb-1.5 text-[10px] text-slate-400 leading-snug">ორიგინალი ჩანაწერი — სიჩქარე და ტონი არ იცვლება</p>
+              )}
+              <div className="my-1 border-t border-slate-100" />
+              <button
+                type="button"
+                onClick={() => { setMp3MenuOpen(false); handleDownloadStems(); }}
+                disabled={isDownloading || allCached}
+                className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-amber-50 cursor-pointer disabled:cursor-default disabled:hover:bg-transparent"
+              >
+                {allCached ? <Check className="w-4 h-4 text-emerald-600 stroke-[3]" /> : <CloudDownload className="w-4 h-4 text-amber-600" />}
+                {allCached ? 'შენახულია ოფლაინ' : 'ოფლაინ შენახვა (ინტერნეტის გარეშე)'}
+              </button>
+            </div>
           )}
-        </button>
+        </div>
 
         {mediaItem?.videoUrl && (
           <a
@@ -854,6 +927,10 @@ export const ChantDetailPage: React.FC<ChantDetailPageProps> = ({ chantId: chant
           </a>
         )}
       </div>
+
+      {saveFailed && (
+        <p className="text-[11px] font-semibold text-red-700 bg-red-50 border border-red-200 rounded-lg px-3 py-1.5">ჩამოტვირთვა ვერ მოხერხდა, სცადეთ თავიდან</p>
+      )}
 
       {/* Waveform seek bar: visualizer + progress in one */}
       <div className="w-full bg-white/95 border border-amber-100/90 rounded-xl px-3 pt-3 pb-1.5 shadow-2xs">
@@ -933,7 +1010,7 @@ export const ChantDetailPage: React.FC<ChantDetailPageProps> = ({ chantId: chant
       </div>
 
       {/* Speed & pitch steppers */}
-      <div className="w-full flex items-center gap-2">
+      <div className="w-full flex flex-wrap items-center gap-2">
         <Stepper
           icon={<Gauge className="w-3.5 h-3.5 text-amber-600" />}
           label="სიჩქარე"
@@ -1038,7 +1115,7 @@ export const ChantDetailPage: React.FC<ChantDetailPageProps> = ({ chantId: chant
                 <div className="border border-dashed border-amber-200 rounded-2xl p-8 bg-amber-50/30 flex flex-col items-center justify-center space-y-3">
                   <Music className="w-12 h-12 text-amber-600 stroke-[1.5]" />
                   <p className="text-xs font-black text-[#85502c]">
-                    {chant?.title || 'წმიდაო ღმერთო'} — {variant?.label || 'გელათის სკოლა'}
+                    {displayTitle || 'წმიდაო ღმერთო'} — {displaySubtitle || 'გელათის სკოლა'}
                   </p>
                   <p className="text-[11px] text-slate-500 max-w-xs leading-relaxed">
                     აქ წარმოდგენილია საგალობლის ნოტები ხმების მიხედვით. შეგიძლიათ გამოიყენოთ ოფლაინ რეჟიმში სამუშაოდ.
@@ -1047,12 +1124,14 @@ export const ChantDetailPage: React.FC<ChantDetailPageProps> = ({ chantId: chant
               )}
 
               {/* Georgian Lyrics details - Compact & Neat */}
-              <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3 text-left space-y-1">
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider">ტექსტი (Lyrics)</h4>
-                <p className="text-xs font-medium text-slate-700 leading-snug whitespace-pre-line text-center italic font-serif">
-                  {lyrics}
-                </p>
-              </div>
+              {lyrics && (
+                <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3 text-left space-y-1">
+                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider">ტექსტი (Lyrics)</h4>
+                  <p className="text-xs font-medium text-slate-700 leading-snug whitespace-pre-line text-center italic font-serif">
+                    {lyrics}
+                  </p>
+                </div>
+              )}
             </div>
 
             <button

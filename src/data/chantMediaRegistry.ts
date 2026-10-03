@@ -28,8 +28,6 @@ export interface ChantMediaItem {
   duration?: number; // seconds, shown until the audio metadata loads
 }
 
-export const DEFAULT_LYRICS = 'წმიდაო ღმერთო, წმიდაო ძლიერო,\nწმიდაო უკვდავო,\nშეგვიწყალენ ჩვენ.';
-
 export const CHANT_MEDIA_REGISTRY: Record<string, ChantMediaItem> = {
   "1": {
     "key": "1",
@@ -1303,7 +1301,7 @@ export const CHANT_MEDIA_REGISTRY: Record<string, ChantMediaItem> = {
 // Drive doesn't send CORS headers, which the player's Web Audio features (voices, pitch, waveform)
 // require. Drive audio links are therefore served through our Cloudflare Worker (see /worker).
 // The registry keeps plain Drive links; they're rewritten once here, at load time.
-const AUDIO_PROXY = 'https://sagandzuri-audio.mr-gabunia.workers.dev';
+export const AUDIO_PROXY = 'https://sagandzuri-audio.mr-gabunia.workers.dev';
 
 const toPlayableUrl = (url: string | undefined) => {
   const id = url?.match(/drive\.usercontent\.google\.com\/download\?id=([A-Za-z0-9_-]+)/)?.[1];
@@ -1318,99 +1316,45 @@ for (const item of Object.values(CHANT_MEDIA_REGISTRY)) {
   item.allVoicesUrl = toPlayableUrl(item.allVoicesUrl);
 }
 
-// Variants bound explicitly to a registry entry ("chantId|variantCode" -> registry key)
+// Which recording belongs to which variant ("chantId|variantCode" -> registry key).
+// Only variants listed here get a player; every other variant shows "no recording yet".
+// Drive folders are named "გ.ს.", so each one is bound to its chant's გ.ს. variant
+// unless the user said otherwise.
 const VARIANT_MEDIA: Record<string, string> = {
-  'chant-8|გ.ს. გამშვ': '5', // სასუფეველსა შენსა; — Drive folder 19APj6Bs6nGQIRFS3k-BzyATt0XbQ3McL
+  'chant-5|გ.ს.': '2',        // აკურთხევს სული ჩემი
+  'chant-7|გ.ს.': '3',        // მხოლოდ-შობილი
+  'chant-8|გ.ს. გამშვ': '5',  // სასუფეველსა შენსა (user: Drive folder 19APj6Bs6nGQIRFS3k-BzyATt0XbQ3McL)
+  'chant-10|გ.ს.': '6',       // მოვედით, თაყვანის-ვსცეთ
+  'chant-11|გ.ს.': '6.1',     // უფალო, აცხოვნენ
+  'chant-12|გ.ს.': '7',       // წმიდაო ღმერთო
+  'chant-14|გ.ს.': '8',       // ალილუია შემდგომად სამოციქულოსა
+  'chant-16|გ.ს.': '1',       // მრჩობლი კვერექსი
+  'chant-17|გ.ს.': '9.1',     // მიცვალებულთა კვერექსი
+  'chant-20|გ.ს.': '10',      // რომელი ქერუბიმთა
+  'chant-20|გ.ს. გამშვ': '10.1',
+  'chant-21|გ.ს.': '11',      // და ვითარცა მეუფესა
+  'chant-23|გ.ს.': '12',      // მამასა და ძესა
+  'chant-24|გ.ს.': '13',      // მრწამსი
+  'chant-25|გ.ს.': '14.2',    // წყალობა, მშვიდობა
+  'chant-27|გ.ს.': '14.1',    // გუაქვს უფლისა მიმართ
+  'chant-28|გ.ს.': '14',      // ღირს არს და მართალ
+  'chant-29|გ.ს.': '15',      // წმიდა არს
+  'chant-30|გ.ს.': '16',      // შენ გიგალობთ
+  'chant-31|გ.ს.': '18.1',    // შენდამი იხარებს
+  'chant-32|გ.ს.': '18',      // ღირს არს ჭეშმარიტად
+  'chant-33|გ.ს.': '19',      // ყოველთა და ყოვლისათვის
+  'chant-35|გ.ს.': '20',      // მამაო ჩუენო
+  'chant-37|გ.ს.': '21',      // ერთ არს
+  'chant-39|გ.ს.': '22',      // კურთხეულ არს მომავალი
+  'chant-40|გ.ს.': '23',      // ხორცი ქრისტესი
+  'chant-41|გ.ს.': '9',       // ალილუია
+  'chant-42|გ.ს.': '24',      // ნათელი ჭეშმარიტი
+  'chant-43|გ.ს.': '25',      // აღავსე პირი ჩემი
+  'chant-45|გ.ს.': '26',      // სახელითა უფლისათა
+  'chant-46|გ.ს.': '27',      // მრავალჟამიერ
 };
 
-// Helper lookup function by chant id or title or variant
-export function getChantMedia(chantId?: string, chantTitle?: string, variantCode?: string, variantName?: string): ChantMediaItem | undefined {
-  if (!chantId && !chantTitle) return undefined;
-
-  const explicitKey = VARIANT_MEDIA[`${chantId}|${variantCode}`];
-  if (explicitKey) return CHANT_MEDIA_REGISTRY[explicitKey];
-  
-  const title = (chantTitle || "").toLowerCase();
-  const vCode = (variantCode || "").toLowerCase();
-  const vName = (variantName || "").toLowerCase();
-  const isGamshv = vCode.includes("გამშვ") || vName.includes("გამშვენებული");
-
-  // 1. Specific title matches
-  if (title.includes("მრჩობლი")) return CHANT_MEDIA_REGISTRY["1"];
-  if (title.includes("აკურთხევ")) return CHANT_MEDIA_REGISTRY["2"];
-  if (title.includes("მხოლოდ")) return CHANT_MEDIA_REGISTRY["3"];
-  if (title.includes("ანტიფონ")) return CHANT_MEDIA_REGISTRY["4"];
-  if (title.includes("ნეტარებ") || title.includes("სასუფეველსა")) return CHANT_MEDIA_REGISTRY["5"];
-  if (title.includes("თაყვანის") || title.includes("მოვედით")) return CHANT_MEDIA_REGISTRY["6"];
-  if (title.includes("აცხოვნ")) return CHANT_MEDIA_REGISTRY["6.1"];
-  if (title.includes("წმიდაო") || title.includes("წმინდაო")) return CHANT_MEDIA_REGISTRY["7"];
-  if (title.includes("წარდგომა") || title.includes("წარდგომანი")) return CHANT_MEDIA_REGISTRY["8.0"];
-  if (title.includes("სამოციქულო") && title.includes("ალილუია")) return CHANT_MEDIA_REGISTRY["8"];
-  if (title.includes("ქერუბიმ")) {
-    return isGamshv ? CHANT_MEDIA_REGISTRY["10.1"] : CHANT_MEDIA_REGISTRY["10"];
-  }
-  if (title.includes("ვითარცა")) return CHANT_MEDIA_REGISTRY["11"];
-  if (title.includes("მამასა და ძესა")) return CHANT_MEDIA_REGISTRY["12"];
-  if (title.includes("მრწამს")) return CHANT_MEDIA_REGISTRY["13"];
-  if (title.includes("წყალობა") || title.includes("ქებისა")) return CHANT_MEDIA_REGISTRY["14.2"];
-  if (title.includes("გუაქვს") || title.includes("გვაქვს")) return CHANT_MEDIA_REGISTRY["14.1"];
-  if (title.includes("ღირს არს და მართალ")) return CHANT_MEDIA_REGISTRY["14"];
-  if (title.includes("წმიდა არს") || title.includes("წმინდა არს")) return CHANT_MEDIA_REGISTRY["15"];
-  if (title.includes("შენ გიგალობთ")) return CHANT_MEDIA_REGISTRY["16"];
-  if (title.includes("შენდამი იხარებს")) return CHANT_MEDIA_REGISTRY["18.1"];
-  if (title.includes("ღირს არს ჭეშმარიტად") || title.includes("ღირს არსი")) return CHANT_MEDIA_REGISTRY["18"];
-  if (title.includes("ყოველთა და ყოვლისათვის")) return CHANT_MEDIA_REGISTRY["19"];
-  if (title.includes("მამაო ჩუენო") || title.includes("მამაო ჩვენო")) return CHANT_MEDIA_REGISTRY["20"];
-  if (title.includes("ერთ არს")) return CHANT_MEDIA_REGISTRY["21"];
-  if (title.includes("კურთხეულ არს მომავალი")) return CHANT_MEDIA_REGISTRY["22"];
-  if (title.includes("ხორცი ქრისტესი")) return CHANT_MEDIA_REGISTRY["23"];
-  if (title.includes("ნათელი ჭეშმარიტი")) return CHANT_MEDIA_REGISTRY["24"];
-  if (title.includes("აღავსე პირი ჩემი")) return CHANT_MEDIA_REGISTRY["25"];
-  if (title.includes("სახელითა უფლისათა") || title.includes("იყავნ სახელი")) return CHANT_MEDIA_REGISTRY["26"];
-  if (title.includes("მრავალჟამიერ") || title.includes("მრავლჟამიერი")) return CHANT_MEDIA_REGISTRY["27"];
-  if (title.includes("მიცვალებულ")) return CHANT_MEDIA_REGISTRY["9.1"];
-  if (title.includes("სულისაცა") && !title.includes("მამასა")) return CHANT_MEDIA_REGISTRY["1.1"];
-  if (title.includes("ალილუია")) return CHANT_MEDIA_REGISTRY["9"];
-
-  // 2. By chant id index fallback
-  const chantIdMap: Record<string, string> = {
-    "chant-16": "1",
-    "chant-5": "2",
-    "chant-7": "3",
-    "chant-8": "5",
-    "chant-10": "6",
-    "chant-11": "6.1",
-    "chant-12": "7",
-    "chant-13": "8.0",
-    "chant-14": "8",
-    "chant-15": "8.1",
-    "chant-17": "9.1",
-    "chant-20": isGamshv ? "10.1" : "10",
-    "chant-21": "11",
-    "chant-23": "12",
-    "chant-24": "13",
-    "chant-25": "14.2",
-    "chant-27": "14.1",
-    "chant-28": "14",
-    "chant-29": "15",
-    "chant-30": "16",
-    "chant-31": "18.1",
-    "chant-32": "18",
-    "chant-33": "19",
-    "chant-35": "20",
-    "chant-37": "21",
-    "chant-39": "22",
-    "chant-40": "23",
-    "chant-41": "9",
-    "chant-42": "24",
-    "chant-43": "25",
-    "chant-45": "26",
-    "chant-46": "27"
-  };
-
-  if (chantId && chantIdMap[chantId]) {
-    return CHANT_MEDIA_REGISTRY[chantIdMap[chantId]];
-  }
-
-  return undefined;
+export function getChantMedia(chantId?: string, variantCode?: string): ChantMediaItem | undefined {
+  const key = VARIANT_MEDIA[`${chantId}|${variantCode}`];
+  return key ? CHANT_MEDIA_REGISTRY[key] : undefined;
 }

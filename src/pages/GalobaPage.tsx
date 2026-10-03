@@ -1,10 +1,29 @@
 import React, { useMemo, useCallback } from 'react';
 import { useNavigation, useChants, ServiceType } from '../context';
-import { TSIRVA_CHANTS, ChantItem, ChantVariant } from '../data';
+import { TSIRVA_CHANTS, MWUKHRI_CHANTS, CISKARI_CHANTS, SADGHESASWAULO_CHANTS, MARXVANI_CHANTS, ZATIKI_CHANTS, ChantItem, ChantVariant } from '../data';
 import { ServiceTabs, ChantSearchBar, ChantAccordionItem } from './galoba';
 import { triggerHaptic } from '../utils/haptics';
 import { matchesSearch } from '../utils/searchUtils';
 import { ArrowLeft, Music } from 'lucide-react';
+import pantocrator from '../assets/images/pantocrator.webp';
+
+// Services whose chant lists exist; the rest show "coming soon"
+const SERVICE_CHANTS: Partial<Record<NonNullable<ServiceType>, ChantItem[]>> = {
+  'წირვა': TSIRVA_CHANTS,
+  'მწუხრი': MWUKHRI_CHANTS,
+  'ცისკარი': CISKARI_CHANTS,
+  'სადღესასწაულო': SADGHESASWAULO_CHANTS,
+  'მარხვანი': MARXVANI_CHANTS,
+  'ზატიკი': ZATIKI_CHANTS,
+};
+const SERVICE_TITLES: Partial<Record<NonNullable<ServiceType>, string>> = {
+  'წირვა': 'წირვის საგალობლები',
+  'მწუხრი': 'მწუხრის საგალობლები',
+  'ცისკარი': 'ცისკრის საგალობლები',
+  'სადღესასწაულო': 'სადღესასწაულო საგალობლები',
+  'მარხვანი': 'მარხვანის საგალობლები',
+  'ზატიკი': 'ზატიკის საგალობლები',
+};
 
 export const GalobaPage: React.FC = () => {
   const {
@@ -41,11 +60,14 @@ export const GalobaPage: React.FC = () => {
     [toggleVariantSelection]
   );
 
+  const serviceChants = selectedService ? SERVICE_CHANTS[selectedService] : undefined;
+
   // Unconditionally compute filtered chants at top level (adheres strictly to React Rules of Hooks)
   const filteredChants = useMemo(() => {
+    const chants = serviceChants ?? [];
     const search = (chantSearch || '').trim();
-    if (!search) return TSIRVA_CHANTS;
-    return TSIRVA_CHANTS.filter((chant) => {
+    if (!search) return chants;
+    return chants.filter((chant) => {
       if (!chant) return false;
       if (matchesSearch(chant.title || '', search)) return true;
       return (
@@ -58,26 +80,51 @@ export const GalobaPage: React.FC = () => {
         ) || false
       );
     });
-  }, [chantSearch]);
+  }, [chantSearch, serviceChants]);
 
   // 1. Service Selection Menu (when no specific service is selected)
   if (!selectedService) {
     return <ServiceTabs onSelectService={handleSelectService} />;
   }
 
-  // 2. წირვა Chants View with 47 chants and unfolding variants
-  if (selectedService === 'წირვა') {
+  // 2. Chant list of the service, with unfolding variants
+  if (serviceChants) {
     return (
       <div className="w-full my-2 px-1 flex flex-col gap-3.5">
+        {/* Christ the Saviour at the head of the list: medallion on a soft golden halo + ornament line */}
+        <div className="flex flex-col items-center pt-1">
+          <div className="relative w-32 sm:w-40">
+            {/* the halo sits on the circle (61% down), not on the crown */}
+            <div
+              aria-hidden
+              className="absolute left-1/2 top-[61%] -translate-x-1/2 -translate-y-1/2 w-[115%] aspect-square rounded-full bg-amber-300/35 blur-2xl"
+            />
+            <img
+              src={pantocrator}
+              alt="მაცხოვარი"
+              width={420}
+              height={481}
+              draggable={false}
+              className="relative block w-full h-auto select-none drop-shadow-[0_8px_16px_rgba(133,80,44,0.28)]"
+            />
+          </div>
+          <div aria-hidden className="mt-2.5 flex items-center gap-2">
+            <span className="h-px w-16 sm:w-28 bg-gradient-to-r from-transparent to-amber-500/60" />
+            <span className="w-1.5 h-1.5 rotate-45 bg-amber-500/70" />
+            <span className="h-px w-16 sm:w-28 bg-gradient-to-l from-transparent to-amber-500/60" />
+          </div>
+        </div>
+
         {/* Header Search Controls Bar */}
         <ChantSearchBar
+          title={SERVICE_TITLES[selectedService] ?? 'საგალობლები'}
           searchQuery={chantSearch || ''}
           onSearchChange={setChantSearch}
           resultCount={filteredChants.length}
         />
 
         {/* List of Chants Accordions */}
-        <div className="space-y-2.5">
+        <div className="space-y-2">
           {filteredChants.map((chant: ChantItem) => {
             const isExpanded = expandedChantId === chant.id;
             return (

@@ -2,12 +2,14 @@ import React from 'react';
 import { Search, X } from 'lucide-react';
 
 interface ChantSearchBarProps {
+  title: string;
   searchQuery: string;
   onSearchChange: (val: string) => void;
   resultCount?: number;
 }
 
 export const ChantSearchBar: React.FC<ChantSearchBarProps> = ({
+  title,
   searchQuery,
   onSearchChange,
 }) => {
@@ -16,7 +18,7 @@ export const ChantSearchBar: React.FC<ChantSearchBarProps> = ({
       <div className="flex items-center gap-2.5">
         <span className="w-2.5 h-2.5 rounded-full bg-amber-500/80 shadow-xs"></span>
         <h2 className="font-bold text-slate-800 text-lg sm:text-xl tracking-tight">
-          წირვის საგალობლები
+          {title}
         </h2>
       </div>
 

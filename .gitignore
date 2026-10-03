@@ -11,3 +11,4 @@ __pycache__/
 *.pyc
 .wrangler/
 .claude/settings.local.json
+desktop.ini

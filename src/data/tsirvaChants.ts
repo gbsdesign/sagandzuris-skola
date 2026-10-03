@@ -1,10 +1,52 @@
+import { BookNums, bookNumLabel, bookPage, bookSource, numsOf } from './gelatiBookIndex';
+import { KK_BOOK, kkLiturgySection, kkPage } from './kartliKakhetiIndex';
+import { V5_BOOK, v5Page, v5Source } from './liturgyVol5Index';
+
 export interface ChantVariant {
   id: string;
   code: string;
   label: string;
   chantName: string;
   fullTitle: string;
+  version?: string;    // book chants: version name (e.g. "ჴმაჲ ბ"; may be empty), listed instead of the school pair
+  page?: number;       // book chants: page in the book
+  bookNums?: number[]; // book chants: chant numbers in the book (sheet music + synthesizer)
+  source?: string;     // book chants: manuscript (Gelati: ხუნდაძე / კერესელიძე / ქორიძე), liturgy section (ქართლ-კახური: სადა / გამშვენებული)
+                       // or opening words (feasts, vol. II), kind of chant (Lent and Pascha, vol. IV)
+  book?: string;       // book chants: sheet-music folder; unset = Gelati school book (vol. I), 'feast' = Gelati feasts (vol. II), 'kk' = Kartli-Kakheti (vol. III),
+                       // 'triod' = Gelati Lent and Pascha (vol. IV), 'v5' = Gelati + Shemokmedi liturgy (vol. V),
+                       // 'karb' = East Georgian school, Karbelashvili mode: feasts, Lent and Pascha (vol. VII)
 }
+
+// Name of a book version everywhere in the app: book number + version, e.g. "145 ხუნდაძე"
+export const variantName = (v: Pick<ChantVariant, 'bookNums' | 'version'>) =>
+  [bookNumLabel(v.bookNums), v.version].filter(Boolean).join(' ');
+
+// "გვ. 205" (+ the manuscript when the name does not already say it)
+export const variantSublabel = (v: ChantVariant) =>
+  v.page ? `გვ. ${v.page}${v.source && !v.version?.includes(v.source) ? ` · ${v.source}` : ''}` : undefined;
+
+// "გ.ს. ამინ (1, გვ. 3)" — used by bookmarks and search
+export const bookFullTitle = (title: string, name: string, page?: number, school = 'გ.ს.') =>
+  `${school} ${title} (${[name, page && `გვ. ${page}`].filter(Boolean).join(', ')})`;
+
+// A version printed in the Kartli-Kakheti book (vol. III); an empty label is filled in from the source (liturgy section)
+export const kkVariant = (id: string, code: string, title: string, label: string, nums: number[], source?: string): ChantVariant => {
+  const version = label || source || '';
+  const page = kkPage(nums[0]);
+  return {
+    id,
+    code,
+    label: 'ქართლ-კახური',
+    chantName: title,
+    fullTitle: bookFullTitle(title, variantName({ bookNums: nums, version }), page, 'ქ.კ.'),
+    version,
+    page,
+    bookNums: nums,
+    source,
+    book: KK_BOOK,
+  };
+};
 
 export interface ChantItem {
   id: string;
@@ -72,15 +114,303 @@ const chantTitles: string[] = [
   'ისპოლა',
 ];
 
-export const TSIRVA_CHANTS: ChantItem[] = chantTitles.map((title, i) => ({
+// Gelati school row = the versions printed in the book (chant numbers 145-255), in chantTitles order.
+// [label, numbers, main]: "main" keeps the old გ.ს. id/code, so its Drive recording stays bound
+// (default: the first version). An empty label is filled in from the manuscript name.
+type BookVersion = [label: string, nums: BookNums, main?: true];
+const MODES = ['ა', 'ბ', 'გ', 'დ', 'ე', 'ვ', 'ზ', 'ჱ'];
+const eightModes = (first: number): BookVersion[] => MODES.map((m, i) => [`ჴმაჲ ${m}`, first + i]);
+
+const TSIRVA_BOOK: BookVersion[][] = [
+  [['', 145]],
+  [['', 146]],
+  [['', 147]],
+  [['ამინ', 148], ['დიდი კუერექსი', [149, 152]]],
+  [['', 153]],
+  [['', [154, 156]]],
+  [['', 157], ['', 158, true]],             // მხოლოდ-შობილი: the recording is №158 (user)
+  [['', 159]],
+  [['', [160, 161]]],
+  [['', 162], ['', 163]],
+  [['', 164]],
+  [['', 165], ['', 166], ['', 167, true]], // წმიდაო ღმერთო: the recording is №167 (user)
+  eightModes(168),
+  [...eightModes(176), ['ალილუიაჲ', 184]],
+  [['და სულისაცა', [185, 186]], ['დიდება შენდა, უფალო', [187, 188]]],
+  [['', [189, 190]]],
+  [['', [191, 193]]],
+  [['', [194, 198]]],
+  [['უფალო, შეგჳწყალენ', 199], ['ამინ', 200]],
+  [['სადა', 201], ['გამშვენებული', 202]],
+  [['', 203], ['', 204]],
+  [['', [205, 207]]],
+  [['და სულისაცა', [208, 209]], ['მამასა და ძესა', 210, true], ['მამასა და ძესა', 211]],
+  [['', 212]],
+  [['', [213, 214]]],
+  [['', 215]],
+  [['', 216], ['', 217]],
+  [['', 218], ['', 219]],
+  [['', 220], ['', 221]],
+  [['ამინ, ამინ', 222], ['შენ გიგალობთ', 223, true], ['შენ გიგალობთ', 224]],
+  [['ჴმაჲ ჱ', 225]],
+  [['', 226], ['', 227]],
+  [['', 228], ['', 229]],
+  [['', [230, 232]]],
+  [['', 233], ['', 234]],
+  [['', 235]],
+  [['', 236]],
+  [['', 237]],
+  [['', 238]],
+  [['', 239], ['', 240]],
+  [['', 241]],
+  [['', 242]],
+  [['', 243]],
+  [['', [244, 246]]],
+  [['სახელითა უფლისათა', 247], ['ამინ', 248], ['იყავნ სახელი უფლისა', 249, true], ['დიდებაჲ, აწ და', 250]],
+  [['', 251], ['', 252], ['', 253]],
+  [['', 254], ['', 255]],
+];
+
+// ქართლ-კახური row = the versions printed in the Kartli-Kakheti book (vol. III, chant numbers 140-240), in chantTitles order.
+// The first ornate version (140-198) takes the old "ქ.კ. გამშვ" slot, the first plain one (199-240) the "ქ.კ." slot;
+// chants with no version there keep the empty pair.
+type KKVersion = [label: string, nums: BookNums];
+const TSIRVA_KK: KKVersion[][] = [
+  [['', 140]],
+  [['', 141]],
+  [['ხმა ჱ', 142]],
+  [['ამინ', 145], ['დიდი კვერექსი', [146, 150]], ['', [199, 201]]],
+  [['', 151], ['', [202, 203]]],
+  [['', [204, 206]]],
+  [['', [152, 153]], ['', [154, 155]], ['', [207, 208]]],
+  [['ავაჯით', 156]],
+  [['', [157, 158]], ['', 209]],
+  [['', 159], ['', 210]],
+  [['', [160, 161]], ['', [211, 212]]],
+  [['', 162], ['ხმა ბ', 163], ['რაოდენთა ქრისტეს მიერ', 164], ['', 213]],
+  [['', 165], ['', 214]],
+  [['', 166], ['', 215]],
+  [['და სულისაცა', 167], ['დიდება შენდა, უფალო', 168], ['და სულისაცა', 216], ['დიდება შენდა, უფალო', 217]],
+  [['', 169], ['', 218]],
+  [],
+  [],
+  [['გრძელი', 221], ['', 222]],
+  [['', 170], ['', 219]],
+  [['', [171, 172]], ['', 220]],
+  [['', [223, 225]]],
+  [['და სულისაცა', 173], ['მამასა და ძესა', 174], ['მამასა და ძესა', 226]],
+  [['', 175], ['', 227]],
+  [['', 176], ['', 228]],
+  [['', 177], ['', 229]],
+  [['', 178], ['', 230]],
+  [['', 179], ['', 231]],
+  [['', 180], ['', 232]],
+  [['ამინ, ამინ', 181], ['შენ გიგალობთ', 182], ['შენ გიგალობთ', 233]],
+  [['ხმა ჱ', 183]],
+  [['', 184], ['', 234]],
+  [['', 185], ['', 235]],
+  [['', [186, 187]]],
+  [['', 188], ['', 236]],
+  [],
+  [['', 189], ['', 237]],
+  [['', 190], ['', 238]],
+  [['', 191]],
+  [['', 192]],
+  [],
+  [['', 193], ['', 239]],
+  [['', 194], ['', 240]],
+  [],
+  [['სახელითა უფლისათა', 195], ['ამინ. იყავნ სახელი უფლისა', 196], ['დიდება, აწ და', 197]],
+  [['', 198]],
+  [['', 143], ['', 144]],
+];
+
+const kkVariants = (n: number, title: string): ChantVariant[] => {
+  const taken = new Set<string>();
+  return TSIRVA_KK[n - 1].map(([label, n0]) => {
+    const nums = numsOf(n0);
+    const section = kkLiturgySection(nums[0]);
+    const slot = section === 'სადა' ? [`v-${n}-3`, 'ქ.კ.'] : [`v-${n}-4`, 'ქ.კ. გამშვ'];
+    const [id, code] = taken.has(slot[0]) ? [`v-${n}-k${nums[0]}`, `ქ.კ. №${nums[0]}`] : slot;
+    taken.add(id);
+    return kkVariant(id, code, title, label, nums, section);
+  });
+};
+
+// Liturgy book vol. V (გამშვენებული კილო), in chantTitles order: Gelati school (numbers 1-119, ქორიძის პარტიტურა)
+// and Shemokmedi school (120-142). Gelati versions are added to the Gelati row next to vol. I; Shemokmedi versions
+// replace the empty "შ.ს." pair (the first takes the "შ.ს. გამშვ" slot). An empty label is filled in from the source.
+const TSIRVA_V5_GS: KKVersion[][] = [
+  [['', 2]],
+  [['', 3]],
+  [['', 5]],
+  [['ამინ', 7], ['ამინ', 8], ['დიდი კვერექსი', [9, 13]]],
+  [['', 14]],
+  [['', [15, 17]], ['', [19, 21]]],
+  [['', 18]],
+  [['', 22]],
+  [['', 23]],
+  [['', 24], ['', 25], ['', 27], ['', 28]],
+  [['', 29]],
+  [['სამღვდელთმთავრო', 34], ['', 35], ['', 36], ['', 39]],
+  [['ხმა ვ', 37]],
+  [['', 38], ['', 40]],
+  [['და სულისაცა', 41], ['და სულისაცა', 42], ['დიდება შენდა, უფალო', 43], ['დიდება შენდა, უფალო', 44], ['დიდება შენდა, უფალო', 45]],
+  [['', [47, 53]]],
+  [['', [54, 56]]],
+  [['', [57, 61]]],
+  [],
+  [['სამღვდელთმთავრო', 62], ['ჭრელი', 63], ['სამღვდელთმთავრო', 65], ['', 67], ['ხმა ჱ', 69]],
+  [['', 64], ['', 66], ['', 68], ['ამინ. და ვითარცა', 70]],
+  [['', [72, 76]]],
+  [['და სულისაცა', 77], ['მამასა და ძესა', 78], ['და სულისაცა', 79], ['მამასა და ძესა', 80]],
+  [['', 81]],
+  [['', 82]],
+  [['', 83]],
+  [['', 84]],
+  [['', 85], ['', 86]],
+  [['', 87]],
+  [['ამინ. ამინ', 88], ['შენ გიგალობთ', 89], ['შენ გიგალობთ', 90]],
+  [],
+  [['', 91]],
+  [['', 92], ['', 93]],
+  [],
+  [['', 94], ['', 95]],
+  [['', 96]],
+  [['', 97]],
+  [['', 98], ['', 100]],
+  [['', 102]],
+  [['', 103]],
+  [['', 101], ['', 104]],
+  [['', 105], ['ხმა ა', 106]],
+  [['', 107], ['ხმა ა', 108]],
+  [['', [109, 111]]],
+  [['სახელითა უფლისათა', 112], ['იყავნ სახელი უფლისა', 113], ['იყავნ სახელი უფლისა', 114], ['დიდება, აწ და', 115]],
+  [['', 30], ['', 31], ['', 32], ['ამინ', 33], ['უწმიდესი და უნეტარესი', 117], ['უწმიდესი და უნეტარესი', 118]],
+  [['', 1], ['', 26], ['', 46], ['', 71], ['', 116]],
+];
+const TSIRVA_V5_SH: Record<number, KKVersion[]> = {
+  7: [['', 120]],
+  10: [['', 121]],
+  12: [['', 122], ['', 123]],
+  20: [['', 124]],
+  21: [['', 125]],
+  23: [['მამასა და ძესა', 126]],
+  24: [['', 127]],
+  25: [['', 128]],
+  26: [['', 129]],
+  27: [['', 130]],
+  28: [['', 131]],
+  29: [['', 132]],
+  30: [['', 133]],
+  32: [['', 134]],
+  33: [['', 135]],
+  35: [['', 136], ['', 137]],
+  36: [['', 138], ['ამინ. ამინ', 139]],
+  37: [['', 140]],
+  40: [['', 141]],
+  45: [['დიდება, აწ და', 142]],
+};
+
+const v5Variant = (id: string, code: string, title: string, label: string, n0: BookNums): ChantVariant => {
+  const nums = numsOf(n0);
+  const gelati = nums[0] <= 119;
+  const source = gelati ? 'V ტომი' : v5Source(nums[0]);
+  const version = label || source;
+  const page = v5Page(nums[0]);
+  return {
+    id,
+    code,
+    label: gelati ? 'გელათის სკოლა' : 'შემოქმედის სკოლა',
+    chantName: title,
+    fullTitle: bookFullTitle(title, variantName({ bookNums: nums, version }), page, gelati ? 'გ.ს.' : 'შ.ს.'),
+    version,
+    page,
+    bookNums: nums,
+    source,
+    book: V5_BOOK,
+  };
+};
+
+const v5GelatiVariants = (n: number, title: string) =>
+  TSIRVA_V5_GS[n - 1].map(([label, n0]) => {
+    const first = numsOf(n0)[0];
+    return v5Variant(`v-${n}-v${first}`, `გ.ს. V №${first}`, title, label, n0);
+  });
+
+const v5ShemokmediVariants = (n: number, title: string) =>
+  (TSIRVA_V5_SH[n] || []).map(([label, n0], k) => {
+    const first = numsOf(n0)[0];
+    const [id, code] = k === 0 ? [`v-${n}-6`, 'შ.ს. გამშვ'] : [`v-${n}-s${first}`, `შ.ს. №${first}`];
+    return v5Variant(id, code, title, label, n0);
+  });
+
+// Chants printed only in vol. V (Gelati): own stable ids, inserted after the chant (chantTitles number) they follow
+const V5_ONLY: { after: number; num: number; title: string }[] = [
+  { after: 2, num: 4, title: 'ულხინე' },
+  { after: 3, num: 6, title: 'მღვდელთა ხარ ბრწყინვალე' },
+  { after: 38, num: 99, title: 'მზისა შემოქმედი (აღდგომის იკოსი)' },
+  { after: 47, num: 119, title: 'პირისა შენისა მადლი (ოქროპირის ტროპარი)' },
+];
+
+// Chants whose "გ.ს. გამშვ" slot has its own recording that is not one of the book versions
+const KEEP_ORNATE_SLOT = new Set([8]);
+
+const gelatiVariants = (n: number, title: string): ChantVariant[] => {
+  const versions = TSIRVA_BOOK[n - 1];
+  const mainIdx = Math.max(0, versions.findIndex(v => v[2]));
+  const list: ChantVariant[] = versions.map(([label, n0], k) => {
+    const nums = numsOf(n0);
+    const source = bookSource(nums);
+    // unlabelled versions are named after their manuscript; the book number tells them apart
+    const version = label || source || '';
+    const page = bookPage(nums[0]);
+    const ornate = label === 'გამშვენებული';
+    const [id, code] = k === mainIdx ? [`v-${n}-1`, 'გ.ს.'] : ornate ? [`v-${n}-2`, 'გ.ს. გამშვ'] : [`v-${n}-g${k + 1}`, `გ.ს. №${nums[0]}`];
+    return {
+      id,
+      code,
+      label: 'გელათის სკოლა',
+      chantName: title,
+      fullTitle: bookFullTitle(title, variantName({ bookNums: nums, version }), page),
+      version,
+      page,
+      bookNums: nums,
+      source,
+    };
+  });
+  if (KEEP_ORNATE_SLOT.has(n) && !list.some(v => v.id === `v-${n}-2`)) {
+    list.push({ id: `v-${n}-2`, code: 'გ.ს. გამშვ', label: variantTemplates[1].label, chantName: title, fullTitle: `გ.ს. გამშვ ${title}`, version: 'გამშვენებული' });
+  }
+  return list;
+};
+
+const liturgyChants: ChantItem[] = chantTitles.map((title, i) => ({
   id: `chant-${i + 1}`,
   index: i + 1,
   title,
-  variants: variantTemplates.map((vt, vIndex) => ({
-    id: `v-${i + 1}-${vIndex + 1}`,
-    code: vt.code,
-    label: vt.label,
-    chantName: title,
-    fullTitle: `${vt.code} ${title}`,
-  })),
+  variants: [
+    ...gelatiVariants(i + 1, title),
+    ...v5GelatiVariants(i + 1, title),
+    ...kkVariants(i + 1, title),
+    ...v5ShemokmediVariants(i + 1, title),
+    ...variantTemplates.slice(2).map((vt, k) => ({
+      id: `v-${i + 1}-${k + 3}`,
+      code: vt.code,
+      label: vt.label,
+      chantName: title,
+      fullTitle: `${vt.code} ${title}`,
+    })).filter(vt => !(vt.code.startsWith('ქ.კ.') && TSIRVA_KK[i].length) // book versions replace the empty pair
+      && !(vt.code.startsWith('შ.ს.') && TSIRVA_V5_SH[i + 1])),
+  ],
 }));
+
+export const TSIRVA_CHANTS: ChantItem[] = liturgyChants.flatMap(item => [
+  item,
+  ...V5_ONLY.filter(o => o.after === item.index).map(o => ({
+    id: `chant-v5-${o.num}`,
+    index: item.index,
+    title: o.title,
+    variants: [v5Variant(`v-v5-${o.num}`, `გ.ს. V №${o.num}`, o.title, '', o.num)],
+  })),
+]);

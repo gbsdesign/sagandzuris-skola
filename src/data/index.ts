@@ -1,4 +1,7 @@
 export * from './tsirvaChants';
+export * from './gelatiBookChants';
+export * from './feastBookChants';
+export * from './triodionBookChants';
 export * from './songsData';
 export * from './mtkmeliData';
 export * from './instrumentsData';

@@ -1,5 +1,22 @@
 @import "tailwindcss";
 
+/* Synthesizer accent: a muted dark lilac, kept apart from the amber recording player */
+@theme {
+  --color-dusk-50: #f7f5f9;
+  --color-dusk-100: #efeaf3;
+  --color-dusk-200: #ddd3e6;
+  --color-dusk-300: #c3b4d1;
+  --color-dusk-400: #a28eb5;
+  --color-dusk-500: #846d99;
+  --color-dusk-600: #6c5781;
+  --color-dusk-700: #5a4869;
+  --color-dusk-800: #4a3c57;
+  --color-dusk-900: #3c3146;
+
+  /* Georgian serif for headings (home page) */
+  --font-serif-ge: "Noto Serif Georgian", Georgia, serif;
+}
+
 /* Refined custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
