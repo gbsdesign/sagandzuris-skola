@@ -1,6 +1,8 @@
 import { BookNums, bookNumLabel, bookPage, bookSource, numsOf } from './gelatiBookIndex';
 import { KK_BOOK, kkLiturgySection, kkPage } from './kartliKakhetiIndex';
 import { V5_BOOK, v5Page, v5Source } from './liturgyVol5Index';
+import { V9_BOOK, v9Page, v9Source } from './liturgyVol9Index';
+import { withPataravaLiturgy } from './pataravaBookChants';
 
 export interface ChantVariant {
   id: string;
@@ -15,7 +17,9 @@ export interface ChantVariant {
                        // or opening words (feasts, vol. II), kind of chant (Lent and Pascha, vol. IV)
   book?: string;       // book chants: sheet-music folder; unset = Gelati school book (vol. I), 'feast' = Gelati feasts (vol. II), 'kk' = Kartli-Kakheti (vol. III),
                        // 'triod' = Gelati Lent and Pascha (vol. IV), 'v5' = Gelati + Shemokmedi liturgy (vol. V),
-                       // 'karb' = East Georgian school, Karbelashvili mode: feasts, Lent and Pascha (vol. VII)
+                       // 'karb' = East Georgian school, Karbelashvili mode: feasts, Lent and Pascha (vol. VII),
+                       // 'pat' = Shemokmedi school as handed down by Dimitri Patarava (2003),
+                       // 'v9' = Gelati liturgy in the authentic mode, plain chants for children, Sunday troparia (vol. IX)
 }
 
 // Name of a book version everywhere in the app: book number + version, e.g. "145 ხუნდაძე"
@@ -345,6 +349,84 @@ const v5ShemokmediVariants = (n: number, title: string) =>
     return v5Variant(id, code, title, label, n0);
   });
 
+// Gelati school book vol. IX (2023), in chantTitles order: the liturgy in the authentic mode (numbers 1-57) and the
+// plain chants for children (58-77). Added to the Gelati row after vol. V; an empty label is filled in from the section.
+const TSIRVA_V9: KKVersion[][] = [
+  [],
+  [],
+  [],
+  [['ამინ', 1], ['დიდი კვერექსი', [2, 3]]],
+  [['', 4], ['', 58]],
+  [['', [5, 7]], ['', [9, 11]]],
+  [['', 8], ['', 59]],
+  [['', 12], ['', 60]],
+  [['', 13]],
+  [['', 14], ['', 61]],
+  [['', 15]],
+  [['ამინ', 16], ['', 17], ['', 62], ['', 63]],
+  [],
+  [['', 18]],
+  [['და სულისაცა', 19], ['დიდება შენდა, უფალო', 20]],
+  [['უფალო, შეგვიწყალენ', 21], ['', [22, 23]]],
+  [['', [24, 26]]],
+  [['', 27]],
+  [['უფალო, შეგვიწყალენ', 28], ['ამინ', 29]],
+  [['', 30], ['', 64]],
+  [['', 31], ['', 65]],
+  [],
+  [['და სულისაცა', 32], ['მამასა და ძესა', 33]],
+  [['', 34]],
+  [['', 35]],
+  [],
+  [['', 36]],
+  [['', 37], ['', 66]],
+  [['', 38], ['', 67]],
+  [['ამინ', 39], ['შენ გიგალობთ', 40], ['შენ გიგალობთ', 68]],
+  [],
+  [['', 41], ['', 69]],
+  [['', 42], ['', 70]],
+  [],
+  [['', 43], ['', 73]],
+  [['და სულისაცა', 71], ['შენ, უფალო', 72]],
+  [['', 44], ['', 74]],
+  [],
+  [['', 46], ['', 76]],
+  [],
+  [['', 45], ['', 75]],
+  [['', 47]],
+  [['', 48]],
+  [['', [49, 52]]],
+  [['სახელითა უფლისათა', 53], ['უფალო, შეგვიწყალენ', 54], ['იყავნ სახელი უფლისა', 55], ['დიდება, აწ და', 56], ['იყავნ სახელი უფლისა', 77]],
+  [],
+  [['', 57]],
+];
+
+// A version printed in vol. IX (also used by the ცისკარი troparia of the eight modes)
+export const v9Variant = (id: string, code: string, title: string, label: string, n0: BookNums): ChantVariant => {
+  const nums = numsOf(n0);
+  const source = v9Source(nums[0]);
+  const version = label || source;
+  const page = v9Page(nums[0]);
+  return {
+    id,
+    code,
+    label: 'გელათის სკოლა',
+    chantName: title,
+    fullTitle: bookFullTitle(title, variantName({ bookNums: nums, version }), page),
+    version,
+    page,
+    bookNums: nums,
+    source,
+    book: V9_BOOK,
+  };
+};
+
+const v9Variants = (n: number, title: string) =>
+  TSIRVA_V9[n - 1].map(([label, n0]) => {
+    const first = numsOf(n0)[0];
+    return v9Variant(`v-${n}-x${first}`, `გ.ს. IX №${first}`, title, label, n0);
+  });
+
 // Chants printed only in vol. V (Gelati): own stable ids, inserted after the chant (chantTitles number) they follow
 const V5_ONLY: { after: number; num: number; title: string }[] = [
   { after: 2, num: 4, title: 'ულხინე' },
@@ -392,6 +474,7 @@ const liturgyChants: ChantItem[] = chantTitles.map((title, i) => ({
   variants: [
     ...gelatiVariants(i + 1, title),
     ...v5GelatiVariants(i + 1, title),
+    ...v9Variants(i + 1, title),
     ...kkVariants(i + 1, title),
     ...v5ShemokmediVariants(i + 1, title),
     ...variantTemplates.slice(2).map((vt, k) => ({
@@ -405,7 +488,8 @@ const liturgyChants: ChantItem[] = chantTitles.map((title, i) => ({
   ],
 }));
 
-export const TSIRVA_CHANTS: ChantItem[] = liturgyChants.flatMap(item => [
+// the Patarava book (Shemokmedi school, 2003) adds its litany and ისპოლა as the შ.ს. row
+export const TSIRVA_CHANTS: ChantItem[] = withPataravaLiturgy(liturgyChants).flatMap(item => [
   item,
   ...V5_ONLY.filter(o => o.after === item.index).map(o => ({
     id: `chant-v5-${o.num}`,

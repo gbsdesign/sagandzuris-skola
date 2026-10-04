@@ -1,5 +1,6 @@
 import { ChantItem, variantName } from './tsirvaChants';
 import { withKarbelaantFeasts } from './karbelaantBookChants';
+import { withPataravaFeasts } from './pataravaBookChants';
 
 // Feast-day chants of the Gelati school book, vol. II ("ქართული გალობა" II ტომი: the twelve great feasts
 // and fixed feasts, in calendar order from the church New Year). Read from the PDF by reading every heading;
@@ -114,7 +115,7 @@ const FEASTS: Feast[] = [
 
 // The opening words (or a remark such as "წმიდაო ღმერთოს მაგიერ") go where the manuscript name of vol. I goes:
 // under the button and in the synthesizer header; the Karbelashvili-mode chants of vol. VII follow as a ქართლ-კახური row
-export const SADGHESASWAULO_CHANTS: ChantItem[] = withKarbelaantFeasts(FEASTS.map(([title, chants], i) => ({
+export const SADGHESASWAULO_CHANTS: ChantItem[] = withPataravaFeasts(withKarbelaantFeasts(FEASTS.map(([title, chants], i) => ({
   id: `sd-${i + 1}`,
   index: i + 1,
   title,
@@ -134,4 +135,4 @@ export const SADGHESASWAULO_CHANTS: ChantItem[] = withKarbelaantFeasts(FEASTS.ma
       book: BOOK,
     };
   }),
-})));
+}))));

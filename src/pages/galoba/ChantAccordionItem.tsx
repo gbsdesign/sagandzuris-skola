@@ -243,9 +243,9 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
               <div key={school} className={`flex gap-2 px-2.5 py-2 ${versions.length > 0 ? 'flex-col sm:flex-row sm:items-center gap-y-1.5' : 'items-center'}`}>
                 <span className={`${versions.length > 0 ? 'px-0.5 sm:px-0' : 'w-[5rem]'} sm:w-32 shrink-0 text-[11px] sm:text-xs font-black leading-tight ${SCHOOL_STYLES[school]?.text ?? 'text-slate-700'}`}>
                   {SCHOOL_STYLES[school]?.name ?? school}
-                  {versions[0]?.book === 'karb' && (
+                  {(versions[0]?.book === 'karb' || versions[0]?.book === 'pat') && (
                     <span className="sm:block sm:mt-0.5 text-[10px] sm:text-[11px] font-bold opacity-70">
-                      <span className="sm:hidden"> · </span>კარბელაანთ კილო
+                      <span className="sm:hidden"> · </span>{versions[0].book === 'karb' ? 'კარბელაანთ კილო' : 'დ. პატარავა'}
                     </span>
                   )}
                 </span>

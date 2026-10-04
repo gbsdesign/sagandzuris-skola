@@ -29,7 +29,7 @@ const iconBtn =
 
 interface BookScorePlayerProps {
   nums: number[];   // chant numbers of this version (one file, named after the first)
-  book?: string;    // folder under public/notes: Gelati school book (default), 'feast', 'kk' (Kartli-Kakheti, vol. III), 'triod', 'v5' (Gelati + Shemokmedi liturgy, vol. V) or 'karb' (Karbelashvili mode, vol. VII)
+  book?: string;    // folder under public/notes: Gelati school book (default), 'feast', 'kk' (Kartli-Kakheti, vol. III), 'triod', 'v5' (Gelati + Shemokmedi liturgy, vol. V), 'karb' (Karbelashvili mode, vol. VII), 'pat' (Patarava, Shemokmedi school) or 'v9' (Gelati, vol. IX)
   page?: number;
   source?: string;
   title?: string;   // chant title, for downloaded file names
@@ -75,7 +75,6 @@ export const BookScorePlayer: React.FC<BookScorePlayerProps> = ({ nums, book, pa
 
   const barRefs = useRef<(HTMLDivElement | null)[]>([]);
   const timeRef = useRef<HTMLSpanElement>(null);
-  const boxRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const menuRef = useRef<HTMLDivElement>(null);
 
   const speed = SPEEDS[speedIdx];
@@ -106,11 +105,6 @@ export const BookScorePlayer: React.FC<BookScorePlayerProps> = ({ nums, book, pa
     return () => cancelAnimationFrame(raf);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [synth, playing, speedIdx, fullscreen]);
-
-  // keep the highlighted line in view while playing
-  useEffect(() => {
-    if (playing && curSys >= 0) boxRefs.current[curSys]?.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
-  }, [curSys, playing]);
 
   useEffect(() => { synth?.setSpeed(speed); }, [synth, speed]);
   useEffect(() => { synth?.setTranspose(transpose); }, [synth, transpose]);
@@ -316,7 +310,6 @@ export const BookScorePlayer: React.FC<BookScorePlayerProps> = ({ nums, book, pa
               s[0] === ii ? (
                 <button
                   key={k}
-                  ref={el => { boxRefs.current[k] = el; }}
                   type="button"
                   onClick={() => playFromLine(k)}
                   className={`absolute rounded-md transition-colors cursor-pointer ${

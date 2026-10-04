@@ -246,14 +246,15 @@ export class ChantSynth {
     if (was) void this.play();
   }
 
-  // start the clock at `sec` and find the first note still sounding there
+  // start the clock at `sec` and find the first note still sounding there. Notes are sorted by start, not by end:
+  // a long note of one voice can still sound after shorter, later notes of another voice have ended,
+  // so this is a scan (notes in between that have already ended are skipped by tick()).
   private startAt(sec: number) {
     this.startSec = sec;
     this.startCtx = this.ctx!.currentTime + 0.05;
-    let lo = 0, hi = this.notes.length;
-    while (lo < hi) { const mid = (lo + hi) >> 1; if (this.notes[mid].e <= sec) lo = mid + 1; else hi = mid; }
-    while (lo > 0 && this.notes[lo - 1].e > sec) lo--;
-    this.next = lo;
+    let i = 0;
+    while (i < this.notes.length && this.notes[i].e <= sec) i++;
+    this.next = i;
   }
 
   private tick() {

@@ -1,4 +1,4 @@
-import { ChantItem, TSIRVA_CHANTS, bookFullTitle, kkVariant, variantName } from './tsirvaChants';
+import { ChantItem, TSIRVA_CHANTS, bookFullTitle, kkVariant, v9Variant, variantName } from './tsirvaChants';
 import { BookNums, bookPage, bookSource, numsOf } from './gelatiBookIndex';
 import { SADGHESASWAULO_CHANTS } from './feastBookChants';
 import { MARXVANI_CHANTS, ZATIKI_CHANTS } from './triodionBookChants';
@@ -8,8 +8,9 @@ import { MARXVANI_CHANTS, ZATIKI_CHANTS } from './triodionBookChants';
 // given by its chant number(s) in the book (a range = parts sung together, e.g. a litany).
 // The third list holds the same chant's versions in the Kartli-Kakheti book (vol. III, numbers 1-139);
 // a chant found only there has no Gelati versions and is placed where vol. III prints it.
+// The fourth list holds versions from the Gelati book vol. IX (2023: Sunday troparia of the eight modes and their theotokia).
 type Versions = [label: string, nums: BookNums][];
-type BookEntry = [title: string, versions: Versions, kk?: Versions];
+type BookEntry = [title: string, versions: Versions, kk?: Versions, v9?: Versions];
 const MODES = ['ა', 'ბ', 'გ', 'დ', 'ე', 'ვ', 'ზ', 'ჱ'];
 // vol. III prints the eight modes of a chant every `step` numbers
 const kkModes = (first: number, step = 1): Versions => MODES.map((m, i) => [`ხმა ${m}`, first + i * step]);
@@ -45,7 +46,13 @@ const CISKARI: BookEntry[] = [
   ['დიდებაჲ მაღალთა შინა ღმერთსა', [['', 77]], [['', 86]]],
   ['დიდი კუერექსი', [['', [78, 83]]], [['ოთხ ხმაში', [87, 98]]]],
   ['ღმერთი უფალი', [['ჴმაჲ ა', 84], ['ჴმაჲ ბ', 86], ['ჴმაჲ გ', 88], ['ჴმაჲ დ', 90], ['ჴმაჲ ე', 92], ['ჴმაჲ ვ', 94], ['ჴმაჲ ზ', 96], ['ჴმაჲ ჱ', 98]], kkModes(99, 2)],
-  ['ტროპარი აღდგომისაჲ', [['ჴმაჲ ა', 85], ['ჴმაჲ ბ', 87], ['ჴმაჲ გ', 89], ['ჴმაჲ დ', 91], ['ჴმაჲ ე', 93], ['ჴმაჲ ვ', 95], ['ჴმაჲ ზ', 97], ['ჴმაჲ ჱ', 99]], kkModes(100, 2)],
+  ['ტროპარი აღდგომისაჲ', [['ჴმაჲ ა', 85], ['ჴმაჲ ბ', 87], ['ჴმაჲ გ', 89], ['ჴმაჲ დ', 91], ['ჴმაჲ ე', 93], ['ჴმაჲ ვ', 95], ['ჴმაჲ ზ', 97], ['ჴმაჲ ჱ', 99]], kkModes(100, 2),
+    [['რაჟამს ლოდი, ხმა ა', 78], ['რაჟამს შთახედ საფლავად, ხმა ბ', 81], ['იხარებდინ ცანი, ხმა გ', 84], ['ბრწყინვალე იგი, ხმა დ', 87],
+      ['თანა დაუსაბამოსა, ხმა ე', 90], ['ანგელოზთა ძალნი, ხმა ვ', 93], ['დახსენ ჯვარითა შენითა, ხმა ზ', 96], ['მაღლით გარდამოხედ, ხმა ჱ', 99]]],
+  // vol. IX only: "დიდება, აწ და" sung together with the theotokion that follows the troparion
+  ['დიდება, აწ და; ღმრთისმშობლისა', [], [], [['გაბრიელ გიღაღადა, ხმა ა', [79, 80]], ['ყოველივე საიდუმლო შენი, ხმა ბ', [82, 83]],
+    ['შენ, შუამდგომელსა, ხმა გ', [85, 86]], ['რომელი საუკუნიდგან, ხმა დ', [88, 89]], ['გიხაროდენ, ბჭეო განუღებელო, ხმა ე', [91, 92]],
+    ['რომელმან კურთხეულ უწოდე, ხმა ვ', [94, 95]], ['ვითარცა ჩვენისა აღდგომისა, ხმა ზ', [97, 98]], ['რომელი ჩვენთვის იშევ, ხმა ჱ', [100, 101]]]],
   ['ნეტარ არიან უბიწონი', [['', 100]], [['', 115]]],
   ['აქებდით სახელსა უფლისასა', [['ქართლ-კახური', 101], ['', 102]], [['', 116]]],
   ['მდინარეთა ზედა ბაბილოვნისათა', [['', 103]]],
@@ -76,9 +83,9 @@ const CISKARI: BookEntry[] = [
 
 const buildChants = (prefix: string, entries: BookEntry[]): ChantItem[] => {
   let gelati = 0;
-  return entries.map(([title, versions, kk = []], i) => {
-    // ids stay stable: Gelati entries are counted among themselves, vol. III-only ones are named after their first number
-    const key = versions.length ? String(++gelati) : `kk${numsOf(kk[0][1])[0]}`;
+  return entries.map(([title, versions, kk = [], v9 = []], i) => {
+    // ids stay stable: Gelati entries are counted among themselves, vol. III-only and vol. IX-only ones are named after their first number
+    const key = versions.length ? String(++gelati) : kk.length ? `kk${numsOf(kk[0][1])[0]}` : `v9-${numsOf(v9[0][1])[0]}`;
     return {
       id: `${prefix}-${key}`,
       index: i + 1,
@@ -105,6 +112,10 @@ const buildChants = (prefix: string, entries: BookEntry[]): ChantItem[] => {
         ...kk.map(([label, n0], vi) => {
           const nums = numsOf(n0);
           return kkVariant(`${prefix}-v-${key}-k${vi + 1}`, kk.length > 1 ? `ქ.კ. №${nums[0]}` : 'ქ.კ.', title, label, nums);
+        }),
+        ...v9.map(([label, n0]) => {
+          const first = numsOf(n0)[0];
+          return v9Variant(`${prefix}-v-${key}-x${first}`, `გ.ს. IX №${first}`, title, label, n0);
         }),
       ],
     };
