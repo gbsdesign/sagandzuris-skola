@@ -1,16 +1,24 @@
 import React from 'react';
-import { useNavigation, useChants, useModal } from '../context';
-import { Sparkles, Music } from 'lucide-react';
+import { useNavigation, useChants, useModal, useAuth } from '../context';
+import { Sparkles, Music, ShieldCheck, ChevronRight } from 'lucide-react';
 import { SubPageHeader } from '../components/layout';
 import { HomePage } from '../pages/HomePage';
 import { GalobaPage } from '../pages/GalobaPage';
 import { ChantDetailPage } from '../pages/ChantDetailPage';
 import { StudentProfileCard } from '../components/views';
 import { GzaView } from '../components/views';
+import { PathPanel, PATH_ICON, PATH_TILE } from '../components/views/IndependentWorkCard';
+import { ChvevebiContent } from '../components/views/ChvevebiPanel';
+import { ManeraContent, ManeraAverageBadge, ManeraQuickRings } from '../components/views/ManeraPanel';
+import { PathSummary } from '../components/views/PathSummary';
+import { ReorderStack } from '../components/views/ReorderStack';
+import { ChemiSamosi } from '../components/views/ChemiSamosi';
 import { GeorgiaMap, MtkmeliMap } from '../components/maps';
 import { SakravebiView } from '../components/views';
 import { AdminPanelPage } from '../pages/AdminPanelPage';
 import { ClassPage } from '../pages/ClassPage';
+import { AncestorsPage } from '../pages/AncestorsPage';
+import { PrayerPage } from '../pages/PrayerPage';
 
 interface AppRouterProps {
   logoUrl: string;
@@ -19,6 +27,7 @@ interface AppRouterProps {
 export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   const { currentPage, selectedService, handleGoBack, navigateTo } = useNavigation();
   const { openModal } = useModal();
+  const { isAdmin } = useAuth();
   const {
     selectedChantVariants,
     handleToggleSong,
@@ -37,17 +46,34 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
 
   if (currentPage === 'profile') {
     return (
-      <div className="px-1 py-3 sm:px-4 md:px-6">
-        <div className="flex items-center justify-between pb-4 mb-6 border-b border-slate-100">
+      <div className="w-full max-w-2xl mx-auto px-1 py-3 sm:px-4 md:px-6">
+        <div className="relative flex items-center justify-between pb-3.5 mb-5 border-b border-slate-100">
+          <h1 className="absolute inset-x-0 top-0 bottom-3.5 flex items-center justify-center pointer-events-none font-serif-ge text-xl sm:text-3xl font-bold text-[#7a2028]">
+            პროფილი
+          </h1>
           <button
             type="button"
             onClick={handleGoBack}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-slate-200/90 hover:border-amber-400/50 bg-slate-50/80 hover:bg-amber-50/50 active:scale-95 text-slate-700 hover:text-[#85502c] transition-all text-xs font-semibold cursor-pointer group shadow-2xs"
+            className="relative inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-slate-200/90 hover:border-amber-400/50 bg-slate-50/80 hover:bg-amber-50/50 active:scale-95 text-slate-700 hover:text-[#85502c] transition-all text-xs font-semibold cursor-pointer group shadow-2xs"
           >
-            <span>← უკან დაბრუნება</span>
+            <span>← უკან</span>
           </button>
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => navigateTo('admin')}
+              className="relative inline-flex items-center gap-1.5 h-9 px-3 rounded-full ring-1 ring-[#e8dcc8] bg-white/80 hover:bg-white text-[#4a3426] text-xs font-bold transition-all cursor-pointer active:scale-95"
+              title="ადმინის პანელი"
+            >
+              <ShieldCheck className="w-4 h-4 text-[#7a2028]" />
+              ადმინი
+            </button>
+          )}
         </div>
-        <StudentProfileCard />
+        <div className="space-y-4">
+          <ChemiSamosi />
+          <StudentProfileCard />
+        </div>
       </div>
     );
   }
@@ -72,25 +98,30 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           {currentPage === 'galoba-detail' && <ChantDetailPage />}
 
           {currentPage === 'gz' && (
-            <div className="w-full max-w-2xl mx-auto my-2 px-1 space-y-5">
-              <h1 className="font-serif-ge text-2xl sm:text-3xl font-bold text-[#7a2028] text-center">საგანძურის გზა</h1>
-              {/* skills and manner (they used to sit in the path's popup) */}
-              <div className="grid grid-cols-2 gap-2.5">
-                {([
-                  { modal: 'chvevebi', label: 'ჩვევები', Icon: Sparkles },
-                  { modal: 'manera', label: 'მანერა', Icon: Music },
-                ] as const).map(({ modal, label, Icon }) => (
-                  <button
-                    key={modal}
-                    type="button"
-                    onClick={() => openModal(modal)}
-                    className="inline-flex items-center justify-center gap-2 h-12 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e6d9c2] hover:bg-white hover:ring-[#7a2028]/30 text-[15px] font-bold text-[#4a3426] hover:text-[#7a2028] transition-all cursor-pointer active:scale-[0.98]"
-                  >
-                    <Icon className="w-4 h-4 text-[#7a2028]" />
-                    {label}
-                  </button>
-                ))}
-              </div>
+            <div className="w-full max-w-2xl mx-auto mb-2 px-1 space-y-7">
+              {/* the page title sits in the top bar (SubPageHeader) */}
+              {/* the student can put these cards in their own order; my outfit comes first by default, manner last */}
+              <ReorderStack
+                storageKey="pathCardsOrder"
+                items={[
+                  { id: 'samosi', label: 'ჩემი სამოსი', node: <ChemiSamosi /> },
+                  { id: 'summary', label: 'შენი გზა', node: <PathSummary /> },
+                  {
+                    id: 'habits', label: 'ჩვევები', node: (
+                      <PathPanel id="habits" title="ჩვევები" subtitle="ლოცვითი ჩვევები სულიერი ნიადაგისთვის" icon={<Sparkles className="w-5 h-5" />}>
+                        <ChvevebiContent />
+                      </PathPanel>
+                    ),
+                  },
+                  {
+                    id: 'manera', label: 'მანერა', node: (
+                      <PathPanel id="manera" title="მანერა" subtitle="საშემსრულებლო რჩევები" badge={<ManeraAverageBadge />} extra={<ManeraQuickRings />} icon={<Music className="w-5 h-5" />}>
+                        <ManeraContent />
+                      </PathPanel>
+                    ),
+                  },
+                ]}
+              />
               <GzaView
                 onGoToGaloba={() => navigateTo('galoba')}
                 selectedChantVariants={selectedChantVariants}
@@ -98,6 +129,10 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
               />
             </div>
           )}
+
+          {currentPage === 'tsinaprebi' && <AncestorsPage />}
+
+          {currentPage === 'prayer' && <PrayerPage />}
 
           {currentPage === 'simghera' && (
             <div className="w-full my-2 px-1">

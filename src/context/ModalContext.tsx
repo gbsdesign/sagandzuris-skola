@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { triggerHaptic } from '../utils/haptics';
 
-export type ModalType = 'profile' | 'bookmark' | 'chvevebi' | 'manera' | 'gza' | 'docFilms' | 'drive' | null;
+export type ModalType = 'profile' | 'bookmark' | 'chvevebi' | 'manera' | 'gza' | 'drive' | null;
 
 export interface ModalContextType {
   activeModal: ModalType;

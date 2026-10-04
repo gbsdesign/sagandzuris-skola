@@ -1,7 +1,6 @@
 import React from 'react';
 import { useModal, useAuth } from '../context';
 import {
-  DocFilmsModal,
   ProfileModal,
   BookmarkModal,
   ChvevebiModal,
@@ -39,7 +38,6 @@ export const AppModals: React.FC = () => {
 
   return (
     <>
-      <DocFilmsModal isOpen={activeModal === 'docFilms'} onClose={closeModal} />
       <ProfileModal isOpen={activeModal === 'profile'} onClose={closeModal} />
       <BookmarkModal isOpen={activeModal === 'bookmark'} onClose={closeModal} />
       <ChvevebiModal isOpen={activeModal === 'chvevebi'} onClose={closeModal} />

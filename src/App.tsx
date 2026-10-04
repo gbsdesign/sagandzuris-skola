@@ -20,6 +20,8 @@ import { AppRouter } from './routes/AppRouter';
 import { AppModals } from './components/AppModals';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageSprinkles } from './components/home/PlateOrnaments';
+import { usePrayerReminderScheduler } from './utils/prayerReminders';
+import { isPrayerId } from './data/prayers';
 
 // Backward compatibility exports
 export { filterValidVariants, getValidVariantIds } from './utils/variantValidation';
@@ -41,8 +43,21 @@ export default function App() {
 
 function AppContent() {
   const { loading } = useAuth();
-  const { currentPage } = useNavigation();
+  const { currentPage, openPrayer } = useNavigation();
   const [dbLogo, setDbLogo] = useState<string | null>(null);
+
+  usePrayerReminderScheduler(openPrayer);
+
+  // a tapped reminder may open the site as /?prayer=<id>
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const prayerId = url.searchParams.get('prayer');
+    if (!prayerId) return;
+    url.searchParams.delete('prayer');
+    window.history.replaceState(null, '', url.pathname + url.search + url.hash);
+    if (isPrayerId(prayerId)) openPrayer(prayerId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(

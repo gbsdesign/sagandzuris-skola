@@ -1,4 +1,3 @@
-export * from './DocFilmsModal';
 export * from './ProfileModal';
 export * from './BookmarkModal';
 export * from './ChvevebiModal';

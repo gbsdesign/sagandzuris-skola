@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { triggerHaptic } from '../utils/haptics';
 
-export type PageType = 'home' | 'profile' | 'galoba' | 'galoba-detail' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'gz' | 'bookmark' | 'admin' | 'class';
+export type PageType = 'home' | 'profile' | 'galoba' | 'galoba-detail' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'gz' | 'tsinaprebi' | 'bookmark' | 'admin' | 'class' | 'prayer';
 export type ServiceType = 'წირვა' | 'მწუხრი' | 'ცისკარი' | 'სადღესასწაულო' | 'მარხვანი' | 'ზატიკი' | null;
 
 export interface NavigationContextType {
@@ -13,6 +13,9 @@ export interface NavigationContextType {
   // the class shown on the 'class' page
   selectedClassId: string | null;
   openClass: (classId: string) => void;
+  // the prayer shown on the 'prayer' page (an id from data/prayers)
+  selectedPrayerId: string | null;
+  openPrayer: (prayerId: string) => void;
   handleGoBack: () => void;
   setSelectedService: (service: ServiceType) => void;
   setExpandedChantId: React.Dispatch<React.SetStateAction<string | null>>;
@@ -27,6 +30,9 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [expandedChantId, setExpandedChantId] = useState<string | null>(null);
   const [chantSearch, setChantSearch] = useState<string>('');
   const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
+  const [selectedPrayerId, setSelectedPrayerId] = useState<string | null>(null);
+  const [prayerReturnPage, setPrayerReturnPage] = useState<PageType>('home');
+  const [prayerReturnScroll, setPrayerReturnScroll] = useState(0);
 
   const navigateTo = (page: PageType) => {
     triggerHaptic(10);
@@ -43,8 +49,24 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     navigateTo('class');
   };
 
+  const openPrayer = (prayerId: string) => {
+    setSelectedPrayerId(prayerId);
+    if (currentPage !== 'prayer') {
+      setPrayerReturnPage(currentPage);
+      setPrayerReturnScroll(window.scrollY);
+    }
+    navigateTo('prayer');
+    window.scrollTo({ top: 0 });
+  };
+
   const handleGoBack = () => {
     triggerHaptic(10);
+    if (currentPage === 'prayer') {
+      setCurrentPage(prayerReturnPage);
+      // back to the list where the prayer was picked
+      window.setTimeout(() => window.scrollTo({ top: prayerReturnScroll }), 0);
+      return;
+    }
     if (currentPage === 'galoba-detail') {
       setCurrentPage('galoba');
       if (!selectedService) {
@@ -74,6 +96,8 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         navigateTo,
         selectedClassId,
         openClass,
+        selectedPrayerId,
+        openPrayer,
         handleGoBack,
         setSelectedService,
         setExpandedChantId,

@@ -1,0 +1,218 @@
+import React, { useEffect, useRef, useState } from 'react';
+import { Bell, Check, ChevronDown, Moon, Sun } from 'lucide-react';
+import confetti from 'canvas-confetti';
+import { HABIT_GROUPS, HabitMenu } from '../../data/habitsAndManera';
+import { AKATHISTS, MORNING_EVENING, PRAYER_HOURS, WEEK_DAYS, hourClock, weekPrayerId } from '../../data/prayers';
+import { useChants, useModal, useNavigation } from '../../context';
+import { formatNextHabitsReset } from '../../utils/habitsWeek';
+import { useReminders } from '../../utils/prayerReminders';
+
+// the habit menu left open, so coming back from a prayer shows the same list
+let lastOpenMenu: string | null = null;
+
+const CHIP =
+  'rounded-lg bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40 hover:text-[#7a2028] transition-colors cursor-pointer active:scale-[0.98]';
+
+// The prayers a habit opens: morning/evening (with the weekday prayers), the seven hours, the akathists.
+const HabitPrayerMenu: React.FC<{ menu: HabitMenu; onOpen: (prayerId: string) => void }> = ({ menu, onOpen }) => {
+  const reminders = useReminders();
+  const now = new Date();
+  const today = now.getDay();
+
+  if (menu === 'morning-evening') {
+    return (
+      <div className="space-y-2.5">
+        <div className="grid grid-cols-2 gap-1.5">
+          {MORNING_EVENING.map(p => (
+            <button key={p.id} type="button" onClick={() => onOpen(p.id)} className={`${CHIP} flex items-center justify-center gap-1.5 px-2 py-2.5 text-[13px] font-semibold`}>
+              {p.id === 'dila' ? <Sun className="w-4 h-4 text-[#c08a2a]" /> : <Moon className="w-4 h-4 text-[#6b5b8a]" />}
+              {p.id === 'dila' ? 'დილის' : 'საღამოს'}
+            </button>
+          ))}
+        </div>
+        <div>
+          <p className="px-0.5 pb-1 text-[12px] font-bold text-[#8a7a6a]">შვიდეულის დღეთა ლოცვები</p>
+          <div className="space-y-1">
+            {WEEK_DAYS.map((day, i) => (
+              <div key={day} className={`flex items-center gap-1.5 rounded-lg px-2 py-1 ${i === today ? 'bg-[#7a2028]/[0.07]' : ''}`}>
+                <span className={`flex-1 min-w-0 text-[13px] ${i === today ? 'font-bold text-[#7a2028]' : 'text-[#4a3426]'}`}>
+                  {day}
+                  {i === today && <span className="ml-1 text-[11px] font-semibold">· დღეს</span>}
+                </span>
+                <button type="button" onClick={() => onOpen(weekPrayerId(i, 'dila'))} className={`${CHIP} px-2.5 py-1.5 text-[12px] font-semibold`}>
+                  დილით
+                </button>
+                <button type="button" onClick={() => onOpen(weekPrayerId(i, 'dzili'))} className={`${CHIP} px-2.5 py-1.5 text-[12px] font-semibold`}>
+                  დაწოლისას
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (menu === 'hours') {
+    // the next hour to come is marked, wrapping past midnight to 06:00
+    const minutesNow = now.getHours() * 60 + now.getMinutes();
+    const order = [...PRAYER_HOURS].sort((a, b) => a.hour - b.hour);
+    const next = order.find(h => h.hour * 60 > minutesNow) ?? order[0];
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+        {PRAYER_HOURS.map(h => {
+          const isNext = h.id === next.id;
+          const hasReminder = (reminders[h.id] || []).length > 0;
+          return (
+            <button
+              key={h.id}
+              type="button"
+              onClick={() => onOpen(h.id)}
+              className={`${CHIP} flex items-center gap-2 px-2.5 py-2 text-left ${isNext ? '!ring-[#7a2028]/45 !bg-[#7a2028]/[0.07]' : ''}`}
+            >
+              <span className={`w-12 shrink-0 font-bold tabular-nums text-[13px] ${isNext ? 'text-[#7a2028]' : 'text-[#4a3426]'}`}>{hourClock(h)}</span>
+              <span className="flex-1 min-w-0 text-[13px]">{h.label}</span>
+              {hasReminder && <Bell className="w-3.5 h-3.5 shrink-0 text-[#7a2028]" aria-label="შეხსენება ჩართულია" />}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
+
+  return (
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+      {AKATHISTS.map(p => (
+        <button key={p.id} type="button" onClick={() => onOpen(p.id)} className={`${CHIP} px-2.5 py-2 text-left text-[13px] leading-snug`}>
+          {p.title}
+        </button>
+      ))}
+    </div>
+  );
+};
+
+const celebrate = () => {
+  try {
+    const colors = ['#7a2028', '#f3c969', '#10b981', '#fbf6ec'];
+    confetti({ particleCount: 90, spread: 70, startVelocity: 45, origin: { y: 0.7 }, colors });
+    confetti({ particleCount: 50, spread: 110, decay: 0.92, scalar: 0.9, origin: { y: 0.7 }, colors });
+  } catch {
+    /* confetti is decoration only */
+  }
+};
+
+// "ჩვევები" for students: the explanation and the habits to tick. No counters or progress here —
+// teachers see how many habits a student kept this week in the admin panel.
+// Ticking a habit sets off fireworks and a blessing.
+export const ChvevebiContent: React.FC = () => {
+  const { habitsStats, saveHabitsToFirestore } = useChants();
+  const { openPrayer } = useNavigation();
+  const { activeModal, closeModal } = useModal();
+  const [blessing, setBlessing] = useState(false);
+  const [openMenu, setOpenMenu] = useState<string | null>(lastOpenMenu);
+  const timer = useRef<number | undefined>(undefined);
+
+  const setMenu = (id: string | null) => {
+    lastOpenMenu = id;
+    setOpenMenu(id);
+  };
+
+  const read = (prayerId: string) => {
+    if (activeModal) closeModal();
+    openPrayer(prayerId);
+  };
+
+  useEffect(() => () => window.clearTimeout(timer.current), []);
+
+  const toggle = (id: string) => {
+    const turningOn = !habitsStats[id];
+    saveHabitsToFirestore({ ...habitsStats, [id]: turningOn });
+    if (turningOn) {
+      celebrate();
+      setBlessing(true);
+      window.clearTimeout(timer.current);
+      timer.current = window.setTimeout(() => setBlessing(false), 2800);
+    }
+  };
+
+  return (
+    <div className="space-y-5 text-[#2a2017]">
+      <div className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] p-4 space-y-2 text-sm leading-relaxed text-[#4a3426]">
+        <p className="font-serif-ge font-bold text-[#7a2028]">განმარტება</p>
+        <p>ნიადაგი არის ის, რაშიც მყარად არის „ჩაფლული“ საძირკველი, ხოლო საძირკველზე დგას შენობა — ანუ მგალობლის შემოქმედება.</p>
+        <p>
+          სწორი ნიადაგის მომზადების გარეშე ვერ დამყარდება ვერც საძირკველი და ვერც მგალობლის შემოქმედება. ქვემოთ მოცემულია ჩვევები,
+          რომლებიც საჭიროა სწორი სულიერი ნიადაგის მოსამზადებლად.
+        </p>
+      </div>
+
+      {HABIT_GROUPS.map(group => (
+        <section key={group.id} className="space-y-1.5">
+          <h4 className="px-1 font-serif-ge text-[15px] font-bold text-[#7a2028]">{group.title}</h4>
+          {group.items.map(habit => {
+            const on = Boolean(habitsStats[habit.id]);
+            const check = (
+              <button
+                type="button"
+                role="checkbox"
+                aria-checked={on}
+                aria-label={habit.label}
+                onClick={() => toggle(habit.id)}
+                className="shrink-0 -my-1 -mr-1 p-1.5 rounded-full cursor-pointer active:scale-90 transition-transform"
+              >
+                <span className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${on ? 'bg-[#7a2028] text-[#fbf6ec]' : 'ring-2 ring-[#d9c8ac] bg-white'}`}>
+                  {on && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                </span>
+              </button>
+            );
+            const rowTone = on ? 'bg-[#7a2028]/[0.06] ring-[#7a2028]/25' : 'bg-white ring-[#e8dcc8]';
+
+            if (!habit.menu) {
+              return (
+                <div key={habit.id} className={`flex items-center gap-2 pl-3.5 pr-2.5 py-2 rounded-xl ring-1 transition-colors ${rowTone}`}>
+                  <button type="button" onClick={() => toggle(habit.id)} className="flex-1 min-w-0 text-left text-sm font-medium leading-snug cursor-pointer select-none">
+                    {habit.label}
+                  </button>
+                  {check}
+                </div>
+              );
+            }
+
+            const expanded = openMenu === habit.id;
+            return (
+              <div key={habit.id} className={`rounded-xl ring-1 transition-colors ${rowTone}`}>
+                <div className="flex items-center gap-2 pl-3.5 pr-2.5 py-2">
+                  <button
+                    type="button"
+                    aria-expanded={expanded}
+                    onClick={() => setMenu(expanded ? null : habit.id)}
+                    className="flex-1 min-w-0 flex items-center gap-1.5 text-left text-sm font-medium leading-snug cursor-pointer select-none group"
+                  >
+                    <span className="min-w-0">{habit.label}</span>
+                    <ChevronDown className={`w-4 h-4 shrink-0 text-[#b5a48c] group-hover:text-[#7a2028] transition-transform ${expanded ? 'rotate-180 text-[#7a2028]' : ''}`} />
+                  </button>
+                  {check}
+                </div>
+                {expanded && (
+                  <div className="px-2.5 pb-2.5 pt-0.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                    <HabitPrayerMenu menu={habit.menu} onOpen={read} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </section>
+      ))}
+
+      <p className="text-center text-xs text-[#8a7a6a]">სია თავიდან დაიწყება: {formatNextHabitsReset()}</p>
+
+      {blessing && (
+        <div className="fixed inset-x-0 bottom-8 z-[60] flex justify-center px-4 pointer-events-none">
+          <div className="px-6 py-3.5 rounded-full bg-[#7a2028] text-[#fbf6ec] font-serif-ge text-lg font-bold shadow-[0_12px_32px_-10px_rgba(122,32,40,0.6)] animate-in fade-in slide-in-from-bottom-4 zoom-in-95 duration-300">
+            ღმერთს ებარებოდე! 🙏
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};

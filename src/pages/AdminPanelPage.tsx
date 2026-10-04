@@ -20,6 +20,8 @@ import { useAuth, SUPER_ADMIN_EMAIL } from '../context/AuthContext';
 import { useNavigation } from '../context';
 import { triggerHaptic } from '../utils/haptics';
 import { useAllClasses } from '../hooks/useClasses';
+import { HABIT_ITEMS } from '../data/habitsAndManera';
+import { getHabitsWeekKey } from '../utils/habitsWeek';
 import { ClassesAdmin, AdminStudent } from '../components/admin/ClassesAdmin';
 
 interface AdminRecord {
@@ -48,6 +50,7 @@ interface StudentUserRecord {
   voices?: string[];
   workSchedule?: Record<string, string | string[]>;
   completedSessions?: Record<string, number>;
+  habitsDone?: number; // habits ticked this week (students no longer see a counter; teachers do)
   updatedAt?: string;
   lastActiveAt?: string;
   createdAt?: string;
@@ -138,6 +141,9 @@ export const AdminPanelPage: React.FC = () => {
             voices: Array.isArray(profile.voices) ? profile.voices : Array.isArray(data.voices) ? data.voices : [],
             workSchedule: profile.workSchedule || data.workSchedule || {},
             completedSessions: data.completedSessions || {},
+            habitsDone: data.habitsWeek === getHabitsWeekKey()
+              ? HABIT_ITEMS.filter(h => data.habitsStats?.[h.id]).length
+              : 0,
             updatedAt: data.updatedAt || '',
             lastActiveAt: data.lastActiveAt || data.updatedAt || '',
             createdAt: data.createdAt || data.updatedAt || '',
@@ -464,6 +470,7 @@ export const AdminPanelPage: React.FC = () => {
                       <div className="mb-3 p-4 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] space-y-4 text-sm animate-in fade-in duration-150">
                         <dl className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
                           <Info label="სტატუსი" value={statuses.join(', ') || '—'} />
+                          <Info label="ჩვევები ამ კვირაში" value={`${st.habitsDone || 0} / ${HABIT_ITEMS.length}`} />
                           <Info label="ხმა" value={(st.voices || []).map(v => (v === '1' ? 'მთქმელი' : v === '2' ? 'მოძახილი' : v === '3' ? 'ბანი' : v)).join(', ') || '—'} />
                           <Info
                             label="კვირის განრიგი"

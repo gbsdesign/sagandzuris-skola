@@ -1,12 +1,12 @@
-import React, { useMemo } from 'react';
-import { useAuth, useNavigation, useModal, useChants } from '../../context';
+import React from 'react';
+import { useAuth, useNavigation, useModal } from '../../context';
 import { PWAInstallButton } from '../PWAInstallButton';
 import { triggerHaptic } from '../../utils/haptics';
-import { filterValidVariants } from '../../utils/variantValidation';
 import { useMonthlyStudyStats } from '../../hooks/useMonthlyStudyStats';
+import { MONTHS_SHORT_GE, nextLessonLabel, useSelectedCount, openPathPanel } from '../views/IndependentWorkCard';
 import { useMyClasses } from '../../hooks/useClasses';
 import { ClassLogo } from '../classes/ClassLogo';
-import { Bookmark, User as UserIcon, LogIn, LogOut, Compass } from 'lucide-react';
+import { Bookmark, User as UserIcon, LogIn, LogOut, Compass, ShieldCheck } from 'lucide-react';
 
 interface HeaderProps {
   logoUrl: string;
@@ -17,26 +17,20 @@ const TOOLS = [
   { modal: 'gza', label: 'საგანძურის გზა', Icon: Compass },
 ] as const;
 
-const MONTHS_SHORT_GE = ['იან', 'თებ', 'მარ', 'აპრ', 'მაი', 'ივნ', 'ივლ', 'აგვ', 'სექ', 'ოქტ', 'ნოე', 'დეკ'];
-
-// Phone: [logo] … [დამოუკიდებელი სამუშაო ③] [შესვლა] / tools group below.
+// Phone: [logo] … [🔖 ③] [შესვლა] / tools group below. The full independent-work card lives on the path page.
 // Desktop (lg): one row — logo + name · tools in the middle · independent work + profile.
 export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
-  const { user, signingIn, signInWithGoogle, signOutUser } = useAuth();
+  const { user, signingIn, signInWithGoogle, signOutUser, isAdmin } = useAuth();
   const { navigateTo, currentPage, openClass } = useNavigation();
   const myClasses = useMyClasses(user?.uid);
   const { openModal } = useModal();
-  const { selectedChantVariants = {} } = useChants();
-  const selectedCount = useMemo(() => Object.keys(filterValidVariants(selectedChantVariants)).length, [selectedChantVariants]);
+  const selectedCount = useSelectedCount();
   const stats = useMonthlyStudyStats(user?.uid);
   const showStats = !!stats && stats.planned > 0;
-  const nextLabel = stats?.next
-    ? stats.next.offset === 0 ? 'დღეს' : stats.next.offset === 1 ? 'ხვალ' : `${stats.next.date.getDate()} ${MONTHS_SHORT_GE[stats.next.date.getMonth()]}`
-    : '';
   const workTitle = showStats
     ? `დამოუკიდებელი სამუშაო — ${MONTHS_SHORT_GE[new Date().getMonth()]}: ${stats.worked}/${stats.planned} სთ (${stats.percent}%)\n` +
       `შესრულებული: ${stats.worked} · გამოტოვებული: ${stats.missed} · დარჩენილი: ${stats.remaining}` +
-      (stats.next ? `\nშემდეგი მეცადინეობა: ${nextLabel} · ${stats.next.hour}` : '')
+      (stats.next ? `\nშემდეგი მეცადინეობა: ${nextLessonLabel(stats.next)} · ${stats.next.hour}` : '')
     : 'დამოუკიდებელი სამუშაო';
 
   return (
@@ -58,33 +52,35 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
           <span className="hidden md:inline font-serif-ge text-base font-bold text-[#4a3426]">საგანძურის სკოლა</span>
         </button>
 
-        {/* independent work (main button, always labelled) + install + admin + profile */}
+        {/* independent work (icon + count) + install + admin + profile */}
         <div className="order-2 lg:order-3 ml-auto flex items-center gap-1.5 sm:gap-2 min-w-0">
           <PWAInstallButton compact />
+          {/* admins only: shield icon to the admin panel */}
+          {isAdmin && (
+            <button
+              type="button"
+              onClick={() => navigateTo('admin')}
+              className={`w-9 h-9 rounded-xl ring-1 flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0 ${
+                currentPage === 'admin' ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]' : 'bg-white/80 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028]'
+              }`}
+              title="ადმინ პანელი"
+              aria-label="ადმინ პანელი"
+            >
+              <ShieldCheck className="w-4 h-4" />
+            </button>
+          )}
           <button
             type="button"
-            onClick={() => { triggerHaptic(10); openModal('bookmark'); }}
-            className={`inline-flex items-center gap-1.5 ${showStats ? 'min-h-9 py-1' : 'h-9'} px-2.5 min-[400px]:px-3 rounded-xl bg-white/80 hover:bg-white text-[#4a3426] ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-xs min-[400px]:text-[13px] font-black tracking-tight transition-all cursor-pointer select-none active:scale-95 shrink-0`}
+            onClick={() => {
+              triggerHaptic(10);
+              // signed in: unfold the panel on the path page; guests get the sign-in prompt
+              if (user) { openPathPanel('work'); navigateTo('gz'); } else openModal('bookmark');
+            }}
+            className="inline-flex items-center gap-1.5 h-9 px-2.5 rounded-xl bg-white/80 hover:bg-white ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 transition-all cursor-pointer select-none active:scale-95 shrink-0"
             title={workTitle}
+            aria-label={workTitle}
           >
             <Bookmark className="w-4 h-4 text-[#7a2028] fill-[#7a2028]/20 shrink-0" />
-            <span className="flex flex-col items-stretch gap-0.5 text-left">
-              <span className="whitespace-nowrap leading-tight">დამოუკიდებელი სამუშაო</span>
-              {showStats && (
-                <span className="flex items-center gap-1.5 text-[10px] font-bold text-[#8a7a6a] leading-none">
-                  <span className="flex-1 h-1.5 min-w-8 rounded-full bg-[#efe5d4] overflow-hidden">
-                    <span
-                      className={`block h-full rounded-full ${stats.percent >= 100 ? 'bg-emerald-500' : 'bg-[#7a2028]'}`}
-                      style={{ width: `${stats.percent}%` }}
-                    />
-                  </span>
-                  <span className="whitespace-nowrap">
-                    {stats.worked}/{stats.planned} სთ
-                    {stats.next && <span className="hidden sm:inline"> · {nextLabel} {stats.next.hour}</span>}
-                  </span>
-                </span>
-              )}
-            </span>
             {selectedCount > 0 && (
               <span className="min-w-5 h-5 px-1 rounded-full bg-[#7a2028] text-[#fbf6ec] text-[10px] font-black flex items-center justify-center leading-none">
                 {selectedCount}
@@ -109,7 +105,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
               ))}
               <button
                 type="button"
-                onClick={() => openModal('profile')}
+                onClick={() => navigateTo('profile')}
                 className="shrink-0 rounded-full p-0.5 hover:ring-2 hover:ring-[#7a2028]/30 transition-all cursor-pointer active:scale-95"
                 title={`${user.displayName || user.email} — პროფილი`}
                 aria-label="პროფილის გახსნა"

@@ -14,6 +14,8 @@ export default defineConfig(() => {
         injectRegister: 'inline',
         workbox: {
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+          // opens the prayer when a reminder notification is tapped
+          importScripts: ['prayer-notify-sw.js'],
         },
         includeAssets: ['apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'pwa-maskable-512x512.png'],
         devOptions: {

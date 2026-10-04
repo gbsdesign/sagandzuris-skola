@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { useNavigation, useModal } from '../../context';
+import { useNavigation, useModal, useAuth } from '../../context';
+import { openPathPanel } from '../views/IndependentWorkCard';
 import { triggerHaptic } from '../../utils/haptics';
 import { Toast } from '../ui/Toast';
 
@@ -13,6 +14,7 @@ const VINE = '/home/vine.png';
 export const GrapeNav: React.FC = () => {
   const { navigateTo } = useNavigation();
   const { openModal } = useModal();
+  const { user } = useAuth();
   const [soon, setSoon] = useState<string | null>(null);
 
   const spots: Spot[] = [
@@ -24,10 +26,11 @@ export const GrapeNav: React.FC = () => {
     { label: 'საკრავები', x: 70, y: 48, go: () => navigateTo('sakravebi') },
     // on the leaves
     { label: 'მედავით­ნეობა', x: 35, y: 13 },
-    { label: 'ჩვევები', x: 62, y: 8, go: () => openModal('chvevebi') },
+    // signed in: habits fold open on the path page; guests get the sign-in prompt
+    { label: 'ჩვევები', x: 62, y: 8, go: () => (user ? (openPathPanel('habits'), navigateTo('gz')) : openModal('chvevebi')) },
     { label: 'თამაშები', x: 86, y: 28 },
     // in the qvevri
-    { label: 'გაიცანი წინაპრები', x: 51, y: 82, go: () => openModal('docFilms') },
+    { label: 'გაიცანი წინაპრები', x: 51, y: 82, go: () => navigateTo('tsinaprebi') },
   ];
 
   const press = (s: Spot) => {

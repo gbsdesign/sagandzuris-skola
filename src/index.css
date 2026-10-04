@@ -60,3 +60,31 @@
 @media (prefers-reduced-motion: reduce) {
   .orn-in, .orn-sway, .orn-swing, .orn-spin, .orn-bob { animation: none; }
 }
+
+/* "ჩემი სამოსი": a ticked part drops onto the figure with a short golden glow,
+   the greeting pops up over it, and the finished chokha gets a shine across it */
+@keyframes samosi-drop {
+  0% { opacity: 0; transform: translateY(-12px) scale(1.05); filter: blur(3px) brightness(1.6); }
+  55% { opacity: 1; transform: translateY(0) scale(1); filter: blur(0) brightness(1.15) drop-shadow(0 0 8px rgba(212, 160, 23, 0.9)); }
+  100% { opacity: 1; transform: none; filter: none; }
+}
+@keyframes samosi-pop { 0% { transform: scale(0.7); } 60% { transform: scale(1.12); } 100% { transform: scale(1); } }
+@keyframes samosi-cheer {
+  0% { opacity: 0; transform: translateY(10px) scale(0.85); }
+  12% { opacity: 1; transform: translateY(0) scale(1.04); }
+  20% { transform: scale(1); }
+  85% { opacity: 1; transform: none; }
+  100% { opacity: 0; transform: translateY(-8px); }
+}
+@keyframes samosi-shine { from { background-position: 160% 0; } to { background-position: -60% 0; } }
+.samosi-drop { animation: samosi-drop 0.8s cubic-bezier(0.2, 0.8, 0.3, 1.1) both; }
+.samosi-pop { animation: samosi-pop 0.5s cubic-bezier(0.3, 1.4, 0.5, 1) both; }
+.samosi-cheer { animation: samosi-cheer 2.6s ease-out both; }
+.samosi-shine {
+  background: linear-gradient(110deg, transparent 38%, rgba(255, 255, 255, 0.75) 50%, transparent 62%) no-repeat;
+  background-size: 250% 100%;
+  animation: samosi-shine 1.6s ease-in-out 0.2s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .samosi-drop, .samosi-pop, .samosi-cheer, .samosi-shine { animation: none; }
+}

@@ -5,9 +5,13 @@ export interface ManeraItemType {
   advice: string;
 }
 
+// Habits with a menu open prayers to read right there (see data/prayers).
+export type HabitMenu = 'morning-evening' | 'hours' | 'akathists';
+
 export interface HabitItemType {
   id: string;
   label: string;
+  menu?: HabitMenu;
 }
 
 export const MANERA_ITEMS: ManeraItemType[] = [
@@ -34,7 +38,8 @@ export const HABIT_GROUPS: HabitGroupType[] = [
     id: 'daily',
     title: 'ყოველდღე',
     items: [
-      { id: 'habit_1', label: 'დილის და საღამოს ლოცვების კითხვა' },
+      { id: 'habit_1', label: 'დილის და საღამოს ლოცვების კითხვა', menu: 'morning-evening' },
+      { id: 'habit_13', label: 'შვიდგზის ლოცვა', menu: 'hours' },
       { id: 'habit_2', label: 'სახარების კითხვა' },
       { id: 'habit_3', label: 'სამოციქულოს კითხვა' },
       { id: 'habit_4', label: 'სულიერი ლიტერატურა — დღეში 3–5 გვერდი მაინც' },
@@ -54,7 +59,7 @@ export const HABIT_GROUPS: HabitGroupType[] = [
     id: 'monthly',
     title: 'თვეში 2–3-ჯერ მაინც',
     items: [
-      { id: 'habit_7', label: 'დაუჯდომლები' },
+      { id: 'habit_7', label: 'დაუჯდომლები', menu: 'akathists' },
       { id: 'habit_8', label: 'სამადლობელი პარაკლისი' },
     ],
   },

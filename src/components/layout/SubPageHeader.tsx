@@ -22,16 +22,24 @@ export const SubPageHeader: React.FC<SubPageHeaderProps> = ({
       ? 'მთქმელის საგანძური'
       : currentPage === 'gz'
       ? 'საგანძურის გზა'
+      : currentPage === 'tsinaprebi'
+      ? 'გაიცანი წინაპრები'
       : 'საკრავების საგანძური';
 
   return (
     <>
       {/* Compact Top Navigation Bar */}
-      <div className="w-full flex items-center justify-between pb-3.5 mb-5 border-b border-slate-100">
+      <div className="relative w-full flex items-center justify-between pb-3.5 mb-5 border-b border-slate-100">
+        {/* the path page shows its title here, centred in the top bar */}
+        {(currentPage === 'gz' || currentPage === 'tsinaprebi') && (
+          <h1 className="absolute inset-x-0 top-0 bottom-3.5 flex items-center justify-center pointer-events-none font-serif-ge text-xl sm:text-3xl font-bold text-[#7a2028]">
+            {title}
+          </h1>
+        )}
         <button
           type="button"
           onClick={onGoBack}
-          className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-slate-200/90 hover:border-amber-400/50 bg-slate-50/80 hover:bg-amber-50/50 active:scale-95 text-slate-700 hover:text-[#85502c] transition-all text-xs font-semibold cursor-pointer group shadow-2xs"
+          className="relative inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-slate-200/90 hover:border-amber-400/50 bg-slate-50/80 hover:bg-amber-50/50 active:scale-95 text-slate-700 hover:text-[#85502c] transition-all text-xs font-semibold cursor-pointer group shadow-2xs"
           title="უკან დაბრუნება"
         >
           <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
