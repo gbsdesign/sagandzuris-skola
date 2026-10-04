@@ -7,7 +7,6 @@ import {
   Clock, 
   Sparkles, 
   Info, 
-  ChevronDown, 
   Loader2,
 } from 'lucide-react';
 import { auth, db, handleFirestoreError, OperationType } from '../../firebase';
@@ -50,8 +49,6 @@ const AVAILABLE_HOURS = Array.from({ length: 18 }, (_, i) => {
 
 export const StudentProfileCard: React.FC = () => {
   const [profile, setProfile] = useState<StudentProfile>(INITIAL_PROFILE);
-  const [voicesDropdownOpen, setVoicesDropdownOpen] = useState(false);
-  const [statusDropdownOpen, setStatusDropdownOpen] = useState(false);
   const [activeDay, setActiveDay] = useState<string>('ორშ');
   const [savedMessage, setSavedMessage] = useState(false);
   const [savingDb, setSavingDb] = useState(false);
@@ -242,378 +239,195 @@ export const StudentProfileCard: React.FC = () => {
     : currentUser?.displayName || 'მოსწავლის პროფილი';
   const userEmail = currentUser?.email;
 
+  const field = 'w-full h-11 px-3.5 rounded-xl bg-white ring-1 ring-[#e8dcc8] hover:ring-[#d9c8ac] focus:ring-2 focus:ring-[#7a2028]/40 text-sm text-[#2a2017] placeholder:text-[#b3a594] outline-none transition';
+  const label = 'block mb-1.5 text-xs font-semibold text-[#75685a]';
+  const chip = (active: boolean) =>
+    `inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full text-sm font-semibold transition-colors cursor-pointer select-none active:scale-95 ${
+      active ? 'bg-[#7a2028] text-[#fbf6ec] ring-1 ring-[#7a2028]' : 'bg-white text-[#4a3426] ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40'
+    }`;
+  const VOICES = [
+    { id: '1', label: 'მთქმელი · 1 ხმა' },
+    { id: '2', label: 'მოძახილი · 2 ხმა' },
+    { id: '3', label: 'ბანი · 3 ხმა' },
+  ] as const;
+
   return (
-    <div className="w-full max-w-lg mx-auto space-y-3.5">
-      {/* Modern Compact Profile Header Bar */}
-      <div className="bg-white/95 backdrop-blur-md px-3.5 py-2.5 sm:px-4 sm:py-3 rounded-2xl border border-amber-200/80 shadow-xs hover:shadow-sm transition-all flex items-center justify-between gap-2.5">
-        <div className="flex items-center gap-2.5 sm:gap-3 text-left group select-none flex-1 min-w-0">
-          {/* Avatar with sleek ring */}
-          <div className="relative shrink-0">
-            {userPhoto ? (
-              <img
-                src={userPhoto}
-                alt={displayFullName}
-                className="w-9 h-9 sm:w-10 sm:h-10 rounded-full object-cover ring-2 ring-amber-400/90 ring-offset-1 ring-offset-white shadow-2xs group-hover:scale-105 transition-transform"
-                referrerPolicy="no-referrer"
-              />
-            ) : (
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-amber-500 to-[#85502c] text-white flex items-center justify-center font-bold shadow-2xs group-hover:scale-105 transition-transform ring-2 ring-amber-400/80 ring-offset-1 ring-offset-white">
-                <User className="w-4 h-4 text-white stroke-[2.5]" />
-              </div>
-            )}
-            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 bg-emerald-500 border-2 border-white rounded-full"></span>
-          </div>
-
-          <div className="min-w-0 flex-1">
-            <div className="flex items-center gap-1">
-              <h2 className="text-xs sm:text-sm font-black text-slate-900 tracking-tight transition-colors truncate">
-                {displayFullName}
-              </h2>
+    <div className="w-full max-w-lg mx-auto space-y-4 text-[#2a2017]">
+      {/* who: avatar, name, email */}
+      <div className="flex items-center gap-3.5 px-1">
+        <div className="relative shrink-0">
+          {userPhoto ? (
+            <img
+              src={userPhoto}
+              alt={displayFullName}
+              className="w-14 h-14 rounded-full object-cover ring-2 ring-[#fbf6ec] shadow-[0_0_0_3px_#e8dcc8]"
+              referrerPolicy="no-referrer"
+            />
+          ) : (
+            <div className="w-14 h-14 rounded-full bg-[#efe5d4] text-[#7a2028] flex items-center justify-center shadow-[0_0_0_3px_#e8dcc8]">
+              <User className="w-6 h-6" />
             </div>
-            {userEmail ? (
-              <p className="text-[10px] sm:text-[11px] text-slate-400 font-medium truncate">
-                {userEmail}
-              </p>
-            ) : (
-              <p className="text-[10px] sm:text-[11px] text-amber-700 font-semibold truncate">
-                პროფილის მართვა
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="flex items-center gap-1.5 shrink-0">
-          {savedMessage && (
-            <span className="inline-flex items-center gap-1 text-emerald-800 text-[10px] sm:text-xs font-black bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200/90 shadow-2xs animate-pulse">
-              <Check className="w-3 h-3 stroke-[3]" />
-              შენახულია
-            </span>
           )}
+          <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-emerald-500 border-2 border-[#fbf6ec] rounded-full" />
         </div>
+        <div className="min-w-0 flex-1">
+          <h2 className="font-serif-ge text-lg font-bold text-[#4a3426] truncate">{displayFullName}</h2>
+          <p className="text-sm text-[#8a7a6a] truncate">{userEmail || 'პროფილის მართვა'}</p>
+        </div>
+        {savedMessage && (
+          <span className="inline-flex items-center gap-1 h-8 px-3 rounded-full bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 text-xs font-bold shrink-0">
+            <Check className="w-3.5 h-3.5 stroke-[3]" />
+            შენახულია
+          </span>
+        )}
       </div>
 
-      {/* FORM SECTION */}
-      <div className="bg-white/95 backdrop-blur-md p-4 sm:p-5 rounded-3xl border border-amber-200/70 shadow-md space-y-4 text-slate-700">
-        <div className="flex items-center justify-between border-b border-slate-100 pb-2.5">
-          <span className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-            პირადი ინფორმაცია
-          </span>
-          <span className="text-[10px] text-slate-400">შეავსეთ ველები</span>
-        </div>
+      {/* personal information */}
+      <section className="bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] p-4 sm:p-5 space-y-4">
+        <h3 className="flex items-center gap-2 font-serif-ge text-[15px] font-bold text-[#4a3426]">
+          <Sparkles className="w-4 h-4 text-[#7a2028]" />
+          პირადი ინფორმაცია
+        </h3>
 
-        {/* Name inputs */}
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="text-[11px] font-bold text-slate-600 block mb-1">სახელი</label>
-            <input 
-              name="firstName" 
-              placeholder="სახელი" 
-              value={profile.firstName} 
-              onChange={handleChange} 
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 focus:bg-white text-xs font-medium text-slate-800 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/15 transition-all shadow-2xs" 
-            />
+            <label className={label}>სახელი</label>
+            <input name="firstName" placeholder="სახელი" value={profile.firstName} onChange={handleChange} className={field} />
           </div>
           <div>
-            <label className="text-[11px] font-bold text-slate-600 block mb-1">გვარი</label>
-            <input 
-              name="lastName" 
-              placeholder="გვარი" 
-              value={profile.lastName} 
-              onChange={handleChange} 
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 focus:bg-white text-xs font-medium text-slate-800 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/15 transition-all shadow-2xs" 
-            />
+            <label className={label}>გვარი</label>
+            <input name="lastName" placeholder="გვარი" value={profile.lastName} onChange={handleChange} className={field} />
+          </div>
+          <div>
+            <label className={label}>რეგიონი</label>
+            <input name="region" placeholder="მაგ: ქართლი" value={profile.region} onChange={handleChange} className={field} />
+          </div>
+          <div>
+            <label className={label}>ქალაქი / სოფელი</label>
+            <input name="city" placeholder="მაგ: თბილისი" value={profile.city} onChange={handleChange} className={field} />
           </div>
         </div>
 
-        {/* Birthdate & Status */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-[11px] font-bold text-slate-600 block mb-1">დაბადების თარიღი</label>
-            <div className="flex items-center gap-1.5">
-              <input 
-                name="birthDate.year" 
-                placeholder="წელი" 
-                value={profile.birthDate.year || ''} 
-                onChange={handleChange} 
-                className="w-16 px-1.5 py-2 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 focus:bg-white text-xs font-bold text-slate-800 text-center outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/15 transition-all shadow-2xs" 
-              />
-              <input 
-                name="birthDate.month" 
-                placeholder="თვე" 
-                value={profile.birthDate.month || ''} 
-                onChange={handleChange} 
-                className="w-11 px-1 py-2 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 focus:bg-white text-xs font-bold text-slate-800 text-center outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/15 transition-all shadow-2xs" 
-              />
-              <input 
-                name="birthDate.day" 
-                placeholder="დღე" 
-                value={profile.birthDate.day || ''} 
-                onChange={handleChange} 
-                className="w-11 px-1 py-2 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 focus:bg-white text-xs font-bold text-slate-800 text-center outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/15 transition-all shadow-2xs" 
-              />
-            </div>
-          </div>
-          <div className="relative">
-            <label className="text-[11px] font-bold text-slate-600 block mb-1">სტატუსი</label>
-            <button
-              type="button"
-              onClick={() => setStatusDropdownOpen(!statusDropdownOpen)}
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 active:scale-[0.98] text-xs font-semibold text-left outline-none transition-all flex items-center justify-between cursor-pointer shadow-2xs hover:border-amber-300"
-            >
-              <span className="truncate text-slate-700">
-                {selectedStatuses.length === 0 ? (
-                  <span className="text-slate-400 font-normal">აირჩიეთ სტატუსი...</span>
-                ) : (
-                  selectedStatuses.map(s => {
-                    const item = STATUS_OPTIONS.find(opt => opt.id === s);
-                    return item ? item.label : s;
-                  }).join(', ')
-                )}
-              </span>
-              <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${statusDropdownOpen ? 'rotate-180 text-amber-700' : ''}`} />
-            </button>
-
-            {statusDropdownOpen && (
-              <>
-                <div className="fixed inset-0 z-10" onClick={() => setStatusDropdownOpen(false)}></div>
-                <div className="absolute left-0 right-0 mt-1.5 bg-white border border-slate-200/90 rounded-2xl shadow-xl z-20 p-2 space-y-1.5 animate-in fade-in duration-100">
-                  <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                    მონიშნეთ სტატუსი:
-                  </div>
-                  {STATUS_OPTIONS.map(item => {
-                    const active = selectedStatuses.includes(item.id);
-                    return (
-                      <button
-                        key={item.id}
-                        type="button"
-                        onClick={() => handleStatusToggle(item.id)}
-                        className={`w-full px-3 py-2 rounded-xl text-xs font-bold text-left flex items-center justify-between transition-all cursor-pointer ${
-                          active 
-                            ? 'text-amber-950 bg-amber-100/90 border border-amber-300 shadow-2xs' 
-                            : 'text-slate-600 hover:bg-slate-50 border border-transparent'
-                        }`}
-                      >
-                        <span>{item.label}</span>
-                        {active ? (
-                          <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center">
-                            <Check className="w-3.5 h-3.5 stroke-[3]" />
-                          </div>
-                        ) : (
-                          <div className="w-5 h-5 rounded-full border border-slate-200"></div>
-                        )}
-                      </button>
-                    );
-                  })}
-                </div>
-              </>
-            )}
+        <div>
+          <label className={label}>დაბადების თარიღი</label>
+          <div className="grid grid-cols-[1.4fr_1fr_1fr] gap-2 max-w-xs">
+            <input name="birthDate.year" inputMode="numeric" placeholder="წელი" value={profile.birthDate.year || ''} onChange={handleChange} className={`${field} text-center font-semibold`} />
+            <input name="birthDate.month" inputMode="numeric" placeholder="თვე" value={profile.birthDate.month || ''} onChange={handleChange} className={`${field} text-center font-semibold`} />
+            <input name="birthDate.day" inputMode="numeric" placeholder="დღე" value={profile.birthDate.day || ''} onChange={handleChange} className={`${field} text-center font-semibold`} />
           </div>
         </div>
 
-        {/* Region & City */}
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="text-[11px] font-bold text-slate-600 block mb-1">რეგიონი</label>
-            <input 
-              name="region" 
-              placeholder="მაგ: ქართლი" 
-              value={profile.region} 
-              onChange={handleChange} 
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 focus:bg-white text-xs font-medium text-slate-800 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/15 transition-all shadow-2xs" 
-            />
-          </div>
-          <div>
-            <label className="text-[11px] font-bold text-slate-600 block mb-1">ქალაქი / სოფელი</label>
-            <input 
-              name="city" 
-              placeholder="მაგ: თბილისი" 
-              value={profile.city} 
-              onChange={handleChange} 
-              className="w-full px-3 py-2 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 focus:bg-white text-xs font-medium text-slate-800 outline-none focus:border-amber-500 focus:ring-2 focus:ring-amber-500/15 transition-all shadow-2xs" 
-            />
-          </div>
-        </div>
-
-        {/* Voices Selection with Individual Toggles */}
-        <div className="relative space-y-1">
-          <label className="text-[11px] font-bold text-slate-600 block">
-            რომელი ხმა ხარ ან ფიქრობ რომ ხარ?
-          </label>
-
-          <button
-            type="button"
-            onClick={() => setVoicesDropdownOpen(!voicesDropdownOpen)}
-            className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 bg-slate-50/60 hover:bg-slate-50 active:scale-[0.98] text-xs font-semibold text-left outline-none transition-all flex items-center justify-between cursor-pointer shadow-2xs hover:border-amber-300"
-          >
-            <span className="truncate text-slate-700">
-              {profile.voices.length === 0 
-                ? <span className="text-slate-400 font-normal">აირჩიეთ ხმები (არცერთი არ არის მონიშნული)</span> 
-                : profile.voices.map(v => 
-                    v === '1' ? 'მთქმელი 1-ხმა' : v === '2' ? 'მოძახილი 2-ხმა' : 'ბანი 3-ხმა'
-                  ).join(', ')
-            }
-            </span>
-            <ChevronDown className={`w-3.5 h-3.5 text-slate-400 transition-transform ${voicesDropdownOpen ? 'rotate-180 text-amber-700' : ''}`} />
-          </button>
-          
-          {voicesDropdownOpen && (
-            <>
-              <div className="fixed inset-0 z-10" onClick={() => setVoicesDropdownOpen(false)}></div>
-              <div className="absolute left-0 right-0 mt-1.5 bg-white border border-slate-200/90 rounded-2xl shadow-xl z-20 p-2 space-y-1.5 animate-in fade-in duration-100">
-                <div className="px-2 py-1 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
-                  მონიშნეთ თქვენი ხმა:
-                </div>
-                {[
-                  { id: '1', label: 'მთქმელი 1-ხმა' },
-                  { id: '2', label: 'მოძახილი 2-ხმა' },
-                  { id: '3', label: 'ბანი 3-ხმა' }
-                ].map(item => {
-                  const active = profile.voices.includes(item.id as any);
-                  return (
-                    <button
-                      key={item.id}
-                      type="button"
-                      onClick={() => handleVoiceToggle(item.id as any)}
-                      className={`w-full px-3 py-2 rounded-xl text-xs font-bold text-left flex items-center justify-between transition-all cursor-pointer active:scale-95 ${
-                        active 
-                          ? 'text-amber-950 bg-amber-100/90 border border-amber-300 shadow-2xs' 
-                          : 'text-slate-600 hover:bg-slate-50 border border-transparent'
-                      }`}
-                    >
-                      <span>{item.label}</span>
-                      {active ? (
-                        <div className="w-5 h-5 rounded-full bg-amber-600 text-white flex items-center justify-center">
-                          <Check className="w-3.5 h-3.5 stroke-[3]" />
-                        </div>
-                      ) : (
-                        <div className="w-5 h-5 rounded-full border border-slate-200"></div>
-                      )}
-                    </button>
-                  );
-                })}
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* MODERN SCHEDULE BUILDER */}
-        <div className="bg-gradient-to-br from-slate-50/90 via-white to-amber-50/30 border border-amber-200/80 rounded-2xl p-2.5 sm:p-3 space-y-2 shadow-2xs">
-          {/* Header with Title & Badge */}
-          <div className="flex items-center justify-between border-b border-amber-100/70 pb-1.5">
-            <div className="flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-[#85502c]" />
-              <span className="text-xs font-bold text-slate-800">მუშაობის განრიგი</span>
-              <span className="text-[10px] text-slate-400 font-medium">(06:00 – 23:00)</span>
-            </div>
-
-            <span className={`text-[9px] sm:text-[10px] font-black px-2 py-0.5 rounded-full border shadow-2xs ${
-              isValidSchedule 
-                ? 'text-emerald-800 bg-emerald-100/90 border-emerald-300' 
-                : 'text-amber-800 bg-amber-100/90 border-amber-300'
-            }`}>
-              {configuredDaysList.length} დღე არჩეულია
-            </span>
-          </div>
-
-          {/* 7-Day Segmented Pill Selector with Active Count Badges */}
-          <div className="grid grid-cols-7 gap-1 p-0.5 bg-amber-50/60 rounded-xl border border-amber-200/60">
-            {DAYS_OF_WEEK.map(day => {
-              const dayHours = getSelectedHoursForDay(day.id);
-              const count = dayHours.length;
-              const hasHours = count > 0;
-              const isSelected = activeDay === day.id;
-
+        <div>
+          <label className={label}>სტატუსი</label>
+          <div className="flex flex-wrap gap-2">
+            {STATUS_OPTIONS.map(item => {
+              const active = selectedStatuses.includes(item.id);
               return (
-                <button
-                  key={day.id}
-                  type="button"
-                  onClick={() => setActiveDay(day.id)}
-                  className={`py-1 rounded-lg text-center transition-all cursor-pointer select-none flex flex-col items-center justify-center active:scale-95 ${
-                    isSelected
-                      ? 'bg-gradient-to-br from-amber-500 to-[#85502c] text-white shadow-xs scale-[1.02]'
-                      : hasHours
-                        ? 'bg-amber-100/90 text-amber-950 font-black border border-amber-300/80 hover:bg-amber-200/80'
-                        : 'text-slate-600 hover:bg-white/80'
-                  }`}
-                >
-                  <span className="text-[10px] sm:text-[11px] font-black leading-tight">{day.short}</span>
-                  <span className={`text-[8px] sm:text-[9px] font-extrabold leading-none mt-0.5 ${
-                    isSelected ? 'text-amber-100' : hasHours ? 'text-amber-800' : 'text-slate-400'
-                  }`}>
-                    {hasHours ? `${count}სთ` : '—'}
-                  </span>
+                <button key={item.id} type="button" onClick={() => handleStatusToggle(item.id)} className={chip(active)} aria-pressed={active}>
+                  {active && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                  {item.id}
                 </button>
               );
             })}
           </div>
-
-          {/* Selected Day's Instant Inline Hour Matrix */}
-          <div className="bg-white/95 p-2 rounded-xl border border-amber-200/80 shadow-2xs space-y-1.5">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="font-bold text-slate-800 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
-                {activeDayObj.full}:
-              </span>
-              <span className="text-[10px] text-slate-500 font-medium">
-                {activeDaySelectedHours.length > 0 
-                  ? `მონიშნულია: ${activeDaySelectedHours.join(', ')}` 
-                  : 'აირჩიეთ საათები'}
-              </span>
-            </div>
-
-            {/* 18-Hour Micro Grid */}
-            <div className="grid grid-cols-6 gap-1">
-              {AVAILABLE_HOURS.map(hour => {
-                const isSelected = activeDaySelectedHours.includes(hour);
-                return (
-                  <button
-                    key={hour}
-                    type="button"
-                    onClick={() => handleHourToggle(activeDay, hour)}
-                    className={`py-1 px-0.5 rounded-md text-[9px] sm:text-[10px] font-black transition-all cursor-pointer text-center select-none border active:scale-90 ${
-                      isSelected
-                        ? 'bg-gradient-to-br from-amber-500 to-[#85502c] text-white border-amber-700 shadow-2xs scale-[1.02]'
-                        : 'bg-slate-50 text-slate-700 border-slate-200/80 hover:bg-amber-50/70 hover:border-amber-300'
-                    }`}
-                  >
-                    {hour}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* Validation Note */}
-          <div className={`p-1.5 px-2 rounded-xl border flex items-center gap-1.5 text-[10px] sm:text-[11px] ${
-            isValidSchedule 
-              ? 'bg-emerald-50/80 border-emerald-200/90 text-emerald-800 font-medium' 
-              : 'bg-amber-50/90 border-amber-200/90 text-amber-900 font-medium'
-          }`}>
-            {isValidSchedule ? (
-              <Check className="w-3 h-3 text-emerald-600 shrink-0 stroke-[2.5]" />
-            ) : (
-              <Info className="w-3 h-3 text-amber-700 shrink-0" />
-            )}
-            <span>მინიმუმ <strong>2 დღე</strong> უნდა აირჩიოთ, თითო-თითო საათი მაინც.</span>
-          </div>
         </div>
 
-        {/* Save Button */}
-        <button
-          type="button"
-          onClick={handleSave}
-          disabled={savingDb}
-          className="w-full py-3 rounded-2xl bg-gradient-to-r from-[#ba8555] via-[#a66d3d] to-[#8d5427] hover:brightness-105 text-white font-bold text-sm tracking-wide shadow-md active:scale-95 border border-[#ebd0ad]/60 transition-all flex items-center justify-center gap-2 cursor-pointer select-none disabled:opacity-60"
-        >
-          {savingDb ? (
-            <Loader2 className="w-4 h-4 animate-spin" />
-          ) : (
-            <Save className="w-4 h-4" />
-          )}
-          <span>მონაცემების შენახვა</span>
-        </button>
-      </div>
+        <div>
+          <label className={label}>რომელი ხმა ხარ ან ფიქრობ რომ ხარ?</label>
+          <div className="flex flex-wrap gap-2">
+            {VOICES.map(item => {
+              const active = profile.voices.includes(item.id);
+              return (
+                <button key={item.id} type="button" onClick={() => handleVoiceToggle(item.id)} className={chip(active)} aria-pressed={active}>
+                  {active && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                  {item.label}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
+      {/* weekly schedule */}
+      <section className="bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] p-4 sm:p-5 space-y-3.5">
+        <div className="flex items-center justify-between gap-2">
+          <h3 className="flex items-center gap-2 font-serif-ge text-[15px] font-bold text-[#4a3426]">
+            <Clock className="w-4 h-4 text-[#7a2028]" />
+            მუშაობის განრიგი
+          </h3>
+          <span className={`h-7 px-2.5 inline-flex items-center rounded-full text-xs font-bold ${
+            isValidSchedule ? 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200' : 'bg-[#efe5d4] text-[#75685a]'
+          }`}>
+            {configuredDaysList.length} დღე არჩეულია
+          </span>
+        </div>
+
+        <div className="grid grid-cols-7 gap-1.5">
+          {DAYS_OF_WEEK.map(day => {
+            const count = getSelectedHoursForDay(day.id).length;
+            const isSelected = activeDay === day.id;
+            return (
+              <button
+                key={day.id}
+                type="button"
+                onClick={() => setActiveDay(day.id)}
+                className={`h-12 rounded-xl flex flex-col items-center justify-center transition-colors cursor-pointer select-none active:scale-95 ${
+                  isSelected
+                    ? 'bg-[#7a2028] text-[#fbf6ec]'
+                    : count > 0
+                      ? 'bg-[#7a2028]/10 text-[#7a2028] hover:bg-[#7a2028]/15'
+                      : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40'
+                }`}
+              >
+                <span className="text-xs font-bold leading-tight">{day.short}</span>
+                <span className={`text-[10px] font-semibold leading-none mt-1 ${isSelected ? 'text-[#fbf6ec]/80' : 'opacity-70'}`}>
+                  {count > 0 ? `${count} სთ` : '—'}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        <div className="flex items-baseline justify-between gap-2">
+          <span className="text-sm font-bold text-[#4a3426]">{activeDayObj.full}</span>
+          <span className="text-xs text-[#8a7a6a] truncate">
+            {activeDaySelectedHours.length > 0 ? activeDaySelectedHours.join(', ') : 'აირჩიეთ საათები (06:00 – 23:00)'}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-6 gap-1.5">
+          {AVAILABLE_HOURS.map(hour => {
+            const isSelected = activeDaySelectedHours.includes(hour);
+            return (
+              <button
+                key={hour}
+                type="button"
+                onClick={() => handleHourToggle(activeDay, hour)}
+                className={`h-9 rounded-lg text-xs font-semibold tabular-nums transition-colors cursor-pointer select-none active:scale-95 ${
+                  isSelected ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40'
+                }`}
+              >
+                {hour}
+              </button>
+            );
+          })}
+        </div>
+
+        <p className={`flex items-center gap-2 text-xs ${isValidSchedule ? 'text-emerald-800' : 'text-[#75685a]'}`}>
+          {isValidSchedule ? <Check className="w-3.5 h-3.5 shrink-0 stroke-[2.5]" /> : <Info className="w-3.5 h-3.5 shrink-0" />}
+          <span>მინიმუმ <strong>2 დღე</strong> უნდა აირჩიოთ, თითო-თითო საათი მაინც.</span>
+        </p>
+      </section>
+
+      <button
+        type="button"
+        onClick={handleSave}
+        disabled={savingDb}
+        className="w-full h-12 rounded-2xl bg-[#7a2028] hover:bg-[#5e1820] text-[#fbf6ec] font-bold text-[15px] shadow-[0_4px_14px_rgba(122,32,40,0.25)] active:scale-[0.98] transition-colors flex items-center justify-center gap-2 cursor-pointer select-none disabled:opacity-60"
+      >
+        {savingDb ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+        <span>მონაცემების შენახვა</span>
+      </button>
     </div>
   );
 };

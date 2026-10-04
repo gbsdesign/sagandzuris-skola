@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { triggerHaptic } from '../utils/haptics';
 
-export type PageType = 'home' | 'profile' | 'galoba' | 'galoba-detail' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'gz' | 'bookmark' | 'admin';
+export type PageType = 'home' | 'profile' | 'galoba' | 'galoba-detail' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'gz' | 'bookmark' | 'admin' | 'class';
 export type ServiceType = 'წირვა' | 'მწუხრი' | 'ცისკარი' | 'სადღესასწაულო' | 'მარხვანი' | 'ზატიკი' | null;
 
 export interface NavigationContextType {
@@ -10,6 +10,9 @@ export interface NavigationContextType {
   expandedChantId: string | null;
   chantSearch: string;
   navigateTo: (page: PageType) => void;
+  // the class shown on the 'class' page
+  selectedClassId: string | null;
+  openClass: (classId: string) => void;
   handleGoBack: () => void;
   setSelectedService: (service: ServiceType) => void;
   setExpandedChantId: React.Dispatch<React.SetStateAction<string | null>>;
@@ -23,6 +26,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [selectedService, setSelectedService] = useState<ServiceType>(null);
   const [expandedChantId, setExpandedChantId] = useState<string | null>(null);
   const [chantSearch, setChantSearch] = useState<string>('');
+  const [selectedClassId, setSelectedClassId] = useState<string | null>(null);
 
   const navigateTo = (page: PageType) => {
     triggerHaptic(10);
@@ -32,6 +36,11 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setExpandedChantId(null);
       setChantSearch('');
     }
+  };
+
+  const openClass = (classId: string) => {
+    setSelectedClassId(classId);
+    navigateTo('class');
   };
 
   const handleGoBack = () => {
@@ -63,6 +72,8 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         expandedChantId,
         chantSearch,
         navigateTo,
+        selectedClassId,
+        openClass,
         handleGoBack,
         setSelectedService,
         setExpandedChantId,

@@ -3,19 +3,15 @@ import { ArrowLeft } from 'lucide-react';
 import { PageType, ServiceType } from '../../context';
 
 interface SubPageHeaderProps {
-  logoUrl: string;
   currentPage: PageType;
   selectedService: ServiceType;
   onGoBack: () => void;
-  onGoHome: () => void;
 }
 
 export const SubPageHeader: React.FC<SubPageHeaderProps> = ({
-  logoUrl,
   currentPage,
   selectedService,
   onGoBack,
-  onGoHome,
 }) => {
   const title =
     currentPage === 'galoba'
@@ -40,21 +36,6 @@ export const SubPageHeader: React.FC<SubPageHeaderProps> = ({
         >
           <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
           <span>უკან</span>
-        </button>
-
-        <button
-          type="button"
-          onClick={onGoHome}
-          className="flex items-center gap-2 hover:opacity-80 transition-opacity cursor-pointer"
-        >
-          <img
-            src={logoUrl}
-            alt="საგანძურის სკოლა"
-            className="w-6 h-6 rounded-md object-contain bg-slate-50 border border-slate-200/60 p-0.5"
-          />
-          <span className="text-xs font-medium text-slate-500 hidden sm:inline">
-            საგანძურის სკოლა
-          </span>
         </button>
       </div>
 

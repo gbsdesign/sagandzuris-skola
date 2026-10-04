@@ -1,7 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "mcp__claude_ai_Google_Drive__search_files"
+      "mcp__claude_ai_Google_Drive__search_files",
+      "PowerShell(npx --yes tsx check-media.mts)",
+      "PowerShell(Remove-Item -LiteralPath \"C:\\\\Users\\\\mrgab\\\\Downloads\\\\საგანძურის-სკოლა \\(2\\)\\\\check-media.mts\" -Confirm:$false; npx tsc --noEmit -p .; \"tsc exit: $LASTEXITCODE\")",
+      "PowerShell(try { \\(Invoke-WebRequest http://localhost:5173 -UseBasicParsing -TimeoutSec 5\\).StatusCode } catch { \"down: $\\($_.Exception.Message\\)\" })",
+      "PowerShell(npx tsc --noEmit -p .; \"tsc exit: $LASTEXITCODE\")",
+      "PowerShell(npx tsc --noEmit -p .; \"tsc exit: $LASTEXITCODE\"; $env:W='360'; node \"$env:TEMP\\\\cdp-steps-w.mjs\" \"$env:TEMP\\\\steps18.json\")",
+      "PowerShell(try { \\(Invoke-WebRequest http://localhost:5173 -UseBasicParsing -TimeoutSec 5\\).StatusCode } catch { \"down\" })"
     ]
   }
 }

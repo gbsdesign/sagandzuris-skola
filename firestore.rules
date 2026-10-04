@@ -41,5 +41,17 @@ service cloud.firestore {
       allow read: if isSignedIn();
       allow write: if isAdmin();
     }
+
+    // Classes: admins manage them; members can read the classes they belong to
+    match /classes/{classId} {
+      allow read: if isAdmin() || (isSignedIn() && request.auth.uid in resource.data.memberIds);
+      allow write: if isAdmin();
+    }
+
+    // Teacher's confirmations ("ჩათვლა") of a student's voices: the student reads, only admins write
+    match /confirmations/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
+    }
   }
 }

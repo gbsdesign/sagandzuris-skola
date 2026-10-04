@@ -3,89 +3,80 @@ import { useNavigation, useModal } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 import { Toast } from '../ui/Toast';
 
-// Home menu as a grape cluster drawn like a manuscript ornament: a thin vine line,
-// "გაიცანი წინაპრები" on the stem, every grape a calm flat button. Grapes without `go` are not built yet.
-type Grape = { label: string; go?: () => void; big?: boolean };
+// Home menu drawn on the vine-and-qvevri picture: light parchment labels hang under the grape
+// clusters, sit on the leaves and on the qvevri, and sway gently. Labels without `go` are not built yet.
+// x/y are the label's centre in % of the picture (public/home/vine.png, 1033×1390).
+type Spot = { label: string; x: number; y: number; go?: () => void; big?: boolean; hero?: boolean };
 
-const INK = '#9a3324';
-
-// outlined vine leaf, base at (0,0), pointing up
-const LEAF = 'M0 0C-5-3-13-1-18-8-14-11-13-16-17-23-9-22-5-27 0-36 5-27 9-22 17-23 13-16 14-11 18-8 13-1 5-3 0 0Z';
-const Leaf: React.FC<{ x: number; y: number; r: number; s: number }> = ({ x, y, r, s }) => (
-  <g transform={`translate(${x} ${y}) rotate(${r}) scale(${s})`}>
-    <path d={LEAF} fill={INK} fillOpacity={0.1} stroke={INK} strokeWidth={1.4} strokeLinejoin="round" />
-    <path d="M0 0V-28M0-9-12-17M0-9 12-17" stroke={INK} strokeWidth={1} strokeLinecap="round" opacity={0.6} />
-  </g>
-);
+const VINE = '/home/vine.png';
 
 export const GrapeNav: React.FC = () => {
   const { navigateTo } = useNavigation();
   const { openModal } = useModal();
   const [soon, setSoon] = useState<string | null>(null);
 
-  const rows: Grape[][] = [
-    [
-      { label: 'მედავით­ნეობა' },
-      { label: 'ჩვევები', go: () => openModal('chvevebi') },
-    ],
-    [
-      { label: 'სიმღერა', go: () => navigateTo('simghera'), big: true },
-      { label: 'გალობა', go: () => navigateTo('galoba'), big: true },
-      { label: 'მთქმელი', go: () => navigateTo('mtkmeli'), big: true },
-    ],
-    [
-      { label: 'საკრა­ვები', go: () => navigateTo('sakravebi') },
-      { label: 'თამაშები' },
-    ],
-    [{ label: 'გაიცანი წინაპრები', go: () => openModal('docFilms') }],
+  const spots: Spot[] = [
+    // under the grape clusters
+    { label: 'სიმღერა', x: 13, y: 36, go: () => navigateTo('simghera'), big: true },
+    // chant, the main path, stands biggest at the heart of the vine
+    { label: 'გალობა', x: 57, y: 31, go: () => navigateTo('galoba'), hero: true },
+    { label: 'მთქმელი', x: 50, y: 58, go: () => navigateTo('mtkmeli'), big: true },
+    { label: 'საკრავები', x: 70, y: 48, go: () => navigateTo('sakravebi') },
+    // on the leaves
+    { label: 'მედავით­ნეობა', x: 35, y: 13 },
+    { label: 'ჩვევები', x: 62, y: 8, go: () => openModal('chvevebi') },
+    { label: 'თამაშები', x: 86, y: 28 },
+    // in the qvevri
+    { label: 'გაიცანი წინაპრები', x: 51, y: 82, go: () => openModal('docFilms') },
   ];
 
-  const press = (g: Grape) => {
+  const press = (s: Spot) => {
     triggerHaptic(10);
-    if (g.go) g.go();
-    else setSoon(`„${g.label}“ ჯერ მზადდება — მალე დაემატება`);
+    if (s.go) s.go();
+    else setSoon(`„${s.label}“ ჯერ მზადდება — მალე დაემატება`);
   };
 
   return (
-    <div className="@container w-full max-w-md select-none">
-      {/* vine line with leaves */}
-      <div className="relative">
-        <svg viewBox="0 0 400 70" className="block w-full overflow-visible" fill="none" aria-hidden>
-          <path d="M4 36H396" stroke={INK} strokeWidth={2} strokeLinecap="round" />
-          <path d="M56 36c-4-10 3-17 10-14 5 2 3 9-2 7M344 36c4-10-3-17-10-14-5 2-3 9 2 7" stroke={INK} strokeWidth={1.4} strokeLinecap="round" />
-          <Leaf x={28} y={36} r={-62} s={0.75} />
-          <Leaf x={86} y={36} r={-30} s={0.95} />
-          <Leaf x={314} y={36} r={30} s={0.95} />
-          <Leaf x={372} y={36} r={62} s={0.75} />
-        </svg>
-      </div>
+    <div className="@container w-full max-w-lg select-none">
+      <div className="relative w-full aspect-[1033/1390]">
+        {/* Softened so the vine stays a backdrop and the labels lead the eye */}
+        <img
+          src={VINE}
+          alt=""
+          aria-hidden
+          className="absolute inset-0 w-full h-full opacity-75 [filter:saturate(0.8)_contrast(0.85)_sepia(0.15)]"
+          draggable={false}
+        />
 
-      {/* stem */}
-      <svg viewBox="0 0 40 30" className="block w-[10%] mx-auto -mt-[8.5%]" fill="none" aria-hidden>
-        <path d="M20 0V30" stroke={INK} strokeWidth={3} strokeLinecap="round" />
-      </svg>
-
-      {rows.map((row, ri) => (
-        <div key={ri} className={`flex justify-center ${ri > 0 ? '-mt-[3.2%]' : ''}`}>
-          {row.map(g => (
-            <button
-              key={g.label}
-              type="button"
-              onClick={() => press(g)}
-              className={`${g.big ? 'w-[27%]' : 'w-[24%]'} aspect-square rounded-full flex flex-col items-center justify-center px-[2%] text-center border-[3px] border-[#f8f2e7] shadow-[inset_0_0_0_5px_var(--g),inset_0_0_0_6px_rgba(251,243,230,0.35)] transition-colors cursor-pointer focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-amber-300 ${
-                g.go ? 'bg-[#8e2f22] [--g:#8e2f22] hover:bg-[#74251a] hover:[--g:#74251a]' : 'bg-[#b5695c] [--g:#b5695c] hover:bg-[#a45b4e] hover:[--g:#a45b4e]'
+        {spots.map((s, i) => (
+          <button
+            key={s.label}
+            type="button"
+            onClick={() => press(s)}
+            style={{ left: `${s.x}%`, top: `${s.y}%`, animationDelay: `${-i * 0.7}s` }}
+            className="vine-sway absolute -translate-x-1/2 -translate-y-1/2 cursor-pointer focus-visible:outline-none group"
+          >
+            <span
+              className={`flex flex-col items-center justify-center rounded-full text-center transition-[transform,background-color] duration-200 group-hover:scale-105 group-active:scale-95 group-focus-visible:ring-4 group-focus-visible:ring-amber-300 ${
+                s.hero ? 'px-[1.1em] py-[0.45em] min-h-12' : 'px-[0.9em] py-[0.35em] min-h-9'
+              } ${
+                s.go
+                  ? 'bg-[#7a2028] text-[#fbf6ec] border-2 border-[#fbf6ec] shadow-[0_3px_10px_rgba(74,52,38,0.35)] group-hover:bg-[#5e1820]'
+                  : 'bg-[#fbf6ec] text-[#75685a] border border-dashed border-[#8a7a6a]/70'
               }`}
             >
-              <span className={`font-serif-ge font-bold text-[#fbf3e6] leading-tight hyphens-manual ${g.big ? 'text-[clamp(12px,3.6cqw,17px)]' : g.label.length > 8 ? 'text-[clamp(10px,2.9cqw,14px)]' : 'text-[clamp(11px,3.2cqw,15px)]'}`}>
-                {g.label}
+              <span
+                className={`font-serif-ge font-bold leading-tight hyphens-manual max-w-[6.5em] ${
+                  s.hero ? 'text-[clamp(20px,6cqw,30px)] tracking-wide' : s.big ? 'text-[clamp(14px,3.8cqw,18px)]' : 'text-[clamp(12px,3.2cqw,15px)]'
+                }`}
+              >
+                {s.label}
               </span>
-              {!g.go && (
-                <span className="mt-1 text-[clamp(10px,2.8cqw,12px)] text-[#fbf3e6]/85">მალე</span>
-              )}
-            </button>
-          ))}
-        </div>
-      ))}
+              {!s.go && <span className="text-[clamp(10px,2.5cqw,12px)] leading-tight opacity-80">მალე</span>}
+            </span>
+          </button>
+        ))}
+      </div>
 
       <Toast message={soon || ''} type="info" isVisible={!!soon} onClose={() => setSoon(null)} />
     </div>

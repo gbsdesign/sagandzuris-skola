@@ -5,7 +5,8 @@ export type ModalType = 'profile' | 'bookmark' | 'chvevebi' | 'manera' | 'gza' |
 
 export interface ModalContextType {
   activeModal: ModalType;
-  openModal: (modal: NonNullable<ModalType>) => void;
+  // returnTo: the modal to reopen when this one closes (e.g. skills opened from inside the path)
+  openModal: (modal: NonNullable<ModalType>, returnTo?: NonNullable<ModalType>) => void;
   closeModal: () => void;
   isModalOpen: (modal: NonNullable<ModalType>) => boolean;
 }
@@ -14,16 +15,19 @@ const ModalContext = createContext<ModalContextType | undefined>(undefined);
 
 export const ModalProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [activeModal, setActiveModal] = useState<ModalType>(null);
+  const [returnTo, setReturnTo] = useState<ModalType>(null);
 
-  const openModal = useCallback((modal: NonNullable<ModalType>) => {
+  const openModal = useCallback((modal: NonNullable<ModalType>, back?: NonNullable<ModalType>) => {
     triggerHaptic(10);
     setActiveModal(modal);
+    setReturnTo(back ?? null);
   }, []);
 
   const closeModal = useCallback(() => {
     triggerHaptic(8);
-    setActiveModal(null);
-  }, []);
+    setActiveModal(returnTo);
+    setReturnTo(null);
+  }, [returnTo]);
 
   const isModalOpen = useCallback(
     (modal: NonNullable<ModalType>) => activeModal === modal,

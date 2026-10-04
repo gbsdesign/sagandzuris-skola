@@ -222,8 +222,6 @@ interface SongItemProps {
 }
 
 const SongItem: React.FC<SongItemProps> = ({ song, region, isOpen, onToggleOpen, isSelected, onToggleSelect }) => {
-  const [versionIdx, setVersionIdx] = useState(0);
-  const version = song.versions[versionIdx];
   const hasAudio = song.versions.length > 0;
 
   return (
@@ -300,89 +298,97 @@ const SongItem: React.FC<SongItemProps> = ({ song, region, isOpen, onToggleOpen,
         </button>
       </div>
 
-      {isOpen && (
-        <div className="border-t border-amber-200/70 bg-gradient-to-b from-amber-50/40 to-stone-50/50 p-3 sm:p-4 space-y-2.5 animate-in fade-in duration-200">
-          {song.versions.length > 1 && (
-            <>
-              <div className="text-[11px] font-semibold text-slate-500 px-1 flex items-center gap-1.5">
-                <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-                <span>ჩანაწერები (აირჩიეთ):</span>
-              </div>
-              <div className="flex flex-wrap gap-2">
-                {song.versions.map((v, i) => (
-                  <button
-                    key={i}
-                    type="button"
-                    onClick={() => { triggerHaptic(10); setVersionIdx(i); }}
-                    className={`min-h-9 px-3 py-1.5 rounded-xl border text-xs font-bold text-left transition-all cursor-pointer ${
-                      i === versionIdx
-                        ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
-                        : 'bg-white text-slate-700 border-slate-200 hover:border-amber-300 hover:bg-amber-50'
-                    }`}
-                  >
-                    {v.label}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
+      {isOpen && <SongBody song={song} region={region} />}
+    </div>
+  );
+};
 
-          {version ? (
-            <div className="rounded-xl border border-amber-300/80 bg-white shadow-sm px-2 pb-2.5 pt-2">
-              <ChantPlayer
-                key={`${song.id}-${versionIdx}`}
-                media={songVersionMedia(song, version)}
-                title={song.title}
-                subtitle={`${region.nameGe} · ${version.label}`}
-                inline
-              />
+// the unfolded part of a song: recording picker, player (with notes & lyrics), SoundCloud, lyrics, documents.
+// Also used by the "საგანძურის გზა" list.
+export const SongBody: React.FC<{ song: FolkSong; region: FolkRegion }> = ({ song, region }) => {
+  const [versionIdx, setVersionIdx] = useState(0);
+  const version = song.versions[versionIdx];
+  return (
+      <div className="border-t border-amber-200/70 bg-gradient-to-b from-amber-50/40 to-stone-50/50 p-3 sm:p-4 space-y-2.5 animate-in fade-in duration-200">
+        {song.versions.length > 1 && (
+          <>
+            <div className="text-[11px] font-semibold text-slate-500 px-1 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-600" />
+              <span>ჩანაწერები (აირჩიეთ):</span>
             </div>
-          ) : song.soundcloud ? (
-            <div className="rounded-xl border border-amber-300/80 bg-white shadow-sm overflow-hidden">
-              <iframe
-                title={song.title}
-                src={soundcloudEmbedUrl(song.soundcloud)}
-                className="block w-full h-[166px] border-0"
-                allow="autoplay"
-                loading="lazy"
-              />
-            </div>
-          ) : (
-            <div className="flex flex-col items-center text-center gap-1.5 py-5 px-3 rounded-xl bg-white border border-dashed border-slate-200">
-              <Music className="w-6 h-6 text-slate-300" />
-              <p className="text-xs font-bold text-slate-600">
-                {song.pendingWma ? 'ჩანაწერი მზადდება' : 'ამ სიმღერის ჩანაწერი ჯერ არ არის დამატებული'}
-              </p>
-              <p className="text-[11px] text-slate-400">მალე დაემატება</p>
-            </div>
-          )}
-
-          {/* Lyrics without a player (with a player they're in its notes & lyrics panel) */}
-          {!version && song.lyrics && (
-            <div className="rounded-xl bg-white border border-slate-200/80 p-3">
-              <p className="text-[11px] font-black text-amber-900 mb-1.5">ტექსტი</p>
-              <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{song.lyrics}</p>
-            </div>
-          )}
-
-          {song.docs && song.docs.length > 0 && (
             <div className="flex flex-wrap gap-2">
-              {song.docs.map(doc => (
-                <a
-                  key={doc.id}
-                  href={songDocUrl(doc)}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="min-h-9 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-amber-50 hover:border-amber-300 text-xs font-bold text-slate-700 inline-flex items-center gap-1.5 transition-colors"
+              {song.versions.map((v, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  onClick={() => { triggerHaptic(10); setVersionIdx(i); }}
+                  className={`min-h-9 px-3 py-1.5 rounded-xl border text-xs font-bold text-left transition-all cursor-pointer ${
+                    i === versionIdx
+                      ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
+                      : 'bg-white text-slate-700 border-slate-200 hover:border-amber-300 hover:bg-amber-50'
+                  }`}
                 >
-                  <FileText className="w-4 h-4 text-amber-700" />
-                  {doc.name}
-                </a>
+                  {v.label}
+                </button>
               ))}
             </div>
-          )}
-        </div>
-      )}
-    </div>
+          </>
+        )}
+
+        {version ? (
+          <div className="rounded-xl border border-amber-300/80 bg-white shadow-sm px-2 pb-2.5 pt-2">
+            <ChantPlayer
+              key={`${song.id}-${versionIdx}`}
+              media={songVersionMedia(song, version)}
+              title={song.title}
+              subtitle={`${region.nameGe} · ${version.label}`}
+              inline
+            />
+          </div>
+        ) : song.soundcloud ? (
+          <div className="rounded-xl border border-amber-300/80 bg-white shadow-sm overflow-hidden">
+            <iframe
+              title={song.title}
+              src={soundcloudEmbedUrl(song.soundcloud)}
+              className="block w-full h-[166px] border-0"
+              allow="autoplay"
+              loading="lazy"
+            />
+          </div>
+        ) : (
+          <div className="flex flex-col items-center text-center gap-1.5 py-5 px-3 rounded-xl bg-white border border-dashed border-slate-200">
+            <Music className="w-6 h-6 text-slate-300" />
+            <p className="text-xs font-bold text-slate-600">
+              {song.pendingWma ? 'ჩანაწერი მზადდება' : 'ამ სიმღერის ჩანაწერი ჯერ არ არის დამატებული'}
+            </p>
+            <p className="text-[11px] text-slate-400">მალე დაემატება</p>
+          </div>
+        )}
+
+        {/* Lyrics without a player (with a player they're in its notes & lyrics panel) */}
+        {!version && song.lyrics && (
+          <div className="rounded-xl bg-white border border-slate-200/80 p-3">
+            <p className="text-[11px] font-black text-amber-900 mb-1.5">ტექსტი</p>
+            <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{song.lyrics}</p>
+          </div>
+        )}
+
+        {song.docs && song.docs.length > 0 && (
+          <div className="flex flex-wrap gap-2">
+            {song.docs.map(doc => (
+              <a
+                key={doc.id}
+                href={songDocUrl(doc)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="min-h-9 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-amber-50 hover:border-amber-300 text-xs font-bold text-slate-700 inline-flex items-center gap-1.5 transition-colors"
+              >
+                <FileText className="w-4 h-4 text-amber-700" />
+                {doc.name}
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
   );
 };

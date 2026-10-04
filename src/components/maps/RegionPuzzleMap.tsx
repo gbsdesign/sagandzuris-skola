@@ -2,8 +2,8 @@ import React, { useState } from 'react';
 import { FOLK_REGIONS, FolkRegion, FolkRegionId } from '../../data/songsData';
 import { GEORGIA_MAP_SHAPES, GEORGIA_MAP_SIZE } from '../../data/georgiaMapShapes';
 
-// Georgia as a wooden puzzle: every region is a button, with the same regions repeated
-// below as roomy buttons for phones. Shared look with the songs map.
+// Georgia as a wooden puzzle: every region is a button labelled with its name and count.
+// Shared look with the songs map.
 interface RegionPuzzleMapProps {
   onSelect: (region: FolkRegion) => void;
   count: (id: FolkRegionId) => number;
@@ -19,7 +19,7 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
 
   return (
     <div className="w-full flex flex-col items-center gap-4 animate-in fade-in duration-200">
-      <div className="w-full rounded-3xl bg-gradient-to-br from-[#f7ecd9] via-[#f3e3c6] to-[#ead6b3] border border-[#e2c9a0] shadow-inner p-2 sm:p-4">
+      <div className="w-full">
         <svg
           viewBox={`-12 -12 ${width + 24} ${height + 24}`}
           className="w-full h-auto select-none"
@@ -30,7 +30,14 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
             <filter id="puzzle-piece-shadow" x="-10%" y="-10%" width="120%" height="120%">
               <feDropShadow dx="0" dy="3" stdDeviation="2.5" floodColor="#6b4423" floodOpacity="0.35" />
             </filter>
+            {/* Follows the northern border, from Abkhazia down towards Mtianeti */}
+            <path id="puzzle-title-path" d="M150,22 Q380,40 600,165" fill="none" />
           </defs>
+          <text className="font-black" fontSize={30} letterSpacing={2} fill="#85502c" pointerEvents="none">
+            <textPath href="#puzzle-title-path" startOffset="50%" textAnchor="middle">
+              მთქმელი საქართველო
+            </textPath>
+          </text>
           {FOLK_REGIONS.map(r => {
             const isHover = hovered === r.id;
             return (
@@ -71,9 +78,11 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
                 </g>
               );
             }
-            // Double names ("მცხეთა-მთიანეთი") go on two lines
+            // Double names ("მცხეთა-მთიანეთი") go on two lines; the count sits underneath
             const lines = name.includes('-') ? name.replace('-', '-\n').split('\n') : [name];
-            const lift = hovered === r.id ? 4 : 0;
+            const n = count(r.id);
+            const top = y - (hovered === r.id ? 4 : 0) - (n ? 10 : 0);
+            const dark = DARK_FILLS.has(r.id);
             return (
               <text
                 key={r.id}
@@ -81,43 +90,29 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
                 pointerEvents="none"
                 fontSize={lines.length > 1 ? 18 : 21}
                 className="font-black"
-                fill={DARK_FILLS.has(r.id) ? '#fffaf0' : '#4a2f17'}
+                fill={dark ? '#fffaf0' : '#4a2f17'}
               >
                 {lines.map((line, i) => (
-                  <tspan key={i} x={x} y={y - lift + (i - (lines.length - 1) / 2) * 20} dominantBaseline="middle">
+                  <tspan key={i} x={x} y={top + (i - (lines.length - 1) / 2) * 20} dominantBaseline="middle">
                     {line}
                   </tspan>
                 ))}
+                {n > 0 && (
+                  <tspan
+                    x={x}
+                    y={top + ((lines.length - 1) / 2) * 20 + 22}
+                    dominantBaseline="middle"
+                    fontSize={15}
+                    className="font-bold"
+                    fill={dark ? '#fde9c8' : '#9a4a12'}
+                  >
+                    {countLabel(n)}
+                  </tspan>
+                )}
               </text>
             );
           })}
         </svg>
-      </div>
-
-      <div className="w-full grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {FOLK_REGIONS.map(r => {
-          const n = count(r.id);
-          return (
-            <button
-              key={r.id}
-              type="button"
-              onClick={() => onSelect(r)}
-              onPointerEnter={() => setHovered(r.id)}
-              onPointerLeave={() => setHovered(null)}
-              className={`min-h-11 px-3 py-2 rounded-xl border bg-white hover:bg-amber-50/60 active:scale-[0.98] transition-all cursor-pointer flex items-center gap-2.5 text-left ${
-                hovered === r.id ? 'border-amber-400 shadow-sm' : 'border-slate-200/90'
-              }`}
-            >
-              <span className="w-4 h-4 shrink-0 rounded-md border border-black/10" style={{ background: r.color }} />
-              <span className="flex-1 min-w-0 flex flex-col">
-                <span className="text-[13px] sm:text-sm font-bold text-slate-800 leading-tight break-words">{regionName(r)}</span>
-                <span className={`text-[11px] font-semibold ${n ? 'text-amber-700' : 'text-slate-400'}`}>
-                  {n ? countLabel(n) : 'ჯერ არ არის'}
-                </span>
-              </span>
-            </button>
-          );
-        })}
       </div>
     </div>
   );

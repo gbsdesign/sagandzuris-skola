@@ -12,7 +12,8 @@ import {
   CheckCheck,
   Music,
   X,
-  Sparkles
+  Sparkles,
+  Headphones
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { auth, db, handleFirestoreError, OperationType } from '../../firebase';
@@ -22,6 +23,12 @@ import { filterValidVariants } from '../../utils/variantValidation';
 import { loadGuestData, saveGuestVariants } from '../../utils/localStorageSync';
 import { useNavigation, useModal } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
+import { sortPathItems } from '../../utils/pathItems';
+import { useConfirmations } from '../../hooks/useConfirmations';
+import { ChantDetailPage } from '../../pages/ChantDetailPage';
+import { getChantMedia } from '../../data/chantMediaRegistry';
+import { FOLK_SONGS, getFolkRegion } from '../../data/songsData';
+import { SongBody } from '../maps/GeorgiaMap';
 
 const VARIANT_ORDER_MAP: { [variantId: string]: number } = {};
 let orderIndex = 0;
@@ -81,6 +88,8 @@ export interface SelectedChantVariantItem {
   fullTitle: string;
   isLearned?: boolean;
   voices?: ('1' | '2' | '3')[];
+  order?: number;           // set when a teacher arranges the path
+  assignedByClass?: string; // class that put it here
 }
 
 export type SelectedChantVariantsMap = {
@@ -141,6 +150,8 @@ export const GzaView: React.FC<GzaViewProps> = ({
 }) => {
   const { navigateTo } = useNavigation();
   const [internalVariants, setInternalVariants] = useState<SelectedChantVariantsMap>({});
+  // voices a teacher confirmed ("ჩათვლა"); the student can't undo those
+  const confirmed = useConfirmations(auth.currentUser?.uid);
 
   const activeVariantsMap = filterValidVariants(externalSelectedVariants || internalVariants);
 
@@ -310,12 +321,8 @@ export const GzaView: React.FC<GzaViewProps> = ({
     }
   };
 
-  const selectedVariantsList = Object.values(activeVariantsMap).sort((a, b) => {
-    const orderA = VARIANT_ORDER_MAP[a.variantId] ?? 999999;
-    const orderB = VARIANT_ORDER_MAP[b.variantId] ?? 999999;
-    if (orderA !== orderB) return orderA - orderB;
-    return a.variantId.localeCompare(b.variantId);
-  });
+  // teacher's order first, otherwise catalogue order
+  const selectedVariantsList = sortPathItems(Object.values(activeVariantsMap));
 
   const isGaloba = (item: SelectedChantVariantItem) => {
     return item.variantId.startsWith('tsirva_') || Boolean(VARIANT_ORDER_MAP[item.variantId] !== undefined);
@@ -365,186 +372,217 @@ export const GzaView: React.FC<GzaViewProps> = ({
     },
   ];
 
+  // only one item is unfolded at a time, so only one player plays
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const voicesOf = (item: SelectedChantVariantItem) =>
+    Array.isArray(item.voices)
+      ? item.voices.map(v => String(v))
+      : typeof (item as any).voices === 'string'
+      ? ((item as any).voices as string).split(',').map(v => v.trim())
+      : [];
+
+  const chipOn = 'bg-[#7a2028] text-[#fbf6ec] ring-[#7a2028]';
+  const chipOff = 'bg-[#fbf6ec] text-[#4a3426] ring-[#e6d9c2] hover:ring-[#7a2028]/40 hover:text-[#7a2028]';
+  const chipConfirmed = 'bg-emerald-700 text-white ring-emerald-700';
+
   return (
-    <div className="w-full max-w-lg mx-auto space-y-4 animate-in fade-in duration-200">
+    <div className="w-full mx-auto space-y-6 animate-in fade-in duration-200">
       {selectedVariantsList.length > 0 ? (
-        <div className="space-y-5">
+        <>
           {categories.map((cat) => {
             if (cat.items.length === 0) return null;
 
             return (
-              <div key={cat.id} className="space-y-2">
-                {/* Category Header */}
-                <div className="flex items-center justify-between pb-2 border-b border-amber-200/80">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 rounded-lg bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-800 shrink-0">
-                      <Music className="w-3.5 h-3.5 text-[#85502c]" />
-                    </div>
-                    <h3 className="text-base sm:text-lg font-black text-amber-950 uppercase tracking-wider">
-                      {cat.title}
-                    </h3>
-                  </div>
-                  <span className="text-xs font-black px-2.5 py-0.5 rounded-full border border-amber-300 bg-amber-100/90 text-amber-900 shadow-2xs">
+              <section key={cat.id} className="space-y-2.5">
+                <div className="flex items-baseline justify-between gap-3 px-1 pb-1.5 border-b border-[#e6d9c2]">
+                  <h3 className="font-serif-ge text-xl font-bold text-[#7a2028]">{cat.title}</h3>
+                  <span className="text-[13px] text-[#8a7a6a]">
                     {cat.items.length} {cat.unitSingular}
                   </span>
                 </div>
 
-                {/* Items List */}
                 <div className="space-y-2">
                   {cat.items.map((item, index) => {
-                    const isGS = item.code.startsWith('გ.ს.');
-                    const isKK = item.code.startsWith('ქ.კ.');
+                    const song = cat.id === 'simghera' ? FOLK_SONGS.find(s => s.id === item.variantId) : undefined;
+                    const canOpen = cat.id === 'galoba' || Boolean(song);
+                    const isOpen = canOpen && openId === item.variantId;
+                    const recordings = cat.id === 'galoba'
+                      ? (getChantMedia(item.chantId, item.code) ? 1 : 0)
+                      : song?.versions.length ?? 0;
+                    const title = song ? song.title : item.chantName;
+                    const subtitle = song ? getFolkRegion(song.region).nameGe : item.code;
+                    const itemVoices = voicesOf(item);
+                    const toggleOpen = () => {
+                      triggerHaptic(10);
+                      setOpenId(id => (id === item.variantId ? null : item.variantId));
+                    };
 
                     return (
                       <div
                         key={item.variantId}
-                        className="bg-white border border-amber-200/80 rounded-xl px-2.5 py-1.5 shadow-2xs hover:border-amber-300 transition-all flex flex-col gap-1"
+                        className={`rounded-2xl bg-white ring-1 transition-all overflow-hidden ${
+                          isOpen ? 'ring-[#7a2028]/30 shadow-[0_8px_24px_-12px_rgba(122,32,40,0.35)]' : 'ring-[#e6d9c2] hover:ring-[#7a2028]/25'
+                        }`}
                       >
-                        <div className="flex items-start justify-between gap-1.5">
-                          <div
-                            onClick={() => {
-                              triggerHaptic(10);
-                              localStorage.setItem('selectedChantId', item.chantId);
-                              localStorage.setItem('selectedVariantId', item.variantId);
-                              navigateTo('galoba-detail');
-                            }}
-                            className="flex items-start gap-1.5 min-w-0 flex-1 cursor-pointer group"
+                        <div className="flex items-start gap-2 pl-3 pr-2 pt-2.5">
+                          <button
+                            type="button"
+                            disabled={!canOpen}
+                            onClick={toggleOpen}
+                            className="flex-1 min-w-0 flex items-start gap-2.5 text-left cursor-pointer disabled:cursor-default group"
+                            aria-expanded={isOpen}
                           >
-                            <span className="text-[11px] font-black text-slate-400 shrink-0 mt-0.5 min-w-[16px] text-right">
-                              {index + 1}.
+                            <span className="shrink-0 w-6 h-6 mt-0.5 rounded-full bg-[#fbf6ec] ring-1 ring-[#e6d9c2] text-[11px] font-bold text-[#8a7a6a] flex items-center justify-center">
+                              {index + 1}
                             </span>
-                            <div className="min-w-0 flex-1 leading-tight">
-                              <h4 className="font-extrabold text-slate-800 text-xs leading-snug whitespace-normal break-words group-hover:text-amber-800 transition-colors">
-                                {item.chantName}
-                              </h4>
-                            </div>
-                            <span className={`px-1.5 py-0.5 rounded font-bold text-[10px] shrink-0 border mt-0.5 leading-none ${
-                              isGS
-                                ? 'bg-amber-100 text-amber-900 border-amber-300'
-                                : isKK
-                                ? 'bg-sky-100 text-sky-900 border-sky-300'
-                                : 'bg-emerald-100 text-emerald-900 border-emerald-300'
-                            }`}>
-                              {item.code}
+                            <span className="min-w-0 flex flex-col gap-0.5">
+                              <span className="font-serif-ge font-bold text-[15px] sm:text-base leading-snug text-[#2a2017] group-hover:text-[#7a2028] transition-colors break-words">
+                                {title}
+                              </span>
+                              <span className="flex flex-wrap items-center gap-x-1.5 text-xs text-[#8a7a6a]">
+                                {subtitle}
+                                {cat.id === 'galoba' && (
+                                  <span className="inline-flex items-center gap-1">
+                                    <span className="text-[#d8c9b0]">·</span>
+                                    <Music className="w-3 h-3" />
+                                    ნოტები
+                                  </span>
+                                )}
+                                {recordings > 0 && (
+                                  <span className="inline-flex items-center gap-1 text-[#7a2028]/80">
+                                    <span className="text-[#d8c9b0]">·</span>
+                                    <Headphones className="w-3 h-3" />
+                                    {cat.id === 'galoba' ? 'ჩანაწერი' : `${recordings} ჩანაწერი`}
+                                  </span>
+                                )}
+                              </span>
                             </span>
-                          </div>
+                          </button>
 
+                          {canOpen && (
+                            <button
+                              type="button"
+                              onClick={toggleOpen}
+                              className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center transition-all cursor-pointer ${
+                                isOpen ? 'rotate-180 bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#7a2028]/5 text-[#7a2028] hover:bg-[#7a2028]/10'
+                              }`}
+                              aria-label={isOpen ? 'დახურვა' : 'ნოტები და ჩანაწერები'}
+                            >
+                              <ChevronDown className="w-4 h-4" />
+                            </button>
+                          )}
                           <button
                             type="button"
                             onClick={() => handleRemoveVariant(item.variantId)}
-                            className="p-0.5 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors shrink-0 cursor-pointer -mr-0.5 -mt-0.5"
+                            className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[#b5a898] hover:text-[#7a2028] hover:bg-[#7a2028]/5 transition-colors cursor-pointer"
                             title="სიიდან ამოშლა"
+                            aria-label="სიიდან ამოშლა"
                           >
-                            <X className="w-3.5 h-3.5" />
+                            <X className="w-4 h-4" />
                           </button>
                         </div>
 
-                        <div className="flex items-center justify-end gap-1 pt-1 border-t border-slate-100/80">
+                        {/* progress: voices learned (chants, songs) or simply learned (poems, instruments) */}
+                        <div className="flex flex-wrap items-center justify-end gap-1.5 px-3 pt-2 pb-2.5">
                           {isSakravi(item) || isMtkmeli(item) ? (
+                            (confirmed[item.variantId] || []).includes('1') ? (
+                              <span title="მასწავლებელმა ჩათვალა" className={`h-8 px-3 rounded-full ring-1 text-xs font-bold inline-flex items-center gap-1 ${chipConfirmed}`}>
+                                <CheckCheck className="w-3.5 h-3.5" />
+                                ჩათვლილია
+                              </span>
+                            ) : (
                             <button
                               type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleToggleLearned(item.variantId);
-                              }}
-                              className={`px-2.5 py-0.5 rounded-lg text-[11px] font-black transition-all cursor-pointer border flex items-center gap-1 ${
-                                item.isLearned
-                                  ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 shadow-2xs ring-1 ring-emerald-400/30'
-                                  : 'bg-amber-50/60 text-amber-950 border-amber-200/80 hover:bg-amber-100/80'
-                              }`}
+                              onClick={() => handleToggleLearned(item.variantId)}
+                              className={`h-8 px-3 rounded-full ring-1 text-xs font-bold inline-flex items-center gap-1 transition-all cursor-pointer active:scale-95 ${item.isLearned ? chipOn : chipOff}`}
                             >
-                              {item.isLearned && <Check className="w-2.5 h-2.5 stroke-[3] text-white" />}
-                              <span>{item.isLearned ? 'ნასწავლია' : 'შესასწავლი'}</span>
+                              {item.isLearned && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                              {item.isLearned ? 'ნასწავლია' : 'შესასწავლი'}
                             </button>
+                            )
                           ) : (
                             (['1', '2', '3'] as const).map(vNum => {
-                              const itemVoices = Array.isArray(item.voices)
-                                ? item.voices.map(v => String(v))
-                                : typeof (item as any).voices === 'string'
-                                ? ((item as any).voices as string).split(',').map(v => v.trim())
-                                : [];
-                              const isVoiceActive = itemVoices.includes(String(vNum));
-
+                              const on = itemVoices.includes(vNum);
+                              if ((confirmed[item.variantId] || []).includes(vNum)) {
+                                return (
+                                  <span key={vNum} title="მასწავლებელმა ჩათვალა" className={`h-8 px-3 rounded-full ring-1 text-xs font-bold inline-flex items-center gap-1 ${chipConfirmed}`}>
+                                    <CheckCheck className="w-3.5 h-3.5" />
+                                    {vNum} ხმა
+                                  </span>
+                                );
+                              }
                               return (
                                 <button
                                   key={vNum}
                                   type="button"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleToggleVoice(item.variantId, vNum);
-                                  }}
-                                  className={`px-2 py-0.5 rounded-lg text-[11px] font-black transition-all cursor-pointer border flex items-center gap-0.5 ${
-                                    isVoiceActive
-                                      ? 'bg-emerald-600 hover:bg-emerald-700 text-white border-emerald-700 shadow-2xs ring-1 ring-emerald-400/30'
-                                      : 'bg-amber-50/60 text-amber-950 border-amber-200/80 hover:bg-amber-100/80'
-                                  }`}
+                                  onClick={() => handleToggleVoice(item.variantId, vNum)}
+                                  className={`h-8 px-3 rounded-full ring-1 text-xs font-bold inline-flex items-center gap-1 transition-all cursor-pointer active:scale-95 ${on ? chipOn : chipOff}`}
                                 >
-                                  {isVoiceActive && <Check className="w-2.5 h-2.5 stroke-[3] text-white" />}
-                                  <span>{vNum} ხმა</span>
+                                  {on && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                                  {vNum} ხმა
                                 </button>
                               );
                             })
                           )}
                         </div>
+
+                        {/* notes and recordings, as in the chant / song lists */}
+                        {isOpen && (
+                          <div className="border-t border-[#efe5d4] bg-[#fbf6ec]/60 p-2.5 sm:p-3 animate-in fade-in duration-200">
+                            {song ? (
+                              <SongBody song={song} region={getFolkRegion(song.region)} />
+                            ) : (
+                              <div className="rounded-xl bg-white ring-1 ring-[#e6d9c2] px-2 pb-2.5 pt-1.5">
+                                <ChantDetailPage key={item.variantId} chantId={item.chantId} variantId={item.variantId} inline />
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
-              </div>
+              </section>
             );
           })}
 
-          {/* Bottom Save Button */}
-          <div className="pt-3 pb-2 flex flex-col items-center justify-center gap-1.5 border-t border-amber-200/60">
+          <div className="flex flex-col items-center gap-2 pt-2">
             <button
               type="button"
               onClick={handleManualSave}
-              className={`w-full max-w-xs py-2.5 px-5 rounded-2xl font-black text-xs sm:text-sm transition-all flex items-center justify-center gap-2 cursor-pointer shadow-xs active:scale-98 ${
-                isSavedToast
-                  ? 'bg-emerald-600 text-white border border-emerald-700 shadow-emerald-200'
-                  : 'bg-gradient-to-r from-amber-700 via-amber-800 to-amber-900 text-white hover:brightness-110 border border-amber-900'
+              className={`h-11 px-6 rounded-full text-sm font-bold inline-flex items-center gap-2 transition-all cursor-pointer active:scale-[0.98] ${
+                isSavedToast ? 'bg-emerald-700 text-white' : 'bg-[#7a2028] hover:bg-[#5e1820] text-[#fbf6ec]'
               }`}
             >
-              {isSavedToast ? (
-                <>
-                  <Check className="w-4 h-4 stroke-[3]" />
-                  <span>წარმატებით შენახულია!</span>
-                </>
-              ) : (
-                <>
-                  <CheckCheck className="w-4 h-4" />
-                  <span>ცვლილებების შენახვა</span>
-                </>
-              )}
+              {isSavedToast ? <Check className="w-4 h-4 stroke-[3]" /> : <CheckCheck className="w-4 h-4" />}
+              {isSavedToast ? 'შენახულია' : 'ცვლილებების შენახვა'}
             </button>
-            <span className="text-[10px] font-semibold text-slate-400">
-              ცვლილებები ავტომატურადაც ინახება
-            </span>
-          </div>
-          
-          <div className="text-center pt-2 pb-1 border-t border-amber-100">
-            <p className="text-xs font-bold text-amber-900 leading-tight">
-              ესარის შენი უკვე ნასწავლი გაკვეთილები, <br />
-              იარე წინ დააგროვე საგანძური.
+            <span className="text-xs text-[#8a7a6a]">ცვლილებები ავტომატურადაც ინახება</span>
+            {Object.values(confirmed).some(v => v.length > 0) && (
+              <span className="text-xs text-[#8a7a6a] inline-flex items-center gap-1">
+                <CheckCheck className="w-3.5 h-3.5 text-emerald-700" /> მწვანე — მასწავლებელმა ჩათვალა
+              </span>
+            )}
+            <p className="mt-2 font-serif-ge text-[15px] text-center text-[#4a3426] leading-relaxed">
+              ეს არის შენი უკვე ნასწავლი გაკვეთილები —<br />იარე წინ, დააგროვე საგანძური.
             </p>
           </div>
-        </div>
+        </>
       ) : (
-        <div className="p-4 text-center bg-white rounded-2xl border border-amber-200/80 shadow-2xs space-y-2">
-          <p className="text-xs font-bold text-slate-700">
-            საგანძურის გზაზე ჯერ არაფერია დამატებული.
-          </p>
-          <p className="text-[11px] text-slate-500">
+        <div className="p-6 text-center rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e6d9c2] space-y-2">
+          <p className="font-serif-ge text-base font-bold text-[#4a3426]">საგანძურის გზაზე ჯერ არაფერია დამატებული.</p>
+          <p className="text-[13px] text-[#8a7a6a]">
             გადადით „გალობა“-ში, „სიმღერა“-ში, „მთქმელი“-ში ან „საკრავები“-ში და მონიშნეთ თქვენი ელემენტები.
           </p>
           {onGoToGaloba && (
             <button
               type="button"
               onClick={onGoToGaloba}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-[#ba8555] to-[#8d5427] text-white font-bold text-xs shadow-xs hover:brightness-105 transition-all cursor-pointer mt-1"
+              className="mt-2 inline-flex items-center gap-1.5 h-10 px-4 rounded-full bg-[#7a2028] hover:bg-[#5e1820] text-[#fbf6ec] font-bold text-sm transition-colors cursor-pointer"
             >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>გალობის სიაში გადასვლა</span>
+              <Sparkles className="w-4 h-4" />
+              გალობის სიაში გადასვლა
             </button>
           )}
         </div>

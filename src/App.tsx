@@ -8,6 +8,7 @@ import defaultLogo from './assets/images/user_provided_logo_1790330250486.jpg';
 import {
   AuthProvider,
   useAuth,
+  useNavigation,
   NavigationProvider,
   ModalProvider,
   ChantSelectionProvider,
@@ -18,6 +19,7 @@ import { Header, Footer } from './components/layout';
 import { AppRouter } from './routes/AppRouter';
 import { AppModals } from './components/AppModals';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { PageSprinkles } from './components/home/PlateOrnaments';
 
 // Backward compatibility exports
 export { filterValidVariants, getValidVariantIds } from './utils/variantValidation';
@@ -39,6 +41,7 @@ export default function App() {
 
 function AppContent() {
   const { loading } = useAuth();
+  const { currentPage } = useNavigation();
   const [dbLogo, setDbLogo] = useState<string | null>(null);
 
   useEffect(() => {
@@ -68,7 +71,10 @@ function AppContent() {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-900 flex flex-col font-sans">
+    <div className="relative isolate min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-900 flex flex-col font-sans">
+      {/* plate ornaments at the window edges, behind everything (the home page has its own) */}
+      {currentPage !== 'home' && <PageSprinkles seed={currentPage} />}
+
       <Header logoUrl={currentLogo} />
 
       <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 md:p-8 flex flex-col justify-center">

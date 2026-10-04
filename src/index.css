@@ -32,3 +32,31 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* Home vine menu: buttons sway gently like grapes in the wind */
+@keyframes vine-sway {
+  0%, 100% { transform: rotate(-1.2deg) translateY(0); }
+  50% { transform: rotate(1.2deg) translateY(-2px); }
+}
+.vine-sway {
+  animation: vine-sway 4.2s ease-in-out infinite;
+  transform-origin: 50% 0;
+}
+@media (prefers-reduced-motion: reduce) {
+  .vine-sway { animation: none; }
+}
+
+/* home-page plate ornaments: gentle idle motion + staggered entrance (still when reduced motion is asked) */
+@keyframes orn-in { from { opacity: 0; scale: 0.6; } to { opacity: 1; scale: 1; } }
+@keyframes orn-sway { 0%, 100% { transform: rotate(-5deg); } 50% { transform: rotate(5deg); } }
+@keyframes orn-swing { 0%, 100% { transform: rotate(-4deg); } 50% { transform: rotate(4deg); } }
+@keyframes orn-spin { to { transform: rotate(360deg); } }
+@keyframes orn-bob { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-5%) scale(1.03); } }
+.orn-in { animation: orn-in 0.9s cubic-bezier(0.2, 0.8, 0.3, 1.2) both; }
+.orn-sway { transform-origin: 50% 95%; animation: orn-sway 6s ease-in-out infinite; }
+.orn-swing { transform-origin: 50% 8%; animation: orn-swing 5s ease-in-out infinite; }
+.orn-spin { animation: orn-spin 24s linear infinite; }
+.orn-bob { transform-origin: 50% 100%; animation: orn-bob 4.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .orn-in, .orn-sway, .orn-swing, .orn-spin, .orn-bob { animation: none; }
+}
