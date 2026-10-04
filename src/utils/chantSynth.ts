@@ -49,13 +49,16 @@ export const makeTimeMap = (tempos: BookScore['tempos']) => {
   };
 };
 
-interface Note { s: number; e: number; m: number; v: number } // score seconds at speed 1
+interface Note { s: number; e: number; m: number; v: number; g: number } // score seconds at speed 1; g = level
 
 // Two singers of one voice on the same pitch (a shared head, or one holding while the other sings it again)
 // would give two oscillators on one frequency: twice as loud for a moment. Per voice and pitch, notes that start
 // together become one, and a note struck again while it still sounds ends there and the new one carries on.
-export const singleStrike = (voices: BookScore['voices']): [beat: number, beats: number, midi: number, voice: number][] => {
-  const out: [number, number, number, number][] = [];
+// Voices that enter on the same pitch together (a unison) are identical waves that add up: two of them sound
+// twice as loud, three three times, a jolt a real choir doesn't make. Each gets 1/√k of its level, so k voices
+// in unison are as loud as k voices on different notes.
+export const singleStrike = (voices: BookScore['voices']): [beat: number, beats: number, midi: number, voice: number, level: number][] => {
+  const out: [number, number, number, number, number][] = [];
   voices.forEach((list, v) => {
     const byPitch = new Map<number, { t: number; e: number }[]>();
     for (const [t, d, m] of list) {
@@ -72,12 +75,15 @@ export const singleStrike = (voices: BookScore['voices']): [beat: number, beats:
           cur.e = n.t;
           n.e = end;
         }
-        if (cur) out.push([cur.t, cur.e - cur.t, m, v]);
+        if (cur) out.push([cur.t, cur.e - cur.t, m, v, 1]);
         cur = n;
       }
-      if (cur) out.push([cur.t, cur.e - cur.t, m, v]);
+      if (cur) out.push([cur.t, cur.e - cur.t, m, v, 1]);
     }
   });
+  const unison = new Map<string, number>();
+  for (const [t, , m] of out) { const k = `${t}:${m}`; unison.set(k, (unison.get(k) ?? 0) + 1); }
+  for (const n of out) n[4] = 1 / Math.sqrt(unison.get(`${n[0]}:${n[2]}`)!);
   return out;
 };
 
@@ -91,7 +97,7 @@ const getCtx = () => {
 };
 
 // Soft "choir pad": two slightly detuned oscillators through a low-pass filter
-const playNote = (ctx: BaseAudioContext, dest: AudioNode, midi: number, bass: boolean, at: number, len: number) => {
+const playNote = (ctx: BaseAudioContext, dest: AudioNode, midi: number, bass: boolean, at: number, len: number, gain = 1) => {
   const freq = 440 * Math.pow(2, (midi - 69) / 12);
   const env = ctx.createGain();
   const filter = ctx.createBiquadFilter();
@@ -110,7 +116,7 @@ const playNote = (ctx: BaseAudioContext, dest: AudioNode, midi: number, bass: bo
     o.connect(g).connect(filter);
     return o;
   });
-  const level = bass ? 0.95 : 0.8;
+  const level = (bass ? 0.95 : 0.8) * gain;
   const attack = Math.min(0.06, len / 3), release = Math.min(0.12, len / 2);
   const end = at + len;
   env.gain.setValueAtTime(0, at);
@@ -121,21 +127,33 @@ const playNote = (ctx: BaseAudioContext, dest: AudioNode, midi: number, bass: bo
   return { oscs, env };
 };
 
-// voice gains -> master -> compressor -> makeup gain -> limiter -> output; returns the master and one input per voice
+// voice gains -> master -> compressor -> makeup gain -> soft saturation -> limiter -> output;
+// returns the master and one input per voice
 const buildMix = (ctx: BaseAudioContext, gains: number[]) => {
-  // the limiter only catches the note-onset peaks of the 4-voice chants that the boost would push past 0 dB
+  // last safety only: the saturation below keeps the mix under it
   const limiter = ctx.createDynamicsCompressor();
-  limiter.threshold.value = -2;
+  limiter.threshold.value = -0.5;
   limiter.knee.value = 0;
   limiter.ratio.value = 20;
   limiter.attack.value = 0.001;
   limiter.release.value = 0.1;
   limiter.connect(ctx.destination);
-  // +30 % loudness, after the compressor so every passage gets it in full;
-  // 1.14 because the limiter adds its own automatic makeup gain (~1.1 dB)
+  // Gentle saturation above half scale rounds the rare waveform peaks (at most -1.5 dB at full scale)
+  // instead of ducking the whole mix the way a limiter does; that is what lets the makeup gain go up.
+  const shaper = ctx.createWaveShaper();
+  const N = 2048, curve = new Float32Array(N), K = 0.5, C = 0.9;
+  for (let i = 0; i < N; i++) {
+    const x = (i / (N - 1)) * 2 - 1, a = Math.abs(x);
+    curve[i] = Math.sign(x) * (a < K ? a : K + (C - K) * Math.tanh((a - K) / (C - K)));
+  }
+  shaper.curve = curve;
+  shaper.oversample = '4x';
+  shaper.connect(limiter);
+  // makeup gain after the compressor so every passage gets it in full; with the saturation, 1.75 plays
+  // about 35 % louder than the earlier 1.14 into a -2 dB limiter (measured over six chants)
   const out = ctx.createGain();
-  out.gain.value = 1.14;
-  out.connect(limiter);
+  out.gain.value = 1.75;
+  out.connect(shaper);
   const comp = ctx.createDynamicsCompressor();
   comp.threshold.value = -14;
   comp.ratio.value = 4;
@@ -186,7 +204,7 @@ export class ChantSynth {
     this.toBeat = map.toBeat;
     this.duration = map.toSec(score.dur);
     this.notes = singleStrike(score.voices)
-      .map(([t, d, m, v]) => ({ s: map.toSec(t), e: map.toSec(t + d), m, v }))
+      .map(([t, d, m, v, g]) => ({ s: map.toSec(t), e: map.toSec(t + d), m, v, g }))
       .sort((a, b) => a.s - b.s);
     this.muted = score.voices.map(() => false);
     this.volume = score.voices.map(() => 1);
@@ -297,7 +315,7 @@ export class ChantSynth {
       const start = Math.max(n.s, this.startSec);
       const at = this.startCtx + (start - this.startSec) / this.speed;
       const len = (Math.min(n.e, end) - start) / this.speed; // notes stop at the loop end
-      if (len > 0.02) this.voice(n.m + this.transpose, n.v, Math.max(at, ctx.currentTime), len);
+      if (len > 0.02) this.voice(n.m + this.transpose, n.v, Math.max(at, ctx.currentTime), len, n.g);
     }
     if (this.position() >= end) {
       if (this.loopA !== null) {
@@ -311,8 +329,8 @@ export class ChantSynth {
     }
   }
 
-  private voice(midi: number, v: number, at: number, len: number) {
-    const rec = playNote(this.ctx!, this.voiceGains[v], midi, v >= 2, at, len); // III and IV are basses
+  private voice(midi: number, v: number, at: number, len: number, gain: number) {
+    const rec = playNote(this.ctx!, this.voiceGains[v], midi, v >= 2, at, len, gain); // III and IV are basses
     this.live.add(rec);
     rec.oscs[0].onended = () => { this.live.delete(rec); rec.env.disconnect(); };
   }
@@ -352,7 +370,7 @@ export const renderScore = (score: BookScore, o: RenderOptions): Promise<AudioBu
   const { voices } = buildMix(ctx, o.gains);
   const notes = singleStrike(score.voices)
     .filter(([, , , v]) => o.gains[v])
-    .map(([t, d, m, v]) => ({ v, m, at: lead + map.toSec(t) / o.speed, len: (map.toSec(t + d) - map.toSec(t)) / o.speed }))
+    .map(([t, d, m, v, g]) => ({ v, m, g, at: lead + map.toSec(t) / o.speed, len: (map.toSec(t + d) - map.toSec(t)) / o.speed }))
     .filter(n => n.len > 0.02)
     .sort((a, b) => a.at - b.at);
   // Nodes are created a window ahead and dropped when they end: a graph holding every note
@@ -361,7 +379,7 @@ export const renderScore = (score: BookScore, o: RenderOptions): Promise<AudioBu
   const addUntil = (t: number) => {
     while (next < notes.length && notes[next].at < t) {
       const n = notes[next++];
-      const rec = playNote(ctx, voices[n.v], n.m + o.transpose, n.v >= 2, n.at, n.len);
+      const rec = playNote(ctx, voices[n.v], n.m + o.transpose, n.v >= 2, n.at, n.len, n.g);
       rec.oscs[0].onended = () => rec.env.disconnect();
     }
   };
