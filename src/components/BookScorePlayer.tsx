@@ -315,7 +315,8 @@ export const BookScorePlayer: React.FC<BookScorePlayerProps> = ({ nums, book, pa
                   className={`absolute rounded-md transition-colors cursor-pointer ${
                     k === curSys ? 'bg-dusk-300/25 ring-2 ring-dusk-400/70' : 'hover:bg-dusk-200/15'
                   }`}
-                  style={{ left: `${s[1] * 100}%`, top: `${s[2] * 100}%`, width: `${s[3] * 100}%`, height: `${s[4] * 100}%` }}
+                  // (a few boxes reach a hair past the image edge: kept inside it)
+                  style={{ left: `${Math.max(0, s[1]) * 100}%`, top: `${Math.max(0, s[2]) * 100}%`, width: `${Math.min(s[3], 1 - Math.max(0, s[1])) * 100}%`, height: `${Math.min(s[4], 1 - Math.max(0, s[2])) * 100}%` }}
                   aria-label={`დაკვრა ${k + 1}-ე სტრიქონიდან`}
                   title="დაკვრა ამ სტრიქონიდან"
                 />

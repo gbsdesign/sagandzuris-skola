@@ -51,6 +51,36 @@ export const makeTimeMap = (tempos: BookScore['tempos']) => {
 
 interface Note { s: number; e: number; m: number; v: number } // score seconds at speed 1
 
+// Two singers of one voice on the same pitch (a shared head, or one holding while the other sings it again)
+// would give two oscillators on one frequency: twice as loud for a moment. Per voice and pitch, notes that start
+// together become one, and a note struck again while it still sounds ends there and the new one carries on.
+export const singleStrike = (voices: BookScore['voices']): [beat: number, beats: number, midi: number, voice: number][] => {
+  const out: [number, number, number, number][] = [];
+  voices.forEach((list, v) => {
+    const byPitch = new Map<number, { t: number; e: number }[]>();
+    for (const [t, d, m] of list) {
+      if (!byPitch.has(m)) byPitch.set(m, []);
+      byPitch.get(m)!.push({ t, e: t + d });
+    }
+    for (const [m, notes] of byPitch) {
+      notes.sort((a, b) => a.t - b.t || b.e - a.e);
+      let cur: { t: number; e: number } | null = null;
+      for (const n of notes) {
+        if (cur && n.t < cur.e - 1e-6) {
+          if (n.t - cur.t < 1e-6) { cur.e = Math.max(cur.e, n.e); continue; }
+          const end = Math.max(cur.e, n.e);
+          cur.e = n.t;
+          n.e = end;
+        }
+        if (cur) out.push([cur.t, cur.e - cur.t, m, v]);
+        cur = n;
+      }
+      if (cur) out.push([cur.t, cur.e - cur.t, m, v]);
+    }
+  });
+  return out;
+};
+
 let sharedCtx: AudioContext | null = null;
 const getCtx = () => {
   if (!sharedCtx) {
@@ -155,8 +185,8 @@ export class ChantSynth {
     this.toSec = map.toSec;
     this.toBeat = map.toBeat;
     this.duration = map.toSec(score.dur);
-    this.notes = score.voices
-      .flatMap((list, v) => list.map(([t, d, m]) => ({ s: map.toSec(t), e: map.toSec(t + d), m, v })))
+    this.notes = singleStrike(score.voices)
+      .map(([t, d, m, v]) => ({ s: map.toSec(t), e: map.toSec(t + d), m, v }))
       .sort((a, b) => a.s - b.s);
     this.muted = score.voices.map(() => false);
     this.volume = score.voices.map(() => 1);
@@ -320,8 +350,9 @@ export const renderScore = (score: BookScore, o: RenderOptions): Promise<AudioBu
   const length = lead + map.toSec(score.dur) / o.speed + 0.6;
   const ctx = new OfflineAudioContext(1, Math.ceil(length * RENDER_RATE), RENDER_RATE);
   const { voices } = buildMix(ctx, o.gains);
-  const notes = score.voices
-    .flatMap((list, v) => (o.gains[v] ? list.map(([t, d, m]) => ({ v, m, at: lead + map.toSec(t) / o.speed, len: (map.toSec(t + d) - map.toSec(t)) / o.speed })) : []))
+  const notes = singleStrike(score.voices)
+    .filter(([, , , v]) => o.gains[v])
+    .map(([t, d, m, v]) => ({ v, m, at: lead + map.toSec(t) / o.speed, len: (map.toSec(t + d) - map.toSec(t)) / o.speed }))
     .filter(n => n.len > 0.02)
     .sort((a, b) => a.at - b.at);
   // Nodes are created a window ahead and dropped when they end: a graph holding every note
