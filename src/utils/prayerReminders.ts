@@ -2,14 +2,21 @@ import { useEffect, useRef, useState } from 'react';
 import { PRAYER_HOURS, PrayerHour } from '../data/prayers';
 
 // Reminders for the seven-times prayers ("შვიდგზის ლოცვა"). Kept per device in localStorage:
-// { 'hour-12': [10, 5, 1], ... } — minutes before the hour. Browsers can only fire these while
-// the site is open (also in a background tab); there is no push server behind them.
+// { 'hour-12': [10, 5, 1], ... } — minutes before the hour.
+// Where the browser supports Web Push (installed service worker), the settings are also sent to the
+// Cloudflare Worker "sagandzuri-reminders" (worker/reminders), which pushes them even while the site
+// is closed. Otherwise the page itself checks the clock, which only works while the site is open.
 
 export const REMINDER_OFFSETS = [10, 5, 1];
 
 const KEY = 'prayerReminders';
 const FIRED_KEY = 'prayerRemindersFired';
 const CHANGED = 'prayer-reminders-changed';
+// what the push server last accepted from this browser: { endpoint, settings }
+const PUSH_KEY = 'prayerRemindersPush';
+
+const PUSH_SERVER = 'https://sagandzuri-reminders.mr-gabunia.workers.dev/subscribe';
+const VAPID_PUBLIC_KEY = 'BPQ3-oe86mthAy7mhsrDJIcTnl92WBn7t_OKcGe7h1bg7jR2N2Z_O3eC1D1k8oTFnuo6b6iDC7DI00TxroHz7t8';
 
 export type ReminderSettings = Record<string, number[]>;
 
@@ -38,6 +45,52 @@ export const setHourReminders = (hourId: string, offsets: number[]) => {
   else delete all[hourId];
   write(KEY, all);
   window.dispatchEvent(new Event(CHANGED));
+  void syncPush();
+};
+
+interface PushState {
+  endpoint: string;
+  settings: string;
+}
+
+// true while the push server holds this browser's current reminders
+const pushActive = () => {
+  const state = read<PushState | null>(PUSH_KEY, null);
+  return Boolean(state && state.settings === JSON.stringify(getReminders()) && state.settings !== '{}');
+};
+
+const keyBytes = (b64url: string) => {
+  const b64 = b64url.replace(/-/g, '+').replace(/_/g, '/');
+  return Uint8Array.from(atob(b64 + '='.repeat((4 - (b64.length % 4)) % 4)), c => c.charCodeAt(0));
+};
+
+// Sends this browser's reminders to the push server (or removes them there). Skips the request when
+// the server already has exactly these settings for this subscription.
+export const syncPush = async () => {
+  try {
+    if (!('serviceWorker' in navigator) || !('PushManager' in window)) return;
+    if (!notificationsSupported() || Notification.permission !== 'granted') return;
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg?.pushManager) return;
+    const reminders = getReminders();
+    const settings = JSON.stringify(reminders);
+    const hasAny = settings !== '{}';
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub && hasAny) {
+      sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(VAPID_PUBLIC_KEY) });
+    }
+    if (!sub) return;
+    const last = read<PushState | null>(PUSH_KEY, null);
+    if (last && last.endpoint === sub.endpoint && last.settings === settings) return;
+    const res = await fetch(PUSH_SERVER, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription: sub.toJSON(), reminders, tz: Intl.DateTimeFormat().resolvedOptions().timeZone }),
+    });
+    if (res.ok) write(PUSH_KEY, { endpoint: sub.endpoint, settings });
+  } catch {
+    /* push unavailable — the page's own clock check still covers an open site */
+  }
 };
 
 export const useReminders = (): ReminderSettings => {
@@ -118,6 +171,8 @@ export const usePrayerReminderScheduler = (onOpenPrayer: (prayerId: string) => v
   useEffect(() => {
     const onOpen = (prayerId: string) => openRef.current(prayerId);
     const tick = () => {
+      // the push server sends these; showing them here too would double them
+      if (pushActive()) return;
       const settings = getReminders();
       const now = Date.now();
       const fired = read<Record<string, number>>(FIRED_KEY, {});
@@ -138,6 +193,7 @@ export const usePrayerReminderScheduler = (onOpenPrayer: (prayerId: string) => v
       if (changed) write(FIRED_KEY, fired);
     };
     tick();
+    void syncPush();
     const id = window.setInterval(tick, 15_000);
     return () => window.clearInterval(id);
   }, []);

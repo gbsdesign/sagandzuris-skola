@@ -113,8 +113,11 @@ const HourReminders: React.FC<{ hour: PrayerHour }> = ({ hour }) => {
       </div>
       {notice && <p className="text-xs text-[#7a2028]">{notice}</p>}
       <p className="text-[11px] leading-snug text-[#8a7a6a]">
-        შეხსენება მოვა მაშინ, როცა საიტი გახსნილია ამ მოწყობილობაზე (შეიძლება სხვა ჩანართშიც).
-        {!notificationsSupported() && ' ეს ბრაუზერი შეტყობინებებს არ უჭერს მხარს.'}
+        {!notificationsSupported()
+          ? 'ეს ბრაუზერი შეტყობინებებს არ უჭერს მხარს. iPhone-ზე ჯერ დაამატე საიტი მთავარ ეკრანზე („Add to Home Screen“) და იქიდან გახსენი.'
+          : 'PushManager' in window
+          ? 'შეხსენება მოვა ამ მოწყობილობაზე, საიტი დახურულიც რომ იყოს.'
+          : 'შეხსენება მოვა მაშინ, როცა საიტი გახსნილია ამ მოწყობილობაზე.'}
       </p>
     </section>
   );
