@@ -21,6 +21,7 @@ import { AppRouter } from './routes/AppRouter';
 import { AppModals } from './components/AppModals';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageSprinkles } from './components/home/PlateOrnaments';
+import { TodaySaintsCard } from './components/calendar/TodaySaintsCard';
 import { usePrayerReminderScheduler } from './utils/prayerReminders';
 import { isPrayerId } from './data/prayers';
 
@@ -92,7 +93,10 @@ function AppContent() {
     <div
       className={`relative isolate min-h-screen text-slate-900 flex flex-col font-sans ${
         // the chant pages share the warm paper of the notes pages
-        currentPage === 'galoba' ? 'bg-gradient-to-b from-[#fdfaf4] via-[#f8f1e5] to-[#f1e7d6]' : 'bg-gradient-to-br from-slate-50 via-white to-slate-100'
+        currentPage === 'galoba' ? 'bg-gradient-to-b from-[#fdfaf4] via-[#f8f1e5] to-[#f1e7d6]'
+          // the home page: the footer's warm cream (#fbf6ec), only lighter
+          : currentPage === 'home' ? 'bg-gradient-to-b from-[#fffdf9] via-[#fdfaf4] to-[#fcf7ef]'
+          : 'bg-gradient-to-br from-slate-50 via-white to-slate-100'
       }`}
     >
       {/* plate ornaments at the window edges, behind everything (the home page has its own) */}
@@ -112,6 +116,11 @@ function AppContent() {
 
       <ErrorBoundary>
         <AppModals />
+      </ErrorBoundary>
+
+      {/* once a day on entering: today's saints from the church calendar */}
+      <ErrorBoundary>
+        <TodaySaintsCard />
       </ErrorBoundary>
     </div>
   );

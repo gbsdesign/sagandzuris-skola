@@ -25,7 +25,8 @@
   --ink:#3a2814; --ink-2:#5c4224; --muted:#86693f; --faint:#b0956a; --line:#dcc59a; --line-2:#cdb385;
   --synth-bg:linear-gradient(#f5e9d8,#efe0ca); --dusk-soft:#ead9cf; --dusk-line:#d6c0b2;
   --rec-bg:linear-gradient(#f9ebce,#f2dfbb); --amber-soft:#f3dfb6;
-  --paper:#f1dcb2; --sheet-filter:contrast(.86) sepia(1) saturate(1.12) hue-rotate(-14deg) brightness(.95);
+  /* candle: the page stays crisp black-brown ink; only its white paper takes the candle colour (multiplied onto it) */
+  --paper:#f1dcb2; --sheet-filter:grayscale(1) contrast(1.45) brightness(1.06) sepia(.35); --sheet-blend:multiply;
   --sheet-shadow:0 1px 2px rgba(80,50,15,.12),0 12px 28px -20px rgba(80,50,15,.55);
   --hymn-filter:sepia(.25) saturate(.9);
   --shadow:rgba(80,50,15,.45)
@@ -230,13 +231,18 @@
 .np-sb-dots i{width:6px;height:6px;border-radius:50%;background:currentColor;opacity:.25;transition:opacity .15s,transform .25s cubic-bezier(.3,1.6,.5,1)}
 .np-sb-dots i.on{opacity:1;transform:scale(1.45)}
 .np-cap-tools .np-stepper{flex:1 1 130px;min-width:0;height:40px}
+/* starting notes + tone as one pill: the tone sits inside, on the right */
+.np-startgrp{flex:1 1 100%;min-width:0;height:46px;padding:3px;display:flex;align-items:center;gap:4px;border-radius:999px;background:var(--dusk-soft);box-shadow:inset 0 0 0 1px var(--dusk-line)}
+.np-startgrp .np-start{flex:1 1 auto;height:100%;padding:0 8px 0 9px;background:none;box-shadow:none}
+.np-startgrp .np-stepper{flex:none;height:40px;padding-left:12px;background:var(--surface);box-shadow:0 1px 2px rgba(42,32,23,.08),inset 0 0 0 1px var(--dusk-line)}
+.np-startgrp .np-stepper .lbl{margin-right:6px}
 .np-zoom{flex:0 0 auto;height:40px;display:flex;align-items:center;gap:2px;padding:0 4px;border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}
 .np-zb{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;color:var(--ink-2);background:var(--dusk-soft);transition:transform .12s}
 .np-zb svg{width:16px;height:16px}
 .np-zb:active{transform:scale(.9)}
 .np-zb.fit{margin-left:4px;background:transparent;box-shadow:inset 0 0 0 1px var(--line)}
 .np-zoom output{min-width:48px;text-align:center;font-size:13px;font-weight:800;font-variant-numeric:tabular-nums;color:var(--ink)}
-.np-next-sm{flex:none;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--wine);color:var(--wine-ink);transition:transform .12s}
+.np-next-sm{flex:none;margin-left:auto;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--wine);color:var(--wine-ink);transition:transform .12s}
 .np-next-sm:active{transform:scale(.92)}
 .np-next-sm svg{width:19px;height:19px}
 .np-church-row{flex-basis:100%;min-width:0;display:flex;gap:8px;align-items:stretch}
@@ -250,6 +256,7 @@
 .np-root:is(.land,.wide) .np-caption{align-items:center;padding-top:10px}
 .np-root:is(.land,.wide) .np-cap-tools{order:2;flex-basis:auto}
 .np-root:is(.land,.wide) .np-start{flex:none}
+.np-root:is(.land,.wide) .np-startgrp{flex:none}
 .np-root:is(.land,.wide) .np-cap-tools .np-stepper{flex:0 0 auto}
 .np-root:is(.land,.wide) .np-church-row{flex-basis:auto}
 .np-root:is(.land,.wide) .np-church-next{flex:none;max-width:280px}
@@ -270,11 +277,12 @@
 .np-pg .ro{width:12px}
 .np-sheet{position:relative;margin:0;overflow:hidden;border-radius:3px;background:var(--paper);box-shadow:var(--sheet-shadow);transition:background .4s}
 .np-pimg{position:relative}
-.np-pimg>img{display:block;width:100%;height:auto;max-width:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none;pointer-events:none;filter:var(--sheet-filter);transition:filter .45s}
+.np-pimg>img{display:block;width:100%;height:auto;max-width:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none;pointer-events:none;filter:var(--sheet-filter);mix-blend-mode:var(--sheet-blend,normal);transition:filter .45s}
 .np-o-head,.np-o-tail{display:block;height:auto;margin-left:auto;margin-right:auto;pointer-events:none;user-select:none;opacity:0;filter:var(--hymn-filter);transition:opacity .9s ease}
 .np-o-head{margin-top:3.4%;margin-bottom:1.2%}
 .np-o-tail{margin-top:2.4%;margin-bottom:4%}
 :is(.np-o-head,.np-o-tail).in{opacity:var(--hymn-op)}
+.np-root[data-paper="night"] .np-o-bw{filter:invert(.88) sepia(.3)}
 .np-sys{position:absolute;border-radius:7px;pointer-events:none}
 .np-root.tap-lines .np-sys{pointer-events:auto;cursor:pointer}
 .np-root.tap-lines .np-sys:hover{background:var(--sys-hover)}

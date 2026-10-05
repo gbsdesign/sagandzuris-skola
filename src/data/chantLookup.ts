@@ -4,7 +4,6 @@ import { TSIRVA_CHANTS, ChantItem, ChantVariant } from './tsirvaChants';
 import { MWUKHRI_CHANTS, CISKARI_CHANTS } from './gelatiBookChants';
 import { SADGHESASWAULO_CHANTS } from './feastBookChants';
 import { MARXVANI_CHANTS, ZATIKI_CHANTS } from './triodionBookChants';
-import { getChantMedia } from './chantMediaRegistry';
 
 export type ServiceName = 'წირვა' | 'მწუხრი' | 'ცისკარი' | 'სადღესასწაულო' | 'მარხვანი' | 'ზატიკი';
 
@@ -43,9 +42,8 @@ export const findVersion = (variantId: string | null | undefined): VersionInfo |
 
 export const hasBookNotes = (v: ChantVariant) => Boolean(v.bookNums?.length);
 
-/** Something to show on the notes page: book notes, or the recording's own note sheets. */
-export const canOpenNotes = (chant: ChantItem, v: ChantVariant) =>
-  hasBookNotes(v) || Boolean(getChantMedia(chant.id, v.code)?.notes.length);
+/** The notes page shows the books' notes only (never the Drive copies of a recording's sheets). */
+export const canOpenNotes = (_chant: ChantItem, v: ChantVariant) => hasBookNotes(v);
 
 // "გ.ს. გამშვ" / "გ.ს. №162" -> "გ.ს."
 export const schoolOf = (code: string) => (code || '').trim().split(/\s+/)[0];

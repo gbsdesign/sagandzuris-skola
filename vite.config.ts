@@ -28,12 +28,6 @@ export default defineConfig(() => {
               options: { cacheName: 'sagandzuri-notes-v1', expiration: { maxEntries: 6000 } },
             },
             {
-              // a recording's own note sheets on Google Drive (cross-origin copies)
-              urlPattern: ({ url }) => url.hostname === 'lh3.googleusercontent.com' && url.pathname.startsWith('/d/'),
-              handler: 'CacheFirst',
-              options: { cacheName: 'sagandzuri-notes-v1', cacheableResponse: { statuses: [0, 200] } },
-            },
-            {
               urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com',
               handler: 'StaleWhileRevalidate',
               options: { cacheName: 'google-fonts', expiration: { maxEntries: 40 } },

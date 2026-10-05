@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Bell, BellOff, Loader2 } from 'lucide-react';
+import { Bell, BellOff, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useNavigation } from '../context';
-import { PRAYER_HOURS, PrayerHour, hourClock, prayerTitle } from '../data/prayers';
+import { KATHISMAS, PRAYER_HOURS, PrayerHour, bibleChapterId, hourClock, parseBibleId, prayerTitle } from '../data/prayers';
+import { PROSE, PrayerText } from '../components/views/PrayerText';
 import {
   REMINDER_OFFSETS,
   askNotificationPermission,
@@ -10,9 +11,43 @@ import {
   useReminders,
 } from '../utils/prayerReminders';
 
-// One prayer from the ლოცვანი, read in full. Texts come from public/prayers/<id>.json.
+// orthodox.ge texts are the morning/evening, hour, weekday prayers and akathist-1…18; the rest come from orthodoxy.ge
+const fromOrthodoxGe = (id: string) => /^(dila|dzili|hour-\d+|week-\d-\w+|akathist-\d+)$/.test(id);
+
+// Fetches { html } for a prayer, or one chapter of a book of the New Testament.
+const loadText = async (id: string): Promise<string> => {
+  const bible = parseBibleId(id);
+  if (bible) {
+    const data: { chapters: string[] } = await (await fetch(`/bible/${bible.book.id}.json`)).json();
+    return data.chapters[bible.chapter - 1] || '';
+  }
+  const data: { html: string } = await (await fetch(`/prayers/${id}.json`)).json();
+  return data.html;
+};
+
+// The neighbours of a chapter or kathisma, for reading on.
+const neighbours = (id: string): { prev?: { id: string; label: string }; next?: { id: string; label: string } } => {
+  const bible = parseBibleId(id);
+  if (bible) {
+    const { book, chapter } = bible;
+    return {
+      prev: chapter > 1 ? { id: bibleChapterId(book.id, chapter - 1), label: `თავი ${chapter - 1}` } : undefined,
+      next: chapter < book.chapters ? { id: bibleChapterId(book.id, chapter + 1), label: `თავი ${chapter + 1}` } : undefined,
+    };
+  }
+  const k = KATHISMAS.findIndex(x => x.id === id);
+  if (k >= 0) {
+    return {
+      prev: k > 0 ? { id: KATHISMAS[k - 1].id, label: `კანონი ${k}` } : undefined,
+      next: k < KATHISMAS.length - 1 ? { id: KATHISMAS[k + 1].id, label: `კანონი ${k + 2}` } : undefined,
+    };
+  }
+  return {};
+};
+
+// One prayer from the ლოცვანი (or a chapter of the Gospel / Apostle), read in full.
 export const PrayerPage: React.FC = () => {
-  const { selectedPrayerId } = useNavigation();
+  const { selectedPrayerId, openPrayer } = useNavigation();
   const [html, setHtml] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
 
@@ -21,9 +56,8 @@ export const PrayerPage: React.FC = () => {
     let alive = true;
     setHtml(null);
     setFailed(false);
-    fetch(`/prayers/${selectedPrayerId}.json`)
-      .then(r => r.json())
-      .then((data: { html: string }) => alive && setHtml(data.html))
+    loadText(selectedPrayerId)
+      .then(text => alive && setHtml(text))
       .catch(() => alive && setFailed(true));
     return () => {
       alive = false;
@@ -32,6 +66,25 @@ export const PrayerPage: React.FC = () => {
 
   if (!selectedPrayerId) return null;
   const hour = PRAYER_HOURS.find(h => h.id === selectedPrayerId);
+  const { prev, next } = neighbours(selectedPrayerId);
+  const pager = (prev || next) && (
+    <div className="flex items-center justify-between gap-2">
+      {prev ? (
+        <button type="button" onClick={() => openPrayer(prev.id)} className="h-10 pl-2.5 pr-3.5 rounded-xl bg-white ring-1 ring-[#e8dcc8] text-sm font-semibold text-[#4a3426] hover:text-[#7a2028] hover:ring-[#7a2028]/40 inline-flex items-center gap-1 cursor-pointer active:scale-95">
+          <ChevronLeft className="w-4 h-4" />
+          {prev.label}
+        </button>
+      ) : (
+        <span />
+      )}
+      {next && (
+        <button type="button" onClick={() => openPrayer(next.id)} className="h-10 pl-3.5 pr-2.5 rounded-xl bg-white ring-1 ring-[#e8dcc8] text-sm font-semibold text-[#4a3426] hover:text-[#7a2028] hover:ring-[#7a2028]/40 inline-flex items-center gap-1 cursor-pointer active:scale-95">
+          {next.label}
+          <ChevronRight className="w-4 h-4" />
+        </button>
+      )}
+    </div>
+  );
 
   return (
     <div className="w-full max-w-2xl mx-auto mb-6 px-1 space-y-4">
@@ -41,24 +94,35 @@ export const PrayerPage: React.FC = () => {
 
       <article className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-4 py-5 sm:px-7 sm:py-6">
         {failed ? (
-          <p className="text-center text-sm text-[#8a7a6a]">ლოცვის ჩატვირთვა ვერ მოხერხდა. სცადე ხელახლა.</p>
+          <p className="text-center text-sm text-[#8a7a6a]">ტექსტის ჩატვირთვა ვერ მოხერხდა. სცადე ხელახლა.</p>
         ) : html === null ? (
           <div className="flex justify-center py-10">
             <Loader2 className="w-6 h-6 animate-spin text-[#7a2028]" />
           </div>
+        ) : parseBibleId(selectedPrayerId) ? (
+          <div className={PROSE} dangerouslySetInnerHTML={{ __html: html }} />
         ) : (
-          <div
-            className="prayer-text font-serif-ge text-[17px] leading-[1.75] text-[#2a2017] [&_p]:mb-3.5 [&_p.c]:text-center [&_p.c]:mt-5 [&_p.c]:text-[#7a2028] [&_h2]:font-bold [&_h2]:text-[#7a2028] [&_h2]:text-center [&_h2]:text-lg [&_h2]:mt-6 [&_h2]:mb-3 [&_h2:first-child]:mt-0 [&_em]:text-[#6b5544] [&_sup]:text-[11px] [&_hr]:my-5 [&_hr]:border-[#e8dcc8]"
-            dangerouslySetInnerHTML={{ __html: html }}
-          />
+          <PrayerText html={html} />
         )}
       </article>
 
+      {pager}
+
       <p className="text-center text-xs text-[#8a7a6a]">
         წყარო:{' '}
-        <a href="https://orthodox.ge/locvani" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#7a2028]">
-          orthodox.ge — ლოცვანი
-        </a>
+        {fromOrthodoxGe(selectedPrayerId) ? (
+          <a href="https://orthodox.ge/locvani" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#7a2028]">
+            orthodox.ge — ლოცვანი
+          </a>
+        ) : parseBibleId(selectedPrayerId) ? (
+          <a href="https://www.orthodoxy.ge/tserili/mtatsmindeli/akhali_agtqma.htm" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#7a2028]">
+            orthodoxy.ge — ახალი აღთქმა, გიორგი მთაწმიდელის თარგმანი
+          </a>
+        ) : (
+          <a href="https://www.orthodoxy.ge/lotsvani.htm" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#7a2028]">
+            orthodoxy.ge — ლოცვანი
+          </a>
+        )}
       </p>
     </div>
   );

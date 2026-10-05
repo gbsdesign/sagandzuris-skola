@@ -19,6 +19,8 @@ import { AdminPanelPage } from '../pages/AdminPanelPage';
 import { ClassPage } from '../pages/ClassPage';
 import { AncestorsPage } from '../pages/AncestorsPage';
 import { PrayerPage } from '../pages/PrayerPage';
+import { CommemorationPage } from '../pages/CommemorationPage';
+import { LibraryPage } from '../pages/LibraryPage';
 
 interface AppRouterProps {
   logoUrl: string;
@@ -133,6 +135,10 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           {currentPage === 'tsinaprebi' && <AncestorsPage />}
 
           {currentPage === 'prayer' && <PrayerPage />}
+
+          {currentPage === 'commemoration' && <CommemorationPage />}
+
+          {currentPage === 'biblioteka' && <LibraryPage />}
 
           {currentPage === 'simghera' && (
             <div className="w-full my-2 px-1">

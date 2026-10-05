@@ -28,7 +28,8 @@ interface ServiceTabsProps {
 export const ServiceTabs: React.FC<ServiceTabsProps> = ({ onSelectService }) => {
   return (
     <div className="w-full my-2 px-1 flex flex-col items-center">
-      <div className="w-full max-w-md flex flex-col gap-2.5">
+      {/* as wide as the "დღევანდელი წირვა" card above (max-w-2xl) */}
+      <div className="w-full max-w-2xl flex flex-col gap-2.5">
         {SERVICES.map((serviceTitle) => (
           <button
             key={serviceTitle}

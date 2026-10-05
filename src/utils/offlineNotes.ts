@@ -34,7 +34,7 @@ const cacheUrls = async (cache: Cache, urls: string[]) => {
   }
 };
 
-/** Everything one version needs: notes JSON, its page images, the two drawings, the recording's tracks. */
+/** Everything one version needs: the book notes (JSON + page images), the two drawings, the recording's tracks. */
 const saveVersion = async (cache: Cache, variantId: string) => {
   const info = findVersion(variantId);
   if (!info) return;
@@ -48,14 +48,8 @@ const saveVersion = async (cache: Cache, variantId: string) => {
     const json = await (await cache.match(jsonUrl))!.json();
     for (const im of json.img ?? []) urls.push(base + im.src);
   }
+  await cacheUrls(cache, urls);
   const media = getChantMedia(chant.id, variant.code);
-  if (media) for (const n of media.notes) urls.push(n.url);
-  await cacheUrls(cache, urls.filter(u => u.startsWith('/')));
-  // Drive note sheets are cross-origin: kept as opaque copies, good enough for an <img>
-  for (const u of urls.filter(u => !u.startsWith('/'))) {
-    if (await cache.match(u)) continue;
-    try { await cache.put(u, await fetch(u, { mode: 'no-cors' })); } catch { /* the sheet stays online-only */ }
-  }
   if (media) for (const t of media.tracks.filter(Boolean)) await cacheAudio(t);
 };
 

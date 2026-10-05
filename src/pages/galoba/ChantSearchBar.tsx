@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 
 interface ChantSearchBarProps {
@@ -6,42 +6,67 @@ interface ChantSearchBarProps {
   searchQuery: string;
   onSearchChange: (val: string) => void;
   resultCount?: number;
+  /** small actions at the right end of the row (the "ჩამოწერა" button) */
+  children?: React.ReactNode;
 }
 
+/** The list's heading row, as in the prototype: the title on the left, a small search and the download on the right.
+ *  On a phone the search is an icon that opens into a field over the title. */
 export const ChantSearchBar: React.FC<ChantSearchBarProps> = ({
   title,
   searchQuery,
   onSearchChange,
+  children,
 }) => {
-  return (
-    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white/70 p-3 sm:p-4 rounded-2xl border border-[#e4d8c4] shadow-[0_1px_2px_rgba(42,32,23,0.05)]">
-      <div className="flex items-center gap-2.5">
-        <span aria-hidden className="w-1.5 h-6 rounded-full bg-gradient-to-b from-[#a3323d] to-[#7a2028]" />
-        <h2 className="font-serif-ge font-bold text-[#2a2017] text-lg sm:text-xl">
-          {title}
-        </h2>
-      </div>
+  const [open, setOpen] = useState(Boolean(searchQuery));
+  const inputRef = useRef<HTMLInputElement>(null);
+  const expanded = open || Boolean(searchQuery);
+  useEffect(() => { if (open) inputRef.current?.focus(); }, [open]);
 
-      {/* Fast search filter input */}
-      <div className="relative flex-1 sm:max-w-xs">
-        <Search className="w-4 h-4 text-[#a0907c] absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-        <input
-          type="text"
-          value={searchQuery}
-          onChange={(e) => onSearchChange(e.target.value)}
-          placeholder="ძიება საგალობლებში..."
-          className="w-full h-10 pl-9 pr-8 rounded-xl bg-[#faf6ef] border border-[#e4d8c4] text-[13px] sm:text-sm text-[#2a2017] placeholder-[#a0907c] focus:outline-none focus:ring-2 focus:ring-[#7a2028]/10 focus:border-[#7a2028]/40 focus:bg-white transition-all"
-        />
-        {searchQuery && (
+  return (
+    <div className="mt-2 mx-0.5 flex items-center justify-between gap-2.5">
+      <h2 className={`${expanded ? 'hidden sm:block' : ''} min-w-0 text-[15px] font-extrabold leading-snug text-[#2a2017]`}>
+        {title}
+      </h2>
+
+      <div className={`flex items-center gap-1.5 ${expanded ? 'flex-1 sm:flex-none' : ''}`}>
+        <label className={`relative ${expanded ? 'flex flex-1' : 'hidden'} sm:flex sm:flex-none items-center`}>
+          <Search className="w-3.5 h-3.5 text-[#a0907c] absolute left-3 pointer-events-none" />
+          <input
+            ref={inputRef}
+            type="search"
+            value={searchQuery}
+            onChange={(e) => onSearchChange(e.target.value)}
+            onBlur={() => { if (!searchQuery) setOpen(false); }}
+            placeholder="ძიება…"
+            aria-label="ძიება საგალობლებში"
+            className="w-full sm:w-48 h-8 pl-8 pr-7 rounded-full bg-white text-[12.5px] text-[#2a2017] placeholder-[#a0907c] shadow-[inset_0_0_0_1px_#e4d8c4] focus:outline-none focus:shadow-[inset_0_0_0_1.5px_rgba(122,32,40,0.45)] transition-shadow [&::-webkit-search-cancel-button]:hidden"
+          />
+          {searchQuery && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => { onSearchChange(''); setOpen(false); }}
+              className="absolute right-2 w-5 h-5 rounded-full grid place-items-center text-[#a0907c] hover:text-[#574739] cursor-pointer"
+              title="გასუფთავება"
+              aria-label="ძიების გასუფთავება"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </label>
+        {!expanded && (
           <button
             type="button"
-            onClick={() => onSearchChange('')}
-            className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[#a0907c] hover:text-[#574739] p-0.5 cursor-pointer"
-            title="გასუფთავება"
+            onClick={() => setOpen(true)}
+            className="sm:hidden shrink-0 w-8 h-8 rounded-full grid place-items-center bg-white text-[#574739] shadow-[inset_0_0_0_1px_#e4d8c4] active:scale-95 transition-transform cursor-pointer"
+            aria-label="ძიება საგალობლებში"
+            title="ძიება"
           >
-            <X className="w-3.5 h-3.5" />
+            <Search className="w-4 h-4" />
           </button>
         )}
+        {children}
       </div>
     </div>
   );

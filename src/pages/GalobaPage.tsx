@@ -3,6 +3,7 @@ import { useNavigation, useChants, ServiceType } from '../context';
 import { TSIRVA_CHANTS, MWUKHRI_CHANTS, CISKARI_CHANTS, SADGHESASWAULO_CHANTS, MARXVANI_CHANTS, ZATIKI_CHANTS, ChantItem, ChantVariant } from '../data';
 import { ServiceTabs, ChantSearchBar, ChantAccordionItem } from './galoba';
 import { ProgramCard, ServiceDownload } from './galoba/LiturgyBits';
+import { useNotes } from '../context/NotesContext';
 import { triggerHaptic } from '../utils/haptics';
 import { matchesSearch } from '../utils/searchUtils';
 import { ArrowLeft, Music } from 'lucide-react';
@@ -41,6 +42,7 @@ export const GalobaPage: React.FC = () => {
   } = useNavigation();
 
   const { selectedChantVariants = {}, toggleVariantSelection } = useChants();
+  const regent = useNotes().liturgy.role === 'regent';
 
   const handleSelectService = useCallback(
     (s: ServiceType) => {
@@ -91,7 +93,8 @@ export const GalobaPage: React.FC = () => {
   if (!selectedService) {
     return (
       <div className="w-full flex flex-col gap-4">
-        <div className="w-full max-w-2xl mx-auto px-1"><ProgramCard /></div>
+        {/* same frame as ServiceTabs (px-1 outside, max-w-2xl inside), so the card and the services line up */}
+        <div className="w-full px-1"><div className="max-w-2xl mx-auto"><ProgramCard /></div></div>
         <ServiceTabs onSelectService={handleSelectService} />
       </div>
     );
@@ -100,7 +103,7 @@ export const GalobaPage: React.FC = () => {
   // 2. Chant list of the service, with unfolding variants
   if (serviceChants) {
     return (
-      <div className="galoba-font w-full my-2 px-1 flex flex-col gap-3.5">
+      <div className="galoba-font w-full my-2 px-1 flex flex-col gap-2.5">
         {/* Christ the Saviour at the head of the list: medallion on a soft golden halo + ornament line */}
         <div className="flex flex-col items-center pt-1">
           <div className="relative w-32 sm:w-40">
@@ -127,17 +130,21 @@ export const GalobaPage: React.FC = () => {
 
         <ProgramCard />
 
-        {/* Header Search Controls Bar */}
+        {/* heading row as in the prototype: title, then a small search and the download on the right */}
         <ChantSearchBar
           title={SERVICE_TITLES[selectedService] ?? 'საგალობლები'}
           searchQuery={chantSearch || ''}
           onSearchChange={setChantSearch}
           resultCount={filteredChants.length}
-        />
-        <ServiceDownload chants={serviceChants} label={`მთელი ${SERVICE_GENITIVE[selectedService] ?? selectedService}`} />
+        >
+          <ServiceDownload chants={serviceChants} label={`მთელი ${SERVICE_GENITIVE[selectedService] ?? selectedService}`} />
+        </ChantSearchBar>
+        {regent && (
+          <p className="mx-0.5 text-[11.5px] leading-normal text-[#8c7c6b]">„+“ ვერსიას დღევანდელ წირვაში ამატებს.</p>
+        )}
 
-        {/* List of Chants Accordions */}
-        <div className="space-y-2">
+        {/* the chants: cards stacked edge to edge, as in the prototype */}
+        <div className="flex flex-col">
           {filteredChants.map((chant: ChantItem) => {
             const isExpanded = expandedChantId === chant.id;
             return (

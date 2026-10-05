@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useEffect, useState } from 'react';
-import { Check, ChevronDown, CircleCheck, Headphones, Plus, X } from 'lucide-react';
+import { BookmarkCheck, Check, ChevronDown, CircleCheck, Headphones, Plus, X } from 'lucide-react';
 import { ChantItem, ChantVariant, variantName, variantSublabel } from '../../data';
 import { getChantMedia } from '../../data/chantMediaRegistry';
 import { useNotes } from '../../context/NotesContext';
@@ -208,7 +208,7 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
           onToggleExpand();
         }}
         aria-expanded={isExpanded}
-        className="w-full px-4 sm:px-5 py-3 flex items-center justify-between gap-3 text-left cursor-pointer select-none group"
+        className="w-full px-3.5 py-3 flex items-center justify-between gap-3 text-left cursor-pointer select-none group"
       >
         <div className="flex-1 min-w-0 flex items-center gap-3">
           <span
@@ -221,11 +221,11 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
             }`}
           />
           <div className="min-w-0 flex flex-col gap-0.5">
-            <span className="font-bold text-[#2a2017] text-[15px] sm:text-[17px] leading-snug break-words group-hover:text-[#7a2028] transition-colors">
+            <span className="font-bold text-[#2a2017] text-[17px] leading-snug break-words group-hover:text-[#7a2028] transition-colors">
               {displayTitle}
             </span>
-            {(meta.length > 0 || recordingCount > 0 || savedCount > 0) && (
-              <span className="flex flex-wrap items-center gap-x-1.5 text-[11.5px] sm:text-xs font-medium text-[#8c7c6b]">
+            {(meta.length > 0 || recordingCount > 0 || savedCount > 0 || selectedCount > 0) && (
+              <span className="flex flex-wrap items-center gap-x-1.5 text-[11.5px] font-medium text-[#8c7c6b]">
                 {meta.join(' · ')}
                 {recordingCount > 0 && (
                   <span className="inline-flex items-center gap-1 text-[#b4620e]">
@@ -241,14 +241,17 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
                     {savedCount === openable.length ? 'ჩამოწერილია' : `${savedCount} ჩამოწერილი`}
                   </span>
                 )}
+                {/* versions picked for my independent work: a quiet note in the same line, not a badge */}
+                {selectedCount > 0 && (
+                  <span className="inline-flex items-center gap-1 text-emerald-700">
+                    {(meta.length > 0 || recordingCount > 0 || savedCount > 0) && <span className="text-[#cdbfa9]">·</span>}
+                    <BookmarkCheck className="w-3 h-3" />
+                    {selectedCount} მონიშნული
+                  </span>
+                )}
               </span>
             )}
           </div>
-          {selectedCount > 0 && (
-            <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200">
-              {selectedCount} მონიშნულია
-            </span>
-          )}
         </div>
 
         <span

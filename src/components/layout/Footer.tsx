@@ -1,13 +1,88 @@
-import React from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { CalendarDays, ChevronUp } from 'lucide-react';
+import { triggerHaptic } from '../../utils/haptics';
+import { CALENDAR_EVENT, todayIso } from '../../data/churchCalendar';
+import { ChurchCalendarPanel } from '../calendar/ChurchCalendarPanel';
 
 interface FooterProps {
   logoUrl: string;
 }
 
+const UNFOLD_MS = 480;
+const reducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+const pageBottom = () => document.documentElement.scrollHeight - window.innerHeight;
+
 export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
+  // the church calendar unfolds upward out of the bar; it stays mounted after the first opening
+  const [calOpen, setCalOpen] = useState(false);
+  const [calMounted, setCalMounted] = useState(false);
+  const [calIso, setCalIso] = useState(todayIso);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const openRef = useRef(false);
+  openRef.current = calOpen;
+
+  // keep the page pinned to its end while the panel grows, so it rises from the bar;
+  // then bring the panel's top (the date band) into view
+  const unfold = () => {
+    setCalMounted(true);
+    setCalOpen(true);
+    const t0 = performance.now();
+    const ms = reducedMotion() ? 0 : UNFOLD_MS;
+    const step = (now: number) => {
+      window.scrollTo({ top: pageBottom() });
+      if (now - t0 < ms) requestAnimationFrame(step);
+      else if ((panelRef.current?.getBoundingClientRect().top ?? 0) < 0) {
+        panelRef.current?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' });
+      }
+    };
+    requestAnimationFrame(step);
+  };
+
+  const toggle = () => {
+    triggerHaptic(10);
+    if (calOpen) setCalOpen(false);
+    else unfold();
+  };
+
+  // "სრულად" on today's-saints card, a feast in the library: go down to the bar, then unfold there
+  useEffect(() => {
+    const onOpen = (e: Event) => {
+      const iso = (e as CustomEvent<string>).detail || todayIso();
+      setCalIso(iso);
+      if (openRef.current) {
+        panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+      if (pageBottom() - window.scrollY < 40 || reducedMotion()) {
+        unfold();
+        return;
+      }
+      let done = false;
+      const go = () => { if (!done) { done = true; window.removeEventListener('scrollend', go); unfold(); } };
+      window.addEventListener('scrollend', go);
+      window.setTimeout(go, 900);
+      window.scrollTo({ top: pageBottom(), behavior: 'smooth' });
+    };
+    window.addEventListener(CALENDAR_EVENT, onOpen);
+    return () => window.removeEventListener(CALENDAR_EVENT, onOpen);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   return (
-    <footer className="border-t border-[#e8dcc8] bg-[#fbf6ec] py-6">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#8a7a6a]">
+    <footer className="border-t border-[#e8dcc8] bg-[#fbf6ec]">
+      <div
+        className={`grid ease-out ${calOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
+        style={{ transition: `grid-template-rows ${UNFOLD_MS}ms cubic-bezier(0.22, 1, 0.36, 1)` }}
+      >
+        <div ref={panelRef} className="min-h-0 overflow-hidden scroll-mt-2" inert={!calOpen}>
+          {calMounted && (
+            <div className={`border-b border-[#e8dcc8] transition-opacity duration-300 ${calOpen ? 'opacity-100' : 'opacity-0'}`}>
+              <ChurchCalendarPanel iso={calIso} onChange={setCalIso} onClose={toggle} />
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#8a7a6a]">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2.5">
             <img
@@ -20,7 +95,24 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-4">
+        <div className="w-full sm:w-auto flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-4">
+          {/* church calendar: unfolds upward out of the bar (full width on phones) */}
+          <button
+            type="button"
+            onClick={toggle}
+            aria-expanded={calOpen}
+            className={`w-full sm:w-auto inline-flex items-center justify-center gap-2 h-11 sm:h-10 px-4 rounded-full ring-1 transition-all duration-200 text-sm font-bold cursor-pointer active:scale-95 select-none ${
+              calOpen
+                ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec] shadow-[0_6px_16px_-8px_rgba(122,32,40,0.7)]'
+                : 'bg-white/70 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#4a3426]'
+            }`}
+            title="საეკლესიო კალენდარი"
+          >
+            <CalendarDays className={`w-[18px] h-[18px] ${calOpen ? 'text-[#fbf6ec]' : 'text-[#7a2028]'}`} />
+            კალენდარი
+            <ChevronUp className={`w-4 h-4 transition-transform duration-300 ${calOpen ? 'rotate-180' : ''}`} />
+          </button>
+
           {/* Facebook Button */}
           <a
             href="https://www.facebook.com/passangermgzavrebi"

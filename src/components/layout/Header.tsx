@@ -6,15 +6,16 @@ import { useMonthlyStudyStats } from '../../hooks/useMonthlyStudyStats';
 import { MONTHS_SHORT_GE, nextLessonLabel, useSelectedCount, openPathPanel } from '../views/IndependentWorkCard';
 import { useMyClasses } from '../../hooks/useClasses';
 import { ClassLogo } from '../classes/ClassLogo';
-import { Bookmark, User as UserIcon, LogIn, LogOut, Compass, ShieldCheck } from 'lucide-react';
+import { Bookmark, User as UserIcon, LogIn, LogOut, Compass, ShieldCheck, Library } from 'lucide-react';
 
 interface HeaderProps {
   logoUrl: string;
 }
 
-// learning tools: the path (skills and manner open from inside it)
+// learning tools: the path (skills and manner open from inside it) and the library (open to guests too)
 const TOOLS = [
-  { modal: 'gza', label: 'საგანძურის გზა', Icon: Compass },
+  { id: 'gza', page: 'gz', label: 'საგანძურის გზა', Icon: Compass },
+  { id: 'biblioteka', page: 'biblioteka', label: 'ბიბლიოთეკა', Icon: Library },
 ] as const;
 
 // Phone: [logo] … [🔖 ③] [შესვლა] / tools group below. The full independent-work card lives on the path page.
@@ -146,18 +147,18 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
         {/* learning tools: one group, full width on phones, centred on desktop */}
         <nav className="order-3 lg:order-2 w-full lg:w-auto lg:mx-auto flex justify-center" aria-label="სასწავლო მასალა">
           <div className="w-full sm:w-auto flex items-stretch rounded-xl bg-white/80 ring-1 ring-[#e8dcc8] p-0.5">
-            {TOOLS.map(({ modal, label, Icon }, i) => (
-              <React.Fragment key={modal}>
+            {TOOLS.map(({ id, page, label, Icon }, i) => (
+              <React.Fragment key={id}>
                 {i > 0 && <span aria-hidden className="w-px my-1.5 bg-[#e8dcc8] shrink-0" />}
                 <button
                   type="button"
                   onClick={() => {
                     triggerHaptic(10);
                     // the path is its own page; guests still get the sign-in prompt from the modal layer
-                    if (modal === 'gza' && user) navigateTo('gz');
-                    else openModal(modal);
+                    if (id === 'gza' && !user) openModal('gza');
+                    else navigateTo(page);
                   }}
-                  className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-8 px-2 min-[400px]:px-3 rounded-lg text-xs min-[400px]:text-[13px] font-bold ${modal === 'gza' && currentPage === 'gz' ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
+                  className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-8 px-2 min-[400px]:px-3 rounded-lg text-xs min-[400px]:text-[13px] font-bold ${currentPage === page ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
                   title={label}
                 >
                   <Icon className="w-4 h-4 text-[#7a2028] shrink-0" />

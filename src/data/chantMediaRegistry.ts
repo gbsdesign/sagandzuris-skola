@@ -1323,7 +1323,7 @@ for (const item of Object.values(CHANT_MEDIA_REGISTRY)) {
 const VARIANT_MEDIA: Record<string, string> = {
   'chant-5|გ.ს.': '2',        // აკურთხევს სული ჩემი
   'chant-7|გ.ს.': '3',        // მხოლოდ-შობილი
-  'chant-8|გ.ს. გამშვ': '5',  // სასუფეველსა შენსა (user: Drive folder 19APj6Bs6nGQIRFS3k-BzyATt0XbQ3McL)
+  'chant-8|გ.ს.': '5',  // სასუფეველსა შენსა (user: Drive folder 19APj6Bs6nGQIRFS3k-BzyATt0XbQ3McL); its note sheets are vol. I №159 pages
   'chant-10|გ.ს.': '6',       // მოვედით, თაყვანის-ვსცეთ
   'chant-11|გ.ს.': '6.1',     // უფალო, აცხოვნენ
   'chant-12|გ.ს.': '7',       // წმიდაო ღმერთო

@@ -6,7 +6,7 @@ export interface ManeraItemType {
 }
 
 // Habits with a menu open prayers to read right there (see data/prayers).
-export type HabitMenu = 'morning-evening' | 'hours' | 'akathists';
+export type HabitMenu = 'morning-evening' | 'hours' | 'akathists' | 'gospel' | 'apostle' | 'jesus' | 'psalms';
 
 export interface HabitItemType {
   id: string;
@@ -40,11 +40,11 @@ export const HABIT_GROUPS: HabitGroupType[] = [
     items: [
       { id: 'habit_1', label: 'დილის და საღამოს ლოცვების კითხვა', menu: 'morning-evening' },
       { id: 'habit_13', label: 'შვიდგზის ლოცვა', menu: 'hours' },
-      { id: 'habit_2', label: 'სახარების კითხვა' },
-      { id: 'habit_3', label: 'სამოციქულოს კითხვა' },
+      { id: 'habit_2', label: 'სახარების კითხვა', menu: 'gospel' },
+      { id: 'habit_3', label: 'სამოციქულოს კითხვა', menu: 'apostle' },
       { id: 'habit_4', label: 'სულიერი ლიტერატურა — დღეში 3–5 გვერდი მაინც' },
-      { id: 'habit_5', label: 'იესოს ლოცვა — რაც უფრო ხშირად, მით უკეთესი' },
-      { id: 'habit_6', label: 'ფსალმუნების კითხვა — სასურველია 1 კანონი ან დიდება მაინც' },
+      { id: 'habit_5', label: 'იესოს ლოცვა — რაც უფრო ხშირად, მით უკეთესი', menu: 'jesus' },
+      { id: 'habit_6', label: 'ფსალმუნების კითხვა — სასურველია 1 კანონი ან დიდება მაინც', menu: 'psalms' },
     ],
   },
   {

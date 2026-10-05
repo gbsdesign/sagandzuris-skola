@@ -57,8 +57,7 @@ export const insertInOrder = (items: string[], id: string) => {
 
 export const useLiturgy = () => {
   const { user, isAdmin } = useAuth();
-  const TEST_REGENT = import.meta.env.DEV && localStorage.getItem('sg_test_regent') === '1'; // TEMP: screenshot test, remove
-  const role: 'regent' | 'member' | 'guest' = TEST_REGENT ? 'regent' : !user ? 'guest' : isAdmin ? 'regent' : 'member';
+  const role: 'regent' | 'member' | 'guest' = !user ? 'guest' : isAdmin ? 'regent' : 'member';
   const uid = user?.uid;
 
   // ---- regent: draft, chosen class, templates

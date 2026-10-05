@@ -1,8 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Bell, Check, ChevronDown, Moon, Sun } from 'lucide-react';
+import { Bell, Check, ChevronDown, ChevronRight, Moon, ScrollText, Search, Sun } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { HABIT_GROUPS, HabitMenu } from '../../data/habitsAndManera';
-import { AKATHISTS, MORNING_EVENING, PRAYER_HOURS, WEEK_DAYS, hourClock, weekPrayerId } from '../../data/prayers';
+import {
+  AKATHISTS,
+  AKATHIST_GROUPS,
+  APOSTLE,
+  BibleBook,
+  GOSPELS,
+  KATHISMAS,
+  MORNING_EVENING,
+  PRAYER_HOURS,
+  PSALTER_RULE,
+  WEEK_DAYS,
+  bibleChapterId,
+  hourClock,
+  weekPrayerId,
+} from '../../data/prayers';
+import { useCommemoration } from '../../utils/commemoration';
 import { useChants, useModal, useNavigation } from '../../context';
 import { formatNextHabitsReset } from '../../utils/habitsWeek';
 import { useReminders } from '../../utils/prayerReminders';
@@ -80,13 +95,123 @@ const HabitPrayerMenu: React.FC<{ menu: HabitMenu; onOpen: (prayerId: string) =>
     );
   }
 
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-      {AKATHISTS.map(p => (
-        <button key={p.id} type="button" onClick={() => onOpen(p.id)} className={`${CHIP} px-2.5 py-2 text-left text-[13px] leading-snug`}>
-          {p.title}
+  if (menu === 'gospel') return <BibleBooks books={GOSPELS} onOpen={onOpen} />;
+  if (menu === 'apostle') return <BibleBooks books={APOSTLE} onOpen={onOpen} />;
+
+  if (menu === 'jesus') {
+    return (
+      <div className="space-y-2.5 text-[#2a2017]">
+        <p className="rounded-lg bg-[#fbf6ec] ring-1 ring-[#e8dcc8] px-3 py-2.5 text-center font-serif-ge text-[16px] leading-relaxed text-[#7a2028] font-semibold">
+          უფალო იესო ქრისტე, ძეო ღმრთისაო, შემიწყალე მე ცოდვილი.
+        </p>
+        <div className="px-0.5 space-y-1.5 text-[13px] leading-relaxed text-[#4a3426]">
+          <p>
+            <span className="font-bold text-[#7a2028]">სხვისთვის ლოცვისას</span> ამბობენ: „უფალო იესო ქრისტე, ძეო ღმრთისაო, შეიწყალე{' '}
+            <span className="italic text-[#8a7a6a]">(სახელი)</span>“.
+          </p>
+          <p className="text-[12px] text-[#8a7a6a]">
+            თქვი წყნარად და გაუჩქარებლად, ყურადღებით სიტყვებზე — სადაც უნდა იყო: გზაში, საქმის დროს, დასაძინებლად წოლისას.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (menu === 'psalms') {
+    return (
+      <div className="space-y-2">
+        <button type="button" onClick={() => onOpen(PSALTER_RULE.id)} className={`${CHIP} w-full px-3 py-2 text-left text-[13px] font-semibold`}>
+          📖 {PSALTER_RULE.title} — დასაწყისი და დასასრულის ლოცვები
         </button>
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5">
+          {KATHISMAS.map(k => (
+            <button key={k.id} type="button" onClick={() => onOpen(k.id)} className={`${CHIP} px-2 py-1.5 text-left`}>
+              <span className="block text-[13px] font-bold">{k.title}</span>
+              <span className="block text-[11px] text-[#8a7a6a]">ფს. {k.psalms}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  return <AkathistMenu onOpen={onOpen} />;
+};
+
+// Books of the Gospel or the Apostle; a book unfolds its chapters.
+let lastOpenBook: string | null = null;
+const BibleBooks: React.FC<{ books: BibleBook[]; onOpen: (id: string) => void }> = ({ books, onOpen }) => {
+  const [openBook, setOpenBook] = useState<string | null>(() => (books.some(b => b.id === lastOpenBook) ? lastOpenBook : null));
+  const toggle = (id: string) => {
+    const next = openBook === id ? null : id;
+    lastOpenBook = next;
+    setOpenBook(next);
+  };
+  return (
+    <div className="space-y-1.5">
+      {books.map(book => {
+        const expanded = openBook === book.id;
+        return (
+          <div key={book.id} className={`rounded-lg ring-1 ${expanded ? 'ring-[#7a2028]/30 bg-[#fbf6ec]' : 'ring-[#e8dcc8] bg-[#fbf6ec]/70'}`}>
+            <button
+              type="button"
+              onClick={() => (book.chapters === 1 ? onOpen(bibleChapterId(book.id, 1)) : toggle(book.id))}
+              className="w-full flex items-center gap-2 px-3 py-2 text-left cursor-pointer group"
+            >
+              <span className="flex-1 min-w-0 text-[13px] font-semibold text-[#4a3426] group-hover:text-[#7a2028]">{book.title}</span>
+              <span className="text-[11px] text-[#8a7a6a]">{book.chapters === 1 ? '1 თავი' : `${book.chapters} თავი`}</span>
+              {book.chapters > 1 && <ChevronDown className={`w-4 h-4 text-[#b5a48c] transition-transform ${expanded ? 'rotate-180' : ''}`} />}
+            </button>
+            {expanded && (
+              <div className="grid grid-cols-7 sm:grid-cols-10 gap-1 px-2 pb-2">
+                {Array.from({ length: book.chapters }, (_, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => onOpen(bibleChapterId(book.id, i + 1))}
+                    className="h-9 rounded-md bg-white ring-1 ring-[#e8dcc8] text-[13px] font-semibold tabular-nums text-[#4a3426] hover:text-[#7a2028] hover:ring-[#7a2028]/40 cursor-pointer active:scale-95"
+                  >
+                    {i + 1}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+// 73 akathists in groups, with a search box.
+const AkathistMenu: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) => {
+  const [query, setQuery] = useState('');
+  const q = query.trim();
+  const groups = AKATHIST_GROUPS.map(g => ({ ...g, items: q ? g.items.filter(p => p.title.includes(q)) : g.items })).filter(g => g.items.length);
+  return (
+    <div className="space-y-2.5">
+      <div className="relative">
+        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#b5a48c]" />
+        <input
+          value={query}
+          onChange={e => setQuery(e.target.value)}
+          placeholder={`ძებნა (${AKATHISTS.length} დაუჯდომელი)`}
+          className="w-full h-10 pl-8 pr-3 rounded-lg bg-[#fbf6ec] ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/35 outline-none text-[13px] text-[#2a2017] placeholder:text-[#b5a48c]"
+        />
+      </div>
+      {groups.map(g => (
+        <div key={g.title}>
+          <p className="px-0.5 pb-1 text-[12px] font-bold text-[#8a7a6a]">{g.title}</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+            {g.items.map(p => (
+              <button key={p.id} type="button" onClick={() => onOpen(p.id)} className={`${CHIP} px-2.5 py-2 text-left text-[13px] leading-snug`}>
+                {p.title}
+              </button>
+            ))}
+          </div>
+        </div>
       ))}
+      {!groups.length && <p className="px-1 text-[13px] text-[#8a7a6a]">ვერაფერი მოიძებნა.</p>}
     </div>
   );
 };
@@ -106,8 +231,10 @@ const celebrate = () => {
 // Ticking a habit sets off fireworks and a blessing.
 export const ChvevebiContent: React.FC = () => {
   const { habitsStats, saveHabitsToFirestore } = useChants();
-  const { openPrayer } = useNavigation();
+  const { openPrayer, openCommemoration } = useNavigation();
   const { activeModal, closeModal } = useModal();
+  const { lists } = useCommemoration();
+  const nameCount = lists.living.length + lists.deceased.length + lists.group.length;
   const [blessing, setBlessing] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(lastOpenMenu);
   const timer = useRef<number | undefined>(undefined);
@@ -145,6 +272,26 @@ export const ChvevebiContent: React.FC = () => {
           რომლებიც საჭიროა სწორი სულიერი ნიადაგის მოსამზადებლად.
         </p>
       </div>
+
+      <button
+        type="button"
+        onClick={() => {
+          if (activeModal) closeModal();
+          openCommemoration();
+        }}
+        className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl bg-white ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-left cursor-pointer group active:scale-[0.99] transition-all"
+      >
+        <span className="w-9 h-9 rounded-lg bg-[#7a2028]/10 text-[#7a2028] flex items-center justify-center shrink-0">
+          <ScrollText className="w-4.5 h-4.5" />
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-sm font-bold text-[#2a2017] group-hover:text-[#7a2028]">მოსახსენებელი</span>
+          <span className="block text-[12px] text-[#8a7a6a]">
+            {nameCount ? `${nameCount} სახელი — ლოცვებში მოიხსენიება` : 'ჩაწერე ცოცხალთა და გარდაცვლილთა სახელები'}
+          </span>
+        </span>
+        <ChevronRight className="w-5 h-5 shrink-0 text-[#cbbca6] group-hover:text-[#7a2028]" />
+      </button>
 
       {HABIT_GROUPS.map(group => (
         <section key={group.id} className="space-y-1.5">

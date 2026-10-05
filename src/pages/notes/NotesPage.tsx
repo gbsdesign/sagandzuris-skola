@@ -61,7 +61,7 @@ const HymnImg: React.FC<{ o: HymnOrnament; place: 'top' | 'bottom' }> = ({ o, pl
       alt=""
       aria-hidden
       draggable={false}
-      className={`${place === 'top' ? 'np-o-head' : 'np-o-tail'} ${shown ? 'in' : ''}`}
+      className={`${place === 'top' ? 'np-o-head' : 'np-o-tail'} ${o.bw ? 'np-o-bw' : ''} ${shown ? 'in' : ''}`}
       style={{ width: `${(hymnWidth(o, place) * 100).toFixed(1)}%` }}
       onLoad={() => requestAnimationFrame(() => setShown(true))}
     />
@@ -102,11 +102,10 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     }
     return () => { alive = false; };
   }, [variant.bookNums, variant.book]);
-  const sheets: Sheet[] = useMemo(() => {
-    if (score) return score.img.map(im => ({ src: bookImageUrl(score, im.src), w: im.w, h: im.h, page: im.page }));
-    if (!variant.bookNums?.length && media?.notes.length) return media.notes.map(n => ({ src: n.url }));
-    return [];
-  }, [score, variant.bookNums, media]);
+  const sheets: Sheet[] = useMemo(
+    () => (score ? score.img.map(im => ({ src: bookImageUrl(score, im.src), w: im.w, h: im.h, page: im.page })) : []),
+    [score]
+  );
   const synth = useMemo(() => (score ? new ChantSynth(score) : null), [score]);
   useEffect(() => () => synth?.dispose(), [synth]);
   const VOICES = VOICE_NAMES.slice(0, score?.voices.length ?? 3);
@@ -686,7 +685,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const numLabel = nums.length > 1 ? `№${nums[0]}–${nums[nums.length - 1]}` : nums.length ? `№${nums[0]}` : '';
   const endnote = score
     ? `${BOOK_NAMES[variant.book ?? 'book'] ?? ''} · ${numLabel}${variant.page ? `, გვ. ${variant.page}${lastPage && lastPage !== variant.page ? `–${lastPage}` : ''}` : ''}`
-    : media?.notes.length ? 'ჩანაწერის ნოტები Google Drive-იდან' : '';
+    : '';
   const loopTitle = loop.stage === 0 ? 'გამეორება: მონიშნე დასაწყისი (A)' : loop.stage === 1 ? 'მონიშნე დასასრული (B)' : 'გამეორების გამორთვა';
   const f = folded[orient];
   const loopZone = synth && loop.a !== null ? { left: `${(100 * loop.a) / synth.duration}%`, width: `${(100 * ((loop.b ?? synth.duration) - loop.a)) / synth.duration}%` } : null;
@@ -715,10 +714,17 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
             </div>
             <div className="np-cap-tools">
               {score && (
-                <button type="button" className="np-start" onClick={playStart} aria-label="საწყისი ბგერა: ხმების პირველი ბგერა რიგრიგობით">
-                  <Fork /><span>საწყისი ბგერა</span>
-                  <span className="np-sb-dots" aria-hidden>{VOICES.map((_, i) => <i key={i} className={dots[i] ? 'on' : ''} />)}</span>
-                </button>
+                <div className="np-startgrp" role="group" aria-label="საწყისი ბგერა და ტონი">
+                  <button type="button" className="np-start" onClick={playStart} aria-label="საწყისი ბგერა: ხმების პირველი ბგერა რიგრიგობით">
+                    <Fork /><span>საწყისი ბგერა</span>
+                    <span className="np-sb-dots" aria-hidden>{VOICES.map((_, i) => <i key={i} className={dots[i] ? 'on' : ''} />)}</span>
+                  </button>
+                  <NpStepper
+                    label="ტონი" value={signed(transpose)} changed={transpose !== 0}
+                    onMinus={() => setTranspose(t => Math.max(-7, t - 1))} onPlus={() => setTranspose(t => Math.min(7, t + 1))} onReset={() => setTranspose(0)}
+                    minusDisabled={transpose <= -7} plusDisabled={transpose >= 7}
+                  />
+                </div>
               )}
               <div className="np-zoom" role="group" aria-label="ნოტების ზომა">
                 <button type="button" className="np-zb" onClick={() => zoomStep(-1)} aria-label="დაპატარავება" title="დაპატარავება"><ZoomOut /></button>
@@ -726,13 +732,6 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                 <button type="button" className="np-zb" onClick={() => zoomStep(1)} aria-label="გადიდება" title="გადიდება"><ZoomIn /></button>
                 <button type="button" className="np-zb fit" onClick={zoomFit} aria-label="ეკრანზე მორგება" title="ეკრანზე მორგება"><Scan /></button>
               </div>
-              {score && (
-                <NpStepper
-                  label="ტონი" value={signed(transpose)} changed={transpose !== 0}
-                  onMinus={() => setTranspose(t => Math.max(-7, t - 1))} onPlus={() => setTranspose(t => Math.min(7, t + 1))} onReset={() => setTranspose(0)}
-                  minusDisabled={transpose <= -7} plusDisabled={transpose >= 7}
-                />
-              )}
               {church ? (
                 <div className="np-church-row">
                   <button type="button" className="np-church-x" onClick={() => { triggerHaptic(10); setChurch(false); showToast('ტაძრის რეჟიმი გამოირთო'); }}>
