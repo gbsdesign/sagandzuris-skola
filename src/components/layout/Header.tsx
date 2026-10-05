@@ -35,7 +35,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
     : 'დამოუკიდებელი სამუშაო';
 
   return (
-    <header className="relative z-50 bg-[#fbf6ec] border-b border-[#e8dcc8]">
+    <header className="relative z-50 safe-bleed safe-top bg-[#fbf6ec] border-b border-[#e8dcc8]">
       <div className="max-w-7xl mx-auto px-2 sm:px-4 py-2 flex flex-wrap lg:flex-nowrap items-center gap-2">
         {/* logo (+ name from md up) */}
         <button

@@ -24,12 +24,12 @@ export const ChantSearchBar: React.FC<ChantSearchBarProps> = ({
   useEffect(() => { if (open) inputRef.current?.focus(); }, [open]);
 
   return (
-    <div className="mt-2 mx-0.5 flex items-center justify-between gap-2.5">
+    <div className="mt-2 mx-0.5 flex max-[359px]:flex-wrap items-center justify-between gap-2.5">
       <h2 className={`${expanded ? 'hidden sm:block' : ''} min-w-0 text-[15px] font-extrabold leading-snug text-[#2a2017]`}>
         {title}
       </h2>
 
-      <div className={`flex items-center gap-1.5 ${expanded ? 'flex-1 sm:flex-none' : ''}`}>
+      <div className={`flex items-center gap-1.5 max-[359px]:ml-auto ${expanded ? 'flex-1 sm:flex-none' : ''}`}>
         <label className={`relative ${expanded ? 'flex flex-1' : 'hidden'} sm:flex sm:flex-none items-center`}>
           <Search className="w-3.5 h-3.5 text-[#a0907c] absolute left-3 pointer-events-none" />
           <input

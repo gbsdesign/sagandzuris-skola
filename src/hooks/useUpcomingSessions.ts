@@ -19,6 +19,15 @@ export interface UpcomingSession {
   done: boolean;
 }
 
+/** One of the last 7 days: its planned hours and how many of them were done */
+export interface StudyDay {
+  date: Date;
+  planned: number;
+  done: number;
+  /** hours ticked that day outside the plan */
+  extra: number;
+}
+
 /** Writes the whole map (not a merge) so un-ticking really removes a session. */
 export const saveCompletedSessions = (uid: string, next: Record<string, boolean>) =>
   setDoc(doc(db, 'students', uid), { completedSessions: next }, { mergeFields: ['completedSessions'] });
@@ -40,13 +49,18 @@ export const useUpcomingSessions = (uid: string | undefined, count = 7) => {
     );
   }, [uid]);
 
+  const hoursOn = (date: Date): string[] => {
+    const raw = schedule[DAY_IDS_BY_INDEX[date.getDay()]];
+    if (!raw || typeof raw !== 'string') return [];
+    return raw.split(',').map(s => s.trim()).filter(h => /^\d{2}:00$/.test(h)).sort();
+  };
+
   const today = new Date();
   const sessions: UpcomingSession[] = [];
   for (let offset = 0; offset < 28 && sessions.length < count; offset++) {
     const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() + offset);
-    const raw = schedule[DAY_IDS_BY_INDEX[date.getDay()]];
-    if (!raw || typeof raw !== 'string') continue;
-    const hours = raw.split(',').map(s => s.trim()).filter(h => /^\d{2}:00$/.test(h)).sort();
+    const hours = hoursOn(date);
+    if (!hours.length) continue;
     const dayLabel = offset === 0 ? 'დღეს' : offset === 1 ? 'ხვალ'
       : offset < 7 ? DAY_IDS_BY_INDEX[date.getDay()] : `${date.getDate()} ${MONTHS_SHORT_GE[date.getMonth()]}`;
     for (const hour of hours) {
@@ -55,6 +69,16 @@ export const useUpcomingSessions = (uid: string | undefined, count = 7) => {
       sessions.push({ key, dayLabel, hour, done: !!completed[key] });
     }
   }
+
+  // the last 7 days, oldest first: the streak strip
+  const week: StudyDay[] = Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - 6 + i);
+    const dateKey = toDateKey(date);
+    const hours = hoursOn(date);
+    const ticked = Object.keys(completed).filter(k => completed[k] && k.startsWith(`${dateKey}_`)).map(k => k.slice(dateKey.length + 1));
+    const done = hours.filter(h => ticked.includes(h)).length;
+    return { date, planned: hours.length, done, extra: ticked.length - done };
+  });
 
   const toggle = (key: string) => {
     if (!uid) return;
@@ -65,5 +89,5 @@ export const useUpcomingSessions = (uid: string | undefined, count = 7) => {
     saveCompletedSessions(uid, next).catch(err => console.warn('session sync note:', err));
   };
 
-  return { sessions, toggle };
+  return { sessions, week, toggle };
 };

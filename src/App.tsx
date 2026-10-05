@@ -91,7 +91,7 @@ function AppContent() {
 
   return (
     <div
-      className={`relative isolate min-h-screen text-slate-900 flex flex-col font-sans ${
+      className={`relative isolate min-h-screen safe-x text-slate-900 flex flex-col font-sans ${
         // the chant pages share the warm paper of the notes pages
         currentPage === 'galoba' ? 'bg-gradient-to-b from-[#fdfaf4] via-[#f8f1e5] to-[#f1e7d6]'
           // the home page: the footer's warm cream (#fbf6ec), only lighter

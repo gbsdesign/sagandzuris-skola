@@ -1226,7 +1226,7 @@ export const ChantPlayer: React.FC<ChantDetailPageProps & RecordingProps> = ({ c
       {/* Sheet Music Modal Overlay */}
       {isNotesModalOpen && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
-          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[85vh] overflow-y-auto border border-amber-100 shadow-2xl flex flex-col p-6 space-y-4">
+          <div className="bg-white rounded-3xl max-w-lg w-full max-h-[85dvh] overflow-y-auto border border-amber-100 shadow-2xl flex flex-col p-6 space-y-4">
             
             <div className="flex items-center justify-between border-b border-slate-100 pb-3">
               <h3 className="font-extrabold text-slate-800 text-lg flex items-center gap-2">

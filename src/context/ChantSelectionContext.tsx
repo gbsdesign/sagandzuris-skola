@@ -5,7 +5,8 @@ import { useAuth } from './AuthContext';
 import { useModal } from './ModalContext';
 import { filterValidVariants } from '../utils/variantValidation';
 import { triggerHaptic } from '../utils/haptics';
-import { getHabitsWeekKey } from '../utils/habitsWeek';
+import { HabitLog, dayKey, getHabitsWeekKey, habitsThisWeek, pruneHabitLog } from '../utils/habitsWeek';
+import { HABIT_ITEMS } from '../data/habitsAndManera';
 import { ChantItem, ChantVariant } from '../data/tsirvaChants';
 
 export interface SelectedChantVariant {
@@ -22,8 +23,9 @@ export interface SelectedChantVariant {
 export interface ChantSelectionContextType {
   selectedChantVariants: Record<string, SelectedChantVariant>;
   maneraStats: Record<string, string>;
-  habitsStats: Record<string, boolean>;
-  saveHabitsToFirestore: (nextStats: Record<string, boolean>) => void;
+  habitLog: HabitLog;
+  /** ticks or unticks a habit for today; returns true when it was ticked (false also when signed out) */
+  toggleHabitToday: (id: string) => boolean;
   saveManeraToFirestore: (nextStats: Record<string, string>) => void;
   saveVariantsToFirestoreAndStorage: (nextVariants: Record<string, any>) => void;
   toggleVariantSelection: (chant: ChantItem, v: ChantVariant) => void;
@@ -40,29 +42,29 @@ export const ChantSelectionProvider: React.FC<{ children: React.ReactNode }> = (
   const { openModal } = useModal();
   const [selectedChantVariants, setSelectedChantVariants] = useState<Record<string, SelectedChantVariant>>({});
   const [maneraStats, setManeraStats] = useState<Record<string, string>>({});
-  const [storedHabits, setStoredHabits] = useState<Record<string, boolean>>({});
-  const [habitsWeek, setHabitsWeek] = useState('');
+  const [habitLog, setHabitLog] = useState<HabitLog>({});
 
-  // Marks saved in an earlier week are hidden: the checklist starts over every Sunday 09:00.
-  const habitsStats = habitsWeek === getHabitsWeekKey() ? storedHabits : {};
-
-  const saveHabitsToFirestore = (nextStats: Record<string, boolean>) => {
+  // A habit is ticked per day; the week's summary (habitsStats) is kept alongside for the admin panel.
+  const toggleHabitToday = (id: string) => {
     if (!user) {
       openModal('chvevebi');
-      return;
+      return false;
     }
-    const weekKey = getHabitsWeekKey();
-    setStoredHabits(nextStats);
-    setHabitsWeek(weekKey);
+    const today = dayKey(new Date());
+    const day = habitLog[today] || [];
+    const turningOn = !day.includes(id);
+    const next = pruneHabitLog({ ...habitLog, [today]: turningOn ? [...day, id] : day.filter((h) => h !== id) });
+    setHabitLog(next);
     triggerHaptic(15);
     const userDocRef = doc(db, 'students', user.uid);
     setDoc(
       userDocRef,
-      { habitsStats: nextStats, habitsWeek: weekKey },
-      { mergeFields: ['habitsStats', 'habitsWeek'] }
+      { habitLog: next, habitsStats: habitsThisWeek(next), habitsWeek: getHabitsWeekKey() },
+      { mergeFields: ['habitLog', 'habitsStats', 'habitsWeek'] }
     ).catch((err) => {
       console.warn('Firestore habits sync note:', err);
     });
+    return turningOn;
   };
 
   const saveManeraToFirestore = (nextStats: Record<string, string>) => {
@@ -198,8 +200,7 @@ export const ChantSelectionProvider: React.FC<{ children: React.ReactNode }> = (
     if (!user) {
       setSelectedChantVariants({});
       setManeraStats({});
-      setStoredHabits({});
-      setHabitsWeek('');
+      setHabitLog({});
       return;
     }
 
@@ -217,16 +218,17 @@ export const ChantSelectionProvider: React.FC<{ children: React.ReactNode }> = (
           if (data?.maneraStats) {
             setManeraStats(data.maneraStats);
           }
-          if (data?.habitsStats) {
-            setStoredHabits(data.habitsStats);
-            if (data.habitsWeek) {
-              setHabitsWeek(data.habitsWeek);
-            } else {
-              // Marks saved before the weekly reset existed count as this week's, so nobody loses them on deploy.
-              const weekKey = getHabitsWeekKey();
-              setHabitsWeek(weekKey);
-              setDoc(userDocRef, { habitsWeek: weekKey }, { mergeFields: ['habitsWeek'] }).catch((err) =>
-                console.warn('Firestore habits week note:', err)
+          if (data?.habitLog) {
+            setHabitLog(data.habitLog);
+          } else {
+            // This week's marks from before the daily log count as today's, so nobody loses them on deploy.
+            const week = data?.habitsWeek === getHabitsWeekKey() ? data.habitsStats || {} : {};
+            const ids = HABIT_ITEMS.filter((h) => week[h.id]).map((h) => h.id);
+            const seeded: HabitLog = ids.length ? { [dayKey(new Date())]: ids } : {};
+            setHabitLog(seeded);
+            if (ids.length) {
+              setDoc(userDocRef, { habitLog: seeded }, { mergeFields: ['habitLog'] }).catch((err) =>
+                console.warn('Firestore habit log note:', err)
               );
             }
           }
@@ -256,8 +258,8 @@ export const ChantSelectionProvider: React.FC<{ children: React.ReactNode }> = (
       value={{
         selectedChantVariants,
         maneraStats,
-        habitsStats,
-        saveHabitsToFirestore,
+        habitLog,
+        toggleHabitToday,
         saveManeraToFirestore,
         saveVariantsToFirestoreAndStorage,
         toggleVariantSelection,

@@ -46,6 +46,31 @@ service cloud.firestore {
     match /classes/{classId} {
       allow read: if isAdmin() || (isSignedIn() && request.auth.uid in resource.data.memberIds);
       allow write: if isAdmin();
+
+      // Class chat: members and admins read and post as themselves; the author or an admin deletes; nothing is edited
+      function inClass() {
+        return isAdmin() || (isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/classes/$(classId)).data.memberIds);
+      }
+
+      match /messages/{messageId} {
+        allow read: if inClass();
+        allow create: if inClass()
+          && incoming().uid == request.auth.uid
+          && (incoming().teacher == false || isAdmin())
+          && incoming().createdAt == request.time
+          && incoming().kind in ['text', 'voice']
+          && incoming().text is string && incoming().text.size() <= 2000;
+        allow delete: if isAdmin() || (isSignedIn() && existing().uid == request.auth.uid);
+      }
+
+      // A voice message's MP3, in parts below Firestore's 1 MiB document limit
+      match /voice/{partId} {
+        allow read: if inClass();
+        allow create: if inClass()
+          && incoming().uid == request.auth.uid
+          && incoming().data is bytes && incoming().data.size() <= 750000;
+        allow delete: if isAdmin() || (isSignedIn() && existing().uid == request.auth.uid);
+      }
     }
 
     // Teacher's confirmations ("ჩათვლა") of a student's voices: the student reads, only admins write

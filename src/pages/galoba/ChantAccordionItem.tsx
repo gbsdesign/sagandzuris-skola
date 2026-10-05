@@ -208,9 +208,9 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
           onToggleExpand();
         }}
         aria-expanded={isExpanded}
-        className="w-full px-3.5 py-3 flex items-center justify-between gap-3 text-left cursor-pointer select-none group"
+        className="w-full px-3.5 py-3 max-[359px]:px-3 flex items-center justify-between gap-3 max-[359px]:gap-2 text-left cursor-pointer select-none group"
       >
-        <div className="flex-1 min-w-0 flex items-center gap-3">
+        <div className="flex-1 min-w-0 flex items-center gap-3 max-[359px]:gap-2">
           <span
             className={`w-2 h-2 shrink-0 rounded-full transition-all duration-300 ${
               isExpanded

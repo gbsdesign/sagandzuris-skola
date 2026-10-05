@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Bell, Check, ChevronDown, ChevronRight, Moon, ScrollText, Search, Sun } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { HABIT_GROUPS, HabitMenu } from '../../data/habitsAndManera';
+import { HABIT_GROUPS, HabitGroupType, HabitMenu } from '../../data/habitsAndManera';
 import {
   AKATHISTS,
   AKATHIST_GROUPS,
@@ -19,8 +19,9 @@ import {
 } from '../../data/prayers';
 import { useCommemoration } from '../../utils/commemoration';
 import { useChants, useModal, useNavigation } from '../../context';
-import { formatNextHabitsReset } from '../../utils/habitsWeek';
+import { HabitLog, dayKey, habitPercent, lastDays } from '../../utils/habitsWeek';
 import { useReminders } from '../../utils/prayerReminders';
+import { WeekStreak } from './WeekStreak';
 
 // the habit menu left open, so coming back from a prayer shows the same list
 let lastOpenMenu: string | null = null;
@@ -226,11 +227,32 @@ const celebrate = () => {
   }
 };
 
-// "ჩვევები" for students: the explanation and the habits to tick. No counters or progress here —
-// teachers see how many habits a student kept this week in the admin panel.
+// "30 დღეში 2-ჯერ" — the goal behind a group's percent
+const goalLabel = ({ times, days }: HabitGroupType['goal']) => (times === days ? `ბოლო ${days} დღე` : `${days} დღეში ${times}-ჯერ`);
+
+// A habit's last 7 days and its percent against the group's goal
+const HabitStreak: React.FC<{ log: HabitLog; id: string; goal: HabitGroupType['goal'] }> = ({ log, id, goal }) => {
+  const { done, percent } = habitPercent(log, id, goal);
+  const days = lastDays(7).map(date => {
+    const ticked = !!log[dayKey(date)]?.includes(id);
+    return { date, mark: ticked ? ('done' as const) : ('open' as const), note: ticked ? 'შესრულდა' : undefined };
+  });
+  return (
+    <WeekStreak
+      days={days}
+      percent={percent}
+      percentTitle={`${goal.days} დღეში ${done}-ჯერ — მიზანი ${goal.times}`}
+      className="pl-3.5 pr-2.5 pb-2.5"
+    />
+  );
+};
+
+// "ჩვევები" for students: the explanation and the habits to tick for today. Each habit shows its last
+// 7 days (the streak) and a percent against its group's goal; teachers see the week's count in the admin panel.
 // Ticking a habit sets off fireworks and a blessing.
 export const ChvevebiContent: React.FC = () => {
-  const { habitsStats, saveHabitsToFirestore } = useChants();
+  const { habitLog, toggleHabitToday } = useChants();
+  const todayDone = habitLog[dayKey(new Date())] || [];
   const { openPrayer, openCommemoration } = useNavigation();
   const { activeModal, closeModal } = useModal();
   const { lists } = useCommemoration();
@@ -252,9 +274,7 @@ export const ChvevebiContent: React.FC = () => {
   useEffect(() => () => window.clearTimeout(timer.current), []);
 
   const toggle = (id: string) => {
-    const turningOn = !habitsStats[id];
-    saveHabitsToFirestore({ ...habitsStats, [id]: turningOn });
-    if (turningOn) {
+    if (toggleHabitToday(id)) {
       celebrate();
       setBlessing(true);
       window.clearTimeout(timer.current);
@@ -295,15 +315,18 @@ export const ChvevebiContent: React.FC = () => {
 
       {HABIT_GROUPS.map(group => (
         <section key={group.id} className="space-y-1.5">
-          <h4 className="px-1 font-serif-ge text-[15px] font-bold text-[#7a2028]">{group.title}</h4>
+          <div className="flex items-baseline justify-between gap-2 px-1">
+            <h4 className="font-serif-ge text-[15px] font-bold text-[#7a2028]">{group.title}</h4>
+            <span className="text-[11px] font-semibold text-[#a08a76]">% — {goalLabel(group.goal)}</span>
+          </div>
           {group.items.map(habit => {
-            const on = Boolean(habitsStats[habit.id]);
+            const on = todayDone.includes(habit.id);
             const check = (
               <button
                 type="button"
                 role="checkbox"
                 aria-checked={on}
-                aria-label={habit.label}
+                aria-label={`${habit.label} — დღეს`}
                 onClick={() => toggle(habit.id)}
                 className="shrink-0 -my-1 -mr-1 p-1.5 rounded-full cursor-pointer active:scale-90 transition-transform"
               >
@@ -314,13 +337,18 @@ export const ChvevebiContent: React.FC = () => {
             );
             const rowTone = on ? 'bg-[#7a2028]/[0.06] ring-[#7a2028]/25' : 'bg-white ring-[#e8dcc8]';
 
+            const streak = <HabitStreak log={habitLog} id={habit.id} goal={group.goal} />;
+
             if (!habit.menu) {
               return (
-                <div key={habit.id} className={`flex items-center gap-2 pl-3.5 pr-2.5 py-2 rounded-xl ring-1 transition-colors ${rowTone}`}>
-                  <button type="button" onClick={() => toggle(habit.id)} className="flex-1 min-w-0 text-left text-sm font-medium leading-snug cursor-pointer select-none">
-                    {habit.label}
-                  </button>
-                  {check}
+                <div key={habit.id} className={`rounded-xl ring-1 transition-colors ${rowTone}`}>
+                  <div className="flex items-center gap-2 pl-3.5 pr-2.5 pt-2 pb-1.5">
+                    <button type="button" onClick={() => toggle(habit.id)} className="flex-1 min-w-0 text-left text-sm font-medium leading-snug cursor-pointer select-none">
+                      {habit.label}
+                    </button>
+                    {check}
+                  </div>
+                  {streak}
                 </div>
               );
             }
@@ -328,7 +356,7 @@ export const ChvevebiContent: React.FC = () => {
             const expanded = openMenu === habit.id;
             return (
               <div key={habit.id} className={`rounded-xl ring-1 transition-colors ${rowTone}`}>
-                <div className="flex items-center gap-2 pl-3.5 pr-2.5 py-2">
+                <div className="flex items-center gap-2 pl-3.5 pr-2.5 pt-2 pb-1.5">
                   <button
                     type="button"
                     aria-expanded={expanded}
@@ -340,6 +368,7 @@ export const ChvevebiContent: React.FC = () => {
                   </button>
                   {check}
                 </div>
+                {streak}
                 {expanded && (
                   <div className="px-2.5 pb-2.5 pt-0.5 animate-in fade-in slide-in-from-top-1 duration-200">
                     <HabitPrayerMenu menu={habit.menu} onOpen={read} />
@@ -351,7 +380,9 @@ export const ChvevebiContent: React.FC = () => {
         </section>
       ))}
 
-      <p className="text-center text-xs text-[#8a7a6a]">სია თავიდან დაიწყება: {formatNextHabitsReset()}</p>
+      <p className="px-2 text-center text-xs leading-relaxed text-[#8a7a6a]">
+        წრით მონიშნე, რაც დღეს შეასრულე. ზოლზე ბოლო 7 დღეა — ზედიზედ შესრულებული დღეები ერთ ჯაჭვად ერთდება.
+      </p>
 
       {blessing && (
         <div className="fixed inset-x-0 bottom-8 z-[60] flex justify-center px-4 pointer-events-none">

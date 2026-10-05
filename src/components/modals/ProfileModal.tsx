@@ -21,7 +21,7 @@ export const ProfileModal: React.FC<ProfileModalProps> = ({ isOpen, onClose }) =
     >
       <SwipeToDismiss
         onDismiss={onClose}
-        className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto bg-[#fbf6ec] rounded-[28px] p-4 sm:p-6 shadow-2xl ring-1 ring-[#e8dcc8] space-y-4 animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-lg max-h-[92dvh] overflow-y-auto bg-[#fbf6ec] rounded-[28px] p-4 sm:p-6 shadow-2xl ring-1 ring-[#e8dcc8] space-y-4 animate-in zoom-in-95 duration-200"
       >
         {/* Modal Top Bar with Close Button */}
         <div className="flex items-center justify-between pb-3 border-b border-[#e8dcc8]">

@@ -23,7 +23,7 @@ export const GzaModal: React.FC<GzaModalProps> = ({ isOpen, onClose }) => {
     >
       <SwipeToDismiss
         onDismiss={onClose}
-        className="relative w-full max-w-lg max-h-[92vh] overflow-y-auto bg-slate-50/95 backdrop-blur-md rounded-3xl p-3 sm:p-5 shadow-2xl border border-amber-200/90 space-y-3 animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-lg max-h-[92dvh] overflow-y-auto bg-slate-50/95 backdrop-blur-md rounded-3xl p-3 sm:p-5 shadow-2xl border border-amber-200/90 space-y-3 animate-in zoom-in-95 duration-200"
       >
         <div className="flex items-center justify-between pb-2 border-b border-amber-200/70">
           <div className="flex items-center gap-2">

@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="ka">
   <head>
     <meta charset="UTF-8" />
     <script>
@@ -92,7 +92,17 @@
         }, true);
       })();
     </script>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- viewport-fit=cover: the page reaches under the iPhone notch and home bar; the layout keeps out of them with env(safe-area-inset-*) -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <script>
+      // iPhone / iPad zoom into a text field under 16px when it is tapped and stay zoomed in; maximum-scale stops that there,
+      // while pinch-zoom still works (iOS ignores it for pinching). Android would lose pinch-zoom, so it is left alone.
+      (function () {
+        var ios = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+        var meta = ios && document.querySelector('meta[name="viewport"]');
+        if (meta) meta.setAttribute('content', meta.getAttribute('content') + ', maximum-scale=1');
+      })();
+    </script>
     <title>საგანძურის სკოლა</title>
     <meta name="description" content="ქართული გალობისა და სიმღერის სასწავლო აპლიკაცია" />
     <meta name="theme-color" content="#fcf9f5" />

@@ -1,11 +1,6 @@
-// The habits checklist starts over every Sunday at 09:00 (local time).
+// The habits week starts every Sunday at 09:00 (local time); the admin panel counts habits kept in it.
 const RESET_DAY = 0; // Sunday
 const RESET_HOUR = 9;
-
-const MONTH_NAMES_GE = [
-  'იანვარი', 'თებერვალი', 'მარტი', 'აპრილი', 'მაისი', 'ივნისი',
-  'ივლისი', 'აგვისტო', 'სექტემბერი', 'ოქტომბერი', 'ნოემბერი', 'დეკემბერი',
-];
 
 /** Start of the current habits week: the most recent Sunday 09:00 that is not in the future. */
 export const getHabitsWeekStart = (now: Date = new Date()): Date => {
@@ -19,9 +14,37 @@ export const getHabitsWeekStart = (now: Date = new Date()): Date => {
 /** Stable id of the current habits week, stored next to habitsStats in Firestore. */
 export const getHabitsWeekKey = (now: Date = new Date()): string => getHabitsWeekStart(now).toISOString();
 
-/** e.g. "კვირა, 5 ოქტომბერი, 09:00" */
-export const formatNextHabitsReset = (now: Date = new Date()): string => {
-  const next = getHabitsWeekStart(now);
-  next.setDate(next.getDate() + 7);
-  return `კვირა, ${next.getDate()} ${MONTH_NAMES_GE[next.getMonth()]}, ${String(RESET_HOUR).padStart(2, '0')}:00`;
+// ---- Daily log: which habits were ticked on which day ----
+
+/** { 'YYYY-MM-DD': habit ids ticked that day }, stored in Firestore as `habitLog` */
+export type HabitLog = Record<string, string[]>;
+
+/** Days kept in the log: enough for the longest goal window (30 days) with room to spare. */
+const LOG_DAYS = 62;
+
+export const dayKey = (date: Date): string =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+
+/** The last `n` days ending today, oldest first. */
+export const lastDays = (n: number, now: Date = new Date()): Date[] =>
+  Array.from({ length: n }, (_, i) => new Date(now.getFullYear(), now.getMonth(), now.getDate() - (n - 1) + i));
+
+/** Drops days older than the window and days left empty. */
+export const pruneHabitLog = (log: HabitLog, now: Date = new Date()): HabitLog => {
+  const oldest = dayKey(lastDays(LOG_DAYS, now)[0]);
+  return Object.fromEntries(Object.entries(log).filter(([day, ids]) => day >= oldest && ids.length > 0));
+};
+
+/** Ticked days of a habit within the last `days` days, against its goal. */
+export const habitPercent = (log: HabitLog, id: string, goal: { times: number; days: number }, now: Date = new Date()) => {
+  const done = lastDays(goal.days, now).filter(d => log[dayKey(d)]?.includes(id)).length;
+  return { done, percent: Math.round((100 * Math.min(done, goal.times)) / goal.times) };
+};
+
+/** Habits ticked at least once in the current habits week: kept in `habitsStats` for the admin panel. */
+export const habitsThisWeek = (log: HabitLog, now: Date = new Date()): Record<string, boolean> => {
+  const start = dayKey(getHabitsWeekStart(now));
+  const stats: Record<string, boolean> = {};
+  for (const [day, ids] of Object.entries(log)) if (day >= start) ids.forEach(id => (stats[id] = true));
+  return stats;
 };

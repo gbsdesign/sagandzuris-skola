@@ -35,7 +35,7 @@ export const AuthPromptModal: React.FC<AuthPromptModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-md bg-white rounded-3xl p-6 sm:p-7 shadow-2xl border border-amber-200 flex flex-col items-center text-center gap-4 animate-in zoom-in-95 duration-200 text-slate-800"
+        className="relative w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-white rounded-3xl p-6 sm:p-7 shadow-2xl border border-amber-200 flex flex-col items-center text-center gap-4 animate-in zoom-in-95 duration-200 text-slate-800"
       >
         {/* Close Button */}
         <button

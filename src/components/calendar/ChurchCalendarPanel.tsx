@@ -65,15 +65,15 @@ export const ChurchCalendarPanel: React.FC<{ iso: string; onChange: (iso: string
             <ChevronLeft className="w-4 h-4" />
           </button>
           {SEP}
-          <span className="relative flex-1 sm:flex-none min-w-0 sm:w-[8.5rem]">
+          <span className="relative flex-1 sm:flex-none min-w-0 sm:w-[7.75rem]">
             <select value={shown.month} onChange={e => pick(Number(e.target.value), shown.day)} className={SELECT} aria-label="თვე">
               {MONTHS_GE.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
             </select>
             <ChevronDown className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-[#a39482]" />
           </span>
           {SEP}
-          <span className="relative w-[3.9rem] shrink-0">
-            <select value={shown.day} onChange={e => pick(shown.month, Number(e.target.value))} className={`${SELECT} tabular-nums`} aria-label="რიცხვი">
+          <span className="relative w-14 shrink-0">
+            <select value={shown.day} onChange={e => pick(shown.month, Number(e.target.value))} className={`${SELECT} !pl-2.5 tabular-nums`} aria-label="რიცხვი">
               {Array.from({ length: daysInMonth(shown.year, shown.month, oldStyle) }, (_, i) => (
                 <option key={i} value={i + 1}>{i + 1}</option>
               ))}
@@ -107,7 +107,7 @@ export const ChurchCalendarPanel: React.FC<{ iso: string; onChange: (iso: string
               role="radio"
               aria-checked={oldStyle === o.old}
               onClick={() => setStyle(o.old)}
-              className={`flex-1 sm:flex-none h-9 sm:h-8 px-3 rounded-full text-[12.5px] font-bold whitespace-nowrap transition-colors cursor-pointer select-none ${
+              className={`flex-1 sm:flex-none h-9 sm:h-8 px-3 sm:px-2.5 rounded-full text-[12.5px] font-bold whitespace-nowrap transition-colors cursor-pointer select-none ${
                 oldStyle === o.old ? 'bg-[#7a2028] text-[#fbf6ec]' : 'text-[#4a3426] hover:text-[#7a2028]'
               }`}
             >

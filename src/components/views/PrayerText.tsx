@@ -11,7 +11,7 @@ import { GirsArsSection, girsArsFor, loadGirsArs } from '../../data/girsArs';
 
 export const PROSE =
   'font-serif-ge text-[17px] leading-[1.75] text-[#2a2017] [&_p]:mb-3.5 [&_p.c]:text-center [&_p.c]:mt-5 [&_p.c]:text-[#7a2028] ' +
-  '[&_h2]:font-bold [&_h2]:text-[#7a2028] [&_h2]:text-center [&_h2]:text-lg [&_h2]:mt-6 [&_h2]:mb-3 [&_h2:first-child]:mt-0 ' +
+  '[&_h2]:font-bold [&_h2]:text-[#7a2028] [&_h2]:text-center [&_h2]:text-lg max-[359px]:[&_h2]:text-[17px] [&_h2]:mt-6 [&_h2]:mb-3 [&_h2:first-child]:mt-0 ' +
   '[&_h3]:font-bold [&_h3]:text-[#7a2028] [&_h3]:text-center [&_h3]:text-[16px] [&_h3]:mt-6 [&_h3]:mb-2 ' +
   '[&_blockquote]:pl-4 [&_blockquote]:border-l-2 [&_blockquote]:border-[#e8dcc8] [&_blockquote]:text-[#4a3426] ' +
   '[&_em]:text-[#6b5544] [&_sup]:text-[11px] [&_hr]:my-5 [&_hr]:border-[#e8dcc8]';

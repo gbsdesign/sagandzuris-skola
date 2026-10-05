@@ -87,7 +87,7 @@ const AncestorCard: React.FC<{ a: Ancestor; onOpen: () => void }> = ({ a, onOpen
         {a.years}
       </span>
     )}
-    <span className="absolute inset-x-0 bottom-0 p-3 sm:p-3.5 font-serif-ge text-sm sm:text-[15px] font-bold leading-snug text-white drop-shadow">
+    <span className="absolute inset-x-0 bottom-0 p-3 max-[359px]:px-2 sm:p-3.5 font-serif-ge text-sm max-[359px]:text-[13px] sm:text-[15px] font-bold leading-snug text-white drop-shadow">
       {a.name}
     </span>
   </button>
@@ -310,7 +310,7 @@ const BioReader: React.FC<{ id: number; onNavigate: (id: number) => void; onClos
       role="dialog"
       aria-modal="true"
       aria-label={a.name}
-      className="fixed inset-0 z-[70] overflow-y-auto overscroll-contain bg-[#fbf6ec]"
+      className="fixed inset-0 z-[70] safe-x overflow-y-auto overscroll-contain bg-[#fbf6ec]"
     >
       <div className="sticky top-0 z-10 bg-[#fbf6ec]/90 backdrop-blur-md border-b border-[#e6d9c2]/70">
         <div className="max-w-2xl mx-auto flex items-center gap-3 px-4 py-2.5">
@@ -434,7 +434,7 @@ export const AncestorsPage: React.FC = () => {
               className="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
             />
             <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-            <span className="absolute inset-x-0 bottom-0 p-3 sm:p-4 text-center font-serif-ge text-sm sm:text-base font-bold leading-snug text-white drop-shadow">
+            <span className="absolute inset-x-0 bottom-0 p-3 max-[359px]:px-2 sm:p-4 text-center font-serif-ge text-sm max-[359px]:text-[13px] sm:text-base font-bold leading-snug text-white drop-shadow">
               {name}
             </span>
           </button>

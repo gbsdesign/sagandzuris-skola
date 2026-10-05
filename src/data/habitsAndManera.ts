@@ -29,6 +29,8 @@ export const MANERA_ITEMS: ManeraItemType[] = [
 export interface HabitGroupType {
   id: string;
   title: string;
+  /** the percent shown beside each habit: ticked days in the last `days` days out of `times` */
+  goal: { times: number; days: number };
   items: HabitItemType[];
 }
 
@@ -37,6 +39,7 @@ export const HABIT_GROUPS: HabitGroupType[] = [
   {
     id: 'daily',
     title: 'ყოველდღე',
+    goal: { times: 7, days: 7 },
     items: [
       { id: 'habit_1', label: 'დილის და საღამოს ლოცვების კითხვა', menu: 'morning-evening' },
       { id: 'habit_13', label: 'შვიდგზის ლოცვა', menu: 'hours' },
@@ -50,6 +53,7 @@ export const HABIT_GROUPS: HabitGroupType[] = [
   {
     id: 'weekly',
     title: 'ყოველკვირა',
+    goal: { times: 1, days: 7 },
     items: [
       { id: 'habit_11', label: 'წირვაზე დასწრება' },
       { id: 'habit_12', label: 'ლოცვაზე დასწრება' },
@@ -58,6 +62,7 @@ export const HABIT_GROUPS: HabitGroupType[] = [
   {
     id: 'monthly',
     title: 'თვეში 2–3-ჯერ მაინც',
+    goal: { times: 2, days: 30 },
     items: [
       { id: 'habit_7', label: 'დაუჯდომლები', menu: 'akathists' },
       { id: 'habit_8', label: 'სამადლობელი პარაკლისი' },
@@ -66,6 +71,7 @@ export const HABIT_GROUPS: HabitGroupType[] = [
   {
     id: 'sacraments',
     title: 'საიდუმლოები',
+    goal: { times: 1, days: 30 },
     items: [
       { id: 'habit_9', label: 'აღსარება' },
       { id: 'habit_10', label: 'ზიარება' },

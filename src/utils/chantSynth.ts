@@ -422,7 +422,7 @@ export const renderScore = (score: BookScore, o: RenderOptions): Promise<AudioBu
   return ctx.startRendering();
 };
 
-export const encodeMp3 = (buffer: AudioBuffer, onProgress?: (p: number) => void): Promise<Blob> =>
+export const encodeMp3 = (buffer: AudioBuffer, onProgress?: (p: number) => void, kbps = 128): Promise<Blob> =>
   new Promise((resolve, reject) => {
     const worker = new Worker(new URL('./mp3Worker.ts', import.meta.url), { type: 'module' });
     const samples = buffer.getChannelData(0).slice();
@@ -434,7 +434,7 @@ export const encodeMp3 = (buffer: AudioBuffer, onProgress?: (p: number) => void)
       }
     };
     worker.onerror = err => { reject(err); worker.terminate(); };
-    worker.postMessage({ samples, sampleRate: buffer.sampleRate, kbps: 128 }, [samples.buffer]);
+    worker.postMessage({ samples, sampleRate: buffer.sampleRate, kbps }, [samples.buffer]);
   });
 
 // Save a generated file (MP3 / PDF) with a readable name

@@ -39,7 +39,7 @@ export const Toast: React.FC<ToastProps> = ({
     type === 'success' ? CheckCircle2 : type === 'error' ? AlertCircle : Info;
 
   return (
-    <div className="fixed bottom-5 right-5 z-[200] max-w-sm w-full px-4 animate-in slide-in-from-bottom-5 fade-in duration-200 pointer-events-auto">
+    <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] sm:left-auto sm:right-[calc(env(safe-area-inset-right,0px)+1.25rem)] z-[200] sm:max-w-sm w-full px-4 animate-in slide-in-from-bottom-5 fade-in duration-200 pointer-events-auto">
       <div
         className={`flex items-center justify-between gap-3 p-3.5 rounded-2xl border backdrop-blur-md shadow-lg ${bgStyles}`}
       >

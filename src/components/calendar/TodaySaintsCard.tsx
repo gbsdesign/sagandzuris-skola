@@ -76,7 +76,7 @@ export const TodaySaintsCard: React.FC = () => {
   const more = day.s.length - items.length;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-3 sm:p-6">
+    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] sm:p-6">
       <div
         className={`absolute inset-0 bg-[#2a2017]/35 backdrop-blur-[2px] transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
         onClick={() => close()}
@@ -86,7 +86,7 @@ export const TodaySaintsCard: React.FC = () => {
         role="dialog"
         aria-modal="true"
         aria-labelledby="today-saints-title"
-        className={`relative w-full max-w-md max-h-[calc(100dvh-1.5rem)] flex flex-col rounded-[28px] bg-gradient-to-b from-[#fffdf8] via-[#fdf8ef] to-[#f8efdf] ring-1 ring-[#e8dcc8] shadow-[0_30px_60px_-25px_rgba(42,32,23,0.55)] transition-all ease-[cubic-bezier(0.22,1,0.36,1)] ${
+        className={`relative w-full max-w-md max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom,0px))] flex flex-col rounded-[28px] bg-gradient-to-b from-[#fffdf8] via-[#fdf8ef] to-[#f8efdf] ring-1 ring-[#e8dcc8] shadow-[0_30px_60px_-25px_rgba(42,32,23,0.55)] transition-all ease-[cubic-bezier(0.22,1,0.36,1)] ${
           visible ? 'opacity-100 translate-y-0 scale-100 duration-500' : 'opacity-0 translate-y-6 scale-[0.98] duration-200'
         }`}
       >

@@ -1,5 +1,5 @@
 /* "დღევანდელი წირვა" (ProgramPage.tsx): uses the notes page's colour tokens (.np-root) */
-.pp-root{z-index:79;background:linear-gradient(#fbf6ec,#f3ebdd)}
+.pp-root{z-index:79;background:linear-gradient(#fbf6ec,#f3ebdd);box-shadow:0 0 0 max(env(safe-area-inset-left,0px),env(safe-area-inset-right,0px)) #f6efe3}
 .pp-scroll{position:absolute;inset:0;overflow:auto;overscroll-behavior:contain}
 .pp-top{position:sticky;top:0;z-index:5;display:flex;align-items:center;gap:10px;padding:calc(8px + env(safe-area-inset-top,0px)) 10px 8px;background:var(--chrome);-webkit-backdrop-filter:blur(14px);backdrop-filter:blur(14px);border-bottom:1px solid var(--chrome-line)}
 .pp-top h1{flex:1;margin:0;text-align:center;font-family:var(--serif);font-size:19px;font-weight:700;color:var(--wine)}

@@ -56,7 +56,7 @@ export const PWAInstallButton: React.FC<{ compact?: boolean }> = ({ compact = fa
 
         {showIOSGuide && (
           <div className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-900/60 backdrop-blur-sm p-4 animate-in fade-in duration-200">
-            <div className="w-full max-w-sm rounded-3xl bg-[#fcf9f5] border border-amber-200/80 p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
+            <div className="w-full max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-3xl bg-[#fcf9f5] border border-amber-200/80 p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-200">
               <div className="flex items-center justify-between">
                 <h3 className="text-lg font-bold text-[#5c3a21]">დაყენება iPhone / iPad</h3>
                 <button 

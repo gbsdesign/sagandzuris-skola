@@ -17,6 +17,18 @@
   --font-serif-ge: "Noto Serif Georgian", Georgia, serif;
 }
 
+/* iPhone notch, rounded corners and home bar (viewport-fit=cover in index.html): the content stays inside the safe area.
+   Only a turned phone has side insets; the header and footer still paint their colour out to the screen edges. */
+.safe-x { padding-left: env(safe-area-inset-left, 0px); padding-right: env(safe-area-inset-right, 0px); }
+.safe-bleed {
+  margin-left: calc(-1 * env(safe-area-inset-left, 0px));
+  margin-right: calc(-1 * env(safe-area-inset-right, 0px));
+  padding-left: env(safe-area-inset-left, 0px);
+  padding-right: env(safe-area-inset-right, 0px);
+}
+.safe-top { padding-top: env(safe-area-inset-top, 0px); }
+.safe-bottom { padding-bottom: env(safe-area-inset-bottom, 0px); }
+
 /* Refined custom scrollbar */
 ::-webkit-scrollbar {
   width: 6px;

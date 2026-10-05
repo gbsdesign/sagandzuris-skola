@@ -69,7 +69,7 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
   }, []);
 
   return (
-    <footer className="border-t border-[#e8dcc8] bg-[#fbf6ec]">
+    <footer className="safe-bleed safe-bottom border-t border-[#e8dcc8] bg-[#fbf6ec]">
       <div
         className={`grid ease-out ${calOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
         style={{ transition: `grid-template-rows ${UNFOLD_MS}ms cubic-bezier(0.22, 1, 0.36, 1)` }}

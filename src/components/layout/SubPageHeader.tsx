@@ -61,17 +61,19 @@ export const SubPageHeader: React.FC<SubPageHeaderProps> = ({
   return (
     <>
       {/* Compact Top Navigation Bar */}
-      <div ref={barRef} className="relative w-full flex items-center justify-between pb-3.5 mb-5 border-b border-[#e8dcc8]/70">
+      {/* three columns: "back" · the title centred · an empty column as wide as the first, so on a narrow
+          phone the title moves aside (and wraps) instead of running under the button */}
+      <div ref={barRef} className="relative w-full grid grid-cols-[1fr_auto_1fr] items-center gap-2 pb-3.5 mb-5 border-b border-[#e8dcc8]/70">
         {/* the path page shows its title here, centred in the top bar */}
         {(currentPage === 'gz' || currentPage === 'tsinaprebi' || currentPage === 'biblioteka') && (
-          <h1 className="absolute inset-x-0 top-0 bottom-3.5 flex items-center justify-center pointer-events-none font-serif-ge text-xl sm:text-3xl font-bold text-[#7a2028]">
+          <h1 className="col-start-2 row-start-1 text-center text-balance leading-tight pointer-events-none font-serif-ge text-xl sm:text-3xl font-bold text-[#7a2028]">
             {title}
           </h1>
         )}
         <button
           type="button"
           onClick={onGoBack}
-          className="relative inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full ring-1 ring-[#e8dcc8] bg-white/80 hover:bg-white hover:ring-[#7a2028]/30 active:scale-95 text-[#4a3426] hover:text-[#7a2028] transition-all text-xs font-bold cursor-pointer group"
+          className="col-start-1 row-start-1 justify-self-start relative inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full ring-1 ring-[#e8dcc8] bg-white/80 hover:bg-white hover:ring-[#7a2028]/30 active:scale-95 text-[#4a3426] hover:text-[#7a2028] transition-all text-xs font-bold cursor-pointer group shrink-0 whitespace-nowrap"
           title="უკან დაბრუნება"
         >
           <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
@@ -87,7 +89,7 @@ export const SubPageHeader: React.FC<SubPageHeaderProps> = ({
         aria-hidden={!away}
         aria-label="უკან დაბრუნება"
         title="უკან დაბრუნება"
-        className={`fixed z-40 left-4 bottom-[calc(env(safe-area-inset-bottom,0px)+18px)] lg:bottom-auto lg:top-4 lg:left-[max(12px,calc(50%-488px))] w-12 h-12 lg:w-10 lg:h-10 rounded-full grid place-items-center bg-[#fffdf8]/90 backdrop-blur-md ring-1 ring-[#e8dcc8] shadow-[0_10px_26px_-12px_rgba(74,52,38,0.55)] text-[#7a2028] hover:bg-white hover:ring-[#7a2028]/30 cursor-pointer group transition-[opacity,transform,background-color] duration-300 ease-out active:scale-95 ${
+        className={`fixed z-40 left-[calc(env(safe-area-inset-left,0px)+16px)] bottom-[calc(env(safe-area-inset-bottom,0px)+18px)] lg:bottom-auto lg:top-4 lg:left-[max(12px,calc(50%-488px))] w-12 h-12 lg:w-10 lg:h-10 rounded-full grid place-items-center bg-[#fffdf8]/90 backdrop-blur-md ring-1 ring-[#e8dcc8] shadow-[0_10px_26px_-12px_rgba(74,52,38,0.55)] text-[#7a2028] hover:bg-white hover:ring-[#7a2028]/30 cursor-pointer group transition-[opacity,transform,background-color] duration-300 ease-out active:scale-95 ${
           phoneShow ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none'
         } ${away ? 'lg:opacity-100 lg:translate-y-0 lg:pointer-events-auto' : 'lg:opacity-0 lg:-translate-y-3 lg:pointer-events-none'}`}
       >

@@ -5,8 +5,9 @@ import { useConfirmations } from '../hooks/useConfirmations';
 import { findCatalogEntry, CATEGORY_LABEL, usesVoices, voicesOf, Voice } from '../utils/pathItems';
 import { useMyClasses, useAllClasses } from '../hooks/useClasses';
 import { ClassLogo } from '../components/classes/ClassLogo';
+import { ClassChat } from '../components/classes/ClassChat';
 
-// A class's shared page: its members and the common program. Members reach it from the class logo in the header.
+// A class's shared page: its chat, members and the common program. Members reach it from the class logo in the header.
 export const ClassPage: React.FC = () => {
   const { user, isAdmin } = useAuth();
   const { selectedClassId, handleGoBack } = useNavigation();
@@ -44,6 +45,8 @@ export const ClassPage: React.FC = () => {
         <h1 className="font-serif-ge text-2xl sm:text-3xl font-bold text-[#4a3426]">{cls.name}</h1>
         <p className="text-sm text-[#8a7a6a]">{cls.members.length} წევრი</p>
       </header>
+
+      <ClassChat cls={cls} />
 
       {/* common program */}
       <section className="bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] p-5 sm:p-6">

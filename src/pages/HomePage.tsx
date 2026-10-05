@@ -22,7 +22,8 @@ export const HomePage: React.FC<HomePageProps> = ({ logoUrl }) => {
         referrerPolicy="no-referrer"
       />
       </div>
-      <div className="relative mt-2 w-full flex justify-center">
+      {/* on a phone the vine takes the page's side padding too, so its labels have room */}
+      <div className="relative mt-2 w-[calc(100%+2.5rem)] sm:w-full flex justify-center">
         <GrapeNav />
       </div>
 

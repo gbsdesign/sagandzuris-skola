@@ -3,7 +3,8 @@ import { Bookmark, ChevronDown, Check } from 'lucide-react';
 import { useAuth, useChants, useNavigation } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 import { filterValidVariants } from '../../utils/variantValidation';
-import { useUpcomingSessions } from '../../hooks/useUpcomingSessions';
+import { StudyDay, useUpcomingSessions } from '../../hooks/useUpcomingSessions';
+import { StreakDay, WeekStreak } from './WeekStreak';
 import { StudentBookmarkView } from './StudentBookmarkView';
 
 export const MONTHS_SHORT_GE = ['იან', 'თებ', 'მარ', 'აპრ', 'მაი', 'ივნ', 'ივლ', 'აგვ', 'სექ', 'ოქტ', 'ნოე', 'დეკ'];
@@ -137,11 +138,31 @@ export const PathPanel: React.FC<{
   );
 };
 
+// a study day on the streak strip: all planned hours done joins the chain; a day without a plan is a rest day
+const studyMark = (d: StudyDay, isToday: boolean): StreakDay => {
+  const note = d.planned ? `${d.done}/${d.planned} სთ${d.extra ? ` +${d.extra}` : ''}` : d.extra ? `${d.extra} სთ` : 'დაგეგმილი არ არის';
+  if (d.planned ? d.done >= d.planned : d.extra > 0) return { date: d.date, mark: 'done', note };
+  if (d.done > 0 || d.extra > 0) return { date: d.date, mark: 'partial', note };
+  if (!d.planned) return { date: d.date, mark: 'rest', note };
+  return { date: d.date, mark: isToday ? 'open' : 'missed', note };
+};
+
 // "დამოუკიდებელი სამუშაო": folds open into the month's calendar (its statistics are in the "შენი გზა" card).
 export const IndependentWorkCard: React.FC<{ flat?: boolean; onOpenChange?: (open: boolean) => void }> = ({ flat, onOpenChange }) => {
   const { user } = useAuth();
   const { navigateTo } = useNavigation();
-  const { sessions, toggle } = useUpcomingSessions(user?.uid, 7);
+  const { sessions, week, toggle } = useUpcomingSessions(user?.uid, 7);
+
+  // the last 7 days and the share of their planned hours that were done
+  const planned = week.reduce((n, d) => n + d.planned, 0);
+  const done = week.reduce((n, d) => n + d.done, 0);
+  const streak = planned > 0 ? (
+    <WeekStreak
+      days={week.map((d, i) => studyMark(d, i === week.length - 1))}
+      percent={Math.round((100 * done) / planned)}
+      percentTitle={`ბოლო 7 დღეში ${done}/${planned} სთ`}
+    />
+  ) : null;
 
   // the nearest planned hours, tickable without unfolding; one row shows as many as fit
   const quick = sessions.length > 0 ? (
@@ -169,7 +190,7 @@ export const IndependentWorkCard: React.FC<{ flat?: boolean; onOpenChange?: (ope
       id="work"
       flat={flat}
       onOpenChange={onOpenChange}
-      extra={quick}
+      extra={streak || quick ? <div className="space-y-2">{streak}{quick}</div> : undefined}
       title="დამოუკიდებელი სამუშაო"
       icon={<Bookmark className="w-5 h-5 fill-[#7a2028]/15" />}
       subtitle={sessions.length > 0 ? 'მონიშნე, როცა იმეცადინებ' : 'მეცადინეობის კალენდარი'}

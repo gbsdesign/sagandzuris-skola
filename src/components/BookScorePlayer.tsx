@@ -490,7 +490,7 @@ export const BookScorePlayer: React.FC<BookScorePlayerProps> = ({ nums, book, pa
 
       {/* portal: a transformed ancestor (accordion animation) must not capture position: fixed */}
       {fullscreen && createPortal(
-        <div className="fixed inset-0 z-[70] bg-white flex flex-col" role="dialog" aria-modal="true" aria-label="ნოტები">
+        <div className="fixed inset-0 z-[70] safe-x safe-top safe-bottom bg-white flex flex-col" role="dialog" aria-modal="true" aria-label="ნოტები">
           <div className="shrink-0 border-b border-dusk-200 bg-dusk-50/90">
             <div className="flex items-center gap-2 px-3 py-2">
               {playButton('w-10 h-10')}
