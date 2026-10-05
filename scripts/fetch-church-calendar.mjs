@@ -9,6 +9,7 @@
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { linkCalendarYear } from './lib/saint-lives-match.mjs';
 
 const BASE = 'https://www.orthodoxy.ge/calendar';
 const OFFSET_DAYS = 13; // Julian → Gregorian, 1900–2099
@@ -249,9 +250,15 @@ if (only.length) {
   console.log(JSON.stringify(days, null, 1));
 } else {
   const sorted = Object.fromEntries(Object.keys(days).sort().map((k) => [k, days[k]]));
-  const out = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'data', 'calendar', `${YEAR}.json`);
+  const data = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'src', 'data');
+  const out = path.join(data, 'calendar', `${YEAR}.json`);
+  const year = { year: YEAR, source: `${BASE}/${YEAR}/v2/`, days: sorted };
+  // each commemoration → its life in the library (scripts/fetch-saint-lives.mjs)
+  const lives = await fs.readFile(path.join(data, 'library', 'saintLives.json'), 'utf8').catch(() => null);
+  const linkedNote = lives ? linkCalendarYear(year, JSON.parse(lives).lives) : null;
   await fs.mkdir(path.dirname(out), { recursive: true });
-  await fs.writeFile(out, JSON.stringify({ year: YEAR, source: `${BASE}/${YEAR}/v2/`, days: sorted }));
+  await fs.writeFile(out, JSON.stringify(year));
   console.log(`✓ ${Object.keys(days).length}/${total} დღე → ${out}`);
+  if (linkedNote) console.log(`  ${linkedNote.linked}/${linkedNote.total} ხსენებას აქვს ცხოვრება`);
   if (missing.length) console.log(`  ვერ მოიძებნა: ${missing.join(', ')}`);
 }

@@ -22,6 +22,7 @@ import { AppModals } from './components/AppModals';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageSprinkles } from './components/home/PlateOrnaments';
 import { TodaySaintsCard } from './components/calendar/TodaySaintsCard';
+import { SaintLifeOverlay } from './components/saints/SaintLifeOverlay';
 import { usePrayerReminderScheduler } from './utils/prayerReminders';
 import { isPrayerId } from './data/prayers';
 
@@ -121,6 +122,11 @@ function AppContent() {
       {/* once a day on entering: today's saints from the church calendar */}
       <ErrorBoundary>
         <TodaySaintsCard />
+      </ErrorBoundary>
+
+      {/* a saint's life, opened from that card, the calendar or the library */}
+      <ErrorBoundary>
+        <SaintLifeOverlay />
       </ErrorBoundary>
     </div>
   );

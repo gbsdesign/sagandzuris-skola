@@ -7,8 +7,15 @@ import { useEffect, useState } from 'react';
 export type CalRun = [string, number?];
 /** a paragraph; an empty one is a blank line in the source */
 export type CalPara = CalRun[];
-/** one commemoration as written in the calendar: n = name, d = the trailing "(…)", b = feast (bold) */
-export interface CalSaint { n: string; d?: string; b?: 1 }
+/** one commemoration as written in the calendar: n = name, d = the trailing "(…)", b = feast (bold);
+ *  l = its life in the library (scripts/fetch-saint-lives.mjs) and at = [paragraph, start, end] where it
+ *  stands in the day's text; ls = one link per sentence when a line holds a feast and a saint:
+ *  [from, to (within n), life, paragraph, start, end] */
+export interface CalSaint {
+  n: string; d?: string; b?: 1;
+  l?: string; at?: [number, number, number];
+  ls?: [number, number, string, number?, number?, number?][];
+}
 export interface CalendarDay { t: string; p: CalPara[]; s: CalSaint[] }
 interface CalendarYear { year: number; source: string; days: Record<string, CalendarDay> }
 

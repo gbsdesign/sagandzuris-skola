@@ -1,12 +1,16 @@
 import React from 'react';
 import { Loader2 } from 'lucide-react';
+import { triggerHaptic } from '../../utils/haptics';
 import {
   CalendarDay, CalPara, RUN_BOLD, RUN_RED, RUN_SMALL,
   dayMonthGe, oldDayMonthGe, weekdayGe, todayIso,
 } from '../../data/churchCalendar';
+import { openSaintLife } from '../../data/saintLives';
+import { InlineLink } from '../saints/InlineLink';
 
 // One day of orthodoxy.ge's calendar as the site shows it: the band with both dates and the day's
 // name, then the commemorations, readings and notes with the source's red, bold and small print.
+// A saint whose life is in the library is underlined and opens it.
 
 const isSmallPara = (p: CalPara) => {
   let small = 0, all = 0;
@@ -18,21 +22,66 @@ const isSmallPara = (p: CalPara) => {
   return all > 0 && small / all > 0.5;
 };
 
-const Runs: React.FC<{ para: CalPara }> = ({ para }) => (
-  <>
-    {para.map(([text, f = 0], i) => {
-      const lines = text.split('\n');
-      const cls = `${f & RUN_BOLD ? 'font-bold' : ''} ${f & RUN_RED ? 'text-[#8a1f29]' : ''}`.trim();
-      const body = lines.map((l, j) => (
-        <React.Fragment key={j}>
-          {j > 0 && <br />}
-          {l}
-        </React.Fragment>
-      ));
-      return cls ? <span key={i} className={cls}>{body}</span> : <React.Fragment key={i}>{body}</React.Fragment>;
-    })}
-  </>
-);
+/** the stretches of a paragraph that open a saint's life: [start, end, life] */
+type LifeLink = [number, number, string];
+
+const linksOf = (day: CalendarDay, pi: number): LifeLink[] => {
+  const out: LifeLink[] = [];
+  for (const s of day.s) {
+    if (s.l && s.at?.[0] === pi) out.push([s.at[1], s.at[2], s.l]);
+    for (const x of s.ls || []) if (x[3] === pi && x[4] !== undefined && x[5] !== undefined) out.push([x[4], x[5], x[2]]);
+  }
+  return out.sort((a, b) => a[0] - b[0]);
+};
+
+const RunText: React.FC<{ text: string; f: number }> = ({ text, f }) => {
+  const cls = `${f & RUN_BOLD ? 'font-bold' : ''} ${f & RUN_RED ? 'text-[#8a1f29]' : ''}`.trim();
+  const body = text.split('\n').map((l, j) => (
+    <React.Fragment key={j}>
+      {j > 0 && <br />}
+      {l}
+    </React.Fragment>
+  ));
+  return cls ? <span className={cls}>{body}</span> : <>{body}</>;
+};
+
+const Runs: React.FC<{ para: CalPara; links?: LifeLink[] }> = ({ para, links = [] }) => {
+  // the runs cut where a link starts or ends; each link keeps the runs' bold and red inside it
+  const pieces: { text: string; f: number; life: string | null }[] = [];
+  let pos = 0;
+  for (const [text, f = 0] of para) {
+    let from = 0;
+    while (from < text.length) {
+      const at = pos + from;
+      const link = links.find(([s, e]) => at >= s && at < e);
+      const next = link ? link[1] : Math.min(...links.map(([s]) => s).filter(s => s > at), Infinity);
+      const to = Math.min(text.length, next - pos);
+      pieces.push({ text: text.slice(from, to), f, life: link ? link[2] : null });
+      from = to;
+    }
+    pos += text.length;
+  }
+  const groups: { life: string | null; pieces: typeof pieces }[] = [];
+  for (const p of pieces) {
+    const last = groups[groups.length - 1];
+    if (last && last.life === p.life) last.pieces.push(p);
+    else groups.push({ life: p.life, pieces: [p] });
+  }
+  return (
+    <>
+      {groups.map((g, i) => {
+        const body = g.pieces.map((p, j) => <RunText key={j} text={p.text} f={p.f} />);
+        if (!g.life) return <React.Fragment key={i}>{body}</React.Fragment>;
+        const life = g.life;
+        return (
+          <InlineLink key={i} onOpen={() => { triggerHaptic(8); openSaintLife(life); }} className="hover:bg-[#d2a04a]/[0.12] transition-colors">
+            {body}
+          </InlineLink>
+        );
+      })}
+    </>
+  );
+};
 
 export const CalendarDayView: React.FC<{ iso: string; day: CalendarDay | null | undefined }> = ({ iso, day }) => {
   const isToday = iso === todayIso();
@@ -87,7 +136,7 @@ export const CalendarDayView: React.FC<{ iso: string; day: CalendarDay | null | 
                   small ? 'text-[12.5px] sm:text-[13px] leading-relaxed text-[#4a3426]' : 'text-[14.5px] sm:text-[15px] leading-[1.7]'
                 }`}
               >
-                <Runs para={p} />
+                <Runs para={p} links={linksOf(day, i)} />
               </p>
             );
           })}

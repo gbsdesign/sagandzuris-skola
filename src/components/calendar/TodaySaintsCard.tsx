@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronDown, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, X } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
 import { Sprig } from '../home/PlateOrnaments';
-import { dayMonthGe, oldDayMonthGe, openChurchCalendar, todayIso, useCalendarDay, weekdayGe } from '../../data/churchCalendar';
+import { CalSaint, dayMonthGe, oldDayMonthGe, openChurchCalendar, todayIso, useCalendarDay, weekdayGe } from '../../data/churchCalendar';
+import { openSaintLife } from '../../data/saintLives';
+import { InlineLink } from '../saints/InlineLink';
 
 // Once a day, on entering the site: "may today's saints intercede for you" with the day's
 // commemorations as the calendar words them. "სრულად" goes down to the footer's calendar.
@@ -38,6 +40,52 @@ const NinoCross: React.FC<{ className?: string }> = ({ className }) => (
   </svg>
 );
 
+const open = (id: string) => { triggerHaptic(8); openSaintLife(id); };
+
+const SaintRow: React.FC<{ s: CalSaint }> = ({ s }) => {
+  // the whole line opens its life; a line holding a feast and a saint links each part on its own
+  const whole = s.l ?? (s.ls?.length === 1 ? s.ls[0][2] : undefined);
+  const parts = !whole && s.ls?.length ? s.ls : null;
+  const name = parts ? (
+    <>
+      {parts.map(([from, to, id], k) => (
+        <React.Fragment key={k}>
+          {s.n.slice(k ? parts[k - 1][1] : 0, from)}
+          <InlineLink onOpen={() => open(id)} className="hover:text-[#7a2028]">{s.n.slice(from, to)}</InlineLink>
+        </React.Fragment>
+      ))}
+      {s.n.slice(parts[parts.length - 1][1])}
+    </>
+  ) : s.n;
+  const body = (
+    <>
+      <span className={`mt-[0.6em] shrink-0 w-1.5 h-1.5 rounded-full ${s.b ? 'bg-[#c4262e]' : 'bg-[#d9c6a8]'}`} aria-hidden />
+      <span className={`flex-1 min-w-0 line-clamp-4 text-[15px] leading-relaxed ${s.b ? 'font-bold text-[#7a2028]' : 'text-[#2a2017]'}`}>
+        {name}
+        {s.d && (
+          <>
+            {' '}
+            <span className={`font-sans font-normal text-[12px] text-[#8a7a6a] ${s.d.length <= 24 ? 'whitespace-nowrap' : ''}`}>({s.d})</span>
+          </>
+        )}
+      </span>
+    </>
+  );
+  if (!whole) return <li className="flex gap-2.5 px-2 py-1">{body}</li>;
+  return (
+    <li>
+      <button
+        type="button"
+        onClick={() => open(whole)}
+        className="group w-full flex gap-2.5 rounded-xl px-2 py-1 text-left hover:bg-[#7a2028]/[0.05] cursor-pointer active:scale-[0.99] transition-all"
+      >
+        {body}
+        <ChevronRight className="mt-[0.3em] w-4 h-4 shrink-0 text-[#cdbba3] group-hover:text-[#7a2028] transition-colors" aria-hidden />
+      </button>
+    </li>
+  );
+};
+
 export const TodaySaintsCard: React.FC = () => {
   const [iso] = useState(todayIso);
   const [wanted] = useState(() => !alreadySeen(iso) && !openedForSomethingElse());
@@ -58,7 +106,8 @@ export const TodaySaintsCard: React.FC = () => {
 
   useEffect(() => {
     if (phase !== 'shown') return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    // Escape over an opened life closes that life, not this card
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !window.history.state?.sgLife) close(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -121,23 +170,11 @@ export const TodaySaintsCard: React.FC = () => {
           </div>
         </header>
 
-        <ul className="mt-3 px-6 overflow-y-auto overscroll-contain space-y-2.5 font-serif-ge">
-          {items.map((s, i) => (
-            <li key={i} className="flex gap-2.5">
-              <span className={`mt-[0.6em] shrink-0 w-1.5 h-1.5 rounded-full ${s.b ? 'bg-[#c4262e]' : 'bg-[#d9c6a8]'}`} aria-hidden />
-              <p className={`line-clamp-4 text-[15px] leading-relaxed ${s.b ? 'font-bold text-[#7a2028]' : 'text-[#2a2017]'}`}>
-                {s.n}
-                {s.d && (
-                  <>
-                    {' '}
-                    <span className={`font-sans font-normal text-[12px] text-[#8a7a6a] ${s.d.length <= 24 ? 'whitespace-nowrap' : ''}`}>({s.d})</span>
-                  </>
-                )}
-              </p>
-            </li>
-          ))}
+        {/* a saint with a life in the library opens it (over this card, which waits underneath) */}
+        <ul className="mt-3 px-4 overflow-y-auto overscroll-contain space-y-0.5 font-serif-ge">
+          {items.map((s, i) => <SaintRow key={i} s={s} />)}
           {more > 0 && (
-            <li className="pl-4 text-[13px] font-sans font-semibold text-[#8a7a6a]">და კიდევ {more} ხსენება</li>
+            <li className="pl-6 pt-1.5 text-[13px] font-sans font-semibold text-[#8a7a6a]">და კიდევ {more} ხსენება</li>
           )}
         </ul>
 

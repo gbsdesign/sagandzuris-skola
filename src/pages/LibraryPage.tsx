@@ -1,13 +1,16 @@
 import React, { useState } from 'react';
-import { BookOpen, Church } from 'lucide-react';
+import { BookOpen, Church, ScrollText } from 'lucide-react';
 import { triggerHaptic } from '../utils/haptics';
 import { BookTab } from './library/BookTab';
 import { FeastsTab } from './library/FeastsTab';
+import { LivesTab } from './library/LivesTab';
 
-// "ბიბლიოთეკა": readings from orthodoxy.ge — Svimon Mchedlidze's Sacred History and the church feasts
+// "ბიბლიოთეკა": readings from orthodoxy.ge — Svimon Mchedlidze's Sacred History, the church feasts and
+// the lives of the saints
 const TABS = [
   { id: 'book', label: 'საღმრთო ისტორია', Icon: BookOpen },
   { id: 'feasts', label: 'დღესასწაულები', Icon: Church },
+  { id: 'lives', label: 'წმიდანთა ცხოვრება', Icon: ScrollText },
 ] as const;
 type TabId = typeof TABS[number]['id'];
 
@@ -15,7 +18,10 @@ const TAB_KEY = 'libraryTab';
 
 export const LibraryPage: React.FC = () => {
   const [tab, setTab] = useState<TabId>(() => {
-    try { return localStorage.getItem(TAB_KEY) === 'feasts' ? 'feasts' : 'book'; } catch { return 'book'; }
+    try {
+      const saved = localStorage.getItem(TAB_KEY);
+      return (TABS.some(t => t.id === saved) ? saved : 'book') as TabId;
+    } catch { return 'book'; }
   });
   const pick = (id: TabId) => {
     triggerHaptic(10);
@@ -34,19 +40,19 @@ export const LibraryPage: React.FC = () => {
             role="tab"
             aria-selected={tab === id}
             onClick={() => pick(id)}
-            className={`flex-1 sm:flex-none min-w-0 inline-flex items-center justify-center gap-1.5 min-h-9 py-1 px-1.5 min-[400px]:px-3 sm:px-5 rounded-full text-[13px] leading-tight text-center font-bold min-[400px]:whitespace-nowrap transition-all cursor-pointer select-none active:scale-[0.98] ${
+            className={`flex-auto sm:flex-none inline-flex items-center justify-center gap-1.5 min-h-9 py-1 px-2 min-[400px]:px-3 sm:px-5 rounded-full text-[13px] leading-tight text-center font-bold sm:whitespace-nowrap transition-all cursor-pointer select-none active:scale-[0.98] ${
               tab === id ? 'bg-[#7a2028] text-[#fbf6ec] shadow-[0_6px_14px_-8px_rgba(122,32,40,0.7)]' : 'text-[#4a3426] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.04]'
             }`}
           >
-            {/* a narrow phone: the label gets the room (it may wrap), the icon steps out */}
-            <Icon className="w-4 h-4 shrink-0 hidden min-[400px]:block" />
+            {/* a phone: each tab as wide as its words (they may wrap), the icon steps out */}
+            <Icon className="w-4 h-4 shrink-0 hidden sm:block" />
             {label}
           </button>
         ))}
       </div>
 
       <div className="mt-4" role="tabpanel">
-        {tab === 'book' ? <BookTab /> : <FeastsTab />}
+        {tab === 'book' ? <BookTab /> : tab === 'feasts' ? <FeastsTab /> : <LivesTab />}
       </div>
     </div>
   );
