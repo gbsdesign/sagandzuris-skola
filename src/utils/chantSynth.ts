@@ -170,6 +170,30 @@ const buildMix = (ctx: BaseAudioContext, gains: number[]) => {
   return { master, voices };
 };
 
+/** First note of each voice (I, II, III…), in midi; null for a voice without notes. */
+export const firstNotes = (score: BookScore) =>
+  score.voices.map(list => (list.length ? list.reduce((a, b) => (b[0] < a[0] ? b : a))[2] : null));
+
+let startMix: { master: GainNode; voices: GainNode[] } | null = null;
+/**
+ * The starting notes, top voice first: each sounds `len` seconds and the next starts `gap` seconds later.
+ * `quiet` plays them softly (church). Returns when each note starts, in ms from now, for the dots that follow it.
+ */
+export const playStartNotes = async (midis: (number | null)[], transpose = 0, quiet = false, gap = 0.5, len = 0.8) => {
+  const ctx = getCtx();
+  if (ctx.state !== 'running') await ctx.resume();
+  if (!startMix) startMix = buildMix(ctx, [1, 1, 1, 1]);
+  startMix.master.gain.setValueAtTime(quiet ? 0.12 : 0.22, ctx.currentTime);
+  const t0 = ctx.currentTime + 0.06;
+  const starts: number[] = [];
+  midis.forEach((m, i) => {
+    if (m == null) return;
+    playNote(ctx, startMix!.voices[Math.min(i, 3)], m + transpose, i >= 2, t0 + i * gap, len);
+    starts.push(i);
+  });
+  return starts.map(i => 60 + i * gap * 1000);
+};
+
 const LOOKAHEAD = 0.25; // seconds of audio scheduled ahead
 const TICK_MS = 40;
 

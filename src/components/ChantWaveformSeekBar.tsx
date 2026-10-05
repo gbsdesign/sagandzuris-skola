@@ -11,9 +11,10 @@ interface ChantWaveformSeekBarProps {
   loopStart: number | null;
   loopEnd: number | null;
   onSeek: (time: number) => void;
+  height?: number;          // bar area height (the notes page uses a slimmer one)
+  timeClassName?: string;   // the row with the two times
 }
 
-const HEIGHT = 56;
 const BAR_WIDTH = 2;
 const BAR_GAP = 1.5;
 const PEAK_COUNT = 400;
@@ -71,6 +72,8 @@ export const ChantWaveformSeekBar: React.FC<ChantWaveformSeekBarProps> = ({
   loopStart,
   loopEnd,
   onSeek,
+  height: HEIGHT = 56,
+  timeClassName,
 }) => {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -191,7 +194,7 @@ export const ChantWaveformSeekBar: React.FC<ChantWaveformSeekBarProps> = ({
 
     draw();
     return () => { if (frameId !== null) cancelAnimationFrame(frameId); };
-  }, [width, peaks, duration, isPlaying, analyser, loopStart, loopEnd, dragTime, isPlaying ? 0 : currentTime, timeRef]);
+  }, [width, peaks, duration, isPlaying, analyser, loopStart, loopEnd, dragTime, isPlaying ? 0 : currentTime, timeRef, HEIGHT]);
 
   const timeFromEvent = (e: React.PointerEvent) => {
     const rect = containerRef.current!.getBoundingClientRect();
@@ -247,10 +250,17 @@ export const ChantWaveformSeekBar: React.FC<ChantWaveformSeekBarProps> = ({
         )}
       </div>
 
-      <div className="flex items-center justify-between mt-1 px-0.5 text-[11px] font-mono font-bold">
-        <span className="text-amber-900">{formatTime(shownTime)}</span>
-        <span className="text-slate-400">{formatTime(duration)}</span>
-      </div>
+      {timeClassName ? (
+        <div className={timeClassName}>
+          <span>{formatTime(shownTime)}</span>
+          <span>{formatTime(duration)}</span>
+        </div>
+      ) : (
+        <div className="flex items-center justify-between mt-1 px-0.5 text-[11px] font-mono font-bold">
+          <span className="text-amber-900">{formatTime(shownTime)}</span>
+          <span className="text-slate-400">{formatTime(duration)}</span>
+        </div>
+      )}
     </div>
   );
 };

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, ArrowLeft, RefreshCw, Sparkles, Check, Download, CloudDownload, Headphones, Music, ExternalLink, Video, RotateCcw, RotateCw, Repeat, Gauge, Music2, ChevronRight } from 'lucide-react';
+import { Play, Pause, ArrowLeft, RefreshCw, Sparkles, Check, Download, CloudDownload, Headphones, Music, ExternalLink, Video, RotateCcw, RotateCw, Repeat, Gauge, Music2, ChevronRight, ChevronUp, SlidersHorizontal } from 'lucide-react';
 import * as Tone from 'tone';
 import soundTouchProcessorUrl from '@soundtouchjs/audio-worklet/processor?url';
 import { useNavigation } from '../context';
@@ -13,6 +13,7 @@ import { ChantWaveformSeekBar } from '../components/ChantWaveformSeekBar';
 import { Stepper } from '../components/Stepper';
 import { BookScorePlayer } from '../components/BookScorePlayer';
 import { saveBlob } from '../utils/chantSynth';
+import { NpStepper } from './notes/NpStepper';
 
 const SPEED_KEY = 'sagandzuri_player_speed';
 const PITCH_KEY = 'sagandzuri_player_pitch';
@@ -111,6 +112,16 @@ interface RecordingProps {
   media?: ChantMediaItem;
   title?: string;
   subtitle?: string;
+  // the notes page: notes and lyrics have their own places there, details can fold away,
+  // and the page stops this player when the synthesizer starts (pauseToken changes) or church mode is on
+  hideNotesButton?: boolean;
+  showDetails?: boolean;
+  pauseToken?: number;
+  disabled?: boolean;
+  onPlayingChange?: (playing: boolean) => void;
+  // 'panel': the notes page's compact recording panel (same look as its synthesizer; styles in notes.css)
+  layout?: 'card' | 'panel';
+  onToggleDetails?: () => void;
 }
 
 // Variants without their own recording show a notice instead of the player;
@@ -180,7 +191,7 @@ export const ChantDetailPage: React.FC<ChantDetailPageProps> = props => {
   );
 };
 
-export const ChantPlayer: React.FC<ChantDetailPageProps & RecordingProps> = ({ chantId: chantIdProp, variantId: variantIdProp, inline = false, media, title, subtitle }) => {
+export const ChantPlayer: React.FC<ChantDetailPageProps & RecordingProps> = ({ chantId: chantIdProp, variantId: variantIdProp, inline = false, media, title, subtitle, hideNotesButton = false, showDetails = true, pauseToken, disabled = false, onPlayingChange, layout = 'card', onToggleDetails }) => {
   const { navigateTo } = useNavigation();
 
   // Selected chant/variant: from props when inline, otherwise from localStorage
@@ -580,6 +591,7 @@ export const ChantPlayer: React.FC<ChantDetailPageProps & RecordingProps> = ({ c
       }
     } catch (_) {}
 
+    if (!isPlaying && disabled) return;
     if (isPlaying) {
       // Pause
       audios.forEach(a => {
@@ -606,6 +618,16 @@ export const ChantPlayer: React.FC<ChantDetailPageProps & RecordingProps> = ({ c
       }
     }
   };
+
+  const onPlayingChangeRef = useRef(onPlayingChange);
+  onPlayingChangeRef.current = onPlayingChange;
+  useEffect(() => { onPlayingChangeRef.current?.(isPlaying); }, [isPlaying]);
+  useEffect(() => {
+    if (pauseToken === undefined && !disabled) return;
+    audioElementsRef.current.forEach(a => { try { a?.pause(); } catch (_) {} });
+    setIsPlaying(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pauseToken, disabled]);
 
   // Lock-screen / notification controls (Media Session API).
   // Handlers go through refs so they always call the latest closures.
@@ -780,6 +802,147 @@ export const ChantPlayer: React.FC<ChantDetailPageProps & RecordingProps> = ({ c
     }
   };
 
+  const [mixOpen, setMixOpen] = useState(false);
+  if (layout === 'panel') {
+    const voiceOn = (i: number) => !isAllVoicesActive && voiceActive[i];
+    const pitchLabel = pitchShiftVal > 0 ? `+${pitchShiftVal}` : pitchShiftVal < 0 ? `−${-pitchShiftVal}` : '0';
+    return (
+      <div className="np-pin">
+        <div className="np-row">
+          <button type="button" className="np-ib np-rskip" onClick={() => handleSkip(-SEEK_STEP)} disabled={isLoading} aria-label={`${SEEK_STEP} წამით უკან`} title={`${SEEK_STEP} წამით უკან`}>
+            <RotateCcw /><span className="n">{SEEK_STEP}</span>
+          </button>
+          <button
+            type="button"
+            className={`np-play ${isPlaying ? 'on' : ''} ${isLoading ? 'loading' : ''}`}
+            onClick={handlePlayToggle}
+            disabled={isLoading || (disabled && !isPlaying)}
+            aria-label={isPlaying ? 'პაუზა' : 'დაკვრა'}
+          >
+            <span className="np-pi play"><Play fill="currentColor" /></span>
+            <span className="np-pi pause"><Pause fill="currentColor" /></span>
+            <span className="np-pi load"><RefreshCw className="animate-spin" /></span>
+          </button>
+          <button type="button" className="np-ib np-rskip" onClick={() => handleSkip(SEEK_STEP)} disabled={isLoading} aria-label={`${SEEK_STEP} წამით წინ`} title={`${SEEK_STEP} წამით წინ`}>
+            <RotateCw /><span className="n">{SEEK_STEP}</span>
+          </button>
+          <div className="np-prog">
+            <ChantWaveformSeekBar
+              peaksUrl={activeTracks[3] || activeTracks.find(Boolean) || ''}
+              timeRef={currentTimeRef}
+              currentTime={currentTime}
+              duration={duration || 153}
+              isPlaying={isPlaying}
+              analyser={analyserNode}
+              loopStart={loopStart}
+              loopEnd={loopEnd}
+              onSeek={handleSeek}
+              height={38}
+              timeClassName="np-time"
+            />
+          </div>
+          {onToggleDetails && (
+            <button type="button" className="np-ib np-chev" aria-expanded={showDetails} onClick={onToggleDetails} aria-label="დეტალები" title="ჩაკეცვა / გაშლა">
+              <ChevronUp />
+            </button>
+          )}
+        </div>
+        <div className="np-details">
+          <div className="np-dA">
+            <div className="np-row">
+              <div className="np-seg" role="group" aria-label="ხმები">
+                {[0, 1, 2].map(i => (
+                  <button
+                    key={i}
+                    type="button"
+                    className={voiceOn(i) ? 'on' : ''}
+                    disabled={!voiceAvailable[i]}
+                    aria-pressed={voiceOn(i)}
+                    onClick={() => { triggerHaptic(8); setIsAllVoicesActive(false); voiceSetters[i](prev => !prev); }}
+                  >
+                    {['I', 'II', 'III'][i]}
+                  </button>
+                ))}
+                <button
+                  type="button"
+                  className={`all ${isAllVoicesActive ? 'on' : ''}`}
+                  disabled={!mediaItem.availableVoices.all && !mediaItem.availableVoices.voice1}
+                  onClick={() => { triggerHaptic(8); setIsAllVoicesActive(prev => !prev); setVoice1Active(false); setVoice2Active(false); setVoice3Active(false); }}
+                >
+                  სამივე
+                </button>
+              </div>
+              <button type="button" className="np-ib np-mixbtn" aria-pressed={mixOpen} onClick={() => setMixOpen(o => !o)} aria-label="ხმების სიძლიერე" title="ხმების სიძლიერე">
+                <SlidersHorizontal />
+              </button>
+              <button
+                type="button"
+                className={`np-ib np-loop ${loopStage ? 'pill' : ''} ${loopStage === 1 ? 'half' : ''} ${loopStage === 2 ? 'lit' : ''}`}
+                onClick={handleLoopButton}
+                disabled={isLoading}
+                title={loopStage === 0 ? 'გამეორება: მონიშნე დასაწყისი (A)' : loopStage === 1 ? 'მონიშნე დასასრული (B)' : 'გამეორების გამორთვა'}
+                aria-label="გამეორება"
+              >
+                <Repeat />{loopStage === 1 && <span>A→B</span>}{loopStage === 2 && <span>A–B</span>}
+              </button>
+              {mediaItem.videoUrl && (
+                <a className="np-ib np-video" href={mediaItem.videoUrl} target="_blank" rel="noopener noreferrer" title="ვიდეოს გახსნა" aria-label="ვიდეოს გახსნა">
+                  <Video />
+                </a>
+              )}
+            </div>
+            {mixOpen && (
+              <div className={`np-mix ${isAllVoicesActive ? 'dim' : ''}`}>
+                {[0, 1, 2].map(i => (
+                  <label key={i}>
+                    <span>{['I', 'II', 'III'][i]} ხმა<em>{Math.round(voiceVolumes[i] * 100)}%</em></span>
+                    <input
+                      type="range"
+                      min={0}
+                      max={100}
+                      step={5}
+                      value={Math.round(voiceVolumes[i] * 100)}
+                      disabled={!voiceAvailable[i]}
+                      onChange={e => {
+                        const val = parseInt(e.target.value, 10) / 100;
+                        setVoiceVolumes(prev => prev.map((v, idx) => (idx === i ? val : v)));
+                      }}
+                    />
+                  </label>
+                ))}
+                <p className="np-mix-note">სიძლიერე მუშაობს, როცა ხმები ცალ-ცალკეა ჩართული</p>
+              </div>
+            )}
+          </div>
+          <div className="np-dB">
+            <div className="np-steps">
+              <NpStepper
+                label="სიჩქარე"
+                value={`${Number(playbackSpeed.toFixed(2))}×`}
+                changed={playbackSpeed !== 1}
+                onMinus={() => stepSpeed(-1)}
+                onPlus={() => stepSpeed(1)}
+                onReset={() => setPlaybackSpeed(1)}
+                minusDisabled={speedIdx === 0 || playbackSpeed <= SPEED_STEPS[0]}
+                plusDisabled={playbackSpeed >= SPEED_STEPS[SPEED_STEPS.length - 1]}
+              />
+              <NpStepper
+                label="ტონი"
+                value={pitchLabel}
+                changed={pitchShiftVal !== 0}
+                onMinus={() => setPitchShiftVal(p => Math.max(-7, p - 1))}
+                onPlus={() => setPitchShiftVal(p => Math.min(7, p + 1))}
+                onReset={() => setPitchShiftVal(0)}
+                minusDisabled={pitchShiftVal <= -7}
+                plusDisabled={pitchShiftVal >= 7}
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const roundBtn = 'h-9 rounded-full border border-slate-200 bg-white hover:bg-amber-50 hover:border-amber-300 text-slate-600 text-[11px] font-bold flex items-center justify-center gap-0.5 transition-all cursor-pointer active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed';
 
   return (
@@ -947,6 +1110,7 @@ export const ChantPlayer: React.FC<ChantDetailPageProps & RecordingProps> = ({ c
         />
       </div>
 
+      {showDetails && (<>
       {/* Voices: segmented control; per-voice volume appears under each voice in individual mode */}
       <div className="w-full grid grid-cols-4 gap-1 p-1 rounded-2xl bg-slate-100/80 border border-slate-200/70">
         {[0, 1, 2].map(i => {
@@ -1035,7 +1199,10 @@ export const ChantPlayer: React.FC<ChantDetailPageProps & RecordingProps> = ({ c
         />
       </div>
 
+      </>)}
+
       {/* Sheet music & lyrics */}
+      {!hideNotesButton && (<>
       <button
         type="button"
         onClick={() => {
@@ -1053,6 +1220,8 @@ export const ChantPlayer: React.FC<ChantDetailPageProps & RecordingProps> = ({ c
         )}
         <ChevronRight className="w-4 h-4 text-amber-700/70 shrink-0" />
       </button>
+
+      </>)}
 
       {/* Sheet Music Modal Overlay */}
       {isNotesModalOpen && (

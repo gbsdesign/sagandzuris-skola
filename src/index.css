@@ -61,6 +61,25 @@
   .orn-in, .orn-sway, .orn-swing, .orn-spin, .orn-bob { animation: none; }
 }
 
+/* chant lists: the Georgian sans of the notes pages, and a chant's versions unfold softly */
+.galoba-font { font-family: "Noto Sans Georgian", "BPG Arial", "Sylfaen", system-ui, sans-serif; }
+@keyframes galoba-unfold { from { opacity: 0; transform: translateY(-6px); } }
+
+/* ornaments at the window edges of the inner pages (PageSprinkles): a slow float on top of their own motion.
+   On a phone there is no margin beside the content, so they get smaller, lighter and slip half off the edge. */
+@keyframes orn-drift { 0%, 100% { translate: 0 0; } 50% { translate: 0 -7px; } }
+.sprinkle { position: absolute; width: calc(clamp(34px, 6vw, 88px) * var(--s, 1)); }
+.sprinkle-drift { animation: orn-drift 11s ease-in-out infinite; }
+@media (max-width: 767px) {
+  .sprinkles { opacity: 0.3; }
+  .sprinkle { width: calc(30px * var(--s, 1)); }
+  .sprinkle.l { margin-left: -13px; }
+  .sprinkle.r { margin-right: -13px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .sprinkle-drift, [class*="galoba-unfold"] { animation: none; }
+}
+
 /* "ჩემი სამოსი": a ticked part drops onto the figure with a short golden glow,
    the greeting pops up over it, and the finished chokha gets a shine across it */
 @keyframes samosi-drop {

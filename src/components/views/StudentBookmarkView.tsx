@@ -25,7 +25,8 @@ import { useNavigation, useModal } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 import { sortPathItems } from '../../utils/pathItems';
 import { useConfirmations } from '../../hooks/useConfirmations';
-import { ChantDetailPage } from '../../pages/ChantDetailPage';
+import { useNotes } from '../../context/NotesContext';
+import { findVersion, canOpenNotes } from '../../data/chantLookup';
 import { getChantMedia } from '../../data/chantMediaRegistry';
 import { FOLK_SONGS, getFolkRegion } from '../../data/songsData';
 import { SongBody } from '../maps/GeorgiaMap';
@@ -152,6 +153,7 @@ export const GzaView: React.FC<GzaViewProps> = ({
   const [internalVariants, setInternalVariants] = useState<SelectedChantVariantsMap>({});
   // voices a teacher confirmed ("ჩათვლა"); the student can't undo those
   const confirmed = useConfirmations(auth.currentUser?.uid);
+  const { openNotes } = useNotes();
 
   const activeVariantsMap = filterValidVariants(externalSelectedVariants || internalVariants);
 
@@ -410,8 +412,10 @@ export const GzaView: React.FC<GzaViewProps> = ({
                 <div className="space-y-2.5">
                   {cat.items.map((item, index) => {
                     const song = cat.id === 'simghera' ? FOLK_SONGS.find(s => s.id === item.variantId) : undefined;
-                    const canOpen = cat.id === 'galoba' || Boolean(song);
-                    const isOpen = canOpen && openId === item.variantId;
+                    const chantVersion = cat.id === 'galoba' ? findVersion(item.variantId) : undefined;
+                    const opensPage = Boolean(chantVersion && canOpenNotes(chantVersion.chant, chantVersion.variant));
+                    const canOpen = opensPage || Boolean(song);
+                    const isOpen = Boolean(song) && openId === item.variantId;
                     const recordings = cat.id === 'galoba'
                       ? (getChantMedia(item.chantId, item.code) ? 1 : 0)
                       : song?.versions.length ?? 0;
@@ -420,6 +424,8 @@ export const GzaView: React.FC<GzaViewProps> = ({
                     const itemVoices = voicesOf(item);
                     const toggleOpen = () => {
                       triggerHaptic(10);
+                      // a chant opens its own notes page; a song still folds open here
+                      if (opensPage) { openNotes(item.variantId, 'bookmark'); return; }
                       setOpenId(id => (id === item.variantId ? null : item.variantId));
                     };
 
@@ -480,7 +486,7 @@ export const GzaView: React.FC<GzaViewProps> = ({
                               }`}
                               aria-label={isOpen ? 'დახურვა' : 'ნოტები და ჩანაწერები'}
                             >
-                              <ChevronDown className="w-4 h-4" />
+                              {opensPage ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                             </button>
                           )}
                           <button
@@ -555,13 +561,7 @@ export const GzaView: React.FC<GzaViewProps> = ({
                         {/* notes and recordings, as in the chant / song lists */}
                         {isOpen && (
                           <div className="border-t border-[#f1e8da] bg-[#fdfaf5] p-2.5 sm:p-3 animate-in fade-in duration-200">
-                            {song ? (
-                              <SongBody song={song} region={getFolkRegion(song.region)} />
-                            ) : (
-                              <div className="rounded-xl bg-white ring-1 ring-[#e6d9c2] px-2 pb-2.5 pt-1.5">
-                                <ChantDetailPage key={item.variantId} chantId={item.chantId} variantId={item.variantId} inline />
-                              </div>
-                            )}
+                            {song && <SongBody song={song} region={getFolkRegion(song.region)} />}
                           </div>
                         )}
                       </div>

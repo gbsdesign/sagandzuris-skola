@@ -74,3 +74,10 @@ const toJpeg = async (url: string): Promise<PdfImage> => {
 
 export const scoreToPdf = async (score: BookScore, title: string) =>
   buildPdf(await Promise.all(score.img.map(im => toJpeg(bookImageUrl(score, im.src)))), title);
+
+/** Several chants in one file, in order (today's service): every page of each on its own A4 page. */
+export const scoresToPdf = async (scores: BookScore[], title: string) => {
+  const pages: PdfImage[] = [];
+  for (const score of scores) for (const im of score.img) pages.push(await toJpeg(bookImageUrl(score, im.src)));
+  return buildPdf(pages, title);
+};

@@ -2,6 +2,7 @@ import React, { useMemo, useCallback } from 'react';
 import { useNavigation, useChants, ServiceType } from '../context';
 import { TSIRVA_CHANTS, MWUKHRI_CHANTS, CISKARI_CHANTS, SADGHESASWAULO_CHANTS, MARXVANI_CHANTS, ZATIKI_CHANTS, ChantItem, ChantVariant } from '../data';
 import { ServiceTabs, ChantSearchBar, ChantAccordionItem } from './galoba';
+import { ProgramCard, ServiceDownload } from './galoba/LiturgyBits';
 import { triggerHaptic } from '../utils/haptics';
 import { matchesSearch } from '../utils/searchUtils';
 import { ArrowLeft, Music } from 'lucide-react';
@@ -15,6 +16,10 @@ const SERVICE_CHANTS: Partial<Record<NonNullable<ServiceType>, ChantItem[]>> = {
   'სადღესასწაულო': SADGHESASWAULO_CHANTS,
   'მარხვანი': MARXVANI_CHANTS,
   'ზატიკი': ZATIKI_CHANTS,
+};
+// "მთელი წირვის ჩამოწერა"
+const SERVICE_GENITIVE: Partial<Record<NonNullable<ServiceType>, string>> = {
+  'წირვა': 'წირვის', 'მწუხრი': 'მწუხრის', 'ცისკარი': 'ცისკრის', 'სადღესასწაულო': 'სადღესასწაულოს', 'მარხვანი': 'მარხვანის', 'ზატიკი': 'ზატიკის',
 };
 const SERVICE_TITLES: Partial<Record<NonNullable<ServiceType>, string>> = {
   'წირვა': 'წირვის საგალობლები',
@@ -84,13 +89,18 @@ export const GalobaPage: React.FC = () => {
 
   // 1. Service Selection Menu (when no specific service is selected)
   if (!selectedService) {
-    return <ServiceTabs onSelectService={handleSelectService} />;
+    return (
+      <div className="w-full flex flex-col gap-4">
+        <div className="w-full max-w-2xl mx-auto px-1"><ProgramCard /></div>
+        <ServiceTabs onSelectService={handleSelectService} />
+      </div>
+    );
   }
 
   // 2. Chant list of the service, with unfolding variants
   if (serviceChants) {
     return (
-      <div className="w-full my-2 px-1 flex flex-col gap-3.5">
+      <div className="galoba-font w-full my-2 px-1 flex flex-col gap-3.5">
         {/* Christ the Saviour at the head of the list: medallion on a soft golden halo + ornament line */}
         <div className="flex flex-col items-center pt-1">
           <div className="relative w-32 sm:w-40">
@@ -115,6 +125,8 @@ export const GalobaPage: React.FC = () => {
           </div>
         </div>
 
+        <ProgramCard />
+
         {/* Header Search Controls Bar */}
         <ChantSearchBar
           title={SERVICE_TITLES[selectedService] ?? 'საგალობლები'}
@@ -122,6 +134,7 @@ export const GalobaPage: React.FC = () => {
           onSearchChange={setChantSearch}
           resultCount={filteredChants.length}
         />
+        <ServiceDownload chants={serviceChants} label={`მთელი ${SERVICE_GENITIVE[selectedService] ?? selectedService}`} />
 
         {/* List of Chants Accordions */}
         <div className="space-y-2">

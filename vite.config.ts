@@ -16,6 +16,29 @@ export default defineConfig(() => {
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
           // opens the prayer when a reminder notification is tapped
           importScripts: ['prayer-notify-sw.js'],
+          // a shared notes link (/?c=…&v=…) opens the app even without internet
+          navigateFallback: '/index.html',
+          navigateFallbackDenylist: [/^\/notes\//, /^\/hymn\//, /^\/audio\//],
+          // chant notes and hymnography drawings: kept as they are opened, and by "ჩამოწერა"
+          // (src/utils/offlineNotes.ts fills the same cache), so they open in church without internet
+          runtimeCaching: [
+            {
+              urlPattern: ({ url }) => url.origin === self.location.origin && /^\/(notes|hymn)\//.test(url.pathname),
+              handler: 'StaleWhileRevalidate',
+              options: { cacheName: 'sagandzuri-notes-v1', expiration: { maxEntries: 6000 } },
+            },
+            {
+              // a recording's own note sheets on Google Drive (cross-origin copies)
+              urlPattern: ({ url }) => url.hostname === 'lh3.googleusercontent.com' && url.pathname.startsWith('/d/'),
+              handler: 'CacheFirst',
+              options: { cacheName: 'sagandzuri-notes-v1', cacheableResponse: { statuses: [0, 200] } },
+            },
+            {
+              urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com',
+              handler: 'StaleWhileRevalidate',
+              options: { cacheName: 'google-fonts', expiration: { maxEntries: 40 } },
+            },
+          ],
         },
         includeAssets: ['apple-touch-icon.png', 'pwa-192x192.png', 'pwa-512x512.png', 'pwa-maskable-512x512.png'],
         devOptions: {

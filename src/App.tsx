@@ -13,6 +13,7 @@ import {
   ModalProvider,
   ChantSelectionProvider,
 } from './context';
+import { NotesProvider } from './context/NotesContext';
 
 // Layout & Core Views
 import { Header, Footer } from './components/layout';
@@ -33,7 +34,9 @@ export default function App() {
       <NavigationProvider>
         <ModalProvider>
           <ChantSelectionProvider>
-            <AppContent />
+            <NotesProvider>
+              <AppContent />
+            </NotesProvider>
           </ChantSelectionProvider>
         </ModalProvider>
       </NavigationProvider>
@@ -86,7 +89,12 @@ function AppContent() {
   }
 
   return (
-    <div className="relative isolate min-h-screen bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-900 flex flex-col font-sans">
+    <div
+      className={`relative isolate min-h-screen text-slate-900 flex flex-col font-sans ${
+        // the chant pages share the warm paper of the notes pages
+        currentPage === 'galoba' ? 'bg-gradient-to-b from-[#fdfaf4] via-[#f8f1e5] to-[#f1e7d6]' : 'bg-gradient-to-br from-slate-50 via-white to-slate-100'
+      }`}
+    >
       {/* plate ornaments at the window edges, behind everything (the home page has its own) */}
       {currentPage !== 'home' && <PageSprinkles seed={currentPage} />}
 

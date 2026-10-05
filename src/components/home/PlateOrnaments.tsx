@@ -234,16 +234,19 @@ const SPRINKLE_MOTIFS: { el: React.ReactElement<Svg>; a: Motion }[] = [
 export const PageSprinkles: React.FC<{ seed: string }> = ({ seed }) => {
   const shift = [...seed].reduce((h, c) => (h * 31 + c.charCodeAt(0)) % 997, 7);
   return (
-    <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden opacity-45" aria-hidden>
+    <div className="sprinkles pointer-events-none fixed inset-0 -z-10 overflow-hidden opacity-45" aria-hidden>
       {SPRINKLE_SLOTS.map((s, i) => {
         const m = SPRINKLE_MOTIFS[(i * 5 + shift) % SPRINKLE_MOTIFS.length];
         return (
           <div
             key={`${seed}-${i}`}
-            className="absolute orn-in"
-            style={{ top: s.top, left: s.left, right: s.right, width: `calc(clamp(34px, 6vw, 88px) * ${s.size})`, transform: `rotate(${s.rot}deg)`, animationDelay: `${0.1 + i * 0.08}s` }}
+            className={`sprinkle ${s.left ? 'l' : 'r'} orn-in`}
+            style={{ top: s.top, left: s.left, right: s.right, ['--s' as string]: s.size, transform: `rotate(${s.rot}deg)`, animationDelay: `${0.1 + i * 0.08}s` }}
           >
-            {React.cloneElement(m.el, { className: `block w-full h-auto orn-${m.a}`, style: { animationDelay: `-${(i * 1.7) % 6}s` } })}
+            {/* the slow float and the motif's own motion run on separate layers, so they add up */}
+            <div className="sprinkle-drift" style={{ animationDelay: `-${(i * 2.3) % 11}s` }}>
+              {React.cloneElement(m.el, { className: `block w-full h-auto orn-${m.a}`, style: { animationDelay: `-${(i * 1.7) % 6}s` } })}
+            </div>
           </div>
         );
       })}

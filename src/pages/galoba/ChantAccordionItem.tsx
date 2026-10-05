@@ -1,21 +1,23 @@
-import React, { memo, useCallback, useState } from 'react';
-import { Check, ChevronDown, Headphones, Sparkles, X } from 'lucide-react';
+import React, { memo, useCallback, useEffect, useState } from 'react';
+import { Check, ChevronDown, CircleCheck, Headphones, Plus, X } from 'lucide-react';
 import { ChantItem, ChantVariant, variantName, variantSublabel } from '../../data';
 import { getChantMedia } from '../../data/chantMediaRegistry';
-import { ChantDetailPage } from '../ChantDetailPage';
+import { useNotes } from '../../context/NotesContext';
+import { canOpenNotes } from '../../data/chantLookup';
+import { isOffline, onOfflineChange } from '../../utils/offlineNotes';
 import { triggerHaptic } from '../../utils/haptics';
 
-const SCHOOL_STYLES: Record<string, { name: string; text: string; on: string }> = {
-  'გ.ს.': { name: 'გელათის სკოლა', text: 'text-amber-900', on: 'bg-amber-500 text-white border-amber-600' },
-  'ქ.კ.': { name: 'ქართლ-კახური', text: 'text-sky-900', on: 'bg-sky-600 text-white border-sky-700' },
-  'შ.ს.': { name: 'შემოქმედის სკოლა', text: 'text-emerald-900', on: 'bg-emerald-600 text-white border-emerald-700' },
+// warm paper palette of the notes pages: cream ground, white cards with a sand line
+const SCHOOL_STYLES: Record<string, { name: string; text: string }> = {
+  'გ.ს.': { name: 'გელათის სკოლა', text: 'text-[#78350f]' },
+  'ქ.კ.': { name: 'ქართლ-კახური', text: 'text-[#0c4a6e]' },
+  'შ.ს.': { name: 'შემოქმედის სკოლა', text: 'text-[#064e3b]' },
 };
 
 // "გ.ს. გამშვ" / "გ.ს. №162" -> "გ.ს."
 const schoolOf = (code: string) => code.trim().split(/\s+/)[0];
 
-// Rows of the school grid: book versions (Gelati school vol. I, Kartli-Kakheti vol. III) are listed one by one,
-// the other schools keep their "სადა" / "გამშვენებული" pair
+// Rows of the school grid: book versions are listed one by one, the other schools keep their "სადა" / "გამშვენებული" pair
 const groupBySchool = (variants: ChantVariant[]) => {
   const rows: { school: string; plain?: ChantVariant; ornate?: ChantVariant; versions: ChantVariant[] }[] = [];
   for (const v of variants) {
@@ -34,53 +36,77 @@ const VariantChip: React.FC<{
   variant: ChantVariant;
   label: string;
   sublabel?: string;
-  school: string;
   isOpen: boolean;
   isSelected: boolean;
   onOpen: (id: string) => void;
   onToggleSelect: (chant: ChantItem, v: ChantVariant) => void;
-}> = ({ chant, variant, label, sublabel, school, isOpen, isSelected, onOpen, onToggleSelect }) => {
+}> = ({ chant, variant, label, sublabel, isOpen, isSelected, onOpen, onToggleSelect }) => {
   const hasRecording = Boolean(getChantMedia(chant.id, variant.code));
+  const hasNotes = canOpenNotes(chant, variant);
+  const { openNotes, liturgy } = useNotes();
+  const regent = liturgy.role === 'regent';
+  const progIdx = regent ? (liturgy.program?.items.indexOf(variant.id) ?? -1) : -1;
   return (
-    <div className="relative flex-1 min-w-0">
+    <div className="relative min-w-0">
+      {/* the regent's mark: + adds the version to today's service, then shows its number there */}
+      {regent && hasNotes && (
+        <button
+          type="button"
+          onClick={() => { triggerHaptic(12); liturgy.toggle(variant.id); }}
+          className={`absolute -top-[7px] left-1.5 z-[1] w-[18px] h-[18px] rounded-full flex items-center justify-center text-[10px] font-black tabular-nums transition-all duration-200 cursor-pointer active:scale-90 ${
+            progIdx >= 0
+              ? 'bg-[#7a2028] text-white shadow-[0_3px_8px_-3px_rgba(122,32,40,0.8)] animate-[orn-in_0.4s_cubic-bezier(0.3,1.7,0.5,1)_both]'
+              : 'bg-white text-[#7a2028] shadow-[inset_0_0_0_1.5px_#7a2028] hover:bg-[#f5e8e5]'
+          }`}
+          title={progIdx >= 0 ? `დღევანდელ წირვაშია, №${progIdx + 1}. ამოღება` : 'დღევანდელ წირვაში დამატება'}
+          aria-label={progIdx >= 0 ? `დღევანდელ წირვაშია, №${progIdx + 1}. ამოღება` : 'დღევანდელ წირვაში დამატება'}
+        >
+          {progIdx >= 0 ? progIdx + 1 : <Plus className="w-3 h-3 stroke-[3]" />}
+        </button>
+      )}
       <button
         type="button"
         onClick={() => {
           triggerHaptic(10);
-          localStorage.setItem('selectedChantId', chant.id);
-          localStorage.setItem('selectedVariantId', variant.id);
-          onOpen(variant.id);
+          if (hasNotes) openNotes(variant.id, 'list');
+          else onOpen(variant.id);
         }}
-        className={`w-full ${sublabel ? 'min-h-11 py-1' : 'h-10'} px-1 rounded-lg border text-[11px] sm:text-xs font-bold flex items-center justify-center gap-1 transition-all cursor-pointer active:scale-95 ${
+        className={`w-full ${sublabel ? 'min-h-12 py-1.5' : 'h-11'} px-1.5 rounded-[10px] border text-[11.5px] sm:text-xs font-bold flex items-center justify-center gap-1 text-center leading-tight transition-all duration-150 cursor-pointer active:scale-[0.97] ${
           isOpen
-            ? `${SCHOOL_STYLES[school]?.on ?? 'bg-amber-500 text-white border-amber-600'} shadow-sm`
-            : hasRecording
-            ? 'bg-white text-slate-800 border-slate-300 hover:border-amber-400 hover:bg-amber-50/50'
-            : 'bg-slate-50 text-slate-400 border-slate-200 border-dashed hover:text-slate-600'
+            ? 'bg-[#fcf1df] text-[#2a2017] border-[#e8b866] border-dashed'
+            : hasNotes
+            ? 'bg-white text-[#1e293b] border-[#cbd5e1] hover:border-[#f0a93a] hover:shadow-[0_0_0_3px_rgba(240,169,58,0.16)]'
+            : 'bg-[#faf6ef] text-[#b8aa97] border-[#e4d8c4] border-dashed hover:text-[#8c7c6b]'
         }`}
-        title={hasRecording ? 'ჩანაწერი არის' : 'ჩანაწერი ჯერ არ არის'}
+        title={hasNotes ? (hasRecording ? 'ნოტები და ჩანაწერი' : 'ნოტები') : 'ნოტები ჯერ არ არის'}
       >
-        {hasRecording && <Headphones className="w-3.5 h-3.5 shrink-0" />}
         {label === 'გამშვენებული' ? (
-          <>
+          <span className="inline-flex items-center gap-1">
+            {hasRecording && <Headphones className="w-3.5 h-3.5 shrink-0" />}
             <span className="sm:hidden">გამშვ.</span>
             <span className="hidden sm:inline truncate">გამშვენებული</span>
-          </>
+          </span>
         ) : sublabel ? (
-          <span className="flex flex-col items-center leading-tight min-w-0">
-            {label.endsWith(' გამშვენებული') ? (
-              /* "162 გამშვენებული" does not fit a phone chip: shortened like the "გამშვ." slot above */
-              <>
-                <span className="sm:hidden text-center">{label.replace(/გამშვენებული$/, 'გამშვ.')}</span>
-                <span className="hidden sm:inline text-center">{label}</span>
-              </>
-            ) : (
-              <span className="text-center">{label}</span>
-            )}
-            <span className={`text-[9px] font-semibold ${isOpen ? 'opacity-80' : 'text-slate-400'}`}>{sublabel}</span>
+          <span className="flex flex-col items-center gap-px min-w-0">
+            <span className="inline-flex items-center gap-1">
+              {hasRecording && <Headphones className="w-3.5 h-3.5 shrink-0" />}
+              {label.endsWith(' გამშვენებული') ? (
+                /* "162 გამშვენებული" does not fit a phone chip: shortened like the "გამშვ." slot above */
+                <>
+                  <span className="sm:hidden">{label.replace(/გამშვენებული$/, 'გამშვ.')}</span>
+                  <span className="hidden sm:inline">{label}</span>
+                </>
+              ) : (
+                <span>{label}</span>
+              )}
+            </span>
+            <span className="text-[9.5px] font-semibold text-[#94a3b8]">{sublabel}</span>
           </span>
         ) : (
-          <span className="truncate">{label}</span>
+          <span className="inline-flex items-center gap-1 truncate">
+            {hasRecording && <Headphones className="w-3.5 h-3.5 shrink-0" />}
+            {label}
+          </span>
         )}
       </button>
       <button
@@ -92,7 +118,7 @@ const VariantChip: React.FC<{
         className={`absolute -top-1.5 -right-1.5 w-[18px] h-[18px] rounded-full border flex items-center justify-center transition-all cursor-pointer ${
           isSelected
             ? 'bg-emerald-600 border-emerald-700 text-white shadow-xs'
-            : 'bg-white border-slate-300 text-transparent hover:border-amber-400'
+            : 'bg-white border-[#cbd5e1] text-transparent hover:border-[#f0a93a]'
         }`}
         title={isSelected ? 'მონიშვნის მოხსნა' : 'დამოუკიდებელ სამუშაოში დამატება'}
         aria-label={isSelected ? 'მონიშვნის მოხსნა' : 'დამოუკიდებელ სამუშაოში დამატება'}
@@ -119,7 +145,7 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
   onToggleVariant,
 }) => {
   const selectedCount = chant?.variants?.filter((v) => Boolean(selectedChantVariants?.[v.id]))?.length || 0;
-  // Only one variant's player is open at a time
+  // a version without notes shows a short notice instead of a page
   const [openVariantId, setOpenVariantId] = useState<string | null>(null);
   const handleOpenToggle = useCallback((id: string) => {
     setOpenVariantId(prev => (prev === id ? null : id));
@@ -131,9 +157,16 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
     chant?.variants?.length && chant.variants.every(v => v.version !== undefined && schoolOf(v.code) === bookSchool)
   );
 
+  // versions kept on the phone ("ჩამოწერა")
+  const openable = (chant?.variants ?? []).filter(v => canOpenNotes(chant, v));
+  const [savedCount, setSavedCount] = useState(() => openable.filter(v => isOffline(v.id)).length);
+  useEffect(() => onOfflineChange(() => setSavedCount(openable.filter(v => isOffline(v.id)).length)),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [chant]);
+
   // Title without the trailing ";" of the book headings
   const displayTitle = (chant?.title || '').replace(/[;\s]+$/, '');
-  // Sub-line: book page · number of book versions · recordings
+  // Sub-line: book page · number of book versions · recordings · kept offline
   const bookVersions = chant?.variants?.filter(v => v.version !== undefined) ?? [];
   const firstPage = bookVersions.find(v => v.page)?.page;
   const recordingCount = chant?.variants?.filter(v => getChantMedia(chant.id, v.code)).length ?? 0;
@@ -145,177 +178,136 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
     bookVersions.length > 1 && `${bookVersions.length} ${isOccasion ? 'საგალობელი' : 'ვერსია'}`,
   ].filter(Boolean) as string[];
 
+  const chip = (variant: ChantVariant, label: string, sublabel?: string) => (
+    <VariantChip
+      key={variant.id}
+      chant={chant}
+      variant={variant}
+      label={label}
+      sublabel={sublabel}
+      isOpen={openVariantId === variant.id}
+      isSelected={Boolean(selectedChantVariants?.[variant.id])}
+      onOpen={handleOpenToggle}
+      onToggleSelect={onToggleVariant}
+    />
+  );
+
   return (
     <div
-      className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+      className={`rounded-2xl border bg-white transition-[border-color,box-shadow] duration-300 overflow-hidden ${
         isExpanded
-          ? 'bg-white border-amber-400/80 shadow-md ring-1 ring-amber-300/40'
-          : 'bg-white/95 border-slate-200/90 shadow-xs hover:border-amber-300/80 hover:shadow-sm'
+          ? 'border-[#efd6a6] shadow-[0_12px_26px_-18px_rgba(133,80,44,0.55)]'
+          : 'border-[#e4d8c4] shadow-[0_1px_2px_rgba(42,32,23,0.05)] hover:border-[#d6c8b1] hover:shadow-[0_10px_22px_-18px_rgba(42,32,23,0.5)]'
       }`}
     >
-      {/* Chant Title Header (Tap to unfold variants) */}
+      {/* Chant title (tap to unfold its versions) */}
       <button
         type="button"
         onClick={() => {
           triggerHaptic(10);
           onToggleExpand();
         }}
-        className="w-full px-4 sm:px-5 py-3 flex items-center justify-between gap-3 text-left transition-colors cursor-pointer select-none group hover:bg-slate-50/60"
+        aria-expanded={isExpanded}
+        className="w-full px-4 sm:px-5 py-3 flex items-center justify-between gap-3 text-left cursor-pointer select-none group"
       >
         <div className="flex-1 min-w-0 flex items-center gap-3">
           <span
-            className={`w-2 h-2 shrink-0 rounded-full transition-all ${
+            className={`w-2 h-2 shrink-0 rounded-full transition-all duration-300 ${
               isExpanded
-                ? 'bg-amber-500 scale-125'
+                ? 'bg-[#f59e0b] scale-125'
                 : selectedCount > 0
                 ? 'bg-emerald-500'
-                : 'bg-slate-300 group-hover:bg-amber-400'
+                : 'bg-[#cdbfa9] group-hover:bg-[#e0a54a]'
             }`}
-          ></span>
+          />
           <div className="min-w-0 flex flex-col gap-0.5">
-            <span className="font-bold text-slate-800 text-[15px] sm:text-[17px] leading-snug break-words group-hover:text-[#85502c] transition-colors">
+            <span className="font-bold text-[#2a2017] text-[15px] sm:text-[17px] leading-snug break-words group-hover:text-[#7a2028] transition-colors">
               {displayTitle}
             </span>
-            {(meta.length > 0 || recordingCount > 0) && (
-              <span className="flex flex-wrap items-center gap-x-1.5 text-[11px] sm:text-xs font-medium text-slate-400">
+            {(meta.length > 0 || recordingCount > 0 || savedCount > 0) && (
+              <span className="flex flex-wrap items-center gap-x-1.5 text-[11.5px] sm:text-xs font-medium text-[#8c7c6b]">
                 {meta.join(' · ')}
                 {recordingCount > 0 && (
-                  <span className="inline-flex items-center gap-1 text-amber-700/80">
-                    {meta.length > 0 && <span className="text-slate-300">·</span>}
+                  <span className="inline-flex items-center gap-1 text-[#b4620e]">
+                    {meta.length > 0 && <span className="text-[#cdbfa9]">·</span>}
                     <Headphones className="w-3 h-3" />
                     {recordingCount} ჩანაწერი
+                  </span>
+                )}
+                {savedCount > 0 && (
+                  <span className="inline-flex items-center gap-1 text-[#2f7a4f]">
+                    <span className="text-[#cdbfa9]">·</span>
+                    <CircleCheck className="w-3 h-3" />
+                    {savedCount === openable.length ? 'ჩამოწერილია' : `${savedCount} ჩამოწერილი`}
                   </span>
                 )}
               </span>
             )}
           </div>
           {selectedCount > 0 && (
-            <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300">
+            <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200">
               {selectedCount} მონიშნულია
             </span>
           )}
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
-          <div
-            className={`w-7 h-7 rounded-full flex items-center justify-center transition-all ${
-              isExpanded
-                ? 'rotate-180 bg-amber-100 text-amber-800'
-                : 'bg-slate-100 text-slate-400 group-hover:text-slate-600'
-            }`}
-          >
-            <ChevronDown className="w-4 h-4 transition-transform duration-200" />
-          </div>
-        </div>
+        <span
+          className={`w-7 h-7 shrink-0 rounded-full flex items-center justify-center transition-all duration-300 ${
+            isExpanded ? 'rotate-180 bg-[#fcf1df] text-[#b4620e]' : 'bg-[#f1e9dc] text-[#8c7c6b] group-hover:text-[#7a2028]'
+          }`}
+        >
+          <ChevronDown className="w-4 h-4" />
+        </span>
       </button>
 
-      {/* Unfolded Variants */}
+      {/* Its versions */}
       {isExpanded && chant?.variants && (
-        <div className="border-t border-amber-200/70 bg-gradient-to-b from-amber-50/40 to-stone-50/50 p-3 sm:p-4 space-y-2.5 animate-in fade-in duration-200">
-          <div className="text-[11px] font-semibold text-slate-500 px-1 flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-amber-600" />
-            <span>{isFeast ? 'დღესასწაულის საგალობლები (აირჩიეთ):' : isOccasion ? 'საგალობლები (აირჩიეთ):' : 'საგალობლის ვარიანტები (აირჩიეთ):'}</span>
-          </div>
+        <div className="border-t border-[#e4d8c4] bg-[#faf6ef] px-3 pt-3.5 pb-3 sm:px-4 flex flex-col gap-2.5 animate-[galoba-unfold_0.32s_cubic-bezier(0.2,0.8,0.2,1)_both]">
+          {isOccasion && (
+            <p className="px-1 text-[11.5px] font-semibold text-[#8c7c6b]">
+              {isFeast ? 'დღესასწაულის საგალობლები' : 'საგალობლები'}
+            </p>
+          )}
 
           {isBookChant ? (
             /* Book chants of one school: one button per version */
-            <div className="rounded-xl bg-white border border-slate-200/80 p-2.5 grid grid-cols-2 sm:grid-cols-4 gap-2">
-              {chant.variants.map(variant => (
-                <VariantChip
-                  key={variant.id}
-                  chant={chant}
-                  variant={variant}
-                  label={variantName(variant) || variant.code}
-                  sublabel={variantSublabel(variant)}
-                  school={bookSchool}
-                  isOpen={openVariantId === variant.id}
-                  isSelected={Boolean(selectedChantVariants?.[variant.id])}
-                  onOpen={handleOpenToggle}
-                  onToggleSelect={onToggleVariant}
-                />
-              ))}
+            <div className="rounded-xl bg-white border border-[#e4d8c4] px-3 pt-3.5 pb-3.5 grid grid-cols-2 sm:grid-cols-3 gap-x-2.5 gap-y-3">
+              {chant.variants.map(variant => chip(variant, variantName(variant) || variant.code, variantSublabel(variant)))}
             </div>
           ) : (
-          /* School × style grid: one row per school, "სადა" / "გამშვენებული" side by side */
-          <div className="rounded-xl bg-white border border-slate-200/80 divide-y-2 divide-slate-300">
-            {groupBySchool(chant.variants).map(({ school, plain, ornate, versions }) => (
-              /* a row of book versions puts the school name above its buttons on phones, so the buttons get the full width */
-              <div key={school} className={`flex gap-2 px-2.5 py-2 ${versions.length > 0 ? 'flex-col sm:flex-row sm:items-center gap-y-1.5' : 'items-center'}`}>
-                <span className={`${versions.length > 0 ? 'px-0.5 sm:px-0' : 'w-[5rem]'} sm:w-32 shrink-0 text-[11px] sm:text-xs font-black leading-tight ${SCHOOL_STYLES[school]?.text ?? 'text-slate-700'}`}>
-                  {SCHOOL_STYLES[school]?.name ?? school}
-                  {(versions[0]?.book === 'karb' || versions[0]?.book === 'pat') && (
-                    <span className="sm:block sm:mt-0.5 text-[10px] sm:text-[11px] font-bold opacity-70">
-                      <span className="sm:hidden"> · </span>{versions[0].book === 'karb' ? 'კარბელაანთ კილო' : 'დ. პატარავა'}
-                    </span>
-                  )}
-                </span>
-                {versions.length > 0 ? (
-                  /* versions printed in a book */
-                  <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-3 gap-2 py-0.5">
-                    {versions.map(variant => (
-                      <VariantChip
-                        key={variant.id}
-                        chant={chant}
-                        variant={variant}
-                        label={variantName(variant) || variant.code}
-                        sublabel={variantSublabel(variant)}
-                        school={school}
-                        isOpen={openVariantId === variant.id}
-                        isSelected={Boolean(selectedChantVariants?.[variant.id])}
-                        onOpen={handleOpenToggle}
-                        onToggleSelect={onToggleVariant}
-                      />
-                    ))}
+            /* one block per school, its name above its buttons */
+            <div className="rounded-xl bg-white border border-[#e4d8c4] divide-y-2 divide-[#d6c8b1]">
+              {groupBySchool(chant.variants).map(({ school, plain, ornate, versions }) => (
+                <div key={school} className="px-3 pt-2.5 pb-3.5 flex flex-col gap-2.5">
+                  <span className={`text-[11.5px] sm:text-[12.5px] font-extrabold leading-tight ${SCHOOL_STYLES[school]?.text ?? 'text-[#574739]'}`}>
+                    {SCHOOL_STYLES[school]?.name ?? school}
+                    {(versions[0]?.book === 'karb' || versions[0]?.book === 'pat') && (
+                      <span className="font-bold opacity-70"> · {versions[0].book === 'karb' ? 'კარბელაანთ კილო' : 'დ. პატარავა'}</span>
+                    )}
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-2.5 gap-y-3">
+                    {versions.length > 0
+                      ? versions.map(variant => chip(variant, variantName(variant) || variant.code, variantSublabel(variant)))
+                      : [plain, ornate].map((variant, i) => (variant ? chip(variant, i === 0 ? 'სადა' : 'გამშვენებული') : null))}
                   </div>
-                ) : [plain, ornate].map((variant, i) =>
-                  variant ? (
-                    <VariantChip
-                      key={variant.id}
-                      chant={chant}
-                      variant={variant}
-                      label={i === 0 ? 'სადა' : 'გამშვენებული'}
-                      school={school}
-                      isOpen={openVariantId === variant.id}
-                      isSelected={Boolean(selectedChantVariants?.[variant.id])}
-                      onOpen={handleOpenToggle}
-                      onToggleSelect={onToggleVariant}
-                    />
-                  ) : (
-                    <span key={i} className="flex-1" />
-                  )
-                )}
-              </div>
-            ))}
-          </div>
+                </div>
+              ))}
+            </div>
           )}
 
-          {/* Player of the chosen variant */}
           {openVariant && (
-            <div className="rounded-xl border border-amber-300/80 bg-white shadow-sm overflow-hidden animate-in fade-in duration-200">
-              <div className="flex items-center justify-between gap-2 px-3 py-2 border-b border-amber-100 bg-amber-50/50">
-                <span className="text-xs font-black text-slate-700 truncate">
-                  {SCHOOL_STYLES[schoolOf(openVariant.code)]?.name ?? openVariant.code}
-                  {openVariant.version !== undefined ? (
-                    <span className="font-bold text-amber-700">
-                      {` · ${variantName(openVariant)}`}
-                      {openVariant.page && ` (${variantSublabel(openVariant)})`}
-                    </span>
-                  ) : (
-                    <span className="font-bold text-amber-700"> · {openVariant.code.includes('გამშვ') ? 'გამშვენებული' : 'სადა'}</span>
-                  )}
-                </span>
-                <button
-                  type="button"
-                  onClick={() => handleOpenToggle(openVariant.id)}
-                  className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-slate-400 hover:bg-white hover:text-slate-700 transition-colors cursor-pointer"
-                  aria-label="დახურვა"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-              <div className="px-2 pb-2.5 pt-1.5">
-                <ChantDetailPage key={openVariant.id} chantId={chant.id} variantId={openVariant.id} inline />
-              </div>
+            <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-white border border-dashed border-[#d6c8b1] animate-[galoba-unfold_0.25s_ease_both]">
+              <span className="text-xs font-semibold text-[#8c7c6b]">
+                {SCHOOL_STYLES[schoolOf(openVariant.code)]?.name ?? openVariant.code} · ამ ვერსიის ნოტები და ჩანაწერი ჯერ არ არის
+              </span>
+              <button
+                type="button"
+                onClick={() => handleOpenToggle(openVariant.id)}
+                className="w-7 h-7 shrink-0 rounded-full flex items-center justify-center text-[#b8aa97] hover:bg-[#f1e9dc] hover:text-[#574739] transition-colors cursor-pointer"
+                aria-label="დახურვა"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
           )}
         </div>
