@@ -1,7 +1,0 @@
-.gcloudignore
-.git
-.gitignore
-node_modules/
-dist/
-build/
-.env*
