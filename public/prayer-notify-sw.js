@@ -12,8 +12,27 @@ const PRAYER_HOURS = [
 ];
 
 // The reminder server (worker/reminders) sends empty pushes 10, 5 or 1 minute before an hour;
-// the clock tells which hour is coming and how long is left.
+// the clock tells which hour is coming and how long is left. Group and assignment reminders carry
+// their own text: { title, body, tag, url }.
 self.addEventListener('push', (event) => {
+  let message = null;
+  try {
+    message = event.data ? event.data.json() : null;
+  } catch (e) {
+    message = null;
+  }
+  if (message && message.title) {
+    event.waitUntil(
+      self.registration.showNotification(message.title, {
+        body: message.body || '',
+        tag: message.tag || undefined,
+        data: { url: message.url || '/' },
+        icon: '/pwa-192x192.png',
+        badge: '/pwa-192x192.png',
+      })
+    );
+    return;
+  }
   const now = new Date();
   const minutesNow = now.getHours() * 60 + now.getMinutes() + now.getSeconds() / 60;
   let best = null;
@@ -35,9 +54,24 @@ self.addEventListener('push', (event) => {
 });
 
 // A tap on a prayer reminder focuses the open site and opens that prayer, or opens the site.
+// A group reminder opens its page (/?prayer=kathisma-8, /?open=psalter …).
 self.addEventListener('notificationclick', (event) => {
   const prayerId = event.notification.data && event.notification.data.prayerId;
+  const url = event.notification.data && event.notification.data.url;
   event.notification.close();
+  if (url) {
+    event.waitUntil(
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
+        const client = clients[0];
+        if (client) {
+          client.postMessage({ type: 'open-url', url });
+          return client.focus();
+        }
+        return self.clients.openWindow(url);
+      })
+    );
+    return;
+  }
   event.waitUntil(
     self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {
       const client = clients[0];

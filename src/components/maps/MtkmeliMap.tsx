@@ -1,9 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Check, Plus, ChevronDown, BookOpen, ExternalLink, Feather, ScrollText, BookText } from 'lucide-react';
 import { FolkRegion } from '../../data/songsData';
 import { MtkmeliAuthor, LiteraryWork, WorkKind, authorsInRegion } from '../../data/mtkmeliData';
 import { RegionPuzzleMap } from './RegionPuzzleMap';
 import { triggerHaptic } from '../../utils/haptics';
+import { useAuth } from '../../context';
+import { askSignIn } from '../access/SignInPrompt';
 
 interface MtkmeliMapProps {
   selectedChantVariants?: Record<string, any>;
@@ -87,6 +89,8 @@ interface AuthorItemProps {
 
 const AuthorItem: React.FC<AuthorItemProps> = ({ author, region, selectedChantVariants, onTogglePoem }) => {
   const [isOpen, setIsOpen] = useState(false);
+  // guests see the authors' names only; opening one asks to sign in
+  const { user } = useAuth();
   const [openWorkId, setOpenWorkId] = useState<string | null>(null);
   const selectedCount = author.works.filter(w => selectedChantVariants[w.id]).length;
 
@@ -100,7 +104,7 @@ const AuthorItem: React.FC<AuthorItemProps> = ({ author, region, selectedChantVa
     >
       <button
         type="button"
-        onClick={() => { triggerHaptic(10); setIsOpen(o => !o); }}
+        onClick={() => { triggerHaptic(10); if (!user) askSignIn(`მთქმელი — ${author.name}`); else setIsOpen(o => !o); }}
         className="w-full px-4 py-3 flex items-center gap-3 text-left cursor-pointer select-none group"
       >
         <span className={`w-2 h-2 shrink-0 rounded-full transition-all ${isOpen ? 'bg-amber-500 scale-125' : selectedCount ? 'bg-emerald-500' : 'bg-slate-300 group-hover:bg-amber-400'}`} />
@@ -156,8 +160,26 @@ interface WorkItemProps {
   onToggleSelect?: () => void;
 }
 
+// a work's full text lives in public/mtkmeli/<id>.json and is fetched when the work is opened
+const useWorkText = (work: LiteraryWork, open: boolean) => {
+  const [text, setText] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (!open || !work.hasText || text !== null) return;
+    let alive = true;
+    setFailed(false);
+    fetch(`/mtkmeli/${work.id}.json`)
+      .then(r => r.json())
+      .then((d: { text: string }) => alive && setText(d.text))
+      .catch(() => alive && setFailed(true));
+    return () => { alive = false; };
+  }, [open, work.hasText, work.id, text]);
+  return { text, failed };
+};
+
 const WorkItem: React.FC<WorkItemProps> = ({ work, isOpen, onToggleOpen, isSelected, onToggleSelect }) => {
   const kind = KIND_STYLE[work.kind];
+  const { text, failed } = useWorkText(work, isOpen);
   return (
     <div className={`rounded-xl border bg-white transition-all ${isOpen ? 'border-amber-300 shadow-sm' : 'border-slate-200/80'}`}>
       <div className="flex items-center gap-2 pr-2">
@@ -167,7 +189,7 @@ const WorkItem: React.FC<WorkItemProps> = ({ work, isOpen, onToggleOpen, isSelec
               {kind.icon}
               {work.kind}
             </span>
-            {work.text && <span className="text-[10px] font-semibold text-emerald-700">სრული ტექსტი</span>}
+            {work.hasText && <span className="text-[10px] font-semibold text-emerald-700">სრული ტექსტი</span>}
           </span>
           <span className="text-sm sm:text-[15px] font-bold text-slate-800 leading-snug">{work.title}</span>
         </button>
@@ -196,8 +218,14 @@ const WorkItem: React.FC<WorkItemProps> = ({ work, isOpen, onToggleOpen, isSelec
       {isOpen && (
         <div className="border-t border-amber-100 px-3 sm:px-4 py-3 space-y-3 animate-in fade-in duration-200">
           {work.note && <p className="text-[11px] font-semibold text-slate-400">{work.note}</p>}
-          {work.text ? (
-            <p className="font-serif text-[15px] sm:text-base text-slate-800 whitespace-pre-line leading-relaxed">{work.text}</p>
+          {work.hasText ? (
+            text !== null ? (
+              <p className="font-serif text-[15px] sm:text-base text-slate-800 whitespace-pre-line leading-relaxed">{text}</p>
+            ) : failed ? (
+              <p className="text-sm text-slate-500">ტექსტი ვერ ჩაიტვირთა — შეამოწმე ინტერნეტი.</p>
+            ) : (
+              <p className="text-sm text-slate-400">იტვირთება…</p>
+            )
           ) : (
             <p className="text-sm text-slate-600 leading-relaxed">{work.description}</p>
           )}

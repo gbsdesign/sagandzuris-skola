@@ -3,6 +3,8 @@ import { Bell, BellOff, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { useNavigation } from '../context';
 import { KATHISMAS, PRAYER_HOURS, PrayerHour, bibleChapterId, hourClock, parseBibleId, prayerTitle } from '../data/prayers';
 import { PROSE, PrayerText } from '../components/views/PrayerText';
+import { KathismaReadMark } from '../components/psalter/KathismaReadMark';
+import { PinButton } from '../components/home/ShortcutShelf';
 import {
   REMINDER_OFFSETS,
   askNotificationPermission,
@@ -66,6 +68,7 @@ export const PrayerPage: React.FC = () => {
 
   if (!selectedPrayerId) return null;
   const hour = PRAYER_HOURS.find(h => h.id === selectedPrayerId);
+  const kathisma = KATHISMAS.find(k => k.id === selectedPrayerId);
   const { prev, next } = neighbours(selectedPrayerId);
   const pager = (prev || next) && (
     <div className="flex items-center justify-between gap-2">
@@ -88,7 +91,10 @@ export const PrayerPage: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl mx-auto mb-6 px-1 space-y-4">
-      <h1 className="text-center font-serif-ge text-xl sm:text-2xl font-bold text-[#7a2028]">{prayerTitle(selectedPrayerId)}</h1>
+      <div className="grid grid-cols-[2.25rem_1fr_2.25rem] items-center gap-2">
+        <h1 className="col-start-2 text-center font-serif-ge text-xl sm:text-2xl font-bold text-[#7a2028]">{prayerTitle(selectedPrayerId)}</h1>
+        <PinButton id={`prayer:${selectedPrayerId}`} />
+      </div>
 
       {hour && <HourReminders hour={hour} />}
 
@@ -102,9 +108,11 @@ export const PrayerPage: React.FC = () => {
         ) : parseBibleId(selectedPrayerId) ? (
           <div className={PROSE} dangerouslySetInnerHTML={{ __html: html }} />
         ) : (
-          <PrayerText html={html} />
+          <PrayerText html={html} glory={Boolean(kathisma)} />
         )}
       </article>
+
+      {kathisma && html !== null && <KathismaReadMark k={kathisma.n} />}
 
       {pager}
 

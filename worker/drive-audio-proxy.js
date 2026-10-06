@@ -9,6 +9,9 @@ const ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'https://sagandzuris-skola.pages.dev',
 ];
+// Cloudflare Pages gives every branch its own test address: <branch>.sagandzuris-skola.pages.dev
+const PREVIEW_ORIGIN = /^https:\/\/[a-z0-9-]+\.sagandzuris-skola\.pages\.dev$/;
+const isAllowed = (origin) => ALLOWED_ORIGINS.includes(origin) || PREVIEW_ORIGIN.test(origin);
 
 const CACHE_SECONDS = 7 * 24 * 60 * 60; // keep files at Cloudflare for a week, so Drive is rarely hit
 const PASS_HEADERS = ['content-type', 'content-length', 'content-range', 'accept-ranges', 'last-modified', 'etag'];
@@ -35,7 +38,7 @@ function withCors(response, origin) {
 export default {
   async fetch(request, env, ctx) {
     const origin = request.headers.get('Origin') || '';
-    if (!ALLOWED_ORIGINS.includes(origin)) {
+    if (!isAllowed(origin)) {
       return new Response('Forbidden', { status: 403 });
     }
     if (request.method === 'OPTIONS') {

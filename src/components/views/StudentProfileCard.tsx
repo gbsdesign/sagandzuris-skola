@@ -12,6 +12,8 @@ import {
 import { auth, db, handleFirestoreError, OperationType } from '../../firebase';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { triggerHaptic } from '../../utils/haptics';
+import { isGeorgian, renameInGroups } from '../../utils/memberName';
+import { writeDirectory } from '../../utils/directory';
 
 const STATUS_OPTIONS = [
   { id: 'დამწყები', label: '1. დამწყები' },
@@ -217,6 +219,11 @@ export const StudentProfileCard: React.FC = () => {
           profile,
           updatedAt: new Date().toISOString()
         }, { merge: true });
+        // teachers find me by this name, and my psalter groups list me by it
+        void writeDirectory(user.uid, { firstName: profile.firstName.trim(), lastName: profile.lastName.trim(), churchName: (profile.churchName || '').trim() });
+        if (isGeorgian(profile.firstName) && isGeorgian(profile.lastName)) {
+          void renameInGroups(user.uid, `${profile.firstName.trim()} ${profile.lastName.trim()}`, (profile.churchName || profile.firstName).trim(), user.photoURL || '');
+        }
       } catch (err) {
         console.warn('Note saving student profile to Firestore (offline):', err);
       }
@@ -297,6 +304,16 @@ export const StudentProfileCard: React.FC = () => {
           <div>
             <label className={label}>გვარი</label>
             <input name="lastName" placeholder="გვარი" value={profile.lastName} onChange={handleChange} className={field} />
+          </div>
+          {/* groups and the commemoration lists need the name in Georgian letters */}
+          {(profile.firstName || profile.lastName) && !(isGeorgian(profile.firstName) && isGeorgian(profile.lastName)) && (
+            <p className="col-span-2 -mt-1 text-xs leading-snug text-[#9a3324]">
+              სახელი და გვარი ქართული ასოებით ჩაწერე — ასე გამოჩნდები ჯგუფში და მოსახსენებელში.
+            </p>
+          )}
+          <div className="col-span-2">
+            <label className={label}>სახელი მოსახსენებლად <span className="font-normal text-[#8a7a6a]">— ნათლობის სახელი, თუ განსხვავდება</span></label>
+            <input name="churchName" placeholder={profile.firstName || 'მაგ: ნინო'} value={profile.churchName || ''} onChange={handleChange} className={field} />
           </div>
           <div>
             <label className={label}>რეგიონი</label>

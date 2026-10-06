@@ -6,16 +6,39 @@ import {
   onAuthStateChanged,
   GoogleAuthProvider,
 } from 'firebase/auth';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase';
 import { triggerHaptic } from '../utils/haptics';
+import { writeDirectory } from '../utils/directory';
 
 export const SUPER_ADMIN_EMAIL = 'mr.gabunia@gmail.com';
 
+// Who may do what (firestore.rules mirrors this):
+// • owner — the school's founder (SUPER_ADMIN_EMAIL): everything, and only they name superadmins;
+// • superadmin — up to three trusted people: everything, including naming admins;
+// • admin — runs the school: every class and group, users, naming teachers, content;
+// • teacher — leads their own classes and psalter groups only (also the "დღევანდელი წირვა" program);
+// • member — a signed-in student or parishioner; guest — not signed in.
+// Staff roles live in admins/{email} { role }; old documents without a role are admins.
+export type Role = 'superadmin' | 'admin' | 'teacher' | 'member' | 'guest';
+export type StaffRole = 'superadmin' | 'admin' | 'teacher';
+export const MAX_EXTRA_SUPERADMINS = 3;
+
+export const ROLE_LABEL: Record<Role, string> = {
+  superadmin: 'სუპერადმინი',
+  admin: 'ადმინი',
+  teacher: 'მასწავლებელი',
+  member: 'წევრი',
+  guest: 'სტუმარი',
+};
+
 export interface AuthContextType {
   user: User | null;
-  isAdmin: boolean;
-  isSuperAdmin: boolean;
+  role: Role;
+  isOwner: boolean;
+  isAdmin: boolean;      // admin, superadmin or owner
+  isSuperAdmin: boolean; // superadmin or owner
+  isTeacher: boolean;    // teacher, or any admin
   loading: boolean;
   signingIn: boolean;
   accessToken: string | null;
@@ -30,13 +53,31 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [staffRole, setStaffRole] = useState<StaffRole | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [signingIn, setSigningIn] = useState<boolean>(false);
   const [accessToken, setAccessToken] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const isSuperAdmin = user?.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+  const isOwner = user?.email?.toLowerCase() === SUPER_ADMIN_EMAIL.toLowerCase();
+  const role: Role = !user ? 'guest' : isOwner ? 'superadmin' : staffRole ?? 'member';
+  const isSuperAdmin = role === 'superadmin';
+  const isAdmin = isSuperAdmin || role === 'admin';
+  const isTeacher = isAdmin || role === 'teacher';
+
+  // the signed-in person's staff document, live: a role given or taken away applies at once
+  useEffect(() => {
+    const email = user?.email?.toLowerCase();
+    if (!email || isOwner) { setStaffRole(null); return; }
+    return onSnapshot(
+      doc(db, 'admins', email),
+      snap => {
+        const r = snap.exists() ? (snap.data().role || 'admin') : null;
+        setStaffRole(r === 'superadmin' || r === 'admin' || r === 'teacher' ? r : null);
+      },
+      () => setStaffRole(null)
+    );
+  }, [user, isOwner]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
@@ -44,12 +85,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       setLoading(false);
       if (!currentUser) {
         setAccessToken(null);
-        setIsAdmin(false);
         return;
       }
 
       const email = currentUser.email?.toLowerCase() || '';
-      const isSuper = email === SUPER_ADMIN_EMAIL.toLowerCase();
 
       // Automatically register/update student in Firestore so registered user list always reflects active users
       try {
@@ -68,32 +107,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (e) {
         console.warn('Student sync error:', e);
       }
+      // name and photo for the teachers' people list
+      void writeDirectory(currentUser.uid, { name: currentUser.displayName || '', photoURL: currentUser.photoURL || '' });
 
-      if (isSuper) {
-        setIsAdmin(true);
-        // Ensure superadmin doc exists in admins collection
-        try {
-          const adminRef = doc(db, 'admins', email);
-          await setDoc(
-            adminRef,
-            {
-              email: email,
-              role: 'superadmin',
-              addedBy: 'system',
-              addedAt: new Date().toISOString(),
-            },
-            { merge: true }
-          );
-        } catch (_) {}
-      } else if (email) {
-        try {
-          const adminSnap = await getDoc(doc(db, 'admins', email));
-          setIsAdmin(adminSnap.exists());
-        } catch (_) {
-          setIsAdmin(false);
-        }
-      } else {
-        setIsAdmin(false);
+      // the owner's own staff document, so the admin lists show them
+      if (email === SUPER_ADMIN_EMAIL.toLowerCase()) {
+        setDoc(
+          doc(db, 'admins', email),
+          { email, role: 'superadmin', userId: currentUser.uid, name: currentUser.displayName || '', addedBy: 'system' },
+          { merge: true }
+        ).catch(() => {});
       }
     });
     return () => unsubscribe();
@@ -146,8 +169,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     <AuthContext.Provider
       value={{
         user,
+        role,
+        isOwner,
         isAdmin,
         isSuperAdmin,
+        isTeacher,
         loading,
         signingIn,
         accessToken,

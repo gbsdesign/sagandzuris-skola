@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { Plus, Search, Trash2, Upload, X, Check, ArrowUp, ArrowDown, RefreshCw, ExternalLink } from 'lucide-react';
-import { collection, deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
+import { arrayUnion, collection, deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth, useNavigation } from '../../context';
 import { SchoolClass, ProgramItem, imageFileToDataUrl } from '../../hooks/useClasses';
@@ -10,6 +10,10 @@ import { filterValidVariants } from '../../utils/variantValidation';
 import { PathItem, sortPathItems, findCatalogEntry, voicesOf, CATEGORY_LABEL } from '../../utils/pathItems';
 import { CatalogPicker } from './CatalogPicker';
 import { MemberPathEditor, writePath } from './MemberPathEditor';
+import { linkTeachers } from '../../hooks/useTeaching';
+import { Toggle } from '../ui/kit';
+import { ShortcutPicker, shortcutIcon } from '../home/ShortcutShelf';
+import { shortcutLabel } from '../../utils/shortcuts';
 
 /**
  * Puts the class program on each member's path (missing items are added at the end) and takes back
@@ -50,29 +54,50 @@ export interface AdminStudent {
 
 const field = 'w-full h-11 px-3.5 rounded-xl bg-white ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/40 text-sm text-[#2a2017] placeholder:text-[#b3a594] outline-none transition';
 
-type Draft = { id: string | null; name: string; logo: string; memberIds: string[]; savedMemberIds: string[]; program: ProgramItem[] };
-const EMPTY: Draft = { id: null, name: '', logo: '', memberIds: [], savedMemberIds: [], program: [] };
+type Draft = {
+  id: string | null; name: string; logo: string; memberIds: string[]; savedMemberIds: string[]; program: ProgramItem[];
+  teacherIds: string[]; classMode: boolean; defaultShortcuts: string[];
+};
+const EMPTY: Draft = { id: null, name: '', logo: '', memberIds: [], savedMemberIds: [], program: [], teacherIds: [], classMode: false, defaultShortcuts: [] };
 
-// Admin tab: list of classes + editor (name, logo, members picked from registered users, common program).
+// Classes: list + editor (name, logo, members, common program, "კლასის რეჟიმი").
+// mode 'admin': every class; create, delete, choose the class's teachers (from `staff`); members from all users.
+// mode 'teacher': the teacher's own class (opened at once with `openId`); members from the people list.
 export const ClassesAdmin: React.FC<{
   classes: SchoolClass[];
   loading: boolean;
   students: AdminStudent[];
   onMessage: (text: string, type: 'success' | 'error') => void;
-}> = ({ classes, loading, students, onMessage }) => {
+  mode?: 'admin' | 'teacher';
+  staff?: AdminStudent[];
+  openId?: string;
+}> = ({ classes, loading, students, onMessage, mode = 'admin', staff = [], openId }) => {
   const { user } = useAuth();
   const { openClass } = useNavigation();
+  const isAdminMode = mode === 'admin';
   const [draft, setDraft] = useState<Draft | null>(null);
   const [memberQuery, setMemberQuery] = useState('');
   const [saving, setSaving] = useState(false);
   const [pathOf, setPathOf] = useState<string | null>(null);
+  const [pickingButtons, setPickingButtons] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const edit = (c?: SchoolClass) => {
     setMemberQuery('');
     setPathOf(null);
-    setDraft(c ? { id: c.id, name: c.name, logo: c.logo || '', memberIds: [...c.memberIds], savedMemberIds: [...c.memberIds], program: c.program.map(p => ({ ...p })) } : { ...EMPTY });
+    setDraft(c ? {
+      id: c.id, name: c.name, logo: c.logo || '', memberIds: [...c.memberIds], savedMemberIds: [...c.memberIds],
+      program: c.program.map(p => ({ ...p })), teacherIds: [...c.teacherIds], classMode: Boolean(c.classMode),
+      defaultShortcuts: [...(c.defaultShortcuts || [])],
+    } : { ...EMPTY });
   };
+
+  // the teacher panel opens its class straight away
+  const opened = classes.find(c => c.id === openId);
+  React.useEffect(() => {
+    if (opened && draft?.id !== opened.id) edit(opened);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opened?.id]);
 
   const shownStudents = useMemo(() => {
     const q = memberQuery.toLowerCase().trim();
@@ -83,6 +108,7 @@ export const ClassesAdmin: React.FC<{
   }, [students, memberQuery, draft?.memberIds]);
 
   if (!draft) {
+    if (!isAdminMode) return loading ? <p className="py-8 text-center text-sm text-[#8a7a6a]">იტვირთება...</p> : null;
     return (
       <div className="space-y-4">
         <button
@@ -102,18 +128,23 @@ export const ClassesAdmin: React.FC<{
         ) : (
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {classes.map(c => (
-              <li key={c.id} className="flex items-center gap-3 p-3.5 rounded-2xl bg-white ring-1 ring-[#e8dcc8]">
-                <ClassLogo name={c.name} logo={c.logo} className="w-12 h-12 text-lg" />
-                <div className="min-w-0 flex-1">
-                  <p className="font-serif-ge font-bold text-[#4a3426] truncate">{c.name}</p>
+              <li key={c.id} className="flex flex-wrap items-center gap-3 p-3.5 rounded-2xl bg-white ring-1 ring-[#e8dcc8]">
+                <ClassLogo name={c.name} logo={c.logo} className="w-12 h-12 text-lg shrink-0" />
+                <div className="min-w-0 flex-1 basis-40">
+                  <p className="font-serif-ge font-bold text-[#4a3426] leading-snug">{c.name}</p>
                   <p className="text-xs text-[#8a7a6a]">{c.members.length} წევრი · პროგრამაში {c.program.length} პუნქტი</p>
+                  <p className={`text-xs ${c.teachers.length ? 'text-[#4a3426]' : 'text-[#9a3324]'}`}>
+                    {c.teachers.length ? `მასწავლებელი: ${c.teachers.map(t => t.name).join(', ')}` : 'მასწავლებელი არ ჰყავს'}
+                  </p>
                 </div>
-                <button type="button" onClick={() => openClass(c.id)} title="კლასის გვერდი" className="w-9 h-9 rounded-full ring-1 ring-[#e8dcc8] text-[#8a7a6a] hover:text-[#7a2028] flex items-center justify-center cursor-pointer">
-                  <ExternalLink className="w-4 h-4" />
-                </button>
-                <button type="button" onClick={() => edit(c)} className="h-9 px-3.5 rounded-full ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-sm font-semibold text-[#4a3426] cursor-pointer">
-                  შეცვლა
-                </button>
+                <div className="flex items-center gap-2 ml-auto">
+                  <button type="button" onClick={() => openClass(c.id)} title="კლასის გვერდი" className="w-9 h-9 rounded-full ring-1 ring-[#e8dcc8] text-[#8a7a6a] hover:text-[#7a2028] flex items-center justify-center cursor-pointer">
+                    <ExternalLink className="w-4 h-4" />
+                  </button>
+                  <button type="button" onClick={() => edit(c)} className="h-9 px-3.5 rounded-full ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-sm font-semibold text-[#4a3426] cursor-pointer">
+                    შეცვლა
+                  </button>
+                </div>
               </li>
             ))}
           </ul>
@@ -155,16 +186,35 @@ export const ClassesAdmin: React.FC<{
         .filter(Boolean)
         .map(s => ({ uid: s!.userId, name: s!.name, photoURL: s!.photoURL || '' }));
       const now = new Date().toISOString();
+      const teachers = draft.teacherIds
+        .map(uid => staff.find(s => s.userId === uid))
+        .filter(Boolean)
+        .map(s => ({ uid: s!.userId, name: s!.name, photoURL: s!.photoURL || '' }));
+      const existing = classes.find(c => c.id === draft.id);
+      const teacherIds = isAdminMode ? teachers.map(t => t.uid) : existing?.teacherIds || [];
       await setDoc(ref, {
         name,
         logo: draft.logo,
         memberIds: members.map(m => m.uid),
         members,
         program: draft.program.map(p => ({ ...(p.id ? { id: p.id, code: p.code || '' } : {}), title: p.title.trim(), note: (p.note || '').trim() })).filter(p => p.title),
+        classMode: draft.classMode,
+        defaultShortcuts: draft.defaultShortcuts,
+        // only admins choose a class's teachers
+        ...(isAdminMode ? { teacherIds, teachers } : {}),
         updatedAt: now,
         ...(draft.id ? {} : { createdAt: now, createdBy: user?.email || '' }),
       }, { merge: true });
       const ids = members.map(m => m.uid);
+      // the class's teachers may now see and arrange the members' paths
+      if (teacherIds.length) {
+        await Promise.all(ids.map(uid =>
+          (isAdminMode
+            ? setDoc(doc(db, 'students', uid), { teacherIds: arrayUnion(...teacherIds) }, { merge: true })
+            : draft.savedMemberIds.includes(uid) ? Promise.resolve() : linkTeachers(uid, { id: ref.id, teacherIds })
+          ).catch(() => {})
+        ));
+      }
       const failed = await syncMemberPaths(ref.id, draft.program, ids, draft.savedMemberIds.filter(x => !ids.includes(x)));
       triggerHaptic(30);
       onMessage(
@@ -194,9 +244,11 @@ export const ClassesAdmin: React.FC<{
     <div className="space-y-5">
       <div className="flex items-center justify-between gap-2">
         <h3 className="font-serif-ge text-lg font-bold text-[#4a3426]">{draft.id ? 'კლასის შეცვლა' : 'ახალი კლასი'}</h3>
-        <button type="button" onClick={() => setDraft(null)} title="გაუქმება" className="w-9 h-9 rounded-full ring-1 ring-[#e8dcc8] text-[#8a7a6a] hover:text-[#7a2028] flex items-center justify-center cursor-pointer">
-          <X className="w-4 h-4" />
-        </button>
+        {!openId && (
+          <button type="button" onClick={() => setDraft(null)} title="გაუქმება" className="w-9 h-9 rounded-full ring-1 ring-[#e8dcc8] text-[#8a7a6a] hover:text-[#7a2028] flex items-center justify-center cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
 
       {/* name + logo */}
@@ -215,6 +267,33 @@ export const ClassesAdmin: React.FC<{
             <button type="button" onClick={() => set({ logo: '' })} className="text-xs text-[#8a7a6a] hover:text-[#7a2028] cursor-pointer">ლოგოს მოშორება</button>
           )}
         </div>
+      </div>
+
+      {/* teachers: chosen by admins */}
+      <div className="space-y-2">
+        <label className="text-xs font-semibold text-[#75685a]">მასწავლებელი</label>
+        {isAdminMode ? (
+          staff.length === 0 ? (
+            <p className="text-sm text-[#8a7a6a]">მასწავლებელი ჯერ არავინაა დანიშნული — „მომხმარებლებში“ მიანიჭე როლი „მასწავლებელი“.</p>
+          ) : (
+            <div className="flex flex-wrap gap-2">
+              {staff.map(t => {
+                const on = draft.teacherIds.includes(t.userId);
+                return (
+                  <button key={t.userId} type="button"
+                    onClick={() => set({ teacherIds: on ? draft.teacherIds.filter(x => x !== t.userId) : [...draft.teacherIds, t.userId] })}
+                    className={`inline-flex items-center gap-2 h-10 pl-1 pr-3.5 rounded-full text-sm font-semibold cursor-pointer transition-colors ${on ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40'}`}>
+                    {t.photoURL ? <img src={t.photoURL} alt="" className="w-8 h-8 rounded-full object-cover" referrerPolicy="no-referrer" /> : <span className="w-8 h-8 rounded-full bg-[#efe5d4] text-[#4a3426] text-sm font-bold flex items-center justify-center">{t.name.charAt(0)}</span>}
+                    {t.name}
+                    {on && <Check className="w-4 h-4" />}
+                  </button>
+                );
+              })}
+            </div>
+          )
+        ) : (
+          <p className="text-sm font-semibold text-[#2a2017]">{classes.find(c => c.id === draft.id)?.teachers.map(t => t.name).join(', ') || '—'}</p>
+        )}
       </div>
 
       {/* members */}
@@ -284,8 +363,38 @@ export const ClassesAdmin: React.FC<{
         )}
       </div>
 
+      {/* the members' starting home buttons, until they choose their own */}
+      <div className="space-y-2">
+        <div className="flex items-baseline justify-between gap-2">
+          <label className="text-xs font-semibold text-[#75685a]">საწყისი ღილაკები მთავარ გვერდზე</label>
+          <button type="button" onClick={() => setPickingButtons(true)} className="text-xs font-bold text-[#7a2028] cursor-pointer">არჩევა</button>
+        </div>
+        {draft.defaultShortcuts.length === 0 ? (
+          <p className="text-[13px] text-[#8a7a6a]">არ არის — წევრები თავად აირჩევენ. შეგიძლია მთელ კლასს შეურჩიო, მაგ. „დღევანდელი წირვა“ და „ჩემი კანონი“.</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {draft.defaultShortcuts.map(id => (
+              <span key={id} className="h-9 pl-1.5 pr-3 rounded-full bg-white ring-1 ring-[#e8dcc8] inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#4a3426]">
+                <span className="w-6 h-6 rounded-full bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center [&>svg]:w-3.5 [&>svg]:h-3.5">{shortcutIcon(id)}</span>
+                {shortcutLabel(id)?.label}
+              </span>
+            ))}
+          </div>
+        )}
+        <ShortcutPicker open={pickingButtons} onClose={() => setPickingButtons(false)} current={draft.defaultShortcuts} onChange={next => set({ defaultShortcuts: next })} />
+      </div>
+
+      <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-3.5">
+        <Toggle
+          on={draft.classMode}
+          onChange={on => set({ classMode: on })}
+          label="კლასის რეჟიმი"
+          hint="წევრები გალობაში ხედავენ მხოლოდ კლასის პროგრამის ვერსიებს — დამწყები აღარ იკარგება 1 130 ვერსიაში. „ყველაფრის ჩვენება“ ერთი შეხებით."
+        />
+      </div>
+
       <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
-        {draft.id && (
+        {draft.id && isAdminMode && (
           <button type="button" onClick={remove} className="h-12 px-5 rounded-2xl ring-1 ring-red-200 text-red-700 hover:bg-red-50 font-semibold text-sm cursor-pointer inline-flex items-center justify-center gap-2">
             <Trash2 className="w-4 h-4" /> კლასის წაშლა
           </button>

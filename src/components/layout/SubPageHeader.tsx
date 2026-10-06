@@ -1,6 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft } from 'lucide-react';
 import { PageType, ServiceType } from '../../context';
+import { sectionOfPage } from '../../data/sections';
+import { PinButton } from '../home/ShortcutShelf';
 
 interface SubPageHeaderProps {
   currentPage: PageType;
@@ -79,6 +81,8 @@ export const SubPageHeader: React.FC<SubPageHeaderProps> = ({
           <ArrowLeft className="w-3.5 h-3.5 group-hover:-translate-x-0.5 transition-transform" />
           <span>უკან</span>
         </button>
+        {/* "📌" puts this section on the home page */}
+        {sectionOfPage(currentPage) && <PinButton id={`section:${sectionOfPage(currentPage)}`} className="col-start-3 row-start-1 justify-self-end" />}
       </div>
 
       {/* the floating "←" (the page column is max-w-4xl = 896px wide and centred: its left margin starts at 50% − 448px) */}

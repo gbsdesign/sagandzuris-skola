@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
@@ -25,6 +25,11 @@ import { TodaySaintsCard } from './components/calendar/TodaySaintsCard';
 import { SaintLifeOverlay } from './components/saints/SaintLifeOverlay';
 import { usePrayerReminderScheduler } from './utils/prayerReminders';
 import { isPrayerId } from './data/prayers';
+import { setRecordingsHidden, startRecordingBindings, useRecordingBindings } from './data/runtimeRecordings';
+import { SignInPrompt } from './components/access/SignInPrompt';
+import { useKidsMode } from './hooks/useAccess';
+
+startRecordingBindings();
 
 // Backward compatibility exports
 export { filterValidVariants, getValidVariantIds } from './utils/variantValidation';
@@ -47,20 +52,46 @@ export default function App() {
 }
 
 function AppContent() {
-  const { loading } = useAuth();
-  const { currentPage, openPrayer } = useNavigation();
+  const { loading, user } = useAuth();
+  const { currentPage, openPrayer, navigateTo } = useNavigation();
+  // live recordings are for signed-in members only (set before the tree below renders)
+  setRecordingsHidden(!user);
+  // recordings bound in the admin panel: the page redraws when they arrive
+  useRecordingBindings();
+  // the kids' mode a teacher turned on: no sharing or outside links anywhere (index.css)
+  const kids = useKidsMode();
+  useEffect(() => {
+    document.documentElement.classList.toggle('kids-mode', Boolean(kids));
+  }, [kids]);
   const [dbLogo, setDbLogo] = useState<string | null>(null);
 
   usePrayerReminderScheduler(openPrayer);
 
-  // a tapped reminder may open the site as /?prayer=<id>
+  // a tapped reminder may open the site as /?prayer=<id> or /?open=psalter|gz|teacher
+  const openFromUrl = (href: string) => {
+    const url = new URL(href, window.location.origin);
+    const prayerId = url.searchParams.get('prayer');
+    const page = url.searchParams.get('open');
+    if (prayerId && isPrayerId(prayerId)) openPrayer(prayerId);
+    else if (page === 'psalter' || page === 'gz' || page === 'teacher') navigateTo(page);
+  };
   useEffect(() => {
     const url = new URL(window.location.href);
-    const prayerId = url.searchParams.get('prayer');
-    if (!prayerId) return;
+    if (!url.searchParams.get('prayer') && !url.searchParams.get('open')) return;
+    const href = url.href;
     url.searchParams.delete('prayer');
+    url.searchParams.delete('open');
     window.history.replaceState(null, '', url.pathname + url.search + url.hash);
-    if (isPrayerId(prayerId)) openPrayer(prayerId);
+    openFromUrl(href);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // ... and while the site is open, the service worker passes the address on
+  useEffect(() => {
+    const sw = navigator.serviceWorker;
+    if (!sw) return;
+    const onMessage = (e: MessageEvent) => { if (e.data?.type === 'open-url' && typeof e.data.url === 'string') openFromUrl(e.data.url); };
+    sw.addEventListener('message', onMessage);
+    return () => sw.removeEventListener('message', onMessage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -97,6 +128,8 @@ function AppContent() {
         currentPage === 'galoba' ? 'bg-gradient-to-b from-[#fdfaf4] via-[#f8f1e5] to-[#f1e7d6]'
           // the home page: the footer's warm cream (#fbf6ec), only lighter
           : currentPage === 'home' ? 'bg-gradient-to-b from-[#fffdf9] via-[#fdfaf4] to-[#fcf7ef]'
+          // the school's management pages and the psalter group: warm paper too
+          : currentPage === 'psalter' || currentPage === 'teacher' || currentPage === 'admin' ? 'bg-gradient-to-b from-[#fdfaf4] via-[#faf4ea] to-[#f6eedf]'
           : 'bg-gradient-to-br from-slate-50 via-white to-slate-100'
       }`}
     >
@@ -108,7 +141,9 @@ function AppContent() {
       <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 md:p-8 flex flex-col justify-center">
         <div className="w-full max-w-4xl mx-auto">
           <ErrorBoundary>
-            <AppRouter logoUrl={currentLogo} />
+            <Suspense fallback={<div className="py-24 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-[#7a2028]" /></div>}>
+              <AppRouter logoUrl={currentLogo} />
+            </Suspense>
           </ErrorBoundary>
         </div>
       </main>
@@ -123,6 +158,9 @@ function AppContent() {
       <ErrorBoundary>
         <TodaySaintsCard />
       </ErrorBoundary>
+
+      {/* "საჭიროა რეგისტრაცია" for guests */}
+      <SignInPrompt />
 
       {/* a saint's life, opened from that card, the calendar or the library */}
       <ErrorBoundary>

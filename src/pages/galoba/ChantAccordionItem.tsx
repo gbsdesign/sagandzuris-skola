@@ -44,11 +44,11 @@ const VariantChip: React.FC<{
   const hasRecording = Boolean(getChantMedia(chant.id, variant.code));
   const hasNotes = canOpenNotes(chant, variant);
   const { openNotes, liturgy } = useNotes();
-  const regent = liturgy.role === 'regent';
+  const regent = liturgy.role === 'teacher';
   const progIdx = regent ? (liturgy.program?.items.indexOf(variant.id) ?? -1) : -1;
   return (
     <div className="relative min-w-0">
-      {/* the regent's mark: + adds the version to today's service, then shows its number there */}
+      {/* the teacher's mark: + adds the version to today's service, then shows its number there */}
       {regent && hasNotes && (
         <button
           type="button"

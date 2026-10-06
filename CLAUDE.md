@@ -26,11 +26,11 @@
   |---|---|---|
   | `src/data/calendar/2026.json` | 889 KB | church calendar, one line per day |
   | `src/data/ancestorsBioTexts.ts` | 370 KB | ancestors' biographies |
-  | `src/data/mtkmeliData.ts` | 298 KB | authors' full texts |
+  | `src/data/mtkmeliData.ts` | 93 KB | authors and works (full texts: `public/mtkmeli/<id>.json`) |
   | `src/data/library/saintLives.json` | 292 KB | saint lives index |
   | `src/data/library/dzveliAgtqma.json` | 126 KB | Sacred History book |
   | `src/data/chantMediaRegistry.ts` | 65 KB | recordings; the binding map `VARIANT_MEDIA` is near line 1320 |
-  | `public/notes/**`, `public/lives/**`, `public/prayers/**`, `public/bible/**` | thousands of JSON files | content data |
+  | `public/notes/**`, `public/lives/**`, `public/prayers/**`, `public/bible/**`, `public/mtkmeli/**` | thousands of JSON files | content data |
   | `src/assets/images/*.jpg` | ~900 KB each | images — never open |
 
 - Folder notes load only when you work there: `src/data/CLAUDE.md` (chant books, ids, recordings,
@@ -97,13 +97,32 @@
   `hooks/useClassChat.ts`, `utils/voiceRecorder.ts`, `utils/classCall.ts`). Voice MP3s are Firestore Bytes
   (no Firebase Storage).
 
+## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
+
+- **Roles** (`context/AuthContext.tsx`, `firestore.rules`): owner (the founder's address) names ≤3 superadmins,
+  superadmins name admins, admins name teachers; staff roles in `admins/{email}.role`. Teachers manage only
+  their own classes (`classes.teacherIds`) and psalter groups; students' `teacherIds` give their teachers
+  access (`becomingTeacher` rule). No regent role and **no invite links** (the user removed them): members
+  are added from `directory/{uid}` (name + photo only). Rules test: `tests/firestore-rules.test.mjs` (emulator).
+- **Psalter group** (`utils/psalter.ts` + `tests/psalter.test.ts`, `hooks/usePsalter.ts`, `pages/PsalterPage.tsx`,
+  `components/psalter/`): cycles of 1–2 days restart on the 1st and 15th (Georgian time, UTC+4); kathismas
+  move +1 on the 1st and 15th; skipped kathismas show only in history. Names at every დიდებაი.
+- **Teacher panel** (`pages/TeacherPage.tsx`, `components/teacher/`), **admin panel** (`pages/AdminPanelPage.tsx`,
+  `components/admin/`): recordings can be bound from the panel (`settings/recordings`, `data/runtimeRecordings.ts`,
+  on top of `VARIANT_MEDIA`); sections open/მალე/hidden (`settings/sections`); JSON export.
+- **Access** (`hooks/useAccess.ts`): guests see chant books + synth, prayers, song/მთქმელი names only (no
+  recordings anywhere); kids' mode is switched by the teacher per student (`students.kidsMode`, no PIN).
+- **Home buttons** (`utils/shortcuts.ts`, `components/home/ShortcutShelf.tsx`, `students.shortcuts`, ≤8; hidden
+  until chosen; class `defaultShortcuts`). Class mode filters the chant lists to the class program.
+- **Reminders Worker** (`worker/reminders/`, D1 + text pushes + group/assignment reminders): code is ready; the
+  user must do the one-time setup from `docs/შეხსენებების-სერვერი.md` on their PC (D1, `FIREBASE_SA`, deploy).
+- Dev check with made-up data: `VITE_EMULATORS=1 npm run dev` + Firebase emulators (auth 9099, firestore 8085).
+
 ## Roadmap (ideas not built yet — confirm open questions with the user first)
 
 Full plan (Georgian doc): https://claude.ai/code/artifact/f10aa016-d92d-4522-8968-2e6acba2d6ab
 
-1. Cleanup / security, teacher role scoped to own classes, invites.
-2. **Psalter group**: each member gets a kathisma (1–20), shifts +1 on the 1st of the month; mark read, „აღება“.
-3. Home shortcuts / pin button, kids or class restrict mode.
+1–3. Built (see above).
 4. Pearls/chests game: listen → sing (mic pitch check) → teacher approves. First chest = vol. IX №58–77.
 5. **My voice**: the user wants AI to learn their voice. Plan discussed 2026-10-06: speech via ElevenLabs
    voice cloning (supports Georgian); singing via RVC voice conversion (Applio on Google Colab — the user's

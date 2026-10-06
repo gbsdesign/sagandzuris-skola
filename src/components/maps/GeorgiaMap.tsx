@@ -13,6 +13,7 @@ import { GEORGIA_MAP_SHAPES, GEORGIA_MAP_SIZE } from '../../data/georgiaMapShape
 import { ChantPlayer } from '../../pages/ChantDetailPage';
 import { useAuth } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
+import { askSignIn } from '../access/SignInPrompt';
 
 interface GeorgiaMapProps {
   selectedChantVariants?: Record<string, any>;
@@ -221,8 +222,14 @@ interface SongItemProps {
   onToggleSelect?: () => void;
 }
 
-const SongItem: React.FC<SongItemProps> = ({ song, region, isOpen, onToggleOpen, isSelected, onToggleSelect }) => {
+const SongItem: React.FC<SongItemProps> = ({ song, region, isOpen: open, onToggleOpen: toggle, isSelected, onToggleSelect: select }) => {
   const hasAudio = song.versions.length > 0;
+  // guests see the song's name and place only: no recordings, performers or authors; opening asks to sign in
+  const { user } = useAuth();
+  const guest = !user;
+  const isOpen = open && !guest;
+  const onToggleOpen = guest ? () => askSignIn(`სიმღერა „${song.title}“`) : toggle;
+  const onToggleSelect = guest ? undefined : select;
 
   return (
     <div
@@ -251,7 +258,7 @@ const SongItem: React.FC<SongItemProps> = ({ song, region, isOpen, onToggleOpen,
               <MapPin className="w-3 h-3 shrink-0 text-amber-700/70" />
               {[region.nameGe, song.municipality, song.area].filter(Boolean).join(' · ')}
             </span>
-            <span className="flex flex-wrap items-center gap-x-1.5 text-[11px] sm:text-xs font-medium text-slate-400">
+            {!guest && <span className="flex flex-wrap items-center gap-x-1.5 text-[11px] sm:text-xs font-medium text-slate-400">
               {song.ownerOnly && (
                 <span className="inline-flex items-center gap-1 text-purple-700">
                   <Lock className="w-3 h-3" /> მხოლოდ თქვენ ხედავთ ·
@@ -270,7 +277,7 @@ const SongItem: React.FC<SongItemProps> = ({ song, region, isOpen, onToggleOpen,
               ) : (
                 <span>ჩანაწერი ჯერ არ არის</span>
               )}
-            </span>
+            </span>}
           </span>
         </button>
 
@@ -292,9 +299,9 @@ const SongItem: React.FC<SongItemProps> = ({ song, region, isOpen, onToggleOpen,
           className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all cursor-pointer ${
             isOpen ? 'rotate-180 bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-400 hover:text-slate-600'
           }`}
-          aria-label={isOpen ? 'დახურვა' : 'გახსნა'}
+          aria-label={guest ? 'შესვლა საჭიროა' : isOpen ? 'დახურვა' : 'გახსნა'}
         >
-          <ChevronDown className="w-4 h-4" />
+          {guest ? <Lock className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
         </button>
       </div>
 

@@ -1,6 +1,7 @@
 export interface StudentProfile {
   firstName: string;
   lastName: string;
+  churchName?: string; // the name for the commemoration lists (psalter group); empty = the first name
   birthDate: {
     year: number;
     month: number;

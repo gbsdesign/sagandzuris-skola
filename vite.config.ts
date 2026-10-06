@@ -18,7 +18,7 @@ export default defineConfig(() => {
           importScripts: ['prayer-notify-sw.js'],
           // a shared notes link (/?c=…&v=…) opens the app even without internet
           navigateFallback: '/index.html',
-          navigateFallbackDenylist: [/^\/notes\//, /^\/hymn\//, /^\/audio\//, /^\/lives\//],
+          navigateFallbackDenylist: [/^\/notes\//, /^\/hymn\//, /^\/audio\//, /^\/lives\//, /^\/mtkmeli\//],
           // chant notes and hymnography drawings: kept as they are opened, and by "ჩამოწერა"
           // (src/utils/offlineNotes.ts fills the same cache), so they open in church without internet
           runtimeCaching: [
@@ -26,6 +26,12 @@ export default defineConfig(() => {
               urlPattern: ({ url }) => url.origin === self.location.origin && /^\/(notes|hymn)\//.test(url.pathname),
               handler: 'StaleWhileRevalidate',
               options: { cacheName: 'sagandzuri-notes-v1', expiration: { maxEntries: 6000 } },
+            },
+            {
+              // მთქმელი full texts: kept once read
+              urlPattern: ({ url }) => url.origin === self.location.origin && url.pathname.startsWith('/mtkmeli/'),
+              handler: 'StaleWhileRevalidate',
+              options: { cacheName: 'sagandzuri-mtkmeli-v1', expiration: { maxEntries: 400 } },
             },
             {
               // the saints' lives and their icons (library, calendar): kept once read
