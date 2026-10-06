@@ -9,6 +9,7 @@ import {
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase';
 import { triggerHaptic } from '../utils/haptics';
+import { registerTeacher } from '../hooks/useDirectChat';
 
 export const SUPER_ADMIN_EMAIL = 'mr.gabunia@gmail.com';
 
@@ -85,10 +86,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             { merge: true }
           );
         } catch (_) {}
+        // listed as a teacher students can write to privately
+        registerTeacher(currentUser).catch(e => console.warn('teacher sync: ', e));
       } else if (email) {
         try {
           const adminSnap = await getDoc(doc(db, 'admins', email));
           setIsAdmin(adminSnap.exists());
+          if (adminSnap.exists()) registerTeacher(currentUser).catch(e => console.warn('teacher sync: ', e));
         } catch (_) {
           setIsAdmin(false);
         }
