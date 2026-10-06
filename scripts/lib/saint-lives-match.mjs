@@ -91,11 +91,17 @@ const isPlace = (w) => (/ელ$/.test(w) && !EL_NAMES.has(w) && !EL_DOERS.test(
 // the place itself: ანტიოქიელ / ანტიოქიის → ანტიოქი, სერბეთის / სერბელ → სერბ, ასურელ / სირიელ → სირი
 const placeRoot = (w) => w.replace(/(ეთის|ეთშ|იდან|ელ|ის|შ|ს)$/, '').replace(/^ასურ/, 'სირი');
 // two spellings of one place: ტრაპეზუნტელ / ტრაპიზონელ, ლიმნელ / ლემნოსელ, დურაჰის / დირექიელ
+// letters added, dropped, changed or swapped (ირაიდა / ირიადა) — each counts one
 const distance = (a, b) => {
+  let prev2 = [];
   let prev = Array.from({ length: b.length + 1 }, (_, j) => j);
   for (let i = 1; i <= a.length; i++) {
     const row = [i];
-    for (let j = 1; j <= b.length; j++) row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    for (let j = 1; j <= b.length; j++) {
+      row[j] = Math.min(prev[j] + 1, row[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+      if (i > 1 && j > 1 && a[i - 1] === b[j - 2] && a[i - 2] === b[j - 1]) row[j] = Math.min(row[j], prev2[j - 2] + 1);
+    }
+    prev2 = prev;
     prev = row;
   }
   return prev[b.length];
@@ -331,4 +337,3 @@ export function linkCalendarYear(cal, allLives) {
   return { total, linked };
 }
 
-export const _test = { nameWords, stem, same, near, mismatch, datedOut, oldStyle, pad, kindsOf };

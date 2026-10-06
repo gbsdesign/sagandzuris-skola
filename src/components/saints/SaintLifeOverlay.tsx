@@ -96,7 +96,8 @@ const Body: React.FC<{ life: Life }> = ({ life }) => {
         if (b.a === 'c') return <p key={i} className="mt-4 text-center"><Runs runs={b.r} /></p>;
         // the life opens with a cinnabar initial, as the library's book does
         const [head] = b.r;
-        const initial = i === firstText && head && !head[1] && !head[2] ? head[0].charAt(0) : '';
+        // (a letter only: "1166 წელს…" keeps its year whole)
+        const initial = i === firstText && head && !head[1] && !head[2] && /^[ა-ჰ]/.test(head[0]) ? head[0].charAt(0) : '';
         return (
           <p key={i} className={i === firstText ? '' : 'mt-3.5'}>
             {initial && (
