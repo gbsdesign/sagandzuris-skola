@@ -18,6 +18,28 @@
 - **Never auto-scroll** a player to the playing line. No octave-leap checks in note audits.
 - Never put the user's email in request headers/URLs (e.g. API User-Agent).
 
+## Saving tokens (the user pays for every session)
+
+- **Never read these files whole** — search them (Grep) or read a small line range:
+
+  | File | Size | What |
+  |---|---|---|
+  | `src/data/calendar/2026.json` | 889 KB | church calendar, one line per day |
+  | `src/data/ancestorsBioTexts.ts` | 370 KB | ancestors' biographies |
+  | `src/data/mtkmeliData.ts` | 298 KB | authors' full texts |
+  | `src/data/library/saintLives.json` | 292 KB | saint lives index |
+  | `src/data/library/dzveliAgtqma.json` | 126 KB | Sacred History book |
+  | `src/data/chantMediaRegistry.ts` | 65 KB | recordings; the binding map `VARIANT_MEDIA` is near line 1320 |
+  | `public/notes/**`, `public/lives/**`, `public/prayers/**`, `public/bible/**` | thousands of JSON files | content data |
+  | `src/assets/images/*.jpg` | ~900 KB each | images — never open |
+
+- Folder notes load only when you work there: `src/data/CLAUDE.md` (chant books, ids, recordings,
+  calendar), `src/pages/notes/CLAUDE.md` (notes page, church mode, liturgy program).
+- Repeated jobs have skills — use them instead of re-deriving the steps: `/add-recording`, `/publish`,
+  `/phone-check`, `/update-calendar` (in `.claude/skills/`).
+- The user's task template is `docs/დავალების-შაბლონი.md`. If a request is unclear, ask one short
+  question instead of exploring the whole codebase.
+
 ## Cloud sessions
 
 - A cloud session sees only what is pushed to GitHub. Local-only things are NOT available there: the user's
@@ -38,37 +60,19 @@
 - Fixed/full-screen UI must respect `env(safe-area-inset-*)` (`viewport-fit=cover` is on); helpers
   `.safe-x`, `.safe-top`, `.safe-bottom`, `.safe-bleed` in `index.css`.
 
-## Audio (recordings)
+## Audio and sheet music (details in `src/data/CLAUDE.md`)
 
-- Recordings stay in the user's Google Drive. Drive has no CORS, so every audio link goes through the Worker
-  `https://sagandzuri-audio.mr-gabunia.workers.dev/<driveFileId>` (code `worker/drive-audio-proxy.js`).
-  It allows only localhost:5173 and the pages.dev origin, and serves only `audio/*`.
-- Binding: `getChantMedia(chantId, variantCode)` uses only the explicit `VARIANT_MEDIA` map in
-  `chantMediaRegistry.ts` ("chant-N|variantCode" → registry key). No title guessing, no fallback tracks.
-  Unbound variants show "ჩანაწერი ჯერ არ არის".
-- New recording workflow: the user shares a Drive folder (1/2/3/სამივე mp3) and says which variant; bind the
-  file ids in `chantMediaRegistry.ts`. Do NOT bind Drive `ნოტები` sheets — the app uses book notes only.
-- Known issue: song `fs-e12` version „ქ.კ. (ვიდეოდან)“ points to an mp4 → Worker returns 502.
-
-## Book sheet music + synthesizer
-
-- Notes read from the chant books by OMR, stored as `public/notes/<book>/NNN.json` + `NNN-K.webp`:
-  `book` (vol. I, Gelati), `feast` (II), `kk` (III Kartli-Kakheti), `triod` (IV), `v5` (V liturgy),
-  `karb` (VII Karbelaant), `pat` (Patarava), `v9` (IX, scan).
-- Data files placing them: `gelatiBookChants.ts`, `tsirvaChants.ts`, `feastBookChants.ts`,
-  `triodionBookChants.ts`, `karbelaantBookChants.ts`, `pataravaBookChants.ts`, index files `*Index.ts`.
-- The OMR scripts are not in the repo. `public/notes/kk/139.json` has a hand fix (B♮ held across a line break) —
-  a re-export would undo it.
-- Many placements of versions are my guesses the user hasn't reviewed — don't present them as confirmed.
+- Recordings stay in the user's Google Drive and play through the Worker
+  `https://sagandzuri-audio.mr-gabunia.workers.dev/<driveFileId>` (Drive sends no CORS headers).
+  Binding is only the explicit `VARIANT_MEDIA` map — use `/add-recording`.
+- Book notes (`public/notes/<book>/`) come from the chant-book PDFs by OMR; the OMR scripts are not in the repo.
+  Many version placements are unreviewed guesses — don't present them as confirmed.
 
 ## Main features (all published on main as of 2026-10-06, commit a2b345d)
 
-- **Notes page** (`pages/notes/NotesPage.tsx`, `ProgramPage.tsx`, `context/NotesContext.tsx`): tapping a chant
-  version opens a full notes page. Church mode (nothing can sound, only starting notes, screen on), paper
-  colours (დღე/სანთელი/ღამე/ავტომატური), resume, next chant, offline save (`utils/offlineNotes.ts`),
-  „დღევანდელი წირვა“ program by the regent (= admin) sent to a class (`hooks/useLiturgy.ts`).
-  Hymnography ornaments: `data/hymnOrnaments.ts` + `public/hymn/`.
-  The choir reads these notes live during the Liturgy: nothing may sound by accident, must work offline.
+- **Notes page** (details in `src/pages/notes/CLAUDE.md`): tapping a chant version opens a full notes page
+  with synth, recording, church mode and the regent's „დღევანდელი წირვა“ program. The choir reads these
+  notes live during the Liturgy: nothing may sound by accident, must work offline.
 - **Folk songs map** (`data/songsData.ts`, `components/maps/GeorgiaMap.tsx`) and **მთქმელი authors map**
   (`data/mtkmeliData.ts`, `MtkmeliMap.tsx`, shared `RegionPuzzleMap.tsx`). Full texts only for authors who
   died before 1956; others get title + description + wiki link.
