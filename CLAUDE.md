@@ -118,6 +118,17 @@
   user must do the one-time setup from `docs/შეხსენებების-სერვერი.md` on their PC (D1, `FIREBASE_SA`, deploy).
 - Dev check with made-up data: `VITE_EMULATORS=1 npm run dev` + Firebase emulators (auth 9099, firestore 8085).
 
+## Plan part 2 (tab „მე-2 ნაწილის სამუშაო გეგმა“ in the plan doc below; six stages, one PR each)
+
+- **Stage 1 built 2026-10-06** (branch `claude/trusting-ptolemy-e66s0f`): sign-in by an e-mail link
+  (`utils/emailLink.ts`, `components/access/SignInChoices.tsx`, `EmailLinkFinish.tsx`; header „შესვლა“ opens
+  the sheet via `openSignIn()`). Needs "Email link (passwordless sign-in)" on in the Firebase console.
+  „პირველი გაცნობა“ (`components/onboarding/FirstMeeting.tsx`): Georgian name, voices, goal → profile,
+  directory, `students.firstMeeting`, and home buttons when none were chosen. `AuthContext` no longer writes
+  empty name/photo on sign-in.
+- Emulator check: firebase-tools in the scratchpad; the auth emulator keeps the letters at
+  `/emulator/v1/projects/<id>/oobCodes`; the app's Firestore database id is `ai-studio-…`, not `(default)`.
+
 ## Roadmap (ideas not built yet — confirm open questions with the user first)
 
 Full plan (Georgian doc): https://claude.ai/code/artifact/f10aa016-d92d-4522-8968-2e6acba2d6ab

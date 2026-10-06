@@ -215,7 +215,7 @@ export const StudentProfileCard: React.FC = () => {
           email: user.email || '',
           displayName: user.displayName || `${profile.firstName} ${profile.lastName}`.trim(),
           photoURL: user.photoURL || '',
-          authProvider: 'Google',
+          authProvider: user.providerData.some(pd => pd.providerId === 'google.com') ? 'Google' : 'email',
           profile,
           updatedAt: new Date().toISOString()
         }, { merge: true });

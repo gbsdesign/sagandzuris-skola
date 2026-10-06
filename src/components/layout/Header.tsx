@@ -7,7 +7,7 @@ import { MONTHS_SHORT_GE, nextLessonLabel, useSelectedCount, openPathPanel } fro
 import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
 import { ClassLogo } from '../classes/ClassLogo';
 import { useAccess } from '../../hooks/useAccess';
-import { askSignIn } from '../access/SignInPrompt';
+import { askSignIn, openSignIn } from '../access/SignInPrompt';
 import { Bookmark, User as UserIcon, LogIn, LogOut, Compass, ShieldCheck, Library, GraduationCap, Baby } from 'lucide-react';
 
 interface HeaderProps {
@@ -23,7 +23,7 @@ const TOOLS = [
 // Phone: [logo] … [🔖 ③] [შესვლა] / tools group below. The full independent-work card lives on the path page.
 // Desktop (lg): one row — logo + name · tools in the middle · independent work + profile.
 export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
-  const { user, signingIn, signInWithGoogle, signOutUser, isAdmin, isTeacher } = useAuth();
+  const { user, signingIn, signOutUser, isAdmin, isTeacher } = useAuth();
   const { navigateTo, currentPage, openClass } = useNavigation();
   const memberOf = useMyClasses(user?.uid);
   // a teacher reaches their own classes' pages from the header too
@@ -164,7 +164,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
             </div>
           ) : (
             <button
-              onClick={signInWithGoogle}
+              onClick={openSignIn}
               disabled={signingIn}
               className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl bg-[#7a2028] hover:bg-[#5e1820] text-[#fbf6ec] text-xs min-[400px]:text-[13px] font-bold transition-all active:scale-95 cursor-pointer shrink-0"
             >

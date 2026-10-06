@@ -90,7 +90,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       const email = currentUser.email?.toLowerCase() || '';
 
-      // Automatically register/update student in Firestore so registered user list always reflects active users
+      // Automatically register/update student in Firestore so registered user list always reflects active users.
+      // Name and photo only when the account has them: one who signed in by an e-mail link has neither, and
+      // must not wipe the name given in "პირველი გაცნობა".
+      const named = {
+        ...(currentUser.displayName ? { displayName: currentUser.displayName } : {}),
+        ...(currentUser.photoURL ? { photoURL: currentUser.photoURL } : {}),
+      };
       try {
         const studentRef = doc(db, 'students', currentUser.uid);
         await setDoc(
@@ -98,8 +104,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           {
             userId: currentUser.uid,
             email: currentUser.email || '',
-            displayName: currentUser.displayName || '',
-            photoURL: currentUser.photoURL || '',
+            ...named,
             lastActiveAt: new Date().toISOString(),
           },
           { merge: true }
@@ -108,7 +113,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn('Student sync error:', e);
       }
       // name and photo for the teachers' people list
-      void writeDirectory(currentUser.uid, { name: currentUser.displayName || '', photoURL: currentUser.photoURL || '' });
+      void writeDirectory(currentUser.uid, {
+        ...(currentUser.displayName ? { name: currentUser.displayName } : {}),
+        ...(currentUser.photoURL ? { photoURL: currentUser.photoURL } : {}),
+      });
 
       // the owner's own staff document, so the admin lists show them
       if (email === SUPER_ADMIN_EMAIL.toLowerCase()) {

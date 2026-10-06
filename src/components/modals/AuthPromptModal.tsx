@@ -1,7 +1,6 @@
 import React from 'react';
-import { LogIn, X, Lock, Sparkles, CheckCircle2 } from 'lucide-react';
-import { useAuth } from '../../context';
-import { triggerHaptic } from '../../utils/haptics';
+import { X, Lock, CheckCircle2 } from 'lucide-react';
+import { SignInChoices } from '../access/SignInChoices';
 
 interface AuthPromptModalProps {
   isOpen: boolean;
@@ -14,19 +13,7 @@ export const AuthPromptModal: React.FC<AuthPromptModalProps> = ({
   onClose,
   targetFeatureName = 'ამ განყოფილებით',
 }) => {
-  const { signingIn, signInWithGoogle } = useAuth();
-
   if (!isOpen) return null;
-
-  const handleSignIn = async () => {
-    triggerHaptic(15);
-    try {
-      await signInWithGoogle();
-      onClose();
-    } catch (err) {
-      console.error('Sign in error:', err);
-    }
-  };
 
   return (
     <div
@@ -77,17 +64,9 @@ export const AuthPromptModal: React.FC<AuthPromptModalProps> = ({
           </div>
         </div>
 
-        {/* Google Sign-in CTA Button */}
+        {/* Google or a link by e-mail */}
         <div className="w-full pt-2 flex flex-col gap-2.5">
-          <button
-            type="button"
-            onClick={handleSignIn}
-            disabled={signingIn}
-            className="w-full py-3.5 px-5 rounded-2xl bg-gradient-to-r from-amber-600 via-[#a06840] to-[#85502c] hover:from-amber-700 hover:to-[#6d3c1c] text-white font-black text-sm tracking-wide shadow-lg shadow-amber-900/20 active:scale-95 transition-all flex items-center justify-center gap-3 cursor-pointer border border-amber-300/40 select-none"
-          >
-            <LogIn className="w-4 h-4" />
-            <span>{signingIn ? 'მიმდინარეობს შესვლა...' : 'Google ანგარიშით შესვლა'}</span>
-          </button>
+          <SignInChoices />
 
           <button
             type="button"
