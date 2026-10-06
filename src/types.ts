@@ -9,6 +9,7 @@ export interface StudentProfile {
   };
   region: string;
   city: string;
+  phone?: string; // "+995…" (utils/profileFields normalizePhone)
   experienceLevel: string | string[];
   voices: ('1' | '2' | '3')[];
   workSchedule: {

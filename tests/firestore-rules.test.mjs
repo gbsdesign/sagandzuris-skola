@@ -106,6 +106,15 @@ await t('student cannot write confirmations', assertFails(setDoc(doc(stu, 'confi
 await t('admin lists students', assertSucceeds(getDocs(collection(adm, 'students'))));
 await t('member cannot list students', assertFails(getDocs(collection(stu, 'students'))));
 
+// ---- e-mail link sign-in: the address counts as verified, so roles work the same as with Google
+const byLink = (uid, email) => env.authenticatedContext(uid, { email, email_verified: true, firebase: { sign_in_provider: 'password' } }).firestore();
+const tchLink = byLink('tch', 'tch@x.ge');
+const newLink = byLink('nu', 'nu@x.ge');
+await t('teacher by e-mail link reads own class', assertSucceeds(getDoc(doc(tchLink, 'classes', 'c1'))));
+await t('newcomer by e-mail link registers', assertSucceeds(setDoc(doc(newLink, 'students', 'nu'), { userId: 'nu', email: 'nu@x.ge' }, { merge: true })));
+await t('newcomer saves first meeting', assertSucceeds(setDoc(doc(newLink, 'students', 'nu'), { profile: { firstName: 'ნინო', lastName: 'ბერიძე', voices: ['2'] }, firstMeeting: { voiceUnknown: false } }, { merge: true })));
+await t('newcomer writes own directory name', assertSucceeds(setDoc(doc(newLink, 'directory', 'nu'), { uid: 'nu', firstName: 'ნინო', lastName: 'ბერიძე' }, { merge: true })));
+
 // ---- psalter groups
 await t('teacher creates group', assertSucceeds(setDoc(doc(tch, 'psalterGroups', 'g1'), { name: 'G', teacherIds: ['tch'], teachers: [], memberIds: ['stu'], members: [{ uid: 'stu', name: 'S' }], assignment: {}, cycleDays: 2 })));
 await t('member cannot create group', assertFails(setDoc(doc(stu, 'psalterGroups', 'g2'), { name: 'G', teacherIds: ['stu'], memberIds: [], members: [] })));

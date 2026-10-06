@@ -16,7 +16,7 @@ const LATE_MS = 10000;
 // opened from a shared notes link or a reminder: don't cover what was asked for
 const openedForSomethingElse = () => {
   const q = new URLSearchParams(window.location.search);
-  return ['c', 'v', 'p', 'prayer'].some(k => q.has(k));
+  return ['c', 'v', 'p', 'prayer', 'oobCode'].some(k => q.has(k)); // oobCode: back from the sign-in letter
 };
 
 const alreadySeen = (iso: string) => {

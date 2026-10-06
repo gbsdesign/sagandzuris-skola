@@ -14,6 +14,7 @@ import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { triggerHaptic } from '../../utils/haptics';
 import { isGeorgian, renameInGroups } from '../../utils/memberName';
 import { writeDirectory } from '../../utils/directory';
+import { GEORGIAN_REGIONS, normalizePhone } from '../../utils/profileFields';
 
 const STATUS_OPTIONS = [
   { id: 'დამწყები', label: '1. დამწყები' },
@@ -215,8 +216,8 @@ export const StudentProfileCard: React.FC = () => {
           email: user.email || '',
           displayName: user.displayName || `${profile.firstName} ${profile.lastName}`.trim(),
           photoURL: user.photoURL || '',
-          authProvider: 'Google',
-          profile,
+          authProvider: user.providerData.some(pd => pd.providerId === 'google.com') ? 'Google' : 'email',
+          profile: { ...profile, phone: normalizePhone(profile.phone) ?? (profile.phone || '') },
           updatedAt: new Date().toISOString()
         }, { merge: true });
         // teachers find me by this name, and my psalter groups list me by it
@@ -315,13 +316,23 @@ export const StudentProfileCard: React.FC = () => {
             <label className={label}>სახელი მოსახსენებლად <span className="font-normal text-[#8a7a6a]">— ნათლობის სახელი, თუ განსხვავდება</span></label>
             <input name="churchName" placeholder={profile.firstName || 'მაგ: ნინო'} value={profile.churchName || ''} onChange={handleChange} className={field} />
           </div>
-          <div>
+          <div className="col-span-2">
             <label className={label}>რეგიონი</label>
-            <input name="region" placeholder="მაგ: ქართლი" value={profile.region} onChange={handleChange} className={field} />
+            <select name="region" value={profile.region} onChange={handleChange} className={`${field} cursor-pointer`}>
+              <option value="" disabled>აირჩიე რეგიონი</option>
+              {/* an old free-text region stays visible until another is chosen */}
+              {[...GEORGIAN_REGIONS, ...(profile.region && !GEORGIAN_REGIONS.includes(profile.region) ? [profile.region] : [])].map(r => (
+                <option key={r} value={r}>{r}</option>
+              ))}
+            </select>
           </div>
           <div>
             <label className={label}>ქალაქი / სოფელი</label>
             <input name="city" placeholder="მაგ: თბილისი" value={profile.city} onChange={handleChange} className={field} />
+          </div>
+          <div>
+            <label className={label}>ტელეფონი</label>
+            <input name="phone" type="tel" inputMode="tel" autoComplete="tel" placeholder="599 12 34 56" value={profile.phone || ''} onChange={handleChange} className={field} />
           </div>
         </div>
 
