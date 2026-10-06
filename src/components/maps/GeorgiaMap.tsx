@@ -6,10 +6,10 @@ import {
   FolkRegion,
   FolkSong,
   songsInRegion,
+  getFolkRegion,
   songVersionMedia,
   songDocUrl,
   soundcloudEmbedUrl,
-  getFolkRegion,
 } from '../../data/songsData';
 import { RegionPuzzleMap, RegionLocator } from './RegionPuzzleMap';
 import { AddToListButton } from '../ui/AddToListButton';

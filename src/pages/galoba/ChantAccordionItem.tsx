@@ -1,7 +1,6 @@
 import React, { memo, useCallback, useEffect, useState } from 'react';
 import { BookmarkCheck, Check, ChevronDown, CircleCheck, Headphones, Plus, X } from 'lucide-react';
 import { ChantItem, ChantVariant, variantName, variantSublabel } from '../../data';
-import { getChantMedia } from '../../data/chantMediaRegistry';
 import { useNotes } from '../../context/NotesContext';
 import { canOpenNotes } from '../../data/chantLookup';
 import { isOffline, onOfflineChange } from '../../utils/offlineNotes';
@@ -38,10 +37,10 @@ const VariantChip: React.FC<{
   sublabel?: string;
   isOpen: boolean;
   isSelected: boolean;
+  hasRecording: boolean;
   onOpen: (id: string) => void;
   onToggleSelect: (chant: ChantItem, v: ChantVariant) => void;
-}> = ({ chant, variant, label, sublabel, isOpen, isSelected, onOpen, onToggleSelect }) => {
-  const hasRecording = Boolean(getChantMedia(chant.id, variant.code));
+}> = ({ chant, variant, label, sublabel, isOpen, isSelected, hasRecording, onOpen, onToggleSelect }) => {
   const hasNotes = canOpenNotes(chant, variant);
   const { openNotes, liturgy } = useNotes();
   const regent = liturgy.role === 'teacher';
@@ -75,21 +74,21 @@ const VariantChip: React.FC<{
           isOpen
             ? 'bg-[#fcf1df] text-[#2a2017] border-[#e8b866] border-dashed'
             : hasNotes
-            ? 'bg-white text-[#1e293b] border-[#cbd5e1] hover:border-[#f0a93a] hover:shadow-[0_0_0_3px_rgba(240,169,58,0.16)]'
+            ? 'bg-white text-[#2a2017] border-[#e2d3bb] shadow-[0_1px_0_rgba(133,80,44,0.06)] hover:border-[#d9a55a] hover:shadow-[0_0_0_3px_rgba(180,98,14,0.12)]'
             : 'bg-[#faf6ef] text-[#b8aa97] border-[#e4d8c4] border-dashed hover:text-[#8c7c6b]'
         }`}
         title={hasNotes ? (hasRecording ? 'ნოტები და ჩანაწერი' : 'ნოტები') : 'ნოტები ჯერ არ არის'}
       >
         {label === 'გამშვენებული' ? (
           <span className="inline-flex items-center gap-1">
-            {hasRecording && <Headphones className="w-3.5 h-3.5 shrink-0" />}
+            {hasRecording && <Headphones className="w-3.5 h-3.5 shrink-0 text-[#b4620e]" />}
             <span className="sm:hidden">გამშვ.</span>
             <span className="hidden sm:inline truncate">გამშვენებული</span>
           </span>
         ) : sublabel ? (
           <span className="flex flex-col items-center gap-px min-w-0">
             <span className="inline-flex items-center gap-1">
-              {hasRecording && <Headphones className="w-3.5 h-3.5 shrink-0" />}
+              {hasRecording && <Headphones className="w-3.5 h-3.5 shrink-0 text-[#b4620e]" />}
               {label.endsWith(' გამშვენებული') ? (
                 /* "162 გამშვენებული" does not fit a phone chip: shortened like the "გამშვ." slot above */
                 <>
@@ -100,11 +99,11 @@ const VariantChip: React.FC<{
                 <span>{label}</span>
               )}
             </span>
-            <span className="text-[9.5px] font-semibold text-[#94a3b8]">{sublabel}</span>
+            <span className="text-[9.5px] font-semibold text-[#a0907c]">{sublabel}</span>
           </span>
         ) : (
           <span className="inline-flex items-center gap-1 truncate">
-            {hasRecording && <Headphones className="w-3.5 h-3.5 shrink-0" />}
+            {hasRecording && <Headphones className="w-3.5 h-3.5 shrink-0 text-[#b4620e]" />}
             {label}
           </span>
         )}
@@ -118,7 +117,7 @@ const VariantChip: React.FC<{
         className={`absolute -top-1.5 -right-1.5 w-[18px] h-[18px] rounded-full border flex items-center justify-center transition-all cursor-pointer ${
           isSelected
             ? 'bg-emerald-600 border-emerald-700 text-white shadow-xs'
-            : 'bg-white border-[#cbd5e1] text-transparent hover:border-[#f0a93a]'
+            : 'bg-white border-[#dccbb0] text-transparent hover:border-[#d9a55a]'
         }`}
         title={isSelected ? 'მონიშვნის მოხსნა' : 'დამოუკიდებელ სამუშაოში დამატება'}
         aria-label={isSelected ? 'მონიშვნის მოხსნა' : 'დამოუკიდებელ სამუშაოში დამატება'}
@@ -135,6 +134,8 @@ interface ChantAccordionItemProps {
   onToggleExpand: () => void;
   selectedChantVariants: Record<string, any>;
   onToggleVariant: (chant: ChantItem, v: ChantVariant) => void;
+  /** "chantId|code" of every version with a recording, made once for the whole list */
+  recorded: ReadonlySet<string>;
 }
 
 export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
@@ -143,6 +144,7 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
   onToggleExpand,
   selectedChantVariants = {},
   onToggleVariant,
+  recorded,
 }) => {
   const selectedCount = chant?.variants?.filter((v) => Boolean(selectedChantVariants?.[v.id]))?.length || 0;
   // a version without notes shows a short notice instead of a page
@@ -169,7 +171,7 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
   // Sub-line: book page · number of book versions · recordings · kept offline
   const bookVersions = chant?.variants?.filter(v => v.version !== undefined) ?? [];
   const firstPage = bookVersions.find(v => v.page)?.page;
-  const recordingCount = chant?.variants?.filter(v => getChantMedia(chant.id, v.code)).length ?? 0;
+  const recordingCount = chant?.variants?.filter(v => recorded.has(`${chant.id}|${v.code}`)).length ?? 0;
   // a feast (სადღესასწაულო) or an occasion of მარხვანი / ზატიკი lists its own chants, not versions of one chant
   const isFeast = chant?.id?.startsWith('sd-');
   const isOccasion = isFeast || /^(mx|zt)-/.test(chant?.id ?? '');
@@ -187,6 +189,7 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
       sublabel={sublabel}
       isOpen={openVariantId === variant.id}
       isSelected={Boolean(selectedChantVariants?.[variant.id])}
+      hasRecording={recorded.has(`${chant.id}|${variant.code}`)}
       onOpen={handleOpenToggle}
       onToggleSelect={onToggleVariant}
     />
