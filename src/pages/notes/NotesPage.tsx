@@ -166,7 +166,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const land = orient === 'land', wide = orient === 'desk';
   const gutter = wide ? 28 : land ? 14 : 8;
   const isSaved = Boolean(selectedChantVariants?.[vid]);
-  const progIdx = liturgy.role === 'regent' ? (liturgy.program?.items.indexOf(vid) ?? -1) : -1;
+  const progIdx = liturgy.role === 'teacher' ? (liturgy.program?.items.indexOf(vid) ?? -1) : -1;
   const tapLines = panel === 'synth' && !church && Boolean(score);
   const shownPaper = paper === 'auto' ? (darkOS ? 'night' : 'day') : paper;
 
@@ -960,7 +960,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
           setPaper={p => { triggerHaptic(8); setPaper(p); store.set('sagandzuri_paper', p); }}
           church={church}
           toggleChurch={() => { triggerHaptic(10); setChurch(!church); if (church) showToast('ტაძრის რეჟიმი გამოირთო'); }}
-          regent={liturgy.role === 'regent'}
+          regent={liturgy.role === 'teacher'}
           progIdx={progIdx}
           toggleProgram={() => {
             const items = liturgy.toggle(vid);

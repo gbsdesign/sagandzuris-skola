@@ -159,7 +159,9 @@ type Mode =
 
 // The class's chat: text and voice messages between members and teachers.
 export const ClassChat: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin: isSchoolAdmin } = useAuth();
+  // this class's teachers (and the school's admins) speak as teachers here
+  const isAdmin = isSchoolAdmin || (!!user && cls.teacherIds.includes(user.uid));
   const { messages, loading, error } = useClassChat(cls.id);
   const [text, setText] = useState('');
   const [mode, setMode] = useState<Mode>({ k: 'idle' });
@@ -172,7 +174,7 @@ export const ClassChat: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
   const field = useRef<HTMLTextAreaElement>(null);
   const canRecord = voiceRecordingSupported();
 
-  const me = cls.members.find(m => m.uid === user?.uid);
+  const me = cls.members.find(m => m.uid === user?.uid) || cls.teachers.find(m => m.uid === user?.uid);
   const author: ChatAuthor | null = user
     ? { uid: user.uid, name: me?.name || user.displayName || 'მასწავლებელი', photoURL: me?.photoURL || user.photoURL || '', teacher: isAdmin }
     : null;

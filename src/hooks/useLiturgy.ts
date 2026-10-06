@@ -1,18 +1,19 @@
-// "დღევანდელი წირვა": the regent's program of the service (which version of which chant, in order).
-// The regent (an admin) edits a draft kept in their own settings, then sends it to a class (choir):
-// it is copied into the class document, which the class members can read.
+// "დღევანდელი წირვა": the teacher's program of the service (which version of which chant, in order).
+// The teacher (who leads the choir; there is no separate regent role) edits a draft kept in their own
+// settings, then sends it to one of their classes: it is copied into the class document, which the
+// class members can read. Admins may send to any class.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
-import { useAllClasses, useMyClasses, SchoolClass } from './useClasses';
+import { useManagedClasses, useMyClasses, SchoolClass } from './useClasses';
 import { findVersion, serviceOrder } from '../data/chantLookup';
 
 export interface LiturgyProgram {
   date: string;      // YYYY-MM-DD
   items: string[];   // variant ids, in singing order
   sentAt?: string;   // ISO time it was sent to the class
-  by?: string;       // the regent's name
+  by?: string;       // the teacher's name
   className?: string;
 }
 export interface LiturgyTemplate { name: string; items: string[] }
@@ -56,19 +57,19 @@ export const insertInOrder = (items: string[], id: string) => {
 };
 
 export const useLiturgy = () => {
-  const { user, isAdmin } = useAuth();
-  const role: 'regent' | 'member' | 'guest' = !user ? 'guest' : isAdmin ? 'regent' : 'member';
+  const { user, isTeacher } = useAuth();
+  const role: 'teacher' | 'member' | 'guest' = !user ? 'guest' : isTeacher ? 'teacher' : 'member';
   const uid = user?.uid;
 
-  // ---- regent: draft, chosen class, templates
+  // ---- teacher: draft, chosen class, templates
   const [draft, setDraft] = useState<LiturgyProgram>({ date: nextSunday(), items: [] });
   const [classId, setClassIdState] = useState<string | null>(null);
   const [templates, setTemplates] = useState<LiturgyTemplate[]>([]);
-  const { classes: allClasses } = useAllClasses(role === 'regent');
+  const { classes: allClasses } = useManagedClasses();
   const myClasses = useMyClasses(role === 'member' ? uid : null);
 
   useEffect(() => {
-    if (role !== 'regent' || !uid) return;
+    if (role !== 'teacher' || !uid) return;
     const off1 = onSnapshot(doc(db, 'users', uid, 'settings', 'liturgy'), snap => {
       const d = snap.data();
       if (!d) return;
@@ -89,9 +90,9 @@ export const useLiturgy = () => {
       .catch(err => console.warn('liturgy save:', err?.code || err));
   }, [uid, classId]);
 
-  const regentClass: SchoolClass | undefined = allClasses.find(c => c.id === classId) ?? allClasses[0];
+  const teacherClass: SchoolClass | undefined = allClasses.find(c => c.id === classId) ?? allClasses[0];
   useEffect(() => {
-    if (role === 'regent' && !classId && allClasses[0]) setClassIdState(allClasses[0].id);
+    if (role === 'teacher' && !classId && allClasses[0]) setClassIdState(allClasses[0].id);
   }, [role, classId, allClasses]);
 
   const setClassId = useCallback((id: string) => {
@@ -108,13 +109,13 @@ export const useLiturgy = () => {
   const setDate = useCallback((date: string) => saveDraft({ ...draft, date }), [draft, saveDraft]);
 
   const send = useCallback(async () => {
-    if (!regentClass) throw new Error('no class');
+    if (!teacherClass) throw new Error('no class');
     const sentAt = new Date().toISOString();
-    await updateDoc(doc(db, 'classes', regentClass.id), {
+    await updateDoc(doc(db, 'classes', teacherClass.id), {
       liturgy: { date: draft.date, items: draft.items, sentAt, by: user?.displayName || '' },
     });
-    return regentClass.name;
-  }, [regentClass, draft, user]);
+    return teacherClass.name;
+  }, [teacherClass, draft, user]);
 
   const saveTemplate = useCallback(async (name: string) => {
     if (!uid) return;
@@ -148,15 +149,15 @@ export const useLiturgy = () => {
     try { localStorage.setItem(CACHE_KEY, JSON.stringify(memberProgram)); } catch { /* storage blocked */ }
   }, [memberProgram]);
 
-  const regentSent = (regentClass as (SchoolClass & { liturgy?: any }) | undefined)?.liturgy;
-  const program: LiturgyProgram | null = role === 'regent'
-    ? { ...draft, sentAt: regentSent?.sentAt, className: regentClass?.name }
+  const teacherSent = (teacherClass as (SchoolClass & { liturgy?: any }) | undefined)?.liturgy;
+  const program: LiturgyProgram | null = role === 'teacher'
+    ? { ...draft, sentAt: teacherSent?.sentAt, className: teacherClass?.name }
     : role === 'member' ? (memberProgram ?? cached) : null;
 
   return {
-    role, program, classes: allClasses, classId: regentClass?.id ?? null, setClassId,
+    role, program, classes: allClasses, classId: teacherClass?.id ?? null, setClassId,
     toggle, setItems, setDate, send, templates, saveTemplate, deleteTemplate,
-    sentInSync: Boolean(regentSent && JSON.stringify(regentSent.items) === JSON.stringify(draft.items) && regentSent.date === draft.date),
+    sentInSync: Boolean(teacherSent && JSON.stringify(teacherSent.items) === JSON.stringify(draft.items) && teacherSent.date === draft.date),
   };
 };
 

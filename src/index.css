@@ -119,3 +119,12 @@
 @media (prefers-reduced-motion: reduce) {
   .samosi-drop, .samosi-pop, .samosi-cheer, .samosi-shine { animation: none; }
 }
+
+/* entrance motion for the management pages and sheets (sg-in: fade; sg-up: rise; sg-pop: grow) */
+@keyframes sg-enter { from { opacity: 0; transform: translate3d(0, var(--sg-y, 0), 0) scale(var(--sg-s, 1)); } }
+@utility sg-in { animation: sg-enter 0.2s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+@utility sg-up { --sg-y: 14px; animation: sg-enter 0.24s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+@utility sg-pop { --sg-s: 0.96; animation: sg-enter 0.2s cubic-bezier(0.2, 0.8, 0.3, 1) both; }
+@media (prefers-reduced-motion: reduce) {
+  .sg-in, .sg-up, .sg-pop { animation: none; }
+}

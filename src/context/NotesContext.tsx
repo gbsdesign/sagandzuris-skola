@@ -23,7 +23,7 @@ interface NotesContextType {
   church: boolean;
   setChurch: (on: boolean) => void;
   liturgy: LiturgyApi;
-  /** the program on screen: one opened from a shared link, otherwise the regent's draft or my class's program */
+  /** the program on screen: one opened from a shared link, otherwise the teacher's draft or my class's program */
   program: LiturgyProgram | null;
   fromLink: boolean;
 }

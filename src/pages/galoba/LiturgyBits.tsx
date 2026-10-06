@@ -8,13 +8,13 @@ import { estimateMb, offlineCount, offlineSupported, onOfflineChange, saveOfflin
 import { GrapeBunch } from '../../components/home/PlateOrnaments';
 import { triggerHaptic } from '../../utils/haptics';
 
-/** "დღევანდელი წირვა" card at the head of the chant lists: the regent's program, or the one sent to my class. */
+/** "დღევანდელი წირვა" card at the head of the chant lists: the teacher's program, or the one sent to my class. */
 export const ProgramCard: React.FC = () => {
   const { liturgy, program, openProgram } = useNotes();
   if (liturgy.role === 'guest' || (liturgy.role === 'member' && !program)) return null;
   const n = program?.items.length ?? 0;
   const meta = program
-    ? `${formatLiturgyDate(program.date)} · ${n} საგალობელი${liturgy.role === 'member' && program.sentAt ? ` · რეგენტმა გამოგზავნა ${formatTime(program.sentAt)}` : ''}`
+    ? `${formatLiturgyDate(program.date)} · ${n} საგალობელი${liturgy.role === 'member' && program.sentAt ? ` · მასწავლებელმა გამოგზავნა ${formatTime(program.sentAt)}` : ''}`
     : '';
   return (
     <button

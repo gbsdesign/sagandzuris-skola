@@ -1,82 +1,229 @@
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
-    // Reusable Helpers
+    // ---- Who is asking -------------------------------------------------------------------------
+    // Roles (src/context/AuthContext.tsx mirrors them):
+    //   owner       — the founder's address below: everything; only they name superadmins
+    //   superadmin  — admins/{email}.role == 'superadmin': everything, names admins
+    //   admin       — role 'admin' (or an old document without a role): the whole school, names teachers
+    //   teacher     — role 'teacher': only the classes and psalter groups whose teacherIds hold them
+    // Staff checks go by e-mail, so the e-mail must be verified (Google sign-in always is).
     function isSignedIn() { return request.auth != null; }
-    function isSuperAdmin() { return isSignedIn() && request.auth.token.email == 'mr.gabunia@gmail.com'; }
-    function isAdmin() { return isSuperAdmin() || (isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.token.email))); }
-    function isValidId(id) { return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$'); }
+    function uid() { return request.auth.uid; }
+    function verified() {
+      return isSignedIn() && request.auth.token.email_verified == true && request.auth.token.email is string;
+    }
+    function myEmail() { return request.auth.token.email.lower(); }
+    function isOwner() { return verified() && myEmail() == 'mr.gabunia@gmail.com'; }
+    function staffPath() { return /databases/$(database)/documents/admins/$(myEmail()); }
+    function staffRole() {
+      return (verified() && exists(staffPath())) ? get(staffPath()).data.get('role', 'admin') : '';
+    }
+    function isSuperAdmin() { return isOwner() || staffRole() == 'superadmin'; }
+    function isAdmin() { return isSuperAdmin() || staffRole() == 'admin'; }
+    function isTeacher() { return isAdmin() || staffRole() == 'teacher'; }
+
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
-    
-    // Default Deny
+    function changed() { return incoming().diff(existing()).affectedKeys(); }
+
+    // an invite code (invites/{code}) for this very class or group
+    function validInvite(code, kind, target) {
+      let inv = get(/databases/$(database)/documents/invites/$(code)).data;
+      return inv.kind == kind && inv.targetId == target && inv.get('active', true) == true;
+    }
+
+    // Default deny
     match /{document=**} {
       allow read, write: if false;
     }
 
+    // Public school settings: logo, recordings bound from the admin panel, which sections are open
     match /settings/{settingId} {
       allow read: if true;
       allow write: if isAdmin();
     }
-    
+
+    // ---- Staff -----------------------------------------------------------------------------------
+    match /admins/{email} {
+      function canGrant(role) {
+        return (role == 'superadmin' && isOwner())
+          || (role == 'admin' && isSuperAdmin())
+          || (role == 'teacher' && isAdmin());
+      }
+      // the list is for admins; everyone may read their own document (to learn their role)
+      allow read: if isAdmin() || (verified() && myEmail() == email);
+      allow create: if canGrant(incoming().get('role', '')) && incoming().email == email;
+      allow update: if canGrant(incoming().get('role', '')) && canGrant(existing().get('role', 'admin'));
+      allow delete: if canGrant(existing().get('role', 'admin')) && email != 'mr.gabunia@gmail.com';
+    }
+
+    // ---- Students --------------------------------------------------------------------------------
     match /students/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      
+      function isSelf() { return isSignedIn() && uid() == userId; }
+      // a teacher of one of this student's classes (classes copy their teachers into teacherIds)
+      function teachesMe() { return isTeacher() && uid() in resource.data.get('teacherIds', []); }
+
+      allow read: if isSelf() || isAdmin() || teachesMe();
+      allow create: if isSelf() || isAdmin();
+      // teachers may only arrange the student's path ("საგანძურის გზა")
+      allow update: if isSelf() || isAdmin()
+        || (teachesMe() && changed().hasOnly(['selectedChantVariants', 'teacherIds', 'updatedAt']));
+      allow delete: if isAdmin();
+
       match /{allSubcollections=**} {
-        allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+        allow read, write: if (isSignedIn() && uid() == userId) || isAdmin();
       }
     }
-    
+
+    // A person's own settings (e.g. the "დღევანდელი წირვა" draft and templates)
     match /users/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      
+      allow read, write: if (isSignedIn() && uid() == userId) || isAdmin();
+
       match /{allSubcollections=**} {
-        allow read, write: if isSignedIn() && (request.auth.uid == userId || isAdmin());
+        allow read, write: if (isSignedIn() && uid() == userId) || isAdmin();
       }
     }
-    
-    match /admins/{adminId} {
-      allow read: if isSignedIn();
-      allow write: if isAdmin();
+
+    // Teacher's confirmations ("ჩათვლა") of a student's voices: the student reads, their teachers write
+    match /confirmations/{userId} {
+      function teachesStudent() {
+        return isTeacher()
+          && uid() in get(/databases/$(database)/documents/students/$(userId)).data.get('teacherIds', []);
+      }
+      allow read: if (isSignedIn() && uid() == userId) || isAdmin() || teachesStudent();
+      allow write: if isAdmin() || teachesStudent();
     }
 
-    // Classes: admins manage them; members can read the classes they belong to
+    // ---- Invites: a code in a link or QR lets a signed-in person join one class or psalter group ----
+    match /invites/{code} {
+      function leads(kind, target) {
+        return isAdmin() || (isTeacher() && (
+          (kind == 'class' && uid() in get(/databases/$(database)/documents/classes/$(target)).data.get('teacherIds', []))
+          || (kind == 'psalter' && uid() in get(/databases/$(database)/documents/psalterGroups/$(target)).data.get('teacherIds', []))
+        ));
+      }
+      allow get: if isSignedIn();
+      allow list: if false;
+      allow create: if incoming().kind in ['class', 'psalter'] && incoming().createdBy == uid()
+        && leads(incoming().kind, incoming().targetId);
+      allow update, delete: if leads(existing().kind, existing().targetId);
+    }
+
+    // ---- Classes -----------------------------------------------------------------------------------
     match /classes/{classId} {
-      allow read: if isAdmin() || (isSignedIn() && request.auth.uid in resource.data.memberIds);
-      allow write: if isAdmin();
-
-      // Class chat: members and admins read and post as themselves; the author or an admin deletes; nothing is edited
+      function cls() { return get(/databases/$(database)/documents/classes/$(classId)).data; }
+      function teachesClass() { return isTeacher() && uid() in cls().get('teacherIds', []); }
       function inClass() {
-        return isAdmin() || (isSignedIn() && request.auth.uid in get(/databases/$(database)/documents/classes/$(classId)).data.memberIds);
+        return isAdmin() || (isSignedIn() && (uid() in cls().memberIds || uid() in cls().get('teacherIds', [])));
+      }
+      // joining with an invite: only oneself is added
+      function joining() {
+        return isSignedIn()
+          && changed().hasOnly(['memberIds', 'members', 'joinCode', 'updatedAt'])
+          && !(uid() in existing().memberIds)
+          && uid() in incoming().memberIds
+          && incoming().memberIds.hasAll(existing().memberIds)
+          && incoming().memberIds.size() == existing().memberIds.size() + 1
+          && incoming().members.size() == existing().members.size() + 1
+          && validInvite(incoming().joinCode, 'class', classId);
+      }
+      // leaving: only oneself is taken out
+      function leaving() {
+        return isSignedIn()
+          && changed().hasOnly(['memberIds', 'members', 'updatedAt'])
+          && uid() in existing().memberIds
+          && incoming().memberIds == existing().memberIds.removeAll([uid()])
+          && incoming().members.size() == existing().members.size() - 1;
       }
 
+      allow read: if isAdmin()
+        || (isSignedIn() && (uid() in resource.data.memberIds || uid() in resource.data.teacherIds));
+      allow create, delete: if isAdmin();
+      // a class's teacher runs it, but only admins choose its teachers
+      allow update: if isAdmin()
+        || (isTeacher() && uid() in existing().get('teacherIds', []) && !changed().hasAny(['teacherIds', 'teachers']))
+        || joining() || leaving();
+
+      // Class chat: members and teachers read and post as themselves; the author or a teacher deletes
       match /messages/{messageId} {
         allow read: if inClass();
         allow create: if inClass()
-          && incoming().uid == request.auth.uid
-          && (incoming().teacher == false || isAdmin())
+          && incoming().uid == uid()
+          && (incoming().teacher == false || teachesClass() || isAdmin())
           && incoming().createdAt == request.time
           && incoming().kind in ['text', 'voice']
           && incoming().text is string && incoming().text.size() <= 2000;
-        allow delete: if isAdmin() || (isSignedIn() && existing().uid == request.auth.uid);
+        allow delete: if isAdmin() || teachesClass() || (isSignedIn() && existing().uid == uid());
       }
 
       // A voice message's MP3, in parts below Firestore's 1 MiB document limit
       match /voice/{partId} {
         allow read: if inClass();
         allow create: if inClass()
-          && incoming().uid == request.auth.uid
+          && incoming().uid == uid()
           && incoming().data is bytes && incoming().data.size() <= 750000;
-        allow delete: if isAdmin() || (isSignedIn() && existing().uid == request.auth.uid);
+        allow delete: if isAdmin() || teachesClass() || (isSignedIn() && existing().uid == uid());
+      }
+
+      // Teacher's assignments (chant + voice + due date) and lesson attendance
+      match /assignments/{assignmentId} {
+        allow read: if inClass();
+        allow write: if isAdmin() || teachesClass();
+      }
+      match /attendance/{day} {
+        allow read: if inClass();
+        allow write: if isAdmin() || teachesClass();
       }
     }
 
-    // Teacher's confirmations ("ჩათვლა") of a student's voices: the student reads, only admins write
-    match /confirmations/{userId} {
-      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin());
-      allow write: if isAdmin();
+    // ---- Psalter groups ("ფსალმუნთა ჯგუფი") ---------------------------------------------------------
+    match /psalterGroups/{groupId} {
+      function grp() { return get(/databases/$(database)/documents/psalterGroups/$(groupId)).data; }
+      function leadsGroup() { return isTeacher() && uid() in grp().get('teacherIds', []); }
+      function inGroup() {
+        return isAdmin() || (isSignedIn() && (uid() in grp().memberIds || uid() in grp().get('teacherIds', [])));
+      }
+      function joiningGroup() {
+        return isSignedIn()
+          && changed().hasOnly(['memberIds', 'members', 'joinCode', 'updatedAt'])
+          && !(uid() in existing().memberIds)
+          && uid() in incoming().memberIds
+          && incoming().memberIds.hasAll(existing().memberIds)
+          && incoming().memberIds.size() == existing().memberIds.size() + 1
+          && incoming().members.size() == existing().members.size() + 1
+          && validInvite(incoming().joinCode, 'psalter', groupId);
+      }
+      // leaving frees one's kathisma (it is taken out of the distribution)
+      function leavingGroup() {
+        return isSignedIn()
+          && changed().hasOnly(['memberIds', 'members', 'assignment', 'updatedAt'])
+          && uid() in existing().memberIds
+          && incoming().memberIds == existing().memberIds.removeAll([uid()])
+          && incoming().members.size() == existing().members.size() - 1;
+      }
+      // a member renames themself (their Georgian name for the commemoration list)
+      function renamingSelf() {
+        return isSignedIn()
+          && changed().hasOnly(['members', 'updatedAt'])
+          && uid() in existing().memberIds
+          && incoming().members.size() == existing().members.size();
+      }
+
+      allow read: if isAdmin()
+        || (isSignedIn() && (uid() in resource.data.memberIds || uid() in resource.data.teacherIds));
+      allow create: if isAdmin() || (isTeacher() && uid() in incoming().teacherIds);
+      allow update: if isAdmin()
+        || (isTeacher() && uid() in existing().get('teacherIds', []) && !changed().hasAny(['teacherIds', 'teachers']))
+        || joiningGroup() || leavingGroup() || renamingSelf();
+      allow delete: if isAdmin() || (isTeacher() && uid() in existing().get('teacherIds', []));
+
+      // One cycle (1 or 2 days) of reading all twenty kathismas: who read, took or asked for help
+      match /cycles/{cycleId} {
+        allow read: if inGroup();
+        allow create, update: if inGroup() && incoming().keys().hasOnly(['slots', 'start', 'end', 'updatedAt']);
+        allow delete: if isAdmin() || leadsGroup();
+      }
     }
   }
 }

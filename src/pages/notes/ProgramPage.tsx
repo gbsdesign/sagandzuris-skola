@@ -1,4 +1,4 @@
-// "დღევანდელი წირვა": the regent's program for the service. The regent dates it, orders it (drag the dots),
+// "დღევანდელი წირვა": the teacher's program for the service. The teacher dates it, orders it (drag the dots),
 // keeps templates, shows a QR code, makes one PDF and sends it to a class; everyone can start the service
 // in church mode or keep the whole program on the phone for singing without internet.
 import React, { useEffect, useRef, useState } from 'react';
@@ -29,7 +29,7 @@ const labelOf = (id: string) => {
 export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
   const { closeProgram, openNotes, setChurch, liturgy, program, fromLink } = useNotes();
   const nav = useNavigation();
-  const regent = liturgy.role === 'regent' && !fromLink;
+  const regent = liturgy.role === 'teacher' && !fromLink;
   const items = program?.items ?? [];
   const [sheet, setSheet] = useState<'tpl' | 'qr' | null>(null);
   const [tplName, setTplName] = useState('');
@@ -172,7 +172,7 @@ export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
     ? 'გაზიარებული პროგრამა'
     : regent
       ? (liturgy.sentInSync && program?.sentAt ? `გაგზავნილია ${formatTime(program.sentAt)}` : program?.sentAt ? 'შეცვლილია, ჯერ არ გაგზავნილა' : 'ჯერ არ გაგზავნილა')
-      : program?.sentAt ? `რეგენტმა გამოგზავნა ${formatTime(program.sentAt)}` : '';
+      : program?.sentAt ? `მასწავლებელმა გამოგზავნა ${formatTime(program.sentAt)}` : '';
 
   return (
     <div className="np-root pp-root" hidden={hidden} role="dialog" aria-modal="true" aria-label="დღევანდელი წირვა">
@@ -185,7 +185,7 @@ export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
         <div className="pp-wrap">
           {!program ? (
             <p className="pp-empty">
-              {liturgy.role === 'guest' ? 'შედი საიტზე, რომ შენი გუნდის პროგრამა ნახო.' : 'რეგენტს პროგრამა ჯერ არ გამოუგზავნია.'}
+              {liturgy.role === 'guest' ? 'შედი საიტზე, რომ შენი გუნდის პროგრამა ნახო.' : 'მასწავლებელს პროგრამა ჯერ არ გამოუგზავნია.'}
             </p>
           ) : (
             <>

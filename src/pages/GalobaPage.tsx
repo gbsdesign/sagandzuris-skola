@@ -42,7 +42,7 @@ export const GalobaPage: React.FC = () => {
   } = useNavigation();
 
   const { selectedChantVariants = {}, toggleVariantSelection } = useChants();
-  const regent = useNotes().liturgy.role === 'regent';
+  const regent = useNotes().liturgy.role === 'teacher';
 
   const handleSelectService = useCallback(
     (s: ServiceType) => {
