@@ -1,12 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Lock, LogIn } from 'lucide-react';
+import { Hourglass, Lock, LogIn } from 'lucide-react';
 import { useAuth } from '../../context';
-import { Sheet } from '../ui/kit';
+import { Btn, Sheet } from '../ui/kit';
 import { SignInChoices, SignInStep } from './SignInChoices';
 
 // The sign-in sheet, mounted once in App: Google or a link by e-mail (SignInChoices).
 // askSignIn('ბიბლიოთეკა') — "საჭიროა რეგისტრაცია": guests see these sections' buttons, but opening one asks them to sign in.
 // openSignIn() — the plain "შესვლა" from the header.
+// A member who signed in but waits for a superadmin (utils/memberAccess) gets „მიმდინარეობს დამატება“ instead.
 const EVENT = 'sg-ask-sign-in';
 
 export const askSignIn = (what: string) => window.dispatchEvent(new CustomEvent(EVENT, { detail: what || 'ეს განყოფილება' }));
@@ -24,6 +25,13 @@ export const SignInPrompt: React.FC = () => {
   }, []);
   useEffect(() => { if (user) setWhat(null); }, [user]);
   if (what === null) return null;
+  if (user) {
+    return (
+      <Sheet open onClose={() => setWhat(null)} title="მიმდინარეობს დამატება" footer={<Btn size="lg" full onClick={() => setWhat(null)}>კარგი</Btn>}>
+        <WaitingText />
+      </Sheet>
+    );
+  }
   const locked = what !== '';
   return (
     <Sheet open onClose={() => setWhat(null)} title={locked ? 'საჭიროა რეგისტრაცია' : 'შესვლა'}>
@@ -45,8 +53,24 @@ export const SignInPrompt: React.FC = () => {
   );
 };
 
+/** „მიმდინარეობს დამატება“: what a member waiting for a superadmin reads. */
+export const WaitingText: React.FC = () => (
+  <div className="text-center py-1">
+    <div className="mx-auto w-16 h-16 rounded-3xl bg-[#b7791f]/[0.1] text-[#9a6212] flex items-center justify-center">
+      <Hourglass className="w-8 h-8" />
+    </div>
+    <p className="mt-4 font-serif-ge text-lg font-bold text-[#4a3426]">თქვენი დამატება მიმდინარეობს</p>
+    <p className="mt-1.5 text-[15px] text-[#75685a] leading-relaxed max-w-sm mx-auto">
+      სკოლის ადმინისტრაცია განიხილავს თქვენს რეგისტრაციას. დადასტურებისთანავე ყველაფერი თავისით გაიხსნება — ხელახლა
+      შესვლა არ დაგჭირდებათ. მანამდე შეგიძლიათ ისარგებლოთ ღია ნაწილებით.
+    </p>
+  </div>
+);
+
 /** In place of a page a guest may not open (e.g. after a reload). */
-export const LockedPage: React.FC<{ what: string }> = ({ what }) => (
+export const LockedPage: React.FC<{ what: string }> = ({ what }) => useAuth().user ? (
+  <div className="w-full max-w-sm mx-auto py-16 px-4"><WaitingText /></div>
+) : (
   <div className="w-full max-w-sm mx-auto py-16 px-4 text-center space-y-4">
     <div className="mx-auto w-16 h-16 rounded-3xl bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center"><Lock className="w-8 h-8" /></div>
     <p className="font-serif-ge text-xl font-bold text-[#4a3426]">„{what}“ — მხოლოდ წევრებისთვის</p>

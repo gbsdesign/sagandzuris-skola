@@ -172,12 +172,14 @@ export interface ChatPanelProps {
   onSent?: (kind: 'text' | 'voice', text: string) => void;
   /** height of the message list */
   listClassName?: string;
+  /** someone else's chat, shown to the superadmin: messages only, no writing */
+  readOnly?: boolean;
 }
 
 // A chat: text and voice messages (a class's chat, or a teacher's private chat with a student).
 export const ChatPanel: React.FC<ChatPanelProps> = ({
   base, author, messages, loading, error, header, isCall, callTitle, onJoinCall, canDelete,
-  showNames = false, seenAt = null, onSent, listClassName = 'h-[56vh] min-h-[300px] max-h-[560px]',
+  showNames = false, seenAt = null, onSent, listClassName = 'h-[56vh] min-h-[300px] max-h-[560px]', readOnly = false,
 }) => {
   const [text, setText] = useState('');
   const [mode, setMode] = useState<Mode>({ k: 'idle' });
@@ -342,7 +344,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             const mine = m.uid === author.uid;
             const newDay = !!m.at && (!prev?.at || prev.at.toDateString() !== m.at.toDateString());
             const first = newDay || prev?.uid !== m.uid;
-            const canDel = canDelete(m);
+            const canDel = !readOnly && canDelete(m);
             return (
               <React.Fragment key={m.id}>
                 {newDay && (
@@ -420,6 +422,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
       {err && <p className="px-5 pt-3 text-sm text-[#a02c2c]">{err}</p>}
 
+      {readOnly ? (
+        <p className="px-5 py-4 text-center text-sm text-[#8a7a6a]">მხოლოდ სანახავად — ამ ჩათში წერა არ შეგიძლიათ.</p>
+      ) : (
       <div className="p-3 sm:px-4 flex items-end gap-2">
         {mode.k === 'idle' && (
           <>
@@ -481,6 +486,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </>
         )}
       </div>
+      )}
       {mode.k === 'recording' && (
         <p className="px-5 -mt-1 pb-3 text-xs text-[#a89886]">მაქსიმუმ {VOICE_MAX_SECONDS / 60} წუთი. ■ — დასრულება, მერე მოისმენთ და გაგზავნით.</p>
       )}

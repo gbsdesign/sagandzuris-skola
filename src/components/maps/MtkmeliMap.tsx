@@ -5,8 +5,9 @@ import { MtkmeliAuthor, LiteraryWork, WorkKind, authorsInRegion } from '../../da
 import { RegionPuzzleMap, RegionLocator } from './RegionPuzzleMap';
 import { AddToListButton } from '../ui/AddToListButton';
 import { triggerHaptic } from '../../utils/haptics';
-import { useAuth, useNavigation } from '../../context';
+import { useNavigation } from '../../context';
 import { askSignIn } from '../access/SignInPrompt';
+import { useAccess } from '../../hooks/useAccess';
 
 interface MtkmeliMapProps {
   selectedChantVariants?: Record<string, any>;
@@ -84,7 +85,8 @@ interface AuthorItemProps {
 const AuthorItem: React.FC<AuthorItemProps> = ({ author, region, selectedChantVariants, onTogglePoem }) => {
   const [isOpen, setIsOpen] = useState(false);
   // guests see the authors' names only; opening one asks to sign in
-  const { user } = useAuth();
+  // (a member a superadmin has not let in yet counts as a guest)
+  const { member } = useAccess();
   const [openWorkId, setOpenWorkId] = useState<string | null>(null);
   const selectedCount = author.works.filter(w => selectedChantVariants[w.id]).length;
 
@@ -98,7 +100,7 @@ const AuthorItem: React.FC<AuthorItemProps> = ({ author, region, selectedChantVa
     >
       <button
         type="button"
-        onClick={() => { triggerHaptic(10); if (!user) askSignIn(`მთქმელი — ${author.name}`); else setIsOpen(o => !o); }}
+        onClick={() => { triggerHaptic(10); if (!member) askSignIn(`მთქმელი — ${author.name}`); else setIsOpen(o => !o); }}
         className="w-full px-4 py-3 flex items-center gap-3 text-left cursor-pointer select-none group"
       >
         <span className={`w-2 h-2 shrink-0 rounded-full transition-all ${isOpen ? 'bg-amber-500 scale-125' : selectedCount ? 'bg-emerald-500' : 'bg-slate-300 group-hover:bg-amber-400'}`} />

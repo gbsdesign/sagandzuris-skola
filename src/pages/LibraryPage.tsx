@@ -4,6 +4,7 @@ import { triggerHaptic } from '../utils/haptics';
 import { BookTab } from './library/BookTab';
 import { FeastsTab } from './library/FeastsTab';
 import { LivesTab } from './library/LivesTab';
+import { SynthDownload } from './library/SynthDownload';
 import { useOpenRequest } from '../utils/searchOpen';
 
 // "ბიბლიოთეკა": readings from orthodoxy.ge — Svimon Mchedlidze's Sacred History, the church feasts and
@@ -37,6 +38,8 @@ export const LibraryPage: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl mx-auto mb-2 px-1">
+      <SynthDownload />
+
       {/* full width on a phone, a compact centred switch from sm up */}
       <div role="tablist" aria-label="ბიბლიოთეკა" className="flex sm:w-fit sm:mx-auto rounded-full bg-white/80 ring-1 ring-[#e8dcc8] p-1">
         {TABS.map(({ id, label, Icon }) => (

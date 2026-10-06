@@ -31,6 +31,8 @@ import { SignInPrompt } from './components/access/SignInPrompt';
 import { EmailLinkFinish } from './components/access/EmailLinkFinish';
 import { FirstMeeting } from './components/onboarding/FirstMeeting';
 import { useKidsMode } from './hooks/useAccess';
+import { MembershipGate, WaitingBanner } from './components/access/MembershipGate';
+import { useMembership } from './utils/memberAccess';
 
 startRecordingBindings();
 
@@ -57,8 +59,9 @@ export default function App() {
 function AppContent() {
   const { loading, user } = useAuth();
   const { currentPage, openPrayer, navigateTo } = useNavigation();
-  // live recordings are for signed-in members only (set before the tree below renders)
-  setRecordingsHidden(!user);
+  // live recordings are for members a superadmin let in with them (set before the tree below renders)
+  const membership = useMembership();
+  setRecordingsHidden(!user || !membership.can('recordings'));
   // recordings bound in the admin panel: the page redraws when they arrive
   useRecordingBindings();
   // the kids' mode a teacher turned on: no sharing or outside links anywhere (index.css)
@@ -143,6 +146,8 @@ function AppContent() {
 
       <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 md:p-8 flex flex-col justify-center">
         <div className="w-full max-w-4xl mx-auto">
+          {/* „მიმდინარეობს დამატება“ while a superadmin has not decided on a new member */}
+          <WaitingBanner />
           <ErrorBoundary>
             <Suspense fallback={<div className="py-24 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-[#7a2028]" /></div>}>
               <AppRouter logoUrl={currentLogo} />
@@ -159,12 +164,15 @@ function AppContent() {
 
       {/* once a day on entering: today's saints from the church calendar */}
       <ErrorBoundary>
-        <TodaySaintsCard />
+        {membership.can('calendar') && <TodaySaintsCard />}
       </ErrorBoundary>
 
       {/* sign-in (Google or a link by e-mail), "საჭიროა რეგისტრაცია" for guests, and the return from the e-mail link */}
       <SignInPrompt />
       <EmailLinkFinish />
+
+      {/* a new member's admission: „დამატება შეფერხებულია“ (and signing out) or the welcome */}
+      <MembershipGate />
 
       {/* "პირველი გაცნობა": name, voice and goal, once */}
       <ErrorBoundary>
@@ -178,7 +186,7 @@ function AppContent() {
 
       {/* the one search over the whole app (header button, the home field, "/" or Ctrl+K) */}
       <ErrorBoundary>
-        <GlobalSearch />
+        {membership.can('search') && <GlobalSearch />}
       </ErrorBoundary>
     </div>
   );

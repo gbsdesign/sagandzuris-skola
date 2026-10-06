@@ -4,6 +4,7 @@ import { db } from '../firebase';
 import { AKATHISTS, KATHISMAS, MORNING_EVENING, PRAYER_HOURS, PSALTER_RULE, prayerTitle } from '../data/prayers';
 import { SECTIONS, SectionId } from '../data/sections';
 import { findVersion } from '../data/chantLookup';
+import { dayKey } from './habitsWeek';
 
 // "ჩემი ღილაკები": up to eight buttons a member puts under the home vine (students/{uid}.shortcuts, the
 // same on every device). Ids:
@@ -76,6 +77,18 @@ export const SHORTCUT_GROUPS: { title: string; ids: string[] }[] = [
   { title: 'ბიბლიოთეკა', ids: ['section:biblioteka', 'special:calendar'] },
 ];
 
+/** The habit a button's "✓ წავიკითხე" also ticks; `null` → the button has nothing to mark. */
+export const habitOfShortcut = (id: string): string | null => {
+  const ref = refOf(id);
+  if (id === 'special:kathisma') return 'habit_6';
+  if (kindOf(id) !== 'prayer') return null;
+  if (MORNING_EVENING.some(p => p.id === ref)) return 'habit_1';
+  if (PRAYER_HOURS.some(h => h.id === ref)) return 'habit_13';
+  if (AKATHISTS.some(a => a.id === ref)) return 'habit_7';
+  if (KATHISMAS.some(k => k.id === ref)) return 'habit_6';
+  return null;
+};
+
 export const sectionOfShortcut = (id: string): SectionId | null => {
   if (kindOf(id) === 'section') return refOf(id) as SectionId;
   if (id === 'special:kathisma') return 'medavitneoba';
@@ -84,25 +97,40 @@ export const sectionOfShortcut = (id: string): SectionId | null => {
   return null;
 };
 
-/** My saved buttons (live): `null` while I never chose any. */
+/** Buttons marked today: students/{uid}.shortcutsDone = { day, ids } — another day's marks count as none. */
+type ShortcutsDone = { day: string; ids: string[] };
+
+/** My saved buttons (live): `null` while I never chose any; `done` = the ones I marked today. */
 export const useMyShortcuts = (uid?: string | null) => {
   const [list, setList] = useState<string[] | null>(null);
+  const [marks, setMarks] = useState<ShortcutsDone | null>(null);
   const [loaded, setLoaded] = useState(false);
   useEffect(() => {
-    if (!uid) { setList(null); setLoaded(true); return; }
+    if (!uid) { setList(null); setMarks(null); setLoaded(true); return; }
     setLoaded(false);
     return onSnapshot(
       doc(db, 'students', uid),
       snap => {
         const v = snap.data()?.shortcuts;
         setList(Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && !!shortcutLabel(x)) : null);
+        const d = snap.data()?.shortcutsDone;
+        setMarks(d && typeof d.day === 'string' && Array.isArray(d.ids) ? d : null);
         setLoaded(true);
       },
       () => setLoaded(true)
     );
   }, [uid]);
-  return { list, loaded };
+  const done = marks?.day === dayKey(new Date()) ? marks.ids : [];
+  return { list, loaded, done };
 };
 
 export const saveShortcuts = (uid: string, list: string[]) =>
   setDoc(doc(db, 'students', uid), { shortcuts: list.slice(0, MAX_SHORTCUTS) }, { mergeFields: ['shortcuts'] });
+
+/** Marks a button read for today (or takes the mark back); `done` is today's list as it is now. */
+export const markShortcutDone = (uid: string, done: string[], id: string, on: boolean) =>
+  setDoc(
+    doc(db, 'students', uid),
+    { shortcutsDone: { day: dayKey(new Date()), ids: on ? [...done.filter(x => x !== id), id] : done.filter(x => x !== id) } },
+    { mergeFields: ['shortcutsDone'] }
+  );

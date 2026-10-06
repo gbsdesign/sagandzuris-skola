@@ -13,6 +13,7 @@ import { RecordingsTab } from '../components/admin/RecordingsTab';
 import { SectionsTab } from '../components/admin/SectionsTab';
 import { StatsTab } from '../components/admin/StatsTab';
 import { SchoolTab } from '../components/admin/SchoolTab';
+import { AccessRequests, AccessRecord, DecisionRecord, toAccess } from '../components/admin/AccessRequests';
 
 type Tab = 'users' | 'classes' | 'recordings' | 'sections' | 'stats' | 'school';
 const TAB_KEY = 'sg-admin-tab';
@@ -47,6 +48,22 @@ export const AdminPanelPage: React.FC<{ logoUrl: string }> = ({ logoUrl }) => {
     return () => { off1(); off2(); };
   }, [isAdmin]);
 
+  // new members' requests and who decided them: superadmins only
+  const [access, setAccess] = useState<Record<string, AccessRecord>>({});
+  const [decisions, setDecisions] = useState<Record<string, DecisionRecord>>({});
+  useEffect(() => {
+    if (!isSuperAdmin) return;
+    const off1 = onSnapshot(collection(db, 'memberAccess'),
+      s => setAccess(Object.fromEntries(s.docs.map(d => [d.id, toAccess(d.data())]))),
+      () => setAccess({}));
+    const off2 = onSnapshot(collection(db, 'accessDecisions'),
+      s => setDecisions(Object.fromEntries(s.docs.map(d => [d.id, d.data() as DecisionRecord]))),
+      () => setDecisions({}));
+    return () => { off1(); off2(); };
+  }, [isSuperAdmin]);
+  const staffEmails = new Set([SUPER_ADMIN_EMAIL, ...staff.map(s => s.email)]);
+  const waiting = users.filter(u => access[u.userId]?.status === 'pending' && !staffEmails.has(u.email.toLowerCase())).length;
+
   // people who may lead a class or group: teachers and admins
   const leaders = useMemo(() => {
     const byEmail = new Map(users.map(u => [u.email.toLowerCase(), u]));
@@ -63,7 +80,7 @@ export const AdminPanelPage: React.FC<{ logoUrl: string }> = ({ logoUrl }) => {
   const teachersWithoutClass = leaders.filter(l => staff.find(s => s.userId === l.userId || s.email === l.email.toLowerCase())?.role === 'teacher' && !classes.some(c => c.teacherIds.includes(l.userId)) && !groups.some(g => g.teacherIds.includes(l.userId))).length;
 
   const TABS = [
-    { id: 'users' as const, label: 'მომხმარებლები', Icon: Users, count: users.length },
+    { id: 'users' as const, label: 'მომხმარებლები', Icon: Users, count: users.length, dot: waiting > 0 },
     { id: 'classes' as const, label: 'კლასები', Icon: GraduationCap, dot: teachersWithoutClass > 0 },
     { id: 'recordings' as const, label: 'ჩანაწერები', Icon: Disc3 },
     { id: 'sections' as const, label: 'განყოფილებები', Icon: LayoutGrid },
@@ -81,6 +98,9 @@ export const AdminPanelPage: React.FC<{ logoUrl: string }> = ({ logoUrl }) => {
       <Tabs cols="wide" value={tab} onChange={setTab} items={TABS} />
       <Flash flash={msg.flash} onClose={msg.clear} />
 
+      {tab === 'users' && isSuperAdmin && (
+        <AccessRequests users={users} staff={staff} access={access} decisions={decisions} onMessage={msg.say} />
+      )}
       {tab === 'users' && <UsersTab users={users} staff={staff} classes={classes} groups={groups} loading={loading} onMessage={msg.say} />}
       {tab === 'classes' && (
         <div className="space-y-4">

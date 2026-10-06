@@ -17,6 +17,7 @@ import { ChantPlayer } from '../ChantPlayer';
 import { useAuth, useNavigation } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 import { askSignIn } from '../access/SignInPrompt';
+import { useAccess } from '../../hooks/useAccess';
 import { useOpenRequest } from '../../utils/searchOpen';
 
 interface GeorgiaMapProps {
@@ -133,8 +134,8 @@ interface SongItemProps {
 const SongItem: React.FC<SongItemProps> = ({ id, song, region, isOpen: open, onToggleOpen: toggle, isSelected, onToggleSelect: select }) => {
   const hasAudio = song.versions.length > 0;
   // guests see the song's name and place only: no recordings, performers or authors; opening asks to sign in
-  const { user } = useAuth();
-  const guest = !user;
+  // (a member a superadmin has not let in yet counts as a guest)
+  const guest = !useAccess().member;
   const isOpen = open && !guest;
   const onToggleOpen = guest ? () => askSignIn(`სიმღერა „${song.title}“`) : toggle;
   const onToggleSelect = guest ? undefined : select;

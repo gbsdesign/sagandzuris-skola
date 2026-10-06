@@ -11,6 +11,7 @@ import { auth, db, googleProvider } from '../firebase';
 import { triggerHaptic } from '../utils/haptics';
 import { writeDirectory } from '../utils/directory';
 import { registerTeacher } from '../hooks/useDirectChat';
+import { ensureMembership } from '../utils/memberAccess';
 
 export const SUPER_ADMIN_EMAIL = 'mr.gabunia@gmail.com';
 
@@ -109,6 +110,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...(currentUser.displayName ? { displayName: currentUser.displayName } : {}),
         ...(currentUser.photoURL ? { photoURL: currentUser.photoURL } : {}),
       };
+      // a brand-new member's request for a superadmin (utils/memberAccess) comes first: without it the students
+      // document must not be written, or the newcomer would count as a member from before approvals
+      try {
+        await ensureMembership(currentUser);
+      } catch (e) {
+        console.warn('Membership request error:', e);
+        return;
+      }
       try {
         const studentRef = doc(db, 'students', currentUser.uid);
         await setDoc(

@@ -3,8 +3,9 @@ import {
   BookMarked, BookOpen, CalendarDays, Check, Clock, Compass, Feather, GraduationCap, Library, Moon, Music, Music2, Music4, Pencil,
   Plus, ScrollText, Sparkles, Star, Sun, Users, X, Pin, PinOff, Search, Guitar,
 } from 'lucide-react';
-import { useAuth, useNavigation } from '../../context';
+import { useAuth, useChants, useNavigation } from '../../context';
 import { useNotes } from '../../context/NotesContext';
+import { dayKey } from '../../utils/habitsWeek';
 import { openChurchCalendar } from '../../data/churchCalendar';
 import { MORNING_EVENING } from '../../data/prayers';
 import { SectionId } from '../../data/sections';
@@ -14,12 +15,14 @@ import { useAccess } from '../../hooks/useAccess';
 import { cycleOf, georgiaToday, kathismasOf, ownersIn } from '../../utils/psalter';
 import { searchCatalog } from '../../utils/pathItems';
 import {
-  MAX_SHORTCUTS, SHORTCUT_GROUPS, kindOf, refOf, saveShortcuts, sectionOfShortcut, shortcutLabel, useMyShortcuts,
+  MAX_SHORTCUTS, SHORTCUT_GROUPS, habitOfShortcut, kindOf, markShortcutDone, refOf, saveShortcuts, sectionOfShortcut, shortcutLabel,
+  useMyShortcuts,
 } from '../../utils/shortcuts';
 import { triggerHaptic } from '../../utils/haptics';
 import { openPathPanel } from '../views/IndependentWorkCard';
 import { askSignIn } from '../access/SignInPrompt';
 import { FIELD, IconBtn, Sheet } from '../ui/kit';
+import { KathismaTiles } from '../psalter/KathismaTile';
 
 const SECTION_ICON: Record<SectionId, React.ReactNode> = {
   galoba: <Music2 />, simghera: <Music />, mtkmeli: <Feather />, sakravebi: <Guitar />, medavitneoba: <BookOpen />,
@@ -87,7 +90,8 @@ export const useOpenShortcut = () => {
 // "ჩემი ღილაკები" under the vine (and, in `profile`, on the profile page). Hidden while there is nothing on it.
 export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ variant = 'home' }) => {
   const { user } = useAuth();
-  const { list, loaded } = useMyShortcuts(user?.uid);
+  const { list, loaded, done } = useMyShortcuts(user?.uid);
+  const { habitLog, toggleHabitToday } = useChants();
   const classes = useMyClasses(user?.uid);
   const access = useAccess();
   const open = useOpenShortcut();
@@ -96,9 +100,12 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
   const [drag, setDrag] = useState<{ from: number; to: number } | null>(null);
   const press = useRef<{ t: number; x: number; y: number; long: boolean; idx: number } | null>(null);
 
+  const { groups } = useMyPsalterGroups(user?.uid);
+  // on the home page a psalter-group member's kathisma leads the shelf as its own tile
+  const readingIn = variant === 'home' && user ? groups.filter(g => g.memberIds.includes(user.uid)) : [];
   const classDefaults = classes.find(c => c.defaultShortcuts?.length)?.defaultShortcuts || [];
   const own = list !== null;
-  const ids = useMemo(
+  const all = useMemo(
     () => (own ? list! : classDefaults).filter(id => {
       if (!shortcutLabel(id)) return false;
       const sec = sectionOfShortcut(id);
@@ -107,12 +114,22 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [list, classDefaults.join(','), access]
   );
+  // the plain "ჩემი კანონი" button would repeat the tile, so it hides behind it (and stays saved)
+  const keptKathisma = readingIn.length > 0 && all.includes('special:kathisma');
+  const ids = keptKathisma ? all.filter(id => id !== 'special:kathisma') : all;
 
   if (!user || !loaded) return null;
-  if (variant === 'home' && ids.length === 0) return null;
+  if (variant === 'home' && ids.length === 0 && readingIn.length === 0) return null;
 
-  const save = (next: string[]) => saveShortcuts(user.uid, next).catch(() => {});
+  const save = (next: string[]) => saveShortcuts(user.uid, keptKathisma ? [...next, 'special:kathisma'] : next).catch(() => {});
   const remove = (id: string) => { triggerHaptic(12); save(ids.filter(x => x !== id)); };
+  // "✓ წავიკითხე": today's mark on the button, and its habit ticked too (taking the mark back leaves the habit)
+  const markDone = (id: string, habit: string) => {
+    triggerHaptic(15);
+    const on = !done.includes(id);
+    markShortcutDone(user.uid, done, id, on).catch(() => {});
+    if (on && !(habitLog[dayKey(new Date())] || []).includes(habit)) toggleHabitToday(habit);
+  };
   const order = drag ? (() => { const a = [...ids]; const [m] = a.splice(drag.from, 1); a.splice(drag.to, 0, m); return a; })() : ids;
 
   const onDown = (i: number) => (e: React.PointerEvent) => {
@@ -148,7 +165,7 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
   };
 
   return (
-    <section className={variant === 'home' ? 'relative mt-6 w-full max-w-md text-left' : 'rounded-3xl bg-white/80 ring-1 ring-[#e8dcc8] p-4 sm:p-5'}>
+    <section className={variant === 'home' ? 'relative mt-6 w-[calc(100%+2.5rem)] sm:w-full max-w-md text-left' : 'rounded-3xl bg-white/80 ring-1 ring-[#e8dcc8] p-4 sm:p-5'}>
       <div className="flex items-center gap-2 mb-2.5 px-0.5">
         <h2 className="flex-1 font-serif-ge text-[15px] font-bold text-[#4a3426]">ჩემი ღილაკები</h2>
         {!own && ids.length > 0 && <span className="text-[11px] text-[#8a7a6a]">მასწავლებლის შერჩეული</span>}
@@ -169,9 +186,14 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
       )}
 
       <ul className={`grid grid-cols-3 min-[480px]:grid-cols-4 gap-2 select-none ${editing ? 'touch-none' : ''}`}>
+        {readingIn.map(g => <KathismaTiles key={g.id} group={g} uid={user.uid} />)}
         {order.map((id, i) => {
           const l = shortcutLabel(id)!;
           const dragging = drag && order[drag.to] === id;
+          // a prayer, akathist or kathisma gets a "✓ წავიკითხე" corner; the tile then lays out to the left
+          const habit = variant === 'home' ? habitOfShortcut(id) : null;
+          const isDone = !!habit && done.includes(id);
+          const longest = Math.max(...l.label.split(/\s+/).map(w => w.length));
           return (
             <li key={id} data-tile={i} className="relative">
               <button
@@ -182,14 +204,29 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
                 onPointerCancel={() => { if (press.current) window.clearTimeout(press.current.t); press.current = null; setDrag(null); }}
                 onContextMenu={e => e.preventDefault()}
                 aria-label={l.label}
-                className={`w-full h-[92px] rounded-2xl bg-white ring-1 ring-[#e8dcc8] flex flex-col items-center justify-center gap-1.5 px-1.5 text-center cursor-pointer transition shadow-[0_2px_6px_-4px_rgba(74,52,38,0.4)] ${
+                className={`w-full h-[104px] rounded-2xl ring-1 flex flex-col cursor-pointer transition shadow-[0_2px_6px_-4px_rgba(74,52,38,0.4)] ${
+                  habit ? 'justify-between p-2 pb-2.5 text-left' : 'items-center justify-center gap-1.5 px-1.5 text-center'
+                } ${isDone ? 'bg-emerald-50 ring-emerald-200' : 'bg-white ring-[#e8dcc8]'} ${
                   editing ? 'animate-[sg-wiggle_0.35s_ease-in-out_infinite_alternate]' : 'hover:ring-[#7a2028]/40 active:scale-95'
                 } ${dragging ? 'ring-2 !ring-[#7a2028] scale-105 z-10' : ''}`}
               >
                 <span className="w-9 h-9 rounded-xl bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center [&>svg]:w-[19px] [&>svg]:h-[19px]">{shortcutIcon(id)}</span>
-                {/* a long single word gets a size smaller rather than being split */}
-                <span className={`w-full leading-[1.2] font-bold text-[#4a3426] line-clamp-2 ${Math.max(...l.label.split(/\s+/).map(w => w.length)) > 11 ? 'text-[11px] tracking-[-0.01em]' : 'text-[12px]'}`}>{l.label}</span>
+                {/* a long single word gets a size smaller rather than being split (sooner beside a ✓, with three lines) */}
+                <span className={`w-full leading-[1.2] font-bold text-[#4a3426] ${
+                  habit
+                    ? `line-clamp-3 break-words ${longest > 9 ? 'text-[11px] tracking-[-0.02em]' : 'text-[12px]'}`
+                    : `line-clamp-2 ${longest > 11 ? 'text-[11px] tracking-[-0.01em]' : 'text-[12px]'}`
+                }`}>{l.label}</span>
               </button>
+              {habit && !editing && (
+                <button type="button" onClick={() => markDone(id, habit)} aria-pressed={isDone}
+                  aria-label={isDone ? `${l.label} — მონიშვნის მოხსნა` : `${l.label} — წავიკითხე`} title={isDone ? 'დღეს წაკითხულია' : 'წავიკითხე'}
+                  className={`absolute top-2 right-2 w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition active:scale-90 ${
+                    isDone ? 'bg-emerald-500 text-white shadow' : 'ring-1 ring-[#d9c8ac] text-[#b3a594] hover:text-[#7a2028] hover:ring-[#7a2028]/40'
+                  }`}>
+                  <Check className="w-[18px] h-[18px] stroke-[3]" />
+                </button>
+              )}
               {editing && (
                 <button type="button" onClick={() => remove(id)} aria-label={`${l.label} — წაშლა`}
                   className="absolute -top-1.5 -right-1.5 w-7 h-7 rounded-full bg-[#4a3426] text-white flex items-center justify-center shadow cursor-pointer">
@@ -202,7 +239,7 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
         {ids.length < MAX_SHORTCUTS && (editing || variant === 'profile' || ids.length < 4) && (
           <li>
             <button type="button" onClick={() => setAdding(true)} aria-label="ღილაკის დამატება"
-              className="w-full h-[92px] rounded-2xl border-2 border-dashed border-[#d9c8ac] text-[#8a7a6a] hover:text-[#7a2028] hover:border-[#7a2028]/40 flex flex-col items-center justify-center gap-1 cursor-pointer transition">
+              className="w-full h-[104px] rounded-2xl border-2 border-dashed border-[#d9c8ac] text-[#8a7a6a] hover:text-[#7a2028] hover:border-[#7a2028]/40 flex flex-col items-center justify-center gap-1 cursor-pointer transition">
               <Plus className="w-6 h-6" />
               <span className="text-[11px] font-bold">დამატება</span>
             </button>

@@ -13,6 +13,7 @@ import {
 } from '../../utils/profileFields';
 import { Btn, Sheet } from '../ui/kit';
 import { EMAIL_FIELD } from '../access/SignInChoices';
+import { useMembership } from '../../utils/memberAccess';
 
 // "პირველი გაცნობა": until a member's profile holds everything below, this form covers the app and cannot be
 // closed (only "გამოსვლა"). Six short cards, one question each, with what is already known filled in: name and
@@ -118,6 +119,7 @@ const Heading: React.FC<{ title: string; text?: string }> = ({ title, text }) =>
 
 export const FirstMeeting: React.FC = () => {
   const { user, signOutUser } = useAuth();
+  const membership = useMembership().status;
   const { notes, programOpen, church } = useNotes();
   const uid = user && !user.isAnonymous ? user.uid : null;
   const [data, setData] = useState<DocumentData | null | undefined>(undefined);
@@ -177,6 +179,8 @@ export const FirstMeeting: React.FC = () => {
 
   if (!uid || !user || data === undefined || closed || !prefilled) return null;
   if (notes || programOpen || church) return null;
+  // one a superadmin refused is signed out at once (MembershipGate): nothing to fill in
+  if (membership === 'rejected') return null;
   if (profileComplete(data)) return null;
 
   const isNew = !hasGeorgianName(profile) && !data?.firstMeeting;

@@ -84,6 +84,25 @@ service cloud.firestore {
       }
     }
 
+    // ---- Admission of new members (src/utils/memberAccess.ts) ----------------------------------------------------
+    // A newcomer asks once (status 'pending', nothing given) and may only count their own visits; superadmins let
+    // them in with chosen features, or refuse. The request is never deleted, so a refused member stays refused.
+    match /memberAccess/{userId} {
+      function isSelf() { return isSignedIn() && uid() == userId; }
+      allow read: if isSelf() || isSuperAdmin();
+      allow create: if isSuperAdmin()
+        || (isSelf()
+          && incoming().keys().hasOnly(['status', 'features', 'requestedAt', 'attempts', 'lastAttemptAt'])
+          && incoming().status == 'pending'
+          && incoming().features == []);
+      allow update: if isSuperAdmin() || (isSelf() && changed().hasOnly(['attempts', 'lastAttemptAt']));
+      allow delete: if false;
+    }
+    // who let a member in or refused them: superadmins only, the member never reads it
+    match /accessDecisions/{userId} {
+      allow read, write: if isSuperAdmin();
+    }
+
     // A person's own settings (e.g. the "დღევანდელი წირვა" draft and templates)
     match /users/{userId} {
       allow read, write: if (isSignedIn() && uid() == userId) || isAdmin();
@@ -166,6 +185,73 @@ service cloud.firestore {
       match /attendance/{day} {
         allow read: if inClass();
         allow write: if isAdmin() || teachesClass();
+      }
+    }
+
+    // ---- Private chats: a teacher and a student of their class ----------------------------------------
+    // Teachers students can write to: name and photo only, each teacher keeps their own entry
+    match /teachers/{userId} {
+      allow read: if isSignedIn();
+      allow create, update: if isTeacher() && uid() == userId
+        && incoming().keys().hasOnly(['name', 'photoURL', 'updatedAt'])
+        && incoming().name is string && incoming().name.size() <= 120
+        && incoming().photoURL is string && incoming().photoURL.size() <= 2000;
+      allow delete: if isAdmin() || (isSignedIn() && uid() == userId);
+    }
+
+    // dms/{teacherUid}_{studentUid}: classId names a class the teacher teaches and the student is in.
+    // Only the two of them read and write; the superadmin may read every chat, but not write in it.
+    match /dms/{dmId} {
+      function thread() { return get(/databases/$(database)/documents/dms/$(dmId)).data; }
+      function linkedBy(teacherUid, studentUid, classId) {
+        let c = get(/databases/$(database)/documents/classes/$(classId)).data;
+        return teacherUid in c.get('teacherIds', []) && studentUid in c.get('memberIds', []);
+      }
+      // the two are still teacher and student of that class
+      function stillLinked() { let t = thread(); return linkedBy(t.teacherUid, t.studentUid, t.classId); }
+      function inThread() { return isSignedIn() && uid() in thread().members; }
+      function isThreadTeacher() { return isSignedIn() && uid() == thread().teacherUid; }
+
+      // a chat not made yet reads as missing (the app checks before making it)
+      allow get: if isSuperAdmin() || (isSignedIn() && (resource == null || uid() in resource.data.members));
+      allow list: if isSuperAdmin() || (isSignedIn() && uid() in resource.data.members);
+      allow create: if isSignedIn()
+        && dmId == incoming().teacherUid + '_' + incoming().studentUid
+        && incoming().teacherUid != incoming().studentUid
+        && incoming().members == [incoming().teacherUid, incoming().studentUid]
+        && uid() in incoming().members
+        && incoming().classId is string
+        && linkedBy(incoming().teacherUid, incoming().studentUid, incoming().classId)
+        && incoming().keys().hasOnly(['members', 'teacherUid', 'studentUid', 'classId', 'room', 'names', 'photos',
+             'createdAt', 'lastAt', 'lastBy', 'lastText', 'read', 'callAt', 'callBy']);
+      // each marks only their own reading; only the teacher starts a call; classId may move to another class
+      // the two share
+      allow update: if isSignedIn() && uid() in existing().members
+        && changed().hasOnly(['classId', 'names', 'photos', 'lastAt', 'lastBy', 'lastText', 'read', 'callAt', 'callBy'])
+        && linkedBy(existing().teacherUid, existing().studentUid, incoming().classId)
+        && incoming().get('read', {}).diff(existing().get('read', {})).affectedKeys().hasOnly([uid()])
+        && (!changed().hasAny(['lastBy']) || incoming().lastBy == uid())
+        && (!changed().hasAny(['callAt', 'callBy']) || (uid() == existing().teacherUid && incoming().callBy == uid()));
+      allow delete: if isSuperAdmin();
+
+      match /messages/{messageId} {
+        allow read: if isSuperAdmin() || inThread();
+        allow create: if inThread() && stillLinked()
+          && incoming().uid == uid()
+          && incoming().teacher == isThreadTeacher()
+          && incoming().createdAt == request.time
+          && (incoming().kind in ['text', 'voice'] || (incoming().kind == 'call' && isThreadTeacher()))
+          && incoming().text is string && incoming().text.size() <= 2000;
+        allow delete: if isSuperAdmin() || (isSignedIn() && existing().uid == uid());
+      }
+
+      // A voice message's MP3, in parts below Firestore's 1 MiB document limit
+      match /voice/{partId} {
+        allow read: if isSuperAdmin() || inThread();
+        allow create: if inThread() && stillLinked()
+          && incoming().uid == uid()
+          && incoming().data is bytes && incoming().data.size() <= 750000;
+        allow delete: if isSuperAdmin() || (isSignedIn() && existing().uid == uid());
       }
     }
 

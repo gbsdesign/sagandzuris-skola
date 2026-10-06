@@ -9,7 +9,8 @@ import { ClassLogo } from '../classes/ClassLogo';
 import { useAccess } from '../../hooks/useAccess';
 import { askSignIn, openSignIn } from '../access/SignInPrompt';
 import { SearchButton } from '../search/GlobalSearch';
-import { Bookmark, User as UserIcon, LogIn, LogOut, Compass, ShieldCheck, Library, GraduationCap, Baby } from 'lucide-react';
+import { useDirectThreads, isUnread } from '../../hooks/useDirectChat';
+import { Bookmark, User as UserIcon, LogIn, LogOut, Compass, ShieldCheck, Library, GraduationCap, Baby, MessageCircle } from 'lucide-react';
 import { MONTHS_SHORT_GE } from '../../utils/dateNames';
 
 interface HeaderProps {
@@ -25,15 +26,20 @@ const TOOLS = [
 // Phone: [logo] … [🔖 ③] [შესვლა] / tools group below. The full independent-work card lives on the path page.
 // Desktop (lg): one row — logo + name · tools in the middle · independent work + profile.
 export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
-  const { user, signingIn, signOutUser, isAdmin, isTeacher } = useAuth();
+  const { user, signingIn, signOutUser, isAdmin, isTeacher, isSuperAdmin } = useAuth();
   const { navigateTo, currentPage, openClass } = useNavigation();
   const memberOf = useMyClasses(user?.uid);
   // a teacher reaches their own classes' pages from the header too
   const { classes: teaching } = useTeachingClasses(isTeacher ? user?.uid : null);
   const myClasses = [...memberOf, ...teaching.filter(t => !memberOf.some(m => m.id === t.id))];
+  // private chats: for everyone in a class (or teaching one), and the superadmin's overview
+  const { threads } = useDirectThreads(user?.uid);
+  const unread = user ? threads.filter(t => isUnread(t, user.uid)).length : 0;
   const { openModal } = useModal();
   const selectedCount = useSelectedCount();
   const access = useAccess();
+  // a member a superadmin has not let in (or not given these) sees no class or private chats
+  const showChats = !!user && access.can('messages') && (myClasses.length > 0 || threads.length > 0 || isSuperAdmin);
   // kids' mode: no profile settings and no signing out (the teacher turns it off)
   const kids = Boolean(access.kids);
   // the learning tools the admin's switches and the kids' mode leave visible
@@ -68,7 +74,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
         {/* independent work (icon + count) + install + admin + profile */}
         <div className="order-2 lg:order-3 ml-auto flex items-center gap-1.5 sm:gap-2 min-w-0">
           {/* the search sits beside the learning tools; with none of them shown, up here */}
-          {tools.length === 0 && <SearchButton />}
+          {tools.length === 0 && access.can('search') && <SearchButton />}
           <PWAInstallButton compact />
           {/* teachers (and admins): the teacher's panel */}
           {isTeacher && (
@@ -120,7 +126,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
           {user ? (
             <div className="flex items-center gap-1.5">
               {/* the student's class(es): logo before the avatar, opens the class page */}
-              {myClasses.map(c => (
+              {access.can('classes') && myClasses.map(c => (
                 <button
                   key={c.id}
                   type="button"
@@ -132,6 +138,26 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                   <ClassLogo name={c.name} logo={c.logo} className="w-8 h-8 text-sm" />
                 </button>
               ))}
+              {showChats && (
+                <button
+                  type="button"
+                  onClick={() => navigateTo('messages')}
+                  className={`relative w-9 h-9 rounded-xl ring-1 flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0 ${
+                    currentPage === 'messages' || currentPage === 'dm'
+                      ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]'
+                      : 'bg-white/80 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028]'
+                  }`}
+                  title={unread ? `პირადი შეტყობინებები — ${unread} წაუკითხავი` : 'პირადი შეტყობინებები'}
+                  aria-label={unread ? `პირადი შეტყობინებები, ${unread} წაუკითხავი` : 'პირადი შეტყობინებები'}
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  {unread > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#c62828] text-white text-[10px] font-black flex items-center justify-center leading-none ring-2 ring-[#fbf6ec]">
+                      {unread}
+                    </span>
+                  )}
+                </button>
+              )}
               {kids && (
                 <span className="inline-flex items-center gap-1 h-8 px-2.5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-bold shrink-0" title="საბავშვო რეჟიმი — მასწავლებელმა ჩართო">
                   <Baby className="w-3.5 h-3.5" /> საბავშვო
@@ -204,7 +230,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
               </React.Fragment>
             ))}
           </div>
-          <SearchButton />
+          {access.can('search') && <SearchButton />}
         </nav>
         )}
       </div>

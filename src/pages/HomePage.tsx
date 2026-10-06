@@ -1,20 +1,13 @@
 import React from 'react';
 import { GrapeNav } from '../components/home/GrapeNav';
 import { PlateScatter, PlateBand, Qvevri, SpiralJug } from '../components/home/PlateOrnaments';
-import { useAuth } from '../context';
-import { useMyPsalterGroups } from '../hooks/usePsalter';
-import { MyKathismaCard } from '../components/psalter/MyKathismaCard';
 import { ShortcutShelf } from '../components/home/ShortcutShelf';
-import { HomeSearchField } from '../components/search/GlobalSearch';
 
 interface HomePageProps {
   logoUrl: string;
 }
 
 export const HomePage: React.FC<HomePageProps> = ({ logoUrl }) => {
-  const { user } = useAuth();
-  const { groups } = useMyPsalterGroups(user?.uid);
-  const readingIn = user ? groups.filter(g => g.memberIds.includes(user.uid)) : [];
   return (
     <div className="relative overflow-hidden px-5 py-8 sm:px-10 sm:py-12 text-center flex flex-col items-center text-[#2a2017]">
       {/* School logo straight on the parchment (multiply drops its white background), vine ornament under it */}
@@ -30,25 +23,13 @@ export const HomePage: React.FC<HomePageProps> = ({ logoUrl }) => {
         referrerPolicy="no-referrer"
       />
       </div>
-      {/* one search over everything: chants, prayers, the psalter, songs, chanters, feasts, functions */}
-      <div className="relative mt-3 w-full flex justify-center">
-        <HomeSearchField />
-      </div>
-
       {/* on a phone the vine takes the page's side padding too, so its labels have room */}
       <div className="relative mt-2 w-[calc(100%+2.5rem)] sm:w-full flex justify-center">
         <GrapeNav />
       </div>
 
-      {/* "ჩემი ღილაკები": the member's own buttons, right under the vine (nothing shows until some are chosen) */}
+      {/* "ჩემი ღილაკები": the member's own buttons, right under the vine, led by "ჩემი კანონი" for a psalter-group member */}
       <ShortcutShelf />
-
-      {/* "ჩემი კანონი": members of a psalter group see this cycle's kathisma right under the vine */}
-      {user && readingIn.length > 0 && (
-        <div className="relative mt-6 w-full max-w-md space-y-3 text-left">
-          {readingIn.map(g => <MyKathismaCard key={g.id} group={g} uid={user.uid} compact />)}
-        </div>
-      )}
 
       <PlateBand className="lg:hidden mt-10" />
 

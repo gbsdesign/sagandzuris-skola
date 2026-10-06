@@ -3,13 +3,14 @@ import { collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, up
 import type { User } from 'firebase/auth';
 import { db } from '../firebase';
 import { sendCallMessage, ChatAuthor } from './useClassChat';
+import type { SchoolClass } from './useClasses';
 
-// A teacher's private chat with one student: dms/{teacherUid}_{studentUid}, readable only by the two of them
-// (firestore.rules). Only a teacher and a student talk privately — never two students. The document keeps both
-// names and photos, the newest message's time and preview for the lists, when each of them last opened it
-// (read.{uid}), the private call's room key and the last call. Its messages and voice parts live under it,
-// like a class chat's (hooks/useClassChat.ts).
-// Teachers are admins; each one adds themselves to teachers/{uid} on signing in, so students can find them.
+// A teacher's private chat with one student of their class: dms/{teacherUid}_{studentUid}, readable only by the
+// two of them and the superadmin (firestore.rules). Only a teacher and a student talk privately — never two
+// students. The document keeps the class that links them (classId), both names and photos, the newest message's
+// time and preview for the lists, when each of them last opened it (read.{uid}), the private call's room key and
+// the last call. Its messages and voice parts live under it, like a class chat's (hooks/useClassChat.ts).
+// Each teacher keeps their name and photo in teachers/{uid} on signing in, so students see them fresh.
 
 export interface Person { uid: string; name: string; photoURL: string }
 
@@ -89,32 +90,79 @@ export const useDirectThreads = (uid?: string | null) => {
 
 const byName = (a: Person, b: Person) => a.name.localeCompare(b.name, 'ka');
 
-/** The teachers a student can write to: admins who have signed in to the app (live). */
-export const useTeachers = (enabled: boolean) => {
-  const [teachers, setTeachers] = useState<Person[]>([]);
+/** Someone one may write to privately, and the class that links the two of them. */
+export interface Contact extends Person {
+  classId: string;
+  className: string;
+  /** the viewer teaches this person (otherwise this person is the viewer's teacher) */
+  iTeach: boolean;
+}
+
+/**
+ * Whom uid may write to privately: the teachers of the classes uid is in, and the members of the classes uid
+ * teaches (an admin too, when the class names them a teacher). One entry per person, sorted by name.
+ */
+export const contactsOf = (classes: SchoolClass[], uid: string): Contact[] => {
+  const seen = new Map<string, Contact>();
+  for (const c of classes) {
+    const people = c.teacherIds.includes(uid) ? c.members.map(p => ({ p, iTeach: true }))
+      : c.memberIds.includes(uid) ? c.teachers.map(p => ({ p, iTeach: false }))
+      : [];
+    for (const { p, iTeach } of people) {
+      if (p.uid === uid || seen.has(p.uid)) continue;
+      seen.set(p.uid, { uid: p.uid, name: p.name || '', photoURL: p.photoURL || '', classId: c.id, className: c.name, iTeach });
+    }
+  }
+  return [...seen.values()].sort(byName);
+};
+
+/** Teachers' own name and photo (teachers/{uid}), fresher than the copies kept in classes (live). */
+export const useTeacherCards = (enabled: boolean) => {
+  const [cards, setCards] = useState<Record<string, Person>>({});
+  useEffect(() => {
+    if (!enabled) return;
+    return onSnapshot(
+      collection(db, 'teachers'),
+      s => setCards(Object.fromEntries(s.docs.map(d => [d.id, { uid: d.id, name: d.get('name') || '', photoURL: d.get('photoURL') || '' }]))),
+      err => console.warn('teachers: ', err?.code || err)
+    );
+  }, [enabled]);
+  return cards;
+};
+
+/** One private chat (live); null while loading, or when it is missing or not readable. */
+export const useThread = (id?: string | null) => {
+  const [thread, setThread] = useState<DirectThread | null>(null);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
-    if (!enabled) { setLoading(false); return; }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    let listed: Record<string, any> | null = null;
-    let staff: Set<string> | null = null;
-    // a removed teacher's teachers/ entry stays behind: only current staff (admins/ with their userId) are shown
-    const emit = () => {
-      if (!listed || !staff) return;
-      setTeachers(
-        Object.entries(listed)
-          .filter(([uid]) => staff!.has(uid))
-          .map(([uid, v]) => ({ uid, name: v.name || 'მასწავლებელი', photoURL: v.photoURL || '' }))
-          .sort(byName)
-      );
-      setLoading(false);
-    };
-    const fail = (err: { code?: string }) => { console.warn('teachers: ', err?.code || err); setLoading(false); };
-    const off1 = onSnapshot(collection(db, 'teachers'), s => { listed = Object.fromEntries(s.docs.map(d => [d.id, d.data()])); emit(); }, fail);
-    const off2 = onSnapshot(collection(db, 'admins'), s => { staff = new Set(s.docs.map(d => String(d.data().userId || '')).filter(Boolean)); emit(); }, fail);
-    return () => { off1(); off2(); };
+    if (!id) { setThread(null); setLoading(false); return; }
+    setLoading(true);
+    return onSnapshot(
+      doc(db, 'dms', id),
+      snap => { setThread(snap.exists() ? toThread(snap.id, snap.data({ serverTimestamps: 'estimate' })) : null); setLoading(false); },
+      err => { console.warn('dm: ', err?.code || err); setThread(null); setLoading(false); }
+    );
+  }, [id]);
+  return { thread, loading };
+};
+
+/** Every private chat in the school, newest first: the superadmin's overview (live). */
+export const useAllThreads = (enabled: boolean) => {
+  const [threads, setThreads] = useState<DirectThread[]>([]);
+  const [loading, setLoading] = useState(enabled);
+  useEffect(() => {
+    if (!enabled) { setThreads([]); setLoading(false); return; }
+    setLoading(true);
+    return onSnapshot(
+      collection(db, 'dms'),
+      snap => {
+        setThreads(snap.docs.map(d => toThread(d.id, d.data({ serverTimestamps: 'estimate' }))).sort((a, b) => newest(b) - newest(a)));
+        setLoading(false);
+      },
+      err => { console.warn('dms: ', err?.code || err); setThreads([]); setLoading(false); }
+    );
   }, [enabled]);
-  return { teachers, loading };
+  return { threads, loading };
 };
 
 /** A teacher or admin signing in: listed as a teacher students can write to (name and photo only, kept fresh). */
@@ -127,15 +175,23 @@ export const registerTeacher = (user: User) =>
 
 const roomKey = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), b => b.toString(16).padStart(2, '0')).join('');
 
-/** The teacher's and student's chat, made the first time either of them opens it; resolves to its id. */
-export const openThread = async (teacher: Person, student: Person): Promise<string> => {
+/**
+ * The teacher's and student's chat, made the first time either of them opens it; resolves to its id.
+ * classId is a class that links the two (firestore.rules checks it); an older chat moves to it when its
+ * class no longer does.
+ */
+export const openThread = async (teacher: Person, student: Person, classId: string): Promise<string> => {
   const id = dmId(teacher.uid, student.uid);
   const ref = doc(db, 'dms', id);
-  if (!(await getDoc(ref)).exists()) {
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    if (snap.get('classId') !== classId) await updateDoc(ref, { classId }).catch(e => console.warn('dms: ', e?.code || e));
+  } else {
     await setDoc(ref, {
       members: [teacher.uid, student.uid],
       teacherUid: teacher.uid,
       studentUid: student.uid,
+      classId,
       room: roomKey(),
       names: { [teacher.uid]: teacher.name, [student.uid]: student.name },
       photos: { [teacher.uid]: teacher.photoURL, [student.uid]: student.photoURL },

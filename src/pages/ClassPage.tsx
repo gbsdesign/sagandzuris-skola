@@ -1,5 +1,5 @@
-import React from 'react';
-import { ArrowLeft, Users, ListChecks, Check, CheckCheck } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, Users, ListChecks, Check, CheckCheck, MessageCircle, Loader2 } from 'lucide-react';
 import { useAuth, useNavigation, useChants } from '../context';
 import { useConfirmations } from '../hooks/useConfirmations';
 import { findCatalogEntry, CATEGORY_LABEL, usesVoices, voicesOf, Voice } from '../utils/pathItems';
@@ -7,11 +7,17 @@ import { useMyClasses, useAllClasses, useTeachingClasses } from '../hooks/useCla
 import { LessonTable } from '../components/teacher/Schedule';
 import { ClassLogo } from '../components/classes/ClassLogo';
 import { ClassChat } from '../components/classes/ClassChat';
+import { Avatar } from '../components/classes/ChatPanel';
+import { openThread, Person } from '../hooks/useDirectChat';
+import type { ClassMember } from '../hooks/useClasses';
 
 // A class's shared page: its chat, members and the common program. Members reach it from the class logo in the header.
 export const ClassPage: React.FC = () => {
   const { user, isAdmin, isTeacher } = useAuth();
-  const { selectedClassId, handleGoBack } = useNavigation();
+  const { selectedClassId, handleGoBack, openDm } = useNavigation();
+  // a private chat being opened (the other person's uid), and why it could not be
+  const [opening, setOpening] = useState<string | null>(null);
+  const [dmErr, setDmErr] = useState('');
   const mine = useMyClasses(user?.uid);
   const { classes: all } = useAllClasses(isAdmin);
   const { classes: teaching } = useTeachingClasses(isTeacher ? user?.uid : null);
@@ -32,6 +38,29 @@ export const ClassPage: React.FC = () => {
     );
   }
 
+  // private chats: a member writes to the class's teachers, a teacher of the class to its members
+  const iTeach = !!user && cls.teacherIds.includes(user.uid);
+  const iAmMember = !!user && cls.memberIds.includes(user.uid);
+  const person = (p: ClassMember): Person => ({ uid: p.uid, name: p.name || '', photoURL: p.photoURL || '' });
+  const meHere = (): Person => {
+    const p = cls.members.find(m => m.uid === user?.uid) || cls.teachers.find(m => m.uid === user?.uid);
+    return { uid: user!.uid, name: p?.name || user!.displayName || '', photoURL: p?.photoURL || user!.photoURL || '' };
+  };
+  const writeTo = async (other: ClassMember, otherIsTeacher: boolean) => {
+    setDmErr('');
+    setOpening(other.uid);
+    try {
+      const id = otherIsTeacher ? await openThread(person(other), meHere(), cls.id) : await openThread(meHere(), person(other), cls.id);
+      openDm(id);
+    } catch (e) {
+      console.warn('dm: ', e);
+      setDmErr('პირადი ჩათი ვერ გაიხსნა. სცადეთ მოგვიანებით.');
+    } finally {
+      setOpening(null);
+    }
+  };
+  const myTeachers = iAmMember ? cls.teachers.filter(t => t.uid !== user?.uid) : [];
+
   return (
     <div className="w-full max-w-2xl mx-auto px-1 py-4 sm:py-8 space-y-6 text-[#2a2017]">
       <button
@@ -48,6 +77,24 @@ export const ClassPage: React.FC = () => {
         <p className="text-sm text-[#8a7a6a]">
           {cls.members.length} წევრი{cls.teachers.length > 0 && ` · მასწავლებელი: ${cls.teachers.map(t => t.name).join(', ')}`}
         </p>
+        {myTeachers.length > 0 && (
+          <div className="flex flex-wrap justify-center gap-2 mt-1">
+            {myTeachers.map(t => (
+              <button
+                key={t.uid}
+                type="button"
+                onClick={() => writeTo(t, true)}
+                disabled={opening === t.uid}
+                className="h-11 max-w-full pl-1.5 pr-4 rounded-full bg-white ring-1 ring-[#7a2028]/25 hover:ring-[#7a2028]/45 text-[#7a2028] text-sm font-bold inline-flex items-center gap-2 cursor-pointer active:scale-95 transition disabled:opacity-60"
+              >
+                <Avatar name={t.name} photoURL={t.photoURL} className="w-8 h-8 text-sm" />
+                <span className="truncate">{myTeachers.length > 1 ? `მისწერეთ: ${t.name}` : 'მისწერეთ მასწავლებელს'}</span>
+                {opening === t.uid ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" /> : <MessageCircle className="w-4 h-4 shrink-0" />}
+              </button>
+            ))}
+          </div>
+        )}
+        {dmErr && <p className="text-sm text-[#a02c2c]">{dmErr}</p>}
       </header>
 
       {cls.schedule.length > 0 && <LessonTable slots={cls.schedule} title="გაკვეთილების ცხრილი" />}
@@ -122,10 +169,22 @@ export const ClassPage: React.FC = () => {
                   {m.name.charAt(0)}
                 </span>
               )}
-              <span className="font-semibold text-[#2a2017] truncate">
+              <span className="flex-1 min-w-0 font-semibold text-[#2a2017] truncate">
                 {m.name}
                 {m.uid === user?.uid && <span className="ml-1.5 text-xs font-normal text-[#8a7a6a]">(შენ)</span>}
               </span>
+              {iTeach && m.uid !== user?.uid && (
+                <button
+                  type="button"
+                  onClick={() => writeTo(m, false)}
+                  disabled={opening === m.uid}
+                  className="w-9 h-9 shrink-0 rounded-xl ring-1 ring-[#e8dcc8] bg-white hover:ring-[#7a2028]/40 text-[#7a2028] flex items-center justify-center cursor-pointer active:scale-95 transition disabled:opacity-60"
+                  title={`პირადი მიწერა: ${m.name}`}
+                  aria-label={`პირადი მიწერა: ${m.name}`}
+                >
+                  {opening === m.uid ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+                </button>
+              )}
             </li>
           ))}
         </ul>

@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import type { PageType } from '../context/NavigationContext';
 import { KidsMode, SECTIONS, SectionId, sectionOfPage } from '../data/sections';
 import { useSections } from './useSections';
+import { useMembership } from '../utils/memberAccess';
 
 // Who sees which section, in one place:
 // • admins see everything that is built;
@@ -46,21 +47,29 @@ export const useKidsMode = (): KidsMode | null => {
 };
 
 export const useAccess = () => {
-  const { user, isAdmin } = useAuth();
+  const { isAdmin } = useAuth();
   const { state } = useSections();
   const kids = useKidsMode();
+  // a member a superadmin has not let in yet sees what guests see; one let in sees only what was given
+  // (utils/memberAccess) — what was not given is hidden, never shown as locked
+  const membership = useMembership();
+  const member = membership.isMember;
   const section = (id: SectionId): Access => {
     const built = Boolean(SECTIONS.find(s => s.id === id)?.page);
     if (isAdmin) return built ? 'open' : 'soon';
     if (state[id] === 'hidden') return 'hidden';
     if (kids && !kids.sections.includes(id)) return 'hidden';
+    if (member && !membership.can(id)) return 'hidden';
     if (state[id] === 'soon' || !built) return 'soon';
-    if (!user && !GUEST_OPEN.includes(id)) return 'locked';
+    if (!member && !GUEST_OPEN.includes(id)) return 'locked';
     return 'open';
   };
   const page = (p: PageType): Access => {
     const id = sectionOfPage(p);
-    return id ? section(id) : 'open';
+    if (id) return section(id);
+    if (p === 'class') return membership.can('classes') ? 'open' : 'hidden';
+    if (p === 'messages' || p === 'dm') return membership.can('messages') ? 'open' : 'hidden';
+    return 'open';
   };
-  return { section, page, kids };
+  return { section, page, kids, member, can: membership.can, status: membership.status };
 };

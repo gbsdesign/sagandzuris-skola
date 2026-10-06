@@ -20,6 +20,7 @@ export interface UserRecord {
   lastName: string;
   city: string;
   region: string;
+  phone: string;
   voices: string[];
   statuses: string[];
   birth: string;
@@ -56,6 +57,7 @@ export const toUser = (id: string, d: any): UserRecord => {
     lastName,
     city: p.city || d.city || '',
     region: p.region || d.region || '',
+    phone: p.phone || '',
     voices: Array.isArray(p.voices) ? p.voices : [],
     statuses: ([] as string[]).concat(p.experienceLevel || []),
     birth: p.birthDate?.year ? `${p.birthDate.day || 1}/${p.birthDate.month || 1}/${p.birthDate.year}` : '',

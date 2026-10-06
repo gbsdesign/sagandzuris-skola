@@ -32,6 +32,8 @@ const CommemorationPage = page(() => import('../pages/CommemorationPage'), 'Comm
 const LibraryPage = page(() => import('../pages/LibraryPage'), 'LibraryPage');
 const PsalterPage = page(() => import('../pages/PsalterPage'), 'PsalterPage');
 const TeacherPage = page(() => import('../pages/TeacherPage'), 'TeacherPage');
+const MessagesPage = page(() => import('../pages/MessagesPage'), 'MessagesPage');
+const DirectChatPage = page(() => import('../pages/DirectChatPage'), 'DirectChatPage');
 
 interface AppRouterProps {
   logoUrl: string;
@@ -40,7 +42,7 @@ interface AppRouterProps {
 export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   const { currentPage, selectedService, handleGoBack, navigateTo } = useNavigation();
   const { openModal } = useModal();
-  const { isAdmin, isTeacher } = useAuth();
+  const { user, isAdmin, isTeacher } = useAuth();
   const access = useAccess();
   const {
     selectedChantVariants,
@@ -66,6 +68,15 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
 
   if (currentPage === 'psalter') {
     return <PsalterPage />;
+  }
+
+  // private chats (signed in only)
+  if (currentPage === 'messages') {
+    return user ? <MessagesPage /> : <HomePage logoUrl={logoUrl} />;
+  }
+
+  if (currentPage === 'dm') {
+    return user ? <DirectChatPage /> : <HomePage logoUrl={logoUrl} />;
   }
 
   if (currentPage === 'teacher') {

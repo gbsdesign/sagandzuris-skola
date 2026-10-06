@@ -3,6 +3,7 @@ import { CalendarDays, ChevronUp } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
 import { CALENDAR_EVENT, todayIso } from '../../data/churchCalendar';
 import { ChurchCalendarPanel } from '../calendar/ChurchCalendarPanel';
+import { useMembership } from '../../utils/memberAccess';
 
 interface FooterProps {
   logoUrl: string;
@@ -20,6 +21,11 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
   const panelRef = useRef<HTMLDivElement>(null);
   const openRef = useRef(false);
   openRef.current = calOpen;
+  // the calendar is for members a superadmin gave it to (utils/memberAccess); for others it does not show
+  const canCal = useMembership().can('calendar');
+  const canRef = useRef(canCal);
+  canRef.current = canCal;
+  useEffect(() => { if (!canCal) setCalOpen(false); }, [canCal]);
 
   // keep the page pinned to its end while the panel grows, so it rises from the bar;
   // then bring the panel's top (the date band) into view
@@ -47,6 +53,7 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
   // "სრულად" on today's-saints card, a feast in the library: go down to the bar, then unfold there
   useEffect(() => {
     const onOpen = (e: Event) => {
+      if (!canRef.current) return;
       const iso = (e as CustomEvent<string>).detail || todayIso();
       setCalIso(iso);
       if (openRef.current) {
@@ -70,7 +77,7 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
 
   return (
     <footer className="safe-bleed safe-bottom border-t border-[#e8dcc8] bg-[#fbf6ec]">
-      <div
+      {canCal && <div
         className={`grid ease-out ${calOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
         style={{ transition: `grid-template-rows ${UNFOLD_MS}ms cubic-bezier(0.22, 1, 0.36, 1)` }}
       >
@@ -81,7 +88,7 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
             </div>
           )}
         </div>
-      </div>
+      </div>}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-[#8a7a6a]">
         <div className="flex flex-wrap items-center gap-3">
           <div className="flex items-center gap-2.5">
@@ -97,7 +104,7 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
 
         <div className="w-full sm:w-auto flex flex-wrap items-center justify-center sm:justify-end gap-3 sm:gap-4">
           {/* church calendar: unfolds upward out of the bar (full width on phones) */}
-          <button
+          {canCal && <button
             type="button"
             onClick={toggle}
             aria-expanded={calOpen}
@@ -111,7 +118,7 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
             <CalendarDays className={`w-[18px] h-[18px] ${calOpen ? 'text-[#fbf6ec]' : 'text-[#7a2028]'}`} />
             კალენდარი
             <ChevronUp className={`w-4 h-4 transition-transform duration-300 ${calOpen ? 'rotate-180' : ''}`} />
-          </button>
+          </button>}
 
           {/* Facebook Button */}
           <a

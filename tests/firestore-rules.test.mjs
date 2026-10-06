@@ -2,7 +2,7 @@
 // "node tests/firestore-rules.test.mjs firestore.rules" (with firebase-tools and @firebase/rules-unit-testing installed
 // next to it; firebase.json sets the emulator port 8085). Every case below must pass before publishing the rules.
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, arrayUnion, arrayRemove } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
 import { readFileSync } from 'node:fs';
 
 const rules = readFileSync(process.argv[2], 'utf8');
@@ -130,10 +130,68 @@ await t('teacher changes assignment', assertSucceeds(updateDoc(doc(tch, 'psalter
 await t('member leaves group', assertSucceeds(updateDoc(doc(stu2, 'psalterGroups', 'g1'), { memberIds: arrayRemove('stu2'), members: arrayRemove({ uid: 'stu2', name: 'S2' }), assignment: {} })));
 await t('member renames self', assertSucceeds(updateDoc(doc(stu, 'psalterGroups', 'g1'), { members: [{ uid: 'stu', name: 'სანდრო' }] })));
 
+// ---- private chats: a teacher and a student of their class (class c9: teacher tch2, members stu3 and stu2)
+await env.withSecurityRulesDisabled(async c => {
+  await setDoc(doc(c.firestore(), 'classes', 'c9'), { name: 'D', memberIds: ['stu3', 'stu2'], members: [], teacherIds: ['tch2'], teachers: [], program: [] });
+});
+const stu3 = as('stu3', 'stu3@x.ge');
+const dm = (extra = {}) => ({
+  members: ['tch2', 'stu3'], teacherUid: 'tch2', studentUid: 'stu3', classId: 'c9', room: 'r', names: {}, photos: {},
+  createdAt: serverTimestamp(), lastAt: null, lastBy: '', lastText: '', read: {}, callAt: null, callBy: '', ...extra,
+});
+const msg = (uid, teacher, kind = 'text') => ({ uid, name: 'x', photoURL: '', teacher, kind, text: 'hi', createdAt: serverTimestamp() });
+await t('teacher lists self: name and photo', assertSucceeds(setDoc(doc(tch2, 'teachers', 'tch2'), { name: 'T2', photoURL: '', updatedAt: 'now' })));
+await t('teacher entry holds no e-mail', assertFails(setDoc(doc(tch2, 'teachers', 'tch2'), { name: 'T2', photoURL: '', email: 'tch2@x.ge' })));
+await t('member cannot list self as teacher', assertFails(setDoc(doc(stu3, 'teachers', 'stu3'), { name: 'S3', photoURL: '' })));
+await t('member reads teachers', assertSucceeds(getDoc(doc(stu3, 'teachers', 'tch2'))));
+await t('student checks a chat not made yet', assertSucceeds(getDoc(doc(stu3, 'dms', 'tch2_stu3'))));
+await t('student cannot open chat with a teacher not theirs', assertFails(setDoc(doc(stu3, 'dms', 'tch_stu3'), dm({ members: ['tch', 'stu3'], teacherUid: 'tch' }))));
+await t('chat id must match its two people', assertFails(setDoc(doc(stu3, 'dms', 'zz_stu3'), dm())));
+await t('two students cannot chat', assertFails(setDoc(doc(stu3, 'dms', 'stu2_stu3'), dm({ members: ['stu2', 'stu3'], teacherUid: 'stu2' }))));
+await t('student opens chat with own teacher', assertSucceeds(setDoc(doc(stu3, 'dms', 'tch2_stu3'), dm())));
+await t('student writes to own teacher', assertSucceeds(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm1'), msg('stu3', false))));
+await t('student cannot pose as teacher', assertFails(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm2'), msg('stu3', true))));
+await t('student cannot start a call', assertFails(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm3'), msg('stu3', false, 'call'))));
+await t('teacher answers', assertSucceeds(setDoc(doc(tch2, 'dms', 'tch2_stu3', 'messages', 'm4'), msg('tch2', true))));
+await t('teacher starts a call', assertSucceeds(setDoc(doc(tch2, 'dms', 'tch2_stu3', 'messages', 'm5'), msg('tch2', true, 'call'))));
+await t('student marks own reading', assertSucceeds(updateDoc(doc(stu3, 'dms', 'tch2_stu3'), { 'read.stu3': serverTimestamp() })));
+await t("student cannot mark teacher's reading", assertFails(updateDoc(doc(stu3, 'dms', 'tch2_stu3'), { 'read.tch2': serverTimestamp() })));
+await t('member lists own chats', assertSucceeds(getDocs(query(collection(stu3, 'dms'), where('members', 'array-contains', 'stu3')))));
+await t('another student cannot read the chat', assertFails(getDoc(doc(stu2, 'dms', 'tch2_stu3'))));
+await t('another student cannot read its messages', assertFails(getDoc(doc(stu2, 'dms', 'tch2_stu3', 'messages', 'm1'))));
+await t('another teacher cannot read the chat', assertFails(getDoc(doc(tch, 'dms', 'tch2_stu3'))));
+await t('admin cannot read the chat', assertFails(getDoc(doc(adm, 'dms', 'tch2_stu3'))));
+await t('superadmin reads the chat', assertSucceeds(getDoc(doc(sup, 'dms', 'tch2_stu3', 'messages', 'm1'))));
+await t('superadmin lists every chat', assertSucceeds(getDocs(collection(owner, 'dms'))));
+await t('superadmin cannot write in the chat', assertFails(setDoc(doc(sup, 'dms', 'tch2_stu3', 'messages', 'm6'), msg('sup', false))));
+await env.withSecurityRulesDisabled(async c => {
+  await updateDoc(doc(c.firestore(), 'classes', 'c9'), { memberIds: ['stu2'] });
+});
+await t('student who left the class cannot write', assertFails(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm7'), msg('stu3', false))));
+
 // ---- settings
 await t('guest reads settings', assertSucceeds(getDoc(doc(guest, 'settings', 'logo'))));
 await t('teacher cannot write settings', assertFails(setDoc(doc(tch, 'settings', 'sections'), { a: 1 })));
 await t('admin writes settings', assertSucceeds(setDoc(doc(adm, 'settings', 'sections'), { a: 1 })));
+
+// ---- admission of new members
+const ask = { status: 'pending', features: [], requestedAt: 'x', attempts: 1, lastAttemptAt: 'x' };
+await t('newcomer asks to be let in', assertSucceeds(setDoc(doc(stu2, 'memberAccess', 'stu2'), ask)));
+await t('newcomer cannot let themself in', assertFails(setDoc(doc(stu3, 'memberAccess', 'stu3'), { ...ask, status: 'approved', features: 'all' })));
+await t('newcomer cannot give themself features', assertFails(setDoc(doc(stu3, 'memberAccess', 'stu3'), { ...ask, features: ['galoba'] })));
+await t('nobody asks for another', assertFails(setDoc(doc(stu, 'memberAccess', 'stu3'), ask)));
+await t('member counts own visits', assertSucceeds(updateDoc(doc(stu2, 'memberAccess', 'stu2'), { attempts: 2, lastAttemptAt: 'y' })));
+await t('member cannot change own status', assertFails(updateDoc(doc(stu2, 'memberAccess', 'stu2'), { status: 'approved' })));
+await t('member cannot delete own request', assertFails(deleteDoc(doc(stu2, 'memberAccess', 'stu2'))));
+await t('member reads own access', assertSucceeds(getDoc(doc(stu2, 'memberAccess', 'stu2'))));
+await t('member cannot read another\'s access', assertFails(getDoc(doc(stu, 'memberAccess', 'stu2'))));
+await t('admin cannot list requests', assertFails(getDocs(collection(adm, 'memberAccess'))));
+await t('superadmin lists requests', assertSucceeds(getDocs(collection(sup, 'memberAccess'))));
+await t('superadmin lets in', assertSucceeds(updateDoc(doc(sup, 'memberAccess', 'stu2'), { status: 'approved', features: ['galoba'] })));
+await t('owner refuses', assertSucceeds(updateDoc(doc(owner, 'memberAccess', 'stu2'), { status: 'rejected', features: [] })));
+await t('superadmin writes who decided', assertSucceeds(setDoc(doc(sup, 'accessDecisions', 'stu2'), { by: 'sup@x.ge' })));
+await t('member cannot read who decided', assertFails(getDoc(doc(stu2, 'accessDecisions', 'stu2'))));
+await t('admin cannot read who decided', assertFails(getDoc(doc(adm, 'accessDecisions', 'stu2'))));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();

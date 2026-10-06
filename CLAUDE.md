@@ -135,6 +135,12 @@
   notes, the program or church mode is open. The user removed „რისთვის მოხვედით?“ — don't bring it back.
   Phone lives only in `students/{uid}.profile.phone` (not in `directory`). `AuthContext` no longer writes empty
   name/photo on sign-in.
+- **Admission of new members** (built 2026-10-06, branch `chat-work`, not committed): `utils/memberAccess.ts`
+  (`memberAccess/{uid}` status pending/approved/rejected + features; `accessDecisions/{uid}` who decided, superadmins
+  only). Pending = guest view + „მიმდინარეობს დამატება“ (`components/access/MembershipGate.tsx`); refused = signed out
+  with „დამატება შეფერხებულია“ every time. Superadmins decide in admin panel → მომხმარებლები (`admin/AccessRequests.tsx`).
+  Old members (students doc, no memberAccess) and staff keep everything. Features not given are hidden, never locked.
+  Search and the church calendar are features too (the user's choice): guests and waiting members don't get them.
 - Emulator check: firebase-tools in the scratchpad; the auth emulator keeps the letters at
   `/emulator/v1/projects/<id>/oobCodes`; the app's Firestore database id is `ai-studio-…`, not `(default)`.
 
