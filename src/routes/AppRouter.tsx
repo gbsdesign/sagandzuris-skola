@@ -21,7 +21,6 @@ import { SECTIONS, sectionOfPage } from '../data/sections';
 // Pages load when first opened, so the first visit downloads less (App wraps the router in Suspense).
 const page = <T extends string>(load: () => Promise<Record<T, React.ComponentType<any>>>, name: T) =>
   lazy(() => load().then(m => ({ default: m[name] })));
-const ChantDetailPage = page(() => import('../pages/ChantDetailPage'), 'ChantDetailPage');
 const GeorgiaMap = page(() => import('../components/maps/GeorgiaMap'), 'GeorgiaMap');
 const MtkmeliMap = page(() => import('../components/maps/MtkmeliMap'), 'MtkmeliMap');
 const SakravebiView = page(() => import('../components/views/SakravebiView'), 'SakravebiView');
@@ -122,13 +121,6 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
 
         <div className="w-full flex-1 min-h-[300px] flex flex-col justify-between items-center mt-1">
           {currentPage === 'galoba' && <GalobaPage />}
-          
-          {/* Add route handler for detail page if possible, 
-              but since AppRouter is tied to currentPage state, 
-              this might require a new page type or similar.
-              Given the constraints, let's just handle it here. */}
-
-          {currentPage === 'galoba-detail' && <ChantDetailPage />}
 
           {currentPage === 'gz' && (
             <div className="w-full max-w-2xl mx-auto mb-2 px-1 space-y-7">

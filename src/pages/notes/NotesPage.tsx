@@ -17,7 +17,7 @@ import { getChantMedia } from '../../data/chantMediaRegistry';
 import { countPlay } from '../../utils/playStats';
 import { hymnPair, hymnWidth, HymnOrnament } from '../../data/hymnOrnaments';
 import { BookScore, ChantSynth, bookImageUrl, loadBookScore, encodeMp3, renderScore, saveBlob, firstNotes, playStartNotes } from '../../utils/chantSynth';
-import { ChantPlayer } from '../ChantDetailPage';
+import { ChantPlayer } from '../../components/ChantPlayer';
 import { NpStepper } from './NpStepper';
 import { getAudioArrayBufferFromIdb } from '../../utils/audioIdb';
 import { GrapeBunch, VineLeaf, Rosette, Sprig, PlateBand } from '../../components/home/PlateOrnaments';
@@ -933,7 +933,6 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
               key={vid}
               chantId={chant.id}
               variantId={vid}
-              inline
               layout="panel"
               hideNotesButton
               showDetails={!f.rec}
