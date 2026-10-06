@@ -3,6 +3,7 @@ import { addDoc, arrayUnion, collection, deleteDoc, doc, limit, onSnapshot, orde
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { SchoolClass } from './useClasses';
+import { MONTHS_SHORT_GE, WEEKDAYS_GE, WEEKDAYS_SHORT_GE } from '../utils/dateNames';
 
 // The teacher's side of a class: the members' records, assignments and attendance.
 //   classes/{id}/assignments/{a}  { title, variantId, code, voices, due, note, studentIds, createdAt, createdBy }
@@ -160,12 +161,9 @@ export const dueLabel = (iso: string) => {
   return `ვადამდე ${n} დღე`;
 };
 
-const MONTHS = ['იან', 'თებ', 'მარ', 'აპრ', 'მაი', 'ივნ', 'ივლ', 'აგვ', 'სექ', 'ოქტ', 'ნოე', 'დეკ'];
-export const WEEKDAYS = ['კვირა', 'ორშაბათი', 'სამშაბათი', 'ოთხშაბათი', 'ხუთშაბათი', 'პარასკევი', 'შაბათი'];
-export const WEEKDAYS_SHORT = ['კვ', 'ორ', 'სა', 'ოთ', 'ხუ', 'პა', 'შა'];
 export const shortDate = (iso: string) => {
   const [y, m, d] = iso.split('-').map(Number);
-  return y ? `${d} ${MONTHS[m - 1]}` : iso;
+  return y ? `${d} ${MONTHS_SHORT_GE[m - 1]}` : iso;
 };
 export const weekdayOf = (iso: string) => {
   const [y, m, d] = iso.split('-').map(Number);

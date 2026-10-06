@@ -10,8 +10,8 @@ import {
 } from '../../utils/voiceRecorder';
 import { triggerHaptic } from '../../utils/haptics';
 import { classCallLink, classCallUrl } from '../../utils/classCall';
+import { MONTHS_GE } from '../../utils/dateNames';
 
-const MONTHS = ['იანვარი', 'თებერვალი', 'მარტი', 'აპრილი', 'მაისი', 'ივნისი', 'ივლისი', 'აგვისტო', 'სექტემბერი', 'ოქტომბერი', 'ნოემბერი', 'დეკემბერი'];
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -21,7 +21,7 @@ const dayLabel = (d: Date) => {
   yesterday.setDate(now.getDate() - 1);
   if (d.toDateString() === now.toDateString()) return 'დღეს';
   if (d.toDateString() === yesterday.toDateString()) return 'გუშინ';
-  return `${d.getDate()} ${MONTHS[d.getMonth()]}${d.getFullYear() !== now.getFullYear() ? ` ${d.getFullYear()}` : ''}`;
+  return `${d.getDate()} ${MONTHS_GE[d.getMonth()]}${d.getFullYear() !== now.getFullYear() ? ` ${d.getFullYear()}` : ''}`;
 };
 
 // links in a message (e.g. a lesson's call link) open in a new tab

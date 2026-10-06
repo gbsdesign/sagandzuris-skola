@@ -18,26 +18,18 @@ import {
 import confetti from 'canvas-confetti';
 import { auth, db, handleFirestoreError, OperationType } from '../../firebase';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { ALL_CHANTS } from '../../data/gelatiBookChants';
 import { filterValidVariants } from '../../utils/variantValidation';
 import { loadGuestData, saveGuestVariants } from '../../utils/localStorageSync';
 import { useNavigation, useModal } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
-import { sortPathItems } from '../../utils/pathItems';
+import { sortPathItems, categoryOf, usesVoices, PathCategory } from '../../utils/pathItems';
 import { useConfirmations } from '../../hooks/useConfirmations';
 import { useNotes } from '../../context/NotesContext';
 import { findVersion, canOpenNotes } from '../../data/chantLookup';
 import { getChantMedia } from '../../data/chantMediaRegistry';
 import { FOLK_SONGS, getFolkRegion } from '../../data/songsData';
 import { SongBody } from '../maps/GeorgiaMap';
-
-const VARIANT_ORDER_MAP: { [variantId: string]: number } = {};
-let orderIndex = 0;
-ALL_CHANTS.forEach(chant => {
-  chant.variants.forEach(variant => {
-    VARIANT_ORDER_MAP[variant.id] = orderIndex++;
-  });
-});
+import { MONTHS_GE, MONTHS_GEN_GE, WEEKDAYS_GE } from '../../utils/dateNames';
 
 const triggerFireworks = () => {
   try {
@@ -104,21 +96,8 @@ interface StudentProfile {
   workSchedule?: { [key: string]: string };
 }
 
-const MONTH_NAMES_GE = [
-  'იანვარი', 'თებერვალი', 'მარტი', 'აპრილი', 'მაისი', 'ივნისი',
-  'ივლისი', 'აგვისტო', 'სექტემბერი', 'ოქტომბერი', 'ნოემბერი', 'დეკემბერი'
-];
 
-// Genitive forms ("ოქტომბრის სტატისტიკა", not "ოქტომბერიის")
-const MONTH_GENITIVE_GE = [
-  'იანვრის', 'თებერვლის', 'მარტის', 'აპრილის', 'მაისის', 'ივნისის',
-  'ივლისის', 'აგვისტოს', 'სექტემბრის', 'ოქტომბრის', 'ნოემბრის', 'დეკემბრის'
-];
 
-// Indexed by Date.getDay() (0 = Sunday)
-const WEEKDAY_FULL_GE = [
-  'კვირა', 'ორშაბათი', 'სამშაბათი', 'ოთხშაბათი', 'ხუთშაბათი', 'პარასკევი', 'შაბათი'
-];
 
 const DAYS_OF_WEEK = [
   { id: 'ორშ', short: 'ორშ', dayIndex: 1 },
@@ -139,6 +118,8 @@ const AVAILABLE_HOURS = [
 interface GzaViewProps {
   onBack?: () => void;
   onGoToGaloba?: () => void;
+  /** leave out the "nothing added yet" card (the path page's summary card already shows the first step) */
+  hideEmpty?: boolean;
   selectedChantVariants?: SelectedChantVariantsMap;
   onUpdateVariants?: (next: SelectedChantVariantsMap) => void;
 }
@@ -146,6 +127,7 @@ interface GzaViewProps {
 // "გზა" PAGE COMPONENT ONLY
 export const GzaView: React.FC<GzaViewProps> = ({
   onGoToGaloba,
+  hideEmpty,
   selectedChantVariants: externalSelectedVariants,
   onUpdateVariants
 }) => {
@@ -326,26 +308,12 @@ export const GzaView: React.FC<GzaViewProps> = ({
   // teacher's order first, otherwise catalogue order
   const selectedVariantsList = sortPathItems(Object.values(activeVariantsMap));
 
-  const isGaloba = (item: SelectedChantVariantItem) => {
-    return item.variantId.startsWith('tsirva_') || Boolean(VARIANT_ORDER_MAP[item.variantId] !== undefined);
-  };
-
-  const isMtkmeli = (item: SelectedChantVariantItem) => {
-    return item.variantId.includes('_p') || item.variantId.startsWith('abk_p') || item.variantId.startsWith('sam_p');
-  };
-
-  const isSakravi = (item: SelectedChantVariantItem) => {
-    return ['chonguri', 'fanduri', 'doli', 'garmoni', 'chuniri', 'changi'].some(id => item.variantId.startsWith(id));
-  };
-
-  const isSimghera = (item: SelectedChantVariantItem) => {
-    return !isGaloba(item) && !isMtkmeli(item) && !isSakravi(item);
-  };
-
-  const galobaItems = selectedVariantsList.filter(isGaloba);
-  const simgheraItems = selectedVariantsList.filter(isSimghera);
-  const mtkmeliItems = selectedVariantsList.filter(isMtkmeli);
-  const sakravebiItems = selectedVariantsList.filter(isSakravi);
+  // the same sorting into categories as everywhere else (pathItems), so every instrument lands under საკრავები
+  const inCategory = (c: PathCategory) => selectedVariantsList.filter(item => categoryOf(item.variantId) === c);
+  const galobaItems = inCategory('galoba');
+  const simgheraItems = inCategory('simghera');
+  const mtkmeliItems = inCategory('mtkmeli');
+  const sakravebiItems = inCategory('sakravebi');
 
   const categories = [
     {
@@ -503,7 +471,7 @@ export const GzaView: React.FC<GzaViewProps> = ({
                         {/* progress: voices learned (chants, songs) or simply learned (poems, instruments) */}
                         <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 px-3.5 pt-2.5 pb-3">
                           {/* how many of the three voices are learned */}
-                          {!(isSakravi(item) || isMtkmeli(item)) && (
+                          {usesVoices(item.variantId) && (
                             <span className="mr-auto flex items-center gap-2 text-xs font-bold text-[#8a7a6a] tabular-nums">
                               <span className="w-14 sm:w-20 h-1.5 rounded-full bg-[#f1e8da] overflow-hidden">
                                 <span
@@ -514,7 +482,7 @@ export const GzaView: React.FC<GzaViewProps> = ({
                               {Math.min(itemVoices.length, 3)}/3
                             </span>
                           )}
-                          {isSakravi(item) || isMtkmeli(item) ? (
+                          {!usesVoices(item.variantId) ? (
                             (confirmed[item.variantId] || []).includes('1') ? (
                               <span title="მასწავლებელმა ჩათვალა" className={`h-9 px-4 rounded-full text-xs font-bold inline-flex items-center gap-1.5 ${segConfirmed}`}>
                                 <CheckCheck className="w-3.5 h-3.5" />
@@ -594,7 +562,7 @@ export const GzaView: React.FC<GzaViewProps> = ({
             </p>
           </div>
         </>
-      ) : (
+      ) : hideEmpty ? null : (
         <div className="px-6 py-8 text-center rounded-3xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-20px_rgba(42,32,23,0.35)] space-y-2">
           <p className="font-serif-ge text-base font-bold text-[#4a3426]">საგანძურის გზაზე ჯერ არაფერია დამატებული.</p>
           <p className="text-[13px] text-[#8a7a6a]">
@@ -852,7 +820,7 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
             <div className="space-y-1.5">
               <div className="flex items-center gap-1.5">
                 <h3 className="flex-1 font-serif-ge text-[15px] font-bold text-[#2a2017]">
-                  {MONTH_NAMES_GE[currentMonth]} {currentYear}
+                  {MONTHS_GE[currentMonth]} {currentYear}
                 </h3>
                 {!isViewingCurrentMonth && (
                   <button
@@ -893,7 +861,7 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
                         picked ? 'bg-[#7a2028]/[0.08] ring-[1.5px] ring-[#7a2028]' : 'hover:bg-[#fbf6ec]'
                       }`}
                       aria-pressed={picked}
-                      aria-label={`${dayItem.dayNum} ${MONTH_NAMES_GE[currentMonth]}`}
+                      aria-label={`${dayItem.dayNum} ${MONTHS_GE[currentMonth]}`}
                     >
                       <span className={`min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-[11px] leading-none font-bold tabular-nums ${
                         dayItem.isToday ? 'bg-[#7a2028] text-[#fbf6ec]' : hasSchedule ? 'text-[#2a2017]' : 'text-[#cbbca6]'
@@ -927,8 +895,8 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
                 return (
                   <div className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#efe5d4] px-3 py-2.5 space-y-2">
                     <p className="text-sm font-bold text-[#2a2017]">
-                      {day.dayNum} {MONTH_NAMES_GE[currentMonth]}
-                      <span className="font-normal text-[#8a7a6a]"> · {WEEKDAY_FULL_GE[new Date(currentYear, currentMonth, day.dayNum).getDay()]}</span>
+                      {day.dayNum} {MONTHS_GE[currentMonth]}
+                      <span className="font-normal text-[#8a7a6a]"> · {WEEKDAYS_GE[new Date(currentYear, currentMonth, day.dayNum).getDay()]}</span>
                     </p>
                     {day.scheduledHours.length === 0 ? (
                       <p className="text-xs text-[#8a7a6a]">ამ დღეს მეცადინეობა არ არის დაგეგმილი.</p>

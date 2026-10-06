@@ -15,16 +15,18 @@ export interface SamosiPart {
   label: string;
   /** drawn instead of cut from the photo */
   art?: SamosiArtKind;
+  /** one sentence of the part's story, shown when the student adds it */
+  story: string;
 }
 
 export const SAMOSI_PARTS: SamosiPart[] = [
-  { id: 'chokha', label: 'ჩოხა' },
-  { id: 'akhalukhi', label: 'ახალუხი' },
-  { id: 'masrebi', label: 'მასრები' },
-  { id: 'kamari', label: 'ქამარი' },
-  { id: 'khanjali', label: 'ხანჯალი' },
-  { id: 'aziurebi', label: 'აზიურები', art: 'boots' },
-  { id: 'papanaki', label: 'ფაფანაკი', art: 'hat' },
+  { id: 'chokha', label: 'ჩოხა', story: 'ჩოხა ქართველი მამაკაცის ტრადიციული სამოსია — საუკუნეების მანძილზე იგი ვაჟკაცობისა და ღირსების ნიშნად ითვლებოდა.' },
+  { id: 'akhalukhi', label: 'ახალუხი', story: 'ახალუხი ჩოხის ქვეშ იცმევა: ტანზე მომდგარი, მაღალსაყელოიანი სამოსია, რომელიც ჩოხის გულისპირში მოჩანს.' },
+  { id: 'masrebi', label: 'მასრები', story: 'მასრებში ძველად თოფის ერთ გასროლაზე გათვლილი დენთი ინახებოდა, დღეს კი ისინი ჩოხის მორთულობაა.' },
+  { id: 'kamari', label: 'ქამარი', story: 'ვიწრო ტყავის ქამარი, ხშირად ვერცხლით მოჭედილი, ჩოხას წელზე უჭერს — მასზე ხანჯალი ეკიდება.' },
+  { id: 'khanjali', label: 'ხანჯალი', story: 'ორლესული ხანჯალი ძველად ქართველი მამაკაცის იარაღი იყო, დღეს კი ჩოხის ღირსების ნიშანია.' },
+  { id: 'aziurebi', label: 'აზიურები', art: 'boots', story: 'ჩოხასთან რბილი ტყავის ჩექმებს იცვამდნენ — მსუბუქსა და მოხერხებულს ცხენზე ჯდომისა და ცეკვისთვის.' },
+  { id: 'papanaki', label: 'ფაფანაკი', art: 'hat', story: 'ქუდი კაცის ღირსების ნიშანი იყო — „ქუდზე კაცი“ ნიშნავდა, რომ ყველა ქუდოსანი ერთად უნდა დამდგარიყო.' },
 ];
 
 export const samosiLayer = (id: string) => `${SAMOSI_DIR}/${id}.webp`;

@@ -6,8 +6,8 @@ import { filterValidVariants } from '../../utils/variantValidation';
 import { StudyDay, useUpcomingSessions } from '../../hooks/useUpcomingSessions';
 import { StreakDay, WeekStreak } from './WeekStreak';
 import { StudentBookmarkView } from './StudentBookmarkView';
+import { MONTHS_SHORT_GE } from '../../utils/dateNames';
 
-export const MONTHS_SHORT_GE = ['იან', 'თებ', 'მარ', 'აპრ', 'მაი', 'ივნ', 'ივლ', 'აგვ', 'სექ', 'ოქტ', 'ნოე', 'დეკ'];
 
 // "დღეს" / "ხვალ" / "12 ოქტ" for the next planned lesson
 export const nextLessonLabel = (next: { offset: number; date: Date }) =>
@@ -28,8 +28,19 @@ export const PATH_ICON = 'w-11 h-11 shrink-0 rounded-xl bg-[#7a2028]/[0.07] text
 const PANEL_KEY = (id: string) => `pathPanel:${id}`;
 const PANEL_EVENT = 'open-path-panel';
 
+// The path page's tabs (PathTabs), and the tab that holds each panel, so opening a panel shows its tab
+export type PathTab = 'learn' | 'spirit' | 'samosi';
+export const PATH_TAB_KEY = 'pathTab';
+export const PATH_TAB_EVENT = 'path-tab';
+const PANEL_TAB: Record<string, PathTab> = { work: 'learn', manera: 'learn', habits: 'spirit' };
+
 export const openPathPanel = (id: string) => {
-  try { localStorage.setItem(PANEL_KEY(id), '1'); } catch { /* storage off: the event still opens it */ }
+  const tab = PANEL_TAB[id];
+  try {
+    localStorage.setItem(PANEL_KEY(id), '1');
+    if (tab) localStorage.setItem(PATH_TAB_KEY, tab);
+  } catch { /* storage off: the events still open it */ }
+  if (tab) window.dispatchEvent(new CustomEvent(PATH_TAB_EVENT, { detail: tab }));
   window.dispatchEvent(new CustomEvent(PANEL_EVENT, { detail: id }));
 };
 
