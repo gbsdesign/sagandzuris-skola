@@ -24,6 +24,9 @@ import { LibraryPage } from '../pages/LibraryPage';
 import { PsalterPage } from '../pages/PsalterPage';
 import { TeacherPage } from '../pages/TeacherPage';
 import { MyClassWork } from '../components/teacher/MyClassWork';
+import { useAccess } from '../hooks/useAccess';
+import { LockedPage } from '../components/access/SignInPrompt';
+import { SECTIONS, sectionOfPage } from '../data/sections';
 
 interface AppRouterProps {
   logoUrl: string;
@@ -33,6 +36,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   const { currentPage, selectedService, handleGoBack, navigateTo } = useNavigation();
   const { openModal } = useModal();
   const { isAdmin, isTeacher } = useAuth();
+  const access = useAccess();
   const {
     selectedChantVariants,
     handleToggleSong,
@@ -40,6 +44,13 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
     handleToggleInstrument,
     setSelectedChantVariants,
   } = useChants();
+
+  // a section a guest may not open, or one hidden by the admin or by the kids' mode (e.g. after a reload)
+  const pageAccess = access.page(currentPage);
+  if (pageAccess === 'locked') {
+    return <LockedPage what={SECTIONS.find(x => x.id === sectionOfPage(currentPage))?.label || 'ეს გვერდი'} />;
+  }
+  if (pageAccess === 'hidden' || pageAccess === 'soon') return <HomePage logoUrl={logoUrl} />;
 
   if (currentPage === 'admin') {
     return isAdmin ? <AdminPanelPage logoUrl={logoUrl} /> : <HomePage logoUrl={logoUrl} />;

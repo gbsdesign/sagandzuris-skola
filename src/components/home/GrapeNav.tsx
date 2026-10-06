@@ -3,13 +3,16 @@ import { useNavigation, useModal, useAuth } from '../../context';
 import { openPathPanel } from '../views/IndependentWorkCard';
 import { triggerHaptic } from '../../utils/haptics';
 import { Toast } from '../ui/Toast';
+import { useAccess } from '../../hooks/useAccess';
+import { askSignIn } from '../access/SignInPrompt';
+import { SectionId } from '../../data/sections';
 
 // Home menu drawn on the vine-and-qvevri picture: light parchment labels hang under the grape
 // clusters, sit on the leaves and on the qvevri, and sway gently. Labels without `go` are not built yet.
 // x/y are the label's centre in % of the picture (public/home/vine.png, 1033×1390).
 // nx/ny: the same spot on a phone, where the labels keep a readable size on a smaller picture and would touch;
 // they stay on the same leaf / cluster, only spread apart (from a 448px-wide picture up, x/y apply).
-type Spot = { label: string; x: number; y: number; nx?: number; ny?: number; go?: () => void; big?: boolean; hero?: boolean };
+type Spot = { id: SectionId; label: string; x: number; y: number; nx?: number; ny?: number; go?: () => void; big?: boolean; hero?: boolean };
 
 const VINE = '/home/vine.png';
 
@@ -17,29 +20,37 @@ export const GrapeNav: React.FC = () => {
   const { navigateTo } = useNavigation();
   const { openModal } = useModal();
   const { user } = useAuth();
+  const access = useAccess();
   const [soon, setSoon] = useState<string | null>(null);
 
   const spots: Spot[] = [
     // under the grape clusters
-    { label: 'სიმღერა', x: 13, y: 36, nx: 18, ny: 43, go: () => navigateTo('simghera'), big: true },
+    { id: 'simghera', label: 'სიმღერა', x: 13, y: 36, nx: 18, ny: 43, go: () => navigateTo('simghera'), big: true },
     // chant, the main path, stands biggest at the heart of the vine
-    { label: 'გალობა', x: 57, y: 31, nx: 56, ny: 33, go: () => navigateTo('galoba'), hero: true },
-    { label: 'მთქმელი', x: 50, y: 58, nx: 47, ny: 59, go: () => navigateTo('mtkmeli'), big: true },
-    { label: 'საკრავები', x: 70, y: 48, nx: 73, ny: 48, go: () => navigateTo('sakravebi') },
+    { id: 'galoba', label: 'გალობა', x: 57, y: 31, nx: 56, ny: 33, go: () => navigateTo('galoba'), hero: true },
+    { id: 'mtkmeli', label: 'მთქმელი', x: 50, y: 58, nx: 47, ny: 59, go: () => navigateTo('mtkmeli'), big: true },
+    { id: 'sakravebi', label: 'საკრავები', x: 70, y: 48, nx: 73, ny: 48, go: () => navigateTo('sakravebi') },
     // on the leaves
     // the psalter group ("ფსალმუნთა ჯგუფი")
-    { label: 'მედავით­ნეობა', x: 35, y: 13, nx: 29, ny: 14, go: () => navigateTo('psalter') },
+    { id: 'medavitneoba', label: 'მედავით­ნეობა', x: 35, y: 13, nx: 29, ny: 14, go: () => navigateTo('psalter') },
     // signed in: habits fold open on the path page; guests get the sign-in prompt
-    { label: 'ჩვევები', x: 62, y: 8, nx: 66, ny: 8, go: () => (user ? (openPathPanel('habits'), navigateTo('gz')) : openModal('chvevebi')) },
-    { label: 'თამაშები', x: 86, y: 28, nx: 83, ny: 20 },
+    { id: 'chvevebi', label: 'ჩვევები', x: 62, y: 8, nx: 66, ny: 8, go: () => (user ? (openPathPanel('habits'), navigateTo('gz')) : openModal('chvevebi')) },
+    { id: 'tamashebi', label: 'თამაშები', x: 86, y: 28, nx: 83, ny: 20 },
     // in the qvevri
-    { label: 'გაიცანი წინაპრები', x: 51, y: 82, go: () => navigateTo('tsinaprebi') },
+    { id: 'tsinaprebi', label: 'გაიცანი წინაპრები', x: 51, y: 82, go: () => navigateTo('tsinaprebi') },
   ];
 
-  const press = (s: Spot) => {
+  // the admin's switches, the kids' mode and the guest's limits decide what each label does
+  const shown = spots
+    .map(s => ({ ...s, access: access.section(s.id) }))
+    .filter(s => s.access !== 'hidden')
+    .map(s => (s.access === 'soon' ? { ...s, go: undefined } : s));
+
+  const press = (s: (typeof shown)[number]) => {
     triggerHaptic(10);
-    if (s.go) s.go();
-    else setSoon(`„${s.label}“ ჯერ მზადდება — მალე დაემატება`);
+    if (s.access === 'locked') askSignIn(s.label.replace('\u00ad', ''));
+    else if (s.go) s.go();
+    else setSoon(`„${s.label.replace('\u00ad', '')}“ ჯერ მზადდება — მალე დაემატება`);
   };
 
   return (
@@ -54,7 +65,7 @@ export const GrapeNav: React.FC = () => {
           draggable={false}
         />
 
-        {spots.map((s, i) => (
+        {shown.map((s, i) => (
           <button
             key={s.label}
             type="button"

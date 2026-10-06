@@ -1,5 +1,5 @@
 // Auto-generated chant media registry linking Google Drive resources
-import { RUNTIME_MEDIA } from './runtimeRecordings';
+import { RUNTIME_MEDIA, recordingsAreHidden } from './runtimeRecordings';
 export interface ChantNoteItem {
   name: string;
   id: string;
@@ -1356,6 +1356,8 @@ const VARIANT_MEDIA: Record<string, string> = {
 };
 
 export function getChantMedia(chantId?: string, variantCode?: string): ChantMediaItem | undefined {
+  // guests see no recordings at all
+  if (recordingsAreHidden()) return undefined;
   // a recording bound in the admin panel (settings/recordings) comes first
   const bound = RUNTIME_MEDIA[`${chantId}|${variantCode}`];
   if (bound) return bound;

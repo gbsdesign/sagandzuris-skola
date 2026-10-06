@@ -17,6 +17,11 @@ export interface RecordingBinding {
 
 const AUDIO_PROXY = 'https://sagandzuri-audio.mr-gabunia.workers.dev';
 export const RUNTIME_MEDIA: Record<string, ChantMediaItem> = {};
+
+// Guests don't see the live recordings at all (only the book notes and the synthesizer).
+let recordingsHidden = true;
+export const setRecordingsHidden = (hidden: boolean) => { recordingsHidden = hidden; };
+export const recordingsAreHidden = () => recordingsHidden;
 let bindings: Record<string, RecordingBinding> = {};
 let version = 0;
 const listeners = new Set<() => void>();

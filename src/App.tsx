@@ -25,7 +25,8 @@ import { TodaySaintsCard } from './components/calendar/TodaySaintsCard';
 import { SaintLifeOverlay } from './components/saints/SaintLifeOverlay';
 import { usePrayerReminderScheduler } from './utils/prayerReminders';
 import { isPrayerId } from './data/prayers';
-import { startRecordingBindings, useRecordingBindings } from './data/runtimeRecordings';
+import { setRecordingsHidden, startRecordingBindings, useRecordingBindings } from './data/runtimeRecordings';
+import { SignInPrompt } from './components/access/SignInPrompt';
 
 startRecordingBindings();
 
@@ -50,8 +51,10 @@ export default function App() {
 }
 
 function AppContent() {
-  const { loading } = useAuth();
+  const { loading, user } = useAuth();
   const { currentPage, openPrayer } = useNavigation();
+  // live recordings are for signed-in members only (set before the tree below renders)
+  setRecordingsHidden(!user);
   // recordings bound in the admin panel: the page redraws when they arrive
   useRecordingBindings();
   const [dbLogo, setDbLogo] = useState<string | null>(null);
@@ -130,6 +133,9 @@ function AppContent() {
       <ErrorBoundary>
         <TodaySaintsCard />
       </ErrorBoundary>
+
+      {/* "საჭიროა რეგისტრაცია" for guests */}
+      <SignInPrompt />
 
       {/* a saint's life, opened from that card, the calendar or the library */}
       <ErrorBoundary>
