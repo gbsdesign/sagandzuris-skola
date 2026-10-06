@@ -53,7 +53,7 @@ export default function App() {
 
 function AppContent() {
   const { loading, user } = useAuth();
-  const { currentPage, openPrayer } = useNavigation();
+  const { currentPage, openPrayer, navigateTo } = useNavigation();
   // live recordings are for signed-in members only (set before the tree below renders)
   setRecordingsHidden(!user);
   // recordings bound in the admin panel: the page redraws when they arrive
@@ -67,14 +67,31 @@ function AppContent() {
 
   usePrayerReminderScheduler(openPrayer);
 
-  // a tapped reminder may open the site as /?prayer=<id>
+  // a tapped reminder may open the site as /?prayer=<id> or /?open=psalter|gz|teacher
+  const openFromUrl = (href: string) => {
+    const url = new URL(href, window.location.origin);
+    const prayerId = url.searchParams.get('prayer');
+    const page = url.searchParams.get('open');
+    if (prayerId && isPrayerId(prayerId)) openPrayer(prayerId);
+    else if (page === 'psalter' || page === 'gz' || page === 'teacher') navigateTo(page);
+  };
   useEffect(() => {
     const url = new URL(window.location.href);
-    const prayerId = url.searchParams.get('prayer');
-    if (!prayerId) return;
+    if (!url.searchParams.get('prayer') && !url.searchParams.get('open')) return;
+    const href = url.href;
     url.searchParams.delete('prayer');
+    url.searchParams.delete('open');
     window.history.replaceState(null, '', url.pathname + url.search + url.hash);
-    if (isPrayerId(prayerId)) openPrayer(prayerId);
+    openFromUrl(href);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // ... and while the site is open, the service worker passes the address on
+  useEffect(() => {
+    const sw = navigator.serviceWorker;
+    if (!sw) return;
+    const onMessage = (e: MessageEvent) => { if (e.data?.type === 'open-url' && typeof e.data.url === 'string') openFromUrl(e.data.url); };
+    sw.addEventListener('message', onMessage);
+    return () => sw.removeEventListener('message', onMessage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

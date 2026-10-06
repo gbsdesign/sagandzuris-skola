@@ -2,10 +2,18 @@ name = "sagandzuri-reminders"
 main = "reminders.js"
 compatibility_date = "2026-09-01"
 
-# reminders fall 10, 5 and 1 minute before a prayer hour
+# :50, :55, :59 — the seven-times prayers (10, 5 and 1 minute before an hour);
+# :00 — psalter groups and assignments (Georgian time is worked out inside)
 [triggers]
-crons = ["50,55,59 * * * *"]
+crons = ["50,55,59 * * * *", "0 * * * *"]
 
+# subscriptions (schema.sql); create it with: npx wrangler d1 create sagandzuri-reminders
+[[d1_databases]]
+binding = "DB"
+database_name = "sagandzuri-reminders"
+database_id = "PASTE-THE-ID-FROM-wrangler-d1-create"
+
+# the old storage: read once to move the prayer subscriptions into D1
 [[kv_namespaces]]
 binding = "REMINDERS"
 id = "6013a00c7d1c44aeaf80f67a82ef4a1d"
@@ -13,3 +21,6 @@ id = "6013a00c7d1c44aeaf80f67a82ef4a1d"
 [vars]
 # public half of the VAPID pair; the private JWK is the secret VAPID_PRIVATE_JWK
 VAPID_PUBLIC_KEY = "BPQ3-oe86mthAy7mhsrDJIcTnl92WBn7t_OKcGe7h1bg7jR2N2Z_O3eC1D1k8oTFnuo6b6iDC7DI00TxroHz7t8"
+# the Firestore the reminders read (secret FIREBASE_SA: the service account's JSON key)
+FIREBASE_PROJECT_ID = "psalms-reading-group-ge-dev"
+FIRESTORE_DB = "ai-studio-f343d2d0-5076-4642-93d6-799814399e1a"

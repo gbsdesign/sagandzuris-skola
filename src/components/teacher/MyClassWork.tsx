@@ -6,6 +6,8 @@ import { daysUntil, dueLabel, shortDate, useMyAssignments } from '../../hooks/us
 import { useConfirmations } from '../../hooks/useConfirmations';
 import { Voice, voicesOf } from '../../utils/pathItems';
 import { LessonTable } from './Schedule';
+import { Toggle } from '../ui/kit';
+import { pushSupported, setGroupPush, useGroupPush } from '../../utils/groupPush';
 
 const VOICE_LABEL: Record<string, string> = { '1': 'I ხმა', '2': 'II ხმა', '3': 'III ხმა' };
 
@@ -16,6 +18,8 @@ export const MyClassWork: React.FC = () => {
   const assignments = useMyAssignments(classes.map(c => c.id), user?.uid);
   const { selectedChantVariants } = useChants();
   const confirmed = useConfirmations(user?.uid);
+  const push = useGroupPush();
+  const [pushNote, setPushNote] = React.useState('');
   const current = assignments.filter(a => daysUntil(a.due) >= -3);
   const withSchedule = classes.filter(c => c.schedule.length);
   if (!user || (!current.length && !withSchedule.length)) return null;
@@ -62,6 +66,17 @@ export const MyClassWork: React.FC = () => {
               );
             })}
           </ul>
+          {pushSupported() && (
+            <div className="mt-2 border-t border-[#efe3cf]">
+              <Toggle
+                on={push.assignments}
+                onChange={async on => setPushNote(await setGroupPush({ ...push, assignments: on }))}
+                label="შეხსენება ვადამდე"
+                hint="ვადის წინა საღამოს, 19:00-ზე, ამ მოწყობილობაზე"
+              />
+              {pushNote && <p className="text-xs font-semibold text-[#9a3324]">{pushNote}</p>}
+            </div>
+          )}
         </div>
       )}
       {withSchedule.map(c => (
