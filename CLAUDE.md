@@ -123,9 +123,13 @@
 - **Stage 1 built 2026-10-06** (branch `claude/trusting-ptolemy-e66s0f`): sign-in by an e-mail link
   (`utils/emailLink.ts`, `components/access/SignInChoices.tsx`, `EmailLinkFinish.tsx`; header „შესვლა“ opens
   the sheet via `openSignIn()`). Needs "Email link (passwordless sign-in)" on in the Firebase console.
-  „პირველი გაცნობა“ (`components/onboarding/FirstMeeting.tsx`): Georgian name and voices → profile,
-  directory, `students.firstMeeting` (the user removed the „რისთვის მოხვედით?“ question — don't bring it back).
-  `AuthContext` no longer writes empty name/photo on sign-in.
+  „პირველი გაცნობა“ (`components/onboarding/FirstMeeting.tsx`): a locked form (no ✕, only „გამოსვლა“) over
+  the app until the profile is complete — six cards: Georgian name, birth date (lists), region (list) + town or
+  village, phone, status („დამწყები / ვგალობ / ვმღერი / ვუკრავ“), voices. Every field is required (the user's
+  rule); what counts as complete is `utils/profileFields.ts` (+ `tests/profileFields.test.ts`). It waits while
+  notes, the program or church mode is open. The user removed „რისთვის მოხვედით?“ — don't bring it back.
+  Phone lives only in `students/{uid}.profile.phone` (not in `directory`). `AuthContext` no longer writes empty
+  name/photo on sign-in.
 - Emulator check: firebase-tools in the scratchpad; the auth emulator keeps the letters at
   `/emulator/v1/projects/<id>/oobCodes`; the app's Firestore database id is `ai-studio-…`, not `(default)`.
 

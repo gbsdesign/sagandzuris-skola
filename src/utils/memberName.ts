@@ -2,24 +2,15 @@ import { useEffect, useState } from 'react';
 import { collection, doc, getDocs, onSnapshot, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { writeDirectory } from './directory';
+import { fullName, prayerName, type ProfileName } from './georgianName';
 
 // A member's name as the group sees it and prays for it: in Georgian letters, from the profile
 // (students/{uid}.profile.firstName / lastName, and churchName — the name given at baptism, for the
 // commemoration lists; when empty the first name is used). Google names are often Latin or carry
 // a surname, so groups ask for these instead.
 
-const GEORGIAN = /^[ა-ჿᲐ-Ჿ]+(?:[\s-][ა-ჿᲐ-Ჿ]+)*$/;
-export const isGeorgian = (s: string | undefined) => !!s && GEORGIAN.test(s.trim());
-
-export interface ProfileName {
-  firstName: string;
-  lastName: string;
-  churchName: string;
-}
-
-export const fullName = (p: Partial<ProfileName> | undefined) => [p?.firstName, p?.lastName].map(x => (x || '').trim()).filter(Boolean).join(' ');
-export const prayerName = (p: Partial<ProfileName> | undefined) => (p?.churchName || p?.firstName || '').trim();
-export const hasGeorgianName = (p: Partial<ProfileName> | undefined) => isGeorgian(p?.firstName) && isGeorgian(p?.lastName);
+export { isGeorgian, fullName, prayerName, hasGeorgianName } from './georgianName';
+export type { ProfileName } from './georgianName';
 
 /** The signed-in person's profile name (live). `null` while loading. */
 export const useProfileName = (uid?: string | null) => {
