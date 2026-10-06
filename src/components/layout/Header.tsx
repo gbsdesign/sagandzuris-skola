@@ -8,6 +8,7 @@ import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
 import { ClassLogo } from '../classes/ClassLogo';
 import { useAccess } from '../../hooks/useAccess';
 import { askSignIn } from '../access/SignInPrompt';
+import { SearchButton } from '../search/GlobalSearch';
 import { Bookmark, User as UserIcon, LogIn, LogOut, Compass, ShieldCheck, Library, GraduationCap, Baby } from 'lucide-react';
 
 interface HeaderProps {
@@ -65,6 +66,8 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
 
         {/* independent work (icon + count) + install + admin + profile */}
         <div className="order-2 lg:order-3 ml-auto flex items-center gap-1.5 sm:gap-2 min-w-0">
+          {/* the search sits beside the learning tools; with none of them shown, up here */}
+          {tools.length === 0 && <SearchButton />}
           <PWAInstallButton compact />
           {/* teachers (and admins): the teacher's panel */}
           {isTeacher && (
@@ -174,10 +177,10 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
           )}
         </div>
 
-        {/* learning tools: one group, full width on phones, centred on desktop */}
+        {/* learning tools: one group, full width on phones, centred on desktop; the search beside it */}
 {tools.length > 0 && (
-        <nav className="order-3 lg:order-2 w-full lg:w-auto lg:mx-auto flex justify-center" aria-label="სასწავლო მასალა">
-          <div className="w-full sm:w-auto flex items-stretch rounded-xl bg-white/80 ring-1 ring-[#e8dcc8] p-0.5">
+        <nav className="order-3 lg:order-2 w-full lg:w-auto lg:mx-auto flex justify-center gap-1.5 sm:gap-2" aria-label="სასწავლო მასალა">
+          <div className="flex-1 sm:flex-none flex items-stretch rounded-xl bg-white/80 ring-1 ring-[#e8dcc8] p-0.5">
             {tools.map(({ id, page, label, Icon }, i) => (
               <React.Fragment key={id}>
                 {i > 0 && <span aria-hidden className="w-px my-1.5 bg-[#e8dcc8] shrink-0" />}
@@ -200,6 +203,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
               </React.Fragment>
             ))}
           </div>
+          <SearchButton />
         </nav>
         )}
       </div>

@@ -93,6 +93,9 @@
   orthodoxy.ge publishes it.** Don't add "წყარო: orthodoxy.ge" lines (the user removed them).
 - **Saint lives** (`components/saints/SaintLifeOverlay.tsx`, `public/lives/`, linking in
   `scripts/lib/saint-lives-match.mjs`).
+- **One search** (`components/search/`, index `data/searchIndex.ts`, matching `utils/searchMatch.ts` + test):
+  header 🔍, home field, `/` or Ctrl+K. Finds functions, chants, prayers/akathists/Bible chapters („მათე 5“),
+  psalter („ფს 50“), songs, chanters, feasts. Pages take the picked item via `useOpenRequest` (`utils/searchOpen.ts`).
 - **Class chat** with voice messages + Jitsi video call button (`components/classes/ClassChat.tsx`,
   `hooks/useClassChat.ts`, `utils/voiceRecorder.ts`, `utils/classCall.ts`). Voice MP3s are Firestore Bytes
   (no Firebase Storage).
