@@ -10,7 +10,7 @@ import { PathPanel, PATH_ICON, PATH_TILE } from '../components/views/Independent
 import { ChvevebiContent } from '../components/views/ChvevebiPanel';
 import { ManeraContent, ManeraAverageBadge, ManeraQuickRings } from '../components/views/ManeraPanel';
 import { PathSummary } from '../components/views/PathSummary';
-import { ReorderStack } from '../components/views/ReorderStack';
+import { PathTabs } from '../components/views/PathTabs';
 import { ChemiSamosi } from '../components/views/ChemiSamosi';
 import { MyClassWork } from '../components/teacher/MyClassWork';
 import { ShortcutShelf } from '../components/home/ShortcutShelf';
@@ -131,36 +131,45 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           {currentPage === 'galoba-detail' && <ChantDetailPage />}
 
           {currentPage === 'gz' && (
-            <div className="w-full max-w-2xl mx-auto mb-2 px-1 space-y-7">
-              {/* the page title sits in the top bar (SubPageHeader) */}
-              {/* the teacher's assignments and the lesson timetable, when there are any */}
-              <MyClassWork />
-              {/* the student can put these cards in their own order; my outfit comes first by default, manner last */}
-              <ReorderStack
-                storageKey="pathCardsOrder"
-                items={[
-                  { id: 'samosi', label: 'ჩემი სამოსი', node: <ChemiSamosi /> },
-                  { id: 'summary', label: 'შენი გზა', node: <PathSummary /> },
-                  {
-                    id: 'habits', label: 'ჩვევები', node: (
-                      <PathPanel id="habits" title="ჩვევები" subtitle="ლოცვითი ჩვევები სულიერი ნიადაგისთვის" icon={<Sparkles className="w-5 h-5" />}>
+            <div className="w-full max-w-2xl mx-auto mb-2 px-1">
+              {/* the page title sits in the top bar (SubPageHeader); the page itself is in three tabs */}
+              <PathTabs
+                panels={{
+                  learn: (
+                    <>
+                      {/* the teacher's assignments and the lesson timetable, when there are any */}
+                      <MyClassWork />
+                      <div className="space-y-3">
+                        <PathSummary />
+                        <PathPanel id="manera" title="მანერა" subtitle="საშემსრულებლო რჩევები" badge={<ManeraAverageBadge />} extra={<ManeraQuickRings />} icon={<Music className="w-5 h-5" />}>
+                          <ManeraContent />
+                        </PathPanel>
+                      </div>
+                      <GzaView
+                        hideEmpty
+                        onGoToGaloba={() => navigateTo('galoba')}
+                        selectedChantVariants={selectedChantVariants}
+                        onUpdateVariants={(next) => setSelectedChantVariants(next)}
+                      />
+                    </>
+                  ),
+                  spirit: (
+                    // the tab's only card, so it is always open
+                    <section className="w-full rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] overflow-hidden">
+                      <div className="flex items-center gap-3.5 p-3.5 sm:p-4">
+                        <span className={PATH_ICON}><Sparkles className="w-5 h-5" /></span>
+                        <span className="flex-1 min-w-0">
+                          <span className="block text-[15px] sm:text-base font-black leading-tight text-[#2a2017]">ჩვევები</span>
+                          <span className="block mt-1 text-xs font-semibold text-[#8a7a6a]">ლოცვითი ჩვევები სულიერი ნიადაგისთვის</span>
+                        </span>
+                      </div>
+                      <div className="border-t border-[#efe5d4] px-3 sm:px-4 pt-4 pb-4">
                         <ChvevebiContent />
-                      </PathPanel>
-                    ),
-                  },
-                  {
-                    id: 'manera', label: 'მანერა', node: (
-                      <PathPanel id="manera" title="მანერა" subtitle="საშემსრულებლო რჩევები" badge={<ManeraAverageBadge />} extra={<ManeraQuickRings />} icon={<Music className="w-5 h-5" />}>
-                        <ManeraContent />
-                      </PathPanel>
-                    ),
-                  },
-                ]}
-              />
-              <GzaView
-                onGoToGaloba={() => navigateTo('galoba')}
-                selectedChantVariants={selectedChantVariants}
-                onUpdateVariants={(next) => setSelectedChantVariants(next)}
+                      </div>
+                    </section>
+                  ),
+                  samosi: <ChemiSamosi unfolded />,
+                }}
               />
             </div>
           )}

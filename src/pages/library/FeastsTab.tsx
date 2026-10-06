@@ -3,12 +3,12 @@ import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
 import { Rosette } from '../../components/home/PlateOrnaments';
 import { FEAST_GROUPS, Feast, feastDates, feastUrl } from '../../data/library/feasts';
-import { MONTHS_GE, daysBetween, fromIso, oldDayMonthGe, openChurchCalendar, todayIso, weekdayGe } from '../../data/churchCalendar';
+import { daysBetween, fromIso, oldDayMonthGe, openChurchCalendar, todayIso, weekdayGe } from '../../data/churchCalendar';
+import { MONTHS_GE, MONTHS_SHORT_GE } from '../../utils/dateNames';
 
 // orthodoxy.ge's feast list with this year's dates worked out: fixed feasts from their date,
 // movable ones from Easter. Tapping a date opens that day in the footer's calendar.
 
-const MONTHS_SHORT = ['იან', 'თებ', 'მარ', 'აპრ', 'მაი', 'ივნ', 'ივლ', 'აგვ', 'სექ', 'ოქტ', 'ნოე', 'დეკ'];
 
 const inDays = (n: number) => (n === 0 ? 'დღეს' : n === 1 ? 'ხვალ' : `${n} დღეში`);
 
@@ -21,7 +21,7 @@ const DateTile: React.FC<{ iso: string; past: boolean; today: boolean }> = ({ is
       }`}
     >
       <span className="font-serif-ge text-[17px] font-bold leading-none tabular-nums">{d.getDate()}</span>
-      <span className="mt-0.5 text-[10px] font-bold leading-none">{MONTHS_SHORT[d.getMonth()]}</span>
+      <span className="mt-0.5 text-[10px] font-bold leading-none">{MONTHS_SHORT_GE[d.getMonth()]}</span>
     </span>
   );
 };
@@ -120,7 +120,7 @@ export const FeastsTab: React.FC = () => {
           <Rosette color="#fbf6ec" className="absolute -right-4 -bottom-6 w-24 h-24 opacity-[0.08]" />
           <span className="w-12 shrink-0 self-start rounded-xl bg-[#fbf6ec]/10 ring-1 ring-[#fbf6ec]/20 flex flex-col items-center justify-center py-1.5">
             <span className="font-serif-ge text-[20px] font-bold leading-none tabular-nums">{fromIso(next.iso).getDate()}</span>
-            <span className="mt-0.5 text-[10.5px] font-bold leading-none text-[#f3d9a8]">{MONTHS_SHORT[fromIso(next.iso).getMonth()]}</span>
+            <span className="mt-0.5 text-[10.5px] font-bold leading-none text-[#f3d9a8]">{MONTHS_SHORT_GE[fromIso(next.iso).getMonth()]}</span>
           </span>
           <span className="relative flex-1 min-w-0">
             <span className="block text-[11px] font-bold text-[#f3d9a8]">უახლოესი დღესასწაული · {inDays(daysBetween(today, next.iso))}</span>

@@ -4,13 +4,14 @@ import { Users, Clock, Sparkles, ClipboardCheck, Route, Baby, Lock } from 'lucid
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
 import { SchoolClass } from '../../hooks/useClasses';
-import { StudentRecord, WEEKDAYS_SHORT, agoLabel, useAttendance } from '../../hooks/useTeaching';
+import { StudentRecord, agoLabel, useAttendance } from '../../hooks/useTeaching';
 import { computeMonthlyStats } from '../../hooks/useMonthlyStudyStats';
 import { HABIT_ITEMS } from '../../data/habitsAndManera';
 import { dayKey, lastDays } from '../../utils/habitsWeek';
 import { DEFAULT_KIDS_SECTIONS, KidsMode, SECTIONS, SectionId } from '../../data/sections';
 import { MemberPathEditor } from '../admin/MemberPathEditor';
 import { Avatar, Btn, Card, CardTitle, Empty, Pill, Sheet, Stat, Toggle } from '../ui/kit';
+import { WEEKDAYS_SHORT_GE } from '../../utils/dateNames';
 
 const VOICE = { '1': 'მთქმელი', '2': 'მოძახილი', '3': 'ბანი' } as Record<string, string>;
 const MONTHS = ['იანვარში', 'თებერვალში', 'მარტში', 'აპრილში', 'მაისში', 'ივნისში', 'ივლისში', 'აგვისტოში', 'სექტემბერში', 'ოქტომბერში', 'ნოემბერში', 'დეკემბერში'];
@@ -158,7 +159,7 @@ const StudentSheet: React.FC<{
                   <div className="w-full h-14 flex items-end">
                     <div className={`w-full rounded-md ${n ? 'bg-[#7a2028]' : 'bg-[#efe5d4]'}`} style={{ height: `${Math.max(8, (n / Math.max(maxDay, HABIT_ITEMS.length / 2)) * 100)}%` }} title={`${n}`} />
                   </div>
-                  <span className="text-[10.5px] font-semibold text-[#8a7a6a]">{WEEKDAYS_SHORT[d.getDay()]}</span>
+                  <span className="text-[10.5px] font-semibold text-[#8a7a6a]">{WEEKDAYS_SHORT_GE[d.getDay()]}</span>
                 </div>
               ))}
             </div>

@@ -230,6 +230,18 @@ const celebrate = () => {
 // "30 დღეში 2-ჯერ" — the goal behind a group's percent
 const goalLabel = ({ times, days }: HabitGroupType['goal']) => (times === days ? `ბოლო ${days} დღე` : `${days} დღეში ${times}-ჯერ`);
 
+// the explanation opens in full the first time; after that it waits folded
+const INTRO_SEEN_KEY = 'habitsIntroSeen';
+const introSeen = () => {
+  try { return localStorage.getItem(INTRO_SEEN_KEY) === '1'; } catch { return false; }
+};
+
+// "ფსალმუნების კითხვა — სასურველია 1 კანონი…": the name, and the hint after the dash in smaller type
+const splitLabel = (label: string) => {
+  const i = label.indexOf(' — ');
+  return i < 0 ? { name: label, hint: '' } : { name: label.slice(0, i), hint: label.slice(i + 3) };
+};
+
 // A habit's last 7 days and its percent against the group's goal
 const HabitStreak: React.FC<{ log: HabitLog; id: string; goal: HabitGroupType['goal'] }> = ({ log, id, goal }) => {
   const { done, percent } = habitPercent(log, id, goal);
@@ -238,12 +250,7 @@ const HabitStreak: React.FC<{ log: HabitLog; id: string; goal: HabitGroupType['g
     return { date, mark: ticked ? ('done' as const) : ('open' as const), note: ticked ? 'შესრულდა' : undefined };
   });
   return (
-    <WeekStreak
-      days={days}
-      percent={percent}
-      percentTitle={`${goal.days} დღეში ${done}-ჯერ — მიზანი ${goal.times}`}
-      className="pl-3.5 pr-2.5 pb-2.5"
-    />
+    <WeekStreak dots days={days} percent={percent} percentTitle={`${goal.days} დღეში ${done}-ჯერ — მიზანი ${goal.times}`} />
   );
 };
 
@@ -259,7 +266,12 @@ export const ChvevebiContent: React.FC = () => {
   const nameCount = lists.living.length + lists.deceased.length + lists.group.length;
   const [blessing, setBlessing] = useState(false);
   const [openMenu, setOpenMenu] = useState<string | null>(lastOpenMenu);
+  const [introOpen, setIntroOpen] = useState(() => !introSeen());
   const timer = useRef<number | undefined>(undefined);
+
+  useEffect(() => {
+    try { localStorage.setItem(INTRO_SEEN_KEY, '1'); } catch { /* it just opens again next time */ }
+  }, []);
 
   const setMenu = (id: string | null) => {
     lastOpenMenu = id;
@@ -284,13 +296,25 @@ export const ChvevebiContent: React.FC = () => {
 
   return (
     <div className="space-y-5 text-[#2a2017]">
-      <div className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] p-4 space-y-2 text-sm leading-relaxed text-[#4a3426]">
-        <p className="font-serif-ge font-bold text-[#7a2028]">განმარტება</p>
-        <p>ნიადაგი არის ის, რაშიც მყარად არის „ჩაფლული“ საძირკველი, ხოლო საძირკველზე დგას შენობა — ანუ მგალობლის შემოქმედება.</p>
-        <p>
-          სწორი ნიადაგის მომზადების გარეშე ვერ დამყარდება ვერც საძირკველი და ვერც მგალობლის შემოქმედება. ქვემოთ მოცემულია ჩვევები,
-          რომლებიც საჭიროა სწორი სულიერი ნიადაგის მოსამზადებლად.
-        </p>
+      <div className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-sm leading-relaxed text-[#4a3426]">
+        <button
+          type="button"
+          aria-expanded={introOpen}
+          onClick={() => setIntroOpen(o => !o)}
+          className="w-full min-h-11 flex items-center justify-between gap-2 px-4 py-2.5 text-left cursor-pointer group"
+        >
+          <span className="font-serif-ge font-bold text-[#7a2028]">განმარტება</span>
+          <ChevronDown className={`w-4 h-4 shrink-0 text-[#b5a48c] group-hover:text-[#7a2028] transition-transform ${introOpen ? 'rotate-180 text-[#7a2028]' : ''}`} />
+        </button>
+        {introOpen && (
+          <div className="px-4 pb-4 -mt-1 space-y-2 animate-in fade-in duration-200">
+            <p>ნიადაგი არის ის, რაშიც მყარად არის „ჩაფლული“ საძირკველი, ხოლო საძირკველზე დგას შენობა — ანუ მგალობლის შემოქმედება.</p>
+            <p>
+              სწორი ნიადაგის მომზადების გარეშე ვერ დამყარდება ვერც საძირკველი და ვერც მგალობლის შემოქმედება. ქვემოთ მოცემულია ჩვევები,
+              რომლებიც საჭიროა სწორი სულიერი ნიადაგის მოსამზადებლად.
+            </p>
+          </div>
+        )}
       </div>
 
       <button
@@ -319,69 +343,60 @@ export const ChvevebiContent: React.FC = () => {
             <h4 className="font-serif-ge text-[15px] font-bold text-[#7a2028]">{group.title}</h4>
             <span className="text-[11px] font-semibold text-[#a08a76]">% — {goalLabel(group.goal)}</span>
           </div>
-          {group.items.map(habit => {
-            const on = todayDone.includes(habit.id);
-            const check = (
-              <button
-                type="button"
-                role="checkbox"
-                aria-checked={on}
-                aria-label={`${habit.label} — დღეს`}
-                onClick={() => toggle(habit.id)}
-                className="shrink-0 -my-1 -mr-1 p-1.5 rounded-full cursor-pointer active:scale-90 transition-transform"
-              >
-                <span className={`w-6 h-6 rounded-full flex items-center justify-center transition-colors ${on ? 'bg-[#7a2028] text-[#fbf6ec]' : 'ring-2 ring-[#d9c8ac] bg-white'}`}>
-                  {on && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                </span>
-              </button>
-            );
-            const rowTone = on ? 'bg-[#7a2028]/[0.06] ring-[#7a2028]/25' : 'bg-white ring-[#e8dcc8]';
-
-            const streak = <HabitStreak log={habitLog} id={habit.id} goal={group.goal} />;
-
-            if (!habit.menu) {
+          {/* one compact row per habit: the name, its last 7 days as dots with the percent, today's circle.
+              Phones put the dots under the name, wider screens in their own column. */}
+          <ul className="rounded-xl ring-1 ring-[#e8dcc8] bg-white divide-y divide-[#f1e8d9] overflow-hidden">
+            {group.items.map(habit => {
+              const on = todayDone.includes(habit.id);
+              const { name, hint } = splitLabel(habit.label);
+              const expanded = !!habit.menu && openMenu === habit.id;
               return (
-                <div key={habit.id} className={`rounded-xl ring-1 transition-colors ${rowTone}`}>
-                  <div className="flex items-center gap-2 pl-3.5 pr-2.5 pt-2 pb-1.5">
-                    <button type="button" onClick={() => toggle(habit.id)} className="flex-1 min-w-0 text-left text-sm font-medium leading-snug cursor-pointer select-none">
-                      {habit.label}
+                <li key={habit.id} className={`transition-colors ${on ? 'bg-[#7a2028]/[0.05]' : ''}`}>
+                  <div className="grid grid-cols-[minmax(0,1fr)_auto] sm:grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-3 gap-y-1.5 pl-3.5 pr-1.5 py-2">
+                    <button
+                      type="button"
+                      aria-expanded={habit.menu ? expanded : undefined}
+                      onClick={() => (habit.menu ? setMenu(expanded ? null : habit.id) : toggle(habit.id))}
+                      className="col-start-1 row-start-1 min-w-0 text-left cursor-pointer select-none group"
+                    >
+                      <span className="flex items-center gap-1.5 text-sm font-medium leading-snug">
+                        <span className="min-w-0">{name}</span>
+                        {habit.menu && (
+                          <ChevronDown className={`w-4 h-4 shrink-0 text-[#b5a48c] group-hover:text-[#7a2028] transition-transform ${expanded ? 'rotate-180 text-[#7a2028]' : ''}`} />
+                        )}
+                      </span>
+                      {hint && <span className="block mt-0.5 text-xs leading-snug text-[#8a7a6a]">{hint}</span>}
                     </button>
-                    {check}
+                    <div className="col-start-1 row-start-2 sm:col-start-2 sm:row-start-1">
+                      <HabitStreak log={habitLog} id={habit.id} goal={group.goal} />
+                    </div>
+                    <button
+                      type="button"
+                      role="checkbox"
+                      aria-checked={on}
+                      aria-label={`${habit.label} — დღეს`}
+                      onClick={() => toggle(habit.id)}
+                      className="col-start-2 row-start-1 row-span-2 sm:col-start-3 sm:row-span-1 p-1.5 rounded-full cursor-pointer active:scale-90 transition-transform"
+                    >
+                      <span className={`w-7 h-7 rounded-full flex items-center justify-center transition-colors ${on ? 'bg-[#7a2028] text-[#fbf6ec]' : 'ring-2 ring-[#d9c8ac] bg-white'}`}>
+                        {on && <Check className="w-4 h-4 stroke-[3]" />}
+                      </span>
+                    </button>
                   </div>
-                  {streak}
-                </div>
+                  {expanded && habit.menu && (
+                    <div className="px-2.5 pb-2.5 pt-0.5 animate-in fade-in slide-in-from-top-1 duration-200">
+                      <HabitPrayerMenu menu={habit.menu} onOpen={read} />
+                    </div>
+                  )}
+                </li>
               );
-            }
-
-            const expanded = openMenu === habit.id;
-            return (
-              <div key={habit.id} className={`rounded-xl ring-1 transition-colors ${rowTone}`}>
-                <div className="flex items-center gap-2 pl-3.5 pr-2.5 pt-2 pb-1.5">
-                  <button
-                    type="button"
-                    aria-expanded={expanded}
-                    onClick={() => setMenu(expanded ? null : habit.id)}
-                    className="flex-1 min-w-0 flex items-center gap-1.5 text-left text-sm font-medium leading-snug cursor-pointer select-none group"
-                  >
-                    <span className="min-w-0">{habit.label}</span>
-                    <ChevronDown className={`w-4 h-4 shrink-0 text-[#b5a48c] group-hover:text-[#7a2028] transition-transform ${expanded ? 'rotate-180 text-[#7a2028]' : ''}`} />
-                  </button>
-                  {check}
-                </div>
-                {streak}
-                {expanded && (
-                  <div className="px-2.5 pb-2.5 pt-0.5 animate-in fade-in slide-in-from-top-1 duration-200">
-                    <HabitPrayerMenu menu={habit.menu} onOpen={read} />
-                  </div>
-                )}
-              </div>
-            );
-          })}
+            })}
+          </ul>
         </section>
       ))}
 
       <p className="px-2 text-center text-xs leading-relaxed text-[#8a7a6a]">
-        წრით მონიშნე, რაც დღეს შეასრულე. ზოლზე ბოლო 7 დღეა — ზედიზედ შესრულებული დღეები ერთ ჯაჭვად ერთდება.
+        წრით მონიშნე, რაც დღეს შეასრულე. 7 წერტილი ბოლო 7 დღეა (ბოლო — დღეს); ზედიზედ შესრულებული დღეები ერთ ზოლად ერთდება.
       </p>
 
       {blessing && (

@@ -3,12 +3,13 @@ import { useAuth, useNavigation, useModal } from '../../context';
 import { PWAInstallButton } from '../PWAInstallButton';
 import { triggerHaptic } from '../../utils/haptics';
 import { useMonthlyStudyStats } from '../../hooks/useMonthlyStudyStats';
-import { MONTHS_SHORT_GE, nextLessonLabel, useSelectedCount, openPathPanel } from '../views/IndependentWorkCard';
+import { nextLessonLabel, useSelectedCount, openPathPanel } from '../views/IndependentWorkCard';
 import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
 import { ClassLogo } from '../classes/ClassLogo';
 import { useAccess } from '../../hooks/useAccess';
 import { askSignIn } from '../access/SignInPrompt';
 import { Bookmark, User as UserIcon, LogIn, LogOut, Compass, ShieldCheck, Library, GraduationCap, Baby } from 'lucide-react';
+import { MONTHS_SHORT_GE } from '../../utils/dateNames';
 
 interface HeaderProps {
   logoUrl: string;
