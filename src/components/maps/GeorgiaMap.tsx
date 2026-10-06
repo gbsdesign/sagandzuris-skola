@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Check, Plus, ChevronDown, Headphones, Sparkles, FileText, Music, Lock, MapPin } from 'lucide-react';
 import {
+  FOLK_SONGS,
   FOLK_REGIONS,
   FolkRegion,
   FolkSong,
@@ -8,12 +9,14 @@ import {
   songVersionMedia,
   songDocUrl,
   soundcloudEmbedUrl,
+  getFolkRegion,
 } from '../../data/songsData';
 import { GEORGIA_MAP_SHAPES, GEORGIA_MAP_SIZE } from '../../data/georgiaMapShapes';
 import { ChantPlayer } from '../ChantPlayer';
 import { useAuth } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 import { askSignIn } from '../access/SignInPrompt';
+import { useOpenRequest } from '../../utils/searchOpen';
 
 interface GeorgiaMapProps {
   selectedChantVariants?: Record<string, any>;
@@ -28,6 +31,14 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
   const showOwnerOnly = isAdmin || isSuperAdmin;
   const [region, setRegion] = useState<FolkRegion | null>(null);
   const [hovered, setHovered] = useState<string | null>(null);
+  // a song picked in the search: its region's list, with the song open
+  const [found, setFound] = useState<string | null>(null);
+  useOpenRequest('simghera', id => {
+    const song = FOLK_SONGS.find(s => s.id === id);
+    if (!song) return;
+    setRegion(getFolkRegion(song.region));
+    setFound(id);
+  });
 
   const openRegion = (r: FolkRegion) => {
     triggerHaptic(10);
@@ -37,9 +48,11 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
   if (region) {
     return (
       <RegionPlaylist
+        key={`${region.id}:${found || ''}`}
         region={region}
+        initialOpenId={found}
         songs={songsInRegion(region.id, showOwnerOnly)}
-        onBack={() => setRegion(null)}
+        onBack={() => { setRegion(null); setFound(null); }}
         selectedChantVariants={selectedChantVariants}
         onToggleSong={onToggleSong}
       />
@@ -158,14 +171,19 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
 
 interface RegionPlaylistProps {
   region: FolkRegion;
+  initialOpenId?: string | null;
   songs: FolkSong[];
   onBack: () => void;
   selectedChantVariants: Record<string, any>;
   onToggleSong?: GeorgiaMapProps['onToggleSong'];
 }
 
-const RegionPlaylist: React.FC<RegionPlaylistProps> = ({ region, songs, onBack, selectedChantVariants, onToggleSong }) => {
-  const [openId, setOpenId] = useState<string | null>(null);
+const RegionPlaylist: React.FC<RegionPlaylistProps> = ({ region, initialOpenId, songs, onBack, selectedChantVariants, onToggleSong }) => {
+  const [openId, setOpenId] = useState<string | null>(initialOpenId ?? null);
+  // the song picked in the search comes into view
+  useEffect(() => {
+    if (initialOpenId) document.getElementById(`song-${initialOpenId}`)?.scrollIntoView({ block: 'start' });
+  }, [initialOpenId]);
 
   return (
     <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
@@ -199,6 +217,7 @@ const RegionPlaylist: React.FC<RegionPlaylistProps> = ({ region, songs, onBack, 
           {songs.map(song => (
             <SongItem
               key={song.id}
+              id={`song-${song.id}`}
               song={song}
               region={region}
               isOpen={openId === song.id}
@@ -214,6 +233,7 @@ const RegionPlaylist: React.FC<RegionPlaylistProps> = ({ region, songs, onBack, 
 };
 
 interface SongItemProps {
+  id?: string;
   song: FolkSong;
   region: FolkRegion;
   isOpen: boolean;
@@ -222,7 +242,7 @@ interface SongItemProps {
   onToggleSelect?: () => void;
 }
 
-const SongItem: React.FC<SongItemProps> = ({ song, region, isOpen: open, onToggleOpen: toggle, isSelected, onToggleSelect: select }) => {
+const SongItem: React.FC<SongItemProps> = ({ id, song, region, isOpen: open, onToggleOpen: toggle, isSelected, onToggleSelect: select }) => {
   const hasAudio = song.versions.length > 0;
   // guests see the song's name and place only: no recordings, performers or authors; opening asks to sign in
   const { user } = useAuth();
@@ -233,7 +253,8 @@ const SongItem: React.FC<SongItemProps> = ({ song, region, isOpen: open, onToggl
 
   return (
     <div
-      className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+      id={id}
+      className={`scroll-mt-3 rounded-2xl border transition-all duration-200 overflow-hidden ${
         isOpen
           ? 'bg-white border-amber-400/80 shadow-md ring-1 ring-amber-300/40'
           : 'bg-white/95 border-slate-200/90 shadow-xs hover:border-amber-300/80 hover:shadow-sm'

@@ -4,6 +4,7 @@ import { triggerHaptic } from '../utils/haptics';
 import { BookTab } from './library/BookTab';
 import { FeastsTab } from './library/FeastsTab';
 import { LivesTab } from './library/LivesTab';
+import { useOpenRequest } from '../utils/searchOpen';
 
 // "ბიბლიოთეკა": readings from orthodoxy.ge — Svimon Mchedlidze's Sacred History, the church feasts and
 // the lives of the saints
@@ -23,11 +24,16 @@ export const LibraryPage: React.FC = () => {
       return (TABS.some(t => t.id === saved) ? saved : 'book') as TabId;
     } catch { return 'book'; }
   });
-  const pick = (id: TabId) => {
-    triggerHaptic(10);
+  const show = (id: TabId) => {
     setTab(id);
     try { localStorage.setItem(TAB_KEY, id); } catch { /* ignore */ }
   };
+  const pick = (id: TabId) => {
+    triggerHaptic(10);
+    show(id);
+  };
+  // a tab picked in the search
+  useOpenRequest('biblioteka', id => { if (TABS.some(t => t.id === id)) show(id as TabId); });
 
   return (
     <div className="w-full max-w-2xl mx-auto mb-2 px-1">

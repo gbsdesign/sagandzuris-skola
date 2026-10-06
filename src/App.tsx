@@ -23,6 +23,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageSprinkles } from './components/home/PlateOrnaments';
 import { TodaySaintsCard } from './components/calendar/TodaySaintsCard';
 import { SaintLifeOverlay } from './components/saints/SaintLifeOverlay';
+import { GlobalSearch } from './components/search/GlobalSearch';
 import { usePrayerReminderScheduler } from './utils/prayerReminders';
 import { isPrayerId } from './data/prayers';
 import { setRecordingsHidden, startRecordingBindings, useRecordingBindings } from './data/runtimeRecordings';
@@ -165,6 +166,11 @@ function AppContent() {
       {/* a saint's life, opened from that card, the calendar or the library */}
       <ErrorBoundary>
         <SaintLifeOverlay />
+      </ErrorBoundary>
+
+      {/* the one search over the whole app (header button, the home field, "/" or Ctrl+K) */}
+      <ErrorBoundary>
+        <GlobalSearch />
       </ErrorBoundary>
     </div>
   );
