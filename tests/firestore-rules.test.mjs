@@ -112,7 +112,7 @@ const tchLink = byLink('tch', 'tch@x.ge');
 const newLink = byLink('nu', 'nu@x.ge');
 await t('teacher by e-mail link reads own class', assertSucceeds(getDoc(doc(tchLink, 'classes', 'c1'))));
 await t('newcomer by e-mail link registers', assertSucceeds(setDoc(doc(newLink, 'students', 'nu'), { userId: 'nu', email: 'nu@x.ge' }, { merge: true })));
-await t('newcomer saves first meeting', assertSucceeds(setDoc(doc(newLink, 'students', 'nu'), { profile: { firstName: 'ნინო', lastName: 'ბერიძე', voices: ['2'] }, firstMeeting: { goal: 'locva' }, shortcuts: ['prayer:dila'] }, { merge: true })));
+await t('newcomer saves first meeting', assertSucceeds(setDoc(doc(newLink, 'students', 'nu'), { profile: { firstName: 'ნინო', lastName: 'ბერიძე', voices: ['2'] }, firstMeeting: { voiceUnknown: false } }, { merge: true })));
 await t('newcomer writes own directory name', assertSucceeds(setDoc(doc(newLink, 'directory', 'nu'), { uid: 'nu', firstName: 'ნინო', lastName: 'ბერიძე' }, { merge: true })));
 
 // ---- psalter groups

@@ -4,19 +4,16 @@ import { doc, DocumentData, onSnapshot, setDoc } from 'firebase/firestore';
 import { ArrowLeft, ArrowRight, Check } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
-import { useMyClasses } from '../../hooks/useClasses';
 import { hasGeorgianName, isGeorgian, saveProfileName } from '../../utils/memberName';
 import { Btn, Sheet } from '../ui/kit';
 import { EMAIL_FIELD } from '../access/SignInChoices';
 
 // "პირველი გაცნობა": a member whose profile has no Georgian name yet (everyone who signs in by e-mail, and new
-// Google members) gets three short screens: who they are (name and surname, Georgian letters only), which voice
-// they sing, and what they came for. The answers go into the profile (students/{uid}.profile, directory/{uid});
-// the last one fills the home buttons when the member never chose any and no class gives starting buttons.
+// Google members) gets two short screens: who they are (name and surname, Georgian letters only) and which voice
+// they sing. The answers go into the profile (students/{uid}.profile, directory/{uid}).
 // Done once: students/{uid}.firstMeeting. "მოგვიანებით" hides it until the next visit.
 
 type Voice = '1' | '2' | '3';
-type Goal = 'galoba' | 'locva' | 'orive';
 
 const VOICES: { id: Voice | 'x'; title: string; sub: string }[] = [
   { id: '1', title: 'I ხმა', sub: 'მთქმელი' },
@@ -25,18 +22,6 @@ const VOICES: { id: Voice | 'x'; title: string; sub: string }[] = [
   { id: 'x', title: 'არ ვიცი', sub: 'მასწავლებელი დაგეხმარებათ' },
 ];
 
-const GOALS: { id: Goal; title: string; sub: string }[] = [
-  { id: 'galoba', title: 'გალობა', sub: 'საგალობლები, ნოტები, წირვა' },
-  { id: 'locva', title: 'ლოცვა და ფსალმუნი', sub: 'ლოცვანი, მედავითნეობა, მოსახსენებელი' },
-  { id: 'orive', title: 'ორივე', sub: 'გალობაც და ლოცვაც' },
-];
-
-const GOAL_SHORTCUTS: Record<Goal, string[]> = {
-  galoba: ['section:galoba', 'special:liturgy', 'section:gza'],
-  locva: ['prayer:dila', 'prayer:dzili', 'section:medavitneoba', 'special:commemoration'],
-  orive: ['section:galoba', 'special:liturgy', 'prayer:dila', 'prayer:dzili', 'section:medavitneoba'],
-};
-
 const LATER_KEY = 'sgFirstMeetingLater';
 const NOT_GEORGIAN = /[^ა-ჿᲐ-Ჿ\s-]/g;
 
@@ -44,10 +29,10 @@ const laterThisVisit = (uid: string) => {
   try { return sessionStorage.getItem(LATER_KEY) === uid; } catch { return false; }
 };
 
-const Choice: React.FC<{ on: boolean; onClick: () => void; title: string; sub: string; round?: boolean }> = ({ on, onClick, title, sub, round }) => (
+const Choice: React.FC<{ on: boolean; onClick: () => void; title: string; sub: string }> = ({ on, onClick, title, sub }) => (
   <button
     type="button"
-    role={round ? 'radio' : 'checkbox'}
+    role="checkbox"
     aria-checked={on}
     onClick={onClick}
     className={`w-full min-h-[60px] flex items-center gap-3 px-4 py-3 rounded-2xl text-left cursor-pointer transition ${
@@ -55,7 +40,7 @@ const Choice: React.FC<{ on: boolean; onClick: () => void; title: string; sub: s
     }`}
   >
     <span
-      className={`w-7 h-7 shrink-0 flex items-center justify-center ${round ? 'rounded-full' : 'rounded-lg'} ${
+      className={`w-7 h-7 shrink-0 flex items-center justify-center rounded-lg ${
         on ? 'bg-[#7a2028] text-white' : 'bg-white ring-2 ring-[#d9c8ac]'
       }`}
       aria-hidden
@@ -72,7 +57,6 @@ const Choice: React.FC<{ on: boolean; onClick: () => void; title: string; sub: s
 export const FirstMeeting: React.FC = () => {
   const { user } = useAuth();
   const uid = user && !user.isAnonymous ? user.uid : null;
-  const classes = useMyClasses(uid);
   const [data, setData] = useState<DocumentData | null | undefined>(undefined);
   const [closed, setClosed] = useState(false);
 
@@ -81,7 +65,6 @@ export const FirstMeeting: React.FC = () => {
   const [last, setLast] = useState('');
   const [latin, setLatin] = useState(false);
   const [voices, setVoices] = useState<Set<Voice | 'x'>>(new Set());
-  const [goal, setGoal] = useState<Goal | null>(null);
   const [error, setError] = useState('');
   const [saving, setSaving] = useState(false);
   const [prefilled, setPrefilled] = useState(false);
@@ -121,8 +104,6 @@ export const FirstMeeting: React.FC = () => {
   if (!uid || !user || data === undefined || closed) return null;
   if (data?.firstMeeting || hasGeorgianName(profile) || laterThisVisit(uid)) return null;
 
-  const fillsButtons = !Array.isArray(data?.shortcuts) && !classes.some(c => c.defaultShortcuts?.length);
-
   const later = () => {
     try { sessionStorage.setItem(LATER_KEY, uid); } catch { /* asked again on the next render */ }
     setClosed(true);
@@ -156,16 +137,12 @@ export const FirstMeeting: React.FC = () => {
       setFirst(first.trim());
       setLast(last.trim());
     }
-    if (step === 1 && voices.size === 0) {
-      setError('მონიშნეთ ხმა ან „არ ვიცი“.');
-      return;
-    }
     setError('');
     setStep(s => s + 1);
   };
 
   const finish = async () => {
-    if (!goal) { setError('აირჩიეთ ერთი პასუხი.'); return; }
+    if (voices.size === 0) { setError('მონიშნეთ ხმა ან „არ ვიცი“.'); return; }
     setSaving(true);
     setError('');
     try {
@@ -173,9 +150,8 @@ export const FirstMeeting: React.FC = () => {
       await saveProfileName(uid, name, user.photoURL || '');
       const patch: Record<string, unknown> = {
         profile: { voices: [...voices].filter((v): v is Voice => v !== 'x').sort() },
-        firstMeeting: { goal, voiceUnknown: voices.has('x'), at: new Date().toISOString() },
+        firstMeeting: { voiceUnknown: voices.has('x'), at: new Date().toISOString() },
       };
-      if (fillsButtons) patch.shortcuts = GOAL_SHORTCUTS[goal];
       await setDoc(doc(db, 'students', uid), patch, { merge: true });
       // members who came by e-mail have no name in their account: give them this one
       if (!user.displayName) await updateProfile(user, { displayName: `${name.firstName} ${name.lastName}` }).catch(() => {});
@@ -195,7 +171,7 @@ export const FirstMeeting: React.FC = () => {
         </Btn>
       )}
       <div className="flex-1" />
-      {step < 2 ? (
+      {step < 1 ? (
         <Btn size="lg" onClick={next}>
           შემდეგი <ArrowRight />
         </Btn>
@@ -210,8 +186,8 @@ export const FirstMeeting: React.FC = () => {
   return (
     <Sheet open onClose={later} title="მოგესალმებით!" footer={footer}>
       <div className="space-y-4 py-1">
-        <div className="flex items-center gap-1.5" aria-label={`ნაბიჯი ${step + 1} სამიდან`}>
-          {[0, 1, 2].map(i => (
+        <div className="flex items-center gap-1.5" aria-label={`ნაბიჯი ${step + 1} ორიდან`}>
+          {[0, 1].map(i => (
             <span key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i <= step ? 'bg-[#7a2028]' : 'bg-[#e8dcc8]'}`} />
           ))}
         </div>
@@ -263,24 +239,6 @@ export const FirstMeeting: React.FC = () => {
             <div className="space-y-2">
               {VOICES.map(v => (
                 <Choice key={v.id} on={voices.has(v.id)} onClick={() => toggleVoice(v.id)} title={v.title} sub={v.sub} />
-              ))}
-            </div>
-          </>
-        )}
-
-        {step === 2 && (
-          <>
-            <div>
-              <h4 className="font-serif-ge text-[20px] font-bold text-[#2a2017]">რისთვის მოხვედით?</h4>
-              <p className="mt-1 text-[15px] text-[#75685a] leading-relaxed">
-                {fillsButtons
-                  ? 'ამის მიხედვით მთავარ გვერდზე სწრაფ ღილაკებს მოგიმზადებთ. შეცვლა მერეც შეიძლება.'
-                  : 'ეს დაგვეხმარება, აპი უკეთ მოგიწყოთ.'}
-              </p>
-            </div>
-            <div className="space-y-2" role="radiogroup">
-              {GOALS.map(g => (
-                <Choice key={g.id} round on={goal === g.id} onClick={() => { setGoal(g.id); setError(''); }} title={g.title} sub={g.sub} />
               ))}
             </div>
           </>
