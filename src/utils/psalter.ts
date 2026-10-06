@@ -11,6 +11,8 @@
 // • A group stores its distribution (kathisma → readers) for one half-month, `baseHalf`; other
 //   half-months are that distribution turned by the number of half-months in between.
 
+import { MONTHS_GE, MONTHS_GEN_GE } from './dateNames';
+
 export const KATHISMA_COUNT = 20;
 const TBILISI_OFFSET_MS = 4 * 3600_000;
 const DAY_MS = 86400_000;
@@ -140,15 +142,13 @@ export const formatLeft = (ms: number) => {
   return `${Math.max(1, mm)} წთ`;
 };
 
-const MONTHS_GEN = ['იანვრის', 'თებერვლის', 'მარტის', 'აპრილის', 'მაისის', 'ივნისის', 'ივლისის', 'აგვისტოს', 'სექტემბრის', 'ოქტომბრის', 'ნოემბრის', 'დეკემბრის'];
-const MONTHS = ['იანვარი', 'თებერვალი', 'მარტი', 'აპრილი', 'მაისი', 'ივნისი', 'ივლისი', 'აგვისტო', 'სექტემბერი', 'ოქტომბერი', 'ნოემბერი', 'დეკემბერი'];
 
 /** "6–7 ოქტომბერი", "31 ოქტომბერი – 1 ნოემბერი", "15 ოქტომბერი". */
 export const formatRange = (c: Pick<Cycle, 'start' | 'end'>) => {
   const a = parseIso(c.start), b = parseIso(c.end);
-  if (c.start === c.end) return `${a.d} ${MONTHS[a.m - 1]}`;
-  if (a.m === b.m) return `${a.d}–${b.d} ${MONTHS[a.m - 1]}`;
-  return `${a.d} ${MONTHS[a.m - 1]} – ${b.d} ${MONTHS[b.m - 1]}`;
+  if (c.start === c.end) return `${a.d} ${MONTHS_GE[a.m - 1]}`;
+  if (a.m === b.m) return `${a.d}–${b.d} ${MONTHS_GE[a.m - 1]}`;
+  return `${a.d} ${MONTHS_GE[a.m - 1]} – ${b.d} ${MONTHS_GE[b.m - 1]}`;
 };
 
 /** When the next shift of kathismas happens: { label: "15 ოქტომბრის", from: "15 ოქტომბრიდან" }. */
@@ -156,6 +156,6 @@ export const nextShiftDate = (iso: Iso) => {
   const { y, m, d } = parseIso(iso);
   const ny = m === 12 ? y + 1 : y, nm = m === 12 ? 1 : m + 1;
   const [day, month, at] = d < 15 ? [15, m, isoOf(y, m, 15)] : [1, nm, isoOf(ny, nm, 1)];
-  const gen = MONTHS_GEN[month - 1];
+  const gen = MONTHS_GEN_GE[month - 1];
   return { iso: at, label: `${day} ${gen}`, from: `${day} ${gen.replace(/ს$/, 'დან')}` };
 };

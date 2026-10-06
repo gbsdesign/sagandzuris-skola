@@ -249,18 +249,19 @@ export const Flash: React.FC<{ flash: FlashMsg; onClose: () => void }> = ({ flas
   ) : null;
 
 /** A sheet that rises from the bottom on phones and sits centred on wide screens. */
-export const Sheet: React.FC<{ open: boolean; onClose: () => void; title: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode; wide?: boolean }> = ({ open, onClose, title, children, footer, wide }) => {
+/** `locked`: no ✕, and neither Escape nor a tap outside closes it (a form that must be filled in). */
+export const Sheet: React.FC<{ open: boolean; onClose: () => void; title: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode; wide?: boolean; locked?: boolean }> = ({ open, onClose, title, children, footer, wide, locked }) => {
   useEffect(() => {
     if (!open) return;
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !locked && onClose();
     window.addEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
-  }, [open, onClose]);
+  }, [open, onClose, locked]);
   if (!open) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-[#2a2017]/45 backdrop-blur-[2px] sg-in" onClick={onClose}>
+    <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-[#2a2017]/45 backdrop-blur-[2px] sg-in" onClick={locked ? undefined : onClose}>
       <div
         role="dialog"
         aria-modal="true"
@@ -273,7 +274,7 @@ export const Sheet: React.FC<{ open: boolean; onClose: () => void; title: React.
         <div className="flex items-center gap-2 px-5 pt-5 pb-3 border-b border-[#e8dcc8]">
           <span className="sm:hidden absolute left-1/2 -translate-x-1/2 top-1.5 w-10 h-1 rounded-full bg-[#d9c8ac]" aria-hidden />
           <h3 className="flex-1 min-w-0 font-serif-ge text-[17px] font-bold text-[#4a3426]">{title}</h3>
-          <IconBtn label="დახურვა" onClick={onClose}><X /></IconBtn>
+          {!locked && <IconBtn label="დახურვა" onClick={onClose}><X /></IconBtn>}
         </div>
         <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">{children}</div>
         {footer && <div className="px-5 py-3 border-t border-[#e8dcc8] bg-[#fbf6ec]/95">{footer}</div>}

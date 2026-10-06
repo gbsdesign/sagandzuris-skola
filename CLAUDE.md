@@ -64,6 +64,8 @@
 - Firebase project `psalms-reading-group-ge-dev`. Security rules live in `firestore.rules`.
 - No URL router: pages are switched by `NavigationContext` (history.state `sgNav`, `sgDepth`, …).
   Notes pages use `NotesContext` (`?c=&v=`, `?p=`), saint lives use their own `sgLife` history entry.
+  The region open on the songs/მთქმელი map (or an open instrument) is `sgNav.mapItem` (`openMapItem`), so the
+  one top-bar „უკან“ first returns to the map.
 - Fixed/full-screen UI must respect `env(safe-area-inset-*)` (`viewport-fit=cover` is on); helpers
   `.safe-x`, `.safe-top`, `.safe-bottom`, `.safe-bleed` in `index.css`.
 
@@ -93,6 +95,9 @@
   orthodoxy.ge publishes it.** Don't add "წყარო: orthodoxy.ge" lines (the user removed them).
 - **Saint lives** (`components/saints/SaintLifeOverlay.tsx`, `public/lives/`, linking in
   `scripts/lib/saint-lives-match.mjs`).
+- **One search** (`components/search/`, index `data/searchIndex.ts`, matching `utils/searchMatch.ts` + test):
+  header 🔍, home field, `/` or Ctrl+K. Finds functions, chants, prayers/akathists/Bible chapters („მათე 5“),
+  psalter („ფს 50“), songs, chanters, feasts. Pages take the picked item via `useOpenRequest` (`utils/searchOpen.ts`).
 - **Class chat** with voice messages + Jitsi video call button (`components/classes/ClassChat.tsx`,
   `hooks/useClassChat.ts`, `utils/voiceRecorder.ts`, `utils/classCall.ts`). Voice MP3s are Firestore Bytes
   (no Firebase Storage).
@@ -117,6 +122,21 @@
 - **Reminders Worker** (`worker/reminders/`, D1 + text pushes + group/assignment reminders): code is ready; the
   user must do the one-time setup from `docs/შეხსენებების-სერვერი.md` on their PC (D1, `FIREBASE_SA`, deploy).
 - Dev check with made-up data: `VITE_EMULATORS=1 npm run dev` + Firebase emulators (auth 9099, firestore 8085).
+
+## Plan part 2 (tab „მე-2 ნაწილის სამუშაო გეგმა“ in the plan doc below; six stages, one PR each)
+
+- **Stage 1 built 2026-10-06** (branch `claude/trusting-ptolemy-e66s0f`): sign-in by an e-mail link
+  (`utils/emailLink.ts`, `components/access/SignInChoices.tsx`, `EmailLinkFinish.tsx`; header „შესვლა“ opens
+  the sheet via `openSignIn()`). Needs "Email link (passwordless sign-in)" on in the Firebase console.
+  „პირველი გაცნობა“ (`components/onboarding/FirstMeeting.tsx`): a locked form (no ✕, only „გამოსვლა“) over
+  the app until the profile is complete — six cards: Georgian name, birth date (lists), region (list) + town or
+  village, phone, status („დამწყები / ვგალობ / ვმღერი / ვუკრავ“), voices. Every field is required (the user's
+  rule); what counts as complete is `utils/profileFields.ts` (+ `tests/profileFields.test.ts`). It waits while
+  notes, the program or church mode is open. The user removed „რისთვის მოხვედით?“ — don't bring it back.
+  Phone lives only in `students/{uid}.profile.phone` (not in `directory`). `AuthContext` no longer writes empty
+  name/photo on sign-in.
+- Emulator check: firebase-tools in the scratchpad; the auth emulator keeps the letters at
+  `/emulator/v1/projects/<id>/oobCodes`; the app's Firestore database id is `ai-studio-…`, not `(default)`.
 
 ## Roadmap (ideas not built yet — confirm open questions with the user first)
 

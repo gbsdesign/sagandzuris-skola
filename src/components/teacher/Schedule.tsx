@@ -3,8 +3,9 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { CalendarClock, Plus, Save, Trash2 } from 'lucide-react';
 import { db } from '../../firebase';
 import { LessonSlot, SchoolClass } from '../../hooks/useClasses';
-import { WEEKDAYS } from '../../hooks/useTeaching';
+import {  } from '../../hooks/useTeaching';
 import { Btn, Card, CardTitle, FIELD, Flash, IconBtn, useFlash } from '../ui/kit';
+import { WEEKDAYS_GE } from '../../utils/dateNames';
 
 // Monday first, as a week is read in Georgia
 const ORDER = [1, 2, 3, 4, 5, 6, 0];
@@ -38,7 +39,7 @@ export const LessonTable: React.FC<{ slots: LessonSlot[]; title?: string; compac
           const isNext = next?.slot === s;
           return (
             <li key={i} className={`flex items-center gap-3 px-3.5 py-2.5 ${s.day === today ? 'bg-[#7a2028]/[0.04]' : ''}`}>
-              <span className={`w-20 shrink-0 text-sm font-bold ${s.day === today ? 'text-[#7a2028]' : 'text-[#4a3426]'}`}>{WEEKDAYS[s.day]}</span>
+              <span className={`w-20 shrink-0 text-sm font-bold ${s.day === today ? 'text-[#7a2028]' : 'text-[#4a3426]'}`}>{WEEKDAYS_GE[s.day]}</span>
               <span className="text-sm font-semibold tabular-nums text-[#2a2017]">{s.start}{s.end ? `–${s.end}` : ''}</span>
               <span className="flex-1 min-w-0 text-[13px] text-[#8a7a6a] truncate">{s.note}</span>
               {isNext && <span className="shrink-0 h-6 px-2 rounded-full bg-[#7a2028] text-[#fbf6ec] text-[11px] font-bold inline-flex items-center">{whenLabel(next!.inDays)}</span>}
@@ -82,7 +83,7 @@ export const SchedulePanel: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
             <li key={i} className="p-3 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#efe3cf] space-y-2">
               <div className="flex gap-2">
                 <select className={`${FIELD} flex-1`} value={r.day} onChange={e => patch(i, { day: Number(e.target.value) })} aria-label="დღე">
-                  {ORDER.map(d => <option key={d} value={d}>{WEEKDAYS[d]}</option>)}
+                  {ORDER.map(d => <option key={d} value={d}>{WEEKDAYS_GE[d]}</option>)}
                 </select>
                 <IconBtn label="წაშლა" tone="danger" onClick={() => setRows(x => x.filter((_, j) => j !== i))}><Trash2 /></IconBtn>
               </div>

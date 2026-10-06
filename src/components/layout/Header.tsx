@@ -3,12 +3,14 @@ import { useAuth, useNavigation, useModal } from '../../context';
 import { PWAInstallButton } from '../PWAInstallButton';
 import { triggerHaptic } from '../../utils/haptics';
 import { useMonthlyStudyStats } from '../../hooks/useMonthlyStudyStats';
-import { MONTHS_SHORT_GE, nextLessonLabel, useSelectedCount, openPathPanel } from '../views/IndependentWorkCard';
+import { nextLessonLabel, useSelectedCount, openPathPanel } from '../views/IndependentWorkCard';
 import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
 import { ClassLogo } from '../classes/ClassLogo';
 import { useAccess } from '../../hooks/useAccess';
-import { askSignIn } from '../access/SignInPrompt';
+import { askSignIn, openSignIn } from '../access/SignInPrompt';
+import { SearchButton } from '../search/GlobalSearch';
 import { Bookmark, User as UserIcon, LogIn, LogOut, Compass, ShieldCheck, Library, GraduationCap, Baby } from 'lucide-react';
+import { MONTHS_SHORT_GE } from '../../utils/dateNames';
 
 interface HeaderProps {
   logoUrl: string;
@@ -23,7 +25,7 @@ const TOOLS = [
 // Phone: [logo] … [🔖 ③] [შესვლა] / tools group below. The full independent-work card lives on the path page.
 // Desktop (lg): one row — logo + name · tools in the middle · independent work + profile.
 export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
-  const { user, signingIn, signInWithGoogle, signOutUser, isAdmin, isTeacher } = useAuth();
+  const { user, signingIn, signOutUser, isAdmin, isTeacher } = useAuth();
   const { navigateTo, currentPage, openClass } = useNavigation();
   const memberOf = useMyClasses(user?.uid);
   // a teacher reaches their own classes' pages from the header too
@@ -65,6 +67,8 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
 
         {/* independent work (icon + count) + install + admin + profile */}
         <div className="order-2 lg:order-3 ml-auto flex items-center gap-1.5 sm:gap-2 min-w-0">
+          {/* the search sits beside the learning tools; with none of them shown, up here */}
+          {tools.length === 0 && <SearchButton />}
           <PWAInstallButton compact />
           {/* teachers (and admins): the teacher's panel */}
           {isTeacher && (
@@ -164,7 +168,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
             </div>
           ) : (
             <button
-              onClick={signInWithGoogle}
+              onClick={openSignIn}
               disabled={signingIn}
               className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl bg-[#7a2028] hover:bg-[#5e1820] text-[#fbf6ec] text-xs min-[400px]:text-[13px] font-bold transition-all active:scale-95 cursor-pointer shrink-0"
             >
@@ -174,10 +178,10 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
           )}
         </div>
 
-        {/* learning tools: one group, full width on phones, centred on desktop */}
+        {/* learning tools: one group, full width on phones, centred on desktop; the search beside it */}
 {tools.length > 0 && (
-        <nav className="order-3 lg:order-2 w-full lg:w-auto lg:mx-auto flex justify-center" aria-label="სასწავლო მასალა">
-          <div className="w-full sm:w-auto flex items-stretch rounded-xl bg-white/80 ring-1 ring-[#e8dcc8] p-0.5">
+        <nav className="order-3 lg:order-2 w-full lg:w-auto lg:mx-auto flex justify-center gap-1.5 sm:gap-2" aria-label="სასწავლო მასალა">
+          <div className="flex-1 sm:flex-none flex items-stretch rounded-xl bg-white/80 ring-1 ring-[#e8dcc8] p-0.5">
             {tools.map(({ id, page, label, Icon }, i) => (
               <React.Fragment key={id}>
                 {i > 0 && <span aria-hidden className="w-px my-1.5 bg-[#e8dcc8] shrink-0" />}
@@ -200,6 +204,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
               </React.Fragment>
             ))}
           </div>
+          <SearchButton />
         </nav>
         )}
       </div>

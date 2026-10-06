@@ -23,10 +23,13 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageSprinkles } from './components/home/PlateOrnaments';
 import { TodaySaintsCard } from './components/calendar/TodaySaintsCard';
 import { SaintLifeOverlay } from './components/saints/SaintLifeOverlay';
+import { GlobalSearch } from './components/search/GlobalSearch';
 import { usePrayerReminderScheduler } from './utils/prayerReminders';
 import { isPrayerId } from './data/prayers';
 import { setRecordingsHidden, startRecordingBindings, useRecordingBindings } from './data/runtimeRecordings';
 import { SignInPrompt } from './components/access/SignInPrompt';
+import { EmailLinkFinish } from './components/access/EmailLinkFinish';
+import { FirstMeeting } from './components/onboarding/FirstMeeting';
 import { useKidsMode } from './hooks/useAccess';
 
 startRecordingBindings();
@@ -159,12 +162,23 @@ function AppContent() {
         <TodaySaintsCard />
       </ErrorBoundary>
 
-      {/* "საჭიროა რეგისტრაცია" for guests */}
+      {/* sign-in (Google or a link by e-mail), "საჭიროა რეგისტრაცია" for guests, and the return from the e-mail link */}
       <SignInPrompt />
+      <EmailLinkFinish />
+
+      {/* "პირველი გაცნობა": name, voice and goal, once */}
+      <ErrorBoundary>
+        <FirstMeeting />
+      </ErrorBoundary>
 
       {/* a saint's life, opened from that card, the calendar or the library */}
       <ErrorBoundary>
         <SaintLifeOverlay />
+      </ErrorBoundary>
+
+      {/* the one search over the whole app (header button, the home field, "/" or Ctrl+K) */}
+      <ErrorBoundary>
+        <GlobalSearch />
       </ErrorBoundary>
     </div>
   );

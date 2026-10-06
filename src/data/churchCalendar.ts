@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { MONTHS_GE, WEEKDAYS_GE } from '../utils/dateNames';
 
 // orthodoxy.ge's day calendar ("მხოლოდ თანამედროვე ქართული კალენდარი"), one file per church (old-style) year,
 // made by scripts/fetch-church-calendar.mjs. Days are keyed by the new-style date (YYYY-MM-DD).
@@ -25,8 +26,6 @@ export const RUN_SMALL = 4;
 
 const YEARS = import.meta.glob<{ default: CalendarYear }>('./calendar/*.json');
 
-export const MONTHS_GE = ['იანვარი', 'თებერვალი', 'მარტი', 'აპრილი', 'მაისი', 'ივნისი', 'ივლისი', 'აგვისტო', 'სექტემბერი', 'ოქტომბერი', 'ნოემბერი', 'დეკემბერი'];
-export const WEEKDAYS_GE = ['კვირა', 'ორშაბათი', 'სამშაბათი', 'ოთხშაბათი', 'ხუთშაბათი', 'პარასკევი', 'შაბათი'];
 
 // Julian → Gregorian difference for 1900–2099
 const OLD_STYLE_LAG = 13;

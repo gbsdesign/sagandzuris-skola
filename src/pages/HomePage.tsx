@@ -5,6 +5,7 @@ import { useAuth } from '../context';
 import { useMyPsalterGroups } from '../hooks/usePsalter';
 import { MyKathismaCard } from '../components/psalter/MyKathismaCard';
 import { ShortcutShelf } from '../components/home/ShortcutShelf';
+import { HomeSearchField } from '../components/search/GlobalSearch';
 
 interface HomePageProps {
   logoUrl: string;
@@ -29,6 +30,11 @@ export const HomePage: React.FC<HomePageProps> = ({ logoUrl }) => {
         referrerPolicy="no-referrer"
       />
       </div>
+      {/* one search over everything: chants, prayers, the psalter, songs, chanters, feasts, functions */}
+      <div className="relative mt-3 w-full flex justify-center">
+        <HomeSearchField />
+      </div>
+
       {/* on a phone the vine takes the page's side padding too, so its labels have room */}
       <div className="relative mt-2 w-[calc(100%+2.5rem)] sm:w-full flex justify-center">
         <GrapeNav />

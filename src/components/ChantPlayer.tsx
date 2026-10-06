@@ -1,19 +1,20 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, ArrowLeft, RefreshCw, Sparkles, Check, Download, CloudDownload, Headphones, Music, ExternalLink, Video, RotateCcw, RotateCw, Repeat, Gauge, Music2, ChevronRight, ChevronUp, SlidersHorizontal } from 'lucide-react';
+import { Play, Pause, RefreshCw, Check, Download, CloudDownload, Music, Video, RotateCcw, RotateCw, Repeat, Gauge, Music2, ChevronRight, ChevronUp, SlidersHorizontal } from 'lucide-react';
 import * as Tone from 'tone';
 import soundTouchProcessorUrl from '@soundtouchjs/audio-worklet/processor?url';
-import { useNavigation } from '../context';
 import { ALL_CHANTS } from '../data/gelatiBookChants';
 import { variantName } from '../data/tsirvaChants';
 import { getChantMedia, type ChantMediaItem } from '../data/chantMediaRegistry';
 import { triggerHaptic } from '../utils/haptics';
 import { isAudioCached, cacheAudio } from '../utils/audioCache';
 import { getAudioArrayBufferFromIdb } from '../utils/audioIdb';
-import { ChantWaveformSeekBar } from '../components/ChantWaveformSeekBar';
-import { Stepper } from '../components/Stepper';
-import { BookScorePlayer } from '../components/BookScorePlayer';
+import { ChantWaveformSeekBar } from './ChantWaveformSeekBar';
+import { Stepper } from './Stepper';
 import { saveBlob } from '../utils/chantSynth';
-import { NpStepper } from './notes/NpStepper';
+import { NpStepper } from '../pages/notes/NpStepper';
+
+// The recording player: a chant version's recording (chantId + variantId) or a folk song's (media).
+// Used by the notes page (layout 'panel') and the folk-songs map (layout 'card').
 
 const SPEED_KEY = 'sagandzuri_player_speed';
 const PITCH_KEY = 'sagandzuri_player_pitch';
@@ -101,14 +102,10 @@ const readStoredNumber =(key: string, fallback: number, min: number, max: number
   }
 };
 
-interface ChantDetailPageProps {
+interface ChantPlayerProps {
   chantId?: string;
   variantId?: string;
-  inline?: boolean; // rendered inside the chant list instead of as its own page
-}
-
-// A recording that isn't a chant variant (folk songs): media and titles are passed in directly
-interface RecordingProps {
+  // A recording that isn't a chant variant (folk songs): media and titles are passed in directly
   media?: ChantMediaItem;
   title?: string;
   subtitle?: string;
@@ -124,84 +121,11 @@ interface RecordingProps {
   onToggleDetails?: () => void;
 }
 
-// Variants without their own recording show a notice instead of the player;
-// book versions show their sheet music + synthesizer under it
-const NoRecording: React.FC<{ inline: boolean; onBack: () => void; children?: React.ReactNode }> = ({ inline, onBack, children }) => (
-  <div className={inline ? 'w-full pt-1 space-y-3' : 'bg-white border border-slate-200/90 rounded-2xl p-4 shadow-sm w-full max-w-md mx-auto space-y-3'}>
-    {!inline && (
-      <button
-        type="button"
-        onClick={onBack}
-        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 hover:border-amber-400 bg-slate-50 hover:bg-amber-50 text-slate-700 transition-all text-xs font-semibold cursor-pointer active:scale-95"
-      >
-        <ArrowLeft className="w-3.5 h-3.5" />
-        <span>უკან დაბრუნება</span>
-      </button>
-    )}
-    {children ? (
-      <p className="flex items-center gap-1.5 px-3 py-2 rounded-xl bg-slate-50 border border-dashed border-slate-200 text-[11px] font-semibold text-slate-500">
-        <Music className="w-4 h-4 text-slate-300 shrink-0" />
-        ჩანაწერი ჯერ არ არის — მოისმინეთ ნოტები სინთეზატორით
-      </p>
-    ) : (
-      <div className="flex flex-col items-center text-center gap-1.5 py-5 px-3 rounded-xl bg-slate-50 border border-dashed border-slate-200">
-        <Music className="w-6 h-6 text-slate-300" />
-        <p className="text-xs font-bold text-slate-600">ამ ვარიანტის ჩანაწერი ჯერ არ არის დამატებული</p>
-        <p className="text-[11px] text-slate-400">მალე დაემატება</p>
-      </div>
-    )}
-    {children}
-  </div>
-);
-
-export const ChantDetailPage: React.FC<ChantDetailPageProps> = props => {
-  const { navigateTo } = useNavigation();
-  const chantId = props.chantId || localStorage.getItem('selectedChantId') || 'chant-1';
-  const variantId = props.variantId || localStorage.getItem('selectedVariantId') || 'v-1-1';
-  const chant = ALL_CHANTS.find(c => c.id === chantId);
-  const variant = chant?.variants?.find(v => v.id === variantId);
-  const inline = Boolean(props.inline);
-  const score = variant?.bookNums?.length ? (
-    <BookScorePlayer nums={variant.bookNums} book={variant.book} page={variant.page} source={variant.source} title={chant?.title} name={variantName(variant)} />
-  ) : null;
-
-  if (!getChantMedia(chantId, variant?.code)) {
-    return <NoRecording inline={inline} onBack={() => navigateTo('galoba')}>{score}</NoRecording>;
-  }
-  if (!inline) {
-    return (
-      <>
-        <ChantPlayer {...props} />
-        {score && <div className="w-full max-w-md mx-auto mt-3">{score}</div>}
-      </>
-    );
-  }
-  // inline: the recording (amber card) and the synthesizer (its own indigo card) stay visibly apart
-  return (
-    <div className="w-full flex flex-col gap-3 pt-1">
-      <section className="w-full rounded-xl border border-amber-200 bg-amber-50/40 p-2.5 flex flex-col gap-2.5">
-        <div className="flex items-center gap-2 px-0.5">
-          <Headphones className="w-5 h-5 text-amber-600 shrink-0" />
-          <span className="text-sm sm:text-base font-black text-amber-900">ხმიანი ჩანაწერი</span>
-        </div>
-        <ChantPlayer {...props} />
-      </section>
-      {score}
-    </div>
-  );
-};
-
-export const ChantPlayer: React.FC<ChantDetailPageProps & RecordingProps> = ({ chantId: chantIdProp, variantId: variantIdProp, inline = false, media, title, subtitle, hideNotesButton = false, showDetails = true, pauseToken, disabled = false, onPlayingChange, layout = 'card', onToggleDetails }) => {
-  const { navigateTo } = useNavigation();
-
-  // Selected chant/variant: from props when inline, otherwise from localStorage
-  const chantId = chantIdProp || localStorage.getItem('selectedChantId') || 'chant-1';
-  const variantId = variantIdProp || localStorage.getItem('selectedVariantId') || 'v-1-1';
-
-  const chant = ALL_CHANTS.find(c => c.id === chantId);
+export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, media, title, subtitle, hideNotesButton = false, showDetails = true, pauseToken, disabled = false, onPlayingChange, layout = 'card', onToggleDetails }) => {
+  const chant = chantId ? ALL_CHANTS.find(c => c.id === chantId) : undefined;
   const variant = chant?.variants?.find(v => v.id === variantId);
 
-  // Always bound: ChantDetailPage renders the player only for variants that have media
+  // Always bound: the callers render the player only for recordings that have media
   const mediaItem = media ?? getChantMedia(chantId, variant?.code)!;
   const displayTitle = title ?? chant?.title;
   const displaySubtitle = subtitle ?? variant?.label;
@@ -946,47 +870,7 @@ export const ChantPlayer: React.FC<ChantDetailPageProps & RecordingProps> = ({ c
   const roundBtn = 'h-9 rounded-full border border-slate-200 bg-white hover:bg-amber-50 hover:border-amber-300 text-slate-600 text-[11px] font-bold flex items-center justify-center gap-0.5 transition-all cursor-pointer active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed';
 
   return (
-    <div
-      className={
-        inline
-          ? 'w-full flex flex-col gap-3'
-          : 'bg-white border border-slate-200/90 rounded-2xl p-3 sm:p-5 shadow-sm flex flex-col w-full max-w-md mx-auto gap-3'
-      }
-    >
-      {!inline && (
-        <>
-          {/* Top Navigation Row */}
-          <div className="w-full flex items-center justify-between border-b border-slate-100 pb-2">
-            <button
-              type="button"
-              onClick={() => {
-                triggerHaptic(10);
-                audioElementsRef.current.forEach(a => { try { a?.pause(); } catch (_) {} });
-                navigateTo('galoba');
-              }}
-              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg border border-slate-200 hover:border-amber-400 bg-slate-50 hover:bg-amber-50 text-slate-700 hover:text-[#85502c] transition-all text-xs font-semibold cursor-pointer active:scale-95 shadow-2xs"
-            >
-              <ArrowLeft className="w-3.5 h-3.5" />
-              <span>უკან დაბრუნება</span>
-            </button>
-            <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300">
-              {variant?.code || 'ვარიანტი'}
-            </span>
-          </div>
-
-          {/* Title Details */}
-          <div className="text-center space-y-0.5">
-            <h2 className="text-base sm:text-lg font-black text-slate-800 tracking-tight leading-snug">
-              {displayTitle || 'წმიდაო ღმერთო'}
-            </h2>
-            <p className="text-[11px] sm:text-xs text-amber-700 font-bold flex items-center justify-center gap-1">
-              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-              {displaySubtitle || 'გელათის სკოლა'}
-            </p>
-          </div>
-        </>
-      )}
-
+    <div className="w-full flex flex-col gap-3">
       {/* Transport: repeat · −5 · play · +5 · offline · video */}
       <div className="relative flex flex-wrap items-center justify-center gap-1.5 sm:gap-2">
         <button

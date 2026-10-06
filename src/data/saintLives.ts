@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { MONTHS_GE, fromOldStyle, oldStyleOf, todayIso } from './churchCalendar';
+import { fromOldStyle, oldStyleOf, todayIso } from './churchCalendar';
+import { MONTHS_GE } from '../utils/dateNames';
 
 // orthodoxy.ge's "წმინდანთა ცხოვრება", made by scripts/fetch-saint-lives.mjs: the list is bundled
 // (src/data/library/saintLives.json), each life is fetched when opened (public/lives/<id>.json).

@@ -8,6 +8,7 @@ import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { useManagedClasses, useMyClasses, SchoolClass } from './useClasses';
 import { findVersion, serviceOrder } from '../data/chantLookup';
+import { MONTHS_GE, WEEKDAYS_GE } from '../utils/dateNames';
 
 export interface LiturgyProgram {
   date: string;      // YYYY-MM-DD
@@ -28,17 +29,15 @@ export const nextSunday = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-const WD = ['კვირა', 'ორშაბათი', 'სამშაბათი', 'ოთხშაბათი', 'ხუთშაბათი', 'პარასკევი', 'შაბათი'];
-const MO = ['იანვარი', 'თებერვალი', 'მარტი', 'აპრილი', 'მაისი', 'ივნისი', 'ივლისი', 'აგვისტო', 'სექტემბერი', 'ოქტომბერი', 'ნოემბერი', 'დეკემბერი'];
 export const formatLiturgyDate = (iso: string) => {
   const [y, m, d] = iso.split('-').map(Number);
   if (!y || !m || !d) return iso;
-  return `${WD[new Date(y, m - 1, d).getDay()]}, ${d} ${MO[m - 1]}`;
+  return `${WEEKDAYS_GE[new Date(y, m - 1, d).getDay()]}, ${d} ${MONTHS_GE[m - 1]}`;
 };
 export const formatTime = (iso?: string) => {
   if (!iso) return '';
   const d = new Date(iso);
-  return `${d.getDate()} ${MO[d.getMonth()].slice(0, 3)}. ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+  return `${d.getDate()} ${MONTHS_GE[d.getMonth()].slice(0, 3)}. ${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
 
 /** Where a new item goes: among the items of its own service, in the service's order; otherwise at the end. */

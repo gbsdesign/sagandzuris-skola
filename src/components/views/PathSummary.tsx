@@ -1,24 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { useChants } from '../../context';
 import { filterValidVariants } from '../../utils/variantValidation';
-import { ALL_CHANTS } from '../../data/gelatiBookChants';
-import { useAuth } from '../../context';
+import { usesVoices } from '../../utils/pathItems';
+import { useAuth, useNavigation } from '../../context';
 import { useMonthlyStudyStats } from '../../hooks/useMonthlyStudyStats';
+import { ChevronRight, Compass } from 'lucide-react';
 import { IndependentWorkCard } from './IndependentWorkCard';
+import { MONTHS_GE } from '../../utils/dateNames';
 
-const MONTH_NAMES_GE = ['იანვარი', 'თებერვალი', 'მარტი', 'აპრილი', 'მაისი', 'ივნისი', 'ივლისი', 'აგვისტო', 'სექტემბერი', 'ოქტომბერი', 'ნოემბერი', 'დეკემბერი'];
-
-const CHANT_IDS = new Set(ALL_CHANTS.flatMap(c => c.variants.map(v => v.id)));
-const INSTRUMENTS = ['chonguri', 'fanduri', 'doli', 'garmoni', 'chuniri', 'changi'];
-
-// Chants and songs are learned voice by voice (3 voices); poems and instruments are simply learned or not
-const byVoices = (id: string) =>
-  CHANT_IDS.has(id) || id.startsWith('tsirva_') || !(id.includes('_p') || INSTRUMENTS.some(p => id.startsWith(p)));
 
 // Card at the top of "საგანძურის გზა": progress on the path, this month's study hours and the independent work
 export const PathSummary: React.FC = () => {
   const { selectedChantVariants = {} } = useChants();
   const { user } = useAuth();
+  const { navigateTo } = useNavigation();
   // this month's independent-work hours (moved here from the independent-work panel)
   const month = useMonthlyStudyStats(user?.uid);
   const s = useMemo(() => {
@@ -27,7 +22,8 @@ export const PathSummary: React.FC = () => {
     for (const it of items) {
       const v = Array.isArray(it.voices) ? it.voices.length : 0;
       if (it.isLearned || v > 0) learned++;
-      if (byVoices(it.variantId)) {
+      // chants and songs are learned voice by voice (3 voices); poems and instruments are simply learned or not
+      if (usesVoices(it.variantId)) {
         voices += v;
         voiceSlots += 3;
         score += Math.min(v, 3) / 3;
@@ -51,20 +47,24 @@ export const PathSummary: React.FC = () => {
   return (
     <section className="rounded-3xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_12px_30px_-20px_rgba(42,32,23,0.35)] p-3.5 sm:p-4">
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3">
-        <Stat
-          big
-          className={ringCell}
-          label="შენი გზა"
-          percent={s.percent}
-          value={s.learned}
-          of={s.total}
-          unit="ნასწავლი"
-          note={s.voiceSlots > 0 ? `${s.voices}/${s.voiceSlots} ხმა` : `${s.total - s.learned} სასწავლი`}
-        />
+        {s.total ? (
+          <Stat
+            big
+            className={ringCell}
+            label="შენი გზა"
+            percent={s.percent}
+            value={s.learned}
+            of={s.total}
+            unit="ნასწავლი"
+            note={s.voiceSlots > 0 ? `${s.voices}/${s.voiceSlots} ხმა` : `${s.total - s.learned} სასწავლი`}
+          />
+        ) : (
+          <FirstStep className={ringCell} onStart={() => navigateTo('galoba')} />
+        )}
         {hasMonth && (
           <Stat
             className="pt-3 border-t border-[#efe5d4] sm:pt-0 sm:border-t-0 sm:pl-6 self-center"
-            label={MONTH_NAMES_GE[new Date().getMonth()]}
+            label={MONTHS_GE[new Date().getMonth()]}
             percent={month!.percent}
             value={month!.worked}
             of={month!.planned}
@@ -80,6 +80,27 @@ export const PathSummary: React.FC = () => {
     </section>
   );
 };
+
+// An empty path: one step to take instead of a ring of zeros
+const FirstStep: React.FC<{ className?: string; onStart: () => void }> = ({ className = '', onStart }) => (
+  <div className={`flex items-center gap-4 sm:gap-5 min-w-0 ${className}`}>
+    <span className="relative shrink-0 w-16 h-16 min-[380px]:w-[5.5rem] min-[380px]:h-[5.5rem] sm:w-28 sm:h-28 rounded-full bg-[radial-gradient(circle_at_50%_30%,#ffffff,#f6eee2)] ring-[6px] ring-[#f3e9db] ring-inset flex items-center justify-center text-[#7a2028]">
+      <Compass className="w-7 h-7 min-[380px]:w-9 min-[380px]:h-9 sm:w-11 sm:h-11" strokeWidth={1.6} />
+    </span>
+    <div className="min-w-0 space-y-2">
+      <p className="text-[13px] sm:text-sm font-bold text-[#7a2028]">შენი გზა</p>
+      <p className="text-sm leading-snug text-[#4a3426]">აქ გამოჩნდება, რას სწავლობ და რამდენი ისწავლე.</p>
+      <button
+        type="button"
+        onClick={onStart}
+        className="min-h-11 py-2 pl-4 pr-3 rounded-[22px] bg-[#7a2028] hover:bg-[#5e1820] text-[#fbf6ec] text-sm font-bold leading-snug text-left inline-flex items-center gap-1 transition-colors cursor-pointer active:scale-[0.97] shadow-[0_6px_16px_-8px_rgba(122,32,40,0.7)]"
+      >
+        აირჩიე პირველი საგალობელი
+        <ChevronRight className="w-4 h-4 shrink-0" />
+      </button>
+    </div>
+  </div>
+);
 
 // Eases a shown number toward its target (from 0 when it first appears): drives the ring's sweep and count-up
 const useSweep = (target: number, ms = 1100) => {

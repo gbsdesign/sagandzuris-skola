@@ -29,7 +29,7 @@ export const SECTIONS: SectionDef[] = [
 ];
 
 export const sectionOfPage = (page: PageType): SectionId | null => {
-  if (page === 'galoba' || page === 'galoba-detail') return 'galoba';
+  if (page === 'galoba') return 'galoba';
   if (page === 'psalter') return 'medavitneoba';
   const s = SECTIONS.find(x => x.page === page && x.id !== 'chvevebi');
   return s ? s.id : null;

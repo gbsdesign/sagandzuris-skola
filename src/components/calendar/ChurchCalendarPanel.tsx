@@ -2,9 +2,10 @@ import React, { useState } from 'react';
 import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
 import {
-  MONTHS_GE, addDays, daysInMonth, fromIso, fromOldStyle, oldStyleOf, todayIso, useCalendarDay,
+  addDays, daysInMonth, fromIso, fromOldStyle, oldStyleOf, todayIso, useCalendarDay,
 } from '../../data/churchCalendar';
 import { CalendarDayView } from './CalendarDayView';
+import { MONTHS_GE } from '../../utils/dateNames';
 
 // The footer's calendar: orthodoxy.ge's day page with its controls — previous / next day around
 // the month and day pickers (read in the old or the new style), back to today, and the style.

@@ -2,8 +2,9 @@ import React, { useMemo, useState } from 'react';
 import { Check, CheckCheck, ClipboardCheck, History } from 'lucide-react';
 import { useAuth } from '../../context';
 import { SchoolClass } from '../../hooks/useClasses';
-import { WEEKDAYS, WEEKDAYS_SHORT, localIso, saveAttendance, shortDate, useAttendance, weekdayOf } from '../../hooks/useTeaching';
+import { localIso, saveAttendance, shortDate, useAttendance, weekdayOf } from '../../hooks/useTeaching';
 import { Avatar, Btn, Card, CardTitle, Empty, FIELD, Flash, useFlash } from '../ui/kit';
+import { WEEKDAYS_GE, WEEKDAYS_SHORT_GE } from '../../utils/dateNames';
 
 /** The latest days (up to `count`) that fall on the class's lesson weekdays, today first. */
 const recentLessonDays = (cls: SchoolClass, count = 4) => {
@@ -53,12 +54,12 @@ export const AttendancePanel: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
           {choices.map(d => (
             <button key={d} type="button" onClick={() => setDate(d)}
               className={`h-10 px-3.5 rounded-full text-[13px] font-bold cursor-pointer transition ${d === date ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426]'}`}>
-              {d === localIso() ? 'დღეს' : `${WEEKDAYS_SHORT[weekdayOf(d)]}, ${shortDate(d)}`}
+              {d === localIso() ? 'დღეს' : `${WEEKDAYS_SHORT_GE[weekdayOf(d)]}, ${shortDate(d)}`}
             </button>
           ))}
           <input type="date" value={date} max={localIso()} onChange={e => e.target.value && setDate(e.target.value)} className={`${FIELD} !w-auto !h-10`} aria-label="სხვა დღე" />
         </div>
-        <p className="mb-2 text-[13px] text-[#8a7a6a]">{WEEKDAYS[weekdayOf(date)]}, {shortDate(date)}{saved ? '' : ' · ჯერ არ მონიშნულა'}</p>
+        <p className="mb-2 text-[13px] text-[#8a7a6a]">{WEEKDAYS_GE[weekdayOf(date)]}, {shortDate(date)}{saved ? '' : ' · ჯერ არ მონიშნულა'}</p>
         <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           {cls.members.map(m => {
             const on = present.includes(m.uid);

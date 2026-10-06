@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Music, Play, Search, X } from 'lucide-react';
 import { ANCESTORS, type Ancestor, type BioBlock } from '../data/ancestorsBios';
+import { useOpenRequest } from '../utils/searchOpen';
 
 // "Meet the ancestors": portraits of the great chanters lead the page, then every
 // biography from galobani.ge as a card that opens a full-screen reader, then the
@@ -413,6 +414,8 @@ export const AncestorsPage: React.FC = () => {
   const [openId, setOpenId] = useState<number | null>(null);
   const [query, setQuery] = useState('');
   const closeReader = useCallback(() => setOpenId(null), []);
+  // a chanter picked in the search opens straight in the reader
+  useOpenRequest('tsinaprebi', id => setOpenId(Number(id)));
 
   const q = query.trim();
   const found = useMemo(() => (q ? ANCESTORS.filter((a) => a.name.includes(q)) : []), [q]);

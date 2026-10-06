@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { Check, ChevronDown } from 'lucide-react';
+import { Check, ChevronDown, X } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
@@ -38,14 +38,18 @@ const fireworks = (finale: boolean) => {
 
 // "ჩემი სამოსი": the student ticks off the parts of their chokha and watches it come together —
 // a pale mannequin at first, each ticked part dropping into place in colour. Saved in students/{uid}.samosi.
-export const ChemiSamosi: React.FC = () => {
+// `unfolded`: always open, without the fold arrow (the path page's own "სამოსი" tab).
+export const ChemiSamosi: React.FC<{ unfolded?: boolean }> = ({ unfolded }) => {
   const { user } = useAuth();
-  const [open, setOpen] = useState(false);
+  const [folded, setOpen] = useState(false);
+  const open = unfolded || folded;
   const [owned, setOwned] = useState<string[]>([]);
   // how many times each part has been ticked in this visit: a new value replays its drop animation
   const [drops, setDrops] = useState<Record<string, number>>({});
   const [cheer, setCheer] = useState<{ n: number; finale: boolean } | null>(null);
   const [shine, setShine] = useState(0);
+  // the part just added: its one-sentence story shows under the figure until the next one
+  const [story, setStory] = useState<SamosiPart | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -76,6 +80,7 @@ export const ChemiSamosi: React.FC = () => {
     const next = adding ? [...owned, part.id] : owned.filter(id => id !== part.id);
     setOwned(next);
     triggerHaptic(adding ? 25 : 10);
+    setStory(adding ? part : s => (s?.id === part.id ? null : s));
     if (adding) {
       const finale = next.length === TOTAL;
       setDrops(d => ({ ...d, [part.id]: (d[part.id] || 0) + 1 }));
@@ -93,8 +98,8 @@ export const ChemiSamosi: React.FC = () => {
   return (
     // same card look as the other tiles of "საგანძურის გზა" (PATH_TILE), without the hover lift
     <section className="w-full rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] overflow-hidden">
-      <button
-        type="button"
+      <Header
+        unfolded={unfolded}
         onClick={toggleOpen}
         className="w-full flex items-center gap-3 p-3 sm:px-4 text-left cursor-pointer select-none hover:bg-[#fbf6ec]/60 transition-colors"
         aria-expanded={open}
@@ -106,10 +111,12 @@ export const ChemiSamosi: React.FC = () => {
             {complete ? 'ჩოხა სრულადაა აწყობილი' : `${done} / ${TOTAL} შეგროვებულია`}
           </span>
         </span>
-        <span className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all ${open ? 'rotate-180 bg-[#7a2028]/10 text-[#7a2028]' : 'bg-[#fbf6ec] text-[#8a7a6a]'}`}>
-          <ChevronDown className="w-4 h-4" />
-        </span>
-      </button>
+        {!unfolded && (
+          <span className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all ${open ? 'rotate-180 bg-[#7a2028]/10 text-[#7a2028]' : 'bg-[#fbf6ec] text-[#8a7a6a]'}`}>
+            <ChevronDown className="w-4 h-4" />
+          </span>
+        )}
+      </Header>
 
       {open && (
         <div className="px-4 pb-4 space-y-5 animate-in fade-in duration-300">
@@ -165,6 +172,31 @@ export const ChemiSamosi: React.FC = () => {
               </div>
             )}
           </div>
+
+          {/* the story of the part just added */}
+          {story && (
+            <div key={story.id} className="flex items-start gap-3 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#eadfcb] pl-2.5 pr-1.5 py-2.5 animate-in fade-in slide-in-from-top-1 duration-300" aria-live="polite">
+              <span className="w-10 h-10 shrink-0 rounded-xl bg-white shadow-[0_1px_2px_rgba(42,32,23,0.08)] flex items-center justify-center">
+                {story.art ? (
+                  <SamosiArt kind={story.art} className="w-8 h-8" />
+                ) : (
+                  <img src={samosiThumb(story.id)} alt="" aria-hidden draggable={false} className="w-9 h-9" />
+                )}
+              </span>
+              <p className="flex-1 min-w-0 pt-0.5 text-[13px] leading-relaxed text-[#4a3426]">
+                <span className="font-bold text-[#7a2028]">{story.label}. </span>
+                {story.story}
+              </p>
+              <button
+                type="button"
+                onClick={() => setStory(null)}
+                aria-label="დახურვა"
+                className="w-9 h-9 shrink-0 -my-1 rounded-full flex items-center justify-center text-[#a99a88] hover:text-[#7a2028] hover:bg-white cursor-pointer transition-colors"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          )}
 
           {/* progress: one slim bar with hairline marks between the parts, the count beside it */}
           <div className="flex items-center gap-3" role="progressbar" aria-valuemin={0} aria-valuemax={TOTAL} aria-valuenow={done} aria-label="შეგროვებული ნაწილები">
@@ -230,6 +262,14 @@ export const ChemiSamosi: React.FC = () => {
     </section>
   );
 };
+
+// The card's title row: a fold button, or a plain row when the card is always open
+const Header: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { unfolded?: boolean }> = ({ unfolded, children, ...button }) =>
+  unfolded ? (
+    <div className="w-full flex items-center gap-3 p-3 sm:px-4">{children}</div>
+  ) : (
+    <button type="button" {...button}>{children}</button>
+  );
 
 // Thumbnail of the chokha inside a ring that fills as parts are collected
 const ProgressRing: React.FC<{ value: number; complete: boolean }> = ({ value, complete }) => {

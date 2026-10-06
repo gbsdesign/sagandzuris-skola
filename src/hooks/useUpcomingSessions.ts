@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { triggerHaptic } from '../utils/haptics';
+import { MONTHS_SHORT_GE } from '../utils/dateNames';
 
 // The next planned independent-study hours (today's included, even if the hour has passed, so it can
 // still be ticked) and a toggle for them — lets the folded "დამოუკიდებელი მეცადინეობა" card be used directly.
 
 const DAY_IDS_BY_INDEX = ['კვი', 'ორშ', 'სამ', 'ოთხ', 'ხუთ', 'პარ', 'შაბ'];
-const MONTHS_SHORT_GE = ['იან', 'თებ', 'მარ', 'აპრ', 'მაი', 'ივნ', 'ივლ', 'აგვ', 'სექ', 'ოქტ', 'ნოე', 'დეკ'];
 
 export const toDateKey = (date: Date): string =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;

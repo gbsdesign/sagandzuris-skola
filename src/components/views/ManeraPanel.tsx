@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Lightbulb, ChevronDown } from 'lucide-react';
 import { MANERA_ITEMS } from '../../data/habitsAndManera';
 import { useChants } from '../../context';
+import { openPathPanel } from './IndependentWorkCard';
 
 const QUICK_VALUES = [0, 25, 50, 75, 100];
 
@@ -36,28 +37,44 @@ const SHORT: Record<string, string> = {
   '6': 'პირი', '7': 'ხმოვნები', '8': 'მორგება', '9': 'დგომა',
 };
 
-/** Each tip's percentage as a tiny ring with a one-word label; one row shows as many as fit. */
+// A tapped ring on the folded card opens the panel with that tip unfolded. The panel's content mounts
+// only when it opens, so the wish waits here until ManeraContent picks it up.
+const OPEN_TIP_EVENT = 'manera-open-tip';
+let pendingTip: string | null = null;
+
+/** Each tip's percentage as a small ring with a one-word label; the row slides sideways, a tap opens the tip. */
 export const ManeraQuickRings: React.FC = () => {
   const { values } = useManera();
-  const R = 10, C = 2 * Math.PI * R;
+  const R = 14, C = 2 * Math.PI * R;
+  const openTip = (num: string) => {
+    pendingTip = num;
+    openPathPanel('manera');
+    window.dispatchEvent(new CustomEvent(OPEN_TIP_EVENT, { detail: num }));
+  };
   return (
-    <div className="flex flex-wrap md:justify-end gap-x-0.5 h-[40px] overflow-hidden">
+    <div className="flex overflow-x-auto overflow-y-hidden overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,#000_calc(100%-28px),transparent)] pr-6">
       {MANERA_ITEMS.map((item, i) => {
         const v = values[i];
         return (
-          <span key={item.num} title={`${item.title}: ${v}%`} className="w-[58px] flex flex-col items-center gap-0.5">
-            <span className="relative w-7 h-7">
-              <svg viewBox="0 0 28 28" className="w-full h-full -rotate-90">
-                <circle cx="14" cy="14" r={R} fill="none" stroke="#f1e8da" strokeWidth="3" />
+          <button
+            key={item.num}
+            type="button"
+            onClick={() => openTip(item.num)}
+            aria-label={`${item.title}: ${v}%`}
+            className={`w-[76px] shrink-0 flex flex-col items-center gap-1 py-0.5 rounded-xl cursor-pointer active:scale-95 transition-transform ${i === 0 ? 'md:ml-auto' : ''}`}
+          >
+            <span className="relative w-9 h-9">
+              <svg viewBox="0 0 36 36" className="w-full h-full -rotate-90">
+                <circle cx="18" cy="18" r={R} fill="none" stroke="#f1e8da" strokeWidth="3.5" />
                 {v > 0 && (
-                  <circle cx="14" cy="14" r={R} fill="none" stroke={maneraTone(v).ring} strokeWidth="3" strokeLinecap="round"
+                  <circle cx="18" cy="18" r={R} fill="none" stroke={maneraTone(v).ring} strokeWidth="3.5" strokeLinecap="round"
                     strokeDasharray={C} strokeDashoffset={C * (1 - v / 100)} />
                 )}
               </svg>
-              <span className="absolute inset-0 flex items-center justify-center text-[9px] font-black text-[#2a2017] tabular-nums">{v}</span>
+              <span className="absolute inset-0 flex items-center justify-center text-[11px] font-black text-[#2a2017] tabular-nums">{v}</span>
             </span>
-            <span className="w-full text-center text-[9px] leading-none font-semibold text-[#8a7a6a] truncate">{SHORT[item.num] || item.title}</span>
-          </span>
+            <span className="w-full text-center text-xs leading-tight font-semibold text-[#75685a] truncate">{SHORT[item.num] || item.title}</span>
+          </button>
         );
       })}
     </div>
@@ -83,7 +100,13 @@ const MiniRing: React.FC<{ value: number }> = ({ value }) => {
 // "მანერა": one compact row per performance tip; tap a row to rate it (slider + quick values) and read the advice.
 export const ManeraContent: React.FC = () => {
   const { values, set } = useManera();
-  const [openNum, setOpenNum] = useState<string | null>(null);
+  const [openNum, setOpenNum] = useState<string | null>(() => { const n = pendingTip; pendingTip = null; return n; });
+  // a ring tapped while the panel is already open
+  useEffect(() => {
+    const onTip = (e: Event) => { pendingTip = null; setOpenNum((e as CustomEvent).detail); };
+    window.addEventListener(OPEN_TIP_EVENT, onTip);
+    return () => window.removeEventListener(OPEN_TIP_EVENT, onTip);
+  }, []);
   const [draft, setDraft] = useState<{ num: string; v: number } | null>(null);
 
   return (

@@ -3,8 +3,9 @@ import { ChevronLeft, ChevronRight, Loader2, Search, X } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
 import { VineLeaf } from '../../components/home/PlateOrnaments';
 import { LifeThumb } from '../../components/saints/LifeThumb';
-import { MONTHS_GE, dayMonthGe, daysInMonth, fromOldStyle, oldStyleOf, todayIso } from '../../data/churchCalendar';
+import { dayMonthGe, daysInMonth, fromOldStyle, oldStyleOf, todayIso } from '../../data/churchCalendar';
 import { LifeEntry, lifeNewIso, lifeOldDay, openSaintLife, splitTitle, useLivesIndex } from '../../data/saintLives';
+import { MONTHS_GE, MONTHS_SHORT_GE } from '../../utils/dateNames';
 
 // "წმიდანთა ცხოვრება" from orthodoxy.ge: by the month (old style, as the menaion reads them), the Georgian
 // saints, the Theotokos' life in chapters and the movable days; or a search. A life opens over the page.
@@ -18,7 +19,6 @@ const VIEWS = [
 type ViewId = typeof VIEWS[number]['id'];
 
 const VIEW_KEY = 'libraryLivesView';
-const MONTHS_SHORT = ['იან', 'თებ', 'მარ', 'აპრ', 'მაი', 'ივნ', 'ივლ', 'აგვ', 'სექ', 'ოქტ', 'ნოე', 'დეკ'];
 
 // searching: one spelling for წმიდა/წმინდა, ღვთის/ღმრთის, and no punctuation
 const norm = (s: string) =>
@@ -68,7 +68,7 @@ const DayGroup: React.FC<{ month: number; day: number; lives: LifeEntry[]; today
           today ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]' : 'bg-[#f6ecda] ring-[#ead9bd] text-[#7a2028]'
         }`}>
           <span className="font-serif-ge text-[17px] font-bold leading-none tabular-nums">{day}</span>
-          <span className="mt-0.5 text-[10px] font-bold leading-none">{MONTHS_SHORT[month - 1]}</span>
+          <span className="mt-0.5 text-[10px] font-bold leading-none">{MONTHS_SHORT_GE[month - 1]}</span>
         </span>
         <span className="min-w-0">
           <span className="block font-serif-ge text-[14.5px] font-bold text-[#7a2028] leading-tight">

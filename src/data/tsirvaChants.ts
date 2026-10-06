@@ -26,9 +26,20 @@ export interface ChantVariant {
 export const variantName = (v: Pick<ChantVariant, 'bookNums' | 'version'>) =>
   [bookNumLabel(v.bookNums), v.version].filter(Boolean).join(' ');
 
-// "გვ. 205" (+ the manuscript when the name does not already say it)
-export const variantSublabel = (v: ChantVariant) =>
-  v.page ? `გვ. ${v.page}${v.source && !v.version?.includes(v.source) ? ` · ${v.source}` : ''}` : undefined;
+// Short book names for the version buttons (Patarava's book is named in the school row above them)
+const BOOK_SHORT: Record<string, string> = {
+  book: 'I ტომი', feast: 'II ტომი', kk: 'III ტომი', triod: 'IV ტომი', v5: 'V ტომი', karb: 'VII ტომი', v9: 'IX ტომი',
+};
+
+// "I ტომი · გვ. 205" (+ the manuscript); the book and the manuscript are left out when the name already says them.
+// The book's numeral is matched whole: "I ტომი" is also the end of "III ტომი".
+export const variantSublabel = (v: ChantVariant) => {
+  if (!v.page) return undefined;
+  const book = BOOK_SHORT[v.book ?? 'book'];
+  const namesBook = book && new RegExp(`(^|[^IVX])${book}`).test(v.version ?? '');
+  const namesSource = v.source && v.version?.includes(v.source);
+  return [!namesBook && book, `გვ. ${v.page}`, !namesSource && v.source].filter(Boolean).join(' · ');
+};
 
 // "გ.ს. ამინ (1, გვ. 3)" — used by bookmarks and search
 export const bookFullTitle = (title: string, name: string, page?: number, school = 'გ.ს.') =>
