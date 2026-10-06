@@ -64,6 +64,8 @@
 - Firebase project `psalms-reading-group-ge-dev`. Security rules live in `firestore.rules`.
 - No URL router: pages are switched by `NavigationContext` (history.state `sgNav`, `sgDepth`, …).
   Notes pages use `NotesContext` (`?c=&v=`, `?p=`), saint lives use their own `sgLife` history entry.
+  The region open on the songs/მთქმელი map (or an open instrument) is `sgNav.mapItem` (`openMapItem`), so the
+  one top-bar „უკან“ first returns to the map.
 - Fixed/full-screen UI must respect `env(safe-area-inset-*)` (`viewport-fit=cover` is on); helpers
   `.safe-x`, `.safe-top`, `.safe-bottom`, `.safe-bleed` in `index.css`.
 

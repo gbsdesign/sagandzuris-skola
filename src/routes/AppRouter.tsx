@@ -46,7 +46,6 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
     selectedChantVariants,
     handleToggleSong,
     handleTogglePoem,
-    handleToggleInstrument,
     setSelectedChantVariants,
   } = useChants();
 
@@ -194,10 +193,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
 
           {currentPage === 'sakravebi' && (
             <div className="w-full my-2 px-1">
-              <SakravebiView
-                selectedChantVariants={selectedChantVariants}
-                onToggleInstrument={handleToggleInstrument}
-              />
+              <SakravebiView selectedChantVariants={selectedChantVariants} />
             </div>
           )}
         </div>

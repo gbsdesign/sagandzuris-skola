@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Check, Plus, ChevronDown, BookOpen, ExternalLink, Feather, ScrollText, BookText } from 'lucide-react';
-import { FolkRegion } from '../../data/songsData';
+import { ChevronDown, BookOpen, ExternalLink, Feather, ScrollText, BookText } from 'lucide-react';
+import { FOLK_REGIONS, FolkRegion } from '../../data/songsData';
 import { MtkmeliAuthor, LiteraryWork, WorkKind, authorsInRegion } from '../../data/mtkmeliData';
-import { RegionPuzzleMap } from './RegionPuzzleMap';
+import { RegionPuzzleMap, RegionLocator } from './RegionPuzzleMap';
+import { AddToListButton } from '../ui/AddToListButton';
 import { triggerHaptic } from '../../utils/haptics';
-import { useAuth } from '../../context';
+import { useAuth, useNavigation } from '../../context';
 import { askSignIn } from '../access/SignInPrompt';
 
 interface MtkmeliMapProps {
@@ -22,15 +23,18 @@ const KIND_STYLE: Record<WorkKind, { icon: React.ReactNode; cls: string }> = {
 };
 
 export const MtkmeliMap: React.FC<MtkmeliMapProps> = ({ selectedChantVariants = {}, onTogglePoem }) => {
-  const [region, setRegion] = useState<FolkRegion | null>(null);
+  // the open region is a history step: the top bar's "back" (and the phone's) returns to the map
+  const { mapItem, openMapItem } = useNavigation();
+  const region = FOLK_REGIONS.find(r => r.id === mapItem) ?? null;
 
   if (!region) {
     return (
       <RegionPuzzleMap
-        onSelect={r => { triggerHaptic(10); setRegion(r); }}
+        onSelect={r => openMapItem(r.id)}
         count={id => authorsInRegion(id).length}
         countLabel={n => `${n} ავტორი`}
         regionName={regionName}
+        title="მთქმელი საქართველო"
       />
     );
   }
@@ -38,23 +42,13 @@ export const MtkmeliMap: React.FC<MtkmeliMapProps> = ({ selectedChantVariants = 
   const authors = authorsInRegion(region.id);
   return (
     <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
-      <div className="flex items-center justify-between gap-2 border-b border-amber-200/60 pb-2.5">
-        <button
-          type="button"
-          onClick={() => { triggerHaptic(10); setRegion(null); }}
-          className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl bg-slate-100 hover:bg-slate-200/80 text-slate-700 font-extrabold text-xs transition-colors cursor-pointer"
-        >
-          <ArrowLeft className="w-3.5 h-3.5" />
-          <span>რუკაზე დაბრუნება</span>
-        </button>
-        <span className="text-[11px] font-black px-2.5 py-0.5 rounded-full bg-amber-500/15 border border-amber-500/30 text-amber-900">
-          {authors.length} ავტორი
-        </span>
-      </div>
-
-      <div className="flex items-center gap-3 px-1">
-        <span className="w-9 h-9 shrink-0 rounded-xl border border-black/10 shadow-xs" style={{ background: region.color }} />
-        <h3 className="text-lg sm:text-xl font-black text-slate-800 leading-tight">{regionName(region)}</h3>
+      {/* where the region is: a small map with it lit */}
+      <div className="flex items-center gap-3 px-1 pb-3 border-b border-amber-200/60">
+        <RegionLocator region={region} className="w-28 sm:w-32 h-auto shrink-0" />
+        <div className="min-w-0 flex flex-col gap-0.5">
+          <h3 className="text-lg sm:text-xl font-black text-slate-800 leading-tight">{regionName(region)}</h3>
+          <span className="text-xs font-bold text-amber-800">{authors.length} ავტორი</span>
+        </div>
       </div>
 
       {authors.length === 0 ? (
@@ -193,18 +187,7 @@ const WorkItem: React.FC<WorkItemProps> = ({ work, isOpen, onToggleOpen, isSelec
           </span>
           <span className="text-sm sm:text-[15px] font-bold text-slate-800 leading-snug">{work.title}</span>
         </button>
-        {onToggleSelect && (
-          <button
-            type="button"
-            onClick={onToggleSelect}
-            className={`w-9 h-9 shrink-0 rounded-xl border flex items-center justify-center transition-all cursor-pointer ${
-              isSelected ? 'bg-amber-600 text-white border-amber-700 shadow-2xs' : 'bg-white text-slate-400 hover:text-amber-800 border-slate-200'
-            }`}
-            title={isSelected ? 'ამოღება' : 'დამატება საგანძურის გზაზე'}
-          >
-            {isSelected ? <Check className="w-4 h-4 stroke-[3]" /> : <Plus className="w-4 h-4" />}
-          </button>
-        )}
+        {onToggleSelect && <AddToListButton isSelected={isSelected} onToggle={onToggleSelect} />}
         <button
           type="button"
           onClick={onToggleOpen}
