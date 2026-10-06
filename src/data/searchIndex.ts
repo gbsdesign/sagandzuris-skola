@@ -8,7 +8,8 @@ import {
 import { FOLK_SONGS, getFolkRegion } from './songsData';
 import { ANCESTORS } from './ancestorsBios';
 import { FEAST_GROUPS, feastDates } from './library/feasts';
-import { MONTHS_GE, daysBetween, fromIso, todayIso, weekdayGe } from './churchCalendar';
+import { daysBetween, fromIso, todayIso, weekdayGe } from './churchCalendar';
+import { MONTHS_GE } from '../utils/dateNames';
 import { SECTIONS, SectionId } from './sections';
 import { SPECIALS, sectionOfShortcut } from '../utils/shortcuts';
 import { kathismaOfPsalm, matchScore, psalmNumber, searchNormalize, splitTrailingNumber } from '../utils/searchMatch';

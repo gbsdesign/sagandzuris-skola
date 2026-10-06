@@ -6,7 +6,7 @@ import { db } from '../../firebase';
 import { useAuth } from '../../context';
 import { useNotes } from '../../context/NotesContext';
 import { hasGeorgianName, isGeorgian, saveProfileName } from '../../utils/memberName';
-import { MONTHS_GE } from '../../data/churchCalendar';
+import { MONTHS_GE } from '../../utils/dateNames';
 import {
   GEORGIAN_REGIONS, STATUS_OPTIONS, daysInMonth, isPlaceholderBirth, normalizePhone, profileComplete, showPhone,
   statusList, validBirth,
