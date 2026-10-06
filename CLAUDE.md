@@ -37,6 +37,13 @@
   calendar), `src/pages/notes/CLAUDE.md` (notes page, church mode, liturgy program).
 - Repeated jobs have skills — use them instead of re-deriving the steps: `/add-recording`, `/publish`,
   `/phone-check`, `/update-calendar` (in `.claude/skills/`).
+- A hook (`.claude/hooks/guard-big-read.mjs`) refuses whole-file Reads of text files over 200 KB — use Grep
+  or offset/limit; don't try to work around it.
+- Keep command output small: `npm run build 2>&1 | tail -20`, `git diff --stat` before a full diff,
+  `git log --oneline -5`. Don't print whole JSON files.
+- Don't start subagents/workflows unless the user asks — each one re-reads the project from scratch.
+- Progress notes in Georgian should be one or two short lines; save detail for the final summary.
+- Don't re-read a file you just edited, and don't re-run a check that already passed.
 - The user's task template is `docs/დავალების-შაბლონი.md`. If a request is unclear, ask one short
   question instead of exploring the whole codebase.
 

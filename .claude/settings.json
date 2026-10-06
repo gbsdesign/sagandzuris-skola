@@ -9,5 +9,19 @@
       "PowerShell(npx tsc --noEmit -p .; \"tsc exit: $LASTEXITCODE\"; $env:W='360'; node \"$env:TEMP\\\\cdp-steps-w.mjs\" \"$env:TEMP\\\\steps18.json\")",
       "PowerShell(try { \\(Invoke-WebRequest http://localhost:5173 -UseBasicParsing -TimeoutSec 5\\).StatusCode } catch { \"down\" })"
     ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Read",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/hooks/guard-big-read.mjs\"",
+            "timeout": 10
+          }
+        ]
+      }
+    ]
   }
 }
