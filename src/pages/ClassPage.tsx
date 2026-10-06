@@ -3,17 +3,19 @@ import { ArrowLeft, Users, ListChecks, Check, CheckCheck } from 'lucide-react';
 import { useAuth, useNavigation, useChants } from '../context';
 import { useConfirmations } from '../hooks/useConfirmations';
 import { findCatalogEntry, CATEGORY_LABEL, usesVoices, voicesOf, Voice } from '../utils/pathItems';
-import { useMyClasses, useAllClasses } from '../hooks/useClasses';
+import { useMyClasses, useAllClasses, useTeachingClasses } from '../hooks/useClasses';
+import { LessonTable } from '../components/teacher/Schedule';
 import { ClassLogo } from '../components/classes/ClassLogo';
 import { ClassChat } from '../components/classes/ClassChat';
 
 // A class's shared page: its chat, members and the common program. Members reach it from the class logo in the header.
 export const ClassPage: React.FC = () => {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isTeacher } = useAuth();
   const { selectedClassId, handleGoBack } = useNavigation();
   const mine = useMyClasses(user?.uid);
   const { classes: all } = useAllClasses(isAdmin);
-  const cls = [...mine, ...all].find(c => c.id === selectedClassId) || mine[0];
+  const { classes: teaching } = useTeachingClasses(isTeacher ? user?.uid : null);
+  const cls = [...mine, ...teaching, ...all].find(c => c.id === selectedClassId) || mine[0];
   const { selectedChantVariants } = useChants();
   const confirmed = useConfirmations(user?.uid);
 
@@ -43,8 +45,12 @@ export const ClassPage: React.FC = () => {
       <header className="flex flex-col items-center text-center gap-3">
         <ClassLogo name={cls.name} logo={cls.logo} className="w-24 h-24 text-4xl shadow-[0_0_0_4px_#fbf6ec,0_0_0_5px_#e8dcc8]" />
         <h1 className="font-serif-ge text-2xl sm:text-3xl font-bold text-[#4a3426]">{cls.name}</h1>
-        <p className="text-sm text-[#8a7a6a]">{cls.members.length} წევრი</p>
+        <p className="text-sm text-[#8a7a6a]">
+          {cls.members.length} წევრი{cls.teachers.length > 0 && ` · მასწავლებელი: ${cls.teachers.map(t => t.name).join(', ')}`}
+        </p>
       </header>
+
+      {cls.schedule.length > 0 && <LessonTable slots={cls.schedule} title="გაკვეთილების ცხრილი" />}
 
       <ClassChat cls={cls} />
 

@@ -26,36 +26,18 @@ export interface MonthlyStudyStats {
   next: { date: Date; hour: string; offset: number } | null;
 }
 
-export const useMonthlyStudyStats = (uid: string | undefined): MonthlyStudyStats | null => {
-  const [schedule, setSchedule] = useState<{ [day: string]: string } | null>(null);
-  const [completed, setCompleted] = useState<{ [key: string]: boolean }>({});
-
-  useEffect(() => {
-    if (!uid) {
-      setSchedule(null);
-      setCompleted({});
-      return;
-    }
-    return onSnapshot(
-      doc(db, 'students', uid),
-      snapshot => {
-        const data = snapshot.exists() ? snapshot.data() : {};
-        setSchedule(data.profile?.workSchedule || {});
-        setCompleted(data.completedSessions || {});
-      },
-      () => setSchedule(null)
-    );
-  }, [uid]);
-
-  if (!schedule) return null;
-
+/** The month's numbers from a student's schedule and ticked hours (also used for teachers' overviews). */
+export const computeMonthlyStats = (
+  schedule: { [day: string]: string },
+  completed: { [key: string]: boolean },
+  today: Date = new Date()
+): MonthlyStudyStats => {
   const hoursFor = (date: Date): string[] => {
     const raw = schedule[DAY_IDS_BY_INDEX[date.getDay()]];
     if (!raw || typeof raw !== 'string') return [];
     return raw.split(',').map(s => s.trim()).filter(s => AVAILABLE_HOURS.includes(s));
   };
 
-  const today = new Date();
   const todayKey = toDateKey(today);
   const year = today.getFullYear();
   const month = today.getMonth();
@@ -94,4 +76,29 @@ export const useMonthlyStudyStats = (uid: string | undefined): MonthlyStudyStats
     percent: Math.min(100, Math.round((worked / planned) * 100)),
     next,
   };
+};
+
+export const useMonthlyStudyStats = (uid: string | undefined): MonthlyStudyStats | null => {
+  const [schedule, setSchedule] = useState<{ [day: string]: string } | null>(null);
+  const [completed, setCompleted] = useState<{ [key: string]: boolean }>({});
+
+  useEffect(() => {
+    if (!uid) {
+      setSchedule(null);
+      setCompleted({});
+      return;
+    }
+    return onSnapshot(
+      doc(db, 'students', uid),
+      snapshot => {
+        const data = snapshot.exists() ? snapshot.data() : {};
+        setSchedule(data.profile?.workSchedule || {});
+        setCompleted(data.completedSessions || {});
+      },
+      () => setSchedule(null)
+    );
+  }, [uid]);
+
+  if (!schedule) return null;
+  return computeMonthlyStats(schedule, completed);
 };

@@ -4,9 +4,9 @@ import { PWAInstallButton } from '../PWAInstallButton';
 import { triggerHaptic } from '../../utils/haptics';
 import { useMonthlyStudyStats } from '../../hooks/useMonthlyStudyStats';
 import { MONTHS_SHORT_GE, nextLessonLabel, useSelectedCount, openPathPanel } from '../views/IndependentWorkCard';
-import { useMyClasses } from '../../hooks/useClasses';
+import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
 import { ClassLogo } from '../classes/ClassLogo';
-import { Bookmark, User as UserIcon, LogIn, LogOut, Compass, ShieldCheck, Library } from 'lucide-react';
+import { Bookmark, User as UserIcon, LogIn, LogOut, Compass, ShieldCheck, Library, GraduationCap } from 'lucide-react';
 
 interface HeaderProps {
   logoUrl: string;
@@ -21,9 +21,12 @@ const TOOLS = [
 // Phone: [logo] … [🔖 ③] [შესვლა] / tools group below. The full independent-work card lives on the path page.
 // Desktop (lg): one row — logo + name · tools in the middle · independent work + profile.
 export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
-  const { user, signingIn, signInWithGoogle, signOutUser, isAdmin } = useAuth();
+  const { user, signingIn, signInWithGoogle, signOutUser, isAdmin, isTeacher } = useAuth();
   const { navigateTo, currentPage, openClass } = useNavigation();
-  const myClasses = useMyClasses(user?.uid);
+  const memberOf = useMyClasses(user?.uid);
+  // a teacher reaches their own classes' pages from the header too
+  const { classes: teaching } = useTeachingClasses(isTeacher ? user?.uid : null);
+  const myClasses = [...memberOf, ...teaching.filter(t => !memberOf.some(m => m.id === t.id))];
   const { openModal } = useModal();
   const selectedCount = useSelectedCount();
   const stats = useMonthlyStudyStats(user?.uid);
@@ -56,6 +59,20 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
         {/* independent work (icon + count) + install + admin + profile */}
         <div className="order-2 lg:order-3 ml-auto flex items-center gap-1.5 sm:gap-2 min-w-0">
           <PWAInstallButton compact />
+          {/* teachers (and admins): the teacher's panel */}
+          {isTeacher && (
+            <button
+              type="button"
+              onClick={() => navigateTo('teacher')}
+              className={`w-9 h-9 rounded-xl ring-1 flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0 ${
+                currentPage === 'teacher' ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]' : 'bg-white/80 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028]'
+              }`}
+              title="მასწავლებლის პანელი"
+              aria-label="მასწავლებლის პანელი"
+            >
+              <GraduationCap className="w-4 h-4" />
+            </button>
+          )}
           {/* admins only: shield icon to the admin panel */}
           {isAdmin && (
             <button

@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import type { Voice } from '../utils/pathItems';
 
 // Teacher's "ჩათვლა": per student, which voices of which path item a teacher has confirmed.
-// Kept in confirmations/{uid} (only admins may write), so a student can't confirm their own work.
+// Kept in confirmations/{uid} (only their teachers and admins may write), so a student can't confirm their own work.
 // Learned-only items (poems, instruments) use voice '1' to mean "learned".
 export type Confirmations = Record<string, Voice[]>;
 

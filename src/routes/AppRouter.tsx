@@ -22,6 +22,8 @@ import { PrayerPage } from '../pages/PrayerPage';
 import { CommemorationPage } from '../pages/CommemorationPage';
 import { LibraryPage } from '../pages/LibraryPage';
 import { PsalterPage } from '../pages/PsalterPage';
+import { TeacherPage } from '../pages/TeacherPage';
+import { MyClassWork } from '../components/teacher/MyClassWork';
 
 interface AppRouterProps {
   logoUrl: string;
@@ -30,7 +32,7 @@ interface AppRouterProps {
 export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   const { currentPage, selectedService, handleGoBack, navigateTo } = useNavigation();
   const { openModal } = useModal();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isTeacher } = useAuth();
   const {
     selectedChantVariants,
     handleToggleSong,
@@ -40,7 +42,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   } = useChants();
 
   if (currentPage === 'admin') {
-    return <AdminPanelPage />;
+    return isAdmin ? <AdminPanelPage /> : <HomePage logoUrl={logoUrl} />;
   }
 
   if (currentPage === 'class') {
@@ -49,6 +51,10 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
 
   if (currentPage === 'psalter') {
     return <PsalterPage />;
+  }
+
+  if (currentPage === 'teacher') {
+    return isTeacher ? <TeacherPage /> : <HomePage logoUrl={logoUrl} />;
   }
 
   if (currentPage === 'profile') {
@@ -107,6 +113,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           {currentPage === 'gz' && (
             <div className="w-full max-w-2xl mx-auto mb-2 px-1 space-y-7">
               {/* the page title sits in the top bar (SubPageHeader) */}
+              {/* the teacher's assignments and the lesson timetable, when there are any */}
+              <MyClassWork />
               {/* the student can put these cards in their own order; my outfit comes first by default, manner last */}
               <ReorderStack
                 storageKey="pathCardsOrder"
