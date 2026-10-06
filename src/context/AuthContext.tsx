@@ -10,6 +10,7 @@ import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase';
 import { triggerHaptic } from '../utils/haptics';
 import { writeDirectory } from '../utils/directory';
+import { registerTeacher } from '../hooks/useDirectChat';
 
 export const SUPER_ADMIN_EMAIL = 'mr.gabunia@gmail.com';
 
@@ -78,6 +79,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       () => setStaffRole(null)
     );
   }, [user, isOwner]);
+
+  // a teacher or admin is listed as a teacher students can write to privately; a refusal (e.g. no rules yet)
+  // must not disturb signing in
+  useEffect(() => {
+    if (!user || !isTeacher) return;
+    try {
+      registerTeacher(user).catch(e => console.warn('teacher sync: ', e?.code || e));
+    } catch (e) {
+      console.warn('teacher sync: ', e);
+    }
+  }, [user, isTeacher]);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
