@@ -949,3 +949,6 @@ export const songVersionMedia = (song: FolkSong, version: SongVersion): ChantMed
 
 export const songsInRegion = (region: FolkRegionId, showOwnerOnly: boolean) =>
   FOLK_SONGS.filter(s => s.region === region && (showOwnerOnly || !s.ownerOnly));
+
+/** A song picked in the chant search: the songs map opens its region with this song unfolded, once. */
+export const pendingSong: { id: string | null } = { id: null };

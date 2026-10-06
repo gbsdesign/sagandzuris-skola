@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { ArrowLeft, Check, Plus, ChevronDown, Headphones, Sparkles, FileText, Music, Lock, MapPin } from 'lucide-react';
 import {
   FOLK_REGIONS,
   FolkRegion,
   FolkSong,
   songsInRegion,
+  pendingSong,
+  FOLK_SONGS,
+  getFolkRegion,
   songVersionMedia,
   songDocUrl,
   soundcloudEmbedUrl,
@@ -26,7 +29,11 @@ const DARK_FILLS = new Set(['mtianeti', 'kalakuri']);
 export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = {}, onToggleSong }) => {
   const { isAdmin, isSuperAdmin } = useAuth();
   const showOwnerOnly = isAdmin || isSuperAdmin;
-  const [region, setRegion] = useState<FolkRegion | null>(null);
+  // a song picked in the chant search opens in its region
+  const [region, setRegion] = useState<FolkRegion | null>(() => {
+    const song = FOLK_SONGS.find(s => s.id === pendingSong.id);
+    return song ? getFolkRegion(song.region) : null;
+  });
   const [hovered, setHovered] = useState<string | null>(null);
 
   const openRegion = (r: FolkRegion) => {
@@ -165,7 +172,16 @@ interface RegionPlaylistProps {
 }
 
 const RegionPlaylist: React.FC<RegionPlaylistProps> = ({ region, songs, onBack, selectedChantVariants, onToggleSong }) => {
-  const [openId, setOpenId] = useState<string | null>(null);
+  const [openId, setOpenId] = useState<string | null>(() => {
+    const id = pendingSong.id;
+    pendingSong.id = null;
+    return songs.some(s => s.id === id) ? id : null;
+  });
+  // the song picked in the search may lie further down the region's list
+  useEffect(() => {
+    if (openId) document.getElementById(`song-${openId}`)?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
@@ -197,15 +213,16 @@ const RegionPlaylist: React.FC<RegionPlaylistProps> = ({ region, songs, onBack, 
       ) : (
         <div className="flex flex-col gap-2">
           {songs.map(song => (
-            <SongItem
-              key={song.id}
-              song={song}
-              region={region}
-              isOpen={openId === song.id}
-              onToggleOpen={() => { triggerHaptic(10); setOpenId(id => (id === song.id ? null : song.id)); }}
-              isSelected={Boolean(selectedChantVariants[song.id])}
-              onToggleSelect={onToggleSong ? () => { triggerHaptic(15); onToggleSong(song.id, song.title, region.regionCode, region.nameGe); } : undefined}
-            />
+            <div key={song.id} id={`song-${song.id}`} className="scroll-mt-4">
+              <SongItem
+                song={song}
+                region={region}
+                isOpen={openId === song.id}
+                onToggleOpen={() => { triggerHaptic(10); setOpenId(id => (id === song.id ? null : song.id)); }}
+                isSelected={Boolean(selectedChantVariants[song.id])}
+                onToggleSelect={onToggleSong ? () => { triggerHaptic(15); onToggleSong(song.id, song.title, region.regionCode, region.nameGe); } : undefined}
+              />
+            </div>
           ))}
         </div>
       )}
