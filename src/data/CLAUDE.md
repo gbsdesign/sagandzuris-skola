@@ -47,7 +47,8 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
 
 ## Texts and copyright
 
-- მთქმელი (`mtkmeliData.ts`): full texts only for authors who died before 1956; others get title +
+- მთქმელი (`mtkmeliData.ts`): full texts only for authors who died before 1956 (kept in
+  `public/mtkmeli/<work id>.json`, fetched when opened; the work has `hasText: true`); others get title +
   description + wiki link. Use only titles verified on Wikipedia/Wikisource.
 - Saint lives are from the Patriarchate's „წმიდანთა ცხოვრება“ (2001); the user chose to include full texts.
 - Prayers: `prayers.ts` + `public/prayers/<id>.json`; `girsArs.ts` has the seasonal Axion rules.

@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
@@ -141,7 +141,9 @@ function AppContent() {
       <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 md:p-8 flex flex-col justify-center">
         <div className="w-full max-w-4xl mx-auto">
           <ErrorBoundary>
-            <AppRouter logoUrl={currentLogo} />
+            <Suspense fallback={<div className="py-24 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-[#7a2028]" /></div>}>
+              <AppRouter logoUrl={currentLogo} />
+            </Suspense>
           </ErrorBoundary>
         </div>
       </main>

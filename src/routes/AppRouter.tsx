@@ -1,10 +1,9 @@
-import React from 'react';
+import React, { lazy } from 'react';
 import { useNavigation, useChants, useModal, useAuth } from '../context';
 import { Sparkles, Music, ShieldCheck, ChevronRight } from 'lucide-react';
 import { SubPageHeader } from '../components/layout';
 import { HomePage } from '../pages/HomePage';
 import { GalobaPage } from '../pages/GalobaPage';
-import { ChantDetailPage } from '../pages/ChantDetailPage';
 import { StudentProfileCard } from '../components/views';
 import { GzaView } from '../components/views';
 import { PathPanel, PATH_ICON, PATH_TILE } from '../components/views/IndependentWorkCard';
@@ -13,21 +12,27 @@ import { ManeraContent, ManeraAverageBadge, ManeraQuickRings } from '../componen
 import { PathSummary } from '../components/views/PathSummary';
 import { ReorderStack } from '../components/views/ReorderStack';
 import { ChemiSamosi } from '../components/views/ChemiSamosi';
-import { GeorgiaMap, MtkmeliMap } from '../components/maps';
-import { SakravebiView } from '../components/views';
-import { AdminPanelPage } from '../pages/AdminPanelPage';
-import { ClassPage } from '../pages/ClassPage';
-import { AncestorsPage } from '../pages/AncestorsPage';
-import { PrayerPage } from '../pages/PrayerPage';
-import { CommemorationPage } from '../pages/CommemorationPage';
-import { LibraryPage } from '../pages/LibraryPage';
-import { PsalterPage } from '../pages/PsalterPage';
-import { TeacherPage } from '../pages/TeacherPage';
 import { MyClassWork } from '../components/teacher/MyClassWork';
 import { ShortcutShelf } from '../components/home/ShortcutShelf';
 import { useAccess } from '../hooks/useAccess';
 import { LockedPage } from '../components/access/SignInPrompt';
 import { SECTIONS, sectionOfPage } from '../data/sections';
+
+// Pages load when first opened, so the first visit downloads less (App wraps the router in Suspense).
+const page = <T extends string>(load: () => Promise<Record<T, React.ComponentType<any>>>, name: T) =>
+  lazy(() => load().then(m => ({ default: m[name] })));
+const ChantDetailPage = page(() => import('../pages/ChantDetailPage'), 'ChantDetailPage');
+const GeorgiaMap = page(() => import('../components/maps/GeorgiaMap'), 'GeorgiaMap');
+const MtkmeliMap = page(() => import('../components/maps/MtkmeliMap'), 'MtkmeliMap');
+const SakravebiView = page(() => import('../components/views/SakravebiView'), 'SakravebiView');
+const AdminPanelPage = page(() => import('../pages/AdminPanelPage'), 'AdminPanelPage');
+const ClassPage = page(() => import('../pages/ClassPage'), 'ClassPage');
+const AncestorsPage = page(() => import('../pages/AncestorsPage'), 'AncestorsPage');
+const PrayerPage = page(() => import('../pages/PrayerPage'), 'PrayerPage');
+const CommemorationPage = page(() => import('../pages/CommemorationPage'), 'CommemorationPage');
+const LibraryPage = page(() => import('../pages/LibraryPage'), 'LibraryPage');
+const PsalterPage = page(() => import('../pages/PsalterPage'), 'PsalterPage');
+const TeacherPage = page(() => import('../pages/TeacherPage'), 'TeacherPage');
 
 interface AppRouterProps {
   logoUrl: string;
