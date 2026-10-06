@@ -10,7 +10,7 @@ import {
   soundcloudEmbedUrl,
 } from '../../data/songsData';
 import { GEORGIA_MAP_SHAPES, GEORGIA_MAP_SIZE } from '../../data/georgiaMapShapes';
-import { ChantPlayer } from '../../pages/ChantDetailPage';
+import { ChantPlayer } from '../ChantPlayer';
 import { useAuth } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 import { askSignIn } from '../access/SignInPrompt';
@@ -349,7 +349,6 @@ export const SongBody: React.FC<{ song: FolkSong; region: FolkRegion }> = ({ son
               media={songVersionMedia(song, version)}
               title={song.title}
               subtitle={`${region.nameGe} · ${version.label}`}
-              inline
             />
           </div>
         ) : song.soundcloud ? (

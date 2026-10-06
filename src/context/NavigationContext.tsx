@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { triggerHaptic } from '../utils/haptics';
 
-export type PageType = 'home' | 'profile' | 'galoba' | 'galoba-detail' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'gz' | 'tsinaprebi' | 'bookmark' | 'admin' | 'teacher' | 'class' | 'prayer' | 'commemoration' | 'biblioteka' | 'psalter';
+export type PageType = 'home' | 'profile' | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'gz' | 'tsinaprebi' | 'bookmark' | 'admin' | 'teacher' | 'class' | 'prayer' | 'commemoration' | 'biblioteka' | 'psalter';
 export type ServiceType = 'წირვა' | 'მწუხრი' | 'ცისკარი' | 'სადღესასწაულო' | 'მარხვანი' | 'ზატიკი' | null;
 
 export interface NavigationContextType {
@@ -33,7 +33,7 @@ interface NavSnap { page: PageType; service: ServiceType; classId: string | null
 const HOME: NavSnap = { page: 'home', service: null, classId: null, prayerId: null };
 const makeSnap = (page: PageType, service: ServiceType, classId: string | null, prayerId: string | null): NavSnap => ({
   page,
-  service: page === 'galoba' || page === 'galoba-detail' ? service : null,
+  service: page === 'galoba' ? service : null,
   classId: page === 'class' ? classId : null,
   prayerId: page === 'prayer' ? prayerId : null,
 });
@@ -124,7 +124,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     triggerHaptic(10);
     markLeave();
     setCurrentPage(page);
-    if (page !== 'galoba-detail' && page !== 'galoba') {
+    if (page !== 'galoba') {
       setSelectedService(null);
       setExpandedChantId(null);
       setChantSearch('');
@@ -170,13 +170,6 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       setCurrentPage(back.page);
       // back to the place the prayer was picked
       window.setTimeout(() => window.scrollTo({ top: back.scroll }), 0);
-      return;
-    }
-    if (currentPage === 'galoba-detail') {
-      setCurrentPage('galoba');
-      if (!selectedService) {
-        setSelectedService('წირვა');
-      }
       return;
     }
     if (selectedService) {
