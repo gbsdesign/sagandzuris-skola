@@ -25,6 +25,9 @@ import { TodaySaintsCard } from './components/calendar/TodaySaintsCard';
 import { SaintLifeOverlay } from './components/saints/SaintLifeOverlay';
 import { usePrayerReminderScheduler } from './utils/prayerReminders';
 import { isPrayerId } from './data/prayers';
+import { startRecordingBindings, useRecordingBindings } from './data/runtimeRecordings';
+
+startRecordingBindings();
 
 // Backward compatibility exports
 export { filterValidVariants, getValidVariantIds } from './utils/variantValidation';
@@ -49,6 +52,8 @@ export default function App() {
 function AppContent() {
   const { loading } = useAuth();
   const { currentPage, openPrayer } = useNavigation();
+  // recordings bound in the admin panel: the page redraws when they arrive
+  useRecordingBindings();
   const [dbLogo, setDbLogo] = useState<string | null>(null);
 
   usePrayerReminderScheduler(openPrayer);

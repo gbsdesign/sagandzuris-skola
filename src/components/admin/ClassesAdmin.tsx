@@ -124,21 +124,23 @@ export const ClassesAdmin: React.FC<{
         ) : (
           <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {classes.map(c => (
-              <li key={c.id} className="flex items-center gap-3 p-3.5 rounded-2xl bg-white ring-1 ring-[#e8dcc8]">
-                <ClassLogo name={c.name} logo={c.logo} className="w-12 h-12 text-lg" />
-                <div className="min-w-0 flex-1">
-                  <p className="font-serif-ge font-bold text-[#4a3426] truncate">{c.name}</p>
+              <li key={c.id} className="flex flex-wrap items-center gap-3 p-3.5 rounded-2xl bg-white ring-1 ring-[#e8dcc8]">
+                <ClassLogo name={c.name} logo={c.logo} className="w-12 h-12 text-lg shrink-0" />
+                <div className="min-w-0 flex-1 basis-40">
+                  <p className="font-serif-ge font-bold text-[#4a3426] leading-snug">{c.name}</p>
                   <p className="text-xs text-[#8a7a6a]">{c.members.length} წევრი · პროგრამაში {c.program.length} პუნქტი</p>
-                  <p className={`text-xs truncate ${c.teachers.length ? 'text-[#4a3426]' : 'text-[#9a3324]'}`}>
+                  <p className={`text-xs ${c.teachers.length ? 'text-[#4a3426]' : 'text-[#9a3324]'}`}>
                     {c.teachers.length ? `მასწავლებელი: ${c.teachers.map(t => t.name).join(', ')}` : 'მასწავლებელი არ ჰყავს'}
                   </p>
                 </div>
-                <button type="button" onClick={() => openClass(c.id)} title="კლასის გვერდი" className="w-9 h-9 rounded-full ring-1 ring-[#e8dcc8] text-[#8a7a6a] hover:text-[#7a2028] flex items-center justify-center cursor-pointer">
-                  <ExternalLink className="w-4 h-4" />
-                </button>
-                <button type="button" onClick={() => edit(c)} className="h-9 px-3.5 rounded-full ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-sm font-semibold text-[#4a3426] cursor-pointer">
-                  შეცვლა
-                </button>
+                <div className="flex items-center gap-2 ml-auto">
+                  <button type="button" onClick={() => openClass(c.id)} title="კლასის გვერდი" className="w-9 h-9 rounded-full ring-1 ring-[#e8dcc8] text-[#8a7a6a] hover:text-[#7a2028] flex items-center justify-center cursor-pointer">
+                    <ExternalLink className="w-4 h-4" />
+                  </button>
+                  <button type="button" onClick={() => edit(c)} className="h-9 px-3.5 rounded-full ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-sm font-semibold text-[#4a3426] cursor-pointer">
+                    შეცვლა
+                  </button>
+                </div>
               </li>
             ))}
           </ul>

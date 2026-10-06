@@ -42,7 +42,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   } = useChants();
 
   if (currentPage === 'admin') {
-    return isAdmin ? <AdminPanelPage /> : <HomePage logoUrl={logoUrl} />;
+    return isAdmin ? <AdminPanelPage logoUrl={logoUrl} /> : <HomePage logoUrl={logoUrl} />;
   }
 
   if (currentPage === 'class') {

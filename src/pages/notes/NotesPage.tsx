@@ -13,6 +13,7 @@ import { useChants } from '../../context';
 import { findVersion, neighbourVersion, SCHOOL_NAMES, BOOK_NAMES, SERVICE_LISTS, schoolOf } from '../../data/chantLookup';
 import { variantName } from '../../data/tsirvaChants';
 import { getChantMedia } from '../../data/chantMediaRegistry';
+import { countPlay } from '../../utils/playStats';
 import { hymnPair, hymnWidth, HymnOrnament } from '../../data/hymnOrnaments';
 import { BookScore, ChantSynth, bookImageUrl, loadBookScore, encodeMp3, renderScore, saveBlob, firstNotes, playStartNotes } from '../../utils/chantSynth';
 import { ChantPlayer } from '../ChantDetailPage';
@@ -497,6 +498,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     setRecPause(n => n + 1);
     await synth.play();
     setPlaying(true);
+    countPlay(vid, 'synth');
   };
   const playFromLine = async (k: number) => {
     if (!synth || !score || church) return;
@@ -935,7 +937,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
               onToggleDetails={() => fold('rec')}
               pauseToken={recPause}
               disabled={church}
-              onPlayingChange={p => { setRecPlaying(p); if (p) stopSynth(); }}
+              onPlayingChange={p => { setRecPlaying(p); if (p) { stopSynth(); countPlay(vid, 'rec'); } }}
             />
           </div>
         )}

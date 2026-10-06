@@ -120,10 +120,11 @@ export function Tabs<T extends string>({ items, value, onChange, cols = 3 }: {
   items: { id: T; label: string; Icon?: React.ComponentType<{ className?: string }>; count?: number; dot?: boolean }[];
   value: T;
   onChange: (id: T) => void;
-  cols?: 2 | 3 | 4;
+  cols?: 2 | 3 | 4 | 'wide';
 }) {
   return (
-    <div className={cx('grid gap-1 p-1 rounded-2xl bg-white/75 ring-1 ring-[#e8dcc8]', cols === 2 ? 'grid-cols-2' : cols === 4 ? 'grid-cols-2 min-[480px]:grid-cols-4' : 'grid-cols-3')}>
+    <div className={cx('grid gap-1 p-1 rounded-2xl bg-white/75 ring-1 ring-[#e8dcc8]',
+      cols === 2 ? 'grid-cols-2' : cols === 4 ? 'grid-cols-2 min-[480px]:grid-cols-4' : cols === 'wide' ? 'grid-cols-2 min-[600px]:grid-cols-3' : 'grid-cols-3')}>
       {items.map(({ id, label, Icon, count, dot }) => {
         const on = id === value;
         return (

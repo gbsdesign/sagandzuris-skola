@@ -1,4 +1,5 @@
 // Auto-generated chant media registry linking Google Drive resources
+import { RUNTIME_MEDIA } from './runtimeRecordings';
 export interface ChantNoteItem {
   name: string;
   id: string;
@@ -1355,6 +1356,12 @@ const VARIANT_MEDIA: Record<string, string> = {
 };
 
 export function getChantMedia(chantId?: string, variantCode?: string): ChantMediaItem | undefined {
+  // a recording bound in the admin panel (settings/recordings) comes first
+  const bound = RUNTIME_MEDIA[`${chantId}|${variantCode}`];
+  if (bound) return bound;
   const key = VARIANT_MEDIA[`${chantId}|${variantCode}`];
   return key ? CHANT_MEDIA_REGISTRY[key] : undefined;
 }
+
+/** How many versions have a recording bound in code (the admin panel shows it). */
+export const codeBindingCount = () => Object.keys(VARIANT_MEDIA).length;
