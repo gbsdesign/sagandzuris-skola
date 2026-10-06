@@ -8,6 +8,7 @@ service cloud.firestore {
     //   admin       — role 'admin' (or an old document without a role): the whole school, names teachers
     //   teacher     — role 'teacher': only the classes and psalter groups whose teacherIds hold them
     // Staff checks go by e-mail, so the e-mail must be verified (Google sign-in always is).
+    // Members are added to classes and groups by their teacher or an admin (there are no invite links).
     function isSignedIn() { return request.auth != null; }
     function uid() { return request.auth.uid; }
     function verified() {
@@ -26,12 +27,6 @@ service cloud.firestore {
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
     function changed() { return incoming().diff(existing()).affectedKeys(); }
-
-    // an invite code (invites/{code}) for this very class or group
-    function validInvite(code, kind, target) {
-      let inv = get(/databases/$(database)/documents/invites/$(code)).data;
-      return inv.kind == kind && inv.targetId == target && inv.get('active', true) == true;
-    }
 
     // Default deny
     match /{document=**} {
@@ -63,12 +58,25 @@ service cloud.firestore {
       function isSelf() { return isSignedIn() && uid() == userId; }
       // a teacher of one of this student's classes (classes copy their teachers into teacherIds)
       function teachesMe() { return isTeacher() && uid() in resource.data.get('teacherIds', []); }
+      // a teacher who has just added this student to their class gets access to the student's path:
+      // teacherVia names that class, and only its teachers may be added
+      function becomingTeacher() {
+        let c = get(/databases/$(database)/documents/classes/$(incoming().teacherVia)).data;
+        return isTeacher()
+          && changed().hasOnly(['teacherIds', 'teacherVia'])
+          && uid() in c.get('teacherIds', [])
+          && userId in c.memberIds
+          && uid() in incoming().teacherIds
+          && incoming().teacherIds.hasAll(existing().get('teacherIds', []))
+          && incoming().teacherIds.hasOnly(existing().get('teacherIds', []).concat(c.get('teacherIds', [])));
+      }
 
       allow read: if isSelf() || isAdmin() || teachesMe();
       allow create: if isSelf() || isAdmin();
-      // teachers may only arrange the student's path ("საგანძურის გზა")
+      // teachers may only arrange the student's path ("საგანძურის გზა") and switch the kids' mode
       allow update: if isSelf() || isAdmin()
-        || (teachesMe() && changed().hasOnly(['selectedChantVariants', 'teacherIds', 'updatedAt']));
+        || (teachesMe() && changed().hasOnly(['selectedChantVariants', 'kidsMode', 'updatedAt']))
+        || becomingTeacher();
       allow delete: if isAdmin();
 
       match /{allSubcollections=**} {
@@ -95,19 +103,14 @@ service cloud.firestore {
       allow write: if isAdmin() || teachesStudent();
     }
 
-    // ---- Invites: a code in a link or QR lets a signed-in person join one class or psalter group ----
-    match /invites/{code} {
-      function leads(kind, target) {
-        return isAdmin() || (isTeacher() && (
-          (kind == 'class' && uid() in get(/databases/$(database)/documents/classes/$(target)).data.get('teacherIds', []))
-          || (kind == 'psalter' && uid() in get(/databases/$(database)/documents/psalterGroups/$(target)).data.get('teacherIds', []))
-        ));
-      }
-      allow get: if isSignedIn();
-      allow list: if false;
-      allow create: if incoming().kind in ['class', 'psalter'] && incoming().createdBy == uid()
-        && leads(incoming().kind, incoming().targetId);
-      allow update, delete: if leads(existing().kind, existing().targetId);
+    // ---- Directory: name and photo of everyone signed in, so teachers can add people to their classes
+    // and psalter groups without seeing anyone's private record. Each person writes only their own entry.
+    match /directory/{userId} {
+      allow read: if isTeacher();
+      allow create, update: if isSignedIn() && uid() == userId
+        && incoming().keys().hasOnly(['uid', 'name', 'firstName', 'lastName', 'churchName', 'photoURL', 'updatedAt'])
+        && incoming().uid == userId;
+      allow delete: if isAdmin() || (isSignedIn() && uid() == userId);
     }
 
     // ---- Classes -----------------------------------------------------------------------------------
@@ -116,17 +119,6 @@ service cloud.firestore {
       function teachesClass() { return isTeacher() && uid() in cls().get('teacherIds', []); }
       function inClass() {
         return isAdmin() || (isSignedIn() && (uid() in cls().memberIds || uid() in cls().get('teacherIds', [])));
-      }
-      // joining with an invite: only oneself is added
-      function joining() {
-        return isSignedIn()
-          && changed().hasOnly(['memberIds', 'members', 'joinCode', 'updatedAt'])
-          && !(uid() in existing().memberIds)
-          && uid() in incoming().memberIds
-          && incoming().memberIds.hasAll(existing().memberIds)
-          && incoming().memberIds.size() == existing().memberIds.size() + 1
-          && incoming().members.size() == existing().members.size() + 1
-          && validInvite(incoming().joinCode, 'class', classId);
       }
       // leaving: only oneself is taken out
       function leaving() {
@@ -143,7 +135,7 @@ service cloud.firestore {
       // a class's teacher runs it, but only admins choose its teachers
       allow update: if isAdmin()
         || (isTeacher() && uid() in existing().get('teacherIds', []) && !changed().hasAny(['teacherIds', 'teachers']))
-        || joining() || leaving();
+        || leaving();
 
       // Class chat: members and teachers read and post as themselves; the author or a teacher deletes
       match /messages/{messageId} {
@@ -184,16 +176,6 @@ service cloud.firestore {
       function inGroup() {
         return isAdmin() || (isSignedIn() && (uid() in grp().memberIds || uid() in grp().get('teacherIds', [])));
       }
-      function joiningGroup() {
-        return isSignedIn()
-          && changed().hasOnly(['memberIds', 'members', 'joinCode', 'updatedAt'])
-          && !(uid() in existing().memberIds)
-          && uid() in incoming().memberIds
-          && incoming().memberIds.hasAll(existing().memberIds)
-          && incoming().memberIds.size() == existing().memberIds.size() + 1
-          && incoming().members.size() == existing().members.size() + 1
-          && validInvite(incoming().joinCode, 'psalter', groupId);
-      }
       // leaving frees one's kathisma (it is taken out of the distribution)
       function leavingGroup() {
         return isSignedIn()
@@ -215,7 +197,7 @@ service cloud.firestore {
       allow create: if isAdmin() || (isTeacher() && uid() in incoming().teacherIds);
       allow update: if isAdmin()
         || (isTeacher() && uid() in existing().get('teacherIds', []) && !changed().hasAny(['teacherIds', 'teachers']))
-        || joiningGroup() || leavingGroup() || renamingSelf();
+        || leavingGroup() || renamingSelf();
       allow delete: if isAdmin() || (isTeacher() && uid() in existing().get('teacherIds', []));
 
       // One cycle (1 or 2 days) of reading all twenty kathismas: who read, took or asked for help

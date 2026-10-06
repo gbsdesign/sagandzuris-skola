@@ -3,6 +3,8 @@ import { ChevronDown, Loader2 } from 'lucide-react';
 import { useNavigation } from '../../context';
 import { Commemoration, NameListId, useCommemoration } from '../../utils/commemoration';
 import { GirsArsSection, girsArsFor, loadGirsArs } from '../../data/girsArs';
+import { useAuth } from '../../context';
+import { useGroupPrayerNames } from '../../hooks/usePsalter';
 
 // The text of a prayer, with three additions woven in:
 // • "(სახელი)" / "(სახელები მათი)" show the student's names from მოსახსენებელი (tap → edit the lists);
@@ -42,12 +44,15 @@ const withNames = (block: string, lists: Commemoration) =>
     return `<button type="button" data-names="${list}" title="${title} — შეცვლა" class="${NAME_CHIP}${names.length ? '' : ' !font-normal !text-[#8a7a6a]'}">${text}</button>`;
   });
 
-type Segment = { kind: 'html'; html: string } | { kind: 'girs' } | { kind: 'modzgvari' };
+type Segment = { kind: 'html'; html: string } | { kind: 'girs' } | { kind: 'modzgvari' } | { kind: 'glory' };
+
+// a kathisma's "დიდებაი." (the end of a stasis), where the psalter group's names are remembered
+const GLORY = /დიდებაი\.?\s*$/;
 
 const GIRS = /ღირს[\s-]*არს\s+ჭეშმარიტად/;
 const isModzgvari = (block: string) => /სულიერი\s+მამა/.test(block) && /\(მეტანია\)/.test(block);
 
-const segment = (html: string, lists: Commemoration): Segment[] => {
+const segment = (html: string, lists: Commemoration, glory: boolean): Segment[] => {
   const out: Segment[] = [];
   let buffer = '';
   const flush = () => {
@@ -71,17 +76,23 @@ const segment = (html: string, lists: Commemoration): Segment[] => {
     } else if (GIRS.test(plain(block))) {
       flush();
       out.push({ kind: 'girs' });
+    } else if (glory && GLORY.test(plain(block).trim())) {
+      flush();
+      out.push({ kind: 'glory' });
     }
   }
   flush();
   return out;
 };
 
-export const PrayerText: React.FC<{ html: string }> = ({ html }) => {
+export const PrayerText: React.FC<{ html: string; glory?: boolean }> = ({ html, glory = false }) => {
   const { openCommemoration } = useNavigation();
   const { lists } = useCommemoration();
+  const { user } = useAuth();
+  const fromGroups = useGroupPrayerNames(glory ? user?.uid : null);
+  const groupNames = useMemo(() => [...fromGroups, ...lists.group.filter(n => !fromGroups.includes(n))], [fromGroups, lists.group]);
   const [modzgvariOpen, setModzgvariOpen] = useState(false);
-  const segments = useMemo(() => segment(html, lists), [html, lists]);
+  const segments = useMemo(() => segment(html, lists, glory), [html, lists, glory]);
 
   const onClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -96,6 +107,8 @@ export const PrayerText: React.FC<{ html: string }> = ({ html }) => {
           <div key={i} dangerouslySetInnerHTML={{ __html: s.html }} />
         ) : s.kind === 'girs' ? (
           <GirsArs key={i} />
+        ) : s.kind === 'glory' ? (
+          <GloryNames key={i} names={groupNames} onEdit={openCommemoration} />
         ) : (
           modzgvariOpen && <ExtraPrayer key={i} id="modzgvari-extra" onClose={() => setModzgvariOpen(false)} />
         )
@@ -103,6 +116,23 @@ export const PrayerText: React.FC<{ html: string }> = ({ html }) => {
     </div>
   );
 };
+
+// At each "დიდებაი" of a kathisma: the psalter group's members, to remember them by name.
+const GloryNames: React.FC<{ names: string[]; onEdit: () => void }> = ({ names, onEdit }) => (
+  <div className="-mt-1.5 mb-4 font-sans">
+    <button
+      type="button"
+      onClick={onEdit}
+      className="w-full text-left rounded-xl bg-[#7a2028]/[0.05] ring-1 ring-[#7a2028]/15 px-3.5 py-2.5 hover:bg-[#7a2028]/[0.08] cursor-pointer transition-colors"
+      title="ჯგუფის წევრების სია — შეცვლა"
+    >
+      <span className="block text-[11.5px] font-bold uppercase tracking-wide text-[#7a2028]">✦ ჯგუფის წევრები</span>
+      <span className={`block font-serif-ge text-[15.5px] leading-snug ${names.length ? 'text-[#2a2017]' : 'text-[#8a7a6a]'}`}>
+        {names.length ? names.join(', ') : 'სია ცარიელია — შეეხე და ჩაწერე სახელები მოსახსენებელში'}
+      </span>
+    </button>
+  </div>
+);
 
 // What replaces "ღირს არს" today. The button is filled when today has its own hymn, so it is noticed while praying.
 const GirsArs: React.FC = () => {

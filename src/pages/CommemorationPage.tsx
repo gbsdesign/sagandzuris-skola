@@ -2,10 +2,14 @@ import React, { useRef, useState } from 'react';
 import { ArrowUpToLine, GripVertical, Plus, X } from 'lucide-react';
 import { NAME_LISTS, NameListId, splitNames, useCommemoration } from '../utils/commemoration';
 import { triggerHaptic } from '../utils/haptics';
+import { useAuth } from '../context';
+import { useGroupPrayerNames } from '../hooks/usePsalter';
 
 // "მოსახსენებელი": the names a student prays for. Their order here is the order they are read in prayers.
 export const CommemorationPage: React.FC = () => {
   const { lists, save } = useCommemoration();
+  const { user } = useAuth();
+  const fromGroups = useGroupPrayerNames(user?.uid);
 
   const update = (id: NameListId, names: string[]) => save({ ...lists, [id]: names });
 
@@ -17,17 +21,18 @@ export const CommemorationPage: React.FC = () => {
         რიგის შესაცვლელად სახელი ჩაავლე <GripVertical className="inline w-3.5 h-3.5 -mt-0.5" /> ნიშნით და გადაიტანე.
       </p>
       {NAME_LISTS.map(list => (
-        <NameList key={list.id} title={list.title} hint={list.hint} names={lists[list.id]} onChange={names => update(list.id, names)} />
+        <NameList key={list.id} title={list.title} hint={list.hint} names={lists[list.id]} onChange={names => update(list.id, names)} auto={list.id === 'group' ? fromGroups : undefined} />
       ))}
     </div>
   );
 };
 
-const NameList: React.FC<{ title: string; hint: string; names: string[]; onChange: (names: string[]) => void }> = ({
+const NameList: React.FC<{ title: string; hint: string; names: string[]; onChange: (names: string[]) => void; auto?: string[] }> = ({
   title,
   hint,
   names,
   onChange,
+  auto,
 }) => {
   const [draft, setDraft] = useState('');
   const [drag, setDrag] = useState<{ from: number; to: number; dy: number } | null>(null);
@@ -95,6 +100,18 @@ const NameList: React.FC<{ title: string; hint: string; names: string[]; onChang
         </h2>
         <p className="text-[12px] leading-snug text-[#8a7a6a]">{hint}</p>
       </div>
+
+      {/* the psalter group's members fill in by themselves */}
+      {auto && auto.length > 0 && (
+        <div className="rounded-xl bg-[#7a2028]/[0.04] ring-1 ring-[#7a2028]/10 px-3 py-2.5">
+          <p className="text-[11.5px] font-bold text-[#7a2028] mb-1.5">ფსალმუნთა ჯგუფიდან — თავისით</p>
+          <div className="flex flex-wrap gap-1.5">
+            {auto.map(n => (
+              <span key={n} className="h-8 px-3 rounded-full bg-white ring-1 ring-[#e8dcc8] text-[14px] font-semibold text-[#2a2017] inline-flex items-center">{n}</span>
+            ))}
+          </div>
+        </div>
+      )}
 
       {names.length > 0 && (
         <ol className="space-y-1.5 select-none">

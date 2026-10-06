@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
-import { getAuth, GoogleAuthProvider } from 'firebase/auth';
-import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, getFirestore, setLogLevel } from 'firebase/firestore';
+import { getAuth, GoogleAuthProvider, connectAuthEmulator, signInWithEmailAndPassword } from 'firebase/auth';
+import { initializeFirestore, persistentLocalCache, persistentMultipleTabManager, getFirestore, setLogLevel, connectFirestoreEmulator } from 'firebase/firestore';
 import config from '../firebase-applet-config.json';
 
 const firebaseConfig = {
@@ -35,6 +35,14 @@ try {
   firestoreDb = getFirestore(app, (config as any).firestoreDatabaseId);
 }
 export const db = firestoreDb;
+
+// Development only: `VITE_EMULATORS=1 npm run dev` talks to the local Firebase emulators (auth 9099,
+// firestore 8085) instead of the real project, so screens can be checked with made-up people and data.
+if (import.meta.env.VITE_EMULATORS === '1') {
+  connectAuthEmulator(auth, 'http://127.0.0.1:9099', { disableWarnings: true });
+  connectFirestoreEmulator(db, '127.0.0.1', 8085);
+  (window as unknown as Record<string, unknown>).__sgSignIn = (email: string, password: string) => signInWithEmailAndPassword(auth, email, password);
+}
 
 export enum OperationType {
   CREATE = 'create',

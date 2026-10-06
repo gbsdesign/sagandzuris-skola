@@ -38,8 +38,7 @@ await env.withSecurityRulesDisabled(async c => {
   await setDoc(doc(db, 'classes', 'c2'), { name: 'B', memberIds: [], members: [], program: [] }); // an old class: no teacherIds
   await setDoc(doc(db, 'students', 'stu'), { userId: 'stu', teacherIds: ['tch'], selectedChantVariants: {} });
   await setDoc(doc(db, 'students', 'stu2'), { userId: 'stu2' });
-  await setDoc(doc(db, 'invites', 'CODE1'), { kind: 'class', targetId: 'c1', createdBy: 'tch' });
-  await setDoc(doc(db, 'invites', 'GCODE'), { kind: 'psalter', targetId: 'g1', createdBy: 'tch' });
+  await setDoc(doc(db, 'students', 'stu3'), { userId: 'stu3' });
 });
 
 // ---- staff
@@ -72,17 +71,21 @@ await t('teacher cannot change teachers', assertFails(updateDoc(doc(tch, 'classe
 await t('teacher cannot create class', assertFails(setDoc(doc(tch, 'classes', 'c9'), { name: 'X', memberIds: [], members: [], teacherIds: ['tch'] })));
 await t('admin creates class', assertSucceeds(setDoc(doc(adm, 'classes', 'c3'), { name: 'X', memberIds: [], members: [], teacherIds: ['tch2'] })));
 await t('member cannot edit program', assertFails(updateDoc(doc(stu, 'classes', 'c1'), { program: [] })));
-await t('join without invite fails', assertFails(updateDoc(doc(stu2, 'classes', 'c1'), { memberIds: arrayUnion('stu2'), members: arrayUnion({ uid: 'stu2', name: 'S2' }) })));
-await t('join with wrong invite fails', assertFails(updateDoc(doc(stu2, 'classes', 'c1'), { memberIds: arrayUnion('stu2'), members: arrayUnion({ uid: 'stu2', name: 'S2' }), joinCode: 'GCODE' })));
-await t('join someone else fails', assertFails(updateDoc(doc(stu2, 'classes', 'c1'), { memberIds: arrayUnion('zzz'), members: arrayUnion({ uid: 'zzz', name: 'Z' }), joinCode: 'CODE1' })));
-await t('read invite', assertSucceeds(getDoc(doc(stu2, 'invites', 'CODE1'))));
-await t('list invites fails', assertFails(getDocs(collection(stu2, 'invites'))));
-await t('join with invite', assertSucceeds(updateDoc(doc(stu2, 'classes', 'c1'), { memberIds: arrayUnion('stu2'), members: arrayUnion({ uid: 'stu2', name: 'S2' }), joinCode: 'CODE1', updatedAt: 'now' })));
-await t('member reads class after joining', assertSucceeds(getDoc(doc(stu2, 'classes', 'c1'))));
-await t('leave class', assertSucceeds(updateDoc(doc(stu2, 'classes', 'c1'), { memberIds: arrayRemove('stu2'), members: arrayRemove({ uid: 'stu2', name: 'S2' }) })));
-await t('teacher creates invite for own class', assertSucceeds(setDoc(doc(tch, 'invites', 'NEW1'), { kind: 'class', targetId: 'c1', createdBy: 'tch' })));
-await t('teacher cannot invite to other class', assertFails(setDoc(doc(tch, 'invites', 'NEW2'), { kind: 'class', targetId: 'c3', createdBy: 'tch' })));
-await t('member cannot create invite', assertFails(setDoc(doc(stu, 'invites', 'NEW3'), { kind: 'class', targetId: 'c1', createdBy: 'stu' })));
+await t('member cannot add themself', assertFails(updateDoc(doc(stu2, 'classes', 'c1'), { memberIds: arrayUnion('stu2'), members: arrayUnion({ uid: 'stu2', name: 'S2' }) })));
+await t('teacher adds a member', assertSucceeds(updateDoc(doc(tch, 'classes', 'c1'), { memberIds: arrayUnion('stu3'), members: arrayUnion({ uid: 'stu3', name: 'S3' }) })));
+await t('teacher links to new member', assertSucceeds(setDoc(doc(tch, 'students', 'stu3'), { teacherIds: arrayUnion('tch'), teacherVia: 'c1' }, { merge: true })));
+await t('teacher reads new member', assertSucceeds(getDoc(doc(tch, 'students', 'stu3'))));
+await t('teacher cannot link to a non-member', assertFails(setDoc(doc(tch, 'students', 'stu2'), { teacherIds: arrayUnion('tch'), teacherVia: 'c1' }, { merge: true })));
+await t('teacher cannot link a stranger teacher', assertFails(setDoc(doc(tch, 'students', 'stu3'), { teacherIds: arrayUnion('tch2'), teacherVia: 'c1' }, { merge: true })));
+await t('other teacher cannot link via foreign class', assertFails(setDoc(doc(tch2, 'students', 'stu'), { teacherIds: arrayUnion('tch2'), teacherVia: 'c1' }, { merge: true })));
+await t('leave class', assertSucceeds(updateDoc(doc(stu, 'classes', 'c1'), { memberIds: arrayRemove('stu'), members: arrayRemove({ uid: 'stu', name: 'S' }) })));
+await t('cannot remove someone else', assertFails(updateDoc(doc(stu2, 'classes', 'c1'), { memberIds: arrayRemove('stu3'), members: arrayRemove({ uid: 'stu3', name: 'S3' }) })));
+await env.withSecurityRulesDisabled(async c => { await updateDoc(doc(c.firestore(), 'classes', 'c1'), { memberIds: arrayUnion('stu'), members: arrayUnion({ uid: 'stu', name: 'S' }) }); });
+await t('writes own directory entry', assertSucceeds(setDoc(doc(stu, 'directory', 'stu'), { uid: 'stu', name: 'S', photoURL: '' })));
+await t('cannot write others directory', assertFails(setDoc(doc(stu, 'directory', 'stu2'), { uid: 'stu2', name: 'X' })));
+await t('directory has no extra fields', assertFails(setDoc(doc(stu, 'directory', 'stu'), { uid: 'stu', name: 'S', email: 'x' })));
+await t('teacher lists directory', assertSucceeds(getDocs(collection(tch, 'directory'))));
+await t('member cannot list directory', assertFails(getDocs(collection(stu, 'directory'))));
 await t('teacher writes attendance', assertSucceeds(setDoc(doc(tch, 'classes', 'c1', 'attendance', '2026-10-06'), { present: ['stu'] })));
 await t('member reads attendance', assertSucceeds(getDoc(doc(stu, 'classes', 'c1', 'attendance', '2026-10-06'))));
 await t('member cannot write attendance', assertFails(setDoc(doc(stu, 'classes', 'c1', 'attendance', '2026-10-07'), { present: ['stu'] })));
@@ -93,6 +96,8 @@ await t('member reads assignments', assertSucceeds(getDocs(collection(stu, 'clas
 await t('teacher reads own student', assertSucceeds(getDoc(doc(tch, 'students', 'stu'))));
 await t('teacher cannot read other student', assertFails(getDoc(doc(tch, 'students', 'stu2'))));
 await t('teacher edits path', assertSucceeds(setDoc(doc(tch, 'students', 'stu'), { selectedChantVariants: { a: 1 } }, { mergeFields: ['selectedChantVariants'] })));
+await t('teacher cannot rewrite the teacher list', assertFails(updateDoc(doc(tch, 'students', 'stu'), { teacherIds: ['tch', 'tch2'], selectedChantVariants: {} })));
+await t('teacher switches kids mode', assertSucceeds(updateDoc(doc(tch, 'students', 'stu'), { kidsMode: { on: true, sections: ['galoba'] } })));
 await t('teacher cannot edit profile', assertFails(updateDoc(doc(tch, 'students', 'stu'), { firstName: 'x' })));
 await t('teacher writes confirmations', assertSucceeds(setDoc(doc(tch, 'confirmations', 'stu'), { a: ['1'] })));
 await t('teacher cannot confirm others', assertFails(setDoc(doc(tch, 'confirmations', 'stu2'), { a: ['1'] })));
@@ -107,7 +112,7 @@ await t('member cannot create group', assertFails(setDoc(doc(stu, 'psalterGroups
 await t('member reads group', assertSucceeds(getDoc(doc(stu, 'psalterGroups', 'g1'))));
 await t('member queries groups', assertSucceeds(getDocs(query(collection(stu, 'psalterGroups'), where('memberIds', 'array-contains', 'stu')))));
 await t('outsider cannot read group', assertFails(getDoc(doc(stu2, 'psalterGroups', 'g1'))));
-await t('join group with invite', assertSucceeds(updateDoc(doc(stu2, 'psalterGroups', 'g1'), { memberIds: arrayUnion('stu2'), members: arrayUnion({ uid: 'stu2', name: 'S2' }), joinCode: 'GCODE' })));
+await t('teacher adds group member', assertSucceeds(updateDoc(doc(tch, 'psalterGroups', 'g1'), { memberIds: arrayUnion('stu2'), members: arrayUnion({ uid: 'stu2', name: 'S2' }) })));
 await t('member marks a kathisma', assertSucceeds(setDoc(doc(stu, 'psalterGroups', 'g1', 'cycles', '2026-10-06'), { slots: { 7: { readBy: 'stu' } }, start: '2026-10-06' }, { merge: true })));
 await t('member cannot write odd fields', assertFails(setDoc(doc(stu, 'psalterGroups', 'g1', 'cycles', '2026-10-06'), { hack: 1 }, { merge: true })));
 await t('outsider cannot read cycles', assertFails(getDoc(doc(stu2 === stu ? stu : as('zz', 'zz@x.ge'), 'psalterGroups', 'g1', 'cycles', '2026-10-06'))));

@@ -9,6 +9,7 @@ import {
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase';
 import { triggerHaptic } from '../utils/haptics';
+import { writeDirectory } from '../utils/directory';
 
 export const SUPER_ADMIN_EMAIL = 'mr.gabunia@gmail.com';
 
@@ -106,6 +107,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       } catch (e) {
         console.warn('Student sync error:', e);
       }
+      // name and photo for the teachers' people list
+      void writeDirectory(currentUser.uid, { name: currentUser.displayName || '', photoURL: currentUser.photoURL || '' });
 
       // the owner's own staff document, so the admin lists show them
       if (email === SUPER_ADMIN_EMAIL.toLowerCase()) {

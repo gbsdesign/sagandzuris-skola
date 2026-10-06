@@ -3,6 +3,7 @@ import { Bell, BellOff, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react'
 import { useNavigation } from '../context';
 import { KATHISMAS, PRAYER_HOURS, PrayerHour, bibleChapterId, hourClock, parseBibleId, prayerTitle } from '../data/prayers';
 import { PROSE, PrayerText } from '../components/views/PrayerText';
+import { KathismaReadMark } from '../components/psalter/KathismaReadMark';
 import {
   REMINDER_OFFSETS,
   askNotificationPermission,
@@ -66,6 +67,7 @@ export const PrayerPage: React.FC = () => {
 
   if (!selectedPrayerId) return null;
   const hour = PRAYER_HOURS.find(h => h.id === selectedPrayerId);
+  const kathisma = KATHISMAS.find(k => k.id === selectedPrayerId);
   const { prev, next } = neighbours(selectedPrayerId);
   const pager = (prev || next) && (
     <div className="flex items-center justify-between gap-2">
@@ -102,9 +104,11 @@ export const PrayerPage: React.FC = () => {
         ) : parseBibleId(selectedPrayerId) ? (
           <div className={PROSE} dangerouslySetInnerHTML={{ __html: html }} />
         ) : (
-          <PrayerText html={html} />
+          <PrayerText html={html} glory={Boolean(kathisma)} />
         )}
       </article>
+
+      {kathisma && html !== null && <KathismaReadMark k={kathisma.n} />}
 
       {pager}
 

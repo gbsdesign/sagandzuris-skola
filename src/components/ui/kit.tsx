@@ -265,12 +265,12 @@ export const Sheet: React.FC<{ open: boolean; onClose: () => void; title: React.
         aria-modal="true"
         onClick={e => e.stopPropagation()}
         className={cx(
-          'w-full max-h-[92dvh] flex flex-col bg-[#fbf6ec] ring-1 ring-[#e8dcc8] shadow-2xl rounded-t-[28px] sm:rounded-[28px] safe-bottom sg-up',
+          'relative w-full max-h-[92dvh] flex flex-col bg-[#fbf6ec] ring-1 ring-[#e8dcc8] shadow-2xl rounded-t-[28px] sm:rounded-[28px] safe-bottom sg-up',
           wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'
         )}
       >
-        <div className="flex items-center gap-2 px-5 pt-4 pb-3 border-b border-[#e8dcc8]">
-          <span className="sm:hidden absolute left-1/2 -translate-x-1/2 -mt-2.5 w-10 h-1 rounded-full bg-[#d9c8ac]" aria-hidden />
+        <div className="flex items-center gap-2 px-5 pt-5 pb-3 border-b border-[#e8dcc8]">
+          <span className="sm:hidden absolute left-1/2 -translate-x-1/2 top-1.5 w-10 h-1 rounded-full bg-[#d9c8ac]" aria-hidden />
           <h3 className="flex-1 min-w-0 font-serif-ge text-[17px] font-bold text-[#4a3426]">{title}</h3>
           <IconBtn label="დახურვა" onClick={onClose}><X /></IconBtn>
         </div>

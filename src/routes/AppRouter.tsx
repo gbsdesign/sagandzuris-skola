@@ -21,6 +21,7 @@ import { AncestorsPage } from '../pages/AncestorsPage';
 import { PrayerPage } from '../pages/PrayerPage';
 import { CommemorationPage } from '../pages/CommemorationPage';
 import { LibraryPage } from '../pages/LibraryPage';
+import { PsalterPage } from '../pages/PsalterPage';
 
 interface AppRouterProps {
   logoUrl: string;
@@ -44,6 +45,10 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
 
   if (currentPage === 'class') {
     return <ClassPage />;
+  }
+
+  if (currentPage === 'psalter') {
+    return <PsalterPage />;
   }
 
   if (currentPage === 'profile') {

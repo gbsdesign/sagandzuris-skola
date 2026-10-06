@@ -97,6 +97,8 @@ function AppContent() {
         currentPage === 'galoba' ? 'bg-gradient-to-b from-[#fdfaf4] via-[#f8f1e5] to-[#f1e7d6]'
           // the home page: the footer's warm cream (#fbf6ec), only lighter
           : currentPage === 'home' ? 'bg-gradient-to-b from-[#fffdf9] via-[#fdfaf4] to-[#fcf7ef]'
+          // the school's management pages and the psalter group: warm paper too
+          : currentPage === 'psalter' || currentPage === 'teacher' || currentPage === 'admin' ? 'bg-gradient-to-b from-[#fdfaf4] via-[#faf4ea] to-[#f6eedf]'
           : 'bg-gradient-to-br from-slate-50 via-white to-slate-100'
       }`}
     >

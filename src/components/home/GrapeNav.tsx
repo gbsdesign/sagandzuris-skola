@@ -27,7 +27,8 @@ export const GrapeNav: React.FC = () => {
     { label: 'მთქმელი', x: 50, y: 58, nx: 47, ny: 59, go: () => navigateTo('mtkmeli'), big: true },
     { label: 'საკრავები', x: 70, y: 48, nx: 73, ny: 48, go: () => navigateTo('sakravebi') },
     // on the leaves
-    { label: 'მედავით­ნეობა', x: 35, y: 13, nx: 29, ny: 14 },
+    // the psalter group ("ფსალმუნთა ჯგუფი")
+    { label: 'მედავით­ნეობა', x: 35, y: 13, nx: 29, ny: 14, go: () => navigateTo('psalter') },
     // signed in: habits fold open on the path page; guests get the sign-in prompt
     { label: 'ჩვევები', x: 62, y: 8, nx: 66, ny: 8, go: () => (user ? (openPathPanel('habits'), navigateTo('gz')) : openModal('chvevebi')) },
     { label: 'თამაშები', x: 86, y: 28, nx: 83, ny: 20 },
