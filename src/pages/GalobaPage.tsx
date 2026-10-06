@@ -1,12 +1,13 @@
-import React, { useMemo, useCallback } from 'react';
-import { useNavigation, useChants, ServiceType } from '../context';
+import React, { useMemo, useCallback, useState } from 'react';
+import { useNavigation, useChants, useAuth, ServiceType } from '../context';
+import { useMyClasses } from '../hooks/useClasses';
 import { TSIRVA_CHANTS, MWUKHRI_CHANTS, CISKARI_CHANTS, SADGHESASWAULO_CHANTS, MARXVANI_CHANTS, ZATIKI_CHANTS, ChantItem, ChantVariant } from '../data';
 import { ServiceTabs, ChantSearchBar, ChantAccordionItem } from './galoba';
 import { ProgramCard, ServiceDownload } from './galoba/LiturgyBits';
 import { useNotes } from '../context/NotesContext';
 import { triggerHaptic } from '../utils/haptics';
 import { matchesSearch } from '../utils/searchUtils';
-import { ArrowLeft, Music } from 'lucide-react';
+import { ArrowLeft, Music, GraduationCap } from 'lucide-react';
 import pantocrator from '../assets/images/pantocrator.webp';
 
 // Services whose chant lists exist; the rest show "coming soon"
@@ -67,7 +68,27 @@ export const GalobaPage: React.FC = () => {
     [toggleVariantSelection]
   );
 
-  const serviceChants = selectedService ? SERVICE_CHANTS[selectedService] : undefined;
+  // "კლასის რეჟიმი": a class whose teacher turned it on sees only its program's versions (one tap shows all)
+  const { user, isTeacher } = useAuth();
+  const myClasses = useMyClasses(user?.uid);
+  const modeClass = isTeacher ? undefined : myClasses.find(c => c.classMode && c.program.some(p => p.id));
+  const programIds = useMemo(() => new Set((modeClass?.program || []).map(p => p.id).filter(Boolean) as string[]), [modeClass]);
+  const [showAll, setShowAll] = useState(() => { try { return sessionStorage.getItem('sg-class-mode-all') === '1'; } catch { return false; } });
+  const classOnly = Boolean(modeClass) && !showAll;
+  const toggleShowAll = () => {
+    triggerHaptic(10);
+    setShowAll(v => { try { sessionStorage.setItem('sg-class-mode-all', v ? '0' : '1'); } catch { /* storage blocked */ } return !v; });
+  };
+
+  const allServiceChants = selectedService ? SERVICE_CHANTS[selectedService] : undefined;
+  const serviceChants = useMemo(
+    () => (allServiceChants && classOnly
+      ? allServiceChants
+          .map(c => ({ ...c, variants: (c.variants || []).filter(v => programIds.has(v.id)) }))
+          .filter(c => c.variants.length > 0)
+      : allServiceChants),
+    [allServiceChants, classOnly, programIds]
+  );
 
   // Unconditionally compute filtered chants at top level (adheres strictly to React Rules of Hooks)
   const filteredChants = useMemo(() => {
@@ -129,6 +150,19 @@ export const GalobaPage: React.FC = () => {
         </div>
 
         <ProgramCard />
+
+        {modeClass && (
+          <div className={`flex flex-wrap items-center gap-x-3 gap-y-2.5 p-3 rounded-2xl ring-1 ${classOnly ? 'bg-[#7a2028]/[0.05] ring-[#7a2028]/20' : 'bg-white/80 ring-[#e8dcc8]'}`}>
+            <span className="w-9 h-9 rounded-xl bg-[#7a2028] text-[#fbf6ec] flex items-center justify-center shrink-0"><GraduationCap className="w-[18px] h-[18px]" /></span>
+            <span className="flex-1 min-w-[10rem] leading-snug">
+              <span className="block text-[13px] font-bold text-[#4a3426]">კლასის რეჟიმი · {modeClass.name}</span>
+              <span className="block text-[12px] text-[#8a7a6a]">{classOnly ? 'ჩანს მხოლოდ კლასის პროგრამის ვერსიები' : 'ახლა ყველა ვერსია ჩანს'}</span>
+            </span>
+            <button type="button" onClick={toggleShowAll} className="ml-auto h-10 px-4 rounded-full bg-white ring-1 ring-[#e8dcc8] text-[13px] font-bold text-[#7a2028] cursor-pointer shrink-0 active:scale-95">
+              {classOnly ? 'ყველაფრის ჩვენება' : 'მხოლოდ პროგრამა'}
+            </button>
+          </div>
+        )}
 
         {/* heading row as in the prototype: title, then a small search and the download on the right */}
         <ChantSearchBar

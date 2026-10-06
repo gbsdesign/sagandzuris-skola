@@ -128,3 +128,14 @@
 @media (prefers-reduced-motion: reduce) {
   .sg-in, .sg-up, .sg-pop { animation: none; }
 }
+@keyframes sg-wiggle { from { transform: rotate(-1.4deg); } to { transform: rotate(1.4deg); } }
+@media (prefers-reduced-motion: reduce) {
+  [class*="sg-wiggle"] { animation: none !important; }
+}
+
+/* the kids' mode a teacher turns on: no sharing and no links leading out of the app */
+.kids-mode a[target="_blank"],
+.kids-mode [data-share],
+.kids-mode .np-mshare,
+.kids-mode .np-mshare + .np-msep,
+.kids-mode .np-more > .np-msec:first-child { display: none !important; }

@@ -8,7 +8,7 @@ import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
 import { ClassLogo } from '../classes/ClassLogo';
 import { useAccess } from '../../hooks/useAccess';
 import { askSignIn } from '../access/SignInPrompt';
-import { Bookmark, User as UserIcon, LogIn, LogOut, Compass, ShieldCheck, Library, GraduationCap } from 'lucide-react';
+import { Bookmark, User as UserIcon, LogIn, LogOut, Compass, ShieldCheck, Library, GraduationCap, Baby } from 'lucide-react';
 
 interface HeaderProps {
   logoUrl: string;
@@ -32,6 +32,8 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
   const { openModal } = useModal();
   const selectedCount = useSelectedCount();
   const access = useAccess();
+  // kids' mode: no profile settings and no signing out (the teacher turns it off)
+  const kids = Boolean(access.kids);
   // the learning tools the admin's switches and the kids' mode leave visible
   const tools = TOOLS.filter(t => access.section(t.id === 'gza' ? 'gza' : 'biblioteka') !== 'hidden');
   const stats = useMonthlyStudyStats(user?.uid);
@@ -126,10 +128,16 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                   <ClassLogo name={c.name} logo={c.logo} className="w-8 h-8 text-sm" />
                 </button>
               ))}
+              {kids && (
+                <span className="inline-flex items-center gap-1 h-8 px-2.5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-bold shrink-0" title="საბავშვო რეჟიმი — მასწავლებელმა ჩართო">
+                  <Baby className="w-3.5 h-3.5" /> საბავშვო
+                </span>
+              )}
               <button
                 type="button"
-                onClick={() => navigateTo('profile')}
-                className="shrink-0 rounded-full p-0.5 hover:ring-2 hover:ring-[#7a2028]/30 transition-all cursor-pointer active:scale-95"
+                onClick={() => !kids && navigateTo('profile')}
+                disabled={kids}
+                className="shrink-0 rounded-full p-0.5 hover:ring-2 hover:ring-[#7a2028]/30 transition-all cursor-pointer active:scale-95 disabled:cursor-default disabled:hover:ring-0"
                 title={`${user.displayName || user.email} — პროფილი`}
                 aria-label="პროფილის გახსნა"
               >
@@ -146,13 +154,13 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                   </div>
                 )}
               </button>
-              <button
+              {!kids && <button
                 onClick={signOutUser}
                 className="w-9 h-9 rounded-xl ring-1 ring-[#e8dcc8] bg-white/80 text-[#8a7a6a] hover:text-[#7a2028] hover:bg-white flex items-center justify-center active:scale-90 transition-all cursor-pointer"
                 title="გამოსვლა"
               >
                 <LogOut className="w-4 h-4" />
-              </button>
+              </button>}
             </div>
           ) : (
             <button

@@ -24,6 +24,7 @@ import { LibraryPage } from '../pages/LibraryPage';
 import { PsalterPage } from '../pages/PsalterPage';
 import { TeacherPage } from '../pages/TeacherPage';
 import { MyClassWork } from '../components/teacher/MyClassWork';
+import { ShortcutShelf } from '../components/home/ShortcutShelf';
 import { useAccess } from '../hooks/useAccess';
 import { LockedPage } from '../components/access/SignInPrompt';
 import { SECTIONS, sectionOfPage } from '../data/sections';
@@ -68,6 +69,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
     return isTeacher ? <TeacherPage /> : <HomePage logoUrl={logoUrl} />;
   }
 
+  if (currentPage === 'profile' && access.kids) return <HomePage logoUrl={logoUrl} />;
+
   if (currentPage === 'profile') {
     return (
       <div className="w-full max-w-2xl mx-auto px-1 py-3 sm:px-4 md:px-6">
@@ -96,6 +99,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
         </div>
         <div className="space-y-4">
           <ChemiSamosi />
+          <ShortcutShelf variant="profile" />
           <StudentProfileCard />
         </div>
       </div>

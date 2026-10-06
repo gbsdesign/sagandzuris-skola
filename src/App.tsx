@@ -27,6 +27,7 @@ import { usePrayerReminderScheduler } from './utils/prayerReminders';
 import { isPrayerId } from './data/prayers';
 import { setRecordingsHidden, startRecordingBindings, useRecordingBindings } from './data/runtimeRecordings';
 import { SignInPrompt } from './components/access/SignInPrompt';
+import { useKidsMode } from './hooks/useAccess';
 
 startRecordingBindings();
 
@@ -57,6 +58,11 @@ function AppContent() {
   setRecordingsHidden(!user);
   // recordings bound in the admin panel: the page redraws when they arrive
   useRecordingBindings();
+  // the kids' mode a teacher turned on: no sharing or outside links anywhere (index.css)
+  const kids = useKidsMode();
+  useEffect(() => {
+    document.documentElement.classList.toggle('kids-mode', Boolean(kids));
+  }, [kids]);
   const [dbLogo, setDbLogo] = useState<string | null>(null);
 
   usePrayerReminderScheduler(openPrayer);

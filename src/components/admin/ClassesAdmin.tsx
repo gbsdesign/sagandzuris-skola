@@ -12,6 +12,8 @@ import { CatalogPicker } from './CatalogPicker';
 import { MemberPathEditor, writePath } from './MemberPathEditor';
 import { linkTeachers } from '../../hooks/useTeaching';
 import { Toggle } from '../ui/kit';
+import { ShortcutPicker, shortcutIcon } from '../home/ShortcutShelf';
+import { shortcutLabel } from '../../utils/shortcuts';
 
 /**
  * Puts the class program on each member's path (missing items are added at the end) and takes back
@@ -54,9 +56,9 @@ const field = 'w-full h-11 px-3.5 rounded-xl bg-white ring-1 ring-[#e8dcc8] focu
 
 type Draft = {
   id: string | null; name: string; logo: string; memberIds: string[]; savedMemberIds: string[]; program: ProgramItem[];
-  teacherIds: string[]; classMode: boolean;
+  teacherIds: string[]; classMode: boolean; defaultShortcuts: string[];
 };
-const EMPTY: Draft = { id: null, name: '', logo: '', memberIds: [], savedMemberIds: [], program: [], teacherIds: [], classMode: false };
+const EMPTY: Draft = { id: null, name: '', logo: '', memberIds: [], savedMemberIds: [], program: [], teacherIds: [], classMode: false, defaultShortcuts: [] };
 
 // Classes: list + editor (name, logo, members, common program, "კლასის რეჟიმი").
 // mode 'admin': every class; create, delete, choose the class's teachers (from `staff`); members from all users.
@@ -77,6 +79,7 @@ export const ClassesAdmin: React.FC<{
   const [memberQuery, setMemberQuery] = useState('');
   const [saving, setSaving] = useState(false);
   const [pathOf, setPathOf] = useState<string | null>(null);
+  const [pickingButtons, setPickingButtons] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const edit = (c?: SchoolClass) => {
@@ -85,6 +88,7 @@ export const ClassesAdmin: React.FC<{
     setDraft(c ? {
       id: c.id, name: c.name, logo: c.logo || '', memberIds: [...c.memberIds], savedMemberIds: [...c.memberIds],
       program: c.program.map(p => ({ ...p })), teacherIds: [...c.teacherIds], classMode: Boolean(c.classMode),
+      defaultShortcuts: [...(c.defaultShortcuts || [])],
     } : { ...EMPTY });
   };
 
@@ -195,6 +199,7 @@ export const ClassesAdmin: React.FC<{
         members,
         program: draft.program.map(p => ({ ...(p.id ? { id: p.id, code: p.code || '' } : {}), title: p.title.trim(), note: (p.note || '').trim() })).filter(p => p.title),
         classMode: draft.classMode,
+        defaultShortcuts: draft.defaultShortcuts,
         // only admins choose a class's teachers
         ...(isAdminMode ? { teacherIds, teachers } : {}),
         updatedAt: now,
@@ -356,6 +361,27 @@ export const ClassesAdmin: React.FC<{
             })}
           </ol>
         )}
+      </div>
+
+      {/* the members' starting home buttons, until they choose their own */}
+      <div className="space-y-2">
+        <div className="flex items-baseline justify-between gap-2">
+          <label className="text-xs font-semibold text-[#75685a]">საწყისი ღილაკები მთავარ გვერდზე</label>
+          <button type="button" onClick={() => setPickingButtons(true)} className="text-xs font-bold text-[#7a2028] cursor-pointer">არჩევა</button>
+        </div>
+        {draft.defaultShortcuts.length === 0 ? (
+          <p className="text-[13px] text-[#8a7a6a]">არ არის — წევრები თავად აირჩევენ. შეგიძლია მთელ კლასს შეურჩიო, მაგ. „დღევანდელი წირვა“ და „ჩემი კანონი“.</p>
+        ) : (
+          <div className="flex flex-wrap gap-1.5">
+            {draft.defaultShortcuts.map(id => (
+              <span key={id} className="h-9 pl-1.5 pr-3 rounded-full bg-white ring-1 ring-[#e8dcc8] inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#4a3426]">
+                <span className="w-6 h-6 rounded-full bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center [&>svg]:w-3.5 [&>svg]:h-3.5">{shortcutIcon(id)}</span>
+                {shortcutLabel(id)?.label}
+              </span>
+            ))}
+          </div>
+        )}
+        <ShortcutPicker open={pickingButtons} onClose={() => setPickingButtons(false)} current={draft.defaultShortcuts} onChange={next => set({ defaultShortcuts: next })} />
       </div>
 
       <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-3.5">

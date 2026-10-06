@@ -4,6 +4,7 @@ import { PlateScatter, PlateBand, Qvevri, SpiralJug } from '../components/home/P
 import { useAuth } from '../context';
 import { useMyPsalterGroups } from '../hooks/usePsalter';
 import { MyKathismaCard } from '../components/psalter/MyKathismaCard';
+import { ShortcutShelf } from '../components/home/ShortcutShelf';
 
 interface HomePageProps {
   logoUrl: string;
@@ -32,6 +33,9 @@ export const HomePage: React.FC<HomePageProps> = ({ logoUrl }) => {
       <div className="relative mt-2 w-[calc(100%+2.5rem)] sm:w-full flex justify-center">
         <GrapeNav />
       </div>
+
+      {/* "ჩემი ღილაკები": the member's own buttons, right under the vine (nothing shows until some are chosen) */}
+      <ShortcutShelf />
 
       {/* "ჩემი კანონი": members of a psalter group see this cycle's kathisma right under the vine */}
       {user && readingIn.length > 0 && (

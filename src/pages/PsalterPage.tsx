@@ -14,6 +14,7 @@ import { PsalterGroup, useGroupNow, useMyPsalterGroups } from '../hooks/usePsalt
 import { KATHISMA_COUNT, cycleOf, georgiaToday, kathismasOf, readCount } from '../utils/psalter';
 import { fullName, hasGeorgianName, isGeorgian, saveProfileName, useProfileName } from '../utils/memberName';
 import { pushSupported, setGroupPush, useGroupPush } from '../utils/groupPush';
+import { PinButton } from '../components/home/ShortcutShelf';
 
 export { openPsalterGroup };
 
@@ -33,7 +34,12 @@ export const PsalterPage: React.FC = () => {
         title="ფსალმუნთა ჯგუფი"
         subtitle={group ? group.name : 'მედავითნეობა — ერთად ვკითხულობთ ფსალმუნს'}
         onBack={handleGoBack}
-        right={isTeacher && groups.length > 0 ? <Btn size="sm" kind="ghost" icon={<Plus />} onClick={() => setCreating(true)}>ახალი</Btn> : undefined}
+        right={
+          <span className="flex items-center gap-2">
+            {isTeacher && groups.length > 0 && <Btn size="sm" kind="ghost" icon={<Plus />} onClick={() => setCreating(true)}>ახალი</Btn>}
+            {groups.length > 0 && <PinButton id="special:kathisma" />}
+          </span>
+        }
       />
 
       {!user ? (

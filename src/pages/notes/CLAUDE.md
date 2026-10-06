@@ -9,11 +9,11 @@ moving to the next chant in service order.
 - `NotesPage.tsx` + `notes.css` (`np-` classes): the full-screen notes page. Top bar with small icon+label tools
   (სინთეზატორი, ჩანაწერი, ტექსტი, ჩემი სია, მეტი) that open their panels. Pinch-zoom, remembered separately
   for upright / turned / computer.
-- `ProgramPage.tsx` + `program.css`: „დღევანდელი წირვა“ — the regent's chosen versions for a date.
+- `ProgramPage.tsx` + `program.css`: „დღევანდელი წირვა“ — the teacher's chosen versions for a date.
 - `NpStepper.tsx`: small +/- stepper (tone ±7).
 - `src/context/NotesContext.tsx`: overlay pages + browser history/URL (`?c=&v=` for a chant, `?p=date~ids` for
   a program), church-mode state.
-- `src/hooks/useLiturgy.ts`: regent = admin. Draft in `users/{uid}/settings/liturgy`, templates in
+- `src/hooks/useLiturgy.ts`: the class's teacher (admins: any class) composes it; there is no regent role. Draft in `users/{uid}/settings/liturgy`, templates in
   `…/liturgyTemplates`, "send" writes `classes/{id}.liturgy`; members read it (cached in localStorage).
 - `src/utils/offlineNotes.ts`: Cache `sagandzuri-notes-v1`, shared with Workbox runtimeCaching in `vite.config.ts`.
 - `src/data/hymnOrnaments.ts` + `public/hymn/top-NN|bottom-NN.webp`: drawings above the first page and below the
@@ -34,5 +34,5 @@ moving to the next chant in service order.
 - Share: WhatsApp / Facebook / Messenger / Instagram inside "მეტი" (Instagram copies the link; on phones use
   `navigator.share`).
 
-Not testable headless: regent flows (need login). Mount the component in a temporary page with a mock
+Not testable headless without the emulators: teacher flows (need login). Mount the component in a temporary page with a mock
 provider if you need a screenshot, and delete it afterwards.

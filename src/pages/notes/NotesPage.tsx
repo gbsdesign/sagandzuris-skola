@@ -5,11 +5,12 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import {
   ArrowLeft, ArrowRight, BookmarkCheck, BookmarkPlus, Check, ChevronLeft, ChevronUp, Church, CloudDownload, Download, Ellipsis,
   FileText, Flame, Headphones, ListOrdered, LoaderCircle, Minus, Moon, Music2, Pause, Piano, Play, Plus, Repeat, RotateCcw,
-  Scan, SlidersHorizontal, Sun, SunMoon, TextAlignStart, X, ZoomIn, ZoomOut,
+  Scan, SlidersHorizontal, Sun, SunMoon, TextAlignStart, X, ZoomIn, ZoomOut, Pin,
 } from 'lucide-react';
 import './notes.css';
 import { useNotes, shareNotesUrl, NotesOrigin } from '../../context/NotesContext';
-import { useChants } from '../../context';
+import { useAuth, useChants } from '../../context';
+import { MAX_SHORTCUTS, saveShortcuts, useMyShortcuts } from '../../utils/shortcuts';
 import { findVersion, neighbourVersion, SCHOOL_NAMES, BOOK_NAMES, SERVICE_LISTS, schoolOf } from '../../data/chantLookup';
 import { variantName } from '../../data/tsirvaChants';
 import { getChantMedia } from '../../data/chantMediaRegistry';
@@ -72,6 +73,8 @@ const HymnImg: React.FC<{ o: HymnOrnament; place: 'top' | 'bottom' }> = ({ o, pl
 export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, from }) => {
   const { goNotes, closeNotes, church, setChurch, liturgy, program } = useNotes();
   const { selectedChantVariants, toggleVariantSelection } = useChants();
+  const { user } = useAuth();
+  const { list: shortcuts } = useMyShortcuts(user?.uid);
   const info = findVersion(vid)!;
   const { chant, variant, service } = info;
   const media = getChantMedia(chant.id, variant.code);
@@ -982,6 +985,15 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
           allVoices={allVoices}
           exportPdf={exportPdf}
           exportMp3={exportMp3}
+          pinned={user ? (shortcuts || []).includes(`chant:${vid}`) : null}
+          togglePin={() => {
+            if (!user) return;
+            const list = shortcuts || [];
+            const id = `chant:${vid}`;
+            if (list.includes(id)) { saveShortcuts(user.uid, list.filter(x => x !== id)).catch(() => {}); showToast('მოიხსნა მთავარი გვერდიდან'); }
+            else if (list.length >= MAX_SHORTCUTS) showToast(`მთავარზე უკვე ${MAX_SHORTCUTS} ღილაკია`);
+            else { saveShortcuts(user.uid, [...list, id]).catch(() => {}); showToast('გავიდა მთავარ გვერდზე — „ჩემი ღილაკები“'); }
+          }}
         />
       )}
 
@@ -1020,6 +1032,8 @@ const MoreMenu: React.FC<{
   allVoices: string;
   exportPdf: () => void;
   exportMp3: (which: number | 'all') => void;
+  pinned: boolean | null; // null: not signed in
+  togglePin: () => void;
 }> = p => {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -1070,6 +1084,12 @@ const MoreMenu: React.FC<{
         <CloudDownload /><span className="txt">ინტერნეტის გარეშე<small>ნოტები, სინთეზატორი, ჩანაწერი</small></span>
         <span className={`state ${p.offline ? 'ok' : ''}`}>{p.offlineBusy ? 'იწერება…' : p.offline ? 'ჩამოწერილია' : 'ჩამოწერა'}</span>
       </button>
+      {p.pinned !== null && (
+        <button type="button" className="np-mrow" role="menuitemcheckbox" aria-checked={p.pinned} onClick={p.togglePin}>
+          <Pin /><span className="txt">მთავარ გვერდზე<small>„ჩემი ღილაკებში“ ამ საგალობლის ღილაკი</small></span>
+          <span className={`state ${p.pinned ? 'ok' : ''}`}>{p.pinned ? 'გატანილია' : 'გატანა'}</span>
+        </button>
+      )}
       <button type="button" className="np-mrow" role="menuitemcheckbox" aria-checked={p.wakeOn} onClick={p.toggleWake}>
         <Sun /><span className="txt">ეკრანი არ ჩაქრეს<small>{p.wakeNote}</small></span><span className="np-sw" aria-hidden />
       </button>
