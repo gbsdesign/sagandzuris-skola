@@ -113,7 +113,8 @@ export const AccessRequests: React.FC<{
               u.birth && ['დაბადება', u.birth],
               (u.region || u.city) && ['ადგილი', [u.city, u.region].filter(Boolean).join(', ')],
               u.phone && ['ტელეფონი', showPhone(u.phone) || u.phone],
-              u.statuses.length > 0 && ['სტატუსი', u.statuses.join(', ')],
+              u.abilities && ['შესაძლებლობები', u.abilities],
+              u.interests && ['ინტერესები', u.interests],
               u.voices.length > 0 && ['ხმა', u.voices.map(v => VOICE[v] || v).join(', ')],
             ].filter(Boolean) as [string, string][];
             return (

@@ -1,8 +1,9 @@
 import { hasGeorgianName } from './georgianName';
+import { INSTRUMENTS_LIST } from '../data/instrumentsData';
 
 // The member's profile fields that "პირველი გაცნობა" requires (students/{uid}.profile) and the profile card edits:
-// name, birth date, region and town or village, phone, status ("სტატუსი") and voices. Kept in one place so both
-// agree on what counts as filled in.
+// name, birth date, region and town or village, phone, abilities and interests ("შესაძლებლობები და ინტერესები")
+// and voices. Kept in one place so both agree on what counts as filled in.
 
 export const GEORGIAN_REGIONS = [
   'თბილისი',
@@ -20,15 +21,71 @@ export const GEORGIAN_REGIONS = [
   'საზღვარგარეთ',
 ];
 
-// ids are what the profile card has always stored in profile.experienceLevel
-export const STATUS_OPTIONS = [
-  { id: 'დამწყები', title: 'დამწყები', sub: 'ახლა ვიწყებ სწავლას' },
-  { id: 'ვგალობ', title: 'ვგალობ', sub: 'საეკლესიო გალობა' },
-  { id: 'ვმღერი', title: 'ვმღერი', sub: 'ხალხური სიმღერა' },
-  { id: 'ვუკრავ', title: 'ვუკრავ', sub: 'ქართული საკრავები' },
+// What a member can do (profile.abilities) and what interests them (profile.interests). „დაკვრა“ asks which
+// instruments (profile.instruments: ids from the საკრავები list), „გალობა“ asks where they chant
+// (profile.chantPlace), „სხვა“ is written by hand (profile.abilityOther / profile.interestOther).
+// 'beginner' stands alone: nothing yet.
+export type AbilityId = 'galoba' | 'simghera' | 'leksi' | 'dakvra' | 'skhva' | 'beginner';
+export type InterestId = 'galoba' | 'simghera' | 'sakravebi' | 'leksebi' | 'skhva';
+
+export const ABILITY_OPTIONS: { id: AbilityId; title: string; sub: string }[] = [
+  { id: 'galoba', title: 'გალობა', sub: 'საეკლესიო გალობა' },
+  { id: 'simghera', title: 'სიმღერა', sub: 'ხალხური სიმღერა' },
+  { id: 'leksi', title: 'ლექსის თქმა', sub: 'ლექსის ზეპირად თქმა' },
+  { id: 'dakvra', title: 'დაკვრა', sub: 'აირჩიეთ საკრავები' },
+  { id: 'skhva', title: 'სხვა', sub: 'ჩაწერეთ თავად' },
+  { id: 'beginner', title: 'ჯერ ვიწყებ', sub: 'ჯერ არცერთი არ შემიძლია' },
 ];
 
-/** profile.experienceLevel was once a single string; now a list. */
+export const INTEREST_OPTIONS: { id: InterestId; title: string; sub: string }[] = [
+  { id: 'galoba', title: 'გალობა', sub: 'საეკლესიო გალობა' },
+  { id: 'simghera', title: 'სიმღერა', sub: 'ხალხური სიმღერა' },
+  { id: 'sakravebi', title: 'საკრავები', sub: 'ქართული და სხვა საკრავები' },
+  { id: 'leksebi', title: 'ლექსები', sub: 'ქართული პოეზია' },
+  { id: 'skhva', title: 'სხვა', sub: 'ჩაწერეთ თავად' },
+];
+
+const list = (v: unknown): string[] => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
+const filled = (v: unknown) => typeof v === 'string' && v.trim().length >= 2;
+
+/** Abilities answered in full: each chosen one with its follow-up question. */
+export const abilitiesDone = (p: Record<string, any>) => {
+  const a = list(p.abilities);
+  return a.length > 0
+    && (!a.includes('dakvra') || list(p.instruments).length > 0)
+    && (!a.includes('galoba') || filled(p.chantPlace))
+    && (!a.includes('skhva') || filled(p.abilityOther));
+};
+
+export const interestsDone = (p: Record<string, any>) => {
+  const i = list(p.interests);
+  return i.length > 0 && (!i.includes('skhva') || filled(p.interestOther));
+};
+
+// the old „სტატუსი“ answers, as abilities (for one who answered before abilities existed)
+const FROM_STATUS: Record<string, AbilityId> = { 'ვგალობ': 'galoba', 'ვმღერი': 'simghera', 'ვუკრავ': 'dakvra', 'დამწყები': 'beginner' };
+export const abilitiesOf = (p: Record<string, any>): AbilityId[] =>
+  (Array.isArray(p.abilities) ? list(p.abilities) : statusList(p.experienceLevel).map(s => FROM_STATUS[s] || ''))
+    .filter((x): x is AbilityId => ABILITY_OPTIONS.some(o => o.id === x));
+
+const instrumentName = (id: string) => INSTRUMENTS_LIST.find(x => x.id === id)?.nameGe || id;
+
+/** "გალობა (სამების ტაძარი), დაკვრა: ჩონგური, გიტარა" — for the teacher's and admin's lists. */
+export const abilitiesText = (p: Record<string, any>) => {
+  const a = list(p.abilities);
+  if (!a.length) return statusList(p.experienceLevel).join(', '); // answered before abilities existed
+  return a.map(id => {
+    if (id === 'galoba') return filled(p.chantPlace) ? `გალობა (${p.chantPlace.trim()})` : 'გალობა';
+    if (id === 'dakvra') return list(p.instruments).length ? `დაკვრა: ${list(p.instruments).map(instrumentName).join(', ')}` : 'დაკვრა';
+    if (id === 'skhva') return filled(p.abilityOther) ? p.abilityOther.trim() : 'სხვა';
+    return ABILITY_OPTIONS.find(o => o.id === id)?.title || id;
+  }).join('; ');
+};
+
+export const interestsText = (p: Record<string, any>) =>
+  list(p.interests).map(id => (id === 'skhva' && filled(p.interestOther) ? p.interestOther.trim() : INTEREST_OPTIONS.find(o => o.id === id)?.title || id)).join(', ');
+
+/** profile.experienceLevel (the old „სტატუსი“) was once a single string; then a list. */
 export const statusList = (v: unknown): string[] =>
   Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : typeof v === 'string' && v.trim() ? [v] : [];
 
@@ -76,6 +133,7 @@ export const profileComplete = (data: Record<string, any> | null | undefined) =>
     && GEORGIAN_REGIONS.includes(p.region)
     && (p.city || '').trim().length >= 2
     && !!normalizePhone(p.phone)
-    && statusList(p.experienceLevel).length > 0
+    // abilities and interests; one who chose the old „სტატუსი“ before they existed is not asked again
+    && ((abilitiesDone(p) && interestsDone(p)) || (!Array.isArray(p.abilities) && statusList(p.experienceLevel).length > 0))
     && (voices || met?.voiceUnknown === true);
 };

@@ -1,6 +1,8 @@
 export interface InstrumentItem {
   id: string;
   nameGe: string;
+  /** false: not a Georgian folk instrument (e.g. the guitar) */
+  folk?: boolean;
 }
 
 export const INSTRUMENTS_LIST: InstrumentItem[] = [
@@ -12,4 +14,5 @@ export const INSTRUMENTS_LIST: InstrumentItem[] = [
   { id: 'changi', nameGe: 'ჩანგი' },
   { id: 'salamuri', nameGe: 'სალამური' },
   { id: 'larchemi', nameGe: 'ლარჩემი' },
+  { id: 'gitara', nameGe: 'გიტარა', folk: false },
 ];

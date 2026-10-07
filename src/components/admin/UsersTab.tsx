@@ -9,6 +9,7 @@ import { PsalterGroup } from '../../hooks/usePsalter';
 import { agoLabel } from '../../hooks/useTeaching';
 import { computeMonthlyStats } from '../../hooks/useMonthlyStudyStats';
 import { Avatar, Card, FIELD, Pill } from '../ui/kit';
+import { abilitiesText, interestsText } from '../../utils/profileFields';
 
 export interface UserRecord {
   userId: string;
@@ -22,7 +23,8 @@ export interface UserRecord {
   region: string;
   phone: string;
   voices: string[];
-  statuses: string[];
+  abilities: string;   // „შესაძლებლობები“, as text (utils/profileFields)
+  interests: string;
   birth: string;
   workSchedule: Record<string, string>;
   completedSessions: Record<string, boolean>;
@@ -59,7 +61,8 @@ export const toUser = (id: string, d: any): UserRecord => {
     region: p.region || d.region || '',
     phone: p.phone || '',
     voices: Array.isArray(p.voices) ? p.voices : [],
-    statuses: ([] as string[]).concat(p.experienceLevel || []),
+    abilities: abilitiesText(p),
+    interests: interestsText(p),
     birth: p.birthDate?.year ? `${p.birthDate.day || 1}/${p.birthDate.month || 1}/${p.birthDate.year}` : '',
     workSchedule: p.workSchedule || {},
     completedSessions: d.completedSessions || {},
@@ -207,7 +210,8 @@ export const UsersTab: React.FC<{
                   <div className="mb-3 p-4 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] space-y-4 text-sm sg-in">
                     <dl className="grid grid-cols-2 gap-x-5 gap-y-3">
                       <Info label="ხმა" value={u.voices.map(v => VOICE[v] || v).join(', ') || '—'} />
-                      <Info label="სტატუსი" value={u.statuses.join(', ') || '—'} />
+                      <Info label="შესაძლებლობები" value={u.abilities || '—'} />
+                      <Info label="ინტერესები" value={u.interests || '—'} />
                       <Info label="სამუშაო ამ თვეში" value={work.planned ? `${work.worked}/${work.planned} სთ (${work.percent}%)` : 'განრიგი არ აქვს'} />
                       <Info label="ჩვევები 7 დღეში" value={`${week} მონიშვნა (${HABIT_ITEMS.length} ჩვევიდან)`} />
                       <Info label="ადგილი" value={[u.city, u.region].filter(Boolean).join(', ') || '—'} />

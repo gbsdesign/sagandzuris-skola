@@ -14,14 +14,8 @@ import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { triggerHaptic } from '../../utils/haptics';
 import { isGeorgian, renameInGroups } from '../../utils/memberName';
 import { writeDirectory } from '../../utils/directory';
-import { GEORGIAN_REGIONS, normalizePhone } from '../../utils/profileFields';
-
-const STATUS_OPTIONS = [
-  { id: 'დამწყები', label: '1. დამწყები' },
-  { id: 'ვგალობ', label: '2. ვგალობ' },
-  { id: 'ვმღერი', label: '3. ვმღერი' },
-  { id: 'ვუკრავ', label: '4. ვუკრავ' },
-];
+import { ABILITY_OPTIONS, AbilityId, GEORGIAN_REGIONS, INTEREST_OPTIONS, abilitiesOf, normalizePhone } from '../../utils/profileFields';
+import { INSTRUMENTS_LIST } from '../../data/instrumentsData';
 
 const INITIAL_PROFILE: StudentProfile = {
   firstName: '',
@@ -177,31 +171,20 @@ export const StudentProfileCard: React.FC = () => {
     });
   };
 
-  const selectedStatuses = useMemo(() => {
-    if (Array.isArray(profile.experienceLevel)) {
-      return profile.experienceLevel;
-    }
-    if (typeof profile.experienceLevel === 'string' && profile.experienceLevel.trim()) {
-      return [profile.experienceLevel];
-    }
-    return [];
-  }, [profile.experienceLevel]);
-
-  const handleStatusToggle = (statusId: string) => {
-    setProfile(prev => {
-      const current = Array.isArray(prev.experienceLevel) 
-        ? prev.experienceLevel 
-        : (typeof prev.experienceLevel === 'string' && prev.experienceLevel.trim() ? [prev.experienceLevel] : []);
-      const exists = current.includes(statusId);
-      const next = exists 
-        ? current.filter(s => s !== statusId)
-        : [...current, statusId];
-      return {
-        ...prev,
-        experienceLevel: next
-      };
-    });
-  };
+  // abilities (with the instruments they play and where they chant) and interests — the same as "პირველი გაცნობა"
+  const abilities = useMemo(() => abilitiesOf(profile), [profile]);
+  const interests = profile.interests || [];
+  const toggleAbility = (id: AbilityId) => setProfile(prev => {
+    const cur = abilitiesOf(prev);
+    const next = id === 'beginner'
+      ? (cur.includes('beginner') ? [] : ['beginner'])
+      : (cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id]).filter(x => x !== 'beginner');
+    return { ...prev, abilities: next };
+  });
+  const toggleIn = (key: 'instruments' | 'interests', id: string) => setProfile(prev => {
+    const cur = prev[key] || [];
+    return { ...prev, [key]: cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id] };
+  });
 
   // Save profile to Firestore with explicit mergeFields to never overwrite completedSessions or selectedChantVariants
   const handleSave = async () => {
@@ -346,18 +329,68 @@ export const StudentProfileCard: React.FC = () => {
         </div>
 
         <div>
-          <label className={label}>სტატუსი</label>
+          <label className={label}>შესაძლებლობები</label>
           <div className="flex flex-wrap gap-2">
-            {STATUS_OPTIONS.map(item => {
-              const active = selectedStatuses.includes(item.id);
+            {ABILITY_OPTIONS.map(item => {
+              const active = abilities.includes(item.id);
               return (
-                <button key={item.id} type="button" onClick={() => handleStatusToggle(item.id)} className={chip(active)} aria-pressed={active}>
+                <button key={item.id} type="button" onClick={() => toggleAbility(item.id)} className={chip(active)} aria-pressed={active}>
                   {active && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                  {item.id}
+                  {item.title}
                 </button>
               );
             })}
           </div>
+          {abilities.includes('galoba') && (
+            <div className="mt-3">
+              <label className={label}>სად გალობთ?</label>
+              <input placeholder="ტაძარი, ქალაქი ან სოფელი" value={profile.chantPlace || ''}
+                onChange={e => setProfile(prev => ({ ...prev, chantPlace: e.target.value }))} className={field} />
+            </div>
+          )}
+          {abilities.includes('dakvra') && (
+            <div className="mt-3">
+              <label className={label}>რაზე უკრავთ?</label>
+              <div className="flex flex-wrap gap-2">
+                {INSTRUMENTS_LIST.map(item => {
+                  const active = (profile.instruments || []).includes(item.id);
+                  return (
+                    <button key={item.id} type="button" onClick={() => toggleIn('instruments', item.id)} className={chip(active)} aria-pressed={active}>
+                      {active && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                      {item.nameGe}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {abilities.includes('skhva') && (
+            <div className="mt-3">
+              <label className={label}>სხვა — რა შეგიძლიათ?</label>
+              <input value={profile.abilityOther || ''} onChange={e => setProfile(prev => ({ ...prev, abilityOther: e.target.value }))} className={field} />
+            </div>
+          )}
+        </div>
+
+        <div>
+          <label className={label}>ინტერესები</label>
+          <div className="flex flex-wrap gap-2">
+            {INTEREST_OPTIONS.map(item => {
+              const active = interests.includes(item.id);
+              return (
+                <button key={item.id} type="button" onClick={() => toggleIn('interests', item.id)} className={chip(active)} aria-pressed={active}>
+                  {active && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                  {item.title}
+                </button>
+              );
+            })}
+          </div>
+          {interests.includes('skhva') && (
+            <div className="mt-3">
+              <label className={label}>სხვა — რა გაინტერესებთ?</label>
+              <input value={profile.interestOther || ''} onChange={e => setProfile(prev => ({ ...prev, interestOther: e.target.value }))} className={field} />
+            </div>
+          )}
         </div>
 
         <div>

@@ -12,6 +12,7 @@ import { DEFAULT_KIDS_SECTIONS, KidsMode, SECTIONS, SectionId } from '../../data
 import { MemberPathEditor } from '../admin/MemberPathEditor';
 import { Avatar, Btn, Card, CardTitle, Empty, Pill, Sheet, Stat, Toggle } from '../ui/kit';
 import { WEEKDAYS_SHORT_GE } from '../../utils/dateNames';
+import { abilitiesText, interestsText } from '../../utils/profileFields';
 
 const VOICE = { '1': 'მთქმელი', '2': 'მოძახილი', '3': 'ბანი' } as Record<string, string>;
 const MONTHS = ['იანვარში', 'თებერვალში', 'მარტში', 'აპრილში', 'მაისში', 'ივნისში', 'ივლისში', 'აგვისტოში', 'სექტემბერში', 'ოქტომბერში', 'ნოემბერში', 'დეკემბერში'];
@@ -168,7 +169,8 @@ const StudentSheet: React.FC<{
           <dl className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] divide-y divide-[#f1e8d9] text-sm">
             <Row label="ბოლო აქტივობა">{agoLabel(s.lastActive)}</Row>
             <Row label="ხმა">{(s.profile.voices || []).map((v: string) => VOICE[v] || v).join(', ') || '—'}</Row>
-            <Row label="სტატუსი">{([] as string[]).concat(s.profile.experienceLevel || []).join(', ') || '—'}</Row>
+            <Row label="შესაძლებლობები">{abilitiesText(s.profile) || '—'}</Row>
+            <Row label="ინტერესები">{interestsText(s.profile) || '—'}</Row>
             <Row label="გზაზე">{s.path} საგალობელი/სიმღერა</Row>
             <Row label="სამუშაო განრიგი">{schedule.length ? schedule.map(([d, h]) => `${d}: ${h}`).join(' · ') : 'არ არის გაწერილი'}</Row>
           </dl>

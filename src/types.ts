@@ -10,7 +10,13 @@ export interface StudentProfile {
   region: string;
   city: string;
   phone?: string; // "+995…" (utils/profileFields normalizePhone)
-  experienceLevel: string | string[];
+  experienceLevel: string | string[]; // the old „სტატუსი“ (before abilities and interests)
+  abilities?: string[];      // utils/profileFields ABILITY_OPTIONS
+  abilityOther?: string;
+  instruments?: string[];    // data/instrumentsData ids
+  chantPlace?: string;       // where they chant
+  interests?: string[];      // INTEREST_OPTIONS
+  interestOther?: string;
   voices: ('1' | '2' | '3')[];
   workSchedule: {
     [day: string]: string; // e.g. { 'ორშ': '10:00 - 12:00', ... }

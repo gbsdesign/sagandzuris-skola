@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { Fragment, useEffect, useState } from 'react';
 import { updateProfile } from 'firebase/auth';
 import { doc, DocumentData, onSnapshot, setDoc } from 'firebase/firestore';
 import { ArrowLeft, ArrowRight, Check, ChevronDown, LogOut } from 'lucide-react';
@@ -8,16 +8,18 @@ import { useNotes } from '../../context/NotesContext';
 import { hasGeorgianName, isGeorgian, saveProfileName } from '../../utils/memberName';
 import { MONTHS_GE } from '../../utils/dateNames';
 import {
-  GEORGIAN_REGIONS, STATUS_OPTIONS, daysInMonth, isPlaceholderBirth, normalizePhone, profileComplete, showPhone,
-  statusList, validBirth,
+  ABILITY_OPTIONS, AbilityId, GEORGIAN_REGIONS, INTEREST_OPTIONS, InterestId, daysInMonth, isPlaceholderBirth,
+  abilitiesOf, normalizePhone, profileComplete, showPhone, validBirth,
 } from '../../utils/profileFields';
+import { INSTRUMENTS_LIST } from '../../data/instrumentsData';
 import { Btn, Sheet } from '../ui/kit';
 import { EMAIL_FIELD } from '../access/SignInChoices';
 import { useMembership } from '../../utils/memberAccess';
 
 // "პირველი გაცნობა": until a member's profile holds everything below, this form covers the app and cannot be
-// closed (only "გამოსვლა"). Six short cards, one question each, with what is already known filled in: name and
-// surname (Georgian letters), birth date, region and town or village, phone, status, voices. The answers go into
+// closed (only "გამოსვლა"). Seven short cards, one question each, with what is already known filled in: name and
+// surname (Georgian letters), birth date, region and town or village, phone, abilities (with the instruments they
+// play and where they chant), interests, voices. The answers go into
 // the profile (students/{uid}.profile, the same fields the profile card edits) and directory/{uid} (name only);
 // students/{uid}.firstMeeting marks it done. It waits while the notes page, the liturgy program or church mode is
 // open, so nothing covers the notes during a service.
@@ -31,7 +33,7 @@ const VOICES: { id: Voice | 'x'; title: string; sub: string }[] = [
   { id: 'x', title: 'არ ვიცი', sub: 'მასწავლებელი დაგეხმარებათ' },
 ];
 
-const STEPS = 6;
+const STEPS = 7;
 const PHONE_EXAMPLE = '599\u00a012\u00a034\u00a056'; // kept on one line
 const NOT_GEORGIAN = /[^ა-ჿᲐ-Ჿ\s-]/g;
 const THIS_YEAR = new Date().getFullYear();
@@ -46,11 +48,21 @@ interface Answers {
   region: string;
   city: string;
   phone: string;
-  statuses: string[];
+  abilities: AbilityId[];
+  abilityOther: string;
+  instruments: string[];
+  chantPlace: string;
+  interests: InterestId[];
+  interestOther: string;
   voices: (Voice | 'x')[];
 }
 
-const EMPTY: Answers = { first: '', last: '', day: 0, month: 0, year: 0, region: '', city: '', phone: '', statuses: [], voices: [] };
+const EMPTY: Answers = {
+  first: '', last: '', day: 0, month: 0, year: 0, region: '', city: '', phone: '',
+  abilities: [], abilityOther: '', instruments: [], chantPlace: '', interests: [], interestOther: '', voices: [],
+};
+
+const short = (v: string) => v.trim().length < 2;
 
 /** What is missing on a card ('' = fine). */
 const problem = (a: Answers, step: number) => {
@@ -59,11 +71,25 @@ const problem = (a: Answers, step: number) => {
     case 1: return validBirth(a) ? '' : 'აირჩიეთ რიცხვი, თვე და წელი.';
     case 2: return !a.region ? 'აირჩიეთ რეგიონი.' : a.city.trim().length < 2 ? 'ჩაწერეთ ქალაქი ან სოფელი.' : '';
     case 3: return normalizePhone(a.phone) ? '' : `ჩაწერეთ ტელეფონის ნომერი, მაგალითად: ${PHONE_EXAMPLE}`;
-    case 4: return a.statuses.length ? '' : 'მონიშნეთ ერთი მაინც.';
-    case 5: return a.voices.length ? '' : 'მონიშნეთ ხმა ან „არ ვიცი“.';
+    case 4:
+      if (!a.abilities.length) return 'მონიშნეთ ერთი მაინც.';
+      if (a.abilities.includes('galoba') && short(a.chantPlace)) return 'ჩაწერეთ, სად გალობთ.';
+      if (a.abilities.includes('dakvra') && !a.instruments.length) return 'აირჩიეთ, რაზე უკრავთ.';
+      if (a.abilities.includes('skhva') && short(a.abilityOther)) return 'ჩაწერეთ, რა შეგიძლიათ.';
+      return '';
+    case 5:
+      if (!a.interests.length) return 'მონიშნეთ ერთი მაინც.';
+      if (a.interests.includes('skhva') && short(a.interestOther)) return 'ჩაწერეთ, რა გაინტერესებთ.';
+      return '';
+    case 6: return a.voices.length ? '' : 'მონიშნეთ ხმა ან „არ ვიცი“.';
   }
   return '';
 };
+
+/** A follow-up question that opens right under the choice it belongs to. */
+const FollowUp: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <div className="ml-3 pl-4 py-2 border-l-[3px] border-[#7a2028]/25">{children}</div>
+);
 
 const Choice: React.FC<{ on: boolean; onClick: () => void; title: string; sub: string }> = ({ on, onClick, title, sub }) => (
   <button
@@ -169,11 +195,16 @@ export const FirstMeeting: React.FC = () => {
       region: GEORGIAN_REGIONS.includes(profile.region) ? profile.region : '',
       city: profile.city || '',
       phone: phone ? showPhone(phone) : profile.phone || '',
-      statuses: statusList(profile.experienceLevel).filter(s => STATUS_OPTIONS.some(o => o.id === s)),
+      abilities: abilitiesOf(profile),
+      abilityOther: profile.abilityOther || '',
+      instruments: Array.isArray(profile.instruments) ? profile.instruments.filter((x: string) => INSTRUMENTS_LIST.some(i => i.id === x)) : [],
+      chantPlace: profile.chantPlace || '',
+      interests: Array.isArray(profile.interests) ? profile.interests.filter((x: string): x is InterestId => INTEREST_OPTIONS.some(o => o.id === x)) : [],
+      interestOther: profile.interestOther || '',
       voices: voices.length ? voices : data?.firstMeeting?.voiceUnknown ? ['x'] : [],
     };
     setA(known);
-    const gap = [0, 1, 2, 3, 4, 5].find(s => problem(known, s));
+    const gap = Array.from({ length: STEPS }, (_, i) => i).find(s => problem(known, s));
     setStep(gap ?? 0);
   }, [data, prefilled, user, profile]);
 
@@ -201,6 +232,12 @@ export const FirstMeeting: React.FC = () => {
 
   const toggle = <T extends string>(list: T[], id: T): T[] => (list.includes(id) ? list.filter(x => x !== id) : [...list, id]);
 
+  // „ჯერ ვიწყებ“ stands alone
+  const toggleAbility = (id: AbilityId) => {
+    if (id === 'beginner') set({ abilities: a.abilities.includes('beginner') ? [] : ['beginner'] });
+    else set({ abilities: toggle(a.abilities.filter(x => x !== 'beginner'), id) });
+  };
+
   const toggleVoice = (id: Voice | 'x') => {
     if (id === 'x') set({ voices: a.voices.includes('x') ? [] : ['x'] });
     else set({ voices: toggle(a.voices.filter(v => v !== 'x'), id) });
@@ -215,7 +252,7 @@ export const FirstMeeting: React.FC = () => {
   };
 
   const finish = async () => {
-    const p = problem(a, 5);
+    const p = problem(a, STEPS - 1);
     if (p) { setError(p); return; }
     setSaving(true);
     setError('');
@@ -228,7 +265,12 @@ export const FirstMeeting: React.FC = () => {
           region: a.region,
           city: a.city.trim(),
           phone: normalizePhone(a.phone),
-          experienceLevel: a.statuses,
+          abilities: a.abilities,
+          abilityOther: a.abilities.includes('skhva') ? a.abilityOther.trim() : '',
+          instruments: a.abilities.includes('dakvra') ? INSTRUMENTS_LIST.map(i => i.id).filter(id => a.instruments.includes(id)) : [],
+          chantPlace: a.abilities.includes('galoba') ? a.chantPlace.trim() : '',
+          interests: INTEREST_OPTIONS.map(o => o.id).filter(id => a.interests.includes(id)),
+          interestOther: a.interests.includes('skhva') ? a.interestOther.trim() : '',
           voices: a.voices.filter((v): v is Voice => v !== 'x').sort(),
         },
         firstMeeting: { voiceUnknown: a.voices.includes('x'), at: new Date().toISOString() },
@@ -294,7 +336,7 @@ export const FirstMeeting: React.FC = () => {
 
         {step === 1 && (
           <>
-            <Heading title="როდის დაიბადეთ?" text="აირჩიეთ სიიდან." />
+            <Heading title="დაბადების თარიღი" text="აირჩიეთ სიიდან." />
             <div className="grid grid-cols-[0.9fr_1.75fr_1.2fr] gap-2">
               <div>
                 <FieldLabel htmlFor="sg-birth-day">რიცხვი</FieldLabel>
@@ -347,16 +389,78 @@ export const FirstMeeting: React.FC = () => {
 
         {step === 4 && (
           <>
-            <Heading title="თქვენი სტატუსი" text="შეგიძლიათ რამდენიმე მონიშნოთ." />
+            <Heading title="შესაძლებლობები" text="რა შეგიძლიათ? შეგიძლიათ რამდენიმე მონიშნოთ." />
             <div className="space-y-2">
-              {STATUS_OPTIONS.map(o => (
-                <Choice key={o.id} on={a.statuses.includes(o.id)} onClick={() => set({ statuses: toggle(a.statuses, o.id) })} title={o.title} sub={o.sub} />
-              ))}
+              {ABILITY_OPTIONS.map(o => {
+                const on = a.abilities.includes(o.id);
+                return (
+                  <Fragment key={o.id}>
+                    <Choice on={on} onClick={() => toggleAbility(o.id)} title={o.title} sub={o.sub} />
+                    {on && o.id === 'galoba' && (
+                      <FollowUp>
+                        <FieldLabel htmlFor="sg-chant-place">სად გალობთ?</FieldLabel>
+                        <input id="sg-chant-place" lang="ka" placeholder="ტაძარი, ქალაქი ან სოფელი" value={a.chantPlace}
+                          onChange={e => set({ chantPlace: e.target.value })} className={EMAIL_FIELD} />
+                      </FollowUp>
+                    )}
+                    {on && o.id === 'dakvra' && (
+                      <FollowUp>
+                        <p className="mb-2 text-[14px] font-bold text-[#4a3426]">რაზე უკრავთ?</p>
+                        <div className="flex flex-wrap gap-2">
+                          {INSTRUMENTS_LIST.map(i => {
+                            const picked = a.instruments.includes(i.id);
+                            return (
+                              <button key={i.id} type="button" role="checkbox" aria-checked={picked}
+                                onClick={() => set({ instruments: toggle(a.instruments, i.id) })}
+                                className={`h-11 px-4 inline-flex items-center gap-1.5 rounded-full text-[15px] font-semibold cursor-pointer transition ${
+                                  picked ? 'bg-[#7a2028] text-white' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40'
+                                }`}>
+                                {picked && <Check className="w-4 h-4" strokeWidth={3} />}
+                                {i.nameGe}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </FollowUp>
+                    )}
+                    {on && o.id === 'skhva' && (
+                      <FollowUp>
+                        <FieldLabel htmlFor="sg-ability-other">რა შეგიძლიათ?</FieldLabel>
+                        <input id="sg-ability-other" lang="ka" value={a.abilityOther}
+                          onChange={e => set({ abilityOther: e.target.value })} className={EMAIL_FIELD} />
+                      </FollowUp>
+                    )}
+                  </Fragment>
+                );
+              })}
             </div>
           </>
         )}
 
         {step === 5 && (
+          <>
+            <Heading title="ინტერესები" text="რა გაინტერესებთ? შეგიძლიათ რამდენიმე მონიშნოთ." />
+            <div className="space-y-2">
+              {INTEREST_OPTIONS.map(o => {
+                const on = a.interests.includes(o.id);
+                return (
+                  <Fragment key={o.id}>
+                    <Choice on={on} onClick={() => set({ interests: toggle(a.interests, o.id) })} title={o.title} sub={o.sub} />
+                    {on && o.id === 'skhva' && (
+                      <FollowUp>
+                        <FieldLabel htmlFor="sg-interest-other">რა გაინტერესებთ?</FieldLabel>
+                        <input id="sg-interest-other" lang="ka" value={a.interestOther}
+                          onChange={e => set({ interestOther: e.target.value })} className={EMAIL_FIELD} />
+                      </FollowUp>
+                    )}
+                  </Fragment>
+                );
+              })}
+            </div>
+          </>
+        )}
+
+        {step === 6 && (
           <>
             <Heading title="რომელ ხმას გალობთ?" text="შეგიძლიათ რამდენიმე მონიშნოთ." />
             <div className="space-y-2">

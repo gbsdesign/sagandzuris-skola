@@ -52,3 +52,22 @@ test('the old card default 2000-01-01 counts only once confirmed in the first me
   assert.ok(!profileComplete(placeholder));
   assert.ok(profileComplete({ ...placeholder, firstMeeting: { at: '2026-10-06' } }));
 });
+
+test('abilities and interests, each with its follow-up question', () => {
+  const base = { ...full.profile, experienceLevel: [] as string[] };
+  const p = (patch: Record<string, unknown>) => ({ profile: { ...base, abilities: ['simghera'], interests: ['galoba'], ...patch } });
+  assert.ok(profileComplete(p({})));
+  assert.ok(!profileComplete(p({ abilities: [] })), 'no ability');
+  assert.ok(!profileComplete(p({ interests: [] })), 'no interest');
+  assert.ok(!profileComplete(p({ abilities: ['galoba'] })), 'chanting asks where');
+  assert.ok(profileComplete(p({ abilities: ['galoba'], chantPlace: 'სამების ტაძარი' })));
+  assert.ok(!profileComplete(p({ abilities: ['dakvra'] })), 'playing asks which instruments');
+  assert.ok(profileComplete(p({ abilities: ['dakvra'], instruments: ['gitara'] })));
+  assert.ok(!profileComplete(p({ abilities: ['skhva'] })), '"სხვა" is written by hand');
+  assert.ok(profileComplete(p({ abilities: ['skhva'], abilityOther: 'ცეკვა' })));
+  assert.ok(!profileComplete(p({ interests: ['skhva'], interestOther: '' })));
+  assert.ok(profileComplete(p({ abilities: ['beginner'] })), '"ჯერ ვიწყებ"');
+  // one who answered the old „სტატუსი“ is not asked again; once abilities exist, the old answer no longer counts
+  assert.ok(profileComplete({ profile: { ...full.profile } }));
+  assert.ok(!profileComplete({ profile: { ...full.profile, abilities: [] } }));
+});

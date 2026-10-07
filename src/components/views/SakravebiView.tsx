@@ -30,7 +30,7 @@ export const SakravebiView: React.FC<SakravebiViewProps> = ({ selectedChantVaria
           </div>
 
           <div className="p-4 bg-amber-50/50 rounded-xl border border-amber-200/50 text-xs sm:text-sm text-slate-600 font-medium">
-            ქართული ტრადიციული საკრავი — {selectedInstrument.nameGe}. საკრავის შესახებ ისტორიული ცნობები, ვიდეო გაკვეთილები და აკორდები მალე დაემატება.
+            {selectedInstrument.folk === false ? 'საკრავი' : 'ქართული ტრადიციული საკრავი'} — {selectedInstrument.nameGe}. საკრავის შესახებ ისტორიული ცნობები, ვიდეო გაკვეთილები და აკორდები მალე დაემატება.
           </div>
         </div>
       ) : (

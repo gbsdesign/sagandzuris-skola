@@ -64,7 +64,7 @@ export const getAllRegistryItems = (): Map<string, DataRegistryItem> => {
       title: inst.nameGe,
       category: 'instrument',
       code: 'საკრავი',
-      regionOrAuthor: 'ხალხური საკრავი',
+      regionOrAuthor: inst.folk === false ? 'საკრავი' : 'ხალხური საკრავი',
     });
   });
 

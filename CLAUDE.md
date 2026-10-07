@@ -135,7 +135,7 @@
   notes, the program or church mode is open. The user removed „რისთვის მოხვედით?“ — don't bring it back.
   Phone lives only in `students/{uid}.profile.phone` (not in `directory`). `AuthContext` no longer writes empty
   name/photo on sign-in.
-- **Admission of new members** (built 2026-10-06, branch `chat-work`, not committed): `utils/memberAccess.ts`
+- **Admission of new members** (pushed to main 2026-10-06, commit 261611b, with the private chats): `utils/memberAccess.ts`
   (`memberAccess/{uid}` status pending/approved/rejected + features; `accessDecisions/{uid}` who decided, superadmins
   only). Pending = guest view + „მიმდინარეობს დამატება“ (`components/access/MembershipGate.tsx`); refused = signed out
   with „დამატება შეფერხებულია“ every time. Superadmins decide in admin panel → მომხმარებლები (`admin/AccessRequests.tsx`).
