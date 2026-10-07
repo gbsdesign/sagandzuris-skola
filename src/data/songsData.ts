@@ -1,11 +1,16 @@
 // Folk songs ("სიმღერა" section): Georgia's regions on the map and the songs from the
-// user's Drive folders "1. აღმოსავლეთ საქართველო", "2. დასავლეთ საქართველო", "3. ქალაქური".
+// user's Drive folders "1. აღმოსავლეთ საქართველო", "2. დასავლეთ საქართველო", "3. ქალაქური",
+// plus the „ალაზანი“ / „ანჩისხატი“ archive (songArchive.ts), merged in at the end of this file.
 // Audio is played from Drive through the Cloudflare Worker (see chantMediaRegistry.ts).
 import { AUDIO_PROXY, type ChantMediaItem } from './chantMediaRegistry';
+import { ARCHIVE_SONGS, WHO } from './songArchive';
 
-export type FolkRegionId =
+/** Regions with a piece on the map */
+export type MapRegionId =
   | 'abkhazeti' | 'svaneti' | 'samegrelo' | 'racha' | 'imereti' | 'guria' | 'achara'
   | 'samtskhe' | 'shidakartli' | 'kvemokartli' | 'mtianeti' | 'kakheti' | 'kalakuri';
+/** ...and the historical lands outside today's map, listed only as cards (ლაზეთი) */
+export type FolkRegionId = MapRegionId | 'lazeti';
 
 export interface FolkRegion {
   id: FolkRegionId;
@@ -14,7 +19,7 @@ export interface FolkRegion {
   color: string; // map fill, wooden-puzzle palette
 }
 
-export const FOLK_REGIONS: FolkRegion[] = [
+export const FOLK_REGIONS: (FolkRegion & { id: MapRegionId })[] = [
   { id: 'abkhazeti', nameGe: 'აფხაზეთი', regionCode: 'აფხ.', color: '#a3c27f' },
   { id: 'svaneti', nameGe: 'სვანეთი', regionCode: 'სვან.', color: '#dcb25e' },
   { id: 'samegrelo', nameGe: 'სამეგრელო', regionCode: 'სამეგ.', color: '#d9a294' },
@@ -30,7 +35,15 @@ export const FOLK_REGIONS: FolkRegion[] = [
   { id: 'kalakuri', nameGe: 'ქალაქური', regionCode: 'ქალაქ.', color: '#85502c' },
 ];
 
-export const getFolkRegion = (id: FolkRegionId) => FOLK_REGIONS.find(r => r.id === id)!;
+// lands outside the map: a card under the map's region list (the songs map only)
+export const FOLK_EXTRA_REGIONS: FolkRegion[] = [
+  { id: 'lazeti', nameGe: 'ლაზეთი', regionCode: 'ლაზ.', color: '#8fb3c4' },
+];
+
+export const getFolkRegion = (id: FolkRegionId) => [...FOLK_REGIONS, ...FOLK_EXTRA_REGIONS].find(r => r.id === id)!;
+
+// sub-areas a region's song list can be narrowed to (the songs' `area`)
+export const FOLK_SUB_AREAS = ['ხევი', 'ხევსურეთი', 'ფშავი', 'მთიულეთი', 'გუდამაყარი', 'თიანეთი', 'თუშეთი', 'ქართლ-კახეთი', 'რაჭა', 'ლეჩხუმი', 'მესხეთი'];
 
 // Drive file ids of one recording's tracks
 export interface SongTracks {
@@ -64,13 +77,22 @@ export interface FolkSong {
   docs?: SongDoc[];
   // .wma recordings browsers can't play; bound as versions once converted to mp3
   pendingWma?: string[];
-  ownerOnly?: boolean; // listed only for the owner's account and admins
+  ownerOnly?: boolean; // listed only for the owner's account (mr.gabunia), not for other admins
   soundcloud?: string; // SoundCloud track URL, played in SoundCloud's own compact widget
+  genre?: string; // სუფრული, შრომის, საგმირო…
+  recs?: SongRec[]; // archive recordings by ensembles and singers (one file each)
+}
+
+/** One archive recording of a song: a single Drive mp3 by one performer */
+export interface SongRec {
+  id: string;
+  who: string;
+  note?: string; // "ხუხუნაიშვილების ვარიანტი", or a number when one performer sang it twice
 }
 
 const one = (label: string, all: string): SongVersion => ({ label, tracks: { all } });
 
-export const FOLK_SONGS: FolkSong[] = [
+const BASE_SONGS: FolkSong[] = [
   // ───────── აღმოსავლეთ საქართველო ─────────
   {
     id: 'fs-e8', num: '8', title: 'ცანგალა და გოგონა', region: 'kakheti',
@@ -923,6 +945,23 @@ II სოლისტი (1 ხმა)
   },
 ];
 
+// The archive joins the list: a song already here (same title and region) gets the archive's recordings,
+// the rest come after this file's songs.
+export const FOLK_SONGS: FolkSong[] = (() => {
+  const list = BASE_SONGS.map(s => ({ ...s }));
+  for (const a of ARCHIVE_SONGS) {
+    const recs = a.recs.map(([id, who, note]) => ({ id, who: WHO[who], note }));
+    const same = list.find(s => s.region === a.region && s.title === a.title);
+    if (same) {
+      same.recs = [...(same.recs ?? []), ...recs];
+      same.genre ??= a.genre;
+      continue;
+    }
+    list.push({ id: a.id, title: a.title, region: a.region, area: a.area, genre: a.genre, versions: [], recs });
+  }
+  return list;
+})();
+
 const DRIVE_VIEW = (id: string) => `https://drive.google.com/file/d/${id}/view`;
 export const songDocUrl = (doc: SongDoc) => DRIVE_VIEW(doc.id);
 
@@ -946,6 +985,21 @@ export const songVersionMedia = (song: FolkSong, version: SongVersion): ChantMed
     lyrics: song.lyrics,
   };
 };
+
+// Player media for one archive recording: a single full track
+export const songRecMedia = (song: FolkSong, rec: SongRec): ChantMediaItem => ({
+  key: `${song.id}:${rec.id}`,
+  title: song.title,
+  folderId: '',
+  folderUrl: '',
+  tracks: ['', '', '', `${AUDIO_PROXY}/${rec.id}`],
+  availableVoices: { voice1: false, voice2: false, voice3: false, all: true },
+  notes: [],
+  lyrics: song.lyrics,
+});
+
+/** How many recordings a song has: its own versions + archive recordings */
+export const songRecordingCount = (s: FolkSong) => s.versions.length + (s.recs?.length ?? 0);
 
 export const songsInRegion = (region: FolkRegionId, showOwnerOnly: boolean) =>
   FOLK_SONGS.filter(s => s.region === region && (showOwnerOnly || !s.ownerOnly));

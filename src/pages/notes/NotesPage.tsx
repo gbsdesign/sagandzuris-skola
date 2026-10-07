@@ -3,7 +3,7 @@
 // the next chant is one tap away. Church mode silences everything except the starting notes.
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowLeft, ArrowRight, BookmarkCheck, BookmarkPlus, Check, ChevronLeft, ChevronUp, Church, CloudDownload, Download, Ellipsis,
+  ArrowLeft, ArrowRight, BookmarkCheck, BookmarkPlus, Check, ChevronDown, ChevronLeft, ChevronUp, Church, CloudDownload, Download, Ellipsis,
   FileText, Flame, Headphones, ListOrdered, LoaderCircle, Minus, Moon, Music2, Pause, Piano, Play, Plus, Repeat, RotateCcw,
   Scan, SlidersHorizontal, Sun, SunMoon, TextAlignStart, X, ZoomIn, ZoomOut, Pin,
 } from 'lucide-react';
@@ -13,7 +13,8 @@ import { useAuth, useChants } from '../../context';
 import { MAX_SHORTCUTS, saveShortcuts, useMyShortcuts } from '../../utils/shortcuts';
 import { findVersion, neighbourVersion, SCHOOL_NAMES, BOOK_NAMES, SERVICE_LISTS, schoolOf } from '../../data/chantLookup';
 import { variantName } from '../../data/tsirvaChants';
-import { getChantMedia } from '../../data/chantMediaRegistry';
+import { getChantMedia, type ChantMediaItem } from '../../data/chantMediaRegistry';
+import { chantRecordingMedia, chantRecordings } from '../../data/chantRecordings';
 import { countPlay } from '../../utils/playStats';
 import { hymnPair, hymnWidth, HymnOrnament } from '../../data/hymnOrnaments';
 import { BookScore, ChantSynth, bookImageUrl, loadBookScore, encodeMp3, renderScore, saveBlob, firstNotes, playStartNotes } from '../../utils/chantSynth';
@@ -82,6 +83,18 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const name = variant.version !== undefined ? (variantName(variant) || variant.code) : (variant.code.includes('გამშვ') ? 'გამშვენებული' : 'სადა');
   const schoolName = SCHOOL_NAMES[schoolOf(variant.code)] ?? schoolOf(variant.code);
   const lyrics = media?.lyrics;
+  // recordings to choose from: the school's own first, then other choirs' recordings of this very book version
+  // (chantRecordings.ts); the ჩანაწერი panel has a list to pick one
+  const recSources = useMemo(() => {
+    const list: { label: string; media: ChantMediaItem }[] = [];
+    if (media) list.push({ label: 'საგანძურის სკოლა', media });
+    for (const r of chantRecordings(vid)) list.push({ label: r.who, media: chantRecordingMedia(r, title) });
+    return list;
+  }, [vid, media, title]);
+  const [recIdx, setRecIdx] = useState(0);
+  useEffect(() => setRecIdx(0), [vid]);
+  const recSource = recSources[Math.min(recIdx, recSources.length - 1)];
+  const recMedia = recSource?.media;
   const pair = hymnPair(chant.id);
 
   // ---------- where this version sits: the program, or its service
@@ -436,7 +449,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     setMoreOpen(false);
     setRecMounted(false);
     setRecPlaying(false);
-    if (!media && panel === 'rec') setPanel(null);
+    if (!recMedia && panel === 'rec') setPanel(null);
     if (!lyrics && panel === 'text') setPanel(null);
     const sc = scrollerRef.current;
     if (sc) { sc.scrollTop = 0; sc.scrollLeft = 0; }
@@ -661,18 +674,18 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
       saveBlob(blob, `${docName} — ${label}.mp3`);
     });
   };
-  const recTracks = media ? [3, 0, 1, 2].filter(i => media.tracks[i] && (i === 3 ? media.availableVoices.all : [media.availableVoices.voice1, media.availableVoices.voice2, media.availableVoices.voice3][i])) : [];
+  const recTracks = recMedia ? [3, 0, 1, 2].filter(i => recMedia.tracks[i] && (i === 3 ? recMedia.availableVoices.all : [recMedia.availableVoices.voice1, recMedia.availableVoices.voice2, recMedia.availableVoices.voice3][i])) : [];
   const saveRecMp3 = (i: number) => {
     const label = ['I ხმა', 'II ხმა', 'III ხმა', 'სამივე ხმა'][i];
     return runExport(`ჩანაწერი · ${label}`, async () => {
-      const url = media!.tracks[i];
+      const url = recMedia!.tracks[i];
       let buf = await getAudioArrayBufferFromIdb(url);
       if (!buf) {
         const res = await fetch(url);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         buf = await res.arrayBuffer();
       }
-      saveBlob(new Blob([buf], { type: 'audio/mpeg' }), `${docName} — ჩანაწერი, ${label}.mp3`);
+      saveBlob(new Blob([buf], { type: 'audio/mpeg' }), `${docName} — ${recSource?.label ?? 'ჩანაწერი'}, ${label}.mp3`);
     });
   };
   const keepOffline = async () => {
@@ -833,7 +846,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                 <span className="np-lb">სინთეზატორი</span>
               </button>
             )}
-            {media && (
+            {recMedia && (
               <button type="button" className={`np-tool ${recPlaying ? 'live' : ''}`} data-tool="rec" aria-expanded={panel === 'rec'} onClick={() => togglePanel('rec')} title="ჩანაწერი">
                 <span className="np-ico"><Headphones strokeWidth={1.8} /><span className="np-eq" aria-hidden><i /><i /><i /></span></span>
                 <span className="np-lb">ჩანაწერი</span>
@@ -927,12 +940,26 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
         )}
         {exporting && <p className="np-export">მზადდება {exporting.label}… {Math.round(exporting.progress * 100)}%</p>}
 
-        {recMounted && media && (
+        {recMounted && recMedia && (
           <div className={`np-panel rec ${f.rec ? 'collapsed' : ''}`} hidden={panel !== 'rec'}>
+            {recSources.length > 1 && (
+              <label className="np-recpick">
+                <span>შემსრულებელი</span>
+                <select
+                  value={recIdx}
+                  onChange={e => { triggerHaptic(10); setRecPlaying(false); setRecIdx(Number(e.target.value)); }}
+                  aria-label="შემსრულებლის არჩევა"
+                >
+                  {recSources.map((r, i) => <option key={i} value={i}>{r.label}</option>)}
+                </select>
+                <ChevronDown aria-hidden />
+              </label>
+            )}
             <ChantPlayer
-              key={vid}
+              key={`${vid}-${recIdx}`}
               chantId={chant.id}
               variantId={vid}
+              media={recMedia}
               layout="panel"
               hideNotesButton
               showDetails={!f.rec}

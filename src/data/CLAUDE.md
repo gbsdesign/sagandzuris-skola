@@ -34,9 +34,22 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
 - Don't bind Drive `ნოტები` sheets for new recordings — the app shows book notes only.
 - Undecided keys: 1.1 / 8.1 / 8.2 (და სულისაცა: chant-15 or chant-26?), 4 (ანტიფონები), 8.0 (no audio).
 
+## Other choirs' chant recordings (`chantRecordings.ts`)
+
+- `CHANT_RECORDINGS[variantId]` = recordings from Drive „ანჩისხატი“ (albums 1–4 by school) and „ალაზანი“ (Artem
+  Erkomaishvili, Shavnabada), bound by version id only where one book version fits (built 2026-10-07, 56 files).
+  The notes page lists them under „შემსრულებელი“ after the school's own recording. Many more chant files there are
+  unbound (several versions of one school, or no notes in the app) — the user chose "don't bind when unsure".
+
 ## Folk songs (`songsData.ts`)
 
-- Edit only `FOLK_SONGS`. Region guesses for many songs are unconfirmed.
+- Hand-made songs are `BASE_SONGS`; `FOLK_SONGS` = them + `songArchive.ts` (505 songs / 983 one-track recordings
+  from Drive „ალაზანი“ + „ანჩისხატი/5 სიმღერები“, generated 2026-10-07 by a scratch script — regen would undo hand
+  edits). Same title + region merges into a hand-made song (`recs`). `area` = sub-area (ხევი, თუშეთი…), list filter.
+  ~275 archive files were left out (region unclear); ლაზეთი is a list-only region (`FOLK_EXTRA_REGIONS`).
+- Song page: `components/maps/SongPage.tsx` (history `sgSong`), words from `song.lyrics` or `public/song-texts/<id>.json`
+  (none yet — no bulk source found online; don't write lyrics from memory).
+- Region guesses for many hand-made songs are unconfirmed.
 - Songs with `pendingWma` wait for the user's mp3 upload to Drive; then bind the new ids and remove the flag.
 - Song `fs-e12` „ქ.კ. (ვიდეოდან)“ points to an mp4 — the Worker serves only `audio/*`, so it returns 502.
 

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { FOLK_REGIONS, FolkRegion, FolkRegionId } from '../../data/songsData';
+import { FOLK_REGIONS, FolkRegion, FolkRegionId, MapRegionId } from '../../data/songsData';
 import { GEORGIA_MAP_SHAPES, GEORGIA_MAP_SIZE } from '../../data/georgiaMapShapes';
 
 // Georgia as a wooden puzzle, shared by the songs and მთქმელი maps. The map itself carries only colour and touch
@@ -10,11 +10,12 @@ interface RegionPuzzleMapProps {
   countLabel: (n: number) => string; // "3 ავტორი"
   regionName?: (region: FolkRegion) => string; // e.g. Tbilisi instead of "ქალაქური"
   title?: string; // written along the northern border
+  extraRegions?: FolkRegion[]; // lands outside the map (ლაზეთი): cards after the map's regions
 }
 
 const { width, height } = GEORGIA_MAP_SIZE;
 
-export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, count, countLabel, regionName = r => r.nameGe, title }) => {
+export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, count, countLabel, regionName = r => r.nameGe, title, extraRegions = [] }) => {
   const [hovered, setHovered] = useState<FolkRegionId | null>(null);
   const lit = FOLK_REGIONS.find(r => r.id === hovered);
   const tbilisi = GEORGIA_MAP_SHAPES.kalakuri.label;
@@ -91,7 +92,7 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
 
       {/* The same regions as roomy cards (easier to tap on a phone) */}
       <div className="w-full grid grid-cols-2 sm:grid-cols-3 gap-2">
-        {FOLK_REGIONS.map(r => {
+        {[...FOLK_REGIONS, ...extraRegions].map(r => {
           const n = count(r.id);
           return (
             <button
@@ -121,7 +122,15 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
 
 // A small map at the top of a region's list: the region lit, the rest of Georgia pale
 export const RegionLocator: React.FC<{ region: FolkRegion; className?: string }> = ({ region, className }) => {
-  const shape = GEORGIA_MAP_SHAPES[region.id];
+  const shape = region.id in GEORGIA_MAP_SHAPES ? GEORGIA_MAP_SHAPES[region.id as MapRegionId] : undefined;
+  // a land outside today's map (ლაზეთი): its colour as a tile instead
+  if (!shape) {
+    return (
+      <span className="w-16 h-16 shrink-0 rounded-2xl border border-black/10 shadow-inner flex items-center justify-center text-[11px] font-black text-white/95" style={{ background: region.color }} aria-hidden="true">
+        {region.regionCode}
+      </span>
+    );
+  }
   return (
     <svg viewBox={`-8 -8 ${width + 16} ${height + 16}`} className={className} aria-hidden="true">
       {FOLK_REGIONS.filter(r => r.id !== region.id).map(r => (

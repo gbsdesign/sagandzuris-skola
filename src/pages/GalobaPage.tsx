@@ -3,6 +3,7 @@ import { useNavigation, useChants, useAuth, ServiceType } from '../context';
 import { useMyClasses } from '../hooks/useClasses';
 import { ChantItem, ChantVariant } from '../data';
 import { getChantMedia } from '../data/chantMediaRegistry';
+import { chantRecordings } from '../data/chantRecordings';
 import { useRecordingBindings } from '../data/runtimeRecordings';
 import { ServiceTabs, ChantSearchBar, ChantAccordionItem } from './galoba';
 import { ProgramCard, ServiceDownload } from './galoba/LiturgyBits';
@@ -102,7 +103,7 @@ export const GalobaPage: React.FC = () => {
   const bindings = useRecordingBindings();
   const recorded = useMemo(() => {
     const keys = new Set<string>();
-    for (const c of serviceChants) for (const v of c.variants || []) if (getChantMedia(c.id, v.code)) keys.add(`${c.id}|${v.code}`);
+    for (const c of serviceChants) for (const v of c.variants || []) if (getChantMedia(c.id, v.code) || chantRecordings(v.id).length) keys.add(`${c.id}|${v.code}`);
     return keys;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [serviceChants, bindings, user]);

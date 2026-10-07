@@ -98,6 +98,13 @@
 @keyframes np-panel{from{opacity:0;transform:translateY(-6px)}}
 .np-panel.synth{--p-bg:var(--synth-bg);--acc:var(--dusk);--acc-2:var(--dusk-2);--acc-soft:var(--dusk-soft);--acc-line:var(--dusk-line)}
 .np-panel.rec{--p-bg:var(--rec-bg);--acc:var(--amber-btn);--acc-2:var(--amber);--acc-soft:var(--amber-soft);--acc-line:var(--amber-line)}
+/* which choir's recording plays: a native list (roomy, works the same on every phone) */
+.np-recpick{position:relative;display:flex;align-items:center;gap:10px;margin:0 0 10px}
+.np-recpick>span{font-size:12px;font-weight:800;color:var(--muted);white-space:nowrap}
+.np-recpick select{flex:1;min-width:0;height:42px;padding:0 38px 0 14px;border-radius:12px;border:1px solid var(--acc-line);background:var(--surface);color:var(--ink);font-size:15px;font-weight:700;appearance:none;-webkit-appearance:none;cursor:pointer;outline:none}
+.np-recpick select:focus-visible{box-shadow:0 0 0 3px var(--acc-soft)}
+.np-recpick>svg{position:absolute;right:12px;top:50%;width:18px;height:18px;transform:translateY(-50%);color:var(--acc);pointer-events:none}
+.np-root.church .np-recpick{display:none}
 .np-panel.text{--p-bg:var(--surface-2);padding:0}
 .np-ib .n{position:absolute;bottom:3px;right:4px;font-size:9px;font-weight:800;line-height:1}
 .np-ib:disabled{opacity:.4}

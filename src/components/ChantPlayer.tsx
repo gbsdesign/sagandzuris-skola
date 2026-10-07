@@ -774,6 +774,8 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
         <div className="np-details">
           <div className="np-dA">
             <div className="np-row">
+              {/* a one-track recording (another choir's) has no voices to switch or balance */}
+              {voiceAvailable.some(Boolean) && <>
               <div className="np-seg" role="group" aria-label="ხმები">
                 {[0, 1, 2].map(i => (
                   <button
@@ -799,6 +801,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
               <button type="button" className="np-ib np-mixbtn" aria-pressed={mixOpen} onClick={() => setMixOpen(o => !o)} aria-label="ხმების სიძლიერე" title="ხმების სიძლიერე">
                 <SlidersHorizontal />
               </button>
+              </>}
               <button
                 type="button"
                 className={`np-ib np-loop ${loopStage ? 'pill' : ''} ${loopStage === 1 ? 'half' : ''} ${loopStage === 2 ? 'lit' : ''}`}
@@ -995,8 +998,9 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
       </div>
 
       {showDetails && (<>
-      {/* Voices: segmented control; per-voice volume appears under each voice in individual mode */}
-      <div className="w-full grid grid-cols-4 gap-1 p-1 rounded-2xl bg-slate-100/80 border border-slate-200/70">
+      {/* Voices: segmented control; per-voice volume appears under each voice in individual mode.
+          A one-track recording (a song from the archive) has nothing to switch: no control. */}
+      {voiceAvailable.some(Boolean) && <div className="w-full grid grid-cols-4 gap-1 p-1 rounded-2xl bg-slate-100/80 border border-slate-200/70">
         {[0, 1, 2].map(i => {
           const isOn = !isAllVoicesActive && voiceActive[i];
           return (
@@ -1055,7 +1059,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
         >
           სამივე
         </button>
-      </div>
+      </div>}
 
       {/* Speed & pitch steppers */}
       <div className="w-full flex flex-wrap items-center gap-2">

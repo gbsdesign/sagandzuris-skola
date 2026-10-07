@@ -37,7 +37,7 @@ export const GlobalSearch: React.FC = () => {
       const k = (e.key === 'k' || e.key === 'K' || e.key === 'ქ') && (e.ctrlKey || e.metaKey);
       if (!k && (e.key !== '/' || typing || e.ctrlKey || e.metaKey || e.altKey)) return;
       const st = window.history.state || {};
-      if (st.sgNotes || st.sgProg || st.sgLife) return;
+      if (st.sgNotes || st.sgProg || st.sgLife || st.sgSong) return;
       e.preventDefault();
       openSearch();
     };
