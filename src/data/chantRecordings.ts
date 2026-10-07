@@ -5,6 +5,7 @@
 // versions the book itself credits to "ერქომაიშვილი". The notes page lists them next to the school's own recording.
 import { AUDIO_PROXY, type ChantMediaItem } from './chantMediaRegistry';
 import { recordingsAreHidden } from './runtimeRecordings';
+import { ALL_CHANTS } from './gelatiBookChants';
 
 export interface ChantRecording {
   id: string;  // Drive file id
@@ -81,3 +82,143 @@ export const chantRecordingMedia = (r: ChantRecording, title: string): ChantMedi
   availableVoices: { voice1: false, voice2: false, voice3: false, all: true },
   notes: [],
 });
+
+// Recordings whose school is known but no book version of it fits — the user's rule (2026-10-07): Gurian,
+// the Erkomaishvilis, „11 მარგალიტი“ and F. Koridze are the Shemokmedi school, "გელათური" the Gelati school.
+// Each becomes a recording-only version (no notes) in that school's row of the chant: [chant, school, hymn, performer, Drive file]
+const RECORDING_VERSIONS: [string, 'შ.ს.' | 'გ.ს.', string, string, string][] = [
+  ['zt-1', 'შ.ს.', 'აღდგომასა შენსა', 'არტემ ერქომაიშვილი', '1XL54MtNm5nN9ByidnFGA1OLJSk7U_OnE'],
+  ['zt-6', 'შ.ს.', 'აღდგომის ანტიფონები', 'არტემ ერქომაიშვილი', '1Ml-tl-HGb0vjLAbH57duShD2T240a_2h'],
+  ['zt-3', 'შ.ს.', 'აღდგომის IX ძლისპირის ჩასართავი', 'არტემ ერქომაიშვილი', '1kOJOMk5iZjM3AqpBPgZzp2s_1vX1ZY33'],
+  ['zt-3', 'შ.ს.', 'აღდგომის IX ძლისპირი', 'არტემ ერქომაიშვილი', '1wUa6uIQZhL4nm8x50Ceb4-KKABDf9rT8'],
+  ['zt-2', 'შ.ს.', 'აღდგომისა დღე არს', 'არტემ ერქომაიშვილი', '1mB4hN6jSOQLupq7pXqI53neBledUpbnE'],
+  ['chant-1', 'შ.ს.', 'აქსიოს', 'არტემ ერქომაიშვილი', '1QrAShom7Kh5O6ColrknjYwTgfBmru1Sr'],
+  ['sd-26', 'შ.ს.', 'ამაღლდი დიდებით', 'არტემ ერქომაიშვილი', '1GXGnRkHVq9YA6nzwq21770PbjS42tPNL'],
+  ['sd-26', 'შ.ს.', 'ამაღლების IX ძლისპირის ჩასართავი', 'არტემ ერქომაიშვილი', '1JY0Wki-NrZf0wNUL35gKacY4Hwcz-mt_'],
+  ['zt-3', 'შ.ს.', 'ანგელოზი ღაღადებს (1)', 'არტემ ერქომაიშვილი', '1s2awd27x_2T-3bHDqcyFrDn_9npvC8at'],
+  ['zt-3', 'შ.ს.', 'ანგელოზი ღაღადებს (2)', 'არტემ ერქომაიშვილი', '1Sx7lFiaaCs99l682mteUINGx6BGoV-_f'],
+  ['mx-8', 'შ.ს.', 'აწ ძალნი ცათანი', 'არტემ ერქომაიშვილი', '1zMNGAvPD6WaKHfEJ87gZ4f0uVm3eUvi8'],
+  ['mw-19', 'შ.ს.', 'აწ განუტევე', 'არტემ ერქომაიშვილი', '11m-BjJDDenFjO8ymyr_sUidbHHBue2to'],
+  ['sd-14', 'შ.ს.', 'ბასილი დიდის ტროპარი', 'არტემ ერქომაიშვილი', '1pRGQkcK-QtlDFCu_RZukZo28NOO_3Zby'],
+  ['sd-22', 'შ.ს.', 'ბზობის IX ძლისპირის ჩასართავი', 'არტემ ერქომაიშვილი', '1pb18UapmRgTmob3Wq6ltngLXX1ykt7p2'],
+  ['zt-2', 'შ.ს.', 'დაღაცათუ ნებსით თვისით', 'არტემ ერქომაიშვილი', '1llvxxIj4tET3IINbvlmT8_VYg1-VFZ9t'],
+  ['sd-21', 'შ.ს.', 'დღეს ცხოვრებისა ჩვენისა', 'არტემ ერქომაიშვილი', '1eBGD_XADAkSDhiI73q4T53zLNzXrHDRn'],
+  ['zt-6', 'შ.ს.', 'ეკლესიასა შინა', 'არტემ ერქომაიშვილი', '1F3DxJ5N7nNTb3FOvMwR63kD0Kr7n1-6F'],
+  ['zt-3', 'შ.ს.', 'ესე არს წმიდა', 'არტემ ერქომაიშვილი', '1tTfzeAdWndGVDfUBIxlghR0OmKGqGoOj'],
+  ['zt-3', 'შ.ს.', 'განათლდი, განათლდი (1)', 'არტემ ერქომაიშვილი', '1u4-nuYe0KFnjlrofUGil9XDwz_Q7dhNa'],
+  ['zt-3', 'შ.ს.', 'განათლდი, განათლდი (2)', 'არტემ ერქომაიშვილი', '1YjHvzqAYJcr8sJEoQb7DlwCK5H4U-d7p'],
+  ['zt-2', 'შ.ს.', 'განვიწმიდნეთ საცნობელნი', 'არტემ ერქომაიშვილი', '1_mQ5I2jTkBlsggWCQ5my46yOC6Ye37xs'],
+  ['sd-19', 'შ.ს.', 'გიხაროდენ, მიმადლებულო', 'არტემ ერქომაიშვილი', '1Ry44Bl-Y0ZokdH3MkJy7Vtn0wK-JcQ3c'],
+  ['ck-3', 'შ.ს.', 'ღმერთი უფალი', 'არტემ ერქომაიშვილი', '1d-KVpWSqT5yzPvWEEgRjO_Sgp5NleYOI'],
+  ['zt-2', 'შ.ს.', 'გუშინ შენთანა', 'არტემ ერქომაიშვილი', '1_u0OpU87gC4jh8s2l6E0O78ziAatBIYo'],
+  ['chant-47', 'შ.ს.', 'ისპოლა', 'არტემ ერქომაიშვილი', '1cM1xdm1K996ZkNKNVcYXEg1QtZDfP-h3'],
+  ['sd-13', 'შ.ს.', 'ქალწული დღეს არსებად', 'არტემ ერქომაიშვილი', '1OoEVliWaifuSCnTwykCpx2-dl2UsugF2'],
+  ['sd-9', 'შ.ს.', 'კიდობანსა მას სჯულისასა', 'არტემ ერქომაიშვილი', '1R5spqTNNb2GEqYEFZlmHlEGMUBW_L7V-'],
+  ['zt-1', 'შ.ს.', 'ქრისტე აღდგა (1)', 'არტემ ერქომაიშვილი', '1eFHi_kWgw-piA_AxqiM6nStab5becdEC'],
+  ['zt-1', 'შ.ს.', 'ქრისტე აღდგა (2)', 'არტემ ერქომაიშვილი', '186-4hDiGIhOpEQ9A50GICcZZq_HAhOZO'],
+  ['zt-1', 'შ.ს.', 'ქრისტე აღდგა (3)', 'არტემ ერქომაიშვილი', '1kva_PpTbKhzMZ7q9o5MkNQlw4rH5Mn85'],
+  ['zt-1', 'შ.ს.', 'ქრისტე აღდგა (4)', 'არტემ ერქომაიშვილი', '1V4ufK05Hirc_ujNr_XoiwXr4JTqWJNOa'],
+  ['sd-13', 'შ.ს.', 'ქრისტეს შობასა ვადიდებდეთ', 'არტემ ერქომაიშვილი', '18eirtP2ZZkiHKLQOOZByKwqERP_D5j9f'],
+  ['chant-39', 'შ.ს.', 'კურთხეულ არს მომავალი', 'არტემ ერქომაიშვილი', '1V6SF7bTEagchq46CSKXS080DQ6tuAMN3'],
+  ['sd-13', 'შ.ს.', 'კვერთხი იესეს', 'არტემ ერქომაიშვილი', '1HM2YiDzjXQEwUFjX-JUyD6nasMoP5XEG'],
+  ['chant-35', 'შ.ს.', 'მამაო ჩუენო (1)', 'არტემ ერქომაიშვილი', '1pq2dF9OTQvQ_kGAvLvCbGNrr6F6CGjX9'],
+  ['chant-35', 'შ.ს.', 'მამაო ჩუენო (2)', 'არტემ ერქომაიშვილი', '1u5OMF8cUhI_cEYXNvorO93l2mQwFFPHP'],
+  ['sd-19', 'შ.ს.', 'მირქმის IX ძლისპირის ჩასართავი', 'არტემ ერქომაიშვილი', '1SZWdq6LSReJMDY-44IveQHx_awzg5zuG'],
+  ['zt-2', 'შ.ს.', 'მოვედით და ვსვათ', 'არტემ ერქომაიშვილი', '1NrFHfgH3rcIoPbiUN5mV4UVEtW5lNKng'],
+  ['mx-20', 'შ.ს.', 'შვენიერმან იოსებ', 'არტემ ერქომაიშვილი', '19TMD4X_2R7jIPcgKKdRk_dLuSH5KEU8r'],
+  ['sd-32', 'შ.ს.', 'მთასა ზედა', 'არტემ ერქომაიშვილი', '1RWddjWPT19-m-HFx4gGyy__mwFd-Ejx9'],
+  ['sd-15', 'შ.ს.', 'ნათლისღების ანტიფონები', 'არტემ ერქომაიშვილი', '1zLmUlnR4eWZ-JoweFGiPi0Vm_97pGs9M'],
+  ['sd-15', 'შ.ს.', 'ნათლისღების IX ძლისპირის ჩასართავი', 'არტემ ერქომაიშვილი', '1qjosY11KB68mERb3Vhsc4aCcGUrOYroZ'],
+  ['zt-1', 'შ.ს.', 'პასექი ბრწყინვალედ მშვენიერი', 'არტემ ერქომაიშვილი', '1CDqy1-yeIGZXu1r-2rqK8QJHGIUQiuM2'],
+  ['sd-32', 'შ.ს.', 'ფერისცვალების ანტიფონები', 'არტემ ერქომაიშვილი', '1Lk_nxK4NVZPrsYh6SJ0GIxiUWOmbrSMj'],
+  ['sd-32', 'შ.ს.', 'ფერისცვალების IX ძლისპირის ჩასართავი', 'არტემ ერქომაიშვილი', '1WIJlChhcsSPGMejUL2eCbvpgnZyKZrBy'],
+  ['mx-18', 'შ.ს.', 'რაჟამს დიდებულნი მოწაფენი', 'არტემ ერქომაიშვილი', '1TW6JGLGRjPbXL93xBHZwNlIE7_YstBMN'],
+  ['sd-15', 'შ.ს.', 'რაჟამს იორდანეს', 'არტემ ერქომაიშვილი', '1zlB3xnYD4a3TUjXGQU-cDudJDhY9g8va'],
+  ['mx-3', 'შ.ს.', 'რაჟამს მოხვიდე, ღმერთო', 'არტემ ერქომაიშვილი', '17kYj9mHjdK2HyIko5p6mlH-tWSPTtqqf'],
+  ['ck-4', 'შ.ს.', 'რაჟამს შთახედ', 'არტემ ერქომაიშვილი', '1avICMhaE_8sZVLwyGLCOTmqQu0BpWbS2'],
+  ['chant-12', 'შ.ს.', 'რაოდენთა ქრისტეს მიერ', 'არტემ ერქომაიშვილი', '1w-cg-aM_gCYgwO_IUp_xEDDAUSst9UiW'],
+  ['mx-5', 'შ.ს.', 'რომელმან მეცხრესა ჟამსა', 'არტემ ერქომაიშვილი', '1EP_DUb4wWYo31rqoSEwI0wMNjaV0LBDt'],
+  ['zt-2', 'შ.ს.', 'საღმრთოსა სახმილავსა', 'არტემ ერქომაიშვილი', '1hpMg9TIQAP8_XAfQU9FobqndU_eUCAMh'],
+  ['sd-13', 'შ.ს.', 'საიდუმლო უცხო და დიდებული', 'არტემ ერქომაიშვილი', '1ZY01yiYA8vIh9GWFKktFgChw_JIQHIl_'],
+  ['sd-13', 'შ.ს.', 'საშოით მთიებისა', 'არტემ ერქომაიშვილი', '1A5phPUswgVNYvqr8AHs-Mi3XLd8D7jVv'],
+  ['chant-31', 'შ.ს.', 'შენდამი იხარებს', 'არტემ ერქომაიშვილი', '1PW0glq51BHj307sb_AQW6AKqVYjoUGjq'],
+  ['sd-26', 'შ.ს.', 'ჰშევ ქალწულო', 'არტემ ერქომაიშვილი', '1PoF9rWNeELDgFl__cUz1EyeKKPJqJ12c'],
+  ['sd-32', 'შ.ს.', 'შობა შენი უხრწნელ არს', 'არტემ ერქომაიშვილი', '1SfBA2FxTXx3xKiArqQe-SM8zn4loa-Zm'],
+  ['sd-13', 'შ.ს.', 'შობის IX ძლისპირის ჩასართავი', 'არტემ ერქომაიშვილი', '1Ud_x8nMl_mHoW08W26wmZzIRKGEwiPCI'],
+  ['sd-16', 'შ.ს.', 'სიტყვისა ღვთისა', 'არტემ ერქომაიშვილი', '1yaAd7_dgjP9tWMIz-wFoBfz3wSX71P2f'],
+  ['sd-8', 'შ.ს.', 'ტყვეთა განმათავისუფლებელო', 'არტემ ერქომაიშვილი', '1ayqJv0j0fd5ahbZDorPut-Yy-NaVJm4o'],
+  ['chant-2', 'შ.ს.', 'ტონ დესპოტინ', 'არტემ ერქომაიშვილი', '1Wk42bGi0DKYcnxZS1bkxZ_crJzGVMYLH'],
+  ['mx-8', 'შ.ს.', 'წარემართენ ლოცვა ჩემი', 'არტემ ერქომაიშვილი', '1Ru9dOa0dGAdT1IaKBvWh8GKAkQXdvNkC'],
+  ['sd-19', 'შ.ს.', 'წერილთა მიერ სჯულისათა', 'არტემ ერქომაიშვილი', '1-hc-BWHMatGRcDAmg_CzipktZ6AW-C35'],
+  ['zt-2', 'შ.ს.', 'ცისკარსა მსთვად', 'არტემ ერქომაიშვილი', '1gnrHXzwAqOQf37yey-aZNaBxrWaiYEKk'],
+  ['mw-7', 'შ.ს.', 'უფალო, ღაღად-ვყავ', 'არტემ ერქომაიშვილი', '1mgEBw80SzH3A7D5k3rj8BdSL43xieRkt'],
+  ['sd-32', 'შ.ს.', 'უფალო, მოგვივლინე', 'არტემ ერქომაიშვილი', '1jKTUNeLfjYG6fC2-sfsdQnSNmm6UInmR'],
+  ['mx-5', 'შ.ს.', 'უფალო, რომელმან', 'არტემ ერქომაიშვილი', '1dvyNQQ1x0--NR61B5yzuODi6IH8n2qhE'],
+  ['sd-15', 'შ.ს.', 'ვერ-შემძლებელ ვართ', 'არტემ ერქომაიშვილი', '1PF6LGoi9noU4PKLPRA1U7TfvUKPmpk8l'],
+  ['sd-7', 'შ.ს.', 'ზეცისა მხედრობათა', 'არტემ ერქომაიშვილი', '1Y1Juwgq68JJldiln-69OjcdIxvLY4n9L'],
+  ['zt-3', 'შ.ს.', 'ანგელოზი ღაღადებს', 'ანჩისხატის გუნდი', '1EK1PybadWG92ISHvdTJBTxQ4-zXmaDcE'],
+  ['mw-19', 'შ.ს.', 'აწ განუტევე', 'ანჩისხატის გუნდი', '1OpbjMjfKMhIPDsfhq0OHtfMnQCYNbW14'],
+  ['zt-2', 'შ.ს.', 'დაღაცათუ ნებსით თვისით', 'ანჩისხატის გუნდი', '1cpoitWQfLOIqYMvTKi3ikC6RX72BnuBT'],
+  ['zt-3', 'შ.ს.', 'განათლდი, განათლდი', 'ანჩისხატის გუნდი', '1tR_unx32KDAdi_b18EKWF4QWm_Wm0-ZO'],
+  ['ck-3', 'შ.ს.', 'ღმერთი უფალი', 'ანჩისხატის გუნდი', '1x2NoOwMw2oKPdi5NNwAsDerEAoSuGjJN'],
+  ['sd-13', 'შ.ს.', 'ქალწული დღეს არსებად', 'ანჩისხატის გუნდი', '1MYotbneEVIXtVjm-ErNdY9qEH2ofVTHz'],
+  ['zt-1', 'შ.ს.', 'ქრისტე აღდგა', 'ანჩისხატის გუნდი', '1ZzNOUwGabYYecgtqFBsnSDIxSuaIq1S2'],
+  ['sd-13', 'შ.ს.', 'ქრისტეს შობასა ვადიდებდეთ', 'ანჩისხატის გუნდი', '19J2ItuyWFanLbbrUp9YD-TDGPT-7GsmA'],
+  ['sd-13', 'შ.ს.', 'კვერთხი იესეს', 'ანჩისხატის გუნდი', '11ohBdEaH3gVTKYimA1fCCwC4c_5pF-CW'],
+  ['chant-35', 'შ.ს.', 'მამაო ჩუენო', 'ანჩისხატის გუნდი', '1Ts8LiCe9IIAMdT3SIFXEgQfUYLqR7Hsv'],
+  ['zt-2', 'შ.ს.', 'მოვედით და ვსვათ', 'ანჩისხატის გუნდი', '1qjR_EZhXLgYHsF6FmXa822csUx7yAdcD'],
+  ['sd-32', 'შ.ს.', 'მთასა ზედა', 'ანჩისხატის გუნდი', '1kGjAB4sb-UeIl5bj2506nusskSWwIJ0H'],
+  ['sd-15', 'შ.ს.', 'რაჟამს იორდანეს', 'ანჩისხატის გუნდი', '1fgVqWi1NOSIYmwDWh-qdkHj9xT1NmfDg'],
+  ['ck-4', 'შ.ს.', 'რაჟამს შთახედ საფლავად', 'ანჩისხატის გუნდი', '1zdGl6kAF5SQoeVRK2Rnu8vIBOkE4QGUJ'],
+  ['sd-32', 'შ.ს.', 'შობა შენი', 'ანჩისხატის გუნდი', '19omsldCe65_edzdUVY-KOPPvyWc3ZQzp'],
+  ['mx-15', 'შ.ს.', 'სიყვარულმან მოგიყვანა (1)', 'ანჩისხატის გუნდი', '1T-wXUMfD-1M9KOHrDhKfevVgcykTPeSX'],
+  ['mx-15', 'შ.ს.', 'სიყვარულმან მოგიყვანა (2)', 'ანჩისხატის გუნდი', '1rx9SIPWA2eyOZuzI5Kjp5R0N16HEwuAg'],
+  ['sd-8', 'შ.ს.', 'ტყვეთა განმათავისუფლებელო', 'ანჩისხატის გუნდი', '1oD9niWik_E1a8m0BxMstB8X9kQ9DDJuF'],
+  ['zt-2', 'შ.ს.', 'ცისკარსა მსთვად', 'ანჩისხატის გუნდი', '11yG9wJtvlSjHUqtX_Ryj6DKTMnfDoxTb'],
+  ['mw-7', 'შ.ს.', 'უფალო, ღაღად-ვყავ', 'ანჩისხატის გუნდი', '1EBFxqxXc2uiHPTq620LG0AojeHzl7gBl'],
+  ['sd-32', 'შ.ს.', 'უფალო, მოგვივლინე', 'ანჩისხატის გუნდი', '1HO73iEnQ3itWgE4kJXUUdOi998Xm_bSE'],
+  ['mx-5', 'შ.ს.', 'უფალო, რომელმან (1)', 'ანჩისხატის გუნდი', '1HTElLONSgn7CNIMwge6aEonild7w3Lwl'],
+  ['mx-5', 'შ.ს.', 'უფალო, რომელმან (2)', 'ანჩისხატის გუნდი', '1asIdhJw8e3miM21ReD4ntVOt7IJaUUKg'],
+  ['sd-7', 'შ.ს.', 'ზეცისა მხედრობათა', 'ანჩისხატის გუნდი', '1svgsAPkl0RJGf4_Zp41r-an0r2CTCv-d'],
+  ['zt-2', 'შ.ს.', 'აღდგომისა დღე არს', '„11 მარგალიტი“', '1j9nB14bMICyNIsMhMNgDqi6J4Af2tUWZ'],
+  ['zt-3', 'შ.ს.', 'განათლდი, განათლდი', '„11 მარგალიტი“', '1Q3ECcSGeM-0Ivnfb5CFIXHCfTR2vbNwQ'],
+  ['sd-13', 'შ.ს.', 'საიდუმლო უცხო', '„11 მარგალიტი“', '1VjUcVFV3uNHV3T52qUcRNjkA7jx0uMTI'],
+  ['mx-15', 'შ.ს.', 'სიყვარულმან მოგიყვანა', '„11 მარგალიტი“', '1LGxRPwbaYhgFhIuT5tvhYxIFK9SFytir'],
+  ['mx-15', 'შ.ს.', 'სიყვარულმან მოგიყვანა', 'არტემ ერქომაიშვილი', '1rzM_zDWTFEJcjZon4jLL0dgHfOOBcbrr'],
+  ['sd-32', 'შ.ს.', 'შობა შენი', 'გიგო ერქომაიშვილი', '1_2rTYCJo03Fl0hn22UVEd6KK2GJneWzM'],
+  ['sd-32', 'შ.ს.', 'შობა შენი უხრწნელ არს', 'ანსამბლი „რუსთავი“', '1nsp47CYRqz4N6xOsHVcJ76k5wGhy7Bfz'],
+  ['sd-22', 'შ.ს.', 'დღეს საღმრთომან მადლმან', 'ბორჯომის კონფერენცია', '1jGc22ZvCtpg3uoxwxDVS_dtOVzTOFsKc'],
+  ['sd-28', 'შ.ს.', 'მეუფეო ზეცათაო', 'ბორჯომის კონფერენცია', '18ZVyzozPrnuLhSgZF7XEbnF0lf7kUhC1'],
+  ['zt-1', 'შ.ს.', 'აღდგომასა შენსა', '„ქართული ხალხური მუსიკა“ (გურია)', '1nRtFZipyAW5TE9x4hxhlbHJNt5sMRUm0'],
+  ['sd-28', 'შ.ს.', 'მეუფეო ზეცათაო', '„ქართული ხალხური მუსიკა“ (გურია)', '1bzWGLdXAp3Qj8Zh1yqVL0JY_x6YWGXNP'],
+  ['zt-2', 'შ.ს.', 'მოვედით და ვსვათ', '„ქართული ხალხური მუსიკა“ (გურია)', '14gqCv_XgEpwUPvTL9oUv53mktKMnv6cB'],
+  ['mw-20', 'გ.ს.', 'ღმრთისმშობელო ქალწულო', 'ანსამბლი „შავნაბადა“', '1axduu1owiFXlnZUIeo6tRBalxoV7tT3Z'],
+  ['sd-13', 'შ.ს.', 'შობის შესვლადი (ფ. ქორიძე)', 'ანსამბლი „შავნაბადა“', '1XxNMUm8O7wtfIqDsib8mNHWR74oRbBoZ'],
+  ['sd-8', 'შ.ს.', 'წმ. გიორგის ტროპარი', 'ანსამბლი „შავნაბადა“', '14npA6JUnEMJunxckTZjPOCdG0IFkLFiD'],
+  ['mx-5', 'შ.ს.', 'უფალო, რომელმან', 'ანსამბლი „შავნაბადა“', '113RzySfMdXcFoDzilKMMRJ4MQ1Hb7RIA'],
+];
+
+const SCHOOL_LABELS = { 'შ.ს.': 'შემოქმედის სკოლა', 'გ.ს.': 'გელათის სკოლა' };
+const recordingVersionIds = new Set<string>();
+// added to the chants once, when this module loads: a feast's (or Lent's, Pascha's) button is named after the hymn
+// with the performer under it; a single chant's button after the performer
+RECORDING_VERSIONS.forEach(([chantId, school, hymn, who, file], i) => {
+  const id = `rv-${i + 1}`;
+  const chant = ALL_CHANTS.find(c => c.id === chantId);
+  if (!chant || chant.variants.some(v => v.id === id)) return;
+  const occasion = /^(sd|mx|zt)-/.test(chantId);
+  chant.variants.push({
+    id,
+    code: `${school} ჩ${i + 1}`,
+    label: SCHOOL_LABELS[school],
+    chantName: chant.title,
+    fullTitle: `${chant.title.replace(/[;\s]+$/, '')} — ${hymn}`,
+    version: occasion ? hymn : who,
+    source: occasion ? who : 'ჩანაწერი',
+  });
+  CHANT_RECORDINGS[id] = [{ id: file, who }];
+  recordingVersionIds.add(id);
+});
+
+/** A version that is only a recording (no notes): listed with its performer, plays in the list itself */
+export const isRecordingVersion = (variantId: string) => recordingVersionIds.has(variantId);

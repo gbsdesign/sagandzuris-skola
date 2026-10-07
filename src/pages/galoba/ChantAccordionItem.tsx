@@ -5,6 +5,8 @@ import { useNotes } from '../../context/NotesContext';
 import { canOpenNotes } from '../../data/chantLookup';
 import { isOffline, onOfflineChange } from '../../utils/offlineNotes';
 import { triggerHaptic } from '../../utils/haptics';
+import { chantRecordingMedia, chantRecordings, isRecordingVersion } from '../../data/chantRecordings';
+import { ChantPlayer } from '../../components/ChantPlayer';
 
 // warm paper palette of the notes pages: cream ground, white cards with a sand line
 const SCHOOL_STYLES: Record<string, { name: string; text: string }> = {
@@ -42,6 +44,8 @@ const VariantChip: React.FC<{
   onToggleSelect: (chant: ChantItem, v: ChantVariant) => void;
 }> = ({ chant, variant, label, sublabel, isOpen, isSelected, hasRecording, onOpen, onToggleSelect }) => {
   const hasNotes = canOpenNotes(chant, variant);
+  // a version that is only another choir's recording: a normal button, it plays below the buttons
+  const playable = hasNotes || (isRecordingVersion(variant.id) && hasRecording);
   const { openNotes, liturgy } = useNotes();
   const regent = liturgy.role === 'teacher';
   const progIdx = regent ? (liturgy.program?.items.indexOf(variant.id) ?? -1) : -1;
@@ -73,11 +77,11 @@ const VariantChip: React.FC<{
         className={`w-full ${sublabel ? 'min-h-12 py-1.5' : 'h-11'} px-1.5 rounded-[10px] border text-[11.5px] sm:text-xs font-bold flex items-center justify-center gap-1 text-center leading-tight transition-all duration-150 cursor-pointer active:scale-[0.97] ${
           isOpen
             ? 'bg-[#fcf1df] text-[#2a2017] border-[#e8b866] border-dashed'
-            : hasNotes
+            : playable
             ? 'bg-white text-[#2a2017] border-[#e2d3bb] shadow-[0_1px_0_rgba(133,80,44,0.06)] hover:border-[#d9a55a] hover:shadow-[0_0_0_3px_rgba(180,98,14,0.12)]'
             : 'bg-[#faf6ef] text-[#b8aa97] border-[#e4d8c4] border-dashed hover:text-[#8c7c6b]'
         }`}
-        title={hasNotes ? (hasRecording ? 'ნოტები და ჩანაწერი' : 'ნოტები') : 'ნოტები ჯერ არ არის'}
+        title={hasNotes ? (hasRecording ? 'ნოტები და ჩანაწერი' : 'ნოტები') : playable ? 'ჩანაწერი (ნოტები არ არის)' : 'ნოტები ჯერ არ არის'}
       >
         {label === 'გამშვენებული' ? (
           <span className="inline-flex items-center gap-1">
@@ -153,10 +157,12 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
     setOpenVariantId(prev => (prev === id ? null : id));
   }, []);
   const openVariant = chant?.variants?.find(v => v.id === openVariantId);
+  const openRecs = openVariant ? chantRecordings(openVariant.id) : [];
+  const variants = (chant?.variants ?? []).filter(v => !isRecordingVersion(v.id) || chantRecordings(v.id).length > 0);
   // მწუხრი / ცისკარი: every variant is a book version; one school -> a plain grid, Gelati + Kartli-Kakheti -> school rows
   const bookSchool = schoolOf(chant?.variants?.[0]?.code || '');
   const isBookChant = Boolean(
-    chant?.variants?.length && chant.variants.every(v => v.version !== undefined && schoolOf(v.code) === bookSchool)
+    variants.length && variants.every(v => v.version !== undefined && schoolOf(v.code) === bookSchool)
   );
 
   // versions kept on the phone ("ჩამოწერა")
@@ -187,7 +193,7 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
       chant={chant}
       variant={variant}
       label={label}
-      sublabel={sublabel}
+      sublabel={sublabel ?? (isRecordingVersion(variant.id) ? variant.source : undefined)}
       isOpen={openVariantId === variant.id}
       isSelected={Boolean(selectedChantVariants?.[variant.id])}
       hasRecording={recorded.has(`${chant.id}|${variant.code}`)}
@@ -280,22 +286,25 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
           {isBookChant ? (
             /* Book chants of one school: one button per version */
             <div className="rounded-xl bg-white border border-[#e4d8c4] px-3 pt-3.5 pb-3.5 grid grid-cols-2 sm:grid-cols-3 gap-x-2.5 gap-y-3">
-              {chant.variants.map(variant => chip(variant, variantName(variant) || variant.code, variantSublabel(variant)))}
+              {variants.map(variant => chip(variant, variantName(variant) || variant.code, variantSublabel(variant)))}
             </div>
           ) : (
             /* one block per school, its name above its buttons */
             <div className="rounded-xl bg-white border border-[#e4d8c4] divide-y-2 divide-[#d6c8b1]">
-              {groupBySchool(chant.variants).map(({ school, plain, ornate, versions }) => (
+              {groupBySchool(variants).map(({ school, plain, ornate, versions }) => (
                 <div key={school} className="px-3 pt-2.5 pb-3.5 flex flex-col gap-2.5">
                   <span className={`text-[11.5px] sm:text-[12.5px] font-extrabold leading-tight ${SCHOOL_STYLES[school]?.text ?? 'text-[#574739]'}`}>
                     {SCHOOL_STYLES[school]?.name ?? school}
-                    {(versions[0]?.book === 'karb' || versions[0]?.book === 'pat') && (
+                    {/* the book's name heads the row only when every button is from it (not with other choirs' recordings) */}
+                    {(versions[0]?.book === 'karb' || versions[0]?.book === 'pat') && versions.every(v => v.book === versions[0].book) && (
                       <span className="font-bold opacity-70"> · {versions[0].book === 'karb' ? 'კარბელაანთ კილო' : 'დ. პატარავა'}</span>
                     )}
                   </span>
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-2.5 gap-y-3">
                     {versions.length > 0
-                      ? versions.map(variant => chip(variant, variantName(variant) || variant.code, variantSublabel(variant)))
+                      ? versions.map(variant => chip(variant, variantName(variant) || variant.code,
+                          // in a row with recordings the book's name moves onto its own buttons
+                          [variant.book === 'pat' && versions.some(v => v.book !== 'pat') && 'დ. პატარავა', variantSublabel(variant)].filter(Boolean).join(' · ') || undefined))
                       : [plain, ornate].map((variant, i) => (variant ? chip(variant, i === 0 ? 'სადა' : 'გამშვენებული') : null))}
                   </div>
                 </div>
@@ -303,7 +312,33 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
             </div>
           )}
 
-          {openVariant && (
+          {openVariant && openRecs.length > 0 && (
+            <div className="rounded-xl border border-[#efd6a6] bg-white px-2 pb-2.5 pt-2 animate-[galoba-unfold_0.25s_ease_both]">
+              <div className="flex items-center justify-between gap-2 px-2 pt-0.5 pb-1">
+                <span className="min-w-0 text-[12.5px] font-extrabold text-[#7a2028] break-words">
+                  {[openVariant.source !== 'ჩანაწერი' && openVariant.version, openRecs[0].who].filter(Boolean).join(' · ')}
+                  <span className="font-semibold text-[#a0907c]"> · ნოტები აპში ჯერ არ არის</span>
+                </span>
+                <button
+                  type="button"
+                  onClick={() => handleOpenToggle(openVariant.id)}
+                  className="w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-[#b8aa97] hover:bg-[#f1e9dc] hover:text-[#574739] transition-colors cursor-pointer"
+                  aria-label="დახურვა"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <ChantPlayer
+                key={openVariant.id}
+                media={chantRecordingMedia(openRecs[0], displayTitle)}
+                title={displayTitle}
+                subtitle={openRecs[0].who}
+                hideNotesButton
+              />
+            </div>
+          )}
+
+          {openVariant && openRecs.length === 0 && (
             <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-white border border-dashed border-[#d6c8b1] animate-[galoba-unfold_0.25s_ease_both]">
               <span className="text-xs font-semibold text-[#8c7c6b]">
                 {SCHOOL_STYLES[schoolOf(openVariant.code)]?.name ?? openVariant.code} · ამ ვერსიის ნოტები და ჩანაწერი ჯერ არ არის
