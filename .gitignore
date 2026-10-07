@@ -11,3 +11,6 @@ __pycache__/
 .wrangler/
 .claude/settings.local.json
 desktop.ini
+
+# Playwright test screenshots
+.playwright-mcp/

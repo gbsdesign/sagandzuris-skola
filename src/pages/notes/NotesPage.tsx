@@ -12,7 +12,7 @@ import { useNotes, shareNotesUrl, NotesOrigin } from '../../context/NotesContext
 import { useAuth, useChants } from '../../context';
 import { MAX_SHORTCUTS, saveShortcuts, useMyShortcuts } from '../../utils/shortcuts';
 import { findVersion, neighbourVersion, SCHOOL_NAMES, BOOK_NAMES, SERVICE_LISTS, schoolOf } from '../../data/chantLookup';
-import { variantName } from '../../data/tsirvaChants';
+import { UNNUMBERED_BOOKS, variantName } from '../../data/tsirvaChants';
 import { getChantMedia, type ChantMediaItem } from '../../data/chantMediaRegistry';
 import { chantRecordingMedia, chantRecordings } from '../../data/chantRecordings';
 import { countPlay } from '../../utils/playStats';
