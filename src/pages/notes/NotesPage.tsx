@@ -700,9 +700,11 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   // ---------- render
   const lastPage = sheets.length ? sheets[sheets.length - 1].page : undefined;
   const nums = variant.bookNums ?? [];
-  const numLabel = nums.length > 1 ? `№${nums[0]}–${nums[nums.length - 1]}` : nums.length ? `№${nums[0]}` : '';
+  const numLabel = UNNUMBERED_BOOKS.has(variant.book ?? '') ? ''
+    : nums.length > 1 ? `№${nums[0]}–${nums[nums.length - 1]}` : nums.length ? `№${nums[0]}` : '';
+  const pageLabel = variant.page ? `გვ. ${variant.page}${lastPage && lastPage !== variant.page ? `–${lastPage}` : ''}` : '';
   const endnote = score
-    ? `${BOOK_NAMES[variant.book ?? 'book'] ?? ''} · ${numLabel}${variant.page ? `, გვ. ${variant.page}${lastPage && lastPage !== variant.page ? `–${lastPage}` : ''}` : ''}`
+    ? `${BOOK_NAMES[variant.book ?? 'book'] ?? ''} · ${[numLabel, pageLabel].filter(Boolean).join(', ')}`
     : '';
   const loopTitle = loop.stage === 0 ? 'გამეორება: მონიშნე დასაწყისი (A)' : loop.stage === 1 ? 'მონიშნე დასასრული (B)' : 'გამეორების გამორთვა';
   const f = folded[orient];

@@ -52,7 +52,7 @@ export interface SearchItem {
 
 export interface SearchWho {
   signedIn: boolean;
-  owner: boolean; // admins see the owner's private songs too
+  owner: boolean; // only the owner sees the owner's private songs
   teacher: boolean;
   hasClass: boolean;
 }

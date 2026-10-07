@@ -91,13 +91,13 @@ interface SearchResultsProps {
 /** Hits in the other services, the folk songs and the prayer book. */
 export const SearchResults: React.FC<SearchResultsProps> = ({ query, skipService, keepChant, onOpenChant, emptyAbove = true }) => {
   const { openPrayer, navigateTo } = useNavigation();
-  const { isAdmin, isSuperAdmin } = useAuth();
+  const { isOwner } = useAuth();
   const { page } = useAccess();
   const songsOpen = page('simghera') === 'open';
   const prayersOpen = page('prayer') === 'open';
 
   const chants = useMemo(() => searchChants(query, skipService).filter(h => !keepChant || keepChant(h.chant)), [query, skipService, keepChant]);
-  const songs = useMemo(() => (songsOpen ? searchSongs(query, isAdmin || isSuperAdmin) : []), [query, songsOpen, isAdmin, isSuperAdmin]);
+  const songs = useMemo(() => (songsOpen ? searchSongs(query, isOwner) : []), [query, songsOpen, isOwner]);
   const prayers = useMemo(() => (prayersOpen ? searchPrayers(query) : []), [query, prayersOpen]);
 
   if (!chants.length && !songs.length && !prayers.length) {

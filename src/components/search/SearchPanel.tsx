@@ -105,7 +105,7 @@ const GroupHead: React.FC<{ title: string; count?: number; right?: React.ReactNo
 );
 
 export const SearchPanel: React.FC<{ onClose: () => void; onChoose: (action: () => void) => void }> = ({ onClose, onChoose }) => {
-  const { user, isAdmin, isSuperAdmin, isTeacher } = useAuth();
+  const { user, isOwner, isTeacher } = useAuth();
   const { navigateTo, setSelectedService, setExpandedChantId, setChantSearch } = useNavigation();
   const access = useAccess();
   const classes = useMyClasses(user?.uid);
@@ -118,8 +118,8 @@ export const SearchPanel: React.FC<{ onClose: () => void; onChoose: (action: () 
   const inputRef = useRef<HTMLInputElement>(null);
 
   const index = useMemo(
-    () => buildSearchIndex({ signedIn: !!user, owner: isAdmin || isSuperAdmin, teacher: isTeacher, hasClass: classes.length > 0 }),
-    [user, isAdmin, isSuperAdmin, isTeacher, classes.length]
+    () => buildSearchIndex({ signedIn: !!user, owner: isOwner, teacher: isTeacher, hasClass: classes.length > 0 }),
+    [user, isOwner, isTeacher, classes.length]
   );
   // hidden sections (the admin's switches, the kids' mode) and unbuilt ones are not offered at all
   const shown = (it: SearchItem) => !it.section || (access.section(it.section) !== 'hidden' && access.section(it.section) !== 'soon');
