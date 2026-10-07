@@ -172,9 +172,10 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
   const bookVersions = chant?.variants?.filter(v => v.version !== undefined) ?? [];
   const firstPage = bookVersions.find(v => v.page)?.page;
   const recordingCount = chant?.variants?.filter(v => recorded.has(`${chant.id}|${v.code}`)).length ?? 0;
-  // a feast (სადღესასწაულო) or an occasion of მარხვანი / ზატიკი lists its own chants, not versions of one chant
+  // a feast (სადღესასწაულო), an occasion of მარხვანი / ზატიკი, a group of მომიხსენენი, a tone of ძლისპირები or a
+  // canon of კატაბასიები lists its own chants, not versions of one chant
   const isFeast = chant?.id?.startsWith('sd-');
-  const isOccasion = isFeast || /^(mx|zt)-/.test(chant?.id ?? '');
+  const isOccasion = isFeast || /^(mx|zt|mm|dz|kt)-/.test(chant?.id ?? '');
   const meta = [
     firstPage && `გვ. ${firstPage}`,
     bookVersions.length > 1 && `${bookVersions.length} ${isOccasion ? 'საგალობელი' : 'ვერსია'}`,
@@ -272,6 +273,7 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
           {isOccasion && (
             <p className="px-1 text-[11.5px] font-semibold text-[#8c7c6b]">
               {isFeast ? 'დღესასწაულის საგალობლები' : 'საგალობლები'}
+              {chant.model && <span className="font-medium"> · „{chant.model}“</span>}
             </p>
           )}
 

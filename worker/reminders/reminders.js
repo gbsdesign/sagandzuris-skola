@@ -16,7 +16,12 @@
 // move the subscriptions into D1), vars VAPID_PUBLIC_KEY, FIREBASE_PROJECT_ID, FIRESTORE_DB,
 // secrets VAPID_PRIVATE_JWK and FIREBASE_SA (the service account's JSON key, for reading Firestore).
 
-const MAIN_ORIGINS = ['https://sagandzuris-skola.pages.dev', 'http://localhost:5173'];
+const MAIN_ORIGINS = [
+  'https://sagandzuris-skola.pages.dev',
+  'https://sagandzureli.ge',
+  'https://www.sagandzureli.ge',
+  'http://localhost:5173',
+];
 const PREVIEW_ORIGIN = /^https:\/\/[a-z0-9-]+\.sagandzuris-skola\.pages\.dev$/;
 const allowedOrigin = (o) => MAIN_ORIGINS.includes(o) || PREVIEW_ORIGIN.test(o);
 const HOURS = { 'hour-6': 6, 'hour-9': 9, 'hour-12': 12, 'hour-15': 15, 'hour-18': 18, 'hour-21': 21, 'hour-24': 0 };

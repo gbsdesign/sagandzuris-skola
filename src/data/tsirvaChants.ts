@@ -20,11 +20,12 @@ export interface ChantVariant {
                        // 'karb' = East Georgian school, Karbelashvili mode: feasts, Lent and Pascha (vol. VII),
                        // 'pat' = Shemokmedi school as handed down by Dimitri Patarava (2003),
                        // 'v9' = Gelati liturgy in the authentic mode, plain chants for children, Sunday troparia (vol. IX),
-                       // 'momix' = troparia on the Beatitudes, Hymnographical collection I (Kereselidze's manuscripts)
+                       // 'momix' = troparia on the Beatitudes, Hymnographical collection I (Kereselidze's manuscripts),
+                       // 'v8' = vol. VIII, irmoi of the eight tones, katavasias and Resurrection kontakia
 }
 
 // Books that print no chant numbers: their file numbers are not shown
-export const UNNUMBERED_BOOKS = new Set(['momix']);
+export const UNNUMBERED_BOOKS = new Set(['momix', 'v8']);
 
 // Name of a book version everywhere in the app: book number + version, e.g. "145 ხუნდაძე"
 export const variantName = (v: Pick<ChantVariant, 'bookNums' | 'version' | 'book'>) =>

@@ -19,6 +19,8 @@ const BOOK_LABELS: Record<string, [vol: string, name: string]> = {
   karb: ['VII ტომი', 'კარბელაანთ კილო'],
   v9: ['IX ტომი', 'გელათის სკოლა'],
   pat: ['პატარავა', 'შემოქმედის სკოლა'],
+  momix: ['ჰიმნოგრ. კრებული I', 'მომიხსენენი'],
+  v8: ['VIII ტომი', 'ძლისპირები, კატაბასიები'],
 };
 
 const useExportState = () => {

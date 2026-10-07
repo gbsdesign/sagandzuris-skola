@@ -4,8 +4,11 @@ import { TSIRVA_CHANTS, ChantItem, ChantVariant } from './tsirvaChants';
 import { MWUKHRI_CHANTS, CISKARI_CHANTS } from './gelatiBookChants';
 import { SADGHESASWAULO_CHANTS } from './feastBookChants';
 import { MARXVANI_CHANTS, ZATIKI_CHANTS } from './triodionBookChants';
+import { MOMIXSENENI_CHANTS } from './beatitudesBookChants';
+import { DZLISPIREBI_CHANTS, KATABASIEBI_CHANTS } from './irmosBookChants';
 
-export type ServiceName = 'წირვა' | 'მწუხრი' | 'ცისკარი' | 'სადღესასწაულო' | 'მარხვანი' | 'ზატიკი';
+export type ServiceName = 'წირვა' | 'მწუხრი' | 'ცისკარი' | 'სადღესასწაულო' | 'მარხვანი' | 'ზატიკი' | 'მომიხსენენი'
+  | 'ძლისპირები' | 'კატაბასიები';
 
 export const SERVICE_LISTS: [ServiceName, ChantItem[]][] = [
   ['წირვა', TSIRVA_CHANTS],
@@ -14,6 +17,9 @@ export const SERVICE_LISTS: [ServiceName, ChantItem[]][] = [
   ['სადღესასწაულო', SADGHESASWAULO_CHANTS],
   ['მარხვანი', MARXVANI_CHANTS],
   ['ზატიკი', ZATIKI_CHANTS],
+  ['მომიხსენენი', MOMIXSENENI_CHANTS],
+  ['ძლისპირები', DZLISPIREBI_CHANTS],
+  ['კატაბასიები', KATABASIEBI_CHANTS],
 ];
 
 export interface VersionInfo {
@@ -52,6 +58,8 @@ export const SCHOOL_NAMES: Record<string, string> = {
   'გ.ს.': 'გელათის სკოლა',
   'ქ.კ.': 'ქართლ-კახური',
   'შ.ს.': 'შემოქმედის სკოლა',
+  'ე.კ.': 'ექვთიმე კერესელიძის ხელნაწერი',
+  'რ.ძ.': 'რვახმა საცისკრო ძლისპირები',
 };
 
 export const BOOK_NAMES: Record<string, string> = {
@@ -63,6 +71,8 @@ export const BOOK_NAMES: Record<string, string> = {
   karb: 'კარბელაანთ კილო, VII ტომი',
   pat: 'დიმიტრი პატარავას საგალობლები',
   v9: 'გელათის სკოლის საგალობლები, IX ტომი',
+  momix: 'ჰიმნოგრაფიული კრებული I, მომიხსენენი',
+  v8: 'რვახმა საცისკრო ძლისპირები, VIII ტომი',
 };
 
 /** Order of a version inside the services (service first, then the chant's place in it). */

@@ -8,6 +8,8 @@
 const ALLOWED_ORIGINS = [
   'http://localhost:5173',
   'https://sagandzuris-skola.pages.dev',
+  'https://sagandzureli.ge',
+  'https://www.sagandzureli.ge',
 ];
 // Cloudflare Pages gives every branch its own test address: <branch>.sagandzuris-skola.pages.dev
 const PREVIEW_ORIGIN = /^https:\/\/[a-z0-9-]+\.sagandzuris-skola\.pages\.dev$/;

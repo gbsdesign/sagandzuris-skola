@@ -17,6 +17,13 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
 | `karb` | Karbelaant mode, vol. VII (№1–187) | 16 | `karbelaantBookChants.ts` (`withKarbelaantFeasts/Lent/Pascha`) |
 | `pat` | Patarava 2003 (11 of 29 chants) | 18 | `pataravaBookChants.ts` |
 | `v9` | Gelati vol. IX, 2023 (scan, №1–101) | 11 | `TSIRVA_V9`; 4th list in `gelatiBookChants.ts`; index `liturgyVol9Index.ts` |
+| `v8` | Vol. VIII „რვახმა საცისკრო ძლისპირები" (no school named; code "რ.ძ."; no printed numbers — files 1–166) | −1 / −2 from PDF p. 108 / −3 from p. 307 | `irmosBookChants.ts` — tabs ძლისპირები (`dz-N`, 8 tones) and კატაბასიები (`kt-N`, 12 canons + Resurrection kontakia); feast names identified from the first irmos, two canons left unnamed |
+| `momix` | „ჰიმნოგრაფიული კრებული" I, troparia on the Beatitudes (Kereselidze mss., code "ე.კ."; no printed numbers — files 1–268 in book order) | 0 | `beatitudesBookChants.ts` — tab მომიხსენენი, 59 groups `mm-N` (tone + day) |
+
+- The Hymnographical collection (მომიხსენენი, დასდებელნი) is Sibelius/Opus-font engraving: the OMR needed a WinAnsi→MacRoman
+  glyph map, "q=80" tempo marks, chant starts from the "Troparion N / Glory. / Now and." titles, and `SMALL_RHYTHM=1`
+  (a lone small head sings only where its voice would otherwise come out short by exactly its length). Scripts: session
+  scratchpad `dfa1e456…/scratchpad/omr` (`scan_momix.mjs`, `export_momix.mjs`, `gen_momix_ts.cjs`), scale 1.0478.
 
 - Liturgy ids: first ornate kk version `v-n-4`, first plain kk `v-n-3`, further `v-n-kNNN`; vol. V `v-n-vNNN` /
   `v-n-sNNN`; vol. IX `v-n-xNNN`. Vol. III №87–98 is the 4-voice litany (voices I–IV + "ყველა").
