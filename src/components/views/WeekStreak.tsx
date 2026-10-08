@@ -29,10 +29,8 @@ export const WeekStreak: React.FC<{
   /** shown at the strip's right end; left out when there is nothing to measure */
   percent?: number | null;
   percentTitle?: string;
-  /** a small strip of 7 dots without the day letters (the habits' compact rows) */
-  dots?: boolean;
   className?: string;
-}> = ({ days, percent, percentTitle, dots, className = '' }) => {
+}> = ({ days, percent, percentTitle, className = '' }) => {
   const todayKey = new Date().toDateString();
   const run = days.reduce((n, d) => (d.mark === 'done' ? n + 1 : 0), 0);
   return (
@@ -40,7 +38,7 @@ export const WeekStreak: React.FC<{
       <div
         role="img"
         aria-label={`ბოლო 7 დღე: ${days.filter(d => d.mark === 'done').length} შესრულებული${run > 1 ? `, ზედიზედ ${run}` : ''}`}
-        className={dots ? 'w-[98px] shrink-0 grid grid-cols-7' : 'flex-1 min-w-0 max-w-[17rem] grid grid-cols-7'}
+        className="flex-1 min-w-0 max-w-[17rem] grid grid-cols-7"
       >
         {days.map((d, i) => {
           const joinPrev = d.mark === 'done' && days[i - 1]?.mark === 'done';
@@ -49,17 +47,17 @@ export const WeekStreak: React.FC<{
           return (
             <div
               key={i}
-              className={dots ? 'relative h-2.5' : 'relative h-[22px]'}
+              className="relative h-[22px]"
               title={`${WEEKDAYS_GE[d.date.getDay()]}, ${d.date.getDate()} ${MONTHS_SHORT_GE[d.date.getMonth()]}${today ? ' (დღეს)' : ''}${d.note ? ` — ${d.note}` : ''}`}
             >
               <span
-                className={`absolute inset-y-0 flex items-center justify-center text-[10px] font-bold leading-none select-none transition-colors ${
-                  dots && d.mark === 'open' ? 'bg-[#ebe0ce]' : TONE[d.mark]
-                } ${joinPrev ? 'left-0 rounded-l-none' : `left-[2px] ${dots ? 'rounded-l-full' : 'rounded-l-md'}`} ${
-                  joinNext ? 'right-0 rounded-r-none' : `right-[2px] ${dots ? 'rounded-r-full' : 'rounded-r-md'}`
-                } ${today && d.mark !== 'done' ? 'ring-[1.5px] ring-inset ring-[#7a2028]/45 !text-[#7a2028]' : ''}`}
+                className={`absolute inset-y-0 flex items-center justify-center text-[10px] font-bold leading-none select-none transition-colors ${TONE[d.mark]} ${
+                  joinPrev ? 'left-0 rounded-l-none' : 'left-[2px] rounded-l-md'
+                } ${joinNext ? 'right-0 rounded-r-none' : 'right-[2px] rounded-r-md'} ${
+                  today && d.mark !== 'done' ? 'ring-[1.5px] ring-inset ring-[#7a2028]/45 !text-[#7a2028]' : ''
+                }`}
               >
-                {!dots && WEEKDAYS_SHORT_GE[d.date.getDay()]}
+                {WEEKDAYS_SHORT_GE[d.date.getDay()]}
               </span>
             </div>
           );
@@ -68,7 +66,7 @@ export const WeekStreak: React.FC<{
       {percent != null && (
         <span
           title={percentTitle}
-          className={`shrink-0 text-right font-black tabular-nums leading-none ${dots ? 'w-9 text-xs' : 'ml-auto w-10 text-[13px]'} ${percentTone(percent)}`}
+          className={`shrink-0 ml-auto w-10 text-right text-[13px] font-black tabular-nums leading-none ${percentTone(percent)}`}
         >
           {percent}
           <span className="text-[10px] font-bold">%</span>

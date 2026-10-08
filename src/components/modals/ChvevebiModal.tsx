@@ -1,5 +1,4 @@
 import React from 'react';
-import { Sparkles, X } from 'lucide-react';
 import { SwipeToDismiss } from '../ui/SwipeToDismiss';
 import { ChvevebiContent } from '../views/ChvevebiPanel';
 
@@ -21,26 +20,8 @@ export const ChvevebiModal: React.FC<ChvevebiModalProps> = ({ isOpen, onClose })
         onDismiss={onClose}
         className="relative w-full max-w-xl max-h-[90dvh] overflow-y-auto bg-[#fbf6ec] rounded-[28px] p-4 sm:p-6 shadow-2xl ring-1 ring-[#e8dcc8] space-y-4 animate-in zoom-in-95 duration-200"
       >
-        <div className="flex items-center justify-between gap-3 pb-3 border-b border-[#e8dcc8]">
-          <div className="flex items-center gap-2.5">
-            <span className="w-9 h-9 rounded-xl bg-[#7a2028]/10 text-[#7a2028] flex items-center justify-center shrink-0">
-              <Sparkles className="w-5 h-5" />
-            </span>
-            <h3 className="font-serif-ge text-base sm:text-lg font-bold text-[#4a3426] leading-snug">
-              სწორი სულიერი ნიადაგის შესაქმნელად ლოცვითი ჩვევები
-            </h3>
-          </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-9 h-9 rounded-full flex items-center justify-center bg-white/80 ring-1 ring-[#e8dcc8] text-[#8a7a6a] hover:text-[#7a2028] transition-colors cursor-pointer shrink-0"
-            title="დახურვა"
-            aria-label="დახურვა"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-        <ChvevebiContent />
+        {/* the habits draw their own title row, with ✕ */}
+        <ChvevebiContent onClose={onClose} />
       </SwipeToDismiss>
     </div>
   );

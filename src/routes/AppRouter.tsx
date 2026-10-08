@@ -1,12 +1,12 @@
 import React, { lazy, useEffect, useRef } from 'react';
 import { useNavigation, useChants, useModal, useAuth } from '../context';
-import { Sparkles, Music, ShieldCheck, ChevronRight } from 'lucide-react';
+import { Music, ShieldCheck, ChevronRight } from 'lucide-react';
 import { SubPageHeader } from '../components/layout';
 import { HomePage } from '../pages/HomePage';
 import { GalobaPage } from '../pages/GalobaPage';
 import { StudentProfileCard } from '../components/views';
 import { GzaView } from '../components/views';
-import { PathPanel, PATH_ICON, PATH_TILE } from '../components/views/IndependentWorkCard';
+import { PathPanel, PATH_TILE } from '../components/views/IndependentWorkCard';
 import { ChvevebiContent } from '../components/views/ChvevebiPanel';
 import { ManeraContent, ManeraAverageBadge, ManeraQuickRings } from '../components/views/ManeraPanel';
 import { PathSummary } from '../components/views/PathSummary';
@@ -169,18 +169,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
                     </>
                   ),
                   spirit: (
-                    // the tab's only card, so it is always open
-                    <section className="w-full rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] overflow-hidden">
-                      <div className="flex items-center gap-3.5 p-3.5 sm:p-4">
-                        <span className={PATH_ICON}><Sparkles className="w-5 h-5" /></span>
-                        <span className="flex-1 min-w-0">
-                          <span className="block text-[15px] sm:text-base font-black leading-tight text-[#2a2017]">ჩვევები</span>
-                          <span className="block mt-1 text-xs font-semibold text-[#8a7a6a]">ლოცვითი ჩვევები სულიერი ნიადაგისთვის</span>
-                        </span>
-                      </div>
-                      <div className="border-t border-[#efe5d4] px-3 sm:px-4 pt-4 pb-4">
-                        <ChvevebiContent />
-                      </div>
+                    // the tab's only card, so it is always open; the habits draw their own title row
+                    <section className="w-full rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] px-3 py-3.5 sm:p-4">
+                      <ChvevebiContent />
                     </section>
                   ),
                   samosi: <ChemiSamosi unfolded />,

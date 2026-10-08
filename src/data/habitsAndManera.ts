@@ -11,6 +11,8 @@ export type HabitMenu = 'morning-evening' | 'hours' | 'akathists' | 'gospel' | '
 export interface HabitItemType {
   id: string;
   label: string;
+  /** the measure, shown over the habit's prayers and in the explanation: "დღეში 3–5 გვერდი მაინც" */
+  hint?: string;
   menu?: HabitMenu;
 }
 
@@ -26,11 +28,14 @@ export const MANERA_ITEMS: ManeraItemType[] = [
   { num: '9', title: 'სწორი შინაგანი დგომა', defaultEff: '', advice: 'ბგერები უნდა ჟღერდეს თვითრწმენით, თქვენი პიროვნული სიღრმიდან.' }
 ];
 
+/** a habit's goal is counted per calendar day, per week (from Sunday) or per calendar month */
+export type HabitPeriod = 'day' | 'week' | 'month';
+
 export interface HabitGroupType {
   id: string;
   title: string;
-  /** the percent shown beside each habit: ticked days in the last `days` days out of `times` */
-  goal: { times: number; days: number };
+  /** `times` ticked days in each day / week / month */
+  goal: { times: number; per: HabitPeriod };
   items: HabitItemType[];
 }
 
@@ -39,22 +44,22 @@ export const HABIT_GROUPS: HabitGroupType[] = [
   {
     id: 'daily',
     title: 'ყოველდღე',
-    goal: { times: 7, days: 7 },
+    goal: { times: 1, per: 'day' },
     items: [
-      { id: 'habit_1', label: 'დილის და საღამოს ლოცვების კითხვა', menu: 'morning-evening' },
+      { id: 'habit_1', label: 'დილის და საღამოს ლოცვები', menu: 'morning-evening' },
       { id: 'habit_13', label: 'შვიდგზის ლოცვა', menu: 'hours' },
-      { id: 'habit_2', label: 'სახარების კითხვა', menu: 'gospel' },
-      { id: 'habit_3', label: 'სამოციქულოს კითხვა', menu: 'apostle' },
-      { id: 'habit_4', label: 'სულიერი ლიტერატურა — დღეში 3–5 გვერდი მაინც' },
-      { id: 'habit_5', label: 'იესოს ლოცვა — რაც უფრო ხშირად, მით უკეთესი', menu: 'jesus' },
-      { id: 'habit_6', label: 'ფსალმუნების კითხვა — სასურველია 1 კანონი ან დიდება მაინც', menu: 'psalms' },
+      { id: 'habit_2', label: 'სახარება', menu: 'gospel' },
+      { id: 'habit_3', label: 'სამოციქულო', menu: 'apostle' },
+      { id: 'habit_4', label: 'სულიერი ლიტერატურა', hint: 'დღეში 3–5 გვერდი მაინც' },
+      { id: 'habit_5', label: 'იესოს ლოცვა', hint: 'რაც უფრო ხშირად, მით უკეთესი', menu: 'jesus' },
+      { id: 'habit_6', label: 'ფსალმუნები', hint: 'სასურველია 1 კანონი ან დიდება მაინც', menu: 'psalms' },
       { id: 'habit_14', label: 'ჩანაწერების წიგნაკი' },
     ],
   },
   {
     id: 'weekly',
     title: 'ყოველკვირა',
-    goal: { times: 1, days: 7 },
+    goal: { times: 1, per: 'week' },
     items: [
       { id: 'habit_11', label: 'წირვაზე დასწრება' },
       { id: 'habit_12', label: 'ლოცვაზე დასწრება' },
@@ -63,7 +68,7 @@ export const HABIT_GROUPS: HabitGroupType[] = [
   {
     id: 'monthly',
     title: 'თვეში 2–3-ჯერ მაინც',
-    goal: { times: 2, days: 30 },
+    goal: { times: 2, per: 'month' },
     items: [
       { id: 'habit_7', label: 'დაუჯდომლები', menu: 'akathists' },
       { id: 'habit_8', label: 'სამადლობელი პარაკლისი' },
@@ -72,7 +77,7 @@ export const HABIT_GROUPS: HabitGroupType[] = [
   {
     id: 'sacraments',
     title: 'საიდუმლოები',
-    goal: { times: 1, days: 30 },
+    goal: { times: 1, per: 'month' },
     items: [
       { id: 'habit_9', label: 'აღსარება' },
       { id: 'habit_10', label: 'ზიარება' },
