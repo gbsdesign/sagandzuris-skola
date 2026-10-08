@@ -7,6 +7,8 @@ import {
   abc, chord, interval, intervalWords, letter, midi, note, scale, steps, syl, tonicName,
   type ChordKind, type ChordShape, type ModeName, type Note,
 } from '../utils/musicTheory';
+import { makeGrouping, seeded } from '../utils/theoryDrills';
+import { DICTATIONS, SAMPLE_DICTATION, VOICES3 } from './abituriDictations';
 
 export type PlayMode = 'notes' | 'even' | 'arp';
 
@@ -22,6 +24,8 @@ export interface StaffSpec {
   hide?: boolean;
   /** a button for each voice alone */
   voices?: string[];
+  /** a button that sounds every voice's first note together (as a dictation is begun) */
+  start?: boolean;
 }
 
 export interface KeysSpec { from?: string; to?: string; mark?: string[]; cap?: string }
@@ -109,22 +113,16 @@ export const SAMPLE_RHYTHM = 'M:4/4\nL:1/8\nK:C\nF4 F2 FFFF z2 F6 [|] FFFF F3 FF
 export const SAMPLE_RHYTHM_GROUPED = 'M:4/4\nL:1/8\nK:C\nF4 F2 FF | FF z2 F4- | F2 FF FF F2- | FFFF F4 |]';
 const SAMPLE_DURATIONS = 'L:1/16\nK:C\nF16 | z8 | F4 | z2 | F |]';
 const SAMPLE_DURATIONS_SWAPPED = 'L:1/16\nK:C\nz16 | F8 | z4 | F2 | z |]';
-export const SAMPLE_DICTATION = `M:C
-L:1/4
-%%score [1 2 3]
-K:C
-V:1
-G2 A2 | G2 F2 | E2 D2 | E4 |]
-V:2
-E2 D/E/ F | E F/E/ D2 | C2 B, C/B,/ | A,4 |]
-V:3 clef=bass
-G,2 F,2 | G,4 | A,2 G,2 | A,4 |]`;
+export { SAMPLE_DICTATION };
 
 // practice that the tests check as well
 export const GROUP_24 = ['M:2/4\nL:1/8\nK:C\nB2 BBBB B4 B2 B3 B B4 |]', 'M:2/4\nL:1/8\nK:C\nB2 BB | BB B2- | B2 B2 | B3 B | B4 |]'];
 export const GROUP_34 = ['M:3/4\nL:1/8\nK:C\nB4 BBBB B6 B2 BB B4 B2 |]', 'M:3/4\nL:1/8\nK:C\nB4 BB | BB B4- | B2 B2 BB | B4 B2 |]'];
 export const TRANSPOSE_UP = ['M:2/4\nL:1/8\nK:C\nC2 E2 | G2 ^F2 | G2 _B2 | A2 G2 | E2 D2 | C4 |]', 'M:2/4\nL:1/8\nK:D\nD2 F2 | A2 ^G2 | A2 =c2 | B2 A2 | F2 E2 | D4 |]'];
 export const TRANSPOSE_DOWN = ['M:2/4\nL:1/8\nK:G\nG2 B2 | d2 ^c2 | d2 B2 | G4 |]', 'M:2/4\nL:1/8\nK:E\nE2 G2 | B2 ^A2 | B2 G2 | E4 |]'];
+export const TRANSPOSE_UP2 = [TRANSPOSE_DOWN[0], 'M:2/4\nL:1/8\nK:Ab\nA2 c2 | e2 =d2 | e2 c2 | A4 |]'];
+// a 6/8 grouping, made by the practice's own generator (always the same one: a fixed seed)
+export const GROUP_68 = makeGrouping(seeded(68), '6/8');
 
 const C4 = n('C4');
 const MODES: ModeName[] = ['იონიური', 'დორიული', 'ფრიგიული', 'ლიდიური', 'მიქსოლიდიური', 'ეოლიური', 'ლოკრიული'];
@@ -139,6 +137,9 @@ const D_MIX = modeFrom('D4', 'მაჟორი', 'მიქსოლიდი�
 const C_DOR = modeFrom('C4', 'ნატურალური მინორი', 'დორიული', 5, '↑VI');
 const G_LYD = modeFrom('G4', 'მაჟორი', 'ლიდიური', 3, '↑IV');
 const H_PHR = modeFrom('B3', 'ნატურალური მინორი', 'ფრიგიული', 1, '↓II');
+const A_ION = scale(n('A4'), 'იონიური');
+const E_AEO = scale(n('E4'), 'ეოლიური');
+const H_LOC = scale(n('B3'), 'ლოკრიული');
 
 const chordTable = (['მაჟ.', 'მინ.'] as ChordKind[]).flatMap(k =>
   (['5/3', '6', '6/4'] as ChordShape[]).map(s => {
@@ -367,6 +368,7 @@ export const LESSONS: Lesson[] = [
         ex: [
           { q: 'დააჯგუფე **2/4** ზომაში:', abc: GROUP_24[0], a: 'ხუთი ტაქტი: ნახევარი ტაქტის ხაზზე იყოფა და ლიგით ერთდება.', aAbc: GROUP_24[1], play: 'notes' },
           { q: 'დააჯგუფე **3/4** ზომაში:', abc: GROUP_34[0], a: 'ოთხი ტაქტი: წერტილიანი ნახევარი (6 მერვედი) ორ ტაქტზე იყოფა — ნახევარი + მეოთხედი, ლიგით.', aAbc: GROUP_34[1], play: 'notes' },
+          { q: 'დააჯგუფე **6/8** ზომაში:', abc: GROUP_68.given, a: 'ოთხი ტაქტი, თითოში ორი სამმერვედიანი წილი: მერვედები სამ-სამად ერთიანდება, ტაქტის ხაზზე გადასული ნოტი ლიგით იყოფა.', aAbc: GROUP_68.answer, play: 'notes' },
         ],
       },
     ],
@@ -562,6 +564,13 @@ export const LESSONS: Lesson[] = [
       { staff: { ...G_LYD.staff, cap: 'G ლიდიური — ორი ნიშანი, ფა♯ და დო♯.' } },
       { p: `**h ფრიგიული** — მინორული, II დადაბლებული. სი მინორი: ${names(H_PHR.b)}. დო♯ ხდება დო: **${letters(H_PHR.m)}**.` },
       { staff: { ...H_PHR.staff, cap: 'h ფრიგიული — ერთი ნიშანი, ფა♯.' } },
+      { h: 'დანარჩენი სამი' },
+      { p: `**A იონიური** — იგივე ლა მაჟორია: **${letters(A_ION)}** (სამი დიეზი).` },
+      { staff: { abc: scaleAbc(A_ION), play: 'even', cap: 'A იონიური = ლა მაჟორი.' } },
+      { p: `**e ეოლიური** — იგივე მი ნატურალური მინორია: **${letters(E_AEO)}** (ერთი დიეზი).` },
+      { staff: { abc: scaleAbc(E_AEO), play: 'even', cap: 'e ეოლიური = მი ნატურალური მინორი.' } },
+      { p: `**h ლოკრიული** — მინორული, დადაბლებული II და V. სი-დან ის თეთრ კლავიშებზეა: **${letters(H_LOC)}**.` },
+      { staff: { abc: scaleAbc(H_LOC, [4, '↓V']), play: 'even', cap: 'h ლოკრიული — ნიშნების გარეშე.' } },
       { h: 'შემოწმება „მშობელი“ მაჟორით' },
       { p: 'ყოველი კილო რომელიღაც მაჟორის ბგერებია, სხვა საფეხურიდან დაწყებული: **დორიული** — II-დან, **ფრიგიული** — III-დან, **ლიდიური** — IV-დან, **მიქსოლიდიური** — V-დან, **ეოლიური** — VI-დან, **ლოკრიული** — VII-დან.' },
       {
@@ -619,6 +628,7 @@ export const LESSONS: Lesson[] = [
         ex: [
           { q: 'გადაიტანე **დ.2-ით ზემოთ**:', abc: TRANSPOSE_UP[0], a: 'დო მაჟორიდან — **რე მაჟორი** (ორი დიეზი). ფა♯ (↑IV) ხდება **სოლ♯**, სი♭ (↓VII) ხდება **დო♮** — ბეკარით, რადგან გასაღებთან დო♯-ია.', aAbc: TRANSPOSE_UP[1], play: 'notes' },
           { q: 'გადაიტანე **პ.3-ით ქვემოთ**:', abc: TRANSPOSE_DOWN[0], a: 'სოლ მაჟორიდან — **მი მაჟორი** (ოთხი დიეზი). დო♯ (↑IV) ხდება **ლა♯**.', aAbc: TRANSPOSE_DOWN[1], play: 'notes' },
+          { q: 'იგივე მელოდია გადაიტანე **პ.2-ით ზემოთ**:', abc: TRANSPOSE_UP2[0], a: 'სოლ-იდან პ.2 ზემოთ — **ლა♭** (და არა სოლ♯: სეკუნდა სხვა სახელზეა!). ლა♭ მაჟორს ოთხი ბემოლი აქვს. დო♯ (↑IV) ხდება **რე♮** — ბეკარით.', aAbc: TRANSPOSE_UP2[1], play: 'notes' },
         ],
       },
     ],
@@ -650,9 +660,10 @@ export const LESSONS: Lesson[] = [
       },
       { h: 'ოფიციალური ნიმუში — ივარჯიშე' },
       { p: 'მოუსმინე და სცადე ჩაწერა; მერე ნოტები გახსენი და შეამოწმე. ცალკე ხმაც შეგიძლია მოისმინო.' },
-      { staff: { abc: SAMPLE_DICTATION, tempo: 72, hide: true, voices: ['ზედა ხმა', 'შუა ხმა', 'ბანი'] } },
-      { h: 'კიდევ სამი კარნახი' },
-      { p: 'ჯერ ერთხმიანი, მერე ორხმიანი. ყოველი რამდენჯერმე მოისმინე.' },
+      { staff: { abc: SAMPLE_DICTATION, tempo: 72, hide: true, voices: VOICES3, start: true } },
+      { tip: `კიდევ ${DICTATIONS.length - 1} სამხმიანი კარნახი, ამავე სახით, — ზემოთ, **ვარჯიშში: „კარნახი“**. ჩაწერე სამივე ხმა, როგორც გამოცდაზე.` },
+      { h: 'გასახურებლად: ერთი და ორი ხმა' },
+      { p: 'თუ სამი ხმა ჯერ ძნელია, დაიწყე აქედან: ჯერ ერთხმიანი, მერე ორხმიანი. ყოველი რამდენჯერმე მოისმინე.' },
       { staff: { abc: 'M:2/4\nL:1/8\nK:C\nE2 G2 | F2 D2 | E D C D | C4 |]', tempo: 72, hide: true, cap: '№1 — ერთხმიანი, 2/4, დო მაჟორი.' } },
       { staff: { abc: 'M:3/4\nL:1/8\nK:C\nA2 c2 e2 | d4 c2 | B2 ^G2 B2 | A6 |]', tempo: 80, hide: true, cap: '№2 — ერთხმიანი, 3/4, ლა მინორი (ერთხელ ჰარმონიული სოლ♯).' } },
       { staff: { abc: 'M:C\nL:1/4\n%%score [1 2]\nK:C\nV:1\nG2 A2 | G2 E2 | F2 E D | E4 |]\nV:2\nE2 F2 | E2 C2 | D2 C B, | C4 |]', tempo: 72, hide: true, voices: ['ზედა ხმა', 'ქვედა ხმა'], cap: '№3 — ორხმიანი, 4/4: ხმები ტერციით მიდის.' } },

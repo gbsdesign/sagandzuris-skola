@@ -2,6 +2,7 @@ import React from 'react';
 import { ChevronRight, Headphones } from 'lucide-react';
 import { ServiceType } from '../../context';
 import { ALBUM_RECS, CHANT_ALBUMS, ChantAlbumId } from '../../data/chantAlbums';
+import { usePlacements } from '../../data/placements';
 import { triggerHaptic } from '../../utils/haptics';
 
 type Service = NonNullable<ServiceType>;
@@ -33,6 +34,7 @@ interface ServiceTabsProps {
 }
 
 export const ServiceTabs: React.FC<ServiceTabsProps> = ({ onSelectService, onOpenAlbum }) => {
+  usePlacements(); // the album counts follow a moved recording
   return (
     <div className="w-full my-2 px-1 flex flex-col items-center">
       {/* as wide as the "დღევანდელი წირვა" card above (max-w-2xl) */}

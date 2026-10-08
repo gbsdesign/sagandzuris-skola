@@ -246,6 +246,30 @@ export const CHANTS: ProgramItem[] = [
   },
 ];
 
+// I round, „ფურცლიდან კითხვა“ practice: short three-voice chants of the Gelati book vol. I that are not in the
+// program above (one version of each, 20–62 beats long; picked by length from public/notes/book on 2026-10-08)
+export const SIGHT_READING: { vid: string; title: string; num: number; service: string }[] = [
+  { vid: 'v-13-1', title: 'წარდგომანი აღდგომისანი', num: 168, service: 'წირვა' },
+  { vid: 'v-46-1', title: 'მრავალჟამიერ', num: 251, service: 'წირვა' },
+  { vid: 'mw-v-13-3', title: 'წარდგომაჲ მწუხრად', num: 51, service: 'მწუხრი' },
+  { vid: 'ck-v-12-1', title: 'ჩასართავი აღსავლისაჲ', num: 109, service: 'ცისკარი' },
+  { vid: 'v-42-1', title: 'ნათელი ჭეშმარიტი', num: 242, service: 'წირვა' },
+  { vid: 'mw-v-21-1', title: 'იყავნ სახელი უფლისა', num: 75, service: 'მწუხრი' },
+  { vid: 'ck-v-3-5', title: 'ღმერთი უფალი', num: 92, service: 'ცისკარი' },
+  { vid: 'v-40-1', title: 'ხორცი ქრისტესი', num: 239, service: 'წირვა' },
+  { vid: 'mw-v-18-1', title: 'შენ, უფალო', num: 64, service: 'მწუხრი' },
+  { vid: 'mw-v-22-1', title: 'დაამტკიცე, ღმერთო', num: 76, service: 'მწუხრი' },
+  { vid: 'ck-v-21-2', title: 'უპატიოსნესსა', num: 143, service: 'ცისკარი' },
+  { vid: 'v-41-1', title: 'ალილუია', num: 241, service: 'წირვა' },
+  { vid: 'ck-v-20-1', title: 'ადიდებს სული ჩემი', num: 127, service: 'ცისკარი' },
+  { vid: 'v-43-1', title: 'აღავსე პირი ჩემი', num: 243, service: 'წირვა' },
+  { vid: 'v-2-1', title: 'ტონ დესპოტინ', num: 146, service: 'წირვა' },
+  { vid: 'ck-v-15-2', title: 'ყოველი სული', num: 130, service: 'ცისკარი' },
+  { vid: 'v-36-1', title: 'შენ, უფალო (წირვა)', num: 235, service: 'წირვა' },
+  { vid: 'mw-v-12-3', title: 'ნათელო მხიარულო', num: 47, service: 'მწუხრი' },
+  { vid: 'v-28-1', title: 'ღირს არს და მართალ', num: 218, service: 'წირვა' },
+];
+
 // the university's bachelor's admission page (programs change every year)
 export const UNIVERSITY_PAGE = 'https://galoba.edu.ge/%e1%83%91%e1%83%90%e1%83%99%e1%83%90%e1%83%9a%e1%83%90%e1%83%95%e1%83%a0%e1%83%98%e1%83%90%e1%83%a2%e1%83%98/';
 

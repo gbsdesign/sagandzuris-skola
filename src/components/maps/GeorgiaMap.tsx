@@ -1,3 +1,4 @@
+import { usePlacements } from '../../data/placements';
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Headphones, Sparkles, FileText, Music, Lock, MapPin, Search, X, TextAlignStart } from 'lucide-react';
 import {
@@ -62,6 +63,7 @@ const useSongSearch = (songs: FolkSong[], query: string, withPerformers: boolean
 export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = {}, onToggleSong }) => {
   const { isOwner } = useAuth();
   const showOwnerOnly = isOwner;
+  const placed = usePlacements(); // a recording moved from the app: the lists follow
   const member = useAccess().member;
   // the open region is a history step: the top bar's "back" (and the phone's) returns to the map
   const { mapItem, openMapItem } = useNavigation();
@@ -78,7 +80,8 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
     if (!mapItem) setFound(null);
   }, [mapItem]);
 
-  const allSongs = useMemo(() => FOLK_SONGS.filter(s => showOwnerOnly || !s.ownerOnly), [showOwnerOnly]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const allSongs = useMemo(() => FOLK_SONGS.filter(s => showOwnerOnly || !s.ownerOnly), [showOwnerOnly, placed]);
   const [query, setQuery] = useState('');
   const results = useSongSearch(allSongs, query, member);
 

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, FileText, Headphones, Music, TextAlignStart } from 'lucide-react';
+import { ArrowLeft, ArrowRightLeft, FileText, Headphones, Music, TextAlignStart } from 'lucide-react';
 import {
   FOLK_SONGS, FolkSong, getFolkRegion, songDocUrl, songRecMedia, songVersionMedia, soundcloudEmbedUrl,
 } from '../../data/songsData';
@@ -7,12 +7,16 @@ import type { ChantMediaItem } from '../../data/chantMediaRegistry';
 import { ChantPlayer } from '../ChantPlayer';
 import { triggerHaptic } from '../../utils/haptics';
 import { stopPreview } from '../../utils/listPreview';
+import { useAuth } from '../../context';
+import { usePlacements } from '../../data/placements';
+import { MoveSheet } from '../archive/MoveSheet';
 
 // One recording of a song: the school's own versions (voices) first, then the archive's performers
 export interface SongTake {
   label: string;
   sub?: string;
   media: ChantMediaItem;
+  recId?: string; // an archive recording: it can be moved („გადატანა“)
 }
 
 export const songTakes = (s: FolkSong): SongTake[] => [
@@ -21,7 +25,7 @@ export const songTakes = (s: FolkSong): SongTake[] => [
     sub: v.tracks.v1 || v.tracks.v2 || v.tracks.v3 ? 'ხმებით' : undefined,
     media: songVersionMedia(s, v),
   })),
-  ...(s.recs ?? []).map(r => ({ label: r.who, sub: r.note, media: songRecMedia(s, r) })),
+  ...(s.recs ?? []).map(r => ({ label: r.who, sub: r.note, media: songRecMedia(s, r), recId: r.id })),
 ];
 
 // A song's page over the whole screen: one recording (player with MP3 download) and the words.
@@ -55,6 +59,10 @@ export const SongPage: React.FC = () => {
   const [state, setState] = useState<string | null>(historySong);
   const [visible, setVisible] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // the owner and the superadmins move a recording to another region, song or to the chants
+  const { isSuperAdmin } = useAuth();
+  const [moving, setMoving] = useState(false);
+  usePlacements();
   // a quick listen started from a list stops when the page opens: its own player takes over
   useEffect(() => { if (state) stopPreview(); }, [state]);
 
@@ -99,7 +107,7 @@ export const SongPage: React.FC = () => {
 
   useEffect(() => {
     if (!song) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') close(); };
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !moving) close(); };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
@@ -183,7 +191,17 @@ export const SongPage: React.FC = () => {
           <section className="rounded-2xl border border-[#efd6a6] bg-white shadow-[0_12px_26px_-18px_rgba(133,80,44,0.55)] px-2 pb-2.5 pt-2">
             <p className="px-2 pt-1 pb-1.5 flex items-center gap-1.5 text-[13px] font-extrabold text-[#7a2028]">
               <Headphones className="w-4 h-4 shrink-0" />
-              <span className="min-w-0 break-words">{take.label}{take.sub ? ` · ${take.sub}` : ''}</span>
+              <span className="flex-1 min-w-0 break-words">{take.label}{take.sub ? ` · ${take.sub}` : ''}</span>
+              {isSuperAdmin && take.recId && (
+                <button
+                  type="button"
+                  onClick={() => { triggerHaptic(10); setMoving(true); }}
+                  className="shrink-0 min-h-9 px-3 rounded-full border border-[#e2d3bb] bg-white text-[12px] font-bold text-[#574739] inline-flex items-center gap-1.5 hover:border-[#d9a55a] cursor-pointer"
+                >
+                  <ArrowRightLeft className="w-3.5 h-3.5 text-[#b4620e]" />
+                  გადატანა
+                </button>
+              )}
             </p>
             <ChantPlayer
               key={`${song.id}-${takeIdx}`}
@@ -236,6 +254,21 @@ export const SongPage: React.FC = () => {
           </section>
         )}
       </div></div>
+      {moving && take?.recId && (
+        <MoveSheet
+          target={{
+            id: take.recId,
+            from: { kind: 'song', region: song.region, title: song.title },
+            who: take.label,
+            songRecIds: (song.recs ?? []).map(r => r.id),
+          }}
+          onClose={() => {
+            setMoving(false);
+            // the song's last recording went elsewhere: the page has nothing left to show
+            if (!FOLK_SONGS.some(s => s.id === song.id)) close();
+          }}
+        />
+      )}
     </div>
   );
 };

@@ -1,3 +1,4 @@
+import { usePlacements } from '../../data/placements';
 import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, CalendarDays, ChevronRight, Lightbulb, Lock, Music, Music2, ScrollText, Search, Sparkles, Users, X, BookOpen,
@@ -117,9 +118,11 @@ export const SearchPanel: React.FC<{ onClose: () => void; onChoose: (action: () 
   const [recent, setRecent] = useState(readRecent);
   const inputRef = useRef<HTMLInputElement>(null);
 
+  const placed = usePlacements(); // a moved recording changes the song list
   const index = useMemo(
     () => buildSearchIndex({ signedIn: !!user, owner: isOwner, teacher: isTeacher, hasClass: classes.length > 0 }),
-    [user, isOwner, isTeacher, classes.length]
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [user, isOwner, isTeacher, classes.length, placed]
   );
   // hidden sections (the admin's switches, the kids' mode) and unbuilt ones are not offered at all
   const shown = (it: SearchItem) => !it.section || (access.section(it.section) !== 'hidden' && access.section(it.section) !== 'soon');
@@ -169,7 +172,8 @@ export const SearchPanel: React.FC<{ onClose: () => void; onChoose: (action: () 
           return;
         case 'song': requestOpen('simghera', o.id); navigateTo('simghera'); return;
         case 'ancestor': requestOpen('tsinaprebi', String(o.id)); navigateTo('tsinaprebi'); return;
-        case 'library': requestOpen('biblioteka', o.tab); navigateTo('biblioteka'); return;
+        // the page first (it closes an open book), then the book: already on the shelf, the page takes it at once
+        case 'library': navigateTo('biblioteka'); requestOpen('biblioteka', o.tab); return;
         case 'feast': openChurchCalendar(o.iso); return;
       }
     });

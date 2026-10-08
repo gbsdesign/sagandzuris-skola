@@ -1,13 +1,19 @@
 import React, { useMemo, useRef, useState } from 'react';
 import {
   BookMarked, BookOpen, CalendarDays, Check, Clock, Compass, Feather, GraduationCap, Library, Moon, Music, Music2, Music4, Pencil,
-  Plus, ScrollText, Sparkles, Star, Sun, Users, X, Pin, PinOff, Search, Guitar,
+  Plus, ScrollText, Sparkles, Star, Sun, Users, X, Pin, PinOff, Search, Guitar, Church, NotebookPen, HandHeart, Flame, Heart,
+  MessageCircle, UserPlus, ListMusic, Disc3, LayoutGrid, BarChart3, School, ClipboardList, ClipboardCheck, CalendarClock, Settings2,
+  ChevronDown,
 } from 'lucide-react';
 import { useAuth, useChants, useNavigation } from '../../context';
 import { useNotes } from '../../context/NotesContext';
 import { dayKey } from '../../utils/habitsWeek';
 import { openChurchCalendar } from '../../data/churchCalendar';
 import { MORNING_EVENING } from '../../data/prayers';
+import { HABIT_ITEMS, HabitMenu } from '../../data/habitsAndManera';
+import { HabitPrayerMenu } from '../views/ChvevebiPanel';
+import { requestOpen } from '../../utils/searchOpen';
+import { ServiceType } from '../../context/NavigationContext';
 import { SectionId } from '../../data/sections';
 import { useMyClasses } from '../../hooks/useClasses';
 import { useMyPsalterGroups } from '../../hooks/usePsalter';
@@ -15,8 +21,8 @@ import { useAccess } from '../../hooks/useAccess';
 import { cycleOf, georgiaToday, kathismasOf, ownersIn } from '../../utils/psalter';
 import { searchCatalog } from '../../utils/pathItems';
 import {
-  MAX_SHORTCUTS, SHORTCUT_GROUPS, habitOfShortcut, kindOf, markShortcutDone, refOf, saveShortcuts, sectionOfShortcut, shortcutLabel,
-  useMyShortcuts,
+  HABIT_SHORT, MAX_SHORTCUTS, SHORTCUT_GROUPS, habitOfShortcut, kindOf, markShortcutDone, refOf, roleAllows, saveShortcuts, sectionOfShortcut,
+  shortcutLabel, useMyShortcuts,
 } from '../../utils/shortcuts';
 import { triggerHaptic } from '../../utils/haptics';
 import { openPathPanel } from '../views/IndependentWorkCard';
@@ -31,9 +37,24 @@ const SECTION_ICON: Record<SectionId, React.ReactNode> = {
 const SPECIAL_ICON: Record<string, React.ReactNode> = {
   kathisma: <BookMarked />, liturgy: <Music4 />, commemoration: <ScrollText />, calendar: <CalendarDays />, class: <GraduationCap />, teacher: <GraduationCap />,
 };
+const HABIT_ICON: Record<string, React.ReactNode> = {
+  habit_2: <BookOpen />, habit_3: <BookOpen />, habit_5: <Heart />, habit_4: <Library />, habit_14: <NotebookPen />,
+  habit_11: <Church />, habit_12: <Church />, habit_8: <Flame />, habit_9: <HandHeart />, habit_10: <Sparkles />,
+};
+const TAB_ICON: Record<string, React.ReactNode> = {
+  'teacher:students': <Users />, 'teacher:assignments': <ClipboardList />, 'teacher:attendance': <ClipboardCheck />,
+  'teacher:schedule': <CalendarClock />, 'teacher:class': <Settings2 />, 'teacher:groups': <BookOpen />,
+  'admin:users': <Users />, 'admin:classes': <GraduationCap />, 'admin:recordings': <Disc3 />, 'admin:sections': <LayoutGrid />,
+  'admin:stats': <BarChart3 />, 'admin:school': <School />, 'admin:requests': <UserPlus />,
+  'library:book': <BookOpen />, 'library:feasts': <CalendarDays />, 'library:lives': <Feather />,
+  'page:abituri': <GraduationCap />, 'page:messages': <MessageCircle />,
+};
 export const shortcutIcon = (id: string): React.ReactNode => {
   const ref = refOf(id);
+  if (TAB_ICON[id]) return TAB_ICON[id];
   switch (kindOf(id)) {
+    case 'habit': return HABIT_ICON[ref] || <Sparkles />;
+    case 'service': return <ListMusic />;
     case 'section': return SECTION_ICON[ref as SectionId] || <Star />;
     case 'special': return SPECIAL_ICON[ref] || <Star />;
     case 'chant': return <Music2 />;
@@ -41,6 +62,7 @@ export const shortcutIcon = (id: string): React.ReactNode => {
       if (ref.startsWith('kathisma') || ref === 'psalter-rule') return <BookOpen />;
       if (ref.startsWith('hour-')) return <Clock />;
       if (ref.startsWith('akathist')) return <Star />;
+      if (ref.startsWith('week-')) return ref.endsWith('dila') ? <Sun /> : <Moon />;
       return ref === MORNING_EVENING[0].id ? <Sun /> : <Moon />;
   }
   return <Star />;
@@ -49,7 +71,7 @@ export const shortcutIcon = (id: string): React.ReactNode => {
 /** Opens a shortcut (the guest's and kids' limits apply). */
 export const useOpenShortcut = () => {
   const { user } = useAuth();
-  const { navigateTo, openPrayer, openCommemoration, openClass } = useNavigation();
+  const { navigateTo, openPrayer, openCommemoration, openClass, setSelectedService } = useNavigation();
   const { openNotes, openProgram } = useNotes();
   const classes = useMyClasses(user?.uid);
   const { groups } = useMyPsalterGroups(user?.uid);
@@ -62,6 +84,13 @@ export const useOpenShortcut = () => {
     switch (kindOf(id)) {
       case 'prayer': openPrayer(ref); return;
       case 'chant': openNotes(ref, 'bookmark'); return;
+      case 'habit': openPathPanel('habits'); navigateTo('gz'); return;
+      case 'service': navigateTo('galoba'); setSelectedService(ref as ServiceType); window.scrollTo({ top: 0 }); return;
+      case 'library': navigateTo('biblioteka'); requestOpen('biblioteka', ref); return;
+      case 'page': navigateTo(ref as 'abituri' | 'messages'); return;
+      // the panels open on the tab they remember
+      case 'teacher': try { localStorage.setItem('sg-teacher-tab', ref); } catch { /* storage off */ } navigateTo('teacher'); return;
+      case 'admin': try { localStorage.setItem('sg-admin-tab', ref === 'requests' ? 'users' : ref); } catch { /* storage off */ } navigateTo('admin'); return;
       case 'section':
         if (ref === 'chvevebi') { openPathPanel('habits'); navigateTo('gz'); return; }
         if (ref === 'medavitneoba') { navigateTo('psalter'); return; }
@@ -89,7 +118,9 @@ export const useOpenShortcut = () => {
 
 // "ჩემი ღილაკები" under the vine (and, in `profile`, on the profile page). Hidden while there is nothing on it.
 export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ variant = 'home' }) => {
-  const { user } = useAuth();
+  const { user, isTeacher, isAdmin, isSuperAdmin } = useAuth();
+  const { openPrayer } = useNavigation();
+  const [menu, setMenu] = useState<{ menu: HabitMenu; title: string } | null>(null);
   const { list, loaded, done } = useMyShortcuts(user?.uid);
   const { habitLog, toggleHabitToday } = useChants();
   const classes = useMyClasses(user?.uid);
@@ -107,12 +138,12 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
   const own = list !== null;
   const all = useMemo(
     () => (own ? list! : classDefaults).filter(id => {
-      if (!shortcutLabel(id)) return false;
+      if (!shortcutLabel(id) || !roleAllows(id, { isTeacher, isAdmin, isSuperAdmin })) return false;
       const sec = sectionOfShortcut(id);
       return !sec || access.section(sec) !== 'hidden';
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [list, classDefaults.join(','), access]
+    [list, classDefaults.join(','), access, isTeacher, isAdmin, isSuperAdmin]
   );
   // the plain "ჩემი კანონი" button would repeat the tile, so it hides behind it (and stays saved)
   const keptKathisma = readingIn.length > 0 && all.includes('special:kathisma');
@@ -124,8 +155,11 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
   const save = (next: string[]) => saveShortcuts(user.uid, keptKathisma ? [...next, 'special:kathisma'] : next).catch(() => {});
   const remove = (id: string) => { triggerHaptic(12); save(ids.filter(x => x !== id)); };
   // "✓ წავიკითხე": today's mark on the button, and its habit ticked too (taking the mark back leaves the habit)
+  const todayHabits = habitLog[dayKey(new Date())] || [];
   const markDone = (id: string, habit: string) => {
     triggerHaptic(15);
+    // a habit button is the habit itself: its mark is today's tick, both ways
+    if (kindOf(id) === 'habit') { toggleHabitToday(habit); return; }
     const on = !done.includes(id);
     markShortcutDone(user.uid, done, id, on).catch(() => {});
     if (on && !(habitLog[dayKey(new Date())] || []).includes(habit)) toggleHabitToday(habit);
@@ -161,7 +195,14 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
       setDrag(null);
       return;
     }
-    if (p && !p.long && !editing) open(id);
+    if (p && !p.long && !editing) {
+      if (kindOf(id) !== 'habit') { open(id); return; }
+      // a habit with books (Gospel, Apostle, Jesus prayer) opens them; the others are ticked by the tap
+      const ref = refOf(id);
+      const m = HABIT_ITEMS.find(h => h.id === ref)?.menu;
+      if (m) setMenu({ menu: m, title: HABIT_SHORT[ref] });
+      else markDone(id, ref);
+    }
   };
 
   return (
@@ -192,7 +233,7 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
           const dragging = drag && order[drag.to] === id;
           // a prayer, akathist or kathisma gets a "✓ წავიკითხე" corner; the tile then lays out to the left
           const habit = variant === 'home' ? habitOfShortcut(id) : null;
-          const isDone = !!habit && done.includes(id);
+          const isDone = !!habit && (kindOf(id) === 'habit' ? todayHabits.includes(habit) : done.includes(id));
           const longest = Math.max(...l.label.split(/\s+/).map(w => w.length));
           return (
             <li key={id} data-tile={i} className="relative">
@@ -249,15 +290,19 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
       {editing && <p className="mt-2 text-[11.5px] text-[#8a7a6a] px-0.5">გადაიტანე ღილაკი სხვა ადგილზე ან წაშალე ✕-ით.</p>}
 
       <ShortcutPicker open={adding} onClose={() => setAdding(false)} current={ids} onChange={save} />
+      <Sheet open={!!menu} onClose={() => setMenu(null)} title={menu?.title || ''}>
+        {menu && <HabitPrayerMenu menu={menu.menu} onOpen={pid => { setMenu(null); openPrayer(pid); }} />}
+      </Sheet>
     </section>
   );
 };
 
 /** The "+" sheet: everything that can go on the home page, by section; a chant version by search. */
 export const ShortcutPicker: React.FC<{ open: boolean; onClose: () => void; current: string[]; onChange: (next: string[]) => void; max?: number }> = ({ open, onClose, current, onChange, max = MAX_SHORTCUTS }) => {
-  const { isTeacher } = useAuth();
+  const { isTeacher, isAdmin, isSuperAdmin } = useAuth();
   const access = useAccess();
   const [q, setQ] = useState('');
+  const [allAkathists, setAllAkathists] = useState(false);
   const hits = useMemo(() => (q.trim() ? searchCatalog(q, 40).filter(e => e.category === 'galoba').slice(0, 12) : []), [q]);
   const full = current.length >= max;
   const toggle = (id: string) => {
@@ -267,11 +312,12 @@ export const ShortcutPicker: React.FC<{ open: boolean; onClose: () => void; curr
   };
   const groups = SHORTCUT_GROUPS.map(g => ({
     ...g,
-    ids: [...g.ids, ...(g.title === 'სწავლა' && isTeacher ? ['special:teacher'] : [])].filter(id => {
+    ids: g.ids.filter(id => {
+      if (!roleAllows(id, { isTeacher, isAdmin, isSuperAdmin })) return false;
       const sec = sectionOfShortcut(id);
       return !sec || access.section(sec) !== 'hidden';
     }),
-  }));
+  })).filter(g => g.ids.length > 0);
   const Chip: React.FC<{ id: string }> = ({ id }) => {
     const l = shortcutLabel(id);
     if (!l) return null;
@@ -291,7 +337,20 @@ export const ShortcutPicker: React.FC<{ open: boolean; onClose: () => void; curr
         {groups.map(g => (
           <div key={g.title}>
             <p className="text-xs font-bold uppercase tracking-wide text-[#8a7a6a] mb-2">{g.title}</p>
-            <div className="flex flex-wrap gap-2">{g.ids.map(id => <Chip key={id} id={id} />)}</div>
+            {g.title === 'დაუჯდომლები' ? (
+              <div className="flex flex-wrap gap-2">
+                {/* the six most read first; the rest of the 73 on request (a chosen one always shows) */}
+                {g.ids.filter((id, i) => allAkathists || i < 6 || current.includes(id)).map(id => <Chip key={id} id={id} />)}
+                {!allAkathists && g.ids.length > 6 && (
+                  <button type="button" onClick={() => setAllAkathists(true)}
+                    className="h-11 px-4 rounded-2xl inline-flex items-center gap-1.5 text-[13px] font-bold text-[#7a2028] border-2 border-dashed border-[#d9c8ac] hover:border-[#7a2028]/40 cursor-pointer">
+                    ყველა {g.ids.length} <ChevronDown className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+            ) : (
+              <div className="flex flex-wrap gap-2">{g.ids.map(id => <Chip key={id} id={id} />)}</div>
+            )}
             {g.title === 'გალობა' && (
               <div className="mt-3 space-y-2">
                 <div className="relative">

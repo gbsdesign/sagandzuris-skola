@@ -10,7 +10,8 @@ import {
   ChevronDown,
   Check,
   CheckCheck,
-  Music,
+  Circle,
+  Pencil,
   X,
   Sparkles,
   Headphones
@@ -123,6 +124,47 @@ interface GzaViewProps {
   selectedChantVariants?: SelectedChantVariantsMap;
   onUpdateVariants?: (next: SelectedChantVariantsMap) => void;
 }
+
+const VOICES = ['1', '2', '3'] as const;
+// one voice (or the whole item, when it has no voices): not yet / learned / confirmed by the teacher
+type VoiceMark = 'off' | 'on' | 'ok';
+
+// Left mark of a path row: one arc per voice around the row number (dark red = learned, green = confirmed
+// by the teacher); when every arc is filled it turns into a solid ✓. Items without voices have one whole ring.
+const RING_R = 13.5;
+const RING_C = 2 * Math.PI * RING_R;
+const StatusRing: React.FC<{ n: number; marks: VoiceMark[] }> = ({ n, marks }) => {
+  if (marks.every(m => m !== 'off')) {
+    const allOk = marks.every(m => m === 'ok');
+    return (
+      <span className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white ${allOk ? 'bg-emerald-600' : 'bg-gradient-to-br from-[#a3323d] to-[#7a2028]'}`}>
+        {allOk ? <CheckCheck className="w-4 h-4" /> : <Check className="w-4 h-4 stroke-[3]" />}
+      </span>
+    );
+  }
+  const gap = marks.length > 1 ? 4 : 0;
+  const seg = RING_C / marks.length - gap;
+  return (
+    <span className="relative shrink-0 w-8 h-8 flex items-center justify-center">
+      <svg viewBox="0 0 32 32" className="absolute inset-0 w-full h-full -rotate-90" aria-hidden>
+        {marks.map((m, i) => (
+          <circle
+            key={i}
+            cx="16"
+            cy="16"
+            r={RING_R}
+            fill="none"
+            strokeWidth="3"
+            stroke={m === 'ok' ? '#059669' : m === 'on' ? '#7a2028' : '#ebe0cd'}
+            strokeDasharray={`${seg} ${RING_C - seg}`}
+            strokeDashoffset={-((i * RING_C) / marks.length + gap / 2)}
+          />
+        ))}
+      </svg>
+      <span className={`text-[12px] font-bold tabular-nums ${marks.some(m => m !== 'off') ? 'text-[#7a2028]' : 'text-[#a08f7c]'}`}>{n}</span>
+    </span>
+  );
+};
 
 // "გზა" PAGE COMPONENT ONLY
 export const GzaView: React.FC<GzaViewProps> = ({
@@ -352,11 +394,24 @@ export const GzaView: React.FC<GzaViewProps> = ({
       ? ((item as any).voices as string).split(',').map(v => v.trim())
       : [];
 
-  // voices as one segmented control: filled = learned, green = confirmed by the teacher
-  const segOn = 'bg-[#7a2028] text-white shadow-[0_2px_6px_-2px_rgba(122,32,40,0.6)]';
-  const segOff = 'text-[#6b5a4c] hover:bg-white hover:text-[#7a2028]';
-  const segConfirmed = 'bg-emerald-600 text-white shadow-[0_2px_6px_-2px_rgba(5,150,105,0.6)]';
-  const learnedOf = (item: SelectedChantVariantItem) => item.isLearned || voicesOf(item).length > 0;
+  // a voice counts as learned when the student ticked it or a teacher confirmed it ("ჩათვლა": green, can't be undone)
+  const confirmedOf = (item: SelectedChantVariantItem) => confirmed[item.variantId] || [];
+  const marksOf = (item: SelectedChantVariantItem): VoiceMark[] => {
+    if (!usesVoices(item.variantId)) {
+      return [confirmedOf(item).includes('1') ? 'ok' : item.isLearned ? 'on' : 'off'];
+    }
+    const mine = voicesOf(item);
+    return VOICES.map(v => (confirmedOf(item).includes(v) ? 'ok' : mine.includes(v) ? 'on' : 'off'));
+  };
+  const isDone = (item: SelectedChantVariantItem) => marksOf(item).every(m => m !== 'off');
+
+  // the section whose rows show ✕ (remove) instead of the arrow
+  const [editingCat, setEditingCat] = useState<string | null>(null);
+
+  const voiceDot = 'w-9 h-9 rounded-full text-sm font-bold inline-flex items-center justify-center tabular-nums transition-all';
+  const markOn = 'bg-gradient-to-br from-[#a3323d] to-[#7a2028] text-white shadow-[0_2px_6px_-2px_rgba(122,32,40,0.6)]';
+  const markOff = 'bg-[#f6efe3] text-[#6b5a4c] hover:bg-[#efe3cf] hover:text-[#7a2028]';
+  const markOk = 'bg-emerald-600 text-white shadow-[0_2px_6px_-2px_rgba(5,150,105,0.6)]';
 
   return (
     <div className="w-full mx-auto space-y-6 animate-in fade-in duration-200">
@@ -364,32 +419,57 @@ export const GzaView: React.FC<GzaViewProps> = ({
         <>
           {categories.map((cat) => {
             if (cat.items.length === 0) return null;
+            const editing = editingCat === cat.id;
+            const rows = cat.items.map(item => {
+              const song = cat.id === 'simghera' ? FOLK_SONGS.find(s => s.id === item.variantId) : undefined;
+              const chantVersion = cat.id === 'galoba' ? findVersion(item.variantId) : undefined;
+              const opensPage = Boolean(chantVersion && canOpenNotes(chantVersion.chant, chantVersion.variant));
+              return { item, song, opensPage, canOpen: opensPage || Boolean(song) };
+            });
+            // rows without an arrow keep its place, so the voice buttons stay in one column
+            const anyOpens = rows.some(r => r.canOpen);
 
             return (
-              <section key={cat.id} className="space-y-2.5">
-                <div className="flex items-center justify-between gap-3 px-1">
-                  <h3 className="flex items-center gap-2.5 font-serif-ge text-xl font-bold text-[#2a2017]">
-                    <span aria-hidden className="w-1.5 h-6 rounded-full bg-gradient-to-b from-[#a3323d] to-[#7a2028]" />
-                    {cat.title}
-                  </h3>
-                  <span className="h-7 px-3 rounded-full bg-[#7a2028]/[0.07] text-[#7a2028] text-xs font-bold inline-flex items-center tabular-nums whitespace-nowrap">
-                    {cat.items.filter(learnedOf).length}/{cat.items.length} ნასწავლი
-                  </span>
+              <section key={cat.id} className="space-y-2">
+                <div className="px-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="flex items-center gap-2.5 font-serif-ge text-xl font-bold text-[#2a2017]">
+                      <span aria-hidden className="w-1.5 h-6 rounded-full bg-gradient-to-b from-[#a3323d] to-[#7a2028]" />
+                      {cat.title}
+                    </h3>
+                    <div className="flex items-center gap-1">
+                      <span className="h-7 px-2.5 rounded-full bg-[#7a2028]/[0.07] text-[#7a2028] text-xs font-bold inline-flex items-center tabular-nums whitespace-nowrap">
+                        {cat.items.filter(isDone).length}/{cat.items.length} ნასწავლი
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => setEditingCat(c => (c === cat.id ? null : cat.id))}
+                        aria-pressed={editing}
+                        className={`h-9 px-3 rounded-full text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
+                          editing ? 'bg-[#2a2017] text-white' : 'text-[#6b5a4c] hover:bg-[#7a2028]/[0.06] hover:text-[#7a2028]'
+                        }`}
+                      >
+                        {editing ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <Pencil className="w-3.5 h-3.5" />}
+                        {editing ? 'მზადაა' : 'შეცვლა'}
+                      </button>
+                    </div>
+                  </div>
+                  {(editing || usesVoices(cat.items[0].variantId)) && (
+                    <p className="mt-0.5 pl-4 text-xs text-[#8a7a6a]">
+                      {editing ? 'შეეხე ✕-ს, რომ სიიდან ამოშალო' : 'შეეხე ხმის ნომერს, როცა ისწავლი'}
+                    </p>
+                  )}
                 </div>
 
-                <div className="space-y-2.5">
-                  {cat.items.map((item, index) => {
-                    const song = cat.id === 'simghera' ? FOLK_SONGS.find(s => s.id === item.variantId) : undefined;
-                    const chantVersion = cat.id === 'galoba' ? findVersion(item.variantId) : undefined;
-                    const opensPage = Boolean(chantVersion && canOpenNotes(chantVersion.chant, chantVersion.variant));
-                    const canOpen = opensPage || Boolean(song);
+                <ul className="rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-20px_rgba(42,32,23,0.35)] divide-y divide-[#f1e8da] overflow-hidden">
+                  {rows.map(({ item, song, opensPage, canOpen }, index) => {
                     const isOpen = Boolean(song) && openId === item.variantId;
                     const recordings = cat.id === 'galoba'
                       ? (getChantMedia(item.chantId, item.code) ? 1 : 0)
                       : song?.versions.length ?? 0;
                     const title = song ? song.title : item.chantName;
                     const subtitle = song ? getFolkRegion(song.region).nameGe : item.code;
-                    const itemVoices = voicesOf(item);
+                    const marks = marksOf(item);
                     const toggleOpen = () => {
                       triggerHaptic(10);
                       // a chant opens its own notes page; a song still folds open here
@@ -398,144 +478,110 @@ export const GzaView: React.FC<GzaViewProps> = ({
                     };
 
                     return (
-                      <div
-                        key={item.variantId}
-                        className={`rounded-2xl bg-white ring-1 transition-all duration-200 overflow-hidden ${
-                          isOpen
-                            ? 'ring-[#7a2028]/30 shadow-[0_18px_40px_-22px_rgba(122,32,40,0.55)]'
-                            : 'ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-20px_rgba(42,32,23,0.35)] hover:ring-[#7a2028]/25'
-                        }`}
-                      >
-                        <div className="flex items-start gap-2 pl-3.5 pr-2.5 pt-3">
-                          <button
-                            type="button"
-                            disabled={!canOpen}
-                            onClick={toggleOpen}
-                            className="flex-1 min-w-0 flex items-start gap-2.5 text-left cursor-pointer disabled:cursor-default group"
-                            aria-expanded={isOpen}
-                          >
-                            <span
-                              className={`shrink-0 w-8 h-8 rounded-xl text-[13px] font-black flex items-center justify-center tabular-nums transition-colors ${
-                                learnedOf(item) ? 'bg-gradient-to-br from-[#a3323d] to-[#7a2028] text-white' : 'bg-[#f6efe3] text-[#8a7a6a]'
-                              }`}
-                            >
-                              {index + 1}
-                            </span>
-                            <span className="min-w-0 flex flex-col gap-1 pt-0.5">
-                              <span className="font-serif-ge font-bold text-[15px] sm:text-base leading-snug text-[#2a2017] group-hover:text-[#7a2028] transition-colors break-words">
-                                {title}
-                              </span>
-                              <span className="flex flex-wrap items-center gap-x-1.5 gap-y-1 text-xs text-[#8a7a6a]">
-                                <span className="px-2 py-0.5 rounded-md bg-[#f6efe3] text-[#6b5a4c] font-semibold">{subtitle}</span>
-                                {cat.id === 'galoba' && (
-                                  <span className="inline-flex items-center gap-1">
-                                    <span className="text-[#d8c9b0]">·</span>
-                                    <Music className="w-3 h-3" />
-                                    ნოტები
-                                  </span>
-                                )}
-                                {recordings > 0 && (
-                                  <span className="inline-flex items-center gap-1 text-[#7a2028]/80">
-                                    <span className="text-[#d8c9b0]">·</span>
-                                    <Headphones className="w-3 h-3" />
-                                    {cat.id === 'galoba' ? 'ჩანაწერი' : `${recordings} ჩანაწერი`}
-                                  </span>
-                                )}
-                              </span>
-                            </span>
-                          </button>
+                      <li key={item.variantId} className={`transition-colors ${isOpen ? 'bg-[#fdfaf5]' : ''}`}>
+                        <div className="flex items-center gap-3 pl-3 pr-2 py-2.5">
+                          <StatusRing n={index + 1} marks={marks} />
 
-                          {canOpen && (
+                          {/* phone: title on top, code + voices below; wider: voices on the right of both */}
+                          <div className="flex-1 min-w-0 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1">
+                            <button
+                              type="button"
+                              disabled={!canOpen}
+                              onClick={toggleOpen}
+                              aria-expanded={song ? isOpen : undefined}
+                              className="col-span-2 sm:col-span-1 min-w-0 text-left font-serif-ge font-bold text-[15px] leading-snug text-[#2a2017] break-words transition-colors enabled:cursor-pointer enabled:hover:text-[#7a2028] disabled:cursor-default"
+                            >
+                              {title}
+                            </button>
+                            <span className="col-start-1 row-start-2 min-w-0 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[#8a7a6a]">
+                              {subtitle && <span className="min-w-0 truncate">{subtitle}</span>}
+                              {recordings > 0 && (
+                                <span className="inline-flex items-center gap-1 text-[#7a2028]/80 whitespace-nowrap">
+                                  <Headphones className="w-3 h-3" />
+                                  {cat.id === 'galoba' ? 'ჩანაწერი' : `${recordings} ჩანაწერი`}
+                                </span>
+                              )}
+                            </span>
+
+                            <div className="col-start-2 row-start-2 sm:row-start-1 sm:row-span-2 justify-self-end flex items-center gap-1">
+                              {usesVoices(item.variantId) ? (
+                                <>
+                                  <span className="mr-0.5 text-[11px] font-semibold text-[#a08f7c]">ხმა</span>
+                                  {VOICES.map((vNum, i) =>
+                                    marks[i] === 'ok' ? (
+                                      <span key={vNum} title="მასწავლებელმა ჩათვალა" aria-label={`${vNum} ხმა — ჩათვლილია`} className={`${voiceDot} ${markOk}`}>
+                                        {vNum}
+                                      </span>
+                                    ) : (
+                                      <button
+                                        key={vNum}
+                                        type="button"
+                                        onClick={() => handleToggleVoice(item.variantId, vNum)}
+                                        aria-pressed={marks[i] === 'on'}
+                                        aria-label={`${vNum} ხმა`}
+                                        title={marks[i] === 'on' ? 'ნასწავლია' : 'შეეხე, როცა ისწავლი'}
+                                        className={`${voiceDot} cursor-pointer active:scale-95 ${marks[i] === 'on' ? markOn : markOff}`}
+                                      >
+                                        {vNum}
+                                      </button>
+                                    )
+                                  )}
+                                </>
+                              ) : marks[0] === 'ok' ? (
+                                <span title="მასწავლებელმა ჩათვალა" className={`h-9 px-3.5 rounded-full text-xs font-bold inline-flex items-center gap-1.5 ${markOk}`}>
+                                  <CheckCheck className="w-3.5 h-3.5" />
+                                  ჩათვლილია
+                                </span>
+                              ) : (
+                                <button
+                                  type="button"
+                                  onClick={() => handleToggleLearned(item.variantId)}
+                                  aria-pressed={Boolean(item.isLearned)}
+                                  className={`h-9 px-3.5 rounded-full text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${item.isLearned ? markOn : markOff}`}
+                                >
+                                  {item.isLearned ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <Circle className="w-3.5 h-3.5" />}
+                                  {item.isLearned ? 'ნასწავლია' : 'ვისწავლე'}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+
+                          {editing ? (
+                            <button
+                              type="button"
+                              onClick={() => handleRemoveVariant(item.variantId)}
+                              className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center bg-[#a3323d]/[0.08] text-[#a3323d] hover:bg-[#a3323d] hover:text-white transition-colors cursor-pointer animate-in fade-in duration-150"
+                              title="სიიდან ამოშლა"
+                              aria-label={`${title} — სიიდან ამოშლა`}
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          ) : canOpen ? (
                             <button
                               type="button"
                               onClick={toggleOpen}
                               className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-all cursor-pointer ${
                                 isOpen ? 'rotate-180 bg-[#7a2028] text-white' : 'bg-[#7a2028]/[0.06] text-[#7a2028] hover:bg-[#7a2028]/[0.12]'
                               }`}
-                              aria-label={isOpen ? 'დახურვა' : 'ნოტები და ჩანაწერები'}
+                              aria-label={opensPage ? 'ნოტების გახსნა' : isOpen ? 'დახურვა' : 'ჩანაწერები'}
                             >
                               {opensPage ? <ChevronRight className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
                             </button>
-                          )}
-                          <button
-                            type="button"
-                            onClick={() => handleRemoveVariant(item.variantId)}
-                            className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-[#c2b4a2] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.06] transition-colors cursor-pointer"
-                            title="სიიდან ამოშლა"
-                            aria-label="სიიდან ამოშლა"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
+                          ) : anyOpens ? (
+                            <span aria-hidden className="shrink-0 w-9" />
+                          ) : null}
                         </div>
 
-                        {/* progress: voices learned (chants, songs) or simply learned (poems, instruments) */}
-                        <div className="flex flex-wrap items-center justify-end gap-x-3 gap-y-2 px-3.5 pt-2.5 pb-3">
-                          {/* how many of the three voices are learned */}
-                          {usesVoices(item.variantId) && (
-                            <span className="mr-auto flex items-center gap-2 text-xs font-bold text-[#8a7a6a] tabular-nums">
-                              <span className="w-14 sm:w-20 h-1.5 rounded-full bg-[#f1e8da] overflow-hidden">
-                                <span
-                                  className={`block h-full rounded-full transition-[width] duration-500 ${itemVoices.length >= 3 ? 'bg-emerald-500' : 'bg-gradient-to-r from-[#a3323d] to-[#7a2028]'}`}
-                                  style={{ width: `${(100 * Math.min(itemVoices.length, 3)) / 3}%` }}
-                                />
-                              </span>
-                              {Math.min(itemVoices.length, 3)}/3
-                            </span>
-                          )}
-                          {!usesVoices(item.variantId) ? (
-                            (confirmed[item.variantId] || []).includes('1') ? (
-                              <span title="მასწავლებელმა ჩათვალა" className={`h-9 px-4 rounded-full text-xs font-bold inline-flex items-center gap-1.5 ${segConfirmed}`}>
-                                <CheckCheck className="w-3.5 h-3.5" />
-                                ჩათვლილია
-                              </span>
-                            ) : (
-                            <button
-                              type="button"
-                              onClick={() => handleToggleLearned(item.variantId)}
-                              className={`h-9 px-4 rounded-full text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${item.isLearned ? segOn : 'bg-[#f6efe3] ' + segOff}`}
-                            >
-                              {item.isLearned && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                              {item.isLearned ? 'ნასწავლია' : 'შესასწავლი'}
-                            </button>
-                            )
-                          ) : (
-                            <div className="inline-flex items-center gap-1 p-1 rounded-full bg-[#f6efe3]">
-                            {(['1', '2', '3'] as const).map(vNum => {
-                              const on = itemVoices.includes(vNum);
-                              if ((confirmed[item.variantId] || []).includes(vNum)) {
-                                return (
-                                  <span key={vNum} title="მასწავლებელმა ჩათვალა" className={`h-8 px-3.5 rounded-full text-xs font-bold inline-flex items-center gap-1 ${segConfirmed}`}>
-                                    <CheckCheck className="w-3.5 h-3.5" />
-                                    {vNum} ხმა
-                                  </span>
-                                );
-                              }
-                              return (
-                                <button
-                                  key={vNum}
-                                  type="button"
-                                  onClick={() => handleToggleVoice(item.variantId, vNum)}
-                                  className={`h-8 px-3.5 rounded-full text-xs font-bold inline-flex items-center gap-1 transition-all cursor-pointer active:scale-95 ${on ? segOn : segOff}`}
-                                >
-                                  {on && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                                  {vNum} ხმა
-                                </button>
-                              );
-                            })}
-                            </div>
-                          )}
-                        </div>
-
-                        {/* notes and recordings, as in the chant / song lists */}
-                        {isOpen && (
+                        {/* a song's recordings, as in the songs list */}
+                        {isOpen && song && (
                           <div className="border-t border-[#f1e8da] bg-[#fdfaf5] p-2.5 sm:p-3 animate-in fade-in duration-200">
-                            {song && <SongBody song={song} region={getFolkRegion(song.region)} />}
+                            <SongBody song={song} region={getFolkRegion(song.region)} />
                           </div>
                         )}
-                      </div>
+                      </li>
                     );
                   })}
-                </div>
+                </ul>
               </section>
             );
           })}

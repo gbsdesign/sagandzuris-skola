@@ -6,7 +6,7 @@ import abcjs from 'abcjs';
 import { chord, interval, intervalName, letter, midi, note, scale, steps, syllable, type Note } from '../src/utils/musicTheory';
 import {
   GROUP_24, GROUP_34, LESSONS, SAMPLE_DICTATION, SAMPLE_MELODY, SAMPLE_MELODY_DOWN, SAMPLE_RHYTHM, SAMPLE_RHYTHM_GROUPED,
-  TRANSPOSE_DOWN, TRANSPOSE_UP, type StaffSpec,
+  TRANSPOSE_DOWN, TRANSPOSE_UP, TRANSPOSE_UP2, GROUP_68, type StaffSpec,
 } from '../src/data/abituriLessons';
 
 const L = (ns: Note[]) => ns.map(letter).join(' ');
@@ -81,6 +81,8 @@ test('the transposition exercises', () => {
   assert.deepEqual(up[1].map(e => e.pitch), up[0].map(e => e.pitch + 2));
   const down = [events(TRANSPOSE_DOWN[0]), events(TRANSPOSE_DOWN[1])];
   assert.deepEqual(down[1].map(e => e.pitch), down[0].map(e => e.pitch - 3));
+  const up2 = [events(TRANSPOSE_UP2[0]), events(TRANSPOSE_UP2[1])];
+  assert.deepEqual(up2[1].map(e => e.pitch), up2[0].map(e => e.pitch + 1));
 });
 
 // grouped rhythms sound exactly like the given ones (ties joined) and fill every bar

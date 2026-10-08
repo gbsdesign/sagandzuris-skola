@@ -25,7 +25,21 @@ const summarize = (data: Record<string, any> | undefined) => {
   const habitTicks = week.reduce((a, x) => a + x.n, 0);
   const path = Object.keys(data?.selectedChantVariants || {}).length;
   const kids: KidsMode | undefined = data?.kidsMode;
-  return { profile, work, week, habitTicks, path, kids, lastActive: data?.lastActiveAt || data?.updatedAt };
+  return { profile, work, week, habitTicks, path, kids, abituri: abituriText(data?.abituri), lastActive: data?.lastActiveAt || data?.updatedAt };
+};
+
+// the admission theory (hooks/useAbituriProgress): lessons done, the last mock test, practice
+const abituriText = (a: any): string => {
+  if (!a || typeof a !== 'object') return '';
+  const parts: string[] = [];
+  const lessons = Array.isArray(a.lessons) ? a.lessons.length : 0;
+  if (lessons) parts.push(`${lessons} გაკვეთილი გავლილი`);
+  const last = Array.isArray(a.tests) ? a.tests[a.tests.length - 1] : null;
+  if (last && typeof last.score === 'number') parts.push(`ბოლო საცდელი ტესტი ${last.score}/${last.max}`);
+  const counts = a.drills && typeof a.drills === 'object' ? (Object.values(a.drills) as unknown[]).filter(Array.isArray) as number[][] : [];
+  const all = counts.reduce((n, c) => n + (c[1] || 0), 0), right = counts.reduce((n, c) => n + (c[0] || 0), 0);
+  if (all) parts.push(`ვარჯიშში ${right}/${all} სწორი`);
+  return parts.join(' · ');
 };
 
 // "მოსწავლის მიმოხილვა": every member at a glance — independent work this month, habits this week,
@@ -172,6 +186,7 @@ const StudentSheet: React.FC<{
             <Row label="შესაძლებლობები">{abilitiesText(s.profile) || '—'}</Row>
             <Row label="ინტერესები">{interestsText(s.profile) || '—'}</Row>
             <Row label="გზაზე">{s.path} საგალობელი/სიმღერა</Row>
+            {s.abituri && <Row label="აბიტურიენტი">{s.abituri}</Row>}
             <Row label="სამუშაო განრიგი">{schedule.length ? schedule.map(([d, h]) => `${d}: ${h}`).join(' · ') : 'არ არის გაწერილი'}</Row>
           </dl>
 

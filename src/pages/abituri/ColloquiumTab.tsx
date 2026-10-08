@@ -3,6 +3,7 @@ import { CirclePlay, Ear, Play, X } from 'lucide-react';
 import { COLLOQUIUM_CHANTS, COLLOQUIUM_SONGS, COLLOQUIUM_VIDEOS, type ColloquiumGroup, type ColloquiumItem } from '../../data/abituriProgram';
 import { triggerHaptic } from '../../utils/haptics';
 import { CARD, Pill, SectionHead } from './shared';
+import { ColloquiumQuiz } from './ColloquiumQuiz';
 
 // III exam — the colloquium: excerpts are played, the student names them. Every item plays its own part of the
 // university's listening video right here (an embedded player opens under the row; one at a time).
@@ -20,6 +21,8 @@ export const ColloquiumTab: React.FC = () => {
           <b> რა ჰქვია</b> და <b>სადაურია</b>, და ფურცელზე დაწერო. ქვემოთ — ყველაფერი, რაც შეიძლება შეგხვდეს.
         </p>
       </div>
+
+      <ColloquiumQuiz />
 
       <section>
         <SectionHead

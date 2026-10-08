@@ -33,10 +33,11 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
-    // Public school settings: logo, recordings bound from the admin panel, which sections are open
+    // Public school settings: logo, recordings bound from the admin panel, which sections are open.
+    // „placements“ (recordings moved to another region, song or album) is for the owner and superadmins only.
     match /settings/{settingId} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if (settingId == 'placements' && isSuperAdmin()) || (settingId != 'placements' && isAdmin());
     }
 
     // ---- Staff -----------------------------------------------------------------------------------

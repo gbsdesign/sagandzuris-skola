@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Eye, Play, Square } from 'lucide-react';
+import { Eye, Music, Play, Square } from 'lucide-react';
 import type { AudioTrackNoteItem, TuneObject } from 'abcjs';
 import type { PlayMode, StaffSpec } from '../../data/abituriLessons';
-import { playLessonNotes, stopLessonNotes } from '../../utils/chantSynth';
+import { lessonAudioReady, playLessonNotes, stopLessonNotes } from '../../utils/chantSynth';
 import { triggerHaptic } from '../../utils/haptics';
 import './staff.css';
 
@@ -53,7 +53,11 @@ const schedule = (events: AudioTrackNoteItem[], mode: PlayMode, tempo: number): 
 
 let current: (() => void) | null = null;
 
-export const Staff: React.FC<StaffSpec> = ({ abc, cap, play = 'notes', tempo = 84, hide, voices }) => {
+/** `bare`: no box of its own (a staff inside a card or a button); `coverText`: what a covered staff says;
+ * `autoPlay`: sounds once drawn, if the student has already played something */
+export const Staff: React.FC<StaffSpec & { className?: string; bare?: boolean; coverText?: string; autoPlay?: boolean }> = ({
+  abc, cap, play = 'notes', tempo = 84, hide, voices, start: withStart, className = 'my-4', bare, coverText, autoPlay,
+}) => {
   const box = useRef<HTMLDivElement>(null);
   const paper = useRef<HTMLDivElement>(null);
   const tune = useRef<TuneObject | null>(null);
@@ -144,10 +148,32 @@ export const Staff: React.FC<StaffSpec> = ({ abc, cap, play = 'notes', tempo = 8
     setPlaying(voice);
   };
 
+  // a new task sounds by itself once the student has played something
+  const autoDone = useRef(false);
+  useEffect(() => {
+    if (!ready || !autoPlay || autoDone.current || !lessonAudioReady()) return;
+    autoDone.current = true;
+    start(-1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ready]);
+
+  // every voice's first note, together — the dictation's starting chord
+  const playStart = () => {
+    const t = tune.current;
+    if (!t) return;
+    triggerHaptic(10);
+    current?.();
+    current = null;
+    const firsts = t.setUpAudio({}).tracks
+      .map(tr => tr.find((e): e is AudioTrackNoteItem => e.cmd === 'note'))
+      .filter((e): e is AudioTrackNoteItem => Boolean(e));
+    void playLessonNotes(firsts.map(e => [0, 1.6, e.pitch] as [number, number, number]));
+  };
+
   const canPlay = play !== false;
   return (
-    <figure className="my-4">
-      <div className="relative rounded-2xl bg-[#fffdf8] ring-1 ring-[#e8dcc8] px-2.5 sm:px-4 py-2">
+    <figure className={className}>
+      <div className={`relative rounded-2xl ${bare ? 'px-1' : 'bg-[#fffdf8] ring-1 ring-[#e8dcc8] px-2.5 sm:px-4 py-2'}`}>
         <div ref={box}>
           <div ref={paper} className={`abc-paper ${shown ? (ready ? '' : 'min-h-24') : 'h-32'}`} />
         </div>
@@ -159,7 +185,7 @@ export const Staff: React.FC<StaffSpec> = ({ abc, cap, play = 'notes', tempo = 8
         {!shown && (
           <div className="absolute inset-0 grid place-items-center rounded-2xl bg-[#fbf6ec] p-3 text-center">
             <div>
-              <p className="text-[13.5px] font-semibold leading-snug text-[#6b5c4d]">ნოტები დამალულია — ჯერ მოუსმინე და ჩაწერე.</p>
+              <p className="text-[13.5px] font-semibold leading-snug text-[#6b5c4d]">{coverText ?? 'ნოტები დამალულია — ჯერ მოუსმინე და ჩაწერე.'}</p>
               <button
                 type="button"
                 onClick={() => { triggerHaptic(10); setShown(true); }}
@@ -173,6 +199,16 @@ export const Staff: React.FC<StaffSpec> = ({ abc, cap, play = 'notes', tempo = 8
       </div>
       {canPlay && voices ? (
         <div className="mt-2.5 flex flex-wrap gap-2">
+          {withStart && (
+            <button
+              type="button"
+              disabled={!ready}
+              onClick={playStart}
+              className="inline-flex items-center gap-1.5 min-h-11 px-4 rounded-full text-[13.5px] font-bold bg-white text-[#4a3426] ring-1 ring-[#e8dcc8] hover:text-[#7a2028] cursor-pointer disabled:opacity-50"
+            >
+              <Music className="w-4 h-4" /> საწყისი ბგერები
+            </button>
+          )}
           {[-1, ...voices.map((_, i) => i)].map(v => (
             <button
               key={v}

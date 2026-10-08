@@ -154,7 +154,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
                     <>
                       {/* the teacher's assignments and the lesson timetable, when there are any */}
                       <MyClassWork />
-                      <div className="space-y-3">
+                      <div className="space-y-4">
                         <PathSummary />
                         <PathPanel id="manera" title="მანერა" subtitle="საშემსრულებლო რჩევები" badge={<ManeraAverageBadge />} extra={<ManeraQuickRings />} icon={<Music className="w-5 h-5" />}>
                           <ManeraContent />

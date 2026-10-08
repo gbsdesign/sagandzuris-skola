@@ -1,24 +1,22 @@
 import React, { useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Loader2, Search, X } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
-import { VineLeaf } from '../../components/home/PlateOrnaments';
 import { LifeThumb } from '../../components/saints/LifeThumb';
 import { dayMonthGe, daysInMonth, fromOldStyle, oldStyleOf, todayIso } from '../../data/churchCalendar';
 import { LifeEntry, lifeNewIso, lifeOldDay, openSaintLife, splitTitle, useLivesIndex } from '../../data/saintLives';
 import { MONTHS_GE, MONTHS_SHORT_GE } from '../../utils/dateNames';
+import { BookHead, BookNav, SectionTitle, ToContents } from './BookHead';
+import { MiniCover } from './Shelf';
 
-// "წმიდანთა ცხოვრება" from orthodoxy.ge: by the month (old style, as the menaion reads them), the Georgian
-// saints, the Theotokos' life in chapters and the movable days; or a search. A life opens over the page.
+// "წმიდანთა ცხოვრება" from orthodoxy.ge, read like a menaion: the contents (today's saints, the twelve
+// months in old style, the Georgian saints, the Theotokos' life in chapters, the movable days), each part
+// a step of its own ("lives:m9", "lives:georgian"…); the search hides behind 🔍. A life opens over the page.
 
-const VIEWS = [
-  { id: 'months', label: 'თვეების მიხედვით' },
+const PARTS = [
   { id: 'georgian', label: 'ქართველი წმიდანები' },
   { id: 'theotokos', label: 'ღვთისმშობლის ცხოვრება' },
-  { id: 'movable', label: 'გარდამავალი' },
+  { id: 'movable', label: 'გარდამავალი დღესასწაულები' },
 ] as const;
-type ViewId = typeof VIEWS[number]['id'];
-
-const VIEW_KEY = 'libraryLivesView';
 
 // searching: one spelling for წმიდა/წმინდა, ღვთის/ღმრთის, and no punctuation
 const norm = (s: string) =>
@@ -33,11 +31,11 @@ const LifeRow: React.FC<{ life: LifeEntry; sub?: string }> = ({ life, sub }) => 
       <button
         type="button"
         onClick={() => open(life)}
-        className="group w-full flex items-center gap-3 rounded-xl px-2 py-2 text-left hover:bg-[#7a2028]/[0.04] cursor-pointer active:scale-[0.99] transition-all"
+        className="group w-full flex items-center gap-3 min-h-12 rounded-xl px-2 py-2 text-left hover:bg-[#7a2028]/[0.04] cursor-pointer active:scale-[0.99] transition-all"
       >
         <LifeThumb life={life} />
         <span className="flex-1 min-w-0">
-          <span className="block font-serif-ge text-[14px] sm:text-[14.5px] leading-snug text-[#2a2017] group-hover:text-[#7a2028] transition-colors">
+          <span className="block font-serif-ge text-[14.5px] leading-snug text-[#2a2017] group-hover:text-[#7a2028] transition-colors">
             {name}
             {note && <span className="font-sans text-[11.5px] text-[#8a7a6a]"> ({note})</span>}
           </span>
@@ -60,7 +58,8 @@ const whenOf = (l: LifeEntry) => {
 
 // one day of a month: its old-style date, this year's new-style date, its lives
 const DayGroup: React.FC<{ month: number; day: number; lives: LifeEntry[]; today: boolean }> = ({ month, day, lives, today }) => {
-  const iso = fromOldStyle(oldStyleOf(todayIso()).year, month, Math.min(day, daysInMonth(oldStyleOf(todayIso()).year, month, true)));
+  const year = oldStyleOf(todayIso()).year;
+  const iso = fromOldStyle(year, month, Math.min(day, daysInMonth(year, month, true)));
   return (
     <section className={`${CARD} ${today ? 'ring-[#7a2028]/30' : ''}`}>
       <header className="flex items-center gap-2.5 px-2 pt-1.5 pb-1">
@@ -84,29 +83,38 @@ const DayGroup: React.FC<{ month: number; day: number; lives: LifeEntry[]; today
 };
 
 const STEP_BTN =
-  'w-9 h-9 rounded-full text-[#7a2028] hover:bg-[#7a2028]/[0.06] flex items-center justify-center cursor-pointer active:scale-95 transition-all';
+  'w-10 h-10 rounded-full text-[#7a2028] hover:bg-[#7a2028]/[0.06] flex items-center justify-center cursor-pointer active:scale-95 transition-all';
 
-export const LivesTab: React.FC = () => {
+const byDay = (list: LifeEntry[]) => {
+  const days = new Map<number, LifeEntry[]>();
+  for (const l of list) {
+    if (!days.has(l.d!)) days.set(l.d!, []);
+    days.get(l.d!)!.push(l);
+  }
+  return [...days];
+};
+
+export const LivesTab: React.FC<{ nav: BookNav }> = ({ nav }) => {
   const { lives, failed } = useLivesIndex();
   const old = oldStyleOf(todayIso());
-  const [view, setView] = useState<ViewId>(() => {
-    try {
-      const v = localStorage.getItem(VIEW_KEY);
-      return (VIEWS.some(x => x.id === v) ? v : 'months') as ViewId;
-    } catch { return 'months'; }
-  });
-  const [month, setMonth] = useState(old.month);
+  const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState('');
 
   const listed = useMemo(() => (lives || []).filter(l => !l.x), [lives]);
   const todays = useMemo(() => listed.filter(l => l.m === old.month && l.d === old.day), [listed, old.month, old.day]);
-
-  const pick = (v: ViewId) => {
-    triggerHaptic(8);
-    setView(v);
-    try { localStorage.setItem(VIEW_KEY, v); } catch { /* ignore */ }
-  };
-  const step = (n: number) => { triggerHaptic(8); setMonth(m => ((m - 1 + n + 12) % 12) + 1); };
+  const perMonth = useMemo(() => {
+    const n = Array(12).fill(0) as number[];
+    for (const l of listed) if (l.m) n[l.m - 1]++;
+    return n;
+  }, [listed]);
+  const georgian = useMemo(() => listed.filter(l => l.g), [listed]);
+  const theotokos = useMemo(
+    () => listed
+      .filter(l => l.id.startsWith('gvtismshobeli/'))
+      .sort((a, b) => (parseInt(a.id.split('/')[1], 10) || 99) - (parseInt(b.id.split('/')[1], 10) || 99)),
+    [listed],
+  );
+  const movable = useMemo(() => listed.filter(l => l.id.startsWith('gardamavali/')), [listed]);
 
   const found = useMemo(() => {
     const q = norm(query);
@@ -124,39 +132,102 @@ export const LivesTab: React.FC = () => {
     );
   }
 
-  const byDay = (list: LifeEntry[]) => {
-    const days = new Map<number, LifeEntry[]>();
-    for (const l of list) {
-      if (!days.has(l.d!)) days.set(l.d!, []);
-      days.get(l.d!)!.push(l);
-    }
-    return [...days];
-  };
+  const part = nav.part;
+  const month = part?.startsWith('m') ? Number(part.slice(1)) : 0;
 
+  // a month, as the menaion has it; the arrows turn its pages in place
+  if (month >= 1 && month <= 12) {
+    const step = (n: number) => { triggerHaptic(8); nav.go(`m${((month - 1 + n + 12) % 12) + 1}`, true); };
+    return (
+      <div>
+        <div className="flex items-center justify-between gap-3">
+          <ToContents onClick={nav.up} />
+          <div className="inline-flex items-center h-11 rounded-full bg-white ring-1 ring-[#e8dcc8] p-0.5">
+            <button type="button" onClick={() => step(-1)} className={STEP_BTN} aria-label="წინა თვე">
+              <ChevronLeft className="w-4 h-4" />
+            </button>
+            <span className="min-w-[6.5rem] text-center font-serif-ge text-[15px] font-bold text-[#2a2017]">{MONTHS_GE[month - 1]}</span>
+            <button type="button" onClick={() => step(1)} className={STEP_BTN} aria-label="შემდეგი თვე">
+              <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+        <p className="mt-3 pl-1 text-[12px] text-[#8a7a6a]">თარიღები ძველი სტილით, როგორც თვენში; ქვემოთ — ახალი სტილით</p>
+        <div className="mt-2.5 space-y-3">
+          {byDay(listed.filter(l => l.m === month)).map(([d, ls]) => (
+            <DayGroup key={d} month={month} day={d} lives={ls} today={month === old.month && d === old.day} />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  const partInfo = PARTS.find(p => p.id === part);
+  if (partInfo) {
+    return (
+      <div>
+        <ToContents onClick={nav.up} />
+        <h2 className="mt-4 px-1 font-serif-ge text-[19px] font-bold text-[#2a2017]">{partInfo.label}</h2>
+        {part === 'georgian' ? (
+          <div className="mt-3 space-y-3">
+            {MONTHS_GE.map((name, mi) => {
+              const ls = georgian.filter(l => l.m === mi + 1);
+              if (!ls.length) return null;
+              return (
+                <section key={mi} className={CARD}>
+                  <h3 className="px-2 pt-1.5 pb-1 font-serif-ge text-[15px] sm:text-[16px] font-bold text-[#7a2028]">{name}</h3>
+                  <ul className={ROWS}>{ls.map(l => <LifeRow key={l.id} life={l} sub={whenOf(l)} />)}</ul>
+                </section>
+              );
+            })}
+          </div>
+        ) : (
+          <ul className={`mt-3 ${CARD} ${ROWS}`}>
+            {(part === 'theotokos' ? theotokos : movable).map(l => <LifeRow key={l.id} life={l} sub={part === 'movable' ? l.h : undefined} />)}
+          </ul>
+        )}
+      </div>
+    );
+  }
+
+  // the contents
+  const closeSearch = () => { setQuery(''); setSearching(false); };
   return (
     <div>
-      {/* search */}
-      <label className="relative block">
-        <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#b3a594] pointer-events-none" />
-        <input
-          type="search"
-          value={query}
-          onChange={e => setQuery(e.target.value)}
-          placeholder="წმიდანის სახელი…"
-          className="w-full h-11 pl-10 pr-10 rounded-full bg-white ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/30 outline-none font-serif-ge text-[15px] text-[#2a2017] placeholder:text-[#b3a594] [&::-webkit-search-cancel-button]:hidden"
-          aria-label="წმიდანის ძებნა"
-        />
-        {query && (
+      <BookHead
+        cover={<MiniCover id="lives" className="w-11 h-[60px]" />}
+        title="წმიდანთა ცხოვრება"
+        sub={<>{listed.length} ცხოვრება · თვენის რიგით</>}
+        action={
           <button
             type="button"
-            onClick={() => setQuery('')}
-            className="absolute right-1.5 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full text-[#8a7a6a] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.06] flex items-center justify-center cursor-pointer"
-            aria-label="გასუფთავება"
+            onClick={() => { triggerHaptic(8); if (searching) closeSearch(); else setSearching(true); }}
+            className={`w-11 h-11 shrink-0 rounded-full flex items-center justify-center ring-1 cursor-pointer active:scale-95 transition-all ${
+              searching ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]' : 'bg-white ring-[#e8dcc8] text-[#7a2028] hover:ring-[#7a2028]/35'
+            }`}
+            aria-label={searching ? 'ძებნის დახურვა' : 'წმიდანის ძებნა'}
+            aria-expanded={searching}
           >
-            <X className="w-4 h-4" />
+            {searching ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
           </button>
-        )}
-      </label>
+        }
+      />
+
+      {searching && (
+        <label className="relative mt-4 block animate-[galoba-unfold_0.2s_ease_both]">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#b3a594] pointer-events-none" />
+          <input
+            type="search"
+            autoFocus
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            onKeyDown={e => { if (e.key === 'Escape') closeSearch(); }}
+            placeholder="წმიდანის სახელი…"
+            className="w-full h-12 pl-10 pr-4 rounded-full bg-white ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/30 outline-none font-serif-ge text-[16px] text-[#2a2017] placeholder:text-[#b3a594] [&::-webkit-search-cancel-button]:hidden"
+            aria-label="წმიდანის ძებნა"
+          />
+        </label>
+      )}
 
       {found ? (
         <div className="mt-3">
@@ -171,107 +242,60 @@ export const LivesTab: React.FC = () => {
         </div>
       ) : (
         <>
-          {/* what to show */}
-          {/* two by two on a phone, one row from sm up */}
-          <div className="mt-3 grid grid-cols-2 gap-1.5 sm:flex sm:flex-wrap" role="tablist" aria-label="წმიდანთა ცხოვრება">
-            {VIEWS.map(v => (
-              <button
-                key={v.id}
-                type="button"
-                role="tab"
-                aria-selected={view === v.id}
-                onClick={() => pick(v.id)}
-                className={`min-h-9 py-1.5 px-3 sm:px-3.5 rounded-full text-[12.5px] leading-tight text-center font-bold cursor-pointer select-none active:scale-[0.97] transition-all ${
-                  view === v.id
-                    ? 'bg-[#7a2028] text-[#fbf6ec] shadow-[0_6px_14px_-8px_rgba(122,32,40,0.7)]'
-                    : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:text-[#7a2028] hover:ring-[#7a2028]/30'
-                }`}
-              >
-                {v.label}
-              </button>
-            ))}
+          {/* today */}
+          {todays.length > 0 && (
+            <section className="mt-4 rounded-2xl bg-[#fffdf8] ring-1 ring-[#d2a04a]/40 shadow-[0_1px_2px_rgba(42,32,23,0.04),0_10px_24px_-20px_rgba(42,32,23,0.45)] p-1.5 sm:p-2">
+              <p className="px-2 pt-1.5 pb-1 flex flex-wrap items-baseline gap-x-2">
+                <span className="font-serif-ge text-[15px] font-bold text-[#7a2028]">დღეს იხსენიებიან</span>
+                <span className="text-[12px] font-semibold text-[#8a6a52]">{old.day} {MONTHS_GE[old.month - 1]} ძვ. სტ.</span>
+              </p>
+              <ul className={ROWS}>{todays.map(l => <LifeRow key={l.id} life={l} />)}</ul>
+            </section>
+          )}
+
+          {/* the twelve months */}
+          <SectionTitle className="mt-6">თვეები</SectionTitle>
+          <div className="mt-2.5 grid grid-cols-3 sm:grid-cols-4 gap-2">
+            {MONTHS_GE.map((name, mi) => {
+              const now = mi + 1 === old.month;
+              return (
+                <button
+                  key={mi}
+                  type="button"
+                  onClick={() => nav.go(`m${mi + 1}`)}
+                  className={`min-h-[60px] rounded-2xl px-2 py-2 text-center cursor-pointer active:scale-[0.97] transition-all ${
+                    now ? 'bg-[#7a2028]/[0.06] ring-2 ring-[#7a2028]/35' : 'bg-white ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/30'
+                  }`}
+                >
+                  <span className="block font-serif-ge text-[14.5px] font-bold leading-tight text-[#2a2017]">{name}</span>
+                  <span className={`mt-0.5 block text-[11.5px] font-semibold tabular-nums ${now ? 'text-[#7a2028]' : 'text-[#8a7a6a]'}`}>
+                    {now ? 'ახლა · ' : ''}{perMonth[mi]}
+                  </span>
+                </button>
+              );
+            })}
           </div>
 
-          {view === 'months' && (
-            <>
-              {/* today */}
-              {todays.length > 0 && (
-                <section className="relative mt-3 overflow-hidden rounded-2xl bg-gradient-to-br from-[#7a2028] via-[#6b1a22] to-[#4a1218] text-[#fbf6ec] p-3 sm:p-3.5 shadow-[0_14px_30px_-20px_rgba(74,18,24,0.9)]">
-                  <VineLeaf color="#fbf6ec" className="absolute -right-6 -top-7 w-28 h-28 opacity-[0.07] rotate-12" />
-                  <p className="relative pl-1 text-[11px] font-bold text-[#f3d9a8]">
-                    დღეს იხსენიებიან · {old.day} {MONTHS_GE[old.month - 1]} ძვ. სტ.
-                  </p>
-                  <ul className="relative mt-1.5 space-y-0.5">
-                    {todays.map(l => {
-                      const { name } = splitTitle(l.t);
-                      return (
-                        <li key={l.id}>
-                          <button
-                            type="button"
-                            onClick={() => open(l)}
-                            className="group w-full flex items-center gap-2.5 rounded-xl px-1 py-1.5 text-left hover:bg-[#fbf6ec]/[0.07] cursor-pointer active:scale-[0.99] transition-all"
-                          >
-                            <LifeThumb life={l} className="w-8 h-10 ring-[#fbf6ec]/25" />
-                            <span className="flex-1 min-w-0 font-serif-ge text-[14px] sm:text-[15px] leading-snug font-semibold">{name}</span>
-                            <ChevronRight className="w-4 h-4 shrink-0 text-[#fbf6ec]/50 group-hover:text-[#fbf6ec] group-hover:translate-x-0.5 transition-all" />
-                          </button>
-                        </li>
-                      );
-                    })}
-                  </ul>
-                </section>
-              )}
-
-              {/* the month */}
-              <div className="mt-3 flex items-center justify-between gap-3 pl-1">
-                <p className="text-[12px] text-[#8a7a6a]">ძველი სტილით, როგორც თვენში</p>
-                <div className="inline-flex items-center h-10 rounded-full bg-white ring-1 ring-[#e8dcc8] p-0.5">
-                  <button type="button" onClick={() => step(-1)} className={STEP_BTN} aria-label="წინა თვე">
-                    <ChevronLeft className="w-4 h-4" />
+          {/* the other parts */}
+          <SectionTitle className="mt-6">ასევე</SectionTitle>
+          <ul className={`mt-2.5 ${CARD} ${ROWS}`}>
+            {PARTS.map(p => {
+              const n = p.id === 'georgian' ? georgian.length : p.id === 'theotokos' ? theotokos.length : movable.length;
+              return (
+                <li key={p.id}>
+                  <button
+                    type="button"
+                    onClick={() => nav.go(p.id)}
+                    className="group w-full flex items-center gap-3 min-h-14 rounded-xl px-3 py-2 text-left hover:bg-[#7a2028]/[0.04] cursor-pointer active:scale-[0.99] transition-all"
+                  >
+                    <span className="flex-1 min-w-0 font-serif-ge text-[15px] font-semibold leading-snug text-[#2a2017] group-hover:text-[#7a2028] transition-colors">{p.label}</span>
+                    <span className="shrink-0 text-[12px] font-bold tabular-nums text-[#8a7a6a]">{n}</span>
+                    <ChevronRight className="w-4 h-4 shrink-0 text-[#cdbba3] group-hover:text-[#7a2028] transition-colors" />
                   </button>
-                  <span className="min-w-[6.5rem] text-center font-serif-ge text-[14px] font-bold text-[#2a2017]">{MONTHS_GE[month - 1]}</span>
-                  <button type="button" onClick={() => step(1)} className={STEP_BTN} aria-label="შემდეგი თვე">
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-              <div className="mt-3 space-y-3">
-                {byDay(listed.filter(l => l.m === month)).map(([d, ls]) => (
-                  <DayGroup key={d} month={month} day={d} lives={ls} today={month === old.month && d === old.day} />
-                ))}
-              </div>
-            </>
-          )}
-
-          {view === 'georgian' && (
-            <div className="mt-3 space-y-3">
-              {MONTHS_GE.map((name, mi) => {
-                const ls = listed.filter(l => l.g && l.m === mi + 1);
-                if (!ls.length) return null;
-                return (
-                  <section key={mi} className={CARD}>
-                    <h3 className="px-2 pt-1.5 pb-1 font-serif-ge text-[15px] sm:text-[16px] font-bold text-[#7a2028]">{name}</h3>
-                    <ul className={ROWS}>{ls.map(l => <LifeRow key={l.id} life={l} sub={whenOf(l)} />)}</ul>
-                  </section>
-                );
-              })}
-            </div>
-          )}
-
-          {view === 'theotokos' && (
-            <ul className={`mt-3 ${CARD} ${ROWS}`}>
-              {listed
-                .filter(l => l.id.startsWith('gvtismshobeli/'))
-                .sort((a, b) => (parseInt(a.id.split('/')[1], 10) || 99) - (parseInt(b.id.split('/')[1], 10) || 99))
-                .map(l => <LifeRow key={l.id} life={l} />)}
-            </ul>
-          )}
-
-          {view === 'movable' && (
-            <ul className={`mt-3 ${CARD} ${ROWS}`}>
-              {listed.filter(l => l.id.startsWith('gardamavali/')).map(l => <LifeRow key={l.id} life={l} sub={l.h} />)}
-            </ul>
-          )}
+                </li>
+              );
+            })}
+          </ul>
         </>
       )}
     </div>

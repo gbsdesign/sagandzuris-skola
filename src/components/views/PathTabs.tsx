@@ -80,7 +80,7 @@ export const PathTabs: React.FC<{ panels: Record<PathTab, React.ReactNode> }> = 
         })}
       </div>
 
-      <div key={tab} role="tabpanel" id="path-tab-panel" aria-labelledby={`path-tab-${tab}`} className="space-y-7 animate-in fade-in duration-200">
+      <div key={tab} role="tabpanel" id="path-tab-panel" aria-labelledby={`path-tab-${tab}`} className="space-y-4 animate-in fade-in duration-200">
         {panels[tab]}
       </div>
     </div>

@@ -35,8 +35,9 @@ export const exportItems = (): ExportItem[] => {
 const AVG_SECONDS = 91;
 const KBPS = 64;
 export const estimateMb = (count: number) => Math.round((count * AVG_SECONDS * KBPS) / 8 / 1024);
-// a computer made vol. IX (82 chants) in 5 minutes with three lanes: about 3.6 s a chant
-export const estimateMinutes = (count: number) => Math.max(1, Math.round((count * 3.6) / 60));
+// a computer made vol. IX (82 chants) in 5 minutes with three lanes (3.6 s a chant), Patarava's 11 long
+// chants in 68 s (6 s): about 5 s a chant on a computer
+export const estimateMinutes = (count: number) => Math.max(1, Math.round((count * 5) / 60));
 
 const pad3 = (n: number) => String(n).padStart(3, '0');
 const clean = (s: string) => s.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 90).trim();
@@ -49,6 +50,7 @@ const fileName = (it: ExportItem) => {
 
 export interface ExportState {
   phase: 'running' | 'saving' | 'done' | 'cancelled' | 'failed';
+  books: string[]; // the books in this ZIP
   done: number;
   total: number;
   current: string; // the chant being made
@@ -118,7 +120,7 @@ export const startExport = async (books: string[]) => {
   const release = keepAwake();
   let done = 0;
   let failed = 0;
-  set({ phase: 'running', done, total: list.length, current: list[0].title, failed });
+  set({ phase: 'running', books, done, total: list.length, current: list[0].title, failed });
 
   // a few chants at once: rendering and encoding (in workers) overlap
   const lanes = Math.max(1, Math.min(3, (navigator.hardwareConcurrency || 2) - 1));

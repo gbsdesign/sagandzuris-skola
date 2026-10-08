@@ -1,8 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Headphones, LoaderCircle, Pause, Play } from 'lucide-react';
+import { ArrowRightLeft, Headphones, LoaderCircle, Pause, Play } from 'lucide-react';
 import { ALBUM_RECS, AlbumRec, getChantAlbum } from '../../data/chantAlbums';
 import { AUDIO_PROXY } from '../../data/chantMediaRegistry';
 import { useAccess } from '../../hooks/useAccess';
+import { useAuth } from '../../context';
+import { usePlacements } from '../../data/placements';
+import { MoveSheet, MoveTarget } from '../../components/archive/MoveSheet';
 import { stopPreview } from '../../utils/listPreview';
 import { triggerHaptic } from '../../utils/haptics';
 
@@ -80,6 +83,10 @@ export const ChantAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
   const album = getChantAlbum(albumId);
   const { can } = useAccess();
   const player = useAlbumPlayer();
+  // the owner and the superadmins move a recording to another album or to the songs
+  const { isSuperAdmin } = useAuth();
+  const placed = usePlacements();
+  const [moving, setMoving] = useState<MoveTarget | null>(null);
 
   // one block per performer, the largest first
   const groups = useMemo(() => {
@@ -89,7 +96,8 @@ export const ChantAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
       map.get(r[2])!.push(r);
     }
     return [...map].sort((a, b) => b[1].length - a[1].length);
-  }, [album]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [album, placed]);
 
   if (!album) return null;
   const total = ALBUM_RECS[album.id].length;
@@ -122,7 +130,7 @@ export const ChantAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
                 </h2>
               )}
               <ul className="divide-y divide-[#efe5d4]">
-                {recs.map(([id, title, , note]) => {
+                {recs.map(([id, title, recWho, note]) => {
                   const on = player.cur === id;
                   const phase = on ? player.phase : 'paused';
                   return (
@@ -148,6 +156,17 @@ export const ChantAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
                           <span className="text-[16px] font-bold leading-snug text-[#2a2017] break-words">{title}</span>
                           {note && <span className="text-[12.5px] leading-snug text-[#8c7c6b] break-words">{note}</span>}
                         </div>
+                        {isSuperAdmin && (
+                          <button
+                            type="button"
+                            onClick={() => { triggerHaptic(10); setMoving({ id, from: { kind: 'chant', album: album.id, title }, who: recWho }); }}
+                            className="ml-auto shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-[#b4620e] hover:bg-[#fcf1df] cursor-pointer"
+                            title="გადატანა"
+                            aria-label={`გადატანა: ${title}`}
+                          >
+                            <ArrowRightLeft className="w-4 h-4" />
+                          </button>
+                        )}
                       </div>
                       {on && (
                         <div className="flex items-center gap-2.5 pl-[58px] max-[359px]:pl-0">
@@ -174,6 +193,7 @@ export const ChantAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
           ))
         )}
       </div>
+      {moving && <MoveSheet target={moving} onClose={() => setMoving(null)} />}
     </div>
   );
 };

@@ -22,9 +22,10 @@ export interface NavigationContextType {
   // "მოსახსენებელი": the student's name lists
   openCommemoration: () => void;
   // the region open on the songs / მთქმელი map, or the instrument open on the instruments page
-  // (its own history step, so "back" first returns to the map)
+  // (its own history step, so "back" first returns to the map); in the library a book ("lives") or a part
+  // of it ("lives:m9"). `replace` turns pages in place (the next chapter) instead of adding a step.
   mapItem: string | null;
-  openMapItem: (id: string) => void;
+  openMapItem: (id: string, replace?: boolean) => void;
   handleGoBack: () => void;
   setSelectedService: (service: ServiceType) => void;
   setExpandedChantId: React.Dispatch<React.SetStateAction<string | null>>;
@@ -38,8 +39,8 @@ const NavigationContext = createContext<NavigationContextType | undefined>(undef
 // The notes page and "დღევანდელი წირვა" keep their own entries (NotesContext: sgNotes / sgProg).
 interface NavSnap { page: PageType; service: ServiceType; classId: string | null; prayerId: string | null; mapItem?: string | null; dmId?: string | null }
 const HOME: NavSnap = { page: 'home', service: null, classId: null, prayerId: null, mapItem: null, dmId: null };
-// pages whose open item (a map region, an instrument, a chant album) is a step of its own in history
-const MAP_PAGES: PageType[] = ['simghera', 'mtkmeli', 'sakravebi', 'galoba'];
+// pages whose open item (a map region, an instrument, a chant album, a library book) is a step of its own in history
+const MAP_PAGES: PageType[] = ['simghera', 'mtkmeli', 'sakravebi', 'galoba', 'biblioteka'];
 const makeSnap = (page: PageType, service: ServiceType, classId: string | null, prayerId: string | null, mapItem: string | null, dmId: string | null = null): NavSnap => ({
   page,
   service: page === 'galoba' ? service : null,
@@ -159,9 +160,10 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     window.scrollTo({ top: 0 });
   };
 
-  const openMapItem = (id: string) => {
+  const openMapItem = (id: string, replace = false) => {
     triggerHaptic(10);
     markLeave();
+    if (replace) replaceNext.current = performance.now();
     setMapItem(id);
     // the list starts at its top; "back" brings the map back where it was
     window.setTimeout(() => window.scrollTo({ top: 0 }), 0);
@@ -204,7 +206,8 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       return;
     }
     if (mapItem) {
-      setMapItem(null);
+      // a part of a library book goes up to the book's contents
+      setMapItem(currentPage === 'biblioteka' && mapItem.includes(':') ? mapItem.split(':')[0] : null);
       return;
     }
     if (selectedService) {

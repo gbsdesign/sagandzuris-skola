@@ -216,6 +216,9 @@ export const playLessonNotes = async (notes: [at: number, len: number, midi: num
   for (const [at, len, m] of notes) playNote(ctx, bus, m, m < 55, t0 + at, len, 1 / Math.sqrt(together(at)));
 };
 
+/** sound may start by itself: the student has already played something (a browser wants a tap first) */
+export const lessonAudioReady = () => sharedCtx?.state === 'running';
+
 export const stopLessonNotes = () => {
   const bus = lessonBus;
   if (!bus || !sharedCtx) return;

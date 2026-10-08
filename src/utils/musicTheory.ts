@@ -148,3 +148,29 @@ export const steps = (notes: Note[]) =>
 
 /** a tonic written as the test writes it: major-like modes with a capital letter (D), minor-like small (c, h) */
 export const tonicName = (n: Note, minorLike: boolean) => (minorLike ? letter(n).toLowerCase() : letter(n));
+
+// ---------- keys ----------
+
+/** the major key's signature: sharps (+) or flats (−) — G 1, F −1, Fis 6 */
+export const fifths = (tonic: Note) => [0, 2, 4, -1, 1, 3, 5][tonic.step] + 7 * tonic.alt;
+
+const SHARP_ORDER = [3, 0, 4, 1, 5, 2, 6]; // ფა დო სოლ რე ლა მი სი
+const FLAT_ORDER = [6, 2, 5, 1, 4, 0, 3]; // სი მი ლა რე სოლ დო ფა
+
+/** the alteration each step carries in the major key of `tonic` */
+export const keyAlts = (tonic: Note) => {
+  const f = fifths(tonic), alts = [0, 0, 0, 0, 0, 0, 0];
+  (f > 0 ? SHARP_ORDER.slice(0, f) : FLAT_ORDER.slice(0, -f)).forEach(s => { alts[s] = f > 0 ? 1 : -1; });
+  return alts;
+};
+
+/** the key for ABC's K: field (F#, Bb) */
+export const keyName = (tonic: Note) => LETTERS[tonic.step] + (tonic.alt > 0 ? '#' : tonic.alt < 0 ? 'b' : '');
+
+/** „ერთი დიეზი“, „4 ბემოლი“, „ნიშნების გარეშე“ */
+export const signsWords = (tonic: Note) => {
+  const f = fifths(tonic);
+  if (!f) return 'ნიშნების გარეშე';
+  const k = Math.abs(f);
+  return `${k === 1 ? 'ერთი' : k} ${f > 0 ? 'დიეზი' : 'ბემოლი'}`;
+};

@@ -9,6 +9,7 @@ import {
 } from '../../data/abituriProgram';
 import { songVid } from '../../data/songBookChants';
 import { CARD, Pill, SectionHead, hasVoices, takeMedia, useCanListen } from './shared';
+import { RoundOnePractice } from './RoundOnePractice';
 
 // I exam — chant and song: the three 2026 lists, each piece with its recordings (voice by voice), notes and links
 
@@ -42,6 +43,7 @@ export const ProgramTab: React.FC = () => {
 
   return (
     <div>
+      <RoundOnePractice />
       <div role="tablist" aria-label="პროგრამა" className="grid grid-cols-3 gap-1 sm:w-fit sm:mx-auto mb-5 rounded-[20px] sm:rounded-full bg-white/80 ring-1 ring-[#e8dcc8] p-1">
         {LISTS.map(l => (
           <button

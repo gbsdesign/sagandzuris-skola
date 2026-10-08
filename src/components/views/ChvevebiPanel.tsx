@@ -30,7 +30,7 @@ const CHIP =
   'rounded-lg bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40 hover:text-[#7a2028] transition-colors cursor-pointer active:scale-[0.98]';
 
 // The prayers a habit opens: morning/evening (with the weekday prayers), the seven hours, the akathists.
-const HabitPrayerMenu: React.FC<{ menu: HabitMenu; onOpen: (prayerId: string) => void }> = ({ menu, onOpen }) => {
+export const HabitPrayerMenu: React.FC<{ menu: HabitMenu; onOpen: (prayerId: string) => void }> = ({ menu, onOpen }) => {
   const reminders = useReminders();
   const now = new Date();
   const today = now.getDay();

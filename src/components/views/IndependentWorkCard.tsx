@@ -1,5 +1,5 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { Bookmark, ChevronDown, Check } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { Bookmark, CalendarDays, ChevronDown, Check } from 'lucide-react';
 import { useAuth, useChants, useNavigation } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 import { filterValidVariants } from '../../utils/variantValidation';
@@ -7,6 +7,7 @@ import { StudyDay, useUpcomingSessions } from '../../hooks/useUpcomingSessions';
 import { StreakDay, WeekStreak } from './WeekStreak';
 import { StudentBookmarkView } from './StudentBookmarkView';
 import { MONTHS_SHORT_GE } from '../../utils/dateNames';
+import { CHIP_DONE, CHIP_SOFT, CHIP_STRONG, PATH_CHIP, PATH_LABEL, PATH_LABEL_ICON } from './pathStyle';
 
 
 // "დღეს" / "ხვალ" / "12 ოქტ" for the next planned lesson
@@ -52,23 +53,23 @@ export const PathPanel: React.FC<{
   badge?: React.ReactNode;
   /** quick actions on the folded card: beside the title on wide screens, under it on phones */
   extra?: React.ReactNode;
-  /** sits inside another card: a soft tinted strip instead of a white tile */
+  /** a part of another card: a small label with a "foldLabel ⌄" button, the quick actions under it */
   flat?: boolean;
-  /** told when the panel folds open or shut (and once on mount), so a host card can re-lay itself */
-  onOpenChange?: (open: boolean) => void;
+  /** the flat panel's fold button: its icon, and its name for screen readers and the tooltip ("კალენდარი") */
+  foldIcon?: React.ReactNode;
+  foldLabel?: string;
   children: React.ReactNode;
-}> = ({ id, title, subtitle, icon, badge, extra, flat, onOpenChange, children }) => {
+}> = ({ id, title, subtitle, icon, badge, extra, flat, foldIcon, foldLabel = 'გაშლა', children }) => {
   const [open, setOpen] = useState(() => {
     try { return localStorage.getItem(PANEL_KEY(id)) === '1'; } catch { return false; }
   });
   const ref = useRef<HTMLDivElement>(null);
 
-  useLayoutEffect(() => { onOpenChange?.(open); }, [open, onOpenChange]);
-
   const setAndRemember = (v: boolean) => {
     setOpen(v);
     try { localStorage.setItem(PANEL_KEY(id), v ? '1' : '0'); } catch { /* ignore */ }
   };
+  const toggle = () => { triggerHaptic(10); setAndRemember(!open); };
 
   useEffect(() => {
     const onOpen = (e: Event) => {
@@ -80,40 +81,40 @@ export const PathPanel: React.FC<{
     return () => window.removeEventListener(PANEL_EVENT, onOpen);
   }, [id]);
 
-  return (
-    <div
-      ref={ref}
-      className={flat
-        ? `group w-full rounded-2xl bg-[#7a2028]/[0.04] overflow-hidden scroll-mt-4 ${open ? 'ring-1 ring-[#7a2028]/15' : ''}`
-        : `${PATH_TILE} hover:-translate-y-0 overflow-hidden scroll-mt-4 ${open ? 'ring-[#7a2028]/20' : ''}`}
-    >
-      {flat ? (
-        // compact: a small title in the corner, the quick actions under it, the fold arrow beside
-        <div
-          onClick={() => { triggerHaptic(10); setAndRemember(!open); }}
-          className="w-full flex items-center gap-3 px-3 py-2.5 sm:px-3.5 text-left cursor-pointer select-none"
-        >
-          <div className="flex-1 min-w-0 space-y-1.5">
-            <p className="text-[11px] sm:text-xs font-bold tracking-wide text-[#8a7a6a] group-hover:text-[#7a2028] transition-colors">{title}</p>
-            {extra ? (
-              <div onClick={e => e.stopPropagation()} className="cursor-default">{extra}</div>
-            ) : (
-              subtitle && <p className="text-sm font-semibold text-[#2a2017]">{subtitle}</p>
-            )}
-          </div>
+  if (flat) {
+    return (
+      <div ref={ref} className="w-full scroll-mt-4">
+        <div className="flex items-center gap-2">
+          <p className={`flex-1 min-w-0 ${PATH_LABEL}`}>
+            {icon}
+            <span className="min-w-0">{title}</span>
+          </p>
           <button
             type="button"
-            onClick={e => { e.stopPropagation(); triggerHaptic(10); setAndRemember(!open); }}
+            onClick={toggle}
             aria-expanded={open}
-            aria-label={open ? `${title} — დაკეცვა` : `${title} — გაშლა`}
-            className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all cursor-pointer ${open ? 'rotate-180 bg-[#7a2028] text-[#fbf6ec]' : 'bg-white text-[#7a2028] shadow-2xs'}`}
+            aria-label={foldIcon ? foldLabel : undefined}
+            title={foldIcon ? foldLabel : undefined}
+            className={`${PATH_CHIP} ${open ? CHIP_STRONG : CHIP_SOFT} shrink-0 cursor-pointer active:scale-95`}
           >
-            <ChevronDown className="w-5 h-5" />
+            {foldIcon ?? foldLabel}
+            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
           </button>
         </div>
-      ) : (
+        {extra ? <div className="mt-2.5">{extra}</div> : subtitle && <p className="mt-1 text-[13px] text-[#8a7a6a]">{subtitle}</p>}
+        {open && (
+          <div className="mt-3.5 pt-4 border-t border-[#efe5d4] animate-in fade-in slide-in-from-top-1 duration-200">
+            {children}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div ref={ref} className={`${PATH_TILE} hover:-translate-y-0 overflow-hidden scroll-mt-4 ${open ? 'ring-[#7a2028]/20' : ''}`}>
       <div
-        onClick={() => { triggerHaptic(10); setAndRemember(!open); }}
+        onClick={toggle}
         className="w-full flex flex-wrap md:flex-nowrap items-center gap-x-3.5 gap-y-3 p-3.5 sm:p-4 text-left text-[#2a2017] cursor-pointer select-none"
       >
         <span className={PATH_ICON}>{icon}</span>
@@ -131,7 +132,7 @@ export const PathPanel: React.FC<{
         )}
         <button
           type="button"
-          onClick={e => { e.stopPropagation(); triggerHaptic(10); setAndRemember(!open); }}
+          onClick={e => { e.stopPropagation(); toggle(); }}
           aria-expanded={open}
           aria-label={open ? `${title} — დაკეცვა` : `${title} — გაშლა`}
           className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all cursor-pointer ${open ? 'rotate-180 bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#7a2028]/[0.06] text-[#7a2028]'}`}
@@ -139,7 +140,6 @@ export const PathPanel: React.FC<{
           <ChevronDown className="w-5 h-5" />
         </button>
       </div>
-      )}
       {open && (
         <div className="border-t border-[#efe5d4] bg-white px-3 sm:px-4 pt-4 pb-4 animate-in fade-in slide-in-from-top-1 duration-200">
           {children}
@@ -158,41 +158,39 @@ const studyMark = (d: StudyDay, isToday: boolean): StreakDay => {
   return { date: d.date, mark: isToday ? 'open' : 'missed', note };
 };
 
-// "დამოუკიდებელი სამუშაო": folds open into the month's calendar (its statistics are in the "შენი გზა" card).
-export const IndependentWorkCard: React.FC<{ flat?: boolean; onOpenChange?: (open: boolean) => void }> = ({ flat, onOpenChange }) => {
+// "დამოუკიდებელი სამუშაო": folds open into the month's calendar (its hours and percent are on the "შენი გზა" card).
+export const IndependentWorkCard: React.FC<{ flat?: boolean }> = ({ flat }) => {
   const { user } = useAuth();
   const { navigateTo } = useNavigation();
   const { sessions, week, toggle } = useUpcomingSessions(user?.uid, 7);
 
-  // the last 7 days and the share of their planned hours that were done
+  // the last 7 days as a strip; the strip itself shows how they went, so no percent beside it
   const planned = week.reduce((n, d) => n + d.planned, 0);
-  const done = week.reduce((n, d) => n + d.done, 0);
-  const streak = planned > 0 ? (
-    <WeekStreak
-      days={week.map((d, i) => studyMark(d, i === week.length - 1))}
-      percent={Math.round((100 * done) / planned)}
-      percentTitle={`ბოლო 7 დღეში ${done}/${planned} სთ`}
-    />
-  ) : null;
+  const streak = planned > 0 ? <WeekStreak days={week.map((d, i) => studyMark(d, i === week.length - 1))} /> : null;
 
-  // the nearest planned hours, tickable without unfolding; one row shows as many as fit
+  // the nearest planned hours, tickable without unfolding. Each day's name is written once, before its first
+  // hour ("დღეს 19:00 20:00  ხვალ 21:00"); one row shows as many as fit.
   const quick = sessions.length > 0 ? (
-    <div className={`flex flex-wrap gap-1.5 h-9 overflow-hidden ${flat ? '' : 'md:justify-end'}`}>
-      {sessions.map(s => (
-        <button
-          key={s.key}
-          type="button"
-          onClick={() => toggle(s.key)}
-          aria-pressed={s.done}
-          title={s.done ? 'შესრულებულია — დააჭირე გასაუქმებლად' : 'დააჭირე, როცა იმეცადინებ'}
-          className={`h-9 px-3 rounded-full text-xs font-bold tabular-nums whitespace-nowrap inline-flex items-center gap-1 transition-colors cursor-pointer active:scale-95 ${
-            s.done ? 'bg-emerald-600 text-white' : 'bg-[#7a2028]/[0.06] text-[#7a2028] hover:bg-[#7a2028]/[0.12]'
-          }`}
-        >
-          {s.done && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-          <span className="font-semibold opacity-80">{s.dayLabel}</span> {s.hour}
-        </button>
-      ))}
+    <div className={`flex flex-wrap items-center gap-1.5 h-9 overflow-hidden ${flat ? '' : 'md:justify-end'}`}>
+      {sessions.map((s, i) => {
+        const firstOfDay = i === 0 || sessions[i - 1].dayLabel !== s.dayLabel;
+        return (
+          <span key={s.key} className={`inline-flex items-center gap-1.5 ${firstOfDay && i > 0 ? 'ml-2' : ''}`}>
+            {firstOfDay && <span className="text-xs font-bold text-[#75685a]">{s.dayLabel}</span>}
+            <button
+              type="button"
+              onClick={() => toggle(s.key)}
+              aria-pressed={s.done}
+              aria-label={`${s.dayLabel} ${s.hour}`}
+              title={s.done ? 'შესრულებულია — დააჭირე გასაუქმებლად' : 'დააჭირე, როცა იმეცადინებ'}
+              className={`${PATH_CHIP} ${s.done ? CHIP_DONE : CHIP_SOFT} cursor-pointer active:scale-95`}
+            >
+              {s.done && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+              {s.hour}
+            </button>
+          </span>
+        );
+      })}
     </div>
   ) : undefined;
 
@@ -200,11 +198,12 @@ export const IndependentWorkCard: React.FC<{ flat?: boolean; onOpenChange?: (ope
     <PathPanel
       id="work"
       flat={flat}
-      onOpenChange={onOpenChange}
-      extra={streak || quick ? <div className="space-y-2">{streak}{quick}</div> : undefined}
+      foldIcon={<CalendarDays className="w-[18px] h-[18px]" />}
+      foldLabel="კალენდარი"
+      extra={streak || quick ? <div className="space-y-2.5">{streak}{quick}</div> : undefined}
       title="დამოუკიდებელი სამუშაო"
-      icon={<Bookmark className="w-5 h-5 fill-[#7a2028]/15" />}
-      subtitle={sessions.length > 0 ? 'მონიშნე, როცა იმეცადინებ' : 'მეცადინეობის კალენდარი'}
+      icon={<Bookmark className={flat ? `${PATH_LABEL_ICON} fill-[#7a2028]/15` : 'w-5 h-5 fill-[#7a2028]/15'} />}
+      subtitle={sessions.length > 0 ? 'მონიშნე, როცა იმეცადინებ' : 'საათები დაგეგმე კალენდარში'}
     >
       <StudentBookmarkView onBack={() => {}} onGoToGaloba={() => navigateTo('galoba')} />
     </PathPanel>

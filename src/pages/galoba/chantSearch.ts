@@ -1,3 +1,4 @@
+import { placementsVersion } from '../../data/placements';
 import { ServiceType } from '../../context';
 import {
   TSIRVA_CHANTS, MWUKHRI_CHANTS, CISKARI_CHANTS, SADGHESASWAULO_CHANTS, MARXVANI_CHANTS, ZATIKI_CHANTS,
@@ -42,8 +43,11 @@ export const searchChants = (q: SearchQuery, skip?: ServiceType): ChantHit[] =>
     .flatMap(service => SERVICE_CHANTS[service].filter(c => chantMatches(c, q)).map(chant => ({ service, chant })));
 
 // Songs: title, region and place
+// (made again after a recording is moved: data/placements)
 let songIndex: { song: FolkSong; key: string }[] | null = null;
+let songIndexOf = -1;
 export const searchSongs = (q: SearchQuery, showOwnerOnly: boolean): FolkSong[] => {
+  if (songIndexOf !== placementsVersion()) { songIndex = null; songIndexOf = placementsVersion(); }
   songIndex ??= FOLK_SONGS.map(song => ({
     song,
     key: searchKey([song.title, getFolkRegion(song.region).nameGe, song.municipality, song.area].filter(Boolean).join(' · ')),

@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { CalendarClock, Plus, Save, Trash2 } from 'lucide-react';
+import { CalendarClock, MapPin, Plus, Save, Trash2 } from 'lucide-react';
 import { db } from '../../firebase';
 import { LessonSlot, SchoolClass } from '../../hooks/useClasses';
 import {  } from '../../hooks/useTeaching';
 import { Btn, Card, CardTitle, FIELD, Flash, IconBtn, useFlash } from '../ui/kit';
 import { WEEKDAYS_GE } from '../../utils/dateNames';
+import { CHIP_STATIC, CHIP_STRONG, PATH_CHIP, PATH_LABEL } from '../views/pathStyle';
 
 // Monday first, as a week is read in Georgia
 const ORDER = [1, 2, 3, 4, 5, 6, 0];
@@ -39,7 +40,7 @@ export const LessonTable: React.FC<{ slots: LessonSlot[]; title?: string; compac
           const isNext = next?.slot === s;
           return (
             <li key={i} className={`flex items-center gap-3 px-3.5 py-2.5 ${s.day === today ? 'bg-[#7a2028]/[0.04]' : ''}`}>
-              <span className={`w-20 shrink-0 text-sm font-bold ${s.day === today ? 'text-[#7a2028]' : 'text-[#4a3426]'}`}>{WEEKDAYS_GE[s.day]}</span>
+              <span className={`min-w-28 shrink-0 text-sm font-bold ${s.day === today ? 'text-[#7a2028]' : 'text-[#4a3426]'}`}>{WEEKDAYS_GE[s.day]}</span>
               <span className="text-sm font-semibold tabular-nums text-[#2a2017]">{s.start}{s.end ? `–${s.end}` : ''}</span>
               <span className="flex-1 min-w-0 text-[13px] text-[#8a7a6a] truncate">{s.note}</span>
               {isNext && <span className="shrink-0 h-6 px-2 rounded-full bg-[#7a2028] text-[#fbf6ec] text-[11px] font-bold inline-flex items-center">{whenLabel(next!.inDays)}</span>}
@@ -47,6 +48,52 @@ export const LessonTable: React.FC<{ slots: LessonSlot[]; title?: string; compac
           );
         })}
       </ul>
+    </div>
+  );
+};
+
+// short weekday names for the chips
+const DAY_SHORT = ['კვ', 'ორშ', 'სამ', 'ოთხ', 'ხუთ', 'პარ', 'შაბ'];
+
+/** The timetable as one wrapping line of chips — "ორშ 19:00–21:00 · 4 დღეში" — with the next lesson filled in.
+ *  A place written on every lesson (e.g. "თბ") is shown once: beside the label, or after the chips. */
+export const LessonChips: React.FC<{ slots: LessonSlot[]; label?: React.ReactNode; className?: string }> = ({ slots, label, className = '' }) => {
+  if (!slots.length) return null;
+  const next = nextLesson(slots);
+  const notes = new Set(slots.map(s => s.note?.trim() || ''));
+  const shared = notes.size === 1 ? [...notes][0] : '';
+  const place = shared ? (
+    <span title={shared} className="min-w-0 max-w-[50%] inline-flex items-center gap-1 text-xs font-semibold text-[#8a7a6a]">
+      <MapPin className="w-3.5 h-3.5 shrink-0" />
+      <span className="truncate">{shared}</span>
+    </span>
+  ) : null;
+  return (
+    <div className={className}>
+      {label && (
+        <div className="flex items-center gap-3 mb-2">
+          <p className={`flex-1 min-w-0 ${PATH_LABEL}`}>{label}</p>
+          {place}
+        </div>
+      )}
+      <div className="flex flex-wrap items-center gap-1.5">
+        {sortSlots(slots).map((s, i) => {
+          const isNext = next?.slot === s;
+          const note = shared ? '' : s.note?.trim();
+          return (
+            <span
+              key={i}
+              title={`${WEEKDAYS_GE[s.day]}${s.note ? ` — ${s.note}` : ''}`}
+              className={`${PATH_CHIP} max-w-full ${isNext ? CHIP_STRONG : CHIP_STATIC}`}
+            >
+              <span className="shrink-0">{DAY_SHORT[s.day]} {s.start}{s.end ? `–${s.end}` : ''}</span>
+              {note && <span className="min-w-0 truncate font-semibold opacity-70">· {note}</span>}
+              {isNext && <span className="shrink-0 font-semibold opacity-80">· {whenLabel(next!.inDays)}</span>}
+            </span>
+          );
+        })}
+        {!label && place}
+      </div>
     </div>
   );
 };

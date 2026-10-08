@@ -27,6 +27,7 @@ import { GlobalSearch } from './components/search/GlobalSearch';
 import { usePrayerReminderScheduler } from './utils/prayerReminders';
 import { isPrayerId } from './data/prayers';
 import { setRecordingsHidden, startRecordingBindings, useRecordingBindings } from './data/runtimeRecordings';
+import { startPlacements } from './data/placements';
 import { SignInPrompt } from './components/access/SignInPrompt';
 import { EmailLinkFinish } from './components/access/EmailLinkFinish';
 import { FirstMeeting } from './components/onboarding/FirstMeeting';
@@ -35,6 +36,7 @@ import { MembershipGate, WaitingBanner } from './components/access/MembershipGat
 import { useMembership } from './utils/memberAccess';
 
 startRecordingBindings();
+startPlacements();
 
 // Backward compatibility exports
 export { filterValidVariants, getValidVariantIds } from './utils/variantValidation';
