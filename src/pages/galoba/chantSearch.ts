@@ -1,7 +1,7 @@
 import { ServiceType } from '../../context';
 import {
   TSIRVA_CHANTS, MWUKHRI_CHANTS, CISKARI_CHANTS, SADGHESASWAULO_CHANTS, MARXVANI_CHANTS, ZATIKI_CHANTS,
-  MOMIXSENENI_CHANTS, DZLISPIREBI_CHANTS, KATABASIEBI_CHANTS, ChantItem, FOLK_SONGS, FolkSong, getFolkRegion,
+  MOMIXSENENI_CHANTS, DZLISPIREBI_CHANTS, KATABASIEBI_CHANTS, DASADEBLEBI_CHANTS, ChantItem, FOLK_SONGS, FolkSong, getFolkRegion,
 } from '../../data';
 import { MORNING_EVENING, AKATHISTS, KATHISMAS, PSALTER_RULE, PRAYER_HOURS, weekPrayerId, prayerTitle } from '../../data/prayers';
 import { SearchQuery, matchesQuery, searchKey } from '../../utils/searchUtils';
@@ -19,6 +19,7 @@ export const SERVICE_CHANTS: Record<Service, ChantItem[]> = {
   'მომიხსენენი': MOMIXSENENI_CHANTS,
   'ძლისპირები': DZLISPIREBI_CHANTS,
   'კატაბასიები': KATABASIEBI_CHANTS,
+  'დასადებლები': DASADEBLEBI_CHANTS,
 };
 
 // A chant is found by its title or by any of its versions' names; the key is made once per chant

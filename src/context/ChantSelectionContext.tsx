@@ -7,7 +7,7 @@ import { filterValidVariants } from '../utils/variantValidation';
 import { triggerHaptic } from '../utils/haptics';
 import { HabitLog, dayKey, getHabitsWeekKey, habitsThisWeek, pruneHabitLog } from '../utils/habitsWeek';
 import { HABIT_ITEMS } from '../data/habitsAndManera';
-import { ChantItem, ChantVariant } from '../data/tsirvaChants';
+import { ChantItem, ChantVariant, versionTitle } from '../data/tsirvaChants';
 
 export interface SelectedChantVariant {
   variantId: string;
@@ -112,7 +112,7 @@ export const ChantSelectionProvider: React.FC<{ children: React.ReactNode }> = (
         chantName: chant.title,
         code: v.code,
         label: v.label,
-        fullTitle: v.fullTitle,
+        fullTitle: versionTitle(chant, v),
         isLearned: false,
         voices: [],
       };

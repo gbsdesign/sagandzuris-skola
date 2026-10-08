@@ -1,6 +1,7 @@
 // Items of a student's "საგანძურის გზა" (selectedChantVariants): building them from any catalogue id,
 // searching the catalogue, and one shared ordering (teacher-set `order` first, else catalogue order).
 import { ALL_CHANTS } from '../data/gelatiBookChants';
+import { versionTitle } from '../data/tsirvaChants';
 import { FOLK_SONGS, getFolkRegion } from '../data/songsData';
 import { MTKMELI_AUTHORS } from '../data/mtkmeliData';
 import { INSTRUMENTS_LIST } from '../data/instrumentsData';
@@ -71,10 +72,10 @@ export const getCatalog = (): CatalogEntry[] => {
     chant.variants.forEach(v =>
       list.push({
         id: v.id,
-        title: v.fullTitle || v.chantName || chant.title,
+        title: versionTitle(chant, v),
         code: v.code,
         category: 'galoba',
-        make: () => ({ variantId: v.id, chantId: chant.id, chantName: chant.title, code: v.code, label: v.label, fullTitle: v.fullTitle, isLearned: false, voices: [] }),
+        make: () => ({ variantId: v.id, chantId: chant.id, chantName: chant.title, code: v.code, label: v.label, fullTitle: versionTitle(chant, v), isLearned: false, voices: [] }),
       })
     )
   );

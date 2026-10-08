@@ -23,6 +23,8 @@ import { askSignIn } from '../access/SignInPrompt';
 import { useAccess } from '../../hooks/useAccess';
 import { useOpenRequest } from '../../utils/searchOpen';
 import { matchScore, searchNormalize } from '../../utils/searchMatch';
+import { toggleAudioPreview } from '../../utils/listPreview';
+import { PreviewButton } from '../PreviewButton';
 
 interface GeorgiaMapProps {
   selectedChantVariants?: Record<string, any>;
@@ -369,10 +371,21 @@ const SongItem: React.FC<SongItemProps> = ({ id, song, showRegion, isOpen: open,
           {takes.length > 0 ? (
             <>
               <p className="px-1 text-[11.5px] font-semibold text-[#8c7c6b]">შესრულებები — აირჩიეთ მოსასმენად</p>
-              <div className="rounded-xl bg-white border border-[#e4d8c4] px-3 pt-3.5 pb-3.5 grid grid-cols-2 sm:grid-cols-3 gap-x-2.5 gap-y-3">
-                {takes.map((t, i) => (
+              <div className="rounded-xl bg-white border border-[#e4d8c4] px-3 pt-3.5 pb-3.5 grid grid-cols-2 sm:grid-cols-3 gap-x-2.5 gap-y-4">
+                {takes.map((t, i) => {
+                  const url = t.media.tracks[3] || t.media.tracks.find(Boolean);
+                  return (
+                  <div key={i} className="relative min-w-0">
+                  {/* a quick listen to this performance, without opening the song's page */}
+                  {url && (
+                    <PreviewButton
+                      id={`${song.id}~${i}`}
+                      onToggle={() => toggleAudioPreview(`${song.id}~${i}`, url)}
+                      label="მოსმენა"
+                      className="-bottom-[7px] left-1.5"
+                    />
+                  )}
                   <button
-                    key={i}
                     type="button"
                     onClick={() => { triggerHaptic(10); openSongPage(song.id, i); }}
                     className="w-full min-h-12 py-1.5 px-1.5 rounded-[10px] border text-[11.5px] sm:text-xs font-bold flex flex-col items-center justify-center gap-px text-center leading-tight transition-all duration-150 cursor-pointer active:scale-[0.97] bg-white text-[#2a2017] border-[#e2d3bb] shadow-[0_1px_0_rgba(133,80,44,0.06)] hover:border-[#d9a55a] hover:shadow-[0_0_0_3px_rgba(180,98,14,0.12)]"
@@ -383,7 +396,9 @@ const SongItem: React.FC<SongItemProps> = ({ id, song, showRegion, isOpen: open,
                     </span>
                     {t.sub && <span className="text-[9.5px] font-semibold text-[#a0907c]">{t.sub}</span>}
                   </button>
-                ))}
+                  </div>
+                  );
+                })}
               </div>
             </>
           ) : (

@@ -22,7 +22,7 @@ const SECTIONS: Array<{ title: string; note: string; service?: Service }> = [
   { title: 'კატაბასიები', note: 'წლიური ციკლისა · აღდგომის კონდაკები, 8 ხმა', service: 'კატაბასიები' },
   { title: 'ოხითები', note: 'ოხითები და კონდაკები' },
   { title: 'აღდგომის ოხითები', note: '8 ხმა' },
-  { title: 'დასადებლები', note: '„უფალო, ღაღადვყავ“, ხმა ა–დ' },
+  { title: 'დასადებლები', note: '„უფალო, ღაღადვყავ“, ხმა ა–დ', service: 'დასადებლები' },
 ];
 
 interface ServiceTabsProps {

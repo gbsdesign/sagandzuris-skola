@@ -6,9 +6,14 @@ import { SADGHESASWAULO_CHANTS } from './feastBookChants';
 import { MARXVANI_CHANTS, ZATIKI_CHANTS } from './triodionBookChants';
 import { MOMIXSENENI_CHANTS } from './beatitudesBookChants';
 import { DZLISPIREBI_CHANTS, KATABASIEBI_CHANTS } from './irmosBookChants';
+import { DASADEBLEBI_CHANTS } from './sticheraBookChants';
+import { SONG_CHANTS } from './songBookChants';
 
 export type ServiceName = 'წირვა' | 'მწუხრი' | 'ცისკარი' | 'სადღესასწაულო' | 'მარხვანი' | 'ზატიკი' | 'მომიხსენენი'
-  | 'ძლისპირები' | 'კატაბასიები';
+  | 'ძლისპირები' | 'კატაბასიები' | 'დასადებლები';
+/** A list the notes page can open: a service tab, or the admission program's songs (no tab). */
+export type NotesListName = ServiceName | 'სიმღერა';
+export const isServiceTab = (s: NotesListName): s is ServiceName => s !== 'სიმღერა';
 
 export const SERVICE_LISTS: [ServiceName, ChantItem[]][] = [
   ['წირვა', TSIRVA_CHANTS],
@@ -20,12 +25,17 @@ export const SERVICE_LISTS: [ServiceName, ChantItem[]][] = [
   ['მომიხსენენი', MOMIXSENENI_CHANTS],
   ['ძლისპირები', DZLISPIREBI_CHANTS],
   ['კატაბასიები', KATABASIEBI_CHANTS],
+  ['დასადებლები', DASADEBLEBI_CHANTS],
 ];
+
+// everything the notes page can open: the services, then lists without a service tab — the admission program's
+// songs (songBookChants.ts). Search, recordings admin and synth downloads use SERVICE_LISTS only.
+export const NOTES_LISTS: [NotesListName, ChantItem[]][] = [...SERVICE_LISTS, ['სიმღერა', SONG_CHANTS]];
 
 export interface VersionInfo {
   chant: ChantItem;
   variant: ChantVariant;
-  service: ServiceName;
+  service: NotesListName;
   serviceIndex: number; // position of the service in SERVICE_LISTS
   chantIndex: number;   // position of the chant in its service
 }
@@ -33,7 +43,7 @@ export interface VersionInfo {
 let index: Map<string, VersionInfo> | null = null;
 const buildIndex = () => {
   const m = new Map<string, VersionInfo>();
-  SERVICE_LISTS.forEach(([service, list], serviceIndex) =>
+  NOTES_LISTS.forEach(([service, list], serviceIndex) =>
     list.forEach((chant, chantIndex) =>
       (chant.variants ?? []).forEach(variant => {
         if (!m.has(variant.id)) m.set(variant.id, { chant, variant, service, serviceIndex, chantIndex });
@@ -60,6 +70,7 @@ export const SCHOOL_NAMES: Record<string, string> = {
   'შ.ს.': 'შემოქმედის სკოლა',
   'ე.კ.': 'ექვთიმე კერესელიძის ხელნაწერი',
   'რ.ძ.': 'რვახმა საცისკრო ძლისპირები',
+  'ჰ.კ.': 'ჰიმნოგრაფიული კრებული',
 };
 
 export const BOOK_NAMES: Record<string, string> = {
@@ -73,6 +84,9 @@ export const BOOK_NAMES: Record<string, string> = {
   v9: 'გელათის სკოლის საგალობლები, IX ტომი',
   momix: 'ჰიმნოგრაფიული კრებული I, მომიხსენენი',
   v8: 'რვახმა საცისკრო ძლისპირები, VIII ტომი',
+  dasd1: 'ჰიმნოგრაფიული კრებული II, დასდებელნი ხმა ა–ბ',
+  dasd2: 'ჰიმნოგრაფიული კრებული III, დასდებელნი ხმა გ–დ',
+  song: 'აბიტურიენტის პროგრამა — სიმღერები',
 };
 
 /** Order of a version inside the services (service first, then the chant's place in it). */
@@ -85,7 +99,7 @@ export const serviceOrder = (info: VersionInfo) => info.serviceIndex * 10000 + i
 export const neighbourVersion = (variantId: string, dir: 1 | -1): string | null => {
   const info = findVersion(variantId);
   if (!info) return null;
-  const list = SERVICE_LISTS[info.serviceIndex][1];
+  const list = NOTES_LISTS[info.serviceIndex][1];
   const book = info.variant.book ?? 'book';
   const school = schoolOf(info.variant.code);
   for (let i = info.chantIndex + dir; i >= 0 && i < list.length; i += dir) {

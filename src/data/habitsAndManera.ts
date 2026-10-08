@@ -48,6 +48,7 @@ export const HABIT_GROUPS: HabitGroupType[] = [
       { id: 'habit_4', label: 'სულიერი ლიტერატურა — დღეში 3–5 გვერდი მაინც' },
       { id: 'habit_5', label: 'იესოს ლოცვა — რაც უფრო ხშირად, მით უკეთესი', menu: 'jesus' },
       { id: 'habit_6', label: 'ფსალმუნების კითხვა — სასურველია 1 კანონი ან დიდება მაინც', menu: 'psalms' },
+      { id: 'habit_14', label: 'ჩანაწერების წიგნაკი' },
     ],
   },
   {

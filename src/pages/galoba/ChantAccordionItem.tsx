@@ -1,10 +1,12 @@
 import React, { memo, useCallback, useEffect, useState } from 'react';
 import { BookmarkCheck, Check, ChevronDown, CircleCheck, Headphones, Plus, X } from 'lucide-react';
-import { ChantItem, ChantVariant, variantName, variantSublabel } from '../../data';
+import { ChantItem, ChantVariant, isChantGroup, variantLines } from '../../data';
 import { useNotes } from '../../context/NotesContext';
 import { canOpenNotes } from '../../data/chantLookup';
 import { isOffline, onOfflineChange } from '../../utils/offlineNotes';
 import { triggerHaptic } from '../../utils/haptics';
+import { toggleSynthPreview } from '../../utils/listPreview';
+import { PreviewButton } from '../../components/PreviewButton';
 
 // warm paper palette of the notes pages: cream ground, white cards with a sand line
 const SCHOOL_STYLES: Record<string, { name: string; text: string }> = {
@@ -63,6 +65,15 @@ const VariantChip: React.FC<{
           {progIdx >= 0 ? progIdx + 1 : <Plus className="w-3 h-3 stroke-[3]" />}
         </button>
       )}
+      {/* a quick listen on the synthesizer, without opening the notes */}
+      {hasNotes && (
+        <PreviewButton
+          id={variant.id}
+          onToggle={() => toggleSynthPreview(variant.id, variant.bookNums![0], variant.book)}
+          label="სინთეზატორით მოსმენა"
+          className="-bottom-[7px] left-1.5"
+        />
+      )}
       <button
         type="button"
         onClick={() => {
@@ -89,17 +100,9 @@ const VariantChip: React.FC<{
           <span className="flex flex-col items-center gap-px min-w-0">
             <span className="inline-flex items-center gap-1">
               {hasRecording && <Headphones className="w-3.5 h-3.5 shrink-0 text-[#b4620e]" />}
-              {label.endsWith(' გამშვენებული') ? (
-                /* "162 გამშვენებული" does not fit a phone chip: shortened like the "გამშვ." slot above */
-                <>
-                  <span className="sm:hidden">{label.replace(/გამშვენებული$/, 'გამშვ.')}</span>
-                  <span className="hidden sm:inline">{label}</span>
-                </>
-              ) : (
-                <span>{label}</span>
-              )}
+              <span>{label}</span>
             </span>
-            <span className="text-[9.5px] font-semibold text-[#a0907c]">{sublabel}</span>
+            <span className="text-[10.5px] font-semibold text-[#a0907c]">{sublabel}</span>
           </span>
         ) : (
           <span className="inline-flex items-center gap-1 truncate">
@@ -172,14 +175,21 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
   const bookVersions = chant?.variants?.filter(v => v.version !== undefined) ?? [];
   const firstPage = bookVersions.find(v => v.page)?.page;
   const recordingCount = chant?.variants?.filter(v => recorded.has(`${chant.id}|${v.code}`)).length ?? 0;
-  // a feast (სადღესასწაულო), an occasion of მარხვანი / ზატიკი, a group of მომიხსენენი, a tone of ძლისპირები or a
-  // canon of კატაბასიები lists its own chants, not versions of one chant
+  // a feast (სადღესასწაულო), an occasion of მარხვანი / ზატიკი, a group of მომიხსენენი or დასადებლები, a tone of
+  // ძლისპირები or a canon of კატაბასიები lists its own chants, not versions of one chant
   const isFeast = chant?.id?.startsWith('sd-');
-  const isOccasion = isFeast || /^(mx|zt|mm|dz|kt)-/.test(chant?.id ?? '');
+  const isOccasion = isChantGroup(chant?.id);
   const meta = [
     firstPage && `გვ. ${firstPage}`,
     bookVersions.length > 1 && `${bookVersions.length} ${isOccasion ? 'საგალობელი' : 'ვერსია'}`,
   ].filter(Boolean) as string[];
+
+  // a book version: "I ტომი · ამინ · გვ. 229" over "კერესელიძე · №165"
+  const bookChip = (variant: ChantVariant) => {
+    const { top, sub } = variantLines(chant.id, chant.title, variant);
+    // a wrapped line keeps "I ტომი" and "გვ. 229" whole
+    return chip(variant, top.replace(/ (?=ტომი)|(?<=გვ\.) /g, ' '), sub || undefined);
+  };
 
   const chip = (variant: ChantVariant, label: string, sublabel?: string) => (
     <VariantChip
@@ -279,8 +289,8 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
 
           {isBookChant ? (
             /* Book chants of one school: one button per version */
-            <div className="rounded-xl bg-white border border-[#e4d8c4] px-3 pt-3.5 pb-3.5 grid grid-cols-2 sm:grid-cols-3 gap-x-2.5 gap-y-3">
-              {chant.variants.map(variant => chip(variant, variantName(variant) || variant.code, variantSublabel(variant)))}
+            <div className="rounded-xl bg-white border border-[#e4d8c4] px-3 pt-3.5 pb-3.5 grid grid-cols-2 sm:grid-cols-3 gap-x-2.5 gap-y-4">
+              {chant.variants.map(bookChip)}
             </div>
           ) : (
             /* one block per school, its name above its buttons */
@@ -293,9 +303,9 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
                       <span className="font-bold opacity-70"> · {versions[0].book === 'karb' ? 'კარბელაანთ კილო' : 'დ. პატარავა'}</span>
                     )}
                   </span>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-2.5 gap-y-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-2.5 gap-y-4">
                     {versions.length > 0
-                      ? versions.map(variant => chip(variant, variantName(variant) || variant.code, variantSublabel(variant)))
+                      ? versions.map(bookChip)
                       : [plain, ornate].map((variant, i) => (variant ? chip(variant, i === 0 ? 'სადა' : 'გამშვენებული') : null))}
                   </div>
                 </div>

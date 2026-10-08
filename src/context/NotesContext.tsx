@@ -3,7 +3,7 @@
 // and the address (?c=…&v=… or ?p=…) can be shared: it opens the same page directly.
 import React, { createContext, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigation } from './NavigationContext';
-import { findVersion } from '../data/chantLookup';
+import { findVersion, isServiceTab } from '../data/chantLookup';
 import { useLiturgy, LiturgyApi, LiturgyProgram } from '../hooks/useLiturgy';
 
 const NotesPage = lazy(() => import('../pages/notes/NotesPage').then(m => ({ default: m.NotesPage })));
@@ -94,11 +94,11 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const landOnList = useCallback((vid: string | null) => {
     const info = findVersion(vid);
     window.history.replaceState(null, '', window.location.pathname);
-    if (info) {
+    if (info && isServiceTab(info.service)) {
       nav.navigateTo('galoba');
       nav.setSelectedService(info.service);
       nav.setExpandedChantId(info.chant.id);
-    }
+    } else if (info) nav.navigateTo('abituri'); // a program song: its list is on the admission page
   }, [nav]);
 
   const openNotes = useCallback((vid: string, from: NotesOrigin) => {
@@ -120,7 +120,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setChurch(false);
     if (cur?.from === 'list') {
       const info = findVersion(cur.vid);
-      if (info) { nav.setSelectedService(info.service); nav.setExpandedChantId(info.chant.id); }
+      if (info && isServiceTab(info.service)) { nav.setSelectedService(info.service); nav.setExpandedChantId(info.chant.id); }
     }
     if (window.history.state?.sgBase) {
       setNotes(null);

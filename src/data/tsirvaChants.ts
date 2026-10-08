@@ -21,30 +21,68 @@ export interface ChantVariant {
                        // 'pat' = Shemokmedi school as handed down by Dimitri Patarava (2003),
                        // 'v9' = Gelati liturgy in the authentic mode, plain chants for children, Sunday troparia (vol. IX),
                        // 'momix' = troparia on the Beatitudes, Hymnographical collection I (Kereselidze's manuscripts),
-                       // 'v8' = vol. VIII, irmoi of the eight tones, katavasias and Resurrection kontakia
+                       // 'v8' = vol. VIII, irmoi of the eight tones, katavasias and Resurrection kontakia,
+                       // 'dasd1' / 'dasd2' = stichera on "Lord, I have cried", Hymnographical collection II (tones I–II) / III (III–IV)
 }
 
-// Books that print no chant numbers: their file numbers are not shown
-export const UNNUMBERED_BOOKS = new Set(['momix', 'v8']);
+// Books whose chant numbers the app does not show (none printed, or not the ones our files use)
+export const UNNUMBERED_BOOKS = new Set(['momix', 'v8', 'dasd1', 'dasd2', 'song']);
 
 // Name of a book version everywhere in the app: book number + version, e.g. "145 ხუნდაძე"
 export const variantName = (v: Pick<ChantVariant, 'bookNums' | 'version' | 'book'>) =>
   [!UNNUMBERED_BOOKS.has(v.book ?? '') && bookNumLabel(v.bookNums), v.version].filter(Boolean).join(' ');
 
-// Short book names for the version buttons (Patarava's book is named in the school row above them)
+// Short book names for the version labels (Patarava's book is named in the school row above them)
 const BOOK_SHORT: Record<string, string> = {
-  book: 'I ტომი', feast: 'II ტომი', kk: 'III ტომი', triod: 'IV ტომი', v5: 'V ტომი', karb: 'VII ტომი', v9: 'IX ტომი',
+  book: 'I ტომი', feast: 'II ტომი', kk: 'III ტომი', triod: 'IV ტომი', v5: 'V ტომი', karb: 'VII ტომი', v8: 'VIII ტომი',
+  v9: 'IX ტომი', momix: 'კრებული I', dasd1: 'კრებული II', dasd2: 'კრებული III',
 };
 
-// "I ტომი · გვ. 205" (+ the manuscript); the book and the manuscript are left out when the name already says them.
-// The book's numeral is matched whole: "I ტომი" is also the end of "III ტომი".
-export const variantSublabel = (v: ChantVariant) => {
-  if (!v.page) return undefined;
+// A feast, an occasion of მარხვანი / ზატიკი, a group of მომიხსენენი or დასადებლები, a tone of ძლისპირები or a canon of
+// კატაბასიები lists its own chants, not versions of one chant: each version is named by its version name
+export const isChantGroup = (chantId = '') => /^(sd|mx|zt|mm|dz|kt|ds)-/.test(chantId);
+
+// Label of a book version everywhere in the app, in two lines:
+//   top "I ტომი · ამინ · გვ. 229" — the book, the chant's name, the page
+//   sub "კერესელიძე · №165"       — the version (manuscript, kind, opening words) and the chant number in the book
+//   meta "I ტომი · გვ. 229 · კერესელიძე · №165" — one line under the chant's name (notes page, program), which is
+//        left out there; a group's chant keeps its own name
+// The book is left out of the version when the version names it ("IX ტომი · საბავშვო" -> "საბავშვო");
+// its numeral is matched whole: "I ტომი" is also the end of "III ტომი".
+export const variantLines = (chantId: string, chantTitle: string, v: ChantVariant) => {
   const book = BOOK_SHORT[v.book ?? 'book'];
-  const namesBook = book && new RegExp(`(^|[^IVX])${book}`).test(v.version ?? '');
-  const namesSource = v.source && v.version?.includes(v.source);
-  return [!namesBook && book, `გვ. ${v.page}`, !namesSource && v.source].filter(Boolean).join(' · ');
+  const clean = (s?: string) => (book ? (s ?? '').replace(new RegExp(`(^|[^IVX])${book}`), '$1') : s ?? '')
+    .replace(/\s*·\s*·\s*/g, ' · ').replace(/^[\s·,]+|[\s·,]+$/g, '');
+  const title = chantTitle.replace(/[;\s]+$/, '');
+  const version = clean(v.version);
+  const source = clean(v.source);
+  const name = isChantGroup(chantId) ? version || title : title;
+  const num = !UNNUMBERED_BOOKS.has(v.book ?? '') && bookNumLabel(v.bookNums);
+  const page = v.page && `გვ. ${v.page}`;
+  const sub = [version !== name && version, source && source !== name && !version.includes(source) && source, num && `№${num}`]
+    .filter(Boolean).join(' · ');
+  return {
+    top: [page && book, name, page].filter(Boolean).join(' · '),
+    sub,
+    meta: [page && book, name !== title && name, page, sub].filter(Boolean).join(' · '),
+  };
 };
+
+// Full name of a version in lists (teacher's picker, class program, my list, assignments):
+// "გ.ს. I ტომი · ამინ · გვ. 229 (კერესელიძე · №165)"; a group's chant also names its group (feast, tone, day)
+export const versionTitle = (chant: { id: string; title: string }, v: ChantVariant) => {
+  if (v.version === undefined || !v.page) return v.fullTitle || v.chantName || chant.title;
+  const { top, sub } = variantLines(chant.id, chant.title, v);
+  const school = v.code.split(' ')[0];
+  const extra = [sub, isChantGroup(chant.id) && chant.title.replace(/[;\s]+$/, '')].filter(Boolean).join(' · ');
+  return `${/^\S+\.\S*\.$/.test(school) ? `${school} ` : ''}${top}${extra ? ` (${extra})` : ''}`;
+};
+
+// The one-line label of any version under its chant's name: book versions as above, the school pair "სადა" / "გამშვენებული"
+export const versionMeta = (chantId: string, chantTitle: string, v: ChantVariant) =>
+  v.version !== undefined
+    ? variantLines(chantId, chantTitle, v).meta || v.code
+    : v.code.includes('გამშვ') ? 'გამშვენებული' : 'სადა';
 
 // "გ.ს. ამინ (1, გვ. 3)" — used by bookmarks and search
 export const bookFullTitle = (title: string, name: string, page?: number, school = 'გ.ს.') =>

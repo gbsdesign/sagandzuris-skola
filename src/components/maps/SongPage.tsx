@@ -6,6 +6,7 @@ import {
 import type { ChantMediaItem } from '../../data/chantMediaRegistry';
 import { ChantPlayer } from '../ChantPlayer';
 import { triggerHaptic } from '../../utils/haptics';
+import { stopPreview } from '../../utils/listPreview';
 
 // One recording of a song: the school's own versions (voices) first, then the archive's performers
 export interface SongTake {
@@ -54,6 +55,8 @@ export const SongPage: React.FC = () => {
   const [state, setState] = useState<string | null>(historySong);
   const [visible, setVisible] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  // a quick listen started from a list stops when the page opens: its own player takes over
+  useEffect(() => { if (state) stopPreview(); }, [state]);
 
   useEffect(() => {
     const onOpen = (e: Event) => {

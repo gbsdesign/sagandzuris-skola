@@ -4,6 +4,7 @@ export * from './feastBookChants';
 export * from './triodionBookChants';
 export * from './beatitudesBookChants';
 export * from './irmosBookChants';
+export * from './sticheraBookChants';
 export * from './songsData';
 export * from './mtkmeliData';
 export * from './instrumentsData';

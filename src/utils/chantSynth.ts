@@ -170,6 +170,9 @@ const buildMix = (ctx: BaseAudioContext, gains: number[]) => {
   return { master, voices };
 };
 
+// bass timbre: III and IV of a chant (IV = the low bass); a song for two choirs (6 voices) has a bass in each choir
+const isBass = (v: number, n: number) => (n === 6 ? v % 3 === 2 : v >= 2);
+
 /** First note of each voice (I, II, III…), in midi; null for a voice without notes. */
 export const firstNotes = (score: BookScore) =>
   score.voices.map(list => (list.length ? list.reduce((a, b) => (b[0] < a[0] ? b : a))[2] : null));
@@ -188,10 +191,37 @@ export const playStartNotes = async (midis: (number | null)[], transpose = 0, qu
   const starts: number[] = [];
   midis.forEach((m, i) => {
     if (m == null) return;
-    playNote(ctx, startMix!.voices[Math.min(i, 3)], m + transpose, i >= 2, t0 + i * gap, len);
+    playNote(ctx, startMix!.voices[Math.min(i, 3)], m + transpose, isBass(i, midis.length), t0 + i * gap, len);
     starts.push(i);
   });
   return starts.map(i => 60 + i * gap * 1000);
+};
+
+let lessonMix: { master: GainNode; voices: GainNode[] } | null = null;
+let lessonBus: GainNode | null = null;
+/**
+ * Lesson examples (the abituri theory lessons): each note is [start, length] in seconds from now and a midi
+ * number; notes sounding together share the level. A new call, or stopLessonNotes(), cuts the one before.
+ */
+export const playLessonNotes = async (notes: [at: number, len: number, midi: number][]) => {
+  const ctx = getCtx();
+  if (ctx.state !== 'running') await ctx.resume();
+  if (!lessonMix) lessonMix = buildMix(ctx, [1]);
+  stopLessonNotes();
+  const bus = ctx.createGain();
+  bus.connect(lessonMix.voices[0]);
+  lessonBus = bus;
+  const t0 = ctx.currentTime + 0.06;
+  const together = (at: number) => notes.filter(([s, l]) => s <= at + 0.001 && s + l > at + 0.001).length;
+  for (const [at, len, m] of notes) playNote(ctx, bus, m, m < 55, t0 + at, len, 1 / Math.sqrt(together(at)));
+};
+
+export const stopLessonNotes = () => {
+  const bus = lessonBus;
+  if (!bus || !sharedCtx) return;
+  lessonBus = null;
+  bus.gain.setTargetAtTime(0, sharedCtx.currentTime, 0.02);
+  window.setTimeout(() => bus.disconnect(), 300);
 };
 
 const LOOKAHEAD = 0.25; // seconds of audio scheduled ahead
@@ -354,7 +384,7 @@ export class ChantSynth {
   }
 
   private voice(midi: number, v: number, at: number, len: number, gain: number) {
-    const rec = playNote(this.ctx!, this.voiceGains[v], midi, v >= 2, at, len, gain); // III and IV are basses
+    const rec = playNote(this.ctx!, this.voiceGains[v], midi, isBass(v, this.voiceGains.length), at, len, gain);
     this.live.add(rec);
     rec.oscs[0].onended = () => { this.live.delete(rec); rec.env.disconnect(); };
   }
@@ -403,7 +433,7 @@ export const renderScore = (score: BookScore, o: RenderOptions): Promise<AudioBu
   const addUntil = (t: number) => {
     while (next < notes.length && notes[next].at < t) {
       const n = notes[next++];
-      const rec = playNote(ctx, voices[n.v], n.m + o.transpose, n.v >= 2, n.at, n.len, n.g);
+      const rec = playNote(ctx, voices[n.v], n.m + o.transpose, isBass(n.v, voices.length), n.at, n.len, n.g);
       rec.oscs[0].onended = () => rec.env.disconnect();
     }
   };

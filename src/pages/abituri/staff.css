@@ -1,0 +1,5 @@
+/* the abituri lessons' notation (abcjs): the notes that sound turn red */
+.abc-paper svg { display: block; overflow: visible; }
+.abc-paper .abc-on,
+.abc-paper .abc-on path { fill: #c0303a !important; }
+.abc-paper .abc-on [stroke]:not([stroke="none"]) { stroke: #c0303a !important; }

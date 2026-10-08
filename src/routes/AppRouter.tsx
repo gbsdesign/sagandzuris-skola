@@ -1,4 +1,4 @@
-import React, { lazy } from 'react';
+import React, { lazy, useEffect, useRef } from 'react';
 import { useNavigation, useChants, useModal, useAuth } from '../context';
 import { Sparkles, Music, ShieldCheck, ChevronRight } from 'lucide-react';
 import { SubPageHeader } from '../components/layout';
@@ -34,6 +34,7 @@ const PsalterPage = page(() => import('../pages/PsalterPage'), 'PsalterPage');
 const TeacherPage = page(() => import('../pages/TeacherPage'), 'TeacherPage');
 const MessagesPage = page(() => import('../pages/MessagesPage'), 'MessagesPage');
 const DirectChatPage = page(() => import('../pages/DirectChatPage'), 'DirectChatPage');
+const AbituriPage = page(() => import('../pages/AbituriPage'), 'AbituriPage');
 
 interface AppRouterProps {
   logoUrl: string;
@@ -42,7 +43,7 @@ interface AppRouterProps {
 export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   const { currentPage, selectedService, handleGoBack, navigateTo } = useNavigation();
   const { openModal } = useModal();
-  const { user, isAdmin, isTeacher } = useAuth();
+  const { user, loading, isAdmin, isTeacher } = useAuth();
   const access = useAccess();
   const {
     selectedChantVariants,
@@ -50,6 +51,17 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
     handleTogglePoem,
     setSelectedChantVariants,
   } = useChants();
+
+  // signing out leaves for the home page, so no signed-in page (profile, chats…) stays on screen with old data
+  const prevUid = useRef(user?.uid);
+  useEffect(() => {
+    if (prevUid.current && !user) {
+      navigateTo('home');
+      window.scrollTo({ top: 0 });
+    }
+    prevUid.current = user?.uid;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   // a section a guest may not open, or one hidden by the admin or by the kids' mode (e.g. after a reload)
   const pageAccess = access.page(currentPage);
@@ -83,7 +95,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
     return isTeacher ? <TeacherPage /> : <HomePage logoUrl={logoUrl} />;
   }
 
-  if (currentPage === 'profile' && access.kids) return <HomePage logoUrl={logoUrl} />;
+  // signed out (e.g. "back" after leaving): the profile has nothing to show
+  if (currentPage === 'profile' && (access.kids || (!user && !loading))) return <HomePage logoUrl={logoUrl} />;
 
   if (currentPage === 'profile') {
     return (
@@ -183,6 +196,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           {currentPage === 'commemoration' && <CommemorationPage />}
 
           {currentPage === 'biblioteka' && <LibraryPage />}
+
+          {currentPage === 'abituri' && <AbituriPage />}
 
           {currentPage === 'simghera' && (
             <div className="w-full my-2 px-1">

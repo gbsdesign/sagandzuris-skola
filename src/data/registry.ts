@@ -1,4 +1,4 @@
-import { ChantItem, ChantVariant } from './tsirvaChants';
+import { ChantItem, ChantVariant, versionTitle } from './tsirvaChants';
 import { ALL_CHANTS } from './gelatiBookChants';
 import { FOLK_SONGS, getFolkRegion } from './songsData';
 import { MTKMELI_AUTHORS } from './mtkmeliData';
@@ -24,7 +24,7 @@ export const getAllRegistryItems = (): Map<string, DataRegistryItem> => {
     chant.variants.forEach((v) => {
       lookupCache.set(v.id, {
         id: v.id,
-        title: v.fullTitle || v.chantName,
+        title: versionTitle(chant, v),
         category: 'chant',
         code: v.code,
         regionOrAuthor: v.label,

@@ -11,8 +11,9 @@ import './notes.css';
 import { useNotes, shareNotesUrl, NotesOrigin } from '../../context/NotesContext';
 import { useAuth, useChants } from '../../context';
 import { MAX_SHORTCUTS, saveShortcuts, useMyShortcuts } from '../../utils/shortcuts';
-import { findVersion, neighbourVersion, SCHOOL_NAMES, BOOK_NAMES, SERVICE_LISTS, schoolOf } from '../../data/chantLookup';
-import { UNNUMBERED_BOOKS, variantName } from '../../data/tsirvaChants';
+import { findVersion, neighbourVersion, SCHOOL_NAMES, BOOK_NAMES, NOTES_LISTS, schoolOf } from '../../data/chantLookup';
+import { songRecordings } from '../../data/programMedia';
+import { UNNUMBERED_BOOKS, versionMeta } from '../../data/tsirvaChants';
 import { getChantMedia, type ChantMediaItem } from '../../data/chantMediaRegistry';
 import { chantRecordingMedia, chantRecordings } from '../../data/chantRecordings';
 import { countPlay } from '../../utils/playStats';
@@ -24,9 +25,10 @@ import { getAudioArrayBufferFromIdb } from '../../utils/audioIdb';
 import { GrapeBunch, VineLeaf, Rosette, Sprig, PlateBand } from '../../components/home/PlateOrnaments';
 import { isOffline, onOfflineChange, saveOffline, offlineSupported } from '../../utils/offlineNotes';
 import { triggerHaptic } from '../../utils/haptics';
+import { stopPreview } from '../../utils/listPreview';
 
 const SPEEDS = [0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.25, 1.4, 1.6, 1.8, 2];
-const VOICE_NAMES = ['I', 'II', 'III', 'IV'];
+const VOICE_NAMES = ['I', 'II', 'III', 'IV', 'V', 'VI']; // V–VI: a song for two choirs (admission program)
 const ZSTEPS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3];
 type Paper = 'day' | 'candle' | 'night' | 'auto';
 type Orient = 'port' | 'land' | 'desk';
@@ -74,13 +76,15 @@ const HymnImg: React.FC<{ o: HymnOrnament; place: 'top' | 'bottom' }> = ({ o, pl
 export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, from }) => {
   const { goNotes, closeNotes, church, setChurch, liturgy, program } = useNotes();
   const { selectedChantVariants, toggleVariantSelection } = useChants();
+  // a quick listen started from a list stops when the notes open
+  useEffect(() => { stopPreview(); }, [vid]);
   const { user } = useAuth();
   const { list: shortcuts } = useMyShortcuts(user?.uid);
   const info = findVersion(vid)!;
   const { chant, variant, service } = info;
   const media = getChantMedia(chant.id, variant.code);
   const title = chant.title.replace(/[;\s]+$/, '');
-  const name = variant.version !== undefined ? (variantName(variant) || variant.code) : (variant.code.includes('გამშვ') ? 'გამშვენებული' : 'სადა');
+  const name = versionMeta(chant.id, chant.title, variant);
   const schoolName = SCHOOL_NAMES[schoolOf(variant.code)] ?? schoolOf(variant.code);
   const lyrics = media?.lyrics;
   // recordings to choose from: the school's own first, then other choirs' recordings of this very book version
@@ -89,6 +93,8 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     const list: { label: string; media: ChantMediaItem }[] = [];
     if (media) list.push({ label: 'საგანძურის სკოლა', media });
     for (const r of chantRecordings(vid)) list.push({ label: r.who, media: chantRecordingMedia(r, title) });
+    // a program song (sg-N): its learning recordings, voice by voice
+    list.push(...songRecordings(vid));
     return list;
   }, [vid, media, title]);
   const [recIdx, setRecIdx] = useState(0);
@@ -102,10 +108,10 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const seqIdx = seq ? seq.indexOf(vid) : -1;
   const prevId = seq ? (seqIdx > 0 ? seq[seqIdx - 1] : null) : neighbourVersion(vid, -1);
   const nextId = seq ? (seqIdx >= 0 && seqIdx < seq.length - 1 ? seq[seqIdx + 1] : null) : neighbourVersion(vid, 1);
-  const serviceList = SERVICE_LISTS[info.serviceIndex][1];
+  const serviceList = NOTES_LISTS[info.serviceIndex][1];
   const posLabel = seq && seqIdx >= 0 ? `პროგრამა ${seqIdx + 1}/${seq.length}` : `${info.chantIndex + 1}/${serviceList.length}`;
   const nextInfo = findVersion(nextId);
-  const nextLabel = (v: ReturnType<typeof findVersion>) => v ? (v.variant.version !== undefined ? variantName(v.variant) : v.variant.code) : '';
+  const nextLabel = (v: ReturnType<typeof findVersion>) => v ? (v.variant.version !== undefined ? versionMeta(v.chant.id, v.chant.title, v.variant) : v.variant.code) : '';
 
   // ---------- notes
   const [score, setScore] = useState<BookScore | null>(null);
@@ -123,7 +129,8 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     () => (score ? score.img.map(im => ({ src: bookImageUrl(score, im.src), w: im.w, h: im.h, page: im.page })) : []),
     [score]
   );
-  const synth = useMemo(() => (score ? new ChantSynth(score) : null), [score]);
+  // a scanned score (some program songs) has pictures only: no synthesizer
+  const synth = useMemo(() => (score && score.voices.length ? new ChantSynth(score) : null), [score]);
   useEffect(() => () => synth?.dispose(), [synth]);
   const VOICES = VOICE_NAMES.slice(0, score?.voices.length ?? 3);
   const allVoices = VOICES.length > 3 ? 'ყველა' : 'სამივე';
@@ -162,12 +169,12 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const [playing, setPlaying] = useState(false);
   const [speedIdx, setSpeedIdx] = useState(SPEEDS.indexOf(1));
   const [transpose, setTranspose] = useState(0);
-  const [voiceOn, setVoiceOn] = useState([true, true, true, true]);
+  const [voiceOn, setVoiceOn] = useState(() => VOICE_NAMES.map(() => true));
   const [volume, setVolume] = useState([1, 1, 1, 1]);
   const [mixOpen, setMixOpen] = useState(false);
   const [loop, setLoop] = useState<{ stage: 0 | 1 | 2; a: number | null; b: number | null }>({ stage: 0, a: null, b: null });
   const [folded, setFolded] = useState<Record<Orient, { synth: boolean; rec: boolean }>>({ port: { synth: false, rec: false }, land: { synth: true, rec: true }, desk: { synth: false, rec: false } });
-  const [dots, setDots] = useState([false, false, false, false]);
+  const [dots, setDots] = useState(() => VOICE_NAMES.map(() => false));
   const [exporting, setExporting] = useState<{ label: string; progress: number } | null>(null);
   const [offline, setOffline] = useState(() => isOffline(vid));
   const [offlineBusy, setOfflineBusy] = useState(false);
@@ -547,7 +554,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     setRecPause(n => n + 1);
     dotTimers.current.forEach(t => window.clearTimeout(t));
     dotTimers.current = [];
-    setDots([false, false, false, false]);
+    setDots(VOICE_NAMES.map(() => false));
     const notes = firstNotes(score);
     await playStartNotes(notes, transpose, church);
     notes.forEach((m, i) => {
@@ -725,7 +732,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
             <div className="np-cap-text">
               <div className="np-eyebrow">{service} · {schoolName}<span className="np-pos">{posLabel}</span></div>
               <h2 className="np-cap-title">{title}</h2>
-              <div className="np-cap-meta">{name}{variant.page ? ` · გვ. ${variant.page}` : ''}</div>
+              <div className="np-cap-meta">{name}</div>
             </div>
             <div className="np-cap-orn" aria-hidden>
               <VineLeaf color="#b3cbbd" className="orn-in" style={{ left: 2, top: 4, width: 30, transform: 'rotate(-24deg)' }} />
@@ -733,7 +740,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
               <Rosette color="#eab53a" petals={10} className="orn-in orn-spin" style={{ right: 2, top: 32, width: 17 }} />
             </div>
             <div className="np-cap-tools">
-              {score && (
+              {score && score.voices.length > 0 && (
                 <div className="np-startgrp" role="group" aria-label="საწყისი ბგერა და ტონი">
                   <button type="button" className="np-start" onClick={playStart} aria-label="საწყისი ბგერა: ხმების პირველი ბგერა რიგრიგობით">
                     <Fork /><span>საწყისი ბგერა</span>
@@ -823,7 +830,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                 <span className="nx">
                   <small>შემდეგი · {seq ? `დღევანდელი წირვა · ${seqIdx + 2}/${seq.length}` : service}</small>
                   <b>{nextInfo.chant.title.replace(/[;\s]+$/, '')}</b>
-                  <span className="v">{nextLabel(nextInfo)}{nextInfo.variant.page ? ` · გვ. ${nextInfo.variant.page}` : ''}</span>
+                  <span className="v">{nextLabel(nextInfo)}</span>
                 </span>
                 <span className="go"><ArrowRight /></span>
               </button>
@@ -842,7 +849,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
         <nav className="np-bar" aria-label="ხელსაწყოები">
           <button type="button" className="np-back" onClick={close} aria-label="უკან" title="უკან"><ChevronLeft strokeWidth={2.4} /></button>
           <div className="np-tools">
-            {score && (
+            {score && score.voices.length > 0 && (
               <button type="button" className={`np-tool ${playing ? 'live' : ''}`} data-tool="synth" aria-expanded={panel === 'synth'} onClick={() => togglePanel('synth')} title="სინთეზატორი">
                 <span className="np-ico"><Piano strokeWidth={1.8} /><span className="np-eq" aria-hidden><i /><i /><i /></span></span>
                 <span className="np-lb">სინთეზატორი</span>
@@ -871,7 +878,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
           </div>
         </nav>
 
-        {panel === 'synth' && score && (
+        {panel === 'synth' && score && synth && (
           <div className={`np-panel synth ${f.synth ? 'collapsed' : ''}`}>
             <div className="np-pin">
               <div className="np-row">
@@ -904,7 +911,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                       {VOICES.map((v, i) => (
                         <button key={v} type="button" className={voiceOn[i] ? 'on' : 'x'} aria-pressed={voiceOn[i]} onClick={() => { triggerHaptic(8); setVoiceOn(on => on.map((x, k) => (k === i ? !x : x))); }}>{v}</button>
                       ))}
-                      <button type="button" className={`all ${voiceOn.slice(0, VOICES.length).every(Boolean) ? 'on' : ''}`} onClick={() => { triggerHaptic(8); setVoiceOn([true, true, true, true]); }}>{allVoices}</button>
+                      <button type="button" className={`all ${voiceOn.slice(0, VOICES.length).every(Boolean) ? 'on' : ''}`} onClick={() => { triggerHaptic(8); setVoiceOn(VOICE_NAMES.map(() => true)); }}>{allVoices}</button>
                     </div>
                     <button type="button" className="np-ib np-mixbtn" aria-pressed={mixOpen} onClick={() => setMixOpen(o => !o)} aria-label="ხმების სიძლიერე" title="ხმების სიძლიერე"><SlidersHorizontal /></button>
                     <button type="button" className={`np-ib np-loop ${loop.stage ? 'pill' : ''} ${loop.stage === 1 ? 'half' : ''} ${loop.stage === 2 ? 'lit' : ''}`} onClick={handleLoop} title={loopTitle} aria-label="გამეორება">

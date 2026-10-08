@@ -10,6 +10,8 @@
   The user is a beginner: before acting, say in Georgian what you are about to do; after each step, say what
   was done ("✅ …"). Say which stage you are at on long tasks. No long silent tool chains.
 - **Don't widen scope.** Change only what was asked (one chant means one chant). Ask before deleting or moving files.
+- **Ask before starting.** Before any task — and before each stage of a long one — ask the open questions first
+  (one short round, recommended option first), even when the user says „აბა შენ იცი“.
 - **Ask which files before heavy processing** when a request names files vaguely — the user was once charged
   for scanning the wrong books.
 - **Visual quality matters**: this is a school app shown to students. Think the design through, check it at
@@ -98,6 +100,15 @@
 - **One search** (`components/search/`, index `data/searchIndex.ts`, matching `utils/searchMatch.ts` + test):
   header 🔍, home field, `/` or Ctrl+K. Finds functions, chants, prayers/akathists/Bible chapters („მათე 5“),
   psalter („ფს 50“), songs, chanters, feasts. Pages take the picked item via `useOpenRequest` (`utils/searchOpen.ts`).
+- **აბიტურიენტს** (page `abituri`, `pages/AbituriPage.tsx` + `pages/abituri/`, data `data/abituriProgram.ts`):
+  University of Chant admission — 2026 chant/boys/girls lists from galoba.edu.ge PDFs merged with the old site
+  sites.google.com/view/asabituri (its Drive folders), colloquium, registration. Opened from the small label under
+  „გალობა“ on the home vine. Tracks "e:<path>" play through the audio Worker's `/edu/` route.
+  Theory tab (2026-10-08): 11 lessons in `data/abituriLessons.ts` built on the university's own samples (theory test =
+  7 tasks: modes, intervals, chords 5/3·6·6/4, transposition, grouping, letter names, rests; 3-voice dictation), solved
+  inside. Notation by abcjs (lazy, `pages/abituri/Staff.tsx`), sound by `playLessonNotes` in `utils/chantSynth.ts`;
+  answers computed by `utils/musicTheory.ts` and checked in `tests/musicTheory.test.ts`. Terms as the test writes them
+  (წ./დ./პ., მაჟ./მინ., „მარცვლოვანი“, German letters: B = სი♭, H = სი).
 - **Class chat** with voice messages + Jitsi video call button (`components/classes/ClassChat.tsx`,
   `hooks/useClassChat.ts`, `utils/voiceRecorder.ts`, `utils/classCall.ts`). Voice MP3s are Firestore Bytes
   (no Firebase Storage).

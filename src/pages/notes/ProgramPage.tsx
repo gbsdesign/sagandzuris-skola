@@ -10,7 +10,7 @@ import './program.css';
 import { useNotes, shareProgramUrl } from '../../context/NotesContext';
 import { useNavigation } from '../../context';
 import { findVersion } from '../../data/chantLookup';
-import { variantName } from '../../data/tsirvaChants';
+import { versionMeta } from '../../data/tsirvaChants';
 import { getChantMedia } from '../../data/chantMediaRegistry';
 import { formatLiturgyDate, formatTime } from '../../hooks/useLiturgy';
 import { isOffline, onOfflineChange, saveOffline, estimateMb, offlineSupported } from '../../utils/offlineNotes';
@@ -22,8 +22,8 @@ const labelOf = (id: string) => {
   const info = findVersion(id);
   if (!info) return { title: id, sub: '' };
   const v = info.variant;
-  const name = v.version !== undefined ? variantName(v) || v.code : v.code;
-  return { title: info.chant.title.replace(/[;\s]+$/, ''), sub: `${name}${v.page ? ` · გვ. ${v.page}` : ''}`, rec: Boolean(getChantMedia(info.chant.id, v.code)) };
+  const sub = v.version !== undefined ? versionMeta(info.chant.id, info.chant.title, v) : v.code;
+  return { title: info.chant.title.replace(/[;\s]+$/, ''), sub, rec: Boolean(getChantMedia(info.chant.id, v.code)) };
 };
 
 export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {

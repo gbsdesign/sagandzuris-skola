@@ -28,6 +28,8 @@ export const SubPageHeader: React.FC<SubPageHeaderProps> = ({
       ? 'გაიცანი წინაპრები'
       : currentPage === 'biblioteka'
       ? 'ბიბლიოთეკა'
+      : currentPage === 'abituri'
+      ? 'აბიტურიენტს'
       : 'საკრავების საგანძური';
 
   // once the bar has scrolled away, a round "←" floats: bottom left on a phone / tablet (thumb reach),
@@ -67,7 +69,7 @@ export const SubPageHeader: React.FC<SubPageHeaderProps> = ({
           phone the title moves aside (and wraps) instead of running under the button */}
       <div ref={barRef} className="relative w-full grid grid-cols-[1fr_auto_1fr] items-center gap-2 pb-3.5 mb-5 border-b border-[#e8dcc8]/70">
         {/* the path page shows its title here, centred in the top bar */}
-        {(currentPage === 'gz' || currentPage === 'tsinaprebi' || currentPage === 'biblioteka') && (
+        {(currentPage === 'gz' || currentPage === 'tsinaprebi' || currentPage === 'biblioteka' || currentPage === 'abituri') && (
           <h1 className="col-start-2 row-start-1 text-center text-balance leading-tight pointer-events-none font-serif-ge text-xl sm:text-3xl font-bold text-[#7a2028]">
             {title}
           </h1>

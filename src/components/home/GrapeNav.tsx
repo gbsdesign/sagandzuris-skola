@@ -6,6 +6,7 @@ import { Toast } from '../ui/Toast';
 import { useAccess } from '../../hooks/useAccess';
 import { askSignIn } from '../access/SignInPrompt';
 import { SectionId } from '../../data/sections';
+import { GraduationCap } from 'lucide-react';
 
 // Home menu drawn on the vine-and-qvevri picture: light parchment labels hang under the grape
 // clusters, sit on the leaves and on the qvevri, and sway gently. Labels without `go` are not built yet.
@@ -45,6 +46,8 @@ export const GrapeNav: React.FC = () => {
     .map(s => ({ ...s, access: access.section(s.id) }))
     .filter(s => s.access !== 'hidden')
     .map(s => (s.access === 'soon' ? { ...s, go: undefined } : s));
+
+  const galobaOpen = shown.some(s => s.id === 'galoba' && s.access === 'open');
 
   const press = (s: (typeof shown)[number]) => {
     triggerHaptic(10);
@@ -94,6 +97,21 @@ export const GrapeNav: React.FC = () => {
             </span>
           </button>
         ))}
+
+        {/* a small extra label hanging under "გალობა": the university admission program */}
+        {galobaOpen && (
+          <button
+            type="button"
+            onClick={() => { triggerHaptic(10); navigateTo('abituri'); }}
+            style={{ '--x': '57%', '--y': '37.8%', '--nx': '56%', '--ny': '41.5%', animationDelay: '-0.35s' } as React.CSSProperties}
+            className="vine-sway absolute left-[var(--nx)] top-[var(--ny)] @md:left-[var(--x)] @md:top-[var(--y)] -translate-x-1/2 -translate-y-1/2 cursor-pointer focus-visible:outline-none group"
+          >
+            <span className="inline-flex items-center gap-1.5 min-h-9 px-3 rounded-full bg-[#fbf6ec] text-[#7a2028] border-[1.5px] border-[#7a2028]/70 shadow-[0_3px_10px_rgba(74,52,38,0.25)] transition-[transform,background-color] duration-200 group-hover:scale-105 group-hover:bg-white group-active:scale-95 group-focus-visible:ring-4 group-focus-visible:ring-amber-300">
+              <GraduationCap className="w-4 h-4 shrink-0" />
+              <span className="font-serif-ge font-bold leading-tight text-[clamp(12px,3.2cqw,14px)] @max-[300px]:text-[11px]">აბიტურიენტს</span>
+            </span>
+          </button>
+        )}
       </div>
 
       <Toast message={soon || ''} type="info" isVisible={!!soon} onClose={() => setSoon(null)} />
