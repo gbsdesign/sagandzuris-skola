@@ -101,7 +101,7 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
               onClick={() => onSelect(r)}
               onPointerEnter={() => setHovered(r.id)}
               onPointerLeave={() => setHovered(null)}
-              className={`min-h-11 px-3 py-2 rounded-xl border bg-white hover:bg-amber-50/60 active:scale-[0.98] transition-all cursor-pointer flex items-center gap-2.5 text-left ${
+              className={`${r.wide ? 'col-span-2 sm:col-span-3 ' : ''}min-h-11 px-3 py-2 rounded-xl border bg-white hover:bg-amber-50/60 active:scale-[0.98] transition-all cursor-pointer flex items-center gap-2.5 text-left ${
                 hovered === r.id ? 'border-amber-400 shadow-sm' : 'border-slate-200/90'
               }`}
             >

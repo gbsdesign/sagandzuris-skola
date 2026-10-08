@@ -6,6 +6,8 @@ import { getChantMedia } from '../data/chantMediaRegistry';
 import { chantRecordings } from '../data/chantRecordings';
 import { useRecordingBindings } from '../data/runtimeRecordings';
 import { ServiceTabs, ChantSearchBar, ChantAccordionItem } from './galoba';
+import { ChantAlbumPage } from './galoba/ChantAlbumPage';
+import { useAccess } from '../hooks/useAccess';
 import { ProgramCard, ServiceDownload } from './galoba/LiturgyBits';
 import { SERVICE_CHANTS, chantMatches, ChantHit } from './galoba/chantSearch';
 import { SearchField, SearchResults } from './galoba/SearchResults';
@@ -40,7 +42,10 @@ export const GalobaPage: React.FC = () => {
     setExpandedChantId,
     chantSearch,
     setChantSearch,
+    mapItem,
+    openMapItem,
   } = useNavigation();
+  const { can } = useAccess();
 
   const { selectedChantVariants = {}, toggleVariantSelection } = useChants();
   const regent = useNotes().liturgy.role === 'teacher';
@@ -119,6 +124,9 @@ export const GalobaPage: React.FC = () => {
     window.scrollTo({ top: 0 });
   }, [setSelectedService, setExpandedChantId]);
 
+  // an album of recordings without notes (a choir, a school, „დასაზუსტებელი“), opened from under the services
+  if (!selectedService && mapItem?.startsWith('album:')) return <ChantAlbumPage albumId={mapItem.slice(6)} />;
+
   // 1. The services, under a small title and the search in all of them
   if (!selectedService) {
     return (
@@ -135,7 +143,12 @@ export const GalobaPage: React.FC = () => {
             <ProgramCard />
           )}
         </div>
-        {!query && <ServiceTabs onSelectService={handleSelectService} />}
+        {!query && (
+          <ServiceTabs
+            onSelectService={handleSelectService}
+            onOpenAlbum={can('recordings') ? id => openMapItem(`album:${id}`) : undefined}
+          />
+        )}
       </div>
     );
   }

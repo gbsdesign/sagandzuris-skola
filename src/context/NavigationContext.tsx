@@ -38,7 +38,8 @@ const NavigationContext = createContext<NavigationContextType | undefined>(undef
 // The notes page and "დღევანდელი წირვა" keep their own entries (NotesContext: sgNotes / sgProg).
 interface NavSnap { page: PageType; service: ServiceType; classId: string | null; prayerId: string | null; mapItem?: string | null; dmId?: string | null }
 const HOME: NavSnap = { page: 'home', service: null, classId: null, prayerId: null, mapItem: null, dmId: null };
-const MAP_PAGES: PageType[] = ['simghera', 'mtkmeli', 'sakravebi'];
+// pages whose open item (a map region, an instrument, a chant album) is a step of its own in history
+const MAP_PAGES: PageType[] = ['simghera', 'mtkmeli', 'sakravebi', 'galoba'];
 const makeSnap = (page: PageType, service: ServiceType, classId: string | null, prayerId: string | null, mapItem: string | null, dmId: string | null = null): NavSnap => ({
   page,
   service: page === 'galoba' ? service : null,

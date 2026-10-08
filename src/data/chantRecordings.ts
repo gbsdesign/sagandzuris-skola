@@ -45,11 +45,11 @@ export const CHANT_RECORDINGS: Record<string, ChantRecording[]> = {
   'ck-v-1-k1': [{ id: '1yuOHqIqQ6n9fEvZaLEh0p9x7XgTzAUEC', who: 'ანჩისხატის გუნდი' }], // დიდებაჲ მაღალთა შინა ღმერთსა
   'sd-v-13-kb44': [{ id: '1sF9bwGrNy-Z-_PP3FkDASKRaGZLp9UgP', who: 'ანჩისხატის გუნდი' }], // ქრისტეშობა — 25 დეკემბერი · III ძლისპირი, ხმა ა
   'zt-v-3-pt4': [{ id: '17onNBn7spBcrfAssk5QvxpWZmoPDJx3h', who: 'ანჩისხატის გუნდი' }], // პასექის ცისკარი — კანონი, VII–IX გალობა · ადიდებს სული ჩემი
-  'zt-v-1-pt1': [{ id: '1GYgUvPTgNbl_QBhXoS-oOyfX7jXZGZzS', who: 'ანჩისხატის გუნდი' }], // პასექი — ქრისტე აღდგა · აღდგომასა შენსა, ხმა ვ
+  'zt-v-1-pt1': [{ id: '1GYgUvPTgNbl_QBhXoS-oOyfX7jXZGZzS', who: 'ანჩისხატის გუნდი' }, { id: '1yZL0AdnvBqK_A65hI5MAuvCPp9xWPl5m', who: 'ანსამბლი „სახიობა“' }, { id: '1xMDOYo0fYeMocvriohYSPCN_4gf0f7iO', who: 'აფშილავები' }, { id: '14r8UhbA34LvaKwd1Pkzgcz8kPRbGYRq8', who: 'ივეტ გრიმოს ექსპედიცია' }], // პასექი — ქრისტე აღდგა · აღდგომასა შენსა, ხმა ვ
   'zt-v-3-pt5': [{ id: '1zXtwG_oH2N9bqBvtMDb4Vtkoh_TxWK0J', who: 'ანჩისხატის გუნდი' }], // პასექის ცისკარი — კანონი, VII–IX გალობა · ანგელოზი ღაღადებს
-  'sd-v-22-pt14': [{ id: '1OVXp0_D8nYe9YrV6-fRI6g8G-jd6kIxf', who: 'ანჩისხატის გუნდი' }], // ბზობა — დიდმარხვის მეექვსე კვირიაკე · დღეს საღმრთომან მადლმან, ხმა ვ
+  'sd-v-22-pt14': [{ id: '1OVXp0_D8nYe9YrV6-fRI6g8G-jd6kIxf', who: 'ანჩისხატის გუნდი' }, { id: '1UGpnUXrzMcUg8kJGDNJ4jiR6tAuvzQZX', who: 'ანსამბლი „ქართული ხმები“' }, { id: '19r_NdeUsgmS-1iNr1MJ7JlTcYsZLex6m', who: 'აფშილავები' }], // ბზობა — დიდმარხვის მეექვსე კვირიაკე · დღეს საღმრთომან მადლმან, ხმა ვ
   'chant-v-47-pt11': [{ id: '1M78_Xwy0JdhYJ1_IJH_LqpCmgWDlzJYm', who: 'ანჩისხატის გუნდი' }], // ისპოლა · ისპოლა
-  'zt-v-1-pt3': [{ id: '1vfNMn6RrslDxjfthIOjbwW2QbrFHHBsl', who: 'ანჩისხატის გუნდი' }], // პასექი — ქრისტე აღდგა · ქრისტე აღდგა
+  'zt-v-1-pt3': [{ id: '1vfNMn6RrslDxjfthIOjbwW2QbrFHHBsl', who: 'ანჩისხატის გუნდი' }, { id: '1npZO76p3QBR2-B5ejoTT4vRzn-jA_tlm', who: 'ანსამბლი „სახიობა“' }], // პასექი — ქრისტე აღდგა · ქრისტე აღდგა
   'zt-v-2-pt6': [{ id: '1gI4R3O8CwJzyoAQ7es3TFprM27ymJAGR', who: 'ანჩისხატის გუნდი' }], // პასექის ცისკარი — კანონი, I–VI გალობა · მოვედით და ვსვათ
   'mx-v-3-pt8': [{ id: '1ERS1-1Myg6hsp9R6o0o3x42spa6DXetI', who: 'ანჩისხატის გუნდი' }], // ხორციელის შაბათი · რაჟამს მოხვიდე, ღმერთი, ხმა ა
   'mx-v-15-pt17': [{ id: '1X65f2Un60zhQZu84htdf021wFEN9ZVsp', who: 'ანჩისხატის გუნდი' }], // დიდმარხვის მე-6 შაბათი · სიყვარულმან მოგიყვანა
@@ -65,6 +65,7 @@ export const CHANT_RECORDINGS: Record<string, ChantRecording[]> = {
   'v-33-6': [{ id: '168xNtmna1F98-4ar5h4j3UtzsO2V_G4I', who: 'არტემ ერქომაიშვილი' }], // ყოველთა და ყოვლისათვის · ერქომაიშვილი
   'v-25-6': [{ id: '1TY1FIYAtD4WdBbFmDtB0GKQKyb90Mh2W', who: 'არტემ ერქომაიშვილი' }], // წყალობა, მშვიდობა · ერქომაიშვილი
   'v-40-6': [{ id: '1c3XdKuJQPxX7o44gsQyUXNMIYwVzgpkJ', who: 'არტემ ერქომაიშვილი' }], // ხორცი ქრისტესი · ერქომაიშვილი
+  'zt-v-1-kb165': [{ id: '1L-c-oHwrW5vqpacUWDHlIXfFgrS5RmfV', who: 'ანსამბლი „სათანაო“' }], // პასექი — ქრისტე აღდგა · აღდგომასა შენსა, ხმა ვ (ქართლ-კახური)
 };
 
 /** Other choirs' recordings of one book version (guests see no recordings at all) */

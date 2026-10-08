@@ -54,13 +54,17 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   Erkomaishvili, Shavnabada), bound by version id only where one book version fits (built 2026-10-07, 56 files).
   The notes page lists them under „შემსრულებელი“ after the school's own recording. Many more chant files there are
   unbound (several versions of one school, or no notes in the app) — the user chose "don't bind when unsure".
+- The user placed the rest on a review page (2026-10-08): `chantAlbums.ts` holds the recordings without notes as
+  albums on the chant page under „ჩანაწერები“ (choirs რუსთავი / სამების გუნდი / ფაზისი, one per school,
+  „დასაზუსტებელი“), opened via `mapItem` `album:<id>` (`pages/galoba/ChantAlbumPage.tsx`).
 
 ## Folk songs (`songsData.ts`)
 
 - Hand-made songs are `BASE_SONGS`; `FOLK_SONGS` = them + `songArchive.ts` (505 songs / 983 one-track recordings
   from Drive „ალაზანი“ + „ანჩისხატი/5 სიმღერები“, generated 2026-10-07 by a scratch script — regen would undo hand
   edits). Same title + region merges into a hand-made song (`recs`). `area` = sub-area (ხევი, თუშეთი…), list filter.
-  ~275 archive files were left out (region unclear); ლაზეთი is a list-only region (`FOLK_EXTRA_REGIONS`).
+  ~275 archive files were left out (region unclear); ლაზეთი is a list-only region (`FOLK_EXTRA_REGIONS`), ოსეთი too;
+  „დასაზუსტებელი“ (region `unsure`, a full-row card) holds the songs the user could not place.
 - Song page: `components/maps/SongPage.tsx` (history `sgSong`), words from `song.lyrics` or `public/song-texts/<id>.json`
   (none yet — no bulk source found online; don't write lyrics from memory).
 - Region guesses for many hand-made songs are unconfirmed.

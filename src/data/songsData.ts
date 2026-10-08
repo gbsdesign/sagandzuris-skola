@@ -10,13 +10,14 @@ export type MapRegionId =
   | 'abkhazeti' | 'svaneti' | 'samegrelo' | 'racha' | 'imereti' | 'guria' | 'achara'
   | 'samtskhe' | 'shidakartli' | 'kvemokartli' | 'mtianeti' | 'kakheti' | 'kalakuri';
 /** ...and the historical lands outside today's map, listed only as cards (ლაზეთი) */
-export type FolkRegionId = MapRegionId | 'lazeti';
+export type FolkRegionId = MapRegionId | 'lazeti' | 'oseti' | 'unsure';
 
 export interface FolkRegion {
   id: FolkRegionId;
   nameGe: string;
   regionCode: string;
   color: string; // map fill, wooden-puzzle palette
+  wide?: boolean; // a card across the whole row (not a land: „დასაზუსტებელი“)
 }
 
 export const FOLK_REGIONS: (FolkRegion & { id: MapRegionId })[] = [
@@ -35,9 +36,12 @@ export const FOLK_REGIONS: (FolkRegion & { id: MapRegionId })[] = [
   { id: 'kalakuri', nameGe: 'ქალაქური', regionCode: 'ქალაქ.', color: '#85502c' },
 ];
 
-// lands outside the map: a card under the map's region list (the songs map only)
+// lands outside the map, and the archive songs whose region is still unknown: cards under the map's region list
+// (the songs map only)
 export const FOLK_EXTRA_REGIONS: FolkRegion[] = [
   { id: 'lazeti', nameGe: 'ლაზეთი', regionCode: 'ლაზ.', color: '#8fb3c4' },
+  { id: 'oseti', nameGe: 'ოსეთი', regionCode: 'ოს.', color: '#b9a3c9' },
+  { id: 'unsure', nameGe: 'დასაზუსტებელი', regionCode: '?', color: '#c4b8a6', wide: true },
 ];
 
 export const getFolkRegion = (id: FolkRegionId) => [...FOLK_REGIONS, ...FOLK_EXTRA_REGIONS].find(r => r.id === id)!;
