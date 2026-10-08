@@ -84,7 +84,7 @@ const Toggle: React.FC<{ value: boolean; labels: [string, string]; onChange: (v:
 const LEVELS: Partial<Record<TaskKind, [string, string]>> = {
   earInterval: ['ხუთი მთავარი', 'ყველა ინტერვალი'],
   earChord: ['მაჟორი თუ მინორი', 'შებრუნებებითაც'],
-  motif: ['მარტივი: 3–4 ბგერა', 'რთული: 5–7, რიტმით'],
+  motif: ['3–4 ბგერა', '5–7, რიტმით'],
 };
 
 /** one kind of practice: a task, its check, the next one; the counts go to the progress */

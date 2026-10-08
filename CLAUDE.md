@@ -109,6 +109,12 @@
   inside. Notation by abcjs (lazy, `pages/abituri/Staff.tsx`), sound by `playLessonNotes` in `utils/chantSynth.ts`;
   answers computed by `utils/musicTheory.ts` and checked in `tests/musicTheory.test.ts`. Terms as the test writes them
   (წ./დ./პ., მაჟ./მინ., „მარცვლოვანი“, German letters: B = სი♭, H = სი).
+  Practice (same day): endless tasks of all 7 test kinds + by ear + 3-voice dictations (`utils/theoryDrills.ts`, tested
+  in `tests/theoryDrills.test.ts`; UI `pages/abituri/drills/`), a mock test in the sample's form (32 points), colloquium
+  „გამოიცანი სმენით“ (`ColloquiumQuiz.tsx`, YouTube without controls so chapter names don't show), I round practice
+  (`RoundOnePractice.tsx`: motifs to sing back; sight-reading = `SIGHT_READING`, 19 short vol. I chants outside the
+  program). Progress (`hooks/useAbituriProgress.ts`) in `students/{uid}.abituri` for members (device for others);
+  teachers see a line in StudentsOverview. Dictations: `data/abituriDictations.ts` (the university's + 6 written here).
 - **Class chat** with voice messages + Jitsi video call button (`components/classes/ClassChat.tsx`,
   `hooks/useClassChat.ts`, `utils/voiceRecorder.ts`, `utils/classCall.ts`). Voice MP3s are Firestore Bytes
   (no Firebase Storage).

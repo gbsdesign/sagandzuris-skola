@@ -57,6 +57,10 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
 - The user placed the rest on a review page (2026-10-08): `chantAlbums.ts` holds the recordings without notes as
   albums on the chant page under „ჩანაწერები“ (choirs რუსთავი / სამების გუნდი / ფაზისი, one per school,
   „დასაზუსტებელი“), opened via `mapItem` `album:<id>` (`pages/galoba/ChantAlbumPage.tsx`).
+- „გადატანა“ (`placements.ts`, `components/archive/MoveSheet.tsx`): the owner and superadmins move an archive song
+  recording or an album recording to another region/song/album, or between songs and chants, from the song page or
+  the album row. Stored in `settings/placements` (rule: superadmins only) and laid over FOLK_SONGS / ALBUM_RECS in
+  place; code edits stay the base, so prefer moving in code when regenerating lists.
 
 ## Folk songs (`songsData.ts`)
 

@@ -8,7 +8,7 @@ import { CHANTS, SIGHT_READING } from '../src/data/abituriProgram';
 import { findVersion } from '../src/data/chantLookup';
 import { intervalName, midi, scale, steps } from '../src/utils/musicTheory';
 import {
-  isRight, makeChord, makeEarChord, makeEarInterval, makeGrouping, makeInterval, makeLetter, makeMockTest, makeMode, makeRest,
+  isRight, makeChord, makeEarChord, makeEarInterval, makeGrouping, makeInterval, makeLetter, makeMockTest, makeMode, makeMotif, makeRest,
   makeTranspose, seeded, startState, type Meter, type Task, type TaskState,
 } from '../src/utils/theoryDrills';
 

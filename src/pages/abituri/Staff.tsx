@@ -54,9 +54,10 @@ const schedule = (events: AudioTrackNoteItem[], mode: PlayMode, tempo: number): 
 let current: (() => void) | null = null;
 
 /** `bare`: no box of its own (a staff inside a card or a button); `coverText`: what a covered staff says;
- * `autoPlay`: sounds once drawn, if the student has already played something */
-export const Staff: React.FC<StaffSpec & { className?: string; bare?: boolean; coverText?: string; autoPlay?: boolean }> = ({
-  abc, cap, play = 'notes', tempo = 84, hide, voices, start: withStart, className = 'my-4', bare, coverText, autoPlay,
+ * `autoPlay`: sounds once drawn, if the student has already played something; `uncover`: the cover's own
+ * „ნოტების ჩვენება“ (off where the practice has its own button) */
+export const Staff: React.FC<StaffSpec & { className?: string; bare?: boolean; coverText?: string; autoPlay?: boolean; uncover?: boolean }> = ({
+  abc, cap, play = 'notes', tempo = 84, hide, voices, start: withStart, className = 'my-4', bare, coverText, autoPlay, uncover = true,
 }) => {
   const box = useRef<HTMLDivElement>(null);
   const paper = useRef<HTMLDivElement>(null);
@@ -186,13 +187,15 @@ export const Staff: React.FC<StaffSpec & { className?: string; bare?: boolean; c
           <div className="absolute inset-0 grid place-items-center rounded-2xl bg-[#fbf6ec] p-3 text-center">
             <div>
               <p className="text-[13.5px] font-semibold leading-snug text-[#6b5c4d]">{coverText ?? 'ნოტები დამალულია — ჯერ მოუსმინე და ჩაწერე.'}</p>
-              <button
-                type="button"
-                onClick={() => { triggerHaptic(10); setShown(true); }}
-                className="mt-2.5 inline-flex items-center gap-1.5 min-h-10 px-4 rounded-full bg-white ring-1 ring-[#e8dcc8] text-[13px] font-bold text-[#4a3426] hover:text-[#7a2028] cursor-pointer"
-              >
-                <Eye className="w-4 h-4" /> ნოტების ჩვენება
-              </button>
+              {uncover && (
+                <button
+                  type="button"
+                  onClick={() => { triggerHaptic(10); setShown(true); }}
+                  className="mt-2.5 inline-flex items-center gap-1.5 min-h-10 px-4 rounded-full bg-white ring-1 ring-[#e8dcc8] text-[13px] font-bold text-[#4a3426] hover:text-[#7a2028] cursor-pointer"
+                >
+                  <Eye className="w-4 h-4" /> ნოტების ჩვენება
+                </button>
+              )}
             </div>
           </div>
         )}

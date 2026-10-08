@@ -315,15 +315,17 @@ export interface MotifTask { kind: 'motif'; abc: string; low: boolean }
 /** easy: 3–4 notes, even; hard: 5–7 notes with a rhythm. `low`: for a low voice, in the bass clef */
 export const makeMotif = (r: Rng, hard: boolean, low: boolean): MotifTask => {
   for (;;) {
-    const tonic = pick(r, low ? notes('C3', 'D3', 'F3', 'G3', 'A2') : notes('C4', 'D4', 'F4', 'G4', 'A3'));
+    // a low voice keeps between F2 and D4, a high one between E3 and G5
+    const tonic = pick(r, low ? notes('A2', 'C3', 'D3') : notes('C4', 'D4', 'F4', 'G4', 'A3'));
     const mode = pick(r, ['მაჟორი', 'ნატურალური მინორი', 'დორიული', 'მიქსოლიდიური'] as ModeName[]);
     const sc = scale(tonic, mode);
     const at = (d: number): Note => { const o = Math.floor(d / 7), n = sc[((d % 7) + 7) % 7]; return { ...n, oct: n.oct + o }; };
     const len = hard ? 5 + int(r, 3) : 3 + int(r, 2);
     // degrees from the tonic (0): start on I, III or V, move by steps and small leaps, end on I, III or V
     const ds = [pick(r, [0, 2, 4])];
-    for (let i = 1; i < len; i++) ds.push(Math.max(-3, Math.min(7, ds[i - 1] + pick(r, hard ? [-1, -1, 1, 1, 2, -2, 3, -3] : [-1, -1, 1, 1, 2, -2]))));
-    if (![0, 2, 4, 7].includes(ds[len - 1]) || new Set(ds).size < 2) continue;
+    for (let i = 1; i < len; i++) ds.push(Math.max(low ? -2 : -3, Math.min(7, ds[i - 1] + pick(r, hard ? [-1, -1, 1, 1, 2, -2, 3, -3] : [-1, -1, 1, 1, 2, -2]))));
+    // within an octave, ending on a steady note, not one note repeated
+    if (![0, 2, 4, 7].includes(ds[len - 1]) || new Set(ds).size < 2 || Math.max(...ds) - Math.min(...ds) > 7) continue;
     // lengths in eighths, by beats: even quarters, or rhythm cells (two eighths share a beam); a long last note
     const cells: number[][] = [];
     if (hard) {

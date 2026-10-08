@@ -281,6 +281,7 @@ export const TaskView: React.FC<TaskViewProps> = props => {
             tempo={72}
             hide={!reveal}
             autoPlay={!reveal}
+            uncover={false}
             coverText="ნოტები დამალულია — ჯერ მოუსმინე და გაიმეორე."
             cap={t.low ? 'დაბალი ხმისთვის (ფა გასაღები).' : 'მაღალი ხმისთვის.'}
             className="my-2"
@@ -294,7 +295,7 @@ export const TaskView: React.FC<TaskViewProps> = props => {
         <div className="space-y-2">
           <Prompt big="კარნახი" hint={`სამი ხმა · ${d.meter} · 4 ტაქტი. მოუსმინე რამდენჯერაც გინდა, ჩაწერე ფურცელზე, მერე ნახე ნოტები.`} />
           {/* opened by „პასუხის ნახვა“: a fresh staff, drawn uncovered */}
-          <Staff key={String(reveal)} abc={d.abc} tempo={d.tempo} hide={!reveal} voices={VOICES3} start className="my-2" />
+          <Staff key={String(reveal)} abc={d.abc} tempo={d.tempo} hide={!reveal} uncover={false} voices={VOICES3} start className="my-2" />
           {reveal && <p className="text-center text-[13px] font-semibold text-[#8a7a6a]">{d.title}</p>}
         </div>
       );
