@@ -1,10 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Loader2 } from 'lucide-react';
 import { useNavigation } from '../../context';
-import { Commemoration, NameListId, useCommemoration } from '../../utils/commemoration';
+import { CategoryListId, Commemoration, inGroupOrder, namesText, useCommemoration } from '../../utils/commemoration';
 import { GirsArsSection, girsArsFor, loadGirsArs } from '../../data/girsArs';
 import { useAuth } from '../../context';
-import { useGroupPrayerNames } from '../../hooks/usePsalter';
+import { groupPrayerText, useGroupPrayerNames } from '../../hooks/usePsalter';
 import { GLORY_PRAYER_HTML } from '../../data/gloryPrayer';
 
 // The text of a prayer, with three additions woven in:
@@ -27,7 +27,7 @@ const plain = (html: string) => html.replace(/<[^>]+>/g, '');
 
 // Which list a "(სახელი)" stands for, judged by the words just before it; null leaves it as written
 // (one's spiritual father, patron saint, the patriarch, oneself).
-const listFor = (before: string): NameListId | null => {
+const listFor = (before: string): CategoryListId | null => {
   const near = plain(before).slice(-220);
   if (/(გარდაცვალებულ|გარდაცვლილ|მიცვალებულ|განუსვენე|შესვენებულ)/.test(near)) return 'deceased';
   if (/(მოძღვ|მასწავლელ)/.test(near.slice(-45))) return null;
@@ -39,10 +39,10 @@ const withNames = (block: string, lists: Commemoration) =>
   block.replace(/\((სახელ[^()]{0,30})\)/g, (match, _inner, offset: number) => {
     const list = listFor(block.slice(0, offset));
     if (!list) return match;
-    const names = lists[list];
-    const text = names.length ? escapeHtml(names.join(', ')) : match;
+    const names = namesText(lists, list);
+    const text = names ? escapeHtml(names) : match;
     const title = list === 'deceased' ? 'გარდაცვლილთა სახელები' : 'ცოცხალთა სახელები';
-    return `<button type="button" data-names="${list}" title="${title} — შეცვლა" class="${NAME_CHIP}${names.length ? '' : ' !font-normal !text-[#8a7a6a]'}">${text}</button>`;
+    return `<button type="button" data-names="${list}" title="${title} — შეცვლა" class="${NAME_CHIP}${names ? '' : ' !font-normal !text-[#8a7a6a]'}">${text}</button>`;
   });
 
 type Segment = { kind: 'html'; html: string } | { kind: 'girs' } | { kind: 'modzgvari' } | { kind: 'glory'; n: number };
@@ -102,7 +102,10 @@ export const PrayerText: React.FC<{ html: string; glory?: boolean }> = ({ html, 
   const { lists } = useCommemoration();
   const { user } = useAuth();
   const fromGroups = useGroupPrayerNames(glory ? user?.uid : null);
-  const groupNames = useMemo(() => [...fromGroups, ...lists.group.filter(n => !fromGroups.includes(n))], [fromGroups, lists.group]);
+  const groupNames = useMemo(
+    () => [...inGroupOrder(fromGroups, lists.groupOrder).map(groupPrayerText), ...lists.group.filter(n => !fromGroups.some(g => g.name === n))],
+    [fromGroups, lists.group, lists.groupOrder]
+  );
   const [modzgvariOpen, setModzgvariOpen] = useState(false);
   const [gloryOpen, setGloryOpen] = useState<number[]>([]);
   const gloryHtml = useMemo(() => {

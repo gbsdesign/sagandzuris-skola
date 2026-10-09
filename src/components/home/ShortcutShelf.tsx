@@ -31,7 +31,7 @@ import { IconBtn, Sheet } from '../ui/kit';
 import { KathismaTiles } from '../psalter/KathismaTile';
 
 const SECTION_ICON: Record<SectionId, React.ReactNode> = {
-  galoba: <Music2 />, simghera: <Music />, mtkmeli: <Feather />, sakravebi: <Guitar />, medavitneoba: <BookOpen />,
+  galoba: <Music2 />, simghera: <Music />, mtkmeli: <Feather />, sakravebi: <Guitar />, medavitneoba: <BookOpen />, medavitneobaTopic: <BookOpen />,
   chvevebi: <Sparkles />, tamashebi: <Star />, tsinaprebi: <Users />, gza: <Compass />, biblioteka: <Library />,
 };
 const SPECIAL_ICON: Record<string, React.ReactNode> = {

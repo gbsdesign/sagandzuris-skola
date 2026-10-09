@@ -3,7 +3,7 @@ import { addDoc, arrayRemove, collection, doc, updateDoc } from 'firebase/firest
 import { BookOpen, Plus, Bell, Info, LogOut, Loader2, LayoutGrid, PenLine, ArrowLeft } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth, useNavigation } from '../context';
-import { Bar, Btn, Card, CardTitle, Empty, FIELD, Flash, Label, PageTop, Sheet, useFlash } from '../components/ui/kit';
+import { Btn, Card, CardTitle, Empty, FIELD, Flash, Label, PageTop, Sheet, useFlash } from '../components/ui/kit';
 import { KathismaGrid } from '../components/psalter/GroupBoard';
 import { MyKathismaCard } from '../components/psalter/MyKathismaCard';
 import { GroupHistory } from '../components/psalter/GroupHistory';
@@ -18,7 +18,7 @@ import { PinButton } from '../components/home/ShortcutShelf';
 
 export { openPsalterGroup };
 
-// "ფსალმუნთა ჯგუფი" (from the home page's „მედავითნეობა“): the group reads the whole Psalter in every
+// "ფსალმუნთა ჯგუფი" (from the home page's vine): the group reads the whole Psalter in every
 // cycle; each member has a kathisma, the board shows all twenty, the teacher manages the group.
 export const PsalterPage: React.FC = () => {
   const { user, isTeacher, isAdmin } = useAuth();
@@ -32,7 +32,7 @@ export const PsalterPage: React.FC = () => {
     <div className="w-full max-w-2xl mx-auto px-1 py-4 sm:py-6 space-y-5 pb-14 text-[#2a2017]">
       <PageTop
         title="ფსალმუნთა ჯგუფი"
-        subtitle={group ? group.name : 'მედავითნეობა — ერთად ვკითხულობთ ფსალმუნს'}
+        subtitle={group ? group.name : 'ერთად ვკითხულობთ ფსალმუნს'}
         onBack={handleGoBack}
         right={
           <span className="flex items-center gap-2">
@@ -104,10 +104,9 @@ const GroupView: React.FC<{ group: PsalterGroup; canLead: boolean }> = ({ group,
             <CardTitle
               icon={<LayoutGrid />}
               title="ციკლის კითხვა"
-              hint={read === KATHISMA_COUNT ? 'მთელი ფსალმუნი წაკითხულია — დიდება ღმერთს!' : `წაიკითხეს ${read} / ${KATHISMA_COUNT} · დარჩა ${KATHISMA_COUNT - read}`}
-              right={<span className="font-serif-ge text-2xl font-bold text-[#7a2028] tabular-nums">{read}<span className="text-base text-[#b3a594]">/20</span></span>}
+              hint={read === KATHISMA_COUNT ? 'მთელი ფსალმუნი წაკითხულია — დიდება ღმერთს!' : undefined}
+              className="!items-center"
             />
-            <div className="mb-3"><Bar value={read} max={KATHISMA_COUNT} tone={read === KATHISMA_COUNT ? 'green' : 'wine'} /></div>
             <KathismaGrid group={group} slots={slots} owners={owners} uid={uid} isLeader={canLead} isMember={isMember} actions={actions} />
             <Flash flash={actions.message} onClose={actions.clearMessage} />
           </Card>

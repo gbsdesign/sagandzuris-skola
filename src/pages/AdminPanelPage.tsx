@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
 import { Users, GraduationCap, Disc3, LayoutGrid, BarChart3, School } from 'lucide-react';
 import { db } from '../firebase';
@@ -14,6 +14,7 @@ import { SectionsTab } from '../components/admin/SectionsTab';
 import { StatsTab } from '../components/admin/StatsTab';
 import { SchoolTab } from '../components/admin/SchoolTab';
 import { AccessRequests, AccessRecord, DecisionRecord, toAccess } from '../components/admin/AccessRequests';
+import { useDirectory, writeDirectory } from '../utils/directory';
 
 type Tab = 'users' | 'classes' | 'recordings' | 'sections' | 'stats' | 'school';
 const TAB_KEY = 'sg-admin-tab';
@@ -47,6 +48,25 @@ export const AdminPanelPage: React.FC<{ logoUrl: string }> = ({ logoUrl }) => {
       () => setStaff([]));
     return () => { off1(); off2(); };
   }, [isAdmin]);
+
+  // members who have not opened the app since the directory began are missing from it, so teachers could not
+  // add them to a class or group: write their name and photo there from their record (once per visit)
+  const directory = useDirectory(isAdmin);
+  const filled = useRef(new Set<string>());
+  useEffect(() => {
+    if (!isAdmin || loading || directory.loading) return;
+    const known = new Set(directory.people.map(p => p.uid));
+    for (const u of users) {
+      if (known.has(u.userId) || filled.current.has(u.userId)) continue;
+      filled.current.add(u.userId);
+      void writeDirectory(u.userId, {
+        name: u.displayName || u.name,
+        ...(u.firstName ? { firstName: u.firstName } : {}),
+        ...(u.lastName ? { lastName: u.lastName } : {}),
+        ...(u.photoURL ? { photoURL: u.photoURL } : {}),
+      });
+    }
+  }, [isAdmin, loading, directory.loading, directory.people, users]);
 
   // new members' requests and who decided them: superadmins only
   const [access, setAccess] = useState<Record<string, AccessRecord>>({});

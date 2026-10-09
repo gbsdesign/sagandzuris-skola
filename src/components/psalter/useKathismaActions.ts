@@ -47,7 +47,7 @@ export const useKathismaActions = (group: PsalterGroup | null | undefined, cycle
         // the mark waits on the phone when offline and is sent later
         void markRead(group!.id, cycle!, k, user!.uid).catch(() => {});
         if (!(habitLog[dayKey(new Date())] || []).includes(PSALMS_HABIT)) toggleHabitToday(PSALMS_HABIT);
-      }, `კანონი ${k} მოინიშნა წაკითხულად. ღმერთმა შეგეწიოს!`),
+      }, `კანონი ${k} მოინიშნა წაკითხულად. ღმერთს ებარებოდე!`),
     unread: (k: number) => run(k, () => unmarkRead(group!.id, cycle!, k), `კანონი ${k}: მონიშვნა გაუქმდა.`),
     take: (k: number) =>
       run(k, async () => {

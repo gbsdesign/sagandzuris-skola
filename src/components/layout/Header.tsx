@@ -131,11 +131,13 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                   key={c.id}
                   type="button"
                   onClick={() => openClass(c.id)}
-                  className="shrink-0 rounded-full p-0.5 hover:ring-2 hover:ring-[#7a2028]/30 transition-all cursor-pointer active:scale-95"
+                  className="shrink-0 inline-flex items-center gap-1.5 h-9 p-0.5 rounded-full bg-white/80 hover:bg-white ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 transition-all cursor-pointer active:scale-95"
                   title={`${c.name} — კლასის გვერდი`}
                   aria-label={`კლასი: ${c.name}`}
                 >
                   <ClassLogo name={c.name} logo={c.logo} className="w-8 h-8 text-sm" />
+                  {/* staff have more buttons up here: on phones their class keeps to the logo */}
+                  <span className={`pr-2.5 text-[12.5px] font-bold text-[#7a2028] leading-none ${isTeacher ? 'hidden sm:inline' : ''}`}>კლასი</span>
                 </button>
               ))}
               {showChats && (

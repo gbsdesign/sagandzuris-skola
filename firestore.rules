@@ -127,7 +127,8 @@ service cloud.firestore {
     // and psalter groups without seeing anyone's private record. Each person writes only their own entry.
     match /directory/{userId} {
       allow read: if isTeacher();
-      allow create, update: if isSignedIn() && uid() == userId
+      // the member, or an admin who corrects their name from the admin panel
+      allow create, update: if ((isSignedIn() && uid() == userId) || isAdmin())
         && incoming().keys().hasOnly(['uid', 'name', 'firstName', 'lastName', 'churchName', 'photoURL', 'updatedAt'])
         && incoming().uid == userId;
       allow delete: if isAdmin() || (isSignedIn() && uid() == userId);

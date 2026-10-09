@@ -44,15 +44,21 @@ const AVAILABLE_HOURS = Array.from({ length: 18 }, (_, i) => {
   return `${h.toString().padStart(2, '0')}:00`;
 });
 
-export const StudentProfileCard: React.FC = () => {
+/** Whose profile an admin edits from the admin panel (without it: my own). */
+export interface ProfileOwner { uid: string; email: string; displayName: string; photoURL: string }
+
+export const StudentProfileCard: React.FC<{ member?: ProfileOwner }> = ({ member }) => {
   const [profile, setProfile] = useState<StudentProfile>(INITIAL_PROFILE);
   const [activeDay, setActiveDay] = useState<string>('ორშ');
   const [savedMessage, setSavedMessage] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const [savingDb, setSavingDb] = useState(false);
 
   // Sync profile only with Firestore on mount and prefill from Auth
   useEffect(() => {
-    const user = auth.currentUser;
+    const user = member
+      ? { uid: member.uid, displayName: member.displayName }
+      : auth.currentUser;
     if (!user) return;
 
     if (user.displayName) {
@@ -105,7 +111,7 @@ export const StudentProfileCard: React.FC = () => {
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [member?.uid]);
 
   // Helper to get selected hours list for a day of week
   const getSelectedHoursForDay = (dayId: string): string[] => {
@@ -190,6 +196,26 @@ export const StudentProfileCard: React.FC = () => {
   const handleSave = async () => {
     triggerHaptic(30);
     setSavingDb(true);
+    setSaveFailed(false);
+
+    // an admin saves only the member's profile: their account fields (e-mail, photo, name in the account) stay theirs
+    if (member) {
+      const first = profile.firstName.trim(), last = profile.lastName.trim(), church = (profile.churchName || '').trim();
+      try {
+        await setDoc(doc(db, 'students', member.uid), {
+          profile: { ...profile, phone: normalizePhone(profile.phone) ?? (profile.phone || '') },
+          updatedAt: new Date().toISOString()
+        }, { merge: true });
+        void writeDirectory(member.uid, { firstName: first, lastName: last, churchName: church });
+        if (isGeorgian(first) && isGeorgian(last)) void renameInGroups(member.uid, `${first} ${last}`, church || first, member.photoURL);
+        setSavedMessage(true);
+        setTimeout(() => setSavedMessage(false), 2500);
+      } catch {
+        setSaveFailed(true);
+      }
+      setSavingDb(false);
+      return;
+    }
 
     const user = auth.currentUser;
     if (user) {
@@ -223,9 +249,9 @@ export const StudentProfileCard: React.FC = () => {
   const configuredDaysList = DAYS_OF_WEEK.filter(d => getSelectedHoursForDay(d.id).length > 0);
   const isValidSchedule = configuredDaysList.length >= 2;
 
-  const currentUser = auth.currentUser;
+  const currentUser = member || auth.currentUser;
   const userPhoto = currentUser?.photoURL;
-  const displayFullName = profile.firstName || profile.lastName 
+  const displayFullName = profile.firstName || profile.lastName
     ? `${profile.firstName} ${profile.lastName}`.trim()
     : currentUser?.displayName || 'მოსწავლის პროფილი';
   const userEmail = currentUser?.email;
@@ -489,6 +515,7 @@ export const StudentProfileCard: React.FC = () => {
         {savingDb ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
         <span>მონაცემების შენახვა</span>
       </button>
+      {saveFailed && <p role="alert" className="text-center text-[13px] font-semibold text-[#9b2c2c]">ვერ შეინახა — სცადე თავიდან.</p>}
     </div>
   );
 };

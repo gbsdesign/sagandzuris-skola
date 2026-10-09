@@ -1,8 +1,8 @@
 import React from 'react';
-import { BookOpen, Check, Clock, HandHelping, LifeBuoy, ChevronRight, Settings2, Undo2 } from 'lucide-react';
+import { BookOpen, Check, Clock, HandHelping, LifeBuoy, ChevronRight, Settings2, Undo2, Users } from 'lucide-react';
 import { useNavigation } from '../../context';
 import { Btn, Flash } from '../ui/kit';
-import { KATHISMA_PSALMS, formatLeft, formatRange, msLeft, nextShiftDate, georgiaToday } from '../../utils/psalter';
+import { KATHISMA_COUNT, KATHISMA_PSALMS, formatLeft, readCount, formatRange, msLeft, nextShiftDate, georgiaToday } from '../../utils/psalter';
 import { PsalterGroup, ergative, firstName, memberName, useGroupNow } from '../../hooks/usePsalter';
 import { useKathismaActions } from './useKathismaActions';
 import { openPsalterGroup } from './selectedGroup';
@@ -74,14 +74,14 @@ export const MyKathismaCard: React.FC<{ group: PsalterGroup; uid: string; compac
                     <span className="min-w-0 flex-1">
                       <span className="block font-serif-ge text-[16px] font-bold leading-snug">ფსალმუნნი {KATHISMA_PSALMS[k - 1]}</span>
                       <span className="block text-[13px] text-[#fbf6ec]/75">
-                        {read ? 'წაკითხულია · ღმერთმა შეგეწიოს' : tookIt ? 'შენ აიღე ჯგუფის დასახმარებლად' : 'ამ ციკლში შენ კითხულობ'}
+                        {read ? 'წაკითხულია · ღმერთს ებარებოდე' : tookIt ? 'შენ აიღე ჯგუფის დასახმარებლად' : 'ამ ციკლში შენ კითხულობ'}
                       </span>
                     </span>
                   </div>
                   {!read && (
-                    <div className="mt-2.5 grid grid-cols-2 gap-2">
-                      <Btn kind="light" icon={<BookOpen />} onClick={() => openPrayer(`kathisma-${k}`)}>კითხვა</Btn>
-                      <Btn kind="ghost" className="!bg-white/10 !ring-white/25 !text-[#fbf6ec] hover:!bg-white/20" icon={<Check />} disabled={actions.busy === k} onClick={() => actions.read(k)}>
+                    <div className="mt-2 pl-[60px] flex flex-wrap gap-2">
+                      <Btn kind="light" size="sm" className="!h-10 !px-4" icon={<BookOpen />} onClick={() => openPrayer(`kathisma-${k}`)}>კითხვა</Btn>
+                      <Btn kind="ghost" size="sm" className="!h-10 !px-4 !bg-white/10 !ring-white/25 !text-[#fbf6ec] hover:!bg-white/20" icon={<Check />} disabled={actions.busy === k} onClick={() => actions.read(k)}>
                         წავიკითხე
                       </Btn>
                     </div>
@@ -103,6 +103,8 @@ export const MyKathismaCard: React.FC<{ group: PsalterGroup; uid: string; compac
             შენი კანონი {k} {ergative(firstName(memberName(group, slots[k]?.takenBy)))} აიღო — ამ ციკლში მისი წასაკითხია.
           </p>
         ))}
+
+        {!compact && <GroupPulse read={readCount(slots)} members={group.memberIds.length} />}
       </div>
 
       {isMember && (
@@ -147,5 +149,65 @@ export const MyKathismaCard: React.FC<{ group: PsalterGroup; uid: string; compac
         </div>
       )}
     </section>
+  );
+};
+
+// The whole group in this cycle: a ring of the kathismas read so far, and how many members there are.
+const GroupPulse: React.FC<{ read: number; members: number }> = ({ read, members }) => {
+  const gradId = `gp${React.useId().replace(/[^\w-]/g, '')}`;
+  const total = KATHISMA_COUNT;
+  const done = read >= total;
+  const r = 31;
+  const len = 2 * Math.PI * r;
+  return (
+    <div className="mt-3 pt-3 border-t border-white/10 flex items-center gap-4">
+      <div className="relative w-[78px] h-[78px] shrink-0" role="img" aria-label={`წაკითხულია ${read} კანონი ${total}-დან`}>
+        <svg viewBox="0 0 78 78" className="w-full h-full -rotate-90" aria-hidden>
+          <defs>
+            <linearGradient id={gradId} x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stopColor={done ? '#a7f3d0' : '#fbe7c6'} />
+              <stop offset="100%" stopColor={done ? '#34d399' : '#e2b26f'} />
+            </linearGradient>
+          </defs>
+          <circle cx="39" cy="39" r={r} fill="none" strokeWidth="9" className="stroke-white/15" />
+          {read > 0 && (
+            <circle
+              cx="39" cy="39" r={r} fill="none" strokeWidth="9" strokeLinecap="round"
+              stroke={`url(#${gradId})`}
+              strokeDasharray={len}
+              strokeDashoffset={len * (1 - Math.min(read, total) / total)}
+              className="transition-[stroke-dashoffset] duration-700 ease-out"
+            />
+          )}
+        </svg>
+        <span className="absolute inset-0 flex flex-col items-center justify-center leading-none">
+          {done ? <Check className="w-7 h-7 text-emerald-300 stroke-[3]" /> : (
+            <>
+              <span className="font-serif-ge text-[22px] font-bold tabular-nums">{read}</span>
+              <span className="mt-0.5 text-[11px] text-[#fbf6ec]/55 tabular-nums">/ {total}</span>
+            </>
+          )}
+        </span>
+      </div>
+
+      <div className="min-w-0 flex-1 space-y-1 text-[13px]">
+        <p className="text-[11px] font-bold tracking-wide uppercase text-[#fbf6ec]/55">ჯგუფი ამ ციკლში</p>
+        <p className="flex items-center gap-2">
+          <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${done ? 'bg-emerald-300' : 'bg-[#eac58f]'}`} />
+          წაკითხული <b className="ml-auto tabular-nums">{read}</b>
+        </p>
+        <p className="flex items-center gap-2 text-[#fbf6ec]/75">
+          <span className="w-2.5 h-2.5 rounded-full shrink-0 bg-white/20" />
+          დარჩა <b className="ml-auto tabular-nums text-[#fbf6ec]">{Math.max(total - read, 0)}</b>
+        </p>
+      </div>
+
+      <div className="self-stretch w-px bg-white/10" />
+      <div className="shrink-0 w-14 text-center">
+        <Users className="w-4 h-4 mx-auto text-[#fbf6ec]/55" />
+        <p className="mt-1 font-serif-ge text-[22px] font-bold tabular-nums leading-none">{members}</p>
+        <p className="mt-1 text-[11.5px] text-[#fbf6ec]/65 leading-none">წევრი</p>
+      </div>
+    </div>
   );
 };

@@ -206,19 +206,30 @@ export const ergative = (name: string) => (/[აეიოუ]$/.test(name) ? `${
 
 export const ALL_KATHISMAS = Array.from({ length: KATHISMA_COUNT }, (_, i) => i + 1);
 
-/** The names my psalter groups pray for at each "დიდება" (everyone but me), for the commemoration list. */
+/** One person my groups pray for: the prayer name and the surname's first four letters („წიკლ.“). */
+export interface GroupPrayerName { uid: string; name: string; short: string }
+
+const surnameShort = (full: string) => {
+  const letters = Array.from(full.trim().split(/\s+/).slice(1).join(' '));
+  return letters.length > 4 ? `${letters.slice(0, 4).join('')}.` : letters.join('');
+};
+
+/** How a group name reads on the list and at „დიდებაი“: „ზურა (წიკლ.) (ოჯ.)“. */
+export const groupPrayerText = (n: GroupPrayerName) => `${n.name}${n.short ? ` (${n.short})` : ''} (ოჯ.)`;
+
+/** The people my psalter groups pray for at each "დიდება" (everyone but me, each once), for the commemoration list. */
 export const useGroupPrayerNames = (uid?: string | null) => {
   const { groups } = useMyPsalterGroups(uid);
   return useMemo(() => {
-    const names: string[] = [];
+    const out: GroupPrayerName[] = [];
     for (const g of groups) {
       if (!uid || !g.memberIds.includes(uid)) continue;
       for (const m of g.members) {
-        if (m.uid === uid) continue;
-        const n = (m.prayer || firstName(m.name)).trim();
-        if (n && !names.includes(n)) names.push(n);
+        if (m.uid === uid || out.some(x => x.uid === m.uid)) continue;
+        const name = (m.prayer || firstName(m.name)).trim();
+        if (name) out.push({ uid: m.uid, name, short: surnameShort(m.name) });
       }
     }
-    return names;
+    return out;
   }, [groups, uid]);
 };

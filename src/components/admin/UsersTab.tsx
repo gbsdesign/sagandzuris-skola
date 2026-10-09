@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { deleteDoc, doc, setDoc } from 'firebase/firestore';
-import { ChevronDown, Search, ShieldCheck, GraduationCap, Crown, User as UserIcon } from 'lucide-react';
+import { ChevronDown, Search, ShieldCheck, GraduationCap, Crown, User as UserIcon, Pencil } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth, SUPER_ADMIN_EMAIL, MAX_EXTRA_SUPERADMINS, ROLE_LABEL, Role } from '../../context';
 import { HABIT_ITEMS } from '../../data/habitsAndManera';
@@ -8,7 +8,8 @@ import { SchoolClass } from '../../hooks/useClasses';
 import { PsalterGroup } from '../../hooks/usePsalter';
 import { agoLabel } from '../../hooks/useTeaching';
 import { computeMonthlyStats } from '../../hooks/useMonthlyStudyStats';
-import { Avatar, Card, FIELD, Pill } from '../ui/kit';
+import { Avatar, Btn, Card, FIELD, Pill, Sheet } from '../ui/kit';
+import { StudentProfileCard } from '../views/StudentProfileCard';
 import { abilitiesText, interestsText } from '../../utils/profileFields';
 
 export interface UserRecord {
@@ -95,6 +96,7 @@ export const UsersTab: React.FC<{
   const [filter, setFilter] = useState<Filter>('all');
   const [open, setOpen] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
+  const [editing, setEditing] = useState<UserRecord | null>(null);
 
   const roleOf = (u: UserRecord): Role => {
     const e = u.email.toLowerCase();
@@ -221,6 +223,7 @@ export const UsersTab: React.FC<{
                       {teaches.length > 0 && <Info label="ასწავლის" value={teaches.map(c => c.name).join(', ')} />}
                       <Info label="ბოლო აქტივობა" value={u.lastActiveAt ? new Date(u.lastActiveAt).toLocaleString('ka-GE') : '—'} />
                     </dl>
+                    <Btn kind="ghost" icon={<Pencil />} onClick={() => setEditing(u)}>პროფილის რედაქტირება</Btn>
 
                     <div className="pt-3 border-t border-[#e8dcc8]">
                       <p className="text-xs font-bold text-[#75685a] mb-2">როლი</p>
@@ -245,6 +248,10 @@ export const UsersTab: React.FC<{
           })}
         </ul>
       )}
+      {/* the member's whole profile, as they see it themselves; the admin's changes are saved into it */}
+      <Sheet open={!!editing} onClose={() => setEditing(null)} title="პროფილის რედაქტირება" wide>
+        {editing && <StudentProfileCard key={editing.userId} member={{ uid: editing.userId, email: editing.email, displayName: editing.displayName, photoURL: editing.photoURL }} />}
+      </Sheet>
     </Card>
   );
 };

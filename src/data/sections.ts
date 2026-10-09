@@ -5,7 +5,7 @@ import type { PageType } from '../context/NavigationContext';
 // • the kids' mode a teacher turns on for a student (only the chosen sections show),
 // • the home buttons ("ჩემი ღილაკები").
 export type SectionId =
-  | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'medavitneoba' | 'chvevebi' | 'tamashebi' | 'tsinaprebi'
+  | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'medavitneoba' | 'medavitneobaTopic' | 'chvevebi' | 'tamashebi' | 'tsinaprebi'
   | 'gza' | 'biblioteka';
 
 export interface SectionDef {
@@ -20,7 +20,9 @@ export const SECTIONS: SectionDef[] = [
   { id: 'simghera', label: 'სიმღერა', page: 'simghera' },
   { id: 'mtkmeli', label: 'მთქმელი', page: 'mtkmeli' },
   { id: 'sakravebi', label: 'საკრავები', page: 'sakravebi' },
-  { id: 'medavitneoba', label: 'მედავითნეობა', page: 'psalter', hint: 'ფსალმუნთა ჯგუფი' },
+  { id: 'medavitneoba', label: 'ფსალმუნთა ჯგუფი', page: 'psalter', hint: 'ერთად ვკითხულობთ ფსალმუნს' },
+  // „მედავითნეობა“ on the vine: a topic of its own, not built yet (the psalter group keeps the old id)
+  { id: 'medavitneobaTopic', label: 'მედავითნეობა', hint: 'ჯერ მზადდება' },
   { id: 'chvevebi', label: 'ჩვევები', page: 'gz', hint: 'ლოცვები ჩვევებიდან იხსნება' },
   { id: 'tamashebi', label: 'თამაშები', hint: 'ჯერ მზადდება' },
   { id: 'tsinaprebi', label: 'გაიცანი წინაპრები', page: 'tsinaprebi' },
@@ -37,9 +39,9 @@ export const sectionOfPage = (page: PageType): SectionId | null => {
 
 export type SectionState = 'open' | 'soon' | 'hidden';
 
-/** Without the admin's settings: everything built is open, games and მედავითნეობა are "მალე". */
+/** Without the admin's settings: everything built is open, games, the psalter group and მედავითნეობა are "მალე". */
 export const DEFAULT_SECTION_STATE: Record<SectionId, SectionState> = {
-  galoba: 'open', simghera: 'open', mtkmeli: 'open', sakravebi: 'open', medavitneoba: 'soon',
+  galoba: 'open', simghera: 'open', mtkmeli: 'open', sakravebi: 'open', medavitneoba: 'soon', medavitneobaTopic: 'soon',
   chvevebi: 'open', tamashebi: 'soon', tsinaprebi: 'open', gza: 'open', biblioteka: 'open',
 };
 

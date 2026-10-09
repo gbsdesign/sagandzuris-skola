@@ -32,8 +32,8 @@ export const GrapeNav: React.FC = () => {
     { id: 'mtkmeli', label: 'მთქმელი', x: 50, y: 58, nx: 47, ny: 59, go: () => navigateTo('mtkmeli'), big: true },
     { id: 'sakravebi', label: 'საკრავები', x: 70, y: 48, nx: 73, ny: 48, go: () => navigateTo('sakravebi') },
     // on the leaves
-    // the psalter group ("ფსალმუნთა ჯგუფი") — not ready yet, so "მალე" like the games
-    { id: 'medavitneoba', label: 'მედავით­ნეობა', x: 35, y: 13, nx: 29, ny: 14 },
+    // მედავითნეობა — a topic not built yet, so "მალე" like the games (not the psalter group)
+    { id: 'medavitneobaTopic', label: 'მედავით­ნეობა', x: 35, y: 13, nx: 29, ny: 14 },
     // signed in: habits fold open on the path page; guests get the sign-in prompt
     { id: 'chvevebi', label: 'ჩვევები', x: 62, y: 8, nx: 66, ny: 8, go: () => (user ? (openPathPanel('habits'), navigateTo('gz')) : openModal('chvevebi')) },
     { id: 'tamashebi', label: 'თამაშები', x: 86, y: 28, nx: 83, ny: 20 },
