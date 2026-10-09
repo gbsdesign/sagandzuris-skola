@@ -4,6 +4,8 @@ import { BookTab } from './library/BookTab';
 import { BookNav } from './library/BookHead';
 import { FeastsTab } from './library/FeastsTab';
 import { LivesTab } from './library/LivesTab';
+import { PrayersTab } from './library/PrayersTab';
+import { SpiritualBooksTab } from './library/SpiritualBooksTab';
 import { SynthDownload } from './library/SynthDownload';
 import { SHELF_IDS, Shelf, ShelfId } from './library/Shelf';
 import { useOpenRequest } from '../utils/searchOpen';
@@ -17,8 +19,8 @@ const isShelfId = (id: string | null | undefined): id is ShelfId => SHELF_IDS.in
 
 export const LibraryPage: React.FC = () => {
   const { mapItem, openMapItem, handleGoBack } = useNavigation();
-  // a book picked in the search
-  useOpenRequest('biblioteka', id => { if (isShelfId(id)) openMapItem(id); });
+  // a book picked in the search, or a chapter of it from a button ("book:12")
+  useOpenRequest('biblioteka', id => { if (isShelfId(id.split(':')[0])) openMapItem(id); });
   const [shelf, ...rest] = (mapItem ?? '').split(':');
   const open = isShelfId(shelf) ? shelf : null;
   const nav: BookNav = {
@@ -33,7 +35,7 @@ export const LibraryPage: React.FC = () => {
         <Shelf onOpen={openMapItem} />
       ) : (
         <div key={open} className="animate-[galoba-unfold_0.25s_ease_both]">
-          {open === 'book' ? <BookTab nav={nav} /> : open === 'feasts' ? <FeastsTab /> : open === 'lives' ? <LivesTab nav={nav} /> : <SynthDownload />}
+          {open === 'book' ? <BookTab nav={nav} /> : open === 'feasts' ? <FeastsTab /> : open === 'lives' ? <LivesTab nav={nav} /> : open === 'prayers' ? <PrayersTab /> : open === 'sasuliero' ? <SpiritualBooksTab nav={nav} /> : <SynthDownload />}
         </div>
       )}
     </div>

@@ -215,35 +215,6 @@ export const GzaView: React.FC<GzaViewProps> = ({
     return () => unsubscribe();
   }, []);
 
-  const [isSavedToast, setIsSavedToast] = useState(false);
-
-  const handleManualSave = async () => {
-    const user = auth.currentUser;
-    if (onUpdateVariants) {
-      onUpdateVariants(activeVariantsMap);
-    }
-
-    if (!user) {
-      saveGuestVariants(activeVariantsMap);
-      setIsSavedToast(true);
-      setTimeout(() => {
-        setIsSavedToast(false);
-      }, 2500);
-      return;
-    }
-
-    try {
-      const userDocRef = doc(db, 'students', user.uid);
-      await setDoc(userDocRef, { selectedChantVariants: activeVariantsMap }, { mergeFields: ['selectedChantVariants'] });
-    } catch (err) {
-      console.warn('Firestore manual save note:', err);
-    }
-    setIsSavedToast(true);
-    setTimeout(() => {
-      setIsSavedToast(false);
-    }, 2500);
-  };
-
   const handleToggleVoice = async (variantId: string, voice: '1' | '2' | '3') => {
     const current = activeVariantsMap[variantId];
     if (!current) return;
@@ -432,12 +403,12 @@ export const GzaView: React.FC<GzaViewProps> = ({
             return (
               <section key={cat.id} className="space-y-2">
                 <div className="px-1">
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1">
                     <h3 className="flex items-center gap-2.5 font-serif-ge text-xl font-bold text-[#2a2017]">
                       <span aria-hidden className="w-1.5 h-6 rounded-full bg-gradient-to-b from-[#a3323d] to-[#7a2028]" />
                       {cat.title}
                     </h3>
-                    <div className="flex items-center gap-1">
+                    <div className="ml-auto flex items-center gap-1">
                       <span className="h-7 px-2.5 rounded-full bg-[#7a2028]/[0.07] text-[#7a2028] text-xs font-bold inline-flex items-center tabular-nums whitespace-nowrap">
                         {cat.items.filter(isDone).length}/{cat.items.length} ნასწავლი
                       </span>
@@ -482,18 +453,19 @@ export const GzaView: React.FC<GzaViewProps> = ({
                         <div className="flex items-center gap-3 pl-3 pr-2 py-2.5">
                           <StatusRing n={index + 1} marks={marks} />
 
-                          {/* phone: title on top, code + voices below; wider: voices on the right of both */}
-                          <div className="flex-1 min-w-0 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1">
+                          {/* phone: title on top, code + voices below (voices drop to their own line when it's too narrow);
+                              wider: voices on the right of both */}
+                          <div className="flex-1 min-w-0 flex flex-wrap items-center gap-x-2 gap-y-1 sm:grid sm:grid-cols-[minmax(0,1fr)_auto] sm:gap-x-3">
                             <button
                               type="button"
                               disabled={!canOpen}
                               onClick={toggleOpen}
                               aria-expanded={song ? isOpen : undefined}
-                              className="col-span-2 sm:col-span-1 min-w-0 text-left font-serif-ge font-bold text-[15px] leading-snug text-[#2a2017] break-words transition-colors enabled:cursor-pointer enabled:hover:text-[#7a2028] disabled:cursor-default"
+                              className="basis-full sm:col-start-1 sm:row-start-1 min-w-0 text-left font-serif-ge font-bold text-[15px] leading-snug text-[#2a2017] break-words transition-colors enabled:cursor-pointer enabled:hover:text-[#7a2028] disabled:cursor-default"
                             >
                               {title}
                             </button>
-                            <span className="col-start-1 row-start-2 min-w-0 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[#8a7a6a]">
+                            <span className="grow basis-[5.5rem] min-w-0 sm:col-start-1 sm:row-start-2 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-[#8a7a6a]">
                               {subtitle && <span className="min-w-0 truncate">{subtitle}</span>}
                               {recordings > 0 && (
                                 <span className="inline-flex items-center gap-1 text-[#7a2028]/80 whitespace-nowrap">
@@ -503,10 +475,10 @@ export const GzaView: React.FC<GzaViewProps> = ({
                               )}
                             </span>
 
-                            <div className="col-start-2 row-start-2 sm:row-start-1 sm:row-span-2 justify-self-end flex items-center gap-1">
+                            <div className="ml-auto sm:col-start-2 sm:row-start-1 sm:row-span-2 flex items-center gap-1">
                               {usesVoices(item.variantId) ? (
                                 <>
-                                  <span className="mr-0.5 text-[11px] font-semibold text-[#a08f7c]">ხმა</span>
+                                  <span className="hidden min-[380px]:inline mr-0.5 text-[11px] font-semibold text-[#a08f7c]">ხმა</span>
                                   {VOICES.map((vNum, i) =>
                                     marks[i] === 'ok' ? (
                                       <span key={vNum} title="მასწავლებელმა ჩათვალა" aria-label={`${vNum} ხმა — ჩათვლილია`} className={`${voiceDot} ${markOk}`}>
@@ -586,27 +558,13 @@ export const GzaView: React.FC<GzaViewProps> = ({
             );
           })}
 
-          <div className="flex flex-col items-center gap-2 pt-2">
-            <button
-              type="button"
-              onClick={handleManualSave}
-              className={`h-12 px-7 rounded-full text-sm font-bold inline-flex items-center gap-2 transition-all cursor-pointer active:scale-[0.98] shadow-[0_10px_24px_-12px_rgba(122,32,40,0.7)] ${
-                isSavedToast ? 'bg-emerald-600 text-white' : 'bg-gradient-to-br from-[#8a2630] to-[#6a1b23] hover:from-[#7a2028] hover:to-[#5e1820] text-white'
-              }`}
-            >
-              {isSavedToast ? <Check className="w-4 h-4 stroke-[3]" /> : <CheckCheck className="w-4 h-4" />}
-              {isSavedToast ? 'შენახულია' : 'ცვლილებების შენახვა'}
-            </button>
-            <span className="text-xs text-[#8a7a6a]">ცვლილებები ავტომატურადაც ინახება</span>
-            {Object.values(confirmed).some(v => v.length > 0) && (
-              <span className="text-xs text-[#8a7a6a] inline-flex items-center gap-1">
+          {Object.values(confirmed).some(v => v.length > 0) && (
+            <p className="flex justify-center pt-2 text-xs text-[#8a7a6a]">
+              <span className="inline-flex items-center gap-1">
                 <CheckCheck className="w-3.5 h-3.5 text-emerald-700" /> მწვანე — მასწავლებელმა ჩათვალა
               </span>
-            )}
-            <p className="mt-2 font-serif-ge text-[15px] text-center text-[#4a3426] leading-relaxed">
-              ეს არის შენი უკვე ნასწავლი გაკვეთილები —<br />იარე წინ, დააგროვე საგანძური.
             </p>
-          </div>
+          )}
         </>
       ) : hideEmpty ? null : (
         <div className="px-6 py-8 text-center rounded-3xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-20px_rgba(42,32,23,0.35)] space-y-2">

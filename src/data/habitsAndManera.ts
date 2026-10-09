@@ -6,7 +6,8 @@ export interface ManeraItemType {
 }
 
 // Habits with a menu open prayers to read right there (see data/prayers).
-export type HabitMenu = 'morning-evening' | 'hours' | 'akathists' | 'gospel' | 'apostle' | 'jesus' | 'psalms';
+// 'book' is the whole ლოცვანი, all of these folded together.
+export type HabitMenu = 'morning-evening' | 'morning' | 'evening' | 'hours' | 'akathists' | 'gospel' | 'apostle' | 'jesus' | 'psalms' | 'book';
 
 export interface HabitItemType {
   id: string;
@@ -46,7 +47,9 @@ export const HABIT_GROUPS: HabitGroupType[] = [
     title: 'ყოველდღე',
     goal: { times: 1, per: 'day' },
     items: [
-      { id: 'habit_1', label: 'დილის და საღამოს ლოცვები', menu: 'morning-evening' },
+      // habit_1 was "დილის და საღამოს ლოცვები" together; its old marks count as the morning ones
+      { id: 'habit_1', label: 'დილის ლოცვები', menu: 'morning' },
+      { id: 'habit_15', label: 'საღამოს ლოცვები', menu: 'evening' },
       { id: 'habit_13', label: 'შვიდგზის ლოცვა', menu: 'hours' },
       { id: 'habit_2', label: 'სახარება', menu: 'gospel' },
       { id: 'habit_3', label: 'სამოციქულო', menu: 'apostle' },

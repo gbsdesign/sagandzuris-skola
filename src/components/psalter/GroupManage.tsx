@@ -7,7 +7,7 @@ import { Avatar, Btn, Card, CardTitle, FIELD, Flash, IconBtn, Label, Pill, useFl
 import { PeoplePicker, Person } from '../people/PeoplePicker';
 import { useDirectory, shownName, shownPrayerName } from '../../utils/directory';
 import { hasGeorgianName } from '../../utils/memberName';
-import { KATHISMA_PSALMS, autoDistribute, cycleOf, georgiaToday, kathismasOf, ownersIn, rebase } from '../../utils/psalter';
+import { KATHISMA_PSALMS, MAX_CYCLE_DAYS, autoDistribute, cycleOf, georgiaToday, halfIndex, kathismasOf, ownersIn, parseCycleDays, parseShiftDays, rebase, shiftDaysText } from '../../utils/psalter';
 import { ALL_KATHISMAS, GroupMember, PsalterGroup, firstName } from '../../hooks/usePsalter';
 
 const TIMES = ['', '18:00', '19:00', '20:00', '21:00', '22:00'];
@@ -19,10 +19,12 @@ export const GroupManage: React.FC<{ group: PsalterGroup; onDeleted: () => void 
   const { people, loading } = useDirectory(isTeacher);
   const [picking, setPicking] = useState(false);
   const [editK, setEditK] = useState<number | null>(null);
-  const half = cycleOf(georgiaToday(), group.cycleDays).half;
+  const half = cycleOf(georgiaToday(), group.cycleDays, group.shiftDays).half;
   const [owners, setOwners] = useState<Record<number, string[]>>(() => ownersIn(group.assignment, group.baseHalf, half));
   const [dirty, setDirty] = useState(false);
-  const [settings, setSettings] = useState({ name: group.name, cycleDays: group.cycleDays, remindDaily: group.remindDaily, remindFinal: group.remindFinal });
+  const [settings, setSettings] = useState({
+    name: group.name, cycleDays: String(group.cycleDays), shiftDays: group.shiftDays.join(', '), remindDaily: group.remindDaily, remindFinal: group.remindFinal,
+  });
   const [saving, setSaving] = useState(false);
   const ref = doc(db, 'psalterGroups', group.id);
 
@@ -82,7 +84,7 @@ export const GroupManage: React.FC<{ group: PsalterGroup; onDeleted: () => void 
     try {
       await updateDoc(ref, { assignment: rebase(owners), baseHalf: half, updatedAt: new Date().toISOString() });
       setDirty(false);
-      msg.ok('განაწილება შენახულია. 1 და 15 რიცხვში ყველა თავისით გადავა შემდეგ კანონზე.');
+      msg.ok(`განაწილება შენახულია. ${shiftDaysText(group.shiftDays)} რიცხვში ყველა თავისით გადავა შემდეგ კანონზე.`);
     } catch {
       msg.fail('განაწილება ვერ შეინახა.');
     } finally {
@@ -90,10 +92,36 @@ export const GroupManage: React.FC<{ group: PsalterGroup; onDeleted: () => void 
     }
   };
 
+  // the cycle length and shift days as typed
+  const typedCycle = parseCycleDays(settings.cycleDays);
+  const typedShift = parseShiftDays(settings.shiftDays);
+  const cycleOk = typedCycle !== null, shiftOk = typedShift !== null;
+  const cycleDays = typedCycle ?? group.cycleDays;
+  const shiftDays = typedShift ?? group.shiftDays;
+  const sameDays = shiftDays.join() === group.shiftDays.join();
+
   const saveSettings = async () => {
     if (!settings.name.trim()) { msg.fail('ჯგუფს სახელი სჭირდება.'); return; }
+    if (!cycleOk) { msg.fail(`ციკლი 1-დან ${MAX_CYCLE_DAYS} დღემდე შეიძლება.`); return; }
+    if (!shiftOk) { msg.fail('გადასვლის რიცხვები 1-დან 28-მდე ჩაწერე, მძიმით: მაგ. 1, 15.'); return; }
+    const today = georgiaToday();
+    // a new rule may start the current cycle afresh: its „წავიკითხე“ marks then stay with the old one
+    if (cycleOf(today, cycleDays, shiftDays).id !== cycleOf(today, group.cycleDays, group.shiftDays).id
+      && !window.confirm('მიმდინარე ციკლი ახლიდან დაიწყება და ამ ციკლის „წავიკითხე“ მონიშვნები აღარ გამოჩნდება. ვინ რომელ კანონს კითხულობს დღეს, არ შეიცვლება. შევინახო?')) return;
     try {
-      await updateDoc(ref, { ...settings, name: settings.name.trim(), updatedAt: new Date().toISOString() });
+      await updateDoc(ref, {
+        name: settings.name.trim(),
+        cycleDays,
+        shiftDays,
+        remindDaily: settings.remindDaily,
+        remindFinal: settings.remindFinal,
+        // new shift days count periods differently: write today's readers down for the new count
+        ...(sameDays ? {} : {
+          assignment: rebase(ownersIn(group.assignment, group.baseHalf, halfIndex(today, group.shiftDays))),
+          baseHalf: halfIndex(today, shiftDays),
+        }),
+        updatedAt: new Date().toISOString(),
+      });
       msg.ok('პარამეტრები შენახულია.');
     } catch {
       msg.fail('ვერ შეინახა.');
@@ -113,7 +141,7 @@ export const GroupManage: React.FC<{ group: PsalterGroup; onDeleted: () => void 
   };
 
   const settingsChanged =
-    settings.name !== group.name || settings.cycleDays !== group.cycleDays || settings.remindDaily !== group.remindDaily || settings.remindFinal !== group.remindFinal;
+    settings.name !== group.name || !cycleOk || !shiftOk || cycleDays !== group.cycleDays || !sameDays || settings.remindDaily !== group.remindDaily || settings.remindFinal !== group.remindFinal;
 
   return (
     <div className="space-y-4">
@@ -159,12 +187,12 @@ export const GroupManage: React.FC<{ group: PsalterGroup; onDeleted: () => void 
         <CardTitle
           icon={<LayoutGrid />}
           title="კანონების განაწილება"
-          hint="ვინ რომელ კანონს კითხულობს ამ ნახევარ თვეში. ერთ კანონს შეიძლება ორი კითხულობდეს, ერთს — ორი კანონი ერგებოდეს."
+          hint="ვინ რომელ კანონს კითხულობს ახლა. ერთ კანონს შეიძლება ორი კითხულობდეს, ერთს — ორი კანონი ერგებოდეს."
         />
         {(unowned.length > 0 || reserve.length > 0) && (
           <div className="mb-3 p-3 rounded-2xl bg-amber-50 ring-1 ring-amber-200 text-[13px] text-amber-900 space-y-1">
             {unowned.length > 0 && (
-              <p className="flex gap-2"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /> უპატრონო კანონები: <b>{unowned.join(', ')}</b> — დაუნიშნე ვინმეს (შეიძლება ერთს ორი კანონი).</p>
+              <p className="flex gap-2"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /> ცარიელი კანონები: <b>{unowned.join(', ')}</b> — დაუნიშნე ვინმეს (შეიძლება ერთს ორი კანონი).</p>
             )}
             {reserve.length > 0 && <p>მარაგში: {reserve.map(m => firstName(m.name)).join(', ')} — ეხმარებიან აღებით, ან დაუნიშნე კანონი მეორე მკითხველად.</p>}
           </div>
@@ -206,25 +234,32 @@ export const GroupManage: React.FC<{ group: PsalterGroup; onDeleted: () => void 
       {/* settings */}
       <Card>
         <CardTitle icon={<Settings2 />} title="პარამეტრები" />
-        <div className="space-y-4">
+        <div className="space-y-3">
           <div>
             <Label>ჯგუფის სახელი</Label>
             <input className={FIELD} value={settings.name} onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
           </div>
-          <div>
-            <Label hint="ამ დროში 20-ვე კანონი უნდა წაიკითხონ">ციკლის ხანგრძლივობა</Label>
-            <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-white ring-1 ring-[#e8dcc8]">
-              {([1, 2] as const).map(n => (
-                <button key={n} type="button" onClick={() => setSettings(s => ({ ...s, cycleDays: n }))}
-                  className={`h-11 rounded-xl text-sm font-bold cursor-pointer transition-colors ${settings.cycleDays === n ? 'bg-[#7a2028] text-[#fbf6ec]' : 'text-[#4a3426] hover:bg-[#7a2028]/5'}`}>
-                  {n === 1 ? '1 დღე' : '2 დღე'}
-                </button>
-              ))}
-            </div>
-          </div>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <Label>ყოველდღიური შეხსენება</Label>
+              <Label>ციკლი (დღე)</Label>
+              <input
+                className={`${FIELD} ${cycleOk ? '' : '!ring-2 !ring-[#9a3324]/50'}`}
+                type="number" inputMode="numeric" min={1} max={MAX_CYCLE_DAYS}
+                value={settings.cycleDays}
+                onChange={e => setSettings(s => ({ ...s, cycleDays: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>გადასვლის რიცხვები</Label>
+              <input
+                className={`${FIELD} ${shiftOk ? '' : '!ring-2 !ring-[#9a3324]/50'}`}
+                inputMode="text" placeholder="1, 15"
+                value={settings.shiftDays}
+                onChange={e => setSettings(s => ({ ...s, shiftDays: e.target.value }))}
+              />
+            </div>
+            <div>
+              <Label>შეხსენება</Label>
               <select className={FIELD} value={settings.remindDaily} onChange={e => setSettings(s => ({ ...s, remindDaily: e.target.value }))}>
                 {TIMES.map(t => <option key={t} value={t}>{t || 'გამორთული'}</option>)}
               </select>
@@ -236,7 +271,10 @@ export const GroupManage: React.FC<{ group: PsalterGroup; onDeleted: () => void 
               </select>
             </div>
           </div>
-          <p className="text-xs text-[#8a7a6a] leading-relaxed">შეხსენება მიდის მხოლოდ მათთან, ვისაც კანონი ჯერ წაკითხული არ აქვს. დრო საქართველოს დროით ითვლება.</p>
+          <p className="text-xs text-[#8a7a6a] leading-relaxed">
+            ციკლში 20-ვე კანონი უნდა წაიკითხონ (1–{MAX_CYCLE_DAYS} დღე). {shiftOk ? `${shiftDaysText(shiftDays)} რიცხვში` : 'გადასვლის რიცხვებში (1–28)'} ყველა შემდეგ კანონზე გადადის.
+            შეხსენება მიდის მხოლოდ მათთან, ვისაც ჯერ არ წაუკითხავს (საქართველოს დროით).
+          </p>
           <Btn icon={<Save />} disabled={!settingsChanged} onClick={saveSettings}>შენახვა</Btn>
         </div>
       </Card>

@@ -5,19 +5,20 @@ import { BookHead, BookNav, SectionTitle, ToContents } from './BookHead';
 import { MiniCover } from './Shelf';
 import { lastChapter, saveChapter } from './readingPlace';
 
-// სვიმონ მჭედლიძე, „საღმრთო ისტორია" — ძველი აღთქმა: the contents, then one chapter at a time
-// ("book:12", a step of its own), remembering where the reader stopped.
+// A book read in the app — სვიმონ მჭედლიძე, „საღმრთო ისტორია" (ძველი აღთქმა) by default: the contents,
+// then one chapter at a time ("book:12", a step of its own), remembering where the reader stopped.
 
+// a run of text: plain, bold (1) or italic (2, the prayers in a book)
 type Run = [string, number?];
 interface Chapter { n: number; title: string; paras: Run[][] }
-interface Book { author: string; book: string; note: string; part: string; source: string; chapters: Chapter[] }
+export interface Book { author: string; book: string; note: string; part: string; source: string; chapters: Chapter[] }
 
-const loadBook = () => import('../../data/library/dzveliAgtqma.json').then(m => m.default as unknown as Book);
+const loadDzveli = () => import('../../data/library/dzveliAgtqma.json').then(m => m.default as unknown as Book);
 
 const Para: React.FC<{ runs: Run[]; first?: boolean }> = ({ runs, first }) => {
   // the chapter opens with a cinnabar initial, as in old manuscripts (and the home page's quote)
   const [head, ...rest] = runs;
-  const initial = first && head && !head[1] ? head[0].charAt(0) : '';
+  const initial = first && head && !head[1] && /\p{L}/u.test(head[0].charAt(0)) ? head[0].charAt(0) : '';
   return (
     <p className={first ? '' : 'mt-3'}>
       {initial && (
@@ -27,31 +28,45 @@ const Para: React.FC<{ runs: Run[]; first?: boolean }> = ({ runs, first }) => {
         </>
       )}
       {(initial ? [[head[0].slice(1)] as Run, ...rest] : runs).map(([t, b], i) =>
-        b ? <strong key={i} className="font-bold text-[#5e1820]">{t}</strong> : <React.Fragment key={i}>{t}</React.Fragment>,
+        b === 1 ? <strong key={i} className="font-bold text-[#5e1820]">{t}</strong>
+          : b === 2 ? <em key={i} className="italic text-[#4a3426]">{t}</em>
+          : <React.Fragment key={i}>{t}</React.Fragment>,
       )}
     </p>
   );
 };
 
-export const BookTab: React.FC<{ nav: BookNav }> = ({ nav }) => {
+interface BookProps {
+  nav: BookNav;
+  /** the book's text, loaded when it opens */
+  load?: () => Promise<Book>;
+  /** the small cover at the head of the contents */
+  cover?: React.ReactNode;
+  /** where the reader stopped is kept under this name */
+  place?: string;
+  /** the line under the title (author · part · chapters by default) */
+  sub?: (book: Book) => React.ReactNode;
+}
+
+export const BookTab: React.FC<BookProps> = ({ nav, load = loadDzveli, cover, place = 'dzveli', sub }) => {
   const [book, setBook] = useState<Book | null>(null);
   const [failed, setFailed] = useState(false);
   const chapter = Number(nav.part) || null;
-  const [last, setLast] = useState<number | null>(() => lastChapter()?.n ?? null);
+  const [last, setLast] = useState<number | null>(() => lastChapter(place)?.n ?? null);
 
   useEffect(() => {
     let alive = true;
-    loadBook().then(b => alive && setBook(b)).catch(() => alive && setFailed(true));
+    load().then(b => alive && setBook(b)).catch(() => alive && setFailed(true));
     return () => { alive = false; };
-  }, []);
+  }, [load]);
 
   const ch = book && chapter ? book.chapters.find(c => c.n === chapter) ?? null : null;
   // the chapter on screen is where the reader stopped
   useEffect(() => {
     if (!ch) return;
     setLast(ch.n);
-    saveChapter(ch.n, ch.title);
-  }, [ch]);
+    saveChapter(ch.n, ch.title, place);
+  }, [ch, place]);
 
   if (failed) {
     return <p className="py-12 text-center text-sm text-[#8a7a6a]">წიგნი ვერ ჩაიტვირთა. სცადეთ თავიდან.</p>;
@@ -119,9 +134,9 @@ export const BookTab: React.FC<{ nav: BookNav }> = ({ nav }) => {
   return (
     <div>
       <BookHead
-        cover={<MiniCover id="book" className="w-11 h-[60px]" />}
+        cover={cover ?? <MiniCover id="book" className="w-11 h-[60px]" />}
         title={book.book}
-        sub={<>{book.author} · {book.part} · {total} თავი</>}
+        sub={sub ? sub(book) : <>{book.author} · {book.part} · {total} თავი</>}
       />
 
       {lastCh && (

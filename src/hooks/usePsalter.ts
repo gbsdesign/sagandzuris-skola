@@ -4,7 +4,7 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import {
-  Assignment, Cycle, KATHISMA_COUNT, Slot, Slots, cycleOf, georgiaToday, halfIndex, kathismasOf, ownersIn, responsible,
+  Assignment, Cycle, KATHISMA_COUNT, Slot, Slots, cycleOf, georgiaToday, halfIndex, kathismasOf, normCycleDays, normShiftDays, ownersIn, responsible,
 } from '../utils/psalter';
 
 // Firestore side of the psalter group:
@@ -27,7 +27,8 @@ export interface PsalterGroup {
   members: GroupMember[];
   assignment: Assignment;
   baseHalf: number;
-  cycleDays: 1 | 2;
+  cycleDays: number; // 1–7
+  shiftDays: number[]; // days of the month when everyone moves one kathisma on (default 1 and 15)
   startDate: string;
   remindDaily: string; // "20:00" — a nudge to whoever hasn't read today; '' = off
   remindFinal: string; // "21:00" on the cycle's last day
@@ -44,8 +45,9 @@ export const toGroup = (id: string, d: any): PsalterGroup => ({
   memberIds: arr(d.memberIds),
   members: arr(d.members),
   assignment: d.assignment && typeof d.assignment === 'object' ? d.assignment : {},
-  baseHalf: typeof d.baseHalf === 'number' ? d.baseHalf : halfIndex(georgiaToday()),
-  cycleDays: d.cycleDays === 1 ? 1 : 2,
+  baseHalf: typeof d.baseHalf === 'number' ? d.baseHalf : halfIndex(georgiaToday(), normShiftDays(d.shiftDays)),
+  cycleDays: normCycleDays(d.cycleDays),
+  shiftDays: normShiftDays(d.shiftDays),
   startDate: d.startDate || '',
   remindDaily: typeof d.remindDaily === 'string' ? d.remindDaily : '20:00',
   remindFinal: typeof d.remindFinal === 'string' ? d.remindFinal : '21:00',
@@ -133,7 +135,7 @@ export const useCycleHistory = (groupId?: string | null, count = 8) => {
 /** Everything a page needs about the current cycle of one group. */
 export const useGroupNow = (group: PsalterGroup | null | undefined, uid?: string | null) => {
   const now = useTicker();
-  const cycle = useMemo(() => (group ? cycleOf(georgiaToday(now), group.cycleDays) : null), [group, now]);
+  const cycle = useMemo(() => (group ? cycleOf(georgiaToday(now), group.cycleDays, group.shiftDays) : null), [group, now]);
   const { slots, loading } = useCycleSlots(group?.id, cycle?.id);
   const owners = useMemo(() => (group && cycle ? ownersIn(group.assignment, group.baseHalf, cycle.half) : {}), [group, cycle]);
   const mine = useMemo(() => {

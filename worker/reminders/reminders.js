@@ -317,19 +317,39 @@ async function fsList(env, path) {
 const pad = (n) => String(n).padStart(2, '0');
 const georgia = (when) => new Date(when.getTime() + TBILISI_MS);
 const isoOf = (d) => `${d.getUTCFullYear()}-${pad(d.getUTCMonth() + 1)}-${pad(d.getUTCDate())}`;
-const halfIndex = (y, m, d) => (y * 12 + (m - 1)) * 2 + (d >= 15 ? 1 : 0);
 const wrap = (k) => ((((k - 1) % 20) + 20) % 20) + 1;
+const DAY_MS = 86400_000;
 
-const cycleOf = (g, cycleDays) => {
+// the group's shift days (1–28; none → the 1st and the 15th) and cycle length (1–7; unreadable → 2)
+const shiftDaysOf = (group) => {
+  const list = Array.isArray(group.shiftDays) ? group.shiftDays.map(Number).filter((n) => Number.isInteger(n) && n >= 1 && n <= 28) : [];
+  const clean = [...new Set(list)].sort((a, b) => a - b);
+  return clean.length ? clean : [1, 15];
+};
+const cycleLen = (n) => {
+  const v = Math.round(Number(n));
+  return Number.isFinite(v) && v >= 1 ? Math.min(v, 7) : 2;
+};
+
+// g: "now" shifted to Georgian time; group: the psalterGroups document
+const cycleOf = (g, group) => {
+  const days = shiftDaysOf(group);
+  const n = days.length;
+  const len = cycleLen(group.cycleDays);
   const y = g.getUTCFullYear(), m = g.getUTCMonth() + 1, d = g.getUTCDate();
-  const len = cycleDays === 1 ? 1 : 2;
-  const first = d >= 15 ? 15 : 1;
-  const last = d >= 15 ? new Date(Date.UTC(y, m, 0)).getUTCDate() : 14;
-  const count = Math.max(1, Math.floor((last - first + 1) / len));
-  const idx = Math.min(Math.floor((d - first) / len), count - 1);
-  const startDay = first + idx * len;
-  const endDay = idx === count - 1 ? last : startDay + len - 1;
-  return { id: `${y}-${pad(m)}-${pad(startDay)}`, endDay, half: halfIndex(y, m, startDay), lastDay: d === endDay };
+  let month = y * 12 + (m - 1);
+  let j = -1;
+  for (let i = n - 1; i >= 0; i--) if (days[i] <= d) { j = i; break; }
+  if (j < 0) { month -= 1; j = n - 1; }
+  const at = (mi, day) => Date.UTC(Math.floor(mi / 12), mi % 12, day);
+  const pStart = at(month, days[j]);
+  const pEnd = (j + 1 < n ? at(month, days[j + 1]) : at(month + 1, days[0])) - DAY_MS;
+  const today = Date.UTC(y, m - 1, d);
+  const count = Math.max(1, Math.floor(((pEnd - pStart) / DAY_MS + 1) / len));
+  const idx = Math.min(Math.floor((today - pStart) / DAY_MS / len), count - 1);
+  const start = pStart + idx * len * DAY_MS;
+  const end = idx === count - 1 ? pEnd : start + (len - 1) * DAY_MS;
+  return { id: isoOf(new Date(start)), half: month * n + j, lastDay: today === end, shiftDay: today === pStart };
 };
 
 const ownersIn = (assignment, baseHalf, half) => {
@@ -363,11 +383,11 @@ async function runGroupHour(env, when) {
 
   const groups = await fsList(env, 'psalterGroups');
   for (const group of groups) {
-    const cycle = cycleOf(g, group.cycleDays);
+    const cycle = cycleOf(g, group);
     const owners = ownersIn(group.assignment, typeof group.baseHalf === 'number' ? group.baseHalf : cycle.half, cycle.half);
     const daily = group.remindDaily === undefined ? '20:00' : group.remindDaily;
     const final = group.remindFinal === undefined ? '21:00' : group.remindFinal;
-    const shiftDay = (g.getUTCDate() === 1 || g.getUTCDate() === 15) && hour === SHIFT_HOUR;
+    const shiftDay = cycle.shiftDay && hour === SHIFT_HOUR;
     const isDaily = daily === hh;
     const isFinal = cycle.lastDay && final === hh;
     if (!isDaily && !isFinal && !shiftDay) continue;
@@ -430,7 +450,7 @@ async function groupEvent(request, env) {
   const group = await fsGet(env, `psalterGroups/${body.groupId}`);
   if (!group || !(group.memberIds || []).includes(uid)) return [403, 'not a member'];
   const g = georgia(new Date());
-  const cycle = cycleOf(g, group.cycleDays);
+  const cycle = cycleOf(g, group);
   const slot = ((await fsGet(env, `psalterGroups/${body.groupId}/cycles/${cycle.id}`))?.slots || {})[k] || {};
   const fresh = (at) => at && Date.now() - new Date(at).getTime() < 10 * 60_000;
   const owners = ownersIn(group.assignment, typeof group.baseHalf === 'number' ? group.baseHalf : cycle.half, cycle.half)[k];

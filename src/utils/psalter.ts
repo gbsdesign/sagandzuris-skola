@@ -3,13 +3,15 @@
 //
 // • Dates are Georgian calendar days (Asia/Tbilisi is UTC+4 all year, no daylight saving), never the
 //   phone's own clock zone.
-// • The year is cut into half-months: the 1st–14th and the 15th–end. Cycles start afresh on the 1st
-//   and the 15th; a day left over at the end of a half-month joins its last cycle (so with two-day
-//   cycles one cycle may last three days).
-// • On the 1st and the 15th everyone moves one kathisma on (7 → 8, 20 → 1), so in ten months each
-//   reader goes through all twenty. The kathisma is worked out from the date: nobody switches anything.
-// • A group stores its distribution (kathisma → readers) for one half-month, `baseHalf`; other
-//   half-months are that distribution turned by the number of half-months in between.
+// • Each group picks its shift days of the month (`shiftDays`, 1–28; by default the 1st and the 15th).
+//   They cut the year into periods; cycles (1–7 days) start afresh on every shift day, and days left over
+//   at the end of a period join its last cycle (so with two-day cycles one cycle may last three days).
+// • On every shift day everyone moves one kathisma on (7 → 8, 20 → 1); with the 1st and the 15th each
+//   reader goes through all twenty in ten months. The kathisma is worked out from the date: nobody
+//   switches anything.
+// • A group stores its distribution (kathisma → readers) for one period, `baseHalf` (the name is from
+//   the days of half-months); other periods are that distribution turned by the number of periods between.
+//   With the default days a period's number is the same as the old half-month number.
 
 import { MONTHS_GE, MONTHS_GEN_GE } from './dateNames';
 
@@ -25,7 +27,6 @@ export const parseIso = (iso: Iso) => {
   const [y, m, d] = iso.split('-').map(Number);
   return { y, m, d };
 };
-const daysInMonth = (y: number, m: number) => new Date(Date.UTC(y, m, 0)).getUTCDate();
 
 /** Today's date in Georgia. */
 export const georgiaToday = (now: Date = new Date()): Iso => new Date(now.getTime() + TBILISI_OFFSET_MS).toISOString().slice(0, 10);
@@ -41,11 +42,63 @@ export const addDays = (iso: Iso, n: number): Iso => {
   return new Date(Date.UTC(y, m - 1, d) + n * DAY_MS).toISOString().slice(0, 10);
 };
 
-/** Half-month number: two per month, counted from year 0. */
-export const halfIndex = (iso: Iso) => {
-  const { y, m, d } = parseIso(iso);
-  return (y * 12 + (m - 1)) * 2 + (d >= 15 ? 1 : 0);
+const daysBetween = (a: Iso, b: Iso) => {
+  const x = parseIso(a), y = parseIso(b);
+  return Math.round((Date.UTC(y.y, y.m - 1, y.d) - Date.UTC(x.y, x.m - 1, x.d)) / DAY_MS);
 };
+
+export const DEFAULT_SHIFT_DAYS = [1, 15];
+export const MAX_CYCLE_DAYS = 7;
+
+/** Shift days as stored: whole numbers 1–28, sorted, no repeats; none → the 1st and the 15th. */
+export const normShiftDays = (days?: unknown): number[] => {
+  const list = Array.isArray(days) ? days.map(Number).filter(n => Number.isInteger(n) && n >= 1 && n <= 28) : [];
+  const clean = [...new Set(list)].sort((a, b) => a - b);
+  return clean.length ? clean : DEFAULT_SHIFT_DAYS;
+};
+
+/** Cycle length in days, 1–7 (anything unreadable counts as two, as before). */
+export const normCycleDays = (n: unknown) => {
+  const v = Math.round(Number(n));
+  return Number.isFinite(v) && v >= 1 ? Math.min(v, MAX_CYCLE_DAYS) : 2;
+};
+
+/** Shift days as a teacher types them ("1, 15", "1 10 20"): sorted, no repeats; null when empty or outside 1–28. */
+export const parseShiftDays = (text: string): number[] | null => {
+  const days = [...new Set(text.split(/[^0-9]+/).filter(Boolean).map(Number))].sort((a, b) => a - b);
+  return days.length && days.every(d => d >= 1 && d <= 28) ? days : null;
+};
+
+/** A typed cycle length, or null when it isn't a whole number 1–7. */
+export const parseCycleDays = (text: string): number | null => {
+  const n = Number(text);
+  return text.trim() && Number.isInteger(n) && n >= 1 && n <= MAX_CYCLE_DAYS ? n : null;
+};
+
+/** "1 და 15", "1, 10 და 20", "1". */
+export const shiftDaysText = (days?: number[]) => {
+  const l = normShiftDays(days);
+  return l.length === 1 ? String(l[0]) : `${l.slice(0, -1).join(', ')} და ${l[l.length - 1]}`;
+};
+
+/** The period (from one shift day to the day before the next) that a day falls in, and its number. */
+const periodOf = (iso: Iso, shiftDays?: number[]) => {
+  const days = normShiftDays(shiftDays);
+  const n = days.length;
+  const { y, m, d } = parseIso(iso);
+  let month = y * 12 + (m - 1);
+  let j = -1;
+  for (let i = n - 1; i >= 0; i--) if (days[i] <= d) { j = i; break; }
+  if (j < 0) { month -= 1; j = n - 1; }
+  const ym = (mi: number) => [Math.floor(mi / 12), (mi % 12) + 1] as const;
+  const [sy, sm] = ym(month);
+  const start = isoOf(sy, sm, days[j]);
+  const next = j + 1 < n ? isoOf(sy, sm, days[j + 1]) : isoOf(...ym(month + 1), days[0]);
+  return { index: month * n + j, start, end: addDays(next, -1) };
+};
+
+/** Period number, counted from year 0 (with the 1st and the 15th: the half-month). */
+export const halfIndex = (iso: Iso, shiftDays?: number[]) => periodOf(iso, shiftDays).index;
 
 export interface Cycle {
   id: Iso;      // the first day; also the Firestore document id
@@ -56,21 +109,18 @@ export interface Cycle {
 }
 
 /** The cycle that a day belongs to. */
-export const cycleOf = (iso: Iso, cycleDays: number): Cycle => {
-  const len = cycleDays === 1 ? 1 : 2;
-  const { y, m, d } = parseIso(iso);
-  const first = d >= 15 ? 15 : 1;
-  const last = d >= 15 ? daysInMonth(y, m) : 14;
-  const count = Math.max(1, Math.floor((last - first + 1) / len));
-  const idx = Math.min(Math.floor((d - first) / len), count - 1);
-  const startDay = first + idx * len;
-  const endDay = idx === count - 1 ? last : startDay + len - 1;
-  const start = isoOf(y, m, startDay);
-  return { id: start, start, end: isoOf(y, m, endDay), half: halfIndex(start), days: endDay - startDay + 1 };
+export const cycleOf = (iso: Iso, cycleDays: number, shiftDays?: number[]): Cycle => {
+  const len = normCycleDays(cycleDays);
+  const p = periodOf(iso, shiftDays);
+  const count = Math.max(1, Math.floor((daysBetween(p.start, p.end) + 1) / len));
+  const idx = Math.min(Math.floor(daysBetween(p.start, iso) / len), count - 1);
+  const start = addDays(p.start, idx * len);
+  const end = idx === count - 1 ? p.end : addDays(start, len - 1);
+  return { id: start, start, end, half: p.index, days: daysBetween(start, end) + 1 };
 };
 
-export const previousCycle = (c: Cycle, cycleDays: number) => cycleOf(addDays(c.start, -1), cycleDays);
-export const nextCycle = (c: Cycle, cycleDays: number) => cycleOf(addDays(c.end, 1), cycleDays);
+export const previousCycle = (c: Cycle, cycleDays: number, shiftDays?: number[]) => cycleOf(addDays(c.start, -1), cycleDays, shiftDays);
+export const nextCycle = (c: Cycle, cycleDays: number, shiftDays?: number[]) => cycleOf(addDays(c.end, 1), cycleDays, shiftDays);
 
 /** Milliseconds until the cycle ends (midnight after its last day, Georgian time). */
 export const msLeft = (c: Cycle, now: Date = new Date()) => georgiaMidnight(addDays(c.end, 1)) - now.getTime();
@@ -152,10 +202,9 @@ export const formatRange = (c: Pick<Cycle, 'start' | 'end'>) => {
 };
 
 /** When the next shift of kathismas happens: { label: "15 ოქტომბრის", from: "15 ოქტომბრიდან" }. */
-export const nextShiftDate = (iso: Iso) => {
-  const { y, m, d } = parseIso(iso);
-  const ny = m === 12 ? y + 1 : y, nm = m === 12 ? 1 : m + 1;
-  const [day, month, at] = d < 15 ? [15, m, isoOf(y, m, 15)] : [1, nm, isoOf(ny, nm, 1)];
+export const nextShiftDate = (iso: Iso, shiftDays?: number[]) => {
+  const at = addDays(periodOf(iso, shiftDays).end, 1);
+  const { m: month, d: day } = parseIso(at);
   const gen = MONTHS_GEN_GE[month - 1];
   return { iso: at, label: `${day} ${gen}`, from: `${day} ${gen.replace(/ს$/, 'დან')}` };
 };

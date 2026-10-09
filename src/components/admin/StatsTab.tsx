@@ -83,12 +83,12 @@ const GroupPerf: React.FC<{ group: PsalterGroup }> = ({ group }) => {
   const docs = useCycleHistory(group.id, 10);
   const { avg, full } = useMemo(() => {
     const byId = new Map(docs.map(d => [d.id, d.slots]));
-    let c = previousCycle(cycleOf(georgiaToday(), group.cycleDays), group.cycleDays);
+    let c = previousCycle(cycleOf(georgiaToday(), group.cycleDays, group.shiftDays), group.cycleDays, group.shiftDays);
     const reads: number[] = [];
     for (let i = 0; i < 6; i++) {
       if (group.startDate && c.end < group.startDate) break;
       reads.push(readCount(byId.get(c.id)));
-      c = previousCycle(c, group.cycleDays);
+      c = previousCycle(c, group.cycleDays, group.shiftDays);
     }
     return { avg: reads.length ? reads.reduce((a, b) => a + b, 0) / reads.length : 0, full: reads.filter(r => r === KATHISMA_COUNT).length };
   }, [docs, group]);

@@ -1,17 +1,17 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { addDoc, arrayRemove, collection, doc, updateDoc } from 'firebase/firestore';
-import { BookOpen, Plus, Users, Bell, Info, LogOut, Loader2, LayoutGrid, Settings2, PenLine } from 'lucide-react';
+import { BookOpen, Plus, Bell, Info, LogOut, Loader2, LayoutGrid, PenLine, ArrowLeft } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth, useNavigation } from '../context';
-import { Avatar, Bar, Btn, Card, CardTitle, Empty, FIELD, Flash, Label, PageTop, Pill, Sheet, Tabs, Toggle, useFlash } from '../components/ui/kit';
-import { KathismaGrid, SlotSheet } from '../components/psalter/GroupBoard';
+import { Bar, Btn, Card, CardTitle, Empty, FIELD, Flash, Label, PageTop, Sheet, useFlash } from '../components/ui/kit';
+import { KathismaGrid } from '../components/psalter/GroupBoard';
 import { MyKathismaCard } from '../components/psalter/MyKathismaCard';
 import { GroupHistory } from '../components/psalter/GroupHistory';
 import { GroupManage } from '../components/psalter/GroupManage';
 import { useKathismaActions } from '../components/psalter/useKathismaActions';
 import { openPsalterGroup, useSelectedGroupId } from '../components/psalter/selectedGroup';
 import { PsalterGroup, useGroupNow, useMyPsalterGroups } from '../hooks/usePsalter';
-import { KATHISMA_COUNT, cycleOf, georgiaToday, kathismasOf, readCount } from '../utils/psalter';
+import { DEFAULT_SHIFT_DAYS, KATHISMA_COUNT, MAX_CYCLE_DAYS, cycleOf, georgiaToday, parseCycleDays, parseShiftDays, readCount, shiftDaysText } from '../utils/psalter';
 import { fullName, hasGeorgianName, isGeorgian, saveProfileName, useProfileName } from '../utils/memberName';
 import { pushSupported, setGroupPush, useGroupPush } from '../utils/groupPush';
 import { PinButton } from '../components/home/ShortcutShelf';
@@ -83,7 +83,6 @@ const GroupView: React.FC<{ group: PsalterGroup; canLead: boolean }> = ({ group,
   const [view, setView] = useState<'group' | 'manage'>('group');
   const { cycle, slots, owners } = useGroupNow(group, uid);
   const actions = useKathismaActions(group, cycle);
-  const [picked, setPicked] = useState<number | null>(null);
   const isMember = group.memberIds.includes(uid);
   const read = readCount(slots);
 
@@ -91,50 +90,31 @@ const GroupView: React.FC<{ group: PsalterGroup; canLead: boolean }> = ({ group,
 
   return (
     <div className="space-y-4">
-      {canLead && (
-        <Tabs cols={2} value={view} onChange={setView} items={[
-          { id: 'group', label: 'ჯგუფი', Icon: LayoutGrid },
-          { id: 'manage', label: 'მართვა', Icon: Settings2 },
-        ]} />
-      )}
-
       {view === 'manage' && canLead ? (
-        <GroupManage key={group.id} group={group} onDeleted={() => setView('group')} />
+        <>
+          <Btn kind="ghost" size="sm" icon={<ArrowLeft />} onClick={() => setView('group')}>ჯგუფი</Btn>
+          <GroupManage key={group.id} group={group} onDeleted={() => setView('group')} />
+        </>
       ) : (
         <>
           {isMember && <NameNotice group={group} />}
-          <MyKathismaCard group={group} uid={uid} />
+          <MyKathismaCard group={group} uid={uid} onManage={canLead ? () => setView('manage') : undefined} />
 
           <Card>
             <CardTitle
               icon={<LayoutGrid />}
-              title="ამ ციკლის კითხვა"
+              title="ციკლის კითხვა"
               hint={read === KATHISMA_COUNT ? 'მთელი ფსალმუნი წაკითხულია — დიდება ღმერთს!' : `წაიკითხეს ${read} / ${KATHISMA_COUNT} · დარჩა ${KATHISMA_COUNT - read}`}
               right={<span className="font-serif-ge text-2xl font-bold text-[#7a2028] tabular-nums">{read}<span className="text-base text-[#b3a594]">/20</span></span>}
             />
-            <div className="mb-4"><Bar value={read} max={KATHISMA_COUNT} tone={read === KATHISMA_COUNT ? 'green' : 'wine'} /></div>
-            <KathismaGrid group={group} slots={slots} owners={owners} uid={uid} onPick={setPicked} />
+            <div className="mb-3"><Bar value={read} max={KATHISMA_COUNT} tone={read === KATHISMA_COUNT ? 'green' : 'wine'} /></div>
+            <KathismaGrid group={group} slots={slots} owners={owners} uid={uid} isLeader={canLead} isMember={isMember} actions={actions} />
             <Flash flash={actions.message} onClose={actions.clearMessage} />
           </Card>
 
-          <MembersCard group={group} owners={owners} />
-          {isMember && <RemindersCard />}
-          <GroupHistory group={group} current={cycle} />
-          <HowItWorks />
+          <GroupHistory group={group} current={cycle} footer={<GroupExtras isMember={isMember} shiftDays={group.shiftDays} />} />
           {isMember && !canLead && <LeaveGroup group={group} />}
 
-          <SlotSheet
-            group={group}
-            cycle={cycle}
-            k={picked}
-            slot={picked ? slots[picked] : undefined}
-            owners={picked ? owners[picked] || [] : []}
-            uid={uid}
-            isLeader={canLead}
-            isMember={isMember}
-            actions={actions}
-            onClose={() => setPicked(null)}
-          />
         </>
       )}
     </div>
@@ -192,50 +172,47 @@ const NameNotice: React.FC<{ group: PsalterGroup }> = ({ group }) => {
   );
 };
 
-const MembersCard: React.FC<{ group: PsalterGroup; owners: Record<number, string[]> }> = ({ group, owners }) => (
-  <Card>
-    <CardTitle icon={<Users />} title={`წევრები · ${group.members.length}`} hint={group.teachers.length ? `ხელმძღვანელი: ${group.teachers.map(t => t.name).join(', ')}` : undefined} />
-    <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-      {group.members.map(m => {
-        const ks = kathismasOf(owners, m.uid);
-        return (
-          <li key={m.uid} className="flex items-center gap-3 p-2.5 rounded-2xl bg-white ring-1 ring-[#efe3cf]">
-            <Avatar name={m.name} photo={m.photoURL} size={36} />
-            <span className="flex-1 min-w-0 text-sm font-semibold text-[#2a2017] truncate">{m.name}</span>
-            {ks.length ? <Pill>კ. {ks.join(', ')}</Pill> : <Pill tone="muted">მარაგი</Pill>}
-          </li>
-        );
-      })}
-    </ul>
-  </Card>
-);
-
-const RemindersCard: React.FC = () => {
+/** Under the history: the reminders switch (members) and „how it works“, side by side. */
+const GroupExtras: React.FC<{ isMember: boolean; shiftDays?: number[] }> = ({ isMember, shiftDays }) => {
   const settings = useGroupPush();
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  const toggle = async (on: boolean) => {
+  const [how, setHow] = useState(false);
+  const toggle = async () => {
     setBusy(true);
-    setError(await setGroupPush({ ...settings, psalter: on }));
+    setError(await setGroupPush({ ...settings, psalter: !settings.psalter }));
     setBusy(false);
   };
+  const on = settings.psalter;
   return (
-    <Card>
-      <CardTitle icon={<Bell />} title="შეხსენებები" hint="ამ მოწყობილობაზე, საიტი დახურულიც რომ იყოს" />
-      <Toggle
-        on={settings.psalter}
-        disabled={busy || !pushSupported()}
-        onChange={toggle}
-        label="ფსალმუნთა ჯგუფის შეხსენებები"
-        hint="საღამოს — თუ დღეს არ წაგიკითხავს; ციკლის ბოლოს — თუ კანონი წაუკითხავია; 1 და 15 რიცხვში — შენი ახალი კანონი; როცა შენს კანონს ვინმე აიღებს ან ჯგუფს დახმარება სჭირდება."
-      />
-      {!pushSupported() && <p className="mt-1 text-xs text-[#8a7a6a]">ეს ბრაუზერი შეტყობინებებს ვერ მიიღებს. iPhone-ზე ჯერ დაამატე საიტი მთავარ ეკრანზე.</p>}
-      {error && <p className="mt-1 text-xs font-semibold text-[#9a3324]">{error}</p>}
-    </Card>
+    <>
+      <div className="flex flex-wrap items-center gap-2">
+        {isMember && (
+          <button
+            type="button" role="switch" aria-checked={on} disabled={busy || !pushSupported()} onClick={toggle}
+            className="h-9 pl-3 pr-1.5 rounded-full bg-[#fbf6ec] ring-1 ring-[#efe3cf] text-[13px] font-semibold text-[#4a3426] inline-flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-default"
+          >
+            <Bell className="w-4 h-4 text-[#7a2028]" /> შეხსენებები
+            <span className={`relative w-9 h-6 rounded-full transition-colors ${on ? 'bg-[#7a2028]' : 'bg-[#dccdb5]'}`}>
+              <span className={`absolute top-1 w-4 h-4 rounded-full bg-white shadow transition-[left] ${on ? 'left-4' : 'left-1'}`} />
+            </span>
+          </button>
+        )}
+        <button
+          type="button" onClick={() => setHow(o => !o)} aria-expanded={how}
+          className={`h-9 px-3 rounded-full ring-1 text-[13px] font-semibold inline-flex items-center gap-1.5 cursor-pointer ${how ? 'bg-[#7a2028]/[0.08] ring-[#7a2028]/30 text-[#7a2028]' : 'bg-[#fbf6ec] ring-[#efe3cf] text-[#7a2028]'}`}
+        >
+          <Info className="w-4 h-4" /> როგორ მუშაობს
+        </button>
+      </div>
+      {isMember && !pushSupported() && <p className="mt-2 text-xs text-[#8a7a6a]">ეს ბრაუზერი შეტყობინებებს ვერ მიიღებს. iPhone-ზე ჯერ დაამატე საიტი მთავარ ეკრანზე.</p>}
+      {error && <p className="mt-2 text-xs font-semibold text-[#9a3324]">{error}</p>}
+      {how && <div className="mt-3"><HowList shiftDays={shiftDays} /></div>}
+    </>
   );
 };
 
-const HowItWorks: React.FC = () => {
+const HowItWorks: React.FC<{ shiftDays?: number[] }> = ({ shiftDays }) => {
   const [open, setOpen] = useState(false);
   return (
     <Card tone="paper">
@@ -244,20 +221,23 @@ const HowItWorks: React.FC = () => {
         <span className="flex-1 font-serif-ge font-bold text-[#4a3426]">როგორ მუშაობს ჯგუფი</span>
         <span className="text-sm font-semibold text-[#7a2028]">{open ? 'დახურვა' : 'გახსნა'}</span>
       </button>
-      {open && (
-        <ul className="mt-3 space-y-2 text-[14px] leading-relaxed text-[#4a3426] list-disc pl-5 marker:text-[#7a2028]">
-          <li>ჯგუფი ყოველ ციკლში (1 ან 2 დღე) მთელ ფსალმუნს კითხულობს: 20 კანონს — თითო წევრი თითოს.</li>
-          <li>ყოველი თვის 1 და 15 რიცხვში ყველა თავისით გადადის შემდეგ კანონზე (7 → 8, 20 → 1). 10 თვეში ყველა ყველა კანონს გაივლის.</li>
-          <li>წაკითხვის შემდეგ დააჭირე „წავიკითხე“ — კანონის ბოლოს ან აქ. შემთხვევით მონიშვნა ციკლის ბოლომდე უქმდება.</li>
-          <li>ვერ კითხულობ? დააჭირე „დახმარება მჭირდება“ — ჯგუფი დაინახავს და ვინმე აიღებს.</li>
-          <li>ნებისმიერ წევრს შეუძლია სხვისი წაუკითხავი კანონი „აიღოს“. თუ ორი ერთად აიღებს, პირველს ერგება.</li>
-          <li>ინტერნეტის გარეშე მონიშვნა ტელეფონში ინახება და კავშირის აღდგენისას იგზავნება. დრო საქართველოს დროით ითვლება.</li>
-          <li>ყოველ „დიდებაზე“ კანონის ტექსტში ჯგუფის წევრების სახელები ჩანს მოსახსენებლად.</li>
-        </ul>
-      )}
+      {open && <HowList shiftDays={shiftDays} />}
     </Card>
   );
 };
+
+const HowList: React.FC<{ shiftDays?: number[] }> = ({ shiftDays }) => (
+  <ul className="mt-1 mb-2 space-y-2 text-[14px] leading-relaxed text-[#4a3426] list-disc pl-5 marker:text-[#7a2028]">
+    <li>ჯგუფი ყოველ ციკლში (1–7 დღე) მთელ ფსალმუნს კითხულობს: 20 კანონს — თითო წევრი თითოს.</li>
+    <li>ყოველი თვის {shiftDaysText(shiftDays)} რიცხვში ყველა თავისით გადადის შემდეგ კანონზე (7 → 8, 20 → 1). ასე დროთა განმავლობაში ყველა ყველა კანონს გაივლის.</li>
+    <li>წაკითხვის შემდეგ დააჭირე „წავიკითხე“ — კანონის ბოლოს ან აქ. შემთხვევით მონიშვნა ციკლის ბოლომდე უქმდება.</li>
+    <li>ვერ კითხულობ? დააჭირე „დახმარება მჭირდება“ — ჯგუფი დაინახავს და ვინმე აიღებს.</li>
+    <li>როცა ვინმე დახმარებას ითხოვს, სხვა წევრს შეუძლია მისი კანონი „აიღოს“. თუ ორი ერთად აიღებს, პირველს ერგება.</li>
+    <li>ინტერნეტის გარეშე მონიშვნა ტელეფონში ინახება და კავშირის აღდგენისას იგზავნება. დრო საქართველოს დროით ითვლება.</li>
+    <li>ყოველ „დიდებაზე“ კანონის ტექსტში ჯგუფის წევრების სახელები ჩანს მოსახსენებლად.</li>
+    <li>შეხსენებები (ამ მოწყობილობაზე, საიტი დახურულიც რომ იყოს): საღამოს — თუ დღეს არ წაგიკითხავს; ციკლის ბოლოს — თუ კანონი წაუკითხავია; გადასვლის დღეს — შენი ახალი კანონი; როცა შენს კანონს ვინმე აიღებს ან ჯგუფს დახმარება სჭირდება.</li>
+  </ul>
+);
 
 const LeaveGroup: React.FC<{ group: PsalterGroup }> = ({ group }) => {
   const { user } = useAuth();
@@ -284,19 +264,23 @@ const LeaveGroup: React.FC<{ group: PsalterGroup }> = ({ group }) => {
   );
 };
 
-/** A teacher starts a group: name and cycle length; members and kathismas come next, under „მართვა“. */
+/** A teacher starts a group: name, cycle length and shift days; members and kathismas come next, under „მართვა“. */
 export const CreateGroupSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
   const { user } = useAuth();
   const msg = useFlash();
   const [name, setName] = useState('');
-  const [days, setDays] = useState<1 | 2>(2);
+  const [daysText, setDaysText] = useState('2');
+  const [shiftText, setShiftText] = useState(DEFAULT_SHIFT_DAYS.join(', '));
   const [saving, setSaving] = useState(false);
   const today = georgiaToday();
-  const half = useMemo(() => cycleOf(today, days).half, [today, days]);
+  const days = parseCycleDays(daysText);
+  const shiftDays = parseShiftDays(shiftText);
 
   const create = async () => {
     if (!user) return;
     if (!name.trim()) { msg.fail('დაარქვი ჯგუფს სახელი.'); return; }
+    if (days === null) { msg.fail(`ციკლი 1-დან ${MAX_CYCLE_DAYS} დღემდე შეიძლება.`); return; }
+    if (shiftDays === null) { msg.fail('გადასვლის რიცხვები 1-დან 28-მდე ჩაწერე, მძიმით: მაგ. 1, 15.'); return; }
     setSaving(true);
     try {
       const me = { uid: user.uid, name: user.displayName || 'მასწავლებელი', photoURL: user.photoURL || '' };
@@ -307,8 +291,9 @@ export const CreateGroupSheet: React.FC<{ open: boolean; onClose: () => void }> 
         memberIds: [],
         members: [],
         assignment: {},
-        baseHalf: half,
+        baseHalf: cycleOf(today, days, shiftDays).half,
         cycleDays: days,
+        shiftDays,
         startDate: today,
         remindDaily: '20:00',
         remindFinal: '21:00',
@@ -330,16 +315,22 @@ export const CreateGroupSheet: React.FC<{ open: boolean; onClose: () => void }> 
       footer={<Btn full size="lg" icon={<Plus />} onClick={create} disabled={saving}>{saving ? 'იქმნება…' : 'შექმნა'}</Btn>}>
       <div className="space-y-4">
         <div><Label>სახელი</Label><input className={FIELD} value={name} onChange={e => setName(e.target.value)} placeholder="მაგ: წმ. ნინოს სახელობის ჯგუფი" autoFocus /></div>
-        <div>
-          <Label hint="ამ დროში 20-ვე კანონი იკითხება">ციკლი</Label>
-          <div className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-white ring-1 ring-[#e8dcc8]">
-            {([1, 2] as const).map(n => (
-              <button key={n} type="button" onClick={() => setDays(n)}
-                className={`h-11 rounded-xl text-sm font-bold cursor-pointer ${days === n ? 'bg-[#7a2028] text-[#fbf6ec]' : 'text-[#4a3426]'}`}>{n} დღე</button>
-            ))}
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Label>ციკლი (დღე)</Label>
+            <input className={`${FIELD} ${days === null ? '!ring-2 !ring-[#9a3324]/50' : ''}`} type="number" inputMode="numeric" min={1} max={MAX_CYCLE_DAYS}
+              value={daysText} onChange={e => setDaysText(e.target.value)} />
+          </div>
+          <div>
+            <Label>გადასვლის რიცხვები</Label>
+            <input className={`${FIELD} ${shiftDays === null ? '!ring-2 !ring-[#9a3324]/50' : ''}`} placeholder="1, 15"
+              value={shiftText} onChange={e => setShiftText(e.target.value)} />
           </div>
         </div>
-        <p className="text-[13px] text-[#8a7a6a]">შექმნის შემდეგ „მართვაში“ დაამატე წევრები და გაუნაწილე კანონები.</p>
+        <p className="text-[13px] text-[#8a7a6a] leading-relaxed">
+          ციკლში 20-ვე კანონი იკითხება (1–{MAX_CYCLE_DAYS} დღე). {shiftDays ? `${shiftDaysText(shiftDays)} რიცხვში` : 'გადასვლის რიცხვებში (1–28)'} ყველა შემდეგ კანონზე გადადის.
+          შექმნის შემდეგ „მართვაში“ დაამატე წევრები და გაუნაწილე კანონები.
+        </p>
         <Flash flash={msg.flash} onClose={msg.clear} />
       </div>
     </Sheet>

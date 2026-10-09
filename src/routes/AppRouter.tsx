@@ -150,31 +150,43 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
               {/* the page title sits in the top bar (SubPageHeader); the page itself is in three tabs */}
               <PathTabs
                 panels={{
-                  learn: (
-                    <>
-                      {/* the teacher's assignments and the lesson timetable, when there are any */}
-                      <MyClassWork />
-                      <div className="space-y-4">
-                        <PathSummary />
+                  learn: [
+                    // the teacher's assignments and the lesson timetable, when there are any
+                    { id: 'work', label: 'დავალებები და გაკვეთილები', node: <MyClassWork /> },
+                    { id: 'summary', label: 'შენი გზა და თვე', node: <PathSummary /> },
+                    {
+                      id: 'manera',
+                      label: 'მანერა',
+                      node: (
                         <PathPanel id="manera" title="მანერა" subtitle="საშემსრულებლო რჩევები" badge={<ManeraAverageBadge />} extra={<ManeraQuickRings />} icon={<Music className="w-5 h-5" />}>
                           <ManeraContent />
                         </PathPanel>
-                      </div>
-                      <GzaView
-                        hideEmpty
-                        onGoToGaloba={() => navigateTo('galoba')}
-                        selectedChantVariants={selectedChantVariants}
-                        onUpdateVariants={(next) => setSelectedChantVariants(next)}
-                      />
-                    </>
-                  ),
-                  spirit: (
-                    // the tab's only card, so it is always open; the habits draw their own title row
-                    <section className="w-full rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] px-3 py-3.5 sm:p-4">
-                      <ChvevebiContent />
-                    </section>
-                  ),
-                  samosi: <ChemiSamosi unfolded />,
+                      ),
+                    },
+                    {
+                      id: 'chants',
+                      label: 'საგალობლები',
+                      node: (
+                        <GzaView
+                          hideEmpty
+                          onGoToGaloba={() => navigateTo('galoba')}
+                          selectedChantVariants={selectedChantVariants}
+                          onUpdateVariants={(next) => setSelectedChantVariants(next)}
+                        />
+                      ),
+                    },
+                  ],
+                  spirit: [{
+                    id: 'habits',
+                    label: 'ჩვევები',
+                    // the tab's only card, so it is always open; the tab names it, so the card has no title row
+                    node: (
+                      <section className="w-full rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] px-3 py-3.5 sm:p-4">
+                        <ChvevebiContent />
+                      </section>
+                    ),
+                  }],
+                  samosi: [{ id: 'samosi', label: 'ჩემი სამოსი', node: <ChemiSamosi unfolded /> }],
                 }}
               />
             </div>

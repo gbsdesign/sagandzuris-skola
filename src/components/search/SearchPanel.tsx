@@ -1,16 +1,19 @@
 import { usePlacements } from '../../data/placements';
 import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowLeft, CalendarDays, ChevronRight, Lightbulb, Lock, Music, Music2, ScrollText, Search, Sparkles, Users, X, BookOpen,
+  ArrowLeft, CalendarDays, Check, ChevronRight, Plus, Lightbulb, Lock, Music, Music2, ScrollText, Search, Sparkles, Users, X, BookOpen,
 } from 'lucide-react';
-import { useAuth, useNavigation } from '../../context';
+import { useAuth } from '../../context';
+import { useMyHabits } from '../../hooks/useMyHabits';
+import { buildCatalog, pruneLoaded } from '../../data/catalog';
+import { roleAllows, sectionOfShortcut } from '../../utils/shortcuts';
+import { CatalogTree } from './CatalogTree';
 import { useAccess } from '../../hooks/useAccess';
 import { useMyClasses } from '../../hooks/useClasses';
-import { openChurchCalendar } from '../../data/churchCalendar';
-import { SEARCH_GROUPS, SearchGroupId, SearchHit, SearchItem, buildSearchIndex, runSearch } from '../../data/searchIndex';
-import { requestOpen } from '../../utils/searchOpen';
+import { SEARCH_GROUPS, SearchGroupId, SearchHit, SearchItem, buildSearchIndex, runSearch, shortcutOfSearch } from '../../data/searchIndex';
 import { triggerHaptic } from '../../utils/haptics';
-import { shortcutIcon, useOpenShortcut } from '../home/ShortcutShelf';
+import { shortcutIcon } from '../home/ShortcutShelf';
+import { useOpenSearchTarget } from './openSearchTarget';
 import { askSignIn } from '../access/SignInPrompt';
 
 // The one search over the whole app: chants, prayers, the psalter, songs, the great chanters, feasts and
@@ -67,9 +70,11 @@ interface RowProps {
   id: string;
   onPick: () => void;
   onHover: () => void;
+  /** picking: whether this one is already chosen */
+  on?: boolean;
 }
 
-const Row: React.FC<RowProps> = ({ it, query, locked, active, id, onPick, onHover }) => (
+const Row: React.FC<RowProps> = ({ it, query, locked, active, id, onPick, onHover, on }) => (
   <button
     id={id}
     type="button"
@@ -90,7 +95,11 @@ const Row: React.FC<RowProps> = ({ it, query, locked, active, id, onPick, onHove
       </span>
       {it.sub && <span className="mt-0.5 block text-[12px] leading-snug text-[#8a7a6a] truncate">{it.sub}</span>}
     </span>
-    {locked
+    {on !== undefined ? (
+      <span className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center ${on ? 'bg-[#7a2028] text-[#fbf6ec]' : 'ring-1 ring-[#d9c8ac] text-[#7a2028]'}`} aria-hidden>
+        {on ? <Check className="w-[18px] h-[18px] stroke-[3]" /> : <Plus className="w-[18px] h-[18px]" />}
+      </span>
+    ) : locked
       ? <Lock className="w-4 h-4 shrink-0 text-[#b8a68e]" aria-label="საჭიროა შესვლა" />
       : <ChevronRight className={`w-4 h-4 shrink-0 transition-colors ${active ? 'text-[#7a2028]' : 'text-[#cdbba3]'}`} />}
   </button>
@@ -105,12 +114,27 @@ const GroupHead: React.FC<{ title: string; count?: number; right?: React.ReactNo
   </div>
 );
 
-export const SearchPanel: React.FC<{ onClose: () => void; onChoose: (action: () => void) => void }> = ({ onClose, onChoose }) => {
-  const { user, isOwner, isTeacher } = useAuth();
-  const { navigateTo, setSelectedService, setExpandedChantId, setChantSearch } = useNavigation();
+/** Pick mode: a row (or anything in the catalog under the field) is handed back as a button id instead of opened. */
+export interface SearchPick {
+  /** the line under the field: what is being picked for */
+  title: string;
+  onPick: (id: string, title: string, sub?: string) => void;
+  isOn?: (id: string) => boolean;
+  /** nothing more can be picked (a chosen one can still be taken off) */
+  full?: boolean;
+  fullNote?: string;
+}
+
+export const SearchPanel: React.FC<{
+  onClose: () => void;
+  onChoose?: (action: () => void) => void;
+  pick?: SearchPick;
+}> = ({ onClose, onChoose = go => go(), pick: picking }) => {
+  const { user, isOwner, isTeacher, isAdmin, isSuperAdmin } = useAuth();
+  const myHabits = useMyHabits(user?.uid).groups;
   const access = useAccess();
   const classes = useMyClasses(user?.uid);
-  const openShortcut = useOpenShortcut();
+  const openTarget = useOpenSearchTarget();
   const [query, setQuery] = useState('');
   const deferred = useDeferredValue(query);
   const [expanded, setExpanded] = useState<Set<SearchGroupId>>(new Set());
@@ -135,6 +159,22 @@ export const SearchPanel: React.FC<{ onClose: () => void; onChoose: (action: () 
   );
   const total = results.reduce((n, g) => n + g.hits.length, 0);
 
+  // picking: everything there is, as a tree to unfold
+  const allowed = (id: string) => {
+    if (!roleAllows(id, { isTeacher, isAdmin, isSuperAdmin })) return false;
+    const sec = sectionOfShortcut(id);
+    return !sec || (access.section(sec) !== 'hidden' && access.section(sec) !== 'soon');
+  };
+  const catalog = useMemo(
+    () => picking ? buildCatalog({
+      signedIn: !!user, owner: isOwner, hasClass: classes.length > 0, allowed,
+      habits: myHabits.flatMap(g => g.items.map(h => ({ id: h.id, label: h.label, own: h.id.startsWith('my_') }))),
+    }) : [],
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [!!picking, user, isOwner, isTeacher, isAdmin, isSuperAdmin, classes.length, access, myHabits]
+  );
+  const pickedOn = (id: string) => !!picking?.isOn?.(id);
+
   const byKey = useMemo(() => new Map(index.map(it => [it.key, it])), [index]);
   const recentItems = recent.map(k => byKey.get(k)).filter((x): x is SearchItem => !!x && shown(x));
   // the sections and the special pages (the library's tabs are found by name)
@@ -143,7 +183,7 @@ export const SearchPanel: React.FC<{ onClose: () => void; onChoose: (action: () 
   // the rows on screen, in order, for the arrow keys
   const rows: SearchItem[] = deferred.trim()
     ? results.flatMap(g => g.hits.slice(0, expanded.has(g.group) ? MAX_ROWS : FIRST_ROWS).map(h => h.item))
-    : recentItems;
+    : picking ? [] : recentItems;
 
   useEffect(() => { setActive(0); setExpanded(new Set()); }, [deferred]);
   useEffect(() => {
@@ -154,29 +194,18 @@ export const SearchPanel: React.FC<{ onClose: () => void; onChoose: (action: () 
 
   const pick = (it: SearchItem) => {
     triggerHaptic(10);
+    // picking for something else (a habit's or the home page's buttons): the item itself, nothing opens
+    if (picking) {
+      const id = shortcutOfSearch(it);
+      if (picking.full && !pickedOn(id)) return;
+      picking.onPick(id, it.title, it.sub);
+      return;
+    }
     // guests: the sign-in prompt shows once the search is closed
     if (isLocked(it)) { onChoose(() => askSignIn(it.title)); return; }
     saveRecent(it.key);
     setRecent(readRecent());
-    const o = it.open;
-    onChoose(() => {
-      switch (o.kind) {
-        case 'shortcut': openShortcut(o.id); return;
-        case 'chant':
-          // the service's list, narrowed to this chant and unfolded
-          navigateTo('galoba');
-          setSelectedService(o.service);
-          setExpandedChantId(o.chantId);
-          setChantSearch(o.title);
-          window.scrollTo({ top: 0 });
-          return;
-        case 'song': requestOpen('simghera', o.id); navigateTo('simghera'); return;
-        case 'ancestor': requestOpen('tsinaprebi', String(o.id)); navigateTo('tsinaprebi'); return;
-        // the page first (it closes an open book), then the book: already on the shelf, the page takes it at once
-        case 'library': navigateTo('biblioteka'); requestOpen('biblioteka', o.tab); return;
-        case 'feast': openChurchCalendar(o.iso); return;
-      }
-    });
+    onChoose(() => openTarget(it.open));
   };
 
   const onKey = (e: React.KeyboardEvent) => {
@@ -196,8 +225,8 @@ export const SearchPanel: React.FC<{ onClose: () => void; onChoose: (action: () 
   const row = (it: SearchItem) => {
     const n = rowNo++;
     return (
-      <Row key={it.key} it={it} query={deferred} locked={isLocked(it)} active={n === active} id={`sg-find-${n}`}
-        onPick={() => pick(it)} onHover={() => setActive(n)} />
+      <Row key={it.key} it={it} query={deferred} locked={!picking && isLocked(it)} active={n === active} id={`sg-find-${n}`}
+        on={picking ? pickedOn(shortcutOfSearch(it)) : undefined} onPick={() => pick(it)} onHover={() => setActive(n)} />
     );
   };
 
@@ -230,7 +259,7 @@ export const SearchPanel: React.FC<{ onClose: () => void; onChoose: (action: () 
                 enterKeyHint="search"
                 value={query}
                 onChange={e => setQuery(e.target.value)}
-                placeholder="რას ეძებ?"
+                placeholder={picking ? 'მოძებნე ან ჩამოშალე სია' : 'რას ეძებ?'}
                 aria-label="ძიება"
                 aria-controls="sg-find-list"
                 className="w-full h-12 pl-11 pr-11 rounded-2xl bg-white ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/35 outline-none text-[16px] text-[#2a2017] placeholder:text-[#a39482] [&::-webkit-search-cancel-button]:hidden"
@@ -255,6 +284,21 @@ export const SearchPanel: React.FC<{ onClose: () => void; onChoose: (action: () 
               <X className="w-5 h-5" />
             </button>
           </div>
+          {picking && (
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5 px-4 sm:px-5 pb-3 -mt-0.5">
+              <p className="flex-1 min-w-[10rem] font-serif-ge text-[14px] font-bold leading-snug text-[#7a2028]">{picking.title}</p>
+              <button
+                type="button"
+                onClick={onClose}
+                className="h-9 px-4 rounded-full bg-[#7a2028] text-[#fbf6ec] text-[13px] font-bold inline-flex items-center gap-1.5 cursor-pointer active:scale-95 transition"
+              >
+                <Check className="w-4 h-4" /> მზადაა
+              </button>
+              {picking.full && picking.fullNote && (
+                <p className="w-full px-3 py-2 rounded-xl bg-amber-50 ring-1 ring-amber-200 text-[12.5px] leading-snug text-amber-900">{picking.fullNote}</p>
+              )}
+            </div>
+          )}
         </div>
 
         {/* results, or what was opened lately and the functions */}
@@ -292,6 +336,16 @@ export const SearchPanel: React.FC<{ onClose: () => void; onChoose: (action: () 
                   <p className="mt-1 text-[13px] leading-relaxed text-[#8a7a6a]">სცადე სიტყვის ნაწილი, მაგალითად „ღირს“ ან „კანონი 5“</p>
                 </div>
               )
+            ) : picking ? (
+              <div className="pt-3">
+                <CatalogTree
+                  nodes={catalog}
+                  isOn={pickedOn}
+                  full={picking.full}
+                  prune={list => pruneLoaded(list, { allowed })}
+                  onPick={n => n.id && picking.onPick(n.id, n.title, n.sub)}
+                />
+              </div>
             ) : (
               <>
                 {recentItems.length > 0 && (

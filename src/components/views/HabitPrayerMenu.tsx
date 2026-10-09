@@ -34,13 +34,68 @@ const CAPTION = 'px-0.5 pb-1.5 text-[12px] font-bold text-[#8a7a6a]';
 export const HabitPrayerMenu: React.FC<{ menu: HabitMenu; onOpen: (prayerId: string) => void }> = ({ menu, onOpen }) => {
   switch (menu) {
     case 'morning-evening': return <MorningEvening onOpen={onOpen} />;
+    case 'morning': return <MorningEvening onOpen={onOpen} part="dila" />;
+    case 'evening': return <MorningEvening onOpen={onOpen} part="dzili" />;
     case 'hours': return <Hours onOpen={onOpen} />;
     case 'gospel': return <Bible list="gospel" onOpen={onOpen} />;
     case 'apostle': return <Bible list="apostle" onOpen={onOpen} />;
     case 'psalms': return <Psalms onOpen={onOpen} />;
     case 'jesus': return <JesusPrayer />;
+    case 'book': return <PrayerBook onOpen={onOpen} />;
     default: return <Akathists onOpen={onOpen} />;
   }
+};
+
+const BOOK_PARTS: { menu: Exclude<HabitMenu, 'book'>; title: string }[] = [
+  { menu: 'morning-evening', title: 'დილის და საღამოს ლოცვები' },
+  { menu: 'hours', title: 'შვიდგზის ლოცვა' },
+  { menu: 'psalms', title: 'ფსალმუნები' },
+  { menu: 'gospel', title: 'სახარება' },
+  { menu: 'apostle', title: 'სამოციქულო' },
+  { menu: 'akathists', title: 'დაუჯდომლები' },
+  { menu: 'jesus', title: 'იესოს ლოცვა' },
+];
+// the open part survives a trip to a prayer and back
+const BOOK_PART_KEY = 'prayerBookPart';
+const savedPart = (): string | null => {
+  try { return sessionStorage.getItem(BOOK_PART_KEY); } catch { return null; }
+};
+
+/** The whole ლოცვანი: every habit's prayers as folded parts, one open at a time. In the library and
+ *  behind a habit's book button. */
+export const PrayerBook: React.FC<{ onOpen: (prayerId: string) => void }> = ({ onOpen }) => {
+  const [open, setOpen] = useState<string | null>(savedPart);
+  const toggle = (menu: string) => {
+    const next = open === menu ? null : menu;
+    setOpen(next);
+    try { next ? sessionStorage.setItem(BOOK_PART_KEY, next) : sessionStorage.removeItem(BOOK_PART_KEY); } catch { /* opens folded next time */ }
+  };
+  return (
+    <ul className="rounded-2xl ring-1 ring-[#e8dcc8] bg-white divide-y divide-[#f1e8d9] overflow-hidden">
+      {BOOK_PARTS.map(p => {
+        const on = open === p.menu;
+        return (
+          <li key={p.menu}>
+            <button
+              type="button"
+              onClick={() => toggle(p.menu)}
+              aria-expanded={on}
+              className="w-full min-h-[52px] flex items-center gap-3 px-4 py-2 text-left cursor-pointer hover:bg-[#fbf6ec] transition-colors"
+            >
+              <BookOpen className="w-[18px] h-[18px] shrink-0 text-[#7a2028]" />
+              <span className="flex-1 min-w-0 font-serif-ge text-[15px] font-bold text-[#2a2017]">{p.title}</span>
+              <ChevronDown className={`w-5 h-5 shrink-0 text-[#a08a76] transition-transform ${on ? 'rotate-180' : ''}`} />
+            </button>
+            {on && (
+              <div className="px-3 pb-4 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
+                <HabitPrayerMenu menu={p.menu} onOpen={onOpen} />
+              </div>
+            )}
+          </li>
+        );
+      })}
+    </ul>
+  );
 };
 
 // "გააგრძელე": straight back to where reading stopped
@@ -60,13 +115,14 @@ const ContinueButton: React.FC<{ to: { id: string; label: string }; onOpen: (id:
 );
 
 // Morning and evening prayers, then the weekday prayers: today's first, other days by their chip.
-const MorningEvening: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) => {
+// `part`: only the morning (dila) or only the evening (dzili) prayers, for a habit of its own
+const MorningEvening: React.FC<{ onOpen: (id: string) => void; part?: 'dila' | 'dzili' }> = ({ onOpen, part }) => {
   const today = new Date().getDay();
   const [day, setDay] = useState(today);
   return (
     <div className="space-y-4">
-      <div className="grid grid-cols-2 gap-2">
-        {MORNING_EVENING.map(p => (
+      <div className={`grid ${part ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
+        {MORNING_EVENING.filter(p => !part || (p.id === 'dila') === (part === 'dila')).map(p => (
           <button key={p.id} type="button" onClick={() => onOpen(p.id)} className={`${CHIP} h-16 px-2 flex flex-col items-center justify-center gap-1 text-[14px] font-bold`}>
             {p.id === 'dila' ? <Sun className="w-5 h-5 shrink-0 text-[#c08a2a]" /> : <Moon className="w-5 h-5 shrink-0 text-[#6b5b8a]" />}
             {p.id === 'dila' ? 'დილის ლოცვები' : 'საღამოს ლოცვები'}
@@ -93,13 +149,17 @@ const MorningEvening: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) 
             </button>
           ))}
         </div>
-        <div className="mt-2 grid grid-cols-2 gap-2">
-          <button type="button" onClick={() => onOpen(weekPrayerId(day, 'dila'))} className={`${CHIP} h-11 text-[14px] font-semibold`}>
-            დილით
-          </button>
-          <button type="button" onClick={() => onOpen(weekPrayerId(day, 'dzili'))} className={`${CHIP} h-11 text-[14px] font-semibold`}>
-            დაწოლისას
-          </button>
+        <div className={`mt-2 grid ${part ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
+          {part !== 'dzili' && (
+            <button type="button" onClick={() => onOpen(weekPrayerId(day, 'dila'))} className={`${CHIP} h-11 text-[14px] font-semibold`}>
+              დილით
+            </button>
+          )}
+          {part !== 'dila' && (
+            <button type="button" onClick={() => onOpen(weekPrayerId(day, 'dzili'))} className={`${CHIP} h-11 text-[14px] font-semibold`}>
+              დაწოლისას
+            </button>
+          )}
         </div>
       </div>
     </div>
@@ -253,7 +313,7 @@ const Psalms: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) => {
   const mine = new Set<number>();
   if (user) {
     for (const g of groups.filter(x => x.memberIds.includes(user.uid))) {
-      const c = cycleOf(georgiaToday(), g.cycleDays);
+      const c = cycleOf(georgiaToday(), g.cycleDays, g.shiftDays);
       kathismasOf(ownersIn(g.assignment, g.baseHalf, c.half), user.uid).forEach(k => mine.add(k));
     }
   }

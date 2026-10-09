@@ -5,6 +5,7 @@ import { Commemoration, NameListId, useCommemoration } from '../../utils/commemo
 import { GirsArsSection, girsArsFor, loadGirsArs } from '../../data/girsArs';
 import { useAuth } from '../../context';
 import { useGroupPrayerNames } from '../../hooks/usePsalter';
+import { GLORY_PRAYER_HTML } from '../../data/gloryPrayer';
 
 // The text of a prayer, with three additions woven in:
 // • "(სახელი)" / "(სახელები მათი)" show the student's names from მოსახსენებელი (tap → edit the lists);
@@ -44,17 +45,21 @@ const withNames = (block: string, lists: Commemoration) =>
     return `<button type="button" data-names="${list}" title="${title} — შეცვლა" class="${NAME_CHIP}${names.length ? '' : ' !font-normal !text-[#8a7a6a]'}">${text}</button>`;
   });
 
-type Segment = { kind: 'html'; html: string } | { kind: 'girs' } | { kind: 'modzgvari' } | { kind: 'glory' };
+type Segment = { kind: 'html'; html: string } | { kind: 'girs' } | { kind: 'modzgvari' } | { kind: 'glory'; n: number };
 
-// a kathisma's "დიდებაი." (the end of a stasis), where the psalter group's names are remembered
+// a kathisma's "დიდებაი." (the end of a stasis): tapping it unfolds the glory prayer with the group's names
 const GLORY = /დიდებაი\.?\s*$/;
+const GLORY_WORD = /(დიდებაი\.?)((?:\s|<\/[a-z0-9]+>)*)$/;
 
 const GIRS = /ღირს[\s-]*არს\s+ჭეშმარიტად/;
+const MODZGVARI_BTN =
+  '<button type="button" data-extra="modzgvari" class="inline-flex items-center gap-0.5 align-baseline ml-1 px-2 py-0.5 rounded-full text-[13px] font-sans font-bold text-[#7a2028] ring-1 ring-[#7a2028]/30 hover:bg-[#7a2028]/[0.06] cursor-pointer">დამატებით ▾</button>';
 const isModzgvari = (block: string) => /სულიერი\s+მამა/.test(block) && /\(მეტანია\)/.test(block);
 
 const segment = (html: string, lists: Commemoration, glory: boolean): Segment[] => {
   const out: Segment[] = [];
   let buffer = '';
+  let glories = 0;
   const flush = () => {
     if (buffer) out.push({ kind: 'html', html: buffer });
     buffer = '';
@@ -62,11 +67,18 @@ const segment = (html: string, lists: Commemoration, glory: boolean): Segment[] 
   const blocks = html.match(/<(p|h2|h3|blockquote)\b[^>]*>[\s\S]*?<\/\1>|<hr>|[^<]+/g) || [html];
   for (let block of blocks) {
     const modzgvari = isModzgvari(block);
+    const isGlory = glory && !modzgvari && GLORY.test(plain(block).trim());
     block = withNames(block, lists);
+    if (isGlory) {
+      block = block.replace(
+        GLORY_WORD,
+        `<button type="button" data-glory="${glories}" class="inline-flex items-center gap-1 align-baseline px-2 -mx-0.5 rounded-lg font-bold text-[#7a2028] bg-[#7a2028]/[0.06] ring-1 ring-[#7a2028]/25 hover:bg-[#7a2028]/[0.1] cursor-pointer">$1 <span class="text-[12px]">▾</span></button>$2`
+      );
+    }
     if (modzgvari) {
       block = block.replace(
         /(\(მეტანია\)\.?)/,
-        `$1 <button type="button" data-extra="modzgvari" class="inline-flex items-center gap-0.5 align-baseline ml-1 px-2 py-0.5 rounded-full text-[13px] font-sans font-bold text-[#7a2028] ring-1 ring-[#7a2028]/30 hover:bg-[#7a2028]/[0.06] cursor-pointer">დამატებით ▾</button>`
+        `$1 ${MODZGVARI_BTN}`
       );
     }
     buffer += block;
@@ -76,9 +88,9 @@ const segment = (html: string, lists: Commemoration, glory: boolean): Segment[] 
     } else if (GIRS.test(plain(block))) {
       flush();
       out.push({ kind: 'girs' });
-    } else if (glory && GLORY.test(plain(block).trim())) {
+    } else if (isGlory) {
       flush();
-      out.push({ kind: 'glory' });
+      out.push({ kind: 'glory', n: glories++ });
     }
   }
   flush();
@@ -92,12 +104,26 @@ export const PrayerText: React.FC<{ html: string; glory?: boolean }> = ({ html, 
   const fromGroups = useGroupPrayerNames(glory ? user?.uid : null);
   const groupNames = useMemo(() => [...fromGroups, ...lists.group.filter(n => !fromGroups.includes(n))], [fromGroups, lists.group]);
   const [modzgvariOpen, setModzgvariOpen] = useState(false);
+  const [gloryOpen, setGloryOpen] = useState<number[]>([]);
+  const gloryHtml = useMemo(() => {
+    const chip = `<button type="button" data-names="group" title="ჯგუფის წევრები — შეცვლა" class="${NAME_CHIP}${groupNames.length ? '' : ' !font-normal !text-[#8a7a6a]'}">${
+      groupNames.length ? escapeHtml(groupNames.join(', ')) : '(სახელები)'
+    }</button>`;
+    return withNames(GLORY_PRAYER_HTML, lists)
+      .replace('(ჯგუფი)', chip)
+      .replace(/(\(მეტანია\)\.?)(<\/p>)<!--extra-->/, `$1 ${MODZGVARI_BTN}$2<!--extra-->`);
+  }, [groupNames, lists]);
   const segments = useMemo(() => segment(html, lists, glory), [html, lists, glory]);
 
   const onClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
     if (target.closest('[data-names]')) openCommemoration();
     if (target.closest('[data-extra="modzgvari"]')) setModzgvariOpen(o => !o);
+    const g = target.closest('[data-glory]');
+    if (g) {
+      const n = Number(g.getAttribute('data-glory'));
+      setGloryOpen(list => (list.includes(n) ? list.filter(x => x !== n) : [...list, n]));
+    }
   };
 
   return (
@@ -108,7 +134,9 @@ export const PrayerText: React.FC<{ html: string; glory?: boolean }> = ({ html, 
         ) : s.kind === 'girs' ? (
           <GirsArs key={i} />
         ) : s.kind === 'glory' ? (
-          <GloryNames key={i} names={groupNames} onEdit={openCommemoration} />
+          gloryOpen.includes(s.n) && (
+            <GloryPrayer key={i} html={gloryHtml} extraOpen={modzgvariOpen} onCloseExtra={() => setModzgvariOpen(false)} onClose={() => setGloryOpen(list => list.filter(x => x !== s.n))} />
+          )
         ) : (
           modzgvariOpen && <ExtraPrayer key={i} id="modzgvari-extra" onClose={() => setModzgvariOpen(false)} />
         )
@@ -117,22 +145,20 @@ export const PrayerText: React.FC<{ html: string; glory?: boolean }> = ({ html, 
   );
 };
 
-// At each "დიდებაი" of a kathisma: the psalter group's members, to remember them by name.
-const GloryNames: React.FC<{ names: string[]; onEdit: () => void }> = ({ names, onEdit }) => (
-  <div className="-mt-1.5 mb-4 font-sans">
-    <button
-      type="button"
-      onClick={onEdit}
-      className="w-full text-left rounded-xl bg-[#7a2028]/[0.05] ring-1 ring-[#7a2028]/15 px-3.5 py-2.5 hover:bg-[#7a2028]/[0.08] cursor-pointer transition-colors"
-      title="ჯგუფის წევრების სია — შეცვლა"
-    >
-      <span className="block text-[11.5px] font-bold uppercase tracking-wide text-[#7a2028]">✦ ჯგუფის წევრები</span>
-      <span className={`block font-serif-ge text-[15.5px] leading-snug ${names.length ? 'text-[#2a2017]' : 'text-[#8a7a6a]'}`}>
-        {names.length ? names.join(', ') : 'სია ცარიელია — შეეხე და ჩაწერე სახელები მოსახსენებელში'}
-      </span>
-    </button>
-  </div>
-);
+// Under a kathisma's "დიდებაი", once tapped: the glory prayer, with the group's members and one's departed by name.
+const GloryPrayer: React.FC<{ html: string; extraOpen: boolean; onCloseExtra: () => void; onClose: () => void }> = ({ html, extraOpen, onCloseExtra, onClose }) => {
+  const [before, after = ''] = html.split('<!--extra-->');
+  return (
+    <div className="-mt-1.5 mb-5 rounded-2xl bg-[#7a2028]/[0.035] ring-1 ring-[#7a2028]/12 px-3.5 pt-3 pb-1.5 [&_p]:mb-2.5 [&_hr]:my-3">
+      <div dangerouslySetInnerHTML={{ __html: before }} />
+      {extraOpen && <ExtraPrayer id="modzgvari-extra" onClose={onCloseExtra} />}
+      <div dangerouslySetInnerHTML={{ __html: after }} />
+      <div className="text-center">
+        <button type="button" onClick={onClose} className="h-9 px-3 rounded-full font-sans text-[12.5px] font-bold text-[#7a2028] hover:bg-[#7a2028]/[0.06] cursor-pointer">დახურვა ▴</button>
+      </div>
+    </div>
+  );
+};
 
 // What replaces "ღირს არს" today. The button is filled when today has its own hymn, so it is noticed while praying.
 const GirsArs: React.FC = () => {

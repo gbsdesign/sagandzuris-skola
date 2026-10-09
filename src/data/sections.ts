@@ -37,9 +37,9 @@ export const sectionOfPage = (page: PageType): SectionId | null => {
 
 export type SectionState = 'open' | 'soon' | 'hidden';
 
-/** Without the admin's settings: everything built is open, games are "მალე". */
+/** Without the admin's settings: everything built is open, games and მედავითნეობა are "მალე". */
 export const DEFAULT_SECTION_STATE: Record<SectionId, SectionState> = {
-  galoba: 'open', simghera: 'open', mtkmeli: 'open', sakravebi: 'open', medavitneoba: 'open',
+  galoba: 'open', simghera: 'open', mtkmeli: 'open', sakravebi: 'open', medavitneoba: 'soon',
   chvevebi: 'open', tamashebi: 'soon', tsinaprebi: 'open', gza: 'open', biblioteka: 'open',
 };
 

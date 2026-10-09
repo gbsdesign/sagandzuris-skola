@@ -1,17 +1,18 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useMemo, useRef, useState } from 'react';
 import {
   BookMarked, BookOpen, CalendarDays, Check, Clock, Compass, Feather, GraduationCap, Library, Moon, Music, Music2, Music4, Pencil,
-  Plus, ScrollText, Sparkles, Star, Sun, Users, X, Pin, PinOff, Search, Guitar, Church, NotebookPen, HandHeart, Flame, Heart,
+  Plus, ScrollText, Sparkles, Star, Sun, Users, X, Pin, PinOff, Guitar, Church, NotebookPen, HandHeart, Flame, Heart,
   MessageCircle, UserPlus, ListMusic, Disc3, LayoutGrid, BarChart3, School, ClipboardList, ClipboardCheck, CalendarClock, Settings2,
-  ChevronDown,
 } from 'lucide-react';
 import { useAuth, useChants, useNavigation } from '../../context';
 import { useNotes } from '../../context/NotesContext';
 import { dayKey } from '../../utils/habitsWeek';
-import { openChurchCalendar } from '../../data/churchCalendar';
+import { openChurchCalendar, todayIso } from '../../data/churchCalendar';
+import { openSaintLife } from '../../data/saintLives';
 import { MORNING_EVENING } from '../../data/prayers';
-import { HABIT_ITEMS, HabitMenu } from '../../data/habitsAndManera';
+import { HabitMenu } from '../../data/habitsAndManera';
 import { HabitPrayerMenu } from '../views/ChvevebiPanel';
+import { useMyHabits } from '../../hooks/useMyHabits';
 import { requestOpen } from '../../utils/searchOpen';
 import { ServiceType } from '../../context/NavigationContext';
 import { SectionId } from '../../data/sections';
@@ -19,15 +20,14 @@ import { useMyClasses } from '../../hooks/useClasses';
 import { useMyPsalterGroups } from '../../hooks/usePsalter';
 import { useAccess } from '../../hooks/useAccess';
 import { cycleOf, georgiaToday, kathismasOf, ownersIn } from '../../utils/psalter';
-import { searchCatalog } from '../../utils/pathItems';
 import {
-  HABIT_SHORT, MAX_SHORTCUTS, SHORTCUT_GROUPS, habitOfShortcut, kindOf, markShortcutDone, refOf, roleAllows, saveShortcuts, sectionOfShortcut,
+  MAX_SHORTCUTS, coreOf, habitOfShortcut, kindOf, markShortcutDone, refOf, roleAllows, saveShortcuts, sectionOfShortcut,
   shortcutLabel, useMyShortcuts,
 } from '../../utils/shortcuts';
 import { triggerHaptic } from '../../utils/haptics';
 import { openPathPanel } from '../views/IndependentWorkCard';
 import { askSignIn } from '../access/SignInPrompt';
-import { FIELD, IconBtn, Sheet } from '../ui/kit';
+import { IconBtn, Sheet } from '../ui/kit';
 import { KathismaTiles } from '../psalter/KathismaTile';
 
 const SECTION_ICON: Record<SectionId, React.ReactNode> = {
@@ -46,13 +46,21 @@ const TAB_ICON: Record<string, React.ReactNode> = {
   'teacher:schedule': <CalendarClock />, 'teacher:class': <Settings2 />, 'teacher:groups': <BookOpen />,
   'admin:users': <Users />, 'admin:classes': <GraduationCap />, 'admin:recordings': <Disc3 />, 'admin:sections': <LayoutGrid />,
   'admin:stats': <BarChart3 />, 'admin:school': <School />, 'admin:requests': <UserPlus />,
-  'library:book': <BookOpen />, 'library:feasts': <CalendarDays />, 'library:lives': <Feather />,
+  'library:book': <BookOpen />, 'library:feasts': <CalendarDays />, 'library:lives': <Feather />, 'library:prayers': <ScrollText />,
+  'library:sasuliero': <BookMarked />,
   'page:abituri': <GraduationCap />, 'page:messages': <MessageCircle />,
 };
 export const shortcutIcon = (id: string): React.ReactNode => {
   const ref = refOf(id);
-  if (TAB_ICON[id]) return TAB_ICON[id];
+  if (TAB_ICON[coreOf(id)]) return TAB_ICON[coreOf(id)];
   switch (kindOf(id)) {
+    // a chapter, a month of lives: its book's icon
+    case 'library': return TAB_ICON[`library:${ref.split(':')[0]}`] || <Library />;
+    case 'chantof': return <Music2 />;
+    case 'song': return <Music />;
+    case 'ancestor': return <Users />;
+    case 'feast': return <CalendarDays />;
+    case 'life': return <Feather />;
     case 'habit': return HABIT_ICON[ref] || <Sparkles />;
     case 'service': return <ListMusic />;
     case 'section': return SECTION_ICON[ref as SectionId] || <Star />;
@@ -71,7 +79,7 @@ export const shortcutIcon = (id: string): React.ReactNode => {
 /** Opens a shortcut (the guest's and kids' limits apply). */
 export const useOpenShortcut = () => {
   const { user } = useAuth();
-  const { navigateTo, openPrayer, openCommemoration, openClass, setSelectedService } = useNavigation();
+  const { navigateTo, openPrayer, openCommemoration, openClass, setSelectedService, setExpandedChantId, setChantSearch } = useNavigation();
   const { openNotes, openProgram } = useNotes();
   const classes = useMyClasses(user?.uid);
   const { groups } = useMyPsalterGroups(user?.uid);
@@ -86,7 +94,33 @@ export const useOpenShortcut = () => {
       case 'chant': openNotes(ref, 'bookmark'); return;
       case 'habit': openPathPanel('habits'); navigateTo('gz'); return;
       case 'service': navigateTo('galoba'); setSelectedService(ref as ServiceType); window.scrollTo({ top: 0 }); return;
+      // a book, or a chapter of it ("book:12")
       case 'library': navigateTo('biblioteka'); requestOpen('biblioteka', ref); return;
+      case 'chantof': {
+        // the service's list, narrowed to this chant and unfolded
+        const [service, chantId] = ref.split('/');
+        navigateTo('galoba');
+        setSelectedService(service as ServiceType);
+        setExpandedChantId(chantId);
+        setChantSearch(shortcutLabel(id)?.label || '');
+        window.scrollTo({ top: 0 });
+        return;
+      }
+      case 'song': requestOpen('simghera', ref); navigateTo('simghera'); return;
+      case 'ancestor': requestOpen('tsinaprebi', ref); navigateTo('tsinaprebi'); return;
+      case 'life': openSaintLife(ref); return;
+      case 'feast': {
+        // the feast's next day (this year or the next) in the church calendar
+        const [gi, fi] = ref.split(':').map(Number);
+        import('../../data/library/feasts').then(({ FEAST_GROUPS, feastDates }) => {
+          const f = FEAST_GROUPS[gi]?.feasts[fi];
+          const today = todayIso();
+          const year = Number(today.slice(0, 4));
+          const next = f && [...feastDates(f, year), ...feastDates(f, year + 1)].filter(d => d >= today).sort()[0];
+          openChurchCalendar(next || undefined);
+        }).catch(() => openChurchCalendar());
+        return;
+      }
       case 'page': navigateTo(ref as 'abituri' | 'messages'); return;
       // the panels open on the tab they remember
       case 'teacher': try { localStorage.setItem('sg-teacher-tab', ref); } catch { /* storage off */ } navigateTo('teacher'); return;
@@ -106,7 +140,7 @@ export const useOpenShortcut = () => {
           // straight to this cycle's kathisma text, if I have one
           const g = groups.find(x => user && x.memberIds.includes(user.uid));
           if (g && user) {
-            const c = cycleOf(georgiaToday(), g.cycleDays);
+            const c = cycleOf(georgiaToday(), g.cycleDays, g.shiftDays);
             const mine = kathismasOf(ownersIn(g.assignment, g.baseHalf, c.half), user.uid);
             if (mine.length) { openPrayer(`kathisma-${mine[0]}`); return; }
           }
@@ -132,6 +166,8 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
   const press = useRef<{ t: number; x: number; y: number; long: boolean; idx: number } | null>(null);
 
   const { groups } = useMyPsalterGroups(user?.uid);
+  // my own habits too: a habit button ticks or opens the habit as I set it up
+  const myHabits = useMyHabits(user?.uid).groups.flatMap(g => g.items);
   // on the home page a psalter-group member's kathisma leads the shelf as its own tile
   const readingIn = variant === 'home' && user ? groups.filter(g => g.memberIds.includes(user.uid)) : [];
   const classDefaults = classes.find(c => c.defaultShortcuts?.length)?.defaultShortcuts || [];
@@ -139,11 +175,13 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
   const all = useMemo(
     () => (own ? list! : classDefaults).filter(id => {
       if (!shortcutLabel(id) || !roleAllows(id, { isTeacher, isAdmin, isSuperAdmin })) return false;
+      // a habit taken off my list takes its button with it
+      if (kindOf(id) === 'habit' && !myHabits.some(h => h.id === refOf(id))) return false;
       const sec = sectionOfShortcut(id);
       return !sec || access.section(sec) !== 'hidden';
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [list, classDefaults.join(','), access, isTeacher, isAdmin, isSuperAdmin]
+    [list, classDefaults.join(','), access, isTeacher, isAdmin, isSuperAdmin, myHabits.map(h => h.id).join(',')]
   );
   // the plain "ჩემი კანონი" button would repeat the tile, so it hides behind it (and stays saved)
   const keptKathisma = readingIn.length > 0 && all.includes('special:kathisma');
@@ -199,8 +237,8 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
       if (kindOf(id) !== 'habit') { open(id); return; }
       // a habit with books (Gospel, Apostle, Jesus prayer) opens them; the others are ticked by the tap
       const ref = refOf(id);
-      const m = HABIT_ITEMS.find(h => h.id === ref)?.menu;
-      if (m) setMenu({ menu: m, title: HABIT_SHORT[ref] });
+      const h = myHabits.find(x => x.id === ref);
+      if (h?.menu) setMenu({ menu: h.menu, title: h.label });
       else markDone(id, ref);
     }
   };
@@ -297,73 +335,31 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
   );
 };
 
-/** The "+" sheet: everything that can go on the home page, by section; a chant version by search. */
+const SearchPanel = lazy(() => import('../search/SearchPanel').then(m => ({ default: m.SearchPanel })));
+
+/** The "+": everything that can go on the home page — searched, or unfolded from the catalog down to a single
+ *  prayer, chant, chapter or habit (search/CatalogTree). A second tap takes a button off again. */
 export const ShortcutPicker: React.FC<{ open: boolean; onClose: () => void; current: string[]; onChange: (next: string[]) => void; max?: number }> = ({ open, onClose, current, onChange, max = MAX_SHORTCUTS }) => {
-  const { isTeacher, isAdmin, isSuperAdmin } = useAuth();
-  const access = useAccess();
-  const [q, setQ] = useState('');
-  const [allAkathists, setAllAkathists] = useState(false);
-  const hits = useMemo(() => (q.trim() ? searchCatalog(q, 40).filter(e => e.category === 'galoba').slice(0, 12) : []), [q]);
+  if (!open) return null;
   const full = current.length >= max;
-  const toggle = (id: string) => {
-    triggerHaptic(10);
-    if (current.includes(id)) onChange(current.filter(x => x !== id));
-    else if (!full) onChange([...current, id]);
-  };
-  const groups = SHORTCUT_GROUPS.map(g => ({
-    ...g,
-    ids: g.ids.filter(id => {
-      if (!roleAllows(id, { isTeacher, isAdmin, isSuperAdmin })) return false;
-      const sec = sectionOfShortcut(id);
-      return !sec || access.section(sec) !== 'hidden';
-    }),
-  })).filter(g => g.ids.length > 0);
-  const Chip: React.FC<{ id: string }> = ({ id }) => {
-    const l = shortcutLabel(id);
-    if (!l) return null;
-    const on = current.includes(id);
-    return (
-      <button type="button" onClick={() => toggle(id)} disabled={!on && full} aria-pressed={on}
-        className={`h-11 pl-1.5 pr-3.5 rounded-2xl inline-flex items-center gap-2 text-[13px] font-semibold cursor-pointer transition disabled:opacity-40 disabled:cursor-default ${on ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40'}`}>
-        <span className={`w-8 h-8 rounded-xl flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4 ${on ? 'bg-white/15' : 'bg-[#7a2028]/[0.08] text-[#7a2028]'}`}>{on ? <Check /> : shortcutIcon(id)}</span>
-        <span className="text-left leading-tight">{l.label}{l.sub && <span className={`block text-[10.5px] font-normal ${on ? 'text-[#fbf6ec]/75' : 'text-[#8a7a6a]'}`}>{l.sub}</span>}</span>
-      </button>
-    );
-  };
+  const has = (id: string) => current.some(x => coreOf(x) === coreOf(id));
   return (
-    <Sheet open={open} onClose={onClose} title={`ღილაკის დამატება · ${current.length}/${max}`} wide>
-      <div className="space-y-5">
-        {full && <p className="p-3 rounded-xl bg-amber-50 ring-1 ring-amber-200 text-[13px] text-amber-900">უკვე {max} ღილაკია — ახლის დასამატებლად ჯერ რომელიმე მოხსენი.</p>}
-        {groups.map(g => (
-          <div key={g.title}>
-            <p className="text-xs font-bold uppercase tracking-wide text-[#8a7a6a] mb-2">{g.title}</p>
-            {g.title === 'დაუჯდომლები' ? (
-              <div className="flex flex-wrap gap-2">
-                {/* the six most read first; the rest of the 73 on request (a chosen one always shows) */}
-                {g.ids.filter((id, i) => allAkathists || i < 6 || current.includes(id)).map(id => <Chip key={id} id={id} />)}
-                {!allAkathists && g.ids.length > 6 && (
-                  <button type="button" onClick={() => setAllAkathists(true)}
-                    className="h-11 px-4 rounded-2xl inline-flex items-center gap-1.5 text-[13px] font-bold text-[#7a2028] border-2 border-dashed border-[#d9c8ac] hover:border-[#7a2028]/40 cursor-pointer">
-                    ყველა {g.ids.length} <ChevronDown className="w-4 h-4" />
-                  </button>
-                )}
-              </div>
-            ) : (
-              <div className="flex flex-wrap gap-2">{g.ids.map(id => <Chip key={id} id={id} />)}</div>
-            )}
-            {g.title === 'გალობა' && (
-              <div className="mt-3 space-y-2">
-                <div className="relative">
-                  <Search className="w-4 h-4 text-[#b3a594] absolute left-3.5 top-1/2 -translate-y-1/2" />
-                  <input value={q} onChange={e => setQ(e.target.value)} placeholder="ერთი კონკრეტული საგალობელი…" className={`${FIELD} pl-10`} />
-                </div>
-                {hits.length > 0 && <div className="flex flex-wrap gap-2">{hits.map(h => <Chip key={h.id} id={`chant:${h.id}`} />)}</div>}
-              </div>
-            )}
-          </div>
-        ))}
-      </div>
-    </Sheet>
+    <Suspense fallback={<div className="fixed inset-0 z-[88] bg-[#2a2017]/45" />}>
+      <SearchPanel
+        onClose={onClose}
+        pick={{
+          title: `ღილაკის დამატება · ${current.length}/${max}`,
+          isOn: has,
+          full,
+          fullNote: `უკვე ${max} ღილაკია — ახლის დასამატებლად ჯერ რომელიმე მოხსენი.`,
+          onPick: id => {
+            triggerHaptic(10);
+            if (has(id)) onChange(current.filter(x => coreOf(x) !== coreOf(id)));
+            else if (!full) onChange([...current, id]);
+          },
+        }}
+      />
+    </Suspense>
   );
 };
 

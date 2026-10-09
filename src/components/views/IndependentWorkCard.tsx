@@ -3,11 +3,10 @@ import { Bookmark, CalendarDays, ChevronDown, Check } from 'lucide-react';
 import { useAuth, useChants, useNavigation } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 import { filterValidVariants } from '../../utils/variantValidation';
-import { StudyDay, useUpcomingSessions } from '../../hooks/useUpcomingSessions';
-import { StreakDay, WeekStreak } from './WeekStreak';
+import { useUpcomingSessions } from '../../hooks/useUpcomingSessions';
 import { StudentBookmarkView } from './StudentBookmarkView';
 import { MONTHS_SHORT_GE } from '../../utils/dateNames';
-import { CHIP_DONE, CHIP_SOFT, CHIP_STRONG, PATH_CHIP, PATH_LABEL, PATH_LABEL_ICON } from './pathStyle';
+import { CHIP_SOFT, CHIP_STRONG, PATH_CHIP, PATH_LABEL, PATH_LABEL_ICON } from './pathStyle';
 
 
 // "დღეს" / "ხვალ" / "12 ოქტ" for the next planned lesson
@@ -24,8 +23,9 @@ export const PATH_TILE =
   'group w-full rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] hover:ring-[#7a2028]/25 hover:shadow-[0_1px_2px_rgba(42,32,23,0.05),0_16px_32px_-18px_rgba(122,32,40,0.45)] hover:-translate-y-px transition-all duration-200';
 export const PATH_ICON = 'w-11 h-11 shrink-0 rounded-xl bg-[#7a2028]/[0.07] text-[#7a2028] flex items-center justify-center';
 
-// Panels on the path page fold open in place (no popups). Other places (the header) can open one:
-// openPathPanel('work') remembers the wish and tells a mounted panel to unfold and scroll into view.
+// Panels on the path page fold open in place (no popups) and always start folded. Other places (the header,
+// home buttons) can open one: openPathPanel('work') leaves a one-time wish and tells a mounted panel to
+// unfold and scroll into view; the panel uses the wish up, so the next visit finds it folded again.
 const PANEL_KEY = (id: string) => `pathPanel:${id}`;
 const PANEL_EVENT = 'open-path-panel';
 
@@ -64,16 +64,15 @@ export const PathPanel: React.FC<{
     try { return localStorage.getItem(PANEL_KEY(id)) === '1'; } catch { return false; }
   });
   const ref = useRef<HTMLDivElement>(null);
+  const forgetWish = () => { try { localStorage.removeItem(PANEL_KEY(id)); } catch { /* ignore */ } };
 
-  const setAndRemember = (v: boolean) => {
-    setOpen(v);
-    try { localStorage.setItem(PANEL_KEY(id), v ? '1' : '0'); } catch { /* ignore */ }
-  };
-  const toggle = () => { triggerHaptic(10); setAndRemember(!open); };
+  const toggle = () => { triggerHaptic(10); setOpen(!open); };
 
   useEffect(() => {
+    forgetWish();
     const onOpen = (e: Event) => {
       if ((e as CustomEvent).detail !== id) return;
+      forgetWish();
       setOpen(true);
       setTimeout(() => ref.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 80);
     };
@@ -149,49 +148,38 @@ export const PathPanel: React.FC<{
   );
 };
 
-// a study day on the streak strip: all planned hours done joins the chain; a day without a plan is a rest day
-const studyMark = (d: StudyDay, isToday: boolean): StreakDay => {
-  const note = d.planned ? `${d.done}/${d.planned} სთ${d.extra ? ` +${d.extra}` : ''}` : d.extra ? `${d.extra} სთ` : 'დაგეგმილი არ არის';
-  if (d.planned ? d.done >= d.planned : d.extra > 0) return { date: d.date, mark: 'done', note };
-  if (d.done > 0 || d.extra > 0) return { date: d.date, mark: 'partial', note };
-  if (!d.planned) return { date: d.date, mark: 'rest', note };
-  return { date: d.date, mark: isToday ? 'open' : 'missed', note };
-};
-
 // "დამოუკიდებელი სამუშაო": folds open into the month's calendar (its hours and percent are on the "შენი გზა" card).
 export const IndependentWorkCard: React.FC<{ flat?: boolean }> = ({ flat }) => {
   const { user } = useAuth();
   const { navigateTo } = useNavigation();
-  const { sessions, week, toggle } = useUpcomingSessions(user?.uid, 7);
+  const { sessions, toggle } = useUpcomingSessions(user?.uid, 7);
 
-  // the last 7 days as a strip; the strip itself shows how they went, so no percent beside it
-  const planned = week.reduce((n, d) => n + d.planned, 0);
-  const streak = planned > 0 ? <WeekStreak days={week.map((d, i) => studyMark(d, i === week.length - 1))} /> : null;
-
-  // the nearest planned hours, tickable without unfolding. Each day's name is written once, before its first
-  // hour ("დღეს 19:00 20:00  ხვალ 21:00"); one row shows as many as fit.
-  const quick = sessions.length > 0 ? (
-    <div className={`flex flex-wrap items-center gap-1.5 h-9 overflow-hidden ${flat ? '' : 'md:justify-end'}`}>
-      {sessions.map((s, i) => {
-        const firstOfDay = i === 0 || sessions[i - 1].dayLabel !== s.dayLabel;
-        return (
-          <span key={s.key} className={`inline-flex items-center gap-1.5 ${firstOfDay && i > 0 ? 'ml-2' : ''}`}>
-            {firstOfDay && <span className="text-xs font-bold text-[#75685a]">{s.dayLabel}</span>}
-            <button
-              type="button"
-              onClick={() => toggle(s.key)}
-              aria-pressed={s.done}
-              aria-label={`${s.dayLabel} ${s.hour}`}
-              title={s.done ? 'შესრულებულია — დააჭირე გასაუქმებლად' : 'დააჭირე, როცა იმეცადინებ'}
-              className={`${PATH_CHIP} ${s.done ? CHIP_DONE : CHIP_SOFT} cursor-pointer active:scale-95`}
-            >
-              {s.done && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-              {s.hour}
-            </button>
-          </span>
-        );
-      })}
+  // only today's planned hours, tickable without unfolding (the week and month counts are on "შენი გზა");
+  // with nothing today, one quiet line names the next planned hour
+  const today = sessions.filter(s => s.dayLabel === 'დღეს');
+  const next = sessions.find(s => s.dayLabel !== 'დღეს');
+  const quick = today.length > 0 ? (
+    <div className={`flex flex-wrap items-center gap-2 ${flat ? '' : 'md:justify-end'}`}>
+      <span className="text-[13px] font-bold text-[#75685a] mr-1">დღეს</span>
+      {today.map(s => (
+        <button
+          key={s.key}
+          type="button"
+          onClick={() => toggle(s.key)}
+          aria-pressed={s.done}
+          aria-label={`დღეს ${s.hour}`}
+          title={s.done ? 'შესრულებულია — დააჭირე გასაუქმებლად' : 'დააჭირე, როცა იმეცადინებ'}
+          className={`${PATH_CHIP} ${s.done ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' : CHIP_SOFT} cursor-pointer active:scale-95`}
+        >
+          {s.done && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+          {s.hour}
+        </button>
+      ))}
     </div>
+  ) : next ? (
+    <p className={`text-[13px] text-[#8a7a6a] ${flat ? '' : 'md:text-right'}`}>
+      დღეს დაგეგმილი არ არის · შემდეგი: <span className="font-bold text-[#4a3426]">{next.dayLabel} {next.hour}</span>
+    </p>
   ) : undefined;
 
   return (
@@ -200,10 +188,10 @@ export const IndependentWorkCard: React.FC<{ flat?: boolean }> = ({ flat }) => {
       flat={flat}
       foldIcon={<CalendarDays className="w-[18px] h-[18px]" />}
       foldLabel="კალენდარი"
-      extra={streak || quick ? <div className="space-y-2.5">{streak}{quick}</div> : undefined}
+      extra={quick}
       title="დამოუკიდებელი სამუშაო"
       icon={<Bookmark className={flat ? `${PATH_LABEL_ICON} fill-[#7a2028]/15` : 'w-5 h-5 fill-[#7a2028]/15'} />}
-      subtitle={sessions.length > 0 ? 'მონიშნე, როცა იმეცადინებ' : 'საათები დაგეგმე კალენდარში'}
+      subtitle="საათები დაგეგმე კალენდარში"
     >
       <StudentBookmarkView onBack={() => {}} onGoToGaloba={() => navigateTo('galoba')} />
     </PathPanel>

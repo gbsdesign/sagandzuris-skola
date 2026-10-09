@@ -3,6 +3,7 @@
 // allow for files sent with Access-Control-Allow-Origin. Drive doesn't send it; this Worker does.
 //
 // URL format: https://<worker>.workers.dev/<driveFileId>
+//         or: https://<worker>.workers.dev/<driveFileId>:<resourceKey> — an old file shared by link
 //         or: https://<worker>.workers.dev/edu/<yyyy>/<mm>/<file>.mp3 — a learning recording from
 //             galoba.edu.ge/wp-content/uploads (the University of Chant's site sends no CORS headers either)
 
@@ -60,11 +61,13 @@ export default {
       upstreamUrl = `https://galoba.edu.ge/wp-content/uploads/${file.split('/').map(encodeURIComponent).join('/')}`;
       cacheKey = new Request(`https://edu-audio-cache/${edu[1]}`);
     } else {
-      const id = path.slice(1);
-      if (!/^[A-Za-z0-9_-]{20,80}$/.test(id)) {
+      // old Drive files shared by link also need their resource key: /<id>:<resourcekey>
+      const m = /^\/([A-Za-z0-9_-]{20,80})(?::([A-Za-z0-9_-]{5,80}))?$/.exec(decodeURIComponent(path));
+      if (!m) {
         return new Response('Bad file id', { status: 400, headers: corsHeaders(origin) });
       }
-      upstreamUrl = `https://drive.usercontent.google.com/download?id=${id}&export=download`;
+      const [, id, key] = m;
+      upstreamUrl = `https://drive.usercontent.google.com/download?id=${id}&export=download${key ? `&resourcekey=${key}` : ''}`;
       cacheKey = new Request(`https://drive-audio-cache/${id}`);
     }
 

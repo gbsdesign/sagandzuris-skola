@@ -11,7 +11,7 @@ import { FEAST_GROUPS, feastDates } from './library/feasts';
 import { daysBetween, fromIso, todayIso, weekdayGe } from './churchCalendar';
 import { MONTHS_GE } from '../utils/dateNames';
 import { SECTIONS, SectionId } from './sections';
-import { SPECIALS, sectionOfShortcut } from '../utils/shortcuts';
+import { SPECIALS, labelled, sectionOfShortcut } from '../utils/shortcuts';
 import { kathismaOfPsalm, matchScore, psalmNumber, searchNormalize, splitTrailingNumber } from '../utils/searchMatch';
 
 export type SearchGroupId = 'fn' | 'chant' | 'prayer' | 'psalter' | 'song' | 'ancestor' | 'feast';
@@ -233,4 +233,18 @@ export const runSearch = (index: SearchItem[], query: string): { group: SearchGr
   return [...byGroup.entries()]
     .map(([group, hits]) => ({ group, hits: hits.map((h, i) => ({ h, i })).sort((a, b) => a.h.score - b.h.score || a.i - b.i).map(x => x.h) }))
     .sort((a, b) => a.hits[0].score - b.hits[0].score || order.indexOf(a.group) - order.indexOf(b.group));
+};
+
+/** A search row as a button id (utils/shortcuts) — what picking it for a button keeps. */
+export const shortcutOfSearch = (it: SearchItem): string => {
+  const o = it.open;
+  switch (o.kind) {
+    case 'shortcut': return o.id;
+    case 'chant': return labelled(`chantof:${o.service}/${o.chantId}`, o.title, o.service);
+    case 'song': return labelled(`song:${o.id}`, it.title, it.sub);
+    case 'ancestor': return labelled(`ancestor:${o.id}`, it.title, it.sub);
+    case 'library': return `library:${o.tab}`;
+    // "feast:<group>:<n>" is the row's key; its line (the next date) would go stale
+    case 'feast': return labelled(it.key, it.title);
+  }
 };
