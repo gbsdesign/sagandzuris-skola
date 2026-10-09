@@ -206,12 +206,12 @@ export const ergative = (name: string) => (/[აეიოუ]$/.test(name) ? `${
 
 export const ALL_KATHISMAS = Array.from({ length: KATHISMA_COUNT }, (_, i) => i + 1);
 
-/** One person my groups pray for: the prayer name and the surname's first four letters („წიკლ.“). */
+/** One person my groups pray for: the prayer name and the surname's first five letters („წიკლა.“). */
 export interface GroupPrayerName { uid: string; name: string; short: string }
 
 const surnameShort = (full: string) => {
   const letters = Array.from(full.trim().split(/\s+/).slice(1).join(' '));
-  return letters.length > 4 ? `${letters.slice(0, 4).join('')}.` : letters.join('');
+  return letters.length > 5 ? `${letters.slice(0, 5).join('')}.` : letters.join('');
 };
 
 /** How a group name reads on the list and at „დიდებაი“: „ზურა (წიკლ.) (ოჯ.)“. */
