@@ -1,16 +1,23 @@
-import React, { useState } from 'react';
-import { Bell, BookOpen, ChevronDown, ChevronLeft, ChevronRight, Moon, Play, Search, Sun } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import {
+  Bell, BookHeart, BookOpen, BookOpenText, ChevronDown, ChevronLeft, ChevronRight, Church, Clock, Flame, HandHeart, Heart, Moon, Play,
+  ScrollText, Search, Star, Sun, SunMoon,
+} from 'lucide-react';
 import { HabitMenu } from '../../data/habitsAndManera';
 import {
   AKATHISTS,
   AKATHIST_GROUPS,
   APOSTLE,
   BibleBook,
+  ANDREW_CANON,
+  CONFESSION_PRAYERS,
   GOSPELS,
   KATHISMAS,
   MORNING_EVENING,
   PRAYER_HOURS,
   PSALTER_RULE,
+  PrayerRef,
+  VARIOUS_PRAYERS,
   WEEK_DAYS,
   bibleChapterId,
   hourClock,
@@ -46,14 +53,17 @@ export const HabitPrayerMenu: React.FC<{ menu: HabitMenu; onOpen: (prayerId: str
   }
 };
 
-const BOOK_PARTS: { menu: Exclude<HabitMenu, 'book'>; title: string }[] = [
-  { menu: 'morning-evening', title: 'დილის და საღამოს ლოცვები' },
-  { menu: 'hours', title: 'შვიდგზის ლოცვა' },
-  { menu: 'psalms', title: 'ფსალმუნები' },
-  { menu: 'gospel', title: 'სახარება' },
-  { menu: 'apostle', title: 'სამოციქულო' },
-  { menu: 'akathists', title: 'დაუჯდომლები' },
-  { menu: 'jesus', title: 'იესოს ლოცვა' },
+const BOOK_PARTS: { menu: Exclude<HabitMenu, 'book'> | 'confession' | 'andrew' | 'various'; title: string; icon: React.ReactNode }[] = [
+  { menu: 'morning-evening', title: 'დილის და საღამოს ლოცვები', icon: <SunMoon /> },
+  { menu: 'hours', title: 'შვიდგზის ლოცვა', icon: <Clock /> },
+  { menu: 'psalms', title: 'ფსალმუნები', icon: <BookOpenText /> },
+  { menu: 'gospel', title: 'სახარება', icon: <BookHeart /> },
+  { menu: 'apostle', title: 'სამოციქულო', icon: <ScrollText /> },
+  { menu: 'akathists', title: 'დაუჯდომლები', icon: <Star /> },
+  { menu: 'jesus', title: 'იესოს ლოცვა', icon: <Heart /> },
+  { menu: 'confession', title: 'აღსარების და ზიარების ლოცვები', icon: <Church /> },
+  { menu: 'andrew', title: 'ანდრია კრიტელის კანონი', icon: <Flame /> },
+  { menu: 'various', title: 'სხვადასხვა ლოცვები', icon: <HandHeart /> },
 ];
 // the open part survives a trip to a prayer and back
 const BOOK_PART_KEY = 'prayerBookPart';
@@ -61,17 +71,33 @@ const savedPart = (): string | null => {
   try { return sessionStorage.getItem(BOOK_PART_KEY); } catch { return null; }
 };
 
+/** A place a button names ("psalms", "gospel:matthew", "akathists:2", "week:3"): that part of the book
+ *  unfolded, with its book, group or weekday open. */
+const unfoldAt = (at: string) => {
+  const [part, sub] = at.split(':');
+  const menu = part === 'week' ? 'morning-evening' : part;
+  try { sessionStorage.setItem(BOOK_PART_KEY, menu); } catch { /* opens folded */ }
+  if (!sub) return;
+  if (part === 'gospel' || part === 'apostle') openBook[part] = sub;
+  else if (part === 'akathists') openGroup = AKATHIST_GROUPS[Number(sub)]?.title ?? null;
+  else if (part === 'week') openDay = Number(sub);
+};
+
 /** The whole ლოცვანი: every habit's prayers as folded parts, one open at a time. In the library and
  *  behind a habit's book button. */
-export const PrayerBook: React.FC<{ onOpen: (prayerId: string) => void }> = ({ onOpen }) => {
-  const [open, setOpen] = useState<string | null>(savedPart);
+export const PrayerBook: React.FC<{ onOpen: (prayerId: string) => void; at?: string | null }> = ({ onOpen, at }) => {
+  const [open, setOpen] = useState<string | null>(() => {
+    if (at) unfoldAt(at);
+    return savedPart();
+  });
   const toggle = (menu: string) => {
     const next = open === menu ? null : menu;
     setOpen(next);
     try { next ? sessionStorage.setItem(BOOK_PART_KEY, next) : sessionStorage.removeItem(BOOK_PART_KEY); } catch { /* opens folded next time */ }
   };
   return (
-    <ul className="rounded-2xl ring-1 ring-[#e8dcc8] bg-white divide-y divide-[#f1e8d9] overflow-hidden">
+    // the parts as pills (like the footer's calendar button); the open one is filled, its prayers under it
+    <ul className="space-y-2">
       {BOOK_PARTS.map(p => {
         const on = open === p.menu;
         return (
@@ -80,15 +106,21 @@ export const PrayerBook: React.FC<{ onOpen: (prayerId: string) => void }> = ({ o
               type="button"
               onClick={() => toggle(p.menu)}
               aria-expanded={on}
-              className="w-full min-h-[52px] flex items-center gap-3 px-4 py-2 text-left cursor-pointer hover:bg-[#fbf6ec] transition-colors"
+              className={`w-full min-h-12 flex items-center gap-3 pl-4 pr-3.5 py-2 rounded-full ring-1 text-left cursor-pointer select-none active:scale-[0.99] transition-all duration-200 ${
+                on
+                  ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec] shadow-[0_6px_16px_-8px_rgba(122,32,40,0.7)]'
+                  : 'bg-white/80 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#2a2017]'
+              }`}
             >
-              <BookOpen className="w-[18px] h-[18px] shrink-0 text-[#7a2028]" />
-              <span className="flex-1 min-w-0 font-serif-ge text-[15px] font-bold text-[#2a2017]">{p.title}</span>
-              <ChevronDown className={`w-5 h-5 shrink-0 text-[#a08a76] transition-transform ${on ? 'rotate-180' : ''}`} />
+              <span className={`shrink-0 [&>svg]:w-[18px] [&>svg]:h-[18px] ${on ? 'text-[#fbf6ec]' : 'text-[#7a2028]'}`}>{p.icon}</span>
+              <span className="flex-1 min-w-0 font-serif-ge text-[15px] font-bold leading-snug">{p.title}</span>
+              <ChevronDown className={`w-5 h-5 shrink-0 transition-transform duration-300 ${on ? 'rotate-180 text-[#fbf6ec]/80' : 'text-[#a08a76]'}`} />
             </button>
             {on && (
-              <div className="px-3 pb-4 pt-1 animate-in fade-in slide-in-from-top-1 duration-200">
-                <HabitPrayerMenu menu={p.menu} onOpen={onOpen} />
+              <div className="px-1 pt-3 pb-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                {p.menu === 'various' || p.menu === 'confession' || p.menu === 'andrew'
+                  ? <PrayerList items={p.menu === 'various' ? VARIOUS_PRAYERS : p.menu === 'andrew' ? ANDREW_CANON : CONFESSION_PRAYERS} onOpen={onOpen} />
+                  : <HabitPrayerMenu menu={p.menu} onOpen={onOpen} />}
               </div>
             )}
           </li>
@@ -97,6 +129,18 @@ export const PrayerBook: React.FC<{ onOpen: (prayerId: string) => void }> = ({ o
     </ul>
   );
 };
+
+// Single prayers, one row each: titles are long, so they wrap
+const PrayerList: React.FC<{ items: PrayerRef[]; onOpen: (id: string) => void }> = ({ items, onOpen }) => (
+  <div className="space-y-2">
+    {items.map(p => (
+      <button key={p.id} type="button" onClick={() => onOpen(p.id)} className={`${CHIP} w-full min-h-12 px-3.5 py-2.5 flex items-center gap-2.5 text-left text-[14px] font-bold leading-snug`}>
+        <span className="flex-1 min-w-0">{p.title}</span>
+        <ChevronRight className="w-4 h-4 shrink-0 opacity-60" />
+      </button>
+    ))}
+  </div>
+);
 
 // "გააგრძელე": straight back to where reading stopped
 const ContinueButton: React.FC<{ to: { id: string; label: string }; onOpen: (id: string) => void }> = ({ to, onOpen }) => (
@@ -118,7 +162,8 @@ const ContinueButton: React.FC<{ to: { id: string; label: string }; onOpen: (id:
 // `part`: only the morning (dila) or only the evening (dzili) prayers, for a habit of its own
 const MorningEvening: React.FC<{ onOpen: (id: string) => void; part?: 'dila' | 'dzili' }> = ({ onOpen, part }) => {
   const today = new Date().getDay();
-  const [day, setDay] = useState(today);
+  const [day, setDay] = useState(openDay ?? today);
+  useEffect(() => { openDay = null; }, []);
   return (
     <div className="space-y-4">
       <div className={`grid ${part ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
@@ -224,6 +269,10 @@ const PARTS: Record<'gospel' | 'apostle', { title: string; books: BibleBook[] }[
 
 // the book left open, so coming back from a chapter shows its chapters again
 const openBook: Record<'gospel' | 'apostle', string | null> = { gospel: null, apostle: null };
+// the group left open, so coming back from an akathist shows the same list
+let openGroup: string | null = null;
+// a weekday a button named, shown once instead of today's
+let openDay: number | null = null;
 
 // One book's chapters as numbers; the "გააგრძელე" chapter is ringed.
 const Chapters: React.FC<{ book: BibleBook; resumeId?: string; onOpen: (id: string) => void }> = ({ book, resumeId, onOpen }) => (
@@ -369,8 +418,6 @@ const JesusPrayer: React.FC = () => (
   </div>
 );
 
-// the group left open, so coming back from an akathist shows the same list
-let openGroup: string | null = null;
 
 // 73 akathists: "გააგრძელე", a search box, the groups folded with their counts.
 const Akathists: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) => {

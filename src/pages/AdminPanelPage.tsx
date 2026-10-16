@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
-import { Users, GraduationCap, Disc3, LayoutGrid, BarChart3, School } from 'lucide-react';
+import { Users, GraduationCap, Disc3, School, TriangleAlert } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth, useNavigation, SUPER_ADMIN_EMAIL } from '../context';
 import { useAllClasses } from '../hooks/useClasses';
@@ -10,22 +10,30 @@ import { ClassesAdmin } from '../components/admin/ClassesAdmin';
 import { UsersTab, UserRecord, StaffRecord, toUser } from '../components/admin/UsersTab';
 import { GroupsAdmin } from '../components/admin/GroupsAdmin';
 import { RecordingsTab } from '../components/admin/RecordingsTab';
-import { SectionsTab } from '../components/admin/SectionsTab';
-import { StatsTab } from '../components/admin/StatsTab';
 import { SchoolTab } from '../components/admin/SchoolTab';
-import { AccessRequests, AccessRecord, DecisionRecord, toAccess } from '../components/admin/AccessRequests';
+import { AccessRecord, DecisionRecord, toAccess } from '../components/admin/AccessRequests';
 import { useDirectory, writeDirectory } from '../utils/directory';
 
-type Tab = 'users' | 'classes' | 'recordings' | 'sections' | 'stats' | 'school';
+type Tab = 'users' | 'classes' | 'recordings' | 'school';
 const TAB_KEY = 'sg-admin-tab';
+// the former „განყოფილებები“ is now in „სკოლა“; the former „სტატისტიკა“ numbers stand where they belong
+const OLD_TAB: Record<string, Tab> = { sections: 'school', stats: 'users' };
+const readTab = (): Tab => {
+  try {
+    const t = localStorage.getItem(TAB_KEY) || '';
+    return OLD_TAB[t] || (['users', 'classes', 'recordings', 'school'].includes(t) ? (t as Tab) : 'users');
+  } catch {
+    return 'users';
+  }
+};
 
-// "ადმინის პანელი": the whole school — people and roles, classes and psalter groups with their teachers,
-// recordings, sections, statistics, backup and logo.
+// "ადმინის პანელი": the whole school in four tabs — people (one list; each person in one window), classes and
+// psalter groups (each in its own window), recordings, and the school's settings.
 export const AdminPanelPage: React.FC<{ logoUrl: string }> = ({ logoUrl }) => {
   const { user, isAdmin, isOwner, isSuperAdmin } = useAuth();
   const { handleGoBack } = useNavigation();
   const msg = useFlash();
-  const [tab, setTab] = useState<Tab>(() => { try { return (localStorage.getItem(TAB_KEY) as Tab) || 'users'; } catch { return 'users'; } });
+  const [tab, setTab] = useState<Tab>(readTab);
   useEffect(() => { try { localStorage.setItem(TAB_KEY, tab); } catch { /* storage blocked */ } }, [tab]);
 
   const [users, setUsers] = useState<UserRecord[]>([]);
@@ -100,11 +108,9 @@ export const AdminPanelPage: React.FC<{ logoUrl: string }> = ({ logoUrl }) => {
   const teachersWithoutClass = leaders.filter(l => staff.find(s => s.userId === l.userId || s.email === l.email.toLowerCase())?.role === 'teacher' && !classes.some(c => c.teacherIds.includes(l.userId)) && !groups.some(g => g.teacherIds.includes(l.userId))).length;
 
   const TABS = [
-    { id: 'users' as const, label: 'მომხმარებლები', Icon: Users, count: users.length, dot: waiting > 0 },
+    { id: 'users' as const, label: 'მომხმარებლები', Icon: Users, dot: waiting > 0 },
     { id: 'classes' as const, label: 'კლასები', Icon: GraduationCap, dot: teachersWithoutClass > 0 },
     { id: 'recordings' as const, label: 'ჩანაწერები', Icon: Disc3 },
-    { id: 'sections' as const, label: 'განყოფილებები', Icon: LayoutGrid },
-    { id: 'stats' as const, label: 'სტატისტიკა', Icon: BarChart3 },
     { id: 'school' as const, label: 'სკოლა', Icon: School },
   ];
 
@@ -115,26 +121,25 @@ export const AdminPanelPage: React.FC<{ logoUrl: string }> = ({ logoUrl }) => {
         subtitle={`${isOwner ? 'მფლობელი' : isSuperAdmin ? 'სუპერადმინი' : 'ადმინი'} · ${user?.email || ''}`}
         onBack={handleGoBack}
       />
-      <Tabs cols="wide" value={tab} onChange={setTab} items={TABS} />
+      <Tabs cols={4} value={tab} onChange={setTab} items={TABS} />
       <Flash flash={msg.flash} onClose={msg.clear} />
 
-      {tab === 'users' && isSuperAdmin && (
-        <AccessRequests users={users} staff={staff} access={access} decisions={decisions} onMessage={msg.say} />
+      {tab === 'users' && (
+        <UsersTab users={users} staff={staff} classes={classes} groups={groups} access={access} decisions={decisions} loading={loading} onMessage={msg.say} />
       )}
-      {tab === 'users' && <UsersTab users={users} staff={staff} classes={classes} groups={groups} loading={loading} onMessage={msg.say} />}
       {tab === 'classes' && (
         <div className="space-y-4">
-          <section className="bg-white/80 rounded-3xl ring-1 ring-[#e8dcc8] p-4 sm:p-5">
-            <ClassesAdmin classes={classes} loading={loadingClasses} students={classStudents} staff={leaders} onMessage={msg.say} mode="admin" />
-          </section>
+          {teachersWithoutClass > 0 && (
+            <p className="flex items-center gap-2 px-1 text-[13px] font-semibold text-[#9a6212]">
+              <TriangleAlert className="w-4 h-4 shrink-0" /> {teachersWithoutClass} მასწავლებელს ჯერ კლასი ან ჯგუფი არ აქვს მიბმული.
+            </p>
+          )}
+          <ClassesAdmin classes={classes} loading={loadingClasses} students={classStudents} staff={leaders} onMessage={msg.say} mode="admin" />
           <GroupsAdmin groups={groups} staff={leaders.map(l => ({ uid: l.userId, name: l.name, photoURL: l.photoURL, sub: l.email }))} onMessage={msg.say} />
-          {teachersWithoutClass > 0 && <p className="text-xs text-[#9a3324] px-1">{teachersWithoutClass} მასწავლებელს ჯერ კლასი ან ჯგუფი არ აქვს მიბმული.</p>}
         </div>
       )}
-      {tab === 'recordings' && <RecordingsTab onMessage={msg.say} />}
-      {tab === 'sections' && <SectionsTab onMessage={msg.say} />}
-      {tab === 'stats' && <StatsTab users={users} classes={classes} groups={groups} />}
-      {tab === 'school' && <SchoolTab staff={staff} logoUrl={logoUrl} onMessage={msg.say} />}
+      {tab === 'recordings' && <RecordingsTab users={users} onMessage={msg.say} />}
+      {tab === 'school' && <SchoolTab logoUrl={logoUrl} onMessage={msg.say} />}
     </div>
   );
 };

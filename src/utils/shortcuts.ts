@@ -55,21 +55,23 @@ export const SERVICES = ['წირვა', 'მწუხრი', 'ცისკ�
 export const LIBRARY_SHORT: Record<string, string> = {
   book: 'საღმრთო ისტორია', feasts: 'დღესასწაულები', lives: 'წმიდანთა ცხოვრება', prayers: 'ლოცვანი', sasuliero: 'სასულიერო წიგნები',
 };
-export const PAGES: Record<string, string> = { abituri: 'აბიტურიენტს', messages: 'მიმოწერა' };
+export const PAGES: Record<string, string> = { abituri: 'აბიტურიენტს', messages: 'მიმოწერა', admin: 'ადმინის პანელი' };
 export const TEACHER_TABS: Record<string, string> = {
   students: 'მოსწავლეები', assignments: 'დავალებები', attendance: 'დასწრება', schedule: 'ცხრილი', class: 'კლასის მართვა', groups: 'ფსალმუნის ჯგუფები',
 };
 export const ADMIN_TABS: Record<string, string> = {
-  users: 'მომხმარებლები', classes: 'კლასები', recordings: 'ჩანაწერები', sections: 'განყოფილებები', stats: 'სტატისტიკა', school: 'სკოლა',
+  users: 'მომხმარებლები', classes: 'კლასები', recordings: 'ჩანაწერები', school: 'სკოლა',
   requests: 'წევრების მიღება',
 };
+// buttons made when the admin panel had six tabs open the tab that now holds the same things
+const OLD_ADMIN_TABS: Record<string, string> = { sections: 'school', stats: 'users' };
 
 /** Who may have a button: teacher / admin / superadmin buttons show only to them. */
 export type ShortcutRole = 'teacher' | 'admin' | 'superadmin';
 export const roleOfShortcut = (id: string): ShortcutRole | null => {
   if (id === 'special:teacher' || kindOf(id) === 'teacher') return 'teacher';
   if (id === 'admin:requests') return 'superadmin';
-  if (kindOf(id) === 'admin') return 'admin';
+  if (kindOf(id) === 'admin' || id === 'page:admin') return 'admin';
   return null;
 };
 export const roleAllows = (id: string, who: { isTeacher: boolean; isAdmin: boolean; isSuperAdmin: boolean }) => {
@@ -115,7 +117,10 @@ export const shortcutLabel = (id: string): { label: string; sub?: string } | nul
       return carried(id);
     case 'page': return PAGES[ref] ? { label: PAGES[ref] } : null;
     case 'teacher': return TEACHER_TABS[ref] ? { label: TEACHER_TABS[ref], sub: 'მასწავლებელი' } : null;
-    case 'admin': return ADMIN_TABS[ref] ? { label: ADMIN_TABS[ref], sub: ref === 'requests' ? 'სუპერადმინი' : 'ადმინი' } : null;
+    case 'admin': {
+      const tab = OLD_ADMIN_TABS[ref] || ref;
+      return ADMIN_TABS[tab] ? { label: ADMIN_TABS[tab], sub: tab === 'requests' ? 'სუპერადმინი' : 'ადმინი' } : null;
+    }
   }
   return null;
 };

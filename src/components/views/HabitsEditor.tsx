@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
-import { BookOpen, Check, ChevronDown, GripVertical, Link2, Plus, RotateCcw, ScrollText, Trash2 } from 'lucide-react';
+import { BookOpen, Check, ChevronDown, GripVertical, Hash, Link2, Palette, Plus, RotateCcw, ScrollText, Trash2 } from 'lucide-react';
 import { HABIT_GROUPS, HabitGroupType, HabitMenu } from '../../data/habitsAndManera';
+import { COUNTER_UNITS, HABIT_ICON_IDS, HABIT_TONES, HabitCounter, HabitLook, MAX_COUNTER_GOAL, TONE_IDS } from '../../data/habitLooks';
 import {
   MENUS,
   MENU_LABELS,
@@ -10,18 +11,22 @@ import {
   reorderGroup,
   restoreHabit,
   MyHabitGroup,
+  setHabitCounter,
   setHabitLinks,
+  setHabitLook,
   setHabitMenu,
   setHabitNote,
 } from '../../utils/myHabits';
 import { HabitExtras } from './HabitLinks';
 import { useMyHabits } from '../../hooks/useMyHabits';
 import { useDragSort } from '../ui/useDragSort';
-import { Btn, FIELD, IconBtn, Sheet } from '../ui/kit';
+import { Btn, FIELD, IconBtn, Sheet, Toggle } from '../ui/kit';
+import { HabitBadge, HabitIcon, tint } from '../habits/HabitIcon';
 
 // "✏️" on the habits: the member's own list — drag a habit by its grip within its group, take one away,
-// add one of their own, and choose what it opens: its prayers (the book button), other buttons found by the
-// search or a site's address, and a note of its own. Saved at once (utils/myHabits).
+// add one of their own, and choose its colour and icon, a counter, and what it opens: its prayers (the book
+// button), other buttons found by the search or a site's address, and a note of its own. Saved at once
+// (utils/myHabits).
 
 type Mine = ReturnType<typeof useMyHabits>;
 type Choice = HabitMenu | 'none';
@@ -68,13 +73,20 @@ const EditGroup: React.FC<{ group: MyHabitGroup; mine: Mine; onMenu: (id: string
                   >
                     <GripVertical className="w-5 h-5" />
                   </button>
-                  <div className="flex-1 min-w-0 py-2">
+                  <HabitBadge look={mine.looks[id]} size="sm" />
+                  <div className="flex-1 min-w-0 py-2 pl-2">
                     <span className="block text-[15px] font-medium leading-snug text-[#2a2017]">{h.label}</span>
                     <button
                       type="button"
                       onClick={() => onMenu(id)}
                       className="mt-0.5 -ml-2 inline-flex items-center gap-1.5 min-h-8 px-2 rounded-full text-left text-[12.5px] font-semibold text-[#7a2028] hover:bg-[#7a2028]/[0.06] cursor-pointer transition-colors"
                     >
+                      {mine.counters[id] && (
+                        <span className="inline-flex items-center gap-0.5 tabular-nums">
+                          <Hash className="w-3.5 h-3.5 shrink-0" />
+                          {mine.counters[id].goal}
+                        </span>
+                      )}
                       {h.menu && (
                         <>
                           <BookOpen className="w-3.5 h-3.5 shrink-0" />
@@ -89,7 +101,7 @@ const EditGroup: React.FC<{ group: MyHabitGroup; mine: Mine; onMenu: (id: string
                         </span>
                       ) : null}
                       {h.note && <ScrollText className="w-3.5 h-3.5 shrink-0" aria-label="ჩანაწერი" />}
-                      {!h.menu && !h.links?.length && !h.note && <span className="text-[#a08a76]">ლოცვა, ღილაკები, ჩანაწერი</span>}
+                      {!h.menu && !h.links?.length && !h.note && !mine.counters[id] && <span className="text-[#a08a76]">ფერი, ლოცვა, ღილაკები</span>}
                       <ChevronDown className="w-3.5 h-3.5 shrink-0 opacity-70" />
                     </button>
                   </div>
@@ -126,6 +138,110 @@ const MenuChoices: React.FC<{ value: Choice; onPick: (m: Choice) => void }> = ({
     ))}
   </div>
 );
+
+const SECTION = 'flex items-center gap-1.5 px-0.5 pb-2 text-[13px] font-bold text-[#6a5646]';
+
+// the habit's colour (round swatches) and its icon, drawn in that colour
+const LookPicker: React.FC<{ look: HabitLook; onPick: (look: Partial<HabitLook>) => void }> = ({ look, onPick }) => {
+  const c = HABIT_TONES[look.tone].c;
+  return (
+    <section>
+      <h4 className={SECTION}>
+        <Palette className="w-4 h-4 text-[#7a2028]" />
+        ფერი და ხატულა
+      </h4>
+      {/* the nine tones in one row */}
+      <div className="grid grid-cols-9 gap-1 pb-3 max-w-[24rem]">
+        {TONE_IDS.map(t => {
+          const on = t === look.tone;
+          const tc = HABIT_TONES[t].c;
+          return (
+            <button
+              key={t}
+              type="button"
+              aria-pressed={on}
+              aria-label={HABIT_TONES[t].name}
+              title={HABIT_TONES[t].name}
+              onClick={() => onPick({ tone: t })}
+              className="w-full max-w-9 aspect-square mx-auto rounded-full flex items-center justify-center cursor-pointer transition-transform active:scale-90"
+              style={{ background: tc, boxShadow: on ? `0 0 0 2px #fbf6ec, 0 0 0 3.5px ${tc}` : undefined }}
+            >
+              {on && <Check className="w-4 h-4 text-white stroke-[3]" />}
+            </button>
+          );
+        })}
+      </div>
+      <div className="grid grid-cols-6 gap-1.5">
+        {HABIT_ICON_IDS.map((i, n) => {
+          const on = i === look.icon;
+          return (
+            <button
+              key={i}
+              type="button"
+              aria-pressed={on}
+              aria-label={`ხატულა ${n + 1}`}
+              onClick={() => onPick({ icon: i })}
+              className="h-11 rounded-xl flex items-center justify-center cursor-pointer transition-colors active:scale-95"
+              style={on ? { background: c, color: '#fff' } : { background: tint(c, 0.08), color: c }}
+            >
+              <HabitIcon icon={i} className="w-5 h-5" />
+            </button>
+          );
+        })}
+      </div>
+    </section>
+  );
+};
+
+// a counter: on or off, the day's goal and what is counted
+const CounterSettings: React.FC<{ counter: HabitCounter | undefined; onChange: (counter: HabitCounter | 'none') => void }> = ({ counter, onChange }) => {
+  const [goal, setGoal] = useState(String(counter?.goal ?? 10));
+  const unit = counter?.unit ?? 'ჯერ';
+  const typed = Math.max(1, Math.min(MAX_COUNTER_GOAL, parseInt(goal, 10) || counter?.goal || 10));
+  const commit = () => {
+    setGoal(String(typed));
+    if (counter && typed !== counter.goal) onChange({ goal: typed, unit });
+  };
+  return (
+    <section>
+      <h4 className={SECTION}>
+        <Hash className="w-4 h-4 text-[#7a2028]" />
+        მთვლელი
+      </h4>
+      <Toggle
+        on={!!counter}
+        onChange={on => onChange(on ? { goal: typed, unit } : 'none')}
+        label="რიცხვით ითვლება"
+        hint="მაგ. 100-ჯერ ან 5 გვერდი — მიზანს რომ მიაღწევ, ჩვევა თავად მოინიშნება"
+      />
+      {counter && (
+        <div className="mt-2 space-y-3 animate-in fade-in duration-200">
+          <label className="flex items-center gap-3">
+            <span className="text-[13px] font-bold text-[#6a5646]">მიზანი დღეში</span>
+            <input
+              type="number"
+              inputMode="numeric"
+              min={1}
+              max={MAX_COUNTER_GOAL}
+              value={goal}
+              onChange={e => setGoal(e.target.value)}
+              onBlur={commit}
+              onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+              className={`${FIELD} !w-28 text-center tabular-nums`}
+            />
+          </label>
+          <div className="flex flex-wrap gap-2">
+            {COUNTER_UNITS.map(u => (
+              <button key={u} type="button" aria-pressed={u === unit} onClick={() => onChange({ goal: typed, unit: u })} className={chip(u === unit)}>
+                {u}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+    </section>
+  );
+};
 
 const AddHabit: React.FC<{ onAdd: (label: string, group: string, menu: Choice) => void }> = ({ onAdd }) => {
   const [label, setLabel] = useState('');
@@ -182,7 +298,7 @@ export const HabitsEditor: React.FC<{
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] px-3.5 py-3">
         <p className="flex-1 min-w-[10rem] text-[13px] leading-snug text-[#6a5646]">
           <GripVertical className="inline w-4 h-4 -mt-0.5 text-[#b9a68c]" /> გადაათრიე ·{' '}
-          <ChevronDown className="inline w-3.5 h-3.5 -mt-0.5 text-[#7a2028]" /> ლოცვა, ღილაკები, ჩანაწერი
+          <ChevronDown className="inline w-3.5 h-3.5 -mt-0.5 text-[#7a2028]" /> ფერი, მთვლელი, ლოცვა, ღილაკები, ჩანაწერი
         </p>
         <Btn size="sm" icon={<Check />} onClick={onDone}>
           მზადაა
@@ -257,9 +373,15 @@ export const HabitsEditor: React.FC<{
         footer={<Btn full icon={<Check />} onClick={closeSheet}>მზადაა</Btn>}
       >
         {menuFor && (
-          <div className="space-y-5">
+          <div className="space-y-6">
+            <LookPicker look={mine.looks[menuFor.id]} onPick={look => save(setHabitLook(setup, menuFor.id, look)).catch(() => {})} />
+            <CounterSettings
+              key={`counter:${menuFor.id}`}
+              counter={mine.counters[menuFor.id]}
+              onChange={c => save(setHabitCounter(setup, menuFor.id, c)).catch(() => {})}
+            />
             <section>
-              <h4 className="flex items-center gap-1.5 px-0.5 pb-2 text-[13px] font-bold text-[#6a5646]">
+              <h4 className={SECTION}>
                 <BookOpen className="w-4 h-4 text-[#7a2028]" />
                 ლოცვის ღილაკი
               </h4>

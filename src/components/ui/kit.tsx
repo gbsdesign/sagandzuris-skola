@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, CheckCircle2, AlertCircle, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
 
 // Shared building blocks for the school's management pages (teacher, admin, psalter group):
@@ -56,16 +56,28 @@ export const Card: React.FC<{ className?: string; children: React.ReactNode; ton
   </section>
 );
 
-export const CardTitle: React.FC<{ icon?: React.ReactNode; title: React.ReactNode; hint?: React.ReactNode; right?: React.ReactNode; className?: string }> = ({ icon, title, hint, right, className }) => (
-  <div className={cx('flex items-start gap-3 mb-3.5', className)}>
-    {icon && <span className="w-10 h-10 shrink-0 rounded-2xl bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center [&>svg]:w-5 [&>svg]:h-5">{icon}</span>}
-    <div className="min-w-0 flex-1 pt-0.5">
-      <h2 className="font-serif-ge text-[17px] font-bold text-[#4a3426] leading-snug">{title}</h2>
-      {hint && <p className="text-[13px] text-[#8a7a6a] leading-snug mt-0.5">{hint}</p>}
+/** `hint`: a short line under the title; `info`: a longer explanation behind an ⓘ button. */
+export const CardTitle: React.FC<{ icon?: React.ReactNode; title: React.ReactNode; hint?: React.ReactNode; info?: React.ReactNode; right?: React.ReactNode; className?: string }> = ({ icon, title, hint, info, right, className }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className={cx('mb-3.5', className)}>
+      <div className="flex items-start gap-3">
+        {icon && <span className="w-10 h-10 shrink-0 rounded-2xl bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center [&>svg]:w-5 [&>svg]:h-5">{icon}</span>}
+        <div className="min-w-0 flex-1 pt-0.5">
+          <h2 className="font-serif-ge text-[17px] font-bold text-[#4a3426] leading-snug">{title}</h2>
+          {hint && <p className="text-[13px] text-[#8a7a6a] leading-snug mt-0.5">{hint}</p>}
+        </div>
+        {info && (
+          <IconBtn label="განმარტება" aria-expanded={open} onClick={() => setOpen(o => !o)} className={open ? '!bg-[#7a2028]/[0.1] !text-[#7a2028]' : ''}>
+            <Info />
+          </IconBtn>
+        )}
+        {right}
+      </div>
+      {info && open && <p className={cx('mt-2 text-[13px] text-[#75685a] leading-relaxed sg-in', !!icon && 'sm:pl-[52px]')}>{info}</p>}
     </div>
-    {right}
-  </div>
-);
+  );
+};
 
 type BtnKind = 'primary' | 'ghost' | 'danger' | 'soft' | 'light';
 const BTN: Record<BtnKind, string> = {

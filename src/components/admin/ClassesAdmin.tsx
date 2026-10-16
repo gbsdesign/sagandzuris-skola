@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Plus, Search, Trash2, Upload, X, Check, ArrowUp, ArrowDown, RefreshCw, ExternalLink } from 'lucide-react';
+import { Plus, Search, Trash2, Upload, Check, ArrowUp, ArrowDown, RefreshCw, ExternalLink, ChevronRight, GraduationCap } from 'lucide-react';
 import { arrayUnion, collection, deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth, useNavigation } from '../../context';
@@ -11,9 +11,11 @@ import { PathItem, sortPathItems, findCatalogEntry, voicesOf, CATEGORY_LABEL } f
 import { CatalogPicker } from './CatalogPicker';
 import { MemberPathEditor, writePath } from './MemberPathEditor';
 import { linkTeachers } from '../../hooks/useTeaching';
-import { Toggle } from '../ui/kit';
+import { Btn, Card, CardTitle, Sheet, Toggle } from '../ui/kit';
 import { ShortcutPicker, shortcutIcon } from '../home/ShortcutShelf';
 import { shortcutLabel } from '../../utils/shortcuts';
+import { LeaderChips } from './LeaderChips';
+import { useClassAttendance } from './StatsTab';
 
 /**
  * Puts the class program on each member's path (missing items are added at the end) and takes back
@@ -61,8 +63,9 @@ type Draft = {
 const EMPTY: Draft = { id: null, name: '', logo: '', memberIds: [], savedMemberIds: [], program: [], teacherIds: [], classMode: false, defaultShortcuts: [] };
 
 // Classes: list + editor (name, logo, members, common program, "კლასის რეჟიმი").
-// mode 'admin': every class; create, delete, choose the class's teachers (from `staff`); members from all users.
-// mode 'teacher': the teacher's own class (opened at once with `openId`); members from the people list.
+// mode 'admin': every class in a list; a tap opens the class's own window (create, delete, its teachers from
+// `staff`, members from all users). mode 'teacher': the teacher's own class, opened in place at once with `openId`;
+// members from the people list.
 export const ClassesAdmin: React.FC<{
   classes: SchoolClass[];
   loading: boolean;
@@ -107,50 +110,27 @@ export const ClassesAdmin: React.FC<{
       Number(draft?.memberIds.includes(b.userId)) - Number(draft?.memberIds.includes(a.userId)) || a.name.localeCompare(b.name, 'ka'));
   }, [students, memberQuery, draft?.memberIds]);
 
+  // admin: every class in one list; the open class's window lies over it
+  const list = isAdminMode && (
+    <Card>
+      <CardTitle icon={<GraduationCap />} title="კლასები"
+        info="„დასწრება“ — ბოლო 8 გაკვეთილის საშუალო. კლასის პროგრამა შენახვისას ყველა წევრის საგანძურის გზას ემატება." />
+      {loading ? (
+        <p className="py-6 text-center text-sm text-[#8a7a6a]">იტვირთება...</p>
+      ) : classes.length === 0 ? (
+        <p className="text-sm text-[#8a7a6a]">კლასი ჯერ არ შექმნილა. შექმენი პირველი და დაამატე წევრები.</p>
+      ) : (
+        <ul className="divide-y divide-[#f1e8d9] -mx-1">
+          {classes.map(c => <ClassRow key={c.id} cls={c} onOpen={() => edit(c)} />)}
+        </ul>
+      )}
+      <Btn kind="soft" full icon={<Plus />} className="mt-3 sm:w-auto" onClick={() => edit()}>ახალი კლასი</Btn>
+    </Card>
+  );
+
   if (!draft) {
     if (!isAdminMode) return loading ? <p className="py-8 text-center text-sm text-[#8a7a6a]">იტვირთება...</p> : null;
-    return (
-      <div className="space-y-4">
-        <button
-          type="button"
-          onClick={() => edit()}
-          className="w-full sm:w-auto inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full bg-[#7a2028] hover:bg-[#5e1820] text-[#fbf6ec] font-bold text-sm cursor-pointer active:scale-95"
-        >
-          <Plus className="w-4 h-4" /> ახალი კლასი
-        </button>
-
-        {loading ? (
-          <p className="py-8 text-center text-sm text-[#8a7a6a]">იტვირთება...</p>
-        ) : classes.length === 0 ? (
-          <p className="py-10 text-center text-sm text-[#8a7a6a] rounded-2xl border border-dashed border-[#e8dcc8]">
-            კლასი ჯერ არ შექმნილა. შექმენი პირველი და დაამატე წევრები.
-          </p>
-        ) : (
-          <ul className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {classes.map(c => (
-              <li key={c.id} className="flex flex-wrap items-center gap-3 p-3.5 rounded-2xl bg-white ring-1 ring-[#e8dcc8]">
-                <ClassLogo name={c.name} logo={c.logo} className="w-12 h-12 text-lg shrink-0" />
-                <div className="min-w-0 flex-1 basis-40">
-                  <p className="font-serif-ge font-bold text-[#4a3426] leading-snug">{c.name}</p>
-                  <p className="text-xs text-[#8a7a6a]">{c.members.length} წევრი · პროგრამაში {c.program.length} პუნქტი</p>
-                  <p className={`text-xs ${c.teachers.length ? 'text-[#4a3426]' : 'text-[#9a3324]'}`}>
-                    {c.teachers.length ? `მასწავლებელი: ${c.teachers.map(t => t.name).join(', ')}` : 'მასწავლებელი არ ჰყავს'}
-                  </p>
-                </div>
-                <div className="flex items-center gap-2 ml-auto">
-                  <button type="button" onClick={() => openClass(c.id)} title="კლასის გვერდი" className="w-9 h-9 rounded-full ring-1 ring-[#e8dcc8] text-[#8a7a6a] hover:text-[#7a2028] flex items-center justify-center cursor-pointer">
-                    <ExternalLink className="w-4 h-4" />
-                  </button>
-                  <button type="button" onClick={() => edit(c)} className="h-9 px-3.5 rounded-full ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-sm font-semibold text-[#4a3426] cursor-pointer">
-                    შეცვლა
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        )}
-      </div>
-    );
+    return list;
   }
 
   const set = (patch: Partial<Draft>) => setDraft(d => (d ? { ...d, ...patch } : d));
@@ -240,17 +220,8 @@ export const ClassesAdmin: React.FC<{
     }
   };
 
-  return (
-    <div className="space-y-5">
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="font-serif-ge text-lg font-bold text-[#4a3426]">{draft.id ? 'კლასის შეცვლა' : 'ახალი კლასი'}</h3>
-        {!openId && (
-          <button type="button" onClick={() => setDraft(null)} title="გაუქმება" className="w-9 h-9 rounded-full ring-1 ring-[#e8dcc8] text-[#8a7a6a] hover:text-[#7a2028] flex items-center justify-center cursor-pointer">
-            <X className="w-4 h-4" />
-          </button>
-        )}
-      </div>
-
+  const fields = (
+    <>
       {/* name + logo */}
       <div className="flex items-center gap-4">
         <button type="button" onClick={() => fileRef.current?.click()} title="ლოგოს ატვირთვა" className="relative shrink-0 cursor-pointer group">
@@ -273,24 +244,11 @@ export const ClassesAdmin: React.FC<{
       <div className="space-y-2">
         <label className="text-xs font-semibold text-[#75685a]">მასწავლებელი</label>
         {isAdminMode ? (
-          staff.length === 0 ? (
-            <p className="text-sm text-[#8a7a6a]">მასწავლებელი ჯერ არავინაა დანიშნული — „მომხმარებლებში“ მიანიჭე როლი „მასწავლებელი“.</p>
-          ) : (
-            <div className="flex flex-wrap gap-2">
-              {staff.map(t => {
-                const on = draft.teacherIds.includes(t.userId);
-                return (
-                  <button key={t.userId} type="button"
-                    onClick={() => set({ teacherIds: on ? draft.teacherIds.filter(x => x !== t.userId) : [...draft.teacherIds, t.userId] })}
-                    className={`inline-flex items-center gap-2 h-10 pl-1 pr-3.5 rounded-full text-sm font-semibold cursor-pointer transition-colors ${on ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40'}`}>
-                    {t.photoURL ? <img src={t.photoURL} alt="" className="w-8 h-8 rounded-full object-cover" referrerPolicy="no-referrer" /> : <span className="w-8 h-8 rounded-full bg-[#efe5d4] text-[#4a3426] text-sm font-bold flex items-center justify-center">{t.name.charAt(0)}</span>}
-                    {t.name}
-                    {on && <Check className="w-4 h-4" />}
-                  </button>
-                );
-              })}
-            </div>
-          )
+          <LeaderChips
+            people={staff.map(s => ({ uid: s.userId, name: s.name, photoURL: s.photoURL }))}
+            selected={draft.teacherIds}
+            onChange={teacherIds => set({ teacherIds })}
+          />
         ) : (
           <p className="text-sm font-semibold text-[#2a2017]">{classes.find(c => c.id === draft.id)?.teachers.map(t => t.name).join(', ') || '—'}</p>
         )}
@@ -393,20 +351,11 @@ export const ClassesAdmin: React.FC<{
         />
       </div>
 
-      <div className="flex flex-col-reverse sm:flex-row gap-2 pt-2">
-        {draft.id && isAdminMode && (
-          <button type="button" onClick={remove} className="h-12 px-5 rounded-2xl ring-1 ring-red-200 text-red-700 hover:bg-red-50 font-semibold text-sm cursor-pointer inline-flex items-center justify-center gap-2">
-            <Trash2 className="w-4 h-4" /> კლასის წაშლა
-          </button>
-        )}
-        <button type="button" onClick={save} disabled={saving} className="flex-1 h-12 rounded-2xl bg-[#7a2028] hover:bg-[#5e1820] text-[#fbf6ec] font-bold text-[15px] cursor-pointer disabled:opacity-60 inline-flex items-center justify-center gap-2">
-          {saving ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
-          შენახვა
-        </button>
-      </div>
+    </>
+  );
 
-      {/* each saved member's path: assign, remove, reorder, confirm voices */}
-      {draft.id && draft.savedMemberIds.length > 0 && (
+  // each saved member's path: assign, remove, reorder, confirm voices
+  const paths = draft.id && draft.savedMemberIds.length > 0 && (
         <div className="pt-5 mt-2 border-t border-[#e8dcc8] space-y-3">
           <h3 className="font-serif-ge text-lg font-bold text-[#4a3426]">წევრების საგანძურის გზა</h3>
           <div className="flex flex-wrap gap-2">
@@ -443,7 +392,70 @@ export const ClassesAdmin: React.FC<{
             <p className="text-sm text-[#8a7a6a]">აირჩიე წევრი, რომ მისი გზა ნახო, შეცვალო და ხმები ჩაუთვალო.</p>
           )}
         </div>
-      )}
+  );
+
+  const saveIcon = saving ? <RefreshCw className="animate-spin" /> : <Check />;
+
+  // admin: the class's own window over the list — everything about the class in one place
+  if (isAdminMode) {
+    const saved = classes.find(c => c.id === draft.id);
+    return (
+      <>
+        {list}
+        <Sheet
+          open
+          onClose={() => setDraft(null)}
+          title={saved?.name || 'ახალი კლასი'}
+          wide
+          footer={
+            <div className="flex gap-2">
+              {saved && <Btn kind="danger" size="lg" icon={<Trash2 />} onClick={remove}>წაშლა</Btn>}
+              <Btn size="lg" icon={saveIcon} className="flex-1" onClick={save} disabled={saving}>შენახვა</Btn>
+            </div>
+          }
+        >
+          <div className="space-y-5">
+            {saved && <Btn kind="ghost" size="sm" icon={<ExternalLink />} onClick={() => openClass(saved.id)}>კლასის გვერდი</Btn>}
+            {fields}
+            {paths}
+          </div>
+        </Sheet>
+      </>
+    );
+  }
+
+  // teacher: their class, in place
+  return (
+    <div className="space-y-5">
+      <h3 className="font-serif-ge text-lg font-bold text-[#4a3426]">კლასის შეცვლა</h3>
+      {fields}
+      <Btn size="lg" icon={saveIcon} full onClick={save} disabled={saving}>შენახვა</Btn>
+      {paths}
     </div>
+  );
+};
+
+/** A class in the admin list: logo, name, members and teachers, attendance. */
+const ClassRow: React.FC<{ cls: SchoolClass; onOpen: () => void }> = ({ cls, onOpen }) => {
+  const rate = useClassAttendance(cls);
+  return (
+    <li className="px-1">
+      <button type="button" onClick={onOpen} className="w-full flex items-center gap-3 py-3 text-left cursor-pointer group">
+        <ClassLogo name={cls.name} logo={cls.logo} className="w-11 h-11 text-base shrink-0" />
+        <span className="min-w-0 flex-1">
+          <span className="block font-semibold text-[#2a2017] truncate group-hover:text-[#7a2028]">{cls.name}</span>
+          <span className="block text-xs text-[#8a7a6a] truncate">
+            {cls.members.length} წევრი · {cls.teachers.length ? cls.teachers.map(t => t.name).join(', ') : <span className="text-[#9a3324]">მასწავლებელი არ ჰყავს</span>}
+          </span>
+        </span>
+        {rate !== null && (
+          <span className="shrink-0 text-right leading-tight">
+            <span className="block text-sm font-bold tabular-nums text-[#4a3426]">{rate}%</span>
+            <span className="block text-[11px] text-[#8a7a6a]">დასწრება</span>
+          </span>
+        )}
+        <ChevronRight className="w-4 h-4 text-[#b3a594] shrink-0" />
+      </button>
+    </li>
   );
 };

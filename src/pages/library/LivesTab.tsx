@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, Loader2, Search, X } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
 import { LifeThumb } from '../../components/saints/LifeThumb';
@@ -61,7 +61,7 @@ const DayGroup: React.FC<{ month: number; day: number; lives: LifeEntry[]; today
   const year = oldStyleOf(todayIso()).year;
   const iso = fromOldStyle(year, month, Math.min(day, daysInMonth(year, month, true)));
   return (
-    <section className={`${CARD} ${today ? 'ring-[#7a2028]/30' : ''}`}>
+    <section id={`lives-day-${month}-${day}`} className={`${CARD} scroll-mt-24 ${today ? 'ring-[#7a2028]/30' : ''}`}>
       <header className="flex items-center gap-2.5 px-2 pt-1.5 pb-1">
         <span className={`w-11 shrink-0 rounded-xl flex flex-col items-center justify-center py-1 ring-1 ${
           today ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]' : 'bg-[#f6ecda] ring-[#ead9bd] text-[#7a2028]'
@@ -116,6 +116,12 @@ export const LivesTab: React.FC<{ nav: BookNav }> = ({ nav }) => {
   );
   const movable = useMemo(() => listed.filter(l => l.id.startsWith('gardamavali/')), [listed]);
 
+  // a month's part may name a day ("m9:14", from a button): that day's lives come into view
+  const [partMonth, partDay] = (nav.part ?? '').split(':');
+  useEffect(() => {
+    if (partDay && listed.length) document.getElementById(`lives-day-${partMonth.slice(1)}-${partDay}`)?.scrollIntoView({ block: 'start' });
+  }, [partMonth, partDay, listed.length]);
+
   const found = useMemo(() => {
     const q = norm(query);
     if (!q) return null;
@@ -133,7 +139,7 @@ export const LivesTab: React.FC<{ nav: BookNav }> = ({ nav }) => {
   }
 
   const part = nav.part;
-  const month = part?.startsWith('m') ? Number(part.slice(1)) : 0;
+  const month = part?.startsWith('m') ? Number(partMonth.slice(1)) : 0;
 
   // a month, as the menaion has it; the arrows turn its pages in place
   if (month >= 1 && month <= 12) {

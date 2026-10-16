@@ -71,6 +71,8 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
   // a song picked in the search: its region's list, with the song open
   const [found, setFound] = useState<string | null>(null);
   useOpenRequest('simghera', id => {
+    // a region's button ("r:<region>"): the map with that region open
+    if (id.startsWith('r:')) { openMapItem(id.slice(2)); return; }
     const song = FOLK_SONGS.find(s => s.id === id);
     if (!song) return;
     openMapItem(getFolkRegion(song.region).id);

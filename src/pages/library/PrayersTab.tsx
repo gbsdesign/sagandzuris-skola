@@ -8,7 +8,7 @@ import { MiniCover } from './Shelf';
 
 // "ლოცვანი" on the library shelf: the same prayers the habits open, all in one book.
 // The small button at the right of the title opens მოსახსენებელი, the names read in these prayers.
-export const PrayersTab: React.FC = () => {
+export const PrayersTab: React.FC<{ at?: string | null }> = ({ at }) => {
   const { openPrayer, openCommemoration } = useNavigation();
   const { lists } = useCommemoration();
   const nameCount = countOf(lists, 'living') + countOf(lists, 'deceased') + countOf(lists, 'group');
@@ -32,7 +32,7 @@ export const PrayersTab: React.FC = () => {
           </button>
         }
       />
-      <PrayerBook onOpen={openPrayer} />
+      <PrayerBook onOpen={openPrayer} at={at} />
     </div>
   );
 };

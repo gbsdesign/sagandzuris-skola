@@ -1,4 +1,16 @@
 import { HABIT_GROUPS, HABIT_ITEMS, HabitGroupType, HabitItemType, HabitMenu } from '../data/habitsAndManera';
+import {
+  HABIT_ICON_IDS,
+  HABIT_TONES,
+  HabitCounter,
+  HabitIconId,
+  HabitLook,
+  HabitToneId,
+  MAX_COUNTER_GOAL,
+  SCHOOL_COUNTERS,
+  SCHOOL_LOOKS,
+  TONE_IDS,
+} from '../data/habitLooks';
 import type { SearchGroupId, SearchOpen } from '../data/searchIndex';
 
 // "ჩემი ჩვევები": each member arranges the habits for themselves — the order inside a group, habits
@@ -19,6 +31,10 @@ export interface HabitSetup {
   links?: Record<string, HabitLink[]>;
   /** the member's own words about a habit, shown under ⓘ */
   notes?: Record<string, string>;
+  /** a habit's colour and icon (data/habitLooks); what is not chosen stays the school's */
+  looks?: Record<string, Partial<HabitLook>>;
+  /** a habit counted in numbers, or 'none' to switch the school's counter off */
+  counters?: Record<string, HabitCounter | 'none'>;
 }
 
 /** Something tied to a habit: an item of the one search (kept whole, so it opens without the index), or a site. */
@@ -117,6 +133,55 @@ export const setHabitLinks = (setup: HabitSetup, id: string, links: HabitLink[])
 export const setHabitNote = (setup: HabitSetup, id: string, note: string): HabitSetup => ({
   ...setup,
   notes: { ...setup.notes, [id]: note.trim().slice(0, MAX_NOTE) },
+});
+
+const isTone = (t: unknown): t is HabitToneId => typeof t === 'string' && t in HABIT_TONES;
+const isIcon = (i: unknown): i is HabitIconId => typeof i === 'string' && (HABIT_ICON_IDS as readonly string[]).includes(i);
+
+// a member's own habit keeps one tone wherever it stands in the list
+const toneById = (id: string): HabitToneId => {
+  let h = 0;
+  for (const ch of id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+  return TONE_IDS[h % TONE_IDS.length];
+};
+
+/** Each habit's colour and icon: the member's choice, else the school's, else a tone by its id and ✦. */
+export const resolveLooks = (setup: HabitSetup | null | undefined, groups: MyHabitGroup[]): Record<string, HabitLook> => {
+  const looks: Record<string, HabitLook> = {};
+  for (const h of groups.flatMap(g => g.items)) {
+    const own = setup?.looks?.[h.id];
+    const base = SCHOOL_LOOKS[h.id] ?? { tone: toneById(h.id), icon: 'sparkle' };
+    looks[h.id] = { tone: isTone(own?.tone) ? own.tone : base.tone, icon: isIcon(own?.icon) ? own.icon : base.icon };
+  }
+  return looks;
+};
+
+const isCounter = (c: unknown): c is HabitCounter =>
+  !!c && typeof c === 'object' && Number.isFinite((c as HabitCounter).goal) && (c as HabitCounter).goal >= 1 && typeof (c as HabitCounter).unit === 'string';
+
+/** The habits counted in numbers: the member's own counters and the school's they kept. */
+export const resolveCounters = (setup: HabitSetup | null | undefined, groups: MyHabitGroup[]): Record<string, HabitCounter> => {
+  const counters: Record<string, HabitCounter> = {};
+  for (const h of groups.flatMap(g => g.items)) {
+    const own = setup?.counters?.[h.id];
+    if (own === 'none') continue;
+    const c = isCounter(own) ? own : SCHOOL_COUNTERS[h.id];
+    if (c) counters[h.id] = { goal: Math.min(MAX_COUNTER_GOAL, Math.round(c.goal)), unit: c.unit };
+  }
+  return counters;
+};
+
+export const setHabitLook = (setup: HabitSetup, id: string, look: Partial<HabitLook>): HabitSetup => ({
+  ...setup,
+  looks: { ...setup.looks, [id]: { ...setup.looks?.[id], ...look } },
+});
+
+export const setHabitCounter = (setup: HabitSetup, id: string, counter: HabitCounter | 'none'): HabitSetup => ({
+  ...setup,
+  counters: {
+    ...setup.counters,
+    [id]: counter === 'none' ? 'none' : { goal: Math.max(1, Math.min(MAX_COUNTER_GOAL, Math.round(counter.goal) || 1)), unit: counter.unit.trim().slice(0, 20) },
+  },
 });
 
 /** A typed address as a safe link ("galoba.ge" → https://galoba.ge/); null for anything not http(s). */

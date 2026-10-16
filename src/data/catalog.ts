@@ -1,6 +1,6 @@
 import { SERVICE_LISTS } from './chantLookup';
 import {
-  AKATHIST_GROUPS, APOSTLE, BibleBook, GOSPELS, KATHISMAS, MORNING_EVENING, PRAYER_HOURS, PSALTER_RULE, WEEK_DAYS,
+  AKATHIST_GROUPS, ANDREW_CANON, APOSTLE, BibleBook, CONFESSION_PRAYERS, VARIOUS_PRAYERS, GOSPELS, KATHISMAS, MORNING_EVENING, PRAYER_HOURS, PSALTER_RULE, WEEK_DAYS,
   bibleChapterId, weekPrayerId,
 } from './prayers';
 import { FOLK_SONGS, getFolkRegion } from './songsData';
@@ -13,7 +13,8 @@ import { ADMIN_TABS, LIBRARY_SHORT, SERVICES, TEACHER_TABS, labelled, shortcutLa
 // Everything a button can be made of, as a tree to unfold: the prayer book, the chants by service, the library's
 // books down to their chapters, the habits, songs by region, the great chanters and the app's own pages. The
 // search panel shows it when picking (a habit's buttons, the home page's buttons). A node with an `id` can be
-// picked — the id is a home-button id (utils/shortcuts), which also opens it.
+// picked — the id is a home-button id (utils/shortcuts), which also opens it. Groups have one too: it opens
+// their place (a region on the songs map, a part of the prayer book unfolded, a month's day).
 
 export interface CatalogNode {
   key: string;
@@ -47,42 +48,59 @@ const branch = (key: string, title: string, children: CatalogNode[], extra: Part
   key, title, children, ...extra,
 });
 
-/** drops what this member may not use, and groups left empty */
+/** drops what this member may not use, and groups left empty; a group whose own button isn't allowed
+ *  keeps the rest of what is in it */
 const prune = (nodes: CatalogNode[], ok: (id: string) => boolean): CatalogNode[] =>
   nodes.flatMap(n => {
-    if (n.id && !ok(n.id)) return [];
-    if (!n.children) return [n];
-    const children = prune(n.children, ok);
-    return children.length || n.id || n.load ? [{ ...n, children }] : [];
+    const m = n.id && !ok(n.id) ? { ...n, id: undefined } : n;
+    if (!m.children) return m.id ? [m] : [];
+    const children = prune(m.children, ok);
+    return children.length || m.id ? [{ ...m, children }] : [];
   });
+/** a place in the library's prayer book ("psalms", "gospel:matthew"), named as its row is */
+const bookPlace = (place: string, title: string) => labelled(`library:prayers:${place}`, title, LIBRARY_SHORT.prayers);
 
 const bibleBooks = (prefix: string, books: BibleBook[], gospel: boolean): CatalogNode[] =>
-  books.map(b => branch(`${prefix}:${b.id}`, gospel ? `სახარება — ${b.title}` : b.title,
-    Array.from({ length: b.chapters }, (_, i) => btn(`${prefix}:${b.id}:${i + 1}`, `prayer:${bibleChapterId(b.id, i + 1)}`, `თავი ${i + 1}`, '')),
-    { sub: `${b.chapters} თავი`, icon: 'section:biblioteka' }));
+  books.map(b => {
+    const title = gospel ? `სახარება — ${b.title}` : b.title;
+    return branch(`${prefix}:${b.id}`, title,
+      Array.from({ length: b.chapters }, (_, i) => btn(`${prefix}:${b.id}:${i + 1}`, `prayer:${bibleChapterId(b.id, i + 1)}`, `თავი ${i + 1}`, '')),
+      { id: bookPlace(`${gospel ? 'gospel' : 'apostle'}:${b.id}`, title), sub: `${b.chapters} თავი`, icon: 'section:biblioteka' });
+  });
 
 /** the prayer book; `p` keeps the keys apart where it shows twice (on its own and on the library shelf) */
 const prayerBook = (p: string, who: CatalogWho): CatalogNode[] => [
   branch(`${p}:me`, 'დილის და საღამოს ლოცვები', [
     ...MORNING_EVENING.map(x => btn(`${p}:me:${x.id}`, `prayer:${x.id}`)),
     btn(`${p}:me:comm`, 'special:commemoration'),
-  ], { icon: 'prayer:dila' }),
-  branch(`${p}:hours`, 'შვიდგზის ლოცვა', PRAYER_HOURS.map(h => btn(`${p}:hours:${h.id}`, `prayer:${h.id}`)), { icon: `prayer:${PRAYER_HOURS[0].id}` }),
+  ], { id: bookPlace('morning-evening', 'დილის და საღამოს ლოცვები'), icon: 'prayer:dila' }),
+  branch(`${p}:hours`, 'შვიდგზის ლოცვა', PRAYER_HOURS.map(h => btn(`${p}:hours:${h.id}`, `prayer:${h.id}`)),
+    { id: bookPlace('hours', 'შვიდგზის ლოცვა'), icon: `prayer:${PRAYER_HOURS[0].id}` }),
   branch(`${p}:week`, 'კვირის დღეების ლოცვები',
     WEEK_DAYS.map((day, d) => branch(`${p}:week:${d}`, day, (['dila', 'dzili'] as const).map(part =>
-      btn(`${p}:week:${d}:${part}`, `prayer:${weekPrayerId(d, part)}`, part === 'dila' ? 'დილით' : 'დაწოლისას', '')))),
-    { icon: `prayer:${weekPrayerId(0, 'dila')}` }),
+      btn(`${p}:week:${d}:${part}`, `prayer:${weekPrayerId(d, part)}`, part === 'dila' ? 'დილით' : 'დაწოლისას', '')),
+    { id: bookPlace(`week:${d}`, `${day} — ლოცვები`), icon: `prayer:${weekPrayerId(d, 'dila')}` })),
+    { id: bookPlace('week', 'კვირის დღეების ლოცვები'), icon: `prayer:${weekPrayerId(0, 'dila')}` }),
   branch(`${p}:psalms`, 'ფსალმუნები', [
     ...(who.signedIn ? [btn(`${p}:psalms:mine`, 'special:kathisma')] : []),
     btn(`${p}:psalms:group`, 'section:medavitneoba', 'ფსალმუნთა ჯგუფი'),
     btn(`${p}:psalms:rule`, `prayer:${PSALTER_RULE.id}`),
     ...KATHISMAS.map(k => btn(`${p}:psalms:${k.id}`, `prayer:${k.id}`)),
-  ], { icon: 'section:medavitneoba' }),
-  branch(`${p}:gospel`, 'სახარება', bibleBooks(`${p}:gospel`, GOSPELS, true), { icon: 'habit:habit_2' }),
-  branch(`${p}:apostle`, 'სამოციქულო', bibleBooks(`${p}:apostle`, APOSTLE, false), { icon: 'habit:habit_3' }),
+  ], { id: bookPlace('psalms', 'ფსალმუნები'), icon: 'section:medavitneoba' }),
+  branch(`${p}:gospel`, 'სახარება', bibleBooks(`${p}:gospel`, GOSPELS, true), { id: bookPlace('gospel', 'სახარება'), icon: 'habit:habit_2' }),
+  branch(`${p}:apostle`, 'სამოციქულო', bibleBooks(`${p}:apostle`, APOSTLE, false), { id: bookPlace('apostle', 'სამოციქულო'), icon: 'habit:habit_3' }),
   branch(`${p}:ak`, 'დაუჯდომლები', AKATHIST_GROUPS.map((g, gi) =>
-    branch(`${p}:ak:${gi}`, g.title, g.items.map(a => btn(`${p}:ak:${a.id}`, `prayer:${a.id}`, a.title, '')), { sub: `${g.items.length}` })),
-  { icon: 'prayer:akathist', sub: `${AKATHIST_GROUPS.reduce((n, g) => n + g.items.length, 0)}` }),
+    branch(`${p}:ak:${gi}`, g.title, g.items.map(a => btn(`${p}:ak:${a.id}`, `prayer:${a.id}`, a.title, '')),
+      { id: bookPlace(`akathists:${gi}`, g.title), sub: `${g.items.length}`, icon: 'prayer:akathist' })),
+  { id: bookPlace('akathists', 'დაუჯდომლები'), icon: 'prayer:akathist', sub: `${AKATHIST_GROUPS.reduce((n, g) => n + g.items.length, 0)}` }),
+  // single prayers, each its own button; one added to its list shows up here too
+  ...([
+    ['confession', 'აღსარების და ზიარების ლოცვები', CONFESSION_PRAYERS],
+    ['andrew', 'ანდრია კრიტელის კანონი', ANDREW_CANON],
+    ['various', 'სხვადასხვა ლოცვები', VARIOUS_PRAYERS],
+  ] as const).map(([part, title, list]) => branch(`${p}:${part}`, title,
+    list.map(x => btn(`${p}:${part}:${x.id}`, `prayer:${x.id}`, x.title, '')),
+    { id: bookPlace(part, title), icon: 'library:prayers', sub: `${list.length}` })),
 ];
 
 const chants = (): CatalogNode[] =>
@@ -110,7 +128,8 @@ const lives = async (): Promise<CatalogNode[]> => {
       ...btn(`lv:m${m}`, labelled(`library:lives:m${m}`, month, 'წმიდანთა ცხოვრება'), month, `${inMonth.length} ცხოვრება`),
       icon: 'library:lives',
       children: days.map(d => branch(`lv:m${m}:${d}`, d ? `${d} ${month}` : month,
-        inMonth.filter(l => (l.d || 0) === d).map(l => btn(`lv:${l.id}`, labelled(`life:${l.id}`, l.t, d ? `${d} ${month}` : month), l.t, '')))),
+        inMonth.filter(l => (l.d || 0) === d).map(l => btn(`lv:${l.id}`, labelled(`life:${l.id}`, l.t, d ? `${d} ${month}` : month), l.t, '')),
+        { id: labelled(`library:lives:m${m}:${d}`, d ? `${d} ${month}` : month, LIBRARY_SHORT.lives), icon: 'library:lives' })),
     }];
   });
 };
@@ -124,7 +143,6 @@ const bookChapters = (key: string, tab: string, title: string, load: () => Promi
 };
 
 const library = (who: CatalogWho): CatalogNode[] => [
-  btn('lib:all', 'section:biblioteka', 'ბიბლიოთეკა — თარო'),
   btn('lib:cal', 'special:calendar', 'საეკლესიო კალენდარი'),
   {
     ...btn('lib:book', 'library:book', undefined, 'ძველი აღთქმა'),
@@ -134,7 +152,8 @@ const library = (who: CatalogWho): CatalogNode[] => [
   {
     ...btn('lib:feasts', 'library:feasts', undefined, ''),
     children: FEAST_GROUPS.map((g, gi) => branch(`lib:feasts:${gi}`, g.title,
-      g.feasts.map((f, fi) => btn(`lib:feasts:${gi}:${fi}`, labelled(`feast:${gi}:${fi}`, f.name, g.title), f.name, f.rule)), { sub: `${g.feasts.length}` })),
+      g.feasts.map((f, fi) => btn(`lib:feasts:${gi}:${fi}`, labelled(`feast:${gi}:${fi}`, f.name, g.title), f.name, f.rule)),
+      { id: labelled(`library:feasts:${gi}`, g.title, LIBRARY_SHORT.feasts), sub: `${g.feasts.length}`, icon: 'library:feasts' })),
   },
   { ...btn('lib:prayers', 'library:prayers', undefined, ''), children: prayerBook('lib:pr', who) },
   {
@@ -151,45 +170,43 @@ const library = (who: CatalogWho): CatalogNode[] => [
 ];
 
 const songs = (who: CatalogWho): CatalogNode[] => {
-  const byRegion = new Map<string, typeof FOLK_SONGS>();
+  const byRegion = new Map<string, { id: string; list: typeof FOLK_SONGS }>();
   for (const s of FOLK_SONGS) {
     if (s.ownerOnly && !who.owner) continue;
-    const name = getFolkRegion(s.region).nameGe;
-    byRegion.set(name, [...(byRegion.get(name) || []), s]);
+    const r = getFolkRegion(s.region);
+    const at = byRegion.get(r.nameGe) || { id: r.id, list: [] };
+    byRegion.set(r.nameGe, { ...at, list: [...at.list, s] });
   }
-  return [...byRegion].map(([region, list]) => branch(`sg:${region}`, region,
+  // a region's own button opens the map with that region open ("song:r:<region>")
+  return [...byRegion].map(([region, { id, list }]) => branch(`sg:${region}`, region,
     list.map(s => btn(`sg:${s.id}`, labelled(`song:${s.id}`, s.title, s.area || s.municipality || region), s.title, s.area || s.municipality)),
-    { sub: `${list.length}`, icon: 'section:simghera' }));
+    { id: labelled(`song:r:${id}`, region, 'სიმღერა'), sub: `${list.length}`, icon: 'section:simghera' }));
 };
 
 export const buildCatalog = (who: CatalogWho): CatalogNode[] => prune([
-  branch('prayers', 'ლოცვანი', prayerBook('pr', who), { icon: 'library:prayers', sub: 'ლოცვები, ფსალმუნი, სახარება' }),
+  // each group's own button is its page (so no "— ყველა" row inside)
+  branch('prayers', 'ლოცვანი', prayerBook('pr', who), { id: 'library:prayers', sub: 'ლოცვები, ფსალმუნი, სახარება' }),
   branch('galoba', 'გალობა', [
-    btn('gal:all', 'section:galoba', 'გალობა — ყველა საგალობელი'),
     btn('gal:lit', 'special:liturgy'),
     btn('gal:abit', 'page:abituri'),
     ...chants(),
-  ], { icon: 'section:galoba', sub: 'ღვთისმსახურებების მიხედვით' }),
-  branch('library', 'ბიბლიოთეკა', library(who), { icon: 'section:biblioteka', sub: 'წიგნები თავებამდე' }),
+  ], { id: 'section:galoba', sub: 'ღვთისმსახურებების მიხედვით' }),
+  branch('library', 'ბიბლიოთეკა', library(who), { id: 'section:biblioteka', sub: 'წიგნები თავებამდე' }),
   branch('habits', 'ჩვევები', [
-    btn('hb:all', 'section:chvevebi', 'ჩვევები — ყველა'),
     ...who.habits.map(h => btn(`hb:${h.id}`, h.own ? labelled(`habit:${h.id}`, h.label, 'ჩვევა') : `habit:${h.id}`, h.label, h.own ? 'ჩემი ჩვევა' : undefined)),
-  ], { icon: 'section:chvevebi' }),
-  branch('songs', 'სიმღერა', [btn('sg:all', 'section:simghera', 'სიმღერა — რუკა'), ...songs(who)], { icon: 'section:simghera', sub: 'კუთხეების მიხედვით' }),
+  ], { id: 'section:chvevebi' }),
+  branch('songs', 'სიმღერა', songs(who), { id: 'section:simghera', sub: 'კუთხეების მიხედვით' }),
   branch('ancestors', 'გაიცანი წინაპრები', [
-    btn('an:all', 'section:tsinaprebi', 'წინაპრები — ყველა'),
     ...ANCESTORS.map(a => btn(`an:${a.id}`, labelled(`ancestor:${a.id}`, a.name, a.years), a.name, a.years)),
-  ], { icon: 'section:tsinaprebi' }),
+  ], { id: 'section:tsinaprebi' }),
   branch('study', 'სწავლა', [
-    btn('st:gza', 'section:gza'),
     ...(who.hasClass ? [btn('st:class', 'special:class')] : []),
     ...(who.signedIn ? [btn('st:msg', 'page:messages')] : []),
     btn('st:mtk', 'section:mtkmeli'),
     btn('st:sak', 'section:sakravebi'),
-  ], { icon: 'section:gza' }),
-  branch('teacher', 'მასწავლებელი', [btn('t:panel', 'special:teacher'), ...Object.keys(TEACHER_TABS).map(t => btn(`t:${t}`, `teacher:${t}`))],
-    { icon: 'special:teacher' }),
-  branch('admin', 'ადმინი', Object.keys(ADMIN_TABS).map(t => btn(`a:${t}`, `admin:${t}`)), { icon: 'admin:users' }),
+  ], { id: 'section:gza' }),
+  branch('teacher', 'მასწავლებელი', Object.keys(TEACHER_TABS).map(t => btn(`t:${t}`, `teacher:${t}`)), { id: 'special:teacher' }),
+  branch('admin', 'ადმინი', Object.keys(ADMIN_TABS).map(t => btn(`a:${t}`, `admin:${t}`)), { id: 'page:admin', icon: 'admin:users' }),
 ], who.allowed);
 
 /** Prunes a lazy book's children the same way as the rest. */

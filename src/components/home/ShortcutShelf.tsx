@@ -2,7 +2,7 @@ import React, { Suspense, lazy, useMemo, useRef, useState } from 'react';
 import {
   BookMarked, BookOpen, CalendarDays, Check, Clock, Compass, Feather, GraduationCap, Library, Moon, Music, Music2, Music4, Pencil,
   Plus, ScrollText, Sparkles, Star, Sun, Users, X, Pin, PinOff, Guitar, Church, NotebookPen, HandHeart, Flame, Heart,
-  MessageCircle, UserPlus, ListMusic, Disc3, LayoutGrid, BarChart3, School, ClipboardList, ClipboardCheck, CalendarClock, Settings2,
+  MessageCircle, UserPlus, ListMusic, Disc3, School, ClipboardList, ClipboardCheck, CalendarClock, Settings2,
 } from 'lucide-react';
 import { useAuth, useChants, useNavigation } from '../../context';
 import { useNotes } from '../../context/NotesContext';
@@ -44,11 +44,11 @@ const HABIT_ICON: Record<string, React.ReactNode> = {
 const TAB_ICON: Record<string, React.ReactNode> = {
   'teacher:students': <Users />, 'teacher:assignments': <ClipboardList />, 'teacher:attendance': <ClipboardCheck />,
   'teacher:schedule': <CalendarClock />, 'teacher:class': <Settings2 />, 'teacher:groups': <BookOpen />,
-  'admin:users': <Users />, 'admin:classes': <GraduationCap />, 'admin:recordings': <Disc3 />, 'admin:sections': <LayoutGrid />,
-  'admin:stats': <BarChart3 />, 'admin:school': <School />, 'admin:requests': <UserPlus />,
+  'admin:users': <Users />, 'admin:classes': <GraduationCap />, 'admin:recordings': <Disc3 />, 'admin:sections': <School />,
+  'admin:stats': <Users />, 'admin:school': <School />, 'admin:requests': <UserPlus />,
   'library:book': <BookOpen />, 'library:feasts': <CalendarDays />, 'library:lives': <Feather />, 'library:prayers': <ScrollText />,
   'library:sasuliero': <BookMarked />,
-  'page:abituri': <GraduationCap />, 'page:messages': <MessageCircle />,
+  'page:abituri': <GraduationCap />, 'page:messages': <MessageCircle />, 'page:admin': <Users />,
 };
 export const shortcutIcon = (id: string): React.ReactNode => {
   const ref = refOf(id);
@@ -121,7 +121,7 @@ export const useOpenShortcut = () => {
         }).catch(() => openChurchCalendar());
         return;
       }
-      case 'page': navigateTo(ref as 'abituri' | 'messages'); return;
+      case 'page': navigateTo(ref as 'abituri' | 'messages' | 'admin'); return;
       // the panels open on the tab they remember
       case 'teacher': try { localStorage.setItem('sg-teacher-tab', ref); } catch { /* storage off */ } navigateTo('teacher'); return;
       case 'admin': try { localStorage.setItem('sg-admin-tab', ref === 'requests' ? 'users' : ref); } catch { /* storage off */ } navigateTo('admin'); return;

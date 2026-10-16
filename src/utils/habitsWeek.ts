@@ -18,11 +18,14 @@ export const getHabitsWeekKey = (now: Date = new Date()): string => getHabitsWee
 
 // ---- Daily log: which habits were ticked on which day ----
 
-/** { 'YYYY-MM-DD': habit ids ticked that day }, stored in Firestore as `habitLog` */
+/** { 'YYYY-MM-DD': habit ids ticked that day }, stored in Firestore as `habitLog`; kept whole for the year views */
 export type HabitLog = Record<string, string[]>;
 
-/** Days kept in the log: enough for the longest goal (a calendar month) with room to spare. */
-const LOG_DAYS = 62;
+/** { 'YYYY-MM-DD': { habit id: number } }: the counted habits' numbers, stored as `habitCounts` */
+export type HabitCounts = Record<string, Record<string, number>>;
+
+/** Until October 2026 the log kept only this many days, so a run reaching back that far may have begun earlier. */
+const OLD_LOG_DAYS = 62;
 
 export const dayKey = (date: Date): string =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
@@ -31,10 +34,12 @@ export const dayKey = (date: Date): string =>
 export const lastDays = (n: number, now: Date = new Date()): Date[] =>
   Array.from({ length: n }, (_, i) => new Date(now.getFullYear(), now.getMonth(), now.getDate() - (n - 1) + i));
 
-/** Drops days older than the window and days left empty. */
-export const pruneHabitLog = (log: HabitLog, now: Date = new Date()): HabitLog => {
-  const oldest = dayKey(lastDays(LOG_DAYS, now)[0]);
-  return Object.fromEntries(Object.entries(log).filter(([day, ids]) => day >= oldest && ids.length > 0));
+/** A forgotten tick may still be set (or taken back) for today and the six days before it; older days stay as they were. */
+export const TICK_DAYS = 7;
+
+export const canTickDay = (date: Date, now: Date = new Date()): boolean => {
+  const day = dayKey(date);
+  return day <= dayKey(now) && day >= dayKey(lastDays(TICK_DAYS, now)[0]);
 };
 
 // ---- Goals: counted in this day, this week (from Sunday) or this calendar month ----
@@ -66,11 +71,13 @@ export const doneOn = (log: HabitLog, ids: string[], date: Date): number => {
 export const dayNeeds = (total: number) => Math.ceil(total / 2);
 
 /** Counted days in a row up to today — or up to yesterday while today has not counted yet.
- *  `capped`: the run reaches the oldest day the log keeps, so it may be longer. */
+ *  `capped`: the run reaches back to the start of what the log holds, so it may be longer. */
 export const keptStreak = (log: HabitLog, ids: string[], now: Date = new Date()): { days: number; capped: boolean } => {
   if (!ids.length) return { days: 0, capped: false };
   const need = dayNeeds(ids.length);
-  const days = lastDays(LOG_DAYS, now).reverse(); // today first
+  const oldest = Object.keys(log).sort()[0];
+  const held = oldest ? Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() - new Date(`${oldest}T00:00:00`).getTime()) / 86_400_000) + 1 : 0;
+  const days = lastDays(Math.max(OLD_LOG_DAYS, held), now).reverse(); // today first
   let i = doneOn(log, ids, days[0]) >= need ? 0 : 1;
   let run = 0;
   for (; i < days.length && doneOn(log, ids, days[i]) >= need; i++) run++;

@@ -35,7 +35,7 @@ export const LibraryPage: React.FC = () => {
         <Shelf onOpen={openMapItem} />
       ) : (
         <div key={open} className="animate-[galoba-unfold_0.25s_ease_both]">
-          {open === 'book' ? <BookTab nav={nav} /> : open === 'feasts' ? <FeastsTab /> : open === 'lives' ? <LivesTab nav={nav} /> : open === 'prayers' ? <PrayersTab /> : open === 'sasuliero' ? <SpiritualBooksTab nav={nav} /> : <SynthDownload />}
+          {open === 'book' ? <BookTab nav={nav} /> : open === 'feasts' ? <FeastsTab group={nav.part} /> : open === 'lives' ? <LivesTab nav={nav} /> : open === 'prayers' ? <PrayersTab key={nav.part} at={nav.part} /> : open === 'sasuliero' ? <SpiritualBooksTab nav={nav} /> : <SynthDownload />}
         </div>
       )}
     </div>

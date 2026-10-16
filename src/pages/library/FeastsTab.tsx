@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronLeft, ChevronRight, ExternalLink } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
 import { Rosette } from '../../components/home/PlateOrnaments';
@@ -93,10 +93,14 @@ const FeastRow: React.FC<{ feast: Feast; year: number; today: string }> = ({ fea
 const STEP_BTN =
   'w-10 h-10 rounded-full text-[#7a2028] hover:bg-[#7a2028]/[0.06] flex items-center justify-center cursor-pointer active:scale-95 transition-all';
 
-export const FeastsTab: React.FC = () => {
+/** `group`: a group a button names ("2") comes into view */
+export const FeastsTab: React.FC<{ group?: string | null }> = ({ group }) => {
   const today = todayIso();
   const thisYear = fromIso(today).getFullYear();
   const [year, setYear] = useState(thisYear);
+  useEffect(() => {
+    if (group) document.getElementById(`feast-group-${group}`)?.scrollIntoView({ block: 'start' });
+  }, [group]);
 
   // the nearest feast from today (into next year once this year's are over)
   const next = useMemo(() => {
@@ -164,7 +168,7 @@ export const FeastsTab: React.FC = () => {
 
       <div className="mt-3 space-y-3">
         {FEAST_GROUPS.map((g, gi) => (
-          <section key={gi} className="rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_26px_-22px_rgba(42,32,23,0.35)] p-1.5 sm:p-2">
+          <section key={gi} id={`feast-group-${gi}`} className="scroll-mt-24 rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_26px_-22px_rgba(42,32,23,0.35)] p-1.5 sm:p-2">
             <header className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 pt-1.5 pb-1">
               <h3 className="font-serif-ge text-[15px] sm:text-[16px] font-bold text-[#7a2028]">{g.title}</h3>
               {g.subtitle && (

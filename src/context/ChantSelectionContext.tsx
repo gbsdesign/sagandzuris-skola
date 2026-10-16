@@ -1,11 +1,11 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
+import { FieldPath, deleteField, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { useAuth } from './AuthContext';
 import { useModal } from './ModalContext';
 import { filterValidVariants } from '../utils/variantValidation';
 import { triggerHaptic } from '../utils/haptics';
-import { HabitLog, dayKey, getHabitsWeekKey, habitsThisWeek, pruneHabitLog } from '../utils/habitsWeek';
+import { HabitCounts, HabitLog, canTickDay, dayKey, getHabitsWeekKey, habitsThisWeek } from '../utils/habitsWeek';
 import { HABIT_ITEMS } from '../data/habitsAndManera';
 import { ChantItem, ChantVariant, versionTitle } from '../data/tsirvaChants';
 
@@ -24,8 +24,14 @@ export interface ChantSelectionContextType {
   selectedChantVariants: Record<string, SelectedChantVariant>;
   maneraStats: Record<string, string>;
   habitLog: HabitLog;
-  /** ticks or unticks a habit for today; returns true when it was ticked (false also when signed out) */
+  /** the counted habits' numbers per day */
+  habitCounts: HabitCounts;
+  /** ticks or unticks a habit for a day (today unless given; up to six days back); returns true when it was
+   *  ticked (false also when signed out or the day is too old) */
+  toggleHabit: (id: string, date?: Date) => boolean;
   toggleHabitToday: (id: string) => boolean;
+  /** sets a counted habit's number for a day (today unless given); sent a moment after the last change */
+  setHabitCount: (id: string, count: number, date?: Date) => void;
   saveManeraToFirestore: (nextStats: Record<string, string>) => void;
   saveVariantsToFirestoreAndStorage: (nextVariants: Record<string, any>) => void;
   toggleVariantSelection: (chant: ChantItem, v: ChantVariant) => void;
@@ -43,29 +49,80 @@ export const ChantSelectionProvider: React.FC<{ children: React.ReactNode }> = (
   const [selectedChantVariants, setSelectedChantVariants] = useState<Record<string, SelectedChantVariant>>({});
   const [maneraStats, setManeraStats] = useState<Record<string, string>>({});
   const [habitLog, setHabitLog] = useState<HabitLog>({});
+  const [habitCounts, setHabitCounts] = useState<HabitCounts>({});
 
   // A habit is ticked per day; the week's summary (habitsStats) is kept alongside for the admin panel.
-  const toggleHabitToday = (id: string) => {
+  // Only the changed day is sent, so the whole history (kept for the year views) is never rewritten.
+  const toggleHabit = (id: string, date: Date = new Date()) => {
     if (!user) {
       openModal('chvevebi');
       return false;
     }
-    const today = dayKey(new Date());
-    const day = habitLog[today] || [];
-    const turningOn = !day.includes(id);
-    const next = pruneHabitLog({ ...habitLog, [today]: turningOn ? [...day, id] : day.filter((h) => h !== id) });
+    if (!canTickDay(date)) return false;
+    const day = dayKey(date);
+    const ids = habitLog[day] || [];
+    const turningOn = !ids.includes(id);
+    const nextIds = turningOn ? [...ids, id] : ids.filter((h) => h !== id);
+    const next = { ...habitLog };
+    if (nextIds.length) next[day] = nextIds;
+    else delete next[day];
     setHabitLog(next);
     triggerHaptic(15);
     const userDocRef = doc(db, 'students', user.uid);
-    setDoc(
-      userDocRef,
-      { habitLog: next, habitsStats: habitsThisWeek(next), habitsWeek: getHabitsWeekKey() },
-      { mergeFields: ['habitLog', 'habitsStats', 'habitsWeek'] }
+    const stats = habitsThisWeek(next);
+    const week = getHabitsWeekKey();
+    (nextIds.length
+      ? setDoc(
+          userDocRef,
+          { habitLog: { [day]: nextIds }, habitsStats: stats, habitsWeek: week },
+          { mergeFields: [new FieldPath('habitLog', day), 'habitsStats', 'habitsWeek'] }
+        )
+      : updateDoc(userDocRef, new FieldPath('habitLog', day), deleteField(), 'habitsStats', stats, 'habitsWeek', week)
     ).catch((err) => {
       console.warn('Firestore habits sync note:', err);
     });
     return turningOn;
   };
+  const toggleHabitToday = (id: string) => toggleHabit(id);
+
+  // A counter is tapped many times in a row (the Jesus prayer): the numbers are sent a moment after the last tap,
+  // and until then a snapshot from elsewhere must not take them back.
+  const unsentCounts = useRef<HabitCounts>({});
+  const countTimer = useRef<number | undefined>(undefined);
+  const uidRef = useRef<string | null>(null);
+  uidRef.current = user?.uid ?? null;
+
+  const sendCounts = () => {
+    window.clearTimeout(countTimer.current);
+    const unsent = unsentCounts.current;
+    unsentCounts.current = {};
+    const uid = uidRef.current;
+    const paths = Object.entries(unsent).flatMap(([day, byId]) => Object.keys(byId).map((id) => new FieldPath('habitCounts', day, id)));
+    if (!uid || !paths.length) return;
+    setDoc(doc(db, 'students', uid), { habitCounts: unsent }, { mergeFields: paths }).catch((err) =>
+      console.warn('Firestore habit counts note:', err)
+    );
+  };
+
+  const setHabitCount = (id: string, count: number, date: Date = new Date()) => {
+    if (!user || !canTickDay(date)) return;
+    const day = dayKey(date);
+    const n = Math.max(0, Math.min(99999, Math.round(count) || 0));
+    setHabitCounts((prev) => ({ ...prev, [day]: { ...prev[day], [id]: n } }));
+    unsentCounts.current = { ...unsentCounts.current, [day]: { ...unsentCounts.current[day], [id]: n } };
+    window.clearTimeout(countTimer.current);
+    countTimer.current = window.setTimeout(sendCounts, 1200);
+  };
+
+  // closing the app right after the last tap still keeps the number
+  useEffect(() => {
+    const onHide = () => document.visibilityState === 'hidden' && sendCounts();
+    document.addEventListener('visibilitychange', onHide);
+    return () => {
+      document.removeEventListener('visibilitychange', onHide);
+      sendCounts();
+    };
+  }, []);
 
   const saveManeraToFirestore = (nextStats: Record<string, string>) => {
     if (!user) {
@@ -201,6 +258,7 @@ export const ChantSelectionProvider: React.FC<{ children: React.ReactNode }> = (
       setSelectedChantVariants({});
       setManeraStats({});
       setHabitLog({});
+      setHabitCounts({});
       return;
     }
 
@@ -218,6 +276,10 @@ export const ChantSelectionProvider: React.FC<{ children: React.ReactNode }> = (
           if (data?.maneraStats) {
             setManeraStats(data.maneraStats);
           }
+          // the numbers still being typed stay over what the server has
+          const counts: HabitCounts = data?.habitCounts && typeof data.habitCounts === 'object' ? { ...data.habitCounts } : {};
+          for (const [day, byId] of Object.entries(unsentCounts.current)) counts[day] = { ...counts[day], ...byId };
+          setHabitCounts(counts);
           if (data?.habitLog) {
             setHabitLog(data.habitLog);
           } else {
@@ -259,7 +321,10 @@ export const ChantSelectionProvider: React.FC<{ children: React.ReactNode }> = (
         selectedChantVariants,
         maneraStats,
         habitLog,
+        habitCounts,
+        toggleHabit,
         toggleHabitToday,
+        setHabitCount,
         saveManeraToFirestore,
         saveVariantsToFirestoreAndStorage,
         toggleVariantSelection,

@@ -90,7 +90,11 @@
 - **Prayers** (`data/prayers.ts`, `public/prayers/`, `public/bible/`), psalter kathismas, 73 akathists,
   commemoration name lists (`utils/commemoration.ts`), prayer reminders via Web Push Worker
   `sagandzuri-reminders` (`worker/reminders/`; push works only on the deployed site).
-- **Habits** ticked per day (`students/{uid}.habitLog`), 7-day strip `WeekStreak.tsx`, goals in `habitsAndManera.ts`.
+- **Habits** ticked per day (`students/{uid}.habitLog`, kept whole since 2026-10-16; each tick writes only its day),
+  goals in `habitsAndManera.ts`. Views „დღე · კვირა · თვე · წელი“ + a habit's own page in `components/habits/`
+  (one shared model `useHabits.tsx`; a new view = one entry in `VIEWS` in `ChvevebiPanel.tsx`), stats in
+  `utils/habitStats.ts`. Ticks allowed for the last 7 days (`canTickDay`). Colours/icons/counters: `data/habitLooks.ts`,
+  member's choice in `habitSetup.looks/counters`; counter numbers in `students.habitCounts` (sent 1.2 s after the last tap).
 - **Library** page (`biblioteka`): საღმრთო ისტორია, დღესასწაულები, წმიდანთა ცხოვრება.
   Footer church calendar (`data/churchCalendar.ts`, `data/calendar/<year>.json`, made by
   `node scripts/fetch-church-calendar.mjs <year>`). **The 2026 file ends 13 Jan 2027 — re-run for 2027 once
@@ -132,6 +136,10 @@
 - **Teacher panel** (`pages/TeacherPage.tsx`, `components/teacher/`), **admin panel** (`pages/AdminPanelPage.tsx`,
   `components/admin/`): recordings can be bound from the panel (`settings/recordings`, `data/runtimeRecordings.ts`,
   on top of `VARIANT_MEDIA`); sections open/მალე/hidden (`settings/sections`); JSON export.
+  Since 2026-10-16 four tabs on the „one window“ rule: მომხმარებლები (one list + count filters; a tap opens the
+  person's window `admin/PersonSheet.tsx` — details, role, access, approve/refuse, profile edit), კლასები (class and
+  group windows, shared `LeaderChips`), ჩანაწერები (+ most listened), სკოლა (sections, logo, backup). Numbers of the
+  old სტატისტიკა tab live in `admin/StatsTab.tsx` hooks; old shortcut refs `admin:sections`/`admin:stats` still open.
 - **Access** (`hooks/useAccess.ts`): guests see chant books + synth, prayers, song/მთქმელი names only (no
   recordings anywhere); kids' mode is switched by the teacher per student (`students.kidsMode`, no PIN).
 - **Home buttons** (`utils/shortcuts.ts`, `components/home/ShortcutShelf.tsx`, `students.shortcuts`, ≤8; hidden
@@ -155,7 +163,8 @@
 - **Admission of new members** (pushed to main 2026-10-06, commit 261611b, with the private chats): `utils/memberAccess.ts`
   (`memberAccess/{uid}` status pending/approved/rejected + features; `accessDecisions/{uid}` who decided, superadmins
   only). Pending = guest view + „მიმდინარეობს დამატება“ (`components/access/MembershipGate.tsx`); refused = signed out
-  with „დამატება შეფერხებულია“ every time. Superadmins decide in admin panel → მომხმარებლები (`admin/AccessRequests.tsx`).
+  with „დამატება შეფერხებულია“ every time. Superadmins decide in admin panel → მომხმარებლები, in the person's window (`admin/PersonSheet.tsx`; records and
+  `saveAccess` in `admin/AccessRequests.tsx`).
   Old members (students doc, no memberAccess) and staff keep everything. Features not given are hidden, never locked.
   Search and the church calendar are features too (the user's choice): guests and waiting members don't get them.
 - Emulator check: firebase-tools in the scratchpad; the auth emulator keeps the letters at

@@ -1,9 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { CalendarDays, ChevronUp } from 'lucide-react';
+import { Bell, CalendarDays, ChevronUp } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
 import { CALENDAR_EVENT, todayIso } from '../../data/churchCalendar';
 import { ChurchCalendarPanel } from '../calendar/ChurchCalendarPanel';
 import { useMembership } from '../../utils/memberAccess';
+import { useNavigation } from '../../context/NavigationContext';
+
+const FB_PAGE = 'https://www.facebook.com/passangermgzavrebi';
 
 interface FooterProps {
   logoUrl: string;
@@ -26,6 +29,7 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
   const canRef = useRef(canCal);
   canRef.current = canCal;
   useEffect(() => { if (!canCal) setCalOpen(false); }, [canCal]);
+  const isHome = useNavigation().currentPage === 'home';
 
   // keep the page pinned to its end while the panel grows, so it rises from the bar;
   // then bring the panel's top (the date band) into view
@@ -120,9 +124,21 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
             <ChevronUp className={`w-4 h-4 transition-transform duration-300 ${calOpen ? 'rotate-180' : ''}`} />
           </button>}
 
+          {/* follow the Facebook page — home page only; the follow itself happens on Facebook */}
+          {isHome && <a
+            href={FB_PAGE}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-[#7a2028] hover:bg-[#8e2a33] text-[#fbf6ec] ring-1 ring-[#7a2028] shadow-[0_6px_16px_-8px_rgba(122,32,40,0.7)] transition-colors duration-200 text-sm font-bold active:scale-95"
+            title="გამოიწერეთ ჩვენი Facebook გვერდი"
+          >
+            <Bell className="w-[18px] h-[18px]" />
+            გამოწერა
+          </a>}
+
           {/* Facebook Button */}
           <a
-            href="https://www.facebook.com/passangermgzavrebi"
+            href={FB_PAGE}
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-2 h-10 px-4 rounded-full bg-white/70 hover:bg-white ring-1 ring-[#e8dcc8] hover:ring-[#1877F2]/40 transition-colors duration-200 text-sm group"

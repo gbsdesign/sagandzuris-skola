@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ChevronLeft, ChevronRight, ExternalLink, Music, Play, Search, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Music, Play, Search, X } from 'lucide-react';
 import { ANCESTORS, type Ancestor, type BioBlock } from '../data/ancestorsBios';
 import { useOpenRequest } from '../utils/searchOpen';
 
@@ -51,14 +51,14 @@ const Ornament: React.FC<{ className?: string }> = ({ className = '' }) => (
   </div>
 );
 
-// Burgundy plate with a gilt frame and an Asomtavruli capital, for those without a portrait.
+// Parchment plate with a thin gilt frame and an Asomtavruli capital, for those without a portrait.
 const Monogram: React.FC<{ name: string; big?: boolean }> = ({ name, big }) => (
-  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_20%,#9b3540_0%,#7a2028_45%,#4e1218_100%)]">
-    <div className="absolute inset-2 sm:inset-2.5 rounded-[1.1rem] border border-[#e8c98a]/45" />
-    <div className="absolute inset-3.5 sm:inset-4 rounded-xl border border-[#e8c98a]/20" />
+  <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_30%_15%,#fffaf0_0%,#f6ecd9_55%,#e9d7b3_100%)]">
+    <div className={`absolute border border-[#b08a4a]/40 ${big ? 'inset-2.5 rounded-[1.1rem]' : 'inset-1.5 rounded-[0.8rem]'}`} />
+    <div className={`absolute border border-[#b08a4a]/20 ${big ? 'inset-4 rounded-xl' : 'inset-2.5 rounded-[0.55rem]'}`} />
     <span
-      className={`absolute inset-0 flex items-center justify-center pb-[18%] font-serif-ge text-[#ecd29c] drop-shadow-[0_2px_6px_rgba(0,0,0,0.35)] ${
-        big ? 'text-7xl' : 'text-6xl sm:text-7xl'
+      className={`absolute inset-0 flex items-center justify-center font-serif-ge text-[#7a2028]/85 ${
+        big ? 'pb-[6%] text-7xl' : 'pb-[30%] text-4xl sm:text-5xl'
       }`}
     >
       {initialOf(name)}
@@ -66,33 +66,131 @@ const Monogram: React.FC<{ name: string; big?: boolean }> = ({ name, big }) => (
   </div>
 );
 
-const AncestorCard: React.FC<{ a: Ancestor; onOpen: () => void }> = ({ a, onOpen }) => (
-  <button
-    type="button"
-    onClick={onOpen}
-    className="group relative aspect-[3/4] rounded-3xl overflow-hidden bg-stone-200 shadow-md hover:shadow-xl hover:-translate-y-1 active:scale-[0.98] transition-all duration-300 text-left cursor-pointer"
-  >
-    {a.image ? (
-      <img
-        src={a.image}
-        alt={a.name}
-        loading="lazy"
-        className="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
-      />
-    ) : (
-      <Monogram name={a.name} />
-    )}
-    <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />
-    {a.years && (
-      <span className="absolute top-2.5 left-2.5 px-2 py-0.5 rounded-full bg-black/35 backdrop-blur-sm text-[11px] font-semibold text-white/90">
-        {a.years}
+// "Name (Surname)" → the surname as a quieter second line.
+const splitName = (name: string) => {
+  const m = name.match(/^(.*?)\s*\((.+)\)$/);
+  return m ? [m[1], m[2]] : [name, ''];
+};
+
+const AncestorCard: React.FC<{ a: Ancestor; onOpen: () => void; className?: string }> = ({ a, onOpen, className = '' }) => {
+  const [main, sub] = splitName(a.name);
+  const photo = Boolean(a.image);
+  return (
+    <button
+      type="button"
+      onClick={onOpen}
+      className={`@container group relative aspect-[3/4] rounded-2xl overflow-hidden bg-stone-200 shadow-sm ring-1 ring-black/5 hover:shadow-lg hover:-translate-y-0.5 active:scale-[0.98] transition-all duration-300 text-left cursor-pointer ${className}`}
+    >
+      {photo ? (
+        <img
+          src={a.image}
+          alt={a.name}
+          loading="lazy"
+          className="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+        />
+      ) : (
+        <Monogram name={a.name} />
+      )}
+      {photo && <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />}
+      {a.years && (
+        <span
+          className={`absolute top-1.5 left-1.5 px-1.5 py-px rounded-full text-[10px] font-semibold ${
+            photo ? 'bg-black/35 backdrop-blur-sm text-white/90' : 'bg-[#7a2028]/10 text-[#7a2028]/80'
+          }`}
+        >
+          {a.years}
+        </span>
+      )}
+      <span className={`absolute inset-x-0 bottom-0 px-1.5 pb-2 sm:p-2.5 font-serif-ge leading-tight break-words ${photo ? 'text-white drop-shadow' : 'text-[#7a2028]'}`}>
+        <span className="block text-[clamp(10.5px,10.8cqw,13.5px)] font-bold line-clamp-3">{main}</span>
+        {sub && <span className={`block mt-0.5 text-[clamp(9.5px,9.6cqw,11.5px)] font-semibold ${photo ? 'text-white/75' : 'text-[#7a2028]/60'}`}>{sub}</span>}
       </span>
-    )}
-    <span className="absolute inset-x-0 bottom-0 p-3 max-[359px]:px-2 sm:p-3.5 font-serif-ge text-sm max-[359px]:text-[13px] sm:text-[15px] font-bold leading-snug text-white drop-shadow">
-      {a.name}
-    </span>
-  </button>
-);
+    </button>
+  );
+};
+
+const roundBtn =
+  'w-9 h-9 rounded-full bg-white ring-1 ring-[#e6d9c2] shadow-sm flex items-center justify-center text-[#7a2028] hover:ring-[#7a2028]/30 hover:shadow transition-all cursor-pointer disabled:opacity-35 disabled:cursor-default disabled:shadow-none';
+
+// One group as a swipeable strip of small cards; „ყველა“ unfolds it into a grid.
+const GroupStrip: React.FC<{ title: string; subtitle: string; items: Ancestor[]; onOpen: (id: number) => void }> = ({
+  title,
+  subtitle,
+  items,
+  onOpen,
+}) => {
+  const [all, setAll] = useState(false);
+  const track = useRef<HTMLDivElement>(null);
+  const [edge, setEdge] = useState({ start: true, end: false });
+
+  const measure = useCallback(() => {
+    const el = track.current;
+    if (!el) return;
+    setEdge({ start: el.scrollLeft < 4, end: el.scrollLeft + el.clientWidth > el.scrollWidth - 4 });
+  }, []);
+
+  useEffect(() => {
+    if (all) return;
+    measure();
+    window.addEventListener('resize', measure);
+    return () => window.removeEventListener('resize', measure);
+  }, [all, measure]);
+
+  const page = (dir: 1 | -1) => {
+    const el = track.current;
+    el?.scrollBy({ left: dir * el.clientWidth * 0.8, behavior: 'smooth' });
+  };
+
+  return (
+    <div>
+      <div className="flex items-end justify-between gap-3 mb-2">
+        <div className="min-w-0">
+          <h3 className="font-serif-ge font-bold text-base sm:text-lg leading-tight text-[#7a2028]">{title}</h3>
+          <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {!all && (
+            <>
+              <button type="button" onClick={() => page(-1)} disabled={edge.start} className={`hidden sm:flex ${roundBtn}`} aria-label="წინა">
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button type="button" onClick={() => page(1)} disabled={edge.end} className={`hidden sm:flex ${roundBtn}`} aria-label="შემდეგი">
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </>
+          )}
+          <button
+            type="button"
+            onClick={() => setAll((v) => !v)}
+            aria-expanded={all}
+            className="h-9 pl-3.5 pr-2.5 rounded-full bg-white ring-1 ring-[#e6d9c2] shadow-sm inline-flex items-center gap-1 text-[13px] font-semibold text-[#7a2028] hover:ring-[#7a2028]/30 hover:shadow transition-all cursor-pointer"
+          >
+            {all ? 'შეკეცვა' : `ყველა · ${items.length}`}
+            <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${all ? 'rotate-180' : ''}`} />
+          </button>
+        </div>
+      </div>
+
+      {all ? (
+        <div className="grid grid-cols-3 sm:grid-cols-5 gap-2.5 sm:gap-3 pt-1">
+          {items.map((a) => (
+            <AncestorCard key={a.id} a={a} onOpen={() => onOpen(a.id)} />
+          ))}
+        </div>
+      ) : (
+        <div
+          ref={track}
+          onScroll={measure}
+          className="-mx-1 px-1 pt-1 pb-2 flex gap-2.5 sm:gap-3 overflow-x-auto overscroll-x-contain snap-x snap-mandatory scroll-px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+        >
+          {items.map((a) => (
+            <AncestorCard key={a.id} a={a} onOpen={() => onOpen(a.id)} className="shrink-0 snap-start w-[29%] sm:w-[21.5%]" />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
 
 // A light film card: only the thumbnail loads; the YouTube player appears on tap.
 const FilmCard: React.FC = () => {
@@ -422,44 +520,21 @@ export const AncestorsPage: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl mx-auto mb-4 px-1 space-y-8">
-      <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
-        {PORTRAITS.map(({ src, name, bio }) => (
-          <button
-            key={src}
-            type="button"
-            onClick={() => setOpenId(bio)}
-            className="group relative w-[calc(50%-0.375rem)] sm:w-[calc((100%-2rem)/3)] aspect-[3/4] rounded-3xl overflow-hidden bg-stone-200 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
-          >
-            <img
-              src={src}
-              alt={name}
-              loading="lazy"
-              className="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
-            />
-            <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-            <span className="absolute inset-x-0 bottom-0 p-3 max-[359px]:px-2 sm:p-4 text-center font-serif-ge text-sm max-[359px]:text-[13px] sm:text-base font-bold leading-snug text-white drop-shadow">
-              {name}
-            </span>
-          </button>
-        ))}
-      </div>
-
-      <section className="space-y-4">
-        <SectionLabel>ცნობილი მგალობლები</SectionLabel>
-        <label className="relative block">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+      <div className="space-y-4">
+        <label className="relative block max-w-md mx-auto">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="მოძებნე სახელით…"
-            className="w-full pl-11 pr-4 py-3 rounded-2xl bg-white ring-1 ring-[#e6d9c2] focus:ring-2 focus:ring-[#7a2028]/40 outline-none shadow-sm text-[15px] text-slate-800 placeholder:text-slate-400 transition-shadow"
+            placeholder="მოძებნე მგალობელი…"
+            className="w-full h-10 pl-10 pr-4 rounded-full bg-white/90 ring-1 ring-[#e6d9c2] focus:ring-2 focus:ring-[#7a2028]/40 outline-none shadow-sm text-[15px] text-slate-800 placeholder:text-slate-400 transition-shadow"
           />
         </label>
-
+  
         {q ? (
           found.length ? (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2.5 sm:gap-3">
               {found.map((a) => (
                 <AncestorCard key={a.id} a={a} onOpen={() => setOpenId(a.id)} />
               ))}
@@ -468,21 +543,44 @@ export const AncestorsPage: React.FC = () => {
             <p className="py-6 text-center text-sm text-slate-500">ასეთი სახელი ვერ მოიძებნა</p>
           )
         ) : (
-          GROUPS.map((g) => (
-            <div key={g.key} className="pt-3">
-              <div className="mb-3.5 text-center">
-                <h3 className="font-serif-ge font-bold text-lg sm:text-xl text-[#7a2028]">{g.title}</h3>
-                <p className="text-xs sm:text-sm text-slate-500 mt-0.5">{g.subtitle}</p>
-              </div>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-                {ANCESTORS.filter((a) => a.group === g.key).map((a) => (
-                  <AncestorCard key={a.id} a={a} onOpen={() => setOpenId(a.id)} />
-                ))}
-              </div>
-            </div>
-          ))
+        <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+          {PORTRAITS.map(({ src, name, bio }) => (
+            <button
+              key={src}
+              type="button"
+              onClick={() => setOpenId(bio)}
+              className="group relative w-[calc(50%-0.375rem)] sm:w-[calc((100%-2rem)/3)] aspect-[3/4] rounded-3xl overflow-hidden bg-stone-200 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+            >
+              <img
+                src={src}
+                alt={name}
+                loading="lazy"
+                className="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+              />
+              <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+              <span className="absolute inset-x-0 bottom-0 p-3 max-[359px]:px-2 sm:p-4 text-center font-serif-ge text-sm max-[359px]:text-[13px] sm:text-base font-bold leading-snug text-white drop-shadow">
+                {name}
+              </span>
+            </button>
+          ))}
+        </div>
         )}
-      </section>
+      </div>
+
+      {!q && (
+        <section className="space-y-5">
+          <SectionLabel>ცნობილი მგალობლები</SectionLabel>
+          {GROUPS.map((g) => (
+            <GroupStrip
+              key={g.key}
+              title={g.title}
+              subtitle={g.subtitle}
+              items={ANCESTORS.filter((a) => a.group === g.key)}
+              onOpen={setOpenId}
+            />
+          ))}
+        </section>
+      )}
 
       <section className="space-y-3">
         <SectionLabel>ფილმი</SectionLabel>

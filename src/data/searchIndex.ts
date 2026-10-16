@@ -2,7 +2,7 @@
 // six services, prayers and the New Testament, the psalter, folk songs, the great chanters and the feasts.
 import { SERVICE_LISTS, ServiceName } from './chantLookup';
 import {
-  AKATHIST_GROUPS, APOSTLE, GOSPELS, KATHISMAS, MORNING_EVENING, PRAYER_HOURS, PSALTER_RULE, WEEK_DAYS,
+  AKATHIST_GROUPS, APOSTLE, GOSPELS, KATHISMAS, MORNING_EVENING, PRAYER_HOURS, ANDREW_CANON, CONFESSION_PRAYERS, PSALTER_RULE, VARIOUS_PRAYERS, WEEK_DAYS,
   bibleChapterId, hourClock, prayerTitle, weekPrayerId,
 } from './prayers';
 import { FOLK_SONGS, getFolkRegion } from './songsData';
@@ -137,6 +137,12 @@ export const buildSearchIndex = (who: SearchWho): SearchItem[] => {
   // prayers
   for (const p of MORNING_EVENING)
     out.push(shortcut(`prayer:${p.id}`, 'prayer', p.title, 'ლოცვანი', p.id === 'dzili' ? 'საღამოს ლოცვები' : ''));
+  for (const p of CONFESSION_PRAYERS)
+    out.push(shortcut(`prayer:${p.id}`, 'prayer', prayerTitle(p.id), 'აღსარების და ზიარების ლოცვები', 'აღსარება ზიარება'));
+  for (const p of ANDREW_CANON)
+    out.push(shortcut(`prayer:${p.id}`, 'prayer', prayerTitle(p.id), 'ლოცვანი · დიდმარხვის პირველი კვირა', 'დიდი კანონი'));
+  for (const p of VARIOUS_PRAYERS)
+    out.push(shortcut(`prayer:${p.id}`, 'prayer', p.title, 'სხვადასხვა ლოცვები', ''));
   for (const h of PRAYER_HOURS)
     out.push(shortcut(`prayer:${h.id}`, 'prayer', `ლოცვა ${h.label}`, `შვიდგზის ლოცვა · ${hourClock(h)}`, 'შვიდგზის'));
   WEEK_DAYS.forEach((day, d) => {

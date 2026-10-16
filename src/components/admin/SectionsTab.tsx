@@ -12,8 +12,8 @@ const STATES: { id: SectionState; label: string }[] = [
   { id: 'hidden', label: 'დამალული' },
 ];
 
-// "განყოფილებების ჩართვა": which sections show on the home vine and in the header — open, marked "მალე"
-// or hidden — and which sections a new kids' mode starts with.
+// "განყოფილებების ჩართვა" (in the „სკოლა“ tab): which sections show on the home vine and in the header — open,
+// marked "მალე" or hidden — and which sections a new kids' mode starts with. One card, one save.
 export const SectionsTab: React.FC<{ onMessage: (t: string, type: 'success' | 'error') => void }> = ({ onMessage }) => {
   const saved = useSections();
   const [state, setState] = useState(saved.state);
@@ -35,35 +35,34 @@ export const SectionsTab: React.FC<{ onMessage: (t: string, type: 'success' | 'e
   };
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardTitle icon={<LayoutGrid />} title="განყოფილებები" hint="ღია — ყველა ხედავს; მალე — ჩანს „მალე“ წარწერით; დამალული — არსად ჩანს. ადმინები ყოველთვის ხედავენ ყველაფერს." />
-        <ul className="divide-y divide-[#f1e8d9]">
-          {SECTIONS.map(sec => (
-            <li key={sec.id} className="py-3 flex flex-col min-[460px]:flex-row min-[460px]:items-center gap-2">
-              <span className="flex-1 min-w-0">
-                <span className="block font-semibold text-[#2a2017]">{sec.label}</span>
-                {sec.hint && <span className="block text-xs text-[#8a7a6a]">{sec.hint}</span>}
-              </span>
-              <span className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-white ring-1 ring-[#e8dcc8] shrink-0">
-                {STATES.map(st => {
-                  const disabled = st.id === 'open' && !sec.page;
-                  const on = state[sec.id] === st.id;
-                  return (
-                    <button key={st.id} type="button" disabled={disabled} onClick={() => setState(s => ({ ...s, [sec.id]: st.id }))}
-                      className={`h-9 px-3 rounded-lg text-[13px] font-bold cursor-pointer transition disabled:opacity-35 disabled:cursor-default ${on ? (st.id === 'hidden' ? 'bg-[#4a3426] text-[#fbf6ec]' : 'bg-[#7a2028] text-[#fbf6ec]') : 'text-[#4a3426] hover:bg-[#7a2028]/5'}`}>
-                      {st.label}
-                    </button>
-                  );
-                })}
-              </span>
-            </li>
-          ))}
-        </ul>
-      </Card>
+    <Card>
+      <CardTitle icon={<LayoutGrid />} title="განყოფილებები"
+        info="ღია — ყველა ხედავს; მალე — ჩანს „მალე“ წარწერით; დამალული — არსად ჩანს. ადმინები ყოველთვის ხედავენ ყველაფერს. საბავშვო რეჟიმს მოსწავლეს მასწავლებელი თავად ურთავს და შეუძლია ქვემოთა სია შეცვალოს." />
+      <ul className="divide-y divide-[#f1e8d9]">
+        {SECTIONS.map(sec => (
+          <li key={sec.id} className="py-3 flex flex-col min-[460px]:flex-row min-[460px]:items-center gap-2">
+            <span className="flex-1 min-w-0">
+              <span className="block font-semibold text-[#2a2017]">{sec.label}</span>
+              {sec.hint && <span className="block text-xs text-[#8a7a6a]">{sec.hint}</span>}
+            </span>
+            <span className="grid grid-cols-3 gap-1 p-1 rounded-xl bg-white ring-1 ring-[#e8dcc8] shrink-0">
+              {STATES.map(st => {
+                const disabled = st.id === 'open' && !sec.page;
+                const on = state[sec.id] === st.id;
+                return (
+                  <button key={st.id} type="button" disabled={disabled} onClick={() => setState(s => ({ ...s, [sec.id]: st.id }))}
+                    className={`h-9 px-3 rounded-lg text-[13px] font-bold cursor-pointer transition disabled:opacity-35 disabled:cursor-default ${on ? (st.id === 'hidden' ? 'bg-[#4a3426] text-[#fbf6ec]' : 'bg-[#7a2028] text-[#fbf6ec]') : 'text-[#4a3426] hover:bg-[#7a2028]/5'}`}>
+                    {st.label}
+                  </button>
+                );
+              })}
+            </span>
+          </li>
+        ))}
+      </ul>
 
-      <Card>
-        <CardTitle icon={<Baby />} title="საბავშვო რეჟიმი — თავიდან რა ჩანს" hint="მასწავლებელი მოსწავლეს რეჟიმს თავად ურთავს და შეუძლია ეს სია შეცვალოს." />
+      <div className="mt-2 pt-4 border-t border-[#e8dcc8]">
+        <p className="mb-2.5 flex items-center gap-1.5 text-[13px] font-bold text-[#75685a]"><Baby className="w-4 h-4 text-[#7a2028]" /> საბავშვო რეჟიმი — თავიდან რა ჩანს</p>
         <div className="flex flex-wrap gap-1.5">
           {SECTIONS.filter(s => s.page).map(sec => {
             const on = kids.includes(sec.id);
@@ -75,9 +74,9 @@ export const SectionsTab: React.FC<{ onMessage: (t: string, type: 'success' | 'e
             );
           })}
         </div>
-      </Card>
+      </div>
 
-      <Btn icon={<Save />} disabled={!dirty || busy} onClick={save}>{busy ? 'ინახება…' : 'შენახვა'}</Btn>
-    </div>
+      <Btn icon={<Save />} className="mt-5" disabled={!dirty || busy} onClick={save}>{busy ? 'ინახება…' : 'შენახვა'}</Btn>
+    </Card>
   );
 };

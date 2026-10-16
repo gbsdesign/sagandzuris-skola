@@ -151,6 +151,39 @@ export const AKATHIST_GROUPS: AkathistGroup[] = [
 
 export const AKATHISTS: PrayerRef[] = AKATHIST_GROUPS.flatMap(g => g.items);
 
+// "აღსარების და ზიარების ლოცვები" from orthodox.ge
+export const CONFESSION_PRAYERS: PrayerRef[] = [
+  { id: 'ziarebis-tsin', title: 'ზიარების წინ' },
+  { id: 'ziarebis-shemdeg', title: 'ზიარების შემდეგ' },
+  { id: 'aghsarebis-tsin', title: 'აღსარების წინ' },
+  { id: 'aghsarebis-shemdeg', title: 'აღსარების შემდეგ' },
+  { id: 'tsodvebis-nuskha', title: 'ცოდვების ნუსხა' },
+];
+
+// The Great Canon of St Andrew of Crete, read in parts on the first four days of Great Lent (orthodox.ge)
+export const ANDREW_CANON: PrayerRef[] = ['ორშაბათი', 'სამშაბათი', 'ოთხშაბათი', 'ხუთშაბათი'].map((day, i) => ({ id: `andria-kriteli-${i + 1}`, title: day }));
+
+// "სხვადასხვა ლოცვები" — single prayers from the same section at orthodox.ge
+export const VARIOUS_PRAYERS: PrayerRef[] = [
+  { id: 'dzilsa-shina-dacema', title: 'ლოცვა ძილსა შინა დაცემისა ერისკაცისა' },
+  { id: 'eris-mamulistvis', title: 'ლოცვა ერისა და მამულისათვის' },
+  { id: 'mshobelta-shvilebistvis', title: 'მშობელთა ლოცვითი სულთქმანი შვილთა თვისთათვის (დედის ლოცვა)' },
+  { id: 'shvilebistvis-ambrosi', title: 'ლოცვა შვილთათვის ღირსისა ამბროსი ოპტინელისა' },
+  { id: 'shvilta-angelozi', title: 'ლოცვა შვილთა მფარველი ანგელოსისადმი' },
+  { id: 'shvilis-mshoblebistvis', title: 'შვილის ლოცვა მშობლებისთვის' },
+  { id: 'efrem-asuri', title: 'ლოცვა ეფრემ ასურისა' },
+  { id: 'mdzgholta-dacva', title: 'ლოცვა მძღოლთა შეწევნისა და დაცვისა' },
+  { id: 'mgzavrobis', title: 'ლოცვა მგზავრობის მნებებელთა' },
+  { id: 'sneultatvis', title: 'ლოცვა სნეულთათვის' },
+  { id: 'samadlobeli', title: 'სამადლობელი ლოცვა ყოველი თხოვნის აღსრულების შემდგომ' },
+  { id: 'sefiskveri-tsmida-tsyali', title: 'ლოცვა სეფისკვერის და წმიდა წყლის მიღებისას' },
+  { id: 'siyvarulis-ganasavrcobad', title: 'ლოცვა სიყვარულის განსავრცობად და შურისა და ყოველგვარი სიავის აღმოსაფხვრელად' },
+  { id: 'meomartatvis', title: 'ლოცვა მართლმადიდებელ მეომართათვის' },
+  { id: 'dabadebis-dghes', title: 'ლოცვა დაბადების დღეს წასაკითხი' },
+  { id: 'paseqis-zhamni', title: 'პასექის ჟამნი' },
+  { id: 'ghirs-arsis-nacvlad', title: 'ღირს არს-ის ნაცვლად საკითხავი' },
+];
+
 // The Psalter: twenty kathismas ("კანონები") and the rule for reading them.
 const KATHISMA_PSALMS = ['1–8', '9–16', '17–23', '24–31', '32–36', '37–45', '46–54', '55–63', '64–69', '70–76', '77–84', '85–90', '91–100', '101–104', '105–108', '109–117', '118', '119–133', '134–142', '143–150'];
 
@@ -215,8 +248,12 @@ export const parseBibleId = (id: string): { book: BibleBook; chapter: number; go
 
 // Title shown on the prayer page for any id.
 export const prayerTitle = (id: string): string => {
-  const plain = MORNING_EVENING.find(p => p.id === id);
+  const plain = MORNING_EVENING.find(p => p.id === id) || VARIOUS_PRAYERS.find(p => p.id === id);
+  const confession = CONFESSION_PRAYERS.find(p => p.id === id);
+  if (confession) return confession.id === 'tsodvebis-nuskha' ? confession.title : `ლოცვები ${confession.title}`;
   if (plain) return plain.title;
+  const canon = ANDREW_CANON.find(p => p.id === id);
+  if (canon) return `ანდრია კრიტელის კანონი — ${canon.title}`;
   const akathist = AKATHISTS.find(p => p.id === id);
   if (akathist) return `დაუჯდომელი — ${akathist.title}`;
   const kathisma = KATHISMAS.find(k => k.id === id);

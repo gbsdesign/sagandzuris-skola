@@ -1,12 +1,14 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { deleteField, doc, setDoc } from 'firebase/firestore';
-import { Disc3, Link2, Play, Pause, Save, Trash2, Search, Check, Info } from 'lucide-react';
+import { Disc3, Link2, Play, Pause, Save, Trash2, Search, Check } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
 import { SERVICE_LISTS, SCHOOL_NAMES, schoolOf } from '../../data/chantLookup';
 import { codeBindingCount, getChantMedia } from '../../data/chantMediaRegistry';
 import { RecordingBinding, driveFileId, proxyUrl, useRecordingBindings } from '../../data/runtimeRecordings';
 import { Btn, Card, CardTitle, FIELD, IconBtn, Label, Pill } from '../ui/kit';
+import { TopChants } from './StatsTab';
+import type { UserRecord } from './UsersTab';
 
 const TRACKS = ['I ხმა', 'II ხმა', 'III ხმა', 'სამივე ხმა'];
 
@@ -25,7 +27,8 @@ const allVersions = (): VersionHit[] => {
 
 // "ჩანაწერების მიბმა": a recording's Drive links are bound to a chant version here, without changing
 // the code or republishing the site. Files must be shared "Anyone with the link" and be mp3.
-export const RecordingsTab: React.FC<{ onMessage: (t: string, type: 'success' | 'error') => void }> = ({ onMessage }) => {
+// Below: the bindings made here, and the chants listened to most.
+export const RecordingsTab: React.FC<{ users: UserRecord[]; onMessage: (t: string, type: 'success' | 'error') => void }> = ({ users, onMessage }) => {
   const { user } = useAuth();
   const bindings = useRecordingBindings();
   const versions = useMemo(allVersions, []);
@@ -101,7 +104,7 @@ export const RecordingsTab: React.FC<{ onMessage: (t: string, type: 'success' | 
   return (
     <div className="space-y-4">
       <Card>
-        <CardTitle icon={<Disc3 />} title="ჩანაწერის მიბმა" hint="აირჩიე საგალობლის ვერსია, ჩასვი Google Drive-ის ბმულები და მოუსმინე. კოდის შეცვლა და ხელახლა გამოქვეყნება აღარ სჭირდება." />
+        <CardTitle icon={<Disc3 />} title="ჩანაწერის მიბმა" info="აირჩიე საგალობლის ვერსია, ჩასვი Google Drive-ის ბმულები და მოუსმინე. კოდის შეცვლა და ხელახლა გამოქვეყნება აღარ სჭირდება. ფაილები შენს Google Drive-ში რჩება და ჩვეულებრივ აუდიო-სერვერით იკვრება." />
 
         {/* 1. the version */}
         <Label>1. საგალობლის ვერსია</Label>
@@ -183,8 +186,9 @@ export const RecordingsTab: React.FC<{ onMessage: (t: string, type: 'success' | 
             ))}
           </ul>
         )}
-        <p className="mt-3 flex gap-2 text-xs text-[#8a7a6a]"><Info className="w-4 h-4 shrink-0" /> ფაილები შენს Google Drive-ში რჩება და ჩვეულებრივ აუდიო-სერვერით იკვრება.</p>
       </Card>
+
+      <TopChants users={users} />
     </div>
   );
 };
