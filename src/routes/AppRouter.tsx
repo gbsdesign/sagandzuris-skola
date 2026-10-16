@@ -1,6 +1,6 @@
 import React, { lazy, useEffect, useRef } from 'react';
 import { useNavigation, useChants, useModal, useAuth } from '../context';
-import { Music, ShieldCheck, ChevronRight } from 'lucide-react';
+import { Music, ShieldCheck, ChevronRight, WifiOff, RefreshCw } from 'lucide-react';
 import { SubPageHeader } from '../components/layout';
 import { HomePage } from '../pages/HomePage';
 import { GalobaPage } from '../pages/GalobaPage';
@@ -18,9 +18,39 @@ import { useAccess } from '../hooks/useAccess';
 import { LockedPage } from '../components/access/SignInPrompt';
 import { SECTIONS, sectionOfPage } from '../data/sections';
 
+// A page whose file is not on the phone yet and cannot be fetched: offline before it was ever opened (some pages
+// are not downloaded in advance — vite.config.ts globIgnores). Says so instead of the error box; back online,
+// „ხელახლა ცდა“ reloads the app.
+const NotLoaded: React.FC = () => {
+  const { navigateTo } = useNavigation();
+  return (
+    <div className="w-full max-w-sm mx-auto py-16 px-4 text-center space-y-4">
+      <div className="mx-auto w-16 h-16 rounded-3xl bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center"><WifiOff className="w-8 h-8" /></div>
+      <p className="font-serif-ge text-xl font-bold text-[#4a3426]">გვერდი ვერ ჩაიტვირთა</p>
+      <p className="text-[15px] text-[#75685a]">ინტერნეტის გარეშე ეს გვერდი მხოლოდ მაშინ იხსნება, თუ ერთხელ უკვე გახსნილი იყო. შეამოწმეთ ინტერნეტი და სცადეთ ხელახლა.</p>
+      <div className="flex flex-wrap justify-center gap-2.5 pt-1">
+        <button
+          type="button"
+          onClick={() => window.location.reload()}
+          className="h-11 px-5 rounded-full bg-[#7a2028] text-[#fbf6ec] font-bold inline-flex items-center gap-2 cursor-pointer active:scale-95 transition"
+        >
+          <RefreshCw className="w-4 h-4" />ხელახლა ცდა
+        </button>
+        <button
+          type="button"
+          onClick={() => navigateTo('home')}
+          className="h-11 px-5 rounded-full bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] font-bold cursor-pointer active:scale-95 transition"
+        >
+          მთავარზე
+        </button>
+      </div>
+    </div>
+  );
+};
+
 // Pages load when first opened, so the first visit downloads less (App wraps the router in Suspense).
 const page = <T extends string>(load: () => Promise<Record<T, React.ComponentType<any>>>, name: T) =>
-  lazy(() => load().then(m => ({ default: m[name] })));
+  lazy(() => load().then(m => ({ default: m[name] }), () => ({ default: NotLoaded })));
 const GeorgiaMap = page(() => import('../components/maps/GeorgiaMap'), 'GeorgiaMap');
 const MtkmeliMap = page(() => import('../components/maps/MtkmeliMap'), 'MtkmeliMap');
 const SakravebiView = page(() => import('../components/views/SakravebiView'), 'SakravebiView');

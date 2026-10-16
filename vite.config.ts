@@ -14,11 +14,21 @@ export default defineConfig(() => {
         injectRegister: 'inline',
         workbox: {
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
+          // pages few people open and the heaviest data stay out of the advance download (about 2 MB less for
+          // every new phone); they are kept once opened (the assets cache below). All the choir needs in church
+          // (notes, the program, church mode, prayers) is still downloaded in advance.
+          globIgnores: [
+            '**/node_modules/**/*',
+            'assets/AdminPanelPage-*', 'assets/ClassesAdmin-*', 'assets/TeacherPage-*',
+            'assets/AbituriPage-*', 'assets/abituriLessons-*', 'assets/abcjs-*',
+            'assets/AncestorsPage-*', 'assets/ancestorsBioTexts-*',
+            'assets/20[0-9][0-9]-*', // the church calendar's years
+          ],
           // opens the prayer when a reminder notification is tapped
           importScripts: ['prayer-notify-sw.js'],
           // a shared notes link (/?c=…&v=…) opens the app even without internet
           navigateFallback: '/index.html',
-          navigateFallbackDenylist: [/^\/notes\//, /^\/hymn\//, /^\/audio\//, /^\/lives\//, /^\/mtkmeli\//],
+          navigateFallbackDenylist: [/^\/notes\//, /^\/hymn\//, /^\/audio\//, /^\/lives\//, /^\/mtkmeli\//, /^\/prayers\//, /^\/bible\//],
           // chant notes and hymnography drawings: kept as they are opened, and by "ჩამოწერა"
           // (src/utils/offlineNotes.ts fills the same cache), so they open in church without internet
           runtimeCaching: [
@@ -38,6 +48,18 @@ export default defineConfig(() => {
               urlPattern: ({ url }) => url.origin === self.location.origin && url.pathname.startsWith('/lives/'),
               handler: 'StaleWhileRevalidate',
               options: { cacheName: 'sagandzuri-lives-v1', expiration: { maxEntries: 4000 } },
+            },
+            {
+              // prayers and the New Testament: kept once read, so they open without internet
+              urlPattern: ({ url }) => url.origin === self.location.origin && /^\/(prayers|bible)\//.test(url.pathname),
+              handler: 'StaleWhileRevalidate',
+              options: { cacheName: 'sagandzuri-prayers-v1', expiration: { maxEntries: 400 } },
+            },
+            {
+              // the app's own files left out of the advance download (globIgnores above): kept once opened
+              urlPattern: ({ url }) => url.origin === self.location.origin && /^\/assets\/.+\.(js|css)$/.test(url.pathname),
+              handler: 'CacheFirst',
+              options: { cacheName: 'sagandzuri-assets-v1', expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 90 } },
             },
             {
               urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com',
