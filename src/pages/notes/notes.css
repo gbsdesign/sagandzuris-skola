@@ -9,7 +9,7 @@
   --synth-bg:linear-gradient(#f9f7fb,#f3eff7);
   --amber:#b4620e; --amber-btn:#dc8a22; --amber-soft:#fcf1df; --amber-line:#efd6a6;
   --rec-bg:linear-gradient(#fffaf2,#fcf2e2);
-  --paper:#fff; --sheet-filter:none; --sheet-shadow:0 1px 2px rgba(42,32,23,.08),0 12px 28px -20px rgba(42,32,23,.5);
+  --paper:#fff; --sheet-filter:brightness(.75) contrast(2); --sheet-shadow:0 1px 2px rgba(42,32,23,.08),0 12px 28px -20px rgba(42,32,23,.5);
   --orn-op:1; --orn-filter:none; --hymn-op:1; --hymn-filter:none;
   --toast:#2a2017; --toast-ink:#fff; --toast-btn:rgba(255,255,255,.16);
   --shadow:rgba(42,32,23,.45);
@@ -29,7 +29,7 @@
   --synth-bg:linear-gradient(#f5e9d8,#efe0ca); --dusk-soft:#ead9cf; --dusk-line:#d6c0b2;
   --rec-bg:linear-gradient(#f9ebce,#f2dfbb); --amber-soft:#f3dfb6;
   /* candle: the page stays crisp black-brown ink; only its white paper takes the candle colour (multiplied onto it) */
-  --paper:#f1dcb2; --sheet-filter:grayscale(1) contrast(1.45) brightness(1.06) sepia(.35); --sheet-blend:multiply;
+  --paper:#f1dcb2; --sheet-filter:grayscale(1) brightness(.75) contrast(2) sepia(.3); --sheet-blend:multiply;
   --sheet-shadow:0 1px 2px rgba(80,50,15,.12),0 12px 28px -20px rgba(80,50,15,.55);
   --hymn-filter:sepia(.25) saturate(.9);
   --shadow:rgba(80,50,15,.45)
@@ -43,7 +43,7 @@
   --synth-bg:linear-gradient(#201b26,#1c1821);
   --amber:#f0b062; --amber-btn:#d48a2b; --amber-soft:#34271a; --amber-line:#574024;
   --rec-bg:linear-gradient(#241d14,#1f1910);
-  --paper:#1d1915; --sheet-filter:invert(.9) sepia(.32) saturate(.85) brightness(.96);
+  --paper:#1d1915; --sheet-filter:brightness(.75) contrast(2) invert(.9) sepia(.32) saturate(.85) brightness(.96);
   --sheet-shadow:0 1px 2px rgba(0,0,0,.4),0 12px 28px -20px rgba(0,0,0,.8);
   --orn-op:.5; --orn-filter:saturate(.75) brightness(.9); --hymn-op:.9; --hymn-filter:brightness(1.45) saturate(1.1);
   --toast:#eee4d6; --toast-ink:#1b1612; --toast-btn:rgba(0,0,0,.1);
@@ -257,21 +257,11 @@
 .np-next-sm{flex:none;margin-left:auto;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;background:var(--wine);color:var(--wine-ink);transition:transform .12s}
 .np-next-sm:active{transform:scale(.92)}
 .np-next-sm svg{width:19px;height:19px}
-.np-church-row{flex-basis:100%;min-width:0;display:flex;gap:8px;align-items:stretch}
-.np-church-x{flex:none;height:42px;padding:0 14px;border-radius:999px;display:inline-flex;align-items:center;gap:7px;font-size:12.5px;font-weight:800;color:var(--ink);background:var(--surface);box-shadow:inset 0 0 0 1px var(--line-2)}
-.np-church-x svg{width:16px;height:16px}
-.np-church-next{flex:1;min-width:0;overflow:hidden;height:42px;padding:0 6px 0 14px;border-radius:999px;display:flex;align-items:center;gap:8px;color:var(--wine-ink);background:var(--wine);font-size:12.5px;font-weight:800;text-align:left}
-.np-church-next span{flex:1;width:0;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.np-church-next i{flex:none;width:32px;height:32px;border-radius:50%;display:grid;place-items:center;background:rgba(255,255,255,.16)}
-.np-church-next i svg{width:18px;height:18px}
-.np-church-next:disabled{opacity:.45}
 .np-root:is(.land,.wide) .np-caption{align-items:center;padding-top:10px}
 .np-root:is(.land,.wide) .np-cap-tools{order:2;flex-basis:auto}
 .np-root:is(.land,.wide) .np-start{flex:none}
 .np-root:is(.land,.wide) .np-startgrp{flex:none}
 .np-root:is(.land,.wide) .np-cap-tools .np-stepper{flex:0 0 auto}
-.np-root:is(.land,.wide) .np-church-row{flex-basis:auto}
-.np-root:is(.land,.wide) .np-church-next{flex:none;max-width:280px}
 .np-root:is(.land,.wide) .np-cap-orn{order:3}
 .np-root:is(.land,.wide) .np-cap-title{display:inline;font-size:16px}
 .np-root:is(.land,.wide) .np-cap-meta{display:inline-block;margin-left:8px;white-space:nowrap}
@@ -289,6 +279,11 @@
 .np-pg .ro{width:12px}
 .np-sheet{position:relative;margin:0;overflow:hidden;border-radius:3px;background:var(--paper);box-shadow:var(--sheet-shadow);transition:background .4s}
 .np-pimg{position:relative}
+/* a chant cut into pieces (lines side by side in the book): the pieces one under another, as wide as their ink */
+.np-sheet.cut{padding:2.5% 3%}
+.np-cutcol{margin:0 auto}
+.np-pimg.cut{overflow:hidden}
+.np-pimg.cut>img{position:absolute;max-width:none}
 .np-pimg>img{display:block;width:100%;height:auto;max-width:none;user-select:none;-webkit-user-select:none;-webkit-user-drag:none;pointer-events:none;filter:var(--sheet-filter);mix-blend-mode:var(--sheet-blend,normal);transition:filter .45s}
 .np-o-head,.np-o-tail{display:block;height:auto;margin-left:auto;margin-right:auto;pointer-events:none;user-select:none;opacity:0;filter:var(--hymn-filter);transition:opacity .9s ease}
 .np-o-head{margin-top:3.4%;margin-bottom:1.2%}
@@ -325,6 +320,23 @@
 .np-zbadge.on{opacity:1}
 .np-root.church .np-scroller{padding-top:calc(env(safe-area-inset-top,0px) + 10px)!important}
 .np-root.church .np-mini{display:none}
+/* church: one slim line over the notes; page labels, drawings and ornaments go */
+.np-root .np-caption.np-cbar{flex-wrap:nowrap;align-items:center;gap:8px;padding-top:4px;padding-bottom:8px;--acc:var(--dusk);--acc-2:var(--dusk-2);--acc-soft:var(--dusk-soft);--acc-line:var(--dusk-line)}
+.np-cb-x{flex:none;width:42px;height:42px;border-radius:50%;display:grid;place-items:center;color:var(--ink-2);background:var(--surface);box-shadow:inset 0 0 0 1px var(--line-2)}
+.np-cb-x svg{width:18px;height:18px}
+.np-cb-title{flex:1;min-width:0;margin:0;font-family:var(--serif);font-size:16px;font-weight:600;line-height:1.3;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.np-cb-next{flex:none;min-width:42px;height:42px;padding:0 12px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;gap:6px;background:var(--wine);color:var(--wine-ink);font-size:12.5px;font-weight:800;white-space:nowrap;transition:transform .12s}
+.np-cb-next svg{width:18px;height:18px}
+.np-cb-next:disabled{opacity:.4}
+.np-cbar .lb{display:none}
+.np-cbar .np-startgrp{flex:1 1 auto;width:0}
+.np-cbar .np-start{justify-content:center}
+.np-cbar .np-start .np-sb-dots{margin-left:0}
+/* an upright phone: no room for the title on the line */
+.np-root:not(.land):not(.wide) .np-cb-title{display:none}
+.np-root:is(.land,.wide) .np-cbar .np-startgrp{flex:none;width:auto}
+.np-root:is(.land,.wide) .np-cbar .lb{display:inline}
+.np-root.church :is(.np-pg,.np-o-head,.np-o-tail,.np-band,.np-endnote){display:none}
 .np-frame-scroll{scrollbar-width:thin}
 
 /* ---------- toast ---------- */

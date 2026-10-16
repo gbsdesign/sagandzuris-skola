@@ -19,6 +19,7 @@ import { chantRecordingMedia, chantRecordings } from '../../data/chantRecordings
 import { countPlay } from '../../utils/playStats';
 import { hymnPair, hymnWidth, HymnOrnament } from '../../data/hymnOrnaments';
 import { BookScore, ChantSynth, bookImageUrl, loadBookScore, encodeMp3, renderScore, saveBlob, firstNotes, playStartNotes } from '../../utils/chantSynth';
+import { needsReflow, reflowScore, type Piece, type Reflow } from '../../utils/sheetReflow';
 import { ChantPlayer } from '../../components/ChantPlayer';
 import { NpStepper } from './NpStepper';
 import { getAudioArrayBufferFromIdb } from '../../utils/audioIdb';
@@ -125,9 +126,19 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     }
     return () => { alive = false; };
   }, [variant.bookNums, variant.book]);
+  // lines side by side in the book come cut and one under another (sheetReflow); such a page waits for its cuts
+  const [reflow, setReflow] = useState<{ score: BookScore; cuts: Reflow | null } | null>(null);
+  useEffect(() => {
+    if (!score) return;
+    let alive = true;
+    reflowScore(score, src => bookImageUrl(score, src)).then(cuts => alive && setReflow({ score, cuts }));
+    return () => { alive = false; };
+  }, [score]);
+  const cutsReady = reflow?.score === score;
+  const cuts = cutsReady ? reflow!.cuts : null;
   const sheets: Sheet[] = useMemo(
-    () => (score ? score.img.map(im => ({ src: bookImageUrl(score, im.src), w: im.w, h: im.h, page: im.page })) : []),
-    [score]
+    () => (score && (cutsReady || !needsReflow(score)) ? score.img.map(im => ({ src: bookImageUrl(score, im.src), w: im.w, h: im.h, page: im.page })) : []),
+    [score, cutsReady]
   );
   // a scanned score (some program songs) has pictures only: no synthesizer
   const synth = useMemo(() => (score && score.voices.length ? new ChantSynth(score) : null), [score]);
@@ -717,6 +728,62 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const f = folded[orient];
   const loopZone = synth && loop.a !== null ? { left: `${(100 * loop.a) / synth.duration}%`, width: `${(100 * ((loop.b ?? synth.duration) - loop.a)) / synth.duration}%` } : null;
 
+  // starting notes and tone: under the title, and in church on its one line
+  const startGroup = score && score.voices.length > 0 ? (
+    <div className="np-startgrp" role="group" aria-label="საწყისი ბგერა და ტონი">
+      <button type="button" className="np-start" onClick={playStart} aria-label="საწყისი ბგერა: ხმების პირველი ბგერა რიგრიგობით">
+        <Fork /><span className="lb">საწყისი ბგერა</span>
+        <span className="np-sb-dots" aria-hidden>{VOICES.map((_, i) => <i key={i} className={dots[i] ? 'on' : ''} />)}</span>
+      </button>
+      <NpStepper
+        label="ტონი" value={signed(transpose)} changed={transpose !== 0}
+        onMinus={() => setTranspose(t => Math.max(-7, t - 1))} onPlus={() => setTranspose(t => Math.min(7, t + 1))} onReset={() => setTranspose(0)}
+        minusDisabled={transpose <= -7} plusDisabled={transpose >= 7}
+      />
+    </div>
+  ) : null;
+
+  // one picture: the whole page, or a piece of it (cuts); the lines on it can be tapped
+  const sheetPart = (im: Sheet, ii: number, box: Piece | null, key?: number) => {
+    const [x0, y0, x1, y1] = box ?? [0, 0, 1, 1];
+    const bw = x1 - x0, bh = y1 - y0, W = im.w ?? 1, H = im.h ?? 1;
+    const alt = im.page ? `ნოტები, გვ. ${im.page}` : `ნოტები, ფურცელი ${ii + 1}`;
+    return (
+      <div
+        key={key}
+        className={`np-pimg ${box ? 'cut' : ''}`}
+        style={box && cuts
+          ? { width: `${Math.min(100, (100 * bw * W) / cuts.unit / cuts.col).toFixed(3)}%`, aspectRatio: `${bw * W} / ${bh * H}` }
+          : im.w && im.h ? { aspectRatio: `${im.w} / ${im.h}` } : undefined}
+      >
+        <img
+          src={im.src} width={im.w} height={im.h} alt={key ? '' : alt} decoding="async" draggable={false}
+          style={box ? { width: `${100 / bw}%`, left: `${(-100 * x0) / bw}%`, top: `${(-100 * y0) / bh}%` } : undefined}
+        />
+        {score?.sys.map((s, k) => {
+          if (s[0] !== ii) return null;
+          const sx = Math.max(0, s[1]), sy = Math.max(0, s[2]);
+          const sx1 = Math.min(sx + s[3], 1), sy1 = Math.min(sy + s[4], 1);
+          const cx = (sx + sx1) / 2, cy = (sy + sy1) / 2;
+          if (box && (cx < x0 || cx >= x1 || cy < y0 || cy >= y1)) return null;
+          const l = Math.max(sx, x0), t = Math.max(sy, y0);
+          return (
+            <button
+              key={k}
+              ref={el => { sysRefs.current[k] = el; }}
+              type="button"
+              className="np-sys"
+              tabIndex={tapLines ? 0 : -1}
+              onClick={() => playFromLine(k)}
+              aria-label={`დაკვრა ${k + 1}-ე სტრიქონიდან`}
+              style={{ left: `${(100 * (l - x0)) / bw}%`, top: `${(100 * (t - y0)) / bh}%`, width: `${(100 * (Math.min(sx1, x1) - l)) / bw}%`, height: `${(100 * (Math.min(sy1, y1) - t)) / bh}%` }}
+            />
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div
       ref={rootRef}
@@ -728,6 +795,18 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     >
       <div ref={scrollerRef} className="np-scroller" onScroll={onScroll}>
         <div className="np-content">
+          {church ? (
+            <header className="np-caption np-cbar">
+              <button type="button" className="np-cb-x" onClick={() => { triggerHaptic(10); setChurch(false); showToast('ტაძრის რეჟიმი გამოირთო'); }} aria-label="ტაძრის რეჟიმიდან გამოსვლა" title="გამოსვლა">
+                <X />
+              </button>
+              <h2 className="np-cb-title">{title}</h2>
+              {startGroup}
+              <button type="button" className="np-cb-next" onClick={() => goTo(nextId, 1)} disabled={!nextId} aria-label={nextInfo ? `შემდეგი: ${nextInfo.chant.title}` : 'ბოლო საგალობელია'} title={nextInfo ? `შემდეგი: ${nextInfo.chant.title}` : 'ბოლო საგალობელია'}>
+                <span className="lb">შემდეგი</span><ArrowRight />
+              </button>
+            </header>
+          ) : (
           <header className="np-caption">
             <div className="np-cap-text">
               <div className="np-eyebrow">{service} · {schoolName}<span className="np-pos">{posLabel}</span></div>
@@ -740,42 +819,21 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
               <Rosette color="#eab53a" petals={10} className="orn-in orn-spin" style={{ right: 2, top: 32, width: 17 }} />
             </div>
             <div className="np-cap-tools">
-              {score && score.voices.length > 0 && (
-                <div className="np-startgrp" role="group" aria-label="საწყისი ბგერა და ტონი">
-                  <button type="button" className="np-start" onClick={playStart} aria-label="საწყისი ბგერა: ხმების პირველი ბგერა რიგრიგობით">
-                    <Fork /><span>საწყისი ბგერა</span>
-                    <span className="np-sb-dots" aria-hidden>{VOICES.map((_, i) => <i key={i} className={dots[i] ? 'on' : ''} />)}</span>
-                  </button>
-                  <NpStepper
-                    label="ტონი" value={signed(transpose)} changed={transpose !== 0}
-                    onMinus={() => setTranspose(t => Math.max(-7, t - 1))} onPlus={() => setTranspose(t => Math.min(7, t + 1))} onReset={() => setTranspose(0)}
-                    minusDisabled={transpose <= -7} plusDisabled={transpose >= 7}
-                  />
-                </div>
-              )}
+              {startGroup}
               <div className="np-zoom" role="group" aria-label="ნოტების ზომა">
                 <button type="button" className="np-zb" onClick={() => zoomStep(-1)} aria-label="დაპატარავება" title="დაპატარავება"><ZoomOut /></button>
                 <output>{Math.round(zoom * 100)}%</output>
                 <button type="button" className="np-zb" onClick={() => zoomStep(1)} aria-label="გადიდება" title="გადიდება"><ZoomIn /></button>
                 <button type="button" className="np-zb fit" onClick={zoomFit} aria-label="ეკრანზე მორგება" title="ეკრანზე მორგება"><Scan /></button>
               </div>
-              {church ? (
-                <div className="np-church-row">
-                  <button type="button" className="np-church-x" onClick={() => { triggerHaptic(10); setChurch(false); showToast('ტაძრის რეჟიმი გამოირთო'); }}>
-                    <X /> გამოსვლა
-                  </button>
-                  <button type="button" className="np-church-next" onClick={() => goTo(nextId, 1)} disabled={!nextId}>
-                    <span>{nextInfo ? `შემდეგი: ${nextInfo.chant.title.replace(/[;\s]+$/, '')}` : 'ბოლო საგალობელია'}</span>
-                    <i><ArrowRight /></i>
-                  </button>
-                </div>
-              ) : nextId ? (
+              {nextId ? (
                 <button type="button" className="np-next-sm" onClick={() => goTo(nextId, 1)} aria-label="შემდეგი საგალობელი" title={nextInfo ? `შემდეგი: ${nextInfo.chant.title}` : 'შემდეგი'}>
                   <ArrowRight />
                 </button>
               ) : null}
             </div>
           </header>
+          )}
 
           <div className="np-sheetswrap">
             <div ref={sheetsRef} className="np-sheets" style={{ width: Math.round(fitW * zoom) }}>
@@ -793,27 +851,9 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                     <span className="mot ro"><Rosette color="#eab53a" petals={10} /></span>
                     <span className="mot sp r"><Sprig color="#b3cbbd" /></span>
                   </div>
-                  <figure className="np-sheet">
+                  <figure className={`np-sheet ${cuts ? 'cut' : ''}`}>
                     {ii === 0 && <HymnImg o={pair.top} place="top" />}
-                    <div className="np-pimg" style={im.w && im.h ? { aspectRatio: `${im.w} / ${im.h}` } : undefined}>
-                      <img src={im.src} width={im.w} height={im.h} alt={im.page ? `ნოტები, გვ. ${im.page}` : `ნოტები, ფურცელი ${ii + 1}`} decoding="async" draggable={false} />
-                      {score?.sys.map((s, k) => {
-                        if (s[0] !== ii) return null;
-                        const x = Math.max(0, s[1]), y = Math.max(0, s[2]);
-                        return (
-                          <button
-                            key={k}
-                            ref={el => { sysRefs.current[k] = el; }}
-                            type="button"
-                            className="np-sys"
-                            tabIndex={tapLines ? 0 : -1}
-                            onClick={() => playFromLine(k)}
-                            aria-label={`დაკვრა ${k + 1}-ე სტრიქონიდან`}
-                            style={{ left: `${x * 100}%`, top: `${y * 100}%`, width: `${Math.min(s[3], 1 - x) * 100}%`, height: `${Math.min(s[4], 1 - y) * 100}%` }}
-                          />
-                        );
-                      })}
-                    </div>
+                    {cuts ? <div className="np-cutcol" style={{ width: `${(100 * cuts.col).toFixed(3)}%` }}>{cuts.pages[ii].map((box, bi) => sheetPart(im, ii, box, bi))}</div> : sheetPart(im, ii, null)}
                     {ii === sheets.length - 1 && <HymnImg o={pair.bottom} place="bottom" />}
                   </figure>
                 </React.Fragment>

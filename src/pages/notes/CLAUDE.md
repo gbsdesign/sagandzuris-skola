@@ -11,6 +11,8 @@ moving to the next chant in service order.
   for upright / turned / computer.
 - `ProgramPage.tsx` + `program.css`: „დღევანდელი წირვა“ — the teacher's chosen versions for a date.
 - `NpStepper.tsx`: small +/- stepper (tone ±7).
+- `src/utils/sheetReflow.ts`: chants whose book page sets lines side by side (litanies, ~17 chants) are cut on
+  the picture into pieces shown one under another, up to 2× bigger (cuts found from the ink at load time).
 - `src/context/NotesContext.tsx`: overlay pages + browser history/URL (`?c=&v=` for a chant, `?p=date~ids` for
   a program), church-mode state.
 - `src/hooks/useLiturgy.ts`: the class's teacher (admins: any class) composes it; there is no regent role. Draft in `users/{uid}/settings/liturgy`, templates in
@@ -22,8 +24,10 @@ moving to the next chant in service order.
 
 ## Behaviour the user chose
 
-- **Church mode**: synth and recording cannot sound; only the starting-notes button stays; top bar hidden;
-  screen stays on. "✕ გამოსვლა" + "შემდეგი: …" sit at the top under the tone stepper.
+- **Church mode** (2026-10-16): the notes are the main thing. Synth and recording cannot sound; top bar hidden;
+  screen stays on. One slim line on top: ✕ · title · starting notes + tone · next (upright phone: no title).
+  Zoom buttons, page labels, top/bottom drawings and ornaments are hidden (pinch / Ctrl+wheel still zoom).
+- **Ink**: every paper colour darkens grey edges (`brightness(.75) contrast(2)` in `--sheet-filter`).
 - **Starting notes**: first note of each voice, top to bottom I → II → III, 0.8 s each, 0.5 s apart;
   they follow the tone setting.
 - **Paper colour**: დღე / სანთელი / ღამე / ავტომატური. Gentle motion only.
