@@ -181,7 +181,11 @@ const ProgramCard: React.FC<{ n?: number; item: ProgramItem; active: string | nu
             key={l.url}
             tone={embedUrl === l.url ? 'active' : takes.length ? 'plain' : 'main'}
             icon={embedUrl === l.url ? <X className="w-4 h-4" /> : <CirclePlay className="w-4 h-4" />}
-            onClick={() => { triggerHaptic(10); onActive(embedUrl === l.url ? null : l.url); }}
+            onClick={() => {
+              triggerHaptic(10);
+              if (!canListen) { askSignIn('ჩანაწერები'); return; }
+              onActive(embedUrl === l.url ? null : l.url);
+            }}
           >
             {embedUrl === l.url ? 'დახურვა' : l.label}
           </Pill>

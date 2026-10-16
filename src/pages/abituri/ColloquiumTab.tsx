@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
 import { CirclePlay, Ear, Play, X } from 'lucide-react';
 import { COLLOQUIUM_CHANTS, COLLOQUIUM_SONGS, COLLOQUIUM_VIDEOS, type ColloquiumGroup, type ColloquiumItem } from '../../data/abituriProgram';
+import { askSignIn } from '../../components/access/SignInPrompt';
 import { triggerHaptic } from '../../utils/haptics';
-import { CARD, Pill, SectionHead } from './shared';
+import { CARD, Pill, SectionHead, useCanListen } from './shared';
 import { ColloquiumQuiz } from './ColloquiumQuiz';
 
 // III exam — the colloquium: excerpts are played, the student names them. Every item plays its own part of the
@@ -10,6 +11,11 @@ import { ColloquiumQuiz } from './ColloquiumQuiz';
 
 export const ColloquiumTab: React.FC = () => {
   const [open, setOpen] = useState<string | null>(null);
+  const canListen = useCanListen();
+  // the whole video on YouTube: like every recording, for members (a guest is asked to sign in)
+  const allTogether = (id: string) => canListen
+    ? <Pill href={watchUrl(id)} icon={<CirclePlay className="w-4 h-4" />}>ყველა ერთად</Pill>
+    : <Pill onClick={() => askSignIn('ჩანაწერები')} icon={<CirclePlay className="w-4 h-4" />}>ყველა ერთად</Pill>;
   return (
     <div className="space-y-7">
       <div className={`${CARD} flex items-start gap-3 p-3.5 sm:p-4`}>
@@ -28,7 +34,7 @@ export const ColloquiumTab: React.FC = () => {
         <SectionHead
           title="საგალობლები"
           sub={`${count(COLLOQUIUM_CHANTS)} საგალობელი`}
-          extra={<Pill href={watchUrl(COLLOQUIUM_VIDEOS.chants)} icon={<CirclePlay className="w-4 h-4" />}>ყველა ერთად</Pill>}
+          extra={allTogether(COLLOQUIUM_VIDEOS.chants)}
         />
         <Groups groups={COLLOQUIUM_CHANTS} video={COLLOQUIUM_VIDEOS.chants} open={open} setOpen={setOpen} />
       </section>
@@ -37,7 +43,7 @@ export const ColloquiumTab: React.FC = () => {
         <SectionHead
           title="სიმღერები"
           sub={`${count(COLLOQUIUM_SONGS)} სიმღერა · 10 კუთხე`}
-          extra={<Pill href={watchUrl(COLLOQUIUM_VIDEOS.songs)} icon={<CirclePlay className="w-4 h-4" />}>ყველა ერთად</Pill>}
+          extra={allTogether(COLLOQUIUM_VIDEOS.songs)}
         />
         <Groups groups={COLLOQUIUM_SONGS} video={COLLOQUIUM_VIDEOS.songs} open={open} setOpen={setOpen} />
       </section>
@@ -52,6 +58,7 @@ const embedUrl = (id: string, [start, end]: ColloquiumItem['yt']) =>
   `https://www.youtube-nocookie.com/embed/${id}?start=${start}${end ? `&end=${end}` : ''}&autoplay=1&rel=0&playsinline=1&modestbranding=1`;
 
 const Groups: React.FC<{ groups: ColloquiumGroup[]; video: string; open: string | null; setOpen: (k: string | null) => void }> = ({ groups, video, open, setOpen }) => {
+  const canListen = useCanListen();
   let n = 0;
   return (
     <div className="grid sm:grid-cols-2 gap-3 items-start">
@@ -79,7 +86,11 @@ const Groups: React.FC<{ groups: ColloquiumGroup[]; video: string; open: string 
                     </span>
                     <button
                       type="button"
-                      onClick={() => { triggerHaptic(10); setOpen(isOpen ? null : key); }}
+                      onClick={() => {
+                        triggerHaptic(10);
+                        if (!canListen) { askSignIn('ჩანაწერები'); return; }
+                        setOpen(isOpen ? null : key);
+                      }}
                       title={isOpen ? 'დახურვა' : 'მოსმენა'}
                       aria-label={`${it.title} — ${isOpen ? 'დახურვა' : 'მოსმენა'}`}
                       aria-expanded={isOpen}

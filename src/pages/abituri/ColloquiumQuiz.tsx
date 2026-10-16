@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { ArrowRight, Check, Ear, RotateCcw, X } from 'lucide-react';
 import { COLLOQUIUM_CHANTS, COLLOQUIUM_SONGS, COLLOQUIUM_VIDEOS, type ColloquiumGroup, type ColloquiumItem } from '../../data/abituriProgram';
 import { useAbituriProgress } from '../../hooks/useAbituriProgress';
+import { askSignIn } from '../../components/access/SignInPrompt';
 import { triggerHaptic } from '../../utils/haptics';
-import { CARD, SectionHead } from './shared';
+import { CARD, SectionHead, useCanListen } from './shared';
 
 // „გამოიცანი სმენით“ — the colloquium as practice: a random half minute from the university's listening video,
 // four names to choose from. The player has no controls, so the video's chapter names can't give the answer away.
@@ -46,6 +47,7 @@ const about = (e: Entry) => [e.group, e.item.sub, e.item.genre].filter(Boolean).
 
 export const ColloquiumQuiz: React.FC = () => {
   const { countDrill } = useAbituriProgress();
+  const canListen = useCanListen();
   const [pool, setPool] = useState<Pool>('all');
   const [round, setRound] = useState<Round | null>(null);
   const [choice, setChoice] = useState<Entry | null>(null);
@@ -90,7 +92,7 @@ export const ColloquiumQuiz: React.FC = () => {
             </div>
             <button
               type="button"
-              onClick={() => next()}
+              onClick={() => (canListen ? next() : askSignIn('ჩანაწერები'))}
               className="mt-3.5 inline-flex items-center gap-1.5 min-h-11 px-5 rounded-full bg-[#7a2028] text-[#fbf6ec] text-[14px] font-bold hover:bg-[#5e1820] cursor-pointer shadow-[0_6px_14px_-8px_rgba(122,32,40,0.7)]"
             >
               დაწყება <ArrowRight className="w-4 h-4" />
