@@ -25,6 +25,8 @@ export interface HabitSetup {
   removed?: string[];
   /** the member's own habits */
   custom?: Record<string, { label: string; group: string }>;
+  /** a school habit moved to another group ("რამდენჯერ": daily, weekly, monthly…): its id → the group's id */
+  groups?: Record<string, string>;
   /** a habit's book button: a menu, or 'none' for no button */
   menus?: Record<string, HabitMenu | 'none'>;
   /** what else a habit opens: things found by the search, or other sites */
@@ -67,6 +69,9 @@ export const MENUS = Object.keys(MENU_LABELS) as HabitMenu[];
 
 const isMenu = (m: unknown): m is HabitMenu => typeof m === 'string' && m in MENU_LABELS;
 
+const GROUP_IDS = HABIT_GROUPS.map(g => g.id);
+const SCHOOL_GROUP = new Map(HABIT_GROUPS.flatMap(g => g.items.map(h => [h.id, g.id] as const)));
+
 /** The groups as this member sees them. */
 export const resolveHabits = (setup: HabitSetup | null | undefined): MyHabitGroup[] => {
   const removed = new Set(setup?.removed || []);
@@ -82,9 +87,16 @@ export const resolveHabits = (setup: HabitSetup | null | undefined): MyHabitGrou
     if (m === 'none') return { ...own, menu: undefined };
     return isMenu(m) ? { ...own, menu: m } : own;
   };
+  // each school habit's group: the member's choice, else the school's
+  const groupOf = (id: string) => {
+    const moved = setup?.groups?.[id];
+    return moved && GROUP_IDS.includes(moved) ? moved : SCHOOL_GROUP.get(id);
+  };
   return HABIT_GROUPS.map(g => {
     const mine = Object.entries(custom).filter(([, c]) => c?.group === g.id && c.label).map(([id]) => id);
-    const natural = [...g.items.map(h => h.id), ...mine];
+    // the group's own habits that stayed, then ones moved in from other groups, then the member's own
+    const movedIn = HABIT_ITEMS.filter(h => SCHOOL_GROUP.get(h.id) !== g.id && groupOf(h.id) === g.id).map(h => h.id);
+    const natural = [...g.items.map(h => h.id).filter(id => groupOf(id) === g.id), ...movedIn, ...mine];
     const saved = (setup?.order?.[g.id] || []).filter(id => natural.includes(id));
     // what the saved order doesn't know yet (a habit added since) goes at the end
     const ids = [...saved, ...natural.filter(id => !saved.includes(id))].filter(id => !removed.has(id));
@@ -119,6 +131,15 @@ export const restoreHabit = (setup: HabitSetup, id: string): HabitSetup => ({
   ...setup,
   removed: (setup.removed || []).filter(x => x !== id),
 });
+
+/** Moves a habit to another group ("რამდენჯერ"); it joins the end of that group. Back in its school group, the
+ *  move is forgotten. */
+export const setHabitGroup = (setup: HabitSetup, id: string, group: string): HabitSetup => {
+  const own = setup.custom?.[id];
+  if (own) return { ...setup, custom: { ...setup.custom, [id]: { ...own, group } } };
+  const { [id]: _was, ...groups } = setup.groups || {};
+  return { ...setup, groups: SCHOOL_GROUP.get(id) === group ? groups : { ...groups, [id]: group } };
+};
 
 export const setHabitMenu = (setup: HabitSetup, id: string, menu: HabitMenu | 'none'): HabitSetup => ({
   ...setup,

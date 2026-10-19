@@ -12,6 +12,7 @@ import { showPhone } from '../../utils/profileFields';
 import { Avatar, Btn, Flash, IconBtn, Pill, Sheet, useFlash } from '../ui/kit';
 import { StudentProfileCard } from '../views/StudentProfileCard';
 import { AccessPicker, AccessRecord, DecisionRecord, saveAccess } from './AccessRequests';
+import { ManeraReviewEditor } from './ManeraReviewEditor';
 import type { StaffRecord, UserRecord } from './UsersTab';
 
 export const ROLE_ICON: Record<Role, React.ReactNode> = {
@@ -219,6 +220,13 @@ export const PersonSheet: React.FC<{
                   ))}
                 </div>
               )}
+            </Part>
+          )}
+
+          {/* a member's manera, marked here by admins (teachers mark it from their panel) */}
+          {admitted && !isStaff && (
+            <Part title="მანერა" sub="შეფასება და შენიშვნა თითოეულ რჩევაზე">
+              <ManeraReviewEditor uid={u.userId} />
             </Part>
           )}
 

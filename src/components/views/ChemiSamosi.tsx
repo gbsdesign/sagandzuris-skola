@@ -1,19 +1,61 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import confetti from 'canvas-confetti';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { Check, ChevronDown, X } from 'lucide-react';
+import { Check, X } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
-import { SAMOSI_ASPECT, SAMOSI_FIGURE, SAMOSI_PARTS, SamosiPart, samosiLayer, samosiThumb } from '../../data/samosiData';
+import { DyeWay, useSamosiSrc } from '../../utils/samosiDye';
+import {
+  SAMOSI_ASPECT,
+  SAMOSI_COLORS,
+  SAMOSI_DEFAULT_COLOR,
+  SAMOSI_FIGURE,
+  SAMOSI_PARTS,
+  SAMOSI_TOTAL,
+  SAMOSI_DYED,
+  SamosiKinds,
+  SamosiPart,
+  SamosiPhoto,
+  samosiDone,
+  samosiHex,
+  samosiKindOf,
+  samosiLayer,
+  samosiPhotoOf,
+  samosiThumb,
+} from '../../data/samosiData';
 import { SamosiArt } from './SamosiArt';
+import { SamosiTryOn } from './SamosiTryOn';
 
 const KNOWN = new Set(SAMOSI_PARTS.map(p => p.id));
-const PHOTO_PARTS = SAMOSI_PARTS.filter(p => !p.art);
-const TOTAL = SAMOSI_PARTS.length;
+const COLOR_BY_ID = new Map(SAMOSI_COLORS.map(c => [c.id, c]));
+// the colour picker's tabs: everything at once (first), or one part; the parts that may have a colour of their own
+const PICK_TABS = [
+  { id: 'all', label: 'ყველა' },
+  { id: 'chokha', label: 'ჩოხა' },
+  { id: 'akhalukhi', label: 'ახალუხი' },
+  { id: 'papanaki', label: 'ფაფანაკი' },
+  { id: 'kudi', label: 'ქუდი' },
+] as const;
+type PickTab = (typeof PICK_TABS)[number]['id'];
+const OWN_COLORS = ['akhalukhi', 'papanaki', 'kudi'] as const;
+type OwnColor = (typeof OWN_COLORS)[number];
+// the kinds of the hats that have them (the papakha's)
+const KIND_IDS = new Map(SAMOSI_PARTS.filter(p => p.kinds).map(p => [p.id, new Set(p.kinds!.map(k => k.id))]));
+// the colour picker's rim: all the colours round the circle
+const RAINBOW = `conic-gradient(${SAMOSI_COLORS.map(c => c.hex).join(', ')}, ${SAMOSI_COLORS[0].hex})`;
+// the layers of the chokha photo, and the parts with photos of their own on the shoulder
+const PHOTO_PARTS = SAMOSI_PARTS.filter(p => !p.art && !p.photo);
+const SHOULDER_PARTS = SAMOSI_PARTS.filter(p => p.shoulder && p.photo);
+const TOTAL = SAMOSI_TOTAL;
+const HEAD_PARTS = SAMOSI_PARTS.filter(p => p.head);
+const EXTRA_HATS = SAMOSI_PARTS.filter(p => p.extraHat);
+// the room above the collar for the hat, in % of the figure's width: a head's height, so the hat sits where it
+// would on a head (the hats' places in samosiData are measured in the same units)
+const HEAD_ROOM = 72;
 const COLORS = ['#7a2028', '#c8962e', '#f3e3c6', '#1e2f5a'];
-// slots beside the figure for the drawn parts: the cap up by the collar, the boots down by the hem
-const SLOT_PLACE: Record<string, string> = { papanaki: '-right-[72px] top-[2%]', aziurebi: '-left-[72px] bottom-[12%]' };
+// the slot beside the figure for the boots, down by the hem (the hats go on the head)
+const SLOT_PLACE: Record<string, string> = { aziurebi: '-left-[72px] bottom-[12%]' };
 
 const fireworks = (finale: boolean) => {
   const shots = finale ? 7 : 3;
@@ -38,11 +80,12 @@ const fireworks = (finale: boolean) => {
 
 // "ჩემი სამოსი": the student ticks off the parts of their chokha and watches it come together —
 // a pale mannequin at first, each ticked part dropping into place in colour. Saved in students/{uid}.samosi.
-// Folded at first; shown on the profile and at the top of the path page, where `side` (the path's progress)
-// sits on the right of the folded button — on phones, where the row is too narrow, in a row of its own under it.
-export const ChemiSamosi: React.FC<{ side?: React.ReactNode }> = ({ side }) => {
+// Folded at first into a round button with only "სამოსი" under it; shown on the profile and at the top of the
+// path page, where `side` (the path's progress) sits on the right of the button.
+// `bare`: only the open chokha, without its round button and card (under the path page's round buttons, PathOrbs).
+export const ChemiSamosi: React.FC<{ side?: React.ReactNode; bare?: boolean }> = ({ side, bare }) => {
   const { user } = useAuth();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(!!bare);
   const [owned, setOwned] = useState<string[]>([]);
   // how many times each part has been ticked in this visit: a new value replays its drop animation
   const [drops, setDrops] = useState<Record<string, number>>({});
@@ -50,14 +93,55 @@ export const ChemiSamosi: React.FC<{ side?: React.ReactNode }> = ({ side }) => {
   const [shine, setShine] = useState(0);
   // the part just added: its one-sentence story shows under the figure until the next one
   const [story, setStory] = useState<SamosiPart | null>(null);
+  // the outfit's colour (students/{uid}.samosiColor) — the chokha's, and everything's that has none of its own —
+  // and the parts coloured on their own (.samosiColors: akhalukhi, papanaki, kudi = the hat); picker in the corner
+  const [color, setColor] = useState(SAMOSI_DEFAULT_COLOR);
+  const [colors, setColors] = useState<Partial<Record<OwnColor, string>>>({});
+  const [tab, setTab] = useState<PickTab>('all');
+  // the hat put on last (.samosiHead) and the kind of each hat that has kinds (.samosiKinds)
+  const [head, setHead] = useState<string | null>(null);
+  const [kinds, setKinds] = useState<SamosiKinds>({});
+  const [picking, setPicking] = useState(false);
+  const pickerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     if (!user) return;
     return onSnapshot(doc(db, 'students', user.uid), snap => {
-      const v = snap.data()?.samosi;
+      const d = snap.data();
+      const v = d?.samosi;
       if (Array.isArray(v)) setOwned(v.filter((id): id is string => typeof id === 'string' && KNOWN.has(id)));
+      const c = d?.samosiColor;
+      if (typeof c === 'string' && COLOR_BY_ID.has(c)) setColor(c);
+      const cs = d?.samosiColors;
+      setColors(
+        cs && typeof cs === 'object'
+          ? Object.fromEntries(Object.entries(cs).filter(([k, v]) => OWN_COLORS.includes(k as OwnColor) && typeof v === 'string' && COLOR_BY_ID.has(v)))
+          : {}
+      );
+      if (typeof d?.samosiHead === 'string') setHead(d.samosiHead);
+      const ks = d?.samosiKinds;
+      if (ks && typeof ks === 'object') {
+        setKinds(Object.fromEntries(Object.entries(ks).filter(([id, k]) => typeof k === 'string' && KIND_IDS.get(id)?.has(k))) as SamosiKinds);
+      }
     });
   }, [user]);
+
+  // the picker folds on a tap anywhere else or on Escape
+  useEffect(() => {
+    if (!picking) return;
+    const away = (e: PointerEvent) => {
+      if (!pickerRef.current?.contains(e.target as Node)) setPicking(false);
+    };
+    const esc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') setPicking(false);
+    };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [picking]);
 
   useEffect(() => {
     if (!cheer) return;
@@ -66,13 +150,70 @@ export const ChemiSamosi: React.FC<{ side?: React.ReactNode }> = ({ side }) => {
   }, [cheer]);
 
   const has = (id: string) => owned.includes(id);
-  const done = owned.length;
+  const done = samosiDone(owned);
   const complete = done === TOTAL;
+  const current = COLOR_BY_ID.get(color) || SAMOSI_COLORS[0];
+  // a part's colour: its own if it has one, else the outfit's
+  const colorOf = (part: OwnColor | 'chokha') => (part === 'chokha' ? color : colors[part] || color);
+  const colorObj = (part: OwnColor | 'chokha') => COLOR_BY_ID.get(colorOf(part)) || current;
+  // a part's own photo (papanaki, hats), in the member's kind of it
+  const photoOf = (p: SamosiPart) => samosiPhotoOf(p, kinds);
+  // a photo in its part's colour (the papanaki's, else the hat's): dyed from the photo's own colour, or as it is
+  const lookOf = (photo?: SamosiPhoto, part: OwnColor = 'kudi'): { dye: string | null; way?: DyeWay } => {
+    const id = colorOf(part);
+    if (!photo || id === photo.native) return { dye: null };
+    return { dye: samosiHex(id), way: { range: photo.range, base: photo.native ? samosiHex(photo.native) : undefined } };
+  };
+  const photoLook = (p: SamosiPart) => lookOf(photoOf(p), p.shoulder ? 'papanaki' : 'kudi');
+  // the colour a layer of the chokha photo is dyed into (the akhalukhi its own): null keeps the photo's own blue
+  const dyeFor = (id: string) => {
+    if (!SAMOSI_DYED.has(id)) return null;
+    const c = colorOf(id === 'akhalukhi' ? 'akhalukhi' : 'chokha');
+    return c === SAMOSI_DEFAULT_COLOR ? null : samosiHex(c);
+  };
+  // the picker: the colour of what the open tab colours ('' = the parts differ, under "ყველა")
+  const uniform = OWN_COLORS.every(k => !colors[k] || colors[k] === color);
+  const tabColor = tab === 'all' ? (uniform ? color : '') : colorOf(tab);
+  // the hat on the head: the one put on last while it is collected, else any collected hat
+  const worn = (head && HEAD_PARTS.some(p => p.id === head) && has(head) ? head : HEAD_PARTS.find(p => has(p.id))?.id) || null;
+  const wornPart = worn ? SAMOSI_PARTS.find(p => p.id === worn) : undefined;
+  const wornPhoto = wornPart && photoOf(wornPart);
+
+  const save =(data: Record<string, unknown>, fields: string[]) => {
+    if (!user) return;
+    setDoc(doc(db, 'students', user.uid), data, { mergeFields: fields }).catch(err => console.warn('Firestore samosi note:', err));
+  };
 
   const toggleOpen = () => {
     triggerHaptic(10);
     if (!open && complete) setShine(s => s + 1);
+    setPicking(false);
     setOpen(o => !o);
+  };
+
+  // "ყველა": the whole outfit in one colour (the parts' own colours go); "ჩოხა": the chokha only (the parts that
+  // followed it keep the colour they had); the other tabs: that part only. The picker stays open for more.
+  const pickColor = (id: string) => {
+    if (id === tabColor) return;
+    triggerHaptic(15);
+    if (tab === 'all') {
+      setColor(id);
+      setColors({});
+      save({ samosiColor: id, samosiColors: {} }, ['samosiColor', 'samosiColors']);
+    } else if (tab === 'chokha') {
+      const kept = Object.fromEntries(OWN_COLORS.map(k => [k, colors[k] || color]));
+      setColor(id);
+      setColors(kept);
+      save({ samosiColor: id, samosiColors: kept }, ['samosiColor', 'samosiColors']);
+    } else {
+      setColors(cs => ({ ...cs, [tab]: id }));
+      save({ samosiColors: { [tab]: id } }, [`samosiColors.${tab}`]);
+    }
+  };
+
+  const wear = (id: string) => {
+    setHead(id);
+    save({ samosiHead: id }, ['samosiHead']);
   };
 
   const toggle = (part: SamosiPart) => {
@@ -82,46 +223,148 @@ export const ChemiSamosi: React.FC<{ side?: React.ReactNode }> = ({ side }) => {
     triggerHaptic(adding ? 25 : 10);
     setStory(adding ? part : s => (s?.id === part.id ? null : s));
     if (adding) {
-      const finale = next.length === TOTAL;
+      const finale = samosiDone(next) === TOTAL && done < TOTAL;
       setDrops(d => ({ ...d, [part.id]: (d[part.id] || 0) + 1 }));
       setCheer({ n: Date.now(), finale });
       fireworks(finale);
       if (finale) setShine(s => s + 1);
+      if (part.head) wear(part.id);
     }
-    if (user) {
-      setDoc(doc(db, 'students', user.uid), { samosi: next }, { mergeFields: ['samosi'] }).catch(err =>
-        console.warn('Firestore samosi note:', err)
-      );
+    save({ samosi: next }, ['samosi']);
+  };
+
+  // a hat's kind (the papakha's picture on its tile): it goes on the head, so the change shows — and a hat not yet
+  // collected is collected in that kind
+  const pickKind = (part: SamosiPart, id: string) => {
+    const same = samosiKindOf(part, kinds)?.id === id;
+    if (has(part.id) && same && worn === part.id) return;
+    if (!same) {
+      setKinds(ks => ({ ...ks, [part.id]: id }));
+      save({ samosiKinds: { [part.id]: id } }, [`samosiKinds.${part.id}`]);
     }
+    if (!has(part.id)) return toggle(part);
+    triggerHaptic(15);
+    setDrops(d => ({ ...d, [part.id]: (d[part.id] || 0) + 1 }));
+    if (worn !== part.id) wear(part.id);
+  };
+
+  // a tile's tap: a collected hat that is not on the head goes on it; anything else is ticked or unticked
+  const tap = (part: SamosiPart) => {
+    if (part.head && has(part.id) && worn !== part.id) {
+      triggerHaptic(15);
+      setDrops(d => ({ ...d, [part.id]: (d[part.id] || 0) + 1 }));
+      wear(part.id);
+      return;
+    }
+    toggle(part);
   };
 
   return (
-    // same card look as the other tiles of "საგანძურის გზა" (PATH_TILE), without the hover lift
-    <section className="w-full rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] overflow-hidden">
-      <button
-        type="button"
-        onClick={toggleOpen}
-        className="w-full flex flex-wrap items-center gap-3 p-3 sm:px-4 text-left cursor-pointer select-none hover:bg-[#fbf6ec]/60 transition-colors"
-        aria-expanded={open}
-      >
-        <ProgressRing value={done / TOTAL} complete={complete} />
-        <span className="flex-1 min-w-0">
-          <span className="block text-[15px] sm:text-base font-black text-[#2a2017] leading-tight">ჩემი სამოსი</span>
-          <span className={`block mt-0.5 text-xs font-semibold ${complete ? 'text-emerald-700' : 'text-[#8a7a6a]'}`}>
-            {complete ? 'ჩოხა სრულადაა აწყობილი' : `${done} / ${TOTAL} შეგროვებულია`}
+    <div className="w-full space-y-3">
+      {!bare && (
+      <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
+        {/* the round button: a tap opens and folds the chokha; a wine rim while it is open */}
+        <button
+          type="button"
+          onClick={toggleOpen}
+          className="group shrink-0 flex flex-col items-center gap-1 cursor-pointer select-none"
+          aria-expanded={open}
+        >
+          <span
+            className={`w-14 h-14 rounded-full bg-white flex items-center justify-center ring-2 shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_24px_-14px_rgba(42,32,23,0.45)] transition-all duration-200 group-active:scale-95 ${
+              open ? 'ring-[#7a2028]' : 'ring-[#2a2017]/[0.07] group-hover:ring-[#7a2028]/30'
+            }`}
+          >
+            <SamosiImg src={samosiThumb('chokha')} dye={dyeFor('chokha')} className="w-10 h-10" />
           </span>
-        </span>
-        {side && <span className="order-last basis-full min-[520px]:order-none min-[520px]:basis-auto empty:hidden">{side}</span>}
-        <span className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all ${open ? 'rotate-180 bg-[#7a2028]/10 text-[#7a2028]' : 'bg-[#fbf6ec] text-[#8a7a6a]'}`}>
-          <ChevronDown className="w-4 h-4" />
-        </span>
-      </button>
+          <span className={`text-xs font-bold leading-tight transition-colors ${open ? 'text-[#7a2028]' : 'text-[#4a3426]'}`}>სამოსი</span>
+        </button>
+        {side && <div className="min-w-0 h-14 flex items-center empty:hidden">{side}</div>}
+      </div>
+      )}
 
       {open && (
-        <div className="px-4 pb-4 space-y-5 animate-in fade-in duration-300">
+        // same card look as the other tiles of "საგანძურის გზა" (PATH_TILE), without the hover lift
+        <section className={bare ? 'space-y-5' : 'w-full rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] overflow-hidden p-4 space-y-5 animate-in fade-in duration-300'}>
           {/* the chokha coming together */}
           <div className="relative pt-3 pb-1 rounded-2xl bg-[radial-gradient(ellipse_at_50%_45%,#ffffff_42%,#f6efe3_100%)]">
+            {/* the colour picker: a small round button, the eight colours fold out of it; one colour for it all */}
+            <div ref={pickerRef} className="absolute top-2.5 left-2.5 z-20">
+              <button
+                type="button"
+                onClick={() => setPicking(p => !p)}
+                aria-label={`სამოსის ფერი: ${current.label}`}
+                aria-expanded={picking}
+                title="სამოსის ფერი"
+                className="block w-9 h-9 rounded-full p-[3px] cursor-pointer shadow-[0_4px_12px_-4px_rgba(42,32,23,0.45)] transition-transform active:scale-90"
+                style={{ background: RAINBOW }}
+              >
+                <span className="block w-full h-full rounded-full bg-white p-[3px]">
+                  <span className="block w-full h-full rounded-full ring-1 ring-inset ring-black/10" style={{ background: current.hex }} />
+                </span>
+              </button>
+              {picking && (
+                <div className="absolute top-11 left-0 w-[204px] p-2.5 rounded-2xl bg-white ring-1 ring-[#eadfcb] shadow-[0_14px_36px_-14px_rgba(74,52,38,0.5)] origin-top-left animate-in fade-in zoom-in-95 duration-150">
+                  {/* what is being coloured: everything at once (first), or one part */}
+                  <div className="grid grid-cols-2 gap-1.5 mb-2.5" role="tablist">
+                    {PICK_TABS.map(t => (
+                      <button
+                        key={t.id}
+                        type="button"
+                        role="tab"
+                        aria-selected={tab === t.id}
+                        onClick={() => setTab(t.id)}
+                        className={`h-9 rounded-full text-xs font-bold cursor-pointer transition-colors ${t.id === 'all' ? 'col-span-2' : ''} ${
+                          tab === t.id ? 'bg-[#7a2028] text-white' : 'bg-[#f6efe3] text-[#4a3426] hover:bg-[#efe5d4]'
+                        }`}
+                      >
+                        {t.label}
+                      </button>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-4 gap-2">
+                    {SAMOSI_COLORS.map(c => {
+                      const on = c.id === tabColor;
+                      return (
+                        <button
+                          key={c.id}
+                          type="button"
+                          onClick={() => pickColor(c.id)}
+                          aria-label={c.label}
+                          aria-pressed={on}
+                          title={c.label}
+                          className={`relative w-9 h-9 rounded-full cursor-pointer ring-1 ring-inset ring-black/10 transition-transform active:scale-90 ${
+                            on ? 'outline-2 outline-offset-2 outline-[#7a2028]' : ''
+                          }`}
+                          style={{ background: c.hex }}
+                        >
+                          {on && <Check className={`absolute inset-0 m-auto w-4 h-4 stroke-[3] ${c.id === 'white' ? 'text-[#2a2017]' : 'text-white'}`} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="mt-2 text-center text-xs font-bold text-[#4a3426]">{COLOR_BY_ID.get(tabColor)?.label ?? 'სხვადასხვა ფერი'}</p>
+                </div>
+              )}
+            </div>
+
             <div className="relative mx-auto" style={{ width: 'clamp(150px, calc(100% - 150px), 240px)' }}>
+              {/* the room over the collar, with the hat being worn where it would sit on a head */}
+              <div aria-hidden className="relative" style={{ paddingTop: `${HEAD_ROOM}%` }}>
+                {wornPart && wornPhoto && (
+                  <SamosiImg
+                    key={`${wornPart.id}-${drops[wornPart.id] || 0}`}
+                    src={wornPhoto.src}
+                    {...photoLook(wornPart)}
+                    className={`absolute h-auto pointer-events-none ${drops[wornPart.id] ? 'samosi-drop' : ''}`}
+                    style={{
+                      left: `${wornPhoto.place.left}%`,
+                      top: `${(wornPhoto.place.top / HEAD_ROOM) * 100}%`,
+                      width: `${wornPhoto.place.width}%`,
+                    }}
+                  />
+                )}
+              </div>
               <div
                 className="relative"
                 style={{
@@ -134,14 +377,26 @@ export const ChemiSamosi: React.FC<{ side?: React.ReactNode }> = ({ side }) => {
                 {PHOTO_PARTS.map(p => {
                   const on = has(p.id);
                   return (
-                    <img
+                    <SamosiImg
                       key={`${p.id}-${drops[p.id] || 0}`}
                       src={samosiLayer(p.id)}
-                      alt=""
-                      aria-hidden
-                      draggable={false}
+                      dye={dyeFor(p.id)}
                       className={`absolute inset-0 w-full h-full transition-opacity duration-300 ${on && drops[p.id] ? 'samosi-drop' : ''}`}
                       style={{ opacity: on ? 1 : 0 }}
+                    />
+                  );
+                })}
+                {/* the papanaki on the right shoulder */}
+                {SHOULDER_PARTS.map(p => {
+                  const on = has(p.id);
+                  const place = p.photo!.place;
+                  return (
+                    <SamosiImg
+                      key={`${p.id}-${drops[p.id] || 0}`}
+                      src={p.photo!.src}
+                      {...photoLook(p)}
+                      className={`absolute h-auto transition-opacity duration-300 ${on && drops[p.id] ? 'samosi-drop' : ''}`}
+                      style={{ left: `${place.left}%`, top: `${place.top}%`, width: `${place.width}%`, opacity: on ? 1 : 0 }}
                     />
                   );
                 })}
@@ -155,7 +410,7 @@ export const ChemiSamosi: React.FC<{ side?: React.ReactNode }> = ({ side }) => {
                 )}
               </div>
 
-              {SAMOSI_PARTS.filter(p => p.art).map(p => (
+              {SAMOSI_PARTS.filter(p => p.art && !p.head).map(p => (
                 <Slot key={p.id} part={p} on={has(p.id)} pop={drops[p.id] || 0} className={SLOT_PLACE[p.id]} />
               ))}
             </div>
@@ -172,14 +427,26 @@ export const ChemiSamosi: React.FC<{ side?: React.ReactNode }> = ({ side }) => {
             )}
           </div>
 
+          {/* the member's own photo dressed in this chokha (AI), for those given it */}
+          <SamosiTryOn
+            look={{
+              chokha: current,
+              akhalukhi: colorObj('akhalukhi'),
+              papanaki: has('papanaki') ? colorObj('papanaki') : undefined,
+              hat: wornPart ? { id: wornPart.id, label: wornPart.label, kind: samosiKindOf(wornPart, kinds)?.id, color: colorObj('kudi') } : undefined,
+            }}
+          />
+
           {/* the story of the part just added */}
           {story && (
             <div key={story.id} className="flex items-start gap-3 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#eadfcb] pl-2.5 pr-1.5 py-2.5 animate-in fade-in slide-in-from-top-1 duration-300" aria-live="polite">
               <span className="w-10 h-10 shrink-0 rounded-xl bg-white shadow-[0_1px_2px_rgba(42,32,23,0.08)] flex items-center justify-center">
                 {story.art ? (
                   <SamosiArt kind={story.art} className="w-8 h-8" />
+                ) : story.photo ? (
+                  <SamosiImg src={photoOf(story)!.src} {...photoLook(story)} className="w-9 h-9 object-contain" />
                 ) : (
-                  <img src={samosiThumb(story.id)} alt="" aria-hidden draggable={false} className="w-9 h-9" />
+                  <SamosiImg src={samosiThumb(story.id)} dye={dyeFor(story.id)} className="w-9 h-9" />
                 )}
               </span>
               <p className="flex-1 min-w-0 pt-0.5 text-[13px] leading-relaxed text-[#4a3426]">
@@ -206,8 +473,8 @@ export const ChemiSamosi: React.FC<{ side?: React.ReactNode }> = ({ side }) => {
                 }`}
                 style={{ width: `${(done / TOTAL) * 100}%` }}
               />
-              {SAMOSI_PARTS.slice(1).map((p, i) => (
-                <span key={p.id} className="absolute inset-y-0 w-0.5 -ml-px bg-white" style={{ left: `${((i + 1) / TOTAL) * 100}%` }} />
+              {Array.from({ length: TOTAL - 1 }, (_, i) => (
+                <span key={i} className="absolute inset-y-0 w-0.5 -ml-px bg-white" style={{ left: `${((i + 1) / TOTAL) * 100}%` }} />
               ))}
             </div>
             {complete ? (
@@ -222,26 +489,84 @@ export const ChemiSamosi: React.FC<{ side?: React.ReactNode }> = ({ side }) => {
             )}
           </div>
 
-          {/* the parts: compact tiles, picture first; a ticked tile turns wine-tinted with a check on its picture */}
-          <div className="grid grid-cols-2 min-[480px]:grid-cols-3 sm:grid-cols-4 gap-2">
+          {/* the parts: compact tiles, picture first; a ticked tile turns wine-tinted with a check on its picture.
+              The extra hats follow under their own line: any one of them counts. A collected hat says whether it is
+              on the head; a tap puts it on. A hat with kinds (the papakha) shows a picture of each to pick from. */}
+          <div className="grid grid-cols-2 min-[480px]:grid-cols-3 sm:grid-cols-4 gap-2 items-start">
             {SAMOSI_PARTS.map(p => {
               const on = has(p.id);
               const pic = `transition-[filter,opacity] duration-300 ${on ? '' : 'grayscale opacity-50 group-hover:opacity-75'}`;
+              const name = (
+                <>
+                  <span className={`block text-[13px] font-bold leading-tight ${on ? 'text-[#2a2017]' : 'text-[#7d6e5f]'}`}>{p.label}</span>
+                  {p.head && on && (
+                    <span className={`block mt-0.5 text-[11px] font-bold leading-tight ${worn === p.id ? 'text-[#7a2028]' : 'text-[#a99a88]'}`}>
+                      {worn === p.id ? 'თავზე' : 'დახურვა'}
+                    </span>
+                  )}
+                </>
+              );
               return (
+                <React.Fragment key={p.id}>
+                {p.id === EXTRA_HATS[0]?.id && (
+                  <p className="col-span-full pt-1.5 text-xs font-bold text-[#8a7a6a]">ქუდები — ერთიც საკმარისია</p>
+                )}
+                {p.kinds ? (
+                  // the papakha: its kinds' pictures side by side, a tap on one puts that kind on; its name taps as a tile
+                  <div
+                    className={`group flex flex-wrap items-center gap-x-2.5 gap-y-1 min-h-12 py-1 pl-1.5 pr-2 rounded-xl ring-1 ring-inset transition-all duration-200 ${
+                      on ? 'bg-[#7a2028]/[0.06] ring-[#7a2028]/35' : 'bg-[#f8f5ef] ring-transparent hover:bg-[#f2ece2]'
+                    }`}
+                  >
+                    <span className="flex gap-1" role="group" aria-label={`${p.label}: სახე`}>
+                      {p.kinds.map(k => {
+                        const chosen = on && samosiKindOf(p, kinds)?.id === k.id;
+                        return (
+                          <button
+                            key={k.id}
+                            type="button"
+                            onClick={() => pickKind(p, k.id)}
+                            aria-label={k.label}
+                            title={k.label}
+                            aria-pressed={chosen}
+                            className={`relative w-9 h-9 shrink-0 rounded-lg bg-white shadow-[0_1px_2px_rgba(42,32,23,0.08)] flex items-center justify-center cursor-pointer transition-transform active:scale-90 ${
+                              chosen ? 'ring-2 ring-[#7a2028]' : ''
+                            }`}
+                          >
+                            <SamosiImg
+                              src={k.photo.src}
+                              {...lookOf(k.photo)}
+                              className={`w-8 h-8 object-contain ${on ? `transition-opacity duration-300 ${chosen ? '' : 'opacity-60 hover:opacity-90'}` : pic}`}
+                            />
+                            {chosen && (
+                              <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white bg-[#7a2028] text-white">
+                                <Check className="w-2.5 h-2.5 stroke-[4]" />
+                              </span>
+                            )}
+                          </button>
+                        );
+                      })}
+                    </span>
+                    <button type="button" onClick={() => tap(p)} aria-pressed={on} className="flex-auto self-stretch flex flex-col justify-center text-left cursor-pointer">
+                      {name}
+                    </button>
+                  </div>
+                ) : (
                 <button
-                  key={p.id}
                   type="button"
-                  onClick={() => toggle(p)}
+                  onClick={() => tap(p)}
                   aria-pressed={on}
-                  className={`group flex items-center gap-2.5 h-12 pl-1.5 pr-2 rounded-xl text-left ring-1 ring-inset transition-all duration-200 cursor-pointer active:scale-[0.97] ${
+                  className={`group flex items-center gap-2.5 min-h-12 py-1 pl-1.5 pr-2 rounded-xl text-left ring-1 ring-inset transition-all duration-200 cursor-pointer active:scale-[0.97] ${
                     on ? 'bg-[#7a2028]/[0.06] ring-[#7a2028]/35' : 'bg-[#f8f5ef] ring-transparent hover:bg-[#f2ece2]'
                   }`}
                 >
                   <span className="relative w-9 h-9 shrink-0 rounded-lg bg-white shadow-[0_1px_2px_rgba(42,32,23,0.08)] flex items-center justify-center">
                     {p.art ? (
                       <SamosiArt kind={p.art} className={`w-7 h-7 ${pic}`} />
+                    ) : p.photo ? (
+                      <SamosiImg src={photoOf(p)!.src} {...photoLook(p)} className={`w-8 h-8 object-contain ${pic}`} />
                     ) : (
-                      <img src={samosiThumb(p.id)} alt="" aria-hidden draggable={false} className={`w-8 h-8 ${pic}`} />
+                      <SamosiImg src={samosiThumb(p.id)} dye={dyeFor(p.id)} className={`w-8 h-8 ${pic}`} />
                     )}
                     <span
                       className={`absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center ring-2 ring-white transition-all duration-200 ${
@@ -251,43 +576,30 @@ export const ChemiSamosi: React.FC<{ side?: React.ReactNode }> = ({ side }) => {
                       <Check className="w-2.5 h-2.5 stroke-[4]" />
                     </span>
                   </span>
-                  <span className={`flex-1 min-w-0 truncate text-[13px] font-bold ${on ? 'text-[#2a2017]' : 'text-[#7d6e5f]'}`}>{p.label}</span>
+                  <span className="flex-1 min-w-0">{name}</span>
                 </button>
+                )}
+                </React.Fragment>
               );
             })}
           </div>
-        </div>
+        </section>
       )}
-    </section>
+    </div>
   );
 };
 
-// Thumbnail of the chokha inside a ring that fills as parts are collected
-const ProgressRing: React.FC<{ value: number; complete: boolean }> = ({ value, complete }) => {
-  const r = 23;
-  const c = 2 * Math.PI * r;
-  return (
-    <span className="relative w-[52px] h-[52px] shrink-0">
-      <svg viewBox="0 0 52 52" className="absolute inset-0 -rotate-90" aria-hidden>
-        <circle cx="26" cy="26" r={r} fill="none" stroke="#efe5d4" strokeWidth="3" />
-        <circle
-          cx="26"
-          cy="26"
-          r={r}
-          fill="none"
-          stroke={complete ? '#059669' : '#7a2028'}
-          strokeWidth="3"
-          strokeLinecap="round"
-          strokeDasharray={c}
-          strokeDashoffset={c * (1 - value)}
-          className="transition-[stroke-dashoffset] duration-700"
-        />
-      </svg>
-      <span className="absolute inset-[6px] rounded-full bg-white flex items-center justify-center overflow-hidden">
-        <img src={samosiThumb('chokha')} alt="" aria-hidden draggable={false} className="w-[34px] h-[34px]" />
-      </span>
-    </span>
-  );
+// A decorative picture of the chokha, dyed into the chosen colour; an empty box of the same size while it dyes
+const SamosiImg: React.FC<{ src: string; dye: string | null; way?: DyeWay; className?: string; style?: React.CSSProperties }> = ({
+  src,
+  dye,
+  way,
+  className,
+  style,
+}) => {
+  const url = useSamosiSrc(src, dye, way);
+  if (!url) return <span aria-hidden className={`block ${className || ''}`} />;
+  return <img src={url} alt="" aria-hidden draggable={false} className={className} style={style} />;
 };
 
 // Round slot beside the figure for a drawn part (cap, boots): dashed and pale until collected

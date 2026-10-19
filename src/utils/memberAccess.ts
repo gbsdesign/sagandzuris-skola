@@ -14,7 +14,7 @@ import type { SectionId } from '../data/sections';
 // „დამატება შეფერხებულია“ every time, and their data stays. Features not given are simply not shown.
 // Members from before this (a students document but no memberAccess) keep everything; staff never wait.
 
-export type FeatureId = SectionId | 'recordings' | 'classes' | 'messages' | 'search' | 'calendar';
+export type FeatureId = SectionId | 'recordings' | 'classes' | 'messages' | 'search' | 'calendar' | 'samosiPhoto';
 export type MemberStatus = 'pending' | 'approved' | 'rejected';
 
 export interface FeatureDef { id: FeatureId; label: string; text: string }
@@ -55,6 +55,7 @@ export const FEATURE_GROUPS: { title: string; items: FeatureDef[] }[] = [
     items: [
       { id: 'search', label: 'ძიება', text: 'ერთი ძიება მთელ აპში: საგალობლები, ლოცვები, ბიბლია, ფსალმუნი, სიმღერები, დღესასწაულები' },
       { id: 'calendar', label: 'საეკლესიო კალენდარი', text: 'კალენდარი გვერდის ბოლოს და დღის წმიდანების ბარათი' },
+      { id: 'samosiPhoto', label: 'ფოტოზე ჩოხის ჩაცმა', text: '„ჩემი სამოსი“: საკუთარ ფოტოზე ჩოხის ჩაცმა AI-ით — 10 ცდა (პირველ დღეს 3, შემდეგ დღეში 1)' },
     ],
   },
 ];

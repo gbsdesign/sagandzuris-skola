@@ -25,6 +25,7 @@ import { useNavigation, useModal } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 import { sortPathItems, categoryOf, usesVoices, PathCategory } from '../../utils/pathItems';
 import { useConfirmations } from '../../hooks/useConfirmations';
+import { useMarksLock } from '../../hooks/usePathMarks';
 import { useNotes } from '../../context/NotesContext';
 import { findVersion, canOpenNotes } from '../../data/chantLookup';
 import { getChantMedia } from '../../data/chantMediaRegistry';
@@ -32,7 +33,7 @@ import { FOLK_SONGS, getFolkRegion } from '../../data/songsData';
 import { SongBody } from '../maps/GeorgiaMap';
 import { MONTHS_GE, MONTHS_GEN_GE, WEEKDAYS_GE } from '../../utils/dateNames';
 
-const triggerFireworks = () => {
+export const triggerFireworks = () => {
   try {
     const count = 180;
     const defaults = {
@@ -178,6 +179,8 @@ export const GzaView: React.FC<GzaViewProps> = ({
   const [internalVariants, setInternalVariants] = useState<SelectedChantVariantsMap>({});
   // voices a teacher confirmed ("ჩათვლა"); the student can't undo those
   const confirmed = useConfirmations(auth.currentUser?.uid);
+  // a teacher may stop the student's own marking (marksLock); adding and removing chants stays open
+  const locked = !!useMarksLock(auth.currentUser?.uid)?.on;
   const { openNotes } = useNotes();
 
   const activeVariantsMap = filterValidVariants(externalSelectedVariants || internalVariants);
@@ -218,7 +221,7 @@ export const GzaView: React.FC<GzaViewProps> = ({
 
   const handleToggleVoice = async (variantId: string, voice: '1' | '2' | '3') => {
     const current = activeVariantsMap[variantId];
-    if (!current) return;
+    if (!current || locked) return;
 
     const currentVoices = Array.isArray(current.voices) ? current.voices : [];
     const hasVoice = currentVoices.includes(voice);
@@ -261,7 +264,7 @@ export const GzaView: React.FC<GzaViewProps> = ({
 
   const handleToggleLearned = async (variantId: string) => {
     const current = activeVariantsMap[variantId];
-    if (!current) return;
+    if (!current || locked) return;
 
     const nextLearned = !current.isLearned;
     if (nextLearned) {
@@ -427,9 +430,9 @@ export const GzaView: React.FC<GzaViewProps> = ({
                       </button>
                     </div>
                   </div>
-                  {(editing || usesVoices(cat.items[0].variantId)) && (
+                  {(editing || locked || usesVoices(cat.items[0].variantId)) && (
                     <p className="mt-0.5 pl-4 text-xs text-[#8a7a6a]">
-                      {editing ? 'შეეხე ✕-ს, რომ სიიდან ამოშალო' : 'შეეხე ხმის ნომერს, როცა ისწავლი'}
+                      {editing ? 'შეეხე ✕-ს, რომ სიიდან ამოშალო' : locked ? 'მონიშვნას ახლა მასწავლებელი აკეთებს' : 'შეეხე ხმის ნომერს, როცა ისწავლი'}
                     </p>
                   )}
                 </div>
@@ -491,10 +494,11 @@ export const GzaView: React.FC<GzaViewProps> = ({
                                         key={vNum}
                                         type="button"
                                         onClick={() => handleToggleVoice(item.variantId, vNum)}
+                                        disabled={locked}
                                         aria-pressed={marks[i] === 'on'}
                                         aria-label={`${vNum} ხმა`}
-                                        title={marks[i] === 'on' ? 'ნასწავლია' : 'შეეხე, როცა ისწავლი'}
-                                        className={`${voiceDot} cursor-pointer active:scale-95 ${marks[i] === 'on' ? markOn : markOff}`}
+                                        title={locked ? 'მონიშვნას მასწავლებელი აკეთებს' : marks[i] === 'on' ? 'ნასწავლია' : 'შეეხე, როცა ისწავლი'}
+                                        className={`${voiceDot} cursor-pointer active:scale-95 disabled:cursor-default disabled:active:scale-100 disabled:opacity-60 ${marks[i] === 'on' ? markOn : markOff}`}
                                       >
                                         {vNum}
                                       </button>
@@ -510,8 +514,9 @@ export const GzaView: React.FC<GzaViewProps> = ({
                                 <button
                                   type="button"
                                   onClick={() => handleToggleLearned(item.variantId)}
+                                  disabled={locked}
                                   aria-pressed={Boolean(item.isLearned)}
-                                  className={`h-9 px-3.5 rounded-full text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${item.isLearned ? markOn : markOff}`}
+                                  className={`h-9 px-3.5 rounded-full text-xs font-bold inline-flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 disabled:cursor-default disabled:active:scale-100 disabled:opacity-60 ${item.isLearned ? markOn : markOff}`}
                                 >
                                   {item.isLearned ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <Circle className="w-3.5 h-3.5" />}
                                   {item.isLearned ? 'ნასწავლია' : 'ვისწავლე'}
@@ -800,7 +805,7 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
     : 0;
 
   return (
-    <div className="w-full space-y-3 animate-in fade-in duration-200">
+    <div className="w-full space-y-4 animate-in fade-in duration-200">
       {isLoaded && !hasAnySchedule ? (
         <div className="flex flex-col items-center text-center gap-2.5 py-4">
           <span className="w-12 h-12 rounded-2xl bg-[#7a2028]/[0.07] text-[#7a2028] flex items-center justify-center">
@@ -821,28 +826,41 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
         </div>
       ) : (
         <>
+          {/* the viewed month in one line: a slim bar (done, missed) and its hours */}
+          <div className="space-y-2">
+            <div className="h-1.5 rounded-full bg-[#efe5d4] overflow-hidden flex" aria-hidden>
+              <div className="h-full bg-emerald-500 transition-[width] duration-500" style={{ width: `${monthPlannedHours ? (100 * monthActualWorkedHours) / monthPlannedHours : 0}%` }} />
+              <div className="h-full bg-rose-300 transition-[width] duration-500" style={{ width: `${monthPlannedHours ? (100 * monthMissedHours) / monthPlannedHours : 0}%` }} />
+            </div>
+            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[12px] font-semibold text-[#75685a] tabular-nums">
+              <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500" /><b className="font-black text-[#2a2017]">{monthActualWorkedHours}</b> შესრულდა</span>
+              <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-300" /><b className="font-black text-[#2a2017]">{monthMissedHours}</b> გამოტოვებული</span>
+              <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#7a2028]/35" /><b className="font-black text-[#2a2017]">{monthRemainingHours}</b> დარჩა</span>
+            </div>
+          </div>
+
           {/* wide screens: month on the left, the picked day on the right; phones: stacked */}
-          <div className="grid md:grid-cols-[minmax(0,22rem)_minmax(0,1fr)] gap-x-6 gap-y-3 items-start">
+          <div className="grid md:grid-cols-[minmax(0,21rem)_minmax(0,1fr)] gap-x-6 gap-y-4 items-start">
             <div className="space-y-1.5">
-              <div className="flex items-center gap-1.5">
-                <h3 className="flex-1 font-serif-ge text-[15px] font-bold text-[#2a2017]">
-                  {MONTHS_GE[currentMonth]} {currentYear}
+              <div className="flex items-center gap-1">
+                <h3 className="flex-1 text-[15px] font-black text-[#2a2017]">
+                  {MONTHS_GE[currentMonth]} <span className="font-semibold text-[#a4927c]">{currentYear}</span>
                 </h3>
                 {!isViewingCurrentMonth && (
                   <button
                     type="button"
                     onClick={handleGoToToday}
-                    className="h-8 px-3 rounded-full bg-[#7a2028]/[0.07] hover:bg-[#7a2028]/[0.12] text-[#7a2028] text-xs font-bold transition-colors cursor-pointer active:scale-95"
+                    className="h-9 px-3 rounded-full bg-[#7a2028]/[0.07] hover:bg-[#7a2028]/[0.12] text-[#7a2028] text-xs font-bold transition-colors cursor-pointer active:scale-95"
                     title="მიმდინარე თვეზე დაბრუნება"
                   >
                     დღეს
                   </button>
                 )}
-                <button type="button" onClick={handlePrevMonth} className="w-8 h-8 flex items-center justify-center rounded-full ring-1 ring-[#e8dcc8] bg-white hover:ring-[#7a2028]/40 text-[#4a3426] transition-all cursor-pointer active:scale-95" title="წინა თვე" aria-label="წინა თვე">
-                  <ChevronLeft className="w-4 h-4" />
+                <button type="button" onClick={handlePrevMonth} className="w-9 h-9 flex items-center justify-center rounded-full text-[#75685a] hover:bg-[#7a2028]/[0.06] hover:text-[#7a2028] transition-colors cursor-pointer active:scale-95" title="წინა თვე" aria-label="წინა თვე">
+                  <ChevronLeft className="w-[18px] h-[18px]" />
                 </button>
-                <button type="button" onClick={handleNextMonth} className="w-8 h-8 flex items-center justify-center rounded-full ring-1 ring-[#e8dcc8] bg-white hover:ring-[#7a2028]/40 text-[#4a3426] transition-all cursor-pointer active:scale-95" title="შემდეგი თვე" aria-label="შემდეგი თვე">
-                  <ChevronRight className="w-4 h-4" />
+                <button type="button" onClick={handleNextMonth} className="w-9 h-9 flex items-center justify-center rounded-full text-[#75685a] hover:bg-[#7a2028]/[0.06] hover:text-[#7a2028] transition-colors cursor-pointer active:scale-95" title="შემდეგი თვე" aria-label="შემდეგი თვე">
+                  <ChevronRight className="w-[18px] h-[18px]" />
                 </button>
               </div>
 
@@ -853,9 +871,9 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
               </div>
 
               {/* a dot per planned hour; pick a day to tick its hours */}
-              <div className="grid grid-cols-7 gap-0.5">
+              <div className="grid grid-cols-7 gap-y-0.5">
                 {calendarDays.map((dayItem, index) => {
-                  if (!dayItem) return <div key={`empty-${index}`} className="h-9" />;
+                  if (!dayItem) return <div key={`empty-${index}`} className="h-11" />;
                   const hasSchedule = dayItem.scheduledHours.length > 0;
                   const picked = pickedDay === dayItem.dateKey;
                   return (
@@ -863,51 +881,55 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
                       key={dayItem.dateKey}
                       type="button"
                       onClick={() => setPickedDay(dayItem.dateKey)}
-                      className={`h-9 rounded-lg flex flex-col items-center justify-center gap-[3px] transition-colors cursor-pointer select-none ${
-                        picked ? 'bg-[#7a2028]/[0.08] ring-[1.5px] ring-[#7a2028]' : 'hover:bg-[#fbf6ec]'
+                      className={`h-11 rounded-xl flex flex-col items-center justify-center gap-[3px] transition-colors cursor-pointer select-none ${
+                        picked ? 'bg-[#7a2028]/[0.09]' : 'hover:bg-[#fbf6ec]'
                       }`}
                       aria-pressed={picked}
                       aria-label={`${dayItem.dayNum} ${MONTHS_GE[currentMonth]}`}
                     >
-                      <span className={`min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-[11px] leading-none font-bold tabular-nums ${
-                        dayItem.isToday ? 'bg-[#7a2028] text-[#fbf6ec]' : hasSchedule ? 'text-[#2a2017]' : 'text-[#cbbca6]'
+                      <span className={`w-7 h-7 rounded-full flex items-center justify-center text-[12.5px] leading-none font-bold tabular-nums ${
+                        dayItem.isToday ? 'bg-[#7a2028] text-[#fbf6ec] shadow-[0_3px_8px_-3px_rgba(122,32,40,0.7)]'
+                          : picked ? 'text-[#7a2028]'
+                          : hasSchedule ? 'text-[#2a2017]' : 'text-[#cdbfa9]'
                       }`}>
                         {dayItem.dayNum}
                       </span>
-                      {hasSchedule && (
-                        <span className="flex gap-0.5">
-                          {dayItem.scheduledHours.map(hour => {
-                            const done = Boolean(completedSessions[`${dayItem.dateKey}_${hour}`]);
-                            return (
-                              <span
-                                key={hour}
-                                className={`w-1 h-1 rounded-full ${done ? 'bg-emerald-600' : dayItem.isPast ? 'bg-rose-300' : 'bg-[#7a2028]/35'}`}
-                              />
-                            );
-                          })}
-                        </span>
-                      )}
+                      <span className="h-1 flex gap-0.5">
+                        {dayItem.scheduledHours.map(hour => {
+                          const done = Boolean(completedSessions[`${dayItem.dateKey}_${hour}`]);
+                          return (
+                            <span
+                              key={hour}
+                              className={`w-1 h-1 rounded-full ${done ? 'bg-emerald-500' : dayItem.isPast ? 'bg-rose-300' : 'bg-[#7a2028]/35'}`}
+                            />
+                          );
+                        })}
+                      </span>
                     </button>
                   );
                 })}
               </div>
             </div>
 
-            <div className="space-y-2.5 md:pt-9">
-              {/* the picked day's hours */}
-              {(() => {
-                const day = calendarDays.find(d => d?.dateKey === pickedDay);
-                if (!day) return null;
-                return (
-                  <div className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#efe5d4] px-3 py-2.5 space-y-2">
-                    <p className="text-sm font-bold text-[#2a2017]">
+            {/* the picked day: its hours to tick */}
+            {(() => {
+              const day = calendarDays.find(d => d?.dateKey === pickedDay);
+              if (!day) return null;
+              const allDone = day.scheduledHours.length > 0 && day.completedCount === day.scheduledHours.length;
+              return (
+                <div className="pt-3 border-t border-[#efe5d4] md:mt-11 md:pt-0 md:border-t-0 md:pl-6 md:border-l space-y-3">
+                  <div>
+                    {day.isToday && <p className="text-[11.5px] font-bold text-[#7a2028]">დღეს</p>}
+                    <p className="text-[15px] font-black text-[#2a2017] leading-tight">
                       {day.dayNum} {MONTHS_GE[currentMonth]}
-                      <span className="font-normal text-[#8a7a6a]"> · {WEEKDAYS_GE[new Date(currentYear, currentMonth, day.dayNum).getDay()]}</span>
+                      <span className="font-semibold text-[#8a7a6a]"> · {WEEKDAYS_GE[new Date(currentYear, currentMonth, day.dayNum).getDay()]}</span>
                     </p>
-                    {day.scheduledHours.length === 0 ? (
-                      <p className="text-xs text-[#8a7a6a]">ამ დღეს მეცადინეობა არ არის დაგეგმილი.</p>
-                    ) : (
-                      <div className="flex flex-wrap gap-1.5">
+                  </div>
+                  {day.scheduledHours.length === 0 ? (
+                    <p className="text-[13px] text-[#8a7a6a]">ამ დღეს მეცადინეობა არ არის დაგეგმილი.</p>
+                  ) : (
+                    <>
+                      <div className="flex flex-wrap gap-2">
                         {day.scheduledHours.map(hour => {
                           const done = Boolean(completedSessions[`${day.dateKey}_${hour}`]);
                           const missed = day.isPast && !done;
@@ -917,9 +939,9 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
                               type="button"
                               onClick={() => handleToggleCompleted(day.dateKey, hour)}
                               aria-pressed={done}
-                              className={`h-9 px-3.5 rounded-full text-sm font-bold tabular-nums inline-flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 ${
+                              className={`h-11 px-4 rounded-full text-[15px] font-bold tabular-nums inline-flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 ${
                                 done
-                                  ? 'bg-emerald-600 text-white'
+                                  ? 'bg-emerald-500 text-white shadow-[0_4px_12px_-6px_rgba(5,150,105,0.8)]'
                                   : missed
                                     ? 'bg-white text-rose-700 border border-dashed border-rose-300'
                                     : 'bg-white text-[#7a2028] ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40'
@@ -931,17 +953,14 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
                           );
                         })}
                       </div>
-                    )}
-                  </div>
-                );
-              })()}
-
-              <div className="flex flex-wrap items-center justify-center md:justify-start gap-x-3.5 gap-y-1 text-[11px] font-semibold text-[#8a7a6a] md:px-1">
-                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-600" />შესრულდა</span>
-                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#7a2028]/35" />დაგეგმილი</span>
-                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-300" />გამოტოვებული</span>
-              </div>
-            </div>
+                      <p className={`text-[12px] font-semibold ${allDone ? 'text-emerald-700' : 'text-[#8a7a6a]'}`}>
+                        {allDone ? 'ყველა საათი შესრულებულია' : 'შეეხე საათს, როცა იმეცადინებ'}
+                      </p>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         </>
       )}

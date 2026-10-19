@@ -6,6 +6,8 @@ import { useAuth } from '../../context';
 import { filterValidVariants } from '../../utils/variantValidation';
 import { PathItem, Voice, sortPathItems, categoryOf, CATEGORY_LABEL, PathCategory, usesVoices, voicesOf } from '../../utils/pathItems';
 import { useConfirmations, saveConfirmation } from '../../hooks/useConfirmations';
+import { useMarksLock, saveMarksLock } from '../../hooks/usePathMarks';
+import { Toggle } from '../ui/kit';
 import { CatalogPicker } from './CatalogPicker';
 
 type PathMap = Record<string, PathItem>;
@@ -17,12 +19,15 @@ const normalized = (list: PathItem[]): PathMap =>
 export const writePath = (uid: string, map: PathMap) =>
   setDoc(doc(db, 'students', uid), { selectedChantVariants: map }, { mergeFields: ['selectedChantVariants'] });
 
-// Teacher's view of one student's "საგანძურის გზა": add, remove, reorder, and confirm ("ჩათვლა") each voice.
+// Teacher's view of one student's "საგანძურის გზა": add, remove, reorder; each voice goes round with a tap — not known →
+// marked → confirmed ("ჩათვლა") → not known — so a wrong mark of the student's can be taken back; and the student's own
+// marking can be locked (marksLock), after which only teachers mark.
 export const MemberPathEditor: React.FC<{ uid: string; name: string; onError: (t: string) => void }> = ({ uid, name, onError }) => {
   const { user } = useAuth();
   const [map, setMap] = useState<PathMap>({});
   const [loaded, setLoaded] = useState(false);
   const conf = useConfirmations(uid);
+  const lock = useMarksLock(uid);
 
   useEffect(() => {
     setLoaded(false);
@@ -63,11 +68,37 @@ export const MemberPathEditor: React.FC<{ uid: string; name: string; onError: (t
     const next = cur.includes(v) ? cur.filter(x => x !== v) : [...cur, v].sort() as Voice[];
     saveConfirmation(uid, id, next, user?.email || '').catch(e => onError('ჩათვლა ვერ შეინახა: ' + (e?.code === 'permission-denied' ? 'ბაზის წესებში confirmations ჯერ არ არის დამატებული.' : e?.message || '')));
   };
+  // the student's own mark on a voice (or on a whole poem or instrument), set or taken back by the teacher
+  const setMark = (it: PathItem, v: Voice, on: boolean) => {
+    const have = voicesOf(it, it.variantId);
+    const voices: Voice[] = usesVoices(it.variantId)
+      ? (on ? [...new Set([...have, v])].sort() as Voice[] : have.filter(x => x !== v))
+      : (on ? ['1'] : []);
+    save(sorted.map(x => (x.variantId === it.variantId ? { ...x, voices, isLearned: voices.length > 0 } : x)));
+  };
+  // not known → marked → confirmed → not known
+  const cycleVoice = (it: PathItem, v: Voice) => {
+    const isConf = (conf[it.variantId] || []).includes(v);
+    if (isConf) { toggleConfirm(it.variantId, v); setMark(it, v, false); }
+    else if (voicesOf(it, it.variantId).includes(v)) toggleConfirm(it.variantId, v);
+    else setMark(it, v, true);
+  };
+  const setLocked = (on: boolean) =>
+    saveMarksLock(uid, on, user?.displayName || '').catch(e => onError('ვერ შეინახა: ' + (e?.code === 'permission-denied' ? 'ბაზის წესებში marksLock ჯერ არ არის დამატებული.' : e?.message || '')));
 
   if (!loaded) return <p className="py-6 text-center text-sm text-[#8a7a6a]">იტვირთება...</p>;
 
   return (
     <div className="space-y-4">
+      <div className="px-3 rounded-2xl bg-white ring-1 ring-[#e8dcc8]">
+        <Toggle
+          on={!lock?.on}
+          onChange={on => setLocked(!on)}
+          label="მოსწავლე თავად ნიშნავს"
+          hint={lock?.on ? 'დაბლოკილია — ხმებს მხოლოდ მასწავლებელი ნიშნავს' : 'ნიშნავს, რა იცის; შენ ამოწმებ და ითვლი'}
+        />
+      </div>
+
       <CatalogPicker
         placeholder={`დაამატე ${name}-ის გზაზე`}
         isTaken={id => !!map[id]}
@@ -115,8 +146,8 @@ export const MemberPathEditor: React.FC<{ uid: string; name: string; onError: (t
                         <button
                           key={v}
                           type="button"
-                          onClick={() => toggleConfirm(it.variantId, v)}
-                          title={isConf ? 'ჩათვლილია — დააჭირე გასაუქმებლად' : isMarked ? 'მოსწავლემ მონიშნა — დააჭირე ჩასათვლელად' : 'დააჭირე ჩასათვლელად'}
+                          onClick={() => cycleVoice(it, v)}
+                          title={isConf ? 'ჩათვლილია — დააჭირე მოსახსნელად' : isMarked ? 'მონიშნულია — დააჭირე ჩასათვლელად' : 'დააჭირე მოსანიშნად'}
                           className={`h-9 px-3 rounded-full text-xs font-bold inline-flex items-center gap-1 cursor-pointer transition-colors ${
                             isConf
                               ? 'bg-emerald-700 text-white'
@@ -140,7 +171,7 @@ export const MemberPathEditor: React.FC<{ uid: string; name: string; onError: (t
 
       <p className="text-xs text-[#8a7a6a] leading-relaxed">
         <span className="text-[#7a2028] font-semibold">ღვინისფერი ✓</span> — მოსწავლემ თავად მონიშნა ·{' '}
-        <span className="text-emerald-700 font-semibold">მწვანე ✓✓</span> — მასწავლებელმა ჩათვალა. ხმაზე დაჭერა ჩათვლას რთავს ან აუქმებს.
+        <span className="text-emerald-700 font-semibold">მწვანე ✓✓</span> — მასწავლებელმა ჩათვალა. დაჭერა რიგრიგობით: მონიშვნა → ჩათვლა → მოხსნა.
       </p>
     </div>
   );

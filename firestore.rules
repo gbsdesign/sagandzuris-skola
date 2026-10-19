@@ -73,10 +73,13 @@ service cloud.firestore {
       }
 
       allow read: if isSelf() || isAdmin() || teachesMe();
-      allow create: if isSelf() || isAdmin();
-      // teachers may only arrange the student's path ("საგანძურის გზა") and switch the kids' mode
-      allow update: if isSelf() || isAdmin()
-        || (teachesMe() && changed().hasOnly(['selectedChantVariants', 'kidsMode', 'updatedAt']))
+      // "მანერა" marks (maneraReview) and the stop on the student's own marking (marksLock) come only from teachers
+      // and admins: the student reads them, never writes them
+      allow create: if (isSelf() && !incoming().keys().hasAny(['maneraReview', 'marksLock'])) || isAdmin();
+      // teachers may only arrange the student's path ("საგანძურის გზა"), switch the kids' mode, mark the manera and
+      // lock the student's marking
+      allow update: if (isSelf() && !changed().hasAny(['maneraReview', 'marksLock'])) || isAdmin()
+        || (teachesMe() && changed().hasOnly(['selectedChantVariants', 'kidsMode', 'maneraReview', 'marksLock', 'updatedAt']))
         || becomingTeacher();
       allow delete: if isAdmin();
 
@@ -102,6 +105,29 @@ service cloud.firestore {
     // who let a member in or refused them: superadmins only, the member never reads it
     match /accessDecisions/{userId} {
       allow read, write: if isSuperAdmin();
+    }
+
+    // ---- "ჩემი სამოსი" on the member's own photo (src/utils/samosiTryOn.ts) --------------------------------------
+    // Only the finished picture is kept. The tries are counted here — 3 on the first day, then 1 a day, 10 in all —
+    // and the counters only grow: removing the picture never gives tries back. Admins may see it, nobody else.
+    match /samosiTryOn/{userId} {
+      function isSelf() { return isSignedIn() && uid() == userId; }
+      function fieldsOk() {
+        return incoming().keys().hasOnly(['firstDay', 'day', 'dayCount', 'total', 'image', 'color', 'at'])
+          && (!('image' in incoming()) || (incoming().image is bytes && incoming().image.size() < 950000));
+      }
+      function dayLimitOk() { return incoming().dayCount <= (incoming().day == incoming().firstDay ? 3 : 1); }
+      allow read: if isSelf() || isAdmin();
+      allow create: if isSelf() && fieldsOk()
+        && incoming().total == 1 && incoming().dayCount == 1 && incoming().day == incoming().firstDay;
+      allow update: if isSelf() && fieldsOk() && incoming().firstDay == existing().firstDay && (
+        // one more try
+        (incoming().total == existing().total + 1 && incoming().total <= 10 && dayLimitOk()
+          && incoming().dayCount == (incoming().day == existing().day ? existing().dayCount + 1 : 1))
+        // or only the picture removed
+        || (!changed().hasAny(['firstDay', 'day', 'dayCount', 'total']) && !('image' in incoming()))
+      );
+      allow delete: if isAdmin();
     }
 
     // A person's own settings (e.g. the "დღევანდელი წირვა" draft and templates)

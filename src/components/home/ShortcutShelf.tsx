@@ -286,27 +286,28 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
                 onPointerCancel={() => { if (press.current) window.clearTimeout(press.current.t); press.current = null; setDrag(null); }}
                 onContextMenu={e => e.preventDefault()}
                 aria-label={l.label}
-                className={`w-full h-[104px] rounded-2xl ring-1 flex flex-col cursor-pointer transition shadow-[0_2px_6px_-4px_rgba(74,52,38,0.4)] ${
-                  habit ? 'justify-between p-2 pb-2.5 text-left' : 'items-center justify-center gap-1.5 px-1.5 text-center'
-                } ${isDone ? 'bg-emerald-50 ring-emerald-200' : 'bg-white ring-[#e8dcc8]'} ${
-                  editing ? 'animate-[sg-wiggle_0.35s_ease-in-out_infinite_alternate]' : 'hover:ring-[#7a2028]/40 active:scale-95'
+                className={`w-full h-[74px] rounded-[14px] ring-1 flex flex-col cursor-pointer transition shadow-[0_1px_3px_-1px_rgba(74,52,38,0.14)] ${
+                  habit ? 'justify-between px-2 py-2 text-left' : 'items-center justify-center gap-1 px-1.5 text-center'
+                } ${isDone ? 'bg-emerald-50/80 ring-emerald-200' : 'bg-white ring-[#ebe0cd]'} ${
+                  editing ? 'animate-[sg-wiggle_0.35s_ease-in-out_infinite_alternate]' : 'hover:ring-[#7a2028]/35 active:scale-[0.96]'
                 } ${dragging ? 'ring-2 !ring-[#7a2028] scale-105 z-10' : ''}`}
               >
-                <span className="w-9 h-9 rounded-xl bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center [&>svg]:w-[19px] [&>svg]:h-[19px]">{shortcutIcon(id)}</span>
-                {/* a long single word gets a size smaller rather than being split (sooner beside a ✓, with three lines) */}
-                <span className={`w-full leading-[1.2] font-bold text-[#4a3426] ${
-                  habit
-                    ? `line-clamp-3 break-words ${longest > 9 ? 'text-[11px] tracking-[-0.02em]' : 'text-[12px]'}`
-                    : `line-clamp-2 ${longest > 11 ? 'text-[11px] tracking-[-0.01em]' : 'text-[12px]'}`
+                <span className={`flex items-center text-[#7a2028] [&>svg]:w-[18px] [&>svg]:h-[18px] [&>svg]:stroke-[1.9] ${habit ? 'h-7' : 'h-6 justify-center'}`}>{shortcutIcon(id)}</span>
+                {/* a long single word gets a size smaller rather than being split on a 360px phone */}
+                <span className={`w-full line-clamp-2 break-words leading-[1.2] font-bold text-[#4a3426] ${
+                  longest > 9 ? 'text-[10.5px] tracking-[-0.02em]' : longest > 8 ? 'text-[11px] tracking-[-0.01em]' : 'text-[12px]'
                 }`}>{l.label}</span>
               </button>
+              {/* a 28px ring, tapped anywhere in its 40px corner */}
               {habit && !editing && (
                 <button type="button" onClick={() => markDone(id, habit)} aria-pressed={isDone}
                   aria-label={isDone ? `${l.label} — მონიშვნის მოხსნა` : `${l.label} — წავიკითხე`} title={isDone ? 'დღეს წაკითხულია' : 'წავიკითხე'}
-                  className={`absolute top-2 right-2 w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition active:scale-90 ${
-                    isDone ? 'bg-emerald-500 text-white shadow' : 'ring-1 ring-[#d9c8ac] text-[#b3a594] hover:text-[#7a2028] hover:ring-[#7a2028]/40'
+                  className="group absolute top-0.5 right-0.5 w-10 h-10 flex items-center justify-center cursor-pointer transition active:scale-90">
+                  <span className={`w-7 h-7 rounded-full flex items-center justify-center transition ${
+                    isDone ? 'bg-emerald-500 text-white shadow-sm' : 'ring-1 ring-[#dccdb4] text-[#bcae9c] group-hover:text-[#7a2028] group-hover:ring-[#7a2028]/40'
                   }`}>
-                  <Check className="w-[18px] h-[18px] stroke-[3]" />
+                    <Check className="w-[15px] h-[15px] stroke-[3]" />
+                  </span>
                 </button>
               )}
               {editing && (
@@ -321,8 +322,8 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
         {ids.length < MAX_SHORTCUTS && (editing || variant === 'profile' || ids.length < 4) && (
           <li>
             <button type="button" onClick={() => setAdding(true)} aria-label="ღილაკის დამატება"
-              className="w-full h-[104px] rounded-2xl border-2 border-dashed border-[#d9c8ac] text-[#8a7a6a] hover:text-[#7a2028] hover:border-[#7a2028]/40 flex flex-col items-center justify-center gap-1 cursor-pointer transition">
-              <Plus className="w-6 h-6" />
+              className="w-full h-[74px] rounded-[14px] border-[1.5px] border-dashed border-[#d9c8ac] text-[#8a7a6a] hover:text-[#7a2028] hover:border-[#7a2028]/40 flex flex-col items-center justify-center gap-0.5 cursor-pointer transition">
+              <Plus className="w-5 h-5" />
               <span className="text-[11px] font-bold">დამატება</span>
             </button>
           </li>

@@ -2,7 +2,7 @@ import React from 'react';
 import { ScrollText } from 'lucide-react';
 import { useNavigation } from '../../context';
 import { PrayerBook } from '../../components/views/HabitPrayerMenu';
-import { nameCount as countOf, useCommemoration } from '../../utils/commemoration';
+import { NAME_LISTS, nameCount as countOf, useCommemoration } from '../../utils/commemoration';
 import { BookHead } from './BookHead';
 import { MiniCover } from './Shelf';
 
@@ -11,7 +11,7 @@ import { MiniCover } from './Shelf';
 export const PrayersTab: React.FC<{ at?: string | null }> = ({ at }) => {
   const { openPrayer, openCommemoration } = useNavigation();
   const { lists } = useCommemoration();
-  const nameCount = countOf(lists, 'living') + countOf(lists, 'deceased') + countOf(lists, 'group');
+  const nameCount = NAME_LISTS.reduce((n, l) => n + countOf(lists, l.id), 0);
   const label = `მოსახსენებელი · ${nameCount ? `${nameCount} სახელი` : 'ჩაწერე სახელები'}`;
   return (
     <div className="space-y-4">

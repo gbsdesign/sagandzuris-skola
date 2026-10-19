@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, ChevronDown, ChevronRight, Flame, Info, Pencil, Plus, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, ArrowUpDown, Check, ChevronDown, ChevronRight, Flame, Info, Pencil, Plus, Sparkles, X } from 'lucide-react';
 import { useAuth, useModal, useNavigation } from '../../context';
 import { useMyHabits } from '../../hooks/useMyHabits';
 import { useAccess } from '../../hooks/useAccess';
@@ -8,22 +8,22 @@ import { askSignIn } from '../access/SignInPrompt';
 import { useOpenSearchTarget } from '../search/openSearchTarget';
 import { dayNeeds } from '../../utils/habitsWeek';
 import { triggerHaptic } from '../../utils/haptics';
-import { IconBtn, Sheet } from '../ui/kit';
+import { Btn, IconBtn, Sheet } from '../ui/kit';
 import { HabitPrayerMenu } from './HabitPrayerMenu';
-import { HabitsEditor } from './HabitsEditor';
+import { AddHabitPanel, HabitSettings, HabitsReorder } from './HabitsEditor';
 import { PATH_ICON } from './IndependentWorkCard';
-import { DayView } from '../habits/DayView';
+import { DayView, ListEdit } from '../habits/DayView';
 import { WeekView } from '../habits/WeekView';
 import { MonthView } from '../habits/MonthView';
 import { YearView } from '../habits/YearView';
 import { HabitPage, HabitPageTitle } from '../habits/HabitPage';
-import { HabitsModel, dailyIdsOf, rareOf, useHabitToggle, useHabitsModel } from '../habits/useHabits';
+import { HabitsModel, dailyIdsOf, dailyOf, rareOf, useHabitToggle, useHabitsModel } from '../habits/useHabits';
 
 // the home page buttons open the same menus; the prayer page ticks through the same toggle
 export { HabitPrayerMenu, useHabitToggle };
 
-// The sheet open over the habits (a habit's page, its prayers, or 'info') lives in the history entry: the phone's
-// back closes it, and coming back from a prayer opened in it shows it again.
+// The sheet open over the habits (a habit's page or its settings, adding a habit, or 'info') lives in the history
+// entry: the phone's back closes it, and coming back from a prayer opened in it shows it again.
 const SHEET_KEY = 'sgHabit';
 const sheetInHistory = (): string | null => {
   try {
@@ -56,7 +56,14 @@ const useHabitSheet = () => {
     closing.current = true;
     window.history.back();
   };
-  return { sheet, open, close };
+  // another face of the same sheet (a habit's page ↔ its settings): no new history step, so back still closes it
+  const swap = (id: string) => {
+    try {
+      window.history.replaceState({ ...(window.history.state || {}), [SHEET_KEY]: id }, '');
+    } catch { /* still swaps */ }
+    setSheet(id);
+  };
+  return { sheet, open, close, swap };
 };
 
 const INFO_TITLE = 'mb-1.5 font-serif-ge text-[15px] font-bold text-[#7a2028]';
@@ -86,13 +93,14 @@ const HabitsInfo: React.FC<{ groups: MyHabitGroup[] }> = ({ groups }) => {
         </li>
         <li>
           • <ChevronRight className="inline w-4 h-4 -mt-0.5 text-[#7a2028]" /> — ჩვევის გვერდი: ზედიზედ დღეები, საუკეთესო სერია,
-          კალენდარი და წელი. <Plus className="inline w-4 h-4 -mt-0.5 text-[#7a2028]" /> — მთვლელი (მაგ. იესოს ლოცვა): მიზანს რომ
+          კალენდარი და წელი. იქვე <Pencil className="inline w-4 h-4 -mt-0.5 text-[#7a2028]" /> — რამდენჯერ, ფერი და ხატულა,
+          მთვლელი, ლოცვა, სხვა ღილაკები (ძებნით ან ლინკით), ჩანაწერი და წაშლა. <Plus className="inline w-4 h-4 -mt-0.5 text-[#7a2028]" /> — მთვლელი (მაგ. იესოს ლოცვა): მიზანს რომ
           მიაღწევ, ჩვევა თავად მოინიშნება; ზოლის გვერდით რიცხვზე დაჭერით ზუსტ რაოდენობას ჩაწერ.
         </li>
         <li>• „დღე ▾“ — აქ აირჩევ კვირას, თვეს ან წელს: ყველა ჩვევა ერთად — კვირის ბადე, თვის კალენდარი და წლის რუკა.</li>
         <li>
-          • <Pencil className="inline w-4 h-4 -mt-0.5 text-[#7a2028]" /> — შენი სია: რიგი, დამატება, წაშლა, ფერი და ხატულა, მთვლელი,
-          ლოცვა, სხვა ღილაკები (ძებნით ან ლინკით) და ჩანაწერი.
+          • სიის ბოლოს: <Plus className="inline w-4 h-4 -mt-0.5 text-[#7a2028]" /> ჩვევის დამატება (წაშლილიც იქიდან დაბრუნდება) და{' '}
+          <ArrowUpDown className="inline w-4 h-4 -mt-0.5 text-[#7a2028]" /> რიგი — ჩვევას სახელურით გადაათრევ.
         </li>
         <li>
           • დღე ჩაითვლება, როცა დღის ჩვევების ნახევარი მაინც შესრულდება ({dayNeeds(DAILY_IDS.length)} / {DAILY_IDS.length}).{' '}
@@ -143,15 +151,17 @@ interface ViewProps {
   actions: React.ReactNode;
   onOpenPrayer: (prayerId: string) => void;
   onLink: (l: HabitLink) => void;
+  /** a member's own list (not for a guest) */
+  edit?: ListEdit;
 }
 const VIEWS: { id: ViewId; label: string; render: (p: ViewProps) => React.ReactNode }[] = [
-  { id: 'day', label: 'დღე', render: p => <DayView model={p.model} date={p.date} onDate={p.onDate} actions={p.actions} onOpenPrayer={p.onOpenPrayer} onLink={p.onLink} /> },
+  { id: 'day', label: 'დღე', render: p => <DayView model={p.model} date={p.date} onDate={p.onDate} actions={p.actions} onOpenPrayer={p.onOpenPrayer} onLink={p.onLink} edit={p.edit} /> },
   { id: 'week', label: 'კვირა', render: p => <WeekView model={p.model} onPickDay={p.onPickDay} /> },
   { id: 'month', label: 'თვე', render: p => <MonthView model={p.model} onPickDay={p.onPickDay} /> },
   { id: 'year', label: 'წელი', render: p => <YearView model={p.model} /> },
 ];
 
-// „დღე ▾“ before ✏️: one button with the view's name; a tap drops the views in a small list under it
+// „დღე ▾“ before ⓘ: one button with the view's name; a tap drops the views in a small list under it
 const ViewMenu: React.FC<{ value: ViewId; onChange: (v: ViewId) => void }> = ({ value, onChange }) => {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLSpanElement>(null);
@@ -214,17 +224,17 @@ const ViewMenu: React.FC<{ value: ViewId; onChange: (v: ViewId) => void }> = ({ 
 };
 
 // "ჩვევები" for students: the day (its ring, the last seven days, the habits), the week, the month and the year.
-// A tap on a habit ticks the chosen day (teachers see the ticks in their panels); „›“ opens the habit's own page.
+// A tap on a habit ticks the chosen day (teachers see the ticks in their panels); „›“ opens the habit's own page,
+// where ✏️ changes it; adding and reordering sit at the end of each list (views/HabitsEditor).
 // Finishing the whole of today sets off fireworks and a blessing.
 export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose }) => {
   const { openPrayer } = useNavigation();
   const { activeModal, closeModal } = useModal();
-  const { sheet, open, close } = useHabitSheet();
+  const { sheet, open, close, swap } = useHabitSheet();
   const { model, blessing } = useHabitsModel(id => open(`habit:${id}`));
   const [seen, setSeen] = useState(introSeen);
   const { user } = useAuth();
   const mine = useMyHabits(user?.uid);
-  const [editing, setEditing] = useState(false);
   const [view, setView] = useState<ViewId>('day');
   const [date, setDate] = useState(() => new Date());
   const access = useAccess();
@@ -249,15 +259,21 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
     leaveFor(() => openTarget(l.open));
   };
 
+  // one window per habit: 'habit:<id>' is its page, 'edit:<id>' its settings ✏️
   const habitId = sheet?.startsWith('habit:') ? sheet.slice(6) : null;
+  const editId = user && sheet?.startsWith('edit:') ? sheet.slice(5) : null;
+  const windowId = habitId ?? editId;
+  const addTo = user && sheet?.startsWith('add:') ? sheet.slice(4) : null;
+  const edit: ListEdit | undefined = user
+    ? {
+        add: col => open(`add:${col === 0 ? 'daily' : 'weekly'}`),
+        reorder: col => <HabitsReorder mine={mine} groups={col === 0 ? dailyOf(mine.groups) : rareOf(mine.groups)} />,
+      }
+    : undefined;
+
   const actions = (
     <>
       <ViewMenu value={view} onChange={setView} />
-      {user && (
-        <IconBtn label="ჩვევების შეცვლა" onClick={() => setEditing(true)}>
-          <Pencil />
-        </IconBtn>
-      )}
       <span className="relative">
         <IconBtn label="განმარტება" onClick={openInfo}>
           <Info />
@@ -274,41 +290,66 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
     actions,
     onOpenPrayer: id => leaveFor(() => openPrayer(id)),
     onLink: openLink,
+    edit,
   };
 
   return (
     <div className="space-y-4 text-[#2a2017]">
-      {/* on the path page the tab already says "ჩვევები"; the window keeps its own title and ✕ */}
-      {onClose && (
-        <div className="flex items-center gap-3">
-          <span className={PATH_ICON}>
-            <Sparkles className="w-5 h-5" />
-          </span>
-          <h3 className="flex-1 min-w-0 text-[15px] sm:text-base font-black leading-tight text-[#2a2017]">ჩვევები</h3>
+      {/* the title on the path page too; only the window has ✕ */}
+      <div className="flex items-center gap-3">
+        <span className={PATH_ICON}>
+          <Sparkles className="w-5 h-5" />
+        </span>
+        <h3 className="flex-1 min-w-0 text-[15px] sm:text-base font-black leading-tight text-[#2a2017]">ჩვევები</h3>
+        {onClose && (
           <IconBtn label="დახურვა" onClick={onClose}>
             <X />
           </IconBtn>
-        </div>
-      )}
+        )}
+      </div>
 
-      {editing ? (
-        <HabitsEditor mine={mine} sheet={sheet} openSheet={open} closeSheet={close} onDone={() => setEditing(false)} />
-      ) : (
-        <>
-          {/* the day keeps its buttons in its card; the other views get them at the top right */}
-          {view !== 'day' && <div className="flex items-center justify-end mb-2">{actions}</div>}
-          <div key={view} className="animate-in fade-in duration-200">
-            {VIEWS.find(v => v.id === view)!.render(props)}
-          </div>
-        </>
-      )}
+      {/* the day keeps its buttons in its card; the other views get them at the top right */}
+      {view !== 'day' && <div className="flex items-center justify-end mb-2">{actions}</div>}
+      <div key={view} className="animate-in fade-in duration-200">
+        {VIEWS.find(v => v.id === view)!.render(props)}
+      </div>
 
       <Sheet open={sheet === 'info'} onClose={close} title="განმარტება">
         <HabitsInfo groups={mine.groups} />
       </Sheet>
 
-      <Sheet open={!!habitId} onClose={close} title={habitId ? <HabitPageTitle model={model} id={habitId} /> : ''} wide>
-        {habitId && <HabitPage model={model} id={habitId} date={date} />}
+      <Sheet
+        open={!!windowId}
+        onClose={close}
+        wide
+        title={
+          !windowId ? '' : editId ? (
+            <span className="flex items-center gap-1 min-w-0">
+              <IconBtn label="უკან" className="-ml-2" onClick={() => swap(`habit:${editId}`)}>
+                <ArrowLeft />
+              </IconBtn>
+              <HabitPageTitle model={model} id={editId} />
+            </span>
+          ) : (
+            <span className="flex items-center gap-1 min-w-0">
+              <span className="flex-1 min-w-0">
+                <HabitPageTitle model={model} id={windowId} />
+              </span>
+              {user && (
+                <IconBtn label="ჩვევის შეცვლა" onClick={() => swap(`edit:${windowId}`)}>
+                  <Pencil />
+                </IconBtn>
+              )}
+            </span>
+          )
+        }
+        footer={editId ? <Btn full icon={<Check />} onClick={() => swap(`habit:${editId}`)}>მზადაა</Btn> : undefined}
+      >
+        {editId ? <HabitSettings mine={mine} id={editId} onRemoved={close} /> : habitId && <HabitPage model={model} id={habitId} date={date} />}
+      </Sheet>
+
+      <Sheet open={!!addTo} onClose={close} title="ახალი ჩვევა">
+        {addTo && <AddHabitPanel mine={mine} group={addTo} onDone={close} />}
       </Sheet>
 
       {blessing}

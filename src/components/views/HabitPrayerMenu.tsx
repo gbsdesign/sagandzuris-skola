@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-  Bell, BookHeart, BookOpen, BookOpenText, ChevronDown, ChevronLeft, ChevronRight, Church, Clock, Flame, HandHeart, Heart, Moon, Play,
+  Bell, BookHeart, BookOpen, BookOpenText, ChevronDown, ChevronLeft, ChevronRight, Church, Clock, Cross, Flame, HandHeart, Heart, Moon, Play,
   ScrollText, Search, Star, Sun, SunMoon,
 } from 'lucide-react';
 import { HabitMenu } from '../../data/habitsAndManera';
@@ -14,6 +14,7 @@ import {
   GOSPELS,
   KATHISMAS,
   MORNING_EVENING,
+  PARAKLISES,
   PRAYER_HOURS,
   PSALTER_RULE,
   PrayerRef,
@@ -53,13 +54,14 @@ export const HabitPrayerMenu: React.FC<{ menu: HabitMenu; onOpen: (prayerId: str
   }
 };
 
-const BOOK_PARTS: { menu: Exclude<HabitMenu, 'book'> | 'confession' | 'andrew' | 'various'; title: string; icon: React.ReactNode }[] = [
+const BOOK_PARTS: { menu: Exclude<HabitMenu, 'book'> | 'confession' | 'andrew' | 'various' | 'paraklisi'; title: string; icon: React.ReactNode }[] = [
   { menu: 'morning-evening', title: 'დილის და საღამოს ლოცვები', icon: <SunMoon /> },
   { menu: 'hours', title: 'შვიდგზის ლოცვა', icon: <Clock /> },
   { menu: 'psalms', title: 'ფსალმუნები', icon: <BookOpenText /> },
   { menu: 'gospel', title: 'სახარება', icon: <BookHeart /> },
   { menu: 'apostle', title: 'სამოციქულო', icon: <ScrollText /> },
   { menu: 'akathists', title: 'დაუჯდომლები', icon: <Star /> },
+  { menu: 'paraklisi', title: 'პარაკლისი', icon: <Cross /> },
   { menu: 'jesus', title: 'იესოს ლოცვა', icon: <Heart /> },
   { menu: 'confession', title: 'აღსარების და ზიარების ლოცვები', icon: <Church /> },
   { menu: 'andrew', title: 'ანდრია კრიტელის კანონი', icon: <Flame /> },
@@ -117,8 +119,8 @@ export const PrayerBook: React.FC<{ onOpen: (prayerId: string) => void; at?: str
             </button>
             {on && (
               <div className="px-1 pt-3 pb-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                {p.menu === 'various' || p.menu === 'confession' || p.menu === 'andrew'
-                  ? <PrayerList items={p.menu === 'various' ? VARIOUS_PRAYERS : p.menu === 'andrew' ? ANDREW_CANON : CONFESSION_PRAYERS} onOpen={onOpen} />
+                {p.menu === 'various' || p.menu === 'confession' || p.menu === 'andrew' || p.menu === 'paraklisi'
+                  ? <PrayerList items={p.menu === 'various' ? VARIOUS_PRAYERS : p.menu === 'andrew' ? ANDREW_CANON : p.menu === 'paraklisi' ? PARAKLISES : CONFESSION_PRAYERS} onOpen={onOpen} />
                   : <HabitPrayerMenu menu={p.menu} onOpen={onOpen} />}
               </div>
             )}

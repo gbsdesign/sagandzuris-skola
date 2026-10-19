@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { BookOpen, Check, ChevronDown, ChevronRight, Flame, Info, Plus } from 'lucide-react';
+import { ArrowUpDown, BookOpen, Check, ChevronDown, ChevronRight, Flame, Info, Plus } from 'lucide-react';
 import { COUNTER_TAP_STEP, HabitCounter } from '../../data/habitLooks';
 import { HabitGroupType } from '../../data/habitsAndManera';
 import { HabitLink, MyHabit, MyHabitGroup } from '../../utils/myHabits';
@@ -14,7 +14,16 @@ import { HabitsModel } from './useHabits';
 import { DayDot, Ring, ViewHeading, dotState } from './parts';
 
 // "დღე": the chosen day's ring and status, the last seven days to choose from (a forgotten tick may be set up to
-// six days back), then the daily habits beside the weekly and monthly ones.
+// six days back), then the daily habits beside the weekly and monthly ones; a member changes each list at its end.
+
+/** A member's own list: „+ ჩვევის დამატება“ and „⇅ რიგი“ at the end of each list (0 — daily, 1 — weekly and monthly). */
+export interface ListEdit {
+  add: (col: 0 | 1) => void;
+  /** the list's habits with grips, drawn in its place while „რიგი“ is on */
+  reorder: (col: 0 | 1) => React.ReactNode;
+}
+
+const TOOL = 'min-h-10 px-3 rounded-full inline-flex items-center gap-1.5 text-[13px] font-bold cursor-pointer transition-colors active:scale-[0.97]';
 
 const longDate = (d: Date) => `${WEEKDAYS_GE[d.getDay()]}, ${d.getDate()} ${MONTHS_GE[d.getMonth()]}`;
 
@@ -287,11 +296,13 @@ export const DayView: React.FC<{
   model: HabitsModel;
   date: Date;
   onDate: (d: Date) => void;
-  /** „დღე ▾“ ✏️ ⓘ at the right of the status line */
+  /** „დღე ▾“ ⓘ at the right of the status line */
   actions?: React.ReactNode;
   onOpenPrayer: (prayerId: string) => void;
   onLink: (l: HabitLink) => void;
-}> = ({ model, date, onDate, actions, onOpenPrayer, onLink }) => {
+  edit?: ListEdit;
+}> = ({ model, date, onDate, actions, onOpenPrayer, onLink, edit }) => {
+  const [sorting, setSorting] = useState<0 | 1 | null>(null);
   const today = dayKey(date) === dayKey(new Date());
   const s = dayState(model.log, model.dailyIds, date);
   const total = Math.max(1, s.total);
@@ -329,20 +340,48 @@ export const DayView: React.FC<{
       {/* the daily habits beside the weekly and monthly ones; one column on a phone */}
       <div className="@container">
         <div className="grid gap-4 @lg:grid-cols-2 items-start">
-          {[model.daily, model.rare].map((groups, i) =>
-            groups.some(g => g.items.length) ? (
+          {[model.daily, model.rare].map((groups, i) => {
+            const col = i as 0 | 1;
+            const has = groups.some(g => g.items.length);
+            const sorted = has && sorting === col;
+            // an empty list keeps its place for a member, to add a habit to it
+            if (!has && !edit) return null;
+            return (
               <section key={i}>
                 <ViewHeading>{i === 0 ? 'ყოველდღე' : 'კვირაში და თვეში'}</ViewHeading>
-                <ul className="rounded-2xl ring-1 ring-[#e8dcc8] bg-white divide-y divide-[#f1e8d9] overflow-hidden">
-                  {groups.flatMap(g =>
-                    g.items.map(h => (
-                      <HabitRow key={h.id} model={model} habit={h} group={g} date={date} onOpenPrayer={onOpenPrayer} onLink={onLink} />
-                    ))
-                  )}
-                </ul>
+                {sorted && edit ? (
+                  edit.reorder(col)
+                ) : has ? (
+                  <ul className="rounded-2xl ring-1 ring-[#e8dcc8] bg-white divide-y divide-[#f1e8d9] overflow-hidden">
+                    {groups.flatMap(g =>
+                      g.items.map(h => (
+                        <HabitRow key={h.id} model={model} habit={h} group={g} date={date} onOpenPrayer={onOpenPrayer} onLink={onLink} />
+                      ))
+                    )}
+                  </ul>
+                ) : null}
+                {edit && (
+                  <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 pt-1.5">
+                    <button type="button" onClick={() => edit.add(col)} className={`${TOOL} text-[#7a2028] hover:bg-[#7a2028]/[0.06]`}>
+                      <Plus className="w-4 h-4" />
+                      ჩვევის დამატება
+                    </button>
+                    {has && (
+                      <button
+                        type="button"
+                        aria-pressed={sorted}
+                        onClick={() => { triggerHaptic(8); setSorting(sorted ? null : col); }}
+                        className={`${TOOL} ${sorted ? 'bg-[#7a2028] text-[#fbf6ec]' : 'text-[#75685a] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.06]'}`}
+                      >
+                        {sorted ? <Check className="w-4 h-4" /> : <ArrowUpDown className="w-4 h-4" />}
+                        {sorted ? 'მზადაა' : 'რიგი'}
+                      </button>
+                    )}
+                  </div>
+                )}
               </section>
-            ) : null
-          )}
+            );
+          })}
         </div>
       </div>
     </div>

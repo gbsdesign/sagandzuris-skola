@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronDown, Loader2, X } from 'lucide-react';
 import { useNavigation } from '../../context';
-import { CategoryListId, Commemoration, inGroupOrder, namesText, useCommemoration } from '../../utils/commemoration';
+import { Commemoration, NameListId, inGroupOrder, isCategoryList, namesText, useCommemoration } from '../../utils/commemoration';
 import { GirsArsSection, girsArsFor, loadGirsArs } from '../../data/girsArs';
 import { useAuth } from '../../context';
 import { groupPrayerText, useGroupPrayerNames } from '../../hooks/usePsalter';
@@ -21,30 +21,93 @@ export const PROSE =
   '[&_blockquote]:pl-4 [&_blockquote]:border-l-2 [&_blockquote]:border-[#e8dcc8] [&_blockquote]:text-[#4a3426] ' +
   '[&_em]:text-[#6b5544] [&_sup]:text-[11px] [&_hr]:my-5 [&_hr]:border-[#e8dcc8]';
 
+// a span, not a button: a button stays one box, so a long list could not wrap from line to line
 const NAME_CHIP =
-  'inline rounded-md px-1 -mx-0.5 font-semibold text-[#7a2028] bg-[#7a2028]/[0.07] hover:bg-[#7a2028]/[0.13] cursor-pointer';
+  'inline rounded-md px-1 -mx-0.5 font-semibold text-[#7a2028] bg-[#7a2028]/[0.07] hover:bg-[#7a2028]/[0.13] cursor-pointer ' +
+  '[box-decoration-break:clone] [-webkit-box-decoration-break:clone] [overflow-wrap:anywhere]';
+const FOLD_BTN =
+  'inline-flex items-center align-baseline px-2.5 py-0.5 rounded-full whitespace-nowrap text-[13px] font-sans font-bold text-[#7a2028] ring-1 ring-[#7a2028]/30 hover:bg-[#7a2028]/[0.06] cursor-pointer';
+// a list longer than FOLD_AT shows its first FOLD_SHOW names and „კიდევ N ▾“; unfolded, it reads smaller, a category a line
+const FOLD_AT = 12;
+const FOLD_SHOW = 8;
 
 const escapeHtml = (s: string) => s.replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!);
 const plain = (html: string) => html.replace(/<[^>]+>/g, '');
 
 // Which list a "(სახელი)" stands for, judged by the words just before it; null leaves it as written
 // (one's spiritual father, patron saint, the patriarch, oneself).
-const listFor = (before: string): CategoryListId | null => {
+const listFor = (before: string): NameListId | null => {
   const near = plain(before).slice(-220);
   if (/(გარდაცვალებულ|გარდაცვლილ|მიცვალებულ|განუსვენე|შესვენებულ)/.test(near)) return 'deceased';
   if (/(მოძღვ|მასწავლელ)/.test(near.slice(-45))) return null;
   if (/(წმიდაო|მამაჲ ჩუენი|მამა ჩვენი|მონასა შენსა|მონისა შენისა|შეპყრობილნი|წარტაცებულნი)[\s,:]*$/.test(near.slice(-70))) return null;
+  // „განჰკურნენ მონანი ესე შენნი (სახელები)“ — the prayer for the sick
+  if (/(განჰკურნ|სნეულ|უძლურ)/.test(near.slice(-60))) return 'sick';
   return 'living';
 };
 
-const withNames = (block: string, lists: Commemoration) =>
+const NAMES_TITLE: Partial<Record<NameListId, string>> = {
+  living: 'ცოცხალთა სახელები',
+  deceased: 'გარდაცვლილთა სახელები',
+  group: 'ჯგუფის წევრები',
+  sick: 'უძლურებასა და განსაცდელსა შინა მყოფნი',
+  trial: 'განსაცდელსა შინა მყოფნი',
+};
+
+const namesAttrs = (list: NameListId) => `role="button" tabindex="0" data-names="${list}" title="${NAMES_TITLE[list]} — შეცვლა"`;
+
+// a list's names in a prayer, tapped to change them; `empty` shows while the list has none
+const namesChip = (list: NameListId, names: string, empty: string) =>
+  `<span ${namesAttrs(list)} class="${NAME_CHIP}${names ? '' : ' !font-normal !text-[#8a7a6a]'}">${names ? escapeHtml(names) : empty}</span>`;
+
+// the names without a category first, then each category's
+const nameGroups = (lists: Commemoration, list: NameListId) =>
+  [{ title: '', names: lists[list] }, ...(isCategoryList(list) ? lists.sections[list] : [])].filter(g => g.names.length);
+
+// a long list: folded — its first names and „კიდევ N ▾“; unfolded — a small box, a category a line, „ჩაკეცვა ▴“ under it
+const foldedNames = (list: NameListId, lists: Commemoration, key: string, open: boolean) => {
+  const groups = nameGroups(lists, list);
+  const count = groups.reduce((n, g) => n + g.names.length, 0);
+  if (count <= FOLD_AT) return namesChip(list, namesText(lists, list), '');
+  if (!open) {
+    let left = FOLD_SHOW;
+    const parts: string[] = [];
+    for (const g of groups) {
+      if (left <= 0) break;
+      const some = g.names.slice(0, left);
+      left -= some.length;
+      parts.push(`${g.title ? `${g.title}: ` : ''}${some.join(', ')}`);
+    }
+    return `${namesChip(list, `${parts.join('; ')} …`, '')} <button type="button" data-fold="${key}" aria-expanded="false" class="${FOLD_BTN}">კიდევ ${count - FOLD_SHOW} ▾</button>`;
+  }
+  const rows = groups
+    .map(
+      g =>
+        `<span class="block mt-1.5 first:mt-0">${
+          g.title ? `<span class="mr-0.5 whitespace-nowrap font-sans text-[11.5px] font-bold text-[#8a7a6a]">${escapeHtml(g.title)}</span> ` : ''
+        }${escapeHtml(g.names.join(', '))}</span>`
+    )
+    .join('');
+  return (
+    `<span class="block my-2 rounded-xl bg-[#7a2028]/[0.045] ring-1 ring-[#7a2028]/12 px-3 pt-2 pb-1.5 text-left">` +
+    `<span ${namesAttrs(list)} class="block text-[15px] leading-[1.6] font-semibold text-[#7a2028] cursor-pointer [overflow-wrap:anywhere]">${rows}</span>` +
+    `<span class="flex justify-center mt-1.5"><button type="button" data-fold="${key}" aria-expanded="true" class="${FOLD_BTN}">ჩაკეცვა ▴</button></span>` +
+    `</span>`
+  );
+};
+
+const counter = (prefix: string) => {
+  let n = 0;
+  return () => `${prefix}${n++}`;
+};
+
+// `open`: the unfolded lists' keys; `nextKey` numbers each list in the text, so a list keeps its key while names change
+const withNames = (block: string, lists: Commemoration, open: string[], nextKey: () => string) =>
   block.replace(/\((სახელ[^()]{0,30})\)/g, (match, _inner, offset: number) => {
     const list = listFor(block.slice(0, offset));
     if (!list) return match;
-    const names = namesText(lists, list);
-    const text = names ? escapeHtml(names) : match;
-    const title = list === 'deceased' ? 'გარდაცვლილთა სახელები' : 'ცოცხალთა სახელები';
-    return `<button type="button" data-names="${list}" title="${title} — შეცვლა" class="${NAME_CHIP}${names ? '' : ' !font-normal !text-[#8a7a6a]'}">${text}</button>`;
+    const key = nextKey();
+    return nameGroups(lists, list).length ? foldedNames(list, lists, key, open.includes(key)) : namesChip(list, '', match);
   });
 
 type Segment = { kind: 'html'; html: string } | { kind: 'girs' } | { kind: 'modzgvari' } | { kind: 'glory'; n: number } | { kind: 'day' };
@@ -65,10 +128,11 @@ const MODZGVARI_BTN =
   '<button type="button" data-extra="modzgvari" class="inline-flex items-center gap-0.5 align-baseline ml-1 px-2 py-0.5 rounded-full text-[13px] font-sans font-bold text-[#7a2028] ring-1 ring-[#7a2028]/30 hover:bg-[#7a2028]/[0.06] cursor-pointer">დამატებით ▾</button>';
 const isModzgvari = (block: string) => /სულიერი\s+მამა/.test(block) && /\(მეტანია\)/.test(block);
 
-const segment = (html: string, lists: Commemoration, glory: boolean, day: boolean): Segment[] => {
+const segment = (html: string, lists: Commemoration, glory: boolean, day: boolean, open: string[]): Segment[] => {
   const out: Segment[] = [];
   let buffer = '';
   let glories = 0;
+  const nextKey = counter('n');
   const flush = () => {
     if (buffer) out.push({ kind: 'html', html: buffer });
     buffer = '';
@@ -86,7 +150,7 @@ const segment = (html: string, lists: Commemoration, glory: boolean, day: boolea
     let block = raw;
     const modzgvari = isModzgvari(block);
     const isGlory = glory && !modzgvari && GLORY.test(plain(block).trim());
-    block = withNames(block, lists);
+    block = withNames(block, lists, open, nextKey);
     if (isGlory) {
       block = block.replace(
         GLORY_WORD,
@@ -123,23 +187,40 @@ export const PrayerText: React.FC<{ html: string; glory?: boolean; dayPrayer?: s
   const { user } = useAuth();
   const fromGroups = useGroupPrayerNames(glory ? user?.uid : null);
   const groupNames = useMemo(
-    () => [...inGroupOrder(fromGroups, lists.groupOrder).map(groupPrayerText), ...lists.group.filter(n => !fromGroups.some(g => g.name === n))],
-    [fromGroups, lists.group, lists.groupOrder]
+    () => [
+      ...inGroupOrder(fromGroups, lists).map(groupPrayerText),
+      ...lists.group.filter(n => !fromGroups.some(g => g.name === n)),
+    ],
+    [fromGroups, lists]
   );
   const [modzgvariOpen, setModzgvariOpen] = useState(false);
   const [gloryOpen, setGloryOpen] = useState<number[]>([]);
-  const gloryHtml = useMemo(() => {
-    const chip = `<button type="button" data-names="group" title="ჯგუფის წევრები — შეცვლა" class="${NAME_CHIP}${groupNames.length ? '' : ' !font-normal !text-[#8a7a6a]'}">${
-      groupNames.length ? escapeHtml(groupNames.join(', ')) : '(სახელები)'
-    }</button>`;
-    return withNames(GLORY_PRAYER_HTML, lists)
-      .replace('(ჯგუფი)', chip)
-      .replace(/(\(მეტანია\)\.?)(<\/p>)<!--extra-->/, `$1 ${MODZGVARI_BTN}$2<!--extra-->`);
-  }, [groupNames, lists]);
-  const segments = useMemo(() => segment(html, lists, glory, Boolean(dayPrayer)), [html, lists, glory, dayPrayer]);
+  const [namesOpen, setNamesOpen] = useState<string[]>([]);
+  const gloryHtml = useMemo(
+    () =>
+      withNames(GLORY_PRAYER_HTML, lists, namesOpen, counter('g'))
+        .replace('(ჯგუფი)', namesChip('group', groupNames.join(', '), '(სახელები)'))
+        .replace(/(\(მეტანია\)\.?)(<\/p>)<!--extra-->/, `$1 ${MODZGVARI_BTN}$2<!--extra-->`),
+    [groupNames, lists, namesOpen]
+  );
+  // folded under the group's names at „დიდებაი“: those in sickness and trials, then those in trials
+  const sickHtml = useMemo(
+    () =>
+      `<p>მოიხსენე, უფალო, უძლურებასა და განსაცდელსა შინა მყოფნი მონანი და მხევალნი შენნი: ${namesChip('sick', lists.sick.join(', '), '(სახელები)')} <em>(მეტანია)</em>.</p>` +
+      `<p>მოიხსენე, უფალო, განსაცდელსა შინა მყოფნი მონანი და მხევალნი შენნი: ${namesChip('trial', lists.trial.join(', '), '(სახელები)')} <em>(მეტანია)</em>.</p>`,
+    [lists.sick, lists.trial]
+  );
+  const sickCount = lists.sick.length + lists.trial.length;
+  const segments = useMemo(() => segment(html, lists, glory, Boolean(dayPrayer), namesOpen), [html, lists, glory, dayPrayer, namesOpen]);
 
   const onClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
+    const fold = target.closest('[data-fold]');
+    if (fold) {
+      const key = fold.getAttribute('data-fold') || '';
+      setNamesOpen(open => (open.includes(key) ? open.filter(k => k !== key) : [...open, key]));
+      return;
+    }
     if (target.closest('[data-names]')) openCommemoration();
     if (target.closest('[data-extra="modzgvari"]')) setModzgvariOpen(o => !o);
     const g = target.closest('[data-glory]');
@@ -150,7 +231,17 @@ export const PrayerText: React.FC<{ html: string; glory?: boolean; dayPrayer?: s
   };
 
   return (
-    <div className={PROSE} onClick={onClick}>
+    <div
+      className={PROSE}
+      onClick={onClick}
+      onKeyDown={e => {
+        // the names are spans: Enter or Space opens the lists, as a button would
+        if ((e.key === 'Enter' || e.key === ' ') && (e.target as HTMLElement).matches('[data-names]')) {
+          e.preventDefault();
+          openCommemoration();
+        }
+      }}
+    >
       {segments.map((s, i) =>
         s.kind === 'html' ? (
           <div key={i} dangerouslySetInnerHTML={{ __html: s.html }} />
@@ -158,7 +249,7 @@ export const PrayerText: React.FC<{ html: string; glory?: boolean; dayPrayer?: s
           <GirsArs key={i} />
         ) : s.kind === 'glory' ? (
           gloryOpen.includes(s.n) && (
-            <GloryPrayer key={i} html={gloryHtml} extraOpen={modzgvariOpen} onCloseExtra={() => setModzgvariOpen(false)} onClose={() => setGloryOpen(list => list.filter(x => x !== s.n))} />
+            <GloryPrayer key={i} html={gloryHtml} sickHtml={sickHtml} sickCount={sickCount} extraOpen={modzgvariOpen} onCloseExtra={() => setModzgvariOpen(false)} onClose={() => setGloryOpen(list => list.filter(x => x !== s.n))} />
           )
         ) : s.kind === 'day' ? (
           dayPrayer && <DayPrayer key={i} id={dayPrayer} />
@@ -170,14 +261,38 @@ export const PrayerText: React.FC<{ html: string; glory?: boolean; dayPrayer?: s
   );
 };
 
-// Under a kathisma's "დიდებაი", once tapped: the glory prayer, with the group's members and one's departed by name.
-const GloryPrayer: React.FC<{ html: string; extraOpen: boolean; onCloseExtra: () => void; onClose: () => void }> = ({ html, extraOpen, onCloseExtra, onClose }) => {
+// Under a kathisma's "დიდებაი", once tapped: the glory prayer, with the group's members and one's departed by name;
+// after the group, a fold for those in sickness and trials.
+const GloryPrayer: React.FC<{
+  html: string;
+  sickHtml: string;
+  sickCount: number;
+  extraOpen: boolean;
+  onCloseExtra: () => void;
+  onClose: () => void;
+}> = ({ html, sickHtml, sickCount, extraOpen, onCloseExtra, onClose }) => {
+  const [sickOpen, setSickOpen] = useState(false);
   const [before, after = ''] = html.split('<!--extra-->');
+  const [mid, rest = ''] = after.split('<!--sick-->');
   return (
     <div className="-mt-1.5 mb-5 rounded-2xl bg-[#7a2028]/[0.035] ring-1 ring-[#7a2028]/12 px-3.5 pt-3 pb-1.5 [&_p]:mb-2.5 [&_hr]:my-3">
       <div dangerouslySetInnerHTML={{ __html: before }} />
       {extraOpen && <ExtraPrayer id="modzgvari-extra" onClose={onCloseExtra} />}
-      <div dangerouslySetInnerHTML={{ __html: after }} />
+      <div dangerouslySetInnerHTML={{ __html: mid }} />
+      <div className="mb-2.5">
+        <button
+          type="button"
+          onClick={() => setSickOpen(o => !o)}
+          aria-expanded={sickOpen}
+          className="inline-flex items-center gap-1.5 max-w-full min-h-9 px-3 py-1 rounded-full font-sans text-left text-[13px] leading-snug font-bold text-[#7a2028] ring-1 ring-[#7a2028]/30 hover:bg-[#7a2028]/[0.06] cursor-pointer"
+        >
+          უძლურებასა და განსაცდელსა შინა მყოფნი
+          {sickCount > 0 && <span className="font-semibold text-[#b5a48c]">{sickCount}</span>}
+          <ChevronDown className={`w-3.5 h-3.5 shrink-0 transition-transform ${sickOpen ? 'rotate-180' : ''}`} />
+        </button>
+        {sickOpen && <div className="mt-2.5 animate-in fade-in slide-in-from-top-1 duration-200" dangerouslySetInnerHTML={{ __html: sickHtml }} />}
+      </div>
+      <div dangerouslySetInnerHTML={{ __html: rest }} />
       <div className="text-center">
         <button type="button" onClick={onClose} className="h-9 px-3 rounded-full font-sans text-[12.5px] font-bold text-[#7a2028] hover:bg-[#7a2028]/[0.06] cursor-pointer">დახურვა ▴</button>
       </div>

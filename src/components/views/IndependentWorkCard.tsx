@@ -1,14 +1,12 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bookmark, ChevronDown, Check } from 'lucide-react';
+import { ChevronDown } from 'lucide-react';
 import { useAuth, useChants, useNavigation } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 import { filterValidVariants } from '../../utils/variantValidation';
 import { useUpcomingSessions } from '../../hooks/useUpcomingSessions';
 import { useMonthlyStudyStats } from '../../hooks/useMonthlyStudyStats';
 import { StudentBookmarkView } from './StudentBookmarkView';
-import { PercentRing } from './PercentRing';
 import { MONTHS_GE, MONTHS_SHORT_GE } from '../../utils/dateNames';
-import { CHIP_SOFT, PATH_CHIP } from './pathStyle';
 
 
 // "დღეს" / "ხვალ" / "12 ოქტ" for the next planned lesson
@@ -31,19 +29,14 @@ export const PATH_ICON = 'w-11 h-11 shrink-0 rounded-xl bg-[#7a2028]/[0.07] text
 const PANEL_KEY = (id: string) => `pathPanel:${id}`;
 const PANEL_EVENT = 'open-path-panel';
 
-// The path page's tabs (PathTabs), and the tab that holds each panel, so opening a panel shows its tab
-export type PathTab = 'learn' | 'spirit';
-export const PATH_TAB_KEY = 'pathTab';
-export const PATH_TAB_EVENT = 'path-tab';
-const PANEL_TAB: Record<string, PathTab> = { work: 'spirit', manera: 'learn', habits: 'spirit' };
+// "habits" is the page's own card, always shown, so it needs no wish
+const ALWAYS_SHOWN = new Set(['habits']);
 
 export const openPathPanel = (id: string) => {
-  const tab = PANEL_TAB[id];
+  if (ALWAYS_SHOWN.has(id)) return;
   try {
     localStorage.setItem(PANEL_KEY(id), '1');
-    if (tab) localStorage.setItem(PATH_TAB_KEY, tab);
-  } catch { /* storage off: the events still open it */ }
-  if (tab) window.dispatchEvent(new CustomEvent(PATH_TAB_EVENT, { detail: tab }));
+  } catch { /* storage off: the event still opens it */ }
   window.dispatchEvent(new CustomEvent(PANEL_EVENT, { detail: id }));
 };
 
@@ -117,57 +110,53 @@ export const PathPanel: React.FC<{
   );
 };
 
-// "დამოუკიდებელი სამუშაო": this month's hours as a ring and a count, today's planned hours tickable on the folded
-// card; folds open into the month's calendar.
-export const IndependentWorkCard: React.FC = () => {
+/** A panel above the tabs (the round buttons, PathOrbs) opening when asked from elsewhere with openPathPanel():
+ *  the wish left before the page mounted, or the event while it is shown. */
+export const usePanelWish = (ids: readonly string[], onOpen: (id: string) => void) => {
+  const cb = useRef(onOpen);
+  cb.current = onOpen;
+  const key = ids.join(',');
+  useEffect(() => {
+    const list = key.split(',');
+    for (const id of list) {
+      let wished = false;
+      try { wished = localStorage.getItem(PANEL_KEY(id)) === '1'; localStorage.removeItem(PANEL_KEY(id)); } catch { /* storage off */ }
+      if (wished) cb.current(id);
+    }
+    const onEvent = (e: Event) => {
+      const id = (e as CustomEvent).detail;
+      if (!list.includes(id)) return;
+      try { localStorage.removeItem(PANEL_KEY(id)); } catch { /* ignore */ }
+      cb.current(id);
+    };
+    window.addEventListener(PANEL_EVENT, onEvent);
+    return () => window.removeEventListener(PANEL_EVENT, onEvent);
+  }, [key]);
+};
+
+// "დამოუკიდებელი სამუშაო" (a round button on the path page): this month's hours, and today's planned hours to tick
+export const useIndependentWork = () => {
   const { user } = useAuth();
-  const { navigateTo } = useNavigation();
   const { sessions, toggle } = useUpcomingSessions(user?.uid, 7);
   const month = useMonthlyStudyStats(user?.uid);
   const planned = month && month.planned > 0 ? month : null;
   const monthName = MONTHS_GE[new Date().getMonth()];
-
-  // only today's planned hours, tickable without unfolding; with nothing today, one quiet line names the next planned hour
   const today = sessions.filter(s => s.dayLabel === 'დღეს');
   const next = sessions.find(s => s.dayLabel !== 'დღეს');
-  const quick = today.length > 0 ? (
-    <div className="flex flex-wrap items-center gap-2 md:justify-end">
-      <span className="text-[13px] font-bold text-[#75685a] mr-1">დღეს</span>
-      {today.map(s => (
-        <button
-          key={s.key}
-          type="button"
-          onClick={() => toggle(s.key)}
-          aria-pressed={s.done}
-          aria-label={`დღეს ${s.hour}`}
-          title={s.done ? 'შესრულებულია — დააჭირე გასაუქმებლად' : 'დააჭირე, როცა იმეცადინებ'}
-          className={`${PATH_CHIP} ${s.done ? 'bg-emerald-50 text-emerald-700 ring-1 ring-emerald-200' : CHIP_SOFT} cursor-pointer active:scale-95`}
-        >
-          {s.done && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-          {s.hour}
-        </button>
-      ))}
-    </div>
-  ) : next ? (
-    <p className="text-[13px] text-[#8a7a6a] md:text-right">
-      დღეს დაგეგმილი არ არის · შემდეგი: <span className="font-bold text-[#4a3426]">{next.dayLabel} {next.hour}</span>
-    </p>
-  ) : undefined;
-
-  return (
-    <PathPanel
-      id="work"
-      extra={quick}
-      title="დამოუკიდებელი სამუშაო"
-      icon={<Bookmark className="w-5 h-5 fill-[#7a2028]/15" />}
-      lead={planned ? <PercentRing label={monthName} percent={planned.percent} done={planned.percent >= 100} /> : undefined}
-      subtitle={planned ? (
-        <span className="tabular-nums">
-          {monthName} · <span className="text-[13px] font-black text-[#2a2017]">{planned.worked}</span> / {planned.planned} სთ
-        </span>
-      ) : 'საათები დაგეგმე კალენდარში'}
-    >
-      <StudentBookmarkView onBack={() => {}} onGoToGaloba={() => navigateTo('galoba')} />
-    </PathPanel>
-  );
+  return { planned, monthName, today, next, toggle };
 };
+
+/** The month's line: "ოქტომბერი · 3 / 8 სთ", or a hint while nothing is planned. */
+export const WorkMonthLine: React.FC<{ work: ReturnType<typeof useIndependentWork> }> = ({ work: { planned, monthName } }) =>
+  planned ? (
+    <span className="tabular-nums">
+      {monthName} · <span className="text-[13px] font-black text-[#2a2017]">{planned.worked}</span> / {planned.planned} სთ
+    </span>
+  ) : <>საათები დაგეგმე კალენდარში</>;
+
+/** The open panel: the month's calendar, opened on today (its hours are ticked there). */
+export const WorkPanel: React.FC = () => {
+  const { navigateTo } = useNavigation();
+  return <StudentBookmarkView onBack={() => {}} onGoToGaloba={() => navigateTo('galoba')} />;
+};
+

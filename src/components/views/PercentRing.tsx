@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 
 // Eases a shown number toward its target (from 0 when it first appears): drives the ring's sweep and count-up
-const useSweep = (target: number, ms = 1100) => {
+export const useSweep = (target: number, ms = 1100) => {
   const [shown, setShown] = useState(0);
   const at = useRef(0);
   useEffect(() => {

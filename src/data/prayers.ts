@@ -189,6 +189,11 @@ export const VARIOUS_PRAYERS: PrayerRef[] = [
   { id: 'ghirs-arsis-nacvlad', title: 'ღირს არს-ის ნაცვლად საკითხავი' },
 ];
 
+// "პარაკლისი" — services of supplication, one prayer each (the booklet's pages are in public/prayers/)
+export const PARAKLISES: PrayerRef[] = [
+  { id: 'paraklisi-samadlobeli', title: 'სამადლობელი პარაკლისი' },
+];
+
 // The Psalter: twenty kathismas ("კანონები") and the rule for reading them.
 const KATHISMA_PSALMS = ['1–8', '9–16', '17–23', '24–31', '32–36', '37–45', '46–54', '55–63', '64–69', '70–76', '77–84', '85–90', '91–100', '101–104', '105–108', '109–117', '118', '119–133', '134–142', '143–150'];
 
@@ -253,7 +258,7 @@ export const parseBibleId = (id: string): { book: BibleBook; chapter: number; go
 
 // Title shown on the prayer page for any id.
 export const prayerTitle = (id: string): string => {
-  const plain = MORNING_EVENING.find(p => p.id === id) || VARIOUS_PRAYERS.find(p => p.id === id);
+  const plain = MORNING_EVENING.find(p => p.id === id) || VARIOUS_PRAYERS.find(p => p.id === id) || PARAKLISES.find(p => p.id === id);
   const confession = CONFESSION_PRAYERS.find(p => p.id === id);
   if (confession) return confession.id === 'tsodvebis-nuskha' ? confession.title : `ლოცვები ${confession.title}`;
   if (plain) return plain.title;

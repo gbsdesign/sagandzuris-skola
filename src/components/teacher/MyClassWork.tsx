@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { BellOff, BellRing, CalendarClock, Check, CheckCheck, ClipboardList, MessageSquareText } from 'lucide-react';
+import { db } from '../../firebase';
 import { useAuth, useChants } from '../../context';
 import { useMyClasses } from '../../hooks/useClasses';
-import { daysUntil, shortDate, useMyAssignments } from '../../hooks/useTeaching';
+import { Assignment, daysUntil, shortDate, useMyAssignments } from '../../hooks/useTeaching';
 import { useConfirmations } from '../../hooks/useConfirmations';
 import { Voice, voicesOf } from '../../utils/pathItems';
 import { LessonChips } from './Schedule';
@@ -29,9 +31,40 @@ const TONE = {
   later: { bar: 'bg-[#7a2028]', badge: 'bg-[#7a2028]/[0.08] text-[#7a2028]' },
 };
 
-// On the student's path page, in one card: the teacher's assignments with their deadlines, and the lesson
-// timetable. The bell beside "დავალებები" turns on the reminder on the eve of a deadline.
-export const MyClassWork: React.FC = () => {
+// the assignments still shown: until three days past their deadline
+const currentWork = (list: Assignment[]) => list.filter(a => daysUntil(a.due) >= -3);
+
+/** The teacher's assignments the student has not seen yet — the number on the "ნასწავლი" button: the shown ones
+ *  created after students/{uid}.workSeenAt. `markSeen` moves that mark past them (to the newest one's own time, so
+ *  the teacher's and the student's clocks never meet). */
+export const useNewWork = () => {
+  const { user } = useAuth();
+  const classes = useMyClasses(user?.uid);
+  const assignments = useMyAssignments(classes.map(c => c.id), user?.uid);
+  // null until the student's doc answers, so nothing counts as new before it
+  const [seenAt, setSeenAt] = useState<string | null>(null);
+  useEffect(() => {
+    if (!user) { setSeenAt(null); return; }
+    return onSnapshot(doc(db, 'students', user.uid), snap => {
+      const v = snap.data()?.workSeenAt;
+      setSeenAt(typeof v === 'string' ? v : '');
+    }, () => {});
+  }, [user]);
+  // (an old assignment without a time never counts as new)
+  const fresh = seenAt === null ? [] : currentWork(assignments).filter(a => (a.createdAt || '') > seenAt);
+  const markSeen = () => {
+    if (!user || !fresh.length) return;
+    const last = fresh.reduce((m, a) => (a.createdAt && a.createdAt > m ? a.createdAt : m), seenAt || '');
+    setSeenAt(last);
+    setDoc(doc(db, 'students', user.uid), { workSeenAt: last }, { mergeFields: ['workSeenAt'] }).catch(() => {});
+  };
+  return { count: fresh.length, markSeen };
+};
+
+// Inside "ნასწავლი" (the round button on the path page), at the top: the teacher's assignments with their
+// deadlines, and the lesson timetable. The bell beside "დავალებები" turns on the reminder on the eve of a deadline.
+// `bare`: no card of its own, a line under it instead.
+export const MyClassWork: React.FC<{ bare?: boolean }> = ({ bare }) => {
   const { user } = useAuth();
   const classes = useMyClasses(user?.uid);
   const assignments = useMyAssignments(classes.map(c => c.id), user?.uid);
@@ -45,7 +78,7 @@ export const MyClassWork: React.FC = () => {
     const t = window.setTimeout(() => setPushNote(null), 4000);
     return () => window.clearTimeout(t);
   }, [pushNote]);
-  const current = assignments.filter(a => daysUntil(a.due) >= -3);
+  const current = currentWork(assignments);
   const withSchedule = classes.filter(c => c.schedule.length);
   if (!user || (!current.length && !withSchedule.length)) return null;
 
@@ -60,7 +93,7 @@ export const MyClassWork: React.FC = () => {
   };
 
   return (
-    <section className={`${PATH_CARD} divide-y divide-[#f1e8d9] [&>*:not(:first-child)]:pt-3 [&>*:not(:last-child)]:pb-3`}>
+    <section className={`${bare ? 'pb-4 border-b border-[#efe5d4]' : PATH_CARD} divide-y divide-[#f1e8d9] [&>*:not(:first-child)]:pt-3 [&>*:not(:last-child)]:pb-3`}>
       {current.length > 0 && (
         <div>
           <div className="flex items-center gap-2">

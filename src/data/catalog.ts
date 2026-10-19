@@ -1,6 +1,6 @@
 import { SERVICE_LISTS } from './chantLookup';
 import {
-  AKATHIST_GROUPS, ANDREW_CANON, APOSTLE, BibleBook, CONFESSION_PRAYERS, VARIOUS_PRAYERS, GOSPELS, KATHISMAS, MORNING_EVENING, PRAYER_HOURS, PSALTER_RULE, WEEK_DAYS,
+  AKATHIST_GROUPS, ANDREW_CANON, APOSTLE, BibleBook, CONFESSION_PRAYERS, VARIOUS_PRAYERS, GOSPELS, KATHISMAS, MORNING_EVENING, PARAKLISES, PRAYER_HOURS, PSALTER_RULE, WEEK_DAYS,
   bibleChapterId, weekPrayerId,
 } from './prayers';
 import { FOLK_SONGS, getFolkRegion } from './songsData';
@@ -98,6 +98,7 @@ const prayerBook = (p: string, who: CatalogWho): CatalogNode[] => [
     ['confession', 'აღსარების და ზიარების ლოცვები', CONFESSION_PRAYERS],
     ['andrew', 'ანდრია კრიტელის კანონი', ANDREW_CANON],
     ['various', 'სხვადასხვა ლოცვები', VARIOUS_PRAYERS],
+    ['paraklisi', 'პარაკლისი', PARAKLISES],
   ] as const).map(([part, title, list]) => branch(`${p}:${part}`, title,
     list.map(x => btn(`${p}:${part}:${x.id}`, `prayer:${x.id}`, x.title, '')),
     { id: bookPlace(part, title), icon: 'library:prayers', sub: `${list.length}` })),

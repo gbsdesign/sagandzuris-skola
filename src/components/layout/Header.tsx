@@ -2,16 +2,13 @@ import React from 'react';
 import { useAuth, useNavigation, useModal } from '../../context';
 import { PWAInstallButton } from '../PWAInstallButton';
 import { triggerHaptic } from '../../utils/haptics';
-import { useMonthlyStudyStats } from '../../hooks/useMonthlyStudyStats';
-import { nextLessonLabel, useSelectedCount, openPathPanel } from '../views/IndependentWorkCard';
 import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
 import { ClassLogo } from '../classes/ClassLogo';
 import { useAccess } from '../../hooks/useAccess';
 import { askSignIn, openSignIn } from '../access/SignInPrompt';
 import { SearchButton } from '../search/GlobalSearch';
 import { useDirectThreads, isUnread } from '../../hooks/useDirectChat';
-import { Bookmark, User as UserIcon, LogIn, LogOut, Compass, ShieldCheck, Library, GraduationCap, Baby, MessageCircle } from 'lucide-react';
-import { MONTHS_SHORT_GE } from '../../utils/dateNames';
+import { User as UserIcon, LogIn, LogOut, Compass, ShieldCheck, Library, GraduationCap, Baby, MessageCircle } from 'lucide-react';
 
 interface HeaderProps {
   logoUrl: string;
@@ -36,7 +33,6 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
   const { threads } = useDirectThreads(user?.uid);
   const unread = user ? threads.filter(t => isUnread(t, user.uid)).length : 0;
   const { openModal } = useModal();
-  const selectedCount = useSelectedCount();
   const access = useAccess();
   // a member a superadmin has not let in (or not given these) sees no class or private chats
   const showChats = !!user && access.can('messages') && (myClasses.length > 0 || threads.length > 0 || isSuperAdmin);
@@ -44,13 +40,24 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
   const kids = Boolean(access.kids);
   // the learning tools the admin's switches and the kids' mode leave visible
   const tools = TOOLS.filter(t => access.section(t.id === 'gza' ? 'gza' : 'biblioteka') !== 'hidden');
-  const stats = useMonthlyStudyStats(user?.uid);
-  const showStats = !!stats && stats.planned > 0;
-  const workTitle = showStats
-    ? `დამოუკიდებელი სამუშაო — ${MONTHS_SHORT_GE[new Date().getMonth()]}: ${stats.worked}/${stats.planned} სთ (${stats.percent}%)\n` +
-      `შესრულებული: ${stats.worked} · გამოტოვებული: ${stats.missed} · დარჩენილი: ${stats.remaining}` +
-      (stats.next ? `\nშემდეგი მეცადინეობა: ${nextLessonLabel(stats.next)} · ${stats.next.hour}` : '')
-    : 'დამოუკიდებელი სამუშაო';
+  // the student's (or teacher's) class(es) sit between the path and the library
+  const classes = access.can('classes') ? myClasses : [];
+  const showNav = tools.length > 0 || classes.length > 0;
+  const classButtons = classes.map((c, i) => (
+    <React.Fragment key={c.id}>
+      {(tools[0]?.id === 'gza' || i > 0) && <span aria-hidden className="w-px my-1.5 bg-[#e8dcc8] shrink-0" />}
+      <button
+        type="button"
+        onClick={() => { triggerHaptic(10); openClass(c.id); }}
+        className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-8 pl-1 pr-2 min-[400px]:pr-3 rounded-lg text-xs min-[400px]:text-[13px] font-bold ${currentPage === 'class' ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
+        title={`${c.name} — კლასის გვერდი`}
+        aria-label={`კლასი: ${c.name}`}
+      >
+        <ClassLogo name={c.name} logo={c.logo} className="w-6 h-6 text-[11px]" />
+        <span>კლასი</span>
+      </button>
+    </React.Fragment>
+  ));
 
   return (
     <header className="relative z-50 safe-bleed safe-top bg-[#fbf6ec] border-b border-[#e8dcc8]">
@@ -74,7 +81,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
         {/* independent work (icon + count) + install + admin + profile */}
         <div className="order-2 lg:order-3 ml-auto flex items-center gap-1.5 sm:gap-2 min-w-0">
           {/* the search sits beside the learning tools; with none of them shown, up here */}
-          {tools.length === 0 && access.can('search') && <SearchButton />}
+          {!showNav && access.can('search') && <SearchButton />}
           <PWAInstallButton compact />
           {/* teachers (and admins): the teacher's panel */}
           {isTeacher && (
@@ -104,42 +111,9 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
               <ShieldCheck className="w-4 h-4" />
             </button>
           )}
-          <button
-            type="button"
-            onClick={() => {
-              triggerHaptic(10);
-              // signed in: unfold the panel on the path page; guests get the sign-in prompt
-              if (user) { openPathPanel('work'); navigateTo('gz'); } else openModal('bookmark');
-            }}
-            className="inline-flex items-center gap-1.5 h-9 px-2.5 rounded-xl bg-white/80 hover:bg-white ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 transition-all cursor-pointer select-none active:scale-95 shrink-0"
-            title={workTitle}
-            aria-label={workTitle}
-          >
-            <Bookmark className="w-4 h-4 text-[#7a2028] fill-[#7a2028]/20 shrink-0" />
-            {selectedCount > 0 && (
-              <span className="min-w-5 h-5 px-1 rounded-full bg-[#7a2028] text-[#fbf6ec] text-[10px] font-black flex items-center justify-center leading-none">
-                {selectedCount}
-              </span>
-            )}
-          </button>
 
           {user ? (
             <div className="flex items-center gap-1.5">
-              {/* the student's class(es): logo before the avatar, opens the class page */}
-              {access.can('classes') && myClasses.map(c => (
-                <button
-                  key={c.id}
-                  type="button"
-                  onClick={() => openClass(c.id)}
-                  className="shrink-0 inline-flex items-center gap-1.5 h-9 p-0.5 rounded-full bg-white/80 hover:bg-white ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 transition-all cursor-pointer active:scale-95"
-                  title={`${c.name} — კლასის გვერდი`}
-                  aria-label={`კლასი: ${c.name}`}
-                >
-                  <ClassLogo name={c.name} logo={c.logo} className="w-8 h-8 text-sm" />
-                  {/* staff have more buttons up here: on phones their class keeps to the logo */}
-                  <span className={`pr-2.5 text-[12.5px] font-bold text-[#7a2028] leading-none ${isTeacher ? 'hidden sm:inline' : ''}`}>კლასი</span>
-                </button>
-              ))}
               {showChats && (
                 <button
                   type="button"
@@ -207,12 +181,14 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
         </div>
 
         {/* learning tools: one group, full width on phones, centred on desktop; the search beside it */}
-{tools.length > 0 && (
+{showNav && (
         <nav className="order-3 lg:order-2 w-full lg:w-auto lg:mx-auto flex justify-center gap-1.5 sm:gap-2" aria-label="სასწავლო მასალა">
           <div className="flex-1 sm:flex-none flex items-stretch rounded-xl bg-white/80 ring-1 ring-[#e8dcc8] p-0.5">
             {tools.map(({ id, page, label, Icon }, i) => (
               <React.Fragment key={id}>
-                {i > 0 && <span aria-hidden className="w-px my-1.5 bg-[#e8dcc8] shrink-0" />}
+                {/* the class(es) go in after the path, before the library */}
+                {id === 'biblioteka' && classButtons}
+                {(i > 0 || (id === 'biblioteka' && classes.length > 0)) && <span aria-hidden className="w-px my-1.5 bg-[#e8dcc8] shrink-0" />}
                 <button
                   type="button"
                   onClick={() => {
@@ -231,6 +207,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                 </button>
               </React.Fragment>
             ))}
+            {!tools.some(t => t.id === 'biblioteka') && classButtons}
           </div>
           {access.can('search') && <SearchButton />}
         </nav>

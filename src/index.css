@@ -133,6 +133,13 @@
   [class*="sg-wiggle"] { animation: none !important; }
 }
 
+/* "საგანძურის გზა": the round buttons at the top rise in one after another */
+@keyframes path-orb-in { from { opacity: 0; transform: translateY(10px) scale(0.84); } }
+.path-orb-in { animation: path-orb-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.25) both; }
+@media (prefers-reduced-motion: reduce) {
+  .path-orb-in { animation: none; }
+}
+
 /* the kids' mode a teacher turns on: no sharing and no links leading out of the app */
 .kids-mode a[target="_blank"],
 .kids-mode [data-share],

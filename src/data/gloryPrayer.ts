@@ -2,7 +2,8 @@
 // (public/prayers/psalter-rule.json) with the prayers for one's spiritual father and parents from the morning
 // prayers (dila.json) around the group's (father, group, family). It unfolds under the word in the kathisma text (components/views/PrayerText.tsx).
 // "(ჯგუფი)" becomes the members of the reader's psalter groups; "(სახელი)"/"(სახელები)" the reader's own lists;
-// "<!--extra-->" is where the spiritual father's fuller prayer („დამატებით“) opens.
+// "<!--extra-->" is where the spiritual father's fuller prayer („დამატებით“) opens; "<!--sick-->" the fold for
+// those in sickness and trials.
 export const GLORY_PRAYER_HTML = [
   "<p>დიდება მამასა და ძესა და წმიდასა სულსა, აწ და მარადის და უკუნითი უკუნისამდე, ამინ. </p>",
   "<p>ალილუია, ალილუია, ალილუია, დიდება შენდა ღმერთო <em>(3-ჯერ)</em>. </p>",
@@ -13,6 +14,7 @@ export const GLORY_PRAYER_HTML = [
   "<p>აცხოვნე, უფალო, და შეიწყალე სულიერი მამა მოძღვარი და მასწავლელი ჩემი, (სახელი), რომელი მარადის იღვიძებს და იღვწის სულისა ჩემისათვის და ლოცვითა მისითა მომანიჭე შენდობა შეცოდებათა ჩემთა (მეტანია).</p>",
   "<!--extra-->",
   "<p>აცხოვნე უფალო და შეიწყალენ მონანი და მხევალნი შენნი: (ჯგუფი) <em>(მეტანია)</em>.</p>",
+  "<!--sick-->",
   "<p>აცხოვნე, უფალო, და შეიწყალენ მშობელნი ჩემნი (სახელი), ძმანი და ნათესავნი ხორციელნი, და ყოველნივე მახლობელნი და მეგობარნი ჩემნი, და მოანიჭე მათ მშვიდობა შენი და აღავსენ იგინი ყოველთა კეთილთა (მეტანია).</p>",
   "<p>განუსვენე ქრისტე ღმერთო, სულთა გარდაცვალებულთა მონათა და მხევალთა შენთა: (სახელები). განუსვენე მათ, სადა იგი მიხედავს ნათელი პირისა შენისა, სადა იგი არ არს ჭირი, მწუხარება, არა ურვა, არცა სულთქმა, არამედ სიხარული და ცხოვრება იგი დაუსრულებელი და მიუტევე მათ ყოველი შეცოდებანი მათნი და მიეც მათ საუკუნო ხსენება <em>(მეტანია)</em>.</p>",
   "<p>აწ და მარადის და უკუნითი უკუნისამდე, ამინ.</p>",

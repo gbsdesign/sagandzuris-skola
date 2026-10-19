@@ -10,6 +10,7 @@ import { HABIT_ITEMS } from '../../data/habitsAndManera';
 import { dayKey, lastDays } from '../../utils/habitsWeek';
 import { DEFAULT_KIDS_SECTIONS, KidsMode, SECTIONS, SectionId } from '../../data/sections';
 import { MemberPathEditor } from '../admin/MemberPathEditor';
+import { ManeraReviewEditor } from '../admin/ManeraReviewEditor';
 import { Avatar, Btn, Card, CardTitle, Empty, Pill, Sheet, Stat, Toggle } from '../ui/kit';
 import { WEEKDAYS_SHORT_GE } from '../../utils/dateNames';
 import { abilitiesText, interestsText } from '../../utils/profileFields';
@@ -122,7 +123,7 @@ const StudentSheet: React.FC<{
   onClose: () => void;
 }> = ({ cls, uid, record, attendance, onClose }) => {
   const { user } = useAuth();
-  const [view, setView] = useState<'info' | 'path'>('info');
+  const [view, setView] = useState<'info' | 'path' | 'manera'>('info');
   const [error, setError] = useState('');
   if (!uid) return null;
   const m = cls.members.find(x => x.uid === uid);
@@ -143,17 +144,19 @@ const StudentSheet: React.FC<{
 
   return (
     <Sheet open onClose={() => { setView('info'); onClose(); }} title={m?.name || 'მოსწავლე'} wide>
-      <div className="grid grid-cols-2 gap-1 p-1 mb-4 rounded-2xl bg-white ring-1 ring-[#e8dcc8]">
-        {(['info', 'path'] as const).map(v => (
+      <div className="grid grid-cols-3 gap-1 p-1 mb-4 rounded-2xl bg-white ring-1 ring-[#e8dcc8]">
+        {(['info', 'path', 'manera'] as const).map(v => (
           <button key={v} type="button" onClick={() => setView(v)}
             className={`h-10 rounded-xl text-sm font-bold cursor-pointer ${view === v ? 'bg-[#7a2028] text-[#fbf6ec]' : 'text-[#4a3426]'}`}>
-            {v === 'info' ? 'მიმოხილვა' : 'საგანძურის გზა'}
+            {v === 'info' ? 'მიმოხილვა' : v === 'path' ? 'გზა' : 'მანერა'}
           </button>
         ))}
       </div>
 
       {view === 'path' ? (
         <MemberPathEditor uid={uid} name={m?.name || 'მოსწავლე'} onError={t => setError(t)} />
+      ) : view === 'manera' ? (
+        <ManeraReviewEditor uid={uid} />
       ) : !record?.data ? (
         <p className="py-8 text-center text-sm text-[#8a7a6a]">{record?.denied ? 'ამ მოსწავლის მონაცემები ჯერ არ ჩანს.' : 'იტვირთება…'}</p>
       ) : (

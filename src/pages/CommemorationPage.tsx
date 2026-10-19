@@ -1,13 +1,44 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Check, GripVertical, Plus, X } from 'lucide-react';
-import { CategoryListId, Commemoration, NAME_LISTS, NameSection, categoryChoices, inGroupOrder, nameCount, splitNames, useCommemoration } from '../utils/commemoration';
+import { Check, GripVertical, MoreHorizontal, Plus, X } from 'lucide-react';
+import {
+  NAME_LISTS,
+  NameListId,
+  NameSection,
+  categoryChoices,
+  compareNames,
+  genderKey,
+  genderOf,
+  guessGender,
+  inGroupOrder,
+  insertSorted,
+  isCategoryList,
+  nameCount,
+  nameParts,
+  splitNames,
+  useCommemoration,
+} from '../utils/commemoration';
+import { CLERGY_TITLES, Gender } from '../data/georgianNames';
 import { triggerHaptic } from '../utils/haptics';
 import { useAuth } from '../context';
 import { GroupMember, GroupPrayerName, PsalterGroup, firstName, groupPrayerText, useGroupPrayerNames, useMyPsalterGroups } from '../hooks/usePsalter';
 import { PinButton } from '../components/home/ShortcutShelf';
-import { Btn, Sheet } from '../components/ui/kit';
+import { Btn, Sheet, Toggle } from '../components/ui/kit';
+
+type Genders = Record<string, Gender>;
+
+// the student's mark for a name, kept only where it differs from what the app guesses
+const withGender = (genders: Genders, entry: string, picked: Gender | undefined): Genders => {
+  const key = genderKey(entry);
+  const mark = picked && picked !== guessGender(entry) ? picked : undefined;
+  if (genders[key] === mark) return genders;
+  const rest = Object.fromEntries(Object.entries(genders).filter(([k]) => k !== key));
+  return mark ? { ...rest, [key]: mark } : rest;
+};
+
+// what a list sends back to be saved
+type ListPatch = { names?: string[]; sections?: NameSection[]; custom?: string[]; genders?: Genders };
 
 // "მოსახსენებელი": the names a student prays for. Their order here is the order they are read in prayers.
 export const CommemorationPage: React.FC = () => {
@@ -15,7 +46,7 @@ export const CommemorationPage: React.FC = () => {
   const { user, isAdmin, isTeacher } = useAuth();
   const fromGroups = useGroupPrayerNames(user?.uid);
   const { groups } = useMyPsalterGroups(user?.uid);
-  const [renaming, setRenaming] = useState<string | null>(null);
+  const [tapped, setTapped] = useState<string | null>(null);
 
   // the group members I may rename (admins anywhere, a teacher in their own groups), and in which of those groups
   const behind = useMemo(() => {
@@ -32,13 +63,25 @@ export const CommemorationPage: React.FC = () => {
     }
     return out;
   }, [groups, user, isAdmin, isTeacher]);
-  const renamed = renaming ? behind.get(renaming) : undefined;
+  const person = tapped ? fromGroups.find(p => p.uid === tapped) : undefined;
 
-  const update = (patch: Partial<Commemoration>) => save({ ...lists, ...patch });
+  const update = (patch: Partial<typeof lists>) => save({ ...lists, ...patch });
+  const saveList = (id: NameListId) => (p: ListPatch) =>
+    update({
+      ...(p.names ? { [id]: p.names } : {}),
+      ...(p.sections && isCategoryList(id) ? { sections: { ...lists.sections, [id]: p.sections } } : {}),
+      ...(p.custom ? { customCategories: p.custom } : {}),
+      ...(p.genders ? { genders: p.genders } : {}),
+    });
 
   return (
     <div className="w-full max-w-2xl mx-auto mb-6 px-1 space-y-4">
       <div className="grid grid-cols-[2.25rem_1fr_2.25rem] items-center gap-2">
+        <OrderMenu
+          on={lists.autoSort}
+          // turning it on leaves the names where they are (the group's people too); only new ones take their place
+          onChange={on => update(on ? { autoSort: true, groupOrder: inGroupOrder(fromGroups, lists).map(p => p.uid) } : { autoSort: false })}
+        />
         <h1 className="col-start-2 text-center font-serif-ge text-xl sm:text-2xl font-bold text-[#7a2028]">მოსახსენებელი</h1>
         <PinButton id="special:commemoration" />
       </div>
@@ -46,67 +89,132 @@ export const CommemorationPage: React.FC = () => {
         ჩაწერე სახელები (რამდენიმეც ერთად) — თითოეული ცალკე დალაგდება. ლოცვებში ისინი გამოჩნდება იქ, სადაც „(სახელი)“ წერია, ამავე რიგით.
         რიგის შესაცვლელად სახელი ჩაავლე <GripVertical className="inline w-3.5 h-3.5 -mt-0.5" /> ნიშნით და გადაიტანე, შესასწორებლად — სახელს დააჭირე.
       </p>
-      {NAME_LISTS.map(list =>
-        list.id === 'group' ? (
+      {NAME_LISTS.map(list => {
+        const id = list.id;
+        return (
           <NameList
-            key={list.id}
+            key={id}
             title={list.title}
             hint={list.hint}
-            count={nameCount(lists, 'group')}
-            names={lists.group}
-            onChange={group => update({ group })}
-            auto={inGroupOrder(fromGroups, lists.groupOrder)}
-            onAutoOrder={groupOrder => update({ groupOrder })}
-            onAutoTap={uid => (behind.has(uid) ? () => setRenaming(uid) : undefined)}
+            count={nameCount(lists, id)}
+            names={lists[id]}
+            genders={lists.genders}
+            ordered={lists.autoSort}
+            onSave={saveList(id)}
+            cats={isCategoryList(id) ? { sections: lists.sections[id], custom: lists.customCategories } : undefined}
+            {...(id === 'group'
+              ? {
+                  auto: inGroupOrder(fromGroups, lists),
+                  onAutoOrder: (groupOrder: string[]) => update({ groupOrder }),
+                  // a leader renames a member; with the order on anyone marks a member a man or a woman
+                  onAutoTap: (uid: string) => (lists.autoSort || behind.has(uid) ? () => setTapped(uid) : undefined),
+                }
+              : {})}
           />
-        ) : (
-          <NameList
-            key={list.id}
-            title={list.title}
-            hint={list.hint}
-            count={nameCount(lists, list.id)}
-            names={lists[list.id]}
-            onChange={names => update({ [list.id]: names })}
-            cats={{
-              sections: lists.sections[list.id],
-              custom: lists.customCategories,
-              onChange: (names, sections, custom) =>
-                update({ [list.id]: names, sections: { ...lists.sections, [list.id as CategoryListId]: sections }, customCategories: custom }),
-            }}
-          />
-        )
-      )}
-      {renamed && (
-        <GroupNameSheet name={(renamed.member.prayer || firstName(renamed.member.name)).trim()} people={[renamed]} onClose={() => setRenaming(null)} />
+        );
+      })}
+      {person && (
+        <GroupNameSheet
+          person={person}
+          leader={behind.get(person.uid)}
+          genders={lists.genders}
+          ordered={lists.autoSort}
+          onGenders={genders => update({ genders })}
+          onClose={() => setTapped(null)}
+        />
       )}
     </div>
   );
 };
 
-/** A group leader corrects how a member is named at „დიდებაი“ — in every group of theirs that member is in. */
-const GroupNameSheet: React.FC<{ name: string; people: { member: GroupMember; groups: PsalterGroup[] }[]; onClose: () => void }> = ({ name, people, onClose }) => {
-  const [names, setNames] = useState(() => Object.fromEntries(people.map(p => [p.member.uid, name])));
+/** ⋯ by the title: „დალაგება“ on or off. */
+const OrderMenu: React.FC<{ on: boolean; onChange: (on: boolean) => void }> = ({ on, onChange }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex">
+      <button
+        type="button"
+        onClick={() => setOpen(o => !o)}
+        aria-expanded={open}
+        aria-label="პარამეტრები"
+        title="პარამეტრები"
+        className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition active:scale-95 bg-white/85 ring-1 ring-[#e8dcc8] text-[#7a2028] hover:ring-[#7a2028]/40"
+      >
+        <MoreHorizontal className="w-[18px] h-[18px]" />
+      </button>
+      {open && (
+        <>
+          <button type="button" aria-label="დახურვა" tabIndex={-1} onClick={() => setOpen(false)} className="fixed inset-0 z-30 cursor-default" />
+          <div className="absolute left-0 top-full mt-1.5 z-40 w-[min(20rem,calc(100vw-2.5rem))] rounded-2xl bg-white ring-1 ring-[#e8dcc8] shadow-lg px-3.5 py-1 sg-in">
+            <Toggle
+              on={on}
+              onChange={onChange}
+              label="დალაგება"
+              hint="ახალი სახელი თავის ადგილას ჩადგება: ჯერ სასულიერო პირები, მერე ერისკაცები; კაცები, მერე ქალები — ანბანით."
+            />
+          </div>
+        </>
+      )}
+    </span>
+  );
+};
+
+/** კაცი / ქალი for one name: what the app guessed until the student picks. */
+const GenderPick: React.FC<{ value: Gender | undefined; onPick: (g: Gender) => void }> = ({ value, onPick }) => (
+  <div className="inline-flex shrink-0 h-11 p-1 rounded-xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8]" role="radiogroup" aria-label="კაცი თუ ქალი">
+    {(
+      [
+        ['m', 'კაცი'],
+        ['f', 'ქალი'],
+      ] as const
+    ).map(([g, label]) => (
+      <button
+        key={g}
+        type="button"
+        role="radio"
+        aria-checked={value === g}
+        onClick={() => {
+          triggerHaptic(8);
+          onPick(g);
+        }}
+        className={`h-9 px-4 rounded-lg text-[14px] font-semibold cursor-pointer transition-colors ${
+          value === g ? 'bg-[#7a2028] text-[#fbf6ec]' : 'text-[#6b5544] hover:text-[#7a2028]'
+        }`}
+      >
+        {label}
+      </button>
+    ))}
+  </div>
+);
+
+/** A group member tapped: a group leader corrects how the member is named at „დიდებაი“ — in every group of theirs
+ *  that member is in; with the order on, anyone marks the member a man or a woman. */
+const GroupNameSheet: React.FC<{
+  person: GroupPrayerName;
+  leader?: { member: GroupMember; groups: PsalterGroup[] };
+  genders: Genders;
+  ordered: boolean;
+  onGenders: (genders: Genders) => void;
+  onClose: () => void;
+}> = ({ person, leader, genders, ordered, onGenders, onClose }) => {
+  const before = leader ? (leader.member.prayer || firstName(leader.member.name)).trim() : person.name;
+  const [name, setName] = useState(before);
+  const [picked, setPicked] = useState<Gender | undefined>(genders[genderKey(person.name)]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   const save = async () => {
-    const changes = people
-      .map(p => ({ ...p, prayer: (names[p.member.uid] || '').trim().replace(/\s+/g, ' ') }))
-      .filter(p => p.prayer && p.prayer !== name);
-    if (!changes.length) return onClose();
+    const prayer = name.trim().replace(/\s+/g, ' ') || before;
+    const nextGenders = ordered ? withGender(genders, prayer, picked) : genders;
+    if (nextGenders !== genders) onGenders(nextGenders);
+    if (!leader || prayer === before) return onClose();
     setBusy(true);
     setError('');
-    // each group is written once, with all of its renamed members
-    const touched = new Map<string, PsalterGroup>();
-    for (const c of changes) for (const g of c.groups) touched.set(g.id, g);
     try {
       await Promise.all(
-        [...touched.values()].map(g =>
+        leader.groups.map(g =>
           updateDoc(doc(db, 'psalterGroups', g.id), {
-            members: g.members.map(m => {
-              const c = changes.find(x => x.member.uid === m.uid);
-              return c ? { ...m, prayer: c.prayer } : m;
-            }),
+            members: g.members.map(m => (m.uid === leader.member.uid ? { ...m, prayer } : m)),
             updatedAt: new Date().toISOString(),
           })
         )
@@ -122,7 +230,7 @@ const GroupNameSheet: React.FC<{ name: string; people: { member: GroupMember; gr
     <Sheet
       open
       onClose={onClose}
-      title="სახელი ლოცვაში"
+      title={leader ? 'სახელი ლოცვაში' : person.name}
       footer={
         <Btn full disabled={busy} onClick={save}>
           შენახვა
@@ -130,90 +238,108 @@ const GroupNameSheet: React.FC<{ name: string; people: { member: GroupMember; gr
       }
     >
       <div className="space-y-3">
-        <p className="text-[12.5px] leading-snug text-[#8a7a6a]">ასე მოიხსენიებს ჯგუფი ამ წევრს „დიდებაი“-ზე. ცვლილება ჯგუფის ყველა წევრს გამოუჩნდება.</p>
-        {people.map(p => (
-          <label key={p.member.uid} className="block space-y-1">
-            <span className="block text-[12.5px] font-semibold text-[#75685a]">
-              {p.member.name}
-              {p.groups.length > 1 && <span className="font-normal text-[#b5a48c]"> · {p.groups.length} ჯგუფში</span>}
-            </span>
-            <input
-              autoFocus={people[0] === p}
-              value={names[p.member.uid] || ''}
-              onChange={e => setNames({ ...names, [p.member.uid]: e.target.value })}
-              onKeyDown={e => {
-                if (e.key === 'Enter') void save();
-              }}
-              className="w-full h-11 px-3.5 rounded-xl bg-white ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/40 outline-none text-[15px] font-medium text-[#2a2017]"
-            />
-          </label>
-        ))}
+        {leader && (
+          <>
+            <p className="text-[12.5px] leading-snug text-[#8a7a6a]">ასე მოიხსენიებს ჯგუფი ამ წევრს „დიდებაი“-ზე. ცვლილება ჯგუფის ყველა წევრს გამოუჩნდება.</p>
+            <label className="block space-y-1">
+              <span className="block text-[12.5px] font-semibold text-[#75685a]">
+                {leader.member.name}
+                {leader.groups.length > 1 && <span className="font-normal text-[#b5a48c]"> · {leader.groups.length} ჯგუფში</span>}
+              </span>
+              <input
+                autoFocus
+                value={name}
+                onChange={e => setName(e.target.value)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter') void save();
+                }}
+                className="w-full h-11 px-3.5 rounded-xl bg-white ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/40 outline-none text-[15px] font-medium text-[#2a2017]"
+              />
+            </label>
+          </>
+        )}
+        {ordered && <GenderPick value={picked ?? guessGender(name || person.name)} onPick={setPicked} />}
         {error && <p className="text-[13px] font-semibold text-[#9a3324]">{error}</p>}
       </div>
     </Sheet>
   );
 };
 
-type Cats = {
-  sections: NameSection[];
-  custom: string[];
-  onChange: (names: string[], sections: NameSection[], custom: string[]) => void;
-};
+type Cats = { sections: NameSection[]; custom: string[] };
 
-// what the category sheet is doing: placing freshly written names, or one name tapped in the list
+// what the name sheet is doing: placing freshly written names, or one name tapped in the list
 type Pending = { kind: 'add'; names: string[] } | { kind: 'edit'; name: string; from: string | null; index: number };
+
+// names written after „მეზობლები:“ go under that category (tidy places them); the rest take their place here
+const insertNames = (list: string[], fresh: string[], cmp: (a: string, b: string) => number) => {
+  const cut = fresh.findIndex(n => n.endsWith(':'));
+  return cut < 0 ? insertSorted(list, fresh, cmp) : [...insertSorted(list, fresh.slice(0, cut), cmp), ...fresh.slice(cut)];
+};
 
 const NameList: React.FC<{
   title: string;
   hint: string;
   count: number;
   names: string[];
-  onChange: (names: string[]) => void;
+  genders: Genders;
+  // „დალაგება“ is on
+  ordered: boolean;
+  onSave: (patch: ListPatch) => void;
   auto?: GroupPrayerName[];
   // the group's people dragged into a new order (their uids)
   onAutoOrder?: (uids: string[]) => void;
-  // a group name the reader may correct gives back what tapping it does
+  // a group name the reader may tap gives back what tapping it does
   onAutoTap?: (uid: string) => (() => void) | undefined;
   cats?: Cats;
-}> = ({ title, hint, count, names, onChange, auto, onAutoOrder, onAutoTap, cats }) => {
+}> = ({ title, hint, count, names, genders, ordered, onSave, auto, onAutoOrder, onAutoTap, cats }) => {
   const [draft, setDraft] = useState('');
   const [pending, setPending] = useState<Pending | null>(null);
 
+  // new names go to the end — or, with the order on, each to its place
+  const put = (list: string[], fresh: string[], g = genders) => (ordered ? insertNames(list, fresh, (a, b) => compareNames(a, b, g)) : [...list, ...fresh]);
+
   const add = () => {
     // several names at once — "ნუნუ ნანა ნიკა" — become separate names
-    const fresh = splitNames(draft);
+    const fresh = splitNames(draft).filter(n => cats || !n.endsWith(':'));
     if (!fresh.length) return;
     triggerHaptic(10);
     setDraft('');
-    if (cats) setPending({ kind: 'add', names: fresh });
-    else onChange([...names, ...fresh]);
+    // „მეზობლები: ანა დათო“ already says where the names go
+    if (cats && !fresh[0].endsWith(':')) setPending({ kind: 'add', names: fresh });
+    else onSave({ names: put(names, fresh) });
   };
 
   // puts names under a category (or none), taking the edited one out of where it was
-  const place = (category: string | null, placed: string[], custom: string[]) => {
-    if (!cats || !pending) return;
+  const place = (category: string | null, placed: string[], custom: string[], nextGenders: Genders) => {
+    if (!pending) return;
+    const done = (plain: string[], sections: NameSection[]) => {
+      onSave(cats ? { names: plain, sections: sections.filter(s => s.names.length), custom, genders: nextGenders } : { names: plain, genders: nextGenders });
+      setPending(null);
+    };
     let plain = [...names];
-    let sections = cats.sections.map(s => ({ ...s, names: [...s.names] }));
+    let sections = (cats?.sections || []).map(s => ({ ...s, names: [...s.names] }));
     if (pending.kind === 'edit') {
       const { from, index } = pending;
-      if (from === category) {
+      if (from === category && (!ordered || (placed.join(' ') === pending.name && nextGenders === genders))) {
         // same place: the name changes where it stands
         const at = (list: string[]) => [...list.slice(0, index), ...placed, ...list.slice(index + 1)];
         if (category === null) plain = at(plain);
         else sections = sections.map(s => (s.title === category ? { ...s, names: at(s.names) } : s));
-        cats.onChange(plain, sections, custom);
-        setPending(null);
-        return;
+        return done(plain, sections);
       }
       if (from === null) plain.splice(index, 1);
       else sections = sections.map(s => (s.title === from ? { ...s, names: s.names.filter((_, j) => j !== index) } : s));
     }
-    if (category === null) plain = [...plain, ...placed];
-    else if (sections.some(s => s.title === category)) sections = sections.map(s => (s.title === category ? { ...s, names: [...s.names, ...placed] } : s));
+    if (category === null) plain = put(plain, placed, nextGenders);
+    else if (sections.some(s => s.title === category)) sections = sections.map(s => (s.title === category ? { ...s, names: put(s.names, placed, nextGenders) } : s));
     else sections = [...sections, { title: category, names: placed }];
-    cats.onChange(plain, sections.filter(s => s.names.length), custom);
-    setPending(null);
+    done(plain, sections);
   };
+
+  // with the order on: names the app can't tell a man from a woman wait at the end until marked
+  const unknown = ordered
+    ? [...(auto || []).map(p => p.name), ...names, ...(cats?.sections.flatMap(s => s.names) || [])].filter(n => !genderOf(n, genders))
+    : [];
 
   return (
     <section className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] p-3.5 sm:p-4 space-y-3">
@@ -243,7 +369,7 @@ const NameList: React.FC<{
         </div>
       )}
 
-      <Rows names={names} onChange={onChange} onTap={cats ? i => setPending({ kind: 'edit', name: names[i], from: null, index: i }) : undefined} />
+      <Rows names={names} onChange={next => onSave({ names: next })} onTap={i => setPending({ kind: 'edit', name: names[i], from: null, index: i })} />
 
       {cats?.sections.map(s => (
         <div key={s.title} className="space-y-1.5">
@@ -252,11 +378,18 @@ const NameList: React.FC<{
           </p>
           <Rows
             names={s.names}
-            onChange={next => cats.onChange(names, cats.sections.map(x => (x.title === s.title ? { ...x, names: next } : x)).filter(x => x.names.length), cats.custom)}
+            onChange={next => onSave({ sections: cats.sections.map(x => (x.title === s.title ? { ...x, names: next } : x)).filter(x => x.names.length) })}
             onTap={i => setPending({ kind: 'edit', name: s.names[i], from: s.title, index: i })}
           />
         </div>
       ))}
+
+      {unknown.length > 0 && (
+        <p className="px-1 text-[12px] leading-snug text-[#9a6a2a]">
+          ვერ ვიცანი, კაცია თუ ქალი: <span className="font-semibold">{[...new Set(unknown.map(n => nameParts(n).bare))].join(', ')}</span>. დააჭირე
+          სახელს და მონიშნე.
+        </p>
+      )}
 
       <form
         className="flex gap-2"
@@ -281,40 +414,50 @@ const NameList: React.FC<{
         </button>
       </form>
 
-      {cats && pending && <CategorySheet pending={pending} custom={cats.custom} onClose={() => setPending(null)} onPlace={place} />}
+      {pending && <NameSheet pending={pending} cats={cats} genders={genders} ordered={ordered} onClose={() => setPending(null)} onPlace={place} />}
     </section>
   );
 };
 
-/** The small window that asks which category the names go under — or lets one name be corrected and moved. */
-const CategorySheet: React.FC<{
+/** The small window that asks which category new names go under — or lets one name be corrected: its spelling,
+ *  (on the lists that have them) its category, and with the order on, man or woman and a clergy title. */
+const NameSheet: React.FC<{
   pending: Pending;
-  custom: string[];
+  cats?: Cats;
+  genders: Genders;
+  ordered: boolean;
   onClose: () => void;
-  onPlace: (category: string | null, names: string[], custom: string[]) => void;
-}> = ({ pending, custom, onClose, onPlace }) => {
+  onPlace: (category: string | null, names: string[], custom: string[], genders: Genders) => void;
+}> = ({ pending, cats, genders, ordered, onClose, onPlace }) => {
   const editing = pending.kind === 'edit';
   const [name, setName] = useState(editing ? pending.name : '');
   const [chosen, setChosen] = useState<string | null>(editing ? pending.from : null);
+  const [picked, setPicked] = useState<Gender | undefined>(editing ? genders[genderKey(pending.name)] : undefined);
   const [fresh, setFresh] = useState('');
-  const [own, setOwn] = useState(custom);
+  const [own, setOwn] = useState(cats?.custom || []);
   const choices = categoryChoices(own);
 
   const names = editing ? splitNames(name) : pending.names;
+  const { title, bare } = nameParts(name);
+  const titles = [...CLERGY_TITLES.map(t => t.title), ...(title && !CLERGY_TITLES.some(t => t.title === title) ? [title] : [])];
+  // the gender mark goes with the one name being corrected
+  const nextGenders = () => (ordered && editing && names.length === 1 && genderKey(names[0]) ? withGender(genders, names[0], picked) : genders);
+  const done = (category: string | null, custom = own) => onPlace(category, names, custom, nextGenders());
+
   const pick = (category: string | null) => {
     triggerHaptic(10);
     // fresh names go straight in; an edited one waits for „შენახვა“
     if (editing) setChosen(category);
-    else onPlace(category, names, own);
+    else done(category);
   };
   const addCategory = () => {
-    const title = fresh.trim().replace(/\s+/g, ' ');
-    if (!title) return;
-    const next = choices.includes(title) ? own : [...own, title];
+    const t = fresh.trim().replace(/\s+/g, ' ');
+    if (!t) return;
+    const next = choices.includes(t) ? own : [...own, t];
     setOwn(next);
     setFresh('');
-    if (editing) setChosen(title);
-    else onPlace(title, names, next);
+    if (editing) setChosen(t);
+    else done(t, next);
   };
 
   const chip = (label: string, value: string | null) => {
@@ -342,7 +485,7 @@ const CategorySheet: React.FC<{
       title={editing ? 'სახელის შესწორება' : 'რომელ კატეგორიაში ჩავწერო?'}
       footer={
         editing ? (
-          <Btn full disabled={!names.length} onClick={() => onPlace(chosen, names, own)}>
+          <Btn full disabled={!names.length} onClick={() => done(chosen)}>
             შენახვა
           </Btn>
         ) : undefined
@@ -350,16 +493,34 @@ const CategorySheet: React.FC<{
     >
       <div className="space-y-4">
         {editing ? (
-          <input
-            autoFocus
-            value={name}
-            onChange={e => setName(e.target.value)}
-            onKeyDown={e => {
-              if (e.key === 'Enter' && names.length) onPlace(chosen, names, own);
-            }}
-            aria-label="სახელი"
-            className="w-full h-11 px-3.5 rounded-xl bg-white ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/40 outline-none text-[15px] font-medium text-[#2a2017]"
-          />
+          <div className="space-y-2.5">
+            <input
+              autoFocus
+              value={name}
+              onChange={e => setName(e.target.value)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && names.length) done(chosen);
+              }}
+              aria-label="სახელი"
+              className="w-full h-11 px-3.5 rounded-xl bg-white ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/40 outline-none text-[15px] font-medium text-[#2a2017]"
+            />
+            {ordered && <div className="flex flex-wrap gap-2">
+              <GenderPick value={picked ?? guessGender(name)} onPick={setPicked} />
+              <select
+                value={title}
+                onChange={e => setName(e.target.value ? `${e.target.value} ${bare}` : bare)}
+                aria-label="წოდება"
+                className="flex-1 min-w-[10rem] h-11 px-3 rounded-xl bg-white ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/40 outline-none text-[15px] font-medium text-[#2a2017] cursor-pointer"
+              >
+                <option value="">ერისკაცი</option>
+                {titles.map(t => (
+                  <option key={t} value={t}>
+                    {t}
+                  </option>
+                ))}
+              </select>
+            </div>}
+          </div>
         ) : (
           <div className="flex flex-wrap gap-1.5">
             {names.map((n, i) => (
@@ -370,33 +531,37 @@ const CategorySheet: React.FC<{
           </div>
         )}
 
-        <div className="flex flex-wrap gap-2">
-          {choices.map(c => chip(c, c))}
-          {chip('კატეგორიის გარეშე', null)}
-        </div>
+        {cats && (
+          <>
+            <div className="flex flex-wrap gap-2">
+              {choices.map(c => chip(c, c))}
+              {chip('კატეგორიის გარეშე', null)}
+            </div>
 
-        <form
-          className="flex gap-2"
-          onSubmit={e => {
-            e.preventDefault();
-            addCategory();
-          }}
-        >
-          <input
-            value={fresh}
-            onChange={e => setFresh(e.target.value)}
-            placeholder="ახალი კატეგორია"
-            className="flex-1 min-w-0 h-11 px-3.5 rounded-xl bg-white ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/40 outline-none text-[15px] text-[#2a2017] placeholder:text-[#b5a48c]"
-          />
-          <button
-            type="submit"
-            disabled={!fresh.trim()}
-            aria-label="კატეგორიის დამატება"
-            className="h-11 w-11 shrink-0 rounded-xl bg-[#7a2028] text-[#fbf6ec] inline-flex items-center justify-center disabled:opacity-40 cursor-pointer active:scale-95 transition-transform"
-          >
-            <Plus className="w-5 h-5" />
-          </button>
-        </form>
+            <form
+              className="flex gap-2"
+              onSubmit={e => {
+                e.preventDefault();
+                addCategory();
+              }}
+            >
+              <input
+                value={fresh}
+                onChange={e => setFresh(e.target.value)}
+                placeholder="ახალი კატეგორია"
+                className="flex-1 min-w-0 h-11 px-3.5 rounded-xl bg-white ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/40 outline-none text-[15px] text-[#2a2017] placeholder:text-[#b5a48c]"
+              />
+              <button
+                type="submit"
+                disabled={!fresh.trim()}
+                aria-label="კატეგორიის დამატება"
+                className="h-11 w-11 shrink-0 rounded-xl bg-[#7a2028] text-[#fbf6ec] inline-flex items-center justify-center disabled:opacity-40 cursor-pointer active:scale-95 transition-transform"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+            </form>
+          </>
+        )}
       </div>
     </Sheet>
   );
@@ -414,22 +579,13 @@ const moved = <T,>(list: T[], from: number, to: number) => {
 const Rows: React.FC<{
   names: string[];
   onChange?: (names: string[]) => void;
-  onTap?: (i: number) => void;
+  onTap: (i: number) => void;
   canTap?: (i: number) => boolean;
   label?: (i: number) => React.ReactNode;
   onMove?: (from: number, to: number) => void;
 }> = ({ names, onChange, onTap, canTap, label, onMove }) => {
   const [drag, setDrag] = useState<{ from: number; to: number } | null>(null);
-  const [editing, setEditing] = useState<{ i: number; text: string } | null>(null);
   const listRef = useRef<HTMLOListElement>(null);
-
-  // a tapped name turns into a field (lists without categories); an emptied one keeps its old spelling
-  const commit = () => {
-    if (!editing) return;
-    const text = editing.text.trim().replace(/\s+/g, ' ');
-    if (text && text !== names[editing.i]) onChange?.(names.map((n, j) => (j === editing.i ? text : n)));
-    setEditing(null);
-  };
 
   const onPointerDown = (i: number) => (e: React.PointerEvent) => {
     e.preventDefault();
@@ -463,7 +619,6 @@ const Rows: React.FC<{
       {ids.map((i, pos) => {
         const name = names[i];
         const held = drag?.from === i;
-        const tappable = onTap ? (canTap ? canTap(i) : true) : !!onChange;
         return (
           <li
             key={`${i}-${name}`}
@@ -483,26 +638,12 @@ const Rows: React.FC<{
             >
               <GripVertical className="w-4 h-4" />
             </button>
-            {editing?.i === i ? (
-              <input
-                autoFocus
-                value={editing.text}
-                onChange={e => setEditing({ i, text: e.target.value })}
-                onBlur={commit}
-                onKeyDown={e => {
-                  if (e.key === 'Enter') commit();
-                  if (e.key === 'Escape') setEditing(null);
-                }}
-                size={Math.max(4, editing.text.length + 1)}
-                aria-label="სახელის შესწორება"
-                className="min-w-0 h-8 px-2 rounded-full bg-white ring-2 ring-[#7a2028]/40 outline-none text-[15px] font-medium text-[#2a2017]"
-              />
-            ) : tappable ? (
+            {!canTap || canTap(i) ? (
               <button
                 type="button"
-                onClick={() => (onTap ? onTap(i) : setEditing({ i, text: name }))}
+                onClick={() => onTap(i)}
                 title="შესწორება"
-                className={`min-w-0 h-9 px-1 truncate text-[15px] font-medium text-[#2a2017] ${onTap ? 'cursor-pointer' : 'cursor-text'}`}
+                className="min-w-0 h-9 px-1 truncate text-[15px] font-medium text-[#2a2017] cursor-pointer"
               >
                 {label ? label(i) : name}
               </button>
