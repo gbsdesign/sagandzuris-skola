@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Bell, BookHeart, BookOpen, BookOpenText, ChevronDown, ChevronLeft, ChevronRight, Church, Clock, Flame, HandHeart, Heart, Moon, Play,
   ScrollText, Search, Star, Sun, SunMoon,
@@ -18,14 +18,11 @@ import {
   PSALTER_RULE,
   PrayerRef,
   VARIOUS_PRAYERS,
-  WEEK_DAYS,
   bibleChapterId,
   hourClock,
-  weekPrayerId,
 } from '../../data/prayers';
 import { useAuth } from '../../context';
 import { useMyPsalterGroups } from '../../hooks/usePsalter';
-import { WEEKDAYS_SHORT_GE } from '../../utils/dateNames';
 import { useReminders } from '../../utils/prayerReminders';
 import { continueReading } from '../../utils/prayerHabits';
 import { cycleOf, georgiaToday, kathismasOf, ownersIn } from '../../utils/psalter';
@@ -37,6 +34,9 @@ const CHIP =
   'rounded-xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40 hover:text-[#7a2028] transition-colors cursor-pointer active:scale-[0.97]';
 const CHIP_ON = '!bg-[#7a2028] !text-[#fbf6ec] !ring-[#7a2028]';
 const CAPTION = 'px-0.5 pb-1.5 text-[12px] font-bold text-[#8a7a6a]';
+
+/** A menu that holds one prayer only (the morning or the evening prayers): its habit opens that prayer straight away. */
+export const singlePrayerOf = (menu?: HabitMenu): string | null => (menu === 'morning' ? 'dila' : menu === 'evening' ? 'dzili' : null);
 
 export const HabitPrayerMenu: React.FC<{ menu: HabitMenu; onOpen: (prayerId: string) => void }> = ({ menu, onOpen }) => {
   switch (menu) {
@@ -72,7 +72,7 @@ const savedPart = (): string | null => {
 };
 
 /** A place a button names ("psalms", "gospel:matthew", "akathists:2", "week:3"): that part of the book
- *  unfolded, with its book, group or weekday open. */
+ *  unfolded, with its book or group open ("week" opens the morning and evening prayers). */
 const unfoldAt = (at: string) => {
   const [part, sub] = at.split(':');
   const menu = part === 'week' ? 'morning-evening' : part;
@@ -80,7 +80,6 @@ const unfoldAt = (at: string) => {
   if (!sub) return;
   if (part === 'gospel' || part === 'apostle') openBook[part] = sub;
   else if (part === 'akathists') openGroup = AKATHIST_GROUPS[Number(sub)]?.title ?? null;
-  else if (part === 'week') openDay = Number(sub);
 };
 
 /** The whole ლოცვანი: every habit's prayers as folded parts, one open at a time. In the library and
@@ -158,58 +157,18 @@ const ContinueButton: React.FC<{ to: { id: string; label: string }; onOpen: (id:
   </button>
 );
 
-// Morning and evening prayers, then the weekday prayers: today's first, other days by their chip.
+// Morning and evening prayers; today's weekday prayer is folded at the end of each (PrayerText).
 // `part`: only the morning (dila) or only the evening (dzili) prayers, for a habit of its own
-const MorningEvening: React.FC<{ onOpen: (id: string) => void; part?: 'dila' | 'dzili' }> = ({ onOpen, part }) => {
-  const today = new Date().getDay();
-  const [day, setDay] = useState(openDay ?? today);
-  useEffect(() => { openDay = null; }, []);
-  return (
-    <div className="space-y-4">
-      <div className={`grid ${part ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
-        {MORNING_EVENING.filter(p => !part || (p.id === 'dila') === (part === 'dila')).map(p => (
-          <button key={p.id} type="button" onClick={() => onOpen(p.id)} className={`${CHIP} h-16 px-2 flex flex-col items-center justify-center gap-1 text-[14px] font-bold`}>
-            {p.id === 'dila' ? <Sun className="w-5 h-5 shrink-0 text-[#c08a2a]" /> : <Moon className="w-5 h-5 shrink-0 text-[#6b5b8a]" />}
-            {p.id === 'dila' ? 'დილის ლოცვები' : 'საღამოს ლოცვები'}
-          </button>
-        ))}
-      </div>
-      <div>
-        <p className={CAPTION}>
-          შვიდეულის ლოცვები · {WEEK_DAYS[day]}
-          {day === today && <span className="text-[#7a2028]"> (დღეს)</span>}
-        </p>
-        <div className="grid grid-cols-7 gap-1">
-          {WEEKDAYS_SHORT_GE.map((name, i) => (
-            <button
-              key={name}
-              type="button"
-              aria-pressed={day === i}
-              aria-label={WEEK_DAYS[i]}
-              onClick={() => setDay(i)}
-              className={`${CHIP} relative h-11 text-[13px] font-bold ${day === i ? CHIP_ON : ''}`}
-            >
-              {name}
-              {i === today && <span className="absolute bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-current" />}
-            </button>
-          ))}
-        </div>
-        <div className={`mt-2 grid ${part ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
-          {part !== 'dzili' && (
-            <button type="button" onClick={() => onOpen(weekPrayerId(day, 'dila'))} className={`${CHIP} h-11 text-[14px] font-semibold`}>
-              დილით
-            </button>
-          )}
-          {part !== 'dila' && (
-            <button type="button" onClick={() => onOpen(weekPrayerId(day, 'dzili'))} className={`${CHIP} h-11 text-[14px] font-semibold`}>
-              დაწოლისას
-            </button>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
+const MorningEvening: React.FC<{ onOpen: (id: string) => void; part?: 'dila' | 'dzili' }> = ({ onOpen, part }) => (
+  <div className={`grid ${part ? 'grid-cols-1' : 'grid-cols-2'} gap-2`}>
+    {MORNING_EVENING.filter(p => !part || (p.id === 'dila') === (part === 'dila')).map(p => (
+      <button key={p.id} type="button" onClick={() => onOpen(p.id)} className={`${CHIP} h-16 px-2 flex flex-col items-center justify-center gap-1 text-[14px] font-bold`}>
+        {p.id === 'dila' ? <Sun className="w-5 h-5 shrink-0 text-[#c08a2a]" /> : <Moon className="w-5 h-5 shrink-0 text-[#6b5b8a]" />}
+        {p.id === 'dila' ? 'დილის ლოცვები' : 'საღამოს ლოცვები'}
+      </button>
+    ))}
+  </div>
+);
 
 // The seven hours: the next one to come on top (wrapping past midnight to 06:00), all seven as chips.
 const Hours: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) => {
@@ -271,8 +230,6 @@ const PARTS: Record<'gospel' | 'apostle', { title: string; books: BibleBook[] }[
 const openBook: Record<'gospel' | 'apostle', string | null> = { gospel: null, apostle: null };
 // the group left open, so coming back from an akathist shows the same list
 let openGroup: string | null = null;
-// a weekday a button named, shown once instead of today's
-let openDay: number | null = null;
 
 // One book's chapters as numbers; the "გააგრძელე" chapter is ringed.
 const Chapters: React.FC<{ book: BibleBook; resumeId?: string; onOpen: (id: string) => void }> = ({ book, resumeId, onOpen }) => (

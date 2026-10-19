@@ -1,16 +1,18 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Loader2 } from 'lucide-react';
+import { ChevronDown, Loader2, X } from 'lucide-react';
 import { useNavigation } from '../../context';
 import { CategoryListId, Commemoration, inGroupOrder, namesText, useCommemoration } from '../../utils/commemoration';
 import { GirsArsSection, girsArsFor, loadGirsArs } from '../../data/girsArs';
 import { useAuth } from '../../context';
 import { groupPrayerText, useGroupPrayerNames } from '../../hooks/usePsalter';
 import { GLORY_PRAYER_HTML } from '../../data/gloryPrayer';
+import { WEEK_DAYS } from '../../data/prayers';
 
-// The text of a prayer, with three additions woven in:
+// The text of a prayer, with these additions woven in:
 // • "(სახელი)" / "(სახელები მათი)" show the student's names from მოსახსენებელი (tap → edit the lists);
 // • under every "ღირს არს ჭეშმარიტად" a button shows what replaces it today;
-// • the prayer for one's spiritual father gets "დამატებით" — the fuller prayer, unfolded in place.
+// • the prayer for one's spiritual father gets "დამატებით" — the fuller prayer, unfolded in place;
+// • the morning and evening prayers end with today's weekday prayer, folded.
 
 export const PROSE =
   'font-serif-ge text-[17px] leading-[1.75] text-[#2a2017] [&_p]:mb-3.5 [&_p.c]:text-center [&_p.c]:mt-5 [&_p.c]:text-[#7a2028] ' +
@@ -45,7 +47,14 @@ const withNames = (block: string, lists: Commemoration) =>
     return `<button type="button" data-names="${list}" title="${title} — შეცვლა" class="${NAME_CHIP}${names ? '' : ' !font-normal !text-[#8a7a6a]'}">${text}</button>`;
   });
 
-type Segment = { kind: 'html'; html: string } | { kind: 'girs' } | { kind: 'modzgvari' } | { kind: 'glory'; n: number };
+type Segment = { kind: 'html'; html: string } | { kind: 'girs' } | { kind: 'modzgvari' } | { kind: 'glory'; n: number } | { kind: 'day' };
+
+// where the closing notes (a rule and "¹ …" footnotes) begin: the day's prayer goes just before them
+const notesStart = (blocks: string[]) => {
+  let i = blocks.length;
+  while (i > 0 && /^(<hr>|<p><sup>|\s*$)/.test(blocks[i - 1])) i--;
+  return i;
+};
 
 // a kathisma's "დიდებაი." (the end of a stasis): tapping it unfolds the glory prayer with the group's names
 const GLORY = /დიდებაი\.?\s*$/;
@@ -56,7 +65,7 @@ const MODZGVARI_BTN =
   '<button type="button" data-extra="modzgvari" class="inline-flex items-center gap-0.5 align-baseline ml-1 px-2 py-0.5 rounded-full text-[13px] font-sans font-bold text-[#7a2028] ring-1 ring-[#7a2028]/30 hover:bg-[#7a2028]/[0.06] cursor-pointer">დამატებით ▾</button>';
 const isModzgvari = (block: string) => /სულიერი\s+მამა/.test(block) && /\(მეტანია\)/.test(block);
 
-const segment = (html: string, lists: Commemoration, glory: boolean): Segment[] => {
+const segment = (html: string, lists: Commemoration, glory: boolean, day: boolean): Segment[] => {
   const out: Segment[] = [];
   let buffer = '';
   let glories = 0;
@@ -64,8 +73,17 @@ const segment = (html: string, lists: Commemoration, glory: boolean): Segment[] 
     if (buffer) out.push({ kind: 'html', html: buffer });
     buffer = '';
   };
-  const blocks = html.match(/<(p|h2|h3|blockquote)\b[^>]*>[\s\S]*?<\/\1>|<hr>|[^<]+/g) || [html];
-  for (let block of blocks) {
+  // a <br> between two blocks (or after the last one) is only spacing — dropped; any other tag outside the
+  // blocks (a line break between loose lines, <em>…) stays whole, so no "br>" turns up as text
+  const cleaned = html.replace(/(<\/(?:p|h2|h3|blockquote)>|<hr>)(?:\s*<br\s*\/?>)+(?=\s*(?:<(?:p|h2|h3|blockquote|hr)\b|$))/gi, '$1');
+  const blocks = cleaned.match(/<(p|h2|h3|blockquote)\b[^>]*>[\s\S]*?<\/\1>|<hr>|<[^>]*>|[^<]+/g) || [cleaned];
+  const dayAt = day ? notesStart(blocks) : -1;
+  for (const [i, raw] of blocks.entries()) {
+    if (i === dayAt) {
+      flush();
+      out.push({ kind: 'day' });
+    }
+    let block = raw;
     const modzgvari = isModzgvari(block);
     const isGlory = glory && !modzgvari && GLORY.test(plain(block).trim());
     block = withNames(block, lists);
@@ -94,10 +112,12 @@ const segment = (html: string, lists: Commemoration, glory: boolean): Segment[] 
     }
   }
   flush();
+  if (dayAt === blocks.length) out.push({ kind: 'day' });
   return out;
 };
 
-export const PrayerText: React.FC<{ html: string; glory?: boolean }> = ({ html, glory = false }) => {
+/** `dayPrayer`: a weekday prayer's id, folded at the end of the text (before its footnotes). */
+export const PrayerText: React.FC<{ html: string; glory?: boolean; dayPrayer?: string }> = ({ html, glory = false, dayPrayer }) => {
   const { openCommemoration } = useNavigation();
   const { lists } = useCommemoration();
   const { user } = useAuth();
@@ -116,7 +136,7 @@ export const PrayerText: React.FC<{ html: string; glory?: boolean }> = ({ html, 
       .replace('(ჯგუფი)', chip)
       .replace(/(\(მეტანია\)\.?)(<\/p>)<!--extra-->/, `$1 ${MODZGVARI_BTN}$2<!--extra-->`);
   }, [groupNames, lists]);
-  const segments = useMemo(() => segment(html, lists, glory), [html, lists, glory]);
+  const segments = useMemo(() => segment(html, lists, glory, Boolean(dayPrayer)), [html, lists, glory, dayPrayer]);
 
   const onClick = (e: React.MouseEvent) => {
     const target = e.target as HTMLElement;
@@ -140,6 +160,8 @@ export const PrayerText: React.FC<{ html: string; glory?: boolean }> = ({ html, 
           gloryOpen.includes(s.n) && (
             <GloryPrayer key={i} html={gloryHtml} extraOpen={modzgvariOpen} onCloseExtra={() => setModzgvariOpen(false)} onClose={() => setGloryOpen(list => list.filter(x => x !== s.n))} />
           )
+        ) : s.kind === 'day' ? (
+          dayPrayer && <DayPrayer key={i} id={dayPrayer} />
         ) : (
           modzgvariOpen && <ExtraPrayer key={i} id="modzgvari-extra" onClose={() => setModzgvariOpen(false)} />
         )
@@ -267,5 +289,85 @@ const ExtraPrayer: React.FC<{ id: string; onClose: () => void }> = ({ id, onClos
         ჩაკეცვა ▴
       </button>
     </div>
+  );
+};
+
+// Today's weekday prayer at the end of the morning or evening prayers: its name, unfolded by a tap.
+const DayPrayer: React.FC<{ id: string }> = ({ id }) => (
+  <FoldedPrayer id={id} label={`დღის ლოცვა · ${WEEK_DAYS[Number(id.split('-')[1])]}`} className="mt-7 mb-5" />
+);
+
+// A prayer folded under its name, unfolded by a tap (inside PROSE). The file's own heading becomes
+// the name, so it is not repeated inside. `load` gives the html from elsewhere (a psalm cut out of its
+// kathisma); `onRemove` adds a ✕ that takes it off one's own list; `woven` shows it as PrayerText (with the
+// "ღირს არს" replacement button and names).
+export const FoldedPrayer: React.FC<{ id: string; label: string; className?: string; load?: () => Promise<string>; onRemove?: () => void; woven?: boolean }> = ({
+  id,
+  label,
+  className = '',
+  load,
+  onRemove,
+  woven = false,
+}) => {
+  const [text, setText] = useState<{ title: string; body: string } | null>(null);
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    (load ? load() : fetch(`/prayers/${id}.json`).then(r => r.json()).then((d: { html: string }) => d.html))
+      .then(html => {
+        const head = html.match(/<h2[^>]*>([\s\S]*?)<\/h2>/);
+        const title = head ? plain(head[1].replace(/,?\s*<br\s*\/?>\s*/g, ', ')).replace(/\s+/g, ' ').trim() : '';
+        alive && setText({ title, body: head ? html.replace(head[0], '') : html });
+      })
+      .catch(() => alive && setText({ title: '', body: '<p>ლოცვის ჩატვირთვა ვერ მოხერხდა.</p>' }));
+    return () => {
+      alive = false;
+    };
+  }, [id]);
+
+  return (
+    <section className={`${className} rounded-2xl bg-[#7a2028]/[0.035] ring-1 ring-[#7a2028]/15`}>
+      <div className="flex items-center">
+        <button
+          type="button"
+          onClick={() => setOpen(o => !o)}
+          aria-expanded={open}
+          className="flex-1 min-w-0 min-h-14 px-4 py-3 flex items-center gap-3 text-left cursor-pointer rounded-2xl hover:bg-[#7a2028]/[0.04] transition-colors"
+        >
+          <span className="flex-1 min-w-0">
+            <span className="block font-sans text-[12px] font-bold text-[#8a7a6a]">{label}</span>
+            {text?.title && <span className="block mt-0.5 text-[16px] font-bold leading-snug text-[#7a2028]">{text.title}</span>}
+          </span>
+          <ChevronDown className={`w-5 h-5 shrink-0 text-[#7a2028] transition-transform duration-300 ${open ? 'rotate-180' : ''}`} />
+        </button>
+        {onRemove && (
+          <button
+            type="button"
+            onClick={onRemove}
+            aria-label="სიიდან ამოღება"
+            title="სიიდან ამოღება"
+            className="w-9 h-9 mr-2 shrink-0 rounded-full flex items-center justify-center text-[#8a7a6a] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.06] cursor-pointer active:scale-90 transition"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        )}
+      </div>
+      {open && (
+        <div className="px-4 pb-2 animate-in fade-in slide-in-from-top-1 duration-200">
+          {text === null ? (
+            <Loader2 className="w-5 h-5 my-3 animate-spin text-[#7a2028] mx-auto" />
+          ) : woven ? (
+            <PrayerText html={text.body} />
+          ) : (
+            <div dangerouslySetInnerHTML={{ __html: text.body }} />
+          )}
+          <div className="text-center">
+            <button type="button" onClick={() => setOpen(false)} className="h-9 px-3 rounded-full font-sans text-[12.5px] font-bold text-[#7a2028] hover:bg-[#7a2028]/[0.06] cursor-pointer">
+              ჩაკეცვა ▴
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
   );
 };

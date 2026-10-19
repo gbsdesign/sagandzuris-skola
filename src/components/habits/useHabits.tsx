@@ -109,9 +109,12 @@ export const useHabitsModel = (openHabit: (id: string) => void): { model: Habits
     countOn: (id, date) => habitCounts[dayKey(date)]?.[id] ?? 0,
     toggle: (id, date) => { toggle(id, date); },
     setCount: (id, n, date) => {
+      const before = habitCounts[dayKey(date)]?.[id] ?? 0;
       setHabitCount(id, n, date);
       const goal = mine.counters[id]?.goal;
-      if (goal && n >= goal && !isOn(id, date)) toggle(id, date);
+      if (!goal) return;
+      // a typed number back under the goal (a mistake put right) unticks the day its count had ticked
+      if (n >= goal ? !isOn(id, date) : before >= goal && isOn(id, date)) toggle(id, date);
     },
     openHabit,
   };

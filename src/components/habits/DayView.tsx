@@ -1,12 +1,13 @@
 import React, { useMemo, useState } from 'react';
-import { Check, ChevronDown, ChevronRight, Flame, Info, Plus } from 'lucide-react';
+import { BookOpen, Check, ChevronDown, ChevronRight, Flame, Info, Plus } from 'lucide-react';
+import { COUNTER_TAP_STEP, HabitCounter } from '../../data/habitLooks';
 import { HabitGroupType } from '../../data/habitsAndManera';
 import { HabitLink, MyHabit, MyHabitGroup } from '../../utils/myHabits';
 import { MONTHS_GE, WEEKDAYS_GE, WEEKDAYS_SHORT_GE } from '../../utils/dateNames';
 import { TICK_DAYS, dayKey, dayNeeds, keptStreak, lastDays, periodStart } from '../../utils/habitsWeek';
 import { currentRun, dayState, ticksOf, timesIn } from '../../utils/habitStats';
 import { triggerHaptic } from '../../utils/haptics';
-import { HabitPrayerMenu } from '../views/HabitPrayerMenu';
+import { HabitPrayerMenu, singlePrayerOf } from '../views/HabitPrayerMenu';
 import { HabitLinkChip } from '../views/HabitLinks';
 import { HabitIcon, colorOf, tint } from './HabitIcon';
 import { HabitsModel } from './useHabits';
@@ -63,9 +64,80 @@ const PeriodNote: React.FC<{ count: number; goal: HabitGroupType['goal']; curren
   );
 };
 
+/** A counted habit's day under its name: the bar and „8 / 15 შეკვეთა“; a tap on the number types the exact one. */
+const CountBar: React.FC<{ count: number; counter: HabitCounter; color: string; label: string; onSet: (n: number) => void }> = ({
+  count,
+  counter,
+  color,
+  label,
+  onSet,
+}) => {
+  const [typing, setTyping] = useState<string | null>(null);
+  const cancelled = React.useRef(false);
+  const commit = () => {
+    const n = parseInt(typing ?? '', 10);
+    setTyping(null);
+    if (!cancelled.current && Number.isFinite(n) && n !== count) onSet(n);
+    cancelled.current = false;
+  };
+  const of = (
+    <>
+      {typing === null && count} / {counter.goal} {counter.unit}
+    </>
+  );
+  return (
+    <div className="flex items-center gap-2.5">
+      <span
+        role="progressbar"
+        aria-label={label}
+        aria-valuemin={0}
+        aria-valuemax={counter.goal}
+        aria-valuenow={Math.min(count, counter.goal)}
+        className="flex-1 min-w-0 h-2 rounded-full overflow-hidden"
+        style={{ background: tint(color, 0.15) }}
+      >
+        <span className="block h-full rounded-full transition-[width] duration-300" style={{ width: `${Math.min(1, count / counter.goal) * 100}%`, background: color }} />
+      </span>
+      {typing === null ? (
+        <button
+          type="button"
+          onClick={() => setTyping(String(count))}
+          aria-label={`${label} — ${count} / ${counter.goal} ${counter.unit}, რიცხვის ჩაწერა`}
+          title="რიცხვის ჩაწერა"
+          className="h-9 -my-1.5 -mr-1 px-2 shrink-0 rounded-full text-[12.5px] font-bold tabular-nums cursor-pointer hover:bg-black/[0.04] transition-colors"
+          style={{ color }}
+        >
+          {of}
+        </button>
+      ) : (
+        <span className="-my-1.5 shrink-0 flex items-center gap-1.5 text-[12.5px] font-bold tabular-nums" style={{ color }}>
+          <input
+            autoFocus
+            type="number"
+            inputMode="numeric"
+            min={0}
+            value={typing}
+            aria-label={`${label} — რამდენი`}
+            onChange={e => setTyping(e.target.value)}
+            onFocus={e => e.target.select()}
+            onBlur={commit}
+            onKeyDown={e => {
+              if (e.key === 'Enter') e.currentTarget.blur();
+              if (e.key === 'Escape') { cancelled.current = true; e.currentTarget.blur(); }
+            }}
+            className="w-[72px] h-9 rounded-xl bg-white text-center text-[16px] font-bold tabular-nums text-[#2a2017] outline-none"
+            style={{ boxShadow: `inset 0 0 0 1.5px ${color}` }}
+          />
+          {of}
+        </span>
+      )}
+    </div>
+  );
+};
+
 // One habit: the round button ticks the chosen day (the habit's icon until it is done); a tap on the name unfolds the
-// habit's prayers and its own buttons (one without either is ticked by its name too). A counted habit fills its row
-// and has „+“; „🔥 ›“ opens the habit's page; ⓘ unfolds the member's note.
+// habit's prayers and its own buttons, or opens its one prayer (one without either is ticked by its name too). A counted habit
+// has its bar under the name and „+“; „🔥 ›“ opens the habit's page; ⓘ unfolds the member's note.
 const HabitRow: React.FC<{
   model: HabitsModel;
   habit: MyHabit;
@@ -81,41 +153,40 @@ const HabitRow: React.FC<{
   const on = model.isOn(habit.id, date);
   const counter = model.counters[habit.id];
   const count = counter ? model.countOn(habit.id, date) : 0;
+  const step = COUNTER_TAP_STEP[habit.id] ?? 1;
   const ticks = useMemo(() => ticksOf(model.log, habit.id), [model.log, habit.id]);
   const run = currentRun(ticks, group.goal, model.first);
   const links = habit.links || [];
-  const folds = !!habit.menu || links.length > 0;
+  // the morning or evening prayers open straight away, unless the member added buttons of their own to unfold
+  const single = links.length === 0 ? singlePrayerOf(habit.menu) : null;
+  const folds = !single && (!!habit.menu || links.length > 0);
   const toggle = () => model.toggle(habit.id, date);
-
-  // the row fills with the day's progress: whole once ticked, part of the way while a counter runs
-  const progress = on ? 1 : counter ? Math.min(1, count / counter.goal) : 0;
-  const fill =
-    progress >= 1 ? tint(c, 0.07) : progress > 0 ? `linear-gradient(90deg, ${tint(c, 0.1)} ${progress * 100}%, transparent ${progress * 100}%)` : undefined;
 
   const rare = group.goal.per !== 'day';
   const periodNow = dayKey(periodStart(group.goal.per, date)) === dayKey(periodStart(group.goal.per, new Date()));
-  const sub = (
-    <>
-      {counter && (
-        <span className="text-[12px] font-bold tabular-nums" style={{ color: c }}>
-          {count} / {counter.goal} {counter.unit}
+
+  const name = (
+    <button
+      type="button"
+      onClick={single ? () => onOpenPrayer(single) : folds ? () => setMenuOpen(o => !o) : toggle}
+      aria-expanded={folds ? menuOpen : undefined}
+      className={`${counter ? 'block w-full py-1' : 'flex-1 min-w-0 min-h-[56px] py-2 pr-1'} text-left cursor-pointer select-none`}
+    >
+      <span className="flex items-center gap-1 text-[15px] font-medium leading-snug text-[#2a2017]">
+        {habit.label}
+        {single && <BookOpen className="w-4 h-4 shrink-0 text-[#b8a68e]" />}
+        {folds && <ChevronDown className={`w-4 h-4 shrink-0 text-[#b8a68e] transition-transform ${menuOpen ? 'rotate-180' : ''}`} />}
+      </span>
+      {rare && (
+        <span className="block mt-0.5 leading-none">
+          <PeriodNote count={timesIn(ticks, periodStart(group.goal.per, date), group.goal.per)} goal={group.goal} current={periodNow} />
         </span>
       )}
-      {counter && rare && <span className="text-[#c9b9a2]"> · </span>}
-      {rare && <PeriodNote count={timesIn(ticks, periodStart(group.goal.per, date), group.goal.per)} goal={group.goal} current={periodNow} />}
-    </>
+    </button>
   );
 
   return (
-    <li className="relative transition-[background] duration-300" style={{ background: fill }}>
-      {/* a counter on its way: a thin line along the bottom shows how far */}
-      {!on && progress > 0 && (
-        <span
-          aria-hidden
-          className="absolute left-0 bottom-0 h-[3px] rounded-r-full transition-[width] duration-300"
-          style={{ width: `${progress * 100}%`, background: tint(c, 0.6) }}
-        />
-      )}
+    <li className="relative transition-[background] duration-300" style={{ background: on ? tint(c, 0.07) : undefined }}>
       <div className="flex items-center">
         <button
           type="button"
@@ -136,24 +207,20 @@ const HabitRow: React.FC<{
             {on ? <Check className="w-[18px] h-[18px] stroke-[3] animate-in zoom-in-50 duration-200" /> : <HabitIcon icon={look?.icon ?? 'sparkle'} className="w-4 h-4" />}
           </span>
         </button>
-        <button
-          type="button"
-          onClick={folds ? () => setMenuOpen(o => !o) : toggle}
-          aria-expanded={folds ? menuOpen : undefined}
-          className="flex-1 min-w-0 min-h-[56px] py-2 pr-1 text-left cursor-pointer select-none"
-        >
-          <span className="flex items-center gap-1 text-[15px] font-medium leading-snug text-[#2a2017]">
-            {habit.label}
-            {folds && <ChevronDown className={`w-4 h-4 shrink-0 text-[#b8a68e] transition-transform ${menuOpen ? 'rotate-180' : ''}`} />}
-          </span>
-          {(counter || rare) && <span className="block mt-0.5 leading-none">{sub}</span>}
-        </button>
+        {counter ? (
+          <div className="flex-1 min-w-0 pt-1.5 pb-3 pr-2">
+            {name}
+            <CountBar count={count} counter={counter} color={c} label={habit.label} onSet={n => model.setCount(habit.id, n, date)} />
+          </div>
+        ) : (
+          name
+        )}
         {counter && (
           <button
             type="button"
-            onClick={() => { triggerHaptic(6); model.setCount(habit.id, count + 1, date); }}
-            aria-label={`${habit.label} — +1 (${count} / ${counter.goal})`}
-            title="+1"
+            onClick={() => { triggerHaptic(6); model.setCount(habit.id, count + step, date); }}
+            aria-label={`${habit.label} — +${step} (${count} / ${counter.goal})`}
+            title={`+${step}`}
             className="w-9 h-9 shrink-0 rounded-full flex items-center justify-center cursor-pointer transition-transform active:scale-90"
             style={{ background: tint(c, 0.13), color: c }}
           >
@@ -220,7 +287,7 @@ export const DayView: React.FC<{
   model: HabitsModel;
   date: Date;
   onDate: (d: Date) => void;
-  /** ✏️ ⓘ at the right of the status line */
+  /** „დღე ▾“ ✏️ ⓘ at the right of the status line */
   actions?: React.ReactNode;
   onOpenPrayer: (prayerId: string) => void;
   onLink: (l: HabitLink) => void;
@@ -239,12 +306,13 @@ export const DayView: React.FC<{
         <div className="flex items-center gap-3.5">
           <Ring value={s.done} max={total} caption={today ? 'დღეს' : 'იმ დღეს'} />
           <div className="flex-1 min-w-0">
-            <div className="flex items-start gap-1">
-              <div className="flex-1 min-w-0 pt-0.5">
+            {/* on a phone the buttons take their own line above the status (wrap-reverse), so the text keeps its width */}
+            <div className="flex flex-wrap-reverse items-end gap-x-1 gap-y-1.5">
+              <div className="flex-1 basis-40 min-w-0 pt-0.5">
                 {!today && <p className="text-[12.5px] font-bold leading-snug text-[#7a2028]">{longDate(date)}</p>}
                 <p className="text-[14px] font-bold leading-snug text-[#2a2017]">{status}</p>
               </div>
-              {actions && <div className="-mt-1.5 -mr-1.5 flex shrink-0">{actions}</div>}
+              {actions && <div className="-mt-1.5 -mr-1.5 ml-auto flex shrink-0">{actions}</div>}
             </div>
             {streak.days > 0 && (
               <p className="mt-1.5 flex items-center gap-1 text-[12.5px] font-bold text-[#b4441c]">

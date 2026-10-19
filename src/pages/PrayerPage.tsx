@@ -1,15 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Bell, BellOff, Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useAuth, useChants, useNavigation } from '../context';
-import { KATHISMAS, PRAYER_HOURS, PrayerHour, bibleChapterId, hourClock, parseBibleId, prayerTitle } from '../data/prayers';
+import { KATHISMAS, PRAYER_HOURS, PrayerHour, bibleChapterId, hourClock, parseBibleId, prayerTitle, todaysWeekPrayerId } from '../data/prayers';
 import { HABIT_ITEMS } from '../data/habitsAndManera';
-import { PROSE, PrayerText } from '../components/views/PrayerText';
-import { KathismaReadMark } from '../components/psalter/KathismaReadMark';
+import { FoldedPrayer, PROSE, PrayerText } from '../components/views/PrayerText';
+import { HourPsalms } from '../components/views/HourPsalms';
+import { ReadingToolbar, useKhutsuri } from '../components/views/ReadingTools';
 import { PinButton } from '../components/home/ShortcutShelf';
 import { useHabitToggle } from '../components/views/ChvevebiPanel';
 import { Btn } from '../components/ui/kit';
 import { useAccess } from '../hooks/useAccess';
-import { useMyPsalterGroups } from '../hooks/usePsalter';
 import { dayKey } from '../utils/habitsWeek';
 import { habitOfPrayer, rememberRead } from '../utils/prayerHabits';
 import {
@@ -59,6 +59,11 @@ export const PrayerPage: React.FC = () => {
   const { selectedPrayerId, openPrayer } = useNavigation();
   const [html, setHtml] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
+  // kept while reading on (next chapter or kathisma); every new visit starts at the standard size, in ordinary letters
+  const [textSize, setTextSize] = useState(100);
+  const [khutsuri, setKhutsuri] = useState(false);
+  const [textEl, setTextEl] = useState<HTMLDivElement | null>(null);
+  useKhutsuri(textEl, khutsuri);
 
   useEffect(() => {
     if (!selectedPrayerId) return;
@@ -114,14 +119,50 @@ export const PrayerPage: React.FC = () => {
           <div className="flex justify-center py-10">
             <Loader2 className="w-6 h-6 animate-spin text-[#7a2028]" />
           </div>
-        ) : parseBibleId(selectedPrayerId) ? (
-          <div className={PROSE} dangerouslySetInnerHTML={{ __html: html }} />
         ) : (
-          <PrayerText html={html} glory={Boolean(kathisma)} />
+          <>
+            <ReadingToolbar size={textSize} onSize={setTextSize} khutsuri={khutsuri} onKhutsuri={setKhutsuri} />
+            {/* big sizes: a long word breaks rather than leaving the card; ხუცური off = the text drawn afresh */}
+            <div key={khutsuri ? 'khutsuri' : 'mkhedruli'} ref={setTextEl} style={{ zoom: textSize / 100 }} className="break-words">
+              {parseBibleId(selectedPrayerId) ? (
+                // the prayers before and after reading Holy Scripture, folded around the chapter; folded again on the next one
+                <div key={selectedPrayerId} className={PROSE}>
+                  <FoldedPrayer id="sakhareba-tsin" label="ლოცვა წაკითხვის წინ" className="mb-5" />
+                  <div dangerouslySetInnerHTML={{ __html: html }} />
+                  <FoldedPrayer id="sakhareba-shemdeg" label="ლოცვა წაკითხვის შემდეგ" className="mt-5" />
+                </div>
+              ) : (
+                <>
+                  {/* a kathisma: the rule's opening prayers above it and the closing ones below, folded; folded again on the next one */}
+                  {kathisma && (
+                    <div className={PROSE}>
+                      <FoldedPrayer key={`tsin-${kathisma.id}`} id="psalter-tsin" label="კითხვის წინ" className="mb-5" />
+                    </div>
+                  )}
+                  <PrayerText
+                    html={html}
+                    glory={Boolean(kathisma)}
+                    dayPrayer={selectedPrayerId === 'dila' || selectedPrayerId === 'dzili' ? todaysWeekPrayerId(selectedPrayerId) : undefined}
+                  />
+                  {kathisma && (
+                    <div className={PROSE}>
+                      <FoldedPrayer key={`shemdeg-${kathisma.id}`} id="psalter-shemdeg" label="კითხვის შემდეგ" className="mt-5" woven />
+                    </div>
+                  )}
+                </>
+              )}
+              {/* each of the seven hours goes on with „მოწყალებისა კარი“ (said three times), folded, then one's own psalms for this hour */}
+              {hour && (
+                <div className={PROSE}>
+                  <FoldedPrayer key={hour.id} id="motskhalebisa-kari" label="განაგრძე" className="mt-6" />
+                  <HourPsalms key={`psalms-${hour.id}`} hour={hour} />
+                </div>
+              )}
+            </div>
+          </>
         )}
       </article>
 
-      {kathisma && html !== null && <KathismaReadMark k={kathisma.n} />}
 
       {html !== null && !failed && <ReadMark prayerId={selectedPrayerId} />}
 
@@ -149,19 +190,17 @@ export const PrayerPage: React.FC = () => {
 
 // At the end of a prayer: "წავიკითხე" ticks today's habit it belongs to (the morning prayers count for
 // "დილის და საღამოს ლოცვები", a chapter for "სახარება"…) and moves "გააგრძელე" past a finished chapter.
-// A psalter group's member marks kathismas in the group's own card above (it ticks the habit too).
+// A kathisma ticks "ფსალმუნები" the same way; psalter groups are marked only on their own page.
 const ReadMark: React.FC<{ prayerId: string }> = ({ prayerId }) => {
   const { user } = useAuth();
   const access = useAccess();
   const { habitLog } = useChants();
   const { toggle, blessing } = useHabitToggle();
-  const { groups } = useMyPsalterGroups(user?.uid);
   const [pressed, setPressed] = useState(false);
   useEffect(() => setPressed(false), [prayerId]);
 
   const habit = HABIT_ITEMS.find(h => h.id === habitOfPrayer(prayerId));
   if (!user || !habit || access.section('chvevebi') !== 'open') return null;
-  if (habit.id === 'habit_6' && groups.some(g => g.memberIds.includes(user.uid))) return null;
   const ticked = (habitLog[dayKey(new Date())] || []).includes(habit.id);
 
   const press = () => {

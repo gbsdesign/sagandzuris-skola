@@ -23,14 +23,17 @@
 }
 @keyframes np-in{from{opacity:0;transform:scale(.985)}}
 .np-root[data-paper="candle"]{
-  --ground:#e6d3ae; --surface:#fbf1dc; --surface-2:#f5e7c9; --surface-3:#ecdab4; --hover:rgba(80,50,15,.06);
-  --chrome:rgba(247,235,208,.95); --chrome-line:#d9c08f;
-  --ink:#3a2814; --ink-2:#5c4224; --muted:#86693f; --faint:#b0956a; --line:#dcc59a; --line-2:#cdb385;
-  --synth-bg:linear-gradient(#f5e9d8,#efe0ca); --dusk-soft:#ead9cf; --dusk-line:#d6c0b2;
-  --rec-bg:linear-gradient(#f9ebce,#f2dfbb); --amber-soft:#f3dfb6;
-  /* candle: the page stays crisp black-brown ink; only its white paper takes the candle colour (multiplied onto it) */
-  --paper:#f1dcb2; --sheet-filter:grayscale(1) brightness(.75) contrast(2) sepia(.3); --sheet-blend:multiply;
-  --sheet-shadow:0 1px 2px rgba(80,50,15,.12),0 12px 28px -20px rgba(80,50,15,.55);
+  --ground:#e7dcc6; --surface:#fbf6ec; --surface-2:#f6efe1; --surface-3:#ede3cf; --hover:rgba(70,50,25,.05);
+  --chrome:rgba(248,243,232,.95); --chrome-line:#ddd0b8;
+  --ink:#3a2c1f; --ink-2:#5a4733; --muted:#857158; --faint:#b2a083; --line:#e0d3bc; --line-2:#d0c0a4;
+  --synth-bg:linear-gradient(#f6f0e6,#f0e8da); --dusk-soft:#ece3da; --dusk-line:#d8cbbd;
+  --rec-bg:linear-gradient(#faf3e4,#f4ead6); --amber-soft:#f4e7cb;
+  /* candle = a book's sepia page: light cream paper (lighter than the ground around it, so the page stands out)
+     and dark-brown ink (#363025, ~11:1) instead of black on yellow. The ink is lifted off pure black and browned;
+     the last brightness() clips the paper back to pure white, so multiplied onto --paper it shows exactly --paper */
+  --paper:#f7f0e1;
+  --sheet-filter:grayscale(1) brightness(.75) contrast(2) invert(.14) brightness(1.163) sepia(.8) brightness(1.06); --sheet-blend:multiply;
+  --sheet-shadow:0 1px 2px rgba(70,50,25,.1),0 12px 28px -20px rgba(70,50,25,.5);
   --hymn-filter:sepia(.25) saturate(.9);
   --shadow:rgba(80,50,15,.45)
 }
@@ -43,7 +46,9 @@
   --synth-bg:linear-gradient(#201b26,#1c1821);
   --amber:#f0b062; --amber-btn:#d48a2b; --amber-soft:#34271a; --amber-line:#574024;
   --rec-bg:linear-gradient(#241d14,#1f1910);
-  --paper:#1d1915; --sheet-filter:brightness(.75) contrast(2) invert(.9) sepia(.32) saturate(.85) brightness(.96);
+  /* soft night: warm grey ink (#c7bdab, ~9:1) instead of near-white strokes that glow in a dark church.
+     The page is inverted to light ink on black and dimmed; "screen" turns its black into exactly --paper */
+  --paper:#1d1915; --sheet-filter:brightness(.75) contrast(2) invert(1) brightness(.66) sepia(.4); --sheet-blend:screen;
   --sheet-shadow:0 1px 2px rgba(0,0,0,.4),0 12px 28px -20px rgba(0,0,0,.8);
   --orn-op:.5; --orn-filter:saturate(.75) brightness(.9); --hymn-op:.9; --hymn-filter:brightness(1.45) saturate(1.1);
   --toast:#eee4d6; --toast-ink:#1b1612; --toast-btn:rgba(0,0,0,.1);
@@ -289,7 +294,10 @@
 .np-o-head{margin-top:3.4%;margin-bottom:1.2%}
 .np-o-tail{margin-top:2.4%;margin-bottom:4%}
 :is(.np-o-head,.np-o-tail).in{opacity:var(--hymn-op)}
-.np-root[data-paper="night"] .np-o-bw{filter:invert(.88) sepia(.3)}
+/* night: black-and-white drawings take the ink's warm grey; coloured ones with dark lines (hymnOrnaments DARK_LINES)
+   turn their lightness over but keep their hues */
+.np-root[data-paper="night"] .np-o-bw{filter:invert(1) brightness(.66) sepia(.4)}
+.np-root[data-paper="night"] .np-o-dark{filter:invert(.9) hue-rotate(180deg) saturate(.85) brightness(.92)}
 .np-sys{position:absolute;border-radius:7px;pointer-events:none}
 .np-root.tap-lines .np-sys{pointer-events:auto;cursor:pointer}
 .np-root.tap-lines .np-sys:hover{background:var(--sys-hover)}

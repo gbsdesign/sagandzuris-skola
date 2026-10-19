@@ -6,10 +6,10 @@ import { HomePage } from '../pages/HomePage';
 import { GalobaPage } from '../pages/GalobaPage';
 import { StudentProfileCard } from '../components/views';
 import { GzaView } from '../components/views';
-import { PathPanel, PATH_TILE } from '../components/views/IndependentWorkCard';
+import { IndependentWorkCard, PathPanel, PATH_TILE } from '../components/views/IndependentWorkCard';
 import { ChvevebiContent } from '../components/views/ChvevebiPanel';
 import { ManeraContent, ManeraAverageBadge, ManeraQuickRings } from '../components/views/ManeraPanel';
-import { PathSummary } from '../components/views/PathSummary';
+import { PathProgress, PathSummary } from '../components/views/PathSummary';
 import { PathTabs } from '../components/views/PathTabs';
 import { ChemiSamosi } from '../components/views/ChemiSamosi';
 import { MyClassWork } from '../components/teacher/MyClassWork';
@@ -177,13 +177,16 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
 
           {currentPage === 'gz' && (
             <div className="w-full max-w-2xl mx-auto mb-2 px-1">
-              {/* the page title sits in the top bar (SubPageHeader); the page itself is in three tabs */}
+              {/* the page title sits in the top bar (SubPageHeader); the page itself is in two tabs,
+                  with the folded "ჩემი სამოსი" above them and the path's progress on its right */}
               <PathTabs
+                top={<ChemiSamosi side={<PathProgress />} />}
                 panels={{
                   learn: [
                     // the teacher's assignments and the lesson timetable, when there are any
                     { id: 'work', label: 'დავალებები და გაკვეთილები', node: <MyClassWork /> },
-                    { id: 'summary', label: 'შენი გზა და თვე', node: <PathSummary /> },
+                    // the first step, only while the path is empty
+                    { id: 'summary', label: 'შენი გზა', node: <PathSummary /> },
                     {
                       id: 'manera',
                       label: 'მანერა',
@@ -206,17 +209,19 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
                       ),
                     },
                   ],
-                  spirit: [{
-                    id: 'habits',
-                    label: 'ჩვევები',
-                    // the tab's only card, so it is always open; the tab names it, so the card has no title row
-                    node: (
-                      <section className="w-full rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] px-3 py-3.5 sm:p-4">
-                        <ChvevebiContent />
-                      </section>
-                    ),
-                  }],
-                  samosi: [{ id: 'samosi', label: 'ჩემი სამოსი', node: <ChemiSamosi unfolded /> }],
+                  spirit: [
+                    { id: 'independent', label: 'დამოუკიდებელი სამუშაო', node: <IndependentWorkCard /> },
+                    {
+                      id: 'habits',
+                      label: 'ჩვევები',
+                      // the tab's main card, so it is always open; the tab names it, so the card has no title row
+                      node: (
+                        <section className="w-full rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] px-3 py-3.5 sm:p-4">
+                          <ChvevebiContent />
+                        </section>
+                      ),
+                    },
+                  ],
                 }}
               />
             </div>

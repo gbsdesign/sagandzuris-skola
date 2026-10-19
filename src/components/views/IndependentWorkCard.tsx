@@ -1,12 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Bookmark, CalendarDays, ChevronDown, Check } from 'lucide-react';
+import { Bookmark, ChevronDown, Check } from 'lucide-react';
 import { useAuth, useChants, useNavigation } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 import { filterValidVariants } from '../../utils/variantValidation';
 import { useUpcomingSessions } from '../../hooks/useUpcomingSessions';
+import { useMonthlyStudyStats } from '../../hooks/useMonthlyStudyStats';
 import { StudentBookmarkView } from './StudentBookmarkView';
-import { MONTHS_SHORT_GE } from '../../utils/dateNames';
-import { CHIP_SOFT, CHIP_STRONG, PATH_CHIP, PATH_LABEL, PATH_LABEL_ICON } from './pathStyle';
+import { PercentRing } from './PercentRing';
+import { MONTHS_GE, MONTHS_SHORT_GE } from '../../utils/dateNames';
+import { CHIP_SOFT, PATH_CHIP } from './pathStyle';
 
 
 // "დღეს" / "ხვალ" / "12 ოქტ" for the next planned lesson
@@ -30,10 +32,10 @@ const PANEL_KEY = (id: string) => `pathPanel:${id}`;
 const PANEL_EVENT = 'open-path-panel';
 
 // The path page's tabs (PathTabs), and the tab that holds each panel, so opening a panel shows its tab
-export type PathTab = 'learn' | 'spirit' | 'samosi';
+export type PathTab = 'learn' | 'spirit';
 export const PATH_TAB_KEY = 'pathTab';
 export const PATH_TAB_EVENT = 'path-tab';
-const PANEL_TAB: Record<string, PathTab> = { work: 'learn', manera: 'learn', habits: 'spirit' };
+const PANEL_TAB: Record<string, PathTab> = { work: 'spirit', manera: 'learn', habits: 'spirit' };
 
 export const openPathPanel = (id: string) => {
   const tab = PANEL_TAB[id];
@@ -50,16 +52,13 @@ export const PathPanel: React.FC<{
   title: string;
   subtitle?: React.ReactNode;
   icon: React.ReactNode;
+  /** shown instead of the square icon: a progress ring */
+  lead?: React.ReactNode;
   badge?: React.ReactNode;
   /** quick actions on the folded card: beside the title on wide screens, under it on phones */
   extra?: React.ReactNode;
-  /** a part of another card: a small label with a "foldLabel ⌄" button, the quick actions under it */
-  flat?: boolean;
-  /** the flat panel's fold button: its icon, and its name for screen readers and the tooltip ("კალენდარი") */
-  foldIcon?: React.ReactNode;
-  foldLabel?: string;
   children: React.ReactNode;
-}> = ({ id, title, subtitle, icon, badge, extra, flat, foldIcon, foldLabel = 'გაშლა', children }) => {
+}> = ({ id, title, subtitle, icon, lead, badge, extra, children }) => {
   const [open, setOpen] = useState(() => {
     try { return localStorage.getItem(PANEL_KEY(id)) === '1'; } catch { return false; }
   });
@@ -80,43 +79,13 @@ export const PathPanel: React.FC<{
     return () => window.removeEventListener(PANEL_EVENT, onOpen);
   }, [id]);
 
-  if (flat) {
-    return (
-      <div ref={ref} className="w-full scroll-mt-4">
-        <div className="flex items-center gap-2">
-          <p className={`flex-1 min-w-0 ${PATH_LABEL}`}>
-            {icon}
-            <span className="min-w-0">{title}</span>
-          </p>
-          <button
-            type="button"
-            onClick={toggle}
-            aria-expanded={open}
-            aria-label={foldIcon ? foldLabel : undefined}
-            title={foldIcon ? foldLabel : undefined}
-            className={`${PATH_CHIP} ${open ? CHIP_STRONG : CHIP_SOFT} shrink-0 cursor-pointer active:scale-95`}
-          >
-            {foldIcon ?? foldLabel}
-            <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
-          </button>
-        </div>
-        {extra ? <div className="mt-2.5">{extra}</div> : subtitle && <p className="mt-1 text-[13px] text-[#8a7a6a]">{subtitle}</p>}
-        {open && (
-          <div className="mt-3.5 pt-4 border-t border-[#efe5d4] animate-in fade-in slide-in-from-top-1 duration-200">
-            {children}
-          </div>
-        )}
-      </div>
-    );
-  }
-
   return (
     <div ref={ref} className={`${PATH_TILE} hover:-translate-y-0 overflow-hidden scroll-mt-4 ${open ? 'ring-[#7a2028]/20' : ''}`}>
       <div
         onClick={toggle}
         className="w-full flex flex-wrap md:flex-nowrap items-center gap-x-3.5 gap-y-3 p-3.5 sm:p-4 text-left text-[#2a2017] cursor-pointer select-none"
       >
-        <span className={PATH_ICON}>{icon}</span>
+        {lead ?? <span className={PATH_ICON}>{icon}</span>}
         <span className={`flex-1 min-w-0 flex flex-col gap-1 ${extra ? 'md:flex-none' : ''}`}>
           <span className="flex items-center gap-2">
             <span className="text-[15px] sm:text-base font-black leading-tight group-hover:text-[#7a2028] transition-colors">{title}</span>
@@ -148,18 +117,21 @@ export const PathPanel: React.FC<{
   );
 };
 
-// "დამოუკიდებელი სამუშაო": folds open into the month's calendar (its hours and percent are on the "შენი გზა" card).
-export const IndependentWorkCard: React.FC<{ flat?: boolean }> = ({ flat }) => {
+// "დამოუკიდებელი სამუშაო": this month's hours as a ring and a count, today's planned hours tickable on the folded
+// card; folds open into the month's calendar.
+export const IndependentWorkCard: React.FC = () => {
   const { user } = useAuth();
   const { navigateTo } = useNavigation();
   const { sessions, toggle } = useUpcomingSessions(user?.uid, 7);
+  const month = useMonthlyStudyStats(user?.uid);
+  const planned = month && month.planned > 0 ? month : null;
+  const monthName = MONTHS_GE[new Date().getMonth()];
 
-  // only today's planned hours, tickable without unfolding (the week and month counts are on "შენი გზა");
-  // with nothing today, one quiet line names the next planned hour
+  // only today's planned hours, tickable without unfolding; with nothing today, one quiet line names the next planned hour
   const today = sessions.filter(s => s.dayLabel === 'დღეს');
   const next = sessions.find(s => s.dayLabel !== 'დღეს');
   const quick = today.length > 0 ? (
-    <div className={`flex flex-wrap items-center gap-2 ${flat ? '' : 'md:justify-end'}`}>
+    <div className="flex flex-wrap items-center gap-2 md:justify-end">
       <span className="text-[13px] font-bold text-[#75685a] mr-1">დღეს</span>
       {today.map(s => (
         <button
@@ -177,7 +149,7 @@ export const IndependentWorkCard: React.FC<{ flat?: boolean }> = ({ flat }) => {
       ))}
     </div>
   ) : next ? (
-    <p className={`text-[13px] text-[#8a7a6a] ${flat ? '' : 'md:text-right'}`}>
+    <p className="text-[13px] text-[#8a7a6a] md:text-right">
       დღეს დაგეგმილი არ არის · შემდეგი: <span className="font-bold text-[#4a3426]">{next.dayLabel} {next.hour}</span>
     </p>
   ) : undefined;
@@ -185,13 +157,15 @@ export const IndependentWorkCard: React.FC<{ flat?: boolean }> = ({ flat }) => {
   return (
     <PathPanel
       id="work"
-      flat={flat}
-      foldIcon={<CalendarDays className="w-[18px] h-[18px]" />}
-      foldLabel="კალენდარი"
       extra={quick}
       title="დამოუკიდებელი სამუშაო"
-      icon={<Bookmark className={flat ? `${PATH_LABEL_ICON} fill-[#7a2028]/15` : 'w-5 h-5 fill-[#7a2028]/15'} />}
-      subtitle="საათები დაგეგმე კალენდარში"
+      icon={<Bookmark className="w-5 h-5 fill-[#7a2028]/15" />}
+      lead={planned ? <PercentRing label={monthName} percent={planned.percent} done={planned.percent >= 100} /> : undefined}
+      subtitle={planned ? (
+        <span className="tabular-nums">
+          {monthName} · <span className="text-[13px] font-black text-[#2a2017]">{planned.worked}</span> / {planned.planned} სთ
+        </span>
+      ) : 'საათები დაგეგმე კალენდარში'}
     >
       <StudentBookmarkView onBack={() => {}} onGoToGaloba={() => navigateTo('galoba')} />
     </PathPanel>

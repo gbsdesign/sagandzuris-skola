@@ -38,11 +38,11 @@ const fireworks = (finale: boolean) => {
 
 // "ჩემი სამოსი": the student ticks off the parts of their chokha and watches it come together —
 // a pale mannequin at first, each ticked part dropping into place in colour. Saved in students/{uid}.samosi.
-// `unfolded`: always open, without the fold arrow (the path page's own "სამოსი" tab).
-export const ChemiSamosi: React.FC<{ unfolded?: boolean }> = ({ unfolded }) => {
+// Folded at first; shown on the profile and at the top of the path page, where `side` (the path's progress)
+// sits on the right of the folded button — on phones, where the row is too narrow, in a row of its own under it.
+export const ChemiSamosi: React.FC<{ side?: React.ReactNode }> = ({ side }) => {
   const { user } = useAuth();
-  const [folded, setOpen] = useState(false);
-  const open = unfolded || folded;
+  const [open, setOpen] = useState(false);
   const [owned, setOwned] = useState<string[]>([]);
   // how many times each part has been ticked in this visit: a new value replays its drop animation
   const [drops, setDrops] = useState<Record<string, number>>({});
@@ -98,10 +98,10 @@ export const ChemiSamosi: React.FC<{ unfolded?: boolean }> = ({ unfolded }) => {
   return (
     // same card look as the other tiles of "საგანძურის გზა" (PATH_TILE), without the hover lift
     <section className="w-full rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] overflow-hidden">
-      <Header
-        unfolded={unfolded}
+      <button
+        type="button"
         onClick={toggleOpen}
-        className="w-full flex items-center gap-3 p-3 sm:px-4 text-left cursor-pointer select-none hover:bg-[#fbf6ec]/60 transition-colors"
+        className="w-full flex flex-wrap items-center gap-3 p-3 sm:px-4 text-left cursor-pointer select-none hover:bg-[#fbf6ec]/60 transition-colors"
         aria-expanded={open}
       >
         <ProgressRing value={done / TOTAL} complete={complete} />
@@ -111,12 +111,11 @@ export const ChemiSamosi: React.FC<{ unfolded?: boolean }> = ({ unfolded }) => {
             {complete ? 'ჩოხა სრულადაა აწყობილი' : `${done} / ${TOTAL} შეგროვებულია`}
           </span>
         </span>
-        {!unfolded && (
-          <span className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all ${open ? 'rotate-180 bg-[#7a2028]/10 text-[#7a2028]' : 'bg-[#fbf6ec] text-[#8a7a6a]'}`}>
-            <ChevronDown className="w-4 h-4" />
-          </span>
-        )}
-      </Header>
+        {side && <span className="order-last basis-full min-[520px]:order-none min-[520px]:basis-auto empty:hidden">{side}</span>}
+        <span className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all ${open ? 'rotate-180 bg-[#7a2028]/10 text-[#7a2028]' : 'bg-[#fbf6ec] text-[#8a7a6a]'}`}>
+          <ChevronDown className="w-4 h-4" />
+        </span>
+      </button>
 
       {open && (
         <div className="px-4 pb-4 space-y-5 animate-in fade-in duration-300">
@@ -262,14 +261,6 @@ export const ChemiSamosi: React.FC<{ unfolded?: boolean }> = ({ unfolded }) => {
     </section>
   );
 };
-
-// The card's title row: a fold button, or a plain row when the card is always open
-const Header: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & { unfolded?: boolean }> = ({ unfolded, children, ...button }) =>
-  unfolded ? (
-    <div className="w-full flex items-center gap-3 p-3 sm:px-4">{children}</div>
-  ) : (
-    <button type="button" {...button}>{children}</button>
-  );
 
 // Thumbnail of the chokha inside a ring that fills as parts are collected
 const ProgressRing: React.FC<{ value: number; complete: boolean }> = ({ value, complete }) => {

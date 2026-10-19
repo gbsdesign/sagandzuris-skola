@@ -197,10 +197,17 @@ const LookPicker: React.FC<{ look: HabitLook; onPick: (look: Partial<HabitLook>)
 const CounterSettings: React.FC<{ counter: HabitCounter | undefined; onChange: (counter: HabitCounter | 'none') => void }> = ({ counter, onChange }) => {
   const [goal, setGoal] = useState(String(counter?.goal ?? 10));
   const unit = counter?.unit ?? 'ჯერ';
+  // a word of one's own („შეკვეთა“, „ლარი“) beside the ready ones
+  const [own, setOwn] = useState(COUNTER_UNITS.includes(unit) ? '' : unit);
   const typed = Math.max(1, Math.min(MAX_COUNTER_GOAL, parseInt(goal, 10) || counter?.goal || 10));
   const commit = () => {
     setGoal(String(typed));
     if (counter && typed !== counter.goal) onChange({ goal: typed, unit });
+  };
+  const commitOwn = () => {
+    const word = own.trim();
+    setOwn(word);
+    if (counter && word && word !== unit) onChange({ goal: typed, unit: word });
   };
   return (
     <section>
@@ -232,11 +239,22 @@ const CounterSettings: React.FC<{ counter: HabitCounter | undefined; onChange: (
           </label>
           <div className="flex flex-wrap gap-2">
             {COUNTER_UNITS.map(u => (
-              <button key={u} type="button" aria-pressed={u === unit} onClick={() => onChange({ goal: typed, unit: u })} className={chip(u === unit)}>
+              <button key={u} type="button" aria-pressed={u === unit} onClick={() => { setOwn(''); onChange({ goal: typed, unit: u }); }} className={chip(u === unit)}>
                 {u}
               </button>
             ))}
           </div>
+          <input
+            type="text"
+            value={own}
+            maxLength={20}
+            placeholder="ან ჩაწერე შენი: შეკვეთა, ლარი, კმ…"
+            aria-label="რას ითვლის — შენი სიტყვა"
+            onChange={e => setOwn(e.target.value)}
+            onBlur={commitOwn}
+            onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+            className={`${FIELD} ${own.trim() && own.trim() === unit ? '!ring-2 !ring-[#7a2028] font-semibold !text-[#7a2028]' : ''}`}
+          />
         </div>
       )}
     </section>

@@ -129,13 +129,14 @@ const VOICES = ['1', '2', '3'] as const;
 // one voice (or the whole item, when it has no voices): not yet / learned / confirmed by the teacher
 type VoiceMark = 'off' | 'on' | 'ok';
 
-// Left mark of a path row: one arc per voice around the row number (dark red = learned, green = confirmed
-// by the teacher); when every arc is filled it turns into a solid ✓. Items without voices have one whole ring.
+// Left mark of a path row: the row number in a ring of one arc per voice; one learned voice is enough to make
+// the item learned, and the ring turns into a solid ✓ (green when the teacher confirmed every ticked voice).
+// Items without voices have one whole ring.
 const RING_R = 13.5;
 const RING_C = 2 * Math.PI * RING_R;
 const StatusRing: React.FC<{ n: number; marks: VoiceMark[] }> = ({ n, marks }) => {
-  if (marks.every(m => m !== 'off')) {
-    const allOk = marks.every(m => m === 'ok');
+  if (marks.some(m => m !== 'off')) {
+    const allOk = marks.every(m => m !== 'on');
     return (
       <span className={`shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white ${allOk ? 'bg-emerald-600' : 'bg-gradient-to-br from-[#a3323d] to-[#7a2028]'}`}>
         {allOk ? <CheckCheck className="w-4 h-4" /> : <Check className="w-4 h-4 stroke-[3]" />}
@@ -374,7 +375,8 @@ export const GzaView: React.FC<GzaViewProps> = ({
     const mine = voicesOf(item);
     return VOICES.map(v => (confirmedOf(item).includes(v) ? 'ok' : mine.includes(v) ? 'on' : 'off'));
   };
-  const isDone = (item: SelectedChantVariantItem) => marksOf(item).every(m => m !== 'off');
+  // one voice is enough for an item to count as learned
+  const isDone = (item: SelectedChantVariantItem) => marksOf(item).some(m => m !== 'off');
 
   // the section whose rows show ✕ (remove) instead of the arrow
   const [editingCat, setEditingCat] = useState<string | null>(null);

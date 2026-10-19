@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronRight, Flame, Info, Pencil, Plus, Sparkles, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, Flame, Info, Pencil, Plus, Sparkles, X } from 'lucide-react';
 import { useAuth, useModal, useNavigation } from '../../context';
 import { useMyHabits } from '../../hooks/useMyHabits';
 import { useAccess } from '../../hooks/useAccess';
@@ -87,9 +87,9 @@ const HabitsInfo: React.FC<{ groups: MyHabitGroup[] }> = ({ groups }) => {
         <li>
           • <ChevronRight className="inline w-4 h-4 -mt-0.5 text-[#7a2028]" /> — ჩვევის გვერდი: ზედიზედ დღეები, საუკეთესო სერია,
           კალენდარი და წელი. <Plus className="inline w-4 h-4 -mt-0.5 text-[#7a2028]" /> — მთვლელი (მაგ. იესოს ლოცვა): მიზანს რომ
-          მიაღწევ, ჩვევა თავად მოინიშნება.
+          მიაღწევ, ჩვევა თავად მოინიშნება; ზოლის გვერდით რიცხვზე დაჭერით ზუსტ რაოდენობას ჩაწერ.
         </li>
-        <li>• კვირა · თვე · წელი — ყველა ჩვევა ერთად: კვირის ბადე, თვის კალენდარი და წლის რუკა.</li>
+        <li>• „დღე ▾“ — აქ აირჩევ კვირას, თვეს ან წელს: ყველა ჩვევა ერთად — კვირის ბადე, თვის კალენდარი და წლის რუკა.</li>
         <li>
           • <Pencil className="inline w-4 h-4 -mt-0.5 text-[#7a2028]" /> — შენი სია: რიგი, დამატება, წაშლა, ფერი და ხატულა, მთვლელი,
           ლოცვა, სხვა ღილაკები (ძებნით ან ლინკით) და ჩანაწერი.
@@ -151,28 +151,67 @@ const VIEWS: { id: ViewId; label: string; render: (p: ViewProps) => React.ReactN
   { id: 'year', label: 'წელი', render: p => <YearView model={p.model} /> },
 ];
 
-// a light segmented switch, so it doesn't compete with the page's own wine tabs above it
-const ViewTabs: React.FC<{ value: ViewId; onChange: (v: ViewId) => void }> = ({ value, onChange }) => (
-  <div role="tablist" aria-label="ჩვევების ხედი" className="grid gap-1 p-1 rounded-2xl bg-[#f3ebdd]/80 ring-1 ring-[#e8dcc8]" style={{ gridTemplateColumns: `repeat(${VIEWS.length}, minmax(0, 1fr))` }}>
-    {VIEWS.map(v => {
-      const on = v.id === value;
-      return (
-        <button
-          key={v.id}
-          type="button"
-          role="tab"
-          aria-selected={on}
-          onClick={() => { if (!on) { triggerHaptic(8); onChange(v.id); } }}
-          className={`h-10 min-w-0 px-1 rounded-xl text-[13.5px] font-bold truncate cursor-pointer transition-colors ${
-            on ? 'bg-white text-[#7a2028] ring-1 ring-[#e8dcc8] shadow-[0_2px_8px_-4px_rgba(74,52,38,0.35)]' : 'text-[#75685a] hover:text-[#7a2028]'
-          }`}
+// „დღე ▾“ before ✏️: one button with the view's name; a tap drops the views in a small list under it
+const ViewMenu: React.FC<{ value: ViewId; onChange: (v: ViewId) => void }> = ({ value, onChange }) => {
+  const [open, setOpen] = useState(false);
+  const box = useRef<HTMLSpanElement>(null);
+  useEffect(() => {
+    if (!open) return;
+    const away = (e: PointerEvent) => { if (!box.current?.contains(e.target as Node)) setOpen(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', esc);
+    return () => {
+      document.removeEventListener('pointerdown', away);
+      document.removeEventListener('keydown', esc);
+    };
+  }, [open]);
+  const current = VIEWS.find(v => v.id === value)!;
+  return (
+    <span ref={box} className="relative mr-1">
+      <button
+        type="button"
+        aria-haspopup="menu"
+        aria-expanded={open}
+        aria-label={`ხედი: ${current.label}`}
+        onClick={() => { triggerHaptic(8); setOpen(o => !o); }}
+        className="h-9 pl-3 pr-2 rounded-full inline-flex items-center gap-1 text-[13.5px] font-bold text-[#7a2028] bg-white ring-1 ring-[#e8dcc8] shadow-[0_2px_8px_-5px_rgba(74,52,38,0.35)] cursor-pointer transition active:scale-95 hover:bg-[#fffdf9]"
+      >
+        {current.label}
+        <ChevronDown className={`w-4 h-4 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div
+          role="menu"
+          aria-label="ჩვევების ხედი"
+          className="absolute right-0 top-full mt-1.5 z-30 w-40 p-1 rounded-2xl bg-white ring-1 ring-[#e8dcc8] shadow-[0_14px_32px_-12px_rgba(74,52,38,0.45)] origin-top-right animate-in fade-in zoom-in-95 duration-150"
         >
-          {v.label}
-        </button>
-      );
-    })}
-  </div>
-);
+          {VIEWS.map(v => {
+            const on = v.id === value;
+            return (
+              <button
+                key={v.id}
+                type="button"
+                role="menuitemradio"
+                aria-checked={on}
+                onClick={() => {
+                  setOpen(false);
+                  if (!on) { triggerHaptic(8); onChange(v.id); }
+                }}
+                className={`w-full h-11 px-3 rounded-xl flex items-center gap-2 text-left text-[14px] font-bold cursor-pointer transition-colors ${
+                  on ? 'bg-[#f3ebdd] text-[#7a2028]' : 'text-[#4a3426] hover:bg-[#7a2028]/[0.05]'
+                }`}
+              >
+                <span className="flex-1">{v.label}</span>
+                {on && <Check className="w-4 h-4 stroke-[2.5]" />}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </span>
+  );
+};
 
 // "ჩვევები" for students: the day (its ring, the last seven days, the habits), the week, the month and the year.
 // A tap on a habit ticks the chosen day (teachers see the ticks in their panels); „›“ opens the habit's own page.
@@ -213,6 +252,7 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
   const habitId = sheet?.startsWith('habit:') ? sheet.slice(6) : null;
   const actions = (
     <>
+      <ViewMenu value={view} onChange={setView} />
       {user && (
         <IconBtn label="ჩვევების შეცვლა" onClick={() => setEditing(true)}>
           <Pencil />
@@ -255,7 +295,8 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
         <HabitsEditor mine={mine} sheet={sheet} openSheet={open} closeSheet={close} onDone={() => setEditing(false)} />
       ) : (
         <>
-          <ViewTabs value={view} onChange={setView} />
+          {/* the day keeps its buttons in its card; the other views get them at the top right */}
+          {view !== 'day' && <div className="flex items-center justify-end mb-2">{actions}</div>}
           <div key={view} className="animate-in fade-in duration-200">
             {VIEWS.find(v => v.id === view)!.render(props)}
           </div>

@@ -17,6 +17,11 @@ const WEEK_DAYS_DAT = ['კვირიაკეს', 'ორშაბათს'
 
 export const weekPrayerId = (day: number, part: 'dila' | 'dzili') => `week-${day}-${part}`;
 
+/** Today's weekday prayer, folded at the end of the morning or evening prayers. Till 04:00 the evening is
+ *  still the day before's. */
+export const todaysWeekPrayerId = (part: 'dila' | 'dzili', now = new Date()) =>
+  weekPrayerId((now.getDay() + (part === 'dzili' && now.getHours() < 4 ? 6 : 0)) % 7, part);
+
 export interface PrayerHour {
   id: string;
   hour: number; // 0–23; the midnight prayer is 0

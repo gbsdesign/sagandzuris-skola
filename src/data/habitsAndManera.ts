@@ -55,7 +55,7 @@ export const HABIT_GROUPS: HabitGroupType[] = [
       { id: 'habit_3', label: 'სამოციქულო', menu: 'apostle' },
       { id: 'habit_4', label: 'სულიერი ლიტერატურა', hint: 'დღეში 3–5 გვერდი მაინც' },
       { id: 'habit_5', label: 'იესოს ლოცვა', hint: 'რაც უფრო ხშირად, მით უკეთესი', menu: 'jesus' },
-      { id: 'habit_6', label: 'ფსალმუნები', hint: 'სასურველია 1 კანონი ან დიდება მაინც', menu: 'psalms' },
+      { id: 'habit_6', label: 'ფსალმუნები', menu: 'psalms' },
       { id: 'habit_14', label: 'ჩანაწერების წიგნაკი' },
     ],
   },

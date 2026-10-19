@@ -12,6 +12,7 @@ import { openSaintLife } from '../../data/saintLives';
 import { MORNING_EVENING } from '../../data/prayers';
 import { HabitMenu } from '../../data/habitsAndManera';
 import { HabitPrayerMenu } from '../views/ChvevebiPanel';
+import { singlePrayerOf } from '../views/HabitPrayerMenu';
 import { useMyHabits } from '../../hooks/useMyHabits';
 import { requestOpen } from '../../utils/searchOpen';
 import { ServiceType } from '../../context/NavigationContext';
@@ -238,7 +239,9 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
       // a habit with books (Gospel, Apostle, Jesus prayer) opens them; the others are ticked by the tap
       const ref = refOf(id);
       const h = myHabits.find(x => x.id === ref);
-      if (h?.menu) setMenu({ menu: h.menu, title: h.label });
+      const single = singlePrayerOf(h?.menu);
+      if (single) openPrayer(single);
+      else if (h?.menu) setMenu({ menu: h.menu, title: h.label });
       else markDone(id, ref);
     }
   };

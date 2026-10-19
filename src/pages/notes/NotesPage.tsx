@@ -67,7 +67,7 @@ const HymnImg: React.FC<{ o: HymnOrnament; place: 'top' | 'bottom' }> = ({ o, pl
       alt=""
       aria-hidden
       draggable={false}
-      className={`${place === 'top' ? 'np-o-head' : 'np-o-tail'} ${o.bw ? 'np-o-bw' : ''} ${shown ? 'in' : ''}`}
+      className={`${place === 'top' ? 'np-o-head' : 'np-o-tail'} ${o.bw ? 'np-o-bw' : ''} ${o.dark ? 'np-o-dark' : ''} ${shown ? 'in' : ''}`}
       style={{ width: `${(hymnWidth(o, place) * 100).toFixed(1)}%` }}
       onLoad={() => requestAnimationFrame(() => setShown(true))}
     />
@@ -1123,7 +1123,7 @@ const MoreMenu: React.FC<{
   const url = encodeURIComponent(p.shareUrl);
   const PAPERS: [Paper, string, string, React.ReactNode][] = [
     ['day', 'დღე', '#fff', <Sun key="d" color="#c58a1c" />],
-    ['candle', 'სანთელი', '#f1dcae', <Flame key="c" color="#9b5a12" fill="#9b5a12" />],
+    ['candle', 'სანთელი', '#f3e8d2', <Flame key="c" color="#9b5a12" fill="#9b5a12" />],
     ['night', 'ღამე', '#1d1915', <Moon key="n" color="#e6dccb" fill="#e6dccb" />],
     ['auto', 'ავტო', 'linear-gradient(135deg,#fff 50%,#1d1915 50%)', <SunMoon key="a" color="#8c7c6b" />],
   ];

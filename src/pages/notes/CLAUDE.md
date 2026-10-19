@@ -30,7 +30,9 @@ moving to the next chant in service order.
 - **Ink**: every paper colour darkens grey edges (`brightness(.75) contrast(2)` in `--sheet-filter`).
 - **Starting notes**: first note of each voice, top to bottom I → II → III, 0.8 s each, 0.5 s apart;
   they follow the tone setting.
-- **Paper colour**: დღე / სანთელი / ღამე / ავტომატური. Gentle motion only.
+- **Paper colour**: დღე / სანთელი / ღამე / ავტომატური. Gentle motion only. Chosen 2026-10-19 for the eyes:
+  სანთელი = a book's sepia page (cream paper lighter than the ground, dark-brown ink); ღამე = soft (warm grey ink
+  ~9:1, never near-white). Coloured drawings with dark lines are listed in `DARK_LINES` (hymnOrnaments.ts).
 - Resume where you stopped; next/previous chant in service or program order.
 - Tap-a-line plays only while the synth panel is open. Playing one player stops the other.
 - **Never auto-scroll** to the playing line.

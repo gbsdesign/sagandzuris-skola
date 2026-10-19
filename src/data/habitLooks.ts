@@ -54,11 +54,17 @@ export interface HabitCounter {
   unit: string;
 }
 
-export const COUNTER_UNITS = ['ჯერ', 'გვერდი', 'წუთი', 'თავი', 'კათისმა'];
+export const COUNTER_UNITS = ['ჯერ', 'გვერდი', 'წუთი', 'თავი', 'კანონი'];
 export const MAX_COUNTER_GOAL = 9999;
 
 // on from the start; a member may change the goal or switch the counter off
 export const SCHOOL_COUNTERS: Record<string, HabitCounter> = {
   habit_5: { goal: 100, unit: 'ჯერ' },
   habit_4: { goal: 5, unit: 'გვერდი' },
+  habit_2: { goal: 3, unit: 'თავი' },
+  habit_3: { goal: 3, unit: 'თავი' },
+  habit_6: { goal: 5, unit: 'კანონი' },
 };
+
+// what one tap on the day list's "+" adds (the Jesus prayer goes by tens); 1 for the rest
+export const COUNTER_TAP_STEP: Record<string, number> = { habit_5: 10 };

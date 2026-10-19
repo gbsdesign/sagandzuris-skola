@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, GraduationCap, Shirt, Sparkles } from 'lucide-react';
+import { ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, GraduationCap, Sparkles } from 'lucide-react';
 import { useAuth } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 import { moveItem, ordered, usePathOrder } from '../../utils/pathOrder';
@@ -8,7 +8,6 @@ import { PathTab, PATH_TAB_EVENT, PATH_TAB_KEY } from './IndependentWorkCard';
 const TABS: { id: PathTab; label: string; Icon: React.FC<{ className?: string }> }[] = [
   { id: 'learn', label: 'სწავლა', Icon: GraduationCap },
   { id: 'spirit', label: 'ჩვევები', Icon: Sparkles },
-  { id: 'samosi', label: 'სამოსი', Icon: Shirt },
 ];
 const TAB_IDS = TABS.map(t => t.id);
 
@@ -25,10 +24,11 @@ const readTab = (): PathTab => {
 
 const stepBtn = 'w-9 h-9 shrink-0 rounded-full flex items-center justify-center ring-1 ring-[#e8dcc8] bg-white text-[#7a2028] transition-colors cursor-pointer hover:bg-[#7a2028]/[0.06] active:scale-95 disabled:opacity-30 disabled:cursor-default disabled:hover:bg-white';
 
-// "საგანძურის გზა" in three tabs, so the page is not one long column: study, spiritual life, my outfit.
+// "საგანძურის გზა" in two tabs, so the page is not one long column: study and spiritual life.
+// `top` sits above the tabs on both (the folded "ჩემი სამოსი").
 // The last tab is remembered on this device; openPathPanel() switches to the tab holding its panel.
 // The member may reorder the tabs and each tab's cards ("რიგის შეცვლა"); the order follows their account.
-export const PathTabs: React.FC<{ panels: Record<PathTab, PathCard[]> }> = ({ panels }) => {
+export const PathTabs: React.FC<{ panels: Record<PathTab, PathCard[]>; top?: React.ReactNode }> = ({ panels, top }) => {
   const { user } = useAuth();
   const { order, save } = usePathOrder(user?.uid);
   const [tab, setTab] = useState<PathTab>(readTab);
@@ -70,6 +70,7 @@ export const PathTabs: React.FC<{ panels: Record<PathTab, PathCard[]> }> = ({ pa
 
   return (
     <div className="space-y-5">
+      {top}
       <div className="space-y-2">
         <div className="flex justify-end">
           <button
@@ -88,7 +89,7 @@ export const PathTabs: React.FC<{ panels: Record<PathTab, PathCard[]> }> = ({ pa
           role="tablist"
           aria-label="საგანძურის გზა"
           onKeyDown={onKey}
-          className="grid grid-cols-3 gap-1 p-1 rounded-full bg-white/85 ring-1 ring-[#e8dcc8] shadow-[0_1px_2px_rgba(74,52,38,0.05)]"
+          className="grid grid-cols-2 gap-1 p-1 rounded-full bg-white/85 ring-1 ring-[#e8dcc8] shadow-[0_1px_2px_rgba(74,52,38,0.05)]"
         >
           {tabs.map(({ id, label, Icon }) => {
             const on = id === tab;
