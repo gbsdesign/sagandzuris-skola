@@ -34,8 +34,9 @@ export interface TryOnRecord {
   at?: Timestamp;
 }
 
-/** tries left today under the rule above */
-export const triesLeft = (r: TryOnRecord | null, today: string): number => {
+/** tries left today under the rule above; the founder (owner) has no limit */
+export const triesLeft = (r: TryOnRecord | null, today: string, unlimited = false): number => {
+  if (unlimited) return Infinity;
   const total = r?.total || 0;
   const usedToday = r?.day === today ? r.dayCount || 0 : 0;
   const perDay = !r?.firstDay || r.firstDay === today ? FIRST_DAY_TRIES : DAILY_TRIES;
@@ -196,14 +197,14 @@ export const dressInChokha = async (photo: File, look: TryOnLook): Promise<Blob>
 };
 
 /** Saves a finished picture and counts the try; refuses when no try is left today. */
-export const saveTryOn = async (uid: string, picture: Blob, colorId: string) => {
+export const saveTryOn = async (uid: string, picture: Blob, colorId: string, unlimited = false) => {
   const image = Bytes.fromUint8Array(new Uint8Array(await picture.arrayBuffer()));
   const ref = doc(db, 'samosiTryOn', uid);
   await runTransaction(db, async tx => {
     const snap = await tx.get(ref);
     const r = (snap.exists() ? snap.data() : null) as TryOnRecord | null;
     const today = georgiaToday();
-    if (triesLeft(r, today) <= 0) throw new TryOnError('no-tries');
+    if (triesLeft(r, today, unlimited) <= 0) throw new TryOnError('no-tries');
     const sameDay = r?.day === today;
     tx.set(ref, {
       firstDay: r?.firstDay || today,
@@ -221,7 +222,7 @@ export const saveTryOn = async (uid: string, picture: Blob, colorId: string) => 
 export const removeTryOn = (uid: string) => updateDoc(doc(db, 'samosiTryOn', uid), { image: deleteField(), color: deleteField(), at: deleteField() });
 
 /** The member's record, its picture as a URL, and the tries left today. */
-export const useTryOn = (uid: string | null | undefined) => {
+export const useTryOn = (uid: string | null | undefined, unlimited = false) => {
   const [record, setRecord] = useState<TryOnRecord | null>(null);
   const [loaded, setLoaded] = useState(false);
 
@@ -248,5 +249,5 @@ export const useTryOn = (uid: string | null | undefined) => {
     if (url) URL.revokeObjectURL(url);
   }, [url]);
 
-  return { loaded, url, left: triesLeft(record, georgiaToday()), total: record?.total || 0 };
+  return { loaded, url, left: triesLeft(record, georgiaToday(), unlimited), total: record?.total || 0 };
 };

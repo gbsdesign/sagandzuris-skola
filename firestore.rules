@@ -108,7 +108,8 @@ service cloud.firestore {
     }
 
     // ---- "ჩემი სამოსი" on the member's own photo (src/utils/samosiTryOn.ts) --------------------------------------
-    // Only the finished picture is kept. The tries are counted here — 3 on the first day, then 1 a day, 10 in all —
+    // Only the finished picture is kept. The tries are counted here — 3 on the first day, then 1 a day, 10 in all
+    // (the founder has no limit) —
     // and the counters only grow: removing the picture never gives tries back. Admins may see it, nobody else.
     match /samosiTryOn/{userId} {
       function isSelf() { return isSignedIn() && uid() == userId; }
@@ -122,7 +123,7 @@ service cloud.firestore {
         && incoming().total == 1 && incoming().dayCount == 1 && incoming().day == incoming().firstDay;
       allow update: if isSelf() && fieldsOk() && incoming().firstDay == existing().firstDay && (
         // one more try
-        (incoming().total == existing().total + 1 && incoming().total <= 10 && dayLimitOk()
+        (incoming().total == existing().total + 1 && (isOwner() || (incoming().total <= 10 && dayLimitOk()))
           && incoming().dayCount == (incoming().day == existing().day ? existing().dayCount + 1 : 1))
         // or only the picture removed
         || (!changed().hasAny(['firstDay', 'day', 'dayCount', 'total']) && !('image' in incoming()))

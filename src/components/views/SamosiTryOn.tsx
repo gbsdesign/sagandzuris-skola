@@ -22,10 +22,10 @@ const LINK_BTN =
 // Shown only to those given "ფოტოზე ჩოხის ჩაცმა" (feature samosiPhoto).
 export const SamosiTryOn: React.FC<{ look: TryOnLook }> = ({ look }) => {
   const color = look.chokha;
-  const { user } = useAuth();
+  const { user, isOwner } = useAuth();
   const access = useAccess();
   const allowed = !!user && access.can('samosiPhoto');
-  const { loaded, url, left, total } = useTryOn(allowed ? user?.uid : null);
+  const { loaded, url, left, total } = useTryOn(allowed ? user?.uid : null, isOwner);
   const [open, setOpen] = useState(false);
   const [photo, setPhoto] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
@@ -52,8 +52,9 @@ export const SamosiTryOn: React.FC<{ look: TryOnLook }> = ({ look }) => {
   if (!allowed || !user) return null;
 
   const shown = fresh || url;
-  const status =
-    total >= TRYON_TOTAL ? 'ცდები ამოიწურა' : left > 0 ? `დღეს დარჩა ${left} ცდა · სულ ${TRYON_TOTAL - total}` : 'ხვალ კიდევ 1 ცდა გექნება';
+  const status = isOwner
+    ? 'ცდები ულიმიტოა'
+    : total >= TRYON_TOTAL ? 'ცდები ამოიწურა' : left > 0 ? `დღეს დარჩა ${left} ცდა · სულ ${TRYON_TOTAL - total}` : 'ხვალ კიდევ 1 ცდა გექნება';
 
   const pick = (e: React.ChangeEvent<HTMLInputElement>) => {
     const f = e.target.files?.[0];
@@ -76,7 +77,7 @@ export const SamosiTryOn: React.FC<{ look: TryOnLook }> = ({ look }) => {
       return;
     }
     try {
-      await saveTryOn(user.uid, picture, color.id);
+      await saveTryOn(user.uid, picture, color.id, isOwner);
       if (fresh) URL.revokeObjectURL(fresh);
       setFresh(null);
     } catch (err) {
