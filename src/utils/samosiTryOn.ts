@@ -13,6 +13,14 @@ import { georgiaToday } from './psalter';
 
 export const TRYON_MODEL = 'gemini-3.1-flash-image';
 export const TRYON_TOTAL = 10;
+// Gemini answers only requests that carry an App Check pass (reCAPTCHA key "sagandzuri-web", Google Cloud →
+// Fraud Defense). Switched on at the first try, so the other pages never load reCAPTCHA.
+const RECAPTCHA_KEY = '6LdS3_YtAAAAAFomGteA1WGyDA9WFkb8C3usatET';
+let appCheckOn: Promise<void> | null = null;
+const startAppCheck = () =>
+  (appCheckOn ??= import('firebase/app-check').then(({ initializeAppCheck, ReCaptchaEnterpriseProvider }) => {
+    initializeAppCheck(getApp(), { provider: new ReCaptchaEnterpriseProvider(RECAPTCHA_KEY), isTokenAutoRefreshEnabled: false });
+  }));
 const FIRST_DAY_TRIES = 3;
 const DAILY_TRIES = 1;
 
@@ -157,6 +165,7 @@ export const dressInChokha = async (photo: File, look: TryOnLook): Promise<Blob>
   }
   const [personData, outfitData] = await Promise.all([blobToBase64(person), outfit(look).then(blobToBase64)]);
 
+  await startAppCheck();
   const { getAI, getGenerativeModel, GoogleAIBackend, ResponseModality } = await import('firebase/ai');
   const model = getGenerativeModel(getAI(getApp(), { backend: new GoogleAIBackend() }), {
     model: TRYON_MODEL,
@@ -177,7 +186,7 @@ export const dressInChokha = async (photo: File, look: TryOnLook): Promise<Blob>
     console.warn('Gemini try-on note:', err);
     const text = String((err as Error)?.message || err);
     if (/prepay|credits|depleted|quota|resource.?exhausted|429/i.test(text)) throw new TryOnError('no-credits');
-    if (/api.?key|not.?enabled|permission|403|billing|ai.?logic|not found|404/i.test(text)) throw new TryOnError('setup');
+    if (/api.?key|not.?enabled|permission|403|billing|ai.?logic|app.?check|not found|404/i.test(text)) throw new TryOnError('setup');
     if (/safety|blocked|prohibited/i.test(text)) throw new TryOnError('no-picture');
     throw new TryOnError(navigator.onLine === false ? 'offline' : 'failed');
   }
