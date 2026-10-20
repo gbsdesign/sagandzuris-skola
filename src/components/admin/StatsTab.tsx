@@ -9,7 +9,7 @@ import { Bar, Card, CardTitle } from '../ui/kit';
 import { UserRecord } from './UsersTab';
 
 // The admin panel's numbers, each shown where it belongs (there is no separate statistics tab): a class's
-// attendance on its row, a psalter group's reading on its row, the most listened chants under „ჩანაწერები“;
+// attendance on its row, a psalter group's reading on its row, the most listened chants under „სკოლა“;
 // the people counts are the filters of the users list.
 
 /** Attendance of the last 8 lessons in percent; null before the first lesson. */
@@ -51,22 +51,24 @@ export const TopChants: React.FC<{ users: UserRecord[] }> = ({ users }) => {
 
   return (
     <Card>
-      <CardTitle icon={<Headphones />} title="ყველაზე მოსმენადი საგალობლები"
+      <CardTitle icon={<Headphones />} title="ყველაზე მოსმენადი" hint="ათი საგალობელი, ყველას მოსმენა ერთად"
         info="სინთეზატორით ან ჩანაწერით მოსმენა. ერთი ადამიანი ერთ ვერსიას ერთხელ ითვლება ყოველ შესვლაზე." />
       {top.length === 0 ? (
         <p className="text-sm text-[#8a7a6a]">მოსმენები ჯერ არ დაგროვილა.</p>
       ) : (
-        <ol className="space-y-2.5">
+        <ol className="grid md:grid-cols-2 md:grid-flow-col md:grid-rows-5 gap-x-8">
           {top.map((t, i) => (
-            <li key={t.vid} className="flex items-center gap-3">
-              <span className="w-6 text-right text-sm font-bold text-[#b3a594] tabular-nums">{i + 1}</span>
+            <li key={t.vid} className="flex items-center gap-3 py-2 border-b border-[#f1e8d9]">
+              <span className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center text-[11px] font-bold tabular-nums ${i < 3 ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#f4ece0] text-[#8a7a6a]'}`}>{i + 1}</span>
               <span className="flex-1 min-w-0">
-                <span className="flex items-baseline justify-between gap-2">
-                  <span className="text-sm font-semibold text-[#2a2017] truncate">{t.info!.chant.title.replace(/[;\s]+$/, '')}</span>
-                  <span className="text-sm font-bold tabular-nums text-[#7a2028] shrink-0">{t.n}</span>
+                <span className="flex items-baseline gap-2">
+                  <span className="flex-1 min-w-0 text-[13.5px] font-semibold text-[#2a2017] truncate">{t.info!.chant.title.replace(/[;\s]+$/, '')}</span>
+                  <span className="text-[13px] font-bold tabular-nums text-[#7a2028] shrink-0">{t.n}</span>
                 </span>
-                <span className="block text-xs text-[#8a7a6a] mb-1">{t.info!.service} · {t.info!.variant.code}</span>
-                <Bar value={t.n} max={maxPlays} />
+                <span className="flex items-center gap-2 mt-1">
+                  <span className="text-[11.5px] text-[#9a8b7b] shrink-0">{t.info!.service} · {t.info!.variant.code}</span>
+                  <span className="flex-1 min-w-0"><Bar value={t.n} max={maxPlays} /></span>
+                </span>
               </span>
             </li>
           ))}

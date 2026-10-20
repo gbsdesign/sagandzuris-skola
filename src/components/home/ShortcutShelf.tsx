@@ -43,7 +43,7 @@ const HABIT_ICON: Record<string, React.ReactNode> = {
   habit_11: <Church />, habit_12: <Church />, habit_8: <Flame />, habit_9: <HandHeart />, habit_10: <Sparkles />,
 };
 const TAB_ICON: Record<string, React.ReactNode> = {
-  'teacher:students': <Users />, 'teacher:assignments': <ClipboardList />, 'teacher:attendance': <ClipboardCheck />,
+  'teacher:students': <GraduationCap />, 'teacher:assignments': <ClipboardList />, 'teacher:attendance': <ClipboardCheck />,
   'teacher:schedule': <CalendarClock />, 'teacher:class': <Settings2 />, 'teacher:groups': <BookOpen />,
   'admin:users': <Users />, 'admin:classes': <GraduationCap />, 'admin:recordings': <Disc3 />, 'admin:sections': <School />,
   'admin:stats': <Users />, 'admin:school': <School />, 'admin:requests': <UserPlus />,

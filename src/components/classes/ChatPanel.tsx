@@ -165,8 +165,8 @@ export interface ChatPanelProps {
   callTitle: string;
   onJoinCall: () => void;
   canDelete: (m: ChatMessage) => boolean;
-  /** a class: avatars and names over the others' messages; a private chat has only two people */
-  showNames?: boolean;
+  /** a class: avatars and names over the others' messages; a private chat has only two people (or: whose messages) */
+  showNames?: boolean | ((m: ChatMessage) => boolean);
   /** the other person last opened this chat (a private chat): "ნანახია" under my last message */
   seenAt?: Date | null;
   onSent?: (kind: 'text' | 'voice', text: string) => void;
@@ -174,12 +174,17 @@ export interface ChatPanelProps {
   listClassName?: string;
   /** someone else's chat, shown to the superadmin: messages only, no writing */
   readOnly?: boolean;
+  /** the badge beside a teacher's (or an admin's) name when names are shown */
+  staffLabel?: string;
+  /** fill the parent's height (the messages page); the list takes what the header and the field leave */
+  fill?: boolean;
 }
 
 // A chat: text and voice messages (a class's chat, or a teacher's private chat with a student).
 export const ChatPanel: React.FC<ChatPanelProps> = ({
   base, author, messages, loading, error, header, isCall, callTitle, onJoinCall, canDelete,
   showNames = false, seenAt = null, onSent, listClassName = 'h-[56vh] min-h-[300px] max-h-[560px]', readOnly = false,
+  staffLabel = 'მასწავლებელი', fill = false,
 }) => {
   const [text, setText] = useState('');
   const [mode, setMode] = useState<Mode>({ k: 'idle' });
@@ -318,7 +323,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const round = 'w-12 h-12 shrink-0 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition disabled:opacity-40 disabled:cursor-default';
 
   return (
-    <section className="bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] overflow-hidden">
+    <section className={`bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] overflow-hidden ${fill ? 'h-full flex flex-col' : ''}`}>
       {header}
 
       <div
@@ -327,7 +332,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           const el = e.currentTarget;
           stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
         }}
-        className={`${listClassName} overflow-y-auto overscroll-contain px-3 sm:px-5 py-3 bg-[#fbf6ec]/70 border-y border-[#efe5d4]`}
+        className={`${fill ? 'flex-1 min-h-0' : listClassName} overflow-y-auto overscroll-contain px-3 sm:px-5 py-3 bg-[#fbf6ec]/70 border-y border-[#efe5d4]`}
       >
         {loading ? (
           <div className="h-full flex items-center justify-center text-[#b3a594]"><Loader2 className="w-6 h-6 animate-spin" /></div>
@@ -345,6 +350,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             const newDay = !!m.at && (!prev?.at || prev.at.toDateString() !== m.at.toDateString());
             const first = newDay || prev?.uid !== m.uid;
             const canDel = !readOnly && canDelete(m);
+            const named = typeof showNames === 'function' ? showNames(m) : showNames;
             return (
               <React.Fragment key={m.id}>
                 {newDay && (
@@ -353,12 +359,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   </div>
                 )}
                 <div className={`flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'} ${first ? 'mt-3' : 'mt-1'}`}>
-                  {showNames && !mine && (first ? <Avatar name={m.name} photoURL={m.photoURL} /> : <span className="w-8 shrink-0" />)}
+                  {named && !mine && (first ? <Avatar name={m.name} photoURL={m.photoURL} /> : <span className="w-8 shrink-0" />)}
                   <div className={`max-w-[82%] flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
-                    {showNames && first && !mine && (
+                    {named && first && !mine && (
                       <p className="text-xs font-semibold text-[#7a2028] mb-1 px-1 flex items-center gap-1.5">
                         {m.name}
-                        {m.teacher && <span className="px-1.5 py-px rounded-full bg-[#7a2028]/10 text-[10px] font-bold">მასწავლებელი</span>}
+                        {m.teacher && <span className="px-1.5 py-px rounded-full bg-[#7a2028]/10 text-[10px] font-bold">{staffLabel}</span>}
                       </p>
                     )}
                     <div

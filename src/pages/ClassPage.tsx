@@ -1,29 +1,27 @@
 import React, { useState } from 'react';
-import { ArrowLeft, Users, ListChecks, Check, CheckCheck, MessageCircle, Loader2 } from 'lucide-react';
-import { useAuth, useNavigation, useChants } from '../context';
-import { useConfirmations } from '../hooks/useConfirmations';
-import { findCatalogEntry, CATEGORY_LABEL, usesVoices, voicesOf, Voice } from '../utils/pathItems';
+import { ArrowLeft, Users, MessageCircle, Loader2, ChevronDown } from 'lucide-react';
+import { useAuth, useNavigation } from '../context';
 import { useMyClasses, useAllClasses, useTeachingClasses } from '../hooks/useClasses';
 import { LessonTable } from '../components/teacher/Schedule';
 import { ClassLogo } from '../components/classes/ClassLogo';
 import { ClassChat } from '../components/classes/ClassChat';
+import { ClassProgram } from '../components/classes/ClassProgram';
 import { Avatar } from '../components/classes/ChatPanel';
 import { openThread, Person } from '../hooks/useDirectChat';
 import type { ClassMember } from '../hooks/useClasses';
 
-// A class's shared page: its chat, members and the common program. Members reach it from the class logo in the header.
+// A class's shared page: its program (at the top), chat and members. Members reach it from the class logo in the header.
 export const ClassPage: React.FC = () => {
   const { user, isAdmin, isTeacher } = useAuth();
   const { selectedClassId, handleGoBack, openDm } = useNavigation();
   // a private chat being opened (the other person's uid), and why it could not be
   const [opening, setOpening] = useState<string | null>(null);
   const [dmErr, setDmErr] = useState('');
+  const [showMembers, setShowMembers] = useState(false);
   const mine = useMyClasses(user?.uid);
   const { classes: all } = useAllClasses(isAdmin);
   const { classes: teaching } = useTeachingClasses(isTeacher ? user?.uid : null);
   const cls = [...mine, ...teaching, ...all].find(c => c.id === selectedClassId) || mine[0];
-  const { selectedChantVariants } = useChants();
-  const confirmed = useConfirmations(user?.uid);
 
   if (!cls) {
     return (
@@ -97,79 +95,41 @@ export const ClassPage: React.FC = () => {
         {dmErr && <p className="text-sm text-[#a02c2c]">{dmErr}</p>}
       </header>
 
+      <ClassProgram cls={cls} />
+
       {cls.schedule.length > 0 && <LessonTable slots={cls.schedule} title="გაკვეთილების ცხრილი" />}
 
       <ClassChat cls={cls} />
 
-      {/* common program */}
-      <section className="bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] p-5 sm:p-6">
-        <h2 className="flex items-center gap-2 font-serif-ge text-lg font-bold text-[#4a3426] mb-4">
-          <ListChecks className="w-5 h-5 text-[#7a2028]" /> საერთო პროგრამა
-        </h2>
-        {cls.program.length === 0 ? (
-          <p className="text-sm text-[#8a7a6a]">პროგრამა ჯერ არ არის შედგენილი.</p>
-        ) : (
-          <ol className="space-y-3">
-            {cls.program.map((item, i) => (
-              <li key={i} className="flex gap-3">
-                <span className="w-7 h-7 shrink-0 rounded-full bg-[#7a2028]/10 text-[#7a2028] text-sm font-bold flex items-center justify-center tabular-nums">
-                  {i + 1}
+      {/* members: one folded line (count + a few faces); a tap shows the list */}
+      <section className="bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] overflow-hidden">
+        <button
+          type="button"
+          onClick={() => setShowMembers(o => !o)}
+          aria-expanded={showMembers}
+          className="w-full min-h-14 flex items-center gap-2 px-5 sm:px-6 py-3 text-left cursor-pointer transition-colors hover:bg-white/60"
+        >
+          <Users className="w-5 h-5 shrink-0 text-[#7a2028]" />
+          <span className="font-serif-ge text-lg font-bold text-[#4a3426] truncate">კლასის წევრები</span>
+          <span className="text-sm font-bold text-[#a4927c] tabular-nums">{cls.members.length}</span>
+          <span className="flex-1" />
+          {!showMembers && (
+            <span aria-hidden className="flex -space-x-2">
+              {cls.members.slice(0, 4).map((m, i) => (
+                <span key={m.uid} className={`rounded-full ring-2 ring-[#fdfaf5] ${i === 3 ? 'hidden min-[400px]:block' : ''}`}>
+                  <Avatar name={m.name} photoURL={m.photoURL} className="w-7 h-7 text-xs" />
                 </span>
-                <div className="pt-0.5 min-w-0 flex-1">
-                  <p className="font-semibold text-[#2a2017]">{item.title}</p>
-                  {item.id && (
-                    <p className="text-xs text-[#8a7a6a]">{CATEGORY_LABEL[findCatalogEntry(item.id)?.category || 'galoba']} · {item.code}</p>
-                  )}
-                  {item.note && <p className="text-sm text-[#75685a] whitespace-pre-line mt-0.5">{item.note}</p>}
-                  {/* the viewer's own progress on this item */}
-                  {item.id && (() => {
-                    const mineItem = selectedChantVariants[item.id];
-                    const marked = mineItem ? voicesOf(mineItem, item.id) : [];
-                    const conf = confirmed[item.id] || [];
-                    const list: Voice[] = usesVoices(item.id) ? ['1', '2', '3'] : ['1'];
-                    return (
-                      <div className="flex flex-wrap gap-1.5 mt-2">
-                        {list.map(v => {
-                          const isConf = conf.includes(v);
-                          const isMarked = marked.includes(v);
-                          return (
-                            <span
-                              key={v}
-                              className={`h-7 px-2.5 rounded-full text-xs font-bold inline-flex items-center gap-1 ${
-                                isConf ? 'bg-emerald-700 text-white' : isMarked ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#b3a594]'
-                              }`}
-                            >
-                              {isConf ? <CheckCheck className="w-3.5 h-3.5" /> : isMarked ? <Check className="w-3.5 h-3.5" /> : null}
-                              {usesVoices(item.id!) ? `${v} ხმა` : 'ნასწავლი'}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    );
-                  })()}
-                </div>
-              </li>
-            ))}
-          </ol>
-        )}
-      </section>
-
-      {/* members */}
-      <section className="bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] p-5 sm:p-6">
-        <h2 className="flex items-center gap-2 font-serif-ge text-lg font-bold text-[#4a3426] mb-4">
-          <Users className="w-5 h-5 text-[#7a2028]" /> კლასის წევრები
-        </h2>
-        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              ))}
+            </span>
+          )}
+          <ChevronDown className={`w-5 h-5 shrink-0 text-[#a4927c] transition-transform ${showMembers ? 'rotate-180' : ''}`} />
+        </button>
+        {showMembers && (
+        <ul className="sg-in grid grid-cols-1 sm:grid-cols-2 gap-x-3 px-3 sm:px-4 pb-3">
           {cls.members.map(m => (
-            <li key={m.uid} className={`flex items-center gap-3 p-2.5 rounded-2xl ${m.uid === user?.uid ? 'bg-[#7a2028]/5 ring-1 ring-[#7a2028]/20' : 'bg-white ring-1 ring-[#e8dcc8]'}`}>
-              {m.photoURL ? (
-                <img src={m.photoURL} alt="" className="w-10 h-10 rounded-full object-cover" referrerPolicy="no-referrer" />
-              ) : (
-                <span className="w-10 h-10 rounded-full bg-[#efe5d4] text-[#4a3426] font-bold flex items-center justify-center">
-                  {m.name.charAt(0)}
-                </span>
-              )}
-              <span className="flex-1 min-w-0 font-semibold text-[#2a2017] truncate">
+            <li key={m.uid} className={`min-h-12 flex items-center gap-2.5 px-2 py-1 rounded-xl ${m.uid === user?.uid ? 'bg-[#7a2028]/[0.05]' : ''}`}>
+              <Avatar name={m.name} photoURL={m.photoURL} className="w-8 h-8 text-sm" />
+              <span className="flex-1 min-w-0 text-[14px] font-semibold text-[#2a2017] truncate">
                 {m.name}
                 {m.uid === user?.uid && <span className="ml-1.5 text-xs font-normal text-[#8a7a6a]">(შენ)</span>}
               </span>
@@ -178,7 +138,7 @@ export const ClassPage: React.FC = () => {
                   type="button"
                   onClick={() => writeTo(m, false)}
                   disabled={opening === m.uid}
-                  className="w-9 h-9 shrink-0 rounded-xl ring-1 ring-[#e8dcc8] bg-white hover:ring-[#7a2028]/40 text-[#7a2028] flex items-center justify-center cursor-pointer active:scale-95 transition disabled:opacity-60"
+                  className="w-9 h-9 shrink-0 rounded-full text-[#7a2028] hover:bg-[#7a2028]/[0.07] flex items-center justify-center cursor-pointer active:scale-95 transition disabled:opacity-60"
                   title={`პირადი მიწერა: ${m.name}`}
                   aria-label={`პირადი მიწერა: ${m.name}`}
                 >
@@ -188,6 +148,7 @@ export const ClassPage: React.FC = () => {
             </li>
           ))}
         </ul>
+        )}
       </section>
     </div>
   );

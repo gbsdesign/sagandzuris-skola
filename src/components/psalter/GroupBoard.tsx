@@ -1,8 +1,13 @@
-import React from 'react';
-import { BookOpen, Check, HandHelping, Undo2, LifeBuoy } from 'lucide-react';
+import React, { useState } from 'react';
+import { arrayUnion, doc, updateDoc } from 'firebase/firestore';
+import { BookOpen, Check, HandHelping, Undo2, LifeBuoy, Pencil } from 'lucide-react';
+import { db } from '../../firebase';
 import { useNavigation } from '../../context';
-import { KATHISMA_PSALMS, Slots, responsible, slotState } from '../../utils/psalter';
-import { ALL_KATHISMAS, PsalterGroup, ergative, firstName, memberName } from '../../hooks/usePsalter';
+import { KATHISMA_PSALMS, Slots, cycleOf, georgiaToday, rebase, responsible, slotState } from '../../utils/psalter';
+import { ALL_KATHISMAS, GroupMember, PsalterGroup, ergative, firstName, memberName } from '../../hooks/usePsalter';
+import { useManagedClasses } from '../../hooks/useClasses';
+import { Flash, useFlash } from '../ui/kit';
+import { PeoplePicker, Person } from '../people/PeoplePicker';
 import { useKathismaActions } from './useKathismaActions';
 
 type Act = { key: string; label: string; icon: React.ReactNode; onClick: () => void; strong?: boolean; on?: boolean };
@@ -19,6 +24,33 @@ export const KathismaGrid: React.FC<{
   actions: ReturnType<typeof useKathismaActions>;
 }> = ({ group, slots, owners, uid, isLeader, isMember, actions }) => {
   const { openPrayer } = useNavigation();
+  // a leader's ✎ under a tile: the class list, to name who reads this kanon (saved at once; a class member
+  // who is not in the group yet joins it)
+  const { classes } = useManagedClasses();
+  const cls = classes.find(c => c.psalterGroupId === group.id);
+  const [editK, setEditK] = useState<number | null>(null);
+  const msg = useFlash();
+  const people: Person[] = [
+    ...(cls?.members || []).map(m => ({ uid: m.uid, name: m.name, photoURL: m.photoURL })),
+    ...group.members.filter(m => !cls?.memberIds.includes(m.uid)).map(m => ({ uid: m.uid, name: m.name, photoURL: m.photoURL })),
+  ];
+  const assign = async (k: number, uids: string[]) => {
+    const added: GroupMember[] = uids.filter(u => !group.memberIds.includes(u)).map(u => {
+      const m = cls?.members.find(x => x.uid === u);
+      return { uid: u, name: m?.name || 'წევრი', prayer: '', photoURL: m?.photoURL || '' };
+    });
+    try {
+      await updateDoc(doc(db, 'psalterGroups', group.id), {
+        assignment: rebase({ ...owners, [k]: uids }),
+        baseHalf: cycleOf(georgiaToday(), group.cycleDays, group.shiftDays).half,
+        ...(added.length ? { members: arrayUnion(...added), memberIds: arrayUnion(...added.map(m => m.uid)) } : {}),
+        updatedAt: new Date().toISOString(),
+      });
+      msg.ok(`კანონი ${k}: ${uids.length ? uids.map(u => people.find(p => p.uid === u)?.name || 'წევრი').join(', ') : 'არავინ'}.`);
+    } catch {
+      msg.fail('ვერ შეინახა.');
+    }
+  };
   return (
     <div>
       <ul className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2">
@@ -74,7 +106,8 @@ export const KathismaGrid: React.FC<{
                 {dark && <Check className="w-4 h-4 mt-1.5 stroke-[3] text-emerald-200" aria-label="წაკითხულია" />}
                 {help && <span className="w-2.5 h-2.5 mt-2 rounded-full bg-amber-500 animate-pulse" aria-label="დახმარება სჭირდება" />}
                 <span className="flex-1" />
-                {acts.length > 0 && <div className="pointer-events-auto flex gap-1 -mt-0.5 -mr-0.5">
+                <div className="pointer-events-auto flex flex-col items-end gap-1 -mt-0.5 -mr-0.5">
+                {acts.length > 0 && <div className="flex gap-1">
                   {acts.map(a => (
                     <button
                       key={a.key}
@@ -96,6 +129,13 @@ export const KathismaGrid: React.FC<{
                     </button>
                   ))}
                 </div>}
+                {isLeader && (
+                  <button type="button" title="ვინ კითხულობს" aria-label={`კანონი ${k}: ვინ კითხულობს`} onClick={() => setEditK(k)}
+                    className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition active:scale-90 [&>svg]:w-4 [&>svg]:h-4 ${dark ? 'text-white/70 hover:text-white hover:bg-white/15' : 'text-[#b3a594] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.07]'}`}>
+                    <Pencil />
+                  </button>
+                )}
+                </div>
               </div>
               <div className="relative pointer-events-none mt-auto pt-2 min-w-0">
                 <span className={`block leading-tight line-clamp-2 break-words ${quiet ? 'text-[12px] font-medium' : 'text-[13.5px] font-bold'}`}>{caption || '—'}</span>
@@ -107,6 +147,19 @@ export const KathismaGrid: React.FC<{
           );
         })}
       </ul>
+      {msg.flash && <div className="mt-3"><Flash flash={msg.flash} onClose={msg.clear} /></div>}
+      {isLeader && (
+        <PeoplePicker
+          open={editK !== null}
+          onClose={() => setEditK(null)}
+          title={editK ? `კანონი ${editK} — ვინ კითხულობს` : ''}
+          people={people}
+          selected={editK ? owners[editK] || [] : []}
+          doneLabel="შენახვა"
+          empty="კლასში ჯერ წევრები არ არიან."
+          onDone={uids => { if (editK) void assign(editK, uids); }}
+        />
+      )}
       <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1.5 text-[11px] font-semibold text-[#8a7a6a] [&_svg]:w-3.5 [&_svg]:h-3.5 [&_svg]:text-[#7a2028]">
         <span className="inline-flex items-center gap-1"><BookOpen /> ფილაზე დაჭერა — კითხვა</span>
         <span className="inline-flex items-center gap-1"><Check /> წავიკითხე</span>

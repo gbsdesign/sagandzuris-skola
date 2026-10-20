@@ -133,12 +133,14 @@
 - **Psalter group** (`utils/psalter.ts` + `tests/psalter.test.ts`, `hooks/usePsalter.ts`, `pages/PsalterPage.tsx`,
   `components/psalter/`): cycles of 1–2 days restart on the 1st and 15th (Georgian time, UTC+4); kathismas
   move +1 on the 1st and 15th; skipped kathismas show only in history. Names at every დიდებაი.
+  Since 2026-10-20 a group lives only inside its class (`classes.psalterGroupId`, made from `teacher/ClassHeader.tsx`;
+  no standalone „ახალი ჯგუფი“, admin sees it on the class row). The user calls a kathisma „კანონი“ in the UI.
 - **Teacher panel** (`pages/TeacherPage.tsx`, `components/teacher/`), **admin panel** (`pages/AdminPanelPage.tsx`,
-  `components/admin/`): recordings can be bound from the panel (`settings/recordings`, `data/runtimeRecordings.ts`,
-  on top of `VARIANT_MEDIA`); sections open/მალე/hidden (`settings/sections`); JSON export.
-  Since 2026-10-16 four tabs on the „one window“ rule: მომხმარებლები (one list + count filters; a tap opens the
+  `components/admin/`): sections open/მალე/hidden (`settings/sections`); JSON export. The panel's recording-binding
+  form and logo card were removed 2026-10-20 (the app still reads `settings/recordings` and `settings/logo`).
+  Since 2026-10-20 three tabs on the „one window“ rule: მომხმარებლები (one list + count filters; a tap opens the
   person's window `admin/PersonSheet.tsx` — details, role, access, approve/refuse, profile edit), კლასები (class and
-  group windows, shared `LeaderChips`), ჩანაწერები (+ most listened), სკოლა (sections, logo, backup). Numbers of the
+  group windows, shared `LeaderChips`), სკოლა (sections, most listened, backup + folded safety list). Numbers of the
   old სტატისტიკა tab live in `admin/StatsTab.tsx` hooks; old shortcut refs `admin:sections`/`admin:stats` still open.
 - **Access** (`hooks/useAccess.ts`): guests see chant books + synth, prayers, song/მთქმელი names only (no
   recordings anywhere); kids' mode is switched by the teacher per student (`students.kidsMode`, no PIN).

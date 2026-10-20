@@ -42,6 +42,8 @@ export interface SchoolClass {
   classMode?: boolean;
   // the teacher's starting home buttons for members who have chosen none
   defaultShortcuts?: string[];
+  // the class's own psalter group, made by its teacher (none until they make one)
+  psalterGroupId?: string;
   createdAt?: string;
   updatedAt?: string;
 }
@@ -60,6 +62,7 @@ const toClass = (id: string, d: any): SchoolClass => ({
   schedule: list(d.schedule).filter((x: any) => x && typeof x.day === 'number' && typeof x.start === 'string'),
   classMode: Boolean(d.classMode),
   defaultShortcuts: list(d.defaultShortcuts).filter((x: unknown) => typeof x === 'string'),
+  psalterGroupId: typeof d.psalterGroupId === 'string' ? d.psalterGroupId : '',
   createdAt: d.createdAt || '',
   updatedAt: d.updatedAt || '',
   ...(d.liturgy ? { liturgy: d.liturgy } : {}),

@@ -15,7 +15,7 @@ export interface NavigationContextType {
   openClass: (classId: string) => void;
   // the private chat shown on the 'dm' page (hooks/useDirectChat: teacherUid_studentUid)
   selectedDmId: string | null;
-  openDm: (dmId: string) => void;
+  openDm: (dmId: string, replace?: boolean) => void;
   // the prayer shown on the 'prayer' page (an id from data/prayers)
   selectedPrayerId: string | null;
   openPrayer: (prayerId: string) => void;
@@ -154,10 +154,12 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     navigateTo('class');
   };
 
-  const openDm = (dmId: string) => {
+  // `replace`: moving from one open chat to another (the list beside it on a computer) turns the page in place
+  const openDm = (dmId: string, replace = false) => {
     setSelectedDmId(dmId);
     navigateTo('dm');
-    window.scrollTo({ top: 0 });
+    if (replace) replaceNext.current = performance.now();
+    else window.scrollTo({ top: 0 });
   };
 
   const openMapItem = (id: string, replace = false) => {

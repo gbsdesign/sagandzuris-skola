@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { CalendarClock, MapPin, Plus, Save, Trash2 } from 'lucide-react';
+import { MapPin, Plus, Save, Trash2 } from 'lucide-react';
 import { db } from '../../firebase';
 import { LessonSlot, SchoolClass } from '../../hooks/useClasses';
-import {  } from '../../hooks/useTeaching';
-import { Btn, Card, CardTitle, FIELD, Flash, IconBtn, useFlash } from '../ui/kit';
+import { Btn, FIELD, Flash, IconBtn, Sheet, useFlash } from '../ui/kit';
 import { WEEKDAYS_GE } from '../../utils/dateNames';
 import { CHIP_STATIC, CHIP_STRONG, PATH_CHIP, PATH_LABEL } from '../views/pathStyle';
 
@@ -98,12 +97,33 @@ export const LessonChips: React.FC<{ slots: LessonSlot[]; label?: React.ReactNod
   );
 };
 
-/** The teacher edits the class timetable. */
-export const SchedulePanel: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
+/** The timetable in one short line (the teacher's class header): "ორშ 19:00", the next lesson filled in;
+ *  the full time and place in each pill's title. */
+export const LessonPills: React.FC<{ slots: LessonSlot[] }> = ({ slots }) => {
+  const next = nextLesson(slots);
+  return (
+    <span className="mt-1 flex flex-wrap gap-1">
+      {sortSlots(slots).map((s, i) => {
+        const isNext = next?.slot === s;
+        return (
+          <span key={i} title={`${WEEKDAYS_GE[s.day]} ${s.start}${s.end ? `–${s.end}` : ''}${s.note ? ` — ${s.note}` : ''}`}
+            className={`h-6 px-2 rounded-full inline-flex items-center gap-1 text-[11.5px] font-bold tabular-nums whitespace-nowrap ${isNext ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#7a2028]/[0.06] text-[#4a3426]'}`}>
+            {DAY_SHORT[s.day]} {s.start}
+            {isNext && <span className="font-semibold opacity-80">· {whenLabel(next!.inDays)}</span>}
+          </span>
+        );
+      })}
+    </span>
+  );
+};
+
+/** The teacher edits the class timetable in its window (opened from the class tab's header); a save closes it. */
+export const ScheduleSheet: React.FC<{ cls: SchoolClass; open: boolean; onClose: () => void }> = ({ cls, open, onClose }) => {
   const msg = useFlash();
   const [rows, setRows] = useState<LessonSlot[]>(cls.schedule);
   const [saving, setSaving] = useState(false);
-  useEffect(() => setRows(cls.schedule), [cls.id, cls.schedule]);
+  // a fresh copy each time it opens; the first lesson is ready to fill in
+  useEffect(() => { if (open) setRows(cls.schedule.length ? cls.schedule : [{ day: 1, start: '18:00', end: '19:30' }]); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   const dirty = JSON.stringify(rows) !== JSON.stringify(cls.schedule);
 
   const patch = (i: number, p: Partial<LessonSlot>) => setRows(r => r.map((x, j) => (j === i ? { ...x, ...p } : x)));
@@ -112,8 +132,7 @@ export const SchedulePanel: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
     setSaving(true);
     try {
       await updateDoc(doc(db, 'classes', cls.id), { schedule: clean, updatedAt: new Date().toISOString() });
-      setRows(clean);
-      msg.ok('ცხრილი შენახულია — მოსწავლეები ნახავენ თავის გზაზე და კლასის გვერდზე.');
+      onClose();
     } catch {
       msg.fail('ცხრილი ვერ შეინახა.');
     } finally {
@@ -122,9 +141,14 @@ export const SchedulePanel: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
   };
 
   return (
-    <div className="space-y-4">
-      <Card>
-        <CardTitle icon={<CalendarClock />} title="გაკვეთილების ცხრილი" hint="დღე და საათი, როცა კლასს გაკვეთილი აქვს. ჩანს მოსწავლის გზის გვერდზე და კლასში." />
+    <Sheet open={open} onClose={onClose} title="გაკვეთილების ცხრილი"
+      footer={
+        <div className="space-y-2">
+          <Flash flash={msg.flash} onClose={msg.clear} />
+          <Btn size="lg" full icon={<Save />} disabled={!dirty || saving} onClick={save}>{saving ? 'ინახება…' : 'შენახვა'}</Btn>
+        </div>
+      }>
+        <p className="mb-3 text-[13px] text-[#8a7a6a] leading-relaxed">დღე და საათი, როცა კლასს გაკვეთილი აქვს. მოსწავლეები ხედავენ თავის გზაზე და კლასის გვერდზე; დასწრების დღეებიც აქედან ჩნდება.</p>
         <ul className="space-y-2.5">
           {rows.map((r, i) => (
             <li key={i} className="p-3 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#efe3cf] space-y-2">
@@ -142,13 +166,7 @@ export const SchedulePanel: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
             </li>
           ))}
         </ul>
-        <div className="mt-3 flex flex-wrap gap-2">
-          <Btn kind="ghost" icon={<Plus />} onClick={() => setRows(r => [...r, { day: r.length ? r[r.length - 1].day : 1, start: '18:00', end: '19:30' }])}>გაკვეთილის დამატება</Btn>
-          <Btn icon={<Save />} disabled={!dirty || saving} onClick={save}>{saving ? 'ინახება…' : 'შენახვა'}</Btn>
-        </div>
-        <div className="mt-3"><Flash flash={msg.flash} onClose={msg.clear} /></div>
-      </Card>
-      {cls.schedule.length > 0 && <LessonTable slots={cls.schedule} title="ასე ხედავენ მოსწავლეები" />}
-    </div>
+        <Btn kind="ghost" full icon={<Plus />} className="mt-3" onClick={() => setRows(r => [...r, { day: r.length ? r[r.length - 1].day : 1, start: '18:00', end: '19:30' }])}>გაკვეთილის დამატება</Btn>
+    </Sheet>
   );
 };

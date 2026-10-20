@@ -8,8 +8,9 @@ import { ChatPanel } from './ChatPanel';
 
 const CALL_NOTICE = '📹 ვიდეო ზარი დაიწყო — შემოგვიერთდით:';
 
-// The class's chat: text and voice messages between members and teachers.
-export const ClassChat: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
+// The class's chat: text and voice messages between members and teachers. On the messages page it fills its pane
+// and shows the class itself (title) where the class page says „კლასის ჩათი“.
+export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fill?: boolean }> = ({ cls, title, fill }) => {
   const { user, isAdmin: isSchoolAdmin } = useAuth();
   // this class's teachers (and the school's admins) speak as teachers here
   const isAdmin = isSchoolAdmin || (!!user && cls.teacherIds.includes(user.uid));
@@ -44,17 +45,22 @@ export const ClassChat: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
       callTitle="ვიდეო ზარი დაიწყო"
       onJoinCall={openCall}
       canDelete={m => m.uid === user.uid || isAdmin}
+      fill={fill}
       header={
-        <div className="flex items-center justify-between gap-3 px-5 sm:px-6 pt-4 pb-3">
-          <h2 className="flex items-center gap-2 font-serif-ge text-lg font-bold text-[#4a3426]">
-            <MessageCircle className="w-5 h-5 text-[#7a2028]" /> კლასის ჩათი
-          </h2>
+        <div className={`flex items-center justify-between gap-3 ${title ? 'px-3 sm:px-4 py-3' : 'px-5 sm:px-6 pt-4 pb-3'}`}>
+          {title || (
+            <h2 className="flex items-center gap-2 font-serif-ge text-lg font-bold text-[#4a3426]">
+              <MessageCircle className="w-5 h-5 text-[#7a2028]" /> კლასის ჩათი
+            </h2>
+          )}
           <button
             type="button"
             onClick={startCall}
-            className="h-11 px-4 shrink-0 rounded-full bg-[#7a2028]/[0.07] ring-1 ring-[#7a2028]/20 text-[#7a2028] text-sm font-bold inline-flex items-center gap-2 cursor-pointer hover:bg-[#7a2028]/[0.11] active:scale-95 transition"
+            aria-label="ვიდეო ზარი"
+            title="ვიდეო ზარი"
+            className={`h-11 shrink-0 rounded-full bg-[#7a2028]/[0.07] ring-1 ring-[#7a2028]/20 text-[#7a2028] text-sm font-bold inline-flex items-center justify-center gap-2 cursor-pointer hover:bg-[#7a2028]/[0.11] active:scale-95 transition ${title ? 'w-11 sm:w-auto sm:px-4' : 'px-4'}`}
           >
-            <Video className="w-[18px] h-[18px]" /> ვიდეო ზარი
+            <Video className="w-[18px] h-[18px]" /> <span className={title ? 'hidden sm:inline' : ''}>ვიდეო ზარი</span>
           </button>
         </div>
       }

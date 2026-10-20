@@ -59,7 +59,6 @@ const LibraryPage = page(() => import('../pages/LibraryPage'), 'LibraryPage');
 const PsalterPage = page(() => import('../pages/PsalterPage'), 'PsalterPage');
 const TeacherPage = page(() => import('../pages/TeacherPage'), 'TeacherPage');
 const MessagesPage = page(() => import('../pages/MessagesPage'), 'MessagesPage');
-const DirectChatPage = page(() => import('../pages/DirectChatPage'), 'DirectChatPage');
 const AbituriPage = page(() => import('../pages/AbituriPage'), 'AbituriPage');
 
 interface AppRouterProps {
@@ -96,7 +95,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   if (pageAccess === 'hidden' || pageAccess === 'soon') return <HomePage logoUrl={logoUrl} />;
 
   if (currentPage === 'admin') {
-    return isAdmin ? <AdminPanelPage logoUrl={logoUrl} /> : <HomePage logoUrl={logoUrl} />;
+    return isAdmin ? <AdminPanelPage /> : <HomePage logoUrl={logoUrl} />;
   }
 
   if (currentPage === 'class') {
@@ -108,12 +107,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   }
 
   // private chats (signed in only)
-  if (currentPage === 'messages') {
-    return user ? <MessagesPage /> : <HomePage logoUrl={logoUrl} />;
-  }
-
-  if (currentPage === 'dm') {
-    return user ? <DirectChatPage /> : <HomePage logoUrl={logoUrl} />;
+  // the messages page: the list, and the open chat beside it ('dm'; on a phone the chat alone)
+  if (currentPage === 'messages' || currentPage === 'dm') {
+    return user ? <MessagesPage logoUrl={logoUrl} /> : <HomePage logoUrl={logoUrl} />;
   }
 
   if (currentPage === 'teacher') {

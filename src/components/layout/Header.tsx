@@ -7,7 +7,7 @@ import { ClassLogo } from '../classes/ClassLogo';
 import { useAccess } from '../../hooks/useAccess';
 import { askSignIn, openSignIn } from '../access/SignInPrompt';
 import { SearchButton } from '../search/GlobalSearch';
-import { useDirectThreads, isUnread } from '../../hooks/useDirectChat';
+import { useInbox, isUnread } from '../../hooks/useDirectChat';
 import { User as UserIcon, LogIn, LogOut, Compass, ShieldCheck, Library, GraduationCap, Baby, MessageCircle } from 'lucide-react';
 
 interface HeaderProps {
@@ -29,13 +29,14 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
   // a teacher reaches their own classes' pages from the header too
   const { classes: teaching } = useTeachingClasses(isTeacher ? user?.uid : null);
   const myClasses = [...memberOf, ...teaching.filter(t => !memberOf.some(m => m.id === t.id))];
-  // private chats: for everyone in a class (or teaching one), and the superadmin's overview
-  const { threads } = useDirectThreads(user?.uid);
+  // private chats: one's own and, for admins, the administration's (messages page)
+  const { threads } = useInbox(user?.uid, isAdmin);
   const unread = user ? threads.filter(t => isUnread(t, user.uid)).length : 0;
   const { openModal } = useModal();
   const access = useAccess();
-  // a member a superadmin has not let in (or not given these) sees no class or private chats
-  const showChats = !!user && access.can('messages') && (myClasses.length > 0 || threads.length > 0 || isSuperAdmin);
+  // a member a superadmin has not let in (or not given these) sees no class or private chats; every other member
+  // may at least write to the administration
+  const showChats = !!user && access.can('messages');
   // kids' mode: no profile settings and no signing out (the teacher turns it off)
   const kids = Boolean(access.kids);
   // the learning tools the admin's switches and the kids' mode leave visible

@@ -32,6 +32,7 @@ import { SignInPrompt } from './components/access/SignInPrompt';
 import { EmailLinkFinish } from './components/access/EmailLinkFinish';
 import { FirstMeeting } from './components/onboarding/FirstMeeting';
 import { useKidsMode } from './hooks/useAccess';
+import { useClassMarksSync } from './hooks/useClassMarks';
 import { MembershipGate, WaitingBanner } from './components/access/MembershipGate';
 import { useMembership } from './utils/memberAccess';
 
@@ -74,6 +75,8 @@ function AppContent() {
   const [dbLogo, setDbLogo] = useState<string | null>(null);
 
   usePrayerReminderScheduler(openPrayer);
+  // the member's marks on their classes' programs, for the class page's "who knows this voice"
+  useClassMarksSync();
 
   // a tapped reminder may open the site as /?prayer=<id> or /?open=psalter|gz|teacher
   const openFromUrl = (href: string) => {

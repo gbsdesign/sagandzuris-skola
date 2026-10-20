@@ -10,7 +10,7 @@ import { GroupHistory } from '../components/psalter/GroupHistory';
 import { GroupManage } from '../components/psalter/GroupManage';
 import { useKathismaActions } from '../components/psalter/useKathismaActions';
 import { openPsalterGroup, useSelectedGroupId } from '../components/psalter/selectedGroup';
-import { PsalterGroup, useGroupNow, useMyPsalterGroups } from '../hooks/usePsalter';
+import { GroupMember, PsalterGroup, useGroupNow, useMyPsalterGroups } from '../hooks/usePsalter';
 import { DEFAULT_SHIFT_DAYS, KATHISMA_COUNT, MAX_CYCLE_DAYS, cycleOf, georgiaToday, parseCycleDays, parseShiftDays, readCount, shiftDaysText } from '../utils/psalter';
 import { fullName, hasGeorgianName, isGeorgian, saveProfileName, useProfileName } from '../utils/memberName';
 import { pushSupported, setGroupPush, useGroupPush } from '../utils/groupPush';
@@ -26,7 +26,7 @@ export const PsalterPage: React.FC = () => {
   const { groups, loading } = useMyPsalterGroups(user?.uid);
   const selectedId = useSelectedGroupId();
   const group = groups.find(g => g.id === selectedId) || groups[0] || null;
-  const [creating, setCreating] = useState(false);
+  // a group is made only from its class (ClassHeader → „შექმნა“), never on its own
 
   return (
     <div className="w-full max-w-2xl mx-auto px-1 py-4 sm:py-6 space-y-5 pb-14 text-[#2a2017]">
@@ -36,7 +36,6 @@ export const PsalterPage: React.FC = () => {
         onBack={handleGoBack}
         right={
           <span className="flex items-center gap-2">
-            {isTeacher && groups.length > 0 && <Btn size="sm" kind="ghost" icon={<Plus />} onClick={() => setCreating(true)}>ახალი</Btn>}
             {groups.length > 0 && <PinButton id="special:kathisma" />}
           </span>
         }
@@ -51,8 +50,7 @@ export const PsalterPage: React.FC = () => {
           <Empty
             icon={<BookOpen />}
             title="ჯერ ფსალმუნთა ჯგუფში არ ხარ"
-            text={isTeacher ? 'შექმენი ჯგუფი, დაამატე წევრები და გაუნაწილე 20 კანონი.' : 'მასწავლებელი დაგამატებს ჯგუფში — მერე აქ გამოჩნდება შენი კანონი.'}
-            action={isTeacher ? <Btn icon={<Plus />} onClick={() => setCreating(true)}>ჯგუფის შექმნა</Btn> : undefined}
+            text={isTeacher ? 'ფსალმუნთა ჯგუფს კლასი იქმნის: მასწავლებლის პანელში, კლასის თავში — „ფსალმუნთა ჯგუფი“ → „შექმნა“.' : 'მასწავლებელი დაგამატებს ჯგუფში — მერე აქ გამოჩნდება შენი კანონი.'}
           />
           <HowItWorks />
         </>
@@ -71,8 +69,6 @@ export const PsalterPage: React.FC = () => {
           {group && <GroupView key={group.id} group={group} canLead={isAdmin || group.teacherIds.includes(user.uid)} />}
         </>
       )}
-
-      <CreateGroupSheet open={creating} onClose={() => setCreating(false)} />
     </div>
   );
 };
@@ -263,11 +259,20 @@ const LeaveGroup: React.FC<{ group: PsalterGroup }> = ({ group }) => {
   );
 };
 
-/** A teacher starts a group: name, cycle length and shift days; members and kathismas come next, under „მართვა“. */
-export const CreateGroupSheet: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
+/**
+ * A teacher starts a group: name, cycle length and shift days; members and kathismas come next, under „მართვა“.
+ * A class's group (`preset`) starts with the class's name, members and teachers; `onCreated` links it to the class.
+ */
+export const CreateGroupSheet: React.FC<{
+  open: boolean;
+  onClose: () => void;
+  preset?: { name: string; members: GroupMember[]; teachers: GroupMember[] };
+  onCreated?: (id: string) => Promise<void>;
+}> = ({ open, onClose, preset, onCreated }) => {
   const { user } = useAuth();
   const msg = useFlash();
   const [name, setName] = useState('');
+  useEffect(() => { if (open && preset) setName(preset.name); }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   const [daysText, setDaysText] = useState('2');
   const [shiftText, setShiftText] = useState(DEFAULT_SHIFT_DAYS.join(', '));
   const [saving, setSaving] = useState(false);
@@ -283,12 +288,14 @@ export const CreateGroupSheet: React.FC<{ open: boolean; onClose: () => void }> 
     setSaving(true);
     try {
       const me = { uid: user.uid, name: user.displayName || 'მასწავლებელი', photoURL: user.photoURL || '' };
+      const teachers = [me, ...(preset?.teachers || []).filter(t => t.uid !== user.uid)];
+      const members = preset?.members || [];
       const ref = await addDoc(collection(db, 'psalterGroups'), {
         name: name.trim(),
-        teacherIds: [user.uid],
-        teachers: [me],
-        memberIds: [],
-        members: [],
+        teacherIds: teachers.map(t => t.uid),
+        teachers,
+        memberIds: members.map(m => m.uid),
+        members,
         assignment: {},
         baseHalf: cycleOf(today, days, shiftDays).half,
         cycleDays: days,
@@ -299,6 +306,7 @@ export const CreateGroupSheet: React.FC<{ open: boolean; onClose: () => void }> 
         createdAt: new Date().toISOString(),
         createdBy: user.uid,
       });
+      await onCreated?.(ref.id);
       openPsalterGroup(ref.id);
       setName('');
       onClose();
@@ -328,7 +336,7 @@ export const CreateGroupSheet: React.FC<{ open: boolean; onClose: () => void }> 
         </div>
         <p className="text-[13px] text-[#8a7a6a] leading-relaxed">
           ციკლში 20-ვე კანონი იკითხება (1–{MAX_CYCLE_DAYS} დღე). {shiftDays ? `${shiftDaysText(shiftDays)} რიცხვში` : 'გადასვლის რიცხვებში (1–28)'} ყველა შემდეგ კანონზე გადადის.
-          შექმნის შემდეგ „მართვაში“ დაამატე წევრები და გაუნაწილე კანონები.
+          {preset ? `კლასის ${preset.members.length} წევრი ჯგუფში თავიდანვე იქნება; შექმნის შემდეგ „მართვაში“ გაუნაწილე კანონები.` : 'შექმნის შემდეგ „მართვაში“ დაამატე წევრები და გაუნაწილე კანონები.'}
         </p>
         <Flash flash={msg.flash} onClose={msg.clear} />
       </div>

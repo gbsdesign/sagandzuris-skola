@@ -21,7 +21,7 @@ export const GroupsAdmin: React.FC<{ groups: PsalterGroup[]; staff: Person[]; on
   return (
     <Card>
       <CardTitle icon={<BookOpen />} title="ფსალმუნთა ჯგუფები"
-        info={`ჯგუფს მისი მასწავლებელი მართავს. „კათისმა“ — ბოლო 6 ციკლში საშუალოდ რამდენი იკითხებოდა (${KATHISMA_COUNT}-დან).`} />
+        info={`ჯგუფს მისი მასწავლებელი მართავს. „კანონი“ — ბოლო 6 ციკლში საშუალოდ რამდენი იკითხებოდა (${KATHISMA_COUNT}-დან).`} />
       {groups.length === 0 ? (
         <p className="text-sm text-[#8a7a6a]">ჯგუფი ჯერ არ შექმნილა.</p>
       ) : (
@@ -56,7 +56,7 @@ const GroupRow: React.FC<{ group: PsalterGroup; onOpen: () => void }> = ({ group
         {reading && (
           <span className="shrink-0 text-right leading-tight">
             <span className="block text-sm font-bold tabular-nums text-[#4a3426]">{reading.avg.toFixed(1)}/{KATHISMA_COUNT}</span>
-            <span className="block text-[11px] text-[#8a7a6a]">კათისმა</span>
+            <span className="block text-[11px] text-[#8a7a6a]">კანონი</span>
           </span>
         )}
         <ChevronRight className="w-4 h-4 text-[#b3a594] shrink-0" />

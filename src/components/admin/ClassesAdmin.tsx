@@ -1,6 +1,6 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Plus, Search, Trash2, Upload, Check, ArrowUp, ArrowDown, RefreshCw, ExternalLink, ChevronRight, GraduationCap } from 'lucide-react';
-import { arrayUnion, collection, deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
+import { Plus, Search, Trash2, Upload, Check, ArrowUp, ArrowDown, RefreshCw, ExternalLink, ChevronRight, GraduationCap, BookOpen } from 'lucide-react';
+import { arrayUnion, collection, deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth, useNavigation } from '../../context';
 import { SchoolClass, ProgramItem, imageFileToDataUrl } from '../../hooks/useClasses';
@@ -11,11 +11,13 @@ import { PathItem, sortPathItems, findCatalogEntry, voicesOf, CATEGORY_LABEL } f
 import { CatalogPicker } from './CatalogPicker';
 import { MemberPathEditor, writePath } from './MemberPathEditor';
 import { linkTeachers } from '../../hooks/useTeaching';
-import { Btn, Card, CardTitle, Sheet, Toggle } from '../ui/kit';
+import { Btn, Card, CardTitle, Flash, Sheet, Toggle, useFlash } from '../ui/kit';
 import { ShortcutPicker, shortcutIcon } from '../home/ShortcutShelf';
 import { shortcutLabel } from '../../utils/shortcuts';
 import { LeaderChips } from './LeaderChips';
-import { useClassAttendance } from './StatsTab';
+import { useClassAttendance, useGroupReading } from './StatsTab';
+import { PsalterGroup } from '../../hooks/usePsalter';
+import { KATHISMA_COUNT } from '../../utils/psalter';
 
 /**
  * Puts the class program on each member's path (missing items are added at the end) and takes back
@@ -47,12 +49,33 @@ const syncMemberPaths = async (classId: string, program: ProgramItem[], memberId
   return failed;
 };
 
+/** Takes one member out of the class (the teacher's button on their card); the class's untouched items leave their path. */
+export const removeClassMember = async (cls: SchoolClass, uid: string) => {
+  await updateDoc(doc(db, 'classes', cls.id), {
+    memberIds: cls.memberIds.filter(x => x !== uid),
+    members: cls.members.filter(m => m.uid !== uid),
+    updatedAt: new Date().toISOString(),
+  });
+  await syncMemberPaths(cls.id, cls.program, [], [uid]);
+};
+
+const cleanProgram = (program: ProgramItem[]) =>
+  program.map(p => ({ ...(p.id ? { id: p.id, code: p.code || '' } : {}), title: p.title.trim(), note: (p.note || '').trim() })).filter(p => p.title);
+
+/** The class's program saved (the teacher's „კლასის პროგრამა“) and put on every member's path; returns the failed paths. */
+export const saveClassProgram = async (cls: SchoolClass, program: ProgramItem[]) => {
+  await updateDoc(doc(db, 'classes', cls.id), { program: cleanProgram(program), updatedAt: new Date().toISOString() });
+  return syncMemberPaths(cls.id, program, cls.memberIds, []);
+};
+
 export interface AdminStudent {
   userId: string;
   name: string;
   email?: string;
   photoURL?: string;
 }
+
+export const CLASS_MODE_HINT = 'წევრები გალობაში ხედავენ მხოლოდ კლასის პროგრამის ვერსიებს — დამწყები აღარ იკარგება 1 130 ვერსიაში. „ყველაფრის ჩვენება“ ერთი შეხებით.';
 
 const field = 'w-full h-11 px-3.5 rounded-xl bg-white ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/40 text-sm text-[#2a2017] placeholder:text-[#b3a594] outline-none transition';
 
@@ -64,8 +87,8 @@ const EMPTY: Draft = { id: null, name: '', logo: '', memberIds: [], savedMemberI
 
 // Classes: list + editor (name, logo, members, common program, "კლასის რეჟიმი").
 // mode 'admin': every class in a list; a tap opens the class's own window (create, delete, its teachers from
-// `staff`, members from all users). mode 'teacher': the teacher's own class, opened in place at once with `openId`;
-// members from the people list.
+// `staff`, members from all users). mode 'teacher': the teacher's own class (`openId`) in its window, opened
+// from the class tab; members from the people list (their paths are in each student's own window).
 export const ClassesAdmin: React.FC<{
   classes: SchoolClass[];
   loading: boolean;
@@ -74,10 +97,21 @@ export const ClassesAdmin: React.FC<{
   mode?: 'admin' | 'teacher';
   staff?: AdminStudent[];
   openId?: string;
-}> = ({ classes, loading, students, onMessage, mode = 'admin', staff = [], openId }) => {
+  onClose?: () => void;
+  /** psalter groups, so a class row shows its own group (a group lives only inside its class) */
+  groups?: PsalterGroup[];
+}> = ({ classes, loading, students, onMessage, mode = 'admin', staff = [], openId, onClose, groups = [] }) => {
   const { user } = useAuth();
   const { openClass } = useNavigation();
   const isAdminMode = mode === 'admin';
+  const local = useFlash();
+  // the teacher's window shows its own errors; a save closes it and is told on the page
+  const tell = (text: string, type: 'success' | 'error') => {
+    if (isAdminMode) return onMessage(text, type);
+    if (type === 'error') return local.say(text, type);
+    onMessage(text, type);
+    onClose?.();
+  };
   const [draft, setDraft] = useState<Draft | null>(null);
   const [memberQuery, setMemberQuery] = useState('');
   const [saving, setSaving] = useState(false);
@@ -121,17 +155,14 @@ export const ClassesAdmin: React.FC<{
         <p className="text-sm text-[#8a7a6a]">კლასი ჯერ არ შექმნილა. შექმენი პირველი და დაამატე წევრები.</p>
       ) : (
         <ul className="divide-y divide-[#f1e8d9] -mx-1">
-          {classes.map(c => <ClassRow key={c.id} cls={c} onOpen={() => edit(c)} />)}
+          {classes.map(c => <ClassRow key={c.id} cls={c} group={groups.find(g => g.id === c.psalterGroupId)} onOpen={() => edit(c)} />)}
         </ul>
       )}
       <Btn kind="soft" full icon={<Plus />} className="mt-3 sm:w-auto" onClick={() => edit()}>ახალი კლასი</Btn>
     </Card>
   );
 
-  if (!draft) {
-    if (!isAdminMode) return loading ? <p className="py-8 text-center text-sm text-[#8a7a6a]">იტვირთება...</p> : null;
-    return list;
-  }
+  if (!draft) return isAdminMode ? list : null;
 
   const set = (patch: Partial<Draft>) => setDraft(d => (d ? { ...d, ...patch } : d));
   const toggleMember = (uid: string) =>
@@ -151,13 +182,13 @@ export const ClassesAdmin: React.FC<{
     try {
       set({ logo: await imageFileToDataUrl(file) });
     } catch {
-      onMessage('ლოგოს სურათი ვერ წაიკითხა.', 'error');
+      tell('ლოგოს სურათი ვერ წაიკითხა.', 'error');
     }
   };
 
   const save = async () => {
     const name = draft.name.trim();
-    if (!name) { onMessage('კლასს სახელი სჭირდება.', 'error'); return; }
+    if (!name) { tell('კლასს სახელი სჭირდება.', 'error'); return; }
     setSaving(true);
     try {
       const ref = draft.id ? doc(db, 'classes', draft.id) : doc(collection(db, 'classes'));
@@ -177,7 +208,7 @@ export const ClassesAdmin: React.FC<{
         logo: draft.logo,
         memberIds: members.map(m => m.uid),
         members,
-        program: draft.program.map(p => ({ ...(p.id ? { id: p.id, code: p.code || '' } : {}), title: p.title.trim(), note: (p.note || '').trim() })).filter(p => p.title),
+        program: cleanProgram(draft.program),
         classMode: draft.classMode,
         defaultShortcuts: draft.defaultShortcuts,
         // only admins choose a class's teachers
@@ -197,13 +228,13 @@ export const ClassesAdmin: React.FC<{
       }
       const failed = await syncMemberPaths(ref.id, draft.program, ids, draft.savedMemberIds.filter(x => !ids.includes(x)));
       triggerHaptic(30);
-      onMessage(
+      setDraft(d => (d ? { ...d, id: ref.id, memberIds: ids, savedMemberIds: ids } : d));
+      tell(
         failed ? `კლასი „${name}“ შენახულია, მაგრამ ${failed} წევრის გზა ვერ განახლდა.` : `კლასი „${name}“ შენახულია და პროგრამა წევრებს მიენიჭა.`,
         failed ? 'error' : 'success'
       );
-      setDraft(d => (d ? { ...d, id: ref.id, memberIds: ids, savedMemberIds: ids } : d));
     } catch (err: any) {
-      onMessage('კლასი ვერ შეინახა: ' + (err?.code === 'permission-denied' ? 'ბაზის წესებში კლასები ჯერ არ არის დამატებული.' : err?.message || ''), 'error');
+      tell('კლასი ვერ შეინახა: ' + (err?.code === 'permission-denied' ? 'ბაზის წესებში კლასები ჯერ არ არის დამატებული.' : err?.message || ''), 'error');
     } finally {
       setSaving(false);
     }
@@ -220,8 +251,10 @@ export const ClassesAdmin: React.FC<{
     }
   };
 
+  // the teacher edits the name, logo and class mode at the top of the class tab (ClassHeader); the window keeps the rest
   const fields = (
     <>
+      {isAdminMode && <>
       {/* name + logo */}
       <div className="flex items-center gap-4">
         <button type="button" onClick={() => fileRef.current?.click()} title="ლოგოს ატვირთვა" className="relative shrink-0 cursor-pointer group">
@@ -243,16 +276,13 @@ export const ClassesAdmin: React.FC<{
       {/* teachers: chosen by admins */}
       <div className="space-y-2">
         <label className="text-xs font-semibold text-[#75685a]">მასწავლებელი</label>
-        {isAdminMode ? (
-          <LeaderChips
-            people={staff.map(s => ({ uid: s.userId, name: s.name, photoURL: s.photoURL }))}
-            selected={draft.teacherIds}
-            onChange={teacherIds => set({ teacherIds })}
-          />
-        ) : (
-          <p className="text-sm font-semibold text-[#2a2017]">{classes.find(c => c.id === draft.id)?.teachers.map(t => t.name).join(', ') || '—'}</p>
-        )}
+        <LeaderChips
+          people={staff.map(s => ({ uid: s.userId, name: s.name, photoURL: s.photoURL }))}
+          selected={draft.teacherIds}
+          onChange={teacherIds => set({ teacherIds })}
+        />
       </div>
+      </>}
 
       {/* members */}
       <div className="space-y-2">
@@ -290,8 +320,8 @@ export const ClassesAdmin: React.FC<{
         </ul>
       </div>
 
-      {/* program: picked from the catalogue, given to every member on save */}
-      <div className="space-y-2">
+      {/* program: picked from the catalogue, given to every member on save (the teacher's own: ClassProgramPanel) */}
+      {isAdminMode && <div className="space-y-2">
         <div className="flex items-baseline justify-between">
           <label className="text-xs font-semibold text-[#75685a]">საერთო პროგრამა</label>
           <span className="text-xs text-[#8a7a6a]">შენახვისას ყველა წევრის საგანძურის გზას დაემატება</span>
@@ -319,7 +349,7 @@ export const ClassesAdmin: React.FC<{
             })}
           </ol>
         )}
-      </div>
+      </div>}
 
       {/* the members' starting home buttons, until they choose their own */}
       <div className="space-y-2">
@@ -342,14 +372,16 @@ export const ClassesAdmin: React.FC<{
         <ShortcutPicker open={pickingButtons} onClose={() => setPickingButtons(false)} current={draft.defaultShortcuts} onChange={next => set({ defaultShortcuts: next })} />
       </div>
 
-      <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-3.5">
-        <Toggle
-          on={draft.classMode}
-          onChange={on => set({ classMode: on })}
-          label="კლასის რეჟიმი"
-          hint="წევრები გალობაში ხედავენ მხოლოდ კლასის პროგრამის ვერსიებს — დამწყები აღარ იკარგება 1 130 ვერსიაში. „ყველაფრის ჩვენება“ ერთი შეხებით."
-        />
-      </div>
+      {isAdminMode && (
+        <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-3.5">
+          <Toggle
+            on={draft.classMode}
+            onChange={on => set({ classMode: on })}
+            label="კლასის რეჟიმი"
+            hint={CLASS_MODE_HINT}
+          />
+        </div>
+      )}
 
     </>
   );
@@ -424,19 +456,39 @@ export const ClassesAdmin: React.FC<{
     );
   }
 
-  // teacher: their class, in place
+  // teacher: their class's window (saving waits for the people list, so no member drops out)
   return (
-    <div className="space-y-5">
-      <h3 className="font-serif-ge text-lg font-bold text-[#4a3426]">კლასის შეცვლა</h3>
-      {fields}
-      <Btn size="lg" icon={saveIcon} full onClick={save} disabled={saving}>შენახვა</Btn>
-      {paths}
-    </div>
+    <Sheet
+      open
+      onClose={() => onClose?.()}
+      title="კლასის მართვა"
+      wide
+      footer={
+        <div className="space-y-2">
+          <Flash flash={local.flash} onClose={local.clear} />
+          <Btn size="lg" icon={saveIcon} full onClick={save} disabled={saving || loading}>შენახვა</Btn>
+        </div>
+      }
+    >
+      <div className="space-y-5">{fields}</div>
+    </Sheet>
   );
 };
 
-/** A class in the admin list: logo, name, members and teachers, attendance. */
-const ClassRow: React.FC<{ cls: SchoolClass; onOpen: () => void }> = ({ cls, onOpen }) => {
+/** The class's psalter group under its row: name and the kanons read on average in the last cycles. */
+const ClassGroupLine: React.FC<{ group: PsalterGroup }> = ({ group }) => {
+  const reading = useGroupReading(group);
+  return (
+    <span className="mt-1 flex items-center gap-1.5 text-xs text-[#7a2028] min-w-0">
+      <BookOpen className="w-3.5 h-3.5 shrink-0" />
+      <span className="font-semibold truncate">{group.name}</span>
+      {reading && <span className="shrink-0 text-[#8a7a6a] tabular-nums">· კანონი {reading.avg.toFixed(1)}/{KATHISMA_COUNT}</span>}
+    </span>
+  );
+};
+
+/** A class in the admin list: logo, name, members and teachers, its psalter group, attendance. */
+const ClassRow: React.FC<{ cls: SchoolClass; group?: PsalterGroup; onOpen: () => void }> = ({ cls, group, onOpen }) => {
   const rate = useClassAttendance(cls);
   return (
     <li className="px-1">
@@ -447,6 +499,7 @@ const ClassRow: React.FC<{ cls: SchoolClass; onOpen: () => void }> = ({ cls, onO
           <span className="block text-xs text-[#8a7a6a] truncate">
             {cls.members.length} წევრი · {cls.teachers.length ? cls.teachers.map(t => t.name).join(', ') : <span className="text-[#9a3324]">მასწავლებელი არ ჰყავს</span>}
           </span>
+          {group && <ClassGroupLine group={group} />}
         </span>
         {rate !== null && (
           <span className="shrink-0 text-right leading-tight">

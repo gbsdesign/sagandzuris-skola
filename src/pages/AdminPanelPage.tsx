@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
-import { Users, GraduationCap, Disc3, School, TriangleAlert } from 'lucide-react';
+import { Users, GraduationCap, School, TriangleAlert } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth, useNavigation, SUPER_ADMIN_EMAIL } from '../context';
 import { useAllClasses } from '../hooks/useClasses';
@@ -8,28 +8,26 @@ import { useAllPsalterGroups } from '../hooks/usePsalter';
 import { Flash, PageTop, Tabs, useFlash } from '../components/ui/kit';
 import { ClassesAdmin } from '../components/admin/ClassesAdmin';
 import { UsersTab, UserRecord, StaffRecord, toUser } from '../components/admin/UsersTab';
-import { GroupsAdmin } from '../components/admin/GroupsAdmin';
-import { RecordingsTab } from '../components/admin/RecordingsTab';
 import { SchoolTab } from '../components/admin/SchoolTab';
 import { AccessRecord, DecisionRecord, toAccess } from '../components/admin/AccessRequests';
 import { useDirectory, writeDirectory } from '../utils/directory';
 
-type Tab = 'users' | 'classes' | 'recordings' | 'school';
+type Tab = 'users' | 'classes' | 'school';
 const TAB_KEY = 'sg-admin-tab';
-// the former „განყოფილებები“ is now in „სკოლა“; the former „სტატისტიკა“ numbers stand where they belong
-const OLD_TAB: Record<string, Tab> = { sections: 'school', stats: 'users' };
+// the former „განყოფილებები“ and „ჩანაწერები“ are now in „სკოლა“; the former „სტატისტიკა“ numbers stand where they belong
+const OLD_TAB: Record<string, Tab> = { sections: 'school', recordings: 'school', stats: 'users' };
 const readTab = (): Tab => {
   try {
     const t = localStorage.getItem(TAB_KEY) || '';
-    return OLD_TAB[t] || (['users', 'classes', 'recordings', 'school'].includes(t) ? (t as Tab) : 'users');
+    return OLD_TAB[t] || (['users', 'classes', 'school'].includes(t) ? (t as Tab) : 'users');
   } catch {
     return 'users';
   }
 };
 
-// "ადმინის პანელი": the whole school in four tabs — people (one list; each person in one window), classes and
-// psalter groups (each in its own window), recordings, and the school's settings.
-export const AdminPanelPage: React.FC<{ logoUrl: string }> = ({ logoUrl }) => {
+// "ადმინის პანელი": the whole school in three tabs — people (one list; each person in one window), classes and
+// psalter groups (each in its own window), and the school (settings + the most listened chants).
+export const AdminPanelPage: React.FC = () => {
   const { user, isAdmin, isOwner, isSuperAdmin } = useAuth();
   const { handleGoBack } = useNavigation();
   const msg = useFlash();
@@ -110,7 +108,6 @@ export const AdminPanelPage: React.FC<{ logoUrl: string }> = ({ logoUrl }) => {
   const TABS = [
     { id: 'users' as const, label: 'მომხმარებლები', Icon: Users, dot: waiting > 0 },
     { id: 'classes' as const, label: 'კლასები', Icon: GraduationCap, dot: teachersWithoutClass > 0 },
-    { id: 'recordings' as const, label: 'ჩანაწერები', Icon: Disc3 },
     { id: 'school' as const, label: 'სკოლა', Icon: School },
   ];
 
@@ -121,7 +118,7 @@ export const AdminPanelPage: React.FC<{ logoUrl: string }> = ({ logoUrl }) => {
         subtitle={`${isOwner ? 'მფლობელი' : isSuperAdmin ? 'სუპერადმინი' : 'ადმინი'} · ${user?.email || ''}`}
         onBack={handleGoBack}
       />
-      <Tabs cols={4} value={tab} onChange={setTab} items={TABS} />
+      <Tabs cols={3} value={tab} onChange={setTab} items={TABS} />
       <Flash flash={msg.flash} onClose={msg.clear} />
 
       {tab === 'users' && (
@@ -134,12 +131,11 @@ export const AdminPanelPage: React.FC<{ logoUrl: string }> = ({ logoUrl }) => {
               <TriangleAlert className="w-4 h-4 shrink-0" /> {teachersWithoutClass} მასწავლებელს ჯერ კლასი ან ჯგუფი არ აქვს მიბმული.
             </p>
           )}
-          <ClassesAdmin classes={classes} loading={loadingClasses} students={classStudents} staff={leaders} onMessage={msg.say} mode="admin" />
-          <GroupsAdmin groups={groups} staff={leaders.map(l => ({ uid: l.userId, name: l.name, photoURL: l.photoURL, sub: l.email }))} onMessage={msg.say} />
+          {/* a psalter group lives only inside its class (made from the class page); it shows on the class's row */}
+          <ClassesAdmin classes={classes} loading={loadingClasses} students={classStudents} staff={leaders} onMessage={msg.say} mode="admin" groups={groups} />
         </div>
       )}
-      {tab === 'recordings' && <RecordingsTab users={users} onMessage={msg.say} />}
-      {tab === 'school' && <SchoolTab logoUrl={logoUrl} onMessage={msg.say} />}
+      {tab === 'school' && <SchoolTab users={users} onMessage={msg.say} />}
     </div>
   );
 };

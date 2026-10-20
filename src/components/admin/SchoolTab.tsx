@@ -1,11 +1,17 @@
-import React, { useRef, useState } from 'react';
-import { Bytes, Timestamp, collection, deleteDoc, doc, getDocs, setDoc } from 'firebase/firestore';
-import { Download, ImageUp, RotateCcw, ListChecks, Loader2 } from 'lucide-react';
+import React, { useState } from 'react';
+import { Bytes, Timestamp, collection, getDocs } from 'firebase/firestore';
+import { ChevronDown, DatabaseBackup, Download, ListChecks, Loader2 } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
-import { imageFileToDataUrl } from '../../hooks/useClasses';
-import { Btn, Card, CardTitle } from '../ui/kit';
+import { Btn, Card } from '../ui/kit';
 import { SectionsTab } from './SectionsTab';
+import { TopChants } from './StatsTab';
+import type { UserRecord } from './UsersTab';
+
+// a small square icon, the same as a card title's
+const RowIcon: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <span className="w-9 h-9 shrink-0 rounded-xl bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center [&>svg]:w-[18px] [&>svg]:h-[18px]">{children}</span>
+);
 
 // Firestore values made plain for JSON (times as ISO text; voice-message audio is left out).
 const plain = (v: unknown): unknown => {
@@ -21,12 +27,14 @@ const readAll = async (path: string[]) => {
   return snap.docs.map(d => ({ id: d.id, ...(plain(d.data()) as object) }));
 };
 
-// "სკოლა": the whole school's settings in one place — sections, the logo, backup export and a short safety
-// checklist. The staff are found in „მომხმარებლები“ (filter „ადმინები“), where their roles are given.
-export const SchoolTab: React.FC<{ logoUrl: string; onMessage: (t: string, type: 'success' | 'error') => void }> = ({ logoUrl, onMessage }) => {
+// "სკოლა": the whole school in one place — sections, the most listened chants (the former „ჩანაწერები“ tab),
+// and one small card with the backup export and the owner's safety checklist (folded).
+// The staff are found in „მომხმარებლები“ (filter „ადმინები“), where their roles are given.
+// The logo card was removed on the user's request (2026-10-20); a logo already saved in settings/logo still shows.
+export const SchoolTab: React.FC<{ users: UserRecord[]; onMessage: (t: string, type: 'success' | 'error') => void }> = ({ users, onMessage }) => {
   const { isOwner } = useAuth();
   const [exporting, setExporting] = useState<string | null>(null);
-  const file = useRef<HTMLInputElement>(null);
+  const [checklist, setChecklist] = useState(false);
 
   const exportAll = async () => {
     setExporting('იწყება…');
@@ -65,59 +73,47 @@ export const SchoolTab: React.FC<{ logoUrl: string; onMessage: (t: string, type:
     }
   };
 
-  const pickLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const f = e.target.files?.[0];
-    e.target.value = '';
-    if (!f) return;
-    try {
-      const url = await imageFileToDataUrl(f, 320);
-      await setDoc(doc(db, 'settings', 'logo'), { logoUrl: url, updatedAt: new Date().toISOString() });
-      onMessage('ლოგო შეიცვალა.', 'success');
-    } catch {
-      onMessage('ლოგო ვერ შეინახა.', 'error');
-    }
-  };
-  const resetLogo = async () => {
-    if (!window.confirm('დავაბრუნო სკოლის თავდაპირველი ლოგო?')) return;
-    await deleteDoc(doc(db, 'settings', 'logo')).then(() => onMessage('თავდაპირველი ლოგო დაბრუნდა (გვერდის განახლების შემდეგ).', 'success')).catch(() => onMessage('ვერ შეიცვალა.', 'error'));
-  };
-
   return (
     <div className="space-y-4">
       <SectionsTab onMessage={onMessage} />
+      <TopChants users={users} />
 
-      <Card>
-        <CardTitle icon={<ImageUp />} title="სკოლის ლოგო" />
-        <div className="flex items-center gap-4">
-          <img src={logoUrl} alt="ლოგო" className="w-20 h-20 rounded-2xl object-contain bg-white ring-1 ring-[#e8dcc8] p-1" referrerPolicy="no-referrer" />
-          <div className="flex flex-wrap gap-2">
-            <Btn kind="ghost" icon={<ImageUp />} onClick={() => file.current?.click()}>ახალი ლოგო</Btn>
-            <Btn kind="ghost" icon={<RotateCcw />} onClick={resetLogo}>თავდაპირველი</Btn>
-          </div>
-          <input ref={file} type="file" accept="image/*" hidden onChange={pickLogo} />
+      <Card className="!py-3">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-1">
+          <RowIcon><DatabaseBackup /></RowIcon>
+          <span className="flex-1 min-w-[10rem]">
+            <span className="block text-[14px] font-bold text-[#4a3426]">სარეზერვო ასლი</span>
+            <span className="block text-[12px] text-[#8a7a6a] leading-snug">ყველა მონაცემი ერთ ფაილად · გირჩევ თვეში ერთხელ</span>
+          </span>
+          <Btn size="sm" kind="ghost" icon={exporting ? <Loader2 className="animate-spin" /> : <Download />} disabled={!!exporting} onClick={exportAll}
+            title="მოსწავლეები და მათი გზა, კლასები, დავალებები, დასწრება, ჩატის ტექსტი, ფსალმუნთა ჯგუფები, მოსახსენებელი სახელები. ხმოვანი შეტყობინებების აუდიო არ შედის.">
+            {exporting ? `მზადდება… ${exporting}` : 'ჩამოტვირთვა'}
+          </Btn>
         </div>
-      </Card>
 
-      <Card>
-        <CardTitle icon={<Download />} title="სარეზერვო ასლი" hint="გირჩევ თვეში ერთხელ"
-          info="ყველა მონაცემი ერთ ფაილად: მოსწავლეები და მათი გზა, კლასები, დავალებები, დასწრება, ჩატის ტექსტი, ფსალმუნთა ჯგუფები, მოსახსენებელი სახელები. ხმოვანი შეტყობინებების აუდიო ფაილში არ შედის." />
-        <Btn icon={exporting ? <Loader2 className="animate-spin" /> : <Download />} disabled={!!exporting} onClick={exportAll}>
-          {exporting ? `მზადდება… ${exporting}` : 'ექსპორტი (JSON)'}
-        </Btn>
+        {isOwner && (
+          <div className="mt-2 pt-2 border-t border-[#f1e8d9]">
+            <button type="button" aria-expanded={checklist} onClick={() => setChecklist(o => !o)}
+              className="w-full flex items-center gap-3 py-1 text-left cursor-pointer">
+              <RowIcon><ListChecks /></RowIcon>
+              <span className="flex-1 min-w-0">
+                <span className="block text-[14px] font-bold text-[#4a3426]">უსაფრთხოების შემოწმება</span>
+                <span className="block text-[12px] text-[#8a7a6a] leading-snug">5 რამ Firebase-ის კონსოლში, ერთხელ · მხოლოდ შენ ხედავ</span>
+              </span>
+              <ChevronDown className={`w-5 h-5 shrink-0 text-[#8a7a6a] transition-transform ${checklist ? 'rotate-180' : ''}`} />
+            </button>
+            {checklist && (
+              <ol className="mt-2 mb-1 sm:ml-12 space-y-1.5 text-[13px] leading-relaxed text-[#4a3426] list-decimal pl-5 marker:text-[#7a2028] marker:font-bold sg-in">
+                <li>Project settings → Users and permissions: მფლობელი (Owner) შენ ხარ.</li>
+                <li>Firestore → Rules: ჩასვი პროექტის ფაილი <code className="text-[12px] bg-[#f4ece0] px-1 rounded">firestore.rules</code> და Publish.</li>
+                <li>Usage and billing → Budget alert: შეტყობინება, თუ ხარჯი გაჩნდება.</li>
+                <li>Google Cloud → APIs → Credentials: API გასაღები შეზღუდე საიტის მისამართებზე.</li>
+                <li>Authentication → Settings → Authorized domains: მხოლოდ საიტის მისამართები.</li>
+              </ol>
+            )}
+          </div>
+        )}
       </Card>
-
-      {isOwner && (
-        <Card tone="paper">
-          <CardTitle icon={<ListChecks />} title="უსაფრთხოების შემოწმება" hint="Firebase-ის კონსოლში ერთხელ გასაკეთებელი (console.firebase.google.com)" />
-          <ol className="space-y-2 text-[14px] leading-relaxed text-[#4a3426] list-decimal pl-5 marker:text-[#7a2028] marker:font-bold">
-            <li>Project settings → Users and permissions: მფლობელი (Owner) შენ ხარ.</li>
-            <li>Firestore → Rules: ჩასვი პროექტის ფაილი <code className="text-[12px] bg-white px-1 rounded">firestore.rules</code> და Publish.</li>
-            <li>Usage and billing → Budget alert: შეტყობინება, თუ ხარჯი გაჩნდება.</li>
-            <li>Google Cloud → APIs → Credentials: API გასაღები შეზღუდე საიტის მისამართებზე.</li>
-            <li>Authentication → Settings → Authorized domains: მხოლოდ საიტის მისამართები.</li>
-          </ol>
-        </Card>
-      )}
     </div>
   );
 };

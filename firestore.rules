@@ -215,6 +215,16 @@ service cloud.firestore {
         allow read: if inClass();
         allow write: if isAdmin() || teachesClass();
       }
+
+      // A member's marks on the class program (voices they know), copied by their own app so the class sees who
+      // knows which voice without reading each other's records
+      match /marks/{memberId} {
+        allow read: if inClass();
+        allow create, update: if isSignedIn() && uid() == memberId && uid() in cls().memberIds
+          && incoming().keys().hasOnly(['voices', 'confirmed', 'updatedAt'])
+          && incoming().voices is map && incoming().confirmed is map;
+        allow delete: if isAdmin() || teachesClass() || (isSignedIn() && uid() == memberId);
+      }
     }
 
     // ---- Private chats: a teacher and a student of their class ----------------------------------------
@@ -228,48 +238,119 @@ service cloud.firestore {
       allow delete: if isAdmin() || (isSignedIn() && uid() == userId);
     }
 
-    // dms/{teacherUid}_{studentUid}: classId names a class the teacher teaches and the student is in.
-    // Only the two of them read and write; the superadmin may read every chat, but not write in it.
+    // A student in the kids' mode (students/{uid}.kidsMode.on) writes privately only to teachers and the
+    // administration. chatFlags/{uid}.kids tells classmates' lists to leave them out; anyone may copy the truth
+    // here, nobody may write anything else.
+    match /chatFlags/{userId} {
+      allow read: if isSignedIn();
+      allow create, update: if isSignedIn()
+        && incoming().keys().hasOnly(['kids'])
+        && incoming().kids == (exists(/databases/$(database)/documents/students/$(userId))
+          && get(/databases/$(database)/documents/students/$(userId)).data.get('kidsMode', {}).get('on', false) == true);
+    }
+
+    // Three kinds of private chat (kind; an old chat without one is 'teach'):
+    //   teach  dms/{teacherUid}_{studentUid} — a teacher and a member of their class (classId links them)
+    //   peer   dms/p_{uidA}_{uidB}          — two members of one class, neither in the kids' mode
+    //   admin  dms/a_{uid}                  — a member and the school's administration: any admin reads and
+    //          answers (read.staff is the administration's reading); members is the member alone
+    // Only the people in it read and write; the superadmin may read every chat.
     match /dms/{dmId} {
       function thread() { return get(/databases/$(database)/documents/dms/$(dmId)).data; }
+      function kindOf(d) { return d.get('kind', 'teach'); }
       function linkedBy(teacherUid, studentUid, classId) {
         let c = get(/databases/$(database)/documents/classes/$(classId)).data;
         return teacherUid in c.get('teacherIds', []) && studentUid in c.get('memberIds', []);
       }
-      // the two are still teacher and student of that class
-      function stillLinked() { let t = thread(); return linkedBy(t.teacherUid, t.studentUid, t.classId); }
-      function inThread() { return isSignedIn() && uid() in thread().members; }
-      function isThreadTeacher() { return isSignedIn() && uid() == thread().teacherUid; }
+      function classmates(a, b, classId) {
+        let c = get(/databases/$(database)/documents/classes/$(classId)).data;
+        return a in c.get('memberIds', []) && b in c.get('memberIds', []);
+      }
+      function kidsOn(u) {
+        let p = /databases/$(database)/documents/students/$(u);
+        return exists(p) && get(p).data.get('kidsMode', {}).get('on', false) == true;
+      }
+      // a member a superadmin has let in (or an old member, who has no request)
+      function approved(u) {
+        let p = /databases/$(database)/documents/memberAccess/$(u);
+        return !exists(p) || get(p).data.status == 'approved';
+      }
+      // the two still share that class (an administration chat stays while its member is let in)
+      function linkOk(d, classId) {
+        let k = kindOf(d);
+        return k == 'admin' ? approved(d.members[0])
+          : k == 'peer' ? classmates(d.members[0], d.members[1], classId)
+          : linkedBy(d.teacherUid, d.studentUid, classId);
+      }
+      function stillLinked() {
+        let t = thread();
+        return linkOk(t, t.get('classId', ''))
+          && (kindOf(t) != 'peer' || (!kidsOn(t.members[0]) && !kidsOn(t.members[1])));
+      }
+      // an admin answering in an administration chat
+      function staffOf(d) { return kindOf(d) == 'admin' && isAdmin() && !(uid() in d.members); }
+      function inThread() { return isSignedIn() && (uid() in thread().members || staffOf(thread())); }
+      function speaksAsStaff() { return kindOf(thread()) == 'teach' ? uid() == thread().teacherUid : staffOf(thread()); }
+
+      function createTeach() {
+        let d = incoming();
+        return kindOf(d) == 'teach'
+          && dmId == d.teacherUid + '_' + d.studentUid
+          && d.teacherUid != d.studentUid
+          && d.members == [d.teacherUid, d.studentUid]
+          && uid() in d.members
+          && d.classId is string
+          && linkedBy(d.teacherUid, d.studentUid, d.classId)
+          && d.keys().hasOnly(['kind', 'members', 'teacherUid', 'studentUid', 'classId', 'room', 'names', 'photos',
+               'createdAt', 'lastAt', 'lastBy', 'lastText', 'read', 'callAt', 'callBy']);
+      }
+      function createPeer() {
+        let d = incoming();
+        return d.get('kind', '') == 'peer'
+          && d.members.size() == 2
+          && d.members[0] != d.members[1]
+          && dmId == 'p_' + d.members[0] + '_' + d.members[1]
+          && uid() in d.members
+          && d.classId is string
+          && classmates(d.members[0], d.members[1], d.classId)
+          && !kidsOn(d.members[0]) && !kidsOn(d.members[1])
+          && d.keys().hasOnly(['kind', 'members', 'classId', 'names', 'photos', 'createdAt', 'lastAt', 'lastBy', 'lastText', 'read']);
+      }
+      function createAdmin() {
+        let d = incoming();
+        return d.get('kind', '') == 'admin'
+          && d.members.size() == 1
+          && dmId == 'a_' + d.members[0]
+          && ((uid() == d.members[0] && approved(uid())) || isAdmin())
+          && d.keys().hasOnly(['kind', 'members', 'names', 'photos', 'createdAt', 'lastAt', 'lastBy', 'lastText', 'read']);
+      }
 
       // a chat not made yet reads as missing (the app checks before making it)
-      allow get: if isSuperAdmin() || (isSignedIn() && (resource == null || uid() in resource.data.members));
-      allow list: if isSuperAdmin() || (isSignedIn() && uid() in resource.data.members);
-      allow create: if isSignedIn()
-        && dmId == incoming().teacherUid + '_' + incoming().studentUid
-        && incoming().teacherUid != incoming().studentUid
-        && incoming().members == [incoming().teacherUid, incoming().studentUid]
-        && uid() in incoming().members
-        && incoming().classId is string
-        && linkedBy(incoming().teacherUid, incoming().studentUid, incoming().classId)
-        && incoming().keys().hasOnly(['members', 'teacherUid', 'studentUid', 'classId', 'room', 'names', 'photos',
-             'createdAt', 'lastAt', 'lastBy', 'lastText', 'read', 'callAt', 'callBy']);
-      // each marks only their own reading; only the teacher starts a call; classId may move to another class
-      // the two share
-      allow update: if isSignedIn() && uid() in existing().members
+      allow get: if isSuperAdmin() || (isSignedIn() && (resource == null || uid() in resource.data.members))
+        || (isAdmin() && resource.data.get('kind', 'teach') == 'admin');
+      allow list: if isSuperAdmin() || (isSignedIn() && uid() in resource.data.members)
+        || (isAdmin() && resource.data.kind == 'admin');
+      allow create: if isSignedIn() && (createTeach() || createPeer() || createAdmin());
+      // each marks only their own reading (the administration its shared one); only a teacher starts a call;
+      // classId may move to another class the two share
+      allow update: if isSignedIn() && (uid() in existing().members || staffOf(existing()))
         && changed().hasOnly(['classId', 'names', 'photos', 'lastAt', 'lastBy', 'lastText', 'read', 'callAt', 'callBy'])
-        && linkedBy(existing().teacherUid, existing().studentUid, incoming().classId)
-        && incoming().get('read', {}).diff(existing().get('read', {})).affectedKeys().hasOnly([uid()])
+        && linkOk(existing(), incoming().get('classId', ''))
+        && incoming().get('read', {}).diff(existing().get('read', {})).affectedKeys()
+             .hasOnly([staffOf(existing()) ? 'staff' : uid()])
         && (!changed().hasAny(['lastBy']) || incoming().lastBy == uid())
-        && (!changed().hasAny(['callAt', 'callBy']) || (uid() == existing().teacherUid && incoming().callBy == uid()));
+        && (!changed().hasAny(['callAt', 'callBy'])
+            || (kindOf(existing()) == 'teach' && uid() == existing().teacherUid && incoming().callBy == uid()));
       allow delete: if isSuperAdmin();
 
       match /messages/{messageId} {
         allow read: if isSuperAdmin() || inThread();
         allow create: if inThread() && stillLinked()
           && incoming().uid == uid()
-          && incoming().teacher == isThreadTeacher()
+          && incoming().teacher == speaksAsStaff()
           && incoming().createdAt == request.time
-          && (incoming().kind in ['text', 'voice'] || (incoming().kind == 'call' && isThreadTeacher()))
+          && (incoming().kind in ['text', 'voice']
+              || (incoming().kind == 'call' && kindOf(thread()) == 'teach' && uid() == thread().teacherUid))
           && incoming().text is string && incoming().text.size() <= 2000;
         allow delete: if isSuperAdmin() || (isSignedIn() && existing().uid == uid());
       }

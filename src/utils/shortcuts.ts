@@ -57,8 +57,10 @@ export const LIBRARY_SHORT: Record<string, string> = {
 };
 export const PAGES: Record<string, string> = { abituri: 'აბიტურიენტს', messages: 'მიმოწერა', admin: 'ადმინის პანელი' };
 export const TEACHER_TABS: Record<string, string> = {
-  students: 'მოსწავლეები', assignments: 'დავალებები', attendance: 'დასწრება', schedule: 'ცხრილი', class: 'კლასის მართვა', groups: 'ფსალმუნის ჯგუფები',
+  students: 'კლასი', assignments: 'კლასის პროგრამა',
 };
+// attendance, the class settings, the timetable and the class's psalter group now live in the class tab (`students`)
+export const OLD_TEACHER_TABS: Record<string, string> = { attendance: 'students', class: 'students', schedule: 'students', groups: 'students' };
 export const ADMIN_TABS: Record<string, string> = {
   users: 'მომხმარებლები', classes: 'კლასები', recordings: 'ჩანაწერები', school: 'სკოლა',
   requests: 'წევრების მიღება',
@@ -116,7 +118,10 @@ export const shortcutLabel = (id: string): { label: string; sub?: string } | nul
     case 'chantof': case 'song': case 'ancestor': case 'feast': case 'life':
       return carried(id);
     case 'page': return PAGES[ref] ? { label: PAGES[ref] } : null;
-    case 'teacher': return TEACHER_TABS[ref] ? { label: TEACHER_TABS[ref], sub: 'მასწავლებელი' } : null;
+    case 'teacher': {
+      const tab = OLD_TEACHER_TABS[ref] || ref;
+      return TEACHER_TABS[tab] ? { label: TEACHER_TABS[tab], sub: 'მასწავლებელი' } : null;
+    }
     case 'admin': {
       const tab = OLD_ADMIN_TABS[ref] || ref;
       return ADMIN_TABS[tab] ? { label: ADMIN_TABS[tab], sub: tab === 'requests' ? 'სუპერადმინი' : 'ადმინი' } : null;

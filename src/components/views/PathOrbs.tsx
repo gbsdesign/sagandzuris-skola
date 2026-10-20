@@ -179,6 +179,66 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
 
 const SHOWN = 8;
 
+type CategoryBar = { id: string; label: string; total: number; learned: number; voices: number; voiceSlots: number };
+
+/** Each kind (გალობა, სიმღერა, …) as a small card: learned / total, a bar, what is left and the voices.
+ *  Also used by the class program (ClassProgram). */
+export const CategoryBars: React.FC<{ categories: CategoryBar[] }> = ({ categories }) => {
+  const n = categories.length;
+  return (
+    <div
+      className="grid gap-2 grid-cols-[repeat(var(--m),minmax(0,1fr))] sm:grid-cols-[repeat(var(--n),minmax(0,1fr))]"
+      style={{ '--m': Math.min(n, 2), '--n': n } as React.CSSProperties}
+    >
+      {categories.map((c, i) => {
+        const left = c.total - c.learned;
+        const full = left === 0;
+        // on phones (two a row) an odd last one takes the whole row
+        const alone = n > 1 && n % 2 === 1 && i === n - 1;
+        return (
+          <div key={c.id} className={`rounded-xl bg-[#faf6ef] px-3 py-2.5 ${alone ? 'col-span-2 sm:col-span-1' : ''}`}>
+            <div className="flex items-baseline justify-between gap-2">
+              <span className="text-[12.5px] font-bold text-[#75685a] truncate">{c.label}</span>
+              <span className="tabular-nums whitespace-nowrap">
+                <span className="text-[18px] font-black text-[#2a2017]">{c.learned}</span>
+                <span className="text-xs font-bold text-[#b3a594]"> / {c.total}</span>
+              </span>
+            </div>
+            <div className="mt-1.5 h-1.5 rounded-full bg-[#ece2d1] overflow-hidden">
+              <div
+                className={`h-full rounded-full transition-[width] duration-700 ${full ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-[#c2414c] to-[#7a2028]'}`}
+                style={{ width: `${(100 * c.learned) / c.total}%` }}
+              />
+            </div>
+            <p className={`mt-1.5 text-[11.5px] font-semibold ${full ? 'text-emerald-700' : 'text-[#8a7a6a]'}`}>
+              {full ? 'ყველა ნასწავლია' : `${left} სასწავლი`}
+              {c.voiceSlots > 0 && <span className="text-[#8a7a6a]"> · {c.voices}/{c.voiceSlots} ხმა</span>}
+            </p>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+/** What tapping an item's name does: a chant opens its notes, a song its place on the map; null when neither can.
+ *  Also used by the class program (ClassProgram). */
+export const usePathItemOpener = () => {
+  const { openNotes } = useNotes();
+  const { navigateTo } = useNavigation();
+  return (id: string): (() => void) | null => {
+    const kind = categoryOf(id);
+    if (kind === 'galoba') {
+      const v = findVersion(id);
+      return v && canOpenNotes(v.chant, v.variant) ? () => { triggerHaptic(10); openNotes(id, 'bookmark'); } : null;
+    }
+    if (kind === 'simghera' && FOLK_SONGS.some(x => x.id === id)) {
+      return () => { triggerHaptic(10); requestOpen('simghera', id); navigateTo('simghera'); };
+    }
+    return null;
+  };
+};
+
 // "ნასწავლი" opened: the teacher's assignments and lessons at the top (MyClassWork), then each kind on the path
 // (გალობა, სიმღერა, მთქმელი, საკრავები) with what is learned, what is left and its voices; under them the learned
 // items, one slim line each, and the ones still to learn folded under "სასწავლი". The student marks what they know
@@ -187,28 +247,16 @@ const SHOWN = 8;
 // (open even while marking is locked). A chant's name opens its notes, a song's its place on the map. An empty path
 // shows its first step instead.
 const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats> }> = ({ s }) => {
-  const { openNotes } = useNotes();
-  const { navigateTo } = useNavigation();
+  const openerOf = usePathItemOpener();
   const { selectedChantVariants, saveVariantsToFirestoreAndStorage } = useChants();
   const { locked, confirmed, toggle } = usePathMarks(triggerFireworks);
   const [all, setAll] = useState<Record<string, boolean>>({});
   const [showTodo, setShowTodo] = useState(false);
   const [editing, setEditing] = useState(false);
-  const n = s.categories.length;
   const todo = s.categories.filter(c => c.todo.length);
   const todoCount = todo.reduce((a, c) => a + c.todo.length, 0);
 
-  const opener = (it: PathItem): (() => void) | null => {
-    const kind = categoryOf(it.variantId);
-    if (kind === 'galoba') {
-      const v = findVersion(it.variantId);
-      return v && canOpenNotes(v.chant, v.variant) ? () => { triggerHaptic(10); openNotes(it.variantId, 'bookmark'); } : null;
-    }
-    if (kind === 'simghera' && FOLK_SONGS.some(x => x.id === it.variantId)) {
-      return () => { triggerHaptic(10); requestOpen('simghera', it.variantId); navigateTo('simghera'); };
-    }
-    return null;
-  };
+  const opener = (it: PathItem) => openerOf(it.variantId);
 
   const remove = (id: string) => {
     triggerHaptic(10);
@@ -294,38 +342,7 @@ const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats> }> = ({ s }) => 
   return (
     <div className="space-y-4">
       <MyClassWork bare />
-      <div
-        className="grid gap-2 grid-cols-[repeat(var(--m),minmax(0,1fr))] sm:grid-cols-[repeat(var(--n),minmax(0,1fr))]"
-        style={{ '--m': Math.min(n, 2), '--n': n } as React.CSSProperties}
-      >
-        {s.categories.map((c, i) => {
-          const left = c.total - c.learned;
-          const full = left === 0;
-          // on phones (two a row) an odd last one takes the whole row
-          const alone = n > 1 && n % 2 === 1 && i === n - 1;
-          return (
-            <div key={c.id} className={`rounded-xl bg-[#faf6ef] px-3 py-2.5 ${alone ? 'col-span-2 sm:col-span-1' : ''}`}>
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-[12.5px] font-bold text-[#75685a] truncate">{c.label}</span>
-                <span className="tabular-nums whitespace-nowrap">
-                  <span className="text-[18px] font-black text-[#2a2017]">{c.learned}</span>
-                  <span className="text-xs font-bold text-[#b3a594]"> / {c.total}</span>
-                </span>
-              </div>
-              <div className="mt-1.5 h-1.5 rounded-full bg-[#ece2d1] overflow-hidden">
-                <div
-                  className={`h-full rounded-full transition-[width] duration-700 ${full ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-[#c2414c] to-[#7a2028]'}`}
-                  style={{ width: `${(100 * c.learned) / c.total}%` }}
-                />
-              </div>
-              <p className={`mt-1.5 text-[11.5px] font-semibold ${full ? 'text-emerald-700' : 'text-[#8a7a6a]'}`}>
-                {full ? 'ყველა ნასწავლია' : `${left} სასწავლი`}
-                {c.voiceSlots > 0 && <span className="text-[#8a7a6a]"> · {c.voices}/{c.voiceSlots} ხმა</span>}
-              </p>
-            </div>
-          );
-        })}
-      </div>
+      <CategoryBars categories={s.categories} />
 
       <div className="flex items-center gap-2 pl-1">
         <p className="flex-1 min-w-0 flex items-center gap-1.5 text-[12px] font-semibold text-[#8a7a6a]">
