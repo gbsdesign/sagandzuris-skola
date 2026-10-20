@@ -14,9 +14,45 @@ import { useAccess } from '../hooks/useAccess';
 import { LockedPage } from '../components/access/SignInPrompt';
 import { SECTIONS, sectionOfPage } from '../data/sections';
 
+// Fetches the newest version of the app (the service worker takes over at once — registerType 'autoUpdate') and
+// starts it again. A page's file that is missing while online means a newer version was published after this tab
+// was opened: its old file is gone from the site.
+const reloadFresh = async () => {
+  try {
+    const sw = navigator.serviceWorker;
+    const reg = await sw?.getRegistration();
+    if (sw && reg) {
+      await reg.update();
+      if (reg.installing || reg.waiting) {
+        await new Promise<void>(done => {
+          const t = setTimeout(done, 10_000);
+          sw.addEventListener('controllerchange', () => { clearTimeout(t); done(); }, { once: true });
+        });
+      }
+    }
+  } catch { /* reload anyway */ }
+  window.location.reload();
+};
+
+// The page loader tries the new version once by itself; if the page still fails after that, „გვერდი ვერ
+// ჩაიტვირთა“ shows — a real problem is never hidden (the user's wish, 2026-10-20).
+const RELOADED_KEY = 'sg-fresh-reload';
+const tryFreshOnce = (): boolean => {
+  if (!navigator.onLine) return false;
+  try {
+    const at = Number(sessionStorage.getItem(RELOADED_KEY) || 0);
+    if (Date.now() - at < 120_000) return false;
+    sessionStorage.setItem(RELOADED_KEY, String(Date.now()));
+  } catch {
+    return false;
+  }
+  void reloadFresh();
+  return true;
+};
+
 // A page whose file is not on the phone yet and cannot be fetched: offline before it was ever opened (some pages
-// are not downloaded in advance — vite.config.ts globIgnores). Says so instead of the error box; back online,
-// „ხელახლა ცდა“ reloads the app.
+// are not downloaded in advance — vite.config.ts globIgnores), or still failing after the new version was fetched.
+// Says so instead of the error box; „ხელახლა ცდა“ fetches the newest version and starts again.
 const NotLoaded: React.FC = () => {
   const { navigateTo } = useNavigation();
   return (
@@ -27,7 +63,7 @@ const NotLoaded: React.FC = () => {
       <div className="flex flex-wrap justify-center gap-2.5 pt-1">
         <button
           type="button"
-          onClick={() => window.location.reload()}
+          onClick={() => void reloadFresh()}
           className="h-11 px-5 rounded-full bg-[#7a2028] text-[#fbf6ec] font-bold inline-flex items-center gap-2 cursor-pointer active:scale-95 transition"
         >
           <RefreshCw className="w-4 h-4" />ხელახლა ცდა
@@ -45,8 +81,12 @@ const NotLoaded: React.FC = () => {
 };
 
 // Pages load when first opened, so the first visit downloads less (App wraps the router in Suspense).
+// While the new version is being fetched the loader stays pending (the Suspense spinner shows).
 const page = <T extends string>(load: () => Promise<Record<T, React.ComponentType<any>>>, name: T) =>
-  lazy(() => load().then(m => ({ default: m[name] }), () => ({ default: NotLoaded })));
+  lazy(() => load().then(
+    m => ({ default: m[name] }),
+    () => (tryFreshOnce() ? new Promise<never>(() => {}) : { default: NotLoaded }),
+  ));
 const GeorgiaMap = page(() => import('../components/maps/GeorgiaMap'), 'GeorgiaMap');
 const MtkmeliMap = page(() => import('../components/maps/MtkmeliMap'), 'MtkmeliMap');
 const SakravebiView = page(() => import('../components/views/SakravebiView'), 'SakravebiView');
