@@ -12,9 +12,9 @@ import { PeriodNav, ViewHeading } from './parts';
 // A habit's own page (a sheet over the habits): its counter, the run and the best run, how often its goal was met,
 // the last weeks or months as bars, a month calendar (the last seven days tick from there too) and the year by months.
 
-const PER_WORD = { day: 'დღე', week: 'კვირა', month: 'თვე' } as const;
+export const PER_WORD = { day: 'დღე', week: 'კვირა', month: 'თვე' } as const;
 /** "77% — 249 დღიდან" */
-const FROM_WORD = { day: 'დღიდან', week: 'კვირიდან', month: 'თვიდან' } as const;
+export const FROM_WORD = { day: 'დღიდან', week: 'კვირიდან', month: 'თვიდან' } as const;
 
 /** The sheet's title: the habit's icon and name. */
 export const HabitPageTitle: React.FC<{ model: HabitsModel; id: string }> = ({ model, id }) => {

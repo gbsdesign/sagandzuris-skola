@@ -7,6 +7,8 @@ import { useAuth } from '../../context';
 import { usePlacements } from '../../data/placements';
 import { MoveSheet, MoveTarget } from '../../components/archive/MoveSheet';
 import { stopPreview } from '../../utils/listPreview';
+import { getCachedAudioUrl } from '../../utils/audioCache';
+import { hasTrack } from '../../utils/offlineFiles';
 import { triggerHaptic } from '../../utils/haptics';
 
 // One album of chant recordings without notes (a choir, a school, „დასაზუსტებელი“): the list grouped by performer,
@@ -19,6 +21,7 @@ type Phase = 'loading' | 'playing' | 'paused';
 const useAlbumPlayer = () => {
   const audio = useRef<HTMLAudioElement | null>(null);
   const current = useRef<string | null>(null);
+  const local = useRef<string | null>(null); // the device copy's object URL, freed on the next track
   const [cur, setCur] = useState<string | null>(null);
   const [phase, setPhase] = useState<Phase>('paused');
   const [time, setTime] = useState(0);
@@ -67,8 +70,20 @@ const useAlbumPlayer = () => {
     setTime(0);
     setDur(0);
     setPhase('loading');
-    a.src = `${AUDIO_PROXY}/${id}`;
-    play(a, id);
+    if (local.current) { URL.revokeObjectURL(local.current); local.current = null; }
+    const url = `${AUDIO_PROXY}/${id}`;
+    if (!hasTrack(url)) {
+      a.src = url;
+      play(a, id);
+      return;
+    }
+    // kept for offline use: plays from the device
+    void getCachedAudioUrl(url).then(blobUrl => {
+      if (current.current !== id) { if (blobUrl) URL.revokeObjectURL(blobUrl); return; }
+      local.current = blobUrl;
+      a.src = blobUrl ?? url;
+      play(a, id);
+    });
   };
 
   const seek = (t: number) => {

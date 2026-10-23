@@ -27,13 +27,18 @@ export const nextLesson = (slots: LessonSlot[], now: Date = new Date()) => {
 const whenLabel = (n: number) => (n === 0 ? 'დღეს' : n === 1 ? 'ხვალ' : `${n} დღეში`);
 
 /** A small timetable: weekday, time and place of each lesson; today's and the next one marked. */
-export const LessonTable: React.FC<{ slots: LessonSlot[]; title?: string; compact?: boolean }> = ({ slots, title, compact }) => {
+export const LessonTable: React.FC<{ slots: LessonSlot[]; title?: string; compact?: boolean; action?: React.ReactNode }> = ({ slots, title, compact, action }) => {
   if (!slots.length) return null;
   const today = new Date().getDay();
   const next = nextLesson(slots);
   return (
     <div className={compact ? '' : 'rounded-2xl bg-white ring-1 ring-[#e8dcc8] overflow-hidden'}>
-      {title && <p className="px-3.5 pt-3 pb-1 text-[12px] font-bold uppercase tracking-wide text-[#8a7a6a]">{title}</p>}
+      {title && (
+        <div className={`flex items-center gap-2 px-3.5 ${action ? 'pt-1.5 pr-1.5' : 'pt-3 pb-1'}`}>
+          <p className="flex-1 min-w-0 text-[12px] font-bold uppercase tracking-wide text-[#8a7a6a]">{title}</p>
+          {action}
+        </div>
+      )}
       <ul className="divide-y divide-[#f1e8d9]">
         {sortSlots(slots).map((s, i) => {
           const isNext = next?.slot === s;

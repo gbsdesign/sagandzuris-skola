@@ -61,10 +61,20 @@ export const variantLines = (chantId: string, chantTitle: string, v: ChantVarian
   const page = v.page && `გვ. ${v.page}`;
   const sub = [version !== name && version, source && source !== name && !version.includes(source) && source, num && `№${num}`]
     .filter(Boolean).join(' · ');
+  const top = [page && book, name, page].filter(Boolean).join(' · ');
   return {
-    top: [page && book, name, page].filter(Boolean).join(' · '),
+    top,
     sub,
     meta: [page && book, name !== title && name, page, sub].filter(Boolean).join(' · '),
+    // a version's card under its chant's own title: "III ტომი · №159 · გვ. 240" over "გამშვენებული"
+    // (a group's chant keeps its own name, below)
+    card: page
+      ? {
+          top: [book, num && `№${num}`, page].filter(Boolean).join(' · '),
+          sub: [name !== title && name, version !== name && version, source && source !== name && !version.includes(source) && source]
+            .filter(Boolean).join(' · '),
+        }
+      : { top, sub },
   };
 };
 

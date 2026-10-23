@@ -9,11 +9,11 @@ const WINE = '#7a2028';
 const TRACK = '#e8dcc8';
 
 /** The selected day as a ring: daily habits ticked of all. */
-export const Ring: React.FC<{ value: number; max: number; caption: string }> = ({ value, max, caption }) => {
+export const Ring: React.FC<{ value: number; max: number; caption: string; compact?: boolean }> = ({ value, max, caption, compact }) => {
   const r = 25;
   const length = 2 * Math.PI * r;
   return (
-    <div className="relative w-[60px] h-[60px] shrink-0" role="img" aria-label={`${caption} ${value} / ${max}`}>
+    <div className={`relative shrink-0 ${compact ? 'w-[52px] h-[52px]' : 'w-[60px] h-[60px]'}`} role="img" aria-label={`${caption} ${value} / ${max}`}>
       <svg viewBox="0 0 60 60" className="w-full h-full -rotate-90">
         <circle cx="30" cy="30" r={r} fill="none" stroke="#efe5d4" strokeWidth="6" />
         {value > 0 && (
@@ -32,11 +32,11 @@ export const Ring: React.FC<{ value: number; max: number; caption: string }> = (
         )}
       </svg>
       <span className="absolute inset-0 flex flex-col items-center justify-center leading-none">
-        <span className="text-[17px] font-black tabular-nums text-[#2a2017]">
+        <span className={`${compact ? 'text-[15px]' : 'text-[17px]'} font-black tabular-nums text-[#2a2017]`}>
           {value}
           <span className="text-[11px] font-bold text-[#a08a76]">/{max}</span>
         </span>
-        <span className="mt-1 text-[9.5px] font-bold text-[#8a7a6a]">{caption}</span>
+        <span className={`${compact ? 'mt-0.5' : 'mt-1'} text-[9.5px] font-bold text-[#8a7a6a]`}>{caption}</span>
       </span>
     </div>
   );
@@ -127,7 +127,7 @@ export const Summary: React.FC<{ items: { value: React.ReactNode; label: string;
 
 /** The small serif heading over a part of a view: "ყოველდღე", "ბოლო 12 კვირა". */
 export const ViewHeading: React.FC<{ children: React.ReactNode; right?: React.ReactNode }> = ({ children, right }) => (
-  <div className="flex items-baseline gap-2 px-1 pb-1.5">
+  <div className="flex items-center gap-2 px-1 pb-1.5 min-h-8">
     <h4 className="flex-1 min-w-0 font-serif-ge text-[15px] font-bold text-[#7a2028]">{children}</h4>
     {right}
   </div>

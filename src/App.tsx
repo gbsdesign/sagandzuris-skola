@@ -31,6 +31,7 @@ import { startPlacements } from './data/placements';
 import { SignInPrompt } from './components/access/SignInPrompt';
 import { EmailLinkFinish } from './components/access/EmailLinkFinish';
 import { FirstMeeting } from './components/onboarding/FirstMeeting';
+import { CallLayer } from './components/calls/CallLayer';
 import { useKidsMode } from './hooks/useAccess';
 import { useClassMarksSync } from './hooks/useClassMarks';
 import { MembershipGate, WaitingBanner } from './components/access/MembershipGate';
@@ -192,6 +193,11 @@ function AppContent() {
       {/* the one search over the whole app (header button, the home field, "/" or Ctrl+K) */}
       <ErrorBoundary>
         {membership.can('search') && <GlobalSearch />}
+      </ErrorBoundary>
+
+      {/* the school's calls: the call screen and the incoming call (private chats and classes) */}
+      <ErrorBoundary>
+        {membership.can('messages') && <CallLayer logoUrl={currentLogo} />}
       </ErrorBoundary>
     </div>
   );

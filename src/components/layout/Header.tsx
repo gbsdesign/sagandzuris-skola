@@ -7,6 +7,7 @@ import { ClassLogo } from '../classes/ClassLogo';
 import { useAccess } from '../../hooks/useAccess';
 import { askSignIn, openSignIn } from '../access/SignInPrompt';
 import { SearchButton } from '../search/GlobalSearch';
+import { OfflineButton } from '../offline/OfflineButton';
 import { useInbox, isUnread } from '../../hooks/useDirectChat';
 import { User as UserIcon, LogIn, LogOut, Compass, ShieldCheck, Library, GraduationCap, Baby, MessageCircle } from 'lucide-react';
 
@@ -84,6 +85,8 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
           {/* the search sits beside the learning tools; with none of them shown, up here */}
           {!showNav && access.can('search') && <SearchButton />}
           <PWAInstallButton compact />
+          {/* offline mode: the cloud shows whether the app works without internet */}
+          <OfflineButton />
           {/* teachers (and admins): the teacher's panel */}
           {isTeacher && (
             <button

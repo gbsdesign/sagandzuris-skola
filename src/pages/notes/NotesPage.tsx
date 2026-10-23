@@ -4,7 +4,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, BookmarkCheck, BookmarkPlus, Check, ChevronDown, ChevronLeft, ChevronUp, Church, CloudDownload, Download, Ellipsis,
-  FileText, Flame, Headphones, ListOrdered, LoaderCircle, Minus, Moon, Music2, Pause, Piano, Play, Plus, Repeat, RotateCcw,
+  FileText, Flame, Headphones, ListPlus, LoaderCircle, Minus, Moon, Music2, Pause, Piano, Play, Plus, Repeat, RotateCcw,
   Scan, SlidersHorizontal, Sun, SunMoon, TextAlignStart, X, ZoomIn, ZoomOut, Pin,
 } from 'lucide-react';
 import './notes.css';
@@ -202,6 +202,13 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const gutter = wide ? 28 : land ? 14 : 8;
   const isSaved = Boolean(selectedChantVariants?.[vid]);
   const progIdx = liturgy.role === 'teacher' ? (liturgy.program?.items.indexOf(vid) ?? -1) : -1;
+  // the teacher's „მსახურება“ in the top bar: adds this version to the service being composed, or takes it out
+  const toggleProgram = () => {
+    triggerHaptic(12);
+    const items = liturgy.toggle(vid);
+    const i = items.indexOf(vid);
+    showToast(i >= 0 ? `დაემატა მსახურებაში · №${i + 1}` : 'ამოიშალა მსახურებიდან');
+  };
   const tapLines = panel === 'synth' && !church && Boolean(score);
   const shownPaper = paper === 'auto' ? (darkOS ? 'night' : 'day') : paper;
 
@@ -907,6 +914,13 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                 <span className="np-lb">ტექსტი</span>
               </button>
             )}
+            {liturgy.role === 'teacher' && (
+              <button type="button" className={`np-tool ${progIdx >= 0 ? 'saved' : ''}`} data-tool="program" aria-pressed={progIdx >= 0} onClick={toggleProgram}
+                title={progIdx >= 0 ? `მსახურებაშია, №${progIdx + 1}. ამოღება` : 'მსახურებაში დამატება'}>
+                <span className="np-ico">{progIdx >= 0 ? <span className="np-pnum">{progIdx + 1}</span> : <ListPlus strokeWidth={1.8} />}</span>
+                <span className="np-lb">მსახურება</span>
+              </button>
+            )}
             <button type="button" className={`np-tool ${isSaved ? 'saved' : ''}`} data-tool="save" aria-pressed={isSaved} onClick={() => { triggerHaptic(12); toggleVariantSelection(chant, variant); }} title="დამოუკიდებელ სამუშაოში დამატება">
               <span className="np-ico">{isSaved ? <BookmarkCheck strokeWidth={1.8} /> : <BookmarkPlus strokeWidth={1.8} />}</span>
               <span className="np-lb">ჩემი სია</span>
@@ -1040,13 +1054,6 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
           setPaper={p => { triggerHaptic(8); setPaper(p); store.set('sagandzuri_paper', p); }}
           church={church}
           toggleChurch={() => { triggerHaptic(10); setChurch(!church); if (church) showToast('ტაძრის რეჟიმი გამოირთო'); }}
-          regent={liturgy.role === 'teacher'}
-          progIdx={progIdx}
-          toggleProgram={() => {
-            const items = liturgy.toggle(vid);
-            const i = items.indexOf(vid);
-            showToast(i >= 0 ? `დაემატა დღევანდელ წირვაში · №${i + 1}` : 'ამოიშალა დღევანდელი წირვიდან');
-          }}
           offline={offline}
           offlineBusy={offlineBusy}
           keepOffline={keepOffline}
@@ -1091,9 +1098,6 @@ const MoreMenu: React.FC<{
   setPaper: (p: Paper) => void;
   church: boolean;
   toggleChurch: () => void;
-  regent: boolean;
-  progIdx: number;
-  toggleProgram: () => void;
   offline: boolean;
   offlineBusy: boolean;
   keepOffline: () => void;
@@ -1149,12 +1153,6 @@ const MoreMenu: React.FC<{
       <button type="button" className="np-mrow" role="menuitemcheckbox" aria-checked={p.church} onClick={p.toggleChurch}>
         <Church /><span className="txt">ტაძრის რეჟიმი<small>ხმა ითიშება, ზოლი იმალება, ეკრანი არ ქრება</small></span><span className="np-sw" aria-hidden />
       </button>
-      {p.regent && (
-        <button type="button" className="np-mrow" role="menuitem" onClick={p.toggleProgram}>
-          <ListOrdered /><span className="txt">დღევანდელი წირვა<small>{p.progIdx >= 0 ? 'პროგრამაშია. დააჭირე ამოსაღებად' : 'ამ ვერსიის დამატება'}</small></span>
-          <span className="state">{p.progIdx >= 0 ? `№${p.progIdx + 1}` : '+'}</span>
-        </button>
-      )}
       <button type="button" className="np-mrow" role="menuitem" onClick={p.keepOffline} disabled={p.offlineBusy}>
         <CloudDownload /><span className="txt">ინტერნეტის გარეშე<small>ნოტები, სინთეზატორი, ჩანაწერი</small></span>
         <span className={`state ${p.offline ? 'ok' : ''}`}>{p.offlineBusy ? 'იწერება…' : p.offline ? 'ჩამოწერილია' : 'ჩამოწერა'}</span>

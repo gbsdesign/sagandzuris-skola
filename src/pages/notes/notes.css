@@ -85,6 +85,7 @@
 .np-tool[data-tool="more"]{--t-soft:var(--surface-3);--t-ink:var(--ink)}
 .np-tool[aria-expanded="true"]{background:var(--t-soft);color:var(--t-ink)}
 .np-tool.saved{color:var(--wine)}
+.np-pnum{width:21px;height:21px;border-radius:50%;background:var(--wine);color:#fff;font-size:11px;font-weight:800;display:grid;place-items:center;font-variant-numeric:tabular-nums}
 .np-eq{position:absolute;top:-5px;right:-9px;display:none;align-items:flex-end;gap:1.5px;height:10px;padding:0 2px;border-radius:4px;background:var(--chrome)}
 .np-tool.live .np-eq{display:flex}
 .np-eq i{display:block;width:2.5px;border-radius:2px;background:var(--t-ink);animation:np-eq .9s ease-in-out infinite}
@@ -95,7 +96,8 @@
 .np-root:is(.land,.wide) .np-tools{justify-content:flex-start;gap:4px}
 .np-root:is(.land,.wide) .np-tool{flex:none;flex-direction:row;height:36px;gap:7px;padding:0 11px}
 .np-root:is(.land,.wide) .np-tool .np-lb{font-size:12px}
-.np-root:is(.land,.wide) .np-tool[data-tool="save"]{margin-left:auto}
+.np-root:is(.land,.wide) .np-tool:is([data-tool="program"],[data-tool="save"]){margin-left:auto}
+.np-root:is(.land,.wide) .np-tool[data-tool="program"] + .np-tool[data-tool="save"]{margin-left:0}
 .np-root:is(.land,.wide) .np-eq{top:-6px;right:-7px}
 
 /* ---------- panels ---------- */

@@ -2,10 +2,10 @@ name = "sagandzuri-reminders"
 main = "reminders.js"
 compatibility_date = "2026-09-01"
 
-# :50, :55, :59 — the seven-times prayers (10, 5 and 1 minute before an hour);
-# :00 — psalter groups and assignments (Georgian time is worked out inside)
+# every minute: the habits' reminders (any time of day); inside, :50, :55, :59 — the seven-times prayers
+# (10, 5 and 1 minute before an hour) and :00 — psalter groups and assignments (Georgian time is worked out inside)
 [triggers]
-crons = ["50,55,59 * * * *", "0 * * * *"]
+crons = ["* * * * *"]
 
 # subscriptions (schema.sql); create it with: npx wrangler d1 create sagandzuri-reminders
 [[d1_databases]]

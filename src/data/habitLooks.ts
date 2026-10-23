@@ -68,3 +68,6 @@ export const SCHOOL_COUNTERS: Record<string, HabitCounter> = {
 
 // what one tap on the day list's "+" adds (the Jesus prayer goes by tens); 1 for the rest
 export const COUNTER_TAP_STEP: Record<string, number> = { habit_5: 10 };
+
+// counted by „წავიკითხე“ at a chapter's end (+1 თავი), so their day-list row has no "+"
+export const COUNTED_BY_READING = ['habit_2', 'habit_3'];

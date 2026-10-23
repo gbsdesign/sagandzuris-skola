@@ -36,6 +36,8 @@ export interface DirectThread {
   read: Record<string, Date | null>;
   callAt: Date | null;
   callBy: string;
+  callKind: 'audio' | 'video';
+  callEnd: Date | null;
   createdAt: Date | null;
 }
 
@@ -69,6 +71,8 @@ const toThread = (id: string, d: any): DirectThread => {
     read: Object.fromEntries(Object.entries(d.read || {}).map(([k, v]) => [k, toDate(v)])),
     callAt: toDate(d.callAt),
     callBy: d.callBy || '',
+    callKind: d.callKind === 'audio' ? 'audio' : 'video',
+    callEnd: toDate(d.callEnd),
     createdAt: toDate(d.createdAt),
   };
 };
@@ -322,13 +326,20 @@ export const noteSent = (t: DirectThread, uid: string, preview: string) =>
 export const markRead = (t: DirectThread, uid: string) =>
   updateDoc(doc(db, 'dms', t.id), { [`read.${readKey(t, uid)}`]: serverTimestamp() });
 
-export const CALL_PREVIEW = '📹 ზარი';
-
-/** The teacher's "ზარი": a call card in the chat; an open app on the student's side shows "გირეკავთ". */
-export const notePrivateCall = async (id: string, author: ChatAuthor) => {
-  await sendCallMessage(dmBase(id), author);
-  await updateDoc(doc(db, 'dms', id), {
-    callAt: serverTimestamp(), callBy: author.uid,
-    lastAt: serverTimestamp(), lastBy: author.uid, lastText: CALL_PREVIEW, [`read.${author.uid}`]: serverTimestamp(),
+/**
+ * The teacher's (or an admin's) call: a call card in the chat, and callAt/callBy/callKind, which ring on the other
+ * side while its app is open (components/calls/CallLayer).
+ */
+export const notePrivateCall = async (t: DirectThread, author: ChatAuthor, kind: 'audio' | 'video') => {
+  await sendCallMessage(dmBase(t.id), author);
+  await updateDoc(doc(db, 'dms', t.id), {
+    callAt: serverTimestamp(), callBy: author.uid, callKind: kind,
+    lastAt: serverTimestamp(), lastBy: author.uid, lastText: kind === 'video' ? '📹 ვიდეოზარი' : '📞 ზარი',
+    [`read.${readKey(t, author.uid)}`]: serverTimestamp(),
   });
 };
+
+/** The call is ringing on uid's side: started a moment ago by the other side and not ended. */
+export const isRinging = (t: DirectThread, uid: string, now = Date.now()) =>
+  !!t.callAt && t.callBy !== uid && now - t.callAt.getTime() < 45_000 && (!t.callEnd || t.callEnd < t.callAt)
+  && (t.kind === 'admin' ? t.members[0] === uid : t.members.includes(uid));

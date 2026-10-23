@@ -82,7 +82,9 @@ export const MonthView: React.FC<{ model: HabitsModel; onPickDay: (d: Date) => v
 const DayDone: React.FC<{ model: HabitsModel; date: Date; onPickDay: (d: Date) => void }> = ({ model, date, onPickDay }) => {
   const s = dayState(model.log, model.dailyIds, date);
   const done = model.all.filter(x => model.isOn(x.habit.id, date));
-  const undone = model.all.filter(x => x.group.goal.per === 'day' && !model.isOn(x.habit.id, date));
+  // a habit with its own days counts as left undone on those days only
+  const due = model.dailyIds(date);
+  const undone = model.all.filter(x => x.group.goal.per === 'day' && due.includes(x.habit.id) && !model.isOn(x.habit.id, date));
   const open = canTickDay(date);
   return (
     <section className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] p-3 space-y-2.5 animate-in fade-in duration-200">

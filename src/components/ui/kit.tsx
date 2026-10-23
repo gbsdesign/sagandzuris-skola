@@ -219,9 +219,29 @@ export const Toggle: React.FC<{ on: boolean; onChange: (on: boolean) => void; la
       <span className="block text-[15px] font-semibold text-[#2a2017]">{label}</span>
       {hint && <span className="block text-[13px] text-[#8a7a6a] leading-snug">{hint}</span>}
     </span>
-    <span className={cx('relative w-12 h-7 shrink-0 rounded-full transition-colors', on ? 'bg-[#7a2028]' : 'bg-[#dccdb5]')}>
-      <span className={cx('absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-[left]', on ? 'left-6' : 'left-1')} />
-    </span>
+    <Knob on={on} />
+  </button>
+);
+
+const Knob: React.FC<{ on: boolean }> = ({ on }) => (
+  <span className={cx('relative block w-12 h-7 shrink-0 rounded-full transition-colors', on ? 'bg-[#7a2028]' : 'bg-[#dccdb5]')}>
+    <span className={cx('absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-[left]', on ? 'left-6' : 'left-1')} />
+  </span>
+);
+
+/** The same switch without its own label, for a row that has more in it; the tap area is 44px tall. */
+export const Switch: React.FC<{ on: boolean; onChange: (on: boolean) => void; label: string; disabled?: boolean }> = ({ on, onChange, label, disabled }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={on}
+    aria-label={label}
+    title={label}
+    disabled={disabled}
+    onClick={() => { triggerHaptic(10); onChange(!on); }}
+    className="h-11 px-1 shrink-0 flex items-center cursor-pointer disabled:opacity-50 disabled:cursor-default"
+  >
+    <Knob on={on} />
   </button>
 );
 

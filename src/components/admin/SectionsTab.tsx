@@ -4,7 +4,8 @@ import { LayoutGrid, Baby, Save, Check } from 'lucide-react';
 import { db } from '../../firebase';
 import { SECTIONS, SectionId, SectionState } from '../../data/sections';
 import { useSections } from '../../hooks/useSections';
-import { Btn, Card, CardTitle } from '../ui/kit';
+import { Btn } from '../ui/kit';
+import { Fold } from './Fold';
 
 // each state with its own colour, so the list reads at a glance
 const STATES: { id: SectionState; label: string; dot: string; on: string }[] = [
@@ -14,7 +15,7 @@ const STATES: { id: SectionState; label: string; dot: string; on: string }[] = [
 ];
 
 // "განყოფილებები" (in the „სკოლა“ tab): which sections show on the home vine and in the header — open,
-// marked "მალე" or hidden — and which sections a new kids' mode starts with. One card, one save.
+// marked "მალე" or hidden — and which sections a new kids' mode starts with. One folding card, one save.
 export const SectionsTab: React.FC<{ onMessage: (t: string, type: 'success' | 'error') => void }> = ({ onMessage }) => {
   const saved = useSections();
   const [state, setState] = useState(saved.state);
@@ -35,10 +36,21 @@ export const SectionsTab: React.FC<{ onMessage: (t: string, type: 'success' | 'e
     }
   };
 
+  // the folded card's line: how many sections stand in each state, or a warning while changes wait unsaved
+  const summary = dirty
+    ? <span className="font-semibold text-[#9a6212]">ცვლილება ჯერ არ შენახულა</span>
+    : STATES.map(st => ({ st, n: SECTIONS.filter(s => state[s.id] === st.id).length }))
+      .filter(x => x.n > 0)
+      .map(({ st, n }, i) => (
+        <React.Fragment key={st.id}>
+          {i > 0 && ' · '}
+          <span className="inline-flex items-center gap-1"><span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />{n} {st.label}</span>
+        </React.Fragment>
+      ));
+
   return (
-    <Card>
-      <CardTitle icon={<LayoutGrid />} title="განყოფილებები"
-        info="ღია — ყველა ხედავს; მალე — ჩანს „მალე“ წარწერით; დამალული — არსად ჩანს. ადმინები ყოველთვის ხედავენ ყველაფერს. საბავშვო რეჟიმს მოსწავლეს მასწავლებელი თავად ურთავს და შეუძლია ქვემოთა სია შეცვალოს." />
+    <Fold icon={<LayoutGrid />} title="განყოფილებები" summary={summary}
+        info="ღია — ყველა ხედავს; მალე — ჩანს „მალე“ წარწერით; დამალული — არსად ჩანს. ადმინები ყოველთვის ხედავენ ყველაფერს. საბავშვო რეჟიმს მოსწავლეს მასწავლებელი თავად ურთავს და შეუძლია ქვემოთა სია შეცვალოს.">
       <ul className="grid md:grid-cols-2 md:gap-x-8">
         {SECTIONS.map(sec => (
           <li key={sec.id} className="py-2 flex flex-wrap items-center gap-x-3 gap-y-1.5 border-b border-[#f1e8d9]">
@@ -86,6 +98,6 @@ export const SectionsTab: React.FC<{ onMessage: (t: string, type: 'success' | 'e
           <Btn size="sm" icon={<Save />} disabled={busy} onClick={save}>{busy ? 'ინახება…' : 'შენახვა'}</Btn>
         </div>
       )}
-    </Card>
+    </Fold>
   );
 };

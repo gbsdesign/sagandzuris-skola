@@ -72,17 +72,29 @@ export const dayNeeds = (total: number) => Math.ceil(total / 2);
 
 /** Counted days in a row up to today — or up to yesterday while today has not counted yet.
  *  `capped`: the run reaches back to the start of what the log holds, so it may be longer. */
-export const keptStreak = (log: HabitLog, ids: string[], now: Date = new Date()): { days: number; capped: boolean } => {
-  if (!ids.length) return { days: 0, capped: false };
-  const need = dayNeeds(ids.length);
+export const keptStreak = (log: HabitLog, ids: DayIds, now: Date = new Date()): { days: number; capped: boolean } => {
+  if (Array.isArray(ids) && !ids.length) return { days: 0, capped: false };
   const oldest = Object.keys(log).sort()[0];
   const held = oldest ? Math.round((new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime() - new Date(`${oldest}T00:00:00`).getTime()) / 86_400_000) + 1 : 0;
   const days = lastDays(Math.max(OLD_LOG_DAYS, held), now).reverse(); // today first
-  let i = doneOn(log, ids, days[0]) >= need ? 0 : 1;
+  // a day with no daily habit due neither counts nor breaks the run
+  const kept = (d: Date) => {
+    const due = idsOn(ids, d);
+    return !due.length ? null : doneOn(log, due, d) >= dayNeeds(due.length);
+  };
+  let i = kept(days[0]) ? 0 : 1;
   let run = 0;
-  for (; i < days.length && doneOn(log, ids, days[i]) >= need; i++) run++;
+  for (; i < days.length; i++) {
+    const k = kept(days[i]);
+    if (k === false) break;
+    if (k) run++;
+  }
   return { days: run, capped: run > 0 && i === days.length };
 };
+
+/** The daily habits, the same every day or due day by day (a habit with „მორგებული“ days). */
+export type DayIds = string[] | ((date: Date) => string[]);
+export const idsOn = (ids: DayIds, date: Date): string[] => (typeof ids === 'function' ? ids(date) : ids);
 
 /** Habits ticked at least once in the current habits week: kept in `habitsStats` for the admin panel. */
 export const habitsThisWeek = (log: HabitLog, now: Date = new Date()): Record<string, boolean> => {

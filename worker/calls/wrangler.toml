@@ -1,0 +1,6 @@
+name = "sagandzuri-calls"
+main = "calls.js"
+compatibility_date = "2026-09-01"
+
+[vars]
+FIREBASE_PROJECT_ID = "psalms-reading-group-ge-dev"

@@ -21,6 +21,7 @@ const write = () => {
 };
 
 export const isOffline = (variantId: string) => saved.has(variantId);
+export const savedVersions = () => [...saved];
 export const offlineCount = (ids: string[]) => ids.filter(id => saved.has(id)).length;
 export const onOfflineChange = (f: () => void) => { listeners.add(f); return () => { listeners.delete(f); }; };
 export const offlineSupported = () => typeof caches !== 'undefined';

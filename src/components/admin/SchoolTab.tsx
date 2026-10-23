@@ -1,16 +1,17 @@
 import React, { useState } from 'react';
 import { Bytes, Timestamp, collection, getDocs } from 'firebase/firestore';
-import { ChevronDown, DatabaseBackup, Download, ListChecks, Loader2 } from 'lucide-react';
+import { DatabaseBackup, Download, ListChecks, Loader2 } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
 import { Btn, Card } from '../ui/kit';
+import { Fold } from './Fold';
 import { SectionsTab } from './SectionsTab';
 import { TopChants } from './StatsTab';
 import type { UserRecord } from './UsersTab';
 
-// a small square icon, the same as a card title's
+// a small square icon, the same as a folding card's
 const RowIcon: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <span className="w-9 h-9 shrink-0 rounded-xl bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center [&>svg]:w-[18px] [&>svg]:h-[18px]">{children}</span>
+  <span className="w-10 h-10 shrink-0 rounded-2xl bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center [&>svg]:w-5 [&>svg]:h-5">{children}</span>
 );
 
 // Firestore values made plain for JSON (times as ISO text; voice-message audio is left out).
@@ -27,14 +28,13 @@ const readAll = async (path: string[]) => {
   return snap.docs.map(d => ({ id: d.id, ...(plain(d.data()) as object) }));
 };
 
-// "სკოლა": the whole school in one place — sections, the most listened chants (the former „ჩანაწერები“ tab),
-// and one small card with the backup export and the owner's safety checklist (folded).
+// "სკოლა": the whole school in one place, one card under another — sections and the most listened chants
+// (the former „ჩანაწერები“ tab) as folding cards, the backup export, and the owner's safety checklist (folded).
 // The staff are found in „მომხმარებლები“ (filter „ადმინები“), where their roles are given.
 // The logo card was removed on the user's request (2026-10-20); a logo already saved in settings/logo still shows.
 export const SchoolTab: React.FC<{ users: UserRecord[]; onMessage: (t: string, type: 'success' | 'error') => void }> = ({ users, onMessage }) => {
   const { isOwner } = useAuth();
   const [exporting, setExporting] = useState<string | null>(null);
-  const [checklist, setChecklist] = useState(false);
 
   const exportAll = async () => {
     setExporting('იწყება…');
@@ -74,46 +74,35 @@ export const SchoolTab: React.FC<{ users: UserRecord[]; onMessage: (t: string, t
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <SectionsTab onMessage={onMessage} />
       <TopChants users={users} />
 
       <Card className="!py-3">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 py-1">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 min-h-[44px]">
           <RowIcon><DatabaseBackup /></RowIcon>
           <span className="flex-1 min-w-[10rem]">
-            <span className="block text-[14px] font-bold text-[#4a3426]">სარეზერვო ასლი</span>
-            <span className="block text-[12px] text-[#8a7a6a] leading-snug">ყველა მონაცემი ერთ ფაილად · გირჩევ თვეში ერთხელ</span>
+            <span className="block font-serif-ge text-[16px] font-bold text-[#4a3426] leading-snug">სარეზერვო ასლი</span>
+            <span className="block text-[12.5px] text-[#8a7a6a] leading-snug mt-0.5">ყველა მონაცემი ერთ ფაილად · გირჩევ თვეში ერთხელ</span>
           </span>
           <Btn size="sm" kind="ghost" icon={exporting ? <Loader2 className="animate-spin" /> : <Download />} disabled={!!exporting} onClick={exportAll}
             title="მოსწავლეები და მათი გზა, კლასები, დავალებები, დასწრება, ჩატის ტექსტი, ფსალმუნთა ჯგუფები, მოსახსენებელი სახელები. ხმოვანი შეტყობინებების აუდიო არ შედის.">
             {exporting ? `მზადდება… ${exporting}` : 'ჩამოტვირთვა'}
           </Btn>
         </div>
-
-        {isOwner && (
-          <div className="mt-2 pt-2 border-t border-[#f1e8d9]">
-            <button type="button" aria-expanded={checklist} onClick={() => setChecklist(o => !o)}
-              className="w-full flex items-center gap-3 py-1 text-left cursor-pointer">
-              <RowIcon><ListChecks /></RowIcon>
-              <span className="flex-1 min-w-0">
-                <span className="block text-[14px] font-bold text-[#4a3426]">უსაფრთხოების შემოწმება</span>
-                <span className="block text-[12px] text-[#8a7a6a] leading-snug">5 რამ Firebase-ის კონსოლში, ერთხელ · მხოლოდ შენ ხედავ</span>
-              </span>
-              <ChevronDown className={`w-5 h-5 shrink-0 text-[#8a7a6a] transition-transform ${checklist ? 'rotate-180' : ''}`} />
-            </button>
-            {checklist && (
-              <ol className="mt-2 mb-1 sm:ml-12 space-y-1.5 text-[13px] leading-relaxed text-[#4a3426] list-decimal pl-5 marker:text-[#7a2028] marker:font-bold sg-in">
-                <li>Project settings → Users and permissions: მფლობელი (Owner) შენ ხარ.</li>
-                <li>Firestore → Rules: ჩასვი პროექტის ფაილი <code className="text-[12px] bg-[#f4ece0] px-1 rounded">firestore.rules</code> და Publish.</li>
-                <li>Usage and billing → Budget alert: შეტყობინება, თუ ხარჯი გაჩნდება.</li>
-                <li>Google Cloud → APIs → Credentials: API გასაღები შეზღუდე საიტის მისამართებზე.</li>
-                <li>Authentication → Settings → Authorized domains: მხოლოდ საიტის მისამართები.</li>
-              </ol>
-            )}
-          </div>
-        )}
       </Card>
+
+      {isOwner && (
+        <Fold icon={<ListChecks />} title="უსაფრთხოების შემოწმება" summary="5 რამ Firebase-ის კონსოლში, ერთხელ · მხოლოდ შენ ხედავ">
+          <ol className="space-y-1.5 text-[13px] leading-relaxed text-[#4a3426] list-decimal pl-5 sm:ml-[52px] marker:text-[#7a2028] marker:font-bold">
+            <li>Project settings → Users and permissions: მფლობელი (Owner) შენ ხარ.</li>
+            <li>Firestore → Rules: ჩასვი პროექტის ფაილი <code className="text-[12px] bg-[#f4ece0] px-1 rounded">firestore.rules</code> და Publish.</li>
+            <li>Usage and billing → Budget alert: შეტყობინება, თუ ხარჯი გაჩნდება.</li>
+            <li>Google Cloud → APIs → Credentials: API გასაღები შეზღუდე საიტის მისამართებზე.</li>
+            <li>Authentication → Settings → Authorized domains: მხოლოდ საიტის მისამართები.</li>
+          </ol>
+        </Fold>
+      )}
     </div>
   );
 };

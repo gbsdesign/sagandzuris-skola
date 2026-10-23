@@ -107,7 +107,7 @@ const LiturgyButton: React.FC<{ onClick: () => void }> = ({ onClick }) => (
 );
 
 /** The class's window: members (from the people list), program, home buttons. */
-const ClassSettings: React.FC<{
+export const ClassSettings: React.FC<{
   cls: SchoolClass;
   classes: SchoolClass[];
   onMessage: (text: string, type: 'success' | 'error') => void;

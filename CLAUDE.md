@@ -43,7 +43,14 @@
   or offset/limit; don't try to work around it.
 - Keep command output small: `npm run build 2>&1 | tail -20`, `git diff --stat` before a full diff,
   `git log --oneline -5`. Don't print whole JSON files.
-- Don't start subagents/workflows unless the user asks — each one re-reads the project from scratch.
+- **Work split (the user asked for it, 2026-10-21):** Opus stays the main worker — plans, decides, reviews, does
+  design, `firestore.rules`, publishing and anything hard to undo. Hand off only clearly specified routine work:
+  `helper` (Haiku) = one small edit or lookup; `worker` (Sonnet) = a bigger mechanical job (many similar edits, data
+  moves, a wide search). Each brief names the files + line ranges, the exact change and what not to touch (agents start
+  cold — a vague brief costs more than doing it). Small fixes: do them directly. Review every result (`git diff`);
+  if fixing it would cost more than redoing, revert and do it yourself. Say in one Georgian line who does what.
+  A kind of job an agent fails twice → stop delegating it and note it here: —
+- No other subagents/workflows unless the user asks.
 - Progress notes in Georgian should be one or two short lines; save detail for the final summary.
 - Don't re-read a file you just edited, and don't re-run a check that already passed.
 - The user's task template is `docs/დავალების-შაბლონი.md`. If a request is unclear, ask one short
@@ -138,7 +145,9 @@
 - **Teacher panel** (`pages/TeacherPage.tsx`, `components/teacher/`), **admin panel** (`pages/AdminPanelPage.tsx`,
   `components/admin/`): sections open/მალე/hidden (`settings/sections`); JSON export. The panel's recording-binding
   form and logo card were removed 2026-10-20 (the app still reads `settings/recordings` and `settings/logo`).
-  Since 2026-10-20 three tabs on the „one window“ rule: მომხმარებლები (one list + count filters; a tap opens the
+  Since 2026-10-21 (edu.doit.gov.ge style) a wine-to-gold head `admin/AdminHero.tsx` with 4 big numbers that open
+  their list (those filters have no chip), class cards in a 2-column grid, „სკოლა“ as folding cards (`admin/Fold.tsx`).
+  Since 2026-10-20 three tabs on the „one window“ rule: წევრები (one list + count filters; a tap opens the
   person's window `admin/PersonSheet.tsx` — details, role, access, approve/refuse, profile edit), კლასები (class and
   group windows, shared `LeaderChips`), სკოლა (sections, most listened, backup + folded safety list). Numbers of the
   old სტატისტიკა tab live in `admin/StatsTab.tsx` hooks; old shortcut refs `admin:sections`/`admin:stats` still open.

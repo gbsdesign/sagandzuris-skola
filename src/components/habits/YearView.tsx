@@ -3,6 +3,8 @@ import { ChevronRight } from 'lucide-react';
 import { MONTHS_SHORT_GE } from '../../utils/dateNames';
 import { dayKey } from '../../utils/habitsWeek';
 import { addDays, dayState, goalShare, parseDay, ticksBetween, ticksOf, yearWeeks } from '../../utils/habitStats';
+import { planShare } from '../../utils/habitSchedule';
+import type { HabitSchedule } from '../../utils/myHabits';
 import { HabitBadge, colorOf, tint } from './HabitIcon';
 import { HabitsModel } from './useHabits';
 import { PeriodNav, Summary, ViewHeading } from './parts';
@@ -130,7 +132,7 @@ export const YearView: React.FC<{ model: HabitsModel }> = ({ model }) => {
         <ViewHeading>ჩვევები</ViewHeading>
         <ul className="rounded-2xl ring-1 ring-[#e8dcc8] bg-white divide-y divide-[#f1e8d9] overflow-hidden">
           {model.all.map(({ habit, group }) => (
-            <HabitYearRow key={habit.id} model={model} id={habit.id} label={habit.label} goal={group.goal} year={year} from={from} to={to} />
+            <HabitYearRow key={habit.id} model={model} id={habit.id} label={habit.label} goal={group.goal} schedule={habit.schedule} year={year} from={from} to={to} />
           ))}
         </ul>
       </section>
@@ -144,13 +146,14 @@ const HabitYearRow: React.FC<{
   id: string;
   label: string;
   goal: { times: number; per: 'day' | 'week' | 'month' };
+  schedule?: HabitSchedule;
   year: number;
   from: Date;
   to: Date;
-}> = ({ model, id, label, goal, year, from, to }) => {
+}> = ({ model, id, label, goal, schedule, year, from, to }) => {
   const ticks = useMemo(() => ticksOf(model.log, id), [model.log, id]);
   const look = model.looks[id];
-  const share = goalShare(ticks, goal, model.first, from, to);
+  const share = schedule ? planShare(schedule, ticks, model.first, new Date(), from, to) : goalShare(ticks, goal, model.first, from, to);
   const days = ticksBetween(ticks, from, to);
   return (
     <li>

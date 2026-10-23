@@ -82,6 +82,22 @@ export async function isAudioInIndexedDB(url: string): Promise<boolean> {
 }
 
 /**
+ * Every recording URL kept in IndexedDB (offline mode, utils/offlineFiles.ts)
+ */
+export async function listAudioKeys(): Promise<string[]> {
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const req = db.transaction(STORE_NAME, 'readonly').objectStore(STORE_NAME).getAllKeys();
+      req.onsuccess = () => resolve(req.result.map(String));
+      req.onerror = () => resolve([]);
+    });
+  } catch {
+    return [];
+  }
+}
+
+/**
  * Removes audio entry from IndexedDB
  */
 export async function removeAudioFromIndexedDB(url: string): Promise<boolean> {

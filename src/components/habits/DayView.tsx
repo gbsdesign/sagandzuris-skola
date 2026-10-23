@@ -1,15 +1,19 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowUpDown, BookOpen, Check, ChevronDown, ChevronRight, Flame, Info, Plus } from 'lucide-react';
-import { COUNTER_TAP_STEP, HabitCounter } from '../../data/habitLooks';
+import { ArrowUpDown, BellRing, Check, Clock, ChevronDown, ChevronRight, Flame, Info, Pencil, Plus } from 'lucide-react';
+import { COUNTED_BY_READING, COUNTER_TAP_STEP, HabitCounter } from '../../data/habitLooks';
 import { HabitGroupType } from '../../data/habitsAndManera';
-import { HabitLink, MyHabit, MyHabitGroup } from '../../utils/myHabits';
+import { HabitLink, HabitSchedule, MyHabit, MyHabitGroup } from '../../utils/myHabits';
+import { isDue, planRun, planShare } from '../../utils/habitSchedule';
 import { MONTHS_GE, WEEKDAYS_GE, WEEKDAYS_SHORT_GE } from '../../utils/dateNames';
 import { TICK_DAYS, dayKey, dayNeeds, keptStreak, lastDays, periodStart } from '../../utils/habitsWeek';
-import { currentRun, dayState, ticksOf, timesIn } from '../../utils/habitStats';
+import { currentRun, dayState, goalShare, ticksOf, timesIn } from '../../utils/habitStats';
 import { triggerHaptic } from '../../utils/haptics';
 import { HabitPrayerMenu, singlePrayerOf } from '../views/HabitPrayerMenu';
 import { HabitLinkChip } from '../views/HabitLinks';
+import { RICH_TEXT } from '../views/RichNoteEditor';
+import { safeNoteHtml } from '../../utils/richNote';
 import { HabitIcon, colorOf, tint } from './HabitIcon';
+import { FROM_WORD } from './HabitPage';
 import { HabitsModel } from './useHabits';
 import { DayDot, Ring, ViewHeading, dotState } from './parts';
 
@@ -21,9 +25,9 @@ export interface ListEdit {
   add: (col: 0 | 1) => void;
   /** the list's habits with grips, drawn in its place while „რიგი“ is on */
   reorder: (col: 0 | 1) => React.ReactNode;
+  /** a habit's settings, unfolded under its card by ✏️; `done` folds them back */
+  settings: (id: string, done: () => void) => React.ReactNode;
 }
-
-const TOOL = 'min-h-10 px-3 rounded-full inline-flex items-center gap-1.5 text-[13px] font-bold cursor-pointer transition-colors active:scale-[0.97]';
 
 const longDate = (d: Date) => `${WEEKDAYS_GE[d.getDay()]}, ${d.getDate()} ${MONTHS_GE[d.getMonth()]}`;
 
@@ -45,12 +49,12 @@ const DayStrip: React.FC<{ model: HabitsModel; selected: Date; onSelect: (d: Dat
             aria-checked={on}
             aria-label={`${today ? 'დღეს, ' : ''}${longDate(d)} — ${s.done} / ${s.total}`}
             onClick={() => { triggerHaptic(8); onSelect(d); }}
-            className={`min-w-0 flex flex-col items-center gap-1 pt-1.5 pb-2 rounded-2xl cursor-pointer transition-colors ${
+            className={`min-w-0 flex flex-col items-center gap-0.5 pt-1 pb-1.5 rounded-2xl cursor-pointer transition-colors ${
               on ? 'bg-white ring-1 ring-[#e8dcc8] shadow-[0_3px_10px_-6px_rgba(74,52,38,0.35)]' : 'hover:bg-white/60'
             }`}
           >
             <span className={`text-[11px] font-bold leading-none ${on ? 'text-[#7a2028]' : 'text-[#8a7a6a]'}`}>{today ? 'დღეს' : WEEKDAYS_SHORT_GE[d.getDay()]}</span>
-            <DayDot day={d.getDate()} share={s.share} state={dotState(s.share, s.counted, false)} today={today} />
+            <DayDot day={d.getDate()} share={s.share} state={dotState(s.share, s.counted, false)} today={today} size={32} />
           </button>
         );
       })}
@@ -73,13 +77,15 @@ const PeriodNote: React.FC<{ count: number; goal: HabitGroupType['goal']; curren
   );
 };
 
-/** A counted habit's day under its name: the bar and „8 / 15 შეკვეთა“; a tap on the number types the exact one. */
-const CountBar: React.FC<{ count: number; counter: HabitCounter; color: string; label: string; onSet: (n: number) => void }> = ({
+/** A counted habit's day under its name: the bar and „8 / 15 შეკვეთა“; a tap on the number types the exact one.
+ *  `bare`: the number only (a card that shows the count as a ring round its button). */
+const CountBar: React.FC<{ count: number; counter: HabitCounter; color: string; label: string; onSet: (n: number) => void; bare?: boolean }> = ({
   count,
   counter,
   color,
   label,
   onSet,
+  bare,
 }) => {
   const [typing, setTyping] = useState<string | null>(null);
   const cancelled = React.useRef(false);
@@ -95,25 +101,27 @@ const CountBar: React.FC<{ count: number; counter: HabitCounter; color: string; 
     </>
   );
   return (
-    <div className="flex items-center gap-2.5">
-      <span
-        role="progressbar"
-        aria-label={label}
-        aria-valuemin={0}
-        aria-valuemax={counter.goal}
-        aria-valuenow={Math.min(count, counter.goal)}
-        className="flex-1 min-w-0 h-2 rounded-full overflow-hidden"
-        style={{ background: tint(color, 0.15) }}
-      >
-        <span className="block h-full rounded-full transition-[width] duration-300" style={{ width: `${Math.min(1, count / counter.goal) * 100}%`, background: color }} />
-      </span>
+    <div className={`${bare ? 'inline-flex gap-0' : 'flex gap-2.5'} items-center`}>
+      {!bare && (
+        <span
+          role="progressbar"
+          aria-label={label}
+          aria-valuemin={0}
+          aria-valuemax={counter.goal}
+          aria-valuenow={Math.min(count, counter.goal)}
+          className="flex-1 min-w-0 h-2 rounded-full overflow-hidden"
+          style={{ background: tint(color, 0.15) }}
+        >
+          <span className="block h-full rounded-full transition-[width] duration-300" style={{ width: `${Math.min(1, count / counter.goal) * 100}%`, background: color }} />
+        </span>
+      )}
       {typing === null ? (
         <button
           type="button"
           onClick={() => setTyping(String(count))}
           aria-label={`${label} — ${count} / ${counter.goal} ${counter.unit}, რიცხვის ჩაწერა`}
           title="რიცხვის ჩაწერა"
-          className="h-9 -my-1.5 -mr-1 px-2 shrink-0 rounded-full text-[12.5px] font-bold tabular-nums cursor-pointer hover:bg-black/[0.04] transition-colors"
+          className={`h-9 -my-1.5 ${bare ? '-ml-2 -mr-1.5' : '-mr-1'} px-2 shrink-0 rounded-full text-[12.5px] font-bold tabular-nums cursor-pointer hover:bg-black/[0.04] transition-colors`}
           style={{ color }}
         >
           {of}
@@ -144,9 +152,62 @@ const CountBar: React.FC<{ count: number; counter: HabitCounter; color: string; 
   );
 };
 
-// One habit: the round button ticks the chosen day (the habit's icon until it is done); a tap on the name unfolds the
-// habit's prayers and its own buttons, or opens its one prayer (one without either is ticked by its name too). A counted habit
-// has its bar under the name and „+“; „🔥 ›“ opens the habit's page; ⓘ unfolds the member's note.
+// A card shows its own numbers: today's count as a ring round the round button, the share and the days under the name,
+// the last ten days as dots beside it, ✏️ unfolding its settings (2026-10-23, every habit).
+const RING = 2 * Math.PI * 18.5;
+// how many days the dots beside a card's name show
+const DOTS = 10;
+
+/** Beside today's count under the name: how often the goal was met and the days ticked in all. */
+const CardStats: React.FC<{ ticks: Set<string>; goal: HabitGroupType['goal']; first: string | null; schedule?: HabitSchedule }> = ({
+  ticks,
+  goal,
+  first,
+  schedule,
+}) => {
+  // a habit with its own days: the share of those days
+  const share = schedule ? planShare(schedule, ticks, first) : goalShare(ticks, goal, first);
+  return (
+    <>
+      <span title={share.of ? `შესრულება ${share.percent}% — ${share.of} ${schedule ? 'დღიდან' : FROM_WORD[goal.per]}` : 'შესრულება — ჯერ არც ერთი დღე არ დასრულებულა'}>
+        {share.of ? `${share.percent}%` : '—'}
+      </span>
+      <span title="სულ მოინიშნა">{ticks.size} დღე</span>
+    </>
+  );
+};
+
+/** „🔥 6“: periods (days, for a daily habit) in a row that met the goal. */
+const Run: React.FC<{ run: number; className?: string }> = ({ run, className = '' }) => (
+  <span title={`ზედიზედ ${run}`} className={`inline-flex items-center gap-0.5 text-[12.5px] leading-none font-bold tabular-nums text-[#b4441c] ${className}`}>
+    <Flame className="w-3.5 h-3.5 shrink-0" />
+    {run}
+  </span>
+);
+
+/** The habit's last ten days as dots beside its name, today's on the right; a done day is filled in its colour. */
+const WeekDots: React.FC<{ ticks: Set<string>; color: string; className: string }> = ({ ticks, color, className }) => (
+  <span className={`shrink-0 items-center gap-[3px] ${className}`} title={`ბოლო ${DOTS} დღე`}>
+    {lastDays(DOTS).map((d, i) => {
+      const on = ticks.has(dayKey(d));
+      return (
+        <span
+          key={i}
+          aria-label={`${longDate(d)}${on ? ' ✓' : ''}`}
+          className={`rounded-full transition-colors ${i === DOTS - 1 ? 'w-2 h-2' : 'w-1.5 h-1.5'}`}
+          style={{ background: on ? color : tint(color, 0.18) }}
+        />
+      );
+    })}
+  </span>
+);
+
+// One habit: the round button ticks the chosen day (the habit's icon until it is done; a counted habit's count runs
+// round it as a ring); a tap on the name unfolds the habit's prayers and its own buttons, or opens its one prayer (one
+// without either is ticked by its name too). Under the name one line of numbers: today's count, the share, the days, the
+// time, the run; a weekly or monthly habit has its period („ამ კვირას 1 / 2“) there instead of the dots. A counted habit
+// has „+“ (not the Gospel and the Apostle: their chapters count by „წავიკითხე“); ✏️ unfolds its settings under it (without
+// them — a guest — „›“ opens the habit's page); ⓘ unfolds the member's note.
 const HabitRow: React.FC<{
   model: HabitsModel;
   habit: MyHabit;
@@ -154,7 +215,11 @@ const HabitRow: React.FC<{
   date: Date;
   onOpenPrayer: (prayerId: string) => void;
   onLink: (l: HabitLink) => void;
-}> = ({ model, habit, group, date, onOpenPrayer, onLink }) => {
+  edit?: ListEdit;
+  /** its settings are unfolded (kept by the list, so a habit stays while its own days are changed) */
+  editing: boolean;
+  onEditing: (on: boolean) => void;
+}> = ({ model, habit, group, date, onOpenPrayer, onLink, edit, editing, onEditing }) => {
   const [noteOpen, setNoteOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const look = model.looks[habit.id];
@@ -164,7 +229,8 @@ const HabitRow: React.FC<{
   const count = counter ? model.countOn(habit.id, date) : 0;
   const step = COUNTER_TAP_STEP[habit.id] ?? 1;
   const ticks = useMemo(() => ticksOf(model.log, habit.id), [model.log, habit.id]);
-  const run = currentRun(ticks, group.goal, model.first);
+  const run = habit.schedule ? planRun(habit.schedule, ticks, model.first) : currentRun(ticks, group.goal, model.first);
+  const ring = !!counter && !on;
   const links = habit.links || [];
   // the morning or evening prayers open straight away, unless the member added buttons of their own to unfold
   const single = links.length === 0 ? singlePrayerOf(habit.menu) : null;
@@ -179,18 +245,12 @@ const HabitRow: React.FC<{
       type="button"
       onClick={single ? () => onOpenPrayer(single) : folds ? () => setMenuOpen(o => !o) : toggle}
       aria-expanded={folds ? menuOpen : undefined}
-      className={`${counter ? 'block w-full py-1' : 'flex-1 min-w-0 min-h-[56px] py-2 pr-1'} text-left cursor-pointer select-none`}
+      className="block w-full py-0.5 text-left cursor-pointer select-none"
     >
       <span className="flex items-center gap-1 text-[15px] font-medium leading-snug text-[#2a2017]">
         {habit.label}
-        {single && <BookOpen className="w-4 h-4 shrink-0 text-[#b8a68e]" />}
         {folds && <ChevronDown className={`w-4 h-4 shrink-0 text-[#b8a68e] transition-transform ${menuOpen ? 'rotate-180' : ''}`} />}
       </span>
-      {rare && (
-        <span className="block mt-0.5 leading-none">
-          <PeriodNote count={timesIn(ticks, periodStart(group.goal.per, date), group.goal.per)} goal={group.goal} current={periodNow} />
-        </span>
-      )}
     </button>
   );
 
@@ -203,28 +263,64 @@ const HabitRow: React.FC<{
           aria-checked={on}
           aria-label={habit.label}
           onClick={toggle}
-          className="w-[52px] min-h-[56px] shrink-0 flex items-center justify-center cursor-pointer select-none"
+          className="w-[48px] self-stretch min-h-[52px] shrink-0 flex items-center justify-center cursor-pointer select-none"
         >
           <span
-            className="w-8 h-8 shrink-0 rounded-full flex items-center justify-center transition-[background,box-shadow] duration-200"
+            className="relative w-8 h-8 shrink-0 rounded-full flex items-center justify-center transition-[background,box-shadow] duration-200"
             style={
               on
                 ? { background: c, color: '#fff', boxShadow: `0 3px 8px -4px ${c}` }
-                : { background: tint(c, 0.12), color: c, boxShadow: `inset 0 0 0 1.5px ${tint(c, 0.3)}` }
+                : { background: tint(c, 0.12), color: c, boxShadow: ring ? undefined : `inset 0 0 0 1.5px ${tint(c, 0.3)}` }
             }
           >
+            {ring && counter && (
+              // today's count as a ring round the button
+              <svg viewBox="0 0 40 40" className="absolute -inset-1 w-10 h-10 -rotate-90 pointer-events-none" aria-hidden>
+                <circle cx="20" cy="20" r="18.5" fill="none" stroke={tint(c, 0.2)} strokeWidth="2.5" />
+                {count > 0 && (
+                  <circle
+                    cx="20"
+                    cy="20"
+                    r="18.5"
+                    fill="none"
+                    stroke={c}
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeDasharray={RING}
+                    strokeDashoffset={RING * (1 - Math.min(1, count / counter.goal))}
+                    className="transition-[stroke-dashoffset] duration-300"
+                  />
+                )}
+              </svg>
+            )}
             {on ? <Check className="w-[18px] h-[18px] stroke-[3] animate-in zoom-in-50 duration-200" /> : <HabitIcon icon={look?.icon ?? 'sparkle'} className="w-4 h-4" />}
           </span>
         </button>
-        {counter ? (
-          <div className="flex-1 min-w-0 pt-1.5 pb-3 pr-2">
-            {name}
-            <CountBar count={count} counter={counter} color={c} label={habit.label} onSet={n => model.setCount(habit.id, n, date)} />
+        {/* the ten days at the right of the name's line; a long name sends them to the line below */}
+        <div className="flex-1 min-w-0 py-1.5 pr-1">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
+            <div className="min-w-0 max-w-full">{name}</div>
+            {/* the run, then (a daily habit) the ten days, at the right of the name */}
+            <span className="ml-auto flex items-center gap-3">
+              {run > 1 && <Run run={run} />}
+              {!rare && <WeekDots ticks={ticks} color={c} className="flex" />}
+            </span>
           </div>
-        ) : (
-          name
-        )}
-        {counter && (
+          {/* one line of figures, a „·“ after each */}
+          <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12.5px] font-semibold tabular-nums text-[#8a7a6a] [&>*:not(:last-child)]:after:content-['·'] [&>*:not(:last-child)]:after:ml-1.5 [&>*:not(:last-child)]:after:text-[#c4b49c]">
+            {rare && <PeriodNote count={timesIn(ticks, periodStart(group.goal.per, date), group.goal.per)} goal={group.goal} current={periodNow} />}
+            {counter && <CountBar bare count={count} counter={counter} color={c} label={habit.label} onSet={n => model.setCount(habit.id, n, date)} />}
+            <CardStats ticks={ticks} goal={group.goal} first={model.first} schedule={habit.schedule} />
+            {habit.time && (
+              <span title={habit.alerts?.length ? 'დრო · შეხსენება ჩართულია' : 'დრო'} className="inline-flex items-center gap-1">
+                {habit.alerts?.length ? <BellRing className="w-3.5 h-3.5 shrink-0" /> : <Clock className="w-3.5 h-3.5 shrink-0" />}
+                {habit.time.from}
+                {habit.time.to ? `–${habit.time.to}` : ''}
+              </span>
+            )}
+          </div>
+        </div>
+        {counter && !COUNTED_BY_READING.includes(habit.id) && (
           <button
             type="button"
             onClick={() => { triggerHaptic(6); model.setCount(habit.id, count + step, date); }}
@@ -236,21 +332,30 @@ const HabitRow: React.FC<{
             <Plus className="w-[18px] h-[18px] stroke-[2.5]" />
           </button>
         )}
-        <button
-          type="button"
-          onClick={() => model.openHabit(habit.id)}
-          aria-label={`${habit.label} — ჩვევის გვერდი${run > 1 ? `, ზედიზედ ${run}` : ''}`}
-          title="ჩვევის გვერდი"
-          className={`h-11 min-w-10 shrink-0 ${habit.note ? '' : 'mr-1'} pl-1.5 pr-1 rounded-full flex items-center justify-end gap-0.5 text-[12.5px] font-bold tabular-nums text-[#b4441c] hover:bg-[#7a2028]/[0.06] cursor-pointer transition-colors`}
-        >
-          {run > 1 && (
-            <>
-              <Flame className="w-3.5 h-3.5 shrink-0" />
-              {run}
-            </>
-          )}
-          <ChevronRight className="w-[18px] h-[18px] shrink-0 text-[#b8a68e]" />
-        </button>
+        {edit ? (
+          <button
+            type="button"
+            onClick={() => onEditing(!editing)}
+            aria-expanded={editing}
+            aria-label={`${habit.label} — შეცვლა`}
+            title="შეცვლა"
+            className={`w-9 h-9 ml-0.5 ${habit.note ? '' : 'mr-1.5'} shrink-0 rounded-full flex items-center justify-center cursor-pointer transition-colors ${
+              editing ? 'bg-[#7a2028] text-[#fbf6ec]' : 'text-[#a08a76] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.06]'
+            }`}
+          >
+            <Pencil className="w-4 h-4" />
+          </button>
+        ) : (
+          <button
+            type="button"
+            onClick={() => model.openHabit(habit.id)}
+            aria-label={`${habit.label} — ჩვევის გვერდი${run > 1 ? `, ზედიზედ ${run}` : ''}`}
+            title="ჩვევის გვერდი"
+            className={`h-11 min-w-10 shrink-0 ${habit.note ? '' : 'mr-1'} pl-1.5 pr-1 rounded-full flex items-center justify-end text-[#b8a68e] hover:bg-[#7a2028]/[0.06] cursor-pointer transition-colors`}
+          >
+            <ChevronRight className="w-[18px] h-[18px] shrink-0" />
+          </button>
+        )}
         {habit.note && (
           <button
             type="button"
@@ -266,6 +371,11 @@ const HabitRow: React.FC<{
           </button>
         )}
       </div>
+      {editing && edit && (
+        <div className="px-3 pt-3 pb-3 border-t border-[#f1e8d9] bg-[#fdfaf4] animate-in fade-in slide-in-from-top-1 duration-200">
+          {edit.settings(habit.id, () => onEditing(false))}
+        </div>
+      )}
       {menuOpen && habit.menu && (
         <div className="px-3 pb-4 pt-1 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
           {habit.hint && <p className="px-0.5 text-[12.5px] font-medium text-[#8a7a6a]">{habit.hint}</p>}
@@ -273,11 +383,20 @@ const HabitRow: React.FC<{
         </div>
       )}
       {(noteOpen || (menuOpen && links.length > 0)) && (
-        <div className="pl-[52px] pr-3 pb-3 -mt-1 space-y-2">
-          {noteOpen && habit.note && (
-            <p className="border-l-2 border-[#e3cfae] pl-2.5 font-serif-ge text-[12.5px] italic leading-relaxed text-[#7a6656] whitespace-pre-line break-words animate-in fade-in duration-200">
-              {habit.note}
-            </p>
+        <div className="pl-[48px] pr-3 pb-3 -mt-1 space-y-2">
+          {noteOpen && habit.richNote ? (
+            <div
+              className={`${RICH_TEXT} border-l-2 border-[#e3cfae] pl-2.5 text-[13px] leading-relaxed text-[#5a4636] animate-in fade-in duration-200`}
+              // made safe twice: when saved and when read (utils/richNote)
+              dangerouslySetInnerHTML={{ __html: safeNoteHtml(habit.richNote) }}
+            />
+          ) : (
+            noteOpen &&
+            habit.note && (
+              <p className="border-l-2 border-[#e3cfae] pl-2.5 font-serif-ge text-[12.5px] italic leading-relaxed text-[#7a6656] whitespace-pre-line break-words animate-in fade-in duration-200">
+                {habit.note}
+              </p>
+            )
           )}
           {menuOpen && links.length > 0 && (
             <div className="flex flex-wrap gap-1.5 animate-in fade-in slide-in-from-top-1 duration-200">
@@ -303,6 +422,7 @@ export const DayView: React.FC<{
   edit?: ListEdit;
 }> = ({ model, date, onDate, actions, onOpenPrayer, onLink, edit }) => {
   const [sorting, setSorting] = useState<0 | 1 | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null);
   const today = dayKey(date) === dayKey(new Date());
   const s = dayState(model.log, model.dailyIds, date);
   const total = Math.max(1, s.total);
@@ -312,10 +432,10 @@ export const DayView: React.FC<{
     s.done >= total ? (today ? 'დღეს ყველა შესრულდა 🙏' : 'ყველა შესრულდა 🙏') : s.done >= need ? 'დღე ჩაითვალა ✓' : `კიდევ ${need - s.done} — და დღე ჩაითვლება`;
 
   return (
-    <div className="space-y-4">
-      <div className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] p-3 space-y-3">
-        <div className="flex items-center gap-3.5">
-          <Ring value={s.done} max={total} caption={today ? 'დღეს' : 'იმ დღეს'} />
+    <div className="space-y-3">
+      <div className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] p-2.5 space-y-1.5">
+        <div className="flex items-center gap-3">
+          <Ring compact value={s.done} max={total} caption={today ? 'დღეს' : 'იმ დღეს'} />
           <div className="flex-1 min-w-0">
             {/* on a phone the buttons take their own line above the status (wrap-reverse), so the text keeps its width */}
             <div className="flex flex-wrap-reverse items-end gap-x-1 gap-y-1.5">
@@ -326,8 +446,8 @@ export const DayView: React.FC<{
               {actions && <div className="-mt-1.5 -mr-1.5 ml-auto flex shrink-0">{actions}</div>}
             </div>
             {streak.days > 0 && (
-              <p className="mt-1.5 flex items-center gap-1 text-[12.5px] font-bold text-[#b4441c]">
-                <Flame className="w-4 h-4 shrink-0" />
+              <p className="mt-0.5 flex items-center gap-1 text-[12.5px] font-bold text-[#b4441c]">
+                <Flame className="w-3.5 h-3.5 shrink-0" />
                 ზედიზედ {streak.days}
                 {streak.capped ? '+' : ''} დღე
               </p>
@@ -339,7 +459,7 @@ export const DayView: React.FC<{
 
       {/* the daily habits beside the weekly and monthly ones; one column on a phone */}
       <div className="@container">
-        <div className="grid gap-4 @lg:grid-cols-2 items-start">
+        <div className="grid grid-cols-1 gap-3 @lg:grid-cols-2 items-start">
           {[model.daily, model.rare].map((groups, i) => {
             const col = i as 0 | 1;
             const has = groups.some(g => g.items.length);
@@ -348,37 +468,65 @@ export const DayView: React.FC<{
             if (!has && !edit) return null;
             return (
               <section key={i}>
-                <ViewHeading>{i === 0 ? 'ყოველდღე' : 'კვირაში და თვეში'}</ViewHeading>
+                <ViewHeading
+                  right={
+                    edit && (
+                      <span className="-my-1 -mr-1 flex items-center gap-0.5">
+                        {has && (
+                          <button
+                            type="button"
+                            aria-pressed={sorted}
+                            aria-label={sorted ? 'რიგი — მზადაა' : 'ჩვევების რიგი'}
+                            title={sorted ? 'მზადაა' : 'რიგი'}
+                            onClick={() => { triggerHaptic(8); setSorting(sorted ? null : col); }}
+                            className={`h-9 rounded-full inline-flex items-center justify-center gap-1 cursor-pointer transition-colors active:scale-95 ${
+                              sorted ? 'px-3 bg-[#7a2028] text-[#fbf6ec] text-[13px] font-bold' : 'w-9 text-[#8a7a6a] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.06]'
+                            }`}
+                          >
+                            {sorted ? <Check className="w-4 h-4" /> : <ArrowUpDown className="w-[18px] h-[18px]" />}
+                            {sorted && 'მზადაა'}
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          aria-label="ჩვევის დამატება"
+                          title="ჩვევის დამატება"
+                          onClick={() => edit.add(col)}
+                          className="w-9 h-9 rounded-full inline-flex items-center justify-center text-[#7a2028] hover:bg-[#7a2028]/[0.06] cursor-pointer transition-colors active:scale-95"
+                        >
+                          <Plus className="w-5 h-5" />
+                        </button>
+                      </span>
+                    )
+                  }
+                >
+                  {i === 0 ? 'ყოველდღე' : 'კვირაში და თვეში'}
+                </ViewHeading>
                 {sorted && edit ? (
                   edit.reorder(col)
                 ) : has ? (
                   <ul className="rounded-2xl ring-1 ring-[#e8dcc8] bg-white divide-y divide-[#f1e8d9] overflow-hidden">
                     {groups.flatMap(g =>
-                      g.items.map(h => (
-                        <HabitRow key={h.id} model={model} habit={h} group={g} date={date} onOpenPrayer={onOpenPrayer} onLink={onLink} />
-                      ))
+                      g.items
+                        // a habit with „მორგებული“ days shows on those days only
+                        .filter(h => !h.schedule || isDue(h.schedule, date) || editingId === h.id)
+                        .map(h => (
+                          <HabitRow
+                            key={h.id}
+                            model={model}
+                            habit={h}
+                            group={g}
+                            date={date}
+                            onOpenPrayer={onOpenPrayer}
+                            onLink={onLink}
+                            edit={edit}
+                            editing={editingId === h.id}
+                            onEditing={on => setEditingId(on ? h.id : null)}
+                          />
+                        ))
                     )}
                   </ul>
                 ) : null}
-                {edit && (
-                  <div className="flex flex-wrap items-center justify-between gap-x-2 gap-y-1 pt-1.5">
-                    <button type="button" onClick={() => edit.add(col)} className={`${TOOL} text-[#7a2028] hover:bg-[#7a2028]/[0.06]`}>
-                      <Plus className="w-4 h-4" />
-                      ჩვევის დამატება
-                    </button>
-                    {has && (
-                      <button
-                        type="button"
-                        aria-pressed={sorted}
-                        onClick={() => { triggerHaptic(8); setSorting(sorted ? null : col); }}
-                        className={`${TOOL} ${sorted ? 'bg-[#7a2028] text-[#fbf6ec]' : 'text-[#75685a] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.06]'}`}
-                      >
-                        {sorted ? <Check className="w-4 h-4" /> : <ArrowUpDown className="w-4 h-4" />}
-                        {sorted ? 'მზადაა' : 'რიგი'}
-                      </button>
-                    )}
-                  </div>
-                )}
               </section>
             );
           })}

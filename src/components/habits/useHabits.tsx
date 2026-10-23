@@ -5,7 +5,8 @@ import { HabitCounter, HabitLook } from '../../data/habitLooks';
 import { useAuth, useChants } from '../../context';
 import { useMyHabits } from '../../hooks/useMyHabits';
 import { MyHabit, MyHabitGroup } from '../../utils/myHabits';
-import { HabitCounts, HabitLog, dayKey } from '../../utils/habitsWeek';
+import { DayIds, HabitCounts, HabitLog, dayKey, idsOn } from '../../utils/habitsWeek';
+import { isDue } from '../../utils/habitSchedule';
 import { historyStart } from '../../utils/habitStats';
 import { triggerHaptic } from '../../utils/haptics';
 
@@ -15,6 +16,11 @@ import { triggerHaptic } from '../../utils/haptics';
 export const dailyOf = <G extends HabitGroupType>(groups: G[]) => groups.filter(g => g.goal.per === 'day');
 export const rareOf = <G extends HabitGroupType>(groups: G[]) => groups.filter(g => g.goal.per !== 'day');
 export const dailyIdsOf = (groups: HabitGroupType[]) => dailyOf(groups).flatMap(g => g.items.map(h => h.id));
+/** the daily habits due on a day: all of them, but one with „მორგებული“ days only on those */
+export const dueDailyOf = (groups: MyHabitGroup[]) => {
+  const items = dailyOf(groups).flatMap(g => g.items);
+  return (date: Date) => items.filter(h => !h.schedule || isDue(h.schedule, date)).map(h => h.id);
+};
 
 const celebrate = () => {
   try {
@@ -36,11 +42,11 @@ const Blessing: React.FC = () => (
 
 /** Ticks or unticks a habit for a day (today unless given). The tick that completes all of today's habits sets off
  *  fireworks and a blessing — render `blessing` on the page. `dailyIds`: the daily habits, when the caller has them. */
-export const useHabitToggle = (dailyIds?: string[]) => {
+export const useHabitToggle = (dailyIds?: DayIds) => {
   const { habitLog, toggleHabit } = useChants();
   const { user } = useAuth();
   const own = useMyHabits(dailyIds ? null : user?.uid).groups;
-  const DAILY_IDS = dailyIds ?? dailyIdsOf(own);
+  const DAILY_IDS = idsOn(dailyIds ?? dueDailyOf(own), new Date());
   const [blessing, setBlessing] = useState(false);
   const timer = useRef<number | undefined>(undefined);
   useEffect(() => () => window.clearTimeout(timer.current), []);
@@ -68,7 +74,8 @@ export interface HabitsModel {
   rare: MyHabitGroup[];
   /** every habit with its group, in the list's order */
   all: { habit: MyHabit; group: MyHabitGroup }[];
-  dailyIds: string[];
+  /** the daily habits due on a day */
+  dailyIds: (date: Date) => string[];
   looks: Record<string, HabitLook>;
   counters: Record<string, HabitCounter>;
   log: HabitLog;
@@ -89,7 +96,7 @@ export const useHabitsModel = (openHabit: (id: string) => void): { model: Habits
   const { habitLog, habitCounts, setHabitCount } = useChants();
   const { user } = useAuth();
   const mine = useMyHabits(user?.uid);
-  const dailyIds = useMemo(() => dailyIdsOf(mine.groups), [mine.groups]);
+  const dailyIds = useMemo(() => dueDailyOf(mine.groups), [mine.groups]);
   const { toggle, blessing } = useHabitToggle(dailyIds);
   const first = useMemo(() => historyStart(habitLog), [habitLog]);
 

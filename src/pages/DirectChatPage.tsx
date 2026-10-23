@@ -1,13 +1,53 @@
 import React, { useEffect } from 'react';
-import { ArrowLeft, Video, Loader2, ShieldCheck } from 'lucide-react';
+import { ArrowLeft, Video, Loader2, ShieldCheck, Phone } from 'lucide-react';
 import { useAuth } from '../context';
 import { useChat, ChatAuthor } from '../hooks/useClassChat';
 import type { SchoolClass } from '../hooks/useClasses';
 import {
-  useThread, dmBase, otherOf, isUnread, isStaffSide, seenByOther, markRead, noteSent, notePrivateCall, ADMIN_NAME,
+  useThread, dmBase, otherOf, isUnread, isStaffSide, seenByOther, markRead, noteSent, ADMIN_NAME,
 } from '../hooks/useDirectChat';
-import { privateCallUrl } from '../utils/classCall';
+import { useCall, useLivePeers, setCallSmall } from '../utils/callSession';
+import { startChatCall, answerChatCall } from '../components/calls/callActions';
 import { ChatPanel, Avatar } from '../components/classes/ChatPanel';
+
+/** The call buttons over a chat: start (📞 📹), join a call that is on, or back to one's own call. */
+export const CallButtons: React.FC<{
+  base: string; canStart: boolean; canVideo: boolean; onStart: (kind: 'audio' | 'video') => void; onJoin: () => void;
+}> = ({ base, canStart, canVideo, onStart, onJoin }) => {
+  const call = useCall();
+  const live = useLivePeers(base).length > 0;
+  const mine = call.info?.base === base && call.status !== 'idle' && call.status !== 'ended';
+  const icon = 'w-11 h-11 shrink-0 rounded-full bg-[#7a2028]/[0.07] ring-1 ring-[#7a2028]/20 text-[#7a2028] inline-flex items-center justify-center cursor-pointer hover:bg-[#7a2028]/[0.11] active:scale-95 transition';
+  if (mine) {
+    return (
+      <button type="button" onClick={() => setCallSmall(false)}
+        className="h-11 px-4 shrink-0 rounded-full bg-emerald-600 text-white text-sm font-bold inline-flex items-center gap-2 cursor-pointer active:scale-95">
+        <span className="w-2 h-2 rounded-full bg-white animate-pulse" /> ზარში
+      </button>
+    );
+  }
+  if (live) {
+    return (
+      <button type="button" onClick={onJoin}
+        className="h-11 px-4 shrink-0 rounded-full bg-emerald-500 text-white text-sm font-bold inline-flex items-center gap-2 cursor-pointer hover:bg-emerald-600 active:scale-95">
+        <Phone className="w-[18px] h-[18px]" /> შესვლა
+      </button>
+    );
+  }
+  if (!canStart) return null;
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      <button type="button" onClick={() => onStart('audio')} aria-label="ზარი" title="ზარი" className={icon}>
+        <Phone className="w-[18px] h-[18px]" />
+      </button>
+      {canVideo && (
+        <button type="button" onClick={() => onStart('video')} aria-label="ვიდეოზარი" title="ვიდეოზარი" className={icon}>
+          <Video className="w-[18px] h-[18px]" />
+        </button>
+      )}
+    </div>
+  );
+};
 
 const VOICE_PREVIEW = '🎤 ხმოვანი შეტყობინება';
 
@@ -47,6 +87,7 @@ export const DirectChat: React.FC<{ id: string; classes: SchoolClass[]; logoUrl?
   const staff = !!thread && isAdmin && isStaffSide(thread, uid);
   const member = !!thread && thread.members.includes(uid);
   const canWrite = member || staff;
+  const livePeers = useLivePeers(thread && canWrite ? dmBase(thread.id) : null);
 
   // opened, or a new message came in while open: mark it read
   useEffect(() => {
@@ -90,12 +131,9 @@ export const DirectChat: React.FC<{ id: string; classes: SchoolClass[]; logoUrl?
     ? <AdminAvatar logoUrl={logoUrl} />
     : <Avatar name={canWrite ? other.name : title} photoURL={canWrite ? other.photoURL : thread.photos[thread.members[thread.members.length - 1]]} className="w-10 h-10 text-base" />;
 
-  const callTitle = `${thread.names[thread.teacherUid] || 'მასწავლებელი'} — ${thread.names[thread.studentUid] || 'მოსწავლე'}`;
-  const joinCall = () => window.open(privateCallUrl(thread.room, callTitle, myName || 'სტუმარი'), '_blank', 'noopener');
-  const startCall = () => {
-    joinCall();
-    notePrivateCall(thread.id, author).catch(e => console.warn('dm call: ', e?.code || e));
-  };
+  // the teacher calls (by voice or video); an admin answering the administration's chat, by voice only
+  const canStart = iTeach || staff;
+  const joinCall = () => answerChatCall(thread, user);
 
   return (
     <ChatPanel
@@ -111,23 +149,22 @@ export const DirectChat: React.FC<{ id: string; classes: SchoolClass[]; logoUrl?
       staffLabel={thread.kind === 'admin' ? 'ადმინი' : 'მასწავლებელი'}
       seenAt={canWrite ? seenByOther(thread, uid) : null}
       isCall={m => m.kind === 'call'}
-      callTitle="ვიდეო ზარი დაიწყო"
+      callTitle={thread.callKind === 'video' ? 'ვიდეოზარი' : 'ზარი'}
       onJoinCall={joinCall}
+      callLive={livePeers.length > 0}
       canDelete={m => m.uid === uid}
       onSent={(kind, text) => noteSent(thread, uid, kind === 'voice' ? VOICE_PREVIEW : text).catch(e => console.warn('dm: ', e?.code || e))}
       header={
         <div className="flex items-center gap-2 px-3 sm:px-4 py-3">
           <PaneTitle face={face} title={title} sub={sub} onBack={onBack} />
-          {iTeach && (
-            <button
-              type="button"
-              onClick={startCall}
-              aria-label="ვიდეო ზარი"
-              title="ვიდეო ზარი"
-              className="h-11 w-11 sm:w-auto sm:px-4 shrink-0 rounded-full bg-[#7a2028]/[0.07] ring-1 ring-[#7a2028]/20 text-[#7a2028] text-sm font-bold inline-flex items-center justify-center gap-2 cursor-pointer hover:bg-[#7a2028]/[0.11] active:scale-95 transition"
-            >
-              <Video className="w-[18px] h-[18px]" /> <span className="hidden sm:inline">ზარი</span>
-            </button>
+          {canWrite && (
+            <CallButtons
+              base={dmBase(thread.id)}
+              canStart={canStart}
+              canVideo={thread.kind === 'teach'}
+              onStart={kind => startChatCall(thread, user, kind)}
+              onJoin={joinCall}
+            />
           )}
         </div>
       }

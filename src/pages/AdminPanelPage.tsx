@@ -1,13 +1,14 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
-import { Users, GraduationCap, School, TriangleAlert } from 'lucide-react';
+import { Users, GraduationCap, School, TriangleAlert, Activity, Hourglass } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth, useNavigation, SUPER_ADMIN_EMAIL } from '../context';
 import { useAllClasses } from '../hooks/useClasses';
 import { useAllPsalterGroups } from '../hooks/usePsalter';
-import { Flash, PageTop, Tabs, useFlash } from '../components/ui/kit';
+import { Flash, Tabs, useFlash } from '../components/ui/kit';
+import { AdminHero, HeroTile } from '../components/admin/AdminHero';
 import { ClassesAdmin } from '../components/admin/ClassesAdmin';
-import { UsersTab, UserRecord, StaffRecord, toUser } from '../components/admin/UsersTab';
+import { UsersTab, UserRecord, StaffRecord, Filter, filterTests, toUser } from '../components/admin/UsersTab';
 import { SchoolTab } from '../components/admin/SchoolTab';
 import { AccessRecord, DecisionRecord, toAccess } from '../components/admin/AccessRequests';
 import { useDirectory, writeDirectory } from '../utils/directory';
@@ -25,13 +26,14 @@ const readTab = (): Tab => {
   }
 };
 
-// "ადმინის პანელი": the whole school in three tabs — people (one list; each person in one window), classes and
+// "ადმინის პანელი": a head with the school's main numbers (each opens its list), then three tabs — people (one list; each person in one window), classes and
 // psalter groups (each in its own window), and the school (settings + the most listened chants).
 export const AdminPanelPage: React.FC = () => {
   const { user, isAdmin, isOwner, isSuperAdmin } = useAuth();
   const { handleGoBack } = useNavigation();
   const msg = useFlash();
   const [tab, setTab] = useState<Tab>(readTab);
+  const [filter, setFilter] = useState<Filter>('all');
   useEffect(() => { try { localStorage.setItem(TAB_KEY, tab); } catch { /* storage blocked */ } }, [tab]);
 
   const [users, setUsers] = useState<UserRecord[]>([]);
@@ -87,8 +89,8 @@ export const AdminPanelPage: React.FC = () => {
       () => setDecisions({}));
     return () => { off1(); off2(); };
   }, [isSuperAdmin]);
-  const staffEmails = new Set([SUPER_ADMIN_EMAIL, ...staff.map(s => s.email)]);
-  const waiting = users.filter(u => access[u.userId]?.status === 'pending' && !staffEmails.has(u.email.toLowerCase())).length;
+  const { test } = filterTests(staff, access, isSuperAdmin);
+  const waiting = users.filter(test.pending).length;
 
   // people who may lead a class or group: teachers and admins
   const leaders = useMemo(() => {
@@ -105,24 +107,45 @@ export const AdminPanelPage: React.FC = () => {
   const classStudents = useMemo(() => users.map(u => ({ userId: u.userId, name: u.name, email: u.email, photoURL: u.photoURL })), [users]);
   const teachersWithoutClass = leaders.filter(l => staff.find(s => s.userId === l.userId || s.email === l.email.toLowerCase())?.role === 'teacher' && !classes.some(c => c.teacherIds.includes(l.userId)) && !groups.some(g => g.teacherIds.includes(l.userId))).length;
 
+  // the big numbers: three people filters (superadmins see who waits; other admins see the teachers) and the classes
+  const userTiles: Filter[] = ['all', 'week', isSuperAdmin ? 'pending' : 'teacher'];
+  const TILES: HeroTile[] = [
+    { id: 'all', label: 'წევრები', n: users.length, Icon: Users },
+    { id: 'week', label: 'აქტიური კვირაში', n: users.filter(test.week).length, Icon: Activity },
+    isSuperAdmin
+      ? { id: 'pending', label: 'ელოდება', n: waiting, Icon: Hourglass, alert: waiting > 0 }
+      : { id: 'teacher', label: 'მასწავლებლები', n: users.filter(test.teacher).length, Icon: GraduationCap },
+    { id: 'classes', label: 'კლასები', n: classes.length, Icon: School },
+  ];
+  const activeTile = tab === 'classes' ? 'classes' : tab === 'users' && userTiles.includes(filter) ? filter : null;
+  const openTile = (id: string) => {
+    if (id === 'classes') return setTab('classes');
+    setTab('users');
+    setFilter(id === filter && tab === 'users' && id !== 'all' ? 'all' : (id as Filter));
+  };
+
   const TABS = [
-    { id: 'users' as const, label: 'მომხმარებლები', Icon: Users, dot: waiting > 0 },
+    { id: 'users' as const, label: 'წევრები', Icon: Users, dot: waiting > 0 },
     { id: 'classes' as const, label: 'კლასები', Icon: GraduationCap, dot: teachersWithoutClass > 0 },
     { id: 'school' as const, label: 'სკოლა', Icon: School },
   ];
 
   return (
     <div className="w-full max-w-4xl mx-auto px-1 py-4 sm:py-6 space-y-5 pb-14 text-[#2a2017]">
-      <PageTop
+      <AdminHero
         title="ადმინის პანელი"
         subtitle={`${isOwner ? 'მფლობელი' : isSuperAdmin ? 'სუპერადმინი' : 'ადმინი'} · ${user?.email || ''}`}
         onBack={handleGoBack}
+        tiles={TILES}
+        activeId={activeTile}
+        onTile={openTile}
       />
       <Tabs cols={3} value={tab} onChange={setTab} items={TABS} />
       <Flash flash={msg.flash} onClose={msg.clear} />
 
       {tab === 'users' && (
-        <UsersTab users={users} staff={staff} classes={classes} groups={groups} access={access} decisions={decisions} loading={loading} onMessage={msg.say} />
+        <UsersTab users={users} staff={staff} classes={classes} groups={groups} access={access} decisions={decisions} loading={loading}
+          filter={filter} onFilter={setFilter} tiles={userTiles} onMessage={msg.say} />
       )}
       {tab === 'classes' && (
         <div className="space-y-4">

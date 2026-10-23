@@ -100,6 +100,7 @@ const PsalterPage = page(() => import('../pages/PsalterPage'), 'PsalterPage');
 const TeacherPage = page(() => import('../pages/TeacherPage'), 'TeacherPage');
 const MessagesPage = page(() => import('../pages/MessagesPage'), 'MessagesPage');
 const AbituriPage = page(() => import('../pages/AbituriPage'), 'AbituriPage');
+const OfflinePage = page(() => import('../pages/OfflinePage'), 'OfflinePage');
 
 interface AppRouterProps {
   logoUrl: string;
@@ -236,6 +237,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           {currentPage === 'biblioteka' && <LibraryPage />}
 
           {currentPage === 'abituri' && <AbituriPage />}
+
+          {currentPage === 'offline' && <OfflinePage />}
 
           {currentPage === 'simghera' && (
             <div className="w-full my-2 px-1">

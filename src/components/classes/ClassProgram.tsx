@@ -18,7 +18,7 @@ const VOICE_NAME: Record<Voice, string> = { '1': 'პირველი ხმ�
 // members of the class know that voice (their own path marks or a teacher's confirmation, copied by useClassMarksSync);
 // the small number on it is how many. The number's colour is the viewer's own mark, as on the path. A teacher who is
 // not a member sees every item in one list, with the counts only.
-export const ClassProgram: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
+export const ClassProgram: React.FC<{ cls: SchoolClass; action?: React.ReactNode }> = ({ cls, action }) => {
   const { user } = useAuth();
   const { selectedChantVariants = {} } = useChants();
   const confirmed = useConfirmations(user?.uid);
@@ -168,9 +168,12 @@ export const ClassProgram: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
   return (
     <section className="bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] p-5 sm:p-6">
       <header className="mb-4">
-        <h2 className="flex items-center gap-2 font-serif-ge text-lg font-bold text-[#4a3426]">
-          <ListChecks className="w-5 h-5 text-[#7a2028]" /> კლასის პროგრამა
-        </h2>
+        <div className="flex items-center gap-2">
+          <h2 className="flex-1 min-w-0 flex items-center gap-2 font-serif-ge text-lg font-bold text-[#4a3426]">
+            <ListChecks className="w-5 h-5 text-[#7a2028]" /> კლასის პროგრამა
+          </h2>
+          {action}
+        </div>
         {iAmMember && total > 0 && (
           <p className="mt-0.5 pl-7 text-xs font-semibold text-[#8a7a6a]">
             {learned} / {total} ნასწავლი{voiceSlots ? ` · ${voices}/${voiceSlots} ხმა` : ''}

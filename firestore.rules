@@ -206,6 +206,21 @@ service cloud.firestore {
         allow delete: if isAdmin() || teachesClass() || (isSignedIn() && existing().uid == uid());
       }
 
+      // The class's call (utils/callSession.ts): call/state says it started (a teacher or an admin starts it, anyone
+      // in the class may mark it ended); peers/{uid} is who is in it now, each writing only their own card
+      match /call/{docId} {
+        allow read: if inClass();
+        allow create, update: if inClass() && docId == 'state'
+          && incoming().keys().hasOnly(['at', 'by', 'name', 'kind', 'end'])
+          && (teachesClass() || isAdmin() || (resource != null && changed().hasOnly(['end'])));
+      }
+      match /peers/{peerId} {
+        allow read: if inClass();
+        allow create, update: if inClass() && peerId == uid() && incoming().uid == uid()
+          && incoming().keys().hasOnly(['uid', 'name', 'photoURL', 'session', 'audio', 'video', 'mic', 'cam', 'staff', 'at']);
+        allow delete: if isSignedIn() && (peerId == uid() || teachesClass() || isAdmin());
+      }
+
       // Teacher's assignments (chant + voice + due date) and lesson attendance
       match /assignments/{assignmentId} {
         allow read: if inClass();
@@ -333,14 +348,18 @@ service cloud.firestore {
       allow create: if isSignedIn() && (createTeach() || createPeer() || createAdmin());
       // each marks only their own reading (the administration its shared one); only a teacher starts a call;
       // classId may move to another class the two share
+      // a call: the teacher (or an admin answering an administration chat, by voice only) starts it; either side ends it
       allow update: if isSignedIn() && (uid() in existing().members || staffOf(existing()))
-        && changed().hasOnly(['classId', 'names', 'photos', 'lastAt', 'lastBy', 'lastText', 'read', 'callAt', 'callBy'])
+        && changed().hasOnly(['classId', 'names', 'photos', 'lastAt', 'lastBy', 'lastText', 'read', 'callAt', 'callBy',
+             'callKind', 'callEnd'])
         && linkOk(existing(), incoming().get('classId', ''))
         && incoming().get('read', {}).diff(existing().get('read', {})).affectedKeys()
              .hasOnly([staffOf(existing()) ? 'staff' : uid()])
         && (!changed().hasAny(['lastBy']) || incoming().lastBy == uid())
-        && (!changed().hasAny(['callAt', 'callBy'])
-            || (kindOf(existing()) == 'teach' && uid() == existing().teacherUid && incoming().callBy == uid()));
+        && (!changed().hasAny(['callAt', 'callBy', 'callKind'])
+            || (((kindOf(existing()) == 'teach' && uid() == existing().teacherUid) || staffOf(existing()))
+                && incoming().callBy == uid() && changed().hasAll(['callAt'])
+                && incoming().get('callKind', 'video') in (kindOf(existing()) == 'admin' ? ['audio'] : ['audio', 'video'])));
       allow delete: if isSuperAdmin();
 
       match /messages/{messageId} {
@@ -350,9 +369,17 @@ service cloud.firestore {
           && incoming().teacher == speaksAsStaff()
           && incoming().createdAt == request.time
           && (incoming().kind in ['text', 'voice']
-              || (incoming().kind == 'call' && kindOf(thread()) == 'teach' && uid() == thread().teacherUid))
+              || (incoming().kind == 'call' && ((kindOf(thread()) == 'teach' && uid() == thread().teacherUid) || staffOf(thread()))))
           && incoming().text is string && incoming().text.size() <= 2000;
         allow delete: if isSuperAdmin() || (isSignedIn() && existing().uid == uid());
+      }
+
+      // Who is in the chat's call now (utils/callSession.ts): each writes only their own card
+      match /peers/{peerId} {
+        allow read: if inThread();
+        allow create, update: if inThread() && peerId == uid() && incoming().uid == uid()
+          && incoming().keys().hasOnly(['uid', 'name', 'photoURL', 'session', 'audio', 'video', 'mic', 'cam', 'staff', 'at']);
+        allow delete: if isSignedIn() && (peerId == uid() || inThread());
       }
 
       // A voice message's MP3, in parts below Firestore's 1 MiB document limit

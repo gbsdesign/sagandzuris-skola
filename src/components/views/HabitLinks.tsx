@@ -7,6 +7,8 @@ import { coreOf, sectionOfShortcut } from '../../utils/shortcuts';
 import { HabitLink, MAX_LINKS, MAX_NOTE, MyHabit, normalizeUrl, siteName } from '../../utils/myHabits';
 import { shortcutIcon } from '../home/ShortcutShelf';
 import { Btn, FIELD } from '../ui/kit';
+import { plainToHtml } from '../../utils/richNote';
+import { RichNoteEditor } from './RichNoteEditor';
 
 // A habit's own buttons (anything the one search finds, or another site) and its note: the chips under a
 // habit, and the part of the habit's edit sheet where they are chosen.
@@ -58,6 +60,11 @@ export const HabitLinkChip: React.FC<{ link: HabitLink; onOpen: () => void }> = 
   );
 
 const LABEL = 'flex items-center gap-1.5 px-0.5 pb-2 text-[13px] font-bold text-[#6a5646] [&>svg]:w-4 [&>svg]:h-4 [&>svg]:text-[#7a2028]';
+/** a row of the editor on a habit's card: a short label on the left, its control beside it */
+export const EDIT_ROW = 'flex flex-wrap items-start gap-x-3 gap-y-1';
+export const EDIT_LABEL = 'w-[76px] shrink-0 min-h-10 flex items-center text-[12.5px] font-bold leading-tight text-[#6a5646]';
+const SMALL =
+  'h-10 px-3 rounded-xl inline-flex items-center gap-1.5 bg-white ring-1 ring-[#e8dcc8] text-[13px] font-semibold text-[#4a3426] hover:ring-[#7a2028]/40 hover:text-[#7a2028] cursor-pointer transition-colors active:scale-[0.97] [&>svg]:w-4 [&>svg]:h-4';
 
 // "ლინკის ჩასმა": the address, and a name for its button (the site's name when left empty)
 const UrlForm: React.FC<{ onAdd: (l: HabitLink) => void; onCancel: () => void }> = ({ onAdd, onCancel }) => {
@@ -106,7 +113,10 @@ export const HabitExtras: React.FC<{
   habit: MyHabit;
   onLinks: (links: HabitLink[]) => void;
   onNote: (note: string) => void;
-}> = ({ habit, onLinks, onNote }) => {
+  /** in the editor on the card: label-left rows, the buttons as chips, the note with its formatting (`onRich`) */
+  compact?: boolean;
+  onRich?: (html: string) => void;
+}> = ({ habit, onLinks, onNote, compact, onRich }) => {
   const links = habit.links || [];
   const [finding, setFinding] = useState(false);
   const [typing, setTyping] = useState(false);
@@ -127,6 +137,75 @@ export const HabitExtras: React.FC<{
     latest.current.onNote(n);
   };
   useEffect(() => () => flush(), []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const search = finding && (
+    <Suspense fallback={<div className="fixed inset-0 z-[88] bg-[#2a2017]/45" />}>
+      <SearchPanel
+        onClose={() => setFinding(false)}
+        pick={{
+          title: `„${habit.label}“ — რა მივამაგრო? · ${links.length}/${MAX_LINKS}`,
+          isOn: id => links.some(l => buttonOf(l) === coreOf(id)),
+          full,
+          fullNote: 'მეტი ღილაკი აღარ ეტევა — ჯერ ერთი მოხსენი.',
+          // a second tap takes it off again
+          onPick: (id, title, sub) =>
+            links.some(l => buttonOf(l) === coreOf(id))
+              ? onLinks(links.filter(l => buttonOf(l) !== coreOf(id)))
+              : !full && add(fromButton(id, title, sub)),
+        }}
+      />
+    </Suspense>
+  );
+
+  if (compact) {
+    return (
+      <>
+        <div className={EDIT_ROW}>
+          <span className={EDIT_LABEL}>ღილაკები</span>
+          <div className="flex-1 min-w-[10rem] flex flex-wrap gap-1.5">
+            {links.map((l, i) => (
+              <span key={i} className={`${SMALL} max-w-full !pr-0.5 !cursor-default`}>
+                <span className="truncate">{l.title}</span>
+                <button
+                  type="button"
+                  onClick={() => onLinks(links.filter((_, j) => j !== i))}
+                  aria-label={`${l.title} — მოხსნა`}
+                  className="w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-[#a08a76] hover:text-red-700 hover:bg-red-50 cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </span>
+            ))}
+            {!full && !typing && (
+              <>
+                <button type="button" onClick={() => setFinding(true)} className={SMALL}>
+                  <Search />
+                  ძებნით
+                </button>
+                <button type="button" onClick={() => setTyping(true)} className={SMALL}>
+                  <Globe />
+                  ლინკი
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+        {typing && <UrlForm onAdd={l => { add(l); setTyping(false); }} onCancel={() => setTyping(false)} />}
+        <div className={EDIT_ROW}>
+          <label htmlFor={`note-${habit.id}`} className={EDIT_LABEL}>
+            აღწერა
+          </label>
+          <RichNoteEditor
+            id={habit.id}
+            value={habit.richNote ?? plainToHtml(habit.note ?? '')}
+            placeholder="რა უნდა მახსოვდეს…"
+            onSave={html => onRich?.(html)}
+          />
+        </div>
+        {search}
+      </>
+    );
+  }
 
   return (
     <div className="space-y-5">
@@ -188,24 +267,7 @@ export const HabitExtras: React.FC<{
         />
       </section>
 
-      {finding && (
-        <Suspense fallback={<div className="fixed inset-0 z-[88] bg-[#2a2017]/45" />}>
-          <SearchPanel
-            onClose={() => setFinding(false)}
-            pick={{
-              title: `„${habit.label}“ — რა მივამაგრო? · ${links.length}/${MAX_LINKS}`,
-              isOn: id => links.some(l => buttonOf(l) === coreOf(id)),
-              full,
-              fullNote: 'მეტი ღილაკი აღარ ეტევა — ჯერ ერთი მოხსენი.',
-              // a second tap takes it off again
-              onPick: (id, title, sub) =>
-                links.some(l => buttonOf(l) === coreOf(id))
-                  ? onLinks(links.filter(l => buttonOf(l) !== coreOf(id)))
-                  : !full && add(fromButton(id, title, sub)),
-            }}
-          />
-        </Suspense>
-      )}
+      {search}
     </div>
   );
 };

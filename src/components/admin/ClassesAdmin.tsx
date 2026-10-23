@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { Plus, Search, Trash2, Upload, Check, ArrowUp, ArrowDown, RefreshCw, ExternalLink, ChevronRight, GraduationCap, BookOpen } from 'lucide-react';
+import { Plus, Search, Trash2, Upload, Check, ArrowUp, ArrowDown, RefreshCw, ExternalLink, ChevronRight, BookOpen, Users, ListMusic, TriangleAlert } from 'lucide-react';
 import { arrayUnion, collection, deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth, useNavigation } from '../../context';
@@ -11,7 +11,7 @@ import { PathItem, sortPathItems, findCatalogEntry, voicesOf, CATEGORY_LABEL } f
 import { CatalogPicker } from './CatalogPicker';
 import { MemberPathEditor, writePath } from './MemberPathEditor';
 import { linkTeachers } from '../../hooks/useTeaching';
-import { Btn, Card, CardTitle, Flash, Sheet, Toggle, useFlash } from '../ui/kit';
+import { Avatar, Bar, Btn, Flash, Pill, Sheet, Toggle, useFlash } from '../ui/kit';
 import { ShortcutPicker, shortcutIcon } from '../home/ShortcutShelf';
 import { shortcutLabel } from '../../utils/shortcuts';
 import { LeaderChips } from './LeaderChips';
@@ -144,22 +144,24 @@ export const ClassesAdmin: React.FC<{
       Number(draft?.memberIds.includes(b.userId)) - Number(draft?.memberIds.includes(a.userId)) || a.name.localeCompare(b.name, 'ka'));
   }, [students, memberQuery, draft?.memberIds]);
 
-  // admin: every class in one list; the open class's window lies over it
+  // admin: every class as a card (two columns on wide screens); the open class's window lies over them
   const list = isAdminMode && (
-    <Card>
-      <CardTitle icon={<GraduationCap />} title="კლასები"
-        info="„დასწრება“ — ბოლო 8 გაკვეთილის საშუალო. კლასის პროგრამა შენახვისას ყველა წევრის საგანძურის გზას ემატება." />
+    <section>
+      {/* the tab and the big number already say „კლასები“: no title here, only the short rule and the button */}
+      <div className="mb-3 px-1 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <p className="flex-1 min-w-[12rem] text-[12.5px] leading-snug text-[#8a7a6a]">დასწრება — ბოლო 8 გაკვეთილის საშუალო. პროგრამა შენახვისას ყველა წევრის გზას ემატება.</p>
+        <Btn size="sm" kind="soft" icon={<Plus />} onClick={() => edit()}>ახალი კლასი</Btn>
+      </div>
       {loading ? (
         <p className="py-6 text-center text-sm text-[#8a7a6a]">იტვირთება...</p>
       ) : classes.length === 0 ? (
-        <p className="text-sm text-[#8a7a6a]">კლასი ჯერ არ შექმნილა. შექმენი პირველი და დაამატე წევრები.</p>
+        <p className="rounded-3xl border border-dashed border-[#dccbb0] px-4 py-8 text-center text-sm text-[#8a7a6a]">კლასი ჯერ არ შექმნილა. შექმენი პირველი და დაამატე წევრები.</p>
       ) : (
-        <ul className="divide-y divide-[#f1e8d9] -mx-1">
+        <ul className="grid sm:grid-cols-2 gap-3">
           {classes.map(c => <ClassRow key={c.id} cls={c} group={groups.find(g => g.id === c.psalterGroupId)} onOpen={() => edit(c)} />)}
         </ul>
       )}
-      <Btn kind="soft" full icon={<Plus />} className="mt-3 sm:w-auto" onClick={() => edit()}>ახალი კლასი</Btn>
-    </Card>
+    </section>
   );
 
   if (!draft) return isAdminMode ? list : null;
@@ -475,39 +477,55 @@ export const ClassesAdmin: React.FC<{
   );
 };
 
-/** The class's psalter group under its row: name and the kanons read on average in the last cycles. */
+/** The class's psalter group on its card: name and the kanons read on average in the last cycles. */
 const ClassGroupLine: React.FC<{ group: PsalterGroup }> = ({ group }) => {
   const reading = useGroupReading(group);
   return (
-    <span className="mt-1 flex items-center gap-1.5 text-xs text-[#7a2028] min-w-0">
-      <BookOpen className="w-3.5 h-3.5 shrink-0" />
-      <span className="font-semibold truncate">{group.name}</span>
-      {reading && <span className="shrink-0 text-[#8a7a6a] tabular-nums">· კანონი {reading.avg.toFixed(1)}/{KATHISMA_COUNT}</span>}
-    </span>
+    <Pill tone="wine" className="max-w-full">
+      <BookOpen />
+      <span className="min-w-0 truncate">{group.name}</span>
+      {reading && <span className="shrink-0 font-semibold opacity-75 tabular-nums">· კანონი {reading.avg.toFixed(1)}/{KATHISMA_COUNT}</span>}
+    </Pill>
   );
 };
 
-/** A class in the admin list: logo, name, members and teachers, its psalter group, attendance. */
+/** A class in the admin list, as a card: logo and name, its teachers, small chips (members, program, psalter
+ *  group) and the attendance bar. A class without a teacher says so in the card's corner. */
 const ClassRow: React.FC<{ cls: SchoolClass; group?: PsalterGroup; onOpen: () => void }> = ({ cls, group, onOpen }) => {
   const rate = useClassAttendance(cls);
   return (
-    <li className="px-1">
-      <button type="button" onClick={onOpen} className="w-full flex items-center gap-3 py-3 text-left cursor-pointer group">
-        <ClassLogo name={cls.name} logo={cls.logo} className="w-11 h-11 text-base shrink-0" />
-        <span className="min-w-0 flex-1">
-          <span className="block font-semibold text-[#2a2017] truncate group-hover:text-[#7a2028]">{cls.name}</span>
-          <span className="block text-xs text-[#8a7a6a] truncate">
-            {cls.members.length} წევრი · {cls.teachers.length ? cls.teachers.map(t => t.name).join(', ') : <span className="text-[#9a3324]">მასწავლებელი არ ჰყავს</span>}
+    <li>
+      <button type="button" onClick={onOpen}
+        className="w-full h-full p-4 flex flex-col gap-3 text-left rounded-3xl bg-white/80 ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/35 hover:shadow-[0_8px_22px_-14px_rgba(74,52,38,0.4)] active:scale-[0.99] cursor-pointer transition group">
+        <span className="flex items-start gap-3">
+          <ClassLogo name={cls.name} logo={cls.logo} className="w-12 h-12 text-base shrink-0" />
+          <span className="min-w-0 flex-1">
+            <span className="block font-serif-ge text-[16px] font-bold leading-snug text-[#2a2017] line-clamp-2 group-hover:text-[#7a2028] transition-colors">{cls.name}</span>
+            {cls.teachers.length ? (
+              <span className="mt-1 flex items-center gap-1.5 min-w-0">
+                <span className="flex -space-x-1.5 shrink-0">
+                  {cls.teachers.slice(0, 3).map(t => <Avatar key={t.uid} name={t.name} photo={t.photoURL} size={20} className="ring-2 ring-white" />)}
+                </span>
+                <span className="text-xs text-[#8a7a6a] truncate">{cls.teachers.map(t => t.name).join(', ')}</span>
+              </span>
+            ) : (
+              <span className="mt-1.5 flex"><Pill tone="amber"><TriangleAlert /> მასწავლებელი არ ჰყავს</Pill></span>
+            )}
           </span>
+          <ChevronRight className="w-4 h-4 mt-1 text-[#b3a594] shrink-0 group-hover:text-[#7a2028] group-hover:translate-x-0.5 transition" />
+        </span>
+        <span className="flex flex-wrap gap-1.5">
+          <Pill tone="muted"><Users /> {cls.members.length} წევრი</Pill>
+          {cls.program.length > 0 && <Pill tone="muted"><ListMusic /> პროგრამაში {cls.program.length}</Pill>}
           {group && <ClassGroupLine group={group} />}
         </span>
         {rate !== null && (
-          <span className="shrink-0 text-right leading-tight">
-            <span className="block text-sm font-bold tabular-nums text-[#4a3426]">{rate}%</span>
-            <span className="block text-[11px] text-[#8a7a6a]">დასწრება</span>
+          <span className="mt-auto flex items-center gap-2.5">
+            <span className="text-[12px] font-semibold text-[#8a7a6a] shrink-0">დასწრება</span>
+            <span className="flex-1 min-w-0"><Bar value={rate} max={100} tone={rate >= 75 ? 'green' : 'wine'} /></span>
+            <span className="text-sm font-bold tabular-nums text-[#4a3426] shrink-0">{rate}%</span>
           </span>
         )}
-        <ChevronRight className="w-4 h-4 text-[#b3a594] shrink-0" />
       </button>
     </li>
   );

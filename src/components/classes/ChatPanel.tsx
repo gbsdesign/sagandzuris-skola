@@ -164,6 +164,8 @@ export interface ChatPanelProps {
   isCall: (m: ChatMessage) => boolean;
   callTitle: string;
   onJoinCall: () => void;
+  /** the call is still on (otherwise its card is only a note, without the button) */
+  callLive?: boolean;
   canDelete: (m: ChatMessage) => boolean;
   /** a class: avatars and names over the others' messages; a private chat has only two people (or: whose messages) */
   showNames?: boolean | ((m: ChatMessage) => boolean);
@@ -182,7 +184,7 @@ export interface ChatPanelProps {
 
 // A chat: text and voice messages (a class's chat, or a teacher's private chat with a student).
 export const ChatPanel: React.FC<ChatPanelProps> = ({
-  base, author, messages, loading, error, header, isCall, callTitle, onJoinCall, canDelete,
+  base, author, messages, loading, error, header, isCall, callTitle, onJoinCall, callLive = true, canDelete,
   showNames = false, seenAt = null, onSent, listClassName = 'h-[56vh] min-h-[300px] max-h-[560px]', readOnly = false,
   staffLabel = 'მასწავლებელი', fill = false,
 }) => {
@@ -316,6 +318,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     el.style.height = `${Math.min(el.scrollHeight, 132)}px`;
   };
 
+  // only the newest call card leads into the call
+  const lastCallId = [...messages].reverse().find(m => isCall(m))?.id;
+
   // my newest message gets "ნანახია" once the other person has opened the chat after it
   const lastMine = [...messages].reverse().find(m => m.uid === author.uid);
   const seenId = seenAt && lastMine?.at && !lastMine.pending && seenAt >= lastMine.at ? lastMine.id : null;
@@ -381,15 +386,17 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                             <Video className="w-5 h-5 shrink-0" /> {callTitle}
                           </p>
                           <div className="flex items-center justify-between gap-4">
-                            <button
-                              type="button"
-                              onClick={e => { e.stopPropagation(); onJoinCall(); }}
-                              className={`h-10 px-4 rounded-full text-sm font-bold cursor-pointer active:scale-95 transition ${
-                                mine ? 'bg-[#fbf6ec] text-[#7a2028]' : 'bg-[#7a2028] text-[#fbf6ec]'
-                              }`}
-                            >
-                              შესვლა ზარში
-                            </button>
+                            {callLive && m.id === lastCallId ? (
+                              <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); onJoinCall(); }}
+                                className={`h-10 px-4 rounded-full text-sm font-bold cursor-pointer active:scale-95 transition ${
+                                  mine ? 'bg-[#fbf6ec] text-[#7a2028]' : 'bg-[#7a2028] text-[#fbf6ec]'
+                                }`}
+                              >
+                                შესვლა ზარში
+                              </button>
+                            ) : <span />}
                             <span className={`text-[11px] leading-none ${mine ? 'text-[#fbf6ec]/70' : 'text-[#a89886]'}`}>{sentAt(m)}</span>
                           </div>
                         </div>

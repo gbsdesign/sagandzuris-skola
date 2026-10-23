@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { BookOpen, CalendarDays, Check, GripVertical, Hash, Palette, Plus, RotateCcw, Trash2 } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { BookOpen, CalendarDays, Check, GripVertical, Hash, Minus, Palette, Plus, RotateCcw, Trash2 } from 'lucide-react';
 import { HABIT_GROUPS, HabitGroupType, HabitMenu } from '../../data/habitsAndManera';
 import { COUNTER_UNITS, HABIT_ICON_IDS, HABIT_TONES, HabitCounter, HabitLook, MAX_COUNTER_GOAL, TONE_IDS } from '../../data/habitLooks';
 import {
@@ -11,14 +11,20 @@ import {
   reorderGroup,
   restoreHabit,
   MyHabitGroup,
+  setHabitAlerts,
   setHabitCounter,
   setHabitGroup,
+  setHabitLabel,
   setHabitLinks,
   setHabitLook,
   setHabitMenu,
   setHabitNote,
+  setHabitRichNote,
+  setHabitSchedule,
+  setHabitTime,
 } from '../../utils/myHabits';
-import { HabitExtras } from './HabitLinks';
+import { EDIT_LABEL, EDIT_ROW, HabitExtras } from './HabitLinks';
+import { ScheduleRows, TimeAlertsRow, newSchedule } from './HabitPlanEditor';
 import { useMyHabits } from '../../hooks/useMyHabits';
 import { useDragSort } from '../ui/useDragSort';
 import { Btn, FIELD, Toggle } from '../ui/kit';
@@ -326,6 +332,225 @@ export const HabitSettings: React.FC<{ mine: Mine; id: string; onRemoved: () => 
           </button>
         )}
       </section>
+    </div>
+  );
+};
+
+// the card's own editor: a short label on the left, the control beside it
+const PICK = `${FIELD} !w-auto flex-1 min-w-[10rem] !h-10 !text-[14px] cursor-pointer`;
+
+/** The day's goal as −/+ round a number one may type, and what is counted as a list (a word of one's own, or no counter). */
+const CounterRow: React.FC<{ counter: HabitCounter | undefined; onChange: (counter: HabitCounter | 'none') => void }> = ({ counter, onChange }) => {
+  const [typed, setTyped] = useState<string | null>(null);
+  const [own, setOwn] = useState(false);
+  if (!counter) {
+    return (
+      <button type="button" onClick={() => onChange({ goal: 10, unit: 'ჯერ' })} className={chip(false)}>
+        რიცხვით დათვლა
+      </button>
+    );
+  }
+  const set = (goal: number) => {
+    const n = Math.max(1, Math.min(MAX_COUNTER_GOAL, goal || counter.goal));
+    if (n !== counter.goal) onChange({ goal: n, unit: counter.unit });
+  };
+  const units = COUNTER_UNITS.includes(counter.unit) ? COUNTER_UNITS : [...COUNTER_UNITS, counter.unit];
+  const step = 'w-10 h-10 shrink-0 flex items-center justify-center text-[#7a2028] cursor-pointer disabled:opacity-30 disabled:cursor-default active:scale-90 transition-transform';
+  return (
+    <span className="inline-flex items-center rounded-xl bg-white ring-1 ring-[#e8dcc8]">
+      <button type="button" aria-label="მიზანი −1" disabled={counter.goal <= 1} onClick={() => set(counter.goal - 1)} className={step}>
+        <Minus className="w-4 h-4 stroke-[2.5]" />
+      </button>
+      <input
+        type="number"
+        inputMode="numeric"
+        min={1}
+        max={MAX_COUNTER_GOAL}
+        aria-label="მიზანი დღეში"
+        value={typed ?? counter.goal}
+        onChange={e => setTyped(e.target.value)}
+        onBlur={() => { if (typed !== null) set(parseInt(typed, 10)); setTyped(null); }}
+        onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()}
+        className="w-12 h-10 bg-transparent text-center text-[16px] font-bold tabular-nums text-[#2a2017] outline-none [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none"
+      />
+      <button type="button" aria-label="მიზანი +1" disabled={counter.goal >= MAX_COUNTER_GOAL} onClick={() => set(counter.goal + 1)} className={step}>
+        <Plus className="w-4 h-4 stroke-[2.5]" />
+      </button>
+      {/* what is counted, in the same box: a ready word, one's own, or no counter */}
+      <span className="self-stretch w-px my-2 bg-[#e8dcc8]" aria-hidden />
+      {own ? (
+        <input
+          autoFocus
+          type="text"
+          maxLength={20}
+          placeholder="სიტყვა"
+          aria-label="რას ითვლის — შენი სიტყვა"
+          onBlur={e => { const word = e.target.value.trim(); setOwn(false); if (word && word !== counter.unit) onChange({ goal: counter.goal, unit: word }); }}
+          onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()}
+          className="w-24 min-w-0 h-10 px-2.5 bg-transparent text-[14px] text-[#2a2017] outline-none"
+        />
+      ) : (
+        <select
+          aria-label="რას ითვლის"
+          value={counter.unit}
+          onChange={e => {
+            const v = e.target.value;
+            if (v === 'own') setOwn(true);
+            else onChange(v === 'none' ? 'none' : { goal: counter.goal, unit: v });
+          }}
+          className="h-10 pl-2.5 pr-1 rounded-r-xl bg-transparent text-[14px] font-semibold text-[#2a2017] outline-none cursor-pointer"
+        >
+          {units.map(u => (
+            <option key={u} value={u}>{u}</option>
+          ))}
+          <option value="own">სხვა…</option>
+          <option value="none">გამორთვა</option>
+        </select>
+      )}
+    </span>
+  );
+};
+
+/** ✏️ on a habit's card: its settings unfolded right under it — its name, colour, icon (a row that scrolls), how often
+ *  (a group, or „მორგებული“ days), its time and reminders, its prayers, the counter, other buttons, a formatted
+ *  description, taking it away; „მზადაა“ folds it back. Each change is saved at once. */
+export const HabitCardEditor: React.FC<{ mine: Mine; id: string; onDone: () => void }> = ({ mine, id, onDone }) => {
+  const { setup, groups, save } = mine;
+  const [asking, setAsking] = useState(false);
+  const icons = useRef<HTMLDivElement>(null);
+  const habit = groups.flatMap(g => g.items).find(h => h.id === id);
+  const group = groups.find(g => g.items.some(h => h.id === id))?.id;
+  const look = mine.looks[id];
+  // the chosen icon in sight within its row (the row only — the page stays where it is)
+  useEffect(() => {
+    const row = icons.current;
+    const on = row?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (row && on) row.scrollLeft = on.offsetLeft - (row.clientWidth - on.offsetWidth) / 2;
+  }, []);
+  if (!habit || !look) return null;
+  const c = HABIT_TONES[look.tone].c;
+  const keep = (next: Parameters<typeof save>[0]) => void save(next).catch(() => {});
+  const plan = habit.schedule;
+
+  return (
+    <div className="space-y-3">
+      <input
+        key={habit.label}
+        defaultValue={habit.label}
+        maxLength={60}
+        aria-label="სათაური"
+        placeholder="სათაური"
+        onBlur={e => e.target.value.trim() !== habit.label && keep(setHabitLabel(setup, id, e.target.value))}
+        onKeyDown={e => e.key === 'Enter' && e.currentTarget.blur()}
+        className="w-full h-11 px-0.5 bg-transparent border-b-2 border-[#e8dcc8] focus:border-[#7a2028] text-[18px] font-bold text-[#2a2017] placeholder:text-[#b3a594] outline-none transition-colors"
+      />
+      <div className="grid grid-cols-9 gap-1.5">
+        {TONE_IDS.map(t => {
+          const on = t === look.tone;
+          const tc = HABIT_TONES[t].c;
+          return (
+            <button
+              key={t}
+              type="button"
+              aria-pressed={on}
+              aria-label={HABIT_TONES[t].name}
+              title={HABIT_TONES[t].name}
+              onClick={() => keep(setHabitLook(setup, id, { tone: t }))}
+              className="w-full max-w-9 aspect-square mx-auto rounded-full flex items-center justify-center cursor-pointer transition-transform active:scale-90"
+              style={{ background: tc, boxShadow: on ? `0 0 0 2px #fff, 0 0 0 3.5px ${tc}` : undefined }}
+            >
+              {on && <Check className="w-4 h-4 text-white stroke-[3]" />}
+            </button>
+          );
+        })}
+      </div>
+      <div ref={icons} className="-mx-3 px-3 flex gap-1.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {HABIT_ICON_IDS.map((i, n) => {
+          const on = i === look.icon;
+          return (
+            <button
+              key={i}
+              type="button"
+              aria-pressed={on}
+              aria-label={`ხატულა ${n + 1}`}
+              onClick={() => keep(setHabitLook(setup, id, { icon: i }))}
+              className="w-10 h-10 shrink-0 rounded-xl flex items-center justify-center cursor-pointer transition-colors active:scale-95"
+              style={on ? { background: c, color: '#fff' } : { background: tint(c, 0.08), color: c }}
+            >
+              <HabitIcon icon={i} className="w-5 h-5" />
+            </button>
+          );
+        })}
+      </div>
+      <label className={EDIT_ROW}>
+        <span className={EDIT_LABEL}>რამდენჯერ</span>
+        <select
+          value={plan ? 'custom' : group}
+          onChange={e =>
+            keep(e.target.value === 'custom' ? setHabitSchedule(setup, id, plan ?? newSchedule()) : setHabitGroup(setup, id, e.target.value))
+          }
+          className={PICK}
+        >
+          {/* the sacraments are not offered any more; a habit still there keeps its place */}
+          {HABIT_GROUPS.filter(g => g.id !== 'sacraments' || (!plan && group === g.id)).map(g => (
+            <option key={g.id} value={g.id}>{groupTitle(g)}</option>
+          ))}
+          <option value="custom">მორგებული…</option>
+        </select>
+      </label>
+      {plan && <ScheduleRows schedule={plan} onChange={s => keep(setHabitSchedule(setup, id, s))} />}
+      <TimeAlertsRow
+        time={habit.time}
+        alerts={habit.alerts ?? []}
+        onTime={t => keep(setHabitTime(setup, id, t))}
+        onAlerts={a => keep(setHabitAlerts(setup, id, a))}
+      />
+      <label className={EDIT_ROW}>
+        <span className={EDIT_LABEL}>ლოცვა</span>
+        <select value={habit.menu ?? 'none'} onChange={e => keep(setHabitMenu(setup, id, e.target.value as Choice))} className={PICK}>
+          {(['none', ...MENUS] as Choice[]).map(m => (
+            <option key={m} value={m}>{m === 'none' ? 'ლოცვის გარეშე' : MENU_LABELS[m]}</option>
+          ))}
+        </select>
+      </label>
+      <div className={EDIT_ROW}>
+        <span className={EDIT_LABEL}>მიზანი</span>
+        <div className="flex-1 min-w-fit">
+          <CounterRow counter={mine.counters[id]} onChange={next => keep(setHabitCounter(setup, id, next))} />
+        </div>
+      </div>
+      <HabitExtras
+        compact
+        habit={habit}
+        onLinks={links => keep(setHabitLinks(setup, id, links))}
+        onNote={note => keep(setHabitNote(setup, id, note))}
+        onRich={html => keep(setHabitRichNote(setup, id, html))}
+      />
+      <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+        {asking ? (
+          <span className="flex flex-wrap items-center gap-2 animate-in fade-in duration-150">
+            <span className="text-[13px] font-semibold text-[#6a5646]">წაიშალოს?</span>
+            <Btn size="sm" kind="danger" onClick={() => { setAsking(false); keep(removeHabit(setup, id)); onDone(); }}>
+              წაშლა
+            </Btn>
+            <Btn size="sm" kind="ghost" onClick={() => setAsking(false)}>
+              არა
+            </Btn>
+          </span>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setAsking(true)}
+            className="min-h-10 px-3 -ml-3 rounded-full inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-[#8a7a6a] hover:text-red-600 hover:bg-red-50 cursor-pointer transition-colors"
+          >
+            <Trash2 className="w-4 h-4" />
+            წაშლა
+          </button>
+        )}
+        <Btn icon={<Check />} onClick={onDone}>
+          მზადაა
+        </Btn>
+      </div>
     </div>
   );
 };

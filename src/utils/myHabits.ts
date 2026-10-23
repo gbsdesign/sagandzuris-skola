@@ -1,4 +1,5 @@
 import { HABIT_GROUPS, HABIT_ITEMS, HabitGroupType, HabitItemType, HabitMenu } from '../data/habitsAndManera';
+import { noteText, safeNoteHtml } from './richNote';
 import {
   HABIT_ICON_IDS,
   HABIT_TONES,
@@ -37,7 +38,38 @@ export interface HabitSetup {
   looks?: Record<string, Partial<HabitLook>>;
   /** a habit counted in numbers, or 'none' to switch the school's counter off */
   counters?: Record<string, HabitCounter | 'none'>;
+  /** a school habit's name of the member's own */
+  labels?: Record<string, string>;
+  /** „მორგებული“: a habit's own days (it then sits with the daily ones and is due on those days only) */
+  schedules?: Record<string, HabitSchedule>;
+  /** a habit's time of day */
+  times?: Record<string, HabitTime>;
+  /** reminders: minutes before the habit's time (0 — at the time) */
+  alerts?: Record<string, number[]>;
+  /** the note with its formatting (safe HTML, see utils/richNote); once written it is shown instead of `notes` */
+  richNotes?: Record<string, string>;
 }
+
+/** Every `every` days, weeks (on `days`, 0 = Sunday) or months (on the start's day of the month), from `start`;
+ *  it ends on `until`, or after `count` times, or never. */
+export interface HabitSchedule {
+  every: number;
+  unit: 'day' | 'week' | 'month';
+  days?: number[];
+  /** YYYY-MM-DD */
+  start: string;
+  until?: string;
+  count?: number;
+}
+
+/** "HH:MM", from and (if given) to */
+export interface HabitTime {
+  from: string;
+  to?: string;
+}
+
+export const ALERT_CHOICES = [0, 5, 10, 15, 30, 60];
+export const MAX_ALERTS = 3;
 
 /** Something tied to a habit: an item of the one search (kept whole, so it opens without the index), or a site. */
 export type HabitLink =
@@ -46,7 +78,13 @@ export type HabitLink =
 
 export interface MyHabit extends HabitItemType {
   links?: HabitLink[];
+  /** the note as plain text (a formatted one with its tags taken away) */
   note?: string;
+  /** the formatted note, safe HTML */
+  richNote?: string;
+  schedule?: HabitSchedule;
+  time?: HabitTime;
+  alerts?: number[];
 }
 export type MyHabitGroup = Omit<HabitGroupType, 'items'> & { items: MyHabit[] };
 
@@ -82,8 +120,23 @@ export const resolveHabits = (setup: HabitSetup | null | undefined): MyHabitGrou
   const withMenu = (h: HabitItemType): MyHabit => {
     const m = menus[h.id];
     const links = setup?.links?.[h.id]?.filter(l => l?.title);
-    const note = setup?.notes?.[h.id]?.trim();
-    const own: MyHabit = { ...h, ...(links?.length ? { links } : {}), ...(note ? { note } : {}) };
+    const rich = setup?.richNotes?.[h.id];
+    const richNote = rich ? safeNoteHtml(rich) : '';
+    const note = rich !== undefined ? noteText(richNote) : setup?.notes?.[h.id]?.trim();
+    const label = setup?.labels?.[h.id]?.trim();
+    const schedule = setup?.schedules?.[h.id];
+    const time = setup?.times?.[h.id];
+    const alerts = time ? setup?.alerts?.[h.id]?.filter(a => ALERT_CHOICES.includes(a)) : undefined;
+    const own: MyHabit = {
+      ...h,
+      ...(label ? { label } : {}),
+      ...(links?.length ? { links } : {}),
+      ...(note ? { note } : {}),
+      ...(richNote && note ? { richNote } : {}),
+      ...(schedule?.start && schedule.every > 0 ? { schedule } : {}),
+      ...(time?.from ? { time } : {}),
+      ...(alerts?.length ? { alerts } : {}),
+    };
     if (m === 'none') return { ...own, menu: undefined };
     return isMenu(m) ? { ...own, menu: m } : own;
   };
@@ -134,12 +187,53 @@ export const restoreHabit = (setup: HabitSetup, id: string): HabitSetup => ({
 
 /** Moves a habit to another group ("რამდენჯერ"); it joins the end of that group. Back in its school group, the
  *  move is forgotten. */
+/** a group chosen from the list ends a „მორგებული“ schedule */
 export const setHabitGroup = (setup: HabitSetup, id: string, group: string): HabitSetup => {
+  const { [id]: _plan, ...schedules } = setup.schedules || {};
+  const next = { ...setup, schedules };
   const own = setup.custom?.[id];
-  if (own) return { ...setup, custom: { ...setup.custom, [id]: { ...own, group } } };
+  if (own) return { ...next, custom: { ...setup.custom, [id]: { ...own, group } } };
   const { [id]: _was, ...groups } = setup.groups || {};
-  return { ...setup, groups: SCHOOL_GROUP.get(id) === group ? groups : { ...groups, [id]: group } };
+  return { ...next, groups: SCHOOL_GROUP.get(id) === group ? groups : { ...groups, [id]: group } };
 };
+
+/** „მორგებული“: the habit's own days; it moves to the daily habits, due on those days only */
+export const setHabitSchedule = (setup: HabitSetup, id: string, schedule: HabitSchedule): HabitSetup => {
+  const clean: HabitSchedule = {
+    every: Math.max(1, Math.min(99, Math.round(schedule.every) || 1)),
+    unit: schedule.unit,
+    start: schedule.start,
+    ...(schedule.unit === 'week' && schedule.days?.length ? { days: [...new Set(schedule.days)].sort() } : {}),
+    ...(schedule.until ? { until: schedule.until } : schedule.count ? { count: Math.max(1, Math.min(999, schedule.count)) } : {}),
+  };
+  const daily = setHabitGroup(setup, id, 'daily');
+  return { ...daily, schedules: { ...daily.schedules, [id]: clean } };
+};
+
+/** the member's own name for a habit; an empty one brings back the school's */
+export const setHabitLabel = (setup: HabitSetup, id: string, label: string): HabitSetup => {
+  const name = label.trim().slice(0, 60);
+  const own = setup.custom?.[id];
+  if (own) return name ? { ...setup, custom: { ...setup.custom, [id]: { ...own, label: name } } } : setup;
+  const school = HABIT_ITEMS.find(h => h.id === id)?.label;
+  const { [id]: _was, ...labels } = setup.labels || {};
+  return { ...setup, labels: !name || name === school ? labels : { ...labels, [id]: name } };
+};
+
+export const setHabitTime = (setup: HabitSetup, id: string, time: HabitTime | null): HabitSetup => {
+  const { [id]: _was, ...times } = setup.times || {};
+  return { ...setup, times: time?.from ? { ...times, [id]: time.to && time.to > time.from ? time : { from: time.from } } : times };
+};
+
+export const setHabitAlerts = (setup: HabitSetup, id: string, alerts: number[]): HabitSetup => ({
+  ...setup,
+  alerts: { ...setup.alerts, [id]: [...new Set(alerts)].filter(a => ALERT_CHOICES.includes(a)).sort((a, b) => a - b).slice(0, MAX_ALERTS) },
+});
+
+export const setHabitRichNote = (setup: HabitSetup, id: string, html: string): HabitSetup => ({
+  ...setup,
+  richNotes: { ...setup.richNotes, [id]: safeNoteHtml(html) },
+});
 
 export const setHabitMenu = (setup: HabitSetup, id: string, menu: HabitMenu | 'none'): HabitSetup => ({
   ...setup,

@@ -10,7 +10,8 @@ import { dayNeeds } from '../../utils/habitsWeek';
 import { triggerHaptic } from '../../utils/haptics';
 import { Btn, IconBtn, Sheet } from '../ui/kit';
 import { HabitPrayerMenu } from './HabitPrayerMenu';
-import { AddHabitPanel, HabitSettings, HabitsReorder } from './HabitsEditor';
+import { setHabitReminders } from '../../utils/prayerReminders';
+import { AddHabitPanel, HabitCardEditor, HabitSettings, HabitsReorder } from './HabitsEditor';
 import { PATH_ICON } from './IndependentWorkCard';
 import { DayView, ListEdit } from '../habits/DayView';
 import { WeekView } from '../habits/WeekView';
@@ -96,6 +97,11 @@ const HabitsInfo: React.FC<{ groups: MyHabitGroup[] }> = ({ groups }) => {
           კალენდარი და წელი. იქვე <Pencil className="inline w-4 h-4 -mt-0.5 text-[#7a2028]" /> — რამდენჯერ, ფერი და ხატულა,
           მთვლელი, ლოცვა, სხვა ღილაკები (ძებნით ან ლინკით), ჩანაწერი და წაშლა. <Plus className="inline w-4 h-4 -mt-0.5 text-[#7a2028]" /> — მთვლელი (მაგ. იესოს ლოცვა): მიზანს რომ
           მიაღწევ, ჩვევა თავად მოინიშნება; ზოლის გვერდით რიცხვზე დაჭერით ზუსტ რაოდენობას ჩაწერ.
+        </li>
+        <li>
+          • სახარებისა და სამოციქულოს ბარათზე ისრის ადგილას <Pencil className="inline w-4 h-4 -mt-0.5 text-[#7a2028]" /> არის: ბარათი ქვემოთ
+          იშლება — სახელი, ფერი, ხატულა, „მორგებული“ დღეები (მაგ. ორშ · ოთხ · პარ), დრო და შეხსენება, ლოცვა, მიზანი, ღილაკები და აღწერა.
+          თავს „წავიკითხე“ ამატებს. წერტილები — ბოლო 10 დღე, % — რამდენჯერ შესრულდა თავისი დღეებიდან.
         </li>
         <li>• „დღე ▾“ — აქ აირჩევ კვირას, თვეს ან წელს: ყველა ჩვევა ერთად — კვირის ბადე, თვის კალენდარი და წლის რუკა.</li>
         <li>
@@ -235,6 +241,16 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
   const [seen, setSeen] = useState(introSeen);
   const { user } = useAuth();
   const mine = useMyHabits(user?.uid);
+  // the habits with a time and reminders become this browser's reminders (and the push server's)
+  useEffect(() => {
+    if (!user) return;
+    setHabitReminders(
+      mine.groups
+        .flatMap(g => g.items)
+        .filter(h => h.time && h.alerts?.length)
+        .map(h => ({ id: h.id, title: h.label, at: h.time!.from, alerts: h.alerts!, ...(h.schedule ? { plan: h.schedule } : {}) }))
+    );
+  }, [mine.groups, user]);
   const [view, setView] = useState<ViewId>('day');
   const [date, setDate] = useState(() => new Date());
   const access = useAccess();
@@ -268,6 +284,7 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
     ? {
         add: col => open(`add:${col === 0 ? 'daily' : 'weekly'}`),
         reorder: col => <HabitsReorder mine={mine} groups={col === 0 ? dailyOf(mine.groups) : rareOf(mine.groups)} />,
+        settings: (id, done) => <HabitCardEditor mine={mine} id={id} onDone={done} />,
       }
     : undefined;
 

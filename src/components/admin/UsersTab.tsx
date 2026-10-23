@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ChevronRight, Hourglass, Search, ShieldAlert } from 'lucide-react';
+import { CalendarDays, ChevronRight, GraduationCap, Hourglass, ListChecks, Search, Shield, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../context';
 import { SchoolClass } from '../../hooks/useClasses';
 import { PsalterGroup } from '../../hooks/usePsalter';
@@ -73,26 +73,11 @@ export const toUser = (id: string, d: any): UserRecord => {
   };
 };
 
-type Filter = 'all' | 'pending' | 'week' | 'month' | 'habits' | 'teacher' | 'admin' | 'refused';
+export type Filter = 'all' | 'pending' | 'week' | 'month' | 'habits' | 'teacher' | 'admin' | 'refused';
 const within = (iso: string, days: number) => !!iso && Date.now() - new Date(iso).getTime() < days * 86400_000;
 
-// "მომხმარებლები": everyone who signed in, in one list with one search; each filter shows how many it holds.
-// Members waiting to be let in stand on top (superadmins). A tap opens the person's one window (PersonSheet).
-export const UsersTab: React.FC<{
-  users: UserRecord[];
-  staff: StaffRecord[];
-  classes: SchoolClass[];
-  groups: PsalterGroup[];
-  access: Record<string, AccessRecord>;
-  decisions: Record<string, DecisionRecord>;
-  loading: boolean;
-  onMessage: (text: string, type: 'success' | 'error') => void;
-}> = ({ users, staff, classes, groups, access, decisions, loading, onMessage }) => {
-  const { isSuperAdmin } = useAuth();
-  const [q, setQ] = useState('');
-  const [filter, setFilter] = useState<Filter>('all');
-  const [openId, setOpenId] = useState<string | null>(null);
-
+/** Who each filter holds; the panel's big numbers and the list's chips count with the same tests. */
+export const filterTests = (staff: StaffRecord[], access: Record<string, AccessRecord>, isSuperAdmin: boolean) => {
   // staff never wait, so a status only counts for members
   const statusOf = (u: UserRecord) => (isSuperAdmin && roleOf(u, staff) === 'member' ? access[u.userId]?.status : undefined);
   const test: Record<Filter, (u: UserRecord) => boolean> = {
@@ -105,14 +90,47 @@ export const UsersTab: React.FC<{
     teacher: u => roleOf(u, staff) === 'teacher',
     admin: u => ['admin', 'superadmin'].includes(roleOf(u, staff)),
   };
+  return { statusOf, test };
+};
+
+const CHIPS: { id: Filter; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'pending', label: 'ელოდება', Icon: Hourglass },
+  { id: 'month', label: 'აქტიური თვეში', Icon: CalendarDays },
+  { id: 'habits', label: 'ჩვევებს ინიშნავს', Icon: ListChecks },
+  { id: 'teacher', label: 'მასწავლებლები', Icon: GraduationCap },
+  { id: 'admin', label: 'ადმინები', Icon: Shield },
+  { id: 'refused', label: 'შეფერხებული', Icon: ShieldAlert },
+];
+
+// "მომხმარებლები": everyone who signed in, in one list with one search. The panel's big numbers on top choose the
+// main filters (they live in AdminPanelPage); the chips here hold the rest, each with how many it holds, and a
+// second tap on a chip goes back to everyone. Members waiting to be let in stand on top (superadmins).
+// A tap on a person opens their one window (PersonSheet).
+export const UsersTab: React.FC<{
+  users: UserRecord[];
+  staff: StaffRecord[];
+  classes: SchoolClass[];
+  groups: PsalterGroup[];
+  access: Record<string, AccessRecord>;
+  decisions: Record<string, DecisionRecord>;
+  loading: boolean;
+  filter: Filter;
+  onFilter: (f: Filter) => void;
+  /** filters already shown as the panel's big numbers: they get no chip */
+  tiles: Filter[];
+  onMessage: (text: string, type: 'success' | 'error') => void;
+}> = ({ users, staff, classes, groups, access, decisions, loading, filter, onFilter, tiles, onMessage }) => {
+  const { isSuperAdmin } = useAuth();
+  const [q, setQ] = useState('');
+  const [openId, setOpenId] = useState<string | null>(null);
+
+  const { statusOf, test } = filterTests(staff, access, isSuperAdmin);
   const count = (f: Filter) => users.filter(test[f]).length;
-  const FILTERS: { id: Filter; label: string; n: number }[] = ([
-    ['all', 'ყველა'], ['pending', 'ელოდება'], ['week', 'აქტიური კვირაში'], ['month', 'აქტიური თვეში'],
-    ['habits', 'ჩვევებს ინიშნავს'], ['teacher', 'მასწავლებლები'], ['admin', 'ადმინები'], ['refused', 'შეფერხებული'],
-  ] as [Filter, string][])
-    .map(([id, label]) => ({ id, label, n: count(id) }))
+  const FILTERS = CHIPS
+    .filter(f => !tiles.includes(f.id))
+    .map(f => ({ ...f, n: count(f.id) }))
     .filter(f => f.n > 0 || !['pending', 'refused'].includes(f.id));
-  const active = FILTERS.some(f => f.id === filter) ? filter : 'all';
+  const active = tiles.includes(filter) || FILTERS.some(f => f.id === filter) ? filter : 'all';
 
   const shown = useMemo(() => {
     const s = q.trim().toLowerCase();
@@ -137,20 +155,23 @@ export const UsersTab: React.FC<{
       </div>
       {/* phones: one row that slides sideways (the labels are long); wider screens: wrapped rows */}
       <div className="-mx-4 sm:mx-0 px-4 sm:px-0 py-0.5 flex gap-1.5 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,#000_calc(100%-28px),transparent)] sm:flex-wrap sm:overflow-visible sm:[mask-image:none]">
-        {FILTERS.map(f => (
-          <button key={f.id} type="button" onClick={() => setFilter(f.id)} aria-pressed={active === f.id}
-            className={`shrink-0 whitespace-nowrap h-9 px-3.5 rounded-full text-[13px] font-bold cursor-pointer transition inline-flex items-center gap-1.5 ${active === f.id ? 'bg-[#4a3426] text-[#fbf6ec]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426]'}`}>
-            {f.id === 'pending' && <span className="w-2 h-2 rounded-full bg-amber-500" aria-hidden />}
-            {f.label}
-            <span className={`tabular-nums ${active === f.id ? 'text-[#fbf6ec]/70' : 'text-[#8a7a6a]'}`}>{f.n}</span>
-          </button>
-        ))}
+        {FILTERS.map(({ id, label, Icon, n }) => {
+          const on = active === id;
+          return (
+            <button key={id} type="button" onClick={() => onFilter(on ? 'all' : id)} aria-pressed={on}
+              className={`shrink-0 whitespace-nowrap h-9 px-3.5 rounded-full text-[13px] font-bold cursor-pointer transition inline-flex items-center gap-1.5 ${on ? 'bg-[#7a2028]/[0.1] text-[#7a2028] ring-1 ring-[#7a2028]/30' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/30'}`}>
+              {id === 'pending' ? <span className="w-2 h-2 rounded-full bg-amber-500" aria-hidden /> : <Icon className={`w-3.5 h-3.5 ${on ? '' : 'text-[#8a7a6a]'}`} />}
+              {label}
+              <span className={`tabular-nums ${on ? 'text-[#7a2028]/70' : 'text-[#8a7a6a]'}`}>{n}</span>
+            </button>
+          );
+        })}
       </div>
 
       {loading ? (
         <p className="py-8 text-center text-sm text-[#8a7a6a]">იტვირთება…</p>
       ) : shown.length === 0 ? (
-        <p className="py-8 text-center text-sm text-[#8a7a6a]">ვერ მოიძებნა.</p>
+        <p className="py-8 text-center text-sm text-[#8a7a6a]">{q.trim() ? 'ვერ მოიძებნა.' : active === 'pending' ? 'მოლოდინში არავინ არის.' : 'აქ ჯერ არავინ არის.'}</p>
       ) : (
         <ul className="divide-y divide-[#f1e8d9] -mx-1">
           {shown.map(u => {

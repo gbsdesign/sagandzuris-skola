@@ -2,6 +2,7 @@ import {StrictMode} from 'react';
 import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
+import { startOffline } from './utils/offlineFiles';
 
 // Auto-clean stale Service Workers on dev/preview so the app never freezes or serves stale assets
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
@@ -36,6 +37,9 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
     }
   });
 }
+
+// offline mode: the light data downloads by itself in the background (utils/offlineFiles.ts)
+startOffline();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

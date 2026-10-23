@@ -3,6 +3,8 @@
 // • Seven-times prayers: POST /subscribe { subscription, reminders: { 'hour-12': [10, 5, 1], ... }, tz }
 //   stores one browser's prayer reminders. Cron :50, :55, :59 sends an empty push; the site's service
 //   worker (public/prayer-notify-sw.js) works out which hour is near and shows it.
+// • Habits: the same POST may hold reminders.habits [{ id, title, at: 'HH:MM', alerts: [minutes before], plan? }]
+//   (a habit's time on its card, „მორგებული“ days in `plan`). Each minute the due ones go out with their text.
 // • Group reminders: POST /account { subscription, token, psalter, assignments } binds the browser to the
 //   signed-in person (the Firebase ID token proves who they are). Cron :00 sends, in Georgian time:
 //   - psalter group: a nudge at the group's daily hour (20:00) to whoever hasn't read their kathisma,
@@ -31,6 +33,11 @@ const SUBJECT = 'https://sagandzuris-skola.pages.dev';
 const TBILISI_MS = 4 * 3600_000; // Georgia keeps UTC+4 all year
 const ASSIGNMENT_HOUR = 19;
 const SHIFT_HOUR = 9;
+
+const HABIT_ALERTS = [0, 5, 10, 15, 30, 60];
+const MAX_HABITS = 30;
+const HHMM = /^([01]\d|2[0-3]):[0-5]\d$/;
+const DAY_KEY = /^\d{4}-\d{2}-\d{2}$/;
 
 const enc = new TextEncoder();
 const dec = new TextDecoder();
@@ -64,11 +71,40 @@ const cleanReminders = (raw) => {
   const out = {};
   if (!raw || typeof raw !== 'object') return out;
   for (const [id, offsets] of Object.entries(raw)) {
+    if (id === 'habits') {
+      const habits = cleanHabits(offsets);
+      if (habits.length) out.habits = habits;
+      continue;
+    }
     if (!(id in HOURS) || !Array.isArray(offsets)) continue;
     const ok = [...new Set(offsets.filter((m) => OFFSETS.includes(m)))];
     if (ok.length) out[id] = ok;
   }
   return out;
+};
+
+// „მორგებული“ days, as the site keeps them (src/utils/myHabits.ts HabitSchedule)
+const cleanPlan = (p) => {
+  if (!p || typeof p !== 'object' || !DAY_KEY.test(p.start) || !['day', 'week', 'month'].includes(p.unit)) return null;
+  const out = { every: Math.min(99, Math.max(1, Math.round(Number(p.every)) || 1)), unit: p.unit, start: p.start };
+  if (p.unit === 'week' && Array.isArray(p.days)) {
+    const days = [...new Set(p.days.filter((d) => Number.isInteger(d) && d >= 0 && d <= 6))];
+    if (days.length) out.days = days;
+  }
+  if (typeof p.until === 'string' && DAY_KEY.test(p.until)) out.until = p.until;
+  else if (Number.isInteger(p.count) && p.count > 0) out.count = Math.min(999, p.count);
+  return out;
+};
+
+const cleanHabits = (raw) => {
+  if (!Array.isArray(raw)) return [];
+  return raw.slice(0, MAX_HABITS).flatMap((h) => {
+    if (!h || typeof h.id !== 'string' || !HHMM.test(h.at) || !Array.isArray(h.alerts)) return [];
+    const alerts = [...new Set(h.alerts.filter((m) => HABIT_ALERTS.includes(m)))].slice(0, 3);
+    if (!alerts.length) return [];
+    const plan = cleanPlan(h.plan);
+    return [{ id: h.id.slice(0, 40), title: String(h.title || 'ჩვევა').slice(0, 60), at: h.at, alerts, ...(plan ? { plan } : {}) }];
+  });
 };
 
 const validTz = (tz) => {
@@ -481,6 +517,7 @@ const localMinutes = (when, tz) => {
 const isDue = (reminders, tz, when) => {
   const now = localMinutes(when, tz);
   for (const [id, offsets] of Object.entries(reminders)) {
+    if (!(id in HOURS)) continue;
     for (const m of offsets) if ((HOURS[id] * 60 - m + 1440) % 1440 === now) return true;
   }
   return false;
@@ -496,6 +533,78 @@ async function runPrayerReminders(env, when) {
     }
   });
   if (due.length) await deliver(env, due.map((r) => [r, null]));
+}
+
+// ---- habits (pushes with their text) -------------------------------------------------------------------
+
+const utcDay = (key) => new Date(`${key}T00:00:00Z`);
+const nextKey = (key) => new Date(utcDay(key).getTime() + DAY_MS).toISOString().slice(0, 10);
+
+const localDay = (when, tz) => {
+  const p = Object.fromEntries(
+    new Intl.DateTimeFormat('en-CA', { timeZone: tz, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(when).map((x) => [x.type, x.value])
+  );
+  return `${p.year}-${p.month}-${p.day}`;
+};
+
+// the same rule as the site's src/utils/habitSchedule.ts (weeks start on Monday)
+const fitsPlan = (p, start, d) => {
+  if (p.unit === 'day') return Math.round((d - start) / DAY_MS) % p.every === 0;
+  if (p.unit === 'week') {
+    const days = p.days?.length ? p.days : [start.getUTCDay()];
+    const monday = (x) => x.getTime() - ((x.getUTCDay() + 6) % 7) * DAY_MS;
+    return days.includes(d.getUTCDay()) && (Math.round((monday(d) - monday(start)) / DAY_MS) / 7) % p.every === 0;
+  }
+  const months = (d.getUTCFullYear() - start.getUTCFullYear()) * 12 + d.getUTCMonth() - start.getUTCMonth();
+  const last = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + 1, 0)).getUTCDate();
+  return months % p.every === 0 && d.getUTCDate() === Math.min(start.getUTCDate(), last);
+};
+
+const planDue = (p, key) => {
+  if (key < p.start || (p.until && key > p.until)) return false;
+  const start = utcDay(p.start);
+  const d = utcDay(key);
+  if (!fitsPlan(p, start, d)) return false;
+  if (!p.count) return true;
+  let n = 0;
+  for (let x = start; x <= d; x = new Date(x.getTime() + DAY_MS)) if (fitsPlan(p, start, x) && ++n > p.count) return false;
+  return true;
+};
+
+/** The habits' reminders due this minute in the browser's time zone (one before midnight is for the next day). */
+const habitMessages = (habits, tz, when) => {
+  const now = localMinutes(when, tz);
+  const today = localDay(when, tz);
+  const out = [];
+  for (const h of habits) {
+    const [hh, mm] = h.at.split(':').map(Number);
+    for (const m of h.alerts) {
+      let at = hh * 60 + mm - m;
+      let day = today;
+      if (at < 0) {
+        at += 1440;
+        day = nextKey(today);
+      }
+      if (at !== now || (h.plan && !planDue(h.plan, day))) continue;
+      const soon = m === 0 ? 'დროა' : m === 60 ? '1 საათში' : `${m} წუთში`;
+      out.push({ title: h.title, body: `${soon} — ${h.at}`, tag: `habit-${h.id}-${m}`, url: '/?open=gz' });
+    }
+  }
+  return out;
+};
+
+async function runHabitReminders(env, when) {
+  const { results } = await env.DB.prepare(`SELECT key, endpoint, p256dh, auth, tz, reminders FROM subs WHERE reminders LIKE '%"habits"%'`).all();
+  const sends = [];
+  for (const r of results) {
+    if (!r.p256dh || !r.auth) continue;
+    try {
+      for (const message of habitMessages(JSON.parse(r.reminders).habits || [], r.tz, when)) sends.push([r, message]);
+    } catch {
+      /* a broken row waits for its next subscribe */
+    }
+  }
+  if (sends.length) await deliver(env, sends);
 }
 
 export default {
@@ -524,8 +633,11 @@ export default {
     ctx.waitUntil((async () => {
       await migrateFromKv(env);
       // the group reminders need FIREBASE_SA; without it the prayer reminders still work
-      if (when.getUTCMinutes() === 0) await runGroupHour(env, when).catch((e) => console.warn("group hour:", e?.message));
-      else await runPrayerReminders(env, when);
+      // one cron each minute: :00 the groups, :50 :55 :59 the prayer hours, every minute the habits
+      const minute = when.getUTCMinutes();
+      if (minute === 0) await runGroupHour(env, when).catch((e) => console.warn("group hour:", e?.message));
+      else if (minute === 50 || minute === 55 || minute === 59) await runPrayerReminders(env, when);
+      await runHabitReminders(env, when).catch((e) => console.warn('habits:', e?.message));
     })());
   },
 };

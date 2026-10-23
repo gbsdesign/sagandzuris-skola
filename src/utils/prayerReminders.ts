@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { PRAYER_HOURS, PrayerHour } from '../data/prayers';
+import type { HabitSchedule } from './myHabits';
+import { isDue } from './habitSchedule';
 
 // Reminders for the seven-times prayers ("შვიდგზის ლოცვა"). Kept per device in localStorage:
 // { 'hour-12': [10, 5, 1], ... } — minutes before the hour.
@@ -39,6 +41,31 @@ const write = (key: string, value: unknown) => {
 
 export const getReminders = (): ReminderSettings => read<ReminderSettings>(KEY, {});
 
+// Habits with a time and reminders (set on a habit's card): kept per device as well, sent to the push server
+// with the prayer ones (`reminders.habits`), and checked by the page itself while it is open.
+const HABITS_KEY = 'habitReminders';
+export interface HabitReminder {
+  id: string;
+  title: string;
+  /** "HH:MM" */
+  at: string;
+  /** minutes before `at` */
+  alerts: number[];
+  plan?: HabitSchedule;
+}
+export const getHabitReminders = (): HabitReminder[] => read<HabitReminder[]>(HABITS_KEY, []);
+export const setHabitReminders = (list: HabitReminder[]) => {
+  if (JSON.stringify(list) === JSON.stringify(getHabitReminders())) return;
+  write(HABITS_KEY, list);
+  void syncPush();
+};
+
+// everything this browser asks the push server for
+const pushReminders = () => {
+  const habits = getHabitReminders();
+  return { ...getReminders(), ...(habits.length ? { habits } : {}) };
+};
+
 export const setHourReminders = (hourId: string, offsets: number[]) => {
   const all = getReminders();
   if (offsets.length) all[hourId] = [...offsets].sort((a, b) => b - a);
@@ -56,7 +83,7 @@ interface PushState {
 // true while the push server holds this browser's current reminders
 const pushActive = () => {
   const state = read<PushState | null>(PUSH_KEY, null);
-  return Boolean(state && state.settings === JSON.stringify(getReminders()) && state.settings !== '{}');
+  return Boolean(state && state.settings === JSON.stringify(pushReminders()) && state.settings !== '{}');
 };
 
 const keyBytes = (b64url: string) => {
@@ -72,7 +99,7 @@ export const syncPush = async () => {
     if (!notificationsSupported() || Notification.permission !== 'granted') return;
     const reg = await navigator.serviceWorker.getRegistration();
     if (!reg?.pushManager) return;
-    const reminders = getReminders();
+    const reminders = pushReminders();
     const settings = JSON.stringify(reminders);
     const hasAny = settings !== '{}';
     let sub = await reg.pushManager.getSubscription();
@@ -161,6 +188,60 @@ const show = async (hour: PrayerHour, minutes: number, onOpen: (prayerId: string
   }
 };
 
+const habitWord = (m: number) => (m === 0 ? 'დროა' : m === 60 ? '1 საათში' : `${m} წუთში`);
+
+const showHabit = async (h: HabitReminder, minutes: number) => {
+  if (!notificationsSupported() || Notification.permission !== 'granted') return;
+  const options: NotificationOptions = {
+    body: `${habitWord(minutes)} — ${h.at}`,
+    icon: '/pwa-192x192.png',
+    badge: '/pwa-192x192.png',
+    tag: `habit-${h.id}-${minutes}`,
+    data: { url: '/?open=gz' },
+  };
+  try {
+    const n = new Notification(h.title, options);
+    n.onclick = () => {
+      window.focus();
+      n.close();
+    };
+    return;
+  } catch {
+    /* fall through to the service worker */
+  }
+  try {
+    const reg = await navigator.serviceWorker?.getRegistration();
+    await reg?.showNotification(h.title, options);
+  } catch {
+    /* nothing more we can do */
+  }
+};
+
+// the habits' reminders due in the last 2 minutes, today's or (before midnight) tomorrow's, on the habit's own days
+const habitTick = () => {
+  const now = Date.now();
+  const fired = read<Record<string, number>>(FIRED_KEY, {});
+  let changed = false;
+  for (const h of getHabitReminders()) {
+    const [hh, mm] = h.at.split(':').map(Number);
+    for (const minutes of h.alerts) {
+      for (const shift of [0, 1]) {
+        const day = new Date();
+        day.setDate(day.getDate() + shift);
+        day.setHours(hh, mm, 0, 0);
+        const at = day.getTime() - minutes * 60_000;
+        const key = `habit-${h.id}-${minutes}`;
+        if (at <= now && now - at < 2 * 60_000 && fired[key] !== at && (!h.plan || isDue(h.plan, day))) {
+          fired[key] = at;
+          changed = true;
+          void showHabit(h, minutes);
+        }
+      }
+    }
+  }
+  if (changed) write(FIRED_KEY, fired);
+};
+
 // Mounted once for the whole app: checks every 15 s whether a reminder is due.
 // A reminder fires if its moment passed less than 2 minutes ago and it has not fired yet,
 // so a throttled background tab or a short sleep still catches it, but an old one does not.
@@ -172,6 +253,8 @@ export const usePrayerReminderScheduler = (onOpenPrayer: (prayerId: string) => v
     const onOpen = (prayerId: string) => openRef.current(prayerId);
     const tick = () => {
       // the push server sends these; showing them here too would double them
+      // a habit's reminder here too (one with the same tag from the push server only replaces it)
+      habitTick();
       if (pushActive()) return;
       const settings = getReminders();
       const now = Date.now();

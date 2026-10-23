@@ -1,5 +1,5 @@
 import type { HabitPeriod } from '../data/habitsAndManera';
-import { HabitLog, dayKey, dayNeeds, doneOn, periodStart } from './habitsWeek';
+import { DayIds, HabitLog, dayKey, dayNeeds, doneOn, idsOn, periodStart } from './habitsWeek';
 
 // Numbers for the habits' views (დღე · კვირა · თვე · წელი) and a habit's own page: runs, the best run, how often
 // the goal was met. The history starts on the first ticked day — nothing before it counts as missed.
@@ -112,20 +112,22 @@ export const lastPeriods = (ticks: Set<string>, per: HabitPeriod, n: number, now
 };
 
 /** A day as a whole: daily habits ticked, and whether it counts (half of them at least). */
-export const dayState = (log: HabitLog, dailyIds: string[], date: Date) => {
-  const total = dailyIds.length;
-  const done = doneOn(log, dailyIds, date);
+export const dayState = (log: HabitLog, dailyIds: DayIds, date: Date) => {
+  const due = idsOn(dailyIds, date);
+  const total = due.length;
+  const done = doneOn(log, due, date);
   return { done, total, share: total ? done / total : 0, counted: total > 0 && done >= dayNeeds(total) };
 };
 
 /** The share of daily ticks over some days (only those from the history's start up to today). */
-export const daysShare = (log: HabitLog, dailyIds: string[], days: Date[], first: string | null, now: Date = new Date()) => {
+export const daysShare = (log: HabitLog, dailyIds: DayIds, days: Date[], first: string | null, now: Date = new Date()) => {
   const today = dayKey(now);
   const counted = days.filter(d => first && dayKey(d) >= first && dayKey(d) <= today);
-  if (!counted.length || !dailyIds.length) return null;
-  const done = counted.reduce((n, d) => n + doneOn(log, dailyIds, d), 0);
+  const total = counted.reduce((n, d) => n + idsOn(dailyIds, d).length, 0);
+  if (!counted.length || !total) return null;
+  const done = counted.reduce((n, d) => n + doneOn(log, idsOn(dailyIds, d), d), 0);
   return {
-    percent: Math.round((done / (counted.length * dailyIds.length)) * 100),
+    percent: Math.round((done / total) * 100),
     countedDays: counted.filter(d => dayState(log, dailyIds, d).counted).length,
   };
 };

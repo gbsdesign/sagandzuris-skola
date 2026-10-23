@@ -1,16 +1,16 @@
 import React, { useEffect, useState } from 'react';
 import { Bell, BellOff, Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
-import { useAuth, useChants, useNavigation } from '../context';
+import { useAuth, useNavigation } from '../context';
 import { KATHISMAS, PRAYER_HOURS, PrayerHour, bibleChapterId, hourClock, parseBibleId, prayerTitle, todaysWeekPrayerId } from '../data/prayers';
 import { HABIT_ITEMS } from '../data/habitsAndManera';
+import { COUNTED_BY_READING } from '../data/habitLooks';
 import { FoldedPrayer, PROSE, PrayerText } from '../components/views/PrayerText';
 import { HourPsalms } from '../components/views/HourPsalms';
 import { ReadingToolbar, useKhutsuri } from '../components/views/ReadingTools';
 import { PinButton } from '../components/home/ShortcutShelf';
-import { useHabitToggle } from '../components/views/ChvevebiPanel';
+import { useHabitsModel } from '../components/habits/useHabits';
 import { Btn } from '../components/ui/kit';
 import { useAccess } from '../hooks/useAccess';
-import { dayKey } from '../utils/habitsWeek';
 import { habitOfPrayer, rememberRead } from '../utils/prayerHabits';
 import {
   REMINDER_OFFSETS,
@@ -189,24 +189,32 @@ export const PrayerPage: React.FC = () => {
 };
 
 // At the end of a prayer: "წავიკითხე" ticks today's habit it belongs to (the morning prayers count for
-// "დილის და საღამოს ლოცვები", a chapter for "სახარება"…) and moves "გააგრძელე" past a finished chapter.
+// "დილის და საღამოს ლოცვები"…; a chapter adds one თავი to "სახარება" or "სამოციქულო") and moves "გააგრძელე" past a finished chapter.
 // A kathisma ticks "ფსალმუნები" the same way; psalter groups are marked only on their own page.
 const ReadMark: React.FC<{ prayerId: string }> = ({ prayerId }) => {
   const { user } = useAuth();
   const access = useAccess();
-  const { habitLog } = useChants();
-  const { toggle, blessing } = useHabitToggle();
+  const { model, blessing } = useHabitsModel(() => {});
   const [pressed, setPressed] = useState(false);
   useEffect(() => setPressed(false), [prayerId]);
 
   const habit = HABIT_ITEMS.find(h => h.id === habitOfPrayer(prayerId));
   if (!user || !habit || access.section('chvevebi') !== 'open') return null;
-  const ticked = (habitLog[dayKey(new Date())] || []).includes(habit.id);
+  const today = new Date();
+  const ticked = model.isOn(habit.id, today);
+  // a chapter of the Gospel or the Apostle adds one to the day's count (the day ticks at the goal); „გაუქმება“ takes it back
+  const counter = COUNTED_BY_READING.includes(habit.id) ? model.counters[habit.id] : undefined;
+  const count = counter ? model.countOn(habit.id, today) : 0;
 
   const press = () => {
     setPressed(true);
     rememberRead(prayerId, true);
-    if (!ticked) toggle(habit.id);
+    if (counter) model.setCount(habit.id, count + 1, today);
+    else if (!ticked) model.toggle(habit.id, today);
+  };
+  const undo = () => {
+    setPressed(false);
+    model.setCount(habit.id, count - 1, today);
   };
 
   return (
@@ -217,14 +225,30 @@ const ReadMark: React.FC<{ prayerId: string }> = ({ prayerId }) => {
           <span className="w-10 h-10 rounded-full bg-emerald-700 text-white flex items-center justify-center shrink-0">
             <Check className="w-5 h-5 stroke-[3]" />
           </span>
-          <span className="flex-1 min-w-0 text-sm font-semibold text-[#2a2017]">წაკითხულია — ჩვევა დღეს მონიშნულია. ღმერთმა შეგეწიოს!</span>
+          <span className="flex-1 min-w-0 text-sm font-semibold text-[#2a2017]">
+            {counter
+              ? `+1 ${counter.unit} — დღეს ${count} / ${counter.goal}.${count >= counter.goal ? ' ჩვევა შესრულდა, ღმერთმა შეგეწიოს!' : ''}`
+              : 'წაკითხულია — ჩვევა დღეს მონიშნულია. ღმერთმა შეგეწიოს!'}
+          </span>
+          {counter && (
+            <Btn size="sm" kind="ghost" onClick={undo}>
+              გაუქმება
+            </Btn>
+          )}
         </div>
       ) : (
         <>
           <Btn full size="lg" kind={ticked ? 'soft' : 'primary'} icon={<Check />} onClick={press}>
             წავიკითხე
           </Btn>
-          {ticked && <p className="text-center text-[12.5px] text-[#8a7a6a]">ჩვევა დღეს უკვე მონიშნულია</p>}
+          {counter
+            ? count > 0 && (
+                <p className="text-center text-[12.5px] tabular-nums text-[#8a7a6a]">
+                  დღეს {count} / {counter.goal} {counter.unit}
+                  {ticked ? ' — ჩვევა შესრულდა' : ''}
+                </p>
+              )
+            : ticked && <p className="text-center text-[12.5px] text-[#8a7a6a]">ჩვევა დღეს უკვე მონიშნულია</p>}
         </>
       )}
       {blessing}

@@ -3,60 +3,59 @@ import react from '@vitejs/plugin-react';
 import path from 'path';
 import {defineConfig} from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
+import { offlinePacks } from './scripts/lib/offline-manifest.mjs';
 
 export default defineConfig(() => {
   return {
     plugins: [
-      react(), 
+      react(),
       tailwindcss(),
+      offlinePacks(path.resolve(import.meta.dirname || '.', 'public')),
       VitePWA({
         registerType: 'autoUpdate',
         injectRegister: 'inline',
         workbox: {
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-          // pages few people open and the heaviest data stay out of the advance download (about 2 MB less for
-          // every new phone); they are kept once opened (the assets cache below). All the choir needs in church
-          // (notes, the program, church mode, prayers) is still downloaded in advance.
+          // the whole app — every page, picture and font — is downloaded in advance, so it opens without internet.
+          // The data under public/ (notes, prayers, lives…) is not: the app keeps it in offline packs itself
+          // (src/utils/offlineFiles.ts, lists from scripts/lib/offline-manifest.mjs).
+          globPatterns: ['**/*.{js,css,html,ico,png,jpg,jpeg,webp,svg,woff,woff2}'],
           globIgnores: [
             '**/node_modules/**/*',
-            'assets/AdminPanelPage-*', 'assets/ClassesAdmin-*', 'assets/TeacherPage-*',
-            'assets/AbituriPage-*', 'assets/abituriLessons-*', 'assets/abcjs-*',
-            'assets/AncestorsPage-*', 'assets/ancestorsBioTexts-*',
-            'assets/20[0-9][0-9]-*', // the church calendar's years
+            'notes/**', 'hymn/**', 'lives/**', 'prayers/**', 'bible/**', 'mtkmeli/**', 'audio/**', 'offline/**',
           ],
           // opens the prayer when a reminder notification is tapped
           importScripts: ['prayer-notify-sw.js'],
           // a shared notes link (/?c=…&v=…) opens the app even without internet
           navigateFallback: '/index.html',
-          navigateFallbackDenylist: [/^\/notes\//, /^\/hymn\//, /^\/audio\//, /^\/lives\//, /^\/mtkmeli\//, /^\/prayers\//, /^\/bible\//],
-          // chant notes and hymnography drawings: kept as they are opened, and by "ჩამოწერა"
-          // (src/utils/offlineNotes.ts fills the same cache), so they open in church without internet
+          navigateFallbackDenylist: [/^\/notes\//, /^\/hymn\//, /^\/audio\//, /^\/lives\//, /^\/mtkmeli\//, /^\/prayers\//, /^\/bible\//, /^\/offline\//],
           runtimeCaching: [
             {
-              urlPattern: ({ url }) => url.origin === self.location.origin && /^\/(notes|hymn)\//.test(url.pathname),
-              handler: 'StaleWhileRevalidate',
-              options: { cacheName: 'sagandzuri-notes-v1', expiration: { maxEntries: 6000 } },
+              // notes, hymnography drawings, prayers, the New Testament, მთქმელი texts and the saints' lives.
+              // A file from an offline pack (marked x-sg-pack) is answered from the device as it is — the app
+              // refreshes the packs itself when a new version is published; the app's own pack downloads
+              // (?sg=…) skip this route. Anything else is kept once opened (also by "ჩამოწერა",
+              // src/utils/offlineNotes.ts) and refreshed in the background.
+              urlPattern: ({ url }) => url.origin === self.location.origin && !url.searchParams.has('sg') &&
+                /^\/(notes|hymn|lives|prayers|bible|mtkmeli)\//.test(url.pathname),
+              handler: async ({ request, url, event }) => {
+                const name = /^\/(notes|hymn)\//.test(url.pathname) ? 'sagandzuri-notes-v1'
+                  : url.pathname.startsWith('/lives/') ? 'sagandzuri-lives-v1'
+                  : url.pathname.startsWith('/mtkmeli/') ? 'sagandzuri-mtkmeli-v1'
+                  : 'sagandzuri-prayers-v1';
+                const kept = await caches.match(request);
+                if (kept && kept.headers.has('x-sg-pack')) return kept;
+                const fresh = fetch(request).then(async res => {
+                  if (res.ok) await (await caches.open(name)).put(request, res.clone());
+                  return res;
+                });
+                if (!kept) return fresh;
+                event.waitUntil(fresh.catch(() => undefined));
+                return kept;
+              },
             },
             {
-              // მთქმელი full texts: kept once read
-              urlPattern: ({ url }) => url.origin === self.location.origin && url.pathname.startsWith('/mtkmeli/'),
-              handler: 'StaleWhileRevalidate',
-              options: { cacheName: 'sagandzuri-mtkmeli-v1', expiration: { maxEntries: 400 } },
-            },
-            {
-              // the saints' lives and their icons (library, calendar): kept once read
-              urlPattern: ({ url }) => url.origin === self.location.origin && url.pathname.startsWith('/lives/'),
-              handler: 'StaleWhileRevalidate',
-              options: { cacheName: 'sagandzuri-lives-v1', expiration: { maxEntries: 4000 } },
-            },
-            {
-              // prayers and the New Testament: kept once read, so they open without internet
-              urlPattern: ({ url }) => url.origin === self.location.origin && /^\/(prayers|bible)\//.test(url.pathname),
-              handler: 'StaleWhileRevalidate',
-              options: { cacheName: 'sagandzuri-prayers-v1', expiration: { maxEntries: 400 } },
-            },
-            {
-              // the app's own files left out of the advance download (globIgnores above): kept once opened
+              // a chunk of an older version, asked for by a page still open from before an update: kept once opened
               urlPattern: ({ url }) => url.origin === self.location.origin && /^\/assets\/.+\.(js|css)$/.test(url.pathname),
               handler: 'CacheFirst',
               options: { cacheName: 'sagandzuri-assets-v1', expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 90 } },
