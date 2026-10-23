@@ -170,7 +170,7 @@ const CallScreen: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         {one ? (
           <div className="relative h-full">
             {other ? (
-              <Tile {...label(other)} stream={other.stream} cam={other.cam} mic={other.mic} speaking={call.speaking.includes(other.uid)} className="absolute inset-0" />
+              <Tile {...label(other)} stream={other.stream} cam={other.cam} mic={other.mic} speaking={call.speaking.includes(other.uid)} className="h-full" />
             ) : (
               <div className="h-full flex items-center justify-center">
                 <span className={`rounded-full ${call.status === 'waiting' ? 'animate-pulse' : ''}`}>
@@ -179,7 +179,9 @@ const CallScreen: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
               </div>
             )}
             {call.cam && call.local && (
-              <Tile {...me} className="absolute right-3 bottom-3 w-28 h-40 sm:w-40 sm:h-52 shadow-2xl" />
+              <div className="absolute right-3 bottom-3 w-28 h-40 sm:w-40 sm:h-52 rounded-3xl shadow-2xl">
+                <Tile {...me} className="h-full" />
+              </div>
             )}
           </div>
         ) : (
@@ -312,6 +314,41 @@ const Incoming: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
     const o = otherOf(ringing, uid);
     const name = fromAdmin ? ADMIN_NAME : ringing.names[ringing.callBy] || o.name || 'ზარი';
     const k = `${ringing.id}:${ringing.callAt?.getTime()}`;
+    const decline = () => { hide(k); declineChatCall(ringing); };
+    const answer = () => { hide(k); answerChatCall(ringing, user); };
+    const video = ringing.callKind === 'video';
+    // like a phone: the whole screen (only a small silent bar over the notes during a service)
+    if (!(notes || programOpen || church)) {
+      return (
+        <div className="fixed inset-0 z-[95] bg-[#1c1513]/[0.97] text-white flex flex-col items-center justify-between safe-top safe-bottom safe-x px-6 py-[12vh]"
+          role="alertdialog" aria-label={`${name} გირეკავთ`}>
+          <div className="flex flex-col items-center gap-4 text-center">
+            <span className="relative">
+              <span className="absolute -inset-3 rounded-full bg-emerald-400/20 animate-ping" />
+              <Face name={name} photoURL={fromAdmin ? logoUrl : ringing.photos[ringing.callBy]} className="relative w-32 h-32 text-5xl" />
+            </span>
+            <p className="mt-3 text-2xl font-bold">{name}</p>
+            <p className="text-white/65">{video ? 'ვიდეოზარი…' : 'ზარი…'}</p>
+          </div>
+          <div className="flex items-start gap-20">
+            <span className="flex flex-col items-center gap-2 text-sm text-white/80">
+              <button type="button" aria-label="უარი" onClick={decline}
+                className="w-[72px] h-[72px] rounded-full bg-[#d6402f] flex items-center justify-center cursor-pointer active:scale-95 transition">
+                <PhoneOff className="w-8 h-8" />
+              </button>
+              უარი
+            </span>
+            <span className="flex flex-col items-center gap-2 text-sm text-white/80">
+              <button type="button" aria-label="პასუხი" onClick={answer}
+                className="w-[72px] h-[72px] rounded-full bg-emerald-500 flex items-center justify-center cursor-pointer active:scale-95 transition">
+                {video ? <Video className="w-8 h-8" /> : <Phone className="w-8 h-8" />}
+              </button>
+              პასუხი
+            </span>
+          </div>
+        </div>
+      );
+    }
     return (
       <div className={box} role="alertdialog" aria-label={`${name} გირეკავთ`}>
         <Face name={name} photoURL={fromAdmin ? logoUrl : ringing.photos[ringing.callBy]} className="w-12 h-12 text-lg" />
@@ -319,11 +356,11 @@ const Incoming: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
           <p className="truncate font-bold">{name}</p>
           <p className="text-xs text-white/65">{ringing.callKind === 'video' ? 'ვიდეოზარი…' : 'გირეკავთ…'}</p>
         </div>
-        <button type="button" aria-label="უარი" title="უარი" onClick={() => { hide(k); declineChatCall(ringing); }} className={`${small} bg-[#d6402f]`}>
+        <button type="button" aria-label="უარი" title="უარი" onClick={decline} className={`${small} bg-[#d6402f]`}>
           <PhoneOff className="w-5 h-5" />
         </button>
-        <button type="button" aria-label="პასუხი" title="პასუხი" onClick={() => { hide(k); answerChatCall(ringing, user); }} className={`${small} bg-emerald-500`}>
-          {ringing.callKind === 'video' ? <Video className="w-5 h-5" /> : <Phone className="w-5 h-5" />}
+        <button type="button" aria-label="პასუხი" title="პასუხი" onClick={answer} className={`${small} bg-emerald-500`}>
+          {video ? <Video className="w-5 h-5" /> : <Phone className="w-5 h-5" />}
         </button>
       </div>
     );
