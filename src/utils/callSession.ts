@@ -42,7 +42,19 @@ export interface CallInfo {
   /** this side shows admins as „ადმინისტრაცია“ */
   anonStaff: boolean;
   me: { uid: string; name: string; photoURL: string; staff: boolean };
+  /** a class's teachers: their video is always received */
+  leaders?: string[];
 }
+
+// Picture quality: a private call in HD; a class's call lighter, and each phone receives at most a few videos
+// (the others are heard and shown by their photo), so a big class does not freeze phones or slow connections.
+const MAX_VIDEOS = 6;
+const videoConstraints = (oneToOne: boolean, facing: 'user' | 'environment'): MediaTrackConstraints => (oneToOne
+  ? { facingMode: facing, width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, max: 30 } }
+  : { facingMode: facing, width: { ideal: 640 }, height: { ideal: 360 }, frameRate: { ideal: 24, max: 24 } });
+const sendLimits = (oneToOne: boolean) => (oneToOne
+  ? { maxBitrate: 1_800_000, maxFramerate: 30 }
+  : { maxBitrate: 550_000, maxFramerate: 24 });
 
 export interface CallState {
   info: CallInfo | null;
@@ -216,7 +228,26 @@ class Call {
       });
       await this.pc.setRemoteDescription(r.sessionDescription);
       if (track.kind === 'audio') this.audioName = track.id; else this.videoName = track.id;
+      if (track.kind === 'video') {
+        // a clear picture from the start, but never more than the call can carry
+        try {
+          const p = tr.sender.getParameters();
+          if (!p.encodings?.length) p.encodings = [{}];
+          Object.assign(p.encodings[0], sendLimits(this.info.oneToOne));
+          await tr.sender.setParameters(p);
+        } catch { /* the browser's own limits stay */ }
+      }
     });
+  }
+
+  /** whose video this phone receives: everyone in a private call; in a class, the teachers first, up to MAX_VIDEOS */
+  videoFrom(live: Peer[]) {
+    if (this.info.oneToOne) return new Set(live.filter(p => p.video).map(p => p.uid));
+    const withCam = live.filter(p => p.video && p.cam);
+    const lead = this.info.leaders || [];
+    const order = [...withCam].sort((a, b) =>
+      Number(lead.includes(b.uid)) - Number(lead.includes(a.uid)) || a.uid.localeCompare(b.uid));
+    return new Set(order.slice(0, MAX_VIDEOS).map(p => p.uid));
   }
 
   /** receive the others' tracks; let go of those who left */
@@ -224,12 +255,17 @@ class Call {
     if (this.closed) return;
     const live = this.others.filter(p => fresh(p) && p.session);
     if (live.length) this.everJoined = true;
+    const seeVideo = this.videoFrom(live);
+    const wanted = new Set<string>();
     for (const p of live) {
-      const want = [p.audio, p.video].filter(Boolean).filter(n => !this.pulled.has(`${p.uid}:${n}`));
+      const names = [p.audio, seeVideo.has(p.uid) ? p.video : ''].filter(Boolean);
+      names.forEach(n => wanted.add(`${p.uid}:${n}`));
+      const want = names.filter(n => !this.pulled.has(`${p.uid}:${n}`));
       const retry = want.filter(n => (this.failed.get(`${p.uid}:${n}`) ?? 0) < Date.now());
       if (retry.length) this.pull(p, retry).catch(e => console.warn('call pull: ', e));
     }
-    const gone = [...this.pulled.keys()].filter(k => !live.some(p => k.startsWith(`${p.uid}:`) && [p.audio, p.video].includes(k.slice(p.uid.length + 1))));
+    // those who left, and videos no longer received (a class's 7th camera, a camera turned off)
+    const gone = [...this.pulled.keys()].filter(k => !wanted.has(k));
     if (gone.length) this.drop(gone);
     this.publishPeers();
     // a private call ends when the other side has left
@@ -272,6 +308,13 @@ class Call {
 
   drop(keys: string[]) {
     const mids = keys.map(k => this.pulled.get(k)).filter((m): m is string => !!m);
+    // a video no longer received leaves its tile (the photo shows instead of a frozen picture)
+    mids.forEach(mid => {
+      const owner = this.midOwner.get(mid);
+      const track = this.pc.getTransceivers().find(t => t.mid === mid)?.receiver.track;
+      if (owner && track) this.streams.get(owner)?.removeTrack(track);
+      this.midOwner.delete(mid);
+    });
     keys.forEach(k => {
       this.pulled.delete(k);
       const uid = k.slice(0, k.indexOf(':'));
@@ -341,7 +384,7 @@ if (typeof window !== 'undefined') {
 }
 
 const camera = (facing: 'user' | 'environment') =>
-  navigator.mediaDevices.getUserMedia({ video: { facingMode: facing, width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24 } } });
+  navigator.mediaDevices.getUserMedia({ video: videoConstraints(!!current?.info.oneToOne, facing) });
 
 /**
  * Joins (or starts) the call of a chat or a class. Resolves once connected, or with the reason it could not.
@@ -361,7 +404,7 @@ export const joinCall = async (info: CallInfo, kind: CallKind): Promise<boolean>
     try {
       local = await navigator.mediaDevices.getUserMedia({
         audio,
-        video: video ? { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24 } } : false,
+        video: video ? videoConstraints(info.oneToOne, 'user') : false,
       });
     } catch (e) {
       // the camera would not start: the call goes on by voice, and says why

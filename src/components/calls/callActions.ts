@@ -32,6 +32,7 @@ export const classCallInfo = (c: SchoolClass, user: User): CallInfo => {
     canVideo: true,
     anonStaff: false,
     me: { uid: user.uid, name: p?.name || user.displayName || '', photoURL: p?.photoURL || user.photoURL || '', staff: false },
+    leaders: c.teacherIds,
   };
 };
 
