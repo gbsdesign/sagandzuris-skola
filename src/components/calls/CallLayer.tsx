@@ -37,7 +37,10 @@ const Face: React.FC<{ name: string; photoURL?: string; className: string }> = (
 
 const MediaVideo: React.FC<{ stream: MediaStream; mirror?: boolean }> = ({ stream, mirror }) => {
   const ref = useRef<HTMLVideoElement>(null);
-  useEffect(() => { if (ref.current && ref.current.srcObject !== stream) ref.current.srcObject = stream; }, [stream]);
+  useEffect(() => {
+    const v = ref.current;
+    if (v && v.srcObject !== stream) { v.srcObject = stream; v.play().catch(() => {}); }
+  }, [stream]);
   return <video ref={ref} autoPlay playsInline muted className={`absolute inset-0 w-full h-full object-cover ${mirror ? '-scale-x-100' : ''}`} />;
 };
 
@@ -202,6 +205,10 @@ const CallScreen: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
           <button type="button" onClick={dismissCall} className="h-12 px-6 rounded-full bg-white/12 text-sm font-bold cursor-pointer">დახურვა</button>
         </div>
       ) : (
+        <>
+        {call.hint && (
+          <p className="shrink-0 mx-auto mb-3 max-w-md px-4 py-2.5 rounded-2xl bg-white/10 text-center text-sm text-white/90" role="status">{call.hint}</p>
+        )}
         <div className="shrink-0 pb-5 pt-1 flex items-center justify-center gap-3 sm:gap-4">
           <RoundBtn label={call.mic ? 'მიკროფონის გამორთვა' : 'მიკროფონის ჩართვა'} onClick={toggleMic} tone={call.mic ? 'plain' : 'off'}>
             {call.mic ? <Mic className="w-6 h-6" /> : <MicOff className="w-6 h-6" />}
@@ -220,6 +227,7 @@ const CallScreen: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             <PhoneOff className="w-7 h-7" />
           </RoundBtn>
         </div>
+        </>
       )}
     </div>
   );

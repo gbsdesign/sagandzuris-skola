@@ -58,10 +58,27 @@ export interface CallState {
   since: number;
   /** shrunk to a bar at the bottom */
   small: boolean;
+  /** a short notice over the controls (e.g. the camera could not start) */
+  hint: string;
 }
 
 const IDLE: CallState = {
-  info: null, status: 'idle', note: '', mic: true, cam: false, facing: 'user', local: null, peers: [], speaking: [], since: 0, small: false,
+  info: null, status: 'idle', note: '', mic: true, cam: false, facing: 'user', local: null, peers: [], speaking: [], since: 0, small: false, hint: '',
+};
+
+// why a camera did not start, in words
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const cameraTrouble = (e: any) =>
+  e?.name === 'NotAllowedError' ? 'კამერაზე წვდომა არ არის — ნება დართეთ ბრაუზერის პარამეტრებში (🔒 მისამართის გვერდით).'
+    : e?.name === 'NotReadableError' || e?.name === 'AbortError' ? 'კამერა სხვა ფანჯარას ან პროგრამას უკავია — დახურეთ ის და სცადეთ თავიდან.'
+    : e?.name === 'NotFoundError' || e?.name === 'OverconstrainedError' ? 'კამერა ვერ მოიძებნა.'
+    : 'კამერა ვერ ჩაირთო.';
+
+let hintTimer = 0;
+const showHint = (hint: string) => {
+  set({ hint });
+  clearTimeout(hintTimer);
+  hintTimer = window.setTimeout(() => set({ hint: '' }), 6000);
 };
 
 let state: CallState = IDLE;
@@ -338,15 +355,30 @@ export const joinCall = async (info: CallInfo, kind: CallKind): Promise<boolean>
   const video = kind === 'video' && info.canVideo;
   set({ ...IDLE, info, status: 'connecting', cam: video, since: Date.now() });
   let local: MediaStream;
+  const audio = { echoCancellation: true, noiseSuppression: true, autoGainControl: true };
   try {
-    local = await navigator.mediaDevices.getUserMedia({
-      audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true },
-      video: video ? { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24 } } : false,
-    });
+    if (!navigator.mediaDevices?.getUserMedia) throw Object.assign(new Error('insecure'), { name: 'Insecure' });
+    try {
+      local = await navigator.mediaDevices.getUserMedia({
+        audio,
+        video: video ? { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 }, frameRate: { ideal: 24 } } : false,
+      });
+    } catch (e) {
+      // the camera would not start: the call goes on by voice, and says why
+      if (!video) throw e;
+      local = await navigator.mediaDevices.getUserMedia({ audio });
+      showHint(cameraTrouble(e));
+    }
   } catch (e) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const denied = (e as any)?.name === 'NotAllowedError';
-    set({ status: 'ended', note: denied ? 'მიკროფონზე წვდომა არ არის. ნება დართეთ ბრაუზერის პარამეტრებში.' : 'მიკროფონი ვერ ჩაირთო.' });
+    const name = (e as any)?.name;
+    set({
+      status: 'ended',
+      note: name === 'Insecure' ? 'ზარი მხოლოდ საიტის https მისამართზე მუშაობს (sagandzuris-skola.pages.dev).'
+        : name === 'NotAllowedError' ? 'მიკროფონზე წვდომა არ არის. ნება დართეთ ბრაუზერის პარამეტრებში.'
+        : name === 'NotReadableError' ? 'მიკროფონი სხვა პროგრამას უკავია.'
+        : 'მიკროფონი ვერ ჩაირთო.',
+    });
     return false;
   }
   const call = new Call(info, local);
@@ -424,6 +456,7 @@ export const toggleCam = async () => {
       set({ cam: true, local: new MediaStream(call.local.getTracks()) });
     } catch (e) {
       console.warn('call camera: ', e);
+      showHint(cameraTrouble(e));
       return;
     }
   }
@@ -446,6 +479,7 @@ export const flipCamera = async () => {
     set({ facing, local: new MediaStream(call.local.getTracks()) });
   } catch (e) {
     console.warn('call flip: ', e);
+    showHint(cameraTrouble(e));
   }
 };
 
