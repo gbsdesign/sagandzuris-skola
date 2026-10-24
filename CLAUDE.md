@@ -56,6 +56,16 @@
 - The user's task template is `docs/დავალების-შაბლონი.md`. If a request is unclear, ask one short
   question instead of exploring the whole codebase.
 
+## Several computers, one GitHub
+
+- The user works on several computers, with the project in a different folder on each. GitHub `main` is the one thing
+  they share: never copy project files between folders or computers, and never make a second copy on one computer.
+- Work only in the folder this session was opened in (the one holding this file). If the session starts outside the
+  project (e.g. the user's home folder), ask which folder before touching any file.
+- At session start a hook (`.claude/hooks/session-git-check.mjs`) reports the folder and how far this copy is behind
+  or ahead of GitHub. Behind → tell the user and `git pull` (with their OK) before editing. When a piece of work is
+  done, remind the user it reaches the other computers only after `/publish`.
+
 ## Cloud sessions
 
 - A cloud session sees only what is pushed to GitHub. Local-only things are NOT available there: the user's
@@ -129,6 +139,13 @@
 - **Class chat** with voice messages + Jitsi video call button (`components/classes/ClassChat.tsx`,
   `hooks/useClassChat.ts`, `utils/voiceRecorder.ts`, `utils/classCall.ts`). Voice MP3s are Firestore Bytes
   (no Firebase Storage).
+- **Class page** (`pages/ClassPage.tsx`, rebuilt 2026-10-24): members in a sticky left column on a computer (`lg`), a
+  folded line on top on a phone; the class's teachers get `ClassRoll` (`teacher/StudentsOverview.tsx`: attendance ✓,
+  💬, a name opens the member's window, now with „მიწერა“/„ამოღება“). „სასწავლო პროგრამა“ (renamed everywhere from
+  „კლასის პროგრამა“) is compact: one thin progress bar, „დავალებები“ folding open beside the title (red dot = an
+  assignment still to do; teachers manage them there — `AssignmentsFold`). The timetable lives in the chat's 📅
+  (`ScheduleFold`, edited in place). Teacher-only parts never show to members; attendance is teacher-only in
+  `firestore.rules` too (members no longer read it).
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 

@@ -30,7 +30,8 @@ export const LibraryPage: React.FC = () => {
   };
 
   return (
-    <div className="w-full max-w-2xl mx-auto mb-2 px-1">
+    // the front room widens on a computer, so the whole bookcase stands on one board
+    <div className={`w-full mx-auto mb-2 px-1 ${open ? 'max-w-2xl' : 'max-w-2xl lg:max-w-4xl'}`}>
       {!open ? (
         <Shelf onOpen={openMapItem} />
       ) : (

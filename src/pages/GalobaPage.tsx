@@ -194,7 +194,7 @@ export const GalobaPage: React.FC = () => {
           <span className="w-9 h-9 rounded-xl bg-[#7a2028] text-[#fbf6ec] flex items-center justify-center shrink-0"><GraduationCap className="w-[18px] h-[18px]" /></span>
           <span className="flex-1 min-w-[10rem] leading-snug">
             <span className="block text-[13px] font-bold text-[#4a3426]">კლასის რეჟიმი · {modeClass.name}</span>
-            <span className="block text-[12px] text-[#8a7a6a]">{classOnly ? 'ჩანს მხოლოდ კლასის პროგრამის ვერსიები' : 'ახლა ყველა ვერსია ჩანს'}</span>
+            <span className="block text-[12px] text-[#8a7a6a]">{classOnly ? 'ჩანს მხოლოდ სასწავლო პროგრამის ვერსიები' : 'ახლა ყველა ვერსია ჩანს'}</span>
           </span>
           <button type="button" onClick={toggleShowAll} className="ml-auto h-10 px-4 rounded-full bg-white ring-1 ring-[#e8dcc8] text-[13px] font-bold text-[#7a2028] cursor-pointer shrink-0 active:scale-95">
             {classOnly ? 'ყველაფრის ჩვენება' : 'მხოლოდ პროგრამა'}

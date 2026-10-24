@@ -226,9 +226,9 @@ service cloud.firestore {
         allow read: if inClass();
         allow write: if isAdmin() || teachesClass();
       }
+      // attendance is the teachers' own record: the members don't read it
       match /attendance/{day} {
-        allow read: if inClass();
-        allow write: if isAdmin() || teachesClass();
+        allow read, write: if isAdmin() || teachesClass();
       }
 
       // A member's marks on the class program (voices they know), copied by their own app so the class sees who

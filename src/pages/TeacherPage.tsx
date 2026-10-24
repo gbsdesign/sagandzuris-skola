@@ -15,10 +15,10 @@ import { ClassProgramPanel } from '../components/teacher/ClassProgramPanel';
 import { OLD_TEACHER_TABS } from '../utils/shortcuts';
 
 // „კლასი“ (id `students`): the class's name, mode, lessons, psalter group, members and attendance;
-// „კლასის პროგრამა“ (id `assignments`): today's liturgy and the assignments
+// „სასწავლო პროგრამა“ (id `assignments`): today's liturgy and the assignments
 const TABS = [
   { id: 'students' as const, label: 'კლასი', Icon: GraduationCap },
-  { id: 'assignments' as const, label: 'კლასის პროგრამა', Icon: ClipboardList },
+  { id: 'assignments' as const, label: 'სასწავლო პროგრამა', Icon: ClipboardList },
 ];
 type Tab = (typeof TABS)[number]['id'];
 const TAB_KEY = 'sg-teacher-tab';
@@ -54,7 +54,7 @@ export const TeacherPage: React.FC = () => {
       {/* the classes: pick one; the chosen class's chat on the right */}
       {loading ? null : classes.length === 0 ? (
         <Empty icon={<GraduationCap />} title="კლასი ჯერ არ გაქვს"
-          text={isAdmin ? 'შექმენი კლასი ადმინის პანელში და მიაბი მასწავლებელი.' : 'ადმინი მიგაბამს კლასს — მერე აქ გამოჩნდება მოსწავლეები, დასწრება და კლასის პროგრამა.'} />
+          text={isAdmin ? 'შექმენი კლასი ადმინის პანელში და მიაბი მასწავლებელი.' : 'ადმინი მიგაბამს კლასს — მერე აქ გამოჩნდება მოსწავლეები, დასწრება და სასწავლო პროგრამა.'} />
       ) : (
         <div className="flex items-start gap-2">
           <div className="flex-1 min-w-0 flex gap-2 overflow-x-auto pb-3 -mb-2 -ml-1 pl-1 snap-x">

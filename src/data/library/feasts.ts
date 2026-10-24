@@ -5,6 +5,8 @@ import { addDays, easterIso } from '../churchCalendar';
 
 export interface Feast {
   name: string;
+  /** "ქრისტეშობა" — the name as people say it, for a small place like the library shelf's plate */
+  short?: string;
   /** "დიდ-მარხვის მეექვსე კვირას" — how the source states a movable feast's day */
   rule?: string;
   /** days from Easter */
@@ -28,36 +30,36 @@ export const FEAST_GROUPS: FeastGroup[] = [
     title: '12 საუფლო დღესასწაული',
     subtitle: 'მოძრავი',
     feasts: [
-      { name: 'ბრწყინვალე აღდგომა უფლისა ღმრთისა და მაცხოვრისა ჩუენისა იესუ ქრისტესი', rule: 'თარიღი ყოველ წელს გამოითვლება', fromEaster: [0], href: 'dgesastsaulebi/agdgoma.htm' },
-      { name: 'ბზობა (ბაიობა) ანუ უფლის დიდებით შესვლა იერუსალიმში', rule: 'დიდ-მარხვის მეექვსე კვირას', fromEaster: [-7], href: 'markhvebi/didmarkhva/6kvira/kvira.htm' },
-      { name: 'ამაღლება', rule: 'აღდგომიდან მე-40 დღეს', fromEaster: [39], href: 'dgesastsaulebi/amagleba.htm' },
-      { name: 'სულთმოფენობა', rule: 'აღდგომიდან 50-ე დღეს', fromEaster: [49], href: 'dgesastsaulebi/sultmofenoba.htm' },
+      { short: 'აღდგომა', name: 'ბრწყინვალე აღდგომა უფლისა ღმრთისა და მაცხოვრისა ჩუენისა იესუ ქრისტესი', rule: 'თარიღი ყოველ წელს გამოითვლება', fromEaster: [0], href: 'dgesastsaulebi/agdgoma.htm' },
+      { short: 'ბზობა', name: 'ბზობა (ბაიობა) ანუ უფლის დიდებით შესვლა იერუსალიმში', rule: 'დიდ-მარხვის მეექვსე კვირას', fromEaster: [-7], href: 'markhvebi/didmarkhva/6kvira/kvira.htm' },
+      { short: 'ამაღლება', name: 'ამაღლება', rule: 'აღდგომიდან მე-40 დღეს', fromEaster: [39], href: 'dgesastsaulebi/amagleba.htm' },
+      { short: 'სულთმოფენობა', name: 'სულთმოფენობა', rule: 'აღდგომიდან 50-ე დღეს', fromEaster: [49], href: 'dgesastsaulebi/sultmofenoba.htm' },
     ],
   },
   {
     title: '12 საუფლო დღესასწაული',
     subtitle: 'უძრავი',
     feasts: [
-      { name: 'განცხადება - ნათლისღება უფლისა ჩუენისა იესუ ქრისტესი', fixed: [{ old: [6, 1], new: [19, 1] }], href: 'dgesastsaulebi/natlisgeba.htm' },
-      { name: 'მირქმა - მიგებება იესუ ქრისტესი', fixed: [{ old: [2, 2], new: [15, 2] }], href: 'dgesastsaulebi/mirkma.htm' },
-      { name: 'ხარება ყოვლადწმიდისა ღმრთისმშობელისა', fixed: [{ old: [25, 3], new: [7, 4] }], href: 'dgesastsaulebi/khareba.htm' },
-      { name: 'ფერისცვალება იესუ ქრისტესი', fixed: [{ old: [6, 8], new: [19, 8] }], href: 'dgesastsaulebi/peristsvaleba.htm' },
-      { name: 'მარიამობა - მიძინება ყოვლადწმიდისა ღმრთისმშობელისა', fixed: [{ old: [15, 8], new: [28, 8] }], href: 'dgesastsaulebi/mariamoba.htm' },
-      { name: 'ღმრთისმშობლობა - შობა ყოვლადწმიდისა ღმრთისმშობელისა', fixed: [{ old: [8, 9], new: [21, 9] }], href: 'dgesastsaulebi/gvtismshoblis_shoba.htm' },
-      { name: 'ჯვართამაღლება - მსოფლიო ამაღლება ცხოველსმყოფელისა და პატიოსნისა ჯვარისა', fixed: [{ old: [14, 9], new: [27, 9] }], href: 'dgesastsaulebi/jvartamagleba.htm' },
-      { name: 'ტაძრად მიყვანება ყოვლადწმიდისა ღმრთისმშობელისა', fixed: [{ old: [21, 11], new: [4, 12] }], href: 'dgesastsaulebi/tadzrad_mikvaneba.htm' },
-      { name: 'ქრისტეშობა - ხორციელად შობა უფლისა ღმრთისა და მაცხოვრისა ჩუენისა იესუ ქრისტესი', fixed: [{ old: [25, 12], new: [7, 1] }], href: 'dgesastsaulebi/shoba.htm' },
+      { short: 'ნათლისღება', name: 'განცხადება - ნათლისღება უფლისა ჩუენისა იესუ ქრისტესი', fixed: [{ old: [6, 1], new: [19, 1] }], href: 'dgesastsaulebi/natlisgeba.htm' },
+      { short: 'მირქმა', name: 'მირქმა - მიგებება იესუ ქრისტესი', fixed: [{ old: [2, 2], new: [15, 2] }], href: 'dgesastsaulebi/mirkma.htm' },
+      { short: 'ხარება', name: 'ხარება ყოვლადწმიდისა ღმრთისმშობელისა', fixed: [{ old: [25, 3], new: [7, 4] }], href: 'dgesastsaulebi/khareba.htm' },
+      { short: 'ფერისცვალება', name: 'ფერისცვალება იესუ ქრისტესი', fixed: [{ old: [6, 8], new: [19, 8] }], href: 'dgesastsaulebi/peristsvaleba.htm' },
+      { short: 'მარიამობა', name: 'მარიამობა - მიძინება ყოვლადწმიდისა ღმრთისმშობელისა', fixed: [{ old: [15, 8], new: [28, 8] }], href: 'dgesastsaulebi/mariamoba.htm' },
+      { short: 'ღმრთისმშობლობა', name: 'ღმრთისმშობლობა - შობა ყოვლადწმიდისა ღმრთისმშობელისა', fixed: [{ old: [8, 9], new: [21, 9] }], href: 'dgesastsaulebi/gvtismshoblis_shoba.htm' },
+      { short: 'ჯვართამაღლება', name: 'ჯვართამაღლება - მსოფლიო ამაღლება ცხოველსმყოფელისა და პატიოსნისა ჯვარისა', fixed: [{ old: [14, 9], new: [27, 9] }], href: 'dgesastsaulebi/jvartamagleba.htm' },
+      { short: 'ტაძრად მიყვანება', name: 'ტაძრად მიყვანება ყოვლადწმიდისა ღმრთისმშობელისა', fixed: [{ old: [21, 11], new: [4, 12] }], href: 'dgesastsaulebi/tadzrad_mikvaneba.htm' },
+      { short: 'ქრისტეშობა', name: 'ქრისტეშობა - ხორციელად შობა უფლისა ღმრთისა და მაცხოვრისა ჩუენისა იესუ ქრისტესი', fixed: [{ old: [25, 12], new: [7, 1] }], href: 'dgesastsaulebi/shoba.htm' },
     ],
   },
   {
     title: 'დიდი დღესასწაულები',
     feasts: [
-      { name: 'წინადაცვეთა უფლისა ჩვენისა იესუ ქრისტესი და ხსენება წმ. ბასილი დიდისა', fixed: [{ old: [1, 1], new: [14, 1] }], href: 'dgesastsaulebi/tsinadatsveta.htm' },
-      { name: 'წმიდისა დედისა ჩუენისა მოციქულთა სწორისა ნინო ქართველთა განმანათლებელისა', fixed: [{ old: [14, 1], new: [27, 1] }, { old: [19, 5], new: [1, 6] }], href: 'dgesastsaulebi/nino.htm' },
-      { name: 'წმიდა იოანე ნათლისმცემლის შობა', fixed: [{ old: [24, 6], new: [7, 7] }], href: 'dgesastsaulebi/ioanes_shoba.htm' },
-      { name: 'წმიდათა თავთა მოციქულთა პეტრესი და პავლესი', fixed: [{ old: [29, 6], new: [12, 7] }], href: 'dgesastsaulebi/petre-pavloba.htm' },
-      { name: 'წმიდა იოანე ნათლისმცემლის თავისკვეთა', fixed: [{ old: [29, 8], new: [11, 9] }], href: 'dgesastsaulebi/taviskveta.htm' },
-      { name: 'მცხეთობა-სვეტიცხოვლობა - ყოვლადწმიდა ღმრთისმშობლის საფარველი', fixed: [{ old: [1, 10], new: [14, 10] }, { old: [30, 6], new: [13, 7] }], href: 'dgesastsaulebi/svetitskhovloba.htm' },
+      { short: 'წინადაცვეთა', name: 'წინადაცვეთა უფლისა ჩვენისა იესუ ქრისტესი და ხსენება წმ. ბასილი დიდისა', fixed: [{ old: [1, 1], new: [14, 1] }], href: 'dgesastsaulebi/tsinadatsveta.htm' },
+      { short: 'ნინოობა', name: 'წმიდისა დედისა ჩუენისა მოციქულთა სწორისა ნინო ქართველთა განმანათლებელისა', fixed: [{ old: [14, 1], new: [27, 1] }, { old: [19, 5], new: [1, 6] }], href: 'dgesastsaulebi/nino.htm' },
+      { short: 'იოანე ნათლისმცემლის შობა', name: 'წმიდა იოანე ნათლისმცემლის შობა', fixed: [{ old: [24, 6], new: [7, 7] }], href: 'dgesastsaulebi/ioanes_shoba.htm' },
+      { short: 'პეტრე-პავლობა', name: 'წმიდათა თავთა მოციქულთა პეტრესი და პავლესი', fixed: [{ old: [29, 6], new: [12, 7] }], href: 'dgesastsaulebi/petre-pavloba.htm' },
+      { short: 'თავისკვეთა', name: 'წმიდა იოანე ნათლისმცემლის თავისკვეთა', fixed: [{ old: [29, 8], new: [11, 9] }], href: 'dgesastsaulebi/taviskveta.htm' },
+      { short: 'მცხეთობა-სვეტიცხოვლობა', name: 'მცხეთობა-სვეტიცხოვლობა - ყოვლადწმიდა ღმრთისმშობლის საფარველი', fixed: [{ old: [1, 10], new: [14, 10] }, { old: [30, 6], new: [13, 7] }], href: 'dgesastsaulebi/svetitskhovloba.htm' },
     ],
   },
   {

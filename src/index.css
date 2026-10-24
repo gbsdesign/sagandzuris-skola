@@ -73,6 +73,15 @@
   .orn-in, .orn-sway, .orn-swing, .orn-spin, .orn-bob { animation: none; }
 }
 
+/* the library shelf's oil lamp: the flame breathes and its light on the back wall with it */
+@keyframes lamp-flicker { 0%, 100% { transform: scale(1, 1); } 30% { transform: scale(0.94, 1.06); } 55% { transform: scale(1.04, 0.95); } 80% { transform: scale(0.97, 1.03); } }
+@keyframes lamp-glow { 0%, 100% { opacity: 0.85; } 40% { opacity: 1; } 70% { opacity: 0.72; } }
+.lamp-flame { transform-box: fill-box; transform-origin: 50% 100%; animation: lamp-flicker 2.6s ease-in-out infinite; }
+.lamp-glow { animation: lamp-glow 3.4s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .lamp-flame, .lamp-glow { animation: none; }
+}
+
 /* chant lists: the Georgian sans of the notes pages, and a chant's versions unfold softly */
 .galoba-font { font-family: "Noto Sans Georgian", "BPG Arial", "Sylfaen", system-ui, sans-serif; }
 @keyframes galoba-unfold { from { opacity: 0; transform: translateY(-6px); } }

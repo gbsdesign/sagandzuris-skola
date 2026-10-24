@@ -66,7 +66,8 @@ export const SCHOOL_COUNTERS: Record<string, HabitCounter> = {
   habit_6: { goal: 5, unit: 'კანონი' },
 };
 
-// what one tap on the day list's "+" adds (the Jesus prayer goes by tens); 1 for the rest
+// what one tap on the day list's "+" adds (the Jesus prayer goes by tens — a member's own habit with the
+// Jesus prayer menu too, see DayView); 1 for the rest
 export const COUNTER_TAP_STEP: Record<string, number> = { habit_5: 10 };
 
 // counted by „წავიკითხე“ at a chapter's end (+1 თავი), so their day-list row has no "+"

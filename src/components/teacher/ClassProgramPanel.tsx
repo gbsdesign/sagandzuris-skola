@@ -13,7 +13,7 @@ import { saveClassProgram } from '../admin/ClassesAdmin';
 import { useOpenShortcut } from '../home/ShortcutShelf';
 import { Btn, Card, CardTitle, FIELD, Flash, Sheet, useFlash } from '../ui/kit';
 
-// „კლასის პროგრამა“ in the teacher's panel: what the class learns, in order; 👁 opens an item, ✕ takes it out.
+// „სასწავლო პროგრამა“ in the teacher's panel: what the class learns, in order; 👁 opens an item, ✕ takes it out.
 // „დამატება“ opens everything to walk through — chants by service down to every version (recordings too), the prayer
 // book, the library, songs, poems, instruments, the great chanters — with 👁 to look and + to add. The choice is saved
 // when the window closes (or before 👁 leaves the page); chants, songs, poems and instruments go onto every member's path.
@@ -60,7 +60,7 @@ export const ClassProgramPanel: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
 
   return (
     <Card>
-      <CardTitle icon={<ListChecks />} title="კლასის პროგრამა"
+      <CardTitle icon={<ListChecks />} title="სასწავლო პროგრამა"
         hint={program.length ? `${program.length} ერთეული · საგალობლები და სიმღერები წევრების გზაზეც` : 'რასაც კლასი სწავლობს — საგალობლები და სიმღერები წევრების გზაზეც ემატება'}
         right={<Btn size="sm" icon={<Plus />} onClick={() => setDraft(program)} disabled={saving}>დამატება</Btn>} />
       {program.length === 0 ? (

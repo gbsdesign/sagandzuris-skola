@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { Check, CheckCheck } from 'lucide-react';
+import { CalendarDays, Check, CheckCheck } from 'lucide-react';
 import { useAuth } from '../../context';
 import { SchoolClass } from '../../hooks/useClasses';
 import { AttendanceDay, localIso, saveAttendance, shortDate, useAttendance, weekdayOf } from '../../hooks/useTeaching';
-import { Btn, FIELD, Flash, useFlash } from '../ui/kit';
+import { Btn, Flash, useFlash } from '../ui/kit';
 import { triggerHaptic } from '../../utils/haptics';
 import { WEEKDAYS_GE, WEEKDAYS_SHORT_GE } from '../../utils/dateNames';
 
@@ -49,29 +49,40 @@ export const useClassAttendance = (cls: SchoolClass) => {
 };
 export type ClassAttendance = ReturnType<typeof useClassAttendance>;
 
-/** The day being marked: the latest lesson days, any other by the date field; below — how many came. */
-export const AttendanceDays: React.FC<{ a: ClassAttendance; total: number }> = ({ a, total }) => (
-  <div className="mb-3">
-    <div className="flex flex-wrap gap-2">
-      {a.choices.map(d => (
-        <button key={d} type="button" onClick={() => a.setDate(d)}
-          className={`h-10 px-3.5 rounded-full text-[13px] font-bold cursor-pointer transition ${d === a.date ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426]'}`}>
-          {d === localIso() ? 'დღეს' : `${WEEKDAYS_SHORT_GE[weekdayOf(d)]}, ${shortDate(d)}`}
-        </button>
-      ))}
-      <input type="date" value={a.date} max={localIso()} onChange={e => e.target.value && a.setDate(e.target.value)} className={`${FIELD} !w-auto !h-10`} aria-label="სხვა დღე" />
+/** The day being marked: the latest lesson days, any other through 📅 (then shown as a day of its own); below — how
+ *  many came. */
+export const AttendanceDays: React.FC<{ a: ClassAttendance; total: number }> = ({ a, total }) => {
+  const days = a.choices.includes(a.date) ? a.choices : [...a.choices, a.date];
+  return (
+    <div className="mb-3">
+      <div className="flex flex-wrap gap-1.5">
+        {days.map(d => (
+          <button key={d} type="button" onClick={() => a.setDate(d)} aria-pressed={d === a.date}
+            className={`h-9 px-3 rounded-full text-[13px] font-bold cursor-pointer transition ${d === a.date ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40'}`}>
+            {d === localIso() ? 'დღეს' : `${WEEKDAYS_SHORT_GE[weekdayOf(d)]}, ${shortDate(d)}`}
+          </button>
+        ))}
+        {/* the date field lies unseen over the round button and opens the device's own calendar */}
+        <label title="სხვა დღე" className="relative w-9 h-9 shrink-0 rounded-full bg-white ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028] flex items-center justify-center cursor-pointer transition">
+          <CalendarDays className="w-4 h-4" />
+          <input type="date" value={a.date} max={localIso()} aria-label="სხვა დღე"
+            onChange={e => e.target.value && a.setDate(e.target.value)}
+            onClick={e => { try { e.currentTarget.showPicker(); } catch { /* the browser opens its own */ } }}
+            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
+        </label>
+      </div>
+      <div className="mt-2.5 flex flex-wrap items-center gap-2">
+        <p className="flex-1 min-w-40 text-[13px] text-[#8a7a6a]">
+          {WEEKDAYS_GE[weekdayOf(a.date)]}, {shortDate(a.date)} ·{' '}
+          {a.marked ? <span className="font-bold text-emerald-800 tabular-nums">მოვიდა {a.present.length}/{total}</span> : 'ჯერ არ მონიშნულა'}
+        </p>
+        {a.present.length < total && <Btn kind="soft" size="sm" icon={<CheckCheck />} onClick={a.allCame}>ყველა მოვიდა</Btn>}
+        {a.present.length > 0 && <Btn kind="ghost" size="sm" onClick={a.clear}>გასუფთავება</Btn>}
+      </div>
+      {a.msg.flash && <div className="mt-2.5"><Flash flash={a.msg.flash} onClose={a.msg.clear} /></div>}
     </div>
-    <div className="mt-2.5 flex flex-wrap items-center gap-2">
-      <p className="basis-full sm:basis-auto sm:flex-1 text-[13px] text-[#8a7a6a]">
-        {WEEKDAYS_GE[weekdayOf(a.date)]}, {shortDate(a.date)} ·{' '}
-        {a.marked ? <span className="font-bold text-emerald-800 tabular-nums">მოვიდა {a.present.length}/{total}</span> : 'ჯერ არ მონიშნულა'}
-      </p>
-      {a.present.length < total && <Btn kind="soft" size="sm" icon={<CheckCheck />} onClick={a.allCame}>ყველა მოვიდა</Btn>}
-      {a.present.length > 0 && <Btn kind="ghost" size="sm" onClick={a.clear}>გასუფთავება</Btn>}
-    </div>
-    {a.msg.flash && <div className="mt-2.5"><Flash flash={a.msg.flash} onClose={a.msg.clear} /></div>}
-  </div>
-);
+  );
+};
 
 /** The round ✓ on a student's card: came to the chosen day's lesson. */
 export const CameCheck: React.FC<{ on: boolean; name: string; onToggle: () => void; className?: string }> = ({ on, name, onToggle, className = '' }) => (

@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { ClipboardList, Plus, Trash2, Music, Users } from 'lucide-react';
+import { Check, ClipboardList, Plus, Trash2, Music, Users } from 'lucide-react';
 import { useAuth } from '../../context';
 import { SchoolClass } from '../../hooks/useClasses';
-import { Assignment, StudentRecord, createAssignment, deleteAssignment, dueLabel, daysUntil, localIso, shortDate, useAssignments } from '../../hooks/useTeaching';
+import { Assignment, StudentRecord, createAssignment, deleteAssignment, dueLabel, daysUntil, localIso, shortDate, useAssignments, useClassStudents } from '../../hooks/useTeaching';
 import { CatalogEntry, CATEGORY_LABEL, PathItem, Voice, findCatalogEntry, sortPathItems, usesVoices, voicesOf } from '../../utils/pathItems';
 import { filterValidVariants } from '../../utils/variantValidation';
 import { writePath } from '../admin/MemberPathEditor';
@@ -12,6 +12,7 @@ import { CatalogPicker } from '../admin/CatalogPicker';
 import { Btn, Card, CardTitle, Empty, FIELD, Flash, IconBtn, Label, Pill, Sheet, useFlash } from '../ui/kit';
 
 const VOICE_LABEL: Record<string, string> = { '1': 'I ხმა', '2': 'II ხმა', '3': 'III ხმა' };
+const ROMAN: Record<string, string> = { '1': 'I', '2': 'II', '3': 'III' };
 
 /** Who an assignment is for, and how many of them already marked its voices on their path. */
 const progressOf = (a: Assignment, cls: SchoolClass, records: Record<string, StudentRecord>) => {
@@ -97,6 +98,54 @@ export const AssignmentsPanel: React.FC<{ cls: SchoolClass; records: Record<stri
           <ul className="space-y-2.5">{past.slice(0, 10).map(a => <Row key={a.id} a={a} />)}</ul>
         </Card>
       )}
+      <NewAssignment open={adding} onClose={() => setAdding(false)} cls={cls} onDone={t => msg.ok(t)} />
+    </div>
+  );
+};
+
+/** The class page's „დავალებები“ fold (ClassProgram), for the class's teachers: the current assignments in slim rows —
+ *  voices, deadline, for whom, how many marked it — with 🗑, and „ახალი დავალება“. The members' records (for the
+ *  counts) are read only while it is open. */
+export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[] }> = ({ cls, list }) => {
+  const records = useClassStudents(cls);
+  const [adding, setAdding] = useState(false);
+  const msg = useFlash();
+
+  const remove = async (a: Assignment) => {
+    if (!window.confirm(`წავშალო დავალება „${a.title}“?`)) return;
+    try { await deleteAssignment(cls.id, a.id); } catch { msg.fail('ვერ წაიშალა.'); }
+  };
+
+  return (
+    <div className="space-y-2.5">
+      {list.length === 0 ? (
+        <p className="text-sm text-[#8a7a6a]">მიმდინარე დავალება არ არის.</p>
+      ) : (
+        <ul className="-mt-1 divide-y divide-[#efe5d4]">
+          {list.map(a => {
+            const { targets, done } = progressOf(a, cls, records);
+            const n = daysUntil(a.due);
+            return (
+              <li key={a.id} className="flex items-start gap-2 py-2.5">
+                <div className="min-w-0 flex-1">
+                  <p className="text-[14px] font-semibold leading-snug text-[#2a2017] break-words">{a.title}</p>
+                  {/* the voices in one chip; „for whom“ only when it isn't the whole class */}
+                  <div className="mt-1.5 flex flex-wrap gap-1.5">
+                    {a.voices.length > 0 && <Pill>{a.voices.map(v => ROMAN[v]).join(' · ')} ხმა</Pill>}
+                    <Pill tone={n < 0 ? 'muted' : n <= 2 ? 'amber' : 'brown'}>{shortDate(a.due)} · {dueLabel(a.due)}</Pill>
+                    {a.studentIds.length > 0 && <Pill tone="muted"><Users /> {targets.length} მოსწავლე</Pill>}
+                    {a.variantId && <Pill tone="green"><Check /> მონიშნა {done.length}/{targets.length}</Pill>}
+                  </div>
+                  {a.note && <p className="mt-1.5 text-[12.5px] leading-snug text-[#75685a] whitespace-pre-line">{a.note}</p>}
+                </div>
+                <IconBtn label="წაშლა" tone="danger" onClick={() => remove(a)}><Trash2 /></IconBtn>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+      <Flash flash={msg.flash} onClose={msg.clear} />
+      <Btn kind="soft" size="sm" icon={<Plus />} onClick={() => setAdding(true)}>ახალი დავალება</Btn>
       <NewAssignment open={adding} onClose={() => setAdding(false)} cls={cls} onDone={t => msg.ok(t)} />
     </div>
   );

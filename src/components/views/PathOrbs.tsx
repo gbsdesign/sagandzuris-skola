@@ -75,6 +75,8 @@ const maneraHue = (v: number): OrbHue => (v >= 80 ? 'done' : v >= 50 ? 'amber' :
 // The member sets their order under "რიგი" (PathTabs), which hands it over as `order`.
 export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map(o => o.id) }) => {
   const [open, setOpen] = useState<OrbId | null>(null);
+  // "ნასწავლი": ✎ in the card's head swaps the marks for ✕ (LearnPanel); folding the card ends it
+  const [editing, setEditing] = useState(false);
   const stats = usePathStats();
   const manera = useManera();
   const work = useIndependentWork();
@@ -88,7 +90,8 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
   }, [open, newWork.count]);
 
   usePanelWish(['manera', 'work'], id => setOpen(id as OrbId));
-  const toggle = (id: OrbId) => { triggerHaptic(10); setOpen(o => (o === id ? null : id)); };
+  const toggle = (id: OrbId) => { triggerHaptic(10); setEditing(false); setOpen(o => (o === id ? null : id)); };
+  const close = () => { setEditing(false); setOpen(null); };
 
   // today's planned hours on the "სამუშაო" button: how many are left, a green ✓ once all are done
   const todayLeft = work.today.filter(s => !s.done).length;
@@ -132,7 +135,7 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
   };
   const orbs = ids.map(orb);
 
-  const cards: Record<OrbId, { title: string; sub: React.ReactNode; aside?: React.ReactNode; body: React.ReactNode }> = {
+  const cards: Record<OrbId, { title: string; sub: React.ReactNode; aside?: React.ReactNode; action?: React.ReactNode; body: React.ReactNode }> = {
     samosi: {
       title: 'ჩემი სამოსი',
       sub: samosi.count === SAMOSI_TOTAL ? 'ჩოხა სრულადაა აწყობილი' : `${samosi.count} / ${SAMOSI_TOTAL} შეგროვებულია`,
@@ -140,8 +143,13 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
     },
     learn: {
       title: 'ნასწავლი',
-      sub: stats.total ? `${stats.learned} / ${stats.total} ნასწავლი${stats.voiceSlots ? ` · ${stats.voices}/${stats.voiceSlots} ხმა` : ''}` : 'გზა ჯერ ცარიელია',
-      body: <LearnPanel s={stats} />,
+      sub: stats.total ? <LearnLine s={stats} /> : 'გზა ჯერ ცარიელია',
+      action: stats.total ? (
+        <IconBtn label={editing ? 'მზადაა' : 'სიის შეცვლა'} tone={editing ? 'wine' : 'plain'} aria-pressed={editing} onClick={() => setEditing(v => !v)}>
+          {editing ? <Check className="stroke-[3]" /> : <Pencil />}
+        </IconBtn>
+      ) : undefined,
+      body: <LearnPanel s={stats} editing={editing} />,
     },
     manera: { title: 'მანერა', sub: 'საშემსრულებლო რჩევები', aside: <ManeraAverageBadge />, body: <ManeraContent /> },
     work: { title: 'დამოუკიდებელი სამუშაო', sub: <WorkMonthLine work={work} />, body: <WorkPanel /> },
@@ -168,7 +176,10 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
               </span>
               <span className="block mt-0.5 text-xs font-semibold text-[#8a7a6a]">{card.sub}</span>
             </span>
-            <IconBtn label="დაკეცვა" onClick={() => setOpen(null)}><X /></IconBtn>
+            <span className="shrink-0 flex items-center gap-1">
+              {card.action}
+              <IconBtn label="დაკეცვა" onClick={close}><X /></IconBtn>
+            </span>
           </header>
           <div className="px-3 py-4 sm:p-4">{card.body}</div>
         </section>
@@ -179,47 +190,18 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
 
 const SHOWN = 8;
 
-type CategoryBar = { id: string; label: string; total: number; learned: number; voices: number; voiceSlots: number };
-
-/** Each kind (გალობა, სიმღერა, …) as a small card: learned / total, a bar, what is left and the voices.
- *  Also used by the class program (ClassProgram). */
-export const CategoryBars: React.FC<{ categories: CategoryBar[] }> = ({ categories }) => {
-  const n = categories.length;
-  return (
-    <div
-      className="grid gap-2 grid-cols-[repeat(var(--m),minmax(0,1fr))] sm:grid-cols-[repeat(var(--n),minmax(0,1fr))]"
-      style={{ '--m': Math.min(n, 2), '--n': n } as React.CSSProperties}
-    >
-      {categories.map((c, i) => {
-        const left = c.total - c.learned;
-        const full = left === 0;
-        // on phones (two a row) an odd last one takes the whole row
-        const alone = n > 1 && n % 2 === 1 && i === n - 1;
-        return (
-          <div key={c.id} className={`rounded-xl bg-[#faf6ef] px-3 py-2.5 ${alone ? 'col-span-2 sm:col-span-1' : ''}`}>
-            <div className="flex items-baseline justify-between gap-2">
-              <span className="text-[12.5px] font-bold text-[#75685a] truncate">{c.label}</span>
-              <span className="tabular-nums whitespace-nowrap">
-                <span className="text-[18px] font-black text-[#2a2017]">{c.learned}</span>
-                <span className="text-xs font-bold text-[#b3a594]"> / {c.total}</span>
-              </span>
-            </div>
-            <div className="mt-1.5 h-1.5 rounded-full bg-[#ece2d1] overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-[width] duration-700 ${full ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-[#c2414c] to-[#7a2028]'}`}
-                style={{ width: `${(100 * c.learned) / c.total}%` }}
-              />
-            </div>
-            <p className={`mt-1.5 text-[11.5px] font-semibold ${full ? 'text-emerald-700' : 'text-[#8a7a6a]'}`}>
-              {full ? 'ყველა ნასწავლია' : `${left} სასწავლი`}
-              {c.voiceSlots > 0 && <span className="text-[#8a7a6a]"> · {c.voices}/{c.voiceSlots} ხმა</span>}
-            </p>
-          </div>
-        );
-      })}
-    </div>
-  );
-};
+/** The path's progress under the "ნასწავლი" title: a bar, then learned / total and the voices (as on the class page). */
+const LearnLine: React.FC<{ s: ReturnType<typeof usePathStats> }> = ({ s }) => (
+  <span className="flex items-center gap-2.5 mt-1">
+    <span className="flex-1 h-1.5 rounded-full bg-[#ece2d1] overflow-hidden">
+      <span
+        className={`block h-full rounded-full transition-[width] duration-700 ${s.learned === s.total ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-[#c2414c] to-[#7a2028]'}`}
+        style={{ width: `${s.percent}%` }}
+      />
+    </span>
+    <span className="shrink-0 tabular-nums">{s.learned}/{s.total}{s.voiceSlots ? ` · ${s.voices}/${s.voiceSlots} ხმა` : ''}</span>
+  </span>
+);
 
 /** What tapping an item's name does: a chant opens its notes, a song its place on the map; null when neither can.
  *  Also used by the class program (ClassProgram). */
@@ -239,20 +221,20 @@ export const usePathItemOpener = () => {
   };
 };
 
-// "ნასწავლი" opened: the teacher's assignments and lessons at the top (MyClassWork), then each kind on the path
-// (გალობა, სიმღერა, მთქმელი, საკრავები) with what is learned, what is left and its voices; under them the learned
-// items, one slim line each, and the ones still to learn folded under "სასწავლი". The student marks what they know
-// right here (a voice, or a whole poem or instrument) unless a teacher has locked marking; a voice the teacher
-// confirmed is green and only the teacher takes it back. "შეცვლა" swaps the marks for ✕ to take items off the path
-// (open even while marking is locked). A chant's name opens its notes, a song's its place on the map. An empty path
-// shows its first step instead.
-const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats> }> = ({ s }) => {
+// "ნასწავლი" opened: the teacher's assignments and lessons at the top (MyClassWork), then the learned items, one slim
+// line each (under a heading per kind — გალობა, სიმღერა, მთქმელი, საკრავები — when the path has more than one), and
+// the ones still to learn folded under "სასწავლი". The whole path's progress is the bar in the card's head. The
+// student marks what they know right here (a voice, or a whole poem or instrument) unless a teacher has locked
+// marking; a voice the teacher confirmed is green and only the teacher takes it back. `editing` (✎ in the card's
+// head) swaps the marks for ✕ to take items off the path (open even while marking is locked). A chant's name opens
+// its notes, a song's its place on the map. An empty path shows its first step instead.
+const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats>; editing: boolean }> = ({ s, editing }) => {
   const openerOf = usePathItemOpener();
   const { selectedChantVariants, saveVariantsToFirestoreAndStorage } = useChants();
   const { locked, confirmed, toggle } = usePathMarks(triggerFireworks);
   const [all, setAll] = useState<Record<string, boolean>>({});
   const [showTodo, setShowTodo] = useState(false);
-  const [editing, setEditing] = useState(false);
+  const several = s.categories.length > 1;
   const todo = s.categories.filter(c => c.todo.length);
   const todoCount = todo.reduce((a, c) => a + c.todo.length, 0);
 
@@ -340,28 +322,14 @@ const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats> }> = ({ s }) => 
   }
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-3">
       <MyClassWork bare />
-      <CategoryBars categories={s.categories} />
 
-      <div className="flex items-center gap-2 pl-1">
-        <p className="flex-1 min-w-0 flex items-center gap-1.5 text-[12px] font-semibold text-[#8a7a6a]">
-          {editing ? 'შეეხე ✕-ს, რომ სიიდან ამოშალო'
-            : locked ? <><Lock className="w-3.5 h-3.5 shrink-0" /> მონიშვნას ახლა მასწავლებელი აკეთებს</>
-            : 'შეეხე ხმის ნომერს, როცა ისწავლი'}
+      {locked && !editing && (
+        <p className="flex items-center gap-1.5 px-1 text-[12px] font-semibold text-[#8a7a6a]">
+          <Lock className="w-3.5 h-3.5 shrink-0" /> მონიშვნას ახლა მასწავლებელი აკეთებს
         </p>
-        <button
-          type="button"
-          onClick={() => { triggerHaptic(8); setEditing(v => !v); }}
-          aria-pressed={editing}
-          className={`shrink-0 h-9 px-3 rounded-full text-xs font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer active:scale-95 ${
-            editing ? 'bg-[#2a2017] text-white' : 'text-[#6b5a4c] hover:bg-[#7a2028]/[0.06] hover:text-[#7a2028]'
-          }`}
-        >
-          {editing ? <Check className="w-3.5 h-3.5 stroke-[3]" /> : <Pencil className="w-3.5 h-3.5" />}
-          {editing ? 'მზადაა' : 'შეცვლა'}
-        </button>
-      </div>
+      )}
 
       {s.learned === 0 ? (
         <p className="px-1 text-[13px] text-[#8a7a6a]">ჯერ არაფერია ნასწავლი — მონიშნე „სასწავლში“, რაც უკვე იცი.</p>
@@ -371,7 +339,7 @@ const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats> }> = ({ s }) => 
           const list = open ? c.done : c.done.slice(0, SHOWN);
           return (
             <section key={c.id}>
-              <h4 className="px-1 mb-0.5 text-[12px] font-bold text-[#a4927c]">{c.label} · {c.done.length}</h4>
+              {several && <h4 className="px-1 mb-0.5 text-[12px] font-bold text-[#a4927c] tabular-nums">{c.label} · {c.done.length}/{c.total}</h4>}
               <ul className="divide-y divide-[#f3ebdd]">{list.map(it => row(it, c.id))}</ul>
               {c.done.length > SHOWN && (
                 <button
@@ -394,7 +362,7 @@ const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats> }> = ({ s }) => 
             type="button"
             onClick={() => { triggerHaptic(8); setShowTodo(o => !o); }}
             aria-expanded={showTodo}
-            className="w-full h-11 px-3 rounded-xl flex items-center gap-2 bg-[#faf6ef] hover:bg-[#f5eee2] text-left cursor-pointer transition-colors"
+            className="w-full h-10 px-3 rounded-xl flex items-center gap-2 bg-[#faf6ef] hover:bg-[#f5eee2] text-left cursor-pointer transition-colors"
           >
             <span className="flex-1 text-[13.5px] font-bold text-[#4a3426]">სასწავლი</span>
             <span className="text-[12.5px] font-bold text-[#a4927c] tabular-nums">{todoCount}</span>

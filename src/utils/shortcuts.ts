@@ -57,7 +57,7 @@ export const LIBRARY_SHORT: Record<string, string> = {
 };
 export const PAGES: Record<string, string> = { abituri: 'აბიტურიენტს', messages: 'მიმოწერა', admin: 'ადმინის პანელი' };
 export const TEACHER_TABS: Record<string, string> = {
-  students: 'კლასი', assignments: 'კლასის პროგრამა',
+  students: 'კლასი', assignments: 'სასწავლო პროგრამა',
 };
 // attendance, the class settings, the timetable and the class's psalter group now live in the class tab (`students`)
 export const OLD_TEACHER_TABS: Record<string, string> = { attendance: 'students', class: 'students', schedule: 'students', groups: 'students' };

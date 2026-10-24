@@ -32,6 +32,7 @@ export interface OfflineState {
   recMissing: number;                 // chosen recordings not on the device yet
   failed: boolean;                    // the last run could not get something from the server
   usage: number | null;               // bytes the app uses on the device
+  quota: number | null;               // bytes the browser lets the app use in all
 }
 
 const CHOICE_KEY = 'sg_offline_choice';
@@ -94,6 +95,7 @@ let state: OfflineState = {
   recMissing: 0,
   failed: false,
   usage: null,
+  quota: null,
 };
 const listeners = new Set<() => void>();
 const set = (patch: Partial<OfflineState>) => {
@@ -129,7 +131,7 @@ export const trackEstimate = (known: Readonly<Record<string, number>>) => {
 const refreshUsage = async () => {
   try {
     const e = await navigator.storage?.estimate?.();
-    if (e?.usage !== undefined) set({ usage: e.usage });
+    if (e?.usage !== undefined) set({ usage: e.usage, quota: e.quota ?? null });
   } catch { /* not available */ }
 };
 const askToKeep = () => { navigator.storage?.persist?.().catch(() => undefined); };
@@ -224,7 +226,8 @@ const runPack = async ({ p, files, todo }: Job) => {
   await Promise.all([worker(), worker(), worker()]);
   if (!alive()) return true;
   if (!lost && !broken) rec.v = p.v;
-  if (broken) failed = true;
+  // a fetch that threw while the phone is online: the server is unreachable, not the internet gone
+  if (broken || (lost && navigator.onLine)) failed = true;
   await save();
   set({ stored: storedOf() });
   return !lost;
@@ -269,6 +272,7 @@ const runRecordings = async () => {
       set({ tracks: new Set(state.tracks).add(url), sizes: { ...sizes }, recMissing: Math.max(0, state.recMissing - 1) });
       progress(buf.byteLength, 'rec');
     } catch {
+      if (navigator.onLine) failed = true;
       return false;
     }
   }

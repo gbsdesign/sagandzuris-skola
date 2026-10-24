@@ -87,7 +87,8 @@ await t('directory has no extra fields', assertFails(setDoc(doc(stu, 'directory'
 await t('teacher lists directory', assertSucceeds(getDocs(collection(tch, 'directory'))));
 await t('member cannot list directory', assertFails(getDocs(collection(stu, 'directory'))));
 await t('teacher writes attendance', assertSucceeds(setDoc(doc(tch, 'classes', 'c1', 'attendance', '2026-10-06'), { present: ['stu'] })));
-await t('member reads attendance', assertSucceeds(getDoc(doc(stu, 'classes', 'c1', 'attendance', '2026-10-06'))));
+await t('teacher reads attendance', assertSucceeds(getDoc(doc(tch, 'classes', 'c1', 'attendance', '2026-10-06'))));
+await t('member cannot read attendance', assertFails(getDoc(doc(stu, 'classes', 'c1', 'attendance', '2026-10-06'))));
 await t('member cannot write attendance', assertFails(setDoc(doc(stu, 'classes', 'c1', 'attendance', '2026-10-07'), { present: ['stu'] })));
 await t('teacher writes assignment', assertSucceeds(setDoc(doc(tch, 'classes', 'c1', 'assignments', 'a1'), { title: 'x' })));
 await t('member reads assignments', assertSucceeds(getDocs(collection(stu, 'classes', 'c1', 'assignments'))));

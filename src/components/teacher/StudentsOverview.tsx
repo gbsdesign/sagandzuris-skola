@@ -1,10 +1,10 @@
 import React, { useMemo, useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { Users, Clock, Sparkles, ClipboardCheck, Route, Baby, Lock, UserMinus, UserPlus } from 'lucide-react';
+import { Users, Clock, Sparkles, ClipboardCheck, Route, Baby, Lock, UserMinus, UserPlus, Loader2, MessageCircle } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
-import { SchoolClass } from '../../hooks/useClasses';
-import { AttendanceDay, StudentRecord, agoLabel } from '../../hooks/useTeaching';
+import type { ClassMember, SchoolClass } from '../../hooks/useClasses';
+import { AttendanceDay, StudentRecord, agoLabel, useClassStudents } from '../../hooks/useTeaching';
 import { AttendanceDays, AttendanceStrip, CameCheck, useClassAttendance } from './AttendancePanel';
 import { computeMonthlyStats } from '../../hooks/useMonthlyStudyStats';
 import { HABIT_ITEMS } from '../../data/habitsAndManera';
@@ -17,6 +17,7 @@ import { Avatar, Btn, Card, CardTitle, Empty, Pill, Sheet, Stat, Toggle } from '
 import { WEEKDAYS_SHORT_GE } from '../../utils/dateNames';
 import { abilitiesText, interestsText } from '../../utils/profileFields';
 import { syncKidsFlag } from '../../hooks/useDirectChat';
+import { Avatar as Face } from '../classes/ChatPanel';
 
 const VOICE = { '1': 'მთქმელი', '2': 'მოძახილი', '3': 'ბანი' } as Record<string, string>;
 const MONTHS = ['იანვარში', 'თებერვალში', 'მარტში', 'აპრილში', 'მაისში', 'ივნისში', 'ივლისში', 'აგვისტოში', 'სექტემბერში', 'ოქტომბერში', 'ნოემბერში', 'დეკემბერში'];
@@ -46,6 +47,18 @@ const abituriText = (a: any): string => {
   return parts.join(' · ');
 };
 
+/** The class's three figures: independent work this month on average, members active in the last 7 days, and the
+ *  attendance at the latest lessons on average (null before any lesson is marked). */
+const classFigures = (sums: ReturnType<typeof summarize>[], attendance: AttendanceDay[]) => {
+  const n = sums.length;
+  const came = attendance.reduce((a, d) => a + d.present.length, 0);
+  return {
+    work: n ? Math.round(sums.reduce((a, s) => a + s.work.percent, 0) / n) : 0,
+    active: sums.filter(s => s.lastActive && Date.now() - new Date(s.lastActive).getTime() < 7 * 86400_000).length,
+    attendance: attendance.length && n ? Math.round((came / (attendance.length * n)) * 100) : null,
+  };
+};
+
 // The class tab: every member at a glance — independent work this month, habits this week, attendance and
 // the last visit. The ✓ on a card marks who came (the day above the list), the button beside it takes the
 // member out of the class; a tap on the card opens the details, the path and the kids' mode; „მართვა“ opens
@@ -72,16 +85,14 @@ export const StudentsOverview: React.FC<{ cls: SchoolClass; records: Record<stri
     }
   };
 
-  const avgWork = Math.round(rows.reduce((a, r) => a + r.s.work.percent, 0) / rows.length);
-  const activeWeek = rows.filter(r => r.s.lastActive && Date.now() - new Date(r.s.lastActive).getTime() < 7 * 86400_000).length;
-  const cameAll = attendance.reduce((n, d) => n + d.present.length, 0);
+  const f = classFigures(rows.map(r => r.s), attendance);
 
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-3 gap-2">
-        <Stat value={`${avgWork}%`} label="სამუშაო, საშუალოდ" tone="wine" />
-        <Stat value={`${activeWeek}/${rows.length}`} label="აქტიური 7 დღეში" tone="green" />
-        <Stat value={attendance.length ? `${Math.round((cameAll / (attendance.length * rows.length)) * 100)}%` : '—'} label="დასწრება, საშუალოდ" />
+        <Stat value={`${f.work}%`} label="სამუშაო, საშუალოდ" tone="wine" />
+        <Stat value={`${f.active}/${rows.length}`} label="აქტიური 7 დღეში" tone="green" />
+        <Stat value={f.attendance === null ? '—' : `${f.attendance}%`} label="დასწრება, საშუალოდ" />
       </div>
 
       <Card>
@@ -141,6 +152,73 @@ export const StudentsOverview: React.FC<{ cls: SchoolClass; records: Record<stri
   );
 };
 
+/** The class page's members as its teachers see them (ClassPage): the day's attendance on top, ✓ on each member (one
+ *  tap, saved at once) beside 💬, the class's three figures at the bottom; a name opens the member's window with what
+ *  the teacher panel has for them, plus „მიწერა“ and „ამოღება“. `shown`: the members the search left. The members'
+ *  records are read only while it is shown. */
+export const ClassRoll: React.FC<{
+  cls: SchoolClass;
+  shown: ClassMember[];
+  me?: string;
+  onWrite?: (m: ClassMember) => void;
+  writing?: string | null;
+}> = ({ cls, shown, me, onWrite, writing }) => {
+  const records = useClassStudents(cls);
+  const att = useClassAttendance(cls);
+  const [open, setOpen] = useState<string | null>(null);
+  const f = classFigures(cls.members.map(m => summarize(records[m.uid]?.data)), att.last);
+
+  const remove = async (m: ClassMember) => {
+    if (!window.confirm(`ამოვიღო „${m.name}“ კლასიდან? მისი ანგარიში და ნასწავლი არ წაიშლება.`)) return false;
+    try {
+      await removeClassMember(cls, m.uid);
+      return true;
+    } catch {
+      att.msg.fail('წევრი ვერ ამოიღო.');
+      return false;
+    }
+  };
+
+  return (
+    <>
+      <AttendanceDays a={att} total={cls.members.length} />
+      <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-x-3">
+        {shown.map(m => {
+          const here = att.present.includes(m.uid);
+          return (
+            <li key={m.uid} className={`min-h-12 flex items-center gap-1 pl-1.5 pr-1 py-1 rounded-xl transition-colors ${here ? 'bg-emerald-50' : m.uid === me ? 'bg-[#7a2028]/[0.05]' : 'hover:bg-[#fbf6ec]'}`}>
+              <button type="button" onClick={() => setOpen(m.uid)} title="დეტალები და რედაქტირება"
+                className="flex-1 min-w-0 min-h-10 flex items-center gap-2.5 text-left cursor-pointer">
+                <Face name={m.name} photoURL={m.photoURL} className="w-8 h-8 text-sm" />
+                <span className="flex-1 min-w-0 truncate text-[14px] font-semibold text-[#2a2017]">
+                  {m.name}
+                  {m.uid === me && <span className="ml-1.5 text-xs font-normal text-[#8a7a6a]">(შენ)</span>}
+                </span>
+              </button>
+              {onWrite && m.uid !== me && (
+                <button type="button" onClick={() => onWrite(m)} disabled={writing === m.uid}
+                  title={`პირადი მიწერა: ${m.name}`} aria-label={`პირადი მიწერა: ${m.name}`}
+                  className="w-9 h-9 shrink-0 rounded-full text-[#7a2028] hover:bg-[#7a2028]/[0.07] flex items-center justify-center cursor-pointer active:scale-95 transition disabled:opacity-60">
+                  {writing === m.uid ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+                </button>
+              )}
+              <CameCheck on={here} name={m.name} onToggle={() => att.toggle(m.uid)} />
+            </li>
+          );
+        })}
+      </ul>
+      {shown.length === 0 && <p className="px-1.5 py-3 text-sm text-[#8a7a6a]">ვერ მოიძებნა.</p>}
+      <p className="mt-2 pt-2.5 px-1.5 border-t border-[#f1e8d9] flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold tabular-nums text-[#8a7a6a]">
+        <span title="დამოუკიდებელი მუშაობა ამ თვეში, საშუალოდ">სამუშაო <b className="text-[#4a3426]">{f.work}%</b></span>
+        <span title="აქტიური ბოლო 7 დღეში">აქტიური <b className="text-[#4a3426]">{f.active}/{cls.members.length}</b></span>
+        <span title="დასწრება ბოლო გაკვეთილებზე, საშუალოდ">დასწრება <b className="text-[#4a3426]">{f.attendance === null ? '—' : `${f.attendance}%`}</b></span>
+      </p>
+      <StudentSheet cls={cls} uid={open} record={open ? records[open] : undefined} onClose={() => setOpen(null)} attendance={att.last}
+        onWrite={onWrite} onRemove={remove} />
+    </>
+  );
+};
+
 /** One small figure on a student's row: icon + value (the meaning in `title`); amber when it lags. */
 const Meta: React.FC<{ icon: React.ReactNode; title: string; warn?: boolean; children: React.ReactNode }> = ({ icon, title, warn, children }) => (
   <span title={title} className={`inline-flex items-center gap-1 [&>svg]:w-3.5 [&>svg]:h-3.5 [&>svg]:opacity-70 ${warn ? 'text-amber-700' : ''}`}>{icon}{children}</span>
@@ -152,12 +230,16 @@ const StudentSheet: React.FC<{
   record?: StudentRecord;
   attendance: AttendanceDay[];
   onClose: () => void;
-}> = ({ cls, uid, record, attendance, onClose }) => {
+  // the class page's own actions on the member (ClassRoll): a private message, out of the class (true when taken out)
+  onWrite?: (m: ClassMember) => void;
+  onRemove?: (m: ClassMember) => Promise<boolean>;
+}> = ({ cls, uid, record, attendance, onClose, onWrite, onRemove }) => {
   const { user } = useAuth();
   const [view, setView] = useState<'info' | 'path' | 'manera'>('info');
   const [error, setError] = useState('');
   if (!uid) return null;
   const m = cls.members.find(x => x.uid === uid);
+  const close = () => { setView('info'); onClose(); };
   const s = summarize(record?.data);
   const kids: KidsMode = { on: false, sections: DEFAULT_KIDS_SECTIONS, ...(s.kids || {}) };
   const maxDay = Math.max(1, ...s.week.map(w => w.n));
@@ -175,7 +257,13 @@ const StudentSheet: React.FC<{
   };
 
   return (
-    <Sheet open onClose={() => { setView('info'); onClose(); }} title={m?.name || 'მოსწავლე'} wide>
+    <Sheet open onClose={close} title={m?.name || 'მოსწავლე'} wide
+      footer={m && (onWrite || onRemove) ? (
+        <div className="flex gap-2 [&>*]:flex-1">
+          {onWrite && m.uid !== user?.uid && <Btn kind="soft" icon={<MessageCircle />} onClick={() => onWrite(m)}>მიწერა</Btn>}
+          {onRemove && <Btn kind="danger" icon={<UserMinus />} title="კლასიდან ამოღება" onClick={async () => { if (await onRemove(m)) close(); }}>ამოღება</Btn>}
+        </div>
+      ) : undefined}>
       <div className="grid grid-cols-3 gap-1 p-1 mb-4 rounded-2xl bg-white ring-1 ring-[#e8dcc8]">
         {(['info', 'path', 'manera'] as const).map(v => (
           <button key={v} type="button" onClick={() => setView(v)}

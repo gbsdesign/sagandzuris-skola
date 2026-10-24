@@ -62,7 +62,7 @@ export const removeClassMember = async (cls: SchoolClass, uid: string) => {
 const cleanProgram = (program: ProgramItem[]) =>
   program.map(p => ({ ...(p.id ? { id: p.id, code: p.code || '' } : {}), title: p.title.trim(), note: (p.note || '').trim() })).filter(p => p.title);
 
-/** The class's program saved (the teacher's „კლასის პროგრამა“) and put on every member's path; returns the failed paths. */
+/** The class's program saved (the teacher's „სასწავლო პროგრამა“) and put on every member's path; returns the failed paths. */
 export const saveClassProgram = async (cls: SchoolClass, program: ProgramItem[]) => {
   await updateDoc(doc(db, 'classes', cls.id), { program: cleanProgram(program), updatedAt: new Date().toISOString() });
   return syncMemberPaths(cls.id, program, cls.memberIds, []);
@@ -75,7 +75,7 @@ export interface AdminStudent {
   photoURL?: string;
 }
 
-export const CLASS_MODE_HINT = 'წევრები გალობაში ხედავენ მხოლოდ კლასის პროგრამის ვერსიებს — დამწყები აღარ იკარგება 1 130 ვერსიაში. „ყველაფრის ჩვენება“ ერთი შეხებით.';
+export const CLASS_MODE_HINT = 'წევრები გალობაში ხედავენ მხოლოდ სასწავლო პროგრამის ვერსიებს — დამწყები აღარ იკარგება 1 130 ვერსიაში. „ყველაფრის ჩვენება“ ერთი შეხებით.';
 
 const field = 'w-full h-11 px-3.5 rounded-xl bg-white ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/40 text-sm text-[#2a2017] placeholder:text-[#b3a594] outline-none transition';
 

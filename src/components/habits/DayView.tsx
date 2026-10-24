@@ -227,7 +227,7 @@ const HabitRow: React.FC<{
   const on = model.isOn(habit.id, date);
   const counter = model.counters[habit.id];
   const count = counter ? model.countOn(habit.id, date) : 0;
-  const step = COUNTER_TAP_STEP[habit.id] ?? 1;
+  const step = COUNTER_TAP_STEP[habit.id] ?? (habit.menu === 'jesus' ? 10 : 1);
   const ticks = useMemo(() => ticksOf(model.log, habit.id), [model.log, habit.id]);
   const run = habit.schedule ? planRun(habit.schedule, ticks, model.first) : currentRun(ticks, group.goal, model.first);
   const ring = !!counter && !on;

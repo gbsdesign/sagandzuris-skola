@@ -1,14 +1,11 @@
-import React, { useState } from 'react';
-import { ArrowLeft, Users, MessageCircle, Loader2, ChevronDown, Pencil, Music4, ClipboardCheck, ClipboardList, CalendarPlus } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { ArrowLeft, Users, MessageCircle, Loader2, ChevronDown, Pencil, Music4, Search, X } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
 import { useNotes } from '../context/NotesContext';
 import { useMyClasses, useAllClasses, useTeachingClasses, useManagedClasses } from '../hooks/useClasses';
-import { useClassStudents } from '../hooks/useTeaching';
-import { LessonTable, ScheduleSheet } from '../components/teacher/Schedule';
 import { ClassHeader } from '../components/teacher/ClassHeader';
 import { ClassProgramPanel } from '../components/teacher/ClassProgramPanel';
-import { StudentsOverview } from '../components/teacher/StudentsOverview';
-import { AssignmentsPanel } from '../components/teacher/AssignmentsPanel';
+import { ClassRoll } from '../components/teacher/StudentsOverview';
 import { ClassLogo } from '../components/classes/ClassLogo';
 import { ClassChat } from '../components/classes/ClassChat';
 import { ClassProgram } from '../components/classes/ClassProgram';
@@ -19,12 +16,15 @@ import { openThread, Person } from '../hooks/useDirectChat';
 import type { ClassMember, SchoolClass } from '../hooks/useClasses';
 
 // the teacher's windows opened from the class page (the teacher panel's parts)
-type Panel = 'class' | 'program' | 'schedule' | 'members' | 'students' | 'assignments';
+type Panel = 'class' | 'program' | 'members';
 // a panel's card shown inside a window loses its own frame (no box in a box)
 const FLAT = 'space-y-4 [&>section]:p-0 [&>section]:bg-transparent [&>section]:ring-0 [&>section]:shadow-none';
 
-// A class's shared page: its program (at the top), chat and members. Members reach it from the class logo in the header.
-// Its teachers and admins also see ✏️ on each card and the teacher panel's other parts as buttons under the title.
+// A class's shared page: its members, program and chat. Members reach it from the class logo in the header. On a
+// computer the members stand in a column of their own on the left, as the chats do on the messages page; on a phone
+// they are a folded line at the top. Its teachers and admins also see ✏️ on each card and the teacher panel's parts in
+// place: the assignments beside the program, the timetable in the chat (📅), attendance and each member's window in
+// the members list — none of it shows to the members.
 export const ClassPage: React.FC = () => {
   const { user, isAdmin, isTeacher } = useAuth();
   const { selectedClassId, handleGoBack, openDm } = useNavigation();
@@ -32,7 +32,6 @@ export const ClassPage: React.FC = () => {
   // a private chat being opened (the other person's uid), and why it could not be
   const [opening, setOpening] = useState<string | null>(null);
   const [dmErr, setDmErr] = useState('');
-  const [showMembers, setShowMembers] = useState(false);
   const [panel, setPanel] = useState<Panel | null>(null);
   const msg = useFlash();
   const mine = useMyClasses(user?.uid);
@@ -80,7 +79,7 @@ export const ClassPage: React.FC = () => {
   const close = () => setPanel(null);
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-1 py-4 sm:py-8 space-y-6 text-[#2a2017]">
+    <div className="w-full max-w-2xl lg:max-w-5xl mx-auto px-1 py-4 sm:py-8 space-y-6 text-[#2a2017]">
       <button
         type="button"
         onClick={handleGoBack}
@@ -116,76 +115,29 @@ export const ClassPage: React.FC = () => {
           </div>
         )}
         {dmErr && <p className="text-sm text-[#a02c2c]">{dmErr}</p>}
-        {/* the teacher panel's parts that have no card on this page */}
+        {/* the teacher panel's part that has no card on this page */}
         {canEdit && (
           <div className="flex flex-wrap justify-center gap-2 mt-1">
             <TeacherBtn icon={<Music4 />} onClick={openProgram}>დღევანდელი მსახურება</TeacherBtn>
-            <TeacherBtn icon={<ClipboardCheck />} onClick={() => setPanel('students')}>მოსწავლეები და დასწრება</TeacherBtn>
-            <TeacherBtn icon={<ClipboardList />} onClick={() => setPanel('assignments')}>დავალებები</TeacherBtn>
-            {cls.schedule.length === 0 && <TeacherBtn icon={<CalendarPlus />} onClick={() => setPanel('schedule')}>გაკვეთილების ცხრილი</TeacherBtn>}
           </div>
         )}
         {msg.flash && <div className="w-full text-left"><Flash flash={msg.flash} onClose={msg.clear} /></div>}
       </header>
 
-      <ClassProgram cls={cls} action={pencil('program', 'პროგრამის რედაქტირება')} />
-
-      {cls.schedule.length > 0 && <LessonTable slots={cls.schedule} title="გაკვეთილების ცხრილი" action={pencil('schedule', 'ცხრილის შეცვლა')} />}
-
-      <ClassChat cls={cls} />
-
-      {/* members: one folded line (count + a few faces); a tap shows the list */}
-      <section className="bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] overflow-hidden">
-        <div className="flex items-center">
-        <button
-          type="button"
-          onClick={() => setShowMembers(o => !o)}
-          aria-expanded={showMembers}
-          className="flex-1 min-w-0 min-h-14 flex items-center gap-2 px-5 sm:px-6 py-3 text-left cursor-pointer transition-colors hover:bg-white/60"
-        >
-          <Users className="w-5 h-5 shrink-0 text-[#7a2028]" />
-          <span className="font-serif-ge text-lg font-bold text-[#4a3426] truncate">კლასის წევრები</span>
-          <span className="text-sm font-bold text-[#a4927c] tabular-nums">{cls.members.length}</span>
-          <span className="flex-1" />
-          {!showMembers && (
-            <span aria-hidden className="flex -space-x-2">
-              {cls.members.slice(0, 4).map((m, i) => (
-                <span key={m.uid} className={`rounded-full ring-2 ring-[#fdfaf5] ${i === 3 ? 'hidden min-[400px]:block' : ''}`}>
-                  <Avatar name={m.name} photoURL={m.photoURL} className="w-7 h-7 text-xs" />
-                </span>
-              ))}
-            </span>
-          )}
-          <ChevronDown className={`w-5 h-5 shrink-0 text-[#a4927c] transition-transform ${showMembers ? 'rotate-180' : ''}`} />
-        </button>
-        {canEdit && <span className="shrink-0 pr-3">{pencil('members', 'წევრების დამატება და ამოღება')}</span>}
+      <div className="space-y-6 lg:space-y-0 lg:grid lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6 lg:items-start">
+        <ClassMembers
+          cls={cls}
+          canEdit={canEdit}
+          me={user?.uid}
+          edit={pencil('members', 'წევრების დამატება და ამოღება')}
+          onWrite={iTeach ? m => writeTo(m, false) : undefined}
+          writing={opening}
+        />
+        <div className="min-w-0 space-y-6">
+          <ClassProgram cls={cls} canEdit={canEdit} action={pencil('program', 'პროგრამის რედაქტირება')} />
+          <ClassChat cls={cls} />
         </div>
-        {showMembers && (
-        <ul className="sg-in grid grid-cols-1 sm:grid-cols-2 gap-x-3 px-3 sm:px-4 pb-3">
-          {cls.members.map(m => (
-            <li key={m.uid} className={`min-h-12 flex items-center gap-2.5 px-2 py-1 rounded-xl ${m.uid === user?.uid ? 'bg-[#7a2028]/[0.05]' : ''}`}>
-              <Avatar name={m.name} photoURL={m.photoURL} className="w-8 h-8 text-sm" />
-              <span className="flex-1 min-w-0 text-[14px] font-semibold text-[#2a2017] truncate">
-                {m.name}
-                {m.uid === user?.uid && <span className="ml-1.5 text-xs font-normal text-[#8a7a6a]">(შენ)</span>}
-              </span>
-              {iTeach && m.uid !== user?.uid && (
-                <button
-                  type="button"
-                  onClick={() => writeTo(m, false)}
-                  disabled={opening === m.uid}
-                  className="w-9 h-9 shrink-0 rounded-full text-[#7a2028] hover:bg-[#7a2028]/[0.07] flex items-center justify-center cursor-pointer active:scale-95 transition disabled:opacity-60"
-                  title={`პირადი მიწერა: ${m.name}`}
-                  aria-label={`პირადი მიწერა: ${m.name}`}
-                >
-                  {opening === m.uid ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-        )}
-      </section>
+      </div>
 
       {canEdit && (
         <>
@@ -195,14 +147,124 @@ export const ClassPage: React.FC = () => {
           <Sheet open={panel === 'program'} onClose={close} title="პროგრამის რედაქტირება" wide>
             <div className={FLAT}><ClassProgramPanel cls={cls} /></div>
           </Sheet>
-          <ScheduleSheet cls={cls} open={panel === 'schedule'} onClose={close} />
           {panel === 'members' && <MembersWindow cls={cls} onMessage={msg.say} onClose={close} />}
-          {(panel === 'students' || panel === 'assignments') && (
-            <RecordsWindow cls={cls} which={panel} onClose={close} onEditClass={() => setPanel('members')} />
-          )}
         </>
       )}
     </div>
+  );
+};
+
+// the width at which the members get their own column (Tailwind's `lg`)
+const WIDE = '(min-width: 1024px)';
+const useWide = () => {
+  const [wide, setWide] = useState(() => window.matchMedia(WIDE).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(WIDE);
+    const change = () => setWide(mq.matches);
+    mq.addEventListener('change', change);
+    return () => mq.removeEventListener('change', change);
+  }, []);
+  return wide;
+};
+
+/** „კლასის წევრები“: on a computer a column of its own, always open and staying in view; on a phone one folded line
+ *  (count + a few faces) that a tap opens. A search over the names once the class is big. The class's teachers get the
+ *  roll (ClassRoll: attendance, 💬, each member's window); the members only the names. */
+const ClassMembers: React.FC<{
+  cls: SchoolClass;
+  canEdit: boolean;
+  me?: string;
+  edit: React.ReactNode;
+  onWrite?: (m: ClassMember) => void;
+  writing: string | null;
+}> = ({ cls, canEdit, me, edit, onWrite, writing }) => {
+  const wide = useWide();
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const shown = wide || open;
+  const needle = q.trim().toLowerCase();
+  const found = needle ? cls.members.filter(m => (m.name || '').toLowerCase().includes(needle)) : cls.members;
+
+  const title = (
+    <>
+      <Users className="w-5 h-5 shrink-0 text-[#7a2028]" />
+      <span className="font-serif-ge text-lg font-bold text-[#4a3426] truncate">კლასის წევრები</span>
+      <span className="text-sm font-bold text-[#a4927c] tabular-nums">{cls.members.length}</span>
+    </>
+  );
+
+  return (
+    <section className="bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] overflow-hidden lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:flex lg:flex-col">
+      <div className="shrink-0 flex items-center">
+        {wide ? (
+          <h2 className="flex-1 min-w-0 min-h-14 flex items-center gap-2 px-5 py-3">{title}</h2>
+        ) : (
+          <button
+            type="button"
+            onClick={() => setOpen(o => !o)}
+            aria-expanded={open}
+            className="flex-1 min-w-0 min-h-14 flex items-center gap-2 px-4 min-[400px]:px-5 sm:px-6 py-3 text-left cursor-pointer transition-colors hover:bg-white/60"
+          >
+            {title}
+            <span className="flex-1" />
+            {/* a few faces, where the title still has room beside them */}
+            {!open && (
+              <span aria-hidden className="hidden min-[430px]:flex -space-x-2">
+                {cls.members.slice(0, 4).map((m, i) => (
+                  <span key={m.uid} className={`rounded-full ring-2 ring-[#fdfaf5] ${i === 3 ? 'hidden min-[400px]:block' : ''}`}>
+                    <Avatar name={m.name} photoURL={m.photoURL} className="w-7 h-7 text-xs" />
+                  </span>
+                ))}
+              </span>
+            )}
+            <ChevronDown className={`w-5 h-5 shrink-0 text-[#a4927c] transition-transform ${open ? 'rotate-180' : ''}`} />
+          </button>
+        )}
+        {edit && <span className="shrink-0 pr-3">{edit}</span>}
+      </div>
+
+      {shown && cls.members.length > 8 && (
+        <label className="shrink-0 relative block mx-3 sm:mx-4 mb-2">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a89886] pointer-events-none" />
+          <input
+            type="search"
+            value={q}
+            onChange={e => setQ(e.target.value)}
+            placeholder="ძებნა სახელით…"
+            aria-label="ძებნა"
+            className="w-full h-11 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] pl-10 pr-10 text-base text-[#2a2017] placeholder:text-[#b3a594] focus:outline-none focus:ring-2 focus:ring-[#7a2028]/35 [&::-webkit-search-cancel-button]:hidden"
+          />
+          {q && (
+            <button type="button" onClick={() => setQ('')} aria-label="გასუფთავება" className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-[#a89886] hover:text-[#4a3426] cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </label>
+      )}
+
+      {shown && (
+        <div className="sg-in lg:flex-1 lg:min-h-0 lg:overflow-y-auto overscroll-contain px-3 sm:px-4 pt-1 pb-3">
+          {canEdit ? (
+            <ClassRoll cls={cls} shown={found} me={me} onWrite={onWrite} writing={writing} />
+          ) : (
+            <>
+              <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-x-3">
+                {found.map(m => (
+                  <li key={m.uid} className={`min-h-12 flex items-center gap-2.5 px-2 py-1 rounded-xl ${m.uid === me ? 'bg-[#7a2028]/[0.05]' : ''}`}>
+                    <Avatar name={m.name} photoURL={m.photoURL} className="w-8 h-8 text-sm" />
+                    <span className="flex-1 min-w-0 text-[14px] font-semibold text-[#2a2017] truncate">
+                      {m.name}
+                      {m.uid === me && <span className="ml-1.5 text-xs font-normal text-[#8a7a6a]">(შენ)</span>}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              {found.length === 0 && <p className="px-2 py-3 text-sm text-[#8a7a6a]">ვერ მოიძებნა.</p>}
+            </>
+          )}
+        </div>
+      )}
+    </section>
   );
 };
 
@@ -217,16 +279,4 @@ const TeacherBtn: React.FC<{ icon: React.ReactNode; onClick: () => void; childre
 const MembersWindow: React.FC<{ cls: SchoolClass; onMessage: (text: string, type: 'success' | 'error') => void; onClose: () => void }> = ({ cls, onMessage, onClose }) => {
   const { classes } = useManagedClasses();
   return <ClassSettings cls={cls} classes={classes.some(c => c.id === cls.id) ? classes : [cls, ...classes]} onMessage={onMessage} onClose={onClose} />;
-};
-
-/** Students with attendance, or the assignments: both read the members' records, so only while open. */
-const RecordsWindow: React.FC<{ cls: SchoolClass; which: 'students' | 'assignments'; onClose: () => void; onEditClass: () => void }> = ({ cls, which, onClose, onEditClass }) => {
-  const records = useClassStudents(cls);
-  return (
-    <Sheet open onClose={onClose} title={which === 'students' ? 'მოსწავლეები და დასწრება' : 'დავალებები'} wide>
-      <div className={FLAT}>
-        {which === 'students' ? <StudentsOverview cls={cls} records={records} onEditClass={onEditClass} /> : <AssignmentsPanel cls={cls} records={records} />}
-      </div>
-    </Sheet>
-  );
 };
