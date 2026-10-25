@@ -209,6 +209,16 @@ await t('member cannot write another birth year', assertFails(setDoc(doc(stu, 'b
 await t('teacher reads birth years', assertSucceeds(getDocs(collection(tch, 'birthYears'))));
 await t('admin corrects a birthday', assertSucceeds(setDoc(doc(adm, 'birthdays', 'stu3'), bday('stu3'))));
 
+// ---- „ოსტატობა“: the class's lessons and each member's steps done
+await t('teacher writes a lesson', assertSucceeds(setDoc(doc(tch, 'classes', 'c1', 'lessons', 'l1'), { title: 'L', steps: [], order: 0 })));
+await t('member reads the lessons', assertSucceeds(getDocs(collection(stu, 'classes', 'c1', 'lessons'))));
+await t('member cannot write a lesson', assertFails(setDoc(doc(stu, 'classes', 'c1', 'lessons', 'l2'), { title: 'X', steps: [], order: 1 })));
+await t('outsider cannot read the lessons', assertFails(getDocs(collection(stu2, 'classes', 'c1', 'lessons'))));
+await t('member marks own steps', assertSucceeds(setDoc(doc(stu, 'classes', 'c1', 'lessonProgress', 'stu'), { done: { l1: ['a'] }, updatedAt: 'x' })));
+await t('member cannot mark for another', assertFails(setDoc(doc(stu, 'classes', 'c1', 'lessonProgress', 'stu2'), { done: {}, updatedAt: 'x' })));
+await t('teacher reads the progress', assertSucceeds(getDocs(collection(tch, 'classes', 'c1', 'lessonProgress'))));
+await t("member cannot read the others' progress", assertFails(getDocs(collection(stu, 'classes', 'c1', 'lessonProgress'))));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);

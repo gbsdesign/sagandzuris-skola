@@ -252,6 +252,18 @@ service cloud.firestore {
         allow read: if inClass();
         allow write: if isAdmin() || teachesClass();
       }
+      // „ოსტატობა“: step-by-step lessons the class's teachers build; the class reads them
+      match /lessons/{lessonId} {
+        allow read: if inClass();
+        allow write: if isAdmin() || teachesClass();
+      }
+      // each member's steps done: written by the member, read by them and the class's teachers
+      match /lessonProgress/{memberId} {
+        allow read: if isAdmin() || teachesClass() || (isSignedIn() && uid() == memberId);
+        allow create, update: if isSignedIn() && uid() == memberId && uid() in cls().memberIds
+          && incoming().keys().hasOnly(['done', 'updatedAt']) && incoming().done is map;
+        allow delete: if isAdmin() || teachesClass() || (isSignedIn() && uid() == memberId);
+      }
       // attendance is the teachers' own record: the members don't read it
       match /attendance/{day} {
         allow read, write: if isAdmin() || teachesClass();

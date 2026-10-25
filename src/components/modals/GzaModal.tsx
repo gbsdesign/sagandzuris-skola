@@ -49,7 +49,7 @@ export const GzaModal: React.FC<GzaModalProps> = ({ isOpen, onClose }) => {
         <div className="grid grid-cols-2 gap-2">
           {([
             { modal: 'chvevebi', label: 'ჩვევები', Icon: Sparkles },
-            { modal: 'manera', label: 'მანერა', Icon: Music },
+            { modal: 'manera', label: 'ოსტატობა', Icon: Music },
           ] as const).map(({ modal, label, Icon }) => (
             <button
               key={modal}

@@ -72,13 +72,9 @@ export const ManeraAverageBadge: React.FC = () => {
 export const ManeraContent: React.FC = () => {
   const { marks } = useManera();
   const [openNum, setOpenNum] = useState<string | null>(null);
-  const marked = marks.some(Boolean);
 
   return (
     <div className="text-[#2a2017]">
-      <p className="px-1 pb-3 text-[13px] leading-relaxed text-[#8a7a6a]">
-        საშემსრულებლო საძირკველი ცხრა რჩევად. {marked ? 'თითოეულს მასწავლებელი აფასებს.' : 'შეფასებას და შენიშვნებს მასწავლებელი დაწერს.'}
-      </p>
       <ul className="border-y border-[#f1e8d9] divide-y divide-[#f1e8d9]">
         {MANERA_ITEMS.map((item, i) => {
           const m = marks[i];

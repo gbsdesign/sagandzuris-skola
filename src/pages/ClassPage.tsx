@@ -12,6 +12,7 @@ import { ClassChat } from '../components/classes/ClassChat';
 import { ClassProgram } from '../components/classes/ClassProgram';
 import { MembersWindow } from '../components/classes/MembersWindow';
 import { ClassPsalter } from '../components/psalter/ClassPsalter';
+import { ClassLessons } from '../components/mastery/ClassLessons';
 import { Avatar } from '../components/classes/ChatPanel';
 import { Btn, Flash, IconBtn, PageBar, Sheet, useFlash } from '../components/ui/kit';
 import { openThread, Person } from '../hooks/useDirectChat';
@@ -152,6 +153,7 @@ export const ClassPage: React.FC<{ classId?: string; focus?: 'psalter' }> = ({ c
         />
         <div className="min-w-0 space-y-4">
           <ClassProgram cls={cls} canEdit={canEdit} action={pencil('program', 'პროგრამის რედაქტირება')} />
+          <ClassLessons cls={cls} canEdit={canEdit} />
           <ClassPsalter cls={cls} canLead={canEdit} focus={focus === 'psalter'} />
           <ClassChat cls={cls} timetable={false} />
         </div>

@@ -19,6 +19,7 @@ import { FirstStep, usePathStats } from './PathSummary';
 import { MyClassWork, useNewWork } from '../teacher/MyClassWork';
 import { triggerFireworks } from './StudentBookmarkView';
 import { ManeraAverageBadge, ManeraContent, useManera } from './ManeraPanel';
+import { MasteryContent } from '../mastery/MasteryContent';
 import { WorkMonthLine, WorkPanel, useIndependentWork, usePanelWish } from './IndependentWorkCard';
 
 type OrbId = 'samosi' | 'learn' | 'manera' | 'work';
@@ -27,7 +28,7 @@ type OrbId = 'samosi' | 'learn' | 'manera' | 'work';
 export const PATH_ORBS: { id: OrbId; label: string }[] = [
   { id: 'samosi', label: 'სამოსი' },
   { id: 'learn', label: 'ნასწავლი' },
-  { id: 'manera', label: 'მანერა' },
+  { id: 'manera', label: 'ოსტატობა' },
   { id: 'work', label: 'სამუშაო' },
 ];
 
@@ -118,7 +119,7 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
       case 'manera':
         // a dash until a teacher has marked something
         return (
-          <PathOrb key={id} label="მანერა" title="მანერა" percent={manera.average ?? 0} hue={maneraHue(manera.average ?? 0)} open={open === id} onClick={() => toggle(id)} index={index}>
+          <PathOrb key={id} label="ოსტატობა" title="ოსტატობა" percent={manera.average ?? 0} hue={maneraHue(manera.average ?? 0)} open={open === id} onClick={() => toggle(id)} index={index}>
             {manera.average === null ? <span className="text-[22px] font-black text-[#cbbca6]">—</span> : <OrbPercent value={manera.average} />}
           </PathOrb>
         );
@@ -151,7 +152,7 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
       ) : undefined,
       body: <LearnPanel s={stats} editing={editing} />,
     },
-    manera: { title: 'მანერა', sub: 'საშემსრულებლო რჩევები', aside: <ManeraAverageBadge />, body: <ManeraContent /> },
+    manera: { title: 'ოსტატობა', sub: 'გაკვეთილები და რჩევები', aside: <ManeraAverageBadge />, body: <MasteryContent /> },
     work: { title: 'დამოუკიდებელი სამუშაო', sub: <WorkMonthLine work={work} />, body: <WorkPanel /> },
   };
   const card = open ? cards[open] : null;

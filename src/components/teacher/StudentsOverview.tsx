@@ -268,7 +268,7 @@ const StudentSheet: React.FC<{
         {(['info', 'path', 'manera'] as const).map(v => (
           <button key={v} type="button" onClick={() => setView(v)}
             className={`h-10 rounded-xl text-sm font-bold cursor-pointer ${view === v ? 'bg-[#7a2028] text-[#fbf6ec]' : 'text-[#4a3426]'}`}>
-            {v === 'info' ? 'მიმოხილვა' : v === 'path' ? 'გზა' : 'მანერა'}
+            {v === 'info' ? 'მიმოხილვა' : v === 'path' ? 'გზა' : 'ოსტატობა'}
           </button>
         ))}
       </div>

@@ -26,7 +26,7 @@ export const ManeraModal: React.FC<ManeraModalProps> = ({ isOpen, onClose }) => 
             <span className="w-9 h-9 rounded-xl bg-[#7a2028]/10 text-[#7a2028] flex items-center justify-center">
               <Music className="w-[18px] h-[18px]" />
             </span>
-            <h3 className="font-serif-ge text-lg font-bold text-[#4a3426]">მანერა</h3>
+            <h3 className="font-serif-ge text-lg font-bold text-[#4a3426]">ოსტატობა</h3>
             <ManeraAverageBadge />
           </div>
           <button
