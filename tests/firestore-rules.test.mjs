@@ -194,6 +194,21 @@ await t('superadmin writes who decided', assertSucceeds(setDoc(doc(sup, 'accessD
 await t('member cannot read who decided', assertFails(getDoc(doc(stu2, 'accessDecisions', 'stu2'))));
 await t('admin cannot read who decided', assertFails(getDoc(doc(adm, 'accessDecisions', 'stu2'))));
 
+// ---- birthdays: the day and month for every admitted member, the year for staff only
+const bday = (u, extra = {}) => ({ uid: u, name: 'ანა ბერიძე', photoURL: '', month: 10, day: 27, updatedAt: 'x', ...extra });
+await t('member writes own birthday', assertSucceeds(setDoc(doc(stu, 'birthdays', 'stu'), bday('stu'))));
+await t('member cannot write another birthday', assertFails(setDoc(doc(stu, 'birthdays', 'stu3'), bday('stu3'))));
+await t('a birthday keeps no year', assertFails(setDoc(doc(stu, 'birthdays', 'stu'), bday('stu', { year: 1990 }))));
+await t('a birthday month is 1–12', assertFails(setDoc(doc(stu, 'birthdays', 'stu'), bday('stu', { month: 13 }))));
+await t('member reads the birthdays', assertSucceeds(getDocs(collection(stu, 'birthdays'))));
+await t('refused member cannot read the birthdays', assertFails(getDocs(collection(stu2, 'birthdays'))));
+await t('guest cannot read the birthdays', assertFails(getDocs(collection(guest, 'birthdays'))));
+await t('member writes own birth year', assertSucceeds(setDoc(doc(stu, 'birthYears', 'stu'), { year: 1990, updatedAt: 'x' })));
+await t('member cannot read birth years', assertFails(getDocs(collection(stu, 'birthYears'))));
+await t('member cannot write another birth year', assertFails(setDoc(doc(stu, 'birthYears', 'stu3'), { year: 1990, updatedAt: 'x' })));
+await t('teacher reads birth years', assertSucceeds(getDocs(collection(tch, 'birthYears'))));
+await t('admin corrects a birthday', assertSucceeds(setDoc(doc(adm, 'birthdays', 'stu3'), bday('stu3'))));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);

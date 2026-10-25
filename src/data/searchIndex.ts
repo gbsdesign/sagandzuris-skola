@@ -90,6 +90,7 @@ const SPECIAL_TEXT: Record<string, [string, string]> = {
   commemoration: ['სახელების სიები', 'სახელები ცოცხალთა მიცვალებულთა აღსავლენი'],
   calendar: ['დღის წმიდანები და დღესასწაულები', 'კალენდარი დღეს წმიდანი'],
   kathisma: ['ამ ციკლში ჩემი წასაკითხი', 'ფსალმუნი კათისმა'],
+  birthdays: ['ვის როდის აქვს დაბადების დღე', 'დაბადების დღე დღეობა იუბილე'],
   class: ['კლასის გვერდი', 'კლასი მასწავლებელი მოსწავლეები დასწრება პროგრამა'],
 };
 const LIBRARY_TABS: { tab: LibraryTab; title: string; sub: string; keys: string }[] = [
@@ -114,6 +115,7 @@ export const buildSearchIndex = (who: SearchWho): SearchItem[] => {
   for (const [id, label] of Object.entries(SPECIALS)) {
     if (id === 'kathisma' && !who.signedIn) continue;
     if (id === 'class' && !who.hasClass) continue;
+    if (id === 'birthdays' && !who.signedIn) continue;
     if (id === 'teacher') continue; // the old teacher panel's button: the class page is „ჩემი კლასი“
     const [sub, keys] = SPECIAL_TEXT[id] || ['', ''];
     out.push(shortcut(`special:${id}`, 'fn', id === 'calendar' ? 'საეკლესიო კალენდარი' : label, sub, keys));

@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { triggerHaptic } from '../utils/haptics';
 
-export type PageType = 'home' | 'profile' | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'gz' | 'tsinaprebi' | 'bookmark' | 'admin' | 'teacher' | 'class' | 'prayer' | 'commemoration' | 'biblioteka' | 'psalter' | 'messages' | 'dm' | 'abituri' | 'offline';
+export type PageType = 'home' | 'profile' | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'gz' | 'tsinaprebi' | 'bookmark' | 'admin' | 'teacher' | 'class' | 'prayer' | 'commemoration' | 'biblioteka' | 'psalter' | 'messages' | 'dm' | 'abituri' | 'offline' | 'birthdays';
 export type ServiceType = 'წირვა' | 'მწუხრი' | 'ცისკარი' | 'სადღესასწაულო' | 'მარხვანი' | 'ზატიკი' | 'მომიხსენენი' | 'ძლისპირები' | 'კატაბასიები' | 'დასადებლები' | null;
 
 export interface NavigationContextType {

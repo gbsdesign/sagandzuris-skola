@@ -36,6 +36,7 @@ import { useKidsMode } from './hooks/useAccess';
 import { useClassMarksSync } from './hooks/useClassMarks';
 import { MembershipGate, WaitingBanner } from './components/access/MembershipGate';
 import { useMembership } from './utils/memberAccess';
+import { useBirthdaySync } from './utils/birthdays';
 
 startRecordingBindings();
 startPlacements();
@@ -78,6 +79,8 @@ function AppContent() {
   usePrayerReminderScheduler(openPrayer);
   // the member's marks on their classes' programs, for the class page's "who knows this voice"
   useClassMarksSync();
+  // my day and month for everyone's birthdays list (utils/birthdays)
+  useBirthdaySync();
 
   // a tapped reminder may open the site as /?prayer=<id> or /?open=psalter|gz|teacher (the teacher panel is gone:
   // „teacher“ opens the class page)

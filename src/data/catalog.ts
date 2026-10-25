@@ -202,7 +202,7 @@ export const buildCatalog = (who: CatalogWho): CatalogNode[] => prune([
   ], { id: 'section:tsinaprebi' }),
   branch('study', 'სწავლა', [
     ...(who.hasClass ? [btn('st:class', 'special:class')] : []),
-    ...(who.signedIn ? [btn('st:msg', 'page:messages')] : []),
+    ...(who.signedIn ? [btn('st:msg', 'page:messages'), btn('st:bday', 'special:birthdays')] : []),
     btn('st:mtk', 'section:mtkmeli'),
     btn('st:sak', 'section:sakravebi'),
   ], { id: 'section:gza' }),

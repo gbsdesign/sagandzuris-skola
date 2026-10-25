@@ -106,6 +106,7 @@ const PsalterPage = page(() => import('../pages/PsalterPage'), 'PsalterPage');
 const MessagesPage = page(() => import('../pages/MessagesPage'), 'MessagesPage');
 const AbituriPage = page(() => import('../pages/AbituriPage'), 'AbituriPage');
 const OfflinePage = page(() => import('../pages/OfflinePage'), 'OfflinePage');
+const BirthdaysPage = page(() => import('../pages/BirthdaysPage'), 'BirthdaysPage');
 
 /** „ფსალმუნთა ჯგუფი“ (the vine, the home tile, a reminder): the class page of the group's class, opened at its psalter
  *  section; a group no class holds (made before 2026-10-20) keeps the old group page. Waits a moment for the classes. */
@@ -144,6 +145,7 @@ const PAGE_TITLES: Partial<Record<PageType, string>> = {
   abituri: 'აბიტურიენტს',
   offline: 'ოფლაინ რეჟიმი',
   commemoration: 'მოსახსენებელი',
+  birthdays: 'დაბადების დღეები',
 };
 // an open library book shows its own name in the bar (the shelf's covers; LibraryPage's `mapItem` „book:12“)
 const LIBRARY_BOOKS: Record<string, string> = {
@@ -203,6 +205,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
     return isTeacher ? <ClassPage /> : <HomePage logoUrl={logoUrl} />;
   }
 
+  // the birthdays are for admitted members (and staff) only
+  if (currentPage === 'birthdays' && !(user && access.member)) return <HomePage logoUrl={logoUrl} />;
+
   // signed out (e.g. "back" after leaving): the profile has nothing to show
   if (currentPage === 'profile' && (access.kids || (!user && !loading))) return <HomePage logoUrl={logoUrl} />;
 
@@ -226,6 +231,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
     const section = sectionOfPage(currentPage);
     const pin = currentPage === 'prayer' && selectedPrayerId ? `prayer:${selectedPrayerId}`
       : currentPage === 'commemoration' ? 'special:commemoration'
+      : currentPage === 'birthdays' ? 'special:birthdays'
       : section ? `section:${section}` : null;
     const book = currentPage === 'biblioteka' ? LIBRARY_BOOKS[(mapItem ?? '').split(':')[0]] : undefined;
     const title = currentPage === 'prayer' && selectedPrayerId ? prayerTitle(selectedPrayerId) : book ?? PAGE_TITLES[currentPage] ?? '';
@@ -268,6 +274,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           {currentPage === 'abituri' && <AbituriPage />}
 
           {currentPage === 'offline' && <OfflinePage />}
+
+          {currentPage === 'birthdays' && <BirthdaysPage />}
 
           {currentPage === 'simghera' && (
             <div className="w-full my-2 px-1">

@@ -161,6 +161,32 @@ service cloud.firestore {
       allow delete: if isAdmin() || (isSignedIn() && uid() == userId);
     }
 
+    // ---- Birthdays (src/utils/birthdays.ts) ------------------------------------------------------------------------
+    // The day and month of every member who wrote a birth date in their profile, for the birthdays page: every
+    // admitted member reads them (a member a superadmin has not let in yet does not). Each member writes only their
+    // own, from their profile; an admin may correct one. The year stays apart and is for teachers and admins only.
+    function admittedMember() {
+      let p = /databases/$(database)/documents/memberAccess/$(uid());
+      return isSignedIn() && (!exists(p) || get(p).data.status == 'approved');
+    }
+    match /birthdays/{userId} {
+      allow read: if isTeacher() || admittedMember();
+      allow create, update: if ((isSignedIn() && uid() == userId) || isAdmin())
+        && incoming().keys().hasOnly(['uid', 'name', 'photoURL', 'month', 'day', 'updatedAt'])
+        && incoming().uid == userId
+        && incoming().name is string && incoming().name.size() <= 120
+        && incoming().month is int && incoming().month >= 1 && incoming().month <= 12
+        && incoming().day is int && incoming().day >= 1 && incoming().day <= 31;
+      allow delete: if isAdmin() || (isSignedIn() && uid() == userId);
+    }
+    match /birthYears/{userId} {
+      allow read: if isTeacher();
+      allow create, update: if ((isSignedIn() && uid() == userId) || isAdmin())
+        && incoming().keys().hasOnly(['year', 'updatedAt'])
+        && incoming().year is int && incoming().year >= 1900 && incoming().year <= 2100;
+      allow delete: if isAdmin() || (isSignedIn() && uid() == userId);
+    }
+
     // ---- Classes -----------------------------------------------------------------------------------
     match /classes/{classId} {
       function cls() { return get(/databases/$(database)/documents/classes/$(classId)).data; }

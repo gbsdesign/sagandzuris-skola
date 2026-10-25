@@ -48,6 +48,7 @@ export const SPECIALS: Record<string, string> = {
   commemoration: 'მოსახსენებელი',
   calendar: 'კალენდარი',
   class: 'ჩემი კლასი',
+  birthdays: 'დაბადების დღეები',
   // an old button of the removed teacher panel (2026-10-25): it opens the class page now
   teacher: 'ჩემი კლასი',
 };
