@@ -13,7 +13,7 @@ import { DEFAULT_KIDS_SECTIONS, KidsMode, SECTIONS, SectionId } from '../../data
 import { MemberPathEditor } from '../admin/MemberPathEditor';
 import { removeClassMember } from '../admin/ClassesAdmin';
 import { ManeraReviewEditor } from '../admin/ManeraReviewEditor';
-import { Avatar, Btn, Card, CardTitle, Empty, Pill, Sheet, Stat, Toggle } from '../ui/kit';
+import { askConfirm, Avatar, Btn, Card, CardTitle, Empty, Pill, Sheet, Stat, Toggle } from '../ui/kit';
 import { WEEKDAYS_SHORT_GE } from '../../utils/dateNames';
 import { abilitiesText, interestsText } from '../../utils/profileFields';
 import { syncKidsFlag } from '../../hooks/useDirectChat';
@@ -77,7 +77,7 @@ export const StudentsOverview: React.FC<{ cls: SchoolClass; records: Record<stri
   );
 
   const remove = async (uid: string, name: string) => {
-    if (!window.confirm(`ამოვიღო „${name}“ კლასიდან? მისი ანგარიში და ნასწავლი არ წაიშლება.`)) return;
+    if (!(await askConfirm({ title: `ამოვიღო „${name}“ კლასიდან?`, text: 'მისი ანგარიში და ნასწავლი არ წაიშლება.', ok: 'ამოღება', danger: true }))) return;
     try {
       await removeClassMember(cls, uid);
     } catch {
@@ -169,7 +169,7 @@ export const ClassRoll: React.FC<{
   const f = classFigures(cls.members.map(m => summarize(records[m.uid]?.data)), att.last);
 
   const remove = async (m: ClassMember) => {
-    if (!window.confirm(`ამოვიღო „${m.name}“ კლასიდან? მისი ანგარიში და ნასწავლი არ წაიშლება.`)) return false;
+    if (!(await askConfirm({ title: `ამოვიღო „${m.name}“ კლასიდან?`, text: 'მისი ანგარიში და ნასწავლი არ წაიშლება.', ok: 'ამოღება', danger: true }))) return false;
     try {
       await removeClassMember(cls, m.uid);
       return true;
@@ -294,11 +294,11 @@ const StudentSheet: React.FC<{
             <div className="flex items-end gap-1.5">
               {s.week.map(({ d, n }) => (
                 <div key={d.toISOString()} className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-[10.5px] font-bold tabular-nums text-[#4a3426]">{n || ''}</span>
+                  <span className="text-[11.5px] font-bold tabular-nums text-[#4a3426]">{n || ''}</span>
                   <div className="w-full h-14 flex items-end">
                     <div className={`w-full rounded-md ${n ? 'bg-[#7a2028]' : 'bg-[#efe5d4]'}`} style={{ height: `${Math.max(8, (n / Math.max(maxDay, HABIT_ITEMS.length / 2)) * 100)}%` }} title={`${n}`} />
                   </div>
-                  <span className="text-[10.5px] font-semibold text-[#8a7a6a]">{WEEKDAYS_SHORT_GE[d.getDay()]}</span>
+                  <span className="text-[11.5px] font-semibold text-[#8a7a6a]">{WEEKDAYS_SHORT_GE[d.getDay()]}</span>
                 </div>
               ))}
             </div>

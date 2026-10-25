@@ -11,7 +11,7 @@ import { PathItem, sortPathItems, findCatalogEntry, voicesOf, CATEGORY_LABEL } f
 import { CatalogPicker } from './CatalogPicker';
 import { MemberPathEditor, writePath } from './MemberPathEditor';
 import { linkTeachers } from '../../hooks/useTeaching';
-import { Avatar, Bar, Btn, Flash, Pill, Sheet, Toggle, useFlash } from '../ui/kit';
+import { askConfirm, Avatar, Bar, Btn, Flash, Pill, Sheet, Toggle, useFlash } from '../ui/kit';
 import { ShortcutPicker, shortcutIcon } from '../home/ShortcutShelf';
 import { shortcutLabel } from '../../utils/shortcuts';
 import { LeaderChips } from './LeaderChips';
@@ -243,7 +243,8 @@ export const ClassesAdmin: React.FC<{
   };
 
   const remove = async () => {
-    if (!draft.id || !window.confirm(`წავშალო კლასი „${draft.name}“? წევრები თავად არ წაიშლებიან.`)) return;
+    if (!draft.id) return;
+    if (!(await askConfirm({ title: `წავშალო კლასი „${draft.name}“?`, text: 'წევრები თავად არ წაიშლებიან.', ok: 'წაშლა', danger: true }))) return;
     try {
       await deleteDoc(doc(db, 'classes', draft.id));
       onMessage(`კლასი „${draft.name}“ წაიშალა.`, 'success');

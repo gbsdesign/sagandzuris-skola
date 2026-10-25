@@ -53,7 +53,7 @@ export const SakravebiView: React.FC<SakravebiViewProps> = ({ selectedChantVaria
                   </span>
                 </div>
                 {isInstSelected && (
-                  <span className="px-2 py-0.5 rounded-full bg-amber-900/60 text-amber-200 border border-amber-400/40 text-[10px] font-black">
+                  <span className="px-2 py-0.5 rounded-full bg-amber-900/60 text-amber-200 border border-amber-400/40 text-[11px] font-black">
                     მონიშნულია ✓
                   </span>
                 )}

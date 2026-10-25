@@ -1,23 +1,18 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { ChevronDown, ChevronRight, X } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
-import { Sprig } from '../home/PlateOrnaments';
 import { CalSaint, dayMonthGe, oldDayMonthGe, openChurchCalendar, todayIso, useCalendarDay, weekdayGe } from '../../data/churchCalendar';
 import { openSaintLife } from '../../data/saintLives';
+import { useMembership } from '../../utils/memberAccess';
 import { InlineLink } from '../saints/InlineLink';
 
-// Once a day, on entering the site: "may today's saints intercede for you" with the day's
-// commemorations as the calendar words them. "სრულად" goes down to the footer's calendar.
+// Today's saints at the top of the home page: one folded line in the flow (the date and the day's first
+// commemoration), so the vine stays on a phone's first screen. A tap unfolds the day's commemorations as the
+// calendar words them and „კალენდარი“; ✕ puts it away for the day. Since 2026-10-25 (it used to be a once-a-day
+// dialog over the whole page).
 
 const SEEN_KEY = 'todaySaintsCardSeen';
-const SHOWN_ITEMS = 8;
-const LATE_MS = 10000;
-
-// opened from a shared notes link or a reminder: don't cover what was asked for
-const openedForSomethingElse = () => {
-  const q = new URLSearchParams(window.location.search);
-  return ['c', 'v', 'p', 'prayer', 'oobCode'].some(k => q.has(k)); // oobCode: back from the sign-in letter
-};
+const SHOWN_ITEMS = 6;
 
 const alreadySeen = (iso: string) => {
   try { return localStorage.getItem(SEEN_KEY) === iso; } catch { return false; }
@@ -60,12 +55,12 @@ const SaintRow: React.FC<{ s: CalSaint }> = ({ s }) => {
   const body = (
     <>
       <span className={`mt-[0.6em] shrink-0 w-1.5 h-1.5 rounded-full ${s.b ? 'bg-[#c4262e]' : 'bg-[#d9c6a8]'}`} aria-hidden />
-      <span className={`flex-1 min-w-0 line-clamp-4 text-[15px] leading-relaxed ${s.b ? 'font-bold text-[#7a2028]' : 'text-[#2a2017]'}`}>
+      <span className={`flex-1 min-w-0 text-[15px] leading-relaxed ${s.b ? 'font-bold text-[#7a2028]' : 'text-[#2a2017]'}`}>
         {name}
         {s.d && (
           <>
             {' '}
-            <span className={`font-sans font-normal text-[12px] text-[#8a7a6a] ${s.d.length <= 24 ? 'whitespace-nowrap' : ''}`}>({s.d})</span>
+            <span className={`font-sans font-normal text-xs text-[#8a7a6a] ${s.d.length <= 24 ? 'whitespace-nowrap' : ''}`}>({s.d})</span>
           </>
         )}
       </span>
@@ -86,116 +81,75 @@ const SaintRow: React.FC<{ s: CalSaint }> = ({ s }) => {
   );
 };
 
-export const TodaySaintsCard: React.FC = () => {
+export const TodaySaintsCard: React.FC<{ className?: string }> = ({ className }) => {
+  // the calendar is a feature a superadmin gives (utils/memberAccess); guests and waiting members don't get it
+  const canCal = useMembership().can('calendar');
   const [iso] = useState(todayIso);
-  const [wanted] = useState(() => !alreadySeen(iso) && !openedForSomethingElse());
-  const day = useCalendarDay(wanted ? iso : null);
-  const [phase, setPhase] = useState<'hidden' | 'in' | 'shown' | 'out'>('hidden');
-  const mountedAt = useRef(performance.now());
+  const [hidden, setHidden] = useState(() => alreadySeen(iso));
+  const [unfolded, setUnfolded] = useState(false);
+  const day = useCalendarDay(canCal && !hidden ? iso : null);
 
-  // appear a moment after the page has settled — never long after, in the middle of reading
-  useEffect(() => {
-    if (!wanted || !day?.s.length || performance.now() - mountedAt.current > LATE_MS) return;
-    const t = window.setTimeout(() => {
-      setPhase('in');
-      try { localStorage.setItem(SEEN_KEY, iso); } catch { /* shows again next time */ }
-      requestAnimationFrame(() => requestAnimationFrame(() => setPhase('shown')));
-    }, 700);
-    return () => window.clearTimeout(t);
-  }, [wanted, day, iso]);
-
-  useEffect(() => {
-    if (phase !== 'shown') return;
-    // Escape over an opened life closes that life, not this card
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && !window.history.state?.sgLife) close(); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
-
-  const close = (then?: () => void) => {
+  const close = () => {
     triggerHaptic(8);
-    setPhase('out');
-    window.setTimeout(() => { setPhase('hidden'); then?.(); }, 240);
+    setHidden(true);
+    try { localStorage.setItem(SEEN_KEY, iso); } catch { /* shows again next time */ }
   };
 
-  if (phase === 'hidden' || !day) return null;
-  const visible = phase === 'shown';
+  if (!canCal || hidden || !day?.s.length) return null;
+  const first = day.s[0];
   const items = day.s.slice(0, SHOWN_ITEMS);
   const more = day.s.length - items.length;
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-end sm:items-center justify-center p-3 pb-[calc(env(safe-area-inset-bottom,0px)+0.75rem)] sm:p-6">
-      <div
-        className={`absolute inset-0 bg-[#2a2017]/35 backdrop-blur-[2px] transition-opacity duration-300 ${visible ? 'opacity-100' : 'opacity-0'}`}
-        onClick={() => close()}
-        aria-hidden
-      />
-      <section
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="today-saints-title"
-        className={`relative w-full max-w-md max-h-[calc(100dvh-1.5rem-env(safe-area-inset-bottom,0px))] flex flex-col rounded-[28px] bg-gradient-to-b from-[#fffdf8] via-[#fdf8ef] to-[#f8efdf] ring-1 ring-[#e8dcc8] shadow-[0_30px_60px_-25px_rgba(42,32,23,0.55)] transition-all ease-[cubic-bezier(0.22,1,0.36,1)] ${
-          visible ? 'opacity-100 translate-y-0 scale-100 duration-500' : 'opacity-0 translate-y-6 scale-[0.98] duration-200'
-        }`}
-      >
+    <section
+      aria-label="დღის წმიდანები"
+      className={`w-full max-w-md text-left rounded-2xl bg-white/80 ring-1 ring-[#e8dcc8] shadow-[0_1px_2px_rgba(74,52,38,0.05)] sg-in ${className || ''}`}
+    >
+      {/* the folded line: the date and the day's first commemoration; a tap unfolds the rest */}
+      <div className="flex items-center gap-1 pl-3 pr-1.5">
         <button
           type="button"
-          onClick={() => close()}
-          className="absolute top-3 right-3 w-9 h-9 rounded-full text-[#8a7a6a] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.06] flex items-center justify-center cursor-pointer transition-colors"
-          aria-label="დახურვა"
+          onClick={() => { triggerHaptic(8); setUnfolded(u => !u); }}
+          aria-expanded={unfolded}
+          className="group flex-1 min-w-0 flex items-center gap-2.5 py-2 text-left cursor-pointer"
         >
-          <X className="w-4.5 h-4.5" />
+          <NinoCross className="w-4 h-6 shrink-0" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs font-semibold text-[#8a7a6a]">{weekdayGe(iso)}, {dayMonthGe(iso)}</span>
+            <span className={`block truncate font-serif-ge text-[15px] leading-snug ${first.b ? 'font-bold text-[#7a2028]' : 'text-[#2a2017]'}`}>{first.n}</span>
+          </span>
+          <ChevronDown className={`w-[18px] h-[18px] shrink-0 text-[#b3a594] group-hover:text-[#7a2028] transition-transform ${unfolded ? 'rotate-180' : ''}`} aria-hidden />
         </button>
+        <button
+          type="button"
+          onClick={close}
+          className="w-9 h-9 shrink-0 rounded-full text-[#8a7a6a] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.06] flex items-center justify-center cursor-pointer transition-colors"
+          aria-label="დღეს აღარ მაჩვენო"
+          title="დღეს აღარ მაჩვენო"
+        >
+          <X className="w-[18px] h-[18px]" />
+        </button>
+      </div>
 
-        {/* the cross between two vine sprigs */}
-        <div className="pt-6 flex items-center justify-center gap-3" aria-hidden>
-          <Sprig color="#d2a04a" className="w-10 h-10 -rotate-[65deg] opacity-80" />
-          <NinoCross className="w-11 h-[60px]" />
-          <Sprig color="#d2a04a" className="w-10 h-10 rotate-[65deg] opacity-80" />
-        </div>
-
-        <header className="px-6 pt-3 text-center">
-          <p className="text-[12px] font-semibold text-[#8a7a6a]">
-            {weekdayGe(iso)}, {dayMonthGe(iso)}
-            <span className="text-[#b3a594]"> · ძვ. სტ. {oldDayMonthGe(iso)}</span>
-          </p>
-          <h2 id="today-saints-title" className="mt-1.5 font-serif-ge text-[21px] sm:text-[23px] leading-snug font-bold text-[#7a2028] text-balance">
-            შეგეწიოთ დღევანდელი წმიდანების მეოხება
-          </h2>
-          <div className="mx-auto mt-3 flex items-center justify-center gap-2" aria-hidden>
-            <span className="h-px w-12 bg-gradient-to-r from-transparent to-[#d9c6a8]" />
-            <span className="w-1.5 h-1.5 rotate-45 bg-[#c4262e]/70" />
-            <span className="h-px w-12 bg-gradient-to-l from-transparent to-[#d9c6a8]" />
+      {unfolded && (
+        <div className="px-2 pb-2 border-t border-[#f1e8d9] sg-in">
+          <p className="px-2 pt-2 text-xs font-semibold text-[#b3a594]">ძველი სტილით {oldDayMonthGe(iso)}</p>
+          {/* a saint with a life in the library opens it */}
+          <ul className="mt-1 space-y-0.5 font-serif-ge">
+            {items.map((s, i) => <SaintRow key={i} s={s} />)}
+          </ul>
+          <div className="mt-1 flex items-center justify-between gap-2 pl-2">
+            <span className="text-[13px] font-semibold text-[#8a7a6a]">{more > 0 ? `და კიდევ ${more} ხსენება` : ''}</span>
+            <button
+              type="button"
+              onClick={() => { triggerHaptic(8); openChurchCalendar(iso); }}
+              className="inline-flex items-center gap-0.5 h-9 pl-3 pr-2 rounded-full text-[13px] font-bold text-[#7a2028] hover:bg-[#7a2028]/[0.06] cursor-pointer active:scale-95 transition"
+            >
+              კალენდარი <ChevronRight className="w-4 h-4" />
+            </button>
           </div>
-        </header>
-
-        {/* a saint with a life in the library opens it (over this card, which waits underneath) */}
-        <ul className="mt-3 px-4 overflow-y-auto overscroll-contain space-y-0.5 font-serif-ge">
-          {items.map((s, i) => <SaintRow key={i} s={s} />)}
-          {more > 0 && (
-            <li className="pl-6 pt-1.5 text-[13px] font-sans font-semibold text-[#8a7a6a]">და კიდევ {more} ხსენება</li>
-          )}
-        </ul>
-
-        <div className="px-5 pt-5 pb-5 flex flex-col-reverse sm:flex-row gap-2">
-          <button
-            type="button"
-            onClick={() => close()}
-            className="h-11 sm:flex-1 rounded-full ring-1 ring-[#e8dcc8] bg-white/70 hover:bg-white text-[#4a3426] text-sm font-bold cursor-pointer active:scale-[0.98] transition-all"
-          >
-            დახურვა
-          </button>
-          <button
-            type="button"
-            onClick={() => close(() => openChurchCalendar(iso))}
-            className="h-11 sm:flex-[1.4] inline-flex items-center justify-center gap-1.5 rounded-full bg-[#7a2028] hover:bg-[#5e1820] text-[#fbf6ec] text-sm font-bold shadow-[0_8px_18px_-8px_rgba(122,32,40,0.75)] cursor-pointer active:scale-[0.98] transition-all outline-none focus-visible:ring-4 focus-visible:ring-[#7a2028]/25"
-          >
-            სრულად
-            <ChevronDown className="w-4 h-4" />
-          </button>
         </div>
-      </section>
-    </div>
+      )}
+    </section>
   );
 };

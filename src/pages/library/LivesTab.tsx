@@ -67,12 +67,12 @@ const DayGroup: React.FC<{ month: number; day: number; lives: LifeEntry[]; today
           today ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]' : 'bg-[#f6ecda] ring-[#ead9bd] text-[#7a2028]'
         }`}>
           <span className="font-serif-ge text-[17px] font-bold leading-none tabular-nums">{day}</span>
-          <span className="mt-0.5 text-[10px] font-bold leading-none">{MONTHS_SHORT_GE[month - 1]}</span>
+          <span className="mt-0.5 text-[11px] font-bold leading-none">{MONTHS_SHORT_GE[month - 1]}</span>
         </span>
         <span className="min-w-0">
           <span className="block font-serif-ge text-[14.5px] font-bold text-[#7a2028] leading-tight">
             {day} {MONTHS_GE[month - 1]}
-            {today && <span className="ml-1.5 inline-block align-middle px-1.5 rounded-full bg-[#7a2028] text-[#fbf6ec] text-[10px] font-bold leading-[16px] font-sans">დღეს</span>}
+            {today && <span className="ml-1.5 inline-block align-middle px-1.5 rounded-full bg-[#7a2028] text-[#fbf6ec] text-[11px] font-bold leading-[16px] font-sans">დღეს</span>}
           </span>
           <span className="block text-[11.5px] font-semibold text-[#8a6a52]">ახალი სტილით {dayMonthGe(iso)}</span>
         </span>

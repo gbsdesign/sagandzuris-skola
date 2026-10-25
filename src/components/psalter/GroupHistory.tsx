@@ -71,7 +71,7 @@ export const GroupHistory: React.FC<{ group: PsalterGroup; current: Cycle; count
                   className={`h-12 rounded-lg px-1 flex flex-col items-center justify-center ${read ? 'bg-emerald-700 text-white' : 'bg-red-50 text-red-800 ring-1 ring-red-200'}`}
                 >
                   <span className="font-serif-ge text-[15px] font-bold leading-none tabular-nums">{k}</span>
-                  <span className="mt-0.5 w-full text-center text-[10px] leading-tight font-semibold truncate opacity-90">{who ? short(who) : '—'}</span>
+                  <span className="mt-0.5 w-full text-center text-[11px] leading-tight font-semibold truncate opacity-90">{who ? short(who) : '—'}</span>
                 </li>
               );
             })}

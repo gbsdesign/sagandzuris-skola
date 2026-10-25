@@ -23,7 +23,7 @@ const DateTile: React.FC<{ iso: string; past: boolean; today: boolean }> = ({ is
       }`}
     >
       <span className="font-serif-ge text-[17px] font-bold leading-none tabular-nums">{d.getDate()}</span>
-      <span className="mt-0.5 text-[10px] font-bold leading-none">{MONTHS_SHORT_GE[d.getMonth()]}</span>
+      <span className="mt-0.5 text-[11px] font-bold leading-none">{MONTHS_SHORT_GE[d.getMonth()]}</span>
     </span>
   );
 };
@@ -63,7 +63,7 @@ const FeastRow: React.FC<{ feast: Feast; year: number; today: string }> = ({ fea
                   tabIndex={0}
                   onClick={e => { e.stopPropagation(); triggerHaptic(8); openChurchCalendar(d); }}
                   onKeyDown={e => { if (e.key === 'Enter') { e.stopPropagation(); openChurchCalendar(d); } }}
-                  className={`inline-flex items-center h-5 px-1.5 rounded-full text-[10.5px] font-bold ring-1 cursor-pointer ${
+                  className={`inline-flex items-center h-5 px-1.5 rounded-full text-[11.5px] font-bold ring-1 cursor-pointer ${
                     d < today ? 'bg-[#f4efe7] ring-[#ebe3d6] text-[#a39482]' : 'bg-[#f6ecda] ring-[#ead9bd] text-[#7a2028]'
                   }`}
                 >
@@ -132,7 +132,7 @@ export const FeastsTab: React.FC<{ group?: string | null }> = ({ group }) => {
           <Rosette color="#d2a04a" className="absolute -right-5 -bottom-7 w-24 h-24 opacity-[0.12]" />
           <span className="w-12 shrink-0 self-start rounded-xl bg-[#7a2028] text-[#fbf6ec] flex flex-col items-center justify-center py-1.5">
             <span className="font-serif-ge text-[20px] font-bold leading-none tabular-nums">{fromIso(next.iso).getDate()}</span>
-            <span className="mt-0.5 text-[10.5px] font-bold leading-none text-[#f3d9a8]">{MONTHS_SHORT_GE[fromIso(next.iso).getMonth()]}</span>
+            <span className="mt-0.5 text-[11.5px] font-bold leading-none text-[#f3d9a8]">{MONTHS_SHORT_GE[fromIso(next.iso).getMonth()]}</span>
           </span>
           <span className="relative flex-1 min-w-0">
             <span className="block text-[12px] font-bold text-[#9a7438]">უახლოესი დღესასწაული · {inDays(daysBetween(today, next.iso))}</span>
@@ -172,7 +172,7 @@ export const FeastsTab: React.FC<{ group?: string | null }> = ({ group }) => {
             <header className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 pt-1.5 pb-1">
               <h3 className="font-serif-ge text-[15px] sm:text-[16px] font-bold text-[#7a2028]">{g.title}</h3>
               {g.subtitle && (
-                <span className="inline-flex items-center h-5 px-2 rounded-full bg-[#f6ecda] text-[10.5px] font-bold text-[#8a5a2a]">{g.subtitle}</span>
+                <span className="inline-flex items-center h-5 px-2 rounded-full bg-[#f6ecda] text-[11.5px] font-bold text-[#8a5a2a]">{g.subtitle}</span>
               )}
             </header>
             <ul className="[&>li+li]:border-t [&>li+li]:border-[#2a2017]/[0.05]">

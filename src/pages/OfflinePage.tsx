@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { BookOpen, Check, ChevronDown, ChevronRight, Cloud, CloudCheck, CloudDownload, CloudOff, HardDrive, Headphones, Library, Loader2, Zap } from 'lucide-react';
-import { Bar, Btn, Card, Empty, Sheet, Switch, Tabs, Toggle } from '../components/ui/kit';
+import { askConfirm, Bar, Btn, Card, Empty, Sheet, Switch, Tabs, Toggle } from '../components/ui/kit';
 import { BOOK_NAMES } from '../data/chantLookup';
 import { recordingGroups, type RecGroup, type RecItem, type RecSection } from '../data/offlineRecordings';
 import { useAccess } from '../hooks/useAccess';
@@ -54,8 +54,8 @@ const whatLabel = (what: string) =>
 const missing = (s: OfflineState) => s.recMissing > 0 || s.packs.some(p => isKept(s, p.id) && !s.stored[p.id]?.complete);
 
 /** Turning off what is already on the device asks first (recording sizes are estimates, hence `about`). */
-const sureToRemove = (what: string, bytes: number, about = false) =>
-  bytes <= 0 || window.confirm(`${what} — ${about ? '≈ ' : ''}${size(bytes)} წაიშლება ტელეფონიდან. გავაგრძელო?`);
+const sureToRemove = async (what: string, bytes: number, about = false): Promise<boolean> =>
+  bytes <= 0 || askConfirm({ title: `${what} — ${about ? '≈ ' : ''}${size(bytes)} წაიშლება ტელეფონიდან.`, ok: 'წაშლა', danger: true });
 
 /** ✓ on the device · the share while downloading · an empty ring while waiting. */
 const Mark: React.FC<{ done: boolean; pct?: number }> = ({ done, pct }) =>
@@ -240,7 +240,7 @@ const PackRow: React.FC<{ s: OfflineState; p: PackInfo; title: string; count?: s
     : !s.online ? `დაელოდება ინტერნეტს · ${pct}%`
     : s.failed && !s.run ? `შეფერხდა · ${pct}%`
     : `რიგშია · ${size(p.b)}`;
-  const turn = (v: boolean) => { if (v || sureToRemove(`„${title}“`, st?.bytes ?? 0)) void setPacks([p.id], v); };
+  const turn = async (v: boolean) => { if (v || await sureToRemove(`„${title}“`, st?.bytes ?? 0)) void setPacks([p.id], v); };
   const sw = <Switch on={on} onChange={turn} label={`${title} — ოფლაინ`} />;
   return (
     <div className={icon ? '' : 'py-0.5'}>
@@ -264,9 +264,9 @@ const BooksCard: React.FC<{ s: OfflineState; books: PackInfo[] }> = ({ s, books 
   const allOn = on.length === books.length;
   const total = books.reduce((a, p) => a + p.b, 0);
   const allDone = allOn && books.every(p => s.stored[p.id]?.complete);
-  const toggleAll = (v: boolean) => {
+  const toggleAll = async (v: boolean) => {
     const kept = books.reduce((a, p) => a + (s.stored[p.id]?.bytes ?? 0), 0);
-    if (v || sureToRemove('ყველა წიგნის გვერდები', kept)) void setPacks(books.map(p => p.id), v);
+    if (v || await sureToRemove('ყველა წიგნის გვერდები', kept)) void setPacks(books.map(p => p.id), v);
   };
   const line = allDone ? `ყველა ჩამოწერილია · ${size(total)}`
     : on.length ? `ჩართულია ${on.length} / ${books.length} · სულ ${size(total)}`
@@ -338,7 +338,7 @@ const GroupRow: React.FC<{ s: OfflineState; g: RecGroup; est: (url: string) => n
     : ok
       ? `ჩამოწერილია · ${size(st.kept)}`
       : `${recState(s)} · ${st.chosenDone} / ${st.chosen}`;
-  const turn = (v: boolean) => { if (v || sureToRemove(`„${g.title}“`, st.chosenKept, true)) void setGroup(g, v); };
+  const turn = async (v: boolean) => { if (v || await sureToRemove(`„${g.title}“`, st.chosenKept, true)) void setGroup(g, v); };
   return (
     <div className="flex items-center gap-1">
       <button type="button" onClick={onOpen} className="min-w-0 flex-1 flex items-center gap-2 py-2 text-left cursor-pointer group">
@@ -357,7 +357,7 @@ const GroupRow: React.FC<{ s: OfflineState; g: RecGroup; est: (url: string) => n
 
 const GroupSheet: React.FC<{ s: OfflineState; g: RecGroup; est: (url: string) => number; onClose: () => void }> = ({ s, g, est, onClose }) => {
   const st = groupStats(s, g, est);
-  const turnAll = (v: boolean) => { if (v || sureToRemove('ყველა ჩანაწერი', st.chosenKept, true)) void setGroup(g, v); };
+  const turnAll = async (v: boolean) => { if (v || await sureToRemove('ყველა ჩანაწერი', st.chosenKept, true)) void setGroup(g, v); };
   return (
     <Sheet open onClose={onClose} title={g.title}>
       <Toggle on={st.whole} onChange={turnAll} label="ყველა ჩანაწერი" hint={`${g.items.length} ჩანაწერი · ახლებიც თავისით დაემატება`} />

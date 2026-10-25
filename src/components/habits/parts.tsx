@@ -36,7 +36,7 @@ export const Ring: React.FC<{ value: number; max: number; caption: string; compa
           {value}
           <span className="text-[11px] font-bold text-[#a08a76]">/{max}</span>
         </span>
-        <span className={`${compact ? 'mt-0.5' : 'mt-1'} text-[9.5px] font-bold text-[#8a7a6a]`}>{caption}</span>
+        <span className={`${compact ? 'mt-0.5' : 'mt-1'} text-[11px] font-bold text-[#8a7a6a]`}>{caption}</span>
       </span>
     </div>
   );

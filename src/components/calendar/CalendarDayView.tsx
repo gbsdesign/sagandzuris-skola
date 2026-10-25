@@ -91,7 +91,7 @@ export const CalendarDayView: React.FC<{ iso: string; day: CalendarDay | null | 
       <header className="grid grid-cols-2 sm:grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1.5 rounded-xl bg-[#f6ecda] ring-1 ring-[#e8dcc8] px-3 py-2 sm:px-3.5">
         <div className="min-w-0 whitespace-nowrap">
           <p className="font-serif-ge text-[14px] sm:text-[15px] font-bold text-[#7a2028] leading-tight">{oldDayMonthGe(iso)}</p>
-          <p className="text-[10.5px] font-semibold text-[#8a6a52]">ძველი სტილით</p>
+          <p className="text-[11.5px] font-semibold text-[#8a6a52]">ძველი სტილით</p>
         </div>
         <div className="col-span-2 sm:col-span-1 order-last sm:order-none text-center min-w-0">
           {day === undefined ? (
@@ -104,8 +104,8 @@ export const CalendarDayView: React.FC<{ iso: string; day: CalendarDay | null | 
         </div>
         <div className="min-w-0 text-right whitespace-nowrap">
           <p className="font-serif-ge text-[14px] sm:text-[15px] font-bold text-[#7a2028] leading-tight">{dayMonthGe(iso)}</p>
-          <p className="text-[10.5px] font-semibold text-[#8a6a52]">
-            {isToday && <span className="mr-1 inline-block px-1.5 rounded-full bg-[#7a2028] text-[#fbf6ec] text-[10px] font-bold leading-[15px]">დღეს</span>}
+          <p className="text-[11.5px] font-semibold text-[#8a6a52]">
+            {isToday && <span className="mr-1 inline-block px-1.5 rounded-full bg-[#7a2028] text-[#fbf6ec] text-[11px] font-bold leading-[15px]">დღეს</span>}
             ახალი სტილით
           </p>
         </div>

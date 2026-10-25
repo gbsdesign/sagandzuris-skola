@@ -87,6 +87,11 @@
   one top-bar „უკან“ first returns to the map.
 - Fixed/full-screen UI must respect `env(safe-area-inset-*)` (`viewport-fit=cover` is on); helpers
   `.safe-x`, `.safe-top`, `.safe-bottom`, `.safe-bleed` in `index.css`.
+- **Kit rules (redesign stage 1, 2026-10-25)** — `components/ui/kit.tsx`: every inner page has the one `PageBar`
+  (44px round ←, title left, 36px round 📌/✎ right; the router gives most pages theirs); asking before deleting
+  goes through `askConfirm` (shown by `ConfirmHost` in `App.tsx`), never `window.confirm`; new text ≥12px, nothing
+  below 11px anywhere; one paper background for every page in `App.tsx`. Signing out lives only at the profile's
+  bottom (`views/ProfileActions.tsx`); today's saints are a folded line at the top of home (`TodaySaintsCard`).
 
 ## Audio and sheet music (details in `src/data/CLAUDE.md`)
 
@@ -201,6 +206,15 @@
 ## Roadmap (ideas not built yet — confirm open questions with the user first)
 
 Full plan (Georgian doc): https://claude.ai/code/artifact/f10aa016-d92d-4522-8968-2e6acba2d6ab
+
+**Redesign in 8 stages (agreed 2026-10-25; audit of every page with 204 findings and the stage plan:
+https://claude.ai/artifact/Q5taZYajdGvJEVpHmoHVEu).** Each stage = one PR, shown to the user with emulator
+screenshots first. 1 საძირკველი — done (kit rules above). 2 class page = the only workplace (teacher panel removed,
+psalter group inside the class). 3 library lighter (no plates under the books). 4 birthdays/name days page + push
+5/3/1 days before (members see month list without year; teachers/admins all). 5 women's costume beside the chokha
+(images by Gemini in the chokha's style, approved by the user first; girls open it first, by `nameGender`).
+6 „მანერა“ → „ოსტატობა“ (exercises, tips, step-by-step lessons the teacher builds). 7 pearls game + AI teacher that
+listens (Gemini through Firebase AI Logic). 8 calls on Android (wake lock, push, TURN key from the user).
 
 1–3. Built (see above).
 4. Pearls/chests game: listen → sing (mic pitch check) → teacher approves. First chest = vol. IX №58–77.

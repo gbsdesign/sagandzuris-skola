@@ -9,7 +9,7 @@ import { askSignIn, openSignIn } from '../access/SignInPrompt';
 import { SearchButton } from '../search/GlobalSearch';
 import { OfflineButton } from '../offline/OfflineButton';
 import { useInbox, isUnread } from '../../hooks/useDirectChat';
-import { User as UserIcon, LogIn, LogOut, Compass, ShieldCheck, Library, GraduationCap, Baby, MessageCircle } from 'lucide-react';
+import { User as UserIcon, LogIn, Compass, ShieldCheck, Library, GraduationCap, Baby, MessageCircle } from 'lucide-react';
 
 interface HeaderProps {
   logoUrl: string;
@@ -24,7 +24,7 @@ const TOOLS = [
 // Phone: [logo] … [🔖 ③] [შესვლა] / tools group below. The full independent-work card lives on the path page.
 // Desktop (lg): one row — logo + name · tools in the middle · independent work + profile.
 export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
-  const { user, signingIn, signOutUser, isAdmin, isTeacher, isSuperAdmin } = useAuth();
+  const { user, signingIn, isAdmin, isTeacher } = useAuth();
   const { navigateTo, currentPage, openClass } = useNavigation();
   const memberOf = useMyClasses(user?.uid);
   // a teacher reaches their own classes' pages from the header too
@@ -51,11 +51,11 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
       <button
         type="button"
         onClick={() => { triggerHaptic(10); openClass(c.id); }}
-        className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-8 pl-1 pr-2 min-[400px]:pr-3 rounded-lg text-xs min-[400px]:text-[13px] font-bold ${currentPage === 'class' ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
+        className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-10 pl-1.5 pr-2 min-[400px]:pr-3 rounded-lg text-xs min-[400px]:text-[13px] font-bold ${currentPage === 'class' ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
         title={`${c.name} — კლასის გვერდი`}
         aria-label={`კლასი: ${c.name}`}
       >
-        <ClassLogo name={c.name} logo={c.logo} className="w-6 h-6 text-[11px]" />
+        <ClassLogo name={c.name} logo={c.logo} className="w-7 h-7 text-xs" />
         <span>კლასი</span>
       </button>
     </React.Fragment>
@@ -82,8 +82,9 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
 
         {/* independent work (icon + count) + install + admin + profile */}
         <div className="order-2 lg:order-3 ml-auto flex items-center gap-1.5 sm:gap-2 min-w-0">
-          {/* the search sits beside the learning tools; with none of them shown, up here */}
-          {!showNav && access.can('search') && <SearchButton />}
+          {/* the search sits beside the learning tools; with none of them shown, up here — and up here on a narrow
+              phone (under 400px), where the three chips need the whole row */}
+          {access.can('search') && <SearchButton className={showNav ? 'min-[400px]:hidden' : ''} />}
           <PWAInstallButton compact />
           {/* offline mode: the cloud shows whether the app works without internet */}
           <OfflineButton />
@@ -132,14 +133,14 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                 >
                   <MessageCircle className="w-4 h-4" />
                   {unread > 0 && (
-                    <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#c62828] text-white text-[10px] font-black flex items-center justify-center leading-none ring-2 ring-[#fbf6ec]">
+                    <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-[#c62828] text-white text-[11px] font-black flex items-center justify-center leading-none ring-2 ring-[#fbf6ec]">
                       {unread}
                     </span>
                   )}
                 </button>
               )}
               {kids && (
-                <span className="inline-flex items-center gap-1 h-8 px-2.5 rounded-full bg-amber-100 text-amber-900 text-[11px] font-bold shrink-0" title="საბავშვო რეჟიმი — მასწავლებელმა ჩართო">
+                <span className="inline-flex items-center gap-1 h-9 px-2.5 rounded-full bg-amber-100 text-amber-900 text-xs font-bold shrink-0" title="საბავშვო რეჟიმი — მასწავლებელმა ჩართო">
                   <Baby className="w-3.5 h-3.5" /> საბავშვო
                 </span>
               )}
@@ -164,13 +165,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                   </div>
                 )}
               </button>
-              {!kids && <button
-                onClick={signOutUser}
-                className="w-9 h-9 rounded-xl ring-1 ring-[#e8dcc8] bg-white/80 text-[#8a7a6a] hover:text-[#7a2028] hover:bg-white flex items-center justify-center active:scale-90 transition-all cursor-pointer"
-                title="გამოსვლა"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>}
+              {/* signing out lives at the bottom of the profile page (ProfileActions), behind a question */}
             </div>
           ) : (
             <button
@@ -203,7 +198,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                     else if (id === 'biblioteka' && access.section('biblioteka') === 'locked') askSignIn('ბიბლიოთეკა');
                     else navigateTo(page);
                   }}
-                  className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-8 px-2 min-[400px]:px-3 rounded-lg text-xs min-[400px]:text-[13px] font-bold ${currentPage === page ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
+                  className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-10 px-2 min-[400px]:px-3 rounded-lg text-xs min-[400px]:text-[13px] font-bold ${currentPage === page ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
                   title={label}
                 >
                   <Icon className="w-4 h-4 text-[#7a2028] shrink-0" />
@@ -213,7 +208,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
             ))}
             {!tools.some(t => t.id === 'biblioteka') && classButtons}
           </div>
-          {access.can('search') && <SearchButton />}
+          {access.can('search') && <SearchButton className="max-[399px]:hidden" />}
         </nav>
         )}
       </div>

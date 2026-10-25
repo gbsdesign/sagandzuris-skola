@@ -38,11 +38,11 @@
   background: transparent;
 }
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
+  background: #d9c8ac;
   border-radius: 9999px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  background: #c4ae8a;
 }
 
 /* Home vine menu: buttons sway gently like grapes in the wind */

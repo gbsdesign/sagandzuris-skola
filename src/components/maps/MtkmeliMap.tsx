@@ -113,7 +113,7 @@ const AuthorItem: React.FC<AuthorItemProps> = ({ author, region, selectedChantVa
           </span>
         </span>
         {selectedCount > 0 && (
-          <span className="shrink-0 px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300">
+          <span className="shrink-0 px-2 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300">
             {selectedCount} მონიშნულია
           </span>
         )}
@@ -181,11 +181,11 @@ const WorkItem: React.FC<WorkItemProps> = ({ work, isOpen, onToggleOpen, isSelec
       <div className="flex items-center gap-2 pr-2">
         <button type="button" onClick={onToggleOpen} className="flex-1 min-w-0 px-3 py-2.5 flex flex-col items-start gap-1 text-left cursor-pointer">
           <span className="flex flex-wrap items-center gap-1.5">
-            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[10px] font-black ${kind.cls}`}>
+            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[11px] font-black ${kind.cls}`}>
               {kind.icon}
               {work.kind}
             </span>
-            {work.hasText && <span className="text-[10px] font-semibold text-emerald-700">სრული ტექსტი</span>}
+            {work.hasText && <span className="text-[11px] font-semibold text-emerald-700">სრული ტექსტი</span>}
           </span>
           <span className="text-sm sm:text-[15px] font-bold text-slate-800 leading-snug">{work.title}</span>
         </button>

@@ -870,7 +870,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
     );
   }
 
-  const roundBtn = 'h-9 rounded-full border border-slate-200 bg-white hover:bg-amber-50 hover:border-amber-300 text-slate-600 text-[11px] font-bold flex items-center justify-center gap-0.5 transition-all cursor-pointer active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed';
+  const roundBtn = 'h-9 rounded-full border border-slate-200 bg-white hover:bg-amber-50 hover:border-amber-300 text-slate-600 text-xs font-bold flex items-center justify-center gap-0.5 transition-all cursor-pointer active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed';
 
   return (
     <div className="w-full flex flex-col gap-3">
@@ -948,7 +948,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
                 </button>
               ))}
               {mp3Tracks.length > 0 && (
-                <p className="px-3 pt-0.5 pb-1.5 text-[10px] text-slate-400 leading-snug">ორიგინალი ჩანაწერი — სიჩქარე და ტონი არ იცვლება</p>
+                <p className="px-3 pt-0.5 pb-1.5 text-[11px] text-slate-400 leading-snug">ორიგინალი ჩანაწერი — სიჩქარე და ტონი არ იცვლება</p>
               )}
               <div className="my-1 border-t border-slate-100" />
               <button
@@ -1035,7 +1035,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
                     className="w-full accent-amber-600 h-1 cursor-pointer"
                     aria-label={`${['I', 'II', 'III'][i]} ხმის სიმაღლე`}
                   />
-                  <span className="text-[9px] font-mono font-bold text-slate-500 leading-none mt-0.5">
+                  <span className="text-[11px] font-mono font-bold text-slate-500 leading-none mt-0.5">
                     {Math.round(voiceVolumes[i] * 100)}%
                   </span>
                 </div>
@@ -1102,7 +1102,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
         <Music className="w-4 h-4 text-amber-700 shrink-0" />
         <span className="flex-1 text-xs font-extrabold text-slate-700">ნოტები და ტექსტი</span>
         {notes.length > 0 && (
-          <span className="text-[10px] font-bold text-amber-800 bg-white/80 px-2 py-0.5 rounded-full border border-amber-200/70">
+          <span className="text-[11px] font-bold text-amber-800 bg-white/80 px-2 py-0.5 rounded-full border border-amber-200/70">
             {notes.length} გვ.
           </span>
         )}
@@ -1156,7 +1156,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
                               <Download className="w-3 h-3 stroke-[2.5]" />
                             </button>
                           </div>
-                          <span className="text-[10px] text-slate-500 font-mono">{note.name}</span>
+                          <span className="text-[11px] text-slate-500 font-mono">{note.name}</span>
                         </div>
                         <img
                           src={note.url}
@@ -1183,7 +1183,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
               {/* Georgian Lyrics details - Compact & Neat */}
               {lyrics && (
                 <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3 text-left space-y-1">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-wider">ტექსტი (Lyrics)</h4>
+                  <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider">ტექსტი (Lyrics)</h4>
                   <p className="text-xs font-medium text-slate-700 leading-snug whitespace-pre-line text-center italic font-serif">
                     {lyrics}
                   </p>

@@ -18,7 +18,7 @@ export const OrbPercent: React.FC<{ value: number }> = ({ value }) => {
   return (
     <span className="font-black tabular-nums leading-none text-[#2a2017] text-[17px] min-[400px]:text-[19px] sm:text-[21px]">
       {Math.round(p)}
-      <span className="text-[10px] sm:text-[11px] font-bold text-[#a08a76]">%</span>
+      <span className="text-[11px] font-bold text-[#a08a76]">%</span>
     </span>
   );
 };

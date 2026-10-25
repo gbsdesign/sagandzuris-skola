@@ -339,7 +339,7 @@ const Psalms: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) => {
               className={`${CHIP} h-14 flex flex-col items-center justify-center leading-none ${isMine ? CHIP_ON : ''}`}
             >
               <span className="text-[17px] font-black tabular-nums">{k.n}</span>
-              <span className={`mt-1 text-[10.5px] tabular-nums ${isMine ? 'text-[#fbf6ec]/80' : 'text-[#8a7a6a]'}`}>{k.psalms}</span>
+              <span className={`mt-1 text-[11.5px] tabular-nums ${isMine ? 'text-[#fbf6ec]/80' : 'text-[#8a7a6a]'}`}>{k.psalms}</span>
             </button>
           );
         })}

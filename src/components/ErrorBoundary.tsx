@@ -52,7 +52,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 'გვერდის ჩატვირთვისას წარმოიშვა დროებითი შეფერხება. სცადეთ განახლება.'}
             </p>
             {this.state.error?.message && (
-              <p className="text-[10px] text-red-400 font-mono max-w-xs truncate mx-auto bg-red-50/60 px-2 py-1 rounded">
+              <p className="text-[11px] text-red-400 font-mono max-w-xs truncate mx-auto bg-red-50/60 px-2 py-1 rounded">
                 {this.state.error.message}
               </p>
             )}

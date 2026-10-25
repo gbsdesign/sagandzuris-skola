@@ -3,7 +3,7 @@ import { addDoc, arrayRemove, collection, doc, updateDoc } from 'firebase/firest
 import { BookOpen, Plus, Bell, Info, LogOut, Loader2, LayoutGrid, PenLine, ArrowLeft } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth, useNavigation } from '../context';
-import { Btn, Card, CardTitle, Empty, FIELD, Flash, Label, PageTop, Sheet, useFlash } from '../components/ui/kit';
+import { Btn, Card, CardTitle, Empty, FIELD, Flash, Label, PageBar, Sheet, askConfirm, useFlash } from '../components/ui/kit';
 import { KathismaGrid } from '../components/psalter/GroupBoard';
 import { MyKathismaCard } from '../components/psalter/MyKathismaCard';
 import { GroupHistory } from '../components/psalter/GroupHistory';
@@ -30,7 +30,7 @@ export const PsalterPage: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl mx-auto px-1 py-4 sm:py-6 space-y-5 pb-14 text-[#2a2017]">
-      <PageTop
+      <PageBar
         title="ფსალმუნთა ჯგუფი"
         subtitle={group ? group.name : 'ერთად ვკითხულობთ ფსალმუნს'}
         onBack={handleGoBack}
@@ -238,7 +238,8 @@ const LeaveGroup: React.FC<{ group: PsalterGroup }> = ({ group }) => {
   const { user } = useAuth();
   const [error, setError] = useState('');
   const leave = async () => {
-    if (!user || !window.confirm(`გახვიდე ჯგუფიდან „${group.name}“? შენი კანონი თავისუფალი გახდება.`)) return;
+    if (!user) return;
+    if (!(await askConfirm({ title: `გახვიდე ჯგუფიდან „${group.name}“?`, text: 'შენი კანონი თავისუფალი გახდება.', ok: 'გასვლა', danger: true }))) return;
     const mine = group.members.filter(m => m.uid === user.uid);
     try {
       await updateDoc(doc(db, 'psalterGroups', group.id), {

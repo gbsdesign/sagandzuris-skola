@@ -179,7 +179,7 @@ export const SongPage: React.FC = () => {
                   }`}
                 >
                   <span className="break-words">{t.label}</span>
-                  {t.sub && <span className="text-[10px] font-semibold text-[#a0907c]">{t.sub}</span>}
+                  {t.sub && <span className="text-[11px] font-semibold text-[#a0907c]">{t.sub}</span>}
                 </button>
               ))}
             </div>

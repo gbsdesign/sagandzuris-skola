@@ -51,7 +51,7 @@ export const WeekStreak: React.FC<{
               title={`${WEEKDAYS_GE[d.date.getDay()]}, ${d.date.getDate()} ${MONTHS_SHORT_GE[d.date.getMonth()]}${today ? ' (დღეს)' : ''}${d.note ? ` — ${d.note}` : ''}`}
             >
               <span
-                className={`absolute inset-y-0 flex items-center justify-center text-[10px] font-bold leading-none select-none transition-colors ${TONE[d.mark]} ${
+                className={`absolute inset-y-0 flex items-center justify-center text-[11px] font-bold leading-none select-none transition-colors ${TONE[d.mark]} ${
                   joinPrev ? 'left-0 rounded-l-none' : 'left-[2px] rounded-l-md'
                 } ${joinNext ? 'right-0 rounded-r-none' : 'right-[2px] rounded-r-md'} ${
                   today && d.mark !== 'done' ? 'ring-[1.5px] ring-inset ring-[#7a2028]/45 !text-[#7a2028]' : ''
@@ -69,7 +69,7 @@ export const WeekStreak: React.FC<{
           className={`shrink-0 ml-auto w-10 text-right text-[13px] font-black tabular-nums leading-none ${percentTone(percent)}`}
         >
           {percent}
-          <span className="text-[10px] font-bold">%</span>
+          <span className="text-[11px] font-bold">%</span>
         </span>
       )}
     </div>

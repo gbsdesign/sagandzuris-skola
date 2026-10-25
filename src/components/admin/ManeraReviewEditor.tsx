@@ -6,7 +6,7 @@ import { useAuth } from '../../context';
 import { MANERA_ITEMS } from '../../data/habitsAndManera';
 import { triggerHaptic } from '../../utils/haptics';
 import { ManeraMark, ManeraScore, markDate, readManeraReview } from '../views/ManeraPanel';
-import { Btn, FIELD, Flash, useFlash } from '../ui/kit';
+import { askConfirm, Btn, FIELD, Flash, useFlash } from '../ui/kit';
 
 const STEPS = [0, 25, 50, 75, 100];
 
@@ -62,8 +62,8 @@ export const ManeraReviewEditor: React.FC<{ uid: string }> = ({ uid }) => {
       at: Date.now(),
     });
   };
-  const clear = (num: string) => {
-    if (!window.confirm('ამ რჩევის შეფასება და შენიშვნა წაიშალოს?')) return;
+  const clear = async (num: string) => {
+    if (!(await askConfirm({ title: 'ამ რჩევის შეფასება და შენიშვნა წაიშალოს?', ok: 'წაშლა', danger: true }))) return;
     void write(num, deleteField());
   };
 

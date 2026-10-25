@@ -9,7 +9,7 @@ import { CatalogEntry, CATEGORY_LABEL, PathItem, Voice, findCatalogEntry, sortPa
 import { filterValidVariants } from '../../utils/variantValidation';
 import { writePath } from '../admin/MemberPathEditor';
 import { CatalogPicker } from '../admin/CatalogPicker';
-import { Btn, Card, CardTitle, Empty, FIELD, Flash, IconBtn, Label, Pill, Sheet, useFlash } from '../ui/kit';
+import { askConfirm, Btn, Card, CardTitle, Empty, FIELD, Flash, IconBtn, Label, Pill, Sheet, useFlash } from '../ui/kit';
 
 const VOICE_LABEL: Record<string, string> = { '1': 'I ხმა', '2': 'II ხმა', '3': 'III ხმა' };
 const ROMAN: Record<string, string> = { '1': 'I', '2': 'II', '3': 'III' };
@@ -37,7 +37,7 @@ export const AssignmentsPanel: React.FC<{ cls: SchoolClass; records: Record<stri
   const past = list.filter(a => daysUntil(a.due) < 0).reverse();
 
   const remove = async (a: Assignment) => {
-    if (!window.confirm(`წავშალო დავალება „${a.title}“?`)) return;
+    if (!(await askConfirm({ title: `წავშალო დავალება „${a.title}“?`, ok: 'წაშლა', danger: true }))) return;
     try { await deleteAssignment(cls.id, a.id); } catch { msg.fail('ვერ წაიშალა.'); }
   };
 
@@ -112,7 +112,7 @@ export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[] }>
   const msg = useFlash();
 
   const remove = async (a: Assignment) => {
-    if (!window.confirm(`წავშალო დავალება „${a.title}“?`)) return;
+    if (!(await askConfirm({ title: `წავშალო დავალება „${a.title}“?`, ok: 'წაშლა', danger: true }))) return;
     try { await deleteAssignment(cls.id, a.id); } catch { msg.fail('ვერ წაიშალა.'); }
   };
 

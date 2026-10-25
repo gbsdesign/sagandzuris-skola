@@ -369,7 +369,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                     {named && first && !mine && (
                       <p className="text-xs font-semibold text-[#7a2028] mb-1 px-1 flex items-center gap-1.5">
                         {m.name}
-                        {m.teacher && <span className="px-1.5 py-px rounded-full bg-[#7a2028]/10 text-[10px] font-bold">{staffLabel}</span>}
+                        {m.teacher && <span className="px-1.5 py-px rounded-full bg-[#7a2028]/10 text-[11px] font-bold">{staffLabel}</span>}
                       </p>
                     )}
                     <div

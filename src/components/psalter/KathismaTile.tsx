@@ -31,7 +31,7 @@ export const KathismaTiles: React.FC<{ group: PsalterGroup; uid: string }> = ({ 
               <span className="h-7 flex items-center font-serif-ge text-[22px] leading-none font-bold tabular-nums">{k}</span>
               <span className="w-full">
                 <span className="block text-[12px] font-bold leading-[1.15] whitespace-nowrap">კანონი</span>
-                <span className={`block text-[10.5px] leading-[1.2] whitespace-nowrap ${read ? 'text-emerald-200' : 'text-[#fbf6ec]/70'}`}>
+                <span className={`block text-[11.5px] leading-[1.2] whitespace-nowrap ${read ? 'text-emerald-200' : 'text-[#fbf6ec]/70'}`}>
                   {read ? 'წაკითხული' :`ფს. ${KATHISMA_PSALMS[k - 1]}`}
                 </span>
               </span>

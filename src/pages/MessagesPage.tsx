@@ -430,7 +430,7 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
                   <section key={g.cls.id}>
                     {(chip === 'all' && (contactRows.length > 1 || showAdminRow)) && (
                       <h4 className="flex items-center gap-2 px-2.5 pt-3 pb-1 text-[13px] font-bold text-[#4a3426] min-w-0">
-                        <ClassLogo name={g.cls.name} logo={g.cls.logo} className="w-5 h-5 text-[10px]" />
+                        <ClassLogo name={g.cls.name} logo={g.cls.logo} className="w-5 h-5 text-[11px]" />
                         <span className="truncate">{g.cls.name}</span>
                       </h4>
                     )}
