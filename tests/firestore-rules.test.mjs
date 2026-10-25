@@ -236,6 +236,16 @@ await t("the member's teacher hears the takes", assertSucceeds(getDocs(collectio
 await t('another teacher does not', assertFails(getDocs(collection(tch2, 'pearlTakes', 'stu', 'takes'))));
 await t('another member does not', assertFails(getDocs(collection(stu2, 'pearlTakes', 'stu', 'takes'))));
 
+// ---- „ქართული კაბა“'s pictures
+const pic = () => ({ image: Bytes.fromUint8Array(new Uint8Array(3000)), mime: 'image/webp', w: 480, h: 853, at: 'x' });
+await t('owner keeps a kaba picture', assertSucceeds(setDoc(doc(owner, 'samosiArt', 'kaba-full'), pic())));
+await t('owner publishes the kaba', assertSucceeds(setDoc(doc(owner, 'samosiArt', 'kaba'), { published: true, at: 'x', by: OWNER })));
+await t('a member cannot change the kaba pictures', assertFails(setDoc(doc(stu, 'samosiArt', 'kaba-full'), pic())));
+await t('an admin cannot publish the kaba', assertFails(setDoc(doc(adm, 'samosiArt', 'kaba'), { published: false })));
+await t('a kaba picture must be bytes', assertFails(setDoc(doc(owner, 'samosiArt', 'kaba-x'), { ...pic(), image: 'x' })));
+await t('a guest sees the kaba pictures', assertSucceeds(getDoc(doc(guest, 'samosiArt', 'kaba-full'))));
+await t('a member ticks kaba parts', assertSucceeds(setDoc(doc(stu, 'students', 'stu'), { kaba: ['kaba'], samosiOutfit: 'kaba' }, { merge: true })));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);

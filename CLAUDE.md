@@ -226,6 +226,13 @@ listens (Gemini through Firebase AI Logic). 8 calls on Android (wake lock, push,
    only) in the member's window (`PearlReview`). „AI მასწავლებელი“ (`utils/aiTeacher.ts`, gemini-3.8-flash through
    Firebase AI Logic with the try-on's App Check; 3 a day per device, superadmins unlimited) — works only on the
    deployed site. Tested in the emulator with a fake microphone WAV (Chromium `--use-file-for-fake-audio-capture`).
+- „ქართული კაბა“ beside the chokha (redesign stage 5, built 2026-10-25): „ჩემი სამოსი“ gets a ჩოხა / ქართული კაბა switch
+  (`ChemiSamosi.tsx`; a girl's name by `nameGender` opens the kaba first; choice in `students.samosiOutfit`, parts in
+  `students.kaba`). Parts in `data/kabaData.ts` (კაბა, გულისპირი, სარტყელი, ქათიბი, ლეჩაქი). The pictures are made by the
+  owner in „კაბის სახელოსნო“ (`KabaStudio.tsx`, only the owner sees it): Gemini draws the whole dress in the chokha
+  photo's style on green, each part is cut out of it, the green is keyed out in the browser (`utils/kabaArt.ts`), kept
+  in `samosiArt/kaba-*` (Firestore bytes); members see the kaba only after „გამოქვეყნება“ (`samosiArt/kaba.published`).
+  Until the owner makes and publishes the pictures on the live site, members see only the chokha.
 5. **My voice**: the user wants AI to learn their voice. Plan discussed 2026-10-06: speech via ElevenLabs
    voice cloning (supports Georgian); singing via RVC voice conversion (Applio on Google Colab — the user's
    PC has only a 2 GB MX130 GPU). Generated audio is made in advance and served like other recordings.

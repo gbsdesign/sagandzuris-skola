@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import confetti from 'canvas-confetti';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { Check, X } from 'lucide-react';
 import { db } from '../../firebase';
@@ -26,6 +25,10 @@ import {
 } from '../../data/samosiData';
 import { SamosiArt } from './SamosiArt';
 import { SamosiTryOn } from './SamosiTryOn';
+import { fireworks } from '../../utils/samosiFireworks';
+import { useKabaSettings } from '../../utils/kabaArt';
+import { nameGender } from '../../data/georgianNames';
+import { KabaSamosi } from './KabaSamosi';
 
 const KNOWN = new Set(SAMOSI_PARTS.map(p => p.id));
 const COLOR_BY_ID = new Map(SAMOSI_COLORS.map(c => [c.id, c]));
@@ -53,30 +56,8 @@ const EXTRA_HATS = SAMOSI_PARTS.filter(p => p.extraHat);
 // the room above the collar for the hat, in % of the figure's width: a head's height, so the hat sits where it
 // would on a head (the hats' places in samosiData are measured in the same units)
 const HEAD_ROOM = 72;
-const COLORS = ['#7a2028', '#c8962e', '#f3e3c6', '#1e2f5a'];
 // the slot beside the figure for the boots, down by the hem (the hats go on the head)
 const SLOT_PLACE: Record<string, string> = { aziurebi: '-left-[72px] bottom-[12%]' };
-
-const fireworks = (finale: boolean) => {
-  const shots = finale ? 7 : 3;
-  for (let i = 0; i < shots; i++) {
-    setTimeout(() => {
-      confetti({
-        particleCount: finale ? 80 : 55,
-        spread: 360,
-        startVelocity: finale ? 32 : 26,
-        ticks: finale ? 95 : 70,
-        gravity: 0.85,
-        scalar: finale ? 1 : 0.85,
-        colors: COLORS,
-        shapes: finale && i % 2 ? ['star'] : ['circle', 'square'],
-        origin: { x: 0.15 + Math.random() * 0.7, y: 0.15 + Math.random() * 0.3 },
-        zIndex: 200,
-        disableForReducedMotion: true,
-      });
-    }, i * (finale ? 260 : 220));
-  }
-};
 
 // "ჩემი სამოსი": the student ticks off the parts of their chokha and watches it come together —
 // a pale mannequin at first, each ticked part dropping into place in colour. Saved in students/{uid}.samosi.
@@ -84,8 +65,14 @@ const fireworks = (finale: boolean) => {
 // path page, where `side` (the path's progress) sits on the right of the button.
 // `bare`: only the open chokha, without its round button and card (under the path page's round buttons, PathOrbs).
 export const ChemiSamosi: React.FC<{ side?: React.ReactNode; bare?: boolean }> = ({ side, bare }) => {
-  const { user } = useAuth();
+  const { user, isOwner } = useAuth();
   const [open, setOpen] = useState(!!bare);
+  // the chokha or „ქართული კაბა“ (redesign stage 5; once the owner has published the kaba's pictures): the member's
+  // choice (students/{uid}.samosiOutfit), else the kaba first for a girl's name
+  const kaba = useKabaSettings();
+  const kabaOn = kaba.published || isOwner;
+  const [outfit, setOutfit] = useState<'chokha' | 'kaba' | null>(null);
+  const [firstName, setFirstName] = useState('');
   const [owned, setOwned] = useState<string[]>([]);
   // how many times each part has been ticked in this visit: a new value replays its drop animation
   const [drops, setDrops] = useState<Record<string, number>>({});
@@ -119,6 +106,8 @@ export const ChemiSamosi: React.FC<{ side?: React.ReactNode; bare?: boolean }> =
           : {}
       );
       if (typeof d?.samosiHead === 'string') setHead(d.samosiHead);
+      if (d?.samosiOutfit === 'chokha' || d?.samosiOutfit === 'kaba') setOutfit(d.samosiOutfit);
+      setFirstName(typeof d?.profile?.firstName === 'string' ? d.profile.firstName : '');
       const ks = d?.samosiKinds;
       if (ks && typeof ks === 'object') {
         setKinds(Object.fromEntries(Object.entries(ks).filter(([id, k]) => typeof k === 'string' && KIND_IDS.get(id)?.has(k))) as SamosiKinds);
@@ -178,6 +167,8 @@ export const ChemiSamosi: React.FC<{ side?: React.ReactNode; bare?: boolean }> =
   const worn = (head && HEAD_PARTS.some(p => p.id === head) && has(head) ? head : HEAD_PARTS.find(p => has(p.id))?.id) || null;
   const wornPart = worn ? SAMOSI_PARTS.find(p => p.id === worn) : undefined;
   const wornPhoto = wornPart && photoOf(wornPart);
+
+  const shown = !kabaOn ? 'chokha' : outfit ?? (nameGender(firstName) === 'f' ? 'kaba' : 'chokha');
 
   const save =(data: Record<string, unknown>, fields: string[]) => {
     if (!user) return;
@@ -286,6 +277,18 @@ export const ChemiSamosi: React.FC<{ side?: React.ReactNode; bare?: boolean }> =
       {open && (
         // same card look as the other tiles of "საგანძურის გზა" (PATH_TILE), without the hover lift
         <section className={bare ? 'space-y-5' : 'w-full rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] overflow-hidden p-4 space-y-5 animate-in fade-in duration-300'}>
+          {kabaOn && (
+            <div role="tablist" aria-label="სამოსი" className="grid grid-cols-2 gap-1 p-1 rounded-full bg-[#f6efe3]">
+              {(['chokha', 'kaba'] as const).map(o => (
+                <button key={o} type="button" role="tab" aria-selected={shown === o}
+                  onClick={() => { triggerHaptic(8); setOutfit(o); save({ samosiOutfit: o }, ['samosiOutfit']); }}
+                  className={`h-10 rounded-full text-sm font-bold cursor-pointer transition-colors ${shown === o ? 'bg-[#7a2028] text-[#fbf6ec]' : 'text-[#4a3426] hover:bg-white/70'}`}>
+                  {o === 'chokha' ? 'ჩოხა' : 'ქართული კაბა'}
+                </button>
+              ))}
+            </div>
+          )}
+          {shown === 'kaba' ? <KabaSamosi published={kaba.published} head={kaba.head} /> : (<>
           {/* the chokha coming together */}
           <div className="relative pt-3 pb-1 rounded-2xl bg-[radial-gradient(ellipse_at_50%_45%,#ffffff_42%,#f6efe3_100%)]">
             {/* the colour picker: a small round button, the eight colours fold out of it; one colour for it all */}
@@ -583,6 +586,7 @@ export const ChemiSamosi: React.FC<{ side?: React.ReactNode; bare?: boolean }> =
               );
             })}
           </div>
+          </>)}
         </section>
       )}
     </div>

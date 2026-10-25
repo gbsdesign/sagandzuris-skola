@@ -152,6 +152,14 @@ service cloud.firestore {
       allow write: if isAdmin() || teachesStudent();
     }
 
+    // ---- „ქართული კაბა“'s pictures (src/utils/kabaArt.ts): made by the owner in the studio, read by everyone ----------
+    match /samosiArt/{artId} {
+      allow read: if true;
+      allow create, update: if isSuperAdmin()
+        && (artId == 'kaba' || (request.resource.data.image is bytes && request.resource.data.image.size() < 1000000));
+      allow delete: if isSuperAdmin();
+    }
+
     // ---- The pearls game (src/hooks/usePearls.ts) ----------------------------------------------------------------
     // A member's best take of each pearl (a short MP3), for their teachers to hear before they approve it.
     match /pearlTakes/{userId}/takes/{versionId} {
