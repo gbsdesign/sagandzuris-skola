@@ -246,6 +246,16 @@ await t('a kaba picture must be bytes', assertFails(setDoc(doc(owner, 'samosiArt
 await t('a guest sees the kaba pictures', assertSucceeds(getDoc(doc(guest, 'samosiArt', 'kaba-full'))));
 await t('a member ticks kaba parts', assertSucceeds(setDoc(doc(stu, 'students', 'stu'), { kaba: ['kaba'], samosiOutfit: 'kaba' }, { merge: true })));
 
+// ---- „ანგელოზის დღე“
+const nd = (uid, extra = {}) => ({ uid, name: 'S', photoURL: '', month: 1, day: 27, saint: 'წმიდა ნინო', updatedAt: 'x', ...extra });
+await t('member chooses own name day', assertSucceeds(setDoc(doc(stu, 'nameDays', 'stu'), nd('stu'))));
+await t("member cannot choose another's name day", assertFails(setDoc(doc(stu, 'nameDays', 'stu2'), nd('stu2'))));
+await t('a name day has only its fields', assertFails(setDoc(doc(stu, 'nameDays', 'stu'), nd('stu', { phone: '1' }))));
+await t('a member reads the name days', assertSucceeds(getDocs(collection(stu, 'nameDays'))));
+await t('a refused member does not', assertFails(getDocs(collection(stu2, 'nameDays'))));
+await t('a guest does not', assertFails(getDocs(collection(guest, 'nameDays'))));
+await t('member clears own name day', assertSucceeds(deleteDoc(doc(stu, 'nameDays', 'stu'))));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);

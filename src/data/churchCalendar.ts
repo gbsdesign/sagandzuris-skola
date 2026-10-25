@@ -104,6 +104,10 @@ export const loadCalendarDay = async (iso: string): Promise<CalendarDay | null> 
   return year?.days[iso] ?? null;
 };
 
+/** every day of the church year that holds `iso` (today by default), keyed by the new-style date */
+export const loadCalendarYearDays = async (iso = todayIso()): Promise<Record<string, CalendarDay>> =>
+  (await loadYear(churchYearOf(iso)))?.days ?? {};
+
 /** the day's calendar entry: undefined while loading, null when orthodoxy.ge has not published it */
 export const useCalendarDay = (iso: string | null) => {
   const [state, setState] = useState<{ iso: string | null; day: CalendarDay | null | undefined }>({ iso: null, day: undefined });

@@ -226,6 +226,11 @@ listens (Gemini through Firebase AI Logic). 8 calls on Android (wake lock, push,
    only) in the member's window (`PearlReview`). „AI მასწავლებელი“ (`utils/aiTeacher.ts`, gemini-3.8-flash through
    Firebase AI Logic with the try-on's App Check; 3 a day per device, superadmins unlimited) — works only on the
    deployed site. Tested in the emulator with a fake microphone WAV (Chromium `--use-file-for-fake-audio-capture`).
+- Birthdays and name days (redesign stage 4, 2026-10-25): page `birthdays` (`pages/BirthdaysPage.tsx`), records
+  `birthdays/{uid}` + staff-only `birthYears/{uid}` written from the profile (`utils/birthdays.ts`), and „ანგელოზის დღე“
+  the member picks from the church-calendar days that name their (baptismal) name (`components/birthdays/MyNameDay.tsx`,
+  matching in `utils/nameDayMatch.ts` + test, records `nameDays/{uid}` in `utils/nameDays.ts`). Home gold line and phone
+  notices 5/3/1 days before for staff: `components/home/BirthdaysSoon.tsx`.
 - „ქართული კაბა“ beside the chokha (redesign stage 5, built 2026-10-25): „ჩემი სამოსი“ gets a ჩოხა / ქართული კაბა switch
   (`ChemiSamosi.tsx`; a girl's name by `nameGender` opens the kaba first; choice in `students.samosiOutfit`, parts in
   `students.kaba`). Parts in `data/kabaData.ts` (კაბა, გულისპირი, სარტყელი, ქათიბი, ლეჩაქი). The pictures are made by the

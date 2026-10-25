@@ -205,6 +205,19 @@ service cloud.firestore {
         && incoming().day is int && incoming().day >= 1 && incoming().day <= 31;
       allow delete: if isAdmin() || (isSignedIn() && uid() == userId);
     }
+    // „ანგელოზის დღე“ (src/utils/nameDays.ts): the saint's day a member chose, beside the birthdays
+    match /nameDays/{userId} {
+      allow read: if isTeacher() || admittedMember();
+      allow create, update: if ((isSignedIn() && uid() == userId) || isAdmin())
+        && incoming().keys().hasOnly(['uid', 'name', 'photoURL', 'month', 'day', 'saint', 'updatedAt'])
+        && incoming().uid == userId
+        && incoming().name is string && incoming().name.size() <= 120
+        && incoming().saint is string && incoming().saint.size() <= 300
+        && incoming().month is int && incoming().month >= 1 && incoming().month <= 12
+        && incoming().day is int && incoming().day >= 1 && incoming().day <= 31;
+      allow delete: if isAdmin() || (isSignedIn() && uid() == userId);
+    }
+
     match /birthYears/{userId} {
       allow read: if isTeacher();
       allow create, update: if ((isSignedIn() && uid() == userId) || isAdmin())
