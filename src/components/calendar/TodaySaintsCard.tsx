@@ -1,17 +1,18 @@
 import React, { useState } from 'react';
-import { ChevronRight, X } from 'lucide-react';
+import { ChevronDown, ChevronRight, X } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
 import { CalSaint, dayMonthGe, oldDayMonthGe, openChurchCalendar, todayIso, useCalendarDay, weekdayGe } from '../../data/churchCalendar';
 import { openSaintLife } from '../../data/saintLives';
 import { useMembership } from '../../utils/memberAccess';
 import { InlineLink } from '../saints/InlineLink';
 
-// Today's saints at the top of the home page: a small card in the flow (nothing is covered), with the day's
-// first commemorations as the calendar words them. ✕ puts it away for the day; „კალენდარი“ opens the footer's.
-// Since 2026-10-25 (it used to be a once-a-day dialog over the whole page).
+// Today's saints at the top of the home page: one folded line in the flow (the date and the day's first
+// commemoration), so the vine stays on a phone's first screen. A tap unfolds the day's commemorations as the
+// calendar words them and „კალენდარი“; ✕ puts it away for the day. Since 2026-10-25 (it used to be a once-a-day
+// dialog over the whole page).
 
 const SEEN_KEY = 'todaySaintsCardSeen';
-const SHOWN_ITEMS = 3;
+const SHOWN_ITEMS = 6;
 
 const alreadySeen = (iso: string) => {
   try { return localStorage.getItem(SEEN_KEY) === iso; } catch { return false; }
@@ -54,7 +55,7 @@ const SaintRow: React.FC<{ s: CalSaint }> = ({ s }) => {
   const body = (
     <>
       <span className={`mt-[0.6em] shrink-0 w-1.5 h-1.5 rounded-full ${s.b ? 'bg-[#c4262e]' : 'bg-[#d9c6a8]'}`} aria-hidden />
-      <span className={`flex-1 min-w-0 line-clamp-2 text-[15px] leading-relaxed ${s.b ? 'font-bold text-[#7a2028]' : 'text-[#2a2017]'}`}>
+      <span className={`flex-1 min-w-0 text-[15px] leading-relaxed ${s.b ? 'font-bold text-[#7a2028]' : 'text-[#2a2017]'}`}>
         {name}
         {s.d && (
           <>
@@ -85,6 +86,7 @@ export const TodaySaintsCard: React.FC<{ className?: string }> = ({ className })
   const canCal = useMembership().can('calendar');
   const [iso] = useState(todayIso);
   const [hidden, setHidden] = useState(() => alreadySeen(iso));
+  const [unfolded, setUnfolded] = useState(false);
   const day = useCalendarDay(canCal && !hidden ? iso : null);
 
   const close = () => {
@@ -94,24 +96,34 @@ export const TodaySaintsCard: React.FC<{ className?: string }> = ({ className })
   };
 
   if (!canCal || hidden || !day?.s.length) return null;
+  const first = day.s[0];
   const items = day.s.slice(0, SHOWN_ITEMS);
   const more = day.s.length - items.length;
 
   return (
     <section
-      aria-labelledby="today-saints-title"
-      className={`w-full max-w-md text-left rounded-2xl bg-white/80 ring-1 ring-[#e8dcc8] shadow-[0_1px_2px_rgba(74,52,38,0.05)] px-3 pt-2.5 pb-2 sg-in ${className || ''}`}
+      aria-label="დღის წმიდანები"
+      className={`w-full max-w-md text-left rounded-2xl bg-white/80 ring-1 ring-[#e8dcc8] shadow-[0_1px_2px_rgba(74,52,38,0.05)] sg-in ${className || ''}`}
     >
-      <div className="flex items-center gap-2.5 pl-1">
-        <NinoCross className="w-5 h-7 shrink-0" />
-        <p id="today-saints-title" className="flex-1 min-w-0 text-[13px] leading-snug font-semibold text-[#8a7a6a]">
-          {weekdayGe(iso)}, {dayMonthGe(iso)}
-          <span className="block text-xs font-medium text-[#b3a594]">ძვ. სტ. {oldDayMonthGe(iso)}</span>
-        </p>
+      {/* the folded line: the date and the day's first commemoration; a tap unfolds the rest */}
+      <div className="flex items-center gap-1 pl-3 pr-1.5">
+        <button
+          type="button"
+          onClick={() => { triggerHaptic(8); setUnfolded(u => !u); }}
+          aria-expanded={unfolded}
+          className="group flex-1 min-w-0 flex items-center gap-2.5 py-2 text-left cursor-pointer"
+        >
+          <NinoCross className="w-4 h-6 shrink-0" />
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs font-semibold text-[#8a7a6a]">{weekdayGe(iso)}, {dayMonthGe(iso)}</span>
+            <span className={`block truncate font-serif-ge text-[15px] leading-snug ${first.b ? 'font-bold text-[#7a2028]' : 'text-[#2a2017]'}`}>{first.n}</span>
+          </span>
+          <ChevronDown className={`w-[18px] h-[18px] shrink-0 text-[#b3a594] group-hover:text-[#7a2028] transition-transform ${unfolded ? 'rotate-180' : ''}`} aria-hidden />
+        </button>
         <button
           type="button"
           onClick={close}
-          className="w-9 h-9 -mr-1 shrink-0 rounded-full text-[#8a7a6a] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.06] flex items-center justify-center cursor-pointer transition-colors"
+          className="w-9 h-9 shrink-0 rounded-full text-[#8a7a6a] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.06] flex items-center justify-center cursor-pointer transition-colors"
           aria-label="დღეს აღარ მაჩვენო"
           title="დღეს აღარ მაჩვენო"
         >
@@ -119,21 +131,25 @@ export const TodaySaintsCard: React.FC<{ className?: string }> = ({ className })
         </button>
       </div>
 
-      {/* a saint with a life in the library opens it */}
-      <ul className="mt-1 space-y-0.5 font-serif-ge">
-        {items.map((s, i) => <SaintRow key={i} s={s} />)}
-      </ul>
-
-      <div className="mt-1 flex items-center justify-between gap-2 pl-3">
-        <span className="text-[13px] font-semibold text-[#8a7a6a]">{more > 0 ? `და კიდევ ${more} ხსენება` : ''}</span>
-        <button
-          type="button"
-          onClick={() => { triggerHaptic(8); openChurchCalendar(iso); }}
-          className="inline-flex items-center gap-0.5 h-9 pl-3 pr-2 rounded-full text-[13px] font-bold text-[#7a2028] hover:bg-[#7a2028]/[0.06] cursor-pointer active:scale-95 transition"
-        >
-          კალენდარი <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
+      {unfolded && (
+        <div className="px-2 pb-2 border-t border-[#f1e8d9] sg-in">
+          <p className="px-2 pt-2 text-xs font-semibold text-[#b3a594]">ძველი სტილით {oldDayMonthGe(iso)}</p>
+          {/* a saint with a life in the library opens it */}
+          <ul className="mt-1 space-y-0.5 font-serif-ge">
+            {items.map((s, i) => <SaintRow key={i} s={s} />)}
+          </ul>
+          <div className="mt-1 flex items-center justify-between gap-2 pl-2">
+            <span className="text-[13px] font-semibold text-[#8a7a6a]">{more > 0 ? `და კიდევ ${more} ხსენება` : ''}</span>
+            <button
+              type="button"
+              onClick={() => { triggerHaptic(8); openChurchCalendar(iso); }}
+              className="inline-flex items-center gap-0.5 h-9 pl-3 pr-2 rounded-full text-[13px] font-bold text-[#7a2028] hover:bg-[#7a2028]/[0.06] cursor-pointer active:scale-95 transition"
+            >
+              კალენდარი <ChevronRight className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
