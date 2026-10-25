@@ -158,7 +158,6 @@ export const LivesTab: React.FC<{ nav: BookNav }> = ({ nav }) => {
             </button>
           </div>
         </div>
-        <p className="mt-3 pl-1 text-[12px] text-[#8a7a6a]">თარიღები ძველი სტილით, როგორც თვენში; ქვემოთ — ახალი სტილით</p>
         <div className="mt-2.5 space-y-3">
           {byDay(listed.filter(l => l.m === month)).map(([d, ls]) => (
             <DayGroup key={d} month={month} day={d} lives={ls} today={month === old.month && d === old.day} />

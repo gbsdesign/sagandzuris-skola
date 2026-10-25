@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { AudioLines, Check, Download, Info, Loader2, X } from 'lucide-react';
+import { AudioLines, Check, Download, Loader2, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { triggerHaptic } from '../../utils/haptics';
 import {
@@ -63,21 +63,12 @@ export const SynthDownload: React.FC = () => {
           </span>
         }
         title="საგალობლების mp3"
-        sub="სინთეზატორით დაკრული, ყველა ხმით · თითო წიგნი ერთ ZIP ფაილად"
       />
 
       {!user ? (
         <p className="mt-6 text-center text-[13.5px] text-[#8a7a6a]">ჩამოტვირთვა მხოლოდ წევრებისთვისაა.</p>
       ) : (
         <>
-          <p className="mt-4 flex items-start gap-2.5 rounded-2xl bg-[#f6ecda]/60 ring-1 ring-[#ead9bd] px-3.5 py-3 text-[12.5px] leading-relaxed text-[#5a4636]">
-            <Info className="w-4 h-4 mt-0.5 shrink-0 text-[#9a7438]" />
-            <span>
-              ფაილი ამ მოწყობილობაზე მზადდება — სანამ არ დასრულდება, აპი ღია დატოვეთ. დრო კომპიუტერისაა;
-              ტელეფონზე უფრო დიდხანს გაგრძელდება.
-            </span>
-          </p>
-
           <ul className="mt-4 rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_26px_-22px_rgba(42,32,23,0.35)] p-1.5 sm:p-2 [&>li+li]:border-t [&>li+li]:border-[#2a2017]/[0.05]">
             {BOOKS.filter(([id]) => counts.get(id)).map(([id, vol, name]) => {
               const n = counts.get(id)!;

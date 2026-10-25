@@ -147,7 +147,7 @@ export const FeastsTab: React.FC<{ group?: string | null }> = ({ group }) => {
 
       {/* the year the dates are worked out for */}
       <div className="mt-5 flex items-center justify-between gap-3 pl-1">
-        <p className="text-[12px] text-[#8a7a6a]">ახალი სტილით</p>
+        <span />
         <div className="flex items-center gap-1.5">
           {year !== thisYear && (
             <button type="button" onClick={() => { triggerHaptic(8); setYear(thisYear); }} className="h-10 px-3 rounded-full text-[12.5px] font-bold text-[#7a2028] hover:bg-[#7a2028]/[0.06] cursor-pointer">
