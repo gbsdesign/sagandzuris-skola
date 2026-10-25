@@ -111,7 +111,7 @@ export const AttendanceStrip: React.FC<{ uid: string; last: AttendanceDay[] }> =
                 <span className={`w-full h-7 rounded-md flex items-center justify-center ${on ? 'bg-emerald-600 text-white' : 'bg-[#efe5d4]'}`}>
                   {on && <Check className="w-3.5 h-3.5 stroke-[3]" />}
                 </span>
-                <span className="text-[10.5px] font-semibold text-[#8a7a6a] tabular-nums">{Number(d.date.slice(8))}</span>
+                <span className="text-[11.5px] font-semibold text-[#8a7a6a] tabular-nums">{Number(d.date.slice(8))}</span>
               </div>
             );
           })}

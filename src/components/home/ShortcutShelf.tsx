@@ -250,7 +250,7 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
     <section className={variant === 'home' ? 'relative mt-6 w-[calc(100%+2.5rem)] sm:w-full max-w-md text-left' : 'rounded-3xl bg-white/80 ring-1 ring-[#e8dcc8] p-4 sm:p-5'}>
       <div className="flex items-center gap-2 mb-2.5 px-0.5">
         <h2 className="flex-1 font-serif-ge text-[15px] font-bold text-[#4a3426]">ჩემი ღილაკები</h2>
-        {!own && ids.length > 0 && <span className="text-[11px] text-[#8a7a6a]">მასწავლებლის შერჩეული</span>}
+        {!own && ids.length > 0 && <span className="text-xs text-[#8a7a6a]">მასწავლებლის შერჩეული</span>}
         {(ids.length > 0 || variant === 'profile') && (
           editing ? (
             <button type="button" onClick={() => setEditing(false)} className="h-9 px-3.5 rounded-full bg-[#7a2028] text-[#fbf6ec] text-[13px] font-bold inline-flex items-center gap-1.5 cursor-pointer">
@@ -286,7 +286,7 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
                 onPointerCancel={() => { if (press.current) window.clearTimeout(press.current.t); press.current = null; setDrag(null); }}
                 onContextMenu={e => e.preventDefault()}
                 aria-label={l.label}
-                className={`w-full h-[74px] rounded-[14px] ring-1 flex flex-col cursor-pointer transition shadow-[0_1px_3px_-1px_rgba(74,52,38,0.14)] ${
+                className={`w-full h-20 rounded-[14px] ring-1 flex flex-col cursor-pointer transition shadow-[0_1px_3px_-1px_rgba(74,52,38,0.14)] ${
                   habit ? 'justify-between px-2 py-2 text-left' : 'items-center justify-center gap-1 px-1.5 text-center'
                 } ${isDone ? 'bg-emerald-50/80 ring-emerald-200' : 'bg-white ring-[#ebe0cd]'} ${
                   editing ? 'animate-[sg-wiggle_0.35s_ease-in-out_infinite_alternate]' : 'hover:ring-[#7a2028]/35 active:scale-[0.96]'
@@ -295,7 +295,7 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
                 <span className={`flex items-center text-[#7a2028] [&>svg]:w-[18px] [&>svg]:h-[18px] [&>svg]:stroke-[1.9] ${habit ? 'h-7' : 'h-6 justify-center'}`}>{shortcutIcon(id)}</span>
                 {/* a long single word gets a size smaller rather than being split on a 360px phone */}
                 <span className={`w-full line-clamp-2 break-words leading-[1.2] font-bold text-[#4a3426] ${
-                  longest > 9 ? 'text-[10.5px] tracking-[-0.02em]' : longest > 8 ? 'text-[11px] tracking-[-0.01em]' : 'text-[12px]'
+                  longest > 9 ? 'text-[11.5px] tracking-[-0.02em]' : longest > 8 ? 'text-xs tracking-[-0.01em]' : 'text-[13px]'
                 }`}>{l.label}</span>
               </button>
               {/* a 28px ring, tapped anywhere in its 40px corner */}
@@ -322,14 +322,14 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
         {ids.length < MAX_SHORTCUTS && (editing || variant === 'profile' || ids.length < 4) && (
           <li>
             <button type="button" onClick={() => setAdding(true)} aria-label="ღილაკის დამატება"
-              className="w-full h-[74px] rounded-[14px] border-[1.5px] border-dashed border-[#d9c8ac] text-[#8a7a6a] hover:text-[#7a2028] hover:border-[#7a2028]/40 flex flex-col items-center justify-center gap-0.5 cursor-pointer transition">
+              className="w-full h-20 rounded-[14px] border-[1.5px] border-dashed border-[#d9c8ac] text-[#8a7a6a] hover:text-[#7a2028] hover:border-[#7a2028]/40 flex flex-col items-center justify-center gap-0.5 cursor-pointer transition">
               <Plus className="w-5 h-5" />
-              <span className="text-[11px] font-bold">დამატება</span>
+              <span className="text-xs font-bold">დამატება</span>
             </button>
           </li>
         )}
       </ul>
-      {editing && <p className="mt-2 text-[11.5px] text-[#8a7a6a] px-0.5">გადაიტანე ღილაკი სხვა ადგილზე ან წაშალე ✕-ით.</p>}
+      {editing && <p className="mt-2 text-xs text-[#8a7a6a] px-0.5">გადაიტანე ღილაკი სხვა ადგილზე ან წაშალე ✕-ით.</p>}
 
       <ShortcutPicker open={adding} onClose={() => setAdding(false)} current={ids} onChange={save} />
       <Sheet open={!!menu} onClose={() => setMenu(null)} title={menu?.title || ''}>
@@ -388,7 +388,7 @@ export const PinButton: React.FC<{ id: string; className?: string }> = ({ id, cl
         className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition active:scale-95 [&>svg]:w-[17px] [&>svg]:h-[17px] ${pinned ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white/85 ring-1 ring-[#e8dcc8] text-[#7a2028] hover:ring-[#7a2028]/40'}`}>
         {pinned ? <PinOff /> : <Pin />}
       </button>
-      {note && <span role="status" className="absolute right-0 top-full mt-1.5 z-20 whitespace-nowrap px-2.5 py-1 rounded-lg bg-[#2a2017] text-white text-[11.5px] font-semibold shadow sg-in">{note}</span>}
+      {note && <span role="status" className="absolute right-0 top-full mt-1.5 z-20 whitespace-nowrap px-2.5 py-1 rounded-lg bg-[#2a2017] text-white text-xs font-semibold shadow sg-in">{note}</span>}
     </span>
   );
 };

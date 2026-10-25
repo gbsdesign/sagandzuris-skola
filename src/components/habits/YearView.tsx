@@ -36,7 +36,7 @@ export const YearMap: React.FC<{ year: number; color: string; level: (day: strin
             return firstOfMonth ? (
               <span
                 key={i}
-                className={`absolute top-0 text-[9.5px] font-bold leading-none text-[#a08a76] ${firstOfMonth.getMonth() % 3 ? 'hidden @md:inline' : ''}`}
+                className={`absolute top-0 text-[11px] font-bold leading-none text-[#a08a76] ${firstOfMonth.getMonth() % 3 ? 'hidden @md:inline' : ''}`}
                 style={{ left: `${(i / weeks.length) * 100}%` }}
               >
                 {MONTHS_SHORT_GE[firstOfMonth.getMonth()]}

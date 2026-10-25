@@ -178,7 +178,7 @@ const Bars: React.FC<{ ticks: Set<string>; goal: HabitGoal; color: string }> = (
               : `${MONTHS_GE[s.start.getMonth()]}: ${s.times}`;
           return (
             <div key={i} className="flex-1 h-full flex flex-col justify-end items-center" title={title}>
-              {s.times > 0 && <span className="mb-0.5 text-[10px] font-bold tabular-nums text-[#8a7a6a]">{s.times}</span>}
+              {s.times > 0 && <span className="mb-0.5 text-[11px] font-bold tabular-nums text-[#8a7a6a]">{s.times}</span>}
               <span
                 className="w-full max-w-7 rounded-t-md transition-[height] duration-500"
                 style={{ height: `${(s.times / max) * 100}%`, minHeight: s.times ? 3 : 0, background: current ? color : tint(color, 0.45) }}
@@ -187,7 +187,7 @@ const Bars: React.FC<{ ticks: Set<string>; goal: HabitGoal; color: string }> = (
           );
         })}
       </div>
-      <div className="flex gap-1.5 px-1 pt-1 text-[10px] font-bold text-[#a08a76]">
+      <div className="flex gap-1.5 px-1 pt-1 text-[11px] font-bold text-[#a08a76]">
         {per === 'month' ? (
           series.map((s, i) => (
             <span key={i} className="flex-1 text-center truncate">{MONTHS_SHORT_GE[s.start.getMonth()]}</span>
@@ -277,7 +277,7 @@ const HabitYear: React.FC<{ model: HabitsModel; ticks: Set<string>; color: strin
       <div className="space-y-[3px]" aria-hidden>
         {MONTHS_SHORT_GE.map((name, m) => (
           <div key={m} className="flex items-center gap-1.5">
-            <span className="w-7 shrink-0 text-[10px] font-bold text-[#a08a76]">{name}</span>
+            <span className="w-7 shrink-0 text-[11px] font-bold text-[#a08a76]">{name}</span>
             <div className="flex-1 grid gap-[2px]" style={{ gridTemplateColumns: 'repeat(31, minmax(0, 1fr))' }}>
               {Array.from({ length: 31 }, (_, i) => {
                 const d = new Date(year, m, i + 1);

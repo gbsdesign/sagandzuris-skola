@@ -21,7 +21,7 @@ import { AppRouter } from './routes/AppRouter';
 import { AppModals } from './components/AppModals';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageSprinkles } from './components/home/PlateOrnaments';
-import { TodaySaintsCard } from './components/calendar/TodaySaintsCard';
+import { ConfirmHost } from './components/ui/kit';
 import { SaintLifeOverlay } from './components/saints/SaintLifeOverlay';
 import { GlobalSearch } from './components/search/GlobalSearch';
 import { usePrayerReminderScheduler } from './utils/prayerReminders';
@@ -124,27 +124,18 @@ function AppContent() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
-        <div className="flex flex-col items-center gap-3 text-slate-600">
-          <Loader2 className="w-8 h-8 animate-spin text-blue-600" />
-          <p className="text-sm font-medium">იტვირთება...</p>
+      <div className="min-h-screen bg-[#fbf6ec] flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-3 text-[#8a7a6a]">
+          <Loader2 className="w-8 h-8 animate-spin text-[#7a2028]" />
+          <p className="text-sm font-semibold">იტვირთება…</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div
-      className={`relative isolate min-h-screen safe-x text-slate-900 flex flex-col font-sans ${
-        // the chant pages share the warm paper of the notes pages
-        currentPage === 'galoba' ? 'bg-gradient-to-b from-[#fdfaf4] via-[#f8f1e5] to-[#f1e7d6]'
-          // the home page: the footer's warm cream (#fbf6ec), only lighter
-          : currentPage === 'home' ? 'bg-gradient-to-b from-[#fffdf9] via-[#fdfaf4] to-[#fcf7ef]'
-          // the school's management pages and the psalter group: warm paper too
-          : currentPage === 'psalter' || currentPage === 'teacher' || currentPage === 'admin' ? 'bg-gradient-to-b from-[#fdfaf4] via-[#faf4ea] to-[#f6eedf]'
-          : 'bg-gradient-to-br from-slate-50 via-white to-slate-100'
-      }`}
-    >
+    // one warm paper for every page (the notes page has its own)
+    <div className="relative isolate min-h-screen safe-x text-[#2a2017] flex flex-col font-sans bg-gradient-to-b from-[#fdfaf4] via-[#faf4ea] to-[#f6eedf]">
       {/* plate ornaments at the window edges, behind everything (the home page has its own) */}
       {currentPage !== 'home' && <PageSprinkles seed={currentPage} />}
 
@@ -168,10 +159,8 @@ function AppContent() {
         <AppModals />
       </ErrorBoundary>
 
-      {/* once a day on entering: today's saints from the church calendar */}
-      <ErrorBoundary>
-        {membership.can('calendar') && <TodaySaintsCard />}
-      </ErrorBoundary>
+      {/* the app's own „are you sure?“ card (kit askConfirm) */}
+      <ConfirmHost />
 
       {/* sign-in (Google or a link by e-mail), "საჭიროა რეგისტრაცია" for guests, and the return from the e-mail link */}
       <SignInPrompt />

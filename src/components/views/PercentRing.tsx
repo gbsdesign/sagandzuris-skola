@@ -41,7 +41,7 @@ export const PercentRing: React.FC<{ percent: number; label: string; done?: bool
       </svg>
       <span aria-hidden className="absolute inset-0 flex items-center justify-center font-black tabular-nums leading-none text-[#2a2017] text-[13px]">
         {Math.round(p)}
-        <span className="text-[9px] font-bold text-[#a08a76]">%</span>
+        <span className="text-[11px] font-bold text-[#a08a76]">%</span>
       </span>
     </span>
   );

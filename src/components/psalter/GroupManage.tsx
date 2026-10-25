@@ -3,7 +3,7 @@ import { collection, deleteDoc, doc, getDocs, updateDoc, arrayUnion } from 'fire
 import { Settings2, Users, Shuffle, Save, Trash2, UserPlus, UserMinus, Pencil, AlertTriangle, LayoutGrid } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
-import { Avatar, Btn, Card, CardTitle, FIELD, Flash, IconBtn, Label, Pill, useFlash } from '../ui/kit';
+import { askConfirm, Avatar, Btn, Card, CardTitle, FIELD, Flash, IconBtn, Label, Pill, useFlash } from '../ui/kit';
 import { PeoplePicker, Person } from '../people/PeoplePicker';
 import { useDirectory, shownName, shownPrayerName } from '../../utils/directory';
 import { hasGeorgianName } from '../../utils/memberName';
@@ -65,8 +65,8 @@ export const GroupManage: React.FC<{ group: PsalterGroup; onDeleted: () => void 
     }
   };
 
-  const removeMember = (m: GroupMember) => {
-    if (!window.confirm(`ამოვიყვანო ${m.name} ჯგუფიდან? მისი კანონი თავისუფალი გახდება.`)) return;
+  const removeMember = async (m: GroupMember) => {
+    if (!(await askConfirm({ title: `ამოვიყვანო ${m.name} ჯგუფიდან?`, text: 'მისი კანონი თავისუფალი გახდება.', ok: 'ამოყვანა', danger: true }))) return;
     void saveMembers(group.memberIds.filter(u => u !== m.uid));
   };
 
@@ -107,7 +107,7 @@ export const GroupManage: React.FC<{ group: PsalterGroup; onDeleted: () => void 
     const today = georgiaToday();
     // a new rule may start the current cycle afresh: its „წავიკითხე“ marks then stay with the old one
     if (cycleOf(today, cycleDays, shiftDays).id !== cycleOf(today, group.cycleDays, group.shiftDays).id
-      && !window.confirm('მიმდინარე ციკლი ახლიდან დაიწყება და ამ ციკლის „წავიკითხე“ მონიშვნები აღარ გამოჩნდება. ვინ რომელ კანონს კითხულობს დღეს, არ შეიცვლება. შევინახო?')) return;
+      && !(await askConfirm({ title: 'შევინახო?', text: 'მიმდინარე ციკლი ახლიდან დაიწყება და ამ ციკლის „წავიკითხე“ მონიშვნები აღარ გამოჩნდება. ვინ რომელ კანონს კითხულობს დღეს, არ შეიცვლება.', ok: 'შენახვა' }))) return;
     try {
       await updateDoc(ref, {
         name: settings.name.trim(),
@@ -129,7 +129,7 @@ export const GroupManage: React.FC<{ group: PsalterGroup; onDeleted: () => void 
   };
 
   const removeGroup = async () => {
-    if (!window.confirm(`წავშალო ჯგუფი „${group.name}“ მთელი ისტორიით? ამის დაბრუნება შეუძლებელია.`)) return;
+    if (!(await askConfirm({ title: `წავშალო ჯგუფი „${group.name}“ მთელი ისტორიით?`, text: 'ამის დაბრუნება შეუძლებელია.', ok: 'წაშლა', danger: true }))) return;
     try {
       const cycles = await getDocs(collection(db, 'psalterGroups', group.id, 'cycles'));
       await Promise.all(cycles.docs.map(d => deleteDoc(d.ref)));
@@ -198,9 +198,9 @@ export const GroupManage: React.FC<{ group: PsalterGroup; onDeleted: () => void 
           </div>
         )}
         <div className="flex flex-wrap gap-2 mb-3">
-          <Btn kind="ghost" icon={<Shuffle />} disabled={!group.members.length} onClick={() => {
+          <Btn kind="ghost" icon={<Shuffle />} disabled={!group.members.length} onClick={async () => {
             const ids = [...group.members].sort((a, b) => a.name.localeCompare(b.name, 'ka')).map(m => m.uid);
-            if (Object.values(owners).some(l => l.length) && !window.confirm('არსებული განაწილება შეიცვლება. გავაგრძელო?')) return;
+            if (Object.values(owners).some(l => l.length) && !(await askConfirm({ title: 'გავაგრძელო?', text: 'არსებული განაწილება შეიცვლება.', ok: 'გაგრძელება' }))) return;
             setOwners(autoDistribute(ids));
             setDirty(true);
           }}>ავტომატური განაწილება</Btn>

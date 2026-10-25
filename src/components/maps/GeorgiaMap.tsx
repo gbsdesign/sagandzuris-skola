@@ -399,7 +399,7 @@ const SongItem: React.FC<SongItemProps> = ({ id, song, showRegion, isOpen: open,
                       <Headphones className="w-3.5 h-3.5 shrink-0 text-[#b4620e]" />
                       <span className="break-words">{t.label}</span>
                     </span>
-                    {t.sub && <span className="text-[9.5px] font-semibold text-[#a0907c]">{t.sub}</span>}
+                    {t.sub && <span className="text-[11px] font-semibold text-[#a0907c]">{t.sub}</span>}
                   </button>
                   </div>
                   );

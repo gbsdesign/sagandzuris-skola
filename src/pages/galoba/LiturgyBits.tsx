@@ -71,7 +71,7 @@ export const ServiceDownload: React.FC<{ chants: ChantItem[]; label: string }> =
         {progress ? <Loader2 className="w-4 h-4 animate-spin" /> : all ? <CircleCheck className="w-4 h-4" /> : <Download className="w-4 h-4" />}
         {progress ? <span className="tabular-nums">{progress.done}/{progress.total}</span> : all ? 'ჩამოწერილია' : confirm ? `~${mb} MB · დადასტურება` : 'ჩამოწერა'}
         {!progress && !all && !confirm && saved > 0 && (
-          <span className="text-[10px] font-semibold text-[#8c7c6b] tabular-nums">{saved}/{ids.length}</span>
+          <span className="text-[11px] font-semibold text-[#8c7c6b] tabular-nums">{saved}/{ids.length}</span>
         )}
         {progress && <i className="absolute left-0 bottom-0 h-[3px] bg-[#7a2028] transition-[width]" style={{ width: `${(100 * progress.done) / Math.max(1, progress.total)}%` }} />}
       </button>

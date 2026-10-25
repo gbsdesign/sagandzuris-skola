@@ -5,7 +5,7 @@ import { useNotes } from '../context/NotesContext';
 import { SchoolClass, useManagedClasses } from '../hooks/useClasses';
 import { useClassStudents } from '../hooks/useTeaching';
 import { useDirectory, shownName } from '../utils/directory';
-import { Empty, Flash, PageTop, Tabs, useFlash } from '../components/ui/kit';
+import { Empty, Flash, PageBar, Tabs, useFlash } from '../components/ui/kit';
 import { ClassLogo } from '../components/classes/ClassLogo';
 import { ClassesAdmin } from '../components/admin/ClassesAdmin';
 import { StudentsOverview } from '../components/teacher/StudentsOverview';
@@ -49,7 +49,7 @@ export const TeacherPage: React.FC = () => {
 
   return (
     <div className="w-full max-w-3xl mx-auto px-1 py-4 sm:py-6 space-y-5 pb-14 text-[#2a2017]">
-      <PageTop title="მასწავლებლის პანელი" subtitle={`${ROLE_LABEL[role]} · ${user?.displayName || user?.email || ''}`} onBack={handleGoBack} />
+      <PageBar title="მასწავლებლის პანელი" subtitle={`${ROLE_LABEL[role]} · ${user?.displayName || user?.email || ''}`} onBack={handleGoBack} />
 
       {/* the classes: pick one; the chosen class's chat on the right */}
       {loading ? null : classes.length === 0 ? (

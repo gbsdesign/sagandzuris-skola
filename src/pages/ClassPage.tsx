@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Users, MessageCircle, Loader2, ChevronDown, Pencil, Music4, Search, X } from 'lucide-react';
+import { Users, MessageCircle, Loader2, ChevronDown, Pencil, Music4, Search, X } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
 import { useNotes } from '../context/NotesContext';
 import { useMyClasses, useAllClasses, useTeachingClasses, useManagedClasses } from '../hooks/useClasses';
@@ -10,7 +10,7 @@ import { ClassLogo } from '../components/classes/ClassLogo';
 import { ClassChat } from '../components/classes/ClassChat';
 import { ClassProgram } from '../components/classes/ClassProgram';
 import { Avatar } from '../components/classes/ChatPanel';
-import { Flash, IconBtn, Sheet, useFlash } from '../components/ui/kit';
+import { Flash, IconBtn, PageBar, Sheet, useFlash } from '../components/ui/kit';
 import { ClassSettings } from './TeacherPage';
 import { openThread, Person } from '../hooks/useDirectChat';
 import type { ClassMember, SchoolClass } from '../hooks/useClasses';
@@ -80,20 +80,11 @@ export const ClassPage: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl lg:max-w-5xl mx-auto px-1 py-4 sm:py-8 space-y-6 text-[#2a2017]">
-      <button
-        type="button"
-        onClick={handleGoBack}
-        className="inline-flex items-center gap-1.5 h-9 px-3 rounded-full ring-1 ring-[#e8dcc8] bg-white/80 hover:bg-white text-sm font-semibold text-[#4a3426] cursor-pointer active:scale-95"
-      >
-        <ArrowLeft className="w-4 h-4" /> უკან
-      </button>
+      {/* the one bar: ← · the class's name · ✎ for its teachers */}
+      <PageBar title={cls.name} onBack={handleGoBack} right={pencil('class', 'კლასის სახელი, ლოგო, რეჟიმი, ფსალმუნთა ჯგუფი')} />
 
       <header className="flex flex-col items-center text-center gap-3">
         <ClassLogo name={cls.name} logo={cls.logo} className="w-24 h-24 text-4xl shadow-[0_0_0_4px_#fbf6ec,0_0_0_5px_#e8dcc8]" />
-        <div className="flex items-center justify-center gap-1 max-w-full">
-          <h1 className="min-w-0 font-serif-ge text-2xl sm:text-3xl font-bold text-[#4a3426]">{cls.name}</h1>
-          {pencil('class', 'კლასის სახელი, ლოგო, რეჟიმი, ფსალმუნთა ჯგუფი')}
-        </div>
         <p className="text-sm text-[#8a7a6a]">
           {cls.members.length} წევრი{cls.teachers.length > 0 && ` · მასწავლებელი: ${cls.teachers.map(t => t.name).join(', ')}`}
         </p>

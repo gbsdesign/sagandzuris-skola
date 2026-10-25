@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
 
-// Shared building blocks for the school's management pages (teacher, admin, psalter group):
-// the same warm paper, burgundy accents and roomy controls as the rest of the app.
+// Shared building blocks for the whole app: the same warm paper, burgundy accents and roomy controls everywhere.
+// Rules (2026-10-25): text is never smaller than 12px (text-xs); icon buttons are 36px, the back button 44px;
+// every inner page has the one PageBar; anything that cannot be undone asks through askConfirm, never window.confirm.
 
 export const C = {
   ink: '#2a2017',
@@ -20,27 +21,83 @@ export const FIELD =
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
-/** Page title row: a round back button, the title and a small line under it. */
-export const PageTop: React.FC<{ title: string; subtitle?: React.ReactNode; onBack?: () => void; right?: React.ReactNode }> = ({ title, subtitle, onBack, right }) => (
-  <div className="flex items-center gap-3">
-    {onBack && (
-      <button
-        type="button"
-        onClick={onBack}
-        className="w-11 h-11 shrink-0 rounded-full ring-1 ring-[#e8dcc8] bg-white/85 hover:bg-white text-[#4a3426] flex items-center justify-center cursor-pointer active:scale-95 transition"
-        aria-label="უკან"
-        title="უკან"
-      >
-        <ArrowLeft className="w-5 h-5" />
-      </button>
-    )}
-    <div className="min-w-0 flex-1">
-      <h1 className="font-serif-ge text-[22px] sm:text-[26px] leading-tight font-bold text-[#4a3426]">{title}</h1>
-      {subtitle && <p className="mt-0.5 text-[13px] sm:text-sm text-[#8a7a6a]">{subtitle}</p>}
-    </div>
-    {right}
-  </div>
-);
+/**
+ * The one title bar of every inner page: a round 44px „←“, the title on the left (a small line under it if needed)
+ * and up to a few 36px round buttons on the right (📌 ✎ ⓘ). Once the bar has scrolled away a round „←“ floats —
+ * bottom left on a phone (thumb reach; it steps aside while scrolling down), in the empty margin left of the page
+ * column on a computer, where it covers nothing.
+ */
+export const PageBar: React.FC<{ title: React.ReactNode; subtitle?: React.ReactNode; onBack?: () => void; right?: React.ReactNode; className?: string }> = ({ title, subtitle, onBack, right, className }) => {
+  const barRef = useRef<HTMLDivElement>(null);
+  const [away, setAway] = useState(false);
+  const [down, setDown] = useState(false);
+  const floats = !!onBack;
+  useEffect(() => {
+    const el = barRef.current;
+    if (!floats || !el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(([e]) => setAway(!e.isIntersecting && e.boundingClientRect.top < 0));
+    io.observe(el);
+    return () => io.disconnect();
+  }, [floats]);
+  useEffect(() => {
+    if (!floats) return;
+    let last = window.scrollY, raf = 0;
+    const onScroll = () => {
+      if (raf) return;
+      raf = requestAnimationFrame(() => {
+        raf = 0;
+        const y = window.scrollY;
+        if (Math.abs(y - last) < 8) return;
+        setDown(y > last);
+        last = y;
+      });
+    };
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => { window.removeEventListener('scroll', onScroll); cancelAnimationFrame(raf); };
+  }, [floats]);
+  const phoneShow = away && !down;
+
+  return (
+    <>
+      <div ref={barRef} className={cx('flex items-center gap-3', className)}>
+        {onBack && (
+          <button
+            type="button"
+            onClick={() => { triggerHaptic(8); onBack(); }}
+            className="w-11 h-11 shrink-0 rounded-full ring-1 ring-[#e8dcc8] bg-white/85 hover:bg-white hover:ring-[#7a2028]/35 text-[#4a3426] hover:text-[#7a2028] flex items-center justify-center cursor-pointer active:scale-95 transition"
+            aria-label="უკან"
+            title="უკან"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </button>
+        )}
+        <div className="min-w-0 flex-1">
+          <h1 className="font-serif-ge text-[22px] sm:text-[26px] leading-tight font-bold text-[#4a3426] text-balance">{title}</h1>
+          {subtitle && <p className="mt-0.5 text-[13px] sm:text-sm text-[#8a7a6a]">{subtitle}</p>}
+        </div>
+        {right && <div className="flex items-center gap-1 shrink-0">{right}</div>}
+      </div>
+
+      {onBack && (
+        <button
+          type="button"
+          onClick={() => { triggerHaptic(8); onBack(); }}
+          tabIndex={away ? 0 : -1}
+          aria-hidden={!away}
+          aria-label="უკან"
+          title="უკან"
+          className={cx(
+            'fixed z-40 left-[calc(env(safe-area-inset-left,0px)+16px)] bottom-[calc(env(safe-area-inset-bottom,0px)+18px)] lg:bottom-auto lg:top-4 lg:left-[max(12px,calc(50%-560px))] w-12 h-12 lg:w-10 lg:h-10 rounded-full grid place-items-center bg-[#fffdf8]/90 backdrop-blur-md ring-1 ring-[#e8dcc8] shadow-[0_10px_26px_-12px_rgba(74,52,38,0.55)] text-[#7a2028] hover:bg-white hover:ring-[#7a2028]/30 cursor-pointer transition-[opacity,transform,background-color] duration-300 ease-out active:scale-95',
+            phoneShow ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none',
+            away ? 'lg:opacity-100 lg:translate-y-0 lg:pointer-events-auto' : 'lg:opacity-0 lg:-translate-y-3 lg:pointer-events-none'
+          )}
+        >
+          <ArrowLeft className="w-5 h-5 lg:w-[18px] lg:h-[18px]" />
+        </button>
+      )}
+    </>
+  );
+};
 
 export const Card: React.FC<{ className?: string; children: React.ReactNode; tone?: 'white' | 'paper' | 'wine' }> = ({ className, children, tone = 'white' }) => (
   <section
@@ -79,11 +136,13 @@ export const CardTitle: React.FC<{ icon?: React.ReactNode; title: React.ReactNod
   );
 };
 
-type BtnKind = 'primary' | 'ghost' | 'danger' | 'soft' | 'light';
+type BtnKind = 'primary' | 'ghost' | 'danger' | 'red' | 'soft' | 'light';
 const BTN: Record<BtnKind, string> = {
   primary: 'bg-[#7a2028] hover:bg-[#5e1820] text-[#fbf6ec] shadow-[0_4px_12px_-6px_rgba(122,32,40,0.7)]',
   ghost: 'bg-white ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#4a3426]',
   danger: 'bg-white ring-1 ring-red-200 hover:bg-red-50 text-red-700',
+  // the solid one for a confirmed deletion
+  red: 'bg-[#b3261e] hover:bg-[#962019] text-white shadow-[0_4px_12px_-6px_rgba(179,38,30,0.7)]',
   soft: 'bg-[#7a2028]/[0.08] hover:bg-[#7a2028]/[0.14] text-[#7a2028]',
   light: 'bg-[#fbf6ec] hover:bg-white text-[#7a2028]',
 };
@@ -176,7 +235,7 @@ export const Avatar: React.FC<{ name?: string; photo?: string; size?: number; cl
 export const Pill: React.FC<{ tone?: 'wine' | 'brown' | 'green' | 'amber' | 'muted' | 'solid'; children: React.ReactNode; className?: string }> = ({ tone = 'wine', children, className }) => (
   <span
     className={cx(
-      'inline-flex items-center gap-1 h-6 px-2.5 rounded-full text-[11px] font-bold whitespace-nowrap [&>svg]:w-3.5 [&>svg]:h-3.5',
+      'inline-flex items-center gap-1 h-7 px-2.5 rounded-full text-xs font-bold whitespace-nowrap [&>svg]:w-3.5 [&>svg]:h-3.5',
       tone === 'wine' && 'bg-[#7a2028]/10 text-[#7a2028]',
       tone === 'brown' && 'bg-[#4a3426]/10 text-[#4a3426]',
       tone === 'green' && 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200',
@@ -326,9 +385,78 @@ export const Stat: React.FC<{ value: React.ReactNode; label: string; tone?: 'pla
     tone === 'amber' && 'bg-amber-50'
   )}>
     <div className={cx('text-xl font-bold tabular-nums leading-tight', tone === 'green' ? 'text-emerald-800' : tone === 'amber' ? 'text-amber-800' : 'text-[#4a3426]')}>{value}</div>
-    <div className="text-[11px] font-semibold text-[#8a7a6a] leading-tight mt-0.5">{label}</div>
+    <div className="text-xs font-semibold text-[#8a7a6a] leading-tight mt-0.5">{label}</div>
   </div>
 );
+
+/* ---------- confirmation in the app's own window ---------- */
+
+export type ConfirmOpts = {
+  /** the question, e.g. „წავშალო კლასი „ა“?“ */
+  title: string;
+  /** what will follow, in one sentence */
+  text?: React.ReactNode;
+  /** the confirming button's word (default „კი“); `danger` makes it solid red */
+  ok?: string;
+  cancel?: string;
+  danger?: boolean;
+};
+type PendingConfirm = ConfirmOpts & { resolve: (yes: boolean) => void };
+let confirmHost: ((p: PendingConfirm) => void) | null = null;
+
+/**
+ * Asks before something that cannot be undone and resolves `true` when the person confirms. A plain string is
+ * the question. Works from any handler (no hook); while no ConfirmHost is mounted it falls back to the browser's box.
+ */
+export const askConfirm = (opts: ConfirmOpts | string): Promise<boolean> => {
+  const o: ConfirmOpts = typeof opts === 'string' ? { title: opts } : opts;
+  if (!confirmHost) return Promise.resolve(window.confirm(o.title));
+  return new Promise(resolve => confirmHost?.({ ...o, resolve }));
+};
+
+/** Mounted once in App: the small paper card that askConfirm opens. Above every sheet (z-90). */
+export const ConfirmHost: React.FC = () => {
+  const [q, setQ] = useState<PendingConfirm | null>(null);
+  useEffect(() => {
+    confirmHost = p => setQ(prev => { prev?.resolve(false); return p; });
+    return () => { confirmHost = null; };
+  }, []);
+  const answer = (yes: boolean) => {
+    triggerHaptic(10);
+    q?.resolve(yes);
+    setQ(null);
+  };
+  useEffect(() => {
+    if (!q) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); answer(false); } };
+    window.addEventListener('keydown', onKey, true);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    return () => { window.removeEventListener('keydown', onKey, true); document.body.style.overflow = prev; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [q]);
+  if (!q) return null;
+  return createPortal(
+    <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center p-3 sm:p-6 bg-[#2a2017]/45 backdrop-blur-[2px] sg-in" onClick={() => answer(false)}>
+      <div
+        role="alertdialog"
+        aria-modal="true"
+        aria-labelledby="sg-confirm-title"
+        onClick={e => e.stopPropagation()}
+        className="w-full sm:max-w-sm rounded-[24px] bg-[#fbf6ec] ring-1 ring-[#e8dcc8] shadow-2xl p-5 safe-bottom sg-up"
+      >
+        <h3 id="sg-confirm-title" className="font-serif-ge text-[18px] leading-snug font-bold text-[#4a3426] text-balance">{q.title}</h3>
+        {q.text && <p className="mt-2 text-sm leading-relaxed text-[#75685a]">{q.text}</p>}
+        <div className="mt-5 grid grid-cols-2 gap-2">
+          {/* the harmless button takes the focus, so Enter never deletes by accident */}
+          <Btn kind="ghost" onClick={() => answer(false)} autoFocus>{q.cancel || 'გაუქმება'}</Btn>
+          <Btn kind={q.danger ? 'red' : 'primary'} onClick={() => answer(true)}>{q.ok || 'კი'}</Btn>
+        </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
 
 /** Thin progress bar. */
 export const Bar: React.FC<{ value: number; max: number; tone?: 'wine' | 'green' }> = ({ value, max, tone = 'wine' }) => (

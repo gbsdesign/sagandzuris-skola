@@ -120,7 +120,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({ isOpen, onCl
                     <h4 className="text-xs sm:text-sm font-bold text-slate-800 group-hover:text-amber-900 transition-colors">
                       {item.title}
                     </h4>
-                    <span className="text-[10px] font-semibold text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200/80 shrink-0">
+                    <span className="text-[11px] font-semibold text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200/80 shrink-0">
                       {item.badge}
                     </span>
                   </div>

@@ -23,7 +23,6 @@ import { CLERGY_TITLES, Gender } from '../data/georgianNames';
 import { triggerHaptic } from '../utils/haptics';
 import { useAuth } from '../context';
 import { GroupMember, GroupPrayerName, PsalterGroup, firstName, groupPrayerText, useGroupPrayerNames, useMyPsalterGroups } from '../hooks/usePsalter';
-import { PinButton } from '../components/home/ShortcutShelf';
 import { Btn, Sheet, Toggle } from '../components/ui/kit';
 
 type Genders = Record<string, Gender>;
@@ -76,19 +75,17 @@ export const CommemorationPage: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl mx-auto mb-6 px-1 space-y-4">
-      <div className="grid grid-cols-[2.25rem_1fr_2.25rem] items-center gap-2">
+      <div className="flex items-start gap-3">
+      <p className="flex-1 min-w-0 text-[13px] leading-relaxed text-[#6b5544]">
+        ჩაწერე სახელები (რამდენიმეც ერთად) — თითოეული ცალკე დალაგდება. ლოცვებში ისინი გამოჩნდება იქ, სადაც „(სახელი)“ წერია, ამავე რიგით.
+        რიგის შესაცვლელად სახელი ჩაავლე <GripVertical className="inline w-3.5 h-3.5 -mt-0.5" /> ნიშნით და გადაიტანე, შესასწორებლად — სახელს დააჭირე.
+      </p>
         <OrderMenu
           on={lists.autoSort}
           // turning it on leaves the names where they are (the group's people too); only new ones take their place
           onChange={on => update(on ? { autoSort: true, groupOrder: inGroupOrder(fromGroups, lists).map(p => p.uid) } : { autoSort: false })}
         />
-        <h1 className="col-start-2 text-center font-serif-ge text-xl sm:text-2xl font-bold text-[#7a2028]">მოსახსენებელი</h1>
-        <PinButton id="special:commemoration" />
       </div>
-      <p className="text-center text-[13px] leading-relaxed text-[#6b5544]">
-        ჩაწერე სახელები (რამდენიმეც ერთად) — თითოეული ცალკე დალაგდება. ლოცვებში ისინი გამოჩნდება იქ, სადაც „(სახელი)“ წერია, ამავე რიგით.
-        რიგის შესაცვლელად სახელი ჩაავლე <GripVertical className="inline w-3.5 h-3.5 -mt-0.5" /> ნიშნით და გადაიტანე, შესასწორებლად — სახელს დააჭირე.
-      </p>
       {NAME_LISTS.map(list => {
         const id = list.id;
         return (

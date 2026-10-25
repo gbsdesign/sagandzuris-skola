@@ -132,7 +132,6 @@ export const GalobaPage: React.FC = () => {
     return (
       <div className="galoba-font w-full px-1 flex flex-col gap-4">
         <div className="w-full max-w-2xl mx-auto flex flex-col gap-3">
-          <h1 className="mx-1 font-serif-ge text-[22px] sm:text-2xl font-bold leading-tight text-[#7a2028]">გალობა</h1>
           <SearchField value={chantSearch || ''} onChange={setChantSearch} placeholder="ძიება ყველა მსახურებაში" />
           {query ? (
             // a tall box, so the centred page doesn't jump up and down while typing

@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Bell, BellOff, Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
-import { KATHISMAS, PRAYER_HOURS, PrayerHour, bibleChapterId, hourClock, parseBibleId, prayerTitle, todaysWeekPrayerId } from '../data/prayers';
+import { KATHISMAS, PRAYER_HOURS, PrayerHour, bibleChapterId, hourClock, parseBibleId, todaysWeekPrayerId } from '../data/prayers';
 import { HABIT_ITEMS } from '../data/habitsAndManera';
 import { COUNTED_BY_READING } from '../data/habitLooks';
 import { FoldedPrayer, PROSE, PrayerText } from '../components/views/PrayerText';
 import { HourPsalms } from '../components/views/HourPsalms';
 import { ReadingToolbar, useKhutsuri } from '../components/views/ReadingTools';
-import { PinButton } from '../components/home/ShortcutShelf';
 import { useHabitsModel } from '../components/habits/useHabits';
 import { Btn } from '../components/ui/kit';
 import { useAccess } from '../hooks/useAccess';
@@ -105,11 +104,6 @@ export const PrayerPage: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl mx-auto mb-6 px-1 space-y-4">
-      <div className="grid grid-cols-[2.25rem_1fr_2.25rem] items-center gap-2">
-        <h1 className="col-start-2 text-center font-serif-ge text-xl sm:text-2xl font-bold text-[#7a2028]">{prayerTitle(selectedPrayerId)}</h1>
-        <PinButton id={`prayer:${selectedPrayerId}`} />
-      </div>
-
       {hour && <HourReminders hour={hour} />}
 
       <article className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-4 py-5 sm:px-7 sm:py-6">

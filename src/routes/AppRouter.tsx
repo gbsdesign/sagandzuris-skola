@@ -1,7 +1,10 @@
 import React, { lazy, useEffect, useRef } from 'react';
-import { useNavigation, useChants, useModal, useAuth } from '../context';
-import { ShieldCheck, ChevronRight, WifiOff, RefreshCw } from 'lucide-react';
-import { SubPageHeader } from '../components/layout';
+import { useNavigation, useChants, useAuth, PageType } from '../context';
+import { WifiOff, RefreshCw } from 'lucide-react';
+import { PageBar } from '../components/ui/kit';
+import { PinButton } from '../components/home/ShortcutShelf';
+import { ProfileActions } from '../components/views/ProfileActions';
+import { prayerTitle } from '../data/prayers';
 import { HomePage } from '../pages/HomePage';
 import { GalobaPage } from '../pages/GalobaPage';
 import { StudentProfileCard } from '../components/views';
@@ -106,9 +109,22 @@ interface AppRouterProps {
   logoUrl: string;
 }
 
+// the title the one PageBar shows on each inner page (the prayer page's comes from the prayer itself)
+const PAGE_TITLES: Partial<Record<PageType, string>> = {
+  galoba: 'გალობა',
+  simghera: 'სიმღერა',
+  mtkmeli: 'მთქმელი',
+  sakravebi: 'საკრავები',
+  gz: 'საგანძურის გზა',
+  tsinaprebi: 'გაიცანი წინაპრები',
+  biblioteka: 'ბიბლიოთეკა',
+  abituri: 'აბიტურიენტს',
+  offline: 'ოფლაინ რეჟიმი',
+  commemoration: 'მოსახსენებელი',
+};
+
 export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
-  const { currentPage, selectedService, handleGoBack, navigateTo } = useNavigation();
-  const { openModal } = useModal();
+  const { currentPage, selectedPrayerId, handleGoBack, navigateTo } = useNavigation();
   const { user, loading, isAdmin, isTeacher } = useAuth();
   const access = useAccess();
   const {
@@ -163,53 +179,35 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   if (currentPage === 'profile') {
     return (
       <div className="w-full max-w-2xl mx-auto px-1 py-3 sm:px-4 md:px-6">
-        <div className="relative flex items-center justify-between pb-3.5 mb-5 border-b border-slate-100">
-          <h1 className="absolute inset-x-0 top-0 bottom-3.5 flex items-center justify-center pointer-events-none font-serif-ge text-xl sm:text-3xl font-bold text-[#7a2028]">
-            პროფილი
-          </h1>
-          <button
-            type="button"
-            onClick={handleGoBack}
-            className="relative inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl border border-slate-200/90 hover:border-amber-400/50 bg-slate-50/80 hover:bg-amber-50/50 active:scale-95 text-slate-700 hover:text-[#85502c] transition-all text-xs font-semibold cursor-pointer group shadow-2xs"
-          >
-            <span>← უკან</span>
-          </button>
-          {isAdmin && (
-            <button
-              type="button"
-              onClick={() => navigateTo('admin')}
-              className="relative inline-flex items-center gap-1.5 h-9 px-3 rounded-full ring-1 ring-[#e8dcc8] bg-white/80 hover:bg-white text-[#4a3426] text-xs font-bold transition-all cursor-pointer active:scale-95"
-              title="ადმინის პანელი"
-            >
-              <ShieldCheck className="w-4 h-4 text-[#7a2028]" />
-              ადმინი
-            </button>
-          )}
-        </div>
+        <PageBar title="პროფილი" onBack={handleGoBack} className="mb-5" />
         <div className="space-y-4">
           <ChemiSamosi />
           <ShortcutShelf variant="profile" />
           <StudentProfileCard />
+          {/* install the app · leave the account (asks first) */}
+          <ProfileActions />
         </div>
       </div>
     );
   }
 
   if (currentPage !== 'home') {
+    // the one bar: „←“, the page's title, and 📌 for a page that can be a home button
+    const section = sectionOfPage(currentPage);
+    const pin = currentPage === 'prayer' && selectedPrayerId ? `prayer:${selectedPrayerId}`
+      : currentPage === 'commemoration' ? 'special:commemoration'
+      : section ? `section:${section}` : null;
+    const title = currentPage === 'prayer' && selectedPrayerId ? prayerTitle(selectedPrayerId) : PAGE_TITLES[currentPage] ?? '';
     return (
       <div className="flex flex-col items-center px-1 py-3 sm:px-4 md:px-6">
-        <SubPageHeader
-          currentPage={currentPage}
-          selectedService={selectedService}
-          onGoBack={handleGoBack}
-        />
+        <PageBar title={title} onBack={handleGoBack} right={pin ? <PinButton id={pin} /> : undefined} className="w-full mb-4" />
 
         <div className="w-full flex-1 min-h-[300px] flex flex-col justify-between items-center mt-1">
           {currentPage === 'galoba' && <GalobaPage />}
 
           {currentPage === 'gz' && (
             <div className="w-full max-w-2xl mx-auto mb-2 px-1">
-              {/* the page title sits in the top bar (SubPageHeader); four round buttons on top (სამოსი, ნასწავლი —
+              {/* the page title sits in the top bar (PageBar); four round buttons on top (სამოსი, ნასწავლი —
                   with the teacher's assignments —, მანერა, სამუშაო) in the member's order, the habits under them */}
               <PathTabs
                 orbs={{ labels: PATH_ORBS, render: order => <PathOrbs order={order} /> }}

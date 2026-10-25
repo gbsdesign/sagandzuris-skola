@@ -467,7 +467,7 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner }> = ({ member
                 }`}
               >
                 <span className="text-xs font-bold leading-tight">{day.short}</span>
-                <span className={`text-[10px] font-semibold leading-none mt-1 ${isSelected ? 'text-[#fbf6ec]/80' : 'opacity-70'}`}>
+                <span className={`text-[11px] font-semibold leading-none mt-1 ${isSelected ? 'text-[#fbf6ec]/80' : 'opacity-70'}`}>
                   {count > 0 ? `${count} სთ` : '—'}
                 </span>
               </button>

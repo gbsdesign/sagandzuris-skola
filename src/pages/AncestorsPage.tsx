@@ -94,7 +94,7 @@ const AncestorCard: React.FC<{ a: Ancestor; onOpen: () => void; className?: stri
       {photo && <div className="absolute inset-x-0 bottom-0 h-3/5 bg-gradient-to-t from-black/85 via-black/35 to-transparent" />}
       {a.years && (
         <span
-          className={`absolute top-1.5 left-1.5 px-1.5 py-px rounded-full text-[10px] font-semibold ${
+          className={`absolute top-1.5 left-1.5 px-1.5 py-px rounded-full text-[11px] font-semibold ${
             photo ? 'bg-black/35 backdrop-blur-sm text-white/90' : 'bg-[#7a2028]/10 text-[#7a2028]/80'
           }`}
         >

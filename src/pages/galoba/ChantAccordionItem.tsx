@@ -393,7 +393,7 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
                           on ? `bg-white shadow-[0_2px_6px_-2px_rgba(74,52,38,0.3)] ${SCHOOL_STYLES[school]?.text ?? 'text-[#574739]'}` : 'text-[#8c7c6b] hover:text-[#4a3426]'
                         }`}>
                         {SCHOOL_STYLES[school]?.short ?? school}
-                        <span className={`max-[419px]:hidden text-[10.5px] font-semibold tabular-nums ${on ? 'opacity-60' : 'text-[#b3a594]'}`}>{count}</span>
+                        <span className={`max-[419px]:hidden text-[11.5px] font-semibold tabular-nums ${on ? 'opacity-60' : 'text-[#b3a594]'}`}>{count}</span>
                       </button>
                     );
                   })}

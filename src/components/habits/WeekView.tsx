@@ -65,7 +65,7 @@ export const WeekView: React.FC<{ model: HabitsModel; onPickDay: (d: Date) => vo
                   isToday ? 'text-[#7a2028]' : key > today ? 'text-[#cbbca6]' : 'text-[#8a7a6a]'
                 }`}
               >
-                <span className="text-[10.5px] font-bold">{WEEKDAYS_SHORT_GE[d.getDay()]}</span>
+                <span className="text-[11.5px] font-bold">{WEEKDAYS_SHORT_GE[d.getDay()]}</span>
                 <span className={`text-[12.5px] tabular-nums ${isToday ? 'font-black' : 'font-semibold'}`}>{d.getDate()}</span>
               </button>
             );

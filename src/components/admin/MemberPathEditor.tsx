@@ -7,7 +7,7 @@ import { filterValidVariants } from '../../utils/variantValidation';
 import { PathItem, Voice, sortPathItems, categoryOf, CATEGORY_LABEL, PathCategory, usesVoices, voicesOf } from '../../utils/pathItems';
 import { useConfirmations, saveConfirmation } from '../../hooks/useConfirmations';
 import { useMarksLock, saveMarksLock } from '../../hooks/usePathMarks';
-import { Toggle } from '../ui/kit';
+import { askConfirm, Toggle } from '../ui/kit';
 import { CatalogPicker } from './CatalogPicker';
 
 type PathMap = Record<string, PathItem>;
@@ -130,7 +130,7 @@ export const MemberPathEditor: React.FC<{ uid: string; name: string; onError: (t
                     <button type="button" onClick={() => move(it.variantId, 1)} disabled={i === items.length - 1} title="ქვემოთ" className="w-8 h-8 rounded-full text-[#8a7a6a] hover:bg-[#fbf6ec] disabled:opacity-30 flex items-center justify-center cursor-pointer"><ArrowDown className="w-4 h-4" /></button>
                     <button
                       type="button"
-                      onClick={() => window.confirm(`მოვხსნა „${it.chantName}“ ${name}-ის გზიდან?`) && save(sorted.filter(x => x.variantId !== it.variantId))}
+                      onClick={async () => { if (await askConfirm({ title: `მოვხსნა „${it.chantName}“ ${name}-ის გზიდან?`, ok: 'მოხსნა', danger: true })) save(sorted.filter(x => x.variantId !== it.variantId)); }}
                       title="მოხსნა"
                       className="w-8 h-8 rounded-full text-[#8a7a6a] hover:text-red-600 hover:bg-red-50 flex items-center justify-center cursor-pointer"
                     >

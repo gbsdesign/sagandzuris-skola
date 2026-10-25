@@ -126,7 +126,7 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; actio
                 >
                   {voiced ? v : <Check className="w-4 h-4 stroke-[3]" />}
                   {n > 0 && (
-                    <span aria-hidden className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-white ring-1 ring-[#e3d6c1] text-[10.5px] leading-[18px] font-black text-[#4a3426] text-center tabular-nums">
+                    <span aria-hidden className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full bg-white ring-1 ring-[#e3d6c1] text-[11.5px] leading-[18px] font-black text-[#4a3426] text-center tabular-nums">
                       {n}
                     </span>
                   )}

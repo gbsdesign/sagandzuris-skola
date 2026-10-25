@@ -9,7 +9,7 @@ import { agoLabel } from '../../hooks/useTeaching';
 import { computeMonthlyStats } from '../../hooks/useMonthlyStudyStats';
 import { ALL_FEATURES, ALWAYS_OPEN, FeatureId } from '../../utils/memberAccess';
 import { showPhone } from '../../utils/profileFields';
-import { Avatar, Btn, Flash, IconBtn, Pill, Sheet, useFlash } from '../ui/kit';
+import { askConfirm, Avatar, Btn, Flash, IconBtn, Pill, Sheet, useFlash } from '../ui/kit';
 import { StudentProfileCard } from '../views/StudentProfileCard';
 import { AccessPicker, AccessRecord, DecisionRecord, saveAccess } from './AccessRequests';
 import { ManeraReviewEditor } from './ManeraReviewEditor';
@@ -78,8 +78,8 @@ export const PersonSheet: React.FC<{
       setBusy(false);
     }
   };
-  const refuse = () => {
-    if (!window.confirm(`${u.name} — დამატების შეფერხება? ის ანგარიშიდან გავა და შემდეგ შესვლებზეც ამას ნახავს, სანამ არ დაუშვებთ. მონაცემები შეინახება.`)) return;
+  const refuse = async () => {
+    if (!(await askConfirm({ title: `${u.name} — დამატების შეფერხება?`, text: 'ის ანგარიშიდან გავა და შემდეგ შესვლებზეც ამას ნახავს, სანამ არ დაუშვებთ. მონაცემები შეინახება.', ok: 'შეფერხება', danger: true }))) return;
     void decide('rejected');
   };
 
@@ -96,7 +96,7 @@ export const PersonSheet: React.FC<{
       note.fail(`სუპერადმინი შენს გარდა მაქსიმუმ ${MAX_EXTRA_SUPERADMINS} შეიძლება იყოს.`);
       return;
     }
-    if (!window.confirm(`${u.name} — ${next === 'member' ? 'როლის მოხსნა (ჩვეულებრივი წევრი)' : `როლი: ${ROLE_LABEL[next]}`}?`)) return;
+    if (!(await askConfirm({ title: `${u.name} — ${next === 'member' ? 'როლის მოხსნა (ჩვეულებრივი წევრი)' : `როლი: ${ROLE_LABEL[next]}`}?`, ok: 'შეცვლა' }))) return;
     setBusy(true);
     try {
       if (next === 'member') await deleteDoc(doc(db, 'admins', email));

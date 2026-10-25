@@ -143,7 +143,7 @@ const AutoScroll: React.FC<{ zoom: number; onClose: () => void }> = ({ zoom, onC
           <Minus className="w-[18px] h-[18px]" />
         </button>
         <span className="w-16 text-center leading-none select-none">
-          <span className="block text-[10.5px] font-bold text-[#8a7a6a]">სიჩქარე</span>
+          <span className="block text-[11.5px] font-bold text-[#8a7a6a]">სიჩქარე</span>
           <span className="block mt-1 text-[16px] font-black tabular-nums text-[#7a2028]">{SPEEDS[speed].label}</span>
         </span>
         <button type="button" aria-label="სწრაფად" disabled={speed >= SPEEDS.length - 1} onClick={() => setSpeed(s => s + 1)} className={ROUND}>
