@@ -103,7 +103,9 @@ export const callState = () => state;
 
 // ---- Firestore: who is in a call ----------------------------------------------------------------------------
 
-const FRESH_MS = 50_000;
+// a phone's heartbeat is written every 15 s; Android slows a page's timers to once a minute when the screen is off or
+// another app is in front, so a peer counts as gone only after 75 s — and, in a call, not while its sound still comes
+const FRESH_MS = 75_000;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toPeer = (d: any): Peer => ({
   uid: d.uid || '', name: d.name || '', photoURL: d.photoURL || '', staff: !!d.staff, mic: d.mic !== false, cam: !!d.cam,
@@ -167,6 +169,9 @@ class Call {
   closed = false;
   audioCtx: AudioContext | null = null;
   meters = new Map<string, AnalyserNode>();
+  /** when each other phone's sound last arrived (from the connection's own counters) */
+  lastMedia = new Map<string, number>();
+  received = new Map<string, number>();
 
   constructor(info: CallInfo, local: MediaStream) {
     this.info = info;
@@ -194,7 +199,11 @@ class Call {
       this.publishPeers();
     };
     this.pc.onconnectionstatechange = () => {
-      if (this.pc.connectionState === 'failed' && !this.closed) leaveCall('კავშირი გაწყდა.');
+      if (this.closed) return;
+      const c = this.pc.connectionState;
+      if (c === 'failed') leaveCall('კავშირი გაწყდა. თუ ხშირად ხდება, სცადეთ სხვა ინტერნეტი (Wi-Fi ან მობილური).');
+      else if (c === 'disconnected') showHint('კავშირი შეფერხდა — ვცდილობ აღდგენას…');
+      else if (c === 'connected' && state.hint.startsWith('კავშირი')) set({ hint: '' });
     };
     this.session = (await api('/sessions/new', 'POST')).sessionId;
     for (const t of this.local.getTracks()) await this.push(t);
@@ -206,15 +215,49 @@ class Call {
       this.sync();
     });
     this.timers.push(window.setInterval(() => this.measure(), 300));
+    this.timers.push(window.setInterval(() => { void this.watchMedia(); }, 5000));
   }
 
+  /** Waits for the connection: after 8 s it says so on screen and waits on (20 s in all); a failed one stops the call. */
   connected() {
-    return new Promise<void>(resolve => {
+    return new Promise<void>((resolve, reject) => {
       const ok = () => this.pc.iceConnectionState === 'connected' || this.pc.iceConnectionState === 'completed';
       if (ok()) return resolve();
-      const t = window.setTimeout(resolve, 8000);
-      this.pc.addEventListener('iceconnectionstatechange', () => { if (ok()) { clearTimeout(t); resolve(); } });
+      const slow = window.setTimeout(() => showHint('კავშირი ნელა მყარდება…'), 8000);
+      const give = window.setTimeout(() => { done(); resolve(); }, 20_000);
+      const done = () => { clearTimeout(slow); clearTimeout(give); this.pc.removeEventListener('iceconnectionstatechange', onChange); };
+      const onChange = () => {
+        if (ok()) { done(); if (state.hint.startsWith('კავშირი')) set({ hint: '' }); resolve(); }
+        else if (this.pc.iceConnectionState === 'failed') { done(); reject(new Error('ice failed')); }
+      };
+      this.pc.addEventListener('iceconnectionstatechange', onChange);
     });
+  }
+
+  /** Notes whose sound is still arriving (bytes received per track), so a phone whose page timers Android slowed down
+   *  does not drop out of the call while it is still heard. */
+  async watchMedia() {
+    if (this.closed) return;
+    try {
+      const stats = await this.pc.getStats();
+      // a report names its track by mid (newer browsers) or by the receiving track's id
+      const byTrack = new Map(this.pc.getTransceivers().flatMap(t => {
+        const owner = this.midOwner.get(t.mid || '');
+        return owner && t.receiver.track ? [[t.receiver.track.id, owner] as const] : [];
+      }));
+      stats.forEach(r => {
+        if (r.type !== 'inbound-rtp' || r.kind !== 'audio') return;
+        const owner = this.midOwner.get(String(r.mid ?? '')) || byTrack.get(String(r.trackIdentifier ?? ''));
+        if (!owner) return;
+        const before = this.received.get(owner) ?? 0;
+        if (r.bytesReceived > before) { this.received.set(owner, r.bytesReceived); this.lastMedia.set(owner, Date.now()); }
+      });
+    } catch { /* no stats: the heartbeat alone decides */ }
+  }
+
+  /** still in the call: a fresh heartbeat, or their sound arrived within the last 20 s */
+  alive(p: Peer) {
+    return fresh(p) || Date.now() - (this.lastMedia.get(p.uid) ?? 0) < 20_000;
   }
 
   /** send one's microphone or camera */
@@ -253,7 +296,7 @@ class Call {
   /** receive the others' tracks; let go of those who left */
   sync() {
     if (this.closed) return;
-    const live = this.others.filter(p => fresh(p) && p.session);
+    const live = this.others.filter(p => this.alive(p) && p.session);
     if (live.length) this.everJoined = true;
     const seeVideo = this.videoFrom(live);
     const wanted = new Set<string>();
@@ -328,7 +371,7 @@ class Call {
 
   publishPeers() {
     if (this.closed) return;
-    const peers = this.others.filter(p => fresh(p) && p.session)
+    const peers = this.others.filter(p => this.alive(p) && p.session)
       .map(p => ({ ...p, stream: this.streams.get(p.uid) || null }));
     set({ peers, status: peers.length ? 'live' : this.everJoined ? 'live' : 'waiting' });
   }
@@ -366,6 +409,7 @@ class Call {
 
   close() {
     this.closed = true;
+    keepAwake(false);
     this.timers.forEach(t => clearInterval(t));
     this.offPeers?.();
     this.offEnd?.();
@@ -378,9 +422,29 @@ class Call {
 
 let current: Call | null = null;
 
+// the screen stays on while in a call (Android turns it off after a while, and a call in the dark gets cut);
+// the browser lets the lock go when the page is hidden, so it is taken again on coming back
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+let wakeLock: any = null;
+const keepAwake = (on: boolean) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const wl = (navigator as any).wakeLock;
+  if (!on) { wakeLock?.release?.().catch(() => {}); wakeLock = null; return; }
+  if (!wl || wakeLock || document.visibilityState !== 'visible') return;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  wl.request('screen').then((l: any) => { wakeLock = l; l.addEventListener?.('release', () => { wakeLock = null; }); }).catch(() => {});
+};
+
 // closing the tab or the app leaves the call at once (instead of the others waiting for the heartbeat to grow old)
 if (typeof window !== 'undefined') {
   window.addEventListener('pagehide', () => { if (current) leaveCall(); });
+  // back in front: the heartbeat at once, the screen kept on again, the sound woken up
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState !== 'visible' || !current) return;
+    current.writeMe().catch(() => {});
+    current.audioCtx?.resume().catch(() => {});
+    keepAwake(true);
+  });
 }
 
 const camera = (facing: 'user' | 'environment') =>
@@ -427,6 +491,7 @@ export const joinCall = async (info: CallInfo, kind: CallKind): Promise<boolean>
   const call = new Call(info, local);
   current = call;
   set({ local, cam: local.getVideoTracks().length > 0 });
+  keepAwake(true);
   try {
     await call.start();
     if (current !== call) return false;
@@ -437,7 +502,9 @@ export const joinCall = async (info: CallInfo, kind: CallKind): Promise<boolean>
     if (current === call) {
       current = null;
       await call.close();
-      set({ status: 'ended', note: 'ზარი ვერ დაიწყო. სცადეთ ცოტა ხანში.' });
+      set({ status: 'ended', note: (e as Error)?.message === 'ice failed'
+        ? 'კავშირი ვერ დამყარდა. სცადეთ სხვა ინტერნეტი (Wi-Fi ან მობილური) ან ცოტა ხანში.'
+        : 'ზარი ვერ დაიწყო. სცადეთ ცოტა ხანში.' });
     }
     return false;
   }
