@@ -179,7 +179,6 @@ export const ScheduleSheet: React.FC<{ cls: SchoolClass; open: boolean; onClose:
           <Btn size="lg" full icon={<Save />} disabled={!d.dirty || d.saving} onClick={async () => { if (await d.save()) onClose(); }}>{d.saving ? 'ინახება…' : 'შენახვა'}</Btn>
         </div>
       }>
-        <p className="mb-3 text-[13px] text-[#8a7a6a] leading-relaxed">დღე და საათი, როცა კლასს გაკვეთილი აქვს. მოსწავლეები ხედავენ თავის გზაზე და კლასის გვერდზე; დასწრების დღეებიც აქედან ჩნდება.</p>
         <ScheduleRows rows={d.rows} setRows={d.setRows} />
     </Sheet>
   );

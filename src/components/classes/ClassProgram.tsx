@@ -11,6 +11,21 @@ import { usePathItemOpener } from '../views/PathOrbs';
 import { WorkItems, currentWork, workDone } from '../teacher/MyClassWork';
 import { AssignmentsFold } from '../teacher/AssignmentsPanel';
 import { Avatar } from './ChatPanel';
+import { findVersion } from '../../data/chantLookup';
+import { variantLines } from '../../data/tsirvaChants';
+
+/** A program row's two lines: a chant's own name first, then its book, page, number and source, muted
+ *  („აკურთხევს სული ჩემი“ / „I ტომი · გვ. 212 · ხუნდაძე · №153“); a song or a poem keeps its title and code. */
+const programLines = (p: ProgramItem): { title: string; sub?: string } => {
+  const v = p.id ? findVersion(p.id) : undefined;
+  if (!v || !v.variant.page) return { title: p.title, sub: p.code };
+  const { top, sub } = variantLines(v.chant.id, v.chant.title, v.variant);
+  const segs = top.split(' · ');
+  // top = book · name · page
+  const name = segs.length >= 3 ? segs.slice(1, -1).join(' · ') : top;
+  const where = segs.length >= 3 ? `${segs[0]} · ${segs[segs.length - 1]}` : '';
+  return { title: name, sub: [where, sub].filter(Boolean).join(' · ') || p.code };
+};
 
 type Listed = ProgramItem & { id: string; key: string };
 
@@ -83,11 +98,12 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; actio
     const own = mine(p.id);
     const list: Voice[] = voiced ? ['1', '2', '3'] : ['1'];
     const openV = list.find(v => who === `${p.key}:${v}`);
+    const lines = programLines(p);
     const name = (
       <>
         <span className="min-w-0">
-          <span className="line-clamp-2 break-words text-[13.5px] leading-tight font-semibold text-[#2a2017]">{p.title}</span>
-          {p.code && <span className="block truncate text-[11.5px] leading-tight text-[#a4927c]">{p.code}</span>}
+          <span className="line-clamp-2 break-words text-[14px] leading-tight font-semibold text-[#2a2017]">{lines.title}</span>
+          {lines.sub && <span className="block mt-0.5 line-clamp-2 text-xs leading-tight text-[#a4927c]">{lines.sub}</span>}
           {p.note && <span className="block mt-0.5 text-[12px] leading-snug text-[#75685a] whitespace-pre-line">{p.note}</span>}
         </span>
         {go && <ChevronRight className="w-4 h-4 shrink-0 text-[#c4b49c] group-hover:text-[#7a2028]" />}

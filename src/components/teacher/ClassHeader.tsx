@@ -1,23 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
-import { BookOpen, CalendarClock, Check, ChevronRight, Info, PenLine, Plus, Upload } from 'lucide-react';
+import { doc, updateDoc } from 'firebase/firestore';
+import { Check, Info, PenLine, Upload } from 'lucide-react';
 import { db } from '../../firebase';
-import { useNavigation } from '../../context';
 import { SchoolClass, imageFileToDataUrl } from '../../hooks/useClasses';
-import { PsalterGroup, toGroup, useGroupNow } from '../../hooks/usePsalter';
-import { KATHISMA_COUNT, formatRange, readCount } from '../../utils/psalter';
 import { triggerHaptic } from '../../utils/haptics';
 import { ClassLogo } from '../classes/ClassLogo';
 import { CLASS_MODE_HINT } from '../admin/ClassesAdmin';
-import { openPsalterGroup } from '../psalter/selectedGroup';
-import { CreateGroupSheet } from '../../pages/PsalterPage';
-import { LessonPills, ScheduleSheet } from './Schedule';
-import { Bar, Btn, Card, Flash, IconBtn, useFlash } from '../ui/kit';
+import { Card, Flash, useFlash } from '../ui/kit';
 
-type Editable = Partial<Pick<SchoolClass, 'name' | 'logo' | 'classMode' | 'psalterGroupId'>>;
+type Editable = Partial<Pick<SchoolClass, 'name' | 'logo' | 'classMode'>>;
 
-// The top of the class tab: the class's logo and name (edited in place, saved at once), the class mode, and the
-// class's own psalter group — made by its teacher; a class without one shows a button to make it.
+// The class's ✎ window on the class page: the logo and name (edited in place, saved at once) and the class mode.
+// The timetable and the psalter group are edited where they show, on the class page itself (stage 2, 2026-10-25).
 export const ClassHeader: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
   const msg = useFlash();
   const fileRef = useRef<HTMLInputElement>(null);
@@ -87,93 +81,7 @@ export const ClassHeader: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
         </div>
       </div>
       {info && <p className="mt-2 text-[13px] text-[#75685a] leading-relaxed sg-in">{CLASS_MODE_HINT}</p>}
-      <ClassSchedule cls={cls} />
-      <ClassPsalter cls={cls} onLink={id => save({ psalterGroupId: id })} />
       {msg.flash && <div className="mt-3"><Flash flash={msg.flash} onClose={msg.clear} /></div>}
     </Card>
-  );
-};
-
-/** The lessons as chips (the next one filled in); the pencil opens the timetable's window. */
-const ClassSchedule: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
-  const [editing, setEditing] = useState(false);
-  const has = cls.schedule.length > 0;
-  // a place written on every lesson is shown once, beside the title
-  const notes = new Set(cls.schedule.map(s => s.note?.trim() || ''));
-  const place = notes.size === 1 ? [...notes][0] : '';
-  return (
-    <div className="mt-3.5 pt-3.5 border-t border-[#f1e8d9]">
-      <div className="flex items-center gap-3">
-        <span className="w-9 h-9 rounded-xl bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center shrink-0"><CalendarClock className="w-[18px] h-[18px]" /></span>
-        <span className="flex-1 min-w-0">
-          <span className="flex items-baseline gap-1.5 min-w-0">
-            <span className="text-sm font-bold text-[#4a3426]">გაკვეთილები</span>
-            {place && <span className="text-xs text-[#8a7a6a] truncate">· {place}</span>}
-          </span>
-          {has ? <LessonPills slots={cls.schedule} /> : <span className="block text-xs text-[#8a7a6a]">ცხრილი ჯერ არ არის</span>}
-        </span>
-        {has ? (
-          <IconBtn label="ცხრილის შეცვლა" onClick={() => setEditing(true)}><PenLine /></IconBtn>
-        ) : (
-          <Btn kind="soft" size="sm" icon={<Plus />} onClick={() => setEditing(true)}>დამატება</Btn>
-        )}
-      </div>
-      <ScheduleSheet cls={cls} open={editing} onClose={() => setEditing(false)} />
-    </div>
-  );
-};
-
-/** The class's own group, live; undefined while loading or when it can't be read. */
-const useClassGroup = (id?: string) => {
-  const [group, setGroup] = useState<PsalterGroup | null | undefined>(undefined);
-  useEffect(() => {
-    if (!id) { setGroup(null); return; }
-    setGroup(undefined);
-    return onSnapshot(doc(db, 'psalterGroups', id), s => setGroup(s.exists() ? toGroup(s.id, s.data()) : null), () => setGroup(undefined));
-  }, [id]);
-  return group;
-};
-
-const ClassPsalter: React.FC<{ cls: SchoolClass; onLink: (id: string) => Promise<void> }> = ({ cls, onLink }) => {
-  const group = useClassGroup(cls.psalterGroupId);
-  const [creating, setCreating] = useState(false);
-  if (group === undefined) return null;
-  const people = (list: SchoolClass['members']) => list.map(m => ({ uid: m.uid, name: m.name, photoURL: m.photoURL || '' }));
-  return (
-    <div className="mt-3.5 pt-3.5 border-t border-[#f1e8d9]">
-      {group ? <GroupLine group={group} /> : (
-        <div className="flex items-center gap-3">
-          <span className="w-9 h-9 rounded-xl bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center shrink-0"><BookOpen className="w-[18px] h-[18px]" /></span>
-          <span className="flex-1 min-w-0">
-            <span className="block text-sm font-bold text-[#4a3426]">ფსალმუნთა ჯგუფი</span>
-            <span className="block text-xs text-[#8a7a6a]">ჯერ არ შექმნილა</span>
-          </span>
-          <Btn kind="soft" size="sm" icon={<Plus />} onClick={() => setCreating(true)}>შექმნა</Btn>
-        </div>
-      )}
-      <CreateGroupSheet open={creating} onClose={() => setCreating(false)} onCreated={onLink}
-        preset={{ name: cls.name, members: people(cls.members), teachers: people(cls.teachers) }} />
-    </div>
-  );
-};
-
-/** The group in one line: name, members, the current cycle, kathismas read; a tap opens it on the psalter page. */
-const GroupLine: React.FC<{ group: PsalterGroup }> = ({ group }) => {
-  const { navigateTo } = useNavigation();
-  const { cycle, slots } = useGroupNow(group, null);
-  const read = readCount(slots);
-  return (
-    <button type="button" onClick={() => { openPsalterGroup(group.id); navigateTo('psalter'); }} className="w-full text-left cursor-pointer group">
-      <span className="flex items-center gap-3">
-        <span className="w-9 h-9 rounded-xl bg-[#7a2028] text-[#fbf6ec] flex items-center justify-center shrink-0"><BookOpen className="w-[18px] h-[18px]" /></span>
-        <span className="flex-1 min-w-0">
-          <span className="block text-sm font-bold text-[#2a2017] truncate">{group.name}</span>
-          <span className="block text-xs text-[#8a7a6a] truncate">ფსალმუნთა ჯგუფი · {group.members.length} წევრი{cycle ? ` · ${formatRange(cycle)}` : ''}</span>
-        </span>
-        <span className="text-sm font-bold tabular-nums text-[#7a2028]">{read}/{KATHISMA_COUNT}</span>
-        <ChevronRight className="w-4 h-4 text-[#b3a594] group-hover:text-[#7a2028] transition-colors" />
-      </span>
-      <span className="block mt-2 pl-12"><Bar value={read} max={KATHISMA_COUNT} tone={read === KATHISMA_COUNT ? 'green' : 'wine'} /></span>
-    </button>
   );
 };

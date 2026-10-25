@@ -123,8 +123,9 @@ export const useOpenShortcut = () => {
         return;
       }
       case 'page': navigateTo(ref as 'abituri' | 'messages' | 'admin'); return;
-      // the panels open on the tab they remember
-      case 'teacher': try { localStorage.setItem('sg-teacher-tab', ref); } catch { /* storage off */ } navigateTo('teacher'); return;
+      // an old teacher-panel button: the panel is gone, its parts live on the class page
+      case 'teacher': if (classes[0]) openClass(classes[0].id); else navigateTo('class'); return;
+      // the admin panel opens on the tab it remembers
       case 'admin': try { localStorage.setItem('sg-admin-tab', ref === 'requests' ? 'users' : ref); } catch { /* storage off */ } navigateTo('admin'); return;
       case 'section':
         if (ref === 'chvevebi') { openPathPanel('habits'); navigateTo('gz'); return; }
@@ -135,8 +136,7 @@ export const useOpenShortcut = () => {
         if (ref === 'liturgy') openProgram();
         else if (ref === 'commemoration') openCommemoration();
         else if (ref === 'calendar') openChurchCalendar();
-        else if (ref === 'teacher') navigateTo('teacher');
-        else if (ref === 'class') { if (classes[0]) openClass(classes[0].id); }
+        else if (ref === 'class' || ref === 'teacher') { if (classes[0]) openClass(classes[0].id); else navigateTo('class'); }
         else if (ref === 'kathisma') {
           // straight to this cycle's kathisma text, if I have one
           const g = groups.find(x => user && x.memberIds.includes(user.uid));

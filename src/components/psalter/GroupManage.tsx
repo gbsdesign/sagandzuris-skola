@@ -152,7 +152,6 @@ export const GroupManage: React.FC<{ group: PsalterGroup; onDeleted: () => void 
         <CardTitle
           icon={<Users />}
           title={`წევრები · ${group.members.length}`}
-          hint="დაამატე რეგისტრირებული მომხმარებლები; ვინც ჯგუფიდან გავა, მისი კანონი თავისუფალი ხდება."
         />
         <div className="flex flex-wrap gap-2 mb-3">
           <Btn icon={<UserPlus />} onClick={() => setPicking(true)}>წევრების დამატება</Btn>
@@ -187,7 +186,6 @@ export const GroupManage: React.FC<{ group: PsalterGroup; onDeleted: () => void 
         <CardTitle
           icon={<LayoutGrid />}
           title="კანონების განაწილება"
-          hint="ვინ რომელ კანონს კითხულობს ახლა. ერთ კანონს შეიძლება ორი კითხულობდეს, ერთს — ორი კანონი ერგებოდეს."
         />
         {(unowned.length > 0 || reserve.length > 0) && (
           <div className="mb-3 p-3 rounded-2xl bg-amber-50 ring-1 ring-amber-200 text-[13px] text-amber-900 space-y-1">

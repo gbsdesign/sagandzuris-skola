@@ -79,13 +79,15 @@ function AppContent() {
   // the member's marks on their classes' programs, for the class page's "who knows this voice"
   useClassMarksSync();
 
-  // a tapped reminder may open the site as /?prayer=<id> or /?open=psalter|gz|teacher
+  // a tapped reminder may open the site as /?prayer=<id> or /?open=psalter|gz|teacher (the teacher panel is gone:
+  // „teacher“ opens the class page)
   const openFromUrl = (href: string) => {
     const url = new URL(href, window.location.origin);
     const prayerId = url.searchParams.get('prayer');
     const page = url.searchParams.get('open');
     if (prayerId && isPrayerId(prayerId)) openPrayer(prayerId);
-    else if (page === 'psalter' || page === 'gz' || page === 'teacher') navigateTo(page);
+    else if (page === 'psalter' || page === 'gz') navigateTo(page);
+    else if (page === 'teacher') navigateTo('class');
   };
   useEffect(() => {
     const url = new URL(window.location.href);

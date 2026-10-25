@@ -1,31 +1,36 @@
 import React, { useEffect, useState } from 'react';
-import { Users, MessageCircle, Loader2, ChevronDown, Pencil, Music4, Search, X } from 'lucide-react';
+import { Users, MessageCircle, Loader2, ChevronDown, Pencil, Music4, Search, X, CalendarClock, Plus } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
 import { useNotes } from '../context/NotesContext';
-import { useMyClasses, useAllClasses, useTeachingClasses, useManagedClasses } from '../hooks/useClasses';
+import { useMyClasses, useAllClasses, useTeachingClasses } from '../hooks/useClasses';
 import { ClassHeader } from '../components/teacher/ClassHeader';
 import { ClassProgramPanel } from '../components/teacher/ClassProgramPanel';
 import { ClassRoll } from '../components/teacher/StudentsOverview';
+import { LessonChips, ScheduleSheet } from '../components/teacher/Schedule';
 import { ClassLogo } from '../components/classes/ClassLogo';
 import { ClassChat } from '../components/classes/ClassChat';
 import { ClassProgram } from '../components/classes/ClassProgram';
+import { MembersWindow } from '../components/classes/MembersWindow';
+import { ClassPsalter } from '../components/psalter/ClassPsalter';
 import { Avatar } from '../components/classes/ChatPanel';
-import { Flash, IconBtn, PageBar, Sheet, useFlash } from '../components/ui/kit';
-import { ClassSettings } from './TeacherPage';
+import { Btn, Flash, IconBtn, PageBar, Sheet, useFlash } from '../components/ui/kit';
 import { openThread, Person } from '../hooks/useDirectChat';
 import type { ClassMember, SchoolClass } from '../hooks/useClasses';
 
-// the teacher's windows opened from the class page (the teacher panel's parts)
-type Panel = 'class' | 'program' | 'members';
+// the teacher's windows opened from the class page
+type Panel = 'class' | 'program' | 'members' | 'schedule';
 // a panel's card shown inside a window loses its own frame (no box in a box)
 const FLAT = 'space-y-4 [&>section]:p-0 [&>section]:bg-transparent [&>section]:ring-0 [&>section]:shadow-none';
+// the round buttons in the title bar that do something (not ✎)
+const BAR_BTN = 'bg-white/85 ring-1 ring-[#e8dcc8] !text-[#7a2028] hover:!bg-white';
 
-// A class's shared page: its members, program and chat. Members reach it from the class logo in the header. On a
-// computer the members stand in a column of their own on the left, as the chats do on the messages page; on a phone
-// they are a folded line at the top. Its teachers and admins also see ✏️ on each card and the teacher panel's parts in
-// place: the assignments beside the program, the timetable in the chat (📅), attendance and each member's window in
-// the members list — none of it shows to the members.
-export const ClassPage: React.FC = () => {
+// A class's shared page and, since the teacher panel was removed (redesign stage 2, 2026-10-25), its teachers' only
+// workplace. The title bar: the class's logo and name, its members and teachers; 🎵 today's liturgy and ✎ (name,
+// logo, mode) for its teachers, 💬 to the teacher for a member. Under it the timetable as chips (✎ edits it). Then the
+// members (a column of their own on a computer, a folded line on a phone; teachers get the roll with attendance),
+// the program with the assignments, the class's psalter group (`focus` = opened for it) and the chat. Nothing that
+// manages shows to the members.
+export const ClassPage: React.FC<{ classId?: string; focus?: 'psalter' }> = ({ classId, focus }) => {
   const { user, isAdmin, isTeacher } = useAuth();
   const { selectedClassId, handleGoBack, openDm } = useNavigation();
   const { openProgram } = useNotes();
@@ -37,7 +42,9 @@ export const ClassPage: React.FC = () => {
   const mine = useMyClasses(user?.uid);
   const { classes: all } = useAllClasses(isAdmin);
   const { classes: teaching } = useTeachingClasses(isTeacher ? user?.uid : null);
-  const cls = [...mine, ...teaching, ...all].find(c => c.id === selectedClassId) || mine[0];
+  const id = classId ?? selectedClassId;
+  // no class asked for (an old „teacher panel“ link): one's own class, else the first one taught
+  const cls = [...mine, ...teaching, ...all].find(c => c.id === id) || mine[0] || teaching[0];
 
   if (!cls) {
     return (
@@ -77,45 +84,64 @@ export const ClassPage: React.FC = () => {
   const canEdit = iTeach || isAdmin;
   const pencil = (p: Panel, label: string) => canEdit && <IconBtn label={label} tone="wine" onClick={() => setPanel(p)}><Pencil /></IconBtn>;
   const close = () => setPanel(null);
+  const teacherNames = cls.teachers.map(t => t.name).filter(Boolean).join(', ');
 
   return (
-    <div className="w-full max-w-2xl lg:max-w-5xl mx-auto px-1 py-4 sm:py-8 space-y-6 text-[#2a2017]">
-      {/* the one bar: ← · the class's name · ✎ for its teachers */}
-      <PageBar title={cls.name} onBack={handleGoBack} right={pencil('class', 'კლასის სახელი, ლოგო, რეჟიმი, ფსალმუნთა ჯგუფი')} />
+    <div className="w-full max-w-2xl lg:max-w-5xl mx-auto px-1 py-4 sm:py-6 space-y-4 text-[#2a2017]">
+      <PageBar
+        title={cls.name}
+        subtitle={`${cls.members.length} წევრი${teacherNames ? ` · ${teacherNames}` : ''}`}
+        onBack={handleGoBack}
+        // the logo beside the name where there is room (a phone has it in the header's „კლასი“ already)
+        lead={<span className="hidden min-[480px]:block shrink-0"><ClassLogo name={cls.name} logo={cls.logo} className="w-11 h-11 text-lg" /></span>}
+        right={
+          <>
+            {canEdit && <IconBtn label="დღევანდელი წირვა" className={BAR_BTN} onClick={openProgram}><Music4 /></IconBtn>}
+            {myTeachers.length === 1 && (
+              <IconBtn label="მისწერე მასწავლებელს" className={BAR_BTN} disabled={opening === myTeachers[0].uid} onClick={() => writeTo(myTeachers[0], true)}>
+                {opening === myTeachers[0].uid ? <Loader2 className="animate-spin" /> : <MessageCircle />}
+              </IconBtn>
+            )}
+            {pencil('class', 'კლასის სახელი, ლოგო და რეჟიმი')}
+          </>
+        }
+      />
 
-      <header className="flex flex-col items-center text-center gap-3">
-        <ClassLogo name={cls.name} logo={cls.logo} className="w-24 h-24 text-4xl shadow-[0_0_0_4px_#fbf6ec,0_0_0_5px_#e8dcc8]" />
-        <p className="text-sm text-[#8a7a6a]">
-          {cls.members.length} წევრი{cls.teachers.length > 0 && ` · მასწავლებელი: ${cls.teachers.map(t => t.name).join(', ')}`}
-        </p>
-        {myTeachers.length > 0 && (
-          <div className="flex flex-wrap justify-center gap-2 mt-1">
-            {myTeachers.map(t => (
-              <button
-                key={t.uid}
-                type="button"
-                onClick={() => writeTo(t, true)}
-                disabled={opening === t.uid}
-                className="h-11 max-w-full pl-1.5 pr-4 rounded-full bg-white ring-1 ring-[#7a2028]/25 hover:ring-[#7a2028]/45 text-[#7a2028] text-sm font-bold inline-flex items-center gap-2 cursor-pointer active:scale-95 transition disabled:opacity-60"
-              >
-                <Avatar name={t.name} photoURL={t.photoURL} className="w-8 h-8 text-sm" />
-                <span className="truncate">{myTeachers.length > 1 ? `მისწერეთ: ${t.name}` : 'მისწერეთ მასწავლებელს'}</span>
-                {opening === t.uid ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" /> : <MessageCircle className="w-4 h-4 shrink-0" />}
-              </button>
-            ))}
-          </div>
-        )}
-        {dmErr && <p className="text-sm text-[#a02c2c]">{dmErr}</p>}
-        {/* the teacher panel's part that has no card on this page */}
-        {canEdit && (
-          <div className="flex flex-wrap justify-center gap-2 mt-1">
-            <TeacherBtn icon={<Music4 />} onClick={openProgram}>დღევანდელი მსახურება</TeacherBtn>
-          </div>
-        )}
-        {msg.flash && <div className="w-full text-left"><Flash flash={msg.flash} onClose={msg.clear} /></div>}
-      </header>
+      {/* two or more teachers: one button each */}
+      {myTeachers.length > 1 && (
+        <div className="flex flex-wrap gap-2">
+          {myTeachers.map(t => (
+            <button
+              key={t.uid}
+              type="button"
+              onClick={() => writeTo(t, true)}
+              disabled={opening === t.uid}
+              className="h-11 max-w-full pl-1.5 pr-4 rounded-full bg-white ring-1 ring-[#7a2028]/25 hover:ring-[#7a2028]/45 text-[#7a2028] text-sm font-bold inline-flex items-center gap-2 cursor-pointer active:scale-95 transition disabled:opacity-60"
+            >
+              <Avatar name={t.name} photoURL={t.photoURL} className="w-8 h-8 text-sm" />
+              <span className="truncate">{t.name}</span>
+              {opening === t.uid ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" /> : <MessageCircle className="w-4 h-4 shrink-0" />}
+            </button>
+          ))}
+        </div>
+      )}
 
-      <div className="space-y-6 lg:space-y-0 lg:grid lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6 lg:items-start">
+      {/* the timetable: chips, the next lesson filled in; ✎ for the teachers */}
+      {cls.schedule.length > 0 ? (
+        <div className="flex items-center gap-2">
+          <div className="flex-1 min-w-0">
+            <LessonChips slots={cls.schedule} lead={<CalendarClock className="w-[18px] h-[18px] shrink-0 text-[#7a2028] mr-0.5" aria-label="გაკვეთილები" />} />
+          </div>
+          {canEdit && <IconBtn label="ცხრილის შეცვლა" onClick={() => setPanel('schedule')}><Pencil /></IconBtn>}
+        </div>
+      ) : canEdit ? (
+        <Btn kind="soft" size="sm" icon={<Plus />} onClick={() => setPanel('schedule')}>გაკვეთილების ცხრილი</Btn>
+      ) : null}
+
+      {dmErr && <p className="text-sm text-[#a02c2c]">{dmErr}</p>}
+      {msg.flash && <Flash flash={msg.flash} onClose={msg.clear} />}
+
+      <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6 lg:items-start">
         <ClassMembers
           cls={cls}
           canEdit={canEdit}
@@ -124,9 +150,10 @@ export const ClassPage: React.FC = () => {
           onWrite={iTeach ? m => writeTo(m, false) : undefined}
           writing={opening}
         />
-        <div className="min-w-0 space-y-6">
+        <div className="min-w-0 space-y-4">
           <ClassProgram cls={cls} canEdit={canEdit} action={pencil('program', 'პროგრამის რედაქტირება')} />
-          <ClassChat cls={cls} />
+          <ClassPsalter cls={cls} canLead={canEdit} focus={focus === 'psalter'} />
+          <ClassChat cls={cls} timetable={false} />
         </div>
       </div>
 
@@ -138,6 +165,7 @@ export const ClassPage: React.FC = () => {
           <Sheet open={panel === 'program'} onClose={close} title="პროგრამის რედაქტირება" wide>
             <div className={FLAT}><ClassProgramPanel cls={cls} /></div>
           </Sheet>
+          <ScheduleSheet cls={cls} open={panel === 'schedule'} onClose={close} />
           {panel === 'members' && <MembersWindow cls={cls} onMessage={msg.say} onClose={close} />}
         </>
       )}
@@ -257,17 +285,4 @@ const ClassMembers: React.FC<{
       )}
     </section>
   );
-};
-
-const TeacherBtn: React.FC<{ icon: React.ReactNode; onClick: () => void; children: React.ReactNode }> = ({ icon, onClick, children }) => (
-  <button type="button" onClick={onClick}
-    className="h-11 max-w-full px-4 rounded-full bg-white ring-1 ring-[#7a2028]/25 hover:ring-[#7a2028]/45 text-[#7a2028] text-sm font-bold inline-flex items-center gap-2 cursor-pointer active:scale-95 transition [&>svg]:w-4 [&>svg]:h-4 [&>svg]:shrink-0">
-    {icon}<span className="truncate">{children}</span>
-  </button>
-);
-
-/** The class's members window from the teacher panel (add from the people list, take out). */
-const MembersWindow: React.FC<{ cls: SchoolClass; onMessage: (text: string, type: 'success' | 'error') => void; onClose: () => void }> = ({ cls, onMessage, onClose }) => {
-  const { classes } = useManagedClasses();
-  return <ClassSettings cls={cls} classes={classes.some(c => c.id === cls.id) ? classes : [cls, ...classes]} onMessage={onMessage} onClose={onClose} />;
 };

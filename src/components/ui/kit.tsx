@@ -27,7 +27,7 @@ const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).jo
  * bottom left on a phone (thumb reach; it steps aside while scrolling down), in the empty margin left of the page
  * column on a computer, where it covers nothing.
  */
-export const PageBar: React.FC<{ title: React.ReactNode; subtitle?: React.ReactNode; onBack?: () => void; right?: React.ReactNode; className?: string }> = ({ title, subtitle, onBack, right, className }) => {
+export const PageBar: React.FC<{ title: React.ReactNode; subtitle?: React.ReactNode; onBack?: () => void; right?: React.ReactNode; className?: string; lead?: React.ReactNode }> = ({ title, subtitle, onBack, right, className, lead }) => {
   const barRef = useRef<HTMLDivElement>(null);
   const [away, setAway] = useState(false);
   const [down, setDown] = useState(false);
@@ -71,9 +71,11 @@ export const PageBar: React.FC<{ title: React.ReactNode; subtitle?: React.ReactN
             <ArrowLeft className="w-5 h-5" />
           </button>
         )}
+        {/* `lead`: a small picture beside the title (a class's logo) */}
+        {lead}
         <div className="min-w-0 flex-1">
           <h1 className="font-serif-ge text-[22px] sm:text-[26px] leading-tight font-bold text-[#4a3426] text-balance">{title}</h1>
-          {subtitle && <p className="mt-0.5 text-[13px] sm:text-sm text-[#8a7a6a]">{subtitle}</p>}
+          {subtitle && <p className="mt-0.5 text-[13px] sm:text-sm text-[#8a7a6a] truncate">{subtitle}</p>}
         </div>
         {right && <div className="flex items-center gap-1 shrink-0">{right}</div>}
       </div>

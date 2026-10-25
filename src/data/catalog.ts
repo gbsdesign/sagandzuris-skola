@@ -8,7 +8,7 @@ import { ANCESTORS } from './ancestorsBios';
 import { FEAST_GROUPS } from './library/feasts';
 import { loadLivesIndex } from './saintLives';
 import { MONTHS_GE } from '../utils/dateNames';
-import { ADMIN_TABS, LIBRARY_SHORT, SERVICES, TEACHER_TABS, labelled, shortcutLabel } from '../utils/shortcuts';
+import { ADMIN_TABS, LIBRARY_SHORT, SERVICES, labelled, shortcutLabel } from '../utils/shortcuts';
 
 // Everything a button can be made of, as a tree to unfold: the prayer book, the chants by service, the library's
 // books down to their chapters, the habits, songs by region, the great chanters and the app's own pages. The
@@ -206,7 +206,6 @@ export const buildCatalog = (who: CatalogWho): CatalogNode[] => prune([
     btn('st:mtk', 'section:mtkmeli'),
     btn('st:sak', 'section:sakravebi'),
   ], { id: 'section:gza' }),
-  branch('teacher', 'მასწავლებელი', Object.keys(TEACHER_TABS).map(t => btn(`t:${t}`, `teacher:${t}`)), { id: 'special:teacher' }),
   branch('admin', 'ადმინი', Object.keys(ADMIN_TABS).map(t => btn(`a:${t}`, `admin:${t}`)), { id: 'page:admin', icon: 'admin:users' }),
 ], who.allowed);
 
