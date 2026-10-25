@@ -126,6 +126,7 @@ export const useOpenShortcut = () => {
       case 'section':
         if (ref === 'chvevebi') { openPathPanel('habits'); navigateTo('gz'); return; }
         if (ref === 'medavitneoba') { navigateTo('psalter'); return; }
+        if (ref === 'tamashebi') { navigateTo('games'); return; }
         navigateTo((ref === 'gza' ? 'gz' : ref) as Parameters<typeof navigateTo>[0]);
         return;
       case 'special':

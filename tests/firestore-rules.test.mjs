@@ -2,7 +2,7 @@
 // "node tests/firestore-rules.test.mjs firestore.rules" (with firebase-tools and @firebase/rules-unit-testing installed
 // next to it; firebase.json sets the emulator port 8085). Every case below must pass before publishing the rules.
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, arrayUnion, arrayRemove, serverTimestamp, Bytes } from 'firebase/firestore';
 import { readFileSync } from 'node:fs';
 
 const rules = readFileSync(process.argv[2], 'utf8');
@@ -218,6 +218,23 @@ await t('member marks own steps', assertSucceeds(setDoc(doc(stu, 'classes', 'c1'
 await t('member cannot mark for another', assertFails(setDoc(doc(stu, 'classes', 'c1', 'lessonProgress', 'stu2'), { done: {}, updatedAt: 'x' })));
 await t('teacher reads the progress', assertSucceeds(getDocs(collection(tch, 'classes', 'c1', 'lessonProgress'))));
 await t("member cannot read the others' progress", assertFails(getDocs(collection(stu, 'classes', 'c1', 'lessonProgress'))));
+
+// ---- the pearls game: the member's own tries, the teacher's approval, the kept takes
+const take = (score = 85) => ({ audio: Bytes.fromUint8Array(new Uint8Array(2000)), mime: 'audio/mpeg', score, voice: '1', at: 'x' });
+await t('member saves own pearls', assertSucceeds(setDoc(doc(stu, 'students', 'stu'), { pearls: { 'v-5-x58': { best: 85, voice: '1', at: 'x' } } }, { merge: true })));
+await t('member cannot write own manera marks', assertFails(updateDoc(doc(stu, 'students', 'stu'), { maneraReview: { a: 1 } })));
+await t('member cannot lift own marking lock', assertFails(setDoc(doc(stu, 'students', 'stu'), { marksLock: false }, { merge: true })));
+await t('member cannot delete own record', assertFails(deleteDoc(doc(stu, 'students', 'stu'))));
+await t('member cannot approve own pearl', assertFails(setDoc(doc(stu, 'students', 'stu'), { pearlShine: { 'v-5-x58': { voice: '1', by: 'stu', at: 'x' } } }, { merge: true })));
+await t('teacher approves a pearl', assertSucceeds(setDoc(doc(tch, 'students', 'stu'), { pearlShine: { 'v-5-x58': { voice: '1', by: 'tch', at: 'x' } }, updatedAt: 'x' }, { merge: true })));
+await t("teacher cannot change the member's pearls", assertFails(setDoc(doc(tch, 'students', 'stu'), { pearls: { 'v-5-x58': { best: 100, voice: '1', at: 'x' } } }, { merge: true })));
+await t('member keeps a take', assertSucceeds(setDoc(doc(stu, 'pearlTakes', 'stu', 'takes', 'v-5-x58'), take())));
+await t('member cannot keep a take for another', assertFails(setDoc(doc(stu, 'pearlTakes', 'stu2', 'takes', 'v-5-x58'), take())));
+await t('a take must be sound bytes', assertFails(setDoc(doc(stu, 'pearlTakes', 'stu', 'takes', 'v-7-x59'), { ...take(), audio: 'x' })));
+await t('a take stays small', assertFails(setDoc(doc(stu, 'pearlTakes', 'stu', 'takes', 'v-7-x59'), { ...take(), audio: Bytes.fromUint8Array(new Uint8Array(700000)) })));
+await t("the member's teacher hears the takes", assertSucceeds(getDocs(collection(tch, 'pearlTakes', 'stu', 'takes'))));
+await t('another teacher does not', assertFails(getDocs(collection(tch2, 'pearlTakes', 'stu', 'takes'))));
+await t('another member does not', assertFails(getDocs(collection(stu2, 'pearlTakes', 'stu', 'takes'))));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();

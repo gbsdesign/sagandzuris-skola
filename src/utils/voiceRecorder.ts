@@ -33,12 +33,12 @@ export interface VoiceRecording {
 export const voiceRecordingSupported = () =>
   typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia && typeof MediaRecorder !== 'undefined';
 
-const pickMime = () =>
+export const pickMime = () =>
   ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/webm']
     .find(t => MediaRecorder.isTypeSupported?.(t)) || '';
 
 // recorder output (webm / mp4 / ogg, whatever the browser makes) -> mono 24 kHz MP3
-const toMp3 = async (blob: Blob): Promise<VoiceTake> => {
+export const toMp3 = async (blob: Blob): Promise<VoiceTake> => {
   const Ctx = window.AudioContext || (window as any).webkitAudioContext;
   const ctx: AudioContext = new Ctx();
   try {

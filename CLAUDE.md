@@ -217,7 +217,15 @@ psalter group inside the class). 3 library lighter (no plates under the books). 
 listens (Gemini through Firebase AI Logic). 8 calls on Android (wake lock, push, TURN key from the user).
 
 1–3. Built (see above).
-4. Pearls/chests game: listen → sing (mic pitch check) → teacher approves. First chest = vol. IX №58–77.
+4. Pearls/chests game — built 2026-10-25 (redesign stage 7, branch `claude/dazzling-goodall-inv60p`): page `games`
+   (section `tamashebi`, still „მალე“ until the admin opens it; admins see it open). Chests in `data/pearls.ts` (first =
+   vol. IX №58–77), the first phrase of the chosen voice from the book notes (`utils/pearls.ts` `phraseOf`), singing
+   heard in the browser (`utils/pitch.ts`: YIN pitch, notes, key-free score; ≥80% polishes; `utils/singCapture.ts`),
+   sheet `components/pearls/PearlSheet.tsx`. Best try in `students.pearls`, best take (MP3) in
+   `pearlTakes/{uid}/takes/{versionId}`; the teacher hears it and approves („ჩათვლა“ → `students.pearlShine`, teachers
+   only) in the member's window (`PearlReview`). „AI მასწავლებელი“ (`utils/aiTeacher.ts`, gemini-3.8-flash through
+   Firebase AI Logic with the try-on's App Check; 3 a day per device, superadmins unlimited) — works only on the
+   deployed site. Tested in the emulator with a fake microphone WAV (Chromium `--use-file-for-fake-audio-capture`).
 5. **My voice**: the user wants AI to learn their voice. Plan discussed 2026-10-06: speech via ElevenLabs
    voice cloning (supports Georgian); singing via RVC voice conversion (Applio on Google Colab — the user's
    PC has only a 2 GB MX130 GPU). Generated audio is made in advance and served like other recordings.

@@ -73,17 +73,19 @@ service cloud.firestore {
       }
 
       allow read: if isSelf() || isAdmin() || teachesMe();
-      // "მანერა" marks (maneraReview) and the stop on the student's own marking (marksLock) come only from teachers
-      // and admins: the student reads them, never writes them
-      allow create: if (isSelf() && !incoming().keys().hasAny(['maneraReview', 'marksLock'])) || isAdmin();
-      // teachers may only arrange the student's path ("საგანძურის გზა"), switch the kids' mode, mark the manera and
-      // lock the student's marking
-      allow update: if (isSelf() && !changed().hasAny(['maneraReview', 'marksLock'])) || isAdmin()
-        || (teachesMe() && changed().hasOnly(['selectedChantVariants', 'kidsMode', 'maneraReview', 'marksLock', 'updatedAt']))
+      // "მანერა" marks (maneraReview), the stop on the student's own marking (marksLock) and the pearls a teacher
+      // approved (pearlShine) come only from teachers and admins: the student reads them, never writes them
+      allow create: if (isSelf() && !incoming().keys().hasAny(['maneraReview', 'marksLock', 'pearlShine'])) || isAdmin();
+      // teachers may only arrange the student's path ("საგანძურის გზა"), switch the kids' mode, mark the manera,
+      // lock the student's marking and approve pearls
+      allow update: if (isSelf() && !changed().hasAny(['maneraReview', 'marksLock', 'pearlShine'])) || isAdmin()
+        || (teachesMe() && changed().hasOnly(['selectedChantVariants', 'kidsMode', 'maneraReview', 'marksLock', 'pearlShine', 'updatedAt']))
         || becomingTeacher();
       allow delete: if isAdmin();
 
-      match /{allSubcollections=**} {
+      // the student's own subcollections (none in use yet). „{sub}/{rest=**}“, not „{all=**}“: a bare „**“ also
+      // matches the student document itself and let the student write the teacher-only fields above
+      match /{sub}/{rest=**} {
         allow read, write: if (isSignedIn() && uid() == userId) || isAdmin();
       }
     }
@@ -148,6 +150,22 @@ service cloud.firestore {
       }
       allow read: if (isSignedIn() && uid() == userId) || isAdmin() || teachesStudent();
       allow write: if isAdmin() || teachesStudent();
+    }
+
+    // ---- The pearls game (src/hooks/usePearls.ts) ----------------------------------------------------------------
+    // A member's best take of each pearl (a short MP3), for their teachers to hear before they approve it.
+    match /pearlTakes/{userId}/takes/{versionId} {
+      function teachesStudent() {
+        return isTeacher()
+          && uid() in get(/databases/$(database)/documents/students/$(userId)).data.get('teacherIds', []);
+      }
+      function isSelf() { return isSignedIn() && uid() == userId; }
+      allow read: if isSelf() || isAdmin() || teachesStudent();
+      allow create, update: if isSelf()
+        && request.resource.data.keys().hasOnly(['audio', 'mime', 'score', 'voice', 'at'])
+        && request.resource.data.audio is bytes && request.resource.data.audio.size() < 600000
+        && request.resource.data.score is number && request.resource.data.voice in ['1', '2', '3'];
+      allow delete: if isSelf() || isAdmin();
     }
 
     // ---- Directory: name and photo of everyone signed in, so teachers can add people to their classes
