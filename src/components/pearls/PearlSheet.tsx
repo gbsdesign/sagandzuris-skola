@@ -7,6 +7,7 @@ import { phraseOf, PearlRecord, PearlShine, pearlState, VOICE_NAMES, noteName } 
 import { POLISH_SHARE, notesFromFrames, scoreSinging } from '../../utils/pitch';
 import { startSinging, singingSupported, SingSession } from '../../utils/singCapture';
 import { savePearl, saveTake } from '../../hooks/usePearls';
+import { takeReport } from '../../utils/takeReport';
 import { askAiTeacher, aiTriesLeft, AiTeacherError, AI_PROBLEM_TEXT } from '../../utils/aiTeacher';
 import { useNotes } from '../../context/NotesContext';
 import { triggerHaptic } from '../../utils/haptics';
@@ -18,7 +19,7 @@ import type { Voice } from '../../utils/pathItems';
 // listens to a take and answers in a few words.
 
 type Phase = 'idle' | 'listening' | 'singing' | 'scoring' | 'done';
-interface Result { pct: number; hits: boolean[]; offset: number; mp3: Blob | null }
+interface Result { pct: number; hits: boolean[]; offset: number; mp3: Blob | null; report: string[] }
 
 export const STATE_TEXT = { new: 'ახალი', tried: 'დაწყებული', polished: 'გაპრიალებული', shining: 'ბრწყინავს' } as const;
 const VOICES: Voice[] = ['1', '2', '3'];
@@ -101,10 +102,11 @@ export const PearlSheet: React.FC<{
     session.current = null;
     setPhase('scoring');
     const take = await s.stop();
-    const r = scoreSinging(phrase.target, notesFromFrames(take.frames));
+    const sung = notesFromFrames(take.frames);
+    const r = scoreSinging(phrase.target, sung);
     const pct = Math.round(r.share * 100);
     offset.current = r.offset;
-    setResult({ pct, hits: r.hits, offset: r.offset, mp3: take.mp3 });
+    setResult({ pct, hits: r.hits, offset: r.offset, mp3: take.mp3, report: takeReport(phrase, r, sung) });
     setPhase('done');
     triggerHaptic(pct >= POLISH_SHARE * 100 ? 30 : 12);
     if (!uid) return;
@@ -173,6 +175,7 @@ export const PearlSheet: React.FC<{
         voice: VOICE_NAMES[voice],
         notes: phrase.target.map(noteName),
         hit: result.hits.filter(Boolean).length,
+        report: result.report,
       }, unlimited);
       setAi({ busy: false, text, problem: '' });
     } catch (e) {
