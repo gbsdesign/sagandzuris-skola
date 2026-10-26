@@ -24,7 +24,7 @@ export const SECTIONS: SectionDef[] = [
   // „მედავითნეობა“ on the vine: a topic of its own, not built yet (the psalter group keeps the old id)
   { id: 'medavitneobaTopic', label: 'მედავითნეობა', hint: 'ჯერ მზადდება' },
   { id: 'chvevebi', label: 'ჩვევები', page: 'gz', hint: 'ლოცვები ჩვევებიდან იხსნება' },
-  { id: 'tamashebi', label: 'თამაშები', hint: 'ჯერ მზადდება' },
+  { id: 'tamashebi', label: 'თამაშები', page: 'games', hint: 'მარგალიტები: მოისმინე, იმღერე, გააპრიალე' },
   { id: 'tsinaprebi', label: 'გაიცანი წინაპრები', page: 'tsinaprebi' },
   { id: 'gza', label: 'საგანძურის გზა', page: 'gz' },
   { id: 'biblioteka', label: 'ბიბლიოთეკა', page: 'biblioteka' },
@@ -39,7 +39,8 @@ export const sectionOfPage = (page: PageType): SectionId | null => {
 
 export type SectionState = 'open' | 'soon' | 'hidden';
 
-/** Without the admin's settings: everything built is open, games, the psalter group and მედავითნეობა are "მალე". */
+/** Without the admin's settings: everything built is open; games (until the admin opens them), the psalter group and
+ *  მედავითნეობა are "მალე". */
 export const DEFAULT_SECTION_STATE: Record<SectionId, SectionState> = {
   galoba: 'open', simghera: 'open', mtkmeli: 'open', sakravebi: 'open', medavitneoba: 'soon', medavitneobaTopic: 'soon',
   chvevebi: 'open', tamashebi: 'soon', tsinaprebi: 'open', gza: 'open', biblioteka: 'open',

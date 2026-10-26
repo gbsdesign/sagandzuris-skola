@@ -17,7 +17,7 @@ export const TRYON_TOTAL = 10;
 // Fraud Defense). Switched on at the first try, so the other pages never load reCAPTCHA.
 const RECAPTCHA_KEY = '6LdS3_YtAAAAAFomGteA1WGyDA9WFkb8C3usatET';
 let appCheckOn: Promise<void> | null = null;
-const startAppCheck = () =>
+export const startAppCheck = () =>
   (appCheckOn ??= import('firebase/app-check').then(({ initializeAppCheck, ReCaptchaEnterpriseProvider }) => {
     initializeAppCheck(getApp(), { provider: new ReCaptchaEnterpriseProvider(RECAPTCHA_KEY), isTokenAutoRefreshEnabled: false });
   }));

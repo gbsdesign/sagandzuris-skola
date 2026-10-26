@@ -18,6 +18,7 @@ import { WEEKDAYS_SHORT_GE } from '../../utils/dateNames';
 import { abilitiesText, interestsText } from '../../utils/profileFields';
 import { syncKidsFlag } from '../../hooks/useDirectChat';
 import { Avatar as Face } from '../classes/ChatPanel';
+import { PearlReview } from '../pearls/PearlReview';
 
 const VOICE = { '1': 'მთქმელი', '2': 'მოძახილი', '3': 'ბანი' } as Record<string, string>;
 const MONTHS = ['იანვარში', 'თებერვალში', 'მარტში', 'აპრილში', 'მაისში', 'ივნისში', 'ივლისში', 'აგვისტოში', 'სექტემბერში', 'ოქტომბერში', 'ნოემბერში', 'დეკემბერში'];
@@ -268,7 +269,7 @@ const StudentSheet: React.FC<{
         {(['info', 'path', 'manera'] as const).map(v => (
           <button key={v} type="button" onClick={() => setView(v)}
             className={`h-10 rounded-xl text-sm font-bold cursor-pointer ${view === v ? 'bg-[#7a2028] text-[#fbf6ec]' : 'text-[#4a3426]'}`}>
-            {v === 'info' ? 'მიმოხილვა' : v === 'path' ? 'გზა' : 'მანერა'}
+            {v === 'info' ? 'მიმოხილვა' : v === 'path' ? 'გზა' : 'ოსტატობა'}
           </button>
         ))}
       </div>
@@ -313,6 +314,8 @@ const StudentSheet: React.FC<{
             {s.abituri && <Row label="აბიტურიენტი">{s.abituri}</Row>}
             <Row label="სამუშაო განრიგი">{schedule.length ? schedule.map(([d, h]) => `${d}: ${h}`).join(' · ') : 'არ არის გაწერილი'}</Row>
           </dl>
+
+          <PearlReview uid={uid} pearls={record.data.pearls} shine={record.data.pearlShine} />
 
           {/* kids' mode: the teacher turns it on; the student can't turn it off */}
           <div className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] px-3.5 pb-3">

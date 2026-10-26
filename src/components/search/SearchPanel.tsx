@@ -144,7 +144,7 @@ export const SearchPanel: React.FC<{
 
   const placed = usePlacements(); // a moved recording changes the song list
   const index = useMemo(
-    () => buildSearchIndex({ signedIn: !!user, owner: isOwner, teacher: isTeacher, hasClass: classes.length > 0 }),
+    () => buildSearchIndex({ signedIn: !!user, owner: isOwner, teacher: isTeacher, hasClass: classes.length > 0 || isTeacher }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [user, isOwner, isTeacher, classes.length, placed]
   );

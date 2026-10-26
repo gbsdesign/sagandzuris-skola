@@ -225,7 +225,7 @@ export const PersonSheet: React.FC<{
 
           {/* a member's manera, marked here by admins (teachers mark it from their panel) */}
           {admitted && !isStaff && (
-            <Part title="მანერა" sub="შეფასება და შენიშვნა თითოეულ რჩევაზე">
+            <Part title="ოსტატობა" sub="შეფასება და შენიშვნა თითოეულ რჩევაზე">
               <ManeraReviewEditor uid={u.userId} />
             </Part>
           )}

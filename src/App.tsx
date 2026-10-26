@@ -36,6 +36,7 @@ import { useKidsMode } from './hooks/useAccess';
 import { useClassMarksSync } from './hooks/useClassMarks';
 import { MembershipGate, WaitingBanner } from './components/access/MembershipGate';
 import { useMembership } from './utils/memberAccess';
+import { useBirthdaySync } from './utils/birthdays';
 
 startRecordingBindings();
 startPlacements();
@@ -78,14 +79,18 @@ function AppContent() {
   usePrayerReminderScheduler(openPrayer);
   // the member's marks on their classes' programs, for the class page's "who knows this voice"
   useClassMarksSync();
+  // my day and month for everyone's birthdays list (utils/birthdays)
+  useBirthdaySync();
 
-  // a tapped reminder may open the site as /?prayer=<id> or /?open=psalter|gz|teacher
+  // a tapped reminder may open the site as /?prayer=<id> or /?open=psalter|gz|teacher (the teacher panel is gone:
+  // „teacher“ opens the class page)
   const openFromUrl = (href: string) => {
     const url = new URL(href, window.location.origin);
     const prayerId = url.searchParams.get('prayer');
     const page = url.searchParams.get('open');
     if (prayerId && isPrayerId(prayerId)) openPrayer(prayerId);
-    else if (page === 'psalter' || page === 'gz' || page === 'teacher') navigateTo(page);
+    else if (page === 'psalter' || page === 'gz') navigateTo(page);
+    else if (page === 'teacher') navigateTo('class');
   };
   useEffect(() => {
     const url = new URL(window.location.href);

@@ -1,6 +1,6 @@
-import React, { lazy, useEffect, useRef } from 'react';
+import React, { lazy, useEffect, useRef, useState } from 'react';
 import { useNavigation, useChants, useAuth, PageType } from '../context';
-import { WifiOff, RefreshCw } from 'lucide-react';
+import { WifiOff, RefreshCw, Loader2 } from 'lucide-react';
 import { PageBar } from '../components/ui/kit';
 import { PinButton } from '../components/home/ShortcutShelf';
 import { ProfileActions } from '../components/views/ProfileActions';
@@ -16,6 +16,9 @@ import { ShortcutShelf } from '../components/home/ShortcutShelf';
 import { useAccess } from '../hooks/useAccess';
 import { LockedPage } from '../components/access/SignInPrompt';
 import { SECTIONS, sectionOfPage } from '../data/sections';
+import { useMyPsalterGroups } from '../hooks/usePsalter';
+import { useAllClasses, useMyClasses, useTeachingClasses } from '../hooks/useClasses';
+import { useSelectedGroupId } from '../components/psalter/selectedGroup';
 
 // Fetches the newest version of the app (the service worker takes over at once — registerType 'autoUpdate') and
 // starts it again. A page's file that is missing while online means a newer version was published after this tab
@@ -100,10 +103,32 @@ const PrayerPage = page(() => import('../pages/PrayerPage'), 'PrayerPage');
 const CommemorationPage = page(() => import('../pages/CommemorationPage'), 'CommemorationPage');
 const LibraryPage = page(() => import('../pages/LibraryPage'), 'LibraryPage');
 const PsalterPage = page(() => import('../pages/PsalterPage'), 'PsalterPage');
-const TeacherPage = page(() => import('../pages/TeacherPage'), 'TeacherPage');
 const MessagesPage = page(() => import('../pages/MessagesPage'), 'MessagesPage');
 const AbituriPage = page(() => import('../pages/AbituriPage'), 'AbituriPage');
 const OfflinePage = page(() => import('../pages/OfflinePage'), 'OfflinePage');
+const BirthdaysPage = page(() => import('../pages/BirthdaysPage'), 'BirthdaysPage');
+const GamesPage = page(() => import('../pages/GamesPage'), 'GamesPage');
+
+/** „ფსალმუნთა ჯგუფი“ (the vine, the home tile, a reminder): the class page of the group's class, opened at its psalter
+ *  section; a group no class holds (made before 2026-10-20) keeps the old group page. Waits a moment for the classes. */
+const PsalterOrClass: React.FC = () => {
+  const { user, isAdmin, isTeacher } = useAuth();
+  const { groups, loading } = useMyPsalterGroups(user?.uid);
+  const selectedId = useSelectedGroupId();
+  const mine = useMyClasses(user?.uid);
+  const { classes: teaching } = useTeachingClasses(isTeacher ? user?.uid : null);
+  const { classes: all } = useAllClasses(isAdmin);
+  const [waited, setWaited] = useState(false);
+  useEffect(() => {
+    const t = window.setTimeout(() => setWaited(true), 1500);
+    return () => window.clearTimeout(t);
+  }, []);
+  const group = groups.find(g => g.id === selectedId) || groups[0];
+  const cls = group && [...mine, ...teaching, ...all].find(c => c.psalterGroupId === group.id);
+  if (cls) return <ClassPage classId={cls.id} focus="psalter" />;
+  if (user && (loading || (group && !waited))) return <div className="py-24 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-[#7a2028]" /></div>;
+  return <PsalterPage />;
+};
 
 interface AppRouterProps {
   logoUrl: string;
@@ -121,10 +146,17 @@ const PAGE_TITLES: Partial<Record<PageType, string>> = {
   abituri: 'აბიტურიენტს',
   offline: 'ოფლაინ რეჟიმი',
   commemoration: 'მოსახსენებელი',
+  birthdays: 'დაბადების დღეები',
+  games: 'თამაშები',
+};
+// an open library book shows its own name in the bar (the shelf's covers; LibraryPage's `mapItem` „book:12“)
+const LIBRARY_BOOKS: Record<string, string> = {
+  book: 'საღმრთო ისტორია', lives: 'წმიდანთა ცხოვრება', feasts: 'დღესასწაულები', prayers: 'ლოცვანი',
+  sasuliero: 'სასულიერო წიგნები', audio: 'საგალობლების mp3',
 };
 
 export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
-  const { currentPage, selectedPrayerId, handleGoBack, navigateTo } = useNavigation();
+  const { currentPage, selectedPrayerId, mapItem, handleGoBack, navigateTo } = useNavigation();
   const { user, loading, isAdmin, isTeacher } = useAuth();
   const access = useAccess();
   const {
@@ -159,8 +191,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
     return <ClassPage />;
   }
 
+  // the psalter group lives on its class's page (redesign stage 2); a group with no class keeps its old page
   if (currentPage === 'psalter') {
-    return <PsalterPage />;
+    return <PsalterOrClass />;
   }
 
   // private chats (signed in only)
@@ -169,9 +202,13 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
     return user ? <MessagesPage logoUrl={logoUrl} /> : <HomePage logoUrl={logoUrl} />;
   }
 
+  // the old teacher panel (a remembered page, an old link): its parts live on the class page
   if (currentPage === 'teacher') {
-    return isTeacher ? <TeacherPage /> : <HomePage logoUrl={logoUrl} />;
+    return isTeacher ? <ClassPage /> : <HomePage logoUrl={logoUrl} />;
   }
+
+  // the birthdays are for admitted members (and staff) only
+  if (currentPage === 'birthdays' && !(user && access.member)) return <HomePage logoUrl={logoUrl} />;
 
   // signed out (e.g. "back" after leaving): the profile has nothing to show
   if (currentPage === 'profile' && (access.kids || (!user && !loading))) return <HomePage logoUrl={logoUrl} />;
@@ -196,8 +233,10 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
     const section = sectionOfPage(currentPage);
     const pin = currentPage === 'prayer' && selectedPrayerId ? `prayer:${selectedPrayerId}`
       : currentPage === 'commemoration' ? 'special:commemoration'
+      : currentPage === 'birthdays' ? 'special:birthdays'
       : section ? `section:${section}` : null;
-    const title = currentPage === 'prayer' && selectedPrayerId ? prayerTitle(selectedPrayerId) : PAGE_TITLES[currentPage] ?? '';
+    const book = currentPage === 'biblioteka' ? LIBRARY_BOOKS[(mapItem ?? '').split(':')[0]] : undefined;
+    const title = currentPage === 'prayer' && selectedPrayerId ? prayerTitle(selectedPrayerId) : book ?? PAGE_TITLES[currentPage] ?? '';
     return (
       <div className="flex flex-col items-center px-1 py-3 sm:px-4 md:px-6">
         <PageBar title={title} onBack={handleGoBack} right={pin ? <PinButton id={pin} /> : undefined} className="w-full mb-4" />
@@ -237,6 +276,10 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           {currentPage === 'abituri' && <AbituriPage />}
 
           {currentPage === 'offline' && <OfflinePage />}
+
+          {currentPage === 'birthdays' && <BirthdaysPage />}
+
+          {currentPage === 'games' && <GamesPage />}
 
           {currentPage === 'simghera' && (
             <div className="w-full my-2 px-1">

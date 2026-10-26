@@ -2,7 +2,7 @@
 // "node tests/firestore-rules.test.mjs firestore.rules" (with firebase-tools and @firebase/rules-unit-testing installed
 // next to it; firebase.json sets the emulator port 8085). Every case below must pass before publishing the rules.
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, arrayUnion, arrayRemove, serverTimestamp } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, arrayUnion, arrayRemove, serverTimestamp, Bytes } from 'firebase/firestore';
 import { readFileSync } from 'node:fs';
 
 const rules = readFileSync(process.argv[2], 'utf8');
@@ -193,6 +193,68 @@ await t('owner refuses', assertSucceeds(updateDoc(doc(owner, 'memberAccess', 'st
 await t('superadmin writes who decided', assertSucceeds(setDoc(doc(sup, 'accessDecisions', 'stu2'), { by: 'sup@x.ge' })));
 await t('member cannot read who decided', assertFails(getDoc(doc(stu2, 'accessDecisions', 'stu2'))));
 await t('admin cannot read who decided', assertFails(getDoc(doc(adm, 'accessDecisions', 'stu2'))));
+
+// ---- birthdays: the day and month for every admitted member, the year for staff only
+const bday = (u, extra = {}) => ({ uid: u, name: 'ანა ბერიძე', photoURL: '', month: 10, day: 27, updatedAt: 'x', ...extra });
+await t('member writes own birthday', assertSucceeds(setDoc(doc(stu, 'birthdays', 'stu'), bday('stu'))));
+await t('member cannot write another birthday', assertFails(setDoc(doc(stu, 'birthdays', 'stu3'), bday('stu3'))));
+await t('a birthday keeps no year', assertFails(setDoc(doc(stu, 'birthdays', 'stu'), bday('stu', { year: 1990 }))));
+await t('a birthday month is 1–12', assertFails(setDoc(doc(stu, 'birthdays', 'stu'), bday('stu', { month: 13 }))));
+await t('member reads the birthdays', assertSucceeds(getDocs(collection(stu, 'birthdays'))));
+await t('refused member cannot read the birthdays', assertFails(getDocs(collection(stu2, 'birthdays'))));
+await t('guest cannot read the birthdays', assertFails(getDocs(collection(guest, 'birthdays'))));
+await t('member writes own birth year', assertSucceeds(setDoc(doc(stu, 'birthYears', 'stu'), { year: 1990, updatedAt: 'x' })));
+await t('member cannot read birth years', assertFails(getDocs(collection(stu, 'birthYears'))));
+await t('member cannot write another birth year', assertFails(setDoc(doc(stu, 'birthYears', 'stu3'), { year: 1990, updatedAt: 'x' })));
+await t('teacher reads birth years', assertSucceeds(getDocs(collection(tch, 'birthYears'))));
+await t('admin corrects a birthday', assertSucceeds(setDoc(doc(adm, 'birthdays', 'stu3'), bday('stu3'))));
+
+// ---- „ოსტატობა“: the class's lessons and each member's steps done
+await t('teacher writes a lesson', assertSucceeds(setDoc(doc(tch, 'classes', 'c1', 'lessons', 'l1'), { title: 'L', steps: [], order: 0 })));
+await t('member reads the lessons', assertSucceeds(getDocs(collection(stu, 'classes', 'c1', 'lessons'))));
+await t('member cannot write a lesson', assertFails(setDoc(doc(stu, 'classes', 'c1', 'lessons', 'l2'), { title: 'X', steps: [], order: 1 })));
+await t('outsider cannot read the lessons', assertFails(getDocs(collection(stu2, 'classes', 'c1', 'lessons'))));
+await t('member marks own steps', assertSucceeds(setDoc(doc(stu, 'classes', 'c1', 'lessonProgress', 'stu'), { done: { l1: ['a'] }, updatedAt: 'x' })));
+await t('member cannot mark for another', assertFails(setDoc(doc(stu, 'classes', 'c1', 'lessonProgress', 'stu2'), { done: {}, updatedAt: 'x' })));
+await t('teacher reads the progress', assertSucceeds(getDocs(collection(tch, 'classes', 'c1', 'lessonProgress'))));
+await t("member cannot read the others' progress", assertFails(getDocs(collection(stu, 'classes', 'c1', 'lessonProgress'))));
+
+// ---- the pearls game: the member's own tries, the teacher's approval, the kept takes
+const take = (score = 85) => ({ audio: Bytes.fromUint8Array(new Uint8Array(2000)), mime: 'audio/mpeg', score, voice: '1', at: 'x' });
+await t('member saves own pearls', assertSucceeds(setDoc(doc(stu, 'students', 'stu'), { pearls: { 'v-5-x58': { best: 85, voice: '1', at: 'x' } } }, { merge: true })));
+await t('member cannot write own manera marks', assertFails(updateDoc(doc(stu, 'students', 'stu'), { maneraReview: { a: 1 } })));
+await t('member cannot lift own marking lock', assertFails(setDoc(doc(stu, 'students', 'stu'), { marksLock: false }, { merge: true })));
+await t('member cannot delete own record', assertFails(deleteDoc(doc(stu, 'students', 'stu'))));
+await t('member cannot approve own pearl', assertFails(setDoc(doc(stu, 'students', 'stu'), { pearlShine: { 'v-5-x58': { voice: '1', by: 'stu', at: 'x' } } }, { merge: true })));
+await t('teacher approves a pearl', assertSucceeds(setDoc(doc(tch, 'students', 'stu'), { pearlShine: { 'v-5-x58': { voice: '1', by: 'tch', at: 'x' } }, updatedAt: 'x' }, { merge: true })));
+await t("teacher cannot change the member's pearls", assertFails(setDoc(doc(tch, 'students', 'stu'), { pearls: { 'v-5-x58': { best: 100, voice: '1', at: 'x' } } }, { merge: true })));
+await t('member keeps a take', assertSucceeds(setDoc(doc(stu, 'pearlTakes', 'stu', 'takes', 'v-5-x58'), take())));
+await t('member cannot keep a take for another', assertFails(setDoc(doc(stu, 'pearlTakes', 'stu2', 'takes', 'v-5-x58'), take())));
+await t('a take must be sound bytes', assertFails(setDoc(doc(stu, 'pearlTakes', 'stu', 'takes', 'v-7-x59'), { ...take(), audio: 'x' })));
+await t('a take stays small', assertFails(setDoc(doc(stu, 'pearlTakes', 'stu', 'takes', 'v-7-x59'), { ...take(), audio: Bytes.fromUint8Array(new Uint8Array(700000)) })));
+await t("the member's teacher hears the takes", assertSucceeds(getDocs(collection(tch, 'pearlTakes', 'stu', 'takes'))));
+await t('another teacher does not', assertFails(getDocs(collection(tch2, 'pearlTakes', 'stu', 'takes'))));
+await t('another member does not', assertFails(getDocs(collection(stu2, 'pearlTakes', 'stu', 'takes'))));
+
+// ---- „ქართული კაბა“'s pictures
+const pic = () => ({ image: Bytes.fromUint8Array(new Uint8Array(3000)), mime: 'image/webp', w: 480, h: 853, at: 'x' });
+await t('owner keeps a kaba picture', assertSucceeds(setDoc(doc(owner, 'samosiArt', 'kaba-full'), pic())));
+await t('owner publishes the kaba', assertSucceeds(setDoc(doc(owner, 'samosiArt', 'kaba'), { published: true, at: 'x', by: OWNER })));
+await t('a member cannot change the kaba pictures', assertFails(setDoc(doc(stu, 'samosiArt', 'kaba-full'), pic())));
+await t('an admin cannot publish the kaba', assertFails(setDoc(doc(adm, 'samosiArt', 'kaba'), { published: false })));
+await t('a kaba picture must be bytes', assertFails(setDoc(doc(owner, 'samosiArt', 'kaba-x'), { ...pic(), image: 'x' })));
+await t('a guest sees the kaba pictures', assertSucceeds(getDoc(doc(guest, 'samosiArt', 'kaba-full'))));
+await t('a member ticks kaba parts', assertSucceeds(setDoc(doc(stu, 'students', 'stu'), { kaba: ['kaba'], samosiOutfit: 'kaba' }, { merge: true })));
+
+// ---- „ანგელოზის დღე“
+const nd = (uid, extra = {}) => ({ uid, name: 'S', photoURL: '', month: 1, day: 27, saint: 'წმიდა ნინო', updatedAt: 'x', ...extra });
+await t('member chooses own name day', assertSucceeds(setDoc(doc(stu, 'nameDays', 'stu'), nd('stu'))));
+await t("member cannot choose another's name day", assertFails(setDoc(doc(stu, 'nameDays', 'stu2'), nd('stu2'))));
+await t('a name day has only its fields', assertFails(setDoc(doc(stu, 'nameDays', 'stu'), nd('stu', { phone: '1' }))));
+await t('a member reads the name days', assertSucceeds(getDocs(collection(stu, 'nameDays'))));
+await t('a refused member does not', assertFails(getDocs(collection(stu2, 'nameDays'))));
+await t('a guest does not', assertFails(getDocs(collection(guest, 'nameDays'))));
+await t('member clears own name day', assertSucceeds(deleteDoc(doc(stu, 'nameDays', 'stu'))));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();

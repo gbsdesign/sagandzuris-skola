@@ -8,7 +8,7 @@ import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
 import type { SchoolClass } from '../../hooks/useClasses';
 import { useInbox, isRinging, ADMIN_NAME, otherOf, DirectThread } from '../../hooks/useDirectChat';
 import {
-  useCall, leaveCall, dismissCall, toggleMic, toggleCam, flipCamera, setCallSmall, RemotePeer, RING_MS,
+  useCall, useLivePeers, leaveCall, dismissCall, toggleMic, toggleCam, flipCamera, setCallSmall, RemotePeer, RING_MS,
 } from '../../utils/callSession';
 import { afterLeave, answerChatCall, declineChatCall, joinClassCall } from './callActions';
 
@@ -257,12 +257,27 @@ const useClassCalls = (classes: SchoolClass[]) => {
   return Object.values(calls).filter((c): c is ClassCall => !!c);
 };
 
-// a soft two-note bell, every 2.5 s
+// Android lets a page make a sound only after a tap: the bell's AudioContext is made and woken by the first touch or
+// key anywhere in the app, so an incoming call later rings out loud (a context made at ring time stays silent there).
+let bellCtx: AudioContext | null = null;
+if (typeof window !== 'undefined') {
+  const unlock = () => {
+    try {
+      bellCtx ??= new AudioContext();
+      void bellCtx.resume();
+      if (bellCtx.state === 'running') ['pointerdown', 'keydown', 'touchend'].forEach(e => window.removeEventListener(e, unlock, true));
+    } catch { /* no sound on this browser */ }
+  };
+  ['pointerdown', 'keydown', 'touchend'].forEach(e => window.addEventListener(e, unlock, true));
+}
+
+// a soft two-note bell, every 2.5 s (and the phone vibrates with it)
 const useRingTone = (on: boolean) => {
   useEffect(() => {
     if (!on) return;
-    let ctx: AudioContext | null = null;
-    try { ctx = new AudioContext(); } catch { return; }
+    let ctx: AudioContext | null = bellCtx;
+    const own = !ctx;
+    if (!ctx) { try { ctx = new AudioContext(); } catch { return; } }
     const bell = () => {
       if (!ctx) return;
       ctx.resume().catch(() => {});
@@ -283,7 +298,7 @@ const useRingTone = (on: boolean) => {
     };
     bell();
     const t = setInterval(bell, 2500);
-    return () => { clearInterval(t); ctx?.close().catch(() => {}); };
+    return () => { clearInterval(t); if (own) ctx?.close().catch(() => {}); try { navigator.vibrate?.(0); } catch { /* none */ } };
   }, [on]);
 };
 
@@ -306,8 +321,11 @@ const Incoming: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const ringing: DirectThread | undefined = user
     ? threads.find(t => isRinging(t, uid) && inCall !== `dms/${t.id}` && !gone.includes(`${t.id}:${t.callAt?.getTime()}`))
     : undefined;
-  const classCall = classCalls.find(c =>
+  const candidate = classCalls.find(c =>
     c.by !== uid && inCall !== `classes/${c.cls.id}` && Date.now() - c.at < 3 * 3600_000 && !gone.includes(`${c.cls.id}:${c.at}`));
+  // a class's call shows only while someone is in it (a phone that started it and fell off never says „ended“)
+  const inClassCall = useLivePeers(candidate ? `classes/${candidate.cls.id}` : null);
+  const classCall = candidate && (Date.now() - candidate.at < RING_MS || inClassCall.length > 0) ? candidate : undefined;
   const quiet = notes || programOpen || church || call.status !== 'idle';
   useRingTone(!quiet && (!!ringing || (!!classCall && Date.now() - classCall.at < RING_MS)));
 

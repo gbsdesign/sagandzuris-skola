@@ -14,7 +14,7 @@ import { dayKey } from './habitsWeek';
 //                                                                         calendar | class | teacher
 //   habit:<id>     a habit (tap ticks today, or opens its books)   service:<name>  a service's chant list
 //   library:<tab>  a library tab      page:<x>  abituri | messages
-//   teacher:<tab>  a teacher-panel tab (teachers only)     admin:<tab>  an admin-panel tab (admins; requests: superadmins)
+//   teacher:<tab>  an old teacher-panel button (teachers only; opens the class page)   admin:<tab>  an admin-panel tab
 //   chantof:<service>/<chantId>  one chant in its service's list      song:<id>  ancestor:<id>  a folk song, a great chanter
 //   feast:<group>:<n>  a feast (its next day in the calendar)       life:<id>  a saint's life
 //   library:<tab>:<part>  a chapter of a book ("book:12", "sasuliero:ati:3", "lives:m9")
@@ -48,7 +48,9 @@ export const SPECIALS: Record<string, string> = {
   commemoration: 'მოსახსენებელი',
   calendar: 'კალენდარი',
   class: 'ჩემი კლასი',
-  teacher: 'მასწავლებლის პანელი',
+  birthdays: 'დაბადების დღეები',
+  // an old button of the removed teacher panel (2026-10-25): it opens the class page now
+  teacher: 'ჩემი კლასი',
 };
 
 export const SERVICES = ['წირვა', 'მწუხრი', 'ცისკარი', 'სადღესასწაულო', 'მარხვანი', 'ზატიკი', 'მომიხსენენი', 'ძლისპირები', 'კატაბასიები', 'დასადებლები'] as const;

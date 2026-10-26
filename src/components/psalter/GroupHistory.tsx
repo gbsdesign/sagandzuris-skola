@@ -6,7 +6,8 @@ import { ALL_KATHISMAS, PsalterGroup, firstName, memberName, useCycleHistory } f
 
 // The finished cycles, one at a time (‹ date ›, or pick from the list): who read which kathisma and which
 // were skipped. `footer` (the reminders switch and „how it works“) sits at its bottom.
-export const GroupHistory: React.FC<{ group: PsalterGroup; current: Cycle; count?: number; footer?: React.ReactNode }> = ({ group, current, count = 12, footer }) => {
+// `bare`: inside the class page's psalter section — no card, title or legend of its own.
+export const GroupHistory: React.FC<{ group: PsalterGroup; current: Cycle; count?: number; footer?: React.ReactNode; bare?: boolean }> = ({ group, current, count = 12, footer, bare }) => {
   const docs = useCycleHistory(group.id, count + 4);
   const rows = useMemo(() => {
     const byId = new Map(docs.map(d => [d.id, d.slots]));
@@ -28,9 +29,10 @@ export const GroupHistory: React.FC<{ group: PsalterGroup; current: Cycle; count
   const owners = useMemo(() => (row ? ownersIn(group.assignment, group.baseHalf, row.cycle.half) : {}), [row, group.assignment, group.baseHalf]);
   const short = (uid?: string) => firstName(memberName(group, uid));
 
+  const Frame: React.ElementType = bare ? 'div' : Card;
   return (
-    <Card>
-      <CardTitle icon={<History />} title="ისტორია" hint="აირჩიე ციკლი: ვინ რომელი კანონი წაიკითხა, რომელი გამოტოვდა" />
+    <Frame>
+      {!bare && <CardTitle icon={<History />} title="ისტორია" hint="აირჩიე ციკლი: ვინ რომელი კანონი წაიკითხა, რომელი გამოტოვდა" />}
       {!row ? (
         <p className="text-sm text-[#8a7a6a]">ჯგუფი ახლახან დაიწყო — ისტორია პირველი ციკლის შემდეგ გამოჩნდება.</p>
       ) : (
@@ -76,13 +78,13 @@ export const GroupHistory: React.FC<{ group: PsalterGroup; current: Cycle; count
               );
             })}
           </ul>
-          <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-[11px] font-semibold text-[#8a7a6a]">
+          {!bare && <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-[#8a7a6a]">
             <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-emerald-700" /> წაიკითხა</span>
             <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-red-50 ring-1 ring-red-200" /> გამოტოვდა (ვისი იყო)</span>
-          </div>
+          </div>}
         </div>
       )}
       {footer && <div className="mt-3 pt-3 border-t border-[#efe3cf]">{footer}</div>}
-    </Card>
+    </Frame>
   );
 };

@@ -73,17 +73,19 @@ service cloud.firestore {
       }
 
       allow read: if isSelf() || isAdmin() || teachesMe();
-      // "მანერა" marks (maneraReview) and the stop on the student's own marking (marksLock) come only from teachers
-      // and admins: the student reads them, never writes them
-      allow create: if (isSelf() && !incoming().keys().hasAny(['maneraReview', 'marksLock'])) || isAdmin();
-      // teachers may only arrange the student's path ("საგანძურის გზა"), switch the kids' mode, mark the manera and
-      // lock the student's marking
-      allow update: if (isSelf() && !changed().hasAny(['maneraReview', 'marksLock'])) || isAdmin()
-        || (teachesMe() && changed().hasOnly(['selectedChantVariants', 'kidsMode', 'maneraReview', 'marksLock', 'updatedAt']))
+      // "მანერა" marks (maneraReview), the stop on the student's own marking (marksLock) and the pearls a teacher
+      // approved (pearlShine) come only from teachers and admins: the student reads them, never writes them
+      allow create: if (isSelf() && !incoming().keys().hasAny(['maneraReview', 'marksLock', 'pearlShine'])) || isAdmin();
+      // teachers may only arrange the student's path ("საგანძურის გზა"), switch the kids' mode, mark the manera,
+      // lock the student's marking and approve pearls
+      allow update: if (isSelf() && !changed().hasAny(['maneraReview', 'marksLock', 'pearlShine'])) || isAdmin()
+        || (teachesMe() && changed().hasOnly(['selectedChantVariants', 'kidsMode', 'maneraReview', 'marksLock', 'pearlShine', 'updatedAt']))
         || becomingTeacher();
       allow delete: if isAdmin();
 
-      match /{allSubcollections=**} {
+      // the student's own subcollections (none in use yet). „{sub}/{rest=**}“, not „{all=**}“: a bare „**“ also
+      // matches the student document itself and let the student write the teacher-only fields above
+      match /{sub}/{rest=**} {
         allow read, write: if (isSignedIn() && uid() == userId) || isAdmin();
       }
     }
@@ -150,6 +152,30 @@ service cloud.firestore {
       allow write: if isAdmin() || teachesStudent();
     }
 
+    // ---- „ქართული კაბა“'s pictures (src/utils/kabaArt.ts): made by the owner in the studio, read by everyone ----------
+    match /samosiArt/{artId} {
+      allow read: if true;
+      allow create, update: if isSuperAdmin()
+        && (artId == 'kaba' || (request.resource.data.image is bytes && request.resource.data.image.size() < 1000000));
+      allow delete: if isSuperAdmin();
+    }
+
+    // ---- The pearls game (src/hooks/usePearls.ts) ----------------------------------------------------------------
+    // A member's best take of each pearl (a short MP3), for their teachers to hear before they approve it.
+    match /pearlTakes/{userId}/takes/{versionId} {
+      function teachesStudent() {
+        return isTeacher()
+          && uid() in get(/databases/$(database)/documents/students/$(userId)).data.get('teacherIds', []);
+      }
+      function isSelf() { return isSignedIn() && uid() == userId; }
+      allow read: if isSelf() || isAdmin() || teachesStudent();
+      allow create, update: if isSelf()
+        && request.resource.data.keys().hasOnly(['audio', 'mime', 'score', 'voice', 'at'])
+        && request.resource.data.audio is bytes && request.resource.data.audio.size() < 600000
+        && request.resource.data.score is number && request.resource.data.voice in ['1', '2', '3'];
+      allow delete: if isSelf() || isAdmin();
+    }
+
     // ---- Directory: name and photo of everyone signed in, so teachers can add people to their classes
     // and psalter groups without seeing anyone's private record. Each person writes only their own entry.
     match /directory/{userId} {
@@ -158,6 +184,45 @@ service cloud.firestore {
       allow create, update: if ((isSignedIn() && uid() == userId) || isAdmin())
         && incoming().keys().hasOnly(['uid', 'name', 'firstName', 'lastName', 'churchName', 'photoURL', 'updatedAt'])
         && incoming().uid == userId;
+      allow delete: if isAdmin() || (isSignedIn() && uid() == userId);
+    }
+
+    // ---- Birthdays (src/utils/birthdays.ts) ------------------------------------------------------------------------
+    // The day and month of every member who wrote a birth date in their profile, for the birthdays page: every
+    // admitted member reads them (a member a superadmin has not let in yet does not). Each member writes only their
+    // own, from their profile; an admin may correct one. The year stays apart and is for teachers and admins only.
+    function admittedMember() {
+      let p = /databases/$(database)/documents/memberAccess/$(uid());
+      return isSignedIn() && (!exists(p) || get(p).data.status == 'approved');
+    }
+    match /birthdays/{userId} {
+      allow read: if isTeacher() || admittedMember();
+      allow create, update: if ((isSignedIn() && uid() == userId) || isAdmin())
+        && incoming().keys().hasOnly(['uid', 'name', 'photoURL', 'month', 'day', 'updatedAt'])
+        && incoming().uid == userId
+        && incoming().name is string && incoming().name.size() <= 120
+        && incoming().month is int && incoming().month >= 1 && incoming().month <= 12
+        && incoming().day is int && incoming().day >= 1 && incoming().day <= 31;
+      allow delete: if isAdmin() || (isSignedIn() && uid() == userId);
+    }
+    // „ანგელოზის დღე“ (src/utils/nameDays.ts): the saint's day a member chose, beside the birthdays
+    match /nameDays/{userId} {
+      allow read: if isTeacher() || admittedMember();
+      allow create, update: if ((isSignedIn() && uid() == userId) || isAdmin())
+        && incoming().keys().hasOnly(['uid', 'name', 'photoURL', 'month', 'day', 'saint', 'updatedAt'])
+        && incoming().uid == userId
+        && incoming().name is string && incoming().name.size() <= 120
+        && incoming().saint is string && incoming().saint.size() <= 300
+        && incoming().month is int && incoming().month >= 1 && incoming().month <= 12
+        && incoming().day is int && incoming().day >= 1 && incoming().day <= 31;
+      allow delete: if isAdmin() || (isSignedIn() && uid() == userId);
+    }
+
+    match /birthYears/{userId} {
+      allow read: if isTeacher();
+      allow create, update: if ((isSignedIn() && uid() == userId) || isAdmin())
+        && incoming().keys().hasOnly(['year', 'updatedAt'])
+        && incoming().year is int && incoming().year >= 1900 && incoming().year <= 2100;
       allow delete: if isAdmin() || (isSignedIn() && uid() == userId);
     }
 
@@ -225,6 +290,18 @@ service cloud.firestore {
       match /assignments/{assignmentId} {
         allow read: if inClass();
         allow write: if isAdmin() || teachesClass();
+      }
+      // „ოსტატობა“: step-by-step lessons the class's teachers build; the class reads them
+      match /lessons/{lessonId} {
+        allow read: if inClass();
+        allow write: if isAdmin() || teachesClass();
+      }
+      // each member's steps done: written by the member, read by them and the class's teachers
+      match /lessonProgress/{memberId} {
+        allow read: if isAdmin() || teachesClass() || (isSignedIn() && uid() == memberId);
+        allow create, update: if isSignedIn() && uid() == memberId && uid() in cls().memberIds
+          && incoming().keys().hasOnly(['done', 'updatedAt']) && incoming().done is map;
+        allow delete: if isAdmin() || teachesClass() || (isSignedIn() && uid() == memberId);
       }
       // attendance is the teachers' own record: the members don't read it
       match /attendance/{day} {

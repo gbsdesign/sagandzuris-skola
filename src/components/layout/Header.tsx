@@ -9,7 +9,7 @@ import { askSignIn, openSignIn } from '../access/SignInPrompt';
 import { SearchButton } from '../search/GlobalSearch';
 import { OfflineButton } from '../offline/OfflineButton';
 import { useInbox, isUnread } from '../../hooks/useDirectChat';
-import { User as UserIcon, LogIn, Compass, ShieldCheck, Library, GraduationCap, Baby, MessageCircle } from 'lucide-react';
+import { User as UserIcon, LogIn, Compass, ShieldCheck, Library, Baby, MessageCircle } from 'lucide-react';
 
 interface HeaderProps {
   logoUrl: string;
@@ -88,20 +88,6 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
           <PWAInstallButton compact />
           {/* offline mode: the cloud shows whether the app works without internet */}
           <OfflineButton />
-          {/* teachers (and admins): the teacher's panel */}
-          {isTeacher && (
-            <button
-              type="button"
-              onClick={() => navigateTo('teacher')}
-              className={`w-9 h-9 rounded-xl ring-1 flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0 ${
-                currentPage === 'teacher' ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]' : 'bg-white/80 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028]'
-              }`}
-              title="მასწავლებლის პანელი"
-              aria-label="მასწავლებლის პანელი"
-            >
-              <GraduationCap className="w-4 h-4" />
-            </button>
-          )}
           {/* admins only: shield icon to the admin panel */}
           {isAdmin && (
             <button

@@ -13,7 +13,8 @@ import { ChatPanel } from './ChatPanel';
 // components/calls): a teacher or an admin starts it, everyone in the class may join (with the camera off at first).
 // On the messages page it fills its pane and shows the class itself (title) where the class page says „კლასის ჩათი“.
 // 📅 before the call buttons folds the lesson timetable open under the title; the class's teachers edit it there.
-export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fill?: boolean }> = ({ cls, title, fill }) => {
+// The class page shows the timetable under its own title bar, so there `timetable={false}` leaves 📅 out.
+export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fill?: boolean; timetable?: boolean }> = ({ cls, title, fill, timetable = true }) => {
   const { user, isAdmin: isSchoolAdmin } = useAuth();
   // this class's teachers (and the school's admins) speak as teachers here
   const isAdmin = isSchoolAdmin || (!!user && cls.teacherIds.includes(user.uid));
@@ -52,7 +53,7 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
               </h2>
             )}
             <div className="ml-auto flex items-center gap-1.5 shrink-0">
-              {(cls.schedule.length > 0 || isAdmin) && (
+              {timetable && (cls.schedule.length > 0 || isAdmin) && (
                 <button
                   type="button"
                   onClick={() => { triggerHaptic(8); setLessons(o => !o); }}

@@ -3,6 +3,7 @@ import { GrapeNav } from '../components/home/GrapeNav';
 import { PlateScatter, PlateBand, Qvevri, SpiralJug } from '../components/home/PlateOrnaments';
 import { ShortcutShelf } from '../components/home/ShortcutShelf';
 import { TodaySaintsCard } from '../components/calendar/TodaySaintsCard';
+import { BirthdaysSoon } from '../components/home/BirthdaysSoon';
 
 interface HomePageProps {
   logoUrl: string;
@@ -241,7 +242,10 @@ export const HomePage: React.FC<HomePageProps> = ({ logoUrl }) => {
       {/* School logo straight on the parchment (multiply drops its white background), vine ornament under it */}
       <PlateScatter />
       {/* today's saints from the church calendar, until ✕ for the day */}
-      <TodaySaintsCard className="relative mb-6" />
+      <TodaySaintsCard className="relative mb-3" />
+      {/* birthdays: within five days for teachers and admins, today's for members */}
+      <BirthdaysSoon className="relative mb-3" />
+      <div className="mb-3" aria-hidden />
       {/* holy fathers' words, changing every 15 minutes: toward God above the logo, toward people under the Patriarch's "cross" */}
       <FatherSaying key={`a${slot}`} {...SAYINGS_ABOVE[slot % SAYINGS_ABOVE.length]} className="mb-6" />
       <div className="relative w-full flex justify-center">

@@ -81,8 +81,9 @@ const SECTION_TEXT: Partial<Record<SectionId, [string, string]>> = {
   sakravebi: ['ხალხური საკრავები', 'ინსტრუმენტები ჩონგური ფანდური'],
   medavitneoba: ['ერთად ვკითხულობთ ფსალმუნს', 'ფსალმუნი კანონი კათისმა ფსალმუნთა კითხვა'],
   chvevebi: ['ლოცვითი ჩვევები', 'ლოცვები დღის წესი'],
+  tamashebi: ['მარგალიტები: მოისმინე, იმღერე, გააპრიალე', 'თამაში მარგალიტი სკივრი სიმღერა მიკროფონი'],
   tsinaprebi: ['ცნობილი მგალობლები და ჰიმნოგრაფები', 'წინაპრები ბიოგრაფია'],
-  gza: ['ჩემი სამუშაო, ჩვევები და მანერა', 'დამოუკიდებელი სამუშაო გეგმა'],
+  gza: ['ჩემი სამუშაო, ჩვევები და ოსტატობა', 'დამოუკიდებელი სამუშაო გეგმა'],
   biblioteka: ['საღმრთო ისტორია, დღესასწაულები, ცხოვრებები', 'წიგნები'],
 };
 const SPECIAL_TEXT: Record<string, [string, string]> = {
@@ -90,8 +91,8 @@ const SPECIAL_TEXT: Record<string, [string, string]> = {
   commemoration: ['სახელების სიები', 'სახელები ცოცხალთა მიცვალებულთა აღსავლენი'],
   calendar: ['დღის წმიდანები და დღესასწაულები', 'კალენდარი დღეს წმიდანი'],
   kathisma: ['ამ ციკლში ჩემი წასაკითხი', 'ფსალმუნი კათისმა'],
-  class: ['კლასის გვერდი', 'კლასი მასწავლებელი'],
-  teacher: ['კლასები და მოსწავლეები', 'მასწავლებელი'],
+  birthdays: ['ვის როდის აქვს დაბადების დღე', 'დაბადების დღე დღეობა იუბილე'],
+  class: ['კლასის გვერდი', 'კლასი მასწავლებელი მოსწავლეები დასწრება პროგრამა'],
 };
 const LIBRARY_TABS: { tab: LibraryTab; title: string; sub: string; keys: string }[] = [
   { tab: 'book', title: 'საღმრთო ისტორია', sub: 'ბიბლიოთეკა · სვიმონ მჭედლიძე', keys: 'ძველი აღთქმა ბიბლია' },
@@ -115,7 +116,8 @@ export const buildSearchIndex = (who: SearchWho): SearchItem[] => {
   for (const [id, label] of Object.entries(SPECIALS)) {
     if (id === 'kathisma' && !who.signedIn) continue;
     if (id === 'class' && !who.hasClass) continue;
-    if (id === 'teacher' && !who.teacher) continue;
+    if (id === 'birthdays' && !who.signedIn) continue;
+    if (id === 'teacher') continue; // the old teacher panel's button: the class page is „ჩემი კლასი“
     const [sub, keys] = SPECIAL_TEXT[id] || ['', ''];
     out.push(shortcut(`special:${id}`, 'fn', id === 'calendar' ? 'საეკლესიო კალენდარი' : label, sub, keys));
   }

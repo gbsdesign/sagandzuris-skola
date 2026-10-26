@@ -1,9 +1,5 @@
 import React, { Suspense, lazy, useMemo, useRef, useState } from 'react';
-import {
-  BookMarked, BookOpen, CalendarDays, Check, Clock, Compass, Feather, GraduationCap, Library, Moon, Music, Music2, Music4, Pencil,
-  Plus, ScrollText, Sparkles, Star, Sun, Users, X, Pin, PinOff, Guitar, Church, NotebookPen, HandHeart, Flame, Heart,
-  MessageCircle, UserPlus, ListMusic, Disc3, School, ClipboardList, ClipboardCheck, CalendarClock, Settings2,
-} from 'lucide-react';
+import { BookMarked, BookOpen, CalendarDays, Check, Clock, Compass, Feather, GraduationCap, Library, Moon, Music, Music2, Music4, Pencil, Plus, ScrollText, Sparkles, Star, Sun, Users, X, Pin, PinOff, Guitar, Church, NotebookPen, HandHeart, Flame, Heart, MessageCircle, UserPlus, ListMusic, Disc3, School, ClipboardList, ClipboardCheck, CalendarClock, Settings2, Cake } from 'lucide-react';
 import { useAuth, useChants, useNavigation } from '../../context';
 import { useNotes } from '../../context/NotesContext';
 import { dayKey } from '../../utils/habitsWeek';
@@ -36,7 +32,7 @@ const SECTION_ICON: Record<SectionId, React.ReactNode> = {
   chvevebi: <Sparkles />, tamashebi: <Star />, tsinaprebi: <Users />, gza: <Compass />, biblioteka: <Library />,
 };
 const SPECIAL_ICON: Record<string, React.ReactNode> = {
-  kathisma: <BookMarked />, liturgy: <Music4 />, commemoration: <ScrollText />, calendar: <CalendarDays />, class: <GraduationCap />, teacher: <GraduationCap />,
+  kathisma: <BookMarked />, liturgy: <Music4 />, commemoration: <ScrollText />, calendar: <CalendarDays />, class: <GraduationCap />, teacher: <GraduationCap />, birthdays: <Cake />,
 };
 const HABIT_ICON: Record<string, React.ReactNode> = {
   habit_2: <BookOpen />, habit_3: <BookOpen />, habit_5: <Heart />, habit_4: <Library />, habit_14: <NotebookPen />,
@@ -123,20 +119,22 @@ export const useOpenShortcut = () => {
         return;
       }
       case 'page': navigateTo(ref as 'abituri' | 'messages' | 'admin'); return;
-      // the panels open on the tab they remember
-      case 'teacher': try { localStorage.setItem('sg-teacher-tab', ref); } catch { /* storage off */ } navigateTo('teacher'); return;
+      // an old teacher-panel button: the panel is gone, its parts live on the class page
+      case 'teacher': if (classes[0]) openClass(classes[0].id); else navigateTo('class'); return;
+      // the admin panel opens on the tab it remembers
       case 'admin': try { localStorage.setItem('sg-admin-tab', ref === 'requests' ? 'users' : ref); } catch { /* storage off */ } navigateTo('admin'); return;
       case 'section':
         if (ref === 'chvevebi') { openPathPanel('habits'); navigateTo('gz'); return; }
         if (ref === 'medavitneoba') { navigateTo('psalter'); return; }
+        if (ref === 'tamashebi') { navigateTo('games'); return; }
         navigateTo((ref === 'gza' ? 'gz' : ref) as Parameters<typeof navigateTo>[0]);
         return;
       case 'special':
         if (ref === 'liturgy') openProgram();
         else if (ref === 'commemoration') openCommemoration();
         else if (ref === 'calendar') openChurchCalendar();
-        else if (ref === 'teacher') navigateTo('teacher');
-        else if (ref === 'class') { if (classes[0]) openClass(classes[0].id); }
+        else if (ref === 'birthdays') navigateTo('birthdays');
+        else if (ref === 'class' || ref === 'teacher') { if (classes[0]) openClass(classes[0].id); else navigateTo('class'); }
         else if (ref === 'kathisma') {
           // straight to this cycle's kathisma text, if I have one
           const g = groups.find(x => user && x.memberIds.includes(user.uid));
