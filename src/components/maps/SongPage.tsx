@@ -31,7 +31,7 @@ export const songTakes = (s: FolkSong): SongTake[] => [
   })),
   ...(s.recs ?? []).map(r => ({ label: r.who, sub: r.note, media: songRecMedia(s, r), recId: r.id })),
   ...(s.centre ?? []).map(r => ({
-    label: r.who, media: centreRecMedia(s, r), centre: true, embed: r.mp3 ? undefined : audiomackEmbedUrl(r.page),
+    label: r.who, sub: r.note, media: centreRecMedia(s, r), centre: true, embed: r.mp3 ? undefined : audiomackEmbedUrl(r.page),
   })),
 ];
 
@@ -39,7 +39,7 @@ export const songTakes = (s: FolkSong): SongTake[] => [
 export const TakePlayer: React.FC<{ take: SongTake; title: string; subtitle: string; hideNotesButton?: boolean }> = ({ take, title, subtitle, hideNotesButton }) => {
   const canSave = useCanDownloadCentre();
   if (take.embed) {
-    return <iframe title={`${title} · ${take.label}`} src={take.embed} className="block w-full h-[252px] border-0 rounded-xl" allow="autoplay" loading="lazy" />;
+    return <iframe title={`${title} · ${take.label}`} src={take.embed} className="block w-full h-[280px] border-0 rounded-xl" allow="autoplay" loading="lazy" />;
   }
   return <ChantPlayer media={take.media} title={title} subtitle={subtitle} hideNotesButton={hideNotesButton} noDownload={take.centre && !canSave} />;
 };
