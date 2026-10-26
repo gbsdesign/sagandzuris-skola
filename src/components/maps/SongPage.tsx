@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRightLeft, FileText, Headphones, Music, TextAlignStart } from 'lucide-react';
 import {
-  FOLK_SONGS, FolkSong, getFolkRegion, songDocUrl, songRecMedia, songVersionMedia, soundcloudEmbedUrl,
+  FOLK_SONGS, FolkSong, centreRecMedia, getFolkRegion, songDocUrl, songRecMedia, songVersionMedia, soundcloudEmbedUrl,
 } from '../../data/songsData';
+import { audiomackEmbedUrl } from '../../data/folkCentre';
+import { useCanDownloadCentre } from '../../hooks/useCentreDownload';
 import type { ChantMediaItem } from '../../data/chantMediaRegistry';
 import { ChantPlayer } from '../ChantPlayer';
 import { triggerHaptic } from '../../utils/haptics';
@@ -17,6 +19,8 @@ export interface SongTake {
   sub?: string;
   media: ChantMediaItem;
   recId?: string; // an archive recording: it can be moved („გადატანა“)
+  embed?: string; // a Folklore Centre recording not yet in the Drive: Audiomack's own player
+  centre?: boolean; // the Folklore Centre's: saving it (MP3 / offline) only for members an admin allowed
 }
 
 export const songTakes = (s: FolkSong): SongTake[] => [
@@ -26,7 +30,19 @@ export const songTakes = (s: FolkSong): SongTake[] => [
     media: songVersionMedia(s, v),
   })),
   ...(s.recs ?? []).map(r => ({ label: r.who, sub: r.note, media: songRecMedia(s, r), recId: r.id })),
+  ...(s.centre ?? []).map(r => ({
+    label: r.who, media: centreRecMedia(s, r), centre: true, embed: r.mp3 ? undefined : audiomackEmbedUrl(r.page),
+  })),
 ];
+
+/** One take's player: the school's player, or Audiomack's for a Centre recording the Drive does not have yet. */
+export const TakePlayer: React.FC<{ take: SongTake; title: string; subtitle: string; hideNotesButton?: boolean }> = ({ take, title, subtitle, hideNotesButton }) => {
+  const canSave = useCanDownloadCentre();
+  if (take.embed) {
+    return <iframe title={`${title} · ${take.label}`} src={take.embed} className="block w-full h-[252px] border-0 rounded-xl" allow="autoplay" loading="lazy" />;
+  }
+  return <ChantPlayer media={take.media} title={title} subtitle={subtitle} hideNotesButton={hideNotesButton} noDownload={take.centre && !canSave} />;
+};
 
 // A song's page over the whole screen: one recording (player with MP3 download) and the words.
 // It is a history entry (sgSong = "songId~take"), so the phone's back gesture closes it.
@@ -203,9 +219,9 @@ export const SongPage: React.FC = () => {
                 </button>
               )}
             </p>
-            <ChantPlayer
+            <TakePlayer
               key={`${song.id}-${takeIdx}`}
-              media={take.media}
+              take={take}
               title={song.title}
               subtitle={`${region.nameGe} · ${take.label}`}
               hideNotesButton
