@@ -35,6 +35,9 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
 - Liturgy ids: first ornate kk version `v-n-4`, first plain kk `v-n-3`, further `v-n-kNNN`; vol. V `v-n-vNNN` /
   `v-n-sNNN`; vol. IX `v-n-xNNN`. Vol. III №87–98 is the 4-voice litany (voices I–IV + "ყველა").
 - `public/notes/kk/139.json` has a hand fix (B♮ held across a line break, t=80–92). A re-export would undo it.
+- Accidental hand fixes (2026-10-26, checked against the page pictures): dasd1/003–012 voice I last line E3→E♭3,
+  momix/001–002 voice I t=80–80.5 C♯3→C3, v9/014 voice II t=8.5,10 F♯3→F3, karb/003 voice I t=182 G♯3→G3.
+  Different key signatures per voice (e.g. treble 1♭, bass 2♭) are the books' own — not OMR errors.
 - The OMR scripts live only in the user's old session scratchpads — they are not in this repo.
 - Unreviewed guesses (don't present as confirmed): vol. I↔III matches, vol. V/IX placements, which book
   version a liturgy recording follows (the `main` flag in `TSIRVA_BOOK` moves a recording to another version).
