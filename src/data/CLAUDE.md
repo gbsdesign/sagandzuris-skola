@@ -38,6 +38,10 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
 - Accidental hand fixes (2026-10-26, checked against the page pictures): dasd1/003–012 voice I last line E3→E♭3,
   momix/001–002 voice I t=80–80.5 C♯3→C3, v9/014 voice II t=8.5,10 F♯3→F3, karb/003 voice I t=182 G♯3→G3.
   Different key signatures per voice (e.g. treble 1♭, bass 2♭) are the books' own — not OMR errors.
+  Second round (same day, 331 notes in 154 files, every one checked on the page picture): the same E3→E♭3 in dasd1/dasd2
+  line 5–6 and momix line 6; mid-line key changes the OMR missed (dasd1/122–125 and 138–205 line 3, feast/045, karb/045, 051, 082; kk/029; v5/087, 098; v8/029, 033,
+  056, 061, 067, 135, 159); printed ♯/♮/♭ not read (v9/034 bass ♯G at every cadence, v9/031, 041, 069, 078, 090, 091,
+  099, 100; v8/083; karb/153, 173). The list with the rule per line is in that thread's scratchpad `fixes.txt`.
 - The OMR scripts live only in the user's old session scratchpads — they are not in this repo.
 - Unreviewed guesses (don't present as confirmed): vol. I↔III matches, vol. V/IX placements, which book
   version a liturgy recording follows (the `main` flag in `TSIRVA_BOOK` moves a recording to another version).
