@@ -94,7 +94,8 @@
   (44px round ←, title left, 36px round 📌/✎ right; the router gives most pages theirs); asking before deleting
   goes through `askConfirm` (shown by `ConfirmHost` in `App.tsx`), never `window.confirm`; new text ≥12px, nothing
   below 11px anywhere; one paper background for every page in `App.tsx`. Signing out lives only at the profile's
-  bottom (`views/ProfileActions.tsx`); today's saints are a folded line at the top of home (`TodaySaintsCard`).
+  bottom (`views/ProfileActions.tsx`); the admin panel opens only from the profile's wine row (`views/AdminEntry.tsx`,
+  no header shield since 2026-10-27), and the profile's details are three folds with „შენახვა“ shown only while changed; today's saints are a folded line at the top of home (`TodaySaintsCard`).
 
 ## Audio and sheet music (details in `src/data/CLAUDE.md`)
 

@@ -4,6 +4,7 @@ import { WifiOff, RefreshCw, Loader2 } from 'lucide-react';
 import { PageBar } from '../components/ui/kit';
 import { PinButton } from '../components/home/ShortcutShelf';
 import { ProfileActions } from '../components/views/ProfileActions';
+import { AdminEntry } from '../components/views/AdminEntry';
 import { prayerTitle } from '../data/prayers';
 import { HomePage } from '../pages/HomePage';
 import { GalobaPage } from '../pages/GalobaPage';
@@ -216,14 +217,20 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   if (currentPage === 'profile') {
     return (
       <div className="w-full max-w-2xl mx-auto px-1 py-3 sm:px-4 md:px-6">
-        <PageBar title="პროფილი" onBack={handleGoBack} className="mb-5" />
-        <div className="space-y-4">
-          <ChemiSamosi />
+        <PageBar title="პროფილი" onBack={handleGoBack} className="mb-4" />
+        {/* the head card, the admin panel's row (admins), my outfit and home buttons, then the details folded */}
+        <StudentProfileCard slot={<>
+          <AdminEntry />
+          <ChemiSamosi side={
+            <span className="block">
+              <span className="block font-serif-ge text-[15px] font-bold text-[#4a3426]">ჩემი სამოსი</span>
+              <span className="block text-[13px] text-[#8a7a6a] leading-snug">ჩოხა და ქართული კაბა — ნაწილი ნაწილ</span>
+            </span>
+          } />
           <ShortcutShelf variant="profile" />
-          <StudentProfileCard />
-          {/* install the app · leave the account (asks first) */}
-          <ProfileActions />
-        </div>
+        </>} />
+        {/* install the app · leave the account (asks first) */}
+        <div className="max-w-lg mx-auto mt-3"><ProfileActions /></div>
       </div>
     );
   }
