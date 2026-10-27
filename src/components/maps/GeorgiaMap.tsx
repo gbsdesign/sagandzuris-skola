@@ -15,9 +15,8 @@ import {
   songRecordingCount,
 } from '../../data/songsData';
 import { RegionPuzzleMap, RegionLocator } from './RegionPuzzleMap';
-import { SongPage, openSongPage, songTakes } from './SongPage';
+import { SongPage, TakePlayer, openSongPage, songTakes } from './SongPage';
 import { AddToListButton } from '../ui/AddToListButton';
-import { ChantPlayer } from '../ChantPlayer';
 import { useAuth, useNavigation } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 import { askSignIn } from '../access/SignInPrompt';
@@ -461,9 +460,9 @@ export const SongBody: React.FC<{ song: FolkSong; region: FolkRegion }> = ({ son
 
         {take ? (
           <div className="rounded-xl border border-amber-300/80 bg-white shadow-sm px-2 pb-2.5 pt-2">
-            <ChantPlayer
+            <TakePlayer
               key={`${song.id}-${takeIdx}`}
-              media={take.media}
+              take={take}
               title={song.title}
               subtitle={`${region.nameGe} · ${take.label}`}
             />

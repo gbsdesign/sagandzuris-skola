@@ -4,6 +4,7 @@
 // Audio is played from Drive through the Cloudflare Worker (see chantMediaRegistry.ts).
 import { AUDIO_PROXY, type ChantMediaItem } from './chantMediaRegistry';
 import { ARCHIVE_SONGS, WHO } from './songArchive';
+import { CENTRE_SONG_RECS, type CentreRec } from './folkCentre';
 
 /** Regions with a piece on the map */
 export type MapRegionId =
@@ -85,6 +86,7 @@ export interface FolkSong {
   soundcloud?: string; // SoundCloud track URL, played in SoundCloud's own compact widget
   genre?: string; // სუფრული, შრომის, საგმირო…
   recs?: SongRec[]; // archive recordings by ensembles and singers (one file each)
+  centre?: CentreRec[]; // the Folklore Centre's recordings (data/folkCentre.ts)
 }
 
 /** One archive recording of a song: a single Drive mp3 by one performer */
@@ -963,6 +965,7 @@ export const FOLK_SONGS: FolkSong[] = (() => {
     }
     list.push({ id: a.id, title: a.title, region: a.region, area: a.area, genre: a.genre, versions: [], recs });
   }
+  for (const s of list) if (CENTRE_SONG_RECS[s.id]) s.centre = CENTRE_SONG_RECS[s.id];
   return list;
 })();
 
@@ -1002,8 +1005,11 @@ export const songRecMedia = (song: FolkSong, rec: SongRec): ChantMediaItem => ({
   lyrics: song.lyrics,
 });
 
-/** How many recordings a song has: its own versions + archive recordings */
-export const songRecordingCount = (s: FolkSong) => s.versions.length + (s.recs?.length ?? 0);
+// A Centre recording the school has as an mp3 (rec.mp3), for the school's own player
+export const centreRecMedia = (song: FolkSong, rec: CentreRec): ChantMediaItem => songRecMedia(song, { id: rec.mp3 || '', who: rec.who });
+
+/** How many recordings a song has: its own versions + archive recordings + the Folklore Centre's */
+export const songRecordingCount = (s: FolkSong) => s.versions.length + (s.recs?.length ?? 0) + (s.centre?.length ?? 0);
 
 export const songsInRegion = (region: FolkRegionId, showOwnerOnly: boolean) =>
   FOLK_SONGS.filter(s => s.region === region && (showOwnerOnly || !s.ownerOnly));
