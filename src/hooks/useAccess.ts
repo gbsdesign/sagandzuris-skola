@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import type { PageType } from '../context/NavigationContext';
 import { KidsMode, SECTIONS, SectionId, sectionOfPage } from '../data/sections';
 import { useSections } from './useSections';
-import { useMembership } from '../utils/memberAccess';
+import { FeatureId, useMembership } from '../utils/memberAccess';
 
 // Who sees which section, in one place:
 // • admins see everything that is built;
@@ -46,6 +46,9 @@ export const useKidsMode = (): KidsMode | null => {
   return !isTeacher && kidsCache.uid === (user?.uid ?? null) ? kidsCache.mode : null;
 };
 
+// a member's features are given per section; the pearls game goes with the games (one switch to give)
+const featureOf = (id: SectionId): FeatureId => (id === 'margalitebi' ? 'tamashebi' : id);
+
 export const useAccess = () => {
   const { isAdmin } = useAuth();
   const { state } = useSections();
@@ -59,7 +62,7 @@ export const useAccess = () => {
     if (isAdmin) return built ? 'open' : 'soon';
     if (state[id] === 'hidden') return 'hidden';
     if (kids && !kids.sections.includes(id)) return 'hidden';
-    if (member && !membership.can(id)) return 'hidden';
+    if (member && !membership.can(featureOf(id))) return 'hidden';
     if (state[id] === 'soon' || !built) return 'soon';
     if (!member && !GUEST_OPEN.includes(id)) return 'locked';
     return 'open';

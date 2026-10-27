@@ -110,6 +110,7 @@ const MessagesPage = page(() => import('../pages/MessagesPage'), 'MessagesPage')
 const AbituriPage = page(() => import('../pages/AbituriPage'), 'AbituriPage');
 const OfflinePage = page(() => import('../pages/OfflinePage'), 'OfflinePage');
 const BirthdaysPage = page(() => import('../pages/BirthdaysPage'), 'BirthdaysPage');
+const GamesPage = page(() => import('../pages/GamesPage'), 'GamesPage');
 const MedavitneobaPage = page(() => import('../pages/MedavitneobaPage'), 'MedavitneobaPage');
 
 /** „ფსალმუნთა ჯგუფი“ (the vine, the home tile, a reminder): the class page of the group's class, opened at its psalter
@@ -150,6 +151,7 @@ const PAGE_TITLES: Partial<Record<PageType, string>> = {
   offline: 'ოფლაინ რეჟიმი',
   commemoration: 'მოსახსენებელი',
   birthdays: 'დაბადების დღეები',
+  games: 'თამაშები',
   medavitneoba: 'მედავითნეობა',
 };
 // an open library book shows its own name in the bar (the shelf's covers; LibraryPage's `mapItem` „book:12“)
@@ -164,8 +166,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   const access = useAccess();
   // a member still waiting to be let in: the profile shows who they are, not the member's tools
   const waiting = useMembership().status === 'pending';
-  // „მარგალიტები“ (section tamashebi) shows on the path only while the admin's switch and the member's access let it
-  const pathOrbs = PATH_ORBS.filter(o => o.id !== 'pearls' || access.section('tamashebi') === 'open');
+  // „მარგალიტები“ (section margalitebi) shows on the path only while the admin's switch and the member's access let it
+  const pathOrbs = PATH_ORBS.filter(o => o.id !== 'pearls' || access.section('margalitebi') === 'open');
   const {
     selectedChantVariants,
     handleToggleSong,
@@ -293,6 +295,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
 
           {currentPage === 'birthdays' && <BirthdaysPage />}
 
+          {currentPage === 'games' && <GamesPage />}
           {currentPage === 'medavitneoba' && <MedavitneobaPage />}
 
           {currentPage === 'simghera' && (

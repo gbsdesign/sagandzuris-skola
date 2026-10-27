@@ -37,7 +37,7 @@ export const PATH_ORBS: { id: OrbId; label: string }[] = [
   { id: 'learn', label: 'ნასწავლი' },
   { id: 'manera', label: 'ოსტატობა' },
   { id: 'work', label: 'სამუშაო' },
-  // the pearls game (section „tamashebi“: the router leaves it out when the admin closes it)
+  // the pearls game (section „margalitebi“: the router leaves it out when the admin closes it)
   { id: 'pearls', label: 'მარგალიტები' },
 ];
 

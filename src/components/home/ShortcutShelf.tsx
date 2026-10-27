@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useMemo, useRef, useState } from 'react';
-import { BookMarked, BookOpen, CalendarDays, Check, Clock, Compass, Feather, GraduationCap, Library, Moon, Music, Music2, Music4, Pencil, Plus, ScrollText, Sparkles, Star, Sun, Users, X, Pin, PinOff, Guitar, Church, NotebookPen, HandHeart, Flame, Heart, MessageCircle, UserPlus, ListMusic, Disc3, School, ClipboardList, ClipboardCheck, CalendarClock, Settings2, Cake } from 'lucide-react';
+import { BookMarked, BookOpen, CalendarDays, Check, Clock, Compass, Feather, GraduationCap, Library, Moon, Music, Music2, Music4, Pencil, Plus, ScrollText, Sparkles, Star, Sun, Users, X, Pin, PinOff, Guitar, Church, NotebookPen, HandHeart, Flame, Heart, MessageCircle, UserPlus, ListMusic, Disc3, School, ClipboardList, ClipboardCheck, CalendarClock, Settings2, Cake, Gem } from 'lucide-react';
 import { useAuth, useChants, useNavigation } from '../../context';
 import { useNotes } from '../../context/NotesContext';
 import { dayKey } from '../../utils/habitsWeek';
@@ -29,7 +29,7 @@ import { KathismaTiles } from '../psalter/KathismaTile';
 
 const SECTION_ICON: Record<SectionId, React.ReactNode> = {
   galoba: <Music2 />, simghera: <Music />, mtkmeli: <Feather />, sakravebi: <Guitar />, medavitneoba: <BookOpen />, medavitneobaTopic: <BookOpen />,
-  chvevebi: <Sparkles />, tamashebi: <Star />, tsinaprebi: <Users />, gza: <Compass />, biblioteka: <Library />,
+  chvevebi: <Sparkles />, tamashebi: <Star />, margalitebi: <Gem />, tsinaprebi: <Users />, gza: <Compass />, biblioteka: <Library />,
 };
 const SPECIAL_ICON: Record<string, React.ReactNode> = {
   kathisma: <BookMarked />, liturgy: <Music4 />, commemoration: <ScrollText />, calendar: <CalendarDays />, class: <GraduationCap />, teacher: <GraduationCap />, birthdays: <Cake />,
@@ -126,7 +126,8 @@ export const useOpenShortcut = () => {
       case 'section':
         if (ref === 'chvevebi') { openPathPanel('habits'); navigateTo('gz'); return; }
         if (ref === 'medavitneoba') { navigateTo('psalter'); return; }
-        if (ref === 'tamashebi') { openPathPanel('pearls'); navigateTo('gz'); return; }
+        if (ref === 'tamashebi') { navigateTo('games'); return; }
+        if (ref === 'margalitebi') { openPathPanel('pearls'); navigateTo('gz'); return; }
         if (ref === 'medavitneobaTopic') { navigateTo('medavitneoba'); return; }
         navigateTo((ref === 'gza' ? 'gz' : ref) as Parameters<typeof navigateTo>[0]);
         return;

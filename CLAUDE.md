@@ -170,6 +170,12 @@
   assignment still to do; teachers manage them there — `AssignmentsFold`). The timetable lives in the chat's 📅
   (`ScheduleFold`, edited in place). Teacher-only parts never show to members; attendance is teacher-only in
   `firestore.rules` too (members no longer read it).
+- **Games hub** (`pages/GamesPage.tsx`, 2026-10-27): „თამაშები“ is a hub of three category tabs (მუსიკალური · ქართული ·
+  ცოცხალი) from `data/games.ts`; every game carries its variant chips (ონლაინ · ჰიბრიდული · უტელეფონო); unbuilt games are
+  „მალე“ rows; the vine label „თამაშები“ opens it. The pearls game stays the round button of „საგანძურის გზა“ (below), now
+  under its own section `margalitebi` (open/მალე/hidden switch in the admin panel; a member's feature for it is the games'
+  one — `featureOf` in `hooks/useAccess.ts`). The plan with 42 games and the six Georgianized board games:
+  https://claude.ai/artifact/Dw24amtHhQvSGUd1pPE4fg
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 
@@ -237,8 +243,8 @@ listens (Gemini through Firebase AI Logic). 8 calls on Android (wake lock, push,
 
 1–3. Built (see above).
 4. Pearls/chests game — built 2026-10-25 (redesign stage 7, branch `claude/dazzling-goodall-inv60p`). Since 2026-10-27
-   the fifth round button „მარგალიტები“ of „საგანძურის გზა“ (`PathOrbs`, body `pearls/PearlChests.tsx`; no games page
-   and no vine label any more), shown while section `tamashebi` is open (now open by default). Chests in `data/pearls.ts` (first =
+   the fifth round button „მარგალიტები“ of „საგანძურის გზა“ (`PathOrbs`, body `pearls/PearlChests.tsx`; the games page is
+   the hub above), shown while section `margalitebi` is open (open by default). Chests in `data/pearls.ts` (first =
    vol. IX №58–77), the first phrase of the chosen voice from the book notes (`utils/pearls.ts` `phraseOf`), singing
    heard in the browser (`utils/pitch.ts`: YIN pitch, notes, key-free score; ≥80% polishes; `utils/singCapture.ts`),
    sheet `components/pearls/PearlSheet.tsx`. Best try in `students.pearls`, best take (MP3) in
