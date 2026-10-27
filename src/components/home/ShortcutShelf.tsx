@@ -259,12 +259,6 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
           )
         )}
       </div>
-      {variant === 'profile' && (
-        <p className="mb-3 px-0.5 text-[13px] text-[#8a7a6a] leading-snug">
-          {MAX_SHORTCUTS}-მდე ღილაკი მთავარ გვერდზე, ვაზის ქვეშ. დიდხანს დააჭირე — გადაადგილება ან წაშლა. ყველა გვერდზე „📌“ ღილაკიც ამატებს.
-        </p>
-      )}
-
       <ul className={`grid grid-cols-3 min-[480px]:grid-cols-4 gap-2 select-none ${editing ? 'touch-none' : ''}`}>
         {readingIn.map(g => <KathismaTiles key={g.id} group={g} uid={user.uid} />)}
         {order.map((id, i) => {

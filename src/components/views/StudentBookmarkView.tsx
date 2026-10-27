@@ -794,8 +794,6 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
     });
   }
 
-  const monthRemainingHours = Math.max(0, monthPlannedHours - monthActualWorkedHours - monthMissedHours);
-
   const progressPercent = monthPlannedHours > 0
     ? Math.min(100, Math.round((monthActualWorkedHours / monthPlannedHours) * 100))
     : 0;

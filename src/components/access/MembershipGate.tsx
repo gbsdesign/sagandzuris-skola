@@ -1,12 +1,13 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Hourglass, PartyPopper, ShieldAlert } from 'lucide-react';
+import { ChevronRight, Hourglass, PartyPopper, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../context';
 import { useNotes } from '../../context/NotesContext';
 import { useMembership } from '../../utils/memberAccess';
 import { Btn, Sheet } from '../ui/kit';
+import { WaitingText } from './SignInPrompt';
 
 // What a member reads about their own admission (utils/memberAccess), mounted once in App:
-// • waiting — „მიმდინარეობს დამატება“ at the top of every page (WaitingBanner);
+// • waiting — a thin „მიმდინარეობს დამატება“ strip at the top of every page; a tap opens the full text (WaitingBanner);
 // • refused — „დამატება შეფერხებულია“, and they are signed out; it repeats on every later sign-in;
 // • let in while the app is open — a short welcome, and what was given opens at once.
 // Nothing here says who decided or what was left out.
@@ -69,21 +70,24 @@ export const MembershipGate: React.FC = () => {
 export const WaitingBanner: React.FC = () => {
   const { status } = useMembership();
   const { notes } = useNotes();
+  const [open, setOpen] = useState(false);
   if (status !== 'pending' || notes) return null;
   return (
-    <div
-      role="status"
-      className="mb-4 flex items-start gap-3 rounded-2xl bg-[#fdf3dc] ring-1 ring-[#ecd39a] px-4 py-3.5 text-[#5c4413]"
-    >
-      <span className="w-10 h-10 shrink-0 rounded-xl bg-white/70 ring-1 ring-[#ecd39a] text-[#9a6212] flex items-center justify-center" aria-hidden>
-        <Hourglass className="w-5 h-5" />
-      </span>
-      <div className="min-w-0">
-        <p className="font-bold text-[15px] leading-snug">მიმდინარეობს დამატება</p>
-        <p className="mt-0.5 text-[14px] leading-relaxed text-[#7a5f2a]">
-          ადმინისტრაცია განიხილავს თქვენს რეგისტრაციას. დადასტურებისთანავე ყველაფერი თავისით გაიხსნება.
-        </p>
-      </div>
-    </div>
+    <>
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="mb-4 w-full min-h-11 flex items-center gap-2.5 rounded-2xl bg-[#fdf3dc] ring-1 ring-[#ecd39a] px-4 py-2 text-left text-[#5c4413] cursor-pointer hover:bg-[#fbedcb] transition-colors"
+      >
+        <Hourglass className="w-[18px] h-[18px] shrink-0 text-[#9a6212]" aria-hidden />
+        <span className="flex-1 min-w-0 font-bold text-[14.5px] leading-snug">მიმდინარეობს დამატება</span>
+        <ChevronRight className="w-4 h-4 shrink-0 text-[#9a6212]" aria-hidden />
+      </button>
+      {open && (
+        <Sheet open onClose={() => setOpen(false)} title="მიმდინარეობს დამატება" footer={<Btn size="lg" full onClick={() => setOpen(false)}>კარგი</Btn>}>
+          <WaitingText />
+        </Sheet>
+      )}
+    </>
   );
 };

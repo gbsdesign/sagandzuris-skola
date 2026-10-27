@@ -58,9 +58,6 @@ export const SignInChoices: React.FC<{ onStep?: (step: SignInStep) => void }> = 
         <Btn size="lg" kind="ghost" full icon={<Mail />} onClick={() => { setError(''); setStep('email'); }}>
           შესვლა ელფოსტით
         </Btn>
-        <p className="pt-1 text-[13px] text-[#8a7a6a] leading-relaxed text-center">
-          Google-ის ანგარიში არ გაქვთ? ელფოსტაზე ბმულს გამოგიგზავნით, პაროლი არ დაგჭირდებათ.
-        </p>
       </div>
     );
   }
@@ -86,9 +83,6 @@ export const SignInChoices: React.FC<{ onStep?: (step: SignInStep) => void }> = 
           className={EMAIL_FIELD}
         />
         {error && <p role="alert" className="text-[14px] font-semibold text-[#9b2c2c] leading-snug">{error}</p>}
-        <p className="text-[13px] text-[#8a7a6a] leading-relaxed">
-          ამ მისამართზე მოგივათ წერილი ბმულით. ბმულზე დაჭერით აქ შეხვალთ.
-        </p>
         <Btn type="submit" size="lg" full icon={<Send />} disabled={busy}>
           {busy ? 'იგზავნება…' : 'ბმულის გაგზავნა'}
         </Btn>
@@ -110,11 +104,7 @@ export const SignInChoices: React.FC<{ onStep?: (step: SignInStep) => void }> = 
           გახსენით ფოსტა <span className="font-bold break-all">{email.trim().toLowerCase()}</span> და დააჭირეთ წერილში ბმულს.
         </p>
       </div>
-      <ul className="text-left space-y-1.5 rounded-2xl bg-white ring-1 ring-[#efe3cf] px-4 py-3 text-[14px] text-[#4a3426] leading-snug list-disc pl-8">
-        <li>წერილი შეიძლება ინგლისურად მოვიდეს: დააჭირეთ ბმულს „Sign in to …“.</li>
-        <li>თუ წერილი არ ჩანს, შეამოწმეთ საქაღალდე „სპამი“ (Spam).</li>
-        <li>ბმული ამავე ტელეფონზე გახსენით.</li>
-      </ul>
+      <p className="text-[15px] text-[#75685a] leading-relaxed">წერილი ინგლისურადაა („Sign in to …“); თუ არ ჩანს — სპამში.</p>
       {error && <p role="alert" className="text-[14px] font-semibold text-[#9b2c2c] leading-snug">{error}</p>}
       <Btn kind="soft" full disabled={wait > 0 || busy} onClick={() => void send()}>
         {busy ? 'იგზავნება…' : wait > 0 ? `ხელახლა გაგზავნა (${wait} წმ)` : 'ხელახლა გაგზავნა'}
