@@ -54,6 +54,16 @@ export const CENTRE_SONG_RECS: Record<string, CentreRec[]> = {
   'fs-w136': [{ who: 'სახელმწიფო ანსამბლი', page: 'folkcentre/song/track-17-27' }], // მარებელი
 };
 
+/** chant version id → the Centre's recordings of it: only where the school has one version of that hymn in the app
+ *  (the user's rule: bind what is certain, leave the rest). From „ცისკრისა და მწუხრის საგალობლები • გელათის სკოლა“. */
+export const CENTRE_CHANT_RECS: Record<string, CentreRec[]> = {
+  'mw-v-2-1': [{ who: 'ანსამბლი „შავნაბადა“', page: 'folkcentre/song/01-track-01' }], // მოვედით, თაყუანის-ვსცეთ
+  'mw-v-22-1': [{ who: 'ანსამბლი „შავნაბადა“', page: 'folkcentre/song/29-track-29-1' }], // დაამტკიცე, ღმერთო
+  'ck-v-1-1': [{ who: 'ანსამბლი „შავნაბადა“', page: 'folkcentre/song/01-track-01-1' }], // დიდებაჲ მაღალთა შინა ღმერთსა
+  'ck-v-19-2': [{ who: 'ანსამბლი „შავნაბადა“', page: 'folkcentre/song/17-track-17-7' }], // აღდგომაჲ ქრისტესი, ჴმაჲ ზ
+  'ck-v-20-1': [{ who: 'ანსამბლი „შავნაბადა“', page: 'folkcentre/song/21-track-21-5' }], // ადიდებს სული ჩემი
+};
+
 export const audiomackEmbedUrl = (page: string) => {
   const [artist, kind, ...slug] = page.split('/');
   return `https://audiomack.com/embed/${artist}/${kind}/${slug.join('/')}?background=1&color=7a2028`;

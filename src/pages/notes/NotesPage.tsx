@@ -16,6 +16,8 @@ import { songRecordings } from '../../data/programMedia';
 import { UNNUMBERED_BOOKS, versionMeta } from '../../data/tsirvaChants';
 import { getChantMedia, type ChantMediaItem } from '../../data/chantMediaRegistry';
 import { chantRecordingMedia, chantRecordings } from '../../data/chantRecordings';
+import { CENTRE_CHANT_RECS, audiomackEmbedUrl } from '../../data/folkCentre';
+import { recordingsAreHidden } from '../../data/runtimeRecordings';
 import { countPlay } from '../../utils/playStats';
 import { hymnPair, hymnWidth, HymnOrnament } from '../../data/hymnOrnaments';
 import { BookScore, ChantSynth, bookImageUrl, loadBookScore, encodeMp3, renderScore, saveBlob, firstNotes, playStartNotes } from '../../utils/chantSynth';
@@ -91,9 +93,15 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   // recordings to choose from: the school's own first, then other choirs' recordings of this very book version
   // (chantRecordings.ts); the ჩანაწერი panel has a list to pick one
   const recSources = useMemo(() => {
-    const list: { label: string; media: ChantMediaItem }[] = [];
+    const list: { label: string; media: ChantMediaItem; embed?: string }[] = [];
     if (media) list.push({ label: 'საგანძურის სკოლა', media });
     for (const r of chantRecordings(vid)) list.push({ label: r.who, media: chantRecordingMedia(r, title) });
+    // the Folklore Centre's, in Audiomack's own player (data/folkCentre.ts)
+    if (!recordingsAreHidden()) {
+      for (const r of CENTRE_CHANT_RECS[vid] ?? []) {
+        list.push({ label: r.who, media: chantRecordingMedia({ id: r.mp3 || '', who: r.who }, title), embed: r.mp3 ? undefined : audiomackEmbedUrl(r.page) });
+      }
+    }
     // a program song (sg-N): its learning recordings, voice by voice
     list.push(...songRecordings(vid));
     return list;
@@ -1018,7 +1026,9 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                 <ChevronDown aria-hidden />
               </label>
             )}
-            <ChantPlayer
+            {recSource.embed ? (
+              !church && <iframe key={`${vid}-${recIdx}`} title={`${title} · ${recSource.label}`} src={recSource.embed} className="block w-full h-[280px] border-0 rounded-xl" allow="autoplay" loading="lazy" />
+            ) : <ChantPlayer
               key={`${vid}-${recIdx}`}
               chantId={chant.id}
               variantId={vid}
@@ -1030,7 +1040,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
               pauseToken={recPause}
               disabled={church}
               onPlayingChange={p => { setRecPlaying(p); if (p) { stopSynth(); countPlay(vid, 'rec'); } }}
-            />
+            />}
           </div>
         )}
 
