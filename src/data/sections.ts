@@ -6,7 +6,7 @@ import type { PageType } from '../context/NavigationContext';
 // • the home buttons ("ჩემი ღილაკები").
 export type SectionId =
   | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'medavitneoba' | 'medavitneobaTopic' | 'chvevebi' | 'tamashebi' | 'tsinaprebi'
-  | 'gza' | 'biblioteka';
+  | 'gza' | 'biblioteka' | 'margalitebi';
 
 export interface SectionDef {
   id: SectionId;
@@ -24,7 +24,9 @@ export const SECTIONS: SectionDef[] = [
   // „მედავითნეობა“ on the vine: a topic of its own, not built yet (the psalter group keeps the old id)
   { id: 'medavitneobaTopic', label: 'მედავითნეობა', hint: 'ჯერ მზადდება' },
   { id: 'chvevebi', label: 'ჩვევები', page: 'gz', hint: 'ლოცვები ჩვევებიდან იხსნება' },
-  { id: 'tamashebi', label: 'თამაშები', page: 'games', hint: 'მარგალიტები: მოისმინე, იმღერე, გააპრიალე' },
+  { id: 'tamashebi', label: 'თამაშები', page: 'games', hint: 'მუსიკალური · ქართული · ცოცხალი' },
+  // the pearls game: a game of the hub with a switch of its own (its feature is the games' one)
+  { id: 'margalitebi', label: 'მარგალიტები', page: 'pearls', hint: 'მოისმინე, იმღერე, გააპრიალე' },
   { id: 'tsinaprebi', label: 'გაიცანი წინაპრები', page: 'tsinaprebi' },
   { id: 'gza', label: 'საგანძურის გზა', page: 'gz' },
   { id: 'biblioteka', label: 'ბიბლიოთეკა', page: 'biblioteka' },
@@ -39,11 +41,11 @@ export const sectionOfPage = (page: PageType): SectionId | null => {
 
 export type SectionState = 'open' | 'soon' | 'hidden';
 
-/** Without the admin's settings: everything built is open; games (until the admin opens them), the psalter group and
+/** Without the admin's settings: everything built is open; the pearls game (until the admin opens it), the psalter group and
  *  მედავითნეობა are "მალე". */
 export const DEFAULT_SECTION_STATE: Record<SectionId, SectionState> = {
   galoba: 'open', simghera: 'open', mtkmeli: 'open', sakravebi: 'open', medavitneoba: 'soon', medavitneobaTopic: 'soon',
-  chvevebi: 'open', tamashebi: 'soon', tsinaprebi: 'open', gza: 'open', biblioteka: 'open',
+  chvevebi: 'open', tamashebi: 'open', margalitebi: 'soon', tsinaprebi: 'open', gza: 'open', biblioteka: 'open',
 };
 
 /** A kids' mode starts with these sections (the admin may choose others in settings/sections). */

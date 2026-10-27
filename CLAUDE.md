@@ -151,6 +151,11 @@
   assignment still to do; teachers manage them there — `AssignmentsFold`). The timetable lives in the chat's 📅
   (`ScheduleFold`, edited in place). Teacher-only parts never show to members; attendance is teacher-only in
   `firestore.rules` too (members no longer read it).
+- **Games hub** (`pages/GamesPage.tsx`, 2026-10-27): „თამაშები“ is a hub of three category tabs (მუსიკალური · ქართული ·
+  ცოცხალი) from `data/games.ts`; every game carries its variant chips (ონლაინ · ჰიბრიდული · უტელეფონო); unbuilt games are
+  „მალე“ rows. The pearls game moved to `pages/PearlsPage.tsx` (section `margalitebi`, page `pearls`, its own open/მალე/hidden
+  switch in the admin panel; a member's feature for it is the games' one — `featureOf` in `hooks/useAccess.ts`). The plan with
+  42 games and the six Georgianized board games: https://claude.ai/artifact/Dw24amtHhQvSGUd1pPE4fg
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 
