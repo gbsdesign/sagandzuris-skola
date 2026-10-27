@@ -84,11 +84,11 @@ export const SearchButton: React.FC<{ className?: string }> = ({ className = '' 
   <button
     type="button"
     onClick={() => { triggerHaptic(10); openSearch(); }}
-    className={`w-9 h-9 shrink-0 rounded-xl bg-white/80 hover:bg-white ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028] flex items-center justify-center transition-all cursor-pointer active:scale-95 ${className}`}
+    className={`w-9 h-9 shrink-0 rounded-full bg-white/80 hover:bg-white ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028] flex items-center justify-center transition-all cursor-pointer active:scale-95 ${className}`}
     title="ძიება (/)"
     aria-label="ძიება"
   >
-    <Search className="w-4 h-4" />
+    <Search className="w-[18px] h-[18px]" />
   </button>
 );
 

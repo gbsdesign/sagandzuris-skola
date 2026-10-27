@@ -101,13 +101,13 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
               onPointerEnter={() => setHovered(r.id)}
               onPointerLeave={() => setHovered(null)}
               className={`${r.wide ? 'col-span-2 sm:col-span-3 ' : ''}min-h-11 px-3 py-2 rounded-xl border bg-white hover:bg-amber-50/60 active:scale-[0.98] transition-all cursor-pointer flex items-center gap-2.5 text-left ${
-                hovered === r.id ? 'border-amber-400 shadow-sm' : 'border-slate-200/90'
+                hovered === r.id ? 'border-amber-400 shadow-sm' : 'border-[#e8dcc8]/90'
               }`}
             >
               <span className="w-4 h-4 shrink-0 rounded-md border border-black/10" style={{ background: r.color }} />
               <span className="flex-1 min-w-0 flex flex-col">
-                <span className="text-[13px] sm:text-sm font-bold text-slate-800 leading-tight break-words">{regionName(r)}</span>
-                <span className={`text-[11px] font-semibold ${n ? 'text-amber-700' : 'text-slate-400'}`}>
+                <span className="text-[13px] sm:text-sm font-bold text-[#2a2017] leading-tight break-words">{regionName(r)}</span>
+                <span className={`text-[11px] font-semibold ${n ? 'text-amber-700' : 'text-[#a39482]'}`}>
                   {n ? countLabel(n) : 'ჯერ არ არის'}
                 </span>
               </span>

@@ -440,7 +440,7 @@ export const SongBody: React.FC<{ song: FolkSong; region: FolkRegion }> = ({ son
       <div className="border-t border-amber-200/70 bg-gradient-to-b from-amber-50/40 to-stone-50/50 p-3 sm:p-4 space-y-2.5 animate-in fade-in duration-200">
         {takes.length > 1 && (
           <>
-            <div className="text-[11px] font-semibold text-slate-500 px-1 flex items-center gap-1.5">
+            <div className="text-[11px] font-semibold text-[#8a7a6a] px-1 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-600" />
               <span>ჩანაწერები (აირჩიეთ):</span>
             </div>
@@ -453,7 +453,7 @@ export const SongBody: React.FC<{ song: FolkSong; region: FolkRegion }> = ({ son
                   className={`min-h-9 px-3 py-1.5 rounded-xl border text-xs font-bold text-left transition-all cursor-pointer ${
                     i === takeIdx
                       ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
-                      : 'bg-white text-slate-700 border-slate-200 hover:border-amber-300 hover:bg-amber-50'
+                      : 'bg-white text-[#4a3426] border-[#e8dcc8] hover:border-amber-300 hover:bg-amber-50'
                   }`}
                 >
                   {t.label}{t.sub ? ` · ${t.sub}` : ''}
@@ -483,20 +483,20 @@ export const SongBody: React.FC<{ song: FolkSong; region: FolkRegion }> = ({ son
             />
           </div>
         ) : (
-          <div className="flex flex-col items-center text-center gap-1.5 py-5 px-3 rounded-xl bg-white border border-dashed border-slate-200">
-            <Music className="w-6 h-6 text-slate-300" />
-            <p className="text-xs font-bold text-slate-600">
+          <div className="flex flex-col items-center text-center gap-1.5 py-5 px-3 rounded-xl bg-white border border-dashed border-[#e8dcc8]">
+            <Music className="w-6 h-6 text-[#d6c8b1]" />
+            <p className="text-xs font-bold text-[#6b5c4d]">
               {song.pendingWma ? 'ჩანაწერი მზადდება' : 'ამ სიმღერის ჩანაწერი ჯერ არ არის დამატებული'}
             </p>
-            <p className="text-[11px] text-slate-400">მალე დაემატება</p>
+            <p className="text-[11px] text-[#a39482]">მალე დაემატება</p>
           </div>
         )}
 
         {/* Lyrics without a player (with a player they're in its notes & lyrics panel) */}
         {!take && song.lyrics && (
-          <div className="rounded-xl bg-white border border-slate-200/80 p-3">
+          <div className="rounded-xl bg-white border border-[#e8dcc8]/80 p-3">
             <p className="text-[11px] font-black text-amber-900 mb-1.5">ტექსტი</p>
-            <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{song.lyrics}</p>
+            <p className="text-sm text-[#4a3426] whitespace-pre-line leading-relaxed">{song.lyrics}</p>
           </div>
         )}
 
@@ -508,7 +508,7 @@ export const SongBody: React.FC<{ song: FolkSong; region: FolkRegion }> = ({ son
                 href={songDocUrl(doc)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="min-h-9 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-amber-50 hover:border-amber-300 text-xs font-bold text-slate-700 inline-flex items-center gap-1.5 transition-colors"
+                className="min-h-9 px-3 py-1.5 rounded-xl border border-[#e8dcc8] bg-white hover:bg-amber-50 hover:border-amber-300 text-xs font-bold text-[#4a3426] inline-flex items-center gap-1.5 transition-colors"
               >
                 <FileText className="w-4 h-4 text-amber-700" />
                 {doc.name}

@@ -39,7 +39,7 @@ export const GroupHistory: React.FC<{ group: PsalterGroup; current: Cycle; count
         <div>
           <div className="flex items-center gap-2">
             <IconBtn label="წინა ციკლი" disabled={at >= rows.length - 1} onClick={() => setAt(i => Math.min(i + 1, rows.length - 1))}><ChevronLeft /></IconBtn>
-            <label className="relative flex-1 min-w-0 h-10 rounded-full bg-[#fbf6ec] ring-1 ring-[#efe3cf] flex items-center justify-center gap-1.5 text-sm font-semibold text-[#2a2017] cursor-pointer">
+            <label className="relative flex-1 min-w-0 h-10 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] flex items-center justify-center gap-1.5 text-sm font-semibold text-[#2a2017] cursor-pointer">
               <span className="truncate">{formatRange(row.cycle)}</span>
               <ChevronDown className="w-4 h-4 text-[#8a7a6a] shrink-0" />
               <select
@@ -84,7 +84,7 @@ export const GroupHistory: React.FC<{ group: PsalterGroup; current: Cycle; count
           </div>}
         </div>
       )}
-      {footer && <div className="mt-3 pt-3 border-t border-[#efe3cf]">{footer}</div>}
+      {footer && <div className="mt-3 pt-3 border-t border-[#e8dcc8]">{footer}</div>}
     </Frame>
   );
 };

@@ -50,7 +50,7 @@ export const ServiceTabs: React.FC<ServiceTabsProps> = ({ onSelectService, onOpe
               triggerHaptic(15);
               onSelectService(service);
             }}
-            className="w-full group flex items-center gap-3 py-3 pl-5 pr-3.5 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e6d9c2] shadow-[0_1px_3px_rgba(74,52,38,0.08)] hover:bg-white hover:ring-[#7a2028]/30 hover:shadow-[0_6px_18px_-8px_rgba(122,32,40,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 cursor-pointer text-left select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a2028]"
+            className="w-full group flex items-center gap-3 py-3 pl-5 pr-3.5 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] shadow-[0_1px_3px_rgba(74,52,38,0.08)] hover:bg-white hover:ring-[#7a2028]/30 hover:shadow-[0_6px_18px_-8px_rgba(122,32,40,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 cursor-pointer text-left select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a2028]"
           >
             <span className="flex-1 min-w-0">
               <span className="block font-serif-ge font-bold text-lg sm:text-xl leading-tight text-[#7a2028]">{title}</span>
@@ -81,7 +81,7 @@ export const ServiceTabs: React.FC<ServiceTabsProps> = ({ onSelectService, onOpe
                   triggerHaptic(15);
                   onOpenAlbum(id);
                 }}
-                className="w-full group flex items-center gap-3 py-3 pl-5 pr-3.5 rounded-2xl bg-white ring-1 ring-[#e6d9c2] shadow-[0_1px_3px_rgba(74,52,38,0.08)] hover:ring-[#b4620e]/40 hover:shadow-[0_6px_18px_-8px_rgba(180,98,14,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 cursor-pointer text-left select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a2028]"
+                className="w-full group flex items-center gap-3 py-3 pl-5 pr-3.5 rounded-2xl bg-white ring-1 ring-[#e8dcc8] shadow-[0_1px_3px_rgba(74,52,38,0.08)] hover:ring-[#b4620e]/40 hover:shadow-[0_6px_18px_-8px_rgba(180,98,14,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 cursor-pointer text-left select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a2028]"
               >
                 <span className="flex-1 min-w-0">
                   <span className="block font-serif-ge font-bold text-[17px] sm:text-lg leading-tight text-[#2a2017]">{title}</span>

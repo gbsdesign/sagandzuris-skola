@@ -991,7 +991,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
       )}
 
       {/* Waveform seek bar: visualizer + progress in one */}
-      <div className="w-full bg-white border border-[#efe3cf] rounded-xl px-3 pt-3 pb-1.5 shadow-2xs">
+      <div className="w-full bg-white border border-[#e8dcc8] rounded-xl px-3 pt-3 pb-1.5 shadow-2xs">
         <ChantWaveformSeekBar
           peaksUrl={activeTracks[3] || activeTracks.find(Boolean) || ''}
           timeRef={currentTimeRef}
@@ -1108,7 +1108,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
         className="w-full h-10 px-3 rounded-full bg-amber-50/70 hover:bg-amber-100/70 border border-amber-200/70 flex items-center gap-2 text-left transition-all cursor-pointer active:scale-[0.99]"
       >
         <Music className="w-4 h-4 text-amber-700 shrink-0" />
-        <span className="flex-1 text-xs font-extrabold text-slate-700">ნოტები და ტექსტი</span>
+        <span className="flex-1 text-xs font-extrabold text-[#4a3426]">ნოტები და ტექსტი</span>
         {notes.length > 0 && (
           <span className="text-[11px] font-bold text-amber-800 bg-white/80 px-2 py-0.5 rounded-full border border-amber-200/70">
             {notes.length} გვ.
@@ -1124,8 +1124,8 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="bg-white rounded-3xl max-w-lg w-full max-h-[85dvh] overflow-y-auto border border-amber-100 shadow-2xl flex flex-col p-6 space-y-4">
             
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-extrabold text-slate-800 text-lg flex items-center gap-2">
+            <div className="flex items-center justify-between border-b border-[#f1e9dc] pb-3">
+              <h3 className="font-extrabold text-[#2a2017] text-lg flex items-center gap-2">
                 <Music className="w-5 h-5 text-amber-600" />
                 საგალობლის ნოტები და ტექსტი
               </h3>
@@ -1134,7 +1134,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
                   triggerHaptic(10);
                   setIsNotesModalOpen(false);
                 }}
-                className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                className="p-1.5 rounded-xl hover:bg-[#f1e9dc] text-[#a39482] hover:text-[#4a3426] transition-colors"
               >
                 ✕
               </button>
@@ -1146,7 +1146,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
                 <div className="space-y-3">
                   <div className="flex flex-col gap-3">
                     {notes.map((note, idx) => (
-                      <div key={note.id || idx} className="rounded-xl overflow-hidden border border-amber-200/80 shadow-xs bg-slate-50">
+                      <div key={note.id || idx} className="rounded-xl overflow-hidden border border-amber-200/80 shadow-xs bg-[#fbf6ec]">
                         <div className="px-3 py-1.5 bg-amber-100/60 border-b border-amber-200/60 flex items-center justify-between text-xs font-bold text-amber-900">
                           <div className="flex items-center gap-1.5">
                             <span>ნოტების ფურცელი {idx + 1}</span>
@@ -1164,7 +1164,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
                               <Download className="w-3 h-3 stroke-[2.5]" />
                             </button>
                           </div>
-                          <span className="text-[11px] text-slate-500 font-mono">{note.name}</span>
+                          <span className="text-[11px] text-[#8a7a6a] font-mono">{note.name}</span>
                         </div>
                         <img
                           src={note.url}
@@ -1182,7 +1182,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
                   <p className="text-xs font-black text-[#85502c]">
                     {displayTitle || 'წმიდაო ღმერთო'} — {displaySubtitle || 'გელათის სკოლა'}
                   </p>
-                  <p className="text-[11px] text-slate-500 max-w-xs leading-relaxed">
+                  <p className="text-[11px] text-[#8a7a6a] max-w-xs leading-relaxed">
                     აქ წარმოდგენილია საგალობლის ნოტები ხმების მიხედვით. შეგიძლიათ გამოიყენოთ ოფლაინ რეჟიმში სამუშაოდ.
                   </p>
                 </div>
@@ -1190,9 +1190,9 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
 
               {/* Georgian Lyrics details - Compact & Neat */}
               {lyrics && (
-                <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3 text-left space-y-1">
-                  <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider">ტექსტი (Lyrics)</h4>
-                  <p className="text-xs font-medium text-slate-700 leading-snug whitespace-pre-line text-center italic font-serif">
+                <div className="bg-[#fbf6ec] border border-[#e8dcc8]/60 rounded-xl p-3 text-left space-y-1">
+                  <h4 className="text-[11px] font-black text-[#a39482] uppercase tracking-wider">ტექსტი (Lyrics)</h4>
+                  <p className="text-xs font-medium text-[#4a3426] leading-snug whitespace-pre-line text-center italic font-serif">
                     {lyrics}
                   </p>
                 </div>

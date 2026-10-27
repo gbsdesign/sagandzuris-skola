@@ -213,7 +213,8 @@ export const IconBtn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & {
 
 /** Segmented tabs that wrap into a grid on phones instead of shrinking. */
 export function Tabs<T extends string>({ items, value, onChange, cols = 3 }: {
-  items: { id: T; label: string; Icon?: React.ComponentType<{ className?: string }>; count?: number; dot?: boolean }[];
+  // `over`: a small line above the label (an exam's number on the admission page)
+  items: { id: T; label: string; over?: string; Icon?: React.ComponentType<{ className?: string }>; count?: number; dot?: boolean }[];
   value: T;
   onChange: (id: T) => void;
   cols?: 2 | 3 | 4 | 'wide';
@@ -221,7 +222,7 @@ export function Tabs<T extends string>({ items, value, onChange, cols = 3 }: {
   return (
     <div className={cx('grid gap-1 p-1 rounded-2xl bg-white/75 ring-1 ring-[#e8dcc8]',
       cols === 2 ? 'grid-cols-2' : cols === 4 ? 'grid-cols-2 min-[480px]:grid-cols-4' : cols === 'wide' ? 'grid-cols-2 min-[600px]:grid-cols-3' : 'grid-cols-3')}>
-      {items.map(({ id, label, Icon, count, dot }) => {
+      {items.map(({ id, label, over, Icon, count, dot }) => {
         const on = id === value;
         return (
           <button
@@ -235,7 +236,14 @@ export function Tabs<T extends string>({ items, value, onChange, cols = 3 }: {
             )}
           >
             {Icon && <Icon className="w-4 h-4 shrink-0" />}
-            <span className="leading-tight text-center">{label}</span>
+            {over ? (
+              <span className="flex flex-col items-center text-center leading-tight">
+                <span className={cx('text-[11px] font-black uppercase tracking-wide', on ? 'text-[#fbf6ec]/75' : 'text-[#a0703c]')}>{over}</span>
+                <span className="mt-0.5">{label}</span>
+              </span>
+            ) : (
+              <span className="leading-tight text-center">{label}</span>
+            )}
             {count !== undefined && <span className={cx('text-xs tabular-nums', on ? 'text-[#fbf6ec]/75' : 'text-[#8a7a6a]')}>{count}</span>}
             {dot && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500" />}
           </button>
@@ -404,7 +412,7 @@ export const Sheet: React.FC<{ open: boolean; onClose: () => void; title: React.
 export const Stat: React.FC<{ value: React.ReactNode; label: string; tone?: 'plain' | 'wine' | 'green' | 'amber' }> = ({ value, label, tone = 'plain' }) => (
   <div className={cx(
     'rounded-2xl px-3 py-2.5 min-w-0',
-    tone === 'plain' && 'bg-[#fbf6ec] ring-1 ring-[#efe3cf]',
+    tone === 'plain' && 'bg-[#fbf6ec] ring-1 ring-[#e8dcc8]',
     tone === 'wine' && 'bg-[#7a2028]/[0.07]',
     tone === 'green' && 'bg-emerald-50',
     tone === 'amber' && 'bg-amber-50'

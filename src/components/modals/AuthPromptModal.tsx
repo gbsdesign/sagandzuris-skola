@@ -17,18 +17,18 @@ export const AuthPromptModal: React.FC<AuthPromptModalProps> = ({
 
   return (
     <div
-      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/70 backdrop-blur-md animate-in fade-in duration-200"
+      className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-[#2a2017]/70 backdrop-blur-md animate-in fade-in duration-200"
       onClick={() => onClose()}
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-white rounded-3xl p-6 sm:p-7 shadow-2xl border border-amber-200 flex flex-col items-center text-center gap-4 animate-in zoom-in-95 duration-200 text-slate-800"
+        className="relative w-full max-w-md max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain bg-white rounded-3xl p-6 sm:p-7 shadow-2xl border border-amber-200 flex flex-col items-center text-center gap-4 animate-in zoom-in-95 duration-200 text-[#2a2017]"
       >
         {/* Close Button */}
         <button
           type="button"
           onClick={() => onClose()}
-          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+          className="absolute top-4 right-4 w-8 h-8 rounded-full bg-[#f1e9dc] hover:bg-[#e8dcc8] text-[#8a7a6a] hover:text-[#2a2017] flex items-center justify-center transition-colors cursor-pointer"
         >
           <X className="w-4 h-4" />
         </button>
@@ -40,16 +40,16 @@ export const AuthPromptModal: React.FC<AuthPromptModalProps> = ({
 
         {/* Modal Title & Description */}
         <div className="space-y-2">
-          <h3 className="text-lg sm:text-xl font-black text-slate-800">
+          <h3 className="text-lg sm:text-xl font-black text-[#2a2017]">
             საჭიროა ავტორიზაცია
           </h3>
-          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed max-w-sm">
+          <p className="text-xs sm:text-sm text-[#6b5c4d] leading-relaxed max-w-sm">
             <span className="font-bold text-amber-900">{targetFeatureName}</span> სარგებლობისთვის, თქვენი მონაცემების, შეფასებებისა და პირადი პროგრესის უსაფრთხოდ შესანახად გთხოვთ გაიაროთ ავტორიზაცია.
           </p>
         </div>
 
         {/* Feature Highlights */}
-        <div className="w-full bg-amber-50/50 rounded-2xl p-3.5 border border-amber-200/60 text-left space-y-2 text-xs text-slate-700">
+        <div className="w-full bg-amber-50/50 rounded-2xl p-3.5 border border-amber-200/60 text-left space-y-2 text-xs text-[#4a3426]">
           <div className="flex items-center gap-2">
             <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
             <span>პირადი პროგრესისა და შეფასებების შენახვა</span>
@@ -71,7 +71,7 @@ export const AuthPromptModal: React.FC<AuthPromptModalProps> = ({
           <button
             type="button"
             onClick={() => onClose()}
-            className="w-full py-2.5 px-4 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold text-xs transition-colors cursor-pointer"
+            className="w-full py-2.5 px-4 rounded-xl bg-[#f1e9dc] hover:bg-[#e8dcc8] text-[#6b5c4d] font-bold text-xs transition-colors cursor-pointer"
           >
             გაუქმება
           </button>

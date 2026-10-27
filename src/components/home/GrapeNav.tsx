@@ -92,7 +92,7 @@ export const GrapeNav: React.FC = () => {
               >
                 {s.label}
               </span>
-              {!s.go && <span className="text-[clamp(10px,2.5cqw,12px)] leading-tight opacity-80">მალე</span>}
+              {!s.go && <span className="text-[clamp(11px,2.5cqw,12px)] leading-tight opacity-80">მალე</span>}
             </span>
           </button>
         ))}

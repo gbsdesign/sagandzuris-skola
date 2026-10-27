@@ -115,7 +115,7 @@ const AncestorCard: React.FC<{ a: Ancestor; onOpen: () => void; className?: stri
 };
 
 const roundBtn =
-  'w-9 h-9 rounded-full bg-white ring-1 ring-[#e6d9c2] shadow-sm flex items-center justify-center text-[#7a2028] hover:ring-[#7a2028]/30 hover:shadow transition-all cursor-pointer disabled:opacity-35 disabled:cursor-default disabled:shadow-none';
+  'w-9 h-9 rounded-full bg-white ring-1 ring-[#e8dcc8] shadow-sm flex items-center justify-center text-[#7a2028] hover:ring-[#7a2028]/30 hover:shadow transition-all cursor-pointer disabled:opacity-35 disabled:cursor-default disabled:shadow-none';
 
 // One group as a swipeable strip of small cards; „ყველა“ unfolds it into a grid.
 const GroupStrip: React.FC<{ title: string; subtitle: string; items: Ancestor[]; onOpen: (id: number) => void }> = ({
@@ -168,7 +168,7 @@ const GroupStrip: React.FC<{ title: string; subtitle: string; items: Ancestor[];
             type="button"
             onClick={() => setAll((v) => !v)}
             aria-expanded={all}
-            className="h-9 pl-3.5 pr-2.5 rounded-full bg-white ring-1 ring-[#e6d9c2] shadow-sm inline-flex items-center gap-1 text-[13px] font-semibold text-[#7a2028] hover:ring-[#7a2028]/30 hover:shadow transition-all cursor-pointer"
+            className="h-9 pl-3.5 pr-2.5 rounded-full bg-white ring-1 ring-[#e8dcc8] shadow-sm inline-flex items-center gap-1 text-[13px] font-semibold text-[#7a2028] hover:ring-[#7a2028]/30 hover:shadow transition-all cursor-pointer"
           >
             {all ? 'შეკეცვა' : `ყველა · ${items.length}`}
             <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${all ? 'rotate-180' : ''}`} />
@@ -227,7 +227,7 @@ const FilmCard: React.FC = () => {
     <button
       type="button"
       onClick={() => setPlaying(true)}
-      className="group w-full flex items-center gap-4 p-2.5 rounded-2xl bg-white ring-1 ring-[#e6d9c2] shadow-sm hover:shadow-md hover:ring-[#7a2028]/30 transition-all text-left cursor-pointer active:scale-[0.99]"
+      className="group w-full flex items-center gap-4 p-2.5 rounded-2xl bg-white ring-1 ring-[#e8dcc8] shadow-sm hover:shadow-md hover:ring-[#7a2028]/30 transition-all text-left cursor-pointer active:scale-[0.99]"
     >
       <div className="relative w-32 sm:w-40 aspect-video shrink-0 rounded-xl overflow-hidden bg-stone-800">
         <img
@@ -286,7 +286,7 @@ const BioBody: React.FC<{ blocks: BioBlock[] }> = ({ blocks }) => {
         }
         if ('verse' in b) {
           return (
-            <blockquote key={i} className="my-6 py-4 px-5 rounded-2xl bg-white/70 ring-1 ring-[#e6d9c2] font-serif-ge italic text-center text-[#4a3426] leading-loose">
+            <blockquote key={i} className="my-6 py-4 px-5 rounded-2xl bg-white/70 ring-1 ring-[#e8dcc8] font-serif-ge italic text-center text-[#4a3426] leading-loose">
               {b.verse.map((l, j) => (
                 <span key={j} className="block">{l}</span>
               ))}
@@ -295,7 +295,7 @@ const BioBody: React.FC<{ blocks: BioBlock[] }> = ({ blocks }) => {
         }
         if ('sources' in b) {
           return (
-            <div key={i} className="mt-9 pt-5 border-t border-[#e6d9c2] text-[0.8em] text-[#8a7a6a] leading-relaxed">
+            <div key={i} className="mt-9 pt-5 border-t border-[#e8dcc8] text-[0.8em] text-[#8a7a6a] leading-relaxed">
               <p className="font-bold text-[#574739] mb-2">წყაროები და სამეცნიერო ლიტერატურა</p>
               {b.sources.map((s, j) => (
                 <p key={j} className="mb-1">{s}</p>
@@ -385,7 +385,7 @@ const BioReader: React.FC<{ id: number; onNavigate: (id: number) => void; onClos
       <button
         type="button"
         onClick={() => onNavigate(target.id)}
-        className={`group flex-1 min-w-0 flex items-center gap-3 p-2.5 rounded-2xl bg-white ring-1 ring-[#e6d9c2] shadow-sm hover:shadow-md hover:ring-[#7a2028]/30 transition-all cursor-pointer active:scale-[0.99] ${
+        className={`group flex-1 min-w-0 flex items-center gap-3 p-2.5 rounded-2xl bg-white ring-1 ring-[#e8dcc8] shadow-sm hover:shadow-md hover:ring-[#7a2028]/30 transition-all cursor-pointer active:scale-[0.99] ${
           dir === 'next' ? 'flex-row-reverse text-right' : 'text-left'
         }`}
       >
@@ -419,7 +419,7 @@ const BioReader: React.FC<{ id: number; onNavigate: (id: number) => void; onClos
       aria-label={a.name}
       className="fixed inset-0 z-[70] safe-x overflow-y-auto overscroll-contain bg-[#fbf6ec]"
     >
-      <div className="sticky top-0 z-10 bg-[#fbf6ec]/90 backdrop-blur-md border-b border-[#e6d9c2]/70">
+      <div className="sticky top-0 z-10 bg-[#fbf6ec]/90 backdrop-blur-md border-b border-[#e8dcc8]/70">
         <div className="max-w-2xl mx-auto flex items-center gap-3 px-4 py-2">
           <BackBtn onClick={onClose} />
           <p
@@ -469,7 +469,7 @@ const BioReader: React.FC<{ id: number; onNavigate: (id: number) => void; onClos
         </header>
 
         {headings.length >= 3 && (
-          <nav className="mt-7 p-4 rounded-2xl bg-white/70 ring-1 ring-[#e6d9c2]">
+          <nav className="mt-7 p-4 rounded-2xl bg-white/70 ring-1 ring-[#e8dcc8]">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#7a2028]/70 mb-2.5">შინაარსი</p>
             <ol className="space-y-1">
               {headings.map((h, n) => (
@@ -536,7 +536,7 @@ export const AncestorsPage: React.FC = () => {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="მოძებნე მგალობელი…"
-            className="w-full h-10 pl-10 pr-4 rounded-full bg-white/90 ring-1 ring-[#e6d9c2] focus:ring-2 focus:ring-[#7a2028]/40 outline-none shadow-sm text-[15px] text-[#2a2017] placeholder:text-[#a39482] transition-shadow"
+            className="w-full h-10 pl-10 pr-4 rounded-full bg-white/90 ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/40 outline-none shadow-sm text-[15px] text-[#2a2017] placeholder:text-[#a39482] transition-shadow"
           />
         </label>
   
@@ -604,7 +604,7 @@ export const AncestorsPage: React.FC = () => {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex items-center justify-between gap-3 p-4 rounded-2xl bg-white ring-1 ring-[#e6d9c2] shadow-sm hover:shadow-md hover:ring-[#7a2028]/30 transition-all duration-200 text-[#2a2017] hover:text-[#7a2028]"
+              className="group flex items-center justify-between gap-3 p-4 rounded-2xl bg-white ring-1 ring-[#e8dcc8] shadow-sm hover:shadow-md hover:ring-[#7a2028]/30 transition-all duration-200 text-[#2a2017] hover:text-[#7a2028]"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[#fbf6ec] flex items-center justify-center shrink-0">

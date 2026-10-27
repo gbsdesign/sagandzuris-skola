@@ -132,12 +132,12 @@ export const ChantAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
         </header>
 
         {!can('recordings') ? (
-          <p className="px-4 py-6 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e6d9c2] text-center text-[14px] text-[#8a7a6a]">
+          <p className="px-4 py-6 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-center text-[14px] text-[#8a7a6a]">
             ჩანაწერები სკოლის წევრებისთვისაა.
           </p>
         ) : (
           groups.map(([who, recs]) => (
-            <section key={who} className="rounded-2xl bg-white ring-1 ring-[#e6d9c2] shadow-[0_1px_3px_rgba(74,52,38,0.06)] overflow-hidden">
+            <section key={who} className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] shadow-[0_1px_3px_rgba(74,52,38,0.06)] overflow-hidden">
               {!oneGroup && (
                 <h2 className="px-4 py-2.5 bg-[#fbf6ec] border-b border-[#efe5d4] text-[13.5px] font-extrabold text-[#574739] flex items-baseline justify-between gap-3">
                   <span className="min-w-0">{who}</span>

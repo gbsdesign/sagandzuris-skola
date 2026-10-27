@@ -8,7 +8,7 @@ export const PWAInstallButton: React.FC<{ compact?: boolean }> = ({ compact = fa
   const { isInstallable, isInstalled, isIOS, install } = usePWAInstall();
   const [showIOSGuide, setShowIOSGuide] = useState(false);
   const buttonClass = compact
-    ? 'w-9 h-9 rounded-xl ring-1 ring-[#e8dcc8] bg-white/80 hover:bg-white hover:ring-[#7a2028]/40 text-[#7a2028] flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0'
+    ? 'w-9 h-9 rounded-full ring-1 ring-[#e8dcc8] bg-white/80 hover:bg-white hover:ring-[#7a2028]/40 text-[#7a2028] flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0'
     : 'inline-flex items-center justify-center gap-2 h-11 px-5 rounded-full bg-white ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#4a3426] text-sm font-bold cursor-pointer select-none transition active:scale-[0.97] shrink-0';
 
   // If already running as an installed PWA, hide the button
@@ -28,7 +28,7 @@ export const PWAInstallButton: React.FC<{ compact?: boolean }> = ({ compact = fa
 
   const inner = (
     <>
-      <Download className={compact ? 'w-4 h-4' : 'w-[18px] h-[18px] text-[#7a2028]'} />
+      <Download className={compact ? 'w-[18px] h-[18px]' : 'w-[18px] h-[18px] text-[#7a2028]'} />
       {!compact && <span>აპის დაყენება</span>}
     </>
   );

@@ -79,6 +79,6 @@
 .pp-qr svg{width:100%;height:100%;display:block}
 .pp-qr-cap{margin:0;text-align:center;font-size:13px;font-weight:600;line-height:1.5;color:var(--ink-2)}
 .pp-link{display:flex;justify-content:center;margin:14px 0 4px}
-.pp-link code{flex:1;min-width:0;font-size:10.5px;color:var(--ink-2);word-break:break-all;user-select:all}
+.pp-link code{flex:1;min-width:0;font-size:11.5px;color:var(--ink-2);word-break:break-all;user-select:all}
 .pp-link button{flex:none;display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 18px;border-radius:12px;background:var(--wine);color:var(--wine-ink);font-size:13px;font-weight:700}
 .pp-link button svg{width:14px;height:14px}

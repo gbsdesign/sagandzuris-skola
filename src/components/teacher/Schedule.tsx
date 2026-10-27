@@ -146,7 +146,7 @@ const ScheduleRows: React.FC<{ rows: LessonSlot[]; setRows: React.Dispatch<React
     <>
       <ul className="space-y-2.5">
         {rows.map((r, i) => (
-          <li key={i} className="p-3 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#efe3cf] space-y-2">
+          <li key={i} className="p-3 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] space-y-2">
             <div className="flex gap-2">
               <select className={`${FIELD} flex-1`} value={r.day} onChange={e => patch(i, { day: Number(e.target.value) })} aria-label="დღე">
                 {ORDER.map(d => <option key={d} value={d}>{WEEKDAYS_GE[d]}</option>)}

@@ -71,7 +71,7 @@ export const BirthdaysPage: React.FC = () => {
               const today = nextBirthday(e, now).days === 0;
               return (
                 <li key={e.key} className={`min-h-14 flex items-center gap-3 px-2 py-1.5 ${e.uid === user?.uid ? 'bg-[#7a2028]/[0.04] rounded-2xl' : ''}`}>
-                  <span className={`w-11 h-11 shrink-0 rounded-xl flex flex-col items-center justify-center leading-none ${today ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#fbf6ec] ring-1 ring-[#efe3cf] text-[#4a3426]'}`}>
+                  <span className={`w-11 h-11 shrink-0 rounded-xl flex flex-col items-center justify-center leading-none ${today ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[#4a3426]'}`}>
                     <span className="font-serif-ge text-[17px] font-bold tabular-nums">{e.day}</span>
                     <span className="mt-0.5 text-[11px] font-semibold opacity-75">{MONTHS_SHORT_GE[e.month - 1]}</span>
                   </span>

@@ -183,6 +183,10 @@ export const PersonSheet: React.FC<{
               )}
               {u.kidsMode?.on && <Pill tone="amber">საბავშვო რეჟიმი</Pill>}
             </div>
+            {/* the one ✎ of the app: a round 36px button beside what it changes */}
+            <IconBtn label="პროფილის რედაქტირება" className="self-start" onClick={() => setEditing(true)}>
+              <Pencil />
+            </IconBtn>
           </div>
 
           {shown.length > 0 ? (
@@ -197,7 +201,6 @@ export const PersonSheet: React.FC<{
           ) : (
             <Pill tone="amber">პროფილს ჯერ ავსებს</Pill>
           )}
-          <Btn kind="ghost" size="sm" icon={<Pencil />} onClick={() => setEditing(true)}>პროფილის რედაქტირება</Btn>
 
           {admitted && (
             <Part title="როლი">

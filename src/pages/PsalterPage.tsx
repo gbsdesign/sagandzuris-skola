@@ -185,7 +185,7 @@ const GroupExtras: React.FC<{ isMember: boolean; shiftDays?: number[] }> = ({ is
         {isMember && (
           <button
             type="button" role="switch" aria-checked={on} disabled={busy || !pushSupported()} onClick={toggle}
-            className="h-9 pl-3 pr-1.5 rounded-full bg-[#fbf6ec] ring-1 ring-[#efe3cf] text-[13px] font-semibold text-[#4a3426] inline-flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-default"
+            className="h-9 pl-3 pr-1.5 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[13px] font-semibold text-[#4a3426] inline-flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-default"
           >
             <Bell className="w-4 h-4 text-[#7a2028]" /> შეხსენებები
             <span className={`relative w-9 h-6 rounded-full transition-colors ${on ? 'bg-[#7a2028]' : 'bg-[#dccdb5]'}`}>
@@ -195,7 +195,7 @@ const GroupExtras: React.FC<{ isMember: boolean; shiftDays?: number[] }> = ({ is
         )}
         <button
           type="button" onClick={() => setHow(o => !o)} aria-expanded={how}
-          className={`h-9 px-3 rounded-full ring-1 text-[13px] font-semibold inline-flex items-center gap-1.5 cursor-pointer ${how ? 'bg-[#7a2028]/[0.08] ring-[#7a2028]/30 text-[#7a2028]' : 'bg-[#fbf6ec] ring-[#efe3cf] text-[#7a2028]'}`}
+          className={`h-9 px-3 rounded-full ring-1 text-[13px] font-semibold inline-flex items-center gap-1.5 cursor-pointer ${how ? 'bg-[#7a2028]/[0.08] ring-[#7a2028]/30 text-[#7a2028]' : 'bg-[#fbf6ec] ring-[#e8dcc8] text-[#7a2028]'}`}
         >
           <Info className="w-4 h-4" /> როგორ მუშაობს
         </button>
