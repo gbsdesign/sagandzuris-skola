@@ -43,6 +43,10 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   056, 061, 067, 135, 159); printed ♯/♮/♭ not read (v9/034 bass ♯G at every cadence, v9/031, 041, 069, 078, 090, 091,
   099, 100; v8/083; karb/153, 173). Carry fixes (an accidental the OMR held over a whole barless line, clashing
   with another voice): book/030, feast/038, karb/100, 180, kk/040, 043, v5/124. The list with the rule per line is in that thread's scratchpad `fixes.txt`.
+  Third round (2026-10-27, `fixes2.txt`, 28 notes): key change missed in one or two voices (v8/020 line 5, v8/089
+  line 5, v5/136 lines 8 and 11, dasd1/120 bass line 2 kept 7♭), an accidental carried past a real barline (kk/183
+  line 27, v5/027 line 1, v8/028 line 3) and an unread ♮ at a line start (v5/028 line 7). These no-clash errors are
+  only found by looking: the OMR does not store barlines or key signatures.
 - The OMR scripts live only in the user's old session scratchpads — they are not in this repo.
 - Unreviewed guesses (don't present as confirmed): vol. I↔III matches, vol. V/IX placements, which book
   version a liturgy recording follows (the `main` flag in `TSIRVA_BOOK` moves a recording to another version).
