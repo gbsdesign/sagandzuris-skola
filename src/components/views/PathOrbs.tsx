@@ -111,7 +111,7 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, newWork.count]);
 
-  usePanelWish(['manera', 'work', 'pearls'], id => setOpen(id as OrbId));
+  usePanelWish(['learn', 'manera', 'work', 'pearls'], id => setOpen(id as OrbId));
   const toggle = (id: OrbId) => { triggerHaptic(10); setEditing(false); setOpen(o => (o === id ? null : id)); };
   const close = () => { setEditing(false); setOpen(null); };
 
