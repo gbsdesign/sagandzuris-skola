@@ -72,7 +72,9 @@
   `Downloads` folder (PDF chant books, recordings, drawings), OMR scripts in old session scratchpads, Google Drive files.
 - Work on a branch and open a pull request. **Merging into `main` publishes the live site within minutes**
   (Cloudflare Pages), so tell the user clearly what a PR changes before they merge.
-- Firestore rules are published by hand in the Firebase console (no Firebase CLI). Cloudflare Workers are
+- Firestore rules: `.github/workflows/firestore-rules.yml` runs `tests/firestore-rules.test.mjs` in the emulator on PRs and
+  publishes `firestore.rules` when it reaches main (secret `FIREBASE_SERVICE_ACCOUNT`; added 2026-10-27). Until that secret
+  exists, the user publishes them by hand in the Firebase console. Cloudflare Workers are
   deployed from the user's PC with wrangler — a cloud session can edit `worker/` but cannot deploy it.
 
 ## Project basics

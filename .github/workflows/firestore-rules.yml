@@ -1,0 +1,61 @@
+# The database rules (firestore.rules): checked on every pull request that changes them, and published to Firebase
+# when they reach main — no more pasting them into the console by hand.
+# One-time setup: the GitHub secret FIREBASE_SERVICE_ACCOUNT = the whole JSON key of a service account of
+# psalms-reading-group-ge-dev (Firebase console → Project settings → Service accounts → Generate new private key).
+name: Firestore rules
+
+on:
+  push:
+    branches: [main]
+    paths: [firestore.rules, tests/firestore-rules.test.mjs, .github/workflows/firestore-rules.yml]
+  pull_request:
+    paths: [firestore.rules, tests/firestore-rules.test.mjs, .github/workflows/firestore-rules.yml]
+  workflow_dispatch:
+
+concurrency:
+  group: firestore-rules-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  rules:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      # the tools in a folder of their own, so the app's packages are not installed
+      - name: Install the Firebase tools
+        run: |
+          mkdir ci && cd ci
+          npm init -y > /dev/null
+          npm i --no-audit --no-fund firebase-tools@15.34.1 @firebase/rules-unit-testing@5.0.2 firebase@12.19.0
+          cp ../firestore.rules ../tests/firestore-rules.test.mjs .
+
+      # every case in the test must pass, or nothing is published
+      - name: Check the rules in the emulator
+        working-directory: ci
+        run: |
+          echo '{"emulators":{"firestore":{"port":8085}}}' > firebase.json
+          npx firebase emulators:exec --only firestore --project demo-sg "node firestore-rules.test.mjs firestore.rules"
+
+      - name: Publish the rules
+        if: github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
+        working-directory: ci
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          if [ -z "$SA" ]; then echo "::error::The secret FIREBASE_SERVICE_ACCOUNT is missing — add it in the repository settings."; exit 1; fi
+          printf '%s' "$SA" > "$RUNNER_TEMP/sa.json"
+          export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
+          # the app's database is a named one (firebase-applet-config.json), not "(default)"
+          DB=$(node -p "require('../firebase-applet-config.json').firestoreDatabaseId")
+          echo "{\"firestore\":[{\"database\":\"$DB\",\"rules\":\"firestore.rules\"}]}" > firebase.json
+          npx firebase deploy --only firestore:rules --project psalms-reading-group-ge-dev --non-interactive
+          rm -f "$RUNNER_TEMP/sa.json"
