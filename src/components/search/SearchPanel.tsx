@@ -1,7 +1,7 @@
 import { usePlacements } from '../../data/placements';
 import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  ArrowLeft, CalendarDays, Check, ChevronRight, Plus, Lightbulb, Lock, Music, Music2, ScrollText, Search, Sparkles, Users, X, BookOpen,
+  CalendarDays, Check, ChevronRight, Plus, Lock, Music, Music2, ScrollText, Search, Sparkles, Users, X, BookOpen,
 } from 'lucide-react';
 import { useAuth } from '../../context';
 import { useMyHabits } from '../../hooks/useMyHabits';
@@ -15,6 +15,7 @@ import { triggerHaptic } from '../../utils/haptics';
 import { shortcutIcon } from '../home/ShortcutShelf';
 import { useOpenSearchTarget } from './openSearchTarget';
 import { askSignIn } from '../access/SignInPrompt';
+import { BackBtn } from '../ui/kit';
 
 // The one search over the whole app: chants, prayers, the psalter, songs, the great chanters, feasts and
 // the app's own functions. Full screen on a phone, a centred window from sm up. GlobalSearch opens it.
@@ -243,14 +244,7 @@ export const SearchPanel: React.FC<{
         {/* the field */}
         <div className="safe-top safe-x border-b border-[#e8dcc8]">
           <div className="flex items-center gap-2 px-3 sm:px-4 py-3">
-            <button
-              type="button"
-              onClick={onClose}
-              className="sm:hidden w-10 h-10 shrink-0 rounded-full bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] flex items-center justify-center cursor-pointer active:scale-95"
-              aria-label="დახურვა"
-            >
-              <ArrowLeft className="w-5 h-5" />
-            </button>
+            <BackBtn onClick={onClose} label="დახურვა" className="sm:hidden" />
             <label className="relative flex-1 min-w-0">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#7a2028] pointer-events-none" />
               <input
@@ -387,10 +381,6 @@ export const SearchPanel: React.FC<{
                     </button>
                   ))}
                 </div>
-                <p className="mt-5 px-3 flex items-start gap-2 text-[12.5px] leading-relaxed text-[#8a7a6a]">
-                  <Lightbulb className="w-4 h-4 mt-0.5 shrink-0 text-[#cdbba3]" />
-                  <span>მოძებნე საგალობელი, ლოცვა, დაუჯდომელი, ფსალმუნი („ფს 50“), სახარების თავი („მათე 5“), სიმღერა, მგალობელი ან დღესასწაული.</span>
-                </p>
               </>
             )}
           </div>

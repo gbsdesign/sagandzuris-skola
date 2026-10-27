@@ -54,12 +54,9 @@ export const TheoryTab: React.FC = () => {
   return (
     <div className="space-y-7">
       <section>
-        <SectionHead title="მუსიკის თეორია" sub="II ტური · წერითი გამოცდა" />
+        <SectionHead title="მუსიკის თეორია" sub="II ტური · ტესტის 7 დავალება და კარნახი" />
         <div className={`${CARD} p-3.5 sm:p-4`}>
-          <p className="px-1 text-[14px] leading-relaxed text-[#4a3426]">
-            ტესტი — <b className="text-[#2a2017]">„მუსიკალური ანბანი“</b> — შვიდი დავალებისგან შედგება. თითოეულს თავისი გაკვეთილი აქვს:
-          </p>
-          <ol className="mt-2.5 grid sm:grid-cols-2 gap-x-3 gap-y-1">
+          <ol className="grid sm:grid-cols-2 gap-x-3 gap-y-1">
             {THEORY_TOPICS.map((t, i) => {
               const lesson = byTask(i + 1);
               return (
@@ -78,11 +75,7 @@ export const TheoryTab: React.FC = () => {
               );
             })}
           </ol>
-          <p className="mt-3 pt-3 px-1 border-t border-[#efe5d4] text-[13px] leading-relaxed text-[#6b5c4d]">
-            ტურის მეორე ნაწილია <b className="text-[#4a3426]">კარნახი</b> (ნიმუშში — ოთხტაქტიანი, სამხმიანი), მესამე —
-            <b className="text-[#4a3426]"> კოლოკვიუმი</b>, მას ცალკე ჩანართი აქვს.
-          </p>
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-3 pt-3 border-t border-[#efe5d4] flex flex-wrap gap-2">
             <Pill href={OFFICIAL_PDFS.theoryTest} icon={<FileText className="w-4 h-4" />}>ტესტის ნიმუში</Pill>
             <Pill href={OFFICIAL_PDFS.dictation} icon={<FileText className="w-4 h-4" />}>კარნახის ნიმუში</Pill>
           </div>
@@ -92,7 +85,7 @@ export const TheoryTab: React.FC = () => {
       <section id="trainer" className="scroll-mt-24">
         <SectionHead
           title="ვარჯიში"
-          sub={progress.onAccount ? 'ყოველ ჯერზე ახალი დავალება · ინახება შენს ანგარიშზე' : 'ყოველ ჯერზე ახალი დავალება'}
+          sub="ყოველ ჯერზე ახალი"
         />
         <div className="space-y-3">
           <Trainer progress={progress} kind={drill} setKind={setDrill} />

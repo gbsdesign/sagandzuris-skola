@@ -34,16 +34,8 @@ export const AbituriPage: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl mx-auto mb-6 px-1">
-      <header className="text-center px-2 mb-5">
-        <p className="text-[12px] font-black uppercase tracking-[0.14em] text-[#a0703c]">მისაღები გამოცდები · 2026</p>
-        <h2 className="mt-1.5 font-serif-ge text-[22px] sm:text-[26px] font-bold leading-tight text-[#2a2017] text-balance">
-          გზა გალობის უნივერსიტეტისკენ
-        </h2>
-        <p className="mt-2 mx-auto max-w-md text-[14px] leading-relaxed text-[#6b5c4d] text-pretty">
-          სამი გამოცდა და ყველაფერი, რაც მათთვის გჭირდება — პროგრამა, ნოტები და ხმა-ხმა ჩანაწერები ერთ ადგილას.
-        </p>
-        <UpdateNotice className="mt-4 mx-auto max-w-xl" />
-      </header>
+      {/* the page bar already names the page: only the one line about the yearly rules */}
+      <UpdateNotice className="px-2 mb-4" />
 
       {/* the exams in order: two by two on a phone, one row from sm up */}
       <div role="tablist" aria-label="აბიტურიენტს" className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 rounded-[22px] bg-white/80 ring-1 ring-[#e8dcc8] p-1.5">

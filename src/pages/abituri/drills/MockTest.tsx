@@ -136,10 +136,7 @@ const StartCard: React.FC<{ onStart: () => void; tests: TestResult[] }> = ({ onS
       </span>
       <div className="min-w-0">
         <h3 className="font-serif-ge text-[17px] font-bold leading-snug text-[#2a2017]">საცდელი ტესტი</h3>
-        <p className="mt-1 text-[13.5px] leading-relaxed text-[#6b5c4d]">
-          როგორც ნამდვილ გამოცდაზე: 4 კილო, 10 ინტერვალი, 6 აკორდი, ტრანსპონირება, დაჯგუფება, 5 ასო და 5 პაუზა.
-          ყოველ ჯერზე ახალი; ქულა — ბოლოს.
-        </p>
+        <p className="mt-0.5 text-[13.5px] leading-snug text-[#6b5c4d]">32 ქულა · ყოველ ჯერზე ახალი</p>
       </div>
     </div>
     {tests.length > 0 && (

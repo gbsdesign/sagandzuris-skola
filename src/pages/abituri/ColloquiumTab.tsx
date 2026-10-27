@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CirclePlay, Ear, Play, X } from 'lucide-react';
+import { CirclePlay, Play, X } from 'lucide-react';
 import { COLLOQUIUM_CHANTS, COLLOQUIUM_SONGS, COLLOQUIUM_VIDEOS, type ColloquiumGroup, type ColloquiumItem } from '../../data/abituriProgram';
 import { askSignIn } from '../../components/access/SignInPrompt';
 import { triggerHaptic } from '../../utils/haptics';
@@ -18,16 +18,6 @@ export const ColloquiumTab: React.FC = () => {
     : <Pill onClick={() => askSignIn('ჩანაწერები')} icon={<CirclePlay className="w-4 h-4" />}>ყველა ერთად</Pill>;
   return (
     <div className="space-y-7">
-      <div className={`${CARD} flex items-start gap-3 p-3.5 sm:p-4`}>
-        <span className="shrink-0 grid place-items-center w-10 h-10 rounded-full bg-[#7a2028]/[0.08] text-[#7a2028]">
-          <Ear className="w-5 h-5" />
-        </span>
-        <p className="text-[14px] leading-relaxed text-[#3a2d22]">
-          გამოცდაზე მოგასმენინებენ ნაწყვეტებს სიმღერებიდან და საგალობლებიდან. უნდა გამოიცნო, <b>რა არის</b>,
-          <b> რა ჰქვია</b> და <b>სადაურია</b>, და ფურცელზე დაწერო. ქვემოთ — ყველაფერი, რაც შეიძლება შეგხვდეს.
-        </p>
-      </div>
-
       <ColloquiumQuiz />
 
       <section>

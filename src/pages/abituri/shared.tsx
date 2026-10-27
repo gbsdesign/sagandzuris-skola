@@ -1,5 +1,5 @@
 import React from 'react';
-import { TriangleAlert } from 'lucide-react';
+import { ExternalLink, Info } from 'lucide-react';
 import { FOLK_SONGS, type FolkRegionId } from '../../data/songsData';
 import { useAuth } from '../../context';
 import { useAccess } from '../../hooks/useAccess';
@@ -68,17 +68,13 @@ export const SectionHead: React.FC<{ title: string; sub?: string; extra?: React.
   </div>
 );
 
-// The university changes its rules every year — shown at the top of the page and on the admission tab
+// The university changes its rules every year: one quiet line at the top of the page
 export const UpdateNotice: React.FC<{ className?: string }> = ({ className = '' }) => (
-  <div role="note" className={`flex items-start gap-3 rounded-2xl bg-[#fdf4e3] ring-1 ring-[#e9c98f] px-4 py-3.5 sm:px-5 sm:py-4 text-left ${className}`}>
-    <TriangleAlert className="w-6 h-6 shrink-0 mt-0.5 text-[#b7791f]" />
-    <p className="text-[16px] leading-relaxed text-[#4a3826] text-pretty">
-      აქ დადებული ინფორმაცია, პროგრამა და ჩანაწერები შეიძლება განახლებას საჭიროებდეს — გალობის უნივერსიტეტი
-      წესებს ყოველ წელს ცვლის. ამიტომ შეამოწმეთ{' '}
-      <a href={UNIVERSITY_PAGE} target="_blank" rel="noopener noreferrer" className="font-bold text-[#7a2028] underline underline-offset-2 decoration-[#7a2028]/40 hover:decoration-[#7a2028]">
-        უნივერსიტეტის ვებგვერდი
-      </a>
-      , განსაკუთრებით მარტის დასაწყისში.
-    </p>
-  </div>
+  <p role="note" className={`text-[13px] leading-relaxed text-[#6b5c4d] text-center text-balance ${className}`}>
+    <Info className="inline w-4 h-4 -mt-0.5 mr-1 text-[#b7791f]" />
+    წესები ყოველ წელს იცვლება —{' '}
+    <a href={UNIVERSITY_PAGE} target="_blank" rel="noopener noreferrer" className="whitespace-nowrap font-bold text-[#7a2028] underline underline-offset-2 decoration-[#7a2028]/40 hover:decoration-[#7a2028]">
+      უნივერსიტეტის გვერდი <ExternalLink className="inline w-3.5 h-3.5 -mt-0.5" />
+    </a>
+  </p>
 );

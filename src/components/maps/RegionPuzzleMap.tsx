@@ -78,14 +78,13 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
         </svg>
         {/* the lit region's name: a fixed-height line, so nothing jumps */}
         <p className="h-6 mt-1 flex items-center justify-center gap-2 text-[13px] font-bold text-[#6b4423]" aria-live="polite">
-          {lit ? (
+          {/* empty until a region is lit: the map and the cards speak for themselves */}
+          {lit && (
             <>
               <span className="w-3 h-3 rounded-[4px] border border-black/10" style={{ background: lit.color }} />
               <span>{regionName(lit)}</span>
               {count(lit.id) > 0 && <span className="font-semibold text-amber-700">· {countLabel(count(lit.id))}</span>}
             </>
-          ) : (
-            <span className="font-semibold text-[#a07c58]">აირჩიე კუთხე რუკაზე ან სიაში</span>
           )}
         </p>
       </div>

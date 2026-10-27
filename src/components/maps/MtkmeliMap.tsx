@@ -17,10 +17,11 @@ interface MtkmeliMapProps {
 // On this map Tbilisi is a city, not the songs' "ქალაქური" category
 const regionName = (r: FolkRegion) => (r.id === 'kalakuri' ? 'თბილისი' : r.nameGe);
 
-const KIND_STYLE: Record<WorkKind, { icon: React.ReactNode; cls: string }> = {
-  'ლექსი': { icon: <Feather className="w-3 h-3" />, cls: 'bg-amber-100 text-amber-900 border-amber-300' },
-  'პოემა': { icon: <ScrollText className="w-3 h-3" />, cls: 'bg-rose-100 text-rose-900 border-rose-300' },
-  'თხრობა': { icon: <BookText className="w-3 h-3" />, cls: 'bg-sky-100 text-sky-900 border-sky-300' },
+// one calm chip for every kind; the icon still tells a poem from a story
+const KIND_ICON: Record<WorkKind, React.ReactNode> = {
+  'ლექსი': <Feather className="w-3 h-3" />,
+  'პოემა': <ScrollText className="w-3 h-3" />,
+  'თხრობა': <BookText className="w-3 h-3" />,
 };
 
 export const MtkmeliMap: React.FC<MtkmeliMapProps> = ({ selectedChantVariants = {}, onTogglePoem }) => {
@@ -44,19 +45,18 @@ export const MtkmeliMap: React.FC<MtkmeliMapProps> = ({ selectedChantVariants = 
   return (
     <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
       {/* where the region is: a small map with it lit */}
-      <div className="flex items-center gap-3 px-1 pb-3 border-b border-amber-200/60">
+      <div className="flex items-center gap-3 px-1 pb-3 border-b border-[#e4d8c4]">
         <RegionLocator region={region} className="w-28 sm:w-32 h-auto shrink-0" />
         <div className="min-w-0 flex flex-col gap-0.5">
-          <h3 className="text-lg sm:text-xl font-black text-slate-800 leading-tight">{regionName(region)}</h3>
-          <span className="text-xs font-bold text-amber-800">{authors.length} ავტორი</span>
+          <h3 className="text-lg sm:text-xl font-black text-[#2a2017] leading-tight">{regionName(region)}</h3>
+          <span className="text-xs font-bold text-[#8a4b12]">{authors.length} ავტორი</span>
         </div>
       </div>
 
       {authors.length === 0 ? (
-        <div className="flex flex-col items-center text-center gap-1.5 py-8 px-3 rounded-2xl bg-slate-50 border border-dashed border-slate-200">
-          <BookOpen className="w-6 h-6 text-slate-300" />
-          <p className="text-sm font-bold text-slate-600">ამ კუთხის ავტორები ჯერ არ დამატებულა</p>
-          <p className="text-xs text-slate-400">მალე დაემატება</p>
+        <div className="flex flex-col items-center text-center gap-1.5 py-8 px-3 rounded-2xl bg-[#faf6ef] border border-dashed border-[#d6c8b1]">
+          <BookOpen className="w-6 h-6 text-[#cdbfa9]" />
+          <p className="text-sm font-bold text-[#574739]">ამ კუთხის ავტორები ჯერ არ დამატებულა</p>
         </div>
       ) : (
         <div className="flex flex-col gap-2">
@@ -92,45 +92,46 @@ const AuthorItem: React.FC<AuthorItemProps> = ({ author, region, selectedChantVa
 
   return (
     <div
-      className={`rounded-2xl border transition-all duration-200 overflow-hidden ${
+      className={`rounded-2xl border bg-white transition-[border-color,box-shadow] duration-300 overflow-hidden ${
         isOpen
-          ? 'bg-white border-amber-400/80 shadow-md ring-1 ring-amber-300/40'
-          : 'bg-white/95 border-slate-200/90 shadow-xs hover:border-amber-300/80 hover:shadow-sm'
+          ? 'border-[#efd6a6] shadow-[0_12px_26px_-18px_rgba(133,80,44,0.55)]'
+          : 'border-[#e4d8c4] shadow-[0_1px_2px_rgba(42,32,23,0.05)] hover:border-[#d6c8b1] hover:shadow-[0_10px_22px_-18px_rgba(42,32,23,0.5)]'
       }`}
     >
       <button
         type="button"
         onClick={() => { triggerHaptic(10); if (!member) askSignIn(`მთქმელი — ${author.name}`); else setIsOpen(o => !o); }}
-        className="w-full px-4 py-3 flex items-center gap-3 text-left cursor-pointer select-none group"
+        aria-expanded={isOpen}
+        className="w-full pl-3.5 pr-2.5 py-3 flex items-center gap-3 text-left cursor-pointer select-none group"
       >
-        <span className={`w-2 h-2 shrink-0 rounded-full transition-all ${isOpen ? 'bg-amber-500 scale-125' : selectedCount ? 'bg-emerald-500' : 'bg-slate-300 group-hover:bg-amber-400'}`} />
+        <span className={`w-2 h-2 shrink-0 rounded-full transition-all ${isOpen ? 'bg-[#f59e0b] scale-125' : selectedCount ? 'bg-emerald-500' : 'bg-[#cdbfa9] group-hover:bg-[#e0a54a]'}`} />
         <span className="flex-1 min-w-0 flex flex-col gap-0.5">
-          <span className="font-bold text-slate-800 text-[15px] sm:text-[17px] leading-snug group-hover:text-[#85502c] transition-colors">
+          <span className="font-bold text-[#2a2017] text-[17px] leading-snug group-hover:text-[#7a2028] transition-colors">
             {author.name}
           </span>
-          <span className="text-[11px] sm:text-xs font-medium text-slate-400">
+          <span className="text-[11.5px] sm:text-xs font-semibold text-[#8c7c6b]">
             {author.years} · {author.works.length} ნაწარმოები
           </span>
         </span>
         {selectedCount > 0 && (
-          <span className="shrink-0 px-2 py-0.5 rounded-full text-[11px] font-black bg-emerald-100 text-emerald-900 border border-emerald-300">
+          <span className="shrink-0 px-2 py-0.5 rounded-full text-[11.5px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
             {selectedCount} მონიშნულია
           </span>
         )}
-        <span className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all ${isOpen ? 'rotate-180 bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-400'}`}>
+        <span className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all ${isOpen ? 'rotate-180 bg-[#fcf1df] text-[#b4620e]' : 'bg-[#f1e9dc] text-[#8c7c6b] group-hover:text-[#7a2028]'}`}>
           <ChevronDown className="w-4 h-4" />
         </span>
       </button>
 
       {isOpen && (
-        <div className="border-t border-amber-200/70 bg-gradient-to-b from-amber-50/40 to-stone-50/50 p-3 sm:p-4 space-y-2.5 animate-in fade-in duration-200">
-          <p className="text-sm text-slate-600 leading-relaxed px-1">
+        <div className="border-t border-[#e4d8c4] animate-in fade-in duration-200">
+          <p className="px-4 py-3 text-sm text-[#574739] leading-relaxed">
             {author.about}{' '}
-            <a href={author.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 font-bold text-amber-800 hover:underline">
+            <a href={author.link} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 font-bold text-[#8a4b12] hover:underline">
               ბიოგრაფია <ExternalLink className="w-3 h-3" />
             </a>
           </p>
-          <div className="flex flex-col gap-2">
+          <div className="border-t border-[#efe5d4] divide-y divide-[#efe5d4]">
             {author.works.map(work => (
               <WorkItem
                 key={work.id}
@@ -174,26 +175,26 @@ const useWorkText = (work: LiteraryWork, open: boolean) => {
 };
 
 const WorkItem: React.FC<WorkItemProps> = ({ work, isOpen, onToggleOpen, isSelected, onToggleSelect }) => {
-  const kind = KIND_STYLE[work.kind];
+
   const { text, failed } = useWorkText(work, isOpen);
   return (
-    <div className={`rounded-xl border bg-white transition-all ${isOpen ? 'border-amber-300 shadow-sm' : 'border-slate-200/80'}`}>
-      <div className="flex items-center gap-2 pr-2">
-        <button type="button" onClick={onToggleOpen} className="flex-1 min-w-0 px-3 py-2.5 flex flex-col items-start gap-1 text-left cursor-pointer">
+    <div className={`transition-colors ${isOpen ? 'bg-[#fffdf8]' : ''}`}>
+      <div className="flex items-center gap-2 pr-2.5">
+        <button type="button" onClick={onToggleOpen} aria-expanded={isOpen} className="flex-1 min-w-0 pl-4 pr-1 py-2.5 flex flex-col items-start gap-1 text-left cursor-pointer group">
           <span className="flex flex-wrap items-center gap-1.5">
-            <span className={`inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md border text-[11px] font-black ${kind.cls}`}>
-              {kind.icon}
+            <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md bg-[#f6ecda] text-[#8a5a2a] text-[11.5px] font-bold">
+              {KIND_ICON[work.kind]}
               {work.kind}
             </span>
-            {work.hasText && <span className="text-[11px] font-semibold text-emerald-700">სრული ტექსტი</span>}
+            {work.hasText && <span className="text-[11.5px] font-semibold text-[#b4620e]">სრული ტექსტი</span>}
           </span>
-          <span className="text-sm sm:text-[15px] font-bold text-slate-800 leading-snug">{work.title}</span>
+          <span className="text-[15px] font-bold text-[#2a2017] leading-snug group-hover:text-[#7a2028] transition-colors">{work.title}</span>
         </button>
         {onToggleSelect && <AddToListButton isSelected={isSelected} onToggle={onToggleSelect} />}
         <button
           type="button"
           onClick={onToggleOpen}
-          className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all cursor-pointer ${isOpen ? 'rotate-180 bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-400'}`}
+          className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center transition-all cursor-pointer ${isOpen ? 'rotate-180 bg-[#fcf1df] text-[#b4620e]' : 'bg-[#f1e9dc] text-[#8c7c6b] hover:text-[#7a2028]'}`}
           aria-label={isOpen ? 'დახურვა' : 'გახსნა'}
         >
           <ChevronDown className="w-4 h-4" />
@@ -201,26 +202,26 @@ const WorkItem: React.FC<WorkItemProps> = ({ work, isOpen, onToggleOpen, isSelec
       </div>
 
       {isOpen && (
-        <div className="border-t border-amber-100 px-3 sm:px-4 py-3 space-y-3 animate-in fade-in duration-200">
-          {work.note && <p className="text-[11px] font-semibold text-slate-400">{work.note}</p>}
+        <div className="px-4 pt-1 pb-4 space-y-3 animate-in fade-in duration-200">
+          {work.note && <p className="text-[11.5px] font-semibold text-[#8c7c6b]">{work.note}</p>}
           {work.hasText ? (
             text !== null ? (
-              <p className="font-serif text-[15px] sm:text-base text-slate-800 whitespace-pre-line leading-relaxed">{text}</p>
+              <p className="font-serif text-[15px] sm:text-base text-[#2a2017] whitespace-pre-line leading-relaxed">{text}</p>
             ) : failed ? (
-              <p className="text-sm text-slate-500">ტექსტი ვერ ჩაიტვირთა — შეამოწმე ინტერნეტი.</p>
+              <p className="text-sm text-[#8c7c6b]">ტექსტი ვერ ჩაიტვირთა — შეამოწმე ინტერნეტი.</p>
             ) : (
-              <p className="text-sm text-slate-400">იტვირთება…</p>
+              <p className="text-sm text-[#8c7c6b]">იტვირთება…</p>
             )
           ) : (
-            <p className="text-sm text-slate-600 leading-relaxed">{work.description}</p>
+            <p className="text-sm text-[#574739] leading-relaxed">{work.description}</p>
           )}
           <a
             href={work.link.url}
             target="_blank"
             rel="noopener noreferrer"
-            className="min-h-9 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-amber-50 hover:border-amber-300 text-xs font-bold text-slate-700 inline-flex items-center gap-1.5 transition-colors"
+            className="min-h-9 px-3 py-1.5 rounded-xl border border-[#e4d8c4] bg-white hover:bg-[#fcf1df] hover:border-[#efd6a6] text-xs font-bold text-[#4a3426] inline-flex items-center gap-1.5 transition-colors"
           >
-            <ExternalLink className="w-4 h-4 text-amber-700" />
+            <ExternalLink className="w-4 h-4 text-[#b4620e]" />
             {work.link.label}
           </a>
         </div>

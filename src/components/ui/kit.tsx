@@ -21,6 +21,39 @@ export const FIELD =
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
+/** The one round 44px „←“ of a page's bar. Full-screen windows with their own sticky bar (a song, a biography, the
+ *  search) use it too, so every way back looks the same. */
+export const BackBtn: React.FC<{ onClick: () => void; label?: string; className?: string; icon?: React.ReactNode }> = ({ onClick, label = 'უკან', className, icon }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={cx('w-11 h-11 shrink-0 rounded-full ring-1 ring-[#e8dcc8] bg-white/85 hover:bg-white hover:ring-[#7a2028]/35 text-[#4a3426] hover:text-[#7a2028] flex items-center justify-center cursor-pointer active:scale-95 transition', className)}
+    aria-label={label}
+    title={label}
+  >
+    {icon ?? <ArrowLeft className="w-5 h-5" />}
+  </button>
+);
+
+/** true once `target` (a window's big title) has scrolled up under its sticky bar inside the scrolling `root`:
+ *  the bar then shows the title itself, so the name is never written twice on one screen. */
+export const useScrolledAway = (target: React.RefObject<Element | null>, root: React.RefObject<Element | null>, key: unknown, bar = 56) => {
+  const [away, setAway] = useState(false);
+  useEffect(() => {
+    const el = target.current;
+    setAway(false);
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(
+      ([e]) => setAway(!e.isIntersecting && e.boundingClientRect.top < (e.rootBounds?.top ?? bar)),
+      { root: root.current, rootMargin: `-${bar}px 0px 0px 0px` }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return away;
+};
+
 /**
  * The one title bar of every inner page: a round 44px „←“, the title on the left (a small line under it if needed)
  * and up to a few 36px round buttons on the right (📌 ✎ ⓘ). Once the bar has scrolled away a round „←“ floats —
@@ -60,17 +93,7 @@ export const PageBar: React.FC<{ title: React.ReactNode; subtitle?: React.ReactN
   return (
     <>
       <div ref={barRef} className={cx('flex items-center gap-3', className)}>
-        {onBack && (
-          <button
-            type="button"
-            onClick={() => { triggerHaptic(8); onBack(); }}
-            className="w-11 h-11 shrink-0 rounded-full ring-1 ring-[#e8dcc8] bg-white/85 hover:bg-white hover:ring-[#7a2028]/35 text-[#4a3426] hover:text-[#7a2028] flex items-center justify-center cursor-pointer active:scale-95 transition"
-            aria-label="უკან"
-            title="უკან"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-        )}
+        {onBack && <BackBtn onClick={() => { triggerHaptic(8); onBack(); }} />}
         {/* `lead`: a small picture beside the title (a class's logo) */}
         {lead}
         <div className="min-w-0 flex-1">
