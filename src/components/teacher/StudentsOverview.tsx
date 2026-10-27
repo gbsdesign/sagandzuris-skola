@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { Users, Clock, Sparkles, ClipboardCheck, Route, Baby, Lock, UserMinus, UserPlus, Loader2, MessageCircle } from 'lucide-react';
+import { Users, Clock, Sparkles, ClipboardCheck, Baby, Lock, UserMinus, UserPlus, Loader2, MessageCircle } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
 import type { ClassMember, SchoolClass } from '../../hooks/useClasses';
@@ -98,7 +98,7 @@ export const StudentsOverview: React.FC<{ cls: SchoolClass; records: Record<stri
       </div>
 
       <Card>
-        <CardTitle icon={<Users />} title="მოსწავლეები" hint="✓ — მოვიდა · სახელზე შეხება — დეტალები" />
+        <CardTitle icon={<Users />} title="მოსწავლეები" />
         <AttendanceDays a={att} total={rows.length} />
         <ul className="-mx-2 divide-y divide-[#f1e8d9]">
           {rows.map(({ m, rec, s }) => {
@@ -325,7 +325,6 @@ const StudentSheet: React.FC<{
               on={kids.on}
               onChange={on => setKids({ ...kids, on })}
               label={<span className="inline-flex items-center gap-1.5"><Lock className="w-4 h-4 text-[#7a2028]" /> საბავშვო რეჟიმი</span>}
-              hint="ჩანს მხოლოდ არჩეული განყოფილებები; იმალება გაზიარება, გარე ბმულები, ანგარიშიდან გასვლა და პარამეტრები. გამორთვა მხოლოდ მასწავლებელს შეუძლია."
             />
             {kids.on && (
               <div className="pt-1">
@@ -346,7 +345,6 @@ const StudentSheet: React.FC<{
             )}
           </div>
           {error && <p className="text-sm font-semibold text-red-700">{error}</p>}
-          <Btn kind="ghost" full icon={<Route />} onClick={() => setView('path')}>საგანძურის გზა და ჩათვლა</Btn>
         </div>
       )}
     </Sheet>

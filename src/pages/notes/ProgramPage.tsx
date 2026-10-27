@@ -3,7 +3,7 @@
 // in church mode or keep the whole program on the phone for singing without internet.
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  CalendarDays, Check, ChevronLeft, CloudDownload, Copy, FileText, GripVertical, Headphones, Church, Plus, QrCode, Send, Trash2, Users, X, LayoutTemplate, CircleCheck,
+  CalendarDays, PenLine, Check, ChevronLeft, CloudDownload, Copy, FileText, GripVertical, Headphones, Church, Plus, QrCode, Send, Trash2, Users, X, LayoutTemplate, CircleCheck,
 } from 'lucide-react';
 import './notes.css';
 import './program.css';
@@ -75,7 +75,7 @@ export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
       say(`გაეგზავნა „${name}“: ყველა წევრი ამ პროგრამას დაინახავს`, 4000);
     } catch (err) {
       console.warn(err);
-      say(liturgy.classes.length ? 'გაგზავნა ვერ მოხერხდა. შეამოწმე ინტერნეტი' : 'ჯერ ადმინის პანელში შექმენი კლასი (გუნდი)', 4200);
+      say(liturgy.classes.length ? 'გაგზავნა ვერ მოხერხდა. შეამოწმე ინტერნეტი' : 'ჯერ ადმინის პანელში შექმენი კლასი', 4200);
     } finally { setBusy(null); }
   };
 
@@ -185,7 +185,7 @@ export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
         <div className="pp-wrap">
           {!program ? (
             <p className="pp-empty">
-              {liturgy.role === 'guest' ? 'შედი საიტზე, რომ შენი გუნდის პროგრამა ნახო.' : 'მასწავლებელს პროგრამა ჯერ არ გამოუგზავნია.'}
+              {liturgy.role === 'guest' ? 'შედი საიტზე, რომ შენი კლასის პროგრამა ნახო.' : 'მასწავლებელს პროგრამა ჯერ არ გამოუგზავნია.'}
             </p>
           ) : (
             <>
@@ -193,38 +193,46 @@ export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
                 <label className="pp-chip date">
                   <CalendarDays />
                   <span>{formatLiturgyDate(program.date)}</span>
+                  {regent && <PenLine className="pen" aria-hidden />}
                   {regent && <input type="date" value={program.date} onChange={e => e.target.value && liturgy.setDate(e.target.value)} aria-label="თარიღი" />}
                 </label>
                 <span className="pp-chip class">
                   <Users />
                   {regent && liturgy.classes.length > 1 ? (
-                    <select value={liturgy.classId ?? ''} onChange={e => liturgy.setClassId(e.target.value)} aria-label="რომელ გუნდს">
+                    <select value={liturgy.classId ?? ''} onChange={e => liturgy.setClassId(e.target.value)} aria-label="რომელ კლასს">
                       {liturgy.classes.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
                     </select>
                   ) : (
-                    <span>{program.className || (regent ? 'კლასი ჯერ არ არის' : 'ჩემი გუნდი')}</span>
+                    <span>{program.className || (regent ? 'კლასი ჯერ არ არის' : 'ჩემი კლასი')}</span>
                   )}
-                  {sentNote && <span className={`pp-sent ${liturgy.sentInSync || !regent ? 'ok' : ''}`}>· {sentNote}</span>}
+                  {sentNote && <span className={`pp-sent ${liturgy.sentInSync || !regent ? 'ok' : ''}`}>{sentNote}</span>}
                 </span>
               </div>
 
-              <div className={`pp-actions ${regent ? '' : 'two'}`}>
+              <div className={`pp-actions ${regent ? 'three' : 'two'}`}>
                 {regent && <button type="button" className="pp-act" onClick={() => setSheet('tpl')}><LayoutTemplate /><span>შაბლონები</span></button>}
                 <button type="button" className="pp-act" onClick={() => setSheet('qr')} disabled={!items.length}><QrCode /><span>QR კოდი</span></button>
                 <button type="button" className="pp-act" onClick={makePdf} disabled={!items.length || busy === 'pdf'}><FileText /><span>{busy === 'pdf' ? 'მზადდება…' : 'PDF'}</span></button>
-                {regent && <button type="button" className="pp-act" onClick={send} disabled={!items.length || busy === 'send'}><Send /><span>{busy === 'send' ? 'იგზავნება…' : 'გუნდს გაგზავნა'}</span></button>}
               </div>
+
+              {/* the teacher's main step: sending the list to the class (bright while the class has an older one) */}
+              {regent && (
+                <button type="button" className={`pp-send ${liturgy.sentInSync ? 'done' : ''}`} onClick={send} disabled={!items.length || busy === 'send'}>
+                  {liturgy.sentInSync ? <CircleCheck /> : <Send />}
+                  <span>{busy === 'send' ? 'იგზავნება…' : liturgy.sentInSync ? 'კლასს გაგზავნილია' : 'კლასს გაგზავნა'}</span>
+                </button>
+              )}
 
               <button type="button" className="pp-primary" onClick={start} disabled={!items.length}><Church /><span>წირვის დაწყება · ტაძრის რეჟიმი</span></button>
               <button type="button" className={`pp-secondary ${allOffline ? 'done' : ''}`} onClick={keepAll} disabled={!items.length || Boolean(dl)}>
                 {allOffline ? <CircleCheck /> : <CloudDownload />}
-                <span>{dl ? `ჩამოიწერება… ${dl.done}/${dl.total}` : allOffline ? 'ჩამოწერილია, ინტერნეტის გარეშეც გაიხსნება' : `ყველაფრის ჩამოწერა ინტერნეტის გარეშე · ~${estimateMb(items)} MB`}</span>
+                <span>{dl ? `ჩამოიწერება… ${dl.done}/${dl.total}` : allOffline ? 'ჩამოწერილია' : `ჩამოწერა ოფლაინისთვის · ~${estimateMb(items)} MB`}</span>
                 {dl && <i className="pp-bar" style={{ width: `${(100 * dl.done) / Math.max(1, dl.total)}%` }} />}
               </button>
 
               <ol ref={listRef} className="pp-list">
                 {!items.length && (
-                  <li className="pp-empty">{regent ? 'პროგრამა ცარიელია. სიაში „+“-ით დაამატე საგალობლები ან აირჩიე შაბლონი.' : 'პროგრამა ცარიელია.'}</li>
+                  <li className="pp-empty">პროგრამა ცარიელია.</li>
                 )}
                 {items.map((id, i) => {
                   const l = labelOf(id);
@@ -256,8 +264,7 @@ export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
           <div className="pp-grip" />
           <button type="button" className="pp-close" onClick={() => setSheet(null)} aria-label="დახურვა"><X /></button>
           <h3>შაბლონები</h3>
-          <p className="pp-sub">შაბლონი ინახავს საგალობლებს და მათ ვერსიებს. მომავალ კვირას ერთი შეხებით აღადგენ და მხოლოდ საჭიროს შეცვლი.</p>
-          {!liturgy.templates.length && <p className="pp-sub">შაბლონები ჯერ არ გაქვს. შეადგინე პროგრამა და შეინახე ქვემოთ.</p>}
+          {!liturgy.templates.length && <p className="pp-sub">შაბლონები ჯერ არ გაქვს.</p>}
           {liturgy.templates.map(t => (
             <div key={t.name} className="pp-tpl">
               <span className="tx"><b>{t.name}</b><small>{t.items.length} საგალობელი</small></span>
@@ -284,9 +291,7 @@ export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
           <button type="button" className="pp-close" onClick={() => setSheet(null)} aria-label="დახურვა"><X /></button>
           <h3>დღევანდელი წირვა · QR</h3>
           <div className="pp-qr" dangerouslySetInnerHTML={{ __html: qrSvg }} />
-          <p className="pp-qr-cap">მგალობელი ტელეფონის კამერით დაასკანერებს და დღევანდელი წირვა გაეხსნება.</p>
-          <div className="pp-link"><code>{url}</code><button type="button" onClick={copyUrl}><Copy /> კოპირება</button></div>
-          <p className="pp-sub">მთელი სია თავად QR-შია ჩაწერილი. ინტერნეტის გარეშე გაიხსნება იმ ტელეფონზე, სადაც საიტი აპად არის დაყენებული და ნოტები წინასწარ ჩამოწერილია.</p>
+          <div className="pp-link"><button type="button" onClick={copyUrl}><Copy /> ბმულის კოპირება</button></div>
         </div>
       )}
 

@@ -430,11 +430,7 @@ export const GzaView: React.FC<GzaViewProps> = ({
                       </button>
                     </div>
                   </div>
-                  {(editing || locked || usesVoices(cat.items[0].variantId)) && (
-                    <p className="mt-0.5 pl-4 text-xs text-[#8a7a6a]">
-                      {editing ? 'შეეხე ✕-ს, რომ სიიდან ამოშალო' : locked ? 'მონიშვნას ახლა მასწავლებელი აკეთებს' : 'შეეხე ხმის ნომერს, როცა ისწავლი'}
-                    </p>
-                  )}
+                  {locked && !editing && <p className="mt-0.5 pl-4 text-xs text-[#8a7a6a]">მონიშვნას ახლა მასწავლებელი აკეთებს</p>}
                 </div>
 
                 <ul className="rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-20px_rgba(42,32,23,0.35)] divide-y divide-[#f1e8da] overflow-hidden">
@@ -798,8 +794,6 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
     });
   }
 
-  const monthRemainingHours = Math.max(0, monthPlannedHours - monthActualWorkedHours - monthMissedHours);
-
   const progressPercent = monthPlannedHours > 0
     ? Math.min(100, Math.round((monthActualWorkedHours / monthPlannedHours) * 100))
     : 0;
@@ -832,11 +826,9 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
               <div className="h-full bg-emerald-500 transition-[width] duration-500" style={{ width: `${monthPlannedHours ? (100 * monthActualWorkedHours) / monthPlannedHours : 0}%` }} />
               <div className="h-full bg-rose-300 transition-[width] duration-500" style={{ width: `${monthPlannedHours ? (100 * monthMissedHours) / monthPlannedHours : 0}%` }} />
             </div>
-            <div className="flex flex-wrap gap-x-3 gap-y-1 text-[12px] font-semibold text-[#75685a] tabular-nums">
-              <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-500" /><b className="font-black text-[#2a2017]">{monthActualWorkedHours}</b> შესრულდა</span>
-              <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-300" /><b className="font-black text-[#2a2017]">{monthMissedHours}</b> გამოტოვებული</span>
-              <span className="inline-flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-[#7a2028]/35" /><b className="font-black text-[#2a2017]">{monthRemainingHours}</b> დარჩა</span>
-            </div>
+            {monthMissedHours > 0 && (
+              <p className="text-[12px] font-semibold text-[#75685a] tabular-nums"><b className="font-black text-[#2a2017]">{monthMissedHours}</b> საათი გამოტოვებული</p>
+            )}
           </div>
 
           {/* wide screens: month on the left, the picked day on the right; phones: stacked */}
@@ -953,9 +945,7 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
                           );
                         })}
                       </div>
-                      <p className={`text-[12px] font-semibold ${allDone ? 'text-emerald-700' : 'text-[#8a7a6a]'}`}>
-                        {allDone ? 'ყველა საათი შესრულებულია' : 'შეეხე საათს, როცა იმეცადინებ'}
-                      </p>
+                      {allDone && <p className="text-[12px] font-semibold text-emerald-700">ყველა საათი შესრულებულია</p>}
                     </>
                   )}
                 </div>

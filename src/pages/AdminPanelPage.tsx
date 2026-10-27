@@ -166,7 +166,7 @@ export const AdminPanelPage: React.FC = () => {
       <Flash flash={msg.flash} onClose={msg.clear} />
 
       {tab === 'users' && (
-        <UsersTab users={users} staff={staff} classes={classes} groups={groups} access={access} decisions={decisions} loading={loading}
+        <UsersTab users={users} staff={staff} classes={classes} access={access} decisions={decisions} loading={loading}
           filter={filter} onFilter={setFilter} tiles={userTiles} onMessage={msg.say} />
       )}
       {tab === 'classes' && (

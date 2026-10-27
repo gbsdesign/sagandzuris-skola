@@ -103,7 +103,7 @@ const GroupSection: React.FC<{ sectionRef: React.Ref<HTMLElement>; cls: SchoolCl
       {isMember && (
         <div className="mt-3 space-y-2">
           {mine.length === 0 && takenFromMe.length === 0 && (
-            <p className="px-1 text-[13px] text-[#8a7a6a]">ამ ციკლში კანონი არ გაქვს — დახმარების თხოვნისას შეგიძლია აიღო.</p>
+            <p className="px-1 text-[13px] text-[#8a7a6a]">ამ ციკლში კანონი არ გაქვს</p>
           )}
           {mine.map(k => <MyLine key={k} group={group} k={k} uid={uid!} slots={slots} owners={owners} left={msLeft(cycle, now)} actions={actions} />)}
           {takenFromMe.map(k => (

@@ -190,9 +190,9 @@ export const GroupManage: React.FC<{ group: PsalterGroup; onDeleted: () => void 
         {(unowned.length > 0 || reserve.length > 0) && (
           <div className="mb-3 p-3 rounded-2xl bg-amber-50 ring-1 ring-amber-200 text-[13px] text-amber-900 space-y-1">
             {unowned.length > 0 && (
-              <p className="flex gap-2"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /> ცარიელი კანონები: <b>{unowned.join(', ')}</b> — დაუნიშნე ვინმეს (შეიძლება ერთს ორი კანონი).</p>
+              <p className="flex gap-2"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /> ცარიელი კანონები: <b>{unowned.join(', ')}</b></p>
             )}
-            {reserve.length > 0 && <p>მარაგში: {reserve.map(m => firstName(m.name)).join(', ')} — ეხმარებიან აღებით, ან დაუნიშნე კანონი მეორე მკითხველად.</p>}
+            {reserve.length > 0 && <p>მარაგში: {reserve.map(m => firstName(m.name)).join(', ')}</p>}
           </div>
         )}
         <div className="flex flex-wrap gap-2 mb-3">
@@ -269,10 +269,6 @@ export const GroupManage: React.FC<{ group: PsalterGroup; onDeleted: () => void 
               </select>
             </div>
           </div>
-          <p className="text-xs text-[#8a7a6a] leading-relaxed">
-            ციკლში 20-ვე კანონი უნდა წაიკითხონ (1–{MAX_CYCLE_DAYS} დღე). {shiftOk ? `${shiftDaysText(shiftDays)} რიცხვში` : 'გადასვლის რიცხვებში (1–28)'} ყველა შემდეგ კანონზე გადადის.
-            შეხსენება მიდის მხოლოდ მათთან, ვისაც ჯერ არ წაუკითხავს (საქართველოს დროით).
-          </p>
           <Btn icon={<Save />} disabled={!settingsChanged} onClick={saveSettings}>შენახვა</Btn>
         </div>
       </Card>

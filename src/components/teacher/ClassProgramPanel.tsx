@@ -61,10 +61,10 @@ export const ClassProgramPanel: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
   return (
     <Card>
       <CardTitle icon={<ListChecks />} title="სასწავლო პროგრამა"
-        hint={program.length ? `${program.length} ერთეული · საგალობლები და სიმღერები წევრების გზაზეც` : 'რასაც კლასი სწავლობს — საგალობლები და სიმღერები წევრების გზაზეც ემატება'}
+        hint={program.length ? `${program.length} ერთეული` : undefined}
         right={<Btn size="sm" icon={<Plus />} onClick={() => setDraft(program)} disabled={saving}>დამატება</Btn>} />
       {program.length === 0 ? (
-        <p className="text-sm text-[#8a7a6a]">პროგრამა ჯერ ცარიელია — „დამატებით“ გადაათვალიერე გალობა, ლოცვანი, ბიბლიოთეკა, სიმღერა და სხვა.</p>
+        <p className="text-sm text-[#8a7a6a]">პროგრამა ჯერ ცარიელია.</p>
       ) : (
         <ol className="-mx-2 divide-y divide-[#f1e8d9]">
           {program.map((p, i) => {

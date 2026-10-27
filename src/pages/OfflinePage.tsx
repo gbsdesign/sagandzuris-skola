@@ -15,7 +15,8 @@ import {
 // Turning off what is already on the device asks first.
 
 const MB = 1024 * 1024;
-const size = (b: number) => (b >= 1024 * MB ? `${(b / (1024 * MB)).toFixed(1)} გბ` : `${Math.max(1, Math.round(b / MB))} მბ`);
+// a no-break space keeps the unit beside its number (and „≈“ beside the size)
+const size = (b: number) => (b >= 1024 * MB ? `${(b / (1024 * MB)).toFixed(1)}\u00a0გბ` : `${Math.max(1, Math.round(b / MB))}\u00a0მბ`);
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 const CARD = '!p-3.5 sm:!p-4';
 const TILE = 'w-9 h-9 shrink-0 rounded-xl bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center [&>svg]:w-[18px] [&>svg]:h-[18px]';
@@ -49,13 +50,13 @@ const whatLabel = (what: string) =>
   what === 'rec' ? 'ჩანაწერები'
     : what === 'lives' ? 'წმიდანთა ცხოვრებანი'
     : what.startsWith('notes-') ? BOOK_NAMES[what.slice(6)] ?? 'ნოტების წიგნი'
-    : 'ავტომატური ნაწილი';
+    : AUTO.find(row => row.ids.includes(what))?.label ?? 'ავტომატური ნაწილი';
 
 const missing = (s: OfflineState) => s.recMissing > 0 || s.packs.some(p => isKept(s, p.id) && !s.stored[p.id]?.complete);
 
 /** Turning off what is already on the device asks first (recording sizes are estimates, hence `about`). */
 const sureToRemove = async (what: string, bytes: number, about = false): Promise<boolean> =>
-  bytes <= 0 || askConfirm({ title: `${what} — ${about ? '≈ ' : ''}${size(bytes)} წაიშლება ტელეფონიდან.`, ok: 'წაშლა', danger: true });
+  bytes <= 0 || askConfirm({ title: `${what} — ${about ? '≈\u00a0' : ''}${size(bytes)} წაიშლება ტელეფონიდან.`, ok: 'წაშლა', danger: true });
 
 /** ✓ on the device · the share while downloading · an empty ring while waiting. */
 const Mark: React.FC<{ done: boolean; pct?: number }> = ({ done, pct }) =>
@@ -85,7 +86,7 @@ const RowText: React.FC<{ title: React.ReactNode; line: React.ReactNode; done?: 
 );
 
 /** A card's head: icon, name, one line under it and something on the right. */
-const SectionHead: React.FC<{ icon: React.ReactNode; title: string; line: React.ReactNode; right?: React.ReactNode; className?: string }> = ({ icon, title, line, right, className }) => (
+const SectionHead: React.FC<{ icon: React.ReactNode; title: string; line?: React.ReactNode; right?: React.ReactNode; className?: string }> = ({ icon, title, line, right, className }) => (
   <div className={cx('flex items-center gap-3', className ?? 'pb-2')}>
     <span className={TILE}>{icon}</span>
     <div className="min-w-0 flex-1">
@@ -115,7 +116,7 @@ const Space: React.FC<{ s: OfflineState }> = ({ s }) => {
         <HardDrive className="w-3.5 h-3.5 shrink-0" />
         <span>
           ტელეფონზე უკავია <b className="text-[#4a3426] tabular-nums">{size(s.usage)}</b>
-          {free !== null && <> · კიდევ დაეტევა ≈ <span className="tabular-nums">{size(free)}</span></>}
+          {free !== null && <> · კიდევ დაეტევა {'≈\u00a0'}<span className="tabular-nums">{size(free)}</span></>}
         </span>
       </p>
       {parts.length > 1 && (
@@ -147,10 +148,10 @@ const AutoPart: React.FC<{ s: OfflineState }> = ({ s }) => {
         className="w-full min-h-12 flex items-center gap-3 px-3.5 sm:px-4 py-2 text-left cursor-pointer hover:bg-[#7a2028]/[0.03] transition-colors"
       >
         <span className="w-10 shrink-0 flex justify-center text-[#7a2028]"><Zap className="w-[18px] h-[18px]" /></span>
-        <RowText title="ავტომატურად" line={`მსუბუქი ნაწილი, თავისით${total ? ` · ${size(total)}` : ''}`} />
-        {packs.length
-          ? <Mark done={all.done && s.appReady} pct={!all.done && (busy || all.pct > 0) ? all.pct : undefined} />
-          : s.online && !s.failed && <Loader2 className="w-4 h-4 shrink-0 animate-spin text-[#b3a594]" aria-label="იტვირთება" />}
+        <RowText title="ავტომატურად" line={`აპი, ნოტები, ლოცვები${total ? ` · ${size(total)}` : ''}`} />
+        {packs.length && !(busy && !all.done)
+          ? <Mark done={all.done && s.appReady} pct={!all.done && all.pct > 0 ? all.pct : undefined} />
+          : (busy || (s.online && !s.failed)) && <Loader2 className="w-4 h-4 shrink-0 animate-spin text-[#b3a594]" aria-label="იტვირთება" />}
         <ChevronDown className={cx('w-5 h-5 shrink-0 text-[#8a7a6a] transition-transform', open && 'rotate-180')} />
       </button>
       {open && (
@@ -185,7 +186,7 @@ const StatusCard: React.FC<{ s: OfflineState }> = ({ s }) => {
     switch (status) {
       case 'run': return {
         Icon: CloudDownload, tone: 'wine', title: `ჩამოწერა · ${pct}%`,
-        text: `${whatLabel(s.run?.what ?? '')}. აპით სარგებლობა ამასობაში ჩვეულებრივ შეგიძლიათ.`,
+        text: whatLabel(s.run?.what ?? ''),
       };
       case 'offline': return {
         Icon: CloudOff, tone: 'muted', title: 'ინტერნეტი არ არის',
@@ -270,7 +271,7 @@ const BooksCard: React.FC<{ s: OfflineState; books: PackInfo[] }> = ({ s, books 
   };
   const line = allDone ? `ყველა ჩამოწერილია · ${size(total)}`
     : on.length ? `ჩართულია ${on.length} / ${books.length} · სულ ${size(total)}`
-    : `${books.length} წიგნი · ${size(total)} · აირჩიეთ`;
+    : `${books.length} წიგნი · ${size(total)}`;
   return (
     <Card className="!p-0 overflow-hidden">
       <button
@@ -334,7 +335,7 @@ const GroupRow: React.FC<{ s: OfflineState; g: RecGroup; est: (url: string) => n
   const n = g.items.length;
   const ok = st.chosen > 0 && st.chosenDone === st.chosen;
   const line = st.chosen === 0
-    ? (st.done ? `${n} ჩანაწერი · ${st.done} უკვე ტელეფონზეა` : `${n} ჩანაწერი · ≈ ${size(st.total)}`)
+    ? (st.done ? `${n} ჩანაწერი · ${st.done} უკვე ტელეფონზეა` : `${n} ჩანაწერი · ≈\u00a0${size(st.total)}`)
     : ok
       ? `ჩამოწერილია · ${size(st.kept)}`
       : `${recState(s)} · ${st.chosenDone} / ${st.chosen}`;
@@ -370,7 +371,7 @@ const GroupSheet: React.FC<{ s: OfflineState; g: RecGroup; est: (url: string) =>
             <div key={it.id} className="flex items-center gap-3 py-1">
               <RowText
                 title={it.title}
-                line={[it.sub, done ? size(bytes) : `≈ ${size(bytes)}`, on && !done ? recState(s) : ''].filter(Boolean).join(' · ')}
+                line={[it.sub, done ? size(bytes) : `≈\u00a0${size(bytes)}`, on && !done ? recState(s) : ''].filter(Boolean).join(' · ')}
                 done={done}
               />
               <Switch on={on} onChange={v => void setItem(g, it.id, v)} label={`${it.title} — ოფლაინ`} />
@@ -393,7 +394,7 @@ const RecordingsCard: React.FC<{ s: OfflineState; groups: RecGroup[] }> = ({ s, 
   const cols = sections.length >= 4 ? 4 : sections.length === 3 ? 3 : 2;
   return (
     <Card className={CARD}>
-      <SectionHead icon={<Headphones />} title="ჩანაწერები" line={<StateLine>ჩართეთ მთელი ჯგუფი, ან გახსენით და აირჩიეთ ცალკეული</StateLine>} />
+      <SectionHead icon={<Headphones />} title="ჩანაწერები" />
       {sections.length > 1 && current && (
         <div className="mb-1">
           <Tabs
@@ -451,10 +452,6 @@ export const OfflinePage: React.FC = () => {
           <PackRow s={s} p={lives} title="წმიდანთა ცხოვრებანი" count="ცხოვრებანი და ხატები" icon={<Library />} />
         </Card>
       )}
-      <p className="px-3 pt-1 text-center text-[12px] text-[#8a7a6a] leading-relaxed">
-        ერთხელ გახსნილი გალობის ნოტები ისედაც ინახება. წიგნები და ჩანაწერები ბევრ ადგილს იკავებს — ჩართეთ მხოლოდ საჭირო;
-        გამორთვისას ტელეფონიდან მაშინვე იშლება.
-      </p>
     </div>
   );
 };

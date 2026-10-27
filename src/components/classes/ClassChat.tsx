@@ -1,8 +1,8 @@
-import React, { useState } from 'react';
-import { CalendarDays, MessageCircle } from 'lucide-react';
-import { useAuth } from '../../context';
+import React, { useEffect, useRef, useState } from 'react';
+import { CalendarDays, History, MessageCircle } from 'lucide-react';
+import { useAuth, useNavigation } from '../../context';
 import type { SchoolClass } from '../../hooks/useClasses';
-import { useChat, classChatBase, ChatAuthor } from '../../hooks/useClassChat';
+import { useChat, classChatBase, ChatAuthor, markChatSeen } from '../../hooks/useClassChat';
 import { CallButtons } from '../../pages/DirectChatPage';
 import { startClassCall, joinClassCall } from '../calls/callActions';
 import { ScheduleFold } from '../teacher/Schedule';
@@ -14,13 +14,38 @@ import { ChatPanel } from './ChatPanel';
 // On the messages page it fills its pane and shows the class itself (title) where the class page says „კლასის ჩათი“.
 // 📅 before the call buttons folds the lesson timetable open under the title; the class's teachers edit it there.
 // The class page shows the timetable under its own title bar, so there `timetable={false}` leaves 📅 out.
-export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fill?: boolean; timetable?: boolean }> = ({ cls, title, fill, timetable = true }) => {
+// `compact` (the class page): only the newest few messages, growing with the page instead of scrolling inside it;
+// the earlier ones open on the messages page.
+// The chat counts as read (for the 💬 count) while it is on screen.
+const COMPACT = 3;
+
+export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fill?: boolean; timetable?: boolean; compact?: boolean }> = ({ cls, title, fill, timetable = true, compact = false }) => {
   const { user, isAdmin: isSchoolAdmin } = useAuth();
+  const { openDm } = useNavigation();
   // this class's teachers (and the school's admins) speak as teachers here
   const isAdmin = isSchoolAdmin || (!!user && cls.teacherIds.includes(user.uid));
   const base = classChatBase(cls.id);
   const { messages, loading, error } = useChat(base);
   const [lessons, setLessons] = useState(false);
+
+  // read: the newest message, once the chat is (at least partly) in view
+  const box = useRef<HTMLDivElement>(null);
+  const [inView, setInView] = useState(false);
+  const signedIn = !!user;
+  useEffect(() => {
+    const el = box.current;
+    if (!el) return;
+    if (typeof IntersectionObserver === 'undefined') { setInView(true); return; }
+    const io = new IntersectionObserver(([e]) => setInView(e.isIntersecting), { threshold: 0.25 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [signedIn]);
+  const newest = messages[messages.length - 1];
+  const newestAt = newest && !newest.pending ? newest.at?.getTime() : undefined;
+  useEffect(() => {
+    if (user && inView && newestAt) markChatSeen(user.uid, cls.id, newestAt);
+  }, [user, inView, newestAt, cls.id]);
+
   if (!user) return null;
 
   const me = cls.members.find(m => m.uid === user.uid) || cls.teachers.find(m => m.uid === user.uid);
@@ -28,11 +53,14 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
     uid: user.uid, name: me?.name || user.displayName || 'მასწავლებელი', photoURL: me?.photoURL || user.photoURL || '', teacher: isAdmin,
   };
 
+  const shown = compact ? messages.slice(-COMPACT) : messages;
+
   return (
+    <div ref={box} className={fill ? 'h-full' : ''}>
     <ChatPanel
       base={base}
       author={author}
-      messages={messages}
+      messages={shown}
       loading={loading}
       error={error}
       showNames
@@ -43,6 +71,15 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
       onJoinCall={() => {}}
       canDelete={m => m.uid === user.uid || isAdmin}
       fill={fill}
+      listClassName={compact ? '' : undefined}
+      listTop={compact && messages.length > COMPACT ? (
+        <div className="flex justify-center pb-1">
+          <button type="button" onClick={() => { triggerHaptic(8); openDm(`class:${cls.id}`); }}
+            className="h-9 px-3.5 rounded-full bg-white/90 ring-1 ring-[#e8dcc8] text-[13px] font-bold text-[#7a2028] inline-flex items-center gap-1.5 cursor-pointer active:scale-95 hover:ring-[#7a2028]/35 transition">
+            <History className="w-4 h-4" /> ადრინდელი შეტყობინებები
+          </button>
+        </div>
+      ) : undefined}
       header={
         <div className={title ? 'px-3 sm:px-4 py-3' : 'px-4 min-[400px]:px-5 sm:px-6 pt-4 pb-3'}>
           {/* on a phone too narrow for the title and the round buttons, the buttons drop under the title */}
@@ -85,5 +122,6 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
         </div>
       }
     />
+    </div>
   );
 };

@@ -16,6 +16,7 @@ import { PathToday } from '../components/views/PathToday';
 import { ChemiSamosi } from '../components/views/ChemiSamosi';
 import { ShortcutShelf } from '../components/home/ShortcutShelf';
 import { useAccess } from '../hooks/useAccess';
+import { useMembership } from '../utils/memberAccess';
 import { LockedPage } from '../components/access/SignInPrompt';
 import { SECTIONS, sectionOfPage } from '../data/sections';
 import { useMyPsalterGroups } from '../hooks/usePsalter';
@@ -161,6 +162,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   const { currentPage, selectedPrayerId, mapItem, handleGoBack, navigateTo } = useNavigation();
   const { user, loading, isAdmin, isTeacher } = useAuth();
   const access = useAccess();
+  // a member still waiting to be let in: the profile shows who they are, not the member's tools
+  const waiting = useMembership().status === 'pending';
   // „მარგალიტები“ (section tamashebi) shows on the path only while the admin's switch and the member's access let it
   const pathOrbs = PATH_ORBS.filter(o => o.id !== 'pearls' || access.section('tamashebi') === 'open');
   const {
@@ -219,18 +222,18 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
 
   if (currentPage === 'profile') {
     return (
-      <div className="w-full max-w-2xl mx-auto px-1 py-3 sm:px-4 md:px-6">
+      <div className="w-full max-w-lg mx-auto px-1 py-3 sm:px-0">
         <PageBar title="პროფილი" onBack={handleGoBack} className="mb-4" />
         {/* the head card, the admin panel's row (admins), my outfit and home buttons, then the details folded */}
-        <StudentProfileCard slot={<>
+        <StudentProfileCard waiting={waiting} slot={<>
           <AdminEntry />
-          <ChemiSamosi side={
+          {!waiting && <ChemiSamosi side={
             <span className="block">
               <span className="block font-serif-ge text-[15px] font-bold text-[#4a3426]">ჩემი სამოსი</span>
               <span className="block text-[13px] text-[#8a7a6a] leading-snug">ჩოხა და ქართული კაბა — ნაწილი ნაწილ</span>
             </span>
-          } />
-          <ShortcutShelf variant="profile" />
+          } />}
+          {!waiting && <ShortcutShelf variant="profile" />}
         </>} />
         {/* install the app · leave the account (asks first) */}
         <div className="max-w-lg mx-auto mt-3"><ProfileActions /></div>

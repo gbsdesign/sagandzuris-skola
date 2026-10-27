@@ -28,31 +28,29 @@ export const Toast: React.FC<ToastProps> = ({
 
   if (!isVisible) return null;
 
-  const bgStyles =
-    type === 'success'
-      ? 'bg-emerald-900/90 text-white border-emerald-700 shadow-emerald-900/30'
-      : type === 'error'
-      ? 'bg-red-900/90 text-white border-red-700 shadow-red-900/30'
-      : 'bg-slate-900/90 text-white border-slate-700 shadow-slate-900/30';
-
+  // the app's paper with a coloured icon (the kit's Flash uses the same tones)
   const Icon =
     type === 'success' ? CheckCircle2 : type === 'error' ? AlertCircle : Info;
+  const iconColor = type === 'success' ? 'text-emerald-600' : type === 'error' ? 'text-red-600' : 'text-[#7a2028]';
 
   return (
     <div className="fixed inset-x-0 bottom-[calc(env(safe-area-inset-bottom,0px)+1.25rem)] sm:left-auto sm:right-[calc(env(safe-area-inset-right,0px)+1.25rem)] z-[200] sm:max-w-sm w-full px-4 animate-in slide-in-from-bottom-5 fade-in duration-200 pointer-events-auto">
       <div
-        className={`flex items-center justify-between gap-3 p-3.5 rounded-2xl border backdrop-blur-md shadow-lg ${bgStyles}`}
+        role="status"
+        className="flex items-center justify-between gap-3 pl-3.5 pr-1.5 py-1.5 min-h-12 rounded-2xl bg-[#fffdf8] ring-1 ring-[#e8dcc8] shadow-[0_14px_30px_-14px_rgba(74,52,38,0.45)] text-[#2a2017]"
       >
         <div className="flex items-center gap-2.5 min-w-0">
-          <Icon className="w-4 h-4 shrink-0 text-amber-300" />
-          <p className="text-xs font-bold leading-snug">{message}</p>
+          <Icon className={`w-[18px] h-[18px] shrink-0 ${iconColor}`} />
+          <p className="text-sm font-semibold leading-snug">{message}</p>
         </div>
         <button
           type="button"
           onClick={onClose}
-          className="text-white/70 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors cursor-pointer"
+          aria-label="დახურვა"
+          title="დახურვა"
+          className="w-9 h-9 shrink-0 rounded-full grid place-items-center text-[#8a7a6a] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.06] transition-colors cursor-pointer"
         >
-          <X className="w-3.5 h-3.5" />
+          <X className="w-4 h-4" />
         </button>
       </div>
     </div>

@@ -21,6 +21,39 @@ export const FIELD =
 
 const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
+/** The one round 44px „←“ of a page's bar. Full-screen windows with their own sticky bar (a song, a biography, the
+ *  search) use it too, so every way back looks the same. */
+export const BackBtn: React.FC<{ onClick: () => void; label?: string; className?: string; icon?: React.ReactNode }> = ({ onClick, label = 'უკან', className, icon }) => (
+  <button
+    type="button"
+    onClick={onClick}
+    className={cx('w-11 h-11 shrink-0 rounded-full ring-1 ring-[#e8dcc8] bg-white/85 hover:bg-white hover:ring-[#7a2028]/35 text-[#4a3426] hover:text-[#7a2028] flex items-center justify-center cursor-pointer active:scale-95 transition', className)}
+    aria-label={label}
+    title={label}
+  >
+    {icon ?? <ArrowLeft className="w-5 h-5" />}
+  </button>
+);
+
+/** true once `target` (a window's big title) has scrolled up under its sticky bar inside the scrolling `root`:
+ *  the bar then shows the title itself, so the name is never written twice on one screen. */
+export const useScrolledAway = (target: React.RefObject<Element | null>, root: React.RefObject<Element | null>, key: unknown, bar = 56) => {
+  const [away, setAway] = useState(false);
+  useEffect(() => {
+    const el = target.current;
+    setAway(false);
+    if (!el || typeof IntersectionObserver === 'undefined') return;
+    const io = new IntersectionObserver(
+      ([e]) => setAway(!e.isIntersecting && e.boundingClientRect.top < (e.rootBounds?.top ?? bar)),
+      { root: root.current, rootMargin: `-${bar}px 0px 0px 0px` }
+    );
+    io.observe(el);
+    return () => io.disconnect();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return away;
+};
+
 /**
  * The one title bar of every inner page: a round 44px „←“, the title on the left (a small line under it if needed)
  * and up to a few 36px round buttons on the right (📌 ✎ ⓘ). Once the bar has scrolled away a round „←“ floats —
@@ -60,17 +93,7 @@ export const PageBar: React.FC<{ title: React.ReactNode; subtitle?: React.ReactN
   return (
     <>
       <div ref={barRef} className={cx('flex items-center gap-3', className)}>
-        {onBack && (
-          <button
-            type="button"
-            onClick={() => { triggerHaptic(8); onBack(); }}
-            className="w-11 h-11 shrink-0 rounded-full ring-1 ring-[#e8dcc8] bg-white/85 hover:bg-white hover:ring-[#7a2028]/35 text-[#4a3426] hover:text-[#7a2028] flex items-center justify-center cursor-pointer active:scale-95 transition"
-            aria-label="უკან"
-            title="უკან"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-        )}
+        {onBack && <BackBtn onClick={() => { triggerHaptic(8); onBack(); }} />}
         {/* `lead`: a small picture beside the title (a class's logo) */}
         {lead}
         <div className="min-w-0 flex-1">
@@ -190,7 +213,8 @@ export const IconBtn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & {
 
 /** Segmented tabs that wrap into a grid on phones instead of shrinking. */
 export function Tabs<T extends string>({ items, value, onChange, cols = 3 }: {
-  items: { id: T; label: string; Icon?: React.ComponentType<{ className?: string }>; count?: number; dot?: boolean }[];
+  // `over`: a small line above the label (an exam's number on the admission page)
+  items: { id: T; label: string; over?: string; Icon?: React.ComponentType<{ className?: string }>; count?: number; dot?: boolean }[];
   value: T;
   onChange: (id: T) => void;
   cols?: 2 | 3 | 4 | 'wide';
@@ -198,7 +222,7 @@ export function Tabs<T extends string>({ items, value, onChange, cols = 3 }: {
   return (
     <div className={cx('grid gap-1 p-1 rounded-2xl bg-white/75 ring-1 ring-[#e8dcc8]',
       cols === 2 ? 'grid-cols-2' : cols === 4 ? 'grid-cols-2 min-[480px]:grid-cols-4' : cols === 'wide' ? 'grid-cols-2 min-[600px]:grid-cols-3' : 'grid-cols-3')}>
-      {items.map(({ id, label, Icon, count, dot }) => {
+      {items.map(({ id, label, over, Icon, count, dot }) => {
         const on = id === value;
         return (
           <button
@@ -212,7 +236,14 @@ export function Tabs<T extends string>({ items, value, onChange, cols = 3 }: {
             )}
           >
             {Icon && <Icon className="w-4 h-4 shrink-0" />}
-            <span className="leading-tight text-center">{label}</span>
+            {over ? (
+              <span className="flex flex-col items-center text-center leading-tight">
+                <span className={cx('text-[11px] font-black uppercase tracking-wide', on ? 'text-[#fbf6ec]/75' : 'text-[#a0703c]')}>{over}</span>
+                <span className="mt-0.5">{label}</span>
+              </span>
+            ) : (
+              <span className="leading-tight text-center">{label}</span>
+            )}
             {count !== undefined && <span className={cx('text-xs tabular-nums', on ? 'text-[#fbf6ec]/75' : 'text-[#8a7a6a]')}>{count}</span>}
             {dot && <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-amber-500" />}
           </button>
@@ -381,7 +412,7 @@ export const Sheet: React.FC<{ open: boolean; onClose: () => void; title: React.
 export const Stat: React.FC<{ value: React.ReactNode; label: string; tone?: 'plain' | 'wine' | 'green' | 'amber' }> = ({ value, label, tone = 'plain' }) => (
   <div className={cx(
     'rounded-2xl px-3 py-2.5 min-w-0',
-    tone === 'plain' && 'bg-[#fbf6ec] ring-1 ring-[#efe3cf]',
+    tone === 'plain' && 'bg-[#fbf6ec] ring-1 ring-[#e8dcc8]',
     tone === 'wine' && 'bg-[#7a2028]/[0.07]',
     tone === 'green' && 'bg-emerald-50',
     tone === 'amber' && 'bg-amber-50'

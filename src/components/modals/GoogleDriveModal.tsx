@@ -44,26 +44,26 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({ isOpen, onCl
     <div
       role="dialog"
       aria-modal="true"
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2a2017]/60 backdrop-blur-xs animate-in fade-in duration-200"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
       <SwipeToDismiss
         onDismiss={onClose}
-        className="bg-white rounded-3xl border border-slate-200 shadow-2xl max-w-lg w-full p-5 sm:p-6 overflow-hidden flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[92dvh] overflow-y-auto"
+        className="bg-white rounded-3xl border border-[#e8dcc8] shadow-2xl max-w-lg w-full p-5 sm:p-6 overflow-hidden flex flex-col gap-4 animate-in zoom-in-95 duration-200 max-h-[92dvh] overflow-y-auto"
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+        <div className="flex items-center justify-between pb-3 border-b border-[#f1e9dc]">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500/15 to-indigo-500/20 border border-blue-200/80 flex items-center justify-center text-blue-700 shadow-2xs">
               <Cloud className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-800 text-lg sm:text-xl flex items-center gap-2">
+              <h3 className="font-bold text-[#2a2017] text-lg sm:text-xl flex items-center gap-2">
                 Google Drive საცავი
               </h3>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-[#8a7a6a]">
                 საგალობლების ციფრული არქივი და ღრუბლოვანი რესურსები
               </p>
             </div>
@@ -72,7 +72,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({ isOpen, onCl
           <button
             type="button"
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 flex items-center justify-center transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-full bg-[#f1e9dc] hover:bg-[#e8dcc8] text-[#8a7a6a] hover:text-[#2a2017] flex items-center justify-center transition-colors cursor-pointer"
             title="დახურვა"
           >
             <X className="w-4 h-4" />
@@ -84,10 +84,10 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({ isOpen, onCl
           <div className="flex items-center gap-2.5">
             <HardDrive className="w-5 h-5 text-blue-600 shrink-0" />
             <div className="text-xs">
-              <span className="font-semibold text-slate-800 block">
+              <span className="font-semibold text-[#2a2017] block">
                 {user ? (user.displayName || user.email) : 'სტუმრის რეჟიმი'}
               </span>
-              <span className="text-slate-500 text-[11px]">
+              <span className="text-[#8a7a6a] text-[11px]">
                 {user ? 'Google Drive დაკავშირებულია' : 'შესვლა Google ანგარიშით'}
               </span>
             </div>
@@ -99,7 +99,7 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({ isOpen, onCl
 
         {/* Drive resource items */}
         <div className="space-y-2.5">
-          <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block px-1">
+          <span className="text-[11px] font-bold uppercase tracking-wider text-[#a39482] block px-1">
             ხელმისაწვდომი რესურსები
           </span>
           {driveResources.map((item, idx) => {
@@ -110,33 +110,33 @@ export const GoogleDriveModal: React.FC<GoogleDriveModalProps> = ({ isOpen, onCl
                 href={item.link}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="group flex items-start gap-3 p-3 rounded-2xl bg-slate-50 hover:bg-amber-50/60 border border-slate-200/80 hover:border-amber-300/80 transition-all text-left block"
+                className="group flex items-start gap-3 p-3 rounded-2xl bg-[#fbf6ec] hover:bg-amber-50/60 border border-[#e8dcc8]/80 hover:border-amber-300/80 transition-all text-left block"
               >
                 <div className={`p-2.5 rounded-xl border bg-gradient-to-br ${item.color} shrink-0 mt-0.5`}>
                   <Icon className="w-4 h-4" />
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center justify-between gap-2">
-                    <h4 className="text-xs sm:text-sm font-bold text-slate-800 group-hover:text-amber-900 transition-colors">
+                    <h4 className="text-xs sm:text-sm font-bold text-[#2a2017] group-hover:text-amber-900 transition-colors">
                       {item.title}
                     </h4>
-                    <span className="text-[11px] font-semibold text-slate-500 bg-white px-2 py-0.5 rounded-md border border-slate-200/80 shrink-0">
+                    <span className="text-[11px] font-semibold text-[#8a7a6a] bg-white px-2 py-0.5 rounded-md border border-[#e8dcc8]/80 shrink-0">
                       {item.badge}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1 leading-relaxed line-clamp-2">
+                  <p className="text-[11px] text-[#8a7a6a] mt-1 leading-relaxed line-clamp-2">
                     {item.desc}
                   </p>
                 </div>
-                <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-amber-600 transition-colors shrink-0 self-center ml-1" />
+                <ExternalLink className="w-4 h-4 text-[#a39482] group-hover:text-amber-600 transition-colors shrink-0 self-center ml-1" />
               </a>
             );
           })}
         </div>
 
         {/* Action Button */}
-        <div className="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
-          <p className="text-[11px] text-slate-400">
+        <div className="pt-2 border-t border-[#f1e9dc] flex items-center justify-between gap-2">
+          <p className="text-[11px] text-[#a39482]">
             ფაილები ხელმისაწვდომია ნებისმიერ მოწყობილობაზე
           </p>
           <a

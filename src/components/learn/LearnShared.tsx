@@ -300,7 +300,7 @@ export const SingPanel: React.FC<{
       {result && !busy && (
         <div className="flex flex-col gap-3">
           {result.pct >= 0 ? (
-            <div className={`rounded-xl px-3.5 py-3 ${learnedNow ? 'bg-[#fbf3df] ring-1 ring-[#e9cf8f]' : 'bg-[#fbf6ec] ring-1 ring-[#efe3cf]'}`}>
+            <div className={`rounded-xl px-3.5 py-3 ${learnedNow ? 'bg-[#fbf3df] ring-1 ring-[#e9cf8f]' : 'bg-[#fbf6ec] ring-1 ring-[#e8dcc8]'}`}>
               <p className="flex items-baseline gap-2">
                 <span className="font-serif-ge text-2xl font-bold text-[#4a3426] leading-none">{result.pct}%</span>
                 <span className="text-[13px] text-[#75685a]">{result.hits.filter(Boolean).length} ნოტი {result.hits.length}-დან</span>
@@ -313,7 +313,7 @@ export const SingPanel: React.FC<{
               </p>
             </div>
           ) : !marked ? (
-            <div className="rounded-xl bg-[#fbf6ec] ring-1 ring-[#efe3cf] px-3.5 py-3 flex flex-col gap-2.5">
+            <div className="rounded-xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] px-3.5 py-3 flex flex-col gap-2.5">
               <p className="text-[14px] font-bold text-[#4a3426]">მოუსმინე შენს ჩანაწერს. როგორ გამოგივიდა?</p>
               <div className="grid grid-cols-2 gap-2">
                 <Btn kind="primary" icon={<Check />} onClick={() => mark(true)}>ვიცი</Btn>
@@ -333,7 +333,7 @@ export const SingPanel: React.FC<{
             </div>
           )}
           {(ai.text || ai.problem) && (
-            <div className={`rounded-xl p-3.5 ${ai.problem ? 'bg-amber-50 ring-1 ring-amber-200' : 'bg-[#fbf6ec] ring-1 ring-[#efe3cf]'}`}>
+            <div className={`rounded-xl p-3.5 ${ai.problem ? 'bg-amber-50 ring-1 ring-amber-200' : 'bg-[#fbf6ec] ring-1 ring-[#e8dcc8]'}`}>
               {ai.text && <p className="mb-1.5 flex items-center gap-1.5 text-[13px] font-bold text-[#7a2028]"><Sparkles className="w-4 h-4" />AI მასწავლებელი</p>}
               <p className="text-[14px] leading-relaxed text-[#4a3426] whitespace-pre-line">{ai.text || ai.problem}</p>
             </div>

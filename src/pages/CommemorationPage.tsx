@@ -1,7 +1,7 @@
 import React, { useMemo, useRef, useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { Check, GripVertical, MoreHorizontal, Plus, X } from 'lucide-react';
+import { Check, GripVertical, Plus, X } from 'lucide-react';
 import {
   NAME_LISTS,
   NameListId,
@@ -75,13 +75,11 @@ export const CommemorationPage: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl mx-auto mb-6 px-1 space-y-4">
-      <div className="flex items-start gap-3">
-      <p className="flex-1 min-w-0 text-[13px] leading-relaxed text-[#6b5544]">
-        ჩაწერე სახელები (რამდენიმეც ერთად) — თითოეული ცალკე დალაგდება. ლოცვებში ისინი გამოჩნდება იქ, სადაც „(სახელი)“ წერია, ამავე რიგით.
-        რიგის შესაცვლელად სახელი ჩაავლე <GripVertical className="inline w-3.5 h-3.5 -mt-0.5" /> ნიშნით და გადაიტანე, შესასწორებლად — სახელს დააჭირე.
-      </p>
-        <OrderMenu
+      {/* one switch, no instructions: names are added, dragged by their handle and tapped to fix */}
+      <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-3.5 sm:px-4">
+        <Toggle
           on={lists.autoSort}
+          label="თავისით დალაგება"
           // turning it on leaves the names where they are (the group's people too); only new ones take their place
           onChange={on => update(on ? { autoSort: true, groupOrder: inGroupOrder(fromGroups, lists).map(p => p.uid) } : { autoSort: false })}
         />
@@ -92,7 +90,6 @@ export const CommemorationPage: React.FC = () => {
           <NameList
             key={id}
             title={list.title}
-            hint={list.hint}
             count={nameCount(lists, id)}
             names={lists[id]}
             genders={lists.genders}
@@ -121,38 +118,6 @@ export const CommemorationPage: React.FC = () => {
         />
       )}
     </div>
-  );
-};
-
-/** ⋯ by the title: „დალაგება“ on or off. */
-const OrderMenu: React.FC<{ on: boolean; onChange: (on: boolean) => void }> = ({ on, onChange }) => {
-  const [open, setOpen] = useState(false);
-  return (
-    <span className="relative inline-flex">
-      <button
-        type="button"
-        onClick={() => setOpen(o => !o)}
-        aria-expanded={open}
-        aria-label="პარამეტრები"
-        title="პარამეტრები"
-        className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition active:scale-95 bg-white/85 ring-1 ring-[#e8dcc8] text-[#7a2028] hover:ring-[#7a2028]/40"
-      >
-        <MoreHorizontal className="w-[18px] h-[18px]" />
-      </button>
-      {open && (
-        <>
-          <button type="button" aria-label="დახურვა" tabIndex={-1} onClick={() => setOpen(false)} className="fixed inset-0 z-30 cursor-default" />
-          <div className="absolute left-0 top-full mt-1.5 z-40 w-[min(20rem,calc(100vw-2.5rem))] rounded-2xl bg-white ring-1 ring-[#e8dcc8] shadow-lg px-3.5 py-1 sg-in">
-            <Toggle
-              on={on}
-              onChange={onChange}
-              label="დალაგება"
-              hint="ახალი სახელი თავის ადგილას ჩადგება: ჯერ სასულიერო პირები, მერე ერისკაცები; კაცები, მერე ქალები — ანბანით."
-            />
-          </div>
-        </>
-      )}
-    </span>
   );
 };
 
@@ -275,7 +240,6 @@ const insertNames = (list: string[], fresh: string[], cmp: (a: string, b: string
 
 const NameList: React.FC<{
   title: string;
-  hint: string;
   count: number;
   names: string[];
   genders: Genders;
@@ -288,7 +252,7 @@ const NameList: React.FC<{
   // a group name the reader may tap gives back what tapping it does
   onAutoTap?: (uid: string) => (() => void) | undefined;
   cats?: Cats;
-}> = ({ title, hint, count, names, genders, ordered, onSave, auto, onAutoOrder, onAutoTap, cats }) => {
+}> = ({ title, count, names, genders, ordered, onSave, auto, onAutoOrder, onAutoTap, cats }) => {
   const [draft, setDraft] = useState('');
   const [pending, setPending] = useState<Pending | null>(null);
 
@@ -340,12 +304,9 @@ const NameList: React.FC<{
 
   return (
     <section className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] p-3.5 sm:p-4 space-y-3">
-      <div>
-        <h2 className="font-serif-ge text-[16px] font-bold text-[#7a2028]">
-          {title} <span className="text-[13px] font-semibold text-[#b5a48c]">{count || ''}</span>
-        </h2>
-        <p className="text-[12px] leading-snug text-[#8a7a6a]">{hint}</p>
-      </div>
+      <h2 className="font-serif-ge text-[16px] font-bold text-[#7a2028]">
+        {title} <span className="text-[13px] font-semibold text-[#b5a48c]">{count || ''}</span>
+      </h2>
 
       {/* the psalter group's members fill in by themselves */}
       {auto && auto.length > 0 && (
@@ -356,7 +317,7 @@ const NameList: React.FC<{
             label={i => (
               <>
                 <span className="font-semibold">{auto[i].name}</span>{' '}
-                <span className="text-[12.5px] text-[#8a7a6a]">{auto[i].short && `(${auto[i].short}) `}(ოჯ.)</span>
+                <span className="text-[12.5px] text-[#8a7a6a]">{auto[i].short && `(${auto[i].short})`}</span>
               </>
             )}
             onMove={(from, to) => onAutoOrder?.(moved(auto, from, to).map(p => p.uid))}

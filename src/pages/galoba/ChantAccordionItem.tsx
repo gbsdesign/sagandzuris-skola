@@ -1,5 +1,5 @@
 import React, { memo, useCallback, useEffect, useRef, useState } from 'react';
-import { Bookmark, BookmarkCheck, ChevronDown, CircleCheck, Headphones, X } from 'lucide-react';
+import { Bookmark, BookmarkCheck, ChevronDown, CircleCheck, Headphones, ListPlus, Play, X } from 'lucide-react';
 import { ChantItem, ChantVariant, isChantGroup, variantLines } from '../../data';
 import { useNotes } from '../../context/NotesContext';
 import { canOpenNotes } from '../../data/chantLookup';
@@ -25,7 +25,7 @@ const incipitUrl = (v: ChantVariant) =>
 const missingIncipits = new Set<string>();
 
 // It fills the card from edge to edge at a fixed shape, as tall as a narrow card allows; what does not fit fades out
-// on the right, where the ▶ sits.
+// on the right, where the ▶ sits on a pale round island (a tap beside the ▶ does not open the notes).
 // Until the picture has come, its place glows softly; then it fades in.
 const Incipit: React.FC<{ src: string; onClick: () => void; onMissing: () => void; play: React.ReactNode }> = ({ src, onClick, onMissing, play }) => {
   const [ready, setReady] = useState(false);
@@ -37,7 +37,7 @@ const Incipit: React.FC<{ src: string; onClick: () => void; onMissing: () => voi
           onError={() => { missingIncipits.add(src); onMissing(); }}
           className={`block w-full h-full object-cover object-left mix-blend-multiply pointer-events-none select-none transition-opacity duration-500 [mask-image:linear-gradient(to_right,#000_72%,transparent_98%)] ${ready ? 'opacity-100' : 'opacity-0'}`} />
       </button>
-      <span className="absolute right-1 top-1/2 -translate-y-1/2">{play}</span>
+      <span className="absolute right-0.5 top-1/2 -translate-y-1/2 w-14 h-14 rounded-full bg-white/80 flex items-center justify-center">{play}</span>
     </div>
   );
 };
@@ -94,15 +94,20 @@ const VariantChip: React.FC<{
 }> = ({ chant, variant, label, sublabel, isOpen, isSelected, hasRecording, onOpen, onToggleSelect }) => {
   const hasNotes = canOpenNotes(chant, variant);
   // a version that is only another choir's recording: a normal button, it plays below the buttons
-  const playable = hasNotes || (isRecordingVersion(variant.id) && hasRecording);
-  // the teacher adds a version to the service from its notes page („მსახურება“ in the top bar), not from here
-  const { openNotes } = useNotes();
+  const recOnly = !hasNotes && isRecordingVersion(variant.id) && hasRecording;
+  const playable = hasNotes || recOnly;
+  // the teacher's „+“ under the bookmark puts a version into the service being composed (as „წირვა“ on its notes
+  // page does); once in, it shows its number in the service
+  const { openNotes, liturgy } = useNotes();
+  const progAt = liturgy.role === 'teacher' && hasNotes ? (liturgy.program?.items.indexOf(variant.id) ?? -1) : null;
   // "I ტომი · №162" strong; the page goes to the quieter line under it: "გვ. 225 · ხუნდაძე"
   const parts = label.split(' · ');
   // (under a tome's heading the tome is gone and the page stays up: "№162 · გვ. 225")
   const pageAt = parts.length > 1 && parts[0].includes('ტომი') ? parts.findIndex(p => p.startsWith('გვ.')) : -1;
-  const head = pageAt >= 0 ? parts.filter((_, i) => i !== pageAt) : parts;
-  const under = [pageAt >= 0 && parts[pageAt], sublabel].filter(Boolean).join(' · ');
+  // a recording of the chant itself would repeat the chant's name: its performer heads the card, „ჩანაწერი“ under it
+  const who = recOnly && label === chant.title.replace(/[;\s]+$/, '') ? chantRecordings(variant.id)[0]?.who || variant.version : undefined;
+  const head = who ? [who] : pageAt >= 0 ? parts.filter((_, i) => i !== pageAt) : parts;
+  const under = who ? 'ჩანაწერი' : [pageAt >= 0 && parts[pageAt], sublabel].filter(Boolean).join(' · ');
   // kept on the phone („ჩამოწერა“): a small green mark beside the recording's
   const [offline, setOffline] = useState(() => isOffline(variant.id));
   useEffect(() => onOfflineChange(() => setOffline(isOffline(variant.id))), [variant.id]);
@@ -114,6 +119,22 @@ const VariantChip: React.FC<{
   // the picture of the notes' start, while it is there; the ▶ sits on it, otherwise under the bookmark on the right
   const pic = hasNotes ? incipitUrl(variant) : '';
   const [hasPic, setHasPic] = useState(!!pic && !missingIncipits.has(pic));
+  /* a recording without notes: a ▶ on the left (as in the albums) opens its player under the buttons; the card takes
+     the whole row, so a performer's name fits */
+  const recPlay = recOnly && (
+    <button
+      type="button"
+      onClick={e => { e.stopPropagation(); open(); }}
+      className={`relative shrink-0 w-10 h-10 rounded-full flex items-center justify-center transition-all duration-200 cursor-pointer active:scale-90 ${
+        isOpen ? 'bg-[#b4620e] text-white shadow-[0_3px_8px_-3px_rgba(180,98,14,0.85)]' : 'bg-white text-[#b4620e] shadow-[inset_0_0_0_1.5px_#d9a55a] hover:bg-[#fcf1df]'
+      }`}
+      title={isOpen ? 'ჩანაწერის დახურვა' : 'ჩანაწერის მოსმენა'}
+      aria-label={isOpen ? 'ჩანაწერის დახურვა' : 'ჩანაწერის მოსმენა'}
+      aria-expanded={isOpen}
+    >
+      <Play className="w-4 h-4 fill-current translate-x-[1px]" />
+    </button>
+  );
   /* a quick listen on the synthesizer, without opening the notes */
   const play = hasNotes && (
     <PreviewButton
@@ -125,7 +146,7 @@ const VariantChip: React.FC<{
   );
   return (
     <div
-      className={`relative min-w-0 flex flex-col rounded-xl overflow-hidden transition-[transform,box-shadow,background-color] duration-150 active:scale-[0.98] ${
+      className={`relative min-w-0 flex flex-col rounded-xl overflow-hidden transition-[transform,box-shadow,background-color] duration-150 active:scale-[0.98] ${recOnly ? 'col-span-2' : ''} ${
         isOpen
           ? 'bg-[#fcf1df] ring-1 ring-[#e8b866]'
           : playable
@@ -133,7 +154,8 @@ const VariantChip: React.FC<{
           : 'bg-transparent border border-dashed border-[#e4d8c4]'
       }`}
     >
-      <div className="flex items-start">
+      <div className={`flex ${recOnly ? 'items-center' : 'items-start'}`}>
+      {recPlay && <span className="shrink-0 pl-2">{recPlay}</span>}
       <button
         type="button"
         onClick={open}
@@ -156,7 +178,7 @@ const VariantChip: React.FC<{
         {(under || hasRecording || offline) && (
           <span className="mt-0.5 flex flex-wrap items-center gap-x-1 text-[11.5px] text-[#9a8a76]">
             {under && <span className="min-w-0">{under}</span>}
-            {hasRecording && <Headphones className="w-3.5 h-3.5 shrink-0 text-[#b4620e]" aria-label="ჩანაწერი" />}
+            {hasRecording && !who && <Headphones className="w-3.5 h-3.5 shrink-0 text-[#b4620e]" aria-label="ჩანაწერი" />}
             {offline && <CircleCheck className="w-3.5 h-3.5 shrink-0 text-[#2f7a4f]" aria-label="ჩამოწერილია" />}
           </span>
         )}
@@ -178,6 +200,20 @@ const VariantChip: React.FC<{
             ? <BookmarkCheck className="w-[18px] h-[18px] text-emerald-700 fill-emerald-100" />
             : <Bookmark className="w-[18px] h-[18px] text-[#cdbb9f] group-hover/sel:text-[#b4620e] transition-colors" />}
         </button>
+        {progAt !== null && (
+          <button
+            type="button"
+            onClick={() => { triggerHaptic(12); liturgy.toggle(variant.id); }}
+            className="w-9 h-9 flex items-center justify-center cursor-pointer active:scale-90 group/prog"
+            title={progAt >= 0 ? `წირვაშია, №${progAt + 1}. ამოღება` : 'წირვაში დამატება'}
+            aria-label={progAt >= 0 ? `წირვიდან ამოღება (№${progAt + 1})` : 'წირვაში დამატება'}
+            aria-pressed={progAt >= 0}
+          >
+            {progAt >= 0
+              ? <span className="min-w-[22px] h-[22px] px-1 rounded-full bg-[#7a2028] text-white text-[11.5px] font-bold tabular-nums flex items-center justify-center">{progAt + 1}</span>
+              : <ListPlus className="w-[18px] h-[18px] text-[#cdbb9f] group-hover/prog:text-[#7a2028] transition-colors" />}
+          </button>
+        )}
         {!hasPic && play && <span className="pb-1.5">{play}</span>}
       </div>
       </div>
@@ -312,42 +348,33 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
         aria-expanded={isExpanded}
         className="w-full px-3.5 py-3 max-[359px]:px-3 flex items-center justify-between gap-3 max-[359px]:gap-2 text-left cursor-pointer select-none group"
       >
-        <div className="flex-1 min-w-0 flex items-center gap-3 max-[359px]:gap-2">
-          <span
-            className={`w-2 h-2 shrink-0 rounded-full transition-all duration-300 ${
-              isExpanded
-                ? 'bg-[#f59e0b] scale-125'
-                : selectedCount > 0
-                ? 'bg-emerald-500'
-                : 'bg-[#cdbfa9] group-hover:bg-[#e0a54a]'
-            }`}
-          />
+        <div className="flex-1 min-w-0 flex items-center">
           <div className="min-w-0 flex flex-col gap-0.5">
             <span className="font-bold text-[#2a2017] text-[17px] leading-snug break-words group-hover:text-[#7a2028] transition-colors">
               {displayTitle}
             </span>
             {(meta.length > 0 || recordingCount > 0 || savedCount > 0 || selectedCount > 0) && (
-              <span className="flex flex-wrap items-center gap-x-1.5 text-[11.5px] font-medium text-[#8c7c6b]">
+              <span className="flex flex-wrap items-center gap-x-1.5 text-[11.5px] font-medium text-[#75685a]">
                 {meta.join(' · ')}
                 {recordingCount > 0 && (
-                  <span className="inline-flex items-center gap-1 text-[#b4620e]">
+                  <span className="inline-flex items-center gap-1">
                     {meta.length > 0 && <span className="text-[#cdbfa9]">·</span>}
-                    <Headphones className="w-3 h-3" />
+                    <Headphones className="w-3 h-3 text-[#b4620e]" />
                     {recordingCount} ჩანაწერი
                   </span>
                 )}
                 {savedCount > 0 && (
-                  <span className="inline-flex items-center gap-1 text-[#2f7a4f]">
+                  <span className="inline-flex items-center gap-1">
                     <span className="text-[#cdbfa9]">·</span>
-                    <CircleCheck className="w-3 h-3" />
+                    <CircleCheck className="w-3 h-3 text-[#2f7a4f]" />
                     {savedCount === openable.length ? 'ჩამოწერილია' : `${savedCount} ჩამოწერილი`}
                   </span>
                 )}
                 {/* versions picked for my independent work: a quiet note in the same line, not a badge */}
                 {selectedCount > 0 && (
-                  <span className="inline-flex items-center gap-1 text-emerald-700">
+                  <span className="inline-flex items-center gap-1">
                     {(meta.length > 0 || recordingCount > 0 || savedCount > 0) && <span className="text-[#cdbfa9]">·</span>}
-                    <BookmarkCheck className="w-3 h-3" />
+                    <BookmarkCheck className="w-3 h-3 text-emerald-700" />
                     {selectedCount} მონიშნული
                   </span>
                 )}
@@ -386,13 +413,15 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
                   {schoolRows.map(({ school, plain, ornate, versions }) => {
                     const on = school === shownSchool;
                     const count = versions.length || [plain, ornate].filter(Boolean).length;
+                    const withRec = [plain, ornate, ...versions].some(v => v && recorded.has(`${chant.id}|${v.code}`));
                     return (
                       <button key={school} type="button" role="tab" aria-selected={on}
                         onClick={() => { triggerHaptic(8); setSchool(school); }}
-                        className={`flex-auto h-9 px-2 min-[420px]:px-2.5 sm:px-3.5 rounded-full text-[13px] font-bold whitespace-nowrap inline-flex items-center justify-center gap-1.5 cursor-pointer transition ${
+                        className={`flex-auto h-9 px-1.5 min-[420px]:px-2.5 sm:px-3.5 rounded-full text-[13px] font-bold whitespace-nowrap inline-flex items-center justify-center gap-1 min-[420px]:gap-1.5 cursor-pointer transition ${
                           on ? `bg-white shadow-[0_2px_6px_-2px_rgba(74,52,38,0.3)] ${SCHOOL_STYLES[school]?.text ?? 'text-[#574739]'}` : 'text-[#8c7c6b] hover:text-[#4a3426]'
                         }`}>
                         {SCHOOL_STYLES[school]?.short ?? school}
+                        {withRec && <Headphones className="w-3 h-3 shrink-0 text-[#b4620e]" aria-label="ჩანაწერით" />}
                         <span className={`max-[419px]:hidden text-[11.5px] font-semibold tabular-nums ${on ? 'opacity-60' : 'text-[#b3a594]'}`}>{count}</span>
                       </button>
                     );
@@ -427,7 +456,6 @@ export const ChantAccordionItem: React.FC<ChantAccordionItemProps> = memo(({
               <div className="flex items-center justify-between gap-2 px-2 pt-0.5 pb-1">
                 <span className="min-w-0 text-[12.5px] font-extrabold text-[#7a2028] break-words">
                   {[openVariant.source !== 'ჩანაწერი' && openVariant.version, openRecs[0].who].filter(Boolean).join(' · ')}
-                  <span className="font-semibold text-[#a0907c]"> · ნოტები აპში ჯერ არ არის</span>
                 </span>
                 <button
                   type="button"

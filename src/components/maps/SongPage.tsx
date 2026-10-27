@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRightLeft, FileText, GraduationCap, Headphones, Music, TextAlignStart } from 'lucide-react';
+import { ArrowRightLeft, FileText, GraduationCap, Headphones, Music, TextAlignStart } from 'lucide-react';
 import {
   FOLK_SONGS, FolkSong, centreRecMedia, getFolkRegion, songDocUrl, songRecMedia, songVersionMedia, soundcloudEmbedUrl,
 } from '../../data/songsData';
@@ -14,6 +14,7 @@ import { usePlacements } from '../../data/placements';
 import { MoveSheet } from '../archive/MoveSheet';
 import { LearnAudio } from '../learn/LearnAudio';
 import { songPiece } from '../../utils/learn';
+import { BackBtn, useScrolledAway } from '../ui/kit';
 
 // One recording of a song: the school's own versions (voices) first, then the archive's performers
 export interface SongTake {
@@ -110,6 +111,9 @@ export const SongPage: React.FC = () => {
   const takes = song ? songTakes(song) : [];
   const takeIdx = Math.min(Math.max(Number(takeStr) || 0, 0), Math.max(takes.length - 1, 0));
   const take = takes[takeIdx];
+  // the bar names the song only once its big title has scrolled under it
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const titleAway = useScrolledAway(titleRef, scrollRef, songId);
   const words = useSongText(song);
 
   useEffect(() => {
@@ -152,16 +156,13 @@ export const SongPage: React.FC = () => {
       {/* top bar */}
       <div className="sticky top-0 z-10 safe-top bg-[#faf6ef]/95 backdrop-blur border-b border-[#e4d8c4]">
         <div className="safe-x"><div className="max-w-2xl mx-auto h-14 px-3 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={close}
-            className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-[#574739] hover:bg-[#f1e9dc] active:scale-95 transition cursor-pointer"
-            aria-label="უკან"
-            title="უკან"
+          <BackBtn onClick={close} />
+          <span
+            aria-hidden
+            className={`min-w-0 flex-1 truncate text-[15px] font-bold text-[#2a2017] transition-opacity duration-200 ${titleAway ? 'opacity-100' : 'opacity-0'}`}
           >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-[#2a2017]">{song.title}</span>
+            {song.title}
+          </span>
         </div></div>
       </div>
 
@@ -172,7 +173,7 @@ export const SongPage: React.FC = () => {
             <span className="w-3 h-3 rounded-[4px] border border-black/10" style={{ background: region.color }} />
             {place}
           </span>
-          <h1 className="text-[26px] sm:text-[30px] font-black leading-tight text-[#2a2017] break-words">{song.title}</h1>
+          <h1 ref={titleRef} className="text-[26px] sm:text-[30px] font-black leading-tight text-[#2a2017] break-words">{song.title}</h1>
           {song.genre && (
             <span className="self-start mt-0.5 px-2.5 py-1 rounded-full bg-[#fcf1df] border border-[#efd6a6] text-[12px] font-bold text-[#8a4b12]">
               {song.genre}

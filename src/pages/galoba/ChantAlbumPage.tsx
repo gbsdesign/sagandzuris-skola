@@ -132,12 +132,12 @@ export const ChantAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
         </header>
 
         {!can('recordings') ? (
-          <p className="px-4 py-6 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e6d9c2] text-center text-[14px] text-[#8a7a6a]">
+          <p className="px-4 py-6 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-center text-[14px] text-[#8a7a6a]">
             ჩანაწერები სკოლის წევრებისთვისაა.
           </p>
         ) : (
           groups.map(([who, recs]) => (
-            <section key={who} className="rounded-2xl bg-white ring-1 ring-[#e6d9c2] shadow-[0_1px_3px_rgba(74,52,38,0.06)] overflow-hidden">
+            <section key={who} className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] shadow-[0_1px_3px_rgba(74,52,38,0.06)] overflow-hidden">
               {!oneGroup && (
                 <h2 className="px-4 py-2.5 bg-[#fbf6ec] border-b border-[#efe5d4] text-[13.5px] font-extrabold text-[#574739] flex items-baseline justify-between gap-3">
                   <span className="min-w-0">{who}</span>
@@ -154,8 +154,8 @@ export const ChantAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
                         <button
                           type="button"
                           onClick={() => player.toggle(id)}
-                          className={`shrink-0 w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#7a2028] ${
-                            on ? 'bg-[#7a2028] text-white shadow-[0_6px_14px_-6px_rgba(122,32,40,0.7)]' : 'bg-[#7a2028]/[0.07] text-[#7a2028] hover:bg-[#7a2028]/[0.12]'
+                          className={`shrink-0 w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#b4620e] ${
+                            on ? 'bg-[#dc8a22] text-white shadow-[0_6px_14px_-6px_rgba(180,98,14,0.75)]' : 'bg-[#dc8a22]/[0.1] text-[#b4620e] hover:bg-[#dc8a22]/[0.16]'
                           }`}
                           aria-label={phase === 'playing' ? `პაუზა: ${title}` : `მოსმენა: ${title}`}
                         >
@@ -194,7 +194,7 @@ export const ChantAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
                             value={Math.min(player.time, player.dur || 0)}
                             onChange={e => player.seek(Number(e.target.value))}
                             disabled={!player.dur}
-                            className="flex-1 min-w-0 h-8 accent-[#7a2028] cursor-pointer disabled:opacity-40"
+                            className="flex-1 min-w-0 h-8 accent-[#dc8a22] cursor-pointer disabled:opacity-40"
                             aria-label="გადახვევა"
                           />
                           <span className="w-9 text-[11.5px] font-semibold tabular-nums text-[#8c7c6b]">{player.dur ? clock(player.dur) : '–:––'}</span>

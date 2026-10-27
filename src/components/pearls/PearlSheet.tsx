@@ -229,7 +229,7 @@ export const PearlSheet: React.FC<{
           ))}
         </div>
 
-        <div className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#efe3cf] px-2 py-2">
+        <div className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] px-2 py-2">
           {failed ? (
             <p className="py-10 text-center text-sm text-[#8a7a6a]">ნოტები ვერ ჩაიტვირთა — ინტერნეტი შეამოწმე.</p>
           ) : !phrase ? (

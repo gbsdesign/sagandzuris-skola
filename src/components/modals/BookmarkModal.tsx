@@ -16,12 +16,12 @@ export const BookmarkModal: React.FC<BookmarkModalProps> = ({ isOpen, onClose })
 
   return (
     <div 
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#2a2017]/60 backdrop-blur-sm animate-in fade-in duration-200"
       onClick={() => onClose()}
     >
       <SwipeToDismiss
         onDismiss={onClose}
-        className="relative w-full max-w-lg max-h-[92dvh] overflow-y-auto bg-slate-50/95 backdrop-blur-md rounded-3xl p-3 sm:p-5 shadow-2xl border border-amber-200/90 space-y-3 animate-in zoom-in-95 duration-200"
+        className="relative w-full max-w-lg max-h-[92dvh] overflow-y-auto bg-[#fbf6ec]/95 backdrop-blur-md rounded-3xl p-3 sm:p-5 shadow-2xl border border-amber-200/90 space-y-3 animate-in zoom-in-95 duration-200"
       >
         {/* Modal Top Bar with Close Button */}
         <div className="flex items-center justify-between pb-2 border-b border-amber-200/70">
@@ -29,7 +29,7 @@ export const BookmarkModal: React.FC<BookmarkModalProps> = ({ isOpen, onClose })
             <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-800 shadow-2xs">
               <Bookmark className="w-4 h-4 text-[#85502c] fill-amber-500/30" />
             </div>
-            <h3 className="text-sm sm:text-base font-black text-slate-800">
+            <h3 className="text-sm sm:text-base font-black text-[#2a2017]">
               დამოუკიდებელი სამუშაო
             </h3>
           </div>
@@ -37,7 +37,7 @@ export const BookmarkModal: React.FC<BookmarkModalProps> = ({ isOpen, onClose })
           <button
             type="button"
             onClick={onClose}
-            className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-slate-200/80 text-slate-500 hover:text-slate-800 transition-colors cursor-pointer border border-transparent hover:border-slate-300 shadow-2xs"
+            className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-[#e8dcc8]/80 text-[#8a7a6a] hover:text-[#2a2017] transition-colors cursor-pointer border border-transparent hover:border-[#d6c8b1] shadow-2xs"
             title="დახურვა"
             aria-label="დახურვა"
           >
