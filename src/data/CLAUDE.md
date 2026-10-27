@@ -35,6 +35,22 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
 - Liturgy ids: first ornate kk version `v-n-4`, first plain kk `v-n-3`, further `v-n-kNNN`; vol. V `v-n-vNNN` /
   `v-n-sNNN`; vol. IX `v-n-xNNN`. Vol. III №87–98 is the 4-voice litany (voices I–IV + "ყველა").
 - `public/notes/kk/139.json` has a hand fix (B♮ held across a line break, t=80–92). A re-export would undo it.
+- Accidental hand fixes (2026-10-26, checked against the page pictures): dasd1/003–012 voice I last line E3→E♭3,
+  momix/001–002 voice I t=80–80.5 C♯3→C3, v9/014 voice II t=8.5,10 F♯3→F3, karb/003 voice I t=182 G♯3→G3.
+  Different key signatures per voice (e.g. treble 1♭, bass 2♭) are the books' own — not OMR errors.
+  Second round (same day, 331 notes in 154 files, every one checked on the page picture): the same E3→E♭3 in dasd1/dasd2
+  line 5–6 and momix line 6; mid-line key changes the OMR missed (dasd1/122–125 and 138–205 line 3, feast/045, karb/045, 051, 082; kk/029; v5/087, 098; v8/029, 033,
+  056, 061, 067, 135, 159); printed ♯/♮/♭ not read (v9/034 bass ♯G at every cadence, v9/031, 041, 069, 078, 090, 091,
+  099, 100; v8/083; karb/153, 173). Carry fixes (an accidental the OMR held over a whole barless line, clashing
+  with another voice): book/030, feast/038, karb/100, 180, kk/040, 043, v5/124. The list with the rule per line is in that thread's scratchpad `fixes.txt`.
+  Third round (2026-10-27, `fixes2.txt`, 28 notes): key change missed in one or two voices (v8/020 line 5, v8/089
+  line 5, v5/136 lines 8 and 11, dasd1/120 bass line 2 kept 7♭), an accidental carried past a real barline (kk/183
+  line 27, v5/027 line 1, v8/028 line 3) and an unread ♮ at a line start (v5/028 line 7). These no-clash errors are
+  only found by looking: the OMR does not store barlines or key signatures.
+  Fourth round (2026-10-27, `fixes3.txt`, 52 notes in 43 files): the same tune repeated across many files compared copy
+  to copy, the odd ones checked on the picture — dasd1/133–139, 187, 189, 204, 205 voice II line 2 F→F♯; momix/039–077
+  voice II t≈23 G→G♯; dasd1/231–234 bass lines 1–3 key change missed; dasd1/023–028 bass B→B♭ at the cadence.
+  Copies that differ in the book too (v5/008 vs 009, kk/183, karb/180) were left as printed.
 - The OMR scripts live only in the user's old session scratchpads — they are not in this repo.
 - Unreviewed guesses (don't present as confirmed): vol. I↔III matches, vol. V/IX placements, which book
   version a liturgy recording follows (the `main` flag in `TSIRVA_BOOK` moves a recording to another version).

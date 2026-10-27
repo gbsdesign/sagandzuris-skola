@@ -4,6 +4,7 @@ import { WifiOff, RefreshCw, Loader2 } from 'lucide-react';
 import { PageBar } from '../components/ui/kit';
 import { PinButton } from '../components/home/ShortcutShelf';
 import { ProfileActions } from '../components/views/ProfileActions';
+import { AdminEntry } from '../components/views/AdminEntry';
 import { prayerTitle } from '../data/prayers';
 import { HomePage } from '../pages/HomePage';
 import { GalobaPage } from '../pages/GalobaPage';
@@ -107,7 +108,6 @@ const MessagesPage = page(() => import('../pages/MessagesPage'), 'MessagesPage')
 const AbituriPage = page(() => import('../pages/AbituriPage'), 'AbituriPage');
 const OfflinePage = page(() => import('../pages/OfflinePage'), 'OfflinePage');
 const BirthdaysPage = page(() => import('../pages/BirthdaysPage'), 'BirthdaysPage');
-const GamesPage = page(() => import('../pages/GamesPage'), 'GamesPage');
 const MedavitneobaPage = page(() => import('../pages/MedavitneobaPage'), 'MedavitneobaPage');
 
 /** „ფსალმუნთა ჯგუფი“ (the vine, the home tile, a reminder): the class page of the group's class, opened at its psalter
@@ -148,7 +148,6 @@ const PAGE_TITLES: Partial<Record<PageType, string>> = {
   offline: 'ოფლაინ რეჟიმი',
   commemoration: 'მოსახსენებელი',
   birthdays: 'დაბადების დღეები',
-  games: 'თამაშები',
   medavitneoba: 'მედავითნეობა',
 };
 // an open library book shows its own name in the bar (the shelf's covers; LibraryPage's `mapItem` „book:12“)
@@ -161,6 +160,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   const { currentPage, selectedPrayerId, mapItem, handleGoBack, navigateTo } = useNavigation();
   const { user, loading, isAdmin, isTeacher } = useAuth();
   const access = useAccess();
+  // „მარგალიტები“ (section tamashebi) shows on the path only while the admin's switch and the member's access let it
+  const pathOrbs = PATH_ORBS.filter(o => o.id !== 'pearls' || access.section('tamashebi') === 'open');
   const {
     selectedChantVariants,
     handleToggleSong,
@@ -218,14 +219,20 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   if (currentPage === 'profile') {
     return (
       <div className="w-full max-w-2xl mx-auto px-1 py-3 sm:px-4 md:px-6">
-        <PageBar title="პროფილი" onBack={handleGoBack} className="mb-5" />
-        <div className="space-y-4">
-          <ChemiSamosi />
+        <PageBar title="პროფილი" onBack={handleGoBack} className="mb-4" />
+        {/* the head card, the admin panel's row (admins), my outfit and home buttons, then the details folded */}
+        <StudentProfileCard slot={<>
+          <AdminEntry />
+          <ChemiSamosi side={
+            <span className="block">
+              <span className="block font-serif-ge text-[15px] font-bold text-[#4a3426]">ჩემი სამოსი</span>
+              <span className="block text-[13px] text-[#8a7a6a] leading-snug">ჩოხა და ქართული კაბა — ნაწილი ნაწილ</span>
+            </span>
+          } />
           <ShortcutShelf variant="profile" />
-          <StudentProfileCard />
-          {/* install the app · leave the account (asks first) */}
-          <ProfileActions />
-        </div>
+        </>} />
+        {/* install the app · leave the account (asks first) */}
+        <div className="max-w-lg mx-auto mt-3"><ProfileActions /></div>
       </div>
     );
   }
@@ -251,7 +258,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
               {/* the page title sits in the top bar (PageBar); four round buttons on top (სამოსი, ნასწავლი —
                   with the teacher's assignments —, მანერა, სამუშაო) in the member's order, the habits under them */}
               <PathTabs
-                orbs={{ labels: PATH_ORBS, render: order => <PathOrbs order={order} /> }}
+                orbs={{ labels: pathOrbs, render: order => <PathOrbs order={order} /> }}
                 cards={[
                   {
                     id: 'habits',
@@ -280,8 +287,6 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           {currentPage === 'offline' && <OfflinePage />}
 
           {currentPage === 'birthdays' && <BirthdaysPage />}
-
-          {currentPage === 'games' && <GamesPage />}
 
           {currentPage === 'medavitneoba' && <MedavitneobaPage />}
 

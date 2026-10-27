@@ -9,7 +9,7 @@ import { askSignIn, openSignIn } from '../access/SignInPrompt';
 import { SearchButton } from '../search/GlobalSearch';
 import { OfflineButton } from '../offline/OfflineButton';
 import { useInbox, isUnread } from '../../hooks/useDirectChat';
-import { User as UserIcon, LogIn, Compass, ShieldCheck, Library, Baby, MessageCircle } from 'lucide-react';
+import { User as UserIcon, LogIn, Compass, Library, Baby, MessageCircle } from 'lucide-react';
 
 interface HeaderProps {
   logoUrl: string;
@@ -80,7 +80,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
           <span className="hidden md:inline font-serif-ge text-base font-bold text-[#4a3426]">საგანძურის სკოლა</span>
         </button>
 
-        {/* independent work (icon + count) + install + admin + profile */}
+        {/* independent work (icon + count) + install + profile (the admin panel opens from the profile) */}
         <div className="order-2 lg:order-3 ml-auto flex items-center gap-1.5 sm:gap-2 min-w-0">
           {/* the search sits beside the learning tools; with none of them shown, up here — and up here on a narrow
               phone (under 400px), where the three chips need the whole row */}
@@ -88,20 +88,6 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
           <PWAInstallButton compact />
           {/* offline mode: the cloud shows whether the app works without internet */}
           <OfflineButton />
-          {/* admins only: shield icon to the admin panel */}
-          {isAdmin && (
-            <button
-              type="button"
-              onClick={() => navigateTo('admin')}
-              className={`w-9 h-9 rounded-xl ring-1 flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0 ${
-                currentPage === 'admin' ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]' : 'bg-white/80 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028]'
-              }`}
-              title="ადმინ პანელი"
-              aria-label="ადმინ პანელი"
-            >
-              <ShieldCheck className="w-4 h-4" />
-            </button>
-          )}
 
           {user ? (
             <div className="flex items-center gap-1.5">

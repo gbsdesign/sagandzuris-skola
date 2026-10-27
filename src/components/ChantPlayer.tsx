@@ -119,9 +119,11 @@ interface ChantPlayerProps {
   // 'panel': the notes page's compact recording panel (same look as its synthesizer; styles in notes.css)
   layout?: 'card' | 'panel';
   onToggleDetails?: () => void;
+  // no MP3 / offline menu: the folklore centre's recordings, for members an admin has not allowed
+  noDownload?: boolean;
 }
 
-export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, media, title, subtitle, hideNotesButton = false, showDetails = true, pauseToken, disabled = false, onPlayingChange, layout = 'card', onToggleDetails }) => {
+export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, media, title, subtitle, hideNotesButton = false, showDetails = true, pauseToken, disabled = false, onPlayingChange, layout = 'card', onToggleDetails, noDownload = false }) => {
   const chant = chantId ? ALL_CHANTS.find(c => c.id === chantId) : undefined;
   const variant = chant?.variants?.find(v => v.id === variantId);
 
@@ -924,7 +926,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
         </button>
 
         {/* one download menu: MP3 files of the recording + saving it for offline listening */}
-        <div ref={mp3MenuRef}>
+        {!noDownload && <div ref={mp3MenuRef}>
           <button
             type="button"
             onClick={() => { triggerHaptic(10); setMp3MenuOpen(o => !o); }}
@@ -962,7 +964,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
               </button>
             </div>
           )}
-        </div>
+        </div>}
 
         {mediaItem?.videoUrl && (
           <a
