@@ -19,9 +19,6 @@ import {
   useReminders,
 } from '../utils/prayerReminders';
 
-// orthodox.ge texts are the morning/evening, hour, weekday prayers and akathist-1…18; the rest come from orthodoxy.ge
-const fromOrthodoxGe = (id: string) => /^(dila|dzili|hour-\d+|week-\d-\w+|akathist-\d+)$/.test(id);
-
 // Fetches { html } for a prayer, or one chapter of a book of the New Testament.
 const loadText = async (id: string): Promise<string> => {
   const bible = parseBibleId(id);
@@ -162,22 +159,6 @@ export const PrayerPage: React.FC = () => {
 
       {pager}
 
-      <p className="text-center text-xs text-[#8a7a6a]">
-        წყარო:{' '}
-        {fromOrthodoxGe(selectedPrayerId) ? (
-          <a href="https://orthodox.ge/locvani" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#7a2028]">
-            orthodox.ge — ლოცვანი
-          </a>
-        ) : parseBibleId(selectedPrayerId) ? (
-          <a href="https://www.orthodoxy.ge/tserili/mtatsmindeli/akhali_agtqma.htm" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#7a2028]">
-            orthodoxy.ge — ახალი აღთქმა, გიორგი მთაწმიდელის თარგმანი
-          </a>
-        ) : (
-          <a href="https://www.orthodoxy.ge/lotsvani.htm" target="_blank" rel="noopener noreferrer" className="underline hover:text-[#7a2028]">
-            orthodoxy.ge — ლოცვანი
-          </a>
-        )}
-      </p>
     </div>
   );
 };
@@ -273,14 +254,10 @@ const HourReminders: React.FC<{ hour: PrayerHour }> = ({ hour }) => {
     setHourReminders(hour.id, turningOn ? [...active, minutes] : active.filter(m => m !== minutes));
   };
 
-  // a line under the chips only when it says something: where the reminder arrives, or why it cannot
+  // a line under the chips only when the reminder cannot work here
   const where = !notificationsSupported()
     ? 'ეს ბრაუზერი შეტყობინებებს არ უჭერს მხარს. iPhone-ზე ჯერ დაამატე საიტი მთავარ ეკრანზე („Add to Home Screen“) და იქიდან გახსენი.'
-    : !active.length
-    ? null
-    : 'PushManager' in window
-    ? 'შეხსენება მოვა ამ მოწყობილობაზე, საიტი დახურულიც რომ იყოს.'
-    : 'შეხსენება მოვა მაშინ, როცა საიტი გახსნილია ამ მოწყობილობაზე.';
+    : null;
 
   return (
     <section className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] px-3.5 py-2.5 space-y-1.5">

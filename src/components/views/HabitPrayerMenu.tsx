@@ -334,7 +334,7 @@ const Psalms: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) => {
             <button
               key={k.id}
               type="button"
-              title={`${k.title} · ფს. ${k.psalms}`}
+              title={`${isMine ? 'შენი კანონი · ' : ''}${k.title} · ფს. ${k.psalms}`}
               onClick={() => onOpen(k.id)}
               className={`${CHIP} h-14 flex flex-col items-center justify-center leading-none ${isMine ? CHIP_ON : ''}`}
             >
@@ -344,12 +344,6 @@ const Psalms: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) => {
           );
         })}
       </div>
-      {mine.size > 0 && (
-        <p className="flex items-center gap-1.5 px-0.5 text-[12px] text-[#8a7a6a]">
-          <span className="w-2.5 h-2.5 rounded-[3px] bg-[#7a2028]" />
-          შენი კანონი ფსალმუნის ჯგუფში
-        </p>
-      )}
       <button type="button" onClick={() => onOpen(PSALTER_RULE.id)} className={`${CHIP} w-full min-h-11 px-3.5 py-2 flex items-center gap-2.5 text-left`}>
         <BookOpen className="w-4 h-4 shrink-0 text-[#7a2028]" />
         <span className="flex-1 min-w-0 text-[13.5px] font-semibold leading-snug">

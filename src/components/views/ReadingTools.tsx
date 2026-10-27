@@ -17,7 +17,8 @@ export const ReadingToolbar: React.FC<{
 }> = ({ size, onSize, khutsuri, onKhutsuri }) => {
   const [scroll, setScroll] = useState(false);
   return (
-    <div className="flex items-center justify-between gap-2 -mt-2 -mx-1.5 sm:-mx-3 mb-3">
+    // sticky: the tools stay at hand all down a long text (the page bar is not sticky)
+    <div className="sticky top-[env(safe-area-inset-top,0px)] z-10 flex items-center justify-between gap-2 -mt-2 -mx-1.5 sm:-mx-3 mb-3 py-1.5 bg-white/90 backdrop-blur-md rounded-full">
       <button
         type="button"
         aria-pressed={khutsuri}
