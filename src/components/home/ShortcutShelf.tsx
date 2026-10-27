@@ -293,7 +293,7 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
                 <span className={`flex items-center text-[#7a2028] [&>svg]:w-[18px] [&>svg]:h-[18px] [&>svg]:stroke-[1.9] ${habit ? 'h-7' : 'h-6 justify-center'}`}>{shortcutIcon(id)}</span>
                 {/* a long single word gets a size smaller rather than being split on a 360px phone */}
                 <span className={`w-full line-clamp-2 break-words leading-[1.2] font-bold text-[#4a3426] ${
-                  longest > 9 ? 'text-[11.5px] tracking-[-0.02em]' : longest > 8 ? 'text-xs tracking-[-0.01em]' : 'text-[13px]'
+                  longest > 9 ? 'text-[12.5px] tracking-[-0.02em]' : 'text-[13px]'
                 }`}>{l.label}</span>
               </button>
               {/* a 28px ring, tapped anywhere in its 40px corner */}
@@ -317,7 +317,7 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
             </li>
           );
         })}
-        {ids.length < MAX_SHORTCUTS && (editing || variant === 'profile' || ids.length < 4) && (
+        {ids.length < MAX_SHORTCUTS && (editing || variant === 'profile') && (
           <li>
             <button type="button" onClick={() => setAdding(true)} aria-label="ღილაკის დამატება"
               className="w-full h-20 rounded-[14px] border-[1.5px] border-dashed border-[#d9c8ac] text-[#8a7a6a] hover:text-[#7a2028] hover:border-[#7a2028]/40 flex flex-col items-center justify-center gap-0.5 cursor-pointer transition">
@@ -327,7 +327,6 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
           </li>
         )}
       </ul>
-      {editing && <p className="mt-2 text-xs text-[#8a7a6a] px-0.5">გადაიტანე ღილაკი სხვა ადგილზე ან წაშალე ✕-ით.</p>}
 
       <ShortcutPicker open={adding} onClose={() => setAdding(false)} current={ids} onChange={save} />
       <Sheet open={!!menu} onClose={() => setMenu(null)} title={menu?.title || ''}>

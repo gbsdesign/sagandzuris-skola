@@ -102,7 +102,7 @@ export const GrapeNav: React.FC = () => {
           <button
             type="button"
             onClick={() => { triggerHaptic(10); navigateTo('abituri'); }}
-            style={{ '--x': '57%', '--y': '37.8%', '--nx': '56%', '--ny': '41.5%', animationDelay: '-0.35s' } as React.CSSProperties}
+            style={{ '--x': '57%', '--y': '39%', '--nx': '56%', '--ny': '43.5%', animationDelay: '-0.35s' } as React.CSSProperties}
             className="vine-sway absolute left-[var(--nx)] top-[var(--ny)] @md:left-[var(--x)] @md:top-[var(--y)] -translate-x-1/2 -translate-y-1/2 cursor-pointer focus-visible:outline-none group"
           >
             <span className="inline-flex items-center gap-1.5 min-h-9 px-3 rounded-full bg-[#fbf6ec] text-[#7a2028] border-[1.5px] border-[#7a2028]/70 shadow-[0_3px_10px_rgba(74,52,38,0.25)] transition-[transform,background-color] duration-200 group-hover:scale-105 group-hover:bg-white group-active:scale-95 group-focus-visible:ring-4 group-focus-visible:ring-amber-300">

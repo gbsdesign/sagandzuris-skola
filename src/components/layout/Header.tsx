@@ -51,7 +51,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
       <button
         type="button"
         onClick={() => { triggerHaptic(10); openClass(c.id); }}
-        className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-10 pl-1.5 pr-2 min-[400px]:pr-3 rounded-lg text-xs min-[400px]:text-[13px] font-bold ${currentPage === 'class' ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
+        className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-10 pl-1.5 pr-2 min-[400px]:pr-3 rounded-lg text-[13px] font-bold ${currentPage === 'class' ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
         title={`${c.name} — კლასის გვერდი`}
         aria-label={`კლასი: ${c.name}`}
       >
@@ -95,7 +95,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                 <button
                   type="button"
                   onClick={() => navigateTo('messages')}
-                  className={`relative w-9 h-9 rounded-xl ring-1 flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0 ${
+                  className={`relative w-9 lg:w-auto lg:px-3 lg:gap-1.5 h-9 rounded-xl ring-1 flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0 ${
                     currentPage === 'messages' || currentPage === 'dm'
                       ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]'
                       : 'bg-white/80 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028]'
@@ -104,6 +104,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                   aria-label={unread ? `პირადი შეტყობინებები, ${unread} წაუკითხავი` : 'პირადი შეტყობინებები'}
                 >
                   <MessageCircle className="w-4 h-4" />
+                  <span className="hidden lg:inline text-[13px] font-bold">წერილები</span>
                   {unread > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-[#c62828] text-white text-[11px] font-black flex items-center justify-center leading-none ring-2 ring-[#fbf6ec]">
                       {unread}
@@ -143,7 +144,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
             <button
               onClick={openSignIn}
               disabled={signingIn}
-              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl bg-[#7a2028] hover:bg-[#5e1820] text-[#fbf6ec] text-xs min-[400px]:text-[13px] font-bold transition-all active:scale-95 cursor-pointer shrink-0"
+              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl bg-[#7a2028] hover:bg-[#5e1820] text-[#fbf6ec] text-[13px] font-bold transition-all active:scale-95 cursor-pointer shrink-0"
             >
               <LogIn className="w-4 h-4 hidden min-[400px]:block" />
               {signingIn ? 'შესვლა...' : 'შესვლა'}
@@ -170,7 +171,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                     else if (id === 'biblioteka' && access.section('biblioteka') === 'locked') askSignIn('ბიბლიოთეკა');
                     else navigateTo(page);
                   }}
-                  className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-10 px-2 min-[400px]:px-3 rounded-lg text-xs min-[400px]:text-[13px] font-bold ${currentPage === page ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
+                  className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-10 px-2 min-[400px]:px-3 rounded-lg text-[13px] font-bold ${currentPage === page ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
                   title={label}
                 >
                   <Icon className="w-4 h-4 text-[#7a2028] shrink-0" />
