@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { Check, Info, PenLine, Upload } from 'lucide-react';
+import { Check, PenLine, Upload } from 'lucide-react';
 import { db } from '../../firebase';
 import { SchoolClass, imageFileToDataUrl } from '../../hooks/useClasses';
 import { triggerHaptic } from '../../utils/haptics';
@@ -16,7 +16,6 @@ export const ClassHeader: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
   const msg = useFlash();
   const fileRef = useRef<HTMLInputElement>(null);
   const [name, setName] = useState(cls.name);
-  const [info, setInfo] = useState(false);
   useEffect(() => setName(cls.name), [cls.name]);
   const dirty = !!name.trim() && name.trim() !== cls.name;
   const mode = !!cls.classMode;
@@ -66,21 +65,16 @@ export const ClassHeader: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
             )}
           </div>
           <div className="mt-1 flex items-center gap-1">
-            <button type="button" role="switch" aria-checked={mode} onClick={() => save({ classMode: !mode })}
+            <button type="button" role="switch" aria-checked={mode} onClick={() => save({ classMode: !mode })} title={CLASS_MODE_HINT}
               className={`inline-flex items-center gap-2 h-8 pl-1.5 pr-3 rounded-full text-[13px] font-semibold cursor-pointer transition ${mode ? 'bg-[#7a2028]/[0.08] text-[#7a2028]' : 'bg-[#f6efe3] text-[#75685a] hover:text-[#4a3426]'}`}>
               <span className={`relative w-8 h-[18px] rounded-full transition-colors ${mode ? 'bg-[#7a2028]' : 'bg-[#d9c8ac]'}`}>
                 <span className={`absolute top-[2px] w-[14px] h-[14px] rounded-full bg-white shadow-sm transition-all ${mode ? 'left-[16px]' : 'left-[2px]'}`} />
               </span>
-              კლასის რეჟიმი
-            </button>
-            <button type="button" onClick={() => setInfo(v => !v)} aria-label="რას აკეთებს კლასის რეჟიმი" aria-expanded={info}
-              className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer transition ${info ? 'bg-[#7a2028]/[0.1] text-[#7a2028]' : 'text-[#b3a594] hover:text-[#7a2028]'}`}>
-              <Info className="w-4 h-4" />
+              გალობაში მხოლოდ პროგრამა
             </button>
           </div>
         </div>
       </div>
-      {info && <p className="mt-2 text-[13px] text-[#75685a] leading-relaxed sg-in">{CLASS_MODE_HINT}</p>}
       {msg.flash && <div className="mt-3"><Flash flash={msg.flash} onClose={msg.clear} /></div>}
     </Card>
   );

@@ -130,7 +130,6 @@ export const WeekView: React.FC<{ model: HabitsModel; onPickDay: (d: Date) => vo
         </div>
       </div>
 
-      {days.some(d => canTickDay(d)) && <p className="px-1 text-[12px] font-medium text-[#a08a76]">ბოლო 7 დღის უჯრას შეეხე — მოინიშნება ან მოიხსნება.</p>}
     </div>
   );
 };

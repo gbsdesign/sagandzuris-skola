@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { CalendarDays, ChevronDown, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { ArrowLeft, CalendarDays, ChevronDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
 import {
   addDays, daysInMonth, fromIso, fromOldStyle, oldStyleOf, todayIso, useCalendarDay,
@@ -44,29 +44,30 @@ export const ChurchCalendarPanel: React.FC<{ iso: string; onChange: (iso: string
   const today = todayIso();
 
   return (
-    <div className="max-w-2xl mx-auto px-3 sm:px-6 pt-4 pb-5">
-      <div className="flex items-center gap-2">
-        <CalendarDays className="w-[18px] h-[18px] shrink-0 text-[#7a2028]" />
-        <h2 className="flex-1 min-w-0 font-serif-ge text-base sm:text-[17px] font-bold text-[#7a2028]">საეკლესიო კალენდარი</h2>
+    <div className="max-w-2xl mx-auto px-3 sm:px-6 pt-4 pb-10">
+      {/* a sheet of its own (opened from the footer, today's-saints line, a feast): one bar with ← like a saint's life */}
+      <div className="flex items-center gap-3">
         <button
           type="button"
           onClick={onClose}
-          className="w-9 h-9 shrink-0 rounded-full bg-white ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/35 text-[#7a2028] flex items-center justify-center cursor-pointer active:scale-95 transition-all"
-          aria-label="კალენდრის დაკეცვა"
-          title="დაკეცვა"
+          className="w-11 h-11 shrink-0 rounded-full bg-white ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/35 text-[#4a3426] hover:text-[#7a2028] flex items-center justify-center cursor-pointer active:scale-95 transition-all"
+          aria-label="უკან"
+          title="უკან"
         >
-          <X className="w-4 h-4" />
+          <ArrowLeft className="w-5 h-5" />
         </button>
+        <CalendarDays className="w-[18px] h-[18px] shrink-0 text-[#7a2028]" />
+        <h2 className="flex-1 min-w-0 font-serif-ge text-base sm:text-[17px] font-bold text-[#7a2028]">საეკლესიო კალენდარი</h2>
       </div>
 
       <div className="mt-3 flex flex-wrap items-center gap-2">
         {/* ‹ month · day › — one control */}
-        <div className="flex-1 sm:flex-none min-w-0 flex items-center rounded-full bg-white ring-1 ring-[#e8dcc8] overflow-hidden">
+        <div className="w-full sm:w-auto min-w-0 flex items-center rounded-full bg-white ring-1 ring-[#e8dcc8] overflow-hidden">
           <button type="button" onClick={() => go(-1)} className={STEP} aria-label="წინა დღე" title="წინა დღე">
             <ChevronLeft className="w-4 h-4" />
           </button>
           {SEP}
-          <span className="relative flex-1 sm:flex-none min-w-0 sm:w-[7.75rem]">
+          <span className="relative flex-1 sm:flex-none min-w-[7.5rem] sm:w-[7.75rem]">
             <select value={shown.month} onChange={e => pick(Number(e.target.value), shown.day)} className={SELECT} aria-label="თვე">
               {MONTHS_GE.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
             </select>
@@ -97,10 +98,10 @@ export const ChurchCalendarPanel: React.FC<{ iso: string; onChange: (iso: string
         </button>
 
         {/* the style the month and day are read in */}
-        <div role="radiogroup" aria-label="სტილი" className="w-full sm:w-auto sm:ml-auto flex rounded-full bg-white ring-1 ring-[#e8dcc8] p-0.5">
+        <div role="radiogroup" aria-label="სტილი" className="shrink-0 ml-auto flex rounded-full bg-white ring-1 ring-[#e8dcc8] p-0.5">
           {[
-            { old: true, label: 'ძველი სტილით' },
-            { old: false, label: 'ახალი სტილით' },
+            { old: true, label: 'ძვ. სტ.', title: 'ძველი სტილით' },
+            { old: false, label: 'ახ. სტ.', title: 'ახალი სტილით' },
           ].map(o => (
             <button
               key={o.label}
@@ -108,7 +109,8 @@ export const ChurchCalendarPanel: React.FC<{ iso: string; onChange: (iso: string
               role="radio"
               aria-checked={oldStyle === o.old}
               onClick={() => setStyle(o.old)}
-              className={`flex-1 sm:flex-none h-9 sm:h-8 px-3 sm:px-2.5 rounded-full text-[12.5px] font-bold whitespace-nowrap transition-colors cursor-pointer select-none ${
+              title={o.title}
+              className={`h-9 sm:h-8 px-3 sm:px-2.5 rounded-full text-[12.5px] font-bold whitespace-nowrap transition-colors cursor-pointer select-none ${
                 oldStyle === o.old ? 'bg-[#7a2028] text-[#fbf6ec]' : 'text-[#4a3426] hover:text-[#7a2028]'
               }`}
             >

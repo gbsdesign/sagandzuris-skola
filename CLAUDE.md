@@ -19,6 +19,9 @@
 - **Roomy UI**: comfortable controls (play ~44–48px, icon buttons 36px); fit phones by wrapping, never by shrinking.
 - **Never auto-scroll** a player to the playing line. No octave-leap checks in note audits.
 - Never put the user's email in request headers/URLs (e.g. API User-Agent).
+- **Ready to merge → say it in red.** When a chat's work is finished and its PR is ready (checks green, no conflict),
+  end the reply with a line in red: „🔴 **შესაერთებელია** — PR #N“ (Markdown has no red text, so the red circle + bold),
+  so the user knows to press „Merge“. (The user's rule, 2026-10-27.)
 
 ## Saving tokens (the user pays for every session)
 
@@ -88,10 +91,12 @@
 - Fixed/full-screen UI must respect `env(safe-area-inset-*)` (`viewport-fit=cover` is on); helpers
   `.safe-x`, `.safe-top`, `.safe-bottom`, `.safe-bleed` in `index.css`.
 - **Kit rules (redesign stage 1, 2026-10-25)** — `components/ui/kit.tsx`: every inner page has the one `PageBar`
-  (44px round ←, title left, 36px round 📌/✎ right; the router gives most pages theirs); asking before deleting
+  (44px round ←, title left, 36px round 📌/✎ right; the router gives most pages theirs; full-screen windows with their own
+  sticky bar use the same `BackBtn` and show the title only once the big one scrolls away, `useScrolledAway`); asking before deleting
   goes through `askConfirm` (shown by `ConfirmHost` in `App.tsx`), never `window.confirm`; new text ≥12px, nothing
   below 11px anywhere; one paper background for every page in `App.tsx`. Signing out lives only at the profile's
-  bottom (`views/ProfileActions.tsx`); today's saints are a folded line at the top of home (`TodaySaintsCard`).
+  bottom (`views/ProfileActions.tsx`); the admin panel opens only from the profile's wine row (`views/AdminEntry.tsx`,
+  no header shield since 2026-10-27), and the profile's details are three folds with „შენახვა“ shown only while changed; today's saints are a folded line at the top of home (`TodaySaintsCard`).
 
 ## Audio and sheet music (details in `src/data/CLAUDE.md`)
 
@@ -106,6 +111,14 @@
 - **Notes page** (details in `src/pages/notes/CLAUDE.md`): tapping a chant version opens a full notes page
   with synth, recording, church mode and the regent's „დღევანდელი წირვა“ program. The choir reads these
   notes live during the Liturgy: nothing may sound by accident, must work offline.
+- **სასწავლო რეჟიმი** (2026-10-27, `components/learn/`): „სწავლა“ beside the zoom on the notes page (`LearnMode`) and
+  „სასწავლო რეჟიმი“ on a song's recording (`LearnAudio`, songs without notes). Parts = lines of the book notes (a short
+  line joins its neighbour) or ~12 s of a recording (`utils/learn.ts` + test); a part loops, 50/75/100%, my voice alone /
+  everyone / everyone but me; singing is checked like the pearls (80% learns it), a recording's part is self-marked
+  „ვიცი“. Reviews after 1, 3, 7 days. Progress `students.learning.{piece}` (`hooks/useLearning.ts`; device for guests).
+  Takes go to the teacher through the pearls' store (`pearlTakes`, ids `learn~<piece>~<part>`, approval in
+  `pearlShine`) — no rules change; teachers hear them in the member's window (`LearnReview`). AI teacher shares the
+  pearls' 3 a day.
 - **Folk songs map** (`data/songsData.ts`, `components/maps/GeorgiaMap.tsx`) and **მთქმელი authors map**
   (`data/mtkmeliData.ts`, `MtkmeliMap.tsx`, shared `RegionPuzzleMap.tsx`). Full texts only for authors who
   died before 1956; others get title + description + wiki link.
@@ -117,6 +130,12 @@
   (one shared model `useHabits.tsx`; a new view = one entry in `VIEWS` in `ChvevebiPanel.tsx`), stats in
   `utils/habitStats.ts`. Ticks allowed for the last 7 days (`canTickDay`). Colours/icons/counters: `data/habitLooks.ts`,
   member's choice in `habitSetup.looks/counters`; counter numbers in `students.habitCounts` (sent 1.2 s after the last tap).
+- **მედავითნეობა** (page `medavitneoba`, built 2026-10-27): the reader's course on the vine's „მედავითნეობა“ label
+  (section `medavitneobaTopic`, „მალე“ until the admin opens it). 8 lessons in `data/medavitneLessons.ts`, shown step by
+  step (learn / order / read aloud / quiz / task) in `pages/MedavitneobaPage.tsx` + `pages/medavitneoba/parts.tsx`; the
+  open lesson is `mapItem`. Prayer texts copied from the app's ლოცვანი, psalms cut from the kathismas (`loadPsalmHtml`),
+  the Apostle from `public/bible/`. Recording one's reading stays in the browser. Progress in `students.medavitne`
+  (`hooks/useMedavitneProgress.ts`). Content not yet checked by a priest/regent — the page says so.
 - **Library** page (`biblioteka`): საღმრთო ისტორია, დღესასწაულები, წმიდანთა ცხოვრება.
   Footer church calendar (`data/churchCalendar.ts`, `data/calendar/<year>.json`, made by
   `node scripts/fetch-church-calendar.mjs <year>`). **The 2026 file ends 13 Jan 2027 — re-run for 2027 once
@@ -153,9 +172,10 @@
   `firestore.rules` too (members no longer read it).
 - **Games hub** (`pages/GamesPage.tsx`, 2026-10-27): „თამაშები“ is a hub of three category tabs (მუსიკალური · ქართული ·
   ცოცხალი) from `data/games.ts`; every game carries its variant chips (ონლაინ · ჰიბრიდული · უტელეფონო); unbuilt games are
-  „მალე“ rows. The pearls game moved to `pages/PearlsPage.tsx` (section `margalitebi`, page `pearls`, its own open/მალე/hidden
-  switch in the admin panel; a member's feature for it is the games' one — `featureOf` in `hooks/useAccess.ts`). The plan with
-  42 games and the six Georgianized board games: https://claude.ai/artifact/Dw24amtHhQvSGUd1pPE4fg
+  „მალე“ rows; the vine label „თამაშები“ opens it. The pearls game stays the round button of „საგანძურის გზა“ (below), now
+  under its own section `margalitebi` (open/მალე/hidden switch in the admin panel; a member's feature for it is the games'
+  one — `featureOf` in `hooks/useAccess.ts`). The plan with 42 games and the six Georgianized board games:
+  https://claude.ai/artifact/Dw24amtHhQvSGUd1pPE4fg
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 
@@ -222,8 +242,9 @@ psalter group inside the class). 3 library lighter (no plates under the books). 
 listens (Gemini through Firebase AI Logic). 8 calls on Android (wake lock, push, TURN key from the user).
 
 1–3. Built (see above).
-4. Pearls/chests game — built 2026-10-25 (redesign stage 7, branch `claude/dazzling-goodall-inv60p`): page `games`
-   (section `tamashebi`, still „მალე“ until the admin opens it; admins see it open). Chests in `data/pearls.ts` (first =
+4. Pearls/chests game — built 2026-10-25 (redesign stage 7, branch `claude/dazzling-goodall-inv60p`). Since 2026-10-27
+   the fifth round button „მარგალიტები“ of „საგანძურის გზა“ (`PathOrbs`, body `pearls/PearlChests.tsx`; the games page is
+   the hub above), shown while section `margalitebi` is open (open by default). Chests in `data/pearls.ts` (first =
    vol. IX №58–77), the first phrase of the chosen voice from the book notes (`utils/pearls.ts` `phraseOf`), singing
    heard in the browser (`utils/pitch.ts`: YIN pitch, notes, key-free score; ≥80% polishes; `utils/singCapture.ts`),
    sheet `components/pearls/PearlSheet.tsx`. Best try in `students.pearls`, best take (MP3) in

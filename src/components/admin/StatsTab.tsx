@@ -55,8 +55,7 @@ export const TopChants: React.FC<{ users: UserRecord[] }> = ({ users }) => {
 
   return (
     <Fold icon={<Headphones />} title="ყველაზე მოსმენადი"
-      summary={first ? <>პირველი: <span className="font-semibold text-[#4a3426]">{first}</span></> : 'მოსმენები ჯერ არ დაგროვილა'}
-      info="სინთეზატორით ან ჩანაწერით მოსმენა, ყველას ერთად. ერთი ადამიანი ერთ ვერსიას ერთხელ ითვლება ყოველ შესვლაზე.">
+      summary={first ? <>პირველი: <span className="font-semibold text-[#4a3426]">{first}</span></> : 'მოსმენები ჯერ არ დაგროვილა'}>
       {top.length === 0 ? (
         <p className="text-sm text-[#8a7a6a]">მოსმენები ჯერ არ დაგროვილა.</p>
       ) : (
@@ -71,7 +70,7 @@ export const TopChants: React.FC<{ users: UserRecord[] }> = ({ users }) => {
                     <span className="text-[13px] font-bold tabular-nums text-[#7a2028] shrink-0">{t.n}</span>
                   </span>
                   <span className="flex items-center gap-2 mt-1">
-                    <span className="text-[11.5px] text-[#9a8b7b] shrink-0">{t.info!.service} · {t.info!.variant.code}</span>
+                    <span className="text-xs text-[#9a8b7b] shrink-0">{t.info!.service} · {t.info!.variant.code}</span>
                     <span className="flex-1 min-w-0"><Bar value={t.n} max={maxPlays} /></span>
                   </span>
                 </span>

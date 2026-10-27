@@ -28,13 +28,13 @@ export const OfflineButton: React.FC = () => {
     <button
       type="button"
       onClick={() => { triggerHaptic(10); navigateTo('offline'); }}
-      className={`relative w-9 h-9 rounded-xl ring-1 flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0 ${
+      className={`relative w-9 h-9 rounded-full ring-1 flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0 ${
         here ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]' : 'bg-white/80 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028]'
       }`}
       title={label}
       aria-label={label}
     >
-      <Icon className={`w-4 h-4 ${status === 'offline' && !here ? 'text-[#8a7a6a]' : ''}`} />
+      <Icon className={`w-[18px] h-[18px] ${status === 'offline' && !here ? 'text-[#8a7a6a]' : ''}`} />
       {status === 'run' && (
         <span aria-hidden className="absolute left-2 right-2 bottom-1.5 h-[3px] rounded-full bg-current/15 overflow-hidden">
           <span className="block h-full rounded-full bg-current transition-[width] duration-500" style={{ width: `${Math.max(6, pct)}%` }} />

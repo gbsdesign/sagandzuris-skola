@@ -51,16 +51,11 @@ export const AccessPicker: React.FC<{
   };
   return (
     <div className="space-y-4">
-      <Toggle
-        on={all}
-        onChange={on => onChange(on, new Set(ALL_FEATURES))}
-        label="ყველაფერზე წვდომა"
-        hint={all ? 'ყველა განყოფილება და ის ახალიც, რაც მომავალში დაემატება' : `არჩეულია ${picked.size} / ${ALL_FEATURES.length}`}
-      />
+      <Toggle on={all} onChange={on => onChange(on, new Set(ALL_FEATURES))} label="ყველაფერზე წვდომა" />
       {!all && FEATURE_GROUPS.map(g => (
         <section key={g.title}>
           <h4 className="px-1 mb-1.5 text-[13px] font-bold text-[#75685a]">{g.title}</h4>
-          <div className="space-y-1.5">
+          <div className="grid sm:grid-cols-2 gap-1.5">
             {g.items.map(it => {
               const on = picked.has(it.id);
               return (
@@ -70,17 +65,15 @@ export const AccessPicker: React.FC<{
                   role="checkbox"
                   aria-checked={on}
                   onClick={() => toggle(it.id)}
-                  className={`w-full min-h-[52px] flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-left cursor-pointer transition ${
+                  title={it.text}
+                  className={`w-full h-11 flex items-center gap-3 px-3.5 rounded-xl text-left cursor-pointer transition ${
                     on ? 'bg-white ring-2 ring-[#7a2028]/70' : 'bg-white/60 ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40'
                   }`}
                 >
-                  <span className={`w-7 h-7 shrink-0 flex items-center justify-center rounded-lg ${on ? 'bg-[#7a2028] text-white' : 'bg-white ring-2 ring-[#d9c8ac]'}`} aria-hidden>
-                    {on && <Check className="w-4 h-4" strokeWidth={3} />}
+                  <span className={`w-6 h-6 shrink-0 flex items-center justify-center rounded-md ${on ? 'bg-[#7a2028] text-white' : 'bg-white ring-2 ring-[#d9c8ac]'}`} aria-hidden>
+                    {on && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
                   </span>
-                  <span className="min-w-0">
-                    <span className="block text-[15px] font-semibold text-[#2a2017]">{it.label}</span>
-                    <span className="block text-[13px] text-[#8a7a6a] leading-snug">{it.text}</span>
-                  </span>
+                  <span className="min-w-0 truncate text-[14px] font-semibold text-[#2a2017]">{it.label}</span>
                 </button>
               );
             })}

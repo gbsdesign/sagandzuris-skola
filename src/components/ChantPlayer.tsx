@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Play, Pause, RefreshCw, Check, Download, CloudDownload, Music, Video, RotateCcw, RotateCw, Repeat, Gauge, Music2, ChevronRight, ChevronUp, SlidersHorizontal } from 'lucide-react';
+import { Play, Pause, RefreshCw, Check, Download, CloudDownload, Headphones, Music, Video, RotateCcw, RotateCw, Repeat, Gauge, Music2, ChevronRight, ChevronUp, SlidersHorizontal } from 'lucide-react';
 import * as Tone from 'tone';
 import soundTouchProcessorUrl from '@soundtouchjs/audio-worklet/processor?url';
 import { ALL_CHANTS } from '../data/gelatiBookChants';
@@ -119,9 +119,11 @@ interface ChantPlayerProps {
   // 'panel': the notes page's compact recording panel (same look as its synthesizer; styles in notes.css)
   layout?: 'card' | 'panel';
   onToggleDetails?: () => void;
+  // no MP3 / offline menu: the folklore centre's recordings, for members an admin has not allowed
+  noDownload?: boolean;
 }
 
-export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, media, title, subtitle, hideNotesButton = false, showDetails = true, pauseToken, disabled = false, onPlayingChange, layout = 'card', onToggleDetails }) => {
+export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, media, title, subtitle, hideNotesButton = false, showDetails = true, pauseToken, disabled = false, onPlayingChange, layout = 'card', onToggleDetails, noDownload = false }) => {
   const chant = chantId ? ALL_CHANTS.find(c => c.id === chantId) : undefined;
   const variant = chant?.variants?.find(v => v.id === variantId);
 
@@ -730,6 +732,25 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
   if (layout === 'panel') {
     const voiceOn = (i: number) => !isAllVoicesActive && voiceActive[i];
     const pitchLabel = pitchShiftVal > 0 ? `+${pitchShiftVal}` : pitchShiftVal < 0 ? `−${-pitchShiftVal}` : '0';
+    // a one-track recording (another choir's) has no voices to switch or balance: its 🔁 and 🎥 join the first row
+    const oneTrack = !voiceAvailable.some(Boolean);
+    const loopBtn = (
+      <button
+        type="button"
+        className={`np-ib np-loop ${loopStage ? 'pill' : ''} ${loopStage === 1 ? 'half' : ''} ${loopStage === 2 ? 'lit' : ''}`}
+        onClick={handleLoopButton}
+        disabled={isLoading}
+        title={loopStage === 0 ? 'გამეორება: მონიშნე დასაწყისი (A)' : loopStage === 1 ? 'მონიშნე დასასრული (B)' : 'გამეორების გამორთვა'}
+        aria-label="გამეორება"
+      >
+        <Repeat />{loopStage === 1 && <span>A→B</span>}{loopStage === 2 && <span>A–B</span>}
+      </button>
+    );
+    const videoBtn = mediaItem.videoUrl && (
+      <a className="np-ib np-video" href={mediaItem.videoUrl} target="_blank" rel="noopener noreferrer" title="ვიდეოს გახსნა" aria-label="ვიდეოს გახსნა">
+        <Video />
+      </a>
+    );
     return (
       <div className="np-pin">
         <div className="np-row">
@@ -765,6 +786,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
               timeClassName="np-time"
             />
           </div>
+          {oneTrack && <>{loopBtn}{videoBtn}</>}
           {onToggleDetails && (
             <button type="button" className="np-ib np-chev" aria-expanded={showDetails} onClick={onToggleDetails} aria-label="დეტალები" title="ჩაკეცვა / გაშლა">
               <ChevronUp />
@@ -772,10 +794,8 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
           )}
         </div>
         <div className="np-details">
-          <div className="np-dA">
+          {!oneTrack && <div className="np-dA">
             <div className="np-row">
-              {/* a one-track recording (another choir's) has no voices to switch or balance */}
-              {voiceAvailable.some(Boolean) && <>
               <div className="np-seg" role="group" aria-label="ხმები">
                 {[0, 1, 2].map(i => (
                   <button
@@ -801,22 +821,8 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
               <button type="button" className="np-ib np-mixbtn" aria-pressed={mixOpen} onClick={() => setMixOpen(o => !o)} aria-label="ხმების სიძლიერე" title="ხმების სიძლიერე">
                 <SlidersHorizontal />
               </button>
-              </>}
-              <button
-                type="button"
-                className={`np-ib np-loop ${loopStage ? 'pill' : ''} ${loopStage === 1 ? 'half' : ''} ${loopStage === 2 ? 'lit' : ''}`}
-                onClick={handleLoopButton}
-                disabled={isLoading}
-                title={loopStage === 0 ? 'გამეორება: მონიშნე დასაწყისი (A)' : loopStage === 1 ? 'მონიშნე დასასრული (B)' : 'გამეორების გამორთვა'}
-                aria-label="გამეორება"
-              >
-                <Repeat />{loopStage === 1 && <span>A→B</span>}{loopStage === 2 && <span>A–B</span>}
-              </button>
-              {mediaItem.videoUrl && (
-                <a className="np-ib np-video" href={mediaItem.videoUrl} target="_blank" rel="noopener noreferrer" title="ვიდეოს გახსნა" aria-label="ვიდეოს გახსნა">
-                  <Video />
-                </a>
-              )}
+              {loopBtn}
+              {videoBtn}
             </div>
             {mixOpen && (
               <div className={`np-mix ${isAllVoicesActive ? 'dim' : ''}`}>
@@ -837,10 +843,9 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
                     />
                   </label>
                 ))}
-                <p className="np-mix-note">სიძლიერე მუშაობს, როცა ხმები ცალ-ცალკეა ჩართული</p>
               </div>
             )}
-          </div>
+          </div>}
           <div className="np-dB">
             <div className="np-steps">
               <NpStepper
@@ -853,8 +858,11 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
                 minusDisabled={speedIdx === 0 || playbackSpeed <= SPEED_STEPS[0]}
                 plusDisabled={playbackSpeed >= SPEED_STEPS[SPEED_STEPS.length - 1]}
               />
+              {/* the recording's own tone (🎧), apart from the notes' „ტონი“ beside „საწყისი ბგერა“ */}
               <NpStepper
                 label="ტონი"
+                icon={<Headphones />}
+                name="ჩანაწერის ტონი"
                 value={pitchLabel}
                 changed={pitchShiftVal !== 0}
                 onMinus={() => setPitchShiftVal(p => Math.max(-7, p - 1))}
@@ -870,7 +878,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
     );
   }
 
-  const roundBtn = 'h-9 rounded-full border border-slate-200 bg-white hover:bg-amber-50 hover:border-amber-300 text-slate-600 text-xs font-bold flex items-center justify-center gap-0.5 transition-all cursor-pointer active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed';
+  const roundBtn = 'h-9 rounded-full border border-[#e4d8c4] bg-white hover:bg-[#fcf1df] hover:border-[#efd6a6] text-[#574739] text-xs font-bold flex items-center justify-center gap-0.5 transition-all cursor-pointer active:scale-90 disabled:opacity-40 disabled:cursor-not-allowed';
 
   return (
     <div className="w-full flex flex-col gap-3">
@@ -882,9 +890,9 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
           disabled={isLoading}
           className={`${roundBtn} px-2 sm:px-2.5 whitespace-nowrap ${
             loopStage === 2
-              ? '!bg-amber-500 !border-amber-500 !text-white shadow-sm'
+              ? '!bg-[#dc8a22] !border-[#dc8a22] !text-white shadow-sm'
               : loopStage === 1
-              ? '!border-amber-400 !text-amber-800 !bg-amber-50'
+              ? '!border-[#efd6a6] !text-[#b4620e] !bg-[#fcf1df]'
               : ''
           }`}
           title={loopStage === 0 ? 'გამეორება: მონიშნე დასაწყისი (A)' : loopStage === 1 ? 'მონიშნე დასასრული (B)' : 'გამეორების გამორთვა'}
@@ -905,8 +913,8 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
           onClick={handlePlayToggle}
           disabled={isLoading}
           className={`w-12 h-12 rounded-full flex items-center justify-center transition-all cursor-pointer shadow-md ${
-            isPlaying ? 'bg-[#85502c] hover:bg-[#6c4021] text-white' : 'bg-amber-500 hover:bg-amber-600 text-white'
-          } disabled:bg-slate-300 disabled:cursor-not-allowed active:scale-95`}
+            isPlaying ? 'bg-[#b4620e] hover:bg-[#9a530b] text-white' : 'bg-[#dc8a22] hover:bg-[#c97a17] text-white'
+          } disabled:bg-[#d6c8b1] disabled:cursor-not-allowed active:scale-95`}
           aria-label={isPlaying ? 'პაუზა' : 'დაკვრა'}
         >
           {isLoading ? (
@@ -924,7 +932,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
         </button>
 
         {/* one download menu: MP3 files of the recording + saving it for offline listening */}
-        <div ref={mp3MenuRef}>
+        {!noDownload && <div ref={mp3MenuRef}>
           <button
             type="button"
             onClick={() => { triggerHaptic(10); setMp3MenuOpen(o => !o); }}
@@ -933,36 +941,36 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
             title="ჩამოტვირთვა (MP3 / ოფლაინ)"
             aria-label="ჩამოტვირთვა"
           >
-            {savingTrack !== null || isDownloading ? <RefreshCw className="w-4 h-4 animate-spin text-amber-600" /> : <Download className="w-4 h-4" />}
+            {savingTrack !== null || isDownloading ? <RefreshCw className="w-4 h-4 animate-spin text-[#b4620e]" /> : <Download className="w-4 h-4" />}
           </button>
           {mp3MenuOpen && (
-            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 z-30 w-60 max-w-full rounded-xl border border-amber-200 bg-white shadow-lg py-1 overflow-hidden">
+            <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 z-30 w-60 max-w-full rounded-xl border border-[#efd6a6] bg-white shadow-lg py-1 overflow-hidden">
               {mp3Tracks.map(i => (
                 <button
                   key={i}
                   type="button"
                   onClick={() => handleSaveMp3(i)}
-                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-amber-50 cursor-pointer"
+                  className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-bold text-[#2a2017] hover:bg-[#fcf1df] cursor-pointer"
                 >
-                  <Music2 className={`w-4 h-4 ${i === 3 ? 'text-amber-600' : 'text-slate-400'}`} /> MP3 · {TRACK_LABELS[i]}
+                  <Music2 className={`w-4 h-4 ${i === 3 ? 'text-[#b4620e]' : 'text-[#b8aa97]'}`} /> MP3 · {TRACK_LABELS[i]}
                 </button>
               ))}
               {mp3Tracks.length > 0 && (
-                <p className="px-3 pt-0.5 pb-1.5 text-[11px] text-slate-400 leading-snug">ორიგინალი ჩანაწერი — სიჩქარე და ტონი არ იცვლება</p>
+                <p className="px-3 pt-0.5 pb-1.5 text-[11px] text-[#8c7c6b] leading-snug">ორიგინალი ჩანაწერი — სიჩქარე და ტონი არ იცვლება</p>
               )}
-              <div className="my-1 border-t border-slate-100" />
+              <div className="my-1 border-t border-[#f1e8d9]" />
               <button
                 type="button"
                 onClick={() => { setMp3MenuOpen(false); handleDownloadStems(); }}
                 disabled={isDownloading || allCached}
-                className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-amber-50 cursor-pointer disabled:cursor-default disabled:hover:bg-transparent"
+                className="w-full flex items-center gap-2 px-3 py-2 text-left text-xs font-bold text-[#2a2017] hover:bg-[#fcf1df] cursor-pointer disabled:cursor-default disabled:hover:bg-transparent"
               >
-                {allCached ? <Check className="w-4 h-4 text-emerald-600 stroke-[3]" /> : <CloudDownload className="w-4 h-4 text-amber-600" />}
+                {allCached ? <Check className="w-4 h-4 text-emerald-600 stroke-[3]" /> : <CloudDownload className="w-4 h-4 text-[#b4620e]" />}
                 {allCached ? 'შენახულია ოფლაინ' : 'ოფლაინ შენახვა (ინტერნეტის გარეშე)'}
               </button>
             </div>
           )}
-        </div>
+        </div>}
 
         {mediaItem?.videoUrl && (
           <a
@@ -983,7 +991,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
       )}
 
       {/* Waveform seek bar: visualizer + progress in one */}
-      <div className="w-full bg-white/95 border border-amber-100/90 rounded-xl px-3 pt-3 pb-1.5 shadow-2xs">
+      <div className="w-full bg-white border border-[#e8dcc8] rounded-xl px-3 pt-3 pb-1.5 shadow-2xs">
         <ChantWaveformSeekBar
           peaksUrl={activeTracks[3] || activeTracks.find(Boolean) || ''}
           timeRef={currentTimeRef}
@@ -1000,7 +1008,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
       {showDetails && (<>
       {/* Voices: segmented control; per-voice volume appears under each voice in individual mode.
           A one-track recording (a song from the archive) has nothing to switch: no control. */}
-      {voiceAvailable.some(Boolean) && <div className="w-full grid grid-cols-4 gap-1 p-1 rounded-2xl bg-slate-100/80 border border-slate-200/70">
+      {voiceAvailable.some(Boolean) && <div className="w-full grid grid-cols-4 gap-1 p-1 rounded-2xl bg-[#f1e9dc] border border-[#e8dcc8]">
         {[0, 1, 2].map(i => {
           const isOn = !isAllVoicesActive && voiceActive[i];
           return (
@@ -1014,7 +1022,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
                   voiceSetters[i](prev => !prev);
                 }}
                 className={`h-9 rounded-xl font-black text-xs transition-all cursor-pointer ${
-                  isOn ? 'bg-white text-amber-800 shadow-sm ring-1 ring-amber-300' : 'text-slate-500 hover:text-slate-700'
+                  isOn ? 'bg-white text-[#b4620e] shadow-sm ring-1 ring-[#efd6a6]' : 'text-[#8c7c6b] hover:text-[#4a3426]'
                 } disabled:opacity-35 disabled:cursor-not-allowed`}
                 title={voiceAvailable[i] ? `${['I', 'II', 'III'][i]} ხმის ჩართვა/გამორთვა` : `${['I', 'II', 'III'][i]} ხმა არ მოიძებნა`}
               >
@@ -1032,10 +1040,10 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
                       const val = parseInt(e.target.value, 10) / 100;
                       setVoiceVolumes(prev => prev.map((v, idx) => (idx === i ? val : v)));
                     }}
-                    className="w-full accent-amber-600 h-1 cursor-pointer"
+                    className="w-full accent-[#dc8a22] h-1 cursor-pointer"
                     aria-label={`${['I', 'II', 'III'][i]} ხმის სიმაღლე`}
                   />
-                  <span className="text-[11px] font-mono font-bold text-slate-500 leading-none mt-0.5">
+                  <span className="text-[11px] font-mono font-bold text-[#8c7c6b] leading-none mt-0.5">
                     {Math.round(voiceVolumes[i] * 100)}%
                   </span>
                 </div>
@@ -1054,7 +1062,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
             setVoice3Active(false);
           }}
           className={`h-9 rounded-xl font-black text-xs transition-all cursor-pointer ${
-            isAllVoicesActive ? 'bg-amber-500 text-white shadow-sm' : 'text-slate-500 hover:text-slate-700'
+            isAllVoicesActive ? 'bg-[#dc8a22] text-white shadow-sm' : 'text-[#8c7c6b] hover:text-[#4a3426]'
           } disabled:opacity-35 disabled:cursor-not-allowed`}
         >
           სამივე
@@ -1064,7 +1072,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
       {/* Speed & pitch steppers */}
       <div className="w-full flex flex-wrap items-center gap-2">
         <Stepper
-          icon={<Gauge className="w-3.5 h-3.5 text-amber-600" />}
+          icon={<Gauge className="w-3.5 h-3.5 text-[#b4620e]" />}
           label="სიჩქარე"
           value={`${Number(playbackSpeed.toFixed(2))}×`}
           isDefault={playbackSpeed === 1}
@@ -1075,7 +1083,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
           plusDisabled={playbackSpeed >= SPEED_STEPS[SPEED_STEPS.length - 1]}
         />
         <Stepper
-          icon={<Music2 className="w-3.5 h-3.5 text-amber-600" />}
+          icon={<Music2 className="w-3.5 h-3.5 text-[#b4620e]" />}
           label="ტონი"
           value={pitchShiftVal > 0 ? `+${pitchShiftVal}` : String(pitchShiftVal)}
           isDefault={pitchShiftVal === 0}
@@ -1100,7 +1108,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
         className="w-full h-10 px-3 rounded-full bg-amber-50/70 hover:bg-amber-100/70 border border-amber-200/70 flex items-center gap-2 text-left transition-all cursor-pointer active:scale-[0.99]"
       >
         <Music className="w-4 h-4 text-amber-700 shrink-0" />
-        <span className="flex-1 text-xs font-extrabold text-slate-700">ნოტები და ტექსტი</span>
+        <span className="flex-1 text-xs font-extrabold text-[#4a3426]">ნოტები და ტექსტი</span>
         {notes.length > 0 && (
           <span className="text-[11px] font-bold text-amber-800 bg-white/80 px-2 py-0.5 rounded-full border border-amber-200/70">
             {notes.length} გვ.
@@ -1116,8 +1124,8 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
         <div className="fixed inset-0 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
           <div className="bg-white rounded-3xl max-w-lg w-full max-h-[85dvh] overflow-y-auto border border-amber-100 shadow-2xl flex flex-col p-6 space-y-4">
             
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-extrabold text-slate-800 text-lg flex items-center gap-2">
+            <div className="flex items-center justify-between border-b border-[#f1e9dc] pb-3">
+              <h3 className="font-extrabold text-[#2a2017] text-lg flex items-center gap-2">
                 <Music className="w-5 h-5 text-amber-600" />
                 საგალობლის ნოტები და ტექსტი
               </h3>
@@ -1126,7 +1134,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
                   triggerHaptic(10);
                   setIsNotesModalOpen(false);
                 }}
-                className="p-1.5 rounded-xl hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors"
+                className="p-1.5 rounded-xl hover:bg-[#f1e9dc] text-[#a39482] hover:text-[#4a3426] transition-colors"
               >
                 ✕
               </button>
@@ -1138,7 +1146,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
                 <div className="space-y-3">
                   <div className="flex flex-col gap-3">
                     {notes.map((note, idx) => (
-                      <div key={note.id || idx} className="rounded-xl overflow-hidden border border-amber-200/80 shadow-xs bg-slate-50">
+                      <div key={note.id || idx} className="rounded-xl overflow-hidden border border-amber-200/80 shadow-xs bg-[#fbf6ec]">
                         <div className="px-3 py-1.5 bg-amber-100/60 border-b border-amber-200/60 flex items-center justify-between text-xs font-bold text-amber-900">
                           <div className="flex items-center gap-1.5">
                             <span>ნოტების ფურცელი {idx + 1}</span>
@@ -1156,7 +1164,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
                               <Download className="w-3 h-3 stroke-[2.5]" />
                             </button>
                           </div>
-                          <span className="text-[11px] text-slate-500 font-mono">{note.name}</span>
+                          <span className="text-[11px] text-[#8a7a6a] font-mono">{note.name}</span>
                         </div>
                         <img
                           src={note.url}
@@ -1174,7 +1182,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
                   <p className="text-xs font-black text-[#85502c]">
                     {displayTitle || 'წმიდაო ღმერთო'} — {displaySubtitle || 'გელათის სკოლა'}
                   </p>
-                  <p className="text-[11px] text-slate-500 max-w-xs leading-relaxed">
+                  <p className="text-[11px] text-[#8a7a6a] max-w-xs leading-relaxed">
                     აქ წარმოდგენილია საგალობლის ნოტები ხმების მიხედვით. შეგიძლიათ გამოიყენოთ ოფლაინ რეჟიმში სამუშაოდ.
                   </p>
                 </div>
@@ -1182,9 +1190,9 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
 
               {/* Georgian Lyrics details - Compact & Neat */}
               {lyrics && (
-                <div className="bg-slate-50 border border-slate-200/60 rounded-xl p-3 text-left space-y-1">
-                  <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-wider">ტექსტი (Lyrics)</h4>
-                  <p className="text-xs font-medium text-slate-700 leading-snug whitespace-pre-line text-center italic font-serif">
+                <div className="bg-[#fbf6ec] border border-[#e8dcc8]/60 rounded-xl p-3 text-left space-y-1">
+                  <h4 className="text-[11px] font-black text-[#a39482] uppercase tracking-wider">ტექსტი (Lyrics)</h4>
+                  <p className="text-xs font-medium text-[#4a3426] leading-snug whitespace-pre-line text-center italic font-serif">
                     {lyrics}
                   </p>
                 </div>

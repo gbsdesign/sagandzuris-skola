@@ -73,7 +73,7 @@ export const ManeraReviewEditor: React.FC<{ uid: string }> = ({ uid }) => {
     <div className="space-y-3 text-[#2a2017]">
       <Flash flash={note.flash} onClose={note.clear} />
       <p className="px-1 text-[13px] text-[#8a7a6a]">
-        შეფასებულია {given} / {MANERA_ITEMS.length}. შეეხე რჩევას — დაუწერე პროცენტი და, სურვილისამებრ, შენიშვნა. მოსწავლე მხოლოდ კითხულობს.
+        შეფასებულია {given} / {MANERA_ITEMS.length}
       </p>
       <ul className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] divide-y divide-[#f1e8d9] overflow-hidden">
         {MANERA_ITEMS.map(item => {

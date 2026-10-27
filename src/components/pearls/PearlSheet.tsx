@@ -189,7 +189,7 @@ export const PearlSheet: React.FC<{
   const top = phrase ? Math.max(...phrase.target) + (span - (Math.max(...phrase.target) - Math.min(...phrase.target))) / 2 : 0;
   const y = (m: number) => Math.min(H - 3, Math.max(3, PAD + ((top - m) / span) * (H - 2 * PAD)));
   const lastT = trace.current.length ? trace.current[trace.current.length - 1].t / 1000 : 0;
-  const domain = phrase ? Math.max(phrase.seconds * 1.15, phase === 'singing' || phase === 'done' ? lastT + 0.6 : 0) : 1;
+  const domain = phrase ? Math.max(phrase.seconds * 1.15, phase === 'singing' || result ? lastT + 0.6 : 0) : 1;
   const x = (s: number) => (s / domain) * W;
   let line = '';
   if (offset.current != null) {
@@ -229,7 +229,7 @@ export const PearlSheet: React.FC<{
           ))}
         </div>
 
-        <div className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#efe3cf] px-2 py-2">
+        <div className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] px-2 py-2">
           {failed ? (
             <p className="py-10 text-center text-sm text-[#8a7a6a]">ნოტები ვერ ჩაიტვირთა — ინტერნეტი შეამოწმე.</p>
           ) : !phrase ? (
@@ -238,8 +238,9 @@ export const PearlSheet: React.FC<{
             <svg viewBox={`0 0 ${W} ${H}`} className="w-full h-32" role="img" aria-label="ფრაზის ნოტები და შენი ხმა">
               {phrase.notes.map(([at, len, m], i) => {
                 const k = melodyIndex[i];
-                const fill = phase === 'done' && result && result.hits[k] ? '#c9962a' : '#7a2028';
-                const opacity = phase === 'done' && result ? (result.hits[k] ? 0.9 : 0.25) : phase === 'listening' && at <= head ? 0.65 : 0.22;
+                const scored = result && phase !== 'singing' && phase !== 'scoring';
+                const fill = scored && result.hits[k] ? '#c9962a' : '#7a2028';
+                const opacity = phase === 'listening' && at <= head ? 0.65 : scored ? (result.hits[k] ? 0.9 : 0.25) : 0.22;
                 return <rect key={i} x={x(at) + 1} y={y(m) - 4} width={Math.max(4, x(len) - 2)} height={8} rx={4} fill={fill} opacity={opacity} />;
               })}
               {phase === 'listening' && <line x1={x(head)} x2={x(head)} y1={4} y2={H - 4} stroke="#7a2028" strokeWidth={1.5} opacity={0.5} />}
@@ -283,9 +284,12 @@ export const PearlSheet: React.FC<{
           </button>
         </div>
 
+        {!singingSupported() && !error && (
+          <p className="rounded-2xl bg-amber-50 ring-1 ring-amber-200 px-3.5 py-2.5 text-[13px] text-amber-900">ამ ბრაუზერში მიკროფონი ვერ ჩაირთვება — სცადე Chrome ან Safari.</p>
+        )}
         {error && <p className="rounded-2xl bg-red-50 ring-1 ring-red-200 px-3.5 py-2.5 text-[13px] text-red-800">{error}</p>}
 
-        {phase === 'done' && result && (
+        {result && phase !== 'singing' && phase !== 'scoring' && (
           <div className="space-y-3">
             <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] p-3.5 flex items-center gap-3">
               <PearlIcon state={polishedNow ? 'polished' : 'tried'} size={48} className="shrink-0" />

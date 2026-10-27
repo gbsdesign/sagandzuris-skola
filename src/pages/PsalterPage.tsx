@@ -185,7 +185,7 @@ const GroupExtras: React.FC<{ isMember: boolean; shiftDays?: number[] }> = ({ is
         {isMember && (
           <button
             type="button" role="switch" aria-checked={on} disabled={busy || !pushSupported()} onClick={toggle}
-            className="h-9 pl-3 pr-1.5 rounded-full bg-[#fbf6ec] ring-1 ring-[#efe3cf] text-[13px] font-semibold text-[#4a3426] inline-flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-default"
+            className="h-9 pl-3 pr-1.5 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[13px] font-semibold text-[#4a3426] inline-flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-default"
           >
             <Bell className="w-4 h-4 text-[#7a2028]" /> შეხსენებები
             <span className={`relative w-9 h-6 rounded-full transition-colors ${on ? 'bg-[#7a2028]' : 'bg-[#dccdb5]'}`}>
@@ -195,7 +195,7 @@ const GroupExtras: React.FC<{ isMember: boolean; shiftDays?: number[] }> = ({ is
         )}
         <button
           type="button" onClick={() => setHow(o => !o)} aria-expanded={how}
-          className={`h-9 px-3 rounded-full ring-1 text-[13px] font-semibold inline-flex items-center gap-1.5 cursor-pointer ${how ? 'bg-[#7a2028]/[0.08] ring-[#7a2028]/30 text-[#7a2028]' : 'bg-[#fbf6ec] ring-[#efe3cf] text-[#7a2028]'}`}
+          className={`h-9 px-3 rounded-full ring-1 text-[13px] font-semibold inline-flex items-center gap-1.5 cursor-pointer ${how ? 'bg-[#7a2028]/[0.08] ring-[#7a2028]/30 text-[#7a2028]' : 'bg-[#fbf6ec] ring-[#e8dcc8] text-[#7a2028]'}`}
         >
           <Info className="w-4 h-4" /> როგორ მუშაობს
         </button>
@@ -225,7 +225,7 @@ const HowList: React.FC<{ shiftDays?: number[] }> = ({ shiftDays }) => (
   <ul className="mt-1 mb-2 space-y-2 text-[14px] leading-relaxed text-[#4a3426] list-disc pl-5 marker:text-[#7a2028]">
     <li>ჯგუფი ყოველ ციკლში (1–7 დღე) მთელ ფსალმუნს კითხულობს: 20 კანონს — თითო წევრი თითოს.</li>
     <li>ყოველი თვის {shiftDaysText(shiftDays)} რიცხვში ყველა თავისით გადადის შემდეგ კანონზე (7 → 8, 20 → 1). ასე დროთა განმავლობაში ყველა ყველა კანონს გაივლის.</li>
-    <li>წაკითხვის შემდეგ დააჭირე „წავიკითხე“ — კანონის ბოლოს ან აქ. შემთხვევით მონიშვნა ციკლის ბოლომდე უქმდება.</li>
+    <li>წაკითხვის შემდეგ აქ დააჭირე „წავიკითხე“. შემთხვევით მონიშვნა ციკლის ბოლომდე უქმდება.</li>
     <li>ვერ კითხულობ? დააჭირე „დახმარება მჭირდება“ — ჯგუფი დაინახავს და ვინმე აიღებს.</li>
     <li>როცა ვინმე დახმარებას ითხოვს, სხვა წევრს შეუძლია მისი კანონი „აიღოს“. თუ ორი ერთად აიღებს, პირველს ერგება.</li>
     <li>ინტერნეტის გარეშე მონიშვნა ტელეფონში ინახება და კავშირის აღდგენისას იგზავნება. დრო საქართველოს დროით ითვლება.</li>

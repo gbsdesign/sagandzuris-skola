@@ -7,10 +7,14 @@ moving to the next chant in service order.
 ## Files
 
 - `NotesPage.tsx` + `notes.css` (`np-` classes): the full-screen notes page. Top bar with small icon+label tools
-  (სინთეზატორი, ჩანაწერი, ტექსტი, ჩემი სია, მეტი) that open their panels. Pinch-zoom, remembered separately
-  for upright / turned / computer.
+  (სინთეზატორი, ჩანაწერი, ტექსტი, [წირვა], ჩემი სია, მეტი) that open their panels; an upright phone keeps at most
+  five (ტექსტი is a row in „მეტი“ there; under 360px icons only). Pinch-zoom, remembered separately
+  for upright / turned / computer. The tone is set once, beside „საწყისი ბგერა“ (the recording panel's own is 🎧 ტონი).
+  „ტაძრის რეჟიმი“ is the round ⛪ beside „სწავლა“ (not in „მეტი“).
 - `ProgramPage.tsx` + `program.css`: „დღევანდელი წირვა“ — the teacher's chosen versions for a date.
 - `NpStepper.tsx`: small +/- stepper (tone ±7).
+- „სწავლა“ (`.np-learn`, beside the zoom; not in the crowded top bar) opens `components/learn/LearnMode.tsx` over
+  the page (portal on body, its own `sgLearn` history entry).
 - `src/utils/sheetReflow.ts`: chants whose book page sets lines side by side (litanies, ~17 chants) are cut on
   the picture into pieces shown one under another, up to 2× bigger (cuts found from the ink at load time).
 - `src/context/NotesContext.tsx`: overlay pages + browser history/URL (`?c=&v=` for a chant, `?p=date~ids` for

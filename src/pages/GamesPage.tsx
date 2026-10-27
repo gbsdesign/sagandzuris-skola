@@ -12,11 +12,12 @@ import { BOARD_GAMES, GAME_CATEGORIES, GAMES, GameCategory, GameDef, GameMode, M
 import { Card, Pill, Tabs } from '../components/ui/kit';
 import { Toast } from '../components/ui/Toast';
 import { askSignIn } from '../components/access/SignInPrompt';
+import { openPathPanel } from '../components/views/IndependentWorkCard';
 import { triggerHaptic } from '../utils/haptics';
 
 // „თამაშები“: the hub of the games (2026-10-27). Three categories as tabs — მუსიკალური · ქართული · ცოცხალი — and a
 // row per game with the variants it gets (ონლაინ · ჰიბრიდული · უტელეფონო). A built game opens its page (the pearls
-// game lives on its own page, PearlsPage, with a switch of its own in the admin panel); the rest are the plan's next
+// game stays the round button of „საგანძურის გზა“, under a switch of its own in the admin panel); the rest are the plan's next
 // games, „მალე“ rows that only say so when tapped. The catalogue is data/games.ts.
 
 type Access = ReturnType<ReturnType<typeof useAccess>['section']>;
@@ -99,7 +100,7 @@ export const GamesPage: React.FC = () => {
   const open = (g: GameDef, state: Access) => {
     triggerHaptic(10);
     if (state === 'locked') { askSignIn(g.title); return; }
-    if (state === 'open' && g.page) { navigateTo(g.page); return; }
+    if (state === 'open' && g.page) { if (g.panel) openPathPanel(g.panel); navigateTo(g.page); return; }
     setSoon(`„${g.title}“ ჯერ მზადდება — მალე დაემატება`);
   };
 

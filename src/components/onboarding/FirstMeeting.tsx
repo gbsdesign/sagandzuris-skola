@@ -6,14 +6,14 @@ import { db } from '../../firebase';
 import { useAuth } from '../../context';
 import { useNotes } from '../../context/NotesContext';
 import { hasGeorgianName, isGeorgian, saveProfileName } from '../../utils/memberName';
-import { MONTHS_GE } from '../../utils/dateNames';
 import {
-  ABILITY_OPTIONS, AbilityId, GEORGIAN_REGIONS, INTEREST_OPTIONS, InterestId, daysInMonth, isPlaceholderBirth,
+  ABILITY_OPTIONS, AbilityId, GEORGIAN_REGIONS, INTEREST_OPTIONS, InterestId, isPlaceholderBirth,
   abilitiesOf, normalizePhone, profileComplete, showPhone, validBirth,
 } from '../../utils/profileFields';
 import { INSTRUMENTS_LIST } from '../../data/instrumentsData';
 import { Btn, Sheet } from '../ui/kit';
 import { EMAIL_FIELD } from '../access/SignInChoices';
+import { BirthPick } from '../ui/BirthPick';
 import { useMembership } from '../../utils/memberAccess';
 
 // "პირველი გაცნობა": until a member's profile holds everything below, this form covers the app and cannot be
@@ -36,8 +36,6 @@ const VOICES: { id: Voice | 'x'; title: string; sub: string }[] = [
 const STEPS = 7;
 const PHONE_EXAMPLE = '599\u00a012\u00a034\u00a056'; // kept on one line
 const NOT_GEORGIAN = /[^ა-ჿᲐ-Ჿ\s-]/g;
-const THIS_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: THIS_YEAR - 1919 }, (_, i) => THIS_YEAR - i);
 
 interface Answers {
   first: string;
@@ -109,7 +107,7 @@ const Choice: React.FC<{ on: boolean; onClick: () => void; title: string; sub: s
     </span>
     <span className="min-w-0">
       <span className="block text-[16px] font-bold text-[#2a2017] leading-tight">{title}</span>
-      <span className="block mt-0.5 text-[13px] text-[#8a7a6a] leading-snug">{sub}</span>
+      {sub && <span className="block mt-0.5 text-[13px] text-[#8a7a6a] leading-snug">{sub}</span>}
     </span>
   </button>
 );
@@ -223,13 +221,6 @@ export const FirstMeeting: React.FC = () => {
     set({ [key]: kept.replace(/\s{2,}/g, ' ') });
   };
 
-  const setBirth = (patch: Partial<Pick<Answers, 'day' | 'month' | 'year'>>) => {
-    const next = { ...a, ...patch };
-    // 31 April and the like: the day is chosen again
-    if (next.day && next.month && next.day > daysInMonth(next.year, next.month)) next.day = 0;
-    set({ day: next.day, month: next.month, year: next.year });
-  };
-
   const toggle = <T extends string>(list: T[], id: T): T[] => (list.includes(id) ? list.filter(x => x !== id) : [...list, id]);
 
   // „ჯერ ვიწყებ“ stands alone
@@ -287,6 +278,14 @@ export const FirstMeeting: React.FC = () => {
 
   const footer = (
     <div className="flex items-center gap-2">
+      {step === 0 ? (
+        <Btn kind="ghost" size="lg" icon={<LogOut />} onClick={() => void signOutUser()} disabled={saving}>გამოსვლა</Btn>
+      ) : (
+        <button type="button" onClick={() => void signOutUser()} disabled={saving} aria-label="გამოსვლა" title="გამოსვლა"
+          className="w-12 h-12 shrink-0 rounded-full bg-white ring-1 ring-[#e8dcc8] text-[#8a7a6a] hover:text-[#7a2028] flex items-center justify-center cursor-pointer active:scale-95 transition disabled:opacity-50">
+          <LogOut className="w-[18px] h-[18px]" />
+        </button>
+      )}
       {step > 0 && (
         <Btn kind="ghost" size="lg" icon={<ArrowLeft />} onClick={() => { setError(''); setStep(s => s - 1); }} disabled={saving}>
           უკან
@@ -314,12 +313,12 @@ export const FirstMeeting: React.FC = () => {
               <span key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i <= step ? 'bg-[#7a2028]' : 'bg-[#e8dcc8]'}`} />
             ))}
           </div>
-          <p className="mt-2 text-[13px] text-[#8a7a6a]">ყველა ველი სავალდებულოა · {step + 1} / {STEPS}</p>
+          <p className="mt-2 text-[13px] text-[#8a7a6a] tabular-nums">{step + 1} / {STEPS}</p>
         </div>
 
         {step === 0 && (
           <>
-            <Heading title="ვინ ხართ?" text="სახელი და გვარი ქართული ასოებით. ასე გიპოვით მასწავლებელი და ჯგუფი." />
+            <Heading title="ვინ ხართ?" text="სახელი და გვარი ქართული ასოებით." />
             <div>
               <FieldLabel htmlFor="sg-first-name">სახელი</FieldLabel>
               <input id="sg-first-name" lang="ka" autoComplete="given-name" value={a.first} onChange={e => georgianOnly(e.target.value, 'first')} className={EMAIL_FIELD} />
@@ -336,27 +335,14 @@ export const FirstMeeting: React.FC = () => {
 
         {step === 1 && (
           <>
-            <Heading title="დაბადების თარიღი" text="აირჩიეთ სიიდან." />
-            <div className="grid grid-cols-[0.9fr_1.75fr_1.2fr] gap-2">
-              <div>
-                <FieldLabel htmlFor="sg-birth-day">რიცხვი</FieldLabel>
-                <Pick id="sg-birth-day" value={a.day} placeholder="—" onChange={v => setBirth({ day: Number(v) })}>
-                  {Array.from({ length: a.month ? daysInMonth(a.year, a.month) : 31 }, (_, i) => <option key={i + 1} value={i + 1}>{i + 1}</option>)}
-                </Pick>
-              </div>
-              <div>
-                <FieldLabel htmlFor="sg-birth-month">თვე</FieldLabel>
-                <Pick id="sg-birth-month" value={a.month} placeholder="—" onChange={v => setBirth({ month: Number(v) })}>
-                  {MONTHS_GE.map((m, i) => <option key={m} value={i + 1}>{m}</option>)}
-                </Pick>
-              </div>
-              <div>
-                <FieldLabel htmlFor="sg-birth-year">წელი</FieldLabel>
-                <Pick id="sg-birth-year" value={a.year} placeholder="—" onChange={v => setBirth({ year: Number(v) })}>
-                  {YEARS.map(y => <option key={y} value={y}>{y}</option>)}
-                </Pick>
-              </div>
-            </div>
+            <Heading title="დაბადების თარიღი" />
+            <BirthPick
+              value={{ day: a.day, month: a.month, year: a.year }}
+              onChange={b => set({ day: b.day, month: b.month, year: b.year })}
+              idPrefix="sg-birth"
+              fieldClass={EMAIL_FIELD}
+              label={(htmlFor, text) => <FieldLabel htmlFor={htmlFor}>{text}</FieldLabel>}
+            />
           </>
         )}
 
@@ -378,10 +364,10 @@ export const FirstMeeting: React.FC = () => {
 
         {step === 3 && (
           <>
-            <Heading title="ტელეფონის ნომერი" text={`მაგალითად: ${PHONE_EXAMPLE}. ბავშვისთვის ჩაწერეთ მშობლის ნომერი.`} />
+            <Heading title="ტელეფონის ნომერი" text="ბავშვისთვის — მშობლის ნომერი." />
             <div>
               <FieldLabel htmlFor="sg-phone">ნომერი</FieldLabel>
-              <input id="sg-phone" type="tel" inputMode="tel" autoComplete="tel" value={a.phone} onChange={e => set({ phone: e.target.value })} className={EMAIL_FIELD} />
+              <input id="sg-phone" type="tel" inputMode="tel" autoComplete="tel" placeholder={PHONE_EXAMPLE} value={a.phone} onChange={e => set({ phone: e.target.value })} className={EMAIL_FIELD} />
             </div>
             <p className="text-[13px] text-[#8a7a6a] leading-relaxed">ნომერს ხედავენ მხოლოდ თქვენი მასწავლებლები და სკოლის ადმინისტრაცია.</p>
           </>
@@ -389,7 +375,7 @@ export const FirstMeeting: React.FC = () => {
 
         {step === 4 && (
           <>
-            <Heading title="შესაძლებლობები" text="რა შეგიძლიათ? შეგიძლიათ რამდენიმე მონიშნოთ." />
+            <Heading title="შესაძლებლობები" text="შეგიძლიათ რამდენიმე მონიშნოთ." />
             <div className="space-y-2">
               {ABILITY_OPTIONS.map(o => {
                 const on = a.abilities.includes(o.id);
@@ -439,7 +425,7 @@ export const FirstMeeting: React.FC = () => {
 
         {step === 5 && (
           <>
-            <Heading title="ინტერესები" text="რა გაინტერესებთ? შეგიძლიათ რამდენიმე მონიშნოთ." />
+            <Heading title="ინტერესები" text="შეგიძლიათ რამდენიმე მონიშნოთ." />
             <div className="space-y-2">
               {INTEREST_OPTIONS.map(o => {
                 const on = a.interests.includes(o.id);
@@ -473,15 +459,6 @@ export const FirstMeeting: React.FC = () => {
 
         {error && <p role="alert" className="text-[14px] font-semibold text-[#9b2c2c] leading-snug">{error}</p>}
 
-        {step === 0 && (
-          <button
-            type="button"
-            onClick={() => void signOutUser()}
-            className="mx-auto flex items-center gap-1.5 py-2 text-[14px] font-semibold text-[#8a7a6a] underline underline-offset-4 cursor-pointer"
-          >
-            <LogOut className="w-4 h-4" /> გამოსვლა
-          </button>
-        )}
       </div>
     </Sheet>
   );

@@ -31,7 +31,7 @@ export const RoundOnePractice: React.FC = () => {
   const chant = pick == null ? null : SIGHT_READING[pick];
 
   return (
-    <section className="mb-7">
+    <section className="mt-8">
       <SectionHead title="ვარჯიში" sub="მოტივის გამეორება და ფურცლიდან კითხვა" />
       <div className={`${CARD} divide-y divide-[#efe5d4]`}>
         <div className="flex items-center gap-3 p-3.5 sm:p-4">

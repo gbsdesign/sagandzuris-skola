@@ -1,13 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { BellOff, BellRing, CalendarClock, Check, CheckCheck, ClipboardList, MessageSquareText } from 'lucide-react';
+import { BellOff, BellRing, Check, CheckCheck, ClipboardList, MessageSquareText } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth, useChants } from '../../context';
 import { useMyClasses } from '../../hooks/useClasses';
 import { Assignment, daysUntil, shortDate, useMyAssignments } from '../../hooks/useTeaching';
 import { Confirmations, useConfirmations } from '../../hooks/useConfirmations';
 import { Voice, voicesOf } from '../../utils/pathItems';
-import { LessonChips } from './Schedule';
 import { pushSupported, setGroupPush, useGroupPush } from '../../utils/groupPush';
 import { CHIP_SOFT, CHIP_STRONG, PATH_CARD, PATH_LABEL, PATH_LABEL_ICON } from '../views/pathStyle';
 
@@ -129,7 +128,7 @@ export const useNewWork = () => {
 };
 
 // Inside "ნასწავლი" (the round button on the path page), at the top: the teacher's assignments with their
-// deadlines, and the lesson timetable in one line after a calendar icon. The bell beside "დავალებები" turns on the
+// deadlines (the timetable lives on the class page, the next lesson in the path's „დღეს“ card — PathToday). The bell beside "დავალებები" turns on the
 // reminder on the eve of a deadline. `bare`: no card of its own, a line under it instead.
 export const MyClassWork: React.FC<{ bare?: boolean }> = ({ bare }) => {
   const { user } = useAuth();
@@ -144,8 +143,7 @@ export const MyClassWork: React.FC<{ bare?: boolean }> = ({ bare }) => {
     return () => window.clearTimeout(t);
   }, [pushNote]);
   const current = currentWork(assignments);
-  const withSchedule = classes.filter(c => c.schedule.length);
-  if (!user || (!current.length && !withSchedule.length)) return null;
+  if (!user || !current.length) return null;
 
   const toggleReminder = async () => {
     const on = !push.assignments;
@@ -159,45 +157,31 @@ export const MyClassWork: React.FC<{ bare?: boolean }> = ({ bare }) => {
 
   return (
     <section className={`${bare ? 'pb-3 border-b border-[#efe5d4]' : PATH_CARD} space-y-3`}>
-      {current.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2">
-            <h2 className={`flex-1 min-w-0 ${PATH_LABEL}`}>
-              <ClipboardList className={PATH_LABEL_ICON} /> დავალებები
-            </h2>
-            {pushSupported() && (
-              <button
-                type="button"
-                onClick={toggleReminder}
-                aria-pressed={push.assignments}
-                aria-label="შეხსენება ვადამდე"
-                title={push.assignments ? 'შეხსენება ჩართულია: ვადის წინა საღამოს, 19:00-ზე' : 'შეხსენება ვადამდე — დააჭირე ჩასართავად'}
-                className={`w-9 h-9 -my-1.5 shrink-0 rounded-full flex items-center justify-center transition-colors cursor-pointer active:scale-95 ${push.assignments ? CHIP_STRONG : CHIP_SOFT}`}
-              >
-                {push.assignments ? <BellRing className="w-[18px] h-[18px]" /> : <BellOff className="w-[18px] h-[18px]" />}
-              </button>
-            )}
-          </div>
-          {pushNote && (
-            <p role="status" className={`mt-1 text-xs font-semibold ${pushNote.ok ? 'text-[#75685a]' : 'text-[#9a3324]'}`}>
-              {pushNote.text}
-            </p>
+      <div>
+        <div className="flex items-center gap-2">
+          <h2 className={`flex-1 min-w-0 ${PATH_LABEL}`}>
+            <ClipboardList className={PATH_LABEL_ICON} /> დავალებები
+          </h2>
+          {pushSupported() && (
+            <button
+              type="button"
+              onClick={toggleReminder}
+              aria-pressed={push.assignments}
+              aria-label="შეხსენება ვადამდე"
+              title={push.assignments ? 'შეხსენება ჩართულია: ვადის წინა საღამოს, 19:00-ზე' : 'შეხსენება ვადამდე — დააჭირე ჩასართავად'}
+              className={`w-9 h-9 -my-1.5 shrink-0 rounded-full flex items-center justify-center transition-colors cursor-pointer active:scale-95 ${push.assignments ? CHIP_STRONG : CHIP_SOFT}`}
+            >
+              {push.assignments ? <BellRing className="w-[18px] h-[18px]" /> : <BellOff className="w-[18px] h-[18px]" />}
+            </button>
           )}
-          <WorkItems list={current} />
         </div>
-      )}
-      {withSchedule.map(c => (
-        <LessonChips
-          key={c.id}
-          slots={c.schedule}
-          lead={
-            <span title="გაკვეთილები" className={`mr-0.5 ${PATH_LABEL}`}>
-              <CalendarClock className={PATH_LABEL_ICON} aria-label="გაკვეთილები" />
-              {classes.length > 1 && c.name}
-            </span>
-          }
-        />
-      ))}
+        {pushNote && (
+          <p role="status" className={`mt-1 text-xs font-semibold ${pushNote.ok ? 'text-[#75685a]' : 'text-[#9a3324]'}`}>
+            {pushNote.text}
+          </p>
+        )}
+        <WorkItems list={current} />
+      </div>
     </section>
   );
 };

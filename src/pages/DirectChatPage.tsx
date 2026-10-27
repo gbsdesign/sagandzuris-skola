@@ -123,7 +123,7 @@ export const DirectChat: React.FC<{ id: string; classes: SchoolClass[]; logoUrl?
   const pair = thread.members.map(m => thread.names[m] || '').filter(Boolean).join(' — ');
   const title = canWrite ? other.name || 'უსახელო' : thread.kind === 'admin' ? `${ADMIN_NAME} — ${pair}` : pair;
   const sub = !canWrite ? 'მხოლოდ სანახავად'
-    : staff ? 'ადმინისტრაციის ჩათი · პასუხობს ნებისმიერი ადმინი'
+    : staff ? 'ადმინისტრაციის ჩათი'
     : thread.kind === 'admin' ? 'სკოლის ადმინისტრაცია'
     : thread.kind === 'peer' ? `კლასელი${inClass}`
     : iTeach ? `მოსწავლე${inClass}` : `მასწავლებელი${inClass}`;

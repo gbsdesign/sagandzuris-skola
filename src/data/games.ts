@@ -16,6 +16,7 @@ export interface GameDef {
   category: GameCategory;
   modes: GameMode[];       // the variants, the first is the one built (or planned) first
   page?: PageType;         // built: where it opens
+  panel?: string;          // built: a panel of that page to open first (the path page's round buttons)
   section?: SectionId;     // built: the admin's switch and the member's feature that show or hide it
   original?: string;       // a board game: the game it is a Georgian retheme of
 }
@@ -35,7 +36,7 @@ export const MODE_HINT: Record<GameMode, string> = {
 
 export const GAMES: GameDef[] = [
   // მუსიკალური
-  { id: 'margalitebi', title: 'მარგალიტები', text: 'მოისმინე საგალობლის ფრაზა, ჩამღერე მიკროფონში და გააპრიალე მარგალიტი', category: 'musical', modes: ['online'], page: 'pearls', section: 'margalitebi' },
+  { id: 'margalitebi', title: 'მარგალიტები', text: 'მოისმინე საგალობლის ფრაზა, ჩამღერე მიკროფონში და გააპრიალე მარგალიტი', category: 'musical', modes: ['online'], page: 'gz', panel: 'pearls', section: 'margalitebi' },
   { id: 'dghis-hangi', title: 'დღის ჰანგი', text: 'ყოველდღე ერთი საგალობელი ან სიმღერა: 1 წამი, 2, 4… — გამოიცანი რაც შეიძლება მალე', category: 'musical', modes: ['online', 'hybrid'] },
   { id: 'sam-notshi', title: 'სამ ნოტში!', text: 'სამი ნოტით გამოიცანი საგალობელი; ვერ გამოიცანი — კიდევ ორი ნოტი', category: 'musical', modes: ['hybrid', 'online'] },
   { id: 'eko', title: 'ექო', text: 'აპი ჰანგს უკრავს, შენ იმეორებ — ყოველ ჯერზე ერთი ნოტით გრძელს', category: 'musical', modes: ['online'] },

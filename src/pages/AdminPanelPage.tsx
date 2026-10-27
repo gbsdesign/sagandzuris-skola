@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, onSnapshot } from 'firebase/firestore';
-import { Users, GraduationCap, School, TriangleAlert, Activity, Hourglass } from 'lucide-react';
+import { Users, GraduationCap, School, Activity, Hourglass, ChevronRight, CircleCheck } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth, useNavigation, SUPER_ADMIN_EMAIL } from '../context';
 import { useAllClasses } from '../hooks/useClasses';
@@ -130,8 +130,13 @@ export const AdminPanelPage: React.FC = () => {
     { id: 'school' as const, label: 'სკოლა', Icon: School },
   ];
 
+  const todo = [
+    ...(waiting > 0 ? [{ id: 'wait', icon: <Hourglass />, text: `${waiting} ახალი წევრი ელოდება დამატებას`, go: () => { setTab('users'); setFilter('pending'); } }] : []),
+    ...(teachersWithoutClass > 0 ? [{ id: 'teach', icon: <GraduationCap />, text: `${teachersWithoutClass} მასწავლებელს კლასი ან ჯგუფი არ აქვს`, go: () => setTab('classes') }] : []),
+  ];
+
   return (
-    <div className="w-full max-w-4xl mx-auto px-1 py-4 sm:py-6 space-y-5 pb-14 text-[#2a2017]">
+    <div className="w-full max-w-4xl mx-auto px-1 py-4 sm:py-6 space-y-4 pb-14 text-[#2a2017]">
       <AdminHero
         title="ადმინის პანელი"
         subtitle={`${isOwner ? 'მფლობელი' : isSuperAdmin ? 'სუპერადმინი' : 'ადმინი'} · ${user?.email || ''}`}
@@ -140,20 +145,32 @@ export const AdminPanelPage: React.FC = () => {
         activeId={activeTile}
         onTile={openTile}
       />
+      {/* what waits for the admin, each with its way there; when nothing does, one calm line */}
+      {todo.length > 0 ? (
+        <div className="grid gap-2 sm:grid-cols-2">
+          {todo.map(t => (
+            <button key={t.id} type="button" onClick={t.go}
+              className="w-full min-h-[56px] rounded-2xl bg-amber-50 ring-1 ring-amber-200 hover:ring-amber-300 px-3.5 py-2.5 flex items-center gap-3 text-left cursor-pointer active:scale-[0.99] transition">
+              <span className="w-9 h-9 shrink-0 rounded-xl bg-amber-100 text-[#9a6212] flex items-center justify-center [&>svg]:w-[18px] [&>svg]:h-[18px]">{t.icon}</span>
+              <span className="flex-1 min-w-0 text-[14px] font-semibold text-[#4a3426] leading-snug">{t.text}</span>
+              <ChevronRight className="w-4 h-4 shrink-0 text-[#9a6212]/70" />
+            </button>
+          ))}
+        </div>
+      ) : !loading && (
+        <p className="flex items-center gap-2 px-1 text-[13px] font-semibold text-emerald-800">
+          <CircleCheck className="w-4 h-4 shrink-0" /> ყველაფერი რიგზეა — არაფერი გელოდება.
+        </p>
+      )}
       <Tabs cols={3} value={tab} onChange={setTab} items={TABS} />
       <Flash flash={msg.flash} onClose={msg.clear} />
 
       {tab === 'users' && (
-        <UsersTab users={users} staff={staff} classes={classes} groups={groups} access={access} decisions={decisions} loading={loading}
+        <UsersTab users={users} staff={staff} classes={classes} access={access} decisions={decisions} loading={loading}
           filter={filter} onFilter={setFilter} tiles={userTiles} onMessage={msg.say} />
       )}
       {tab === 'classes' && (
         <div className="space-y-4">
-          {teachersWithoutClass > 0 && (
-            <p className="flex items-center gap-2 px-1 text-[13px] font-semibold text-[#9a6212]">
-              <TriangleAlert className="w-4 h-4 shrink-0" /> {teachersWithoutClass} მასწავლებელს ჯერ კლასი ან ჯგუფი არ აქვს მიბმული.
-            </p>
-          )}
           {/* a psalter group lives only inside its class (made from the class page); it shows on the class's row */}
           <ClassesAdmin classes={classes} loading={loadingClasses} students={classStudents} staff={leaders} onMessage={msg.say} mode="admin" groups={groups} />
         </div>

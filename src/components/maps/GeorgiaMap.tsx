@@ -1,6 +1,6 @@
 import { usePlacements } from '../../data/placements';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, Headphones, Sparkles, FileText, Music, Lock, MapPin, Search, X, TextAlignStart } from 'lucide-react';
+import { ChevronDown, ChevronRight, Headphones, Sparkles, FileText, Music, Lock, MapPin, Search, X, TextAlignStart } from 'lucide-react';
 import {
   FOLK_SONGS,
   FOLK_REGIONS,
@@ -15,9 +15,8 @@ import {
   songRecordingCount,
 } from '../../data/songsData';
 import { RegionPuzzleMap, RegionLocator } from './RegionPuzzleMap';
-import { SongPage, openSongPage, songTakes } from './SongPage';
+import { SongPage, TakePlayer, openSongPage, songTakes } from './SongPage';
 import { AddToListButton } from '../ui/AddToListButton';
-import { ChantPlayer } from '../ChantPlayer';
 import { useAuth, useNavigation } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 import { askSignIn } from '../access/SignInPrompt';
@@ -61,7 +60,7 @@ const useSongSearch = (songs: FolkSong[], query: string, withPerformers: boolean
 };
 
 export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = {}, onToggleSong }) => {
-  const { isOwner } = useAuth();
+  const { isOwner, isSuperAdmin } = useAuth();
   const showOwnerOnly = isOwner;
   const placed = usePlacements(); // a recording moved from the app: the lists follow
   const member = useAccess().member;
@@ -119,7 +118,8 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
               onSelect={r => openMapItem(r.id)}
               count={id => songsInRegion(id, showOwnerOnly).length}
               countLabel={n => `${n} სიმღერა`}
-              extraRegions={FOLK_EXTRA_REGIONS}
+              // the sorting shelf „დასაზუსტებელი“ is for those who move recordings (members find its songs by search)
+              extraRegions={FOLK_EXTRA_REGIONS.filter(r => r.id !== 'unsure' || isOwner || isSuperAdmin)}
             />
           )}
         </div>
@@ -374,38 +374,42 @@ const SongItem: React.FC<SongItemProps> = ({ id, song, showRegion, isOpen: open,
       {isOpen && (
         <div className="border-t border-[#e4d8c4] bg-[#faf6ef] px-3 pt-3.5 pb-3 sm:px-4 flex flex-col gap-2.5 animate-[galoba-unfold_0.32s_cubic-bezier(0.2,0.8,0.2,1)_both]">
           {takes.length > 0 ? (
-            <>
-              <p className="px-1 text-[11.5px] font-semibold text-[#8c7c6b]">შესრულებები — აირჩიეთ მოსასმენად</p>
-              <div className="rounded-xl bg-white border border-[#e4d8c4] px-3 pt-3.5 pb-3.5 grid grid-cols-2 sm:grid-cols-3 gap-x-2.5 gap-y-4">
-                {takes.map((t, i) => {
-                  const url = t.media.tracks[3] || t.media.tracks.find(Boolean);
-                  return (
-                  <div key={i} className="relative min-w-0">
-                  {/* a quick listen to this performance, without opening the song's page */}
-                  {url && (
-                    <PreviewButton
-                      id={`${song.id}~${i}`}
-                      onToggle={() => toggleAudioPreview(`${song.id}~${i}`, url)}
-                      label="მოსმენა"
-                      className="-bottom-[7px] left-1.5"
-                    />
-                  )}
-                  <button
-                    type="button"
-                    onClick={() => { triggerHaptic(10); openSongPage(song.id, i); }}
-                    className="w-full min-h-12 py-1.5 px-1.5 rounded-[10px] border text-[11.5px] sm:text-xs font-bold flex flex-col items-center justify-center gap-px text-center leading-tight transition-all duration-150 cursor-pointer active:scale-[0.97] bg-white text-[#2a2017] border-[#e2d3bb] shadow-[0_1px_0_rgba(133,80,44,0.06)] hover:border-[#d9a55a] hover:shadow-[0_0_0_3px_rgba(180,98,14,0.12)]"
+            <div className="grid sm:grid-cols-2 gap-2">
+              {takes.map((t, i) => {
+                const url = t.media.tracks[3] || t.media.tracks.find(Boolean);
+                return (
+                  <div
+                    key={i}
+                    className="flex items-center gap-2.5 pl-1.5 pr-1 rounded-xl bg-white border border-[#e2d3bb] shadow-[0_1px_0_rgba(133,80,44,0.06)] transition-[border-color,box-shadow] duration-150 hover:border-[#d9a55a] hover:shadow-[0_0_0_3px_rgba(180,98,14,0.12)]"
                   >
-                    <span className="inline-flex items-center gap-1 min-w-0">
-                      <Headphones className="w-3.5 h-3.5 shrink-0 text-[#b4620e]" />
-                      <span className="break-words">{t.label}</span>
-                    </span>
-                    {t.sub && <span className="text-[11px] font-semibold text-[#a0907c]">{t.sub}</span>}
-                  </button>
+                    {/* a quick listen to this performance, without opening the song's page */}
+                    {url ? (
+                      <PreviewButton
+                        id={`${song.id}~${i}`}
+                        onToggle={() => toggleAudioPreview(`${song.id}~${i}`, url)}
+                        label={`მოსმენა: ${t.label}`}
+                        inline
+                      />
+                    ) : (
+                      <span className="shrink-0 w-10 h-10 rounded-full grid place-items-center bg-[#fcf1df] text-[#b4620e]">
+                        <Headphones className="w-4 h-4" />
+                      </span>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => { triggerHaptic(10); openSongPage(song.id, i); }}
+                      className="flex-1 min-w-0 min-h-12 py-1.5 flex items-center gap-2 text-left cursor-pointer group"
+                    >
+                      <span className="flex-1 min-w-0 flex flex-col">
+                        <span className="text-[13.5px] font-bold leading-snug text-[#2a2017] break-words">{t.label}</span>
+                        {t.sub && <span className="text-[11.5px] font-semibold leading-snug text-[#8c7c6b]">{t.sub}</span>}
+                      </span>
+                      <ChevronRight className="w-4 h-4 shrink-0 text-[#b8aa97] transition-colors group-hover:text-[#b4620e]" />
+                    </button>
                   </div>
-                  );
-                })}
-              </div>
-            </>
+                );
+              })}
+            </div>
           ) : (
             <div className="flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl bg-white border border-dashed border-[#d6c8b1]">
               <span className="text-xs font-semibold text-[#8c7c6b]">
@@ -436,7 +440,7 @@ export const SongBody: React.FC<{ song: FolkSong; region: FolkRegion }> = ({ son
       <div className="border-t border-amber-200/70 bg-gradient-to-b from-amber-50/40 to-stone-50/50 p-3 sm:p-4 space-y-2.5 animate-in fade-in duration-200">
         {takes.length > 1 && (
           <>
-            <div className="text-[11px] font-semibold text-slate-500 px-1 flex items-center gap-1.5">
+            <div className="text-[11px] font-semibold text-[#8a7a6a] px-1 flex items-center gap-1.5">
               <Sparkles className="w-3.5 h-3.5 text-amber-600" />
               <span>ჩანაწერები (აირჩიეთ):</span>
             </div>
@@ -449,7 +453,7 @@ export const SongBody: React.FC<{ song: FolkSong; region: FolkRegion }> = ({ son
                   className={`min-h-9 px-3 py-1.5 rounded-xl border text-xs font-bold text-left transition-all cursor-pointer ${
                     i === takeIdx
                       ? 'bg-amber-500 text-white border-amber-600 shadow-sm'
-                      : 'bg-white text-slate-700 border-slate-200 hover:border-amber-300 hover:bg-amber-50'
+                      : 'bg-white text-[#4a3426] border-[#e8dcc8] hover:border-amber-300 hover:bg-amber-50'
                   }`}
                 >
                   {t.label}{t.sub ? ` · ${t.sub}` : ''}
@@ -461,9 +465,9 @@ export const SongBody: React.FC<{ song: FolkSong; region: FolkRegion }> = ({ son
 
         {take ? (
           <div className="rounded-xl border border-amber-300/80 bg-white shadow-sm px-2 pb-2.5 pt-2">
-            <ChantPlayer
+            <TakePlayer
               key={`${song.id}-${takeIdx}`}
-              media={take.media}
+              take={take}
               title={song.title}
               subtitle={`${region.nameGe} · ${take.label}`}
             />
@@ -479,20 +483,20 @@ export const SongBody: React.FC<{ song: FolkSong; region: FolkRegion }> = ({ son
             />
           </div>
         ) : (
-          <div className="flex flex-col items-center text-center gap-1.5 py-5 px-3 rounded-xl bg-white border border-dashed border-slate-200">
-            <Music className="w-6 h-6 text-slate-300" />
-            <p className="text-xs font-bold text-slate-600">
+          <div className="flex flex-col items-center text-center gap-1.5 py-5 px-3 rounded-xl bg-white border border-dashed border-[#e8dcc8]">
+            <Music className="w-6 h-6 text-[#d6c8b1]" />
+            <p className="text-xs font-bold text-[#6b5c4d]">
               {song.pendingWma ? 'ჩანაწერი მზადდება' : 'ამ სიმღერის ჩანაწერი ჯერ არ არის დამატებული'}
             </p>
-            <p className="text-[11px] text-slate-400">მალე დაემატება</p>
+            <p className="text-[11px] text-[#a39482]">მალე დაემატება</p>
           </div>
         )}
 
         {/* Lyrics without a player (with a player they're in its notes & lyrics panel) */}
         {!take && song.lyrics && (
-          <div className="rounded-xl bg-white border border-slate-200/80 p-3">
+          <div className="rounded-xl bg-white border border-[#e8dcc8]/80 p-3">
             <p className="text-[11px] font-black text-amber-900 mb-1.5">ტექსტი</p>
-            <p className="text-sm text-slate-700 whitespace-pre-line leading-relaxed">{song.lyrics}</p>
+            <p className="text-sm text-[#4a3426] whitespace-pre-line leading-relaxed">{song.lyrics}</p>
           </div>
         )}
 
@@ -504,7 +508,7 @@ export const SongBody: React.FC<{ song: FolkSong; region: FolkRegion }> = ({ son
                 href={songDocUrl(doc)}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="min-h-9 px-3 py-1.5 rounded-xl border border-slate-200 bg-white hover:bg-amber-50 hover:border-amber-300 text-xs font-bold text-slate-700 inline-flex items-center gap-1.5 transition-colors"
+                className="min-h-9 px-3 py-1.5 rounded-xl border border-[#e8dcc8] bg-white hover:bg-amber-50 hover:border-amber-300 text-xs font-bold text-[#4a3426] inline-flex items-center gap-1.5 transition-colors"
               >
                 <FileText className="w-4 h-4 text-amber-700" />
                 {doc.name}

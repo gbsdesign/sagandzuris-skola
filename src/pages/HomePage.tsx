@@ -1,6 +1,6 @@
 import React from 'react';
 import { GrapeNav } from '../components/home/GrapeNav';
-import { PlateScatter, PlateBand, Qvevri, SpiralJug } from '../components/home/PlateOrnaments';
+import { PlateScatter, Qvevri, SpiralJug } from '../components/home/PlateOrnaments';
 import { ShortcutShelf } from '../components/home/ShortcutShelf';
 import { TodaySaintsCard } from '../components/calendar/TodaySaintsCard';
 import { BirthdaysSoon } from '../components/home/BirthdaysSoon';
@@ -266,8 +266,6 @@ export const HomePage: React.FC<HomePageProps> = ({ logoUrl }) => {
 
       {/* "ჩემი ღილაკები": the member's own buttons, right under the vine, led by "ჩემი კანონი" for a psalter-group member */}
       <ShortcutShelf />
-
-      <PlateBand className="lg:hidden mt-10" />
 
       {/* the Patriarch's words: typography only, with a cinnabar initial as in old manuscripts */}
       <figure className="relative mt-10 sm:mt-12 w-full max-w-md text-left">

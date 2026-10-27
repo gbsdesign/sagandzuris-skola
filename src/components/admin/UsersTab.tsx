@@ -2,7 +2,6 @@ import React, { useMemo, useState } from 'react';
 import { CalendarDays, ChevronRight, GraduationCap, Hourglass, ListChecks, Search, Shield, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../../context';
 import { SchoolClass } from '../../hooks/useClasses';
-import { PsalterGroup } from '../../hooks/usePsalter';
 import { agoLabel } from '../../hooks/useTeaching';
 import { ALL_FEATURES } from '../../utils/memberAccess';
 import { Avatar, Card, FIELD, Pill } from '../ui/kit';
@@ -110,7 +109,6 @@ export const UsersTab: React.FC<{
   users: UserRecord[];
   staff: StaffRecord[];
   classes: SchoolClass[];
-  groups: PsalterGroup[];
   access: Record<string, AccessRecord>;
   decisions: Record<string, DecisionRecord>;
   loading: boolean;
@@ -119,7 +117,7 @@ export const UsersTab: React.FC<{
   /** filters already shown as the panel's big numbers: they get no chip */
   tiles: Filter[];
   onMessage: (text: string, type: 'success' | 'error') => void;
-}> = ({ users, staff, classes, groups, access, decisions, loading, filter, onFilter, tiles, onMessage }) => {
+}> = ({ users, staff, classes, access, decisions, loading, filter, onFilter, tiles, onMessage }) => {
   const { isSuperAdmin } = useAuth();
   const [q, setQ] = useState('');
   const [openId, setOpenId] = useState<string | null>(null);
@@ -153,8 +151,8 @@ export const UsersTab: React.FC<{
         <Search className="w-4 h-4 text-[#b3a594] absolute left-3.5 top-1/2 -translate-y-1/2" />
         <input value={q} onChange={e => setQ(e.target.value)} placeholder="სახელი, ელფოსტა ან ქალაქი" aria-label="ძებნა" className={`${FIELD} pl-10`} />
       </div>
-      {/* phones: one row that slides sideways (the labels are long); wider screens: wrapped rows */}
-      <div className="-mx-4 sm:mx-0 px-4 sm:px-0 py-0.5 flex gap-1.5 overflow-x-auto overscroll-x-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden [mask-image:linear-gradient(to_right,#000_calc(100%-28px),transparent)] sm:flex-wrap sm:overflow-visible sm:[mask-image:none]">
+      {/* the chips wrap into a second row instead of sliding out of sight */}
+      <div className="flex flex-wrap gap-1.5">
         {FILTERS.map(({ id, label, Icon, n }) => {
           const on = active === id;
           return (
@@ -182,18 +180,29 @@ export const UsersTab: React.FC<{
             return (
               <li key={u.userId} className="px-1">
                 <button type="button" onClick={() => setOpenId(u.userId)} className="w-full flex items-center gap-3 py-3 text-left cursor-pointer group">
-                  <Avatar name={u.name} photo={u.photoURL} size={44} />
+                  {/* a green dot: here in the last week */}
+                  <span className="relative shrink-0">
+                    <Avatar name={u.name} photo={u.photoURL} size={44} />
+                    {test.week(u) && <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white" aria-label="აქტიური ამ კვირაში" />}
+                  </span>
                   <span className="min-w-0 flex-1">
-                    <span className="flex items-center gap-1.5 flex-wrap">
-                      <span className="font-semibold text-[#2a2017] truncate group-hover:text-[#7a2028]">{u.name}</span>
-                      {status === 'pending' && <Pill tone="amber"><Hourglass /> ელოდება</Pill>}
-                      {status === 'rejected' && <Pill tone="wine"><ShieldAlert /> შეფერხებული</Pill>}
-                      {role !== 'member' && <Pill tone={role === 'superadmin' ? 'solid' : role === 'admin' ? 'brown' : 'wine'}>{ROLE_ICON[role]} {roleName(u, role)}</Pill>}
-                      {limited !== null && <Pill tone="muted">წვდომა {limited}/{ALL_FEATURES.length}</Pill>}
-                      {u.kidsMode?.on && <Pill tone="amber">საბავშვო</Pill>}
+                    {/* one line each, so every row is as tall as the next: the name gives way, the signs stay whole */}
+                    <span className="flex items-center gap-1.5 min-w-0">
+                      <span className="min-w-0 font-semibold text-[#2a2017] truncate group-hover:text-[#7a2028]">{u.name}</span>
+                      {status === 'pending' && <Pill tone="amber" className="shrink-0"><Hourglass /> ელოდება</Pill>}
+                      {status === 'rejected' && <Pill tone="wine" className="shrink-0"><ShieldAlert /> შეფერხებული</Pill>}
+                      {/* the role as its round sign, so the name keeps the room (the word is in the person's window) */}
+                      {role !== 'member' && (
+                        <span title={roleName(u, role)} aria-label={roleName(u, role)}
+                          className={`shrink-0 w-6 h-6 rounded-full inline-flex items-center justify-center [&>svg]:w-3.5 [&>svg]:h-3.5 ${role === 'superadmin' ? 'bg-[#4a3426] text-[#fbf6ec]' : role === 'admin' ? 'bg-[#4a3426]/10 text-[#4a3426]' : 'bg-[#7a2028]/10 text-[#7a2028]'}`}>
+                          {ROLE_ICON[role]}
+                        </span>
+                      )}
                     </span>
                     <span className="block text-xs text-[#8a7a6a] truncate">
                       {u.email || 'ელფოსტა არ არის'} · {status === 'pending' ? `მოთხოვნა ${agoLabel(a?.requestedAt)}` : agoLabel(u.lastActiveAt)}
+                      {limited !== null && ` · წვდომა ${limited}/${ALL_FEATURES.length}`}
+                      {u.kidsMode?.on && ' · საბავშვო'}
                     </span>
                   </span>
                   <ChevronRight className="w-4 h-4 text-[#b3a594] shrink-0" />
@@ -210,7 +219,6 @@ export const UsersTab: React.FC<{
           person={open}
           staff={staff}
           classes={classes}
-          groups={groups}
           access={access[open.userId]}
           decision={decisions[open.userId]}
           onClose={() => setOpenId(null)}

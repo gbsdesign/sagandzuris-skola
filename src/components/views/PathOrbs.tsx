@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { Bookmark, Check, ChevronDown, ChevronRight, GraduationCap, Lock, Pencil, X } from 'lucide-react';
 import { db } from '../../firebase';
@@ -21,8 +21,15 @@ import { triggerFireworks } from './StudentBookmarkView';
 import { ManeraAverageBadge, ManeraContent, useManera } from './ManeraPanel';
 import { MasteryContent } from '../mastery/MasteryContent';
 import { WorkMonthLine, WorkPanel, useIndependentWork, usePanelWish } from './IndependentWorkCard';
+import { PearlIcon } from '../pearls/PearlIcon';
+import { usePearls } from '../../hooks/usePearls';
+import { pearlState } from '../../utils/pearls';
+import { CHESTS } from '../../data/pearls';
 
-type OrbId = 'samosi' | 'learn' | 'manera' | 'work';
+// the chests and the singing load only when „მარგალიტები“ is opened
+const PearlChests = lazy(() => import('../pearls/PearlChests'));
+
+type OrbId = 'samosi' | 'learn' | 'manera' | 'work' | 'pearls';
 
 /** The round buttons as the "რიგი" list names them; the member's order of these ids comes in `order`. */
 export const PATH_ORBS: { id: OrbId; label: string }[] = [
@@ -30,6 +37,8 @@ export const PATH_ORBS: { id: OrbId; label: string }[] = [
   { id: 'learn', label: 'ნასწავლი' },
   { id: 'manera', label: 'ოსტატობა' },
   { id: 'work', label: 'სამუშაო' },
+  // the pearls game (section „margalitebi“: the router leaves it out when the admin closes it)
+  { id: 'pearls', label: 'მარგალიტები' },
 ];
 
 const SAMOSI_IDS = new Set(SAMOSI_PARTS.map(p => p.id));
@@ -66,10 +75,21 @@ const SamosiOrb: React.FC<{ count: number; color: string; open: boolean; onClick
   );
 };
 
+// "მარგალიტები": how many pearls of all the chests are polished, and how many shine (approved by a teacher)
+const usePearlSummary = () => {
+  const { user } = useAuth();
+  const { pearls, shine } = usePearls(user?.uid);
+  const ids = CHESTS.flatMap(c => c.pearls);
+  const states = ids.map(id => pearlState(pearls[id], shine[id]));
+  const polished = states.filter(s => s === 'polished' || s === 'shining').length;
+  const shining = states.filter(s => s === 'shining').length;
+  return { total: ids.length, polished, shining, percent: ids.length ? (100 * polished) / ids.length : 0 };
+};
+
 // the manera ring follows the colour rule of its percentages (<50 red, 50–79 amber, 80+ green)
 const maneraHue = (v: number): OrbHue => (v >= 80 ? 'done' : v >= 50 ? 'amber' : 'rose');
 
-// The top of "საგანძურის გზა": four round buttons in a row — სამოსი, ნასწავლი, მანერა, სამუშაო — each a ring of its
+// The top of "საგანძურის გზა": five round buttons in a row — სამოსი, ნასწავლი, ოსტატობა, სამუშაო, მარგალიტები — each a ring of its
 // progress with only its name under it. A tap opens its card under the row (one at a time); a second tap or ✕ folds
 // it. "ნასწავლი" also holds the teacher's assignments and carries the number of new ones. Other places open "მანერა"
 // or "სამუშაო" with openPathPanel().
@@ -83,6 +103,7 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
   const work = useIndependentWork();
   const samosi = useSamosiSummary();
   const newWork = useNewWork();
+  const pearls = usePearlSummary();
 
   // the number on "ნასწავლი" goes once its window shows the new assignments (also ones coming while it is open)
   useEffect(() => {
@@ -90,7 +111,7 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, newWork.count]);
 
-  usePanelWish(['manera', 'work'], id => setOpen(id as OrbId));
+  usePanelWish(['learn', 'manera', 'work', 'pearls'], id => setOpen(id as OrbId));
   const toggle = (id: OrbId) => { triggerHaptic(10); setEditing(false); setOpen(o => (o === id ? null : id)); };
   const close = () => { setEditing(false); setOpen(null); };
 
@@ -132,6 +153,13 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
             {work.planned ? <OrbPercent value={work.planned.percent} /> : <Bookmark className="w-6 h-6 sm:w-7 sm:h-7 text-[#1e2f5a] fill-[#1e2f5a]/10" strokeWidth={1.8} />}
           </PathOrb>
         );
+      case 'pearls':
+        // a pearl while none is polished, then the share polished
+        return (
+          <PathOrb key={id} label="მარგალიტები" title="მარგალიტები" percent={pearls.percent} hue="pearl" open={open === id} onClick={() => toggle(id)} index={index}>
+            {pearls.polished ? <OrbPercent value={pearls.percent} /> : <PearlIcon state="tried" size={40} />}
+          </PathOrb>
+        );
     }
   };
   const orbs = ids.map(orb);
@@ -154,14 +182,30 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
     },
     manera: { title: 'ოსტატობა', sub: 'გაკვეთილები და რჩევები', aside: <ManeraAverageBadge />, body: <MasteryContent /> },
     work: { title: 'დამოუკიდებელი სამუშაო', sub: <WorkMonthLine work={work} />, body: <WorkPanel /> },
+    pearls: {
+      title: 'მარგალიტები',
+      sub: `გაპრიალებული ${pearls.polished} / ${pearls.total}${pearls.shining ? ` · ბრწყინავს ${pearls.shining}` : ''}`,
+      body: (
+        <Suspense fallback={<p className="py-8 text-center text-sm text-[#8a7a6a]">იტვირთება…</p>}>
+          <PearlChests />
+        </Suspense>
+      ),
+    },
   };
   const card = open ? cards[open] : null;
 
   return (
     <div className="w-full space-y-3">
-      <div className="mx-auto max-w-lg grid gap-1 pt-1" style={{ gridTemplateColumns: `repeat(${orbs.length}, minmax(0, 1fr))` }}>
-        {orbs}
-      </div>
+      {orbs.length > 4 ? (
+        // five don't fit one phone row (the names would be cut): three over two there, one row from `sm`
+        <div className="mx-auto max-w-lg grid grid-cols-6 gap-x-1 gap-y-3 pt-1 [&>*]:col-span-2 [&>*:nth-child(4)]:col-start-2 sm:grid-cols-5 sm:gap-y-1 sm:[&>*]:col-span-1 sm:[&>*:nth-child(4)]:col-start-auto">
+          {orbs}
+        </div>
+      ) : (
+        <div className="mx-auto max-w-lg grid gap-1 pt-1" style={{ gridTemplateColumns: `repeat(${orbs.length}, minmax(0, 1fr))` }}>
+          {orbs}
+        </div>
+      )}
       {card && (
         // same card look as the other tiles of "საგანძურის გზა" (PATH_TILE), without the hover lift
         <section
@@ -192,16 +236,9 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
 const SHOWN = 8;
 
 /** The path's progress under the "ნასწავლი" title: a bar, then learned / total and the voices (as on the class page). */
+// the round button's ring already shows the share: the card's head says it in numbers only
 const LearnLine: React.FC<{ s: ReturnType<typeof usePathStats> }> = ({ s }) => (
-  <span className="flex items-center gap-2.5 mt-1">
-    <span className="flex-1 h-1.5 rounded-full bg-[#ece2d1] overflow-hidden">
-      <span
-        className={`block h-full rounded-full transition-[width] duration-700 ${s.learned === s.total ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-[#c2414c] to-[#7a2028]'}`}
-        style={{ width: `${s.percent}%` }}
-      />
-    </span>
-    <span className="shrink-0 tabular-nums">{s.learned}/{s.total}{s.voiceSlots ? ` · ${s.voices}/${s.voiceSlots} ხმა` : ''}</span>
-  </span>
+  <span className="tabular-nums">{s.learned}/{s.total}{s.voiceSlots ? ` · ${s.voices}/${s.voiceSlots} ხმა` : ''}</span>
 );
 
 /** What tapping an item's name does: a chant opens its notes, a song its place on the map; null when neither can.
@@ -284,7 +321,7 @@ const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats>; editing: boolea
             <X className="w-4 h-4" />
           </button>
         ) : (
-          <span className="flex gap-1 shrink-0">
+          <span className="flex gap-1.5 shrink-0">
             {(voiced ? (['1', '2', '3'] as const) : (['1'] as const)).map(v => {
               const confirmedOne = ok.includes(v);
               const on = confirmedOne || have.includes(v);
@@ -297,7 +334,7 @@ const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats>; editing: boolea
                   aria-pressed={on}
                   aria-label={voiced ? `${it.chantName} — ${v} ხმა` : `${it.chantName} — ნასწავლი`}
                   title={confirmedOne ? 'მასწავლებელმა ჩათვალა' : locked ? 'მონიშვნას მასწავლებელი აკეთებს' : on ? 'ნასწავლია — შეეხე მოსახსნელად' : 'შეეხე, როცა ისწავლი'}
-                  className={`w-[30px] h-[30px] rounded-full text-[12px] font-bold tabular-nums flex items-center justify-center transition active:scale-90 disabled:active:scale-100 ${
+                  className={`w-9 h-9 rounded-full text-[13px] font-bold tabular-nums flex items-center justify-center transition active:scale-90 disabled:active:scale-100 ${
                     confirmedOne ? 'bg-emerald-600 text-white'
                       : on ? 'bg-[#7a2028] text-white shadow-[0_2px_6px_-2px_rgba(122,32,40,0.6)]'
                       : 'ring-1 ring-[#e3d6c1] text-[#a4927c] enabled:hover:ring-[#7a2028]/50 enabled:hover:text-[#7a2028]'

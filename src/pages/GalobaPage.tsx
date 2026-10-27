@@ -11,7 +11,6 @@ import { useAccess } from '../hooks/useAccess';
 import { ProgramCard, ServiceDownload } from './galoba/LiturgyBits';
 import { SERVICE_CHANTS, chantMatches, ChantHit } from './galoba/chantSearch';
 import { SearchField, SearchResults } from './galoba/SearchResults';
-import { useNotes } from '../context/NotesContext';
 import { triggerHaptic } from '../utils/haptics';
 import { prepareSearch } from '../utils/searchUtils';
 import { GraduationCap } from 'lucide-react';
@@ -48,7 +47,6 @@ export const GalobaPage: React.FC = () => {
   const { can } = useAccess();
 
   const { selectedChantVariants = {}, toggleVariantSelection } = useChants();
-  const regent = useNotes().liturgy.role === 'teacher';
 
   const handleSelectService = useCallback(
     (s: ServiceType) => {
@@ -101,8 +99,10 @@ export const GalobaPage: React.FC = () => {
     [classOnly, programIds]
   );
 
-  // one search for everything: this service's list, the other services, the songs and the prayers
+  // the list's own filter keeps to its service; the search in everything is the header's 🔍 — only those without
+  // it (guests, waiting members) get a field over the services that also finds songs and prayers
   const query = useMemo(() => prepareSearch(chantSearch || ''), [chantSearch]);
+  const ownSearch = !can('search');
   const filteredChants = useMemo(
     () => (query ? serviceChants.filter(c => chantMatches(c, query)) : serviceChants),
     [query, serviceChants]
@@ -127,22 +127,23 @@ export const GalobaPage: React.FC = () => {
   // an album of recordings without notes (a choir, a school, „დასაზუსტებელი“), opened from under the services
   if (!selectedService && mapItem?.startsWith('album:')) return <ChantAlbumPage albumId={mapItem.slice(6)} />;
 
-  // 1. The services, under a small title and the search in all of them
+  // 1. The services (without the header's search: under a search in all of them)
   if (!selectedService) {
+    const allQuery = ownSearch ? query : null;
     return (
       <div className="galoba-font w-full px-1 flex flex-col gap-4">
         <div className="w-full max-w-2xl mx-auto flex flex-col gap-3">
-          <SearchField value={chantSearch || ''} onChange={setChantSearch} placeholder="ძიება ყველა მსახურებაში" />
-          {query ? (
+          {ownSearch && <SearchField value={chantSearch || ''} onChange={setChantSearch} placeholder="ძიება ყველა მსახურებაში" />}
+          {allQuery ? (
             // a tall box, so the centred page doesn't jump up and down while typing
             <div className="min-h-[60vh]">
-              <SearchResults query={query} keepChant={keepChant} onOpenChant={openHit} />
+              <SearchResults query={allQuery} keepChant={keepChant} onOpenChant={openHit} />
             </div>
           ) : (
             <ProgramCard />
           )}
         </div>
-        {!query && (
+        {!allQuery && (
           <ServiceTabs
             onSelectService={handleSelectService}
             onOpenAlbum={can('recordings') ? id => openMapItem(`album:${id}`) : undefined}
@@ -159,7 +160,7 @@ export const GalobaPage: React.FC = () => {
       {/* Christ the Saviour at the head of the list. Phone: a small medallion beside the title, so the list
           starts on the first screen; computer: large, on a soft golden halo that shows only once the image is in */}
       <div className="flex items-center gap-3 sm:flex-col sm:gap-0 sm:pt-1">
-        <div className="relative shrink-0 w-[68px] sm:w-40">
+        <div className="relative shrink-0 w-[68px] sm:w-28">
           <div
             aria-hidden
             className={`hidden sm:block absolute left-1/2 top-[61%] -translate-x-1/2 -translate-y-1/2 w-[115%] aspect-square rounded-full bg-amber-300/35 blur-2xl transition-opacity duration-500 ${medallionIn ? 'opacity-100' : 'opacity-0'}`}
@@ -178,11 +179,6 @@ export const GalobaPage: React.FC = () => {
         <div className="sm:hidden min-w-0">
           <h1 className="font-serif-ge text-[21px] font-bold leading-tight text-[#7a2028] text-balance">{title}</h1>
           <p className="mt-0.5 text-[12px] font-semibold text-[#8c7c6b]">{serviceChants.length} საგალობელი</p>
-        </div>
-        <div aria-hidden className="hidden sm:flex mt-2.5 items-center gap-2">
-          <span className="h-px w-28 bg-gradient-to-r from-transparent to-amber-500/60" />
-          <span className="w-1.5 h-1.5 rotate-45 bg-amber-500/70" />
-          <span className="h-px w-28 bg-gradient-to-l from-transparent to-amber-500/60" />
         </div>
       </div>
 
@@ -211,9 +207,6 @@ export const GalobaPage: React.FC = () => {
       >
         <ServiceDownload chants={serviceChants} label={`მთელი ${SERVICE_GENITIVE[selectedService] ?? selectedService}`} />
       </ChantSearchBar>
-      {regent && (
-        <p className="mx-0.5 text-[11.5px] leading-normal text-[#8c7c6b]">„+“ ვერსიას დღევანდელ წირვაში ამატებს.</p>
-      )}
 
       {/* the chants: cards stacked edge to edge, as in the prototype */}
       <div className="flex flex-col">
@@ -230,20 +223,8 @@ export const GalobaPage: React.FC = () => {
         ))}
       </div>
 
-      {/* searching: what this service lacks may be in another one, a song or a prayer */}
-      {query && (
-        <div className="mt-3 flex flex-col gap-3">
-          {filteredChants.length === 0 && (
-            <p className="mx-1 text-[13px] font-semibold text-[#8c7c6b]">ამ მსახურებაში ვერ მოიძებნა.</p>
-          )}
-          <SearchResults
-            query={query}
-            skipService={selectedService}
-            keepChant={keepChant}
-            onOpenChant={openHit}
-            emptyAbove={filteredChants.length === 0}
-          />
-        </div>
+      {query && filteredChants.length === 0 && (
+        <p className="mx-1 mt-1 text-[13px] font-semibold text-[#8c7c6b]">ამ მსახურებაში ვერ მოიძებნა.</p>
       )}
     </div>
     );

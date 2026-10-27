@@ -40,12 +40,8 @@ export const SignInPrompt: React.FC = () => {
           <div className="mx-auto w-16 h-16 rounded-3xl bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center">
             {locked ? <Lock className="w-8 h-8" /> : <LogIn className="w-8 h-8" />}
           </div>
-          {locked && <p className="mt-4 font-serif-ge text-lg font-bold text-[#4a3426]">„{what}“</p>}
-          <p className="mt-1.5 text-[15px] text-[#75685a] leading-relaxed max-w-sm mx-auto">
-            {locked
-              ? 'ეს ნაწილი რეგისტრირებული წევრებისთვისაა. შედით Google-ის ანგარიშით ან ელფოსტით — უფასოა.'
-              : 'შედით, რომ თქვენი სწავლა და ჩანიშვნები ყველა მოწყობილობაზე შეინახოს. უფასოა.'}
-          </p>
+          {locked && <p className="mt-4 font-serif-ge text-lg font-bold text-[#4a3426]">„{what}“ — მხოლოდ წევრებისთვის</p>}
+          <p className={`${locked ? 'mt-1' : 'mt-3'} text-[15px] text-[#75685a] leading-relaxed`}>Google-ით ან ელფოსტით, პაროლის გარეშე.</p>
         </div>}
         <SignInChoices onStep={setStep} />
       </div>

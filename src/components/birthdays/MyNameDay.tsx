@@ -106,7 +106,7 @@ const NameDaySheet: React.FC<{
                     <button type="button" onClick={() => pick(c)} disabled={!!busy}
                       className={`w-full flex items-start gap-3 rounded-2xl px-2.5 py-2 text-left cursor-pointer ring-1 transition-colors disabled:opacity-60 ${
                         chosen ? 'bg-[#7a2028]/[0.07] ring-[#7a2028]/40' : 'bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/30'}`}>
-                      <span className={`w-11 h-11 shrink-0 rounded-xl flex flex-col items-center justify-center leading-none ${c.feast ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#fbf6ec] ring-1 ring-[#efe3cf] text-[#4a3426]'}`}>
+                      <span className={`w-11 h-11 shrink-0 rounded-xl flex flex-col items-center justify-center leading-none ${c.feast ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[#4a3426]'}`}>
                         <span className="font-serif-ge text-[17px] font-bold tabular-nums">{c.day}</span>
                         <span className="mt-0.5 text-[11px] font-semibold opacity-80">{MONTHS_SHORT_GE[c.month - 1]}</span>
                       </span>

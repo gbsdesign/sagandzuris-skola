@@ -257,8 +257,8 @@ export const ChantWaveformSeekBar: React.FC<ChantWaveformSeekBarProps> = ({
         </div>
       ) : (
         <div className="flex items-center justify-between mt-1 px-0.5 text-[11px] font-mono font-bold">
-          <span className="text-amber-900">{formatTime(shownTime)}</span>
-          <span className="text-slate-400">{formatTime(duration)}</span>
+          <span className="text-[#7a4a1c]">{formatTime(shownTime)}</span>
+          <span className="text-[#a0907c]">{formatTime(duration)}</span>
         </div>
       )}
     </div>

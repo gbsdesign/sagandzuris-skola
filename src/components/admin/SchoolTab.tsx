@@ -6,6 +6,7 @@ import { useAuth } from '../../context';
 import { Btn, Card } from '../ui/kit';
 import { Fold } from './Fold';
 import { SectionsTab } from './SectionsTab';
+import { CentreDownloadFold } from './CentreDownload';
 import { TopChants } from './StatsTab';
 import type { UserRecord } from './UsersTab';
 
@@ -77,13 +78,14 @@ export const SchoolTab: React.FC<{ users: UserRecord[]; onMessage: (t: string, t
     <div className="space-y-3">
       <SectionsTab onMessage={onMessage} />
       <TopChants users={users} />
+      <CentreDownloadFold users={users} onMessage={onMessage} />
 
       <Card className="!py-3">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 min-h-[44px]">
           <RowIcon><DatabaseBackup /></RowIcon>
           <span className="flex-1 min-w-[10rem]">
             <span className="block font-serif-ge text-[16px] font-bold text-[#4a3426] leading-snug">სარეზერვო ასლი</span>
-            <span className="block text-[12.5px] text-[#8a7a6a] leading-snug mt-0.5">ყველა მონაცემი ერთ ფაილად · გირჩევ თვეში ერთხელ</span>
+            <span className="block text-[12.5px] text-[#8a7a6a] leading-snug mt-0.5">ყველა მონაცემი ერთ ფაილად</span>
           </span>
           <Btn size="sm" kind="ghost" icon={exporting ? <Loader2 className="animate-spin" /> : <Download />} disabled={!!exporting} onClick={exportAll}
             title="მოსწავლეები და მათი გზა, კლასები, დავალებები, დასწრება, ჩატის ტექსტი, ფსალმუნთა ჯგუფები, მოსახსენებელი სახელები. ხმოვანი შეტყობინებების აუდიო არ შედის.">

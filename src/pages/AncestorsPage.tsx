@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Music, Play, Search, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Music, Play, Search, X } from 'lucide-react';
 import { ANCESTORS, type Ancestor, type BioBlock } from '../data/ancestorsBios';
 import { useOpenRequest } from '../utils/searchOpen';
+import { BackBtn, useScrolledAway } from '../components/ui/kit';
 
 // "Meet the ancestors": portraits of the great chanters lead the page, then every
 // biography from galobani.ge as a card that opens a full-screen reader, then the
@@ -72,6 +73,10 @@ const splitName = (name: string) => {
   return m ? [m[1], m[2]] : [name, ''];
 };
 
+// a long surname on a small card may only break where Georgian names do, „კარბელა-შვილები“, „ბულმაისიმის-ძე“
+// (soft hyphens; never in the middle of a word otherwise)
+const soft = (s: string) => s.replace(/(\S{4})(შვილ)/g, '$1\u00ad$2').replace(/(\S{5})(ძე)(?=[\s)]|$)/g, '$1\u00ad$2');
+
 const AncestorCard: React.FC<{ a: Ancestor; onOpen: () => void; className?: string }> = ({ a, onOpen, className = '' }) => {
   const [main, sub] = splitName(a.name);
   const photo = Boolean(a.image);
@@ -102,15 +107,15 @@ const AncestorCard: React.FC<{ a: Ancestor; onOpen: () => void; className?: stri
         </span>
       )}
       <span className={`absolute inset-x-0 bottom-0 px-1.5 pb-2 sm:p-2.5 font-serif-ge leading-tight break-words ${photo ? 'text-white drop-shadow' : 'text-[#7a2028]'}`}>
-        <span className="block text-[clamp(10.5px,10.8cqw,13.5px)] font-bold line-clamp-3">{main}</span>
-        {sub && <span className={`block mt-0.5 text-[clamp(9.5px,9.6cqw,11.5px)] font-semibold ${photo ? 'text-white/75' : 'text-[#7a2028]/60'}`}>{sub}</span>}
+        <span className="block text-[clamp(12.5px,10cqw,15px)] font-bold line-clamp-3">{soft(main)}</span>
+        {sub && <span className={`block mt-0.5 text-[clamp(11px,8.6cqw,12.5px)] font-semibold ${photo ? 'text-white/75' : 'text-[#7a2028]/60'}`}>{soft(sub)}</span>}
       </span>
     </button>
   );
 };
 
 const roundBtn =
-  'w-9 h-9 rounded-full bg-white ring-1 ring-[#e6d9c2] shadow-sm flex items-center justify-center text-[#7a2028] hover:ring-[#7a2028]/30 hover:shadow transition-all cursor-pointer disabled:opacity-35 disabled:cursor-default disabled:shadow-none';
+  'w-9 h-9 rounded-full bg-white ring-1 ring-[#e8dcc8] shadow-sm flex items-center justify-center text-[#7a2028] hover:ring-[#7a2028]/30 hover:shadow transition-all cursor-pointer disabled:opacity-35 disabled:cursor-default disabled:shadow-none';
 
 // One group as a swipeable strip of small cards; „ყველა“ unfolds it into a grid.
 const GroupStrip: React.FC<{ title: string; subtitle: string; items: Ancestor[]; onOpen: (id: number) => void }> = ({
@@ -146,7 +151,7 @@ const GroupStrip: React.FC<{ title: string; subtitle: string; items: Ancestor[];
       <div className="flex items-end justify-between gap-3 mb-2">
         <div className="min-w-0">
           <h3 className="font-serif-ge font-bold text-base sm:text-lg leading-tight text-[#7a2028]">{title}</h3>
-          <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>
+          <p className="text-xs text-[#8a7a6a] mt-0.5">{subtitle}</p>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           {!all && (
@@ -163,7 +168,7 @@ const GroupStrip: React.FC<{ title: string; subtitle: string; items: Ancestor[];
             type="button"
             onClick={() => setAll((v) => !v)}
             aria-expanded={all}
-            className="h-9 pl-3.5 pr-2.5 rounded-full bg-white ring-1 ring-[#e6d9c2] shadow-sm inline-flex items-center gap-1 text-[13px] font-semibold text-[#7a2028] hover:ring-[#7a2028]/30 hover:shadow transition-all cursor-pointer"
+            className="h-9 pl-3.5 pr-2.5 rounded-full bg-white ring-1 ring-[#e8dcc8] shadow-sm inline-flex items-center gap-1 text-[13px] font-semibold text-[#7a2028] hover:ring-[#7a2028]/30 hover:shadow transition-all cursor-pointer"
           >
             {all ? 'შეკეცვა' : `ყველა · ${items.length}`}
             <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${all ? 'rotate-180' : ''}`} />
@@ -184,7 +189,7 @@ const GroupStrip: React.FC<{ title: string; subtitle: string; items: Ancestor[];
           className="-mx-1 px-1 pt-1 pb-2 flex gap-2.5 sm:gap-3 overflow-x-auto overscroll-x-contain snap-x snap-mandatory scroll-px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
           {items.map((a) => (
-            <AncestorCard key={a.id} a={a} onOpen={() => onOpen(a.id)} className="shrink-0 snap-start w-[29%] sm:w-[21.5%]" />
+            <AncestorCard key={a.id} a={a} onOpen={() => onOpen(a.id)} className="shrink-0 snap-start w-[39%] sm:w-[30%]" />
           ))}
         </div>
       )}
@@ -222,7 +227,7 @@ const FilmCard: React.FC = () => {
     <button
       type="button"
       onClick={() => setPlaying(true)}
-      className="group w-full flex items-center gap-4 p-2.5 rounded-2xl bg-white ring-1 ring-[#e6d9c2] shadow-sm hover:shadow-md hover:ring-[#7a2028]/30 transition-all text-left cursor-pointer active:scale-[0.99]"
+      className="group w-full flex items-center gap-4 p-2.5 rounded-2xl bg-white ring-1 ring-[#e8dcc8] shadow-sm hover:shadow-md hover:ring-[#7a2028]/30 transition-all text-left cursor-pointer active:scale-[0.99]"
     >
       <div className="relative w-32 sm:w-40 aspect-video shrink-0 rounded-xl overflow-hidden bg-stone-800">
         <img
@@ -238,10 +243,10 @@ const FilmCard: React.FC = () => {
         </span>
       </div>
       <div className="min-w-0">
-        <p className="font-serif-ge font-bold text-base sm:text-lg text-slate-800 group-hover:text-[#7a2028] transition-colors">
+        <p className="font-serif-ge font-bold text-base sm:text-lg text-[#2a2017] group-hover:text-[#7a2028] transition-colors">
           გალობის რაინდები
         </p>
-        <p className="text-xs sm:text-sm text-slate-500 mt-0.5">დოკუმენტური ფილმი · odishitv</p>
+        <p className="text-xs sm:text-sm text-[#8a7a6a] mt-0.5">დოკუმენტური ფილმი · odishitv</p>
       </div>
     </button>
   );
@@ -281,7 +286,7 @@ const BioBody: React.FC<{ blocks: BioBlock[] }> = ({ blocks }) => {
         }
         if ('verse' in b) {
           return (
-            <blockquote key={i} className="my-6 py-4 px-5 rounded-2xl bg-white/70 ring-1 ring-[#e6d9c2] font-serif-ge italic text-center text-slate-700 leading-loose">
+            <blockquote key={i} className="my-6 py-4 px-5 rounded-2xl bg-white/70 ring-1 ring-[#e8dcc8] font-serif-ge italic text-center text-[#4a3426] leading-loose">
               {b.verse.map((l, j) => (
                 <span key={j} className="block">{l}</span>
               ))}
@@ -290,8 +295,8 @@ const BioBody: React.FC<{ blocks: BioBlock[] }> = ({ blocks }) => {
         }
         if ('sources' in b) {
           return (
-            <div key={i} className="mt-9 pt-5 border-t border-[#e6d9c2] text-[0.8em] text-slate-500 leading-relaxed">
-              <p className="font-bold text-slate-600 mb-2">წყაროები და სამეცნიერო ლიტერატურა</p>
+            <div key={i} className="mt-9 pt-5 border-t border-[#e8dcc8] text-[0.8em] text-[#8a7a6a] leading-relaxed">
+              <p className="font-bold text-[#574739] mb-2">წყაროები და სამეცნიერო ლიტერატურა</p>
               {b.sources.map((s, j) => (
                 <p key={j} className="mb-1">{s}</p>
               ))}
@@ -299,7 +304,7 @@ const BioBody: React.FC<{ blocks: BioBlock[] }> = ({ blocks }) => {
           );
         }
         return (
-          <p key={i} className="text-[0.8em] italic text-slate-500 mt-2">
+          <p key={i} className="text-[0.8em] italic text-[#8a7a6a] mt-2">
             {b.note}
           </p>
         );
@@ -322,6 +327,9 @@ const BioReader: React.FC<{ id: number; onNavigate: (id: number) => void; onClos
   const [texts, setTexts] = useState<Record<number, BioBlock[]> | null>(null);
   const [font, setFont] = useState(readFont);
   const scroller = useRef<HTMLDivElement>(null);
+  // the bar names the person only once the big name has scrolled under it
+  const nameRef = useRef<HTMLHeadingElement>(null);
+  const nameAway = useScrolledAway(nameRef, scroller, id, 60);
 
   const index = ANCESTORS.findIndex((a) => a.id === id);
   const a = ANCESTORS[index];
@@ -377,7 +385,7 @@ const BioReader: React.FC<{ id: number; onNavigate: (id: number) => void; onClos
       <button
         type="button"
         onClick={() => onNavigate(target.id)}
-        className={`group flex-1 min-w-0 flex items-center gap-3 p-2.5 rounded-2xl bg-white ring-1 ring-[#e6d9c2] shadow-sm hover:shadow-md hover:ring-[#7a2028]/30 transition-all cursor-pointer active:scale-[0.99] ${
+        className={`group flex-1 min-w-0 flex items-center gap-3 p-2.5 rounded-2xl bg-white ring-1 ring-[#e8dcc8] shadow-sm hover:shadow-md hover:ring-[#7a2028]/30 transition-all cursor-pointer active:scale-[0.99] ${
           dir === 'next' ? 'flex-row-reverse text-right' : 'text-left'
         }`}
       >
@@ -391,12 +399,12 @@ const BioReader: React.FC<{ id: number; onNavigate: (id: number) => void; onClos
           )}
         </span>
         <span className="min-w-0">
-          <span className="flex items-center gap-0.5 text-[11px] font-semibold uppercase tracking-wider text-slate-400 group-hover:text-[#7a2028] transition-colors">
+          <span className="flex items-center gap-0.5 text-[11px] font-semibold uppercase tracking-wider text-[#8a7a6a] group-hover:text-[#7a2028] transition-colors">
             {dir === 'prev' ? <ChevronLeft className="w-3.5 h-3.5" /> : null}
             {dir === 'prev' ? 'წინა' : 'შემდეგი'}
             {dir === 'next' ? <ChevronRight className="w-3.5 h-3.5" /> : null}
           </span>
-          <span className="block font-serif-ge font-bold text-sm leading-snug text-slate-800 line-clamp-2">{target.name}</span>
+          <span className="block font-serif-ge font-bold text-sm leading-snug text-[#2a2017] line-clamp-2">{target.name}</span>
         </span>
       </button>
     ) : (
@@ -411,34 +419,34 @@ const BioReader: React.FC<{ id: number; onNavigate: (id: number) => void; onClos
       aria-label={a.name}
       className="fixed inset-0 z-[70] safe-x overflow-y-auto overscroll-contain bg-[#fbf6ec]"
     >
-      <div className="sticky top-0 z-10 bg-[#fbf6ec]/90 backdrop-blur-md border-b border-[#e6d9c2]/70">
-        <div className="max-w-2xl mx-auto flex items-center gap-3 px-4 py-2.5">
-          <button
-            type="button"
-            onClick={onClose}
-            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-slate-200/90 hover:border-amber-400/50 bg-white/80 hover:bg-amber-50/50 active:scale-95 text-slate-700 hover:text-[#85502c] transition-all text-sm font-semibold cursor-pointer group shrink-0"
+      <div className="sticky top-0 z-10 bg-[#fbf6ec]/90 backdrop-blur-md border-b border-[#e8dcc8]/70">
+        <div className="max-w-2xl mx-auto flex items-center gap-3 px-4 py-2">
+          <BackBtn onClick={onClose} />
+          <p
+            aria-hidden
+            className={`flex-1 min-w-0 truncate font-serif-ge font-bold text-[15px] text-[#7a2028] transition-opacity duration-200 ${nameAway ? 'opacity-100' : 'opacity-0'}`}
           >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-            <span>უკან</span>
-          </button>
-          <p className="flex-1 min-w-0 truncate text-center font-serif-ge font-bold text-sm text-[#7a2028]/80">{a.name}</p>
-          <div className="flex items-center rounded-xl ring-1 ring-slate-200/90 bg-white/80 shrink-0 overflow-hidden">
+            {a.name}
+          </p>
+          <div className="flex items-center rounded-full ring-1 ring-[#e8dcc8] bg-white/85 shrink-0 overflow-hidden">
             <button
               type="button"
               onClick={() => changeFont(-1)}
               disabled={font === FONT_STEPS[0]}
-              className="w-10 h-9 text-sm font-bold text-slate-600 hover:bg-amber-50 disabled:opacity-35 cursor-pointer disabled:cursor-default"
+              className="w-11 h-9 text-sm font-bold text-[#4a3426] hover:bg-[#fcf1df] hover:text-[#7a2028] disabled:opacity-35 cursor-pointer disabled:cursor-default"
               aria-label="ტექსტის დაპატარავება"
+              title="ტექსტის დაპატარავება"
             >
               A−
             </button>
-            <span className="w-px h-5 bg-slate-200" />
+            <span className="w-px h-5 bg-[#e8dcc8]" />
             <button
               type="button"
               onClick={() => changeFont(1)}
               disabled={font === FONT_STEPS[FONT_STEPS.length - 1]}
-              className="w-10 h-9 text-base font-bold text-slate-600 hover:bg-amber-50 disabled:opacity-35 cursor-pointer disabled:cursor-default"
+              className="w-11 h-9 text-base font-bold text-[#4a3426] hover:bg-[#fcf1df] hover:text-[#7a2028] disabled:opacity-35 cursor-pointer disabled:cursor-default"
               aria-label="ტექსტის გადიდება"
+              title="ტექსტის გადიდება"
             >
               A+
             </button>
@@ -455,13 +463,13 @@ const BioReader: React.FC<{ id: number; onNavigate: (id: number) => void; onClos
               <Monogram name={a.name} big />
             )}
           </div>
-          <h2 className="mt-6 font-serif-ge font-bold text-2xl sm:text-3xl leading-tight text-[#7a2028]">{a.name}</h2>
+          <h2 ref={nameRef} className="mt-6 font-serif-ge font-bold text-2xl sm:text-3xl leading-tight text-[#7a2028]">{a.name}</h2>
           {a.years && <p className="mt-2 text-sm font-semibold tracking-wide text-[#a07a3c]">{a.years}</p>}
           <Ornament className="mt-5" />
         </header>
 
         {headings.length >= 3 && (
-          <nav className="mt-7 p-4 rounded-2xl bg-white/70 ring-1 ring-[#e6d9c2]">
+          <nav className="mt-7 p-4 rounded-2xl bg-white/70 ring-1 ring-[#e8dcc8]">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-[#7a2028]/70 mb-2.5">შინაარსი</p>
             <ol className="space-y-1">
               {headings.map((h, n) => (
@@ -469,7 +477,7 @@ const BioReader: React.FC<{ id: number; onNavigate: (id: number) => void; onClos
                   <button
                     type="button"
                     onClick={() => jumpTo(n)}
-                    className="w-full text-left flex gap-2.5 py-1.5 px-2 -mx-2 rounded-lg text-sm text-slate-700 hover:bg-amber-50 hover:text-[#7a2028] transition-colors cursor-pointer"
+                    className="w-full text-left flex gap-2.5 py-1.5 px-2 -mx-2 rounded-lg text-sm text-[#4a3426] hover:bg-amber-50 hover:text-[#7a2028] transition-colors cursor-pointer"
                   >
                     <span className="font-serif-ge font-bold text-[#b08a4a] w-4 shrink-0">{n + 1}</span>
                     <span>{h}</span>
@@ -480,7 +488,7 @@ const BioReader: React.FC<{ id: number; onNavigate: (id: number) => void; onClos
           </nav>
         )}
 
-        <div className="mt-8 font-serif-ge text-slate-800 leading-[1.85]" style={{ fontSize: `${(17 * font) / 100}px` }}>
+        <div className="mt-8 font-serif-ge text-[#2a2017] leading-[1.85]" style={{ fontSize: `${(17 * font) / 100}px` }}>
           {blocks ? (
             <BioBody blocks={blocks} />
           ) : (
@@ -497,7 +505,7 @@ const BioReader: React.FC<{ id: number; onNavigate: (id: number) => void; onClos
           {navButton(prev, 'prev')}
           {navButton(next, 'next')}
         </div>
-        <p className="mt-6 text-center text-xs text-slate-400">
+        <p className="mt-6 text-center text-xs text-[#8a7a6a]">
           ტექსტი:{' '}
           <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-[#7a2028]">
             galobani.ge — ცნობილი მგალობლების ბიოგრაფიები
@@ -522,13 +530,13 @@ export const AncestorsPage: React.FC = () => {
     <div className="w-full max-w-2xl mx-auto mb-4 px-1 space-y-8">
       <div className="space-y-4">
         <label className="relative block max-w-md mx-auto">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a39482] pointer-events-none" />
           <input
             type="search"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="მოძებნე მგალობელი…"
-            className="w-full h-10 pl-10 pr-4 rounded-full bg-white/90 ring-1 ring-[#e6d9c2] focus:ring-2 focus:ring-[#7a2028]/40 outline-none shadow-sm text-[15px] text-slate-800 placeholder:text-slate-400 transition-shadow"
+            className="w-full h-10 pl-10 pr-4 rounded-full bg-white/90 ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/40 outline-none shadow-sm text-[15px] text-[#2a2017] placeholder:text-[#a39482] transition-shadow"
           />
         </label>
   
@@ -540,16 +548,16 @@ export const AncestorsPage: React.FC = () => {
               ))}
             </div>
           ) : (
-            <p className="py-6 text-center text-sm text-slate-500">ასეთი სახელი ვერ მოიძებნა</p>
+            <p className="py-6 text-center text-sm text-[#8a7a6a]">ასეთი სახელი ვერ მოიძებნა</p>
           )
         ) : (
-        <div className="flex flex-wrap justify-center gap-3 sm:gap-4">
+        <div className="grid grid-cols-3 gap-2.5 sm:gap-4">
           {PORTRAITS.map(({ src, name, bio }) => (
             <button
               key={src}
               type="button"
               onClick={() => setOpenId(bio)}
-              className="group relative w-[calc(50%-0.375rem)] sm:w-[calc((100%-2rem)/3)] aspect-[3/4] rounded-3xl overflow-hidden bg-stone-200 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
+              className="group relative aspect-[3/4] rounded-2xl sm:rounded-3xl overflow-hidden bg-stone-200 shadow-md hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer"
             >
               <img
                 src={src}
@@ -558,8 +566,8 @@ export const AncestorsPage: React.FC = () => {
                 className="absolute inset-0 w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
               />
               <div className="absolute inset-x-0 bottom-0 h-1/2 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-              <span className="absolute inset-x-0 bottom-0 p-3 max-[359px]:px-2 sm:p-4 text-center font-serif-ge text-sm max-[359px]:text-[13px] sm:text-base font-bold leading-snug text-white drop-shadow">
-                {name}
+              <span className="absolute inset-x-0 bottom-0 px-1 pb-2 min-[420px]:p-3 sm:p-4 text-center font-serif-ge text-[12.5px] min-[420px]:text-sm sm:text-base font-bold leading-snug text-white drop-shadow">
+                {soft(name)}
               </span>
             </button>
           ))}
@@ -596,7 +604,7 @@ export const AncestorsPage: React.FC = () => {
               href={href}
               target="_blank"
               rel="noopener noreferrer"
-              className="group flex items-center justify-between gap-3 p-4 rounded-2xl bg-white ring-1 ring-[#e6d9c2] shadow-sm hover:shadow-md hover:ring-[#7a2028]/30 transition-all duration-200 text-slate-800 hover:text-[#7a2028]"
+              className="group flex items-center justify-between gap-3 p-4 rounded-2xl bg-white ring-1 ring-[#e8dcc8] shadow-sm hover:shadow-md hover:ring-[#7a2028]/30 transition-all duration-200 text-[#2a2017] hover:text-[#7a2028]"
             >
               <div className="flex items-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-[#fbf6ec] flex items-center justify-center shrink-0">
@@ -604,11 +612,11 @@ export const AncestorsPage: React.FC = () => {
                 </div>
                 <span className="font-semibold text-sm sm:text-base">{label}</span>
               </div>
-              <ExternalLink className="w-4 h-4 text-slate-400 group-hover:text-[#7a2028] group-hover:translate-x-0.5 transition-all shrink-0" />
+              <ExternalLink className="w-4 h-4 text-[#a39482] group-hover:text-[#7a2028] group-hover:translate-x-0.5 transition-all shrink-0" />
             </a>
           ))}
         </div>
-        <p className="text-center text-xs text-slate-400 pt-1">
+        <p className="text-center text-xs text-[#8a7a6a] pt-1">
           ბიოგრაფიები:{' '}
           <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer" className="underline decoration-dotted hover:text-[#7a2028]">
             galobani.ge

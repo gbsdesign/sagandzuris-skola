@@ -7,6 +7,7 @@ import {
   startVoiceRecording, voiceRecordingSupported, VOICE_MAX_SECONDS, WAVE_BARS, VoiceRecording, VoiceTake,
 } from '../../utils/voiceRecorder';
 import { triggerHaptic } from '../../utils/haptics';
+import { askConfirm } from '../ui/kit';
 import { MONTHS_GE } from '../../utils/dateNames';
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
@@ -180,13 +181,23 @@ export interface ChatPanelProps {
   staffLabel?: string;
   /** fill the parent's height (the messages page); the list takes what the header and the field leave */
   fill?: boolean;
+  /** over the messages, inside the list (the class page's way to the earlier ones) */
+  listTop?: React.ReactNode;
 }
+
+/** A computer's quiet 🗑 beside a message one may delete; it shows when the pointer is over the message. */
+const HoverDelete: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+  <button type="button" onClick={onClick} aria-label="შეტყობინების წაშლა" title="წაშლა"
+    className="self-center w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-[#a89886] hover:text-[#a02c2c] hover:bg-red-50 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition cursor-pointer [@media(hover:none)]:hidden">
+    <Trash2 className="w-4 h-4" />
+  </button>
+);
 
 // A chat: text and voice messages (a class's chat, or a teacher's private chat with a student).
 export const ChatPanel: React.FC<ChatPanelProps> = ({
   base, author, messages, loading, error, header, isCall, callTitle, onJoinCall, callLive = true, canDelete,
   showNames = false, seenAt = null, onSent, listClassName = 'h-[56vh] min-h-[300px] max-h-[560px]', readOnly = false,
-  staffLabel = 'მასწავლებელი', fill = false,
+  staffLabel = 'მასწავლებელი', fill = false, listTop,
 }) => {
   const [text, setText] = useState('');
   const [mode, setMode] = useState<Mode>({ k: 'idle' });
@@ -295,6 +306,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     }
   };
 
+  // a computer's 🗑 beside the message (shown on hover) asks first; a phone's „წაშლა“ under it was already a second tap
+  const askRemove = async (m: ChatMessage) => {
+    if (await askConfirm({ title: 'წავშალო შეტყობინება?', ok: 'წაშლა', danger: true })) remove(m);
+  };
+
   const remove = async (m: ChatMessage) => {
     setActive(null);
     try {
@@ -346,10 +362,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         ) : messages.length === 0 ? (
           <div className="h-full flex flex-col items-center justify-center text-center gap-2 px-6 text-[#8a7a6a]">
             <MessageCircle className="w-9 h-9 text-[#d9c9b0]" />
-            <p className="text-sm">ჯერ შეტყობინება არ არის.<br />დაწერეთ პირველი ან ჩაწერეთ ხმოვანი.</p>
+            <p className="text-sm">ჯერ შეტყობინება არ არის.</p>
           </div>
         ) : (
-          messages.map((m, i) => {
+          <>
+          {listTop}
+          {messages.map((m, i) => {
             const prev = messages[i - 1];
             const mine = m.uid === author.uid;
             const newDay = !!m.at && (!prev?.at || prev.at.toDateString() !== m.at.toDateString());
@@ -363,8 +381,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                     <span className="px-3 py-1 rounded-full bg-white/90 ring-1 ring-[#e8dcc8] text-xs font-semibold text-[#8a7a6a]">{dayLabel(m.at!)}</span>
                   </div>
                 )}
-                <div className={`flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'} ${first ? 'mt-3' : 'mt-1'}`}>
+                <div className={`group flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'} ${first ? 'mt-3' : 'mt-1'}`}>
                   {named && !mine && (first ? <Avatar name={m.name} photoURL={m.photoURL} /> : <span className="w-8 shrink-0" />)}
+                  {mine && canDel && <HoverDelete onClick={() => askRemove(m)} />}
                   <div className={`max-w-[82%] flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
                     {named && first && !mine && (
                       <p className="text-xs font-semibold text-[#7a2028] mb-1 px-1 flex items-center gap-1.5">
@@ -373,7 +392,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                       </p>
                     )}
                     <div
-                      onClick={() => canDel && setActive(active === m.id ? null : m.id)}
+                      // a tap on the message (not on its play button or a link) shows „წაშლა“ under it; a right click too
+                      onClick={e => { if (canDel && !(e.target as HTMLElement).closest('button, a')) setActive(active === m.id ? null : m.id); }}
+                      onContextMenu={canDel ? e => { e.preventDefault(); setActive(m.id); } : undefined}
                       className={`rounded-[20px] px-3.5 py-2 shadow-[0_1px_1px_rgba(74,52,38,0.06)] ${canDel ? 'cursor-pointer' : ''} ${
                         mine
                           ? `bg-[#7a2028] text-[#fbf6ec] ${first ? 'rounded-tr-md' : ''}`
@@ -426,17 +447,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                       </button>
                     )}
                   </div>
+                  {!mine && canDel && <HoverDelete onClick={() => askRemove(m)} />}
                 </div>
               </React.Fragment>
             );
-          })
+          })}
+          </>
         )}
       </div>
 
       {err && <p className="px-5 pt-3 text-sm text-[#a02c2c]">{err}</p>}
 
       {readOnly ? (
-        <p className="px-5 py-4 text-center text-sm text-[#8a7a6a]">მხოლოდ სანახავად — ამ ჩათში წერა არ შეგიძლიათ.</p>
+        <p className="px-5 py-4 text-center text-sm text-[#8a7a6a]">მხოლოდ სანახავად</p>
       ) : (
       <div className="p-3 sm:px-4 flex items-end gap-2">
         {mode.k === 'idle' && (
@@ -470,7 +493,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             </button>
             <div className="flex-1 min-w-0 h-12 rounded-full bg-[#7a2028]/[0.06] ring-1 ring-[#7a2028]/20 flex items-center gap-2.5 px-4">
               <span className="w-2.5 h-2.5 shrink-0 rounded-full bg-[#c62828] animate-pulse" />
-              <span className="font-semibold tabular-nums text-[#7a2028]">{clock(elapsed)}</span>
+              <span className="font-semibold tabular-nums text-[#7a2028] whitespace-nowrap">{clock(elapsed)} <span className="font-medium text-[#8a7a6a]">/ {clock(VOICE_MAX_SECONDS)}</span></span>
               <span className="text-sm text-[#8a7a6a] truncate">იწერება…</span>
             </div>
             <button type="button" onClick={finishRecording} aria-label="დასრულება" className={`${round} bg-[#7a2028] text-[#fbf6ec]`}>
@@ -499,9 +522,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           </>
         )}
       </div>
-      )}
-      {mode.k === 'recording' && (
-        <p className="px-5 -mt-1 pb-3 text-xs text-[#a89886]">მაქსიმუმ {VOICE_MAX_SECONDS / 60} წუთი. ■ — დასრულება, მერე მოისმენთ და გაგზავნით.</p>
       )}
     </section>
   );

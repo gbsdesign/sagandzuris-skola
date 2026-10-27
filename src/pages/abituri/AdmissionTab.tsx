@@ -1,14 +1,12 @@
 import React from 'react';
 import { ExternalLink, FileCheck2, Globe, Heart, Landmark } from 'lucide-react';
 import { DOCUMENTS, REASONS } from '../../data/abituriProgram';
-import { CARD, Pill, SectionHead, UpdateNotice } from './shared';
+import { CARD, Pill, SectionHead } from './shared';
 
 // Admission: the documents for the university's own exams, the national exams, and why to study there
 
 export const AdmissionTab: React.FC = () => (
   <div className="space-y-7">
-    <UpdateNotice />
-
     <section>
       <SectionHead title="რეგისტრაცია გამოცდებზე" sub="ორი რეგისტრაცია — შიდა და ეროვნული" />
       <div className="grid gap-3">

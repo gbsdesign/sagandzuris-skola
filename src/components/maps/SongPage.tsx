@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRightLeft, FileText, Headphones, Music, TextAlignStart } from 'lucide-react';
+import { ArrowRightLeft, FileText, GraduationCap, Headphones, Music, TextAlignStart } from 'lucide-react';
 import {
-  FOLK_SONGS, FolkSong, getFolkRegion, songDocUrl, songRecMedia, songVersionMedia, soundcloudEmbedUrl,
+  FOLK_SONGS, FolkSong, centreRecMedia, getFolkRegion, songDocUrl, songRecMedia, songVersionMedia, soundcloudEmbedUrl,
 } from '../../data/songsData';
+import { audiomackEmbedUrl } from '../../data/folkCentre';
+import { useCanDownloadCentre } from '../../hooks/useCentreDownload';
 import type { ChantMediaItem } from '../../data/chantMediaRegistry';
 import { ChantPlayer } from '../ChantPlayer';
 import { triggerHaptic } from '../../utils/haptics';
@@ -10,6 +12,9 @@ import { stopPreview } from '../../utils/listPreview';
 import { useAuth } from '../../context';
 import { usePlacements } from '../../data/placements';
 import { MoveSheet } from '../archive/MoveSheet';
+import { LearnAudio } from '../learn/LearnAudio';
+import { songPiece } from '../../utils/learn';
+import { BackBtn, useScrolledAway } from '../ui/kit';
 
 // One recording of a song: the school's own versions (voices) first, then the archive's performers
 export interface SongTake {
@@ -17,6 +22,8 @@ export interface SongTake {
   sub?: string;
   media: ChantMediaItem;
   recId?: string; // an archive recording: it can be moved („გადატანა“)
+  embed?: string; // a Folklore Centre recording not yet in the Drive: Audiomack's own player
+  centre?: boolean; // the Folklore Centre's: saving it (MP3 / offline) only for members an admin allowed
 }
 
 export const songTakes = (s: FolkSong): SongTake[] => [
@@ -26,7 +33,19 @@ export const songTakes = (s: FolkSong): SongTake[] => [
     media: songVersionMedia(s, v),
   })),
   ...(s.recs ?? []).map(r => ({ label: r.who, sub: r.note, media: songRecMedia(s, r), recId: r.id })),
+  ...(s.centre ?? []).map(r => ({
+    label: r.who, sub: r.note, media: centreRecMedia(s, r), centre: true, embed: r.mp3 ? undefined : audiomackEmbedUrl(r.page),
+  })),
 ];
+
+/** One take's player: the school's player, or Audiomack's for a Centre recording the Drive does not have yet. */
+export const TakePlayer: React.FC<{ take: SongTake; title: string; subtitle: string; hideNotesButton?: boolean; pauseToken?: number }> = ({ take, title, subtitle, hideNotesButton, pauseToken }) => {
+  const canSave = useCanDownloadCentre();
+  if (take.embed) {
+    return <iframe title={`${title} · ${take.label}`} src={take.embed} className="block w-full h-[280px] border-0 rounded-xl" allow="autoplay" loading="lazy" />;
+  }
+  return <ChantPlayer media={take.media} title={title} subtitle={subtitle} hideNotesButton={hideNotesButton} noDownload={take.centre && !canSave} pauseToken={pauseToken} />;
+};
 
 // A song's page over the whole screen: one recording (player with MP3 download) and the words.
 // It is a history entry (sgSong = "songId~take"), so the phone's back gesture closes it.
@@ -62,6 +81,7 @@ export const SongPage: React.FC = () => {
   // the owner and the superadmins move a recording to another region, song or to the chants
   const { isSuperAdmin } = useAuth();
   const [moving, setMoving] = useState(false);
+  const [learning, setLearning] = useState(false);
   usePlacements();
   // a quick listen started from a list stops when the page opens: its own player takes over
   useEffect(() => { if (state) stopPreview(); }, [state]);
@@ -91,6 +111,9 @@ export const SongPage: React.FC = () => {
   const takes = song ? songTakes(song) : [];
   const takeIdx = Math.min(Math.max(Number(takeStr) || 0, 0), Math.max(takes.length - 1, 0));
   const take = takes[takeIdx];
+  // the bar names the song only once its big title has scrolled under it
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const titleAway = useScrolledAway(titleRef, scrollRef, songId);
   const words = useSongText(song);
 
   useEffect(() => {
@@ -133,16 +156,13 @@ export const SongPage: React.FC = () => {
       {/* top bar */}
       <div className="sticky top-0 z-10 safe-top bg-[#faf6ef]/95 backdrop-blur border-b border-[#e4d8c4]">
         <div className="safe-x"><div className="max-w-2xl mx-auto h-14 px-3 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={close}
-            className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-[#574739] hover:bg-[#f1e9dc] active:scale-95 transition cursor-pointer"
-            aria-label="უკან"
-            title="უკან"
+          <BackBtn onClick={close} />
+          <span
+            aria-hidden
+            className={`min-w-0 flex-1 truncate text-[15px] font-bold text-[#2a2017] transition-opacity duration-200 ${titleAway ? 'opacity-100' : 'opacity-0'}`}
           >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-[#2a2017]">{song.title}</span>
+            {song.title}
+          </span>
         </div></div>
       </div>
 
@@ -153,7 +173,7 @@ export const SongPage: React.FC = () => {
             <span className="w-3 h-3 rounded-[4px] border border-black/10" style={{ background: region.color }} />
             {place}
           </span>
-          <h1 className="text-[26px] sm:text-[30px] font-black leading-tight text-[#2a2017] break-words">{song.title}</h1>
+          <h1 ref={titleRef} className="text-[26px] sm:text-[30px] font-black leading-tight text-[#2a2017] break-words">{song.title}</h1>
           {song.genre && (
             <span className="self-start mt-0.5 px-2.5 py-1 rounded-full bg-[#fcf1df] border border-[#efd6a6] text-[12px] font-bold text-[#8a4b12]">
               {song.genre}
@@ -203,12 +223,26 @@ export const SongPage: React.FC = () => {
                 </button>
               )}
             </p>
-            <ChantPlayer
+            {!take.embed && take.media.tracks.some(Boolean) && (
+              <button
+                type="button"
+                onClick={() => { triggerHaptic(10); setLearning(true); }}
+                className="mx-1 mb-2 w-[calc(100%-8px)] min-h-12 px-4 rounded-xl bg-[#7a2028]/[0.07] hover:bg-[#7a2028]/[0.12] text-[#7a2028] inline-flex items-center gap-2.5 text-left cursor-pointer transition active:scale-[0.99]"
+              >
+                <GraduationCap className="w-5 h-5 shrink-0" />
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[14px] font-bold leading-tight">სასწავლო რეჟიმი</span>
+                  <span className="block text-[12px] text-[#8c6a5a] leading-tight">ნაწილ-ნაწილ: მოსმენა წრეზე, ნელა, შენი სიმღერა</span>
+                </span>
+              </button>
+            )}
+            <TakePlayer
               key={`${song.id}-${takeIdx}`}
-              media={take.media}
+              take={take}
               title={song.title}
               subtitle={`${region.nameGe} · ${take.label}`}
               hideNotesButton
+              pauseToken={learning ? 1 : 0}
             />
           </section>
         ) : song.soundcloud ? (
@@ -254,6 +288,15 @@ export const SongPage: React.FC = () => {
           </section>
         )}
       </div></div>
+      {learning && take && !take.embed && (
+        <LearnAudio
+          piece={songPiece(song.id, takeIdx)}
+          media={take.media}
+          title={song.title}
+          subtitle={take.label}
+          onClose={() => setLearning(false)}
+        />
+      )}
       {moving && take?.recId && (
         <MoveSheet
           target={{

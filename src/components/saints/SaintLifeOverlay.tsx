@@ -42,11 +42,11 @@ const Runs: React.FC<{ runs: LifeRun[]; skipFirst?: number }> = ({ runs, skipFir
 );
 
 // the icon in a thin gilded frame
-const Icon: React.FC<{ block: Extract<LifeBlock, { img: string }>; lead?: boolean }> = ({ block, lead }) => {
+const Icon: React.FC<{ block: Extract<LifeBlock, { img: string }>; lead?: boolean; small?: boolean }> = ({ block, lead, small }) => {
   const [ok, setOk] = useState(true);
   if (!ok) return null;
   return (
-    <figure className={lead ? 'mx-auto mb-6 w-fit sm:float-left sm:mr-7 sm:mb-3 sm:mt-1.5' : 'mx-auto my-6 w-fit clear-both'}>
+    <figure className={small ? 'w-fit' : lead ? 'mx-auto mb-6 w-fit sm:float-left sm:mr-7 sm:mb-3 sm:mt-1.5' : 'mx-auto my-6 w-fit clear-both'}>
       <span className="block rounded-[14px] p-[5px] bg-gradient-to-b from-[#e9cf98] via-[#d2a04a] to-[#b98a3a] shadow-[0_22px_36px_-22px_rgba(74,40,10,0.65)]">
         <img
           src={lifeAsset(block.img)}
@@ -54,7 +54,7 @@ const Icon: React.FC<{ block: Extract<LifeBlock, { img: string }>; lead?: boolea
           width={block.w}
           height={block.h}
           onError={() => setOk(false)}
-          className={`block rounded-[10px] bg-[#f3e8d4] w-auto h-auto ${lead ? 'max-h-[300px] sm:max-h-[340px] max-w-[min(78vw,280px)]' : 'max-h-[360px] max-w-full'}`}
+          className={`block rounded-[10px] bg-[#f3e8d4] w-auto h-auto ${small ? 'max-h-[150px] sm:max-h-[180px] max-w-[40vw]' : lead ? 'max-h-[300px] sm:max-h-[340px] max-w-[min(78vw,280px)]' : 'max-h-[360px] max-w-full'}`}
         />
       </span>
     </figure>
@@ -63,9 +63,22 @@ const Icon: React.FC<{ block: Extract<LifeBlock, { img: string }>; lead?: boolea
 
 const Body: React.FC<{ life: Life }> = ({ life }) => {
   const firstText = life.b.findIndex(b => 'r' in b && !b.a);
+  // icons that open the life one after another stand in one row (smaller) instead of a tall stack
+  const firstImg = life.b.findIndex(b => 'img' in b);
+  let lastLead = firstImg;
+  while (firstImg >= 0 && firstImg < 3 && lastLead + 1 < life.b.length && 'img' in life.b[lastLead + 1]) lastLead++;
+  const row = firstImg >= 0 && firstImg < 3 && lastLead > firstImg;
   return (
     <div className="font-serif-ge text-[16.5px] sm:text-[17.5px] leading-[1.85] text-[#2a2017] text-pretty">
       {life.b.map((b, i) => {
+        if (row && i === firstImg) {
+          return (
+            <div key={i} className="mb-6 flex flex-wrap items-end justify-center gap-3">
+              {life.b.slice(firstImg, lastLead + 1).map((x, k) => 'img' in x && <Icon key={k} block={x} small />)}
+            </div>
+          );
+        }
+        if (row && i > firstImg && i <= lastLead) return null;
         if ('img' in b) return <Icon key={i} block={b} lead={i < 3 && life.b.slice(0, i).every(x => !('img' in x))} />;
         if ('h' in b) {
           if (b.l) {
