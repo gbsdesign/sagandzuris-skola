@@ -21,8 +21,8 @@ export const SECTIONS: SectionDef[] = [
   { id: 'mtkmeli', label: 'მთქმელი', page: 'mtkmeli' },
   { id: 'sakravebi', label: 'საკრავები', page: 'sakravebi' },
   { id: 'medavitneoba', label: 'ფსალმუნთა ჯგუფი', page: 'psalter', hint: 'ერთად ვკითხულობთ ფსალმუნს' },
-  // „მედავითნეობა“ on the vine: a topic of its own, not built yet (the psalter group keeps the old id)
-  { id: 'medavitneobaTopic', label: 'მედავითნეობა', hint: 'ჯერ მზადდება' },
+  // „მედავითნეობა“ on the vine: the reader's course (the psalter group keeps the old id)
+  { id: 'medavitneobaTopic', label: 'მედავითნეობა', page: 'medavitneoba', hint: 'მედავითნის სასწავლო კურსი' },
   { id: 'chvevebi', label: 'ჩვევები', page: 'gz', hint: 'ლოცვები ჩვევებიდან იხსნება' },
   // the pearls game: a round button of „საგანძურის გზა“ (the „თამაშები“ page until 2026-10-27)
   { id: 'tamashebi', label: 'მარგალიტები', page: 'gz', hint: 'მოისმინე, იმღერე, გააპრიალე' },

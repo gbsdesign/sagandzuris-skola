@@ -108,6 +108,7 @@ const MessagesPage = page(() => import('../pages/MessagesPage'), 'MessagesPage')
 const AbituriPage = page(() => import('../pages/AbituriPage'), 'AbituriPage');
 const OfflinePage = page(() => import('../pages/OfflinePage'), 'OfflinePage');
 const BirthdaysPage = page(() => import('../pages/BirthdaysPage'), 'BirthdaysPage');
+const MedavitneobaPage = page(() => import('../pages/MedavitneobaPage'), 'MedavitneobaPage');
 
 /** „ფსალმუნთა ჯგუფი“ (the vine, the home tile, a reminder): the class page of the group's class, opened at its psalter
  *  section; a group no class holds (made before 2026-10-20) keeps the old group page. Waits a moment for the classes. */
@@ -147,6 +148,7 @@ const PAGE_TITLES: Partial<Record<PageType, string>> = {
   offline: 'ოფლაინ რეჟიმი',
   commemoration: 'მოსახსენებელი',
   birthdays: 'დაბადების დღეები',
+  medavitneoba: 'მედავითნეობა',
 };
 // an open library book shows its own name in the bar (the shelf's covers; LibraryPage's `mapItem` „book:12“)
 const LIBRARY_BOOKS: Record<string, string> = {
@@ -286,6 +288,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
 
           {currentPage === 'birthdays' && <BirthdaysPage />}
 
+          {currentPage === 'medavitneoba' && <MedavitneobaPage />}
 
           {currentPage === 'simghera' && (
             <div className="w-full my-2 px-1">
