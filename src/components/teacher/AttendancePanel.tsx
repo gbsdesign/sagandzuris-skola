@@ -72,8 +72,8 @@ export const AttendanceDays: React.FC<{ a: ClassAttendance; total: number }> = (
         </label>
       </div>
       <div className="mt-2.5 flex flex-wrap items-center gap-2">
-        <p className="flex-1 min-w-40 text-[13px] text-[#8a7a6a]">
-          {WEEKDAYS_GE[weekdayOf(a.date)]}, {shortDate(a.date)} ·{' '}
+        {/* the day itself is the picked chip above: here only how many came */}
+        <p className="flex-1 min-w-32 text-[13px] text-[#8a7a6a]">
           {a.marked ? <span className="font-bold text-emerald-800 tabular-nums">მოვიდა {a.present.length}/{total}</span> : 'ჯერ არ მონიშნულა'}
         </p>
         {a.present.length < total && <Btn kind="soft" size="sm" icon={<CheckCheck />} onClick={a.allCame}>ყველა მოვიდა</Btn>}

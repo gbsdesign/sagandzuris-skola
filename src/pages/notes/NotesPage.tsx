@@ -213,12 +213,12 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const gutter = wide ? 28 : land ? 14 : 8;
   const isSaved = Boolean(selectedChantVariants?.[vid]);
   const progIdx = liturgy.role === 'teacher' ? (liturgy.program?.items.indexOf(vid) ?? -1) : -1;
-  // the teacher's „მსახურება“ in the top bar: adds this version to the service being composed, or takes it out
+  // the teacher's „წირვა“ in the top bar: adds this version to the service being composed, or takes it out
   const toggleProgram = () => {
     triggerHaptic(12);
     const items = liturgy.toggle(vid);
     const i = items.indexOf(vid);
-    showToast(i >= 0 ? `დაემატა მსახურებაში · №${i + 1}` : 'ამოიშალა მსახურებიდან');
+    showToast(i >= 0 ? `დაემატა წირვაში · №${i + 1}` : 'ამოიშალა წირვიდან');
   };
   const tapLines = panel === 'synth' && !church && Boolean(score);
   const shownPaper = paper === 'auto' ? (darkOS ? 'night' : 'day') : paper;
@@ -933,9 +933,9 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
             )}
             {liturgy.role === 'teacher' && (
               <button type="button" className={`np-tool ${progIdx >= 0 ? 'saved' : ''}`} data-tool="program" aria-pressed={progIdx >= 0} onClick={toggleProgram}
-                title={progIdx >= 0 ? `მსახურებაშია, №${progIdx + 1}. ამოღება` : 'მსახურებაში დამატება'}>
+                title={progIdx >= 0 ? `წირვაშია, №${progIdx + 1}. ამოღება` : 'წირვაში დამატება'}>
                 <span className="np-ico">{progIdx >= 0 ? <span className="np-pnum">{progIdx + 1}</span> : <ListPlus strokeWidth={1.8} />}</span>
-                <span className="np-lb">მსახურება</span>
+                <span className="np-lb">წირვა</span>
               </button>
             )}
             <button type="button" className={`np-tool ${isSaved ? 'saved' : ''}`} data-tool="save" aria-pressed={isSaved} onClick={() => { triggerHaptic(12); toggleVariantSelection(chant, variant); }} title="დამოუკიდებელ სამუშაოში დამატება">
