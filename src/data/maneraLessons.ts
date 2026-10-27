@@ -1,6 +1,7 @@
 // „ოსტატობა → რჩევები“: each tip of MANERA_ITEMS (by its num) gets a lesson to read and an exercise to do with a
 // timer. The exercise's notes sound from a base note the student picks (low or high voice): `tones` are semitones
-// above it; one tone is held for the whole round, several share the round evenly (a scale, a glide).
+// above it; one tone is held for the whole round, several share the round evenly (a scale, a glide). The other
+// exercise groups (hearing, three voices, folk ways, rhythm) are in data/vocalDrills.ts and use the same steps.
 
 export interface ManeraLesson {
   /** what it is and why it matters, one or two short paragraphs */
@@ -19,6 +20,17 @@ export interface ManeraStep {
   /** rounds, with a short breath between them */
   reps?: number;
   tones?: number[];
+  /** three voices at once, top first (I, II, III); each shares the round evenly like `tones`. The synth leaves out
+   *  the voice the student sings (they pick it), unless `listen` (all sound) or `voice` (this step's voice, 0–2). */
+  parts?: number[][];
+  listen?: boolean;
+  voice?: number;
+  /** what the student sings, for the tuner, when it is not what sounds (an interval over a drone) */
+  sing?: number[];
+  /** a click: beats per minute, beats in a bar and the accented ones (0 = the first) */
+  bpm?: number;
+  bar?: number;
+  accents?: number[];
 }
 
 export interface ManeraExercise {

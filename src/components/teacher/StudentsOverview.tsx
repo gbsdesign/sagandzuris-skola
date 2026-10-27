@@ -19,6 +19,7 @@ import { abilitiesText, interestsText } from '../../utils/profileFields';
 import { syncKidsFlag } from '../../hooks/useDirectChat';
 import { Avatar as Face } from '../classes/ChatPanel';
 import { PearlReview } from '../pearls/PearlReview';
+import { DrillReview } from '../mastery/DrillReview';
 
 const VOICE = { '1': 'მთქმელი', '2': 'მოძახილი', '3': 'ბანი' } as Record<string, string>;
 const MONTHS = ['იანვარში', 'თებერვალში', 'მარტში', 'აპრილში', 'მაისში', 'ივნისში', 'ივლისში', 'აგვისტოში', 'სექტემბერში', 'ოქტომბერში', 'ნოემბერში', 'დეკემბერში'];
@@ -316,6 +317,7 @@ const StudentSheet: React.FC<{
           </dl>
 
           <PearlReview uid={uid} pearls={record.data.pearls} shine={record.data.pearlShine} />
+          <DrillReview uid={uid} drillDone={record.data.drillDone} />
 
           {/* kids' mode: the teacher turns it on; the student can't turn it off */}
           <div className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] px-3.5 pb-3">

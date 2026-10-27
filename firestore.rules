@@ -176,6 +176,21 @@ service cloud.firestore {
       allow delete: if isSelf() || isAdmin();
     }
 
+    // „ოსტატობა“: a member's recording of an exercise, sent to their teachers (utils/drillTakes.ts)
+    match /drillTakes/{userId}/takes/{drillId} {
+      function teachesStudent() {
+        return isTeacher()
+          && uid() in get(/databases/$(database)/documents/students/$(userId)).data.get('teacherIds', []);
+      }
+      function isSelf() { return isSignedIn() && uid() == userId; }
+      allow read: if isSelf() || isAdmin() || teachesStudent();
+      allow create, update: if isSelf()
+        && request.resource.data.keys().hasOnly(['audio', 'mime', 'seconds', 'at'])
+        && request.resource.data.audio is bytes && request.resource.data.audio.size() < 600000
+        && request.resource.data.seconds is number;
+      allow delete: if isSelf() || isAdmin();
+    }
+
     // ---- Directory: name and photo of everyone signed in, so teachers can add people to their classes
     // and psalter groups without seeing anyone's private record. Each person writes only their own entry.
     match /directory/{userId} {

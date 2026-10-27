@@ -1,8 +1,11 @@
 import { useCallback, useEffect, useState } from 'react';
+import { doc, setDoc } from 'firebase/firestore';
+import { db } from '../firebase';
 import { georgiaToday } from './psalter';
 
-// The manera exercises a student has done, kept on this device only (the student's own note, nobody else reads it):
-// tip num → the Georgian days it was done, the last 60 days.
+// The exercises a student has done („ოსტატობა“), by drill id (data/vocalDrills.ts), kept on this device: drill id →
+// the Georgian days it was done, the last 60 days. A signed-in member also leaves the last day in
+// students/{uid}.drillDone {drillId: 'YYYY-MM-DD'}, so the teachers see an exercise they assigned done.
 const KEY = 'sg-manera-done';
 const EVENT = 'sg-manera-done';
 type Done = Record<string, string[]>;
@@ -16,16 +19,17 @@ const read = (): Done => {
 
 const daysAgo = (n: number) => georgiaToday(new Date(Date.now() - n * 86400000));
 
-export const markManeraDone = (num: string) => {
+export const markDrillDone = (id: string, uid?: string | null) => {
   const done = read();
   const today = georgiaToday();
   const oldest = daysAgo(60);
-  done[num] = [...new Set([...(done[num] || []), today])].filter(d => d >= oldest);
+  done[id] = [...new Set([...(done[id] || []), today])].filter(d => d >= oldest);
+  if (uid) setDoc(doc(db, 'students', uid), { drillDone: { [id]: today } }, { merge: true }).catch(() => {});
   try { localStorage.setItem(KEY, JSON.stringify(done)); } catch { /* storage off: the tick lasts this visit */ }
   window.dispatchEvent(new Event(EVENT));
 };
 
-/** Which tips are done today, and on how many of the last 7 days anything was practised. */
+/** Which drills are done today, and on how many of the last 7 days anything was practised. */
 export const useManeraPractice = () => {
   const [done, setDone] = useState<Done>(read);
   useEffect(() => {
@@ -36,7 +40,7 @@ export const useManeraPractice = () => {
   }, []);
   const today = georgiaToday();
   const weekStart = daysAgo(6);
-  const doneToday = useCallback((num: string) => !!done[num]?.includes(today), [done, today]);
+  const doneToday = useCallback((id: string) => !!done[id]?.includes(today), [done, today]);
   const weekDays = new Set(Object.values(done).flat().filter(d => d >= weekStart)).size;
   return { doneToday, weekDays };
 };

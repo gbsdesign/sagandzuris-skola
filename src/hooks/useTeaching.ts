@@ -60,6 +60,8 @@ export interface Assignment {
   title: string;
   variantId?: string;
   code?: string;
+  /** an exercise of „ოსტატობა“ (data/vocalDrills.ts) instead of a chant */
+  exercise?: string;
   voices: string[];   // '1' | '2' | '3'; empty for items without voices
   due: string;        // YYYY-MM-DD
   note?: string;
@@ -73,6 +75,7 @@ const toAssignment = (classId: string, id: string, d: any): Assignment => ({
   title: d.title || 'დავალება',
   variantId: d.variantId || undefined,
   code: d.code || '',
+  exercise: typeof d.exercise === 'string' && d.exercise ? d.exercise : undefined,
   voices: Array.isArray(d.voices) ? d.voices : [],
   due: d.due || '',
   note: d.note || '',
@@ -117,7 +120,12 @@ export const useMyAssignments = (classIds: string[], uid?: string | null) => {
 };
 
 export const createAssignment = (classId: string, a: Omit<Assignment, 'id' | 'classId'>, by: string) =>
-  addDoc(collection(db, 'classes', classId, 'assignments'), { ...a, createdAt: new Date().toISOString(), createdBy: by });
+  addDoc(collection(db, 'classes', classId, 'assignments'), {
+    // Firestore takes no undefined fields
+    ...Object.fromEntries(Object.entries(a).filter(([, v]) => v !== undefined)),
+    createdAt: new Date().toISOString(),
+    createdBy: by,
+  });
 
 export const deleteAssignment = (classId: string, id: string) => deleteDoc(doc(db, 'classes', classId, 'assignments', id));
 

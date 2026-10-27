@@ -9,6 +9,7 @@ import { CATEGORY_LABEL, PathCategory, Voice, categoryOf, usesVoices } from '../
 import { triggerHaptic } from '../../utils/haptics';
 import { usePathItemOpener } from '../views/PathOrbs';
 import { WorkItems, currentWork, workDone } from '../teacher/MyClassWork';
+import { useDrillDone } from '../../utils/drillTakes';
 import { AssignmentsFold } from '../teacher/AssignmentsPanel';
 import { Avatar } from './ChatPanel';
 import { findVersion } from '../../data/chantLookup';
@@ -41,6 +42,7 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; actio
   const { user } = useAuth();
   const { selectedChantVariants = {} } = useChants();
   const confirmed = useConfirmations(user?.uid);
+  const drillDone = useDrillDone(user?.uid);
   const marks = useClassMarks(cls.id);
   const openerOf = usePathItemOpener();
   const assignments = useAssignments(cls.id);
@@ -66,7 +68,7 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; actio
 
   // a teacher sees all the class's assignments, a member those for the whole class or for them
   const work = currentWork(canEdit ? assignments : assignments.filter(a => !a.studentIds.length || (!!user && a.studentIds.includes(user.uid))));
-  const workDot = work.some(a => daysUntil(a.due) >= 0 && (canEdit || !workDone(a, confirmed)));
+  const workDot = work.some(a => daysUntil(a.due) >= 0 && (canEdit || !workDone(a, confirmed, drillDone)));
 
   const cats = (Object.keys(CATEGORY_LABEL) as PathCategory[])
     .map(id => {
