@@ -127,6 +127,7 @@ export const useOpenShortcut = () => {
         if (ref === 'chvevebi') { openPathPanel('habits'); navigateTo('gz'); return; }
         if (ref === 'medavitneoba') { navigateTo('psalter'); return; }
         if (ref === 'tamashebi') { openPathPanel('pearls'); navigateTo('gz'); return; }
+        if (ref === 'medavitneobaTopic') { navigateTo('medavitneoba'); return; }
         navigateTo((ref === 'gza' ? 'gz' : ref) as Parameters<typeof navigateTo>[0]);
         return;
       case 'special':
