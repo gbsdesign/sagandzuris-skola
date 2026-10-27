@@ -1,6 +1,6 @@
 import React from 'react';
 import { ChevronRight, Headphones } from 'lucide-react';
-import { ServiceType } from '../../context';
+import { ServiceType, useAuth } from '../../context';
 import { ALBUM_RECS, CHANT_ALBUMS, ChantAlbumId } from '../../data/chantAlbums';
 import { usePlacements } from '../../data/placements';
 import { triggerHaptic } from '../../utils/haptics';
@@ -8,8 +8,8 @@ import { triggerHaptic } from '../../utils/haptics';
 type Service = NonNullable<ServiceType>;
 
 // The sections of the chant page, in order, each with a short gloss under its name. A section whose chants are
-// not in the app yet has no `service`: it is shown marked "მალე" and does not open. When a book fills one, give it
-// its service (ServiceType + the chant list in chantLookup / chantSearch).
+// not in the app yet has no `service`: it is only named in the one quiet „მალე: …“ line under the list. When a book
+// fills one, give it its service (ServiceType + the chant list in chantLookup / chantSearch).
 const SECTIONS: Array<{ title: string; note: string; service?: Service }> = [
   { title: 'წირვა', note: 'საღმრთო ლიტურგია', service: 'წირვა' },
   { title: 'მწუხრი', note: 'საღამოს ლოცვა', service: 'მწუხრი' },
@@ -35,11 +35,14 @@ interface ServiceTabsProps {
 
 export const ServiceTabs: React.FC<ServiceTabsProps> = ({ onSelectService, onOpenAlbum }) => {
   usePlacements(); // the album counts follow a moved recording
+  // „დასაზუსტებელი“ is the admins' sorting box, not a list for members
+  const { isAdmin } = useAuth();
+  const soon = SECTIONS.filter(s => !s.service).map(s => s.title);
   return (
     <div className="w-full my-2 px-1 flex flex-col items-center">
       {/* as wide as the "დღევანდელი წირვა" card above (max-w-2xl) */}
       <div className="w-full max-w-2xl flex flex-col gap-2.5">
-        {SECTIONS.map(({ title, note, service }) => service ? (
+        {SECTIONS.map(({ title, note, service }) => service && (
           <button
             key={title}
             type="button"
@@ -57,19 +60,11 @@ export const ServiceTabs: React.FC<ServiceTabsProps> = ({ onSelectService, onOpe
               <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
             </span>
           </button>
-        ) : (
-          <div
-            key={title}
-            aria-disabled="true"
-            className="w-full flex items-center gap-3 py-3 pl-5 pr-3.5 rounded-2xl bg-[#fbf6ec]/70 ring-1 ring-[#e6d9c2] select-none cursor-default"
-          >
-            <span className="flex-1 min-w-0">
-              <span className="block font-serif-ge font-bold text-lg sm:text-xl leading-tight text-[#7a2028]/60">{title}</span>
-              <span className="block mt-0.5 text-[13px] text-[#8a7a6a]/80 leading-snug">{note}</span>
-            </span>
-            <span className="shrink-0 px-2.5 py-1 rounded-full text-[12px] font-semibold leading-none text-[#8a7a6a] bg-[#e6d9c2]/60">მალე</span>
-          </div>
         ))}
+
+        {soon.length > 0 && (
+          <p className="mx-1 -mt-0.5 text-[13px] leading-snug text-[#8a7a6a]"><span className="font-semibold">მალე:</span> {soon.join(' · ')}</p>
+        )}
 
         {onOpenAlbum && (
           <>
@@ -78,7 +73,7 @@ export const ServiceTabs: React.FC<ServiceTabsProps> = ({ onSelectService, onOpe
               <span className="font-serif-ge font-bold text-[19px] leading-tight text-[#7a2028]">ჩანაწერები</span>
               <span className="h-px flex-1 bg-gradient-to-r from-[#e6d9c2] to-transparent" aria-hidden />
             </div>
-            {CHANT_ALBUMS.map(({ id, title, note }) => (
+            {CHANT_ALBUMS.filter(a => a.id !== 'unsure' || isAdmin).map(({ id, title }) => (
               <button
                 key={id}
                 type="button"
@@ -90,9 +85,7 @@ export const ServiceTabs: React.FC<ServiceTabsProps> = ({ onSelectService, onOpe
               >
                 <span className="flex-1 min-w-0">
                   <span className="block font-serif-ge font-bold text-[17px] sm:text-lg leading-tight text-[#2a2017]">{title}</span>
-                  <span className="block mt-0.5 text-[13px] text-[#8a7a6a] leading-snug">
-                    {ALBUM_RECS[id].length} ჩანაწერი · {note}
-                  </span>
+                  <span className="block mt-0.5 text-[13px] text-[#8a7a6a] leading-snug">{ALBUM_RECS[id].length} ჩანაწერი</span>
                 </span>
                 <span className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[#b4620e] bg-[#b4620e]/[0.08] group-hover:bg-[#b4620e] group-hover:text-white transition-colors" aria-hidden>
                   <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />

@@ -12,7 +12,8 @@ interface ChantSearchBarProps {
   phoneTitle?: boolean;
 }
 
-/** The list's heading row, as in the prototype: the title on the left, a small search and the download on the right.
+/** The list's heading row, as in the prototype: the title on the left, a small filter of this service's chants and
+ *  the download on the right.
  *  On a phone the search is an icon that opens into a field over the title. */
 export const ChantSearchBar: React.FC<ChantSearchBarProps> = ({
   title,
@@ -41,8 +42,8 @@ export const ChantSearchBar: React.FC<ChantSearchBarProps> = ({
             value={searchQuery}
             onChange={(e) => onSearchChange(e.target.value)}
             onBlur={() => { if (!searchQuery) setOpen(false); }}
-            placeholder="ძიება ყველგან…"
-            aria-label="ძიება საგალობლებში, სიმღერებსა და ლოცვებში"
+            placeholder="ამ მსახურებაში…"
+            aria-label="ძიება ამ მსახურებაში"
             className="w-full sm:w-52 h-9 pl-8 pr-7 rounded-full bg-white text-[12.5px] text-[#2a2017] placeholder-[#a0907c] shadow-[inset_0_0_0_1px_#e4d8c4] focus:outline-none focus:shadow-[inset_0_0_0_1.5px_rgba(122,32,40,0.45)] transition-shadow [&::-webkit-search-cancel-button]:hidden"
           />
           {searchQuery && (
@@ -63,8 +64,8 @@ export const ChantSearchBar: React.FC<ChantSearchBarProps> = ({
             type="button"
             onClick={() => setOpen(true)}
             className="sm:hidden shrink-0 w-9 h-9 rounded-full grid place-items-center bg-white text-[#574739] shadow-[inset_0_0_0_1px_#e4d8c4] active:scale-95 transition-transform cursor-pointer"
-            aria-label="ძიება საგალობლებში"
-            title="ძიება"
+            aria-label="ძიება ამ მსახურებაში"
+            title="ძიება ამ მსახურებაში"
           >
             <Search className="w-4 h-4" />
           </button>
