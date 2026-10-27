@@ -91,7 +91,8 @@
 - Fixed/full-screen UI must respect `env(safe-area-inset-*)` (`viewport-fit=cover` is on); helpers
   `.safe-x`, `.safe-top`, `.safe-bottom`, `.safe-bleed` in `index.css`.
 - **Kit rules (redesign stage 1, 2026-10-25)** — `components/ui/kit.tsx`: every inner page has the one `PageBar`
-  (44px round ←, title left, 36px round 📌/✎ right; the router gives most pages theirs); asking before deleting
+  (44px round ←, title left, 36px round 📌/✎ right; the router gives most pages theirs; full-screen windows with their own
+  sticky bar use the same `BackBtn` and show the title only once the big one scrolls away, `useScrolledAway`); asking before deleting
   goes through `askConfirm` (shown by `ConfirmHost` in `App.tsx`), never `window.confirm`; new text ≥12px, nothing
   below 11px anywhere; one paper background for every page in `App.tsx`. Signing out lives only at the profile's
   bottom (`views/ProfileActions.tsx`); the admin panel opens only from the profile's wine row (`views/AdminEntry.tsx`,
