@@ -107,7 +107,6 @@ const MessagesPage = page(() => import('../pages/MessagesPage'), 'MessagesPage')
 const AbituriPage = page(() => import('../pages/AbituriPage'), 'AbituriPage');
 const OfflinePage = page(() => import('../pages/OfflinePage'), 'OfflinePage');
 const BirthdaysPage = page(() => import('../pages/BirthdaysPage'), 'BirthdaysPage');
-const GamesPage = page(() => import('../pages/GamesPage'), 'GamesPage');
 
 /** „ფსალმუნთა ჯგუფი“ (the vine, the home tile, a reminder): the class page of the group's class, opened at its psalter
  *  section; a group no class holds (made before 2026-10-20) keeps the old group page. Waits a moment for the classes. */
@@ -147,7 +146,6 @@ const PAGE_TITLES: Partial<Record<PageType, string>> = {
   offline: 'ოფლაინ რეჟიმი',
   commemoration: 'მოსახსენებელი',
   birthdays: 'დაბადების დღეები',
-  games: 'თამაშები',
 };
 // an open library book shows its own name in the bar (the shelf's covers; LibraryPage's `mapItem` „book:12“)
 const LIBRARY_BOOKS: Record<string, string> = {
@@ -159,6 +157,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   const { currentPage, selectedPrayerId, mapItem, handleGoBack, navigateTo } = useNavigation();
   const { user, loading, isAdmin, isTeacher } = useAuth();
   const access = useAccess();
+  // „მარგალიტები“ (section tamashebi) shows on the path only while the admin's switch and the member's access let it
+  const pathOrbs = PATH_ORBS.filter(o => o.id !== 'pearls' || access.section('tamashebi') === 'open');
   const {
     selectedChantVariants,
     handleToggleSong,
@@ -249,7 +249,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
               {/* the page title sits in the top bar (PageBar); four round buttons on top (სამოსი, ნასწავლი —
                   with the teacher's assignments —, მანერა, სამუშაო) in the member's order, the habits under them */}
               <PathTabs
-                orbs={{ labels: PATH_ORBS, render: order => <PathOrbs order={order} /> }}
+                orbs={{ labels: pathOrbs, render: order => <PathOrbs order={order} /> }}
                 cards={[
                   {
                     id: 'habits',
@@ -279,7 +279,6 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
 
           {currentPage === 'birthdays' && <BirthdaysPage />}
 
-          {currentPage === 'games' && <GamesPage />}
 
           {currentPage === 'simghera' && (
             <div className="w-full my-2 px-1">

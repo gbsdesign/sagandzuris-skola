@@ -9,12 +9,20 @@ export interface SingSession { stop: () => Promise<SingTake>; cancel: () => void
 export const singingSupported = () =>
   typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia && typeof window.AudioContext !== 'undefined';
 
+// iPhone (Safari 16.4+): with the microphone on, sound goes to the quiet ear speaker and may stay there after it
+// is off, so „მოსმენა“ grew faint after singing. The audio session is set for recording only while singing.
+const setAudioSession = (type: 'play-and-record' | 'auto') => {
+  const s = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
+  if (s) try { s.type = type; } catch { /* not supported */ }
+};
+
 /** Asks for the microphone and starts listening; throws if the member refuses access. */
 export const startSinging = async (onPitch: (midi: number | null, t: number) => void): Promise<SingSession> => {
+  setAudioSession('play-and-record');
   // no echo/noise processing: it chops sustained sung notes
   const stream = await navigator.mediaDevices.getUserMedia({
     audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
-  });
+  }).catch(e => { setAudioSession('auto'); throw e; });
   const ctx = new AudioContext();
   if (ctx.state !== 'running') await ctx.resume().catch(() => undefined);
   const analyser = ctx.createAnalyser();
@@ -46,6 +54,7 @@ export const startSinging = async (onPitch: (midi: number | null, t: number) => 
     window.clearInterval(timer);
     stream.getTracks().forEach(t => t.stop());
     ctx.close().catch(() => undefined);
+    setAudioSession('auto');
   };
 
   return {
