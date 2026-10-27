@@ -3,7 +3,7 @@ import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth, useChants } from '../context';
 import { useConfirmations } from './useConfirmations';
-import { Voice, usesVoices, voicesOf } from '../utils/pathItems';
+import { Voice, findCatalogEntry, usesVoices, voicesOf } from '../utils/pathItems';
 
 /** A teacher's stop on a student's own marking (students/{uid}.marksLock): while on, only teachers mark. The student
  *  may still add chants to the path — the lock is only on "what I know". */
@@ -29,7 +29,8 @@ export const saveMarksLock = (uid: string, on: boolean, by: string) =>
   setDoc(doc(db, 'students', uid), { marksLock: { on, by, at: Date.now() } }, { mergeFields: ['marksLock'] });
 
 /** The student's own marks on their path ("რა ვიცი"): a voice — or a whole poem or instrument — on or off. Nothing
- *  while a teacher has locked marking; a voice the teacher confirmed ("ჩათვლა") only the teacher takes back. */
+ *  while a teacher has locked marking; a voice the teacher confirmed ("ჩათვლა") only the teacher takes back. An item
+ *  not on the path yet (marked from the class program) joins it with that mark. */
 export const usePathMarks = (onLearned?: () => void) => {
   const { user } = useAuth();
   const { selectedChantVariants, setSelectedChantVariants } = useChants();
@@ -38,7 +39,7 @@ export const usePathMarks = (onLearned?: () => void) => {
   const locked = !!lock?.on;
 
   const toggle = (id: string, voice: Voice) => {
-    const cur = selectedChantVariants[id];
+    const cur = selectedChantVariants[id] ?? findCatalogEntry(id)?.make();
     if (!cur || locked || (confirmed[id] || []).includes(voice)) return;
     const have = voicesOf(cur, id);
     const adding = !have.includes(voice);
