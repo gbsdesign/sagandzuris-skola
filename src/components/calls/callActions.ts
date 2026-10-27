@@ -39,12 +39,14 @@ export const classCallInfo = (c: SchoolClass, user: User): CallInfo => {
 // the other side declined or hung up: callEnd came after callAt
 const chatEnded = (d: Record<string, unknown>) => ms(d.callEnd) > 0 && ms(d.callEnd) >= ms(d.callAt);
 
-/** The teacher (or an admin) calls: joins the chat's call, then rings the other side; gives up after 45 s. */
+/** The teacher (or an admin) calls: rings the other side at once and joins the chat's call meanwhile (joining
+ *  can take seconds: the microphone's question, the connection); a call that could not start stops the ring.
+ *  Gives up after 45 s. */
 export const startChatCall = async (t: DirectThread, user: User, kind: CallKind) => {
   const info = chatCallInfo(t, user);
-  if (!(await joinCall(info, kind))) return;
   await notePrivateCall(t, { uid: user.uid, name: info.me.name, photoURL: info.me.photoURL, teacher: true }, kind)
     .catch(e => console.warn('call ring: ', e?.code || e));
+  if (!(await joinCall(info, kind))) { endChatCall(t.id).catch(() => {}); return; }
   watchEnd(info.base, chatEnded, info.base);
   giveUpAfter(45_000, () => { endChatCall(t.id).catch(() => {}); });
 };
@@ -57,11 +59,12 @@ export const answerChatCall = async (t: DirectThread, user: User) => {
 
 export const declineChatCall = (t: DirectThread) => endChatCall(t.id).catch(e => console.warn('call: ', e?.code || e));
 
-/** A class's call: a teacher or an admin starts it (the class sees „ზარი მიმდინარეობს“); anyone joins it. */
+/** A class's call: a teacher or an admin starts it (the class sees „ზარი მიმდინარეობს“ at once, while the teacher
+ *  is still joining); anyone joins it. A call that could not start is taken back. */
 export const startClassCall = async (c: SchoolClass, user: User, kind: CallKind) => {
   const info = classCallInfo(c, user);
-  if (!(await joinCall(info, kind))) return;
   await ringClass(c.id, { uid: user.uid, name: info.me.name }, kind).catch(e => console.warn('call ring: ', e?.code || e));
+  if (!(await joinCall(info, kind))) endClassCall(c.id).catch(() => {});
 };
 
 export const joinClassCall = (c: SchoolClass, user: User, kind: CallKind) => joinCall(classCallInfo(c, user), kind);

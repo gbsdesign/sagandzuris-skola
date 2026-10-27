@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  addDoc, Bytes, collection, doc, getDoc, limit, onSnapshot, orderBy, query, serverTimestamp, writeBatch,
+  addDoc, Bytes, collection, doc, getDoc, limit, onSnapshot, orderBy, query, serverTimestamp, updateDoc, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { VoiceTake } from '../utils/voiceRecorder';
@@ -40,6 +40,67 @@ export const classChatBase = (classId: string) => `classes/${classId}`;
 
 const messagesOf = (base: string) => collection(db, base, 'messages');
 const voicePart = (base: string, messageId: string, n: number) => doc(db, base, 'voice', `${messageId}_${n}`);
+
+// ---- which class chats have news: the newest message of each, and when I last read each ------------------
+
+export interface ChatLast { at: Date | null; uid: string; text: string }
+
+/** The newest message of each class chat (live), for the chat list and the header's count. */
+export const useClassLasts = (ids: string[]) => {
+  const [last, setLast] = useState<Record<string, ChatLast | null>>({});
+  const key = ids.join(',');
+  useEffect(() => {
+    const offs = ids.map(id => onSnapshot(
+      query(messagesOf(classChatBase(id)), orderBy('createdAt', 'desc'), limit(1)),
+      s => {
+        const d = s.docs[0]?.data({ serverTimestamps: 'estimate' });
+        setLast(p => ({
+          ...p,
+          [id]: d ? { at: d.createdAt?.toDate?.() || null, uid: d.uid || '', text: d.kind === 'voice' ? '🎤 ხმოვანი შეტყობინება' : d.text || '' } : null,
+        }));
+      },
+      err => console.warn('class chat: ', err?.code || err)
+    ));
+    return () => offs.forEach(off => off());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [key]);
+  return last;
+};
+
+// when I last read each class chat: in my students document (chatSeen.{classId}), so a phone and a computer
+// agree; what this device noted before that still counts
+const SEEN_KEY = 'sg-classChatSeen';
+const deviceSeen = (): Record<string, number> => {
+  try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '{}') || {}; } catch { return {}; }
+};
+
+/** When I last read each class chat (live): classId → ms. */
+export const useChatSeen = (uid?: string | null) => {
+  const [seen, setSeen] = useState<Record<string, number>>(deviceSeen);
+  useEffect(() => {
+    if (!uid) return;
+    return onSnapshot(doc(db, 'students', uid), snap => {
+      const kept = (snap.data()?.chatSeen || {}) as Record<string, unknown>;
+      const next = deviceSeen();
+      for (const [id, at] of Object.entries(kept)) if (typeof at === 'number' && at > (next[id] || 0)) next[id] = at;
+      setSeen(next);
+    }, () => {});
+  }, [uid]);
+  return seen;
+};
+
+/** I have read a class chat up to `at` (its newest message): this device at once, my record in the background. */
+export const markChatSeen = (uid: string, classId: string, at: number) => {
+  const mine = deviceSeen();
+  if ((mine[classId] || 0) >= at) return;
+  mine[classId] = at;
+  try { localStorage.setItem(SEEN_KEY, JSON.stringify(mine)); } catch { /* private window */ }
+  updateDoc(doc(db, 'students', uid), { [`chatSeen.${classId}`]: at }).catch(() => { /* no record yet: this device keeps it */ });
+};
+
+/** someone else wrote after I last read it */
+export const isClassUnread = (last: ChatLast | null | undefined, seenAt: number | undefined, uid: string) =>
+  !!last?.at && last.uid !== uid && (seenAt ?? 0) < last.at.getTime();
 
 /** The chat's latest messages, oldest first (live). */
 export const useChat = (base?: string | null) => {

@@ -9,6 +9,7 @@ import { askSignIn, openSignIn } from '../access/SignInPrompt';
 import { SearchButton } from '../search/GlobalSearch';
 import { OfflineButton } from '../offline/OfflineButton';
 import { useInbox, isUnread } from '../../hooks/useDirectChat';
+import { useClassLasts, useChatSeen, isClassUnread } from '../../hooks/useClassChat';
 import { User as UserIcon, LogIn, Compass, Library, Baby, MessageCircle } from 'lucide-react';
 
 interface HeaderProps {
@@ -32,12 +33,17 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
   const myClasses = [...memberOf, ...teaching.filter(t => !memberOf.some(m => m.id === t.id))];
   // private chats: one's own and, for admins, the administration's (messages page)
   const { threads } = useInbox(user?.uid, isAdmin);
-  const unread = user ? threads.filter(t => isUnread(t, user.uid)).length : 0;
   const { openModal } = useModal();
   const access = useAccess();
   // a member a superadmin has not let in (or not given these) sees no class or private chats; every other member
   // may at least write to the administration
   const showChats = !!user && access.can('messages');
+  // the 💬 count: unread private chats and class chats with a message after I last read them (on any device)
+  const lasts = useClassLasts(showChats && access.can('classes') ? myClasses.map(c => c.id) : []);
+  const seen = useChatSeen(showChats ? user?.uid : null);
+  const unread = user
+    ? threads.filter(t => isUnread(t, user.uid)).length + myClasses.filter(c => isClassUnread(lasts[c.id], seen[c.id], user.uid)).length
+    : 0;
   // kids' mode: no profile settings and no signing out (the teacher turns it off)
   const kids = Boolean(access.kids);
   // the learning tools the admin's switches and the kids' mode leave visible
@@ -100,8 +106,8 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                       ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]'
                       : 'bg-white/80 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028]'
                   }`}
-                  title={unread ? `პირადი შეტყობინებები — ${unread} წაუკითხავი` : 'პირადი შეტყობინებები'}
-                  aria-label={unread ? `პირადი შეტყობინებები, ${unread} წაუკითხავი` : 'პირადი შეტყობინებები'}
+                  title={unread ? `შეტყობინებები — ${unread} წაუკითხავი` : 'შეტყობინებები'}
+                  aria-label={unread ? `შეტყობინებები, ${unread} წაუკითხავი` : 'შეტყობინებები'}
                 >
                   <MessageCircle className="w-4 h-4" />
                   <span className="hidden lg:inline text-[13px] font-bold">წერილები</span>

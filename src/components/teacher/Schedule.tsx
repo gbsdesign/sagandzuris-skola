@@ -47,7 +47,8 @@ export const LessonTable: React.FC<{ slots: LessonSlot[]; title?: string; compac
             <li key={i} className={`flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2.5 ${s.day === today ? 'bg-[#7a2028]/[0.04]' : ''}`}>
               <span className={`min-w-24 sm:min-w-28 shrink-0 text-sm font-bold ${s.day === today ? 'text-[#7a2028]' : 'text-[#4a3426]'}`}>{WEEKDAYS_GE[s.day]}</span>
               <span className="text-sm font-semibold tabular-nums whitespace-nowrap text-[#2a2017]">{s.start}{s.end ? `–${s.end}` : ''}</span>
-              <span className="flex-1 min-w-0 text-[13px] text-[#8a7a6a] truncate">{s.note}</span>
+              {/* the place: beside the time, or on its own line under it on a narrow phone (never cut) */}
+              {s.note && <span className="order-1 basis-full min-[420px]:order-none min-[420px]:basis-auto min-[420px]:flex-1 min-w-0 text-[13px] text-[#8a7a6a] break-words">{s.note}</span>}
               {isNext && <span className="ml-auto shrink-0 h-6 px-2 rounded-full bg-[#7a2028] text-[#fbf6ec] text-[11px] font-bold inline-flex items-center">{whenLabel(next!.inDays)}</span>}
             </li>
           );

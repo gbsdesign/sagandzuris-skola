@@ -155,7 +155,7 @@ export const ClassPage: React.FC<{ classId?: string; focus?: 'psalter' }> = ({ c
           <ClassProgram cls={cls} canEdit={canEdit} action={pencil('program', 'პროგრამის რედაქტირება')} />
           <ClassLessons cls={cls} canEdit={canEdit} />
           <ClassPsalter cls={cls} canLead={canEdit} focus={focus === 'psalter'} />
-          <ClassChat cls={cls} timetable={false} />
+          <ClassChat cls={cls} timetable={false} compact />
         </div>
       </div>
 
