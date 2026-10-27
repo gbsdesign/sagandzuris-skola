@@ -19,6 +19,9 @@
 - **Roomy UI**: comfortable controls (play ~44–48px, icon buttons 36px); fit phones by wrapping, never by shrinking.
 - **Never auto-scroll** a player to the playing line. No octave-leap checks in note audits.
 - Never put the user's email in request headers/URLs (e.g. API User-Agent).
+- **Ready to merge → say it in red.** When a chat's work is finished and its PR is ready (checks green, no conflict),
+  end the reply with a line in red: „🔴 **შესაერთებელია** — PR #N“ (Markdown has no red text, so the red circle + bold),
+  so the user knows to press „Merge“. (The user's rule, 2026-10-27.)
 
 ## Saving tokens (the user pays for every session)
 
