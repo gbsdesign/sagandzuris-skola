@@ -467,30 +467,33 @@ export const ChemiSamosi: React.FC<{ side?: React.ReactNode; bare?: boolean }> =
             </div>
           )}
 
-          {/* progress: one slim bar with hairline marks between the parts, the count beside it */}
-          <div className="flex items-center gap-3" role="progressbar" aria-valuemin={0} aria-valuemax={TOTAL} aria-valuenow={done} aria-label="შეგროვებული ნაწილები">
-            <div className="relative flex-1 h-1.5 rounded-full bg-[#f1e8da] overflow-hidden">
-              <div
-                className={`absolute inset-y-0 left-0 rounded-full transition-[width] duration-700 ease-out ${
-                  complete ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' : 'bg-gradient-to-r from-[#b04450] to-[#7a2028]'
-                }`}
-                style={{ width: `${(done / TOTAL) * 100}%` }}
-              />
-              {Array.from({ length: TOTAL - 1 }, (_, i) => (
-                <span key={i} className="absolute inset-y-0 w-0.5 -ml-px bg-white" style={{ left: `${((i + 1) / TOTAL) * 100}%` }} />
-              ))}
+          {/* progress: one slim bar with hairline marks between the parts, the count beside it (inside the path card
+              its head already says „2 / 8“) */}
+          {!bare && (
+            <div className="flex items-center gap-3" role="progressbar" aria-valuemin={0} aria-valuemax={TOTAL} aria-valuenow={done} aria-label="შეგროვებული ნაწილები">
+              <div className="relative flex-1 h-1.5 rounded-full bg-[#f1e8da] overflow-hidden">
+                <div
+                  className={`absolute inset-y-0 left-0 rounded-full transition-[width] duration-700 ease-out ${
+                    complete ? 'bg-gradient-to-r from-emerald-500 to-emerald-600' : 'bg-gradient-to-r from-[#b04450] to-[#7a2028]'
+                  }`}
+                  style={{ width: `${(done / TOTAL) * 100}%` }}
+                />
+                {Array.from({ length: TOTAL - 1 }, (_, i) => (
+                  <span key={i} className="absolute inset-y-0 w-0.5 -ml-px bg-white" style={{ left: `${((i + 1) / TOTAL) * 100}%` }} />
+                ))}
+              </div>
+              {complete ? (
+                <span className="inline-flex items-center gap-1 h-6 px-2 rounded-full bg-emerald-50 text-emerald-700 text-xs font-black">
+                  <Check className="w-3 h-3 stroke-[3.5]" />
+                  სრულია
+                </span>
+              ) : (
+                <span className="text-xs font-black text-[#7a2028] tabular-nums">
+                  {done}<span className="text-[#b3a593]">/{TOTAL}</span>
+                </span>
+              )}
             </div>
-            {complete ? (
-              <span className="inline-flex items-center gap-1 h-6 px-2 rounded-full bg-emerald-50 text-emerald-700 text-xs font-black">
-                <Check className="w-3 h-3 stroke-[3.5]" />
-                სრულია
-              </span>
-            ) : (
-              <span className="text-xs font-black text-[#7a2028] tabular-nums">
-                {done}<span className="text-[#b3a593]">/{TOTAL}</span>
-              </span>
-            )}
-          </div>
+          )}
 
           {/* the parts: compact tiles, picture first; a ticked tile turns wine-tinted with a check on its picture.
               The extra hats follow under their own line: any one of them counts. A collected hat says whether it is
@@ -502,10 +505,8 @@ export const ChemiSamosi: React.FC<{ side?: React.ReactNode; bare?: boolean }> =
               const name = (
                 <>
                   <span className={`block text-[13px] font-bold leading-tight ${on ? 'text-[#2a2017]' : 'text-[#7d6e5f]'}`}>{p.label}</span>
-                  {p.head && on && (
-                    <span className={`block mt-0.5 text-[11px] font-bold leading-tight ${worn === p.id ? 'text-[#7a2028]' : 'text-[#a99a88]'}`}>
-                      {worn === p.id ? 'თავზე' : 'დახურვა'}
-                    </span>
+                  {p.head && on && worn === p.id && (
+                    <span className="block mt-0.5 text-xs font-bold leading-tight text-[#7a2028]">თავზე</span>
                   )}
                 </>
               );
