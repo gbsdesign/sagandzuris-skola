@@ -110,6 +110,14 @@
 - **Notes page** (details in `src/pages/notes/CLAUDE.md`): tapping a chant version opens a full notes page
   with synth, recording, church mode and the regent's „დღევანდელი წირვა“ program. The choir reads these
   notes live during the Liturgy: nothing may sound by accident, must work offline.
+- **სასწავლო რეჟიმი** (2026-10-27, `components/learn/`): „სწავლა“ beside the zoom on the notes page (`LearnMode`) and
+  „სასწავლო რეჟიმი“ on a song's recording (`LearnAudio`, songs without notes). Parts = lines of the book notes (a short
+  line joins its neighbour) or ~12 s of a recording (`utils/learn.ts` + test); a part loops, 50/75/100%, my voice alone /
+  everyone / everyone but me; singing is checked like the pearls (80% learns it), a recording's part is self-marked
+  „ვიცი“. Reviews after 1, 3, 7 days. Progress `students.learning.{piece}` (`hooks/useLearning.ts`; device for guests).
+  Takes go to the teacher through the pearls' store (`pearlTakes`, ids `learn~<piece>~<part>`, approval in
+  `pearlShine`) — no rules change; teachers hear them in the member's window (`LearnReview`). AI teacher shares the
+  pearls' 3 a day.
 - **Folk songs map** (`data/songsData.ts`, `components/maps/GeorgiaMap.tsx`) and **მთქმელი authors map**
   (`data/mtkmeliData.ts`, `MtkmeliMap.tsx`, shared `RegionPuzzleMap.tsx`). Full texts only for authors who
   died before 1956; others get title + description + wiki link.

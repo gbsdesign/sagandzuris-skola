@@ -2,7 +2,7 @@ import { getApp } from 'firebase/app';
 import { startAppCheck } from './samosiTryOn';
 import { georgiaToday } from './psalter';
 
-// „AI მასწავლებელი“ in the pearls game: Gemini (through Firebase AI Logic, the same App Check pass as the chokha
+// „AI მასწავლებელი“ in the pearls game and the learning mode: Gemini (through Firebase AI Logic, the same App Check pass as the chokha
 // try-on) listens to a member's take of a pearl's phrase and answers in Georgian: what went well, the one thing to
 // fix, a small exercise. A few a day per device (the owner and superadmins: no limit); nothing is kept.
 
@@ -30,15 +30,21 @@ export const AI_PROBLEM_TEXT: Record<AiTeacherProblem, string> = {
 export interface TakeAbout {
   title: string;     // the chant
   voice: string;     // „I ხმა“
-  notes: string[];   // the phrase's melody, note names
+  notes: string[];   // the phrase's melody, note names (empty for a song learned from a recording)
   hit: number;       // notes the phone heard right
+  what?: string;     // which part („მე-3 ფრაზა“); the pearls game's is the first phrase
+  song?: boolean;    // a folk song, not a chant
 }
 
 const prompt = (a: TakeAbout) => [
-  'შენ ხარ ქართული ტრადიციული საეკლესიო გალობის კეთილი და ზუსტი მასწავლებელი.',
-  `მოსწავლემ ტელეფონში იმღერა საგალობლის „${a.title}“ ${a.voice}ის პირველი ფრაზა (გელათის სკოლა).`,
-  `ფრაზის მელოდია, თანმიმდევრობით (მოსწავლეს შეუძლია სხვა ტონალობაში იმღეროს): ${a.notes.join(' – ')}.`,
-  `ტელეფონის სმენამ ამოიცნო, რომ ${a.notes.length} ნოტიდან ${a.hit} სწორად იმღერა.`,
+  `შენ ხარ ქართული ტრადიციული ${a.song ? 'ხალხური სიმღერის' : 'საეკლესიო გალობის'} კეთილი და ზუსტი მასწავლებელი.`,
+  a.song
+    ? `მოსწავლემ ტელეფონში იმღერა ხალხური სიმღერის „${a.title}“ ${a.voice}ის ${a.what || 'ნაწილი'}.`
+    : `მოსწავლემ ტელეფონში იმღერა საგალობლის „${a.title}“ ${a.voice}ის ${a.what || 'პირველი ფრაზა'} (გელათის სკოლა).`,
+  ...(a.notes.length ? [
+    `ფრაზის მელოდია, თანმიმდევრობით (მოსწავლეს შეუძლია სხვა ტონალობაში იმღეროს): ${a.notes.join(' – ')}.`,
+    `ტელეფონის სმენამ ამოიცნო, რომ ${a.notes.length} ნოტიდან ${a.hit} სწორად იმღერა.`,
+  ] : []),
   'მოუსმინე ჩანაწერს და უპასუხე ქართულად, 3–5 მოკლე წინადადებით, მოსწავლეს მიმართე „შენ“-ით:',
   'ჯერ რა გამოუვიდა კარგად; მერე ერთი ყველაზე მნიშვნელოვანი, რაც უნდა გამოასწოროს (ინტონაცია — სად აიწია ან დაიწია,',
   'რიტმი, სუნთქვა ან ხმის ბგერა); ბოლოს ერთი პატარა სავარჯიშო. არ დაწერო სათაურები, სიები ან ვარსკვლავები.',
