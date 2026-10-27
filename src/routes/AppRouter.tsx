@@ -12,6 +12,7 @@ import { StudentProfileCard } from '../components/views';
 import { ChvevebiContent } from '../components/views/ChvevebiPanel';
 import { PATH_ORBS, PathOrbs } from '../components/views/PathOrbs';
 import { PathTabs } from '../components/views/PathTabs';
+import { PathToday } from '../components/views/PathToday';
 import { ChemiSamosi } from '../components/views/ChemiSamosi';
 import { ShortcutShelf } from '../components/home/ShortcutShelf';
 import { useAccess } from '../hooks/useAccess';
@@ -257,9 +258,10 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           {currentPage === 'galoba' && <GalobaPage />}
 
           {currentPage === 'gz' && (
-            <div className="w-full max-w-2xl mx-auto mb-2 px-1">
-              {/* the page title sits in the top bar (PageBar); four round buttons on top (სამოსი, ნასწავლი —
+            <div className="w-full max-w-2xl mx-auto mb-2 px-1 space-y-5">
+              {/* the page title sits in the top bar (PathToday's „დღეს“ card first, when there is a lesson or an assignment); four round buttons on top (სამოსი, ნასწავლი —
                   with the teacher's assignments —, მანერა, სამუშაო) in the member's order, the habits under them */}
+              <PathToday />
               <PathTabs
                 orbs={{ labels: pathOrbs, render: order => <PathOrbs order={order} /> }}
                 cards={[
@@ -267,7 +269,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
                     id: 'habits',
                     label: 'ჩვევები',
                     node: (
-                      <section className="w-full rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] px-3 py-3.5 sm:p-4">
+                      <section id="path-habits" className="w-full scroll-mt-4 rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] px-3 py-3.5 sm:p-4">
                         <ChvevebiContent />
                       </section>
                     ),
