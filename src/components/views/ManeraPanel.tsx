@@ -1,10 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { Lightbulb, ChevronDown, MessageSquareText } from 'lucide-react';
+import { Lightbulb, ChevronDown, MessageSquareText, BookOpen, Dumbbell, Play, Check } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
 import { MANERA_ITEMS } from '../../data/habitsAndManera';
 import { MONTHS_SHORT_GE } from '../../utils/dateNames';
+import { MANERA_LESSONS } from '../../data/maneraLessons';
+import { useManeraPractice } from '../../utils/maneraPractice';
+import { Btn } from '../ui/kit';
+import { ManeraLessonSheet } from '../mastery/ManeraLessonSheet';
 
 // One colour rule for every percentage: <50 red, 50–79 amber, 80+ green
 export const maneraTone = (v: number) =>
@@ -67,18 +71,47 @@ export const ManeraAverageBadge: React.FC = () => {
   return average === null ? null : <ManeraScore v={average} />;
 };
 
-// "მანერა" for the student, to read: one row per performance tip with the teacher's mark; a tap unfolds the
-// teacher's note (who wrote it, when) and the tip's advice. Only teachers and admins mark (ManeraReviewEditor).
+// "მანერა" for the student: one row per performance tip with the teacher's mark; a tap unfolds the teacher's note
+// (who wrote it, when) and the tip's advice, and opens its lesson and exercise (ManeraLessonSheet). Above, one
+// exercise for today: the weakest marked tip not done yet, otherwise the next one by the day. Only teachers and
+// admins mark (ManeraReviewEditor).
 export const ManeraContent: React.FC = () => {
   const { marks } = useManera();
+  const { doneToday, weekDays } = useManeraPractice();
   const [openNum, setOpenNum] = useState<string | null>(null);
+  const [sheet, setSheet] = useState<{ num: string; tab: 'lesson' | 'exercise' } | null>(null);
+
+  const todo = MANERA_ITEMS.map((item, i) => ({ item, i, v: marks[i]?.v })).filter(x => !doneToday(x.item.num));
+  const weak = todo.filter(x => x.v !== undefined && x.v < 80).sort((a, b) => a.v! - b.v!)[0];
+  const today = weak ?? todo[Math.floor(Date.now() / 86400000) % Math.max(1, todo.length)];
+  const sheetIndex = sheet ? MANERA_ITEMS.findIndex(it => it.num === sheet.num) : -1;
 
   return (
-    <div className="text-[#2a2017]">
+    <div className="text-[#2a2017] space-y-3">
+      <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-4 py-3.5 flex flex-wrap items-center gap-x-3 gap-y-2.5">
+        {today ? (
+          <>
+            <div className="flex-1 min-w-[170px]">
+              <p className="text-[12px] font-bold text-[#8a7a6a]">
+                დღის სავარჯიშო · ~{MANERA_LESSONS[today.item.num]?.exercise.minutes ?? 3} წთ{weak ? ' · მასწავლებლის შეფასებით' : ''}
+              </p>
+              <p className="mt-0.5 text-[15px] font-bold leading-snug text-[#4a3426]">{today.item.title}</p>
+            </div>
+            <Btn icon={<Play />} onClick={() => setSheet({ num: today.item.num, tab: 'exercise' })}>დაწყება</Btn>
+          </>
+        ) : (
+          <p className="flex-1 text-[14px] font-bold text-emerald-700">დღეს ყველა სავარჯიშო შეასრულე ✓</p>
+        )}
+        {weekDays > 0 && (
+          <p className="basis-full text-[12px] text-[#8a7a6a]">ბოლო 7 დღიდან ივარჯიშე <b className="text-[#4a3426] tabular-nums">{weekDays}</b> დღე</p>
+        )}
+      </div>
+
       <ul className="border-y border-[#f1e8d9] divide-y divide-[#f1e8d9]">
         {MANERA_ITEMS.map((item, i) => {
           const m = marks[i];
           const open = openNum === item.num;
+          const did = doneToday(item.num);
           return (
             <li key={item.num}>
               <button
@@ -87,7 +120,9 @@ export const ManeraContent: React.FC = () => {
                 aria-expanded={open}
                 className={`w-full min-h-12 flex items-center gap-2.5 px-1 py-2 text-left cursor-pointer transition-colors ${open ? '' : 'hover:bg-[#fbf6ec]/70'}`}
               >
-                <span className="w-5 shrink-0 text-center text-xs font-bold text-[#c4b49c] tabular-nums">{item.num}</span>
+                <span className={`w-5 h-5 shrink-0 rounded-full flex items-center justify-center text-xs font-bold tabular-nums ${did ? 'bg-emerald-600 text-white' : 'text-[#c4b49c]'}`}>
+                  {did ? <Check className="w-3 h-3" aria-label="დღეს შესრულებულია" /> : i + 1}
+                </span>
                 <span className={`flex-1 min-w-0 text-[14px] font-semibold leading-snug ${open ? 'text-[#7a2028]' : ''}`}>{item.title}</span>
                 {m?.note && <MessageSquareText aria-label="მასწავლებლის შენიშვნა" className="w-4 h-4 shrink-0 text-[#b3a594]" />}
                 <ManeraScore v={m?.v} />
@@ -110,12 +145,27 @@ export const ManeraContent: React.FC = () => {
                     </span>
                     {item.advice}
                   </p>
+                  {MANERA_LESSONS[item.num] && (
+                    <div className="flex flex-wrap gap-2">
+                      <Btn kind="soft" size="sm" icon={<BookOpen />} onClick={() => setSheet({ num: item.num, tab: 'lesson' })}>გაკვეთილი</Btn>
+                      <Btn kind="soft" size="sm" icon={<Dumbbell />} onClick={() => setSheet({ num: item.num, tab: 'exercise' })}>
+                        სავარჯიშო · {MANERA_LESSONS[item.num].exercise.minutes} წთ
+                      </Btn>
+                    </div>
+                  )}
                 </div>
               )}
             </li>
           );
         })}
       </ul>
+
+      <ManeraLessonSheet
+        item={sheetIndex >= 0 ? MANERA_ITEMS[sheetIndex] : null}
+        position={sheetIndex + 1}
+        startTab={sheet?.tab}
+        onClose={() => setSheet(null)}
+      />
     </div>
   );
 };

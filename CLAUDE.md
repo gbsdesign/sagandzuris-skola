@@ -117,6 +117,10 @@
   (one shared model `useHabits.tsx`; a new view = one entry in `VIEWS` in `ChvevebiPanel.tsx`), stats in
   `utils/habitStats.ts`. Ticks allowed for the last 7 days (`canTickDay`). Colours/icons/counters: `data/habitLooks.ts`,
   member's choice in `habitSetup.looks/counters`; counter numbers in `students.habitCounts` (sent 1.2 s after the last tap).
+- **ოსტატობა → რჩევები** (2026-10-27): 11 performance tips (`MANERA_ITEMS`; `num` is the key of teachers' marks, the
+  list shows the position; 10 = დგომა, 11 = სუნთქვა ფრაზებს შორის were added). Each has a lesson + timed exercise with a
+  synth base note, low/high voice (`data/maneraLessons.ts`, `components/mastery/ManeraLessonSheet.tsx`); „შევასრულე“
+  is kept on the device only (`utils/maneraPractice.ts`); „დღის სავარჯიშო“ suggests the weakest marked tip first.
 - **Library** page (`biblioteka`): საღმრთო ისტორია, დღესასწაულები, წმიდანთა ცხოვრება.
   Footer church calendar (`data/churchCalendar.ts`, `data/calendar/<year>.json`, made by
   `node scripts/fetch-church-calendar.mjs <year>`). **The 2026 file ends 13 Jan 2027 — re-run for 2027 once
