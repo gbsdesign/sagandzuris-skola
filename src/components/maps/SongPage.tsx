@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRightLeft, FileText, Headphones, Music, TextAlignStart } from 'lucide-react';
+import { ArrowLeft, ArrowRightLeft, FileText, GraduationCap, Headphones, Music, TextAlignStart } from 'lucide-react';
 import {
   FOLK_SONGS, FolkSong, centreRecMedia, getFolkRegion, songDocUrl, songRecMedia, songVersionMedia, soundcloudEmbedUrl,
 } from '../../data/songsData';
@@ -12,6 +12,8 @@ import { stopPreview } from '../../utils/listPreview';
 import { useAuth } from '../../context';
 import { usePlacements } from '../../data/placements';
 import { MoveSheet } from '../archive/MoveSheet';
+import { LearnAudio } from '../learn/LearnAudio';
+import { songPiece } from '../../utils/learn';
 
 // One recording of a song: the school's own versions (voices) first, then the archive's performers
 export interface SongTake {
@@ -36,12 +38,12 @@ export const songTakes = (s: FolkSong): SongTake[] => [
 ];
 
 /** One take's player: the school's player, or Audiomack's for a Centre recording the Drive does not have yet. */
-export const TakePlayer: React.FC<{ take: SongTake; title: string; subtitle: string; hideNotesButton?: boolean }> = ({ take, title, subtitle, hideNotesButton }) => {
+export const TakePlayer: React.FC<{ take: SongTake; title: string; subtitle: string; hideNotesButton?: boolean; pauseToken?: number }> = ({ take, title, subtitle, hideNotesButton, pauseToken }) => {
   const canSave = useCanDownloadCentre();
   if (take.embed) {
     return <iframe title={`${title} · ${take.label}`} src={take.embed} className="block w-full h-[280px] border-0 rounded-xl" allow="autoplay" loading="lazy" />;
   }
-  return <ChantPlayer media={take.media} title={title} subtitle={subtitle} hideNotesButton={hideNotesButton} noDownload={take.centre && !canSave} />;
+  return <ChantPlayer media={take.media} title={title} subtitle={subtitle} hideNotesButton={hideNotesButton} noDownload={take.centre && !canSave} pauseToken={pauseToken} />;
 };
 
 // A song's page over the whole screen: one recording (player with MP3 download) and the words.
@@ -78,6 +80,7 @@ export const SongPage: React.FC = () => {
   // the owner and the superadmins move a recording to another region, song or to the chants
   const { isSuperAdmin } = useAuth();
   const [moving, setMoving] = useState(false);
+  const [learning, setLearning] = useState(false);
   usePlacements();
   // a quick listen started from a list stops when the page opens: its own player takes over
   useEffect(() => { if (state) stopPreview(); }, [state]);
@@ -219,12 +222,26 @@ export const SongPage: React.FC = () => {
                 </button>
               )}
             </p>
+            {!take.embed && take.media.tracks.some(Boolean) && (
+              <button
+                type="button"
+                onClick={() => { triggerHaptic(10); setLearning(true); }}
+                className="mx-1 mb-2 w-[calc(100%-8px)] min-h-12 px-4 rounded-xl bg-[#7a2028]/[0.07] hover:bg-[#7a2028]/[0.12] text-[#7a2028] inline-flex items-center gap-2.5 text-left cursor-pointer transition active:scale-[0.99]"
+              >
+                <GraduationCap className="w-5 h-5 shrink-0" />
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[14px] font-bold leading-tight">სასწავლო რეჟიმი</span>
+                  <span className="block text-[12px] text-[#8c6a5a] leading-tight">ნაწილ-ნაწილ: მოსმენა წრეზე, ნელა, შენი სიმღერა</span>
+                </span>
+              </button>
+            )}
             <TakePlayer
               key={`${song.id}-${takeIdx}`}
               take={take}
               title={song.title}
               subtitle={`${region.nameGe} · ${take.label}`}
               hideNotesButton
+              pauseToken={learning ? 1 : 0}
             />
           </section>
         ) : song.soundcloud ? (
@@ -270,6 +287,15 @@ export const SongPage: React.FC = () => {
           </section>
         )}
       </div></div>
+      {learning && take && !take.embed && (
+        <LearnAudio
+          piece={songPiece(song.id, takeIdx)}
+          media={take.media}
+          title={song.title}
+          subtitle={take.label}
+          onClose={() => setLearning(false)}
+        />
+      )}
       {moving && take?.recId && (
         <MoveSheet
           target={{

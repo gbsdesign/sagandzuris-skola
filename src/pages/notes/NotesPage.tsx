@@ -4,7 +4,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, BookmarkCheck, BookmarkPlus, Check, ChevronDown, ChevronLeft, ChevronUp, Church, CloudDownload, Download, Ellipsis,
-  FileText, Flame, Headphones, ListPlus, LoaderCircle, Minus, Moon, Music2, Pause, Piano, Play, Plus, Repeat, RotateCcw,
+  FileText, Flame, GraduationCap, Headphones, ListPlus, LoaderCircle, Minus, Moon, Music2, Pause, Piano, Play, Plus, Repeat, RotateCcw,
   Scan, SlidersHorizontal, Sun, SunMoon, TextAlignStart, X, ZoomIn, ZoomOut, Pin,
 } from 'lucide-react';
 import './notes.css';
@@ -23,6 +23,7 @@ import { hymnPair, hymnWidth, HymnOrnament } from '../../data/hymnOrnaments';
 import { BookScore, ChantSynth, bookImageUrl, loadBookScore, encodeMp3, renderScore, saveBlob, firstNotes, playStartNotes } from '../../utils/chantSynth';
 import { needsReflow, reflowScore, type Piece, type Reflow } from '../../utils/sheetReflow';
 import { ChantPlayer } from '../../components/ChantPlayer';
+import { LearnMode } from '../../components/learn/LearnMode';
 import { NpStepper } from './NpStepper';
 import { getAudioArrayBufferFromIdb } from '../../utils/audioIdb';
 import { GrapeBunch, VineLeaf, Rosette, Sprig, PlateBand } from '../../components/home/PlateOrnaments';
@@ -173,6 +174,8 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const [recMounted, setRecMounted] = useState(false);
   const [recPlaying, setRecPlaying] = useState(false);
   const [recPause, setRecPause] = useState(0);
+  const [learning, setLearning] = useState(false);
+  useEffect(() => setLearning(false), [vid]);
   const [moreOpen, setMoreOpen] = useState(false);
   const [paper, setPaper] = useState<Paper>(() => store.get<Paper>('sagandzuri_paper', 'day'));
   const [darkOS, setDarkOS] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
@@ -540,6 +543,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   useEffect(() => { synth?.setLoop(loop.a, loop.b); }, [synth, loop]);
 
   const stopSynth = useCallback(() => { if (synth?.playing) { synth.pause(); setPlaying(false); } }, [synth]);
+  const openLearning = () => { triggerHaptic(10); stopSynth(); setRecPause(n => n + 1); setPanel(null); setLearning(true); };
   const toggleSynth = async () => {
     if (!synth || church) return;
     triggerHaptic(10);
@@ -841,6 +845,11 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                 <button type="button" className="np-zb" onClick={() => zoomStep(1)} aria-label="გადიდება" title="გადიდება"><ZoomIn /></button>
                 <button type="button" className="np-zb fit" onClick={zoomFit} aria-label="ეკრანზე მორგება" title="ეკრანზე მორგება"><Scan /></button>
               </div>
+              {score && score.voices.length > 0 && (
+                <button type="button" className="np-learn" onClick={openLearning} title="სასწავლო რეჟიმი: ნაწილ-ნაწილ სწავლა">
+                  <GraduationCap strokeWidth={1.9} /><span>სწავლა</span>
+                </button>
+              )}
               {nextId ? (
                 <button type="button" className="np-next-sm" onClick={() => goTo(nextId, 1)} aria-label="შემდეგი საგალობელი" title={nextInfo ? `შემდეგი: ${nextInfo.chant.title}` : 'შემდეგი'}>
                   <ArrowRight />
@@ -1094,6 +1103,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
         <span>{toast.msg}</span>
         {toast.action && <button type="button" onClick={() => { toast.action!.run(); setToast(t => ({ ...t, on: false })); }}>{toast.action.label}</button>}
       </div>
+      {learning && score && <LearnMode vid={vid} score={score} onClose={() => setLearning(false)} />}
     </div>
   );
 };
