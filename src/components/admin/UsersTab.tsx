@@ -182,7 +182,11 @@ export const UsersTab: React.FC<{
             return (
               <li key={u.userId} className="px-1">
                 <button type="button" onClick={() => setOpenId(u.userId)} className="w-full flex items-center gap-3 py-3 text-left cursor-pointer group">
-                  <Avatar name={u.name} photo={u.photoURL} size={44} />
+                  {/* a green dot: here in the last week */}
+                  <span className="relative shrink-0">
+                    <Avatar name={u.name} photo={u.photoURL} size={44} />
+                    {test.week(u) && <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white" aria-label="აქტიური ამ კვირაში" />}
+                  </span>
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-1.5 flex-wrap">
                       <span className="font-semibold text-[#2a2017] truncate group-hover:text-[#7a2028]">{u.name}</span>
