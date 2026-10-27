@@ -167,6 +167,8 @@ const CardStats: React.FC<{ ticks: Set<string>; goal: HabitGroupType['goal']; fi
 }) => {
   // a habit with its own days: the share of those days
   const share = schedule ? planShare(schedule, ticks, first) : goalShare(ticks, goal, first);
+  // „— · 0 დღე“ on every untouched habit only crowds the list
+  if (!ticks.size) return null;
   return (
     <>
       <span title={share.of ? `შესრულება ${share.percent}% — ${share.of} ${schedule ? 'დღიდან' : FROM_WORD[goal.per]}` : 'შესრულება — ჯერ არც ერთი დღე არ დასრულებულა'}>
@@ -215,6 +217,7 @@ const HabitRow: React.FC<{
   date: Date;
   onOpenPrayer: (prayerId: string) => void;
   onLink: (l: HabitLink) => void;
+  /** only while the list is in its „შეცვლა“ mode: ✏️ instead of „›“ */
   edit?: ListEdit;
   /** its settings are unfolded (kept by the list, so a habit stays while its own days are changed) */
   editing: boolean;
@@ -303,22 +306,24 @@ const HabitRow: React.FC<{
             {/* the run, then (a daily habit) the ten days, at the right of the name */}
             <span className="ml-auto flex items-center gap-3">
               {run > 1 && <Run run={run} />}
-              {!rare && <WeekDots ticks={ticks} color={c} className="flex" />}
+              {!rare && ticks.size > 0 && <WeekDots ticks={ticks} color={c} className="flex" />}
             </span>
           </div>
-          {/* one line of figures, a „·“ after each */}
-          <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12.5px] font-semibold tabular-nums text-[#8a7a6a] [&>*:not(:last-child)]:after:content-['·'] [&>*:not(:last-child)]:after:ml-1.5 [&>*:not(:last-child)]:after:text-[#c4b49c]">
-            {rare && <PeriodNote count={timesIn(ticks, periodStart(group.goal.per, date), group.goal.per)} goal={group.goal} current={periodNow} />}
-            {counter && <CountBar bare count={count} counter={counter} color={c} label={habit.label} onSet={n => model.setCount(habit.id, n, date)} />}
-            <CardStats ticks={ticks} goal={group.goal} first={model.first} schedule={habit.schedule} />
-            {habit.time && (
-              <span title={habit.alerts?.length ? 'დრო · შეხსენება ჩართულია' : 'დრო'} className="inline-flex items-center gap-1">
-                {habit.alerts?.length ? <BellRing className="w-3.5 h-3.5 shrink-0" /> : <Clock className="w-3.5 h-3.5 shrink-0" />}
-                {habit.time.from}
-                {habit.time.to ? `–${habit.time.to}` : ''}
-              </span>
-            )}
-          </div>
+          {/* one line of figures, a „·“ after each; none while a daily habit was never ticked and has nothing to count */}
+          {(rare || counter || ticks.size > 0 || habit.time) && (
+            <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12.5px] font-semibold tabular-nums text-[#8a7a6a] [&>*:not(:last-child)]:after:content-['·'] [&>*:not(:last-child)]:after:ml-1.5 [&>*:not(:last-child)]:after:text-[#c4b49c]">
+              {rare && <PeriodNote count={timesIn(ticks, periodStart(group.goal.per, date), group.goal.per)} goal={group.goal} current={periodNow} />}
+              {counter && <CountBar bare count={count} counter={counter} color={c} label={habit.label} onSet={n => model.setCount(habit.id, n, date)} />}
+              <CardStats ticks={ticks} goal={group.goal} first={model.first} schedule={habit.schedule} />
+              {habit.time && (
+                <span title={habit.alerts?.length ? 'დრო · შეხსენება ჩართულია' : 'დრო'} className="inline-flex items-center gap-1">
+                  {habit.alerts?.length ? <BellRing className="w-3.5 h-3.5 shrink-0" /> : <Clock className="w-3.5 h-3.5 shrink-0" />}
+                  {habit.time.from}
+                  {habit.time.to ? `–${habit.time.to}` : ''}
+                </span>
+              )}
+            </div>
+          )}
         </div>
         {counter && !COUNTED_BY_READING.includes(habit.id) && (
           <button
@@ -423,6 +428,8 @@ export const DayView: React.FC<{
 }> = ({ model, date, onDate, actions, onOpenPrayer, onLink, edit }) => {
   const [sorting, setSorting] = useState<0 | 1 | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  // „შეცვლა“: one ✏️ over the lists; the rows' ✏️, the order and „+“ show only then (2026-10-27)
+  const [changing, setChanging] = useState(false);
   const today = dayKey(date) === dayKey(new Date());
   const s = dayState(model.log, model.dailyIds, date);
   const total = Math.max(1, s.total);
@@ -463,7 +470,7 @@ export const DayView: React.FC<{
           {[model.daily, model.rare].map((groups, i) => {
             const col = i as 0 | 1;
             const has = groups.some(g => g.items.length);
-            const sorted = has && sorting === col;
+            const sorted = has && sorting === col && changing;
             // an empty list keeps its place for a member, to add a habit to it
             if (!has && !edit) return null;
             return (
@@ -472,7 +479,7 @@ export const DayView: React.FC<{
                   right={
                     edit && (
                       <span className="-my-1 -mr-1 flex items-center gap-0.5">
-                        {has && (
+                        {changing && has && (
                           <button
                             type="button"
                             aria-pressed={sorted}
@@ -487,15 +494,33 @@ export const DayView: React.FC<{
                             {sorted && 'მზადაა'}
                           </button>
                         )}
-                        <button
-                          type="button"
-                          aria-label="ჩვევის დამატება"
-                          title="ჩვევის დამატება"
-                          onClick={() => edit.add(col)}
-                          className="w-9 h-9 rounded-full inline-flex items-center justify-center text-[#7a2028] hover:bg-[#7a2028]/[0.06] cursor-pointer transition-colors active:scale-95"
-                        >
-                          <Plus className="w-5 h-5" />
-                        </button>
+                        {(changing || !has) && (
+                          <button
+                            type="button"
+                            aria-label="ჩვევის დამატება"
+                            title="ჩვევის დამატება"
+                            onClick={() => edit.add(col)}
+                            className="w-9 h-9 rounded-full inline-flex items-center justify-center text-[#7a2028] hover:bg-[#7a2028]/[0.06] cursor-pointer transition-colors active:scale-95"
+                          >
+                            <Plus className="w-5 h-5" />
+                          </button>
+                        )}
+                        {/* the one ✏️, over the first list only */}
+                        {i === 0 && (
+                          <button
+                            type="button"
+                            aria-pressed={changing}
+                            aria-label={changing ? 'შეცვლა — მზადაა' : 'ჩვევების შეცვლა'}
+                            title={changing ? 'მზადაა' : 'შეცვლა'}
+                            onClick={() => { triggerHaptic(8); setChanging(c => !c); setSorting(null); setEditingId(null); }}
+                            className={`h-9 rounded-full inline-flex items-center justify-center gap-1 cursor-pointer transition-colors active:scale-95 ${
+                              changing ? 'px-3 bg-[#7a2028] text-[#fbf6ec] text-[13px] font-bold' : 'w-9 text-[#8a7a6a] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.06]'
+                            }`}
+                          >
+                            {changing ? <Check className="w-4 h-4" /> : <Pencil className="w-[17px] h-[17px]" />}
+                            {changing && 'მზადაა'}
+                          </button>
+                        )}
                       </span>
                     )
                   }
@@ -519,7 +544,7 @@ export const DayView: React.FC<{
                             date={date}
                             onOpenPrayer={onOpenPrayer}
                             onLink={onLink}
-                            edit={edit}
+                            edit={changing ? edit : undefined}
                             editing={editingId === h.id}
                             onEditing={on => setEditingId(on ? h.id : null)}
                           />
