@@ -95,7 +95,6 @@ export const MemberPathEditor: React.FC<{ uid: string; name: string; onError: (t
           on={!lock?.on}
           onChange={on => setLocked(!on)}
           label="მოსწავლე თავად ნიშნავს"
-          hint={lock?.on ? 'დაბლოკილია — ხმებს მხოლოდ მასწავლებელი ნიშნავს' : 'ნიშნავს, რა იცის; შენ ამოწმებ და ითვლი'}
         />
       </div>
 
@@ -126,13 +125,13 @@ export const MemberPathEditor: React.FC<{ uid: string; name: string; onError: (t
                       {it.chantName}
                       <span className="ml-1.5 px-1.5 py-0.5 rounded-md bg-[#efe5d4] text-[#75685a] text-[11px] font-bold align-middle">{it.code}</span>
                     </span>
-                    <button type="button" onClick={() => move(it.variantId, -1)} disabled={i === 0} title="ზემოთ" className="w-8 h-8 rounded-full text-[#8a7a6a] hover:bg-[#fbf6ec] disabled:opacity-30 flex items-center justify-center cursor-pointer"><ArrowUp className="w-4 h-4" /></button>
-                    <button type="button" onClick={() => move(it.variantId, 1)} disabled={i === items.length - 1} title="ქვემოთ" className="w-8 h-8 rounded-full text-[#8a7a6a] hover:bg-[#fbf6ec] disabled:opacity-30 flex items-center justify-center cursor-pointer"><ArrowDown className="w-4 h-4" /></button>
+                    <button type="button" onClick={() => move(it.variantId, -1)} disabled={i === 0} title="ზემოთ" className="w-9 h-9 shrink-0 rounded-full text-[#8a7a6a] hover:bg-[#fbf6ec] disabled:opacity-30 flex items-center justify-center cursor-pointer"><ArrowUp className="w-4 h-4" /></button>
+                    <button type="button" onClick={() => move(it.variantId, 1)} disabled={i === items.length - 1} title="ქვემოთ" className="w-9 h-9 shrink-0 rounded-full text-[#8a7a6a] hover:bg-[#fbf6ec] disabled:opacity-30 flex items-center justify-center cursor-pointer"><ArrowDown className="w-4 h-4" /></button>
                     <button
                       type="button"
                       onClick={async () => { if (await askConfirm({ title: `მოვხსნა „${it.chantName}“ ${name}-ის გზიდან?`, ok: 'მოხსნა', danger: true })) save(sorted.filter(x => x.variantId !== it.variantId)); }}
                       title="მოხსნა"
-                      className="w-8 h-8 rounded-full text-[#8a7a6a] hover:text-red-600 hover:bg-red-50 flex items-center justify-center cursor-pointer"
+                      className="w-9 h-9 shrink-0 rounded-full text-[#8a7a6a] hover:text-red-600 hover:bg-red-50 flex items-center justify-center cursor-pointer"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -168,11 +167,6 @@ export const MemberPathEditor: React.FC<{ uid: string; name: string; onError: (t
           </ul>
         </div>
       ))}
-
-      <p className="text-xs text-[#8a7a6a] leading-relaxed">
-        <span className="text-[#7a2028] font-semibold">ღვინისფერი ✓</span> — მოსწავლემ თავად მონიშნა ·{' '}
-        <span className="text-emerald-700 font-semibold">მწვანე ✓✓</span> — მასწავლებელმა ჩათვალა. დაჭერა რიგრიგობით: მონიშვნა → ჩათვლა → მოხსნა.
-      </p>
     </div>
   );
 };

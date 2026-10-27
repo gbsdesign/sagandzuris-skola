@@ -1,18 +1,15 @@
 import React, { useState } from 'react';
 import { deleteDoc, doc, setDoc } from 'firebase/firestore';
-import { ArrowLeft, Check, Crown, GraduationCap, Hourglass, Info, Pencil, ShieldAlert, ShieldCheck, User as UserIcon, X } from 'lucide-react';
+import { ArrowLeft, Check, Crown, GraduationCap, Hourglass, Pencil, ShieldAlert, ShieldCheck, User as UserIcon, X } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth, SUPER_ADMIN_EMAIL, MAX_EXTRA_SUPERADMINS, ROLE_LABEL, Role } from '../../context';
 import { SchoolClass } from '../../hooks/useClasses';
-import { PsalterGroup } from '../../hooks/usePsalter';
 import { agoLabel } from '../../hooks/useTeaching';
-import { computeMonthlyStats } from '../../hooks/useMonthlyStudyStats';
-import { ALL_FEATURES, ALWAYS_OPEN, FeatureId } from '../../utils/memberAccess';
+import { ALL_FEATURES, FeatureId } from '../../utils/memberAccess';
 import { showPhone } from '../../utils/profileFields';
 import { askConfirm, Avatar, Btn, Flash, IconBtn, Pill, Sheet, useFlash } from '../ui/kit';
 import { StudentProfileCard } from '../views/StudentProfileCard';
 import { AccessPicker, AccessRecord, DecisionRecord, saveAccess } from './AccessRequests';
-import { ManeraReviewEditor } from './ManeraReviewEditor';
 import { CentreDownloadSwitch } from './CentreDownload';
 import type { StaffRecord, UserRecord } from './UsersTab';
 
@@ -32,23 +29,24 @@ export const roleName = (u: UserRecord, role: Role) => (isOwnerEmail(u) ? 'მ�
 const sameFeatures = (a: 'all' | FeatureId[], b: 'all' | FeatureId[]) =>
   a === 'all' || b === 'all' ? a === b : a.length === b.length && a.every(f => b.includes(f));
 
-// One person's window ("ერთი ფანჯარა"): everything about them in one place — the details they gave, their
-// classes and groups, their role, what they may open (superadmins), letting them in or refusing, and editing
-// their profile, which opens inside this same window.
+// One person's window ("ერთი ფანჯარა"): who they are — the details they gave and their classes — their role,
+// what they may open (superadmins), letting them in or refusing, and editing their profile, which opens inside
+// this same window. Their learning (path, ოსტატობა, work, habits) is followed on the class page.
 export const PersonSheet: React.FC<{
   person: UserRecord;
   staff: StaffRecord[];
   classes: SchoolClass[];
-  groups: PsalterGroup[];
   access?: AccessRecord;      // superadmins only; none: a member from before approvals
   decision?: DecisionRecord;
   onClose: () => void;
   onMessage: (text: string, type: 'success' | 'error') => void;
-}> = ({ person: u, staff, classes, groups, access, decision, onClose, onMessage }) => {
+}> = ({ person: u, staff, classes, access, decision, onClose, onMessage }) => {
   const { user, isOwner, isSuperAdmin } = useAuth();
   const note = useFlash();
   const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState(false);
+  // the role buttons open from the role's ✎ (a rare change)
+  const [roleOpen, setRoleOpen] = useState(false);
 
   const role = roleOf(u, staff);
   const isStaff = role !== 'member';
@@ -105,6 +103,7 @@ export const PersonSheet: React.FC<{
         email, role: next, userId: u.userId, name: u.name, addedBy: user?.email || '', addedAt: new Date().toISOString(),
       });
       note.ok(next === 'member' ? 'როლი მოიხსნა.' : `ახლა ${ROLE_LABEL[next]}ა.`);
+      setRoleOpen(false);
     } catch {
       note.fail('როლი ვერ შეიცვალა — ამის უფლება არ გაქვს.');
     } finally {
@@ -115,9 +114,6 @@ export const PersonSheet: React.FC<{
   // the details, each once; empty ones are left out
   const inClasses = classes.filter(c => c.memberIds.includes(u.userId)).map(c => c.name);
   const teaches = classes.filter(c => c.teacherIds.includes(u.userId)).map(c => c.name);
-  const inGroups = groups.filter(g => g.memberIds.includes(u.userId) || g.teacherIds.includes(u.userId)).map(g => g.name);
-  const work = computeMonthlyStats(u.workSchedule, u.completedSessions);
-  const week = Object.entries(u.habitLog).filter(([d]) => Date.now() - new Date(d).getTime() < 7 * 86400_000).reduce((a, [, l]) => a + l.length, 0);
   const facts: [string, React.ReactNode][] = [
     ['დაბადება', u.birth],
     ['ადგილი', [u.city, u.region].filter(Boolean).join(', ')],
@@ -129,10 +125,8 @@ export const PersonSheet: React.FC<{
     ['ინტერესები', u.interests],
   ];
   if (admitted) {
-    facts.push(['კლასი', inClasses.join(', ') || '—'], ['ფსალმუნთა ჯგუფი', inGroups.join(', ') || '—']);
+    facts.push(['კლასი', inClasses.join(', ') || '—']);
     if (teaches.length) facts.push(['ასწავლის', teaches.join(', ')]);
-    if (work.planned) facts.push(['სამუშაო ამ თვეში', `${work.worked}/${work.planned} სთ (${work.percent}%)`]);
-    facts.push(['ჩვევები 7 დღეში', week ? `${week} მონიშვნა` : '—']);
   }
   const shown = facts.filter(([, v]) => v);
   const tries = Math.max(0, (access?.attempts || 0) - 1);
@@ -206,28 +200,27 @@ export const PersonSheet: React.FC<{
           <Btn kind="ghost" size="sm" icon={<Pencil />} onClick={() => setEditing(true)}>პროფილის რედაქტირება</Btn>
 
           {admitted && (
-            <Part title="როლი" sub={isOwner && choices.includes('superadmin') ? `სუპერადმინი შენს გარდა: ${extraSupers}/${MAX_EXTRA_SUPERADMINS}` : undefined}>
-              {choices.length === 0 ? (
-                <p className="text-[13px] text-[#4a3426]">
-                  <b>{roleName(u, role)}</b> — {isOwnerEmail(u) ? 'სკოლის მფლობელის როლი არ იცვლება.' : 'ამ როლის შეცვლის უფლება არ გაქვს.'}
+            <Part title="როლი">
+              <div className="flex items-center gap-2 min-h-9">
+                <p className="flex-1 min-w-0 inline-flex items-center gap-1.5 text-[15px] font-bold text-[#2a2017] [&>svg]:w-4 [&>svg]:h-4 [&>svg]:text-[#7a2028]">
+                  {ROLE_ICON[role]} {roleName(u, role)}
                 </p>
-              ) : (
-                <div className="grid grid-cols-2 min-[460px]:grid-cols-4 gap-1.5">
+                {choices.length > 0 && (
+                  <IconBtn label="როლის შეცვლა" aria-expanded={roleOpen} onClick={() => setRoleOpen(o => !o)} className={roleOpen ? '!bg-[#7a2028]/[0.1] !text-[#7a2028]' : ''}>
+                    <Pencil />
+                  </IconBtn>
+                )}
+              </div>
+              {roleOpen && choices.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5 sg-in">
                   {choices.map(r => (
                     <button key={r} type="button" disabled={busy || r === role} onClick={() => setRole(r)} aria-pressed={r === role}
-                      className={`h-11 px-2 rounded-xl text-[13px] font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer transition [&>svg]:w-4 [&>svg]:h-4 ${r === role ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40'} disabled:cursor-default`}>
+                      className={`h-11 px-3.5 rounded-xl text-[13px] font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer transition [&>svg]:w-4 [&>svg]:h-4 ${r === role ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40'} disabled:cursor-default`}>
                       {ROLE_ICON[r]} {ROLE_LABEL[r]}
                     </button>
                   ))}
                 </div>
               )}
-            </Part>
-          )}
-
-          {/* a member's manera, marked here by admins (teachers mark it from their panel) */}
-          {admitted && !isStaff && (
-            <Part title="ოსტატობა" sub="შეფასება და შენიშვნა თითოეულ რჩევაზე">
-              <ManeraReviewEditor uid={u.userId} />
             </Part>
           )}
 
@@ -238,17 +231,10 @@ export const PersonSheet: React.FC<{
           )}
 
           {manageAccess && (
-            <Part
-              title="წვდომა"
-              sub={admitted ? (!access ? 'ძველი წევრი' : decision?.by ? `დაუშვა: ${decision.by}` : undefined) : undefined}
-              info={`${ALWAYS_OPEN} არჩეულის გარდა დანარჩენი წევრს უბრალოდ არ უჩანს. ვინ დაუშვა და რა შეეზღუდა, წევრი ვერ ხედავს.`}
-            >
+            <Part title="წვდომა" sub={admitted && decision?.by ? `დაუშვა: ${decision.by}` : undefined}>
               <AccessPicker all={all} picked={picked} onChange={(a, p) => { setAll(a); setPicked(p); }} />
               {admitted && (
-                <button type="button" onClick={refuse} disabled={busy}
-                  className="mt-2 flex items-center gap-1.5 min-h-[44px] px-1 text-[14px] font-semibold text-[#9b2c2c] underline underline-offset-4 cursor-pointer">
-                  <ShieldAlert className="w-4 h-4" /> დამატების შეფერხება
-                </button>
+                <Btn kind="danger" size="sm" icon={<ShieldAlert />} className="mt-3" onClick={refuse} disabled={busy}>დამატების შეფერხება</Btn>
               )}
             </Part>
           )}
@@ -258,24 +244,13 @@ export const PersonSheet: React.FC<{
   );
 };
 
-/** One part of the window under a thin line: a small label, a muted line, an ⓘ for the longer explanation. */
-const Part: React.FC<{ title: string; sub?: string; info?: string; children: React.ReactNode }> = ({ title, sub, info, children }) => {
-  const [open, setOpen] = useState(false);
-  return (
-    <section className="pt-4 border-t border-[#e8dcc8]">
-      <div className="flex items-center gap-2 mb-2.5 min-h-9">
-        <div className="min-w-0 flex-1">
-          <h4 className="text-[13px] font-bold text-[#75685a]">{title}</h4>
-          {sub && <p className="text-xs text-[#8a7a6a] break-all">{sub}</p>}
-        </div>
-        {info && (
-          <IconBtn label="განმარტება" aria-expanded={open} onClick={() => setOpen(o => !o)} className={open ? '!bg-[#7a2028]/[0.1] !text-[#7a2028]' : ''}>
-            <Info />
-          </IconBtn>
-        )}
-      </div>
-      {info && open && <p className="-mt-1 mb-3 text-[13px] text-[#75685a] leading-relaxed sg-in">{info}</p>}
-      {children}
-    </section>
-  );
-};
+/** One part of the window under a thin line: a small label and, under it, a muted line. */
+const Part: React.FC<{ title: string; sub?: string; children: React.ReactNode }> = ({ title, sub, children }) => (
+  <section className="pt-4 border-t border-[#e8dcc8]">
+    <div className="mb-2.5">
+      <h4 className="text-[13px] font-bold text-[#75685a]">{title}</h4>
+      {sub && <p className="text-xs text-[#8a7a6a] break-all">{sub}</p>}
+    </div>
+    {children}
+  </section>
+);

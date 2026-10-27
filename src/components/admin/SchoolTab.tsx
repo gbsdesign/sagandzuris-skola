@@ -85,7 +85,7 @@ export const SchoolTab: React.FC<{ users: UserRecord[]; onMessage: (t: string, t
           <RowIcon><DatabaseBackup /></RowIcon>
           <span className="flex-1 min-w-[10rem]">
             <span className="block font-serif-ge text-[16px] font-bold text-[#4a3426] leading-snug">სარეზერვო ასლი</span>
-            <span className="block text-[12.5px] text-[#8a7a6a] leading-snug mt-0.5">ყველა მონაცემი ერთ ფაილად · გირჩევ თვეში ერთხელ</span>
+            <span className="block text-[12.5px] text-[#8a7a6a] leading-snug mt-0.5">ყველა მონაცემი ერთ ფაილად</span>
           </span>
           <Btn size="sm" kind="ghost" icon={exporting ? <Loader2 className="animate-spin" /> : <Download />} disabled={!!exporting} onClick={exportAll}
             title="მოსწავლეები და მათი გზა, კლასები, დავალებები, დასწრება, ჩატის ტექსტი, ფსალმუნთა ჯგუფები, მოსახსენებელი სახელები. ხმოვანი შეტყობინებების აუდიო არ შედის.">
