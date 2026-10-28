@@ -221,15 +221,17 @@ export interface KabaPiece { url: string; thumb?: string; w: number; h: number }
 
 /** whether members see the dress, and where its headdress sits */
 export const useKabaSettings = () => {
-  const [v, setV] = useState<{ published: boolean; head: KabaHead }>({ published: false, head: KABA_HEAD_DEFAULT });
+  // `loaded`: the answer has come (the pearls' gifts wait for it before choosing the outfit, utils/pearlGifts.ts)
+  const [v, setV] = useState<{ published: boolean; head: KabaHead; loaded: boolean }>({ published: false, head: KABA_HEAD_DEFAULT, loaded: false });
   useEffect(() => onSnapshot(doc(db, 'samosiArt', 'kaba'), s => {
     const d = s.data();
     const h = d?.head;
     setV({
       published: d?.published === true,
       head: h && typeof h.y === 'number' && typeof h.w === 'number' ? { y: h.y, w: h.w } : KABA_HEAD_DEFAULT,
+      loaded: true,
     });
-  }, () => setV({ published: false, head: KABA_HEAD_DEFAULT })), []);
+  }, () => setV({ published: false, head: KABA_HEAD_DEFAULT, loaded: true })), []);
   return v;
 };
 

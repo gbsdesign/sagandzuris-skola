@@ -334,7 +334,13 @@ listens (Gemini through Firebase AI Logic). 8 calls on Android (wake lock, push,
    the mirror). Each voice keeps its own best (`pearls[id].voices`); all three polished = a golden pearl (`isGolden`),
    three dots under each pearl. Sheet `components/pearls/PearlSheet.tsx`. Best try in `students.pearls`, best take (MP3) in
    `pearlTakes/{uid}/takes/{versionId}`; the teacher hears it and approves („ჩათვლა“ → `students.pearlShine`, teachers
-   only) in the member's window (`PearlReview`). „AI მასწავლებელი“ (`utils/aiTeacher.ts`, gemini-3.8-flash through
+   only) in the member's window (`PearlReview`) or on the class page (`pearls/ClassPearls.tsx`, teachers only, since
+   2026-10-28: „მოსასმენი“ queue — ▶ fetches the take on demand, „ჩათვლა“ — and one table of members × chests). Since
+   2026-10-28 every 5 shining pearls give the outfit of „ჩემი სამოსი“ its next part (`utils/pearlGifts.ts` + test,
+   `hooks/usePearlGifts.ts`: the member's own app adds it from the path page — `PearlGiftBanner` in `PathOrbs` — and keeps
+   `students.pearlGifts {steps, parts, seen}`; the pearls panel shows „შემდეგი ჯილდო“), and the home page has
+   „დღის მარგალიტი“ (`home/PearlOfDay.tsx`: the same pearl for the whole school, hangi's `pickOfDay`; a tap opens it on the
+   path page through `utils/pearlWish.ts`). „AI მასწავლებელი“ (`utils/aiTeacher.ts`, gemini-3.8-flash through
    Firebase AI Logic with the try-on's App Check; 3 a day per device, superadmins unlimited) — works only on the
    deployed site. Tested in the emulator with a fake microphone WAV (Chromium `--use-file-for-fake-audio-capture`).
 - Birthdays and name days (redesign stage 4, 2026-10-25): page `birthdays` (`pages/BirthdaysPage.tsx`), records

@@ -92,6 +92,9 @@ export const pearlPatch = (rec: PearlRecord | undefined, pct: number, voice: Voi
   return Object.keys(patch).length ? patch : null;
 };
 
+/** A chant's title without the trailing stop the books give it. */
+export const chantName = (title: string) => title.replace(/[\s;:,.]+$/, '');
+
 export const VOICE_NAMES: Record<Voice, string> = { '1': 'I ხმა', '2': 'II ხმა', '3': 'III ხმა' };
 
 /**

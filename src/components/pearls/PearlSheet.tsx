@@ -4,7 +4,7 @@ import { Sheet, Btn, Pill } from '../ui/kit';
 import { BOOK_NAMES, findVersion } from '../../data/chantLookup';
 import { BookScore, loadBookScore, playLessonNotes, stopLessonNotes } from '../../utils/chantSynth';
 import {
-  phraseOf, PearlRecord, PearlShine, pearlState, VOICE_NAMES, noteName, missedNotes, pearlPatch, voiceBests, isGolden, POLISH_PCT, VOICE_IDS,
+  phraseOf, PearlRecord, PearlShine, pearlState, VOICE_NAMES, noteName, missedNotes, pearlPatch, voiceBests, isGolden, POLISH_PCT, VOICE_IDS, chantName,
 } from '../../utils/pearls';
 import { POLISH_SHARE, notesFromFrames, scoreSinging } from '../../utils/pitch';
 import { startSinging, singingSupported, SingSession } from '../../utils/singCapture';
@@ -30,7 +30,7 @@ const W = 320;
 const H = 128;
 const PAD = 10;
 
-export const chantName = (title: string) => title.replace(/[\s;:,.]+$/, '');
+export { chantName };
 
 export const PearlSheet: React.FC<{
   id: string;

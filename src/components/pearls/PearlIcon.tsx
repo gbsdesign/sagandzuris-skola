@@ -1,5 +1,6 @@
 import React, { useId } from 'react';
-import type { PearlState } from '../../utils/pearls';
+import { POLISH_PCT, VOICE_IDS, VOICE_NAMES, voiceBests } from '../../utils/pearls';
+import type { PearlRecord, PearlState } from '../../utils/pearls';
 
 // One pearl, drawn: matte and grey while new, lighter once tried, white with a rainbow lustre when polished, and
 // with a gold glow and two sparks when a teacher has approved it. `golden`: polished in all three voices — a gold
@@ -50,5 +51,24 @@ export const PearlIcon: React.FC<{ state: PearlState; golden?: boolean; size?: n
         </>
       )}
     </svg>
+  );
+};
+
+/** Three dots under a pearl, one per voice: filled once polished in it, a ring once tried, pale until then (gold on a
+ *  golden pearl). */
+export const VoiceDots: React.FC<{ rec?: PearlRecord; golden?: boolean; className?: string }> = ({ rec, golden, className = 'mt-1' }) => {
+  const b = voiceBests(rec);
+  const title = VOICE_IDS.map(v => `${VOICE_NAMES[v]}: ${b[v] != null ? `${b[v]}%` : '—'}`).join(' · ');
+  return (
+    <span className={`flex items-center gap-[3px] ${className}`} title={title} aria-label={title}>
+      {VOICE_IDS.map(v => {
+        const n = b[v];
+        const cls = golden ? 'bg-[#c9962a]'
+          : n == null ? 'bg-[#e3d6c1]'
+          : n >= POLISH_PCT ? 'bg-[#7a2028]'
+          : 'bg-white ring-[1.5px] ring-inset ring-[#7a2028]/70';
+        return <span key={v} className={`w-[7px] h-[7px] rounded-full ${cls}`} />;
+      })}
+    </span>
   );
 };
