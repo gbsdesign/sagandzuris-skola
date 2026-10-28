@@ -7,12 +7,14 @@ import {
 } from '../../utils/amikhseni';
 import { Bar, Btn, Card, FIELD, Toggle, askConfirm } from '../../components/ui/kit';
 import { TableScreen } from '../../components/games/TableScreen';
+import { Chip } from '../../components/games/Chip';
+import { bell, closeAudio, openAudio } from '../../utils/gameSounds';
 import { triggerHaptic } from '../../utils/haptics';
 
 // „ამიხსენი“ (games hub, 2026-10-28, the Alias-like table game, hybrid): the phone is in the explainer's hand — it shows
 // the word, the team guesses, „გამოიცნო“ is a point and „გამოტოვება“ costs one; the minute ends with a bell, the phone
 // passes to the next team. The rules are utils/amikhseni.ts, the cards data/amikhseniWords.ts, the big screen
-// components/games/TableScreen.tsx. Works offline; nothing is saved but the settings.
+// components/games/TableScreen.tsx, the bell utils/gameSounds.ts. Works offline; nothing is saved but the settings.
 
 type Phase = 'setup' | 'ready' | 'play' | 'review' | 'board' | 'end';
 
@@ -33,42 +35,6 @@ const readSettings = (): { settings: AliasSettings; names: string[] } => {
 const writeSettings = (settings: AliasSettings, names: string[]) => {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify({ settings, names })); } catch { /* private mode */ }
 };
-
-const AudioCtx = () => window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-
-/** The bell at the end of the minute: three short tones on the context the „წავედით!“ tap opened (a phone lets Web Audio
- *  sound only on a context made or resumed by a touch; the minute ends with no touch). */
-const bell = (ctx: AudioContext | null) => {
-  try {
-    if (!ctx) return;
-    if (ctx.state === 'suspended') ctx.resume().catch(() => { /* stays silent */ });
-    const now = ctx.currentTime;
-    [0, 0.2, 0.4].forEach((t, i) => {
-      const o = ctx.createOscillator();
-      const g = ctx.createGain();
-      o.type = 'sine';
-      o.frequency.value = i === 2 ? 1046.5 : 784;
-      o.connect(g);
-      g.connect(ctx.destination);
-      g.gain.setValueAtTime(0.0001, now + t);
-      g.gain.exponentialRampToValueAtTime(0.35, now + t + 0.015);
-      g.gain.exponentialRampToValueAtTime(0.0001, now + t + 0.18);
-      o.start(now + t);
-      o.stop(now + t + 0.2);
-    });
-  } catch { /* no audio: the vibration and the screen say it */ }
-};
-
-const Chip: React.FC<{ on: boolean; onClick: () => void; children: React.ReactNode }> = ({ on, onClick, children }) => (
-  <button
-    type="button"
-    onClick={() => { triggerHaptic(5); onClick(); }}
-    aria-pressed={on}
-    className={`h-10 px-3.5 rounded-full text-[13px] font-bold ring-1 transition cursor-pointer active:scale-[0.97] ${on ? 'bg-[#7a2028] text-[#fbf6ec] ring-[#7a2028]' : 'bg-white text-[#4a3426] ring-[#e8dcc8] hover:ring-[#7a2028]/40'}`}
-  >
-    {children}
-  </button>
-);
 
 const TimerRing: React.FC<{ left: number; total: number }> = ({ left, total }) => {
   const r = 44;
@@ -96,7 +62,7 @@ const AmikhseniGame: React.FC = () => {
   const [endAt, setEndAt] = useState(0);
   const [left, setLeft] = useState(0);
   const audioCtx = useRef<AudioContext | null>(null);
-  useEffect(() => () => { audioCtx.current?.close().catch(() => { /* gone */ }); audioCtx.current = null; }, []);
+  useEffect(() => () => closeAudio(audioCtx), []);
 
   const set = (patch: Partial<AliasSettings>) => setConf(c => { const next = { settings: { ...c.settings, ...patch }, names: c.names }; writeSettings(next.settings, next.names); return next; });
   const rename = (i: number, name: string) => setConf(c => { const n = [...c.names]; n[i] = name.slice(0, 16); writeSettings(c.settings, n); return { settings: c.settings, names: n }; });
@@ -117,10 +83,7 @@ const AmikhseniGame: React.FC = () => {
   const go = () => {
     triggerHaptic(20);
     // the tap that starts the minute also opens (or wakes) the sound, so the bell may ring when the minute ends
-    try {
-      if (!audioCtx.current) audioCtx.current = new (AudioCtx())();
-      if (audioCtx.current.state === 'suspended') audioCtx.current.resume().catch(() => { /* stays silent */ });
-    } catch { /* no Web Audio: the vibration and the screen say it */ }
+    openAudio(audioCtx);
     setWords([]);
     setEndAt(Date.now() + settings.seconds * 1000);
     setLeft(settings.seconds);

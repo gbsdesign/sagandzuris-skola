@@ -50,8 +50,8 @@ export const GAMES: GameDef[] = [
   { id: 'asoebis-bade', title: 'ასოების ბადე', text: 'ბადეში დამალული სიტყვები იპოვე: საგალობლები, ტაძრები, კუთხეები', category: 'georgian', modes: ['online', 'noPhone'] },
   // ცოცხალი
   { id: 'amikhseni', title: 'ამიხსენი', text: 'ახსენი სიტყვა მისი თქმის გარეშე, გუნდმა გამოიცნოს — ტელეფონი დროსა და ქულებს ითვლის', category: 'live', modes: ['hybrid', 'noPhone'], page: 'games', item: 'amikhseni', section: 'tamashebi' },
-  { id: 'gatvla', title: 'გათვლა', text: 'ქართული გათვლები და წილისყრა: ვინ იწყებს, ვინ რომელ გუნდშია', category: 'live', modes: ['hybrid'] },
-  { id: 'tskheli-churchkhela', title: 'ცხელი ჩურჩხელა', text: 'მუსიკა ჩერდება — ვისაც ხელში რჩება, ის ასრულებს დავალებას', category: 'live', modes: ['hybrid'] },
+  { id: 'gatvla', title: 'გათვლა', text: 'ვინ იწყებს, ვისი ჯერია, ვინ რომელ გუნდშია — გათვლის ლექსით, ბორბლით და წილისყრით, ერთ ტელეფონზე', category: 'live', modes: ['hybrid'], page: 'games', item: 'gatvla', section: 'tamashebi' },
+  { id: 'tskheli-churchkhela', title: 'ცხელი ჩურჩხელა', text: 'სკოლის ჩანაწერი მოულოდნელად ჩერდება — ვისაც ჩურჩხელა ხელში რჩება, ის დავალებას ასრულებს', category: 'live', modes: ['hybrid'], page: 'games', item: 'churchkhela', section: 'tamashebi' },
   { id: 'ra-sad-rodis', title: 'რა? სად? როდის?', text: 'გუნდური ვიქტორინა ერთწუთიანი კითხვებით ჩვენი თემებიდან', category: 'live', modes: ['hybrid', 'noPhone'] },
   { id: 'mtsqemsebi', title: 'მწყემსები და მგლები', text: 'მაფია ქართულად: როლები, წამყვანი, დღე და ღამე, ხმის მიცემა', category: 'live', modes: ['hybrid', 'noPhone'] },
 ];
