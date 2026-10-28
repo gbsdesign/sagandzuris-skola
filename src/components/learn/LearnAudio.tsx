@@ -24,11 +24,13 @@ const ordinal = (n: number) => (n === 1 ? 'პირველი' : `მე-${n}
 const VOICES: Voice[] = ['1', '2', '3'];
 type Mix = 'mine' | 'all' | 'others';
 
-export const LearnAudio: React.FC<{ piece: string; media: ChantMediaItem; title: string; subtitle: string; words?: string; onClose: () => void }> = ({ piece, media, title, subtitle, words, onClose }) => {
+export const LearnAudio: React.FC<{
+  piece: string; media: ChantMediaItem; title: string; subtitle: string; words?: string; voice?: Voice; onClose: () => void;
+}> = ({ piece, media, title, subtitle, words, voice: asked, onClose }) => {
   const { user, isSuperAdmin } = useAuth();
   const uid = user?.uid ?? null;
   const pearls = usePearls(uid);
-  const { rec, loaded, savePart } = useLearning(uid, piece);
+  const { rec, loaded, savePart, noteParts } = useLearning(uid, piece);
   const today = georgiaToday();
   // the voices recorded apart play together (in step), or the one recording of everyone
   const sources = useMemo(() => {
@@ -36,8 +38,9 @@ export const LearnAudio: React.FC<{ piece: string; media: ChantMediaItem; title:
     return voices.length ? voices : media.tracks[3] ? [{ v: 'all' as const, url: media.tracks[3] }] : [];
   }, [media.tracks.join('|')]); // the page makes a new media object on every render
   const split = sources.length > 1;
-  const [voice, setVoice] = useState<Voice>('1');
-  const [voicePicked, setVoicePicked] = useState(false);
+  // the voice to start on: a teacher's assignment's, else the one named in the profile
+  const [voice, setVoice] = useState<Voice>(asked ?? '1');
+  const [voicePicked, setVoicePicked] = useState(!!asked);
   const [mix, setMix] = useState<Mix>('mine');
   const [duration, setDuration] = useState(0);
   const [failed, setFailed] = useState(false);
@@ -70,6 +73,8 @@ export const LearnAudio: React.FC<{ piece: string; media: ChantMediaItem; title:
     return () => { alive = false; window.clearTimeout(late); };
   }, [sources]);
   const parts = useMemo(() => cut ?? (failedCut ? partsOfRecording(duration) : []), [cut, failedCut, duration]);
+  // the teacher's bars need the number of parts
+  useEffect(() => { if (loaded) noteParts(parts.length); }, [loaded, parts.length]);
   // the words written in the app come first (as on the song's page)
   const written = useWrittenSongText(parseSongPiece(piece)?.songId);
   const text = written || words || '';

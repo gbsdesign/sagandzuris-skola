@@ -1,13 +1,16 @@
-// „Open this piece straight in its learning mode“ (the home page's review line): the notes page or the song page takes
-// the request once the piece is on screen. One request at a time.
+import type { Voice } from './pathItems';
 
-let pending: string | null = null;
+// „Open this piece straight in its learning mode“ (the home page's review line, a teacher's assignment): the notes page
+// or the song page takes the request once the piece is on screen, with the voice to start on. One request at a time.
 
-export const requestLearn = (piece: string) => { pending = piece; };
+let pending: { piece: string; voice?: Voice } | null = null;
 
-/** True once, for the page showing the requested piece. */
-export const takeLearn = (piece: string) => {
-  if (pending !== piece) return false;
+export const requestLearn = (piece: string, voice?: Voice) => { pending = { piece, voice }; };
+
+/** The request, once, for the page showing the requested piece; null otherwise. */
+export const takeLearn = (piece: string): { voice?: Voice } | null => {
+  if (pending?.piece !== piece) return null;
+  const { voice } = pending;
   pending = null;
-  return true;
+  return { voice };
 };

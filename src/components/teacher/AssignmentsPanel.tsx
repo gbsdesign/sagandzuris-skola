@@ -11,16 +11,24 @@ import { writePath } from '../admin/MemberPathEditor';
 import { CatalogPicker } from '../admin/CatalogPicker';
 import { askConfirm, Btn, Card, CardTitle, Empty, FIELD, Flash, IconBtn, Label, Pill, Sheet, Tabs, useFlash } from '../ui/kit';
 import { DRILL_GROUPS, MANERA_DRILL_GROUP, findDrill, drillGroupTitle } from '../../data/vocalDrills';
+import { allLearned, assignedProgress } from '../../utils/learn';
+import { PartsBar } from '../learn/PartsBar';
 
 const VOICE_LABEL: Record<string, string> = { '1': 'I ხმა', '2': 'II ხმა', '3': 'III ხმა' };
 const ROMAN: Record<string, string> = { '1': 'I', '2': 'II', '3': 'III' };
 
-/** Who an assignment is for, and how many of them already marked its voices on their path. */
+/** A member's way through an assigned chant or song in the learning mode (null before they opened it). */
+const learntOf = (a: Assignment, rec?: StudentRecord) =>
+  a.variantId ? assignedProgress(a.variantId, rec?.data?.learning, rec?.data?.learnParts) : null;
+
+/** Who an assignment is for, and who has done it: learned every part in the learning mode or marked its voices on
+ *  their path (a chant or song), pressed „შევასრულე“ since it was given (an exercise). */
 const progressOf = (a: Assignment, cls: SchoolClass, records: Record<string, StudentRecord>) => {
   const targets = a.studentIds.length ? a.studentIds.filter(u => cls.memberIds.includes(u)) : cls.memberIds;
   const done = targets.filter(uid => {
     if (a.exercise) return ((records[uid]?.data?.drillDone?.[a.exercise] as string) || '') >= (a.createdAt || '').slice(0, 10);
     if (!a.variantId) return false;
+    if (allLearned(learntOf(a, records[uid]))) return true;
     const item = records[uid]?.data?.selectedChantVariants?.[a.variantId];
     if (!item) return false;
     const marked = voicesOf(item, a.variantId);
@@ -105,13 +113,37 @@ export const AssignmentsPanel: React.FC<{ cls: SchoolClass; records: Record<stri
   );
 };
 
+/** An assigned chant or song, member by member: the bar of its parts in their learning mode, ✓ once done. */
+const WhoLearns: React.FC<{ a: Assignment; cls: SchoolClass; records: Record<string, StudentRecord>; targets: string[]; done: string[] }> = ({ a, cls, records, targets, done }) => (
+  <ul className="sg-in mt-2.5 space-y-2.5 rounded-xl bg-[#fbf6ec] ring-1 ring-[#efe5d4] px-3 py-2.5">
+    {targets.map(uid => {
+      const p = learntOf(a, records[uid]);
+      const ok = done.includes(uid);
+      return (
+        <li key={uid}>
+          <p className="flex items-center gap-2">
+            <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-[#4a3426]">{cls.members.find(m => m.uid === uid)?.name || 'წევრი'}</span>
+            <span className="shrink-0 inline-flex items-center gap-1 text-[12px] font-bold tabular-nums text-[#8a7a6a]">
+              {p ? `${p.learned}/${p.total}` : ok ? 'მონიშნა გზაზე' : 'არ დაუწყია'}
+              {ok && <Check className="w-4 h-4 stroke-[3] text-emerald-600" aria-label="შესრულდა" />}
+            </span>
+          </p>
+          {p && <PartsBar p={p} className="mt-1" />}
+        </li>
+      );
+    })}
+  </ul>
+);
+
 /** The class page's „დავალებები“ fold (ClassProgram), for the class's teachers: the current assignments in slim rows —
- *  voices, deadline, for whom, how many marked it — with 🗑, „ახალი დავალება“, and the older ones (`past`, latest first)
- *  folded under „ძველი · N“ with their results. The members' records (for the counts) are read only while it is open. */
+ *  voices, deadline, for whom, how many did it (a chant's count unfolds into each member's bar of its parts) — with 🗑,
+ *  „ახალი დავალება“, and the older ones (`past`, latest first) folded under „ძველი · N“ with their results. The
+ *  members' records (for the counts) are read only while it is open. */
 export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; past?: Assignment[] }> = ({ cls, list, past = [] }) => {
   const records = useClassStudents(cls);
   const [adding, setAdding] = useState(false);
   const [old, setOld] = useState(false);
+  const [shown, setShown] = useState<string | null>(null);
   const msg = useFlash();
 
   const remove = async (a: Assignment) => {
@@ -129,14 +161,22 @@ export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; p
             <div className="min-w-0 flex-1">
               <p className="text-[14px] font-semibold leading-snug text-[#2a2017] break-words">{a.title}</p>
               {/* the voices in one chip; „for whom“ only when it isn't the whole class */}
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 {a.voices.length > 0 && <Pill>{a.voices.map(v => ROMAN[v]).join(' · ')} ხმა</Pill>}
                 <Pill tone={n < 0 ? 'muted' : n <= 2 ? 'amber' : 'brown'}>{shortDate(a.due)} · {dueLabel(a.due)}</Pill>
                 {a.studentIds.length > 0 && <Pill tone="muted"><Users /> {targets.length} მოსწავლე</Pill>}
                 {a.exercise && <Pill tone="muted"><Dumbbell /> სავარჯიშო</Pill>}
-                {(a.variantId || a.exercise) && <Pill tone="green"><Check /> {a.exercise ? 'შეასრულა' : 'მონიშნა'} {done.length}/{targets.length}</Pill>}
+                {a.exercise && <Pill tone="green"><Check /> შეასრულა {done.length}/{targets.length}</Pill>}
+                {a.variantId && targets.length > 0 && (
+                  <button type="button" aria-expanded={shown === a.id} onClick={() => setShown(s => (s === a.id ? null : a.id))}
+                    className="inline-flex items-center gap-1 h-9 pl-3 pr-2 rounded-full text-xs font-bold whitespace-nowrap bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 cursor-pointer hover:bg-emerald-100 transition-colors">
+                    <Check className="w-3.5 h-3.5" /> ისწავლა {done.length}/{targets.length}
+                    <ChevronDown className={`w-4 h-4 transition-transform ${shown === a.id ? 'rotate-180' : ''}`} />
+                  </button>
+                )}
               </div>
               {a.note && <p className="mt-1.5 text-[12.5px] leading-snug text-[#75685a] whitespace-pre-line">{a.note}</p>}
+              {shown === a.id && <WhoLearns a={a} cls={cls} records={records} targets={targets} done={done} />}
             </div>
             <IconBtn label="წაშლა" tone="danger" onClick={() => remove(a)}><Trash2 /></IconBtn>
           </li>

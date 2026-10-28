@@ -11,6 +11,7 @@ import { triggerHaptic } from '../../utils/haptics';
 import { MONTHS_GE, WEEKDAYS_GE } from '../../utils/dateNames';
 import { nextLesson } from '../teacher/Schedule';
 import { currentWork, workDone } from '../teacher/MyClassWork';
+import { useAllLearning } from '../../hooks/useLearning';
 import { openPathPanel } from './IndependentWorkCard';
 import { PATH_CARD, PATH_LABEL } from './pathStyle';
 import { findVersion } from '../../data/chantLookup';
@@ -53,6 +54,7 @@ export const PathToday: React.FC = () => {
   const classes = useMyClasses(user?.uid);
   const assignments = useMyAssignments(classes.map(c => c.id), user?.uid);
   const confirmed = useConfirmations(user?.uid);
+  const myLearning = useAllLearning(user?.uid);
   const habits = useMyHabits(user?.uid);
   if (!user) return null;
 
@@ -66,7 +68,7 @@ export const PathToday: React.FC = () => {
 
   // the nearest assignment not yet confirmed and not past its deadline
   const work = currentWork(assignments)
-    .filter(a => daysUntil(a.due) >= 0 && !workDone(a, confirmed))
+    .filter(a => daysUntil(a.due) >= 0 && !workDone(a, confirmed, undefined, myLearning))
     .sort((a, b) => a.due.localeCompare(b.due));
   const next = work[0];
 

@@ -1,38 +1,22 @@
 import React from 'react';
 import { ChevronRight, GraduationCap } from 'lucide-react';
-import { useAuth, useNavigation } from '../../context';
-import { useNotes } from '../../context/NotesContext';
+import { useAuth } from '../../context';
 import { useAllLearning } from '../../hooks/useLearning';
-import { parseSongPiece, reviewsDue } from '../../utils/learn';
-import { requestLearn } from '../../utils/learnOpen';
-import { requestOpen } from '../../utils/searchOpen';
+import { reviewsDue } from '../../utils/learn';
 import { georgiaToday } from '../../utils/psalter';
-import { triggerHaptic } from '../../utils/haptics';
-import { openSongPage } from '../maps/SongPage';
 import { pieceTitle } from '../learn/LearnReview';
+import { useOpenLearning } from '../learn/openLearning';
 
 // The home page's line of the learning mode: what waits for its review today (1, 3 and 7 days after a part was
 // learned). A row opens that chant or song straight in its learning mode. Members only; nothing due — no line.
 
 export const LearnDue: React.FC<{ className?: string }> = ({ className }) => {
   const { user } = useAuth();
-  const { navigateTo } = useNavigation();
-  const { openNotes } = useNotes();
+  const open = useOpenLearning();
   const all = useAllLearning(user?.uid);
-  const due = reviewsDue(all || undefined, georgiaToday());
+  const due = reviewsDue(all?.learning, georgiaToday());
   if (!due.length) return null;
   const parts = due.reduce((n, d) => n + d.parts.length, 0);
-
-  const open = (piece: string) => {
-    triggerHaptic(10);
-    requestLearn(piece);
-    const song = parseSongPiece(piece);
-    if (!song) { openNotes(piece, 'list'); return; }
-    // the songs' map, then the song's page over it (the map listens once it is on screen)
-    requestOpen('simghera', song.songId);
-    navigateTo('simghera');
-    window.setTimeout(() => openSongPage(song.songId, song.take), 350);
-  };
 
   return (
     <section className={`w-full max-w-md text-left rounded-2xl bg-white/85 ring-1 ring-[#e8dcc8] shadow-[0_8px_18px_-14px_rgba(122,32,40,0.6)] overflow-hidden sg-in ${className || ''}`}>
