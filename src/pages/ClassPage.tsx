@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import {
   Users, MessageCircle, Loader2, Pencil, Music4, Search, X, CalendarClock, Plus, ChevronRight, ClipboardList, ListChecks,
-  UserPlus, Palette,
+  UserPlus, Palette, GraduationCap, Archive, TriangleAlert,
 } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
 import { useNotes } from '../context/NotesContext';
@@ -14,19 +14,23 @@ import { ClassChat } from '../components/classes/ClassChat';
 import { ClassProgram } from '../components/classes/ClassProgram';
 import { ClassWork, useClassWork } from '../components/classes/ClassWork';
 import { AddMemberSheet } from '../components/classes/MembersWindow';
+import { ClassTeachersSheet } from '../components/classes/ClassTeachersSheet';
+import { archiveClass } from '../components/admin/ClassesAdmin';
+import { changed } from '../components/admin/changed';
 import { ClassPsalter } from '../components/psalter/ClassPsalter';
 import { ClassLessons } from '../components/mastery/ClassLessons';
 import { ClassPearls } from '../components/pearls/ClassPearls';
 import { Avatar } from '../components/classes/ChatPanel';
-import { Btn, Flash, IconBtn, PageBar, Sheet, Tabs, useFlash } from '../components/ui/kit';
+import { Btn, Flash, IconBtn, PageBar, Sheet, Tabs, useFlash, useWide } from '../components/ui/kit';
 import { openThread, Person } from '../hooks/useDirectChat';
 import { isClassUnread, useChatSeen, useClassLasts } from '../hooks/useClassChat';
 import { triggerHaptic } from '../utils/haptics';
+import { errorText } from '../utils/errorText';
 import type { ClassMember, SchoolClass } from '../hooks/useClasses';
 
 // the teacher's windows opened from the class page: the one ✎'s list ('edit') and what it opens; 'people' is the members'
 // window on a phone
-type Panel = 'edit' | 'class' | 'members' | 'schedule' | 'people';
+type Panel = 'edit' | 'class' | 'teachers' | 'members' | 'schedule' | 'people';
 // a panel's card shown inside a window loses its own frame (no box in a box)
 const FLAT = 'space-y-4 [&>section]:p-0 [&>section]:bg-transparent [&>section]:ring-0 [&>section]:shadow-none';
 // the round buttons in the title bar
@@ -74,10 +78,11 @@ export const ClassPage: React.FC<{ classId?: string; focus?: 'psalter' }> = ({ c
       </div>
     );
   }
-  return <ClassView key={cls.id} cls={cls} focus={focus} />;
+  return <ClassView key={cls.id} cls={cls} focus={focus} inUse={all} />;
 };
 
-const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter' }> = ({ cls, focus }) => {
+// `inUse`: every class in use (admins; for the teachers' and the archive's access bookkeeping)
+const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolClass[] }> = ({ cls, focus, inUse }) => {
   const { user, isAdmin } = useAuth();
   const { handleGoBack, openDm } = useNavigation();
   const { openProgram } = useNotes();
@@ -123,6 +128,19 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter' }> = ({ cls, foc
   };
   const myTeachers = iAmMember ? cls.teachers.filter(t => t.uid !== user?.uid) : [];
   const close = () => setPanel(null);
+  // admins: „არქივში“ from the ✎ list — made at once (nothing is deleted), „გაუქმება“ brings it back; the page is left,
+  // since an archived class shows nowhere
+  const toArchive = async () => {
+    close();
+    try {
+      // a member's record that could not be set is put right the next time the admin panel opens
+      await archiveClass(cls, true, inUse);
+      changed('archive', `კლასი „${cls.name}“ არქივში გადავიდა`, cls.id, () => archiveClass(cls, false, inUse));
+      handleGoBack();
+    } catch (e) {
+      msg.fail('კლასი ვერ გადავიდა არქივში: ' + errorText(e));
+    }
+  };
   const teacherNames = cls.teachers.map(t => t.name).filter(Boolean).join(', ');
   const members = (
     <MembersList cls={cls} canEdit={canEdit} me={user?.uid} onWrite={iTeach ? m => writeTo(m, false) : undefined} writing={opening} />
@@ -167,6 +185,16 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter' }> = ({ cls, foc
             </button>
           ))}
         </div>
+      )}
+
+      {/* admins: a class nobody leads says so, with the way to name its teacher */}
+      {isAdmin && cls.teacherIds.length === 0 && (
+        <button type="button" onClick={() => setPanel('teachers')}
+          className="w-full min-h-12 px-4 py-2 rounded-2xl bg-amber-50 ring-1 ring-amber-200 text-amber-900 flex items-center gap-2.5 text-left text-[14px] font-semibold cursor-pointer hover:bg-amber-100/70 transition-colors">
+          <TriangleAlert className="w-[18px] h-[18px] shrink-0 text-amber-600" />
+          <span className="flex-1 min-w-0">მასწავლებელი არ ჰყავს — დანიშვნა</span>
+          <ChevronRight className="w-5 h-5 shrink-0 text-amber-600" />
+        </button>
       )}
 
       {/* the timetable: chips, the next lesson filled in (the teachers change it from ✎) */}
@@ -251,6 +279,8 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter' }> = ({ cls, foc
             <ul className="-mx-1 divide-y divide-[#efe5d4]">
               {[
                 { Icon: Palette, label: 'სახელი, ლოგო და რეჟიმი', go: () => setPanel('class') },
+                // what only admins set: who leads the class
+                ...(isAdmin ? [{ Icon: GraduationCap, label: 'მასწავლებლები', go: () => setPanel('teachers') }] : []),
                 { Icon: CalendarClock, label: 'გაკვეთილების ცხრილი', go: () => setPanel('schedule') },
                 { Icon: ListChecks, label: 'სასწავლო პროგრამა', go: () => { close(); setTab('program'); setEditingProgram(true); } },
                 { Icon: UserPlus, label: 'წევრის დამატება', go: () => setPanel('members') },
@@ -265,7 +295,15 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter' }> = ({ cls, foc
                 </li>
               ))}
             </ul>
+            {/* admins: the class put away (nothing is deleted; „გაუქმება“ for a few seconds, later the panel's „არქივი“) */}
+            {isAdmin && (
+              <div className="mt-3 pt-3 border-t border-[#efe5d4]">
+                <Btn kind="ghost" full icon={<Archive />} onClick={toArchive}>არქივში გადატანა</Btn>
+                <p className="mt-1.5 text-[12px] text-[#8a7a6a] leading-snug text-center">კლასი და მისი ფსალმუნთა ჯგუფი ყველას დაემალება — არაფერი წაიშლება.</p>
+              </div>
+            )}
           </Sheet>
+          {isAdmin && <ClassTeachersSheet cls={cls} inUse={inUse} open={panel === 'teachers'} onClose={close} />}
           <Sheet open={panel === 'class'} onClose={close} title="კლასის რედაქტირება">
             <div className={FLAT}><ClassHeader cls={cls} /></div>
           </Sheet>
@@ -275,19 +313,6 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter' }> = ({ cls, foc
       )}
     </div>
   );
-};
-
-// the width at which the members get their own column (Tailwind's `lg`)
-const WIDE = '(min-width: 1024px)';
-const useWide = () => {
-  const [wide, setWide] = useState(() => window.matchMedia(WIDE).matches);
-  useEffect(() => {
-    const mq = window.matchMedia(WIDE);
-    const change = () => setWide(mq.matches);
-    mq.addEventListener('change', change);
-    return () => mq.removeEventListener('change', change);
-  }, []);
-  return wide;
 };
 
 /** „კლასის წევრები“ on a computer: a column of its own, always open and staying in view (a phone has one line that opens

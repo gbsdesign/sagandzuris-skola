@@ -1,5 +1,8 @@
-import React from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { Check } from 'lucide-react';
+import { collection, onSnapshot } from 'firebase/firestore';
+import { db } from '../../firebase';
+import { shownName, useDirectory } from '../../utils/directory';
 import { Avatar } from '../ui/kit';
 
 export interface Leader { uid: string; name: string; photoURL?: string }
@@ -29,3 +32,23 @@ export const LeaderChips: React.FC<{
       })}
     </div>
   );
+
+/** Admins: who may lead a class — every teacher and admin on the staff list, named as the directory names them.
+ *  `loading` stays true until both lists have come (a window saving the teachers waits for it). */
+export const useLeaders = (enabled: boolean) => {
+  const { people, loading: dirLoading } = useDirectory(enabled);
+  const [staff, setStaff] = useState<{ uid: string; name: string }[] | null>(null);
+  useEffect(() => {
+    if (!enabled) { setStaff([]); return; }
+    return onSnapshot(collection(db, 'admins'),
+      s => setStaff(s.docs.map(d => d.data()).filter(x => x.userId).map(x => ({ uid: String(x.userId), name: String(x.name || '') }))),
+      () => setStaff([]));
+  }, [enabled]);
+  const leaders = useMemo<Leader[]>(() => (staff || [])
+    .map(s => {
+      const p = people.find(x => x.uid === s.uid);
+      return { uid: s.uid, name: p ? shownName(p) : s.name || 'უსახელო', photoURL: p?.photoURL };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, 'ka')), [staff, people]);
+  return { leaders, loading: staff === null || dirLoading };
+};

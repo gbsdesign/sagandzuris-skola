@@ -8,6 +8,7 @@ import { useAllPsalterGroups } from '../hooks/usePsalter';
 import { Flash, PageBar, useFlash } from '../components/ui/kit';
 import { AdminHero, HeroTile } from '../components/admin/AdminHero';
 import { ClassesAdmin } from '../components/admin/ClassesAdmin';
+import { useLeftMembers } from '../utils/leftMembers';
 import { UsersTab, UserRecord, StaffRecord, Filter, filterTests, toUser } from '../components/admin/UsersTab';
 import { SchoolSheet } from '../components/admin/SchoolTab';
 import { AccessRecord, DecisionRecord, toAccess } from '../components/admin/AccessRequests';
@@ -118,7 +119,8 @@ export const AdminPanelPage: React.FC = () => {
       () => setDecisions({}));
     return () => { off1(); off2(); };
   }, [isSuperAdmin]);
-  const { test } = filterTests(staff, access, isSuperAdmin, classes);
+  const left = useLeftMembers();
+  const { test } = filterTests(staff, access, isSuperAdmin, classes, left.uids);
   const waiting = users.filter(test.pending).length;
 
   // people who may lead a class or group: teachers and admins
@@ -146,7 +148,7 @@ export const AdminPanelPage: React.FC = () => {
   const usersIn = !loading && !failed.users;
   const userTiles: Filter[] = ['all', 'week', isSuperAdmin ? 'pending' : 'teacher'];
   const TILES: HeroTile[] = [
-    { id: 'all', label: 'ყველა', n: usersIn ? users.length : null, Icon: Users },
+    { id: 'all', label: 'ყველა', n: usersIn ? users.filter(test.all).length : null, Icon: Users },
     { id: 'week', label: 'აქტიური კვირაში', n: usersIn && staffLoaded && (!isSuperAdmin || accessLoaded) ? users.filter(test.week).length : null, Icon: Activity },
     isSuperAdmin
       ? { id: 'pending', label: 'ელოდება', n: usersIn && staffLoaded && accessLoaded && !failed.access ? waiting : null, Icon: Hourglass, alert: waiting > 0 }
@@ -209,15 +211,15 @@ export const AdminPanelPage: React.FC = () => {
 
       {view === 'users' && (
         <UsersTab users={users} staff={staff} classes={classes} access={access} decisions={decisions} loading={loading}
-          filter={filter} onFilter={setFilter} tiles={userTiles} openId={openId} onOpen={setOpenId} onMessage={msg.say} />
+          filter={filter} onFilter={setFilter} tiles={userTiles} openId={openId} onOpen={setOpenId} onMessage={msg.say} left={left} />
       )}
       {view === 'classes' && (
         <div className="space-y-4">
           {/* a psalter group lives only inside its class (made from the class page); it shows on the class's row */}
-          <ClassesAdmin classes={classes} archived={archived} loading={loadingClasses} failed={classesFailed} staff={leaders} onMessage={msg.say} groups={groups} />
+          <ClassesAdmin classes={classes} archived={archived} loading={loadingClasses} failed={classesFailed} onMessage={msg.say} groups={groups} />
         </div>
       )}
-      {schoolOpen && <SchoolSheet users={users} onClose={() => setSchoolOpen(false)} />}
+      {schoolOpen && <SchoolSheet users={users} classes={classes} onClose={() => setSchoolOpen(false)} />}
     </div>
   );
 };

@@ -356,6 +356,15 @@
   (`utils/adminPush.ts`, `adminPush/{uid}`): „ახალი წევრი ელოდება“ (superadmins; `ensureMembership` → Worker
   `/access-request`, a tap opens `/?open=admin&person=<uid>`) and „ორშაბათის მიმოხილვა“ (Monday 10:00, `weekText`). The
   Worker sends only to people still in `admins` and adds its `subs.admin` column itself — needs only `wrangler deploy`.
+  Stage IV (2026-10-28): a class is edited only on its page — the ✎ list gives admins „მასწავლებლები“
+  (`classes/ClassTeachersSheet.tsx`, `useLeaders` in `admin/LeaderChips.tsx`, `saveClassTeachers` also sets the members'
+  teacherIds and the psalter group) and „არქივში გადატანა“, and a class nobody leads shows admins an amber „დანიშვნა“ line;
+  the panel's cards have no ✎ and „ახალი კლასი“ asks only the name, then opens the page. On a computer (`useWide`, `lg`) the
+  members list and the person's window stand side by side (the kit's `Sheet docked`). „გასული“ (person's window → „სკოლაში“):
+  `settings/leftMembers` (`utils/leftMembers.ts`) — they keep the app; `filterTests` leaves them out of every number and
+  list but the chip „გასულები“, birthdays/name days and the Worker's Monday count skip them. ⚙ „სკოლა“ → „განცხადება
+  კლასებს“ (`admin/Announce.tsx`): one text into the chat of every ticked class, as the admin's message. „განყოფილებები“:
+  one row per section with its „ბავშვებს“ toggle (no second list).
 - **Access** (`hooks/useAccess.ts`): guests see chant books + synth, prayers, song/მთქმელი names only (no
   recordings anywhere); kids' mode is switched by the teacher per student (`students.kidsMode`, no PIN).
 - **Home buttons** (`utils/shortcuts.ts`, `components/home/ShortcutShelf.tsx`, `students.shortcuts`, ≤8; hidden
