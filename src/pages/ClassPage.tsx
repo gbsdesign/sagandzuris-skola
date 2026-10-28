@@ -4,13 +4,12 @@ import { useAuth, useNavigation } from '../context';
 import { useNotes } from '../context/NotesContext';
 import { useMyClasses, useAllClasses, useTeachingClasses } from '../hooks/useClasses';
 import { ClassHeader } from '../components/teacher/ClassHeader';
-import { ClassProgramPanel } from '../components/teacher/ClassProgramPanel';
 import { ClassRoll } from '../components/teacher/StudentsOverview';
 import { LessonChips, ScheduleSheet } from '../components/teacher/Schedule';
 import { ClassLogo } from '../components/classes/ClassLogo';
 import { ClassChat } from '../components/classes/ClassChat';
 import { ClassProgram } from '../components/classes/ClassProgram';
-import { MembersWindow } from '../components/classes/MembersWindow';
+import { AddMemberSheet } from '../components/classes/MembersWindow';
 import { ClassPsalter } from '../components/psalter/ClassPsalter';
 import { ClassLessons } from '../components/mastery/ClassLessons';
 import { Avatar } from '../components/classes/ChatPanel';
@@ -19,7 +18,7 @@ import { openThread, Person } from '../hooks/useDirectChat';
 import type { ClassMember, SchoolClass } from '../hooks/useClasses';
 
 // the teacher's windows opened from the class page
-type Panel = 'class' | 'program' | 'members' | 'schedule';
+type Panel = 'class' | 'members' | 'schedule';
 // a panel's card shown inside a window loses its own frame (no box in a box)
 const FLAT = 'space-y-4 [&>section]:p-0 [&>section]:bg-transparent [&>section]:ring-0 [&>section]:shadow-none';
 // the round buttons in the title bar that do something (not ✎)
@@ -83,7 +82,7 @@ export const ClassPage: React.FC<{ classId?: string; focus?: 'psalter' }> = ({ c
   };
   const myTeachers = iAmMember ? cls.teachers.filter(t => t.uid !== user?.uid) : [];
   const canEdit = iTeach || isAdmin;
-  const pencil = (p: Panel, label: string) => canEdit && <IconBtn label={label} tone="wine" onClick={() => setPanel(p)}><Pencil /></IconBtn>;
+  const pencil = (p: Panel, label: string) => canEdit && <IconBtn label={label} onClick={() => setPanel(p)}><Pencil /></IconBtn>;
   const close = () => setPanel(null);
   const teacherNames = cls.teachers.map(t => t.name).filter(Boolean).join(', ');
 
@@ -147,15 +146,15 @@ export const ClassPage: React.FC<{ classId?: string; focus?: 'psalter' }> = ({ c
           cls={cls}
           canEdit={canEdit}
           me={user?.uid}
-          edit={pencil('members', 'წევრების დამატება და ამოღება')}
+          edit={canEdit && <IconBtn label="წევრის დამატება" onClick={() => setPanel('members')}><Plus /></IconBtn>}
           onWrite={iTeach ? m => writeTo(m, false) : undefined}
           writing={opening}
         />
         <div className="min-w-0 space-y-4">
-          <ClassProgram cls={cls} canEdit={canEdit} action={pencil('program', 'პროგრამის რედაქტირება')} />
+          <ClassProgram cls={cls} canEdit={canEdit} />
           <ClassLessons cls={cls} canEdit={canEdit} />
           <ClassPsalter cls={cls} canLead={canEdit} focus={focus === 'psalter'} />
-          <ClassChat cls={cls} timetable={false} />
+          <ClassChat cls={cls} timetable={false} compact />
         </div>
       </div>
 
@@ -164,11 +163,8 @@ export const ClassPage: React.FC<{ classId?: string; focus?: 'psalter' }> = ({ c
           <Sheet open={panel === 'class'} onClose={close} title="კლასის რედაქტირება">
             <div className={FLAT}><ClassHeader cls={cls} /></div>
           </Sheet>
-          <Sheet open={panel === 'program'} onClose={close} title="პროგრამის რედაქტირება" wide>
-            <div className={FLAT}><ClassProgramPanel cls={cls} /></div>
-          </Sheet>
           <ScheduleSheet cls={cls} open={panel === 'schedule'} onClose={close} />
-          {panel === 'members' && <MembersWindow cls={cls} onMessage={msg.say} onClose={close} />}
+          {panel === 'members' && <AddMemberSheet cls={cls} onMessage={msg.say} onClose={close} />}
         </>
       )}
     </div>

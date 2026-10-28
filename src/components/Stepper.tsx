@@ -2,9 +2,9 @@ import React from 'react';
 import { Minus, Plus } from 'lucide-react';
 import { triggerHaptic } from '../utils/haptics';
 
-// amber = recording player, dusk = synthesizer
+// amber = recording player (the notes page's warm paper colours), dusk = synthesizer
 const TONES = {
-  amber: { ring: 'hover:ring-amber-300', changed: 'text-amber-700' },
+  amber: { ring: 'hover:ring-[#efd6a6]', changed: 'text-[#b4620e]' },
   dusk: { ring: 'hover:ring-dusk-300', changed: 'text-dusk-700' },
 };
 
@@ -23,10 +23,10 @@ export const Stepper: React.FC<{
   tone?: keyof typeof TONES;
 }> = ({ icon, label, value, isDefault, onMinus, onPlus, onReset, minusDisabled, plusDisabled, tone = 'amber' }) => {
   const t = TONES[tone];
-  const stepBtn = `w-9 h-9 shrink-0 rounded-full flex items-center justify-center bg-white text-slate-700 shadow-xs ring-1 ring-slate-200 ${t.ring} active:scale-90 transition-all disabled:opacity-30 disabled:active:scale-100 cursor-pointer`;
+  const stepBtn = `w-9 h-9 shrink-0 rounded-full flex items-center justify-center bg-white text-[#574739] shadow-xs ring-1 ring-[#e4d8c4] ${t.ring} active:scale-90 transition-all disabled:opacity-30 disabled:active:scale-100 cursor-pointer`;
   return (
-    <div className="flex-1 min-w-[124px] flex flex-col gap-1 px-1.5 pt-1.5 pb-1.5 rounded-2xl bg-slate-50 border border-slate-200/80">
-      <span className="flex items-center justify-center gap-1 text-[11px] font-bold text-slate-500 leading-none">
+    <div className="flex-1 min-w-[124px] flex flex-col gap-1 px-1.5 pt-1.5 pb-1.5 rounded-2xl bg-[#faf6ef] border border-[#e8dcc8]">
+      <span className="flex items-center justify-center gap-1 text-[11px] font-bold text-[#8c7c6b] leading-none">
         {icon}
         {label}
       </span>
@@ -43,7 +43,7 @@ export const Stepper: React.FC<{
         <button
           type="button"
           onClick={() => { triggerHaptic(5); onReset(); }}
-          className={`flex-1 min-w-0 h-9 text-center font-mono text-sm font-black transition-colors cursor-pointer ${isDefault ? 'text-slate-700' : t.changed}`}
+          className={`flex-1 min-w-0 h-9 text-center font-mono text-sm font-black transition-colors cursor-pointer ${isDefault ? 'text-[#2a2017]' : t.changed}`}
           title="საწყისზე დაბრუნება"
         >
           {value}

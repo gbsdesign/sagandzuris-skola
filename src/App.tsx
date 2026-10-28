@@ -146,7 +146,7 @@ function AppContent() {
 
       <Header logoUrl={currentLogo} />
 
-      <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 md:p-8 flex flex-col justify-center">
+      <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 md:p-8 flex flex-col">
         <div className="w-full max-w-4xl mx-auto">
           {/* „მიმდინარეობს დამატება“ while a superadmin has not decided on a new member */}
           <WaitingBanner />

@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRightLeft, FileText, GraduationCap, Headphones, Music, TextAlignStart } from 'lucide-react';
+import { ArrowRightLeft, FileText, GraduationCap, Headphones, Music, TextAlignStart } from 'lucide-react';
 import {
   FOLK_SONGS, FolkSong, centreRecMedia, getFolkRegion, songDocUrl, songRecMedia, songVersionMedia, soundcloudEmbedUrl,
 } from '../../data/songsData';
@@ -14,6 +14,7 @@ import { usePlacements } from '../../data/placements';
 import { MoveSheet } from '../archive/MoveSheet';
 import { LearnAudio } from '../learn/LearnAudio';
 import { songPiece } from '../../utils/learn';
+import { BackBtn, Tabs, useScrolledAway } from '../ui/kit';
 
 // One recording of a song: the school's own versions (voices) first, then the archive's performers
 export interface SongTake {
@@ -110,6 +111,9 @@ export const SongPage: React.FC = () => {
   const takes = song ? songTakes(song) : [];
   const takeIdx = Math.min(Math.max(Number(takeStr) || 0, 0), Math.max(takes.length - 1, 0));
   const take = takes[takeIdx];
+  // the bar names the song only once its big title has scrolled under it
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const titleAway = useScrolledAway(titleRef, scrollRef, songId);
   const words = useSongText(song);
 
   useEffect(() => {
@@ -152,16 +156,13 @@ export const SongPage: React.FC = () => {
       {/* top bar */}
       <div className="sticky top-0 z-10 safe-top bg-[#faf6ef]/95 backdrop-blur border-b border-[#e4d8c4]">
         <div className="safe-x"><div className="max-w-2xl mx-auto h-14 px-3 flex items-center gap-2">
-          <button
-            type="button"
-            onClick={close}
-            className="w-10 h-10 shrink-0 rounded-full flex items-center justify-center text-[#574739] hover:bg-[#f1e9dc] active:scale-95 transition cursor-pointer"
-            aria-label="უკან"
-            title="უკან"
+          <BackBtn onClick={close} />
+          <span
+            aria-hidden
+            className={`min-w-0 flex-1 truncate text-[15px] font-bold text-[#2a2017] transition-opacity duration-200 ${titleAway ? 'opacity-100' : 'opacity-0'}`}
           >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <span className="min-w-0 flex-1 truncate text-[15px] font-bold text-[#2a2017]">{song.title}</span>
+            {song.title}
+          </span>
         </div></div>
       </div>
 
@@ -172,7 +173,7 @@ export const SongPage: React.FC = () => {
             <span className="w-3 h-3 rounded-[4px] border border-black/10" style={{ background: region.color }} />
             {place}
           </span>
-          <h1 className="text-[26px] sm:text-[30px] font-black leading-tight text-[#2a2017] break-words">{song.title}</h1>
+          <h1 ref={titleRef} className="text-[26px] sm:text-[30px] font-black leading-tight text-[#2a2017] break-words">{song.title}</h1>
           {song.genre && (
             <span className="self-start mt-0.5 px-2.5 py-1 rounded-full bg-[#fcf1df] border border-[#efd6a6] text-[12px] font-bold text-[#8a4b12]">
               {song.genre}
@@ -184,24 +185,12 @@ export const SongPage: React.FC = () => {
         {takes.length > 1 && (
           <section className="flex flex-col gap-2">
             <h2 className="px-0.5 text-[12px] font-extrabold text-[#8c7c6b]">შესრულებები · {takes.length}</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {takes.map((t, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => { triggerHaptic(10); openSongPage(song.id, i); }}
-                  aria-pressed={i === takeIdx}
-                  className={`min-h-12 px-2 py-1.5 rounded-[10px] border text-[12px] font-bold leading-tight flex flex-col items-center justify-center gap-px text-center transition-all cursor-pointer active:scale-[0.97] ${
-                    i === takeIdx
-                      ? 'bg-[#fcf1df] text-[#2a2017] border-[#e8b866] shadow-[0_0_0_3px_rgba(180,98,14,0.12)]'
-                      : 'bg-white text-[#2a2017] border-[#e2d3bb] hover:border-[#d9a55a]'
-                  }`}
-                >
-                  <span className="break-words">{t.label}</span>
-                  {t.sub && <span className="text-[11px] font-semibold text-[#a0907c]">{t.sub}</span>}
-                </button>
-              ))}
-            </div>
+            <Tabs
+              cols="wide"
+              items={takes.map((t, i) => ({ id: String(i), label: t.label, under: t.sub }))}
+              value={String(takeIdx)}
+              onChange={id => openSongPage(song.id, Number(id))}
+            />
           </section>
         )}
 

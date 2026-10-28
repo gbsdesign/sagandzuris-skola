@@ -229,7 +229,7 @@ const LessonEditor: React.FC<{ cls: SchoolClass; lesson: Lesson | null; nextOrde
                 {STEP_KINDS.map(k => (
                   <button key={k.id} type="button" aria-pressed={s.kind === k.id} onClick={() => patch(i, { kind: k.id })}
                     className={`h-10 rounded-xl inline-flex items-center justify-center gap-1.5 text-[13px] font-bold cursor-pointer transition [&>svg]:w-4 [&>svg]:h-4 ${
-                      s.kind === k.id ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#fbf6ec] ring-1 ring-[#efe3cf] text-[#4a3426] hover:ring-[#7a2028]/30'
+                      s.kind === k.id ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/30'
                     }`}>
                     {KIND_ICON[k.id]} {k.label}
                   </button>

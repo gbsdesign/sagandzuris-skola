@@ -7,8 +7,10 @@ moving to the next chant in service order.
 ## Files
 
 - `NotesPage.tsx` + `notes.css` (`np-` classes): the full-screen notes page. Top bar with small icon+label tools
-  (სინთეზატორი, ჩანაწერი, ტექსტი, ჩემი სია, მეტი) that open their panels. Pinch-zoom, remembered separately
-  for upright / turned / computer.
+  (სინთეზატორი, ჩანაწერი, ტექსტი, [წირვა], ჩემი სია, მეტი) that open their panels; an upright phone keeps at most
+  five (ტექსტი is a row in „მეტი“ there; under 360px icons only). Pinch-zoom, remembered separately
+  for upright / turned / computer. The tone is set once, beside „საწყისი ბგერა“ (the recording panel's own is 🎧 ტონი).
+  „ტაძრის რეჟიმი“ is the round ⛪ beside „სწავლა“ (not in „მეტი“).
 - `ProgramPage.tsx` + `program.css`: „დღევანდელი წირვა“ — the teacher's chosen versions for a date.
 - `NpStepper.tsx`: small +/- stepper (tone ±7).
 - „სწავლა“ (`.np-learn`, beside the zoom; not in the crowded top bar) opens `components/learn/LearnMode.tsx` over
@@ -17,7 +19,7 @@ moving to the next chant in service order.
   the picture into pieces shown one under another, up to 2× bigger (cuts found from the ink at load time).
 - `src/context/NotesContext.tsx`: overlay pages + browser history/URL (`?c=&v=` for a chant, `?p=date~ids` for
   a program), church-mode state.
-- `src/hooks/useLiturgy.ts`: the class's teacher (admins: any class) composes it; there is no regent role. Draft in `users/{uid}/settings/liturgy`, templates in
+- `src/hooks/useLiturgy.ts`: the class's teacher (admins: any class) composes it; there is no regent role. Drafts per class in `users/{uid}/settings/liturgy` (`drafts.{classId}`; none → the class's last sent), templates in
   `…/liturgyTemplates`, "send" writes `classes/{id}.liturgy`; members read it (cached in localStorage).
 - `src/utils/offlineNotes.ts`: Cache `sagandzuri-notes-v1`, shared with Workbox runtimeCaching in `vite.config.ts`.
 - `src/data/hymnOrnaments.ts` + `public/hymn/top-NN|bottom-NN.webp`: drawings above the first page and below the

@@ -1,7 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ArrowLeft, Eye, Loader2, MessageCircle, Search, ShieldCheck, X } from 'lucide-react';
-import { collection, limit, onSnapshot, orderBy, query } from 'firebase/firestore';
-import { db } from '../firebase';
+import { ChevronRight, Eye, Loader2, MessageCircle, Search, ShieldCheck, X } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
 import { useMyClasses, useTeachingClasses, useAllClasses } from '../hooks/useClasses';
 import type { SchoolClass } from '../hooks/useClasses';
@@ -11,7 +9,9 @@ import {
   openThread, openPeerThread, openAdminThread, otherOf, isUnread, isStaffSide, adminId, ADMIN_NAME,
   Contact, DirectThread, Person,
 } from '../hooks/useDirectChat';
+import { useClassLasts, useChatSeen, isClassUnread } from '../hooks/useClassChat';
 import { Avatar, hhmm, dayLabel } from '../components/classes/ChatPanel';
+import { PageBar } from '../components/ui/kit';
 import { ClassLogo } from '../components/classes/ClassLogo';
 import { ClassChat } from '../components/classes/ClassChat';
 import { DirectChat, AdminAvatar, PaneTitle } from './DirectChatPage';
@@ -21,36 +21,6 @@ const when = (d: Date | null) => (!d ? '' : d.toDateString() === new Date().toDa
 const CLASS_PREFIX = 'class:';
 // in „ყველა“, each class shows this many people; the rest are a tap away (the class's own filter)
 const FEW = 6;
-
-// ---- class chats in the list: the newest message, and when this device last opened each ---------------------
-
-interface Last { at: Date | null; uid: string; text: string }
-
-const useClassLasts = (ids: string[]) => {
-  const [last, setLast] = useState<Record<string, Last | null>>({});
-  const key = ids.join(',');
-  useEffect(() => {
-    const offs = ids.map(id => onSnapshot(
-      query(collection(db, 'classes', id, 'messages'), orderBy('createdAt', 'desc'), limit(1)),
-      s => {
-        const d = s.docs[0]?.data({ serverTimestamps: 'estimate' });
-        setLast(p => ({
-          ...p,
-          [id]: d ? { at: d.createdAt?.toDate?.() || null, uid: d.uid || '', text: d.kind === 'voice' ? '🎤 ხმოვანი შეტყობინება' : d.text || '' } : null,
-        }));
-      },
-      err => console.warn('class chat: ', err?.code || err)
-    ));
-    return () => offs.forEach(off => off());
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [key]);
-  return last;
-};
-
-const SEEN_KEY = 'sg-classChatSeen';
-const readSeen = (): Record<string, number> => {
-  try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '{}') || {}; } catch { return {}; }
-};
 
 // the page fills the screen below the header: the list and the chat scroll inside it, the page itself does not
 const useFitHeight = (ref: React.RefObject<HTMLElement | null>, dep: unknown) => {
@@ -134,7 +104,8 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const [chip, setChip] = useState('all');
   const [opening, setOpening] = useState<string | null>(null);
   const [err, setErr] = useState('');
-  const [seen, setSeen] = useState(readSeen);
+  // when I last read each class chat (on any of my devices); the chat marks itself read while it is open
+  const seen = useChatSeen(uid);
 
   // the member's own kids' mode, copied where classmates' lists can see it (the rules accept only the truth)
   const kidsOn = !!kidsMode;
@@ -147,15 +118,6 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const classRows = known.filter(c => mine.some(m => m.id === c.id) || chip === c.id);
   const lasts = useClassLasts(classRows.map(c => c.id));
   const openClassId = open?.startsWith(CLASS_PREFIX) ? open.slice(CLASS_PREFIX.length) : null;
-  const openClassLast = openClassId ? lasts[openClassId]?.at?.getTime() : undefined;
-  useEffect(() => {
-    if (!openClassId) return;
-    setSeen(s => {
-      const next = { ...s, [openClassId]: Date.now() };
-      try { localStorage.setItem(SEEN_KEY, JSON.stringify(next)); } catch { /* private window */ }
-      return next;
-    });
-  }, [openClassId, openClassLast]);
 
   const shell = useRef<HTMLDivElement>(null);
   const fit = useFitHeight(shell, open);
@@ -212,7 +174,7 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       if (!inChip(c.id) || !matches(c.name)) continue;
       const last = lasts[c.id];
       const id = CLASS_PREFIX + c.id;
-      const unread = !!last?.at && last.uid !== uid && (seen[c.id] ?? 0) < last.at.getTime() && open !== id;
+      const unread = isClassUnread(last, seen[c.id], uid) && open !== id;
       items.push({
         key: id,
         at: last?.at?.getTime() ?? 0,
@@ -291,8 +253,11 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       return matches(fresh(c).name);
     });
     const cut = chip === 'all' && !needle && list.length > FEW + 1;
-    return { cls: g.cls, list: cut ? list.slice(0, FEW) : list, more: cut ? list.length - FEW : 0 };
+    return { cls: g.cls, list: cut ? list.slice(0, FEW) : list, more: cut ? list.length - FEW : 0, total: list.length };
   }).filter(g => g.list.length > 0);
+  // many classes (an admin, a teacher of several): in „ყველა“ each class is one line that opens its people;
+  // a search still finds anyone
+  const folded = chip === 'all' && !needle && contactRows.length > 2;
 
   const relLabel = (c: Contact, cls: SchoolClass) =>
     c.rel === 'peer' ? 'კლასელი' : c.rel === 'teacher' || cls.teacherIds.includes(c.uid) ? 'მასწავლებელი' : 'მოსწავლე';
@@ -309,7 +274,6 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         <MessageCircle className="w-8 h-8 text-[#7a2028]/70" />
       </span>
       <p className="font-serif-ge text-lg font-bold text-[#4a3426]">აირჩიეთ ჩათი</p>
-      <p className="text-sm text-[#8a7a6a] max-w-xs">ან მარცხნივ, სიიდან დაიწყეთ ახალი საუბარი. ხმოვანი შეტყობინებაც შეგიძლიათ.</p>
     </div>
   ) : openClassId ? (
     openCls ? (
@@ -328,29 +292,25 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
 
   return (
     <div className="w-full max-w-5xl mx-auto px-1 py-3 sm:py-5 text-[#2a2017]">
-      <div className={`${open ? 'hidden lg:flex' : 'flex'} items-center gap-2 mb-3`}>
-        <button
-          type="button"
-          onClick={handleGoBack}
-          aria-label="უკან"
-          className="w-9 h-9 shrink-0 rounded-full ring-1 ring-[#e8dcc8] bg-white/80 hover:bg-white text-[#4a3426] flex items-center justify-center cursor-pointer active:scale-95"
-        >
-          <ArrowLeft className="w-4 h-4" />
-        </button>
-        <h1 className="font-serif-ge text-xl sm:text-2xl font-bold text-[#4a3426] truncate">შეტყობინებები</h1>
-        {isSuperAdmin && (
-          <button
-            type="button"
-            onClick={() => setOverview(v => !v)}
-            aria-pressed={overview}
-            title="სკოლის ყველა პირადი ჩათი — მხოლოდ სანახავად"
-            className={`ml-auto h-9 px-3.5 shrink-0 rounded-full text-sm font-bold inline-flex items-center gap-1.5 cursor-pointer active:scale-95 transition ${
-              overview ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white/80 ring-1 ring-[#e8dcc8] text-[#7a2028] hover:bg-white'
-            }`}
-          >
-            <Eye className="w-4 h-4" /> ყველა ჩათი
-          </button>
-        )}
+      {/* the school's one page bar; on a phone with a chat open the chat's own head takes its place */}
+      <div className={`${open ? 'hidden lg:block' : ''} mb-3`}>
+        <PageBar
+          title="შეტყობინებები"
+          onBack={handleGoBack}
+          right={isSuperAdmin && (
+            <button
+              type="button"
+              onClick={() => setOverview(v => !v)}
+              aria-pressed={overview}
+              title="სკოლის ყველა პირადი ჩათი — მხოლოდ სანახავად"
+              className={`h-9 px-3.5 shrink-0 rounded-full text-sm font-bold inline-flex items-center gap-1.5 cursor-pointer active:scale-95 transition ${
+                overview ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white/80 ring-1 ring-[#e8dcc8] text-[#7a2028] hover:bg-white'
+              }`}
+            >
+              <Eye className="w-4 h-4" /> ყველა ჩათი
+            </button>
+          )}
+        />
       </div>
 
       <div
@@ -426,7 +386,19 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
                     />
                   </ul>
                 )}
-                {contactRows.map(g => (
+                {folded ? (
+                  <ul className="space-y-0.5">
+                    {contactRows.map(g => (
+                      <Row
+                        key={g.cls.id}
+                        face={<ClassLogo name={g.cls.name} logo={g.cls.logo} className="w-11 h-11 text-base" />}
+                        name={g.cls.name}
+                        sub={<span className="inline-flex items-center gap-1">{g.total} ადამიანი <ChevronRight className="w-3.5 h-3.5" /></span>}
+                        onClick={() => setChip(g.cls.id)}
+                      />
+                    ))}
+                  </ul>
+                ) : contactRows.map(g => (
                   <section key={g.cls.id}>
                     {(chip === 'all' && (contactRows.length > 1 || showAdminRow)) && (
                       <h4 className="flex items-center gap-2 px-2.5 pt-3 pb-1 text-[13px] font-bold text-[#4a3426] min-w-0">

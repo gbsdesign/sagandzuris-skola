@@ -6,7 +6,6 @@ import {
   User, 
   Clock, 
   Sparkles, 
-  Info, 
   Loader2,
   IdCard,
   Mic,
@@ -15,12 +14,14 @@ import {
 import { useAuth } from '../../context';
 import { Pill } from '../ui/kit';
 import { Fold } from '../admin/Fold';
+import { WORK_DAYS, WorkScheduleEditor, hoursOf } from './WorkScheduleEditor';
 import { auth, db, handleFirestoreError, OperationType } from '../../firebase';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { triggerHaptic } from '../../utils/haptics';
 import { isGeorgian, renameInGroups } from '../../utils/memberName';
 import { writeDirectory } from '../../utils/directory';
-import { ABILITY_OPTIONS, AbilityId, GEORGIAN_REGIONS, INTEREST_OPTIONS, abilitiesOf, normalizePhone } from '../../utils/profileFields';
+import { ABILITY_OPTIONS, AbilityId, GEORGIAN_REGIONS, INTEREST_OPTIONS, abilitiesOf, isPlaceholderBirth, normalizePhone, showPhone, validBirth } from '../../utils/profileFields';
+import { BirthPick } from '../ui/BirthPick';
 import { INSTRUMENTS_LIST } from '../../data/instrumentsData';
 
 const INITIAL_PROFILE: StudentProfile = {
@@ -34,38 +35,26 @@ const INITIAL_PROFILE: StudentProfile = {
   workSchedule: {},
 };
 
-const DAYS_OF_WEEK = [
-  { id: 'ორშ', short: 'ორშ', full: 'ორშაბათი', jsDay: 1 },
-  { id: 'სამ', short: 'სამ', full: 'სამშაბათი', jsDay: 2 },
-  { id: 'ოთხ', short: 'ოთხ', full: 'ოთხშაბათი', jsDay: 3 },
-  { id: 'ხუთ', short: 'ხუთ', full: 'ხუთშაბათი', jsDay: 4 },
-  { id: 'პარ', short: 'პარ', full: 'პარასკევი', jsDay: 5 },
-  { id: 'შაბ', short: 'შაბ', full: 'შაბათი', jsDay: 6 },
-  { id: 'კვი', short: 'კვი', full: 'კვირა', jsDay: 0 },
-];
-
-// All available hours from 06:00 to 23:00
-const AVAILABLE_HOURS = Array.from({ length: 18 }, (_, i) => {
-  const h = i + 6;
-  return `${h.toString().padStart(2, '0')}:00`;
-});
-
 /** Whose profile an admin edits from the admin panel (without it: my own). */
 export interface ProfileOwner { uid: string; email: string; displayName: string; photoURL: string }
 
 /** A profile: a head card (photo, name, role, voice, place), then `slot` (the profile page puts the admin panel's row,
  *  the outfit and the home buttons there), then the details as three folding cards. „შენახვა“ shows only while
  *  something differs from what is saved. */
-export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.ReactNode }> = ({ member, slot }) => {
+export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.ReactNode; waiting?: boolean }> = ({ member, slot, waiting = false }) => {
   const { isAdmin, isSuperAdmin, isTeacher } = useAuth();
   const [profile, setProfile] = useState<StudentProfile>(INITIAL_PROFILE);
   // the saved profile as text (set after each snapshot), to tell whether anything is changed
   const [baseline, setBaseline] = useState<string | null>(null);
   const [synced, setSynced] = useState(0);
-  const [activeDay, setActiveDay] = useState<string>('ორშ');
   const [savedMessage, setSavedMessage] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
   const [savingDb, setSavingDb] = useState(false);
+  // „არ ვიცი“ for the voice, kept where „პირველი გაცნობა“ keeps it (firstMeeting.voiceUnknown); `met`: that form was filled
+  const [met, setMet] = useState(false);
+  const [voiceUnknown, setVoiceUnknown] = useState(false);
+  const [savedUnknown, setSavedUnknown] = useState(false);
+  const [birthError, setBirthError] = useState(false);
 
   // Sync profile only with Firestore on mount and prefill from Auth
   useEffect(() => {
@@ -95,6 +84,9 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
       setSynced(n => n + 1);
       if (snapshot.exists()) {
         const data = snapshot.data();
+        setMet(!!data.firstMeeting);
+        setVoiceUnknown(!!data.firstMeeting?.voiceUnknown);
+        setSavedUnknown(!!data.firstMeeting?.voiceUnknown);
         if (data.profile) {
           let loadedVoices = Array.isArray(data.profile.voices) ? data.profile.voices : [];
           // If legacy data had all 3 voices auto-marked by old mock default, clean to empty
@@ -108,6 +100,8 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
             firstName: data.profile.firstName || prev.firstName,
             lastName: data.profile.lastName || prev.lastName,
             voices: loadedVoices,
+            // shown the way „პირველი გაცნობა“ shows it; saving cleans it again
+            phone: showPhone(data.profile.phone),
             workSchedule: data.profile.workSchedule || {}
           }));
         } else {
@@ -131,43 +125,6 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (synced) setBaseline(JSON.stringify(profile)); }, [synced]);
 
-  // Helper to get selected hours list for a day of week
-  const getSelectedHoursForDay = (dayId: string): string[] => {
-    const raw = profile.workSchedule?.[dayId];
-    if (!raw || typeof raw !== 'string') return [];
-    return raw
-      .split(',')
-      .map(s => s.trim())
-      .filter(s => AVAILABLE_HOURS.includes(s));
-  };
-
-  // Toggle hour in profile setup for the active day
-  const handleHourToggle = (dayId: string, hour: string) => {
-    const currentHours = getSelectedHoursForDay(dayId);
-    let nextHours: string[];
-    
-    if (currentHours.includes(hour)) {
-      nextHours = currentHours.filter(h => h !== hour);
-    } else {
-      nextHours = [...currentHours, hour].sort((a, b) => {
-        return parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]);
-      });
-    }
-
-    setProfile(prev => {
-      const updatedSchedule = { ...(prev.workSchedule || {}) };
-      if (nextHours.length === 0) {
-        delete updatedSchedule[dayId];
-      } else {
-        updatedSchedule[dayId] = nextHours.join(', ');
-      }
-      return {
-        ...prev,
-        workSchedule: updatedSchedule
-      };
-    });
-  };
-
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     
@@ -183,6 +140,7 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
   };
 
   const handleVoiceToggle = (voice: '1' | '2' | '3') => {
+    setVoiceUnknown(false);
     setProfile(prev => {
       const exists = prev.voices.includes(voice);
       const nextVoices = exists 
@@ -210,11 +168,18 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
     return { ...prev, [key]: cur.includes(id) ? cur.filter(x => x !== id) : [...cur, id] };
   });
 
+  // the old starting value (1 January 2000) that many saved without choosing shows as not chosen yet
+  const birthUnset = !met && isPlaceholderBirth(profile.birthDate);
+
   // Save profile to Firestore with explicit mergeFields to never overwrite completedSessions or selectedChantVariants
   const handleSave = async () => {
+    // an untouched old placeholder stays as it was; a date begun must be finished
+    if (!(birthUnset && isPlaceholderBirth(profile.birthDate)) && !validBirth(profile.birthDate)) { setBirthError(true); return; }
+    setBirthError(false);
     triggerHaptic(30);
     setSavingDb(true);
     setSaveFailed(false);
+    const unknown = met && voiceUnknown !== savedUnknown ? { firstMeeting: { voiceUnknown } } : {};
 
     // an admin saves only the member's profile: their account fields (e-mail, photo, name in the account) stay theirs
     if (member) {
@@ -222,12 +187,14 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
       try {
         await setDoc(doc(db, 'students', member.uid), {
           profile: { ...profile, phone: normalizePhone(profile.phone) ?? (profile.phone || '') },
+          ...unknown,
           updatedAt: new Date().toISOString()
         }, { merge: true });
         void writeDirectory(member.uid, { firstName: first, lastName: last, churchName: church });
         if (isGeorgian(first) && isGeorgian(last)) void renameInGroups(member.uid, `${first} ${last}`, church || first, member.photoURL);
         setSavedMessage(true);
         setBaseline(JSON.stringify(profile));
+        setSavedUnknown(voiceUnknown);
         setTimeout(() => setSavedMessage(false), 2500);
       } catch {
         setSaveFailed(true);
@@ -246,6 +213,7 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
           photoURL: user.photoURL || '',
           authProvider: user.providerData.some(pd => pd.providerId === 'google.com') ? 'Google' : 'email',
           profile: { ...profile, phone: normalizePhone(profile.phone) ?? (profile.phone || '') },
+          ...unknown,
           updatedAt: new Date().toISOString()
         }, { merge: true });
         // teachers find me by this name, and my psalter groups list me by it
@@ -261,13 +229,11 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
     setSavingDb(false);
     setSavedMessage(true);
     setBaseline(JSON.stringify(profile));
+    setSavedUnknown(voiceUnknown);
     setTimeout(() => setSavedMessage(false), 2500);
   };
 
-  const activeDayObj = DAYS_OF_WEEK.find(d => d.id === activeDay) || DAYS_OF_WEEK[0];
-  const activeDaySelectedHours = getSelectedHoursForDay(activeDay);
-  const configuredDaysList = DAYS_OF_WEEK.filter(d => getSelectedHoursForDay(d.id).length > 0);
-  const isValidSchedule = configuredDaysList.length >= 2;
+  const configuredDaysList = WORK_DAYS.filter(d => hoursOf(profile.workSchedule, d.id).length > 0);
 
   const currentUser = member || auth.currentUser;
   const userPhoto = currentUser?.photoURL;
@@ -291,14 +257,16 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
   // what each folded part says while closed
   const voiceNames = VOICES.filter(v => profile.voices.includes(v.id)).map(v => v.label.split(' · ')[0]);
   const place = [profile.city, profile.region].filter(Boolean).join(', ');
-  const personalSummary = [place, profile.phone].filter(Boolean).join(' · ') || 'შეავსე შენი მონაცემები';
+  // the number keeps to one line (no-break spaces)
+  const personalSummary = [place, profile.phone?.replace(/ /g, '\u00a0')].filter(Boolean).join(' · ') || 'შეავსეთ თქვენი მონაცემები';
   const skillsSummary = [
     ...voiceNames,
     ...ABILITY_OPTIONS.filter(a => abilities.includes(a.id)).map(a => a.title),
   ].join(' · ') || 'ხმა, შესაძლებლობები, ინტერესები';
   const scheduleSummary = configuredDaysList.length ? configuredDaysList.map(d => d.short).join(', ') : 'დღეები ჯერ არ არის არჩეული';
   const role = member ? null : isSuperAdmin ? 'სუპერადმინი' : isAdmin ? 'ადმინი' : isTeacher ? 'მასწავლებელი' : 'წევრი';
-  const dirty = baseline === null || baseline !== JSON.stringify(profile);
+  const dirty = baseline === null || baseline !== JSON.stringify(profile) || voiceUnknown !== savedUnknown;
+  const justSaved = savedMessage && !dirty;
 
   return (
     <div className="w-full max-w-lg mx-auto space-y-3 text-[#2a2017]">
@@ -323,9 +291,8 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
             <p className="text-[13px] text-[#8a7a6a] truncate">{userEmail || 'პროფილი'}</p>
           </div>
         </div>
-        {(role || voiceNames.length > 0 || place || savedMessage) && (
+        {(role || voiceNames.length > 0 || place) && (
           <div className="px-4 sm:px-5 pb-4 -mt-1.5 flex flex-wrap gap-1.5">
-            {savedMessage && <Pill tone="green"><Check /> შენახულია</Pill>}
             {role && <Pill tone={role === 'წევრი' ? 'brown' : 'wine'}>{role}</Pill>}
             {voiceNames.map(v => <Pill key={v} tone="muted"><Mic /> {v}</Pill>)}
             {place && <Pill tone="muted"><MapPin /> {place}</Pill>}
@@ -349,7 +316,7 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
             {/* groups and the commemoration lists need the name in Georgian letters */}
             {(profile.firstName || profile.lastName) && !(isGeorgian(profile.firstName) && isGeorgian(profile.lastName)) && (
               <p className="col-span-2 -mt-1 text-xs leading-snug text-[#9a3324]">
-                სახელი და გვარი ქართული ასოებით ჩაწერე — ასე გამოჩნდები ჯგუფში და მოსახსენებელში.
+                სახელი და გვარი ქართული ასოებით ჩაწერეთ — ასე გამოჩნდებით ჯგუფში და მოსახსენებელში.
               </p>
             )}
             <div className="col-span-2">
@@ -359,7 +326,7 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
             <div className="col-span-2">
               <label className={label}>რეგიონი</label>
               <select name="region" value={profile.region} onChange={handleChange} className={`${field} cursor-pointer`}>
-                <option value="" disabled>აირჩიე რეგიონი</option>
+                <option value="" disabled>აირჩიეთ რეგიონი</option>
                 {/* an old free-text region stays visible until another is chosen */}
                 {[...GEORGIAN_REGIONS, ...(profile.region && !GEORGIAN_REGIONS.includes(profile.region) ? [profile.region] : [])].map(r => (
                   <option key={r} value={r}>{r}</option>
@@ -377,12 +344,15 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
           </div>
 
           <div>
-            <label className={label}>დაბადების თარიღი</label>
-            <div className="grid grid-cols-[1.4fr_1fr_1fr] gap-2 max-w-xs">
-              <input name="birthDate.year" inputMode="numeric" placeholder="წელი" value={profile.birthDate.year || ''} onChange={handleChange} className={`${field} text-center font-semibold`} />
-              <input name="birthDate.month" inputMode="numeric" placeholder="თვე" value={profile.birthDate.month || ''} onChange={handleChange} className={`${field} text-center font-semibold`} />
-              <input name="birthDate.day" inputMode="numeric" placeholder="დღე" value={profile.birthDate.day || ''} onChange={handleChange} className={`${field} text-center font-semibold`} />
-            </div>
+            <p className={label}>დაბადების თარიღი</p>
+            <BirthPick
+              value={birthUnset ? { day: 0, month: 0, year: 0 } : profile.birthDate}
+              onChange={b => { setBirthError(false); setProfile(prev => ({ ...prev, birthDate: b })); }}
+              idPrefix={member ? `pf-${member.uid}-birth` : 'pf-birth'}
+              fieldClass={field}
+              label={(htmlFor, text) => <label htmlFor={htmlFor} className="block mb-1 text-[12px] text-[#8a7a6a]">{text}</label>}
+            />
+            {birthError && <p role="alert" className="mt-1.5 text-xs leading-snug text-[#9a3324]">აირჩიეთ რიცხვი, თვე და წელი.</p>}
           </div>
 
         </div>
@@ -456,7 +426,7 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
           </div>
 
           <div>
-            <label className={label}>რომელი ხმა ხარ ან ფიქრობ რომ ხარ?</label>
+            <label className={label}>რომელ ხმას გალობთ?</label>
             <div className="flex flex-wrap gap-2">
               {VOICES.map(item => {
                 const active = profile.voices.includes(item.id);
@@ -467,84 +437,40 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
                   </button>
                 );
               })}
+              {met && (
+                <button type="button" onClick={() => { setVoiceUnknown(true); setProfile(prev => ({ ...prev, voices: [] })); }}
+                  className={chip(voiceUnknown && profile.voices.length === 0)} aria-pressed={voiceUnknown && profile.voices.length === 0}>
+                  {voiceUnknown && profile.voices.length === 0 && <Check className="w-3.5 h-3.5 stroke-[3]" />}
+                  არ ვიცი
+                </button>
+              )}
             </div>
           </div>
         </div>
       </Fold>
 
-      <Fold icon={<Clock />} title="მუშაობის განრიგი" summary={scheduleSummary}>
-        <div className="space-y-3.5">
-          <div className="grid grid-cols-7 gap-1.5">
-            {DAYS_OF_WEEK.map(day => {
-              const count = getSelectedHoursForDay(day.id).length;
-              const isSelected = activeDay === day.id;
-              return (
-                <button
-                  key={day.id}
-                  type="button"
-                  onClick={() => setActiveDay(day.id)}
-                  className={`h-12 rounded-xl flex flex-col items-center justify-center transition-colors cursor-pointer select-none active:scale-95 ${
-                    isSelected
-                      ? 'bg-[#7a2028] text-[#fbf6ec]'
-                      : count > 0
-                        ? 'bg-[#7a2028]/10 text-[#7a2028] hover:bg-[#7a2028]/15'
-                        : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40'
-                  }`}
-                >
-                  <span className="text-xs font-bold leading-tight">{day.short}</span>
-                  <span className={`text-[11px] font-semibold leading-none mt-1 ${isSelected ? 'text-[#fbf6ec]/80' : 'opacity-70'}`}>
-                    {count > 0 ? `${count} სთ` : '—'}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="text-sm font-bold text-[#4a3426]">{activeDayObj.full}</span>
-            <span className="text-xs text-[#8a7a6a] truncate">
-              {activeDaySelectedHours.length > 0 ? activeDaySelectedHours.join(', ') : 'აირჩიეთ საათები (06:00 – 23:00)'}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-6 gap-1.5">
-            {AVAILABLE_HOURS.map(hour => {
-              const isSelected = activeDaySelectedHours.includes(hour);
-              return (
-                <button
-                  key={hour}
-                  type="button"
-                  onClick={() => handleHourToggle(activeDay, hour)}
-                  className={`h-9 rounded-lg text-xs font-semibold tabular-nums transition-colors cursor-pointer select-none active:scale-95 ${
-                    isSelected ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40'
-                  }`}
-                >
-                  {hour}
-                </button>
-              );
-            })}
-          </div>
-
-          <p className={`flex items-center gap-2 text-xs ${isValidSchedule ? 'text-emerald-800' : 'text-[#75685a]'}`}>
-            {isValidSchedule ? <Check className="w-3.5 h-3.5 shrink-0 stroke-[2.5]" /> : <Info className="w-3.5 h-3.5 shrink-0" />}
-            <span>მინიმუმ <strong>2 დღე</strong> უნდა აირჩიოთ, თითო-თითო საათი მაინც.</span>
-          </p>
-        </div>
-      </Fold>
+      {/* the path's work timetable: a member's tool, not shown while one waits to be let in */}
+      {!waiting && <Fold icon={<Clock />} title="მუშაობის განრიგი" summary={scheduleSummary}>
+        <WorkScheduleEditor schedule={profile.workSchedule} onChange={ws => setProfile(prev => ({ ...prev, workSchedule: ws }))} />
+      </Fold>}
 
       {/* the save button shows only while something is changed, and stays in reach at the bottom */}
-      {(dirty || savingDb || saveFailed) && (
+      {(dirty || savingDb || saveFailed || justSaved) && (
         <div className="sticky bottom-3 z-10 pt-1 sg-in">
           <button
             type="button"
             onClick={handleSave}
-            disabled={savingDb}
-            className="w-full h-12 rounded-2xl bg-[#7a2028] hover:bg-[#5e1820] text-[#fbf6ec] font-bold text-[15px] shadow-[0_10px_24px_-8px_rgba(122,32,40,0.55)] active:scale-[0.98] transition-colors flex items-center justify-center gap-2 cursor-pointer select-none disabled:opacity-60"
+            disabled={savingDb || justSaved}
+            className={`w-full h-12 rounded-2xl font-bold text-[15px] active:scale-[0.98] transition-colors flex items-center justify-center gap-2 cursor-pointer select-none disabled:cursor-default ${
+              justSaved
+                ? 'bg-emerald-700 text-white shadow-[0_10px_24px_-8px_rgba(4,120,87,0.55)]'
+                : 'bg-[#7a2028] hover:bg-[#5e1820] text-[#fbf6ec] shadow-[0_10px_24px_-8px_rgba(122,32,40,0.55)] disabled:opacity-60'
+            }`}
           >
-            {savingDb ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-            <span>ცვლილებების შენახვა</span>
+            {justSaved ? <Check className="w-4 h-4 stroke-[3]" /> : savingDb ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+            <span>{justSaved ? 'შენახულია' : 'ცვლილებების შენახვა'}</span>
           </button>
-          {saveFailed && <p role="alert" className="mt-1.5 text-center text-[13px] font-semibold text-[#9b2c2c]">ვერ შეინახა — სცადე თავიდან.</p>}
+          {saveFailed && <p role="alert" className="mt-1.5 text-center text-[13px] font-semibold text-[#9b2c2c]">ვერ შეინახა — სცადეთ თავიდან.</p>}
         </div>
       )}
     </div>

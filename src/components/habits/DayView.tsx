@@ -1,32 +1,30 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowUpDown, BellRing, Check, Clock, ChevronDown, ChevronRight, Flame, Info, Pencil, Plus } from 'lucide-react';
+import { ArrowUpDown, Check, ChevronDown, ChevronRight, Flame, Info, Pencil, Plus } from 'lucide-react';
 import { COUNTED_BY_READING, COUNTER_TAP_STEP, HabitCounter } from '../../data/habitLooks';
 import { HabitGroupType } from '../../data/habitsAndManera';
-import { HabitLink, HabitSchedule, MyHabit, MyHabitGroup } from '../../utils/myHabits';
-import { isDue, planRun, planShare } from '../../utils/habitSchedule';
+import { HabitLink, MyHabit, MyHabitGroup } from '../../utils/myHabits';
+import { isDue, planRun } from '../../utils/habitSchedule';
 import { MONTHS_GE, WEEKDAYS_GE, WEEKDAYS_SHORT_GE } from '../../utils/dateNames';
 import { TICK_DAYS, dayKey, dayNeeds, keptStreak, lastDays, periodStart } from '../../utils/habitsWeek';
-import { currentRun, dayState, goalShare, ticksOf, timesIn } from '../../utils/habitStats';
+import { currentRun, dayState, ticksOf, timesIn } from '../../utils/habitStats';
 import { triggerHaptic } from '../../utils/haptics';
 import { HabitPrayerMenu, singlePrayerOf } from '../views/HabitPrayerMenu';
 import { HabitLinkChip } from '../views/HabitLinks';
 import { RICH_TEXT } from '../views/RichNoteEditor';
 import { safeNoteHtml } from '../../utils/richNote';
 import { HabitIcon, colorOf, tint } from './HabitIcon';
-import { FROM_WORD } from './HabitPage';
 import { HabitsModel } from './useHabits';
 import { DayDot, Ring, ViewHeading, dotState } from './parts';
 
 // "დღე": the chosen day's ring and status, the last seven days to choose from (a forgotten tick may be set up to
 // six days back), then the daily habits beside the weekly and monthly ones; a member changes each list at its end.
 
-/** A member's own list: „+ ჩვევის დამატება“ and „⇅ რიგი“ at the end of each list (0 — daily, 1 — weekly and monthly). */
+/** A member's own list: „+ ჩვევის დამატება“ and „⇅ რიგი“ at the end of each list (0 — daily, 1 — weekly and monthly);
+ *  a habit itself is changed on its own page (its ✏️), the one editor. */
 export interface ListEdit {
   add: (col: 0 | 1) => void;
   /** the list's habits with grips, drawn in its place while „რიგი“ is on */
   reorder: (col: 0 | 1) => React.ReactNode;
-  /** a habit's settings, unfolded under its card by ✏️; `done` folds them back */
-  settings: (id: string, done: () => void) => React.ReactNode;
 }
 
 const longDate = (d: Date) => `${WEEKDAYS_GE[d.getDay()]}, ${d.getDate()} ${MONTHS_GE[d.getMonth()]}`;
@@ -152,32 +150,11 @@ const CountBar: React.FC<{ count: number; counter: HabitCounter; color: string; 
   );
 };
 
-// A card shows its own numbers: today's count as a ring round the round button, the share and the days under the name,
-// the last ten days as dots beside it, ✏️ unfolding its settings (2026-10-23, every habit).
+// A card shows its own numbers: today's count as a ring round the round button, the last ten days as dots beside the name,
+// „›“ opening its own page (the share, the days ticked, and its ✏️ — the one place a habit is changed).
 const RING = 2 * Math.PI * 18.5;
 // how many days the dots beside a card's name show
 const DOTS = 10;
-
-/** Beside today's count under the name: how often the goal was met and the days ticked in all. */
-const CardStats: React.FC<{ ticks: Set<string>; goal: HabitGroupType['goal']; first: string | null; schedule?: HabitSchedule }> = ({
-  ticks,
-  goal,
-  first,
-  schedule,
-}) => {
-  // a habit with its own days: the share of those days
-  const share = schedule ? planShare(schedule, ticks, first) : goalShare(ticks, goal, first);
-  // „— · 0 დღე“ on every untouched habit only crowds the list
-  if (!ticks.size) return null;
-  return (
-    <>
-      <span title={share.of ? `შესრულება ${share.percent}% — ${share.of} ${schedule ? 'დღიდან' : FROM_WORD[goal.per]}` : 'შესრულება — ჯერ არც ერთი დღე არ დასრულებულა'}>
-        {share.of ? `${share.percent}%` : '—'}
-      </span>
-      <span title="სულ მოინიშნა">{ticks.size} დღე</span>
-    </>
-  );
-};
 
 /** „🔥 6“: periods (days, for a daily habit) in a row that met the goal. */
 const Run: React.FC<{ run: number; className?: string }> = ({ run, className = '' }) => (
@@ -206,10 +183,10 @@ const WeekDots: React.FC<{ ticks: Set<string>; color: string; className: string 
 
 // One habit: the round button ticks the chosen day (the habit's icon until it is done; a counted habit's count runs
 // round it as a ring); a tap on the name unfolds the habit's prayers and its own buttons, or opens its one prayer (one
-// without either is ticked by its name too). Under the name one line of numbers: today's count, the share, the days, the
-// time, the run; a weekly or monthly habit has its period („ამ კვირას 1 / 2“) there instead of the dots. A counted habit
-// has „+“ (not the Gospel and the Apostle: their chapters count by „წავიკითხე“); ✏️ unfolds its settings under it (without
-// them — a guest — „›“ opens the habit's page); ⓘ unfolds the member's note.
+// without either is ticked by its name too). One line: at the name's right the run and the last ten days; a weekly or
+// monthly habit has its period („ამ კვირას 1 / 2“) there instead, a counted one its number. A counted habit
+// has „+“ (not the Gospel and the Apostle: their chapters count by „წავიკითხე“); „›“ opens the habit's page, for a member
+// and a guest alike; ⓘ unfolds the member's note.
 const HabitRow: React.FC<{
   model: HabitsModel;
   habit: MyHabit;
@@ -217,12 +194,7 @@ const HabitRow: React.FC<{
   date: Date;
   onOpenPrayer: (prayerId: string) => void;
   onLink: (l: HabitLink) => void;
-  /** only while the list is in its „შეცვლა“ mode: ✏️ instead of „›“ */
-  edit?: ListEdit;
-  /** its settings are unfolded (kept by the list, so a habit stays while its own days are changed) */
-  editing: boolean;
-  onEditing: (on: boolean) => void;
-}> = ({ model, habit, group, date, onOpenPrayer, onLink, edit, editing, onEditing }) => {
+}> = ({ model, habit, group, date, onOpenPrayer, onLink }) => {
   const [noteOpen, setNoteOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const look = model.looks[habit.id];
@@ -251,7 +223,7 @@ const HabitRow: React.FC<{
       className="block w-full py-0.5 text-left cursor-pointer select-none"
     >
       <span className="flex items-center gap-1 text-[15px] font-medium leading-snug text-[#2a2017]">
-        {habit.label}
+        <span className="truncate">{habit.label}</span>
         {folds && <ChevronDown className={`w-4 h-4 shrink-0 text-[#b8a68e] transition-transform ${menuOpen ? 'rotate-180' : ''}`} />}
       </span>
     </button>
@@ -299,31 +271,20 @@ const HabitRow: React.FC<{
             {on ? <Check className="w-[18px] h-[18px] stroke-[3] animate-in zoom-in-50 duration-200" /> : <HabitIcon icon={look?.icon ?? 'sparkle'} className="w-4 h-4" />}
           </span>
         </button>
-        {/* the ten days at the right of the name's line; a long name sends them to the line below */}
-        <div className="flex-1 min-w-0 py-1.5 pr-1">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
-            <div className="min-w-0 max-w-full">{name}</div>
-            {/* the run, then (a daily habit) the ten days, at the right of the name */}
-            <span className="ml-auto flex items-center gap-3">
-              {run > 1 && <Run run={run} />}
-              {!rare && ticks.size > 0 && <WeekDots ticks={ticks} color={c} className="flex" />}
-            </span>
-          </div>
-          {/* one line of figures, a „·“ after each; none while a daily habit was never ticked and has nothing to count */}
-          {(rare || counter || ticks.size > 0 || habit.time) && (
-            <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12.5px] font-semibold tabular-nums text-[#8a7a6a] [&>*:not(:last-child)]:after:content-['·'] [&>*:not(:last-child)]:after:ml-1.5 [&>*:not(:last-child)]:after:text-[#c4b49c]">
-              {rare && <PeriodNote count={timesIn(ticks, periodStart(group.goal.per, date), group.goal.per)} goal={group.goal} current={periodNow} />}
-              {counter && <CountBar bare count={count} counter={counter} color={c} label={habit.label} onSet={n => model.setCount(habit.id, n, date)} />}
-              <CardStats ticks={ticks} goal={group.goal} first={model.first} schedule={habit.schedule} />
-              {habit.time && (
-                <span title={habit.alerts?.length ? 'დრო · შეხსენება ჩართულია' : 'დრო'} className="inline-flex items-center gap-1">
-                  {habit.alerts?.length ? <BellRing className="w-3.5 h-3.5 shrink-0" /> : <Clock className="w-3.5 h-3.5 shrink-0" />}
-                  {habit.time.from}
-                  {habit.time.to ? `–${habit.time.to}` : ''}
-                </span>
-              )}
-            </div>
-          )}
+        {/* one line: the name (cut short when long), then at its right the run and the ten days — or a weekly/monthly
+            habit's period, or a counted habit's number; the share and the days ticked live on the habit's own page */}
+        <div className="flex-1 min-w-0 py-1.5 pr-1 flex items-center gap-x-2.5">
+          <div className="min-w-0 flex-1">{name}</div>
+          <span className="shrink-0 flex items-center gap-2.5">
+            {run > 1 && <Run run={run} />}
+            {rare ? (
+              <PeriodNote count={timesIn(ticks, periodStart(group.goal.per, date), group.goal.per)} goal={group.goal} current={periodNow} />
+            ) : counter ? (
+              <CountBar bare count={count} counter={counter} color={c} label={habit.label} onSet={n => model.setCount(habit.id, n, date)} />
+            ) : (
+              ticks.size > 0 && <WeekDots ticks={ticks} color={c} className="hidden min-[360px]:flex" />
+            )}
+          </span>
         </div>
         {counter && !COUNTED_BY_READING.includes(habit.id) && (
           <button
@@ -337,30 +298,15 @@ const HabitRow: React.FC<{
             <Plus className="w-[18px] h-[18px] stroke-[2.5]" />
           </button>
         )}
-        {edit ? (
-          <button
-            type="button"
-            onClick={() => onEditing(!editing)}
-            aria-expanded={editing}
-            aria-label={`${habit.label} — შეცვლა`}
-            title="შეცვლა"
-            className={`w-9 h-9 ml-0.5 ${habit.note ? '' : 'mr-1.5'} shrink-0 rounded-full flex items-center justify-center cursor-pointer transition-colors ${
-              editing ? 'bg-[#7a2028] text-[#fbf6ec]' : 'text-[#a08a76] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.06]'
-            }`}
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => model.openHabit(habit.id)}
-            aria-label={`${habit.label} — ჩვევის გვერდი${run > 1 ? `, ზედიზედ ${run}` : ''}`}
-            title="ჩვევის გვერდი"
-            className={`h-11 min-w-10 shrink-0 ${habit.note ? '' : 'mr-1'} pl-1.5 pr-1 rounded-full flex items-center justify-end text-[#b8a68e] hover:bg-[#7a2028]/[0.06] cursor-pointer transition-colors`}
-          >
-            <ChevronRight className="w-[18px] h-[18px] shrink-0" />
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => model.openHabit(habit.id)}
+          aria-label={`${habit.label} — ჩვევის გვერდი${run > 1 ? `, ზედიზედ ${run}` : ''}`}
+          title="ჩვევის გვერდი"
+          className={`h-11 min-w-10 shrink-0 ${habit.note ? '' : 'mr-1'} pl-1.5 pr-1 rounded-full flex items-center justify-end text-[#b8a68e] hover:bg-[#7a2028]/[0.06] cursor-pointer transition-colors`}
+        >
+          <ChevronRight className="w-[18px] h-[18px] shrink-0" />
+        </button>
         {habit.note && (
           <button
             type="button"
@@ -376,11 +322,6 @@ const HabitRow: React.FC<{
           </button>
         )}
       </div>
-      {editing && edit && (
-        <div className="px-3 pt-3 pb-3 border-t border-[#f1e8d9] bg-[#fdfaf4] animate-in fade-in slide-in-from-top-1 duration-200">
-          {edit.settings(habit.id, () => onEditing(false))}
-        </div>
-      )}
       {menuOpen && habit.menu && (
         <div className="px-3 pb-4 pt-1 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
           {habit.hint && <p className="px-0.5 text-[12.5px] font-medium text-[#8a7a6a]">{habit.hint}</p>}
@@ -427,7 +368,6 @@ export const DayView: React.FC<{
   edit?: ListEdit;
 }> = ({ model, date, onDate, actions, onOpenPrayer, onLink, edit }) => {
   const [sorting, setSorting] = useState<0 | 1 | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
   // „შეცვლა“: one ✏️ over the lists; the rows' ✏️, the order and „+“ show only then (2026-10-27)
   const [changing, setChanging] = useState(false);
   const today = dayKey(date) === dayKey(new Date());
@@ -512,7 +452,7 @@ export const DayView: React.FC<{
                             aria-pressed={changing}
                             aria-label={changing ? 'შეცვლა — მზადაა' : 'ჩვევების შეცვლა'}
                             title={changing ? 'მზადაა' : 'შეცვლა'}
-                            onClick={() => { triggerHaptic(8); setChanging(c => !c); setSorting(null); setEditingId(null); }}
+                            onClick={() => { triggerHaptic(8); setChanging(c => !c); setSorting(null); }}
                             className={`h-9 rounded-full inline-flex items-center justify-center gap-1 cursor-pointer transition-colors active:scale-95 ${
                               changing ? 'px-3 bg-[#7a2028] text-[#fbf6ec] text-[13px] font-bold' : 'w-9 text-[#8a7a6a] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.06]'
                             }`}
@@ -534,7 +474,7 @@ export const DayView: React.FC<{
                     {groups.flatMap(g =>
                       g.items
                         // a habit with „მორგებული“ days shows on those days only
-                        .filter(h => !h.schedule || isDue(h.schedule, date) || editingId === h.id)
+                        .filter(h => !h.schedule || isDue(h.schedule, date))
                         .map(h => (
                           <HabitRow
                             key={h.id}
@@ -544,9 +484,6 @@ export const DayView: React.FC<{
                             date={date}
                             onOpenPrayer={onOpenPrayer}
                             onLink={onLink}
-                            edit={changing ? edit : undefined}
-                            editing={editingId === h.id}
-                            onEditing={on => setEditingId(on ? h.id : null)}
                           />
                         ))
                     )}

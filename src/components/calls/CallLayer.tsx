@@ -35,21 +35,32 @@ const Face: React.FC<{ name: string; photoURL?: string; className: string }> = (
     <span className={`${className} shrink-0 rounded-full bg-[#7a2028] text-[#fbf6ec] font-bold flex items-center justify-center`}>{name.charAt(0) || '?'}</span>
   );
 
+// a stream on its element, playing; back in the app (a phone may have stopped it meanwhile) it plays again —
+// a picture is given its stream anew, since play() alone can leave iOS on a black frame
+const usePlaying = (ref: React.RefObject<HTMLMediaElement | null>, stream: MediaStream, picture: boolean) => {
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    if (el.srcObject !== stream) { el.srcObject = stream; el.play().catch(() => {}); }
+    const back = () => {
+      if (document.visibilityState !== 'visible') return;
+      if (picture) { el.srcObject = null; el.srcObject = stream; }
+      el.play().catch(() => {});
+    };
+    document.addEventListener('visibilitychange', back);
+    return () => document.removeEventListener('visibilitychange', back);
+  }, [ref, stream, picture]);
+};
+
 const MediaVideo: React.FC<{ stream: MediaStream; mirror?: boolean }> = ({ stream, mirror }) => {
   const ref = useRef<HTMLVideoElement>(null);
-  useEffect(() => {
-    const v = ref.current;
-    if (v && v.srcObject !== stream) { v.srcObject = stream; v.play().catch(() => {}); }
-  }, [stream]);
+  usePlaying(ref, stream, true);
   return <video ref={ref} autoPlay playsInline muted className={`absolute inset-0 w-full h-full object-cover ${mirror ? '-scale-x-100' : ''}`} />;
 };
 
 const MediaAudio: React.FC<{ stream: MediaStream }> = ({ stream }) => {
   const ref = useRef<HTMLAudioElement>(null);
-  useEffect(() => {
-    const a = ref.current;
-    if (a && a.srcObject !== stream) { a.srcObject = stream; a.play().catch(() => {}); }
-  }, [stream]);
+  usePlaying(ref, stream, false);
   return <audio ref={ref} autoPlay />;
 };
 

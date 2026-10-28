@@ -104,7 +104,6 @@ export const AdminPanelPage: React.FC = () => {
       .sort((a, b) => a.name.localeCompare(b.name, 'ka'));
   }, [staff, users]);
 
-  const classStudents = useMemo(() => users.map(u => ({ userId: u.userId, name: u.name, email: u.email, photoURL: u.photoURL })), [users]);
   const teachersWithoutClass = leaders.filter(l => staff.find(s => s.userId === l.userId || s.email === l.email.toLowerCase())?.role === 'teacher' && !classes.some(c => c.teacherIds.includes(l.userId)) && !groups.some(g => g.teacherIds.includes(l.userId))).length;
 
   // the big numbers: three people filters (superadmins see who waits; other admins see the teachers) and the classes
@@ -166,13 +165,13 @@ export const AdminPanelPage: React.FC = () => {
       <Flash flash={msg.flash} onClose={msg.clear} />
 
       {tab === 'users' && (
-        <UsersTab users={users} staff={staff} classes={classes} groups={groups} access={access} decisions={decisions} loading={loading}
+        <UsersTab users={users} staff={staff} classes={classes} access={access} decisions={decisions} loading={loading}
           filter={filter} onFilter={setFilter} tiles={userTiles} onMessage={msg.say} />
       )}
       {tab === 'classes' && (
         <div className="space-y-4">
           {/* a psalter group lives only inside its class (made from the class page); it shows on the class's row */}
-          <ClassesAdmin classes={classes} loading={loadingClasses} students={classStudents} staff={leaders} onMessage={msg.say} mode="admin" groups={groups} />
+          <ClassesAdmin classes={classes} loading={loadingClasses} staff={leaders} onMessage={msg.say} groups={groups} />
         </div>
       )}
       {tab === 'school' && <SchoolTab users={users} onMessage={msg.say} />}

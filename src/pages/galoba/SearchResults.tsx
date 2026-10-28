@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { BookOpen, ChevronRight, Music2, Search, X } from 'lucide-react';
-import { useAuth, useNavigation, ServiceType } from '../../context';
+import { useAuth, useNavigation } from '../../context';
 import { ChantItem, getFolkRegion } from '../../data';
 import { requestOpen } from '../../utils/searchOpen';
 import { useAccess } from '../../hooks/useAccess';
@@ -79,37 +79,31 @@ const Row: React.FC<{ title: string; sub: string; icon?: React.ReactNode; onClic
 
 interface SearchResultsProps {
   query: SearchQuery;
-  /** the service whose own list is already shown above */
-  skipService?: ServiceType;
   /** class mode: only chants with versions in the class program */
   keepChant?: (chant: ChantItem) => boolean;
   onOpenChant: (hit: ChantHit) => void;
-  /** nothing was found above either: say so */
-  emptyAbove?: boolean;
 }
 
-/** Hits in the other services, the folk songs and the prayer book. */
-export const SearchResults: React.FC<SearchResultsProps> = ({ query, skipService, keepChant, onOpenChant, emptyAbove = true }) => {
+/** Hits in every service, the folk songs and the prayer book (the services page of those without the header's 🔍). */
+export const SearchResults: React.FC<SearchResultsProps> = ({ query, keepChant, onOpenChant }) => {
   const { openPrayer, navigateTo } = useNavigation();
   const { isOwner } = useAuth();
   const { page } = useAccess();
   const songsOpen = page('simghera') === 'open';
   const prayersOpen = page('prayer') === 'open';
 
-  const chants = useMemo(() => searchChants(query, skipService).filter(h => !keepChant || keepChant(h.chant)), [query, skipService, keepChant]);
+  const chants = useMemo(() => searchChants(query).filter(h => !keepChant || keepChant(h.chant)), [query, keepChant]);
   const songs = useMemo(() => (songsOpen ? searchSongs(query, isOwner) : []), [query, songsOpen, isOwner]);
   const prayers = useMemo(() => (prayersOpen ? searchPrayers(query) : []), [query, prayersOpen]);
 
   if (!chants.length && !songs.length && !prayers.length) {
-    return emptyAbove ? (
-      <p className="mx-1 py-6 text-center text-[13px] font-semibold text-[#8c7c6b]">ვერაფერი მოიძებნა. სცადეთ სხვა სიტყვა.</p>
-    ) : null;
+    return <p className="mx-1 py-6 text-center text-[13px] font-semibold text-[#8c7c6b]">ვერაფერი მოიძებნა. სცადეთ სხვა სიტყვა.</p>;
   }
 
   return (
     <div className="flex flex-col gap-4">
       <Group
-        title={skipService ? 'სხვა მსახურებებში' : 'საგალობლები'}
+        title="საგალობლები"
         items={chants}
         row={h => (
           <Row

@@ -213,12 +213,12 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const gutter = wide ? 28 : land ? 14 : 8;
   const isSaved = Boolean(selectedChantVariants?.[vid]);
   const progIdx = liturgy.role === 'teacher' ? (liturgy.program?.items.indexOf(vid) ?? -1) : -1;
-  // the teacher's „მსახურება“ in the top bar: adds this version to the service being composed, or takes it out
+  // the teacher's „წირვა“ in the top bar: adds this version to the service being composed, or takes it out
   const toggleProgram = () => {
     triggerHaptic(12);
     const items = liturgy.toggle(vid);
     const i = items.indexOf(vid);
-    showToast(i >= 0 ? `დაემატა მსახურებაში · №${i + 1}` : 'ამოიშალა მსახურებიდან');
+    showToast(i >= 0 ? `დაემატა წირვაში · №${i + 1}` : 'ამოიშალა წირვიდან');
   };
   const tapLines = panel === 'synth' && !church && Boolean(score);
   const shownPaper = paper === 'auto' ? (darkOS ? 'night' : 'day') : paper;
@@ -608,7 +608,6 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
         if (!b) return;
         window.setTimeout(() => { b.classList.add('flash'); window.setTimeout(() => b.classList.remove('flash'), 1700); }, i * 40);
       });
-      showToast('შეეხე ნოტების სტრიქონს და დაკვრა იქიდან დაიწყება', 3600);
     }
   };
   const fold = (p: 'synth' | 'rec') => setFolded(f => ({ ...f, [orient]: { ...f[orient], [p]: !f[orient][p] } }));
@@ -850,11 +849,10 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                   <GraduationCap strokeWidth={1.9} /><span>სწავლა</span>
                 </button>
               )}
-              {nextId ? (
-                <button type="button" className="np-next-sm" onClick={() => goTo(nextId, 1)} aria-label="შემდეგი საგალობელი" title={nextInfo ? `შემდეგი: ${nextInfo.chant.title}` : 'შემდეგი'}>
-                  <ArrowRight />
-                </button>
-              ) : null}
+              <button type="button" className="np-church" onClick={() => { triggerHaptic(10); setChurch(true); }}
+                aria-label="ტაძრის რეჟიმი" title="ტაძრის რეჟიმი: ხმა ითიშება, ზოლი იმალება, ეკრანი არ ქრება">
+                <Church strokeWidth={1.9} />
+              </button>
             </div>
           </header>
           )}
@@ -933,9 +931,9 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
             )}
             {liturgy.role === 'teacher' && (
               <button type="button" className={`np-tool ${progIdx >= 0 ? 'saved' : ''}`} data-tool="program" aria-pressed={progIdx >= 0} onClick={toggleProgram}
-                title={progIdx >= 0 ? `მსახურებაშია, №${progIdx + 1}. ამოღება` : 'მსახურებაში დამატება'}>
+                title={progIdx >= 0 ? `წირვაშია, №${progIdx + 1}. ამოღება` : 'წირვაში დამატება'}>
                 <span className="np-ico">{progIdx >= 0 ? <span className="np-pnum">{progIdx + 1}</span> : <ListPlus strokeWidth={1.8} />}</span>
-                <span className="np-lb">მსახურება</span>
+                <span className="np-lb">წირვა</span>
               </button>
             )}
             <button type="button" className={`np-tool ${isSaved ? 'saved' : ''}`} data-tool="save" aria-pressed={isSaved} onClick={() => { triggerHaptic(12); toggleVariantSelection(chant, variant); }} title="დამოუკიდებელ სამუშაოში დამატება">
@@ -1007,11 +1005,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                       onMinus={() => setSpeedIdx(i => Math.max(0, i - 1))} onPlus={() => setSpeedIdx(i => Math.min(SPEEDS.length - 1, i + 1))} onReset={() => setSpeedIdx(SPEEDS.indexOf(1))}
                       minusDisabled={speedIdx === 0} plusDisabled={speedIdx === SPEEDS.length - 1}
                     />
-                    <NpStepper
-                      label="ტონი" value={signed(transpose)} changed={transpose !== 0}
-                      onMinus={() => setTranspose(t => Math.max(-7, t - 1))} onPlus={() => setTranspose(t => Math.min(7, t + 1))} onReset={() => setTranspose(0)}
-                      minusDisabled={transpose <= -7} plusDisabled={transpose >= 7}
-                    />
+                    {/* the tone is set once, beside „საწყისი ბგერა“ under the title */}
                   </div>
                 </div>
               </div>
@@ -1055,6 +1049,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
 
         {panel === 'text' && lyrics && (
           <div className="np-panel text">
+            <button type="button" className="np-ib np-text-x" onClick={() => togglePanel('text')} aria-label="ტექსტის დახურვა" title="დახურვა"><X /></button>
             <div className="np-lyrics">{lyrics.split('\n').map((line, i) => <p key={i}>{line}</p>)}</div>
           </div>
         )}
@@ -1071,13 +1066,14 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
           onInstagram={shareInstagram}
           paper={paper}
           setPaper={p => { triggerHaptic(8); setPaper(p); store.set('sagandzuri_paper', p); }}
-          church={church}
-          toggleChurch={() => { triggerHaptic(10); setChurch(!church); if (church) showToast('ტაძრის რეჟიმი გამოირთო'); }}
+          hasText={Boolean(lyrics)}
+          textOn={panel === 'text'}
+          toggleText={() => togglePanel('text')}
           offline={offline}
           offlineBusy={offlineBusy}
           keepOffline={keepOffline}
           wakeOn={wakeOn || church}
-          wakeNote={(wakeOn || church) && (wakeFailed || !('wakeLock' in navigator)) ? 'ამ ბრაუზერში ვერ ჩაირთო' : church ? 'ტაძრის რეჟიმში ყოველთვის' : 'სანამ ნოტები ღიაა'}
+          wakeNote={(wakeOn || church) && (wakeFailed || !('wakeLock' in navigator)) ? 'ამ ბრაუზერში ვერ ჩაირთო' : ''}
           toggleWake={() => { if (church) return; setWakeOn(!wakeOn); store.set('sagandzuri_wake', !wakeOn); }}
           hasScore={Boolean(score)}
           recTracks={recTracks}
@@ -1116,12 +1112,14 @@ const MoreMenu: React.FC<{
   onInstagram: (e: React.MouseEvent) => void;
   paper: Paper;
   setPaper: (p: Paper) => void;
-  church: boolean;
-  toggleChurch: () => void;
+  hasText: boolean;
+  textOn: boolean;
+  toggleText: () => void;
   offline: boolean;
   offlineBusy: boolean;
   keepOffline: () => void;
   wakeOn: boolean;
+  /** only when the screen could not be kept on */
   wakeNote: string;
   toggleWake: () => void;
   hasScore: boolean;
@@ -1135,6 +1133,8 @@ const MoreMenu: React.FC<{
   togglePin: () => void;
 }> = p => {
   const ref = useRef<HTMLDivElement>(null);
+  // the downloads fold into one row
+  const [dl, setDl] = useState(false);
   useEffect(() => {
     const close = (e: PointerEvent) => {
       const t = e.target as HTMLElement;
@@ -1170,39 +1170,40 @@ const MoreMenu: React.FC<{
         ))}
       </div>
       <div className="np-msep" />
-      <button type="button" className="np-mrow" role="menuitemcheckbox" aria-checked={p.church} onClick={p.toggleChurch}>
-        <Church /><span className="txt">ტაძრის რეჟიმი<small>ხმა ითიშება, ზოლი იმალება, ეკრანი არ ქრება</small></span><span className="np-sw" aria-hidden />
-      </button>
+      {p.hasText && (
+        <button type="button" className="np-mrow" data-row="text" role="menuitemcheckbox" aria-checked={p.textOn} onClick={() => { p.toggleText(); p.onClose(); }}>
+          <TextAlignStart /><span className="txt">ტექსტი</span><span className="np-sw" aria-hidden />
+        </button>
+      )}
       <button type="button" className="np-mrow" role="menuitem" onClick={p.keepOffline} disabled={p.offlineBusy}>
-        <CloudDownload /><span className="txt">ინტერნეტის გარეშე<small>ნოტები, სინთეზატორი, ჩანაწერი</small></span>
+        <CloudDownload /><span className="txt">ინტერნეტის გარეშე</span>
         <span className={`state ${p.offline ? 'ok' : ''}`}>{p.offlineBusy ? 'იწერება…' : p.offline ? 'ჩამოწერილია' : 'ჩამოწერა'}</span>
       </button>
       {p.pinned !== null && (
         <button type="button" className="np-mrow" role="menuitemcheckbox" aria-checked={p.pinned} onClick={p.togglePin}>
-          <Pin /><span className="txt">მთავარ გვერდზე<small>„ჩემი ღილაკებში“ ამ საგალობლის ღილაკი</small></span>
+          <Pin /><span className="txt">მთავარ გვერდზე</span>
           <span className={`state ${p.pinned ? 'ok' : ''}`}>{p.pinned ? 'გატანილია' : 'გატანა'}</span>
         </button>
       )}
       <button type="button" className="np-mrow" role="menuitemcheckbox" aria-checked={p.wakeOn} onClick={p.toggleWake}>
-        <Sun /><span className="txt">ეკრანი არ ჩაქრეს<small>{p.wakeNote}</small></span><span className="np-sw" aria-hidden />
+        <Sun /><span className="txt">ეკრანი არ ჩაქრეს{p.wakeNote && <small>{p.wakeNote}</small>}</span><span className="np-sw" aria-hidden />
       </button>
       {(p.hasScore || p.recTracks.length > 0) && (
-        <>
-          <div className="np-msep" />
-          <div className="np-msec">ჩამოტვირთვა</div>
-        </>
+        <button type="button" className="np-mrow" aria-expanded={dl} onClick={() => setDl(o => !o)}>
+          <Download /><span className="txt">ჩამოტვირთვა</span><ChevronDown className={`np-mchev ${dl ? 'up' : ''}`} />
+        </button>
       )}
-      {p.recTracks.map(i => (
-        <button key={`r${i}`} type="button" className="np-mrow" role="menuitem" onClick={() => { p.onClose(); p.saveRecMp3(i); }}>
-          <Headphones /><span className="txt">ჩანაწერი MP3 · {['I ხმა', 'II ხმა', 'III ხმა', 'სამივე ხმა'][i]}{i === 3 && <small>ორიგინალი ჩანაწერი</small>}</span><Download />
+      {dl && p.recTracks.map(i => (
+        <button key={`r${i}`} type="button" className="np-mrow sub" role="menuitem" onClick={() => { p.onClose(); p.saveRecMp3(i); }}>
+          <Headphones /><span className="txt">ჩანაწერი MP3 · {['I ხმა', 'II ხმა', 'III ხმა', 'სამივე ხმა'][i]}</span><Download />
         </button>
       ))}
-      {p.hasScore && (
+      {dl && p.hasScore && (
         <>
-          <button type="button" className="np-mrow" role="menuitem" onClick={p.exportPdf}><FileText /><span className="txt">ნოტები (PDF)</span><Download /></button>
-          <button type="button" className="np-mrow" role="menuitem" onClick={() => p.exportMp3('all')}><Music2 /><span className="txt">სინთეზატორი MP3 · {p.allVoices} ხმა<small>მიმდინარე ტემპით და ტონით</small></span><Download /></button>
+          <button type="button" className="np-mrow sub" role="menuitem" onClick={p.exportPdf}><FileText /><span className="txt">ნოტები (PDF)</span><Download /></button>
+          <button type="button" className="np-mrow sub" role="menuitem" onClick={() => p.exportMp3('all')}><Music2 /><span className="txt">სინთეზატორი MP3 · {p.allVoices} ხმა</span><Download /></button>
           {p.voices.map((v, i) => (
-            <button key={v} type="button" className="np-mrow" role="menuitem" onClick={() => p.exportMp3(i)}><Music2 /><span className="txt">სინთეზატორი MP3 · {v} ხმა</span><Download /></button>
+            <button key={v} type="button" className="np-mrow sub" role="menuitem" onClick={() => p.exportMp3(i)}><Music2 /><span className="txt">სინთეზატორი MP3 · {v} ხმა</span><Download /></button>
           ))}
         </>
       )}

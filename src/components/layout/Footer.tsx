@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { CalendarDays, ChevronUp } from 'lucide-react';
+import { CalendarDays } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
 import { CALENDAR_EVENT, todayIso } from '../../data/churchCalendar';
 import { ChurchCalendarPanel } from '../calendar/ChurchCalendarPanel';
@@ -11,86 +11,68 @@ interface FooterProps {
   logoUrl: string;
 }
 
-const UNFOLD_MS = 480;
-const reducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
-const pageBottom = () => document.documentElement.scrollHeight - window.innerHeight;
+// the open calendar is a history entry of its own (sgCal), so the phone's „back“ closes it
+const historyCal = () => { try { return !!(window.history.state || {}).sgCal; } catch { return false; } };
 
 export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
-  // the church calendar unfolds upward out of the bar; it stays mounted after the first opening
-  const [calOpen, setCalOpen] = useState(false);
-  const [calMounted, setCalMounted] = useState(false);
+  // the church calendar opens as a sheet over the page (the page underneath stays where it was)
+  const [calOpen, setCalOpen] = useState(historyCal);
+  const [visible, setVisible] = useState(false);
   const [calIso, setCalIso] = useState(todayIso);
-  const panelRef = useRef<HTMLDivElement>(null);
-  const openRef = useRef(false);
-  openRef.current = calOpen;
+  const sheetRef = useRef<HTMLDivElement>(null);
   // the calendar is for members a superadmin gave it to (utils/memberAccess); for others it does not show
   const canCal = useMembership().can('calendar');
   const canRef = useRef(canCal);
   canRef.current = canCal;
-  useEffect(() => { if (!canCal) setCalOpen(false); }, [canCal]);
 
-  // keep the page pinned to its end while the panel grows, so it rises from the bar;
-  // then bring the panel's top (the date band) into view
-  const unfold = () => {
-    setCalMounted(true);
+  const open = (iso?: string) => {
+    if (iso) setCalIso(iso);
+    sheetRef.current?.scrollTo({ top: 0 });
+    if (historyCal()) return;
+    try { window.history.pushState({ ...(window.history.state || {}), sgCal: 1 }, ''); } catch { /* still opens */ }
     setCalOpen(true);
-    const t0 = performance.now();
-    const ms = reducedMotion() ? 0 : UNFOLD_MS;
-    const step = (now: number) => {
-      window.scrollTo({ top: pageBottom() });
-      if (now - t0 < ms) requestAnimationFrame(step);
-      else if ((panelRef.current?.getBoundingClientRect().top ?? 0) < 0) {
-        panelRef.current?.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'start' });
-      }
-    };
-    requestAnimationFrame(step);
+  };
+  const close = () => {
+    triggerHaptic(8);
+    if (historyCal()) window.history.back();
+    else setCalOpen(false);
   };
 
-  const toggle = () => {
-    triggerHaptic(10);
-    if (calOpen) setCalOpen(false);
-    else unfold();
-  };
-
-  // "სრულად" on today's-saints card, a feast in the library: go down to the bar, then unfold there
   useEffect(() => {
-    const onOpen = (e: Event) => {
-      if (!canRef.current) return;
-      const iso = (e as CustomEvent<string>).detail || todayIso();
-      setCalIso(iso);
-      if (openRef.current) {
-        panelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        return;
-      }
-      if (pageBottom() - window.scrollY < 40 || reducedMotion()) {
-        unfold();
-        return;
-      }
-      let done = false;
-      const go = () => { if (!done) { done = true; window.removeEventListener('scrollend', go); unfold(); } };
-      window.addEventListener('scrollend', go);
-      window.setTimeout(go, 900);
-      window.scrollTo({ top: pageBottom(), behavior: 'smooth' });
-    };
+    const onPop = () => setCalOpen(historyCal());
+    // "სრულად" on today's-saints line, a feast in the library: the sheet opens on that day
+    const onOpen = (e: Event) => { if (canRef.current) open((e as CustomEvent<string>).detail || todayIso()); };
+    window.addEventListener('popstate', onPop);
     window.addEventListener(CALENDAR_EVENT, onOpen);
-    return () => window.removeEventListener(CALENDAR_EVENT, onOpen);
+    return () => {
+      window.removeEventListener('popstate', onPop);
+      window.removeEventListener(CALENDAR_EVENT, onOpen);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  const shown = calOpen && canCal;
+  useEffect(() => {
+    if (!shown) { setVisible(false); return; }
+    const r = requestAnimationFrame(() => requestAnimationFrame(() => setVisible(true)));
+    return () => cancelAnimationFrame(r);
+  }, [shown]);
+
   return (
     <footer className="safe-bleed safe-bottom border-t border-[#e8dcc8] bg-[#fbf6ec]">
-      {canCal && <div
-        className={`grid ease-out ${calOpen ? 'grid-rows-[1fr]' : 'grid-rows-[0fr]'}`}
-        style={{ transition: `grid-template-rows ${UNFOLD_MS}ms cubic-bezier(0.22, 1, 0.36, 1)` }}
-      >
-        <div ref={panelRef} className="min-h-0 overflow-hidden scroll-mt-2" inert={!calOpen}>
-          {calMounted && (
-            <div className={`border-b border-[#e8dcc8] transition-opacity duration-300 ${calOpen ? 'opacity-100' : 'opacity-0'}`}>
-              <ChurchCalendarPanel iso={calIso} onChange={setCalIso} onClose={toggle} />
-            </div>
-          )}
+      {shown && (
+        <div
+          ref={sheetRef}
+          role="dialog"
+          aria-modal="true"
+          aria-label="საეკლესიო კალენდარი"
+          className={`fixed inset-0 z-[80] overflow-y-auto overscroll-contain bg-[#fbf6ec] safe-top safe-bottom safe-x transition-[opacity,transform] ease-[cubic-bezier(0.22,1,0.36,1)] ${
+            visible ? 'opacity-100 translate-y-0 duration-300' : 'opacity-0 translate-y-3 duration-200'
+          }`}
+        >
+          <ChurchCalendarPanel iso={calIso} onChange={setCalIso} onClose={close} />
         </div>
-      </div>}
+      )}
       {/* one row: [კალენდარი] [Facebook] [WhatsApp] (icon-only on a phone), the © line under it;
           the logo and the name only from the sm breakpoint up — a phone has them in the header already */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 flex flex-col items-center gap-3 text-xs text-[#8a7a6a]">
@@ -106,21 +88,15 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* church calendar: unfolds upward out of the bar */}
+            {/* church calendar: opens as a sheet over the page */}
             {canCal && <button
               type="button"
-              onClick={toggle}
-              aria-expanded={calOpen}
-              className={`inline-flex items-center justify-center gap-2 h-10 px-4 rounded-full ring-1 transition-all duration-200 text-sm font-bold cursor-pointer active:scale-95 select-none ${
-                calOpen
-                  ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec] shadow-[0_6px_16px_-8px_rgba(122,32,40,0.7)]'
-                  : 'bg-white/70 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#4a3426]'
-              }`}
+              onClick={() => { triggerHaptic(10); open(todayIso()); }}
+              className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-full ring-1 transition-all duration-200 text-sm font-bold cursor-pointer active:scale-95 select-none bg-white/70 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#4a3426]"
               title="საეკლესიო კალენდარი"
             >
-              <CalendarDays className={`w-[18px] h-[18px] ${calOpen ? 'text-[#fbf6ec]' : 'text-[#7a2028]'}`} />
+              <CalendarDays className="w-[18px] h-[18px] text-[#7a2028]" />
               კალენდარი
-              <ChevronUp className={`w-4 h-4 transition-transform duration-300 ${calOpen ? 'rotate-180' : ''}`} />
             </button>}
 
             <a

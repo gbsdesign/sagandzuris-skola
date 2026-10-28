@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
-import { ArrowLeft, Video, Loader2, ShieldCheck, Phone } from 'lucide-react';
+import { Video, Loader2, ShieldCheck, Phone } from 'lucide-react';
+import { BackBtn } from '../components/ui/kit';
 import { useAuth } from '../context';
 import { useChat, ChatAuthor } from '../hooks/useClassChat';
 import type { SchoolClass } from '../hooks/useClasses';
@@ -61,14 +62,7 @@ export const AdminAvatar: React.FC<{ logoUrl?: string; className?: string }> = (
 /** The bar over an open chat: back (phones only, where the chat takes the whole page), face, name and what links us. */
 export const PaneTitle: React.FC<{ face: React.ReactNode; title: string; sub: string; onBack: () => void }> = ({ face, title, sub, onBack }) => (
   <div className="flex items-center gap-2.5 min-w-0 flex-1">
-    <button
-      type="button"
-      onClick={onBack}
-      aria-label="უკან"
-      className="lg:hidden w-10 h-10 -ml-1 shrink-0 rounded-full flex items-center justify-center text-[#4a3426] hover:bg-[#7a2028]/[0.06] cursor-pointer active:scale-95"
-    >
-      <ArrowLeft className="w-5 h-5" />
-    </button>
+    <BackBtn onClick={onBack} className="lg:hidden" />
     {face}
     <div className="min-w-0">
       <h2 className="text-[15px] sm:text-base font-bold text-[#2a2017] truncate leading-tight">{title}</h2>
@@ -99,9 +93,7 @@ export const DirectChat: React.FC<{ id: string; classes: SchoolClass[]; logoUrl?
     return (
       <section className="h-full min-h-[320px] rounded-3xl bg-white/70 ring-1 ring-[#e8dcc8] flex flex-col">
         <div className="p-3 lg:hidden">
-          <button type="button" onClick={onBack} aria-label="უკან" className="w-10 h-10 rounded-full flex items-center justify-center text-[#4a3426] hover:bg-[#7a2028]/[0.06] cursor-pointer">
-            <ArrowLeft className="w-5 h-5" />
-          </button>
+          <BackBtn onClick={onBack} />
         </div>
         <div className="flex-1 flex items-center justify-center text-sm text-[#8a7a6a]">
           {threadLoading ? <Loader2 className="w-6 h-6 animate-spin text-[#b3a594]" /> : 'ჩათი ვერ მოიძებნა.'}
@@ -123,7 +115,7 @@ export const DirectChat: React.FC<{ id: string; classes: SchoolClass[]; logoUrl?
   const pair = thread.members.map(m => thread.names[m] || '').filter(Boolean).join(' — ');
   const title = canWrite ? other.name || 'უსახელო' : thread.kind === 'admin' ? `${ADMIN_NAME} — ${pair}` : pair;
   const sub = !canWrite ? 'მხოლოდ სანახავად'
-    : staff ? 'ადმინისტრაციის ჩათი · პასუხობს ნებისმიერი ადმინი'
+    : staff ? 'ადმინისტრაციის ჩათი'
     : thread.kind === 'admin' ? 'სკოლის ადმინისტრაცია'
     : thread.kind === 'peer' ? `კლასელი${inClass}`
     : iTeach ? `მოსწავლე${inClass}` : `მასწავლებელი${inClass}`;

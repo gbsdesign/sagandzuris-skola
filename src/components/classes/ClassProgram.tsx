@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, CheckCheck, ChevronDown, ChevronRight, ClipboardList, ListChecks, Users } from 'lucide-react';
+import { Check, CheckCheck, ChevronDown, ChevronRight, ClipboardList, ListChecks, Pencil, Users } from 'lucide-react';
 import { useAuth, useChants } from '../../context';
 import type { ProgramItem, SchoolClass } from '../../hooks/useClasses';
 import { usePathMarks } from '../../hooks/usePathMarks';
@@ -13,32 +13,20 @@ import { useDrillDone } from '../../utils/drillTakes';
 import { AssignmentsFold } from '../teacher/AssignmentsPanel';
 import { Avatar } from './ChatPanel';
 import { triggerFireworks } from '../views/StudentBookmarkView';
-import { findVersion } from '../../data/chantLookup';
-import { variantLines } from '../../data/tsirvaChants';
-
-/** A program row's two lines: a chant's own name first, then its book, page, number and source, muted
- *  („აკურთხევს სული ჩემი“ / „I ტომი · გვ. 212 · ხუნდაძე · №153“); a song or a poem keeps its title and code. */
-const programLines = (p: ProgramItem): { title: string; sub?: string } => {
-  const v = p.id ? findVersion(p.id) : undefined;
-  if (!v || !v.variant.page) return { title: p.title, sub: p.code };
-  const { top, sub } = variantLines(v.chant.id, v.chant.title, v.variant);
-  const segs = top.split(' · ');
-  // top = book · name · page
-  const name = segs.length >= 3 ? segs.slice(1, -1).join(' · ') : top;
-  const where = segs.length >= 3 ? `${segs[0]} · ${segs[segs.length - 1]}` : '';
-  return { title: name, sub: [where, sub].filter(Boolean).join(' · ') || p.code };
-};
+import { ProgramEditor, programLines } from '../teacher/ClassProgramPanel';
+import { IconBtn } from '../ui/kit';
 
 type Listed = ProgramItem & { id: string; key: string };
 
 const VOICE_NAME: Record<Voice, string> = { '1': 'პირველი ხმა', '2': 'მეორე ხმა', '3': 'მესამე ხმა' };
 
-// „სასწავლო პროგრამა“, at the top of the class page: a member's progress in one thin bar, the learned items, and the
-// rest folded under "სასწავლი". A member's voice numbers are their own marks, the same buttons as on the path; 👥 beside
-// them shows which members of the class know each voice (their own path marks or a teacher's confirmation, copied by
-// useClassMarksSync). A teacher who is not a member sees every item in one list, with 👥 only. „დავალებები“ beside the title folds open the assignments (a dot while one is still
-// to do): a member's own, or the class's to manage for its teachers (`canEdit`).
-export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; action?: React.ReactNode }> = ({ cls, canEdit, action }) => {
+// „სასწავლო პროგრამა“, at the top of the class page: a member's progress in one thin bar, then the whole program in
+// the teacher's order (no longer split into learned / folded "სასწავლი", 2026-10-28). A member's voice numbers are their
+// own marks, the same buttons as on the path; 👥 beside them shows which members of the class know each voice (their own
+// path marks or a teacher's confirmation, copied by useClassMarksSync). „დავალებები“ beside the title folds open the
+// assignments (a dot while one is still to do): a member's own, or the class's to manage for its teachers (`canEdit`).
+// The class's teachers change the program right here by ✎ (ProgramEditor).
+export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean }> = ({ cls, canEdit }) => {
   const { user } = useAuth();
   const { selectedChantVariants = {} } = useChants();
   // the member's own marks, as on „საგანძურის გზა“ (a program item not on the path yet joins it when marked)
@@ -49,7 +37,8 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; actio
   const assignments = useAssignments(cls.id);
   // the item whose „ვინ იცის“ is open (its key)
   const [who, setWho] = useState<string | null>(null);
-  const [showTodo, setShowTodo] = useState(false);
+  // the class's teachers change the program right here (✎): ↑ ↓ ✕ and „დამატება“
+  const [editing, setEditing] = useState(false);
   const [showWork, setShowWork] = useState(false);
   const iAmMember = !!user && cls.memberIds.includes(user.uid);
 
@@ -80,8 +69,6 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; actio
         id,
         label: CATEGORY_LABEL[id],
         items,
-        done,
-        todo: items.filter(p => !mine(p.id).known.length),
         learned: done.length,
         voices: voiced.reduce((a, p) => a + mine(p.id).known.length, 0),
         voiceSlots: voiced.length * 3,
@@ -92,8 +79,6 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; actio
   const learned = cats.reduce((a, c) => a + c.learned, 0);
   const voices = cats.reduce((a, c) => a + c.voices, 0);
   const voiceSlots = cats.reduce((a, c) => a + c.voiceSlots, 0);
-  const todo = cats.filter(c => c.todo.length);
-  const todoCount = todo.reduce((a, c) => a + c.todo.length, 0);
 
   const row = (p: Listed) => {
     const go = openerOf(p.id);
@@ -238,7 +223,7 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; actio
               {workDot && <span aria-hidden className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#e5484d] ring-2 ring-white" />}
             </button>
           </div>
-          {action}
+          {canEdit && !editing && <IconBtn label="პროგრამის შეცვლა" onClick={() => setEditing(true)}><Pencil /></IconBtn>}
         </div>
         {iAmMember && total > 0 && (
           <div className="mt-2 flex items-center gap-3">
@@ -258,7 +243,7 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; actio
       {showWork && (
         <div className={`sg-in mt-3 rounded-2xl bg-[#faf6ef] px-3.5 ${canEdit || !work.length ? 'py-3' : 'pb-3'}`}>
           {canEdit ? (
-            <AssignmentsFold cls={cls} list={work} />
+            <AssignmentsFold cls={cls} list={work} past={assignments.filter(a => daysUntil(a.due) < 0 && !work.includes(a)).reverse()} />
           ) : work.length ? (
             <WorkItems list={work} />
           ) : (
@@ -267,37 +252,14 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; actio
         </div>
       )}
 
-      {cls.program.length === 0 ? (
+      {editing && canEdit ? (
+        <div className="mt-3"><ProgramEditor cls={cls} onDone={() => setEditing(false)} /></div>
+      ) : cls.program.length === 0 ? (
         <p className="mt-3 text-sm text-[#8a7a6a]">პროგრამა ჯერ არ არის შედგენილი.</p>
       ) : (
         <div className="mt-3 space-y-3">
-          {/* a teacher's view, or a member who has learned nothing yet: the whole program, unfolded */}
-          {!iAmMember || learned === 0 ? (
-            groups(cats.map(c => ({ id: c.id, label: c.label, items: c.items })))
-          ) : (
-            <>
-              {groups(cats.filter(c => c.done.length).map(c => ({ id: c.id, label: c.label, items: c.done })))}
-              {todoCount > 0 && (
-                <div>
-                  <button
-                    type="button"
-                    onClick={() => { triggerHaptic(8); setShowTodo(o => !o); }}
-                    aria-expanded={showTodo}
-                    className="w-full h-11 px-3 rounded-xl flex items-center gap-2 bg-[#faf6ef] hover:bg-[#f5eee2] text-left cursor-pointer transition-colors"
-                  >
-                    <span className="flex-1 text-[13.5px] font-bold text-[#4a3426]">სასწავლი</span>
-                    <span className="text-[12.5px] font-bold text-[#a4927c] tabular-nums">{todoCount}</span>
-                    <ChevronDown className={`w-4 h-4 text-[#a4927c] transition-transform ${showTodo ? 'rotate-180' : ''}`} />
-                  </button>
-                  {showTodo && (
-                    <div className="mt-2 space-y-3 sg-in">
-                      {groups(todo.map(c => ({ id: c.id, label: c.label, items: c.todo })), todo.length > 1)}
-                    </div>
-                  )}
-                </div>
-              )}
-            </>
-          )}
+          {/* one list for everyone, in the teacher's order; what a member has learned shows on its own voice buttons */}
+          {groups(cats.map(c => ({ id: c.id, label: c.label, items: c.items })))}
 
           {/* early free-text items: no catalogue id, so no voices */}
           {free.length > 0 && (

@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { addDoc, arrayRemove, collection, doc, updateDoc } from 'firebase/firestore';
-import { BookOpen, Plus, Bell, Info, LogOut, Loader2, LayoutGrid, PenLine, ArrowLeft } from 'lucide-react';
+import { BookOpen, Plus, Bell, Info, LogOut, Loader2, LayoutGrid, PenLine } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth, useNavigation } from '../context';
 import { Btn, Card, CardTitle, Empty, FIELD, Flash, Label, PageBar, Sheet, askConfirm, useFlash } from '../components/ui/kit';
 import { KathismaGrid } from '../components/psalter/GroupBoard';
 import { MyKathismaCard } from '../components/psalter/MyKathismaCard';
 import { GroupHistory } from '../components/psalter/GroupHistory';
-import { GroupManage } from '../components/psalter/GroupManage';
+import { GroupSettingsSheet } from '../components/psalter/GroupManage';
 import { useKathismaActions } from '../components/psalter/useKathismaActions';
 import { openPsalterGroup, useSelectedGroupId } from '../components/psalter/selectedGroup';
 import { GroupMember, PsalterGroup, useGroupNow, useMyPsalterGroups } from '../hooks/usePsalter';
@@ -76,7 +76,7 @@ export const PsalterPage: React.FC = () => {
 const GroupView: React.FC<{ group: PsalterGroup; canLead: boolean }> = ({ group, canLead }) => {
   const { user } = useAuth();
   const uid = user!.uid;
-  const [view, setView] = useState<'group' | 'manage'>('group');
+  const [manage, setManage] = useState(false);
   const { cycle, slots, owners } = useGroupNow(group, uid);
   const actions = useKathismaActions(group, cycle);
   const isMember = group.memberIds.includes(uid);
@@ -86,32 +86,23 @@ const GroupView: React.FC<{ group: PsalterGroup; canLead: boolean }> = ({ group,
 
   return (
     <div className="space-y-4">
-      {view === 'manage' && canLead ? (
-        <>
-          <Btn kind="ghost" size="sm" icon={<ArrowLeft />} onClick={() => setView('group')}>ჯგუფი</Btn>
-          <GroupManage key={group.id} group={group} onDeleted={() => setView('group')} />
-        </>
-      ) : (
-        <>
-          {isMember && <NameNotice group={group} />}
-          <MyKathismaCard group={group} uid={uid} onManage={canLead ? () => setView('manage') : undefined} />
+      {isMember && <NameNotice group={group} />}
+      <MyKathismaCard group={group} uid={uid} onManage={canLead ? () => setManage(true) : undefined} />
 
-          <Card>
-            <CardTitle
-              icon={<LayoutGrid />}
-              title="ციკლის კითხვა"
-              hint={read === KATHISMA_COUNT ? 'მთელი ფსალმუნი წაკითხულია — დიდება ღმერთს!' : undefined}
-              className="!items-center"
-            />
-            <KathismaGrid group={group} slots={slots} owners={owners} uid={uid} isLeader={canLead} isMember={isMember} actions={actions} />
-            <Flash flash={actions.message} onClose={actions.clearMessage} />
-          </Card>
+      <Card>
+        <CardTitle
+          icon={<LayoutGrid />}
+          title="ციკლის კითხვა"
+          hint={read === KATHISMA_COUNT ? 'მთელი ფსალმუნი წაკითხულია — დიდება ღმერთს!' : undefined}
+          className="!items-center"
+        />
+        <KathismaGrid group={group} slots={slots} owners={owners} uid={uid} isLeader={canLead} isMember={isMember} actions={actions} />
+        <Flash flash={actions.message} onClose={actions.clearMessage} />
+      </Card>
 
-          <GroupHistory group={group} current={cycle} footer={<GroupExtras isMember={isMember} shiftDays={group.shiftDays} />} />
-          {isMember && !canLead && <LeaveGroup group={group} />}
-
-        </>
-      )}
+      <GroupHistory group={group} current={cycle} footer={<GroupExtras isMember={isMember} shiftDays={group.shiftDays} />} />
+      {isMember && !canLead && <LeaveGroup group={group} />}
+      {canLead && <GroupSettingsSheet open={manage} onClose={() => setManage(false)} group={group} onDeleted={() => setManage(false)} />}
     </div>
   );
 };
@@ -185,7 +176,7 @@ const GroupExtras: React.FC<{ isMember: boolean; shiftDays?: number[] }> = ({ is
         {isMember && (
           <button
             type="button" role="switch" aria-checked={on} disabled={busy || !pushSupported()} onClick={toggle}
-            className="h-9 pl-3 pr-1.5 rounded-full bg-[#fbf6ec] ring-1 ring-[#efe3cf] text-[13px] font-semibold text-[#4a3426] inline-flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-default"
+            className="h-9 pl-3 pr-1.5 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[13px] font-semibold text-[#4a3426] inline-flex items-center gap-2 cursor-pointer disabled:opacity-50 disabled:cursor-default"
           >
             <Bell className="w-4 h-4 text-[#7a2028]" /> შეხსენებები
             <span className={`relative w-9 h-6 rounded-full transition-colors ${on ? 'bg-[#7a2028]' : 'bg-[#dccdb5]'}`}>
@@ -195,7 +186,7 @@ const GroupExtras: React.FC<{ isMember: boolean; shiftDays?: number[] }> = ({ is
         )}
         <button
           type="button" onClick={() => setHow(o => !o)} aria-expanded={how}
-          className={`h-9 px-3 rounded-full ring-1 text-[13px] font-semibold inline-flex items-center gap-1.5 cursor-pointer ${how ? 'bg-[#7a2028]/[0.08] ring-[#7a2028]/30 text-[#7a2028]' : 'bg-[#fbf6ec] ring-[#efe3cf] text-[#7a2028]'}`}
+          className={`h-9 px-3 rounded-full ring-1 text-[13px] font-semibold inline-flex items-center gap-1.5 cursor-pointer ${how ? 'bg-[#7a2028]/[0.08] ring-[#7a2028]/30 text-[#7a2028]' : 'bg-[#fbf6ec] ring-[#e8dcc8] text-[#7a2028]'}`}
         >
           <Info className="w-4 h-4" /> როგორ მუშაობს
         </button>
@@ -225,7 +216,7 @@ const HowList: React.FC<{ shiftDays?: number[] }> = ({ shiftDays }) => (
   <ul className="mt-1 mb-2 space-y-2 text-[14px] leading-relaxed text-[#4a3426] list-disc pl-5 marker:text-[#7a2028]">
     <li>ჯგუფი ყოველ ციკლში (1–7 დღე) მთელ ფსალმუნს კითხულობს: 20 კანონს — თითო წევრი თითოს.</li>
     <li>ყოველი თვის {shiftDaysText(shiftDays)} რიცხვში ყველა თავისით გადადის შემდეგ კანონზე (7 → 8, 20 → 1). ასე დროთა განმავლობაში ყველა ყველა კანონს გაივლის.</li>
-    <li>წაკითხვის შემდეგ დააჭირე „წავიკითხე“ — კანონის ბოლოს ან აქ. შემთხვევით მონიშვნა ციკლის ბოლომდე უქმდება.</li>
+    <li>წაკითხვის შემდეგ აქ დააჭირე „წავიკითხე“. შემთხვევით მონიშვნა ციკლის ბოლომდე უქმდება.</li>
     <li>ვერ კითხულობ? დააჭირე „დახმარება მჭირდება“ — ჯგუფი დაინახავს და ვინმე აიღებს.</li>
     <li>როცა ვინმე დახმარებას ითხოვს, სხვა წევრს შეუძლია მისი კანონი „აიღოს“. თუ ორი ერთად აიღებს, პირველს ერგება.</li>
     <li>ინტერნეტის გარეშე მონიშვნა ტელეფონში ინახება და კავშირის აღდგენისას იგზავნება. დრო საქართველოს დროით ითვლება.</li>

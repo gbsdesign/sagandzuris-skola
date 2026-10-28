@@ -1,10 +1,8 @@
 import React, { useState } from 'react';
 import { Bytes, Timestamp, collection, getDocs } from 'firebase/firestore';
-import { DatabaseBackup, Download, ListChecks, Loader2 } from 'lucide-react';
+import { DatabaseBackup, Download, Loader2 } from 'lucide-react';
 import { db } from '../../firebase';
-import { useAuth } from '../../context';
 import { Btn, Card } from '../ui/kit';
-import { Fold } from './Fold';
 import { SectionsTab } from './SectionsTab';
 import { CentreDownloadFold } from './CentreDownload';
 import { TopChants } from './StatsTab';
@@ -34,7 +32,6 @@ const readAll = async (path: string[]) => {
 // The staff are found in „მომხმარებლები“ (filter „ადმინები“), where their roles are given.
 // The logo card was removed on the user's request (2026-10-20); a logo already saved in settings/logo still shows.
 export const SchoolTab: React.FC<{ users: UserRecord[]; onMessage: (t: string, type: 'success' | 'error') => void }> = ({ users, onMessage }) => {
-  const { isOwner } = useAuth();
   const [exporting, setExporting] = useState<string | null>(null);
 
   const exportAll = async () => {
@@ -85,7 +82,7 @@ export const SchoolTab: React.FC<{ users: UserRecord[]; onMessage: (t: string, t
           <RowIcon><DatabaseBackup /></RowIcon>
           <span className="flex-1 min-w-[10rem]">
             <span className="block font-serif-ge text-[16px] font-bold text-[#4a3426] leading-snug">სარეზერვო ასლი</span>
-            <span className="block text-[12.5px] text-[#8a7a6a] leading-snug mt-0.5">ყველა მონაცემი ერთ ფაილად · გირჩევ თვეში ერთხელ</span>
+            <span className="block text-[12.5px] text-[#8a7a6a] leading-snug mt-0.5">ყველა მონაცემი ერთ ფაილად</span>
           </span>
           <Btn size="sm" kind="ghost" icon={exporting ? <Loader2 className="animate-spin" /> : <Download />} disabled={!!exporting} onClick={exportAll}
             title="მოსწავლეები და მათი გზა, კლასები, დავალებები, დასწრება, ჩატის ტექსტი, ფსალმუნთა ჯგუფები, მოსახსენებელი სახელები. ხმოვანი შეტყობინებების აუდიო არ შედის.">
@@ -94,17 +91,6 @@ export const SchoolTab: React.FC<{ users: UserRecord[]; onMessage: (t: string, t
         </div>
       </Card>
 
-      {isOwner && (
-        <Fold icon={<ListChecks />} title="უსაფრთხოების შემოწმება" summary="5 რამ Firebase-ის კონსოლში, ერთხელ · მხოლოდ შენ ხედავ">
-          <ol className="space-y-1.5 text-[13px] leading-relaxed text-[#4a3426] list-decimal pl-5 sm:ml-[52px] marker:text-[#7a2028] marker:font-bold">
-            <li>Project settings → Users and permissions: მფლობელი (Owner) შენ ხარ.</li>
-            <li>Firestore → Rules: ჩასვი პროექტის ფაილი <code className="text-[12px] bg-[#f4ece0] px-1 rounded">firestore.rules</code> და Publish.</li>
-            <li>Usage and billing → Budget alert: შეტყობინება, თუ ხარჯი გაჩნდება.</li>
-            <li>Google Cloud → APIs → Credentials: API გასაღები შეზღუდე საიტის მისამართებზე.</li>
-            <li>Authentication → Settings → Authorized domains: მხოლოდ საიტის მისამართები.</li>
-          </ol>
-        </Fold>
-      )}
     </div>
   );
 };

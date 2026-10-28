@@ -37,7 +37,7 @@ export const PATH_ORBS: { id: OrbId; label: string }[] = [
   { id: 'learn', label: 'ნასწავლი' },
   { id: 'manera', label: 'ოსტატობა' },
   { id: 'work', label: 'სამუშაო' },
-  // the pearls game (section „tamashebi“: the router leaves it out when the admin closes it)
+  // the pearls game (section „margalitebi“: the router leaves it out when the admin closes it)
   { id: 'pearls', label: 'მარგალიტები' },
 ];
 
@@ -111,7 +111,7 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, newWork.count]);
 
-  usePanelWish(['manera', 'work', 'pearls'], id => setOpen(id as OrbId));
+  usePanelWish(['learn', 'manera', 'work', 'pearls'], id => setOpen(id as OrbId));
   const toggle = (id: OrbId) => { triggerHaptic(10); setEditing(false); setOpen(o => (o === id ? null : id)); };
   const close = () => { setEditing(false); setOpen(null); };
 
@@ -236,16 +236,9 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
 const SHOWN = 8;
 
 /** The path's progress under the "ნასწავლი" title: a bar, then learned / total and the voices (as on the class page). */
+// the round button's ring already shows the share: the card's head says it in numbers only
 const LearnLine: React.FC<{ s: ReturnType<typeof usePathStats> }> = ({ s }) => (
-  <span className="flex items-center gap-2.5 mt-1">
-    <span className="flex-1 h-1.5 rounded-full bg-[#ece2d1] overflow-hidden">
-      <span
-        className={`block h-full rounded-full transition-[width] duration-700 ${s.learned === s.total ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-[#c2414c] to-[#7a2028]'}`}
-        style={{ width: `${s.percent}%` }}
-      />
-    </span>
-    <span className="shrink-0 tabular-nums">{s.learned}/{s.total}{s.voiceSlots ? ` · ${s.voices}/${s.voiceSlots} ხმა` : ''}</span>
-  </span>
+  <span className="tabular-nums">{s.learned}/{s.total}{s.voiceSlots ? ` · ${s.voices}/${s.voiceSlots} ხმა` : ''}</span>
 );
 
 /** What tapping an item's name does: a chant opens its notes, a song its place on the map; null when neither can.
@@ -328,7 +321,7 @@ const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats>; editing: boolea
             <X className="w-4 h-4" />
           </button>
         ) : (
-          <span className="flex gap-1 shrink-0">
+          <span className="flex gap-1.5 shrink-0">
             {(voiced ? (['1', '2', '3'] as const) : (['1'] as const)).map(v => {
               const confirmedOne = ok.includes(v);
               const on = confirmedOne || have.includes(v);
@@ -341,7 +334,7 @@ const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats>; editing: boolea
                   aria-pressed={on}
                   aria-label={voiced ? `${it.chantName} — ${v} ხმა` : `${it.chantName} — ნასწავლი`}
                   title={confirmedOne ? 'მასწავლებელმა ჩათვალა' : locked ? 'მონიშვნას მასწავლებელი აკეთებს' : on ? 'ნასწავლია — შეეხე მოსახსნელად' : 'შეეხე, როცა ისწავლი'}
-                  className={`w-[30px] h-[30px] rounded-full text-[12px] font-bold tabular-nums flex items-center justify-center transition active:scale-90 disabled:active:scale-100 ${
+                  className={`w-9 h-9 rounded-full text-[13px] font-bold tabular-nums flex items-center justify-center transition active:scale-90 disabled:active:scale-100 ${
                     confirmedOne ? 'bg-emerald-600 text-white'
                       : on ? 'bg-[#7a2028] text-white shadow-[0_2px_6px_-2px_rgba(122,32,40,0.6)]'
                       : 'ring-1 ring-[#e3d6c1] text-[#a4927c] enabled:hover:ring-[#7a2028]/50 enabled:hover:text-[#7a2028]'
@@ -377,7 +370,7 @@ const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats>; editing: boolea
       )}
 
       {s.learned === 0 ? (
-        <p className="px-1 text-[13px] text-[#8a7a6a]">ჯერ არაფერია ნასწავლი — მონიშნე „სასწავლში“, რაც უკვე იცი.</p>
+        <p className="px-1 text-[13px] text-[#8a7a6a]">ჯერ არაფერია ნასწავლი.</p>
       ) : (
         s.categories.filter(c => c.done.length).map(c => {
           const open = all[c.id];

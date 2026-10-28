@@ -12,14 +12,17 @@ import { StudentProfileCard } from '../components/views';
 import { ChvevebiContent } from '../components/views/ChvevebiPanel';
 import { PATH_ORBS, PathOrbs } from '../components/views/PathOrbs';
 import { PathTabs } from '../components/views/PathTabs';
+import { PathToday } from '../components/views/PathToday';
 import { ChemiSamosi } from '../components/views/ChemiSamosi';
 import { ShortcutShelf } from '../components/home/ShortcutShelf';
 import { useAccess } from '../hooks/useAccess';
+import { useMembership } from '../utils/memberAccess';
 import { LockedPage } from '../components/access/SignInPrompt';
 import { SECTIONS, sectionOfPage } from '../data/sections';
 import { useMyPsalterGroups } from '../hooks/usePsalter';
 import { useAllClasses, useMyClasses, useTeachingClasses } from '../hooks/useClasses';
 import { useSelectedGroupId } from '../components/psalter/selectedGroup';
+import { gameTitleOfItem } from '../data/games';
 
 // Fetches the newest version of the app (the service worker takes over at once — registerType 'autoUpdate') and
 // starts it again. A page's file that is missing while online means a newer version was published after this tab
@@ -108,6 +111,7 @@ const MessagesPage = page(() => import('../pages/MessagesPage'), 'MessagesPage')
 const AbituriPage = page(() => import('../pages/AbituriPage'), 'AbituriPage');
 const OfflinePage = page(() => import('../pages/OfflinePage'), 'OfflinePage');
 const BirthdaysPage = page(() => import('../pages/BirthdaysPage'), 'BirthdaysPage');
+const GamesPage = page(() => import('../pages/GamesPage'), 'GamesPage');
 const MedavitneobaPage = page(() => import('../pages/MedavitneobaPage'), 'MedavitneobaPage');
 
 /** „ფსალმუნთა ჯგუფი“ (the vine, the home tile, a reminder): the class page of the group's class, opened at its psalter
@@ -148,6 +152,7 @@ const PAGE_TITLES: Partial<Record<PageType, string>> = {
   offline: 'ოფლაინ რეჟიმი',
   commemoration: 'მოსახსენებელი',
   birthdays: 'დაბადების დღეები',
+  games: 'თამაშები',
   medavitneoba: 'მედავითნეობა',
 };
 // an open library book shows its own name in the bar (the shelf's covers; LibraryPage's `mapItem` „book:12“)
@@ -160,8 +165,10 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   const { currentPage, selectedPrayerId, mapItem, handleGoBack, navigateTo } = useNavigation();
   const { user, loading, isAdmin, isTeacher } = useAuth();
   const access = useAccess();
-  // „მარგალიტები“ (section tamashebi) shows on the path only while the admin's switch and the member's access let it
-  const pathOrbs = PATH_ORBS.filter(o => o.id !== 'pearls' || access.section('tamashebi') === 'open');
+  // a member still waiting to be let in: the profile shows who they are, not the member's tools
+  const waiting = useMembership().status === 'pending';
+  // „მარგალიტები“ (section margalitebi) shows on the path only while the admin's switch and the member's access let it
+  const pathOrbs = PATH_ORBS.filter(o => o.id !== 'pearls' || access.section('margalitebi') === 'open');
   const {
     selectedChantVariants,
     handleToggleSong,
@@ -218,18 +225,18 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
 
   if (currentPage === 'profile') {
     return (
-      <div className="w-full max-w-2xl mx-auto px-1 py-3 sm:px-4 md:px-6">
+      <div className="w-full max-w-lg mx-auto px-1 py-3 sm:px-0">
         <PageBar title="პროფილი" onBack={handleGoBack} className="mb-4" />
         {/* the head card, the admin panel's row (admins), my outfit and home buttons, then the details folded */}
-        <StudentProfileCard slot={<>
+        <StudentProfileCard waiting={waiting} slot={<>
           <AdminEntry />
-          <ChemiSamosi side={
+          {!waiting && <ChemiSamosi side={
             <span className="block">
               <span className="block font-serif-ge text-[15px] font-bold text-[#4a3426]">ჩემი სამოსი</span>
               <span className="block text-[13px] text-[#8a7a6a] leading-snug">ჩოხა და ქართული კაბა — ნაწილი ნაწილ</span>
             </span>
-          } />
-          <ShortcutShelf variant="profile" />
+          } />}
+          {!waiting && <ShortcutShelf variant="profile" />}
         </>} />
         {/* install the app · leave the account (asks first) */}
         <div className="max-w-lg mx-auto mt-3"><ProfileActions /></div>
@@ -245,7 +252,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
       : currentPage === 'birthdays' ? 'special:birthdays'
       : section ? `section:${section}` : null;
     const book = currentPage === 'biblioteka' ? LIBRARY_BOOKS[(mapItem ?? '').split(':')[0]] : undefined;
-    const title = currentPage === 'prayer' && selectedPrayerId ? prayerTitle(selectedPrayerId) : book ?? PAGE_TITLES[currentPage] ?? '';
+    // a game open inside the games page shows its own name („დღის ჰანგი“, „ამიხსენი“)
+    const game = currentPage === 'games' ? gameTitleOfItem(mapItem) : undefined;
+    const title = currentPage === 'prayer' && selectedPrayerId ? prayerTitle(selectedPrayerId) : book ?? game ?? PAGE_TITLES[currentPage] ?? '';
     return (
       <div className="flex flex-col items-center px-1 py-3 sm:px-4 md:px-6">
         <PageBar title={title} onBack={handleGoBack} right={pin ? <PinButton id={pin} /> : undefined} className="w-full mb-4" />
@@ -254,9 +263,10 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           {currentPage === 'galoba' && <GalobaPage />}
 
           {currentPage === 'gz' && (
-            <div className="w-full max-w-2xl mx-auto mb-2 px-1">
-              {/* the page title sits in the top bar (PageBar); four round buttons on top (სამოსი, ნასწავლი —
+            <div className="w-full max-w-2xl mx-auto mb-2 px-1 space-y-5">
+              {/* the page title sits in the top bar (PathToday's „დღეს“ card first, when there is a lesson or an assignment); four round buttons on top (სამოსი, ნასწავლი —
                   with the teacher's assignments —, მანერა, სამუშაო) in the member's order, the habits under them */}
+              <PathToday />
               <PathTabs
                 orbs={{ labels: pathOrbs, render: order => <PathOrbs order={order} /> }}
                 cards={[
@@ -264,7 +274,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
                     id: 'habits',
                     label: 'ჩვევები',
                     node: (
-                      <section className="w-full rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] px-3 py-3.5 sm:p-4">
+                      <section id="path-habits" className="w-full scroll-mt-4 rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] px-3 py-3.5 sm:p-4">
                         <ChvevebiContent />
                       </section>
                     ),
@@ -288,6 +298,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
 
           {currentPage === 'birthdays' && <BirthdaysPage />}
 
+          {currentPage === 'games' && <GamesPage />}
           {currentPage === 'medavitneoba' && <MedavitneobaPage />}
 
           {currentPage === 'simghera' && (

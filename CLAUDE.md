@@ -93,7 +93,8 @@
 - Fixed/full-screen UI must respect `env(safe-area-inset-*)` (`viewport-fit=cover` is on); helpers
   `.safe-x`, `.safe-top`, `.safe-bottom`, `.safe-bleed` in `index.css`.
 - **Kit rules (redesign stage 1, 2026-10-25)** — `components/ui/kit.tsx`: every inner page has the one `PageBar`
-  (44px round ←, title left, 36px round 📌/✎ right; the router gives most pages theirs); asking before deleting
+  (44px round ←, title left, 36px round 📌/✎ right; the router gives most pages theirs; full-screen windows with their own
+  sticky bar use the same `BackBtn` and show the title only once the big one scrolls away, `useScrolledAway`); asking before deleting
   goes through `askConfirm` (shown by `ConfirmHost` in `App.tsx`), never `window.confirm`; new text ≥12px, nothing
   below 11px anywhere; one paper background for every page in `App.tsx`. Signing out lives only at the profile's
   bottom (`views/ProfileActions.tsx`); the admin panel opens only from the profile's wine row (`views/AdminEntry.tsx`,
@@ -104,6 +105,9 @@
 - Recordings stay in the user's Google Drive and play through the Worker
   `https://sagandzuri-audio.mr-gabunia.workers.dev/<driveFileId>` (Drive sends no CORS headers).
   Binding is only the explicit `VARIANT_MEDIA` map — use `/add-recording`.
+  **Every `<audio>` / `new Audio()` that plays a Worker URL must set `crossOrigin = 'anonymous'`** (as `ChantPlayer` does):
+  the Worker answers only requests carrying the site's `Origin`, and a plain media request sends none → 403, silence
+  (the „დღის ჰანგი“ bug of 2026-10-28).
 - Book notes (`public/notes/<book>/`) come from the chant-book PDFs by OMR; the OMR scripts are not in the repo.
   Many version placements are unreviewed guesses — don't present them as confirmed.
 
@@ -131,6 +135,7 @@
   (one shared model `useHabits.tsx`; a new view = one entry in `VIEWS` in `ChvevebiPanel.tsx`), stats in
   `utils/habitStats.ts`. Ticks allowed for the last 7 days (`canTickDay`). Colours/icons/counters: `data/habitLooks.ts`,
   member's choice in `habitSetup.looks/counters`; counter numbers in `students.habitCounts` (sent 1.2 s after the last tap).
+  One habit editor (2026-10-28): the habit window's ✏️ (`HabitCardEditor`); the rows only have „›“.
 - **ოსტატობა** (2026-10-27): „დღის სავარჯიშო“ on top (a teacher's assigned exercise, then the weakest marked tip, then by
   day), 11 performance tips (`MANERA_ITEMS`; `num` is the key of teachers' marks, the list shows the position; 10 = დგომა,
   11 = სუნთქვა ფრაზებს შორის were added) and 4 exercise groups — სმენა, სამხმიანობა, ხალხური ხერხები, რიტმი
@@ -169,16 +174,30 @@
   (`RoundOnePractice.tsx`: motifs to sing back; sight-reading = `SIGHT_READING`, 19 short vol. I chants outside the
   program). Progress (`hooks/useAbituriProgress.ts`) in `students/{uid}.abituri` for members (device for others);
   teachers see a line in StudentsOverview. Dictations: `data/abituriDictations.ts` (the university's + 6 written here).
-- **Class chat** with voice messages + Jitsi video call button (`components/classes/ClassChat.tsx`,
-  `hooks/useClassChat.ts`, `utils/voiceRecorder.ts`, `utils/classCall.ts`). Voice MP3s are Firestore Bytes
+- **Class chat** with voice messages (`components/classes/ClassChat.tsx`, `hooks/useClassChat.ts`,
+  `utils/voiceRecorder.ts`); calls are the app's own (`components/calls/`, `utils/callSession.ts`), Jitsi is gone. Voice MP3s are Firestore Bytes
   (no Firebase Storage).
 - **Class page** (`pages/ClassPage.tsx`, rebuilt 2026-10-24): members in a sticky left column on a computer (`lg`), a
   folded line on top on a phone; the class's teachers get `ClassRoll` (`teacher/StudentsOverview.tsx`: attendance ✓,
   💬, a name opens the member's window, now with „მიწერა“/„ამოღება“). „სასწავლო პროგრამა“ (renamed everywhere from
   „კლასის პროგრამა“) is compact: one thin progress bar, „დავალებები“ folding open beside the title (red dot = an
-  assignment still to do; teachers manage them there — `AssignmentsFold`). The timetable lives in the chat's 📅
-  (`ScheduleFold`, edited in place). Teacher-only parts never show to members; attendance is teacher-only in
+  assignment still to do; teachers manage them there — `AssignmentsFold`, past ones under „ძველი · N“). The program is
+  changed in place by its ✎ (`ProgramEditor`); the members card's „+“ adds one person (`AddMemberSheet`). The timetable is one line of chips under the
+  class title (and under the chat's title on the messages page), changed by ✎ (`ScheduleSheet`). Teacher-only parts never show to members; attendance is teacher-only in
   `firestore.rules` too (members no longer read it).
+- **Games hub** (`pages/GamesPage.tsx`, 2026-10-27): „თამაშები“ is a hub of three category tabs (მუსიკალური · ქართული ·
+  ცოცხალი) from `data/games.ts`; every game carries its variant chips (ონლაინ · ჰიბრიდული · უტელეფონო); unbuilt games are
+  „მალე“ rows; the vine label „თამაშები“ opens it. The pearls game stays the round button of „საგანძურის გზა“ (below), now
+  under its own section `margalitebi` (open/მალე/hidden switch in the admin panel; a member's feature for it is the games'
+  one — `featureOf` in `hooks/useAccess.ts`). The plan with 42 games and the six Georgianized board games:
+  https://claude.ai/artifact/Dw24amtHhQvSGUd1pPE4fg
+- **First two games (2026-10-28)**: „დღის ჰანგი“ (`pages/games/HangiGame.tsx`; logic `utils/hangi.ts` + test; pool
+  `data/hangiPool.ts` = every recording the member may hear — `VARIANT_MEDIA` via `codeBoundMedia()`, `CHANT_RECORDINGS`, folk
+  mp3s; the day's pick = rendezvous hash of `date|id`, the same for the whole school, Tbilisi day; six tries 1·2·4·7·11·16 s;
+  record `students.games.hangi.days[iso]` through `hooks/useHangi.ts`, the device for guests, no rules change) and „ამიხსენი“
+  (`pages/games/AmikhseniGame.tsx`; rules `utils/amikhseni.ts` + test; ~1000 cards in `data/amikhseniWords.ts` built from the
+  app's own data; settings stay on the device). `components/games/TableScreen.tsx` is the full-screen face of every live game
+  (wake lock, safe areas). Both open inside the hub as `mapItem` (`GameDef.item`; the bar title from `gameTitleOfItem`).
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 
@@ -192,6 +211,9 @@
   move +1 on the 1st and 15th; skipped kathismas show only in history. Names at every დიდებაი.
   Since 2026-10-20 a group lives only inside its class (`classes.psalterGroupId`, made from `teacher/ClassHeader.tsx`;
   no standalone „ახალი ჯგუფი“, admin sees it on the class row). The user calls a kathisma „კანონი“ in the UI.
+  Since 2026-10-28 the group's members follow its class (`addClassMember`/`removeClassMember`), who reads a kanon is set
+  only in the kanon's window, the rest in one settings window (`GroupSettingsSheet`); „წავიკითხე“ on a kathisma also marks
+  my kanon.
 - **Teacher panel** (`pages/TeacherPage.tsx`, `components/teacher/`), **admin panel** (`pages/AdminPanelPage.tsx`,
   `components/admin/`): sections open/მალე/hidden (`settings/sections`); JSON export. The panel's recording-binding
   form and logo card were removed 2026-10-20 (the app still reads `settings/recordings` and `settings/logo`).
@@ -246,8 +268,8 @@ listens (Gemini through Firebase AI Logic). 8 calls on Android (wake lock, push,
 
 1–3. Built (see above).
 4. Pearls/chests game — built 2026-10-25 (redesign stage 7, branch `claude/dazzling-goodall-inv60p`). Since 2026-10-27
-   the fifth round button „მარგალიტები“ of „საგანძურის გზა“ (`PathOrbs`, body `pearls/PearlChests.tsx`; no games page
-   and no vine label any more), shown while section `tamashebi` is open (now open by default). Chests in `data/pearls.ts` (first =
+   the fifth round button „მარგალიტები“ of „საგანძურის გზა“ (`PathOrbs`, body `pearls/PearlChests.tsx`; the games page is
+   the hub above), shown while section `margalitebi` is open (open by default). Chests in `data/pearls.ts` (first =
    vol. IX №58–77), the first phrase of the chosen voice from the book notes (`utils/pearls.ts` `phraseOf`), singing
    heard in the browser (`utils/pitch.ts`: YIN pitch, notes, key-free score; ≥80% polishes; `utils/singCapture.ts`),
    sheet `components/pearls/PearlSheet.tsx`. Best try in `students.pearls`, best take (MP3) in

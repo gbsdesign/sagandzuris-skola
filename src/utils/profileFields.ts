@@ -29,17 +29,17 @@ export type AbilityId = 'galoba' | 'simghera' | 'leksi' | 'dakvra' | 'skhva' | '
 export type InterestId = 'galoba' | 'simghera' | 'sakravebi' | 'leksebi' | 'skhva';
 
 export const ABILITY_OPTIONS: { id: AbilityId; title: string; sub: string }[] = [
-  { id: 'galoba', title: 'გალობა', sub: 'საეკლესიო გალობა' },
-  { id: 'simghera', title: 'სიმღერა', sub: 'ხალხური სიმღერა' },
-  { id: 'leksi', title: 'ლექსის თქმა', sub: 'ლექსის ზეპირად თქმა' },
+  { id: 'galoba', title: 'გალობა', sub: '' },
+  { id: 'simghera', title: 'სიმღერა', sub: '' },
+  { id: 'leksi', title: 'ლექსის თქმა', sub: '' },
   { id: 'dakvra', title: 'დაკვრა', sub: 'აირჩიეთ საკრავები' },
   { id: 'skhva', title: 'სხვა', sub: 'ჩაწერეთ თავად' },
   { id: 'beginner', title: 'ჯერ ვიწყებ', sub: 'ჯერ არცერთი არ შემიძლია' },
 ];
 
 export const INTEREST_OPTIONS: { id: InterestId; title: string; sub: string }[] = [
-  { id: 'galoba', title: 'გალობა', sub: 'საეკლესიო გალობა' },
-  { id: 'simghera', title: 'სიმღერა', sub: 'ხალხური სიმღერა' },
+  { id: 'galoba', title: 'გალობა', sub: '' },
+  { id: 'simghera', title: 'სიმღერა', sub: '' },
   { id: 'sakravebi', title: 'საკრავები', sub: 'ქართული და სხვა საკრავები' },
   { id: 'leksebi', title: 'ლექსები', sub: 'ქართული პოეზია' },
   { id: 'skhva', title: 'სხვა', sub: 'ჩაწერეთ თავად' },

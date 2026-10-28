@@ -44,10 +44,10 @@ export class ErrorBoundary extends Component<Props, State> {
           </div>
 
           <div className="space-y-1.5">
-            <h3 className="text-lg font-black text-slate-800">
+            <h3 className="text-lg font-black text-[#2a2017]">
               {this.props.fallbackTitle || 'დაფიქსირდა შეცდომა'}
             </h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto leading-relaxed">
+            <p className="text-xs text-[#8a7a6a] max-w-sm mx-auto leading-relaxed">
               {this.props.fallbackMessage ||
                 'გვერდის ჩატვირთვისას წარმოიშვა დროებითი შეფერხება. სცადეთ განახლება.'}
             </p>
@@ -71,7 +71,7 @@ export class ErrorBoundary extends Component<Props, State> {
             <button
               type="button"
               onClick={this.handleGoHome}
-              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs border border-slate-200 active:scale-95 transition-all cursor-pointer"
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#f1e9dc] hover:bg-[#e8dcc8] text-[#4a3426] font-bold text-xs border border-[#e8dcc8] active:scale-95 transition-all cursor-pointer"
             >
               <Home className="w-3.5 h-3.5" />
               <span>მთავარზე დაბრუნება</span>

@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ChevronDown, ChevronLeft, ChevronRight, History } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, History } from 'lucide-react';
 import { Card, CardTitle, IconBtn } from '../ui/kit';
 import { Cycle, KATHISMA_COUNT, Slots, formatRange, ownersIn, previousCycle } from '../../utils/psalter';
 import { ALL_KATHISMAS, PsalterGroup, firstName, memberName, useCycleHistory } from '../../hooks/usePsalter';
@@ -39,7 +39,7 @@ export const GroupHistory: React.FC<{ group: PsalterGroup; current: Cycle; count
         <div>
           <div className="flex items-center gap-2">
             <IconBtn label="წინა ციკლი" disabled={at >= rows.length - 1} onClick={() => setAt(i => Math.min(i + 1, rows.length - 1))}><ChevronLeft /></IconBtn>
-            <label className="relative flex-1 min-w-0 h-10 rounded-full bg-[#fbf6ec] ring-1 ring-[#efe3cf] flex items-center justify-center gap-1.5 text-sm font-semibold text-[#2a2017] cursor-pointer">
+            <label className="relative flex-1 min-w-0 h-10 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] flex items-center justify-center gap-1.5 text-sm font-semibold text-[#2a2017] cursor-pointer">
               <span className="truncate">{formatRange(row.cycle)}</span>
               <ChevronDown className="w-4 h-4 text-[#8a7a6a] shrink-0" />
               <select
@@ -61,7 +61,7 @@ export const GroupHistory: React.FC<{ group: PsalterGroup; current: Cycle; count
             <span className={`text-sm font-bold tabular-nums ${row.read === KATHISMA_COUNT ? 'text-emerald-700' : 'text-[#4a3426]'}`}>{row.read}/{KATHISMA_COUNT}</span>
           </div>
 
-          <ul className="mt-3 grid grid-cols-5 sm:grid-cols-10 gap-1.5">
+          <ul className="mt-3 grid grid-cols-4 min-[420px]:grid-cols-5 sm:grid-cols-10 gap-1.5">
             {ALL_KATHISMAS.map(k => {
               const s = row.slots[k];
               const read = !!s?.readBy;
@@ -70,21 +70,22 @@ export const GroupHistory: React.FC<{ group: PsalterGroup; current: Cycle; count
                 <li
                   key={k}
                   title={read ? `${k} — წაიკითხა ${memberName(group, s!.readBy)}` : `${k} — გამოტოვდა${who ? ` (${memberName(group, who)})` : ''}`}
-                  className={`h-12 rounded-lg px-1 flex flex-col items-center justify-center ${read ? 'bg-emerald-700 text-white' : 'bg-red-50 text-red-800 ring-1 ring-red-200'}`}
+                  className={`relative min-h-14 rounded-lg px-1 py-1.5 flex flex-col items-center justify-center ${read ? 'bg-[#fbf6ec] text-[#4a3426] ring-1 ring-[#e8dcc8]' : 'bg-red-50 text-red-800 ring-1 ring-red-200'}`}
                 >
-                  <span className="font-serif-ge text-[15px] font-bold leading-none tabular-nums">{k}</span>
-                  <span className="mt-0.5 w-full text-center text-[11px] leading-tight font-semibold truncate opacity-90">{who ? short(who) : '—'}</span>
+                  <span className="font-serif-ge text-[16px] font-bold leading-none tabular-nums">{k}</span>
+                  <span className="mt-1 w-full text-center text-xs leading-tight font-semibold truncate opacity-85">{who ? short(who) : '—'}</span>
+                  {read && <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center" aria-hidden><Check className="w-2.5 h-2.5 stroke-[4]" /></span>}
                 </li>
               );
             })}
           </ul>
           {!bare && <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-xs font-semibold text-[#8a7a6a]">
-            <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-emerald-700" /> წაიკითხა</span>
+            <span className="inline-flex items-center gap-1.5"><span className="w-3.5 h-3.5 rounded-full bg-emerald-600 text-white flex items-center justify-center"><Check className="w-2.5 h-2.5 stroke-[4]" /></span> წაიკითხა</span>
             <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-red-50 ring-1 ring-red-200" /> გამოტოვდა (ვისი იყო)</span>
           </div>}
         </div>
       )}
-      {footer && <div className="mt-3 pt-3 border-t border-[#efe3cf]">{footer}</div>}
+      {footer && <div className="mt-3 pt-3 border-t border-[#e8dcc8]">{footer}</div>}
     </Frame>
   );
 };

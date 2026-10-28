@@ -1,96 +1,30 @@
-import React, { useMemo, useState } from 'react';
-import { collection, deleteDoc, doc, getDocs, updateDoc, arrayUnion } from 'firebase/firestore';
-import { Settings2, Users, Shuffle, Save, Trash2, UserPlus, UserMinus, Pencil, AlertTriangle, LayoutGrid } from 'lucide-react';
+import React, { useState } from 'react';
+import { arrayRemove, arrayUnion, collection, deleteDoc, doc, getDocs, updateDoc } from 'firebase/firestore';
+import { Save, Shuffle, Trash2 } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
-import { askConfirm, Avatar, Btn, Card, CardTitle, FIELD, Flash, IconBtn, Label, Pill, useFlash } from '../ui/kit';
-import { PeoplePicker, Person } from '../people/PeoplePicker';
-import { useDirectory, shownName, shownPrayerName } from '../../utils/directory';
-import { hasGeorgianName } from '../../utils/memberName';
-import { KATHISMA_PSALMS, MAX_CYCLE_DAYS, autoDistribute, cycleOf, georgiaToday, halfIndex, kathismasOf, ownersIn, parseCycleDays, parseShiftDays, rebase, shiftDaysText } from '../../utils/psalter';
-import { ALL_KATHISMAS, GroupMember, PsalterGroup, firstName } from '../../hooks/usePsalter';
+import { askConfirm, Btn, FIELD, Flash, Label, Sheet, Toggle, useFlash } from '../ui/kit';
+import type { SchoolClass } from '../../hooks/useClasses';
+import { MAX_CYCLE_DAYS, autoDistribute, cycleOf, georgiaToday, halfIndex, kathismasOf, ownersIn, parseCycleDays, parseShiftDays, rebase } from '../../utils/psalter';
+import { ALL_KATHISMAS, GroupMember, PsalterGroup } from '../../hooks/usePsalter';
 
 const TIMES = ['', '18:00', '19:00', '20:00', '21:00', '22:00'];
 
-// The teacher's side of a psalter group: settings, members, and who reads which kathisma.
-export const GroupManage: React.FC<{ group: PsalterGroup; onDeleted: () => void }> = ({ group, onDeleted }) => {
-  const { user, isTeacher } = useAuth();
+// The leader's one window for a psalter group (the section's ✎): name, the cycle and its shift days, the two
+// reminders, „მეც ვკითხულობ“ and „ავტომატური განაწილება“ (both saved at once), the group's deletion at the bottom.
+// Who reads which kanon is named in the kanon's own window; the members are the class's (added and taken out there).
+export const GroupSettingsSheet: React.FC<{ open: boolean; onClose: () => void; group: PsalterGroup; cls?: SchoolClass; onDeleted: () => void }> = ({ open, onClose, group, cls, onDeleted }) => {
+  const { user } = useAuth();
   const msg = useFlash();
-  const { people, loading } = useDirectory(isTeacher);
-  const [picking, setPicking] = useState(false);
-  const [editK, setEditK] = useState<number | null>(null);
-  const half = cycleOf(georgiaToday(), group.cycleDays, group.shiftDays).half;
-  const [owners, setOwners] = useState<Record<number, string[]>>(() => ownersIn(group.assignment, group.baseHalf, half));
-  const [dirty, setDirty] = useState(false);
-  const [settings, setSettings] = useState({
+  const blank = () => ({
     name: group.name, cycleDays: String(group.cycleDays), shiftDays: group.shiftDays.join(', '), remindDaily: group.remindDaily, remindFinal: group.remindFinal,
   });
-  const [saving, setSaving] = useState(false);
+  const [settings, setSettings] = useState(blank);
   const ref = doc(db, 'psalterGroups', group.id);
-
-  const memberPeople: Person[] = group.members.map(m => ({ uid: m.uid, name: m.name, photoURL: m.photoURL }));
-  const directory: Person[] = people.map(p => ({
-    uid: p.uid,
-    name: shownName(p),
-    photoURL: p.photoURL,
-    sub: hasGeorgianName(p) ? undefined : 'ქართული სახელი პროფილში ჯერ არ აქვს',
-  }));
-
-  const unowned = ALL_KATHISMAS.filter(k => !(owners[k] || []).length);
-  const load = useMemo(() => Object.fromEntries(group.memberIds.map(u => [u, kathismasOf(owners, u).length])), [owners, group.memberIds]);
-  const reserve = group.members.filter(m => !load[m.uid]);
-
-  const saveMembers = async (uids: string[]) => {
-    const keep = group.members.filter(m => uids.includes(m.uid));
-    const added: GroupMember[] = uids
-      .filter(u => !group.memberIds.includes(u))
-      .map(u => {
-        const p = people.find(x => x.uid === u);
-        return { uid: u, name: p ? shownName(p) : 'წევრი', prayer: p ? shownPrayerName(p) : '', photoURL: p?.photoURL || '' };
-      });
-    const removed = group.memberIds.filter(u => !uids.includes(u));
-    const nextOwners = Object.fromEntries(ALL_KATHISMAS.map(k => [k, (owners[k] || []).filter(u => !removed.includes(u))]));
-    try {
-      await updateDoc(ref, {
-        members: [...keep, ...added],
-        memberIds: [...keep, ...added].map(m => m.uid),
-        // a member who leaves frees their kathisma until the teacher names someone else
-        ...(removed.length ? { assignment: rebase(nextOwners), baseHalf: half } : {}),
-        updatedAt: new Date().toISOString(),
-      });
-      if (removed.length) setOwners(nextOwners);
-      msg.ok(`წევრები განახლდა${added.length ? ` · დაემატა ${added.length}` : ''}${removed.length ? ` · გავიდა ${removed.length}` : ''}.`);
-    } catch {
-      msg.fail('წევრები ვერ შეინახა.');
-    }
-  };
-
-  const removeMember = async (m: GroupMember) => {
-    if (!(await askConfirm({ title: `ამოვიყვანო ${m.name} ჯგუფიდან?`, text: 'მისი კანონი თავისუფალი გახდება.', ok: 'ამოყვანა', danger: true }))) return;
-    void saveMembers(group.memberIds.filter(u => u !== m.uid));
-  };
-
-  const addMyself = async () => {
-    if (!user) return;
-    const p = people.find(x => x.uid === user.uid);
-    const me: GroupMember = { uid: user.uid, name: p ? shownName(p) : user.displayName || 'მასწავლებელი', prayer: p ? shownPrayerName(p) : '', photoURL: user.photoURL || '' };
-    await updateDoc(ref, { members: arrayUnion(me), memberIds: arrayUnion(user.uid), updatedAt: new Date().toISOString() })
-      .then(() => msg.ok('შენც ჯგუფის წევრი ხარ — ახლა კანონი მიიღე განაწილებაში.'))
-      .catch(() => msg.fail('ვერ დაემატე.'));
-  };
-
-  const saveAssignment = async () => {
-    setSaving(true);
-    try {
-      await updateDoc(ref, { assignment: rebase(owners), baseHalf: half, updatedAt: new Date().toISOString() });
-      setDirty(false);
-      msg.ok(`განაწილება შენახულია. ${shiftDaysText(group.shiftDays)} რიცხვში ყველა თავისით გადავა შემდეგ კანონზე.`);
-    } catch {
-      msg.fail('განაწილება ვერ შეინახა.');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const half = cycleOf(georgiaToday(), group.cycleDays, group.shiftDays).half;
+  const owners = ownersIn(group.assignment, group.baseHalf, half);
+  const reading = !!user && group.memberIds.includes(user.uid);
+  const close = () => { setSettings(blank()); msg.clear(); onClose(); };
 
   // the cycle length and shift days as typed
   const typedCycle = parseCycleDays(settings.cycleDays);
@@ -99,6 +33,8 @@ export const GroupManage: React.FC<{ group: PsalterGroup; onDeleted: () => void 
   const cycleDays = typedCycle ?? group.cycleDays;
   const shiftDays = typedShift ?? group.shiftDays;
   const sameDays = shiftDays.join() === group.shiftDays.join();
+  const changed =
+    settings.name !== group.name || !cycleOk || !shiftOk || cycleDays !== group.cycleDays || !sameDays || settings.remindDaily !== group.remindDaily || settings.remindFinal !== group.remindFinal;
 
   const saveSettings = async () => {
     if (!settings.name.trim()) { msg.fail('ჯგუფს სახელი სჭირდება.'); return; }
@@ -122,9 +58,53 @@ export const GroupManage: React.FC<{ group: PsalterGroup; onDeleted: () => void 
         }),
         updatedAt: new Date().toISOString(),
       });
-      msg.ok('პარამეტრები შენახულია.');
+      msg.ok('შენახულია.');
     } catch {
       msg.fail('ვერ შეინახა.');
+    }
+  };
+
+  // the leader reads too (or no longer): their kanons go free when they stop
+  const setReading = async (on: boolean) => {
+    if (!user) return;
+    const mineNow = kathismasOf(owners, user.uid);
+    if (!on && mineNow.length && !(await askConfirm({ title: 'აღარ კითხულობ?', text: `კანონი ${mineNow.join(', ')} თავისუფალი დარჩება.`, ok: 'დიახ' }))) return;
+    const me = group.members.find(m => m.uid === user.uid)
+      || { uid: user.uid, name: cls?.teachers.find(t => t.uid === user.uid)?.name || user.displayName || 'მასწავლებელი', prayer: '', photoURL: user.photoURL || '' };
+    try {
+      await updateDoc(ref, on
+        ? { members: arrayUnion(me), memberIds: arrayUnion(user.uid), updatedAt: new Date().toISOString() }
+        : {
+          members: group.members.filter(m => m.uid !== user.uid),
+          memberIds: arrayRemove(user.uid),
+          ...(mineNow.length ? { assignment: rebase(Object.fromEntries(ALL_KATHISMAS.map(k => [k, owners[k].filter(u => u !== user.uid)]))), baseHalf: half } : {}),
+          updatedAt: new Date().toISOString(),
+        });
+    } catch {
+      msg.fail('ვერ შეინახა.');
+    }
+  };
+
+  // every reader gets a kanon in turn, by name: the class's members and the leaders who read
+  const distribute = async () => {
+    const readers: GroupMember[] = [
+      ...(cls ? cls.members.map(m => group.members.find(g => g.uid === m.uid) || { uid: m.uid, name: m.name, prayer: '', photoURL: m.photoURL || '' }) : []),
+      ...group.members.filter(m => !cls || !cls.memberIds.includes(m.uid)),
+    ];
+    if (!readers.length) { msg.fail('ჯერ არავინაა, ვისაც კანონი მიეცემა.'); return; }
+    if (Object.values(owners).some(l => l.length) && !(await askConfirm({ title: 'განაწილება თავიდან?', text: 'ყველას ახალი კანონი მიეცემა სახელების მიხედვით; არსებული განაწილება შეიცვლება.', ok: 'განაწილება' }))) return;
+    const ids = [...readers].sort((a, b) => a.name.localeCompare(b.name, 'ka')).map(m => m.uid);
+    try {
+      await updateDoc(ref, {
+        members: readers,
+        memberIds: readers.map(m => m.uid),
+        assignment: rebase(autoDistribute(ids)),
+        baseHalf: half,
+        updatedAt: new Date().toISOString(),
+      });
+      msg.ok(ids.length < ALL_KATHISMAS.length ? 'განაწილდა — ზოგს ორი კანონი შეხვდა.' : 'განაწილდა.');
+    } catch {
+      msg.fail('განაწილება ვერ შეინახა.');
     }
   };
 
@@ -134,173 +114,66 @@ export const GroupManage: React.FC<{ group: PsalterGroup; onDeleted: () => void 
       const cycles = await getDocs(collection(db, 'psalterGroups', group.id, 'cycles'));
       await Promise.all(cycles.docs.map(d => deleteDoc(d.ref)));
       await deleteDoc(ref);
+      // the class forgets it, so its page offers „შექმნა“ again
+      if (cls) await updateDoc(doc(db, 'classes', cls.id), { psalterGroupId: '', updatedAt: new Date().toISOString() }).catch(() => {});
       onDeleted();
     } catch {
       msg.fail('ჯგუფი ვერ წაიშალა.');
     }
   };
 
-  const settingsChanged =
-    settings.name !== group.name || !cycleOk || !shiftOk || cycleDays !== group.cycleDays || !sameDays || settings.remindDaily !== group.remindDaily || settings.remindFinal !== group.remindFinal;
-
   return (
-    <div className="space-y-4">
-      <Flash flash={msg.flash} onClose={msg.clear} />
-
-      {/* members */}
-      <Card>
-        <CardTitle
-          icon={<Users />}
-          title={`წევრები · ${group.members.length}`}
-        />
-        <div className="flex flex-wrap gap-2 mb-3">
-          <Btn icon={<UserPlus />} onClick={() => setPicking(true)}>წევრების დამატება</Btn>
-          {user && !group.memberIds.includes(user.uid) && <Btn kind="ghost" onClick={addMyself}>მეც ვკითხულობ</Btn>}
+    <Sheet open={open} onClose={close} title="ჯგუფის პარამეტრები"
+      footer={changed ? <Btn full icon={<Save />} onClick={saveSettings}>შენახვა</Btn> : undefined}>
+      <div className="space-y-4">
+        <Flash flash={msg.flash} onClose={msg.clear} />
+        <div>
+          <Label>ჯგუფის სახელი</Label>
+          <input className={FIELD} value={settings.name} onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
         </div>
-        {group.members.length === 0 ? (
-          <p className="text-sm text-[#8a7a6a]">ჯგუფში ჯერ არავინაა.</p>
-        ) : (
-          <ul className="divide-y divide-[#efe3cf]">
-            {group.members.map(m => {
-              const ks = kathismasOf(owners, m.uid);
-              return (
-                <li key={m.uid} className="flex items-center gap-3 py-2.5">
-                  <Avatar name={m.name} photo={m.photoURL} size={38} />
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-[15px] font-semibold text-[#2a2017] truncate">{m.name}</span>
-                    <span className="block text-xs text-[#8a7a6a]">
-                      {ks.length ? `კანონი ${ks.join(', ')}` : 'მარაგში'}
-                      {!/^[ა-ჿ\s-]+$/.test(m.name) && <span className="text-[#9a3324]"> · სახელი ქართულად არ წერია</span>}
-                    </span>
-                  </span>
-                  <IconBtn label="ჯგუფიდან ამოყვანა" tone="danger" onClick={() => removeMember(m)}><UserMinus /></IconBtn>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </Card>
-
-      {/* distribution */}
-      <Card>
-        <CardTitle
-          icon={<LayoutGrid />}
-          title="კანონების განაწილება"
-        />
-        {(unowned.length > 0 || reserve.length > 0) && (
-          <div className="mb-3 p-3 rounded-2xl bg-amber-50 ring-1 ring-amber-200 text-[13px] text-amber-900 space-y-1">
-            {unowned.length > 0 && (
-              <p className="flex gap-2"><AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" /> ცარიელი კანონები: <b>{unowned.join(', ')}</b> — დაუნიშნე ვინმეს (შეიძლება ერთს ორი კანონი).</p>
-            )}
-            {reserve.length > 0 && <p>მარაგში: {reserve.map(m => firstName(m.name)).join(', ')} — ეხმარებიან აღებით, ან დაუნიშნე კანონი მეორე მკითხველად.</p>}
-          </div>
-        )}
-        <div className="flex flex-wrap gap-2 mb-3">
-          <Btn kind="ghost" icon={<Shuffle />} disabled={!group.members.length} onClick={async () => {
-            const ids = [...group.members].sort((a, b) => a.name.localeCompare(b.name, 'ka')).map(m => m.uid);
-            if (Object.values(owners).some(l => l.length) && !(await askConfirm({ title: 'გავაგრძელო?', text: 'არსებული განაწილება შეიცვლება.', ok: 'გაგრძელება' }))) return;
-            setOwners(autoDistribute(ids));
-            setDirty(true);
-          }}>ავტომატური განაწილება</Btn>
-          <Btn icon={<Save />} disabled={!dirty || saving} onClick={saveAssignment}>{saving ? 'ინახება…' : 'შენახვა'}</Btn>
-        </div>
-        <ul className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          {ALL_KATHISMAS.map(k => {
-            const list = owners[k] || [];
-            return (
-              <li key={k}>
-                <button
-                  type="button"
-                  onClick={() => setEditK(k)}
-                  className={`w-full flex items-center gap-3 p-2.5 rounded-2xl text-left cursor-pointer transition ${list.length ? 'bg-white ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40' : 'bg-amber-50/60 ring-1 ring-dashed ring-amber-300 border border-dashed border-amber-300'}`}
-                >
-                  <span className="w-10 h-10 rounded-xl bg-[#7a2028]/[0.08] text-[#7a2028] font-serif-ge font-bold text-lg flex items-center justify-center tabular-nums shrink-0">{k}</span>
-                  <span className="min-w-0 flex-1">
-                    <span className="block text-sm font-semibold text-[#2a2017] truncate">
-                      {list.length ? list.map(u => group.members.find(m => m.uid === u)?.name || 'წევრი').join(', ') : 'არავინ'}
-                    </span>
-                    <span className="block text-xs text-[#8a7a6a]">ფს. {KATHISMA_PSALMS[k - 1]}</span>
-                  </span>
-                  <Pencil className="w-4 h-4 text-[#b3a594] shrink-0" />
-                </button>
-              </li>
-            );
-          })}
-        </ul>
-      </Card>
-
-      {/* settings */}
-      <Card>
-        <CardTitle icon={<Settings2 />} title="პარამეტრები" />
-        <div className="space-y-3">
+        <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>ჯგუფის სახელი</Label>
-            <input className={FIELD} value={settings.name} onChange={e => setSettings(s => ({ ...s, name: e.target.value }))} />
+            <Label>ციკლი (დღე)</Label>
+            <input
+              className={`${FIELD} ${cycleOk ? '' : '!ring-2 !ring-[#9a3324]/50'}`}
+              type="number" inputMode="numeric" min={1} max={MAX_CYCLE_DAYS}
+              value={settings.cycleDays}
+              onChange={e => setSettings(s => ({ ...s, cycleDays: e.target.value }))}
+            />
           </div>
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label>ციკლი (დღე)</Label>
-              <input
-                className={`${FIELD} ${cycleOk ? '' : '!ring-2 !ring-[#9a3324]/50'}`}
-                type="number" inputMode="numeric" min={1} max={MAX_CYCLE_DAYS}
-                value={settings.cycleDays}
-                onChange={e => setSettings(s => ({ ...s, cycleDays: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label>გადასვლის რიცხვები</Label>
-              <input
-                className={`${FIELD} ${shiftOk ? '' : '!ring-2 !ring-[#9a3324]/50'}`}
-                inputMode="text" placeholder="1, 15"
-                value={settings.shiftDays}
-                onChange={e => setSettings(s => ({ ...s, shiftDays: e.target.value }))}
-              />
-            </div>
-            <div>
-              <Label>შეხსენება</Label>
-              <select className={FIELD} value={settings.remindDaily} onChange={e => setSettings(s => ({ ...s, remindDaily: e.target.value }))}>
-                {TIMES.map(t => <option key={t} value={t}>{t || 'გამორთული'}</option>)}
-              </select>
-            </div>
-            <div>
-              <Label>ციკლის ბოლოს</Label>
-              <select className={FIELD} value={settings.remindFinal} onChange={e => setSettings(s => ({ ...s, remindFinal: e.target.value }))}>
-                {TIMES.map(t => <option key={t} value={t}>{t || 'გამორთული'}</option>)}
-              </select>
-            </div>
+          <div>
+            <Label>გადასვლის რიცხვები</Label>
+            <input
+              className={`${FIELD} ${shiftOk ? '' : '!ring-2 !ring-[#9a3324]/50'}`}
+              inputMode="text" placeholder="1, 15"
+              value={settings.shiftDays}
+              onChange={e => setSettings(s => ({ ...s, shiftDays: e.target.value }))}
+            />
           </div>
-          <p className="text-xs text-[#8a7a6a] leading-relaxed">
-            ციკლში 20-ვე კანონი უნდა წაიკითხონ (1–{MAX_CYCLE_DAYS} დღე). {shiftOk ? `${shiftDaysText(shiftDays)} რიცხვში` : 'გადასვლის რიცხვებში (1–28)'} ყველა შემდეგ კანონზე გადადის.
-            შეხსენება მიდის მხოლოდ მათთან, ვისაც ჯერ არ წაუკითხავს (საქართველოს დროით).
-          </p>
-          <Btn icon={<Save />} disabled={!settingsChanged} onClick={saveSettings}>შენახვა</Btn>
+          <div>
+            <Label>შეხსენება</Label>
+            <select className={FIELD} value={settings.remindDaily} onChange={e => setSettings(s => ({ ...s, remindDaily: e.target.value }))}>
+              {TIMES.map(t => <option key={t} value={t}>{t || 'გამორთული'}</option>)}
+            </select>
+          </div>
+          <div>
+            <Label>ციკლის ბოლოს</Label>
+            <select className={FIELD} value={settings.remindFinal} onChange={e => setSettings(s => ({ ...s, remindFinal: e.target.value }))}>
+              {TIMES.map(t => <option key={t} value={t}>{t || 'გამორთული'}</option>)}
+            </select>
+          </div>
         </div>
-      </Card>
 
-      <div className="pt-1">
-        <Btn kind="danger" icon={<Trash2 />} onClick={removeGroup}>ჯგუფის წაშლა</Btn>
+        <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-3.5">
+          <Toggle on={reading} onChange={on => void setReading(on)} label="მეც ვკითხულობ" />
+        </div>
+
+        <Btn kind="ghost" full icon={<Shuffle />} onClick={distribute}>ავტომატური განაწილება</Btn>
+
+        <div className="pt-2 border-t border-[#e8dcc8]">
+          <Btn kind="danger" full icon={<Trash2 />} onClick={removeGroup}>ჯგუფის წაშლა</Btn>
+        </div>
       </div>
-
-      <PeoplePicker
-        open={picking}
-        onClose={() => setPicking(false)}
-        title="ჯგუფის წევრები"
-        people={directory}
-        selected={group.memberIds}
-        loading={loading}
-        onDone={saveMembers}
-        empty="ჯერ არავინ დარეგისტრირებულა."
-      />
-      <PeoplePicker
-        open={editK !== null}
-        onClose={() => setEditK(null)}
-        title={editK ? `კანონი ${editK} — ვინ კითხულობს` : ''}
-        people={memberPeople}
-        selected={editK ? owners[editK] || [] : []}
-        doneLabel="არჩევა"
-        empty="ჯერ წევრები დაამატე."
-        onDone={uids => { if (editK) { setOwners(o => ({ ...o, [editK]: uids })); setDirty(true); } }}
-      />
-    </div>
+    </Sheet>
   );
 };

@@ -79,11 +79,11 @@ const FeastRow: React.FC<{ feast: Feast; year: number; today: string }> = ({ fea
           href={url}
           target="_blank"
           rel="noopener noreferrer"
-          className="w-10 shrink-0 rounded-xl flex items-center justify-center text-[#cdbba3] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.04] transition-colors"
+          className="w-10 shrink-0 rounded-xl flex items-center justify-center text-[#7a2028]/70 hover:text-[#7a2028] hover:bg-[#7a2028]/[0.04] transition-colors"
           title="ვრცლად"
           aria-label={`${feast.name} — ვრცლად`}
         >
-          <ExternalLink className="w-3.5 h-3.5" />
+          <ExternalLink className="w-[18px] h-[18px]" />
         </a>
       )}
     </li>

@@ -1,5 +1,5 @@
-import React, { useMemo, useRef, useState } from 'react';
-import { Plus, Search, Trash2, Upload, Check, ArrowUp, ArrowDown, RefreshCw, ExternalLink, ChevronRight, BookOpen, Users, ListMusic, TriangleAlert } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Plus, Trash2, Upload, Check, RefreshCw, ExternalLink, Pencil, BookOpen, Users, ListMusic, TriangleAlert } from 'lucide-react';
 import { arrayUnion, collection, deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth, useNavigation } from '../../context';
@@ -7,17 +7,14 @@ import { SchoolClass, ProgramItem, imageFileToDataUrl } from '../../hooks/useCla
 import { ClassLogo } from '../classes/ClassLogo';
 import { triggerHaptic } from '../../utils/haptics';
 import { filterValidVariants } from '../../utils/variantValidation';
-import { PathItem, sortPathItems, findCatalogEntry, voicesOf, CATEGORY_LABEL } from '../../utils/pathItems';
-import { CatalogPicker } from './CatalogPicker';
-import { MemberPathEditor, writePath } from './MemberPathEditor';
+import { PathItem, sortPathItems, findCatalogEntry, voicesOf } from '../../utils/pathItems';
+import { writePath } from './MemberPathEditor';
 import { linkTeachers } from '../../hooks/useTeaching';
-import { askConfirm, Avatar, Bar, Btn, Flash, Pill, Sheet, Toggle, useFlash } from '../ui/kit';
-import { ShortcutPicker, shortcutIcon } from '../home/ShortcutShelf';
-import { shortcutLabel } from '../../utils/shortcuts';
+import { askConfirm, Avatar, Bar, Btn, IconBtn, Pill, Sheet } from '../ui/kit';
 import { LeaderChips } from './LeaderChips';
 import { useClassAttendance, useGroupReading } from './StatsTab';
-import { PsalterGroup } from '../../hooks/usePsalter';
-import { KATHISMA_COUNT } from '../../utils/psalter';
+import { GroupMember, PsalterGroup, toGroup } from '../../hooks/usePsalter';
+import { KATHISMA_COUNT, cycleOf, georgiaToday, ownersIn, rebase } from '../../utils/psalter';
 
 /**
  * Puts the class program on each member's path (missing items are added at the end) and takes back
@@ -57,6 +54,46 @@ export const removeClassMember = async (cls: SchoolClass, uid: string) => {
     updatedAt: new Date().toISOString(),
   });
   await syncMemberPaths(cls.id, cls.program, [], [uid]);
+  await leaveClassGroup(cls, uid).catch(() => {});
+};
+
+// the class's psalter group follows the class: a new member joins it (a kanon is named in the kanon's window or by
+// „ავტომატური განაწილება“), one taken out leaves it and their kanon goes free
+const joinClassGroup = async (cls: SchoolClass, p: { uid: string; name: string; photoURL?: string }) => {
+  if (!cls.psalterGroupId) return;
+  const me: GroupMember = { uid: p.uid, name: p.name, prayer: '', photoURL: p.photoURL || '' };
+  await updateDoc(doc(db, 'psalterGroups', cls.psalterGroupId), { members: arrayUnion(me), memberIds: arrayUnion(p.uid), updatedAt: new Date().toISOString() });
+};
+const leaveClassGroup = async (cls: SchoolClass, uid: string) => {
+  if (!cls.psalterGroupId) return;
+  const ref = doc(db, 'psalterGroups', cls.psalterGroupId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const g = toGroup(snap.id, snap.data());
+  if (!g.memberIds.includes(uid)) return;
+  const half = cycleOf(georgiaToday(), g.cycleDays, g.shiftDays).half;
+  const owners = ownersIn(g.assignment, g.baseHalf, half);
+  await updateDoc(ref, {
+    members: g.members.filter(m => m.uid !== uid),
+    memberIds: g.memberIds.filter(x => x !== uid),
+    assignment: rebase(Object.fromEntries(Object.entries(owners).map(([k, l]) => [k, l.filter(x => x !== uid)]))),
+    baseHalf: half,
+    updatedAt: new Date().toISOString(),
+  });
+};
+
+/** Puts one person into the class (the „+“ on the class page's members card): their path gets the program, and the
+ *  class's teachers may see it. Returns the failed paths (0 or 1). */
+export const addClassMember = async (cls: SchoolClass, p: { uid: string; name: string; photoURL?: string }) => {
+  if (cls.memberIds.includes(p.uid)) return 0;
+  await updateDoc(doc(db, 'classes', cls.id), {
+    memberIds: [...cls.memberIds, p.uid],
+    members: [...cls.members, { uid: p.uid, name: p.name, photoURL: p.photoURL || '' }],
+    updatedAt: new Date().toISOString(),
+  });
+  await linkTeachers(p.uid, cls).catch(() => {});
+  await joinClassGroup(cls, p).catch(() => {});
+  return syncMemberPaths(cls.id, cls.program, [p.uid], []);
 };
 
 const cleanProgram = (program: ProgramItem[]) =>
@@ -85,43 +122,26 @@ type Draft = {
 };
 const EMPTY: Draft = { id: null, name: '', logo: '', memberIds: [], savedMemberIds: [], program: [], teacherIds: [], classMode: false, defaultShortcuts: [] };
 
-// Classes: list + editor (name, logo, members, common program, "კლასის რეჟიმი").
-// mode 'admin': every class in a list; a tap opens the class's own window (create, delete, its teachers from
-// `staff`, members from all users). mode 'teacher': the teacher's own class (`openId`) in its window, opened
-// from the class tab; members from the people list (their paths are in each student's own window).
+// Classes: the admin's list of every class as a card; a tap opens the class page (the one workplace: members, program,
+// mode, paths), ✎ opens a small window for what only admins set — name, logo, its teachers from `staff` — and
+// creating or deleting a class. (The teachers' old members window with its long list of ticks is gone, 2026-10-28:
+// a class page's „+“ adds one person at a time, and the members' starting buttons are in the class's ✎.)
 export const ClassesAdmin: React.FC<{
   classes: SchoolClass[];
   loading: boolean;
-  students: AdminStudent[];
   onMessage: (text: string, type: 'success' | 'error') => void;
-  mode?: 'admin' | 'teacher';
   staff?: AdminStudent[];
-  openId?: string;
-  onClose?: () => void;
   /** psalter groups, so a class row shows its own group (a group lives only inside its class) */
   groups?: PsalterGroup[];
-}> = ({ classes, loading, students, onMessage, mode = 'admin', staff = [], openId, onClose, groups = [] }) => {
+}> = ({ classes, loading, onMessage, staff = [], groups = [] }) => {
   const { user } = useAuth();
   const { openClass } = useNavigation();
-  const isAdminMode = mode === 'admin';
-  const local = useFlash();
-  // the teacher's window shows its own errors; a save closes it and is told on the page
-  const tell = (text: string, type: 'success' | 'error') => {
-    if (isAdminMode) return onMessage(text, type);
-    if (type === 'error') return local.say(text, type);
-    onMessage(text, type);
-    onClose?.();
-  };
+  const tell = onMessage;
   const [draft, setDraft] = useState<Draft | null>(null);
-  const [memberQuery, setMemberQuery] = useState('');
   const [saving, setSaving] = useState(false);
-  const [pathOf, setPathOf] = useState<string | null>(null);
-  const [pickingButtons, setPickingButtons] = useState(false);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const edit = (c?: SchoolClass) => {
-    setMemberQuery('');
-    setPathOf(null);
     setDraft(c ? {
       id: c.id, name: c.name, logo: c.logo || '', memberIds: [...c.memberIds], savedMemberIds: [...c.memberIds],
       program: c.program.map(p => ({ ...p })), teacherIds: [...c.teacherIds], classMode: Boolean(c.classMode),
@@ -129,27 +149,11 @@ export const ClassesAdmin: React.FC<{
     } : { ...EMPTY });
   };
 
-  // the teacher panel opens its class straight away
-  const opened = classes.find(c => c.id === openId);
-  React.useEffect(() => {
-    if (opened && draft?.id !== opened.id) edit(opened);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [opened?.id]);
-
-  const shownStudents = useMemo(() => {
-    const q = memberQuery.toLowerCase().trim();
-    const list = q ? students.filter(s => `${s.name} ${s.email || ''}`.toLowerCase().includes(q)) : students;
-    // selected first, then by name
-    return [...list].sort((a, b) =>
-      Number(draft?.memberIds.includes(b.userId)) - Number(draft?.memberIds.includes(a.userId)) || a.name.localeCompare(b.name, 'ka'));
-  }, [students, memberQuery, draft?.memberIds]);
-
   // admin: every class as a card (two columns on wide screens); the open class's window lies over them
-  const list = isAdminMode && (
+  const list = (
     <section>
-      {/* the tab and the big number already say „კლასები“: no title here, only the short rule and the button */}
-      <div className="mb-3 px-1 flex flex-wrap items-center gap-x-3 gap-y-2">
-        <p className="flex-1 min-w-[12rem] text-[12.5px] leading-snug text-[#8a7a6a]">დასწრება — ბოლო 8 გაკვეთილის საშუალო. პროგრამა შენახვისას ყველა წევრის გზას ემატება.</p>
+      {/* the tab and the big number already say „კლასები“: no title here, only the button */}
+      <div className="mb-3 px-1 flex justify-end">
         <Btn size="sm" kind="soft" icon={<Plus />} onClick={() => edit()}>ახალი კლასი</Btn>
       </div>
       {loading ? (
@@ -158,24 +162,15 @@ export const ClassesAdmin: React.FC<{
         <p className="rounded-3xl border border-dashed border-[#dccbb0] px-4 py-8 text-center text-sm text-[#8a7a6a]">კლასი ჯერ არ შექმნილა. შექმენი პირველი და დაამატე წევრები.</p>
       ) : (
         <ul className="grid sm:grid-cols-2 gap-3">
-          {classes.map(c => <ClassRow key={c.id} cls={c} group={groups.find(g => g.id === c.psalterGroupId)} onOpen={() => edit(c)} />)}
+          {classes.map(c => <ClassRow key={c.id} cls={c} group={groups.find(g => g.id === c.psalterGroupId)} onOpen={() => openClass(c.id)} onEdit={() => edit(c)} />)}
         </ul>
       )}
     </section>
   );
 
-  if (!draft) return isAdminMode ? list : null;
+  if (!draft) return list;
 
   const set = (patch: Partial<Draft>) => setDraft(d => (d ? { ...d, ...patch } : d));
-  const toggleMember = (uid: string) =>
-    set({ memberIds: draft.memberIds.includes(uid) ? draft.memberIds.filter(x => x !== uid) : [...draft.memberIds, uid] });
-  const moveItem = (i: number, dir: -1 | 1) => {
-    const p = [...draft.program];
-    const j = i + dir;
-    if (j < 0 || j >= p.length) return;
-    [p[i], p[j]] = [p[j], p[i]];
-    set({ program: p });
-  };
 
   const pickLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -194,47 +189,30 @@ export const ClassesAdmin: React.FC<{
     setSaving(true);
     try {
       const ref = draft.id ? doc(db, 'classes', draft.id) : doc(collection(db, 'classes'));
-      const members = draft.memberIds
-        .map(uid => students.find(s => s.userId === uid))
-        .filter(Boolean)
-        .map(s => ({ uid: s!.userId, name: s!.name, photoURL: s!.photoURL || '' }));
+      // the admin's window: name, logo and teachers; members, program and the rest are set on the class page
       const now = new Date().toISOString();
       const teachers = draft.teacherIds
         .map(uid => staff.find(s => s.userId === uid))
         .filter(Boolean)
         .map(s => ({ uid: s!.userId, name: s!.name, photoURL: s!.photoURL || '' }));
-      const existing = classes.find(c => c.id === draft.id);
-      const teacherIds = isAdminMode ? teachers.map(t => t.uid) : existing?.teacherIds || [];
+      const teacherIds = teachers.map(t => t.uid);
       await setDoc(ref, {
         name,
         logo: draft.logo,
-        memberIds: members.map(m => m.uid),
-        members,
-        program: cleanProgram(draft.program),
-        classMode: draft.classMode,
-        defaultShortcuts: draft.defaultShortcuts,
-        // only admins choose a class's teachers
-        ...(isAdminMode ? { teacherIds, teachers } : {}),
+        teacherIds,
+        teachers,
         updatedAt: now,
-        ...(draft.id ? {} : { createdAt: now, createdBy: user?.email || '' }),
+        ...(draft.id ? {} : { memberIds: [], members: [], program: [], classMode: false, defaultShortcuts: [], createdAt: now, createdBy: user?.email || '' }),
       }, { merge: true });
-      const ids = members.map(m => m.uid);
       // the class's teachers may now see and arrange the members' paths
       if (teacherIds.length) {
-        await Promise.all(ids.map(uid =>
-          (isAdminMode
-            ? setDoc(doc(db, 'students', uid), { teacherIds: arrayUnion(...teacherIds) }, { merge: true })
-            : draft.savedMemberIds.includes(uid) ? Promise.resolve() : linkTeachers(uid, { id: ref.id, teacherIds })
-          ).catch(() => {})
+        await Promise.all(draft.savedMemberIds.map(uid =>
+          setDoc(doc(db, 'students', uid), { teacherIds: arrayUnion(...teacherIds) }, { merge: true }).catch(() => {})
         ));
       }
-      const failed = await syncMemberPaths(ref.id, draft.program, ids, draft.savedMemberIds.filter(x => !ids.includes(x)));
       triggerHaptic(30);
-      setDraft(d => (d ? { ...d, id: ref.id, memberIds: ids, savedMemberIds: ids } : d));
-      tell(
-        failed ? `კლასი „${name}“ შენახულია, მაგრამ ${failed} წევრის გზა ვერ განახლდა.` : `კლასი „${name}“ შენახულია და პროგრამა წევრებს მიენიჭა.`,
-        failed ? 'error' : 'success'
-      );
+      setDraft(d => (d ? { ...d, id: ref.id } : d));
+      tell(draft.id ? `კლასი „${name}“ შენახულია.` : `კლასი „${name}“ შეიქმნა — წევრებს და პროგრამას კლასის გვერდზე დაამატებ.`, 'success');
     } catch (err: any) {
       tell('კლასი ვერ შეინახა: ' + (err?.code === 'permission-denied' ? 'ბაზის წესებში კლასები ჯერ არ არის დამატებული.' : err?.message || ''), 'error');
     } finally {
@@ -254,10 +232,9 @@ export const ClassesAdmin: React.FC<{
     }
   };
 
-  // the teacher edits the name, logo and class mode at the top of the class tab (ClassHeader); the window keeps the rest
+  // name, logo, teachers
   const fields = (
     <>
-      {isAdminMode && <>
       {/* name + logo */}
       <div className="flex items-center gap-4">
         <button type="button" onClick={() => fileRef.current?.click()} title="ლოგოს ატვირთვა" className="relative shrink-0 cursor-pointer group">
@@ -285,218 +262,56 @@ export const ClassesAdmin: React.FC<{
           onChange={teacherIds => set({ teacherIds })}
         />
       </div>
-      </>}
-
-      {/* members */}
-      <div className="space-y-2">
-        <div className="flex items-baseline justify-between">
-          <label className="text-xs font-semibold text-[#75685a]">წევრები</label>
-          <span className="text-xs font-bold text-[#7a2028]">{draft.memberIds.length} არჩეულია</span>
-        </div>
-        <div className="relative">
-          <Search className="w-4 h-4 text-[#b3a594] absolute left-3.5 top-1/2 -translate-y-1/2" />
-          <input value={memberQuery} onChange={e => setMemberQuery(e.target.value)} placeholder="მოძებნე სახელით ან ელფოსტით" className={`${field} pl-10`} />
-        </div>
-        <ul className="max-h-72 overflow-y-auto rounded-2xl ring-1 ring-[#e8dcc8] bg-white divide-y divide-[#f1e8d9]">
-          {shownStudents.map(s => {
-            const on = draft.memberIds.includes(s.userId);
-            return (
-              <li key={s.userId}>
-                <button type="button" onClick={() => toggleMember(s.userId)} className={`w-full flex items-center gap-3 px-3 py-2.5 text-left cursor-pointer transition-colors ${on ? 'bg-[#7a2028]/5' : 'hover:bg-[#fbf6ec]'}`}>
-                  <span className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 ${on ? 'bg-[#7a2028] text-white' : 'ring-1 ring-[#d9c8ac]'}`}>
-                    {on && <Check className="w-3.5 h-3.5 stroke-[3]" />}
-                  </span>
-                  {s.photoURL ? (
-                    <img src={s.photoURL} alt="" className="w-8 h-8 rounded-full object-cover" referrerPolicy="no-referrer" />
-                  ) : (
-                    <span className="w-8 h-8 rounded-full bg-[#efe5d4] text-[#4a3426] text-sm font-bold flex items-center justify-center">{s.name.charAt(0)}</span>
-                  )}
-                  <span className="min-w-0">
-                    <span className="block text-sm font-semibold text-[#2a2017] truncate">{s.name}</span>
-                    {s.email && <span className="block text-xs text-[#8a7a6a] truncate">{s.email}</span>}
-                  </span>
-                </button>
-              </li>
-            );
-          })}
-          {shownStudents.length === 0 && <li className="px-3 py-6 text-center text-sm text-[#8a7a6a]">ვერ მოიძებნა.</li>}
-        </ul>
-      </div>
-
-      {/* program: picked from the catalogue, given to every member on save (the teacher's own: ClassProgramPanel) */}
-      {isAdminMode && <div className="space-y-2">
-        <div className="flex items-baseline justify-between">
-          <label className="text-xs font-semibold text-[#75685a]">საერთო პროგრამა</label>
-          <span className="text-xs text-[#8a7a6a]">შენახვისას ყველა წევრის საგანძურის გზას დაემატება</span>
-        </div>
-        <CatalogPicker
-          isTaken={id => draft.program.some(p => p.id === id)}
-          onPick={e => set({ program: [...draft.program, { id: e.id, title: e.title, code: e.code }] })}
-        />
-        {draft.program.length > 0 && (
-          <ol className="rounded-2xl ring-1 ring-[#e8dcc8] bg-white divide-y divide-[#f1e8d9]">
-            {draft.program.map((p, i) => {
-              const cat = p.id ? findCatalogEntry(p.id)?.category : undefined;
-              return (
-                <li key={p.id || i} className="flex items-center gap-2 px-3 py-2">
-                  <span className="w-7 h-7 shrink-0 rounded-full bg-[#7a2028]/10 text-[#7a2028] text-sm font-bold flex items-center justify-center tabular-nums">{i + 1}</span>
-                  <span className="flex-1 min-w-0">
-                    <span className="block text-sm font-semibold text-[#2a2017] truncate">{p.title}</span>
-                    <span className="block text-xs text-[#8a7a6a]">{cat ? `${CATEGORY_LABEL[cat]} · ${p.code}` : 'ტექსტი'}</span>
-                  </span>
-                  <button type="button" onClick={() => moveItem(i, -1)} disabled={i === 0} title="ზემოთ" className="w-8 h-8 rounded-full text-[#8a7a6a] hover:bg-[#fbf6ec] disabled:opacity-30 flex items-center justify-center cursor-pointer"><ArrowUp className="w-4 h-4" /></button>
-                  <button type="button" onClick={() => moveItem(i, 1)} disabled={i === draft.program.length - 1} title="ქვემოთ" className="w-8 h-8 rounded-full text-[#8a7a6a] hover:bg-[#fbf6ec] disabled:opacity-30 flex items-center justify-center cursor-pointer"><ArrowDown className="w-4 h-4" /></button>
-                  <button type="button" onClick={() => set({ program: draft.program.filter((_, j) => j !== i) })} title="პროგრამიდან ამოღება" className="w-8 h-8 rounded-full text-[#8a7a6a] hover:text-red-600 hover:bg-red-50 flex items-center justify-center cursor-pointer"><Trash2 className="w-4 h-4" /></button>
-                </li>
-              );
-            })}
-          </ol>
-        )}
-      </div>}
-
-      {/* the members' starting home buttons, until they choose their own */}
-      <div className="space-y-2">
-        <div className="flex items-baseline justify-between gap-2">
-          <label className="text-xs font-semibold text-[#75685a]">საწყისი ღილაკები მთავარ გვერდზე</label>
-          <button type="button" onClick={() => setPickingButtons(true)} className="text-xs font-bold text-[#7a2028] cursor-pointer">არჩევა</button>
-        </div>
-        {draft.defaultShortcuts.length === 0 ? (
-          <p className="text-[13px] text-[#8a7a6a]">არ არის — წევრები თავად აირჩევენ. შეგიძლია მთელ კლასს შეურჩიო, მაგ. „დღევანდელი წირვა“ და „ჩემი კანონი“.</p>
-        ) : (
-          <div className="flex flex-wrap gap-1.5">
-            {draft.defaultShortcuts.map(id => (
-              <span key={id} className="h-9 pl-1.5 pr-3 rounded-full bg-white ring-1 ring-[#e8dcc8] inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#4a3426]">
-                <span className="w-6 h-6 rounded-full bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center [&>svg]:w-3.5 [&>svg]:h-3.5">{shortcutIcon(id)}</span>
-                {shortcutLabel(id)?.label}
-              </span>
-            ))}
-          </div>
-        )}
-        <ShortcutPicker open={pickingButtons} onClose={() => setPickingButtons(false)} current={draft.defaultShortcuts} onChange={next => set({ defaultShortcuts: next })} />
-      </div>
-
-      {isAdminMode && (
-        <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-3.5">
-          <Toggle
-            on={draft.classMode}
-            onChange={on => set({ classMode: on })}
-            label="კლასის რეჟიმი"
-            hint={CLASS_MODE_HINT}
-          />
-        </div>
-      )}
-
     </>
-  );
-
-  // each saved member's path: assign, remove, reorder, confirm voices
-  const paths = draft.id && draft.savedMemberIds.length > 0 && (
-        <div className="pt-5 mt-2 border-t border-[#e8dcc8] space-y-3">
-          <h3 className="font-serif-ge text-lg font-bold text-[#4a3426]">წევრების საგანძურის გზა</h3>
-          <div className="flex flex-wrap gap-2">
-            {draft.savedMemberIds.map(uid => {
-              const st = students.find(s => s.userId === uid);
-              const on = pathOf === uid;
-              return (
-                <button
-                  key={uid}
-                  type="button"
-                  onClick={() => setPathOf(on ? null : uid)}
-                  className={`inline-flex items-center gap-2 h-10 pl-1 pr-3.5 rounded-full text-sm font-semibold cursor-pointer transition-colors ${
-                    on ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40'
-                  }`}
-                >
-                  {st?.photoURL ? (
-                    <img src={st.photoURL} alt="" className="w-8 h-8 rounded-full object-cover" referrerPolicy="no-referrer" />
-                  ) : (
-                    <span className="w-8 h-8 rounded-full bg-[#efe5d4] text-[#4a3426] text-sm font-bold flex items-center justify-center">{(st?.name || '?').charAt(0)}</span>
-                  )}
-                  {st?.name || 'წევრი'}
-                </button>
-              );
-            })}
-          </div>
-          {pathOf ? (
-            <MemberPathEditor
-              key={pathOf}
-              uid={pathOf}
-              name={students.find(s => s.userId === pathOf)?.name || 'მოსწავლე'}
-              onError={t => onMessage(t, 'error')}
-            />
-          ) : (
-            <p className="text-sm text-[#8a7a6a]">აირჩიე წევრი, რომ მისი გზა ნახო, შეცვალო და ხმები ჩაუთვალო.</p>
-          )}
-        </div>
   );
 
   const saveIcon = saving ? <RefreshCw className="animate-spin" /> : <Check />;
 
-  // admin: the class's own window over the list — everything about the class in one place
-  if (isAdminMode) {
-    const saved = classes.find(c => c.id === draft.id);
-    return (
-      <>
-        {list}
-        <Sheet
-          open
-          onClose={() => setDraft(null)}
-          title={saved?.name || 'ახალი კლასი'}
-          wide
-          footer={
-            <div className="flex gap-2">
-              {saved && <Btn kind="danger" size="lg" icon={<Trash2 />} onClick={remove}>წაშლა</Btn>}
-              <Btn size="lg" icon={saveIcon} className="flex-1" onClick={save} disabled={saving}>შენახვა</Btn>
-            </div>
-          }
-        >
-          <div className="space-y-5">
-            {saved && <Btn kind="ghost" size="sm" icon={<ExternalLink />} onClick={() => openClass(saved.id)}>კლასის გვერდი</Btn>}
-            {fields}
-            {paths}
-          </div>
-        </Sheet>
-      </>
-    );
-  }
-
-  // teacher: their class's window (saving waits for the people list, so no member drops out)
+  // the class's own window over the list
+  const saved = classes.find(c => c.id === draft.id);
   return (
-    <Sheet
-      open
-      onClose={() => onClose?.()}
-      title="კლასის მართვა"
-      wide
-      footer={
-        <div className="space-y-2">
-          <Flash flash={local.flash} onClose={local.clear} />
-          <Btn size="lg" icon={saveIcon} full onClick={save} disabled={saving || loading}>შენახვა</Btn>
+    <>
+      {list}
+      <Sheet
+        open
+        onClose={() => setDraft(null)}
+        title={saved?.name || 'ახალი კლასი'}
+        wide
+        footer={
+          <div className="flex gap-2">
+            {saved && <Btn kind="danger" size="lg" icon={<Trash2 />} onClick={remove}>წაშლა</Btn>}
+            <Btn size="lg" icon={saveIcon} className="flex-1" onClick={save} disabled={saving}>შენახვა</Btn>
+          </div>
+        }
+      >
+        <div className="space-y-5">
+          {saved && <Btn kind="ghost" size="sm" icon={<ExternalLink />} onClick={() => openClass(saved.id)}>კლასის გვერდი</Btn>}
+          {fields}
         </div>
-      }
-    >
-      <div className="space-y-5">{fields}</div>
-    </Sheet>
+      </Sheet>
+    </>
   );
 };
 
-/** The class's psalter group on its card: name and the kanons read on average in the last cycles. */
+/** The class's psalter group on its card: the kanons read on average in the last cycles (the group is the class's
+ *  own, so its name would only repeat the card's). */
 const ClassGroupLine: React.FC<{ group: PsalterGroup }> = ({ group }) => {
   const reading = useGroupReading(group);
   return (
-    <Pill tone="wine" className="max-w-full">
-      <BookOpen />
-      <span className="min-w-0 truncate">{group.name}</span>
-      {reading && <span className="shrink-0 font-semibold opacity-75 tabular-nums">· კანონი {reading.avg.toFixed(1)}/{KATHISMA_COUNT}</span>}
-    </Pill>
+    <span title={group.name}>
+      <Pill tone="wine"><BookOpen /> {reading ? <span className="tabular-nums">კანონი {reading.avg.toFixed(1)}/{KATHISMA_COUNT}</span> : 'ფსალმუნთა ჯგუფი'}</Pill>
+    </span>
   );
 };
 
 /** A class in the admin list, as a card: logo and name, its teachers, small chips (members, program, psalter
- *  group) and the attendance bar. A class without a teacher says so in the card's corner. */
-const ClassRow: React.FC<{ cls: SchoolClass; group?: PsalterGroup; onOpen: () => void }> = ({ cls, group, onOpen }) => {
+ *  group) and the attendance bar. A tap opens the class page; ✎ in the corner opens the admin's small window.
+ *  A class without a teacher says so on the card. */
+const ClassRow: React.FC<{ cls: SchoolClass; group?: PsalterGroup; onOpen: () => void; onEdit: () => void }> = ({ cls, group, onOpen, onEdit }) => {
   const rate = useClassAttendance(cls);
   return (
-    <li>
-      <button type="button" onClick={onOpen}
+    <li className="relative">
+      <button type="button" onClick={onOpen} title={`${cls.name} — კლასის გვერდი`}
         className="w-full h-full p-4 flex flex-col gap-3 text-left rounded-3xl bg-white/80 ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/35 hover:shadow-[0_8px_22px_-14px_rgba(74,52,38,0.4)] active:scale-[0.99] cursor-pointer transition group">
         <span className="flex items-start gap-3">
           <ClassLogo name={cls.name} logo={cls.logo} className="w-12 h-12 text-base shrink-0" />
@@ -513,7 +328,8 @@ const ClassRow: React.FC<{ cls: SchoolClass; group?: PsalterGroup; onOpen: () =>
               <span className="mt-1.5 flex"><Pill tone="amber"><TriangleAlert /> მასწავლებელი არ ჰყავს</Pill></span>
             )}
           </span>
-          <ChevronRight className="w-4 h-4 mt-1 text-[#b3a594] shrink-0 group-hover:text-[#7a2028] group-hover:translate-x-0.5 transition" />
+          {/* room for the ✎ that lies over the card's corner */}
+          <span aria-hidden className="w-7 shrink-0" />
         </span>
         <span className="flex flex-wrap gap-1.5">
           <Pill tone="muted"><Users /> {cls.members.length} წევრი</Pill>
@@ -528,6 +344,7 @@ const ClassRow: React.FC<{ cls: SchoolClass; group?: PsalterGroup; onOpen: () =>
           </span>
         )}
       </button>
+      <IconBtn label={`${cls.name} — სახელი, ლოგო, მასწავლებლები`} onClick={onEdit} className="absolute top-3 right-3 bg-white/90 ring-1 ring-[#e8dcc8]"><Pencil /></IconBtn>
     </li>
   );
 };

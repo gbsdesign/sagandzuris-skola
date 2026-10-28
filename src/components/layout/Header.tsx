@@ -1,6 +1,5 @@
 import React from 'react';
 import { useAuth, useNavigation, useModal } from '../../context';
-import { PWAInstallButton } from '../PWAInstallButton';
 import { triggerHaptic } from '../../utils/haptics';
 import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
 import { ClassLogo } from '../classes/ClassLogo';
@@ -9,6 +8,7 @@ import { askSignIn, openSignIn } from '../access/SignInPrompt';
 import { SearchButton } from '../search/GlobalSearch';
 import { OfflineButton } from '../offline/OfflineButton';
 import { useInbox, isUnread } from '../../hooks/useDirectChat';
+import { useClassLasts, useChatSeen, isClassUnread } from '../../hooks/useClassChat';
 import { User as UserIcon, LogIn, Compass, Library, Baby, MessageCircle } from 'lucide-react';
 
 interface HeaderProps {
@@ -32,12 +32,17 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
   const myClasses = [...memberOf, ...teaching.filter(t => !memberOf.some(m => m.id === t.id))];
   // private chats: one's own and, for admins, the administration's (messages page)
   const { threads } = useInbox(user?.uid, isAdmin);
-  const unread = user ? threads.filter(t => isUnread(t, user.uid)).length : 0;
   const { openModal } = useModal();
   const access = useAccess();
   // a member a superadmin has not let in (or not given these) sees no class or private chats; every other member
   // may at least write to the administration
   const showChats = !!user && access.can('messages');
+  // the 💬 count: unread private chats and class chats with a message after I last read them (on any device)
+  const lasts = useClassLasts(showChats && access.can('classes') ? myClasses.map(c => c.id) : []);
+  const seen = useChatSeen(showChats ? user?.uid : null);
+  const unread = user
+    ? threads.filter(t => isUnread(t, user.uid)).length + myClasses.filter(c => isClassUnread(lasts[c.id], seen[c.id], user.uid)).length
+    : 0;
   // kids' mode: no profile settings and no signing out (the teacher turns it off)
   const kids = Boolean(access.kids);
   // the learning tools the admin's switches and the kids' mode leave visible
@@ -51,7 +56,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
       <button
         type="button"
         onClick={() => { triggerHaptic(10); openClass(c.id); }}
-        className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-10 pl-1.5 pr-2 min-[400px]:pr-3 rounded-lg text-xs min-[400px]:text-[13px] font-bold ${currentPage === 'class' ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
+        className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-10 pl-1.5 pr-2 min-[400px]:pr-3 rounded-full text-[13px] font-bold ${currentPage === 'class' ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
         title={`${c.name} — კლასის გვერდი`}
         aria-label={`კლასი: ${c.name}`}
       >
@@ -80,12 +85,12 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
           <span className="hidden md:inline font-serif-ge text-base font-bold text-[#4a3426]">საგანძურის სკოლა</span>
         </button>
 
-        {/* independent work (icon + count) + install + profile (the admin panel opens from the profile) */}
+        {/* independent work (icon + count) + profile (the admin panel opens from the profile; installing the app lives
+            in the profile and on the offline page) */}
         <div className="order-2 lg:order-3 ml-auto flex items-center gap-1.5 sm:gap-2 min-w-0">
           {/* the search sits beside the learning tools; with none of them shown, up here — and up here on a narrow
               phone (under 400px), where the three chips need the whole row */}
           {access.can('search') && <SearchButton className={showNav ? 'min-[400px]:hidden' : ''} />}
-          <PWAInstallButton compact />
           {/* offline mode: the cloud shows whether the app works without internet */}
           <OfflineButton />
 
@@ -95,15 +100,16 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                 <button
                   type="button"
                   onClick={() => navigateTo('messages')}
-                  className={`relative w-9 h-9 rounded-xl ring-1 flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0 ${
+                  className={`relative w-9 lg:w-auto lg:px-3 lg:gap-1.5 h-9 rounded-full ring-1 flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0 ${
                     currentPage === 'messages' || currentPage === 'dm'
                       ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]'
                       : 'bg-white/80 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028]'
                   }`}
-                  title={unread ? `პირადი შეტყობინებები — ${unread} წაუკითხავი` : 'პირადი შეტყობინებები'}
-                  aria-label={unread ? `პირადი შეტყობინებები, ${unread} წაუკითხავი` : 'პირადი შეტყობინებები'}
+                  title={unread ? `შეტყობინებები — ${unread} წაუკითხავი` : 'შეტყობინებები'}
+                  aria-label={unread ? `შეტყობინებები, ${unread} წაუკითხავი` : 'შეტყობინებები'}
                 >
-                  <MessageCircle className="w-4 h-4" />
+                  <MessageCircle className="w-[18px] h-[18px]" />
+                  <span className="hidden lg:inline text-[13px] font-bold">წერილები</span>
                   {unread > 0 && (
                     <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-[#c62828] text-white text-[11px] font-black flex items-center justify-center leading-none ring-2 ring-[#fbf6ec]">
                       {unread}
@@ -143,7 +149,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
             <button
               onClick={openSignIn}
               disabled={signingIn}
-              className="inline-flex items-center gap-1.5 h-9 px-3 rounded-xl bg-[#7a2028] hover:bg-[#5e1820] text-[#fbf6ec] text-xs min-[400px]:text-[13px] font-bold transition-all active:scale-95 cursor-pointer shrink-0"
+              className="inline-flex items-center gap-1.5 h-9 px-3.5 rounded-full bg-[#7a2028] hover:bg-[#5e1820] text-[#fbf6ec] text-[13px] font-bold transition-all active:scale-95 cursor-pointer shrink-0"
             >
               <LogIn className="w-4 h-4 hidden min-[400px]:block" />
               {signingIn ? 'შესვლა...' : 'შესვლა'}
@@ -154,7 +160,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
         {/* learning tools: one group, full width on phones, centred on desktop; the search beside it */}
 {showNav && (
         <nav className="order-3 lg:order-2 w-full lg:w-auto lg:mx-auto flex justify-center gap-1.5 sm:gap-2" aria-label="სასწავლო მასალა">
-          <div className="flex-1 sm:flex-none flex items-stretch rounded-xl bg-white/80 ring-1 ring-[#e8dcc8] p-0.5">
+          <div className="flex-1 sm:flex-none flex items-stretch rounded-full bg-white/80 ring-1 ring-[#e8dcc8] p-0.5">
             {tools.map(({ id, page, label, Icon }, i) => (
               <React.Fragment key={id}>
                 {/* the class(es) go in after the path, before the library */}
@@ -170,7 +176,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                     else if (id === 'biblioteka' && access.section('biblioteka') === 'locked') askSignIn('ბიბლიოთეკა');
                     else navigateTo(page);
                   }}
-                  className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-10 px-2 min-[400px]:px-3 rounded-lg text-xs min-[400px]:text-[13px] font-bold ${currentPage === page ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
+                  className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-10 px-2 min-[400px]:px-3 rounded-full text-[13px] font-bold ${currentPage === page ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
                   title={label}
                 >
                   <Icon className="w-4 h-4 text-[#7a2028] shrink-0" />

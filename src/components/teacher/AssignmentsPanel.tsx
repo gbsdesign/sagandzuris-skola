@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { Check, ClipboardList, Dumbbell, Plus, Trash2, Music, Users } from 'lucide-react';
+import { Check, ChevronDown, ClipboardList, Dumbbell, Plus, Trash2, Music, Users } from 'lucide-react';
 import { useAuth } from '../../context';
 import { SchoolClass } from '../../hooks/useClasses';
 import { Assignment, StudentRecord, createAssignment, deleteAssignment, dueLabel, daysUntil, localIso, shortDate, useAssignments, useClassStudents } from '../../hooks/useTeaching';
@@ -106,11 +106,12 @@ export const AssignmentsPanel: React.FC<{ cls: SchoolClass; records: Record<stri
 };
 
 /** The class page's „დავალებები“ fold (ClassProgram), for the class's teachers: the current assignments in slim rows —
- *  voices, deadline, for whom, how many marked it — with 🗑, and „ახალი დავალება“. The members' records (for the
- *  counts) are read only while it is open. */
-export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[] }> = ({ cls, list }) => {
+ *  voices, deadline, for whom, how many marked it — with 🗑, „ახალი დავალება“, and the older ones (`past`, latest first)
+ *  folded under „ძველი · N“ with their results. The members' records (for the counts) are read only while it is open. */
+export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; past?: Assignment[] }> = ({ cls, list, past = [] }) => {
   const records = useClassStudents(cls);
   const [adding, setAdding] = useState(false);
+  const [old, setOld] = useState(false);
   const msg = useFlash();
 
   const remove = async (a: Assignment) => {
@@ -118,37 +119,47 @@ export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[] }>
     try { await deleteAssignment(cls.id, a.id); } catch { msg.fail('ვერ წაიშალა.'); }
   };
 
+  const rows = (items: Assignment[]) => (
+    <ul className="-mt-1 divide-y divide-[#efe5d4]">
+      {items.map(a => {
+        const { targets, done } = progressOf(a, cls, records);
+        const n = daysUntil(a.due);
+        return (
+          <li key={a.id} className="flex items-start gap-2 py-2.5">
+            <div className="min-w-0 flex-1">
+              <p className="text-[14px] font-semibold leading-snug text-[#2a2017] break-words">{a.title}</p>
+              {/* the voices in one chip; „for whom“ only when it isn't the whole class */}
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {a.voices.length > 0 && <Pill>{a.voices.map(v => ROMAN[v]).join(' · ')} ხმა</Pill>}
+                <Pill tone={n < 0 ? 'muted' : n <= 2 ? 'amber' : 'brown'}>{shortDate(a.due)} · {dueLabel(a.due)}</Pill>
+                {a.studentIds.length > 0 && <Pill tone="muted"><Users /> {targets.length} მოსწავლე</Pill>}
+                {a.exercise && <Pill tone="muted"><Dumbbell /> სავარჯიშო</Pill>}
+                {(a.variantId || a.exercise) && <Pill tone="green"><Check /> {a.exercise ? 'შეასრულა' : 'მონიშნა'} {done.length}/{targets.length}</Pill>}
+              </div>
+              {a.note && <p className="mt-1.5 text-[12.5px] leading-snug text-[#75685a] whitespace-pre-line">{a.note}</p>}
+            </div>
+            <IconBtn label="წაშლა" tone="danger" onClick={() => remove(a)}><Trash2 /></IconBtn>
+          </li>
+        );
+      })}
+    </ul>
+  );
+
   return (
     <div className="space-y-2.5">
-      {list.length === 0 ? (
-        <p className="text-sm text-[#8a7a6a]">მიმდინარე დავალება არ არის.</p>
-      ) : (
-        <ul className="-mt-1 divide-y divide-[#efe5d4]">
-          {list.map(a => {
-            const { targets, done } = progressOf(a, cls, records);
-            const n = daysUntil(a.due);
-            return (
-              <li key={a.id} className="flex items-start gap-2 py-2.5">
-                <div className="min-w-0 flex-1">
-                  <p className="text-[14px] font-semibold leading-snug text-[#2a2017] break-words">{a.title}</p>
-                  {/* the voices in one chip; „for whom“ only when it isn't the whole class */}
-                  <div className="mt-1.5 flex flex-wrap gap-1.5">
-                    {a.voices.length > 0 && <Pill>{a.voices.map(v => ROMAN[v]).join(' · ')} ხმა</Pill>}
-                    <Pill tone={n < 0 ? 'muted' : n <= 2 ? 'amber' : 'brown'}>{shortDate(a.due)} · {dueLabel(a.due)}</Pill>
-                    {a.studentIds.length > 0 && <Pill tone="muted"><Users /> {targets.length} მოსწავლე</Pill>}
-                    {a.exercise && <Pill tone="muted"><Dumbbell /> სავარჯიშო</Pill>}
-                    {(a.variantId || a.exercise) && <Pill tone="green"><Check /> {a.exercise ? 'შეასრულა' : 'მონიშნა'} {done.length}/{targets.length}</Pill>}
-                  </div>
-                  {a.note && <p className="mt-1.5 text-[12.5px] leading-snug text-[#75685a] whitespace-pre-line">{a.note}</p>}
-                </div>
-                <IconBtn label="წაშლა" tone="danger" onClick={() => remove(a)}><Trash2 /></IconBtn>
-              </li>
-            );
-          })}
-        </ul>
-      )}
+      {list.length === 0 ? <p className="text-sm text-[#8a7a6a]">მიმდინარე დავალება არ არის.</p> : rows(list)}
       <Flash flash={msg.flash} onClose={msg.clear} />
       <Btn kind="soft" size="sm" icon={<Plus />} onClick={() => setAdding(true)}>ახალი დავალება</Btn>
+      {past.length > 0 && (
+        <div className="border-t border-[#efe5d4]">
+          <button type="button" aria-expanded={old} onClick={() => setOld(o => !o)}
+            className="w-full h-11 flex items-center gap-2 text-left text-[13.5px] font-bold text-[#75685a] cursor-pointer">
+            ძველი · {past.length}
+            <ChevronDown className={`w-4 h-4 text-[#a4927c] transition-transform ${old ? 'rotate-180' : ''}`} />
+          </button>
+          {old && <div className="sg-in pt-1">{rows(past)}</div>}
+        </div>
+      )}
       <NewAssignment open={adding} onClose={() => setAdding(false)} cls={cls} onDone={t => msg.ok(t)} />
     </div>
   );

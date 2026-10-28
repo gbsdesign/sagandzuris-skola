@@ -9,6 +9,22 @@ const ROUND =
   'w-9 h-9 shrink-0 rounded-full flex items-center justify-center font-bold leading-none text-[#7a2028] hover:bg-[#7a2028]/[0.07] cursor-pointer active:scale-90 transition disabled:opacity-35 disabled:cursor-default disabled:hover:bg-transparent disabled:active:scale-100';
 const PILL = 'bg-[#fbf6ec] ring-1 ring-[#e8dcc8]';
 
+/** „A− | A+“ in one warm pill, for a reader's bar (the ancestors' biographies, the saints' lives). */
+export const SizePill: React.FC<{ onStep: (dir: 1 | -1) => void; atMin: boolean; atMax: boolean }> = ({ onStep, atMin, atMax }) => {
+  const btn = 'w-11 h-9 font-bold text-[#4a3426] hover:bg-[#fcf1df] hover:text-[#7a2028] disabled:opacity-35 cursor-pointer disabled:cursor-default';
+  return (
+    <div className="flex items-center rounded-full ring-1 ring-[#e8dcc8] bg-white/85 shrink-0 overflow-hidden">
+      <button type="button" onClick={() => onStep(-1)} disabled={atMin} className={`${btn} text-sm`} aria-label="ტექსტის დაპატარავება" title="ტექსტის დაპატარავება">
+        A−
+      </button>
+      <span className="w-px h-5 bg-[#e8dcc8]" />
+      <button type="button" onClick={() => onStep(1)} disabled={atMax} className={`${btn} text-base`} aria-label="ტექსტის გადიდება" title="ტექსტის გადიდება">
+        A+
+      </button>
+    </div>
+  );
+};
+
 export const ReadingToolbar: React.FC<{
   size: number;
   onSize: (size: number) => void;
@@ -17,7 +33,8 @@ export const ReadingToolbar: React.FC<{
 }> = ({ size, onSize, khutsuri, onKhutsuri }) => {
   const [scroll, setScroll] = useState(false);
   return (
-    <div className="flex items-center justify-between gap-2 -mt-2 -mx-1.5 sm:-mx-3 mb-3">
+    // sticky: the tools stay at hand all down a long text (the page bar is not sticky)
+    <div className="sticky top-[env(safe-area-inset-top,0px)] z-10 flex items-center justify-between gap-2 -mt-2 -mx-1.5 sm:-mx-3 mb-3 py-1.5 bg-white/90 backdrop-blur-md rounded-full">
       <button
         type="button"
         aria-pressed={khutsuri}

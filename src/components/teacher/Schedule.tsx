@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { MapPin, Pencil, Plus, Save, Trash2 } from 'lucide-react';
+import { MapPin, Plus, Save, Trash2 } from 'lucide-react';
 import { db } from '../../firebase';
 import { LessonSlot, SchoolClass } from '../../hooks/useClasses';
 import { Btn, FIELD, Flash, IconBtn, Sheet, useFlash } from '../ui/kit';
@@ -47,7 +47,8 @@ export const LessonTable: React.FC<{ slots: LessonSlot[]; title?: string; compac
             <li key={i} className={`flex flex-wrap items-center gap-x-3 gap-y-1 px-3.5 py-2.5 ${s.day === today ? 'bg-[#7a2028]/[0.04]' : ''}`}>
               <span className={`min-w-24 sm:min-w-28 shrink-0 text-sm font-bold ${s.day === today ? 'text-[#7a2028]' : 'text-[#4a3426]'}`}>{WEEKDAYS_GE[s.day]}</span>
               <span className="text-sm font-semibold tabular-nums whitespace-nowrap text-[#2a2017]">{s.start}{s.end ? `–${s.end}` : ''}</span>
-              <span className="flex-1 min-w-0 text-[13px] text-[#8a7a6a] truncate">{s.note}</span>
+              {/* the place: beside the time, or on its own line under it on a narrow phone (never cut) */}
+              {s.note && <span className="order-1 basis-full min-[420px]:order-none min-[420px]:basis-auto min-[420px]:flex-1 min-w-0 text-[13px] text-[#8a7a6a] break-words">{s.note}</span>}
               {isNext && <span className="ml-auto shrink-0 h-6 px-2 rounded-full bg-[#7a2028] text-[#fbf6ec] text-[11px] font-bold inline-flex items-center">{whenLabel(next!.inDays)}</span>}
             </li>
           );
@@ -145,7 +146,7 @@ const ScheduleRows: React.FC<{ rows: LessonSlot[]; setRows: React.Dispatch<React
     <>
       <ul className="space-y-2.5">
         {rows.map((r, i) => (
-          <li key={i} className="p-3 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#efe3cf] space-y-2">
+          <li key={i} className="p-3 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] space-y-2">
             <div className="flex gap-2">
               <select className={`${FIELD} flex-1`} value={r.day} onChange={e => patch(i, { day: Number(e.target.value) })} aria-label="დღე">
                 {ORDER.map(d => <option key={d} value={d}>{WEEKDAYS_GE[d]}</option>)}
@@ -181,33 +182,5 @@ export const ScheduleSheet: React.FC<{ cls: SchoolClass; open: boolean; onClose:
       }>
         <ScheduleRows rows={d.rows} setRows={d.setRows} />
     </Sheet>
-  );
-};
-
-/** The class chat's 📅 (ClassChat): the timetable folds open under the chat's title, and its teachers change it right
- *  there — ✏️ turns the lessons into fields, „შენახვა“ saves them. A class without lessons opens straight into them. */
-export const ScheduleFold: React.FC<{ cls: SchoolClass; canEdit: boolean; onClose: () => void }> = ({ cls, canEdit, onClose }) => {
-  const [editing, setEditing] = useState(false);
-  if (canEdit && (editing || !cls.schedule.length)) return <ScheduleEditor cls={cls} onSaved={() => setEditing(false)} onCancel={() => (cls.schedule.length ? setEditing(false) : onClose())} />;
-  return cls.schedule.length ? (
-    <LessonTable slots={cls.schedule} title="გაკვეთილების ცხრილი"
-      action={canEdit ? <IconBtn label="ცხრილის შეცვლა" onClick={() => setEditing(true)}><Pencil /></IconBtn> : undefined} />
-  ) : (
-    <p className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-3.5 py-3 text-sm text-[#8a7a6a]">ცხრილი ჯერ არ არის.</p>
-  );
-};
-
-const ScheduleEditor: React.FC<{ cls: SchoolClass; onSaved: () => void; onCancel: () => void }> = ({ cls, onSaved, onCancel }) => {
-  const d = useScheduleDraft(cls);
-  return (
-    <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] p-3">
-      <p className="px-0.5 mb-2.5 text-[12px] font-bold uppercase tracking-wide text-[#8a7a6a]">გაკვეთილების ცხრილი</p>
-      <ScheduleRows rows={d.rows} setRows={d.setRows} />
-      {d.msg.flash && <div className="mt-3"><Flash flash={d.msg.flash} onClose={d.msg.clear} /></div>}
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <Btn kind="ghost" onClick={onCancel}>გაუქმება</Btn>
-        <Btn icon={<Save />} disabled={!d.dirty || d.saving} onClick={async () => { if (await d.save()) onSaved(); }}>{d.saving ? 'ინახება…' : 'შენახვა'}</Btn>
-      </div>
-    </div>
   );
 };

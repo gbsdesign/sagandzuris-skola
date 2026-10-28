@@ -159,7 +159,7 @@ export const LearnMode: React.FC<{ vid: string; score: BookScore; onClose: () =>
 const PartPicture: React.FC<{ score: BookScore; sys: number[] }> = ({ score, sys }) => {
   if (!sys.length) return null;
   return (
-    <div className="flex flex-col gap-1.5 rounded-xl bg-[#fffdf8] ring-1 ring-[#efe3cf] p-1.5">
+    <div className="flex flex-col gap-1.5 rounded-xl bg-[#fffdf8] ring-1 ring-[#e8dcc8] p-1.5">
       {sys.map(k => {
         const [ii, x, y, w, h] = score.sys[k];
         const im = score.img[ii];

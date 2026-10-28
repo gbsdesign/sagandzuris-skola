@@ -58,9 +58,9 @@ export const MyKathismaCard: React.FC<{ group: PsalterGroup; uid: string; compac
                     <button type="button" aria-pressed={read} disabled={!canToggle || busy}
                       aria-label={read ? `კანონი ${k} — მონიშვნის მოხსნა` : `კანონი ${k} — წავიკითხე`}
                       onClick={() => (read ? actions.unread(k) : actions.read(k))}
-                      className={`relative w-14 h-14 shrink-0 rounded-2xl flex items-center justify-center font-serif-ge text-[26px] font-bold tabular-nums cursor-pointer transition active:scale-95 disabled:cursor-default ${busy ? 'opacity-70' : ''} ${read ? 'bg-emerald-600 text-white shadow-[0_8px_18px_-10px_rgba(16,185,129,0.9)]' : 'bg-[#fbf6ec] text-[#7a2028] hover:bg-white'}`}>
+                      className={`relative w-14 h-14 shrink-0 rounded-2xl flex items-center justify-center font-serif-ge text-[26px] font-bold tabular-nums cursor-pointer transition active:scale-95 disabled:cursor-default ${busy ? 'opacity-70' : ''} ${read ? 'bg-[#fbf6ec]/80 text-[#7a2028]/60' : 'bg-[#fbf6ec] text-[#7a2028] hover:bg-white'}`}>
                       {k}
-                      <span className={`absolute -top-1.5 -right-1.5 w-[22px] h-[22px] rounded-full flex items-center justify-center transition ${read ? 'bg-white text-emerald-700' : 'bg-[#6c1c24] ring-2 ring-[#fbf6ec]/60'}`}>
+                      <span className={`absolute -top-1.5 -right-1.5 w-[22px] h-[22px] rounded-full flex items-center justify-center transition ${read ? 'bg-emerald-600 text-white ring-2 ring-[#fbf6ec]/60' : 'bg-[#6c1c24] ring-2 ring-[#fbf6ec]/60'}`}>
                         {read && <Check className="w-3.5 h-3.5 stroke-[3.5]" />}
                       </span>
                     </button>

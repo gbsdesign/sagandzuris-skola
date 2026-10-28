@@ -29,7 +29,7 @@ export const PearlChests: React.FC = () => {
       {/* how to play, in three steps */}
       <ol className="grid grid-cols-3 gap-2">
         {STEPS.map((s, i) => (
-          <li key={i} className="flex flex-col items-center gap-1.5 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#efe3cf] px-1.5 py-2.5 text-center">
+          <li key={i} className="flex flex-col items-center gap-1.5 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] px-1.5 py-2.5 text-center">
             <span className="w-8 h-8 rounded-full bg-white ring-1 ring-[#e8dcc8] text-[#7a2028] flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4">
               {s.icon}
             </span>

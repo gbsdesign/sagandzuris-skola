@@ -6,7 +6,7 @@ import type { PageType } from '../context/NavigationContext';
 // • the home buttons ("ჩემი ღილაკები").
 export type SectionId =
   | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'medavitneoba' | 'medavitneobaTopic' | 'chvevebi' | 'tamashebi' | 'tsinaprebi'
-  | 'gza' | 'biblioteka';
+  | 'gza' | 'biblioteka' | 'margalitebi';
 
 export interface SectionDef {
   id: SectionId;
@@ -24,8 +24,9 @@ export const SECTIONS: SectionDef[] = [
   // „მედავითნეობა“ on the vine: the reader's course (the psalter group keeps the old id)
   { id: 'medavitneobaTopic', label: 'მედავითნეობა', page: 'medavitneoba', hint: 'მედავითნის სასწავლო კურსი' },
   { id: 'chvevebi', label: 'ჩვევები', page: 'gz', hint: 'ლოცვები ჩვევებიდან იხსნება' },
-  // the pearls game: a round button of „საგანძურის გზა“ (the „თამაშები“ page until 2026-10-27)
-  { id: 'tamashebi', label: 'მარგალიტები', page: 'gz', hint: 'მოისმინე, იმღერე, გააპრიალე' },
+  { id: 'tamashebi', label: 'თამაშები', page: 'games', hint: 'მუსიკალური · ქართული · ცოცხალი' },
+  // the pearls game: the fifth round button of „საგანძურის გზა“, with a switch of its own (its feature is the games' one)
+  { id: 'margalitebi', label: 'მარგალიტები', page: 'gz', hint: 'მოისმინე, იმღერე, გააპრიალე' },
   { id: 'tsinaprebi', label: 'გაიცანი წინაპრები', page: 'tsinaprebi' },
   { id: 'gza', label: 'საგანძურის გზა', page: 'gz' },
   { id: 'biblioteka', label: 'ბიბლიოთეკა', page: 'biblioteka' },
@@ -34,7 +35,7 @@ export const SECTIONS: SectionDef[] = [
 export const sectionOfPage = (page: PageType): SectionId | null => {
   if (page === 'galoba') return 'galoba';
   if (page === 'psalter') return 'medavitneoba';
-  const s = SECTIONS.find(x => x.page === page && x.id !== 'chvevebi' && x.id !== 'tamashebi');
+  const s = SECTIONS.find(x => x.page === page && x.id !== 'chvevebi' && x.id !== 'margalitebi');
   return s ? s.id : null;
 };
 
@@ -43,7 +44,7 @@ export type SectionState = 'open' | 'soon' | 'hidden';
 /** Without the admin's settings: everything built is open; the psalter group and მედავითნეობა are "მალე". */
 export const DEFAULT_SECTION_STATE: Record<SectionId, SectionState> = {
   galoba: 'open', simghera: 'open', mtkmeli: 'open', sakravebi: 'open', medavitneoba: 'soon', medavitneobaTopic: 'soon',
-  chvevebi: 'open', tamashebi: 'open', tsinaprebi: 'open', gza: 'open', biblioteka: 'open',
+  chvevebi: 'open', tamashebi: 'open', margalitebi: 'open', tsinaprebi: 'open', gza: 'open', biblioteka: 'open',
 };
 
 /** A kids' mode starts with these sections (the admin may choose others in settings/sections). */

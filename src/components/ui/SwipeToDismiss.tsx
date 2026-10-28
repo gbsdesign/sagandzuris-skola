@@ -87,7 +87,7 @@ export function SwipeToDismiss({ onDismiss, children, className = '' }: SwipeToD
     >
       {/* iOS-style pull bar handle visible on mobile */}
       <div className="flex justify-center pb-2.5 pt-1 sm:hidden">
-        <div className="w-12 h-1.5 rounded-full bg-slate-300/80 active:bg-slate-400"></div>
+        <div className="w-12 h-1.5 rounded-full bg-[#d6c8b1]/80 active:bg-[#a39482]"></div>
       </div>
       {children}
     </div>
