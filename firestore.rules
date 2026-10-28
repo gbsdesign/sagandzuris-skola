@@ -40,6 +40,22 @@ service cloud.firestore {
       allow write: if (settingId == 'placements' && isSuperAdmin()) || (settingId != 'placements' && isAdmin());
     }
 
+    // Folk songs' words written in the app (SongWords): everyone reads; admins and the members an admin listed in
+    // settings/songTextEditors write. { text, by: the writer's uid, at }.
+    match /songTexts/{songId} {
+      function songTextEditor() {
+        return isAdmin() || (request.auth != null
+          && request.auth.uid in get(/databases/$(database)/documents/settings/songTextEditors).data.get('uids', []));
+      }
+      allow read: if true;
+      allow delete: if songTextEditor();
+      allow create, update: if songTextEditor()
+        && request.resource.data.keys().hasOnly(['text', 'by', 'at'])
+        && request.resource.data.text is string && request.resource.data.text.size() <= 20000
+        && request.resource.data.by == request.auth.uid
+        && request.resource.data.at == request.time;
+    }
+
     // ---- Staff -----------------------------------------------------------------------------------
     match /admins/{email} {
       function canGrant(role) {
