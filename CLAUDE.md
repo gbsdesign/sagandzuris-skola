@@ -76,7 +76,9 @@
   `Downloads` folder (PDF chant books, recordings, drawings), OMR scripts in old session scratchpads, Google Drive files.
 - Work on a branch and open a pull request. **Merging into `main` publishes the live site within minutes**
   (Cloudflare Pages), so tell the user clearly what a PR changes before they merge.
-- Firestore rules are published by hand in the Firebase console (no Firebase CLI). Cloudflare Workers are
+- Firestore rules: `.github/workflows/firestore-rules.yml` runs `tests/firestore-rules.test.mjs` in the emulator on PRs and
+  publishes `firestore.rules` when it reaches main (secret `FIREBASE_SERVICE_ACCOUNT`; added 2026-10-27). Until that secret
+  exists, the user publishes them by hand in the Firebase console. Cloudflare Workers are
   deployed from the user's PC with wrangler — a cloud session can edit `worker/` but cannot deploy it.
 
 ## Project basics
@@ -135,6 +137,14 @@
   `utils/habitStats.ts`. Ticks allowed for the last 7 days (`canTickDay`). Colours/icons/counters: `data/habitLooks.ts`,
   member's choice in `habitSetup.looks/counters`; counter numbers in `students.habitCounts` (sent 1.2 s after the last tap).
   One habit editor (2026-10-28): the habit window's ✏️ (`HabitCardEditor`); the rows only have „›“.
+- **ოსტატობა** (2026-10-27): „დღის სავარჯიშო“ on top (a teacher's assigned exercise, then the weakest marked tip, then by
+  day), 11 performance tips (`MANERA_ITEMS`; `num` is the key of teachers' marks, the list shows the position; 10 = დგომა,
+  11 = სუნთქვა ფრაზებს შორის were added) and 4 exercise groups — სმენა, სამხმიანობა, ხალხური ხერხები, რიტმი
+  (`data/vocalDrills.ts`; a tip is drill `tip-<num>`). Every drill = lesson + timed exercise (`DrillSheet` in
+  `components/mastery/ManeraLessonSheet.tsx`): synth notes from a low/high base, three voices with the student's own left
+  out, a click (bpm/bar/accents), a mic tuner + recording (≤90 s) sent to teachers (`drillTakes/{uid}/takes/{drillId}`,
+  rules published by the workflow; teachers hear them in the member's window, `DrillReview`). „შევასრულე“: device days
+  (`utils/maneraPractice.ts`) + `students.drillDone.{id}` = last day. Teachers can assign an exercise (`assignments.exercise`).
 - **მედავითნეობა** (page `medavitneoba`, built 2026-10-27): the reader's course on the vine's „მედავითნეობა“ label
   (section `medavitneobaTopic`, „მალე“ until the admin opens it). 8 lessons in `data/medavitneLessons.ts`, shown step by
   step (learn / order / read aloud / quiz / task) in `pages/MedavitneobaPage.tsx` + `pages/medavitneoba/parts.tsx`; the

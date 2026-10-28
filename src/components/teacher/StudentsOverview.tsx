@@ -19,6 +19,7 @@ import { abilitiesText, interestsText } from '../../utils/profileFields';
 import { syncKidsFlag } from '../../hooks/useDirectChat';
 import { Avatar as Face } from '../classes/ChatPanel';
 import { PearlReview } from '../pearls/PearlReview';
+import { DrillReview } from '../mastery/DrillReview';
 import { LearnReview } from '../learn/LearnReview';
 
 const VOICE = { '1': 'მთქმელი', '2': 'მოძახილი', '3': 'ბანი' } as Record<string, string>;
@@ -301,6 +302,7 @@ const StudentSheet: React.FC<{
           <AttendanceStrip uid={uid} last={attendance} />
 
           <PearlReview uid={uid} pearls={record.data.pearls} shine={record.data.pearlShine} />
+          <DrillReview uid={uid} drillDone={record.data.drillDone} />
           <LearnReview uid={uid} learning={record.data.learning} shine={record.data.pearlShine} />
 
           <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8]">

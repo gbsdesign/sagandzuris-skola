@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { BellOff, BellRing, Check, CheckCheck, ClipboardList, MessageSquareText } from 'lucide-react';
+import { BellOff, BellRing, Check, CheckCheck, ClipboardList, Dumbbell, MessageSquareText } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth, useChants } from '../../context';
 import { useMyClasses } from '../../hooks/useClasses';
 import { Assignment, daysUntil, shortDate, useMyAssignments } from '../../hooks/useTeaching';
 import { Confirmations, useConfirmations } from '../../hooks/useConfirmations';
 import { Voice, voicesOf } from '../../utils/pathItems';
+import { Btn } from '../ui/kit';
+import { DrillSheet } from '../mastery/ManeraLessonSheet';
+import { useDrillDone } from '../../utils/drillTakes';
 import { pushSupported, setGroupPush, useGroupPush } from '../../utils/groupPush';
 import { CHIP_SOFT, CHIP_STRONG, PATH_CARD, PATH_LABEL, PATH_LABEL_ICON } from '../views/pathStyle';
 
@@ -33,8 +36,10 @@ const TONE = {
 // the assignments still shown: until three days past their deadline
 export const currentWork = (list: Assignment[]) => list.filter(a => daysUntil(a.due) >= -3);
 
-/** Done = a teacher confirmed every voice it asks for (or the item itself, when it has no voices). */
-export const workDone = (a: Assignment, confirmed: Confirmations) => {
+/** Done = a teacher confirmed every voice it asks for (or the item itself, when it has no voices); an exercise —
+ *  the member pressed „შევასრულე“ on it since it was given (`drillDone`: students/{uid}.drillDone). */
+export const workDone = (a: Assignment, confirmed: Confirmations, drillDone: Record<string, string> = {}) => {
+  if (a.exercise) return (drillDone[a.exercise] || '') >= (a.createdAt || '').slice(0, 10);
   const conf = (a.variantId && confirmed[a.variantId]) || [];
   const need = a.voices.length ? a.voices : ['1'];
   return a.variantId ? need.every(v => conf.includes(v as Voice)) : false;
@@ -47,15 +52,17 @@ export const WorkItems: React.FC<{ list: Assignment[] }> = ({ list }) => {
   const { user } = useAuth();
   const { selectedChantVariants } = useChants();
   const confirmed = useConfirmations(user?.uid);
+  const drillDone = useDrillDone(user?.uid);
+  const [drill, setDrill] = useState<string | null>(null);
   return (
     <ul className="divide-y divide-[#f1e8d9]">
       {list.map(a => {
         const item = a.variantId ? selectedChantVariants[a.variantId] : undefined;
         const marked = item && a.variantId ? voicesOf(item, a.variantId) : [];
-        const done = workDone(a, confirmed);
+        const done = workDone(a, confirmed, drillDone);
         const n = daysUntil(a.due);
         const tone = TONE[done ? 'done' : n < 0 ? 'past' : n <= 1 ? 'soon' : 'later'];
-        const { main, ref } = splitTitle(a.title);
+        const { main, ref } = a.exercise ? { main: a.title, ref: `სავარჯიშო · ${a.code || ''}` } : splitTitle(a.title);
         return (
           <li key={`${a.classId}-${a.id}`} className="py-2.5 last:pb-0">
             <div className="relative pl-3.5">
@@ -92,10 +99,14 @@ export const WorkItems: React.FC<{ list: Assignment[] }> = ({ list }) => {
                   <span className="min-w-0 whitespace-pre-line">{a.note}</span>
                 </p>
               )}
+              {a.exercise && !done && (
+                <Btn kind="soft" size="sm" icon={<Dumbbell />} className="mt-2" onClick={() => setDrill(a.exercise!)}>სავარჯიშოს დაწყება</Btn>
+              )}
             </div>
           </li>
         );
       })}
+      <DrillSheet drillId={drill} startTab="exercise" onClose={() => setDrill(null)} />
     </ul>
   );
 };

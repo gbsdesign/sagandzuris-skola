@@ -76,7 +76,7 @@ export const ManeraReviewEditor: React.FC<{ uid: string }> = ({ uid }) => {
         შეფასებულია {given} / {MANERA_ITEMS.length}
       </p>
       <ul className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] divide-y divide-[#f1e8d9] overflow-hidden">
-        {MANERA_ITEMS.map(item => {
+        {MANERA_ITEMS.map((item, i) => {
           const m = review[item.num];
           const open = openNum === item.num;
           return (
@@ -87,7 +87,7 @@ export const ManeraReviewEditor: React.FC<{ uid: string }> = ({ uid }) => {
                 aria-expanded={open}
                 className={`w-full min-h-12 flex items-center gap-2.5 px-3 py-2 text-left cursor-pointer transition-colors ${open ? 'bg-[#fbf6ec]' : 'hover:bg-[#fbf6ec]/60'}`}
               >
-                <span className="w-5 shrink-0 text-center text-xs font-bold text-[#c4b49c] tabular-nums">{item.num}</span>
+                <span className="w-5 shrink-0 text-center text-xs font-bold text-[#c4b49c] tabular-nums">{i + 1}</span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-[14px] font-semibold leading-snug">{item.title}</span>
                   {m?.at && <span className="block text-[11.5px] text-[#8a7a6a]">{m.by || 'მასწავლებელი'} · {markDate(m.at)}</span>}

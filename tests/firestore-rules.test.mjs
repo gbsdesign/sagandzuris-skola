@@ -256,6 +256,16 @@ await t('a refused member does not', assertFails(getDocs(collection(stu2, 'nameD
 await t('a guest does not', assertFails(getDocs(collection(guest, 'nameDays'))));
 await t('member clears own name day', assertSucceeds(deleteDoc(doc(stu, 'nameDays', 'stu'))));
 
+// „ოსტატობა“: a member's exercise recording for their teachers; the last day done on their own record
+const drillTake = { audio: Bytes.fromUint8Array(new Uint8Array([1, 2, 3])), mime: 'audio/mpeg', seconds: 12, at: '2026-10-27T10:00:00Z' };
+await t('member sends own exercise take', assertSucceeds(setDoc(doc(stu, 'drillTakes', 'stu', 'takes', 'ear-fifth'), drillTake)));
+await t('member cannot write another one\'s take', assertFails(setDoc(doc(stu2, 'drillTakes', 'stu', 'takes', 'ear-fifth'), drillTake)));
+await t('take with extra fields refused', assertFails(setDoc(doc(stu, 'drillTakes', 'stu', 'takes', 'ear-unison'), { ...drillTake, score: 1 })));
+await t('member\'s teacher hears the take', assertSucceeds(getDoc(doc(tch, 'drillTakes', 'stu', 'takes', 'ear-fifth'))));
+await t('another teacher cannot hear it', assertFails(getDoc(doc(tch2, 'drillTakes', 'stu', 'takes', 'ear-fifth'))));
+await t('teacher cannot change the take', assertFails(setDoc(doc(tch, 'drillTakes', 'stu', 'takes', 'ear-fifth'), drillTake)));
+await t('member marks an exercise done', assertSucceeds(setDoc(doc(stu, 'students', 'stu'), { drillDone: { 'ear-fifth': '2026-10-27' } }, { merge: true })));
+
 // ---- song texts
 const st = (by, extra = {}) => ({ text: 'ლექსი', by, at: serverTimestamp(), ...extra });
 await t('admin writes a song text before any editor is chosen', assertSucceeds(setDoc(doc(adm, 'songTexts', 's1'), st('adm'))));

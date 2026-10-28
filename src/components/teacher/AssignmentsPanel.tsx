@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { Check, ChevronDown, ClipboardList, Plus, Trash2, Music, Users } from 'lucide-react';
+import { Check, ChevronDown, ClipboardList, Dumbbell, Plus, Trash2, Music, Users } from 'lucide-react';
 import { useAuth } from '../../context';
 import { SchoolClass } from '../../hooks/useClasses';
 import { Assignment, StudentRecord, createAssignment, deleteAssignment, dueLabel, daysUntil, localIso, shortDate, useAssignments, useClassStudents } from '../../hooks/useTeaching';
@@ -9,7 +9,8 @@ import { CatalogEntry, CATEGORY_LABEL, PathItem, Voice, findCatalogEntry, sortPa
 import { filterValidVariants } from '../../utils/variantValidation';
 import { writePath } from '../admin/MemberPathEditor';
 import { CatalogPicker } from '../admin/CatalogPicker';
-import { askConfirm, Btn, Card, CardTitle, Empty, FIELD, Flash, IconBtn, Label, Pill, Sheet, useFlash } from '../ui/kit';
+import { askConfirm, Btn, Card, CardTitle, Empty, FIELD, Flash, IconBtn, Label, Pill, Sheet, Tabs, useFlash } from '../ui/kit';
+import { DRILL_GROUPS, MANERA_DRILL_GROUP, findDrill, drillGroupTitle } from '../../data/vocalDrills';
 
 const VOICE_LABEL: Record<string, string> = { '1': 'I ხმა', '2': 'II ხმა', '3': 'III ხმა' };
 const ROMAN: Record<string, string> = { '1': 'I', '2': 'II', '3': 'III' };
@@ -18,6 +19,7 @@ const ROMAN: Record<string, string> = { '1': 'I', '2': 'II', '3': 'III' };
 const progressOf = (a: Assignment, cls: SchoolClass, records: Record<string, StudentRecord>) => {
   const targets = a.studentIds.length ? a.studentIds.filter(u => cls.memberIds.includes(u)) : cls.memberIds;
   const done = targets.filter(uid => {
+    if (a.exercise) return ((records[uid]?.data?.drillDone?.[a.exercise] as string) || '') >= (a.createdAt || '').slice(0, 10);
     if (!a.variantId) return false;
     const item = records[uid]?.data?.selectedChantVariants?.[a.variantId];
     if (!item) return false;
@@ -48,20 +50,20 @@ export const AssignmentsPanel: React.FC<{ cls: SchoolClass; records: Record<stri
     return (
       <li className="p-3.5 rounded-2xl bg-white ring-1 ring-[#e8dcc8]">
         <div className="flex items-start gap-3">
-          <span className="w-10 h-10 rounded-xl bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center shrink-0"><Music className="w-5 h-5" /></span>
+          <span className="w-10 h-10 rounded-xl bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center shrink-0">{a.exercise ? <Dumbbell className="w-5 h-5" /> : <Music className="w-5 h-5" />}</span>
           <div className="min-w-0 flex-1">
             <p className="font-semibold text-[#2a2017] leading-snug">{a.title}</p>
-            <p className="text-xs text-[#8a7a6a]">{entry ? `${CATEGORY_LABEL[entry.category]} · ${a.code}` : 'დავალება'}</p>
+            <p className="text-xs text-[#8a7a6a]">{a.exercise ? `სავარჯიშო · ${a.code}` : entry ? `${CATEGORY_LABEL[entry.category]} · ${a.code}` : 'დავალება'}</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {a.voices.map(v => <Pill key={v}>{VOICE_LABEL[v]}</Pill>)}
               <Pill tone={n < 0 ? 'muted' : n <= 2 ? 'amber' : 'brown'}>{shortDate(a.due)} · {dueLabel(a.due)}</Pill>
               <Pill tone="muted"><Users /> {a.studentIds.length ? `${targets.length} მოსწავლე` : 'მთელი კლასი'}</Pill>
             </div>
             {a.note && <p className="mt-2 text-[13px] text-[#75685a] whitespace-pre-line">{a.note}</p>}
-            {a.variantId && (
+            {(a.variantId || a.exercise) && (
               <div className="mt-2.5">
                 <div className="flex items-center justify-between text-xs text-[#8a7a6a] mb-1">
-                  <span>მოსწავლეებმა მონიშნეს</span>
+                  <span>{a.exercise ? 'შეასრულეს' : 'მოსწავლეებმა მონიშნეს'}</span>
                   <span className="font-bold text-[#4a3426] tabular-nums">{done.length}/{targets.length}</span>
                 </div>
                 <div className="h-1.5 rounded-full bg-[#efe5d4] overflow-hidden">
@@ -131,7 +133,8 @@ export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; p
                 {a.voices.length > 0 && <Pill>{a.voices.map(v => ROMAN[v]).join(' · ')} ხმა</Pill>}
                 <Pill tone={n < 0 ? 'muted' : n <= 2 ? 'amber' : 'brown'}>{shortDate(a.due)} · {dueLabel(a.due)}</Pill>
                 {a.studentIds.length > 0 && <Pill tone="muted"><Users /> {targets.length} მოსწავლე</Pill>}
-                {a.variantId && <Pill tone="green"><Check /> მონიშნა {done.length}/{targets.length}</Pill>}
+                {a.exercise && <Pill tone="muted"><Dumbbell /> სავარჯიშო</Pill>}
+                {(a.variantId || a.exercise) && <Pill tone="green"><Check /> {a.exercise ? 'შეასრულა' : 'მონიშნა'} {done.length}/{targets.length}</Pill>}
               </div>
               {a.note && <p className="mt-1.5 text-[12.5px] leading-snug text-[#75685a] whitespace-pre-line">{a.note}</p>}
             </div>
@@ -164,6 +167,8 @@ export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; p
 
 const NewAssignment: React.FC<{ open: boolean; onClose: () => void; cls: SchoolClass; onDone: (text: string) => void }> = ({ open, onClose, cls, onDone }) => {
   const { user } = useAuth();
+  const [kind, setKind] = useState<'chant' | 'drill'>('chant');
+  const [drillId, setDrillId] = useState('');
   const [entry, setEntry] = useState<CatalogEntry | null>(null);
   const [voices, setVoices] = useState<string[]>([]);
   const [due, setDue] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 7); return localIso(d); });
@@ -173,9 +178,31 @@ const NewAssignment: React.FC<{ open: boolean; onClose: () => void; cls: SchoolC
   const [error, setError] = useState('');
   const withVoices = entry ? usesVoices(entry.id) : false;
 
-  const reset = () => { setEntry(null); setVoices([]); setNote(''); setWhom([]); setError(''); };
+  const reset = () => { setEntry(null); setDrillId(''); setVoices([]); setNote(''); setWhom([]); setError(''); };
+  const drill = findDrill(drillId);
+
+  // an exercise of „ოსტატობა“: nothing goes onto the path; it counts as done once the member presses „შევასრულე“
+  const saveDrill = async () => {
+    if (!user || !drill) { setError('აირჩიე სავარჯიშო.'); return; }
+    if (!due) { setError('მიუთითე ვადა.'); return; }
+    setBusy(true);
+    setError('');
+    try {
+      await createAssignment(cls.id, {
+        title: drill.title, exercise: drill.id, code: drillGroupTitle(drill.id), voices: [], due, note: note.trim(), studentIds: whom,
+      }, user.uid);
+      onDone('დავალება შეიქმნა: მოსწავლე სავარჯიშოს „ოსტატობაში“ და დავალებებში ნახავს.');
+      reset();
+      onClose();
+    } catch {
+      setError('დავალება ვერ შეიქმნა.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
   const save = async () => {
+    if (kind === 'drill') return saveDrill();
     if (!user || !entry) { setError('აირჩიე საგალობელი.'); return; }
     if (!due) { setError('მიუთითე ვადა.'); return; }
     setBusy(true);
@@ -210,8 +237,25 @@ const NewAssignment: React.FC<{ open: boolean; onClose: () => void; cls: SchoolC
 
   return (
     <Sheet open={open} onClose={onClose} title="ახალი დავალება"
-      footer={<Btn full size="lg" icon={<Plus />} disabled={busy || !entry} onClick={save}>{busy ? 'იქმნება…' : 'დავალების მიცემა'}</Btn>}>
+      footer={<Btn full size="lg" icon={<Plus />} disabled={busy || (kind === 'drill' ? !drill : !entry)} onClick={save}>{busy ? 'იქმნება…' : 'დავალების მიცემა'}</Btn>}>
       <div className="space-y-4">
+        <Tabs<'chant' | 'drill'> cols={2} value={kind} onChange={k => { setKind(k); setError(''); }} items={[
+          { id: 'chant', label: 'საგალობელი', Icon: Music },
+          { id: 'drill', label: 'სავარჯიშო', Icon: Dumbbell },
+        ]} />
+        {kind === 'drill' ? (
+          <div>
+            <Label hint="„ოსტატობიდან“">სავარჯიშო</Label>
+            <select className={FIELD} value={drillId} onChange={e => setDrillId(e.target.value)} aria-label="სავარჯიშო">
+              <option value="">აირჩიე…</option>
+              {[MANERA_DRILL_GROUP, ...DRILL_GROUPS].map(g => (
+                <optgroup key={g.id} label={g.title}>
+                  {g.drills.map(d => <option key={d.id} value={d.id}>{d.title} · {d.exercise.minutes} წთ</option>)}
+                </optgroup>
+              ))}
+            </select>
+          </div>
+        ) : (
         <div>
           <Label>საგალობელი</Label>
           {entry ? (
@@ -226,7 +270,8 @@ const NewAssignment: React.FC<{ open: boolean; onClose: () => void; cls: SchoolC
             <CatalogPicker onPick={e => setEntry(e)} placeholder="მოძებნე საგალობელი ან სიმღერა" />
           )}
         </div>
-        {withVoices && (
+        )}
+        {kind === 'chant' && withVoices && (
           <div>
             <Label hint="რამდენიც გინდა">ხმა</Label>
             <div className="flex flex-wrap gap-2">
