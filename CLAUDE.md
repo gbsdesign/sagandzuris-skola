@@ -408,7 +408,7 @@
   until chosen; class `defaultShortcuts`). Class mode filters the chant lists to the class program.
 - **Reminders Worker** (`worker/reminders/`, D1 + text pushes + group/assignment reminders): published by the workflow
   above, which also does the old one-time setup of `docs/შეხსენებების-სერვერი.md` (finds or makes the D1 database, fills
-  its id into wrangler.toml for the run, runs `schema.sql`, warns when the Worker lacks `FIREBASE_SA` or `VAPID_PRIVATE_JWK` — those are set in the Cloudflare dashboard).
+  its id into wrangler.toml for the run, runs `schema.sql`, gives the Worker `FIREBASE_SA` once from `FIREBASE_SERVICE_ACCOUNT` — the user agreed 2026-10-28 — and warns when `VAPID_PRIVATE_JWK` is missing).
 - `VITE_EMULATORS=1` points the app at local Firebase emulators — not used any more (the user's rule, 2026-10-28).
 
 ## Plan part 2 (tab „მე-2 ნაწილის სამუშაო გეგმა“ in the plan doc below; six stages, one PR each)

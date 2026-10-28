@@ -2,7 +2,8 @@
 # main, or by hand (Actions → Reminders Worker → Run workflow), so nobody needs a computer with wrangler any more.
 # It also does the old one-time setup of docs/შეხსენებების-სერვერი.md by itself: finds (or makes) the D1 database
 # „sagandzuri-reminders“, puts its id into wrangler.toml for this run only, creates the tables (schema.sql only adds
-# what is missing) and warns when the Worker lacks one of its secrets (FIREBASE_SA, VAPID_PRIVATE_JWK).
+# what is missing), gives the Worker its Firestore key FIREBASE_SA once — the same service-account key as the rules
+# workflow's FIREBASE_SERVICE_ACCOUNT (the user's choice, 2026-10-28) — and warns when VAPID_PRIVATE_JWK is missing.
 # One-time setup: the GitHub secret CLOUDFLARE_API_TOKEN = a Cloudflare API token from the template „Edit Cloudflare
 # Workers“ with „Account · D1 · Edit“ added. Until it exists the run only warns and stops.
 name: Reminders Worker
@@ -78,13 +79,20 @@ jobs:
         working-directory: worker/reminders
         run: wrangler deploy
 
-      # only the names of the Worker's secrets are read, never their values; a missing one is set by its owner in
-      # the Cloudflare dashboard (the Worker → Settings → Variables and Secrets)
+      # the secrets' names are read, never their values; FIREBASE_SA is given only while the Worker has none
       - name: Check the Worker's secrets
         if: steps.key.outputs.ok == 'true'
         working-directory: worker/reminders
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
         run: |
           NAMES=$(wrangler secret list --format=json) || { echo "$NAMES"; exit 1; }
           has() { node -e 'const s=process.argv[1];process.exit(JSON.parse(s.slice(s.indexOf("["))).some(x=>x.name===process.argv[2])?0:1)' "$NAMES" "$1"; }
-          has FIREBASE_SA || echo "::warning::The Worker has no FIREBASE_SA — group, assignment and admin reminders stay off until it is set."
+          if has FIREBASE_SA; then
+            echo "FIREBASE_SA is set."
+          elif [ -n "$SA" ]; then
+            printf '%s' "$SA" | wrangler secret put FIREBASE_SA
+          else
+            echo "::warning::The Worker has no FIREBASE_SA and the secret FIREBASE_SERVICE_ACCOUNT is missing — group, assignment and admin reminders stay off."
+          fi
           has VAPID_PRIVATE_JWK || echo "::warning::The Worker has no VAPID_PRIVATE_JWK — no push can be sent until it is set."
