@@ -4,15 +4,15 @@ import { Avatar } from '../ui/kit';
 
 export interface Leader { uid: string; name: string; photoURL?: string }
 
-// Who leads a class or a psalter group: the school's teachers and admins as chips, tapped on or off.
-// The same chips in the class window and the group window.
+// Who leads a class: the school's teachers and admins as chips, tapped on or off (the class's ✎ window; its psalter
+// group follows the class's teachers).
 export const LeaderChips: React.FC<{
   people: Leader[];
   selected: string[];
   onChange: (uids: string[]) => void;
 }> = ({ people, selected, onChange }) =>
   people.length === 0 ? (
-    <p className="text-[13px] text-[#8a7a6a]">მასწავლებელი ჯერ არავინაა — „მომხმარებლებში“ ადამიანის ფანჯარაში მიანიჭე როლი „მასწავლებელი“.</p>
+    <p className="text-[13px] text-[#8a7a6a]">მასწავლებელი ჯერ არავინაა — „წევრებში“ ადამიანის ფანჯარაში მიანიჭე როლი „მასწავლებელი“.</p>
   ) : (
     <div className="flex flex-wrap gap-2">
       {people.map(p => {

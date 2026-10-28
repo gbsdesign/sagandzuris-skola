@@ -419,6 +419,7 @@ async function runGroupHour(env, when) {
 
   const groups = await fsList(env, 'psalterGroups');
   for (const group of groups) {
+    if (group.archived) continue; // its class is in the admin's archive
     const cycle = cycleOf(g, group);
     const owners = ownersIn(group.assignment, typeof group.baseHalf === 'number' ? group.baseHalf : cycle.half, cycle.half);
     const daily = group.remindDaily === undefined ? '20:00' : group.remindDaily;
@@ -459,6 +460,7 @@ async function runGroupHour(env, when) {
     const tomorrow = isoOf(new Date(g.getTime() + 86400_000));
     const classes = await fsList(env, 'classes');
     for (const cls of classes) {
+      if (cls.archived) continue;
       const list = (await fsList(env, `classes/${cls.id}/assignments`)).filter((a) => a.due === tomorrow);
       for (const a of list) {
         const targets = Array.isArray(a.studentIds) && a.studentIds.length ? a.studentIds : cls.memberIds || [];

@@ -19,9 +19,10 @@
 - **Roomy UI**: comfortable controls (play ~44–48px, icon buttons 36px); fit phones by wrapping, never by shrinking.
 - **Never auto-scroll** a player to the playing line. No octave-leap checks in note audits.
 - Never put the user's email in request headers/URLs (e.g. API User-Agent).
-- **Ready to merge → say it in red.** When a chat's work is finished and its PR is ready (checks green, no conflict),
-  end the reply with a line in red: „🔴 **შესაერთებელია** — PR #N“ (Markdown has no red text, so the red circle + bold),
-  so the user knows to press „Merge“. (The user's rule, 2026-10-27.)
+- **Ready → merge it yourself, then say it in red.** When a chat's work is finished and its PR is ready (local checks
+  pass, GitHub checks green, no conflict), merge it right away — PRs that change `firestore.rules` too — and end the reply
+  with „🔴 **შეერთდა** — PR #N“ (Markdown has no red text, so the red circle + bold). Never write „შესაერთებელია“ and wait;
+  only if merging is impossible (red check, conflict) say why. (The user's rule, 2026-10-27, widened 2026-10-28.)
 
 ## Saving tokens (the user pays for every session)
 
@@ -299,6 +300,14 @@
   person's window `admin/PersonSheet.tsx` — details, role, access, approve/refuse, profile edit), კლასები (class and
   group windows, shared `LeaderChips`), სკოლა (sections, most listened, backup + folded safety list). Numbers of the
   old სტატისტიკა tab live in `admin/StatsTab.tsx` hooks; old shortcut refs `admin:sections`/`admin:stats` still open.
+  Since 2026-10-28 (admin review, stage ①; review doc https://claude.ai/artifact/DbTEz3fwSDQkSbcxwY6yjb) a class is never
+  deleted: its ✎ „არქივში“ sets `archived` on the class and its psalter group (every hook hides them, the rules close its chat,
+  private chats and lessons to all but admins, the reminders Worker skips them), the fold „არქივი · N“ under the cards brings one back. `students.teacherIds` = the teachers of the member's
+  classes in use (`utils/classTeachers.ts` + test): the class ✎ and the archive set it, a teacher's „ამოღება“ takes the
+  class's teachers off (rule `leavingTeachers`), and the admin panel puts every list right when it opens (only with the
+  server's class list, `useAllClasses().fresh`). The class ✎ keeps teachers missing from the staff list and copies the
+  teachers to the class's psalter group. Errors go through `utils/errorText.ts` (plain Georgian). Tile „ყველა“ counts
+  everyone; „აქტიური“ only admitted non-staff members.
 - **Access** (`hooks/useAccess.ts`): guests see chant books + synth, prayers, song/მთქმელი names only (no
   recordings anywhere); kids' mode is switched by the teacher per student (`students.kidsMode`, no PIN).
 - **Home buttons** (`utils/shortcuts.ts`, `components/home/ShortcutShelf.tsx`, `students.shortcuts`, ≤8; hidden
