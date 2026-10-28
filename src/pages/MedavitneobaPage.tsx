@@ -7,6 +7,8 @@ import { LESSONS, LESSON_SOURCES, lessonById, type Lesson } from '../data/medavi
 import { useMedavitneProgress } from '../hooks/useMedavitneProgress';
 import { StepView } from './medavitneoba/parts';
 import { triggerHaptic } from '../utils/haptics';
+import { lessonTakeId } from '../utils/dayReadings';
+import { DayCard } from './medavitneoba/DayCard';
 
 // „მედავითნეობა“: a step-by-step course for the church reader (lessons in data/medavitneLessons.ts).
 // The open lesson is `mapItem` (its id), so the top bar's „←“ and the phone's back first return to the list.
@@ -58,6 +60,8 @@ const Overview: React.FC<{ done: string[]; open: (id: string) => void; onAccount
           ტაძრებში წესი ცოტათი განსხვავდება. რასაც აქ ისწავლი, გადაამოწმე შენს მოძღვართან ან რეგენტთან.
         </p>
       </div>
+
+      <DayCard />
 
       {/* the lessons as a path: number, title, time; the done ones ticked, the next one marked */}
       <ol className="relative">
@@ -163,7 +167,7 @@ const LessonView: React.FC<{ lesson: Lesson; learned: boolean; setLearned: (on: 
             </button>
           </div>
         ) : (
-          <StepView key={`${lesson.id}-${at}`} step={lesson.steps[at]} onPsalter={() => navigateTo('psalter')} />
+          <StepView key={`${lesson.id}-${at}`} step={lesson.steps[at]} onPsalter={() => navigateTo('psalter')} sendId={lessonTakeId(lesson.id, at)} />
         )}
       </section>
 

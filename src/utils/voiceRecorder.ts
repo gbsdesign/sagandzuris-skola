@@ -37,24 +37,32 @@ export const pickMime = () =>
   ['audio/webm;codecs=opus', 'audio/mp4', 'audio/ogg;codecs=opus', 'audio/webm']
     .find(t => MediaRecorder.isTypeSupported?.(t)) || '';
 
-// recorder output (webm / mp4 / ogg, whatever the browser makes) -> mono 24 kHz MP3
-export const toMp3 = async (blob: Blob): Promise<VoiceTake> => {
+// recorder output (webm / mp4 / ogg, whatever the browser makes) -> mono MP3, 24 kHz / 48 kbps unless told otherwise;
+// `maxSeconds` keeps only the take's start
+const encodeTake = async (blob: Blob, rate: number, kbps: number, maxSeconds = Infinity): Promise<VoiceTake> => {
   const Ctx = window.AudioContext || (window as any).webkitAudioContext;
   const ctx: AudioContext = new Ctx();
   try {
     const decoded = await ctx.decodeAudioData(await blob.arrayBuffer());
-    const offline = new OfflineAudioContext(1, Math.max(1, Math.ceil(decoded.duration * RATE)), RATE);
+    const seconds = Math.min(decoded.duration, maxSeconds);
+    const offline = new OfflineAudioContext(1, Math.max(1, Math.ceil(seconds * rate)), rate);
     const src = offline.createBufferSource();
     src.buffer = decoded;
     src.connect(offline.destination);
     src.start();
     const mono = await offline.startRendering();
     const wave = waveOf(mono.getChannelData(0));
-    return { mp3: await encodeMp3(mono, undefined, KBPS), seconds: decoded.duration, wave };
+    return { mp3: await encodeMp3(mono, undefined, kbps), seconds, wave };
   } finally {
     ctx.close?.();
   }
 };
+
+export const toMp3 = (blob: Blob) => encodeTake(blob, RATE, KBPS);
+
+/** A spoken take made small enough for the pearls' store (< 600 KB): 16 kHz, 24 kbps, ~3 KB a second. */
+export const SMALL_MAX_SECONDS = 180;
+export const toSmallMp3 = (blob: Blob, maxSeconds = SMALL_MAX_SECONDS) => encodeTake(blob, 16000, 24, maxSeconds);
 
 /** Asks for the microphone and starts recording; throws if the user refuses access. */
 export const startVoiceRecording = async (): Promise<VoiceRecording> => {
