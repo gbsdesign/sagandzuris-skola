@@ -213,8 +213,8 @@ export const IconBtn: React.FC<React.ButtonHTMLAttributes<HTMLButtonElement> & {
 
 /** Segmented tabs that wrap into a grid on phones instead of shrinking. */
 export function Tabs<T extends string>({ items, value, onChange, cols = 3 }: {
-  // `over`: a small line above the label (an exam's number on the admission page)
-  items: { id: T; label: string; over?: string; Icon?: React.ComponentType<{ className?: string }>; count?: number; dot?: boolean }[];
+  // `over`: a small line above the label (an exam's number on the admission page); `under`: one below it (a performer's year)
+  items: { id: T; label: string; over?: string; under?: string; Icon?: React.ComponentType<{ className?: string }>; count?: number; dot?: boolean }[];
   value: T;
   onChange: (id: T) => void;
   cols?: 2 | 3 | 4 | 'wide';
@@ -222,7 +222,7 @@ export function Tabs<T extends string>({ items, value, onChange, cols = 3 }: {
   return (
     <div className={cx('grid gap-1 p-1 rounded-2xl bg-white/75 ring-1 ring-[#e8dcc8]',
       cols === 2 ? 'grid-cols-2' : cols === 4 ? 'grid-cols-2 min-[480px]:grid-cols-4' : cols === 'wide' ? 'grid-cols-2 min-[600px]:grid-cols-3' : 'grid-cols-3')}>
-      {items.map(({ id, label, over, Icon, count, dot }) => {
+      {items.map(({ id, label, over, under, Icon, count, dot }) => {
         const on = id === value;
         return (
           <button
@@ -240,6 +240,11 @@ export function Tabs<T extends string>({ items, value, onChange, cols = 3 }: {
               <span className="flex flex-col items-center text-center leading-tight">
                 <span className={cx('text-[11px] font-black uppercase tracking-wide', on ? 'text-[#fbf6ec]/75' : 'text-[#a0703c]')}>{over}</span>
                 <span className="mt-0.5">{label}</span>
+              </span>
+            ) : under ? (
+              <span className="flex flex-col items-center text-center leading-tight">
+                <span className="break-words">{label}</span>
+                <span className={cx('mt-0.5 text-[11.5px] font-semibold', on ? 'text-[#fbf6ec]/75' : 'text-[#8a7a6a]')}>{under}</span>
               </span>
             ) : (
               <span className="leading-tight text-center">{label}</span>

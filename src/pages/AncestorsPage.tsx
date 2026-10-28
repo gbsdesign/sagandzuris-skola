@@ -562,7 +562,8 @@ export const AncestorsPage: React.FC = () => {
               key={g.key}
               title={g.title}
               subtitle={g.subtitle}
-              items={ANCESTORS.filter((a) => a.group === g.key)}
+              // the three in the portraits above are not shown a second time here
+              items={ANCESTORS.filter((a) => a.group === g.key && !PORTRAITS.some(p => p.bio === a.id))}
               onOpen={setOpenId}
             />
           ))}

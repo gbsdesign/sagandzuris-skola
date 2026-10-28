@@ -348,7 +348,7 @@ export const ShortcutPicker: React.FC<{ open: boolean; onClose: () => void; curr
           title: `ღილაკის დამატება · ${current.length}/${max}`,
           isOn: has,
           full,
-          fullNote: `უკვე ${max} ღილაკია — ახლის დასამატებლად ჯერ რომელიმე მოხსენი.`,
+          fullNote: `უკვე ${max} ღილაკია — ახლის დასამატებლად ჯერ რომელიმე მოხსენით.`,
           onPick: id => {
             triggerHaptic(10);
             if (has(id)) onChange(current.filter(x => coreOf(x) !== coreOf(id)));

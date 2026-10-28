@@ -167,8 +167,8 @@
   folded line on top on a phone; the class's teachers get `ClassRoll` (`teacher/StudentsOverview.tsx`: attendance ✓,
   💬, a name opens the member's window, now with „მიწერა“/„ამოღება“). „სასწავლო პროგრამა“ (renamed everywhere from
   „კლასის პროგრამა“) is compact: one thin progress bar, „დავალებები“ folding open beside the title (red dot = an
-  assignment still to do; teachers manage them there — `AssignmentsFold`). The timetable lives in the chat's 📅
-  (`ScheduleFold`, edited in place). Teacher-only parts never show to members; attendance is teacher-only in
+  assignment still to do; teachers manage them there — `AssignmentsFold`). The timetable is one line of chips under the
+  class title (and under the chat's title on the messages page), changed by ✎ (`ScheduleSheet`). Teacher-only parts never show to members; attendance is teacher-only in
   `firestore.rules` too (members no longer read it).
 - **Games hub** (`pages/GamesPage.tsx`, 2026-10-27): „თამაშები“ is a hub of three category tabs (მუსიკალური · ქართული ·
   ცოცხალი) from `data/games.ts`; every game carries its variant chips (ონლაინ · ჰიბრიდული · უტელეფონო); unbuilt games are

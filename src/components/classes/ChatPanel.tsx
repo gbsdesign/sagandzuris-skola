@@ -204,6 +204,29 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const [elapsed, setElapsed] = useState(0);
   const [err, setErr] = useState('');
   const [active, setActive] = useState<string | null>(null);
+  // a long press (half a second, the finger kept still) or a right click picks a message; a tap on the picked one lets
+  // it go; a press on its play button or a link does not count
+  const hold = useRef<number | null>(null);
+  const stopHold = () => { if (hold.current) window.clearTimeout(hold.current); hold.current = null; };
+  const holdToPick = (id: string) => ({
+    onPointerDown: (e: React.PointerEvent) => {
+      if (e.pointerType === 'mouse' || (e.target as HTMLElement).closest('button, a')) return;
+      stopHold();
+      hold.current = window.setTimeout(() => { hold.current = null; triggerHaptic(20); setActive(id); }, 500);
+    },
+    onPointerUp: stopHold,
+    onPointerLeave: stopHold,
+    onPointerCancel: stopHold,
+    onContextMenu: (e: React.MouseEvent) => {
+      if ((e.target as HTMLElement).closest('a')) return;
+      e.preventDefault();
+      stopHold();
+      setActive(id);
+    },
+    onClick: (e: React.MouseEvent) => {
+      if (active === id && !(e.target as HTMLElement).closest('button, a')) setActive(null);
+    },
+  });
   const rec = useRef<VoiceRecording | null>(null);
   const list = useRef<HTMLDivElement>(null);
   const stick = useRef(true);
@@ -392,10 +415,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                       </p>
                     )}
                     <div
-                      // a tap on the message (not on its play button or a link) shows „წაშლა“ under it; a right click too
-                      onClick={e => { if (canDel && !(e.target as HTMLElement).closest('button, a')) setActive(active === m.id ? null : m.id); }}
-                      onContextMenu={canDel ? e => { e.preventDefault(); setActive(m.id); } : undefined}
-                      className={`rounded-[20px] px-3.5 py-2 shadow-[0_1px_1px_rgba(74,52,38,0.06)] ${canDel ? 'cursor-pointer' : ''} ${
+                      // a long press on the message (as in any messenger; a right click on a computer) shows „წაშლა“ under
+                      // it; a plain tap does nothing, so playing a voice message or opening a link never shows it
+                      {...(canDel ? holdToPick(m.id) : {})}
+                      className={`rounded-[20px] px-3.5 py-2 shadow-[0_1px_1px_rgba(74,52,38,0.06)] ${canDel ? '[-webkit-touch-callout:none]' : ''} ${
                         mine
                           ? `bg-[#7a2028] text-[#fbf6ec] ${first ? 'rounded-tr-md' : ''}`
                           : `bg-white ring-1 ring-[#e8dcc8] text-[#2a2017] ${first ? 'rounded-tl-md' : ''}`

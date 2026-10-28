@@ -375,7 +375,7 @@ export const FirstMeeting: React.FC = () => {
 
         {step === 4 && (
           <>
-            <Heading title="შესაძლებლობები" text="შეგიძლიათ რამდენიმე მონიშნოთ." />
+            <Heading title="შესაძლებლობები" />
             <div className="space-y-2">
               {ABILITY_OPTIONS.map(o => {
                 const on = a.abilities.includes(o.id);
@@ -425,7 +425,7 @@ export const FirstMeeting: React.FC = () => {
 
         {step === 5 && (
           <>
-            <Heading title="ინტერესები" text="შეგიძლიათ რამდენიმე მონიშნოთ." />
+            <Heading title="ინტერესები" />
             <div className="space-y-2">
               {INTEREST_OPTIONS.map(o => {
                 const on = a.interests.includes(o.id);
@@ -448,7 +448,7 @@ export const FirstMeeting: React.FC = () => {
 
         {step === 6 && (
           <>
-            <Heading title="რომელ ხმას გალობთ?" text="შეგიძლიათ რამდენიმე მონიშნოთ." />
+            <Heading title="რომელ ხმას გალობთ?" />
             <div className="space-y-2">
               {VOICES.map(v => (
                 <Choice key={v.id} on={a.voices.includes(v.id)} onClick={() => toggleVoice(v.id)} title={v.title} sub={v.sub} />

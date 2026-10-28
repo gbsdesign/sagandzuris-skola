@@ -14,7 +14,7 @@ import { usePlacements } from '../../data/placements';
 import { MoveSheet } from '../archive/MoveSheet';
 import { LearnAudio } from '../learn/LearnAudio';
 import { songPiece } from '../../utils/learn';
-import { BackBtn, useScrolledAway } from '../ui/kit';
+import { BackBtn, Tabs, useScrolledAway } from '../ui/kit';
 
 // One recording of a song: the school's own versions (voices) first, then the archive's performers
 export interface SongTake {
@@ -185,24 +185,12 @@ export const SongPage: React.FC = () => {
         {takes.length > 1 && (
           <section className="flex flex-col gap-2">
             <h2 className="px-0.5 text-[12px] font-extrabold text-[#8c7c6b]">შესრულებები · {takes.length}</h2>
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              {takes.map((t, i) => (
-                <button
-                  key={i}
-                  type="button"
-                  onClick={() => { triggerHaptic(10); openSongPage(song.id, i); }}
-                  aria-pressed={i === takeIdx}
-                  className={`min-h-12 px-2 py-1.5 rounded-[10px] border text-[12px] font-bold leading-tight flex flex-col items-center justify-center gap-px text-center transition-all cursor-pointer active:scale-[0.97] ${
-                    i === takeIdx
-                      ? 'bg-[#fcf1df] text-[#2a2017] border-[#e8b866] shadow-[0_0_0_3px_rgba(180,98,14,0.12)]'
-                      : 'bg-white text-[#2a2017] border-[#e2d3bb] hover:border-[#d9a55a]'
-                  }`}
-                >
-                  <span className="break-words">{t.label}</span>
-                  {t.sub && <span className="text-[11px] font-semibold text-[#a0907c]">{t.sub}</span>}
-                </button>
-              ))}
-            </div>
+            <Tabs
+              cols="wide"
+              items={takes.map((t, i) => ({ id: String(i), label: t.label, under: t.sub }))}
+              value={String(takeIdx)}
+              onChange={id => openSongPage(song.id, Number(id))}
+            />
           </section>
         )}
 

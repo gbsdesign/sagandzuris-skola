@@ -83,7 +83,7 @@ export const ClassPage: React.FC<{ classId?: string; focus?: 'psalter' }> = ({ c
   };
   const myTeachers = iAmMember ? cls.teachers.filter(t => t.uid !== user?.uid) : [];
   const canEdit = iTeach || isAdmin;
-  const pencil = (p: Panel, label: string) => canEdit && <IconBtn label={label} tone="wine" onClick={() => setPanel(p)}><Pencil /></IconBtn>;
+  const pencil = (p: Panel, label: string) => canEdit && <IconBtn label={label} onClick={() => setPanel(p)}><Pencil /></IconBtn>;
   const close = () => setPanel(null);
   const teacherNames = cls.teachers.map(t => t.name).filter(Boolean).join(', ');
 
