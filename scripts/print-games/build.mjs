@@ -6,7 +6,7 @@ import { build } from './lib.mjs';
 const args = process.argv.slice(2);
 const ids = args.filter(a => !a.startsWith('--'));
 const previews = args.find(a => a.startsWith('--previews='))?.slice('--previews='.length) ?? null;
-const ALL = ['mepis-kari', 'samshvildis-game', 'okros-khana', 'lurji-supra'];
+const ALL = ['mepis-kari', 'samshvildis-game', 'okros-khana', 'lurji-supra', 'ori-takhti', 'qaravani'];
 
 for (const id of ids.length ? ids : ALL) {
   const game = await import(`./games/${id}.mjs`);
