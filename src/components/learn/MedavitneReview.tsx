@@ -5,11 +5,12 @@ import { dayMonthGe } from '../../data/churchCalendar';
 import { lessonById } from '../../data/medavitneLessons';
 import { bookName, parseReadTakeId, rangesText, type ReadTake } from '../../utils/dayReadings';
 import type { PearlShine } from '../../utils/pearls';
+import { PACE_NAMES, paceNumber, paceZone } from '../../utils/readingPace';
 import { shinePearl, takeUrl, usePearlTakes } from '../../hooks/usePearls';
 import { askConfirm, Btn } from '../ui/kit';
 
 // The member's readings sent from „მედავითნეობა“ (a lesson's read-aloud step or the day's Apostle, ids „read~…“)
-// in their window (teachers, admins): hear one and approve it („ჩათვლა“, kept in students.pearlShine under its id).
+// in their window (teachers, admins): hear one, see its pace, and approve it („ჩათვლა“, kept in students.pearlShine).
 // Shown only once something was sent.
 
 const titleOf = (t: ReadTake) => {
@@ -71,6 +72,12 @@ export const MedavitneReview: React.FC<{ uid: string; shine?: Record<string, Pea
               <div className="min-w-0 flex-1">
                 <p className="text-[14px] font-bold text-[#4a3426] truncate">{title}</p>
                 <p className="text-[12px] text-[#8a7a6a] truncate">{sub} · {t.at.slice(0, 10)}</p>
+                {/* the pace the member's page counted (score = syllables a second × 10) */}
+                {t.score > 0 && (
+                  <p className="text-[12px] font-semibold text-[#8a7a6a]">
+                    ტემპი: <span className={paceZone(t.score / 10) === 'even' ? 'text-emerald-700' : 'text-amber-700'}>{PACE_NAMES[paceZone(t.score / 10)]}</span> · {paceNumber(t.score / 10)} მარცვ./წმ
+                  </p>
+                )}
               </div>
               <button type="button" onClick={() => play(t.id)} aria-label={playing === t.id ? 'გაჩერება' : 'მოსმენა'}
                 className="shrink-0 w-10 h-10 rounded-full bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center cursor-pointer hover:bg-[#7a2028]/[0.14]">

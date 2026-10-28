@@ -1,11 +1,13 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BookOpen, CalendarDays, ChevronDown } from 'lucide-react';
+import { BookOpen, CalendarDays, ChevronDown, Music } from 'lucide-react';
 import { PROSE } from '../../components/views/PrayerText';
 import { addDays, dayMonthGe, fromIso, oldDayMonthGe, openChurchCalendar, todayIso, useCalendarDay, weekdayGe } from '../../data/churchCalendar';
 import { useMembership } from '../../utils/memberAccess';
 import { triggerHaptic } from '../../utils/haptics';
+import { readableText, syllableCount } from '../../utils/readingPace';
 import { dayTakeId, readingsOf, toneName, toneOf, type Reading } from '../../utils/dayReadings';
 import { bibleRangesHtml, ReadAloud } from './parts';
+import { ToneSheet } from './ToneSheet';
 
 // „დღის წესი“ on the course's list: the week's tone, the day's saints and readings, for today or the coming Sunday,
 // read out of the church calendar (utils/dayReadings.ts). An Apostle reading unfolds with its text and the recorder,
@@ -34,7 +36,7 @@ const ApostleText: React.FC<{ r: Reading; iso: string }> = ({ r, iso }) => {
           ? <div dangerouslySetInnerHTML={{ __html: html }} />
           : <p className="font-sans text-[14px] text-[#8a7a6a]">{failed ? 'ტექსტის ჩატვირთვა ვერ მოხერხდა — შეამოწმე ინტერნეტი.' : 'იტვირთება…'}</p>}
       </div>
-      <ReadAloud sendId={dayTakeId(r, iso)} />
+      <ReadAloud sendId={dayTakeId(r, iso)} syllables={html ? syllableCount(readableText(html)) : undefined} />
     </div>
   );
 };
@@ -51,6 +53,7 @@ export const DayCard: React.FC = () => {
   const lastSunday = addDays(iso, -fromIso(iso).getDay());
   const sundayDay = useCalendarDay(canCal && lastSunday !== iso ? lastSunday : null);
   const [open, setOpen] = useState<number | null>(null);
+  const [toneOpen, setToneOpen] = useState<number | null>(null);
   useEffect(() => setOpen(null), [iso]);
 
   const readings = useMemo(() => (day ? readingsOf(day) : []), [day]);
@@ -91,10 +94,14 @@ export const DayCard: React.FC = () => {
           {title && <h3 className="mt-0.5 font-serif-ge text-[18px] font-bold leading-snug text-[#2a2017] text-pretty">{title}</h3>}
         </div>
         {tone && (
-          <span className="shrink-0 flex flex-col items-center justify-center w-16 h-16 rounded-2xl bg-[#7a2028] text-[#fbf6ec] shadow-[0_6px_14px_-8px_rgba(122,32,40,0.7)]">
-            <span className="text-[11px] font-bold leading-none text-[#fbf6ec]/75">ხმა</span>
-            <span className="mt-1 font-serif-ge text-[22px] font-bold leading-none">{toneName(tone).replace('ხმა ', '')}</span>
-          </span>
+          // the tone opens its Sunday chants in the books (ToneSheet)
+          <button type="button" onClick={() => { triggerHaptic(10); setToneOpen(tone); }}
+            aria-label={`${toneName(tone)} — საგალობლები ნოტებით`}
+            className="shrink-0 flex flex-col items-center justify-center gap-1 w-[72px] h-[84px] rounded-2xl bg-[#7a2028] hover:bg-[#5e1820] text-[#fbf6ec] cursor-pointer transition active:scale-[0.97] shadow-[0_6px_14px_-8px_rgba(122,32,40,0.7)]">
+            <span className="text-[12px] font-bold leading-none text-[#fbf6ec]/75">ხმა</span>
+            <span className="font-serif-ge text-[22px] font-bold leading-none">{toneName(tone).replace('ხმა ', '')}</span>
+            <span className="inline-flex items-center gap-1 text-[12px] font-bold leading-none text-[#fbf6ec]/85"><Music className="w-3.5 h-3.5" />ნოტები</span>
+          </button>
         )}
       </div>
 
@@ -162,6 +169,7 @@ export const DayCard: React.FC = () => {
           </button>
         </>
       )}
+      <ToneSheet tone={toneOpen} onClose={() => setToneOpen(null)} />
     </section>
   );
 };
