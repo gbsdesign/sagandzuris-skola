@@ -22,6 +22,7 @@ import { ManeraAverageBadge, ManeraContent, useMastery } from './ManeraPanel';
 import { MasteryContent } from '../mastery/MasteryContent';
 import { WorkMonthLine, WorkPanel, useIndependentWork, usePanelWish } from './IndependentWorkCard';
 import { PearlIcon } from '../pearls/PearlIcon';
+import { PearlGiftBanner } from '../pearls/PearlGift';
 import { usePearls } from '../../hooks/usePearls';
 import { isGolden, pearlState } from '../../utils/pearls';
 import { CHESTS } from '../../data/pearls';
@@ -207,6 +208,8 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
           {orbs}
         </div>
       )}
+      {/* the parts of the outfit the shining pearls have given (it also adds them), where the pearls game is */}
+      {ids.includes('pearls') && <PearlGiftBanner onShow={() => { setEditing(false); setOpen('samosi'); }} />}
       {card && (
         // same card look as the other tiles of "საგანძურის გზა" (PATH_TILE), without the hover lift
         <section

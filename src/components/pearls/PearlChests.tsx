@@ -1,19 +1,23 @@
 import React, { useState } from 'react';
 import { Headphones, Mic, Sparkles } from 'lucide-react';
 import { useAuth } from '../../context';
-import { CHESTS, Chest } from '../../data/pearls';
+import { CHESTS, Chest, chestOf } from '../../data/pearls';
 import { findVersion } from '../../data/chantLookup';
 import { usePearls } from '../../hooks/usePearls';
-import { PearlRecord, PearlShine, POLISH_PCT, VOICE_IDS, VOICE_NAMES, isGolden, pearlState, voiceBests } from '../../utils/pearls';
-import { PearlIcon } from './PearlIcon';
+import { PearlRecord, PearlShine, isGolden, pearlState } from '../../utils/pearls';
+import { PearlIcon, VoiceDots } from './PearlIcon';
 import { PearlSheet, chantName } from './PearlSheet';
+import { NextGiftLine } from './PearlGift';
 import { Bar } from '../ui/kit';
 import { triggerHaptic } from '../../utils/haptics';
+import { usePearlWish } from '../../utils/pearlWish';
 
 // „მარგალიტები“, a round button of „საგანძურის გზა“ (PathOrbs; it was the „თამაშები“ page until 2026-10-27).
 // Each chest holds chants; each chant is a pearl to polish by singing its first phrase, and a teacher makes it shine.
 // The chests are three cards on top (one open at a time, remembered on the device); under each pearl three dots say
-// which voices are polished, and a pearl polished in all three is golden.
+// which voices are polished, and a pearl polished in all three is golden. A line under the steps shows the way to the
+// next part of „ჩემი სამოსი“ (every five shining pearls give one, PearlGift); „დღის მარგალიტი“ on the home page opens a
+// pearl here (utils/pearlWish).
 
 const STEPS = [
   { icon: <Headphones />, text: 'მოისმინე ფრაზა' },
@@ -52,6 +56,13 @@ export const PearlChests: React.FC = () => {
     try { localStorage.setItem(CHEST_KEY, id); } catch { /* storage off */ }
   };
   const counts = chestCounts(chest, records);
+  // a pearl asked for from elsewhere: its chest, and its sheet
+  usePearlWish(id => {
+    const c = chestOf(id);
+    if (!c) return;
+    setPicked(c.id);
+    setOpen(id);
+  });
 
   return (
     <div className="space-y-5">
@@ -66,6 +77,9 @@ export const PearlChests: React.FC = () => {
           </li>
         ))}
       </ol>
+
+      {/* the next part of the outfit the shining pearls will give */}
+      {user && <NextGiftLine />}
 
       {/* the chests: a card each, the chosen one with a wine rim */}
       <div role="tablist" aria-label="სკივრები" className="grid grid-cols-3 gap-2">
@@ -129,25 +143,6 @@ export const PearlChests: React.FC = () => {
         />
       )}
     </div>
-  );
-};
-
-/** Three dots under a pearl, one per voice: filled once polished in it, a ring once tried, pale until then (gold on a
- *  golden pearl). */
-export const VoiceDots: React.FC<{ rec?: PearlRecord; golden?: boolean; className?: string }> = ({ rec, golden, className = 'mt-1' }) => {
-  const b = voiceBests(rec);
-  const title = VOICE_IDS.map(v => `${VOICE_NAMES[v]}: ${b[v] != null ? `${b[v]}%` : '—'}`).join(' · ');
-  return (
-    <span className={`flex items-center gap-[3px] ${className}`} title={title} aria-label={title}>
-      {VOICE_IDS.map(v => {
-        const n = b[v];
-        const cls = golden ? 'bg-[#c9962a]'
-          : n == null ? 'bg-[#e3d6c1]'
-          : n >= POLISH_PCT ? 'bg-[#7a2028]'
-          : 'bg-white ring-[1.5px] ring-inset ring-[#7a2028]/70';
-        return <span key={v} className={`w-[7px] h-[7px] rounded-full ${cls}`} />;
-      })}
-    </span>
   );
 };
 

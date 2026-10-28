@@ -12,6 +12,7 @@ import { ClassProgram } from '../components/classes/ClassProgram';
 import { AddMemberSheet } from '../components/classes/MembersWindow';
 import { ClassPsalter } from '../components/psalter/ClassPsalter';
 import { ClassLessons } from '../components/mastery/ClassLessons';
+import { ClassPearls } from '../components/pearls/ClassPearls';
 import { Avatar } from '../components/classes/ChatPanel';
 import { Btn, Flash, IconBtn, PageBar, Sheet, useFlash } from '../components/ui/kit';
 import { openThread, Person } from '../hooks/useDirectChat';
@@ -153,6 +154,8 @@ export const ClassPage: React.FC<{ classId?: string; focus?: 'psalter' }> = ({ c
         <div className="min-w-0 space-y-4">
           <ClassProgram cls={cls} canEdit={canEdit} />
           <ClassLessons cls={cls} canEdit={canEdit} />
+          {/* the members' pearls, for the class's teachers: takes to hear and approve, one table by chest */}
+          {canEdit && <ClassPearls cls={cls} />}
           <ClassPsalter cls={cls} canLead={canEdit} focus={focus === 'psalter'} />
           <ClassChat cls={cls} timetable={false} compact />
         </div>

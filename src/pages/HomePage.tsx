@@ -5,6 +5,7 @@ import { ShortcutShelf } from '../components/home/ShortcutShelf';
 import { TodaySaintsCard } from '../components/calendar/TodaySaintsCard';
 import { BirthdaysSoon } from '../components/home/BirthdaysSoon';
 import { LearnDue } from '../components/home/LearnDue';
+import { PearlOfDay } from '../components/home/PearlOfDay';
 
 interface HomePageProps {
   logoUrl: string;
@@ -248,6 +249,8 @@ export const HomePage: React.FC<HomePageProps> = ({ logoUrl }) => {
       <BirthdaysSoon className="relative mb-3" />
       {/* the learning mode's reviews due today */}
       <LearnDue className="relative mb-3" />
+      {/* the day's pearl of the pearls game, the same for the whole school, until ✕ for the day */}
+      <PearlOfDay className="relative mb-3" />
       <div className="mb-3" aria-hidden />
       {/* holy fathers' words, changing every 15 minutes: toward God above the logo, toward people under the Patriarch's "cross" */}
       <FatherSaying key={`a${slot}`} {...SAYINGS_ABOVE[slot % SAYINGS_ABOVE.length]} className="mb-6" />
