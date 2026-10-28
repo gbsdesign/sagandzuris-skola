@@ -264,7 +264,9 @@
   ≈50×43 cm whose ends meet by letters ა–ვ, 18 numbers laid by the letters' spiral so 6 and 8 never touch, 9 gates with fixed place
   names, A6 cards via `placedSheet`) and „ლურჯი სუფრა“ (№5, Azul in Erekle II's Tbilisi: 105 stamps of 20 mm on one sheet whose back
   is one indigo field, four A4-landscape boards turned onto portrait pages — apprentice / master side, trays ⌀90 mm, the უსტაბაში
-  token tile-sized to fit a floor place). A game with sheets gets `print: { href, sheets }` in `data/games.ts`; its hub card
+  token tile-sized to fit a floor place); then (sixth PR) „ორი ტახტი“ (№4, 7 Wonders Duel between the western (ქუთაისი) and eastern
+  (თბილისი) thrones: 73 age cards with the original costs/effects under Georgian names, 8 help cards, 12 Georgian monuments 96×62 mm,
+  board „ლიხის გზა“ in two A4-landscape pieces, the knight as a fold-up tent, coins 1/3/6 თეთრი). A game with sheets gets `print: { href, sheets }` in `data/games.ts`; its hub card
   shows a wine „დასაბეჭდი ფურცლები“ strip („PDF · N ფურცელი“, one line; „PDF · “ hidden below 400 px) and its „უტელეფონო“ chip turns wine.
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
