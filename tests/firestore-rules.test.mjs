@@ -265,6 +265,8 @@ await t('member\'s teacher hears the take', assertSucceeds(getDoc(doc(tch, 'dril
 await t('another teacher cannot hear it', assertFails(getDoc(doc(tch2, 'drillTakes', 'stu', 'takes', 'ear-fifth'))));
 await t('teacher cannot change the take', assertFails(setDoc(doc(tch, 'drillTakes', 'stu', 'takes', 'ear-fifth'), drillTake)));
 await t('member marks an exercise done', assertSucceeds(setDoc(doc(stu, 'students', 'stu'), { drillDone: { 'ear-fifth': '2026-10-27' } }, { merge: true })));
+await t('member keeps an exercise\'s best score', assertSucceeds(setDoc(doc(stu, 'students', 'stu'), { drillScore: { 'ear-fifth': 82 } }, { merge: true })));
+await t('a teacher cannot change the score', assertFails(setDoc(doc(tch, 'students', 'stu'), { drillScore: { 'ear-fifth': 100 } }, { merge: true })));
 
 // ---- song texts
 const st = (by, extra = {}) => ({ text: 'ლექსი', by, at: serverTimestamp(), ...extra });

@@ -145,6 +145,11 @@
   out, a click (bpm/bar/accents), a mic tuner + recording (≤90 s) sent to teachers (`drillTakes/{uid}/takes/{drillId}`,
   rules published by the workflow; teachers hear them in the member's window, `DrillReview`). „შევასრულე“: device days
   (`utils/maneraPractice.ts`) + `students.drillDone.{id}` = last day. Teachers can assign an exercise (`assignments.exercise`).
+  Scores (2026-10-28): „შეფასებით“ runs the exercise with the microphone — notes and rhythm are scored in the browser
+  (`utils/drillScore.ts` + test: each look vs the step's note, any octave; claps vs the beat grid after a one-bar count-in,
+  the click silent after it; the note to sing sounds only 1.2 s so the phone hears the student), the tips by the AI teacher
+  (`askAiScore`, JSON score, its own 3 a day — scope `manera`). Best % in `students.drillScore.{id}` + device
+  (`utils/drillScores.ts`); the ring = `useMastery` (ManeraPanel): all 27 exercises, a teacher's mark wins, unscored = 0.
 - **მედავითნეობა** (page `medavitneoba`, built 2026-10-27): the reader's course on the vine's „მედავითნეობა“ label
   (section `medavitneobaTopic`, „მალე“ until the admin opens it). 8 lessons in `data/medavitneLessons.ts`, shown step by
   step (learn / order / read aloud / quiz / task) in `pages/MedavitneobaPage.tsx` + `pages/medavitneoba/parts.tsx`; the
