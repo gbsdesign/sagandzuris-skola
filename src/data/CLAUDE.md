@@ -63,8 +63,8 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   line 2 voices II–III two beats late, line 10 voice I triplet misread; dasd2/083 line 11 voice II last notes 4 beats
   early; triod/054 the OMR dropped one part of a divided voice in 14 places (voice I lines 3–6, 8, 11, 12; voices II–III
   line 12) — 60 notes added, so voice I there now overlaps itself on purpose.
-  The other 76 lines + the first check's side notes (same day, each fix confirmed by a second picture check, list in
-  that thread's `r7_fixes.json`): triod/107 key signatures (2♭) printed mid-line in lines 12, 15, 18 were ignored —
+  The other 76 lines + the first check's side notes (same day, each fix confirmed by a second picture check; exact notes in the
+  commit of 2026-10-28 "fix 33 errors"): triod/107 key signatures (2♭) printed mid-line in lines 12, 15, 18 were ignored —
   20 notes → B♭/E♭; dropped eighth rests (a voice half a beat early, its last note stretched) in v5/131 lines 2, 3, 5,
   7, v5/132 line 10, v5/134 line 6, v5/135 line 2, v5/136 line 7 (all voices); v5/132 line 8 F→F♯ (accidental over
   the line break); v5/124 line 4 bass B♭→B, lines 10 and 13 divided voices misread (line 13 one beat shorter); v5/098
