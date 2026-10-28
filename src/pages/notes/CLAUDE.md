@@ -14,7 +14,8 @@ moving to the next chant in service order.
 - `ProgramPage.tsx` + `program.css`: „დღევანდელი წირვა“ — the teacher's chosen versions for a date.
 - `NpStepper.tsx`: small +/- stepper (tone ±7).
 - „სწავლა“ (`.np-learn`, beside the zoom; not in the crowded top bar) opens `components/learn/LearnMode.tsx` over
-  the page (portal on body, its own `sgLearn` history entry).
+  the page (portal on body, its own `sgLearn` history entry). The home card „დღეს გასამეორებელი“ opens it straight away
+  through `requestLearn(piece)` → `takeLearn(vid)` once the score has loaded.
 - `src/utils/sheetReflow.ts`: chants whose book page sets lines side by side (litanies, ~17 chants) are cut on
   the picture into pieces shown one under another, up to 2× bigger (cuts found from the ink at load time).
 - `src/context/NotesContext.tsx`: overlay pages + browser history/URL (`?c=&v=` for a chant, `?p=date~ids` for

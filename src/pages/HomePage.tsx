@@ -4,6 +4,7 @@ import { PlateScatter, Qvevri, SpiralJug } from '../components/home/PlateOrnamen
 import { ShortcutShelf } from '../components/home/ShortcutShelf';
 import { TodaySaintsCard } from '../components/calendar/TodaySaintsCard';
 import { BirthdaysSoon } from '../components/home/BirthdaysSoon';
+import { LearnDue } from '../components/home/LearnDue';
 
 interface HomePageProps {
   logoUrl: string;
@@ -245,6 +246,8 @@ export const HomePage: React.FC<HomePageProps> = ({ logoUrl }) => {
       <TodaySaintsCard className="relative mb-3" />
       {/* birthdays: within five days for teachers and admins, today's for members */}
       <BirthdaysSoon className="relative mb-3" />
+      {/* the learning mode's reviews due today */}
+      <LearnDue className="relative mb-3" />
       <div className="mb-3" aria-hidden />
       {/* holy fathers' words, changing every 15 minutes: toward God above the logo, toward people under the Patriarch's "cross" */}
       <FatherSaying key={`a${slot}`} {...SAYINGS_ABOVE[slot % SAYINGS_ABOVE.length]} className="mb-6" />

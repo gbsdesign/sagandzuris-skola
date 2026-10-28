@@ -125,6 +125,14 @@
   Takes go to the teacher through the pearls' store (`pearlTakes`, ids `learn~<piece>~<part>`, approval in
   `pearlShine`) — no rules change; teachers hear them in the member's window (`LearnReview`). AI teacher shares the
   pearls' 3 a day.
+  Since 2026-10-28: three steps per part (`StepBar`: მოისმინე 50% my voice → ერთად 75% everyone but me → მარტო 100%, sing;
+  three loops move on by themselves); a singing mirror (`LearnMirror`: the part's notes as bars, my voice as a line, moved
+  into the part's key from my first steady note); a soft band over the notes picture follows the playing beat
+  (`markerAt` — x of notes is guessed from their lengths, no real positions); a recording is split at its quietest
+  places between 6 and 16 s (`partsAtBreaths` over `utils/audioEnergy.ts`, falls back to equal parts); a song's words
+  beside every part (`wordsForPart`, only roughly — no timings); home card „დღეს გასამეორებელი“ (`home/LearnDue.tsx`,
+  opens the piece through `utils/learnOpen.ts`) and one daily phone reminder on the reminders Worker
+  (`utils/learnReminder.ts`, id `learn-review`, kept apart from the habits' list in `prayerReminders.ts`).
 - **Folk songs map** (`data/songsData.ts`, `components/maps/GeorgiaMap.tsx`) and **მთქმელი authors map**
   (`data/mtkmeliData.ts`, `MtkmeliMap.tsx`, shared `RegionPuzzleMap.tsx`). Full texts only for authors who
   died before 1956; others get title + description + wiki link.
