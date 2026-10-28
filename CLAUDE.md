@@ -176,6 +176,13 @@
   under its own section `margalitebi` (open/მალე/hidden switch in the admin panel; a member's feature for it is the games'
   one — `featureOf` in `hooks/useAccess.ts`). The plan with 42 games and the six Georgianized board games:
   https://claude.ai/artifact/Dw24amtHhQvSGUd1pPE4fg
+- **First two games (2026-10-28)**: „დღის ჰანგი“ (`pages/games/HangiGame.tsx`; logic `utils/hangi.ts` + test; pool
+  `data/hangiPool.ts` = every recording the member may hear — `VARIANT_MEDIA` via `codeBoundMedia()`, `CHANT_RECORDINGS`, folk
+  mp3s; the day's pick = rendezvous hash of `date|id`, the same for the whole school, Tbilisi day; six tries 1·2·4·7·11·16 s;
+  record `students.games.hangi.days[iso]` through `hooks/useHangi.ts`, the device for guests, no rules change) and „ამიხსენი“
+  (`pages/games/AmikhseniGame.tsx`; rules `utils/amikhseni.ts` + test; ~1000 cards in `data/amikhseniWords.ts` built from the
+  app's own data; settings stay on the device). `components/games/TableScreen.tsx` is the full-screen face of every live game
+  (wake lock, safe areas). Both open inside the hub as `mapItem` (`GameDef.item`; the bar title from `gameTitleOfItem`).
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 

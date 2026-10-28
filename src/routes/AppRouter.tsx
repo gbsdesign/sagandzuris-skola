@@ -22,6 +22,7 @@ import { SECTIONS, sectionOfPage } from '../data/sections';
 import { useMyPsalterGroups } from '../hooks/usePsalter';
 import { useAllClasses, useMyClasses, useTeachingClasses } from '../hooks/useClasses';
 import { useSelectedGroupId } from '../components/psalter/selectedGroup';
+import { gameTitleOfItem } from '../data/games';
 
 // Fetches the newest version of the app (the service worker takes over at once — registerType 'autoUpdate') and
 // starts it again. A page's file that is missing while online means a newer version was published after this tab
@@ -251,7 +252,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
       : currentPage === 'birthdays' ? 'special:birthdays'
       : section ? `section:${section}` : null;
     const book = currentPage === 'biblioteka' ? LIBRARY_BOOKS[(mapItem ?? '').split(':')[0]] : undefined;
-    const title = currentPage === 'prayer' && selectedPrayerId ? prayerTitle(selectedPrayerId) : book ?? PAGE_TITLES[currentPage] ?? '';
+    // a game open inside the games page shows its own name („დღის ჰანგი“, „ამიხსენი“)
+    const game = currentPage === 'games' ? gameTitleOfItem(mapItem) : undefined;
+    const title = currentPage === 'prayer' && selectedPrayerId ? prayerTitle(selectedPrayerId) : book ?? game ?? PAGE_TITLES[currentPage] ?? '';
     return (
       <div className="flex flex-col items-center px-1 py-3 sm:px-4 md:px-6">
         <PageBar title={title} onBack={handleGoBack} right={pin ? <PinButton id={pin} /> : undefined} className="w-full mb-4" />
