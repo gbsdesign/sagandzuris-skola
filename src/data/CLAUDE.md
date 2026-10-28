@@ -59,6 +59,10 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   dasd2 bass in 29 files (the bar „…შენ-ნი, ღმერ-თო, ა-ლად ცეცხ-ლი-სა“: a doubled F3 quarter → eighth, the rest of the
   line half a beat later), dasd2/003 voice II line 1 rebuilt (beats 0–10), song/004 line 8 voice I two 32nd notes read
   as quarters (everything after the line moved 1.75 beats earlier). The other overlaps are divided voices in the books.
+  Silences and early line ends (same day, 104 of 180 lines checked on the picture; the rest are book rests): v5/004
+  line 2 voices II–III two beats late, line 10 voice I triplet misread; dasd2/083 line 11 voice II last notes 4 beats
+  early; triod/054 the OMR dropped one part of a divided voice in 14 places (voice I lines 3–6, 8, 11, 12; voices II–III
+  line 12) — 60 notes added, so voice I there now overlaps itself on purpose.
 - The OMR scripts live only in the user's old session scratchpads — they are not in this repo.
 - Unreviewed guesses (don't present as confirmed): vol. I↔III matches, vol. V/IX placements, which book
   version a liturgy recording follows (the `main` flag in `TSIRVA_BOOK` moves a recording to another version).
