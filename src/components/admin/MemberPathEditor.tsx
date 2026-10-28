@@ -9,6 +9,7 @@ import { useConfirmations, saveConfirmation } from '../../hooks/useConfirmations
 import { useMarksLock, saveMarksLock } from '../../hooks/usePathMarks';
 import { askConfirm, Toggle } from '../ui/kit';
 import { CatalogPicker } from './CatalogPicker';
+import { errorText } from '../../utils/errorText';
 
 type PathMap = Record<string, PathItem>;
 
@@ -34,7 +35,7 @@ export const MemberPathEditor: React.FC<{ uid: string; name: string; onError: (t
     return onSnapshot(
       doc(db, 'students', uid),
       snap => { setMap(filterValidVariants((snap.exists() && snap.data().selectedChantVariants) || {})); setLoaded(true); },
-      err => { onError('მოსწავლის გზა ვერ ჩაიტვირთა: ' + (err?.code || '')); setLoaded(true); }
+      err => { onError('მოსწავლის გზა ვერ ჩაიტვირთა: ' + errorText(err)); setLoaded(true); }
     );
   }, [uid]);
 
@@ -46,7 +47,7 @@ export const MemberPathEditor: React.FC<{ uid: string; name: string; onError: (t
   const save = (list: PathItem[]) => {
     const next = normalized(list);
     setMap(next);
-    writePath(uid, next).catch(e => onError('ვერ შეინახა: ' + (e?.message || '')));
+    writePath(uid, next).catch(e => onError('ვერ შეინახა: ' + errorText(e)));
   };
 
   const move = (id: string, dir: -1 | 1) => {
@@ -66,7 +67,7 @@ export const MemberPathEditor: React.FC<{ uid: string; name: string; onError: (t
   const toggleConfirm = (id: string, v: Voice) => {
     const cur = conf[id] || [];
     const next = cur.includes(v) ? cur.filter(x => x !== v) : [...cur, v].sort() as Voice[];
-    saveConfirmation(uid, id, next, user?.email || '').catch(e => onError('ჩათვლა ვერ შეინახა: ' + (e?.code === 'permission-denied' ? 'ბაზის წესებში confirmations ჯერ არ არის დამატებული.' : e?.message || '')));
+    saveConfirmation(uid, id, next, user?.email || '').catch(e => onError('ჩათვლა ვერ შეინახა: ' + errorText(e)));
   };
   // the student's own mark on a voice (or on a whole poem or instrument), set or taken back by the teacher
   const setMark = (it: PathItem, v: Voice, on: boolean) => {
@@ -84,7 +85,7 @@ export const MemberPathEditor: React.FC<{ uid: string; name: string; onError: (t
     else setMark(it, v, true);
   };
   const setLocked = (on: boolean) =>
-    saveMarksLock(uid, on, user?.displayName || '').catch(e => onError('ვერ შეინახა: ' + (e?.code === 'permission-denied' ? 'ბაზის წესებში marksLock ჯერ არ არის დამატებული.' : e?.message || '')));
+    saveMarksLock(uid, on, user?.displayName || '').catch(e => onError('ვერ შეინახა: ' + errorText(e)));
 
   if (!loaded) return <p className="py-6 text-center text-sm text-[#8a7a6a]">იტვირთება...</p>;
 

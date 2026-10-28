@@ -85,7 +85,21 @@ service cloud.firestore {
           && userId in c.memberIds
           && uid() in incoming().teacherIds
           && incoming().teacherIds.hasAll(existing().get('teacherIds', []))
-          && incoming().teacherIds.hasOnly(existing().get('teacherIds', []).concat(c.get('teacherIds', [])));
+          && incoming().teacherIds.hasOnly(existing().get('teacherIds', []).concat(c.get('teacherIds', [])))
+          && !c.get('archived', false);
+      }
+      // a teacher who has just taken this student out of their class (teacherVia) takes that class's teachers off the
+      // list — nobody else; a teacher of another class of the student who drops off with them is linked back when
+      // they open that class (useClassStudents)
+      function leavingTeachers() {
+        let c = get(/databases/$(database)/documents/classes/$(incoming().teacherVia)).data;
+        let before = existing().get('teacherIds', []);
+        return isTeacher()
+          && changed().hasOnly(['teacherIds', 'teacherVia'])
+          && uid() in c.get('teacherIds', [])
+          && !(userId in c.memberIds)
+          && before.hasAll(incoming().teacherIds)
+          && before.removeAll(incoming().teacherIds).hasOnly(c.get('teacherIds', []));
       }
 
       allow read: if isSelf() || isAdmin() || teachesMe();
@@ -96,7 +110,7 @@ service cloud.firestore {
       // lock the student's marking and approve pearls
       allow update: if (isSelf() && !changed().hasAny(['maneraReview', 'marksLock', 'pearlShine'])) || isAdmin()
         || (teachesMe() && changed().hasOnly(['selectedChantVariants', 'kidsMode', 'maneraReview', 'marksLock', 'pearlShine', 'updatedAt']))
-        || becomingTeacher();
+        || becomingTeacher() || leavingTeachers();
       allow delete: if isAdmin();
 
       // the student's own subcollections (none in use yet). „{sub}/{rest=**}“, not „{all=**}“: a bare „**“ also
@@ -276,9 +290,9 @@ service cloud.firestore {
       allow read: if isAdmin()
         || (isSignedIn() && (uid() in resource.data.memberIds || uid() in resource.data.teacherIds));
       allow create, delete: if isAdmin();
-      // a class's teacher runs it, but only admins choose its teachers
+      // a class's teacher runs it, but only admins choose its teachers and put it in the archive (or bring it back)
       allow update: if isAdmin()
-        || (isTeacher() && uid() in existing().get('teacherIds', []) && !changed().hasAny(['teacherIds', 'teachers']))
+        || (isTeacher() && uid() in existing().get('teacherIds', []) && !changed().hasAny(['teacherIds', 'teachers', 'archived', 'archivedAt']))
         || leaving();
 
       // Class chat: members and teachers read and post as themselves; the author or a teacher deletes
@@ -527,7 +541,7 @@ service cloud.firestore {
         || (isSignedIn() && (uid() in resource.data.memberIds || uid() in resource.data.teacherIds));
       allow create: if isAdmin() || (isTeacher() && uid() in incoming().teacherIds);
       allow update: if isAdmin()
-        || (isTeacher() && uid() in existing().get('teacherIds', []) && !changed().hasAny(['teacherIds', 'teachers']))
+        || (isTeacher() && uid() in existing().get('teacherIds', []) && !changed().hasAny(['teacherIds', 'teachers', 'archived']))
         || leavingGroup() || renamingSelf();
       allow delete: if isAdmin() || (isTeacher() && uid() in existing().get('teacherIds', []));
 

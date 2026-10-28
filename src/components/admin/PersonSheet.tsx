@@ -13,6 +13,7 @@ import { AccessPicker, AccessRecord, DecisionRecord, saveAccess } from './Access
 import { CentreDownloadSwitch } from './CentreDownload';
 import { SongTextSwitch } from './SongTextEditors';
 import type { StaffRecord, UserRecord } from './UsersTab';
+import { errorText } from '../../utils/errorText';
 
 export const ROLE_ICON: Record<Role, React.ReactNode> = {
   superadmin: <Crown />, admin: <ShieldCheck />, teacher: <GraduationCap />, member: <UserIcon />, guest: <UserIcon />,
@@ -105,8 +106,8 @@ export const PersonSheet: React.FC<{
       });
       note.ok(next === 'member' ? 'როლი მოიხსნა.' : `ახლა ${ROLE_LABEL[next]}ა.`);
       setRoleOpen(false);
-    } catch {
-      note.fail('როლი ვერ შეიცვალა — ამის უფლება არ გაქვს.');
+    } catch (e) {
+      note.fail('როლი ვერ შეიცვალა: ' + errorText(e));
     } finally {
       setBusy(false);
     }

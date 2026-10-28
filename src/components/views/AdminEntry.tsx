@@ -10,13 +10,19 @@ import { triggerHaptic } from '../../utils/haptics';
 export const AdminEntry: React.FC = () => {
   const { isAdmin, isSuperAdmin } = useAuth();
   const { navigateTo } = useNavigation();
-  const [waiting, setWaiting] = useState(0);
+  const [pending, setPending] = useState<string[]>([]);
+  const [staffIds, setStaffIds] = useState<string[]>([]);
 
+  // staff never wait (a teacher's role lets them in), so they are not counted — as in the panel
   useEffect(() => {
     if (!isSuperAdmin) return;
-    return onSnapshot(query(collection(db, 'memberAccess'), where('status', '==', 'pending')),
-      s => setWaiting(s.size), () => setWaiting(0));
+    const off1 = onSnapshot(query(collection(db, 'memberAccess'), where('status', '==', 'pending')),
+      s => setPending(s.docs.map(d => d.id)), () => setPending([]));
+    const off2 = onSnapshot(collection(db, 'admins'),
+      s => setStaffIds(s.docs.map(d => d.data().userId).filter((x): x is string => typeof x === 'string' && !!x)), () => setStaffIds([]));
+    return () => { off1(); off2(); };
   }, [isSuperAdmin]);
+  const waiting = pending.filter(uid => !staffIds.includes(uid)).length;
 
   if (!isAdmin) return null;
   const open = () => {

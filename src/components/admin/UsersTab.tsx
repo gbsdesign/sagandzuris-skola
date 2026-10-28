@@ -31,6 +31,8 @@ export interface UserRecord {
   lastActiveAt: string;
   createdAt: string;
   kidsMode?: { on?: boolean };
+  /** the teachers who may read this record (the teachers of the member's classes) */
+  teacherIds: string[];
 }
 
 export interface StaffRecord {
@@ -69,6 +71,7 @@ export const toUser = (id: string, d: any): UserRecord => {
     lastActiveAt: d.lastActiveAt || d.updatedAt || '',
     createdAt: d.createdAt || '',
     kidsMode: d.kidsMode,
+    teacherIds: Array.isArray(d.teacherIds) ? d.teacherIds : [],
   };
 };
 
@@ -79,12 +82,14 @@ const within = (iso: string, days: number) => !!iso && Date.now() - new Date(iso
 export const filterTests = (staff: StaffRecord[], access: Record<string, AccessRecord>, isSuperAdmin: boolean) => {
   // staff never wait, so a status only counts for members
   const statusOf = (u: UserRecord) => (isSuperAdmin && roleOf(u, staff) === 'member' ? access[u.userId]?.status : undefined);
+  // „აქტიური“ counts the school's members: not the staff, not those waiting or refused
+  const member = (u: UserRecord) => roleOf(u, staff) === 'member' && !['pending', 'rejected'].includes(statusOf(u) || '');
   const test: Record<Filter, (u: UserRecord) => boolean> = {
     all: () => true,
     pending: u => statusOf(u) === 'pending',
     refused: u => statusOf(u) === 'rejected',
-    week: u => within(u.lastActiveAt, 7),
-    month: u => within(u.lastActiveAt, 30),
+    week: u => member(u) && within(u.lastActiveAt, 7),
+    month: u => member(u) && within(u.lastActiveAt, 30),
     habits: u => Object.entries(u.habitLog).some(([d, l]) => l.length > 0 && within(d, 7)),
     teacher: u => roleOf(u, staff) === 'teacher',
     admin: u => ['admin', 'superadmin'].includes(roleOf(u, staff)),

@@ -106,6 +106,24 @@ await t('student reads own confirmations', assertSucceeds(getDoc(doc(stu, 'confi
 await t('student cannot write confirmations', assertFails(setDoc(doc(stu, 'confirmations', 'stu'), { a: ['1'] })));
 await t('admin lists students', assertSucceeds(getDocs(collection(adm, 'students'))));
 await t('member cannot list students', assertFails(getDocs(collection(stu, 'students'))));
+// taken out of a class: its teachers come off the member's teacherIds (c4 has just lost stu4; tchX leads another class)
+await env.withSecurityRulesDisabled(async c => {
+  const db = c.firestore();
+  await setDoc(doc(db, 'classes', 'c4'), { name: 'D', memberIds: [], members: [], teacherIds: ['tch', 'tch2'], teachers: [] });
+  await setDoc(doc(db, 'classes', 'c6'), { name: 'F', memberIds: ['stu5'], members: [], teacherIds: ['tch'], teachers: [], archived: true });
+  await setDoc(doc(db, 'students', 'stu4'), { userId: 'stu4', teacherIds: ['tch', 'tch2', 'tchX'] });
+  await setDoc(doc(db, 'students', 'stu5'), { userId: 'stu5' });
+});
+await t('teacher of a still-member cannot drop teachers', assertFails(updateDoc(doc(tch, 'students', 'stu'), { teacherIds: arrayRemove('tch'), teacherVia: 'c1' })));
+await t('teacher of another class cannot drop', assertFails(updateDoc(doc(tch2, 'students', 'stu4'), { teacherIds: arrayRemove('tch'), teacherVia: 'c1' })));
+await t('teacher drops the class teachers of a removed member', assertSucceeds(updateDoc(doc(tch, 'students', 'stu4'), { teacherIds: arrayRemove('tch', 'tch2'), teacherVia: 'c4' })));
+await t('teacher cannot drop another class\'s teacher', assertFails(updateDoc(doc(tch2, 'students', 'stu4'), { teacherIds: arrayRemove('tchX'), teacherVia: 'c4' })));
+await t('teacher cannot add while dropping', assertFails(updateDoc(doc(tch2, 'students', 'stu4'), { teacherIds: ['tchX', 'tch2'], teacherVia: 'c4' })));
+await t('admin sets the teacher list', assertSucceeds(updateDoc(doc(adm, 'students', 'stu4'), { teacherIds: ['tch'] })));
+await t('an archived class links no teacher', assertFails(setDoc(doc(tch, 'students', 'stu5'), { teacherIds: arrayUnion('tch'), teacherVia: 'c6' }, { merge: true })));
+await t('teacher cannot archive own class', assertFails(updateDoc(doc(tch, 'classes', 'c1'), { archived: true })));
+await t('admin archives a class', assertSucceeds(updateDoc(doc(adm, 'classes', 'c3'), { archived: true, archivedAt: '2026-10-28' })));
+await t('admin brings it back', assertSucceeds(updateDoc(doc(adm, 'classes', 'c3'), { archived: false, archivedAt: '' })));
 
 // ---- e-mail link sign-in: the address counts as verified, so roles work the same as with Google
 const byLink = (uid, email) => env.authenticatedContext(uid, { email, email_verified: true, firebase: { sign_in_provider: 'password' } }).firestore();
@@ -130,6 +148,9 @@ await t('member cannot change assignment', assertFails(updateDoc(doc(stu, 'psalt
 await t('teacher changes assignment', assertSucceeds(updateDoc(doc(tch, 'psalterGroups', 'g1'), { assignment: { 1: ['stu'] } })));
 await t('member leaves group', assertSucceeds(updateDoc(doc(stu2, 'psalterGroups', 'g1'), { memberIds: arrayRemove('stu2'), members: arrayRemove({ uid: 'stu2', name: 'S2' }), assignment: {} })));
 await t('member renames self', assertSucceeds(updateDoc(doc(stu, 'psalterGroups', 'g1'), { members: [{ uid: 'stu', name: 'სანდრო' }] })));
+await t('teacher cannot archive the group', assertFails(updateDoc(doc(tch, 'psalterGroups', 'g1'), { archived: true })));
+await t('admin archives the group', assertSucceeds(updateDoc(doc(adm, 'psalterGroups', 'g1'), { archived: true })));
+await t('admin brings the group back', assertSucceeds(updateDoc(doc(adm, 'psalterGroups', 'g1'), { archived: false })));
 
 // ---- private chats: a teacher and a student of their class (class c9: teacher tch2, members stu3 and stu2)
 await env.withSecurityRulesDisabled(async c => {
