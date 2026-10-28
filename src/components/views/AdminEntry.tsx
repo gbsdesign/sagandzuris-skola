@@ -4,6 +4,7 @@ import { ChevronRight, ShieldCheck } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth, useNavigation } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
+import { WINE_BAND } from '../admin/AdminHero';
 
 /** The profile's way into the admin panel (the header's shield is gone since 2026-10-27): one wine row, admins only.
  *  Superadmins see how many new members wait; a tap with someone waiting opens the panel on them. */
@@ -35,7 +36,7 @@ export const AdminEntry: React.FC = () => {
 
   return (
     <button type="button" onClick={open}
-      className="relative w-full overflow-hidden rounded-3xl px-4 py-3.5 flex items-center gap-3.5 text-left text-[#fbf6ec] bg-gradient-to-r from-[#4a1a20] via-[#7a2028] to-[#9a6a38] shadow-[0_12px_28px_-18px_rgba(94,24,32,0.85)] cursor-pointer active:scale-[0.99] transition">
+      className={`relative w-full overflow-hidden rounded-3xl px-4 py-3.5 flex items-center gap-3.5 text-left text-[#fbf6ec] ${WINE_BAND} shadow-[0_12px_28px_-18px_rgba(94,24,32,0.85)] cursor-pointer active:scale-[0.99] transition`}>
       <span aria-hidden className="pointer-events-none absolute -top-12 -right-8 w-40 h-40 rounded-full bg-[#f3d9a4]/20 blur-2xl" />
       <span className="relative w-11 h-11 shrink-0 rounded-2xl bg-white/12 ring-1 ring-white/20 flex items-center justify-center">
         <ShieldCheck className="w-5 h-5" />
@@ -43,7 +44,7 @@ export const AdminEntry: React.FC = () => {
       <span className="relative min-w-0 flex-1">
         <span className="block font-serif-ge text-[16px] font-bold leading-snug">ადმინის პანელი</span>
         <span className="block text-[13px] text-[#fbf6ec]/75 leading-snug">
-          {waiting > 0 ? 'ახალი წევრები ელოდება დამატებას' : 'წევრები, კლასები, სკოლის პარამეტრები'}
+          {waiting > 0 ? 'ახალი წევრები ელოდება დამატებას' : 'წევრები, კლასები, სკოლა'}
         </span>
       </span>
       {waiting > 0 && (

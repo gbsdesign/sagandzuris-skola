@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useMemo, useRef, useState } from 'react';
-import { BookMarked, BookOpen, CalendarDays, Check, Clock, Compass, Feather, GraduationCap, Library, Moon, Music, Music2, Music4, Pencil, Plus, ScrollText, Sparkles, Star, Sun, Users, X, Pin, PinOff, Guitar, Church, NotebookPen, HandHeart, Flame, Heart, MessageCircle, UserPlus, ListMusic, Disc3, School, ClipboardList, ClipboardCheck, CalendarClock, Settings2, Cake, Gem } from 'lucide-react';
+import { BookMarked, BookOpen, CalendarDays, Check, Clock, Compass, Feather, GraduationCap, Library, Moon, Music, Music2, Music4, Pencil, Plus, ScrollText, Sparkles, Star, Sun, Users, X, Pin, PinOff, Guitar, Church, NotebookPen, HandHeart, Flame, Heart, MessageCircle, ListMusic, School, ClipboardList, ClipboardCheck, CalendarClock, Settings2, Cake, Gem } from 'lucide-react';
 import { useAuth, useChants, useNavigation } from '../../context';
 import { useNotes } from '../../context/NotesContext';
 import { dayKey } from '../../utils/habitsWeek';
@@ -41,8 +41,8 @@ const HABIT_ICON: Record<string, React.ReactNode> = {
 const TAB_ICON: Record<string, React.ReactNode> = {
   'teacher:students': <GraduationCap />, 'teacher:assignments': <ClipboardList />, 'teacher:attendance': <ClipboardCheck />,
   'teacher:schedule': <CalendarClock />, 'teacher:class': <Settings2 />, 'teacher:groups': <BookOpen />,
-  'admin:users': <Users />, 'admin:classes': <GraduationCap />, 'admin:recordings': <Disc3 />, 'admin:sections': <School />,
-  'admin:stats': <Users />, 'admin:school': <School />, 'admin:requests': <UserPlus />,
+  'admin:users': <Users />, 'admin:classes': <GraduationCap />, 'admin:recordings': <School />, 'admin:sections': <School />,
+  'admin:stats': <Users />, 'admin:school': <School />, 'admin:requests': <Users />,
   'library:book': <BookOpen />, 'library:feasts': <CalendarDays />, 'library:lives': <Feather />, 'library:prayers': <ScrollText />,
   'library:sasuliero': <BookMarked />,
   'page:abituri': <GraduationCap />, 'page:messages': <MessageCircle />, 'page:admin': <Users />,

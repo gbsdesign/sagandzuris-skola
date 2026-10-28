@@ -58,6 +58,10 @@
 - No other subagents/workflows unless the user asks.
 - Progress notes in Georgian should be one or two short lines; save detail for the final summary.
 - Don't re-read a file you just edited, and don't re-run a check that already passed.
+- **Only the checks a change needs (the user's rule, 2026-10-28: „მხოლოდ აუცილებელი ტესტები, არ ქნას უაზროდ“).** Run the
+  tests of the files you changed (`npx tsx --test tests/<name>.test.ts`), `npm run typecheck`, and `npm run build`
+  once before the PR; the rules emulator test only when `firestore.rules` changed. Screenshots only of the screens the
+  change touches, once (again only for a fix you made); no extra review agents or repeated runs „just in case“.
 - The user's task template is `docs/დავალების-შაბლონი.md`. If a request is unclear, ask one short
   question instead of exploring the whole codebase.
 
@@ -321,10 +325,15 @@
   form and logo card were removed 2026-10-20 (the app still reads `settings/recordings` and `settings/logo`).
   Since 2026-10-21 (edu.doit.gov.ge style) a wine-to-gold head `admin/AdminHero.tsx` with 4 big numbers that open
   their list (those filters have no chip), class cards in a 2-column grid, „სკოლა“ as folding cards (`admin/Fold.tsx`).
-  Since 2026-10-20 three tabs on the „one window“ rule: წევრები (one list + count filters; a tap opens the
-  person's window `admin/PersonSheet.tsx` — details, role, access, approve/refuse, profile edit), კლასები (class and
-  group windows, shared `LeaderChips`), სკოლა (sections, most listened, backup + folded safety list). Numbers of the
-  old სტატისტიკა tab live in `admin/StatsTab.tsx` hooks; old shortcut refs `admin:sections`/`admin:stats` still open.
+  Since 2026-10-20 the „one window“ rule: წევრები (one list + count filters; a tap opens the person's window
+  `admin/PersonSheet.tsx` — details, role, „დამატებითი უფლებები“, access, approve/refuse, profile edit), კლასები (class
+  windows, shared `LeaderChips`). Since 2026-10-28 (stage ②) no tabs: the page has the kit's `PageBar` (role under the
+  title, „სკოლა“ on the right — ⚙ from 400 px), the four numbers (`AdminHero`, „—“ until loaded, „ელოდება“ amber) switch
+  between the members and the classes, and ⚙ „სკოლა“ is one window (`SchoolSheet` in `admin/SchoolTab.tsx`: sections with
+  40 px buttons, most listened, `admin/ExtraRights.tsx` = the centre's recordings + song texts in one card, backup).
+  Every window shows its own messages inside it (sticky `Flash`). Empty filter chips hide; „ახალი კლასი“ is the dashed
+  last card. Numbers of the old სტატისტიკა tab live in `admin/StatsTab.tsx` hooks; old shortcut refs (`admin:sections`,
+  `stats`, `recordings`, `requests`, `school`) still open the right part („სკოლა“ ones open the window once).
   Since 2026-10-28 (admin review, stage ①; review doc https://claude.ai/artifact/DbTEz3fwSDQkSbcxwY6yjb) a class is never
   deleted: its ✎ „არქივში“ sets `archived` on the class and its psalter group (every hook hides them, the rules close its chat,
   private chats and lessons to all but admins, the reminders Worker skips them), the fold „არქივი · N“ under the cards brings one back. `students.teacherIds` = the teachers of the member's

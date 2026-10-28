@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { CalendarDays, ChevronRight, GraduationCap, Hourglass, ListChecks, Search, Shield, ShieldAlert } from 'lucide-react';
+import { CalendarDays, ChevronRight, GraduationCap, Hourglass, ListChecks, Search, Shield, ShieldAlert, X } from 'lucide-react';
 import { useAuth } from '../../context';
 import { SchoolClass } from '../../hooks/useClasses';
 import { agoLabel } from '../../hooks/useTeaching';
@@ -97,8 +97,8 @@ export const filterTests = (staff: StaffRecord[], access: Record<string, AccessR
   return { statusOf, test };
 };
 
+// „ელოდება“ has no chip: its place is the panel's big number (superadmins; others never see who waits)
 const CHIPS: { id: Filter; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: 'pending', label: 'ელოდება', Icon: Hourglass },
   { id: 'month', label: 'აქტიური თვეში', Icon: CalendarDays },
   { id: 'habits', label: 'ჩვევებს ინიშნავს', Icon: ListChecks },
   { id: 'teacher', label: 'მასწავლებლები', Icon: GraduationCap },
@@ -106,9 +106,9 @@ const CHIPS: { id: Filter; label: string; Icon: React.ComponentType<{ className?
   { id: 'refused', label: 'შეფერხებული', Icon: ShieldAlert },
 ];
 
-// "მომხმარებლები": everyone who signed in, in one list with one search. The panel's big numbers on top choose the
-// main filters (they live in AdminPanelPage); the chips here hold the rest, each with how many it holds, and a
-// second tap on a chip goes back to everyone. Members waiting to be let in stand on top (superadmins).
+// „წევრები“: everyone who signed in, in one list with one search. The panel's big numbers on top choose the
+// main filters (they live in AdminPanelPage); the chips here hold the rest, each with how many it holds (an empty one
+// is left out), and a second tap on a chip goes back to everyone. Members waiting to be let in stand on top (superadmins).
 // A tap on a person opens their one window (PersonSheet).
 export const UsersTab: React.FC<{
   users: UserRecord[];
@@ -129,10 +129,11 @@ export const UsersTab: React.FC<{
 
   const { statusOf, test } = filterTests(staff, access, isSuperAdmin);
   const count = (f: Filter) => users.filter(test[f]).length;
+  // a chip that holds nobody is left out — unless it is the one open, so it can be tapped shut
   const FILTERS = CHIPS
     .filter(f => !tiles.includes(f.id))
     .map(f => ({ ...f, n: count(f.id) }))
-    .filter(f => f.n > 0 || !['pending', 'refused'].includes(f.id));
+    .filter(f => f.n > 0 || f.id === filter);
   const active = tiles.includes(filter) || FILTERS.some(f => f.id === filter) ? filter : 'all';
 
   const shown = useMemo(() => {
@@ -154,22 +155,28 @@ export const UsersTab: React.FC<{
     <Card className="space-y-4">
       <div className="relative">
         <Search className="w-4 h-4 text-[#b3a594] absolute left-3.5 top-1/2 -translate-y-1/2" />
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="სახელი, ელფოსტა ან ქალაქი" aria-label="ძებნა" className={`${FIELD} pl-10`} />
+        <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="სახელი, ელფოსტა ან ქალაქი" aria-label="ძებნა"
+          className={`${FIELD} pl-10 pr-11 [&::-webkit-search-cancel-button]:hidden`} />
+        {q && (
+          <button type="button" onClick={() => setQ('')} aria-label="გასუფთავება" className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-[#a89886] hover:text-[#4a3426] cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
       {/* the chips wrap into a second row instead of sliding out of sight */}
-      <div className="flex flex-wrap gap-1.5">
+      {FILTERS.length > 0 && <div className="flex flex-wrap gap-1.5">
         {FILTERS.map(({ id, label, Icon, n }) => {
           const on = active === id;
           return (
             <button key={id} type="button" onClick={() => onFilter(on ? 'all' : id)} aria-pressed={on}
               className={`shrink-0 whitespace-nowrap h-9 px-3.5 rounded-full text-[13px] font-bold cursor-pointer transition inline-flex items-center gap-1.5 ${on ? 'bg-[#7a2028]/[0.1] text-[#7a2028] ring-1 ring-[#7a2028]/30' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/30'}`}>
-              {id === 'pending' ? <span className="w-2 h-2 rounded-full bg-amber-500" aria-hidden /> : <Icon className={`w-3.5 h-3.5 ${on ? '' : 'text-[#8a7a6a]'}`} />}
+              <Icon className={`w-3.5 h-3.5 ${on ? '' : 'text-[#8a7a6a]'}`} />
               {label}
               <span className={`tabular-nums ${on ? 'text-[#7a2028]/70' : 'text-[#8a7a6a]'}`}>{n}</span>
             </button>
           );
         })}
-      </div>
+      </div>}
 
       {loading ? (
         <p className="py-8 text-center text-sm text-[#8a7a6a]">იტვირთება…</p>

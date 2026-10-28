@@ -13,7 +13,7 @@ import { filterValidVariants } from '../../utils/variantValidation';
 import { PathItem, sortPathItems, findCatalogEntry, voicesOf } from '../../utils/pathItems';
 import { writePath } from './MemberPathEditor';
 import { linkTeachers } from '../../hooks/useTeaching';
-import { askConfirm, Avatar, Bar, Btn, IconBtn, Pill, Sheet } from '../ui/kit';
+import { askConfirm, Avatar, Bar, Btn, Flash, IconBtn, Pill, Sheet, useFlash } from '../ui/kit';
 import { LeaderChips } from './LeaderChips';
 import { useClassAttendance, useGroupReading } from './StatsTab';
 import { GroupMember, PsalterGroup, toGroup } from '../../hooks/usePsalter';
@@ -192,8 +192,12 @@ export const ClassesAdmin: React.FC<{
   const [saving, setSaving] = useState(false);
   const [restoring, setRestoring] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
+  // what goes wrong while the class's window is open is said inside it (the page's line lies behind the dim);
+  // what went right is said on the page once the window closes
+  const note = useFlash();
 
   const edit = (c?: SchoolClass) => {
+    note.clear();
     setDraft(c ? { id: c.id, name: c.name, logo: c.logo || '', teacherIds: [...c.teacherIds] } : { ...EMPTY });
   };
 
@@ -216,22 +220,32 @@ export const ClassesAdmin: React.FC<{
   // admin: every class as a card (two columns on wide screens); the open class's window lies over them
   const list = (
     <section className="space-y-3">
-      {/* the tab and the big number already say „კლასები“: no title here, only the button */}
-      <div className="px-1 flex justify-end">
-        <Btn size="sm" kind="soft" icon={<Plus />} onClick={() => edit()}>ახალი კლასი</Btn>
-      </div>
       {loading ? (
         <p className="py-6 text-center text-sm text-[#8a7a6a]">იტვირთება…</p>
       ) : failed ? (
         <p className="rounded-3xl bg-red-50 ring-1 ring-red-200 px-4 py-6 text-center text-sm text-red-800">კლასები ვერ ჩაიტვირთა — შეამოწმე ინტერნეტი და გახსენი თავიდან.</p>
-      ) : classes.length === 0 ? (
-        <p className="rounded-3xl border border-dashed border-[#dccbb0] px-4 py-8 text-center text-sm text-[#8a7a6a]">
-          {archived.length ? 'გამოყენებაში კლასი არ არის — დააბრუნე არქივიდან ან შექმენი ახალი.' : 'კლასი ჯერ არ შექმნილა. შექმენი პირველი და დაამატე წევრები.'}
-        </p>
       ) : (
-        <ul className="grid sm:grid-cols-2 gap-3">
-          {classes.map(c => <ClassRow key={c.id} cls={c} group={groups.find(g => g.id === c.psalterGroupId)} onOpen={() => openClass(c.id)} onEdit={() => edit(c)} />)}
-        </ul>
+        <>
+          {classes.length === 0 && (
+            <p className="px-1 text-center text-sm text-[#8a7a6a]">
+              {archived.length ? 'გამოყენებაში კლასი არ არის — დააბრუნე არქივიდან ან შექმენი ახალი.' : 'კლასი ჯერ არ შექმნილა. შექმენი პირველი და დაამატე წევრები.'}
+            </p>
+          )}
+          {/* the cards, and after them one more with a dashed edge: a new class */}
+          <ul className="grid sm:grid-cols-2 gap-3">
+            {classes.map(c => <ClassRow key={c.id} cls={c} group={groups.find(g => g.id === c.psalterGroupId)} onOpen={() => openClass(c.id)} onEdit={() => edit(c)} />)}
+            <li>
+              <button type="button" onClick={() => edit()}
+                className="w-full h-full min-h-[88px] p-4 flex items-center justify-center gap-3 rounded-3xl border-2 border-dashed border-[#dccbb0] hover:border-[#7a2028]/40 text-[#7a2028] hover:bg-white/50 active:scale-[0.99] cursor-pointer transition">
+                <span className="w-10 h-10 shrink-0 rounded-full bg-[#7a2028]/[0.08] flex items-center justify-center"><Plus className="w-5 h-5" /></span>
+                <span className="text-left">
+                  <span className="block font-serif-ge text-[16px] font-bold leading-snug">ახალი კლასი</span>
+                  <span className="block text-[12px] text-[#8a7a6a] leading-snug">სახელი, ლოგო და მასწავლებელი</span>
+                </span>
+              </button>
+            </li>
+          </ul>
+        </>
       )}
       {archived.length > 0 && (
         <Fold icon={<Archive />} title={`არქივი · ${archived.length}`} summary="დამალული კლასები — არაფერი წაშლილა"
@@ -276,13 +290,13 @@ export const ClassesAdmin: React.FC<{
     try {
       set({ logo: await imageFileToDataUrl(file) });
     } catch {
-      tell('ლოგოს სურათი ვერ წაიკითხა.', 'error');
+      note.fail('ლოგოს სურათი ვერ წაიკითხა — სცადე სხვა სურათი.');
     }
   };
 
   const save = async () => {
     const name = draft.name.trim();
-    if (!name) { tell('კლასს სახელი სჭირდება.', 'error'); return; }
+    if (!name) { note.fail('კლასს სახელი სჭირდება.'); return; }
     setSaving(true);
     try {
       const ref = draft.id ? doc(db, 'classes', draft.id) : doc(collection(db, 'classes'));
@@ -314,7 +328,7 @@ export const ClassesAdmin: React.FC<{
       setDraft(null);
       tell((draft.id ? `კლასი „${name}“ შენახულია.` : `კლასი „${name}“ შეიქმნა — წევრებს და პროგრამას კლასის გვერდზე დაამატებ.`) + accessNote(n), 'success');
     } catch (e) {
-      tell('კლასი ვერ შეინახა: ' + errorText(e), 'error');
+      note.fail('კლასი ვერ შეინახა: ' + errorText(e));
     } finally {
       setSaving(false);
     }
@@ -334,7 +348,7 @@ export const ClassesAdmin: React.FC<{
       setDraft(null);
       tell(`კლასი „${saved.name}“ არქივშია — ქვემოთ, „არქივში“ ნახავ.${accessNote(n)}`, 'success');
     } catch (e) {
-      tell('კლასი ვერ გადავიდა არქივში: ' + errorText(e), 'error');
+      note.fail('კლასი ვერ გადავიდა არქივში: ' + errorText(e));
     } finally {
       setSaving(false);
     }
@@ -388,6 +402,7 @@ export const ClassesAdmin: React.FC<{
         }
       >
         <div className="space-y-5">
+          {note.flash && <div className="sticky top-0 z-10"><Flash flash={note.flash} onClose={note.clear} /></div>}
           {saved && <Btn kind="ghost" size="sm" icon={<ExternalLink />} onClick={() => openClass(saved.id)}>კლასის გვერდი</Btn>}
           {fields}
         </div>
