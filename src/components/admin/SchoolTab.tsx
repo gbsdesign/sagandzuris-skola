@@ -2,12 +2,11 @@ import React, { useState } from 'react';
 import { Bytes, Timestamp, collection, getDocs } from 'firebase/firestore';
 import { DatabaseBackup, Download, Loader2 } from 'lucide-react';
 import { db } from '../../firebase';
-import { Btn, Card } from '../ui/kit';
+import { Btn, Card, Flash, Sheet, useFlash } from '../ui/kit';
 import { useAuth } from '../../context';
 import { errorText } from '../../utils/errorText';
 import { SectionsTab } from './SectionsTab';
-import { CentreDownloadFold } from './CentreDownload';
-import { SongTextEditorsFold } from './SongTextEditors';
+import { ExtraRightsFold } from './ExtraRights';
 import { TopChants } from './StatsTab';
 import type { UserRecord } from './UsersTab';
 
@@ -30,13 +29,16 @@ const readAll = async (path: string[]) => {
   return snap.docs.map(d => ({ id: d.id, ...(plain(d.data()) as object) }));
 };
 
-// "სკოლა": the whole school in one place, one card under another — sections and the most listened chants
-// (the former „ჩანაწერები“ tab) as folding cards, the backup export, and the owner's safety checklist (folded).
+// ⚙ „სკოლა“ (2026-10-28: a window from the panel's bar instead of a third tab — the panel's numbers already switch
+// between the members and the classes): the whole school's settings, one folding card under another — sections, the most
+// listened chants, the extra rights — and the backup export. Its messages show inside the window, not behind it.
 // The staff are found in „წევრები“ (filter „ადმინები“), where their roles are given.
 // The logo card was removed on the user's request (2026-10-20); a logo already saved in settings/logo still shows.
-export const SchoolTab: React.FC<{ users: UserRecord[]; onMessage: (t: string, type: 'success' | 'error') => void }> = ({ users, onMessage }) => {
+export const SchoolSheet: React.FC<{ users: UserRecord[]; onClose: () => void }> = ({ users, onClose }) => {
   const { isSuperAdmin } = useAuth();
   const [exporting, setExporting] = useState<string | null>(null);
+  const msg = useFlash();
+  const onMessage = msg.say;
 
   const exportAll = async () => {
     setExporting('იწყება…');
@@ -82,26 +84,28 @@ export const SchoolTab: React.FC<{ users: UserRecord[]; onMessage: (t: string, t
   };
 
   return (
-    <div className="space-y-3">
-      <SectionsTab onMessage={onMessage} />
-      <TopChants users={users} />
-      <CentreDownloadFold users={users} onMessage={onMessage} />
-      <SongTextEditorsFold users={users} onMessage={onMessage} />
+    <Sheet open onClose={onClose} title="სკოლა" wide>
+      <div className="space-y-3">
+        {/* the message stays in sight however far down the window was scrolled (the backup is at its bottom) */}
+        {msg.flash && <div className="sticky top-0 z-10"><Flash flash={msg.flash} onClose={msg.clear} /></div>}
+        <SectionsTab onMessage={onMessage} />
+        <TopChants users={users} />
+        <ExtraRightsFold users={users} onMessage={onMessage} />
 
-      <Card className="!py-3">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 min-h-[44px]">
-          <RowIcon><DatabaseBackup /></RowIcon>
-          <span className="flex-1 min-w-[10rem]">
-            <span className="block font-serif-ge text-[16px] font-bold text-[#4a3426] leading-snug">სარეზერვო ასლი</span>
-            <span className="block text-[12.5px] text-[#8a7a6a] leading-snug mt-0.5">ყველა ჩანაწერი ერთ ფაილად — აუდიოს, პირადი ჩატებისა და სურათების გარდა</span>
-          </span>
-          <Btn size="sm" kind="ghost" icon={exporting ? <Loader2 className="animate-spin" /> : <Download />} disabled={!!exporting} onClick={exportAll}
-            title="წევრები და მათი გზა, მიღება და ნებართვები, დაბადების და ანგელოზის დღეები, კლასები (დავალებები, დასწრება, ჩატის ტექსტი, გაკვეთილები, ნიშნები), ფსალმუნთა ჯგუფები, სიმღერების ტექსტები. არ შედის: ხმოვანი შეტყობინებები და ნამღერი, პირადი ჩატები, სურათები.">
-            {exporting ? `მზადდება… ${exporting}` : 'ჩამოტვირთვა'}
-          </Btn>
-        </div>
-      </Card>
-
-    </div>
+        <Card className="!py-3">
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2 min-h-[44px]">
+            <RowIcon><DatabaseBackup /></RowIcon>
+            <span className="flex-1 min-w-[10rem]">
+              <span className="block font-serif-ge text-[16px] font-bold text-[#4a3426] leading-snug">სარეზერვო ასლი</span>
+              <span className="block text-[12.5px] text-[#8a7a6a] leading-snug mt-0.5">ყველა ჩანაწერი ერთ ფაილად — აუდიოს, პირადი ჩატებისა და სურათების გარდა</span>
+            </span>
+            <Btn size="sm" kind="ghost" icon={exporting ? <Loader2 className="animate-spin" /> : <Download />} disabled={!!exporting} onClick={exportAll}
+              title="წევრები და მათი გზა, მიღება და ნებართვები, დაბადების და ანგელოზის დღეები, კლასები (დავალებები, დასწრება, ჩატის ტექსტი, გაკვეთილები, ნიშნები), ფსალმუნთა ჯგუფები, სიმღერების ტექსტები. არ შედის: ხმოვანი შეტყობინებები და ნამღერი, პირადი ჩატები, სურათები.">
+              {exporting ? `მზადდება… ${exporting}` : 'ჩამოტვირთვა'}
+            </Btn>
+          </div>
+        </Card>
+      </div>
+    </Sheet>
   );
 };

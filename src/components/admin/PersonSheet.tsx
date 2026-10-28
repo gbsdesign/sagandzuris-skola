@@ -162,7 +162,8 @@ export const PersonSheet: React.FC<{
         <StudentProfileCard key={u.userId} member={{ uid: u.userId, email: u.email, displayName: u.displayName, photoURL: u.photoURL }} />
       ) : (
         <div className="space-y-4 text-sm">
-          <Flash flash={note.flash} onClose={note.clear} />
+          {/* the window's own messages, in sight however far it was scrolled */}
+          {note.flash && <div className="sticky top-0 z-10"><Flash flash={note.flash} onClose={note.clear} /></div>}
 
           <div className="flex items-center gap-3.5">
             <Avatar name={u.name} photo={u.photoURL} size={56} />
@@ -229,15 +230,11 @@ export const PersonSheet: React.FC<{
             </Part>
           )}
 
-          {admitted && !isStaff && (
-            <Part title="ფოლკლორის ცენტრის ჩანაწერები" sub="ჩამოწერა და ოფლაინ შენახვა">
-              <CentreDownloadSwitch uid={u.userId} onMessage={onMessage} />
-            </Part>
-          )}
-
+          {/* the rights beyond a member's, one short row each (the folklore centre's recordings are staff's anyway) */}
           {admitted && (role === 'member' || role === 'teacher') && (
-            <Part title="სიმღერების ტექსტები" sub="ჩაწერა და შესწორება სიმღერის გვერდზე">
-              <SongTextSwitch uid={u.userId} onMessage={onMessage} />
+            <Part title="დამატებითი უფლებები">
+              {!isStaff && <CentreDownloadSwitch uid={u.userId} onMessage={note.say} />}
+              <SongTextSwitch uid={u.userId} onMessage={note.say} />
             </Part>
           )}
 
