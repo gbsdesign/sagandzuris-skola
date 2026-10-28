@@ -223,9 +223,11 @@
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
   `scripts/print-games/lib.mjs` (Noto Georgian fonts fetched into a gitignored folder, 3×3 sheets of 63×88 mm cards with crop marks,
   backs mirrored for long-edge duplex, ⌀25 mm token sheets, series stripe „საგანძურის თამაშები №N“, lucide icons as SVG), one module per
-  game in `scripts/print-games/games/`. Portraits are ornament placeholders until the user approves Gemini pictures. Built so far:
-  „მეფის კარი“ (№6) and „სამშვილდის ღამე“ (№2). A game with sheets gets `print: { href, pages }` in `data/games.ts`; its hub card
-  shows a wine „დასაბეჭდი ფურცლები“ strip and its „უტელეფონო“ chip turns wine.
+  game in `scripts/print-games/games/`. Every file prints „ყველაფერი ორმხრივად“: a module lists its physical sheets
+  (`{ key, front, back? }`), `duplex()` makes each sheet two pages (a missing back = a labelled blank page) and the cover names
+  sheets by number (`sheetNo`). Portraits are ornament placeholders until the user approves Gemini pictures. Built so far:
+  „მეფის კარი“ (№6) and „სამშვილდის ღამე“ (№2). A game with sheets gets `print: { href, sheets }` in `data/games.ts`; its hub card
+  shows a wine „დასაბეჭდი ფურცლები“ strip („PDF · N ფურცელი“) and its „უტელეფონო“ chip turns wine.
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 

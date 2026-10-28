@@ -1,6 +1,6 @@
 // „სამშვილდის ღამე“ — the school's Mafia (plan doc, tab „6 სამაგიდო თამაში“): 24 role cards, 4 reminder cards, the
 // chronicler's sheet (night script, roles table, chronicle grid), the day/night disk, two mats and a box label. Series №2.
-import { C, SERIES, SCHOOL, aso, esc, icon, corners, braid, bolnisiCross, borjgali, crescentStars, cardSheet, page, stripe, foot } from '../lib.mjs';
+import { C, SERIES, SCHOOL, aso, esc, icon, corners, braid, bolnisiCross, borjgali, crescentStars, cardSheet, page, stripe, foot, duplex, sheetNo } from '../lib.mjs';
 
 export const id = 'samshvildis-game';
 export const title = 'სამშვილდის ღამე';
@@ -78,7 +78,7 @@ ${ROLE_TABLE.map(r => `<tr>${r.map((c, i) => `<td${i === 0 ? ' class="n"' : ''}>
 
 const GLOSS = [['სამშვილდე', 'ციხე-ქალაქი ხრამის ხეობაში, ქვემო ქართლში; 1110 წელს დავით აღმაშენებელმა დაიბრუნა'], ['ბჭობა, ბჭე', 'საქმის განხილვა და განსჯა; მსაჯული'], ['უხუცესი', 'პატივცემული, ხანდაზმული წინამძღოლი'], ['ციხისთავი', 'ციხის უფროსი'], ['მეციხოვნე', 'ციხის მცველი მეომარი'], ['კარაბადინი', 'XI საუკუნის სამკურნალო წიგნი'], ['მემატიანე', 'მატიანის — ისტორიის წიგნის — დამწერი'], ['მესტვირე', 'სტვირზე, გუდასტვირზე დამკვრელი'], ['დიდგორი', '1121 წლის 12 აგვისტოს „ძლევაჲ საკვირველი“ — დიდგორის ბრძოლა']];
 
-const coverPage = page(`${stripe(NO)}
+const coverPage = no => page(`${stripe(NO)}
 <div class="cover">
   <div class="aso title">${aso(title)}</div>
   <h1 class="gameTitle">სამშვილდის ღამე</h1>
@@ -87,14 +87,14 @@ const coverPage = page(`${stripe(NO)}
     <div>
       <h3>რა არის ამ ფაილში</h3>
       <table class="t comp">
-        <tr><th>კომპონენტი</th><th>ცალი</th><th>გვერდი</th><th>ბეჭდვა · ჭრა</th></tr>
-        <tr><td>როლის ბარათები (12 მოქალაქე, 5 ჯაშუში, 6 როლი, მემატიანე)</td><td>24 + 3*</td><td>2–5 · ზურგი 6–9</td><td><span class="chk"></span> <span class="chk"></span></td></tr>
-        <tr><td>შეხსენების ბარათები (ორმხრივი)</td><td>4</td><td>5 · მეორე მხარე 9</td><td><span class="chk"></span> <span class="chk"></span></td></tr>
-        <tr><td>წესების ფურცელი (ორმხრივი)</td><td>1</td><td>10–11</td><td><span class="chk"></span></td></tr>
-        <tr><td>მემატიანის ფურცელი (ორმხრივი, ლამინირებული)</td><td>1</td><td>12–13</td><td><span class="chk"></span></td></tr>
-        <tr><td>დღე/ღამის დისკი ⌀80 მმ (ორმხრივი)</td><td>1</td><td>14</td><td><span class="chk"></span> <span class="chk"></span></td></tr>
-        <tr><td>ხალიჩები „ციხე“ და „ტყვეობა“ (A5)</td><td>2</td><td>15</td><td><span class="chk"></span> <span class="chk"></span></td></tr>
-        <tr><td>ყუთის ეტიკეტი (A5)</td><td>1</td><td>16</td><td><span class="chk"></span> <span class="chk"></span></td></tr>
+        <tr><th>კომპონენტი</th><th>ცალი</th><th>ფურცელი</th><th>ბეჭდვა · ჭრა</th></tr>
+        <tr><td>როლის ბარათები (12 მოქალაქე, 5 ჯაშუში, 6 როლი, მემატიანე)</td><td>24 + 3*</td><td>${no('cards1')}–${no('cards4')}</td><td><span class="chk"></span> <span class="chk"></span></td></tr>
+        <tr><td>შეხსენების ბარათები (ორმხრივი)</td><td>4</td><td>${no('cards4')}</td><td><span class="chk"></span> <span class="chk"></span></td></tr>
+        <tr><td>წესების ფურცელი (ორმხრივი)</td><td>1</td><td>${no('rules')}</td><td><span class="chk"></span></td></tr>
+        <tr><td>მემატიანის ფურცელი (ორმხრივი, ლამინირებული)</td><td>1</td><td>${no('chron')}</td><td><span class="chk"></span></td></tr>
+        <tr><td>დღე/ღამის დისკი ⌀80 მმ</td><td>1</td><td>${no('disk')}</td><td><span class="chk"></span> <span class="chk"></span></td></tr>
+        <tr><td>ხალიჩები „ციხე“ და „ტყვეობა“ (A5)</td><td>2</td><td>${no('mats')}</td><td><span class="chk"></span> <span class="chk"></span></td></tr>
+        <tr><td>ყუთის ეტიკეტი (A5)</td><td>1</td><td>${no('label')}</td><td><span class="chk"></span> <span class="chk"></span></td></tr>
         <tr><td>ქვიშის საათი 60 წმ · თვალსაფარები · მშრალი მარკერი</td><td>1 · 16 · 1</td><td>საყიდელია, სურვილით</td><td><span class="chk"></span></td></tr>
       </table>
       <p class="small">* 3 სათადარიგო ბარათი — დაკარგულის ნაცვლად, მარკერით ჩასაწერი.</p>
@@ -102,10 +102,10 @@ const coverPage = page(`${stripe(NO)}
     <div>
       <h3>როგორ დავბეჭდოთ</h3>
       <ol class="how">
-        <li>ბეჭდვა <b>100%-ზე</b>, „fit to page“ გამორთული. ჯერ ერთი საცდელი გვერდი — ბარათი 63×88 მმ უნდა გამოვიდეს.</li>
-        <li>ბარათები — <b>300 გ მუყაოზე</b>; ყდა (ჩასადები) ან მქრქალი ლამინაცია აუცილებელია, რომ ბარათი ზურგით არ გაირჩეს. ზურგის გვერდები სარკისებურადაა — ორმხრივი ბეჭდვა გრძელი კიდით.</li>
-        <li>მემატიანის ფურცელი და ხალიჩები — 160–200 გ ქაღალდი + ლამინაცია; იწერება მშრალი მარკერით.</li>
-        <li>დისკი — ორივე მხარე ამოჭერი და 2–3 მმ მუყაოზე ზურგით დააკარი.</li>
+        <li><b>ყველაფერი ორმხრივად</b>, გრძელი კიდით, <b>100%-ზე</b> („fit to page“ გამორთული) — ყოველ ფურცელს თავისი ზურგი მოსდევს. ჯერ ერთი საცდელი ფურცელი: ბარათი 63×88 მმ უნდა გამოვიდეს და ზურგი წინას დაემთხვეს.</li>
+        <li>ქაღალდი: ფურცლები ${no('cards1')}–${no('cards4')} (ბარათები) — <b>300 გ მუყაო</b>; ${no('rules')}–${no('chron')} (წესები, მემატიანის ფურცელი) — 160–200 გ, ლამინაციით; ${no('disk')}–${no('label')} — 200–300 გ.</li>
+        <li>ბარათებს ყდა (ჩასადები) ან მქრქალი ლამინაცია აუცილებლად — რომ ბარათი ზურგით ან კიდით არ გაირჩეს.</li>
+        <li>დისკი — ორივე წრე ამოჭერი და 2–3 მმ მუყაოს ორივე მხარეს დააკარი.</li>
         <li>ყუთი — მზა მუყაოს ყუთი ≈120×100×45 მმ, ეტიკეტი ზემოდან.</li>
       </ol>
       <div class="box legal"><b>წყარო და უფლებები.</b> შექმნილია „მაფიის“ (დიმიტრი დავიდოვი, 1986) სალაპარაკო თამაშის წესების მიხედვით. სახელები, ტექსტი და ნახატები საგანძურის სკოლისაა. მხოლოდ სასკოლო, არაკომერციული გამოყენებისთვის — არ იყიდება. თამაშში არავინ იღუპება — ტყვეობა და ციხეა.</div>
@@ -344,15 +344,21 @@ table.roles{font-size:9pt}
 .lSeries .aso{color:var(--wine);font-size:9.5pt}
 `;
 
-export const pages = [
-  coverPage,
-  cardSheet(fronts.slice(0, 9), { label: 'სამშვილდის ღამე · ბარათები 1/4 — წინა მხარე' }),
-  cardSheet(fronts.slice(9, 18), { label: 'სამშვილდის ღამე · ბარათები 2/4 — წინა მხარე' }),
-  cardSheet(fronts.slice(18, 27), { label: 'სამშვილდის ღამე · ბარათები 3/4 — წინა მხარე' }),
-  cardSheet(fronts.slice(27, 36), { label: 'სამშვილდის ღამე · ბარათები 4/4 — წინა მხარე (შეხსენება და სათადარიგო)' }),
-  cardSheet(backs.slice(0, 9), { back: true, label: 'სამშვილდის ღამე · ბარათები 1/4 — ზურგი (სარკისებურად)' }),
-  cardSheet(backs.slice(9, 18), { back: true, label: 'სამშვილდის ღამე · ბარათები 2/4 — ზურგი (სარკისებურად)' }),
-  cardSheet(backs.slice(18, 27), { back: true, label: 'სამშვილდის ღამე · ბარათები 3/4 — ზურგი (სარკისებურად)' }),
-  cardSheet(backs.slice(27, 36), { back: true, label: 'სამშვილდის ღამე · ბარათები 4/4 — ზურგი (სარკისებურად)' }),
-  rulesPage1, rulesPage2, chronPage1, chronPage2, diskPage, matsPage, labelPage,
+const card = (i, label) => ({
+  key: `cards${i + 1}`,
+  front: cardSheet(fronts.slice(i * 9, i * 9 + 9), { label: `სამშვილდის ღამე · ბარათები ${i + 1}/4 — ${label}` }),
+  back: cardSheet(backs.slice(i * 9, i * 9 + 9), { back: true, label: `სამშვილდის ღამე · ბარათები ${i + 1}/4 — ზურგი` }),
+});
+const SHEETS = [
+  { key: 'cover' },
+  card(0, 'წინა მხარე'), card(1, 'წინა მხარე'), card(2, 'წინა მხარე'), card(3, 'წინა მხარე (შეხსენება და სათადარიგო)'),
+  { key: 'rules', front: rulesPage1, back: rulesPage2 },
+  { key: 'chron', front: chronPage1, back: chronPage2 },
+  { key: 'disk', front: diskPage },
+  { key: 'mats', front: matsPage },
+  { key: 'label', front: labelPage },
 ];
+SHEETS[0].front = coverPage(k => sheetNo(SHEETS, k));
+
+export const sheets = SHEETS.length;
+export const pages = duplex(SHEETS);

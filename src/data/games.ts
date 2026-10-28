@@ -19,7 +19,7 @@ export interface GameDef {
   panel?: string;          // built: a panel of that page to open first (the path page's round buttons)
   item?: string;           // built inside the games page: its `mapItem` (pages/games/)
   section?: SectionId;     // built: the admin's switch and the member's feature that show or hide it
-  print?: { href: string; pages: number }; // made on paper: the printable sheets, public/games/print/<id>.pdf (scripts/print-games)
+  print?: { href: string; sheets: number }; // made on paper: public/games/print/<id>.pdf, printed two-sided (scripts/print-games)
   original?: string;       // a board game: the game it is a Georgian retheme of
 }
 
@@ -60,11 +60,11 @@ export const GAMES: GameDef[] = [
 /** The six board games the school will print and make itself — each a Georgian retheme (names are drafts). */
 export const BOARD_GAMES: GameDef[] = [
   { id: 'okros-khana', title: 'ოქროს ხანა', original: 'კატანი', text: 'ერისთავები ოქროს ხანის საქართველოს აშენებენ: ხე, ქვა, მატყლი, პური, მადანი', category: 'live', modes: ['noPhone', 'hybrid', 'online'] },
-  { id: 'samshvildis-ghame', title: 'სამშვილდის ღამე', original: 'მაფია', text: 'ციხე-ქალაქის მცველები და ჯაშუშები; წამყვანი, დღე და ღამე, ხმის მიცემა', category: 'live', modes: ['noPhone', 'hybrid', 'online'], print: { href: '/games/print/samshvildis-game.pdf', pages: 16 } },
+  { id: 'samshvildis-ghame', title: 'სამშვილდის ღამე', original: 'მაფია', text: 'ციხე-ქალაქის მცველები და ჯაშუშები; წამყვანი, დღე და ღამე, ხმის მიცემა', category: 'live', modes: ['noPhone', 'hybrid', 'online'], print: { href: '/games/print/samshvildis-game.pdf', sheets: 10 } },
   { id: 'qaravani', title: 'ქარავანი', original: 'Ticket to Ride', text: 'საქართველოს რუკა: ქარავნის გზები და მომლოცველობა მცხეთიდან ბათუმამდე', category: 'live', modes: ['noPhone', 'hybrid', 'online'] },
   { id: 'ori-takhti', title: 'ორი ტახტი', original: '7 Wonders Duel', text: 'ორი ქართული სამეფო სამ ეპოქაში: ვინ ააშენებს მეტ ძეგლს', category: 'live', modes: ['noPhone', 'hybrid', 'online'] },
   { id: 'lurji-supra', title: 'ლურჯი სუფრა', original: 'Azul', text: 'ქართული ორნამენტებით მოხატული ფილები სუფრაზე დააწყვე', category: 'live', modes: ['noPhone', 'hybrid', 'online'] },
-  { id: 'mepis-kari', title: 'მეფის კარი', original: 'Coup', text: 'მეფის კარის როლები: ვინ ვინ არის — ბლეფი და გამჭრიახობა', category: 'live', modes: ['noPhone', 'hybrid', 'online'], print: { href: '/games/print/mepis-kari.pdf', pages: 13 } },
+  { id: 'mepis-kari', title: 'მეფის კარი', original: 'Coup', text: 'მეფის კარის როლები: ვინ ვინ არის — ბლეფი და გამჭრიახობა', category: 'live', modes: ['noPhone', 'hybrid', 'online'], print: { href: '/games/print/mepis-kari.pdf', sheets: 8 } },
 ];
 
 /** The title of a game open inside the games page (its `mapItem`), for the top bar. */

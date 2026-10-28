@@ -1,6 +1,6 @@
 // „მეფის კარი“ — the school's Coup (plan doc, tab „6 სამაგიდო თამაში“): 15 courtier cards (+5 for 7–8 players),
 // 6 reminder cards, 50 „თეთრი“ coins, a court board, the rules sheet and a tuck box. Series №6.
-import { C, SERIES, SCHOOL, aso, esc, icon, corners, braid, borjgali, cardSheet, tokenSheet, page, stripe, foot } from '../lib.mjs';
+import { C, SERIES, SCHOOL, aso, esc, icon, corners, braid, borjgali, cardSheet, tokenSheet, page, stripe, foot, duplex, sheetNo } from '../lib.mjs';
 
 export const id = 'mepis-kari';
 export const title = 'მეფის კარი';
@@ -83,7 +83,7 @@ const coinFront = `<div class="coin"><div class="ring"></div><div class="tetri a
 const coinBack = `<div class="coin dark"><div class="ring"></div>${borjgali(15, C.gold)}</div>`;
 const COINS = 70;
 
-const coverPage = page(`${stripe(NO)}
+const coverPage = no => page(`${stripe(NO)}
 <div class="cover">
   <div class="aso title">${aso(title)}</div>
   <h1 class="gameTitle">მეფის კარი</h1>
@@ -92,13 +92,13 @@ const coverPage = page(`${stripe(NO)}
     <div>
       <h3>რა არის ამ ფაილში</h3>
       <table class="t comp">
-        <tr><th>კომპონენტი</th><th>ცალი</th><th>გვერდი</th><th>ბეჭდვა · ჭრა</th></tr>
-        <tr><td>კარისკაცის ბარათები</td><td>15 + 5*</td><td>2–4 · ზურგი 5–7</td><td><span class="chk"></span> <span class="chk"></span></td></tr>
-        <tr><td>შეხსენების ბარათები (ორმხრივი)</td><td>6</td><td>3–4 · მეორე მხარე 6–7</td><td><span class="chk"></span> <span class="chk"></span></td></tr>
-        <tr><td>თეთრი (მონეტები, ⌀25 მმ)</td><td>50 (70 იბეჭდება)</td><td>8 · ზურგი 9</td><td><span class="chk"></span> <span class="chk"></span></td></tr>
-        <tr><td>წესების ფურცელი (ორმხრივი)</td><td>1</td><td>10–11</td><td><span class="chk"></span></td></tr>
-        <tr><td>კარის დაფა</td><td>1</td><td>12</td><td><span class="chk"></span></td></tr>
-        <tr><td>ბარათების კოლოფი</td><td>1</td><td>13</td><td><span class="chk"></span> <span class="chk"></span></td></tr>
+        <tr><th>კომპონენტი</th><th>ცალი</th><th>ფურცელი</th><th>ბეჭდვა · ჭრა</th></tr>
+        <tr><td>კარისკაცის ბარათები</td><td>15 + 5*</td><td>${no('cards1')}–${no('cards3')}</td><td><span class="chk"></span> <span class="chk"></span></td></tr>
+        <tr><td>შეხსენების ბარათები (ორმხრივი)</td><td>6</td><td>${no('cards2')}–${no('cards3')}</td><td><span class="chk"></span> <span class="chk"></span></td></tr>
+        <tr><td>თეთრი (მონეტები, ⌀25 მმ)</td><td>50 (70 იბეჭდება)</td><td>${no('coins')}</td><td><span class="chk"></span> <span class="chk"></span></td></tr>
+        <tr><td>წესების ფურცელი (ორმხრივი)</td><td>1</td><td>${no('rules')}</td><td><span class="chk"></span></td></tr>
+        <tr><td>კარის დაფა</td><td>1</td><td>${no('board')}</td><td><span class="chk"></span></td></tr>
+        <tr><td>ბარათების კოლოფი</td><td>1</td><td>${no('box')}</td><td><span class="chk"></span> <span class="chk"></span></td></tr>
         <tr><td>ჩასადებები 66×91 მმ</td><td>21</td><td>საყიდელია</td><td><span class="chk"></span></td></tr>
         <tr><td>ქისა თეთრისთვის</td><td>1</td><td>იკერება</td><td><span class="chk"></span></td></tr>
       </table>
@@ -107,10 +107,10 @@ const coverPage = page(`${stripe(NO)}
     <div>
       <h3>როგორ დავბეჭდოთ</h3>
       <ol class="how">
-        <li>ბეჭდვა <b>100%-ზე</b>, „fit to page“ გამორთული. ჯერ ერთი საცდელი გვერდი — ბარათი 63×88 მმ უნდა გამოვიდეს.</li>
-        <li>ბარათები — <b>300 გ მუყაოზე</b> (ან 250 გ + ჩასადები). ზურგის გვერდები სარკისებურადაა დაწყობილი — ორმხრივი ბეჭდვა გრძელი კიდით. ჩასადებებით ზურგის ბეჭდვა არ სჭირდება.</li>
-        <li>ჭრა — ხაზებზე, მაკრატლით ან დანით სახაზავზე; კუთხეები 3 მმ მომრგვალების მომჭრელით.</li>
-        <li>თეთრი — წებოვან ქაღალდზე დაბეჭდე, 2 მმ მუყაოზე დააკარი, 25 მმ წრიული პერფორატორით ამოჭერი (ან ხის დისკები 25 მმ).</li>
+        <li><b>ყველაფერი ორმხრივად</b>, გრძელი კიდით, <b>100%-ზე</b> („fit to page“ გამორთული) — ყოველ ფურცელს თავისი ზურგი მოსდევს. ჯერ ერთი საცდელი ფურცელი: ბარათი 63×88 მმ უნდა გამოვიდეს და ზურგი წინას დაემთხვეს.</li>
+        <li>ქაღალდი: ფურცლები ${no('cards1')}–${no('coins')} (ბარათები, თეთრი) — <b>300 გ მუყაო</b>; ${no('rules')} (წესები) — ჩვეულებრივი; ${no('board')}–${no('box')} — 200–300 გ.</li>
+        <li>ჭრა — ხაზებზე, მაკრატლით ან დანით სახაზავზე; კუთხეები 3 მმ მომრგვალების მომჭრელით. ჩასადებებით (66×91 მმ) ზურგი არც ჩანს.</li>
+        <li>თეთრი — 25 მმ წრიული პერფორატორით ან მაკრატლით; 2 მმ მუყაოზე დაკრული უფრო მტკიცეა (ან ხის დისკები 25 მმ).</li>
         <li>წესები და კარის დაფა — მქრქალი ლამინაცია 125 მკმ.</li>
       </ol>
       <div class="box legal"><b>წყარო და უფლებები.</b> შექმნილია „Coup“-ის (რიკი ტაჰტა, 2012) წესების მიხედვით. სახელები, ტექსტი და ნახატები საგანძურის სკოლისაა. მხოლოდ სასკოლო, არაკომერციული გამოყენებისთვის — არ იყიდება.</div>
@@ -289,15 +289,22 @@ table.big td.n{font-weight:800;color:var(--wine)}
 .bHint span{display:flex;align-items:center;gap:2mm}
 `;
 
-export const pages = [
-  coverPage,
-  cardSheet(fronts.slice(0, 9), { label: 'მეფის კარი · ბარათები 1/3 — წინა მხარე' }),
-  cardSheet(fronts.slice(9, 18), { label: 'მეფის კარი · ბარათები 2/3 — წინა მხარე' }),
-  cardSheet(fronts.slice(18, 27), { label: 'მეფის კარი · ბარათები 3/3 — წინა მხარე (7–8 მოთამაშის ბარათები და სათადარიგო)' }),
-  cardSheet(backs.slice(0, 9), { back: true, label: 'მეფის კარი · ბარათები 1/3 — ზურგი (სარკისებურად)' }),
-  cardSheet(backs.slice(9, 18), { back: true, label: 'მეფის კარი · ბარათები 2/3 — ზურგი (სარკისებურად)' }),
-  cardSheet(backs.slice(18, 27), { back: true, label: 'მეფის კარი · ბარათები 3/3 — ზურგი (სარკისებურად)' }),
-  tokenSheet(Array(COINS).fill(coinFront), { label: 'მეფის კარი · თეთრი ⌀25 მმ — წინა მხარე (70, საჭიროა 50)' }),
-  tokenSheet(Array(COINS).fill(coinBack), { back: true, label: 'მეფის კარი · თეთრი — ზურგი (სარკისებურად)' }),
-  rulesPage1, rulesPage2, boardPage, boxPage,
+const card = (i, label) => ({
+  key: `cards${i + 1}`,
+  front: cardSheet(fronts.slice(i * 9, i * 9 + 9), { label: `მეფის კარი · ბარათები ${i + 1}/3 — ${label}` }),
+  back: cardSheet(backs.slice(i * 9, i * 9 + 9), { back: true, label: `მეფის კარი · ბარათები ${i + 1}/3 — ზურგი` }),
+});
+const SHEETS = [
+  { key: 'cover' },
+  card(0, 'წინა მხარე'),
+  card(1, 'წინა მხარე'),
+  card(2, 'წინა მხარე (7–8 მოთამაშის ბარათები და სათადარიგო)'),
+  { key: 'coins', front: tokenSheet(Array(COINS).fill(coinFront), { label: 'მეფის კარი · თეთრი ⌀25 მმ — წინა მხარე (70, საჭიროა 50)' }), back: tokenSheet(Array(COINS).fill(coinBack), { back: true, label: 'მეფის კარი · თეთრი — ზურგი' }) },
+  { key: 'rules', front: rulesPage1, back: rulesPage2 },
+  { key: 'board', front: boardPage },
+  { key: 'box', front: boxPage },
 ];
+SHEETS[0].front = coverPage(k => sheetNo(SHEETS, k));
+
+export const sheets = SHEETS.length;
+export const pages = duplex(SHEETS);

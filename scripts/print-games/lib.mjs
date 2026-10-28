@@ -125,7 +125,7 @@ export const page = (inner, cls = '') => `<section class="page ${cls}">${inner}<
 export const cardSheet = (cards, { back = false, label = '' } = {}) => {
   const order = back ? [2, 1, 0, 5, 4, 3, 8, 7, 6] : [0, 1, 2, 3, 4, 5, 6, 7, 8];
   const slots = order.map(i => cards[i] ?? '<div class="card blank"></div>').join('');
-  return page(`${cutMarks()}<div class="grid">${slots}</div><div class="sheetLabel">${esc(label)}</div>`, 'sheet');
+  return page(`${cutMarks()}<div class="grid">${slots}</div><div class="sheetLabel">ფურცელი %SHEET% · ${esc(label)}</div>`, 'sheet');
 };
 
 /** Round tokens ⌀`d` mm in a 7×10 grid (fits A4 with a 25 mm punch's spacing); `back` mirrors every row. */
@@ -138,7 +138,21 @@ export const tokenSheet = (tokens, { d = 25, gap = 1.5, cols = 7, rows = 10, bac
     const t = tokens[i];
     if (t) out += `<div class="token" style="left:${left + c * (d + gap)}mm;top:${top + r * (d + gap)}mm;width:${d}mm;height:${d}mm">${t}</div>`;
   }
-  return page(`${out}<div class="sheetLabel">${esc(label)}</div>`, 'tokens');
+  return page(`${out}<div class="sheetLabel">ფურცელი %SHEET% · ${esc(label)}</div>`, 'tokens');
+};
+
+/** The whole file prints „ორმხრივად, გრძელი კიდით“: every physical sheet is { key, front, back? } and becomes two pages, a
+ * one-sided sheet getting a back that says it is blank on purpose. `%SHEET%` in a page becomes its sheet number. */
+export const duplex = (sheets) => sheets.flatMap((sh, i) => {
+  const n = String(i + 1);
+  const fill = html => html.replaceAll('%SHEET%', n);
+  return [fill(sh.front), sh.back ? fill(sh.back) : page(`<div class="blankBack">ფურცელი ${n} · ეს მხარე განზრახ ცარიელია — ფაილი ორმხრივი ბეჭდვისთვისაა აწყობილი</div>`, 'blank')];
+});
+/** A sheet's number in the list (the cover is sheet 1). */
+export const sheetNo = (sheets, key) => {
+  const i = sheets.findIndex(sh => sh.key === key);
+  if (i < 0) throw new Error(`no sheet ${key}`);
+  return i + 1;
 };
 
 /** The series stripe for covers and rules sheets. */
@@ -159,6 +173,7 @@ html,body{margin:0;padding:0;background:#fff;color:var(--brown);font-family:'Ser
 .fit{white-space:nowrap;overflow:hidden}
 .fit>span{display:inline-block}
 .sheetLabel{position:absolute;left:10.5mm;top:3mm;font-size:8pt;color:#8a7a68;letter-spacing:.04em}
+.blankBack{position:absolute;left:0;right:0;bottom:12mm;text-align:center;font-size:8pt;color:#b3a593}
 .grid{position:absolute;left:10.5mm;top:16.5mm;width:189mm;height:264mm;display:grid;grid-template-columns:repeat(3,63mm);grid-template-rows:repeat(3,88mm)}
 .card{width:63mm;height:88mm;position:relative;overflow:hidden;background:var(--paper)}
 .card.blank{background:#fff}

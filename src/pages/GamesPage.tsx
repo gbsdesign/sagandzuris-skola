@@ -98,7 +98,7 @@ const GameRow: React.FC<{ g: GameDef; state: Access; meta?: string; onOpen: () =
         >
           <Printer className="w-[18px] h-[18px] shrink-0" />
           <span className="text-[14px] font-bold leading-none">დასაბეჭდი ფურცლები</span>
-          <span className="ml-auto text-[12px] tabular-nums leading-none text-[#fbf6ec]/80">PDF · {g.print.pages} გვ.</span>
+          <span className="ml-auto text-[12px] tabular-nums leading-none text-[#fbf6ec]/80">PDF · {g.print.sheets} ფურცელი</span>
         </a>
       </li>
     );
