@@ -182,10 +182,23 @@
   Since 2026-10-28 two tabs „გაკვეთილები · წიგნები“: „წიგნები“ (`pages/medavitneoba/Wignebi.tsx`, menu `data/wignebi.ts`,
   texts `public/wignebi/<collection>/<NN>.json`, fetched on open, kept by the service worker) = the liturgical books of the
   „საღვთისმსახურო წიგნები“ app (ღვთისმშობლის მიძინების მონასტერი) in that app's menu order: Bible (NT, OT, ტრაპეზის სახარება,
-  სამოციქულო), calendar 2024–2027, კონდაკი, კურთხევანი, პარაკლიტონი, საზიარო თვენი, ჟამნი, დავითნი, მგალობელთათვის,
+  სამოციქულო), calendar 2024–2027, კონდაკი, კურთხევანი, პარაკლიტონი, საზიარო თვენი, ჟამნი, ზატიკი, დავითნი, მგალობელთათვის,
   წარდგომები, ლოცვანი, პარაკლისები, ანდრია კრიტელი. Place = `mapItem` „w…“ (`utils/wignebiPath.ts` for „←“ after a reload).
   **Admins only** until the user has the monastery's permission (others see „მალე“). The texts were extracted from that
   app's bundle; its old nuskhuri-font texts were converted with the app's own table (archaic letters kept).
+  **Generated — never edit `public/wignebi` or `data/wignebi.ts` by hand**: `scripts/wignebi/` (plain Python, no packages:
+  `hermes.py` reads the app's Hermes bundle — v98 up to app 1.1.3, v99 since 1.1.4, opcode tables `ops98.txt`/`ops99.txt`
+  (v99 = the opcode-name order inside hermesc 260318099 from npm) — and finds each book's module by its export name,
+  `convert.py` + table = the legacy font, `build.py` writes the files, menu labels from `labels.json` keyed by the data's
+  keys). `.github/workflows/wignebi-update.yml` runs `update.py` daily: asks the app's Expo update server (runtime = app
+  version, probes the next ones; last update in `scripts/wignebi/state.json`), checks the hash, rebuilds, refuses an update
+  that loses items or >3% of a book's text, and commits straight to main (the user's choice, 2026-10-28). A newer app from
+  the Play store: `python3 scripts/wignebi/update.py --apk <file>` (then the server is asked for that version's updates).
+  Applied: the 22 Sep 2026 update (commemorations ილია → შიო after Patriarch Shio III's election, 3 typos) and the 1.1.4 APK
+  (199 small fixes + ზატიკი, the user's upload 2026-10-28). ზატიკი: after ჟამნი as in the app's menu, 13 items with the app's
+  own labels (weeks: part 1 = კვირა … 7 = შაბათი, each day's service begins the evening before), its abbreviation codes from
+  the app's own converter in `zatiki_table.json` (our output = the app's display for 99.93% of its strings, archaic letters kept).
+  The shelves' last tile fills its row when left alone (`tileLook` in Wignebi.tsx).
 - **Library** page (`biblioteka`): საღმრთო ისტორია, დღესასწაულები, წმიდანთა ცხოვრება.
   Footer church calendar (`data/churchCalendar.ts`, `data/calendar/<year>.json`, made by
   `node scripts/fetch-church-calendar.mjs <year>`). **The 2026 file ends 13 Jan 2027 — re-run for 2027 once
