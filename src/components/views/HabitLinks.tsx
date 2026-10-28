@@ -17,6 +17,7 @@ const SearchPanel = lazy(() => import('../search/SearchPanel').then(m => ({ defa
 
 const GROUP_ICON: Record<SearchGroupId, React.ReactNode> = {
   fn: <Sparkles />, chant: <Music2 />, prayer: <ScrollText />, psalter: <BookOpen />, song: <Music />, ancestor: <Users />, feast: <CalendarDays />,
+  person: <Users />, // never picked for a habit (the search offers people only outside picking)
 };
 
 export const linkIcon = (l: HabitLink): React.ReactNode =>

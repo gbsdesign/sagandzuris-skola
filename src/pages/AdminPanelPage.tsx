@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { collection, doc, onSnapshot, updateDoc } from 'firebase/firestore';
-import { Users, GraduationCap, School, Activity, Hourglass, ChevronRight, CircleCheck, WifiOff, Settings } from 'lucide-react';
+import { Users, GraduationCap, School, Activity, Hourglass, ChevronRight, CircleCheck, WifiOff, Settings, UserX, TriangleAlert } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth, useNavigation, SUPER_ADMIN_EMAIL } from '../context';
 import { useAllClasses } from '../hooks/useClasses';
@@ -13,6 +13,7 @@ import { SchoolSheet } from '../components/admin/SchoolTab';
 import { AccessRecord, DecisionRecord, toAccess } from '../components/admin/AccessRequests';
 import { useDirectory, writeDirectory } from '../utils/directory';
 import { teachersDiffer, teachersOf } from '../utils/classTeachers';
+import { useOpenRequest } from '../utils/searchOpen';
 
 // the list the panel shows: the members or the classes (chosen by the big numbers); remembered on the device.
 // A home button made for a former tab („სკოლა“, „ჩანაწერები“, „განყოფილებები“, „წევრების მიღება“…) writes its name here
@@ -35,6 +36,9 @@ export const AdminPanelPage: React.FC = () => {
   const [schoolOpen, setSchoolOpen] = useState(() => SCHOOL_TABS.includes(readStored()));
   const [filter, setFilter] = useState<Filter>('all');
   useEffect(() => { try { localStorage.setItem(TAB_KEY, view); } catch { /* storage blocked */ } }, [view]);
+  // the person whose window is open; the search (🔍, admins only) opens one straight away
+  const [openId, setOpenId] = useState<string | null>(null);
+  useOpenRequest('admin', uid => { setView('users'); setOpenId(uid); });
 
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [staff, setStaff] = useState<StaffRecord[]>([]);
@@ -114,7 +118,7 @@ export const AdminPanelPage: React.FC = () => {
       () => setDecisions({}));
     return () => { off1(); off2(); };
   }, [isSuperAdmin]);
-  const { test } = filterTests(staff, access, isSuperAdmin);
+  const { test } = filterTests(staff, access, isSuperAdmin, classes);
   const waiting = users.filter(test.pending).length;
 
   // people who may lead a class or group: teachers and admins
@@ -129,6 +133,8 @@ export const AdminPanelPage: React.FC = () => {
       .sort((a, b) => a.name.localeCompare(b.name, 'ka'));
   }, [staff, users]);
 
+  const classesWithoutTeacher = classes.filter(c => !c.teacherIds.length).length;
+  const membersWithoutClass = users.filter(test.noClass).length;
   const teachersWithoutClass = leaders.filter(l => staff.find(s => s.userId === l.userId || s.email === l.email.toLowerCase())?.role === 'teacher' && !classes.some(c => c.teacherIds.includes(l.userId)) && !groups.some(g => g.teacherIds.includes(l.userId))).length;
 
   // the attention lines wait for every list, so they never flash a wrong number; a list that did not come says so
@@ -155,8 +161,11 @@ export const AdminPanelPage: React.FC = () => {
     setFilter(id === filter && view === 'users' && id !== 'all' ? 'all' : (id as Filter));
   };
 
+  const showFilter = (f: Filter) => { setView('users'); setFilter(f); };
   const todo = !ready || broken ? [] : [
     ...(teachersWithoutClass > 0 ? [{ id: 'teach', icon: <GraduationCap />, text: `${teachersWithoutClass} მასწავლებელს კლასი ან ჯგუფი არ აქვს`, go: () => setView('classes') }] : []),
+    ...(classesWithoutTeacher > 0 ? [{ id: 'lead', icon: <TriangleAlert />, text: `${classesWithoutTeacher} კლასს მასწავლებელი არ ჰყავს`, go: () => setView('classes') }] : []),
+    ...(membersWithoutClass > 0 ? [{ id: 'class', icon: <UserX />, text: `${membersWithoutClass} წევრი კლასის გარეშეა`, go: () => showFilter('noClass') }] : []),
   ];
 
   return (
@@ -200,7 +209,7 @@ export const AdminPanelPage: React.FC = () => {
 
       {view === 'users' && (
         <UsersTab users={users} staff={staff} classes={classes} access={access} decisions={decisions} loading={loading}
-          filter={filter} onFilter={setFilter} tiles={userTiles} onMessage={msg.say} />
+          filter={filter} onFilter={setFilter} tiles={userTiles} openId={openId} onOpen={setOpenId} onMessage={msg.say} />
       )}
       {view === 'classes' && (
         <div className="space-y-4">
