@@ -51,6 +51,10 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   to copy, the odd ones checked on the picture — dasd1/133–139, 187, 189, 204, 205 voice II line 2 F→F♯; momix/039–077
   voice II t≈23 G→G♯; dasd1/231–234 bass lines 1–3 key change missed; dasd1/023–028 bass B→B♭ at the cadence.
   Copies that differ in the book too (v5/008 vs 009, kk/183, karb/180) were left as printed.
+  Fifth round (2026-10-28, `fixes4.txt`, 19 notes in 6 files): line-end chords with a semitone/tritone clash and a note
+  outside the line's key, checked on the picture — a key change after a barline missed in v8/166 lines 3 and 11, kk/210
+  line 5, karb/105 line 10, karb/052 line 1 (bass), v8/084 line 8 (bass); karb/150 line 21 voice I last note B♭→A.
+  The other line-end clashes are the books' own (per-voice key signatures, printed ♮, divided bass).
 - The OMR scripts live only in the user's old session scratchpads — they are not in this repo.
 - Unreviewed guesses (don't present as confirmed): vol. I↔III matches, vol. V/IX placements, which book
   version a liturgy recording follows (the `main` flag in `TSIRVA_BOOK` moves a recording to another version).
