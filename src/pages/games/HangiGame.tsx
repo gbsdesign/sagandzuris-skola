@@ -30,6 +30,7 @@ const HangiGame: React.FC = () => {
   const [playing, setPlaying] = useState(false);
   const [pos, setPos] = useState(0);
   const [toast, setToast] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
   const audio = useRef<HTMLAudioElement | null>(null);
 
   // the day turns at midnight in Georgia, even with the page open
@@ -50,25 +51,33 @@ const HangiGame: React.FC = () => {
   const n = dayNumber(today);
 
   const stop = () => { audio.current?.pause(); setPlaying(false); };
-  useEffect(() => () => { audio.current?.pause(); audio.current = null; }, []);
+
+  // The element is made as soon as the day's pick is known, so the first tap plays at once; nothing sounds before that tap.
+  // The Worker answers only requests that carry the site's Origin, which a plain media request does not send — so the
+  // element asks with CORS (crossOrigin), exactly as ChantPlayer does.
+  useEffect(() => {
+    if (!pick) return;
+    const a = new Audio();
+    a.crossOrigin = 'anonymous';
+    a.preload = 'auto';
+    a.src = pick.url;
+    a.addEventListener('ended', () => setPlaying(false));
+    a.addEventListener('error', () => { setPlaying(false); setFailed(true); });
+    audio.current = a;
+    setFailed(false);
+    setPos(0);
+    return () => { a.pause(); a.removeAttribute('src'); a.load(); audio.current = null; setPlaying(false); };
+  }, [pick]);
 
   const play = async () => {
-    if (!pick) return;
+    const a = audio.current;
+    if (!pick || !a) return;
     triggerHaptic(10);
     if (playing) { stop(); return; }
-    let a = audio.current;
-    if (!a || a.dataset.id !== pick.id) {
-      a?.pause();
-      a = new Audio(pick.url);
-      a.preload = 'auto';
-      a.dataset.id = pick.id;
-      a.addEventListener('ended', () => setPlaying(false));
-      a.addEventListener('error', () => { setPlaying(false); setToast('ჩანაწერი ვერ ჩაიტვირთა — შეამოწმე ინტერნეტი'); });
-      audio.current = a;
-    }
+    if (failed) { setFailed(false); a.load(); }
     a.currentTime = 0;
     setPos(0);
-    try { await a.play(); setPlaying(true); } catch { setPlaying(false); setToast('ჩანაწერი ვერ ჩაირთო — სცადე კიდევ'); }
+    try { await a.play(); setPlaying(true); } catch { setPlaying(false); setToast('ჩანაწერი ვერ ჩაირთო — შეამოწმე ინტერნეტი და სცადე კიდევ'); }
   };
 
   // the snippet stops where the ladder says; the position moves the bar
@@ -169,7 +178,9 @@ const HangiGame: React.FC = () => {
                 );
               })}
             </div>
-            <p className="mt-1 text-[12px] text-[#9a8b7b]">{next ? `შემდეგი ცდის მერე: ${next} წამი` : day.done ? 'დღის თამაში დასრულდა' : 'ბოლო ცდაა'}</p>
+            <p className={`mt-1 text-[12px] ${failed ? 'text-[#c0392b]' : 'text-[#9a8b7b]'}`}>
+              {failed ? 'ჩანაწერი ვერ ჩაიტვირთა — შეამოწმე ინტერნეტი და სცადე კიდევ' : next ? `შემდეგი ცდის მერე: ${next} წამი` : day.done ? 'დღის თამაში დასრულდა' : 'ბოლო ცდაა'}
+            </p>
           </div>
         </div>
       </Card>

@@ -103,6 +103,9 @@
 - Recordings stay in the user's Google Drive and play through the Worker
   `https://sagandzuri-audio.mr-gabunia.workers.dev/<driveFileId>` (Drive sends no CORS headers).
   Binding is only the explicit `VARIANT_MEDIA` map — use `/add-recording`.
+  **Every `<audio>` / `new Audio()` that plays a Worker URL must set `crossOrigin = 'anonymous'`** (as `ChantPlayer` does):
+  the Worker answers only requests carrying the site's `Origin`, and a plain media request sends none → 403, silence
+  (the „დღის ჰანგი“ bug of 2026-10-28).
 - Book notes (`public/notes/<book>/`) come from the chant-book PDFs by OMR; the OMR scripts are not in the repo.
   Many version placements are unreviewed guesses — don't present them as confirmed.
 

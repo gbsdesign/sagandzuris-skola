@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronRight, Minus, Plus, RotateCcw, SkipForward, Trophy, Users } from 'lucide-react';
 import { WORD_CATEGORIES } from '../../data/amikhseniWords';
 import {
@@ -34,11 +34,14 @@ const writeSettings = (settings: AliasSettings, names: string[]) => {
   try { localStorage.setItem(SETTINGS_KEY, JSON.stringify({ settings, names })); } catch { /* private mode */ }
 };
 
-/** The bell at the end of the minute: three short tones, only after the explainer started the turn. */
-const bell = () => {
+const AudioCtx = () => window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
+
+/** The bell at the end of the minute: three short tones on the context the „წავედით!“ tap opened (a phone lets Web Audio
+ *  sound only on a context made or resumed by a touch; the minute ends with no touch). */
+const bell = (ctx: AudioContext | null) => {
   try {
-    const Ctx = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
-    const ctx = new Ctx();
+    if (!ctx) return;
+    if (ctx.state === 'suspended') ctx.resume().catch(() => { /* stays silent */ });
     const now = ctx.currentTime;
     [0, 0.2, 0.4].forEach((t, i) => {
       const o = ctx.createOscillator();
@@ -53,7 +56,6 @@ const bell = () => {
       o.start(now + t);
       o.stop(now + t + 0.2);
     });
-    setTimeout(() => { ctx.close().catch(() => { /* gone */ }); }, 900);
   } catch { /* no audio: the vibration and the screen say it */ }
 };
 
@@ -93,6 +95,8 @@ const AmikhseniGame: React.FC = () => {
   const [words, setWords] = useState<TurnWord[]>([]);
   const [endAt, setEndAt] = useState(0);
   const [left, setLeft] = useState(0);
+  const audioCtx = useRef<AudioContext | null>(null);
+  useEffect(() => () => { audioCtx.current?.close().catch(() => { /* gone */ }); audioCtx.current = null; }, []);
 
   const set = (patch: Partial<AliasSettings>) => setConf(c => { const next = { settings: { ...c.settings, ...patch }, names: c.names }; writeSettings(next.settings, next.names); return next; });
   const rename = (i: number, name: string) => setConf(c => { const n = [...c.names]; n[i] = name.slice(0, 16); writeSettings(c.settings, n); return { settings: c.settings, names: n }; });
@@ -112,6 +116,11 @@ const AmikhseniGame: React.FC = () => {
   };
   const go = () => {
     triggerHaptic(20);
+    // the tap that starts the minute also opens (or wakes) the sound, so the bell may ring when the minute ends
+    try {
+      if (!audioCtx.current) audioCtx.current = new (AudioCtx())();
+      if (audioCtx.current.state === 'suspended') audioCtx.current.resume().catch(() => { /* stays silent */ });
+    } catch { /* no Web Audio: the vibration and the screen say it */ }
     setWords([]);
     setEndAt(Date.now() + settings.seconds * 1000);
     setLeft(settings.seconds);
@@ -125,7 +134,7 @@ const AmikhseniGame: React.FC = () => {
       const ms = endAt - Date.now();
       const s = Math.max(0, Math.ceil(ms / 1000));
       setLeft(prev => { if (s === 10 && prev !== 10) triggerHaptic(30); return s; });
-      if (ms <= 0) { clearInterval(t); bell(); triggerHaptic(150); setPhase('review'); }
+      if (ms <= 0) { clearInterval(t); bell(audioCtx.current); triggerHaptic(150); setPhase('review'); }
     }, 200);
     return () => clearInterval(t);
   }, [phase, endAt]);
