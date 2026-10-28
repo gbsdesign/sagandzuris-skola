@@ -11,6 +11,7 @@ import { askConfirm, Avatar, Btn, Flash, IconBtn, Pill, Sheet, useFlash } from '
 import { StudentProfileCard } from '../views/StudentProfileCard';
 import { AccessPicker, AccessRecord, DecisionRecord, saveAccess } from './AccessRequests';
 import { CentreDownloadSwitch } from './CentreDownload';
+import { SongTextSwitch } from './SongTextEditors';
 import type { StaffRecord, UserRecord } from './UsersTab';
 
 export const ROLE_ICON: Record<Role, React.ReactNode> = {
@@ -230,6 +231,12 @@ export const PersonSheet: React.FC<{
           {admitted && !isStaff && (
             <Part title="ფოლკლორის ცენტრის ჩანაწერები" sub="ჩამოწერა და ოფლაინ შენახვა">
               <CentreDownloadSwitch uid={u.userId} onMessage={onMessage} />
+            </Part>
+          )}
+
+          {admitted && (role === 'member' || role === 'teacher') && (
+            <Part title="სიმღერების ტექსტები" sub="ჩაწერა და შესწორება სიმღერის გვერდზე">
+              <SongTextSwitch uid={u.userId} onMessage={onMessage} />
             </Part>
           )}
 

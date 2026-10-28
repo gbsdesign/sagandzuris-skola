@@ -5,6 +5,7 @@ import { db } from '../../firebase';
 import { Btn, Card } from '../ui/kit';
 import { SectionsTab } from './SectionsTab';
 import { CentreDownloadFold } from './CentreDownload';
+import { SongTextEditorsFold } from './SongTextEditors';
 import { TopChants } from './StatsTab';
 import type { UserRecord } from './UsersTab';
 
@@ -76,6 +77,7 @@ export const SchoolTab: React.FC<{ users: UserRecord[]; onMessage: (t: string, t
       <SectionsTab onMessage={onMessage} />
       <TopChants users={users} />
       <CentreDownloadFold users={users} onMessage={onMessage} />
+      <SongTextEditorsFold users={users} onMessage={onMessage} />
 
       <Card className="!py-3">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-2 min-h-[44px]">
