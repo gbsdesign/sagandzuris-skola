@@ -281,8 +281,8 @@
   group windows, shared `LeaderChips`), სკოლა (sections, most listened, backup + folded safety list). Numbers of the
   old სტატისტიკა tab live in `admin/StatsTab.tsx` hooks; old shortcut refs `admin:sections`/`admin:stats` still open.
   Since 2026-10-28 (admin review, stage ①; review doc https://claude.ai/artifact/DbTEz3fwSDQkSbcxwY6yjb) a class is never
-  deleted: its ✎ „არქივში“ sets `archived` on the class and its psalter group (every hook hides them, the reminders Worker
-  skips them), the fold „არქივი · N“ under the cards brings one back. `students.teacherIds` = the teachers of the member's
+  deleted: its ✎ „არქივში“ sets `archived` on the class and its psalter group (every hook hides them, the rules close its chat,
+  private chats and lessons to all but admins, the reminders Worker skips them), the fold „არქივი · N“ under the cards brings one back. `students.teacherIds` = the teachers of the member's
   classes in use (`utils/classTeachers.ts` + test): the class ✎ and the archive set it, a teacher's „ამოღება“ takes the
   class's teachers off (rule `leavingTeachers`), and the admin panel puts every list right when it opens (only with the
   server's class list, `useAllClasses().fresh`). The class ✎ keeps teachers missing from the staff list and copies the

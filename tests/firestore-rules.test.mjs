@@ -186,6 +186,16 @@ await t('admin cannot read the chat', assertFails(getDoc(doc(adm, 'dms', 'tch2_s
 await t('superadmin reads the chat', assertSucceeds(getDoc(doc(sup, 'dms', 'tch2_stu3', 'messages', 'm1'))));
 await t('superadmin lists every chat', assertSucceeds(getDocs(collection(owner, 'dms'))));
 await t('superadmin cannot write in the chat', assertFails(setDoc(doc(sup, 'dms', 'tch2_stu3', 'messages', 'm6'), msg('sup', false))));
+// a class in the archive links nobody: its private chats and its own chat close until it comes back
+const archiveC9 = on => env.withSecurityRulesDisabled(async c => { await updateDoc(doc(c.firestore(), 'classes', 'c9'), { archived: on }); });
+await archiveC9(true);
+await t('archived class: student cannot write to its teacher', assertFails(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm8'), msg('stu3', false))));
+await t('archived class: teacher cannot start a call', assertFails(setDoc(doc(tch2, 'dms', 'tch2_stu3', 'messages', 'm9'), msg('tch2', true, 'call'))));
+await t('archived class: member cannot read its chat', assertFails(getDocs(collection(stu3, 'classes', 'c9', 'messages'))));
+await t('archived class: teacher cannot write attendance', assertFails(setDoc(doc(tch2, 'classes', 'c9', 'attendance', '2026-10-28'), { present: [] })));
+await t('archived class: admin still reads its chat', assertSucceeds(getDocs(collection(adm, 'classes', 'c9', 'messages'))));
+await archiveC9(false);
+await t('brought back: the chat works again', assertSucceeds(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm10'), msg('stu3', false))));
 await env.withSecurityRulesDisabled(async c => {
   await updateDoc(doc(c.firestore(), 'classes', 'c9'), { memberIds: ['stu2'] });
 });

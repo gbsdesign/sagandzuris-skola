@@ -274,9 +274,11 @@ service cloud.firestore {
     // ---- Classes -----------------------------------------------------------------------------------
     match /classes/{classId} {
       function cls() { return get(/databases/$(database)/documents/classes/$(classId)).data; }
-      function teachesClass() { return isTeacher() && uid() in cls().get('teacherIds', []); }
+      // a class in the archive is closed to everyone but admins (its chat, calls, lessons, attendance)
+      function teachesClass() { return isTeacher() && uid() in cls().get('teacherIds', []) && !cls().get('archived', false); }
       function inClass() {
-        return isAdmin() || (isSignedIn() && (uid() in cls().memberIds || uid() in cls().get('teacherIds', [])));
+        return isAdmin() || (isSignedIn() && !cls().get('archived', false)
+          && (uid() in cls().memberIds || uid() in cls().get('teacherIds', [])));
       }
       // leaving: only oneself is taken out
       function leaving() {
@@ -395,13 +397,14 @@ service cloud.firestore {
     match /dms/{dmId} {
       function thread() { return get(/databases/$(database)/documents/dms/$(dmId)).data; }
       function kindOf(d) { return d.get('kind', 'teach'); }
+      // a class in the archive links nobody (as a deleted one did)
       function linkedBy(teacherUid, studentUid, classId) {
         let c = get(/databases/$(database)/documents/classes/$(classId)).data;
-        return teacherUid in c.get('teacherIds', []) && studentUid in c.get('memberIds', []);
+        return teacherUid in c.get('teacherIds', []) && studentUid in c.get('memberIds', []) && !c.get('archived', false);
       }
       function classmates(a, b, classId) {
         let c = get(/databases/$(database)/documents/classes/$(classId)).data;
-        return a in c.get('memberIds', []) && b in c.get('memberIds', []);
+        return a in c.get('memberIds', []) && b in c.get('memberIds', []) && !c.get('archived', false);
       }
       function kidsOn(u) {
         let p = /databases/$(database)/documents/students/$(u);

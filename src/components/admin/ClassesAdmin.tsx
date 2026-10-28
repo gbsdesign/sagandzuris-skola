@@ -225,7 +225,9 @@ export const ClassesAdmin: React.FC<{
       ) : failed ? (
         <p className="rounded-3xl bg-red-50 ring-1 ring-red-200 px-4 py-6 text-center text-sm text-red-800">კლასები ვერ ჩაიტვირთა — შეამოწმე ინტერნეტი და გახსენი თავიდან.</p>
       ) : classes.length === 0 ? (
-        <p className="rounded-3xl border border-dashed border-[#dccbb0] px-4 py-8 text-center text-sm text-[#8a7a6a]">კლასი ჯერ არ შექმნილა. შექმენი პირველი და დაამატე წევრები.</p>
+        <p className="rounded-3xl border border-dashed border-[#dccbb0] px-4 py-8 text-center text-sm text-[#8a7a6a]">
+          {archived.length ? 'გამოყენებაში კლასი არ არის — დააბრუნე არქივიდან ან შექმენი ახალი.' : 'კლასი ჯერ არ შექმნილა. შექმენი პირველი და დაამატე წევრები.'}
+        </p>
       ) : (
         <ul className="grid sm:grid-cols-2 gap-3">
           {classes.map(c => <ClassRow key={c.id} cls={c} group={groups.find(g => g.id === c.psalterGroupId)} onOpen={() => openClass(c.id)} onEdit={() => edit(c)} />)}

@@ -188,7 +188,7 @@ export const UsersTab: React.FC<{
                   {/* a green dot: here in the last week */}
                   <span className="relative shrink-0">
                     <Avatar name={u.name} photo={u.photoURL} size={44} />
-                    {test.week(u) && <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white" aria-label="აქტიური ამ კვირაში" />}
+                    {within(u.lastActiveAt, 7) && <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white" aria-label="აქტიური ამ კვირაში" />}
                   </span>
                   <span className="min-w-0 flex-1">
                     {/* one line each, so every row is as tall as the next: the name gives way, the signs stay whole */}
