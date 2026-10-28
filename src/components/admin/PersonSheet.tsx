@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, setDoc, updateDoc } from 'firebase/firestore';
 import {
-  ArrowLeft, BookOpenCheck, CalendarCheck, Check, ChevronRight, Crown, Dumbbell, Gem, GraduationCap, Hourglass, ListChecks,
+  ArrowLeft, BookOpenCheck, CalendarCheck, Check, ChevronRight, Copy, Crown, Dumbbell, Gem, GraduationCap, Hourglass, ListChecks,
   DoorOpen, MessageCircle, Pencil, Plus, ShieldAlert, ShieldCheck, Undo2, User as UserIcon, X,
 } from 'lucide-react';
 import { db } from '../../firebase';
@@ -23,6 +23,7 @@ import { addClassMember, removeClassMember } from './ClassesAdmin';
 import { changed } from './changed';
 import { logChange } from '../../utils/adminLog';
 import { setLeft } from '../../utils/leftMembers';
+import { NOTE_MAX, saveAdminNote, useAdminNote } from '../../utils/adminNotes';
 import type { StaffRecord, UserRecord } from './UsersTab';
 import { errorText } from '../../utils/errorText';
 
@@ -31,7 +32,7 @@ export const ROLE_ICON: Record<Role, React.ReactNode> = {
 };
 const VOICE: Record<string, string> = { '1': 'I ხმა', '2': 'II ხმა', '3': 'III ხმა' };
 
-export const isOwnerEmail = (u: UserRecord) => u.email.toLowerCase() === SUPER_ADMIN_EMAIL;
+const isOwnerEmail = (u: UserRecord) => u.email.toLowerCase() === SUPER_ADMIN_EMAIL;
 export const roleOf = (u: UserRecord, staff: StaffRecord[]): Role => {
   if (isOwnerEmail(u)) return 'superadmin';
   const e = u.email.toLowerCase();
@@ -46,6 +47,7 @@ const sameFeatures = (a: 'all' | FeatureId[], b: 'all' | FeatureId[]) =>
 // app, their classes (each opens its page; „კლასში დამატება“ puts them into one more), their role and who gave it, the kids'
 // mode, what they may open (superadmins), letting them in — with a class in the same step — or refusing, writing to them,
 // and editing their profile, which opens inside this same window. Their learning in detail is followed on the class page.
+// An account that may be their second one is named on top (a tap opens it); „ჩანიშვნა“ = the admins' private note.
 export const PersonSheet: React.FC<{
   person: UserRecord;
   /** everyone, to name who gave a role or let someone in (the records keep an e-mail) */
@@ -60,7 +62,10 @@ export const PersonSheet: React.FC<{
   docked?: boolean;
   /** marked „გასული“ — since when (ISO, or „—“ when unknown) */
   leftSince?: string;
-}> = ({ person: u, users, staff, classes, access, decision, onClose, onMessage, docked, leftSince }) => {
+  /** accounts that may be the same person's (utils/duplicates) */
+  twins?: { uid: string; why: 'phone' | 'name'; person: UserRecord }[];
+  onOpenPerson?: (uid: string) => void;
+}> = ({ person: u, users, staff, classes, access, decision, onClose, onMessage, docked, leftSince, twins = [], onOpenPerson }) => {
   const { user, isOwner, isSuperAdmin } = useAuth();
   const { openClass, openDm } = useNavigation();
   const note = useFlash();
@@ -307,6 +312,31 @@ export const PersonSheet: React.FC<{
             </IconBtn>
           </div>
 
+          {twins.length > 0 && (
+            <div className="rounded-2xl bg-amber-50 ring-1 ring-amber-200 px-3.5 py-2.5">
+              <p className="flex items-center gap-1.5 text-[13px] font-bold text-[#9a6212]">
+                <Copy className="w-4 h-4 shrink-0" /> შესაძლო ორმაგი ანგარიში
+              </p>
+              <ul className="mt-1.5 space-y-1">
+                {twins.map(t => (
+                  <li key={t.uid}>
+                    <button type="button" onClick={() => onOpenPerson?.(t.uid)}
+                      className="w-full min-h-11 -mx-1 px-1 flex items-center gap-2.5 rounded-xl text-left cursor-pointer hover:bg-amber-100/60 transition">
+                      <Avatar name={t.person.name} photo={t.person.photoURL} size={32} />
+                      <span className="flex-1 min-w-0">
+                        <span className="block text-[14px] font-semibold text-[#2a2017] truncate">{t.person.name}</span>
+                        <span className="block text-[12px] text-[#8a7a6a] truncate">
+                          {t.why === 'phone' ? 'იგივე ტელეფონი' : 'იგივე სახელი და გვარი'} · {t.person.email || 'ელფოსტა არ არის'}
+                        </span>
+                      </span>
+                      <ChevronRight className="w-4 h-4 shrink-0 text-[#9a6212]/70" />
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           {shown.length > 0 ? (
             <dl className="grid grid-cols-2 gap-x-4 gap-y-2.5">
               {shown.map(([k, v]) => (
@@ -321,6 +351,8 @@ export const PersonSheet: React.FC<{
           )}
 
           {admitted && <Activity person={u} classIds={memberOf.map(c => c.id)} />}
+
+          <PrivateNote uid={u.userId} nameOf={nameOf} by={user?.email?.toLowerCase() || ''} />
 
           {admitted && (
             <Part title="კლასები">
@@ -445,6 +477,44 @@ export const PersonSheet: React.FC<{
         </div>
       )}
     </Sheet>
+  );
+};
+
+/** „ჩანიშვნა“: the admins' private note on the person; „შენახვა“ shows only while it differs from the saved one. */
+const PrivateNote: React.FC<{ uid: string; nameOf: (email?: string) => string; by: string }> = ({ uid, nameOf, by }) => {
+  const { note, loaded } = useAdminNote(uid);
+  const saved = note?.text || '';
+  const [text, setText] = useState(saved);
+  const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
+  useEffect(() => { setText(saved); }, [saved]);
+  const dirty = text.trim() !== saved;
+  const save = async () => {
+    setBusy(true);
+    setErr('');
+    try {
+      await saveAdminNote(uid, text, by);
+    } catch (e) {
+      setErr('ვერ შეინახა: ' + errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const sub = note ? `${nameOf(note.by)}${note.at ? ` · ${shortDate(note.at)}` : ''}` : 'ხედავენ მხოლოდ ადმინები';
+  return (
+    <Part title="ჩანიშვნა" sub={sub}>
+      <textarea value={text} onChange={e => setText(e.target.value.slice(0, NOTE_MAX))} disabled={!loaded} rows={text ? 3 : 2}
+        placeholder="მაგ.: დაურეკე ოთხშაბათს · დედამ დაწერა, რომ…" aria-label="პირადი ჩანიშვნა"
+        className="w-full min-h-[64px] px-3.5 py-2.5 rounded-xl bg-white ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/40 text-[14px] leading-snug text-[#2a2017] placeholder:text-[#b3a594] outline-none transition resize-y" />
+      {err && <p className="mt-1.5 text-[12px] font-semibold text-red-700">{err}</p>}
+      {dirty && (
+        <div className="mt-2 flex items-center gap-2 sg-in">
+          <Btn kind="ghost" size="sm" onClick={() => setText(saved)} disabled={busy}>გაუქმება</Btn>
+          <Btn size="sm" icon={<Check />} onClick={save} disabled={busy}>{text.trim() ? 'შენახვა' : 'წაშლა'}</Btn>
+          <span className="ml-auto text-[12px] text-[#8a7a6a] tabular-nums">{text.length}/{NOTE_MAX}</span>
+        </div>
+      )}
+    </Part>
   );
 };
 

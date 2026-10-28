@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { CalendarDays, ChevronRight, DoorOpen, Download, GraduationCap, Hourglass, ListChecks, MoonStar, MousePointerClick, School, Search, Shield, ShieldAlert, UserRoundPen, X } from 'lucide-react';
+import { CalendarDays, Check, ChevronRight, Copy, DoorOpen, Download, GraduationCap, Hourglass, ListChecks, MoonStar, MousePointerClick, School, Search, Shield, ShieldAlert, SquareCheck, UserRoundPen, X } from 'lucide-react';
 import { useAuth } from '../../context';
 import { SchoolClass } from '../../hooks/useClasses';
 import { agoLabel } from '../../hooks/useTeaching';
@@ -11,6 +11,9 @@ import { downloadCsv } from '../../utils/csv';
 import type { KidsMode } from '../../data/sections';
 import { AccessRecord, DecisionRecord } from './AccessRequests';
 import type { LeftMembers } from '../../utils/leftMembers';
+import { duplicatesOf } from '../../utils/duplicates';
+import { TeachLine, useLastLessons } from './TeacherOverview';
+import { BulkBar } from './BulkActions';
 import { PersonSheet, ROLE_ICON, roleName, roleOf } from './PersonSheet';
 
 export interface UserRecord {
@@ -85,12 +88,12 @@ export const toUser = (id: string, d: any): UserRecord => {
   };
 };
 
-export type Filter = 'all' | 'pending' | 'week' | 'month' | 'habits' | 'teacher' | 'admin' | 'refused' | 'noClass' | 'incomplete' | 'away' | 'left';
+export type Filter = 'all' | 'pending' | 'week' | 'month' | 'habits' | 'teacher' | 'admin' | 'refused' | 'noClass' | 'incomplete' | 'away' | 'twins' | 'left';
 const within = (iso: string, days: number) => !!iso && Date.now() - new Date(iso).getTime() < days * 86400_000;
 
 /** Who each filter holds; the panel's big numbers and the list's chips count with the same tests. A member marked
- *  „გასული“ (`left`) is in no list but „გასულები“. */
-export const filterTests = (staff: StaffRecord[], access: Record<string, AccessRecord>, isSuperAdmin: boolean, classes: SchoolClass[], left: ReadonlySet<string> = new Set()) => {
+ *  „გასული“ (`left`) is in no list but „გასულები“; `twins` = who may have a second account (utils/duplicates). */
+export const filterTests = (staff: StaffRecord[], access: Record<string, AccessRecord>, isSuperAdmin: boolean, classes: SchoolClass[], left: ReadonlySet<string> = new Set(), twins: ReadonlySet<string> = new Set()) => {
   // staff never wait, so a status only counts for members
   const statusOf = (u: UserRecord) => (isSuperAdmin && roleOf(u, staff) === 'member' ? access[u.userId]?.status : undefined);
   // „აქტიური“ counts the school's members: not the staff, not those waiting or refused
@@ -111,6 +114,7 @@ export const filterTests = (staff: StaffRecord[], access: Record<string, AccessR
     incomplete: u => roleOf(u, staff) === 'member' && statusOf(u) !== 'rejected' && !u.profileDone,
     // members who have not opened the app for a month (or never since the records began)
     away: u => member(u) && !within(u.lastActiveAt, 30),
+    twins: u => twins.has(u.userId),
     left: u => left.has(u.userId),
   };
   const gone = (u: UserRecord) => left.has(u.userId);
@@ -132,6 +136,7 @@ const CHIPS: { id: Filter; label: string; Icon: React.ComponentType<{ className?
   { id: 'noClass', label: 'კლასის გარეშე', Icon: School },
   { id: 'incomplete', label: 'პროფილი არასრული', Icon: UserRoundPen },
   { id: 'away', label: '30+ დღე არ შემოსულა', Icon: MoonStar },
+  { id: 'twins', label: 'შესაძლო ორმაგი', Icon: Copy },
   { id: 'left', label: 'გასულები', Icon: DoorOpen },
 ];
 
@@ -140,6 +145,8 @@ const CHIPS: { id: Filter; label: string; Icon: React.ComponentType<{ className?
 // is left out), and a second tap on a chip goes back to everyone. Members waiting to be let in stand on top (superadmins).
 // A tap on a person opens their one window (PersonSheet; the panel keeps which one is open, so the search can open it).
 // Superadmins can take the list as it is shown (search and filter) as a table for Excel / Google Sheets.
+// Under „მასწავლებლები“ / „ადმინები“ a teacher's row says what they lead (TeacherOverview); an account that may be someone's
+// second one says „შესაძლო ორმაგი“ (same phone or full name); „მონიშვნა“ ticks several people for one action (BulkActions).
 export const UsersTab: React.FC<{
   users: UserRecord[];
   staff: StaffRecord[];
@@ -163,7 +170,12 @@ export const UsersTab: React.FC<{
   // a computer: the list on the left, the person's window as the right column (stage IV, 2026-10-28)
   const wide = useWide();
 
-  const { statusOf, test } = filterTests(staff, access, isSuperAdmin, classes, left.uids);
+  // „შესაძლო ორმაგი“: the same phone or the same full name (a name only when the person wrote one)
+  const twins = useMemo(() => duplicatesOf(users.map(u => ({
+    userId: u.userId, name: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.displayName, phone: u.phone,
+  }))), [users]);
+  const twinIds = useMemo(() => new Set(twins.keys()), [twins]);
+  const { statusOf, test } = filterTests(staff, access, isSuperAdmin, classes, left.uids, twinIds);
   const classNames = (uid: string) => classes.filter(c => c.memberIds.includes(uid)).map(c => c.name).join(', ');
   const count = (f: Filter) => users.filter(test[f]).length;
   // a chip that holds nobody is left out — unless it is the one open, so it can be tapped shut
@@ -184,7 +196,20 @@ export const UsersTab: React.FC<{
         || (wait(a) ? (access[a.userId]?.requestedAt || '').localeCompare(access[b.userId]?.requestedAt || '') : 0)
         || (b.lastActiveAt || '').localeCompare(a.lastActiveAt || ''));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [users, q, active, staff, access, isSuperAdmin, classes, left]);
+  }, [users, q, active, staff, access, isSuperAdmin, classes, left, twinIds]);
+
+  // the teachers' overview: under these two filters a row of one who teaches shows what they lead
+  const teachView = active === 'teacher' || active === 'admin';
+  const lastLessons = useLastLessons(classes.filter(c => c.teacherIds.length).map(c => c.id), teachView);
+
+  // „მონიშვნა“: taps tick instead of opening; the bar at the bottom acts on the ticked
+  const [picking, setPicking] = useState(false);
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const startPicking = () => { setPicking(true); setSel(new Set()); setOpenId(null); };
+  const stopPicking = () => { setPicking(false); setSel(new Set()); };
+  const tick = (uid: string) => setSel(s => { const n = new Set(s); if (n.has(uid)) n.delete(uid); else n.add(uid); return n; });
+  const allShown = shown.length > 0 && shown.every(u => sel.has(u.userId));
+  const tickAll = () => setSel(allShown ? new Set() : new Set(shown.map(u => u.userId)));
 
   const open = openId ? users.find(u => u.userId === openId) : undefined;
 
@@ -220,12 +245,15 @@ export const UsersTab: React.FC<{
       onClose={() => setOpenId(null)}
       onMessage={onMessage}
       leftSince={left.since[open.userId] || (left.uids.has(open.userId) ? '—' : undefined)}
+      twins={(twins.get(open.userId) || []).map(t => ({ ...t, person: users.find(x => x.userId === t.uid) }))
+        .filter((t): t is { uid: string; why: 'phone' | 'name'; person: UserRecord } => !!t.person)}
+      onOpenPerson={setOpenId}
       docked={wide}
     />
   );
 
   const list = (
-    <Card className="space-y-4">
+    <Card className={`space-y-4 ${picking ? 'pb-28' : ''}`}>
       <div className="relative">
         <Search className="w-4 h-4 text-[#b3a594] absolute left-3.5 top-1/2 -translate-y-1/2" />
         <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="სახელი, ელფოსტა ან ქალაქი" aria-label="ძებნა"
@@ -252,6 +280,32 @@ export const UsersTab: React.FC<{
         })}
       </div>}
 
+      {/* how many are shown, and „მონიშვნა“ — several people for one action */}
+      {!loading && shown.length > 0 && (
+        <div className="flex items-center gap-2 min-h-9 -mb-1">
+          {picking ? (
+            <>
+              <button type="button" onClick={tickAll} aria-pressed={allShown}
+                className="h-9 pl-2 pr-3.5 rounded-full text-[13px] font-bold inline-flex items-center gap-2 cursor-pointer transition bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40">
+                <Tick on={allShown} /> ყველა · {shown.length}
+              </button>
+              <button type="button" onClick={stopPicking}
+                className="ml-auto h-9 px-3.5 rounded-full text-[13px] font-bold inline-flex items-center gap-1.5 cursor-pointer transition text-[#7a2028] hover:bg-[#7a2028]/[0.06]">
+                <X className="w-4 h-4" /> დასრულება
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="text-[13px] text-[#8a7a6a] tabular-nums">{shown.length} ადამიანი</span>
+              <button type="button" onClick={startPicking} title="რამდენიმე ადამიანი ერთად: კლასში ჩაწერა, დაშვება, ჩანაწერების უფლება"
+                className="ml-auto h-9 px-3.5 rounded-full text-[13px] font-bold inline-flex items-center gap-1.5 cursor-pointer transition text-[#7a2028] hover:bg-[#7a2028]/[0.06]">
+                <SquareCheck className="w-4 h-4" /> მონიშვნა
+              </button>
+            </>
+          )}
+        </div>
+      )}
+
       {loading ? (
         <p className="py-8 text-center text-sm text-[#8a7a6a]">იტვირთება…</p>
       ) : shown.length === 0 ? (
@@ -263,10 +317,13 @@ export const UsersTab: React.FC<{
             const status = statusOf(u);
             const a = access[u.userId];
             const limited = a && status === 'approved' && a.features !== 'all' ? a.features.filter(x => ALL_FEATURES.includes(x)).length : null;
+            const on = picking && sel.has(u.userId);
+            const teaches = teachView && (role === 'teacher' || classes.some(c => c.teacherIds.includes(u.userId)));
             return (
               <li key={u.userId} className="px-1">
-                <button type="button" onClick={() => setOpenId(u.userId)} aria-current={wide && openId === u.userId ? 'true' : undefined}
-                  className={`w-full flex items-center gap-3 py-3 text-left cursor-pointer group ${wide ? '-mx-2 px-2 rounded-2xl transition-colors aria-[current=true]:bg-[#7a2028]/[0.07]' : ''}`}>
+                <button type="button" onClick={() => (picking ? tick(u.userId) : setOpenId(u.userId))}
+                  {...(picking ? { role: 'checkbox', 'aria-checked': on } : { 'aria-current': wide && openId === u.userId ? 'true' : undefined })}
+                  className={`w-full flex items-center gap-3 py-3 text-left cursor-pointer group ${wide || picking ? '-mx-2 px-2 rounded-2xl transition-colors aria-[current=true]:bg-[#7a2028]/[0.07] aria-[checked=true]:bg-[#7a2028]/[0.07]' : ''}`}>
                   {/* a green dot: here in the last week */}
                   <span className="relative shrink-0">
                     <Avatar name={u.name} photo={u.photoURL} size={44} />
@@ -286,14 +343,18 @@ export const UsersTab: React.FC<{
                         </span>
                       )}
                     </span>
-                    {/* the class says more than the e-mail; one without a class shows the e-mail */}
-                    <span className="block text-xs text-[#8a7a6a] truncate">
-                      {classNames(u.userId) || u.email || 'ელფოსტა არ არის'} · {status === 'pending' ? `მოთხოვნა ${agoLabel(a?.requestedAt)}` : agoLabel(u.lastActiveAt)}
-                      {limited !== null && ` · წვდომა ${limited}/${ALL_FEATURES.length}`}
-                      {u.kidsMode?.on && ' · საბავშვო'}
-                    </span>
+                    {/* the class says more than the e-mail; one without a class shows the e-mail; a teacher under the teachers'
+                        filters: what they lead */}
+                    {teaches ? <TeachLine uid={u.userId} classes={classes} last={lastLessons} teacher={role === 'teacher'} /> : (
+                      <span className="block text-xs text-[#8a7a6a] truncate">
+                        {twinIds.has(u.userId) && <span className="font-semibold text-[#9a6212]">შესაძლო ორმაგი · </span>}
+                        {classNames(u.userId) || u.email || 'ელფოსტა არ არის'} · {status === 'pending' ? `მოთხოვნა ${agoLabel(a?.requestedAt)}` : agoLabel(u.lastActiveAt)}
+                        {limited !== null && ` · წვდომა ${limited}/${ALL_FEATURES.length}`}
+                        {u.kidsMode?.on && ' · საბავშვო'}
+                      </span>
+                    )}
                   </span>
-                  <ChevronRight className="w-4 h-4 text-[#b3a594] shrink-0" />
+                  {picking ? <Tick on={on} /> : <ChevronRight className="w-4 h-4 text-[#b3a594] shrink-0" />}
                 </button>
               </li>
             );
@@ -301,7 +362,7 @@ export const UsersTab: React.FC<{
         </ul>
       )}
 
-      {isSuperAdmin && !loading && shown.length > 0 && (
+      {isSuperAdmin && !loading && shown.length > 0 && !picking && (
         <div className="pt-1 flex justify-center">
           <Btn kind="ghost" size="sm" icon={<Download />} onClick={exportTable}
             title="სახელი, ტელეფონი, რეგიონი, ხმა, კლასი, როლი — ის სია, რაც ახლა ჩანს (ძებნით და ფილტრით)">
@@ -313,16 +374,29 @@ export const UsersTab: React.FC<{
     </Card>
   );
 
-  if (!wide) return <>{list}{person}</>;
+  const bulk = picking && (
+    <BulkBar picked={users.filter(u => sel.has(u.userId))} staff={staff} classes={classes} access={access}
+      onDone={stopPicking} onMessage={onMessage} />
+  );
+
+  if (!wide) return <>{list}{person}{bulk}</>;
   return (
     <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-5 items-start">
       {list}
       {person || (
         <div className="sticky top-4 min-h-[240px] rounded-3xl border-2 border-dashed border-[#e3d5bd] flex flex-col items-center justify-center gap-2 p-6 text-center text-[#8a7a6a]">
           <MousePointerClick className="w-7 h-7 text-[#c4b49c]" />
-          <p className="text-[14px] leading-snug">აირჩიე ადამიანი სიიდან — მისი ფანჯარა აქ გაიხსნება.</p>
+          <p className="text-[14px] leading-snug">{picking ? 'მონიშნე ადამიანები — მოქმედებები ქვემოთ, ზოლზეა.' : 'აირჩიე ადამიანი სიიდან — მისი ფანჯარა აქ გაიხსნება.'}</p>
         </div>
       )}
+      {bulk}
     </div>
   );
 };
+
+/** The round tick of „მონიშვნა“ (24px; the row itself is the 44px+ target). */
+const Tick: React.FC<{ on: boolean }> = ({ on }) => (
+  <span aria-hidden className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center transition ${on ? 'bg-[#7a2028] text-white' : 'bg-white ring-2 ring-[#d9c8ac]'}`}>
+    {on && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
+  </span>
+);

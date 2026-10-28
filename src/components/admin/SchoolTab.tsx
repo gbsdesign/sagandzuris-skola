@@ -11,6 +11,8 @@ import { TopChants } from './StatsTab';
 import { PhoneNotices } from './PhoneNotices';
 import { ChangeLog } from './ChangeLog';
 import { Announce } from './Announce';
+import { GrowthFold } from './GrowthFold';
+import { RolesFold } from './RolesFold';
 import type { SchoolClass } from '../../hooks/useClasses';
 import type { UserRecord } from './UsersTab';
 
@@ -35,8 +37,8 @@ const readAll = async (path: string[]) => {
 
 // ⚙ „სკოლა“ (2026-10-28: a window from the panel's bar instead of a third tab — the panel's numbers already switch
 // between the members and the classes): the whole school's settings, one folding card under another — sections, the most
-// listened chants, the extra rights, the admin's own phone notices, the change log (superadmins) — the announcement to the
-// classes on top, and the backup export at the bottom. Its messages show inside the window, not behind it.
+// listened chants, the school's growth, the extra rights, the admin's own phone notices, who may do what, the change log
+// (superadmins) — the announcement to the classes on top, and the backup export at the bottom. Its messages show inside the window, not behind it.
 // The staff are found in „წევრები“ (filter „ადმინები“), where their roles are given.
 // The logo card was removed on the user's request (2026-10-20); a logo already saved in settings/logo still shows.
 export const SchoolSheet: React.FC<{ users: UserRecord[]; classes: SchoolClass[]; onClose: () => void }> = ({ users, classes, onClose }) => {
@@ -50,7 +52,7 @@ export const SchoolSheet: React.FC<{ users: UserRecord[]; classes: SchoolClass[]
     try {
       const out: Record<string, unknown> = { exportedAt: new Date().toISOString(), project: 'sagandzuris-skola' };
       // who was let in and who decided: superadmins only (others may not read them)
-      const top = ['students', 'directory', 'admins', 'confirmations', 'settings', 'songTexts', 'birthdays', 'birthYears', 'nameDays',
+      const top = ['students', 'directory', 'admins', 'confirmations', 'settings', 'songTexts', 'birthdays', 'birthYears', 'nameDays', 'adminNotes',
         ...(isSuperAdmin ? ['memberAccess', 'accessDecisions', 'adminLog'] : [])];
       for (const name of top) {
         setExporting(name);
@@ -95,9 +97,11 @@ export const SchoolSheet: React.FC<{ users: UserRecord[]; classes: SchoolClass[]
         {msg.flash && <div className="sticky top-0 z-10"><Flash flash={msg.flash} onClose={msg.clear} /></div>}
         <Announce classes={classes} onMessage={onMessage} />
         <SectionsTab onMessage={onMessage} />
+        <GrowthFold users={users} />
         <TopChants users={users} />
         <ExtraRightsFold users={users} onMessage={onMessage} />
         <PhoneNotices onMessage={onMessage} />
+        <RolesFold />
         {isSuperAdmin && <ChangeLog />}
 
         <Card className="!py-3">

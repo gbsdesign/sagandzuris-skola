@@ -78,7 +78,7 @@ const dropClassTeachers = async (cls: SchoolClass, uid: string) => {
 
 /** Admins: sets each member's teacherIds to the teachers of the classes (in use) they are in. Returns the failures
  *  (a member without a record has nothing to guard and does not count). */
-export const syncStudentTeachers = async (uids: string[], classes: SchoolClass[]) => {
+const syncStudentTeachers = async (uids: string[], classes: SchoolClass[]) => {
   const res = await Promise.all(uids.map(uid =>
     updateDoc(doc(db, 'students', uid), { teacherIds: teachersOf(uid, classes) })
       .then(() => 0, (e: any) => (String(e?.code || '').includes('not-found') ? 0 : 1))
@@ -151,6 +151,38 @@ export const addClassMember = async (cls: SchoolClass, p: { uid: string; name: s
   await linkTeachers(p.uid, cls).catch(() => {});
   await joinClassGroup(cls, p).catch(() => {});
   return syncMemberPaths(cls.id, cls.program, [p.uid], []);
+};
+
+/** Several people into one class at once (the admin's „მონიშვნა“ → „კლასში“): one by one, each step on the class as the
+ *  last one left it. Returns who went in (those already in it are skipped), the people who could not be written in
+ *  (`lost`) and the paths that missed the program (`failed`). */
+export const addClassMembers = async (cls: SchoolClass, people: { uid: string; name: string; photoURL?: string }[]) => {
+  let cur = cls;
+  let failed = 0;
+  let lost = 0;
+  const added: string[] = [];
+  for (const p of people) {
+    if (cur.memberIds.includes(p.uid)) continue;
+    try {
+      failed += await addClassMember(cur, p);
+    } catch {
+      lost++;
+      continue;
+    }
+    cur = { ...cur, memberIds: [...cur.memberIds, p.uid], members: [...cur.members, { uid: p.uid, name: p.name, photoURL: p.photoURL || '' }] };
+    added.push(p.uid);
+  }
+  return { added, failed, lost, after: cur };
+};
+
+/** Takes them out again (the bulk add's „გაუქმება“). `cls` = the class as the add left it. */
+export const removeClassMembers = async (cls: SchoolClass, uids: string[]) => {
+  let cur = cls;
+  for (const uid of uids) {
+    if (!cur.memberIds.includes(uid)) continue;
+    await removeClassMember(cur, uid);
+    cur = { ...cur, memberIds: cur.memberIds.filter(x => x !== uid), members: cur.members.filter(m => m.uid !== uid) };
+  }
 };
 
 const cleanProgram = (program: ProgramItem[]) =>
