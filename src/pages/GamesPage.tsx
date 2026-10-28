@@ -22,6 +22,8 @@ import HangiGame from './games/HangiGame';
 import AmikhseniGame from './games/AmikhseniGame';
 import SitqvaGame from './games/SitqvaGame';
 import OtkheuliGame from './games/OtkheuliGame';
+import GatvlaGame from './games/GatvlaGame';
+import ChurchkhelaGame from './games/ChurchkhelaGame';
 
 // „თამაშები“: the hub of the games (2026-10-27). Three categories as tabs — მუსიკალური · ქართული · ცოცხალი — and a
 // row per game with the variants it gets (ონლაინ · ჰიბრიდული · უტელეფონო). A built game opens its page: the games that live
@@ -41,7 +43,7 @@ const ICON: Record<string, React.ReactNode> = {
 };
 
 // the games that open inside this page, by their `mapItem`
-const INNER: Record<string, React.FC> = { hangi: HangiGame, amikhseni: AmikhseniGame, sitqva: SitqvaGame, otkheuli: OtkheuliGame };
+const INNER: Record<string, React.FC> = { hangi: HangiGame, amikhseni: AmikhseniGame, sitqva: SitqvaGame, otkheuli: OtkheuliGame, gatvla: GatvlaGame, churchkhela: ChurchkhelaGame };
 
 // the category stays chosen on this device
 const CAT_KEY = 'sg-games-cat';

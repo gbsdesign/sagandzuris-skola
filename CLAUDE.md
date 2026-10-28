@@ -199,6 +199,15 @@
   songs by region and chants by service, at most one group of a family per grid; the day's grid `gridOfDay` + unlimited extra grids
   with a random seed, not saved). Both records go through `hooks/useDailyRecord.ts` (`students.games.<game>.days[iso]`, the device
   for guests; `useHangi` is now a wrapper of it), no rules change. All three daily games count days from 2026-10-28.
+- **Live games (2026-10-28, third PR)**: „გათვლა“ (`pages/games/GatvlaGame.tsx`; rules `utils/gatvla.ts` + test; one phone in
+  the circle: names light up per beat of a rhyme and the last beat picks who starts, the picked are skipped next time; the
+  „ვისი ჯერია?“ wheel picks the one asked least (counts on the device); teams of 2–4. Rhymes: the old alphabet names, numbers,
+  the school's own „მთქმელი, მოძახილი, ბანი“ + the teacher's own on the device; names typed or a managed class's members
+  in one tap, all in localStorage `sg-gatvla`) and „ცხელი ჩურჩხელა“ (`pages/games/ChurchkhelaGame.tsx`; rules
+  `utils/churchkhela.ts` + test; Hot Potato: the phone plays a pool recording (`hangiPool`, a random start offset) and stops
+  after a random 5–45 s, the bell rings, a task card comes up, „შეასრულა/ვერ“ tallied; source „ჩემი ხმით“ = the teacher sings
+  and the phone only times — the mode guests get). Shared: `utils/gameSounds.ts` (openAudio in the tap, bell, tick),
+  `components/games/Chip.tsx`. Nothing saved but settings; no rules change.
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 
