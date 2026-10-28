@@ -264,8 +264,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
 
           {currentPage === 'gz' && (
             <div className="w-full max-w-2xl mx-auto mb-2 px-1 space-y-5">
-              {/* the page title sits in the top bar (PathToday's „დღეს“ card first, when there is a lesson or an assignment); four round buttons on top (სამოსი, ნასწავლი —
-                  with the teacher's assignments —, მანერა, სამუშაო) in the member's order, the habits under them */}
+              {/* „ჩემი დღე“: the page title sits in the top bar; PathToday's „დღეს“ card first (a lesson, an assignment, a review —
+                  when there is one), the five round buttons (სამოსი, ნასწავლი — with the teacher's assignments —, ოსტატობა,
+                  სამუშაო, მარგალიტები) in the member's order, the habits under them */}
               <PathToday />
               <PathTabs
                 orbs={{ labels: pathOrbs, render: order => <PathOrbs order={order} /> }}

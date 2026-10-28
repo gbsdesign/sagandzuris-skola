@@ -20,6 +20,8 @@ import { useKathismaActions } from './useKathismaActions';
 // instead of a page of its own. Its head line (count, the cycle's dates, the reminders bell, ✎ for the class's
 // teachers), my kanon(s) on a wine line with a one-tap ✓, the twenty kanons as small tiles — a tap opens one sheet
 // with only the actions that fit — and the history folded. No legend, no „how it works“: the tile sheet says it all.
+// Since 2026-10-28 the whole section is folded to its head line (my kanons named in it) until tapped; opened for the
+// psalter (`focus`) it starts open.
 
 /** The class's own group, live; undefined while loading or when it can't be read, null when the class has none. */
 export const useClassGroup = (id?: string) => {
@@ -67,10 +69,12 @@ export const ClassPsalter: React.FC<{ cls: SchoolClass; canLead: boolean; focus?
       </section>
     );
   }
-  return <GroupSection key={group.id} sectionRef={ref} cls={cls} group={group} canLead={canLead} />;
+  return <GroupSection key={group.id} sectionRef={ref} cls={cls} group={group} canLead={canLead} startOpen={!!focus} />;
 };
 
-const GroupSection: React.FC<{ sectionRef: React.Ref<HTMLElement>; cls: SchoolClass; group: PsalterGroup; canLead: boolean }> = ({ sectionRef, cls, group, canLead }) => {
+const GroupSection: React.FC<{ sectionRef: React.Ref<HTMLElement>; cls: SchoolClass; group: PsalterGroup; canLead: boolean; startOpen: boolean }> = ({
+  sectionRef, cls, group, canLead, startOpen,
+}) => {
   const { user } = useAuth();
   const uid = user?.uid;
   const { now, cycle, slots, owners, mine, takenFromMe, helpWanted } = useGroupNow(group, uid);
@@ -78,6 +82,7 @@ const GroupSection: React.FC<{ sectionRef: React.Ref<HTMLElement>; cls: SchoolCl
   const [tile, setTile] = useState<number | null>(null);
   const [manage, setManage] = useState(false);
   const [history, setHistory] = useState(false);
+  const [shut, setShut] = useState(!startOpen);
   const isMember = !!uid && group.memberIds.includes(uid);
   if (!cycle) return null;
   const read = readCount(slots);
@@ -86,67 +91,88 @@ const GroupSection: React.FC<{ sectionRef: React.Ref<HTMLElement>; cls: SchoolCl
 
   return (
     <section ref={sectionRef} className={`${CARD} scroll-mt-4 px-3 sm:px-4 pt-1 pb-3`} aria-label="ფსალმუნი">
-      {/* head: name · read/20 · the cycle's days · 🔔 · ✎ */}
-      <div className="flex items-center gap-2 min-h-14 pl-1 sm:pl-1">
-        <BookOpen className="w-5 h-5 shrink-0 text-[#7a2028]" />
-        <h2 className="font-serif-ge text-lg font-bold text-[#4a3426]">ფსალმუნი</h2>
-        <span className={`text-sm font-bold tabular-nums ${done ? 'text-emerald-700' : 'text-[#a4927c]'}`}>{read}/{KATHISMA_COUNT}</span>
-        <span className="min-w-0 flex-1 truncate text-xs font-semibold text-[#8a7a6a]">{formatRange(cycle)}</span>
+      {/* head: name · read/20, the cycle's days and my kanons under it (a tap folds the section) · 🔔 · ✎ */}
+      <div className="flex items-center gap-1 pl-1">
+        <button
+          type="button"
+          onClick={() => { triggerHaptic(8); setShut(o => !o); }}
+          aria-expanded={!shut}
+          className="flex-1 min-w-0 min-h-14 py-2 flex items-center gap-2 text-left cursor-pointer"
+        >
+          <BookOpen className="w-5 h-5 shrink-0 text-[#7a2028]" />
+          <span className="flex-1 min-w-0">
+            <span className="flex items-baseline gap-2">
+              <h2 className="font-serif-ge text-lg font-bold text-[#4a3426]">ფსალმუნი</h2>
+              <span className={`text-sm font-bold tabular-nums ${done ? 'text-emerald-700' : 'text-[#a4927c]'}`}>{read}/{KATHISMA_COUNT}</span>
+            </span>
+            <span className="block truncate text-xs font-semibold text-[#8a7a6a]">
+              {formatRange(cycle)}
+              {isMember && mine.length > 0 && <span className="text-[#7a2028]"> · შენი: {mine.join(', ')}</span>}
+            </span>
+          </span>
+          {/* someone asks for help while it is folded */}
+          {shut && isMember && othersHelp.length > 0 && <span aria-label="დახმარებას ითხოვენ" className="w-2.5 h-2.5 shrink-0 rounded-full bg-amber-500" />}
+          <ChevronDown className={`w-5 h-5 shrink-0 text-[#a4927c] transition-transform ${shut ? '' : 'rotate-180'}`} />
+        </button>
         {isMember && <ReminderBell />}
         {canLead && <IconBtn label="ჯგუფის პარამეტრები" onClick={() => setManage(true)}><Pencil /></IconBtn>}
       </div>
-      <div className="px-1"><Bar value={read} max={KATHISMA_COUNT} tone={done ? 'green' : 'wine'} /></div>
+      {!shut && (
+        <>
+          <div className="px-1"><Bar value={read} max={KATHISMA_COUNT} tone={done ? 'green' : 'wine'} /></div>
 
-      {/* my kanon(s) */}
-      {isMember && (
-        <div className="mt-3 space-y-2">
-          {mine.length === 0 && takenFromMe.length === 0 && (
-            <p className="px-1 text-[13px] text-[#8a7a6a]">ამ ციკლში კანონი არ გაქვს</p>
+          {/* my kanon(s) */}
+          {isMember && (
+            <div className="mt-3 space-y-2">
+              {mine.length === 0 && takenFromMe.length === 0 && (
+                <p className="px-1 text-[13px] text-[#8a7a6a]">ამ ციკლში კანონი არ გაქვს</p>
+              )}
+              {mine.map(k => <MyLine key={k} group={group} k={k} uid={uid!} slots={slots} owners={owners} left={msLeft(cycle, now)} actions={actions} />)}
+              {takenFromMe.map(k => (
+                <p key={k} className="px-1 text-[13px] text-[#75685a]">
+                  შენი კანონი {k} {ergative(firstName(memberName(group, slots[k]?.takenBy)))} აიღო.
+                </p>
+              ))}
+            </div>
           )}
-          {mine.map(k => <MyLine key={k} group={group} k={k} uid={uid!} slots={slots} owners={owners} left={msLeft(cycle, now)} actions={actions} />)}
-          {takenFromMe.map(k => (
-            <p key={k} className="px-1 text-[13px] text-[#75685a]">
-              შენი კანონი {k} {ergative(firstName(memberName(group, slots[k]?.takenBy)))} აიღო.
-            </p>
-          ))}
-        </div>
+
+          {/* someone asks for help: one line each, with „აღება“ */}
+          {isMember && othersHelp.length > 0 && (
+            <ul className="mt-2 space-y-1.5">
+              {othersHelp.map(h => (
+                <li key={h.k} className="flex items-center gap-2.5 pl-3 pr-1.5 py-1.5 rounded-2xl bg-amber-50 ring-1 ring-amber-200">
+                  <LifeBuoy className="w-[18px] h-[18px] shrink-0 text-amber-700" />
+                  <span className="flex-1 min-w-0 text-[13px] leading-snug text-amber-950">
+                    <b>{firstName(memberName(group, h.by))}</b> · კანონი {h.k}
+                  </span>
+                  <Btn size="sm" icon={<HandHelping />} disabled={actions.busy === h.k} onClick={() => actions.take(h.k)}>აღება</Btn>
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* the twenty kanons */}
+          <ul className="mt-3 grid grid-cols-5 sm:grid-cols-10 gap-1.5" aria-label="ციკლის 20 კანონი">
+            {ALL_KATHISMAS.map(k => (
+              <Tile key={k} group={group} k={k} uid={uid} slots={slots} owners={owners} onOpen={() => { triggerHaptic(8); setTile(k); }} />
+            ))}
+          </ul>
+
+          <Flash flash={actions.message} onClose={actions.clearMessage} />
+
+          {/* the finished cycles, folded */}
+          <button
+            type="button"
+            onClick={() => setHistory(h => !h)}
+            aria-expanded={history}
+            className="mt-2 w-full h-11 px-1 flex items-center gap-2 text-left text-sm font-bold text-[#4a3426] cursor-pointer"
+          >
+            ისტორია
+            <ChevronDown className={`w-4 h-4 text-[#a4927c] transition-transform ${history ? 'rotate-180' : ''}`} />
+          </button>
+          {history && <div className="px-1 sg-in"><GroupHistory group={group} current={cycle} bare /></div>}
+        </>
       )}
-
-      {/* someone asks for help: one line each, with „აღება“ */}
-      {isMember && othersHelp.length > 0 && (
-        <ul className="mt-2 space-y-1.5">
-          {othersHelp.map(h => (
-            <li key={h.k} className="flex items-center gap-2.5 pl-3 pr-1.5 py-1.5 rounded-2xl bg-amber-50 ring-1 ring-amber-200">
-              <LifeBuoy className="w-[18px] h-[18px] shrink-0 text-amber-700" />
-              <span className="flex-1 min-w-0 text-[13px] leading-snug text-amber-950">
-                <b>{firstName(memberName(group, h.by))}</b> · კანონი {h.k}
-              </span>
-              <Btn size="sm" icon={<HandHelping />} disabled={actions.busy === h.k} onClick={() => actions.take(h.k)}>აღება</Btn>
-            </li>
-          ))}
-        </ul>
-      )}
-
-      {/* the twenty kanons */}
-      <ul className="mt-3 grid grid-cols-5 sm:grid-cols-10 gap-1.5" aria-label="ციკლის 20 კანონი">
-        {ALL_KATHISMAS.map(k => (
-          <Tile key={k} group={group} k={k} uid={uid} slots={slots} owners={owners} onOpen={() => { triggerHaptic(8); setTile(k); }} />
-        ))}
-      </ul>
-
-      <Flash flash={actions.message} onClose={actions.clearMessage} />
-
-      {/* the finished cycles, folded */}
-      <button
-        type="button"
-        onClick={() => setHistory(h => !h)}
-        aria-expanded={history}
-        className="mt-2 w-full h-11 px-1 flex items-center gap-2 text-left text-sm font-bold text-[#4a3426] cursor-pointer"
-      >
-        ისტორია
-        <ChevronDown className={`w-4 h-4 text-[#a4927c] transition-transform ${history ? 'rotate-180' : ''}`} />
-      </button>
-      {history && <div className="px-1 sg-in"><GroupHistory group={group} current={cycle} bare /></div>}
 
       <TileSheet group={group} cls={cls} k={tile} uid={uid} slots={slots} owners={owners} isMember={isMember} canLead={canLead} actions={actions} onClose={() => setTile(null)} />
 

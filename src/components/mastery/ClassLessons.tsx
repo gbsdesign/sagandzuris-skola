@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowDown, ArrowUp, Award, BookOpen, Check, ChevronLeft, ChevronRight, Dumbbell, ExternalLink, Lightbulb, Link2, Music4, Pencil, Plus, Trash2 } from 'lucide-react';
+import { ArrowDown, ArrowUp, Award, BookOpen, Check, ChevronDown, ChevronLeft, ChevronRight, Dumbbell, ExternalLink, Lightbulb, Link2, Music4, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useAuth } from '../../context';
 import type { SchoolClass } from '../../hooks/useClasses';
 import {
@@ -13,12 +13,13 @@ import { Bar, Btn, FIELD, Flash, IconBtn, Label, Sheet, askConfirm, useFlash } f
 // „ოსტატობა“ of one class: its lessons, step by step. A member opens a lesson and goes through it one step at a time,
 // marking each „შესრულდა“; the class's teachers build them in place (+ and ✎) from tips, exercises, chants of the
 // class program and links, and see how many members finished each one. `bare`: inside the path page's panel (no card).
+// `fold`: the class page shows the card as one line that unfolds the lessons (2026-10-28).
 
 const KIND_ICON: Record<StepKind, React.ReactNode> = {
   text: <Lightbulb />, exercise: <Dumbbell />, chant: <Music4 />, link: <Link2 />,
 };
 
-export const ClassLessons: React.FC<{ cls: SchoolClass; canEdit: boolean; bare?: boolean; showClassName?: boolean }> = ({ cls, canEdit, bare, showClassName }) => {
+export const ClassLessons: React.FC<{ cls: SchoolClass; canEdit: boolean; bare?: boolean; showClassName?: boolean; fold?: boolean }> = ({ cls, canEdit, bare, showClassName, fold }) => {
   const { user } = useAuth();
   const lessons = useClassLessons(cls.id);
   const iAmMember = !!user && cls.memberIds.includes(user.uid);
@@ -26,24 +27,46 @@ export const ClassLessons: React.FC<{ cls: SchoolClass; canEdit: boolean; bare?:
   const everyone = useClassLessonProgress(cls.id, canEdit);
   const [open, setOpen] = useState<Lesson | null>(null);
   const [editing, setEditing] = useState<Lesson | 'new' | null>(null);
+  const [shut, setShut] = useState(true);
 
   if (!lessons) return null;
   if (!lessons.length && !canEdit) return null;
   // how many members finished a lesson (the teachers' line)
   const finished = (l: Lesson) => cls.members.filter(m => l.steps.length && doneCount(l, everyone[m.uid] || {}) === l.steps.length).length;
+  const folded = !!fold && shut;
+  // a member's finished lessons, on the folded line
+  const mineDone = lessons.filter(l => l.steps.length && doneCount(l, mine) === l.steps.length).length;
 
   const body = (
     <>
-      <div className={`flex items-center gap-2 ${bare ? 'min-h-11' : 'min-h-14 px-1'}`}>
-        {!bare && <Award className="w-5 h-5 shrink-0 text-[#7a2028]" />}
-        <h2 className="flex-1 min-w-0 font-serif-ge text-lg font-bold text-[#4a3426] truncate">
-          {showClassName ? cls.name : bare ? 'გაკვეთილები' : 'ოსტატობა'}
-          {lessons.length > 0 && <span className="ml-2 font-sans text-sm font-bold text-[#a4927c] tabular-nums">{lessons.length}</span>}
-        </h2>
-        {canEdit && <IconBtn label="ახალი გაკვეთილი" tone="wine" onClick={() => setEditing('new')}><Plus /></IconBtn>}
-      </div>
+      {fold ? (
+        <div className="flex items-center gap-2 min-h-14 px-1">
+          <button type="button" onClick={() => { triggerHaptic(8); setShut(o => !o); }} aria-expanded={!shut}
+            className="flex-1 min-w-0 min-h-14 flex items-center gap-2 text-left cursor-pointer">
+            <Award className="w-5 h-5 shrink-0 text-[#7a2028]" />
+            <h2 className="flex-1 min-w-0 font-serif-ge text-lg font-bold text-[#4a3426] truncate">
+              ოსტატობა
+              {lessons.length > 0 && <span className="ml-2 font-sans text-sm font-bold text-[#a4927c] tabular-nums">{lessons.length}</span>}
+            </h2>
+            {iAmMember && lessons.length > 0 && (
+              <span className={`shrink-0 text-[12.5px] font-bold tabular-nums ${mineDone === lessons.length ? 'text-emerald-700' : 'text-[#8a7a6a]'}`}>{mineDone}/{lessons.length}</span>
+            )}
+            <ChevronDown className={`w-5 h-5 shrink-0 text-[#a4927c] transition-transform ${shut ? '' : 'rotate-180'}`} />
+          </button>
+          {canEdit && <IconBtn label="ახალი გაკვეთილი" tone="wine" onClick={() => setEditing('new')}><Plus /></IconBtn>}
+        </div>
+      ) : (
+        <div className={`flex items-center gap-2 ${bare ? 'min-h-11' : 'min-h-14 px-1'}`}>
+          {!bare && <Award className="w-5 h-5 shrink-0 text-[#7a2028]" />}
+          <h2 className="flex-1 min-w-0 font-serif-ge text-lg font-bold text-[#4a3426] truncate">
+            {showClassName ? cls.name : bare ? 'გაკვეთილები' : 'ოსტატობა'}
+            {lessons.length > 0 && <span className="ml-2 font-sans text-sm font-bold text-[#a4927c] tabular-nums">{lessons.length}</span>}
+          </h2>
+          {canEdit && <IconBtn label="ახალი გაკვეთილი" tone="wine" onClick={() => setEditing('new')}><Plus /></IconBtn>}
+        </div>
+      )}
 
-      {lessons.length === 0 ? (
+      {folded ? null : lessons.length === 0 ? (
         <button type="button" onClick={() => setEditing('new')}
           className="w-full mt-1 min-h-14 rounded-2xl border border-dashed border-[#e0d0b6] text-[#8a7a6a] hover:text-[#7a2028] hover:border-[#7a2028]/40 flex items-center justify-center gap-2 text-sm font-bold cursor-pointer transition">
           <Plus className="w-4 h-4" /> პირველი გაკვეთილი

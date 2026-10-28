@@ -187,9 +187,9 @@ export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; p
 
   return (
     <div className="space-y-2.5">
-      {list.length === 0 ? <p className="text-sm text-[#8a7a6a]">მიმდინარე დავალება არ არის.</p> : rows(list)}
+      <Btn kind="soft" full icon={<Plus />} onClick={() => setAdding(true)}>ახალი დავალება</Btn>
       <Flash flash={msg.flash} onClose={msg.clear} />
-      <Btn kind="soft" size="sm" icon={<Plus />} onClick={() => setAdding(true)}>ახალი დავალება</Btn>
+      {list.length === 0 ? <p className="pt-1 text-sm text-[#8a7a6a]">მიმდინარე დავალება არ არის.</p> : <div className="pt-1">{rows(list)}</div>}
       {past.length > 0 && (
         <div className="border-t border-[#efe5d4]">
           <button type="button" aria-expanded={old} onClick={() => setOld(o => !o)}
