@@ -41,6 +41,9 @@ moving to the next chant in service order.
 - Resume where you stopped; next/previous chant in service or program order.
 - Tap-a-line plays only while the synth panel is open. Playing one player stops the other.
 - **Never auto-scroll** to the playing line.
+- **Synth ball** (2026-10-28): while the synthesizer plays, a small ball (`.np-ball`) glides on the top edge of the playing
+  line — its x is estimated from note lengths (`markerAt`, as in „სწავლა“), not exact. Shown only while playing (hidden on
+  pause). On/off by the ◉ button in the synth panel (`sagandzuri_ball`, on by default, remembered on the device).
 - Book notes only — no Drive `ნოტები` fallback anywhere.
 - Share: WhatsApp / Facebook / Messenger / Instagram inside "მეტი" (Instagram copies the link; on phones use
   `navigator.share`).
