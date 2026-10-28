@@ -7,9 +7,11 @@ import { useAuth, useNavigation } from '../context';
 import { useAccess } from '../hooks/useAccess';
 import { usePearls } from '../hooks/usePearls';
 import { useHangi } from '../hooks/useHangi';
+import { useDailyRecord } from '../hooks/useDailyRecord';
 import { CHESTS } from '../data/pearls';
 import { pearlState } from '../utils/pearls';
 import { hangiMeta, tbilisiToday } from '../utils/hangi';
+import { otkheuliMeta } from '../utils/otkheuli';
 import { BOARD_GAMES, GAME_CATEGORIES, GAMES, GameCategory, GameDef, GameMode, MODE_HINT, MODE_LABEL } from '../data/games';
 import { Card, Pill, Tabs } from '../components/ui/kit';
 import { Toast } from '../components/ui/Toast';
@@ -18,6 +20,8 @@ import { openPathPanel } from '../components/views/IndependentWorkCard';
 import { triggerHaptic } from '../utils/haptics';
 import HangiGame from './games/HangiGame';
 import AmikhseniGame from './games/AmikhseniGame';
+import SitqvaGame from './games/SitqvaGame';
+import OtkheuliGame from './games/OtkheuliGame';
 
 // „თამაშები“: the hub of the games (2026-10-27). Three categories as tabs — მუსიკალური · ქართული · ცოცხალი — and a
 // row per game with the variants it gets (ონლაინ · ჰიბრიდული · უტელეფონო). A built game opens its page: the games that live
@@ -37,7 +41,7 @@ const ICON: Record<string, React.ReactNode> = {
 };
 
 // the games that open inside this page, by their `mapItem`
-const INNER: Record<string, React.FC> = { hangi: HangiGame, amikhseni: AmikhseniGame };
+const INNER: Record<string, React.FC> = { hangi: HangiGame, amikhseni: AmikhseniGame, sitqva: SitqvaGame, otkheuli: OtkheuliGame };
 
 // the category stays chosen on this device
 const CAT_KEY = 'sg-games-cat';
@@ -87,6 +91,8 @@ export const GamesPage: React.FC = () => {
   const access = useAccess();
   const { pearls, shine, loaded } = usePearls(user?.uid);
   const hangi = useHangi();
+  const sitqva = useDailyRecord('sitqva');
+  const otkheuli = useDailyRecord('otkheuli');
   const [cat, setCat] = useState<GameCategory>(rememberedCat);
   const [soon, setSoon] = useState<string | null>(null);
   const today = useMemo(() => tbilisiToday(), []);
@@ -109,7 +115,12 @@ export const GamesPage: React.FC = () => {
   const pearlIds = CHESTS.flatMap(c => c.pearls);
   const polished = pearlIds.filter(id => { const s = pearlState(pearls[id], shine[id]); return s === 'polished' || s === 'shining'; }).length;
   const pearlMeta = user && loaded ? `გაპრიალებული ${polished}/${pearlIds.length}` : undefined;
-  const meta = (g: GameDef) => (g.id === 'margalitebi' ? pearlMeta : g.id === 'dghis-hangi' && hangi.loaded ? hangiMeta(hangi.days, today) : undefined);
+  const meta = (g: GameDef) =>
+    g.id === 'margalitebi' ? pearlMeta
+      : g.id === 'dghis-hangi' && hangi.loaded ? hangiMeta(hangi.days, today)
+      : g.id === 'dghis-sitqva' && sitqva.loaded ? hangiMeta(sitqva.days, today)
+      : g.id === 'otkheuli' && otkheuli.loaded ? otkheuliMeta(otkheuli.days, today)
+      : undefined;
 
   const open = (g: GameDef, state: Access) => {
     triggerHaptic(10);

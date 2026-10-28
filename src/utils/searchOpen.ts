@@ -4,8 +4,8 @@ import { useEffect, useLayoutEffect, useRef } from 'react';
 
 export const SEARCH_EVENT = 'sg-search-open';
 
-/** Opens the search over the current page. */
-export const openSearch = () => window.dispatchEvent(new Event(SEARCH_EVENT));
+/** Opens the search over the current page, with `query` already typed when given (a game's „ნახე აპში“). */
+export const openSearch = (query?: string) => window.dispatchEvent(new CustomEvent(SEARCH_EVENT, { detail: query ?? '' }));
 
 // "Open this song / ancestor / tab": the page takes the request when it mounts, or at once if it is
 // already on screen. One request at a time; a page that never opens simply leaves it unused.
