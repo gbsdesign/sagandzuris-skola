@@ -151,6 +151,13 @@
   open lesson is `mapItem`. Prayer texts copied from the app's ლოცვანი, psalms cut from the kathismas (`loadPsalmHtml`),
   the Apostle from `public/bible/`. Recording one's reading stays in the browser. Progress in `students.medavitne`
   (`hooks/useMedavitneProgress.ts`). Content not yet checked by a priest/regent — the page says so.
+  Since 2026-10-28 two tabs „გაკვეთილები · წიგნები“: „წიგნები“ (`pages/medavitneoba/Wignebi.tsx`, menu `data/wignebi.ts`,
+  texts `public/wignebi/<collection>/<NN>.json`, fetched on open, kept by the service worker) = the liturgical books of the
+  „საღვთისმსახურო წიგნები“ app (ღვთისმშობლის მიძინების მონასტერი) in that app's menu order: Bible (NT, OT, ტრაპეზის სახარება,
+  სამოციქულო), calendar 2024–2027, კონდაკი, კურთხევანი, პარაკლიტონი, საზიარო თვენი, ჟამნი, დავითნი, მგალობელთათვის,
+  წარდგომები, ლოცვანი, პარაკლისები, ანდრია კრიტელი. Place = `mapItem` „w…“ (`utils/wignebiPath.ts` for „←“ after a reload).
+  **Admins only** until the user has the monastery's permission (others see „მალე“). The texts were extracted from that
+  app's bundle; its old nuskhuri-font texts were converted with the app's own table (archaic letters kept).
 - **Library** page (`biblioteka`): საღმრთო ისტორია, დღესასწაულები, წმიდანთა ცხოვრება.
   Footer church calendar (`data/churchCalendar.ts`, `data/calendar/<year>.json`, made by
   `node scripts/fetch-church-calendar.mjs <year>`). **The 2026 file ends 13 Jan 2027 — re-run for 2027 once
