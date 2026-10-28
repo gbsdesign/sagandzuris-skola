@@ -6,6 +6,7 @@ import { syncLearnReminder } from '../utils/learnReminder';
 
 // The learning mode's progress, one record per piece (chant version or song recording):
 //   students/{uid}.learning  {piece: {part: {best, level, due, at}}}  (the member writes it)
+//   students/{uid}.learnParts {piece: number of parts}  (noted when the learning mode opens; the teacher's bars need it)
 // Someone not signed in keeps it on the device.
 
 const localKey = (piece: string) => `sg-learn-${piece}`;
@@ -17,6 +18,7 @@ export const useLearning = (uid: string | null | undefined, piece: string) => {
   const [rec, setRec] = useState<LearnRecord>(() => (uid ? {} : readLocal(piece)));
   const [all, setAll] = useState<Record<string, LearnRecord>>({});
   const [loaded, setLoaded] = useState(!uid);
+  const [noted, setNoted] = useState<number | undefined>();
   useEffect(() => {
     if (!uid) { setRec(readLocal(piece)); setLoaded(true); return; }
     setLoaded(false);
@@ -26,6 +28,7 @@ export const useLearning = (uid: string | null | undefined, piece: string) => {
         const learning = (s.data()?.learning || {}) as Record<string, LearnRecord>;
         setRec(learning[piece] || {});
         setAll(learning);
+        setNoted(s.data()?.learnParts?.[piece]);
         setLoaded(true);
         syncLearnReminder(learning); // the review reminder follows every change
       },
@@ -43,17 +46,28 @@ export const useLearning = (uid: string | null | undefined, piece: string) => {
     setDoc(doc(db, 'students', uid), { learning: { [piece]: { [part]: clean } } }, { merge: true })
       .catch(e => console.warn('learning save:', e?.code || e));
   };
-  return { rec, all, loaded, savePart };
+  /** How many parts the piece has, kept for the teacher (written only when it changed). */
+  const noteParts = (n: number) => {
+    if (!uid || !loaded || !(n > 0) || noted === n) return;
+    setNoted(n);
+    setDoc(doc(db, 'students', uid), { learnParts: { [piece]: n } }, { merge: true })
+      .catch(e => console.warn('learning parts:', e?.code || e));
+  };
+  return { rec, all, loaded, savePart, noteParts };
 };
 
-/** Everything the member learns (the home page's review line). */
+/** Everything the member learns, with the part counts (the home page's review line, their assignments). */
 export const useAllLearning = (uid: string | null | undefined) => {
-  const [all, setAll] = useState<Record<string, LearnRecord> | null>(null);
+  const [all, setAll] = useState<{ learning: Record<string, LearnRecord>; parts: Record<string, number> } | null>(null);
   useEffect(() => {
     if (!uid) { setAll(null); return; }
     return onSnapshot(
       doc(db, 'students', uid),
-      s => { const learning = (s.data()?.learning || {}) as Record<string, LearnRecord>; setAll(learning); syncLearnReminder(learning); },
+      s => {
+        const learning = (s.data()?.learning || {}) as Record<string, LearnRecord>;
+        setAll({ learning, parts: s.data()?.learnParts || {} });
+        syncLearnReminder(learning);
+      },
       err => console.warn('learning:', err?.code || err),
     );
   }, [uid]);

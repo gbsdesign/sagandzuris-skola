@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { afterTry, learnedShare, learnTakeId, markerAt, melodyIn, nextReviewDay, parseLearnTakeId, parseSongPiece, partState, partsAtBreaths, partsOfRecording, partsOfScore, reviewsDue, songPiece, timelineIn, wordsForPart } from '../src/utils/learn';
+import { afterTry, allLearned, assignedProgress, learnedShare, learnTakeId, markerAt, melodyIn, nextReviewDay, parseLearnTakeId, parseSongPiece, partState, partsAtBreaths, partsOfRecording, partsOfScore, reviewsDue, songPiece, timelineIn, wordsForPart } from '../src/utils/learn';
 import type { BookScore } from '../src/utils/chantSynth';
 
 const score = (sys: BookScore['sys'], voices: BookScore['voices'] = [[]], dur = 40): BookScore =>
@@ -99,4 +99,23 @@ test('the reviews due today, and the next review day', () => {
   assert.deepEqual(nextReviewDay(learning, '2026-10-28'), { day: '2026-10-28', count: 3 });
   assert.deepEqual(nextReviewDay({ a: learning.a }, '2026-10-29'), { day: '2026-10-29', count: 1 });
   assert.equal(nextReviewDay({ c: learning.c }, '2026-10-28'), null);
+});
+
+test('an assigned piece: the bar of its parts, a song by its best-learned recording', () => {
+  const r = (level: number) => ({ best: 90, level, at: '' });
+  const learning = {
+    'v-1': { 0: r(1), 2: r(0) },
+    'song-fs-a-t0': { 0: r(1) },
+    'song-fs-a-t2': { 0: r(4), 1: r(2) },
+    'song-fs-ab-t0': { 0: r(1), 1: r(1), 2: r(1) },
+  };
+  const parts = { 'v-1': 3, 'song-fs-a-t0': 4, 'song-fs-a-t2': 2, 'song-fs-ab-t0': 3 };
+  assert.deepEqual(assignedProgress('v-1', learning, parts), { piece: 'v-1', total: 3, learned: 1, marks: [2, 0, 1] });
+  const song = assignedProgress('fs-a', learning, parts);
+  assert.equal(song?.piece, 'song-fs-a-t2');
+  assert.ok(allLearned(song));
+  assert.ok(!allLearned(assignedProgress('v-1', learning, parts)));
+  // not opened yet (no part count): nothing to show
+  assert.equal(assignedProgress('v-2', learning, parts), null);
+  assert.equal(assignedProgress('v-1', learning, {}), null);
 });

@@ -133,6 +133,13 @@
   beside every part (`wordsForPart`, only roughly — no timings); home card „დღეს გასამეორებელი“ (`home/LearnDue.tsx`,
   opens the piece through `utils/learnOpen.ts`) and one daily phone reminder on the reminders Worker
   (`utils/learnReminder.ts`, id `learn-review`, kept apart from the habits' list in `prayerReminders.ts`).
+  A teacher's chant/song assignment (also 2026-10-28): the learning mode notes each piece's part count in
+  `students.learnParts.{piece}` (no rules change); `assignedProgress`/`allLearned` (`utils/learn.ts` + test) — a song counts
+  by its best-learned recording. Every part learned = the assignment is done (`workDone(…, mine)`; the member sees
+  „ნასწავლია“, a teacher's „ჩათვლა“ still shows „ჩათვლილია“; marking on the path still counts for the teacher). The class's
+  „დავალებები“ chip „ისწავლა N/M“ unfolds each member's bar (`WhoLearns`, `learn/PartsBar.tsx`); the member's window lists a
+  bar per piece (`LearnReview`). The member's „სწავლა“ on an assignment opens the learning mode on the assigned voice
+  (`learn/openLearning.ts`: `learnPieceOf`, `useOpenLearning`; `requestLearn(piece, voice)`).
 - **Folk songs map** (`data/songsData.ts`, `components/maps/GeorgiaMap.tsx`) and **მთქმელი authors map**
   (`data/mtkmeliData.ts`, `MtkmeliMap.tsx`, shared `RegionPuzzleMap.tsx`). Full texts only for authors who
   died before 1956; others get title + description + wiki link.

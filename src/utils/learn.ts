@@ -228,3 +228,31 @@ export const nextReviewDay = (learning: Record<string, LearnRecord> | undefined,
   }
   return day ? { day, count } : null;
 };
+
+// ---- an assigned piece (the teacher's „დავალება“) ------------------------------------------------------------------
+
+/** A part as the teacher's bar shows it: 0 not tried, 1 being learned, 2 learned. */
+export type PartMark = 0 | 1 | 2;
+export interface PieceProgress { piece: string; total: number; learned: number; marks: PartMark[] }
+
+export const pieceProgress = (piece: string, rec: LearnRecord | undefined, total: number): PieceProgress => {
+  const marks = Array.from({ length: total }, (_, i): PartMark => (!rec?.[i] ? 0 : rec[i].level >= 1 ? 2 : 1));
+  return { piece, total, learned: marks.filter(m => m === 2).length, marks };
+};
+
+/**
+ * How far a member is with an assigned chant version (its id) or song (its best-learned recording), from their
+ * learning records and the part counts their learning mode noted (students.learnParts). Null until they opened it.
+ */
+export const assignedProgress = (id: string, learning?: Record<string, LearnRecord>, parts?: Record<string, number>): PieceProgress | null => {
+  let best: PieceProgress | null = null;
+  for (const [piece, total] of Object.entries(parts || {})) {
+    if (!(total > 0) || (piece !== id && parseSongPiece(piece)?.songId !== id)) continue;
+    const p = pieceProgress(piece, learning?.[piece], total);
+    if (!best || p.learned / p.total > best.learned / best.total) best = p;
+  }
+  return best;
+};
+
+/** Every part learned in the learning mode: the assignment counts as done. */
+export const allLearned = (p: PieceProgress | null) => !!p && p.learned >= p.total;

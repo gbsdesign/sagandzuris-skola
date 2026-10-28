@@ -21,17 +21,19 @@ import { Choice, LOOPS_PER_STEP, LearnFrame, LearnTips, PartsBar, ReviewReminder
 type Mix = 'mine' | 'all' | 'others';
 const ordinal = (n: number) => (n === 1 ? 'პირველი' : `მე-${n}`);
 
-export const LearnMode: React.FC<{ vid: string; score: BookScore; onClose: () => void }> = ({ vid, score, onClose }) => {
+/** `voice`: the voice to start on (a teacher's assignment); otherwise the one named in the profile. */
+export const LearnMode: React.FC<{ vid: string; score: BookScore; voice?: Voice; onClose: () => void }> = ({ vid, score, voice: asked, onClose }) => {
   const info = findVersion(vid);
   const { user, isSuperAdmin } = useAuth();
   const uid = user?.uid ?? null;
   const pearls = usePearls(uid);
-  const { rec, loaded, savePart } = useLearning(uid, vid);
+  const { rec, loaded, savePart, noteParts } = useLearning(uid, vid);
   const today = georgiaToday();
   const parts = useMemo(() => partsOfScore(score), [score]);
   const voiceCount = Math.min(3, score.voices.length);
-  const [voice, setVoice] = useState<Voice>('1');
-  const [voicePicked, setVoicePicked] = useState(false);
+  const askedOk = !!asked && Number(asked) <= voiceCount;
+  const [voice, setVoice] = useState<Voice>(askedOk ? asked! : '1');
+  const [voicePicked, setVoicePicked] = useState(askedOk);
   const [current, setCurrent] = useState<number | 'all'>(0);
   const [mix, setMix] = useState<Mix>('mine');
   const [speed, setSpeed] = useState(0.5);
@@ -53,6 +55,8 @@ export const LearnMode: React.FC<{ vid: string; score: BookScore; onClose: () =>
   useEffect(() => {
     if (!voicePicked && pearls.loaded) setVoice(Number(pearls.voice) <= voiceCount ? pearls.voice : '1');
   }, [pearls.loaded, pearls.voice, voicePicked, voiceCount]);
+  // the teacher's bars need the number of parts
+  useEffect(() => { if (loaded) noteParts(parts.length); }, [loaded, parts.length]);
   // open on the first part not yet learned (or one due for review)
   const opened = useRef(false);
   useEffect(() => {

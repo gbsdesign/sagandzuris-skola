@@ -304,7 +304,7 @@ const StudentSheet: React.FC<{
 
           <PearlReview uid={uid} pearls={record.data.pearls} shine={record.data.pearlShine} />
           <DrillReview uid={uid} drillDone={record.data.drillDone} drillScore={record.data.drillScore} />
-          <LearnReview uid={uid} learning={record.data.learning} shine={record.data.pearlShine} />
+          <LearnReview uid={uid} learning={record.data.learning} parts={record.data.learnParts} shine={record.data.pearlShine} />
           <MedavitneReview uid={uid} shine={record.data.pearlShine} />
 
           <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8]">
