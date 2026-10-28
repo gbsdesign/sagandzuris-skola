@@ -4,6 +4,7 @@ import { WifiOff, RefreshCw, Loader2 } from 'lucide-react';
 import { PageBar } from '../components/ui/kit';
 import { PinButton } from '../components/home/ShortcutShelf';
 import { ProfileActions } from '../components/views/ProfileActions';
+import { KhutsuriSwitch } from '../components/views/KhutsuriSwitch';
 import { AdminEntry } from '../components/views/AdminEntry';
 import { prayerTitle } from '../data/prayers';
 import { HomePage } from '../pages/HomePage';
@@ -227,7 +228,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
     return (
       <div className="w-full max-w-lg mx-auto px-1 py-3 sm:px-0">
         <PageBar title="პროფილი" onBack={handleGoBack} className="mb-4" />
-        {/* the head card, the admin panel's row (admins), my outfit and home buttons, then the details folded */}
+        {/* the head card, the admin panel's row (admins), my outfit and home buttons, ხუცური, then the details folded */}
         <StudentProfileCard waiting={waiting} slot={<>
           <AdminEntry />
           {!waiting && <ChemiSamosi side={
@@ -237,6 +238,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
             </span>
           } />}
           {!waiting && <ShortcutShelf variant="profile" />}
+          {/* ხუცური: the whole site in the old script, on this device */}
+          <KhutsuriSwitch />
         </>} />
         {/* install the app · leave the account (asks first) */}
         <div className="max-w-lg mx-auto mt-3"><ProfileActions /></div>

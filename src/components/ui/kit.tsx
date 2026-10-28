@@ -320,7 +320,8 @@ export const Toggle: React.FC<{ on: boolean; onChange: (on: boolean) => void; la
   </button>
 );
 
-const Knob: React.FC<{ on: boolean }> = ({ on }) => (
+/** The switch's look alone, for a row that is itself the switch button. */
+export const Knob: React.FC<{ on: boolean }> = ({ on }) => (
   <span className={cx('relative block w-12 h-7 shrink-0 rounded-full transition-colors', on ? 'bg-[#7a2028]' : 'bg-[#dccdb5]')}>
     <span className={cx('absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-[left]', on ? 'left-6' : 'left-1')} />
   </span>
