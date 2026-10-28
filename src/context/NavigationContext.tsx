@@ -40,7 +40,7 @@ const NavigationContext = createContext<NavigationContextType | undefined>(undef
 interface NavSnap { page: PageType; service: ServiceType; classId: string | null; prayerId: string | null; mapItem?: string | null; dmId?: string | null }
 const HOME: NavSnap = { page: 'home', service: null, classId: null, prayerId: null, mapItem: null, dmId: null };
 // pages whose open item (a map region, an instrument, a chant album, a library book) is a step of its own in history
-const MAP_PAGES: PageType[] = ['simghera', 'mtkmeli', 'sakravebi', 'galoba', 'biblioteka', 'medavitneoba'];
+const MAP_PAGES: PageType[] = ['simghera', 'mtkmeli', 'sakravebi', 'galoba', 'biblioteka', 'medavitneoba', 'games'];
 const makeSnap = (page: PageType, service: ServiceType, classId: string | null, prayerId: string | null, mapItem: string | null, dmId: string | null = null): NavSnap => ({
   page,
   service: page === 'galoba' ? service : null,

@@ -17,6 +17,7 @@ export interface GameDef {
   modes: GameMode[];       // the variants, the first is the one built (or planned) first
   page?: PageType;         // built: where it opens
   panel?: string;          // built: a panel of that page to open first (the path page's round buttons)
+  item?: string;           // built inside the games page: its `mapItem` (pages/games/)
   section?: SectionId;     // built: the admin's switch and the member's feature that show or hide it
   original?: string;       // a board game: the game it is a Georgian retheme of
 }
@@ -37,7 +38,7 @@ export const MODE_HINT: Record<GameMode, string> = {
 export const GAMES: GameDef[] = [
   // მუსიკალური
   { id: 'margalitebi', title: 'მარგალიტები', text: 'მოისმინე საგალობლის ფრაზა, ჩამღერე მიკროფონში და გააპრიალე მარგალიტი', category: 'musical', modes: ['online'], page: 'gz', panel: 'pearls', section: 'margalitebi' },
-  { id: 'dghis-hangi', title: 'დღის ჰანგი', text: 'ყოველდღე ერთი საგალობელი ან სიმღერა: 1 წამი, 2, 4… — გამოიცანი რაც შეიძლება მალე', category: 'musical', modes: ['online', 'hybrid'] },
+  { id: 'dghis-hangi', title: 'დღის ჰანგი', text: 'ყოველდღე ერთი საგალობელი ან სიმღერა: 1 წამი, 2, 4… — გამოიცანი რაც შეიძლება მალე', category: 'musical', modes: ['online', 'hybrid'], page: 'games', item: 'hangi', section: 'tamashebi' },
   { id: 'sam-notshi', title: 'სამ ნოტში!', text: 'სამი ნოტით გამოიცანი საგალობელი; ვერ გამოიცანი — კიდევ ორი ნოტი', category: 'musical', modes: ['hybrid', 'online'] },
   { id: 'eko', title: 'ექო', text: 'აპი ჰანგს უკრავს, შენ იმეორებ — ყოველ ჯერზე ერთი ნოტით გრძელს', category: 'musical', modes: ['online'] },
   { id: 'khmis-tsqvilebi', title: 'ხმის წყვილები', text: 'მეხსიერების თამაში: დახურული ბარათების ქვეშ ორი ერთნაირი ხმა იპოვე', category: 'musical', modes: ['online', 'noPhone'] },
@@ -48,7 +49,7 @@ export const GAMES: GameDef[] = [
   { id: 'khutsuri', title: 'ხუცური წარწერა', text: 'ამოიკითხე ასომთავრულით და ნუსხურით დაწერილი — ასო-ასო', category: 'georgian', modes: ['online', 'noPhone'] },
   { id: 'asoebis-bade', title: 'ასოების ბადე', text: 'ბადეში დამალული სიტყვები იპოვე: საგალობლები, ტაძრები, კუთხეები', category: 'georgian', modes: ['online', 'noPhone'] },
   // ცოცხალი
-  { id: 'amikhseni', title: 'ამიხსენი', text: 'ახსენი სიტყვა მისი თქმის გარეშე, გუნდმა გამოიცნოს — ტელეფონი დროსა და ქულებს ითვლის', category: 'live', modes: ['hybrid', 'noPhone'] },
+  { id: 'amikhseni', title: 'ამიხსენი', text: 'ახსენი სიტყვა მისი თქმის გარეშე, გუნდმა გამოიცნოს — ტელეფონი დროსა და ქულებს ითვლის', category: 'live', modes: ['hybrid', 'noPhone'], page: 'games', item: 'amikhseni', section: 'tamashebi' },
   { id: 'gatvla', title: 'გათვლა', text: 'ქართული გათვლები და წილისყრა: ვინ იწყებს, ვინ რომელ გუნდშია', category: 'live', modes: ['hybrid'] },
   { id: 'tskheli-churchkhela', title: 'ცხელი ჩურჩხელა', text: 'მუსიკა ჩერდება — ვისაც ხელში რჩება, ის ასრულებს დავალებას', category: 'live', modes: ['hybrid'] },
   { id: 'ra-sad-rodis', title: 'რა? სად? როდის?', text: 'გუნდური ვიქტორინა ერთწუთიანი კითხვებით ჩვენი თემებიდან', category: 'live', modes: ['hybrid', 'noPhone'] },
@@ -64,3 +65,6 @@ export const BOARD_GAMES: GameDef[] = [
   { id: 'lurji-supra', title: 'ლურჯი სუფრა', original: 'Azul', text: 'ქართული ორნამენტებით მოხატული ფილები სუფრაზე დააწყვე', category: 'live', modes: ['noPhone', 'hybrid', 'online'] },
   { id: 'mepis-kari', title: 'მეფის კარი', original: 'Coup', text: 'მეფის კარის როლები: ვინ ვინ არის — ბლეფი და გამჭრიახობა', category: 'live', modes: ['noPhone', 'hybrid', 'online'] },
 ];
+
+/** The title of a game open inside the games page (its `mapItem`), for the top bar. */
+export const gameTitleOfItem = (item: string | null | undefined) => (item ? GAMES.find(g => g.item === item)?.title : undefined);
