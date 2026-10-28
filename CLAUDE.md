@@ -84,8 +84,10 @@
   (Cloudflare Pages), so tell the user clearly what a PR changes before they merge.
 - Firestore rules: `.github/workflows/firestore-rules.yml` runs `tests/firestore-rules.test.mjs` in the emulator on PRs and
   publishes `firestore.rules` when it reaches main (secret `FIREBASE_SERVICE_ACCOUNT`; added 2026-10-27). Until that secret
-  exists, the user publishes them by hand in the Firebase console. Cloudflare Workers are
-  deployed from the user's PC with wrangler — a cloud session can edit `worker/` but cannot deploy it.
+  exists, the user publishes them by hand in the Firebase console. The reminders Worker is published by
+  `.github/workflows/reminders-worker.yml` when `worker/reminders/**` reaches main (or by „Run workflow“; secret
+  `CLOUDFLARE_API_TOKEN`, added 2026-10-28 — without it the run only warns). The audio Worker (`worker/wrangler.toml`) is
+  still deployed from the user's PC with wrangler.
 
 ## Project basics
 
@@ -362,7 +364,7 @@
   read them in ⚙ „სკოლა“ → „ცვლილებების ჟურნალი“, nobody edits one; in the backup). ⚙ „სკოლა“ → „ტელეფონზე შეტყობინებები“
   (`utils/adminPush.ts`, `adminPush/{uid}`): „ახალი წევრი ელოდება“ (superadmins; `ensureMembership` → Worker
   `/access-request`, a tap opens `/?open=admin&person=<uid>`) and „ორშაბათის მიმოხილვა“ (Monday 10:00, `weekText`). The
-  Worker sends only to people still in `admins` and adds its `subs.admin` column itself — needs only `wrangler deploy`.
+  Worker sends only to people still in `admins` and adds its `subs.admin` column itself — needs only a publish of the Worker.
   Stage IV (2026-10-28): a class is edited only on its page — the ✎ list gives admins „მასწავლებლები“
   (`classes/ClassTeachersSheet.tsx`, `useLeaders` in `admin/LeaderChips.tsx`, `saveClassTeachers` also sets the members'
   teacherIds and the psalter group) and „არქივში გადატანა“, and a class nobody leads shows admins an amber „დანიშვნა“ line;
@@ -389,8 +391,9 @@
   recordings anywhere); kids' mode is switched by the teacher per student (`students.kidsMode`, no PIN).
 - **Home buttons** (`utils/shortcuts.ts`, `components/home/ShortcutShelf.tsx`, `students.shortcuts`, ≤8; hidden
   until chosen; class `defaultShortcuts`). Class mode filters the chant lists to the class program.
-- **Reminders Worker** (`worker/reminders/`, D1 + text pushes + group/assignment reminders): code is ready; the
-  user must do the one-time setup from `docs/შეხსენებების-სერვერი.md` on their PC (D1, `FIREBASE_SA`, deploy).
+- **Reminders Worker** (`worker/reminders/`, D1 + text pushes + group/assignment reminders): published by the workflow
+  above, which also does the old one-time setup of `docs/შეხსენებების-სერვერი.md` (finds or makes the D1 database, fills
+  its id into wrangler.toml for the run, runs `schema.sql`, warns when the Worker lacks `FIREBASE_SA` or `VAPID_PRIVATE_JWK` — those are set in the Cloudflare dashboard).
 - `VITE_EMULATORS=1` points the app at local Firebase emulators — not used any more (the user's rule, 2026-10-28).
 
 ## Plan part 2 (tab „მე-2 ნაწილის სამუშაო გეგმა“ in the plan doc below; six stages, one PR each)
