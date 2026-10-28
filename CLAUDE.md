@@ -342,6 +342,13 @@
   server's class list, `useAllClasses().fresh`). The class ✎ keeps teachers missing from the staff list and copies the
   teachers to the class's psalter group. Errors go through `utils/errorText.ts` (plain Georgian). Tile „ყველა“ counts
   everyone; „აქტიური“ only admitted non-staff members.
+  Stage ③ (2026-10-28): the person's window has „მიწერა“ (the administration's chat, `openAdminThread`), „აქტივობა“
+  (`utils/personActivity.ts` + attendance of their classes), class chips that open the class page + „კლასში დამატება“
+  (`addClassMember`), the kids' mode switch, who gave the role / let them in; a newcomer's class is picked before „დაშვება“.
+  Filters „კლასის გარეშე“, „პროფილი არასრული“, „30+ დღე არ შემოსულა“ (chip icons hide below 400 px); a row shows the
+  class instead of the e-mail; superadmins download the shown list as CSV (`utils/csv.ts`, phones without „+995“). Attention
+  lines „N კლასს მასწავლებელი არ ჰყავს“, „N წევრი კლასის გარეშეა“. Class cards show „ბოლო გაკვეთილი“. Admins find people in
+  the one search (group „ადამიანები“ from `directory`; `requestOpen('admin', uid)` opens the window).
 - **Access** (`hooks/useAccess.ts`): guests see chant books + synth, prayers, song/მთქმელი names only (no
   recordings anywhere); kids' mode is switched by the teacher per student (`students.kidsMode`, no PIN).
 - **Home buttons** (`utils/shortcuts.ts`, `components/home/ShortcutShelf.tsx`, `students.shortcuts`, ≤8; hidden

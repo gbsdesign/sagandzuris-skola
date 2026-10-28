@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { Plus, Archive, ArchiveRestore, Upload, Check, RefreshCw, ExternalLink, Pencil, BookOpen, Users, ListMusic, TriangleAlert } from 'lucide-react';
+import { Plus, Archive, ArchiveRestore, Upload, Check, RefreshCw, ExternalLink, Pencil, BookOpen, Users, ListMusic, TriangleAlert, CalendarCheck } from 'lucide-react';
 import { arrayRemove, arrayUnion, collection, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
 import { auth, db } from '../../firebase';
 import { useAuth, useNavigation } from '../../context';
@@ -18,7 +18,7 @@ import { LeaderChips } from './LeaderChips';
 import { useClassAttendance, useGroupReading } from './StatsTab';
 import { GroupMember, PsalterGroup, toGroup } from '../../hooks/usePsalter';
 import { KATHISMA_COUNT, cycleOf, georgiaToday, ownersIn, rebase } from '../../utils/psalter';
-import { MONTHS_SHORT_GE } from '../../utils/dateNames';
+import { shortDate } from '../../utils/dateNames';
 
 /**
  * Puts the class program on each member's path (missing items are added at the end) and takes back
@@ -162,11 +162,7 @@ type Draft = { id: string | null; name: string; logo: string; teacherIds: string
 const EMPTY: Draft = { id: null, name: '', logo: '', teacherIds: [] };
 
 // „28 ოქტ“, with the year when it is another one
-const shortDay = (iso?: string) => {
-  const d = iso ? new Date(iso) : null;
-  if (!d || isNaN(d.getTime())) return '';
-  return `${d.getDate()} ${MONTHS_SHORT_GE[d.getMonth()]}${d.getFullYear() === new Date().getFullYear() ? '' : ` ${d.getFullYear()}`}`;
-};
+const shortDay = (iso?: string) => shortDate(iso);
 
 // Classes: the admin's list of every class as a card; a tap opens the class page (the one workplace: members, program,
 // mode, paths), ✎ opens a small window for what only admins set — name, logo, its teachers from `staff` — and
@@ -422,11 +418,11 @@ const ClassGroupLine: React.FC<{ group: PsalterGroup }> = ({ group }) => {
   );
 };
 
-/** A class in the admin list, as a card: logo and name, its teachers, small chips (members, program, psalter
- *  group) and the attendance bar. A tap opens the class page; ✎ in the corner opens the admin's small window.
+/** A class in the admin list, as a card: logo and name, its teachers, small chips (members, program, the last lesson,
+ *  psalter group) and the attendance bar. A tap opens the class page; ✎ in the corner opens the admin's small window.
  *  A class without a teacher says so on the card. */
 const ClassRow: React.FC<{ cls: SchoolClass; group?: PsalterGroup; onOpen: () => void; onEdit: () => void }> = ({ cls, group, onOpen, onEdit }) => {
-  const rate = useClassAttendance(cls);
+  const { rate, last } = useClassAttendance(cls);
   return (
     <li className="relative">
       <button type="button" onClick={onOpen} title={`${cls.name} — კლასის გვერდი`}
@@ -452,6 +448,7 @@ const ClassRow: React.FC<{ cls: SchoolClass; group?: PsalterGroup; onOpen: () =>
         <span className="flex flex-wrap gap-1.5">
           <Pill tone="muted"><Users /> {cls.members.length} წევრი</Pill>
           {cls.program.length > 0 && <Pill tone="muted"><ListMusic /> პროგრამაში {cls.program.length}</Pill>}
+          {last && <Pill tone="muted"><CalendarCheck /> ბოლო გაკვეთილი {shortDay(last + 'T12:00:00')}</Pill>}
           {group && <ClassGroupLine group={group} />}
         </span>
         {rate !== null && (
