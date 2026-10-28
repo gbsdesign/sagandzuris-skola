@@ -7,9 +7,9 @@ name: Firestore rules
 on:
   push:
     branches: [main]
-    paths: [firestore.rules, tests/firestore-rules.test.mjs, .github/workflows/firestore-rules.yml]
+    paths: [firestore.rules, tests/firestore-rules.test.mjs, .github/workflows/firestore-rules.yml, .github/scripts/publish-rules.mjs]
   pull_request:
-    paths: [firestore.rules, tests/firestore-rules.test.mjs, .github/workflows/firestore-rules.yml]
+    paths: [firestore.rules, tests/firestore-rules.test.mjs, .github/workflows/firestore-rules.yml, .github/scripts/publish-rules.mjs]
   workflow_dispatch:
 
 concurrency:
@@ -35,8 +35,8 @@ jobs:
         run: |
           mkdir ci && cd ci
           npm init -y > /dev/null
-          npm i --no-audit --no-fund firebase-tools@15.34.1 @firebase/rules-unit-testing@5.0.2 firebase@12.19.0
-          cp ../firestore.rules ../tests/firestore-rules.test.mjs .
+          npm i --no-audit --no-fund firebase-tools@15.34.1 @firebase/rules-unit-testing@5.0.2 firebase@12.19.0 google-auth-library@9.15.1
+          cp ../firestore.rules ../tests/firestore-rules.test.mjs ../.github/scripts/publish-rules.mjs .
 
       # every case in the test must pass, or nothing is published
       - name: Check the rules in the emulator
@@ -56,6 +56,5 @@ jobs:
           export GOOGLE_APPLICATION_CREDENTIALS="$RUNNER_TEMP/sa.json"
           # the app's database is a named one (firebase-applet-config.json), not "(default)"
           DB=$(node -p "require('../firebase-applet-config.json').firestoreDatabaseId")
-          echo "{\"firestore\":[{\"database\":\"$DB\",\"rules\":\"firestore.rules\"}]}" > firebase.json
-          npx firebase deploy --only firestore:rules --project psalms-reading-group-ge-dev --non-interactive
+          node publish-rules.mjs psalms-reading-group-ge-dev "$DB" firestore.rules || { rm -f "$RUNNER_TEMP/sa.json"; exit 1; }
           rm -f "$RUNNER_TEMP/sa.json"
