@@ -185,6 +185,13 @@
   წარდგომები, ლოცვანი, პარაკლისები, ანდრია კრიტელი. Place = `mapItem` „w…“ (`utils/wignebiPath.ts` for „←“ after a reload).
   **Admins only** until the user has the monastery's permission (others see „მალე“). The texts were extracted from that
   app's bundle; its old nuskhuri-font texts were converted with the app's own table (archaic letters kept).
+  **Generated — never edit `public/wignebi` or `data/wignebi.ts` by hand**: `scripts/wignebi/` (plain Python, no packages:
+  `hermes.py` reads the app's Hermes v98 bundle and finds each book's module by its export name, `convert.py` + table = the
+  legacy font, `build.py` writes the files, menu labels from `labels.json` keyed by the data's keys). `.github/workflows/
+  wignebi-update.yml` runs `update.py` daily: asks the app's Expo update server (runtime = app version, probes the next ones;
+  last update in `scripts/wignebi/state.json`), checks the hash, rebuilds, refuses an update that loses items or >3% of a
+  book's text, and commits straight to main (the user's choice, 2026-10-28). The 22 Sep 2026 update is in (commemorations
+  ილია → შიო after Patriarch Shio III's election, 3 typos). Zatiki is only in the Play 1.1.4 APK, not in any update.
 - **Library** page (`biblioteka`): საღმრთო ისტორია, დღესასწაულები, წმიდანთა ცხოვრება.
   Footer church calendar (`data/churchCalendar.ts`, `data/calendar/<year>.json`, made by
   `node scripts/fetch-church-calendar.mjs <year>`). **The 2026 file ends 13 Jan 2027 — re-run for 2027 once

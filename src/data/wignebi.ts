@@ -2,6 +2,7 @@
 // „საღვთისმსახურო წიგნები“ app (ღვთისმშობლის მიძინების სახელობის მამათა მონასტერი). Generated from that app's
 // texts; each item's text is public/wignebi/<collection>/<NN>.json, fetched only when opened.
 // Book file: { t, num?, c: [{ l: label, s: [[heading, paragraphs[]], …] }] }; calendar: { y, m: [days[]] × 12 }.
+// Made by scripts/wignebi (kept up to date with the app's updates by .github/workflows/wignebi-update.yml).
 
 export type WignebiKind = 'grid' | 'list' | 'calendar';
 export type WignebiItem = { n: number; t: string; c: number };
