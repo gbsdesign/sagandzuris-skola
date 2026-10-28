@@ -10,6 +10,8 @@ import { ReadingToolbar, useKhutsuri } from '../components/views/ReadingTools';
 import { useHabitsModel } from '../components/habits/useHabits';
 import { Btn } from '../components/ui/kit';
 import { useAccess } from '../hooks/useAccess';
+import { markRead, useMyPsalterGroups } from '../hooks/usePsalter';
+import { cycleOf, georgiaToday, kathismasOf, ownersIn } from '../utils/psalter';
 import { habitOfPrayer, rememberRead } from '../utils/prayerHabits';
 import {
   REMINDER_OFFSETS,
@@ -175,31 +177,42 @@ export const PrayerPage: React.FC = () => {
 
 // At the end of a prayer: "წავიკითხე" ticks today's habit it belongs to (the morning prayers count for
 // "დილის და საღამოს ლოცვები"…; a chapter adds one თავი to "სახარება" or "სამოციქულო") and moves "გააგრძელე" past a finished chapter.
-// A kathisma ticks "ფსალმუნები" the same way; psalter groups are marked only on their own page.
+// A kathisma ticks "ფსალმუნები" the same way, and when it is my kanon in a psalter group this cycle, the group's
+// kanon is marked read too (the one button for both).
 const ReadMark: React.FC<{ prayerId: string }> = ({ prayerId }) => {
   const { user } = useAuth();
   const access = useAccess();
   const { model, blessing } = useHabitsModel(() => {});
   const [pressed, setPressed] = useState(false);
   useEffect(() => setPressed(false), [prayerId]);
+  const { groups } = useMyPsalterGroups(user?.uid);
 
-  const habit = HABIT_ITEMS.find(h => h.id === habitOfPrayer(prayerId));
-  if (!user || !habit || access.section('chvevebi') !== 'open') return null;
+  const k = /^kathisma-(\d+)$/.exec(prayerId)?.[1];
+  const kanonIn = !user || !k || access.section('medavitneoba') !== 'open' ? [] : groups.flatMap(g => {
+    const c = cycleOf(georgiaToday(), g.cycleDays, g.shiftDays);
+    return g.memberIds.includes(user.uid) && kathismasOf(ownersIn(g.assignment, g.baseHalf, c.half), user.uid).includes(Number(k)) ? [{ g, c }] : [];
+  });
+  const found = HABIT_ITEMS.find(h => h.id === habitOfPrayer(prayerId));
+  const habit = found && access.section('chvevebi') === 'open' ? found : undefined;
+  if (!user || (!habit && !kanonIn.length)) return null;
   const today = new Date();
-  const ticked = model.isOn(habit.id, today);
+  const ticked = !!habit && model.isOn(habit.id, today);
   // a chapter of the Gospel or the Apostle adds one to the day's count (the day ticks at the goal); „გაუქმება“ takes it back
-  const counter = COUNTED_BY_READING.includes(habit.id) ? model.counters[habit.id] : undefined;
-  const count = counter ? model.countOn(habit.id, today) : 0;
+  const counter = habit && COUNTED_BY_READING.includes(habit.id) ? model.counters[habit.id] : undefined;
+  const count = habit && counter ? model.countOn(habit.id, today) : 0;
 
   const press = () => {
     setPressed(true);
     rememberRead(prayerId, true);
+    // the mark waits on the phone when offline and is sent later
+    for (const { g, c } of kanonIn) void markRead(g.id, c, Number(k), user.uid).catch(() => {});
+    if (!habit) return;
     if (counter) model.setCount(habit.id, count + 1, today);
     else if (!ticked) model.toggle(habit.id, today);
   };
   const undo = () => {
     setPressed(false);
-    model.setCount(habit.id, count - 1, today);
+    if (habit) model.setCount(habit.id, count - 1, today);
   };
 
   // one button, no card: „წავიკითხე“, then a soft „წაკითხულია“ (a chapter: „2 / 5 თავი“, a second press takes it back)

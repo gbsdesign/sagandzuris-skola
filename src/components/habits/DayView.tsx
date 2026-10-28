@@ -19,13 +19,12 @@ import { DayDot, Ring, ViewHeading, dotState } from './parts';
 // "დღე": the chosen day's ring and status, the last seven days to choose from (a forgotten tick may be set up to
 // six days back), then the daily habits beside the weekly and monthly ones; a member changes each list at its end.
 
-/** A member's own list: „+ ჩვევის დამატება“ and „⇅ რიგი“ at the end of each list (0 — daily, 1 — weekly and monthly). */
+/** A member's own list: „+ ჩვევის დამატება“ and „⇅ რიგი“ at the end of each list (0 — daily, 1 — weekly and monthly);
+ *  a habit itself is changed on its own page (its ✏️), the one editor. */
 export interface ListEdit {
   add: (col: 0 | 1) => void;
   /** the list's habits with grips, drawn in its place while „რიგი“ is on */
   reorder: (col: 0 | 1) => React.ReactNode;
-  /** a habit's settings, unfolded under its card by ✏️; `done` folds them back */
-  settings: (id: string, done: () => void) => React.ReactNode;
 }
 
 const longDate = (d: Date) => `${WEEKDAYS_GE[d.getDay()]}, ${d.getDate()} ${MONTHS_GE[d.getMonth()]}`;
@@ -152,7 +151,7 @@ const CountBar: React.FC<{ count: number; counter: HabitCounter; color: string; 
 };
 
 // A card shows its own numbers: today's count as a ring round the round button, the last ten days as dots beside the name,
-// ✏️ unfolding its settings (2026-10-23, every habit); the share and the days ticked are on the habit's own page.
+// „›“ opening its own page (the share, the days ticked, and its ✏️ — the one place a habit is changed).
 const RING = 2 * Math.PI * 18.5;
 // how many days the dots beside a card's name show
 const DOTS = 10;
@@ -186,8 +185,8 @@ const WeekDots: React.FC<{ ticks: Set<string>; color: string; className: string 
 // round it as a ring); a tap on the name unfolds the habit's prayers and its own buttons, or opens its one prayer (one
 // without either is ticked by its name too). One line: at the name's right the run and the last ten days; a weekly or
 // monthly habit has its period („ამ კვირას 1 / 2“) there instead, a counted one its number. A counted habit
-// has „+“ (not the Gospel and the Apostle: their chapters count by „წავიკითხე“); ✏️ unfolds its settings under it (without
-// them — a guest — „›“ opens the habit's page); ⓘ unfolds the member's note.
+// has „+“ (not the Gospel and the Apostle: their chapters count by „წავიკითხე“); „›“ opens the habit's page, for a member
+// and a guest alike; ⓘ unfolds the member's note.
 const HabitRow: React.FC<{
   model: HabitsModel;
   habit: MyHabit;
@@ -195,12 +194,7 @@ const HabitRow: React.FC<{
   date: Date;
   onOpenPrayer: (prayerId: string) => void;
   onLink: (l: HabitLink) => void;
-  /** only while the list is in its „შეცვლა“ mode: ✏️ instead of „›“ */
-  edit?: ListEdit;
-  /** its settings are unfolded (kept by the list, so a habit stays while its own days are changed) */
-  editing: boolean;
-  onEditing: (on: boolean) => void;
-}> = ({ model, habit, group, date, onOpenPrayer, onLink, edit, editing, onEditing }) => {
+}> = ({ model, habit, group, date, onOpenPrayer, onLink }) => {
   const [noteOpen, setNoteOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const look = model.looks[habit.id];
@@ -304,30 +298,15 @@ const HabitRow: React.FC<{
             <Plus className="w-[18px] h-[18px] stroke-[2.5]" />
           </button>
         )}
-        {edit ? (
-          <button
-            type="button"
-            onClick={() => onEditing(!editing)}
-            aria-expanded={editing}
-            aria-label={`${habit.label} — შეცვლა`}
-            title="შეცვლა"
-            className={`w-9 h-9 ml-0.5 ${habit.note ? '' : 'mr-1.5'} shrink-0 rounded-full flex items-center justify-center cursor-pointer transition-colors ${
-              editing ? 'bg-[#7a2028] text-[#fbf6ec]' : 'text-[#a08a76] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.06]'
-            }`}
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
-        ) : (
-          <button
-            type="button"
-            onClick={() => model.openHabit(habit.id)}
-            aria-label={`${habit.label} — ჩვევის გვერდი${run > 1 ? `, ზედიზედ ${run}` : ''}`}
-            title="ჩვევის გვერდი"
-            className={`h-11 min-w-10 shrink-0 ${habit.note ? '' : 'mr-1'} pl-1.5 pr-1 rounded-full flex items-center justify-end text-[#b8a68e] hover:bg-[#7a2028]/[0.06] cursor-pointer transition-colors`}
-          >
-            <ChevronRight className="w-[18px] h-[18px] shrink-0" />
-          </button>
-        )}
+        <button
+          type="button"
+          onClick={() => model.openHabit(habit.id)}
+          aria-label={`${habit.label} — ჩვევის გვერდი${run > 1 ? `, ზედიზედ ${run}` : ''}`}
+          title="ჩვევის გვერდი"
+          className={`h-11 min-w-10 shrink-0 ${habit.note ? '' : 'mr-1'} pl-1.5 pr-1 rounded-full flex items-center justify-end text-[#b8a68e] hover:bg-[#7a2028]/[0.06] cursor-pointer transition-colors`}
+        >
+          <ChevronRight className="w-[18px] h-[18px] shrink-0" />
+        </button>
         {habit.note && (
           <button
             type="button"
@@ -343,11 +322,6 @@ const HabitRow: React.FC<{
           </button>
         )}
       </div>
-      {editing && edit && (
-        <div className="px-3 pt-3 pb-3 border-t border-[#f1e8d9] bg-[#fdfaf4] animate-in fade-in slide-in-from-top-1 duration-200">
-          {edit.settings(habit.id, () => onEditing(false))}
-        </div>
-      )}
       {menuOpen && habit.menu && (
         <div className="px-3 pb-4 pt-1 space-y-2 animate-in fade-in slide-in-from-top-1 duration-200">
           {habit.hint && <p className="px-0.5 text-[12.5px] font-medium text-[#8a7a6a]">{habit.hint}</p>}
@@ -394,7 +368,6 @@ export const DayView: React.FC<{
   edit?: ListEdit;
 }> = ({ model, date, onDate, actions, onOpenPrayer, onLink, edit }) => {
   const [sorting, setSorting] = useState<0 | 1 | null>(null);
-  const [editingId, setEditingId] = useState<string | null>(null);
   // „შეცვლა“: one ✏️ over the lists; the rows' ✏️, the order and „+“ show only then (2026-10-27)
   const [changing, setChanging] = useState(false);
   const today = dayKey(date) === dayKey(new Date());
@@ -479,7 +452,7 @@ export const DayView: React.FC<{
                             aria-pressed={changing}
                             aria-label={changing ? 'შეცვლა — მზადაა' : 'ჩვევების შეცვლა'}
                             title={changing ? 'მზადაა' : 'შეცვლა'}
-                            onClick={() => { triggerHaptic(8); setChanging(c => !c); setSorting(null); setEditingId(null); }}
+                            onClick={() => { triggerHaptic(8); setChanging(c => !c); setSorting(null); }}
                             className={`h-9 rounded-full inline-flex items-center justify-center gap-1 cursor-pointer transition-colors active:scale-95 ${
                               changing ? 'px-3 bg-[#7a2028] text-[#fbf6ec] text-[13px] font-bold' : 'w-9 text-[#8a7a6a] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.06]'
                             }`}
@@ -501,7 +474,7 @@ export const DayView: React.FC<{
                     {groups.flatMap(g =>
                       g.items
                         // a habit with „მორგებული“ days shows on those days only
-                        .filter(h => !h.schedule || isDue(h.schedule, date) || editingId === h.id)
+                        .filter(h => !h.schedule || isDue(h.schedule, date))
                         .map(h => (
                           <HabitRow
                             key={h.id}
@@ -511,9 +484,6 @@ export const DayView: React.FC<{
                             date={date}
                             onOpenPrayer={onOpenPrayer}
                             onLink={onLink}
-                            edit={changing ? edit : undefined}
-                            editing={editingId === h.id}
-                            onEditing={on => setEditingId(on ? h.id : null)}
                           />
                         ))
                     )}

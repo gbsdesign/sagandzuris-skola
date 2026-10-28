@@ -241,7 +241,7 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean }> = (
       {showWork && (
         <div className={`sg-in mt-3 rounded-2xl bg-[#faf6ef] px-3.5 ${canEdit || !work.length ? 'py-3' : 'pb-3'}`}>
           {canEdit ? (
-            <AssignmentsFold cls={cls} list={work} />
+            <AssignmentsFold cls={cls} list={work} past={assignments.filter(a => daysUntil(a.due) < 0 && !work.includes(a)).reverse()} />
           ) : work.length ? (
             <WorkItems list={work} />
           ) : (

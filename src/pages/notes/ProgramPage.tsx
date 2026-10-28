@@ -8,7 +8,6 @@ import {
 import './notes.css';
 import './program.css';
 import { useNotes, shareProgramUrl } from '../../context/NotesContext';
-import { useNavigation } from '../../context';
 import { findVersion } from '../../data/chantLookup';
 import { versionMeta } from '../../data/tsirvaChants';
 import { getChantMedia } from '../../data/chantMediaRegistry';
@@ -17,6 +16,7 @@ import { isOffline, onOfflineChange, saveOffline, estimateMb, offlineSupported }
 import { loadBookScore, saveBlob, BookScore } from '../../utils/chantSynth';
 import { GrapeBunch } from '../../components/home/PlateOrnaments';
 import { triggerHaptic } from '../../utils/haptics';
+import { ChantPicker } from '../../components/teacher/ClassProgramPanel';
 
 const labelOf = (id: string) => {
   const info = findVersion(id);
@@ -28,7 +28,6 @@ const labelOf = (id: string) => {
 
 export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
   const { closeProgram, openNotes, setChurch, liturgy, program, fromLink } = useNotes();
-  const nav = useNavigation();
   const regent = liturgy.role === 'teacher' && !fromLink;
   const items = program?.items ?? [];
   const [sheet, setSheet] = useState<'tpl' | 'qr' | null>(null);
@@ -39,6 +38,7 @@ export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
   const toastT = useRef(0);
   const [qrSvg, setQrSvg] = useState('');
   const [busy, setBusy] = useState<string | null>(null);
+  const [picking, setPicking] = useState(false);
   const listRef = useRef<HTMLOListElement>(null);
 
   useEffect(() => onOfflineChange(() => bump(n => n + 1)), []);
@@ -162,11 +162,7 @@ export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
     h.addEventListener('pointercancel', up);
   };
 
-  const addMore = () => {
-    closeProgram();
-    nav.navigateTo('galoba');
-    nav.setSelectedService('წირვა');
-  };
+  // „+ საგალობლის დამატება“: the chants open right here, in a window over the program
 
   const sentNote = fromLink
     ? 'გაზიარებული პროგრამა'
@@ -252,7 +248,7 @@ export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
                   );
                 })}
               </ol>
-              {regent && <button type="button" className="pp-add" onClick={addMore}><Plus /><span>საგალობლის დამატება</span></button>}
+              {regent && <button type="button" className="pp-add" onClick={() => setPicking(true)}><Plus /><span>საგალობლის დამატება</span></button>}
             </>
           )}
         </div>
@@ -294,6 +290,8 @@ export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
           <div className="pp-link"><button type="button" onClick={copyUrl}><Copy /> ბმულის კოპირება</button></div>
         </div>
       )}
+
+      {picking && <ChantPicker picked={items} onToggle={id => liturgy.toggle(id)} onClose={() => setPicking(false)} />}
 
       <div className={`np-toast ${toast.on ? 'on' : ''}`} role="status" aria-live="polite"><span>{toast.msg}</span></div>
     </div>

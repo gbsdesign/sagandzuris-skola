@@ -10,7 +10,7 @@ import { triggerHaptic } from '../../utils/haptics';
 import { Btn, IconBtn, Sheet } from '../ui/kit';
 import { HabitPrayerMenu } from './HabitPrayerMenu';
 import { setHabitReminders } from '../../utils/prayerReminders';
-import { AddHabitPanel, HabitCardEditor, HabitSettings, HabitsReorder } from './HabitsEditor';
+import { AddHabitPanel, HabitCardEditor, HabitsReorder } from './HabitsEditor';
 import { PATH_ICON } from './IndependentWorkCard';
 import { DayView, ListEdit } from '../habits/DayView';
 import { WeekView } from '../habits/WeekView';
@@ -211,7 +211,6 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
     ? {
         add: col => open(`add:${col === 0 ? 'daily' : 'weekly'}`),
         reorder: col => <HabitsReorder mine={mine} groups={col === 0 ? dailyOf(mine.groups) : rareOf(mine.groups)} />,
-        settings: (id, done) => <HabitCardEditor mine={mine} id={id} onDone={done} />,
       }
     : undefined;
 
@@ -286,7 +285,7 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
         }
         footer={editId ? <Btn full icon={<Check />} onClick={() => swap(`habit:${editId}`)}>მზადაა</Btn> : undefined}
       >
-        {editId ? <HabitSettings mine={mine} id={editId} onRemoved={close} /> : habitId && <HabitPage model={model} id={habitId} date={date} />}
+        {editId ? <HabitCardEditor mine={mine} id={editId} onRemoved={close} /> : habitId && <HabitPage model={model} id={habitId} date={date} />}
       </Sheet>
 
       <Sheet open={!!addTo} onClose={close} title="ახალი ჩვევა">

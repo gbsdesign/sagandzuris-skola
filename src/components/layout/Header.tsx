@@ -1,6 +1,5 @@
 import React from 'react';
 import { useAuth, useNavigation, useModal } from '../../context';
-import { PWAInstallButton } from '../PWAInstallButton';
 import { triggerHaptic } from '../../utils/haptics';
 import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
 import { ClassLogo } from '../classes/ClassLogo';
@@ -86,12 +85,12 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
           <span className="hidden md:inline font-serif-ge text-base font-bold text-[#4a3426]">საგანძურის სკოლა</span>
         </button>
 
-        {/* independent work (icon + count) + install + profile (the admin panel opens from the profile) */}
+        {/* independent work (icon + count) + profile (the admin panel opens from the profile; installing the app lives
+            in the profile and on the offline page) */}
         <div className="order-2 lg:order-3 ml-auto flex items-center gap-1.5 sm:gap-2 min-w-0">
           {/* the search sits beside the learning tools; with none of them shown, up here — and up here on a narrow
               phone (under 400px), where the three chips need the whole row */}
           {access.can('search') && <SearchButton className={showNav ? 'min-[400px]:hidden' : ''} />}
-          <PWAInstallButton compact />
           {/* offline mode: the cloud shows whether the app works without internet */}
           <OfflineButton />
 

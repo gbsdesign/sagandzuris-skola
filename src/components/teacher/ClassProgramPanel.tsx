@@ -195,9 +195,10 @@ const searchButtons = (words: string[]) => {
   return buttonIndex.filter(n => { const hay = `${n.title} ${n.sub || ''}`.toLowerCase(); return words.every(w => hay.includes(w)); }).slice(0, 30);
 };
 
-/** Everything to walk through: 👁 shows an item, + adds it (✓ once in the program); the search finds it at once. */
-const ProgramPicker: React.FC<{ picked: ProgramItem[]; onToggle: (item: ProgramItem) => void; onLook: (id: string) => void; onClose: () => void }> = ({ picked, onToggle, onLook, onClose }) => {
-  const top = useMemo(roots, []);
+/** Everything to walk through: 👁 shows an item, + adds it (✓ once in the program); the search finds it at once.
+ *  `chantsOnly`: just the chants' branch (the liturgy program's „+ საგალობლის დამატება“). */
+const ProgramPicker: React.FC<{ picked: ProgramItem[]; onToggle: (item: ProgramItem) => void; onLook?: (id: string) => void; onClose: () => void; chantsOnly?: boolean }> = ({ picked, onToggle, onLook, onClose, chantsOnly }) => {
+  const top = useMemo(() => (chantsOnly ? roots()[0].children!() as Node[] : roots()), [chantsOnly]);
   const [path, setPath] = useState<Node[]>([]);
   const [q, setQ] = useState('');
   const [rows, setRows] = useState<Node[] | null>(top);
@@ -205,14 +206,19 @@ const ProgramPicker: React.FC<{ picked: ProgramItem[]; onToggle: (item: ProgramI
 
   useEffect(() => {
     const words = q.toLowerCase().trim().split(/\s+/).filter(Boolean);
-    if (words.length) { setRows([...searchCatalog(q, 30).map(entryNode), ...searchButtons(words)]); return; }
+    if (words.length) {
+      setRows(chantsOnly
+        ? searchCatalog(q, 60).filter(e => e.category === 'galoba').slice(0, 30).map(entryNode)
+        : [...searchCatalog(q, 30).map(entryNode), ...searchButtons(words)]);
+      return;
+    }
     const next = here?.children ? here.children() : top;
     if (!(next instanceof Promise)) { setRows(next); return; }
     let live = true;
     setRows(null);
     next.then(r => live && setRows(r), () => live && setRows([]));
     return () => { live = false; };
-  }, [here, q, top]);
+  }, [here, q, top, chantsOnly]);
 
   const on = new Set(picked.map(p => p.id));
 
@@ -221,7 +227,7 @@ const ProgramPicker: React.FC<{ picked: ProgramItem[]; onToggle: (item: ProgramI
       footer={<Btn size="lg" full icon={<Check />} onClick={onClose}>მზადაა</Btn>}>
       <div className="relative mb-3">
         <Search className="w-4 h-4 text-[#b3a594] absolute left-3.5 top-1/2 -translate-y-1/2" />
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="მოძებნე საგალობელი, ლოცვა, წიგნი, სიმღერა…" className={`${FIELD} pl-10`} />
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder={chantsOnly ? 'მოძებნე საგალობელი…' : 'მოძებნე საგალობელი, ლოცვა, წიგნი, სიმღერა…'} className={`${FIELD} pl-10`} />
       </div>
       {!q.trim() && path.length > 0 && (
         <button type="button" onClick={() => setPath(p => p.slice(0, -1))}
@@ -246,7 +252,7 @@ const ProgramPicker: React.FC<{ picked: ProgramItem[]; onToggle: (item: ProgramI
                   </span>
                   {n.children && <ChevronRight className="w-4 h-4 shrink-0 text-[#b3a594]" />}
                 </button>
-                {n.open && <RowIcon label={`${n.title} — გახსნა`} onClick={() => onLook(n.open!)}><Eye /></RowIcon>}
+                {n.open && onLook && <RowIcon label={`${n.title} — გახსნა`} onClick={() => onLook(n.open!)}><Eye /></RowIcon>}
                 {n.item && (
                   <button type="button" onClick={() => onToggle(n.item!)} aria-pressed={added} aria-label={`${n.title} — ${added ? 'პროგრამიდან ამოღება' : 'პროგრამაში დამატება'}`}
                     className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center cursor-pointer transition active:scale-90 ${added ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#7a2028]/[0.07] text-[#7a2028] hover:bg-[#7a2028]/[0.12]'}`}>
@@ -262,3 +268,8 @@ const ProgramPicker: React.FC<{ picked: ProgramItem[]; onToggle: (item: ProgramI
     </Sheet>
   );
 };
+
+/** The liturgy program's chant picker: the same tree, its chants' branch only; `picked` and `onToggle` speak in version ids. */
+export const ChantPicker: React.FC<{ picked: string[]; onToggle: (id: string) => void; onClose: () => void }> = ({ picked, onToggle, onClose }) => (
+  <ProgramPicker chantsOnly picked={picked.map(id => ({ id, title: '', code: '' }))} onToggle={item => item.id && onToggle(item.id)} onClose={onClose} />
+);
