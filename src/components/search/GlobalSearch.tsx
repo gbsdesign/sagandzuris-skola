@@ -14,10 +14,13 @@ const inHistory = () => {
 
 export const GlobalSearch: React.FC = () => {
   const [open, setOpen] = useState(inHistory);
+  const [initial, setInitial] = useState('');
   const afterClose = useRef<(() => void) | null>(null);
 
   useEffect(() => {
-    const onOpen = () => {
+    const onOpen = (e: Event) => {
+      const q = (e as CustomEvent<unknown>).detail;
+      setInitial(typeof q === 'string' ? q : '');
       if (inHistory()) return;
       try { window.history.pushState({ ...(window.history.state || {}), sgFind: true }, ''); } catch { /* still opens */ }
       setOpen(true);
@@ -74,7 +77,7 @@ export const GlobalSearch: React.FC = () => {
   if (!open) return null;
   return (
     <Suspense fallback={<div className="fixed inset-0 z-[88] bg-[#2a2017]/45" />}>
-      <SearchPanel onClose={() => close()} onChoose={action => close(action)} />
+      <SearchPanel initialQuery={initial} onClose={() => close()} onChoose={action => close(action)} />
     </Suspense>
   );
 };

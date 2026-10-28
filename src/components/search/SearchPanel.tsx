@@ -130,13 +130,15 @@ export const SearchPanel: React.FC<{
   onClose: () => void;
   onChoose?: (action: () => void) => void;
   pick?: SearchPick;
-}> = ({ onClose, onChoose = go => go(), pick: picking }) => {
+  /** words already typed when the search opens (a game's „ნახე აპში“) */
+  initialQuery?: string;
+}> = ({ onClose, onChoose = go => go(), pick: picking, initialQuery }) => {
   const { user, isOwner, isTeacher, isAdmin, isSuperAdmin } = useAuth();
   const myHabits = useMyHabits(user?.uid).groups;
   const access = useAccess();
   const classes = useMyClasses(user?.uid);
   const openTarget = useOpenSearchTarget();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(initialQuery ?? '');
   const deferred = useDeferredValue(query);
   const [expanded, setExpanded] = useState<Set<SearchGroupId>>(new Set());
   const [active, setActive] = useState(0);

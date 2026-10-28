@@ -155,3 +155,7 @@
 .kids-mode .np-mshare,
 .kids-mode .np-mshare + .np-msep,
 .kids-mode .np-more > .np-msec:first-child { display: none !important; }
+
+/* a wrong pick in „ოთხეული“ / „დღის სიტყვა“ shakes the chosen tiles once */
+@keyframes sg-shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
+.sg-shake { animation: sg-shake 0.4s ease-in-out; }

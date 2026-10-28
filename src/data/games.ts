@@ -43,8 +43,8 @@ export const GAMES: GameDef[] = [
   { id: 'eko', title: 'ექო', text: 'აპი ჰანგს უკრავს, შენ იმეორებ — ყოველ ჯერზე ერთი ნოტით გრძელს', category: 'musical', modes: ['online'] },
   { id: 'khmis-tsqvilebi', title: 'ხმის წყვილები', text: 'მეხსიერების თამაში: დახურული ბარათების ქვეშ ორი ერთნაირი ხმა იპოვე', category: 'musical', modes: ['online', 'noPhone'] },
   // ქართული
-  { id: 'dghis-sitqva', title: 'დღის სიტყვა', text: 'ხუთასოიანი ქართული სიტყვა ექვს ცდაში — ყოველდღე ერთი, მთელი სკოლისთვის', category: 'georgian', modes: ['online', 'noPhone'] },
-  { id: 'otkheuli', title: 'ოთხეული', text: '16 სიტყვა, ოთხი ფარული ჯგუფი: წმიდანები, კუთხეები, საკრავები, ხმები…', category: 'georgian', modes: ['online', 'noPhone'] },
+  { id: 'dghis-sitqva', title: 'დღის სიტყვა', text: 'ქართული სიტყვა ექვს ცდაში — დღის წმინდანი, დღესასწაული ან საეკლესიო სიტყვა, ყოველდღე ერთი მთელი სკოლისთვის', category: 'georgian', modes: ['online', 'noPhone'], page: 'games', item: 'sitqva', section: 'tamashebi' },
+  { id: 'otkheuli', title: 'ოთხეული', text: '16 სიტყვა, ოთხი ფარული ჯგუფი: წმიდანები, კუთხეები, საკრავები, ხმები… — დღის ბადე და კიდევ რამდენიც გინდა', category: 'georgian', modes: ['online', 'noPhone'], page: 'games', item: 'otkheuli', section: 'tamashebi' },
   { id: 'drois-khazi', title: 'დროის ხაზი', text: 'საქართველოს ისტორიის მოვლენები სწორი რიგით დააწყვე', category: 'georgian', modes: ['hybrid', 'noPhone'] },
   { id: 'khutsuri', title: 'ხუცური წარწერა', text: 'ამოიკითხე ასომთავრულით და ნუსხურით დაწერილი — ასო-ასო', category: 'georgian', modes: ['online', 'noPhone'] },
   { id: 'asoebis-bade', title: 'ასოების ბადე', text: 'ბადეში დამალული სიტყვები იპოვე: საგალობლები, ტაძრები, კუთხეები', category: 'georgian', modes: ['online', 'noPhone'] },
