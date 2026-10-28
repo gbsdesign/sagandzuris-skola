@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import {
   AudioLines, Brain, CalendarRange, Castle, ChevronRight, Crown, Dice5, Flame, Gamepad2, Gem, Headphones, Landmark, LayoutGrid, Map, MessageCircle,
   Moon, Music, Music2, Printer, Route, ScrollText, Search, Shapes, SpellCheck, Users,
@@ -6,18 +6,23 @@ import {
 import { useAuth, useNavigation } from '../context';
 import { useAccess } from '../hooks/useAccess';
 import { usePearls } from '../hooks/usePearls';
+import { useHangi } from '../hooks/useHangi';
 import { CHESTS } from '../data/pearls';
 import { pearlState } from '../utils/pearls';
+import { hangiMeta, tbilisiToday } from '../utils/hangi';
 import { BOARD_GAMES, GAME_CATEGORIES, GAMES, GameCategory, GameDef, GameMode, MODE_HINT, MODE_LABEL } from '../data/games';
 import { Card, Pill, Tabs } from '../components/ui/kit';
 import { Toast } from '../components/ui/Toast';
 import { askSignIn } from '../components/access/SignInPrompt';
 import { openPathPanel } from '../components/views/IndependentWorkCard';
 import { triggerHaptic } from '../utils/haptics';
+import HangiGame from './games/HangiGame';
+import AmikhseniGame from './games/AmikhseniGame';
 
 // „თამაშები“: the hub of the games (2026-10-27). Three categories as tabs — მუსიკალური · ქართული · ცოცხალი — and a
-// row per game with the variants it gets (ონლაინ · ჰიბრიდული · უტელეფონო). A built game opens its page (the pearls
-// game stays the round button of „საგანძურის გზა“, under a switch of its own in the admin panel); the rest are the plan's next
+// row per game with the variants it gets (ონლაინ · ჰიბრიდული · უტელეფონო). A built game opens its page: the games that live
+// inside this page („დღის ჰანგი“, „ამიხსენი“ — pages/games/) are `mapItem`, so the top bar's „←“ returns to the hub; the pearls
+// game stays the round button of „საგანძურის გზა“, under a switch of its own in the admin panel. The rest are the plan's next
 // games, „მალე“ rows that only say so when tapped. The catalogue is data/games.ts.
 
 type Access = ReturnType<ReturnType<typeof useAccess>['section']>;
@@ -30,6 +35,9 @@ const ICON: Record<string, React.ReactNode> = {
   amikhseni: <MessageCircle />, gatvla: <Dice5 />, 'tskheli-churchkhela': <Flame />, 'ra-sad-rodis': <Brain />, mtsqemsebi: <Moon />,
   'okros-khana': <Map />, 'samshvildis-ghame': <Castle />, qaravani: <Route />, 'ori-takhti': <Crown />, 'lurji-supra': <LayoutGrid />, 'mepis-kari': <Landmark />,
 };
+
+// the games that open inside this page, by their `mapItem`
+const INNER: Record<string, React.FC> = { hangi: HangiGame, amikhseni: AmikhseniGame };
 
 // the category stays chosen on this device
 const CAT_KEY = 'sg-games-cat';
@@ -74,12 +82,17 @@ const GameRow: React.FC<{ g: GameDef; state: Access; meta?: string; onOpen: () =
 };
 
 export const GamesPage: React.FC = () => {
-  const { navigateTo } = useNavigation();
+  const { navigateTo, mapItem, openMapItem } = useNavigation();
   const { user } = useAuth();
   const access = useAccess();
   const { pearls, shine, loaded } = usePearls(user?.uid);
+  const hangi = useHangi();
   const [cat, setCat] = useState<GameCategory>(rememberedCat);
   const [soon, setSoon] = useState<string | null>(null);
+  const today = useMemo(() => tbilisiToday(), []);
+
+  const Inner = mapItem ? INNER[mapItem] : undefined;
+  if (Inner) return <Inner />;
 
   const pick = (c: GameCategory) => {
     setCat(c);
@@ -92,14 +105,16 @@ export const GamesPage: React.FC = () => {
   const ready = rows.filter(r => r.state === 'open' || r.state === 'locked').length;
   const total = rows.length + BOARD_GAMES.length;
 
-  // the pearls row shows how far the member is
+  // the pearls row shows how far the member is; the daily game's row today's result or the streak
   const pearlIds = CHESTS.flatMap(c => c.pearls);
   const polished = pearlIds.filter(id => { const s = pearlState(pearls[id], shine[id]); return s === 'polished' || s === 'shining'; }).length;
   const pearlMeta = user && loaded ? `გაპრიალებული ${polished}/${pearlIds.length}` : undefined;
+  const meta = (g: GameDef) => (g.id === 'margalitebi' ? pearlMeta : g.id === 'dghis-hangi' && hangi.loaded ? hangiMeta(hangi.days, today) : undefined);
 
   const open = (g: GameDef, state: Access) => {
     triggerHaptic(10);
     if (state === 'locked') { askSignIn(g.title); return; }
+    if (state === 'open' && g.item) { openMapItem(g.item); return; }
     if (state === 'open' && g.page) { if (g.panel) openPathPanel(g.panel); navigateTo(g.page); return; }
     setSoon(`„${g.title}“ ჯერ მზადდება — მალე დაემატება`);
   };
@@ -124,7 +139,7 @@ export const GamesPage: React.FC = () => {
 
       <ul className="space-y-2.5">
         {inCat.map(({ g, state }) => (
-          <GameRow key={g.id} g={g} state={state} meta={g.id === 'margalitebi' ? pearlMeta : undefined} onOpen={() => open(g, state)} />
+          <GameRow key={g.id} g={g} state={state} meta={meta(g)} onOpen={() => open(g, state)} />
         ))}
       </ul>
 

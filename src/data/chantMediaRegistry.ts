@@ -1367,3 +1367,7 @@ export function getChantMedia(chantId?: string, variantCode?: string): ChantMedi
 
 /** How many versions have a recording bound in code (the admin panel shows it). */
 export const codeBindingCount = () => Object.keys(VARIANT_MEDIA).length;
+
+/** The recordings bound in code with the version key („chantId|code“) each belongs to — the daily game's pool (data/hangiPool.ts). */
+export const codeBoundMedia = (): [string, ChantMediaItem][] =>
+  Object.entries(VARIANT_MEDIA).flatMap(([k, key]) => (CHANT_MEDIA_REGISTRY[key] ? [[k, CHANT_MEDIA_REGISTRY[key]] as [string, ChantMediaItem]] : []));
