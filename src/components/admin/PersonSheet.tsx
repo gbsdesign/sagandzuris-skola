@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, setDoc, updateDoc } from 'firebase/firestore';
 import {
   ArrowLeft, BookOpenCheck, CalendarCheck, Check, ChevronRight, Crown, Dumbbell, Gem, GraduationCap, Hourglass, ListChecks,
-  MessageCircle, Pencil, Plus, ShieldAlert, ShieldCheck, User as UserIcon, X,
+  DoorOpen, MessageCircle, Pencil, Plus, ShieldAlert, ShieldCheck, Undo2, User as UserIcon, X,
 } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth, useNavigation, SUPER_ADMIN_EMAIL, MAX_EXTRA_SUPERADMINS, ROLE_LABEL, Role } from '../../context';
@@ -22,6 +22,7 @@ import { SongTextSwitch } from './SongTextEditors';
 import { addClassMember, removeClassMember } from './ClassesAdmin';
 import { changed } from './changed';
 import { logChange } from '../../utils/adminLog';
+import { setLeft } from '../../utils/leftMembers';
 import type { StaffRecord, UserRecord } from './UsersTab';
 import { errorText } from '../../utils/errorText';
 
@@ -55,7 +56,11 @@ export const PersonSheet: React.FC<{
   decision?: DecisionRecord;
   onClose: () => void;
   onMessage: (text: string, type: 'success' | 'error') => void;
-}> = ({ person: u, users, staff, classes, access, decision, onClose, onMessage }) => {
+  /** a computer: the panel's second column instead of a window */
+  docked?: boolean;
+  /** marked „გასული“ — since when (ISO, or „—“ when unknown) */
+  leftSince?: string;
+}> = ({ person: u, users, staff, classes, access, decision, onClose, onMessage, docked, leftSince }) => {
   const { user, isOwner, isSuperAdmin } = useAuth();
   const { openClass, openDm } = useNavigation();
   const note = useFlash();
@@ -209,6 +214,19 @@ export const PersonSheet: React.FC<{
     }
   };
 
+  // „გასული“: a member who finished or left keeps the app, but the school's lists and birthdays leave them out
+  const markLeft = async (on: boolean) => {
+    setBusy(true);
+    try {
+      await setLeft(u.userId, on);
+      changed('member', `${u.name} — ${on ? 'გასული' : 'სკოლაში დაბრუნდა'}`, u.userId, () => setLeft(u.userId, !on));
+    } catch (e) {
+      note.fail('ვერ შეინახა: ' + errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   // the details, each once; empty ones are left out
   const facts: [string, React.ReactNode][] = [
     ['დაბადება', u.birth],
@@ -249,7 +267,7 @@ export const PersonSheet: React.FC<{
   ) : u.name;
 
   return (
-    <Sheet open onClose={onClose} title={title} footer={footer} wide>
+    <Sheet open onClose={onClose} title={title} footer={footer} wide docked={docked}>
       {editing ? (
         <StudentProfileCard key={u.userId} member={{ uid: u.userId, email: u.email, displayName: u.displayName, photoURL: u.photoURL }} />
       ) : (
@@ -276,7 +294,12 @@ export const PersonSheet: React.FC<{
                   ბოლოს შემოვიდა: {agoLabel(u.lastActiveAt)}
                 </p>
               )}
-              {u.kidsMode?.on && <Pill tone="amber">საბავშვო რეჟიმი</Pill>}
+              {(u.kidsMode?.on || leftSince) && (
+                <span className="flex flex-wrap gap-1.5">
+                  {leftSince && <Pill tone="muted"><DoorOpen /> გასული{leftSince !== '—' ? ` · ${shortDate(leftSince)}` : ''}</Pill>}
+                  {u.kidsMode?.on && <Pill tone="amber">საბავშვო რეჟიმი</Pill>}
+                </span>
+              )}
             </div>
             {/* the one ✎ of the app: a round 36px button beside what it changes */}
             <IconBtn label="პროფილის რედაქტირება" className="self-start" onClick={() => setEditing(true)}>
@@ -392,6 +415,22 @@ export const PersonSheet: React.FC<{
             <Part title="საბავშვო რეჟიმი">
               <Toggle on={kidsOn} onChange={setKids} label="მხოლოდ ბავშვების განყოფილებები"
                 hint={`ჩანს: ${SECTIONS.filter(x => kidsSections.includes(x.id)).map(x => x.label).join(', ')}`} />
+            </Part>
+          )}
+
+          {admitted && role === 'member' && (
+            <Part title="სკოლაში">
+              {leftSince ? (
+                <>
+                  <p className="text-[13px] text-[#75685a] leading-snug">გასულად არის მონიშნული: აპით სარგებლობს, მაგრამ სიებში, რიცხვებში და დაბადების დღეებში აღარ ჩანს.</p>
+                  <Btn kind="soft" size="sm" className="mt-2.5" icon={<Undo2 />} onClick={() => markLeft(false)} disabled={busy}>სკოლაში დაბრუნება</Btn>
+                </>
+              ) : (
+                <>
+                  <Btn kind="ghost" size="sm" icon={<DoorOpen />} onClick={() => markLeft(true)} disabled={busy}>გასულად მონიშვნა</Btn>
+                  <p className="mt-1.5 text-[12px] text-[#8a7a6a] leading-snug">კურსდამთავრებული ან წასული: აპი ისევ ეხსნება, სიებიდან, რიცხვებიდან და დაბადების დღეებიდან კი ქრება.</p>
+                </>
+              )}
             </Part>
           )}
 

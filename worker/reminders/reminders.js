@@ -597,7 +597,9 @@ async function runAdminWeek(env, when) {
   if (!uids.length) return;
   const since = new Date(when.getTime() - 7 * DAY_MS).toISOString();
   const sinceDay = isoOf(georgia(new Date(when.getTime() - 7 * DAY_MS)));
-  const students = await fsList(env, 'students', ['createdAt', 'lastActiveAt']);
+  // members marked „გასული“ (settings/leftMembers) are no longer counted
+  const left = new Set(((await fsGet(env, 'settings/leftMembers').catch(() => null))?.uids || []).map(String));
+  const students = (await fsList(env, 'students', ['createdAt', 'lastActiveAt'])).filter((s) => !left.has(s.id));
   const fresh = students.filter((s) => typeof s.createdAt === 'string' && s.createdAt >= since).length;
   const active = students.filter((s) => typeof s.lastActiveAt === 'string' && s.lastActiveAt >= since).length;
   // classes in use with no attendance list in the last 7 days

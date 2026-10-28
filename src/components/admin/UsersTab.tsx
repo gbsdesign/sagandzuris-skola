@@ -1,15 +1,16 @@
 import React, { useMemo, useState } from 'react';
-import { CalendarDays, ChevronRight, Download, GraduationCap, Hourglass, ListChecks, MoonStar, School, Search, Shield, ShieldAlert, UserRoundPen, X } from 'lucide-react';
+import { CalendarDays, ChevronRight, DoorOpen, Download, GraduationCap, Hourglass, ListChecks, MoonStar, MousePointerClick, School, Search, Shield, ShieldAlert, UserRoundPen, X } from 'lucide-react';
 import { useAuth } from '../../context';
 import { SchoolClass } from '../../hooks/useClasses';
 import { agoLabel } from '../../hooks/useTeaching';
 import { ALL_FEATURES } from '../../utils/memberAccess';
-import { Avatar, Btn, Card, FIELD, Pill } from '../ui/kit';
+import { Avatar, Btn, Card, FIELD, Pill, useWide } from '../ui/kit';
 import { abilitiesText, interestsText, profileComplete, showPhone } from '../../utils/profileFields';
 import { personActivity, PersonActivity } from '../../utils/personActivity';
 import { downloadCsv } from '../../utils/csv';
 import type { KidsMode } from '../../data/sections';
 import { AccessRecord, DecisionRecord } from './AccessRequests';
+import type { LeftMembers } from '../../utils/leftMembers';
 import { PersonSheet, ROLE_ICON, roleName, roleOf } from './PersonSheet';
 
 export interface UserRecord {
@@ -84,11 +85,12 @@ export const toUser = (id: string, d: any): UserRecord => {
   };
 };
 
-export type Filter = 'all' | 'pending' | 'week' | 'month' | 'habits' | 'teacher' | 'admin' | 'refused' | 'noClass' | 'incomplete' | 'away';
+export type Filter = 'all' | 'pending' | 'week' | 'month' | 'habits' | 'teacher' | 'admin' | 'refused' | 'noClass' | 'incomplete' | 'away' | 'left';
 const within = (iso: string, days: number) => !!iso && Date.now() - new Date(iso).getTime() < days * 86400_000;
 
-/** Who each filter holds; the panel's big numbers and the list's chips count with the same tests. */
-export const filterTests = (staff: StaffRecord[], access: Record<string, AccessRecord>, isSuperAdmin: boolean, classes: SchoolClass[]) => {
+/** Who each filter holds; the panel's big numbers and the list's chips count with the same tests. A member marked
+ *  „გასული“ (`left`) is in no list but „გასულები“. */
+export const filterTests = (staff: StaffRecord[], access: Record<string, AccessRecord>, isSuperAdmin: boolean, classes: SchoolClass[], left: ReadonlySet<string> = new Set()) => {
   // staff never wait, so a status only counts for members
   const statusOf = (u: UserRecord) => (isSuperAdmin && roleOf(u, staff) === 'member' ? access[u.userId]?.status : undefined);
   // „აქტიური“ counts the school's members: not the staff, not those waiting or refused
@@ -109,8 +111,15 @@ export const filterTests = (staff: StaffRecord[], access: Record<string, AccessR
     incomplete: u => roleOf(u, staff) === 'member' && statusOf(u) !== 'rejected' && !u.profileDone,
     // members who have not opened the app for a month (or never since the records began)
     away: u => member(u) && !within(u.lastActiveAt, 30),
+    left: u => left.has(u.userId),
   };
-  return { statusOf, member, test };
+  const gone = (u: UserRecord) => left.has(u.userId);
+  for (const k of Object.keys(test) as Filter[]) {
+    if (k === 'left') continue;
+    const t = test[k];
+    test[k] = u => !gone(u) && t(u);
+  }
+  return { statusOf, member: (u: UserRecord) => !gone(u) && member(u), test };
 };
 
 // „ელოდება“ has no chip: its place is the panel's big number (superadmins; others never see who waits)
@@ -123,6 +132,7 @@ const CHIPS: { id: Filter; label: string; Icon: React.ComponentType<{ className?
   { id: 'noClass', label: 'კლასის გარეშე', Icon: School },
   { id: 'incomplete', label: 'პროფილი არასრული', Icon: UserRoundPen },
   { id: 'away', label: '30+ დღე არ შემოსულა', Icon: MoonStar },
+  { id: 'left', label: 'გასულები', Icon: DoorOpen },
 ];
 
 // „წევრები“: everyone who signed in, in one list with one search. The panel's big numbers on top choose the
@@ -144,12 +154,16 @@ export const UsersTab: React.FC<{
   openId: string | null;
   onOpen: (uid: string | null) => void;
   onMessage: (text: string, type: 'success' | 'error') => void;
-}> = ({ users, staff, classes, access, decisions, loading, filter, onFilter, tiles, openId, onOpen, onMessage }) => {
+  /** members marked „გასული“ */
+  left: LeftMembers;
+}> = ({ users, staff, classes, access, decisions, loading, filter, onFilter, tiles, openId, onOpen, onMessage, left }) => {
   const { isSuperAdmin } = useAuth();
   const [q, setQ] = useState('');
   const setOpenId = onOpen;
+  // a computer: the list on the left, the person's window as the right column (stage IV, 2026-10-28)
+  const wide = useWide();
 
-  const { statusOf, test } = filterTests(staff, access, isSuperAdmin, classes);
+  const { statusOf, test } = filterTests(staff, access, isSuperAdmin, classes, left.uids);
   const classNames = (uid: string) => classes.filter(c => c.memberIds.includes(uid)).map(c => c.name).join(', ');
   const count = (f: Filter) => users.filter(test[f]).length;
   // a chip that holds nobody is left out — unless it is the one open, so it can be tapped shut
@@ -170,7 +184,7 @@ export const UsersTab: React.FC<{
         || (wait(a) ? (access[a.userId]?.requestedAt || '').localeCompare(access[b.userId]?.requestedAt || '') : 0)
         || (b.lastActiveAt || '').localeCompare(a.lastActiveAt || ''));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [users, q, active, staff, access, isSuperAdmin, classes]);
+  }, [users, q, active, staff, access, isSuperAdmin, classes, left]);
 
   const open = openId ? users.find(u => u.userId === openId) : undefined;
 
@@ -184,7 +198,7 @@ export const UsersTab: React.FC<{
       return [
         u.firstName || u.name, u.lastName, u.email, showPhone(u.phone).replace(/^\+995 /, ''), u.region, u.city, u.birth,
         u.voices.map(v => VOICE[v] || v).join(' '), classNames(u.userId), roleName(u, role),
-        status === 'pending' ? 'ელოდება' : status === 'rejected' ? 'შეფერხებული' : '', day(u.lastActiveAt), day(u.createdAt),
+        status === 'pending' ? 'ელოდება' : status === 'rejected' ? 'შეფერხებული' : left.uids.has(u.userId) ? 'გასული' : '', day(u.lastActiveAt), day(u.createdAt),
       ];
     });
     downloadCsv(`sagandzuri-wevrebi-${new Date().toISOString().slice(0, 10)}.csv`, [
@@ -194,7 +208,23 @@ export const UsersTab: React.FC<{
     onMessage(`ცხრილი ჩამოიტვირთა: ${rows.length} ადამიანი. მასში ტელეფონებია — არ გაუზიარო სხვას.`, 'success');
   };
 
-  return (
+  const person = open && (
+    <PersonSheet
+      key={`${open.userId}-${access[open.userId]?.status || ''}`}
+      person={open}
+      users={users}
+      staff={staff}
+      classes={classes}
+      access={access[open.userId]}
+      decision={decisions[open.userId]}
+      onClose={() => setOpenId(null)}
+      onMessage={onMessage}
+      leftSince={left.since[open.userId] || (left.uids.has(open.userId) ? '—' : undefined)}
+      docked={wide}
+    />
+  );
+
+  const list = (
     <Card className="space-y-4">
       <div className="relative">
         <Search className="w-4 h-4 text-[#b3a594] absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -235,7 +265,8 @@ export const UsersTab: React.FC<{
             const limited = a && status === 'approved' && a.features !== 'all' ? a.features.filter(x => ALL_FEATURES.includes(x)).length : null;
             return (
               <li key={u.userId} className="px-1">
-                <button type="button" onClick={() => setOpenId(u.userId)} className="w-full flex items-center gap-3 py-3 text-left cursor-pointer group">
+                <button type="button" onClick={() => setOpenId(u.userId)} aria-current={wide && openId === u.userId ? 'true' : undefined}
+                  className={`w-full flex items-center gap-3 py-3 text-left cursor-pointer group ${wide ? '-mx-2 px-2 rounded-2xl transition-colors aria-[current=true]:bg-[#7a2028]/[0.07]' : ''}`}>
                   {/* a green dot: here in the last week */}
                   <span className="relative shrink-0">
                     <Avatar name={u.name} photo={u.photoURL} size={44} />
@@ -279,19 +310,19 @@ export const UsersTab: React.FC<{
         </div>
       )}
 
-      {open && (
-        <PersonSheet
-          key={`${open.userId}-${access[open.userId]?.status || ''}`}
-          person={open}
-          users={users}
-          staff={staff}
-          classes={classes}
-          access={access[open.userId]}
-          decision={decisions[open.userId]}
-          onClose={() => setOpenId(null)}
-          onMessage={onMessage}
-        />
-      )}
     </Card>
+  );
+
+  if (!wide) return <>{list}{person}</>;
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-5 items-start">
+      {list}
+      {person || (
+        <div className="sticky top-4 min-h-[240px] rounded-3xl border-2 border-dashed border-[#e3d5bd] flex flex-col items-center justify-center gap-2 p-6 text-center text-[#8a7a6a]">
+          <MousePointerClick className="w-7 h-7 text-[#c4b49c]" />
+          <p className="text-[14px] leading-snug">აირჩიე ადამიანი სიიდან — მისი ფანჯარა აქ გაიხსნება.</p>
+        </div>
+      )}
+    </div>
   );
 };

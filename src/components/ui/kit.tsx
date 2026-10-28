@@ -379,16 +379,34 @@ export const Flash: React.FC<{ flash: FlashMsg; onClose: () => void }> = ({ flas
 
 /** A sheet that rises from the bottom on phones and sits centred on wide screens. */
 /** `locked`: no ✕, and neither Escape nor a tap outside closes it (a form that must be filled in). */
-export const Sheet: React.FC<{ open: boolean; onClose: () => void; title: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode; wide?: boolean; locked?: boolean }> = ({ open, onClose, title, children, footer, wide, locked }) => {
+export const Sheet: React.FC<{
+  open: boolean; onClose: () => void; title: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode; wide?: boolean; locked?: boolean;
+  /** a computer's second column instead of a window over the page: the same head, body and footer, staying in view */
+  docked?: boolean;
+}> = ({ open, onClose, title, children, footer, wide, locked, docked }) => {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !locked && onClose();
     window.addEventListener('keydown', onKey);
+    if (docked) return () => window.removeEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
-  }, [open, onClose, locked]);
+  }, [open, onClose, locked, docked]);
   if (!open) return null;
+  if (docked) {
+    return (
+      <section role="dialog" aria-label={typeof title === 'string' ? title : undefined}
+        className="sticky top-4 max-h-[calc(100dvh-2rem)] flex flex-col bg-[#fbf6ec] ring-1 ring-[#e8dcc8] rounded-3xl shadow-[0_10px_30px_-18px_rgba(74,52,38,0.45)] overflow-hidden sg-in">
+        <div className="flex items-center gap-2 px-5 pt-4 pb-3 border-b border-[#e8dcc8]">
+          <h3 className="flex-1 min-w-0 font-serif-ge text-[17px] font-bold text-[#4a3426]">{title}</h3>
+          {!locked && <IconBtn label="დახურვა" onClick={onClose}><X /></IconBtn>}
+        </div>
+        <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">{children}</div>
+        {footer && <div className="px-5 py-3 border-t border-[#e8dcc8] bg-[#fbf6ec]/95">{footer}</div>}
+      </section>
+    );
+  }
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-[#2a2017]/45 backdrop-blur-[2px] sg-in" onClick={locked ? undefined : onClose}>
       <div
@@ -411,6 +429,20 @@ export const Sheet: React.FC<{ open: boolean; onClose: () => void; title: React.
     </div>,
     document.body
   );
+};
+
+// a computer's width (Tailwind's `lg`), where a page gets its second column
+const WIDE = '(min-width: 1024px)';
+/** True on a computer-wide screen; follows the window as it is resized. */
+export const useWide = () => {
+  const [wide, setWide] = useState(() => window.matchMedia(WIDE).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(WIDE);
+    const change = () => setWide(mq.matches);
+    mq.addEventListener('change', change);
+    return () => mq.removeEventListener('change', change);
+  }, []);
+  return wide;
 };
 
 /** A big number with a caption, for overviews. */
