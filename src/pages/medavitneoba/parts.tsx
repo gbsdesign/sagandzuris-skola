@@ -6,6 +6,8 @@ import { PROSE, FoldedPrayer } from '../../components/views/PrayerText';
 import { loadPsalmHtml } from '../../utils/hourPsalms';
 import { SMALL_MAX_SECONDS, startVoiceRecording, toSmallMp3, voiceRecordingSupported, type VoiceRecording } from '../../utils/voiceRecorder';
 import { triggerHaptic } from '../../utils/haptics';
+import { lineSyllables, paceOf, readableText, syllableCount, voicedSeconds } from '../../utils/readingPace';
+import { PaceMeter } from './PaceMeter';
 import type { LessonStep } from '../../data/medavitneLessons';
 
 // The step views of a „მედავითნეობა“ lesson (pages/MedavitneobaPage.tsx).
@@ -94,14 +96,16 @@ export const bibleRangesHtml = async (book: string, ranges: { ch: number; from: 
   const many = new Set(ranges.map(r => r.ch)).size > 1;
   return ranges.map((r, i) => {
     const prev = ranges[i - 1];
-    const head = !prev ? (many ? `<p class="!mb-1 font-sans text-[13px] font-bold text-[#8a7a6a]">თავი ${r.ch}</p>` : '')
-      : prev.ch !== r.ch ? (r.from === 1 && prev.to >= 999 ? '' : '<p class="text-center text-[#b3a594]">…</p>') + `<p class="!mb-1 font-sans text-[13px] font-bold text-[#8a7a6a]">თავი ${r.ch}</p>`
-      : '<p class="text-center text-[#b3a594]">…</p>';
+    const chapter = `<p data-skip class="!mb-1 font-sans text-[13px] font-bold text-[#8a7a6a]">თავი ${r.ch}</p>`;
+    const gap = '<p data-skip class="text-center text-[#b3a594]">…</p>';
+    const head = !prev ? (many ? chapter : '')
+      : prev.ch !== r.ch ? (r.from === 1 && prev.to >= 999 ? '' : gap) + chapter
+      : gap;
     return head + versesHtml(chapters, r.ch, r.from, r.to);
   }).join('');
 };
 
-const ReadText: React.FC<{ step: Extract<LessonStep, { kind: 'read' }> }> = ({ step }) => {
+const ReadText: React.FC<{ step: Extract<LessonStep, { kind: 'read' }>; onSyllables: (n: number | undefined) => void }> = ({ step, onSyllables }) => {
   const one = step.psalms?.length === 1 ? step.psalms[0] : null;
   const [html, setHtml] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -115,6 +119,11 @@ const ReadText: React.FC<{ step: Extract<LessonStep, { kind: 'read' }> }> = ({ s
     load?.then(h => alive && setHtml(h), () => alive && setFailed(true));
     return () => { alive = false; };
   }, [one, step.bible]);
+  // the pace needs the whole text read: unknown while it loads, and with several folded psalms (one reads some of them)
+  const needsHtml = Boolean(one || step.bible);
+  const syllables = (step.psalms?.length ?? 0) > 1 || (needsHtml && !html) ? undefined
+    : (step.lines ?? []).reduce((n, l) => n + lineSyllables(l), 0) + (html ? syllableCount(readableText(html)) : 0);
+  useEffect(() => { onSyllables(syllables); }, [syllables, onSyllables]);
 
   return (
     <div className={`${PROSE} rounded-2xl bg-[#fffdf8] ring-1 ring-[#e8dcc8] px-4 py-4 sm:px-6 sm:py-5`}>
@@ -136,8 +145,9 @@ const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60))
 /**
  * Record one's own reading and hear it back. The take stays in the browser unless the member sends it to their teachers
  * (`sendId`: the pearls' store, utils/dayReadings.ts READ_PREFIX); the teacher hears it in the member's window and approves it.
+ * With the text's `syllables` known, the take's pace is shown (PaceMeter) and goes with it as its score (×10).
  */
-export const ReadAloud: React.FC<{ sendId?: string }> = ({ sendId }) => {
+export const ReadAloud: React.FC<{ sendId?: string; syllables?: number }> = ({ sendId, syllables }) => {
   const { user } = useAuth();
   const uid = sendId ? user?.uid ?? null : null;
   const { shine, voice } = usePearls(uid);
@@ -145,7 +155,7 @@ export const ReadAloud: React.FC<{ sendId?: string }> = ({ sendId }) => {
   const [secs, setSecs] = useState(0);
   const [url, setUrl] = useState<string | null>(null);
   const [sent, setSent] = useState<'no' | 'busy' | 'yes' | 'failed'>('no');
-  const take = useRef<{ mp3: Blob; seconds: number } | null>(null);
+  const take = useRef<{ mp3: Blob; seconds: number; speech?: { start: number; end: number } | null } | null>(null);
   const rec = useRef<VoiceRecording | null>(null);
   const timer = useRef<number>(0);
 
@@ -153,13 +163,15 @@ export const ReadAloud: React.FC<{ sendId?: string }> = ({ sendId }) => {
   useEffect(() => () => { clear(); rec.current?.cancel(); }, []);
   useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
 
+  const pace = state === 'ready' && take.current && syllables ? paceOf(syllables, voicedSeconds(take.current)) : null;
+
   const send = async () => {
     if (!uid || !sendId || !take.current) return;
     setSent('busy');
     try {
       const small = await toSmallMp3(take.current.mp3);
       if (small.mp3.size > 590000) throw new Error('too big');
-      await saveTake(uid, sendId, small.mp3, 0, voice);
+      await saveTake(uid, sendId, small.mp3, pace && !pace.partial ? Math.round(pace.rate * 10) : 0, voice);
       setSent('yes');
       triggerHaptic(20);
     } catch (e) {
@@ -237,6 +249,10 @@ export const ReadAloud: React.FC<{ sendId?: string }> = ({ sendId }) => {
         )}
       </div>
       {state === 'ready' && url && <audio controls src={url} className="mt-3 w-full h-11" />}
+      {pace && <PaceMeter pace={pace} />}
+      {state === 'ready' && Boolean(syllables) && take.current?.speech === null && (
+        <p className="mt-3 text-[13px] leading-snug text-[#8a7a6a]">ტემპს ვერ დავითვლი: ჩანაწერში ხმა ვერ გავიგე. მიკროფონი შეამოწმე.</p>
+      )}
       {uid && sendId && shine[sendId] && sent === 'no' && (
         <p className="mt-3 inline-flex items-center gap-1.5 text-[14px] font-bold text-emerald-700"><Check className="w-4 h-4" />მასწავლებელმა ჩაგითვალა</p>
       )}
@@ -261,14 +277,17 @@ export const ReadAloud: React.FC<{ sendId?: string }> = ({ sendId }) => {
   );
 };
 
-const Read: React.FC<{ step: Extract<LessonStep, { kind: 'read' }>; sendId?: string }> = ({ step, sendId }) => (
-  <div>
-    <StepTitle eyebrow="წავიკითხოთ ხმამაღლა" title={step.title} />
-    {step.intro && <p className="-mt-1 mb-4 text-[15px] leading-relaxed text-[#6b5c4d] text-pretty">{step.intro}</p>}
-    <ReadText step={step} />
-    <ReadAloud sendId={sendId} />
-  </div>
-);
+const Read: React.FC<{ step: Extract<LessonStep, { kind: 'read' }>; sendId?: string }> = ({ step, sendId }) => {
+  const [syllables, setSyllables] = useState<number | undefined>();
+  return (
+    <div>
+      <StepTitle eyebrow="წავიკითხოთ ხმამაღლა" title={step.title} />
+      {step.intro && <p className="-mt-1 mb-4 text-[15px] leading-relaxed text-[#6b5c4d] text-pretty">{step.intro}</p>}
+      <ReadText step={step} onSyllables={setSyllables} />
+      <ReadAloud sendId={sendId} syllables={syllables} />
+    </div>
+  );
+};
 
 const Quiz: React.FC<{ step: Extract<LessonStep, { kind: 'quiz' }> }> = ({ step }) => {
   const [pick, setPick] = useState<number | null>(null);

@@ -166,7 +166,10 @@
   `toSmallMp3`) puts it in the pearls' store (ids `read~…`, `utils/dayReadings.ts`); teachers hear and „ჩათვლა“ it in the member's
   window (`learn/MedavitneReview.tsx`). „დღის წესი“ card (`medavitneoba/DayCard.tsx`, calendar feature only): today / coming
   Sunday — tone (a weekday takes the Sunday before), saints, readings parsed from the calendar text (`readingsOf` + test); an
-  Apostle reading unfolds with text and recorder. Progress in `students.medavitne`
+  Apostle reading unfolds with text and recorder; the tone opens `ToneSheet` = that tone's Sunday chants in the books
+  (`utils/toneChants.ts` + test: prokeimenon, alleluia, „ღმერთი უფალი“, troparion…, chips open their notes). A take of a known
+  text shows its pace (`utils/readingPace.ts` + test: syllables ÷ voiced seconds; slow < 3 ≤ even ≤ 5 < fast: plain defaults,
+  the user declined tempo research) in `PaceMeter`, and sends it as the take's `score` (×10). Progress in `students.medavitne`
   (`hooks/useMedavitneProgress.ts`). Content not yet checked by a priest/regent — the page says so.
   Since 2026-10-28 two tabs „გაკვეთილები · წიგნები“: „წიგნები“ (`pages/medavitneoba/Wignebi.tsx`, menu `data/wignebi.ts`,
   texts `public/wignebi/<collection>/<NN>.json`, fetched on open, kept by the service worker) = the liturgical books of the

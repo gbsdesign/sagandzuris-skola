@@ -1,6 +1,7 @@
 // Voice messages: records the microphone and turns the take into a small MP3 (mono, 24 kHz, 48 kbps),
 // so a message recorded on Android plays on an iPhone and the other way round.
 import { encodeMp3 } from './chantSynth';
+import { speechSpan } from './readingPace';
 
 export const VOICE_MAX_SECONDS = 300;
 const RATE = 24000;
@@ -10,6 +11,7 @@ export interface VoiceTake {
   mp3: Blob;
   seconds: number;
   wave: string; // WAVE_BARS digits 0-9: loudness along the take, drawn as the message's waveform
+  speech?: { start: number; end: number } | null; // where the voice starts and ends (s): the reading pace leaves out the silence around it
 }
 
 export const WAVE_BARS = 40;
@@ -52,7 +54,8 @@ const encodeTake = async (blob: Blob, rate: number, kbps: number, maxSeconds = I
     src.start();
     const mono = await offline.startRendering();
     const wave = waveOf(mono.getChannelData(0));
-    return { mp3: await encodeMp3(mono, undefined, kbps), seconds, wave };
+    const speech = speechSpan(mono.getChannelData(0), rate);
+    return { mp3: await encodeMp3(mono, undefined, kbps), seconds, wave, speech };
   } finally {
     ctx.close?.();
   }
