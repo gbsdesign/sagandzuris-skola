@@ -32,6 +32,7 @@ export interface PsalterGroup {
   startDate: string;
   remindDaily: string; // "20:00" — a nudge to whoever hasn't read today; '' = off
   remindFinal: string; // "21:00" on the cycle's last day
+  archived?: boolean; // its class is in the admin's archive: hidden with it
   createdAt?: string;
 }
 
@@ -51,6 +52,7 @@ export const toGroup = (id: string, d: any): PsalterGroup => ({
   startDate: d.startDate || '',
   remindDaily: typeof d.remindDaily === 'string' ? d.remindDaily : '20:00',
   remindFinal: typeof d.remindFinal === 'string' ? d.remindFinal : '21:00',
+  ...(d.archived ? { archived: true } : {}),
   createdAt: d.createdAt || '',
 });
 
@@ -75,20 +77,20 @@ export const useMyPsalterGroups = (uid?: string | null) => {
   }, [uid]);
   const groups = useMemo(() => {
     const map = new Map<string, PsalterGroup>();
-    [...asMember, ...asTeacher].forEach(g => map.set(g.id, g));
+    [...asMember, ...asTeacher].filter(g => !g.archived).forEach(g => map.set(g.id, g));
     return [...map.values()].sort(byName);
   }, [asMember, asTeacher]);
   return { groups, loading: !(loaded.m && loaded.t) };
 };
 
-/** Every group (admins). */
+/** Every group in use (admins). */
 export const useAllPsalterGroups = (enabled: boolean) => {
   const [groups, setGroups] = useState<PsalterGroup[]>([]);
   const [loading, setLoading] = useState(true);
   useEffect(() => {
     if (!enabled) { setGroups([]); setLoading(false); return; }
     return onSnapshot(collection(db, 'psalterGroups'),
-      s => { setGroups(s.docs.map(d => toGroup(d.id, d.data())).sort(byName)); setLoading(false); },
+      s => { setGroups(s.docs.map(d => toGroup(d.id, d.data())).filter(g => !g.archived).sort(byName)); setLoading(false); },
       () => setLoading(false));
   }, [enabled]);
   return { groups, loading };

@@ -1,9 +1,12 @@
 import React, { useRef, useState } from 'react';
-import { Plus, Trash2, Upload, Check, RefreshCw, ExternalLink, Pencil, BookOpen, Users, ListMusic, TriangleAlert } from 'lucide-react';
-import { arrayUnion, collection, deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../../firebase';
+import { Plus, Archive, ArchiveRestore, Upload, Check, RefreshCw, ExternalLink, Pencil, BookOpen, Users, ListMusic, TriangleAlert } from 'lucide-react';
+import { arrayRemove, arrayUnion, collection, doc, getDoc, getDocs, query, setDoc, updateDoc, where } from 'firebase/firestore';
+import { auth, db } from '../../firebase';
 import { useAuth, useNavigation } from '../../context';
-import { SchoolClass, ProgramItem, imageFileToDataUrl } from '../../hooks/useClasses';
+import { SchoolClass, ProgramItem, imageFileToDataUrl, toClass } from '../../hooks/useClasses';
+import { teachersOf, teachersToDrop } from '../../utils/classTeachers';
+import { errorText } from '../../utils/errorText';
+import { Fold } from './Fold';
 import { ClassLogo } from '../classes/ClassLogo';
 import { triggerHaptic } from '../../utils/haptics';
 import { filterValidVariants } from '../../utils/variantValidation';
@@ -15,6 +18,7 @@ import { LeaderChips } from './LeaderChips';
 import { useClassAttendance, useGroupReading } from './StatsTab';
 import { GroupMember, PsalterGroup, toGroup } from '../../hooks/usePsalter';
 import { KATHISMA_COUNT, cycleOf, georgiaToday, ownersIn, rebase } from '../../utils/psalter';
+import { MONTHS_SHORT_GE } from '../../utils/dateNames';
 
 /**
  * Puts the class program on each member's path (missing items are added at the end) and takes back
@@ -46,7 +50,8 @@ const syncMemberPaths = async (classId: string, program: ProgramItem[], memberId
   return failed;
 };
 
-/** Takes one member out of the class (the teacher's button on their card); the class's untouched items leave their path. */
+/** Takes one member out of the class (the teacher's button on their card); the class's untouched items leave their path
+ *  and its teachers stop seeing their record. */
 export const removeClassMember = async (cls: SchoolClass, uid: string) => {
   await updateDoc(doc(db, 'classes', cls.id), {
     memberIds: cls.memberIds.filter(x => x !== uid),
@@ -55,6 +60,43 @@ export const removeClassMember = async (cls: SchoolClass, uid: string) => {
   });
   await syncMemberPaths(cls.id, cls.program, [], [uid]);
   await leaveClassGroup(cls, uid).catch(() => {});
+  await dropClassTeachers(cls, uid).catch(() => {});
+};
+
+// the class's teachers come off the member's teacherIds unless they lead another class of theirs. An admin sees every
+// class; a teacher only their own, so another class's teacher may drop off too — opening that class links them back
+// (useClassStudents), and the admin panel puts every list right when it opens
+const dropClassTeachers = async (cls: SchoolClass, uid: string) => {
+  if (!cls.teacherIds.length) return;
+  const all = collection(db, 'classes');
+  const me = auth.currentUser?.uid || '';
+  const snap = await getDocs(query(all, where('memberIds', 'array-contains', uid)))
+    .catch(() => getDocs(query(all, where('teacherIds', 'array-contains', me))));
+  const drop = teachersToDrop(uid, cls, snap.docs.map(d => toClass(d.id, d.data())));
+  if (drop.length) await updateDoc(doc(db, 'students', uid), { teacherIds: arrayRemove(...drop), teacherVia: cls.id });
+};
+
+/** Admins: sets each member's teacherIds to the teachers of the classes (in use) they are in. Returns the failures
+ *  (a member without a record has nothing to guard and does not count). */
+export const syncStudentTeachers = async (uids: string[], classes: SchoolClass[]) => {
+  const res = await Promise.all(uids.map(uid =>
+    updateDoc(doc(db, 'students', uid), { teacherIds: teachersOf(uid, classes) })
+      .then(() => 0, (e: any) => (String(e?.code || '').includes('not-found') ? 0 : 1))
+  ));
+  return res.reduce((a: number, b: number) => a + b, 0);
+};
+
+/** Admins: puts the class in the archive (on) or brings it back. Nothing is deleted: the class and its psalter group
+ *  are hidden from everyone, and its teachers stop seeing its members' records until it comes back.
+ *  `inUse` = the classes in use now. Returns the members whose access could not be set. */
+export const archiveClass = async (cls: SchoolClass, on: boolean, inUse: SchoolClass[]) => {
+  const now = new Date().toISOString();
+  await updateDoc(doc(db, 'classes', cls.id), { archived: on, archivedAt: on ? now : '', updatedAt: now });
+  if (cls.psalterGroupId) {
+    await updateDoc(doc(db, 'psalterGroups', cls.psalterGroupId), { archived: on, updatedAt: now }).catch(() => {});
+  }
+  const others = inUse.filter(c => c.id !== cls.id);
+  return syncStudentTeachers(cls.memberIds, on ? others : [...others, { ...cls, archived: false }]);
 };
 
 // the class's psalter group follows the class: a new member joins it (a kanon is named in the kanon's window or by
@@ -116,54 +158,102 @@ export const CLASS_MODE_HINT = 'წევრები გალობაში �
 
 const field = 'w-full h-11 px-3.5 rounded-xl bg-white ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/40 text-sm text-[#2a2017] placeholder:text-[#b3a594] outline-none transition';
 
-type Draft = {
-  id: string | null; name: string; logo: string; memberIds: string[]; savedMemberIds: string[]; program: ProgramItem[];
-  teacherIds: string[]; classMode: boolean; defaultShortcuts: string[];
+type Draft = { id: string | null; name: string; logo: string; teacherIds: string[] };
+const EMPTY: Draft = { id: null, name: '', logo: '', teacherIds: [] };
+
+// „28 ოქტ“, with the year when it is another one
+const shortDay = (iso?: string) => {
+  const d = iso ? new Date(iso) : null;
+  if (!d || isNaN(d.getTime())) return '';
+  return `${d.getDate()} ${MONTHS_SHORT_GE[d.getMonth()]}${d.getFullYear() === new Date().getFullYear() ? '' : ` ${d.getFullYear()}`}`;
 };
-const EMPTY: Draft = { id: null, name: '', logo: '', memberIds: [], savedMemberIds: [], program: [], teacherIds: [], classMode: false, defaultShortcuts: [] };
 
 // Classes: the admin's list of every class as a card; a tap opens the class page (the one workplace: members, program,
 // mode, paths), ✎ opens a small window for what only admins set — name, logo, its teachers from `staff` — and
-// creating or deleting a class. (The teachers' old members window with its long list of ticks is gone, 2026-10-28:
-// a class page's „+“ adds one person at a time, and the members' starting buttons are in the class's ✎.)
+// creating a class or putting it in the archive. (The teachers' old members window with its long list of ticks is gone,
+// 2026-10-28: a class page's „+“ adds one person at a time, and the members' starting buttons are in the class's ✎.)
+// Since 2026-10-28 a class is never deleted: „არქივში“ hides it with its psalter group, „დაბრუნება“ brings it back.
 export const ClassesAdmin: React.FC<{
   classes: SchoolClass[];
+  /** classes in the archive: a folded list under the cards, each with „დაბრუნება“ */
+  archived?: SchoolClass[];
   loading: boolean;
+  /** the list did not come: then it never says that no class exists */
+  failed?: boolean;
   onMessage: (text: string, type: 'success' | 'error') => void;
   staff?: AdminStudent[];
   /** psalter groups, so a class row shows its own group (a group lives only inside its class) */
   groups?: PsalterGroup[];
-}> = ({ classes, loading, onMessage, staff = [], groups = [] }) => {
+}> = ({ classes, archived = [], loading, failed, onMessage, staff = [], groups = [] }) => {
   const { user } = useAuth();
   const { openClass } = useNavigation();
   const tell = onMessage;
   const [draft, setDraft] = useState<Draft | null>(null);
   const [saving, setSaving] = useState(false);
+  const [restoring, setRestoring] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const edit = (c?: SchoolClass) => {
-    setDraft(c ? {
-      id: c.id, name: c.name, logo: c.logo || '', memberIds: [...c.memberIds], savedMemberIds: [...c.memberIds],
-      program: c.program.map(p => ({ ...p })), teacherIds: [...c.teacherIds], classMode: Boolean(c.classMode),
-      defaultShortcuts: [...(c.defaultShortcuts || [])],
-    } : { ...EMPTY });
+    setDraft(c ? { id: c.id, name: c.name, logo: c.logo || '', teacherIds: [...c.teacherIds] } : { ...EMPTY });
+  };
+
+  // members whose access to the teachers could not be set: said once, plainly
+  const accessNote = (n: number) => (n ? ` ${n} წევრის ჩანაწერი ვერ განახლდა — ადმინის პანელის შემდეგ გახსნაზე გასწორდება.` : '');
+
+  const restore = async (c: SchoolClass) => {
+    setRestoring(c.id);
+    try {
+      const n = await archiveClass(c, false, classes);
+      triggerHaptic(30);
+      tell(`კლასი „${c.name}“ დაბრუნდა.${accessNote(n)}`, 'success');
+    } catch (e) {
+      tell('კლასი ვერ დაბრუნდა: ' + errorText(e), 'error');
+    } finally {
+      setRestoring(null);
+    }
   };
 
   // admin: every class as a card (two columns on wide screens); the open class's window lies over them
   const list = (
-    <section>
+    <section className="space-y-3">
       {/* the tab and the big number already say „კლასები“: no title here, only the button */}
-      <div className="mb-3 px-1 flex justify-end">
+      <div className="px-1 flex justify-end">
         <Btn size="sm" kind="soft" icon={<Plus />} onClick={() => edit()}>ახალი კლასი</Btn>
       </div>
       {loading ? (
-        <p className="py-6 text-center text-sm text-[#8a7a6a]">იტვირთება...</p>
+        <p className="py-6 text-center text-sm text-[#8a7a6a]">იტვირთება…</p>
+      ) : failed ? (
+        <p className="rounded-3xl bg-red-50 ring-1 ring-red-200 px-4 py-6 text-center text-sm text-red-800">კლასები ვერ ჩაიტვირთა — შეამოწმე ინტერნეტი და გახსენი თავიდან.</p>
       ) : classes.length === 0 ? (
-        <p className="rounded-3xl border border-dashed border-[#dccbb0] px-4 py-8 text-center text-sm text-[#8a7a6a]">კლასი ჯერ არ შექმნილა. შექმენი პირველი და დაამატე წევრები.</p>
+        <p className="rounded-3xl border border-dashed border-[#dccbb0] px-4 py-8 text-center text-sm text-[#8a7a6a]">
+          {archived.length ? 'გამოყენებაში კლასი არ არის — დააბრუნე არქივიდან ან შექმენი ახალი.' : 'კლასი ჯერ არ შექმნილა. შექმენი პირველი და დაამატე წევრები.'}
+        </p>
       ) : (
         <ul className="grid sm:grid-cols-2 gap-3">
           {classes.map(c => <ClassRow key={c.id} cls={c} group={groups.find(g => g.id === c.psalterGroupId)} onOpen={() => openClass(c.id)} onEdit={() => edit(c)} />)}
         </ul>
+      )}
+      {archived.length > 0 && (
+        <Fold icon={<Archive />} title={`არქივი · ${archived.length}`} summary="დამალული კლასები — არაფერი წაშლილა"
+          info="არქივში გადატანილი კლასი და მისი ფსალმუნთა ჯგუფი არავის უჩანს და მისი მასწავლებლები ვეღარ ხედავენ წევრების ჩანაწერებს. ჩატი, დასწრება და დავალებები შენახულია — „დაბრუნება“ ყველაფერს უკან აბრუნებს.">
+          <ul className="divide-y divide-[#efe4d3]">
+            {archived.map(c => (
+              <li key={c.id} className="min-h-[60px] py-2 flex items-center gap-3">
+                <ClassLogo name={c.name} logo={c.logo} className="w-10 h-10 text-sm shrink-0" />
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[14px] font-semibold text-[#4a3426] leading-snug break-words">{c.name}</span>
+                  <span className="block text-[12px] text-[#8a7a6a] leading-snug">
+                    {c.members.length} წევრი{c.archivedAt ? ` · ${shortDay(c.archivedAt)}` : ''}
+                  </span>
+                </span>
+                <Btn size="sm" kind="ghost" disabled={restoring === c.id} onClick={() => restore(c)}
+                  icon={restoring === c.id ? <RefreshCw className="animate-spin" /> : <ArchiveRestore />}>
+                  დაბრუნება
+                </Btn>
+              </li>
+            ))}
+          </ul>
+        </Fold>
       )}
     </section>
   );
@@ -171,6 +261,13 @@ export const ClassesAdmin: React.FC<{
   if (!draft) return list;
 
   const set = (patch: Partial<Draft>) => setDraft(d => (d ? { ...d, ...patch } : d));
+  const saved = classes.find(c => c.id === draft.id);
+  // the chips: the school's teachers, and anyone already leading this class who is no longer among them (a role taken
+  // away, a list still loading) — so saving the name or logo never drops a teacher unseen
+  const people = [
+    ...staff.map(s => ({ uid: s.userId, name: s.name, photoURL: s.photoURL })),
+    ...(saved?.teachers || []).filter(t => !staff.some(s => s.userId === t.uid)),
+  ];
 
   const pickLogo = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -192,9 +289,9 @@ export const ClassesAdmin: React.FC<{
       // the admin's window: name, logo and teachers; members, program and the rest are set on the class page
       const now = new Date().toISOString();
       const teachers = draft.teacherIds
-        .map(uid => staff.find(s => s.userId === uid))
-        .filter(Boolean)
-        .map(s => ({ uid: s!.userId, name: s!.name, photoURL: s!.photoURL || '' }));
+        .map(uid => people.find(p => p.uid === uid))
+        .filter((p): p is (typeof people)[number] => !!p)
+        .map(p => ({ uid: p.uid, name: p.name, photoURL: p.photoURL || '' }));
       const teacherIds = teachers.map(t => t.uid);
       await setDoc(ref, {
         name,
@@ -204,31 +301,42 @@ export const ClassesAdmin: React.FC<{
         updatedAt: now,
         ...(draft.id ? {} : { memberIds: [], members: [], program: [], classMode: false, defaultShortcuts: [], createdAt: now, createdBy: user?.email || '' }),
       }, { merge: true });
-      // the class's teachers may now see and arrange the members' paths
-      if (teacherIds.length) {
-        await Promise.all(draft.savedMemberIds.map(uid =>
-          setDoc(doc(db, 'students', uid), { teacherIds: arrayUnion(...teacherIds) }, { merge: true }).catch(() => {})
-        ));
+      // new teachers see the members' records and lead the class's psalter group; the ones taken off no longer do
+      let n = 0;
+      const before = saved?.teacherIds || [];
+      if (saved && (before.length !== teacherIds.length || before.some(t => !teacherIds.includes(t)))) {
+        n = await syncStudentTeachers(saved.memberIds, classes.map(c => (c.id === saved.id ? { ...c, teacherIds } : c)));
+        if (saved.psalterGroupId) {
+          await updateDoc(doc(db, 'psalterGroups', saved.psalterGroupId), { teacherIds, teachers, updatedAt: now }).catch(() => { n++; });
+        }
       }
       triggerHaptic(30);
-      setDraft(d => (d ? { ...d, id: ref.id } : d));
-      tell(draft.id ? `კლასი „${name}“ შენახულია.` : `კლასი „${name}“ შეიქმნა — წევრებს და პროგრამას კლასის გვერდზე დაამატებ.`, 'success');
-    } catch (err: any) {
-      tell('კლასი ვერ შეინახა: ' + (err?.code === 'permission-denied' ? 'ბაზის წესებში კლასები ჯერ არ არის დამატებული.' : err?.message || ''), 'error');
+      setDraft(null);
+      tell((draft.id ? `კლასი „${name}“ შენახულია.` : `კლასი „${name}“ შეიქმნა — წევრებს და პროგრამას კლასის გვერდზე დაამატებ.`) + accessNote(n), 'success');
+    } catch (e) {
+      tell('კლასი ვერ შეინახა: ' + errorText(e), 'error');
     } finally {
       setSaving(false);
     }
   };
 
-  const remove = async () => {
-    if (!draft.id) return;
-    if (!(await askConfirm({ title: `წავშალო კლასი „${draft.name}“?`, text: 'წევრები თავად არ წაიშლებიან.', ok: 'წაშლა', danger: true }))) return;
+  const toArchive = async () => {
+    if (!saved) return;
+    if (!(await askConfirm({
+      title: `გადავიტანო „${saved.name}“ არქივში?`,
+      text: 'კლასი და მისი ფსალმუნთა ჯგუფი ყველას დაემალება, მასწავლებლები ვეღარ დაინახავენ წევრების ჩანაწერებს. არაფერი წაიშლება — „არქივიდან“ ერთი შეხებით დაბრუნდება.',
+      ok: 'არქივში',
+    }))) return;
+    setSaving(true);
     try {
-      await deleteDoc(doc(db, 'classes', draft.id));
-      onMessage(`კლასი „${draft.name}“ წაიშალა.`, 'success');
+      const n = await archiveClass(saved, true, classes);
+      triggerHaptic(30);
       setDraft(null);
-    } catch (err: any) {
-      onMessage('კლასი ვერ წაიშალა: ' + (err?.message || ''), 'error');
+      tell(`კლასი „${saved.name}“ არქივშია — ქვემოთ, „არქივში“ ნახავ.${accessNote(n)}`, 'success');
+    } catch (e) {
+      tell('კლასი ვერ გადავიდა არქივში: ' + errorText(e), 'error');
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -256,11 +364,7 @@ export const ClassesAdmin: React.FC<{
       {/* teachers: chosen by admins */}
       <div className="space-y-2">
         <label className="text-xs font-semibold text-[#75685a]">მასწავლებელი</label>
-        <LeaderChips
-          people={staff.map(s => ({ uid: s.userId, name: s.name, photoURL: s.photoURL }))}
-          selected={draft.teacherIds}
-          onChange={teacherIds => set({ teacherIds })}
-        />
+        <LeaderChips people={people} selected={draft.teacherIds} onChange={teacherIds => set({ teacherIds })} />
       </div>
     </>
   );
@@ -268,7 +372,6 @@ export const ClassesAdmin: React.FC<{
   const saveIcon = saving ? <RefreshCw className="animate-spin" /> : <Check />;
 
   // the class's own window over the list
-  const saved = classes.find(c => c.id === draft.id);
   return (
     <>
       {list}
@@ -279,8 +382,8 @@ export const ClassesAdmin: React.FC<{
         wide
         footer={
           <div className="flex gap-2">
-            {saved && <Btn kind="danger" size="lg" icon={<Trash2 />} onClick={remove}>წაშლა</Btn>}
-            <Btn size="lg" icon={saveIcon} className="flex-1" onClick={save} disabled={saving}>შენახვა</Btn>
+            {saved && <Btn kind="ghost" size="lg" icon={<Archive />} onClick={toArchive} disabled={saving}>არქივში</Btn>}
+            <Btn size="lg" icon={saveIcon} className="flex-1" onClick={save} disabled={saving || !draft.name.trim()}>შენახვა</Btn>
           </div>
         }
       >

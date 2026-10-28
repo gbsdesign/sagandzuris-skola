@@ -3,6 +3,8 @@ import { Bytes, Timestamp, collection, getDocs } from 'firebase/firestore';
 import { DatabaseBackup, Download, Loader2 } from 'lucide-react';
 import { db } from '../../firebase';
 import { Btn, Card } from '../ui/kit';
+import { useAuth } from '../../context';
+import { errorText } from '../../utils/errorText';
 import { SectionsTab } from './SectionsTab';
 import { CentreDownloadFold } from './CentreDownload';
 import { SongTextEditorsFold } from './SongTextEditors';
@@ -30,16 +32,20 @@ const readAll = async (path: string[]) => {
 
 // "სკოლა": the whole school in one place, one card under another — sections and the most listened chants
 // (the former „ჩანაწერები“ tab) as folding cards, the backup export, and the owner's safety checklist (folded).
-// The staff are found in „მომხმარებლები“ (filter „ადმინები“), where their roles are given.
+// The staff are found in „წევრები“ (filter „ადმინები“), where their roles are given.
 // The logo card was removed on the user's request (2026-10-20); a logo already saved in settings/logo still shows.
 export const SchoolTab: React.FC<{ users: UserRecord[]; onMessage: (t: string, type: 'success' | 'error') => void }> = ({ users, onMessage }) => {
+  const { isSuperAdmin } = useAuth();
   const [exporting, setExporting] = useState<string | null>(null);
 
   const exportAll = async () => {
     setExporting('იწყება…');
     try {
       const out: Record<string, unknown> = { exportedAt: new Date().toISOString(), project: 'sagandzuris-skola' };
-      for (const name of ['students', 'directory', 'admins', 'confirmations', 'settings']) {
+      // who was let in and who decided: superadmins only (others may not read them)
+      const top = ['students', 'directory', 'admins', 'confirmations', 'settings', 'songTexts', 'birthdays', 'birthYears', 'nameDays',
+        ...(isSuperAdmin ? ['memberAccess', 'accessDecisions'] : [])];
+      for (const name of top) {
         setExporting(name);
         out[name] = await readAll([name]);
       }
@@ -50,6 +56,9 @@ export const SchoolTab: React.FC<{ users: UserRecord[]; onMessage: (t: string, t
           assignments: await readAll(['classes', c.id, 'assignments']),
           attendance: await readAll(['classes', c.id, 'attendance']),
           messages: await readAll(['classes', c.id, 'messages']),
+          lessons: await readAll(['classes', c.id, 'lessons']),
+          lessonProgress: await readAll(['classes', c.id, 'lessonProgress']),
+          marks: await readAll(['classes', c.id, 'marks']),
         });
       }
       out.classes = classes;
@@ -65,8 +74,8 @@ export const SchoolTab: React.FC<{ users: UserRecord[]; onMessage: (t: string, t
       a.click();
       setTimeout(() => URL.revokeObjectURL(a.href), 4000);
       onMessage(`ასლი ჩამოიტვირთა (${Math.round(blob.size / 1024)} კბ). შეინახე უსაფრთხო ადგილას — მაგ. Google Drive-ში.`, 'success');
-    } catch (e: any) {
-      onMessage('ექსპორტი ვერ მოხერხდა: ' + (e?.code || e?.message || ''), 'error');
+    } catch (e) {
+      onMessage('ასლი ვერ მომზადდა: ' + errorText(e), 'error');
     } finally {
       setExporting(null);
     }
@@ -84,10 +93,10 @@ export const SchoolTab: React.FC<{ users: UserRecord[]; onMessage: (t: string, t
           <RowIcon><DatabaseBackup /></RowIcon>
           <span className="flex-1 min-w-[10rem]">
             <span className="block font-serif-ge text-[16px] font-bold text-[#4a3426] leading-snug">სარეზერვო ასლი</span>
-            <span className="block text-[12.5px] text-[#8a7a6a] leading-snug mt-0.5">ყველა მონაცემი ერთ ფაილად</span>
+            <span className="block text-[12.5px] text-[#8a7a6a] leading-snug mt-0.5">ყველა ჩანაწერი ერთ ფაილად — აუდიოს, პირადი ჩატებისა და სურათების გარდა</span>
           </span>
           <Btn size="sm" kind="ghost" icon={exporting ? <Loader2 className="animate-spin" /> : <Download />} disabled={!!exporting} onClick={exportAll}
-            title="მოსწავლეები და მათი გზა, კლასები, დავალებები, დასწრება, ჩატის ტექსტი, ფსალმუნთა ჯგუფები, მოსახსენებელი სახელები. ხმოვანი შეტყობინებების აუდიო არ შედის.">
+            title="წევრები და მათი გზა, მიღება და ნებართვები, დაბადების და ანგელოზის დღეები, კლასები (დავალებები, დასწრება, ჩატის ტექსტი, გაკვეთილები, ნიშნები), ფსალმუნთა ჯგუფები, სიმღერების ტექსტები. არ შედის: ხმოვანი შეტყობინებები და ნამღერი, პირადი ჩატები, სურათები.">
             {exporting ? `მზადდება… ${exporting}` : 'ჩამოტვირთვა'}
           </Btn>
         </div>

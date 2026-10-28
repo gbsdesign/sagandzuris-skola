@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { collection, onSnapshot } from 'firebase/firestore';
-import { Users, GraduationCap, School, Activity, Hourglass, ChevronRight, CircleCheck } from 'lucide-react';
+import { collection, doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { Users, GraduationCap, School, Activity, Hourglass, ChevronRight, CircleCheck, WifiOff } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth, useNavigation, SUPER_ADMIN_EMAIL } from '../context';
 import { useAllClasses } from '../hooks/useClasses';
@@ -12,6 +12,7 @@ import { UsersTab, UserRecord, StaffRecord, Filter, filterTests, toUser } from '
 import { SchoolTab } from '../components/admin/SchoolTab';
 import { AccessRecord, DecisionRecord, toAccess } from '../components/admin/AccessRequests';
 import { useDirectory, writeDirectory } from '../utils/directory';
+import { teachersDiffer, teachersOf } from '../utils/classTeachers';
 
 type Tab = 'users' | 'classes' | 'school';
 const TAB_KEY = 'sg-admin-tab';
@@ -39,23 +40,47 @@ export const AdminPanelPage: React.FC = () => {
   const [users, setUsers] = useState<UserRecord[]>([]);
   const [staff, setStaff] = useState<StaffRecord[]>([]);
   const [loading, setLoading] = useState(true);
-  const { classes, loading: loadingClasses } = useAllClasses(isAdmin);
+  const [staffLoaded, setStaffLoaded] = useState(false);
+  // which lists did not come (no internet, no right): then the panel says so instead of „all is well“
+  const [failed, setFailed] = useState({ users: false, staff: false, access: false });
+  const fail = (k: keyof typeof failed, v: boolean) => setFailed(f => (f[k] === v ? f : { ...f, [k]: v }));
+  const { classes, archived, loading: loadingClasses, failed: classesFailed, fresh: classesFresh } = useAllClasses(isAdmin);
   const { groups } = useAllPsalterGroups(isAdmin);
 
   useEffect(() => {
     if (!isAdmin) return;
     const off1 = onSnapshot(collection(db, 'students'),
-      s => { setUsers(s.docs.map(d => toUser(d.id, d.data()))); setLoading(false); },
-      () => setLoading(false));
+      s => { setUsers(s.docs.map(d => toUser(d.id, d.data()))); fail('users', false); setLoading(false); },
+      () => { fail('users', true); setLoading(false); });
     const off2 = onSnapshot(collection(db, 'admins'),
-      s => setStaff(s.docs.map(d => {
-        const x = d.data();
-        const r = x.role === 'superadmin' || x.role === 'teacher' ? x.role : 'admin';
-        return { email: (x.email || d.id).toLowerCase(), role: d.id === SUPER_ADMIN_EMAIL ? 'superadmin' : r, userId: x.userId, name: x.name, addedBy: x.addedBy, addedAt: x.addedAt } as StaffRecord;
-      })),
-      () => setStaff([]));
+      s => {
+        setStaff(s.docs.map(d => {
+          const x = d.data();
+          const r = x.role === 'superadmin' || x.role === 'teacher' ? x.role : 'admin';
+          return { email: (x.email || d.id).toLowerCase(), role: d.id === SUPER_ADMIN_EMAIL ? 'superadmin' : r, userId: x.userId, name: x.name, addedBy: x.addedBy, addedAt: x.addedAt } as StaffRecord;
+        }));
+        fail('staff', false);
+        setStaffLoaded(true);
+      },
+      () => { fail('staff', true); setStaffLoaded(true); });
     return () => { off1(); off2(); };
   }, [isAdmin]);
+
+  // every member's teacherIds = the teachers of the classes they are in (only those may read the record,
+  // firestore.rules teachesMe): puts right what older versions left behind (a teacher taken off a class kept the access)
+  // and what a teacher's own page could not see. Only with the server's full class list, never a cached part of it;
+  // each fix once per visit
+  const fixed = useRef(new Set<string>());
+  useEffect(() => {
+    if (!isAdmin || loading || failed.users || !classesFresh || classesFailed) return;
+    for (const u of users) {
+      const should = teachersOf(u.userId, classes);
+      const key = `${u.userId}:${should.join(',')}`;
+      if (!teachersDiffer(u.teacherIds, should) || fixed.current.has(key)) continue;
+      fixed.current.add(key);
+      void updateDoc(doc(db, 'students', u.userId), { teacherIds: should }).catch(() => {});
+    }
+  }, [isAdmin, loading, failed.users, classesFresh, classesFailed, users, classes]);
 
   // members who have not opened the app since the directory began are missing from it, so teachers could not
   // add them to a class or group: write their name and photo there from their record (once per visit)
@@ -79,11 +104,12 @@ export const AdminPanelPage: React.FC = () => {
   // new members' requests and who decided them: superadmins only
   const [access, setAccess] = useState<Record<string, AccessRecord>>({});
   const [decisions, setDecisions] = useState<Record<string, DecisionRecord>>({});
+  const [accessLoaded, setAccessLoaded] = useState(false);
   useEffect(() => {
     if (!isSuperAdmin) return;
     const off1 = onSnapshot(collection(db, 'memberAccess'),
-      s => setAccess(Object.fromEntries(s.docs.map(d => [d.id, toAccess(d.data())]))),
-      () => setAccess({}));
+      s => { setAccess(Object.fromEntries(s.docs.map(d => [d.id, toAccess(d.data())]))); fail('access', false); setAccessLoaded(true); },
+      () => { setAccess({}); fail('access', true); setAccessLoaded(true); });
     const off2 = onSnapshot(collection(db, 'accessDecisions'),
       s => setDecisions(Object.fromEntries(s.docs.map(d => [d.id, d.data() as DecisionRecord]))),
       () => setDecisions({}));
@@ -109,7 +135,7 @@ export const AdminPanelPage: React.FC = () => {
   // the big numbers: three people filters (superadmins see who waits; other admins see the teachers) and the classes
   const userTiles: Filter[] = ['all', 'week', isSuperAdmin ? 'pending' : 'teacher'];
   const TILES: HeroTile[] = [
-    { id: 'all', label: 'წევრები', n: users.length, Icon: Users },
+    { id: 'all', label: 'ყველა', n: users.length, Icon: Users },
     { id: 'week', label: 'აქტიური კვირაში', n: users.filter(test.week).length, Icon: Activity },
     isSuperAdmin
       ? { id: 'pending', label: 'ელოდება', n: waiting, Icon: Hourglass, alert: waiting > 0 }
@@ -129,7 +155,10 @@ export const AdminPanelPage: React.FC = () => {
     { id: 'school' as const, label: 'სკოლა', Icon: School },
   ];
 
-  const todo = [
+  // the attention lines wait for every list, so they never flash a wrong number; a list that did not come says so
+  const ready = !loading && !loadingClasses && staffLoaded && (!isSuperAdmin || accessLoaded);
+  const broken = failed.users || failed.staff || failed.access || classesFailed;
+  const todo = !ready || broken ? [] : [
     ...(waiting > 0 ? [{ id: 'wait', icon: <Hourglass />, text: `${waiting} ახალი წევრი ელოდება დამატებას`, go: () => { setTab('users'); setFilter('pending'); } }] : []),
     ...(teachersWithoutClass > 0 ? [{ id: 'teach', icon: <GraduationCap />, text: `${teachersWithoutClass} მასწავლებელს კლასი ან ჯგუფი არ აქვს`, go: () => setTab('classes') }] : []),
   ];
@@ -156,7 +185,11 @@ export const AdminPanelPage: React.FC = () => {
             </button>
           ))}
         </div>
-      ) : !loading && (
+      ) : broken ? (
+        <p role="alert" className="flex items-center gap-2 rounded-2xl bg-red-50 ring-1 ring-red-200 px-3.5 py-2.5 text-[13px] font-semibold text-red-800">
+          <WifiOff className="w-4 h-4 shrink-0" /> ზოგი მონაცემი ვერ ჩაიტვირთა — შეამოწმე ინტერნეტი და გახსენი თავიდან.
+        </p>
+      ) : ready && (
         <p className="flex items-center gap-2 px-1 text-[13px] font-semibold text-emerald-800">
           <CircleCheck className="w-4 h-4 shrink-0" /> ყველაფერი რიგზეა — არაფერი გელოდება.
         </p>
@@ -171,7 +204,7 @@ export const AdminPanelPage: React.FC = () => {
       {tab === 'classes' && (
         <div className="space-y-4">
           {/* a psalter group lives only inside its class (made from the class page); it shows on the class's row */}
-          <ClassesAdmin classes={classes} loading={loadingClasses} staff={leaders} onMessage={msg.say} groups={groups} />
+          <ClassesAdmin classes={classes} archived={archived} loading={loadingClasses} failed={classesFailed} staff={leaders} onMessage={msg.say} groups={groups} />
         </div>
       )}
       {tab === 'school' && <SchoolTab users={users} onMessage={msg.say} />}
