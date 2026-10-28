@@ -7,6 +7,8 @@ import { MANERA_ITEMS } from '../../data/habitsAndManera';
 import { MONTHS_SHORT_GE } from '../../utils/dateNames';
 import { MANERA_LESSONS } from '../../data/maneraLessons';
 import { useManeraPractice } from '../../utils/maneraPractice';
+import { useDrillScores } from '../../utils/drillScores';
+import { ALL_DRILLS } from '../../data/vocalDrills';
 import { Btn } from '../ui/kit';
 import { DrillSheet } from '../mastery/ManeraLessonSheet';
 
@@ -58,6 +60,23 @@ export const useManera = () => {
   return { marks, average };
 };
 
+/**
+ * „ოსტატობა“ as one number: every exercise (the 11 tips and the 16 drills) counts — a tip a teacher marked by the
+ * teacher's mark, otherwise by the app's best score (microphone or AI teacher), an exercise never scored as 0 — so
+ * the ring grows with practice. null while there is nothing at all.
+ */
+export const useMastery = () => {
+  const { user } = useAuth();
+  const { marks } = useManera();
+  const scores = useDrillScores(user?.uid);
+  const markOf: Record<string, ManeraMark> = {};
+  MANERA_ITEMS.forEach((item, i) => { if (marks[i]) markOf[`tip-${item.num}`] = marks[i]!; });
+  const scoreOf = (drillId: string): number | null => markOf[drillId]?.v ?? scores[drillId] ?? null;
+  const any = ALL_DRILLS.some(d => scoreOf(d.id) !== null);
+  const average = any ? Math.round(ALL_DRILLS.reduce((a, d) => a + (scoreOf(d.id) ?? 0), 0) / ALL_DRILLS.length) : null;
+  return { marks, scores, scoreOf, average };
+};
+
 /** The percent as a small coloured pill; a quiet dash while there is no mark. */
 export const ManeraScore: React.FC<{ v: number | null | undefined }> = ({ v }) => {
   if (v === null || v === undefined) return <span className="w-11 text-center text-sm font-bold text-[#cbbca6]">—</span>;
@@ -67,7 +86,7 @@ export const ManeraScore: React.FC<{ v: number | null | undefined }> = ({ v }) =
 
 /** The average for the card's title; nothing until a teacher has marked something. */
 export const ManeraAverageBadge: React.FC = () => {
-  const { average } = useManera();
+  const { average } = useMastery();
   return average === null ? null : <ManeraScore v={average} />;
 };
 
@@ -75,7 +94,7 @@ export const ManeraAverageBadge: React.FC = () => {
 // (who wrote it, when) and the tip's advice, and opens its lesson and exercise (DrillSheet, drill `tip-<num>`).
 // Only teachers and admins mark (ManeraReviewEditor).
 export const ManeraContent: React.FC = () => {
-  const { marks } = useManera();
+  const { marks, scores } = useMastery();
   const { doneToday } = useManeraPractice();
   const [openNum, setOpenNum] = useState<string | null>(null);
   const [sheet, setSheet] = useState<{ num: string; tab: 'lesson' | 'exercise' } | null>(null);
@@ -101,7 +120,7 @@ export const ManeraContent: React.FC = () => {
                 </span>
                 <span className={`flex-1 min-w-0 text-[14px] font-semibold leading-snug ${open ? 'text-[#7a2028]' : ''}`}>{item.title}</span>
                 {m?.note && <MessageSquareText aria-label="მასწავლებლის შენიშვნა" className="w-4 h-4 shrink-0 text-[#b3a594]" />}
-                <ManeraScore v={m?.v} />
+                <ManeraScore v={m?.v ?? scores[`tip-${item.num}`]} />
                 <ChevronDown className={`w-4 h-4 shrink-0 text-[#b3a594] transition-transform ${open ? 'rotate-180' : ''}`} />
               </button>
 

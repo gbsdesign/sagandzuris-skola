@@ -3,8 +3,11 @@
 import { detectPitch, freqToMidi } from './pitch';
 import { pickMime, toMp3 } from './voiceRecorder';
 
-export interface SingTake { frames: { t: number; midi: number | null }[]; mp3: Blob | null; seconds: number }
-export interface SingSession { stop: () => Promise<SingTake>; cancel: () => void }
+/** one look at the microphone: ms since the start, the sung note (null: no voice) and the loudness (RMS) */
+export interface SingFrame { t: number; midi: number | null; rms: number }
+export interface SingTake { frames: SingFrame[]; mp3: Blob | null; seconds: number }
+/** `frames` grows while listening (an exercise's score reads it round by round); `t0` is its performance.now() zero */
+export interface SingSession { stop: () => Promise<SingTake>; cancel: () => void; frames: SingFrame[]; t0: number }
 
 export const singingSupported = () =>
   typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia && typeof window.AudioContext !== 'undefined';
@@ -17,7 +20,7 @@ const setAudioSession = (type: 'play-and-record' | 'auto') => {
 };
 
 /** Asks for the microphone and starts listening; throws if the member refuses access. */
-export const startSinging = async (onPitch: (midi: number | null, t: number) => void): Promise<SingSession> => {
+export const startSinging = async (onPitch: (midi: number | null, t: number) => void, everyMs = 40): Promise<SingSession> => {
   setAudioSession('play-and-record');
   // no echo/noise processing: it chops sustained sung notes
   const stream = await navigator.mediaDevices.getUserMedia({
@@ -29,16 +32,18 @@ export const startSinging = async (onPitch: (midi: number | null, t: number) => 
   analyser.fftSize = 2048;
   ctx.createMediaStreamSource(stream).connect(analyser);
   const buf = new Float32Array(analyser.fftSize);
-  const frames: SingTake['frames'] = [];
+  const frames: SingFrame[] = [];
   const t0 = performance.now();
   const timer = window.setInterval(() => {
     analyser.getFloatTimeDomainData(buf);
     const f = detectPitch(buf, ctx.sampleRate);
     const midi = f ? freqToMidi(f) : null;
+    let sum = 0;
+    for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
     const t = performance.now() - t0;
-    frames.push({ t, midi });
+    frames.push({ t, midi, rms: Math.sqrt(sum / buf.length) });
     onPitch(midi, t);
-  }, 40);
+  }, everyMs);
 
   let rec: MediaRecorder | null = null;
   const chunks: Blob[] = [];
@@ -58,6 +63,8 @@ export const startSinging = async (onPitch: (midi: number | null, t: number) => 
   };
 
   return {
+    frames,
+    t0,
     stop: () => new Promise<SingTake>(resolve => {
       const seconds = (performance.now() - t0) / 1000;
       const done = (mp3: Blob | null) => resolve({ frames, mp3, seconds });
