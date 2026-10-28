@@ -370,7 +370,7 @@ const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats>; editing: boolea
       )}
 
       {s.learned === 0 ? (
-        <p className="px-1 text-[13px] text-[#8a7a6a]">ჯერ არაფერია ნასწავლი — მონიშნე „სასწავლში“, რაც უკვე იცი.</p>
+        <p className="px-1 text-[13px] text-[#8a7a6a]">ჯერ არაფერია ნასწავლი.</p>
       ) : (
         s.categories.filter(c => c.done.length).map(c => {
           const open = all[c.id];

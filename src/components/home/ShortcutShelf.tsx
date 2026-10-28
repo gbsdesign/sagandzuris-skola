@@ -169,8 +169,9 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
   const { groups } = useMyPsalterGroups(user?.uid);
   // my own habits too: a habit button ticks or opens the habit as I set it up
   const myHabits = useMyHabits(user?.uid).groups.flatMap(g => g.items);
-  // on the home page a psalter-group member's kathisma leads the shelf as its own tile
-  const readingIn = variant === 'home' && user ? groups.filter(g => g.memberIds.includes(user.uid)) : [];
+  // on the home page a psalter-group member's kathisma leads the shelf as its own tile — while the admin keeps
+  // „ფსალმუნთა ჯგუფი“ open (a tile that leads nowhere is worse than none)
+  const readingIn = variant === 'home' && user && access.section('medavitneoba') === 'open' ? groups.filter(g => g.memberIds.includes(user.uid)) : [];
   const classDefaults = classes.find(c => c.defaultShortcuts?.length)?.defaultShortcuts || [];
   const own = list !== null;
   const all = useMemo(
@@ -348,7 +349,7 @@ export const ShortcutPicker: React.FC<{ open: boolean; onClose: () => void; curr
           title: `ღილაკის დამატება · ${current.length}/${max}`,
           isOn: has,
           full,
-          fullNote: `უკვე ${max} ღილაკია — ახლის დასამატებლად ჯერ რომელიმე მოხსენი.`,
+          fullNote: `უკვე ${max} ღილაკია — ახლის დასამატებლად ჯერ რომელიმე მოხსენით.`,
           onPick: id => {
             triggerHaptic(10);
             if (has(id)) onChange(current.filter(x => coreOf(x) !== coreOf(id)));

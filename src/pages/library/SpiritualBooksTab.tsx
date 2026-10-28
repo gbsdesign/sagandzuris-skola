@@ -1,12 +1,13 @@
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
-import { BookHead, BookNav, SectionTitle } from './BookHead';
+import { BookHead, BookNav } from './BookHead';
 import { Book, BookTab } from './BookTab';
 import { MiniCover } from './Shelf';
 import { lastChapter } from './readingPlace';
 
 // "სასულიერო წიგნები": a list of books by the holy fathers (from orthodox.ge). A book ("sasuliero:ati")
 // opens in the same reader as the Sacred History, and its chapter ("sasuliero:ati:3") is a step of its own.
+// With a single book the list is skipped: the shelf's cover opens that book's contents.
 
 interface Entry { id: string; title: string; author: string; chapters: number; load: () => Promise<Book> }
 
@@ -19,7 +20,8 @@ export const BOOKS: Entry[] = [
 
 export const SpiritualBooksTab: React.FC<{ nav: BookNav }> = ({ nav }) => {
   const [id, ...rest] = (nav.part ?? '').split(':');
-  const open = BOOKS.find(b => b.id === id);
+  // while there is only one book, the shelf's cover opens it straight away (no list of one)
+  const open = BOOKS.find(b => b.id === id) ?? (BOOKS.length === 1 ? BOOKS[0] : undefined);
 
   if (open) {
     const inner: BookNav = {
@@ -47,8 +49,7 @@ export const SpiritualBooksTab: React.FC<{ nav: BookNav }> = ({ nav }) => {
         sub="წმიდა მამების სწავლებანი"
       />
 
-      <SectionTitle className="mt-5">წიგნები</SectionTitle>
-      <ul className="mt-2.5 rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_26px_-22px_rgba(42,32,23,0.35)] p-1.5 sm:p-2">
+      <ul className="mt-5 rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_26px_-22px_rgba(42,32,23,0.35)] p-1.5 sm:p-2">
         {BOOKS.map(b => {
           const last = lastChapter(b.id);
           return (

@@ -6,11 +6,14 @@ import { SchoolClass, imageFileToDataUrl } from '../../hooks/useClasses';
 import { triggerHaptic } from '../../utils/haptics';
 import { ClassLogo } from '../classes/ClassLogo';
 import { CLASS_MODE_HINT } from '../admin/ClassesAdmin';
-import { Card, Flash, useFlash } from '../ui/kit';
+import { Btn, Card, Flash, useFlash } from '../ui/kit';
+import { ShortcutPicker, shortcutIcon } from '../home/ShortcutShelf';
+import { shortcutLabel } from '../../utils/shortcuts';
 
-type Editable = Partial<Pick<SchoolClass, 'name' | 'logo' | 'classMode'>>;
+type Editable = Partial<Pick<SchoolClass, 'name' | 'logo' | 'classMode' | 'defaultShortcuts'>>;
 
-// The class's ✎ window on the class page: the logo and name (edited in place, saved at once) and the class mode.
+// The class's ✎ window on the class page: the logo and name (edited in place, saved at once), the class mode and the
+// members' starting home buttons (until they choose their own; moved here from the old members window, 2026-10-28).
 // The timetable and the psalter group are edited where they show, on the class page itself (stage 2, 2026-10-25).
 export const ClassHeader: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
   const msg = useFlash();
@@ -19,6 +22,8 @@ export const ClassHeader: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
   useEffect(() => setName(cls.name), [cls.name]);
   const dirty = !!name.trim() && name.trim() !== cls.name;
   const mode = !!cls.classMode;
+  const [picking, setPicking] = useState(false);
+  const buttons = cls.defaultShortcuts || [];
 
   const save = async (patch: Editable) => {
     try {
@@ -74,6 +79,25 @@ export const ClassHeader: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
             </button>
           </div>
         </div>
+      </div>
+      <div className="mt-4 pt-3 border-t border-[#efe5d4]">
+        <div className="flex items-center gap-2 min-h-9">
+          <span className="flex-1 text-[13px] font-bold text-[#4a3426]">საწყისი ღილაკები მთავარ გვერდზე</span>
+          <Btn size="sm" kind="ghost" onClick={() => setPicking(true)}>არჩევა</Btn>
+        </div>
+        {buttons.length > 0 ? (
+          <div className="mt-1.5 flex flex-wrap gap-1.5">
+            {buttons.map(id => (
+              <span key={id} className="h-9 pl-1.5 pr-3 rounded-full bg-white ring-1 ring-[#e8dcc8] inline-flex items-center gap-1.5 text-[13px] font-semibold text-[#4a3426]">
+                <span className="w-6 h-6 rounded-full bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center [&>svg]:w-3.5 [&>svg]:h-3.5">{shortcutIcon(id)}</span>
+                {shortcutLabel(id)?.label}
+              </span>
+            ))}
+          </div>
+        ) : (
+          <p className="mt-0.5 text-[13px] text-[#8a7a6a]">არ არის — წევრები თავად აირჩევენ.</p>
+        )}
+        <ShortcutPicker open={picking} onClose={() => setPicking(false)} current={buttons} onChange={next => void save({ defaultShortcuts: next })} />
       </div>
       {msg.flash && <div className="mt-3"><Flash flash={msg.flash} onClose={msg.clear} /></div>}
     </Card>

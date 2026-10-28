@@ -5,7 +5,7 @@ import { db } from '../../firebase';
 import { GrapeBunch, Rosette, VineLeaf } from '../../components/home/PlateOrnaments';
 import { useAuth } from '../../context/AuthContext';
 import { SectionTitle } from './BookHead';
-import { lastChapter } from './readingPlace';
+import { lastReading } from './readingPlace';
 import { exportBusy, useExportState } from './SynthDownload';
 
 // The library's front room: the books standing on a wooden shelf (a cover opens the book), the place
@@ -162,7 +162,7 @@ const BookCover: React.FC<{ cover: Cover; onOpen: () => void; opening?: boolean;
 export const Shelf: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) => {
   const { user } = useAuth();
   const job = useExportState();
-  const last = lastChapter();
+  const last = lastReading();
   // a member's own order of the books, if they set one before (the arranging was removed with the plates, 2026-10-25)
   const { order } = useShelfOrder(user?.uid);
   const perRow = usePerRow();
@@ -186,14 +186,14 @@ export const Shelf: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) =>
         <button
           type="button"
           // two steps, the contents and then the chapter, so "back" from the chapter shows the contents
-          onClick={() => { onOpen('book'); window.setTimeout(() => onOpen(`book:${last.n}`), 0); }}
+          onClick={() => { onOpen(last.steps[0]); window.setTimeout(() => onOpen(last.steps[1]), 0); }}
           className="group w-full flex items-center gap-3.5 min-h-16 rounded-2xl bg-[#fffdf8] ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/30 shadow-[0_1px_2px_rgba(42,32,23,0.04),0_10px_24px_-20px_rgba(42,32,23,0.45)] px-3.5 py-2.5 text-left cursor-pointer transition"
         >
-          <MiniCover id="book" />
+          <MiniCover id={last.shelf} />
           <span className="flex-1 min-w-0">
             <span className="block text-xs font-bold text-[#9a7438]">გააგრძელე კითხვა · თავი {last.n}</span>
             <span className="mt-0.5 block font-serif-ge text-[15px] font-semibold leading-snug text-[#2a2017] truncate">
-              {last.title || 'საღმრთო ისტორია'}
+              {last.title || (last.shelf === 'book' ? 'საღმრთო ისტორია' : 'სასულიერო წიგნები')}
             </span>
           </span>
           <ChevronRight className="w-5 h-5 shrink-0 text-[#cdbba3] group-hover:text-[#7a2028] group-hover:translate-x-0.5 transition-all" />
@@ -208,7 +208,7 @@ export const Shelf: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) =>
             <div className="relative z-[1] flex items-end justify-center gap-7 min-[400px]:gap-9 sm:gap-8 px-3">
               {row.map(c => (
                 <div key={c.id} className="w-[40%] max-w-[148px] sm:w-[26%] lg:w-[16%]">
-                  <BookCover cover={c} onOpen={() => openBook(c.id)} opening={opening === c.id} marked={c.id === 'book' && !!last} />
+                  <BookCover cover={c} onOpen={() => openBook(c.id)} opening={opening === c.id} marked={!!last && c.id === last.shelf} />
                 </div>
               ))}
             </div>

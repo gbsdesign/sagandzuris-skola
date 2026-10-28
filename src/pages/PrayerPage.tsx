@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Bell, BellOff, Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
-import { KATHISMAS, PRAYER_HOURS, PrayerHour, bibleChapterId, hourClock, parseBibleId, todaysWeekPrayerId } from '../data/prayers';
+import { KATHISMAS, PRAYER_HOURS, PrayerHour, bibleChapterId, hourClock, parseBibleId, prayerTitle, todaysWeekPrayerId } from '../data/prayers';
 import { HABIT_ITEMS } from '../data/habitsAndManera';
 import { COUNTED_BY_READING } from '../data/habitLooks';
 import { FoldedPrayer, PROSE, PrayerText } from '../components/views/PrayerText';
@@ -10,6 +10,8 @@ import { ReadingToolbar, useKhutsuri } from '../components/views/ReadingTools';
 import { useHabitsModel } from '../components/habits/useHabits';
 import { Btn } from '../components/ui/kit';
 import { useAccess } from '../hooks/useAccess';
+import { markRead, useMyPsalterGroups } from '../hooks/usePsalter';
+import { cycleOf, georgiaToday, kathismasOf, ownersIn } from '../utils/psalter';
 import { habitOfPrayer, rememberRead } from '../utils/prayerHabits';
 import {
   REMINDER_OFFSETS,
@@ -51,6 +53,16 @@ const neighbours = (id: string): { prev?: { id: string; label: string }; next?: 
 };
 
 // One prayer from the ლოცვანი (or a chapter of the Gospel / Apostle), read in full.
+// The text's own first heading goes when the page's bar already says it („დილის ლოცვები“ twice; a kathisma's
+// „კანონი პირველი“ under „ფსალმუნნი — კანონი 1“); a fuller one (an akathist's whole name) stays.
+const flat = (t: string) => t.replace(/<[^>]+>/g, ' ').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().toLowerCase();
+const withoutBarTitle = (html: string, id: string): string => {
+  const head = html.match(/^\s*<h2[^>]*>([\s\S]*?)<\/h2>/);
+  if (!head) return html;
+  const same = flat(head[1]) === flat(prayerTitle(id)) || KATHISMAS.some(k => k.id === id);
+  return same ? html.slice(head[0].length) : html;
+};
+
 export const PrayerPage: React.FC = () => {
   const { selectedPrayerId, openPrayer } = useNavigation();
   const [html, setHtml] = useState<string | null>(null);
@@ -69,7 +81,7 @@ export const PrayerPage: React.FC = () => {
     setHtml(null);
     setFailed(false);
     loadText(selectedPrayerId)
-      .then(text => alive && setHtml(text))
+      .then(text => alive && setHtml(withoutBarTitle(text, selectedPrayerId)))
       .catch(() => alive && setFailed(true));
     return () => {
       alive = false;
@@ -165,69 +177,59 @@ export const PrayerPage: React.FC = () => {
 
 // At the end of a prayer: "წავიკითხე" ticks today's habit it belongs to (the morning prayers count for
 // "დილის და საღამოს ლოცვები"…; a chapter adds one თავი to "სახარება" or "სამოციქულო") and moves "გააგრძელე" past a finished chapter.
-// A kathisma ticks "ფსალმუნები" the same way; psalter groups are marked only on their own page.
+// A kathisma ticks "ფსალმუნები" the same way, and when it is my kanon in a psalter group this cycle, the group's
+// kanon is marked read too (the one button for both).
 const ReadMark: React.FC<{ prayerId: string }> = ({ prayerId }) => {
   const { user } = useAuth();
   const access = useAccess();
   const { model, blessing } = useHabitsModel(() => {});
   const [pressed, setPressed] = useState(false);
   useEffect(() => setPressed(false), [prayerId]);
+  const { groups } = useMyPsalterGroups(user?.uid);
 
-  const habit = HABIT_ITEMS.find(h => h.id === habitOfPrayer(prayerId));
-  if (!user || !habit || access.section('chvevebi') !== 'open') return null;
+  const k = /^kathisma-(\d+)$/.exec(prayerId)?.[1];
+  const kanonIn = !user || !k || access.section('medavitneoba') !== 'open' ? [] : groups.flatMap(g => {
+    const c = cycleOf(georgiaToday(), g.cycleDays, g.shiftDays);
+    return g.memberIds.includes(user.uid) && kathismasOf(ownersIn(g.assignment, g.baseHalf, c.half), user.uid).includes(Number(k)) ? [{ g, c }] : [];
+  });
+  const found = HABIT_ITEMS.find(h => h.id === habitOfPrayer(prayerId));
+  const habit = found && access.section('chvevebi') === 'open' ? found : undefined;
+  if (!user || (!habit && !kanonIn.length)) return null;
   const today = new Date();
-  const ticked = model.isOn(habit.id, today);
+  const ticked = !!habit && model.isOn(habit.id, today);
   // a chapter of the Gospel or the Apostle adds one to the day's count (the day ticks at the goal); „გაუქმება“ takes it back
-  const counter = COUNTED_BY_READING.includes(habit.id) ? model.counters[habit.id] : undefined;
-  const count = counter ? model.countOn(habit.id, today) : 0;
+  const counter = habit && COUNTED_BY_READING.includes(habit.id) ? model.counters[habit.id] : undefined;
+  const count = habit && counter ? model.countOn(habit.id, today) : 0;
 
   const press = () => {
     setPressed(true);
     rememberRead(prayerId, true);
+    // the mark waits on the phone when offline and is sent later
+    for (const { g, c } of kanonIn) void markRead(g.id, c, Number(k), user.uid).catch(() => {});
+    if (!habit) return;
     if (counter) model.setCount(habit.id, count + 1, today);
     else if (!ticked) model.toggle(habit.id, today);
   };
   const undo = () => {
     setPressed(false);
-    model.setCount(habit.id, count - 1, today);
+    if (habit) model.setCount(habit.id, count - 1, today);
   };
 
+  // one button, no card: „წავიკითხე“, then a soft „წაკითხულია“ (a chapter: „2 / 5 თავი“, a second press takes it back)
+  const of = counter ? ` · ${count} / ${counter.goal} ${counter.unit}` : '';
   return (
-    <section className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] p-4 space-y-2.5">
-      <p className="text-[12px] font-bold text-[#8a7a6a]">ჩვევა · {habit.label}</p>
+    <div className="space-y-2.5">
       {pressed ? (
-        <div className="flex items-center gap-3">
-          <span className="w-10 h-10 rounded-full bg-emerald-700 text-white flex items-center justify-center shrink-0">
-            <Check className="w-5 h-5 stroke-[3]" />
-          </span>
-          <span className="flex-1 min-w-0 text-sm font-semibold text-[#2a2017]">
-            {counter
-              ? `+1 ${counter.unit} — დღეს ${count} / ${counter.goal}.${count >= counter.goal ? ' ჩვევა შესრულდა, ღმერთმა შეგეწიოს!' : ''}`
-              : 'წაკითხულია — ჩვევა დღეს მონიშნულია. ღმერთმა შეგეწიოს!'}
-          </span>
-          {counter && (
-            <Btn size="sm" kind="ghost" onClick={undo}>
-              გაუქმება
-            </Btn>
-          )}
-        </div>
+        <Btn full size="lg" kind="soft" icon={<Check />} onClick={counter ? undo : undefined} aria-pressed title={counter ? 'გაუქმება' : undefined}>
+          წაკითხულია{of}
+        </Btn>
       ) : (
-        <>
-          <Btn full size="lg" kind={ticked ? 'soft' : 'primary'} icon={<Check />} onClick={press}>
-            წავიკითხე
-          </Btn>
-          {counter
-            ? count > 0 && (
-                <p className="text-center text-[12.5px] tabular-nums text-[#8a7a6a]">
-                  დღეს {count} / {counter.goal} {counter.unit}
-                  {ticked ? ' — ჩვევა შესრულდა' : ''}
-                </p>
-              )
-            : ticked && <p className="text-center text-[12.5px] text-[#8a7a6a]">ჩვევა დღეს უკვე მონიშნულია</p>}
-        </>
+        <Btn full size="lg" kind={ticked ? 'soft' : 'primary'} icon={<Check />} onClick={press}>
+          წავიკითხე{counter && count > 0 ? of : ''}
+        </Btn>
       )}
       {blessing}
-    </section>
+    </div>
   );
 };
 

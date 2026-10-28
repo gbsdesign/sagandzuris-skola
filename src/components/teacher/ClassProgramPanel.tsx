@@ -1,6 +1,6 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, Check, ChevronRight, Eye, ListChecks, Loader2, Plus, Search, X } from 'lucide-react';
-import { SERVICE_LISTS } from '../../data/chantLookup';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { ArrowDown, ArrowLeft, ArrowUp, Check, ChevronRight, Eye, Loader2, Plus, Search, X } from 'lucide-react';
+import { SERVICE_LISTS, findVersion } from '../../data/chantLookup';
 import { FOLK_SONGS, getFolkRegion } from '../../data/songsData';
 import { MTKMELI_AUTHORS } from '../../data/mtkmeliData';
 import { INSTRUMENTS_LIST } from '../../data/instrumentsData';
@@ -11,12 +11,13 @@ import { triggerHaptic } from '../../utils/haptics';
 import { ProgramItem, SchoolClass } from '../../hooks/useClasses';
 import { saveClassProgram } from '../admin/ClassesAdmin';
 import { useOpenShortcut } from '../home/ShortcutShelf';
-import { Btn, Card, CardTitle, FIELD, Flash, Sheet, useFlash } from '../ui/kit';
+import { Btn, FIELD, Flash, Sheet, useFlash } from '../ui/kit';
+import { variantLines } from '../../data/tsirvaChants';
 
-// „სასწავლო პროგრამა“ in the teacher's panel: what the class learns, in order; 👁 opens an item, ✕ takes it out.
-// „დამატება“ opens everything to walk through — chants by service down to every version (recordings too), the prayer
-// book, the library, songs, poems, instruments, the great chanters — with 👁 to look and + to add. The choice is saved
-// when the window closes (or before 👁 leaves the page); chants, songs, poems and instruments go onto every member's path.
+// „სასწავლო პროგრამა“ changed in place on the class page (its ✎): each row moves ↑ ↓ or goes ✕; „დამატება“ opens
+// everything to walk through — chants by service down to every version (recordings too), the prayer book, the library,
+// songs, poems, instruments, the great chanters — with 👁 to look and + to add. The changes are saved at „მზადაა“ (or
+// before 👁 leaves the page, or when the page is left); chants, songs, poems and instruments go onto every member's path.
 
 /** The button id that shows a program item (a path item's notes page or map, or the item's own button). */
 const openIdOf = (id: string) => {
@@ -25,70 +26,96 @@ const openIdOf = (id: string) => {
   return e.category === 'galoba' ? `chant:${id}` : e.category === 'simghera' ? `song:${id}` : e.category === 'mtkmeli' ? 'section:mtkmeli' : 'section:sakravebi';
 };
 
-export const ClassProgramPanel: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
+/** A program row's two lines: a chant's own name first, then its book, page, number and source, muted
+ *  („აკურთხევს სული ჩემი“ / „I ტომი · გვ. 212 · ხუნდაძე · №153“); a song or a poem keeps its title and code. */
+export const programLines = (p: ProgramItem): { title: string; sub?: string } => {
+  const v = p.id ? findVersion(p.id) : undefined;
+  if (!v || !v.variant.page) return { title: p.title, sub: p.code || (p.id ? shortcutLabel(p.id)?.sub : undefined) };
+  const { top, sub } = variantLines(v.chant.id, v.chant.title, v.variant);
+  const segs = top.split(' · ');
+  // top = book · name · page
+  const name = segs.length >= 3 ? segs.slice(1, -1).join(' · ') : top;
+  const where = segs.length >= 3 ? `${segs[0]} · ${segs[segs.length - 1]}` : '';
+  return { title: name, sub: [where, sub].filter(Boolean).join(' · ') || p.code };
+};
+
+export const ProgramEditor: React.FC<{ cls: SchoolClass; onDone: () => void }> = ({ cls, onDone }) => {
   const msg = useFlash();
   const openShortcut = useOpenShortcut();
-  const [draft, setDraft] = useState<ProgramItem[] | null>(null);
+  const [draft, setDraft] = useState<ProgramItem[]>(cls.program);
+  const [picking, setPicking] = useState(false);
   const [saving, setSaving] = useState(false);
-  const program = cls.program;
+  // what is not saved yet, for leaving the page while changing
+  const pending = useRef<ProgramItem[] | null>(null);
+  pending.current = JSON.stringify(draft) !== JSON.stringify(cls.program) ? draft : null;
 
-  const commit = async (next: ProgramItem[]) => {
+  const commit = async () => {
+    const next = pending.current;
+    if (!next) return true;
     setSaving(true);
     try {
       const failed = await saveClassProgram(cls, next);
       if (failed) msg.fail(`პროგრამა შენახულია, მაგრამ ${failed} წევრის გზა ვერ განახლდა.`);
-      else msg.ok('პროგრამა შენახულია — წევრების გზაზეც განახლდა.');
+      return true;
     } catch {
       msg.fail('პროგრამა ვერ შეინახა.');
+      return false;
     } finally {
       setSaving(false);
     }
   };
+  // leaving the page while changing keeps the changes
+  useEffect(() => () => { if (pending.current) void saveClassProgram(cls, pending.current).catch(() => {}); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const move = (i: number, dir: -1 | 1) => {
+    triggerHaptic(8);
+    setDraft(d => { const n = [...d]; [n[i], n[i + dir]] = [n[i + dir], n[i]]; return n; });
+  };
   const toggle = (item: ProgramItem) => {
     triggerHaptic(10);
-    setDraft(d => d && (d.some(p => p.id === item.id) ? d.filter(p => p.id !== item.id) : [...d, item]));
+    setDraft(d => (d.some(p => p.id === item.id) ? d.filter(p => p.id !== item.id) : [...d, item]));
   };
-  const close = () => {
-    if (draft && JSON.stringify(draft) !== JSON.stringify(program)) void commit(draft);
-    setDraft(null);
-  };
-  // looking at an item leaves the page: the choice so far is kept first
-  const look = (id: string) => {
-    close();
+  // looking at an item leaves the page: the changes so far are saved first
+  const look = async (id: string) => {
+    setPicking(false);
+    await commit();
     openShortcut(id);
   };
+  const done = async () => { if (await commit()) onDone(); };
 
   return (
-    <Card>
-      <CardTitle icon={<ListChecks />} title="სასწავლო პროგრამა"
-        hint={program.length ? `${program.length} ერთეული` : undefined}
-        right={<Btn size="sm" icon={<Plus />} onClick={() => setDraft(program)} disabled={saving}>დამატება</Btn>} />
-      {program.length === 0 ? (
+    <div className="space-y-3">
+      {draft.length === 0 ? (
         <p className="text-sm text-[#8a7a6a]">პროგრამა ჯერ ცარიელია.</p>
       ) : (
-        <ol className="-mx-2 divide-y divide-[#f1e8d9]">
-          {program.map((p, i) => {
-            const cat = p.id ? findCatalogEntry(p.id)?.category : undefined;
+        <ol className="-mx-1 divide-y divide-[#f3ebdd]">
+          {draft.map((p, i) => {
+            const lines = programLines(p);
             const openId = p.id ? openIdOf(p.id) : '';
-            const sub = cat ? `${CATEGORY_LABEL[cat]}${p.code ? ` · ${p.code}` : ''}` : p.code || (p.id && shortcutLabel(p.id)?.sub) || 'ტექსტი';
             return (
-              <li key={p.id || i} className="flex items-center gap-2 px-2 py-2">
+              <li key={p.id || i} className="flex items-center gap-1 py-1.5">
                 <span className="w-7 h-7 shrink-0 rounded-full bg-[#7a2028]/[0.08] text-[#7a2028] text-[13px] font-bold flex items-center justify-center tabular-nums">{i + 1}</span>
-                <span className="flex-1 min-w-0 pl-1">
-                  <span className="block text-sm font-semibold text-[#2a2017] truncate">{p.title}</span>
-                  <span className="block text-xs text-[#8a7a6a] truncate">{sub}</span>
+                <span className="flex-1 min-w-0 pl-1.5">
+                  <span className="block line-clamp-2 break-words text-[14px] leading-tight font-semibold text-[#2a2017]">{lines.title}</span>
+                  {lines.sub && <span className="block mt-0.5 truncate text-xs text-[#a4927c]">{lines.sub}</span>}
                 </span>
-                {openId && <RowIcon label={`${p.title} — გახსნა`} onClick={() => openShortcut(openId)}><Eye /></RowIcon>}
-                <RowIcon label={`${p.title} — პროგრამიდან ამოღება`} danger disabled={saving} onClick={() => commit(program.filter((_, j) => j !== i))}><X /></RowIcon>
+                {openId && <RowIcon label={`${lines.title} — გახსნა`} onClick={() => look(openId)}><Eye /></RowIcon>}
+                <RowIcon label={`${lines.title} — ზემოთ`} disabled={i === 0} onClick={() => move(i, -1)}><ArrowUp /></RowIcon>
+                <RowIcon label={`${lines.title} — ქვემოთ`} disabled={i === draft.length - 1} onClick={() => move(i, 1)}><ArrowDown /></RowIcon>
+                <RowIcon label={`${lines.title} — პროგრამიდან ამოღება`} danger onClick={() => { triggerHaptic(10); setDraft(d => d.filter((_, j) => j !== i)); }}><X /></RowIcon>
               </li>
             );
           })}
         </ol>
       )}
-      {saving && <p className="mt-2 text-xs font-semibold text-[#8a7a6a]">ინახება და წევრების გზა ახლდება…</p>}
-      {msg.flash && <div className="mt-3"><Flash flash={msg.flash} onClose={msg.clear} /></div>}
-      {draft && <ProgramPicker picked={draft} onToggle={toggle} onLook={look} onClose={close} />}
-    </Card>
+      <div className="flex flex-wrap items-center gap-2">
+        <Btn size="sm" kind="soft" icon={<Plus />} onClick={() => setPicking(true)} disabled={saving}>დამატება</Btn>
+        <span className="flex-1" />
+        <Btn size="sm" icon={saving ? <Loader2 className="animate-spin" /> : <Check />} onClick={done} disabled={saving}>{saving ? 'ინახება…' : 'მზადაა'}</Btn>
+      </div>
+      {msg.flash && <Flash flash={msg.flash} onClose={msg.clear} />}
+      {picking && <ProgramPicker picked={draft} onToggle={toggle} onLook={look} onClose={() => setPicking(false)} />}
+    </div>
   );
 };
 
@@ -168,9 +195,10 @@ const searchButtons = (words: string[]) => {
   return buttonIndex.filter(n => { const hay = `${n.title} ${n.sub || ''}`.toLowerCase(); return words.every(w => hay.includes(w)); }).slice(0, 30);
 };
 
-/** Everything to walk through: 👁 shows an item, + adds it (✓ once in the program); the search finds it at once. */
-const ProgramPicker: React.FC<{ picked: ProgramItem[]; onToggle: (item: ProgramItem) => void; onLook: (id: string) => void; onClose: () => void }> = ({ picked, onToggle, onLook, onClose }) => {
-  const top = useMemo(roots, []);
+/** Everything to walk through: 👁 shows an item, + adds it (✓ once in the program); the search finds it at once.
+ *  `chantsOnly`: just the chants' branch (the liturgy program's „+ საგალობლის დამატება“). */
+const ProgramPicker: React.FC<{ picked: ProgramItem[]; onToggle: (item: ProgramItem) => void; onLook?: (id: string) => void; onClose: () => void; chantsOnly?: boolean }> = ({ picked, onToggle, onLook, onClose, chantsOnly }) => {
+  const top = useMemo(() => (chantsOnly ? roots()[0].children!() as Node[] : roots()), [chantsOnly]);
   const [path, setPath] = useState<Node[]>([]);
   const [q, setQ] = useState('');
   const [rows, setRows] = useState<Node[] | null>(top);
@@ -178,14 +206,19 @@ const ProgramPicker: React.FC<{ picked: ProgramItem[]; onToggle: (item: ProgramI
 
   useEffect(() => {
     const words = q.toLowerCase().trim().split(/\s+/).filter(Boolean);
-    if (words.length) { setRows([...searchCatalog(q, 30).map(entryNode), ...searchButtons(words)]); return; }
+    if (words.length) {
+      setRows(chantsOnly
+        ? searchCatalog(q, 60).filter(e => e.category === 'galoba').slice(0, 30).map(entryNode)
+        : [...searchCatalog(q, 30).map(entryNode), ...searchButtons(words)]);
+      return;
+    }
     const next = here?.children ? here.children() : top;
     if (!(next instanceof Promise)) { setRows(next); return; }
     let live = true;
     setRows(null);
     next.then(r => live && setRows(r), () => live && setRows([]));
     return () => { live = false; };
-  }, [here, q, top]);
+  }, [here, q, top, chantsOnly]);
 
   const on = new Set(picked.map(p => p.id));
 
@@ -194,7 +227,7 @@ const ProgramPicker: React.FC<{ picked: ProgramItem[]; onToggle: (item: ProgramI
       footer={<Btn size="lg" full icon={<Check />} onClick={onClose}>მზადაა</Btn>}>
       <div className="relative mb-3">
         <Search className="w-4 h-4 text-[#b3a594] absolute left-3.5 top-1/2 -translate-y-1/2" />
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="მოძებნე საგალობელი, ლოცვა, წიგნი, სიმღერა…" className={`${FIELD} pl-10`} />
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder={chantsOnly ? 'მოძებნე საგალობელი…' : 'მოძებნე საგალობელი, ლოცვა, წიგნი, სიმღერა…'} className={`${FIELD} pl-10`} />
       </div>
       {!q.trim() && path.length > 0 && (
         <button type="button" onClick={() => setPath(p => p.slice(0, -1))}
@@ -219,7 +252,7 @@ const ProgramPicker: React.FC<{ picked: ProgramItem[]; onToggle: (item: ProgramI
                   </span>
                   {n.children && <ChevronRight className="w-4 h-4 shrink-0 text-[#b3a594]" />}
                 </button>
-                {n.open && <RowIcon label={`${n.title} — გახსნა`} onClick={() => onLook(n.open!)}><Eye /></RowIcon>}
+                {n.open && onLook && <RowIcon label={`${n.title} — გახსნა`} onClick={() => onLook(n.open!)}><Eye /></RowIcon>}
                 {n.item && (
                   <button type="button" onClick={() => onToggle(n.item!)} aria-pressed={added} aria-label={`${n.title} — ${added ? 'პროგრამიდან ამოღება' : 'პროგრამაში დამატება'}`}
                     className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center cursor-pointer transition active:scale-90 ${added ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#7a2028]/[0.07] text-[#7a2028] hover:bg-[#7a2028]/[0.12]'}`}>
@@ -235,3 +268,8 @@ const ProgramPicker: React.FC<{ picked: ProgramItem[]; onToggle: (item: ProgramI
     </Sheet>
   );
 };
+
+/** The liturgy program's chant picker: the same tree, its chants' branch only; `picked` and `onToggle` speak in version ids. */
+export const ChantPicker: React.FC<{ picked: string[]; onToggle: (id: string) => void; onClose: () => void }> = ({ picked, onToggle, onClose }) => (
+  <ProgramPicker chantsOnly picked={picked.map(id => ({ id, title: '', code: '' }))} onToggle={item => item.id && onToggle(item.id)} onClose={onClose} />
+);

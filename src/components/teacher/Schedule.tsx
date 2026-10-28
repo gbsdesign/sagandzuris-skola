@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { MapPin, Pencil, Plus, Save, Trash2 } from 'lucide-react';
+import { MapPin, Plus, Save, Trash2 } from 'lucide-react';
 import { db } from '../../firebase';
 import { LessonSlot, SchoolClass } from '../../hooks/useClasses';
 import { Btn, FIELD, Flash, IconBtn, Sheet, useFlash } from '../ui/kit';
@@ -182,33 +182,5 @@ export const ScheduleSheet: React.FC<{ cls: SchoolClass; open: boolean; onClose:
       }>
         <ScheduleRows rows={d.rows} setRows={d.setRows} />
     </Sheet>
-  );
-};
-
-/** The class chat's 📅 (ClassChat): the timetable folds open under the chat's title, and its teachers change it right
- *  there — ✏️ turns the lessons into fields, „შენახვა“ saves them. A class without lessons opens straight into them. */
-export const ScheduleFold: React.FC<{ cls: SchoolClass; canEdit: boolean; onClose: () => void }> = ({ cls, canEdit, onClose }) => {
-  const [editing, setEditing] = useState(false);
-  if (canEdit && (editing || !cls.schedule.length)) return <ScheduleEditor cls={cls} onSaved={() => setEditing(false)} onCancel={() => (cls.schedule.length ? setEditing(false) : onClose())} />;
-  return cls.schedule.length ? (
-    <LessonTable slots={cls.schedule} title="გაკვეთილების ცხრილი"
-      action={canEdit ? <IconBtn label="ცხრილის შეცვლა" onClick={() => setEditing(true)}><Pencil /></IconBtn> : undefined} />
-  ) : (
-    <p className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-3.5 py-3 text-sm text-[#8a7a6a]">ცხრილი ჯერ არ არის.</p>
-  );
-};
-
-const ScheduleEditor: React.FC<{ cls: SchoolClass; onSaved: () => void; onCancel: () => void }> = ({ cls, onSaved, onCancel }) => {
-  const d = useScheduleDraft(cls);
-  return (
-    <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] p-3">
-      <p className="px-0.5 mb-2.5 text-[12px] font-bold uppercase tracking-wide text-[#8a7a6a]">გაკვეთილების ცხრილი</p>
-      <ScheduleRows rows={d.rows} setRows={d.setRows} />
-      {d.msg.flash && <div className="mt-3"><Flash flash={d.msg.flash} onClose={d.msg.clear} /></div>}
-      <div className="mt-2 grid grid-cols-2 gap-2">
-        <Btn kind="ghost" onClick={onCancel}>გაუქმება</Btn>
-        <Btn icon={<Save />} disabled={!d.dirty || d.saving} onClick={async () => { if (await d.save()) onSaved(); }}>{d.saving ? 'ინახება…' : 'შენახვა'}</Btn>
-      </div>
-    </div>
   );
 };

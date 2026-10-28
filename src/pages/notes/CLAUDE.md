@@ -19,7 +19,7 @@ moving to the next chant in service order.
   the picture into pieces shown one under another, up to 2× bigger (cuts found from the ink at load time).
 - `src/context/NotesContext.tsx`: overlay pages + browser history/URL (`?c=&v=` for a chant, `?p=date~ids` for
   a program), church-mode state.
-- `src/hooks/useLiturgy.ts`: the class's teacher (admins: any class) composes it; there is no regent role. Draft in `users/{uid}/settings/liturgy`, templates in
+- `src/hooks/useLiturgy.ts`: the class's teacher (admins: any class) composes it; there is no regent role. Drafts per class in `users/{uid}/settings/liturgy` (`drafts.{classId}`; none → the class's last sent), templates in
   `…/liturgyTemplates`, "send" writes `classes/{id}.liturgy`; members read it (cached in localStorage).
 - `src/utils/offlineNotes.ts`: Cache `sagandzuri-notes-v1`, shared with Workbox runtimeCaching in `vite.config.ts`.
 - `src/data/hymnOrnaments.ts` + `public/hymn/top-NN|bottom-NN.webp`: drawings above the first page and below the

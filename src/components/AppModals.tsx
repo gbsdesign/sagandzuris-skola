@@ -2,14 +2,7 @@ import React, { useEffect } from 'react';
 import { useModal, useAuth } from '../context';
 import { useAccess } from '../hooks/useAccess';
 import { askSignIn } from './access/SignInPrompt';
-import {
-  ProfileModal,
-  BookmarkModal,
-  ChvevebiModal,
-  ManeraModal,
-  GzaModal,
-  GoogleDriveModal,
-} from './modals';
+import { ProfileModal, ManeraModal } from './modals';
 
 const FEATURE_NAMES: Record<string, string> = {
   bookmark: 'დამოუკიდებელი სამუშაო',
@@ -38,11 +31,7 @@ export const AppModals: React.FC = () => {
   return (
     <>
       <ProfileModal isOpen={activeModal === 'profile'} onClose={closeModal} />
-      <BookmarkModal isOpen={activeModal === 'bookmark'} onClose={closeModal} />
-      <ChvevebiModal isOpen={activeModal === 'chvevebi'} onClose={closeModal} />
       <ManeraModal isOpen={activeModal === 'manera'} onClose={closeModal} />
-      <GzaModal isOpen={activeModal === 'gza'} onClose={closeModal} />
-      <GoogleDriveModal isOpen={activeModal === 'drive'} onClose={closeModal} />
     </>
   );
 };

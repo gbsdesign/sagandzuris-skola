@@ -4,6 +4,7 @@ import { askConfirm, Bar, Btn, Card, Empty, Sheet, Switch, Tabs, Toggle } from '
 import { BOOK_NAMES } from '../data/chantLookup';
 import { recordingGroups, type RecGroup, type RecItem, type RecSection } from '../data/offlineRecordings';
 import { useAccess } from '../hooks/useAccess';
+import { PWAInstallButton } from '../components/PWAInstallButton';
 import {
   isAutoPack, isKept, offlineStatus, runPercent, setGroup, setItem, setPacks, syncNow, trackEstimate, useOffline,
   type OfflineState, type PackInfo,
@@ -452,6 +453,8 @@ export const OfflinePage: React.FC = () => {
           <PackRow s={s} p={lives} title="წმიდანთა ცხოვრებანი" count="ცხოვრებანი და ხატები" icon={<Library />} />
         </Card>
       )}
+      {/* the app on the home screen works best offline; the button shows only while the browser offers it */}
+      <div className="flex justify-center pt-1"><PWAInstallButton /></div>
     </div>
   );
 };

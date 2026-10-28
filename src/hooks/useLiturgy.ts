@@ -1,7 +1,7 @@
 // "დღევანდელი წირვა": the teacher's program of the service (which version of which chant, in order).
 // The teacher (who leads the choir; there is no separate regent role) edits a draft kept in their own
-// settings, then sends it to one of their classes: it is copied into the class document, which the
-// class members can read. Admins may send to any class.
+// settings, one per class (`drafts.{classId}`; a class without one starts from what it was last sent), then sends it
+// to that class: it is copied into the class document, which the class members can read. Admins may send to any class.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -61,7 +61,7 @@ export const useLiturgy = () => {
   const uid = user?.uid;
 
   // ---- teacher: draft, chosen class, templates
-  const [draft, setDraft] = useState<LiturgyProgram>({ date: nextSunday(), items: [] });
+  const [drafts, setDrafts] = useState<Record<string, LiturgyProgram>>({});
   const [classId, setClassIdState] = useState<string | null>(null);
   const [templates, setTemplates] = useState<LiturgyTemplate[]>([]);
   const { classes: allClasses } = useManagedClasses();
@@ -72,7 +72,12 @@ export const useLiturgy = () => {
     const off1 = onSnapshot(doc(db, 'users', uid, 'settings', 'liturgy'), snap => {
       const d = snap.data();
       if (!d) return;
-      setDraft({ date: typeof d.date === 'string' && d.date ? d.date : nextSunday(), items: valid(d.items) });
+      const read = (x: { date?: unknown; items?: unknown }): LiturgyProgram => ({ date: typeof x.date === 'string' && x.date ? x.date : nextSunday(), items: valid(x.items) });
+      const next: Record<string, LiturgyProgram> = {};
+      if (d.drafts && typeof d.drafts === 'object') for (const [id, x] of Object.entries(d.drafts)) if (x && typeof x === 'object') next[id] = read(x);
+      // the one draft kept before 2026-10-28 belongs to the class it was for
+      if (typeof d.classId === 'string' && !next[d.classId] && Array.isArray(d.items)) next[d.classId] = read(d);
+      setDrafts(next);
       if (typeof d.classId === 'string') setClassIdState(d.classId);
     }, err => console.warn('liturgy draft:', err?.code || err));
     const off2 = onSnapshot(doc(db, 'users', uid, 'settings', 'liturgyTemplates'), snap => {
@@ -82,22 +87,32 @@ export const useLiturgy = () => {
     return () => { off1(); off2(); };
   }, [role, uid]);
 
-  const saveDraft = useCallback((next: LiturgyProgram, nextClassId = classId) => {
-    setDraft(next);
-    if (!uid) return;
-    setDoc(doc(db, 'users', uid, 'settings', 'liturgy'), { date: next.date, items: next.items, classId: nextClassId ?? null }, { merge: true })
-      .catch(err => console.warn('liturgy save:', err?.code || err));
-  }, [uid, classId]);
-
   const teacherClass: SchoolClass | undefined = allClasses.find(c => c.id === classId) ?? allClasses[0];
   useEffect(() => {
     if (role === 'teacher' && !classId && allClasses[0]) setClassIdState(allClasses[0].id);
   }, [role, classId, allClasses]);
+  const teacherSent = (teacherClass as (SchoolClass & { liturgy?: any }) | undefined)?.liturgy;
+  // the chosen class's draft; none yet — what the class was last sent, or an empty one for the coming Sunday
+  const draft: LiturgyProgram = useMemo(() => {
+    const own = teacherClass && drafts[teacherClass.id];
+    if (own) return own;
+    if (teacherSent && Array.isArray(teacherSent.items)) return { date: typeof teacherSent.date === 'string' && teacherSent.date ? teacherSent.date : nextSunday(), items: valid(teacherSent.items) };
+    return { date: nextSunday(), items: [] };
+  }, [drafts, teacherClass, teacherSent]);
+
+  const saveDraft = useCallback((next: LiturgyProgram) => {
+    const id = teacherClass?.id;
+    if (!id) return;
+    setDrafts(d => ({ ...d, [id]: next }));
+    if (!uid) return;
+    setDoc(doc(db, 'users', uid, 'settings', 'liturgy'), { classId: id, drafts: { [id]: { date: next.date, items: next.items } } }, { merge: true })
+      .catch(err => console.warn('liturgy save:', err?.code || err));
+  }, [uid, teacherClass?.id]);
 
   const setClassId = useCallback((id: string) => {
     setClassIdState(id);
-    saveDraft(draft, id);
-  }, [draft, saveDraft]);
+    if (uid) setDoc(doc(db, 'users', uid, 'settings', 'liturgy'), { classId: id }, { merge: true }).catch(() => {});
+  }, [uid]);
 
   const toggle = useCallback((id: string) => {
     const items = draft.items.includes(id) ? draft.items.filter(x => x !== id) : insertInOrder(draft.items, id);
@@ -148,7 +163,6 @@ export const useLiturgy = () => {
     try { localStorage.setItem(CACHE_KEY, JSON.stringify(memberProgram)); } catch { /* storage blocked */ }
   }, [memberProgram]);
 
-  const teacherSent = (teacherClass as (SchoolClass & { liturgy?: any }) | undefined)?.liturgy;
   const program: LiturgyProgram | null = role === 'teacher'
     ? { ...draft, sentAt: teacherSent?.sentAt, className: teacherClass?.name }
     : role === 'member' ? (memberProgram ?? cached) : null;

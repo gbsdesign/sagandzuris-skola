@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { Users, Clock, Sparkles, ClipboardCheck, Baby, Lock, UserMinus, UserPlus, Loader2, MessageCircle } from 'lucide-react';
+import { Users, Clock, Sparkles, ClipboardCheck, Baby, Lock, UserMinus, UserPlus, Loader2, MessageCircle, ChevronDown } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
 import type { ClassMember, SchoolClass } from '../../hooks/useClasses';
@@ -169,6 +169,8 @@ export const ClassRoll: React.FC<{
   const att = useClassAttendance(cls);
   const [open, setOpen] = useState<string | null>(null);
   const f = classFigures(cls.members.map(m => summarize(records[m.uid]?.data)), att.last);
+  // until every member's record has come, the figures would read 0
+  const loading = cls.members.some(m => !records[m.uid]);
 
   const remove = async (m: ClassMember) => {
     if (!(await askConfirm({ title: `ამოვიღო „${m.name}“ კლასიდან?`, text: 'მისი ანგარიში და ნასწავლი არ წაიშლება.', ok: 'ამოღება', danger: true }))) return false;
@@ -211,8 +213,8 @@ export const ClassRoll: React.FC<{
       </ul>
       {shown.length === 0 && <p className="px-1.5 py-3 text-sm text-[#8a7a6a]">ვერ მოიძებნა.</p>}
       <p className="mt-2 pt-2.5 px-1.5 border-t border-[#f1e8d9] flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold tabular-nums text-[#8a7a6a]">
-        <span title="დამოუკიდებელი მუშაობა ამ თვეში, საშუალოდ">სამუშაო <b className="text-[#4a3426]">{f.work}%</b></span>
-        <span title="აქტიური ბოლო 7 დღეში">აქტიური <b className="text-[#4a3426]">{f.active}/{cls.members.length}</b></span>
+        <span title="დამოუკიდებელი მუშაობა ამ თვეში, საშუალოდ">სამუშაო <b className="text-[#4a3426]">{loading ? '—' : `${f.work}%`}</b></span>
+        <span title="აქტიური ბოლო 7 დღეში">აქტიური <b className="text-[#4a3426]">{loading ? '—' : `${f.active}/${cls.members.length}`}</b></span>
         <span title="დასწრება ბოლო გაკვეთილებზე, საშუალოდ">დასწრება <b className="text-[#4a3426]">{f.attendance === null ? '—' : `${f.attendance}%`}</b></span>
       </p>
       <StudentSheet cls={cls} uid={open} record={open ? records[open] : undefined} onClose={() => setOpen(null)} attendance={att.last}
@@ -239,6 +241,7 @@ const StudentSheet: React.FC<{
   const { user } = useAuth();
   const [view, setView] = useState<'info' | 'path' | 'manera'>('info');
   const [error, setError] = useState('');
+  const [more, setMore] = useState(false);
   if (!uid) return null;
   const m = cls.members.find(x => x.uid === uid);
   const close = () => { setView('info'); onClose(); };
@@ -246,6 +249,7 @@ const StudentSheet: React.FC<{
   const kids: KidsMode = { on: false, sections: DEFAULT_KIDS_SECTIONS, ...(s.kids || {}) };
   const maxDay = Math.max(1, ...s.week.map(w => w.n));
   const schedule = Object.entries((s.profile.workSchedule || {}) as Record<string, string>).filter(([, h]) => h);
+  const came = attendance.filter(d => d.present.includes(uid)).length;
 
   const setKids = async (next: KidsMode) => {
     setError('');
@@ -283,41 +287,55 @@ const StudentSheet: React.FC<{
         <p className="py-8 text-center text-sm text-[#8a7a6a]">{record?.denied ? 'ამ მოსწავლის მონაცემები ჯერ არ ჩანს.' : 'იტვირთება…'}</p>
       ) : (
         <div className="space-y-4">
-          <div className="grid grid-cols-3 gap-2">
-            <Stat value={s.work.planned ? `${s.work.percent}%` : '—'} label={`სამუშაო ${MONTHS[new Date().getMonth()]}`} tone="wine" />
-            <Stat value={s.work.planned ? `${s.work.worked}/${s.work.planned}` : '—'} label="შესრულებული სთ" />
-            <Stat value={String(s.work.missed)} label="გამოტოვებული სთ" tone={s.work.missed > 2 ? 'amber' : 'plain'} />
+          <p className="-mt-1 text-[13px] text-[#75685a]">
+            {(s.profile.voices || []).map((v: string) => VOICE[v] || v).join(', ') || 'ხმა არ არის მითითებული'} · {agoLabel(s.lastActive)}
+          </p>
+
+          {/* three small figures; the rest waits in „მეტი“ */}
+          <div className="grid grid-cols-3 rounded-2xl bg-white ring-1 ring-[#e8dcc8] divide-x divide-[#f1e8d9] text-center">
+            <Figure value={s.work.planned ? `${s.work.percent}%` : '—'} label="სამუშაო" warn={s.work.missed > 2} />
+            <Figure value={attendance.length ? `${came}/${attendance.length}` : '—'} label="დასწრება" />
+            <Figure value={String(s.habitTicks)} label="ჩვევა 7 დღეში" />
           </div>
 
           <AttendanceStrip uid={uid} last={attendance} />
 
-          <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] p-3.5">
-            <p className="text-[13px] font-bold text-[#75685a] mb-2">ჩვევები 7 დღეში · {s.habitTicks} მონიშვნა</p>
-            <div className="flex items-end gap-1.5">
-              {s.week.map(({ d, n }) => (
-                <div key={d.toISOString()} className="flex-1 flex flex-col items-center gap-1">
-                  <span className="text-[11.5px] font-bold tabular-nums text-[#4a3426]">{n || ''}</span>
-                  <div className="w-full h-14 flex items-end">
-                    <div className={`w-full rounded-md ${n ? 'bg-[#7a2028]' : 'bg-[#efe5d4]'}`} style={{ height: `${Math.max(8, (n / Math.max(maxDay, HABIT_ITEMS.length / 2)) * 100)}%` }} title={`${n}`} />
-                  </div>
-                  <span className="text-[11.5px] font-semibold text-[#8a7a6a]">{WEEKDAYS_SHORT_GE[d.getDay()]}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <dl className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] divide-y divide-[#f1e8d9] text-sm">
-            <Row label="ბოლო აქტივობა">{agoLabel(s.lastActive)}</Row>
-            <Row label="ხმა">{(s.profile.voices || []).map((v: string) => VOICE[v] || v).join(', ') || '—'}</Row>
-            <Row label="შესაძლებლობები">{abilitiesText(s.profile) || '—'}</Row>
-            <Row label="ინტერესები">{interestsText(s.profile) || '—'}</Row>
-            <Row label="გზაზე">{s.path} საგალობელი/სიმღერა</Row>
-            {s.abituri && <Row label="აბიტურიენტი">{s.abituri}</Row>}
-            <Row label="სამუშაო განრიგი">{schedule.length ? schedule.map(([d, h]) => `${d}: ${h}`).join(' · ') : 'არ არის გაწერილი'}</Row>
-          </dl>
-
           <PearlReview uid={uid} pearls={record.data.pearls} shine={record.data.pearlShine} />
           <LearnReview uid={uid} learning={record.data.learning} shine={record.data.pearlShine} />
+
+          <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8]">
+            <button type="button" aria-expanded={more} onClick={() => setMore(o => !o)}
+              className="w-full min-h-11 px-3.5 flex items-center justify-between gap-2 text-sm font-bold text-[#4a3426] cursor-pointer">
+              მეტი
+              <ChevronDown className={`w-4 h-4 text-[#8a7a6a] transition-transform ${more ? 'rotate-180' : ''}`} />
+            </button>
+            {more && (
+              <div className="border-t border-[#f1e8d9]">
+                <div className="p-3.5">
+                  <p className="text-[13px] font-bold text-[#75685a] mb-2">ჩვევები 7 დღეში · {s.habitTicks} მონიშვნა</p>
+                  <div className="flex items-end gap-1.5">
+                    {s.week.map(({ d, n }) => (
+                      <div key={d.toISOString()} className="flex-1 flex flex-col items-center gap-1">
+                        <span className="text-[11.5px] font-bold tabular-nums text-[#4a3426]">{n || ''}</span>
+                        <div className="w-full h-14 flex items-end">
+                          <div className={`w-full rounded-md ${n ? 'bg-[#7a2028]' : 'bg-[#efe5d4]'}`} style={{ height: `${Math.max(8, (n / Math.max(maxDay, HABIT_ITEMS.length / 2)) * 100)}%` }} title={`${n}`} />
+                        </div>
+                        <span className="text-[11.5px] font-semibold text-[#8a7a6a]">{WEEKDAYS_SHORT_GE[d.getDay()]}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <dl className="border-t border-[#f1e8d9] divide-y divide-[#f1e8d9] text-sm">
+                  <Row label={`სამუშაო ${MONTHS[new Date().getMonth()]}`}>{s.work.planned ? `${s.work.worked}/${s.work.planned} სთ · გამოტოვებული ${s.work.missed}` : '—'}</Row>
+                  <Row label="სამუშაო განრიგი">{schedule.length ? schedule.map(([d, h]) => `${d}: ${h}`).join(' · ') : 'არ არის გაწერილი'}</Row>
+                  <Row label="შესაძლებლობები">{abilitiesText(s.profile) || '—'}</Row>
+                  <Row label="ინტერესები">{interestsText(s.profile) || '—'}</Row>
+                  <Row label="გზაზე">{s.path} საგალობელი/სიმღერა</Row>
+                  {s.abituri && <Row label="აბიტურიენტი">{s.abituri}</Row>}
+                </dl>
+              </div>
+            )}
+          </div>
 
           {/* kids' mode: the teacher turns it on; the student can't turn it off */}
           <div className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] px-3.5 pb-3">
@@ -350,6 +368,14 @@ const StudentSheet: React.FC<{
     </Sheet>
   );
 };
+
+/** One of the member's window's three small figures. */
+const Figure: React.FC<{ value: string; label: string; warn?: boolean }> = ({ value, label, warn }) => (
+  <div className="px-2 py-2.5">
+    <p className={`text-[17px] font-bold tabular-nums leading-tight ${warn ? 'text-amber-700' : 'text-[#4a3426]'}`}>{value}</p>
+    <p className="text-[12px] font-semibold text-[#8a7a6a] mt-0.5">{label}</p>
+  </div>
+);
 
 const Row: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <div className="flex gap-3 px-3.5 py-2.5">
