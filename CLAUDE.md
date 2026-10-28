@@ -260,8 +260,12 @@
   game in `scripts/print-games/games/`. Every file prints „ყველაფერი ორმხრივად“: a module lists its physical sheets
   (`{ key, front, back? }`), `duplex()` makes each sheet two pages (a missing back = a labelled blank page) and the cover names
   sheets by number (`sheetNo`). Portraits are ornament placeholders until the user approves Gemini pictures. Built so far:
-  „მეფის კარი“ (№6) and „სამშვილდის ღამე“ (№2). A game with sheets gets `print: { href, sheets }` in `data/games.ts`; its hub card
-  shows a wine „დასაბეჭდი ფურცლები“ strip („PDF · N ფურცელი“) and its „უტელეფონო“ chip turns wine.
+  „მეფის კარი“ (№6) and „სამშვილდის ღამე“ (№2); then (fifth PR) „ოქროს ხანა“ (№1, Catan: 19 hexes 79 mm, a frame of six A4 pieces
+  ≈50×43 cm whose ends meet by letters ა–ვ, 18 numbers laid by the letters' spiral so 6 and 8 never touch, 9 gates with fixed place
+  names, A6 cards via `placedSheet`) and „ლურჯი სუფრა“ (№5, Azul in Erekle II's Tbilisi: 105 stamps of 20 mm on one sheet whose back
+  is one indigo field, four A4-landscape boards turned onto portrait pages — apprentice / master side, trays ⌀90 mm, the უსტაბაში
+  token tile-sized to fit a floor place). A game with sheets gets `print: { href, sheets }` in `data/games.ts`; its hub card
+  shows a wine „დასაბეჭდი ფურცლები“ strip („PDF · N ფურცელი“, one line; „PDF · “ hidden below 400 px) and its „უტელეფონო“ chip turns wine.
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 

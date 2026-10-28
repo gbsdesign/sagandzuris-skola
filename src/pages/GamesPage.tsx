@@ -97,8 +97,8 @@ const GameRow: React.FC<{ g: GameDef; state: Access; meta?: string; onOpen: () =
           className="mx-3 mb-3 flex items-center gap-2.5 h-11 px-3.5 rounded-xl bg-[#7a2028] text-[#fbf6ec] shadow-[0_1px_2px_rgba(74,52,38,0.15)] transition-[background-color,transform] hover:bg-[#6a1b22] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#7a2028]/50"
         >
           <Printer className="w-[18px] h-[18px] shrink-0" />
-          <span className="text-[14px] font-bold leading-none">დასაბეჭდი ფურცლები</span>
-          <span className="ml-auto text-[12px] tabular-nums leading-none text-[#fbf6ec]/80">PDF · {g.print.sheets} ფურცელი</span>
+          <span className="min-w-0 truncate text-[14px] font-bold leading-none">დასაბეჭდი ფურცლები</span>
+          <span className="ml-auto shrink-0 whitespace-nowrap text-[12px] tabular-nums leading-none text-[#fbf6ec]/80"><span className="hidden min-[400px]:inline">PDF · </span>{g.print.sheets} ფურცელი</span>
         </a>
       </li>
     );

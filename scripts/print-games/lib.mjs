@@ -54,8 +54,8 @@ const fontFaces = () => FONTS.flatMap(([family, , weights]) => weights.map(w =>
 
 // ---------- text helpers ----------
 export const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-/** მხედრული → ასომთავრული (the 33 letters sit 0x30 apart in Unicode). */
-export const aso = s => String(s).replace(/[ა-ჰ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x30));
+/** მხედრული → ასომთავრული (the letters sit 0x30 apart in Unicode; ჱ ჲ ჳ ჴ ჵ too). */
+export const aso = s => String(s).replace(/[ა-ჵ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x30));
 
 // ---------- icons: lucide's paths, drawn as plain SVG ----------
 const ICON_DIR = path.join(ROOT, 'node_modules', 'lucide-react', 'dist', 'esm', 'icons');
@@ -74,6 +74,10 @@ export const icon = (name, { size = 6, color = C.gold, width = 1.75, cls = '', s
   const body = iconNode(name).map(([tag, attrs]) => `<${tag} ${Object.entries(attrs).filter(([k]) => k !== 'key').map(([k, v]) => `${k}="${v}"`).join(' ')}/>`).join('');
   return `<svg class="${cls}" style="${style}" width="${size}mm" height="${size}mm" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
 };
+
+/** The same icon nested inside another SVG drawn in mm: `x`, `y`, `size` are that SVG's user units. */
+export const iconIn = (name, { x = 0, y = 0, size = 6, color = C.gold, width = 1.75, opacity = 1 } = {}) =>
+  `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round" opacity="${opacity}">${iconNode(name).map(([tag, attrs]) => `<${tag} ${Object.entries(attrs).filter(([k]) => k !== 'key').map(([k, v]) => `${k}="${v}"`).join(' ')}/>`).join('')}</svg>`;
 
 // ---------- ornaments ----------
 /** A vine tendril for a card's corner (viewBox 0 0 40 40, drawn for the top-left corner; rotate for the others). */
@@ -141,6 +145,16 @@ export const tokenSheet = (tokens, { d = 25, gap = 1.5, cols = 7, rows = 10, bac
   return page(`${out}<div class="sheetLabel">ფურცელი %SHEET% · ${esc(label)}</div>`, 'tokens');
 };
 
+/** A sheet of pieces placed by hand: items { x, y, w, h, html } in mm. `back` mirrors every item left↔right, so a back meets
+ * its front after duplex printing on the long edge. */
+export const placedSheet = (items, { back = false, label = '', cls = 'placed' } = {}) => page(`${items.map(it =>
+  `<div class="piece" style="left:${back ? 210 - it.x - it.w : it.x}mm;top:${it.y}mm;width:${it.w}mm;height:${it.h}mm">${it.html}</div>`).join('')}
+${label ? `<div class="sheetLabel">ფურცელი %SHEET% · ${esc(label)}</div>` : ''}`, cls);
+
+/** Corners of a pointy-top hexagon (flat sides left and right) around cx, cy with circumradius r. */
+export const hexPts = (cx, cy, r) => [-90, -30, 30, 90, 150, 210].map(a => [cx + r * Math.cos(a * Math.PI / 180), cy + r * Math.sin(a * Math.PI / 180)]);
+export const ptsAttr = pts => pts.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(' ');
+
 /** The whole file prints „ორმხრივად, გრძელი კიდით“: every physical sheet is { key, front, back? } and becomes two pages, a
  * one-sided sheet getting a back that says it is blank on purpose. `%SHEET%` in a page becomes its sheet number. */
 export const duplex = (sheets) => sheets.flatMap((sh, i) => {
@@ -184,6 +198,8 @@ html,body{margin:0;padding:0;background:#fff;color:var(--brown);font-family:'Ser
 .card.dark .frame2{display:none}
 .card .body{position:absolute;inset:5.2mm;display:flex;flex-direction:column;align-items:stretch}
 .token{position:absolute;border-radius:50%;overflow:hidden}
+.piece{position:absolute}
+.piece>svg{display:block}
 .stripe{display:flex;align-items:center;gap:4mm;background:var(--wine);color:var(--paper);padding:0 8mm;height:11mm;font-size:10pt}
 .stripe .aso{font-size:11pt;letter-spacing:.08em;color:#f0d9a0}
 .stripe .no{font-weight:700;color:#f0d9a0}
