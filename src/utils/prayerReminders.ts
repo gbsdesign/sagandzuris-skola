@@ -60,9 +60,25 @@ export const setHabitReminders = (list: HabitReminder[]) => {
   void syncPush();
 };
 
+// The learning mode's review reminder (utils/learnReminder.ts): one more „habit“ on the next day with a review, kept
+// apart so the habits' list (set from the habits) does not drop it.
+const LEARN_KEY = 'learnReminder';
+export const LEARN_ID = 'learn-review';
+const getLearnReminder = (): HabitReminder | null => read<HabitReminder | null>(LEARN_KEY, null);
+export const setLearnReminder = (r: HabitReminder | null) => {
+  if (JSON.stringify(r) === JSON.stringify(getLearnReminder())) return;
+  if (r) write(LEARN_KEY, r);
+  else { try { localStorage.removeItem(LEARN_KEY); } catch { /* storage off */ } }
+  void syncPush();
+};
+const allHabitReminders = () => {
+  const learn = getLearnReminder();
+  return learn ? [...getHabitReminders(), learn] : getHabitReminders();
+};
+
 // everything this browser asks the push server for
 const pushReminders = () => {
-  const habits = getHabitReminders();
+  const habits = allHabitReminders();
   return { ...getReminders(), ...(habits.length ? { habits } : {}) };
 };
 
@@ -197,7 +213,7 @@ const showHabit = async (h: HabitReminder, minutes: number) => {
     icon: '/pwa-192x192.png',
     badge: '/pwa-192x192.png',
     tag: `habit-${h.id}-${minutes}`,
-    data: { url: '/?open=gz' },
+    data: { url: h.id === LEARN_ID ? '/' : '/?open=gz' }, // the learning review opens home, with its line
   };
   try {
     const n = new Notification(h.title, options);
@@ -222,7 +238,7 @@ const habitTick = () => {
   const now = Date.now();
   const fired = read<Record<string, number>>(FIRED_KEY, {});
   let changed = false;
-  for (const h of getHabitReminders()) {
+  for (const h of allHabitReminders()) {
     const [hh, mm] = h.at.split(':').map(Number);
     for (const minutes of h.alerts) {
       for (const shift of [0, 1]) {

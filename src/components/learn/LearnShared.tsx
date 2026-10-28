@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Check, ChevronDown, Headphones, Lightbulb, Mic, Send, Sparkles, Square } from 'lucide-react';
+import { ArrowLeft, Bell, Check, ChevronDown, Headphones, Lightbulb, Mic, Send, Sparkles, Square } from 'lucide-react';
 import { Btn } from '../ui/kit';
 import { playStartNotes } from '../../utils/chantSynth';
 import { notesFromFrames, scoreSinging } from '../../utils/pitch';
@@ -10,6 +10,9 @@ import { saveTake } from '../../hooks/usePearls';
 import { LEARNED_SHARE, LearnRecord, PartState, partState } from '../../utils/learn';
 import { noteName } from '../../utils/pearls';
 import { triggerHaptic } from '../../utils/haptics';
+import { LearnMirror, MirrorFrame } from './LearnMirror';
+import { askNotificationPermission } from '../../utils/prayerReminders';
+import { REMIND_TIMES, getRemindTime, setRemindTime } from '../../utils/learnReminder';
 import type { Voice } from '../../utils/pathItems';
 
 // Pieces shared by the learning mode of a chant (LearnMode) and of a song's recording (LearnAudio): the page frame,
@@ -154,7 +157,9 @@ export const SingPanel: React.FC<{
   approved: boolean;            // the teacher already approved this one
   onBeforeSing: () => void;     // stop the music
   onTry: (pct: number, ok: boolean) => void;
-}> = ({ target, cue, seconds, uid, unlimited, voice, about, sendId, approved, onBeforeSing, onTry }) => {
+  timeline?: [number, number, number][]; // the part's notes for the mirror (none for a recording)
+  focus?: boolean;              // the path's last step („მარტო“): this card is where to go now
+}> = ({ target, cue, seconds, uid, unlimited, voice, about, sendId, approved, onBeforeSing, onTry, timeline = [], focus }) => {
   const [phase, setPhase] = useState<Phase>('idle');
   const [result, setResult] = useState<Result | null>(null);
   const [live, setLive] = useState<number | null>(null);
@@ -165,6 +170,9 @@ export const SingPanel: React.FC<{
   const session = useRef<SingSession | null>(null);
   const cueTimer = useRef(0);
   const takeAudio = useRef<HTMLAudioElement | null>(null);
+  // the mirror: what the phone heard, and my key against the notes' (from my first steady note)
+  const frames = useRef<MirrorFrame[]>([]);
+  const offset = useRef<number | null>(null);
 
   const reset = () => {
     window.clearTimeout(cueTimer.current);
@@ -178,6 +186,7 @@ export const SingPanel: React.FC<{
     reset();
     setPhase('idle'); setResult(null); setLive(null); setError(''); setSent('no'); setMarked(false);
     setAi({ busy: false, text: '', problem: '' });
+    frames.current = []; offset.current = null;
   }, [sendId, voice]);
 
   const finish = async () => {
@@ -205,6 +214,7 @@ export const SingPanel: React.FC<{
     reset();
     setError(''); setResult(null); setSent('no'); setMarked(false);
     setAi({ busy: false, text: '', problem: '' });
+    frames.current = []; offset.current = null;
     triggerHaptic(12);
     setPhase('cue');
     if (cue != null) await playStartNotes([cue], 0, false, 0.5, 0.9).catch(() => undefined);
@@ -218,6 +228,13 @@ export const SingPanel: React.FC<{
             lastVoiced = t;
           }
           prevT = t; prevMidi = midi;
+          const tr = frames.current;
+          tr.push({ t, midi });
+          // the key: from the first steady note (four readings within a quarter tone)
+          if (midi != null && offset.current == null && target?.length && tr.length >= 4) {
+            const last = tr.slice(-4).map(f => f.midi);
+            if (last.every(m => m != null && Math.abs(m - midi) < 0.5)) offset.current = midi - target[0];
+          }
           setLive(midi);
           // stops by itself at the time limit, or after a pause once something was sung
           if (t > limit || (voiced > 1200 && t - lastVoiced > 2500)) finish();
@@ -275,8 +292,8 @@ export const SingPanel: React.FC<{
   const learnedNow = result && result.pct >= LEARNED_SHARE;
 
   return (
-    <section className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] p-3.5 flex flex-col gap-3">
-      <h2 className="text-[13px] font-extrabold text-[#7a2028]">2 · იმღერე</h2>
+    <section className={`rounded-2xl bg-white p-3.5 flex flex-col gap-3 transition-shadow ${focus ? 'ring-2 ring-[#7a2028] shadow-[0_10px_24px_-16px_rgba(122,32,40,0.7)]' : 'ring-1 ring-[#e8dcc8]'}`}>
+      <h2 className="text-[13px] font-extrabold text-[#7a2028]">იმღერე{target?.length ? ' · აპი შეგიმოწმებს' : ''}</h2>
       <div className="flex items-center gap-3.5">
         <button type="button" onClick={sing} disabled={phase === 'scoring' || !singingSupported()}
           aria-label={phase === 'singing' ? 'გაჩერება' : 'იმღერე'}
@@ -293,6 +310,11 @@ export const SingPanel: React.FC<{
             : 'დააჭირე და იმღერე ეს ნაწილი შენი ხმით. ბოლოს მოუსმინე საკუთარ თავს.'}
         </p>
       </div>
+
+      {(timeline.length > 0 || frames.current.length > 0) && (
+        <LearnMirror notes={timeline} seconds={seconds} frames={frames.current} offset={offset.current}
+          hits={result && !busy && result.pct >= 0 ? result.hits : null} live={phase === 'singing'} />
+      )}
 
       {!singingSupported() && <p className="rounded-xl bg-amber-50 ring-1 ring-amber-200 px-3 py-2 text-[13px] text-amber-900">ამ ბრაუზერში მიკროფონი ვერ ჩაირთვება — სცადე Chrome ან Safari.</p>}
       {error && <p className="rounded-xl bg-red-50 ring-1 ring-red-200 px-3 py-2 text-[13px] text-red-800">{error}</p>}
@@ -358,7 +380,7 @@ export const LearnTips: React.FC<{ song?: boolean }> = ({ song }) => {
   const [open, setOpen] = useState(false);
   const tips = [
     ['ნაწილ-ნაწილ', 'ერთ ჯერზე ერთი პატარა ნაწილი. როცა ორი ისწავლე, „ერთად“ შეაერთებს.'],
-    ['წრეზე და ნელა', 'ნაწილი თავიდან იწყება, სანამ არ გააჩერებ. ჯერ 50%, მერე 75%, ბოლოს 100%.'],
+    ['სამი ნაბიჯი', 'მოისმინე ნელა (50%) → იმღერე ერთად (75%) → მარტო (100%). სამჯერ მოსმენის მერე აპი თავად გადაგიყვანს შემდეგზე.'],
     song ? ['ხმა ცალკე', 'თუ სიმღერას ხმები ცალ-ცალკე აქვს, ჯერ მარტო შენი ხმა ისწავლე.']
       : ['ხმა ცალკე', 'ჯერ მარტო შენი ხმა მოისმინე, მერე „ჩემ გარეშე“ — დანარჩენებთან ერთად იმღერე.'],
     ['თავად იმღერე', 'მოსმენა საკმარისი არ არის: იმღერე და მოუსმინე საკუთარ თავს.'],
@@ -379,6 +401,99 @@ export const LearnTips: React.FC<{ song?: boolean }> = ({ song }) => {
           ))}
         </ul>
       )}
+    </section>
+  );
+};
+
+// ---- the path: three steps for each part ----------------------------------------------------------------------------
+
+export type Step = 1 | 2 | 3;
+/** Listen this many times round before the path moves on by itself. */
+export const LOOPS_PER_STEP = 3;
+
+/** მოისმინე → ერთად → მარტო: each step sets the speed and what sounds; after three times round the path moves on. */
+export const StepBar: React.FC<{ step: Step; loops: number; onStep: (s: Step) => void; hints: [string, string, string] }> = ({ step, loops, onStep, hints }) => {
+  const labels = ['მოისმინე', 'ერთად', 'მარტო'];
+  return (
+    <div className="flex flex-col gap-2">
+      <div role="radiogroup" aria-label="ნაბიჯები" className="grid grid-cols-3 gap-1.5">
+        {labels.map((l, i) => {
+          const n = (i + 1) as Step;
+          const on = step === n, done = step > n;
+          return (
+            <button key={l} type="button" role="radio" aria-checked={on} onClick={() => { triggerHaptic(8); onStep(n); }}
+              className={`min-h-12 px-1.5 rounded-xl flex items-center justify-center gap-1.5 text-[13px] font-bold leading-tight cursor-pointer transition active:scale-[0.97] ${
+                on ? 'bg-[#7a2028] text-[#fbf6ec] shadow-[0_6px_14px_-10px_rgba(122,32,40,0.9)]'
+                  : done ? 'bg-[#fbf3df] text-[#8a6a1e] ring-1 ring-[#e9cf8f]' : 'bg-white text-[#4a3426] ring-1 ring-[#e8dcc8]'}`}>
+              <span className={`w-5 h-5 shrink-0 rounded-full text-[11.5px] flex items-center justify-center ${on ? 'bg-[#fbf6ec]/20' : done ? 'bg-[#c9962a] text-white' : 'bg-[#efe6d6]'}`}>
+                {done ? <Check className="w-3 h-3" /> : n}
+              </span>
+              <span className="text-left">{l}</span>
+            </button>
+          );
+        })}
+      </div>
+      <p className="flex items-center gap-2 px-0.5 text-[12.5px] text-[#75685a]">
+        <span className="min-w-0 flex-1">{hints[step - 1]}</span>
+        {step < 3 && (
+          <span className="shrink-0 flex gap-1" aria-label={`მოსმენა ${Math.min(loops, LOOPS_PER_STEP)} / ${LOOPS_PER_STEP}`}>
+            {Array.from({ length: LOOPS_PER_STEP }, (_, i) => (
+              <span key={i} className={`w-2 h-2 rounded-full transition-colors ${i < loops ? 'bg-[#7a2028]' : 'bg-[#e8dcc8]'}`} />
+            ))}
+          </span>
+        )}
+      </p>
+    </div>
+  );
+};
+
+/** A part's words for a song (shared out over the parts by order, so only near). */
+export const PartWords: React.FC<{ lines: string[] }> = ({ lines }) => (
+  lines.length ? (
+    <div className="rounded-xl bg-[#fffdf8] ring-1 ring-[#e8dcc8] px-3.5 py-2.5">
+      {lines.map((l, i) => <p key={i} className="text-[16px] leading-[1.6] text-[#2a2017]">{l}</p>)}
+      <p className="mt-1 text-[11.5px] text-[#a0907c]">სიტყვები დაახლოებით — ჩანაწერს დროები არ აქვს</p>
+    </div>
+  ) : null
+);
+
+/** „გამეორების შეხსენება“: the hour the phone reminds of the day's reviews (members only). */
+export const ReviewReminder: React.FC = () => {
+  const [at, setAt] = useState(getRemindTime);
+  const [note, setNote] = useState('');
+  const turn = async (next: string) => {
+    triggerHaptic(8);
+    setNote('');
+    if (next && !at) {
+      const p = await askNotificationPermission();
+      if (p !== 'granted') { setNote(p === 'unsupported' ? 'ამ ბრაუზერს შეხსენებები არ შეუძლია.' : 'შეხსენებისთვის ბრაუზერს შეტყობინებების ნება მიეცი.'); return; }
+    }
+    setAt(next);
+    setRemindTime(next);
+  };
+  return (
+    <section className="rounded-2xl bg-white/70 ring-1 ring-[#e8dcc8] p-3.5 flex flex-col gap-2.5">
+      <div className="flex items-center gap-2.5">
+        <Bell className="w-4 h-4 text-[#b4620e] shrink-0" />
+        <span className="flex-1 min-w-0">
+          <span className="block text-[14px] font-bold text-[#4a3426]">გამეორების შეხსენება</span>
+          <span className="block text-[12px] text-[#8c7c6b]">{at ? `იმ დღეს, როცა გასამეორებელი გაქვს, ${at}-ზე` : 'ტელეფონი შეგახსენებს, როცა ნასწავლი გასამეორებელია'}</span>
+        </span>
+        <button type="button" role="switch" aria-checked={Boolean(at)} aria-label="გამეორების შეხსენება" onClick={() => turn(at ? '' : '19:00')}
+          className={`relative w-12 h-7 shrink-0 rounded-full transition-colors cursor-pointer ${at ? 'bg-[#7a2028]' : 'bg-[#d9cdb9]'}`}>
+          <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-[left] ${at ? 'left-[22px]' : 'left-0.5'}`} />
+        </button>
+      </div>
+      {at && (
+        <div role="radiogroup" aria-label="საათი" className="flex flex-wrap gap-1.5">
+          {REMIND_TIMES.map(t => (
+            <button key={t} type="button" role="radio" aria-checked={at === t} onClick={() => turn(t)}
+              className={`h-9 px-3 rounded-full text-[13px] font-bold tabular-nums cursor-pointer transition-colors ${
+                at === t ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426]'}`}>{t}</button>
+          ))}
+        </div>
+      )}
+      {note && <p className="text-[13px] text-amber-900">{note}</p>}
     </section>
   );
 };

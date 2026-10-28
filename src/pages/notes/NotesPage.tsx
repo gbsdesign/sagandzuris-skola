@@ -24,6 +24,7 @@ import { BookScore, ChantSynth, bookImageUrl, loadBookScore, encodeMp3, renderSc
 import { needsReflow, reflowScore, type Piece, type Reflow } from '../../utils/sheetReflow';
 import { ChantPlayer } from '../../components/ChantPlayer';
 import { LearnMode } from '../../components/learn/LearnMode';
+import { takeLearn } from '../../utils/learnOpen';
 import { NpStepper } from './NpStepper';
 import { getAudioArrayBufferFromIdb } from '../../utils/audioIdb';
 import { GrapeBunch, VineLeaf, Rosette, Sprig, PlateBand } from '../../components/home/PlateOrnaments';
@@ -176,6 +177,8 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const [recPause, setRecPause] = useState(0);
   const [learning, setLearning] = useState(false);
   useEffect(() => setLearning(false), [vid]);
+  // the home page's review line opens a chant straight in its learning mode
+  useEffect(() => { if (score?.voices.length && takeLearn(vid)) setLearning(true); }, [score, vid]);
   const [moreOpen, setMoreOpen] = useState(false);
   const [paper, setPaper] = useState<Paper>(() => store.get<Paper>('sagandzuri_paper', 'day'));
   const [darkOS, setDarkOS] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
