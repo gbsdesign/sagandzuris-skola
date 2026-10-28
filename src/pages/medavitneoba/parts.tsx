@@ -1,8 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, Mic, Square, RotateCcw, X, Loader2 } from 'lucide-react';
+import { Check, Mic, Square, RotateCcw, X, Loader2, Send } from 'lucide-react';
+import { useAuth } from '../../context';
+import { saveTake, usePearls } from '../../hooks/usePearls';
 import { PROSE, FoldedPrayer } from '../../components/views/PrayerText';
 import { loadPsalmHtml } from '../../utils/hourPsalms';
-import { startVoiceRecording, voiceRecordingSupported, type VoiceRecording } from '../../utils/voiceRecorder';
+import { SMALL_MAX_SECONDS, startVoiceRecording, toSmallMp3, voiceRecordingSupported, type VoiceRecording } from '../../utils/voiceRecorder';
 import { triggerHaptic } from '../../utils/haptics';
 import type { LessonStep } from '../../data/medavitneLessons';
 
@@ -63,18 +65,40 @@ const Order: React.FC<{ step: Extract<LessonStep, { kind: 'order' }> }> = ({ ste
   </div>
 );
 
-// verses from..to of a chapter of the Apostle (public/bible/<book>.json, verses written „6. …“)
-const bibleVerses = async (book: string, ch: number, from: number, to: number) => {
-  const data: { chapters: string[] } = await (await fetch(`/bible/${book}.json`)).json();
-  const text = (data.chapters[ch - 1] || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
+// verses of the Apostle (public/bible/<book>.json, verses written „6. …“), a verse a line, its number in wine
+const books = new Map<string, Promise<string[]>>();
+const bibleBook = (book: string) => {
+  if (!books.has(book)) {
+    const load = fetch(`/bible/${book}.json`).then(r => r.json()).then((d: { chapters: string[] }) => d.chapters);
+    load.catch(() => books.delete(book));
+    books.set(book, load);
+  }
+  return books.get(book)!;
+};
+// to = 999: to the chapter's end
+const versesHtml = (chapters: string[], ch: number, from: number, to: number) => {
+  const text = (chapters[ch - 1] || '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ');
   const start = text.search(new RegExp(`(^|\\s)${from}\\.\\s`));
-  const end = text.search(new RegExp(`(^|\\s)${to + 1}\\.\\s`));
+  const end = to >= 999 ? -1 : text.search(new RegExp(`(^|\\s)${to + 1}\\.\\s`));
   if (start < 0) throw new Error('verses');
-  // a verse a line, its number in wine
   return text.slice(start, end > start ? end : undefined).trim()
     .split(/\s(?=\d+\.\s)/)
     .map(v => v.replace(/^(\d+)\.\s/, '<sup class="font-sans font-bold text-[#7a2028] mr-1">$1</sup>'))
     .map(v => `<p>${v}</p>`).join('');
+};
+const bibleVerses = async (book: string, ch: number, from: number, to: number) => versesHtml(await bibleBook(book), ch, from, to);
+
+/** a day's reading, all its ranges: a chapter's number where the reading moves on to it, „…“ where verses are skipped */
+export const bibleRangesHtml = async (book: string, ranges: { ch: number; from: number; to: number }[]) => {
+  const chapters = await bibleBook(book);
+  const many = new Set(ranges.map(r => r.ch)).size > 1;
+  return ranges.map((r, i) => {
+    const prev = ranges[i - 1];
+    const head = !prev ? (many ? `<p class="!mb-1 font-sans text-[13px] font-bold text-[#8a7a6a]">თავი ${r.ch}</p>` : '')
+      : prev.ch !== r.ch ? (r.from === 1 && prev.to >= 999 ? '' : '<p class="text-center text-[#b3a594]">…</p>') + `<p class="!mb-1 font-sans text-[13px] font-bold text-[#8a7a6a]">თავი ${r.ch}</p>`
+      : '<p class="text-center text-[#b3a594]">…</p>';
+    return head + versesHtml(chapters, r.ch, r.from, r.to);
+  }).join('');
 };
 
 const ReadText: React.FC<{ step: Extract<LessonStep, { kind: 'read' }> }> = ({ step }) => {
@@ -109,11 +133,19 @@ const ReadText: React.FC<{ step: Extract<LessonStep, { kind: 'read' }> }> = ({ s
 const MAX_SECONDS = 20 * 60;
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
-/** Record one's own reading and hear it back; the take stays in the browser and is never sent anywhere. */
-export const ReadAloud: React.FC = () => {
+/**
+ * Record one's own reading and hear it back. The take stays in the browser unless the member sends it to their teachers
+ * (`sendId`: the pearls' store, utils/dayReadings.ts READ_PREFIX); the teacher hears it in the member's window and approves it.
+ */
+export const ReadAloud: React.FC<{ sendId?: string }> = ({ sendId }) => {
+  const { user } = useAuth();
+  const uid = sendId ? user?.uid ?? null : null;
+  const { shine, voice } = usePearls(uid);
   const [state, setState] = useState<'idle' | 'rec' | 'busy' | 'ready' | 'denied'>('idle');
   const [secs, setSecs] = useState(0);
   const [url, setUrl] = useState<string | null>(null);
+  const [sent, setSent] = useState<'no' | 'busy' | 'yes' | 'failed'>('no');
+  const take = useRef<{ mp3: Blob; seconds: number } | null>(null);
   const rec = useRef<VoiceRecording | null>(null);
   const timer = useRef<number>(0);
 
@@ -121,6 +153,20 @@ export const ReadAloud: React.FC = () => {
   useEffect(() => () => { clear(); rec.current?.cancel(); }, []);
   useEffect(() => () => { if (url) URL.revokeObjectURL(url); }, [url]);
 
+  const send = async () => {
+    if (!uid || !sendId || !take.current) return;
+    setSent('busy');
+    try {
+      const small = await toSmallMp3(take.current.mp3);
+      if (small.mp3.size > 590000) throw new Error('too big');
+      await saveTake(uid, sendId, small.mp3, 0, voice);
+      setSent('yes');
+      triggerHaptic(20);
+    } catch (e) {
+      console.warn('reading take send:', (e as { code?: string })?.code || e);
+      setSent('failed');
+    }
+  };
   const stop = async () => {
     clear();
     const r = rec.current;
@@ -128,14 +174,17 @@ export const ReadAloud: React.FC = () => {
     if (!r) return;
     setState('busy');
     try {
-      const take = await r.stop();
-      setUrl(URL.createObjectURL(take.mp3));
+      const t = await r.stop();
+      take.current = t;
+      setUrl(URL.createObjectURL(t.mp3));
       setState('ready');
     } catch { setState('idle'); }
   };
   const start = async () => {
     triggerHaptic(10);
     setUrl(null);
+    setSent('no');
+    take.current = null;
     try {
       rec.current = await startVoiceRecording();
     } catch { setState('denied'); return; }
@@ -176,6 +225,7 @@ export const ReadAloud: React.FC = () => {
           </p>
           <p className="text-[13px] leading-snug text-[#8a7a6a]">
             {state === 'denied' ? 'მიკროფონზე წვდომა არ არის — ნება დართე ბრაუზერის პარამეტრებში.'
+              : uid ? 'ჩანაწერი მხოლოდ შენ გესმის, სანამ მასწავლებელს არ გაუგზავნი.'
               : 'ჩანაწერი არსად იგზავნება — მხოლოდ შენ გესმის.'}
           </p>
         </div>
@@ -187,16 +237,36 @@ export const ReadAloud: React.FC = () => {
         )}
       </div>
       {state === 'ready' && url && <audio controls src={url} className="mt-3 w-full h-11" />}
+      {uid && sendId && shine[sendId] && sent === 'no' && (
+        <p className="mt-3 inline-flex items-center gap-1.5 text-[14px] font-bold text-emerald-700"><Check className="w-4 h-4" />მასწავლებელმა ჩაგითვალა</p>
+      )}
+      {uid && sendId && state === 'ready' && take.current && (
+        <div className="mt-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+          {sent === 'yes' ? (
+            <p className="inline-flex items-center gap-1.5 min-h-11 text-[14px] font-bold text-emerald-700"><Check className="w-4 h-4" />გაეგზავნა მასწავლებელს</p>
+          ) : (
+            <button type="button" onClick={() => void send()} disabled={sent === 'busy'}
+              className="inline-flex items-center gap-2 h-11 px-5 rounded-full bg-white ring-1 ring-[#7a2028]/30 hover:ring-[#7a2028]/60 text-[#7a2028] text-[15px] font-bold cursor-pointer transition active:scale-[0.97] disabled:opacity-60 disabled:cursor-default">
+              {sent === 'busy' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+              მასწავლებელს გაგზავნა
+            </button>
+          )}
+          {sent === 'failed' && <p className="text-[13px] text-red-700">ვერ გაიგზავნა — შეამოწმე ინტერნეტი და სცადე თავიდან.</p>}
+          {sent !== 'yes' && take.current.seconds > SMALL_MAX_SECONDS + 1 && (
+            <p className="text-[13px] leading-snug text-[#8a7a6a]">გაიგზავნება პირველი {SMALL_MAX_SECONDS / 60} წუთი.</p>
+          )}
+        </div>
+      )}
     </div>
   );
 };
 
-const Read: React.FC<{ step: Extract<LessonStep, { kind: 'read' }> }> = ({ step }) => (
+const Read: React.FC<{ step: Extract<LessonStep, { kind: 'read' }>; sendId?: string }> = ({ step, sendId }) => (
   <div>
     <StepTitle eyebrow="წავიკითხოთ ხმამაღლა" title={step.title} />
     {step.intro && <p className="-mt-1 mb-4 text-[15px] leading-relaxed text-[#6b5c4d] text-pretty">{step.intro}</p>}
     <ReadText step={step} />
-    <ReadAloud />
+    <ReadAloud sendId={sendId} />
   </div>
 );
 
@@ -254,9 +324,9 @@ const Task: React.FC<{ step: Extract<LessonStep, { kind: 'task' }>; onPsalter: (
   </div>
 );
 
-export const StepView: React.FC<{ step: LessonStep; onPsalter: () => void }> = ({ step, onPsalter }) =>
+export const StepView: React.FC<{ step: LessonStep; onPsalter: () => void; sendId?: string }> = ({ step, onPsalter, sendId }) =>
   step.kind === 'learn' ? <Learn step={step} />
   : step.kind === 'order' ? <Order step={step} />
-  : step.kind === 'read' ? <Read step={step} />
+  : step.kind === 'read' ? <Read step={step} sendId={sendId} />
   : step.kind === 'quiz' ? <Quiz step={step} />
   : <Task step={step} onPsalter={onPsalter} />;
