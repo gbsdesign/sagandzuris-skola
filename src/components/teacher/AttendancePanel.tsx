@@ -3,7 +3,7 @@ import { CalendarDays, Check, CheckCheck } from 'lucide-react';
 import { useAuth } from '../../context';
 import { SchoolClass } from '../../hooks/useClasses';
 import { AttendanceDay, localIso, saveAttendance, shortDate, useAttendance, weekdayOf } from '../../hooks/useTeaching';
-import { Btn, Flash, useFlash } from '../ui/kit';
+import { Flash, IconBtn, useFlash } from '../ui/kit';
 import { triggerHaptic } from '../../utils/haptics';
 import { WEEKDAYS_GE, WEEKDAYS_SHORT_GE } from '../../utils/dateNames';
 
@@ -49,13 +49,14 @@ export const useClassAttendance = (cls: SchoolClass) => {
 };
 export type ClassAttendance = ReturnType<typeof useClassAttendance>;
 
-/** The day being marked: the latest lesson days, any other through 📅 (then shown as a day of its own); below — how
- *  many came. */
+/** The day being marked: the latest lesson days, any other through 📅 (then shown as a day of its own); at the line's
+ *  end — how many came and one ✓✓ that marks everyone (pressed again, no one). */
 export const AttendanceDays: React.FC<{ a: ClassAttendance; total: number }> = ({ a, total }) => {
   const days = a.choices.includes(a.date) ? a.choices : [...a.choices, a.date];
+  const all = total > 0 && a.present.length >= total;
   return (
     <div className="mb-3">
-      <div className="flex flex-wrap gap-1.5">
+      <div className="flex flex-wrap items-center gap-1.5">
         {days.map(d => (
           <button key={d} type="button" onClick={() => a.setDate(d)} aria-pressed={d === a.date}
             className={`h-9 px-3 rounded-full text-[13px] font-bold cursor-pointer transition ${d === a.date ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40'}`}>
@@ -70,14 +71,15 @@ export const AttendanceDays: React.FC<{ a: ClassAttendance; total: number }> = (
             onClick={e => { try { e.currentTarget.showPicker(); } catch { /* the browser opens its own */ } }}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
         </label>
-      </div>
-      <div className="mt-2.5 flex flex-wrap items-center gap-2">
-        {/* the day itself is the picked chip above: here only how many came */}
-        <p className="flex-1 min-w-32 text-[13px] text-[#8a7a6a]">
-          {a.marked ? <span className="font-bold text-emerald-800 tabular-nums">მოვიდა {a.present.length}/{total}</span> : 'ჯერ არ მონიშნულა'}
-        </p>
-        {a.present.length < total && <Btn kind="soft" size="sm" icon={<CheckCheck />} onClick={a.allCame}>ყველა მოვიდა</Btn>}
-        {a.present.length > 0 && <Btn kind="ghost" size="sm" onClick={a.clear}>გასუფთავება</Btn>}
+        <span className="ml-auto flex items-center gap-1.5">
+          <span title="მოვიდა" className={`text-[13px] font-bold tabular-nums ${a.marked ? 'text-emerald-800' : 'text-[#8a7a6a]'}`}>
+            {a.marked ? a.present.length : '—'}/{total}
+          </span>
+          <IconBtn label={all ? 'მონიშვნის მოხსნა' : 'ყველა მოვიდა'} aria-pressed={all} onClick={all ? a.clear : a.allCame}
+            className={all ? 'bg-emerald-600 !text-white hover:!bg-emerald-700' : 'bg-white ring-1 ring-[#e8dcc8] !text-emerald-700 hover:!bg-emerald-50'}>
+            <CheckCheck />
+          </IconBtn>
+        </span>
       </div>
       {a.msg.flash && <div className="mt-2.5"><Flash flash={a.msg.flash} onClose={a.msg.clear} /></div>}
     </div>

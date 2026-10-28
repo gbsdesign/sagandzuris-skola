@@ -1,13 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { addDoc, arrayRemove, collection, doc, updateDoc } from 'firebase/firestore';
-import { BookOpen, Plus, Bell, Info, LogOut, Loader2, LayoutGrid, PenLine, ArrowLeft } from 'lucide-react';
+import { BookOpen, Plus, Bell, Info, LogOut, Loader2, LayoutGrid, PenLine } from 'lucide-react';
 import { db } from '../firebase';
 import { useAuth, useNavigation } from '../context';
 import { Btn, Card, CardTitle, Empty, FIELD, Flash, Label, PageBar, Sheet, askConfirm, useFlash } from '../components/ui/kit';
 import { KathismaGrid } from '../components/psalter/GroupBoard';
 import { MyKathismaCard } from '../components/psalter/MyKathismaCard';
 import { GroupHistory } from '../components/psalter/GroupHistory';
-import { GroupManage } from '../components/psalter/GroupManage';
+import { GroupSettingsSheet } from '../components/psalter/GroupManage';
 import { useKathismaActions } from '../components/psalter/useKathismaActions';
 import { openPsalterGroup, useSelectedGroupId } from '../components/psalter/selectedGroup';
 import { GroupMember, PsalterGroup, useGroupNow, useMyPsalterGroups } from '../hooks/usePsalter';
@@ -76,7 +76,7 @@ export const PsalterPage: React.FC = () => {
 const GroupView: React.FC<{ group: PsalterGroup; canLead: boolean }> = ({ group, canLead }) => {
   const { user } = useAuth();
   const uid = user!.uid;
-  const [view, setView] = useState<'group' | 'manage'>('group');
+  const [manage, setManage] = useState(false);
   const { cycle, slots, owners } = useGroupNow(group, uid);
   const actions = useKathismaActions(group, cycle);
   const isMember = group.memberIds.includes(uid);
@@ -86,32 +86,23 @@ const GroupView: React.FC<{ group: PsalterGroup; canLead: boolean }> = ({ group,
 
   return (
     <div className="space-y-4">
-      {view === 'manage' && canLead ? (
-        <>
-          <Btn kind="ghost" size="sm" icon={<ArrowLeft />} onClick={() => setView('group')}>ჯგუფი</Btn>
-          <GroupManage key={group.id} group={group} onDeleted={() => setView('group')} />
-        </>
-      ) : (
-        <>
-          {isMember && <NameNotice group={group} />}
-          <MyKathismaCard group={group} uid={uid} onManage={canLead ? () => setView('manage') : undefined} />
+      {isMember && <NameNotice group={group} />}
+      <MyKathismaCard group={group} uid={uid} onManage={canLead ? () => setManage(true) : undefined} />
 
-          <Card>
-            <CardTitle
-              icon={<LayoutGrid />}
-              title="ციკლის კითხვა"
-              hint={read === KATHISMA_COUNT ? 'მთელი ფსალმუნი წაკითხულია — დიდება ღმერთს!' : undefined}
-              className="!items-center"
-            />
-            <KathismaGrid group={group} slots={slots} owners={owners} uid={uid} isLeader={canLead} isMember={isMember} actions={actions} />
-            <Flash flash={actions.message} onClose={actions.clearMessage} />
-          </Card>
+      <Card>
+        <CardTitle
+          icon={<LayoutGrid />}
+          title="ციკლის კითხვა"
+          hint={read === KATHISMA_COUNT ? 'მთელი ფსალმუნი წაკითხულია — დიდება ღმერთს!' : undefined}
+          className="!items-center"
+        />
+        <KathismaGrid group={group} slots={slots} owners={owners} uid={uid} isLeader={canLead} isMember={isMember} actions={actions} />
+        <Flash flash={actions.message} onClose={actions.clearMessage} />
+      </Card>
 
-          <GroupHistory group={group} current={cycle} footer={<GroupExtras isMember={isMember} shiftDays={group.shiftDays} />} />
-          {isMember && !canLead && <LeaveGroup group={group} />}
-
-        </>
-      )}
+      <GroupHistory group={group} current={cycle} footer={<GroupExtras isMember={isMember} shiftDays={group.shiftDays} />} />
+      {isMember && !canLead && <LeaveGroup group={group} />}
+      {canLead && <GroupSettingsSheet open={manage} onClose={() => setManage(false)} group={group} onDeleted={() => setManage(false)} />}
     </div>
   );
 };

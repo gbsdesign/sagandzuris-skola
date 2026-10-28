@@ -13,7 +13,7 @@ import { Bar, Btn, Flash, IconBtn, Sheet } from '../ui/kit';
 import { PeoplePicker, Person } from '../people/PeoplePicker';
 import { CreateGroupSheet } from '../../pages/PsalterPage';
 import { GroupHistory } from './GroupHistory';
-import { GroupManage } from './GroupManage';
+import { GroupSettingsSheet } from './GroupManage';
 import { useKathismaActions } from './useKathismaActions';
 
 // „ფსალმუნი“ on the class page (redesign stage 2, 2026-10-25): the class's psalter group in one compact section
@@ -33,8 +33,6 @@ export const useClassGroup = (id?: string) => {
 };
 
 const CARD = 'bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8]';
-// GroupManage's cards inside the window lose their own frames (no box in a box); a thin line parts them
-const FLAT = '[&>div>section]:p-0 [&>div>section]:bg-transparent [&>div>section]:ring-0 [&>div>section]:shadow-none [&>div>section]:rounded-none [&>div>section+section]:pt-4 [&>div>section+section]:border-t [&>div>section+section]:border-[#e8dcc8]';
 
 export const ClassPsalter: React.FC<{ cls: SchoolClass; canLead: boolean; focus?: boolean }> = ({ cls, canLead, focus }) => {
   // the admin's switch for „ფსალმუნთა ჯგუფი“ (open / მალე / hidden) still holds for the members
@@ -95,7 +93,7 @@ const GroupSection: React.FC<{ sectionRef: React.Ref<HTMLElement>; cls: SchoolCl
         <span className={`text-sm font-bold tabular-nums ${done ? 'text-emerald-700' : 'text-[#a4927c]'}`}>{read}/{KATHISMA_COUNT}</span>
         <span className="min-w-0 flex-1 truncate text-xs font-semibold text-[#8a7a6a]">{formatRange(cycle)}</span>
         {isMember && <ReminderBell />}
-        {canLead && <IconBtn label="ჯგუფის მართვა" tone="wine" onClick={() => setManage(true)}><Pencil /></IconBtn>}
+        {canLead && <IconBtn label="ჯგუფის პარამეტრები" onClick={() => setManage(true)}><Pencil /></IconBtn>}
       </div>
       <div className="px-1"><Bar value={read} max={KATHISMA_COUNT} tone={done ? 'green' : 'wine'} /></div>
 
@@ -152,11 +150,7 @@ const GroupSection: React.FC<{ sectionRef: React.Ref<HTMLElement>; cls: SchoolCl
 
       <TileSheet group={group} cls={cls} k={tile} uid={uid} slots={slots} owners={owners} isMember={isMember} canLead={canLead} actions={actions} onClose={() => setTile(null)} />
 
-      {canLead && (
-        <Sheet open={manage} onClose={() => setManage(false)} title="ჯგუფის მართვა" wide>
-          <div className={FLAT}><GroupManage group={group} onDeleted={() => setManage(false)} /></div>
-        </Sheet>
-      )}
+      {canLead && <GroupSettingsSheet open={manage} onClose={() => setManage(false)} group={group} cls={cls} onDeleted={() => setManage(false)} />}
     </section>
   );
 };
@@ -176,7 +170,7 @@ const MyLine: React.FC<{ group: PsalterGroup; k: number; uid: string; slots: Slo
   const own = (owners[k] || []).includes(uid);
   const urgent = !read && left < 6 * 3600_000;
   return (
-    <div className={`flex items-center gap-3 pl-1.5 pr-2 py-1.5 rounded-2xl ${read ? 'bg-emerald-50 ring-1 ring-emerald-200' : 'bg-[#7a2028]/[0.06] ring-1 ring-[#7a2028]/15'}`}>
+    <div className={`flex items-center gap-3 pl-1.5 pr-2 py-1.5 rounded-2xl ${read ? 'bg-white ring-1 ring-[#e8dcc8]' : 'bg-[#7a2028]/[0.06] ring-1 ring-[#7a2028]/15'}`}>
       <button
         type="button"
         aria-pressed={read}
@@ -185,11 +179,11 @@ const MyLine: React.FC<{ group: PsalterGroup; k: number; uid: string; slots: Slo
         title={read ? 'წაკითხულია' : 'წავიკითხე'}
         onClick={() => { triggerHaptic(15); if (read) void actions.unread(k); else void actions.read(k); }}
         className={`relative w-12 h-12 shrink-0 rounded-xl flex items-center justify-center font-serif-ge text-[22px] font-bold tabular-nums cursor-pointer transition active:scale-95 disabled:cursor-default ${
-          read ? 'bg-emerald-600 text-white' : 'bg-[#7a2028] text-[#fbf6ec] shadow-[0_6px_14px_-8px_rgba(122,32,40,0.9)]'
+          read ? 'bg-[#fbf6ec] text-[#4a3426]/70 ring-1 ring-[#e8dcc8]' : 'bg-[#7a2028] text-[#fbf6ec] shadow-[0_6px_14px_-8px_rgba(122,32,40,0.9)]'
         }`}
       >
         {k}
-        <span className={`absolute -top-1.5 -right-1.5 w-[22px] h-[22px] rounded-full flex items-center justify-center ring-2 ${read ? 'bg-white text-emerald-700 ring-emerald-50' : 'bg-white/90 text-[#cdbba3] ring-[#f4e9e4]'}`}>
+        <span className={`absolute -top-1.5 -right-1.5 w-[22px] h-[22px] rounded-full flex items-center justify-center ring-2 ${read ? 'bg-emerald-600 text-white ring-white' : 'bg-white/90 text-[#cdbba3] ring-[#f4e9e4]'}`}>
           <Check className="w-3.5 h-3.5 stroke-[3.5]" />
         </span>
       </button>
@@ -234,7 +228,7 @@ const Tile: React.FC<{ group: PsalterGroup; k: number; uid?: string; slots: Slot
         aria-label={`კანონი ${k}${state === 'read' ? ', წაკითხულია' : help ? ', დახმარებას ითხოვს' : ''}`}
         className={[
           'relative w-full h-16 rounded-xl px-1 flex flex-col items-center justify-center cursor-pointer transition active:scale-95',
-          state === 'read' && 'bg-emerald-700 text-white',
+          state === 'read' && 'bg-[#fbf6ec] text-[#4a3426]/65 ring-1 ring-[#e8dcc8]',
           state === 'taken' && 'bg-amber-50 text-amber-900 ring-1 ring-amber-300',
           state === 'unread' && !mine && 'bg-white text-[#4a3426] ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/35',
           mine && state !== 'read' && 'bg-[#7a2028]/[0.06] text-[#4a3426] ring-2 ring-[#7a2028]',
@@ -243,8 +237,8 @@ const Tile: React.FC<{ group: PsalterGroup; k: number; uid?: string; slots: Slot
         ].filter(Boolean).join(' ')}
       >
         <span className="font-serif-ge text-[18px] font-bold leading-none tabular-nums">{k}</span>
-        <span className={`mt-1 w-full text-center text-xs leading-none truncate ${state === 'read' ? 'text-white/85' : 'opacity-80'}`}>{name}</span>
-        {state === 'read' && <Check className="absolute top-1 right-1 w-3.5 h-3.5 stroke-[3] text-emerald-200" aria-hidden />}
+        <span className="mt-1 w-full text-center text-xs leading-none truncate opacity-80">{name}</span>
+        {state === 'read' && <span className="absolute top-1 right-1 w-4 h-4 rounded-full bg-emerald-600 text-white flex items-center justify-center" aria-hidden><Check className="w-2.5 h-2.5 stroke-[4]" /></span>}
         {help && <span className="absolute top-1.5 right-1.5 w-2.5 h-2.5 rounded-full bg-amber-500" aria-hidden />}
       </button>
     </li>

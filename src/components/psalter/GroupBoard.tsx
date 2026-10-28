@@ -86,7 +86,7 @@ export const KathismaGrid: React.FC<{
               key={k}
               className={[
                 'relative rounded-2xl p-3 min-h-[96px] flex flex-col transition-colors',
-                state === 'read' && 'bg-emerald-700 text-white shadow-[0_6px_14px_-10px_rgba(4,120,87,0.9)]',
+                state === 'read' && 'bg-[#fbf6ec] text-[#4a3426]/70 ring-1 ring-[#e8dcc8]',
                 state === 'taken' && 'bg-amber-50 text-amber-900 ring-1 ring-amber-300',
                 state === 'unread' && !mine && 'bg-white text-[#4a3426] ring-1 ring-[#e8dcc8]',
                 mine && state !== 'read' && 'bg-[#7a2028]/[0.05] text-[#4a3426] ring-2 ring-[#7a2028]',
@@ -99,11 +99,11 @@ export const KathismaGrid: React.FC<{
                 type="button"
                 onClick={() => openPrayer(`kathisma-${k}`)}
                 aria-label={`კანონი ${k}: კითხვა`}
-                className={`absolute inset-0 rounded-2xl cursor-pointer transition-colors ${dark ? 'hover:bg-white/[0.06]' : 'hover:bg-[#7a2028]/[0.03]'}`}
+                className={`absolute inset-0 rounded-2xl cursor-pointer transition-colors hover:bg-[#7a2028]/[0.03]`}
               />
               <div className="relative pointer-events-none flex items-start gap-1.5">
                 <span className={`font-serif-ge text-[26px] font-bold leading-none tabular-nums pt-1 ${quiet ? 'text-[#c9b9a0]' : ''}`}>{k}</span>
-                {dark && <Check className="w-4 h-4 mt-1.5 stroke-[3] text-emerald-200" aria-label="წაკითხულია" />}
+                {dark && <span className="w-[18px] h-[18px] mt-1 rounded-full bg-emerald-600 text-white flex items-center justify-center" aria-label="წაკითხულია"><Check className="w-3 h-3 stroke-[3.5]" /></span>}
                 {help && <span className="w-2.5 h-2.5 mt-2 rounded-full bg-amber-500 animate-pulse" aria-label="დახმარება სჭირდება" />}
                 <span className="flex-1" />
                 <div className="pointer-events-auto flex flex-col items-end gap-1 -mt-0.5 -mr-0.5">
@@ -118,8 +118,7 @@ export const KathismaGrid: React.FC<{
                       onClick={a.onClick}
                       className={[
                         'w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition active:scale-90 disabled:opacity-40 [&>svg]:w-[17px] [&>svg]:h-[17px]',
-                        dark ? 'bg-white/15 hover:bg-white/25 text-white'
-                          : a.strong ? 'bg-[#7a2028] text-white hover:bg-[#6c1c24] shadow-[0_4px_10px_-6px_rgba(122,32,40,0.9)] [&>svg]:stroke-[2.6]'
+                        a.strong ? 'bg-[#7a2028] text-white hover:bg-[#6c1c24] shadow-[0_4px_10px_-6px_rgba(122,32,40,0.9)] [&>svg]:stroke-[2.6]'
                           : a.on ? 'bg-amber-200 text-amber-900'
                           : quiet ? 'text-[#b5a48c] ring-1 ring-[#e3d5bd] hover:text-[#7a2028] hover:ring-[#7a2028]/30'
                           : 'bg-[#7a2028]/[0.07] text-[#7a2028] hover:bg-[#7a2028]/[0.13]',
@@ -131,7 +130,7 @@ export const KathismaGrid: React.FC<{
                 </div>}
                 {isLeader && (
                   <button type="button" title="ვინ კითხულობს" aria-label={`კანონი ${k}: ვინ კითხულობს`} onClick={() => setEditK(k)}
-                    className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition active:scale-90 [&>svg]:w-4 [&>svg]:h-4 ${dark ? 'text-white/70 hover:text-white hover:bg-white/15' : 'text-[#b3a594] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.07]'}`}>
+                    className={`w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition active:scale-90 [&>svg]:w-4 [&>svg]:h-4 text-[#b3a594] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.07]`}>
                     <Pencil />
                   </button>
                 )}
@@ -139,7 +138,7 @@ export const KathismaGrid: React.FC<{
               </div>
               <div className="relative pointer-events-none mt-auto pt-2 min-w-0">
                 <span className={`block leading-tight line-clamp-2 break-words ${quiet ? 'text-[12px] font-medium' : 'text-[13.5px] font-bold'}`}>{caption || '—'}</span>
-                <span className={`block mt-0.5 text-[11px] leading-tight ${dark ? 'text-white/70' : help ? 'text-amber-700 font-semibold' : 'opacity-70'}`}>
+                <span className={`block mt-0.5 text-[11px] leading-tight ${help ? 'text-amber-700 font-semibold' : 'opacity-70'}`}>
                   {help ? 'დახმარებას ითხოვს' : `ფს. ${KATHISMA_PSALMS[k - 1]}`}
                 </span>
               </div>

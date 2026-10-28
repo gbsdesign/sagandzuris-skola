@@ -13,8 +13,8 @@ import { linkTeachers } from '../../hooks/useTeaching';
 import { askConfirm, Avatar, Bar, Btn, IconBtn, Pill, Sheet } from '../ui/kit';
 import { LeaderChips } from './LeaderChips';
 import { useClassAttendance, useGroupReading } from './StatsTab';
-import { PsalterGroup } from '../../hooks/usePsalter';
-import { KATHISMA_COUNT } from '../../utils/psalter';
+import { GroupMember, PsalterGroup, toGroup } from '../../hooks/usePsalter';
+import { KATHISMA_COUNT, cycleOf, georgiaToday, ownersIn, rebase } from '../../utils/psalter';
 
 /**
  * Puts the class program on each member's path (missing items are added at the end) and takes back
@@ -54,6 +54,32 @@ export const removeClassMember = async (cls: SchoolClass, uid: string) => {
     updatedAt: new Date().toISOString(),
   });
   await syncMemberPaths(cls.id, cls.program, [], [uid]);
+  await leaveClassGroup(cls, uid).catch(() => {});
+};
+
+// the class's psalter group follows the class: a new member joins it (a kanon is named in the kanon's window or by
+// „ავტომატური განაწილება“), one taken out leaves it and their kanon goes free
+const joinClassGroup = async (cls: SchoolClass, p: { uid: string; name: string; photoURL?: string }) => {
+  if (!cls.psalterGroupId) return;
+  const me: GroupMember = { uid: p.uid, name: p.name, prayer: '', photoURL: p.photoURL || '' };
+  await updateDoc(doc(db, 'psalterGroups', cls.psalterGroupId), { members: arrayUnion(me), memberIds: arrayUnion(p.uid), updatedAt: new Date().toISOString() });
+};
+const leaveClassGroup = async (cls: SchoolClass, uid: string) => {
+  if (!cls.psalterGroupId) return;
+  const ref = doc(db, 'psalterGroups', cls.psalterGroupId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const g = toGroup(snap.id, snap.data());
+  if (!g.memberIds.includes(uid)) return;
+  const half = cycleOf(georgiaToday(), g.cycleDays, g.shiftDays).half;
+  const owners = ownersIn(g.assignment, g.baseHalf, half);
+  await updateDoc(ref, {
+    members: g.members.filter(m => m.uid !== uid),
+    memberIds: g.memberIds.filter(x => x !== uid),
+    assignment: rebase(Object.fromEntries(Object.entries(owners).map(([k, l]) => [k, l.filter(x => x !== uid)]))),
+    baseHalf: half,
+    updatedAt: new Date().toISOString(),
+  });
 };
 
 /** Puts one person into the class (the „+“ on the class page's members card): their path gets the program, and the
@@ -66,6 +92,7 @@ export const addClassMember = async (cls: SchoolClass, p: { uid: string; name: s
     updatedAt: new Date().toISOString(),
   });
   await linkTeachers(p.uid, cls).catch(() => {});
+  await joinClassGroup(cls, p).catch(() => {});
   return syncMemberPaths(cls.id, cls.program, [p.uid], []);
 };
 
