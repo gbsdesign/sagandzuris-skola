@@ -72,6 +72,12 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   line 2 voice II sextuplet; v8/004 and v8/005 line 6 bass (+ v8/004 voice I) rhythm; triod/140 line 1 bass divided
   part added; song/003 the 5- and 7-note runs fill one beat (3/4 bars; the song is 4 beats shorter) + line 3 eighth
   rest; song/005 missing rests (bars at 58, 107, 152.5) and voice I/II eighth + rest endings in lines 9–12.
+  Voice-offset round (2026-10-28, a voice's note starts meeting the others' once moved by a fraction of a beat; each fix
+  confirmed by a second picture check): a 16th read as an eighth (a voice ¼ beat late, the line's last notes stretched)
+  in v8/052 l.4, v8/056 l.4, v8/090 l.10, v8/128 l.6, v8/160 l.10 and l.16; a dropped eighth rest or misread dot (½ beat)
+  in dasd2/030 and 033 l.1, feast/105 l.3, triod/055 l.1; missed ties (two notes of one pitch that must sound as one) in
+  karb/151 l.12, karb/163 l.23, karb/183 l.11 (voices II and III), v5/086 l.4. Not applied (the second check never ran):
+  v5/133 l.8, v5/134 l.10, v5/135 l.1, v5/138 l.3, v5/140 l.2, v9/063 l.2, v9/091 l.3 — a voice looks ½–1 beat off there.
 - The OMR scripts live only in the user's old session scratchpads — they are not in this repo.
 - Unreviewed guesses (don't present as confirmed): vol. I↔III matches, vol. V/IX placements, which book
   version a liturgy recording follows (the `main` flag in `TSIRVA_BOOK` moves a recording to another version).
