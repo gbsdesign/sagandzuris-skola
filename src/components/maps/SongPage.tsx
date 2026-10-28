@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowRightLeft, FileText, GraduationCap, Headphones, Music, TextAlignStart } from 'lucide-react';
+import { ArrowRightLeft, FileText, GraduationCap, Headphones, Music } from 'lucide-react';
 import {
   FOLK_SONGS, FolkSong, centreRecMedia, getFolkRegion, songDocUrl, songRecMedia, songVersionMedia, soundcloudEmbedUrl,
 } from '../../data/songsData';
@@ -12,6 +12,7 @@ import { stopPreview } from '../../utils/listPreview';
 import { useAuth } from '../../context';
 import { usePlacements } from '../../data/placements';
 import { MoveSheet } from '../archive/MoveSheet';
+import { SongWords } from './SongWords';
 import { LearnAudio } from '../learn/LearnAudio';
 import { songPiece } from '../../utils/learn';
 import { BackBtn, Tabs, useScrolledAway } from '../ui/kit';
@@ -244,20 +245,7 @@ export const SongPage: React.FC = () => {
           </section>
         )}
 
-        {/* words */}
-        <section className="rounded-2xl bg-white border border-[#e4d8c4] px-4 pt-3.5 pb-4">
-          <h2 className="flex items-center gap-1.5 text-[13px] font-extrabold text-[#7a2028] mb-2">
-            <TextAlignStart className="w-4 h-4" /> ტექსტი
-          </h2>
-          {words ? (
-            <>
-              <p className="text-[16px] leading-[1.75] text-[#2a2017] whitespace-pre-line">{words.text}</p>
-              {words.source && <p className="mt-3 text-[11.5px] text-[#a0907c]">{words.source}</p>}
-            </>
-          ) : (
-            <p className="text-[13px] text-[#a0907c]">ამ სიმღერის ტექსტი ჯერ არ დამატებულა</p>
-          )}
-        </section>
+        <SongWords songId={song.id} words={words} />
 
         {song.docs && song.docs.length > 0 && (
           <section className="flex flex-wrap gap-2">

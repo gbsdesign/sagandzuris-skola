@@ -266,6 +266,19 @@ await t('another teacher cannot hear it', assertFails(getDoc(doc(tch2, 'drillTak
 await t('teacher cannot change the take', assertFails(setDoc(doc(tch, 'drillTakes', 'stu', 'takes', 'ear-fifth'), drillTake)));
 await t('member marks an exercise done', assertSucceeds(setDoc(doc(stu, 'students', 'stu'), { drillDone: { 'ear-fifth': '2026-10-27' } }, { merge: true })));
 
+// ---- song texts
+const st = (by, extra = {}) => ({ text: 'ლექსი', by, at: serverTimestamp(), ...extra });
+await t('admin writes a song text before any editor is chosen', assertSucceeds(setDoc(doc(adm, 'songTexts', 's1'), st('adm'))));
+await t('member cannot write a song text', assertFails(setDoc(doc(stu, 'songTexts', 's1'), st('stu'))));
+await t('admin chooses an editor', assertSucceeds(setDoc(doc(adm, 'settings', 'songTextEditors'), { uids: arrayUnion('stu') }, { merge: true })));
+await t('chosen member writes a song text', assertSucceeds(setDoc(doc(stu, 'songTexts', 's1'), st('stu'))));
+await t("chosen member cannot sign as another", assertFails(setDoc(doc(stu, 'songTexts', 's1'), st('adm'))));
+await t('a song text has only its fields', assertFails(setDoc(doc(stu, 'songTexts', 's1'), st('stu', { x: 1 }))));
+await t('another member cannot write', assertFails(setDoc(doc(stu2, 'songTexts', 's1'), st('stu2'))));
+await t('a guest reads song texts', assertSucceeds(getDoc(doc(guest, 'songTexts', 's1'))));
+await t('a guest cannot delete one', assertFails(deleteDoc(doc(guest, 'songTexts', 's1'))));
+await t('chosen member deletes a song text', assertSucceeds(deleteDoc(doc(stu, 'songTexts', 's1'))));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);

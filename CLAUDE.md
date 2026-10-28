@@ -35,6 +35,7 @@
   | `src/data/library/saintLives.json` | 292 KB | saint lives index |
   | `src/data/library/dzveliAgtqma.json` | 126 KB | Sacred History book |
   | `src/data/chantMediaRegistry.ts` | 65 KB | recordings; the binding map `VARIANT_MEDIA` is near line 1320 |
+  | `src/data/sitqvaWords.ts` | 195 KB | word bank of „დღის სიტყვა“ — made by `node scripts/build-sitqva-words.mjs`, never edit by hand |
   | `public/notes/**`, `public/lives/**`, `public/prayers/**`, `public/bible/**`, `public/mtkmeli/**` | thousands of JSON files | content data |
   | `src/assets/images/*.jpg` | ~900 KB each | images — never open |
 
@@ -198,6 +199,16 @@
   (`pages/games/AmikhseniGame.tsx`; rules `utils/amikhseni.ts` + test; ~1000 cards in `data/amikhseniWords.ts` built from the
   app's own data; settings stay on the device). `components/games/TableScreen.tsx` is the full-screen face of every live game
   (wake lock, safe areas). Both open inside the hub as `mapItem` (`GameDef.item`; the bar title from `gameTitleOfItem`).
+- **Word games (2026-10-28, same day, second PR)**: „დღის სიტყვა“ (`pages/games/SitqvaGame.tsx`; rules `utils/sitqva.ts` + test;
+  Wordle-like, 4–6 letters, six tries, one word a day for the whole school: the day's feast or a saint of the church calendar
+  (`candidatesOfDay` over `calendar/<year>.json`), else the bank `data/sitqvaAnswers.ts` (church words, places); the hint kind is
+  shown from the start; guesses must be in the bank or in `data/sitqvaWords.ts` (lazy chunk, `utils/sitqvaDictionary.ts`);
+  screen keyboard `components/games/GeoKeyboard.tsx`, a physical keyboard works too; „ნახე აპში“ opens the search with the word —
+  `openSearch(query)`) and „ოთხეული“ (`pages/games/OtkheuliGame.tsx`; rules `utils/otkheuli.ts` + test; Connections-like, 16 words
+  in four hidden groups, four mistakes; ~50 groups in `data/otkheuliGroups.ts` — curated + instruments, costume parts, the archive's
+  songs by region and chants by service, at most one group of a family per grid; the day's grid `gridOfDay` + unlimited extra grids
+  with a random seed, not saved). Both records go through `hooks/useDailyRecord.ts` (`students.games.<game>.days[iso]`, the device
+  for guests; `useHangi` is now a wrapper of it), no rules change. All three daily games count days from 2026-10-28.
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 
