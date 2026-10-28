@@ -161,10 +161,10 @@ export interface ChatPanelProps {
   error: boolean;
   /** the bar above the messages */
   header: React.ReactNode;
-  /** messages shown as a call card with a button into the call */
-  isCall: (m: ChatMessage) => boolean;
-  callTitle: string;
-  onJoinCall: () => void;
+  /** messages shown as a call card with a button into the call (a private chat's calls) */
+  isCall?: (m: ChatMessage) => boolean;
+  callTitle?: string;
+  onJoinCall?: () => void;
   /** the call is still on (otherwise its card is only a note, without the button) */
   callLive?: boolean;
   canDelete: (m: ChatMessage) => boolean;
@@ -195,7 +195,7 @@ const HoverDelete: React.FC<{ onClick: () => void }> = ({ onClick }) => (
 
 // A chat: text and voice messages (a class's chat, or a teacher's private chat with a student).
 export const ChatPanel: React.FC<ChatPanelProps> = ({
-  base, author, messages, loading, error, header, isCall, callTitle, onJoinCall, callLive = true, canDelete,
+  base, author, messages, loading, error, header, isCall = () => false, callTitle, onJoinCall, callLive = true, canDelete,
   showNames = false, seenAt = null, onSent, listClassName = 'h-[56vh] min-h-[300px] max-h-[560px]', readOnly = false,
   staffLabel = 'მასწავლებელი', fill = false, listTop,
 }) => {
@@ -410,7 +410,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                             {callLive && m.id === lastCallId ? (
                               <button
                                 type="button"
-                                onClick={e => { e.stopPropagation(); onJoinCall(); }}
+                                onClick={e => { e.stopPropagation(); onJoinCall?.(); }}
                                 className={`h-10 px-4 rounded-full text-sm font-bold cursor-pointer active:scale-95 transition ${
                                   mine ? 'bg-[#fbf6ec] text-[#7a2028]' : 'bg-[#7a2028] text-[#fbf6ec]'
                                 }`}

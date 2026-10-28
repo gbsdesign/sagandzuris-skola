@@ -64,11 +64,6 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
       loading={loading}
       error={error}
       showNames
-      // the old Jitsi call notices (meet.jit.si links asked phones to install an app): a plain note now
-      isCall={m => m.kind === 'text' && m.text.includes('meet.jit.si')}
-      callTitle="ძველი ვიდეოზარი"
-      callLive={false}
-      onJoinCall={() => {}}
       canDelete={m => m.uid === user.uid || isAdmin}
       fill={fill}
       listClassName={compact ? '' : undefined}
