@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { triggerHaptic } from '../utils/haptics';
+import { wignebiParent } from '../utils/wignebiPath';
 
 export type PageType = 'home' | 'profile' | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'gz' | 'tsinaprebi' | 'bookmark' | 'admin' | 'teacher' | 'class' | 'prayer' | 'commemoration' | 'biblioteka' | 'psalter' | 'messages' | 'dm' | 'abituri' | 'offline' | 'birthdays' | 'medavitneoba' | 'games';
 export type ServiceType = 'წირვა' | 'მწუხრი' | 'ცისკარი' | 'სადღესასწაულო' | 'მარხვანი' | 'ზატიკი' | 'მომიხსენენი' | 'ძლისპირები' | 'კატაბასიები' | 'დასადებლები' | null;
@@ -208,8 +209,9 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       return;
     }
     if (mapItem) {
-      // a part of a library book goes up to the book's contents
-      setMapItem(currentPage === 'biblioteka' && mapItem.includes(':') ? mapItem.split(':')[0] : null);
+      // a part of a library book goes up to the book's contents; a მედავითნეობა book one level up
+      setMapItem(currentPage === 'biblioteka' && mapItem.includes(':') ? mapItem.split(':')[0]
+        : currentPage === 'medavitneoba' && mapItem.startsWith('w:') ? wignebiParent(mapItem) : null);
       return;
     }
     if (selectedService) {

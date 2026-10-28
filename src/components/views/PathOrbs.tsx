@@ -18,7 +18,7 @@ import { ChemiSamosi } from './ChemiSamosi';
 import { FirstStep, usePathStats } from './PathSummary';
 import { MyClassWork, useNewWork } from '../teacher/MyClassWork';
 import { triggerFireworks } from './StudentBookmarkView';
-import { ManeraAverageBadge, ManeraContent, useManera } from './ManeraPanel';
+import { ManeraAverageBadge, ManeraContent, useMastery } from './ManeraPanel';
 import { MasteryContent } from '../mastery/MasteryContent';
 import { WorkMonthLine, WorkPanel, useIndependentWork, usePanelWish } from './IndependentWorkCard';
 import { PearlIcon } from '../pearls/PearlIcon';
@@ -99,7 +99,7 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
   // "ნასწავლი": ✎ in the card's head swaps the marks for ✕ (LearnPanel); folding the card ends it
   const [editing, setEditing] = useState(false);
   const stats = usePathStats();
-  const manera = useManera();
+  const manera = useMastery();
   const work = useIndependentWork();
   const samosi = useSamosiSummary();
   const newWork = useNewWork();
@@ -138,7 +138,7 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
           </PathOrb>
         );
       case 'manera':
-        // a dash until a teacher has marked something
+        // the average of all exercises (teachers' marks and the app's scores); a dash until there is any
         return (
           <PathOrb key={id} label="ოსტატობა" title="ოსტატობა" percent={manera.average ?? 0} hue={maneraHue(manera.average ?? 0)} open={open === id} onClick={() => toggle(id)} index={index}>
             {manera.average === null ? <span className="text-[22px] font-black text-[#cbbca6]">—</span> : <OrbPercent value={manera.average} />}

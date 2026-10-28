@@ -31,6 +31,11 @@ export interface ManeraStep {
   bpm?: number;
   bar?: number;
   accents?: number[];
+  /** the tones sound only in the round's last 2 s — the student sings alone, then checks against the note */
+  cue?: 'end';
+  /** what the score listens for in a rhythm step: every beat (default), the accented beats, the „and“ between
+   *  beats, or every half beat */
+  claps?: 'beats' | 'accents' | 'off' | 'half';
 }
 
 export interface ManeraExercise {

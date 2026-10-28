@@ -145,12 +145,28 @@
   out, a click (bpm/bar/accents), a mic tuner + recording (≤90 s) sent to teachers (`drillTakes/{uid}/takes/{drillId}`,
   rules published by the workflow; teachers hear them in the member's window, `DrillReview`). „შევასრულე“: device days
   (`utils/maneraPractice.ts`) + `students.drillDone.{id}` = last day. Teachers can assign an exercise (`assignments.exercise`).
+  Scores (2026-10-28): „შეფასებით“ runs the exercise with the microphone — notes and rhythm are scored in the browser
+  (`utils/drillScore.ts` + test: each look vs the step's note, any octave; claps vs the beat grid after a one-bar count-in,
+  the click silent after it; the note to sing sounds only 1.2 s so the phone hears the student), the tips by the AI teacher
+  (`askAiScore`, JSON score, its own 3 a day — scope `manera`). Best % in `students.drillScore.{id}` + device
+  (`utils/drillScores.ts`); the ring = `useMastery` (ManeraPanel): all 27 exercises, a teacher's mark wins, unscored = 0.
 - **მედავითნეობა** (page `medavitneoba`, built 2026-10-27): the reader's course on the vine's „მედავითნეობა“ label
   (section `medavitneobaTopic`, „მალე“ until the admin opens it). 8 lessons in `data/medavitneLessons.ts`, shown step by
   step (learn / order / read aloud / quiz / task) in `pages/MedavitneobaPage.tsx` + `pages/medavitneoba/parts.tsx`; the
   open lesson is `mapItem`. Prayer texts copied from the app's ლოცვანი, psalms cut from the kathismas (`loadPsalmHtml`),
-  the Apostle from `public/bible/`. Recording one's reading stays in the browser. Progress in `students.medavitne`
+  the Apostle from `public/bible/`. A reading's take stays in the browser unless „მასწავლებელს გაგზავნა“ (≤3 min, 16 kHz/24 kbps
+  `toSmallMp3`) puts it in the pearls' store (ids `read~…`, `utils/dayReadings.ts`); teachers hear and „ჩათვლა“ it in the member's
+  window (`learn/MedavitneReview.tsx`). „დღის წესი“ card (`medavitneoba/DayCard.tsx`, calendar feature only): today / coming
+  Sunday — tone (a weekday takes the Sunday before), saints, readings parsed from the calendar text (`readingsOf` + test); an
+  Apostle reading unfolds with text and recorder. Progress in `students.medavitne`
   (`hooks/useMedavitneProgress.ts`). Content not yet checked by a priest/regent — the page says so.
+  Since 2026-10-28 two tabs „გაკვეთილები · წიგნები“: „წიგნები“ (`pages/medavitneoba/Wignebi.tsx`, menu `data/wignebi.ts`,
+  texts `public/wignebi/<collection>/<NN>.json`, fetched on open, kept by the service worker) = the liturgical books of the
+  „საღვთისმსახურო წიგნები“ app (ღვთისმშობლის მიძინების მონასტერი) in that app's menu order: Bible (NT, OT, ტრაპეზის სახარება,
+  სამოციქულო), calendar 2024–2027, კონდაკი, კურთხევანი, პარაკლიტონი, საზიარო თვენი, ჟამნი, დავითნი, მგალობელთათვის,
+  წარდგომები, ლოცვანი, პარაკლისები, ანდრია კრიტელი. Place = `mapItem` „w…“ (`utils/wignebiPath.ts` for „←“ after a reload).
+  **Admins only** until the user has the monastery's permission (others see „მალე“). The texts were extracted from that
+  app's bundle; its old nuskhuri-font texts were converted with the app's own table (archaic letters kept).
 - **Library** page (`biblioteka`): საღმრთო ისტორია, დღესასწაულები, წმიდანთა ცხოვრება.
   Footer church calendar (`data/churchCalendar.ts`, `data/calendar/<year>.json`, made by
   `node scripts/fetch-church-calendar.mjs <year>`). **The 2026 file ends 13 Jan 2027 — re-run for 2027 once

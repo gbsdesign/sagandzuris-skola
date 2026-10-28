@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { BookOpen, Check, CheckCircle2, Clock, Dumbbell, Headphones, Lightbulb, Mic, Pause, Play, RotateCcw, Send, SkipForward, Square, Trash2, Volume2, VolumeX, Wind } from 'lucide-react';
+import { BookOpen, Check, CheckCircle2, Clock, Dumbbell, Gauge, Headphones, Lightbulb, Mic, Pause, Play, RotateCcw, Send, SkipForward, Sparkles, Square, Trash2, Volume2, VolumeX, Wind, X } from 'lucide-react';
 import { useAuth } from '../../context';
 import { Btn, IconBtn, Sheet, Tabs } from '../ui/kit';
 import { MANERA_BASE, type ManeraExercise, type ManeraStep } from '../../data/maneraLessons';
@@ -8,6 +8,9 @@ import { playLessonNotes, stopLessonNotes } from '../../utils/chantSynth';
 import { markDrillDone, useManeraPractice } from '../../utils/maneraPractice';
 import { MAX_TAKE_SECONDS, saveDrillTake } from '../../utils/drillTakes';
 import { singingSupported, startSinging, type SingSession } from '../../utils/singCapture';
+import { countInBeats, myPart, onsetsOf, roundFrames, runPercent, scoreKindOf, scorePitchRound, scoreRhythmRound, scoredStep, targetAt, type ScoreKind } from '../../utils/drillScore';
+import { saveDrillScore, useDrillScores } from '../../utils/drillScores';
+import { AI_PROBLEM_TEXT, AI_TEACHER_DAILY, AiTeacherError, aiTriesLeft, askAiScore } from '../../utils/aiTeacher';
 import { noteName } from '../../utils/pearls';
 import { triggerHaptic } from '../../utils/haptics';
 
@@ -43,7 +46,7 @@ export const DrillSheet: React.FC<{ drillId: string | null; label?: string; star
           ]} />
           {tab === 'lesson'
             ? <LessonView drill={drill} onExercise={() => setTab('exercise')} />
-            : <ExerciseView key={drill.id} drillId={drill.id} exercise={drill.exercise} />}
+            : <ExerciseView key={drill.id} drill={drill} />}
         </div>
       )}
     </Sheet>
@@ -105,19 +108,27 @@ const LessonView: React.FC<{ drill: Drill; onExercise: () => void }> = ({ drill,
 type Phase = 'idle' | 'run' | 'breath' | 'paused' | 'end';
 
 const stepTime = (s: ManeraStep) => (s.secs ? s.secs * (s.reps ?? 1) + BREATH * ((s.reps ?? 1) - 1) : 0);
-/** the voice this step's synth leaves to the student (null: all sound, or the step has no voices) */
-const myPart = (s: ManeraStep, chosen: number) => (!s.parts || s.listen ? null : s.voice ?? Math.min(chosen, s.parts.length - 1));
-/** the step's line the student sings at `t` seconds into the round: `sing`, else their voice, else the tones */
-const targetAt = (s: ManeraStep, chosen: number, t: number): number | null => {
-  const mine = myPart(s, chosen);
-  const line = s.sing ?? (mine !== null ? s.parts![mine] : s.tones);
-  if (!line?.length) return null;
-  if (!s.secs) return line.length === 1 ? line[0] : null;
-  return line[Math.min(line.length - 1, Math.max(0, Math.floor(t / (s.secs / line.length))))];
-};
+const CUE = 1.2; // seconds the note to sing sounds at the start of a scored round; then the phone hears only the student
+const MAX_SCORED_SECONDS = 300; // a tip's run sent to the AI teacher
 
-const ExerciseView: React.FC<{ drillId: string; exercise: ManeraExercise }> = ({ drillId, exercise }) => {
-  const { user } = useAuth();
+/** a scored run: the microphone, what kind of score, the rounds scored so far and where the open one began (ms) */
+type Scoring = { session: SingSession; kind: ScoreKind; rounds: number[]; from: number | null; expected: number };
+type RunResult =
+  | { kind: 'pct'; pct: number; record: boolean }
+  | { kind: 'ai'; mp3: Blob | null; busy?: boolean; score?: number; text?: string; record?: boolean; problem?: string };
+
+const tone = (v: number) => (v >= 80 ? 'text-emerald-700' : v >= 50 ? 'text-amber-700' : 'text-rose-700');
+
+const ExerciseView: React.FC<{ drill: Drill }> = ({ drill }) => {
+  const { id: drillId, exercise } = drill;
+  const { user, isSuperAdmin } = useAuth();
+  const best = useDrillScores(user?.uid)[drillId];
+  const kind = scoreKindOf(drill);
+  const scoring = useRef<Scoring | null>(null);
+  const [scoringOn, setScoringOn] = useState(false);
+  const [liveMidi, setLiveMidi] = useState<number | null>(null);
+  const [result, setResult] = useState<RunResult | null>(null);
+  const [scoreNote, setScoreNote] = useState('');
   const { doneToday } = useManeraPractice();
   const [range, setRangeState] = useState<Range>(() => (load(RANGE_KEY, 'low') === 'high' ? 'high' : 'low'));
   const [part, setPartState] = useState(() => Math.min(2, Math.max(0, Number(load(PART_KEY, '0')) || 0)));
@@ -138,21 +149,33 @@ const ExerciseView: React.FC<{ drillId: string; exercise: ManeraExercise }> = ({
   const setSound = (on: boolean) => { setSoundState(on); save(SOUND_KEY, on ? '1' : '0'); if (!on) stopLessonNotes(); };
 
   // the step's sound from `elapsed` seconds into the round: its tones, the other voices, the click
+  // In a scored run the phone must hear the student, not itself: the note to sing sounds only for a moment (CUE), a
+  // drone on the same note as well, and a rhythm step's click only in the count-in.
   const sing = useCallback((s: ManeraStep, elapsed: number) => {
     if (!sound || !s.secs) return;
     const secs = s.secs;
+    const scored = !!scoring.current && scoredStep(s, scoring.current.kind, part);
     const notes: [number, number, number][] = [];
-    const line = (tones: number[]) => {
+    const line = (tones: number[], until = secs, from = 0) => {
       const d = secs / tones.length;
-      tones.forEach((t, i) => notes.push([i * d, d, base + t]));
+      tones.forEach((t, i) => {
+        const a = Math.max(i * d, from), b = Math.min((i + 1) * d, until);
+        if (b > a) notes.push([a, b - a, base + t]);
+      });
     };
-    if (s.tones?.length) line(s.tones);
+    const sung = new Set((s.sing ?? []).map(t => ((t % 12) + 12) % 12));
+    if (s.tones?.length) {
+      if (s.cue === 'end') line(s.tones, secs, secs - 2);
+      else if (scored && scoring.current!.kind === 'pitch' && (!s.sing || s.tones.some(t => sung.has(((t % 12) + 12) % 12)))) line(s.tones, CUE);
+      else line(s.tones);
+    }
     const mine = myPart(s, part);
     s.parts?.forEach((p, v) => { if (v !== mine) line(p); });
     if (s.bpm) {
       const beat = 60 / s.bpm;
       const accents = s.accents ?? [0];
-      for (let i = 0; i * beat < secs - 0.05; i++) notes.push([i * beat, 0.05, accents.includes(i % (s.bar ?? 1)) ? 96 : 88]);
+      const clickUntil = scored && scoring.current!.kind === 'rhythm' ? countInBeats(s) * beat - 0.05 : secs - 0.05;
+      for (let i = 0; i * beat < clickUntil; i++) notes.push([i * beat, 0.08, accents.includes(i % (s.bar ?? 1)) ? 96 : 88]);
     }
     const now = notes
       .filter(([at, len]) => at + len > elapsed + 0.03)
@@ -161,20 +184,62 @@ const ExerciseView: React.FC<{ drillId: string; exercise: ManeraExercise }> = ({
   }, [sound, base, part]);
 
   const startRound = useCallback((s: ManeraStep, elapsed = 0) => {
+    const sc = scoring.current;
+    if (sc) sc.from = performance.now() - sc.session.t0 - elapsed * 1000;
     endAt.current = Date.now() + (s.secs! - elapsed) * 1000;
     setLeft(s.secs! - elapsed);
     setPhase('run');
     sing(s, elapsed);
   }, [sing]);
 
+  // a round of a scored run is over: its frames → its score
+  const closeRound = useCallback((s: ManeraStep) => {
+    const sc = scoring.current;
+    if (!sc || sc.from === null || !s.secs) return;
+    const from = sc.from;
+    sc.from = null;
+    if (!scoredStep(s, sc.kind, part)) return;
+    const heard = s.cue === 'end' ? s.secs - 2 : s.secs;
+    const frames = roundFrames(sc.session.frames, from, from + heard * 1000);
+    sc.rounds.push(sc.kind === 'rhythm' ? scoreRhythmRound(onsetsOf(frames), s) : scorePitchRound(frames, s, part, base));
+  }, [part, base]);
+
+  const stopScoring = useCallback(() => {
+    scoring.current?.session.cancel();
+    scoring.current = null;
+    setScoringOn(false);
+    setLiveMidi(null);
+  }, []);
+
+  // the run is over: the percent now (notes, rhythm), or the take for the AI teacher (the tips)
+  const finishScoring = useCallback(async () => {
+    const sc = scoring.current;
+    if (!sc) return;
+    scoring.current = null;
+    setScoringOn(false);
+    setLiveMidi(null);
+    if (sc.kind === 'ai') {
+      setResult({ kind: 'ai', mp3: null, busy: true });
+      const take = await sc.session.stop();
+      setResult({ kind: 'ai', mp3: take.mp3 });
+      return;
+    }
+    sc.session.cancel();
+    const pct = runPercent(sc.rounds, sc.expected);
+    const record = await saveDrillScore(drillId, pct, user?.uid, best ?? 0);
+    markDrillDone(drillId, user?.uid);
+    setResult({ kind: 'pct', pct, record });
+  }, [drillId, user, best]);
+
   const goTo = useCallback((i: number) => {
     stopLessonNotes();
     setRound(1);
-    if (i >= exercise.steps.length) { setPhase('end'); return; }
+    if (scoring.current) scoring.current.from = null;
+    if (i >= exercise.steps.length) { setPhase('end'); void finishScoring(); return; }
     setIdx(i);
     const s = exercise.steps[i];
     if (s.secs) startRound(s); else setPhase('idle');
-  }, [exercise.steps, startRound]);
+  }, [exercise.steps, startRound, finishScoring]);
 
   // the clock: a round ends → a breath → the next round, or the next step
   useEffect(() => {
@@ -184,6 +249,7 @@ const ExerciseView: React.FC<{ drillId: string; exercise: ManeraExercise }> = ({
       if (ms > 0) { setLeft(ms / 1000); return; }
       window.clearInterval(t);
       triggerHaptic(12);
+      if (phase === 'run') closeRound(step);
       if (phase === 'run' && round < reps) {
         endAt.current = Date.now() + BREATH * 1000;
         setLeft(BREATH);
@@ -196,11 +262,22 @@ const ExerciseView: React.FC<{ drillId: string; exercise: ManeraExercise }> = ({
       }
     }, 100);
     return () => window.clearInterval(t);
-  }, [phase, round, reps, step, idx, startRound, goTo]);
+  }, [phase, round, reps, step, idx, startRound, goTo, closeRound]);
 
-  useEffect(() => () => stopLessonNotes(), []);
+  useEffect(() => () => { stopLessonNotes(); scoring.current?.session.cancel(); }, []);
+
+  // a tip's run may not grow without end: past MAX_SCORED_SECONDS it ends where it is
+  useEffect(() => {
+    if (!scoringOn) return;
+    const t = window.setInterval(() => {
+      const sc = scoring.current;
+      if (sc?.kind === 'ai' && performance.now() - sc.session.t0 > MAX_SCORED_SECONDS * 1000) { stopLessonNotes(); setPhase('end'); void finishScoring(); }
+    }, 1000);
+    return () => window.clearInterval(t);
+  }, [scoringOn, finishScoring]);
 
   const pause = () => {
+    if (scoring.current) { stopScoring(); setScoreNote('შეფასება შეწყდა — პაუზისას ის თავიდან იწყება.'); }
     pausedFrom.current = phase === 'breath' ? 'breath' : 'run';
     setLeft(Math.max(0, (endAt.current - Date.now()) / 1000));
     stopLessonNotes();
@@ -213,7 +290,39 @@ const ExerciseView: React.FC<{ drillId: string; exercise: ManeraExercise }> = ({
     } else startRound(step, step.secs! - left);
   };
   const begin = () => (step.secs ? startRound(step) : goTo(idx + 1));
-  const restart = () => { stopLessonNotes(); setIdx(0); setRound(1); setPhase('idle'); };
+  const restart = () => { stopScoring(); stopLessonNotes(); setIdx(0); setRound(1); setPhase('idle'); setResult(null); setScoreNote(''); };
+
+  // „შეფასებით“: the microphone on, then the run from its first step; every scored round counts
+  const beginScored = async () => {
+    setScoreNote('');
+    setResult(null);
+    stopLessonNotes();
+    try {
+      const session = await startSinging(m => setLiveMidi(m), kind === 'rhythm' ? 20 : 40);
+      const expected = exercise.steps.reduce((a, s) => a + (scoredStep(s, kind, part) ? s.reps ?? 1 : 0), 0);
+      scoring.current = { session, kind, rounds: [], from: null, expected };
+      setScoringOn(true);
+      setIdx(0);
+      setRound(1);
+      const first = exercise.steps[0];
+      if (first.secs) startRound(first); else setPhase('idle');
+    } catch {
+      setScoreNote('მიკროფონი ვერ ჩაირთო. ნება მიეცი ბრაუზერს და სცადე თავიდან.');
+    }
+  };
+
+  const askAi = async () => {
+    if (result?.kind !== 'ai' || !result.mp3 || !user) return;
+    setResult({ ...result, busy: true, problem: '' });
+    try {
+      const r = await askAiScore(user.uid, result.mp3, { title: drill.title, check: drill.lesson.check, steps: exercise.steps.map(s => s.text) }, isSuperAdmin);
+      const record = await saveDrillScore(drillId, r.score, user.uid, best ?? 0);
+      markDrillDone(drillId, user.uid);
+      setResult({ kind: 'ai', mp3: result.mp3, score: r.score, text: r.text, record });
+    } catch (e) {
+      setResult({ kind: 'ai', mp3: result.mp3, problem: AI_PROBLEM_TEXT[e instanceof AiTeacherError ? e.kind : 'failed'] });
+    }
+  };
   const finish = () => { triggerHaptic(20); markDrillDone(drillId, user?.uid); };
 
   const total = Math.round(exercise.steps.reduce((a, s) => a + stepTime(s), 0) / 60) || exercise.minutes;
@@ -233,6 +342,11 @@ const ExerciseView: React.FC<{ drillId: string; exercise: ManeraExercise }> = ({
       <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
         <p className="flex-1 min-w-[160px] font-serif-ge text-[16px] font-bold text-[#4a3426]">{exercise.title}</p>
         <span className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-[#8a7a6a]"><Clock className="w-3.5 h-3.5" /> ~{Math.max(total, exercise.minutes)} წთ</span>
+        {best !== undefined && (
+          <span className="inline-flex items-center gap-1 text-[12.5px] font-bold text-[#8a7a6a]">
+            <Gauge className="w-3.5 h-3.5" /> საუკეთესო <b className={`tabular-nums ${tone(best)}`}>{best}%</b>
+          </span>
+        )}
       </div>
 
       {(pitched || sounding) && (
@@ -254,12 +368,19 @@ const ExerciseView: React.FC<{ drillId: string; exercise: ManeraExercise }> = ({
 
       {phase === 'end' ? (
         <div className="rounded-3xl bg-white ring-1 ring-[#e8dcc8] px-5 py-6 text-center space-y-3">
-          <CheckCircle2 className="w-10 h-10 mx-auto text-emerald-600" />
-          <p className="font-serif-ge text-[17px] font-bold text-[#4a3426]">სავარჯიშო დასრულდა</p>
+          {result ? <RunResultView result={result} best={best} triesLeft={user ? aiTriesLeft(user.uid, isSuperAdmin, 'manera') : 0} signedIn={!!user} onAsk={askAi} /> : (
+            <>
+              <CheckCircle2 className="w-10 h-10 mx-auto text-emerald-600" />
+              <p className="font-serif-ge text-[17px] font-bold text-[#4a3426]">სავარჯიშო დასრულდა</p>
+            </>
+          )}
           {done
             ? <p className="text-[14px] font-semibold text-emerald-700">დღეს შესრულებულია ✓</p>
             : <Btn size="lg" icon={<Check />} onClick={finish}>შევასრულე</Btn>}
-          <div><Btn kind="ghost" size="sm" icon={<RotateCcw />} onClick={restart}>თავიდან</Btn></div>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Btn kind="ghost" size="sm" icon={<RotateCcw />} onClick={restart}>თავიდან</Btn>
+            {singingSupported() && <Btn kind="soft" size="sm" icon={<Gauge />} onClick={() => { restart(); void beginScored(); }}>შეფასებით კიდევ</Btn>}
+          </div>
         </div>
       ) : (
         <div className="rounded-3xl bg-white ring-1 ring-[#e8dcc8] px-4 py-4 sm:px-5">
@@ -283,7 +404,7 @@ const ExerciseView: React.FC<{ drillId: string; exercise: ManeraExercise }> = ({
             ) : phase === 'paused' ? (
               <RoundBtn label="გაგრძელება" onClick={resume}><Play className="w-5 h-5 ml-0.5" /></RoundBtn>
             ) : step.secs ? (
-              <Btn size="lg" icon={<Play />} onClick={begin}>{idx === 0 ? 'დაწყება' : 'გაგრძელება'}</Btn>
+              <Btn size="lg" icon={<Play />} onClick={begin}>{idx === 0 && !scoringOn ? 'დაწყება' : 'გაგრძელება'}</Btn>
             ) : (
               <Btn size="lg" icon={<Check />} onClick={begin}>გავაკეთე</Btn>
             )}
@@ -292,7 +413,26 @@ const ExerciseView: React.FC<{ drillId: string; exercise: ManeraExercise }> = ({
         </div>
       )}
 
-      <MicPanel drillId={drillId} target={target === null ? null : base + target} pitched={pitched} />
+      {scoringOn ? (
+        <ScoringPanel kind={kind} step={step} running={phase === 'run'} elapsed={step?.secs ? step.secs - left : 0}
+          scoring={scoring.current} midi={liveMidi} target={target === null ? null : base + target} onStop={() => { stopScoring(); stopLessonNotes(); setPhase('idle'); setScoreNote('შეფასება შეწყდა.'); }} />
+      ) : phase !== 'end' && !running && singingSupported() && (
+        <div className="rounded-2xl bg-[#7a2028]/[0.04] ring-1 ring-[#e8dcc8] px-4 py-3 flex flex-wrap items-center gap-x-3 gap-y-2">
+          <div className="flex-1 min-w-[180px]">
+            <p className="text-[14px] font-bold text-[#4a3426]">შეფასება</p>
+            <p className="text-[12.5px] leading-snug text-[#8a7a6a]">
+              {scoreNote || (kind === 'pitch'
+                ? 'გაიარე სავარჯიშო მიკროფონით — აპი მოგისმენს, რამდენად ზუსტად აიღე ნოტები, და ბოლოს % გამოჩნდება.'
+                : kind === 'rhythm'
+                  ? 'მეტრონომი ერთ ტაქტს ჩაგითვლის და ჩუმდება — შენ ინარჩუნებ ტემპს. აპი ტაშს მოისმენს და ბოლოს % გამოჩნდება.'
+                  : `გაიარე სავარჯიშო მიკროფონით — ბოლოს AI მასწავლებელი მოუსმენს და შეგაფასებს (დღეში ${AI_TEACHER_DAILY}-ჯერ).`)}
+            </p>
+          </div>
+          <Btn icon={<Gauge />} onClick={() => { restart(); void beginScored(); }}>შეფასებით</Btn>
+        </div>
+      )}
+
+      {!scoringOn && <MicPanel drillId={drillId} target={target === null ? null : base + target} pitched={pitched} />}
 
       <ol className="space-y-1">
         {exercise.steps.map((s, i) => {
@@ -452,42 +592,14 @@ const MicPanel: React.FC<{ drillId: string; target: number | null; pitched: bool
   }
 
   if (state.kind === 'on') {
-    const diff = midi !== null && target !== null ? (((midi - target + 6) % 12) + 12) % 12 - 6 : null;
-    const tone = diff === null ? 'idle' : Math.abs(diff) < 0.25 ? 'ok' : Math.abs(diff) < 0.5 ? 'near' : 'off';
-    const needle = diff === null ? 50 : 50 + Math.max(-1, Math.min(1, diff)) * 45;
     return (
       <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-4 py-3.5 space-y-3">
         <div className="flex items-center gap-3">
-          <span className="relative flex w-2.5 h-2.5 shrink-0"><span className="absolute inset-0 rounded-full bg-[#b3261e] animate-ping opacity-60" /><span className="relative w-2.5 h-2.5 rounded-full bg-[#b3261e]" /></span>
+          <RecDot />
           <span className="text-[13px] font-bold text-[#4a3426] tabular-nums">იწერება · {Math.floor(secs)} / {MAX_TAKE_SECONDS} წმ</span>
           <span className="ml-auto inline-flex items-center gap-1 text-[11.5px] text-[#8a7a6a]"><Headphones className="w-3.5 h-3.5" /> ყურსასმენით უკეთესია</span>
         </div>
-        {pitched && (
-          <div>
-            <div className="flex items-end justify-between gap-3">
-              <div>
-                <p className="text-[11.5px] font-bold text-[#8a7a6a]">შენ</p>
-                <p className={`text-[26px] leading-none font-black ${tone === 'ok' ? 'text-emerald-600' : tone === 'near' ? 'text-amber-600' : tone === 'off' ? 'text-rose-600' : 'text-[#cbbca6]'}`}>
-                  {midi === null ? '—' : noteName(midi)}
-                </p>
-              </div>
-              <p className={`pb-0.5 text-[13px] font-bold ${tone === 'ok' ? 'text-emerald-700' : tone === 'near' ? 'text-amber-700' : 'text-rose-700'}`} aria-live="polite">
-                {diff === null ? '' : tone === 'ok' ? 'ზუსტად' : diff < 0 ? 'ცოტა დაბლა' : 'ცოტა მაღლა'}
-              </p>
-              <div className="text-right">
-                <p className="text-[11.5px] font-bold text-[#8a7a6a]">ნოტი</p>
-                <p className="text-[26px] leading-none font-black text-[#4a3426]">{target === null ? '—' : noteName(target)}</p>
-              </div>
-            </div>
-            <div className="relative mt-2.5 h-3 rounded-full bg-gradient-to-r from-rose-200 via-emerald-200 to-rose-200" aria-hidden>
-              <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-4 bg-emerald-700/50" />
-              {diff !== null && (
-                <span className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full ring-2 ring-white shadow transition-[left] duration-100"
-                  style={{ left: `${needle}%`, background: tone === 'ok' ? '#059669' : tone === 'near' ? '#d97706' : '#e11d48' }} />
-              )}
-            </div>
-          </div>
-        )}
+        {pitched && <Tuner midi={midi} target={target} />}
         <Btn kind="danger" icon={<Square />} onClick={() => void stop()}>გაჩერება</Btn>
       </div>
     );
@@ -512,6 +624,125 @@ const MicPanel: React.FC<{ drillId: string; target: number | null; pitched: bool
       {sent === 'fail' && <p className="text-[13px] text-red-700">ვერ გაიგზავნა. სცადე თავიდან.</p>}
       {state.mp3 && sent !== 'yes' && user && <p className="text-[12px] text-[#8a7a6a]">მასწავლებელი ხედავს ამ სავარჯიშოს მხოლოდ ბოლო გაგზავნილ ჩანაწერს.</p>}
       <Btn kind="ghost" size="sm" icon={<Mic />} onClick={start}>თავიდან ჩაწერა</Btn>
+    </div>
+  );
+};
+
+const RecDot: React.FC = () => (
+  <span className="relative flex w-2.5 h-2.5 shrink-0"><span className="absolute inset-0 rounded-full bg-[#b3261e] animate-ping opacity-60" /><span className="relative w-2.5 h-2.5 rounded-full bg-[#b3261e]" /></span>
+);
+
+/** my note against the one to sing, any octave: the names, „ზუსტად / ცოტა დაბლა / ცოტა მაღლა“ and a needle */
+const Tuner: React.FC<{ midi: number | null; target: number | null }> = ({ midi, target }) => {
+  const diff = midi !== null && target !== null ? (((midi - target + 6) % 12) + 12) % 12 - 6 : null;
+  const tone = diff === null ? 'idle' : Math.abs(diff) < 0.25 ? 'ok' : Math.abs(diff) < 0.5 ? 'near' : 'off';
+  const needle = diff === null ? 50 : 50 + Math.max(-1, Math.min(1, diff)) * 45;
+  return (
+    <div>
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <p className="text-[11.5px] font-bold text-[#8a7a6a]">შენ</p>
+          <p className={`text-[26px] leading-none font-black ${tone === 'ok' ? 'text-emerald-600' : tone === 'near' ? 'text-amber-600' : tone === 'off' ? 'text-rose-600' : 'text-[#cbbca6]'}`}>
+            {midi === null ? '—' : noteName(midi)}
+          </p>
+        </div>
+        <p className={`pb-0.5 text-[13px] font-bold ${tone === 'ok' ? 'text-emerald-700' : tone === 'near' ? 'text-amber-700' : 'text-rose-700'}`} aria-live="polite">
+          {diff === null ? '' : tone === 'ok' ? 'ზუსტად' : diff < 0 ? 'ცოტა დაბლა' : 'ცოტა მაღლა'}
+        </p>
+        <div className="text-right">
+          <p className="text-[11.5px] font-bold text-[#8a7a6a]">ნოტი</p>
+          <p className="text-[26px] leading-none font-black text-[#4a3426]">{target === null ? '—' : noteName(target)}</p>
+        </div>
+      </div>
+      <div className="relative mt-2.5 h-3 rounded-full bg-gradient-to-r from-rose-200 via-emerald-200 to-rose-200" aria-hidden>
+        <span className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-0.5 h-4 bg-emerald-700/50" />
+        {diff !== null && (
+          <span className="absolute top-1/2 -translate-x-1/2 -translate-y-1/2 w-4 h-4 rounded-full ring-2 ring-white shadow transition-[left] duration-100"
+            style={{ left: `${needle}%`, background: tone === 'ok' ? '#059669' : tone === 'near' ? '#d97706' : '#e11d48' }} />
+        )}
+      </div>
+    </div>
+  );
+};
+
+// A scored run in progress: notes → the tuner; rhythm → the count-in, then a beat light and the claps heard; a tip →
+// the recording's time. „შეწყვეტა“ drops the run.
+const ScoringPanel: React.FC<{
+  kind: ScoreKind; step: ManeraStep | undefined; running: boolean; elapsed: number; scoring: Scoring | null;
+  midi: number | null; target: number | null; onStop: () => void;
+}> = ({ kind, step, running, elapsed, scoring, midi, target, onStop }) => {
+  const rhythm = kind === 'rhythm' && running && step?.bpm && scoring && scoredStep(step, 'rhythm', 0);
+  const beat = step?.bpm ? 60 / step.bpm : 1;
+  const countIn = step ? countInBeats(step) : 0;
+  const inCount = rhythm && elapsed < countIn * beat;
+  const flash = rhythm && elapsed % beat < 0.12;
+  const claps = rhythm && scoring && scoring.from !== null && !inCount
+    ? onsetsOf(roundFrames(scoring.session.frames, scoring.from, scoring.from + elapsed * 1000)).filter(t => t >= countIn * beat - 0.15).length
+    : 0;
+  const recSecs = scoring ? Math.floor((performance.now() - scoring.session.t0) / 1000) : 0;
+  return (
+    <div className="rounded-2xl bg-white ring-2 ring-[#7a2028]/25 px-4 py-3.5 space-y-3">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+        <RecDot />
+        <span className="text-[13px] font-bold text-[#4a3426]">
+          შეფასება მიმდინარეობს{kind === 'ai' ? <span className="tabular-nums"> · {Math.floor(recSecs / 60)}:{String(recSecs % 60).padStart(2, '0')}</span> : ''}
+        </span>
+        <span className="ml-auto inline-flex items-center gap-1 text-[11.5px] text-[#8a7a6a]"><Headphones className="w-3.5 h-3.5" /> ყურსასმენით უკეთესია</span>
+      </div>
+      {kind === 'pitch' && <Tuner midi={midi} target={running ? target : null} />}
+      {kind === 'rhythm' && (
+        <div className="flex items-center gap-3">
+          <span className={`w-9 h-9 rounded-full shrink-0 transition-colors duration-75 ${flash ? 'bg-[#7a2028]' : 'bg-[#7a2028]/10'}`} aria-hidden />
+          <p className="text-[14px] font-bold text-[#4a3426]" aria-live="polite">
+            {!rhythm ? 'მოემზადე…' : inCount ? `ჩათვლა… ${Math.min(countIn, Math.floor(elapsed / beat) + 1)}` : <>ახლა შენ! <span className="font-semibold text-[#8a7a6a]">· გავიგე {claps}</span></>}
+          </p>
+        </div>
+      )}
+      {kind === 'ai' && <p className="text-[12.5px] leading-snug text-[#8a7a6a]">გაიარე ყველა ნაბიჯი — ბოლოს AI მასწავლებელი მოუსმენს ჩანაწერს.</p>}
+      <Btn kind="ghost" size="sm" icon={<X />} onClick={onStop}>შეწყვეტა</Btn>
+    </div>
+  );
+};
+
+// The end of a scored run: the percent (and a new best), or the AI teacher's button, then its score and words.
+const RunResultView: React.FC<{ result: RunResult; best: number | undefined; triesLeft: number; signedIn: boolean; onAsk: () => void }> = ({ result, best, triesLeft, signedIn, onAsk }) => {
+  const pct = result.kind === 'pct' ? result.pct : result.score;
+  if (pct === undefined) {
+    const r = result as Extract<RunResult, { kind: 'ai' }>;
+    return (
+      <div className="space-y-3">
+        <Sparkles className="w-9 h-9 mx-auto text-[#7a2028]" />
+        <p className="font-serif-ge text-[17px] font-bold text-[#4a3426]">სავარჯიშო ჩაიწერა</p>
+        {!signedIn ? (
+          <p className="text-[13px] text-[#8a7a6a]">AI მასწავლებელი მხოლოდ შესულ წევრებს უსმენს.</p>
+        ) : r.busy ? (
+          <p className="text-[14px] font-semibold text-[#8a7a6a]">{r.mp3 ? 'AI მასწავლებელი უსმენს…' : 'ჩანაწერი მზადდება…'}</p>
+        ) : r.mp3 ? (
+          <>
+            <Btn size="lg" icon={<Sparkles />} disabled={triesLeft <= 0} onClick={onAsk}>AI-ს შეფასება</Btn>
+            <p className="text-[12px] text-[#8a7a6a]">{Number.isFinite(triesLeft) ? `დღეს დარჩა ${triesLeft} ცდა` : ''}</p>
+          </>
+        ) : (
+          <p className="text-[13px] text-[#8a7a6a]">ამ ბრაუზერში ჩანაწერი ვერ შეინახა.</p>
+        )}
+        {r.problem && <p className="text-[13px] text-red-700">{r.problem}</p>}
+      </div>
+    );
+  }
+  const record = result.record;
+  return (
+    <div className="space-y-2">
+      <p className="text-[12px] font-bold uppercase tracking-wide text-[#8a7a6a]">{result.kind === 'ai' ? 'AI მასწავლებლის შეფასება' : 'შენი შედეგი'}</p>
+      <p className={`text-[52px] leading-none font-black tabular-nums ${tone(pct)}`}>{pct}%</p>
+      <p className="text-[13.5px] font-semibold text-[#4a3426]">
+        {record ? (pct >= 80 ? 'ახალი საუკეთესო შედეგი! 🎉' : 'ახალი საუკეთესო შედეგი!') : best !== undefined ? `შენი საუკეთესო: ${best}%` : ''}
+      </p>
+      {result.kind === 'ai' && result.text && <p className="text-[14px] leading-relaxed text-[#2a2017] text-left whitespace-pre-line">{result.text}</p>}
+      {result.kind === 'pct' && (
+        <p className="text-[12.5px] leading-snug text-[#8a7a6a]">
+          {pct >= 80 ? 'ძალიან კარგი! ხვალ კიდევ გაიმეორე, რომ მყარად დაგრჩეს.' : pct >= 50 ? 'კარგი დასაწყისია. ჯერ ჩვეულებრივად გაიარე და მერე ისევ შეფასებით.' : 'ჯერ შეფასების გარეშე, ნელა და ყურსასმენით ივარჯიშე — მერე ისევ სცადე.'}
+        </p>
+      )}
     </div>
   );
 };

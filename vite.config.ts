@@ -22,26 +22,28 @@ export default defineConfig(() => {
           globPatterns: ['**/*.{js,css,html,ico,png,jpg,jpeg,webp,svg,woff,woff2}'],
           globIgnores: [
             '**/node_modules/**/*',
-            'notes/**', 'hymn/**', 'lives/**', 'prayers/**', 'bible/**', 'mtkmeli/**', 'audio/**', 'offline/**',
+            'notes/**', 'hymn/**', 'lives/**', 'prayers/**', 'bible/**', 'mtkmeli/**', 'audio/**', 'offline/**', 'wignebi/**',
           ],
           // opens the prayer when a reminder notification is tapped
           importScripts: ['prayer-notify-sw.js'],
           // a shared notes link (/?c=…&v=…) opens the app even without internet
           navigateFallback: '/index.html',
-          navigateFallbackDenylist: [/^\/notes\//, /^\/hymn\//, /^\/audio\//, /^\/lives\//, /^\/mtkmeli\//, /^\/prayers\//, /^\/bible\//, /^\/offline\//, /^\/games\/print\//],
+          navigateFallbackDenylist: [/^\/notes\//, /^\/hymn\//, /^\/audio\//, /^\/lives\//, /^\/mtkmeli\//, /^\/prayers\//, /^\/bible\//, /^\/offline\//, /^\/wignebi\//, /^\/games\/print\//],
           runtimeCaching: [
             {
-              // notes, hymnography drawings, prayers, the New Testament, მთქმელი texts and the saints' lives.
+              // notes, hymnography drawings, prayers, the New Testament, მთქმელი texts, the saints' lives and the
+              // liturgical books of მედავითნეობა (public/wignebi).
               // A file from an offline pack (marked x-sg-pack) is answered from the device as it is — the app
               // refreshes the packs itself when a new version is published; the app's own pack downloads
               // (?sg=…) skip this route. Anything else is kept once opened (also by "ჩამოწერა",
               // src/utils/offlineNotes.ts) and refreshed in the background.
               urlPattern: ({ url }) => url.origin === self.location.origin && !url.searchParams.has('sg') &&
-                /^\/(notes|hymn|lives|prayers|bible|mtkmeli)\//.test(url.pathname),
+                /^\/(notes|hymn|lives|prayers|bible|mtkmeli|wignebi)\//.test(url.pathname),
               handler: async ({ request, url, event }) => {
                 const name = /^\/(notes|hymn)\//.test(url.pathname) ? 'sagandzuri-notes-v1'
                   : url.pathname.startsWith('/lives/') ? 'sagandzuri-lives-v1'
                   : url.pathname.startsWith('/mtkmeli/') ? 'sagandzuri-mtkmeli-v1'
+                  : url.pathname.startsWith('/wignebi/') ? 'sagandzuri-wignebi-v1'
                   : 'sagandzuri-prayers-v1';
                 const kept = await caches.match(request);
                 if (kept && kept.headers.has('x-sg-pack')) return kept;

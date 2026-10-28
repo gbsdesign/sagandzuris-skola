@@ -13,7 +13,8 @@ export interface ChantVariant {
   version?: string;    // book chants: version name (e.g. "ჴმაჲ ბ"; may be empty), listed instead of the school pair
   page?: number;       // book chants: page in the book
   bookNums?: number[]; // book chants: chant numbers in the book (sheet music + synthesizer)
-  source?: string;     // book chants: manuscript (Gelati: ხუნდაძე / კერესელიძე / ქორიძე), liturgy section (ქართლ-კახური: სადა / გამშვენებული)
+  numLabel?: string;   // book chants: the printed number when it is not bookNums (anthology "76a", file 761)
+  source?: string;    // book chants: manuscript (Gelati: ხუნდაძე / კერესელიძე / ქორიძე), liturgy section (ქართლ-კახური: სადა / გამშვენებული)
                        // or opening words (feasts, vol. II), kind of chant (Lent and Pascha, vol. IV)
   book?: string;       // book chants: sheet-music folder; unset = Gelati school book (vol. I), 'feast' = Gelati feasts (vol. II), 'kk' = Kartli-Kakheti (vol. III),
                        // 'triod' = Gelati Lent and Pascha (vol. IV), 'v5' = Gelati + Shemokmedi liturgy (vol. V),
@@ -22,20 +23,22 @@ export interface ChantVariant {
                        // 'v9' = Gelati liturgy in the authentic mode, plain chants for children, Sunday troparia (vol. IX),
                        // 'momix' = troparia on the Beatitudes, Hymnographical collection I (Kereselidze's manuscripts),
                        // 'v8' = vol. VIII, irmoi of the eight tones, katavasias and Resurrection kontakia,
-                       // 'dasd1' / 'dasd2' = stichera on "Lord, I have cried", Hymnographical collection II (tones I–II) / III (III–IV)
+                       // 'dasd1' / 'dasd2' = stichera on "Lord, I have cried", Hymnographical collection II (tones I–II) / III (III–IV),
+                       // 'a28', 'a29', … = „ქართული გალობის ანთოლოგია“ (galobani.ge), the volume's number
 }
 
 // Books whose chant numbers the app does not show (none printed, or not the ones our files use)
 export const UNNUMBERED_BOOKS = new Set(['momix', 'v8', 'dasd1', 'dasd2', 'song']);
 
 // Name of a book version everywhere in the app: book number + version, e.g. "145 ხუნდაძე"
-export const variantName = (v: Pick<ChantVariant, 'bookNums' | 'version' | 'book'>) =>
-  [!UNNUMBERED_BOOKS.has(v.book ?? '') && bookNumLabel(v.bookNums), v.version].filter(Boolean).join(' ');
+export const variantName = (v: Pick<ChantVariant, 'bookNums' | 'version' | 'book' | 'numLabel'>) =>
+  [!UNNUMBERED_BOOKS.has(v.book ?? '') && (v.numLabel ?? bookNumLabel(v.bookNums)), v.version].filter(Boolean).join(' ');
 
 // Short book names for the version labels (Patarava's book is named in the school row above them)
 const BOOK_SHORT: Record<string, string> = {
   book: 'I ტომი', feast: 'II ტომი', kk: 'III ტომი', triod: 'IV ტომი', v5: 'V ტომი', karb: 'VII ტომი', v8: 'VIII ტომი',
   v9: 'IX ტომი', momix: 'კრებული I', dasd1: 'კრებული II', dasd2: 'კრებული III',
+  a28: 'ანთ. XXVIII ტომი', a29: 'ანთ. XXIX ტომი',
 };
 
 // A feast, an occasion of მარხვანი / ზატიკი, a group of მომიხსენენი or დასადებლები, a tone of ძლისპირები or a canon of
@@ -57,7 +60,7 @@ export const variantLines = (chantId: string, chantTitle: string, v: ChantVarian
   const version = clean(v.version);
   const source = clean(v.source);
   const name = isChantGroup(chantId) ? version || title : title;
-  const num = !UNNUMBERED_BOOKS.has(v.book ?? '') && bookNumLabel(v.bookNums);
+  const num = !UNNUMBERED_BOOKS.has(v.book ?? '') && (v.numLabel ?? bookNumLabel(v.bookNums));
   const page = v.page && `გვ. ${v.page}`;
   const sub = [version !== name && version, source && source !== name && !version.includes(source) && source, num && `№${num}`]
     .filter(Boolean).join(' · ');
@@ -492,6 +495,37 @@ const v9Variants = (n: number, title: string) =>
     return v9Variant(`v-${n}-x${first}`, `გ.ს. IX №${first}`, title, label, n0);
   });
 
+// „ქართული გალობის ანთოლოგია“ (29 volumes, galobani.ge), by chantTitles number: only the versions the books above
+// lack — a version whose notes match one of theirs is left out (e.g. vol. XIX №8 = IX №8, vol. XXVIII №77b = I №158).
+// Notes in public/notes/a<vol>/, read from the PDF's music font; a number with a letter (76a) gets its own file
+// number (761). Added to the Gelati row after vol. IX; the school is a guess from the volume (Khundadze's manuscripts).
+interface AnthVersion { vol: number; num: string; file: number; page: number; source: string }
+const ANTH_ROMAN: Record<number, string> = { 28: 'XXVIII', 29: 'XXIX' };
+const TSIRVA_ANTH: Record<number, AnthVersion[]> = {
+  7: [
+    { vol: 28, num: '76a', file: 761, page: 152, source: 'ხუნდაძე' },
+    { vol: 28, num: '76b', file: 762, page: 155, source: 'ხუნდაძე' },
+    { vol: 28, num: '76c', file: 763, page: 158, source: 'ხუნდაძე' },
+    { vol: 28, num: '77a', file: 771, page: 161, source: 'ხუნდაძე' },
+    { vol: 29, num: '43', file: 43, page: 74, source: 'ხელნაწერი Q676' },
+  ],
+};
+
+const anthVariants = (n: number, title: string): ChantVariant[] =>
+  (TSIRVA_ANTH[n] || []).map(a => ({
+    id: `v-${n}-a${a.vol}-${a.num}`,
+    code: `გ.ს. ანთ. ${ANTH_ROMAN[a.vol]} №${a.num}`,
+    label: 'გელათის სკოლა',
+    chantName: title,
+    fullTitle: bookFullTitle(title, variantName({ numLabel: a.num, version: a.source }), a.page),
+    version: a.source,
+    page: a.page,
+    bookNums: [a.file],
+    numLabel: a.num,
+    source: a.source,
+    book: `a${a.vol}`,
+  }));
+
 // Chants printed only in vol. V (Gelati): own stable ids, inserted after the chant (chantTitles number) they follow
 const V5_ONLY: { after: number; num: number; title: string }[] = [
   { after: 2, num: 4, title: 'ულხინე' },
@@ -540,6 +574,7 @@ const liturgyChants: ChantItem[] = chantTitles.map((title, i) => ({
     ...gelatiVariants(i + 1, title),
     ...v5GelatiVariants(i + 1, title),
     ...v9Variants(i + 1, title),
+    ...anthVariants(i + 1, title),
     ...kkVariants(i + 1, title),
     ...v5ShemokmediVariants(i + 1, title),
     ...variantTemplates.slice(2).map((vt, k) => ({

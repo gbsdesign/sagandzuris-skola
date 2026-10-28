@@ -1,14 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, ChevronRight, ChevronLeft, Clock, BookOpen, TriangleAlert, ExternalLink, PartyPopper } from 'lucide-react';
-import { useNavigation } from '../context';
-import { Bar } from '../components/ui/kit';
+import { Check, ChevronRight, ChevronLeft, Clock, BookOpen, TriangleAlert, ExternalLink, PartyPopper, GraduationCap, Library } from 'lucide-react';
+import { useAuth, useNavigation } from '../context';
+import { Bar, Empty, Tabs } from '../components/ui/kit';
+import { WignebiView } from './medavitneoba/Wignebi';
 import { LESSONS, LESSON_SOURCES, lessonById, type Lesson } from '../data/medavitneLessons';
 import { useMedavitneProgress } from '../hooks/useMedavitneProgress';
 import { StepView } from './medavitneoba/parts';
 import { triggerHaptic } from '../utils/haptics';
+import { lessonTakeId } from '../utils/dayReadings';
+import { DayCard } from './medavitneoba/DayCard';
 
 // „მედავითნეობა“: a step-by-step course for the church reader (lessons in data/medavitneLessons.ts).
 // The open lesson is `mapItem` (its id), so the top bar's „←“ and the phone's back first return to the list.
+// Two tabs on top: „გაკვეთილები“ (the course) and „წიგნები“ (the liturgical books, `mapItem` „w…“ — see
+// medavitneoba/Wignebi.tsx). The books show only to admins until the monastery's permission is in hand.
 
 const CARD = 'rounded-3xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)]';
 
@@ -55,6 +60,8 @@ const Overview: React.FC<{ done: string[]; open: (id: string) => void; onAccount
           ტაძრებში წესი ცოტათი განსხვავდება. რასაც აქ ისწავლი, გადაამოწმე შენს მოძღვართან ან რეგენტთან.
         </p>
       </div>
+
+      <DayCard />
 
       {/* the lessons as a path: number, title, time; the done ones ticked, the next one marked */}
       <ol className="relative">
@@ -160,7 +167,7 @@ const LessonView: React.FC<{ lesson: Lesson; learned: boolean; setLearned: (on: 
             </button>
           </div>
         ) : (
-          <StepView key={`${lesson.id}-${at}`} step={lesson.steps[at]} onPsalter={() => navigateTo('psalter')} />
+          <StepView key={`${lesson.id}-${at}`} step={lesson.steps[at]} onPsalter={() => navigateTo('psalter')} sendId={lessonTakeId(lesson.id, at)} />
         )}
       </section>
 
@@ -186,12 +193,52 @@ const LessonView: React.FC<{ lesson: Lesson; learned: boolean; setLearned: (on: 
   );
 };
 
+type Tab = 'lessons' | 'books';
+const TABS: { id: Tab; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
+  { id: 'lessons', label: 'გაკვეთილები', Icon: GraduationCap },
+  { id: 'books', label: 'წიგნები', Icon: Library },
+];
+
+const TopTabs: React.FC<{ value: Tab }> = ({ value }) => {
+  const { openMapItem } = useNavigation();
+  // switching tabs replaces the place, so the phone's back leaves the page from either tab
+  return (
+    <div className="w-full max-w-2xl mx-auto mb-5 px-1">
+      <Tabs cols={2} items={TABS} value={value} onChange={id => id !== value && openMapItem(id === 'books' ? 'w' : '', true)} />
+    </div>
+  );
+};
+
 export const MedavitneobaPage: React.FC = () => {
   const { mapItem, openMapItem, handleGoBack } = useNavigation();
+  const { isAdmin } = useAuth();
   const { done, setLearned, onAccount } = useMedavitneProgress();
-  const lesson = mapItem ? lessonById(mapItem) : undefined;
 
-  if (!lesson) return <Overview done={done} open={id => openMapItem(id)} onAccount={onAccount} />;
+  // the books: the shelves carry the tabs, a book's inside doesn't
+  if (mapItem === 'w' || mapItem?.startsWith('w:')) {
+    if (!isAdmin) return (
+      <>
+        <TopTabs value="books" />
+        <div className="w-full max-w-2xl mx-auto mb-6 px-1">
+          <Empty icon={<Library />} title="წიგნები მალე დაემატება" text="ბიბლია, ჟამნი, პარაკლიტონი, დავითნი და სხვა საღვთისმსახურო წიგნები აქ იქნება." />
+        </div>
+      </>
+    );
+    return (
+      <>
+        {mapItem === 'w' && <TopTabs value="books" />}
+        <WignebiView item={mapItem} />
+      </>
+    );
+  }
+
+  const lesson = mapItem ? lessonById(mapItem) : undefined;
+  if (!lesson) return (
+    <>
+      <TopTabs value="lessons" />
+      <Overview done={done} open={id => openMapItem(id)} onAccount={onAccount} />
+    </>
+  );
   const i = LESSONS.indexOf(lesson);
   const next = LESSONS[i + 1];
   return (
