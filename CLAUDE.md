@@ -19,6 +19,9 @@
 - **Roomy UI**: comfortable controls (play ~44–48px, icon buttons 36px); fit phones by wrapping, never by shrinking.
 - **Never auto-scroll** a player to the playing line. No octave-leap checks in note audits.
 - Never put the user's email in request headers/URLs (e.g. API User-Agent).
+- **Only the steps the task needs.** Don't hand the user optional extra steps — „to be safe“ detours such as re-making a key
+  they showed in a screenshot, extra settings, hardening. Only when something is actually broken or they ask.
+  (The user's rule, 2026-10-28: „ეგეთ რამეებს ნუ მტენი“.)
 - **Ready → merge it yourself, then say it in red.** When a chat's work is finished and its PR is ready (local checks
   pass, GitHub checks green, no conflict), merge it right away — PRs that change `firestore.rules` too — and end the reply
   with „🔴 **შეერთდა** — PR #N“ (Markdown has no red text, so the red circle + bold). Never write „შესაერთებელია“ and wait;
