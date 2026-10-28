@@ -242,6 +242,16 @@
   after a random 5–45 s, the bell rings, a task card comes up, „შეასრულა/ვერ“ tallied; source „ჩემი ხმით“ = the teacher sings
   and the phone only times — the mode guests get). Shared: `utils/gameSounds.ts` (openAudio in the tap, bell, tick),
   `components/games/Chip.tsx`. Nothing saved but settings; no rules change.
+- **Printable board games (2026-10-28, fourth PR)**: the „უტელეფონო“ variant of the six board games (plan doc tab „6 სამაგიდო
+  თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
+  Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
+  `scripts/print-games/lib.mjs` (Noto Georgian fonts fetched into a gitignored folder, 3×3 sheets of 63×88 mm cards with crop marks,
+  backs mirrored for long-edge duplex, ⌀25 mm token sheets, series stripe „საგანძურის თამაშები №N“, lucide icons as SVG), one module per
+  game in `scripts/print-games/games/`. Every file prints „ყველაფერი ორმხრივად“: a module lists its physical sheets
+  (`{ key, front, back? }`), `duplex()` makes each sheet two pages (a missing back = a labelled blank page) and the cover names
+  sheets by number (`sheetNo`). Portraits are ornament placeholders until the user approves Gemini pictures. Built so far:
+  „მეფის კარი“ (№6) and „სამშვილდის ღამე“ (№2). A game with sheets gets `print: { href, sheets }` in `data/games.ts`; its hub card
+  shows a wine „დასაბეჭდი ფურცლები“ strip („PDF · N ფურცელი“) and its „უტელეფონო“ chip turns wine.
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 

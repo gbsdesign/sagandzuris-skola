@@ -28,7 +28,7 @@ export default defineConfig(() => {
           importScripts: ['prayer-notify-sw.js'],
           // a shared notes link (/?c=…&v=…) opens the app even without internet
           navigateFallback: '/index.html',
-          navigateFallbackDenylist: [/^\/notes\//, /^\/hymn\//, /^\/audio\//, /^\/lives\//, /^\/mtkmeli\//, /^\/prayers\//, /^\/bible\//, /^\/offline\//, /^\/wignebi\//],
+          navigateFallbackDenylist: [/^\/notes\//, /^\/hymn\//, /^\/audio\//, /^\/lives\//, /^\/mtkmeli\//, /^\/prayers\//, /^\/bible\//, /^\/offline\//, /^\/wignebi\//, /^\/games\/print\//],
           runtimeCaching: [
             {
               // notes, hymnography drawings, prayers, the New Testament, მთქმელი texts, the saints' lives and the

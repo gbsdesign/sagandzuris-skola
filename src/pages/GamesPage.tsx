@@ -57,31 +57,60 @@ const rememberedCat = (): GameCategory => {
 
 const GameRow: React.FC<{ g: GameDef; state: Access; meta?: string; onOpen: () => void }> = ({ g, state, meta, onOpen }) => {
   const ready = state === 'open' || state === 'locked';
+  const body = (
+    <>
+      <span className={`w-11 h-11 shrink-0 rounded-2xl flex items-center justify-center [&>svg]:w-5 [&>svg]:h-5 ${ready ? 'bg-[#7a2028]/[0.08] text-[#7a2028]' : 'bg-[#f1e8d9] text-[#9a8b7b]'}`}>
+        {ICON[g.id] ?? <Gamepad2 />}
+      </span>
+      <span className="min-w-0 flex-1">
+        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
+          <span className={`font-serif-ge text-[15px] font-bold leading-snug ${ready ? 'text-[#4a3426]' : 'text-[#6b5b4b]'}`}>{g.title}</span>
+          {g.original && <span className="text-[12px] text-[#9a8b7b]">{g.original}</span>}
+          {!ready && <Pill tone="amber" className="!h-6">მალე</Pill>}
+        </span>
+        <span className="block mt-0.5 text-[12.5px] leading-snug text-[#75685a]">{g.text}</span>
+        <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
+          {g.modes.map(m => <Pill key={m} tone={ready || (m === 'noPhone' && g.print) ? 'wine' : 'muted'} className="!h-6">{MODE_LABEL[m]}</Pill>)}
+          {meta && <span className="text-[12px] font-bold tabular-nums text-[#7a2028]">{meta}</span>}
+        </span>
+      </span>
+      {ready && <ChevronRight className="w-5 h-5 shrink-0 text-[#b3a593]" />}
+    </>
+  );
+  const look = ready ? 'bg-white/85 ring-[#e8dcc8] shadow-[0_1px_2px_rgba(74,52,38,0.05)]' : 'bg-white/50 ring-[#ece2d2]';
+
+  // a board game already made on paper: the card gets a strip under it that opens its printable sheets
+  if (g.print) {
+    return (
+      <li className={`rounded-2xl ring-1 overflow-hidden ${look}`}>
+        <button
+          type="button"
+          onClick={onOpen}
+          className="w-full flex items-center gap-3 px-3 pt-3 pb-2.5 text-left cursor-pointer transition-colors hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#7a2028]/40"
+        >
+          {body}
+        </button>
+        <a
+          href={g.print.href}
+          target="_blank"
+          rel="noopener"
+          className="mx-3 mb-3 flex items-center gap-2.5 h-11 px-3.5 rounded-xl bg-[#7a2028] text-[#fbf6ec] shadow-[0_1px_2px_rgba(74,52,38,0.15)] transition-[background-color,transform] hover:bg-[#6a1b22] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#7a2028]/50"
+        >
+          <Printer className="w-[18px] h-[18px] shrink-0" />
+          <span className="text-[14px] font-bold leading-none">დასაბეჭდი ფურცლები</span>
+          <span className="ml-auto text-[12px] tabular-nums leading-none text-[#fbf6ec]/80">PDF · {g.print.sheets} ფურცელი</span>
+        </a>
+      </li>
+    );
+  }
   return (
     <li>
       <button
         type="button"
         onClick={onOpen}
-        className={`w-full flex items-center gap-3 px-3 py-3 min-h-16 rounded-2xl text-left ring-1 cursor-pointer transition-[background-color,transform] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a2028]/40 ${
-          ready ? 'bg-white/85 ring-[#e8dcc8] shadow-[0_1px_2px_rgba(74,52,38,0.05)] hover:bg-white' : 'bg-white/50 ring-[#ece2d2] hover:bg-white/70'
-        }`}
+        className={`w-full flex items-center gap-3 px-3 py-3 min-h-16 rounded-2xl text-left ring-1 cursor-pointer transition-[background-color,transform] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a2028]/40 ${look} ${ready ? 'hover:bg-white' : 'hover:bg-white/70'}`}
       >
-        <span className={`w-11 h-11 shrink-0 rounded-2xl flex items-center justify-center [&>svg]:w-5 [&>svg]:h-5 ${ready ? 'bg-[#7a2028]/[0.08] text-[#7a2028]' : 'bg-[#f1e8d9] text-[#9a8b7b]'}`}>
-          {ICON[g.id] ?? <Gamepad2 />}
-        </span>
-        <span className="min-w-0 flex-1">
-          <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className={`font-serif-ge text-[15px] font-bold leading-snug ${ready ? 'text-[#4a3426]' : 'text-[#6b5b4b]'}`}>{g.title}</span>
-            {g.original && <span className="text-[12px] text-[#9a8b7b]">{g.original}</span>}
-            {!ready && <Pill tone="amber" className="!h-6">მალე</Pill>}
-          </span>
-          <span className="block mt-0.5 text-[12.5px] leading-snug text-[#75685a]">{g.text}</span>
-          <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
-            {g.modes.map(m => <Pill key={m} tone={ready ? 'wine' : 'muted'} className="!h-6">{MODE_LABEL[m]}</Pill>)}
-            {meta && <span className="text-[12px] font-bold tabular-nums text-[#7a2028]">{meta}</span>}
-          </span>
-        </span>
-        {ready && <ChevronRight className="w-5 h-5 shrink-0 text-[#b3a593]" />}
+        {body}
       </button>
     </li>
   );
@@ -129,7 +158,7 @@ export const GamesPage: React.FC = () => {
     if (state === 'locked') { askSignIn(g.title); return; }
     if (state === 'open' && g.item) { openMapItem(g.item); return; }
     if (state === 'open' && g.page) { if (g.panel) openPathPanel(g.panel); navigateTo(g.page); return; }
-    setSoon(`„${g.title}“ ჯერ მზადდება — მალე დაემატება`);
+    setSoon(g.print ? `„${g.title}“: დასაბეჭდი ფურცლები მზადაა (ქვემოთ); აპის ვერსია მზადდება` : `„${g.title}“ ჯერ მზადდება — მალე დაემატება`);
   };
 
   const category = GAME_CATEGORIES.find(c => c.id === cat);
@@ -162,7 +191,7 @@ export const GamesPage: React.FC = () => {
             <Printer className="w-4 h-4 shrink-0 text-[#7a2028]" />
             <h2 className="font-serif-ge text-[15px] font-bold text-[#4a3426]">სამაგიდო თამაშები ქართულად</h2>
           </div>
-          <p className="px-1 mb-2.5 text-[12.5px] leading-snug text-[#8a7a6a]">ექვსი ცნობილი თამაში ქართულ თემაზე — სკოლა თვითონ დაბეჭდავს და ააწყობს; მერე ჰიბრიდული და ონლაინ ვარიანტებიც.</p>
+          <p className="px-1 mb-2.5 text-[12.5px] leading-snug text-[#8a7a6a]">ექვსი ცნობილი თამაში ქართულ თემაზე — სკოლა თვითონ დაბეჭდავს და ააწყობს. „დასაბეჭდი ფურცლები“ — ბარათები, წესები და ყველაფერი ჭრის ნიშნებით; მერე ჰიბრიდული და ონლაინ ვარიანტებიც.</p>
           <ul className="space-y-2.5">
             {BOARD_GAMES.map(g => <GameRow key={g.id} g={g} state="soon" onOpen={() => open(g, 'soon')} />)}
           </ul>
