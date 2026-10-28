@@ -1,17 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import {
-  CalendarClock,
   CalendarPlus,
   ChevronLeft,
   ChevronRight,
-  Check
+  Check,
+  Pencil
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
 import { auth, db, handleFirestoreError, OperationType } from '../../firebase';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { useNavigation, useModal } from '../../context';
+import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { triggerHaptic } from '../../utils/haptics';
 import { MONTHS_GE, WEEKDAYS_GE } from '../../utils/dateNames';
+import { Btn, IconBtn } from '../ui/kit';
+import { WorkSchedule, WorkScheduleEditor } from './WorkScheduleEditor';
 
 export const triggerFireworks = () => {
   try {
@@ -104,11 +105,10 @@ interface StudentBookmarkViewProps {
 
 // "დამოუკიდებელი სამუშაო" COMPONENT ONLY
 export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack, onGoToGaloba }) => {
-  const { closeModal } = useModal();
-  const { navigateTo } = useNavigation();
   const [profile, setProfile] = useState<StudentProfile>({ firstName: '', lastName: '' });
   const [completedSessions, setCompletedSessions] = useState<{ [key: string]: boolean }>({});
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
+  const [editingSchedule, setEditingSchedule] = useState(false);
 
   const today = new Date();
   const [currentYear, setCurrentYear] = useState<number>(today.getFullYear());
@@ -158,6 +158,17 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
 
     return () => unsubscribe();
   }, []);
+
+  // the whole map is replaced, so a day whose hours were all taken off is gone from the saved timetable too
+  const saveSchedule = (ws: WorkSchedule) => {
+    setProfile(prev => ({ ...prev, workSchedule: ws }));
+    const user = auth.currentUser;
+    if (!user) return;
+    const ref = doc(db, 'students', user.uid);
+    updateDoc(ref, { 'profile.workSchedule': ws, updatedAt: new Date().toISOString() })
+      .catch(() => setDoc(ref, { profile: { workSchedule: ws } }, { merge: true }))
+      .catch(err => console.warn('Note saving the work timetable (offline):', err));
+  };
 
   const getSelectedHoursForDay = (dayId: string): string[] => {
     const raw = profile.workSchedule?.[dayId];
@@ -306,24 +317,21 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
 
   return (
     <div className="w-full space-y-4 animate-in fade-in duration-200">
-      {isLoaded && !hasAnySchedule ? (
-        <div className="flex flex-col items-center text-center gap-2.5 py-4">
-          <span className="w-12 h-12 rounded-2xl bg-[#7a2028]/[0.07] text-[#7a2028] flex items-center justify-center">
-            <CalendarClock className="w-6 h-6" />
-          </span>
-          <p className="font-serif-ge text-[15px] font-bold text-[#2a2017]">ჯერ არ გაქვს არჩეული მეცადინეობის საათები</p>
-          <p className="text-[13px] text-[#8a7a6a] max-w-xs leading-relaxed">
-            პროფილში მონიშნე, კვირის რომელ დღეებსა და საათებში იმეცადინებ — აქ კალენდარი გამოჩნდება.
-          </p>
-          <button
-            type="button"
-            onClick={() => { closeModal(); navigateTo('profile'); }}
-            className="mt-1 inline-flex items-center gap-2 h-10 px-5 rounded-full bg-[#7a2028] hover:bg-[#5e1820] text-[#fbf6ec] font-bold text-sm transition-colors cursor-pointer active:scale-95"
-          >
-            <CalendarPlus className="w-4 h-4" />
-            განრიგის დაყენება
-          </button>
+      {/* the timetable is set here in place (the same tiles as in the profile), and saved at once */}
+      {editingSchedule && (
+        <div className="space-y-3 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] p-3 sm:p-4 sg-in">
+          <WorkScheduleEditor schedule={profile.workSchedule} onChange={saveSchedule} />
+          <div className="flex justify-end">
+            <Btn size="sm" icon={<Check />} onClick={() => setEditingSchedule(false)}>მზადაა</Btn>
+          </div>
         </div>
+      )}
+      {isLoaded && !hasAnySchedule ? (
+        !editingSchedule && (
+          <div className="flex justify-center py-3">
+            <Btn icon={<CalendarPlus />} onClick={() => setEditingSchedule(true)}>განრიგის დაყენება</Btn>
+          </div>
+        )
       ) : (
         <>
           {/* the viewed month in one line: a slim bar (done, missed) and its hours */}
@@ -344,6 +352,9 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
                 <h3 className="flex-1 text-[15px] font-black text-[#2a2017]">
                   {MONTHS_GE[currentMonth]} <span className="font-semibold text-[#a4927c]">{currentYear}</span>
                 </h3>
+                {!editingSchedule && (
+                  <IconBtn label="განრიგის შეცვლა" onClick={() => { triggerHaptic(8); setEditingSchedule(true); }}><Pencil /></IconBtn>
+                )}
                 {!isViewingCurrentMonth && (
                   <button
                     type="button"

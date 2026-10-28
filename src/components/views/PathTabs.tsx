@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { ArrowUpDown, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
+import React, { useRef, useState } from 'react';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp } from 'lucide-react';
 import { useAuth } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 import { moveItem, ordered, usePathOrder } from '../../utils/pathOrder';
@@ -12,7 +12,8 @@ const stepBtn = 'w-9 h-9 shrink-0 rounded-full flex items-center justify-center 
 // "საგანძურის გზა": `orbs` (the round buttons, PathOrbs) at the top, drawn in the member's order, and the page's
 // cards under them. Until 2026-10-19 the cards were in two tabs, „სწავლა“ and „ჩვევები“; now study lives in the round
 // buttons (the teacher's assignments in "ნასწავლი") and the page keeps one card, "ჩვევები".
-// The member may reorder the round buttons and the cards ("რიგი"); the order follows their account.
+// The member may reorder the round buttons (a long press on them, or a right click) and, once there are several, the
+// cards; the order follows their account. No „რიგი“ button hangs between them any more (2026-10-28).
 export const PathTabs: React.FC<{
   cards: PathCard[];
   orbs?: { labels: { id: string; label: string }[]; render: (order: string[]) => React.ReactNode };
@@ -28,28 +29,40 @@ export const PathTabs: React.FC<{
   const moveOrb = (id: string, dir: -1 | 1) => { triggerHaptic(8); save('orbs', moveItem(orbOrder, id, dir)); };
   const moveCard = (id: string, dir: -1 | 1) => { triggerHaptic(8); save('cards', moveItem(cardIds, id, dir)); };
 
+  // a long press on the round buttons opens their order; the click that ends it does not open a button
+  const press = useRef<number | null>(null);
+  const swallow = useRef(false);
+  const cancel = () => { if (press.current) window.clearTimeout(press.current); press.current = null; };
+  const openOrder = () => { triggerHaptic(20); swallow.current = true; setEditing(true); };
+
   return (
     <div className="space-y-5">
-      {orbs?.render(orbOrder)}
-      <div className="flex justify-end">
-        <button
-          type="button"
-          onClick={() => { triggerHaptic(8); setEditing(v => !v); }}
-          aria-pressed={editing}
-          className={`h-9 px-3.5 rounded-full flex items-center gap-1.5 text-[13px] font-bold ring-1 transition-colors cursor-pointer active:scale-95 ${
-            editing ? 'bg-[#7a2028] text-[#fbf6ec] ring-[#7a2028]' : 'bg-white/85 text-[#75685a] ring-[#e8dcc8] hover:text-[#7a2028]'
-          }`}
-        >
-          {editing ? <Check className="w-4 h-4" /> : <ArrowUpDown className="w-4 h-4" />}
-          {editing ? 'მზადაა' : 'რიგი'}
-        </button>
+      <div
+        onPointerDown={() => { cancel(); press.current = window.setTimeout(openOrder, 600); }}
+        onPointerUp={cancel}
+        onPointerLeave={cancel}
+        onPointerCancel={cancel}
+        onContextMenu={e => { e.preventDefault(); cancel(); openOrder(); }}
+        onClickCapture={e => { if (swallow.current) { swallow.current = false; e.stopPropagation(); e.preventDefault(); } }}
+        className="[-webkit-touch-callout:none]"
+      >
+        {orbs?.render(orbOrder)}
       </div>
 
       {editing && (
         <section aria-label="რიგის შეცვლა" className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] px-3 py-3 sm:px-4 space-y-3 animate-in fade-in duration-200">
+          <div className="flex items-center gap-2">
+            <p className="flex-1 font-serif-ge text-[16px] font-bold text-[#4a3426]">რიგის შეცვლა</p>
+            <button
+              type="button"
+              onClick={() => { triggerHaptic(8); setEditing(false); }}
+              className="h-9 px-3.5 rounded-full flex items-center gap-1.5 text-[13px] font-bold bg-[#7a2028] text-[#fbf6ec] cursor-pointer active:scale-95 transition"
+            >
+              <Check className="w-4 h-4" /> მზადაა
+            </button>
+          </div>
           {orbs && (
             <div className={`space-y-2 ${cards.length > 1 ? 'pb-3 border-b border-[#e8dcc8]' : ''}`}>
-              <p className="text-sm font-bold text-[#2a2017]">ზედა ღილაკები</p>
               <ol className="space-y-2">
                 {orbOrder.map((id, i) => {
                   const label = orbs.labels.find(o => o.id === id)?.label || id;

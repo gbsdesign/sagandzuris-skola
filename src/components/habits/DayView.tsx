@@ -1,19 +1,18 @@
 import React, { useMemo, useState } from 'react';
-import { ArrowUpDown, BellRing, Check, Clock, ChevronDown, ChevronRight, Flame, Info, Pencil, Plus } from 'lucide-react';
+import { ArrowUpDown, Check, ChevronDown, ChevronRight, Flame, Info, Pencil, Plus } from 'lucide-react';
 import { COUNTED_BY_READING, COUNTER_TAP_STEP, HabitCounter } from '../../data/habitLooks';
 import { HabitGroupType } from '../../data/habitsAndManera';
-import { HabitLink, HabitSchedule, MyHabit, MyHabitGroup } from '../../utils/myHabits';
-import { isDue, planRun, planShare } from '../../utils/habitSchedule';
+import { HabitLink, MyHabit, MyHabitGroup } from '../../utils/myHabits';
+import { isDue, planRun } from '../../utils/habitSchedule';
 import { MONTHS_GE, WEEKDAYS_GE, WEEKDAYS_SHORT_GE } from '../../utils/dateNames';
 import { TICK_DAYS, dayKey, dayNeeds, keptStreak, lastDays, periodStart } from '../../utils/habitsWeek';
-import { currentRun, dayState, goalShare, ticksOf, timesIn } from '../../utils/habitStats';
+import { currentRun, dayState, ticksOf, timesIn } from '../../utils/habitStats';
 import { triggerHaptic } from '../../utils/haptics';
 import { HabitPrayerMenu, singlePrayerOf } from '../views/HabitPrayerMenu';
 import { HabitLinkChip } from '../views/HabitLinks';
 import { RICH_TEXT } from '../views/RichNoteEditor';
 import { safeNoteHtml } from '../../utils/richNote';
 import { HabitIcon, colorOf, tint } from './HabitIcon';
-import { FROM_WORD } from './HabitPage';
 import { HabitsModel } from './useHabits';
 import { DayDot, Ring, ViewHeading, dotState } from './parts';
 
@@ -152,32 +151,11 @@ const CountBar: React.FC<{ count: number; counter: HabitCounter; color: string; 
   );
 };
 
-// A card shows its own numbers: today's count as a ring round the round button, the share and the days under the name,
-// the last ten days as dots beside it, ✏️ unfolding its settings (2026-10-23, every habit).
+// A card shows its own numbers: today's count as a ring round the round button, the last ten days as dots beside the name,
+// ✏️ unfolding its settings (2026-10-23, every habit); the share and the days ticked are on the habit's own page.
 const RING = 2 * Math.PI * 18.5;
 // how many days the dots beside a card's name show
 const DOTS = 10;
-
-/** Beside today's count under the name: how often the goal was met and the days ticked in all. */
-const CardStats: React.FC<{ ticks: Set<string>; goal: HabitGroupType['goal']; first: string | null; schedule?: HabitSchedule }> = ({
-  ticks,
-  goal,
-  first,
-  schedule,
-}) => {
-  // a habit with its own days: the share of those days
-  const share = schedule ? planShare(schedule, ticks, first) : goalShare(ticks, goal, first);
-  // „— · 0 დღე“ on every untouched habit only crowds the list
-  if (!ticks.size) return null;
-  return (
-    <>
-      <span title={share.of ? `შესრულება ${share.percent}% — ${share.of} ${schedule ? 'დღიდან' : FROM_WORD[goal.per]}` : 'შესრულება — ჯერ არც ერთი დღე არ დასრულებულა'}>
-        {share.of ? `${share.percent}%` : '—'}
-      </span>
-      <span title="სულ მოინიშნა">{ticks.size} დღე</span>
-    </>
-  );
-};
 
 /** „🔥 6“: periods (days, for a daily habit) in a row that met the goal. */
 const Run: React.FC<{ run: number; className?: string }> = ({ run, className = '' }) => (
@@ -206,8 +184,8 @@ const WeekDots: React.FC<{ ticks: Set<string>; color: string; className: string 
 
 // One habit: the round button ticks the chosen day (the habit's icon until it is done; a counted habit's count runs
 // round it as a ring); a tap on the name unfolds the habit's prayers and its own buttons, or opens its one prayer (one
-// without either is ticked by its name too). Under the name one line of numbers: today's count, the share, the days, the
-// time, the run; a weekly or monthly habit has its period („ამ კვირას 1 / 2“) there instead of the dots. A counted habit
+// without either is ticked by its name too). One line: at the name's right the run and the last ten days; a weekly or
+// monthly habit has its period („ამ კვირას 1 / 2“) there instead, a counted one its number. A counted habit
 // has „+“ (not the Gospel and the Apostle: their chapters count by „წავიკითხე“); ✏️ unfolds its settings under it (without
 // them — a guest — „›“ opens the habit's page); ⓘ unfolds the member's note.
 const HabitRow: React.FC<{
@@ -251,7 +229,7 @@ const HabitRow: React.FC<{
       className="block w-full py-0.5 text-left cursor-pointer select-none"
     >
       <span className="flex items-center gap-1 text-[15px] font-medium leading-snug text-[#2a2017]">
-        {habit.label}
+        <span className="truncate">{habit.label}</span>
         {folds && <ChevronDown className={`w-4 h-4 shrink-0 text-[#b8a68e] transition-transform ${menuOpen ? 'rotate-180' : ''}`} />}
       </span>
     </button>
@@ -299,31 +277,20 @@ const HabitRow: React.FC<{
             {on ? <Check className="w-[18px] h-[18px] stroke-[3] animate-in zoom-in-50 duration-200" /> : <HabitIcon icon={look?.icon ?? 'sparkle'} className="w-4 h-4" />}
           </span>
         </button>
-        {/* the ten days at the right of the name's line; a long name sends them to the line below */}
-        <div className="flex-1 min-w-0 py-1.5 pr-1">
-          <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5">
-            <div className="min-w-0 max-w-full">{name}</div>
-            {/* the run, then (a daily habit) the ten days, at the right of the name */}
-            <span className="ml-auto flex items-center gap-3">
-              {run > 1 && <Run run={run} />}
-              {!rare && ticks.size > 0 && <WeekDots ticks={ticks} color={c} className="flex" />}
-            </span>
-          </div>
-          {/* one line of figures, a „·“ after each; none while a daily habit was never ticked and has nothing to count */}
-          {(rare || counter || ticks.size > 0 || habit.time) && (
-            <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[12.5px] font-semibold tabular-nums text-[#8a7a6a] [&>*:not(:last-child)]:after:content-['·'] [&>*:not(:last-child)]:after:ml-1.5 [&>*:not(:last-child)]:after:text-[#c4b49c]">
-              {rare && <PeriodNote count={timesIn(ticks, periodStart(group.goal.per, date), group.goal.per)} goal={group.goal} current={periodNow} />}
-              {counter && <CountBar bare count={count} counter={counter} color={c} label={habit.label} onSet={n => model.setCount(habit.id, n, date)} />}
-              <CardStats ticks={ticks} goal={group.goal} first={model.first} schedule={habit.schedule} />
-              {habit.time && (
-                <span title={habit.alerts?.length ? 'დრო · შეხსენება ჩართულია' : 'დრო'} className="inline-flex items-center gap-1">
-                  {habit.alerts?.length ? <BellRing className="w-3.5 h-3.5 shrink-0" /> : <Clock className="w-3.5 h-3.5 shrink-0" />}
-                  {habit.time.from}
-                  {habit.time.to ? `–${habit.time.to}` : ''}
-                </span>
-              )}
-            </div>
-          )}
+        {/* one line: the name (cut short when long), then at its right the run and the ten days — or a weekly/monthly
+            habit's period, or a counted habit's number; the share and the days ticked live on the habit's own page */}
+        <div className="flex-1 min-w-0 py-1.5 pr-1 flex items-center gap-x-2.5">
+          <div className="min-w-0 flex-1">{name}</div>
+          <span className="shrink-0 flex items-center gap-2.5">
+            {run > 1 && <Run run={run} />}
+            {rare ? (
+              <PeriodNote count={timesIn(ticks, periodStart(group.goal.per, date), group.goal.per)} goal={group.goal} current={periodNow} />
+            ) : counter ? (
+              <CountBar bare count={count} counter={counter} color={c} label={habit.label} onSet={n => model.setCount(habit.id, n, date)} />
+            ) : (
+              ticks.size > 0 && <WeekDots ticks={ticks} color={c} className="hidden min-[360px]:flex" />
+            )}
+          </span>
         </div>
         {counter && !COUNTED_BY_READING.includes(habit.id) && (
           <button

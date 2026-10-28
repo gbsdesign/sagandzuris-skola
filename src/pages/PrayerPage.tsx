@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Bell, BellOff, Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
-import { KATHISMAS, PRAYER_HOURS, PrayerHour, bibleChapterId, hourClock, parseBibleId, todaysWeekPrayerId } from '../data/prayers';
+import { KATHISMAS, PRAYER_HOURS, PrayerHour, bibleChapterId, hourClock, parseBibleId, prayerTitle, todaysWeekPrayerId } from '../data/prayers';
 import { HABIT_ITEMS } from '../data/habitsAndManera';
 import { COUNTED_BY_READING } from '../data/habitLooks';
 import { FoldedPrayer, PROSE, PrayerText } from '../components/views/PrayerText';
@@ -51,6 +51,16 @@ const neighbours = (id: string): { prev?: { id: string; label: string }; next?: 
 };
 
 // One prayer from the ლოცვანი (or a chapter of the Gospel / Apostle), read in full.
+// The text's own first heading goes when the page's bar already says it („დილის ლოცვები“ twice; a kathisma's
+// „კანონი პირველი“ under „ფსალმუნნი — კანონი 1“); a fuller one (an akathist's whole name) stays.
+const flat = (t: string) => t.replace(/<[^>]+>/g, ' ').replace(/[^\p{L}\p{N}]+/gu, ' ').trim().toLowerCase();
+const withoutBarTitle = (html: string, id: string): string => {
+  const head = html.match(/^\s*<h2[^>]*>([\s\S]*?)<\/h2>/);
+  if (!head) return html;
+  const same = flat(head[1]) === flat(prayerTitle(id)) || KATHISMAS.some(k => k.id === id);
+  return same ? html.slice(head[0].length) : html;
+};
+
 export const PrayerPage: React.FC = () => {
   const { selectedPrayerId, openPrayer } = useNavigation();
   const [html, setHtml] = useState<string | null>(null);
@@ -69,7 +79,7 @@ export const PrayerPage: React.FC = () => {
     setHtml(null);
     setFailed(false);
     loadText(selectedPrayerId)
-      .then(text => alive && setHtml(text))
+      .then(text => alive && setHtml(withoutBarTitle(text, selectedPrayerId)))
       .catch(() => alive && setFailed(true));
     return () => {
       alive = false;
@@ -192,42 +202,21 @@ const ReadMark: React.FC<{ prayerId: string }> = ({ prayerId }) => {
     model.setCount(habit.id, count - 1, today);
   };
 
+  // one button, no card: „წავიკითხე“, then a soft „წაკითხულია“ (a chapter: „2 / 5 თავი“, a second press takes it back)
+  const of = counter ? ` · ${count} / ${counter.goal} ${counter.unit}` : '';
   return (
-    <section className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] p-4 space-y-2.5">
-      <p className="text-[12px] font-bold text-[#8a7a6a]">ჩვევა · {habit.label}</p>
+    <div className="space-y-2.5">
       {pressed ? (
-        <div className="flex items-center gap-3">
-          <span className="w-10 h-10 rounded-full bg-emerald-700 text-white flex items-center justify-center shrink-0">
-            <Check className="w-5 h-5 stroke-[3]" />
-          </span>
-          <span className="flex-1 min-w-0 text-sm font-semibold text-[#2a2017]">
-            {counter
-              ? `+1 ${counter.unit} — დღეს ${count} / ${counter.goal}.${count >= counter.goal ? ' ჩვევა შესრულდა, ღმერთმა შეგეწიოს!' : ''}`
-              : 'წაკითხულია — ჩვევა დღეს მონიშნულია. ღმერთმა შეგეწიოს!'}
-          </span>
-          {counter && (
-            <Btn size="sm" kind="ghost" onClick={undo}>
-              გაუქმება
-            </Btn>
-          )}
-        </div>
+        <Btn full size="lg" kind="soft" icon={<Check />} onClick={counter ? undo : undefined} aria-pressed title={counter ? 'გაუქმება' : undefined}>
+          წაკითხულია{of}
+        </Btn>
       ) : (
-        <>
-          <Btn full size="lg" kind={ticked ? 'soft' : 'primary'} icon={<Check />} onClick={press}>
-            წავიკითხე
-          </Btn>
-          {counter
-            ? count > 0 && (
-                <p className="text-center text-[12.5px] tabular-nums text-[#8a7a6a]">
-                  დღეს {count} / {counter.goal} {counter.unit}
-                  {ticked ? ' — ჩვევა შესრულდა' : ''}
-                </p>
-              )
-            : ticked && <p className="text-center text-[12.5px] text-[#8a7a6a]">ჩვევა დღეს უკვე მონიშნულია</p>}
-        </>
+        <Btn full size="lg" kind={ticked ? 'soft' : 'primary'} icon={<Check />} onClick={press}>
+          წავიკითხე{counter && count > 0 ? of : ''}
+        </Btn>
       )}
       {blessing}
-    </section>
+    </div>
   );
 };
 

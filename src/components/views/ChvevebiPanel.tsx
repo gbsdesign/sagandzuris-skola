@@ -1,12 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowUpDown, Check, ChevronDown, ChevronRight, Flame, Info, Pencil, Plus, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, Info, Pencil, Sparkles, X } from 'lucide-react';
 import { useAuth, useModal, useNavigation } from '../../context';
 import { useMyHabits } from '../../hooks/useMyHabits';
 import { useAccess } from '../../hooks/useAccess';
-import { HabitLink, MyHabitGroup } from '../../utils/myHabits';
+import { HabitLink } from '../../utils/myHabits';
 import { askSignIn } from '../access/SignInPrompt';
 import { useOpenSearchTarget } from '../search/openSearchTarget';
-import { dayNeeds } from '../../utils/habitsWeek';
 import { triggerHaptic } from '../../utils/haptics';
 import { Btn, IconBtn, Sheet } from '../ui/kit';
 import { HabitPrayerMenu } from './HabitPrayerMenu';
@@ -18,7 +17,7 @@ import { WeekView } from '../habits/WeekView';
 import { MonthView } from '../habits/MonthView';
 import { YearView } from '../habits/YearView';
 import { HabitPage, HabitPageTitle } from '../habits/HabitPage';
-import { HabitsModel, dailyIdsOf, dailyOf, rareOf, useHabitToggle, useHabitsModel } from '../habits/useHabits';
+import { HabitsModel, dailyOf, rareOf, useHabitToggle, useHabitsModel } from '../habits/useHabits';
 
 // the home page buttons open the same menus; the prayer page ticks through the same toggle
 export { HabitPrayerMenu, useHabitToggle };
@@ -67,83 +66,16 @@ const useHabitSheet = () => {
   return { sheet, open, close, swap };
 };
 
-const INFO_TITLE = 'mb-1.5 font-serif-ge text-[15px] font-bold text-[#7a2028]';
-
-// "ⓘ": what the habits are for, how ticking works, and each habit's measure
-const HabitsInfo: React.FC<{ groups: MyHabitGroup[] }> = ({ groups }) => {
-  const DAILY_IDS = dailyIdsOf(groups);
-  return (
-  <div className="space-y-5 text-[14px] leading-relaxed text-[#4a3426]">
-    <div className="space-y-2">
-      <p>ნიადაგი არის ის, რაშიც მყარად არის „ჩაფლული“ საძირკველი, ხოლო საძირკველზე დგას შენობა — ანუ მგალობლის შემოქმედება.</p>
-      <p>
-        სწორი ნიადაგის მომზადების გარეშე ვერ დამყარდება ვერც საძირკველი და ვერც მგალობლის შემოქმედება. ქვემოთ მოცემულია ჩვევები,
-        რომლებიც საჭიროა სწორი სულიერი ნიადაგის მოსამზადებლად.
-      </p>
-    </div>
-    <div>
-      <h4 className={INFO_TITLE}>როგორ მოვნიშნო</h4>
-      <ul className="space-y-1.5">
-        <li>• წრეს შეეხე — ჩვევა მოინიშნება. ხელახლა შეხება მონიშვნას მოხსნის.</li>
-        <li>
-          • დაგავიწყდა? ზედა ზოლში აირჩიე წინა დღე (ბოლო 7 დღე) და მონიშნე. უფრო ძველი დღეები აღარ იცვლება.
-        </li>
-        <li>
-          • ჩვევის სახელს შეეხე — ქვემოთ ჩამოიშლება მისი ლოცვები და წასაკითხი. ლოცვის ბოლოს „წავიკითხე“ ჩვევასაც
-          მონიშნავ.
-        </li>
-        <li>
-          • <ChevronRight className="inline w-4 h-4 -mt-0.5 text-[#7a2028]" /> — ჩვევის გვერდი: ზედიზედ დღეები, საუკეთესო სერია,
-          კალენდარი და წელი. იქვე <Pencil className="inline w-4 h-4 -mt-0.5 text-[#7a2028]" /> — რამდენჯერ, ფერი და ხატულა,
-          მთვლელი, ლოცვა, სხვა ღილაკები (ძებნით ან ლინკით), ჩანაწერი და წაშლა. <Plus className="inline w-4 h-4 -mt-0.5 text-[#7a2028]" /> — მთვლელი (მაგ. იესოს ლოცვა): მიზანს რომ
-          მიაღწევ, ჩვევა თავად მოინიშნება; ზოლის გვერდით რიცხვზე დაჭერით ზუსტ რაოდენობას ჩაწერ.
-        </li>
-        <li>
-          • სახარებისა და სამოციქულოს ბარათზე ისრის ადგილას <Pencil className="inline w-4 h-4 -mt-0.5 text-[#7a2028]" /> არის: ბარათი ქვემოთ
-          იშლება — სახელი, ფერი, ხატულა, „მორგებული“ დღეები (მაგ. ორშ · ოთხ · პარ), დრო და შეხსენება, ლოცვა, მიზანი, ღილაკები და აღწერა.
-          თავს „წავიკითხე“ ამატებს. წერტილები — ბოლო 10 დღე, % — რამდენჯერ შესრულდა თავისი დღეებიდან.
-        </li>
-        <li>• „დღე ▾“ — აქ აირჩევ კვირას, თვეს ან წელს: ყველა ჩვევა ერთად — კვირის ბადე, თვის კალენდარი და წლის რუკა.</li>
-        <li>
-          • სიის ბოლოს: <Plus className="inline w-4 h-4 -mt-0.5 text-[#7a2028]" /> ჩვევის დამატება (წაშლილიც იქიდან დაბრუნდება) და{' '}
-          <ArrowUpDown className="inline w-4 h-4 -mt-0.5 text-[#7a2028]" /> რიგი — ჩვევას სახელურით გადაათრევ.
-        </li>
-        <li>
-          • დღე ჩაითვლება, როცა დღის ჩვევების ნახევარი მაინც შესრულდება ({dayNeeds(DAILY_IDS.length)} / {DAILY_IDS.length}).{' '}
-          <Flame className="inline w-4 h-4 -mt-0.5 text-[#b4441c]" /> — ზედიზედ ჩათვლილი დღეები.
-        </li>
-        <li>• კვირის ჩვევები ითვლება კვირა დღიდან, თვისა — თვის პირველი რიცხვიდან.</li>
-      </ul>
-    </div>
-    <div>
-      <h4 className={INFO_TITLE}>ზომა</h4>
-      <ul className="space-y-1.5">
-        {groups.flatMap(g => g.items).filter(h => h.hint).map(h => (
-          <li key={h.id}>
-            • <b className="font-semibold text-[#2a2017]">{h.label}</b> — {h.hint}
-          </li>
-        ))}
-        {/* the sacraments have no measure of their own here */}
-        {rareOf(groups).filter(g => g.id !== 'sacraments' && g.items.length).map(g => (
-          <li key={g.id}>
-            • <b className="font-semibold text-[#2a2017]">{g.title}</b> — {g.items.map(h => h.label).join(', ')}
-          </li>
-        ))}
-      </ul>
-    </div>
+// "ⓘ": what the habits are for (how ticking works is plain from the list itself, 2026-10-28)
+const HabitsInfo: React.FC = () => (
+  <div className="space-y-2 text-[14px] leading-relaxed text-[#4a3426]">
+    <p>ნიადაგი არის ის, რაშიც მყარად არის „ჩაფლული“ საძირკველი, ხოლო საძირკველზე დგას შენობა — ანუ მგალობლის შემოქმედება.</p>
+    <p>
+      სწორი ნიადაგის მომზადების გარეშე ვერ დამყარდება ვერც საძირკველი და ვერც მგალობლის შემოქმედება. ქვემოთ მოცემულია ჩვევები,
+      რომლებიც საჭიროა სწორი სულიერი ნიადაგის მოსამზადებლად.
+    </p>
   </div>
-  );
-};
-
-// the explanation's button carries a dot until it has been opened once
-const INTRO_SEEN_KEY = 'habitsIntroSeen';
-const introSeen = () => {
-  try {
-    return localStorage.getItem(INTRO_SEEN_KEY) === '1';
-  } catch {
-    return false;
-  }
-};
+);
 
 // The habits' views. A new view is one entry here: it gets the shared model (components/habits/useHabits) and the
 // few page actions below.
@@ -238,7 +170,6 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
   const { activeModal, closeModal } = useModal();
   const { sheet, open, close, swap } = useHabitSheet();
   const { model, blessing } = useHabitsModel(id => open(`habit:${id}`));
-  const [seen, setSeen] = useState(introSeen);
   const { user } = useAuth();
   const mine = useMyHabits(user?.uid);
   // the habits with a time and reminders become this browser's reminders (and the push server's)
@@ -260,11 +191,7 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
     if (activeModal) closeModal();
     go();
   };
-  const openInfo = () => {
-    setSeen(true);
-    try { localStorage.setItem(INTRO_SEEN_KEY, '1'); } catch { /* it shows its name again next time */ }
-    open('info');
-  };
+  const openInfo = () => open('info');
 
   // a habit's own button: what the search found opens in the app (a guest is asked to sign in first)
   const openLink = (l: HabitLink) => {
@@ -291,12 +218,9 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
   const actions = (
     <>
       <ViewMenu value={view} onChange={setView} />
-      <span className="relative">
-        <IconBtn label="განმარტება" onClick={openInfo}>
-          <Info />
-        </IconBtn>
-        {!seen && <span className="absolute top-1 right-1 w-2.5 h-2.5 rounded-full bg-[#7a2028] ring-2 ring-[#fbf6ec] pointer-events-none" aria-hidden />}
-      </span>
+      <IconBtn label="განმარტება" onClick={openInfo}>
+        <Info />
+      </IconBtn>
     </>
   );
   const props: ViewProps = {
@@ -332,7 +256,7 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
       </div>
 
       <Sheet open={sheet === 'info'} onClose={close} title="განმარტება">
-        <HabitsInfo groups={mine.groups} />
+        <HabitsInfo />
       </Sheet>
 
       <Sheet

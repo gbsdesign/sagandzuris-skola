@@ -1,5 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, BookOpen, ChevronRight, Loader2, RotateCw } from 'lucide-react';
+import { BookOpen, ChevronRight, Loader2, RotateCw } from 'lucide-react';
+import { BackBtn } from '../ui/kit';
+import { SizePill } from '../views/ReadingTools';
+
 import { triggerHaptic } from '../../utils/haptics';
 import { GrapeBunch } from '../home/PlateOrnaments';
 import { dayMonthGe } from '../../data/churchCalendar';
@@ -9,6 +12,9 @@ import {
 } from '../../data/saintLives';
 import { LifeThumb } from './LifeThumb';
 import { InlineLink } from './InlineLink';
+
+// the reader's text sizes (A− / A+), kept while the window is open
+const SIZE_STEPS = [90, 100, 112, 125, 140];
 
 // A saint's life over the whole screen, opened from the today's-saints card, the footer calendar or the
 // library (openSaintLife). Each life is a history entry: the phone's back gesture closes it, or goes
@@ -61,7 +67,7 @@ const Icon: React.FC<{ block: Extract<LifeBlock, { img: string }>; lead?: boolea
   );
 };
 
-const Body: React.FC<{ life: Life }> = ({ life }) => {
+const Body: React.FC<{ life: Life; size: number }> = ({ life, size }) => {
   const firstText = life.b.findIndex(b => 'r' in b && !b.a);
   // icons that open the life one after another stand in one row (smaller) instead of a tall stack
   const firstImg = life.b.findIndex(b => 'img' in b);
@@ -69,7 +75,7 @@ const Body: React.FC<{ life: Life }> = ({ life }) => {
   while (firstImg >= 0 && firstImg < 3 && lastLead + 1 < life.b.length && 'img' in life.b[lastLead + 1]) lastLead++;
   const row = firstImg >= 0 && firstImg < 3 && lastLead > firstImg;
   return (
-    <div className="font-serif-ge text-[16.5px] sm:text-[17.5px] leading-[1.85] text-[#2a2017] text-pretty">
+    <div className="font-serif-ge text-[16.5px] sm:text-[17.5px] leading-[1.85] text-[#2a2017] text-pretty" style={size === 100 ? undefined : { fontSize: `${(17 * size) / 100}px` }}>
       {life.b.map((b, i) => {
         if (row && i === firstImg) {
           return (
@@ -140,6 +146,8 @@ export const SaintLifeOverlay: React.FC = () => {
   const [attempt, setAttempt] = useState(0);
   const life = useLife(shown, attempt);
   const [titleGone, setTitleGone] = useState(false);
+  const [size, setSize] = useState(100);
+  const stepSize = (dir: 1 | -1) => setSize(v => SIZE_STEPS[Math.min(SIZE_STEPS.length - 1, Math.max(0, SIZE_STEPS.indexOf(v) + dir))]);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
   const back = () => {
@@ -251,21 +259,12 @@ export const SaintLifeOverlay: React.FC = () => {
       {/* the bar */}
       <div className="sticky top-0 z-10 bg-[#fbf6ec]/90 backdrop-blur-md border-b border-[#2a2017]/[0.06]">
         <div className="max-w-[720px] mx-auto h-14 px-3 sm:px-5 flex items-center gap-3">
-          <button
-            type="button"
-            onClick={back}
-            className="w-10 h-10 shrink-0 rounded-full bg-white ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/35 text-[#4a3426] hover:text-[#7a2028] flex items-center justify-center cursor-pointer active:scale-95 transition-all"
-            aria-label="უკან"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </button>
-          <p className={`flex-1 min-w-0 truncate font-serif-ge text-[13px] font-bold text-[#7a2028] transition-opacity duration-200 ${titleGone ? 'opacity-100' : 'opacity-0'}`}>
+          <BackBtn onClick={back} />
+          <p className={`flex-1 min-w-0 truncate font-serif-ge text-[15px] font-bold text-[#7a2028] transition-opacity duration-200 ${titleGone ? 'opacity-100' : 'opacity-0'}`}>
             {name}
           </p>
+          <SizePill onStep={stepSize} atMin={size === SIZE_STEPS[0]} atMax={size === SIZE_STEPS[SIZE_STEPS.length - 1]} />
         </div>
-        <span className={`absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-[12px] font-bold text-[#8a7a6a] pointer-events-none transition-opacity duration-200 ${titleGone ? 'opacity-0' : 'opacity-100'}`}>
-          წმიდანთა ცხოვრება
-        </span>
       </div>
 
       <article className="max-w-[720px] mx-auto px-5 sm:px-8 pt-6 pb-16">
@@ -316,7 +315,7 @@ export const SaintLifeOverlay: React.FC = () => {
             </button>
           </div>
         )}
-        {life && <Body life={life} />}
+        {life && <Body life={life} size={size} />}
 
         {life && sameDay.length > 0 && (
           <section className="clear-both mt-12">

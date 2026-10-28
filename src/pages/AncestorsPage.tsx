@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { SizePill } from '../components/views/ReadingTools';
 import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Music, Play, Search, X } from 'lucide-react';
 import { ANCESTORS, type Ancestor, type BioBlock } from '../data/ancestorsBios';
 import { useOpenRequest } from '../utils/searchOpen';
@@ -428,29 +429,7 @@ const BioReader: React.FC<{ id: number; onNavigate: (id: number) => void; onClos
           >
             {a.name}
           </p>
-          <div className="flex items-center rounded-full ring-1 ring-[#e8dcc8] bg-white/85 shrink-0 overflow-hidden">
-            <button
-              type="button"
-              onClick={() => changeFont(-1)}
-              disabled={font === FONT_STEPS[0]}
-              className="w-11 h-9 text-sm font-bold text-[#4a3426] hover:bg-[#fcf1df] hover:text-[#7a2028] disabled:opacity-35 cursor-pointer disabled:cursor-default"
-              aria-label="ტექსტის დაპატარავება"
-              title="ტექსტის დაპატარავება"
-            >
-              A−
-            </button>
-            <span className="w-px h-5 bg-[#e8dcc8]" />
-            <button
-              type="button"
-              onClick={() => changeFont(1)}
-              disabled={font === FONT_STEPS[FONT_STEPS.length - 1]}
-              className="w-11 h-9 text-base font-bold text-[#4a3426] hover:bg-[#fcf1df] hover:text-[#7a2028] disabled:opacity-35 cursor-pointer disabled:cursor-default"
-              aria-label="ტექსტის გადიდება"
-              title="ტექსტის გადიდება"
-            >
-              A+
-            </button>
-          </div>
+          <SizePill onStep={changeFont} atMin={font === FONT_STEPS[0]} atMax={font === FONT_STEPS[FONT_STEPS.length - 1]} />
         </div>
       </div>
 

@@ -14,6 +14,7 @@ import {
 import { useAuth } from '../../context';
 import { Pill } from '../ui/kit';
 import { Fold } from '../admin/Fold';
+import { WORK_DAYS, WorkScheduleEditor, hoursOf } from './WorkScheduleEditor';
 import { auth, db, handleFirestoreError, OperationType } from '../../firebase';
 import { doc, setDoc, onSnapshot } from 'firebase/firestore';
 import { triggerHaptic } from '../../utils/haptics';
@@ -34,22 +35,6 @@ const INITIAL_PROFILE: StudentProfile = {
   workSchedule: {},
 };
 
-const DAYS_OF_WEEK = [
-  { id: 'ორშ', short: 'ორშ', full: 'ორშაბათი', jsDay: 1 },
-  { id: 'სამ', short: 'სამ', full: 'სამშაბათი', jsDay: 2 },
-  { id: 'ოთხ', short: 'ოთხ', full: 'ოთხშაბათი', jsDay: 3 },
-  { id: 'ხუთ', short: 'ხუთ', full: 'ხუთშაბათი', jsDay: 4 },
-  { id: 'პარ', short: 'პარ', full: 'პარასკევი', jsDay: 5 },
-  { id: 'შაბ', short: 'შაბ', full: 'შაბათი', jsDay: 6 },
-  { id: 'კვი', short: 'კვი', full: 'კვირა', jsDay: 0 },
-];
-
-// All available hours from 06:00 to 23:00
-const AVAILABLE_HOURS = Array.from({ length: 18 }, (_, i) => {
-  const h = i + 6;
-  return `${h.toString().padStart(2, '0')}:00`;
-});
-
 /** Whose profile an admin edits from the admin panel (without it: my own). */
 export interface ProfileOwner { uid: string; email: string; displayName: string; photoURL: string }
 
@@ -62,7 +47,6 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
   // the saved profile as text (set after each snapshot), to tell whether anything is changed
   const [baseline, setBaseline] = useState<string | null>(null);
   const [synced, setSynced] = useState(0);
-  const [activeDay, setActiveDay] = useState<string>('ორშ');
   const [savedMessage, setSavedMessage] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
   const [savingDb, setSavingDb] = useState(false);
@@ -140,43 +124,6 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
   // runs after the snapshot's profile is in place
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => { if (synced) setBaseline(JSON.stringify(profile)); }, [synced]);
-
-  // Helper to get selected hours list for a day of week
-  const getSelectedHoursForDay = (dayId: string): string[] => {
-    const raw = profile.workSchedule?.[dayId];
-    if (!raw || typeof raw !== 'string') return [];
-    return raw
-      .split(',')
-      .map(s => s.trim())
-      .filter(s => AVAILABLE_HOURS.includes(s));
-  };
-
-  // Toggle hour in profile setup for the active day
-  const handleHourToggle = (dayId: string, hour: string) => {
-    const currentHours = getSelectedHoursForDay(dayId);
-    let nextHours: string[];
-    
-    if (currentHours.includes(hour)) {
-      nextHours = currentHours.filter(h => h !== hour);
-    } else {
-      nextHours = [...currentHours, hour].sort((a, b) => {
-        return parseInt(a.split(':')[0]) - parseInt(b.split(':')[0]);
-      });
-    }
-
-    setProfile(prev => {
-      const updatedSchedule = { ...(prev.workSchedule || {}) };
-      if (nextHours.length === 0) {
-        delete updatedSchedule[dayId];
-      } else {
-        updatedSchedule[dayId] = nextHours.join(', ');
-      }
-      return {
-        ...prev,
-        workSchedule: updatedSchedule
-      };
-    });
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -286,10 +233,7 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
     setTimeout(() => setSavedMessage(false), 2500);
   };
 
-  const activeDayObj = DAYS_OF_WEEK.find(d => d.id === activeDay) || DAYS_OF_WEEK[0];
-  const activeDaySelectedHours = getSelectedHoursForDay(activeDay);
-  const configuredDaysList = DAYS_OF_WEEK.filter(d => getSelectedHoursForDay(d.id).length > 0);
-  const isValidSchedule = configuredDaysList.length >= 2;
+  const configuredDaysList = WORK_DAYS.filter(d => hoursOf(profile.workSchedule, d.id).length > 0);
 
   const currentUser = member || auth.currentUser;
   const userPhoto = currentUser?.photoURL;
@@ -507,59 +451,7 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
 
       {/* the path's work timetable: a member's tool, not shown while one waits to be let in */}
       {!waiting && <Fold icon={<Clock />} title="მუშაობის განრიგი" summary={scheduleSummary}>
-        <div className="space-y-3.5">
-          <div className="grid grid-cols-7 gap-1.5">
-            {DAYS_OF_WEEK.map(day => {
-              const count = getSelectedHoursForDay(day.id).length;
-              const isSelected = activeDay === day.id;
-              return (
-                <button
-                  key={day.id}
-                  type="button"
-                  onClick={() => setActiveDay(day.id)}
-                  className={`h-12 rounded-xl flex flex-col items-center justify-center transition-colors cursor-pointer select-none active:scale-95 ${
-                    isSelected
-                      ? 'bg-[#7a2028] text-[#fbf6ec]'
-                      : count > 0
-                        ? 'bg-[#7a2028]/10 text-[#7a2028] hover:bg-[#7a2028]/15'
-                        : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40'
-                  }`}
-                >
-                  <span className="text-xs font-bold leading-tight">{day.short}</span>
-                  <span className={`text-[11px] font-semibold leading-none mt-1 ${isSelected ? 'text-[#fbf6ec]/80' : 'opacity-70'}`}>
-                    {count > 0 ? `${count} სთ` : '—'}
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-
-          <div className="flex items-center justify-between gap-2 min-h-7">
-            <span className="text-sm font-bold text-[#4a3426]">{activeDayObj.full}</span>
-            {isValidSchedule
-              ? <Pill tone="green"><Check /> 2 დღე ან მეტი</Pill>
-              : <Pill tone="muted">მინიმუმ 2 დღე</Pill>}
-          </div>
-
-          <div className="grid grid-cols-6 gap-1.5">
-            {AVAILABLE_HOURS.map(hour => {
-              const isSelected = activeDaySelectedHours.includes(hour);
-              return (
-                <button
-                  key={hour}
-                  type="button"
-                  onClick={() => handleHourToggle(activeDay, hour)}
-                  className={`h-10 rounded-lg text-xs font-semibold tabular-nums transition-colors cursor-pointer select-none active:scale-95 ${
-                    isSelected ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40'
-                  }`}
-                >
-                  {hour}
-                </button>
-              );
-            })}
-          </div>
-
-        </div>
+        <WorkScheduleEditor schedule={profile.workSchedule} onChange={ws => setProfile(prev => ({ ...prev, workSchedule: ws }))} />
       </Fold>}
 
       {/* the save button shows only while something is changed, and stays in reach at the bottom */}
