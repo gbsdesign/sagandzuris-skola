@@ -139,6 +139,30 @@ service cloud.firestore {
       allow read, write: if isSuperAdmin();
     }
 
+    // The admins' change log (src/utils/adminLog.ts): an admin adds a line, signed with their own e-mail, as they change
+    // something; superadmins read it; a line is never changed or deleted.
+    match /adminLog/{id} {
+      allow read: if isSuperAdmin();
+      allow create: if isAdmin()
+        && incoming().keys().hasOnly(['at', 'by', 'byName', 'kind', 'text', 'target'])
+        && incoming().by == myEmail()
+        && incoming().at is string && incoming().kind is string
+        && incoming().text is string && incoming().text.size() <= 300
+        && incoming().get('byName', '') is string && incoming().get('target', '') is string;
+      allow update, delete: if false;
+    }
+
+    // What an admin wants on their phone (src/utils/adminPush.ts; the reminders Worker reads it with its service account):
+    // `waiting` — a newcomer asks to be let in (superadmins only, the ones who decide), `weekly` — Monday's overview.
+    match /adminPush/{userId} {
+      allow read: if isSignedIn() && (uid() == userId || isSuperAdmin());
+      allow create, update: if isAdmin() && uid() == userId
+        && incoming().keys().hasOnly(['waiting', 'weekly', 'at'])
+        && incoming().get('waiting', false) is bool && incoming().get('weekly', false) is bool
+        && (incoming().get('waiting', false) == false || isSuperAdmin());
+      allow delete: if isSignedIn() && (uid() == userId || isSuperAdmin());
+    }
+
     // ---- "ჩემი სამოსი" on the member's own photo (src/utils/samosiTryOn.ts) --------------------------------------
     // Only the finished picture is kept. The tries are counted here — 3 on the first day, then 1 a day, 10 in all
     // (the founder has no limit) —

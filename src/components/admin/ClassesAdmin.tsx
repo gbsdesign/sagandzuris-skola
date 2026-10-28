@@ -7,13 +7,15 @@ import { SchoolClass, ProgramItem, imageFileToDataUrl, toClass } from '../../hoo
 import { teachersOf, teachersToDrop } from '../../utils/classTeachers';
 import { errorText } from '../../utils/errorText';
 import { Fold } from './Fold';
+import { changed } from './changed';
+import { logChange } from '../../utils/adminLog';
 import { ClassLogo } from '../classes/ClassLogo';
 import { triggerHaptic } from '../../utils/haptics';
 import { filterValidVariants } from '../../utils/variantValidation';
 import { PathItem, sortPathItems, findCatalogEntry, voicesOf } from '../../utils/pathItems';
 import { writePath } from './MemberPathEditor';
 import { linkTeachers } from '../../hooks/useTeaching';
-import { askConfirm, Avatar, Bar, Btn, Flash, IconBtn, Pill, Sheet, useFlash } from '../ui/kit';
+import { Avatar, Bar, Btn, Flash, IconBtn, Pill, Sheet, useFlash } from '../ui/kit';
 import { LeaderChips } from './LeaderChips';
 import { useClassAttendance, useGroupReading } from './StatsTab';
 import { GroupMember, PsalterGroup, toGroup } from '../../hooks/usePsalter';
@@ -206,6 +208,7 @@ export const ClassesAdmin: React.FC<{
       const n = await archiveClass(c, false, classes);
       triggerHaptic(30);
       tell(`კლასი „${c.name}“ დაბრუნდა.${accessNote(n)}`, 'success');
+      logChange('archive', `კლასი „${c.name}“ არქივიდან დაბრუნდა`, c.id);
     } catch (e) {
       tell('კლასი ვერ დაბრუნდა: ' + errorText(e), 'error');
     } finally {
@@ -322,6 +325,7 @@ export const ClassesAdmin: React.FC<{
       }
       triggerHaptic(30);
       setDraft(null);
+      logChange('class', draft.id ? `კლასი „${name}“ შეიცვალა${saved && saved.name !== name ? ` (იყო „${saved.name}“)` : ''}` : `კლასი „${name}“ შეიქმნა`, ref.id);
       tell((draft.id ? `კლასი „${name}“ შენახულია.` : `კლასი „${name}“ შეიქმნა — წევრებს და პროგრამას კლასის გვერდზე დაამატებ.`) + accessNote(n), 'success');
     } catch (e) {
       note.fail('კლასი ვერ შეინახა: ' + errorText(e));
@@ -332,17 +336,14 @@ export const ClassesAdmin: React.FC<{
 
   const toArchive = async () => {
     if (!saved) return;
-    if (!(await askConfirm({
-      title: `გადავიტანო „${saved.name}“ არქივში?`,
-      text: 'კლასი და მისი ფსალმუნთა ჯგუფი ყველას დაემალება, მასწავლებლები ვეღარ დაინახავენ წევრების ჩანაწერებს. არაფერი წაიშლება — „არქივიდან“ ერთი შეხებით დაბრუნდება.',
-      ok: 'არქივში',
-    }))) return;
+    // no „დარწმუნებული ხარ?“: nothing is deleted, and „გაუქმება“ brings it back at once (later — the „არქივი“ fold)
     setSaving(true);
     try {
       const n = await archiveClass(saved, true, classes);
       triggerHaptic(30);
       setDraft(null);
-      tell(`კლასი „${saved.name}“ არქივშია — ქვემოთ, „არქივში“ ნახავ.${accessNote(n)}`, 'success');
+      if (n) tell(`კლასი „${saved.name}“ არქივშია.${accessNote(n)}`, 'error');
+      changed('archive', `კლასი „${saved.name}“ არქივში გადავიდა`, saved.id, () => archiveClass(saved, false, classes));
     } catch (e) {
       note.fail('კლასი ვერ გადავიდა არქივში: ' + errorText(e));
     } finally {

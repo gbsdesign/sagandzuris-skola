@@ -21,7 +21,8 @@ import { AppRouter } from './routes/AppRouter';
 import { AppModals } from './components/AppModals';
 import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageSprinkles } from './components/home/PlateOrnaments';
-import { ConfirmHost } from './components/ui/kit';
+import { ConfirmHost, UndoHost } from './components/ui/kit';
+import { requestOpen } from './utils/searchOpen';
 import { SaintLifeOverlay } from './components/saints/SaintLifeOverlay';
 import { GlobalSearch } from './components/search/GlobalSearch';
 import { usePrayerReminderScheduler } from './utils/prayerReminders';
@@ -83,7 +84,7 @@ function AppContent() {
   useBirthdaySync();
 
   // a tapped reminder may open the site as /?prayer=<id> or /?open=psalter|gz|teacher (the teacher panel is gone:
-  // „teacher“ opens the class page)
+  // „teacher“ opens the class page) or /?open=admin&person=<uid>
   const openFromUrl = (href: string) => {
     const url = new URL(href, window.location.origin);
     const prayerId = url.searchParams.get('prayer');
@@ -91,6 +92,12 @@ function AppContent() {
     if (prayerId && isPrayerId(prayerId)) openPrayer(prayerId);
     else if (page === 'psalter' || page === 'gz') navigateTo(page);
     else if (page === 'teacher') navigateTo('class');
+    // an admin's notice: the panel, with the newcomer's window open
+    else if (page === 'admin') {
+      const person = url.searchParams.get('person');
+      if (person) requestOpen('admin', person);
+      navigateTo('admin');
+    }
   };
   useEffect(() => {
     const url = new URL(window.location.href);
@@ -98,6 +105,7 @@ function AppContent() {
     const href = url.href;
     url.searchParams.delete('prayer');
     url.searchParams.delete('open');
+    url.searchParams.delete('person');
     window.history.replaceState(null, '', url.pathname + url.search + url.hash);
     openFromUrl(href);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -166,6 +174,7 @@ function AppContent() {
 
       {/* the app's own „are you sure?“ card (kit askConfirm) */}
       <ConfirmHost />
+      <UndoHost />
 
       {/* sign-in (Google or a link by e-mail), "საჭიროა რეგისტრაცია" for guests, and the return from the e-mail link */}
       <SignInPrompt />

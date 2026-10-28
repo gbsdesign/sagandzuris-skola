@@ -312,6 +312,23 @@ await t('a guest reads song texts', assertSucceeds(getDoc(doc(guest, 'songTexts'
 await t('a guest cannot delete one', assertFails(deleteDoc(doc(guest, 'songTexts', 's1'))));
 await t('chosen member deletes a song text', assertSucceeds(deleteDoc(doc(stu, 'songTexts', 's1'))));
 
+// ---- the admins' change log and their phone notices
+const line = (by, extra = {}) => ({ at: '2026-10-28T20:00:00Z', by, byName: 'A', kind: 'role', text: 'ნინო — როლი: მასწავლებელი', target: 'stu', ...extra });
+await t('admin writes a log line signed with own e-mail', assertSucceeds(setDoc(doc(adm, 'adminLog', 'l1'), line('adm@x.ge'))));
+await t('admin cannot sign a line as another', assertFails(setDoc(doc(adm, 'adminLog', 'l2'), line('sup@x.ge'))));
+await t('a line has only its fields', assertFails(setDoc(doc(adm, 'adminLog', 'l3'), line('adm@x.ge', { x: 1 }))));
+await t('a teacher writes no log line', assertFails(setDoc(doc(tch, 'adminLog', 'l4'), line('tch@x.ge'))));
+await t('superadmin reads the log', assertSucceeds(getDocs(collection(sup, 'adminLog'))));
+await t('admin does not read the log', assertFails(getDocs(collection(adm, 'adminLog'))));
+await t('nobody changes a line', assertFails(updateDoc(doc(sup, 'adminLog', 'l1'), { text: 'x' })));
+await t('nobody deletes a line', assertFails(deleteDoc(doc(sup, 'adminLog', 'l1'))));
+await t('superadmin asks for the newcomer notice', assertSucceeds(setDoc(doc(sup, 'adminPush', 'sup'), { waiting: true, weekly: true, at: 'x' })));
+await t('admin asks for the Monday overview', assertSucceeds(setDoc(doc(adm, 'adminPush', 'adm'), { waiting: false, weekly: true, at: 'x' })));
+await t('admin cannot ask for the newcomer notice', assertFails(setDoc(doc(adm, 'adminPush', 'adm'), { waiting: true, weekly: true, at: 'x' })));
+await t("admin cannot set another's notices", assertFails(setDoc(doc(adm, 'adminPush', 'sup'), { waiting: false, weekly: false, at: 'x' })));
+await t('a member asks for no admin notice', assertFails(setDoc(doc(stu, 'adminPush', 'stu'), { waiting: false, weekly: true, at: 'x' })));
+await t('superadmin turns off a former admin\'s notices', assertSucceeds(deleteDoc(doc(sup, 'adminPush', 'adm'))));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);
