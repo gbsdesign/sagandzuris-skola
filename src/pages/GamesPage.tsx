@@ -79,7 +79,7 @@ const GameRow: React.FC<{ g: GameDef; state: Access; meta?: string; onOpen: () =
   );
   const look = ready ? 'bg-white/85 ring-[#e8dcc8] shadow-[0_1px_2px_rgba(74,52,38,0.05)]' : 'bg-white/50 ring-[#ece2d2]';
 
-  // a board game already made on paper: the card gets a strip under it that opens its printable sheets
+  // a game already made on paper (the board games, the word games' „უტელეფონო“): a strip under the card opens its sheets
   if (g.print) {
     return (
       <li className={`rounded-2xl ring-1 overflow-hidden ${look}`}>

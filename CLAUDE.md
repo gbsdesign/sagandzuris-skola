@@ -304,6 +304,12 @@
   40 carts a player (35 with five), caravanserais = TTR stations, animals as score markers; the cover's back is a glossary of the 47 places).
   A game with sheets gets `print: { href, sheets }` in `data/games.ts`; its hub card
   shows a wine „დასაბეჭდი ფურცლები“ strip („PDF · N ფურცელი“, one line; „PDF · “ hidden below 400 px) and its „უტელეფონო“ chip turns wine.
+  The app's word games got paper kits too (seventh PR): „დღის სიტყვა“ (grids for 4/5/6 letters, four A6 a side; 78 slips from
+  `ANSWER_BANK`; the example coloured by `scoreGuess`), „ოთხეული“ (16 grids of 16 cards = the app's `buildGrid` with fixed seeds,
+  kept only when every group of the list allows one answer, with variety rules; the host's answer sheet) and „ამიხსენი“ (36
+  cards of six words numbered by a die — ten themes, the songs only well-known titles — and a two-sided score sheet). Their
+  modules read the app's TypeScript data through `scripts/print-games/appData.mjs` (esbuild in memory, firebase/React stubbed);
+  their stripe shows a label („ქართული · უტელეფონო“) instead of a number.
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 

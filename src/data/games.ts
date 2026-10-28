@@ -44,13 +44,13 @@ export const GAMES: GameDef[] = [
   { id: 'eko', title: 'ექო', text: 'აპი ჰანგს უკრავს, შენ იმეორებ — ყოველ ჯერზე ერთი ნოტით გრძელს', category: 'musical', modes: ['online'] },
   { id: 'khmis-tsqvilebi', title: 'ხმის წყვილები', text: 'მეხსიერების თამაში: დახურული ბარათების ქვეშ ორი ერთნაირი ხმა იპოვე', category: 'musical', modes: ['online', 'noPhone'] },
   // ქართული
-  { id: 'dghis-sitqva', title: 'დღის სიტყვა', text: 'ქართული სიტყვა ექვს ცდაში — დღის წმინდანი, დღესასწაული ან საეკლესიო სიტყვა, ყოველდღე ერთი მთელი სკოლისთვის', category: 'georgian', modes: ['online', 'noPhone'], page: 'games', item: 'sitqva', section: 'tamashebi' },
-  { id: 'otkheuli', title: 'ოთხეული', text: '16 სიტყვა, ოთხი ფარული ჯგუფი: წმიდანები, კუთხეები, საკრავები, ხმები… — დღის ბადე და კიდევ რამდენიც გინდა', category: 'georgian', modes: ['online', 'noPhone'], page: 'games', item: 'otkheuli', section: 'tamashebi' },
+  { id: 'dghis-sitqva', title: 'დღის სიტყვა', text: 'ქართული სიტყვა ექვს ცდაში — დღის წმინდანი, დღესასწაული ან საეკლესიო სიტყვა, ყოველდღე ერთი მთელი სკოლისთვის', category: 'georgian', modes: ['online', 'noPhone'], page: 'games', item: 'sitqva', section: 'tamashebi', print: { href: '/games/print/dghis-sitqva.pdf', sheets: 7 } },
+  { id: 'otkheuli', title: 'ოთხეული', text: '16 სიტყვა, ოთხი ფარული ჯგუფი: წმიდანები, კუთხეები, საკრავები, ხმები… — დღის ბადე და კიდევ რამდენიც გინდა', category: 'georgian', modes: ['online', 'noPhone'], page: 'games', item: 'otkheuli', section: 'tamashebi', print: { href: '/games/print/otkheuli.pdf', sheets: 18 } },
   { id: 'drois-khazi', title: 'დროის ხაზი', text: 'საქართველოს ისტორიის მოვლენები სწორი რიგით დააწყვე', category: 'georgian', modes: ['hybrid', 'noPhone'] },
   { id: 'khutsuri', title: 'ხუცური წარწერა', text: 'ამოიკითხე ასომთავრულით და ნუსხურით დაწერილი — ასო-ასო', category: 'georgian', modes: ['online', 'noPhone'] },
   { id: 'asoebis-bade', title: 'ასოების ბადე', text: 'ბადეში დამალული სიტყვები იპოვე: საგალობლები, ტაძრები, კუთხეები', category: 'georgian', modes: ['online', 'noPhone'] },
   // ცოცხალი
-  { id: 'amikhseni', title: 'ამიხსენი', text: 'ახსენი სიტყვა მისი თქმის გარეშე, გუნდმა გამოიცნოს — ტელეფონი დროსა და ქულებს ითვლის', category: 'live', modes: ['hybrid', 'noPhone'], page: 'games', item: 'amikhseni', section: 'tamashebi' },
+  { id: 'amikhseni', title: 'ამიხსენი', text: 'ახსენი სიტყვა მისი თქმის გარეშე, გუნდმა გამოიცნოს — ტელეფონი დროსა და ქულებს ითვლის', category: 'live', modes: ['hybrid', 'noPhone'], page: 'games', item: 'amikhseni', section: 'tamashebi', print: { href: '/games/print/amikhseni.pdf', sheets: 6 } },
   { id: 'gatvla', title: 'გათვლა', text: 'ვინ იწყებს, ვისი ჯერია, ვინ რომელ გუნდშია — გათვლის ლექსით, ბორბლით და წილისყრით, ერთ ტელეფონზე', category: 'live', modes: ['hybrid'], page: 'games', item: 'gatvla', section: 'tamashebi' },
   { id: 'tskheli-churchkhela', title: 'ცხელი ჩურჩხელა', text: 'სკოლის ჩანაწერი მოულოდნელად ჩერდება — ვისაც ჩურჩხელა ხელში რჩება, ის დავალებას ასრულებს', category: 'live', modes: ['hybrid'], page: 'games', item: 'churchkhela', section: 'tamashebi' },
   { id: 'ra-sad-rodis', title: 'რა? სად? როდის?', text: 'გუნდური ვიქტორინა ერთწუთიანი კითხვებით ჩვენი თემებიდან', category: 'live', modes: ['hybrid', 'noPhone'] },
