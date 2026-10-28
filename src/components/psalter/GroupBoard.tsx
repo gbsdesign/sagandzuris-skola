@@ -165,7 +165,7 @@ export const KathismaGrid: React.FC<{
         <span className="inline-flex items-center gap-1"><HandHelping /> აღება</span>
         <span className="inline-flex items-center gap-1"><LifeBuoy /> დახმარება</span>
         <span className="inline-flex items-center gap-1"><Undo2 /> გაუქმება</span>
-        <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-emerald-700" /> წაკითხული</span>
+        <span className="inline-flex items-center gap-1.5"><span className="relative w-3 h-3 rounded bg-[#fbf6ec] ring-1 ring-[#e8dcc8]"><span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-emerald-600" /></span> წაკითხული</span>
         <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded bg-amber-100 ring-1 ring-amber-300" /> აღებული</span>
         <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded ring-2 ring-[#7a2028]" /> შენი</span>
       </div>
