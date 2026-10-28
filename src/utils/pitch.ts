@@ -84,42 +84,68 @@ export const notesFromFrames = (frames: { t: number; midi: number | null }[], mi
   return notes;
 };
 
+/** One pitch held over several syllables is one note: from its first syllable's start to its last one's end. */
+export const mergeHeld = (notes: SungNote[]): SungNote[] => {
+  const out: SungNote[] = [];
+  notes.forEach((n, i) => {
+    if (i > 0 && Math.abs(n.midi - notes[i - 1].midi) <= 0.5) out[out.length - 1].end = n.end;
+    else out.push({ ...n });
+  });
+  return out;
+};
+
+export interface Scoring { hits: boolean[]; matched: (SungNote | null)[]; share: number; offset: number }
+
 /**
  * How well the sung notes follow the phrase (target midi numbers), in the singer's own key: any key or octave is
- * fine. The key is the shift that lets the most target notes be found, in order, among the sung notes within a
- * quarter tone (a semitone off is a wrong note). Returns which target notes were hit, the share hit (0..1) and the
- * shift found.
+ * fine. For each key tried, the most target notes are found in order among the sung notes (held notes merged)
+ * within a quarter tone — a semitone off is a wrong note, an extra or a missing note does not throw the rest off —
+ * and the key that finds the most (the fewest cents off on a tie) wins. The keys tried are those that put one of
+ * the first sung notes on one of the first target notes. Returns which target notes were hit, the sung note each
+ * was matched to, the share hit (0..1) and the shift found.
  */
-export const scoreSinging = (target: number[], sungNotes: SungNote[]): { hits: boolean[]; share: number; offset: number } => {
-  if (!target.length) return { hits: [], share: 0, offset: 0 };
-  // syllables sung on one pitch are one melody note, as the target's repeated pitches are
-  const sung = sungNotes.filter((n, i) => i === 0 || Math.abs(n.midi - sungNotes[i - 1].midi) > 0.5);
-  if (!sung.length) return { hits: target.map(() => false), share: 0, offset: 0 };
+export const scoreSinging = (target: number[], sungNotes: SungNote[]): Scoring => {
+  if (!target.length) return { hits: [], matched: [], share: 0, offset: 0 };
+  const sung = mergeHeld(sungNotes);
+  if (!sung.length) return { hits: target.map(() => false), matched: target.map(() => null), share: 0, offset: 0 };
   const TOL = 0.55;
-  const match = (offset: number) => {
-    const hits: boolean[] = [];
-    let j = 0;
-    let err = 0;
-    for (const t of target) {
-      let found = false;
-      // look a few sung notes ahead (a slip or an extra note does not throw the rest off)
-      for (let k = j; k < Math.min(sung.length, j + 3); k++) {
-        const e = Math.abs(sung[k].midi - offset - t);
-        if (e <= TOL) { found = true; err += e; j = k + 1; break; }
+  const n = target.length;
+  const m = sung.length;
+  // the longest run of matches in order (an LCS with a pitch tolerance), fewest cents off among equals
+  const align = (offset: number) => {
+    const cnt = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+    const err = Array.from({ length: n + 1 }, () => new Array<number>(m + 1).fill(0));
+    const way = Array.from({ length: n + 1 }, () => new Array<0 | 1 | 2>(m + 1).fill(0)); // 0 match, 1 skip target, 2 skip sung
+    for (let i = 1; i <= n; i++) {
+      for (let j = 1; j <= m; j++) {
+        let c = cnt[i - 1][j], e = err[i - 1][j], w: 0 | 1 | 2 = 1;
+        if (cnt[i][j - 1] > c || (cnt[i][j - 1] === c && err[i][j - 1] < e)) { c = cnt[i][j - 1]; e = err[i][j - 1]; w = 2; }
+        const d = Math.abs(sung[j - 1].midi - offset - target[i - 1]);
+        if (d <= TOL && (cnt[i - 1][j - 1] + 1 > c || (cnt[i - 1][j - 1] + 1 === c && err[i - 1][j - 1] + d < e))) {
+          c = cnt[i - 1][j - 1] + 1; e = err[i - 1][j - 1] + d; w = 0;
+        }
+        cnt[i][j] = c; err[i][j] = e; way[i][j] = w;
       }
-      hits.push(found);
     }
-    return { offset, hits, n: hits.filter(Boolean).length, err };
+    const matched: (SungNote | null)[] = target.map(() => null);
+    for (let i = n, j = m; i > 0 && j > 0;) {
+      if (way[i][j] === 0) { matched[i - 1] = sung[j - 1]; i--; j--; }
+      else if (way[i][j] === 1) i--;
+      else j--;
+    }
+    return { offset, matched, n: cnt[n][m], err: err[n][m] };
   };
-  // the key is tried from the first few sung notes against the first few target notes (the first may be a slip)
-  let best = match(sung[0].midi - target[0]);
-  for (let i = 0; i < Math.min(3, sung.length); i++) {
-    for (let j = 0; j < Math.min(3, target.length); j++) {
-      const m = match(sung[i].midi - target[j]);
-      if (m.n > best.n || (m.n === best.n && m.err < best.err)) best = m;
+  // the keys: one of the first sung notes on one of the first target notes (the first ones may be slips)
+  let best: ReturnType<typeof align> | null = null;
+  for (let k = 0; k < Math.min(8, m); k++) {
+    for (let t = 0; t < Math.min(6, n); t++) {
+      const a = align(sung[k].midi - target[t]);
+      if (!best || a.n > best.n || (a.n === best.n && a.err < best.err)) best = a;
     }
   }
-  return { hits: best.hits, share: best.n / target.length, offset: best.offset };
+  const { matched, offset } = best!;
+  const hits = matched.map(x => x !== null);
+  return { hits, matched, share: hits.filter(Boolean).length / n, offset };
 };
 
 /** A pearl is polished when this share of the phrase's notes was sung right. */

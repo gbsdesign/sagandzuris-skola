@@ -79,6 +79,16 @@ test('many syllables on one pitch count as one melody note', () => {
   assert.equal(scoreSinging(target, sung).share, 1);
 });
 
+test('a wrong note early on does not pull the later ones out of line', () => {
+  // the third note a semitone low: the next 61 must not be taken for it
+  const target = [61, 62, 64, 62, 64, 66, 64, 62, 61, 64, 62];
+  const sung = [61, 62, 63, 62, 64, 66, 64.75, 62, 61, 62].map((m, i) => ({ midi: m - 3, start: i * 400, end: i * 400 + 300 }));
+  const r = scoreSinging(target, sung);
+  assert.equal(Math.round(r.offset), -3);
+  assert.deepEqual(r.hits.map(Number), [1, 1, 0, 1, 1, 1, 0, 1, 1, 0, 1]);
+  assert.equal(r.matched[3]?.start, 1200);
+});
+
 test('nothing sung scores nothing', () => {
   assert.equal(scoreSinging([60, 62], []).share, 0);
 });

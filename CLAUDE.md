@@ -313,10 +313,13 @@ listens (Gemini through Firebase AI Logic). 8 calls on Android (wake lock, push,
 1–3. Built (see above).
 4. Pearls/chests game — built 2026-10-25 (redesign stage 7, branch `claude/dazzling-goodall-inv60p`). Since 2026-10-27
    the fifth round button „მარგალიტები“ of „საგანძურის გზა“ (`PathOrbs`, body `pearls/PearlChests.tsx`; the games page is
-   the hub above), shown while section `margalitebi` is open (open by default). Chests in `data/pearls.ts` (first =
-   vol. IX №58–77), the first phrase of the chosen voice from the book notes (`utils/pearls.ts` `phraseOf`), singing
-   heard in the browser (`utils/pitch.ts`: YIN pitch, notes, key-free score; ≥80% polishes; `utils/singCapture.ts`),
-   sheet `components/pearls/PearlSheet.tsx`. Best try in `students.pearls`, best take (MP3) in
+   the hub above), shown while section `margalitebi` is open (open by default). Three chests in `data/pearls.ts` (cards on
+   top: წირვა vol. IX №58–77, მწუხრი and ცისკარი from vol. I), the first phrase of the chosen voice from the book notes
+   (`utils/pearls.ts` `phraseOf`), singing heard in the browser (`utils/pitch.ts`: YIN pitch, notes, key-free score —
+   since 2026-10-28 an in-order alignment (LCS), so one wrong note no longer pulls the rest out of line; ≥80% polishes;
+   `utils/singCapture.ts`); „სად შეცდი“ (`missedNotes`: each missed note too high / too low / not heard, numbered red on
+   the mirror). Each voice keeps its own best (`pearls[id].voices`); all three polished = a golden pearl (`isGolden`),
+   three dots under each pearl. Sheet `components/pearls/PearlSheet.tsx`. Best try in `students.pearls`, best take (MP3) in
    `pearlTakes/{uid}/takes/{versionId}`; the teacher hears it and approves („ჩათვლა“ → `students.pearlShine`, teachers
    only) in the member's window (`PearlReview`). „AI მასწავლებელი“ (`utils/aiTeacher.ts`, gemini-3.8-flash through
    Firebase AI Logic with the try-on's App Check; 3 a day per device, superadmins unlimited) — works only on the

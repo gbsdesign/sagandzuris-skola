@@ -23,7 +23,7 @@ import { MasteryContent } from '../mastery/MasteryContent';
 import { WorkMonthLine, WorkPanel, useIndependentWork, usePanelWish } from './IndependentWorkCard';
 import { PearlIcon } from '../pearls/PearlIcon';
 import { usePearls } from '../../hooks/usePearls';
-import { pearlState } from '../../utils/pearls';
+import { isGolden, pearlState } from '../../utils/pearls';
 import { CHESTS } from '../../data/pearls';
 
 // the chests and the singing load only when „მარგალიტები“ is opened
@@ -83,7 +83,8 @@ const usePearlSummary = () => {
   const states = ids.map(id => pearlState(pearls[id], shine[id]));
   const polished = states.filter(s => s === 'polished' || s === 'shining').length;
   const shining = states.filter(s => s === 'shining').length;
-  return { total: ids.length, polished, shining, percent: ids.length ? (100 * polished) / ids.length : 0 };
+  const golden = ids.filter(id => isGolden(pearls[id])).length;
+  return { total: ids.length, polished, shining, golden, percent: ids.length ? (100 * polished) / ids.length : 0 };
 };
 
 // the manera ring follows the colour rule of its percentages (<50 red, 50–79 amber, 80+ green)
@@ -184,7 +185,7 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
     work: { title: 'დამოუკიდებელი სამუშაო', sub: <WorkMonthLine work={work} />, body: <WorkPanel /> },
     pearls: {
       title: 'მარგალიტები',
-      sub: `გაპრიალებული ${pearls.polished} / ${pearls.total}${pearls.shining ? ` · ბრწყინავს ${pearls.shining}` : ''}`,
+      sub: `გაპრიალებული ${pearls.polished} / ${pearls.total}${pearls.golden ? ` · ოქროსფერი ${pearls.golden}` : ''}${pearls.shining ? ` · ბრწყინავს ${pearls.shining}` : ''}`,
       body: (
         <Suspense fallback={<p className="py-8 text-center text-sm text-[#8a7a6a]">იტვირთება…</p>}>
           <PearlChests />
