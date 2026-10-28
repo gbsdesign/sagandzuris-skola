@@ -21,6 +21,7 @@ import { Avatar as Face } from '../classes/ChatPanel';
 import { PearlReview } from '../pearls/PearlReview';
 import { DrillReview } from '../mastery/DrillReview';
 import { LearnReview } from '../learn/LearnReview';
+import { MedavitneReview } from '../learn/MedavitneReview';
 
 const VOICE = { '1': 'მთქმელი', '2': 'მოძახილი', '3': 'ბანი' } as Record<string, string>;
 const MONTHS = ['იანვარში', 'თებერვალში', 'მარტში', 'აპრილში', 'მაისში', 'ივნისში', 'ივლისში', 'აგვისტოში', 'სექტემბერში', 'ოქტომბერში', 'ნოემბერში', 'დეკემბერში'];
@@ -302,8 +303,9 @@ const StudentSheet: React.FC<{
           <AttendanceStrip uid={uid} last={attendance} />
 
           <PearlReview uid={uid} pearls={record.data.pearls} shine={record.data.pearlShine} />
-          <DrillReview uid={uid} drillDone={record.data.drillDone} />
+          <DrillReview uid={uid} drillDone={record.data.drillDone} drillScore={record.data.drillScore} />
           <LearnReview uid={uid} learning={record.data.learning} shine={record.data.pearlShine} />
+          <MedavitneReview uid={uid} shine={record.data.pearlShine} />
 
           <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8]">
             <button type="button" aria-expanded={more} onClick={() => setMore(o => !o)}

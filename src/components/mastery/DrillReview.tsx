@@ -2,12 +2,15 @@ import React, { useEffect, useRef, useState } from 'react';
 import { Dumbbell, Pause, Play } from 'lucide-react';
 import { findDrill } from '../../data/vocalDrills';
 import { drillTakeUrl, readDrillDone, useDrillTakes } from '../../utils/drillTakes';
+import { readDrillScores } from '../../utils/drillScores';
+import { ManeraScore } from '../views/ManeraPanel';
 import { georgiaToday } from '../../utils/psalter';
 import { shortDate } from '../../hooks/useTeaching';
 
-// The member's exercises in their window (teachers, admins): how many they did in the last 7 days, and the recordings
-// they sent („მასწავლებელს გაგზავნა“) to hear. Shown only once there is something.
-export const DrillReview: React.FC<{ uid: string; drillDone?: unknown }> = ({ uid, drillDone }) => {
+// The member's exercises in their window (teachers, admins): how many they did in the last 7 days, the app's best score
+// of each (microphone or AI teacher), and the recordings they sent („მასწავლებელს გაგზავნა“) to hear. Shown only once
+// there is something.
+export const DrillReview: React.FC<{ uid: string; drillDone?: unknown; drillScore?: unknown }> = ({ uid, drillDone, drillScore }) => {
   const takes = useDrillTakes(uid);
   const [playing, setPlaying] = useState<string | null>(null);
   const audio = useRef<{ a: HTMLAudioElement; url: string } | null>(null);
@@ -20,7 +23,8 @@ export const DrillReview: React.FC<{ uid: string; drillDone?: unknown }> = ({ ui
   const done = readDrillDone(drillDone);
   const weekStart = georgiaToday(new Date(Date.now() - 6 * 86400000));
   const week = Object.values(done).filter(d => d >= weekStart).length;
-  if (!takes.length && !Object.keys(done).length) return null;
+  const scores = Object.entries(readDrillScores(drillScore)).sort((a, b) => a[1] - b[1]);
+  if (!takes.length && !Object.keys(done).length && !scores.length) return null;
 
   const play = (id: string) => {
     if (playing === id) { stop(); return; }
@@ -40,6 +44,16 @@ export const DrillReview: React.FC<{ uid: string; drillDone?: unknown }> = ({ ui
       <p className="flex items-center gap-1.5 text-[13px] font-bold text-[#75685a]">
         <Dumbbell className="w-4 h-4" /> სავარჯიშოები · ბოლო 7 დღეში {week}
       </p>
+      {scores.length > 0 && (
+        <ul className="mt-2 flex flex-wrap gap-1.5" aria-label="აპის შეფასებები">
+          {scores.map(([id, v]) => (
+            <li key={id} className="inline-flex items-center gap-1.5 rounded-full bg-[#fbf6ec] ring-1 ring-[#efe5d4] pl-2.5 pr-1 py-0.5">
+              <span className="text-[12.5px] font-semibold text-[#4a3426]">{findDrill(id)?.title ?? id}</span>
+              <ManeraScore v={v} />
+            </li>
+          ))}
+        </ul>
+      )}
       {takes.length > 0 && (
         <ul className="mt-1 divide-y divide-[#f1e8d9]">
           {takes.map(t => (

@@ -1,6 +1,7 @@
 import { getApp } from 'firebase/app';
 import { startAppCheck } from './samosiTryOn';
 import { georgiaToday } from './psalter';
+import { parseScore } from './drillScore';
 
 // „AI მასწავლებელი“ in the pearls game and the learning mode: Gemini (through Firebase AI Logic, the same App Check pass as the chokha
 // try-on) listens to a member's take of a pearl's phrase and answers in Georgian: what went well, the one thing to
@@ -9,10 +10,14 @@ import { georgiaToday } from './psalter';
 export const AI_TEACHER_MODEL = 'gemini-3.8-flash';
 export const AI_TEACHER_DAILY = 3;
 
-const dayKey = (uid: string) => `sg-ai-teacher-${uid}-${georgiaToday()}`;
-const usedToday = (uid: string) => { try { return Number(localStorage.getItem(dayKey(uid))) || 0; } catch { return 0; } };
+/** whose tries: the pearls and the learning mode share one count, „ოსტატობა“ has its own (the user's choice) */
+export type AiScope = 'sing' | 'manera';
+const dayKey = (uid: string, scope: AiScope = 'sing') => `sg-ai-teacher-${scope === 'sing' ? '' : `${scope}-`}${uid}-${georgiaToday()}`;
+const usedToday = (uid: string, scope: AiScope = 'sing') => { try { return Number(localStorage.getItem(dayKey(uid, scope))) || 0; } catch { return 0; } };
+const countTry = (uid: string, scope: AiScope) => { try { localStorage.setItem(dayKey(uid, scope), String(usedToday(uid, scope) + 1)); } catch { /* storage off */ } };
 
-export const aiTriesLeft = (uid: string, unlimited: boolean) => (unlimited ? Infinity : Math.max(0, AI_TEACHER_DAILY - usedToday(uid)));
+export const aiTriesLeft = (uid: string, unlimited: boolean, scope: AiScope = 'sing') =>
+  (unlimited ? Infinity : Math.max(0, AI_TEACHER_DAILY - usedToday(uid, scope)));
 
 export type AiTeacherProblem = 'setup' | 'no-credits' | 'offline' | 'failed' | 'no-tries';
 export class AiTeacherError extends Error {
@@ -80,6 +85,51 @@ export const askAiTeacher = async (uid: string, mp3: Blob, about: TakeAbout, unl
     throw new AiTeacherError(offline() ? 'offline' : 'failed');
   }
   if (!answer) throw new AiTeacherError('failed');
-  if (!unlimited) { try { localStorage.setItem(dayKey(uid), String(usedToday(uid) + 1)); } catch { /* storage off */ } }
+  if (!unlimited) countTry(uid, 'sing');
   return answer.replace(/\*+/g, '');
+};
+
+/** One „ოსტატობა“ tip's exercise, for the AI teacher who scores it. */
+export interface DrillAbout {
+  title: string;   // the tip
+  check: string;   // how to know it is right (the lesson's „check“)
+  steps: string[]; // what the student did, in order
+}
+
+const scorePrompt = (a: DrillAbout) => [
+  'შენ ხარ ქართული ტრადიციული საეკლესიო გალობისა და ხალხური სიმღერის კეთილი და ზუსტი ვოკალის მასწავლებელი.',
+  `მოსწავლემ ტელეფონში ჩაიწერა სავარჯიშო თემაზე „${a.title}“. ფონზე შეიძლება ისმოდეს ტელეფონის სინთეზატორის ნოტი.`,
+  `სავარჯიშოს ნაბიჯები: ${a.steps.map((t, i) => `${i + 1}) ${t}`).join(' ')}`,
+  `სწორად შესრულების ნიშანი: ${a.check}`,
+  'მოუსმინე და შეაფასე, რამდენად კარგად შეასრულა ეს კონკრეტული უნარი — 0-დან 100-მდე (80+ კარგია, 50–79 საშუალო, 50-ზე ნაკლები სუსტი).',
+  'თუ ჩანაწერში თითქმის არაფერი ისმის, ქულა იყოს 0.',
+  'უპასუხე მხოლოდ JSON-ით: {"score": რიცხვი, "text": "2–4 მოკლე წინადადება ქართულად, „შენ“-ით: რა გამოუვიდა და ერთი, რაც უნდა გამოასწოროს"}.',
+].join(' ');
+
+/** The AI teacher's score of a tip's exercise run (MP3): 0–100 and a few words; counts the try only on an answer. */
+export const askAiScore = async (uid: string, mp3: Blob, about: DrillAbout, unlimited = false): Promise<{ score: number; text: string }> => {
+  if (aiTriesLeft(uid, unlimited, 'manera') <= 0) throw new AiTeacherError('no-tries');
+  if (offline()) throw new AiTeacherError('offline');
+  const audio = await blobToBase64(mp3);
+  let raw = '';
+  try {
+    await startAppCheck();
+    const { getAI, getGenerativeModel, GoogleAIBackend } = await import('firebase/ai');
+    const model = getGenerativeModel(getAI(getApp(), { backend: new GoogleAIBackend() }), {
+      model: AI_TEACHER_MODEL,
+      generationConfig: { responseMimeType: 'application/json' },
+    });
+    const res = await model.generateContent([{ text: scorePrompt(about) }, { inlineData: { mimeType: 'audio/mp3', data: audio } }]);
+    raw = res.response.text().trim();
+  } catch (err) {
+    console.warn('AI teacher score:', err);
+    const text = String((err as Error)?.message || err);
+    if (/prepay|credits|depleted|quota|resource.?exhausted|429/i.test(text)) throw new AiTeacherError('no-credits');
+    if (/api.?key|not.?enabled|permission|403|billing|ai.?logic|app.?check|not found|404|recaptcha/i.test(text)) throw new AiTeacherError('setup');
+    throw new AiTeacherError(offline() ? 'offline' : 'failed');
+  }
+  const parsed = parseScore(raw);
+  if (!parsed) throw new AiTeacherError('failed');
+  if (!unlimited) countTry(uid, 'manera');
+  return parsed;
 };

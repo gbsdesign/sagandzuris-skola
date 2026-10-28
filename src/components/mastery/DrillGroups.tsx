@@ -2,11 +2,10 @@ import React, { useState } from 'react';
 import { Check, ChevronDown, ClipboardList, Drum, Ear, Music2, Play, Users } from 'lucide-react';
 import { useAuth } from '../../context';
 import { Btn } from '../ui/kit';
-import { MANERA_ITEMS } from '../../data/habitsAndManera';
 import { ALL_DRILLS, DRILL_GROUPS, findDrill } from '../../data/vocalDrills';
 import { useManeraPractice } from '../../utils/maneraPractice';
 import { useDrillDone } from '../../utils/drillTakes';
-import { useManera } from '../views/ManeraPanel';
+import { ManeraScore, useMastery } from '../views/ManeraPanel';
 import { useMyClasses } from '../../hooks/useClasses';
 import { daysUntil, useMyAssignments } from '../../hooks/useTeaching';
 import { DrillSheet } from './ManeraLessonSheet';
@@ -26,17 +25,18 @@ const useOpenDrillWork = () => {
 // „დღის სავარჯიშო“ at the top of ოსტატობა: a teacher's assigned exercise first, then the weakest marked tip not done
 // today, otherwise the next drill by the day.
 export const DailyDrill: React.FC = () => {
-  const { marks } = useManera();
+  const { scoreOf } = useMastery();
   const { doneToday, weekDays } = useManeraPractice();
   const assigned = useOpenDrillWork();
   const [open, setOpen] = useState<string | null>(null);
 
-  const weak = MANERA_ITEMS.map((item, i) => ({ id: `tip-${item.num}`, v: marks[i]?.v }))
-    .filter(x => x.v !== undefined && x.v < 80 && !doneToday(x.id))
-    .sort((a, b) => a.v! - b.v!)[0];
+  // the weakest exercise so far (a teacher's mark or the app's score under 80), not done today
+  const weak = ALL_DRILLS.map(d => ({ id: d.id, v: scoreOf(d.id) }))
+    .filter((x): x is { id: string; v: number } => x.v !== null && x.v < 80 && !doneToday(x.id))
+    .sort((a, b) => a.v - b.v)[0];
   const todo = ALL_DRILLS.filter(d => !doneToday(d.id));
   const pick = assigned[0]?.exercise ?? weak?.id ?? todo[Math.floor(Date.now() / 86400000) % Math.max(1, todo.length)]?.id;
-  const why = assigned[0] ? 'მასწავლებლის დავალება' : weak ? 'მასწავლებლის შეფასებით' : '';
+  const why = assigned[0] ? 'მასწავლებლის დავალება' : weak ? `ბოლო შეფასება ${weak.v}%` : '';
   const drill = findDrill(pick);
 
   return (
@@ -66,6 +66,7 @@ export const DailyDrill: React.FC = () => {
 // „სავარჯიშოები“: the four groups beside the tips, each folding open its drills; a tap opens the drill's lesson.
 export const DrillGroups: React.FC = () => {
   const { doneToday } = useManeraPractice();
+  const { scoreOf } = useMastery();
   const [openGroup, setOpenGroup] = useState<string | null>(null);
   const [sheet, setSheet] = useState<string | null>(null);
 
@@ -106,7 +107,9 @@ export const DrillGroups: React.FC = () => {
                           {did && <Check className="w-3 h-3" aria-label="დღეს შესრულებულია" />}
                         </span>
                         <span className="flex-1 min-w-0 text-[14px] font-semibold leading-snug text-[#2a2017]">{d.title}</span>
-                        <span className="shrink-0 text-[12px] font-semibold text-[#8a7a6a] tabular-nums">{d.exercise.minutes} წთ</span>
+                        {scoreOf(d.id) !== null
+                          ? <ManeraScore v={scoreOf(d.id)} />
+                          : <span className="shrink-0 text-[12px] font-semibold text-[#8a7a6a] tabular-nums">{d.exercise.minutes} წთ</span>}
                       </button>
                     </li>
                   );
