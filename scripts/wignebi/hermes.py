@@ -1,12 +1,16 @@
 """Reads the texts out of the „საღვთისმსახურო წიგნები“ app's JavaScript bundle.
 
-The app is built with Expo / React Native, so its code ships as Hermes bytecode (version 98). The books are plain
-data modules there: one module per book that builds a big object of class instances (titles[], texts[][]) and
-exports it (`TvenidataData`, `JamniData`, …). This file knows just enough of the bytecode to rebuild those objects:
+The app is built with Expo / React Native, so its code ships as Hermes bytecode (version 98 up to the app's 1.1.3,
+99 since 1.1.4). The books are plain data modules there: one module per book that builds a big object of class
+instances (titles[], texts[][]) and exports it (`Tvenidata`, `JamniData`, …). This file knows just enough of the
+bytecode to rebuild those objects:
 
-  HBC          the file's header and tables (strings, literal buffers, object shapes)
-  disasm       one function's instructions (opcode table: ops.txt, Hermes v98 = static_h BytecodeList.def without
-               CreatePrivateName and NewTypedObjectWithBuffer, with CacheNewObject at index 15)
+  HBC          the file's header and tables (strings, literal buffers, object shapes) — the same in v98 and v99
+  disasm       one function's instructions. Opcode tables: ops98.txt (static_h BytecodeList.def without
+               CreatePrivateName and NewTypedObjectWithBuffer, with CacheNewObject at index 15) and ops99.txt (v98
+               + NewTypedObjectWithBuffer at 4, − CacheNewObject, + CreatePrivateName after AddEmptyString — the order
+               of opcode names inside hermesc 260318099 from npm; every function of the app's 1.1.4 bundle decodes
+               cleanly with it; the two added opcodes are unused there, so their operands are unchecked)
   Ev.run       a tiny evaluator that follows a module function's straight-line code and keeps the objects it builds
   find_module  the function that defines a given export (found by its name string, then checked by running it)
 
@@ -14,7 +18,7 @@ Nothing here runs the app's code for real; unknown operations simply give `Unk` 
 import bisect, collections, os, re, struct
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-VERSION = 98
+VERSIONS = (98, 99)                    # a new version needs its own ops<N>.txt
 
 
 def _al(x):
@@ -26,9 +30,9 @@ class HBC:
         d = self.d = open(path, 'rb').read()
         if d[:8] != bytes.fromhex('c61fbc03c103191f'):
             raise SystemExit(f'{path}: not a Hermes bytecode file')
-        version, = struct.unpack_from('<I', d, 8)
-        if version != VERSION:
-            raise SystemExit(f'{path}: Hermes bytecode v{version}, this reader knows v{VERSION} (ops.txt)')
+        self.version = version = struct.unpack_from('<I', d, 8)[0]
+        if version not in VERSIONS:
+            raise SystemExit(f'{path}: Hermes bytecode v{version}; this reader knows {VERSIONS} (scripts/wignebi/ops<N>.txt)')
         names = ['fileLength', 'globalCodeIndex', 'functionCount', 'stringKindCount', 'identifierCount', 'stringCount',
                  'overflowStringCount', 'stringStorageSize', 'bigIntCount', 'bigIntStorageSize', 'regExpCount',
                  'regExpStorageSize', 'literalValueBufferSize', 'objKeyBufferSize', 'objShapeTableCount',
@@ -97,9 +101,9 @@ SZ = dict(Reg8=1, Reg32=4, UInt8=1, UInt16=2, UInt32=4, Addr8=1, Addr32=4, Imm32
 FMT = dict(Reg8='B', Reg32='I', UInt8='B', UInt16='H', UInt32='I', Addr8='b', Addr32='i', Imm32='i', Double='d')
 
 
-def load_ops(path=os.path.join(HERE, 'ops.txt')):
+def load_ops(version=98):
     ops = []
-    for line in open(path):
+    for line in open(os.path.join(HERE, f'ops{version}.txt')):
         p = line.split()
         if p:
             ops.append((p[0], p[1:]))
@@ -142,12 +146,14 @@ def _key(k):
 
 class Ev:
     def __init__(s, H, ops=None):
-        s.H = H; s.ops = ops or load_ops(); s.S = H.strings(); s.F = func_headers(H)
+        s.H = H; s.ops = ops or load_ops(H.version); s.S = H.strings(); s.F = func_headers(H)
         s.shapes = [struct.unpack_from('<II', H.d, H.shapeOff + 8 * i) for i in range(H.h['objShapeTableCount'])]
         s.shapekeys = {}
         s._starts = None
 
     def keys(s, si):
+        if si >= len(s.shapes):
+            return []                          # not a real instruction (e.g. a switch table after the code)
         if si not in s.shapekeys:
             off, n = s.shapes[si]
             s.shapekeys[si] = [_key(_lit(s.S, x)) for x in read_lits(s.H, s.H.keyOff, off, n)]

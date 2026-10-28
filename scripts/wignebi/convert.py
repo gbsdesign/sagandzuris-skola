@@ -70,8 +70,9 @@ def is_legacy(s):
     l=len([c for c in NONROMAN.findall(s) if c not in 'IVXLCDM']); g=len(GEO.findall(s))
     return (l>=2 and l>g) or (g==0 and any(c in s for c in SPECIAL))
 
-def convert_legacy(s):
+def convert_legacy(s, extra=()):
     s = fix_hyphens(s)
+    for a,b in extra: s = s.replace(a,b)     # a book's own abbreviation codes first (ზატიკი: zatiki_table.json)
     for a,b in ABBR: s = s.replace(a,b)
     s = re.sub(r'(?<=[A-Za-zა-ჿ])8|8(?=[A-Za-z])', 'ი', s)
     s = re.sub(r'(?<=[A-Za-zა-ჿ])6|6(?=[A-Za-z])', 'დ', s)
@@ -86,7 +87,7 @@ def convert_legacy(s):
     s = re.sub(r'  +', ' ', s)
     return s.strip()
 
-def convert(s):
+def convert(s, extra=()):
     if not isinstance(s,str): return s
-    if is_legacy(s): return convert_legacy(s)
+    if is_legacy(s): return convert_legacy(s, extra)
     return fix_hyphens_unicode(uni_old_to_mkhedruli(s)) if (GEO.search(s) or re.search('[Ⴀ-Ⴥⴀ-ⴥ]', s)) else s

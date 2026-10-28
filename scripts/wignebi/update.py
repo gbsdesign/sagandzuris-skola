@@ -6,13 +6,14 @@ checks its hash, rebuilds public/wignebi + src/data/wignebi.ts from it (build.py
 result with what the site has, and only then puts it in place and records the update in state.json.
 
   python3 scripts/wignebi/update.py                 check the server; apply a newer update if there is one
-  python3 scripts/wignebi/update.py --bundle FILE   apply a bundle at hand (e.g. from a newer APK of the app)
+  python3 scripts/wignebi/update.py --apk FILE      apply a newer version of the app from its APK (Play store)
+  python3 scripts/wignebi/update.py --bundle FILE   the same with the bare bundle (assets/index.android.bundle)
   python3 scripts/wignebi/update.py --dry-run       check and build, change nothing
 
 Run daily by .github/workflows/wignebi-update.yml, which commits the change straight to main.
 Nothing is written when a book would lose items or more than a small share of its text (the run fails instead,
 so a broken update never reaches the site)."""
-import base64, hashlib, json, os, re, shutil, sys, tempfile, urllib.error, urllib.request
+import base64, datetime, hashlib, json, os, re, shutil, sys, tempfile, urllib.error, urllib.request, zipfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -128,10 +129,21 @@ def main(argv):
     state = json.load(open(STATE, encoding='utf-8'))
     with tempfile.TemporaryDirectory() as tmp:
         bundle = os.path.join(tmp, 'bundle.hbc')
-        if '--bundle' in argv:
-            shutil.copyfile(argv[argv.index('--bundle') + 1], bundle)
-            update = {'runtimeVersion': state['runtimeVersion'], 'updateId': None, 'createdAt': None,
-                      'source': os.path.basename(argv[argv.index('--bundle') + 1])}
+        if '--apk' in argv or '--bundle' in argv:
+            # a newer app version from the Play store: its own bundle replaces what the site has, and from now on
+            # the server is asked for that version's updates (its runtime = its version); updates made before now
+            # are older than this APK, so createdAt = now
+            src = argv[argv.index('--apk' if '--apk' in argv else '--bundle') + 1]
+            runtime = state['runtimeVersion']
+            if '--apk' in argv:
+                with zipfile.ZipFile(src) as z:
+                    with open(bundle, 'wb') as f:
+                        f.write(z.read('assets/index.android.bundle'))
+                    runtime = json.loads(z.read('assets/app.config'))['version']
+            else:
+                shutil.copyfile(src, bundle)
+            now = datetime.datetime.now(datetime.timezone.utc).strftime('%Y-%m-%dT%H:%M:%S.000Z')
+            update = {'runtimeVersion': runtime, 'updateId': None, 'createdAt': now, 'source': os.path.basename(src)}
         else:
             found = []
             for rt in runtimes(state['runtimeVersion']):

@@ -18,6 +18,9 @@ import hermes              # noqa: E402
 
 REPO = os.path.dirname(os.path.dirname(HERE))
 LABELS = json.load(open(os.path.join(HERE, 'labels.json'), encoding='utf-8'))
+# a book's own abbreviation codes, applied before the common table (taken from the app's converter of that book)
+CODES = {'zatiki': [tuple(x) for x in json.load(open(os.path.join(HERE, 'zatiki_table.json'), encoding='utf-8'))]}
+_codes = ()                                          # the codes of the book being built
 
 
 # ---------- reading the app's data ----------
@@ -56,8 +59,8 @@ def block_sections(b):
     out = []
     for i, t in enumerate(a[0]):
         body = a[1][i] if i < len(a[1]) and isinstance(a[1][i], list) else []
-        title = C.convert(t).strip() if isinstance(t, str) else ''
-        paras = [p for p in (C.convert(p).strip() for p in body if isinstance(p, str)) if p]
+        title = C.convert(t, _codes).strip() if isinstance(t, str) else ''
+        paras = [p for p in (C.convert(p, _codes).strip() for p in body if isinstance(p, str)) if p]
         if title or paras:
             out.append((title, paras))
     return out
@@ -110,6 +113,7 @@ SOURCES = {
     'paraklitoni': ('პარაკლიტონი', 'list', 'data'),
     'tveni': ('საზიარო თვენი', 'list', 'Tvenidata'),
     'jamni': ('ჟამნი', 'list', 'JamniData'),
+    'zatiki': ('ზატიკი', 'list', 'Zatikidata'),        # since the app's 1.1.4
     'davitni': ('დავითნი', 'list', 'DavitniData'),
     'mgalobeltatvis': ('მგალობელთათვის', 'list', 'MedavitneData'),
     'wardgoma': ('წარდგომები', 'list', 'WardgomaData'),
@@ -222,8 +226,10 @@ def build(bundle, root=REPO):
     """writes the app's files under root; returns {collection: (items, characters)}"""
     data = read_bundle(bundle)
     pub = os.path.join(root, 'public', 'wignebi')
+    global _codes
     menu = {}; stats = {}
     for coll, (title, kind, _) in SOURCES.items():
+        _codes = CODES.get(coll, ())
         if kind == 'calendar':
             files, items = calendar(data[coll])
         elif coll in ('akhali', 'dzveli', 'trapezi', 'samociqulo'):
@@ -268,6 +274,7 @@ def write_menu(menu, path, years):
           "  { id: 'paraklitoni', title: 'პარაკლიტონი', sub: 'რვა ხმა, შვიდეულის დღეები', collections: ['paraklitoni'] },",
           "  { id: 'tveni', title: 'საზიარო თვენი', sub: 'წმინდანთა საზიარო განგებანი', collections: ['tveni'] },",
           "  { id: 'jamni', title: 'ჟამნი', sub: 'ჟამები, თვეები, აღდგომისანი', collections: ['jamni'] },",
+          "  { id: 'zatiki', title: 'ზატიკი', sub: 'აღდგომიდან ყოველთა წმიდათა კვირამდე', collections: ['zatiki'] },",
           "  { id: 'davitni', title: 'დავითნი', sub: '20 კანონი, სადიდებლები', collections: ['davitni'] },",
           "  { id: 'mgalobeltatvis', title: 'მგალობელ\\u00adთათვის', sub: 'წირვა, მწუხრი, ცისკარი', collections: ['mgalobeltatvis'] },",
           "  { id: 'wardgoma', title: 'წარდგომები', sub: 'საზიარო, საცისკრო, დღესასწაულთა', collections: ['wardgoma'] },",
