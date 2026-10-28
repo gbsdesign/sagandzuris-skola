@@ -185,6 +185,13 @@
   წარდგომები, ლოცვანი, პარაკლისები, ანდრია კრიტელი. Place = `mapItem` „w…“ (`utils/wignebiPath.ts` for „←“ after a reload).
   **Admins only** until the user has the monastery's permission (others see „მალე“). The texts were extracted from that
   app's bundle; its old nuskhuri-font texts were converted with the app's own table (archaic letters kept).
+- **ხუცური for the whole site** (2026-10-28): the header's round „Ⴞ“ (before the profile, `KhutsuriButton` in
+  `layout/Header.tsx`) sets `html.khutsuri` (`utils/khutsuri.ts`, device only, set before the first paint in `main.tsx`).
+  index.css then swaps `--font-sans`/`--font-serif-ge` to „SG Nuskhuri“ (h1–h3: „SG Asomtavruli“) — the nuskhuri fonts of
+  the „საღვთისმსახურო წიგნები“ app, moved onto Unicode Georgian by `scripts/fonts/build-sg-nuskhuri.py` (`public/fonts/sg-*.woff`,
+  only letters + punctuation; digits/Latin fall back; `size-adjust: 70%` because the app's letters are ~1.5× wider). The text
+  stays ordinary Georgian. Everything turns, buttons too (the user's choice). The prayer page's „ხუცური“ is the same switch;
+  its own nuskhuri/asomtavruli conversion (initial red capitals) now draws with these fonts.
 - **Library** page (`biblioteka`): საღმრთო ისტორია, დღესასწაულები, წმიდანთა ცხოვრება.
   Footer church calendar (`data/churchCalendar.ts`, `data/calendar/<year>.json`, made by
   `node scripts/fetch-church-calendar.mjs <year>`). **The 2026 file ends 13 Jan 2027 — re-run for 2027 once

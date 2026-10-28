@@ -7,6 +7,7 @@ import { COUNTED_BY_READING } from '../data/habitLooks';
 import { FoldedPrayer, PROSE, PrayerText } from '../components/views/PrayerText';
 import { HourPsalms } from '../components/views/HourPsalms';
 import { ReadingToolbar, useKhutsuri } from '../components/views/ReadingTools';
+import { useKhutsuriSetting } from '../utils/khutsuri';
 import { useHabitsModel } from '../components/habits/useHabits';
 import { Btn } from '../components/ui/kit';
 import { useAccess } from '../hooks/useAccess';
@@ -69,7 +70,7 @@ export const PrayerPage: React.FC = () => {
   const [failed, setFailed] = useState(false);
   // kept while reading on (next chapter or kathisma); every new visit starts at the standard size, in ordinary letters
   const [textSize, setTextSize] = useState(100);
-  const [khutsuri, setKhutsuri] = useState(false);
+  const [khutsuri, setKhutsuri] = useKhutsuriSetting();
   const [textEl, setTextEl] = useState<HTMLDivElement | null>(null);
   useKhutsuri(textEl, khutsuri);
 

@@ -10,6 +10,7 @@ import { OfflineButton } from '../offline/OfflineButton';
 import { useInbox, isUnread } from '../../hooks/useDirectChat';
 import { useClassLasts, useChatSeen, isClassUnread } from '../../hooks/useClassChat';
 import { User as UserIcon, LogIn, Compass, Library, Baby, MessageCircle } from 'lucide-react';
+import { useKhutsuriSetting } from '../../utils/khutsuri';
 
 interface HeaderProps {
   logoUrl: string;
@@ -23,6 +24,26 @@ const TOOLS = [
 
 // Phone: [logo] … [🔖 ③] [შესვლა] / tools group below. The full independent-work card lives on the path page.
 // Desktop (lg): one row — logo + name · tools in the middle · independent work + profile.
+
+// the round „Ⴞ“ (asomtavruli ხ) beside the profile: ხუცური on / off for the whole site, kept on this device
+const KhutsuriButton: React.FC = () => {
+  const [on, set] = useKhutsuriSetting();
+  return (
+    <button
+      type="button"
+      onClick={() => set(!on)}
+      aria-pressed={on}
+      title={on ? 'ხუცური ჩართულია — დაბრუნება მხედრულზე' : 'ხუცური — ძველი ქართული დამწერლობა'}
+      aria-label="ხუცური — ძველი ქართული დამწერლობა"
+      className={`w-9 h-9 shrink-0 rounded-full ring-1 flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
+        on ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]' : 'bg-white/80 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028]'
+      }`}
+    >
+      <span aria-hidden className="text-[19px] leading-none translate-y-[1px]" style={{ fontFamily: '"SG Asomtavruli", var(--font-serif-ge)' }}>Ⴞ</span>
+    </button>
+  );
+};
+
 export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
   const { user, signingIn, isAdmin, isTeacher } = useAuth();
   const { navigateTo, currentPage, openClass } = useNavigation();
@@ -93,6 +114,8 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
           {access.can('search') && <SearchButton className={showNav ? 'min-[400px]:hidden' : ''} />}
           {/* offline mode: the cloud shows whether the app works without internet */}
           <OfflineButton />
+          {/* ხუცური: the whole site in the old script (nuskhuri text, asomtavruli headings) */}
+          <KhutsuriButton />
 
           {user ? (
             <div className="flex items-center gap-1.5">
