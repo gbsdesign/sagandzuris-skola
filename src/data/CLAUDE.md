@@ -55,6 +55,10 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   outside the line's key, checked on the picture — a key change after a barline missed in v8/166 lines 3 and 11, kk/210
   line 5, karb/105 line 10, karb/052 line 1 (bass), v8/084 line 8 (bass); karb/150 line 21 voice I last note B♭→A.
   The other line-end clashes are the books' own (per-voice key signatures, printed ♮, divided bass).
+  Rhythm fixes (same day; a note of one voice still sounding when its next note starts, checked on the picture):
+  dasd2 bass in 29 files (the bar „…შენ-ნი, ღმერ-თო, ა-ლად ცეცხ-ლი-სა“: a doubled F3 quarter → eighth, the rest of the
+  line half a beat later), dasd2/003 voice II line 1 rebuilt (beats 0–10), song/004 line 8 voice I two 32nd notes read
+  as quarters (everything after the line moved 1.75 beats earlier). The other overlaps are divided voices in the books.
 - The OMR scripts live only in the user's old session scratchpads — they are not in this repo.
 - Unreviewed guesses (don't present as confirmed): vol. I↔III matches, vol. V/IX placements, which book
   version a liturgy recording follows (the `main` flag in `TSIRVA_BOOK` moves a recording to another version).
