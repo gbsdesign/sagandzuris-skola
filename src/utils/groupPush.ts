@@ -7,6 +7,8 @@ import { auth } from '../firebase';
 //   the 1st and the 15th) and assignment deadlines. The Firebase ID token proves who they are.
 // • POST /group-event { token, groupId, kind, kathisma } — "your kathisma was taken by …" to its reader,
 //   "help needed" to the whole group. The Worker checks the facts in Firestore before it sends anything.
+// • /account with `admin` — an admin's notices (utils/adminPush.ts); POST /access-request { token } — a newcomer's
+//   request, told to the superadmins who asked for it.
 // Push needs the installed service worker; on iPhone the site must be added to the home screen first.
 
 const SERVER = 'https://sagandzuri-reminders.mr-gabunia.workers.dev';
@@ -63,6 +65,48 @@ export const setGroupPush = async (next: GroupPushSettings): Promise<string> => 
     return '';
   } catch {
     return 'შეხსენებების სერვერთან კავშირი ვერ მოხერხდა.';
+  }
+};
+
+/** An admin's notices (utils/adminPush.ts) come to this device too: binds it with `admin` on or off, keeping the
+ *  group settings as they are. Returns an error text, or '' when done. */
+export const bindAdminDevice = async (on: boolean): Promise<string> => {
+  const user = auth.currentUser;
+  if (!user) return 'ჯერ შედი ანგარიშში.';
+  if (!pushSupported()) return on ? 'ეს ბრაუზერი შეტყობინებებს ვერ მიიღებს.' : '';
+  if (on && Notification.permission !== 'granted') {
+    const p = await Notification.requestPermission();
+    if (p !== 'granted') return 'შეტყობინებები დაბლოკილია — ჩართე ბრაუზერის პარამეტრებში ამ საიტისთვის.';
+  }
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg?.pushManager) return on ? 'შეტყობინებები მხოლოდ გამოქვეყნებულ საიტზე მუშაობს.' : '';
+    let sub = await reg.pushManager.getSubscription();
+    if (!sub && on) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(VAPID_PUBLIC_KEY) });
+    if (!sub) return '';
+    const res = await fetch(`${SERVER}/account`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription: sub.toJSON(), token: await user.getIdToken(), ...read(), admin: on }),
+    });
+    return res.ok ? '' : 'შეხსენებების სერვერმა ვერ მიიღო. სცადე მოგვიანებით.';
+  } catch {
+    return 'შეხსენებების სერვერთან კავშირი ვერ მოხერხდა.';
+  }
+};
+
+/** A newcomer's request: the Worker tells the superadmins who asked for it (it checks the request in Firestore). */
+export const notifyAccessRequest = async () => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+    await fetch(`${SERVER}/access-request`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await user.getIdToken() }),
+    });
+  } catch {
+    /* offline or the Worker isn't updated yet: the panel shows them anyway */
   }
 };
 

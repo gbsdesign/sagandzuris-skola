@@ -8,6 +8,8 @@ import { errorText } from '../../utils/errorText';
 import { SectionsTab } from './SectionsTab';
 import { ExtraRightsFold } from './ExtraRights';
 import { TopChants } from './StatsTab';
+import { PhoneNotices } from './PhoneNotices';
+import { ChangeLog } from './ChangeLog';
 import type { UserRecord } from './UsersTab';
 
 // a small square icon, the same as a folding card's
@@ -31,7 +33,7 @@ const readAll = async (path: string[]) => {
 
 // ⚙ „სკოლა“ (2026-10-28: a window from the panel's bar instead of a third tab — the panel's numbers already switch
 // between the members and the classes): the whole school's settings, one folding card under another — sections, the most
-// listened chants, the extra rights — and the backup export. Its messages show inside the window, not behind it.
+// listened chants, the extra rights, the admin's own phone notices, the change log (superadmins) — and the backup export. Its messages show inside the window, not behind it.
 // The staff are found in „წევრები“ (filter „ადმინები“), where their roles are given.
 // The logo card was removed on the user's request (2026-10-20); a logo already saved in settings/logo still shows.
 export const SchoolSheet: React.FC<{ users: UserRecord[]; onClose: () => void }> = ({ users, onClose }) => {
@@ -46,7 +48,7 @@ export const SchoolSheet: React.FC<{ users: UserRecord[]; onClose: () => void }>
       const out: Record<string, unknown> = { exportedAt: new Date().toISOString(), project: 'sagandzuris-skola' };
       // who was let in and who decided: superadmins only (others may not read them)
       const top = ['students', 'directory', 'admins', 'confirmations', 'settings', 'songTexts', 'birthdays', 'birthYears', 'nameDays',
-        ...(isSuperAdmin ? ['memberAccess', 'accessDecisions'] : [])];
+        ...(isSuperAdmin ? ['memberAccess', 'accessDecisions', 'adminLog'] : [])];
       for (const name of top) {
         setExporting(name);
         out[name] = await readAll([name]);
@@ -91,6 +93,8 @@ export const SchoolSheet: React.FC<{ users: UserRecord[]; onClose: () => void }>
         <SectionsTab onMessage={onMessage} />
         <TopChants users={users} />
         <ExtraRightsFold users={users} onMessage={onMessage} />
+        <PhoneNotices onMessage={onMessage} />
+        {isSuperAdmin && <ChangeLog />}
 
         <Card className="!py-3">
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2 min-h-[44px]">

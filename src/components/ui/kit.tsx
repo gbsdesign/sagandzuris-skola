@@ -496,6 +496,64 @@ export const ConfirmHost: React.FC = () => {
   );
 };
 
+/* ---------- „გაუქმება“: a change made at once can be taken back for a few seconds ---------- */
+
+type PendingUndo = { id: number; text: string; undo: () => unknown };
+let undoHost: ((u: PendingUndo) => void) | null = null;
+let undoSeq = 0;
+
+/**
+ * After a change that is made at once (a role, a switch, a section, the archive): a dark bar at the bottom says
+ * what changed, with „გაუქმება“, for 5 seconds — instead of asking „დარწმუნებული ხარ?“ first. `undo` puts it back
+ * (a promise is awaited; when it fails, the bar says so). Works from any handler; without an UndoHost nothing shows.
+ */
+export const offerUndo = (text: string, undo: () => unknown) => undoHost?.({ id: ++undoSeq, text, undo });
+
+/** Mounted once in App: the bar offerUndo opens, above every sheet. Only the bar itself takes taps. */
+export const UndoHost: React.FC = () => {
+  const [u, setU] = useState<PendingUndo | null>(null);
+  const [state, setState] = useState<'open' | 'busy' | 'done' | 'failed'>('open');
+  useEffect(() => {
+    undoHost = p => { setU(p); setState('open'); };
+    return () => { undoHost = null; };
+  }, []);
+  useEffect(() => {
+    if (!u || state === 'busy') return;
+    const t = window.setTimeout(() => setU(null), state === 'open' ? 5000 : 2500);
+    return () => window.clearTimeout(t);
+  }, [u, state]);
+  if (!u) return null;
+  const take = async () => {
+    triggerHaptic(10);
+    setState('busy');
+    try {
+      await u.undo();
+      setState('done');
+    } catch {
+      setState('failed');
+    }
+  };
+  const open = state === 'open' || state === 'busy';
+  return createPortal(
+    <div className="fixed inset-x-0 bottom-0 z-[95] flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pointer-events-none">
+      <div key={u.id} role="status" aria-live="polite"
+        className="pointer-events-auto w-full max-w-md min-h-[52px] pl-4 pr-1.5 py-1.5 rounded-2xl bg-[#2a2017] text-[#fbf6ec] shadow-[0_12px_32px_-12px_rgba(42,32,23,0.8)] flex items-center gap-2 sg-up">
+        {state === 'done' ? <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-300" /> : state === 'failed' ? <AlertCircle className="w-4 h-4 shrink-0 text-red-300" /> : null}
+        <span className="flex-1 min-w-0 text-[14px] font-semibold leading-snug">
+          {state === 'done' ? 'გაუქმდა — ისე დარჩა, როგორც იყო.' : state === 'failed' ? 'ვერ გაუქმდა — შეცვალე ხელით.' : u.text}
+        </span>
+        {open && (
+          <button type="button" onClick={take} disabled={state === 'busy'}
+            className="h-10 px-4 shrink-0 rounded-xl text-[14px] font-bold text-[#f3d9a4] hover:bg-white/10 active:scale-[0.97] cursor-pointer transition disabled:opacity-60">
+            გაუქმება
+          </button>
+        )}
+      </div>
+    </div>,
+    document.body
+  );
+};
+
 /** Thin progress bar. */
 export const Bar: React.FC<{ value: number; max: number; tone?: 'wine' | 'green' }> = ({ value, max, tone = 'wine' }) => (
   <div className="h-2 rounded-full bg-[#efe5d4] overflow-hidden">

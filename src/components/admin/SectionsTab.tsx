@@ -5,6 +5,7 @@ import { db } from '../../firebase';
 import { SECTIONS, SectionId, SectionState } from '../../data/sections';
 import { useSections } from '../../hooks/useSections';
 import { Fold } from './Fold';
+import { changed } from './changed';
 
 // each state with its own colour, so the list reads at a glance
 const STATES: { id: SectionState; label: string; dot: string; on: string }[] = [
@@ -23,24 +24,39 @@ export const SectionsTab: React.FC<{ onMessage: (t: string, type: 'success' | 'e
   const [kids, setKids] = useState<SectionId[]>(saved.kidsDefault);
   useEffect(() => { setState(saved.state); setKids(saved.kidsDefault); }, [saved]);
 
+  const put = (next: { state?: Partial<typeof state>; kidsDefault?: SectionId[] }) =>
+    setDoc(doc(db, 'settings', 'sections'), { ...next, updatedAt: new Date().toISOString() }, { merge: true });
   const write = async (next: { state?: typeof state; kidsDefault?: SectionId[] }) => {
     try {
-      await setDoc(doc(db, 'settings', 'sections'), { ...next, updatedAt: new Date().toISOString() }, { merge: true });
+      await put(next);
+      return true;
     } catch {
       setState(saved.state);
       setKids(saved.kidsDefault);
       onMessage('ვერ შეინახა — შეამოწმე ინტერნეტი.', 'error');
+      return false;
     }
   };
-  const setSection = (id: SectionId, st: SectionState) => {
+  // every tap is logged and can be taken back for a few seconds (only that section goes back)
+  const nameOf = (id: SectionId) => SECTIONS.find(s => s.id === id)?.label || id;
+  const stateName = (st: SectionState) => STATES.find(x => x.id === st)?.label || st;
+  const setSection = async (id: SectionId, st: SectionState) => {
+    const was = state[id];
+    if (was === st) return;
     const next = { ...state, [id]: st };
     setState(next);
-    void write({ state: next });
+    if (await write({ state: next })) {
+      changed('section', `„${nameOf(id)}“ — ${stateName(st)} (იყო ${stateName(was)})`, id, () => put({ state: { [id]: was } }));
+    }
   };
-  const toggleKids = (id: SectionId) => {
-    const next = kids.includes(id) ? kids.filter(x => x !== id) : [...kids, id];
+  const toggleKids = async (id: SectionId) => {
+    const was = kids;
+    const on = !kids.includes(id);
+    const next = on ? [...kids, id] : kids.filter(x => x !== id);
     setKids(next);
-    void write({ kidsDefault: next });
+    if (await write({ kidsDefault: next })) {
+      changed('section', `„${nameOf(id)}“ ${on ? 'დაემატა' : 'მოიხსნა'} საბავშვო რეჟიმის საწყის სიაში`, id, () => put({ kidsDefault: was }));
+    }
   };
 
   // the folded card's line: how many sections stand in each state

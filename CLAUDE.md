@@ -349,6 +349,13 @@
   class instead of the e-mail; superadmins download the shown list as CSV (`utils/csv.ts`, phones without „+995“). Attention
   lines „N კლასს მასწავლებელი არ ჰყავს“, „N წევრი კლასის გარეშეა“. Class cards show „ბოლო გაკვეთილი“. Admins find people in
   the one search (group „ადამიანები“ from `directory`; `requestOpen('admin', uid)` opens the window).
+  Ideas 2, 3, 5, 11 (2026-10-28): a change made at once — a role, a right, the kids' mode, a class added, a section, the
+  archive — no longer asks first: the kit's `offerUndo` (dark bar, 5 s, „გაუქმება“; `UndoHost` in `App.tsx`) through
+  `admin/changed.ts`, which also writes the change log `adminLog` (`utils/adminLog.ts`: admins add signed lines, superadmins
+  read them in ⚙ „სკოლა“ → „ცვლილებების ჟურნალი“, nobody edits one; in the backup). ⚙ „სკოლა“ → „ტელეფონზე შეტყობინებები“
+  (`utils/adminPush.ts`, `adminPush/{uid}`): „ახალი წევრი ელოდება“ (superadmins; `ensureMembership` → Worker
+  `/access-request`, a tap opens `/?open=admin&person=<uid>`) and „ორშაბათის მიმოხილვა“ (Monday 10:00, `weekText`). The
+  Worker sends only to people still in `admins` and adds its `subs.admin` column itself — needs only `wrangler deploy`.
 - **Access** (`hooks/useAccess.ts`): guests see chant books + synth, prayers, song/მთქმელი names only (no
   recordings anywhere); kids' mode is switched by the teacher per student (`students.kidsMode`, no PIN).
 - **Home buttons** (`utils/shortcuts.ts`, `components/home/ShortcutShelf.tsx`, `students.shortcuts`, ≤8; hidden

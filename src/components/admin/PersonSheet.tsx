@@ -19,7 +19,9 @@ import { ClassLogo } from '../classes/ClassLogo';
 import { AccessPicker, AccessRecord, DecisionRecord, saveAccess } from './AccessRequests';
 import { CentreDownloadSwitch } from './CentreDownload';
 import { SongTextSwitch } from './SongTextEditors';
-import { addClassMember } from './ClassesAdmin';
+import { addClassMember, removeClassMember } from './ClassesAdmin';
+import { changed } from './changed';
+import { logChange } from '../../utils/adminLog';
 import type { StaffRecord, UserRecord } from './UsersTab';
 import { errorText } from '../../utils/errorText';
 
@@ -104,6 +106,8 @@ export const PersonSheet: React.FC<{
         return;
       }
     }
+    logChange('access', status === 'rejected' ? `${u.name} — დამატება შეფერხდა`
+      : admitted ? `${u.name} — წვდომა შეიცვალა` : `${u.name} დაემატა სკოლაში${join ? ` და ჩაიწერა კლასში „${join.name}“` : ''}`, u.userId);
     onMessage(status === 'rejected' ? `${u.name}: დამატება შეფერხდა.`
       : admitted ? `${u.name}: წვდომა შეინახა.`
       : join ? `${u.name} დაემატა და ჩაიწერა კლასში „${join.name}“.` : `${u.name} დაემატა.`, 'success');
@@ -127,15 +131,18 @@ export const PersonSheet: React.FC<{
       note.fail(`სუპერადმინი შენს გარდა მაქსიმუმ ${MAX_EXTRA_SUPERADMINS} შეიძლება იყოს.`);
       return;
     }
-    if (!(await askConfirm({ title: `${u.name} — ${next === 'member' ? 'როლის მოხსნა (ჩვეულებრივი წევრი)' : `როლი: ${ROLE_LABEL[next]}`}?`, ok: 'შეცვლა' }))) return;
+    // no „დარწმუნებული ხარ?“: the change is made at once and „გაუქმება“ puts the old record back for a few seconds
+    const before = given ? Object.fromEntries(Object.entries(given).filter(([, v]) => v !== undefined)) : null;
+    const ref = doc(db, 'admins', email);
     setBusy(true);
     try {
-      if (next === 'member') await deleteDoc(doc(db, 'admins', email));
-      else await setDoc(doc(db, 'admins', email), {
+      if (next === 'member') await deleteDoc(ref);
+      else await setDoc(ref, {
         email, role: next, userId: u.userId, name: u.name, addedBy: user?.email || '', addedAt: new Date().toISOString(),
       });
-      note.ok(next === 'member' ? 'როლი მოიხსნა.' : `ახლა ${ROLE_LABEL[next]}ა.`);
       setRoleOpen(false);
+      changed('role', `${u.name} — ${next === 'member' ? `როლი მოიხსნა (იყო ${ROLE_LABEL[role]})` : `როლი: ${ROLE_LABEL[next]}`}`, u.userId,
+        () => (before ? setDoc(ref, before) : deleteDoc(ref)));
     } catch (e) {
       note.fail('როლი ვერ შეიცვალა: ' + errorText(e));
     } finally {
@@ -157,9 +164,12 @@ export const PersonSheet: React.FC<{
   const addTo = async (c: SchoolClass) => {
     setBusy(true);
     try {
-      const failed = await addClassMember(c, { uid: u.userId, name: u.name, photoURL: u.photoURL });
-      note.ok(failed ? `ჩაიწერა კლასში „${c.name}“, მაგრამ პროგრამა გზაზე ვერ დაემატა — კლასის გვერდიდან სცადე თავიდან.` : `ჩაიწერა კლასში „${c.name}“.`);
+      const me = { uid: u.userId, name: u.name, photoURL: u.photoURL || '' };
+      const failed = await addClassMember(c, me);
+      if (failed) note.fail(`ჩაიწერა კლასში „${c.name}“, მაგრამ პროგრამა გზაზე ვერ დაემატა — კლასის გვერდიდან სცადე თავიდან.`);
       setAdding(false);
+      changed('member', `${u.name} ჩაიწერა კლასში „${c.name}“`, c.id,
+        () => removeClassMember({ ...c, memberIds: [...c.memberIds, me.uid], members: [...c.members, me] }, me.uid));
     } catch (e) {
       note.fail(`კლასში ვერ ჩაიწერა: ${errorText(e)}`);
     } finally {
@@ -184,13 +194,16 @@ export const PersonSheet: React.FC<{
   const kidsOn = !!u.kidsMode?.on;
   const kidsSections = u.kidsMode?.sections?.length ? u.kidsMode.sections : DEFAULT_KIDS_SECTIONS;
   const setKids = async (on: boolean) => {
-    try {
+    const save = async (v: boolean) => {
       await updateDoc(doc(db, 'students', u.userId), {
-        kidsMode: { on, sections: kidsSections, by: user?.uid || '', at: new Date().toISOString() },
+        kidsMode: { on: v, sections: kidsSections, by: user?.uid || '', at: new Date().toISOString() },
       });
       // classmates' message lists leave a child in the kids' mode out
-      void syncKidsFlag(u.userId, on);
-      note.ok(on ? 'საბავშვო რეჟიმი ჩაირთო.' : 'საბავშვო რეჟიმი გამოირთო.');
+      void syncKidsFlag(u.userId, v);
+    };
+    try {
+      await save(on);
+      changed('kids', `${u.name} — საბავშვო რეჟიმი ${on ? 'ჩაირთო' : 'გამოირთო'}`, u.userId, () => save(!on));
     } catch (e) {
       note.fail('ვერ შეინახა: ' + errorText(e));
     }
@@ -370,8 +383,8 @@ export const PersonSheet: React.FC<{
           {/* the rights beyond a member's, one short row each (the folklore centre's recordings are staff's anyway) */}
           {admitted && (role === 'member' || role === 'teacher') && (
             <Part title="დამატებითი უფლებები">
-              {!isStaff && <CentreDownloadSwitch uid={u.userId} onMessage={note.say} />}
-              <SongTextSwitch uid={u.userId} onMessage={note.say} />
+              {!isStaff && <CentreDownloadSwitch uid={u.userId} name={u.name} onMessage={note.say} />}
+              <SongTextSwitch uid={u.userId} name={u.name} onMessage={note.say} />
             </Part>
           )}
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import { setCentreMember, useCentreDownloadSettings } from '../../hooks/useCentreDownload';
 import { Toggle } from '../ui/kit';
+import { changed } from './changed';
 
 // Who may save the Folklore Centre's recordings (MP3 / offline): one switch for every member in ⚙ „სკოლა“ →
 // „დამატებითი უფლებები“ (ExtraRights.tsx), and one per member in the person's window. Staff always may.
@@ -10,14 +11,18 @@ type Msg = (text: string, type: 'success' | 'error') => void;
 export const FAIL = 'ვერ შეინახა — სცადე თავიდან';
 
 /** The person's window: this member's switch (shown on, and locked, while every member is allowed). */
-export const CentreDownloadSwitch: React.FC<{ uid: string; onMessage: Msg }> = ({ uid, onMessage }) => {
+export const CentreDownloadSwitch: React.FC<{ uid: string; name: string; onMessage: Msg }> = ({ uid, name, onMessage }) => {
   const s = useCentreDownloadSettings();
   const on = s.everyone || s.uids.includes(uid);
   return (
     <Toggle
       on={on}
       disabled={s.everyone}
-      onChange={v => { setCentreMember(uid, v).catch(() => onMessage(FAIL, 'error')); }}
+      onChange={v => {
+        setCentreMember(uid, v).then(
+          () => changed('right', `${name} — ცენტრის ჩანაწერების ჩამოწერა ${v ? 'ჩაირთო' : 'გამოირთო'}`, uid, () => setCentreMember(uid, !v)),
+          () => onMessage(FAIL, 'error'));
+      }}
       label="ცენტრის ჩანაწერების ჩამოწერა"
       hint={s.everyone ? 'ყველა წევრს ჩართული აქვს (⚙ „სკოლა“)' : undefined}
     />
