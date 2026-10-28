@@ -2,22 +2,24 @@ import React, { useId } from 'react';
 import type { PearlState } from '../../utils/pearls';
 
 // One pearl, drawn: matte and grey while new, lighter once tried, white with a rainbow lustre when polished, and
-// with a gold glow and two sparks when a teacher has approved it.
+// with a gold glow and two sparks when a teacher has approved it. `golden`: polished in all three voices — a gold
+// pearl (as the South Sea ones are).
 const BODY: Record<PearlState, [string, string, string]> = {
   new: ['#ece5da', '#cdc1af', '#a99a85'],
   tried: ['#f6f1e9', '#e0d4c2', '#bba98f'],
   polished: ['#ffffff', '#f3eee9', '#cbbdb3'],
   shining: ['#ffffff', '#f8f1e7', '#d2bea2'],
 };
+const GOLD: [string, string, string] = ['#fff7e0', '#ecc96f', '#b07f2a'];
 
 const Spark: React.FC<{ x: number; y: number; r: number }> = ({ x, y, r }) => (
   <path d={`M${x} ${y - r}Q${x} ${y} ${x + r} ${y}Q${x} ${y} ${x} ${y + r}Q${x} ${y} ${x - r} ${y}Q${x} ${y} ${x} ${y - r}Z`} fill="#e6b84a" />
 );
 
-export const PearlIcon: React.FC<{ state: PearlState; size?: number; className?: string }> = ({ state, size = 56, className }) => {
+export const PearlIcon: React.FC<{ state: PearlState; golden?: boolean; size?: number; className?: string }> = ({ state, golden, size = 56, className }) => {
   const id = useId().replace(/[^a-zA-Z0-9]/g, '');
-  const [hi, mid, lo] = BODY[state];
-  const lustre = state === 'polished' || state === 'shining';
+  const [hi, mid, lo] = golden ? GOLD : BODY[state];
+  const lustre = state === 'polished' || state === 'shining' || golden;
   return (
     <svg viewBox="0 0 64 64" width={size} height={size} className={className} aria-hidden>
       <defs>

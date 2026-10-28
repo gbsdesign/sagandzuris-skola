@@ -3,7 +3,7 @@ import { Play, Pause } from 'lucide-react';
 import { useAuth } from '../../context';
 import { CHESTS } from '../../data/pearls';
 import { findVersion } from '../../data/chantLookup';
-import { PearlRecord, PearlShine, pearlState, VOICE_NAMES } from '../../utils/pearls';
+import { PearlRecord, PearlShine, isGolden, pearlState, VOICE_IDS, voiceBests } from '../../utils/pearls';
 import { shinePearl, takeUrl, usePearlTakes } from '../../hooks/usePearls';
 import { askConfirm, Btn } from '../ui/kit';
 import { PearlIcon } from './PearlIcon';
@@ -12,6 +12,12 @@ import { STATE_TEXT, chantName } from './PearlSheet';
 // The member's pearls in their window (teachers, admins): hear the best take and approve it („ჩათვლა“), after
 // which the pearl shines for the member. Shown only once the member has played.
 const ORDER = { polished: 0, tried: 1, shining: 2, new: 3 };
+const ROMAN = { '1': 'I', '2': 'II', '3': 'III' } as const;
+// „I 85% · II 60%“: the best in each voice sung
+const bestsText = (rec: PearlRecord) => {
+  const b = voiceBests(rec);
+  return VOICE_IDS.filter(v => b[v] != null).map(v => `${ROMAN[v]} ${b[v]}%`).join(' · ');
+};
 
 export const PearlReview: React.FC<{ uid: string; pearls?: Record<string, PearlRecord>; shine?: Record<string, PearlShine> }> = ({ uid, pearls = {}, shine = {} }) => {
   const { user } = useAuth();
@@ -60,13 +66,13 @@ export const PearlReview: React.FC<{ uid: string; pearls?: Record<string, PearlR
       <ul className="mt-1 divide-y divide-[#f1e8d9]">
         {rows.map(({ id, info, state }) => (
           <li key={id} className="py-2.5 flex items-center gap-2.5">
-            <PearlIcon state={state} size={40} className="shrink-0" />
+            <PearlIcon state={state} golden={isGolden(pearls[id])} size={40} className="shrink-0" />
             <div className="min-w-0 flex-1">
               <p className="text-[14px] font-bold text-[#4a3426] truncate">
                 {info ? `№${info.variant.bookNums?.[0]} ${chantName(info.chant.title)}` : id}
               </p>
               <p className="text-[12px] text-[#8a7a6a]">
-                {STATE_TEXT[state]}{pearls[id] ? ` · ${pearls[id].best}% · ${VOICE_NAMES[pearls[id].voice]}` : ''}
+                {STATE_TEXT[state]}{pearls[id] ? ` · ${bestsText(pearls[id])}` : ''}
               </p>
             </div>
             {takes[id] && (
