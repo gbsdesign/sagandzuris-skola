@@ -147,12 +147,19 @@
 - **Prayers** (`data/prayers.ts`, `public/prayers/`, `public/bible/`), psalter kathismas, 73 akathists,
   commemoration name lists (`utils/commemoration.ts`), prayer reminders via Web Push Worker
   `sagandzuri-reminders` (`worker/reminders/`; push works only on the deployed site).
+- **საგანძურის გზა** (page `gz`) = „ჩემი დღე“ since 2026-10-28: `views/PathToday.tsx` „დღეს“ card (next lesson; the nearest
+  assignment with „სწავლა“ + its parts bar when it has a learning mode; „დღეს გასამეორებელი“ — no habits line), the five
+  round buttons (`PathOrbs`), then the habits card.
 - **Habits** ticked per day (`students/{uid}.habitLog`, kept whole since 2026-10-16; each tick writes only its day),
   goals in `habitsAndManera.ts`. Views „დღე · კვირა · თვე · წელი“ + a habit's own page in `components/habits/`
   (one shared model `useHabits.tsx`; a new view = one entry in `VIEWS` in `ChvevebiPanel.tsx`), stats in
   `utils/habitStats.ts`. Ticks allowed for the last 7 days (`canTickDay`). Colours/icons/counters: `data/habitLooks.ts`,
   member's choice in `habitSetup.looks/counters`; counter numbers in `students.habitCounts` (sent 1.2 s after the last tap).
   One habit editor (2026-10-28): the habit window's ✏️ (`HabitCardEditor`); the rows only have „›“.
+  Simplified the same day (the user: „ტვინი ირევა“, sketch approved): the card's head holds the day's count, the run and the
+  view menu „დღე ▾“ (ⓘ „განმარტება“ moved into it); the day = 7-day strip + one status line; a row = the round button (a
+  counted habit's button adds its step, +10 for the Jesus prayer) + the name + its number + „›“ — no „+“, ⓘ note (now on the
+  habit's page), run or ten dots; „კვირაში და თვეში“ folds to one line „N / M“ (`sg-habits-rare-open` on the device).
 - **ოსტატობა** (2026-10-27): „დღის სავარჯიშო“ on top (a teacher's assigned exercise, then the weakest marked tip, then by
   day), 11 performance tips (`MANERA_ITEMS`; `num` is the key of teachers' marks, the list shows the position; 10 = დგომა,
   11 = სუნთქვა ფრაზებს შორის were added) and 4 exercise groups — სმენა, სამხმიანობა, ხალხური ხერხები, რიტმი
@@ -226,14 +233,19 @@
 - **Class chat** with voice messages (`components/classes/ClassChat.tsx`, `hooks/useClassChat.ts`,
   `utils/voiceRecorder.ts`); calls are the app's own (`components/calls/`, `utils/callSession.ts`), Jitsi is gone. Voice MP3s are Firestore Bytes
   (no Firebase Storage).
-- **Class page** (`pages/ClassPage.tsx`, rebuilt 2026-10-24): members in a sticky left column on a computer (`lg`), a
-  folded line on top on a phone; the class's teachers get `ClassRoll` (`teacher/StudentsOverview.tsx`: attendance ✓,
-  💬, a name opens the member's window, now with „მიწერა“/„ამოღება“). „სასწავლო პროგრამა“ (renamed everywhere from
-  „კლასის პროგრამა“) is compact: one thin progress bar, „დავალებები“ folding open beside the title (red dot = an
-  assignment still to do; teachers manage them there — `AssignmentsFold`, past ones under „ძველი · N“). The program is
-  changed in place by its ✎ (`ProgramEditor`); the members card's „+“ adds one person (`AddMemberSheet`). The timetable is one line of chips under the
-  class title (and under the chat's title on the messages page), changed by ✎ (`ScheduleSheet`). Teacher-only parts never show to members; attendance is teacher-only in
-  `firestore.rules` too (members no longer read it).
+- **Class page** (`pages/ClassPage.tsx`, rebuilt 2026-10-24, simplified 2026-10-28 „ერთი რამ, ერთ ადგილას“ from an approved
+  sketch): title bar (🎵 + one ✎ for teachers — its list opens name/logo/mode, the timetable `ScheduleSheet`, the program
+  `ProgramEditor`, adding a member `AddMemberSheet`; 💬 to the teacher for a member), the timetable chips, the members as one
+  line „N წევრი ›“ that opens their window on a phone (a sticky left column on a computer, `lg`); the class's teachers get
+  `ClassRoll` (`teacher/StudentsOverview.tsx`: attendance ✓, 💬, a name opens the member's window, „მიწერა“/„ამოღება“).
+  Then three tabs (kept per visit in sessionStorage): „პროგრამა“ — `ClassProgram`: thin progress bar, a line per item with
+  only its status (my voices, else the learning bar; a teacher sees how many know it), a tap opens `ItemSheet` (ნოტები /
+  სიმღერა, სწავლა, my voice marks, who knows each voice); under it folded cards: ოსტატობა (`ClassLessons fold`), the
+  teachers' pearls, the psalter group (folded head line with „შენი: N“; `focus` opens it) — „დავალებები“
+  (`classes/ClassWork.tsx`: `AssignmentsFold` for teachers, `WorkItems` for members; a dot = a member's assignment to do) —
+  „ჩათი“ (`ClassChat`; a dot while unread). „სასწავლო პროგრამა“ is the name everywhere (not „კლასის პროგრამა“). The timetable
+  chips also sit under the chat's title on the messages page. Teacher-only parts never show to members; attendance is
+  teacher-only in `firestore.rules` too (members no longer read it).
 - **Games hub** (`pages/GamesPage.tsx`, 2026-10-27): „თამაშები“ is a hub of three category tabs (მუსიკალური · ქართული ·
   ცოცხალი) from `data/games.ts`; every game carries its variant chips (ონლაინ · ჰიბრიდული · უტელეფონო); unbuilt games are
   „მალე“ rows; the vine label „თამაშები“ opens it. The pearls game stays the round button of „საგანძურის გზა“ (below), now
