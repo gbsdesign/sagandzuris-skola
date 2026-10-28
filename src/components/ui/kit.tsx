@@ -320,7 +320,8 @@ export const Toggle: React.FC<{ on: boolean; onChange: (on: boolean) => void; la
   </button>
 );
 
-const Knob: React.FC<{ on: boolean }> = ({ on }) => (
+/** The switch's look alone, for a row that is itself the switch button. */
+export const Knob: React.FC<{ on: boolean }> = ({ on }) => (
   <span className={cx('relative block w-12 h-7 shrink-0 rounded-full transition-colors', on ? 'bg-[#7a2028]' : 'bg-[#dccdb5]')}>
     <span className={cx('absolute top-1 w-5 h-5 rounded-full bg-white shadow transition-[left]', on ? 'left-6' : 'left-1')} />
   </span>
@@ -379,16 +380,34 @@ export const Flash: React.FC<{ flash: FlashMsg; onClose: () => void }> = ({ flas
 
 /** A sheet that rises from the bottom on phones and sits centred on wide screens. */
 /** `locked`: no ✕, and neither Escape nor a tap outside closes it (a form that must be filled in). */
-export const Sheet: React.FC<{ open: boolean; onClose: () => void; title: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode; wide?: boolean; locked?: boolean }> = ({ open, onClose, title, children, footer, wide, locked }) => {
+export const Sheet: React.FC<{
+  open: boolean; onClose: () => void; title: React.ReactNode; children: React.ReactNode; footer?: React.ReactNode; wide?: boolean; locked?: boolean;
+  /** a computer's second column instead of a window over the page: the same head, body and footer, staying in view */
+  docked?: boolean;
+}> = ({ open, onClose, title, children, footer, wide, locked, docked }) => {
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !locked && onClose();
     window.addEventListener('keydown', onKey);
+    if (docked) return () => window.removeEventListener('keydown', onKey);
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = prev; };
-  }, [open, onClose, locked]);
+  }, [open, onClose, locked, docked]);
   if (!open) return null;
+  if (docked) {
+    return (
+      <section role="dialog" aria-label={typeof title === 'string' ? title : undefined}
+        className="sticky top-4 max-h-[calc(100dvh-2rem)] flex flex-col bg-[#fbf6ec] ring-1 ring-[#e8dcc8] rounded-3xl shadow-[0_10px_30px_-18px_rgba(74,52,38,0.45)] overflow-hidden sg-in">
+        <div className="flex items-center gap-2 px-5 pt-4 pb-3 border-b border-[#e8dcc8]">
+          <h3 className="flex-1 min-w-0 font-serif-ge text-[17px] font-bold text-[#4a3426]">{title}</h3>
+          {!locked && <IconBtn label="დახურვა" onClick={onClose}><X /></IconBtn>}
+        </div>
+        <div className="flex-1 overflow-y-auto overscroll-contain px-5 py-4">{children}</div>
+        {footer && <div className="px-5 py-3 border-t border-[#e8dcc8] bg-[#fbf6ec]/95">{footer}</div>}
+      </section>
+    );
+  }
   return createPortal(
     <div className="fixed inset-0 z-[80] flex items-end sm:items-center justify-center bg-[#2a2017]/45 backdrop-blur-[2px] sg-in" onClick={locked ? undefined : onClose}>
       <div
@@ -411,6 +430,20 @@ export const Sheet: React.FC<{ open: boolean; onClose: () => void; title: React.
     </div>,
     document.body
   );
+};
+
+// a computer's width (Tailwind's `lg`), where a page gets its second column
+const WIDE = '(min-width: 1024px)';
+/** True on a computer-wide screen; follows the window as it is resized. */
+export const useWide = () => {
+  const [wide, setWide] = useState(() => window.matchMedia(WIDE).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(WIDE);
+    const change = () => setWide(mq.matches);
+    mq.addEventListener('change', change);
+    return () => mq.removeEventListener('change', change);
+  }, []);
+  return wide;
 };
 
 /** A big number with a caption, for overviews. */
@@ -490,6 +523,64 @@ export const ConfirmHost: React.FC = () => {
           <Btn kind="ghost" onClick={() => answer(false)} autoFocus>{q.cancel || 'გაუქმება'}</Btn>
           <Btn kind={q.danger ? 'red' : 'primary'} onClick={() => answer(true)}>{q.ok || 'კი'}</Btn>
         </div>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+/* ---------- „გაუქმება“: a change made at once can be taken back for a few seconds ---------- */
+
+type PendingUndo = { id: number; text: string; undo: () => unknown };
+let undoHost: ((u: PendingUndo) => void) | null = null;
+let undoSeq = 0;
+
+/**
+ * After a change that is made at once (a role, a switch, a section, the archive): a dark bar at the bottom says
+ * what changed, with „გაუქმება“, for 5 seconds — instead of asking „დარწმუნებული ხარ?“ first. `undo` puts it back
+ * (a promise is awaited; when it fails, the bar says so). Works from any handler; without an UndoHost nothing shows.
+ */
+export const offerUndo = (text: string, undo: () => unknown) => undoHost?.({ id: ++undoSeq, text, undo });
+
+/** Mounted once in App: the bar offerUndo opens, above every sheet. Only the bar itself takes taps. */
+export const UndoHost: React.FC = () => {
+  const [u, setU] = useState<PendingUndo | null>(null);
+  const [state, setState] = useState<'open' | 'busy' | 'done' | 'failed'>('open');
+  useEffect(() => {
+    undoHost = p => { setU(p); setState('open'); };
+    return () => { undoHost = null; };
+  }, []);
+  useEffect(() => {
+    if (!u || state === 'busy') return;
+    const t = window.setTimeout(() => setU(null), state === 'open' ? 5000 : 2500);
+    return () => window.clearTimeout(t);
+  }, [u, state]);
+  if (!u) return null;
+  const take = async () => {
+    triggerHaptic(10);
+    setState('busy');
+    try {
+      await u.undo();
+      setState('done');
+    } catch {
+      setState('failed');
+    }
+  };
+  const open = state === 'open' || state === 'busy';
+  return createPortal(
+    <div className="fixed inset-x-0 bottom-0 z-[95] flex justify-center px-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] pointer-events-none">
+      <div key={u.id} role="status" aria-live="polite"
+        className="pointer-events-auto w-full max-w-md min-h-[52px] pl-4 pr-1.5 py-1.5 rounded-2xl bg-[#2a2017] text-[#fbf6ec] shadow-[0_12px_32px_-12px_rgba(42,32,23,0.8)] flex items-center gap-2 sg-up">
+        {state === 'done' ? <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-300" /> : state === 'failed' ? <AlertCircle className="w-4 h-4 shrink-0 text-red-300" /> : null}
+        <span className="flex-1 min-w-0 text-[14px] font-semibold leading-snug">
+          {state === 'done' ? 'გაუქმდა — ისე დარჩა, როგორც იყო.' : state === 'failed' ? 'ვერ გაუქმდა — შეცვალე ხელით.' : u.text}
+        </span>
+        {open && (
+          <button type="button" onClick={take} disabled={state === 'busy'}
+            className="h-10 px-4 shrink-0 rounded-xl text-[14px] font-bold text-[#f3d9a4] hover:bg-white/10 active:scale-[0.97] cursor-pointer transition disabled:opacity-60">
+            გაუქმება
+          </button>
+        )}
       </div>
     </div>,
     document.body

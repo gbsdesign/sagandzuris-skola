@@ -7,9 +7,9 @@ export const SEARCH_EVENT = 'sg-search-open';
 /** Opens the search over the current page, with `query` already typed when given (a game's „ნახე აპში“). */
 export const openSearch = (query?: string) => window.dispatchEvent(new CustomEvent(SEARCH_EVENT, { detail: query ?? '' }));
 
-// "Open this song / ancestor / tab": the page takes the request when it mounts, or at once if it is
+// "Open this song / ancestor / tab / person (the admin panel)": the page takes the request when it mounts, or at once if it is
 // already on screen. One request at a time; a page that never opens simply leaves it unused.
-export type OpenTarget = 'simghera' | 'tsinaprebi' | 'biblioteka';
+export type OpenTarget = 'simghera' | 'tsinaprebi' | 'biblioteka' | 'admin';
 const REQUEST_EVENT = 'sg-open-request';
 let pending: { target: OpenTarget; id: string } | null = null;
 

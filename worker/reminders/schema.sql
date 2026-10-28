@@ -9,6 +9,7 @@ CREATE TABLE IF NOT EXISTS subs (
   uid TEXT,                        -- the signed-in person (group and assignment reminders)
   psalter INTEGER NOT NULL DEFAULT 0,
   assignments INTEGER NOT NULL DEFAULT 0,
+  admin INTEGER NOT NULL DEFAULT 0, -- an admin's notices (adminPush/{uid} in Firestore says which)
   updated_at TEXT
 );
 CREATE INDEX IF NOT EXISTS subs_uid ON subs (uid);

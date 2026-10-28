@@ -1,7 +1,7 @@
 import { usePlacements } from '../../data/placements';
 import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  CalendarDays, Check, ChevronRight, Plus, Lock, Music, Music2, ScrollText, Search, Sparkles, Users, X, BookOpen,
+  CalendarDays, Check, ChevronRight, Plus, Lock, Music, Music2, ScrollText, Search, Sparkles, Users, X, BookOpen, UserRound,
 } from 'lucide-react';
 import { useAuth } from '../../context';
 import { useMyHabits } from '../../hooks/useMyHabits';
@@ -10,7 +10,8 @@ import { roleAllows, sectionOfShortcut } from '../../utils/shortcuts';
 import { CatalogTree } from './CatalogTree';
 import { useAccess } from '../../hooks/useAccess';
 import { useMyClasses } from '../../hooks/useClasses';
-import { SEARCH_GROUPS, SearchGroupId, SearchHit, SearchItem, buildSearchIndex, runSearch, shortcutOfSearch } from '../../data/searchIndex';
+import { SEARCH_GROUPS, SearchGroupId, SearchHit, SearchItem, buildSearchIndex, personItem, runSearch, shortcutOfSearch } from '../../data/searchIndex';
+import { shownName, useDirectory } from '../../utils/directory';
 import { triggerHaptic } from '../../utils/haptics';
 import { shortcutIcon } from '../home/ShortcutShelf';
 import { useOpenSearchTarget } from './openSearchTarget';
@@ -18,7 +19,7 @@ import { askSignIn } from '../access/SignInPrompt';
 import { BackBtn } from '../ui/kit';
 
 // The one search over the whole app: chants, prayers, the psalter, songs, the great chanters, feasts and
-// the app's own functions. Full screen on a phone, a centred window from sm up. GlobalSearch opens it.
+// the app's own functions — and, for admins, people. Full screen on a phone, a centred window from sm up. GlobalSearch opens it.
 
 const RECENT_KEY = 'sgSearchRecent';
 const MAX_RECENT = 6;
@@ -37,6 +38,7 @@ const saveRecent = (key: string) => {
 
 const GROUP_ICON: Record<SearchGroupId, React.ReactNode> = {
   fn: <Sparkles />, chant: <Music2 />, prayer: <ScrollText />, psalter: <BookOpen />, song: <Music />, ancestor: <Users />, feast: <CalendarDays />,
+  person: <UserRound />,
 };
 const GROUP_TILE: Record<SearchGroupId, string> = {
   fn: 'bg-[#7a2028]/[0.08] text-[#7a2028]',
@@ -46,6 +48,7 @@ const GROUP_TILE: Record<SearchGroupId, string> = {
   song: 'bg-[#e6f1e6] text-[#3d6b3d]',
   ancestor: 'bg-[#f3e6dc] text-[#7a4a2a]',
   feast: 'bg-[#fbe9e4] text-[#9a3324]',
+  person: 'bg-[#4a3426]/[0.08] text-[#4a3426]',
 };
 const groupTitle = (id: SearchGroupId) => SEARCH_GROUPS.find(g => g.id === id)?.title || '';
 
@@ -146,10 +149,16 @@ export const SearchPanel: React.FC<{
   const inputRef = useRef<HTMLInputElement>(null);
 
   const placed = usePlacements(); // a moved recording changes the song list
+  // admins find people too (name and photo from the directory); a row opens the person's window in the admin panel.
+  // Never while picking a button
+  const directory = useDirectory(isAdmin && !picking);
   const index = useMemo(
-    () => buildSearchIndex({ signedIn: !!user, owner: isOwner, teacher: isTeacher, hasClass: classes.length > 0 || isTeacher }),
+    () => [
+      ...buildSearchIndex({ signedIn: !!user, owner: isOwner, teacher: isTeacher, hasClass: classes.length > 0 || isTeacher }),
+      ...directory.people.map(p => personItem(p.uid, shownName(p), [p.name, p.churchName].filter(Boolean).join(' '))),
+    ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [user, isOwner, isTeacher, classes.length, placed]
+    [user, isOwner, isTeacher, classes.length, placed, directory.people]
   );
   // hidden sections (the admin's switches, the kids' mode) and unbuilt ones are not offered at all
   const shown = (it: SearchItem) => !it.section || (access.section(it.section) !== 'hidden' && access.section(it.section) !== 'soon');

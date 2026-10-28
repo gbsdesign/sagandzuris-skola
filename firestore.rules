@@ -85,7 +85,21 @@ service cloud.firestore {
           && userId in c.memberIds
           && uid() in incoming().teacherIds
           && incoming().teacherIds.hasAll(existing().get('teacherIds', []))
-          && incoming().teacherIds.hasOnly(existing().get('teacherIds', []).concat(c.get('teacherIds', [])));
+          && incoming().teacherIds.hasOnly(existing().get('teacherIds', []).concat(c.get('teacherIds', [])))
+          && !c.get('archived', false);
+      }
+      // a teacher who has just taken this student out of their class (teacherVia) takes that class's teachers off the
+      // list — nobody else; a teacher of another class of the student who drops off with them is linked back when
+      // they open that class (useClassStudents)
+      function leavingTeachers() {
+        let c = get(/databases/$(database)/documents/classes/$(incoming().teacherVia)).data;
+        let before = existing().get('teacherIds', []);
+        return isTeacher()
+          && changed().hasOnly(['teacherIds', 'teacherVia'])
+          && uid() in c.get('teacherIds', [])
+          && !(userId in c.memberIds)
+          && before.hasAll(incoming().teacherIds)
+          && before.removeAll(incoming().teacherIds).hasOnly(c.get('teacherIds', []));
       }
 
       allow read: if isSelf() || isAdmin() || teachesMe();
@@ -96,7 +110,7 @@ service cloud.firestore {
       // lock the student's marking and approve pearls
       allow update: if (isSelf() && !changed().hasAny(['maneraReview', 'marksLock', 'pearlShine'])) || isAdmin()
         || (teachesMe() && changed().hasOnly(['selectedChantVariants', 'kidsMode', 'maneraReview', 'marksLock', 'pearlShine', 'updatedAt']))
-        || becomingTeacher();
+        || becomingTeacher() || leavingTeachers();
       allow delete: if isAdmin();
 
       // the student's own subcollections (none in use yet). „{sub}/{rest=**}“, not „{all=**}“: a bare „**“ also
@@ -123,6 +137,40 @@ service cloud.firestore {
     // who let a member in or refused them: superadmins only, the member never reads it
     match /accessDecisions/{userId} {
       allow read, write: if isSuperAdmin();
+    }
+
+    // The admins' change log (src/utils/adminLog.ts): an admin adds a line, signed with their own e-mail, as they change
+    // something; superadmins read it; a line is never changed or deleted.
+    match /adminLog/{id} {
+      allow read: if isSuperAdmin();
+      allow create: if isAdmin()
+        && incoming().keys().hasOnly(['at', 'by', 'byName', 'kind', 'text', 'target'])
+        && incoming().by == myEmail()
+        && incoming().at is string && incoming().kind is string
+        && incoming().text is string && incoming().text.size() <= 300
+        && incoming().get('byName', '') is string && incoming().get('target', '') is string;
+      allow update, delete: if false;
+    }
+
+    // What an admin wants on their phone (src/utils/adminPush.ts; the reminders Worker reads it with its service account):
+    // `waiting` — a newcomer asks to be let in (superadmins only, the ones who decide), `weekly` — Monday's overview.
+    match /adminPush/{userId} {
+      allow read: if isSignedIn() && (uid() == userId || isSuperAdmin());
+      allow create, update: if isAdmin() && uid() == userId
+        && incoming().keys().hasOnly(['waiting', 'weekly', 'at'])
+        && incoming().get('waiting', false) is bool && incoming().get('weekly', false) is bool
+        && (incoming().get('waiting', false) == false || isSuperAdmin());
+      allow delete: if isSignedIn() && (uid() == userId || isSuperAdmin());
+    }
+
+    // An admin's private note on a person (src/utils/adminNotes.ts): only admins read and write it, signed with their own
+    // e-mail; the person never sees it.
+    match /adminNotes/{userId} {
+      allow read, delete: if isAdmin();
+      allow create, update: if isAdmin()
+        && incoming().keys().hasOnly(['text', 'by', 'at'])
+        && incoming().text is string && incoming().text.size() > 0 && incoming().text.size() <= 2000
+        && incoming().by == myEmail() && incoming().at is string;
     }
 
     // ---- "ჩემი სამოსი" on the member's own photo (src/utils/samosiTryOn.ts) --------------------------------------
@@ -260,9 +308,11 @@ service cloud.firestore {
     // ---- Classes -----------------------------------------------------------------------------------
     match /classes/{classId} {
       function cls() { return get(/databases/$(database)/documents/classes/$(classId)).data; }
-      function teachesClass() { return isTeacher() && uid() in cls().get('teacherIds', []); }
+      // a class in the archive is closed to everyone but admins (its chat, calls, lessons, attendance)
+      function teachesClass() { return isTeacher() && uid() in cls().get('teacherIds', []) && !cls().get('archived', false); }
       function inClass() {
-        return isAdmin() || (isSignedIn() && (uid() in cls().memberIds || uid() in cls().get('teacherIds', [])));
+        return isAdmin() || (isSignedIn() && !cls().get('archived', false)
+          && (uid() in cls().memberIds || uid() in cls().get('teacherIds', [])));
       }
       // leaving: only oneself is taken out
       function leaving() {
@@ -276,9 +326,9 @@ service cloud.firestore {
       allow read: if isAdmin()
         || (isSignedIn() && (uid() in resource.data.memberIds || uid() in resource.data.teacherIds));
       allow create, delete: if isAdmin();
-      // a class's teacher runs it, but only admins choose its teachers
+      // a class's teacher runs it, but only admins choose its teachers and put it in the archive (or bring it back)
       allow update: if isAdmin()
-        || (isTeacher() && uid() in existing().get('teacherIds', []) && !changed().hasAny(['teacherIds', 'teachers']))
+        || (isTeacher() && uid() in existing().get('teacherIds', []) && !changed().hasAny(['teacherIds', 'teachers', 'archived', 'archivedAt']))
         || leaving();
 
       // Class chat: members and teachers read and post as themselves; the author or a teacher deletes
@@ -381,13 +431,14 @@ service cloud.firestore {
     match /dms/{dmId} {
       function thread() { return get(/databases/$(database)/documents/dms/$(dmId)).data; }
       function kindOf(d) { return d.get('kind', 'teach'); }
+      // a class in the archive links nobody (as a deleted one did)
       function linkedBy(teacherUid, studentUid, classId) {
         let c = get(/databases/$(database)/documents/classes/$(classId)).data;
-        return teacherUid in c.get('teacherIds', []) && studentUid in c.get('memberIds', []);
+        return teacherUid in c.get('teacherIds', []) && studentUid in c.get('memberIds', []) && !c.get('archived', false);
       }
       function classmates(a, b, classId) {
         let c = get(/databases/$(database)/documents/classes/$(classId)).data;
-        return a in c.get('memberIds', []) && b in c.get('memberIds', []);
+        return a in c.get('memberIds', []) && b in c.get('memberIds', []) && !c.get('archived', false);
       }
       function kidsOn(u) {
         let p = /databases/$(database)/documents/students/$(u);
@@ -527,7 +578,7 @@ service cloud.firestore {
         || (isSignedIn() && (uid() in resource.data.memberIds || uid() in resource.data.teacherIds));
       allow create: if isAdmin() || (isTeacher() && uid() in incoming().teacherIds);
       allow update: if isAdmin()
-        || (isTeacher() && uid() in existing().get('teacherIds', []) && !changed().hasAny(['teacherIds', 'teachers']))
+        || (isTeacher() && uid() in existing().get('teacherIds', []) && !changed().hasAny(['teacherIds', 'teachers', 'archived']))
         || leavingGroup() || renamingSelf();
       allow delete: if isAdmin() || (isTeacher() && uid() in existing().get('teacherIds', []));
 

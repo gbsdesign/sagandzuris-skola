@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
-  AudioLines, Brain, CalendarRange, Castle, ChevronRight, Crown, Dice5, Flame, Gamepad2, Gem, Headphones, Landmark, LayoutGrid, Map, MessageCircle,
-  Moon, Music, Music2, Printer, Route, ScrollText, Search, Shapes, SpellCheck, Users,
+  Brain, Castle, ChevronRight, Crown, Dice5, Flame, Gamepad2, Gem, Headphones, Landmark, LayoutGrid, Map, MessageCircle, Music, Printer, Route,
+  Shapes, SpellCheck, Users,
 } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
 import { useAccess } from '../hooks/useAccess';
@@ -28,17 +28,17 @@ import ChurchkhelaGame from './games/ChurchkhelaGame';
 // „თამაშები“: the hub of the games (2026-10-27). Three categories as tabs — მუსიკალური · ქართული · ცოცხალი — and a
 // row per game with the variants it gets (ონლაინ · ჰიბრიდული · უტელეფონო). A built game opens its page: the games that live
 // inside this page („დღის ჰანგი“, „ამიხსენი“ — pages/games/) are `mapItem`, so the top bar's „←“ returns to the hub; the pearls
-// game stays the round button of „საგანძურის გზა“, under a switch of its own in the admin panel. The rest are the plan's next
-// games, „მალე“ rows that only say so when tapped. The catalogue is data/games.ts.
+// game stays the round button of „საგანძურის გზა“, under a switch of its own in the admin panel. A game still being built is a
+// „მალე“ row that only says so when tapped; the board games are paper only — a plain card and the strip that opens their
+// sheets. The catalogue is data/games.ts.
 
 type Access = ReturnType<ReturnType<typeof useAccess>['section']>;
 
 const CAT_ICON: Record<GameCategory, React.ComponentType<{ className?: string }>> = { musical: Music, georgian: Castle, live: Users };
 
 const ICON: Record<string, React.ReactNode> = {
-  margalitebi: <Gem />, 'dghis-hangi': <Headphones />, 'sam-notshi': <Music2 />, eko: <AudioLines />, 'khmis-tsqvilebi': <LayoutGrid />,
-  'dghis-sitqva': <SpellCheck />, otkheuli: <Shapes />, 'drois-khazi': <CalendarRange />, khutsuri: <ScrollText />, 'asoebis-bade': <Search />,
-  amikhseni: <MessageCircle />, gatvla: <Dice5 />, 'tskheli-churchkhela': <Flame />, 'ra-sad-rodis': <Brain />, mtsqemsebi: <Moon />,
+  margalitebi: <Gem />, 'dghis-hangi': <Headphones />, 'dghis-sitqva': <SpellCheck />, otkheuli: <Shapes />,
+  amikhseni: <MessageCircle />, gatvla: <Dice5 />, 'tskheli-churchkhela': <Flame />, 'ra-sad-rodis': <Brain />,
   'okros-khana': <Map />, 'samshvildis-ghame': <Castle />, qaravani: <Route />, 'ori-takhti': <Crown />, 'lurji-supra': <LayoutGrid />, 'mepis-kari': <Landmark />,
 };
 
@@ -55,8 +55,10 @@ const rememberedCat = (): GameCategory => {
   return 'musical';
 };
 
-const GameRow: React.FC<{ g: GameDef; state: Access; meta?: string; onOpen: () => void }> = ({ g, state, meta, onOpen }) => {
-  const ready = state === 'open' || state === 'locked';
+const GameRow: React.FC<{ g: GameDef; state: Access; meta?: string; onOpen?: () => void }> = ({ g, state, meta, onOpen }) => {
+  // a game made only on paper (the board games) has nothing to open in the app: a plain card, its strip opens the sheets
+  const paperOnly = !!g.print && !g.page && !g.item;
+  const ready = paperOnly || state === 'open' || state === 'locked';
   const body = (
     <>
       <span className={`w-11 h-11 shrink-0 rounded-2xl flex items-center justify-center [&>svg]:w-5 [&>svg]:h-5 ${ready ? 'bg-[#7a2028]/[0.08] text-[#7a2028]' : 'bg-[#f1e8d9] text-[#9a8b7b]'}`}>
@@ -74,22 +76,25 @@ const GameRow: React.FC<{ g: GameDef; state: Access; meta?: string; onOpen: () =
           {meta && <span className="text-[12px] font-bold tabular-nums text-[#7a2028]">{meta}</span>}
         </span>
       </span>
-      {ready && <ChevronRight className="w-5 h-5 shrink-0 text-[#b3a593]" />}
+      {ready && !paperOnly && <ChevronRight className="w-5 h-5 shrink-0 text-[#b3a593]" />}
     </>
   );
   const look = ready ? 'bg-white/85 ring-[#e8dcc8] shadow-[0_1px_2px_rgba(74,52,38,0.05)]' : 'bg-white/50 ring-[#ece2d2]';
 
-  // a board game already made on paper: the card gets a strip under it that opens its printable sheets
+  // a game already made on paper (the board games, the word games' „უტელეფონო“): a strip under the card opens its sheets
   if (g.print) {
+    const head = 'w-full flex items-center gap-3 px-3 pt-3 pb-2.5 text-left';
     return (
       <li className={`rounded-2xl ring-1 overflow-hidden ${look}`}>
-        <button
-          type="button"
-          onClick={onOpen}
-          className="w-full flex items-center gap-3 px-3 pt-3 pb-2.5 text-left cursor-pointer transition-colors hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#7a2028]/40"
-        >
-          {body}
-        </button>
+        {paperOnly ? <div className={head}>{body}</div> : (
+          <button
+            type="button"
+            onClick={onOpen}
+            className={`${head} cursor-pointer transition-colors hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#7a2028]/40`}
+          >
+            {body}
+          </button>
+        )}
         <a
           href={g.print.href}
           target="_blank"
@@ -97,8 +102,8 @@ const GameRow: React.FC<{ g: GameDef; state: Access; meta?: string; onOpen: () =
           className="mx-3 mb-3 flex items-center gap-2.5 h-11 px-3.5 rounded-xl bg-[#7a2028] text-[#fbf6ec] shadow-[0_1px_2px_rgba(74,52,38,0.15)] transition-[background-color,transform] hover:bg-[#6a1b22] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#7a2028]/50"
         >
           <Printer className="w-[18px] h-[18px] shrink-0" />
-          <span className="text-[14px] font-bold leading-none">დასაბეჭდი ფურცლები</span>
-          <span className="ml-auto text-[12px] tabular-nums leading-none text-[#fbf6ec]/80">PDF · {g.print.sheets} ფურცელი</span>
+          <span className="min-w-0 truncate text-[14px] font-bold leading-none">დასაბეჭდი ფურცლები</span>
+          <span className="ml-auto shrink-0 whitespace-nowrap text-[12px] tabular-nums leading-none text-[#fbf6ec]/80"><span className="hidden min-[400px]:inline">PDF · </span>{g.print.sheets} ფურცელი</span>
         </a>
       </li>
     );
@@ -139,8 +144,8 @@ export const GamesPage: React.FC = () => {
   // a built game follows its section's switch and the member's features; the rest are „მალე“
   const rows = GAMES.map(g => ({ g, state: (g.section ? access.section(g.section) : 'soon') as Access })).filter(r => r.state !== 'hidden');
   const inCat = rows.filter(r => r.g.category === cat);
-  const ready = rows.filter(r => r.state === 'open' || r.state === 'locked').length;
-  const total = rows.length + BOARD_GAMES.length;
+  const building = rows.filter(r => r.state === 'soon').length;
+  const ready = rows.length - building + BOARD_GAMES.length; // the board games are ready on paper
 
   // the pearls row shows how far the member is; the daily game's row today's result or the streak
   const pearlIds = CHESTS.flatMap(c => c.pearls);
@@ -167,13 +172,13 @@ export const GamesPage: React.FC = () => {
     <div className="w-full max-w-2xl space-y-4">
       <Card tone="wine" className="!p-4 sm:!p-5">
         <p className="font-serif-ge text-[17px] font-bold leading-snug">ითამაშე და ისწავლე</p>
-        <p className="mt-1 text-[13px] leading-snug text-[#fbf6ec]/85">სამი კატეგორია. ყველა თამაშს სამი ვარიანტი ექნება:</p>
+        <p className="mt-1 text-[13px] leading-snug text-[#fbf6ec]/85">სამი კატეგორია და სამი ვარიანტი:</p>
         <ul className="mt-2 space-y-1 text-[12.5px] leading-snug text-[#fbf6ec]/85">
           {(Object.keys(MODE_LABEL) as GameMode[]).map(m => (
             <li key={m}><span className="font-bold text-[#fbf6ec]">{MODE_LABEL[m]}</span> — {MODE_HINT[m]}</li>
           ))}
         </ul>
-        <p className="mt-2.5 text-[12px] tabular-nums text-[#fbf6ec]/70">მზადაა {ready} · მზადდება {total - ready}</p>
+        <p className="mt-2.5 text-[12px] tabular-nums text-[#fbf6ec]/70">მზადაა {ready}{building > 0 && ` · მზადდება ${building}`}</p>
       </Card>
 
       <Tabs items={GAME_CATEGORIES.map(c => ({ id: c.id, label: c.label, Icon: CAT_ICON[c.id] }))} value={cat} onChange={pick} />
@@ -191,9 +196,9 @@ export const GamesPage: React.FC = () => {
             <Printer className="w-4 h-4 shrink-0 text-[#7a2028]" />
             <h2 className="font-serif-ge text-[15px] font-bold text-[#4a3426]">სამაგიდო თამაშები ქართულად</h2>
           </div>
-          <p className="px-1 mb-2.5 text-[12.5px] leading-snug text-[#8a7a6a]">ექვსი ცნობილი თამაში ქართულ თემაზე — სკოლა თვითონ დაბეჭდავს და ააწყობს. „დასაბეჭდი ფურცლები“ — ბარათები, წესები და ყველაფერი ჭრის ნიშნებით; მერე ჰიბრიდული და ონლაინ ვარიანტებიც.</p>
+          <p className="px-1 mb-2.5 text-[12.5px] leading-snug text-[#8a7a6a]">ექვსი ცნობილი თამაში ქართულ თემაზე — სკოლა თვითონ დაბეჭდავს და ააწყობს. „დასაბეჭდი ფურცლები“ — ბარათები, წესები და ყველაფერი ჭრის ნიშნებით.</p>
           <ul className="space-y-2.5">
-            {BOARD_GAMES.map(g => <GameRow key={g.id} g={g} state="soon" onOpen={() => open(g, 'soon')} />)}
+            {BOARD_GAMES.map(g => <GameRow key={g.id} g={g} state="open" />)}
           </ul>
         </section>
       )}

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useLeftMembers } from './leftMembers';
 import { useAuth } from '../context';
 import { fullName } from './memberName';
 import { isPlaceholderBirth, validBirth } from './profileFields';
@@ -36,7 +37,8 @@ export const useBirthdays = (enabled: boolean, withYears: boolean): Birthday[] |
       err => { console.warn('birth years:', err?.message || err); setYears({}); },
     );
   }, [enabled, withYears]);
-  return list && list.map(b => ({ ...b, year: years[b.uid] }));
+  const left = useLeftMembers(enabled);
+  return list && list.filter(b => !left.uids.has(b.uid)).map(b => ({ ...b, year: years[b.uid] }));
 };
 
 const midnight = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());

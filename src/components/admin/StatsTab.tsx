@@ -13,11 +13,13 @@ import { UserRecord } from './UsersTab';
 // attendance on its row, a psalter group's reading on its row, the most listened chants under „სკოლა“;
 // the people counts are the filters of the users list.
 
-/** Attendance of the last 8 lessons in percent; null before the first lesson. */
+/** Attendance of the last 8 lessons in percent (null before the first lesson or without members) and the day of the
+ *  last lesson ('' before the first), so a card tells a class that still meets from one that stopped. */
 export const useClassAttendance = (cls: SchoolClass) => {
   const days = useAttendance(cls.id, 8);
-  if (!days.length || !cls.members.length) return null;
-  return Math.round((days.reduce((a, d) => a + d.present.length, 0) / (days.length * cls.members.length)) * 100);
+  const last = days[0]?.date || '';
+  if (!days.length || !cls.members.length) return { rate: null, last };
+  return { rate: Math.round((days.reduce((a, d) => a + d.present.length, 0) / (days.length * cls.members.length)) * 100), last };
 };
 
 /** The last 6 cycles: kathismas read on average and cycles read in full; null before the first cycle ends. */

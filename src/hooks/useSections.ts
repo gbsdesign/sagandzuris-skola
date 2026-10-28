@@ -1,17 +1,24 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-import { DEFAULT_KIDS_SECTIONS, DEFAULT_SECTION_STATE, SectionId, SectionState } from '../data/sections';
+import { DEFAULT_KIDS_SECTIONS, DEFAULT_SECTION_STATE, SectionId, SectionState, stateOnDay } from '../data/sections';
+import { tbilisiToday } from '../utils/hangi';
 
 // settings/sections (admins write, everyone reads): { state: { galoba: 'open' | 'soon' | 'hidden', … },
-// kidsDefault: SectionId[] } — which sections the home page and header show, and the kids' mode default.
-export interface SectionSettings {
+// openOn: { medavitneobaTopic: '2026-11-01', … }, kidsDefault: SectionId[] } — which sections the home page and header
+// show, the day a „მალე“ one opens by itself, and the kids' mode default.
+interface Stored {
   state: Record<SectionId, SectionState>;
+  openOn: Partial<Record<SectionId, string>>;
   kidsDefault: SectionId[];
 }
+export interface SectionSettings extends Stored {
+  /** as set, before the days (the admin's list) */
+  stored: Record<SectionId, SectionState>;
+}
 
-let cache: SectionSettings = { state: DEFAULT_SECTION_STATE, kidsDefault: DEFAULT_KIDS_SECTIONS };
-const listeners = new Set<(s: SectionSettings) => void>();
+let cache: Stored = { state: DEFAULT_SECTION_STATE, openOn: {}, kidsDefault: DEFAULT_KIDS_SECTIONS };
+const listeners = new Set<(s: Stored) => void>();
 let started = false;
 
 const start = () => {
@@ -23,6 +30,7 @@ const start = () => {
       const d = snap.data() || {};
       cache = {
         state: { ...DEFAULT_SECTION_STATE, ...(d.state || {}) },
+        openOn: d.openOn && typeof d.openOn === 'object' ? d.openOn : {},
         kidsDefault: Array.isArray(d.kidsDefault) ? d.kidsDefault : DEFAULT_KIDS_SECTIONS,
       };
       listeners.forEach(l => l(cache));
@@ -31,7 +39,8 @@ const start = () => {
   );
 };
 
-export const useSections = () => {
+/** `state` = what shows today (a „მალე“ section whose day has come is open); `stored` = as the admin set it. */
+export const useSections = (): SectionSettings => {
   const [s, setS] = useState(cache);
   useEffect(() => {
     start();
@@ -39,5 +48,6 @@ export const useSections = () => {
     setS(cache);
     return () => { listeners.delete(setS); };
   }, []);
-  return s;
+  const today = tbilisiToday();
+  return useMemo(() => ({ ...s, stored: s.state, state: stateOnDay(s.state, s.openOn, today) }), [s, today]);
 };

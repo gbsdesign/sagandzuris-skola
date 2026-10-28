@@ -13,13 +13,13 @@
   --color-dusk-800: #4a3c57;
   --color-dusk-900: #3c3146;
 
-  /* Georgian serif for headings (home page) */
-  --font-serif-ge: "Noto Serif Georgian", Georgia, serif;
+  /* Georgian serif for headings (home page); old-script letters (the prayers' ხუცური) in the app's own alphabet */
+  --font-serif-ge: "SG Old Script", "Noto Serif Georgian", Georgia, serif;
 }
 
 /* ხუცური (utils/khutsuri.ts): the nuskhuri fonts of the „საღვთისმსახურო წიგნები“ app, moved onto the Unicode Georgian
    letters (scripts/fonts/build-sg-nuskhuri.py). They hold only Georgian letters and punctuation — digits and Latin come
-   from the next font. Downloaded only when ხუცური is on (and for the header button's one letter). */
+   from the next font. Downloaded only when ხუცური is on (the profile's switch) or an old-script letter is shown. */
 @font-face {
   font-family: "SG Nuskhuri";
   src: url("/fonts/sg-nuskhuri.woff") format("woff");
@@ -33,6 +33,23 @@
   font-display: swap;
   size-adjust: 70%;
   unicode-range: U+0020-0021, U+002C-002E, U+003A-003B, U+003F, U+10A0-10C5, U+10D0-10F5;
+}
+/* the same letters only for the old scripts' own code points (nuskhuri ⴀ…ⴥ, asomtavruli Ⴀ…Ⴥ) — first in --font-serif-ge,
+   so wherever old-script text is shown (the prayer page's „ხუცური“) it is drawn in the app's alphabet; ordinary text and
+   the downloads are untouched until such a letter appears */
+@font-face {
+  font-family: "SG Old Script";
+  src: url("/fonts/sg-nuskhuri.woff") format("woff");
+  font-display: swap;
+  size-adjust: 70%;
+  unicode-range: U+2D00-2D25;
+}
+@font-face {
+  font-family: "SG Old Script";
+  src: url("/fonts/sg-asomtavruli.woff") format("woff");
+  font-display: swap;
+  size-adjust: 70%;
+  unicode-range: U+10A0-10C5;
 }
 /* the whole site: text in nuskhuri, headings in asomtavruli capitals (the user's choice: everything, buttons too) */
 html.khutsuri {

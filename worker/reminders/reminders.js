@@ -12,6 +12,9 @@
 //   - assignments: at 19:00 the day before the deadline.
 // • POST /group-event { token, groupId, kind: 'taken' | 'help', kathisma }: "your kathisma was taken by …"
 //   to its reader, "help needed" to the group. The facts are checked in Firestore before anything is sent.
+// • Admins (2026-10-28): /account with `admin: true` binds the browser to an admin's notices; what they asked for is
+//   adminPush/{uid} in Firestore { waiting, weekly }. POST /access-request { token } — a newcomer's request (checked in
+//   memberAccess) goes to the superadmins with `waiting`; Monday 10:00 the school's week goes to those with `weekly`.
 // These pushes carry an encrypted text payload (RFC 8291, aes128gcm).
 //
 // Bindings (wrangler.toml): D1 database DB (schema.sql), KV namespace REMINDERS (old storage, read once to
@@ -116,6 +119,22 @@ const validTz = (tz) => {
   }
 };
 
+// The `admin` column came later (2026-10-28): the Worker adds it itself, once, so a deploy is all it takes.
+let schemaReady = false;
+async function ensureSchema(env) {
+  if (schemaReady) return;
+  const v = await env.DB.prepare("SELECT value FROM meta WHERE key = 'schema'").first();
+  if (!v || Number(v.value) < 2) {
+    try {
+      await env.DB.prepare('ALTER TABLE subs ADD COLUMN admin INTEGER NOT NULL DEFAULT 0').run();
+    } catch {
+      /* already there (schema.sql of a fresh install has it) */
+    }
+    await env.DB.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema', '2')").run();
+  }
+  schemaReady = true;
+}
+
 const validSubscription = (sub) =>
   sub && typeof sub.endpoint === 'string' && sub.endpoint.startsWith('https://') && sub.endpoint.length <= 1000;
 
@@ -150,8 +169,8 @@ async function subscribe(request, env) {
   const tz = typeof body.tz === 'string' && validTz(body.tz) ? body.tz : 'Asia/Tbilisi';
   const reminders = cleanReminders(body.reminders);
   const key = await sha256(sub.endpoint);
-  const row = await env.DB.prepare('SELECT uid, psalter, assignments FROM subs WHERE key = ?').bind(key).first();
-  if (!Object.keys(reminders).length && !(row && (row.psalter || row.assignments))) {
+  const row = await env.DB.prepare('SELECT uid, psalter, assignments, admin FROM subs WHERE key = ?').bind(key).first();
+  if (!Object.keys(reminders).length && !(row && (row.psalter || row.assignments || row.admin))) {
     await env.DB.prepare('DELETE FROM subs WHERE key = ?').bind(key).run();
     return [200, 'ok'];
   }
@@ -180,8 +199,10 @@ async function account(request, env) {
   const psalter = body.psalter ? 1 : 0;
   const assignments = body.assignments ? 1 : 0;
   const key = await sha256(sub.endpoint);
-  const row = await env.DB.prepare('SELECT reminders FROM subs WHERE key = ?').bind(key).first();
-  if (!psalter && !assignments && (!row || row.reminders === '{}')) {
+  const row = await env.DB.prepare('SELECT reminders, admin FROM subs WHERE key = ?').bind(key).first();
+  // an admin's notices: set when the call says so, otherwise kept (the group switches do not know of them)
+  const admin = typeof body.admin === 'boolean' ? (body.admin ? 1 : 0) : (row?.admin ? 1 : 0);
+  if (!psalter && !assignments && !admin && (!row || row.reminders === '{}')) {
     await env.DB.prepare('DELETE FROM subs WHERE key = ?').bind(key).run();
     return [200, 'ok'];
   }
@@ -190,11 +211,12 @@ async function account(request, env) {
     if (n >= MAX_SUBS) return [503, 'full'];
   }
   await env.DB.prepare(
-    `INSERT INTO subs (key, endpoint, p256dh, auth, tz, reminders, uid, psalter, assignments, updated_at)
-     VALUES (?, ?, ?, ?, 'Asia/Tbilisi', '{}', ?, ?, ?, ?)
+    `INSERT INTO subs (key, endpoint, p256dh, auth, tz, reminders, uid, psalter, assignments, admin, updated_at)
+     VALUES (?, ?, ?, ?, 'Asia/Tbilisi', '{}', ?, ?, ?, ?, ?)
      ON CONFLICT(key) DO UPDATE SET endpoint = excluded.endpoint, p256dh = excluded.p256dh, auth = excluded.auth,
-       uid = excluded.uid, psalter = excluded.psalter, assignments = excluded.assignments, updated_at = excluded.updated_at`
-  ).bind(key, sub.endpoint, sub.keys.p256dh, sub.keys.auth, uid, psalter, assignments, new Date().toISOString()).run();
+       uid = excluded.uid, psalter = excluded.psalter, assignments = excluded.assignments, admin = excluded.admin,
+       updated_at = excluded.updated_at`
+  ).bind(key, sub.endpoint, sub.keys.p256dh, sub.keys.auth, uid, psalter, assignments, admin, new Date().toISOString()).run();
   return [200, 'ok'];
 }
 
@@ -271,6 +293,9 @@ async function deliver(env, sends) {
 let jwks = null;
 let jwksAt = 0;
 async function verifyIdToken(env, token) {
+  return (await verifyIdClaims(env, token)).sub;
+}
+async function verifyIdClaims(env, token) {
   if (typeof token !== 'string' || token.split('.').length !== 3) throw new Error('token');
   const [h, p, s] = token.split('.');
   const header = JSON.parse(dec.decode(unb64url(h)));
@@ -287,7 +312,7 @@ async function verifyIdToken(env, token) {
   if (!jwk) throw new Error('kid');
   const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
   if (!(await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, unb64url(s), enc.encode(`${h}.${p}`)))) throw new Error('sig');
-  return claims.sub;
+  return claims;
 }
 
 let googleToken = null;
@@ -335,11 +360,13 @@ async function fsGet(env, path) {
   return fromFields((await res.json()).fields);
 }
 
-async function fsList(env, path) {
+// `fields`: only these fields of each document (a big collection such as students stays small)
+async function fsList(env, path, fields = []) {
   const out = [];
   let page = '';
+  const mask = fields.map((f) => `&mask.fieldPaths=${encodeURIComponent(f)}`).join('');
   do {
-    const res = await fetch(`${fsBase(env)}/${path}?pageSize=300${page ? `&pageToken=${page}` : ''}`, { headers: { Authorization: `Bearer ${await accessToken(env)}` } });
+    const res = await fetch(`${fsBase(env)}/${path}?pageSize=300${mask}${page ? `&pageToken=${page}` : ''}`, { headers: { Authorization: `Bearer ${await accessToken(env)}` } });
     if (!res.ok) throw new Error(`firestore ${res.status}`);
     const data = await res.json();
     for (const d of data.documents || []) out.push({ id: d.name.split('/').pop(), ...fromFields(d.fields) });
@@ -419,6 +446,7 @@ async function runGroupHour(env, when) {
 
   const groups = await fsList(env, 'psalterGroups');
   for (const group of groups) {
+    if (group.archived) continue; // its class is in the admin's archive
     const cycle = cycleOf(g, group);
     const owners = ownersIn(group.assignment, typeof group.baseHalf === 'number' ? group.baseHalf : cycle.half, cycle.half);
     const daily = group.remindDaily === undefined ? '20:00' : group.remindDaily;
@@ -459,6 +487,7 @@ async function runGroupHour(env, when) {
     const tomorrow = isoOf(new Date(g.getTime() + 86400_000));
     const classes = await fsList(env, 'classes');
     for (const cls of classes) {
+      if (cls.archived) continue;
       const list = (await fsList(env, `classes/${cls.id}/assignments`)).filter((a) => a.due === tomorrow);
       for (const a of list) {
         const targets = Array.isArray(a.studentIds) && a.studentIds.length ? a.studentIds : cls.memberIds || [];
@@ -504,6 +533,85 @@ async function groupEvent(request, env) {
   const rows = await rowsFor(env, targets, 'psalter');
   await deliver(env, rows.map((r) => [r, message]));
   return [200, 'ok'];
+}
+
+// ---- admins: a newcomer waits; Monday's overview --------------------------------------------------------
+
+// the admins who asked for a notice (adminPush/{uid}; firestore.rules lets only superadmins ask for `waiting`)
+// only people who are still staff (a role taken away leaves their choice behind): superadmins for a waiting member,
+// admins and superadmins for Monday's line
+async function adminsWanting(env, what) {
+  const [push, staff] = await Promise.all([
+    fsList(env, 'adminPush', ['waiting', 'weekly']),
+    fsList(env, 'admins', ['role', 'userId']),
+  ]);
+  const ok = new Set(staff.filter((s) => s.userId && (s.role === 'superadmin' || (what === 'weekly' && s.role === 'admin'))).map((s) => s.userId));
+  return push.filter((d) => d[what] === true && ok.has(d.id)).map((d) => d.id);
+}
+
+const metaGet = async (env, key) => (await env.DB.prepare('SELECT value FROM meta WHERE key = ?').bind(key).first())?.value || null;
+const metaSet = (env, key, value) => env.DB.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').bind(key, value).run();
+
+async function accessRequest(request, env) {
+  const body = await readJson(request);
+  if (!body) return [400, 'bad json'];
+  let claims;
+  try {
+    claims = await verifyIdClaims(env, body.token);
+  } catch {
+    return [401, 'bad token'];
+  }
+  const uid = claims.sub;
+  // a real, fresh request — told once
+  const access = await fsGet(env, `memberAccess/${uid}`);
+  const fresh = access?.requestedAt && Date.now() - new Date(access.requestedAt).getTime() < 15 * 60_000;
+  if (!access || access.status !== 'pending' || !fresh) return [409, 'no fresh request'];
+  if (await metaGet(env, `access:${uid}`)) return [200, 'told'];
+  await metaSet(env, `access:${uid}`, new Date().toISOString());
+  const name = String(claims.name || '').trim().slice(0, 60);
+  const message = {
+    title: 'ახალი წევრი ელოდება',
+    body: name ? `${name} ითხოვს სკოლაში დამატებას. შეეხე და გადაწყვიტე.` : 'ახალი ადამიანი ითხოვს სკოლაში დამატებას. შეეხე და გადაწყვიტე.',
+    tag: `access-${uid}`,
+    url: `/?open=admin&person=${uid}`,
+  };
+  const rows = await rowsFor(env, await adminsWanting(env, 'waiting'), 'admin');
+  await deliver(env, rows.map((r) => [r, message]));
+  return [200, 'ok'];
+}
+
+/** Monday's line: „3 ახალი წევრი · 12 აქტიური · 1 კლასს გაკვეთილი არ ჰქონია“ (empty parts left out). */
+const weekText = ({ fresh, active, idle }) => {
+  const parts = [];
+  if (fresh) parts.push(`${fresh} ახალი წევრი`);
+  parts.push(`${active} აქტიური`);
+  if (idle) parts.push(`${idle} კლასს გაკვეთილი არ ჰქონია`);
+  return parts.join(' · ');
+};
+
+async function runAdminWeek(env, when) {
+  const week = isoOf(georgia(when));
+  if (await metaGet(env, `week:${week}`)) return;
+  await metaSet(env, `week:${week}`, when.toISOString());
+  const uids = await adminsWanting(env, 'weekly');
+  if (!uids.length) return;
+  const since = new Date(when.getTime() - 7 * DAY_MS).toISOString();
+  const sinceDay = isoOf(georgia(new Date(when.getTime() - 7 * DAY_MS)));
+  // members marked „გასული“ (settings/leftMembers) are no longer counted
+  const left = new Set(((await fsGet(env, 'settings/leftMembers').catch(() => null))?.uids || []).map(String));
+  const students = (await fsList(env, 'students', ['createdAt', 'lastActiveAt'])).filter((s) => !left.has(s.id));
+  const fresh = students.filter((s) => typeof s.createdAt === 'string' && s.createdAt >= since).length;
+  const active = students.filter((s) => typeof s.lastActiveAt === 'string' && s.lastActiveAt >= since).length;
+  // classes in use with no attendance list in the last 7 days
+  let idle = 0;
+  for (const c of await fsList(env, 'classes', ['archived'])) {
+    if (c.archived) continue;
+    const days = await fsList(env, `classes/${c.id}/attendance`, ['date']).catch(() => []);
+    if (!days.some((d) => typeof d.date === 'string' && d.date >= sinceDay)) idle++;
+  }
+  const message = { title: 'სკოლის კვირა', body: weekText({ fresh, active, idle }), tag: `week-${week}`, url: '/?open=admin' };
+  const rows = await rowsFor(env, uids, 'admin');
+  await deliver(env, rows.map((r) => [r, message]));
 }
 
 // ---- the prayer hours (empty pushes, as before) --------------------------------------------------------
@@ -613,12 +721,13 @@ export default {
     const headers = cors(origin);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
     const url = new URL(request.url);
-    const routes = { '/subscribe': subscribe, '/account': account, '/group-event': groupEvent };
+    const routes = { '/subscribe': subscribe, '/account': account, '/group-event': groupEvent, '/access-request': accessRequest };
     const handler = request.method === 'POST' ? routes[url.pathname] : null;
     if (handler) {
       if (!allowedOrigin(origin)) return new Response('forbidden', { status: 403, headers });
       try {
         await migrateFromKv(env);
+        await ensureSchema(env);
         const [status, text] = await handler(request, env);
         return new Response(text, { status, headers });
       } catch (e) {
@@ -632,15 +741,19 @@ export default {
     const when = new Date(event.scheduledTime);
     ctx.waitUntil((async () => {
       await migrateFromKv(env);
+      await ensureSchema(env);
       // the group reminders need FIREBASE_SA; without it the prayer reminders still work
-      // one cron each minute: :00 the groups, :50 :55 :59 the prayer hours, every minute the habits
+      // one cron each minute: :00 the groups, :50 :55 :59 the prayer hours, every minute the habits;
+      // Monday 10:00 (Georgian time) the admins' week
       const minute = when.getUTCMinutes();
       if (minute === 0) await runGroupHour(env, when).catch((e) => console.warn("group hour:", e?.message));
+      const g = georgia(when);
+      if (minute === 0 && g.getUTCDay() === 1 && g.getUTCHours() === 10) await runAdminWeek(env, when).catch((e) => console.warn('admin week:', e?.message));
       else if (minute === 50 || minute === 55 || minute === 59) await runPrayerReminders(env, when);
       await runHabitReminders(env, when).catch((e) => console.warn('habits:', e?.message));
     })());
   },
 };
 
-// for tests (tests/reminders-worker.test.mjs)
-export { encryptPayload, cycleOf, ownersIn };
+// for tests (tests/reminders-worker.test.mjs, tests/adminTools.test.ts)
+export { encryptPayload, cycleOf, ownersIn, weekText };

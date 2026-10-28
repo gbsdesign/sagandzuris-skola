@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Check, ChevronDown, Info, Pencil, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, Check, ChevronDown, Flame, Info, Pencil, Sparkles, X } from 'lucide-react';
 import { useAuth, useModal, useNavigation } from '../../context';
 import { useMyHabits } from '../../hooks/useMyHabits';
 import { useAccess } from '../../hooks/useAccess';
@@ -18,6 +18,9 @@ import { MonthView } from '../habits/MonthView';
 import { YearView } from '../habits/YearView';
 import { HabitPage, HabitPageTitle } from '../habits/HabitPage';
 import { HabitsModel, dailyOf, rareOf, useHabitToggle, useHabitsModel } from '../habits/useHabits';
+import { dayState } from '../../utils/habitStats';
+import { dayKey, keptStreak } from '../../utils/habitsWeek';
+import { MONTHS_GE } from '../../utils/dateNames';
 
 // the home page buttons open the same menus; the prayer page ticks through the same toggle
 export { HabitPrayerMenu, useHabitToggle };
@@ -86,21 +89,21 @@ interface ViewProps {
   onDate: (d: Date) => void;
   /** opens a day in "დღე" to tick it */
   onPickDay: (d: Date) => void;
-  actions: React.ReactNode;
   onOpenPrayer: (prayerId: string) => void;
   onLink: (l: HabitLink) => void;
   /** a member's own list (not for a guest) */
   edit?: ListEdit;
 }
 const VIEWS: { id: ViewId; label: string; render: (p: ViewProps) => React.ReactNode }[] = [
-  { id: 'day', label: 'დღე', render: p => <DayView model={p.model} date={p.date} onDate={p.onDate} actions={p.actions} onOpenPrayer={p.onOpenPrayer} onLink={p.onLink} edit={p.edit} /> },
+  { id: 'day', label: 'დღე', render: p => <DayView model={p.model} date={p.date} onDate={p.onDate} onOpenPrayer={p.onOpenPrayer} onLink={p.onLink} edit={p.edit} /> },
   { id: 'week', label: 'კვირა', render: p => <WeekView model={p.model} onPickDay={p.onPickDay} /> },
   { id: 'month', label: 'თვე', render: p => <MonthView model={p.model} onPickDay={p.onPickDay} /> },
   { id: 'year', label: 'წელი', render: p => <YearView model={p.model} /> },
 ];
 
-// „დღე ▾“ before ⓘ: one button with the view's name; a tap drops the views in a small list under it
-const ViewMenu: React.FC<{ value: ViewId; onChange: (v: ViewId) => void }> = ({ value, onChange }) => {
+// „დღე ▾“ in the card's head: one button with the view's name; a tap drops the views in a small list under it, and
+// under them „განმარტება“ (what the habits are for — no ⓘ of its own beside it since 2026-10-28)
+const ViewMenu: React.FC<{ value: ViewId; onChange: (v: ViewId) => void; onInfo: () => void }> = ({ value, onChange, onInfo }) => {
   const [open, setOpen] = useState(false);
   const box = useRef<HTMLSpanElement>(null);
   useEffect(() => {
@@ -116,7 +119,7 @@ const ViewMenu: React.FC<{ value: ViewId; onChange: (v: ViewId) => void }> = ({ 
   }, [open]);
   const current = VIEWS.find(v => v.id === value)!;
   return (
-    <span ref={box} className="relative mr-1">
+    <span ref={box} className="relative shrink-0">
       <button
         type="button"
         aria-haspopup="menu"
@@ -155,6 +158,16 @@ const ViewMenu: React.FC<{ value: ViewId; onChange: (v: ViewId) => void }> = ({ 
               </button>
             );
           })}
+          <div className="my-1 h-px bg-[#efe5d4]" />
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => { setOpen(false); onInfo(); }}
+            className="w-full h-11 px-3 rounded-xl flex items-center gap-2 text-left text-[14px] font-bold text-[#4a3426] hover:bg-[#7a2028]/[0.05] cursor-pointer transition-colors"
+          >
+            <Info className="w-4 h-4 shrink-0 text-[#8a7a6a]" />
+            <span className="flex-1">განმარტება</span>
+          </button>
         </div>
       )}
     </span>
@@ -192,6 +205,9 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
     go();
   };
   const openInfo = () => open('info');
+  const onToday = dayKey(date) === dayKey(new Date());
+  const day = dayState(model.log, model.dailyIds, date);
+  const streak = keptStreak(model.log, model.dailyIds);
 
   // a habit's own button: what the search found opens in the app (a guest is asked to sign in first)
   const openLink = (l: HabitLink) => {
@@ -214,20 +230,11 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
       }
     : undefined;
 
-  const actions = (
-    <>
-      <ViewMenu value={view} onChange={setView} />
-      <IconBtn label="განმარტება" onClick={openInfo}>
-        <Info />
-      </IconBtn>
-    </>
-  );
   const props: ViewProps = {
     model,
     date,
     onDate: setDate,
     onPickDay: d => { setDate(d); setView('day'); },
-    actions,
     onOpenPrayer: id => leaveFor(() => openPrayer(id)),
     onLink: openLink,
     edit,
@@ -235,12 +242,28 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
 
   return (
     <div className="space-y-4 text-[#2a2017]">
-      {/* the title on the path page too; only the window has ✕ */}
+      {/* the title on the path page too, with the chosen day's count and the run of kept days under it, and the view
+          menu at its right; only the window has ✕ */}
       <div className="flex items-center gap-3">
         <span className={PATH_ICON}>
           <Sparkles className="w-5 h-5" />
         </span>
-        <h3 className="flex-1 min-w-0 text-[15px] sm:text-base font-black leading-tight text-[#2a2017]">ჩვევები</h3>
+        <div className="flex-1 min-w-0">
+          <h3 className="text-[15px] sm:text-base font-black leading-tight text-[#2a2017]">ჩვევები</h3>
+          {view === 'day' && day.total > 0 && (
+            <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[12.5px] font-semibold leading-snug text-[#8a7a6a] tabular-nums">
+              <span>{onToday ? 'დღეს' : `${date.getDate()} ${MONTHS_GE[date.getMonth()]}`} {day.done} / {day.total}</span>
+              {streak.days > 0 && (
+                <span className="inline-flex items-center gap-0.5 font-bold text-[#b4441c]">
+                  <Flame className="w-3.5 h-3.5 shrink-0" />
+                  ზედიზედ {streak.days}
+                  {streak.capped ? '+' : ''}
+                </span>
+              )}
+            </p>
+          )}
+        </div>
+        <ViewMenu value={view} onChange={setView} onInfo={openInfo} />
         {onClose && (
           <IconBtn label="დახურვა" onClick={onClose}>
             <X />
@@ -248,8 +271,6 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
         )}
       </div>
 
-      {/* the day keeps its buttons in its card; the other views get them at the top right */}
-      {view !== 'day' && <div className="flex items-center justify-end mb-2">{actions}</div>}
       <div key={view} className="animate-in fade-in duration-200">
         {VIEWS.find(v => v.id === view)!.render(props)}
       </div>

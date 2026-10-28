@@ -19,9 +19,10 @@
 - **Roomy UI**: comfortable controls (play ~44–48px, icon buttons 36px); fit phones by wrapping, never by shrinking.
 - **Never auto-scroll** a player to the playing line. No octave-leap checks in note audits.
 - Never put the user's email in request headers/URLs (e.g. API User-Agent).
-- **Ready to merge → say it in red.** When a chat's work is finished and its PR is ready (checks green, no conflict),
-  end the reply with a line in red: „🔴 **შესაერთებელია** — PR #N“ (Markdown has no red text, so the red circle + bold),
-  so the user knows to press „Merge“. (The user's rule, 2026-10-27.)
+- **Ready → merge it yourself, then say it in red.** When a chat's work is finished and its PR is ready (local checks
+  pass, GitHub checks green, no conflict), merge it right away — PRs that change `firestore.rules` too — and end the reply
+  with „🔴 **შეერთდა** — PR #N“ (Markdown has no red text, so the red circle + bold). Never write „შესაერთებელია“ and wait;
+  only if merging is impossible (red check, conflict) say why. (The user's rule, 2026-10-27, widened 2026-10-28.)
 
 ## Saving tokens (the user pays for every session)
 
@@ -57,6 +58,11 @@
 - No other subagents/workflows unless the user asks.
 - Progress notes in Georgian should be one or two short lines; save detail for the final summary.
 - Don't re-read a file you just edited, and don't re-run a check that already passed.
+- **Only the checks a change needs (the user's rule, 2026-10-28: „მხოლოდ აუცილებელი ტესტები, არ ქნას უაზროდ“; tightened
+  the same night: „ემულატორები დაივიწყე“).** Run the tests of the files you changed (`npx tsx --test tests/<name>.test.ts`),
+  `npm run typecheck`, and `npm run build` once before the PR — nothing else. **No Firebase emulators at all**: no local
+  emulator runs, no seeded made-up data, no emulator screenshots, no local rules test — the GitHub workflow tests
+  `firestore.rules` on the PR by itself. No extra review agents or repeated runs „just in case“.
 - The user's task template is `docs/დავალების-შაბლონი.md`. If a request is unclear, ask one short
   question instead of exploring the whole codebase.
 
@@ -78,8 +84,10 @@
   (Cloudflare Pages), so tell the user clearly what a PR changes before they merge.
 - Firestore rules: `.github/workflows/firestore-rules.yml` runs `tests/firestore-rules.test.mjs` in the emulator on PRs and
   publishes `firestore.rules` when it reaches main (secret `FIREBASE_SERVICE_ACCOUNT`; added 2026-10-27). Until that secret
-  exists, the user publishes them by hand in the Firebase console. Cloudflare Workers are
-  deployed from the user's PC with wrangler — a cloud session can edit `worker/` but cannot deploy it.
+  exists, the user publishes them by hand in the Firebase console. The reminders Worker is published by
+  `.github/workflows/reminders-worker.yml` when `worker/reminders/**` reaches main (or by „Run workflow“; secret
+  `CLOUDFLARE_API_TOKEN`, added 2026-10-28 — without it the run only warns). The audio Worker (`worker/wrangler.toml`) is
+  still deployed from the user's PC with wrangler.
 
 ## Project basics
 
@@ -146,12 +154,19 @@
 - **Prayers** (`data/prayers.ts`, `public/prayers/`, `public/bible/`), psalter kathismas, 73 akathists,
   commemoration name lists (`utils/commemoration.ts`), prayer reminders via Web Push Worker
   `sagandzuri-reminders` (`worker/reminders/`; push works only on the deployed site).
+- **საგანძურის გზა** (page `gz`) = „ჩემი დღე“ since 2026-10-28: `views/PathToday.tsx` „დღეს“ card (next lesson; the nearest
+  assignment with „სწავლა“ + its parts bar when it has a learning mode; „დღეს გასამეორებელი“ — no habits line), the five
+  round buttons (`PathOrbs`), then the habits card.
 - **Habits** ticked per day (`students/{uid}.habitLog`, kept whole since 2026-10-16; each tick writes only its day),
   goals in `habitsAndManera.ts`. Views „დღე · კვირა · თვე · წელი“ + a habit's own page in `components/habits/`
   (one shared model `useHabits.tsx`; a new view = one entry in `VIEWS` in `ChvevebiPanel.tsx`), stats in
   `utils/habitStats.ts`. Ticks allowed for the last 7 days (`canTickDay`). Colours/icons/counters: `data/habitLooks.ts`,
   member's choice in `habitSetup.looks/counters`; counter numbers in `students.habitCounts` (sent 1.2 s after the last tap).
   One habit editor (2026-10-28): the habit window's ✏️ (`HabitCardEditor`); the rows only have „›“.
+  Simplified the same day (the user: „ტვინი ირევა“, sketch approved): the card's head holds the day's count, the run and the
+  view menu „დღე ▾“ (ⓘ „განმარტება“ moved into it); the day = 7-day strip + one status line; a row = the round button (a
+  counted habit's button adds its step, +10 for the Jesus prayer) + the name + its number + „›“ — no „+“, ⓘ note (now on the
+  habit's page), run or ten dots; „კვირაში და თვეში“ folds to one line „N / M“ (`sg-habits-rare-open` on the device).
 - **ოსტატობა** (2026-10-27): „დღის სავარჯიშო“ on top (a teacher's assigned exercise, then the weakest marked tip, then by
   day), 11 performance tips (`MANERA_ITEMS`; `num` is the key of teachers' marks, the list shows the position; 10 = დგომა,
   11 = სუნთქვა ფრაზებს შორის were added) and 4 exercise groups — სმენა, სამხმიანობა, ხალხური ხერხები, რიტმი
@@ -181,17 +196,33 @@
   Since 2026-10-28 two tabs „გაკვეთილები · წიგნები“: „წიგნები“ (`pages/medavitneoba/Wignebi.tsx`, menu `data/wignebi.ts`,
   texts `public/wignebi/<collection>/<NN>.json`, fetched on open, kept by the service worker) = the liturgical books of the
   „საღვთისმსახურო წიგნები“ app (ღვთისმშობლის მიძინების მონასტერი) in that app's menu order: Bible (NT, OT, ტრაპეზის სახარება,
-  სამოციქულო), calendar 2024–2027, კონდაკი, კურთხევანი, პარაკლიტონი, საზიარო თვენი, ჟამნი, დავითნი, მგალობელთათვის,
+  სამოციქულო), calendar 2024–2027, კონდაკი, კურთხევანი, პარაკლიტონი, საზიარო თვენი, ჟამნი, ზატიკი, დავითნი, მგალობელთათვის,
   წარდგომები, ლოცვანი, პარაკლისები, ანდრია კრიტელი. Place = `mapItem` „w…“ (`utils/wignebiPath.ts` for „←“ after a reload).
   **Admins only** until the user has the monastery's permission (others see „მალე“). The texts were extracted from that
   app's bundle; its old nuskhuri-font texts were converted with the app's own table (archaic letters kept).
-- **ხუცური for the whole site** (2026-10-28): the header's round „Ⴞ“ (before the profile, `KhutsuriButton` in
-  `layout/Header.tsx`) sets `html.khutsuri` (`utils/khutsuri.ts`, device only, set before the first paint in `main.tsx`).
-  index.css then swaps `--font-sans`/`--font-serif-ge` to „SG Nuskhuri“ (h1–h3: „SG Asomtavruli“) — the nuskhuri fonts of
-  the „საღვთისმსახურო წიგნები“ app, moved onto Unicode Georgian by `scripts/fonts/build-sg-nuskhuri.py` (`public/fonts/sg-*.woff`,
-  only letters + punctuation; digits/Latin fall back; `size-adjust: 70%` because the app's letters are ~1.5× wider). The text
-  stays ordinary Georgian. Everything turns, buttons too (the user's choice). The prayer page's „ხუცური“ is the same switch;
-  its own nuskhuri/asomtavruli conversion (initial red capitals) now draws with these fonts.
+  **Generated — never edit `public/wignebi` or `data/wignebi.ts` by hand**: `scripts/wignebi/` (plain Python, no packages:
+  `hermes.py` reads the app's Hermes bundle — v98 up to app 1.1.3, v99 since 1.1.4, opcode tables `ops98.txt`/`ops99.txt`
+  (v99 = the opcode-name order inside hermesc 260318099 from npm) — and finds each book's module by its export name,
+  `convert.py` + table = the legacy font, `build.py` writes the files, menu labels from `labels.json` keyed by the data's
+  keys). `.github/workflows/wignebi-update.yml` runs `update.py` daily: asks the app's Expo update server (runtime = app
+  version, probes the next ones; last update in `scripts/wignebi/state.json`), checks the hash, rebuilds, refuses an update
+  that loses items or >3% of a book's text, and commits straight to main (the user's choice, 2026-10-28). A newer app from
+  the Play store: `python3 scripts/wignebi/update.py --apk <file>` (then the server is asked for that version's updates).
+  Applied: the 22 Sep 2026 update (commemorations ილია → შიო after Patriarch Shio III's election, 3 typos) and the 1.1.4 APK
+  (199 small fixes + ზატიკი, the user's upload 2026-10-28). ზატიკი: after ჟამნი as in the app's menu, 13 items with the app's
+  own labels (weeks: part 1 = კვირა … 7 = შაბათი, each day's service begins the evening before), its abbreviation codes from
+  the app's own converter in `zatiki_table.json` (our output = the app's display for 99.93% of its strings, archaic letters kept).
+  The shelves' last tile fills its row when left alone (`tileLook` in Wignebi.tsx).
+- **ხუცური for the whole site** (2026-10-28, moved 2026-10-29): a switch in the profile („ხუცური“, `views/KhutsuriSwitch.tsx`,
+  under the profile in `AppRouter`; no header button — guests have no profile, so they don't get it) sets `html.khutsuri`
+  (`utils/khutsuri.ts`, device only, set before the first paint in `main.tsx`). index.css then swaps
+  `--font-sans`/`--font-serif-ge` to „SG Nuskhuri“ (h1–h3: „SG Asomtavruli“) — the nuskhuri fonts of the „საღვთისმსახურო
+  წიგნები“ app, moved onto Unicode Georgian by `scripts/fonts/build-sg-nuskhuri.py` (`public/fonts/sg-*.woff`, only letters +
+  punctuation; digits/Latin fall back; `size-adjust: 70%` because the app's letters are ~1.5× wider). The text stays
+  ordinary Georgian. Everything turns, buttons too (the user's choice). The prayer page's own „ხუცური“ turns only that prayer
+  (its nuskhuri/asomtavruli conversion with red initials, `useKhutsuri` in `views/ReadingTools.tsx`), now drawn with these
+  fonts: „SG Old Script“ = the same two files for only the old scripts' code points (ⴀ…ⴥ, Ⴀ…Ⴥ), first in `--font-serif-ge`,
+  so any old-script letter on the site is the app's alphabet.
 - **Library** page (`biblioteka`): საღმრთო ისტორია, დღესასწაულები, წმიდანთა ცხოვრება.
   Footer church calendar (`data/churchCalendar.ts`, `data/calendar/<year>.json`, made by
   `node scripts/fetch-church-calendar.mjs <year>`). **The 2026 file ends 13 Jan 2027 — re-run for 2027 once
@@ -219,17 +250,24 @@
 - **Class chat** with voice messages (`components/classes/ClassChat.tsx`, `hooks/useClassChat.ts`,
   `utils/voiceRecorder.ts`); calls are the app's own (`components/calls/`, `utils/callSession.ts`), Jitsi is gone. Voice MP3s are Firestore Bytes
   (no Firebase Storage).
-- **Class page** (`pages/ClassPage.tsx`, rebuilt 2026-10-24): members in a sticky left column on a computer (`lg`), a
-  folded line on top on a phone; the class's teachers get `ClassRoll` (`teacher/StudentsOverview.tsx`: attendance ✓,
-  💬, a name opens the member's window, now with „მიწერა“/„ამოღება“). „სასწავლო პროგრამა“ (renamed everywhere from
-  „კლასის პროგრამა“) is compact: one thin progress bar, „დავალებები“ folding open beside the title (red dot = an
-  assignment still to do; teachers manage them there — `AssignmentsFold`, past ones under „ძველი · N“). The program is
-  changed in place by its ✎ (`ProgramEditor`); the members card's „+“ adds one person (`AddMemberSheet`). The timetable is one line of chips under the
-  class title (and under the chat's title on the messages page), changed by ✎ (`ScheduleSheet`). Teacher-only parts never show to members; attendance is teacher-only in
-  `firestore.rules` too (members no longer read it).
+- **Class page** (`pages/ClassPage.tsx`, rebuilt 2026-10-24, simplified 2026-10-28 „ერთი რამ, ერთ ადგილას“ from an approved
+  sketch): title bar (🎵 + one ✎ for teachers — its list opens name/logo/mode, the timetable `ScheduleSheet`, the program
+  `ProgramEditor`, adding a member `AddMemberSheet`; 💬 to the teacher for a member), the timetable chips, the members as one
+  line „N წევრი ›“ that opens their window on a phone (a sticky left column on a computer, `lg`); the class's teachers get
+  `ClassRoll` (`teacher/StudentsOverview.tsx`: attendance ✓, 💬, a name opens the member's window, „მიწერა“/„ამოღება“).
+  Then three tabs (kept per visit in sessionStorage): „პროგრამა“ — `ClassProgram`: thin progress bar, a line per item with
+  only its status (my voices, else the learning bar; a teacher sees how many know it), a tap opens `ItemSheet` (ნოტები /
+  სიმღერა, სწავლა, my voice marks, who knows each voice); under it folded cards: ოსტატობა (`ClassLessons fold`), the
+  teachers' pearls, the psalter group (folded head line with „შენი: N“; `focus` opens it) — „დავალებები“
+  (`classes/ClassWork.tsx`: `AssignmentsFold` for teachers, `WorkItems` for members; a dot = a member's assignment to do) —
+  „ჩათი“ (`ClassChat`; a dot while unread). „სასწავლო პროგრამა“ is the name everywhere (not „კლასის პროგრამა“). The timetable
+  chips also sit under the chat's title on the messages page. Teacher-only parts never show to members; attendance is
+  teacher-only in `firestore.rules` too (members no longer read it).
 - **Games hub** (`pages/GamesPage.tsx`, 2026-10-27): „თამაშები“ is a hub of three category tabs (მუსიკალური · ქართული ·
-  ცოცხალი) from `data/games.ts`; every game carries its variant chips (ონლაინ · ჰიბრიდული · უტელეფონო); unbuilt games are
-  „მალე“ rows; the vine label „თამაშები“ opens it. The pearls game stays the round button of „საგანძურის გზა“ (below), now
+  ცოცხალი) from `data/games.ts`; every game carries its variant chips (ონლაინ · ჰიბრიდული · უტელეფონო); only ready games show,
+  plus the one being built as a „მალე“ row (since 2026-10-28 the user had the other unbuilt plan games taken off — now only
+  „რა? სად? როდის?“; the plan doc keeps the rest); the board games are paper only (one „უტელეფონო“ chip, a plain card + the
+  print strip); the vine label „თამაშები“ opens it. The pearls game stays the round button of „საგანძურის გზა“ (below), now
   under its own section `margalitebi` (open/მალე/hidden switch in the admin panel; a member's feature for it is the games'
   one — `featureOf` in `hooks/useAccess.ts`). The plan with 42 games and the six Georgianized board games:
   https://claude.ai/artifact/Dw24amtHhQvSGUd1pPE4fg
@@ -267,8 +305,26 @@
   game in `scripts/print-games/games/`. Every file prints „ყველაფერი ორმხრივად“: a module lists its physical sheets
   (`{ key, front, back? }`), `duplex()` makes each sheet two pages (a missing back = a labelled blank page) and the cover names
   sheets by number (`sheetNo`). Portraits are ornament placeholders until the user approves Gemini pictures. Built so far:
-  „მეფის კარი“ (№6) and „სამშვილდის ღამე“ (№2). A game with sheets gets `print: { href, sheets }` in `data/games.ts`; its hub card
-  shows a wine „დასაბეჭდი ფურცლები“ strip („PDF · N ფურცელი“) and its „უტელეფონო“ chip turns wine.
+  „მეფის კარი“ (№6) and „სამშვილდის ღამე“ (№2); then (fifth PR) „ოქროს ხანა“ (№1, Catan: 19 hexes 79 mm, a frame of six A4 pieces
+  ≈50×43 cm whose ends meet by letters ა–ვ, 18 numbers laid by the letters' spiral so 6 and 8 never touch, 9 gates with fixed place
+  names, A6 cards via `placedSheet`) and „ლურჯი სუფრა“ (№5, Azul in Erekle II's Tbilisi: 105 stamps of 20 mm on one sheet whose back
+  is one indigo field, four A4-landscape boards turned onto portrait pages — apprentice / master side, trays ⌀90 mm, the უსტაბაში
+  token tile-sized to fit a floor place); then (sixth PR) „ორი ტახტი“ (№4, 7 Wonders Duel between the western (ქუთაისი) and eastern
+  (თბილისი) thrones: 73 age cards with the original costs/effects under Georgian names, 8 help cards, 12 Georgian monuments 96×62 mm,
+  board „ლიხის გზა“ in two A4-landscape pieces, the knight as a fold-up tent, coins 1/3/6 თეთრი) and „ქარავანი“ (№3, Ticket to Ride
+  Europe in late-XIX-century Georgia: a 78×56 cm map from eight one-sided A4 pieces — 47 hand-placed cities, 74 roads (13 mountain, 4 ship,
+  8 double; the 1872 railway between the doubles), the app's region shapes, coast, rivers and ridges bent onto the cities by a thin-plate
+  spline; `boardItems()` keeps each piece's bounding box so a printed window draws only what it shows; 110 caravan cards of 8 goods + 14
+  locomotives, 40 + 6 „მგზავრის წერილი“ whose points are checked against the map's shortest paths at build time and must name every city,
+  40 carts a player (35 with five), caravanserais = TTR stations, animals as score markers; the cover's back is a glossary of the 47 places).
+  A game with sheets gets `print: { href, sheets }` in `data/games.ts`; its hub card
+  shows a wine „დასაბეჭდი ფურცლები“ strip („PDF · N ფურცელი“, one line; „PDF · “ hidden below 400 px) and its „უტელეფონო“ chip turns wine.
+  The app's word games got paper kits too (seventh PR): „დღის სიტყვა“ (grids for 4/5/6 letters, four A6 a side; 78 slips from
+  `ANSWER_BANK`; the example coloured by `scoreGuess`), „ოთხეული“ (16 grids of 16 cards = the app's `buildGrid` with fixed seeds,
+  kept only when every group of the list allows one answer, with variety rules; the host's answer sheet) and „ამიხსენი“ (36
+  cards of six words numbered by a die — ten themes, the songs only well-known titles — and a two-sided score sheet). Their
+  modules read the app's TypeScript data through `scripts/print-games/appData.mjs` (esbuild in memory, firebase/React stubbed);
+  their stripe shows a label („ქართული · უტელეფონო“) instead of a number.
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 
@@ -290,17 +346,67 @@
   form and logo card were removed 2026-10-20 (the app still reads `settings/recordings` and `settings/logo`).
   Since 2026-10-21 (edu.doit.gov.ge style) a wine-to-gold head `admin/AdminHero.tsx` with 4 big numbers that open
   their list (those filters have no chip), class cards in a 2-column grid, „სკოლა“ as folding cards (`admin/Fold.tsx`).
-  Since 2026-10-20 three tabs on the „one window“ rule: წევრები (one list + count filters; a tap opens the
-  person's window `admin/PersonSheet.tsx` — details, role, access, approve/refuse, profile edit), კლასები (class and
-  group windows, shared `LeaderChips`), სკოლა (sections, most listened, backup + folded safety list). Numbers of the
-  old სტატისტიკა tab live in `admin/StatsTab.tsx` hooks; old shortcut refs `admin:sections`/`admin:stats` still open.
+  Since 2026-10-20 the „one window“ rule: წევრები (one list + count filters; a tap opens the person's window
+  `admin/PersonSheet.tsx` — details, role, „დამატებითი უფლებები“, access, approve/refuse, profile edit), კლასები (class
+  windows, shared `LeaderChips`). Since 2026-10-28 (stage ②) no tabs: the page has the kit's `PageBar` (role under the
+  title, „სკოლა“ on the right — ⚙ from 400 px), the four numbers (`AdminHero`, „—“ until loaded, „ელოდება“ amber) switch
+  between the members and the classes, and ⚙ „სკოლა“ is one window (`SchoolSheet` in `admin/SchoolTab.tsx`: sections with
+  40 px buttons, most listened, `admin/ExtraRights.tsx` = the centre's recordings + song texts in one card, backup).
+  Every window shows its own messages inside it (sticky `Flash`). Empty filter chips hide; „ახალი კლასი“ is the dashed
+  last card. Numbers of the old სტატისტიკა tab live in `admin/StatsTab.tsx` hooks; old shortcut refs (`admin:sections`,
+  `stats`, `recordings`, `requests`, `school`) still open the right part („სკოლა“ ones open the window once).
+  Since 2026-10-28 (admin review, stage ①; review doc https://claude.ai/artifact/DbTEz3fwSDQkSbcxwY6yjb) a class is never
+  deleted: its ✎ „არქივში“ sets `archived` on the class and its psalter group (every hook hides them, the rules close its chat,
+  private chats and lessons to all but admins, the reminders Worker skips them), the fold „არქივი · N“ under the cards brings one back. `students.teacherIds` = the teachers of the member's
+  classes in use (`utils/classTeachers.ts` + test): the class ✎ and the archive set it, a teacher's „ამოღება“ takes the
+  class's teachers off (rule `leavingTeachers`), and the admin panel puts every list right when it opens (only with the
+  server's class list, `useAllClasses().fresh`). The class ✎ keeps teachers missing from the staff list and copies the
+  teachers to the class's psalter group. Errors go through `utils/errorText.ts` (plain Georgian). Tile „ყველა“ counts
+  everyone; „აქტიური“ only admitted non-staff members.
+  Stage ③ (2026-10-28): the person's window has „მიწერა“ (the administration's chat, `openAdminThread`), „აქტივობა“
+  (`utils/personActivity.ts` + attendance of their classes), class chips that open the class page + „კლასში დამატება“
+  (`addClassMember`), the kids' mode switch, who gave the role / let them in; a newcomer's class is picked before „დაშვება“.
+  Filters „კლასის გარეშე“, „პროფილი არასრული“, „30+ დღე არ შემოსულა“ (chip icons hide below 400 px); a row shows the
+  class instead of the e-mail; superadmins download the shown list as CSV (`utils/csv.ts`, phones without „+995“). Attention
+  lines „N კლასს მასწავლებელი არ ჰყავს“, „N წევრი კლასის გარეშეა“. Class cards show „ბოლო გაკვეთილი“. Admins find people in
+  the one search (group „ადამიანები“ from `directory`; `requestOpen('admin', uid)` opens the window).
+  Ideas 2, 3, 5, 11 (2026-10-28): a change made at once — a role, a right, the kids' mode, a class added, a section, the
+  archive — no longer asks first: the kit's `offerUndo` (dark bar, 5 s, „გაუქმება“; `UndoHost` in `App.tsx`) through
+  `admin/changed.ts`, which also writes the change log `adminLog` (`utils/adminLog.ts`: admins add signed lines, superadmins
+  read them in ⚙ „სკოლა“ → „ცვლილებების ჟურნალი“, nobody edits one; in the backup). ⚙ „სკოლა“ → „ტელეფონზე შეტყობინებები“
+  (`utils/adminPush.ts`, `adminPush/{uid}`): „ახალი წევრი ელოდება“ (superadmins; `ensureMembership` → Worker
+  `/access-request`, a tap opens `/?open=admin&person=<uid>`) and „ორშაბათის მიმოხილვა“ (Monday 10:00, `weekText`). The
+  Worker sends only to people still in `admins` and adds its `subs.admin` column itself — needs only a publish of the Worker.
+  Stage IV (2026-10-28): a class is edited only on its page — the ✎ list gives admins „მასწავლებლები“
+  (`classes/ClassTeachersSheet.tsx`, `useLeaders` in `admin/LeaderChips.tsx`, `saveClassTeachers` also sets the members'
+  teacherIds and the psalter group) and „არქივში გადატანა“, and a class nobody leads shows admins an amber „დანიშვნა“ line;
+  the panel's cards have no ✎ and „ახალი კლასი“ asks only the name, then opens the page. On a computer (`useWide`, `lg`) the
+  members list and the person's window stand side by side (the kit's `Sheet docked`). „გასული“ (person's window → „სკოლაში“):
+  `settings/leftMembers` (`utils/leftMembers.ts`) — they keep the app; `filterTests` leaves them out of every number and
+  list but the chip „გასულები“, birthdays/name days and the Worker's Monday count skip them. ⚙ „სკოლა“ → „განცხადება
+  კლასებს“ (`admin/Announce.tsx`): one text into the chat of every ticked class, as the admin's message. „განყოფილებები“:
+  one row per section with its „ბავშვებს“ toggle (no second list).
+  Ideas 7–10, 12–14 (2026-10-28, the review's last PR): under the filters „მასწავლებლები“/„ადმინები“ a teaching person's row
+  says what they lead (`admin/TeacherOverview.tsx`: `TeachLine` + `useLastLessons`, one listener per class on its last
+  attendance; amber = no class, or no lesson for 14+ days). „მონიშვნა“ on the members list picks several people
+  (`admin/BulkActions.tsx` `BulkBar`): „კლასში“ (`addClassMembers`/`removeClassMembers` in `ClassesAdmin.tsx`, with undo),
+  „დაშვება“ for waiting ones (superadmins), „ჩანაწერები“ (the centre's right). Filter „შესაძლო ორმაგი“ (`utils/duplicates.ts`:
+  the same phone's last 9 digits, or the same two-word name) + an amber box in the person's window that opens the twin.
+  „ჩანიშვნა“ in the person's window = an admin-only note (`utils/adminNotes.ts`, `adminNotes/{uid}` {text ≤2000, by = the
+  writer's e-mail, at}; rules: admins only; in the backup). A „მალე“ section can get „გახსნის დღე“ (`settings/sections` `openOn`;
+  `stateOnDay` in `data/sections.ts` opens it on that Tbilisi day; `useSections().stored` = the saved state). ⚙ „სკოლა“ →
+  „სკოლის ზრდა“ (`admin/GrowthFold.tsx`, `utils/growth.ts`): new members by month from `createdAt`, active members by week from
+  `settings/growth.weeks` (the panel keeps this week's count when an admin opens it — `hooks/useGrowth.ts`, so weeks start
+  2026-10-28) — and „ვის რა შეუძლია“ (`admin/RolesFold.tsx`, a card per role). Idea 15 (automatic backup) waits on the user:
+  phone numbers need a protected place first.
 - **Access** (`hooks/useAccess.ts`): guests see chant books + synth, prayers, song/მთქმელი names only (no
   recordings anywhere); kids' mode is switched by the teacher per student (`students.kidsMode`, no PIN).
 - **Home buttons** (`utils/shortcuts.ts`, `components/home/ShortcutShelf.tsx`, `students.shortcuts`, ≤8; hidden
   until chosen; class `defaultShortcuts`). Class mode filters the chant lists to the class program.
-- **Reminders Worker** (`worker/reminders/`, D1 + text pushes + group/assignment reminders): code is ready; the
-  user must do the one-time setup from `docs/შეხსენებების-სერვერი.md` on their PC (D1, `FIREBASE_SA`, deploy).
-- Dev check with made-up data: `VITE_EMULATORS=1 npm run dev` + Firebase emulators (auth 9099, firestore 8085).
+- **Reminders Worker** (`worker/reminders/`, D1 + text pushes + group/assignment reminders): published by the workflow
+  above, which also does the old one-time setup of `docs/შეხსენებების-სერვერი.md` (finds or makes the D1 database, fills
+  its id into wrangler.toml for the run, runs `schema.sql`, warns when the Worker lacks `FIREBASE_SA` or `VAPID_PRIVATE_JWK` — those are set in the Cloudflare dashboard).
+- `VITE_EMULATORS=1` points the app at local Firebase emulators — not used any more (the user's rule, 2026-10-28).
 
 ## Plan part 2 (tab „მე-2 ნაწილის სამუშაო გეგმა“ in the plan doc below; six stages, one PR each)
 
@@ -321,16 +427,15 @@
   `saveAccess` in `admin/AccessRequests.tsx`).
   Old members (students doc, no memberAccess) and staff keep everything. Features not given are hidden, never locked.
   Search and the church calendar are features too (the user's choice): guests and waiting members don't get them.
-- Emulator check: firebase-tools in the scratchpad; the auth emulator keeps the letters at
-  `/emulator/v1/projects/<id>/oobCodes`; the app's Firestore database id is `ai-studio-…`, not `(default)`.
+- The app's Firestore database id is `ai-studio-…`, not `(default)`.
 
 ## Roadmap (ideas not built yet — confirm open questions with the user first)
 
 Full plan (Georgian doc): https://claude.ai/code/artifact/f10aa016-d92d-4522-8968-2e6acba2d6ab
 
 **Redesign in 8 stages (agreed 2026-10-25; audit of every page with 204 findings and the stage plan:
-https://claude.ai/artifact/Q5taZYajdGvJEVpHmoHVEu).** Each stage = one PR, shown to the user with emulator
-screenshots first. 1 საძირკველი — done (kit rules above). 2 class page = the only workplace (teacher panel removed,
+https://claude.ai/artifact/Q5taZYajdGvJEVpHmoHVEu).** Each stage = one PR (no emulator screenshots any more — see
+„Only the checks a change needs“). 1 საძირკველი — done (kit rules above). 2 class page = the only workplace (teacher panel removed,
 psalter group inside the class). 3 library lighter (no plates under the books). 4 birthdays/name days page + push
 5/3/1 days before (members see month list without year; teachers/admins all). 5 women's costume beside the chokha
 (images by Gemini in the chokha's style, approved by the user first; girls open it first, by `nameGender`).

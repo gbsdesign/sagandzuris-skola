@@ -54,8 +54,8 @@ const fontFaces = () => FONTS.flatMap(([family, , weights]) => weights.map(w =>
 
 // ---------- text helpers ----------
 export const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
-/** მხედრული → ასომთავრული (the 33 letters sit 0x30 apart in Unicode). */
-export const aso = s => String(s).replace(/[ა-ჰ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x30));
+/** მხედრული → ასომთავრული (the letters sit 0x30 apart in Unicode; ჱ ჲ ჳ ჴ ჵ too). */
+export const aso = s => String(s).replace(/[ა-ჵ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x30));
 
 // ---------- icons: lucide's paths, drawn as plain SVG ----------
 const ICON_DIR = path.join(ROOT, 'node_modules', 'lucide-react', 'dist', 'esm', 'icons');
@@ -74,6 +74,10 @@ export const icon = (name, { size = 6, color = C.gold, width = 1.75, cls = '', s
   const body = iconNode(name).map(([tag, attrs]) => `<${tag} ${Object.entries(attrs).filter(([k]) => k !== 'key').map(([k, v]) => `${k}="${v}"`).join(' ')}/>`).join('');
   return `<svg class="${cls}" style="${style}" width="${size}mm" height="${size}mm" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round">${body}</svg>`;
 };
+
+/** The same icon nested inside another SVG drawn in mm: `x`, `y`, `size` are that SVG's user units. */
+export const iconIn = (name, { x = 0, y = 0, size = 6, color = C.gold, width = 1.75, opacity = 1 } = {}) =>
+  `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round" opacity="${opacity}">${iconNode(name).map(([tag, attrs]) => `<${tag} ${Object.entries(attrs).filter(([k]) => k !== 'key').map(([k, v]) => `${k}="${v}"`).join(' ')}/>`).join('')}</svg>`;
 
 // ---------- ornaments ----------
 /** A vine tendril for a card's corner (viewBox 0 0 40 40, drawn for the top-left corner; rotate for the others). */
@@ -141,6 +145,28 @@ export const tokenSheet = (tokens, { d = 25, gap = 1.5, cols = 7, rows = 10, bac
   return page(`${out}<div class="sheetLabel">ფურცელი %SHEET% · ${esc(label)}</div>`, 'tokens');
 };
 
+/** A sheet of pieces placed by hand: items { x, y, w, h, html } in mm. `back` mirrors every item left↔right, so a back meets
+ * its front after duplex printing on the long edge. */
+export const placedSheet = (items, { back = false, label = '', cls = 'placed' } = {}) => page(`${items.map(it =>
+  `<div class="piece" style="left:${back ? 210 - it.x - it.w : it.x}mm;top:${it.y}mm;width:${it.w}mm;height:${it.h}mm">${it.html}</div>`).join('')}
+${label ? `<div class="sheetLabel">ფურცელი %SHEET% · ${esc(label)}</div>` : ''}`, cls);
+
+/** `cols`×`rows` equal pieces of `w`×`h` mm centred on the page with crop marks (slips, small cards); `back` mirrors the columns. */
+export const gridSheet = (items, { cols, rows, w, h, back = false, label = '', cls = 'gsheet' }) => {
+  const left = (210 - cols * w) / 2, top = (297 - rows * h) / 2;
+  const xs = Array.from({ length: cols + 1 }, (_, i) => left + i * w), ys = Array.from({ length: rows + 1 }, (_, i) => top + i * h);
+  let out = '';
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) {
+    const it = items[r * cols + (back ? cols - 1 - c : c)];
+    if (it) out += `<div class="piece" style="left:${xs[c]}mm;top:${ys[r]}mm;width:${w}mm;height:${h}mm">${it}</div>`;
+  }
+  return page(`${cutMarks(xs, ys)}${out}<div class="sheetLabel">ფურცელი %SHEET% · ${esc(label)}</div>`, cls);
+};
+
+/** Corners of a pointy-top hexagon (flat sides left and right) around cx, cy with circumradius r. */
+export const hexPts = (cx, cy, r) => [-90, -30, 30, 90, 150, 210].map(a => [cx + r * Math.cos(a * Math.PI / 180), cy + r * Math.sin(a * Math.PI / 180)]);
+export const ptsAttr = pts => pts.map(([x, y]) => `${x.toFixed(2)},${y.toFixed(2)}`).join(' ');
+
 /** The whole file prints „ორმხრივად, გრძელი კიდით“: every physical sheet is { key, front, back? } and becomes two pages, a
  * one-sided sheet getting a back that says it is blank on purpose. `%SHEET%` in a page becomes its sheet number. */
 export const duplex = (sheets) => sheets.flatMap((sh, i) => {
@@ -155,8 +181,8 @@ export const sheetNo = (sheets, key) => {
   return i + 1;
 };
 
-/** The series stripe for covers and rules sheets. */
-export const stripe = (no, right = SCHOOL) => `<div class="stripe"><span class="aso">${aso(SERIES)}</span><span class="no">№${no}</span><span class="right">${esc(right)}</span></div>`;
+/** The series stripe for covers and rules sheets: a board game's number, or a label (the app's games: „ქართული · უტელეფონო“). */
+export const stripe = (no, right = SCHOOL) => `<div class="stripe"><span class="aso">${aso(SERIES)}</span><span class="no">${typeof no === 'number' ? `№${no}` : esc(no)}</span><span class="right">${esc(right)}</span></div>`;
 
 /** A sheet footer: the game, the series and the page number are set by CSS counters on print. */
 export const foot = (text) => `<div class="foot">${text}</div>`;
@@ -184,6 +210,8 @@ html,body{margin:0;padding:0;background:#fff;color:var(--brown);font-family:'Ser
 .card.dark .frame2{display:none}
 .card .body{position:absolute;inset:5.2mm;display:flex;flex-direction:column;align-items:stretch}
 .token{position:absolute;border-radius:50%;overflow:hidden}
+.piece{position:absolute}
+.piece>svg{display:block}
 .stripe{display:flex;align-items:center;gap:4mm;background:var(--wine);color:var(--paper);padding:0 8mm;height:11mm;font-size:10pt}
 .stripe .aso{font-size:11pt;letter-spacing:.08em;color:#f0d9a0}
 .stripe .no{font-weight:700;color:#f0d9a0}
@@ -202,6 +230,25 @@ table.t th{background:var(--parch);color:var(--wine);font-weight:700}
 .box{border:.3mm solid var(--gold);border-radius:2mm;padding:3mm 4mm;background:var(--paper)}
 .chk{display:inline-block;width:3.6mm;height:3.6mm;border:.3mm solid var(--brown);border-radius:.6mm;vertical-align:-0.6mm;margin-right:1.2mm}
 .small{font-size:9pt;color:var(--muted)}
+`;
+
+/** The cover and rules sheet's look, shared by the app's word games (the board games keep their own copies). */
+export const coverCss = `
+.cover{padding:10mm 14mm 0}
+.cover .title{font-size:26pt;color:var(--gold2);letter-spacing:.08em}
+.cover .lead{font-size:12pt;margin:3mm 0 6mm;line-height:1.4}
+.cover .two{display:grid;grid-template-columns:1fr 1fr;gap:8mm;font-size:10pt}
+.cover h3{margin:0 0 2mm;color:var(--wine);font-size:12pt}
+.cover table.comp{font-size:9.3pt}
+.cover table.comp td,.cover table.comp th{padding:1.1mm 1.4mm}
+.cover .how{margin:0;padding-left:4.5mm;font-size:9.8pt;line-height:1.35}
+.cover .how li{margin-bottom:1.6mm}
+.cover .legal{margin-top:3mm;font-size:9pt}
+.rulesWrap{padding:6mm 12mm 0}
+.rhead{display:flex;align-items:baseline;gap:5mm;border-bottom:.3mm solid var(--gold);padding-bottom:1.5mm;margin-bottom:3mm}
+.rtitle{font-size:20pt;color:var(--wine)}
+.rsub{font-size:10.5pt;color:var(--muted)}
+.lead{font-size:10.8pt;line-height:1.4;margin:0 0 3mm}
 `;
 
 /** The script that shrinks `.fit` titles until they fit their width (run after fonts load). */
