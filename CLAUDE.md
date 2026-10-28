@@ -58,10 +58,11 @@
 - No other subagents/workflows unless the user asks.
 - Progress notes in Georgian should be one or two short lines; save detail for the final summary.
 - Don't re-read a file you just edited, and don't re-run a check that already passed.
-- **Only the checks a change needs (the user's rule, 2026-10-28: „მხოლოდ აუცილებელი ტესტები, არ ქნას უაზროდ“).** Run the
-  tests of the files you changed (`npx tsx --test tests/<name>.test.ts`), `npm run typecheck`, and `npm run build`
-  once before the PR; the rules emulator test only when `firestore.rules` changed. Screenshots only of the screens the
-  change touches, once (again only for a fix you made); no extra review agents or repeated runs „just in case“.
+- **Only the checks a change needs (the user's rule, 2026-10-28: „მხოლოდ აუცილებელი ტესტები, არ ქნას უაზროდ“; tightened
+  the same night: „ემულატორები დაივიწყე“).** Run the tests of the files you changed (`npx tsx --test tests/<name>.test.ts`),
+  `npm run typecheck`, and `npm run build` once before the PR — nothing else. **No Firebase emulators at all**: no local
+  emulator runs, no seeded made-up data, no emulator screenshots, no local rules test — the GitHub workflow tests
+  `firestore.rules` on the PR by itself. No extra review agents or repeated runs „just in case“.
 - The user's task template is `docs/დავალების-შაბლონი.md`. If a request is unclear, ask one short
   question instead of exploring the whole codebase.
 
@@ -371,13 +372,26 @@
   list but the chip „გასულები“, birthdays/name days and the Worker's Monday count skip them. ⚙ „სკოლა“ → „განცხადება
   კლასებს“ (`admin/Announce.tsx`): one text into the chat of every ticked class, as the admin's message. „განყოფილებები“:
   one row per section with its „ბავშვებს“ toggle (no second list).
+  Ideas 7–10, 12–14 (2026-10-28, the review's last PR): under the filters „მასწავლებლები“/„ადმინები“ a teaching person's row
+  says what they lead (`admin/TeacherOverview.tsx`: `TeachLine` + `useLastLessons`, one listener per class on its last
+  attendance; amber = no class, or no lesson for 14+ days). „მონიშვნა“ on the members list picks several people
+  (`admin/BulkActions.tsx` `BulkBar`): „კლასში“ (`addClassMembers`/`removeClassMembers` in `ClassesAdmin.tsx`, with undo),
+  „დაშვება“ for waiting ones (superadmins), „ჩანაწერები“ (the centre's right). Filter „შესაძლო ორმაგი“ (`utils/duplicates.ts`:
+  the same phone's last 9 digits, or the same two-word name) + an amber box in the person's window that opens the twin.
+  „ჩანიშვნა“ in the person's window = an admin-only note (`utils/adminNotes.ts`, `adminNotes/{uid}` {text ≤2000, by = the
+  writer's e-mail, at}; rules: admins only; in the backup). A „მალე“ section can get „გახსნის დღე“ (`settings/sections` `openOn`;
+  `stateOnDay` in `data/sections.ts` opens it on that Tbilisi day; `useSections().stored` = the saved state). ⚙ „სკოლა“ →
+  „სკოლის ზრდა“ (`admin/GrowthFold.tsx`, `utils/growth.ts`): new members by month from `createdAt`, active members by week from
+  `settings/growth.weeks` (the panel keeps this week's count when an admin opens it — `hooks/useGrowth.ts`, so weeks start
+  2026-10-28) — and „ვის რა შეუძლია“ (`admin/RolesFold.tsx`, a card per role). Idea 15 (automatic backup) waits on the user:
+  phone numbers need a protected place first.
 - **Access** (`hooks/useAccess.ts`): guests see chant books + synth, prayers, song/მთქმელი names only (no
   recordings anywhere); kids' mode is switched by the teacher per student (`students.kidsMode`, no PIN).
 - **Home buttons** (`utils/shortcuts.ts`, `components/home/ShortcutShelf.tsx`, `students.shortcuts`, ≤8; hidden
   until chosen; class `defaultShortcuts`). Class mode filters the chant lists to the class program.
 - **Reminders Worker** (`worker/reminders/`, D1 + text pushes + group/assignment reminders): code is ready; the
   user must do the one-time setup from `docs/შეხსენებების-სერვერი.md` on their PC (D1, `FIREBASE_SA`, deploy).
-- Dev check with made-up data: `VITE_EMULATORS=1 npm run dev` + Firebase emulators (auth 9099, firestore 8085).
+- `VITE_EMULATORS=1` points the app at local Firebase emulators — not used any more (the user's rule, 2026-10-28).
 
 ## Plan part 2 (tab „მე-2 ნაწილის სამუშაო გეგმა“ in the plan doc below; six stages, one PR each)
 
@@ -398,16 +412,15 @@
   `saveAccess` in `admin/AccessRequests.tsx`).
   Old members (students doc, no memberAccess) and staff keep everything. Features not given are hidden, never locked.
   Search and the church calendar are features too (the user's choice): guests and waiting members don't get them.
-- Emulator check: firebase-tools in the scratchpad; the auth emulator keeps the letters at
-  `/emulator/v1/projects/<id>/oobCodes`; the app's Firestore database id is `ai-studio-…`, not `(default)`.
+- The app's Firestore database id is `ai-studio-…`, not `(default)`.
 
 ## Roadmap (ideas not built yet — confirm open questions with the user first)
 
 Full plan (Georgian doc): https://claude.ai/code/artifact/f10aa016-d92d-4522-8968-2e6acba2d6ab
 
 **Redesign in 8 stages (agreed 2026-10-25; audit of every page with 204 findings and the stage plan:
-https://claude.ai/artifact/Q5taZYajdGvJEVpHmoHVEu).** Each stage = one PR, shown to the user with emulator
-screenshots first. 1 საძირკველი — done (kit rules above). 2 class page = the only workplace (teacher panel removed,
+https://claude.ai/artifact/Q5taZYajdGvJEVpHmoHVEu).** Each stage = one PR (no emulator screenshots any more — see
+„Only the checks a change needs“). 1 საძირკველი — done (kit rules above). 2 class page = the only workplace (teacher panel removed,
 psalter group inside the class). 3 library lighter (no plates under the books). 4 birthdays/name days page + push
 5/3/1 days before (members see month list without year; teachers/admins all). 5 women's costume beside the chokha
 (images by Gemini in the chokha's style, approved by the user first; girls open it first, by `nameGender`).

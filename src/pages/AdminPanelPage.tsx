@@ -15,6 +15,9 @@ import { AccessRecord, DecisionRecord, toAccess } from '../components/admin/Acce
 import { useDirectory, writeDirectory } from '../utils/directory';
 import { teachersDiffer, teachersOf } from '../utils/classTeachers';
 import { useOpenRequest } from '../utils/searchOpen';
+import { activeIn7 } from '../utils/growth';
+import { recordWeek, useGrowthWeeks } from '../hooks/useGrowth';
+import { roleOf } from '../components/admin/PersonSheet';
 
 // the list the panel shows: the members or the classes (chosen by the big numbers); remembered on the device.
 // A home button made for a former tab („სკოლა“, „ჩანაწერები“, „განყოფილებები“, „წევრების მიღება“…) writes its name here
@@ -142,6 +145,16 @@ export const AdminPanelPage: React.FC = () => {
   // the attention lines wait for every list, so they never flash a wrong number; a list that did not come says so
   const ready = !loading && !loadingClasses && staffLoaded && (!isSuperAdmin || accessLoaded);
   const broken = failed.users || failed.staff || failed.access || classesFailed;
+
+  // „სკოლის ზრდა“: this week's active members are kept once per visit (the week's largest count stays; utils/growth)
+  const growth = useGrowthWeeks();
+  const counted = useRef(false);
+  useEffect(() => {
+    if (!ready || broken || !growth.loaded || !left.loaded || counted.current) return;
+    counted.current = true;
+    const n = users.filter(u => roleOf(u, staff) === 'member' && !left.uids.has(u.userId) && activeIn7(u.lastActiveAt)).length;
+    void recordWeek(growth.weeks, n).catch(() => {});
+  }, [ready, broken, growth.loaded, growth.weeks, left, users, staff]);
 
   // the big numbers: three people filters (superadmins see who waits; other admins see the teachers) and the classes.
   // Each shows „—“ until its lists have come; „ელოდება“ turns amber while someone waits (and the row says it once more)

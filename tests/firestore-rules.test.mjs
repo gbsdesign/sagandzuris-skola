@@ -328,6 +328,16 @@ await t('admin cannot ask for the newcomer notice', assertFails(setDoc(doc(adm, 
 await t("admin cannot set another's notices", assertFails(setDoc(doc(adm, 'adminPush', 'sup'), { waiting: false, weekly: false, at: 'x' })));
 await t('a member asks for no admin notice', assertFails(setDoc(doc(stu, 'adminPush', 'stu'), { waiting: false, weekly: true, at: 'x' })));
 await t('superadmin turns off a former admin\'s notices', assertSucceeds(deleteDoc(doc(sup, 'adminPush', 'adm'))));
+const note = (by, extra = {}) => ({ text: 'დაურეკე ოთხშაბათს', by, at: '2026-10-28T21:00:00Z', ...extra });
+await t('admin writes a private note signed as self', assertSucceeds(setDoc(doc(adm, 'adminNotes', 'stu'), note('adm@x.ge'))));
+await t('admin cannot sign a note as another', assertFails(setDoc(doc(adm, 'adminNotes', 'stu'), note('sup@x.ge'))));
+await t('a note has only its fields', assertFails(setDoc(doc(adm, 'adminNotes', 'stu'), note('adm@x.ge', { x: 1 }))));
+await t('a note is at most 2000 letters', assertFails(setDoc(doc(adm, 'adminNotes', 'stu'), note('adm@x.ge', { text: 'ა'.repeat(2001) }))));
+await t('superadmin reads a note', assertSucceeds(getDoc(doc(sup, 'adminNotes', 'stu'))));
+await t('a teacher does not read a note', assertFails(getDoc(doc(tch, 'adminNotes', 'stu'))));
+await t('the person does not read their note', assertFails(getDoc(doc(stu, 'adminNotes', 'stu'))));
+await t('a teacher writes no note', assertFails(setDoc(doc(tch, 'adminNotes', 'stu2'), note('tch@x.ge'))));
+await t('admin deletes a note', assertSucceeds(deleteDoc(doc(adm, 'adminNotes', 'stu'))));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();

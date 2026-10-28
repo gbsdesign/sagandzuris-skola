@@ -7,7 +7,8 @@ import { db } from '../firebase';
 // settings/leftMembers { uids: [...], since: { uid: ISO time } } — admins write it (the settings rule), everyone may read
 // it (only ids, no names), so the birthdays page can leave them out too.
 
-export interface LeftMembers { uids: ReadonlySet<string>; since: Record<string, string> }
+/** `loaded`: the list has come (or could not), so counts may leave them out */
+export interface LeftMembers { uids: ReadonlySet<string>; since: Record<string, string>; loaded?: boolean }
 const NONE: LeftMembers = { uids: new Set(), since: {} };
 const ref = () => doc(db, 'settings', 'leftMembers');
 
@@ -17,8 +18,8 @@ export const useLeftMembers = (enabled = true): LeftMembers => {
     if (!enabled) { setV(NONE); return; }
     return onSnapshot(ref(), s => {
       const d = s.data() || {};
-      setV({ uids: new Set(Array.isArray(d.uids) ? d.uids.map(String) : []), since: d.since && typeof d.since === 'object' ? d.since : {} });
-    }, () => setV(NONE));
+      setV({ uids: new Set(Array.isArray(d.uids) ? d.uids.map(String) : []), since: d.since && typeof d.since === 'object' ? d.since : {}, loaded: true });
+    }, () => setV({ ...NONE, loaded: true }));
   }, [enabled]);
   return v;
 };
