@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@drawable/w_bg" android:gravity="center" android:orientation="vertical" android:padding="10dp">
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:drawableStart="@drawable/lc_book_marked"
+        android:drawablePadding="6dp" android:drawableTint="@color/wine" android:gravity="center_vertical" android:text="ჩემი კანონი"
+        android:textColor="@color/muted" android:textSize="12sp" />
+    <TextView android:id="@+id/number" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:text="—" android:textColor="@color/wine" android:textSize="30sp" android:textStyle="bold" />
+    <TextView android:id="@+id/group" android:layout_width="match_parent" android:layout_height="wrap_content" android:ellipsize="end"
+        android:gravity="center" android:maxLines="2" android:text="ფსალმუნთა ჯგუფი" android:textColor="@color/muted" android:textSize="12sp" />
+</LinearLayout>

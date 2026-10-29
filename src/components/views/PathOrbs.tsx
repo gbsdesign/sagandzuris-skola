@@ -45,7 +45,7 @@ export const PATH_ORBS: { id: OrbId; label: string }[] = [
 const SAMOSI_IDS = new Set(SAMOSI_PARTS.map(p => p.id));
 
 // the chokha for its round button: how many parts are collected, and its colour (students/{uid}.samosi, .samosiColor)
-const useSamosiSummary = () => {
+export const useSamosiSummary = () => {
   const { user } = useAuth();
   const [state, setState] = useState({ count: 0, color: SAMOSI_DEFAULT_COLOR });
   useEffect(() => {
@@ -77,7 +77,7 @@ const SamosiOrb: React.FC<{ count: number; color: string; open: boolean; onClick
 };
 
 // "მარგალიტები": how many pearls of all the chests are polished, and how many shine (approved by a teacher)
-const usePearlSummary = () => {
+export const usePearlSummary = () => {
   const { user } = useAuth();
   const { pearls, shine } = usePearls(user?.uid);
   const ids = CHESTS.flatMap(c => c.pearls);

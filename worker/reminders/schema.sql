@@ -14,3 +14,7 @@ CREATE TABLE IF NOT EXISTS subs (
 );
 CREATE INDEX IF NOT EXISTS subs_uid ON subs (uid);
 CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
+-- the Android app's home-screen widgets (2026-10-29): the app's secret (SHA-256) → person, and what the site left for them
+CREATE TABLE IF NOT EXISTS widgets (secret TEXT PRIMARY KEY, uid TEXT NOT NULL, created_at TEXT);
+CREATE INDEX IF NOT EXISTS widgets_uid ON widgets (uid);
+CREATE TABLE IF NOT EXISTS widget_summary (uid TEXT PRIMARY KEY, json TEXT NOT NULL, updated_at TEXT);

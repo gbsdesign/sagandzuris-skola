@@ -13,6 +13,7 @@ import {
   ModalProvider,
   ChantSelectionProvider,
 } from './context';
+import { AppLinks, requestShortcut } from './components/app/AppLinks';
 import { NotesProvider } from './context/NotesContext';
 
 // Layout & Core Views
@@ -90,8 +91,13 @@ function AppContent() {
     const prayerId = url.searchParams.get('prayer');
     const page = url.searchParams.get('open');
     if (prayerId && isPrayerId(prayerId)) openPrayer(prayerId);
-    else if (page === 'psalter' || page === 'gz') navigateTo(page);
+    else if (page === 'psalter' || page === 'gz' || page === 'profile') navigateTo(page);
     else if (page === 'teacher') navigateTo('class');
+    // the Android app's widgets and icon menu: a home-shelf button by its id
+    else if (page === 'sc') {
+      const id = url.searchParams.get('id');
+      if (id) requestShortcut(id);
+    }
     // an admin's notice: the panel, with the newcomer's window open
     else if (page === 'admin') {
       const person = url.searchParams.get('person');
@@ -106,6 +112,7 @@ function AppContent() {
     url.searchParams.delete('prayer');
     url.searchParams.delete('open');
     url.searchParams.delete('person');
+    url.searchParams.delete('id');
     window.history.replaceState(null, '', url.pathname + url.search + url.hash);
     openFromUrl(href);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -175,6 +182,10 @@ function AppContent() {
       {/* the app's own „are you sure?“ card (kit askConfirm) */}
       <ConfirmHost />
       <UndoHost />
+      {/* the Android app: widget and icon-menu buttons, the widgets' summary, things shared into the app */}
+      <ErrorBoundary>
+        <AppLinks />
+      </ErrorBoundary>
 
       {/* sign-in (Google or a link by e-mail), "საჭიროა რეგისტრაცია" for guests, and the return from the e-mail link */}
       <SignInPrompt />
