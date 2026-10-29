@@ -18,6 +18,7 @@ import { StudentProfileCard } from '../views/StudentProfileCard';
 import { ClassLogo } from '../classes/ClassLogo';
 import { AccessPicker, AccessRecord, DecisionRecord, saveAccess } from './AccessRequests';
 import { CentreDownloadSwitch } from './CentreDownload';
+import { MemberAlbums } from './AlbumRights';
 import { SongTextSwitch } from './SongTextEditors';
 import { addClassMember, removeClassMember } from './ClassesAdmin';
 import { changed } from './changed';
@@ -440,6 +441,13 @@ export const PersonSheet: React.FC<{
             <Part title="დამატებითი უფლებები">
               {!isStaff && <CentreDownloadSwitch uid={u.userId} name={u.name} onMessage={note.say} />}
               <SongTextSwitch uid={u.userId} name={u.name} onMessage={note.say} />
+            </Part>
+          )}
+
+          {/* the song albums this member hears / saves (staff have them all) */}
+          {admitted && role === 'member' && (
+            <Part title="ალბომები">
+              <MemberAlbums uid={u.userId} name={u.name} onMessage={note.say} />
             </Part>
           )}
 

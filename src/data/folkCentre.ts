@@ -1,5 +1,6 @@
 // Recordings of the Folklore Centre (ფოლკლორის ცენტრი, folk.gov.ge), published on Audiomack (audiomack.com/folkcentre).
-// The Centre's albums the school keeps in its own Drive are in centreSongs.ts (generated) and join the songs the same way.
+// The song albums the school keeps in its own Drive are in centreSongs.ts (generated) and join the songs the same way,
+// each only for those an admin let hear it (albumAccess.ts).
 // They join a folk song as further performances, under the performer's name only. Played in Audiomack's own player
 // until an mp3 of the recording is in the school's Drive (`mp3`): then the school's player plays it, and its MP3 /
 // offline menu shows only to members an admin allowed (settings/centreDownload, hooks/useCentreDownload.ts).
@@ -10,6 +11,7 @@ export interface CentreRec {
   page?: string; // Audiomack path after audiomack.com/: 'folkcentre/song/<slug>' (the Drive albums' takes have none)
   mp3?: string;  // Drive file id, once the file is in the school's Drive
   voices?: [string?, string?, string?]; // a learning album's take split by voices: Drive ids of voices I, II, III
+  album?: string; // the song album it comes from (Drive folder id): who hears and saves it is that album's (albumAccess.ts)
 }
 
 /** song id (data/songsData.ts) → the Centre's recordings of it */

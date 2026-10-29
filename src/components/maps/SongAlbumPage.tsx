@@ -1,18 +1,21 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowRightLeft, ChevronRight, Disc3, Headphones, LoaderCircle, MapPin, Pause, Play, RotateCw } from 'lucide-react';
+import { ArrowRightLeft, Check, ChevronRight, Disc3, Download, Headphones, LoaderCircle, MapPin, Pause, Play, RotateCw } from 'lucide-react';
 import { CENTRE_SONG_ALBUMS } from '../../data/centreSongs';
 import { FOLK_SONGS, FolkSong, centreRecId, getFolkRegion } from '../../data/songsData';
 import { usePlacements } from '../../data/placements';
-import { useAccess } from '../../hooks/useAccess';
+import { albumRight, useAlbumAccess } from '../../data/albumAccess';
+import { AUDIO_PROXY } from '../../data/chantMediaRegistry';
 import { useAuth } from '../../context';
 import { MoveSheet, MoveTarget } from '../archive/MoveSheet';
 import { openSongPage, songTakes } from './SongPage';
 import { clock, useAlbumPlayer } from '../../utils/useAlbumPlayer';
 import { triggerHaptic } from '../../utils/haptics';
 
-// One album of the Folklore Centre's songs, as the school's Drive keeps it (data/centreSongs.ts): every recording in
-// the folder's order, one sounding at a time. A recording a song holds shows that song („გურია · ამირანი ›“, a tap
-// opens it); the owner and the superadmins move a recording to a song („გადატანა“) — the album keeps it either way.
+// One song album, as the school's Drive keeps it (data/centreSongs.ts): every recording in the folder's order, one
+// sounding at a time. ▶ and ⬇ follow the album's rights (data/albumAccess.ts: staff all; a member what an admin turned
+// on — a member without any never gets here, the list under the map leaves the album out). A recording a song holds
+// shows that song („გურია · ამირანი ›“, a tap opens it); the owner and the superadmins move a recording to a song
+// („გადატანა“) — the album keeps it either way.
 // The list is public/centre/<folder id>.json, fetched when the album opens (and kept by the service worker).
 
 /** id, title, note, and — when the site already had this recording from an older folder — that file's id */
@@ -55,16 +58,43 @@ const useWhereIs = () => {
   }, [placed]);
 };
 
+/** Saves one recording as an mp3 (the Worker answers a page's fetch, which carries the site's Origin) */
+const saveTrack = async (id: string, title: string) => {
+  const res = await fetch(`${AUDIO_PROXY}/${id}`);
+  if (!res.ok) throw new Error(String(res.status));
+  const url = URL.createObjectURL(await res.blob());
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${title.replace(/[\\/:*?"<>|]+/g, ' ').replace(/\s+/g, ' ').trim() || 'ჩანაწერი'}.mp3`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 2000);
+};
+
 export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
   const album = CENTRE_SONG_ALBUMS.find(a => a[0] === albumId);
-  const { can } = useAccess();
+  useAlbumAccess(); // an admin's switch applies at once
+  const right = albumRight(albumId);
   const { isSuperAdmin } = useAuth();
+  // ⬇ per recording: saving / saved / failed
+  const [saving, setSaving] = useState<Record<string, 'busy' | 'done' | 'failed'>>({});
+  const save = (id: string, title: string) => {
+    if (saving[id] === 'busy') return;
+    triggerHaptic(10);
+    setSaving(s => ({ ...s, [id]: 'busy' }));
+    saveTrack(id, title).then(
+      () => setSaving(s => ({ ...s, [id]: 'done' })),
+      () => setSaving(s => ({ ...s, [id]: 'failed' }))
+    );
+  };
   const { tracks, failed, retry } = useAlbumTracks(albumId);
   const player = useAlbumPlayer();
   const whereIs = useWhereIs();
   const [moving, setMoving] = useState<MoveTarget | null>(null);
 
-  if (!album) return null;
+  // an album one may neither hear nor save is not there for them at all
+  if (!album || (!right.listen && !right.download)) return null;
   const [, name, count] = album;
   const placeOf = (t: Track) => whereIs.get(t[0]) ?? (t[3] ? whereIs.get(t[3]) : undefined);
   const placedCount = tracks ? tracks.filter(t => placeOf(t)).length : 0;
@@ -78,7 +108,6 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
           </span>
           <div className="min-w-0 flex flex-col gap-1">
             <h1 className="font-serif-ge text-[21px] sm:text-2xl font-bold leading-tight text-[#7a2028] text-balance break-words">{name}</h1>
-            <p className="text-[12.5px] leading-snug text-[#8a7a6a]">ფოლკლორის ცენტრის ალბომი</p>
             <p className="inline-flex flex-wrap items-center gap-x-3 gap-y-1 text-[12px] font-semibold text-[#b4620e]">
               <span className="inline-flex items-center gap-1.5"><Headphones className="w-3.5 h-3.5" />{count} ჩანაწერი</span>
               {tracks && placedCount > 0 && (
@@ -88,11 +117,7 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
           </div>
         </header>
 
-        {!can('recordings') ? (
-          <p className="px-4 py-6 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-center text-[14px] text-[#8a7a6a]">
-            ჩანაწერები სკოლის წევრებისთვისაა.
-          </p>
-        ) : failed ? (
+        {failed ? (
           <div className="px-4 py-6 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] flex flex-col items-center gap-3 text-center">
             <p className="text-[14px] text-[#8a7a6a]">ალბომი ვერ ჩაიტვირთა. შეამოწმეთ ინტერნეტი.</p>
             <button
@@ -117,6 +142,7 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
                 return (
                   <li key={id} className={`px-3.5 py-3 flex flex-col gap-2 transition-colors ${on ? 'bg-[#fcf6ea]' : ''}`}>
                     <div className="flex items-center gap-3 min-w-0">
+                      {right.listen && (
                       <button
                         type="button"
                         onClick={() => player.toggle(id)}
@@ -133,7 +159,8 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
                           <Play className="w-[18px] h-[18px] fill-current translate-x-[1px]" />
                         )}
                       </button>
-                      <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+                      )}
+                                            <div className="min-w-0 flex-1 flex flex-col gap-0.5">
                         <span className="text-[15.5px] font-bold leading-snug text-[#2a2017] break-words">
                           <span className="mr-1.5 text-[12px] font-semibold tabular-nums text-[#b3a48f]">{i + 1}.</span>
                           {title}
@@ -151,6 +178,19 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
                           </button>
                         )}
                       </div>
+                      {right.download && (
+                        <button
+                          type="button"
+                          onClick={() => save(id, title)}
+                          className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-colors ${
+                            saving[id] === 'failed' ? 'text-[#9a3412] bg-[#fdeee8]' : saving[id] === 'done' ? 'text-[#4d6b2f] bg-[#eef3e6]' : 'text-[#b4620e] hover:bg-[#fcf1df]'
+                          }`}
+                          title={saving[id] === 'failed' ? 'ვერ ჩამოიწერა — სცადე თავიდან' : 'ჩამოწერა (MP3)'}
+                          aria-label={`ჩამოწერა: ${title}`}
+                        >
+                          {saving[id] === 'busy' ? <LoaderCircle className="w-[18px] h-[18px] animate-spin" /> : saving[id] === 'done' ? <Check className="w-[18px] h-[18px]" /> : <Download className="w-[18px] h-[18px]" />}
+                        </button>
+                      )}
                       {/* a recording the site had before moves from its song's page, not from here */}
                       {isSuperAdmin && !(where && same && !whereIs.has(id)) && (
                         <button
@@ -162,7 +202,7 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
                               from: where ? { kind: 'song', region: where.song.region, title: where.song.title } : undefined,
                               title: title.replace(/ · I{1,3} ხმა$/, ''),
                               who: name,
-                              centre: { who: name, note },
+                              centre: { who: name, note, album: albumId },
                             });
                           }}
                           className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-[#b4620e] hover:bg-[#fcf1df] cursor-pointer"

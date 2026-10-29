@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react';
 import { deleteField, doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { FOLK_SONGS, FolkRegionId, FolkSong, SongRec, centreRecId } from './songsData';
+import { FOLK_SONGS, FolkRegionId, FolkSong, SongRec, centreRecId, withCentreAlbums } from './songsData';
+import { albumRight, onAlbumAccess } from './albumAccess';
 import type { CentreRec } from './folkCentre';
 import { ALBUM_RECS, AlbumRec, ChantAlbumId } from './chantAlbums';
 
@@ -13,16 +14,18 @@ import { ALBUM_RECS, AlbumRec, ChantAlbumId } from './chantAlbums';
 // moves is dropped; a recording moved to a title the region lacks makes a new song there.
 // The Folklore Centre's Drive albums (centreSongs.ts) move the same way: a take the code put in a song (`centre`) is
 // known here; a track that is only in its album (its list is fetched when opened) carries its performer in the move
-// itself (`who`, `note`), and lands among the song's Centre recordings (`centre: true`), which keep its download rule.
+// itself (`who`, `note`, `songAlbum`), and lands among the song's Centre recordings (`centre: true`).
+// The albums' recordings are laid in here too, only those of the albums the signed-in person may hear (albumAccess.ts):
+// FOLK_SONGS as the code writes it has none of them, so nothing of an album shows before the rights are known.
 
 /** `who`/`note`/`centre` come with a move of an album-only track of the Centre (the code lists it nowhere) */
-type MoveInfo = { at?: string; who?: string; note?: string; centre?: boolean };
+type MoveInfo = { at?: string; who?: string; note?: string; centre?: boolean; songAlbum?: string };
 export type Placement =
   | ({ kind: 'song'; region: FolkRegionId; title: string } & MoveInfo)
   | ({ kind: 'chant'; album: ChantAlbumId; title: string } & MoveInfo);
 
 // the lists as the code writes them
-const BASE_SONGS: FolkSong[] = FOLK_SONGS.map(s => ({ ...s, recs: s.recs && [...s.recs], centre: s.centre && [...s.centre] }));
+const BASE_SONGS: FolkSong[] = withCentreAlbums(FOLK_SONGS).map(s => ({ ...s, recs: s.recs && [...s.recs], centre: s.centre && [...s.centre] }));
 const BASE_ALBUMS = Object.fromEntries(Object.entries(ALBUM_RECS).map(([k, v]) => [k, [...v]])) as Record<ChantAlbumId, AlbumRec[]>;
 
 // performer and remark of every movable recording, wherever the code put it
@@ -41,15 +44,17 @@ const apply = () => {
   const songs: FolkSong[] = BASE_SONGS.map(s => ({
     ...s,
     recs: s.recs?.filter(r => !moves[r.id]),
-    centre: s.centre?.filter(c => { const id = centreRecId(c); return !id || !moves[id]; }),
+    centre: s.centre?.filter(c => { const id = centreRecId(c); return (!id || !moves[id]) && (!c.album || albumRight(c.album).listen); }),
   }));
   const albums = Object.fromEntries(
     Object.entries(BASE_ALBUMS).map(([k, v]) => [k, v.filter(r => !moves[r[0]])])
   ) as Record<ChantAlbumId, AlbumRec[]>;
   for (const [id, m] of Object.entries(moves)) {
-    const centre = CENTRE_INFO.get(id) ?? (m?.centre && m.who ? { who: m.who, note: m.note, mp3: id, title: m.title } : undefined);
+    const centre = CENTRE_INFO.get(id) ?? (m?.centre && m.who ? { who: m.who, note: m.note, mp3: id, album: m.songAlbum, title: m.title } : undefined);
     const info = REC_INFO.get(id) ?? centre;
     if (!info || !m?.title) continue;
+    // an album's recording goes nowhere for one who may not hear that album
+    if (centre && !REC_INFO.has(id) && centre.album && !albumRight(centre.album).listen) continue;
     if (m.kind === 'song') {
       const same = songs.filter(s => s.region === m.region && s.title === m.title);
       let target = same.find(s => !s.area) ?? same[0];
@@ -78,6 +83,9 @@ const apply = () => {
 };
 
 let started = false;
+// the albums one may hear changed (signing in, an admin's switch): the songs follow
+onAlbumAccess(apply);
+
 /** Starts listening once (the app's root calls it); offline, the last copy comes from the cache. */
 export const startPlacements = () => {
   if (started) return;

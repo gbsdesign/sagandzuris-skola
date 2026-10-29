@@ -39,6 +39,7 @@ import { useClassMarksSync } from './hooks/useClassMarks';
 import { MembershipGate, WaitingBanner } from './components/access/MembershipGate';
 import { useMembership } from './utils/memberAccess';
 import { useBirthdaySync } from './utils/birthdays';
+import { useAlbumAccessSync } from './data/albumAccess';
 
 startRecordingBindings();
 startPlacements();
@@ -83,6 +84,8 @@ function AppContent() {
   useClassMarksSync();
   // my day and month for everyone's birthdays list (utils/birthdays)
   useBirthdaySync();
+  // which song albums I may hear and save (data/albumAccess): the songs' lists follow
+  useAlbumAccessSync();
 
   // a tapped reminder may open the site as /?prayer=<id> or /?open=psalter|gz|teacher (the teacher panel is gone:
   // „teacher“ opens the class page) or /?open=admin&person=<uid>

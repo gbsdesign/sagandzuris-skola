@@ -1,19 +1,28 @@
 import React, { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Disc3 } from 'lucide-react';
 import { CENTRE_SONG_ALBUMS } from '../../data/centreSongs';
+import { albumShown, useAlbumAccess } from '../../data/albumAccess';
 import { useNavigation } from '../../context';
 import { matchScore, searchNormalize } from '../../utils/searchMatch';
 import { triggerHaptic } from '../../utils/haptics';
 
-// The Folklore Centre's song albums under the songs map (members only — guests hear no recordings): the first ones,
-// then „ყველა ალბომი“. With a search in the map's field, only the albums whose name matches. An album opens as the
-// map's item `album:<Drive folder id>` (SongAlbumPage), so the top bar's „←“ comes back here.
+// The song albums under the songs map — only those the signed-in person may hear or save (data/albumAccess.ts: staff all,
+// a member what an admin turned on; with none the block is not there at all): the first ones, then „ყველა ალბომი“. With a
+// search in the map's field, only the albums whose name matches. An album opens as the map's item
+// `album:<Drive folder id>` (SongAlbumPage), so the top bar's „←“ comes back here.
 
 const FIRST = 8;
-const NAMES = CENTRE_SONG_ALBUMS.map(a => searchNormalize(a[1]));
-const TOTAL = CENTRE_SONG_ALBUMS.reduce((n, a) => n + a[2], 0);
+const NAMES = new Map(CENTRE_SONG_ALBUMS.map(a => [a[0], searchNormalize(a[1])]));
+type Album = (typeof CENTRE_SONG_ALBUMS)[number];
 
-const AlbumRow: React.FC<{ album: (typeof CENTRE_SONG_ALBUMS)[number] }> = ({ album: [id, name, count] }) => {
+/** The albums there for the signed-in person (re-checked when the rights change) */
+export const useShownAlbums = () => {
+  const v = useAlbumAccess();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  return useMemo(() => CENTRE_SONG_ALBUMS.filter(a => albumShown(a[0])), [v]);
+};
+
+const AlbumRow: React.FC<{ album: Album }> = ({ album: [id, name, count] }) => {
   const { openMapItem } = useNavigation();
   return (
     <li>
@@ -35,29 +44,31 @@ const AlbumRow: React.FC<{ album: (typeof CENTRE_SONG_ALBUMS)[number] }> = ({ al
 
 export const CentreAlbums: React.FC<{ query?: string }> = ({ query = '' }) => {
   const [all, setAll] = useState(false);
+  const albums = useShownAlbums();
+  const total = useMemo(() => albums.reduce((n, a) => n + a[2], 0), [albums]);
   const q = searchNormalize(query);
   const found = useMemo(() => {
     if (!q) return null;
-    return CENTRE_SONG_ALBUMS
-      .map((a, i) => ({ a, score: matchScore(NAMES[i], q) }))
-      .filter((x): x is { a: (typeof CENTRE_SONG_ALBUMS)[number]; score: number } => x.score !== null)
+    return albums
+      .map(a => ({ a, score: matchScore(NAMES.get(a[0]) ?? '', q) }))
+      .filter((x): x is { a: Album; score: number } => x.score !== null)
       .sort((x, y) => x.score - y.score)
       .map(x => x.a);
-  }, [q]);
+  }, [q, albums]);
 
-  if (found && found.length === 0) return null;
-  const shown = found ? found.slice(0, 30) : all ? CENTRE_SONG_ALBUMS : CENTRE_SONG_ALBUMS.slice(0, FIRST);
+  if (albums.length === 0 || (found && found.length === 0)) return null;
+  const shown = found ? found.slice(0, 30) : all ? albums : albums.slice(0, FIRST);
 
   return (
     <section className="w-full mt-2 flex flex-col gap-2" aria-labelledby="centre-albums-title">
       <div className="px-1 flex items-end justify-between gap-3">
         <div className="min-w-0">
           <h3 id="centre-albums-title" className="text-[17px] font-black leading-tight text-[#2a2017]">
-            {found ? 'ალბომები' : 'ფოლკლორის ცენტრის ალბომები'}
+            ალბომები
           </h3>
           {!found && (
             <p className="mt-0.5 text-[12px] font-semibold text-[#b4620e]">
-              {CENTRE_SONG_ALBUMS.length} ალბომი · {TOTAL.toLocaleString('ka-GE')} ჩანაწერი
+              {albums.length} ალბომი · {total.toLocaleString('ka-GE')} ჩანაწერი
             </p>
           )}
         </div>
@@ -66,14 +77,14 @@ export const CentreAlbums: React.FC<{ query?: string }> = ({ query = '' }) => {
       <ul className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] shadow-[0_1px_3px_rgba(74,52,38,0.06)] overflow-hidden divide-y divide-[#efe5d4]">
         {shown.map(a => <AlbumRow key={a[0]} album={a} />)}
       </ul>
-      {!found && (
+      {!found && albums.length > FIRST && (
         <button
           type="button"
           onClick={() => { triggerHaptic(10); setAll(v => !v); }}
           aria-expanded={all}
           className="self-center min-h-11 px-5 rounded-full bg-white ring-1 ring-[#e2d3bb] text-[14px] font-bold text-[#574739] inline-flex items-center gap-2 cursor-pointer hover:bg-[#fbf6ec] active:scale-[0.98]"
         >
-          {all ? 'ნაკლები' : `ყველა ალბომი (${CENTRE_SONG_ALBUMS.length})`}
+          {all ? 'ნაკლები' : `ყველა ალბომი (${albums.length})`}
           <ChevronDown className={`w-4 h-4 transition-transform ${all ? 'rotate-180' : ''}`} />
         </button>
       )}

@@ -17,7 +17,7 @@ import {
 import { RegionPuzzleMap, RegionLocator } from './RegionPuzzleMap';
 import { SongPage, TakePlayer, openSongPage, songTakes } from './SongPage';
 import { SongAlbumPage } from './SongAlbumPage';
-import { CentreAlbums } from './CentreAlbums';
+import { CentreAlbums, useShownAlbums } from './CentreAlbums';
 import { AddToListButton } from '../ui/AddToListButton';
 import { useAuth, useNavigation } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
@@ -65,13 +65,13 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
   const { isOwner, isSuperAdmin } = useAuth();
   const showOwnerOnly = isOwner;
   const placed = usePlacements(); // a recording moved from the app: the lists follow
-  const { member, can } = useAccess();
+  const { member } = useAccess();
   // the open region is a history step: the top bar's "back" (and the phone's) returns to the map
   const { mapItem, openMapItem } = useNavigation();
   const region = [...FOLK_REGIONS, ...FOLK_EXTRA_REGIONS].find(r => r.id === mapItem) ?? null;
   // an album of the Folklore Centre („album:<Drive folder id>“), opened from the list under the map
   const albumId = mapItem?.startsWith('album:') ? mapItem.slice(6) : null;
-  const albums = can('recordings');
+  const albums = useShownAlbums().length > 0;
   // a song picked in the search: its region's list, with the song open
   const [found, setFound] = useState<string | null>(null);
   useOpenRequest('simghera', id => {

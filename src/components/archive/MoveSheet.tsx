@@ -23,7 +23,7 @@ export interface MoveTarget {
   /** the title to offer when it has no place yet */
   title?: string;
   /** a track of the Centre's albums: its performer (the album) and note travel with the move */
-  centre?: { who: string; note?: string };
+  centre?: { who: string; note?: string; album?: string };
   /** who sings it, for the heading */
   who: string;
   /** a song's other recordings: "the whole song" moves them together */
@@ -72,7 +72,7 @@ export const MoveSheet: React.FC<{ target: MoveTarget; onClose: () => void }> = 
   const save = () => {
     const t = title.trim();
     if (!t) { setError('დაწერეთ სათაური.'); return; }
-    const extra = target.centre ? { who: target.centre.who, note: target.centre.note, centre: true } : {};
+    const extra = target.centre ? { who: target.centre.who, note: target.centre.note, centre: true, songAlbum: target.centre.album } : {};
     const to: Placement = kind === 'song' ? { kind, region, title: t, ...extra } : { kind, album, title: t, ...extra };
     void run(() => moveRecordings(ids, to));
   };
