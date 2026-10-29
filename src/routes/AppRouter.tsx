@@ -6,6 +6,7 @@ import { PinButton } from '../components/home/ShortcutShelf';
 import { ProfileActions } from '../components/views/ProfileActions';
 import { KhutsuriSwitch } from '../components/views/KhutsuriSwitch';
 import { WidgetLinkCard } from '../components/app/WidgetLinkCard';
+import { CalendarLinkCard } from '../components/app/CalendarLinkCard';
 import { AdminEntry } from '../components/views/AdminEntry';
 import { prayerTitle } from '../data/prayers';
 import { HomePage } from '../pages/HomePage';
@@ -243,6 +244,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           <KhutsuriSwitch />
           {/* the Android app's home-screen widgets */}
           {!waiting && <WidgetLinkCard />}
+          {/* the feasts, fasts and my lessons in the phone's calendar */}
+          {!waiting && <CalendarLinkCard />}
         </>} />
         {/* install the app · leave the account (asks first) */}
         <div className="max-w-lg mx-auto mt-3"><ProfileActions /></div>
