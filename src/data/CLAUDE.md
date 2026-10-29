@@ -21,7 +21,7 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
 | `dasd1` / `dasd2` | „ჰიმნოგრაფიული კრებული" II (tones I–II, files 1–250) / III (tones III–IV, 1–277): stichera on "Lord, I have cried" + the psalm verses (plain and „ჭრელი"); code "ჰ.კ." | 0 | `sticheraBookChants.ts` — tab დასადებლები, 129 groups `ds-N` (tone · day — kind). A title with no music whose footnote says "იხილე — გვ. N, # M" is a cross-reference: its button opens the chant printed on p. N (no file of its own) |
 | `momix` | „ჰიმნოგრაფიული კრებული" I, troparia on the Beatitudes (Kereselidze mss., code "ე.კ."; no printed numbers — files 1–268 in book order) | 0 | `beatitudesBookChants.ts` — tab მომიხსენენი, 59 groups `mm-N` (tone + day) |
 
-| `a1`, `a2`, `a4`, `a28`, `a29`, … | „ქართული გალობის ანთოლოგია“ (29 vols, galobani.ge PDFs: the user's Downloads, Drive „01 ანთოლოგიის ტომეულები“, or `https://pub-f947f7afe8cc44c4928fdba6e2fbb528.r2.dev/antologia_<vol>.pdf`), only versions the books above lack; number with a letter → file number (76a = 761, `numLabel` shows „76a“); a litany of short numbers = one unit file named by its first number (`numLabel` „98–107“) | PDF = book | `src/data/anthologyChants.ts` (`ATTACH` by chant id — any tab — and `NEW_ITEMS` after an item; East Georgian vols → the ქ.კ. row); the rite tabs in `riteChants.ts` |
+| `a1`, `a2`, `a3`, `a4`, `a28`, `a29`, … | „ქართული გალობის ანთოლოგია“ (29 vols, galobani.ge PDFs: the user's Downloads, Drive „01 ანთოლოგიის ტომეულები“, or `https://pub-f947f7afe8cc44c4928fdba6e2fbb528.r2.dev/antologia_<vol>.pdf`), only versions the books above lack; number with a letter → file number (76a = 761, `numLabel` shows „76a“); a litany of short numbers = one unit file named by its first number (`numLabel` „98–107“) | PDF = book | `src/data/anthologyChants.ts` (`ATTACH` by chant id — any tab — and `NEW_ITEMS` after or before an item; East Georgian vols II–IV in `anthologyEastChants.ts` → the ქ.კ. row); the rite tabs in `riteChants.ts` |
 | `song` | Admission-program songs (files 1–10; 9–10 are scans: pictures only, no synth) | — | `songBookChants.ts` from `abituriProgram.ts` (`notes: N`); ids `sg-N`, in `NOTES_LISTS` only (no service tab, not in search) |
 
 - Song notes: Finale/Petrucci PDFs from the user's Drive (abituri page folders), read with the books' OMR + `NO_WIN2MAC=1`
@@ -182,3 +182,13 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   same words is shown from vol. VIII (same tune with other words — the funeral canon's irmoi — gets its own file).
   Unreviewed guesses: „ზეცით გამოჩინებულისა“ (Basil's liturgy, after შენდამი იხარებს), „მოსლვისა შენისა“ starting the
   wedding part.
+- Vols. II–III (2026-10-29, East Georgian = ქ.კ. row after kk): ~560 versions in `anthologyEastChants.ts` (with vol. IV's),
+  kept only when no version of the target chant (or of any book) has the same notes (≥ 0.9 by containment or intervals).
+  Vols. II–III print the number beside its system (`music_top`), letter variants as „81-a“; a litany of many short numbers
+  is one unit (`--to`), but a TOC range of whole versions (prokeimena „6–11 ხმა ა“, ის პოლლა 146–150) is read one by one.
+  Two numbers in one row: the row is split by side, full-width lines below continue the right-hand one. Left out: the
+  fragments the book itself calls unperformable (II 36a, 289, 347; III 221, 337). New items (guesses from the books'
+  introductions, vol. II pp. 18–24, vol. III pp. 11–15): the bishop's meeting chants before/after chant-1–2, აქებს სული ჩემი,
+  three weekday antiphons, დიპტიქი, წარდგომანი დღიურნი, three hymns after განიცადე; feast antiphons, რაოდენთა (შობა),
+  ჯვარსა შენსა (ჯვართამაღლება), feast prokeimena (III №73 under both ნათლისღება and ბზობა), Pascha's in zt-6, the funeral
+  litany in pn-2, and the feast „წმიდა ძმანი კარბელაშვილნი — 24 აგვისტო“ (6 Sep new style, calendar 2026).

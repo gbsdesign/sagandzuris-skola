@@ -1,9 +1,10 @@
 // The tabs of the rites: ხელდასხმა (a priest's ordination), ჯვრისწერა (the wedding) and პანაშვიდი (the funeral,
-// „წესის აგება“ and the panikhida). Each item is one chant and lists its versions, as წირვა does; so far all of them come
-// from „ქართული გალობის ანთოლოგია“ vol. I (Koridze, Gelati school) — later volumes add their versions to the same items.
+// „წესის აგება“ and the panikhida). Each item is one chant and lists its versions, as წირვა does; they come from
+// „ქართული გალობის ანთოლოგია“ vol. I (Koridze, Gelati school) — later volumes add theirs to the same items by id
+// (anthologyChants.ts / anthologyEastChants.ts, e.g. vol. II's funeral litany under pn-2).
 // A chant the site already has with the same words (an irmos of vol. VIII) is shown from there, under its own id here.
 import { ChantItem, ChantVariant } from './tsirvaChants';
-import { AnthPiece, anthVariant } from './anthologyChants';
+import { AnthPiece, anthVariant, anthVariantsFor } from './anthologyChants';
 import { DZLISPIREBI_CHANTS, KATABASIEBI_CHANTS } from './irmosBookChants';
 
 type Item = { title: string; pieces?: AnthPiece[]; same?: string[] };
@@ -27,7 +28,7 @@ const build = (prefix: string, items: Item[]): ChantItem[] =>
       id,
       index: i + 1,
       title,
-      variants: [...pieces.map(a => anthVariant(id, title, a)), ...same.map(s => sameAs(id, title, s))],
+      variants: [...pieces.map(a => anthVariant(id, title, a)), ...same.map(s => sameAs(id, title, s)), ...anthVariantsFor(id, title)],
     };
   });
 

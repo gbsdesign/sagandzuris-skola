@@ -3,10 +3,13 @@
 // vol. II №282–285: alteration variants of one chant that match III №154).
 // Notes in public/notes/a<vol>/, read from the PDFs' music font by scripts/omr; a number with a letter (76a) gets its
 // own file number (761); a unit of several short numbers (a litany) is one file named after its first number.
-// This file holds no imports but types, so every chant list can take its versions from here without an import cycle.
+// The East Georgian volumes (II–IV) are in anthologyEastChants.ts.
+// This file and that one import nothing but types and data, so every chant list can take its versions from here
+// without an import cycle.
 import type { ChantItem, ChantVariant } from './tsirvaChants';
+import { EAST_ATTACH } from './anthologyEastChants';
 
-export const ANTH_ROMAN: Record<number, string> = { 1: 'I', 2: 'II', 4: 'IV', 28: 'XXVIII', 29: 'XXIX' };
+export const ANTH_ROMAN: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 28: 'XXVIII', 29: 'XXIX' };
 // the East Georgian volumes: Kartli-Kakheti school (the school of the others is a guess from the volume)
 const ANTH_EAST = new Set([2, 3, 4, 10, 11]);
 
@@ -27,10 +30,6 @@ const v1 = (num: string, file: number, page: number, source?: string, version = 
   ({ vol: 1, num, file, page, version, source });
 const v1g = (num: string, file: number, page: number, name: string): AnthPiece =>
   ({ vol: 1, num, file, page, version: name, source: KORIDZE });
-// vols II and IV name a version by its source only where the book does
-const eastV = (vol: number, n: number, page: number, source?: string): AnthPiece =>
-  ({ vol, num: String(n), file: n, page, version: source ?? '', source });
-
 /** Versions added to chants that are already on the site, by chant id. */
 const ATTACH: Record<string, AnthPiece[]> = {
   // წირვა (vol. XXVIII–XXIX: Khundadze's manuscripts; the school is a guess from the volume)
@@ -40,10 +39,6 @@ const ATTACH: Record<string, AnthPiece[]> = {
     { vol: 28, num: '76c', file: 763, page: 158, version: 'ხუნდაძე', source: 'ხუნდაძე' },
     { vol: 28, num: '77a', file: 771, page: 161, version: 'ხუნდაძე', source: 'ხუნდაძე' },
     { vol: 29, num: '43', file: 43, page: 74, version: 'ხელნაწერი Q676', source: 'ხელნაწერი Q676' },
-    // ქართლ-კახური (vols II, IV)
-    eastV(2, 277, 268), eastV(2, 278, 270, 'კარბელაშვილი, 1899'), eastV(2, 279, 271),
-    eastV(2, 280, 274, 'მოლოდინაშვილის ხელნაწერი'), eastV(2, 281, 276), eastV(2, 286, 290), eastV(2, 287, 293),
-    eastV(4, 39, 54), eastV(4, 67, 83),
   ],
   'chant-v5-6': [v1('6', 6, 59)],
   'chant-15': [v1('43', 43, 128)],
@@ -72,8 +67,12 @@ const ATTACH: Record<string, AnthPiece[]> = {
   ],
 };
 
-/** Chants the site has no place for in a list that exists: a new item right after the item `after`. */
-const NEW_ITEMS: { after: string; id: string; title: string; pieces: AnthPiece[] }[] = [
+/** The pieces of a chant: the western volumes' above and the East Georgian ones. */
+const piecesOf = (chantId: string): AnthPiece[] => [...(ATTACH[chantId] ?? []), ...(EAST_ATTACH[chantId] ?? [])];
+
+/** Chants the site has no place for in a list that exists: a new item right after the item `after` (or before `before`);
+ *  its versions are its pieces here or, without them, its pieces above. */
+const NEW_ITEMS: { after?: string; before?: string; id: string; title: string; pieces?: AnthPiece[] }[] = [
   { after: 'chant-31', id: 'chant-a1-158', title: 'ზეცით გამოჩინებულისა', pieces: [v1('158', 158, 338, BASIL)] },
   {
     after: 'sd-31', id: 'sd-a1-filimon', title: 'წმიდა ფილიმონ მგალობელი — 12 ივლისი',
@@ -83,6 +82,25 @@ const NEW_ITEMS: { after: string; id: string; title: string; pieces: AnthPiece[]
       v1g('209', 209, 428, 'კონდაკი, ხმა ჱ'),
     ],
   },
+  // vol. II: the bishop's meeting (East Georgian order, vol. II pp. 22–24) — before the bishop's „ღირს არს“ …
+  { before: 'chant-1', id: 'chant-a2-1', title: 'აღმოსავალო მზისაო (პატრიარქის დახვედრა)' },
+  { before: 'chant-1', id: 'chant-a2-5', title: 'დღეს საღმრთომან მადლმან (ეპისკოპოსის დახვედრა)' },
+  { before: 'chant-1', id: 'chant-a2-8', title: 'ნათელი მოხვედ (მღვდელთმთავრის დახვედრა)' },
+  // … and after „ტონ დესპოტინ“
+  { after: 'chant-2', id: 'chant-a2-35', title: 'ვერ შემძლებელ ვართ (მღვდელთმთავრის დახვედრა)' },
+  { after: 'chant-2', id: 'chant-a2-42', title: 'მგალობელნი შენნი (მღვდელთმთავრის დახვედრა)' },
+  { after: 'chant-6', id: 'chant-a2-276', title: 'აქებს სული ჩემი' },
+  { after: 'chant-8', id: 'chant-a2-310', title: 'კეთილ არს აღსარება უფლისა (დღიური ა ანტიფონი)' },
+  { after: 'chant-8', id: 'chant-a2-311', title: 'უფალი სუფევს (დღიური ბ ანტიფონი)' },
+  { after: 'chant-8', id: 'chant-a2-312', title: 'მოვედით, უგალობდეთ უფალსა (დღიური გ ანტიფონი)' },
+  { after: 'chant-11', id: 'chant-a2-377', title: 'დიპტიქი (ქებანი)' },
+  // vol. III: the weekdays' prokeimena; hymns sung after „განიცადე“, while the clergy communes (vol. III p. 11–14)
+  { after: 'chant-13', id: 'chant-a3-48', title: 'წარდგომანი დღიურნი' },
+  { after: 'chant-v5-99', id: 'chant-a3-376', title: 'განმანათლებელი ჩვენი (ზიარებისას)' },
+  { after: 'chant-v5-99', id: 'chant-a3-382', title: 'შენ ხარ ვენახი (ზიარებისას)' },
+  { after: 'chant-v5-99', id: 'chant-a3-383', title: 'ღმრთისმშობელი და ყოვლად პატიოსანი (ზიარებისას)' },
+  // the Karbelashvili brothers (6 September new style): vol. II's ოხითა and კონდაკი
+  { after: 'sd-34', id: 'sd-a2-karbelashvili', title: 'წმიდა ძმანი კარბელაშვილნი — 24 აგვისტო' },
 ];
 
 // a group (feast, occasion of მარხვანი…) lists its own chants; a chant lists versions of itself
@@ -113,16 +131,19 @@ export const anthVariant = (chantId: string, title: string, a: AnthPiece): Chant
 
 /** The anthology's versions of a chant that is on the site; `east` picks only the East Georgian volumes' or only the others'. */
 export const anthVariantsFor = (chantId: string, title: string, east?: boolean): ChantVariant[] =>
-  (ATTACH[chantId] ?? []).filter(a => east === undefined || ANTH_EAST.has(a.vol) === east).map(a => anthVariant(chantId, title, a));
+  piecesOf(chantId).filter(a => east === undefined || ANTH_EAST.has(a.vol) === east).map(a => anthVariant(chantId, title, a));
 
 /** A list with the anthology's versions added to its chants and its new chants put in place. */
-export const withAnthology = (items: ChantItem[], skipAttached = false): ChantItem[] =>
-  items.flatMap(item => [
-    skipAttached || !ATTACH[item.id] ? item : { ...item, variants: [...item.variants, ...anthVariantsFor(item.id, item.title)] },
-    ...NEW_ITEMS.filter(n => n.after === item.id).map(n => ({
-      id: n.id,
-      index: item.index,
-      title: n.title,
-      variants: n.pieces.map(a => anthVariant(n.id, n.title, a)),
-    })),
+export const withAnthology = (items: ChantItem[], skipAttached = false): ChantItem[] => {
+  const newItem = (n: (typeof NEW_ITEMS)[number], index: number): ChantItem => ({
+    id: n.id,
+    index,
+    title: n.title,
+    variants: (n.pieces ?? piecesOf(n.id)).map(a => anthVariant(n.id, n.title, a)),
+  });
+  return items.flatMap(item => [
+    ...NEW_ITEMS.filter(n => n.before === item.id).map(n => newItem(n, item.index)),
+    skipAttached || !piecesOf(item.id).length ? item : { ...item, variants: [...item.variants, ...anthVariantsFor(item.id, item.title)] },
+    ...NEW_ITEMS.filter(n => n.after === item.id).map(n => newItem(n, item.index)),
   ]);
+};

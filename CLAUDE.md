@@ -122,7 +122,8 @@
   (the „დღის ჰანგი“ bug of 2026-10-28).
 - Book notes (`public/notes/<book>/`) come from the chant-book PDFs by OMR; the books' OMR scripts are not in the repo —
   only the anthology's (`scripts/omr/`, also in the cloud). Chant tabs ხელდასხმა · ჯვრისწერა · პანაშვიდი (2026-10-29) are
-  `data/riteChants.ts`; anthology versions everywhere come from `data/anthologyChants.ts`.
+  `data/riteChants.ts`; anthology versions everywhere come from `data/anthologyChants.ts` (East Georgian vols II–IV:
+  `data/anthologyEastChants.ts`; done so far: vols I–III, IV/XXVIII/XXIX only for მხოლოდ-შობილი).
   Many version placements are unreviewed guesses — don't present them as confirmed.
 
 ## Main features (all published on main as of 2026-10-06, commit a2b345d)
