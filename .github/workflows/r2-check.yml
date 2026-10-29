@@ -1,4 +1,4 @@
-# temporary: does the Cloudflare token reach R2? (read-only: lists the buckets) — removed after one run
+# temporary: does the Cloudflare token reach R2? (lists the buckets, makes the notes bucket) — removed after one run
 name: R2 check
 on:
   push:
@@ -13,4 +13,5 @@ jobs:
       - name: List R2 buckets
         run: |
           mkdir w && cd w && npm i --no-audit --no-fund wrangler@4.150.0 >/dev/null 2>&1
+          npx wrangler r2 bucket create sagandzuri-notes
           npx wrangler r2 bucket list
