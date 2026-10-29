@@ -70,6 +70,7 @@ export const toClass = (id: string, d: any): SchoolClass => ({
   createdAt: d.createdAt || '',
   updatedAt: d.updatedAt || '',
   ...(d.liturgy ? { liturgy: d.liturgy } : {}),
+  ...(d.live ? { live: d.live } : {}),
 });
 
 const byName = (a: SchoolClass, b: SchoolClass) => a.name.localeCompare(b.name, 'ka');
