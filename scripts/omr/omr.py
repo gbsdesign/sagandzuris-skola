@@ -1,12 +1,14 @@
 # Anthology (Finale / Petrucci font) chant pages -> the app's BookScore JSON + page pictures.
-# usage: python omr.py <vol> <chantNo> <outDir> [--json-only]
+# usage: python omr.py <vol> <chantNo> <outDir> <startPdfPage> [--file N] [--to <lastNo>] [--json-only]
 import os, re, sys, json, difflib
 import pymupdf
 from PIL import Image
 
 B = os.path.normpath(os.path.expanduser('~/Downloads/ქართული გალობა - galobani.ge'))
-L = chr(92) * 2 + '?' + chr(92)
-VOLS = os.path.join(B, '01 ანთოლოგიის ტომეულები')
+L = chr(92) * 2 + '?' + chr(92) if os.name == 'nt' else ''  # Windows long-path prefix (Georgian names are long)
+# the volumes' folder: the user's Downloads on Windows; elsewhere (a cloud session) set ANTH_DIR to a folder whose
+# sorted file names put vol. 1 first (e.g. "01 - ტომი I.pdf")
+VOLS = os.environ.get('ANTH_DIR') or os.path.join(B, '01 ანთოლოგიის ტომეულები')
 
 LETTER = {'C': 0, 'D': 1, 'E': 2, 'F': 3, 'G': 4, 'A': 5, 'B': 6}
 SEMI = [0, 2, 4, 5, 7, 9, 11]
@@ -15,12 +17,43 @@ CLEF = {'&': (2, 4), 'V': (2, 3), '?': (4, 2)}
 HEADS = {'œ': 1, '˙': 2, 'Ç': 2, 'w': 4, 'W': 0}  # W = breve, recitation: length from its syllables
 RESTS = {'Œ': 1, 'Ó': 2, '‰': 0.5, '≈': 0.25, '∑': 4, 'î': 4}
 FLAGS = {'J': 1, 'j': 1, 'K': 2, 'k': 2, 'L': 3, 'l': 3}
-ACC = {'#': 1, 'b': -1, 'n': 0, 'N': 0}
+ACC = {'#': 1, 'b': -1, 'n': 0, 'N': 0, '(#)': 1, '(b)': -1, '(n)': 0}  # (x) = one bracketed glyph (vol. I)
+
+# Vol. I's Petrucci subset gives its glyphs other codes (control characters for the heads); each was identified on
+# the page pictures (2026-10-29) and is read as the standard Petrucci character it draws. Dynamics and fermatas
+# stay unread, as in the other volumes.
+REMAP_V1 = {'\x06': 'œ', '\x07': '˙', '¶': 'w', 't': 'W', '#': '#', 'Ü': 'b', 'ó': 'n', 'e': '(n)', 'S': '(b)', 'Ö': '(#)',
+            'ì': 'j', 'a': 'J', '°': 'k', 'o': 'K', '4': '.', '\x10': 'Œ', '\x0f': 'Ó', '\x12': '∑', '\x13': '‰',
+            's': 'V', 'Q': '?'}
+REMAP = None  # set by open_vol when the volume uses that encoding; glyphs missing from it are dropped
+
+
+def head_num(txt):
+    """A chant's number from its title line: "203. title", "76a title", vol. I's bare "1." / "7.-8." (the title is
+    its own line there) and "22.a." (= 22a)."""
+    m = re.match(r'^(\d+)\.([a-z])\.', txt)
+    if m:
+        return m.group(1) + m.group(2)
+    m = re.match(r'^(\d+)\.(?:-\d+\.)?$', txt)
+    if m:
+        return m.group(1)
+    m = re.match(r'^(\d+[a-z]?)(?:\.\s*\S|\s+\S|$)', txt)
+    return m.group(1) if m else None
 
 
 def open_vol(vol):
+    global REMAP
     names = sorted(os.listdir(L + VOLS))
-    return pymupdf.open(L + os.path.join(VOLS, names[vol - 1]))
+    doc = pymupdf.open(L + os.path.join(VOLS, names[vol - 1]))
+    REMAP = None
+    for pi in range(min(40, doc.page_count), min(80, doc.page_count)):
+        # a music font whose heads are control characters = vol. I's encoding
+        chars = (ch['c'] for b in doc[pi].get_text('rawdict')['blocks'] for ln in b.get('lines', [])
+                 for sp in ln['spans'] if 'Petrucci' in sp['font'] for ch in sp['chars'])
+        if any(ord(c) < 32 for c in chars):
+            REMAP = REMAP_V1
+            break
+    return doc
 
 
 class Page:
@@ -33,14 +66,18 @@ class Page:
                     if 'Petrucci' in sp['font'] or 'Maestro' in sp['font']:
                         for ch in sp['chars']:
                             x, y = ch['origin']
-                            self.glyphs.append(dict(c=ch['c'], x=x, y=y, size=sp['size'], bb=ch['bbox']))
+                            c = ch['c'] if REMAP is None else REMAP.get(ch['c'])
+                            if c:
+                                self.glyphs.append(dict(c=c, x=x, y=y, size=sp['size'], bb=ch['bbox']))
         for blk in pg.get_text('dict')['blocks']:
             for ln in blk.get('lines', []):
+                if all('Petrucci' in s['font'] or 'Maestro' in s['font'] for s in ln['spans']):
+                    continue  # a time signature ("44") is music, not a chant number
                 txt = ''.join(s['text'] for s in ln['spans']).strip()
                 size = max((s['size'] for s in ln['spans']), default=0)
-                m = re.match(r'^(\d+[a-z]?)(?:\.\s*\S|\s+\S|$)', txt)
-                if m and size >= 12 and ln['bbox'][1] < 780:
-                    self.heads_txt.append((m.group(1), ln['bbox'][1], ln['bbox'][3]))
+                num = head_num(txt)
+                if num and size >= 12 and ln['bbox'][1] < 780:
+                    self.heads_txt.append((num, ln['bbox'][1], ln['bbox'][3], ln['bbox'][0]))
         self.words = [w for w in pg.get_text('words')]
         self.hlines, self.vlines, self.beams, self.curves = [], [], [], []
         for d in pg.get_drawings():
@@ -56,38 +93,56 @@ class Page:
                 if it[0] != 'l':
                     continue
                 a, b = it[1], it[2]
-                if abs(a.y - b.y) < 0.2 and abs(a.x - b.x) > 150:
+                # staff lines; vol. I prints some short pieces two to a row, on staves under 150 pt
+                if abs(a.y - b.y) < 0.2 and abs(a.x - b.x) > 60:
                     self.hlines.append((min(a.x, b.x), max(a.x, b.x), a.y))
                 elif abs(a.x - b.x) < 0.2 and abs(a.y - b.y) > 3:
                     self.vlines.append((a.x, min(a.y, b.y), max(a.y, b.y)))
         self.staves = self._staves()
 
     def _staves(self):
-        ys = sorted(self.hlines, key=lambda h: h[2])
-        out, i = [], 0
-        while i + 4 < len(ys):
-            g = ys[i:i + 5]
-            gaps = [g[k + 1][2] - g[k][2] for k in range(4)]
-            if max(gaps) - min(gaps) < 0.3 and 3 < gaps[0] < 7:
-                out.append(dict(top=g[0][2], bot=g[4][2], sp=gaps[0], x0=g[0][0], x1=g[0][1]))
-                i += 5
+        # a staff's five lines share their left and right ends; grouping by them keeps apart two staves printed
+        # side by side at the same height
+        groups = []
+        for h in self.hlines:
+            g = next((g for g in groups if abs(g[0][0] - h[0]) < 2 and abs(g[0][1] - h[1]) < 2), None)
+            if g:
+                g.append(h)
             else:
-                i += 1
-        return out
+                groups.append([h])
+        out = []
+        for grp in groups:
+            ys = sorted(grp, key=lambda h: h[2])
+            i = 0
+            while i + 4 < len(ys):
+                g = ys[i:i + 5]
+                gaps = [g[k + 1][2] - g[k][2] for k in range(4)]
+                if max(gaps) - min(gaps) < 0.3 and 3 < gaps[0] < 7:
+                    out.append(dict(top=g[0][2], bot=g[4][2], sp=gaps[0], x0=g[0][0], x1=g[0][1]))
+                    i += 5
+                else:
+                    i += 1
+        return sorted(out, key=lambda s: (s['top'], s['x0']))
 
     def systems(self):
-        # staves joined by the system's left line (a vertical line through all of them)
-        sts, out = self.staves, []
+        # staves joined by the system's left line (a vertical line through all of them); staves are taken column by
+        # column, so side-by-side systems stay apart, and the systems come back in reading order
+        cols = []
+        for s in self.staves:
+            if not any(abs(c - s['x0']) < 1.5 for c in cols):
+                cols.append(s['x0'])
+        col = lambda s: next(c for c in cols if abs(c - s['x0']) < 1.5)
+        sts, out = sorted(self.staves, key=lambda s: (col(s), s['top'])), []
         for s in sts:
             if out:
                 prev = out[-1][-1]
-                joined = any(abs(x - s['x0']) < 1.5 and y0 <= prev['top'] + 1 and y1 >= s['bot'] - 1
-                             for x, y0, y1 in self.vlines)
+                joined = abs(prev['x0'] - s['x0']) < 1.5 and any(
+                    abs(x - s['x0']) < 1.5 and y0 <= prev['top'] + 1 and y1 >= s['bot'] - 1 for x, y0, y1 in self.vlines)
                 if joined:
                     out[-1].append(s)
                     continue
             out.append([s])
-        return out
+        return sorted(out, key=lambda sy: (sy[0]['top'], sy[0]['x0']))
 
 
 def staff_of(st_list, y):
@@ -115,7 +170,11 @@ def read_system(P, sysst, dbg=False):
         clef = clefg[0]['c'] if clefg else ('?' if k == len(sysst) - 1 else 'V')
         cl_letter, cl_oct = CLEF[clef]
         heads = []
-        for g in sorted([g for g in mine if g['c'] in HEADS and g['size'] > normal * 0.88], key=lambda g: g['x']):
+        # a head in round brackets is the editors' alternative (vol. I prints it full size): not played
+        parens = [w for w in P.words if w[4] in ('(', ')') and abs((w[1] + w[3]) / 2 - (st['top'] + st['bot']) / 2) < 4 * sp]
+        bracketed = lambda g: any(w[4] == '(' and -1 < g['x'] - w[2] < 8 for w in parens) and any(
+            w[4] == ')' and 0 < w[0] - g['x'] < 18 for w in parens)
+        for g in sorted([g for g in mine if g['c'] in HEADS and g['size'] > normal * 0.88 and not bracketed(g)], key=lambda g: g['x']):
             if not any(q['c'] == g['c'] and abs(q['x'] - g['x']) < 0.6 and abs(q['y'] - g['y']) < 0.6 for q in heads):
                 heads.append(g)  # a head printed twice (two voices on one note) is one head with two stems
         rests = [g for g in mine if g['c'] in RESTS]
@@ -146,7 +205,8 @@ def read_system(P, sysst, dbg=False):
             li, octv = pitch_of(stp)
             acc = None
             for g in mine:
-                if g['c'] in ACC and id(g) not in used and h['x'] - 14 < g['x'] < h['x'] - 1 and abs(g['y'] - h['y']) < sp * 0.6 and g['x'] >= first_x - 14:
+                reach = 20 if len(g['c']) > 1 else 14  # a bracketed accidental is wider
+                if g['c'] in ACC and id(g) not in used and h['x'] - reach < g['x'] < h['x'] - 1 and abs(g['y'] - h['y']) < sp * 0.6 and g['x'] >= first_x - reach:
                     acc = ACC[g['c']]
                     used.add(id(g))
             if acc is not None:
@@ -213,6 +273,15 @@ def read_system(P, sysst, dbg=False):
                         for e in best:
                             e['beats'] *= 2 / 3
                             e['trip'] = True
+        # a stemless (whole) note struck beside a stemmed one of another pitch is a second voice on the staff:
+        # it takes the other stem direction (vol. I's divided bass)
+        for e in events:
+            if e['rest'] or e.get('dir'):
+                continue
+            q = next((q for q in events if not q['rest'] and q.get('dir') and q['midi'] != e['midi']
+                      and abs(q['x'] - e['x']) < 9.5), None)
+            if q and (e['midi'] < q['midi']) == (q['dir'] == 'u'):
+                e['dir'], e['sx'] = ('d' if q['dir'] == 'u' else 'u'), q['sx']
         events.sort(key=lambda e: (e['x'], -(e['midi'] or 0)))
         # columns of heads struck together: chords (one stem) or two voices (stems up and down)
         cols = []
@@ -307,8 +376,12 @@ def sync_recit(res):
     return res
 
 
-def chant_pages(doc, start_page, num):
-    """[(page index, [systems])] of chant `num` that starts on start_page (1-based)."""
+def chant_pages(doc, start_page, num, last=None):
+    """[(page index, [systems])] of chant `num` that starts on start_page (1-based); with `last`, the numbers from
+    `num` to `last` read as one unit (a litany printed as several short numbers)."""
+    lo = int(re.sub(r'\D', '', num))
+    hi = int(re.sub(r'\D', '', last)) if last else None
+    in_unit = lambda h: h[0] == num or (hi is not None and lo <= int(re.sub(r'\D', '', h[0])) <= hi)
     out, pi = [], start_page - 1
     started = False
     while pi < doc.page_count:
@@ -319,9 +392,14 @@ def chant_pages(doc, start_page, num):
         if not started and not mine:
             pi += 1
             continue
-        others = [h for h in heads if h[1] > y_from and h[0] != num]
+        others = [h for h in heads if h[1] > y_from and not in_unit(h)]
         y_to = others[0][1] if others else 1e9
         syss = [s for s in P.systems() if y_from < s[0]['top'] < y_to and len(s) >= 2]
+        twins = [h for h in heads if mine and not started and not in_unit(h) and abs(h[1] - mine[0][1]) < 4]
+        if twins:
+            # two short pieces printed side by side under one row of numbers: each takes the systems nearer its number
+            mx, tx = mine[0][3], twins[0][3]
+            syss = [s for s in syss if abs(s[0]['x0'] - mx) < abs(s[0]['x0'] - tx)]
         if syss:
             out.append((pi, P, syss, y_from if not started else None))
         started = True
@@ -329,6 +407,11 @@ def chant_pages(doc, start_page, num):
             break
         pi += 1
     return out
+
+
+def is_ossia(P, sysst):
+    top = sysst[0]['top']
+    return any(top - 40 < w[1] < top and w[4] in ('Ossia:', 'ase:') for w in P.words)
 
 
 def pitch_seq(voice):
@@ -345,8 +428,9 @@ def main():
     start = int(sys.argv[4])
     json_only = '--json-only' in sys.argv
     fileno = int(sys.argv[sys.argv.index('--file') + 1]) if '--file' in sys.argv else int(re.sub(r'\D', '', num))
+    last = sys.argv[sys.argv.index('--to') + 1] if '--to' in sys.argv else None
     doc = open_vol(vol)
-    parts = chant_pages(doc, start, num)
+    parts = chant_pages(doc, start, num, last)
     if not parts:
         print('not found'); return
     nst = max(len(s) for _, _, syss, _ in parts for s in syss)
@@ -355,6 +439,8 @@ def main():
     sysinfo = []
     for pi, P, syss, y_from in parts:
         for s in syss:
+            if is_ossia(P, s):
+                continue  # an alternative of the line above („ან ასე:“ / Ossia): not played after it
             ev = read_system(P, s)
             # each note starts where the voices' common timeline puts it (sync_recit), never running into the next one
             lens = [round(v[-1]['t'] + v[-1]['beats'], 3) if v else 0 for v in ev]
@@ -373,11 +459,15 @@ def main():
     for pi, P, syss, _ in parts:
         nums = [w[4] for w in P.words if w[1] > 790 and re.fullmatch(r'\d+', w[4])]
         printed[pi] = int(nums[-1]) if nums else pi + 1
-    score = dict(nums=[fileno], page=printed[parts[0][0]], tempos=[[0, 72]], dur=round(t, 3),
+    nums = list(range(int(re.sub(r'\D', '', num)), int(re.sub(r'\D', '', last)) + 1)) if last else [fileno]
+    score = dict(nums=nums, page=printed[parts[0][0]], tempos=[[0, 72]], dur=round(t, 3),
                  voices=voices, img=[], sys=[])
     SC = 2.0
     for ii, (pi, P, syss, y_from) in enumerate(parts):
         X0, X1 = 36, P.pg.rect.width - 36
+        sx0, sx1 = min(s[0]['x0'] for s in syss), max(s[0]['x1'] for s in syss)
+        if sx1 - sx0 < 0.6 * (X1 - X0):  # a piece printed beside another: only its own column
+            X0, X1 = max(0, sx0 - 14), min(P.pg.rect.width, sx1 + 14)
         Y0 = (y_from - 30) if y_from is not None else syss[0][0]['top'] - 22
         if y_from is not None:
             # a chant starting mid-page: begin below the previous chant's last system and its words

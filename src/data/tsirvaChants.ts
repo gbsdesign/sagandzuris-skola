@@ -3,6 +3,7 @@ import { KK_BOOK, kkLiturgySection, kkPage } from './kartliKakhetiIndex';
 import { V5_BOOK, v5Page, v5Source } from './liturgyVol5Index';
 import { V9_BOOK, v9Page, v9Source } from './liturgyVol9Index';
 import { withPataravaLiturgy } from './pataravaBookChants';
+import { anthVariantsFor, withAnthology } from './anthologyChants';
 
 export interface ChantVariant {
   id: string;
@@ -24,7 +25,7 @@ export interface ChantVariant {
                        // 'momix' = troparia on the Beatitudes, Hymnographical collection I (Kereselidze's manuscripts),
                        // 'v8' = vol. VIII, irmoi of the eight tones, katavasias and Resurrection kontakia,
                        // 'dasd1' / 'dasd2' = stichera on "Lord, I have cried", Hymnographical collection II (tones I–II) / III (III–IV),
-                       // 'a28', 'a29', … = „ქართული გალობის ანთოლოგია“ (galobani.ge), the volume's number
+                       // 'a1', 'a28', 'a29', … = „ქართული გალობის ანთოლოგია“ (galobani.ge), the volume's number
 }
 
 // Books whose chant numbers the app does not show (none printed, or not the ones our files use)
@@ -38,7 +39,7 @@ export const variantName = (v: Pick<ChantVariant, 'bookNums' | 'version' | 'book
 const BOOK_SHORT: Record<string, string> = {
   book: 'I ტომი', feast: 'II ტომი', kk: 'III ტომი', triod: 'IV ტომი', v5: 'V ტომი', karb: 'VII ტომი', v8: 'VIII ტომი',
   v9: 'IX ტომი', momix: 'კრებული I', dasd1: 'კრებული II', dasd2: 'კრებული III',
-  a2: 'ანთ. II ტომი', a4: 'ანთ. IV ტომი', a28: 'ანთ. XXVIII ტომი', a29: 'ანთ. XXIX ტომი',
+  a1: 'ანთ. I ტომი', a2: 'ანთ. II ტომი', a4: 'ანთ. IV ტომი', a28: 'ანთ. XXVIII ტომი', a29: 'ანთ. XXIX ტომი',
 };
 
 // A feast, an occasion of მარხვანი / ზატიკი, a group of მომიხსენენი or დასადებლები, a tone of ძლისპირები or a canon of
@@ -495,48 +496,8 @@ const v9Variants = (n: number, title: string) =>
     return v9Variant(`v-${n}-x${first}`, `გ.ს. IX №${first}`, title, label, n0);
   });
 
-// „ქართული გალობის ანთოლოგია“ (29 volumes, galobani.ge), by chantTitles number: only the versions the books above
-// lack — a version whose notes match one of theirs is left out (e.g. vol. XIX №8 = IX №8, vol. XXVIII №77b = I №158).
-// Notes in public/notes/a<vol>/, read from the PDF's music font; a number with a letter (76a) gets its own file
-// number (761). The East Georgian volumes (ANTH_EAST) go to the Kartli-Kakheti row after vol. III, the others to the
-// Gelati row after vol. IX; the school is a guess from the volume (vols XXVIII–XXIX: Khundadze's manuscripts).
-// Vol. II №282–285 are left out too: alteration variants of one chant that match III №154.
-interface AnthVersion { vol: number; num: string; file: number; page: number; source?: string }
-const ANTH_ROMAN: Record<number, string> = { 2: 'II', 4: 'IV', 28: 'XXVIII', 29: 'XXIX' };
-const ANTH_EAST = new Set([2, 3, 4, 10, 11]);
-const TSIRVA_ANTH: Record<number, AnthVersion[]> = {
-  7: [
-    { vol: 28, num: '76a', file: 761, page: 152, source: 'ხუნდაძე' },
-    { vol: 28, num: '76b', file: 762, page: 155, source: 'ხუნდაძე' },
-    { vol: 28, num: '76c', file: 763, page: 158, source: 'ხუნდაძე' },
-    { vol: 28, num: '77a', file: 771, page: 161, source: 'ხუნდაძე' },
-    { vol: 29, num: '43', file: 43, page: 74, source: 'ხელნაწერი Q676' },
-    { vol: 2, num: '277', file: 277, page: 268 },
-    { vol: 2, num: '278', file: 278, page: 270, source: 'კარბელაშვილი, 1899' },
-    { vol: 2, num: '279', file: 279, page: 271 },
-    { vol: 2, num: '280', file: 280, page: 274, source: 'მოლოდინაშვილის ხელნაწერი' },
-    { vol: 2, num: '281', file: 281, page: 276 },
-    { vol: 2, num: '286', file: 286, page: 290 },
-    { vol: 2, num: '287', file: 287, page: 293 },
-    { vol: 4, num: '39', file: 39, page: 54 },
-    { vol: 4, num: '67', file: 67, page: 83 },
-  ],
-};
-
-const anthVariants = (n: number, title: string, east: boolean): ChantVariant[] =>
-  (TSIRVA_ANTH[n] || []).filter(a => ANTH_EAST.has(a.vol) === east).map(a => ({
-    id: `v-${n}-a${a.vol}-${a.num}`,
-    code: `${east ? 'ქ.კ.' : 'გ.ს.'} ანთ. ${ANTH_ROMAN[a.vol]} №${a.num}`,
-    label: east ? 'ქართლ-კახური' : 'გელათის სკოლა',
-    chantName: title,
-    fullTitle: bookFullTitle(title, variantName({ numLabel: a.num, version: a.source }), a.page, east ? 'ქ.კ.' : 'გ.ს.'),
-    version: a.source ?? '', // a book version always has a version name, even an empty one
-    page: a.page,
-    bookNums: [a.file],
-    numLabel: a.num,
-    source: a.source,
-    book: `a${a.vol}`,
-  }));
+// „ქართული გალობის ანთოლოგია“ (anthologyChants.ts): its versions follow vol. IX in the Gelati row, the East Georgian
+// volumes' follow vol. III in the Kartli-Kakheti row
 
 // Chants printed only in vol. V (Gelati): own stable ids, inserted after the chant (chantTitles number) they follow
 const V5_ONLY: { after: number; num: number; title: string }[] = [
@@ -586,9 +547,9 @@ const liturgyChants: ChantItem[] = chantTitles.map((title, i) => ({
     ...gelatiVariants(i + 1, title),
     ...v5GelatiVariants(i + 1, title),
     ...v9Variants(i + 1, title),
-    ...anthVariants(i + 1, title, false),
+    ...anthVariantsFor(`chant-${i + 1}`, title, false),
     ...kkVariants(i + 1, title),
-    ...anthVariants(i + 1, title, true),
+    ...anthVariantsFor(`chant-${i + 1}`, title, true),
     ...v5ShemokmediVariants(i + 1, title),
     ...variantTemplates.slice(2).map((vt, k) => ({
       id: `v-${i + 1}-${k + 3}`,
@@ -602,12 +563,13 @@ const liturgyChants: ChantItem[] = chantTitles.map((title, i) => ({
 }));
 
 // the Patarava book (Shemokmedi school, 2003) adds its litany and ისპოლა as the შ.ს. row
-export const TSIRVA_CHANTS: ChantItem[] = withPataravaLiturgy(liturgyChants).flatMap(item => [
+// the anthology's chants with no place in the books' list are put in after the chant they follow
+export const TSIRVA_CHANTS: ChantItem[] = withAnthology(withPataravaLiturgy(liturgyChants).flatMap(item => [
   item,
   ...V5_ONLY.filter(o => o.after === item.index).map(o => ({
     id: `chant-v5-${o.num}`,
     index: item.index,
     title: o.title,
-    variants: [v5Variant(`v-v5-${o.num}`, `გ.ს. V №${o.num}`, o.title, '', o.num)],
+    variants: [v5Variant(`v-v5-${o.num}`, `გ.ს. V №${o.num}`, o.title, '', o.num), ...anthVariantsFor(`chant-v5-${o.num}`, o.title)],
   })),
-]);
+]), true);

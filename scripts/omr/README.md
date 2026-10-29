@@ -8,9 +8,13 @@ The PDFs' music is vector text (Finale Petrucci or Maestro font), so nothing is 
 Needs Python with `pymupdf` and `pillow` (`python -m pip install --user pymupdf pillow`). Run with
 `python -E -P` so the user's site-packages load but no file next to the PDFs can be imported.
 
+In a cloud session (no Downloads folder) put the volume's PDF in a folder whose sorted names put the wanted volume
+at its number (e.g. only `01 - ტომი I.pdf` for vol. 1) and set `ANTH_DIR` to it. The PDFs:
+`https://pub-f947f7afe8cc44c4928fdba6e2fbb528.r2.dev/antologia_<vol>.pdf` (galobani.ge's library).
+
 | Script | What |
 |---|---|
-| `omr.py <vol> <num> <outDir> <startPdfPage> [--file N] [--json-only]` | one chant → JSON + pictures; prints `!` for a system whose voices end at different beats (a reading error to fix) |
+| `omr.py <vol> <num> <outDir> <startPdfPage> [--file N] [--to LAST] [--json-only]` | one chant (or, with `--to`, the numbers up to LAST as one unit) → JSON + pictures; prints `!` for a system whose voices end at different beats (a reading error to fix) |
 | `compare.py "vol:num:page,…" "book/157,kk/154,…"` | reads versions and ranks them against the site's versions (1.0 = same) |
 | `matrix.py "a2:277,…,kk/154"` | top / middle / bass similarity between read versions and site versions, exact pitches |
 | `diffv.py a2:284 kk/154` | where two versions differ, voice by voice |
