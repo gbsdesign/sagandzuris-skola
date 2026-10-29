@@ -48,7 +48,7 @@ export const GAMES: GameDef[] = [
   { id: 'amikhseni', title: 'ამიხსენი', text: 'ახსენი სიტყვა მისი თქმის გარეშე, გუნდმა გამოიცნოს — ტელეფონი დროსა და ქულებს ითვლის', category: 'live', modes: ['hybrid', 'noPhone'], page: 'games', item: 'amikhseni', section: 'tamashebi', print: { href: '/games/print/amikhseni.pdf', sheets: 6 } },
   { id: 'gatvla', title: 'გათვლა', text: 'ვინ იწყებს, ვისი ჯერია, ვინ რომელ გუნდშია — გათვლის ლექსით, ბორბლით და წილისყრით, ერთ ტელეფონზე', category: 'live', modes: ['hybrid'], page: 'games', item: 'gatvla', section: 'tamashebi' },
   { id: 'tskheli-churchkhela', title: 'ცხელი ჩურჩხელა', text: 'სკოლის ჩანაწერი მოულოდნელად ჩერდება — ვისაც ჩურჩხელა ხელში რჩება, ის დავალებას ასრულებს', category: 'live', modes: ['hybrid'], page: 'games', item: 'churchkhela', section: 'tamashebi' },
-  { id: 'ra-sad-rodis', title: 'რა? სად? როდის?', text: 'გუნდური ვიქტორინა ერთწუთიანი კითხვებით ჩვენი თემებიდან', category: 'live', modes: ['hybrid', 'noPhone'] },
+  { id: 'ra-sad-rodis', title: 'რა? სად? როდის?', text: 'გუნდური ვიქტორინა: ერთი წუთი, პასუხი ფურცელზე — წმინდანები, გალობა, კუთხეები, ისტორია და ჩანაწერის ნაწყვეტები', category: 'live', modes: ['hybrid', 'noPhone'], page: 'games', item: 'rsr', section: 'tamashebi', print: { href: '/games/print/ra-sad-rodis.pdf', sheets: 8 } },
 ];
 
 /** The six board games the school prints and makes itself — each a Georgian retheme, on paper only (no app variant). */

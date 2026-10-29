@@ -268,9 +268,9 @@
   teacher-only in `firestore.rules` too (members no longer read it).
 - **Games hub** (`pages/GamesPage.tsx`, 2026-10-27): „თამაშები“ is a hub of three category tabs (მუსიკალური · ქართული ·
   ცოცხალი) from `data/games.ts`; every game carries its variant chips (ონლაინ · ჰიბრიდული · უტელეფონო); only ready games show,
-  plus the one being built as a „მალე“ row (since 2026-10-28 the user had the other unbuilt plan games taken off — now only
-  „რა? სად? როდის?“; the plan doc keeps the rest); the board games are paper only (one „უტელეფონო“ chip, a plain card + the
-  print strip); the vine label „თამაშები“ opens it. The pearls game stays the round button of „საგანძურის გზა“ (below), now
+  plus the one being built as a „მალე“ row (since 2026-10-28 the user had the other unbuilt plan games taken off — none is being
+  built since „რა? სად? როდის?“ was finished; the plan doc keeps the rest, don't bring them back unasked); the board games are
+  paper only (one „უტელეფონო“ chip, a plain card + the print strip); the vine label „თამაშები“ opens it. The pearls game stays the round button of „საგანძურის გზა“ (below), now
   under its own section `margalitebi` (open/მალე/hidden switch in the admin panel; a member's feature for it is the games'
   one — `featureOf` in `hooks/useAccess.ts`). The plan with 42 games and the six Georgianized board games:
   https://claude.ai/artifact/Dw24amtHhQvSGUd1pPE4fg
@@ -300,6 +300,15 @@
   after a random 5–45 s, the bell rings, a task card comes up, „შეასრულა/ვერ“ tallied; source „ჩემი ხმით“ = the teacher sings
   and the phone only times — the mode guests get). Shared: `utils/gameSounds.ts` (openAudio in the tap, bell, tick),
   `components/games/Chip.tsx`. Nothing saved but settings; no rules change.
+- **„რა? სად? როდის?“ (2026-10-28)**: the team quiz (`pages/games/RaSadRodisGame.tsx`, `mapItem` `rsr`; rules
+  `utils/raSadRodis.ts` + test). The user's answers „1ა 2ა 3ა“: ~100 questions written by Claude from the app's own texts — 111 in
+  `data/raSadRodisQuestions.ts`, 8 topics, stable ids, not yet checked by a teacher (the setup says so) — plus the teacher's own
+  („ჩემი კითხვები“, device only, `sg-rsr-mine`); every team answers the same question on paper at once, the host's phone shows it,
+  counts the minute (tick at 10 and 3-2-1, bell), shows the answer + note and the host ticks who got it; topic „მოისმინე“ makes a
+  question from a `hangiPool` recording (`listenQuestion`: a feast's chant → which feast, a song → its region, else the chant's name)
+  and plays 20 s from a random point. `drawGame` spreads the topics, asks the unasked first (`sg-rsr-seen`, last 60), a dry topic
+  lends its slot; „სხვა კითხვა“ swaps one, „წინა პასუხი“ goes back to fix ticks. The game is kept after every step (`sg-rsr-game`,
+  `parseGame`), so ✕ only pauses — the setup shows „გაგრძელება“. No rules change, nothing in Firestore.
 - **Printable board games (2026-10-28, fourth PR)**: the „უტელეფონო“ variant of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
@@ -327,7 +336,9 @@
   kept only when every group of the list allows one answer, with variety rules; the host's answer sheet) and „ამიხსენი“ (36
   cards of six words numbered by a die — ten themes, the songs only well-known titles — and a two-sided score sheet). Their
   modules read the app's TypeScript data through `scripts/print-games/appData.mjs` (esbuild in memory, firebase/React stubbed);
-  their stripe shows a label („ქართული · უტელეფონო“) instead of a number.
+  their stripe shows a label („ქართული · უტელეფონო“) instead of a number. „რა? სად? როდის?“ has one too (8 sheets): 40 question
+  cards = the first five of each topic (question in front, answer + note on the back), 5 blank cards, a two-sided score sheet
+  (18 questions × 6 teams) and 24 answer slips — so keep the first five of every topic print-worthy.
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 
