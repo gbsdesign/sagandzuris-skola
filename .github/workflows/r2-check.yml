@@ -1,0 +1,16 @@
+# temporary: does the Cloudflare token reach R2? (read-only: lists the buckets) — removed after one run
+name: R2 check
+on:
+  push:
+    branches: [claude/r2-check]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 9a55c3ca8804c47ee27b9e089852c3fc
+    steps:
+      - name: List R2 buckets
+        run: |
+          mkdir w && cd w && npm i --no-audit --no-fund wrangler@4.150.0 >/dev/null 2>&1
+          npx wrangler r2 bucket list
