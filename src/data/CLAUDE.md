@@ -133,10 +133,11 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
 
 ## Anthology notes (`public/notes/a<vol>/`)
 
-- Read from the vector music font of the galobani.ge anthology PDFs (Finale Petrucci / Maestro) by `omr.py` in
-  `C:\Users\mrgab\AppData\Local\Temp\anth\` (outside the repo): stems, beams (also `re` rectangles), flags, dots,
-  ties, triplets („3“), bracketed editorial accidentals, two voices on one staff (stems up/down); a recitation note
-  (breve) = ½ beat per syllable under it; tempo 72.
-- Duplicates were found by comparing the notes with the site's versions (`compare.py`): a match stays on the site
-  and the anthology version is left out. Vols II and IV (East Georgian, Maestro font) and the study collections
-  are not done yet.
+- Read from the vector music font of the galobani.ge anthology PDFs (Finale Petrucci / Maestro) by `scripts/omr/omr.py`
+  (how to run: `scripts/omr/README.md`): stems, beams (also `re` rectangles), flags, dots, ties, triplets („3“),
+  bracketed editorial accidentals, two voices on one staff (stems up and down close together), a head with two stems,
+  small (cue) heads not played; a recitation note (breve) lasts until the other voices' next note (else ½ beat per
+  syllable); tempo 72.
+- Duplicates were found by comparing the notes with the site's versions (`compare.py`, `matrix.py`): a match stays on
+  the site and the anthology version is left out. Done so far: მხოლოდ-შობილი from all volumes. Study collections:
+  only 04 (Gelati, Shavnabada) lists „მხოლოდ-შობილო (ხ.)“ — not compared yet.
