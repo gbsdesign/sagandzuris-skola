@@ -2,8 +2,16 @@
 
 Reads chants from the galobani.ge „ქართული გალობის ანთოლოგია“ PDFs (in the user's
 `Downloads/ქართული გალობა - galobani.ge/01 ანთოლოგიის ტომეულები`) into the app's notes:
-`public/notes/a<vol>/NNN.json` + page pictures `NNN-K.webp` + card picture `i/NNN.webp`.
+`a<vol>/NNN.json` + page pictures `NNN-K.webp` + card picture `i/NNN.webp`.
 The PDFs' music is vector text (Finale Petrucci or Maestro font), so nothing is guessed from images.
+
+**These files are not in the repository** (since 2026-10-30: the site may hold only 20 000 files). They live in the
+Cloudflare R2 bucket `sagandzuri-notes` and the app reads them from https://sagandzuri-notes.mr-gabunia.workers.dev/
+(`src/utils/notesBase.ts`, Worker `worker/notes`). To publish new or corrected files, push a branch `notes-upload`
+that holds only `.github/workflows/notes-r2.yml`, `worker/notes/` and the files under `notes/a<vol>/…`
+(`git worktree add --orphan -b notes-upload <dir>`, copy them in, commit, push): the workflow „Notes on R2“ uploads
+them (a file with the same name is replaced), checks the counts and deletes the branch. The chant lists
+(`src/data/anthology*.ts`) still go through an ordinary PR.
 
 Needs Python with `pymupdf` and `pillow` (`python -m pip install --user pymupdf pillow`). Run with
 `python -E -P` so the user's site-packages load but no file next to the PDFs can be imported.

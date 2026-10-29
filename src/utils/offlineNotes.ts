@@ -5,6 +5,7 @@ import { findVersion } from '../data/chantLookup';
 import { getChantMedia } from '../data/chantMediaRegistry';
 import { hymnPair } from '../data/hymnOrnaments';
 import { cacheAudio } from './audioCache';
+import { notesBase } from './notesBase';
 
 export const NOTES_CACHE = 'sagandzuri-notes-v1';
 const KEY = 'sagandzuri_offline_versions';
@@ -43,7 +44,7 @@ const saveVersion = async (cache: Cache, variantId: string) => {
   const pair = hymnPair(chant.id);
   const urls = [pair.top.src, pair.bottom.src];
   if (variant.bookNums?.length) {
-    const base = `/notes/${variant.book ?? 'book'}/`;
+    const base = notesBase(variant.book);
     const jsonUrl = `${base}${pad3(variant.bookNums[0])}.json`;
     await cacheUrls(cache, [jsonUrl]);
     const json = await (await cache.match(jsonUrl))!.json();

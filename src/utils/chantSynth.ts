@@ -1,6 +1,8 @@
-// Sheet music of the chant books, read from their PDFs (public/notes/<book>/NNN.json:
+// Sheet music of the chant books, read from their PDFs (public/notes/<book>/NNN.json, the anthology's from R2 — notesBase:
 // book = Gelati school, vol. I; kk = Kartli-Kakheti, vol. III), and a small Web Audio
 // synthesizer that plays its voices (three; four in the 4-voice litany of vol. III).
+
+import { notesBase } from './notesBase';
 
 export interface BookScore {
   nums: number[];
@@ -20,7 +22,7 @@ export const bookImageUrl = (score: BookScore, src: string) => score.base + src;
 const scoreCache = new Map<string, Promise<BookScore>>();
 // A version spanning several numbers (e.g. a litany) is one file, named after its first number
 export const loadBookScore = (firstNum: number, book = 'book'): Promise<BookScore> => {
-  const base = `/notes/${book}/`;
+  const base = notesBase(book);
   const key = base + firstNum;
   let p = scoreCache.get(key);
   if (!p) {

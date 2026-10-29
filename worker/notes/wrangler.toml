@@ -1,0 +1,9 @@
+name = "sagandzuri-notes"
+main = "notes.js"
+compatibility_date = "2026-09-01"
+workers_dev = true
+
+# the anthology's notes (made by scripts/omr, uploaded by .github/workflows/notes-r2.yml)
+[[r2_buckets]]
+binding = "NOTES"
+bucket_name = "sagandzuri-notes"

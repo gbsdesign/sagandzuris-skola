@@ -1,7 +1,7 @@
 // „ქართული გალობის ანთოლოგია“ (29 volumes, galobani.ge): only the versions the site's books lack — a version whose
 // notes match one of theirs is left out (e.g. vol. XIX №8 = IX №8, vol. XXVIII №77b = I №158, most of vol. I = vol. V;
 // vol. II №282–285: alteration variants of one chant that match III №154).
-// Notes in public/notes/a<vol>/, read from the PDFs' music font by scripts/omr; a number with a letter (76a) gets its
+// Notes in the R2 bucket „sagandzuri-notes“ (a<vol>/…, utils/notesBase.ts), read from the PDFs' music font by scripts/omr; a number with a letter (76a) gets its
 // own file number (761); a unit of several short numbers (a litany) is one file named after its first number.
 // The East Georgian volumes (II–IV) are in anthologyEastChants.ts.
 // This file and that one import nothing but types and data, so every chant list can take its versions from here
@@ -17,7 +17,7 @@ const ANTH_EAST = new Set([2, 3, 4, 10, 11]);
 export interface AnthPiece {
   vol: number;
   num: string;       // as printed: "6", "76a", a unit "98–107"
-  file: number;      // public/notes/a<vol>/<file>.json (76a = 761, a unit = its first number)
+  file: number;      // a<vol>/<file>.json in R2 (76a = 761, a unit = its first number)
   page: number;
   version: string;   // a chant's version: its source (ქორიძე, ხუნდაძე; may be empty); a group's chant: its own name
   source?: string;   // a chant's version: where in the book (ბასილი დიდის წირვა); a group's chant: its source

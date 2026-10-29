@@ -1,0 +1,90 @@
+# The anthology's notes live in the R2 bucket „sagandzuri-notes“ (the site's 20 000-file limit is kept for the rest) and
+# reach the site through the Worker worker/notes → https://sagandzuri-notes.mr-gabunia.workers.dev/<a<vol>/…>.
+# - the Worker is published when its code reaches main (or by hand: Actions → Notes on R2 → Run workflow);
+# - new notes are uploaded from the branch „notes-upload“: a branch holding only this workflow, worker/notes and the
+#   files under notes/ (notes/a<vol>/NNN.json, NNN-K.webp, i/NNN.webp — scripts/omr's output). Pushing it publishes
+#   the Worker, sets a fresh upload key, uploads every file (an existing one is replaced), checks the counts and deletes
+#   the branch, so the files never stay in the repository.
+# Needs the secret CLOUDFLARE_API_TOKEN (the Workers token, which also holds „Workers R2 Storage · Edit“).
+name: Notes on R2
+
+on:
+  push:
+    branches: [main, notes-upload]
+    paths: [worker/notes/**, .github/workflows/notes-r2.yml, notes/**]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: notes-r2
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      CLOUDFLARE_ACCOUNT_ID: 9a55c3ca8804c47ee27b9e089852c3fc
+      WRANGLER_SEND_METRICS: 'false'
+      NOTES_URL: https://sagandzuri-notes.mr-gabunia.workers.dev
+    steps:
+      - name: Check the Cloudflare key
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::error::The secret CLOUDFLARE_API_TOKEN is missing."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Install wrangler
+        run: |
+          mkdir -p "$RUNNER_TEMP/wr" && cd "$RUNNER_TEMP/wr"
+          npm init -y > /dev/null
+          npm i --no-audit --no-fund wrangler@4.150.0
+          echo "$RUNNER_TEMP/wr/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Publish the Worker
+        working-directory: worker/notes
+        run: wrangler deploy
+
+      - name: Upload the notes
+        if: github.ref == 'refs/heads/notes-upload'
+        run: |
+          KEY=$(openssl rand -hex 32)
+          echo "::add-mask::$KEY"
+          printf '%s' "$KEY" | (cd worker/notes && wrangler secret put UPLOAD_KEY)
+          sleep 15  # the new secret reaches every place of the network
+          cd notes
+          find . -type f \( -name '*.json' -o -name '*.webp' \) | sed 's|^\./||' | sort > "$RUNNER_TEMP/files.txt"
+          echo "$(wc -l < "$RUNNER_TEMP/files.txt") files to upload"
+          put() {
+            for try in 1 2 3 4; do
+              code=$(curl -sS -o /dev/null -w '%{http_code}' -X PUT -H "x-upload-key: $KEY" --data-binary "@$1" "$NOTES_URL/$1") && [ "$code" = 201 ] && return 0
+              sleep $((try * 3))
+            done
+            echo "FAILED $1 ($code)"; return 1
+          }
+          export -f put; export KEY NOTES_URL
+          xargs -P 12 -I{} bash -c 'put "$@"' _ {} < "$RUNNER_TEMP/files.txt" > "$RUNNER_TEMP/failed.txt" || true
+          if [ -s "$RUNNER_TEMP/failed.txt" ]; then cat "$RUNNER_TEMP/failed.txt"; exit 1; fi
+          # every volume's count in the bucket is at least what this upload brought
+          for vol in $(cut -d/ -f1 "$RUNNER_TEMP/files.txt" | sort -u); do
+            want=$(grep -c "^$vol/" "$RUNNER_TEMP/files.txt")
+            have=$(curl -sS -H "x-upload-key: $KEY" "$NOTES_URL/_count?prefix=$vol/" | node -pe 'JSON.parse(require("fs").readFileSync(0)).count')
+            echo "$vol: uploaded $want, in the bucket $have"
+            [ "$have" -ge "$want" ] || { echo "::error::$vol: only $have of $want in the bucket"; exit 1; }
+          done
+          # a sample is read back as the site reads it
+          first=$(head -1 "$RUNNER_TEMP/files.txt")
+          curl -sSf -o /dev/null -H 'Origin: https://sagandzuris-skola.pages.dev' "$NOTES_URL/$first"
+
+      - name: Remove the upload branch
+        if: github.ref == 'refs/heads/notes-upload'
+        run: git push origin --delete notes-upload

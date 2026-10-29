@@ -55,6 +55,7 @@ const loadInk = (src: string) =>
       resolve({ w, h, px });
     };
     im.onerror = () => reject(new Error(`image ${src}`));
+    im.crossOrigin = 'anonymous'; // the anthology's pictures come from its own address (notesBase): read with its consent
     im.src = src;
   });
 

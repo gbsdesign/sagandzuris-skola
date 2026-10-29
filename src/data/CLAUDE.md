@@ -170,7 +170,13 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
 - Saint lives are from the Patriarchate's „წმიდანთა ცხოვრება“ (2001); the user chose to include full texts.
 - Prayers: `prayers.ts` + `public/prayers/<id>.json`; `girsArs.ts` has the seasonal Axion rules.
 
-## Anthology notes (`public/notes/a<vol>/`)
+## Anthology notes (R2 bucket `sagandzuri-notes`, not in the repo)
+
+- Since 2026-10-30 the files `a<vol>/NNN.json`, `NNN-K.webp`, `i/NNN.webp` live in Cloudflare R2 (the site may hold only
+  20 000 files) and are read from https://sagandzuri-notes.mr-gabunia.workers.dev/ (`utils/notesBase.ts`; Worker
+  `worker/notes`; offline: the service worker keeps them in `sagandzuri-notes-v1` like the other notes). New or corrected
+  files: push a branch `notes-upload` (workflow „Notes on R2“ — steps in `scripts/omr/README.md`). Every other book stays
+  in `public/notes/<book>/`.
 
 - Read from the vector music font of the galobani.ge anthology PDFs (Finale Petrucci / Maestro) by `scripts/omr/omr.py`
   (how to run: `scripts/omr/README.md`; in a cloud session set `ANTH_DIR` to a folder holding the PDF): stems, beams (also
