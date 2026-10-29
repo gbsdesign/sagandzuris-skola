@@ -40,18 +40,19 @@ export const pickMime = () =>
     .find(t => MediaRecorder.isTypeSupported?.(t)) || '';
 
 // recorder output (webm / mp4 / ogg, whatever the browser makes) -> mono MP3, 24 kHz / 48 kbps unless told otherwise;
-// `maxSeconds` keeps only the take's start
-const encodeTake = async (blob: Blob, rate: number, kbps: number, maxSeconds = Infinity): Promise<VoiceTake> => {
+// `maxSeconds` keeps only the take's start; `from` (s) cuts off what came before
+const encodeTake = async (blob: Blob, rate: number, kbps: number, maxSeconds = Infinity, from = 0): Promise<VoiceTake> => {
   const Ctx = window.AudioContext || (window as any).webkitAudioContext;
   const ctx: AudioContext = new Ctx();
   try {
     const decoded = await ctx.decodeAudioData(await blob.arrayBuffer());
-    const seconds = Math.min(decoded.duration, maxSeconds);
+    const start = Math.max(0, Math.min(from, decoded.duration - 0.1));
+    const seconds = Math.min(decoded.duration - start, maxSeconds);
     const offline = new OfflineAudioContext(1, Math.max(1, Math.ceil(seconds * rate)), rate);
     const src = offline.createBufferSource();
     src.buffer = decoded;
     src.connect(offline.destination);
-    src.start();
+    src.start(0, start);
     const mono = await offline.startRendering();
     const wave = waveOf(mono.getChannelData(0));
     const speech = speechSpan(mono.getChannelData(0), rate);
@@ -65,7 +66,7 @@ export const toMp3 = (blob: Blob) => encodeTake(blob, RATE, KBPS);
 
 /** A spoken take made small enough for the pearls' store (< 600 KB): 16 kHz, 24 kbps, ~3 KB a second. */
 export const SMALL_MAX_SECONDS = 180;
-export const toSmallMp3 = (blob: Blob, maxSeconds = SMALL_MAX_SECONDS) => encodeTake(blob, 16000, 24, maxSeconds);
+export const toSmallMp3 = (blob: Blob, maxSeconds = SMALL_MAX_SECONDS, from = 0) => encodeTake(blob, 16000, 24, maxSeconds, from);
 
 /** Asks for the microphone and starts recording; throws if the user refuses access. */
 export const startVoiceRecording = async (): Promise<VoiceRecording> => {

@@ -151,6 +151,10 @@
   „დავალებები“ chip „ისწავლა N/M“ unfolds each member's bar (`WhoLearns`, `learn/PartsBar.tsx`); the member's window lists a
   bar per piece (`LearnReview`). The member's „სწავლა“ on an assignment opens the learning mode on the assigned voice
   (`learn/openLearning.ts`: `learnPieceOf`, `useOpenLearning`; `requestLearn(piece, voice)`).
+- **კლასის სტუდია** (2026-10-29, `components/studio/ClassStudio.tsx`): a program chant with book notes gets „სტუდია“ in its
+  window (`ItemSheet` in `classes/ClassProgram.tsx`). A member sings their voice over the synth (their own voice muted) and the
+  take, cut by the output lag, goes to the pearls' store as `studio~<vid>` (no rules change). The class's teacher ticks whose
+  takes go in, hears them together and „კლასის ჩატში“ sends one mixed MP3 (made in the browser) as a voice message.
 - **Folk songs map** (`data/songsData.ts`, `components/maps/GeorgiaMap.tsx`) and **მთქმელი authors map**
   (`data/mtkmeliData.ts`, `MtkmeliMap.tsx`, shared `RegionPuzzleMap.tsx`). Full texts only for authors who
   died before 1956; others get title + description + wiki link.

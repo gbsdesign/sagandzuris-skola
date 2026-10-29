@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Check, CheckCheck, ChevronRight, GraduationCap, Music, Plus, Users } from 'lucide-react';
+import { AudioLines, Check, CheckCheck, ChevronRight, GraduationCap, Music, Plus, Users } from 'lucide-react';
 import { useAuth, useChants } from '../../context';
 import type { ProgramItem, SchoolClass } from '../../hooks/useClasses';
 import { usePathMarks } from '../../hooks/usePathMarks';
@@ -15,6 +15,7 @@ import { ProgramEditor, programLines } from '../teacher/ClassProgramPanel';
 import { PartsBar } from '../learn/PartsBar';
 import { learnPieceOf, useOpenLearning } from '../learn/openLearning';
 import { Btn, Sheet } from '../ui/kit';
+import { StudioMix, StudioRecord, studioPiece } from '../studio/ClassStudio';
 
 type Listed = ProgramItem & { id: string; key: string };
 
@@ -39,6 +40,7 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; editi
   const openLearning = useOpenLearning();
   // the item whose window is open (its key)
   const [shown, setShown] = useState<string | null>(null);
+  const [studio, setStudio] = useState<string | null>(null);
   const iAmMember = !!user && cls.memberIds.includes(user.uid);
 
   const listed: Listed[] = cls.program.flatMap((p, i) => (p.id ? [{ ...p, id: p.id, key: `${i}:${p.id}` }] : []));
@@ -186,6 +188,7 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; editi
           go={openerOf(open.id)}
           piece={learnPieceOf(open.id)}
           onLearn={piece => { setShown(null); openLearning(piece); }}
+          onStudio={studioPiece(open.id) && (iAmMember || canEdit) ? () => { setShown(null); setStudio(open.id); } : null}
           member={iAmMember}
           own={mine(open.id)}
           locked={locked}
@@ -193,6 +196,9 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; editi
           knowers={v => knowers(open.id, v)}
         />
       )}
+      {studio && (canEdit
+        ? <StudioMix cls={cls} vid={studio} onClose={() => setStudio(null)} />
+        : <StudioRecord vid={studio} onClose={() => setStudio(null)} />)}
     </section>
   );
 };
@@ -208,12 +214,13 @@ const ItemSheet: React.FC<{
   go: (() => void) | null;
   piece: string | null;
   onLearn: (piece: string) => void;
+  onStudio: (() => void) | null;
   member: boolean;
   own: { known: Voice[]; confirmed: Voice[] };
   locked: boolean;
   onMark: (v: Voice) => void;
   knowers: (v: Voice) => Knower[];
-}> = ({ p, onClose, go, piece, onLearn, member, own, locked, onMark, knowers }) => {
+}> = ({ p, onClose, go, piece, onLearn, onStudio, member, own, locked, onMark, knowers }) => {
   const lines = programLines(p);
   const voiced = usesVoices(p.id);
   const list: Voice[] = voiced ? ['1', '2', '3'] : ['1'];
@@ -233,6 +240,11 @@ const ItemSheet: React.FC<{
             {go && <Btn kind="ghost" size="lg" icon={<Music />} onClick={() => { onClose(); go(); }}>{song ? 'სიმღერა' : 'ნოტები'}</Btn>}
             {piece && <Btn size="lg" icon={<GraduationCap />} onClick={() => onLearn(piece)}>სწავლა</Btn>}
           </div>
+        )}
+        {onStudio && (
+          <Btn kind="soft" size="lg" full icon={<AudioLines />} onClick={onStudio}>
+            {member ? 'სტუდია — ჩემი ხმის ჩაწერა' : 'სტუდია — ჯგუფური ჩანაწერი'}
+          </Btn>
         )}
 
         {member && (
