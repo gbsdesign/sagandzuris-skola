@@ -8,6 +8,10 @@ import { triggerHaptic } from '../../utils/haptics';
 import { useNavigation } from '../../context';
 import { askSignIn } from '../access/SignInPrompt';
 import { useAccess } from '../../hooks/useAccess';
+import { CENTRE_MTKMELI_ALBUMS } from '../../data/centreOther';
+import { CentreAlbums } from './CentreAlbums';
+import { SongAlbumPage } from './SongAlbumPage';
+import { Reciters, isFolkGroup, useReciters } from './Reciters';
 
 interface MtkmeliMapProps {
   selectedChantVariants?: Record<string, any>;
@@ -28,20 +32,30 @@ export const MtkmeliMap: React.FC<MtkmeliMapProps> = ({ selectedChantVariants = 
   // the open region is a history step: the top bar's "back" (and the phone's) returns to the map
   const { mapItem, openMapItem } = useNavigation();
   const region = FOLK_REGIONS.find(r => r.id === mapItem) ?? null;
+  // the voices of the poets' disc (Reciters.tsx) — only for whoever may hear that album
+  const reciters = useReciters();
+  const recitersIn = (id: string) => reciters.filter(r => r[2] === id);
+  // an album under the map („album:<Drive folder id>“, data/centreOther.ts)
+  if (mapItem?.startsWith('album:')) return <SongAlbumPage albumId={mapItem.slice(6)} />;
 
   if (!region) {
     return (
-      <RegionPuzzleMap
-        onSelect={r => openMapItem(r.id)}
-        count={id => authorsInRegion(id).length}
-        countLabel={n => `${n} ავტორი`}
-        regionName={regionName}
-        title="მთქმელი საქართველო"
-      />
+      <>
+        <RegionPuzzleMap
+          onSelect={r => openMapItem(r.id)}
+          count={id => authorsInRegion(id).length + recitersIn(id).filter(r => !isFolkGroup(r)).length}
+          countLabel={n => `${n} ავტორი`}
+          regionName={regionName}
+          title="მთქმელი საქართველო"
+        />
+        <CentreAlbums list={CENTRE_MTKMELI_ALBUMS} />
+      </>
     );
   }
 
   const authors = authorsInRegion(region.id);
+  const voices = recitersIn(region.id);
+  const named = voices.filter(r => !isFolkGroup(r)).length;
   return (
     <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
       {/* where the region is: a small map with it lit */}
@@ -49,16 +63,16 @@ export const MtkmeliMap: React.FC<MtkmeliMapProps> = ({ selectedChantVariants = 
         <RegionLocator region={region} className="w-28 sm:w-32 h-auto shrink-0" />
         <div className="min-w-0 flex flex-col gap-0.5">
           <h3 className="text-lg sm:text-xl font-black text-[#2a2017] leading-tight">{regionName(region)}</h3>
-          <span className="text-xs font-bold text-[#8a4b12]">{authors.length} ავტორი</span>
+          <span className="text-xs font-bold text-[#8a4b12]">{authors.length} ავტორი{named > 0 && ` · ${named} მელექსე`}</span>
         </div>
       </div>
 
-      {authors.length === 0 ? (
+      {authors.length === 0 && voices.length === 0 ? (
         <div className="flex flex-col items-center text-center gap-1.5 py-8 px-3 rounded-2xl bg-[#faf6ef] border border-dashed border-[#d6c8b1]">
           <BookOpen className="w-6 h-6 text-[#cdbfa9]" />
           <p className="text-sm font-bold text-[#574739]">ამ კუთხის ავტორები ჯერ არ დამატებულა</p>
         </div>
-      ) : (
+      ) : authors.length > 0 && (
         <div className="flex flex-col gap-2">
           {authors.map(author => (
             <AuthorItem
@@ -71,6 +85,7 @@ export const MtkmeliMap: React.FC<MtkmeliMapProps> = ({ selectedChantVariants = 
           ))}
         </div>
       )}
+      <Reciters list={voices} />
     </div>
   );
 };

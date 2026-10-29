@@ -1,25 +1,26 @@
 import React, { useMemo, useState } from 'react';
 import { ChevronDown, ChevronRight, Disc3 } from 'lucide-react';
 import { CENTRE_SONG_ALBUMS } from '../../data/centreSongs';
+import { CENTRE_MTKMELI_ALBUMS } from '../../data/centreOther';
 import { albumShown, useAlbumAccess } from '../../data/albumAccess';
 import { useNavigation } from '../../context';
 import { matchScore, searchNormalize } from '../../utils/searchMatch';
 import { triggerHaptic } from '../../utils/haptics';
 
-// The song albums under the songs map — only those the signed-in person may hear or save (data/albumAccess.ts: staff all,
+// The albums under the songs map (or, with `list`, the მთქმელი map's) — only those the signed-in person may hear or save (data/albumAccess.ts: staff all,
 // a member what an admin turned on; with none the block is not there at all): the first ones, then „ყველა ალბომი“. With a
 // search in the map's field, only the albums whose name matches. An album opens as the map's item
 // `album:<Drive folder id>` (SongAlbumPage), so the top bar's „←“ comes back here.
 
 const FIRST = 8;
-const NAMES = new Map(CENTRE_SONG_ALBUMS.map(a => [a[0], searchNormalize(a[1])]));
+const NAMES = new Map([...CENTRE_SONG_ALBUMS, ...CENTRE_MTKMELI_ALBUMS].map(a => [a[0], searchNormalize(a[1])]));
 type Album = (typeof CENTRE_SONG_ALBUMS)[number];
 
 /** The albums there for the signed-in person (re-checked when the rights change) */
-export const useShownAlbums = () => {
+export const useShownAlbums = (list: Album[] = CENTRE_SONG_ALBUMS) => {
   const v = useAlbumAccess();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  return useMemo(() => CENTRE_SONG_ALBUMS.filter(a => albumShown(a[0])), [v]);
+  return useMemo(() => list.filter(a => albumShown(a[0])), [v, list]);
 };
 
 const AlbumRow: React.FC<{ album: Album }> = ({ album: [id, name, count] }) => {
@@ -42,9 +43,9 @@ const AlbumRow: React.FC<{ album: Album }> = ({ album: [id, name, count] }) => {
   );
 };
 
-export const CentreAlbums: React.FC<{ query?: string }> = ({ query = '' }) => {
+export const CentreAlbums: React.FC<{ query?: string; list?: Album[] }> = ({ query = '', list }) => {
   const [all, setAll] = useState(false);
-  const albums = useShownAlbums();
+  const albums = useShownAlbums(list);
   const total = useMemo(() => albums.reduce((n, a) => n + a[2], 0), [albums]);
   const q = searchNormalize(query);
   const found = useMemo(() => {

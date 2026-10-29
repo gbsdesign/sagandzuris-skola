@@ -7,6 +7,7 @@ listing is not in the repo, it is thousands of lines):
   site_ids.txt      every Drive id the app's data already names (grep of src/data/*.ts)
   all_old_audio.tsv id, folder, name, size, created — the Drive's older audio (sizes find the files the site already has)
   songs.json        the app's songs (step 1: node scripts/centre/dump-songs.mjs <folder>/songs.json)
+  other_albums.tsv, other_files.tsv  (optional) the same for „ფოლკლორის ცენტრი / სხვა“ — see MTKMELI below
 Output: <folder>/plan.json — albums (every file) + takes bound to songs. Step 3: python3 scripts/centre/emit.py <folder>."""
 import csv, collections, json, os, re, sys
 
@@ -19,7 +20,7 @@ files = [r for r in csv.reader(open(f'{INV}/files.tsv'), delimiter='\t')]
 site = set(open(f'{INV}/site_ids.txt').read().split())
 old = {r[0]: r for r in csv.reader(open(f'{INV}/all_old_audio.tsv'), delimiter='\t')}
 site_sizes = {old[i][3] for i in site if i in old and old[i][3]}
-site_by_size = {old[i][3]: i for i in site if i in old and old[i][3]}
+site_by_size = {old[i][3]: i for i in sorted(site) if i in old and old[i][3]}
 existing = json.load(open(DUMP))['songs']
 _gn = open(f'{REPO}/src/data/georgianNames.ts').read()
 FIRST = set(' '.join(re.findall(r'`([^`]*)`', _gn)).split()) | {'ჰამლეტ', 'ჯემალ', 'ანზორ', 'პოლიკარპე', 'ტრისტან', 'ვარლამ'}
@@ -29,7 +30,49 @@ def is_person(t):
     return len(w) >= 2 and w[0] in FIRST and bool(SURNAME.search(w[1]))
 
 def album_name(t):
-    return t.replace(' • სიმღერები', '').strip()
+    return t.replace(' • სიმღერები', '').replace(' • სხვა', '').strip()
+
+# ── „ფოლკლორის ცენტრი / სხვა“ (optional inputs other_albums.tsv: folder id, name; other_files.tsv: file id, folder id,
+#    name, size). A folder whose name without „ • სხვა“ is a song album's joins that album; the rest are albums of their
+#    own — the მთქმელი ones (MTKMELI) stay out of the songs and go to the მთქმელი section (emit.py → centreOther.ts).
+#    Their files get looser rules: a „ლექსი“ there is a sung mountain verse, a region after „ - “ counts, chants stay
+#    in the album; INSTRUMENT ones go to the instrument's window, FORCE ones (songs on a poet's words) to the town songs.
+MTKMELI = {'ლექსის თქმა მწადის ერთისა', 'ფოლკლორული ანსამბლი მოყვარე - ქედა, მერისი'}
+INSTRUMENT = {  # file id: (instrument id of data/instrumentsData.ts, title, note)
+    '1yANBT5Dtb_8zDfIPj5lhiaiLn9xDjQdl': ('fanduri', 'მოხეური მგზავრული საცეკვაო', 'ხევი, სოფ. ყაზბეგი, ალექსი შადური'),
+    '1ZS4ubnHjnUINffiwGIoidgKcEH1rva44': ('salamuri', 'ჩობნური', 'ალექსი ექვთიმიშვილი'),
+}
+ALBUM_ONLY = {'1A6FGDIJAH5FMgFrWb2eUKI_De4wVbTi0'}  # „სმური“ (გუდამაყარი): sung or played — not clear from the file
+FORCE = {  # file id: (region, area, title, the app's song id or None, note)
+    '1bEzHqDe5_5fY1JbmqlQccVWvqC7fst37': ('kalakuri', None, 'ჩემო კარგო ქვეყანა', 'fa-cemo-kargo-kvekana-ql', 'ლექსი ილია ჭავჭავაძისა, მუსიკა რევაზ ლაღიძისა'),
+    '1a4LxCBC5SvYbx4uVWbYXnpurC0Cdiukj': ('kalakuri', None, 'ოდესაც გიცქერ', None, 'მელიტონ ბალანჩივაძე, ლექსი გრიგოლ აბაშიძისა'),
+    '1T1TtmGg_bHnVvmUohf0FDOFkIQfoePwL': ('kalakuri', None, 'დავრდომილი სნეული', None, 'ანდრია ყარაშვილი, ლექსი კოტე მაყაშვილისა'),
+}
+SKHVA_CHANT = re.compile(r'მეუფეო ზეცათაო|დღეს საღმრთომან')
+SKHVA = set()        # files from „სხვა“ that joined the songs' albums
+mt_albums = []       # [folder id, name, files]
+if os.path.exists(f'{INV}/other_albums.tsv'):
+    by_name = {album_name(t): i for i, t in albums}
+    remap = {}
+    for oid, oname in (l.rstrip('\n').split('\t') for l in open(f'{INV}/other_albums.tsv') if l.strip()):
+        base = album_name(oname)
+        if base in MTKMELI: mt_albums.append([oid, base, []])
+        elif base in by_name: remap[oid] = by_name[base]
+        else: albums.append([oid, base]); remap[oid] = oid
+    mt = {a[0]: a for a in mt_albums}
+    for r in csv.reader(open(f'{INV}/other_files.tsv'), delimiter='\t'):
+        if r[1] in mt: mt[r[1]][2].append(r)
+        elif r[1] in remap: files.append([r[0], remap[r[1]], r[2], r[3], 'audio/mpeg']); SKHVA.add(r[0])
+
+def mt_track(fname):
+    """A მთქმელი album's file → (title, who says it)"""
+    n = re.sub(r'\.mp3$', '', fname, flags=re.I)
+    for _ in range(3): n = re.sub(r'^\s*\d{1,3}\s*\.?\s*', '', n)
+    n = n.lstrip('. ')
+    if ' - ' in n: who, t = n.split(' - ', 1)
+    elif ' საუბარი ' in n: who, t = n.split(' საუბარი ', 1); t = 'საუბარი ' + t
+    else: who, t = '', n
+    return t.strip(), who.strip()
 
 # ── region words: (region, area) ──
 R = {}
@@ -151,6 +194,7 @@ def mkh(s): return ''.join(MKH.get(c, c) for c in s)
 NOT_SONG = re.compile(r'საუბ|ინტერვიუ|მოთხრობ|ლექსი|ზღაპარ|დასაკრავ|მელოდი|ფანდურზე|ჩონგურზე|სალამურზე|გარმონზე|ჭუნირზე|ჩანგზე|'
                       r'ჭიანურზე|ლარჭემზე|დუდუკზე|ზურნაზე|სტვირზე|ჩიბონზე|ბუზიკზე|დოლზე|საკრავ|ინსტრუმენტ|შესავალი|ანონს|'
                       r'^track|^ტრეკი|^უსათაურო|^სათაურის გარეშე|სახელწოდება|გუნდი$|^ანსამბლ|^\??$')
+NOT_SKHVA = re.compile(NOT_SONG.pattern.replace('ლექსი|', ''))  # in „სხვა“ a „ლექსი“ is sung
 
 def clean_title(t):
     t = re.sub(r'[„“”"«»()]', '', t)
@@ -278,6 +322,9 @@ for ai, (aid, atitle) in enumerate(albums):
     parsed = []
     for fid, _, fname, size, _ in fs:
         title, hints, extra, voice = parse(fname, pre, learning)
+        if fid in SKHVA: hints += [e for e in extra if region_in(e)]  # „თაგუნა - აჭარული სიმღერა“
+        if fid in FORCE: title, extra = FORCE[fid][2], [FORCE[fid][4]]
+        if fid in INSTRUMENT: title, extra = INSTRUMENT[fid][1], [INSTRUMENT[fid][2]]
         if info and info[0] == 'one':
             extra = ([title] if title and title != info[3] else []) + extra
             title = info[3]
@@ -313,7 +360,20 @@ for ai, (aid, atitle) in enumerate(albums):
 # the same recording twice (one file in two albums): only the first, albums of the „ალაზანი“ series last
 seen = set()
 binds = []
+instruments = []
 for u in sorted(units, key=lambda u: (u['album'].endswith('ალაზანი'), u['ai'])):
+    fid = u['files'][0]['id']
+    if fid in INSTRUMENT:
+        instruments.append({'file': fid, 'instrument': INSTRUMENT[fid][0], 'title': INSTRUMENT[fid][1], 'note': INSTRUMENT[fid][2],
+                            'album': albums[u['ai']][0], 'name': u['album']})
+        why['other: an instrument'] += 1; continue
+    if fid in ALBUM_ONLY: why['album only'] += 1; continue
+    if fid in FORCE:
+        reg, area, title, song, note = FORCE[fid]
+        binds.append({'region': reg, 'area': area, 'title': title, 'key': norm(title), 'song': song, 'how': 'hand', 'album': u['album'],
+                      'ai': u['ai'], 'note': note, 'all': fid, 'voices': None})
+        why['bound by hand' + (' → existing' if song else ' → new')] += 1; continue
+    if fid in SKHVA and SKHVA_CHANT.search(u['title']): why['other: a chant (album only)'] += 1; continue
     sizes = {p['size'] for p in u['files']}
     if sizes & site_sizes: why['dup (already on the site)'] += len(u['files']); continue
     if sizes & seen: why['dup (twice in the centre)'] += len(u['files']); continue
@@ -321,7 +381,8 @@ for u in sorted(units, key=lambda u: (u['album'].endswith('ალაზანი
     k, title, info, name = u['key'], u['title'], u['info'], u['album']
     only_regions = not re.sub('|'.join(map(re.escape, WORDS)), '', k).replace('-', '').strip()
     georgian = len(re.findall(r'[\u10d0-\u10ff]', title)) >= 0.6 * len(re.sub(r'\W', '', title) or 'x')
-    if (not k or len(k) < 2 or NOT_SONG.search(k) or any(NOT_SONG.search(norm(p['fname'])) for p in u['files']) or only_regions
+    ns = NOT_SKHVA if fid in SKHVA else NOT_SONG
+    if (not k or len(k) < 2 or ns.search(k) or any(ns.search(norm(p['fname'])) for p in u['files']) or only_regions
             or not georgian or is_person(title) or (norm(name).startswith(k) and not (info and info[0] == 'one'))
             or 'ტრადიციული მუსიკა' in k):
         why['not a song / no title'] += len(u['files']); continue
@@ -346,7 +407,10 @@ for u in sorted(units, key=lambda u: (u['album'].endswith('ალაზანი
                   'voices': [sl[i]['id'] if i in sl else None for i in (1, 2, 3)] if len(u['files']) > 1 else None})
     if not binds[-1]['voices']: binds[-1]['all'] = u['files'][0]['id']
 
-json.dump({'albums': plan_albums, 'binds': binds}, open(f'{INV}/plan.json', 'w'), ensure_ascii=False)
+mtkmeli = [{'id': aid, 'name': name, 'tracks': [[r[0], *mt_track(r[2])] for r in sorted(fs, key=lambda r: r[2])]}
+           for aid, name, fs in mt_albums]
+json.dump({'albums': plan_albums, 'binds': binds, 'mtkmeli': mtkmeli, 'instruments': instruments},
+          open(f'{INV}/plan.json', 'w'), ensure_ascii=False)
 for k, v in sorted(why.items()): print(f'{v:5}  {k}')
 print('recordings bound:', len(binds), '| new songs:', len({(b['region'], b['area'], b['key']) for b in binds if not b['song']}),
       '| existing songs that get recordings:', len({b['song'] for b in binds if b['song']}))

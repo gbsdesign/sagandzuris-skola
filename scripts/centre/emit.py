@@ -1,5 +1,8 @@
-"""Folklore Centre songs, step 3 of 3: <folder>/plan.json (songs.py) → src/data/centreSongs.ts + public/centre/<folder id>.json."""
+"""Folklore Centre songs, step 3 of 3: <folder>/plan.json (songs.py) → src/data/centreSongs.ts + public/centre/<folder id>.json,
+and („სხვა“) src/data/centreOther.ts through mtkmeli.py."""
 import collections, json, os, re, sys
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import mtkmeli
 
 INV = sys.argv[1]
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -83,6 +86,13 @@ lines += ['};', '', '/** new songs: id, title, region, sub-area (0 = none), take
 lines += [f"  {js(r)}," for r in rows]
 lines += ['];', '']
 open(f'{REPO}/src/data/centreSongs.ts', 'w').write('\n'.join(lines))
+
+# „სხვა“: the მთქმელი albums (their lists beside the songs' ones) + centreOther.ts
+mt_albums, n_people, n_poems = mtkmeli.write(plan, REPO, slug, js)
+for a in mt_albums:
+    tracks = [[t[0], t[1]] + ([t[2]] if t[2] else []) for t in a['tracks']]
+    json.dump({'name': a['name'], 'tracks': tracks}, open(f"{out}/{a['id']}.json", 'w'), ensure_ascii=False, separators=(',', ':'))
+print('მთქმელი albums', len(mt_albums), '| voices', n_people, '| poems', n_poems, '| instrument takes', len(plan.get('instruments', [])))
 print('albums', len(albums), '| existing songs', len(to_existing), '| new songs', len(rows),
       '| takes', sum(len(v) for v in to_existing.values()) + sum(len(r[4]) for r in rows))
 print('ts bytes', os.path.getsize(f'{REPO}/src/data/centreSongs.ts'), '| album json total', sum(os.path.getsize(f'{out}/{f}') for f in os.listdir(out)))

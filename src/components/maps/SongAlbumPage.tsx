@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowRightLeft, Check, ChevronRight, Disc3, Download, Headphones, LoaderCircle, MapPin, Pause, Play, RotateCw } from 'lucide-react';
 import { CENTRE_SONG_ALBUMS } from '../../data/centreSongs';
+import { CENTRE_MTKMELI_ALBUMS } from '../../data/centreOther';
 import { FOLK_SONGS, FolkSong, centreRecId, getFolkRegion } from '../../data/songsData';
 import { usePlacements } from '../../data/placements';
 import { albumRight, useAlbumAccess } from '../../data/albumAccess';
@@ -15,7 +16,7 @@ import { triggerHaptic } from '../../utils/haptics';
 // sounding at a time. ▶ and ⬇ follow the album's rights (data/albumAccess.ts: staff all; a member what an admin turned
 // on — a member without any never gets here, the list under the map leaves the album out). A recording a song holds
 // shows that song („გურია · ამირანი ›“, a tap opens it); the owner and the superadmins move a recording to a song
-// („გადატანა“) — the album keeps it either way.
+// („გადატანა“) — the album keeps it either way. The მთქმელი map opens its albums (data/centreOther.ts) here too, without moves.
 // The list is public/centre/<folder id>.json, fetched when the album opens (and kept by the service worker).
 
 /** id, title, note, and — when the site already had this recording from an older folder — that file's id */
@@ -73,7 +74,8 @@ const saveTrack = async (id: string, title: string) => {
 };
 
 export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
-  const album = CENTRE_SONG_ALBUMS.find(a => a[0] === albumId);
+  const songAlbum = CENTRE_SONG_ALBUMS.find(a => a[0] === albumId);
+  const album = songAlbum ?? CENTRE_MTKMELI_ALBUMS.find(a => a[0] === albumId);
   useAlbumAccess(); // an admin's switch applies at once
   const right = albumRight(albumId);
   const { isSuperAdmin } = useAuth();
@@ -192,7 +194,7 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
                         </button>
                       )}
                       {/* a recording the site had before moves from its song's page, not from here */}
-                      {isSuperAdmin && !(where && same && !whereIs.has(id)) && (
+                      {isSuperAdmin && songAlbum && !(where && same && !whereIs.has(id)) && (
                         <button
                           type="button"
                           onClick={() => {
