@@ -5,6 +5,7 @@
 import { AUDIO_PROXY, type ChantMediaItem } from './chantMediaRegistry';
 import { ARCHIVE_SONGS, WHO } from './songArchive';
 import { CENTRE_SONG_RECS, type CentreRec } from './folkCentre';
+import { CENTRE_NEW_SONGS, CENTRE_SONG_ALBUMS, CENTRE_TAKES_OF, type CentreTake } from './centreSongs';
 
 /** Regions with a piece on the map */
 export type MapRegionId =
@@ -951,6 +952,18 @@ II სოლისტი (1 ხმა)
   },
 ];
 
+const REGION_ALBUM = /^(გურია|იმერეთი|რაჭა|სვანეთი|სამეგრელო|ქართლი|აჭარა|ფშავი|ხევსურეთი|ლეჩხუმი|კახეთი)$/;
+
+/** One take of the Centre's Drive albums as a song's recording: the album's name is the performer's label */
+function centreTake([file, album, note]: CentreTake): CentreRec {
+  const name = CENTRE_SONG_ALBUMS[album]?.[1] ?? '';
+  // an album named after a land would read as a place: „ალბომი „გურია““
+  const who = REGION_ALBUM.test(name) ? `ალბომი „${name}“` : name;
+  if (typeof file === 'string') return { who, note, mp3: file };
+  const [all, v1, v2, v3] = file;
+  return { who, note: note ?? 'სასწავლო · ხმებად', mp3: all || undefined, voices: [v1 || undefined, v2 || undefined, v3 || undefined] };
+}
+
 // The archive joins the list: a song already here (same title and region) gets the archive's recordings,
 // the rest come after this file's songs.
 export const FOLK_SONGS: FolkSong[] = (() => {
@@ -966,6 +979,14 @@ export const FOLK_SONGS: FolkSong[] = (() => {
     list.push({ id: a.id, title: a.title, region: a.region, area: a.area, genre: a.genre, versions: [], recs });
   }
   for (const s of list) if (CENTRE_SONG_RECS[s.id]) s.centre = CENTRE_SONG_RECS[s.id];
+  // the Folklore Centre's albums in the school's Drive (centreSongs.ts): a song the list has, or a new one in its region
+  for (const s of list) {
+    const takes = CENTRE_TAKES_OF[s.id];
+    if (takes) s.centre = [...(s.centre ?? []), ...takes.map(centreTake)];
+  }
+  for (const [id, title, region, area, takes] of CENTRE_NEW_SONGS) {
+    list.push({ id, title, region, area: area || undefined, versions: [], centre: takes.map(centreTake) });
+  }
   return list;
 })();
 
@@ -1005,8 +1026,25 @@ export const songRecMedia = (song: FolkSong, rec: SongRec): ChantMediaItem => ({
   lyrics: song.lyrics,
 });
 
-// A Centre recording the school has as an mp3 (rec.mp3), for the school's own player
-export const centreRecMedia = (song: FolkSong, rec: CentreRec): ChantMediaItem => songRecMedia(song, { id: rec.mp3 || '', who: rec.who });
+// A Centre recording the school has as an mp3 (rec.mp3; a learning take also by voices), for the school's own player
+export const centreRecMedia = (song: FolkSong, rec: CentreRec): ChantMediaItem => {
+  if (!rec.voices) return songRecMedia(song, { id: rec.mp3 || '', who: rec.who });
+  const url = (id?: string) => (id ? `${AUDIO_PROXY}/${id}` : '');
+  const [v1, v2, v3] = rec.voices;
+  return {
+    key: `${song.id}:${rec.mp3 || v1 || v2 || v3}`,
+    title: song.title,
+    folderId: '',
+    folderUrl: '',
+    tracks: [url(v1), url(v2), url(v3), url(rec.mp3)],
+    availableVoices: { voice1: !!v1, voice2: !!v2, voice3: !!v3, all: !!rec.mp3 },
+    notes: [],
+    lyrics: song.lyrics,
+  };
+};
+
+/** The Drive file a Centre recording is known by (its full take, else its first voice) — what „გადატანა“ moves */
+export const centreRecId = (rec: CentreRec) => rec.mp3 || rec.voices?.find(Boolean);
 
 /** How many recordings a song has: its own versions + archive recordings + the Folklore Centre's */
 export const songRecordingCount = (s: FolkSong) => s.versions.length + (s.recs?.length ?? 0) + (s.centre?.length ?? 0);

@@ -103,7 +103,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     // the Folklore Centre's, in Audiomack's own player (data/folkCentre.ts)
     if (!recordingsAreHidden()) {
       for (const r of CENTRE_CHANT_RECS[vid] ?? []) {
-        list.push({ label: r.who, media: chantRecordingMedia({ id: r.mp3 || '', who: r.who }, title), embed: r.mp3 ? undefined : audiomackEmbedUrl(r.page) });
+        list.push({ label: r.who, media: chantRecordingMedia({ id: r.mp3 || '', who: r.who }, title), embed: r.mp3 || !r.page ? undefined : audiomackEmbedUrl(r.page) });
       }
     }
     // a program song (sg-N): its learning recordings, voice by voice

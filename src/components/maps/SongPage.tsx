@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowRightLeft, FileText, GraduationCap, Headphones, Music } from 'lucide-react';
 import {
-  FOLK_SONGS, FolkSong, centreRecMedia, getFolkRegion, songDocUrl, songRecMedia, songVersionMedia, soundcloudEmbedUrl,
+  FOLK_SONGS, FolkSong, centreRecId, centreRecMedia, getFolkRegion, songDocUrl, songRecMedia, songVersionMedia, soundcloudEmbedUrl,
 } from '../../data/songsData';
 import { audiomackEmbedUrl } from '../../data/folkCentre';
 import { useCanDownloadCentre } from '../../hooks/useCentreDownload';
@@ -37,7 +37,10 @@ export const songTakes = (s: FolkSong): SongTake[] => [
   })),
   ...(s.recs ?? []).map(r => ({ label: r.who, sub: r.note, media: songRecMedia(s, r), recId: r.id })),
   ...(s.centre ?? []).map(r => ({
-    label: r.who, sub: r.note, media: centreRecMedia(s, r), centre: true, embed: r.mp3 ? undefined : audiomackEmbedUrl(r.page),
+    label: r.who, sub: r.note, media: centreRecMedia(s, r), centre: true,
+    embed: r.mp3 || r.voices || !r.page ? undefined : audiomackEmbedUrl(r.page),
+    // a take of the Centre's Drive albums moves like an archive recording
+    recId: r.page ? undefined : centreRecId(r),
   })),
 ];
 
@@ -289,7 +292,7 @@ export const SongPage: React.FC = () => {
             id: take.recId,
             from: { kind: 'song', region: song.region, title: song.title },
             who: take.label,
-            songRecIds: (song.recs ?? []).map(r => r.id),
+            songRecIds: [...(song.recs ?? []).map(r => r.id), ...(song.centre ?? []).flatMap(r => (r.page ? [] : [centreRecId(r) ?? []].flat()))],
           }}
           onClose={() => {
             setMoving(false);

@@ -7,7 +7,8 @@ import { Placement, moveRecordings, originalPlace, placementOf, resetRecordings 
 import { triggerHaptic } from '../../utils/haptics';
 
 // „გადატანა“ of one recording (or of all a song's recordings): to a region and song title among the songs, or to an
-// album and chant title among the chant recordings. Only the owner and the superadmins see it.
+// album and chant title among the chant recordings. Only the owner and the superadmins see it. A track of the Folklore
+// Centre's albums that no song holds yet comes without `from` (it is „only in the album“) and with its performer.
 
 const REGIONS = [...FOLK_REGIONS, ...FOLK_EXTRA_REGIONS];
 
@@ -17,8 +18,12 @@ const placeName = (p?: Placement) =>
 export interface MoveTarget {
   /** the recording the button belongs to */
   id: string;
-  /** where it is now */
-  from: Placement;
+  /** where it is now (none: a Centre album's track no song holds) */
+  from?: Placement;
+  /** the title to offer when it has no place yet */
+  title?: string;
+  /** a track of the Centre's albums: its performer (the album) and note travel with the move */
+  centre?: { who: string; note?: string };
   /** who sings it, for the heading */
   who: string;
   /** a song's other recordings: "the whole song" moves them together */
@@ -27,10 +32,10 @@ export interface MoveTarget {
 
 export const MoveSheet: React.FC<{ target: MoveTarget; onClose: () => void }> = ({ target, onClose }) => {
   const { from } = target;
-  const [kind, setKind] = useState<'song' | 'chant'>(from.kind);
-  const [region, setRegion] = useState<FolkRegionId>(from.kind === 'song' ? from.region : 'unsure');
-  const [album, setAlbum] = useState<ChantAlbumId>(from.kind === 'chant' ? from.album : 'unsure');
-  const [title, setTitle] = useState(from.title);
+  const [kind, setKind] = useState<'song' | 'chant'>(from?.kind ?? 'song');
+  const [region, setRegion] = useState<FolkRegionId>(from?.kind === 'song' ? from.region : 'unsure');
+  const [album, setAlbum] = useState<ChantAlbumId>(from?.kind === 'chant' ? from.album : 'unsure');
+  const [title, setTitle] = useState(from?.title ?? target.title ?? '');
   const whole = (target.songRecIds?.length ?? 0) > 1;
   const [all, setAll] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -67,7 +72,8 @@ export const MoveSheet: React.FC<{ target: MoveTarget; onClose: () => void }> = 
   const save = () => {
     const t = title.trim();
     if (!t) { setError('დაწერეთ სათაური.'); return; }
-    const to: Placement = kind === 'song' ? { kind, region, title: t } : { kind, album, title: t };
+    const extra = target.centre ? { who: target.centre.who, note: target.centre.note, centre: true } : {};
+    const to: Placement = kind === 'song' ? { kind, region, title: t, ...extra } : { kind, album, title: t, ...extra };
     void run(() => moveRecordings(ids, to));
   };
 
@@ -86,7 +92,7 @@ export const MoveSheet: React.FC<{ target: MoveTarget; onClose: () => void }> = 
           <span className="w-10 h-10 shrink-0 rounded-xl bg-[#7a2028] text-white flex items-center justify-center"><ArrowRightLeft className="w-5 h-5" /></span>
           <div className="flex-1 min-w-0">
             <h2 id="move-sheet-title" className="font-serif-ge text-[19px] font-bold leading-tight text-[#7a2028]">გადატანა</h2>
-            <p className="mt-0.5 text-[12.5px] leading-snug text-[#8c7c6b] break-words">{target.who} · ახლა: {placeName(from)}</p>
+            <p className="mt-0.5 text-[12.5px] leading-snug text-[#8c7c6b] break-words">{target.who} · ახლა: {from ? placeName(from) : 'მხოლოდ ალბომში'}</p>
           </div>
           <button type="button" onClick={onClose} className="w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-[#8c7c6b] hover:bg-[#efe5d4] cursor-pointer" aria-label="დახურვა">
             <X className="w-5 h-5" />
@@ -161,16 +167,16 @@ export const MoveSheet: React.FC<{ target: MoveTarget; onClose: () => void }> = 
             {busy && <LoaderCircle className="w-4 h-4 animate-spin" />}
             გადატანა
           </button>
-          {moved && home && (
+          {moved && (home || target.centre) && (
             <button
               type="button"
               disabled={busy}
               onClick={() => void run(() => resetRecordings(ids))}
               className="flex-1 min-w-[10rem] min-h-12 px-4 rounded-full bg-white border border-[#e2d3bb] text-[14px] font-bold text-[#574739] flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] disabled:opacity-60"
-              title={placeName(home)}
+              title={home ? placeName(home) : undefined}
             >
               <RotateCcw className="w-4 h-4" />
-              თავდაპირველ ადგილზე
+              {home ? 'თავდაპირველ ადგილზე' : 'მხოლოდ ალბომში'}
             </button>
           )}
         </div>
