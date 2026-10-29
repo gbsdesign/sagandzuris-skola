@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { ChevronDown, Disc3, Download, Headphones, Search, X } from 'lucide-react';
 import { CENTRE_SONG_ALBUMS } from '../../data/centreSongs';
+import { CENTRE_MTKMELI_ALBUMS } from '../../data/centreOther';
 import { AlbumRight, AlbumRights, setEveryoneAlbum, setMemberAlbum, useEveryoneAlbums, useMemberAlbums } from '../../data/albumAccess';
 import { matchScore, searchNormalize } from '../../utils/searchMatch';
 import { triggerHaptic } from '../../utils/haptics';
@@ -15,7 +16,10 @@ type Kind = 'l' | 'd';
 // every member; a member's window → „ალბომები“ for that member alone (what everyone has shows there, locked). Staff
 // have every album. A switch applies at once, with the undo bar and a line in the change log.
 
-const NAMES = new Map(CENTRE_SONG_ALBUMS.map(a => [a[0], searchNormalize(a[1])]));
+// the songs' albums, then the მთქმელი section's (data/centreOther.ts), marked so
+const ALL = [...CENTRE_SONG_ALBUMS, ...CENTRE_MTKMELI_ALBUMS];
+const MTKMELI = new Set(CENTRE_MTKMELI_ALBUMS.map(a => a[0]));
+const NAMES = new Map(ALL.map(a => [a[0], searchNormalize(a[1])]));
 const PAGE = 25;
 const isOn = (r?: AlbumRight) => Boolean(r?.l || r?.d);
 const KIND_WORD: Record<Kind, string> = { l: 'მოსმენა', d: 'ჩამოწერა' };
@@ -50,10 +54,10 @@ const AlbumRightsList: React.FC<{
   const [query, setQuery] = useState('');
   const [onlyOn, setOnlyOn] = useState(false);
   const [limit, setLimit] = useState(PAGE);
-  const onCount = CENTRE_SONG_ALBUMS.filter(a => isOn(rights[a[0]])).length;
+  const onCount = ALL.filter(a => isOn(rights[a[0]])).length;
   const list = useMemo(() => {
     const q = searchNormalize(query);
-    let l = CENTRE_SONG_ALBUMS.filter(a => !onlyOn || isOn(rights[a[0]]) || isOn(inherited[a[0]]));
+    let l = ALL.filter(a => !onlyOn || isOn(rights[a[0]]) || isOn(inherited[a[0]]));
     if (q) {
       l = l.map(a => ({ a, s: matchScore(NAMES.get(a[0]) ?? '', q) }))
         .filter((x): x is { a: (typeof l)[number]; s: number } => x.s !== null)
@@ -107,7 +111,7 @@ const AlbumRightsList: React.FC<{
               <li key={id} className="pl-3 pr-2 py-2 flex items-center gap-2">
                 <span className="min-w-0 flex-1 py-1">
                   <span className="block text-[14px] font-semibold leading-snug text-[#2a2017] break-words">{name}</span>
-                  <span className="block text-[12px] text-[#a0907c] tabular-nums">{count} ჩანაწერი</span>
+                  <span className="block text-[12px] text-[#a0907c] tabular-nums">{count} ჩანაწერი{MTKMELI.has(id) && <span className="font-bold text-[#8a4b12]"> · მთქმელი</span>}</span>
                 </span>
                 {(['l', 'd'] as Kind[]).map(k => (
                   <RightBtn key={k} kind={k} name={name} on={Boolean(r[k])} locked={Boolean(inh[k])}
@@ -134,13 +138,13 @@ const turned = (kind: Kind, on: boolean) => `${KIND_WORD[kind]} ${on ? 'ჩა�
 /** ⚙ „სკოლა“ → „ალბომები“: an album for every member */
 export const AlbumsFold: React.FC<{ onMessage: Msg }> = ({ onMessage }) => {
   const { rights } = useEveryoneAlbums();
-  const n = CENTRE_SONG_ALBUMS.filter(a => isOn(rights[a[0]])).length;
+  const n = ALL.filter(a => isOn(rights[a[0]])).length;
   return (
     <Fold
       icon={<Disc3 />}
       title="ალბომები"
       summary={n ? `ყველა წევრს ჩართული აქვს ${n} ალბომი` : 'წევრებს ჯერ არცერთი ალბომი არ უჩანთ'}
-      info="აქ ჩართული ალბომი ყველა წევრს ეხსნება — მოსასმენად (ყურსასმენი), ჩამოსაწერად (ისარი) ან ორივესთვის. ცალკე წევრს — მის ფანჯარაში, „ალბომები“. ადმინები და მასწავლებლები ყველა ალბომს ხედავენ; წევრს ჩაურთველი ალბომი საერთოდ არ უჩანს — არც ალბომებში, არც სიმღერებში."
+      info="აქ ჩართული ალბომი ყველა წევრს ეხსნება — მოსასმენად (ყურსასმენი), ჩამოსაწერად (ისარი) ან ორივესთვის. ცალკე წევრს — მის ფანჯარაში, „ალბომები“. ადმინები და მასწავლებლები ყველა ალბომს ხედავენ; წევრს ჩაურთველი ალბომი საერთოდ არ უჩანს — არც ალბომებში, არც სიმღერებში, არც მთქმელში."
     >
       <AlbumRightsList
         rights={rights}
@@ -159,8 +163,8 @@ export const MemberAlbums: React.FC<{ uid: string; name: string; onMessage: Msg 
   const { rights } = useMemberAlbums(uid);
   const everyone = useEveryoneAlbums().rights;
   const [open, setOpen] = useState(false);
-  const own = CENTRE_SONG_ALBUMS.filter(a => isOn(rights[a[0]])).length;
-  const shared = CENTRE_SONG_ALBUMS.filter(a => isOn(everyone[a[0]])).length;
+  const own = ALL.filter(a => isOn(rights[a[0]])).length;
+  const shared = ALL.filter(a => isOn(everyone[a[0]])).length;
   return (
     <div className="flex flex-col gap-2.5">
       <button
