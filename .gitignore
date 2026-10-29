@@ -17,3 +17,7 @@ desktop.ini
 
 # Continue/Cline local model config — contains an API key, never commit
 .continue/
+
+# printable board games: fonts fetched by scripts/print-games/build.mjs, its HTML build
+scripts/print-games/fonts/
+scripts/print-games/.build/

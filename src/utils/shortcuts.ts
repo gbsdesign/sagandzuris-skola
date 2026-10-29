@@ -63,12 +63,10 @@ export const TEACHER_TABS: Record<string, string> = {
 };
 // attendance, the class settings, the timetable and the class's psalter group now live in the class tab (`students`)
 export const OLD_TEACHER_TABS: Record<string, string> = { attendance: 'students', class: 'students', schedule: 'students', groups: 'students' };
-export const ADMIN_TABS: Record<string, string> = {
-  users: 'მომხმარებლები', classes: 'კლასები', recordings: 'ჩანაწერები', school: 'სკოლა',
-  requests: 'წევრების მიღება',
-};
-// buttons made when the admin panel had six tabs open the tab that now holds the same things
-const OLD_ADMIN_TABS: Record<string, string> = { sections: 'school', stats: 'users' };
+export const ADMIN_TABS: Record<string, string> = { users: 'წევრები', classes: 'კლასები', school: 'სკოლა' };
+// buttons made when the admin panel had other tabs open the part that now holds the same things (2026-10-28: the
+// recordings live in ⚙ „სკოლა“, the new members' requests in „წევრები“)
+const OLD_ADMIN_TABS: Record<string, string> = { sections: 'school', stats: 'users', recordings: 'school', requests: 'users' };
 
 /** Who may have a button: teacher / admin / superadmin buttons show only to them. */
 export type ShortcutRole = 'teacher' | 'admin' | 'superadmin';
@@ -126,7 +124,7 @@ export const shortcutLabel = (id: string): { label: string; sub?: string } | nul
     }
     case 'admin': {
       const tab = OLD_ADMIN_TABS[ref] || ref;
-      return ADMIN_TABS[tab] ? { label: ADMIN_TABS[tab], sub: tab === 'requests' ? 'სუპერადმინი' : 'ადმინი' } : null;
+      return ADMIN_TABS[tab] ? { label: ADMIN_TABS[tab], sub: ref === 'requests' ? 'სუპერადმინი' : 'ადმინი' } : null;
     }
   }
   return null;

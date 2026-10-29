@@ -106,6 +106,24 @@ await t('student reads own confirmations', assertSucceeds(getDoc(doc(stu, 'confi
 await t('student cannot write confirmations', assertFails(setDoc(doc(stu, 'confirmations', 'stu'), { a: ['1'] })));
 await t('admin lists students', assertSucceeds(getDocs(collection(adm, 'students'))));
 await t('member cannot list students', assertFails(getDocs(collection(stu, 'students'))));
+// taken out of a class: its teachers come off the member's teacherIds (c4 has just lost stu4; tchX leads another class)
+await env.withSecurityRulesDisabled(async c => {
+  const db = c.firestore();
+  await setDoc(doc(db, 'classes', 'c4'), { name: 'D', memberIds: [], members: [], teacherIds: ['tch', 'tch2'], teachers: [] });
+  await setDoc(doc(db, 'classes', 'c6'), { name: 'F', memberIds: ['stu5'], members: [], teacherIds: ['tch'], teachers: [], archived: true });
+  await setDoc(doc(db, 'students', 'stu4'), { userId: 'stu4', teacherIds: ['tch', 'tch2', 'tchX'] });
+  await setDoc(doc(db, 'students', 'stu5'), { userId: 'stu5' });
+});
+await t('teacher of a still-member cannot drop teachers', assertFails(updateDoc(doc(tch, 'students', 'stu'), { teacherIds: arrayRemove('tch'), teacherVia: 'c1' })));
+await t('teacher of another class cannot drop', assertFails(updateDoc(doc(tch2, 'students', 'stu4'), { teacherIds: arrayRemove('tch'), teacherVia: 'c1' })));
+await t('teacher drops the class teachers of a removed member', assertSucceeds(updateDoc(doc(tch, 'students', 'stu4'), { teacherIds: arrayRemove('tch', 'tch2'), teacherVia: 'c4' })));
+await t('teacher cannot drop another class\'s teacher', assertFails(updateDoc(doc(tch2, 'students', 'stu4'), { teacherIds: arrayRemove('tchX'), teacherVia: 'c4' })));
+await t('teacher cannot add while dropping', assertFails(updateDoc(doc(tch2, 'students', 'stu4'), { teacherIds: ['tchX', 'tch2'], teacherVia: 'c4' })));
+await t('admin sets the teacher list', assertSucceeds(updateDoc(doc(adm, 'students', 'stu4'), { teacherIds: ['tch'] })));
+await t('an archived class links no teacher', assertFails(setDoc(doc(tch, 'students', 'stu5'), { teacherIds: arrayUnion('tch'), teacherVia: 'c6' }, { merge: true })));
+await t('teacher cannot archive own class', assertFails(updateDoc(doc(tch, 'classes', 'c1'), { archived: true })));
+await t('admin archives a class', assertSucceeds(updateDoc(doc(adm, 'classes', 'c3'), { archived: true, archivedAt: '2026-10-28' })));
+await t('admin brings it back', assertSucceeds(updateDoc(doc(adm, 'classes', 'c3'), { archived: false, archivedAt: '' })));
 
 // ---- e-mail link sign-in: the address counts as verified, so roles work the same as with Google
 const byLink = (uid, email) => env.authenticatedContext(uid, { email, email_verified: true, firebase: { sign_in_provider: 'password' } }).firestore();
@@ -130,6 +148,9 @@ await t('member cannot change assignment', assertFails(updateDoc(doc(stu, 'psalt
 await t('teacher changes assignment', assertSucceeds(updateDoc(doc(tch, 'psalterGroups', 'g1'), { assignment: { 1: ['stu'] } })));
 await t('member leaves group', assertSucceeds(updateDoc(doc(stu2, 'psalterGroups', 'g1'), { memberIds: arrayRemove('stu2'), members: arrayRemove({ uid: 'stu2', name: 'S2' }), assignment: {} })));
 await t('member renames self', assertSucceeds(updateDoc(doc(stu, 'psalterGroups', 'g1'), { members: [{ uid: 'stu', name: 'სანდრო' }] })));
+await t('teacher cannot archive the group', assertFails(updateDoc(doc(tch, 'psalterGroups', 'g1'), { archived: true })));
+await t('admin archives the group', assertSucceeds(updateDoc(doc(adm, 'psalterGroups', 'g1'), { archived: true })));
+await t('admin brings the group back', assertSucceeds(updateDoc(doc(adm, 'psalterGroups', 'g1'), { archived: false })));
 
 // ---- private chats: a teacher and a student of their class (class c9: teacher tch2, members stu3 and stu2)
 await env.withSecurityRulesDisabled(async c => {
@@ -165,6 +186,16 @@ await t('admin cannot read the chat', assertFails(getDoc(doc(adm, 'dms', 'tch2_s
 await t('superadmin reads the chat', assertSucceeds(getDoc(doc(sup, 'dms', 'tch2_stu3', 'messages', 'm1'))));
 await t('superadmin lists every chat', assertSucceeds(getDocs(collection(owner, 'dms'))));
 await t('superadmin cannot write in the chat', assertFails(setDoc(doc(sup, 'dms', 'tch2_stu3', 'messages', 'm6'), msg('sup', false))));
+// a class in the archive links nobody: its private chats and its own chat close until it comes back
+const archiveC9 = on => env.withSecurityRulesDisabled(async c => { await updateDoc(doc(c.firestore(), 'classes', 'c9'), { archived: on }); });
+await archiveC9(true);
+await t('archived class: student cannot write to its teacher', assertFails(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm8'), msg('stu3', false))));
+await t('archived class: teacher cannot start a call', assertFails(setDoc(doc(tch2, 'dms', 'tch2_stu3', 'messages', 'm9'), msg('tch2', true, 'call'))));
+await t('archived class: member cannot read its chat', assertFails(getDocs(collection(stu3, 'classes', 'c9', 'messages'))));
+await t('archived class: teacher cannot write attendance', assertFails(setDoc(doc(tch2, 'classes', 'c9', 'attendance', '2026-10-28'), { present: [] })));
+await t('archived class: admin still reads its chat', assertSucceeds(getDocs(collection(adm, 'classes', 'c9', 'messages'))));
+await archiveC9(false);
+await t('brought back: the chat works again', assertSucceeds(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm10'), msg('stu3', false))));
 await env.withSecurityRulesDisabled(async c => {
   await updateDoc(doc(c.firestore(), 'classes', 'c9'), { memberIds: ['stu2'] });
 });
@@ -280,6 +311,33 @@ await t('another member cannot write', assertFails(setDoc(doc(stu2, 'songTexts',
 await t('a guest reads song texts', assertSucceeds(getDoc(doc(guest, 'songTexts', 's1'))));
 await t('a guest cannot delete one', assertFails(deleteDoc(doc(guest, 'songTexts', 's1'))));
 await t('chosen member deletes a song text', assertSucceeds(deleteDoc(doc(stu, 'songTexts', 's1'))));
+
+// ---- the admins' change log and their phone notices
+const line = (by, extra = {}) => ({ at: '2026-10-28T20:00:00Z', by, byName: 'A', kind: 'role', text: 'ნინო — როლი: მასწავლებელი', target: 'stu', ...extra });
+await t('admin writes a log line signed with own e-mail', assertSucceeds(setDoc(doc(adm, 'adminLog', 'l1'), line('adm@x.ge'))));
+await t('admin cannot sign a line as another', assertFails(setDoc(doc(adm, 'adminLog', 'l2'), line('sup@x.ge'))));
+await t('a line has only its fields', assertFails(setDoc(doc(adm, 'adminLog', 'l3'), line('adm@x.ge', { x: 1 }))));
+await t('a teacher writes no log line', assertFails(setDoc(doc(tch, 'adminLog', 'l4'), line('tch@x.ge'))));
+await t('superadmin reads the log', assertSucceeds(getDocs(collection(sup, 'adminLog'))));
+await t('admin does not read the log', assertFails(getDocs(collection(adm, 'adminLog'))));
+await t('nobody changes a line', assertFails(updateDoc(doc(sup, 'adminLog', 'l1'), { text: 'x' })));
+await t('nobody deletes a line', assertFails(deleteDoc(doc(sup, 'adminLog', 'l1'))));
+await t('superadmin asks for the newcomer notice', assertSucceeds(setDoc(doc(sup, 'adminPush', 'sup'), { waiting: true, weekly: true, at: 'x' })));
+await t('admin asks for the Monday overview', assertSucceeds(setDoc(doc(adm, 'adminPush', 'adm'), { waiting: false, weekly: true, at: 'x' })));
+await t('admin cannot ask for the newcomer notice', assertFails(setDoc(doc(adm, 'adminPush', 'adm'), { waiting: true, weekly: true, at: 'x' })));
+await t("admin cannot set another's notices", assertFails(setDoc(doc(adm, 'adminPush', 'sup'), { waiting: false, weekly: false, at: 'x' })));
+await t('a member asks for no admin notice', assertFails(setDoc(doc(stu, 'adminPush', 'stu'), { waiting: false, weekly: true, at: 'x' })));
+await t('superadmin turns off a former admin\'s notices', assertSucceeds(deleteDoc(doc(sup, 'adminPush', 'adm'))));
+const note = (by, extra = {}) => ({ text: 'დაურეკე ოთხშაბათს', by, at: '2026-10-28T21:00:00Z', ...extra });
+await t('admin writes a private note signed as self', assertSucceeds(setDoc(doc(adm, 'adminNotes', 'stu'), note('adm@x.ge'))));
+await t('admin cannot sign a note as another', assertFails(setDoc(doc(adm, 'adminNotes', 'stu'), note('sup@x.ge'))));
+await t('a note has only its fields', assertFails(setDoc(doc(adm, 'adminNotes', 'stu'), note('adm@x.ge', { x: 1 }))));
+await t('a note is at most 2000 letters', assertFails(setDoc(doc(adm, 'adminNotes', 'stu'), note('adm@x.ge', { text: 'ა'.repeat(2001) }))));
+await t('superadmin reads a note', assertSucceeds(getDoc(doc(sup, 'adminNotes', 'stu'))));
+await t('a teacher does not read a note', assertFails(getDoc(doc(tch, 'adminNotes', 'stu'))));
+await t('the person does not read their note', assertFails(getDoc(doc(stu, 'adminNotes', 'stu'))));
+await t('a teacher writes no note', assertFails(setDoc(doc(tch, 'adminNotes', 'stu2'), note('tch@x.ge'))));
+await t('admin deletes a note', assertSucceeds(deleteDoc(doc(adm, 'adminNotes', 'stu'))));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();

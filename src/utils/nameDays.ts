@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { collection, deleteDoc, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useLeftMembers } from './leftMembers';
 import type { NameDayChoice } from './nameDayMatch';
 
 // „ანგელოზის დღე“ (redesign stage 4): the day of the saint whose name a member bears. A name stands in the church
@@ -24,7 +25,9 @@ export const useNameDays = (enabled: boolean): NameDay[] | null => {
       err => { console.warn('name days:', err?.message || err); setList([]); },
     );
   }, [enabled]);
-  return list;
+  // a member who left the school („გასული“) is left out
+  const left = useLeftMembers(enabled);
+  return list && list.filter(b => !left.uids.has(b.uid));
 };
 
 export const saveNameDay = (uid: string, name: string, photoURL: string, c: NameDayChoice) =>

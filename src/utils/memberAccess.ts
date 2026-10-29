@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { User } from 'firebase/auth';
 import { doc, getDoc, increment, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
+import { notifyAccessRequest } from './groupPush';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import type { SectionId } from '../data/sections';
@@ -83,6 +84,8 @@ export const ensureMembership = async (user: User) => {
   const student = await getDoc(doc(db, 'students', user.uid));
   if (student.exists()) return; // a member from before approvals: keeps everything
   await setDoc(accessRef(user.uid), { status: 'pending', features: [], requestedAt: now, attempts: 1, lastAttemptAt: now });
+  // the superadmins who asked for it get a phone notice (best effort)
+  void notifyAccessRequest();
 };
 
 // ---- the signed-in person's access, live (one listener pair for the whole app) ----------------------------------

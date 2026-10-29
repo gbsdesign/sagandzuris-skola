@@ -127,8 +127,8 @@ const playNote = (ctx: BaseAudioContext, dest: AudioNode, midi: number, bass: bo
   return { oscs, env };
 };
 
-// voice gains -> master -> compressor -> makeup gain -> soft saturation -> limiter -> output;
-// returns the master and one input per voice
+// voice gains -> pans -> master -> compressor -> makeup gain -> soft saturation -> limiter -> output;
+// returns the master, one input per voice and its pan (left -1 … right 1; the middle unless set)
 const buildMix = (ctx: BaseAudioContext, gains: number[]) => {
   // last safety only: the saturation below keeps the mix under it
   const limiter = ctx.createDynamicsCompressor();
@@ -161,13 +161,17 @@ const buildMix = (ctx: BaseAudioContext, gains: number[]) => {
   const master = ctx.createGain();
   master.gain.value = 0.22;
   master.connect(comp);
+  const pans: StereoPannerNode[] = [];
   const voices = gains.map(v => {
     const g = ctx.createGain();
     g.gain.value = v;
-    g.connect(master);
+    const pan = ctx.createStereoPanner();
+    g.connect(pan);
+    pan.connect(master);
+    pans.push(pan);
     return g;
   });
-  return { master, voices };
+  return { master, voices, pans };
 };
 
 // bass timbre: III and IV of a chant (IV = the low bass); a song for two choirs (6 voices) has a bass in each choir
@@ -240,6 +244,7 @@ export class ChantSynth {
   private ctx: AudioContext | null = null;
   private master: GainNode | null = null;
   private voiceGains: GainNode[] = [];
+  private voicePans: StereoPannerNode[] = [];
   private live = new Set<{ oscs: OscillatorNode[]; env: GainNode }>();
   private timer: number | null = null;
   private next = 0;
@@ -250,6 +255,7 @@ export class ChantSynth {
   private transpose = 0;
   private muted: boolean[];
   private volume: number[];
+  private pan: number[];
   private loopA: number | null = null; // loop A -> B (or A -> end while B is unset)
   private loopB: number | null = null;
   playing = false;
@@ -265,6 +271,7 @@ export class ChantSynth {
       .sort((a, b) => a.s - b.s);
     this.muted = score.voices.map(() => false);
     this.volume = score.voices.map(() => 1);
+    this.pan = score.voices.map(() => 0);
   }
 
   /** Current position in score seconds */
@@ -284,6 +291,8 @@ export class ChantSynth {
       const mix = buildMix(ctx, this.volume.map((v, i) => (this.muted[i] ? 0 : v)));
       this.master = mix.master;
       this.voiceGains = mix.voices;
+      this.voicePans = mix.pans;
+      this.pan.forEach((_, i) => this.applyPan(i));
     }
     this.startAt(from >= this.duration - 0.05 ? (this.loopA ?? 0) : Math.max(0, from));
     this.playing = true;
@@ -309,6 +318,18 @@ export class ChantSynth {
 
   setSpeed(k: number) { this.restartWith(() => { this.speed = k; }); }
   setTranspose(n: number) { this.restartWith(() => { this.transpose = n; }); }
+
+  /** where a voice sounds: -1 the left ear … 1 the right ear */
+  setPan(voice: number, pan: number) {
+    if (voice >= this.pan.length) return;
+    this.pan[voice] = Math.max(-1, Math.min(1, pan));
+    this.applyPan(voice);
+  }
+
+  private applyPan(voice: number) {
+    const p = this.voicePans[voice];
+    if (p && this.ctx) p.pan.setTargetAtTime(this.pan[voice], this.ctx.currentTime, 0.02);
+  }
 
   setMuted(voice: number, mute: boolean) {
     if (voice >= this.muted.length) return;

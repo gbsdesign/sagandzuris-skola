@@ -4,7 +4,8 @@
 import React, { createContext, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigation } from './NavigationContext';
 import { findVersion, isServiceTab } from '../data/chantLookup';
-import { useLiturgy, LiturgyApi, LiturgyProgram } from '../hooks/useLiturgy';
+import { useLiturgy, LiturgyApi, LiturgyProgram, liveNow, type LiveTurn } from '../hooks/useLiturgy';
+import { isAndroidApp, openInApp } from '../utils/androidApp';
 
 const NotesPage = lazy(() => import('../pages/notes/NotesPage').then(m => ({ default: m.NotesPage })));
 const ProgramPage = lazy(() => import('../pages/notes/ProgramPage').then(m => ({ default: m.ProgramPage })));
@@ -26,6 +27,14 @@ interface NotesContextType {
   /** the program on screen: one opened from a shared link, otherwise the teacher's draft or my class's program */
   program: LiturgyProgram | null;
   fromLink: boolean;
+  /** the teacher leads: the chant on their screen opens on the class's phones */
+  leading: boolean;
+  setLeading: (on: boolean) => void;
+  /** a member follows the teacher's lead (on unless they turn it off) */
+  following: boolean;
+  setFollowing: (on: boolean) => void;
+  /** the teacher's chant right now, while they lead */
+  liveTurn: LiveTurn | null;
 }
 
 const NotesContext = createContext<NotesContextType | undefined>(undefined);
@@ -52,6 +61,46 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [linkProgram, setLinkProgram] = useState<LiturgyProgram | null>(null);
   const notesRef = useRef(notes);
   notesRef.current = notes;
+
+  // the Android app: church mode silences the phone („არ შემაწუხოთ“) and leaving it brings the sounds back
+  // (android/ SilenceActivity; it also brings them back by itself three hours later)
+  const silenced = useRef(false);
+  useEffect(() => {
+    if (!isAndroidApp() || church === silenced.current) return;
+    silenced.current = church;
+    openInApp(`silence?on=${church ? 1 : 0}`);
+  }, [church]);
+
+  // „გუნდი მომყვება“: the leading teacher's chant goes to the class; a member's open program or program notes follow it
+  const [leading, setLeadingState] = useState(() => { try { return sessionStorage.getItem('sg-lead') === '1'; } catch { return false; } });
+  const [following, setFollowing] = useState(true);
+  const regent = liturgy.role === 'teacher' && !linkProgram;
+  const setLeading = useCallback((on: boolean) => {
+    setLeadingState(on);
+    try { sessionStorage.setItem('sg-lead', on ? '1' : '0'); } catch { /* storage off */ }
+    if (!on) liturgy.lead('').catch(() => {});
+  }, [liturgy]);
+  const sentVid = useRef('');
+  useEffect(() => {
+    if (!regent || !leading || notes?.from !== 'program' || sentVid.current === notes.vid) return;
+    sentVid.current = notes.vid;
+    liturgy.lead(notes.vid).catch(err => console.warn('lead:', err?.code || err));
+  }, [regent, leading, notes, liturgy]);
+  useEffect(() => { if (!leading) sentVid.current = ''; }, [leading]);
+
+  const rawLive = liturgy.role === 'member' && !linkProgram ? liturgy.program?.live : null;
+  const liveTurn = liveNow(rawLive) ? rawLive : null;
+  const followedAt = useRef('');
+  useEffect(() => {
+    if (!liveTurn || !following || followedAt.current === liveTurn.at || !findVersion(liveTurn.vid)) return;
+    const cur = notesRef.current;
+    const inService = cur ? cur.from === 'program' : programOpen;
+    if (!inService) return; // the member is elsewhere in the app: nothing opens by itself
+    followedAt.current = liveTurn.at;
+    if (cur?.vid === liveTurn.vid) return;
+    if (cur) goNotesRef.current(liveTurn.vid);
+    else openNotesRef.current(liveTurn.vid, 'program');
+  }, [liveTurn, following, programOpen]);
 
   // a shared address opens its page directly
   useEffect(() => {
@@ -115,6 +164,11 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     setNotes({ vid, from: cur.from });
   }, []);
 
+  const openNotesRef = useRef(openNotes);
+  openNotesRef.current = openNotes;
+  const goNotesRef = useRef(goNotes);
+  goNotesRef.current = goNotes;
+
   const closeNotes = useCallback(() => {
     const cur = notesRef.current;
     setChurch(false);
@@ -150,7 +204,8 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const value = useMemo<NotesContextType>(() => ({
     notes, programOpen, openNotes, goNotes, closeNotes, openProgram, closeProgram,
     church, setChurch, liturgy, program, fromLink: Boolean(linkProgram),
-  }), [notes, programOpen, openNotes, goNotes, closeNotes, openProgram, closeProgram, church, liturgy, program, linkProgram]);
+    leading: regent && leading, setLeading, following, setFollowing, liveTurn,
+  }), [notes, programOpen, openNotes, goNotes, closeNotes, openProgram, closeProgram, church, liturgy, program, linkProgram, regent, leading, setLeading, following, liveTurn]);
 
   return (
     <NotesContext.Provider value={value}>

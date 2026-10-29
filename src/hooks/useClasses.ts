@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
@@ -44,13 +44,16 @@ export interface SchoolClass {
   defaultShortcuts?: string[];
   // the class's own psalter group, made by its teacher (none until they make one)
   psalterGroupId?: string;
+  // put away by an admin („არქივი“): hidden everywhere, nothing deleted, an admin brings it back
+  archived?: boolean;
+  archivedAt?: string;
   createdAt?: string;
   updatedAt?: string;
 }
 
 const list = (v: unknown) => (Array.isArray(v) ? v : []);
 
-const toClass = (id: string, d: any): SchoolClass => ({
+export const toClass = (id: string, d: any): SchoolClass => ({
   id,
   name: d.name || 'კლასი',
   logo: d.logo || '',
@@ -63,12 +66,16 @@ const toClass = (id: string, d: any): SchoolClass => ({
   classMode: Boolean(d.classMode),
   defaultShortcuts: list(d.defaultShortcuts).filter((x: unknown) => typeof x === 'string'),
   psalterGroupId: typeof d.psalterGroupId === 'string' ? d.psalterGroupId : '',
+  ...(d.archived ? { archived: true, archivedAt: d.archivedAt || '' } : {}),
   createdAt: d.createdAt || '',
   updatedAt: d.updatedAt || '',
   ...(d.liturgy ? { liturgy: d.liturgy } : {}),
+  ...(d.live ? { live: d.live } : {}),
 });
 
 const byName = (a: SchoolClass, b: SchoolClass) => a.name.localeCompare(b.name, 'ka');
+// the classes in use, by name (an archived class shows only in the admin's „არქივი“)
+const active = (docs: { id: string; data: () => any }[]) => docs.map(d => toClass(d.id, d.data())).filter(c => !c.archived).sort(byName);
 
 /** Classes the given user belongs to (live). */
 export const useMyClasses = (uid?: string | null) => {
@@ -78,7 +85,7 @@ export const useMyClasses = (uid?: string | null) => {
     const q = query(collection(db, 'classes'), where('memberIds', 'array-contains', uid));
     return onSnapshot(
       q,
-      snap => setClasses(snap.docs.map(d => toClass(d.id, d.data())).sort(byName)),
+      snap => setClasses(active(snap.docs)),
       err => { console.warn('classes: ', err?.code || err); setClasses([]); }
     );
   }, [uid]);
@@ -94,7 +101,7 @@ export const useTeachingClasses = (uid?: string | null) => {
     const q = query(collection(db, 'classes'), where('teacherIds', 'array-contains', uid));
     return onSnapshot(
       q,
-      snap => { setClasses(snap.docs.map(d => toClass(d.id, d.data())).sort(byName)); setLoading(false); },
+      snap => { setClasses(active(snap.docs)); setLoading(false); },
       err => { console.warn('teaching classes: ', err?.code || err); setClasses([]); setLoading(false); }
     );
   }, [uid]);
@@ -109,19 +116,30 @@ export const useManagedClasses = () => {
   return isAdmin ? all : own;
 };
 
-/** Every class (admins only, live). */
+/** Every class (admins only, live): those in use, and the archived ones apart. `failed` = the list did not come;
+ *  `fresh` = it is the server's, not a possibly partial copy from the phone's cache. */
 export const useAllClasses = (enabled: boolean) => {
-  const [classes, setClasses] = useState<SchoolClass[]>([]);
+  const [all, setAll] = useState<SchoolClass[]>([]);
   const [loading, setLoading] = useState(true);
+  const [failed, setFailed] = useState(false);
+  const [fresh, setFresh] = useState(false);
   useEffect(() => {
-    if (!enabled) { setClasses([]); setLoading(false); return; }
+    if (!enabled) { setAll([]); setLoading(false); return; }
     return onSnapshot(
       collection(db, 'classes'),
-      snap => { setClasses(snap.docs.map(d => toClass(d.id, d.data())).sort(byName)); setLoading(false); },
-      err => { console.warn('classes: ', err?.code || err); setLoading(false); }
+      { includeMetadataChanges: true },
+      snap => {
+        setAll(snap.docs.map(d => toClass(d.id, d.data())).sort(byName));
+        setFresh(!snap.metadata.fromCache);
+        setFailed(false);
+        setLoading(false);
+      },
+      err => { console.warn('classes: ', err?.code || err); setFailed(true); setFresh(false); setLoading(false); }
     );
   }, [enabled]);
-  return { classes, loading };
+  const classes = useMemo(() => all.filter(c => !c.archived), [all]);
+  const archived = useMemo(() => all.filter(c => c.archived), [all]);
+  return { classes, archived, loading, failed, fresh };
 };
 
 /** Shrinks a picked image to a square-ish data URL small enough to live inside the class document. */

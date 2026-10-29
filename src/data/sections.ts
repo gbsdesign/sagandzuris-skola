@@ -47,6 +47,18 @@ export const DEFAULT_SECTION_STATE: Record<SectionId, SectionState> = {
   chvevebi: 'open', tamashebi: 'open', margalitebi: 'open', tsinaprebi: 'open', gza: 'open', biblioteka: 'open',
 };
 
+/** A „მალე“ section the admin gave a day (settings/sections.openOn, YYYY-MM-DD) opens by itself on that day in Georgia;
+ *  `today` = the Georgian day. Every other state stays as it was set. */
+export const stateOnDay = (
+  state: Record<SectionId, SectionState>, openOn: Partial<Record<SectionId, string>>, today: string,
+): Record<SectionId, SectionState> => {
+  const out = { ...state };
+  for (const [id, day] of Object.entries(openOn) as [SectionId, string][]) {
+    if (out[id] === 'soon' && /^\d{4}-\d{2}-\d{2}$/.test(day || '') && day <= today) out[id] = 'open';
+  }
+  return out;
+};
+
 /** A kids' mode starts with these sections (the admin may choose others in settings/sections). */
 export const DEFAULT_KIDS_SECTIONS: SectionId[] = ['galoba', 'simghera', 'sakravebi', 'chvevebi', 'gza'];
 

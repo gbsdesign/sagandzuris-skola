@@ -24,6 +24,7 @@ export const useOpenSearchTarget = () => {
       // the page first (it closes an open book), then the book: already on the shelf, the page takes it at once
       case 'library': navigateTo('biblioteka'); requestOpen('biblioteka', o.tab); return;
       case 'feast': openChurchCalendar(o.iso); return;
+      case 'person': requestOpen('admin', o.uid); navigateTo('admin'); return;
     }
   };
 };

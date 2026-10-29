@@ -1,7 +1,8 @@
 // The recordings „ოფლაინ რეჟიმი“ offers (pages/OfflinePage.tsx), in the app's own order: chants by service (each
 // version's school recording and other choirs' recordings of it), the recordings-only albums, folk songs by region
-// and the admission program. An item lists the track URLs the players look up in IndexedDB (utils/audioIdb.ts).
-import { SERVICE_LISTS, findVersion } from './chantLookup';
+// and the admission program — plus, for each chant book, the recordings of its chants (section 'books': shown beside the
+// book's pages, so „the whole book“ goes on the phone in one tap). An item lists the track URLs the players look up in IndexedDB (utils/audioIdb.ts).
+import { BOOK_NAMES, SERVICE_LISTS, findVersion, hasBookNotes } from './chantLookup';
 import { AUDIO_PROXY, getChantMedia } from './chantMediaRegistry';
 import { chantRecordings, chantRecordingMedia } from './chantRecordings';
 import { ALBUM_RECS, CHANT_ALBUMS } from './chantAlbums';
@@ -12,7 +13,7 @@ import { variantName } from './tsirvaChants';
 import { recordingsAreHidden } from './runtimeRecordings';
 import { savedVersions } from '../utils/offlineNotes';
 
-export type RecSection = 'galoba' | 'albums' | 'simghera' | 'abituri';
+export type RecSection = 'galoba' | 'albums' | 'simghera' | 'abituri' | 'books';
 export interface RecItem { id: string; title: string; sub?: string; tracks: string[] }
 export interface RecGroup { id: string; section: RecSection; title: string; items: RecItem[] }
 
@@ -39,6 +40,19 @@ export const recordingGroups = (): RecGroup[] => {
       }
     }
     groups.push({ id: `g:${service}`, section: 'galoba', title: service, items });
+  }
+  const byBook = new Map<string, Map<string, RecItem>>();
+  for (const g of groups) {
+    for (const it of g.items) {
+      const info = findVersion(it.id.slice(2));
+      if (!info || !hasBookNotes(info.variant)) continue;
+      const book = info.variant.book ?? 'book';
+      if (!byBook.has(book)) byBook.set(book, new Map());
+      byBook.get(book)!.set(it.id, it);
+    }
+  }
+  for (const [book, items] of byBook) {
+    groups.push({ id: `b:${book}`, section: 'books', title: BOOK_NAMES[book] ?? book, items: [...items.values()] });
   }
   for (const album of CHANT_ALBUMS) {
     const items = ALBUM_RECS[album.id].map(([id, title, who]) => ({ id: `a:${id}`, title, sub: who, tracks: [`${AUDIO_PROXY}/${id}`] }));

@@ -1,6 +1,7 @@
 // Voice messages: records the microphone and turns the take into a small MP3 (mono, 24 kHz, 48 kbps),
 // so a message recorded on Android plays on an iPhone and the other way round.
 import { encodeMp3 } from './chantSynth';
+import { speechSpan } from './readingPace';
 
 export const VOICE_MAX_SECONDS = 300;
 const RATE = 24000;
@@ -10,6 +11,7 @@ export interface VoiceTake {
   mp3: Blob;
   seconds: number;
   wave: string; // WAVE_BARS digits 0-9: loudness along the take, drawn as the message's waveform
+  speech?: { start: number; end: number } | null; // where the voice starts and ends (s): the reading pace leaves out the silence around it
 }
 
 export const WAVE_BARS = 40;
@@ -38,21 +40,23 @@ export const pickMime = () =>
     .find(t => MediaRecorder.isTypeSupported?.(t)) || '';
 
 // recorder output (webm / mp4 / ogg, whatever the browser makes) -> mono MP3, 24 kHz / 48 kbps unless told otherwise;
-// `maxSeconds` keeps only the take's start
-const encodeTake = async (blob: Blob, rate: number, kbps: number, maxSeconds = Infinity): Promise<VoiceTake> => {
+// `maxSeconds` keeps only the take's start; `from` (s) cuts off what came before
+const encodeTake = async (blob: Blob, rate: number, kbps: number, maxSeconds = Infinity, from = 0): Promise<VoiceTake> => {
   const Ctx = window.AudioContext || (window as any).webkitAudioContext;
   const ctx: AudioContext = new Ctx();
   try {
     const decoded = await ctx.decodeAudioData(await blob.arrayBuffer());
-    const seconds = Math.min(decoded.duration, maxSeconds);
+    const start = Math.max(0, Math.min(from, decoded.duration - 0.1));
+    const seconds = Math.min(decoded.duration - start, maxSeconds);
     const offline = new OfflineAudioContext(1, Math.max(1, Math.ceil(seconds * rate)), rate);
     const src = offline.createBufferSource();
     src.buffer = decoded;
     src.connect(offline.destination);
-    src.start();
+    src.start(0, start);
     const mono = await offline.startRendering();
     const wave = waveOf(mono.getChannelData(0));
-    return { mp3: await encodeMp3(mono, undefined, kbps), seconds, wave };
+    const speech = speechSpan(mono.getChannelData(0), rate);
+    return { mp3: await encodeMp3(mono, undefined, kbps), seconds, wave, speech };
   } finally {
     ctx.close?.();
   }
@@ -62,7 +66,7 @@ export const toMp3 = (blob: Blob) => encodeTake(blob, RATE, KBPS);
 
 /** A spoken take made small enough for the pearls' store (< 600 KB): 16 kHz, 24 kbps, ~3 KB a second. */
 export const SMALL_MAX_SECONDS = 180;
-export const toSmallMp3 = (blob: Blob, maxSeconds = SMALL_MAX_SECONDS) => encodeTake(blob, 16000, 24, maxSeconds);
+export const toSmallMp3 = (blob: Blob, maxSeconds = SMALL_MAX_SECONDS, from = 0) => encodeTake(blob, 16000, 24, maxSeconds, from);
 
 /** Asks for the microphone and starts recording; throws if the user refuses access. */
 export const startVoiceRecording = async (): Promise<VoiceRecording> => {

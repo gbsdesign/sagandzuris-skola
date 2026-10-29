@@ -12,3 +12,10 @@ export const MONTHS_SHORT_GE = ['იან', 'თებ', 'მარ', 'აპ�
 export const WEEKDAYS_GE = ['კვირა', 'ორშაბათი', 'სამშაბათი', 'ოთხშაბათი', 'ხუთშაბათი', 'პარასკევი', 'შაბათი'];
 
 export const WEEKDAYS_SHORT_GE = ['კვ', 'ორ', 'სა', 'ოთ', 'ხუ', 'პა', 'შა'];
+
+/** „28 ოქტ“, with the year when it is another one; '' for a missing or broken date. */
+export const shortDate = (iso?: string, now: Date = new Date()) => {
+  const d = iso ? new Date(iso) : null;
+  if (!d || isNaN(d.getTime())) return '';
+  return `${d.getDate()} ${MONTHS_SHORT_GE[d.getMonth()]}${d.getFullYear() === now.getFullYear() ? '' : ` ${d.getFullYear()}`}`;
+};

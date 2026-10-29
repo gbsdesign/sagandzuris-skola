@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="wrap_content"
+    android:gravity="center_vertical" android:minHeight="68dp" android:orientation="horizontal" android:paddingTop="6dp"
+    android:paddingBottom="6dp">
+    <FrameLayout android:layout_width="44dp" android:layout_height="44dp" android:background="@drawable/circle_soft">
+        <ImageView android:id="@+id/icon" android:layout_width="22dp" android:layout_height="22dp" android:layout_gravity="center"
+            android:importantForAccessibility="no" android:tint="@color/wine" />
+    </FrameLayout>
+    <LinearLayout android:layout_width="0dp" android:layout_height="wrap_content" android:layout_marginStart="12dp"
+        android:layout_weight="1" android:orientation="vertical">
+        <TextView android:id="@+id/name" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textColor="@color/ink" android:textSize="16sp" android:textStyle="bold" />
+        <TextView android:id="@+id/sub" android:layout_width="match_parent" android:layout_height="wrap_content"
+            android:textColor="@color/muted" android:textSize="13sp" />
+    </LinearLayout>
+    <Button android:id="@+id/add" style="@style/Btn" android:layout_width="wrap_content" android:layout_height="40dp"
+        android:layout_marginStart="8dp" android:background="@drawable/btn_soft" android:minHeight="40dp" android:paddingStart="14dp"
+        android:paddingEnd="14dp" android:text="დამატება" android:textColor="@color/wine" android:textSize="14sp" />
+</LinearLayout>

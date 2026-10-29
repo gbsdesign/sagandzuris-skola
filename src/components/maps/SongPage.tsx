@@ -15,6 +15,8 @@ import { MoveSheet } from '../archive/MoveSheet';
 import { SongWords } from './SongWords';
 import { LearnAudio } from '../learn/LearnAudio';
 import { songPiece } from '../../utils/learn';
+import { takeLearn } from '../../utils/learnOpen';
+import type { Voice } from '../../utils/pathItems';
 import { BackBtn, Tabs, useScrolledAway } from '../ui/kit';
 
 // One recording of a song: the school's own versions (voices) first, then the archive's performers
@@ -116,6 +118,12 @@ export const SongPage: React.FC = () => {
   const titleRef = useRef<HTMLHeadingElement>(null);
   const titleAway = useScrolledAway(titleRef, scrollRef, songId);
   const words = useSongText(song);
+  // the home page's review line opens a song straight in its learning mode
+  const [learnVoice, setLearnVoice] = useState<Voice | undefined>();
+  useEffect(() => {
+    const asked = song && take && !take.embed ? takeLearn(songPiece(song.id, takeIdx)) : null;
+    if (asked) { setLearnVoice(asked.voice); setLearning(true); }
+  }, [song, take, takeIdx]);
 
   useEffect(() => {
     if (!song) { setVisible(false); return; }
@@ -270,7 +278,9 @@ export const SongPage: React.FC = () => {
           media={take.media}
           title={song.title}
           subtitle={take.label}
-          onClose={() => setLearning(false)}
+          words={words?.text}
+          voice={learnVoice}
+          onClose={() => { setLearning(false); setLearnVoice(undefined); }}
         />
       )}
       {moving && take?.recId && (

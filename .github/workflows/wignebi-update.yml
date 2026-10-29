@@ -1,0 +1,47 @@
+# „წიგნები“ (მედავითნეობა): every day asks the „საღვთისმსახურო წიგნები“ app's update server whether the monastery has
+# published corrections, and if so rebuilds public/wignebi + src/data/wignebi.ts from them and commits straight to main
+# (the owner's choice, 2026-10-28) — Cloudflare Pages then publishes the site as after any push.
+# scripts/wignebi/update.py refuses an update that would lose texts; then this run fails and nothing changes.
+# „Run workflow“ in the Actions tab checks at once.
+name: Wignebi update
+
+on:
+  schedule:
+    - cron: '17 3 * * *'        # 07:17 Tbilisi
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: wignebi-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Check the app's update server and rebuild the books
+        run: python3 -I scripts/wignebi/update.py
+
+      - name: Commit to main
+        run: |
+          if [ -z "$(git status --porcelain -- public/wignebi src/data/wignebi.ts scripts/wignebi/state.json)" ]; then
+            echo "nothing to commit"; exit 0
+          fi
+          WHEN=$(python3 -c "import json;print((json.load(open('scripts/wignebi/state.json'))['createdAt'] or '')[:10])")
+          N=$(python3 -c "import json;print(json.load(open('scripts/wignebi/state.json')).get('changedFiles', 0))")
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/wignebi src/data/wignebi.ts scripts/wignebi/state.json
+          git commit -m "წიგნები: მონასტრის აპის განახლება $WHEN ($N ფაილი)"
+          git push origin HEAD:main

@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  BookOpen, CalendarDays, ScrollText, Droplets, Music2, Sparkles, Clock, Feather, Music, Megaphone, Heart, Flame,
+  BookOpen, CalendarDays, ScrollText, Droplets, Music2, Sparkles, Clock, Feather, Music, Megaphone, Heart, Flame, Sunrise,
   Crown, ChevronRight, ChevronLeft, Minus, Plus, WifiOff, Loader2,
 } from 'lucide-react';
 import { useNavigation } from '../../context';
@@ -22,8 +22,22 @@ const ROW = `${CARD} w-full min-h-16 px-4 py-3 flex items-center gap-3 text-left
 
 const SHELF_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   biblia: BookOpen, kalendari: CalendarDays, kondaki: Crown, kurtxevani: Droplets, paraklitoni: Music2, tveni: Sparkles,
-  jamni: Clock, davitni: Feather, mgalobeltatvis: Music, wardgoma: Megaphone, locvani: Heart, paraklisebi: Flame,
-  kriteli: ScrollText,
+  jamni: Clock, zatiki: Sunrise, davitni: Feather, mgalobeltatvis: Music, wardgoma: Megaphone, locvani: Heart,
+  paraklisebi: Flame, kriteli: ScrollText,
+};
+
+// A shelf tile is tall (icon above the text) — except the last one when the count leaves it alone in its row
+// (2 columns on a phone, 3 from 640px): then it fills the row and lies flat (icon beside the text).
+const TALL = { box: 'min-h-[132px] flex-col items-start', text: 'mt-3' };
+const FLAT = { box: 'col-span-2 min-h-[84px] flex-row items-center gap-3.5', text: 'pr-4' };
+const TALL_SM = { box: 'min-[640px]:col-span-1 min-[640px]:min-h-[132px] min-[640px]:flex-col min-[640px]:items-start min-[640px]:gap-0', text: 'min-[640px]:mt-3 min-[640px]:pr-0' };
+const HALF_SM = { box: 'min-[640px]:col-span-2 min-[640px]:min-h-[132px] min-[640px]:flex-col min-[640px]:items-start min-[640px]:gap-0', text: 'min-[640px]:mt-3 min-[640px]:pr-0' };
+const FLAT_SM = { box: 'min-[640px]:col-span-3 min-[640px]:min-h-[84px] min-[640px]:flex-row min-[640px]:items-center min-[640px]:gap-3.5', text: 'min-[640px]:mt-0 min-[640px]:pr-4' };
+const tileLook = (i: number, n: number) => {
+  const last = i === n - 1;
+  const phone = last && n % 2 === 1 ? FLAT : TALL;
+  const wide = !last ? TALL_SM : n % 3 === 1 ? FLAT_SM : n % 3 === 2 ? HALF_SM : TALL_SM;
+  return { box: `${phone.box} ${wide.box}`, text: `${phone.text} ${wide.text}` };
 };
 
 // ---------- files ----------
@@ -128,16 +142,19 @@ const Home: React.FC<{ open: (id: string) => void }> = ({ open }) => {
       </button>
 
       <div className="mt-3 grid grid-cols-2 min-[640px]:grid-cols-3 gap-3">
-        {rest.map(s => {
+        {rest.map((s, i) => {
           const Icon = SHELF_ICONS[s.id] ?? BookOpen;
+          const look = tileLook(i, rest.length);
           return (
             <button key={s.id} type="button" onClick={() => go(s.id, s.collections)}
-              className={`${CARD} group relative min-h-[132px] p-4 flex flex-col items-start text-left cursor-pointer transition hover:ring-[#7a2028]/25 active:scale-[0.98]`}>
-              <span className="w-11 h-11 rounded-2xl bg-[#7a2028]/[0.07] ring-1 ring-[#7a2028]/10 text-[#7a2028] flex items-center justify-center transition group-hover:bg-[#7a2028] group-hover:text-[#fbf6ec]">
+              className={`${CARD} group relative p-4 flex text-left cursor-pointer transition hover:ring-[#7a2028]/25 active:scale-[0.98] ${look.box}`}>
+              <span className="shrink-0 w-11 h-11 rounded-2xl bg-[#7a2028]/[0.07] ring-1 ring-[#7a2028]/10 text-[#7a2028] flex items-center justify-center transition group-hover:bg-[#7a2028] group-hover:text-[#fbf6ec]">
                 <Icon className="w-5 h-5" />
               </span>
-              <span className="mt-3 block font-serif-ge text-[16px] font-bold leading-snug text-[#2a2017] break-words">{s.title}</span>
-              <span className="mt-1 block text-[13px] leading-snug text-[#8a7a6a]">{s.sub}</span>
+              <span className={`block min-w-0 ${look.text}`}>
+                <span className="block font-serif-ge text-[16px] font-bold leading-snug text-[#2a2017] break-words">{s.title}</span>
+                <span className="mt-1 block text-[13px] leading-snug text-[#8a7a6a]">{s.sub}</span>
+              </span>
               <span className="absolute top-4 right-4 w-1.5 h-1.5 rounded-full bg-[#c9a35f]/70" aria-hidden />
             </button>
           );

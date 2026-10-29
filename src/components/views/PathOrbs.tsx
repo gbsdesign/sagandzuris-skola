@@ -22,8 +22,9 @@ import { ManeraAverageBadge, ManeraContent, useMastery } from './ManeraPanel';
 import { MasteryContent } from '../mastery/MasteryContent';
 import { WorkMonthLine, WorkPanel, useIndependentWork, usePanelWish } from './IndependentWorkCard';
 import { PearlIcon } from '../pearls/PearlIcon';
+import { PearlGiftBanner } from '../pearls/PearlGift';
 import { usePearls } from '../../hooks/usePearls';
-import { pearlState } from '../../utils/pearls';
+import { isGolden, pearlState } from '../../utils/pearls';
 import { CHESTS } from '../../data/pearls';
 
 // the chests and the singing load only when „მარგალიტები“ is opened
@@ -44,7 +45,7 @@ export const PATH_ORBS: { id: OrbId; label: string }[] = [
 const SAMOSI_IDS = new Set(SAMOSI_PARTS.map(p => p.id));
 
 // the chokha for its round button: how many parts are collected, and its colour (students/{uid}.samosi, .samosiColor)
-const useSamosiSummary = () => {
+export const useSamosiSummary = () => {
   const { user } = useAuth();
   const [state, setState] = useState({ count: 0, color: SAMOSI_DEFAULT_COLOR });
   useEffect(() => {
@@ -76,14 +77,15 @@ const SamosiOrb: React.FC<{ count: number; color: string; open: boolean; onClick
 };
 
 // "მარგალიტები": how many pearls of all the chests are polished, and how many shine (approved by a teacher)
-const usePearlSummary = () => {
+export const usePearlSummary = () => {
   const { user } = useAuth();
   const { pearls, shine } = usePearls(user?.uid);
   const ids = CHESTS.flatMap(c => c.pearls);
   const states = ids.map(id => pearlState(pearls[id], shine[id]));
   const polished = states.filter(s => s === 'polished' || s === 'shining').length;
   const shining = states.filter(s => s === 'shining').length;
-  return { total: ids.length, polished, shining, percent: ids.length ? (100 * polished) / ids.length : 0 };
+  const golden = ids.filter(id => isGolden(pearls[id])).length;
+  return { total: ids.length, polished, shining, golden, percent: ids.length ? (100 * polished) / ids.length : 0 };
 };
 
 // the manera ring follows the colour rule of its percentages (<50 red, 50–79 amber, 80+ green)
@@ -184,7 +186,7 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
     work: { title: 'დამოუკიდებელი სამუშაო', sub: <WorkMonthLine work={work} />, body: <WorkPanel /> },
     pearls: {
       title: 'მარგალიტები',
-      sub: `გაპრიალებული ${pearls.polished} / ${pearls.total}${pearls.shining ? ` · ბრწყინავს ${pearls.shining}` : ''}`,
+      sub: `გაპრიალებული ${pearls.polished} / ${pearls.total}${pearls.golden ? ` · ოქროსფერი ${pearls.golden}` : ''}${pearls.shining ? ` · ბრწყინავს ${pearls.shining}` : ''}`,
       body: (
         <Suspense fallback={<p className="py-8 text-center text-sm text-[#8a7a6a]">იტვირთება…</p>}>
           <PearlChests />
@@ -206,6 +208,8 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
           {orbs}
         </div>
       )}
+      {/* the parts of the outfit the shining pearls have given (it also adds them), where the pearls game is */}
+      {ids.includes('pearls') && <PearlGiftBanner onShow={() => { setEditing(false); setOpen('samosi'); }} />}
       {card && (
         // same card look as the other tiles of "საგანძურის გზა" (PATH_TILE), without the hover lift
         <section

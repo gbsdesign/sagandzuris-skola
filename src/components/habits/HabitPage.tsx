@@ -8,6 +8,8 @@ import { triggerHaptic } from '../../utils/haptics';
 import { HabitBadge, colorOf, tint } from './HabitIcon';
 import { HabitsModel } from './useHabits';
 import { PeriodNav, ViewHeading } from './parts';
+import { RICH_TEXT } from '../views/RichNoteEditor';
+import { safeNoteHtml } from '../../utils/richNote';
 
 // A habit's own page (a sheet over the habits): its counter, the run and the best run, how often its goal was met,
 // the last weeks or months as bars, a month calendar (the last seven days tick from there too) and the year by months.
@@ -44,6 +46,18 @@ export const HabitPage: React.FC<{ model: HabitsModel; id: string; date: Date }>
     <div className="space-y-6 text-[#2a2017]">
       {counter && <CounterPad model={model} id={id} date={date} color={c} counter={counter} />}
       {habit.hint && <p className="text-[13px] font-medium text-[#8a7a6a]">{habit.hint}</p>}
+      {/* the member's own note (the list's rows have no ⓘ for it since 2026-10-28) */}
+      {habit.richNote ? (
+        <div
+          className={`${RICH_TEXT} border-l-2 border-[#e3cfae] pl-2.5 text-[13.5px] leading-relaxed text-[#5a4636]`}
+          // made safe twice: when saved and when read (utils/richNote)
+          dangerouslySetInnerHTML={{ __html: safeNoteHtml(habit.richNote) }}
+        />
+      ) : (
+        habit.note && (
+          <p className="border-l-2 border-[#e3cfae] pl-2.5 font-serif-ge text-[13px] italic leading-relaxed text-[#7a6656] whitespace-pre-line break-words">{habit.note}</p>
+        )
+      )}
 
       <div className="grid grid-cols-2 gap-2">
         <Tile label="ახლა ზედიზედ" value={run} unit={word} flame={run > 1} />
@@ -59,10 +73,6 @@ export const HabitPage: React.FC<{ model: HabitsModel; id: string; date: Date }>
       <Bars ticks={ticks} goal={goal} color={c} />
       <HabitMonth model={model} id={id} ticks={ticks} color={c} />
       <HabitYear model={model} ticks={ticks} color={c} />
-
-      {habit.note && (
-        <p className="border-l-2 border-[#e3cfae] pl-2.5 font-serif-ge text-[13px] italic leading-relaxed text-[#7a6656] whitespace-pre-line break-words">{habit.note}</p>
-      )}
     </div>
   );
 };

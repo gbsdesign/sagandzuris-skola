@@ -3,6 +3,8 @@ import {createRoot} from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import { startOffline } from './utils/offlineFiles';
+import { applyKhutsuri, isKhutsuri } from './utils/khutsuri';
+import { markAndroidApp } from './utils/androidApp';
 
 // Auto-clean stale Service Workers on dev/preview so the app never freezes or serves stale assets
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
@@ -40,6 +42,10 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
 
 // offline mode: the light data downloads by itself in the background (utils/offlineFiles.ts)
 startOffline();
+
+// ხუცური (the header's „Ⴞ“): set before the first paint, so the page doesn't flash in mkhedruli
+applyKhutsuri(isKhutsuri());
+markAndroidApp();
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>

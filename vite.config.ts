@@ -28,7 +28,7 @@ export default defineConfig(() => {
           importScripts: ['prayer-notify-sw.js'],
           // a shared notes link (/?c=…&v=…) opens the app even without internet
           navigateFallback: '/index.html',
-          navigateFallbackDenylist: [/^\/notes\//, /^\/hymn\//, /^\/audio\//, /^\/lives\//, /^\/mtkmeli\//, /^\/prayers\//, /^\/bible\//, /^\/offline\//, /^\/wignebi\//],
+          navigateFallbackDenylist: [/^\/notes\//, /^\/hymn\//, /^\/audio\//, /^\/lives\//, /^\/mtkmeli\//, /^\/prayers\//, /^\/bible\//, /^\/offline\//, /^\/wignebi\//, /^\/games\/print\//, /^\/\.well-known\//, /^\/privacy/],
           runtimeCaching: [
             {
               // notes, hymnography drawings, prayers, the New Testament, მთქმელი texts, the saints' lives and the
@@ -82,6 +82,13 @@ export default defineConfig(() => {
           background_color: '#fcf9f5',
           display: 'standalone',
           start_url: '/',
+          // the Android app's „გაზიარება → საგანძური“: a recording or a text into a class chat (public/prayer-notify-sw.js)
+          share_target: {
+            action: '/share-target',
+            method: 'POST',
+            enctype: 'multipart/form-data',
+            params: { title: 'title', text: 'text', url: 'url', files: [{ name: 'audio', accept: ['audio/*'] }] },
+          },
           scope: '/',
           icons: [
             {

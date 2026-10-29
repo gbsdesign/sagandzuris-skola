@@ -2,6 +2,8 @@
 // The teacher (who leads the choir; there is no separate regent role) edits a draft kept in their own
 // settings, one per class (`drafts.{classId}`; a class without one starts from what it was last sent), then sends it
 // to that class: it is copied into the class document, which the class members can read. Admins may send to any class.
+// „გუნდი მომყვება“ (2026-10-29): while the teacher leads the service, the chant on their screen goes into the class
+// document too (`live` { vid, at, by }; `vid: ''` = stopped), and the members' phones open it (NotesContext).
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
@@ -16,7 +18,14 @@ export interface LiturgyProgram {
   sentAt?: string;   // ISO time it was sent to the class
   by?: string;       // the teacher's name
   className?: string;
+  /** the teacher's chant on screen right now, while they lead the choir */
+  live?: LiveTurn | null;
 }
+export interface LiveTurn { vid: string; at: string; by?: string }
+/** a lead older than this is a forgotten one (the service is over) */
+export const LIVE_HOURS = 4;
+export const liveNow = (l: LiveTurn | null | undefined, now = Date.now()): l is LiveTurn =>
+  Boolean(l && l.vid && typeof l.at === 'string' && now - Date.parse(l.at) < LIVE_HOURS * 3600_000);
 export interface LiturgyTemplate { name: string; items: string[] }
 
 const CACHE_KEY = 'sagandzuri_liturgy_cache';
@@ -131,6 +140,14 @@ export const useLiturgy = () => {
     return teacherClass.name;
   }, [teacherClass, draft, user]);
 
+  // the teacher's screen → the class's phones; '' stops the lead
+  const lead = useCallback(async (vid: string) => {
+    if (!teacherClass) return;
+    await updateDoc(doc(db, 'classes', teacherClass.id), {
+      live: { vid, at: new Date().toISOString(), by: user?.displayName || '' },
+    });
+  }, [teacherClass, user]);
+
   const saveTemplate = useCallback(async (name: string) => {
     if (!uid) return;
     const list = [...templates.filter(t => t.name !== name), { name, items: draft.items }];
@@ -152,7 +169,8 @@ export const useLiturgy = () => {
       .sort((a, b) => String(b.l.sentAt || '').localeCompare(String(a.l.sentAt || '')));
     if (!sent.length) return null;
     const { c, l } = sent[0];
-    return { date: l.date || nextSunday(), items: valid(l.items), sentAt: l.sentAt, by: l.by, className: c.name };
+    const live = (c as SchoolClass & { live?: LiveTurn }).live;
+    return { date: l.date || nextSunday(), items: valid(l.items), sentAt: l.sentAt, by: l.by, className: c.name, live: live ?? null };
   }, [myClasses]);
   const [cached, setCached] = useState<LiturgyProgram | null>(() => {
     try { return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); } catch { return null; }
@@ -160,16 +178,16 @@ export const useLiturgy = () => {
   useEffect(() => {
     if (!memberProgram) return;
     setCached(memberProgram);
-    try { localStorage.setItem(CACHE_KEY, JSON.stringify(memberProgram)); } catch { /* storage blocked */ }
+    try { localStorage.setItem(CACHE_KEY, JSON.stringify({ ...memberProgram, live: null })); } catch { /* storage blocked */ }
   }, [memberProgram]);
 
   const program: LiturgyProgram | null = role === 'teacher'
-    ? { ...draft, sentAt: teacherSent?.sentAt, className: teacherClass?.name }
+    ? { ...draft, sentAt: teacherSent?.sentAt, className: teacherClass?.name, live: (teacherClass as (SchoolClass & { live?: LiveTurn }) | undefined)?.live ?? null }
     : role === 'member' ? (memberProgram ?? cached) : null;
 
   return {
     role, program, classes: allClasses, classId: teacherClass?.id ?? null, setClassId,
-    toggle, setItems, setDate, send, templates, saveTemplate, deleteTemplate,
+    toggle, setItems, setDate, send, lead, templates, saveTemplate, deleteTemplate,
     sentInSync: Boolean(teacherSent && JSON.stringify(teacherSent.items) === JSON.stringify(draft.items) && teacherSent.date === draft.date),
   };
 };

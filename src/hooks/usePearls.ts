@@ -5,7 +5,8 @@ import type { PearlRecord, PearlShine } from '../utils/pearls';
 import type { Voice } from '../utils/pathItems';
 
 // The pearls game's records (redesign stage 7):
-//   students/{uid}.pearls      {versionId: {best, voice, at}}  the member's best try (the member writes it)
+//   students/{uid}.pearls      {versionId: {best, voice, at, voices}}  the member's best try, and the best in each
+//                              voice (the member writes it)
 //   students/{uid}.pearlShine  {versionId: {voice, by, at}}    a teacher heard it and approved (teachers only)
 //   pearlTakes/{uid}/takes/{versionId}  {audio (MP3 bytes), mime, score, voice, at}  the best take, for the
 //                                        member's teachers to hear
@@ -29,8 +30,9 @@ export const usePearls = (uid?: string | null) => {
   return state;
 };
 
-export const savePearl = (uid: string, id: string, rec: PearlRecord) =>
-  setDoc(doc(db, 'students', uid), { pearls: { [id]: rec } }, { merge: true });
+/** A try's change to the record (utils/pearls pearlPatch): merged, so the other voices' bests stay. */
+export const savePearl = (uid: string, id: string, patch: Partial<PearlRecord>) =>
+  setDoc(doc(db, 'students', uid), { pearls: { [id]: patch } }, { merge: true });
 
 export const saveTake = async (uid: string, id: string, mp3: Blob, score: number, voice: Voice) =>
   setDoc(doc(db, 'pearlTakes', uid, 'takes', id), {

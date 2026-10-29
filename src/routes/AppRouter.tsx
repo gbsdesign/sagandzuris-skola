@@ -4,6 +4,9 @@ import { WifiOff, RefreshCw, Loader2 } from 'lucide-react';
 import { PageBar } from '../components/ui/kit';
 import { PinButton } from '../components/home/ShortcutShelf';
 import { ProfileActions } from '../components/views/ProfileActions';
+import { KhutsuriSwitch } from '../components/views/KhutsuriSwitch';
+import { WidgetLinkCard } from '../components/app/WidgetLinkCard';
+import { CalendarLinkCard } from '../components/app/CalendarLinkCard';
 import { AdminEntry } from '../components/views/AdminEntry';
 import { prayerTitle } from '../data/prayers';
 import { HomePage } from '../pages/HomePage';
@@ -227,7 +230,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
     return (
       <div className="w-full max-w-lg mx-auto px-1 py-3 sm:px-0">
         <PageBar title="პროფილი" onBack={handleGoBack} className="mb-4" />
-        {/* the head card, the admin panel's row (admins), my outfit and home buttons, then the details folded */}
+        {/* the head card, the admin panel's row (admins), my outfit and home buttons, ხუცური, then the details folded */}
         <StudentProfileCard waiting={waiting} slot={<>
           <AdminEntry />
           {!waiting && <ChemiSamosi side={
@@ -237,6 +240,12 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
             </span>
           } />}
           {!waiting && <ShortcutShelf variant="profile" />}
+          {/* ხუცური: the whole site in the old script, on this device */}
+          <KhutsuriSwitch />
+          {/* the Android app's home-screen widgets */}
+          {!waiting && <WidgetLinkCard />}
+          {/* the feasts, fasts and my lessons in the phone's calendar */}
+          {!waiting && <CalendarLinkCard />}
         </>} />
         {/* install the app · leave the account (asks first) */}
         <div className="max-w-lg mx-auto mt-3"><ProfileActions /></div>
@@ -264,8 +273,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
 
           {currentPage === 'gz' && (
             <div className="w-full max-w-2xl mx-auto mb-2 px-1 space-y-5">
-              {/* the page title sits in the top bar (PathToday's „დღეს“ card first, when there is a lesson or an assignment); four round buttons on top (სამოსი, ნასწავლი —
-                  with the teacher's assignments —, მანერა, სამუშაო) in the member's order, the habits under them */}
+              {/* „ჩემი დღე“: the page title sits in the top bar; PathToday's „დღეს“ card first (a lesson, an assignment, a review —
+                  when there is one), the five round buttons (სამოსი, ნასწავლი — with the teacher's assignments —, ოსტატობა,
+                  სამუშაო, მარგალიტები) in the member's order, the habits under them */}
               <PathToday />
               <PathTabs
                 orbs={{ labels: pathOrbs, render: order => <PathOrbs order={order} /> }}

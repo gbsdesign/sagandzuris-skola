@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@drawable/w_bg" android:orientation="horizontal" android:padding="6dp">
+    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        android:gravity="center" android:orientation="vertical" android:padding="4dp">
+        <FrameLayout android:layout_width="46dp" android:layout_height="46dp" android:background="@drawable/circle_soft">
+            <ImageView android:src="@drawable/lc_music" android:layout_width="24dp" android:layout_height="24dp" android:layout_gravity="center"
+                android:importantForAccessibility="no" android:tint="@color/wine" />
+        </FrameLayout>
+        <TextView android:text="გალობა" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp"
+            android:ellipsize="end" android:gravity="center" android:maxLines="2" android:textColor="@color/ink" android:textSize="12sp" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        android:gravity="center" android:orientation="vertical" android:padding="4dp">
+        <FrameLayout android:layout_width="46dp" android:layout_height="46dp" android:background="@drawable/circle_soft">
+            <ImageView android:src="@drawable/lc_music_2" android:layout_width="24dp" android:layout_height="24dp" android:layout_gravity="center"
+                android:importantForAccessibility="no" android:tint="@color/wine" />
+        </FrameLayout>
+        <TextView android:text="სიმღერა" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp"
+            android:ellipsize="end" android:gravity="center" android:maxLines="2" android:textColor="@color/ink" android:textSize="12sp" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        android:gravity="center" android:orientation="vertical" android:padding="4dp">
+        <FrameLayout android:layout_width="46dp" android:layout_height="46dp" android:background="@drawable/circle_soft">
+            <ImageView android:src="@drawable/lc_feather" android:layout_width="24dp" android:layout_height="24dp" android:layout_gravity="center"
+                android:importantForAccessibility="no" android:tint="@color/wine" />
+        </FrameLayout>
+        <TextView android:text="მთქმელი" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp"
+            android:ellipsize="end" android:gravity="center" android:maxLines="2" android:textColor="@color/ink" android:textSize="12sp" />
+    </LinearLayout>
+    <LinearLayout android:layout_width="0dp" android:layout_height="match_parent" android:layout_weight="1"
+        android:gravity="center" android:orientation="vertical" android:padding="4dp">
+        <FrameLayout android:layout_width="46dp" android:layout_height="46dp" android:background="@drawable/circle_soft">
+            <ImageView android:src="@drawable/lc_book_open" android:layout_width="24dp" android:layout_height="24dp" android:layout_gravity="center"
+                android:importantForAccessibility="no" android:tint="@color/wine" />
+        </FrameLayout>
+        <TextView android:text="ლოცვანი" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp"
+            android:ellipsize="end" android:gravity="center" android:maxLines="2" android:textColor="@color/ink" android:textSize="12sp" />
+    </LinearLayout>
+</LinearLayout>

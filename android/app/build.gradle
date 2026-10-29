@@ -1,0 +1,43 @@
+// The Play Store app = the site in a Trusted Web Activity (Chrome without its address bar).
+// The site's own updates reach the app at once; only this wrapper needs a new versionCode.
+// Its own parts (src/main/java): home-screen widgets, the icon's menu, church silence, the prayer bell.
+plugins {
+    id 'com.android.application'
+}
+
+def host = 'sagandzureli.ge'
+
+android {
+    namespace 'ge.sagandzureli.app'
+    compileSdk 36
+
+    defaultConfig {
+        applicationId 'ge.sagandzureli.app'
+        minSdk 26
+        targetSdk 36
+        versionCode 2
+        versionName '1.1.0'
+
+        manifestPlaceholders = [host: host, launchUrl: "https://${host}/"]
+        resValue 'string', 'app_name', 'საგანძურის სკოლა'
+        resValue 'string', 'launcher_name', 'საგანძური'
+        resValue 'string', 'provider_authority', 'ge.sagandzureli.app.fileprovider'
+        resValue 'string', 'asset_statements',
+            "[{ \\\"relation\\\": [\\\"delegate_permission/common.handle_all_urls\\\"], \\\"target\\\": { \\\"namespace\\\": \\\"web\\\", \\\"site\\\": \\\"https://${host}\\\" } }]"
+    }
+
+    buildTypes {
+        release {
+            minifyEnabled false
+        }
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
+    }
+}
+
+dependencies {
+    implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+}

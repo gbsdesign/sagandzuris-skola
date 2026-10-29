@@ -1,45 +1,46 @@
 import React, { useState } from 'react';
-import { Check, CheckCheck, ChevronDown, ChevronRight, ClipboardList, ListChecks, Pencil, Users } from 'lucide-react';
+import { AudioLines, Check, CheckCheck, ChevronRight, GraduationCap, Music, Plus, Users } from 'lucide-react';
 import { useAuth, useChants } from '../../context';
 import type { ProgramItem, SchoolClass } from '../../hooks/useClasses';
 import { usePathMarks } from '../../hooks/usePathMarks';
 import { ownVoices, useClassMarks } from '../../hooks/useClassMarks';
-import { daysUntil, useAssignments } from '../../hooks/useTeaching';
 import { CATEGORY_LABEL, PathCategory, Voice, categoryOf, usesVoices } from '../../utils/pathItems';
 import { triggerHaptic } from '../../utils/haptics';
+import { assignedProgress } from '../../utils/learn';
+import { useAllLearning } from '../../hooks/useLearning';
 import { usePathItemOpener } from '../views/PathOrbs';
-import { WorkItems, currentWork, workDone } from '../teacher/MyClassWork';
-import { useDrillDone } from '../../utils/drillTakes';
-import { AssignmentsFold } from '../teacher/AssignmentsPanel';
 import { Avatar } from './ChatPanel';
 import { triggerFireworks } from '../views/StudentBookmarkView';
 import { ProgramEditor, programLines } from '../teacher/ClassProgramPanel';
-import { IconBtn } from '../ui/kit';
+import { PartsBar } from '../learn/PartsBar';
+import { learnPieceOf, useOpenLearning } from '../learn/openLearning';
+import { Btn, Sheet } from '../ui/kit';
+import { StudioMix, StudioRecord, studioPiece } from '../studio/ClassStudio';
 
 type Listed = ProgramItem & { id: string; key: string };
 
 const VOICE_NAME: Record<Voice, string> = { '1': 'პირველი ხმა', '2': 'მეორე ხმა', '3': 'მესამე ხმა' };
 
-// „სასწავლო პროგრამა“, at the top of the class page: a member's progress in one thin bar, then the whole program in
-// the teacher's order (no longer split into learned / folded "სასწავლი", 2026-10-28). A member's voice numbers are their
-// own marks, the same buttons as on the path; 👥 beside them shows which members of the class know each voice (their own
-// path marks or a teacher's confirmation, copied by useClassMarksSync). „დავალებები“ beside the title folds open the
-// assignments (a dot while one is still to do): a member's own, or the class's to manage for its teachers (`canEdit`).
-// The class's teachers change the program right here by ✎ (ProgramEditor).
-export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean }> = ({ cls, canEdit }) => {
+// The class page's „პროგრამა“ tab (2026-10-28: „ერთი რამ, ერთ ადგილას“): a member's progress in one thin bar, then the
+// whole program in the teacher's order. A line holds only the name and what the member has of it — the voices they know
+// (green once a teacher confirmed them), else the learning mode's bar of parts; a teacher sees how many members know
+// it. A tap opens the item's window (ItemSheet): its notes or song, „სწავლა“, the member's own voice marks (the same
+// marks as on the path) and who in the class knows each voice (their own path marks or a teacher's confirmation, copied
+// by useClassMarksSync). The teachers change the program from the page's one ✎ (`editing`, ProgramEditor).
+export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; editing?: boolean; onEditing?: (on: boolean) => void }> = ({
+  cls, canEdit, editing, onEditing,
+}) => {
   const { user } = useAuth();
   const { selectedChantVariants = {} } = useChants();
   // the member's own marks, as on „საგანძურის გზა“ (a program item not on the path yet joins it when marked)
   const { locked, confirmed, toggle } = usePathMarks(triggerFireworks);
-  const drillDone = useDrillDone(user?.uid);
+  const myLearning = useAllLearning(user?.uid);
   const marks = useClassMarks(cls.id);
   const openerOf = usePathItemOpener();
-  const assignments = useAssignments(cls.id);
-  // the item whose „ვინ იცის“ is open (its key)
-  const [who, setWho] = useState<string | null>(null);
-  // the class's teachers change the program right here (✎): ↑ ↓ ✕ and „დამატება“
-  const [editing, setEditing] = useState(false);
-  const [showWork, setShowWork] = useState(false);
+  const openLearning = useOpenLearning();
+  // the item whose window is open (its key)
+  const [shown, setShown] = useState<string | null>(null);
+  const [studio, setStudio] = useState<string | null>(null);
   const iAmMember = !!user && cls.memberIds.includes(user.uid);
 
   const listed: Listed[] = cls.program.flatMap((p, i) => (p.id ? [{ ...p, id: p.id, key: `${i}:${p.id}` }] : []));
@@ -55,10 +56,8 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean }> = (
       const ok = own ? own.confirmed : marks[m.uid]?.confirmed[id] || [];
       return [{ m, ok: ok.includes(v), me: m.uid === user?.uid }];
     });
-
-  // a teacher sees all the class's assignments, a member those for the whole class or for them
-  const work = currentWork(canEdit ? assignments : assignments.filter(a => !a.studentIds.length || (!!user && a.studentIds.includes(user.uid))));
-  const workDot = work.some(a => daysUntil(a.due) >= 0 && (canEdit || !workDone(a, confirmed, drillDone)));
+  const voicesOf = (id: string): Voice[] => (usesVoices(id) ? ['1', '2', '3'] : ['1']);
+  const anyoneKnows = (id: string) => new Set(voicesOf(id).flatMap(v => knowers(id, v).map(k => k.m.uid))).size;
 
   const cats = (Object.keys(CATEGORY_LABEL) as PathCategory[])
     .map(id => {
@@ -80,88 +79,215 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean }> = (
   const voices = cats.reduce((a, c) => a + c.voices, 0);
   const voiceSlots = cats.reduce((a, c) => a + c.voiceSlots, 0);
 
+  // what the line shows at its right: the member's voices, else the learning mode's parts; a teacher's count of knowers
+  const status = (p: Listed) => {
+    if (iAmMember) {
+      const own = mine(p.id);
+      if (own.known.length) {
+        const all = own.known.every(v => own.confirmed.includes(v));
+        return (
+          <span className={`shrink-0 h-7 px-2.5 rounded-full inline-flex items-center gap-1 text-[12px] font-bold tabular-nums whitespace-nowrap ${
+            all ? 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200' : 'bg-[#7a2028]/[0.08] text-[#7a2028]'}`}>
+            {all ? <CheckCheck className="w-3.5 h-3.5" /> : <Check className="w-3.5 h-3.5 stroke-[3]" />}
+            {usesVoices(p.id) ? `ხმა ${[...own.known].sort().join(' · ')}` : 'ნასწავლი'}
+          </span>
+        );
+      }
+      const parts = assignedProgress(p.id, myLearning?.learning, myLearning?.parts);
+      return parts && parts.marks.some(m => m > 0) ? <PartsBar p={parts} className="w-16 shrink-0" /> : null;
+    }
+    const n = anyoneKnows(p.id);
+    return n ? (
+      <span className="shrink-0 inline-flex items-center gap-1 text-[12.5px] font-bold tabular-nums text-[#8a7a6a]" title="კლასში იცის">
+        <Users className="w-4 h-4" /> {n}
+      </span>
+    ) : null;
+  };
+
   const row = (p: Listed) => {
-    const go = openerOf(p.id);
-    const voiced = usesVoices(p.id);
-    const own = mine(p.id);
-    const list: Voice[] = voiced ? ['1', '2', '3'] : ['1'];
-    const open = who === p.key;
     const lines = programLines(p);
-    const name = (
-      <>
-        <span className="min-w-0">
-          <span className="line-clamp-2 break-words text-[14px] leading-tight font-semibold text-[#2a2017]">{lines.title}</span>
-          {lines.sub && <span className="block mt-0.5 line-clamp-2 text-xs leading-tight text-[#a4927c]">{lines.sub}</span>}
-          {p.note && <span className="block mt-0.5 text-[12px] leading-snug text-[#75685a] whitespace-pre-line">{p.note}</span>}
-        </span>
-        {go && <ChevronRight className="w-4 h-4 shrink-0 text-[#c4b49c] group-hover:text-[#7a2028]" />}
-      </>
-    );
-    // a phone too narrow for the name beside the buttons puts the buttons on a line of their own under it
-    const nameCls = 'group grow basis-44 min-w-0 min-h-11 py-1 flex items-center gap-1 px-1 text-left';
-    // the members who know at least one voice, for the 👥 button
-    const anyone = new Set(list.flatMap(v => knowers(p.id, v).map(k => k.m.uid))).size;
     return (
-      <li key={p.key} className="py-0.5">
-        <div className="flex flex-wrap items-center gap-x-2">
-          {go ? (
-            <button type="button" onClick={go} className={`${nameCls} rounded-lg cursor-pointer transition-colors hover:bg-[#fbf6ec]`}>{name}</button>
-          ) : (
-            <div className={nameCls}>{name}</div>
-          )}
-          <span className="ml-auto flex items-center gap-2 pb-1 min-[430px]:pb-0">
-            {/* a member's own marks, the same buttons as on „საგანძურის გზა“ */}
-            {iAmMember && (
-              <span className="flex gap-1.5 shrink-0">
-                {list.map(v => {
-                  const okOne = own.confirmed.includes(v);
-                  const on = okOne || own.known.includes(v);
-                  return (
-                    <button
-                      key={v}
-                      type="button"
-                      disabled={locked || okOne}
-                      onClick={() => { triggerHaptic(on ? 8 : 15); toggle(p.id, v); }}
-                      aria-pressed={on}
-                      aria-label={voiced ? `${lines.title} — ${VOICE_NAME[v]}` : `${lines.title} — ნასწავლი`}
-                      title={okOne ? 'მასწავლებელმა ჩათვალა' : locked ? 'მონიშვნას მასწავლებელი აკეთებს' : on ? 'ნასწავლია — შეეხე მოსახსნელად' : 'შეეხე, როცა ისწავლი'}
-                      className={`w-9 h-9 rounded-full text-[13px] font-bold tabular-nums flex items-center justify-center transition active:scale-90 disabled:active:scale-100 ${
-                        okOne ? 'bg-emerald-600 text-white'
-                          : on ? 'bg-[#7a2028] text-white shadow-[0_2px_6px_-2px_rgba(122,32,40,0.6)]'
-                          : 'bg-white ring-1 ring-[#e3d6c1] text-[#a4927c] enabled:hover:ring-[#7a2028]/50 enabled:hover:text-[#7a2028]'
-                      } ${locked && !okOne ? 'opacity-60' : ''} ${locked || okOne ? 'cursor-default' : 'cursor-pointer'}`}
-                    >
-                      {voiced ? v : <Check className="w-4 h-4 stroke-[3]" />}
-                    </button>
-                  );
-                })}
-              </span>
-            )}
-            {/* who in the class knows it: a button of its own, so a mark is never mistaken for it */}
-            <button
-              type="button"
-              onClick={() => { triggerHaptic(8); setWho(open ? null : p.key); }}
-              aria-expanded={open}
-              aria-label={`${lines.title} — ვინ იცის: ${anyone ? anyone : 'ჯერ არავინ'}`}
-              title="კლასში ვინ იცის"
-              className={`shrink-0 h-9 min-w-9 px-2 rounded-full inline-flex items-center justify-center gap-1 text-[12.5px] font-bold tabular-nums transition cursor-pointer active:scale-95 ${
-                open ? 'bg-[#4a3426] text-white' : anyone ? 'bg-[#f3ebdd] text-[#4a3426] hover:bg-[#ece0cc]' : 'text-[#b3a594] hover:bg-[#f3ebdd]'
-              }`}
-            >
-              <Users className="w-4 h-4" />
-              {anyone > 0 && <span>{anyone}</span>}
-            </button>
+      <li key={p.key}>
+        <button
+          type="button"
+          onClick={() => { triggerHaptic(8); setShown(p.key); }}
+          aria-haspopup="dialog"
+          className="group w-full min-h-[60px] py-2 px-1 flex items-center gap-3 text-left rounded-lg cursor-pointer transition-colors hover:bg-[#fbf6ec]"
+        >
+          <span className="min-w-0 flex-1">
+            <span className="block line-clamp-2 break-words text-[14.5px] leading-snug font-semibold text-[#2a2017]">{lines.title}</span>
+            {lines.sub && <span className="block mt-0.5 text-xs leading-snug text-[#a4927c]">{lines.sub}</span>}
+            {p.note && <span className="block mt-0.5 text-[12px] leading-snug text-[#75685a] whitespace-pre-line">{p.note}</span>}
+          </span>
+          {status(p)}
+          <ChevronRight className="w-5 h-5 shrink-0 text-[#c4b49c] group-hover:text-[#7a2028]" />
+        </button>
+      </li>
+    );
+  };
+
+  // a kind's name over its items only when the program has more than one kind
+  const groups = cats.map(c => (
+    <section key={c.id}>
+      {cats.length > 1 && <h4 className="px-1 mb-0.5 text-[12.5px] font-bold text-[#a0703c]">{c.label} · {c.items.length}</h4>}
+      <ul className="divide-y divide-[#f3ebdd]">{c.items.map(row)}</ul>
+    </section>
+  ));
+
+  const open = listed.find(p => p.key === shown);
+
+  return (
+    <section className="bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] px-4 min-[400px]:px-5 sm:px-6 py-4" aria-label="სასწავლო პროგრამა">
+      {iAmMember && total > 0 && !editing && (
+        <div className="mb-3 flex items-center gap-3">
+          <div className="flex-1 h-2 rounded-full bg-[#ece2d1] overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-[width] duration-700 ${learned === total ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-[#c2414c] to-[#7a2028]'}`}
+              style={{ width: `${(100 * learned) / total}%` }}
+            />
+          </div>
+          <span className="shrink-0 text-[12.5px] font-bold tabular-nums text-[#8a7a6a]">
+            ნასწავლი {learned}/{total}{voiceSlots ? ` · ${voices}/${voiceSlots} ხმა` : ''}
           </span>
         </div>
+      )}
 
-        {/* who in the class knows each voice */}
-        {open && (
-          <div className="sg-in mt-1.5 mb-2 rounded-xl bg-[#faf6ef] px-3 py-2.5 space-y-2.5">
+      {editing && canEdit ? (
+        <ProgramEditor cls={cls} onDone={() => onEditing?.(false)} />
+      ) : cls.program.length === 0 ? (
+        <div className="py-1 space-y-3">
+          <p className="text-sm text-[#8a7a6a]">პროგრამა ჯერ არ არის შედგენილი.</p>
+          {canEdit && onEditing && <Btn kind="soft" size="sm" icon={<Plus />} onClick={() => onEditing(true)}>პროგრამის შედგენა</Btn>}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {/* one list for everyone, in the teacher's order */}
+          {groups}
+
+          {/* early free-text items: no catalogue id, so no voices */}
+          {free.length > 0 && (
+            <section>
+              {total > 0 && <h4 className="px-1 mb-0.5 text-[12.5px] font-bold text-[#a0703c]">სხვა · {free.length}</h4>}
+              <ul className="divide-y divide-[#f3ebdd]">
+                {free.map((p, i) => (
+                  <li key={i} className="py-2 px-1">
+                    <p className="text-[14px] leading-snug font-semibold text-[#2a2017]">{p.title}</p>
+                    {p.note && <p className="mt-0.5 text-[12px] leading-snug text-[#75685a] whitespace-pre-line">{p.note}</p>}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+        </div>
+      )}
+
+      {open && (
+        <ItemSheet
+          p={open}
+          onClose={() => setShown(null)}
+          go={openerOf(open.id)}
+          piece={learnPieceOf(open.id)}
+          onLearn={piece => { setShown(null); openLearning(piece); }}
+          onStudio={studioPiece(open.id) && (iAmMember || canEdit) ? () => { setShown(null); setStudio(open.id); } : null}
+          member={iAmMember}
+          own={mine(open.id)}
+          locked={locked}
+          onMark={v => toggle(open.id, v)}
+          knowers={v => knowers(open.id, v)}
+        />
+      )}
+      {studio && (canEdit
+        ? <StudioMix cls={cls} vid={studio} onClose={() => setStudio(null)} />
+        : <StudioRecord vid={studio} onClose={() => setStudio(null)} />)}
+    </section>
+  );
+};
+
+type Knower = { m: SchoolClass['members'][number]; ok: boolean; me: boolean };
+
+/** One program item's window: open it (its notes, or the song), „სწავლა“ (its learning mode), the member's voice marks
+ *  — a voice a teacher confirmed is green and only the teacher takes it back; while a teacher has locked marking they
+ *  only show — and who in the class knows each voice. */
+const ItemSheet: React.FC<{
+  p: Listed;
+  onClose: () => void;
+  go: (() => void) | null;
+  piece: string | null;
+  onLearn: (piece: string) => void;
+  onStudio: (() => void) | null;
+  member: boolean;
+  own: { known: Voice[]; confirmed: Voice[] };
+  locked: boolean;
+  onMark: (v: Voice) => void;
+  knowers: (v: Voice) => Knower[];
+}> = ({ p, onClose, go, piece, onLearn, onStudio, member, own, locked, onMark, knowers }) => {
+  const lines = programLines(p);
+  const voiced = usesVoices(p.id);
+  const list: Voice[] = voiced ? ['1', '2', '3'] : ['1'];
+  const song = categoryOf(p.id) === 'simghera';
+  return (
+    <Sheet open onClose={onClose} title={lines.title}>
+      <div className="space-y-5">
+        {(lines.sub || p.note) && (
+          <div className="-mt-1 space-y-1">
+            {lines.sub && <p className="text-[13px] text-[#8a7a6a]">{lines.sub}</p>}
+            {p.note && <p className="text-[13px] leading-snug text-[#75685a] whitespace-pre-line">{p.note}</p>}
+          </div>
+        )}
+
+        {(go || piece) && (
+          <div className={`grid gap-2.5 ${go && piece ? 'grid-cols-2' : 'grid-cols-1'}`}>
+            {go && <Btn kind="ghost" size="lg" icon={<Music />} onClick={() => { onClose(); go(); }}>{song ? 'სიმღერა' : 'ნოტები'}</Btn>}
+            {piece && <Btn size="lg" icon={<GraduationCap />} onClick={() => onLearn(piece)}>სწავლა</Btn>}
+          </div>
+        )}
+        {onStudio && (
+          <Btn kind="soft" size="lg" full icon={<AudioLines />} onClick={onStudio}>
+            {member ? 'სტუდია — ჩემი ხმის ჩაწერა' : 'სტუდია — ჯგუფური ჩანაწერი'}
+          </Btn>
+        )}
+
+        {member && (
+          <div>
+            <p className="text-[13.5px] font-bold text-[#4a3426]">{voiced ? 'რომელი ხმა იცი?' : 'იცი?'}</p>
+            <div className="mt-2 flex items-center gap-2.5">
+              {list.map(v => {
+                const okOne = own.confirmed.includes(v);
+                const on = okOne || own.known.includes(v);
+                return (
+                  <button
+                    key={v}
+                    type="button"
+                    disabled={locked || okOne}
+                    onClick={() => { triggerHaptic(on ? 8 : 15); onMark(v); }}
+                    aria-pressed={on}
+                    aria-label={voiced ? VOICE_NAME[v] : 'ნასწავლი'}
+                    title={okOne ? 'მასწავლებელმა ჩათვალა' : locked ? 'მონიშვნას მასწავლებელი აკეთებს' : on ? 'ნასწავლია — შეეხე მოსახსნელად' : 'შეეხე, როცა ისწავლი'}
+                    className={`w-12 h-12 shrink-0 rounded-full text-[16px] font-bold tabular-nums flex items-center justify-center transition active:scale-90 disabled:active:scale-100 ${
+                      okOne ? 'bg-emerald-600 text-white'
+                        : on ? 'bg-[#7a2028] text-white shadow-[0_2px_6px_-2px_rgba(122,32,40,0.6)]'
+                        : 'bg-white ring-1 ring-[#e3d6c1] text-[#8a7a6a] enabled:hover:ring-[#7a2028]/50 enabled:hover:text-[#7a2028]'
+                    } ${locked && !okOne ? 'opacity-60' : ''} ${locked || okOne ? 'cursor-default' : 'cursor-pointer'}`}
+                  >
+                    {voiced ? v : <Check className="w-5 h-5 stroke-[3]" />}
+                  </button>
+                );
+              })}
+              <span className="ml-1 text-[12.5px] leading-snug text-[#8a7a6a]">
+                {locked ? 'მონიშვნას ახლა მასწავლებელი აკეთებს' : 'შეეხე, როცა ისწავლი'}
+              </span>
+            </div>
+          </div>
+        )}
+
+        <div>
+          <p className="text-[13.5px] font-bold text-[#4a3426]">კლასში ვინ იცის</p>
+          <div className="mt-2 space-y-3">
             {list.map(v => {
-              const people = knowers(p.id, v);
+              const people = knowers(v);
               return (
                 <div key={v}>
-                  <p className="text-[12px] font-bold text-[#8a7a6a]">
+                  <p className="text-[12.5px] font-bold text-[#8a7a6a]">
                     {voiced ? VOICE_NAME[v] : 'ნასწავლი'} · {people.length ? `იცის ${people.length}` : 'ჯერ არავის აქვს მონიშნული'}
                   </p>
                   {people.length > 0 && (
@@ -186,97 +312,8 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean }> = (
               );
             })}
           </div>
-        )}
-      </li>
-    );
-  };
-
-  // a kind's name over its items only when the program has more than one kind
-  const groups = (list: { id: string; label: string; items: Listed[] }[], heads = cats.length > 1) =>
-    list.map(c => (
-      <section key={c.id}>
-        {heads && <h4 className="px-1 mb-0.5 text-[12px] font-bold text-[#a4927c]">{c.label} · {c.items.length}</h4>}
-        <ul className="divide-y divide-[#f3ebdd]">{c.items.map(row)}</ul>
-      </section>
-    ));
-
-  return (
-    <section className="bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] px-4 min-[400px]:px-5 sm:px-6 py-4">
-      <header>
-        <div className="flex items-start gap-2">
-          {/* on a narrow phone „დავალებები“ drops under the title; ✏️ stays in the corner */}
-          <div className="flex-1 min-w-0 flex flex-wrap items-center gap-x-3 gap-y-1.5">
-            <h2 className="min-h-9 flex items-center gap-2 font-serif-ge text-lg font-bold text-[#4a3426]">
-              <ListChecks className="w-5 h-5 shrink-0 text-[#7a2028]" /> სასწავლო პროგრამა
-            </h2>
-            <button
-              type="button"
-              onClick={() => { triggerHaptic(8); setShowWork(o => !o); }}
-              aria-expanded={showWork}
-              aria-label={workDot ? 'დავალებები — არის მიმდინარე' : 'დავალებები'}
-              className={`relative h-9 pl-3 pr-2.5 rounded-full inline-flex items-center gap-1.5 text-[13px] font-bold cursor-pointer transition active:scale-95 ${
-                showWork ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#7a2028]/[0.07] text-[#7a2028] hover:bg-[#7a2028]/[0.12]'
-              }`}
-            >
-              <ClipboardList className="w-4 h-4" /> დავალებები
-              <ChevronDown className={`w-4 h-4 transition-transform ${showWork ? 'rotate-180' : ''}`} />
-              {workDot && <span aria-hidden className="absolute -top-0.5 -right-0.5 w-3 h-3 rounded-full bg-[#e5484d] ring-2 ring-white" />}
-            </button>
-          </div>
-          {canEdit && !editing && <IconBtn label="პროგრამის შეცვლა" onClick={() => setEditing(true)}><Pencil /></IconBtn>}
         </div>
-        {iAmMember && total > 0 && (
-          <div className="mt-2 flex items-center gap-3">
-            <div className="flex-1 h-1.5 rounded-full bg-[#ece2d1] overflow-hidden">
-              <div
-                className={`h-full rounded-full transition-[width] duration-700 ${learned === total ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-[#c2414c] to-[#7a2028]'}`}
-                style={{ width: `${(100 * learned) / total}%` }}
-              />
-            </div>
-            <span className="shrink-0 text-xs font-semibold tabular-nums text-[#8a7a6a]">
-              {learned}/{total} ნასწავლი{voiceSlots ? ` · ${voices}/${voiceSlots} ხმა` : ''}
-            </span>
-          </div>
-        )}
-      </header>
-
-      {showWork && (
-        <div className={`sg-in mt-3 rounded-2xl bg-[#faf6ef] px-3.5 ${canEdit || !work.length ? 'py-3' : 'pb-3'}`}>
-          {canEdit ? (
-            <AssignmentsFold cls={cls} list={work} past={assignments.filter(a => daysUntil(a.due) < 0 && !work.includes(a)).reverse()} />
-          ) : work.length ? (
-            <WorkItems list={work} />
-          ) : (
-            <p className="text-sm text-[#8a7a6a]">ახლა დავალება არ არის.</p>
-          )}
-        </div>
-      )}
-
-      {editing && canEdit ? (
-        <div className="mt-3"><ProgramEditor cls={cls} onDone={() => setEditing(false)} /></div>
-      ) : cls.program.length === 0 ? (
-        <p className="mt-3 text-sm text-[#8a7a6a]">პროგრამა ჯერ არ არის შედგენილი.</p>
-      ) : (
-        <div className="mt-3 space-y-3">
-          {/* one list for everyone, in the teacher's order; what a member has learned shows on its own voice buttons */}
-          {groups(cats.map(c => ({ id: c.id, label: c.label, items: c.items })))}
-
-          {/* early free-text items: no catalogue id, so no voices */}
-          {free.length > 0 && (
-            <section>
-              {total > 0 && <h4 className="px-1 mb-0.5 text-[12px] font-bold text-[#a4927c]">სხვა · {free.length}</h4>}
-              <ul className="divide-y divide-[#f3ebdd]">
-                {free.map((p, i) => (
-                  <li key={i} className="py-2 px-1">
-                    <p className="text-[13.5px] leading-tight font-semibold text-[#2a2017]">{p.title}</p>
-                    {p.note && <p className="mt-0.5 text-[12px] leading-snug text-[#75685a] whitespace-pre-line">{p.note}</p>}
-                  </li>
-                ))}
-              </ul>
-            </section>
-          )}
-        </div>
-      )}
-    </section>
+      </div>
+    </Sheet>
   );
 };

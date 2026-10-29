@@ -52,6 +52,32 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   to copy, the odd ones checked on the picture — dasd1/133–139, 187, 189, 204, 205 voice II line 2 F→F♯; momix/039–077
   voice II t≈23 G→G♯; dasd1/231–234 bass lines 1–3 key change missed; dasd1/023–028 bass B→B♭ at the cadence.
   Copies that differ in the book too (v5/008 vs 009, kk/183, karb/180) were left as printed.
+  Fifth round (2026-10-28, `fixes4.txt`, 19 notes in 6 files): line-end chords with a semitone/tritone clash and a note
+  outside the line's key, checked on the picture — a key change after a barline missed in v8/166 lines 3 and 11, kk/210
+  line 5, karb/105 line 10, karb/052 line 1 (bass), v8/084 line 8 (bass); karb/150 line 21 voice I last note B♭→A.
+  The other line-end clashes are the books' own (per-voice key signatures, printed ♮, divided bass).
+  Rhythm fixes (same day; a note of one voice still sounding when its next note starts, checked on the picture):
+  dasd2 bass in 29 files (the bar „…შენ-ნი, ღმერ-თო, ა-ლად ცეცხ-ლი-სა“: a doubled F3 quarter → eighth, the rest of the
+  line half a beat later), dasd2/003 voice II line 1 rebuilt (beats 0–10), song/004 line 8 voice I two 32nd notes read
+  as quarters (everything after the line moved 1.75 beats earlier). The other overlaps are divided voices in the books.
+  Silences and early line ends (same day, 104 of 180 lines checked on the picture; the rest are book rests): v5/004
+  line 2 voices II–III two beats late, line 10 voice I triplet misread; dasd2/083 line 11 voice II last notes 4 beats
+  early; triod/054 the OMR dropped one part of a divided voice in 14 places (voice I lines 3–6, 8, 11, 12; voices II–III
+  line 12) — 60 notes added, so voice I there now overlaps itself on purpose.
+  The other 76 lines + the first check's side notes (same day, each fix confirmed by a second picture check; exact notes in the
+  commit of 2026-10-28 "fix 33 errors"): triod/107 key signatures (2♭) printed mid-line in lines 12, 15, 18 were ignored —
+  20 notes → B♭/E♭; dropped eighth rests (a voice half a beat early, its last note stretched) in v5/131 lines 2, 3, 5,
+  7, v5/132 line 10, v5/134 line 6, v5/135 line 2, v5/136 line 7 (all voices); v5/132 line 8 F→F♯ (accidental over
+  the line break); v5/124 line 4 bass B♭→B, lines 10 and 13 divided voices misread (line 13 one beat shorter); v5/098
+  line 2 voice II sextuplet; v8/004 and v8/005 line 6 bass (+ v8/004 voice I) rhythm; triod/140 line 1 bass divided
+  part added; song/003 the 5- and 7-note runs fill one beat (3/4 bars; the song is 4 beats shorter) + line 3 eighth
+  rest; song/005 missing rests (bars at 58, 107, 152.5) and voice I/II eighth + rest endings in lines 9–12.
+  Voice-offset round (2026-10-28, a voice's note starts meeting the others' once moved by a fraction of a beat; each fix
+  confirmed by a second picture check): a 16th read as an eighth (a voice ¼ beat late, the line's last notes stretched)
+  in v8/052 l.4, v8/056 l.4, v8/090 l.10, v8/128 l.6, v8/160 l.10 and l.16; a dropped eighth rest or misread dot (½ beat)
+  in dasd2/030 and 033 l.1, feast/105 l.3, triod/055 l.1; missed ties (two notes of one pitch that must sound as one) in
+  karb/151 l.12, karb/163 l.23, karb/183 l.11 (voices II and III), v5/086 l.4. Not applied (the second check never ran):
+  v5/133 l.8, v5/134 l.10, v5/135 l.1, v5/138 l.3, v5/140 l.2, v9/063 l.2, v9/091 l.3 — a voice looks ½–1 beat off there.
 - The OMR scripts live only in the user's old session scratchpads — they are not in this repo.
 - Unreviewed guesses (don't present as confirmed): vol. I↔III matches, vol. V/IX placements, which book
   version a liturgy recording follows (the `main` flag in `TSIRVA_BOOK` moves a recording to another version).

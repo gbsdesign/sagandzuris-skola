@@ -5,7 +5,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import {
   ArrowLeft, ArrowRight, BookmarkCheck, BookmarkPlus, Check, ChevronDown, ChevronLeft, ChevronUp, Church, CloudDownload, Download, Ellipsis,
   FileText, Flame, GraduationCap, Headphones, ListPlus, LoaderCircle, Minus, Moon, Music2, Pause, Piano, Play, Plus, Repeat, RotateCcw,
-  Scan, SlidersHorizontal, Sun, SunMoon, TextAlignStart, X, ZoomIn, ZoomOut, Pin,
+  CircleDot, Scan, SlidersHorizontal, Sun, SunMoon, TextAlignStart, X, ZoomIn, ZoomOut, Pin,
 } from 'lucide-react';
 import './notes.css';
 import { useNotes, shareNotesUrl, NotesOrigin } from '../../context/NotesContext';
@@ -24,6 +24,9 @@ import { BookScore, ChantSynth, bookImageUrl, loadBookScore, encodeMp3, renderSc
 import { needsReflow, reflowScore, type Piece, type Reflow } from '../../utils/sheetReflow';
 import { ChantPlayer } from '../../components/ChantPlayer';
 import { LearnMode } from '../../components/learn/LearnMode';
+import { takeLearn } from '../../utils/learnOpen';
+import { markerAt } from '../../utils/learn';
+import type { Voice } from '../../utils/pathItems';
 import { NpStepper } from './NpStepper';
 import { getAudioArrayBufferFromIdb } from '../../utils/audioIdb';
 import { GrapeBunch, VineLeaf, Rosette, Sprig, PlateBand } from '../../components/home/PlateOrnaments';
@@ -161,6 +164,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const chromeRef = useRef<HTMLDivElement>(null);
   const sheetsRef = useRef<HTMLDivElement>(null);
   const hlRef = useRef<HTMLDivElement>(null);
+  const ballRef = useRef<HTMLDivElement>(null);
   const sysRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const fillRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
@@ -176,10 +180,20 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const [recPause, setRecPause] = useState(0);
   const [learning, setLearning] = useState(false);
   useEffect(() => setLearning(false), [vid]);
+  // the home page's review line opens a chant straight in its learning mode
+  const [learnVoice, setLearnVoice] = useState<Voice | undefined>();
+  useEffect(() => {
+    const asked = score?.voices.length ? takeLearn(vid) : null;
+    if (asked) { setLearnVoice(asked.voice); setLearning(true); }
+  }, [score, vid]);
   const [moreOpen, setMoreOpen] = useState(false);
   const [paper, setPaper] = useState<Paper>(() => store.get<Paper>('sagandzuri_paper', 'day'));
   const [darkOS, setDarkOS] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
   const [wakeOn, setWakeOn] = useState(() => store.get('sagandzuri_wake', true));
+  // the small ball that glides over the notes while the synthesizer plays (on by default, remembered on the device)
+  const [ballOn, setBallOn] = useState(() => store.get('sagandzuri_ball', true));
+  const ballOnRef = useRef(ballOn);
+  ballOnRef.current = ballOn;
   const [wakeFailed, setWakeFailed] = useState(false);
   const [orient, setOrient] = useState<Orient>('port');
   const [tucked, setTucked] = useState(false);
@@ -289,6 +303,22 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     curSys.current = k;
     placeHL(false);
   }, [placeHL]);
+
+  // the ball: shown only while the synthesizer sounds, on the top edge of the playing line. The page has no note
+  // positions, so its place across the line is estimated from the note lengths (markerAt, as in „სწავლა“).
+  const placeBall = useCallback((k: number, beat: number) => {
+    const ball = ballRef.current, sh = sheetsRef.current;
+    const el = k >= 0 ? sysRefs.current[k] : null;
+    if (!ball) return;
+    if (!sh || !el || !score) { ball.style.opacity = '0'; return; }
+    const s = score.sys[k];
+    const px = s[1] + markerAt(score, k, beat) * s[3]; // x on the page picture, 0–1
+    const x0 = Number(el.dataset.x0), x1 = Number(el.dataset.x1); // the part of the line this button covers
+    const f = clamp((px - x0) / (x1 - x0 || 1), 0, 1);
+    const sr = sh.getBoundingClientRect(), r = el.getBoundingClientRect();
+    ball.style.transform = `translate(${(r.left - sr.left + f * r.width).toFixed(1)}px, ${(r.top - sr.top).toFixed(1)}px)`;
+    ball.style.opacity = '1';
+  }, [score]);
 
   // ---------- size: fit the screen width, times the zoom of this orientation
   const fitWidth = useCallback(() => {
@@ -523,18 +553,20 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     if (durRef.current) durRef.current.textContent = fmt(synth.duration / speed);
     if (miniRef.current && synth.playing) miniRef.current.style.width = `${f * 100}%`;
     const beat = synth.toBeat(sec);
-    highlight(synth.playing || sec > 0 ? score.sys.findIndex(s => beat >= s[5] && beat < s[6]) : -1);
-  }, [synth, score, speed, highlight]);
+    const k = synth.playing || sec > 0 ? score.sys.findIndex(s => beat >= s[5] && beat < s[6]) : -1;
+    highlight(k);
+    placeBall(synth.playing && ballOnRef.current ? k : -1, beat);
+  }, [synth, score, speed, highlight, placeBall]);
   useEffect(() => {
     if (!synth) return;
-    synth.onEnd = () => { setPlaying(false); paint(0); highlight(-1); };
+    synth.onEnd = () => { setPlaying(false); paint(0); highlight(-1); placeBall(-1, 0); };
     paint(synth.position());
     if (!playing) return;
     let raf = 0;
     const loopFrame = () => { if (!draggingTrack.current) paint(synth.position()); raf = requestAnimationFrame(loopFrame); };
     raf = requestAnimationFrame(loopFrame);
     return () => cancelAnimationFrame(raf);
-  }, [synth, playing, paint, highlight]);
+  }, [synth, playing, paint, highlight, placeBall]);
   useEffect(() => { setPlaying(false); }, [synth]);
   useEffect(() => { synth?.setSpeed(speed); }, [synth, speed]);
   useEffect(() => { synth?.setTranspose(transpose); }, [synth, transpose]);
@@ -791,6 +823,8 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
               ref={el => { sysRefs.current[k] = el; }}
               type="button"
               className="np-sys"
+              data-x0={l}
+              data-x1={Math.min(sx1, x1)}
               tabIndex={tapLines ? 0 : -1}
               onClick={() => playFromLine(k)}
               aria-label={`დაკვრა ${k + 1}-ე სტრიქონიდან`}
@@ -881,6 +915,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                 </React.Fragment>
               ))}
               <div ref={hlRef} className="np-hl" aria-hidden />
+              <div ref={ballRef} className="np-ball" aria-hidden />
             </div>
           </div>
 
@@ -986,6 +1021,11 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                     <button type="button" className={`np-ib np-loop ${loop.stage ? 'pill' : ''} ${loop.stage === 1 ? 'half' : ''} ${loop.stage === 2 ? 'lit' : ''}`} onClick={handleLoop} title={loopTitle} aria-label="გამეორება">
                       <Repeat />{loop.stage === 1 && <span>A→</span>}{loop.stage === 2 && <span>A–B</span>}
                     </button>
+                    <button
+                      type="button" className="np-ib np-ballbtn" aria-pressed={ballOn}
+                      onClick={() => { triggerHaptic(8); const next = !ballOn; setBallOn(next); store.set('sagandzuri_ball', next); showToast(next ? 'ბურთულა ნოტებზე ჩაირთო' : 'ბურთულა ნოტებზე გამოირთო'); }}
+                      aria-label="ბურთულა ნოტებზე" title={ballOn ? 'ბურთულა ნოტებზე: ჩართულია' : 'ბურთულა ნოტებზე: გამორთულია'}
+                    ><CircleDot /></button>
                   </div>
                   {mixOpen && (
                     <div className={`np-mix ${VOICES.length > 3 ? 'four' : ''}`}>
@@ -1099,7 +1139,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
         <span>{toast.msg}</span>
         {toast.action && <button type="button" onClick={() => { toast.action!.run(); setToast(t => ({ ...t, on: false })); }}>{toast.action.label}</button>}
       </div>
-      {learning && score && <LearnMode vid={vid} score={score} onClose={() => setLearning(false)} />}
+      {learning && score && <LearnMode vid={vid} score={score} voice={learnVoice} onClose={() => { setLearning(false); setLearnVoice(undefined); }} />}
     </div>
   );
 };

@@ -2,7 +2,8 @@
 // Pure functions, tested in tests/pearls.test.ts.
 import type { BookScore } from './chantSynth';
 import { makeTimeMap } from './chantSynth';
-import { POLISH_SHARE } from './pitch';
+import { POLISH_SHARE, mergeHeld } from './pitch';
+import type { Scoring, SungNote } from './pitch';
 import type { Voice } from './pathItems';
 
 export interface Phrase {
@@ -53,13 +54,78 @@ export const phraseOf = (score: BookScore, voice: number): Phrase => {
 
 export type PearlState = 'new' | 'tried' | 'polished' | 'shining';
 
-export interface PearlRecord { best: number; voice: Voice; at: string } // best: % of the phrase sung right
+/** students/{uid}.pearls[versionId]: the best try in any voice (`best` % of the phrase sung right, its voice — the
+ *  take the teachers hear) and, since 2026-10-28, the best in each voice (older records have only the first). */
+export interface PearlRecord { best: number; voice: Voice; at: string; voices?: Partial<Record<Voice, number>> }
 export interface PearlShine { voice: Voice; by: string; at: string }
 
+export const POLISH_PCT = POLISH_SHARE * 100;
+export const VOICE_IDS: Voice[] = ['1', '2', '3'];
+
 export const pearlState = (rec: PearlRecord | undefined, shine: PearlShine | undefined): PearlState =>
-  shine ? 'shining' : !rec ? 'new' : rec.best >= POLISH_SHARE * 100 ? 'polished' : 'tried';
+  shine ? 'shining' : !rec ? 'new' : rec.best >= POLISH_PCT ? 'polished' : 'tried';
+
+/** The best % in each voice sung so far (an older record counts its overall best for its voice). */
+export const voiceBests = (rec: PearlRecord | undefined): Partial<Record<Voice, number>> => {
+  const out: Partial<Record<Voice, number>> = {};
+  if (!rec) return out;
+  for (const v of VOICE_IDS) {
+    const n = rec.voices?.[v];
+    if (typeof n === 'number') out[v] = n;
+  }
+  if (VOICE_IDS.includes(rec.voice) && typeof rec.best === 'number' && (out[rec.voice] ?? -1) < rec.best) out[rec.voice] = rec.best;
+  return out;
+};
+
+/** Polished in all three voices: the pearl turns golden. */
+export const isGolden = (rec: PearlRecord | undefined) => {
+  const b = voiceBests(rec);
+  return VOICE_IDS.every(v => (b[v] ?? -1) >= POLISH_PCT);
+};
+
+/** What a try of `pct` % in `voice` changes in the record: the voice's own best, and the overall best (with its
+ *  voice and time) when it is reached; null when it improves nothing. Written with merge (hooks/usePearls savePearl). */
+export const pearlPatch = (rec: PearlRecord | undefined, pct: number, voice: Voice, at: string): Partial<PearlRecord> | null => {
+  const patch: Partial<PearlRecord> = {};
+  if (pct > (voiceBests(rec)[voice] ?? -1)) patch.voices = { [voice]: pct };
+  if (!rec || pct >= rec.best) Object.assign(patch, { best: pct, voice, at });
+  return Object.keys(patch).length ? patch : null;
+};
+
+/** A chant's title without the trailing stop the books give it. */
+export const chantName = (title: string) => title.replace(/[\s;:,.]+$/, '');
 
 export const VOICE_NAMES: Record<Voice, string> = { '1': 'I ხმა', '2': 'II ხმა', '3': 'III ხმა' };
+
+/**
+ * Where a take went wrong: each phrase note that was missed (`index` into the target) and how far the voice was from
+ * it in semitones (+ = too high, − = too low) — the nearest of the notes sung between the matched notes around it,
+ * each used once — or null when nothing near it (a semitone and a half) was sung. `scoring` is scoreSinging's.
+ */
+export const missedNotes = (target: number[], sungNotes: SungNote[], scoring: Scoring): { index: number; err: number | null }[] => {
+  const { matched, offset } = scoring;
+  const sung = mergeHeld(sungNotes);
+  const taken = new Set(matched.filter((x): x is SungNote => !!x).map(x => x.start));
+  const used = new Set<number>();
+  const out: { index: number; err: number | null }[] = [];
+  target.forEach((t, i) => {
+    if (matched[i]) return;
+    // the sung notes after the matched note before this one and before the matched note after it
+    let from = -Infinity;
+    for (let p = i - 1; p >= 0; p--) if (matched[p]) { from = matched[p]!.start; break; }
+    let to = Infinity;
+    for (let q = i + 1; q < target.length; q++) if (matched[q]) { to = matched[q]!.start; break; }
+    let best: { start: number; e: number } | null = null;
+    for (const s of sung) {
+      if (s.start <= from || s.start >= to || taken.has(s.start) || used.has(s.start)) continue;
+      const e = s.midi - offset - t;
+      if (Math.abs(e) <= 1.5 && (!best || Math.abs(e) < Math.abs(best.e))) best = { start: s.start, e };
+    }
+    if (best) used.add(best.start);
+    out.push({ index: i, err: best ? best.e : null });
+  });
+  return out;
+};
 
 const NOTE_NAMES = ['დო', 'დო♯', 'რე', 'მი♭', 'მი', 'ფა', 'ფა♯', 'სოლ', 'სოლ♯', 'ლა', 'სი♭', 'სი'];
 export const noteName = (midi: number) => NOTE_NAMES[((Math.round(midi) % 12) + 12) % 12];

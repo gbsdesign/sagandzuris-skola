@@ -230,7 +230,7 @@ const StatusCard: React.FC<{ s: OfflineState }> = ({ s }) => {
 };
 
 /** One optional pack (a book's pages, the lives): its switch, size and progress; with `icon` it is a card's head. */
-const PackRow: React.FC<{ s: OfflineState; p: PackInfo; title: string; count?: string; icon?: React.ReactNode }> = ({ s, p, title, count, icon }) => {
+const PackRow: React.FC<{ s: OfflineState; p: PackInfo; title: string; count?: string; icon?: React.ReactNode; recs?: RecGroup; est?: (url: string) => number }> = ({ s, p, title, count, icon, recs, est }) => {
   const on = isKept(s, p.id);
   const st = s.stored[p.id];
   const done = on && !!st?.complete;
@@ -242,7 +242,13 @@ const PackRow: React.FC<{ s: OfflineState; p: PackInfo; title: string; count?: s
     : !s.online ? `დაელოდება ინტერნეტს · ${pct}%`
     : s.failed && !s.run ? `შეფერხდა · ${pct}%`
     : `რიგშია · ${size(p.b)}`;
-  const turn = async (v: boolean) => { if (v || await sureToRemove(`„${title}“`, st?.bytes ?? 0)) void setPacks([p.id], v); };
+  // a book with recordings: on = its pages and its recordings (the whole book); off = both
+  const rs = recs && est ? groupStats(s, recs, est) : null;
+  const turn = async (v: boolean) => {
+    if (!v && !await sureToRemove(`„${title}“`, (st?.bytes ?? 0) + (rs?.chosenKept ?? 0), !!rs?.chosenKept)) return;
+    void setPacks([p.id], v);
+    if (recs && (v || rs?.chosen)) void setGroup(recs, v);
+  };
   const sw = <Switch on={on} onChange={turn} label={`${title} — ოფლაინ`} />;
   return (
     <div className={icon ? '' : 'py-0.5'}>
@@ -255,13 +261,31 @@ const PackRow: React.FC<{ s: OfflineState; p: PackInfo; title: string; count?: s
         </div>
       )}
       {on && !done && (active || pct > 0) && <div className="mt-1 mb-1.5"><Bar value={pct} max={100} /></div>}
+      {on && recs && rs && <BookRecsRow s={s} g={recs} st={rs} />}
+    </div>
+  );
+};
+
+/** Under a book turned on: its chants' recordings, on with the book; turned off alone it keeps only the pages. */
+const BookRecsRow: React.FC<{ s: OfflineState; g: RecGroup; st: ReturnType<typeof groupStats> }> = ({ s, g, st }) => {
+  const ok = st.whole && st.chosenDone === st.chosen;
+  const line = !st.whole
+    ? `${g.items.length} ჩანაწერი · ≈\u00a0${size(st.total)}`
+    : ok ? `ჩამოწერილია · ${size(st.kept)}` : `${recState(s)} · ${st.chosenDone} / ${st.chosen}`;
+  const turn = async (v: boolean) => { if (v || await sureToRemove(`„${g.title}“ — ჩანაწერები`, st.chosenKept, true)) void setGroup(g, v); };
+  return (
+    <div className="ml-3 pl-3 border-l-2 border-[#efe5d4] flex items-center gap-3 py-1 mb-1">
+      <Headphones aria-hidden className="w-4 h-4 shrink-0 text-[#a4927c]" />
+      <RowText title="ჩანაწერებიც" line={line} done={ok} />
+      <Switch on={st.whole} onChange={turn} label={`${g.title} — ჩანაწერები ოფლაინ`} />
     </div>
   );
 };
 
 /** The chant books, folded: under the head only the books turned on; open, every book with „ყველა წიგნი“ on top. */
-const BooksCard: React.FC<{ s: OfflineState; books: PackInfo[] }> = ({ s, books }) => {
+const BooksCard: React.FC<{ s: OfflineState; books: PackInfo[]; recs: RecGroup[] }> = ({ s, books, recs }) => {
   const [open, setOpen] = useState(false);
+  const est = useMemo(() => trackEstimate(s.sizes), [s.sizes]);
   const on = books.filter(p => isKept(s, p.id));
   const allOn = on.length === books.length;
   const total = books.reduce((a, p) => a + p.b, 0);
@@ -297,7 +321,8 @@ const BooksCard: React.FC<{ s: OfflineState; books: PackInfo[] }> = ({ s, books 
             </div>
           )}
           {(open ? books : on).map(p => (
-            <PackRow key={p.id} s={s} p={p} title={BOOK_NAMES[bookOf(p)] ?? bookOf(p)} count={p.c ? `${p.c} გალობა` : undefined} />
+            <PackRow key={p.id} s={s} p={p} title={BOOK_NAMES[bookOf(p)] ?? bookOf(p)} count={p.c ? `${p.c} გალობა` : undefined}
+              recs={recs.find(g => g.id === `b:${bookOf(p)}`)} est={est} />
           ))}
         </div>
       )}
@@ -446,7 +471,7 @@ export const OfflinePage: React.FC = () => {
   return (
     <div className="w-full max-w-2xl mx-auto px-1 pb-10 space-y-3">
       <StatusCard s={s} />
-      {books.length > 0 && <BooksCard s={s} books={books} />}
+      {books.length > 0 && <BooksCard s={s} books={books} recs={groups.filter(g => g.section === 'books')} />}
       {groups.length > 0 && <RecordingsCard s={s} groups={groups} />}
       {lives && sees.library && (
         <Card className={CARD}>

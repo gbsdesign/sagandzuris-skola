@@ -1,0 +1,98 @@
+# The reminders Worker (worker/reminders → sagandzuri-reminders on Cloudflare): published from here when its code reaches
+# main, or by hand (Actions → Reminders Worker → Run workflow), so nobody needs a computer with wrangler any more.
+# It also does the old one-time setup of docs/შეხსენებების-სერვერი.md by itself: finds (or makes) the D1 database
+# „sagandzuri-reminders“, puts its id into wrangler.toml for this run only, creates the tables (schema.sql only adds
+# what is missing), gives the Worker its Firestore key FIREBASE_SA once — the same service-account key as the rules
+# workflow's FIREBASE_SERVICE_ACCOUNT (the user's choice, 2026-10-28) — and warns when VAPID_PRIVATE_JWK is missing.
+# One-time setup: the GitHub secret CLOUDFLARE_API_TOKEN = a Cloudflare API token from the template „Edit Cloudflare
+# Workers“ with „Account · D1 · Edit“ added. Until it exists the run only warns and stops.
+name: Reminders Worker
+
+on:
+  push:
+    branches: [main]
+    paths: [worker/reminders/**, .github/workflows/reminders-worker.yml]
+  workflow_dispatch:
+
+concurrency:
+  group: reminders-worker
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+      # the account that holds the site's Pages project and the Workers
+      CLOUDFLARE_ACCOUNT_ID: 9a55c3ca8804c47ee27b9e089852c3fc
+      WRANGLER_SEND_METRICS: 'false'
+    steps:
+      - name: Check the Cloudflare key
+        id: key
+        run: |
+          if [ -z "$CLOUDFLARE_API_TOKEN" ]; then
+            echo "::warning::The secret CLOUDFLARE_API_TOKEN is missing — the Worker was not published. Add it in the repository settings and run this workflow again."
+            echo "ok=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ok=true" >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.key.outputs.ok == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.key.outputs.ok == 'true'
+        with:
+          node-version: 22
+
+      # wrangler in a folder of its own, so the app's packages are not installed
+      - name: Install wrangler
+        if: steps.key.outputs.ok == 'true'
+        run: |
+          mkdir -p "$RUNNER_TEMP/wr" && cd "$RUNNER_TEMP/wr"
+          npm init -y > /dev/null
+          npm i --no-audit --no-fund wrangler@4.150.0
+          echo "$RUNNER_TEMP/wr/node_modules/.bin" >> "$GITHUB_PATH"
+
+      - name: Find or make the D1 database
+        if: steps.key.outputs.ok == 'true'
+        working-directory: worker/reminders
+        run: |
+          # the database's id by its name ('' when there is none); wrangler's own words are shown when it fails
+          id_of() {
+            LIST=$(wrangler d1 list --json) || { echo "$LIST" >&2; return 1; }
+            node -e 'const s=process.argv[1];try{const db=JSON.parse(s.slice(s.indexOf("["))).find(d=>d.name==="sagandzuri-reminders");process.stdout.write(db?db.uuid:"")}catch(e){console.error(s);process.exit(1)}' "$LIST"
+          }
+          ID=$(id_of)
+          if [ -z "$ID" ]; then
+            echo "No D1 database yet — making it."
+            wrangler d1 create sagandzuri-reminders --update-config=false
+            ID=$(id_of)
+          fi
+          if [ -z "$ID" ]; then echo "::error::Could not find or make the D1 database sagandzuri-reminders."; exit 1; fi
+          sed -i "s/PASTE-THE-ID-FROM-wrangler-d1-create/$ID/" wrangler.toml
+          grep -q "database_id = \"$ID\"" wrangler.toml || { echo "::error::wrangler.toml holds another database id — remove it so this run sets it."; exit 1; }
+          wrangler d1 execute sagandzuri-reminders --remote --file=schema.sql --yes
+
+      - name: Publish the Worker
+        if: steps.key.outputs.ok == 'true'
+        working-directory: worker/reminders
+        run: wrangler deploy
+
+      # the secrets' names are read, never their values; FIREBASE_SA is given only while the Worker has none
+      - name: Check the Worker's secrets
+        if: steps.key.outputs.ok == 'true'
+        working-directory: worker/reminders
+        env:
+          SA: ${{ secrets.FIREBASE_SERVICE_ACCOUNT }}
+        run: |
+          NAMES=$(wrangler secret list --format=json) || { echo "$NAMES"; exit 1; }
+          has() { node -e 'const s=process.argv[1];process.exit(JSON.parse(s.slice(s.indexOf("["))).some(x=>x.name===process.argv[2])?0:1)' "$NAMES" "$1"; }
+          if has FIREBASE_SA; then
+            echo "FIREBASE_SA is set."
+          elif [ -n "$SA" ]; then
+            printf '%s' "$SA" | wrangler secret put FIREBASE_SA
+          else
+            echo "::warning::The Worker has no FIREBASE_SA and the secret FIREBASE_SERVICE_ACCOUNT is missing — group, assignment and admin reminders stay off."
+          fi
+          has VAPID_PRIVATE_JWK || echo "::warning::The Worker has no VAPID_PRIVATE_JWK — no push can be sent until it is set."

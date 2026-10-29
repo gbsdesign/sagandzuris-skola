@@ -12,11 +12,23 @@
 //   - assignments: at 19:00 the day before the deadline.
 // • POST /group-event { token, groupId, kind: 'taken' | 'help', kathisma }: "your kathisma was taken by …"
 //   to its reader, "help needed" to the group. The facts are checked in Firestore before anything is sent.
+// • Admins (2026-10-28): /account with `admin: true` binds the browser to an admin's notices; what they asked for is
+//   adminPush/{uid} in Firestore { waiting, weekly }. POST /access-request { token } — a newcomer's request (checked in
+//   memberAccess) goes to the superadmins with `waiting`; Monday 10:00 the school's week goes to those with `weekly`.
+// • Home-screen widgets of the Android app (2026-10-29): POST /widget/link { token } gives the app a secret of its own
+//   (the profile's „ვიჯეტის დაკავშირება“); POST /widget/summary { token, summary } — the site, while open, leaves what the
+//   widgets show (habits, the path's percentages, the psalter kanon); the app's widgets, which carry no site Origin, read
+//   GET /widget/data?s=<secret> (that summary + today's ticks and counts, live from Firestore) and tick a habit with
+//   POST /widget/tick { s, id } or count with POST /widget/count { s, id, add }; POST /widget/unlink { s }.
+// • The phone's calendar (2026-10-29): GET /cal/<secret>.ics — great feasts, fasts and the member's lessons (ics.js);
+//   the secret is one of /widget/link's, asked for by the profile's „კალენდარი ტელეფონში“.
 // These pushes carry an encrypted text payload (RFC 8291, aes128gcm).
 //
 // Bindings (wrangler.toml): D1 database DB (schema.sql), KV namespace REMINDERS (old storage, read once to
 // move the subscriptions into D1), vars VAPID_PUBLIC_KEY, FIREBASE_PROJECT_ID, FIRESTORE_DB,
 // secrets VAPID_PRIVATE_JWK and FIREBASE_SA (the service account's JSON key, for reading Firestore).
+
+import { buildIcs } from './ics.js';
 
 const MAIN_ORIGINS = [
   'https://sagandzuris-skola.pages.dev',
@@ -116,6 +128,30 @@ const validTz = (tz) => {
   }
 };
 
+// The `admin` column came later (2026-10-28): the Worker adds it itself, once, so a deploy is all it takes.
+let schemaReady = false;
+async function ensureSchema(env) {
+  if (schemaReady) return;
+  const v = await env.DB.prepare("SELECT value FROM meta WHERE key = 'schema'").first();
+  if (!v || Number(v.value) < 2) {
+    try {
+      await env.DB.prepare('ALTER TABLE subs ADD COLUMN admin INTEGER NOT NULL DEFAULT 0').run();
+    } catch {
+      /* already there (schema.sql of a fresh install has it) */
+    }
+    await env.DB.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema', '2')").run();
+  }
+  if (!v || Number(v.value) < 3) {
+    await env.DB.batch([
+      env.DB.prepare('CREATE TABLE IF NOT EXISTS widgets (secret TEXT PRIMARY KEY, uid TEXT NOT NULL, created_at TEXT)'),
+      env.DB.prepare('CREATE INDEX IF NOT EXISTS widgets_uid ON widgets (uid)'),
+      env.DB.prepare('CREATE TABLE IF NOT EXISTS widget_summary (uid TEXT PRIMARY KEY, json TEXT NOT NULL, updated_at TEXT)'),
+      env.DB.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema', '3')"),
+    ]);
+  }
+  schemaReady = true;
+}
+
 const validSubscription = (sub) =>
   sub && typeof sub.endpoint === 'string' && sub.endpoint.startsWith('https://') && sub.endpoint.length <= 1000;
 
@@ -150,8 +186,8 @@ async function subscribe(request, env) {
   const tz = typeof body.tz === 'string' && validTz(body.tz) ? body.tz : 'Asia/Tbilisi';
   const reminders = cleanReminders(body.reminders);
   const key = await sha256(sub.endpoint);
-  const row = await env.DB.prepare('SELECT uid, psalter, assignments FROM subs WHERE key = ?').bind(key).first();
-  if (!Object.keys(reminders).length && !(row && (row.psalter || row.assignments))) {
+  const row = await env.DB.prepare('SELECT uid, psalter, assignments, admin FROM subs WHERE key = ?').bind(key).first();
+  if (!Object.keys(reminders).length && !(row && (row.psalter || row.assignments || row.admin))) {
     await env.DB.prepare('DELETE FROM subs WHERE key = ?').bind(key).run();
     return [200, 'ok'];
   }
@@ -180,8 +216,10 @@ async function account(request, env) {
   const psalter = body.psalter ? 1 : 0;
   const assignments = body.assignments ? 1 : 0;
   const key = await sha256(sub.endpoint);
-  const row = await env.DB.prepare('SELECT reminders FROM subs WHERE key = ?').bind(key).first();
-  if (!psalter && !assignments && (!row || row.reminders === '{}')) {
+  const row = await env.DB.prepare('SELECT reminders, admin FROM subs WHERE key = ?').bind(key).first();
+  // an admin's notices: set when the call says so, otherwise kept (the group switches do not know of them)
+  const admin = typeof body.admin === 'boolean' ? (body.admin ? 1 : 0) : (row?.admin ? 1 : 0);
+  if (!psalter && !assignments && !admin && (!row || row.reminders === '{}')) {
     await env.DB.prepare('DELETE FROM subs WHERE key = ?').bind(key).run();
     return [200, 'ok'];
   }
@@ -190,11 +228,12 @@ async function account(request, env) {
     if (n >= MAX_SUBS) return [503, 'full'];
   }
   await env.DB.prepare(
-    `INSERT INTO subs (key, endpoint, p256dh, auth, tz, reminders, uid, psalter, assignments, updated_at)
-     VALUES (?, ?, ?, ?, 'Asia/Tbilisi', '{}', ?, ?, ?, ?)
+    `INSERT INTO subs (key, endpoint, p256dh, auth, tz, reminders, uid, psalter, assignments, admin, updated_at)
+     VALUES (?, ?, ?, ?, 'Asia/Tbilisi', '{}', ?, ?, ?, ?, ?)
      ON CONFLICT(key) DO UPDATE SET endpoint = excluded.endpoint, p256dh = excluded.p256dh, auth = excluded.auth,
-       uid = excluded.uid, psalter = excluded.psalter, assignments = excluded.assignments, updated_at = excluded.updated_at`
-  ).bind(key, sub.endpoint, sub.keys.p256dh, sub.keys.auth, uid, psalter, assignments, new Date().toISOString()).run();
+       uid = excluded.uid, psalter = excluded.psalter, assignments = excluded.assignments, admin = excluded.admin,
+       updated_at = excluded.updated_at`
+  ).bind(key, sub.endpoint, sub.keys.p256dh, sub.keys.auth, uid, psalter, assignments, admin, new Date().toISOString()).run();
   return [200, 'ok'];
 }
 
@@ -271,6 +310,9 @@ async function deliver(env, sends) {
 let jwks = null;
 let jwksAt = 0;
 async function verifyIdToken(env, token) {
+  return (await verifyIdClaims(env, token)).sub;
+}
+async function verifyIdClaims(env, token) {
   if (typeof token !== 'string' || token.split('.').length !== 3) throw new Error('token');
   const [h, p, s] = token.split('.');
   const header = JSON.parse(dec.decode(unb64url(h)));
@@ -287,7 +329,7 @@ async function verifyIdToken(env, token) {
   if (!jwk) throw new Error('kid');
   const key = await crypto.subtle.importKey('jwk', jwk, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify']);
   if (!(await crypto.subtle.verify('RSASSA-PKCS1-v1_5', key, unb64url(s), enc.encode(`${h}.${p}`)))) throw new Error('sig');
-  return claims.sub;
+  return claims;
 }
 
 let googleToken = null;
@@ -335,11 +377,13 @@ async function fsGet(env, path) {
   return fromFields((await res.json()).fields);
 }
 
-async function fsList(env, path) {
+// `fields`: only these fields of each document (a big collection such as students stays small)
+async function fsList(env, path, fields = []) {
   const out = [];
   let page = '';
+  const mask = fields.map((f) => `&mask.fieldPaths=${encodeURIComponent(f)}`).join('');
   do {
-    const res = await fetch(`${fsBase(env)}/${path}?pageSize=300${page ? `&pageToken=${page}` : ''}`, { headers: { Authorization: `Bearer ${await accessToken(env)}` } });
+    const res = await fetch(`${fsBase(env)}/${path}?pageSize=300${mask}${page ? `&pageToken=${page}` : ''}`, { headers: { Authorization: `Bearer ${await accessToken(env)}` } });
     if (!res.ok) throw new Error(`firestore ${res.status}`);
     const data = await res.json();
     for (const d of data.documents || []) out.push({ id: d.name.split('/').pop(), ...fromFields(d.fields) });
@@ -419,6 +463,7 @@ async function runGroupHour(env, when) {
 
   const groups = await fsList(env, 'psalterGroups');
   for (const group of groups) {
+    if (group.archived) continue; // its class is in the admin's archive
     const cycle = cycleOf(g, group);
     const owners = ownersIn(group.assignment, typeof group.baseHalf === 'number' ? group.baseHalf : cycle.half, cycle.half);
     const daily = group.remindDaily === undefined ? '20:00' : group.remindDaily;
@@ -459,6 +504,7 @@ async function runGroupHour(env, when) {
     const tomorrow = isoOf(new Date(g.getTime() + 86400_000));
     const classes = await fsList(env, 'classes');
     for (const cls of classes) {
+      if (cls.archived) continue;
       const list = (await fsList(env, `classes/${cls.id}/assignments`)).filter((a) => a.due === tomorrow);
       for (const a of list) {
         const targets = Array.isArray(a.studentIds) && a.studentIds.length ? a.studentIds : cls.memberIds || [];
@@ -504,6 +550,85 @@ async function groupEvent(request, env) {
   const rows = await rowsFor(env, targets, 'psalter');
   await deliver(env, rows.map((r) => [r, message]));
   return [200, 'ok'];
+}
+
+// ---- admins: a newcomer waits; Monday's overview --------------------------------------------------------
+
+// the admins who asked for a notice (adminPush/{uid}; firestore.rules lets only superadmins ask for `waiting`)
+// only people who are still staff (a role taken away leaves their choice behind): superadmins for a waiting member,
+// admins and superadmins for Monday's line
+async function adminsWanting(env, what) {
+  const [push, staff] = await Promise.all([
+    fsList(env, 'adminPush', ['waiting', 'weekly']),
+    fsList(env, 'admins', ['role', 'userId']),
+  ]);
+  const ok = new Set(staff.filter((s) => s.userId && (s.role === 'superadmin' || (what === 'weekly' && s.role === 'admin'))).map((s) => s.userId));
+  return push.filter((d) => d[what] === true && ok.has(d.id)).map((d) => d.id);
+}
+
+const metaGet = async (env, key) => (await env.DB.prepare('SELECT value FROM meta WHERE key = ?').bind(key).first())?.value || null;
+const metaSet = (env, key, value) => env.DB.prepare('INSERT OR REPLACE INTO meta (key, value) VALUES (?, ?)').bind(key, value).run();
+
+async function accessRequest(request, env) {
+  const body = await readJson(request);
+  if (!body) return [400, 'bad json'];
+  let claims;
+  try {
+    claims = await verifyIdClaims(env, body.token);
+  } catch {
+    return [401, 'bad token'];
+  }
+  const uid = claims.sub;
+  // a real, fresh request — told once
+  const access = await fsGet(env, `memberAccess/${uid}`);
+  const fresh = access?.requestedAt && Date.now() - new Date(access.requestedAt).getTime() < 15 * 60_000;
+  if (!access || access.status !== 'pending' || !fresh) return [409, 'no fresh request'];
+  if (await metaGet(env, `access:${uid}`)) return [200, 'told'];
+  await metaSet(env, `access:${uid}`, new Date().toISOString());
+  const name = String(claims.name || '').trim().slice(0, 60);
+  const message = {
+    title: 'ახალი წევრი ელოდება',
+    body: name ? `${name} ითხოვს სკოლაში დამატებას. შეეხე და გადაწყვიტე.` : 'ახალი ადამიანი ითხოვს სკოლაში დამატებას. შეეხე და გადაწყვიტე.',
+    tag: `access-${uid}`,
+    url: `/?open=admin&person=${uid}`,
+  };
+  const rows = await rowsFor(env, await adminsWanting(env, 'waiting'), 'admin');
+  await deliver(env, rows.map((r) => [r, message]));
+  return [200, 'ok'];
+}
+
+/** Monday's line: „3 ახალი წევრი · 12 აქტიური · 1 კლასს გაკვეთილი არ ჰქონია“ (empty parts left out). */
+const weekText = ({ fresh, active, idle }) => {
+  const parts = [];
+  if (fresh) parts.push(`${fresh} ახალი წევრი`);
+  parts.push(`${active} აქტიური`);
+  if (idle) parts.push(`${idle} კლასს გაკვეთილი არ ჰქონია`);
+  return parts.join(' · ');
+};
+
+async function runAdminWeek(env, when) {
+  const week = isoOf(georgia(when));
+  if (await metaGet(env, `week:${week}`)) return;
+  await metaSet(env, `week:${week}`, when.toISOString());
+  const uids = await adminsWanting(env, 'weekly');
+  if (!uids.length) return;
+  const since = new Date(when.getTime() - 7 * DAY_MS).toISOString();
+  const sinceDay = isoOf(georgia(new Date(when.getTime() - 7 * DAY_MS)));
+  // members marked „გასული“ (settings/leftMembers) are no longer counted
+  const left = new Set(((await fsGet(env, 'settings/leftMembers').catch(() => null))?.uids || []).map(String));
+  const students = (await fsList(env, 'students', ['createdAt', 'lastActiveAt'])).filter((s) => !left.has(s.id));
+  const fresh = students.filter((s) => typeof s.createdAt === 'string' && s.createdAt >= since).length;
+  const active = students.filter((s) => typeof s.lastActiveAt === 'string' && s.lastActiveAt >= since).length;
+  // classes in use with no attendance list in the last 7 days
+  let idle = 0;
+  for (const c of await fsList(env, 'classes', ['archived'])) {
+    if (c.archived) continue;
+    const days = await fsList(env, `classes/${c.id}/attendance`, ['date']).catch(() => []);
+    if (!days.some((d) => typeof d.date === 'string' && d.date >= sinceDay)) idle++;
+  }
+  const message = { title: 'სკოლის კვირა', body: weekText({ fresh, active, idle }), tag: `week-${week}`, url: '/?open=admin' };
+  const rows = await rowsFor(env, uids, 'admin');
+  await deliver(env, rows.map((r) => [r, message]));
 }
 
 // ---- the prayer hours (empty pushes, as before) --------------------------------------------------------
@@ -607,20 +732,163 @@ async function runHabitReminders(env, when) {
   if (sends.length) await deliver(env, sends);
 }
 
+// ---- home-screen widgets of the Android app ------------------------------------------------------------
+
+const MAX_WIDGET_SECRETS = 10; // per person (phones and reinstalls)
+const MAX_SUMMARY = 12_000;
+const HABIT_ID = /^[\w-]{1,80}$/;
+const json = (data, status = 200) => [status, JSON.stringify(data), 'application/json'];
+const todayKey = (when = new Date()) => isoOf(georgia(when));
+// a field path inside a map whose keys hold dashes: habitLog.`2026-10-29`
+const fieldPath = (...parts) => parts.map((p) => (/^[A-Za-z_]\w*$/.test(p) ? p : `\`${p.replace(/[`\\]/g, '\\$&')}\``)).join('.');
+
+async function widgetUid(env, secret) {
+  if (typeof secret !== 'string' || secret.length < 20 || secret.length > 100) return null;
+  const row = await env.DB.prepare('SELECT uid FROM widgets WHERE secret = ?').bind(await sha256(secret)).first();
+  return row?.uid || null;
+}
+
+async function widgetLink(request, env) {
+  const body = await readJson(request);
+  let uid;
+  try {
+    uid = await verifyIdToken(env, body?.token);
+  } catch {
+    return [401, 'bad token'];
+  }
+  const secret = b64url(crypto.getRandomValues(new Uint8Array(32)));
+  await env.DB.batch([
+    env.DB.prepare('INSERT INTO widgets (secret, uid, created_at) VALUES (?, ?, ?)').bind(await sha256(secret), uid, new Date().toISOString()),
+    env.DB.prepare(
+      `DELETE FROM widgets WHERE uid = ? AND secret NOT IN (SELECT secret FROM widgets WHERE uid = ? ORDER BY created_at DESC LIMIT ${MAX_WIDGET_SECRETS})`
+    ).bind(uid, uid),
+  ]);
+  return json({ secret });
+}
+
+async function widgetUnlink(request, env) {
+  const body = await readJson(request);
+  if (typeof body?.s === 'string') await env.DB.prepare('DELETE FROM widgets WHERE secret = ?').bind(await sha256(body.s)).run();
+  return [200, 'ok'];
+}
+
+async function widgetSummary(request, env) {
+  const body = await readJson(request);
+  let uid;
+  try {
+    uid = await verifyIdToken(env, body?.token);
+  } catch {
+    return [401, 'bad token'];
+  }
+  const text = JSON.stringify(body.summary ?? null);
+  if (!body.summary || typeof body.summary !== 'object' || text.length > MAX_SUMMARY) return [400, 'bad summary'];
+  await env.DB.prepare('INSERT OR REPLACE INTO widget_summary (uid, json, updated_at) VALUES (?, ?, ?)').bind(uid, text, new Date().toISOString()).run();
+  return [200, 'ok'];
+}
+
+// today's ticks and counts of one person, read without the rest of the history
+async function habitDay(env, uid, day) {
+  const mask = [fieldPath('habitLog', day), fieldPath('habitCounts', day)].map((f) => `mask.fieldPaths=${encodeURIComponent(f)}`).join('&');
+  const res = await fetch(`${fsBase(env)}/students/${uid}?${mask}`, { headers: { Authorization: `Bearer ${await accessToken(env)}` } });
+  if (res.status === 404) return { done: [], counts: {} };
+  if (!res.ok) throw new Error(`firestore ${res.status}`);
+  const doc = fromFields((await res.json()).fields);
+  const done = doc.habitLog?.[day];
+  const counts = doc.habitCounts?.[day];
+  return { done: Array.isArray(done) ? done.filter((x) => typeof x === 'string') : [], counts: counts && typeof counts === 'object' ? counts : {} };
+}
+
+async function fsPatch(env, uid, paths, fields) {
+  const mask = paths.map((f) => `updateMask.fieldPaths=${encodeURIComponent(f)}`).join('&');
+  const res = await fetch(`${fsBase(env)}/students/${uid}?${mask}&currentDocument.exists=true`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${await accessToken(env)}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields }),
+  });
+  if (!res.ok) throw new Error(`firestore ${res.status}`);
+}
+
+const writeDone = (env, uid, day, ids) =>
+  fsPatch(env, uid, [fieldPath('habitLog', day)], ids.length
+    ? { habitLog: { mapValue: { fields: { [day]: { arrayValue: { values: ids.map((stringValue) => ({ stringValue })) } } } } } }
+    : {});
+
+async function widgetData(request, env) {
+  const url = new URL(request.url);
+  const uid = await widgetUid(env, url.searchParams.get('s'));
+  if (!uid) return [401, 'unknown'];
+  const day = todayKey();
+  const row = await env.DB.prepare('SELECT json, updated_at FROM widget_summary WHERE uid = ?').bind(uid).first();
+  const summary = row ? JSON.parse(row.json) : null;
+  return json({ day, summary, at: row?.updated_at || null, ...(await habitDay(env, uid, day)) });
+}
+
+async function widgetTick(request, env) {
+  const body = await readJson(request);
+  const uid = await widgetUid(env, body?.s);
+  if (!uid) return [401, 'unknown'];
+  if (typeof body.id !== 'string' || !HABIT_ID.test(body.id)) return [400, 'bad id'];
+  const day = todayKey();
+  const { done } = await habitDay(env, uid, day);
+  const next = done.includes(body.id) ? done.filter((h) => h !== body.id) : [...done, body.id];
+  await writeDone(env, uid, day, next);
+  return json({ day, done: next });
+}
+
+// a counted habit (the Jesus prayer): adds `add` to today's number; reaching the habit's goal ticks the day
+async function widgetCount(request, env) {
+  const body = await readJson(request);
+  const uid = await widgetUid(env, body?.s);
+  if (!uid) return [401, 'unknown'];
+  const add = Math.round(Number(body.add));
+  if (typeof body.id !== 'string' || !HABIT_ID.test(body.id) || !(add >= 1 && add <= 1000)) return [400, 'bad count'];
+  const day = todayKey();
+  const { done, counts } = await habitDay(env, uid, day);
+  const n = Math.min(100000, (Number(counts[body.id]) || 0) + add);
+  await fsPatch(env, uid, [fieldPath('habitCounts', day, body.id)], {
+    habitCounts: { mapValue: { fields: { [day]: { mapValue: { fields: { [body.id]: { integerValue: String(n) } } } } } } },
+  });
+  const row = await env.DB.prepare('SELECT json FROM widget_summary WHERE uid = ?').bind(uid).first();
+  const goal = Number((row ? JSON.parse(row.json) : null)?.habits?.find?.((h) => h?.id === body.id)?.goal) || 0;
+  let next = done;
+  if (goal && n >= goal && !done.includes(body.id)) {
+    next = [...done, body.id];
+    await writeDone(env, uid, day, next);
+  }
+  return json({ day, done: next, count: n });
+}
+
+// the member's phone calendar (worker/reminders/ics.js): the same secret as the widgets, from POST /widget/link
+async function calendarFeed(request, env) {
+  const m = /^\/cal\/([\w-]{20,100})\.ics$/.exec(new URL(request.url).pathname);
+  const uid = m && (await widgetUid(env, m[1]));
+  if (!uid) return [404, 'unknown'];
+  const classes = (await fsList(env, 'classes', ['name', 'archived', 'memberIds', 'teacherIds', 'schedule']))
+    .filter((c) => !c.archived && ((c.memberIds || []).includes(uid) || (c.teacherIds || []).includes(uid)));
+  return [200, buildIcs(classes), 'text/calendar; charset=utf-8'];
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
     const headers = cors(origin);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
     const url = new URL(request.url);
-    const routes = { '/subscribe': subscribe, '/account': account, '/group-event': groupEvent };
-    const handler = request.method === 'POST' ? routes[url.pathname] : null;
+    const routes = {
+      '/subscribe': subscribe, '/account': account, '/group-event': groupEvent, '/access-request': accessRequest,
+      '/widget/link': widgetLink, '/widget/summary': widgetSummary,
+    };
+    // the app's widgets send no Origin: their secret is the proof
+    const widgetRoutes = { 'GET /widget/data': widgetData, 'POST /widget/tick': widgetTick, 'POST /widget/count': widgetCount, 'POST /widget/unlink': widgetUnlink };
+    const fromWidget = widgetRoutes[`${request.method} ${url.pathname}`] || (request.method === 'GET' && url.pathname.startsWith('/cal/') ? calendarFeed : null);
+    const handler = fromWidget || (request.method === 'POST' ? routes[url.pathname] : null);
     if (handler) {
-      if (!allowedOrigin(origin)) return new Response('forbidden', { status: 403, headers });
+      if (!fromWidget && !allowedOrigin(origin)) return new Response('forbidden', { status: 403, headers });
       try {
         await migrateFromKv(env);
-        const [status, text] = await handler(request, env);
-        return new Response(text, { status, headers });
+        await ensureSchema(env);
+        const [status, text, type] = await handler(request, env);
+        return new Response(text, { status, headers: type ? { ...headers, 'Content-Type': type } : headers });
       } catch (e) {
         return new Response('error', { status: 500, headers });
       }
@@ -632,15 +900,19 @@ export default {
     const when = new Date(event.scheduledTime);
     ctx.waitUntil((async () => {
       await migrateFromKv(env);
+      await ensureSchema(env);
       // the group reminders need FIREBASE_SA; without it the prayer reminders still work
-      // one cron each minute: :00 the groups, :50 :55 :59 the prayer hours, every minute the habits
+      // one cron each minute: :00 the groups, :50 :55 :59 the prayer hours, every minute the habits;
+      // Monday 10:00 (Georgian time) the admins' week
       const minute = when.getUTCMinutes();
       if (minute === 0) await runGroupHour(env, when).catch((e) => console.warn("group hour:", e?.message));
+      const g = georgia(when);
+      if (minute === 0 && g.getUTCDay() === 1 && g.getUTCHours() === 10) await runAdminWeek(env, when).catch((e) => console.warn('admin week:', e?.message));
       else if (minute === 50 || minute === 55 || minute === 59) await runPrayerReminders(env, when);
       await runHabitReminders(env, when).catch((e) => console.warn('habits:', e?.message));
     })());
   },
 };
 
-// for tests (tests/reminders-worker.test.mjs)
-export { encryptPayload, cycleOf, ownersIn };
+// for tests (tests/reminders-worker.test.mjs, tests/adminTools.test.ts)
+export { encryptPayload, cycleOf, ownersIn, weekText };

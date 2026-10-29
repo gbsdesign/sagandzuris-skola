@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { BellOff, BellRing, Check, CheckCheck, ClipboardList, Dumbbell, MessageSquareText } from 'lucide-react';
+import { BellOff, BellRing, Check, CheckCheck, ClipboardList, Dumbbell, GraduationCap, MessageSquareText } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth, useChants } from '../../context';
 import { useMyClasses } from '../../hooks/useClasses';
@@ -11,6 +11,10 @@ import { Btn } from '../ui/kit';
 import { DrillSheet } from '../mastery/ManeraLessonSheet';
 import { useDrillDone } from '../../utils/drillTakes';
 import { pushSupported, setGroupPush, useGroupPush } from '../../utils/groupPush';
+import { useAllLearning } from '../../hooks/useLearning';
+import { allLearned, assignedProgress } from '../../utils/learn';
+import { PartsBar } from '../learn/PartsBar';
+import { learnPieceOf, useOpenLearning } from '../learn/openLearning';
 import { CHIP_SOFT, CHIP_STRONG, PATH_CARD, PATH_LABEL, PATH_LABEL_ICON } from '../views/pathStyle';
 
 const VOICE: Record<string, string> = { '1': 'I', '2': 'II', '3': 'III' };
@@ -36,30 +40,45 @@ const TONE = {
 // the assignments still shown: until three days past their deadline
 export const currentWork = (list: Assignment[]) => list.filter(a => daysUntil(a.due) >= -3);
 
-/** Done = a teacher confirmed every voice it asks for (or the item itself, when it has no voices); an exercise —
- *  the member pressed „შევასრულე“ on it since it was given (`drillDone`: students/{uid}.drillDone). */
-export const workDone = (a: Assignment, confirmed: Confirmations, drillDone: Record<string, string> = {}) => {
+/** The member's learning mode (useAllLearning): its records and the pieces' part counts. */
+export type MyLearning = ReturnType<typeof useAllLearning>;
+
+/** Every part of an assigned chant or song learned in the learning mode. */
+export const learntWork = (a: Assignment, mine?: MyLearning) =>
+  !!a.variantId && allLearned(assignedProgress(a.variantId, mine?.learning, mine?.parts));
+
+/** Done = a teacher confirmed every voice it asks for (or the item itself, when it has no voices), or the member learned
+ *  every part of it in the learning mode (`mine`); an exercise — the member pressed „შევასრულე“ on it since it was
+ *  given (`drillDone`: students/{uid}.drillDone). */
+export const workDone = (a: Assignment, confirmed: Confirmations, drillDone: Record<string, string> = {}, mine?: MyLearning) => {
   if (a.exercise) return (drillDone[a.exercise] || '') >= (a.createdAt || '').slice(0, 10);
+  if (learntWork(a, mine)) return true;
   const conf = (a.variantId && confirmed[a.variantId]) || [];
   const need = a.voices.length ? a.voices : ['1'];
   return a.variantId ? need.every(v => conf.includes(v as Voice)) : false;
 };
 
 /** The assignments as their student sees them: a bar in the deadline's colour, the title, then one line with its book
- *  reference, the voices to learn — filled once marked on the path — and the deadline; the teacher's note under them.
- *  Also the class page's „დავალებები“ (ClassProgram). */
+ *  reference, the voices to learn — filled once marked on the path — and the deadline; the teacher's note under them;
+ *  a chant or song still to do gets „სწავლა“ (straight into its learning mode, on the assigned voice) beside the bar
+ *  of its parts. Also the class page's „დავალებები“ (ClassProgram). */
 export const WorkItems: React.FC<{ list: Assignment[] }> = ({ list }) => {
   const { user } = useAuth();
   const { selectedChantVariants } = useChants();
   const confirmed = useConfirmations(user?.uid);
   const drillDone = useDrillDone(user?.uid);
+  const mine = useAllLearning(user?.uid);
+  const openLearning = useOpenLearning();
   const [drill, setDrill] = useState<string | null>(null);
   return (
     <ul className="divide-y divide-[#f1e8d9]">
       {list.map(a => {
         const item = a.variantId ? selectedChantVariants[a.variantId] : undefined;
         const marked = item && a.variantId ? voicesOf(item, a.variantId) : [];
-        const done = workDone(a, confirmed, drillDone);
+        const done = workDone(a, confirmed, drillDone, mine);
+        const counted = workDone(a, confirmed, drillDone); // a teacher's „ჩათვლა“, not only the learning mode
+        const learnt = a.variantId ? assignedProgress(a.variantId, mine?.learning, mine?.parts) : null;
+        const piece = a.variantId ? learnt?.piece ?? learnPieceOf(a.variantId) : null;
         const n = daysUntil(a.due);
         const tone = TONE[done ? 'done' : n < 0 ? 'past' : n <= 1 ? 'soon' : 'later'];
         const { main, ref } = a.exercise ? { main: a.title, ref: `სავარჯიშო · ${a.code || ''}` } : splitTitle(a.title);
@@ -90,7 +109,7 @@ export const WorkItems: React.FC<{ list: Assignment[] }> = ({ list }) => {
                   </>
                 )}
                 <span className={`ml-auto shrink-0 h-6 px-2.5 rounded-full text-[11.5px] font-bold tabular-nums whitespace-nowrap inline-flex items-center gap-1 ${tone.badge}`}>
-                  {done ? <><CheckCheck className="w-3.5 h-3.5" /> ჩათვლილია</> : dueText(a.due, n)}
+                  {done ? <><CheckCheck className="w-3.5 h-3.5" /> {counted ? 'ჩათვლილია' : 'ნასწავლია'}</> : dueText(a.due, n)}
                 </span>
               </div>
               {a.note && (
@@ -98,6 +117,17 @@ export const WorkItems: React.FC<{ list: Assignment[] }> = ({ list }) => {
                   <MessageSquareText className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[#b3a594]" />
                   <span className="min-w-0 whitespace-pre-line">{a.note}</span>
                 </p>
+              )}
+              {piece && !done && (
+                <div className="mt-2 flex items-center gap-2.5">
+                  <Btn kind="soft" size="sm" icon={<GraduationCap />} onClick={() => openLearning(piece, a.voices[0] as Voice | undefined)}>სწავლა</Btn>
+                  {learnt && (
+                    <>
+                      <PartsBar p={learnt} className="min-w-0 flex-1" />
+                      <span className="shrink-0 text-[12px] font-bold tabular-nums text-[#75685a]">{learnt.learned}/{learnt.total}</span>
+                    </>
+                  )}
+                </div>
               )}
               {a.exercise && !done && (
                 <Btn kind="soft" size="sm" icon={<Dumbbell />} className="mt-2" onClick={() => setDrill(a.exercise!)}>სავარჯიშოს დაწყება</Btn>

@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { afterTry, learnedShare, learnTakeId, melodyIn, parseLearnTakeId, parseSongPiece, partState, partsOfRecording, partsOfScore, songPiece } from '../src/utils/learn';
+import { afterTry, allLearned, assignedProgress, learnedShare, learnTakeId, markerAt, melodyIn, nextReviewDay, parseLearnTakeId, parseSongPiece, partState, partsAtBreaths, partsOfRecording, partsOfScore, reviewsDue, songPiece, timelineIn, wordsForPart } from '../src/utils/learn';
 import type { BookScore } from '../src/utils/chantSynth';
 
 const score = (sys: BookScore['sys'], voices: BookScore['voices'] = [[]], dur = 40): BookScore =>
@@ -53,4 +53,69 @@ test('take ids name the piece and the part', () => {
   assert.deepEqual(parseLearnTakeId(learnTakeId(piece, 2)), { piece, part: 2 });
   assert.deepEqual(parseLearnTakeId(learnTakeId('v-5-x58', 'all')), { piece: 'v-5-x58', part: 'all' });
   assert.equal(parseLearnTakeId('v-5-x58'), null);
+});
+
+test('the timeline of a part: seconds from its start, a note sounds until the next starts', () => {
+  const v: BookScore['voices'][number] = [[4, 2, 60], [5, 1, 62], [6, 4, 64], [12, 1, 65]];
+  assert.deepEqual(timelineIn(score([], [v]), 0, 4, 8), [[0, 1, 60], [1, 1, 62], [2, 2, 64]]);
+});
+
+test('the marker moves across a line: after the clef at the start, near the end at the end, in order between', () => {
+  const v: BookScore['voices'][number] = [[0, 1, 60], [1, 1, 62], [2, 4, 64], [6, 1, 65]];
+  const s = score([[0, 0, 0, 1, 1, 0, 7]], [v], 7);
+  const xs = [0, 1, 2, 4, 6, 6.99].map(b => markerAt(s, 0, b));
+  assert.ok(Math.abs(xs[0] - 0.1) < 1e-9);
+  for (let i = 1; i < xs.length; i++) assert.ok(xs[i] > xs[i - 1]);
+  assert.ok(xs[5] < 0.97 && xs[5] > 0.9);
+  // the long note (4 beats) gets more room than a short one, but not four times as much
+  const short = xs[1] - xs[0], long = markerAt(s, 0, 6) - xs[2];
+  assert.ok(long > short && long < 4 * short);
+});
+
+test('a recording is cut at its pauses', () => {
+  // 40 s, loud everywhere but pauses at 9 s and 21 s and 31 s (10 readings a second)
+  const e = Array.from({ length: 400 }, (_, i) => ([90, 210, 310].some(p => Math.abs(i - p) <= 2) ? 0.01 : 1));
+  const parts = partsAtBreaths(e, 0.1, 40);
+  assert.deepEqual(parts.map(p => Math.round(p.s0)), [0, 9, 21, 31]);
+  assert.equal(parts[3].s1, 40);
+  // no pauses: still parts of 6–16 s
+  const flat = partsAtBreaths(Array(400).fill(1), 0.1, 40);
+  assert.ok(flat.every(p => p.s1 - p.s0 >= 6 && p.s1 - p.s0 <= 16));
+});
+
+test('the words are shared out over the parts in order', () => {
+  const lines = ['a', 'b', 'c', 'd', 'e', 'f'];
+  assert.deepEqual([0, 1, 2].map(i => wordsForPart(lines, i, 3)), [['a', 'b'], ['c', 'd'], ['e', 'f']]);
+  assert.deepEqual(wordsForPart(['a', 'b'], 2, 4), ['b']);
+});
+
+test('the reviews due today, and the next review day', () => {
+  const learning = {
+    a: { 0: { best: 90, level: 1, due: '2026-10-28', at: '' }, 1: { best: 90, level: 2, due: '2026-10-30', at: '' } },
+    b: { 0: { best: 90, level: 1, due: '2026-10-26', at: '' }, 1: { best: 90, level: 1, due: '2026-10-27', at: '' }, 2: { best: 9, level: 0, at: '' } },
+    c: { 0: { best: 90, level: 4, at: '' } },
+  };
+  assert.deepEqual(reviewsDue(learning, '2026-10-28'), [{ piece: 'b', parts: [0, 1] }, { piece: 'a', parts: [0] }]);
+  assert.deepEqual(nextReviewDay(learning, '2026-10-28'), { day: '2026-10-28', count: 3 });
+  assert.deepEqual(nextReviewDay({ a: learning.a }, '2026-10-29'), { day: '2026-10-29', count: 1 });
+  assert.equal(nextReviewDay({ c: learning.c }, '2026-10-28'), null);
+});
+
+test('an assigned piece: the bar of its parts, a song by its best-learned recording', () => {
+  const r = (level: number) => ({ best: 90, level, at: '' });
+  const learning = {
+    'v-1': { 0: r(1), 2: r(0) },
+    'song-fs-a-t0': { 0: r(1) },
+    'song-fs-a-t2': { 0: r(4), 1: r(2) },
+    'song-fs-ab-t0': { 0: r(1), 1: r(1), 2: r(1) },
+  };
+  const parts = { 'v-1': 3, 'song-fs-a-t0': 4, 'song-fs-a-t2': 2, 'song-fs-ab-t0': 3 };
+  assert.deepEqual(assignedProgress('v-1', learning, parts), { piece: 'v-1', total: 3, learned: 1, marks: [2, 0, 1] });
+  const song = assignedProgress('fs-a', learning, parts);
+  assert.equal(song?.piece, 'song-fs-a-t2');
+  assert.ok(allLearned(song));
+  assert.ok(!allLearned(assignedProgress('v-1', learning, parts)));
+  // not opened yet (no part count): nothing to show
+  assert.equal(assignedProgress('v-2', learning, parts), null);
+  assert.equal(assignedProgress('v-1', learning, {}), null);
 });

@@ -14,7 +14,7 @@ import { SECTIONS, SectionId } from './sections';
 import { SPECIALS, labelled, sectionOfShortcut } from '../utils/shortcuts';
 import { kathismaOfPsalm, matchScore, psalmNumber, searchNormalize, splitTrailingNumber } from '../utils/searchMatch';
 
-export type SearchGroupId = 'fn' | 'chant' | 'prayer' | 'psalter' | 'song' | 'ancestor' | 'feast';
+export type SearchGroupId = 'fn' | 'chant' | 'prayer' | 'psalter' | 'song' | 'ancestor' | 'feast' | 'person';
 
 export const SEARCH_GROUPS: { id: SearchGroupId; title: string }[] = [
   { id: 'fn', title: 'ფუნქციები' },
@@ -24,6 +24,7 @@ export const SEARCH_GROUPS: { id: SearchGroupId; title: string }[] = [
   { id: 'song', title: 'სიმღერები' },
   { id: 'ancestor', title: 'წინაპრები' },
   { id: 'feast', title: 'დღესასწაულები' },
+  { id: 'person', title: 'ადამიანები' },
 ];
 
 export type LibraryTab = 'book' | 'feasts' | 'lives';
@@ -35,7 +36,8 @@ export type SearchOpen =
   | { kind: 'song'; id: string }
   | { kind: 'ancestor'; id: number }
   | { kind: 'feast'; iso: string }
-  | { kind: 'library'; tab: LibraryTab };
+  | { kind: 'library'; tab: LibraryTab }
+  | { kind: 'person'; uid: string }; // admins: the person's window in the admin panel
 
 export interface SearchItem {
   key: string; // unique; also what "ბოლოს გახსნილი" remembers
@@ -247,7 +249,11 @@ export const runSearch = (index: SearchItem[], query: string): { group: SearchGr
     .sort((a, b) => a.hits[0].score - b.hits[0].score || order.indexOf(a.group) - order.indexOf(b.group));
 };
 
-/** A search row as a button id (utils/shortcuts) — what picking it for a button keeps. */
+/** Admins find people too (the search adds them from the directory): a row opens the person's window. */
+export const personItem = (uid: string, name: string, keys = ''): SearchItem =>
+  item(`person:${uid}`, 'person', name, { kind: 'person', uid }, { sub: 'ადმინის პანელი · ადამიანის ფანჯარა', keys });
+
+/** A search row as a button id (utils/shortcuts) — what picking it for a button keeps (a person is never picked). */
 export const shortcutOfSearch = (it: SearchItem): string => {
   const o = it.open;
   switch (o.kind) {
@@ -258,5 +264,6 @@ export const shortcutOfSearch = (it: SearchItem): string => {
     case 'library': return `library:${o.tab}`;
     // "feast:<group>:<n>" is the row's key; its line (the next date) would go stale
     case 'feast': return labelled(it.key, it.title);
+    case 'person': return '';
   }
 };

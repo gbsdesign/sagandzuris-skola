@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="paper">#FCF9F5</color>
+    <color name="icon_bg">#FFFFFF</color>
+    <color name="ink">#2B2420</color>
+    <color name="muted">#8A7A6A</color>
+    <color name="wine">#7A2028</color>
+    <color name="wine_soft">#F3E7E4</color>
+    <color name="line">#E8E0D6</color>
+</resources>

@@ -1,12 +1,19 @@
 import React, { useMemo, useState } from 'react';
-import { CalendarDays, ChevronRight, GraduationCap, Hourglass, ListChecks, Search, Shield, ShieldAlert } from 'lucide-react';
+import { CalendarDays, Check, ChevronRight, Copy, DoorOpen, Download, GraduationCap, Hourglass, ListChecks, MoonStar, MousePointerClick, School, Search, Shield, ShieldAlert, SquareCheck, UserRoundPen, X } from 'lucide-react';
 import { useAuth } from '../../context';
 import { SchoolClass } from '../../hooks/useClasses';
 import { agoLabel } from '../../hooks/useTeaching';
 import { ALL_FEATURES } from '../../utils/memberAccess';
-import { Avatar, Card, FIELD, Pill } from '../ui/kit';
-import { abilitiesText, interestsText } from '../../utils/profileFields';
+import { Avatar, Btn, Card, FIELD, Pill, useWide } from '../ui/kit';
+import { abilitiesText, interestsText, profileComplete, showPhone } from '../../utils/profileFields';
+import { personActivity, PersonActivity } from '../../utils/personActivity';
+import { downloadCsv } from '../../utils/csv';
+import type { KidsMode } from '../../data/sections';
 import { AccessRecord, DecisionRecord } from './AccessRequests';
+import type { LeftMembers } from '../../utils/leftMembers';
+import { duplicatesOf } from '../../utils/duplicates';
+import { TeachLine, useLastLessons } from './TeacherOverview';
+import { BulkBar } from './BulkActions';
 import { PersonSheet, ROLE_ICON, roleName, roleOf } from './PersonSheet';
 
 export interface UserRecord {
@@ -30,7 +37,13 @@ export interface UserRecord {
   plays: Record<string, number>;
   lastActiveAt: string;
   createdAt: string;
-  kidsMode?: { on?: boolean };
+  kidsMode?: Partial<KidsMode>;
+  /** the teachers who may read this record (the teachers of the member's classes) */
+  teacherIds: string[];
+  /** everything „პირველი გაცნობა“ asks for is filled in (utils/profileFields) */
+  profileDone: boolean;
+  /** the person's window's short picture: pearls, learned parts, habits this week, exercises */
+  activity: PersonActivity;
 }
 
 export interface StaffRecord {
@@ -69,42 +82,71 @@ export const toUser = (id: string, d: any): UserRecord => {
     lastActiveAt: d.lastActiveAt || d.updatedAt || '',
     createdAt: d.createdAt || '',
     kidsMode: d.kidsMode,
+    teacherIds: Array.isArray(d.teacherIds) ? d.teacherIds : [],
+    profileDone: profileComplete(d),
+    activity: personActivity(d),
   };
 };
 
-export type Filter = 'all' | 'pending' | 'week' | 'month' | 'habits' | 'teacher' | 'admin' | 'refused';
+export type Filter = 'all' | 'pending' | 'week' | 'month' | 'habits' | 'teacher' | 'admin' | 'refused' | 'noClass' | 'incomplete' | 'away' | 'twins' | 'left';
 const within = (iso: string, days: number) => !!iso && Date.now() - new Date(iso).getTime() < days * 86400_000;
 
-/** Who each filter holds; the panel's big numbers and the list's chips count with the same tests. */
-export const filterTests = (staff: StaffRecord[], access: Record<string, AccessRecord>, isSuperAdmin: boolean) => {
+/** Who each filter holds; the panel's big numbers and the list's chips count with the same tests. A member marked
+ *  „გასული“ (`left`) is in no list but „გასულები“; `twins` = who may have a second account (utils/duplicates). */
+export const filterTests = (staff: StaffRecord[], access: Record<string, AccessRecord>, isSuperAdmin: boolean, classes: SchoolClass[], left: ReadonlySet<string> = new Set(), twins: ReadonlySet<string> = new Set()) => {
   // staff never wait, so a status only counts for members
   const statusOf = (u: UserRecord) => (isSuperAdmin && roleOf(u, staff) === 'member' ? access[u.userId]?.status : undefined);
+  // „აქტიური“ counts the school's members: not the staff, not those waiting or refused
+  const member = (u: UserRecord) => roleOf(u, staff) === 'member' && !['pending', 'rejected'].includes(statusOf(u) || '');
+  const inClass = new Set(classes.flatMap(c => c.memberIds));
   const test: Record<Filter, (u: UserRecord) => boolean> = {
     all: () => true,
     pending: u => statusOf(u) === 'pending',
     refused: u => statusOf(u) === 'rejected',
-    week: u => within(u.lastActiveAt, 7),
-    month: u => within(u.lastActiveAt, 30),
+    week: u => member(u) && within(u.lastActiveAt, 7),
+    month: u => member(u) && within(u.lastActiveAt, 30),
     habits: u => Object.entries(u.habitLog).some(([d, l]) => l.length > 0 && within(d, 7)),
     teacher: u => roleOf(u, staff) === 'teacher',
     admin: u => ['admin', 'superadmin'].includes(roleOf(u, staff)),
+    // the school's members nobody has put into a class yet
+    noClass: u => member(u) && !inClass.has(u.userId),
+    // stuck on „პირველი გაცნობა“ (staff are never asked it)
+    incomplete: u => roleOf(u, staff) === 'member' && statusOf(u) !== 'rejected' && !u.profileDone,
+    // members who have not opened the app for a month (or never since the records began)
+    away: u => member(u) && !within(u.lastActiveAt, 30),
+    twins: u => twins.has(u.userId),
+    left: u => left.has(u.userId),
   };
-  return { statusOf, test };
+  const gone = (u: UserRecord) => left.has(u.userId);
+  for (const k of Object.keys(test) as Filter[]) {
+    if (k === 'left') continue;
+    const t = test[k];
+    test[k] = u => !gone(u) && t(u);
+  }
+  return { statusOf, member: (u: UserRecord) => !gone(u) && member(u), test };
 };
 
+// „ელოდება“ has no chip: its place is the panel's big number (superadmins; others never see who waits)
 const CHIPS: { id: Filter; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: 'pending', label: 'ელოდება', Icon: Hourglass },
   { id: 'month', label: 'აქტიური თვეში', Icon: CalendarDays },
   { id: 'habits', label: 'ჩვევებს ინიშნავს', Icon: ListChecks },
   { id: 'teacher', label: 'მასწავლებლები', Icon: GraduationCap },
   { id: 'admin', label: 'ადმინები', Icon: Shield },
   { id: 'refused', label: 'შეფერხებული', Icon: ShieldAlert },
+  { id: 'noClass', label: 'კლასის გარეშე', Icon: School },
+  { id: 'incomplete', label: 'პროფილი არასრული', Icon: UserRoundPen },
+  { id: 'away', label: '30+ დღე არ შემოსულა', Icon: MoonStar },
+  { id: 'twins', label: 'შესაძლო ორმაგი', Icon: Copy },
+  { id: 'left', label: 'გასულები', Icon: DoorOpen },
 ];
 
-// "მომხმარებლები": everyone who signed in, in one list with one search. The panel's big numbers on top choose the
-// main filters (they live in AdminPanelPage); the chips here hold the rest, each with how many it holds, and a
-// second tap on a chip goes back to everyone. Members waiting to be let in stand on top (superadmins).
-// A tap on a person opens their one window (PersonSheet).
+// „წევრები“: everyone who signed in, in one list with one search. The panel's big numbers on top choose the
+// main filters (they live in AdminPanelPage); the chips here hold the rest, each with how many it holds (an empty one
+// is left out), and a second tap on a chip goes back to everyone. Members waiting to be let in stand on top (superadmins).
+// A tap on a person opens their one window (PersonSheet; the panel keeps which one is open, so the search can open it).
+// Superadmins can take the list as it is shown (search and filter) as a table for Excel / Google Sheets.
+// Under „მასწავლებლები“ / „ადმინები“ a teacher's row says what they lead (TeacherOverview); an account that may be someone's
+// second one says „შესაძლო ორმაგი“ (same phone or full name); „მონიშვნა“ ticks several people for one action (BulkActions).
 export const UsersTab: React.FC<{
   users: UserRecord[];
   staff: StaffRecord[];
@@ -116,18 +158,31 @@ export const UsersTab: React.FC<{
   onFilter: (f: Filter) => void;
   /** filters already shown as the panel's big numbers: they get no chip */
   tiles: Filter[];
+  openId: string | null;
+  onOpen: (uid: string | null) => void;
   onMessage: (text: string, type: 'success' | 'error') => void;
-}> = ({ users, staff, classes, access, decisions, loading, filter, onFilter, tiles, onMessage }) => {
+  /** members marked „გასული“ */
+  left: LeftMembers;
+}> = ({ users, staff, classes, access, decisions, loading, filter, onFilter, tiles, openId, onOpen, onMessage, left }) => {
   const { isSuperAdmin } = useAuth();
   const [q, setQ] = useState('');
-  const [openId, setOpenId] = useState<string | null>(null);
+  const setOpenId = onOpen;
+  // a computer: the list on the left, the person's window as the right column (stage IV, 2026-10-28)
+  const wide = useWide();
 
-  const { statusOf, test } = filterTests(staff, access, isSuperAdmin);
+  // „შესაძლო ორმაგი“: the same phone or the same full name (a name only when the person wrote one)
+  const twins = useMemo(() => duplicatesOf(users.map(u => ({
+    userId: u.userId, name: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.displayName, phone: u.phone,
+  }))), [users]);
+  const twinIds = useMemo(() => new Set(twins.keys()), [twins]);
+  const { statusOf, test } = filterTests(staff, access, isSuperAdmin, classes, left.uids, twinIds);
+  const classNames = (uid: string) => classes.filter(c => c.memberIds.includes(uid)).map(c => c.name).join(', ');
   const count = (f: Filter) => users.filter(test[f]).length;
+  // a chip that holds nobody is left out — unless it is the one open, so it can be tapped shut
   const FILTERS = CHIPS
     .filter(f => !tiles.includes(f.id))
     .map(f => ({ ...f, n: count(f.id) }))
-    .filter(f => f.n > 0 || !['pending', 'refused'].includes(f.id));
+    .filter(f => f.n > 0 || f.id === filter);
   const active = tiles.includes(filter) || FILTERS.some(f => f.id === filter) ? filter : 'all';
 
   const shown = useMemo(() => {
@@ -141,30 +196,115 @@ export const UsersTab: React.FC<{
         || (wait(a) ? (access[a.userId]?.requestedAt || '').localeCompare(access[b.userId]?.requestedAt || '') : 0)
         || (b.lastActiveAt || '').localeCompare(a.lastActiveAt || ''));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [users, q, active, staff, access, isSuperAdmin]);
+  }, [users, q, active, staff, access, isSuperAdmin, classes, left, twinIds]);
+
+  // the teachers' overview: under these two filters a row of one who teaches shows what they lead
+  const teachView = active === 'teacher' || active === 'admin';
+  const lastLessons = useLastLessons(classes.filter(c => c.teacherIds.length).map(c => c.id), teachView);
+
+  // „მონიშვნა“: taps tick instead of opening; the bar at the bottom acts on the ticked
+  const [picking, setPicking] = useState(false);
+  const [sel, setSel] = useState<Set<string>>(new Set());
+  const startPicking = () => { setPicking(true); setSel(new Set()); setOpenId(null); };
+  const stopPicking = () => { setPicking(false); setSel(new Set()); };
+  const tick = (uid: string) => setSel(s => { const n = new Set(s); if (n.has(uid)) n.delete(uid); else n.add(uid); return n; });
+  const allShown = shown.length > 0 && shown.every(u => sel.has(u.userId));
+  const tickAll = () => setSel(allShown ? new Set() : new Set(shown.map(u => u.userId)));
 
   const open = openId ? users.find(u => u.userId === openId) : undefined;
 
-  return (
-    <Card className="space-y-4">
+  // the list on screen as a table: phones in the local form (a leading „+“ reads as a formula in Excel)
+  const exportTable = () => {
+    const VOICE: Record<string, string> = { '1': 'I', '2': 'II', '3': 'III' };
+    const day = (iso: string) => (iso ? iso.slice(0, 10) : '');
+    const rows = shown.map(u => {
+      const role = roleOf(u, staff);
+      const status = statusOf(u);
+      return [
+        u.firstName || u.name, u.lastName, u.email, showPhone(u.phone).replace(/^\+995 /, ''), u.region, u.city, u.birth,
+        u.voices.map(v => VOICE[v] || v).join(' '), classNames(u.userId), roleName(u, role),
+        status === 'pending' ? 'ელოდება' : status === 'rejected' ? 'შეფერხებული' : left.uids.has(u.userId) ? 'გასული' : '', day(u.lastActiveAt), day(u.createdAt),
+      ];
+    });
+    downloadCsv(`sagandzuri-wevrebi-${new Date().toISOString().slice(0, 10)}.csv`, [
+      ['სახელი', 'გვარი', 'ელფოსტა', 'ტელეფონი', 'რეგიონი', 'ქალაქი / სოფელი', 'დაბადება', 'ხმა', 'კლასი', 'როლი', 'სტატუსი', 'ბოლოს შემოვიდა', 'პირველად შემოვიდა'],
+      ...rows,
+    ]);
+    onMessage(`ცხრილი ჩამოიტვირთა: ${rows.length} ადამიანი. მასში ტელეფონებია — არ გაუზიარო სხვას.`, 'success');
+  };
+
+  const person = open && (
+    <PersonSheet
+      key={`${open.userId}-${access[open.userId]?.status || ''}`}
+      person={open}
+      users={users}
+      staff={staff}
+      classes={classes}
+      access={access[open.userId]}
+      decision={decisions[open.userId]}
+      onClose={() => setOpenId(null)}
+      onMessage={onMessage}
+      leftSince={left.since[open.userId] || (left.uids.has(open.userId) ? '—' : undefined)}
+      twins={(twins.get(open.userId) || []).map(t => ({ ...t, person: users.find(x => x.userId === t.uid) }))
+        .filter((t): t is { uid: string; why: 'phone' | 'name'; person: UserRecord } => !!t.person)}
+      onOpenPerson={setOpenId}
+      docked={wide}
+    />
+  );
+
+  const list = (
+    <Card className={`space-y-4 ${picking ? 'pb-28' : ''}`}>
       <div className="relative">
         <Search className="w-4 h-4 text-[#b3a594] absolute left-3.5 top-1/2 -translate-y-1/2" />
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="სახელი, ელფოსტა ან ქალაქი" aria-label="ძებნა" className={`${FIELD} pl-10`} />
+        <input type="search" value={q} onChange={e => setQ(e.target.value)} placeholder="სახელი, ელფოსტა ან ქალაქი" aria-label="ძებნა"
+          className={`${FIELD} pl-10 pr-11 [&::-webkit-search-cancel-button]:hidden`} />
+        {q && (
+          <button type="button" onClick={() => setQ('')} aria-label="გასუფთავება" className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-[#a89886] hover:text-[#4a3426] cursor-pointer">
+            <X className="w-4 h-4" />
+          </button>
+        )}
       </div>
-      {/* the chips wrap into a second row instead of sliding out of sight */}
-      <div className="flex flex-wrap gap-1.5">
+      {/* the chips wrap into a second row instead of sliding out of sight; below 400px their icons step aside (as the
+          bar's ⚙ does), so two fit in a row */}
+      {FILTERS.length > 0 && <div className="flex flex-wrap gap-1.5">
         {FILTERS.map(({ id, label, Icon, n }) => {
           const on = active === id;
           return (
             <button key={id} type="button" onClick={() => onFilter(on ? 'all' : id)} aria-pressed={on}
-              className={`shrink-0 whitespace-nowrap h-9 px-3.5 rounded-full text-[13px] font-bold cursor-pointer transition inline-flex items-center gap-1.5 ${on ? 'bg-[#7a2028]/[0.1] text-[#7a2028] ring-1 ring-[#7a2028]/30' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/30'}`}>
-              {id === 'pending' ? <span className="w-2 h-2 rounded-full bg-amber-500" aria-hidden /> : <Icon className={`w-3.5 h-3.5 ${on ? '' : 'text-[#8a7a6a]'}`} />}
+              className={`shrink-0 whitespace-nowrap h-9 px-3 min-[400px]:px-3.5 rounded-full text-[13px] font-bold cursor-pointer transition inline-flex items-center gap-1.5 ${on ? 'bg-[#7a2028]/[0.1] text-[#7a2028] ring-1 ring-[#7a2028]/30' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/30'}`}>
+              <Icon className={`hidden min-[400px]:block w-3.5 h-3.5 ${on ? '' : 'text-[#8a7a6a]'}`} />
               {label}
               <span className={`tabular-nums ${on ? 'text-[#7a2028]/70' : 'text-[#8a7a6a]'}`}>{n}</span>
             </button>
           );
         })}
-      </div>
+      </div>}
+
+      {/* how many are shown, and „მონიშვნა“ — several people for one action */}
+      {!loading && shown.length > 0 && (
+        <div className="flex items-center gap-2 min-h-9 -mb-1">
+          {picking ? (
+            <>
+              <button type="button" onClick={tickAll} aria-pressed={allShown}
+                className="h-9 pl-2 pr-3.5 rounded-full text-[13px] font-bold inline-flex items-center gap-2 cursor-pointer transition bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40">
+                <Tick on={allShown} /> ყველა · {shown.length}
+              </button>
+              <button type="button" onClick={stopPicking}
+                className="ml-auto h-9 px-3.5 rounded-full text-[13px] font-bold inline-flex items-center gap-1.5 cursor-pointer transition text-[#7a2028] hover:bg-[#7a2028]/[0.06]">
+                <X className="w-4 h-4" /> დასრულება
+              </button>
+            </>
+          ) : (
+            <>
+              <span className="text-[13px] text-[#8a7a6a] tabular-nums">{shown.length} ადამიანი</span>
+              <button type="button" onClick={startPicking} title="რამდენიმე ადამიანი ერთად: კლასში ჩაწერა, დაშვება, ჩანაწერების უფლება"
+                className="ml-auto h-9 px-3.5 rounded-full text-[13px] font-bold inline-flex items-center gap-1.5 cursor-pointer transition text-[#7a2028] hover:bg-[#7a2028]/[0.06]">
+                <SquareCheck className="w-4 h-4" /> მონიშვნა
+              </button>
+            </>
+          )}
+        </div>
+      )}
 
       {loading ? (
         <p className="py-8 text-center text-sm text-[#8a7a6a]">იტვირთება…</p>
@@ -177,13 +317,17 @@ export const UsersTab: React.FC<{
             const status = statusOf(u);
             const a = access[u.userId];
             const limited = a && status === 'approved' && a.features !== 'all' ? a.features.filter(x => ALL_FEATURES.includes(x)).length : null;
+            const on = picking && sel.has(u.userId);
+            const teaches = teachView && (role === 'teacher' || classes.some(c => c.teacherIds.includes(u.userId)));
             return (
               <li key={u.userId} className="px-1">
-                <button type="button" onClick={() => setOpenId(u.userId)} className="w-full flex items-center gap-3 py-3 text-left cursor-pointer group">
+                <button type="button" onClick={() => (picking ? tick(u.userId) : setOpenId(u.userId))}
+                  {...(picking ? { role: 'checkbox', 'aria-checked': on } : { 'aria-current': wide && openId === u.userId ? 'true' : undefined })}
+                  className={`w-full flex items-center gap-3 py-3 text-left cursor-pointer group ${wide || picking ? '-mx-2 px-2 rounded-2xl transition-colors aria-[current=true]:bg-[#7a2028]/[0.07] aria-[checked=true]:bg-[#7a2028]/[0.07]' : ''}`}>
                   {/* a green dot: here in the last week */}
                   <span className="relative shrink-0">
                     <Avatar name={u.name} photo={u.photoURL} size={44} />
-                    {test.week(u) && <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white" aria-label="აქტიური ამ კვირაში" />}
+                    {within(u.lastActiveAt, 7) && <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-500 ring-2 ring-white" aria-label="აქტიური ამ კვირაში" />}
                   </span>
                   <span className="min-w-0 flex-1">
                     {/* one line each, so every row is as tall as the next: the name gives way, the signs stay whole */}
@@ -199,13 +343,18 @@ export const UsersTab: React.FC<{
                         </span>
                       )}
                     </span>
-                    <span className="block text-xs text-[#8a7a6a] truncate">
-                      {u.email || 'ელფოსტა არ არის'} · {status === 'pending' ? `მოთხოვნა ${agoLabel(a?.requestedAt)}` : agoLabel(u.lastActiveAt)}
-                      {limited !== null && ` · წვდომა ${limited}/${ALL_FEATURES.length}`}
-                      {u.kidsMode?.on && ' · საბავშვო'}
-                    </span>
+                    {/* the class says more than the e-mail; one without a class shows the e-mail; a teacher under the teachers'
+                        filters: what they lead */}
+                    {teaches ? <TeachLine uid={u.userId} classes={classes} last={lastLessons} teacher={role === 'teacher'} /> : (
+                      <span className="block text-xs text-[#8a7a6a] truncate">
+                        {twinIds.has(u.userId) && <span className="font-semibold text-[#9a6212]">შესაძლო ორმაგი · </span>}
+                        {classNames(u.userId) || u.email || 'ელფოსტა არ არის'} · {status === 'pending' ? `მოთხოვნა ${agoLabel(a?.requestedAt)}` : agoLabel(u.lastActiveAt)}
+                        {limited !== null && ` · წვდომა ${limited}/${ALL_FEATURES.length}`}
+                        {u.kidsMode?.on && ' · საბავშვო'}
+                      </span>
+                    )}
                   </span>
-                  <ChevronRight className="w-4 h-4 text-[#b3a594] shrink-0" />
+                  {picking ? <Tick on={on} /> : <ChevronRight className="w-4 h-4 text-[#b3a594] shrink-0" />}
                 </button>
               </li>
             );
@@ -213,18 +362,41 @@ export const UsersTab: React.FC<{
         </ul>
       )}
 
-      {open && (
-        <PersonSheet
-          key={`${open.userId}-${access[open.userId]?.status || ''}`}
-          person={open}
-          staff={staff}
-          classes={classes}
-          access={access[open.userId]}
-          decision={decisions[open.userId]}
-          onClose={() => setOpenId(null)}
-          onMessage={onMessage}
-        />
+      {isSuperAdmin && !loading && shown.length > 0 && !picking && (
+        <div className="pt-1 flex justify-center">
+          <Btn kind="ghost" size="sm" icon={<Download />} onClick={exportTable}
+            title="სახელი, ტელეფონი, რეგიონი, ხმა, კლასი, როლი — ის სია, რაც ახლა ჩანს (ძებნით და ფილტრით)">
+            ცხრილად ჩამოტვირთვა · {shown.length}
+          </Btn>
+        </div>
       )}
+
     </Card>
   );
+
+  const bulk = picking && (
+    <BulkBar picked={users.filter(u => sel.has(u.userId))} staff={staff} classes={classes} access={access}
+      onDone={stopPicking} onMessage={onMessage} />
+  );
+
+  if (!wide) return <>{list}{person}{bulk}</>;
+  return (
+    <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1fr)] gap-5 items-start">
+      {list}
+      {person || (
+        <div className="sticky top-4 min-h-[240px] rounded-3xl border-2 border-dashed border-[#e3d5bd] flex flex-col items-center justify-center gap-2 p-6 text-center text-[#8a7a6a]">
+          <MousePointerClick className="w-7 h-7 text-[#c4b49c]" />
+          <p className="text-[14px] leading-snug">{picking ? 'მონიშნე ადამიანები — მოქმედებები ქვემოთ, ზოლზეა.' : 'აირჩიე ადამიანი სიიდან — მისი ფანჯარა აქ გაიხსნება.'}</p>
+        </div>
+      )}
+      {bulk}
+    </div>
+  );
 };
+
+/** The round tick of „მონიშვნა“ (24px; the row itself is the 44px+ target). */
+const Tick: React.FC<{ on: boolean }> = ({ on }) => (
+  <span aria-hidden className={`w-6 h-6 shrink-0 rounded-full flex items-center justify-center transition ${on ? 'bg-[#7a2028] text-white' : 'bg-white ring-2 ring-[#d9c8ac]'}`}>
+    {on && <Check className="w-3.5 h-3.5" strokeWidth={3} />}
+  </span>
+);
