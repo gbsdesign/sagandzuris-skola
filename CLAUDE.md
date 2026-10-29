@@ -120,7 +120,9 @@
   **Every `<audio>` / `new Audio()` that plays a Worker URL must set `crossOrigin = 'anonymous'`** (as `ChantPlayer` does):
   the Worker answers only requests carrying the site's `Origin`, and a plain media request sends none → 403, silence
   (the „დღის ჰანგი“ bug of 2026-10-28).
-- Book notes (`public/notes/<book>/`) come from the chant-book PDFs by OMR; the OMR scripts are not in the repo.
+- Book notes (`public/notes/<book>/`) come from the chant-book PDFs by OMR; the books' OMR scripts are not in the repo —
+  only the anthology's (`scripts/omr/`, also in the cloud). Chant tabs ხელდასხმა · ჯვრისწერა · პანაშვიდი (2026-10-29) are
+  `data/riteChants.ts`; anthology versions everywhere come from `data/anthologyChants.ts`.
   Many version placements are unreviewed guesses — don't present them as confirmed.
 
 ## Main features (all published on main as of 2026-10-06, commit a2b345d)

@@ -21,7 +21,7 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
 | `dasd1` / `dasd2` | „ჰიმნოგრაფიული კრებული" II (tones I–II, files 1–250) / III (tones III–IV, 1–277): stichera on "Lord, I have cried" + the psalm verses (plain and „ჭრელი"); code "ჰ.კ." | 0 | `sticheraBookChants.ts` — tab დასადებლები, 129 groups `ds-N` (tone · day — kind). A title with no music whose footnote says "იხილე — გვ. N, # M" is a cross-reference: its button opens the chant printed on p. N (no file of its own) |
 | `momix` | „ჰიმნოგრაფიული კრებული" I, troparia on the Beatitudes (Kereselidze mss., code "ე.კ."; no printed numbers — files 1–268 in book order) | 0 | `beatitudesBookChants.ts` — tab მომიხსენენი, 59 groups `mm-N` (tone + day) |
 
-| `a2`, `a4`, `a28`, `a29`, … | „ქართული გალობის ანთოლოგია“ (29 vols, galobani.ge PDFs in the user's Downloads), only versions the books above lack; number with a letter → file number (76a = 761, `numLabel` shows „76a“) | PDF = book | `TSIRVA_ANTH` in `tsirvaChants.ts` (so far only მხოლოდ-შობილი); tab გელათური is a guess |
+| `a1`, `a2`, `a4`, `a28`, `a29`, … | „ქართული გალობის ანთოლოგია“ (29 vols, galobani.ge PDFs: the user's Downloads, Drive „01 ანთოლოგიის ტომეულები“, or `https://pub-f947f7afe8cc44c4928fdba6e2fbb528.r2.dev/antologia_<vol>.pdf`), only versions the books above lack; number with a letter → file number (76a = 761, `numLabel` shows „76a“); a litany of short numbers = one unit file named by its first number (`numLabel` „98–107“) | PDF = book | `src/data/anthologyChants.ts` (`ATTACH` by chant id — any tab — and `NEW_ITEMS` after an item; East Georgian vols → the ქ.კ. row); the rite tabs in `riteChants.ts` |
 | `song` | Admission-program songs (files 1–10; 9–10 are scans: pictures only, no synth) | — | `songBookChants.ts` from `abituriProgram.ts` (`notes: N`); ids `sg-N`, in `NOTES_LISTS` only (no service tab, not in search) |
 
 - Song notes: Finale/Petrucci PDFs from the user's Drive (abituri page folders), read with the books' OMR + `NO_WIN2MAC=1`
@@ -78,7 +78,7 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   in dasd2/030 and 033 l.1, feast/105 l.3, triod/055 l.1; missed ties (two notes of one pitch that must sound as one) in
   karb/151 l.12, karb/163 l.23, karb/183 l.11 (voices II and III), v5/086 l.4. Not applied (the second check never ran):
   v5/133 l.8, v5/134 l.10, v5/135 l.1, v5/138 l.3, v5/140 l.2, v9/063 l.2, v9/091 l.3 — a voice looks ½–1 beat off there.
-- The OMR scripts live only in the user's old session scratchpads — they are not in this repo.
+- The books' OMR scripts live only in the user's old session scratchpads — not in this repo (the anthology's are: `scripts/omr/`).
 - Unreviewed guesses (don't present as confirmed): vol. I↔III matches, vol. V/IX placements, which book
   version a liturgy recording follows (the `main` flag in `TSIRVA_BOOK` moves a recording to another version).
 
@@ -164,10 +164,21 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
 ## Anthology notes (`public/notes/a<vol>/`)
 
 - Read from the vector music font of the galobani.ge anthology PDFs (Finale Petrucci / Maestro) by `scripts/omr/omr.py`
-  (how to run: `scripts/omr/README.md`): stems, beams (also `re` rectangles), flags, dots, ties, triplets („3“),
-  bracketed editorial accidentals, two voices on one staff (stems up and down close together), a head with two stems,
-  small (cue) heads not played; a recitation note (breve) lasts until the other voices' next note (else ½ beat per
-  syllable); tempo 72.
-- Duplicates were found by comparing the notes with the site's versions (`compare.py`, `matrix.py`): a match stays on
-  the site and the anthology version is left out. Done so far: მხოლოდ-შობილი from all volumes. Study collections:
-  only 04 (Gelati, Shavnabada) lists „მხოლოდ-შობილო (ხ.)“ — not compared yet.
+  (how to run: `scripts/omr/README.md`; in a cloud session set `ANTH_DIR` to a folder holding the PDF): stems, beams (also
+  `re` rectangles), flags, dots, ties, triplets („3“), bracketed editorial accidentals, two voices on one staff (stems up and
+  down close together; a stemless note beside a stemmed one), a head with two stems, small (cue) heads not played; a
+  recitation note (breve) lasts until the other voices' next note (else ½ beat per syllable); tempo 72. `--to <last>`
+  reads several numbers as one unit.
+- Vol. I's Petrucci subset gives its glyphs other codes (heads are control characters): `REMAP_V1` in omr.py, each glyph
+  identified on the page pictures; its bracketed accidentals are single glyphs; a note in round brackets and an ossia line
+  („ან ასე:“) are not played; short pieces may stand two to a row (staves under 150 pt, twin numbers).
+- Duplicates are found by comparing the notes with the site's versions (`compare.py`, `matrix.py`): a match stays on the
+  site and the anthology version is left out. Compare within the chant's own versions, transposition-free, and also by staff
+  steps (the anthology often renotates a chant without the edition's flats: same notes, other accidentals — a duplicate).
+  Done: მხოლოდ-შობილი from all volumes (study collections: only 04 lists „მხოლოდ-შობილო (ხ.)“ — not compared yet); the whole
+  of vol. I (2026-10-29): its Chrysostom liturgy is vol. V (same Koridze edition), its Presanctified/Holy Week chants are
+  vol. IV; 54 files added — წირვა versions, მარხვანი (Lenten hours, Presanctified), the feast „წმიდა ფილიმონ მგალობელი —
+  12 ივლისი“, and the new tabs პანაშვიდი (funeral), ჯვრისწერა, ხელდასხმა. A chant there that vol. VIII already has with the
+  same words is shown from vol. VIII (same tune with other words — the funeral canon's irmoi — gets its own file).
+  Unreviewed guesses: „ზეცით გამოჩინებულისა“ (Basil's liturgy, after შენდამი იხარებს), „მოსლვისა შენისა“ starting the
+  wedding part.

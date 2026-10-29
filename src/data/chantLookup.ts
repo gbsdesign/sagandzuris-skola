@@ -8,9 +8,10 @@ import { MOMIXSENENI_CHANTS } from './beatitudesBookChants';
 import { DZLISPIREBI_CHANTS, KATABASIEBI_CHANTS } from './irmosBookChants';
 import { DASADEBLEBI_CHANTS } from './sticheraBookChants';
 import { SONG_CHANTS } from './songBookChants';
+import { KHELDASKHMA_CHANTS, JVRISWERA_CHANTS, PANASHVIDI_CHANTS } from './riteChants';
 
-export type ServiceName = 'წირვა' | 'მწუხრი' | 'ცისკარი' | 'სადღესასწაულო' | 'მარხვანი' | 'ზატიკი' | 'მომიხსენენი'
-  | 'ძლისპირები' | 'კატაბასიები' | 'დასადებლები';
+export type ServiceName = 'წირვა' | 'მწუხრი' | 'ცისკარი' | 'სადღესასწაულო' | 'მარხვანი' | 'ზატიკი' | 'პანაშვიდი'
+  | 'ჯვრისწერა' | 'ხელდასხმა' | 'მომიხსენენი' | 'ძლისპირები' | 'კატაბასიები' | 'დასადებლები';
 /** A list the notes page can open: a service tab, or the admission program's songs (no tab). */
 export type NotesListName = ServiceName | 'სიმღერა';
 export const isServiceTab = (s: NotesListName): s is ServiceName => s !== 'სიმღერა';
@@ -22,6 +23,9 @@ export const SERVICE_LISTS: [ServiceName, ChantItem[]][] = [
   ['სადღესასწაულო', SADGHESASWAULO_CHANTS],
   ['მარხვანი', MARXVANI_CHANTS],
   ['ზატიკი', ZATIKI_CHANTS],
+  ['პანაშვიდი', PANASHVIDI_CHANTS],
+  ['ჯვრისწერა', JVRISWERA_CHANTS],
+  ['ხელდასხმა', KHELDASKHMA_CHANTS],
   ['მომიხსენენი', MOMIXSENENI_CHANTS],
   ['ძლისპირები', DZLISPIREBI_CHANTS],
   ['კატაბასიები', KATABASIEBI_CHANTS],
@@ -86,6 +90,7 @@ export const BOOK_NAMES: Record<string, string> = {
   v8: 'რვახმა საცისკრო ძლისპირები, VIII ტომი',
   dasd1: 'ჰიმნოგრაფიული კრებული II, დასდებელნი ხმა ა–ბ',
   dasd2: 'ჰიმნოგრაფიული კრებული III, დასდებელნი ხმა გ–დ',
+  a1: 'ქართული გალობის ანთოლოგია, I ტომი',
   a2: 'ქართული გალობის ანთოლოგია, II ტომი',
   a4: 'ქართული გალობის ანთოლოგია, IV ტომი',
   a28: 'ქართული გალობის ანთოლოგია, XXVIII ტომი',

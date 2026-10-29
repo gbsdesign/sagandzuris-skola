@@ -1,6 +1,7 @@
 import { ChantItem, variantName } from './tsirvaChants';
 import { withKarbelaantLent, withKarbelaantPascha } from './karbelaantBookChants';
 import { withPataravaLent, withPataravaPascha } from './pataravaBookChants';
+import { withAnthology } from './anthologyChants';
 
 // Lenten and Paschal chants of the Gelati school book, vol. IV ("ქართული საეკლესიო გალობა" IV ტომი, 2006:
 // მარხვანი №1-94, ზატიკი №95-151). Read from the PDF by reading every heading and the book's table of contents;
@@ -171,5 +172,6 @@ const build = (prefix: string, occasions: Occasion[]): ChantItem[] =>
 
 // the Karbelashvili-mode chants of vol. VII follow as a ქართლ-კახური row
 // and the Patarava book (Shemokmedi school, 2003) as a შ.ს. row
-export const MARXVANI_CHANTS: ChantItem[] = withPataravaLent(withKarbelaantLent(build('mx', MARXVANI)));
+// and the anthology's versions (anthologyChants.ts) after them
+export const MARXVANI_CHANTS: ChantItem[] = withAnthology(withPataravaLent(withKarbelaantLent(build('mx', MARXVANI))));
 export const ZATIKI_CHANTS: ChantItem[] = withPataravaPascha(withKarbelaantPascha(build('zt', ZATIKI)));
