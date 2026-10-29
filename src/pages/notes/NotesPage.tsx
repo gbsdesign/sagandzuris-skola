@@ -35,7 +35,8 @@ import { triggerHaptic } from '../../utils/haptics';
 import { stopPreview } from '../../utils/listPreview';
 
 const SPEEDS = [0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.25, 1.4, 1.6, 1.8, 2];
-const VOICE_NAMES = ['I', 'II', 'III', 'IV', 'V', 'VI']; // V–VI: a song for two choirs (admission program)
+// V–VI: a song for two choirs (admission program); up to X: the anthology's many-voiced litanies (vol. II №211–217)
+const VOICE_NAMES = ['I', 'II', 'III', 'IV', 'V', 'VI', 'VII', 'VIII', 'IX', 'X'];
 const ZSTEPS = [0.5, 0.75, 1, 1.25, 1.5, 2, 2.5, 3];
 type Paper = 'day' | 'candle' | 'night' | 'auto';
 type Orient = 'port' | 'land' | 'desk';
@@ -206,7 +207,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const [speedIdx, setSpeedIdx] = useState(SPEEDS.indexOf(1));
   const [transpose, setTranspose] = useState(0);
   const [voiceOn, setVoiceOn] = useState(() => VOICE_NAMES.map(() => true));
-  const [volume, setVolume] = useState([1, 1, 1, 1]);
+  const [volume, setVolume] = useState(() => VOICE_NAMES.map(() => 1));
   const [mixOpen, setMixOpen] = useState(false);
   const [loop, setLoop] = useState<{ stage: 0 | 1 | 2; a: number | null; b: number | null }>({ stage: 0, a: null, b: null });
   const [folded, setFolded] = useState<Record<Orient, { synth: boolean; rec: boolean }>>({ port: { synth: false, rec: false }, land: { synth: true, rec: true }, desk: { synth: false, rec: false } });
@@ -1010,8 +1011,9 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
               </div>
               <div className="np-details">
                 <div className="np-dA">
-                  <div className="np-row">
-                    <div className="np-seg" role="group" aria-label="ხმები">
+                  {/* more than four voices: the voice buttons take a row of their own and wrap (never shrink) */}
+                  <div className={`np-row ${VOICES.length > 4 ? 'many' : ''}`}>
+                    <div className={`np-seg ${VOICES.length > 4 ? 'many' : ''}`} role="group" aria-label="ხმები">
                       {VOICES.map((v, i) => (
                         <button key={v} type="button" className={voiceOn[i] ? 'on' : 'x'} aria-pressed={voiceOn[i]} onClick={() => { triggerHaptic(8); setVoiceOn(on => on.map((x, k) => (k === i ? !x : x))); }}>{v}</button>
                       ))}
@@ -1028,7 +1030,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                     ><CircleDot /></button>
                   </div>
                   {mixOpen && (
-                    <div className={`np-mix ${VOICES.length > 3 ? 'four' : ''}`}>
+                    <div className={`np-mix ${VOICES.length > 4 ? 'many' : VOICES.length > 3 ? 'four' : ''}`}>
                       {VOICES.map((v, i) => (
                         <label key={v}>
                           <span>{v} ხმა<em>{Math.round(volume[i] * 100)}%</em></span>

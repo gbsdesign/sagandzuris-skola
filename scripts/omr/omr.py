@@ -63,6 +63,7 @@ class Page:
     def __init__(self, pg):
         self.pg = pg
         self.glyphs, self.words, self.heads_txt = [], [], []
+        self.foot_y = 1e9
         for blk in pg.get_text('rawdict')['blocks']:
             for ln in blk.get('lines', []):
                 for sp in ln['spans']:
@@ -81,6 +82,11 @@ class Page:
                 num = head_num(txt)
                 if num and size >= 12 and ln['bbox'][1] < 780:
                     self.heads_txt.append((num, ln['bbox'][1], ln['bbox'][3], ln['bbox'][0]))
+                # the footnotes begin with a line „1) …“ of small plain text (a bold „1) 2)“ is a marker over the music):
+                # music printed below it is an example quoted in a footnote (a manuscript's fragment), not the chant
+                if (re.match(r'\d\)\s*\S', txt) and len(txt) > 15 and size < 11 and 'Bold' not in ln['spans'][0]['font']
+                        and len(txt.split()) >= 4):
+                    self.foot_y = min(self.foot_y, ln['bbox'][1])
         self.words = [w for w in pg.get_text('words')]
         self.hlines, self.vlines, self.beams, self.curves = [], [], [], []
         for d in pg.get_drawings():
@@ -420,7 +426,9 @@ def chant_pages(doc, start_page, num, last=None):
         others = sorted(((music_top(h) if music_top(h) is not None else h[1]), h) for h in heads if not in_unit(h) and near(h))
         others = [h for y, h in others if y > y_from]
         y_to = min((music_top(h) if music_top(h) is not None else h[1]) for h in others) if others else 1e9
-        syss = [s for s in sy if y_from < s[0]['top'] < y_to and len(s) >= 2]
+        # (a chant whose own number stands below the footnotes' start is itself printed there: nothing is cut)
+        foot = P.foot_y if not (mine and not started and mine[0][1] > P.foot_y) else 1e9
+        syss = [s for s in sy if y_from < s[0]['top'] < min(y_to, foot) and len(s) >= 2]
         twins = [h for h in heads if mine and not started and not in_unit(h) and abs(h[1] - mine[0][1]) < 4]
         if twins:
             # two short pieces printed side by side under one row of numbers: each takes the systems nearer its number

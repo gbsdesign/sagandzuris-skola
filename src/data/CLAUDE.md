@@ -195,7 +195,9 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   kept only when no version of the target chant (or of any book) has the same notes (≥ 0.9 by containment or intervals).
   Vols. II–III print the number beside its system (`music_top`), letter variants as „81-a“; a litany of many short numbers
   is one unit (`--to`), but a TOC range of whole versions (prokeimena „6–11 ხმა ა“, ის პოლლა 146–150) is read one by one.
-  Two numbers in one row: the row is split by side, full-width lines below continue the right-hand one. Left out: the
+  Two numbers in one row: the row is split by side, full-width lines below continue the right-hand one. Music below a
+  page's footnotes (a plain small line „1) …“, not the bold markers) is an example quoted there and is not read — unless
+  the chant's own number stands there. Up to 10 voices (II №211–214, 215–217). Left out: the
   fragments the book itself calls unperformable (II 36a, 289, 347; III 221, 337). New items (guesses from the books'
   introductions, vol. II pp. 18–24, vol. III pp. 11–15): the bishop's meeting chants before/after chant-1–2, აქებს სული ჩემი,
   three weekday antiphons, დიპტიქი, წარდგომანი დღიურნი, three hymns after განიცადე; feast antiphons, რაოდენთა (შობა),

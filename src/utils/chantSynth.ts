@@ -7,7 +7,7 @@ export interface BookScore {
   page: number;
   tempos: [beat: number, bpm: number][];
   dur: number; // beats (quarter notes)
-  voices: [beat: number, beats: number, midi: number][][]; // I, II, III (bass)[, IV (low bass)]
+  voices: [beat: number, beats: number, midi: number][][]; // I, II, III (bass)[, IV (low bass)] — up to X in a litany
   img: { src: string; w: number; h: number; page: number }[];
   // one entry per system (line of music): image index, box as fractions of the image, beat range
   sys: [img: number, x: number, y: number, w: number, h: number, t0: number, t1: number][];
@@ -158,8 +158,9 @@ const buildMix = (ctx: BaseAudioContext, gains: number[]) => {
   comp.threshold.value = -14;
   comp.ratio.value = 4;
   comp.connect(out);
+  // more voices than three sound as loud as three: the voices add up in power, so the level drops by √(3/n)
   const master = ctx.createGain();
-  master.gain.value = 0.22;
+  master.gain.value = 0.22 * Math.min(1, Math.sqrt(3 / Math.max(1, gains.length)));
   master.connect(comp);
   const pans: StereoPannerNode[] = [];
   const voices = gains.map(v => {
@@ -174,8 +175,13 @@ const buildMix = (ctx: BaseAudioContext, gains: number[]) => {
   return { master, voices, pans };
 };
 
-// bass timbre: III and IV of a chant (IV = the low bass); a song for two choirs (6 voices) has a bass in each choir
-const isBass = (v: number, n: number) => (n === 6 ? v % 3 === 2 : v >= 2);
+// bass timbre (a little fuller): III and IV of a chant (IV = the low bass); a song for two choirs (6 voices) has a bass in
+// each choir; a litany of five or seven to ten staves by each voice's own range — under G3 on average
+const LOW_VOICE = 55;
+const bassVoices = (pitch: (number | null)[]) =>
+  pitch.map((m, v) => (pitch.length <= 4 ? v >= 2 : pitch.length === 6 ? v % 3 === 2 : m != null && m < LOW_VOICE));
+const meanPitch = (list: BookScore['voices'][number]) => (list.length ? list.reduce((s, n) => s + n[2], 0) / list.length : null);
+const scoreBass = (score: BookScore) => bassVoices(score.voices.map(meanPitch));
 
 /** First note of each voice (I, II, III…), in midi; null for a voice without notes. */
 export const firstNotes = (score: BookScore) =>
@@ -193,9 +199,10 @@ export const playStartNotes = async (midis: (number | null)[], transpose = 0, qu
   startMix.master.gain.setValueAtTime(quiet ? 0.12 : 0.22, ctx.currentTime);
   const t0 = ctx.currentTime + 0.06;
   const starts: number[] = [];
+  const bass = bassVoices(midis);
   midis.forEach((m, i) => {
     if (m == null) return;
-    playNote(ctx, startMix!.voices[Math.min(i, 3)], m + transpose, isBass(i, midis.length), t0 + i * gap, len);
+    playNote(ctx, startMix!.voices[Math.min(i, 3)], m + transpose, bass[i], t0 + i * gap, len);
     starts.push(i);
   });
   return starts.map(i => 60 + i * gap * 1000);
@@ -253,6 +260,7 @@ export class ChantSynth {
   private pausedAt = 0;
   private speed = 1;
   private transpose = 0;
+  private bass: boolean[];
   private muted: boolean[];
   private volume: number[];
   private pan: number[];
@@ -269,6 +277,7 @@ export class ChantSynth {
     this.notes = singleStrike(score.voices)
       .map(([t, d, m, v, g]) => ({ s: map.toSec(t), e: map.toSec(t + d), m, v, g }))
       .sort((a, b) => a.s - b.s);
+    this.bass = scoreBass(score);
     this.muted = score.voices.map(() => false);
     this.volume = score.voices.map(() => 1);
     this.pan = score.voices.map(() => 0);
@@ -408,7 +417,7 @@ export class ChantSynth {
   }
 
   private voice(midi: number, v: number, at: number, len: number, gain: number) {
-    const rec = playNote(this.ctx!, this.voiceGains[v], midi, isBass(v, this.voiceGains.length), at, len, gain);
+    const rec = playNote(this.ctx!, this.voiceGains[v], midi, this.bass[v] ?? false, at, len, gain);
     this.live.add(rec);
     rec.oscs[0].onended = () => { this.live.delete(rec); rec.env.disconnect(); };
   }
@@ -446,6 +455,7 @@ export const renderScore = (score: BookScore, o: RenderOptions): Promise<AudioBu
   const length = lead + map.toSec(score.dur) / o.speed + 0.6;
   const ctx = new OfflineAudioContext(1, Math.ceil(length * RENDER_RATE), RENDER_RATE);
   const { voices } = buildMix(ctx, o.gains);
+  const bass = scoreBass(score);
   const notes = singleStrike(score.voices)
     .filter(([, , , v]) => o.gains[v])
     .map(([t, d, m, v, g]) => ({ v, m, g, at: lead + map.toSec(t) / o.speed, len: (map.toSec(t + d) - map.toSec(t)) / o.speed }))
@@ -457,7 +467,7 @@ export const renderScore = (score: BookScore, o: RenderOptions): Promise<AudioBu
   const addUntil = (t: number) => {
     while (next < notes.length && notes[next].at < t) {
       const n = notes[next++];
-      const rec = playNote(ctx, voices[n.v], n.m + o.transpose, isBass(n.v, voices.length), n.at, n.len, n.g);
+      const rec = playNote(ctx, voices[n.v], n.m + o.transpose, bass[n.v] ?? false, n.at, n.len, n.g);
       rec.oscs[0].onended = () => rec.env.disconnect();
     }
   };
