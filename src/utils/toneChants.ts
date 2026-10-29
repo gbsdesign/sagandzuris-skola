@@ -1,4 +1,5 @@
 import { SERVICE_LISTS, hasBookNotes } from '../data/chantLookup';
+import { ANTH_ROMAN } from '../data/anthologyChants';
 import type { ChantItem, ChantVariant } from '../data/tsirvaChants';
 
 // The Sunday chants of a tone, for the „ხმა“ on the reader's day card (pages/medavitneoba/ToneSheet.tsx): the books'
@@ -36,9 +37,13 @@ let chants: Map<string, ChantItem> | null = null;
 const chantById = (id: string) =>
   (chants ??= new Map(SERVICE_LISTS.flatMap(([, list]) => list.map(c => [c.id, c] as const)))).get(id);
 
-// a version's school, said short as choirs say it (the Gelati school book, vol. I, is the default)
-const bookOf = (v: ChantVariant) =>
-  v.book === 'kk' ? 'ქართლ-კახური' : v.book === 'v9' ? 'გელათური, IX ტ.' : v.book === 'v5' ? 'გელათური, V ტ.' : 'გელათური';
+// a version's school, said short as choirs say it (the Gelati school book, vol. I, is the default); the anthology's
+// volumes („ანთ. III“) by the school of their row
+const bookOf = (v: ChantVariant) => {
+  const anth = /^a(\d+)$/.exec(v.book ?? '');
+  if (anth) return `${v.code.startsWith('ქ.კ.') ? 'ქართლ-კახური' : 'გელათური'}, ანთ. ${ANTH_ROMAN[Number(anth[1])] ?? anth[1]}`;
+  return v.book === 'kk' ? 'ქართლ-კახური' : v.book === 'v9' ? 'გელათური, IX ტ.' : v.book === 'v5' ? 'გელათური, V ტ.' : 'გელათური';
+};
 
 export interface ToneVersion { vid: string; book: string; num?: number }
 export interface ToneRow { title: string; versions: ToneVersion[] }

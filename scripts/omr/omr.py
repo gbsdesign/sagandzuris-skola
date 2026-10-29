@@ -30,8 +30,11 @@ REMAP = None  # set by open_vol when the volume uses that encoding; glyphs missi
 
 def head_num(txt):
     """A chant's number from its title line: "203. title", "76a title", vol. I's bare "1." / "7.-8." (the title is
-    its own line there) and "22.a." (= 22a)."""
+    its own line there), "22.a." (= 22a) and vols II–III's "81-a" (= 81a)."""
     m = re.match(r'^(\d+)\.([a-z])\.', txt)
+    if m:
+        return m.group(1) + m.group(2)
+    m = re.match(r'^(\d+)-([a-z])$', txt)  # vols II–III: "81-a"
     if m:
         return m.group(1) + m.group(2)
     m = re.match(r'^(\d+)\.(?:-\d+\.)?$', txt)
@@ -362,11 +365,22 @@ def sync_recit(res):
         t = max(known) if known else max(est) if est else (times[-1] if times else 0.0)
         times.append(t)
         for k, v in enumerate(res):
-            if idx[k] < len(v) and col_of[v[idx[k]]['x']] == ci:
-                if idx[k] > 0 and v[idx[k] - 1].get('recit'):
-                    v[idx[k] - 1]['beats'] = max(0.5, t - v[idx[k] - 1]['t'])
-                v[idx[k]]['t'] = t
+            first = True
+            while idx[k] < len(v) and col_of[v[idx[k]]['x']] == ci:
+                if first:
+                    if idx[k] > 0 and v[idx[k] - 1].get('recit'):
+                        v[idx[k] - 1]['beats'] = max(0.5, t - v[idx[k] - 1]['t'])
+                    v[idx[k]]['t'] = t
+                    first = False
+                else:  # a second note of one voice in the column (printed very close): right after the first
+                    p = v[idx[k] - 1]
+                    v[idx[k]]['t'] = p['t'] + p['beats']
                 idx[k] += 1
+    # a note left out of the columns' order follows its voice's previous note
+    for v in res:
+        for i, e in enumerate(v):
+            if 't' not in e:
+                e['t'] = v[i - 1]['t'] + v[i - 1]['beats'] if i else 0.0
     # a recitation note at the end of a voice lasts until the others end
     ends = [v[-1]['t'] + v[-1]['beats'] for v in res if v and not v[-1].get('recit')]
     if ends:
@@ -388,22 +402,36 @@ def chant_pages(doc, start_page, num, last=None):
         P = Page(doc[pi])
         heads = sorted(P.heads_txt, key=lambda h: h[1])
         mine = [h for h in heads if h[0] == num]
-        y_from = mine[0][2] if (mine and not started) else -1
         if not started and not mine:
             pi += 1
             continue
-        others = [h for h in heads if h[1] > y_from and not in_unit(h)]
-        y_to = others[0][1] if others else 1e9
-        syss = [s for s in P.systems() if y_from < s[0]['top'] < y_to and len(s) >= 2]
+        sy = P.systems()
+
+        def music_top(h):
+            # vols II–III print the number beside its system's first staff: the music starts at that system's top;
+            # elsewhere the number heads the title above the music
+            hy = (h[1] + h[2]) / 2
+            beside = [s for s in sy if s[0]['top'] - 2 <= hy <= s[-1]['bot'] + 2 and h[3] < s[0]['x0']]
+            return beside[0][0]['top'] - 1 if beside else None
+        mt = music_top(mine[0]) if mine and not started else None
+        y_from = (mt if mt is not None else mine[0][2]) if (mine and not started) else -1
+        # a number far from this one is something else (a verse number, a tone): not where this chant ends
+        near = lambda h: lo - 5 <= int(re.sub(r'\D', '', h[0])) <= (hi or lo) + 40
+        others = sorted(((music_top(h) if music_top(h) is not None else h[1]), h) for h in heads if not in_unit(h) and near(h))
+        others = [h for y, h in others if y > y_from]
+        y_to = min((music_top(h) if music_top(h) is not None else h[1]) for h in others) if others else 1e9
+        syss = [s for s in sy if y_from < s[0]['top'] < y_to and len(s) >= 2]
         twins = [h for h in heads if mine and not started and not in_unit(h) and abs(h[1] - mine[0][1]) < 4]
         if twins:
             # two short pieces printed side by side under one row of numbers: each takes the systems nearer its number
+            # (the row of the numbers is split by side; full-width lines below it continue the right-hand piece)
             mx, tx = mine[0][3], twins[0][3]
-            syss = [s for s in syss if abs(s[0]['x0'] - mx) < abs(s[0]['x0'] - tx)]
+            row = min((s[0]['top'] for s in syss), default=0)
+            syss = [s for s in syss if (abs(s[0]['x0'] - mx) < abs(s[0]['x0'] - tx) if s[0]['top'] - row < 10 else mx > tx)]
         if syss:
             out.append((pi, P, syss, y_from if not started else None))
         started = True
-        if others:
+        if others or (twins and mx < tx):  # the left-hand twin ends in its row
             break
         pi += 1
     return out

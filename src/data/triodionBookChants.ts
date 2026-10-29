@@ -174,4 +174,4 @@ const build = (prefix: string, occasions: Occasion[]): ChantItem[] =>
 // and the Patarava book (Shemokmedi school, 2003) as a შ.ს. row
 // and the anthology's versions (anthologyChants.ts) after them
 export const MARXVANI_CHANTS: ChantItem[] = withAnthology(withPataravaLent(withKarbelaantLent(build('mx', MARXVANI))));
-export const ZATIKI_CHANTS: ChantItem[] = withPataravaPascha(withKarbelaantPascha(build('zt', ZATIKI)));
+export const ZATIKI_CHANTS: ChantItem[] = withAnthology(withPataravaPascha(withKarbelaantPascha(build('zt', ZATIKI))));

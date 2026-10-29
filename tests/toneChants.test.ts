@@ -41,6 +41,7 @@ test('tone IV: the books\' own numbers', () => {
   assert.deepEqual(rows['ღმერთი უფალი'].map(v => [v.book, v.num]), [['გელათური', 90], ['ქართლ-კახური', 105]]);
   assert.deepEqual(rows['აღდგომის ტროპარი'].map(v => v.book), ['გელათური', 'ქართლ-კახური', 'გელათური, IX ტ.']);
   assert.deepEqual(rows['აღდგომის ტროპარი'].map(v => v.num), [91, 106, 87]);
-  assert.deepEqual(rows['წარდგომა'].map(v => v.num), [171]);
-  assert.deepEqual(rows['ალილუია'].map(v => v.num), [179]);
+  assert.deepEqual(rows['წარდგომა'].map(v => v.num), [171, 21, 22, 23, 24, 25]);
+  assert.deepEqual(rows['წარდგომა'].map(v => v.book).slice(1), Array(5).fill('ქართლ-კახური, ანთ. III'));
+  assert.deepEqual(rows['ალილუია'].map(v => v.num).slice(0, 1), [179]);
 });
