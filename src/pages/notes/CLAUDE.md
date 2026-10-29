@@ -49,6 +49,9 @@ moving to the next chant in service order.
   document's `live` { vid, at, by } (`liturgy.lead`; no rules change — teachers may update their class). A member whose program
   page or program notes is open follows a fresh lead (< 4 h, `liveNow`) — `NotesContext`; elsewhere in the app nothing opens.
   The member's line „რეგენტი ახლა: …“ has „მივყვები“ to stop following.
+- **Many voices** (2026-10-29): up to X (the anthology's 10-voice litanies, vol. II №211–217). Over four voices the synth's
+  voice buttons take their own row and wrap into a grid (≥44 px each), the mixer wraps too; the synth's level drops by
+  √(3/n) so any number of voices sounds as loud as three; bass timbre for 5 or 7–10 voices by each voice's average pitch.
 - Book notes only — no Drive `ნოტები` fallback anywhere.
 - Share: WhatsApp / Facebook / Messenger / Instagram inside "მეტი" (Instagram copies the link; on phones use
   `navigator.share`).

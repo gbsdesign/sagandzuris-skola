@@ -182,6 +182,11 @@
 .np-seg button.all.on{background:var(--acc);color:#fff;box-shadow:none}
 .np-mix{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;padding:9px 12px 8px;border-radius:13px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}
 .np-mix.four{grid-template-columns:repeat(4,1fr)}
+.np-mix.many{grid-template-columns:repeat(auto-fill,minmax(92px,1fr))}
+.np-row.many{flex-wrap:wrap;justify-content:flex-end}
+.np-seg.many{flex:1 1 100%;display:grid;grid-template-columns:repeat(auto-fill,minmax(44px,1fr))}
+.np-seg.many button.all{grid-column:span 2}
+.np-root:is(.land,.wide) .np-panel:is(.synth,.rec) .np-seg.many{order:19;flex:1 1 100%}
 .np-mix label{display:flex;flex-direction:column;gap:3px;font-size:11px;font-weight:800;color:var(--ink-2);min-width:0}
 .np-mix label span{display:flex;justify-content:space-between;font-variant-numeric:tabular-nums}
 .np-mix label em{font-style:normal;font-weight:700;color:var(--muted)}
