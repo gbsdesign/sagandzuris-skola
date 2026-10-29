@@ -20,11 +20,15 @@
 //   widgets show (habits, the path's percentages, the psalter kanon); the app's widgets, which carry no site Origin, read
 //   GET /widget/data?s=<secret> (that summary + today's ticks and counts, live from Firestore) and tick a habit with
 //   POST /widget/tick { s, id } or count with POST /widget/count { s, id, add }; POST /widget/unlink { s }.
+// • The phone's calendar (2026-10-29): GET /cal/<secret>.ics — great feasts, fasts and the member's lessons (ics.js);
+//   the secret is one of /widget/link's, asked for by the profile's „კალენდარი ტელეფონში“.
 // These pushes carry an encrypted text payload (RFC 8291, aes128gcm).
 //
 // Bindings (wrangler.toml): D1 database DB (schema.sql), KV namespace REMINDERS (old storage, read once to
 // move the subscriptions into D1), vars VAPID_PUBLIC_KEY, FIREBASE_PROJECT_ID, FIRESTORE_DB,
 // secrets VAPID_PRIVATE_JWK and FIREBASE_SA (the service account's JSON key, for reading Firestore).
+
+import { buildIcs } from './ics.js';
 
 const MAIN_ORIGINS = [
   'https://sagandzuris-skola.pages.dev',
@@ -854,6 +858,16 @@ async function widgetCount(request, env) {
   return json({ day, done: next, count: n });
 }
 
+// the member's phone calendar (worker/reminders/ics.js): the same secret as the widgets, from POST /widget/link
+async function calendarFeed(request, env) {
+  const m = /^\/cal\/([\w-]{20,100})\.ics$/.exec(new URL(request.url).pathname);
+  const uid = m && (await widgetUid(env, m[1]));
+  if (!uid) return [404, 'unknown'];
+  const classes = (await fsList(env, 'classes', ['name', 'archived', 'memberIds', 'teacherIds', 'schedule']))
+    .filter((c) => !c.archived && ((c.memberIds || []).includes(uid) || (c.teacherIds || []).includes(uid)));
+  return [200, buildIcs(classes), 'text/calendar; charset=utf-8'];
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
@@ -866,7 +880,7 @@ export default {
     };
     // the app's widgets send no Origin: their secret is the proof
     const widgetRoutes = { 'GET /widget/data': widgetData, 'POST /widget/tick': widgetTick, 'POST /widget/count': widgetCount, 'POST /widget/unlink': widgetUnlink };
-    const fromWidget = widgetRoutes[`${request.method} ${url.pathname}`];
+    const fromWidget = widgetRoutes[`${request.method} ${url.pathname}`] || (request.method === 'GET' && url.pathname.startsWith('/cal/') ? calendarFeed : null);
     const handler = fromWidget || (request.method === 'POST' ? routes[url.pathname] : null);
     if (handler) {
       if (!fromWidget && !allowedOrigin(origin)) return new Response('forbidden', { status: 403, headers });
