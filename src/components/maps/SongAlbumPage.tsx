@@ -15,7 +15,8 @@ import { triggerHaptic } from '../../utils/haptics';
 // opens it); the owner and the superadmins move a recording to a song („გადატანა“) — the album keeps it either way.
 // The list is public/centre/<folder id>.json, fetched when the album opens (and kept by the service worker).
 
-type Track = [id: string, title: string, note?: string];
+/** id, title, note, and — when the site already had this recording from an older folder — that file's id */
+type Track = [id: string, title: string, note?: string, same?: string];
 
 const useAlbumTracks = (id: string) => {
   const [tracks, setTracks] = useState<Track[] | null>(null);
@@ -65,7 +66,8 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
 
   if (!album) return null;
   const [, name, count] = album;
-  const placedCount = tracks ? tracks.filter(t => whereIs.has(t[0])).length : 0;
+  const placeOf = (t: Track) => whereIs.get(t[0]) ?? (t[3] ? whereIs.get(t[3]) : undefined);
+  const placedCount = tracks ? tracks.filter(t => placeOf(t)).length : 0;
 
   return (
     <div className="galoba-font w-full flex flex-col items-center animate-in fade-in duration-200">
@@ -107,10 +109,11 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
         ) : (
           <section className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] shadow-[0_1px_3px_rgba(74,52,38,0.06)] overflow-hidden">
             <ul className="divide-y divide-[#efe5d4]">
-              {tracks.map(([id, title, note], i) => {
+              {tracks.map((track, i) => {
+                const [id, title, note, same] = track;
                 const on = player.cur === id;
                 const phase = on ? player.phase : 'paused';
-                const where = whereIs.get(id);
+                const where = placeOf(track);
                 return (
                   <li key={id} className={`px-3.5 py-3 flex flex-col gap-2 transition-colors ${on ? 'bg-[#fcf6ea]' : ''}`}>
                     <div className="flex items-center gap-3 min-w-0">
@@ -148,7 +151,8 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
                           </button>
                         )}
                       </div>
-                      {isSuperAdmin && (
+                      {/* a recording the site had before moves from its song's page, not from here */}
+                      {isSuperAdmin && !(where && same && !whereIs.has(id)) && (
                         <button
                           type="button"
                           onClick={() => {

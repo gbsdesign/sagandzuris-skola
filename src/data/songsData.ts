@@ -952,9 +952,13 @@ II სოლისტი (1 ხმა)
   },
 ];
 
+const REGION_ALBUM = /^(გურია|იმერეთი|რაჭა|სვანეთი|სამეგრელო|ქართლი|აჭარა|ფშავი|ხევსურეთი|ლეჩხუმი|კახეთი)$/;
+
 /** One take of the Centre's Drive albums as a song's recording: the album's name is the performer's label */
 function centreTake([file, album, note]: CentreTake): CentreRec {
-  const who = CENTRE_SONG_ALBUMS[album]?.[1] ?? '';
+  const name = CENTRE_SONG_ALBUMS[album]?.[1] ?? '';
+  // an album named after a land would read as a place: „ალბომი „გურია““
+  const who = REGION_ALBUM.test(name) ? `ალბომი „${name}“` : name;
   if (typeof file === 'string') return { who, note, mp3: file };
   const [all, v1, v2, v3] = file;
   return { who, note: note ?? 'სასწავლო · ხმებად', mp3: all || undefined, voices: [v1 || undefined, v2 || undefined, v3 || undefined] };

@@ -40,7 +40,7 @@ const byRecordings = (a: FolkSong, b: FolkSong) => Number(hasRecording(b)) - Num
 // what the songs' search looks through: title, place, genre and (for members) the performers
 const searchText = (s: FolkSong, withPerformers: boolean) => searchNormalize([
   s.title, getFolkRegion(s.region).nameGe, s.area, s.municipality, s.genre,
-  ...(withPerformers ? [...s.versions.map(v => v.label), ...(s.recs ?? []).map(r => r.who)] : []),
+  ...(withPerformers ? [...s.versions.map(v => v.label), ...(s.recs ?? []).map(r => r.who), ...(s.centre ?? []).map(r => r.who)] : []),
 ].filter(Boolean).join(' · '));
 
 const useSongSearch = (songs: FolkSong[], query: string, withPerformers: boolean) => {
