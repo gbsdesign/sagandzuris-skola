@@ -33,6 +33,16 @@
 .pp-secondary{position:relative;overflow:hidden;width:100%;min-height:46px;padding:6px 14px;border-radius:14px;display:flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:700;color:var(--ink-2);background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);text-align:center}
 .pp-secondary svg{width:17px;height:17px;flex:none}
 .pp-secondary.done{color:var(--ok);box-shadow:inset 0 0 0 1px #a8d3b8}
+.pp-lead.on{color:#fff;background:var(--wine);box-shadow:none}
+.pp-lead:disabled{opacity:.55}
+.pp-live{display:flex;align-items:center;gap:10px;min-height:52px;padding:8px 8px 8px 14px;border-radius:14px;background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--wine)}
+.pp-live>svg{width:18px;height:18px;flex:none;color:var(--wine);animation:pp-pulse 1.6s ease-in-out infinite}
+@keyframes pp-pulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.pp-live>svg{animation:none}}
+.pp-live .tx{flex:1;min-width:0;font-size:13.5px;line-height:1.35;color:var(--ink)}
+.pp-live .tx b{color:var(--wine)}
+.pp-live button{flex:none;min-height:40px;padding:0 14px;border-radius:999px;font-size:13px;font-weight:800;color:var(--wine);box-shadow:inset 0 0 0 1.5px var(--wine)}
+.pp-live button.on{color:#fff;background:var(--wine)}
 .pp-bar{position:absolute;left:0;bottom:0;height:3px;background:var(--wine);transition:width .2s}
 .pp-list{list-style:none;margin:4px 0 0;padding:0;display:flex;flex-direction:column;gap:8px}
 .pp-row{position:relative;display:flex;align-items:center;gap:10px;padding:9px 6px 9px 12px;border-radius:14px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);transition:transform .18s ease,box-shadow .2s;animation:pp-in .4s ease both}

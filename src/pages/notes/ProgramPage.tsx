@@ -3,7 +3,7 @@
 // in church mode or keep the whole program on the phone for singing without internet.
 import React, { useEffect, useRef, useState } from 'react';
 import {
-  CalendarDays, PenLine, Check, ChevronLeft, CloudDownload, Copy, FileText, GripVertical, Headphones, Church, Plus, QrCode, Send, Trash2, Users, X, LayoutTemplate, CircleCheck,
+  CalendarDays, PenLine, Check, Radio, ChevronLeft, CloudDownload, Copy, FileText, GripVertical, Headphones, Church, Plus, QrCode, Send, Trash2, Users, X, LayoutTemplate, CircleCheck,
 } from 'lucide-react';
 import './notes.css';
 import './program.css';
@@ -27,7 +27,7 @@ const labelOf = (id: string) => {
 };
 
 export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
-  const { closeProgram, openNotes, setChurch, liturgy, program, fromLink } = useNotes();
+  const { closeProgram, openNotes, setChurch, liturgy, program, fromLink, leading, setLeading, following, setFollowing, liveTurn } = useNotes();
   const regent = liturgy.role === 'teacher' && !fromLink;
   const items = program?.items ?? [];
   const [sheet, setSheet] = useState<'tpl' | 'qr' | null>(null);
@@ -225,6 +225,24 @@ export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
                 <span>{dl ? `ჩამოიწერება… ${dl.done}/${dl.total}` : allOffline ? 'ჩამოწერილია' : `ჩამოწერა ოფლაინისთვის · ~${estimateMb(items)} MB`}</span>
                 {dl && <i className="pp-bar" style={{ width: `${(100 * dl.done) / Math.max(1, dl.total)}%` }} />}
               </button>
+
+              {/* „გუნდი მომყვება“: the teacher's page turns open the same chant on the class's phones */}
+              {regent && (
+                <button type="button" className={`pp-secondary pp-lead ${leading ? 'on' : ''}`} disabled={!program.sentAt}
+                  onClick={() => { triggerHaptic(10); setLeading(!leading); say(leading ? 'გუნდი აღარ მოგყვება' : 'გუნდი მოგყვება: რასაც გადაშლი, მათთანაც გადაიშლება', 3600); }}>
+                  <Radio />
+                  <span>{leading ? 'გუნდი მოგყვება · გამორთვა' : program.sentAt ? 'გუნდი მომყვება — ფურცლები ყველასთან გადაიშლება' : 'გუნდი მომყვება — ჯერ კლასს გაუგზავნე'}</span>
+                </button>
+              )}
+              {!regent && liveTurn && (
+                <div className="pp-live">
+                  <Radio />
+                  <span className="tx"><b>რეგენტი ახლა:</b> {labelOf(liveTurn.vid).title}</span>
+                  <button type="button" className={following ? 'on' : ''} onClick={() => { triggerHaptic(8); setFollowing(!following); }} aria-pressed={following}>
+                    {following ? 'მივყვები' : 'მიყოლა'}
+                  </button>
+                </div>
+              )}
 
               <ol ref={listRef} className="pp-list">
                 {!items.length && (

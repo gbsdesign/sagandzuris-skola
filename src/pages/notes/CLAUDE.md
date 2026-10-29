@@ -44,6 +44,11 @@ moving to the next chant in service order.
 - **Synth ball** (2026-10-28): while the synthesizer plays, a small ball (`.np-ball`) glides on the top edge of the playing
   line — its x is estimated from note lengths (`markerAt`, as in „სწავლა“), not exact. Shown only while playing (hidden on
   pause). On/off by the ◉ button in the synth panel (`sagandzuri_ball`, on by default, remembered on the device).
+- **„გუნდი მომყვება“** (2026-10-29, the user's choice: the phones turn by themselves): on the program page the teacher turns
+  it on (needs the program sent; `sg-lead` in sessionStorage); every chant they open from the program goes into the class
+  document's `live` { vid, at, by } (`liturgy.lead`; no rules change — teachers may update their class). A member whose program
+  page or program notes is open follows a fresh lead (< 4 h, `liveNow`) — `NotesContext`; elsewhere in the app nothing opens.
+  The member's line „რეგენტი ახლა: …“ has „მივყვები“ to stop following.
 - Book notes only — no Drive `ნოტები` fallback anywhere.
 - Share: WhatsApp / Facebook / Messenger / Instagram inside "მეტი" (Instagram copies the link; on phones use
   `navigator.share`).
