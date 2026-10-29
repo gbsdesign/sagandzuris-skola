@@ -2,7 +2,7 @@
 // brothers): II — the liturgy's first half (the bishop's meeting, litanies, antiphons, მოვედით, წმიდაო ღმერთო…), III — its
 // second half (prokeimena, alleluia, ქერუბიმთა, the anaphora…), IV — the liturgy as other chanters wrote it down.
 // Only the versions the site's books lack, by chant id; read and compared by scripts/omr (see its README).
-// A piece: [number as printed, page, version]; its notes file is public/notes/a<vol>/<file>.json, the file from the number
+// A piece: [number as printed, page, version]; its notes file is a<vol>/<file>.json in R2 (utils/notesBase.ts), the file from the number
 // (76a = 761, a unit of several numbers "55–61" = its first number).
 import type { AnthPiece } from './anthologyChants';
 

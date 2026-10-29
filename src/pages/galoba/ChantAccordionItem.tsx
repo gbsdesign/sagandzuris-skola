@@ -4,6 +4,7 @@ import { ChantItem, ChantVariant, isChantGroup, variantLines } from '../../data'
 import { useNotes } from '../../context/NotesContext';
 import { canOpenNotes } from '../../data/chantLookup';
 import { isOffline, onOfflineChange } from '../../utils/offlineNotes';
+import { notesBase } from '../../utils/notesBase';
 import { triggerHaptic } from '../../utils/haptics';
 import { previewProgress, toggleSynthPreview, usePreview } from '../../utils/listPreview';
 import { PreviewButton } from '../../components/PreviewButton';
@@ -21,7 +22,7 @@ const SCHOOL_STYLES: Record<string, { name: string; short: string; text: string 
 // page without the Latin words under the bass, public/notes/<book>/i/NNN.webp (cut by a script outside the repo);
 // a version without one just shows none.
 const incipitUrl = (v: ChantVariant) =>
-  v.bookNums?.length ? `/notes/${v.book || 'book'}/i/${String(v.bookNums[0]).padStart(3, '0')}.webp` : '';
+  v.bookNums?.length ? `${notesBase(v.book || 'book')}i/${String(v.bookNums[0]).padStart(3, '0')}.webp` : '';
 const missingIncipits = new Set<string>();
 
 // It fills the card from edge to edge at a fixed shape, as tall as a narrow card allows; what does not fit fades out

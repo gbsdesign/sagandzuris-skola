@@ -59,6 +59,7 @@ export const buildPdf = (images: PdfImage[], title: string): Blob => {
 // the page images are WebP; PDF embeds JPEG directly, so re-encode through a canvas
 const toJpeg = async (url: string): Promise<PdfImage> => {
   const img = new Image();
+  img.crossOrigin = 'anonymous'; // the anthology's pictures (notesBase) may be drawn on the canvas
   img.src = url;
   await img.decode();
   const canvas = document.createElement('canvas');

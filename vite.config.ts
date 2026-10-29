@@ -58,6 +58,22 @@ export default defineConfig(() => {
               },
             },
             {
+              // the anthology's notes from R2 (src/utils/notesBase.ts): kept with the other notes once opened, so they open
+              // offline and in church; fetched with CORS (the Worker allows it), so the kept copy is a readable answer even
+              // for a plain <img>, and refreshed in the background
+              urlPattern: ({ url }) => url.origin === 'https://sagandzuri-notes.mr-gabunia.workers.dev',
+              handler: async ({ request, event }) => {
+                const kept = await caches.match(request.url);
+                const fresh = fetch(request.url, { mode: 'cors', credentials: 'omit' }).then(async res => {
+                  if (res.ok) await (await caches.open('sagandzuri-notes-v1')).put(request.url, res.clone());
+                  return res;
+                });
+                if (!kept) return fresh;
+                event.waitUntil(fresh.catch(() => undefined));
+                return kept;
+              },
+            },
+            {
               // a chunk of an older version, asked for by a page still open from before an update: kept once opened
               urlPattern: ({ url }) => url.origin === self.location.origin && /^\/assets\/.+\.(js|css)$/.test(url.pathname),
               handler: 'CacheFirst',
