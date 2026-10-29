@@ -18,6 +18,7 @@ Talk in Georgian, step by step.
 4. **No wiring needed:** `src/data/churchCalendar.ts` loads every `calendar/*.json` through
    `import.meta.glob`, so the new file is picked up automatically. Never read the calendar JSON files whole
    (they are ~900 KB) — Grep or read small ranges.
+   Then `node scripts/build-widget-days.mjs` — it rewrites `public/widget/days-<year>.json` for the Android app's day widget.
 5. **Check:** `npm run typecheck`; open the footer calendar on a January 2027 date and on today's date.
    Don't add any "წყარო: orthodoxy.ge" line — the user removed those.
 6. Report, and offer `/publish`.

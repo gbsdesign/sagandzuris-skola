@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- the icon's long-press menu -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut android:shortcutId="galoba" android:enabled="true" android:icon="@drawable/sc_music"
+        android:shortcutShortLabel="@string/sc_galoba">
+        <intent android:action="android.intent.action.VIEW"
+            android:data="https://sagandzureli.ge/?open=sc&amp;id=section:galoba"
+            android:targetPackage="ge.sagandzureli.app"
+            android:targetClass="com.google.androidbrowserhelper.trusted.LauncherActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="prayers" android:enabled="true" android:icon="@drawable/sc_book_open"
+        android:shortcutShortLabel="@string/sc_prayers">
+        <intent android:action="android.intent.action.VIEW"
+            android:data="https://sagandzureli.ge/?open=sc&amp;id=library:prayers"
+            android:targetPackage="ge.sagandzureli.app"
+            android:targetClass="com.google.androidbrowserhelper.trusted.LauncherActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="habits" android:enabled="true" android:icon="@drawable/sc_sprout"
+        android:shortcutShortLabel="@string/sc_habits">
+        <intent android:action="android.intent.action.VIEW"
+            android:data="https://sagandzureli.ge/?open=sc&amp;id=section:chvevebi"
+            android:targetPackage="ge.sagandzureli.app"
+            android:targetClass="com.google.androidbrowserhelper.trusted.LauncherActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="kanon" android:enabled="true" android:icon="@drawable/sc_book_marked"
+        android:shortcutShortLabel="@string/sc_kanon">
+        <intent android:action="android.intent.action.VIEW"
+            android:data="https://sagandzureli.ge/?open=sc&amp;id=special:kathisma"
+            android:targetPackage="ge.sagandzureli.app"
+            android:targetClass="com.google.androidbrowserhelper.trusted.LauncherActivity" />
+    </shortcut>
+</shortcuts>

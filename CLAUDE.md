@@ -226,6 +226,18 @@
   (its nuskhuri/asomtavruli conversion with red initials, `useKhutsuri` in `views/ReadingTools.tsx`), now drawn with these
   fonts: „SG Old Script“ = the same two files for only the old scripts' code points (ⴀ…ⴥ, Ⴀ…Ⴥ), first in `--font-serif-ge`,
   so any old-script letter on the site is the app's alphabet.
+- **Android app** (Google Play, `android/`, 2026-10-29; memory `google-play-app`): a Trusted Web Activity of the live site
+  (so the site's updates need no app update) plus the app's own Java parts in `android/app/src/main/java/ge/sagandzureli/app/`
+  (version 1.1.0, code 2; minSdk 26): six home-screen widgets — buttons (the home vine's places, picked in `ButtonsConfigActivity`),
+  habits (tap ticks / counts), the path's five rings + reviews due, the church day, my psalter kanon, the saying of the day — the
+  icon's long-press menu (`res/xml/shortcuts.xml`), „გაზიარება → საგანძური“ into a class chat (manifest share target → the site's
+  `share_target` + `public/prayer-notify-sw.js` → `components/app/ShareHost.tsx`), church mode's „არ შემაწუხო“
+  (`SilenceActivity`, back after 3 h) and the prayer reminders' bell (`BellDelegationService`, `res/raw/bell.ogg`). The member's
+  widgets read the reminders Worker's `/widget/*` (a secret from the profile's „ვიჯეტის დაკავშირება“, `utils/widgetLink.ts`; the
+  open site leaves the summary there, `components/app/WidgetSync.tsx`); the day and saying widgets read `public/widget/days-<year>.json`
+  (`node scripts/build-widget-days.mjs`). The site knows it runs in the app by `utils/androidApp.ts` and talks to the app through
+  `sagandzuri://` links (`openInApp`). Widget links open `/?open=sc&id=<home button id>`. Icons: `node scripts/android/icons.mjs`.
+  Only GitHub Actions can build it (`.github/workflows/android.yml` → branch `android-build`, unsigned); sign in a session.
 - **Library** page (`biblioteka`): საღმრთო ისტორია, დღესასწაულები, წმიდანთა ცხოვრება.
   Footer church calendar (`data/churchCalendar.ts`, `data/calendar/<year>.json`, made by
   `node scripts/fetch-church-calendar.mjs <year>`). **The 2026 file ends 13 Jan 2027 — re-run for 2027 once

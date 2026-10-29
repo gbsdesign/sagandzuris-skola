@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/root" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@drawable/w_bg" android:orientation="vertical" android:paddingStart="14dp" android:paddingTop="8dp"
+    android:paddingEnd="6dp" android:paddingBottom="8dp">
+    <LinearLayout android:layout_width="match_parent" android:layout_height="40dp" android:gravity="center_vertical"
+        android:orientation="horizontal">
+        <TextView android:id="@+id/title" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1"
+            android:text="ჩვევები" android:textColor="@color/wine" android:textSize="16sp" android:textStyle="bold" />
+        <TextView android:id="@+id/count" android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:textColor="@color/ink" android:textSize="14sp" android:textStyle="bold" />
+        <ImageView android:id="@+id/refresh" android:layout_width="36dp" android:layout_height="36dp" android:layout_marginStart="4dp"
+            android:contentDescription="განახლება" android:padding="9dp" android:src="@drawable/lc_refresh_cw" android:tint="@color/muted" />
+    </LinearLayout>
+    <ListView android:id="@+id/list" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+        android:divider="@null" android:dividerHeight="0dp" android:paddingEnd="8dp" />
+    <TextView android:id="@+id/empty" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1" android:visibility="gone"
+        android:gravity="center" android:text="დღეს ჩვევა არ გაქვს — აირჩიე აპში" android:textColor="@color/muted"
+        android:textSize="13sp" />
+</LinearLayout>

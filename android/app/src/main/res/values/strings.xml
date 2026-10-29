@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="share_target" translatable="false">{\"action\":\"/share-target\",\"method\":\"POST\",\"enctype\":\"multipart/form-data\",\"params\":{\"title\":\"title\",\"text\":\"text\",\"url\":\"url\",\"files\":[{\"name\":\"audio\",\"accept\":[\"audio/*\"]}]}}</string>
+    <string name="sc_galoba">გალობა</string>
+    <string name="sc_prayers">ლოცვანი</string>
+    <string name="sc_habits">ჩვევები</string>
+    <string name="sc_kanon">ჩემი კანონი</string>
+    <string name="w_buttons">ღილაკები</string>
+    <string name="w_buttons_d">გალობა, სიმღერა, ლოცვანი… — შენი არჩეული ღილაკები</string>
+    <string name="w_habits">ჩვევები</string>
+    <string name="w_habits_d">დღის ჩვევები, მონიშვნა ერთი შეხებით</string>
+    <string name="w_path">საგანძურის გზა</string>
+    <string name="w_path_d">გზის პროცენტები და დღეს გასამეორებელი</string>
+    <string name="w_day">დღის კალენდარი</string>
+    <string name="w_day_d">დღესასწაული და დღის წმიდანები</string>
+    <string name="w_kanon">ჩემი კანონი</string>
+    <string name="w_kanon_d">ფსალმუნთა ჯგუფში შენი კანონი</string>
+    <string name="w_quote">დღის სიტყვა</string>
+    <string name="w_quote_d">მამათა სიტყვა ყოველ დღე</string>
+</resources>

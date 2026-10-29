@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="@color/paper" android:fitsSystemWindows="true" android:orientation="vertical">
+    <TextView android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingStart="20dp"
+        android:paddingTop="20dp" android:paddingEnd="20dp" android:text="რომელი ღილაკები?" android:textColor="@color/wine"
+        android:textSize="22sp" android:textStyle="bold" />
+    <TextView android:id="@+id/hint" android:layout_width="match_parent" android:layout_height="wrap_content"
+        android:paddingStart="20dp" android:paddingTop="4dp" android:paddingEnd="20dp" android:paddingBottom="8dp"
+        android:textColor="@color/muted" android:textSize="14sp" />
+    <ListView android:id="@+id/list" android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1"
+        android:divider="@color/line" android:dividerHeight="1dp" />
+    <Button android:id="@+id/save" style="@style/Btn" android:layout_width="match_parent" android:layout_height="52dp"
+        android:layout_margin="16dp" android:background="@drawable/btn_wine" android:text="შენახვა" android:textColor="#FFFFFF" />
+</LinearLayout>

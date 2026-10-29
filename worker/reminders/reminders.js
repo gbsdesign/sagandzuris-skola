@@ -15,6 +15,11 @@
 // • Admins (2026-10-28): /account with `admin: true` binds the browser to an admin's notices; what they asked for is
 //   adminPush/{uid} in Firestore { waiting, weekly }. POST /access-request { token } — a newcomer's request (checked in
 //   memberAccess) goes to the superadmins with `waiting`; Monday 10:00 the school's week goes to those with `weekly`.
+// • Home-screen widgets of the Android app (2026-10-29): POST /widget/link { token } gives the app a secret of its own
+//   (the profile's „ვიჯეტის დაკავშირება“); POST /widget/summary { token, summary } — the site, while open, leaves what the
+//   widgets show (habits, the path's percentages, the psalter kanon); the app's widgets, which carry no site Origin, read
+//   GET /widget/data?s=<secret> (that summary + today's ticks and counts, live from Firestore) and tick a habit with
+//   POST /widget/tick { s, id } or count with POST /widget/count { s, id, add }; POST /widget/unlink { s }.
 // These pushes carry an encrypted text payload (RFC 8291, aes128gcm).
 //
 // Bindings (wrangler.toml): D1 database DB (schema.sql), KV namespace REMINDERS (old storage, read once to
@@ -131,6 +136,14 @@ async function ensureSchema(env) {
       /* already there (schema.sql of a fresh install has it) */
     }
     await env.DB.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema', '2')").run();
+  }
+  if (!v || Number(v.value) < 3) {
+    await env.DB.batch([
+      env.DB.prepare('CREATE TABLE IF NOT EXISTS widgets (secret TEXT PRIMARY KEY, uid TEXT NOT NULL, created_at TEXT)'),
+      env.DB.prepare('CREATE INDEX IF NOT EXISTS widgets_uid ON widgets (uid)'),
+      env.DB.prepare('CREATE TABLE IF NOT EXISTS widget_summary (uid TEXT PRIMARY KEY, json TEXT NOT NULL, updated_at TEXT)'),
+      env.DB.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema', '3')"),
+    ]);
   }
   schemaReady = true;
 }
@@ -715,21 +728,153 @@ async function runHabitReminders(env, when) {
   if (sends.length) await deliver(env, sends);
 }
 
+// ---- home-screen widgets of the Android app ------------------------------------------------------------
+
+const MAX_WIDGET_SECRETS = 10; // per person (phones and reinstalls)
+const MAX_SUMMARY = 12_000;
+const HABIT_ID = /^[\w-]{1,80}$/;
+const json = (data, status = 200) => [status, JSON.stringify(data), 'application/json'];
+const todayKey = (when = new Date()) => isoOf(georgia(when));
+// a field path inside a map whose keys hold dashes: habitLog.`2026-10-29`
+const fieldPath = (...parts) => parts.map((p) => (/^[A-Za-z_]\w*$/.test(p) ? p : `\`${p.replace(/[`\\]/g, '\\$&')}\``)).join('.');
+
+async function widgetUid(env, secret) {
+  if (typeof secret !== 'string' || secret.length < 20 || secret.length > 100) return null;
+  const row = await env.DB.prepare('SELECT uid FROM widgets WHERE secret = ?').bind(await sha256(secret)).first();
+  return row?.uid || null;
+}
+
+async function widgetLink(request, env) {
+  const body = await readJson(request);
+  let uid;
+  try {
+    uid = await verifyIdToken(env, body?.token);
+  } catch {
+    return [401, 'bad token'];
+  }
+  const secret = b64url(crypto.getRandomValues(new Uint8Array(32)));
+  await env.DB.batch([
+    env.DB.prepare('INSERT INTO widgets (secret, uid, created_at) VALUES (?, ?, ?)').bind(await sha256(secret), uid, new Date().toISOString()),
+    env.DB.prepare(
+      `DELETE FROM widgets WHERE uid = ? AND secret NOT IN (SELECT secret FROM widgets WHERE uid = ? ORDER BY created_at DESC LIMIT ${MAX_WIDGET_SECRETS})`
+    ).bind(uid, uid),
+  ]);
+  return json({ secret });
+}
+
+async function widgetUnlink(request, env) {
+  const body = await readJson(request);
+  if (typeof body?.s === 'string') await env.DB.prepare('DELETE FROM widgets WHERE secret = ?').bind(await sha256(body.s)).run();
+  return [200, 'ok'];
+}
+
+async function widgetSummary(request, env) {
+  const body = await readJson(request);
+  let uid;
+  try {
+    uid = await verifyIdToken(env, body?.token);
+  } catch {
+    return [401, 'bad token'];
+  }
+  const text = JSON.stringify(body.summary ?? null);
+  if (!body.summary || typeof body.summary !== 'object' || text.length > MAX_SUMMARY) return [400, 'bad summary'];
+  await env.DB.prepare('INSERT OR REPLACE INTO widget_summary (uid, json, updated_at) VALUES (?, ?, ?)').bind(uid, text, new Date().toISOString()).run();
+  return [200, 'ok'];
+}
+
+// today's ticks and counts of one person, read without the rest of the history
+async function habitDay(env, uid, day) {
+  const mask = [fieldPath('habitLog', day), fieldPath('habitCounts', day)].map((f) => `mask.fieldPaths=${encodeURIComponent(f)}`).join('&');
+  const res = await fetch(`${fsBase(env)}/students/${uid}?${mask}`, { headers: { Authorization: `Bearer ${await accessToken(env)}` } });
+  if (res.status === 404) return { done: [], counts: {} };
+  if (!res.ok) throw new Error(`firestore ${res.status}`);
+  const doc = fromFields((await res.json()).fields);
+  const done = doc.habitLog?.[day];
+  const counts = doc.habitCounts?.[day];
+  return { done: Array.isArray(done) ? done.filter((x) => typeof x === 'string') : [], counts: counts && typeof counts === 'object' ? counts : {} };
+}
+
+async function fsPatch(env, uid, paths, fields) {
+  const mask = paths.map((f) => `updateMask.fieldPaths=${encodeURIComponent(f)}`).join('&');
+  const res = await fetch(`${fsBase(env)}/students/${uid}?${mask}&currentDocument.exists=true`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${await accessToken(env)}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields }),
+  });
+  if (!res.ok) throw new Error(`firestore ${res.status}`);
+}
+
+const writeDone = (env, uid, day, ids) =>
+  fsPatch(env, uid, [fieldPath('habitLog', day)], ids.length
+    ? { habitLog: { mapValue: { fields: { [day]: { arrayValue: { values: ids.map((stringValue) => ({ stringValue })) } } } } } }
+    : {});
+
+async function widgetData(request, env) {
+  const url = new URL(request.url);
+  const uid = await widgetUid(env, url.searchParams.get('s'));
+  if (!uid) return [401, 'unknown'];
+  const day = todayKey();
+  const row = await env.DB.prepare('SELECT json, updated_at FROM widget_summary WHERE uid = ?').bind(uid).first();
+  const summary = row ? JSON.parse(row.json) : null;
+  return json({ day, summary, at: row?.updated_at || null, ...(await habitDay(env, uid, day)) });
+}
+
+async function widgetTick(request, env) {
+  const body = await readJson(request);
+  const uid = await widgetUid(env, body?.s);
+  if (!uid) return [401, 'unknown'];
+  if (typeof body.id !== 'string' || !HABIT_ID.test(body.id)) return [400, 'bad id'];
+  const day = todayKey();
+  const { done } = await habitDay(env, uid, day);
+  const next = done.includes(body.id) ? done.filter((h) => h !== body.id) : [...done, body.id];
+  await writeDone(env, uid, day, next);
+  return json({ day, done: next });
+}
+
+// a counted habit (the Jesus prayer): adds `add` to today's number; reaching the habit's goal ticks the day
+async function widgetCount(request, env) {
+  const body = await readJson(request);
+  const uid = await widgetUid(env, body?.s);
+  if (!uid) return [401, 'unknown'];
+  const add = Math.round(Number(body.add));
+  if (typeof body.id !== 'string' || !HABIT_ID.test(body.id) || !(add >= 1 && add <= 1000)) return [400, 'bad count'];
+  const day = todayKey();
+  const { done, counts } = await habitDay(env, uid, day);
+  const n = Math.min(100000, (Number(counts[body.id]) || 0) + add);
+  await fsPatch(env, uid, [fieldPath('habitCounts', day, body.id)], {
+    habitCounts: { mapValue: { fields: { [day]: { mapValue: { fields: { [body.id]: { integerValue: String(n) } } } } } } },
+  });
+  const row = await env.DB.prepare('SELECT json FROM widget_summary WHERE uid = ?').bind(uid).first();
+  const goal = Number((row ? JSON.parse(row.json) : null)?.habits?.find?.((h) => h?.id === body.id)?.goal) || 0;
+  let next = done;
+  if (goal && n >= goal && !done.includes(body.id)) {
+    next = [...done, body.id];
+    await writeDone(env, uid, day, next);
+  }
+  return json({ day, done: next, count: n });
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
     const headers = cors(origin);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
     const url = new URL(request.url);
-    const routes = { '/subscribe': subscribe, '/account': account, '/group-event': groupEvent, '/access-request': accessRequest };
-    const handler = request.method === 'POST' ? routes[url.pathname] : null;
+    const routes = {
+      '/subscribe': subscribe, '/account': account, '/group-event': groupEvent, '/access-request': accessRequest,
+      '/widget/link': widgetLink, '/widget/summary': widgetSummary,
+    };
+    // the app's widgets send no Origin: their secret is the proof
+    const widgetRoutes = { 'GET /widget/data': widgetData, 'POST /widget/tick': widgetTick, 'POST /widget/count': widgetCount, 'POST /widget/unlink': widgetUnlink };
+    const fromWidget = widgetRoutes[`${request.method} ${url.pathname}`];
+    const handler = fromWidget || (request.method === 'POST' ? routes[url.pathname] : null);
     if (handler) {
-      if (!allowedOrigin(origin)) return new Response('forbidden', { status: 403, headers });
+      if (!fromWidget && !allowedOrigin(origin)) return new Response('forbidden', { status: 403, headers });
       try {
         await migrateFromKv(env);
         await ensureSchema(env);
-        const [status, text] = await handler(request, env);
-        return new Response(text, { status, headers });
+        const [status, text, type] = await handler(request, env);
+        return new Response(text, { status, headers: type ? { ...headers, 'Content-Type': type } : headers });
       } catch (e) {
         return new Response('error', { status: 500, headers });
       }

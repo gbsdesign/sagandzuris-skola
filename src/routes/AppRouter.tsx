@@ -5,6 +5,7 @@ import { PageBar } from '../components/ui/kit';
 import { PinButton } from '../components/home/ShortcutShelf';
 import { ProfileActions } from '../components/views/ProfileActions';
 import { KhutsuriSwitch } from '../components/views/KhutsuriSwitch';
+import { WidgetLinkCard } from '../components/app/WidgetLinkCard';
 import { AdminEntry } from '../components/views/AdminEntry';
 import { prayerTitle } from '../data/prayers';
 import { HomePage } from '../pages/HomePage';
@@ -240,6 +241,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           {!waiting && <ShortcutShelf variant="profile" />}
           {/* ხუცური: the whole site in the old script, on this device */}
           <KhutsuriSwitch />
+          {/* the Android app's home-screen widgets */}
+          {!waiting && <WidgetLinkCard />}
         </>} />
         {/* install the app · leave the account (asks first) */}
         <div className="max-w-lg mx-auto mt-3"><ProfileActions /></div>

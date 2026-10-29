@@ -5,6 +5,7 @@ import React, { createContext, lazy, Suspense, useCallback, useContext, useEffec
 import { useNavigation } from './NavigationContext';
 import { findVersion, isServiceTab } from '../data/chantLookup';
 import { useLiturgy, LiturgyApi, LiturgyProgram } from '../hooks/useLiturgy';
+import { isAndroidApp, openInApp } from '../utils/androidApp';
 
 const NotesPage = lazy(() => import('../pages/notes/NotesPage').then(m => ({ default: m.NotesPage })));
 const ProgramPage = lazy(() => import('../pages/notes/ProgramPage').then(m => ({ default: m.ProgramPage })));
@@ -52,6 +53,15 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const [linkProgram, setLinkProgram] = useState<LiturgyProgram | null>(null);
   const notesRef = useRef(notes);
   notesRef.current = notes;
+
+  // the Android app: church mode silences the phone („არ შემაწუხოთ“) and leaving it brings the sounds back
+  // (android/ SilenceActivity; it also brings them back by itself three hours later)
+  const silenced = useRef(false);
+  useEffect(() => {
+    if (!isAndroidApp() || church === silenced.current) return;
+    silenced.current = church;
+    openInApp(`silence?on=${church ? 1 : 0}`);
+  }, [church]);
 
   // a shared address opens its page directly
   useEffect(() => {

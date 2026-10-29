@@ -83,3 +83,23 @@ self.addEventListener('notificationclick', (event) => {
     })
   );
 });
+
+// ---- „გაზიარება → საგანძური“ (the Android app's share target, manifest share_target) ----------------------------
+// Another app shares a recording or a text: Chrome posts it here as a form. It waits in the cache 'sg-share' until the
+// page (components/app/ShareHost.tsx) picks a class chat for it; the page opens at /?open=share.
+self.addEventListener('fetch', (event) => {
+  const url = new URL(event.request.url);
+  if (event.request.method !== 'POST' || url.pathname !== '/share-target') return;
+  event.respondWith((async () => {
+    const form = await event.request.formData();
+    const cache = await caches.open('sg-share');
+    await Promise.all((await cache.keys()).map((k) => cache.delete(k)));
+    const file = form.get('audio');
+    const text = [form.get('title'), form.get('text'), form.get('url')].filter((x) => typeof x === 'string' && x.trim()).join('\n');
+    if (file && typeof file !== 'string' && file.size) {
+      await cache.put('/share/audio', new Response(file, { headers: { 'Content-Type': file.type || 'audio/mpeg', 'X-Name': encodeURIComponent(file.name || '') } }));
+    }
+    if (text) await cache.put('/share/text', new Response(text, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } }));
+    return Response.redirect('/?open=share', 303);
+  })());
+});

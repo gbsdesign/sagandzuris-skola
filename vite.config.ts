@@ -82,6 +82,13 @@ export default defineConfig(() => {
           background_color: '#fcf9f5',
           display: 'standalone',
           start_url: '/',
+          // the Android app's „გაზიარება → საგანძური“: a recording or a text into a class chat (public/prayer-notify-sw.js)
+          share_target: {
+            action: '/share-target',
+            method: 'POST',
+            enctype: 'multipart/form-data',
+            params: { title: 'title', text: 'text', url: 'url', files: [{ name: 'audio', accept: ['audio/*'] }] },
+          },
           scope: '/',
           icons: [
             {

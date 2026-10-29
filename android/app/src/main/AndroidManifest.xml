@@ -2,6 +2,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- church mode silences the phone („არ შემაწუხო“), SilenceActivity -->
+    <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
 
     <application
         android:allowBackup="true"
@@ -40,6 +42,13 @@
             <meta-data
                 android:name="android.support.customtabs.trusted.FILE_PROVIDER_AUTHORITY"
                 android:value="@string/provider_authority" />
+            <!-- „გაზიარება → საგანძური“: the site's share target (vite.config.ts, public/prayer-notify-sw.js) -->
+            <meta-data
+                android:name="android.support.customtabs.trusted.METADATA_SHARE_TARGET"
+                android:resource="@string/share_target" />
+            <meta-data
+                android:name="android.app.shortcuts"
+                android:resource="@xml/shortcuts" />
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -52,7 +61,97 @@
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="https" android:host="${host}" />
             </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="audio/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="text/plain" />
+            </intent-filter>
         </activity>
+
+        <!-- the app's own screens: linking the widgets, choosing a buttons widget's buttons, church silence -->
+        <activity
+            android:name=".LinkActivity"
+            android:exported="true"
+            android:label="@string/launcher_name"
+            android:theme="@style/Theme.Screen">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sagandzuri" android:host="link" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".SilenceActivity"
+            android:excludeFromRecents="true"
+            android:exported="true"
+            android:noHistory="true"
+            android:theme="@style/Theme.LauncherActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="sagandzuri" android:host="silence" />
+            </intent-filter>
+        </activity>
+        <activity
+            android:name=".ButtonsConfigActivity"
+            android:exported="true"
+            android:label="@string/w_buttons"
+            android:theme="@style/Theme.Screen">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
+            </intent-filter>
+        </activity>
+        <receiver android:name=".SilenceBack" android:exported="false" />
+
+        <!-- home-screen widgets -->
+        <receiver android:name=".ButtonsWidget" android:exported="false" android:label="@string/w_buttons">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_buttons_info" />
+        </receiver>
+        <receiver android:name=".HabitsWidget" android:exported="false" android:label="@string/w_habits">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_habits_info" />
+        </receiver>
+        <receiver android:name=".PathWidget" android:exported="false" android:label="@string/w_path">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_path_info" />
+        </receiver>
+        <receiver android:name=".DayWidget" android:exported="false" android:label="@string/w_day">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_day_info" />
+        </receiver>
+        <receiver android:name=".KanonWidget" android:exported="false" android:label="@string/w_kanon">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_kanon_info" />
+        </receiver>
+        <receiver android:name=".QuoteWidget" android:exported="false" android:label="@string/w_quote">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider" android:resource="@xml/w_quote_info" />
+        </receiver>
+        <service
+            android:name=".HabitsService"
+            android:exported="false"
+            android:permission="android.permission.BIND_REMOTEVIEWS" />
 
         <provider
             android:name="androidx.core.content.FileProvider"
@@ -65,9 +164,12 @@
         </provider>
 
         <service
-            android:name="com.google.androidbrowserhelper.trusted.DelegationService"
+            android:name=".BellDelegationService"
             android:enabled="true"
             android:exported="true">
+            <meta-data
+                android:name="android.support.customtabs.trusted.SMALL_ICON"
+                android:resource="@drawable/lc_church" />
             <intent-filter>
                 <action android:name="android.support.customtabs.trusted.TRUSTED_WEB_ACTIVITY_SERVICE" />
                 <category android:name="android.intent.category.DEFAULT" />
