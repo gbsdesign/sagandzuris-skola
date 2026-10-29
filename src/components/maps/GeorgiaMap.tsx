@@ -16,6 +16,8 @@ import {
 } from '../../data/songsData';
 import { RegionPuzzleMap, RegionLocator } from './RegionPuzzleMap';
 import { SongPage, TakePlayer, openSongPage, songTakes } from './SongPage';
+import { SongAlbumPage } from './SongAlbumPage';
+import { CentreAlbums } from './CentreAlbums';
 import { AddToListButton } from '../ui/AddToListButton';
 import { useAuth, useNavigation } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
@@ -63,10 +65,13 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
   const { isOwner, isSuperAdmin } = useAuth();
   const showOwnerOnly = isOwner;
   const placed = usePlacements(); // a recording moved from the app: the lists follow
-  const member = useAccess().member;
+  const { member, can } = useAccess();
   // the open region is a history step: the top bar's "back" (and the phone's) returns to the map
   const { mapItem, openMapItem } = useNavigation();
   const region = [...FOLK_REGIONS, ...FOLK_EXTRA_REGIONS].find(r => r.id === mapItem) ?? null;
+  // an album of the Folklore Centre („album:<Drive folder id>“), opened from the list under the map
+  const albumId = mapItem?.startsWith('album:') ? mapItem.slice(6) : null;
+  const albums = can('recordings');
   // a song picked in the search: its region's list, with the song open
   const [found, setFound] = useState<string | null>(null);
   useOpenRequest('simghera', id => {
@@ -88,7 +93,9 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
 
   return (
     <>
-      {region ? (
+      {albumId ? (
+        <SongAlbumPage albumId={albumId} />
+      ) : region ? (
         <RegionPlaylist
           key={`${region.id}:${found || ''}`}
           region={region}
@@ -102,25 +109,31 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
           <SongSearchField
             value={query}
             onChange={setQuery}
-            placeholder={member ? 'სიმღერა ან შემსრულებელი' : 'სიმღერის ძებნა'}
+            placeholder={albums ? 'სიმღერა, შემსრულებელი ან ალბომი' : member ? 'სიმღერა ან შემსრულებელი' : 'სიმღერის ძებნა'}
           />
           {results ? (
-            <SongList
-              songs={results.slice(0, 80)}
-              total={results.length}
-              showRegion
-              selectedChantVariants={selectedChantVariants}
-              onToggleSong={onToggleSong}
-              empty="ასეთი სიმღერა ვერ მოიძებნა"
-            />
+            <>
+              <SongList
+                songs={results.slice(0, 80)}
+                total={results.length}
+                showRegion
+                selectedChantVariants={selectedChantVariants}
+                onToggleSong={onToggleSong}
+                empty="ასეთი სიმღერა ვერ მოიძებნა"
+              />
+              {albums && <CentreAlbums query={query} />}
+            </>
           ) : (
-            <RegionPuzzleMap
-              onSelect={r => openMapItem(r.id)}
-              count={id => songsInRegion(id, showOwnerOnly).length}
-              countLabel={n => `${n} სიმღერა`}
-              // the sorting shelf „დასაზუსტებელი“ is for those who move recordings (members find its songs by search)
-              extraRegions={FOLK_EXTRA_REGIONS.filter(r => r.id !== 'unsure' || isOwner || isSuperAdmin)}
-            />
+            <>
+              <RegionPuzzleMap
+                onSelect={r => openMapItem(r.id)}
+                count={id => songsInRegion(id, showOwnerOnly).length}
+                countLabel={n => `${n} სიმღერა`}
+                // the sorting shelf „დასაზუსტებელი“ is for those who move recordings (members find its songs by search)
+                extraRegions={FOLK_EXTRA_REGIONS.filter(r => r.id !== 'unsure' || isOwner || isSuperAdmin)}
+              />
+              {albums && <CentreAlbums />}
+            </>
           )}
         </div>
       )}
