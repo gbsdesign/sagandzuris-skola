@@ -206,6 +206,13 @@ service cloud.firestore {
       }
     }
 
+    // The song albums one member may hear (l) and save (d) (src/data/albumAccess.ts): the member reads, admins write.
+    // The albums turned on for everyone are settings/albumAccess.
+    match /albumAccess/{userId} {
+      allow read: if (isSignedIn() && uid() == userId) || isAdmin();
+      allow write: if isAdmin();
+    }
+
     // Teacher's confirmations ("ჩათვლა") of a student's voices: the student reads, their teachers write
     match /confirmations/{userId} {
       function teachesStudent() {

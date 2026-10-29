@@ -155,8 +155,9 @@
   window (`ItemSheet` in `classes/ClassProgram.tsx`). A member sings their voice over the synth (their own voice muted) and the
   take, cut by the output lag, goes to the pearls' store as `studio~<vid>` (no rules change). The class's teacher ticks whose
   takes go in, hears them together and „კლასის ჩატში“ sends one mixed MP3 (made in the browser) as a voice message.
-- **Folklore Centre's albums** (2026-10-29, songs only so far; chants and „სხვა“ later): 327 song albums from Drive
-  „ფოლკლორის ცენტრი“ under the songs map, 3 491 sure takes in their songs (details in `src/data/CLAUDE.md`).
+- **Song albums** (2026-10-29, songs only so far; chants and „სხვა“ later): 327 albums from Drive „ფოლკლორის ცენტრი“ under
+  the songs map („ალბომები“), 3 491 sure takes in their songs; each album opened per member by admins — 🎧 / ⬇ apart
+  (`data/albumAccess.ts`; details in `src/data/CLAUDE.md`).
 - **Folk songs map** (`data/songsData.ts`, `components/maps/GeorgiaMap.tsx`) and **მთქმელი authors map**
   (`data/mtkmeliData.ts`, `MtkmeliMap.tsx`, shared `RegionPuzzleMap.tsx`). Full texts only for authors who
   died before 1956; others get title + description + wiki link.

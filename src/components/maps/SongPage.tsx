@@ -5,6 +5,7 @@ import {
 } from '../../data/songsData';
 import { audiomackEmbedUrl } from '../../data/folkCentre';
 import { useCanDownloadCentre } from '../../hooks/useCentreDownload';
+import { albumRight, useAlbumAccess } from '../../data/albumAccess';
 import type { ChantMediaItem } from '../../data/chantMediaRegistry';
 import { ChantPlayer } from '../ChantPlayer';
 import { triggerHaptic } from '../../utils/haptics';
@@ -27,6 +28,7 @@ export interface SongTake {
   recId?: string; // an archive recording: it can be moved („გადატანა“)
   embed?: string; // a Folklore Centre recording not yet in the Drive: Audiomack's own player
   centre?: boolean; // the Folklore Centre's: saving it (MP3 / offline) only for members an admin allowed
+  album?: string; // from a song album: saving it is that album's right (data/albumAccess.ts)
 }
 
 export const songTakes = (s: FolkSong): SongTake[] => [
@@ -37,7 +39,7 @@ export const songTakes = (s: FolkSong): SongTake[] => [
   })),
   ...(s.recs ?? []).map(r => ({ label: r.who, sub: r.note, media: songRecMedia(s, r), recId: r.id })),
   ...(s.centre ?? []).map(r => ({
-    label: r.who, sub: r.note, media: centreRecMedia(s, r), centre: true,
+    label: r.who, sub: r.note, media: centreRecMedia(s, r), centre: true, album: r.album,
     embed: r.mp3 || r.voices || !r.page ? undefined : audiomackEmbedUrl(r.page),
     // a take of the Centre's Drive albums moves like an archive recording
     recId: r.page ? undefined : centreRecId(r),
@@ -46,7 +48,9 @@ export const songTakes = (s: FolkSong): SongTake[] => [
 
 /** One take's player: the school's player, or Audiomack's for a Centre recording the Drive does not have yet. */
 export const TakePlayer: React.FC<{ take: SongTake; title: string; subtitle: string; hideNotesButton?: boolean; pauseToken?: number }> = ({ take, title, subtitle, hideNotesButton, pauseToken }) => {
-  const canSave = useCanDownloadCentre();
+  const canSaveCentre = useCanDownloadCentre();
+  useAlbumAccess(); // an admin's switch applies at once
+  const canSave = take.album ? albumRight(take.album).download : canSaveCentre;
   if (take.embed) {
     return <iframe title={`${title} · ${take.label}`} src={take.embed} className="block w-full h-[280px] border-0 rounded-xl" allow="autoplay" loading="lazy" />;
   }

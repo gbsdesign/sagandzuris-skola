@@ -956,12 +956,12 @@ const REGION_ALBUM = /^(გურია|იმერეთი|რაჭა|ს�
 
 /** One take of the Centre's Drive albums as a song's recording: the album's name is the performer's label */
 function centreTake([file, album, note]: CentreTake): CentreRec {
-  const name = CENTRE_SONG_ALBUMS[album]?.[1] ?? '';
+  const [albumId, name] = CENTRE_SONG_ALBUMS[album] ?? ['', ''];
   // an album named after a land would read as a place: „ალბომი „გურია““
   const who = REGION_ALBUM.test(name) ? `ალბომი „${name}“` : name;
-  if (typeof file === 'string') return { who, note, mp3: file };
+  if (typeof file === 'string') return { who, note, mp3: file, album: albumId };
   const [all, v1, v2, v3] = file;
-  return { who, note: note ?? 'სასწავლო · ხმებად', mp3: all || undefined, voices: [v1 || undefined, v2 || undefined, v3 || undefined] };
+  return { who, note: note ?? 'სასწავლო · ხმებად', mp3: all || undefined, voices: [v1 || undefined, v2 || undefined, v3 || undefined], album: albumId };
 }
 
 // The archive joins the list: a song already here (same title and region) gets the archive's recordings,
@@ -979,16 +979,22 @@ export const FOLK_SONGS: FolkSong[] = (() => {
     list.push({ id: a.id, title: a.title, region: a.region, area: a.area, genre: a.genre, versions: [], recs });
   }
   for (const s of list) if (CENTRE_SONG_RECS[s.id]) s.centre = CENTRE_SONG_RECS[s.id];
-  // the Folklore Centre's albums in the school's Drive (centreSongs.ts): a song the list has, or a new one in its region
-  for (const s of list) {
-    const takes = CENTRE_TAKES_OF[s.id];
-    if (takes) s.centre = [...(s.centre ?? []), ...takes.map(centreTake)];
-  }
-  for (const [id, title, region, area, takes] of CENTRE_NEW_SONGS) {
-    list.push({ id, title, region, area: area || undefined, versions: [], centre: takes.map(centreTake) });
-  }
   return list;
 })();
+
+/** The list with the song albums' recordings in it (centreSongs.ts): a song the list has gets them, the rest are new
+ *  songs in their regions. Not FOLK_SONGS itself — each album is only for those an admin let hear it, so data/placements.ts
+ *  builds FOLK_SONGS from this one with the signed-in person's albums (data/albumAccess.ts). */
+export const withCentreAlbums = (list: FolkSong[]): FolkSong[] => {
+  const out = list.map(s => {
+    const takes = CENTRE_TAKES_OF[s.id];
+    return takes ? { ...s, centre: [...(s.centre ?? []), ...takes.map(centreTake)] } : s;
+  });
+  for (const [id, title, region, area, takes] of CENTRE_NEW_SONGS) {
+    out.push({ id, title, region, area: area || undefined, versions: [], centre: takes.map(centreTake) });
+  }
+  return out;
+};
 
 const DRIVE_VIEW = (id: string) => `https://drive.google.com/file/d/${id}/view`;
 export const songDocUrl = (doc: SongDoc) => DRIVE_VIEW(doc.id);

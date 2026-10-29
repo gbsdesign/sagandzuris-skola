@@ -135,9 +135,17 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   the „• ალაზანი“ albums) are not added again — the album row shows their song through the old file (`same`).
 - Learning albums („შევისწავლოთ…“, „სასწავლო ჩანაწერები“): full + voices I–III make one take (`CentreRec.voices`, the player
   offers the voices). Album names that are a land („გურია“) read „ალბომი „გურია““ as a performer.
+- **Who hears what** (2026-10-29, the user: „ვერც კი ხედავდეს რომ იქ რამეა“): `data/albumAccess.ts` — staff (teachers,
+  admins) every album; a member only what an admin turned on, 🎧 listen and ⬇ download apart, for everyone
+  (`settings/albumAccess.all`, ⚙ „სკოლა“ → „ალბომები“) or for them (`albumAccess/{uid}.albums`, their window → „ალბომები“;
+  rules: they read, admins write). FOLK_SONGS as `songsData.ts` writes it has none of the albums' takes
+  (`withCentreAlbums` adds them); `placements.ts` lays in only the allowed albums' takes (re-applied on `onAlbumAccess`), so a
+  song made only of a closed album's takes, the album and the list under the map are not there for that member. In a song,
+  a take needs 🎧; its MP3/offline follows ⬇. On the album page ▶ needs 🎧, ⬇ saves the mp3. The UI says only „ალბომები“
+  (the user had the Folklore Centre's name taken off).
 - Album page `components/maps/SongAlbumPage.tsx` (`mapItem` `album:<folder id>`, list `public/centre/<folder id>.json` fetched on
   open, cached by the service worker as `sagandzuri-centre-v1`); list under the map `CentreAlbums.tsx` (the map's search finds
-  albums too). Centre takes keep the download rule (`settings/centreDownload`). The shared player is `utils/useAlbumPlayer.ts`
+  albums too). The old Audiomack recordings keep `settings/centreDownload`. The shared player is `utils/useAlbumPlayer.ts`
   (with `crossOrigin` — the chant albums had none).
 
 ## Calendar (`calendar/<year>.json`, `churchCalendar.ts`)

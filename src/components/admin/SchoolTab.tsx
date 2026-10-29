@@ -7,6 +7,7 @@ import { useAuth } from '../../context';
 import { errorText } from '../../utils/errorText';
 import { SectionsTab } from './SectionsTab';
 import { ExtraRightsFold } from './ExtraRights';
+import { AlbumsFold } from './AlbumRights';
 import { TopChants } from './StatsTab';
 import { PhoneNotices } from './PhoneNotices';
 import { ChangeLog } from './ChangeLog';
@@ -100,6 +101,7 @@ export const SchoolSheet: React.FC<{ users: UserRecord[]; classes: SchoolClass[]
         <GrowthFold users={users} />
         <TopChants users={users} />
         <ExtraRightsFold users={users} onMessage={onMessage} />
+        <AlbumsFold onMessage={onMessage} />
         <PhoneNotices onMessage={onMessage} />
         <RolesFold />
         {isSuperAdmin && <ChangeLog />}
