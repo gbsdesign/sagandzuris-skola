@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Pause, Play, Repeat } from 'lucide-react';
+import { Headphones, Pause, Play, Repeat } from 'lucide-react';
 import { useAuth } from '../../context';
 import { findVersion } from '../../data/chantLookup';
 import { BookScore, ChantSynth, bookImageUrl, makeTimeMap } from '../../utils/chantSynth';
@@ -18,7 +18,8 @@ import { Choice, LOOPS_PER_STEP, LearnFrame, LearnTips, PartsBar, ReviewReminder
 // checks it on a mirror). A mark runs over the part's notes while it sounds. Progress in students.learning
 // (useLearning); takes go to the teacher like the pearls' (learn~ ids).
 
-type Mix = 'mine' | 'all' | 'others';
+// 'ears': my voice in the left ear, the others in the right (one earphone each, or headphones)
+type Mix = 'mine' | 'all' | 'others' | 'ears';
 const ordinal = (n: number) => (n === 1 ? 'პირველი' : `მე-${n}`);
 
 /** `voice`: the voice to start on (a teacher's assignment); otherwise the one named in the profile. */
@@ -78,7 +79,10 @@ export const LearnMode: React.FC<{ vid: string; score: BookScore; voice?: Voice;
 
   // the synth follows the choices
   useEffect(() => {
-    score.voices.forEach((_, i) => synth.setMuted(i, mix === 'mine' ? i !== vi : mix === 'others' ? i === vi : false));
+    score.voices.forEach((_, i) => {
+      synth.setMuted(i, mix === 'mine' ? i !== vi : mix === 'others' ? i === vi : false);
+      synth.setPan(i, mix === 'ears' ? (i === vi ? -1 : 1) : 0);
+    });
   }, [synth, mix, vi, score]);
   useEffect(() => { synth.setSpeed(speed); }, [synth, speed]);
   useEffect(() => {
@@ -178,7 +182,13 @@ export const LearnMode: React.FC<{ vid: string; score: BookScore; voice?: Voice;
         </div>
         {voiceCount > 1 && (
           <Choice<Mix> label="რა ისმის" value={mix} onChange={setMix}
-            options={[{ value: 'mine', label: 'ჩემი ხმა' }, { value: 'all', label: 'ყველა' }, { value: 'others', label: 'ჩემ გარეშე' }]} />
+            options={[{ value: 'mine', label: 'ჩემი ხმა' }, { value: 'all', label: 'ყველა' }, { value: 'others', label: 'ჩემ გარეშე' }, { value: 'ears', label: 'ყურებში' }]} />
+        )}
+        {voiceCount > 1 && mix === 'ears' && (
+          <p className="flex items-start gap-2 text-[13px] leading-snug text-[#8c7c6b]">
+            <Headphones className="w-4 h-4 mt-0.5 shrink-0" />
+            ყურსასმენით: მარცხენა ყურში შენი ხმაა, მარჯვენაში — დანარჩენები. ერთ ყურს მოხსნი და მხოლოდ ერთ მხარეს გაიგებ.
+          </p>
         )}
       </section>
 

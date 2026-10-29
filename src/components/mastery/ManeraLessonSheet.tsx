@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { BookOpen, Check, CheckCircle2, Clock, Dumbbell, Gauge, Headphones, Lightbulb, Mic, Pause, Play, RotateCcw, Send, SkipForward, Sparkles, Square, Trash2, Volume2, VolumeX, Wind, X } from 'lucide-react';
+import { BookOpen, Check, CheckCircle2, Clock, Dumbbell, Gauge, Headphones, Lightbulb, Mic, Pause, Play, RotateCcw, Send, SkipForward, Sparkles, Square, Trash2, Vibrate, VibrateOff, Volume2, VolumeX, Wind, X } from 'lucide-react';
 import { useAuth } from '../../context';
 import { Btn, IconBtn, Sheet, Tabs } from '../ui/kit';
 import { MANERA_BASE, type ManeraExercise, type ManeraStep } from '../../data/maneraLessons';
@@ -19,6 +19,10 @@ type Range = keyof typeof MANERA_BASE;
 const RANGE_KEY = 'sg-manera-voice';
 const PART_KEY = 'sg-drill-part';
 const SOUND_KEY = 'sg-manera-sound';
+// the beat in the hand: the phone vibrates on every beat of a step's click (Android; iPhones have no vibration for sites),
+// so the microphone hears only the singer
+const VIBRATE_KEY = 'sg-manera-vibrate';
+const canVibrate = typeof navigator !== 'undefined' && 'vibrate' in navigator;
 const BREATH = 3; // seconds to breathe between rounds
 const PART_NAMES = ['I ხმა', 'II ხმა', 'III ხმა (ბანი)'];
 
@@ -133,6 +137,7 @@ const ExerciseView: React.FC<{ drill: Drill }> = ({ drill }) => {
   const [range, setRangeState] = useState<Range>(() => (load(RANGE_KEY, 'low') === 'high' ? 'high' : 'low'));
   const [part, setPartState] = useState(() => Math.min(2, Math.max(0, Number(load(PART_KEY, '0')) || 0)));
   const [sound, setSoundState] = useState(() => load(SOUND_KEY, '1') === '1');
+  const [vibrate, setVibrateState] = useState(() => canVibrate && load(VIBRATE_KEY, '0') === '1');
   const [idx, setIdx] = useState(0);
   const [round, setRound] = useState(1);
   const [phase, setPhase] = useState<Phase>('idle');
@@ -147,6 +152,7 @@ const ExerciseView: React.FC<{ drill: Drill }> = ({ drill }) => {
   const setRange = (v: Range) => { setRangeState(v); save(RANGE_KEY, v); };
   const setPart = (v: number) => { setPartState(v); save(PART_KEY, String(v)); };
   const setSound = (on: boolean) => { setSoundState(on); save(SOUND_KEY, on ? '1' : '0'); if (!on) stopLessonNotes(); };
+  const setVibrate = (on: boolean) => { setVibrateState(on); save(VIBRATE_KEY, on ? '1' : '0'); if (on) navigator.vibrate(40); };
 
   // the step's sound from `elapsed` seconds into the round: its tones, the other voices, the click
   // In a scored run the phone must hear the student, not itself: the note to sing sounds only for a moment (CUE), a
@@ -241,6 +247,27 @@ const ExerciseView: React.FC<{ drill: Drill }> = ({ drill }) => {
     if (s.secs) startRound(s); else setPhase('idle');
   }, [exercise.steps, startRound, finishScoring]);
 
+  // the vibrating metronome: every beat of the running round, the bar's accents longer
+  useEffect(() => {
+    if (!vibrate || phase !== 'run' || !step?.bpm || !step.secs) return;
+    const beat = 60000 / step.bpm;
+    const start = endAt.current - step.secs * 1000;
+    const accents = step.accents ?? [0];
+    let timer = 0;
+    const next = () => {
+      const now = Date.now();
+      const i = Math.max(0, Math.ceil((now - start - 5) / beat));
+      const at = start + i * beat;
+      if (at > endAt.current - 50) return;
+      timer = window.setTimeout(() => {
+        navigator.vibrate(accents.includes(i % (step.bar ?? 1)) ? 70 : 35);
+        next();
+      }, Math.max(0, at - now));
+    };
+    next();
+    return () => { window.clearTimeout(timer); navigator.vibrate(0); };
+  }, [vibrate, phase, step, round]);
+
   // the clock: a round ends → a breath → the next round, or the next step
   useEffect(() => {
     if (phase !== 'run' && phase !== 'breath') return;
@@ -327,6 +354,7 @@ const ExerciseView: React.FC<{ drill: Drill }> = ({ drill }) => {
 
   const total = Math.round(exercise.steps.reduce((a, s) => a + stepTime(s), 0) / 60) || exercise.minutes;
   const sounding = exercise.steps.some(s => s.tones?.length || s.parts?.length || s.bpm);
+  const clicking = exercise.steps.some(s => s.bpm);
   const pitched = exercise.steps.some(s => s.tones?.length || s.parts?.length || s.sing?.length);
   const choosesPart = exercise.steps.some(s => s.parts && !s.listen && s.voice === undefined);
   const running = phase === 'run' || phase === 'breath';
@@ -358,7 +386,13 @@ const ExerciseView: React.FC<{ drill: Drill }> = ({ drill }) => {
             <IconBtn label={sound ? 'ხმა ჩართულია' : 'ხმა გამორთულია'} onClick={() => setSound(!sound)} className="ring-1 ring-[#e8dcc8] bg-white">
               {sound ? <Volume2 /> : <VolumeX />}
             </IconBtn>
-            {!pitched && <span className="text-[13px] font-semibold text-[#8a7a6a]">მეტრონომი {sound ? 'ჩართულია' : 'გამორთულია'}</span>}
+            {canVibrate && clicking && (
+              <IconBtn label={vibrate ? 'ვიბრაცია ჩართულია' : 'ვიბრაცია გამორთულია'} onClick={() => setVibrate(!vibrate)}
+                className={`ring-1 ${vibrate ? 'ring-[#7a2028]/30 bg-[#7a2028]/[0.07] text-[#7a2028]' : 'ring-[#e8dcc8] bg-white'}`}>
+                {vibrate ? <Vibrate /> : <VibrateOff />}
+              </IconBtn>
+            )}
+            {!pitched && <span className="text-[13px] font-semibold text-[#8a7a6a]">მეტრონომი {sound ? 'ჩართულია' : 'გამორთულია'}{vibrate && clicking ? ' · ვიბრაციით' : ''}</span>}
           </div>
           {choosesPart && (
             <Segmented label="ჩემი ხმა" value={String(part)} onChange={v => setPart(Number(v))} items={[['0', 'I'], ['1', 'II'], ['2', 'III']]} prefix="ჩემი ხმა:" />
