@@ -250,7 +250,7 @@
   so any old-script letter on the site is the app's alphabet.
 - **Android app** (Google Play, `android/`, 2026-10-29; memory `google-play-app`): a Trusted Web Activity of the live site
   (so the site's updates need no app update) plus the app's own Java parts in `android/app/src/main/java/ge/sagandzureli/app/`
-  (version 1.1.0, code 2; minSdk 26): six home-screen widgets — buttons (the home vine's places, picked in `ButtonsConfigActivity`),
+  (version 1.1.1, code 3; minSdk 26): six home-screen widgets — buttons (the home vine's places, picked in `ButtonsConfigActivity`),
   habits (tap ticks / counts), the path's five rings + reviews due, the church day, my psalter kanon, the saying of the day — the
   icon's long-press menu (`res/xml/shortcuts.xml`), „გაზიარება → საგანძური“ into a class chat (manifest share target → the site's
   `share_target` + `public/prayer-notify-sw.js` → `components/app/ShareHost.tsx`), church mode's „არ შემაწუხო“
