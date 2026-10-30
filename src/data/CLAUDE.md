@@ -21,7 +21,7 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
 | `dasd1` / `dasd2` | „ჰიმნოგრაფიული კრებული" II (tones I–II, files 1–250) / III (tones III–IV, 1–277): stichera on "Lord, I have cried" + the psalm verses (plain and „ჭრელი"); code "ჰ.კ." | 0 | `sticheraBookChants.ts` — tab დასადებლები, 129 groups `ds-N` (tone · day — kind). A title with no music whose footnote says "იხილე — გვ. N, # M" is a cross-reference: its button opens the chant printed on p. N (no file of its own) |
 | `momix` | „ჰიმნოგრაფიული კრებული" I, troparia on the Beatitudes (Kereselidze mss., code "ე.კ."; no printed numbers — files 1–268 in book order) | 0 | `beatitudesBookChants.ts` — tab მომიხსენენი, 59 groups `mm-N` (tone + day) |
 
-| `a1`–`a5`, `a28`, `a29`, … | „ქართული გალობის ანთოლოგია“ (29 vols, galobani.ge PDFs: the user's Downloads, Drive „01 ანთოლოგიის ტომეულები“, or `https://pub-f947f7afe8cc44c4928fdba6e2fbb528.r2.dev/antologia_<vol>.pdf`), only versions the books above lack; number with a letter → file number (vols I–III and XXVIII: 76a = 761; from vol. IV on ×100: 12b = 1202, because vol. IV has both 12b and №122; `numLabel` shows „76a“); a litany of short numbers = one unit file named by its first number (`numLabel` „98–107“) | PDF = book | `src/data/anthologyChants.ts` (`ATTACH` by chant id — any tab — and `NEW_ITEMS` after or before an item; East Georgian vols II–IV in `anthologyEastChants.ts` → the ქ.კ. row, vol. V on in `anthologyWestChants.ts` → გ.ს.); the rite tabs in `riteChants.ts` |
+| `a1`–`a8`, `a28`, `a29`, … | „ქართული გალობის ანთოლოგია“ (29 vols, galobani.ge PDFs: the user's Downloads, Drive „01 ანთოლოგიის ტომეულები“, or `https://pub-f947f7afe8cc44c4928fdba6e2fbb528.r2.dev/antologia_<vol>.pdf`), only versions the books above lack; number with a letter → file number (vols I–III and XXVIII: 76a = 761; from vol. IV on ×100: 12b = 1202, because vol. IV has both 12b and №122; `numLabel` shows „76a“); a litany of short numbers = one unit file named by its first number (`numLabel` „98–107“) | PDF = book | `src/data/anthologyChants.ts` (`ATTACH` by chant id — any tab — and `NEW_ITEMS` after or before an item; East Georgian vols II–IV in `anthologyEastChants.ts` → the ქ.კ. row, vol. V on in `anthologyWestChants.ts` → გ.ს.); the rite tabs in `riteChants.ts` |
 | `song` | Admission-program songs (files 1–10; 9–10 are scans: pictures only, no synth) | — | `songBookChants.ts` from `abituriProgram.ts` (`notes: N`); ids `sg-N`, in `NOTES_LISTS` only (no service tab, not in search) |
 
 - Song notes: Finale/Petrucci PDFs from the user's Drive (abituri page folders), read with the books' OMR + `NO_WIN2MAC=1`
@@ -185,7 +185,8 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   recitation note (breve) lasts until the other voices' next note (else ½ beat per syllable); tempo 72. `--to <last>`
   reads several numbers as one unit.
 - Vol. I's Petrucci subset gives its glyphs other codes (heads are control characters): `REMAP_V1` in omr.py, each glyph
-  identified on the page pictures; its bracketed accidentals are single glyphs; a note in round brackets and an ossia line
+  identified on the page pictures (vol. VIII's subset numbers heads and rests differently again: `REMAP_V8`, chosen when
+  the font has \x05); its bracketed accidentals are single glyphs; a note in round brackets and an ossia line
   („ან ასე:“) are not played; short pieces may stand two to a row (staves under 150 pt, twin numbers).
 - Duplicates are found by comparing the notes with the site's versions (`compare.py`, `matrix.py`): a match stays on the
   site and the anthology version is left out. Compare within the chant's own versions, transposition-free, and also by staff
@@ -215,3 +216,12 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   Both print their tables of contents in two columns (read by word positions) and vol. V prints some heads „@60.“ (`head_num`
   drops the „@“). New items: „ნეტარ არს კაცი (ზიარებისას)“ after chant-v5-99, four wedding chants in ჯვრისწერა (`jv-a4-192…196`),
   the feast group „შესხმანი — წმიდანთა და დღესასწაულთა“ (`sd-a5-68`, V №68–72) after sd-35. Placements are guesses.
+- Vols. VI–VIII (2026-10-30) = the Heirmologion (Kereselidze's mss. Q684 — Anton Dumbadze, Q687, Q689 — Aristo Kutateladze;
+  Gelati school, გ.ს.) → 479 versions in `anthologyWestChants.ts` (VI 143, VII 126, VIII 210; 33 duplicates). The user's
+  choice: every irmos goes to its tone in ძლისპირები (`dz-1…8`, now `withAnthology`) — or to the katavasia canon (`kt-N`)
+  whose irmos has the same opening words, ode and tone; no tone in the book („?“) → new item „ხმა უცნობია“ (`dz-a8-12`); other
+  kinds go to their chants (VII: ნეტარ არს კაცი, the tone-1 anabathmoi in ck-11, Resurrection stichera in mw-8, ნათელი მხიარული,
+  the wedding's წმიდანო მოწამენო / დიდება შენდა; VIII: Pascha's იპაკო, ღირს არს, უმეტესად კურთხეულსა) or, without a
+  place of their own, to „სხვა საგალობლები — ძლისპირთა წიგნებიდან“ (`dz-a6-1`). A notes match with other words (a sticheron
+  sung to an irmos' tune, vol. VIII's „ქება ქებულთა“ №203–220 vs vol. I) is not a duplicate: words are compared by their
+  first 12 letters. Left out: VIII №202 „ფეხის-ბანა“ (the archdeacon's one-voice recitation). Placements are guesses.

@@ -1,4 +1,5 @@
 import { ChantItem, variantName } from './tsirvaChants';
+import { withAnthology } from './anthologyChants';
 
 // Vol. VIII, „რვახმა საცისკრო ძლისპირები" (Canons for the Eight Tones): the irmoi of the eight tones (book pp. 3–107),
 // the katavasias of the fixed and movable cycle (pp. 110–307, in church-year order) and the Resurrection kontakia of
@@ -225,6 +226,7 @@ const build = (prefix: string, groups: IrmosGroup[]): ChantItem[] => groups.map(
   })),
 }));
 
-// "ძლისპირები": one item per tone; "კატაბასიები": one item per canon, then the Resurrection kontakia
-export const DZLISPIREBI_CHANTS: ChantItem[] = build('dz', OKTOECHOS);
-export const KATABASIEBI_CHANTS: ChantItem[] = build('kt', KATAVASIAS);
+// "ძლისპირები": one item per tone; "კატაბასიები": one item per canon, then the Resurrection kontakia; both with the
+// anthology's irmoi (vols VI–VIII) of that tone or canon
+export const DZLISPIREBI_CHANTS: ChantItem[] = withAnthology(build('dz', OKTOECHOS));
+export const KATABASIEBI_CHANTS: ChantItem[] = withAnthology(build('kt', KATAVASIAS));
