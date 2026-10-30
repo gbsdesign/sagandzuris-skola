@@ -4,7 +4,7 @@ import {
   TSIRVA_CHANTS, MWUKHRI_CHANTS, CISKARI_CHANTS, SADGHESASWAULO_CHANTS, MARXVANI_CHANTS, ZATIKI_CHANTS,
   MOMIXSENENI_CHANTS, DZLISPIREBI_CHANTS, KATABASIEBI_CHANTS, DASADEBLEBI_CHANTS, ChantItem, FOLK_SONGS, FolkSong, getFolkRegion,
 } from '../../data';
-import { KHELDASKHMA_CHANTS, JVRISWERA_CHANTS, PANASHVIDI_CHANTS } from '../../data/riteChants';
+import { KHELDASKHMA_CHANTS, JVRISWERA_CHANTS, PANASHVIDI_CHANTS, PARAKLISI_CHANTS } from '../../data/riteChants';
 import { MORNING_EVENING, AKATHISTS, KATHISMAS, PSALTER_RULE, PRAYER_HOURS, weekPrayerId, prayerTitle } from '../../data/prayers';
 import { SearchQuery, matchesQuery, searchKey } from '../../utils/searchUtils';
 
@@ -21,6 +21,7 @@ export const SERVICE_CHANTS: Record<Service, ChantItem[]> = {
   'პანაშვიდი': PANASHVIDI_CHANTS,
   'ჯვრისწერა': JVRISWERA_CHANTS,
   'ხელდასხმა': KHELDASKHMA_CHANTS,
+  'პარაკლისი': PARAKLISI_CHANTS,
   'მომიხსენენი': MOMIXSENENI_CHANTS,
   'ძლისპირები': DZLISPIREBI_CHANTS,
   'კატაბასიები': KATABASIEBI_CHANTS,

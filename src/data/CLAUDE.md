@@ -21,7 +21,7 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
 | `dasd1` / `dasd2` | „ჰიმნოგრაფიული კრებული" II (tones I–II, files 1–250) / III (tones III–IV, 1–277): stichera on "Lord, I have cried" + the psalm verses (plain and „ჭრელი"); code "ჰ.კ." | 0 | `sticheraBookChants.ts` — tab დასადებლები, 129 groups `ds-N` (tone · day — kind). A title with no music whose footnote says "იხილე — გვ. N, # M" is a cross-reference: its button opens the chant printed on p. N (no file of its own) |
 | `momix` | „ჰიმნოგრაფიული კრებული" I, troparia on the Beatitudes (Kereselidze mss., code "ე.კ."; no printed numbers — files 1–268 in book order) | 0 | `beatitudesBookChants.ts` — tab მომიხსენენი, 59 groups `mm-N` (tone + day) |
 
-| `a1`–`a11`, `a28`, `a29`, … | „ქართული გალობის ანთოლოგია“ (29 vols, galobani.ge PDFs: the user's Downloads, Drive „01 ანთოლოგიის ტომეულები“, or `https://pub-f947f7afe8cc44c4928fdba6e2fbb528.r2.dev/antologia_<vol>.pdf`), only versions the books above lack; number with a letter → file number (vols I–III and XXVIII: 76a = 761; from vol. IV on ×100: 12b = 1202, because vol. IV has both 12b and №122; `numLabel` shows „76a“); a litany of short numbers = one unit file named by its first number (`numLabel` „98–107“) | PDF = book | `src/data/anthologyChants.ts` (`ATTACH` by chant id — any tab — and `NEW_ITEMS` after or before an item; East Georgian vols II–IV and X–XI in `anthologyEastChants.ts` → the ქ.კ. row, the others from vol. V in `anthologyWestChants.ts` → გ.ს.); the rite tabs in `riteChants.ts` |
+| `a1`–`a13`, `a28`, `a29`, … | „ქართული გალობის ანთოლოგია“ (29 vols, galobani.ge PDFs: the user's Downloads, Drive „01 ანთოლოგიის ტომეულები“, or `https://pub-f947f7afe8cc44c4928fdba6e2fbb528.r2.dev/antologia_<vol>.pdf`), only versions the books above lack; number with a letter → file number (vols I–III and XXVIII: 76a = 761; from vol. IV on ×100: 12b = 1202, because vol. IV has both 12b and №122; `numLabel` shows „76a“); a litany of short numbers = one unit file named by its first number (`numLabel` „98–107“) | PDF = book | `src/data/anthologyChants.ts` (`ATTACH` by chant id — any tab — and `NEW_ITEMS` after or before an item; East Georgian vols II–IV and X–XI in `anthologyEastChants.ts` → the ქ.კ. row, the others from vol. V in `anthologyWestChants.ts` → გ.ს.); the rite tabs in `riteChants.ts` |
 | `song` | Admission-program songs (files 1–10; 9–10 are scans: pictures only, no synth) | — | `songBookChants.ts` from `abituriProgram.ts` (`notes: N`); ids `sg-N`, in `NOTES_LISTS` only (no service tab, not in search) |
 
 - Song notes: Finale/Petrucci PDFs from the user's Drive (abituri page folders), read with the books' OMR + `NO_WIN2MAC=1`
@@ -238,3 +238,12 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   for same-tune duplicates applies only to matches in the books of shared tunes (dasd, momix, v8, a6–a8).
   `MWUKHRI_CHANTS`/`CISKARI_CHANTS` were not `withAnthology` before 2026-10-30, so vol. VII–VIII's 14 pieces there were hidden.
   The OMR warns of a voice 2 beats short in IX №70–82 (the 9th ode's refrains: a divided first voice) — not fixed.
+- Vols. XII–XIII (2026-10-31, Kereselidze's ms. Q672, გ.ს.): XII (vespers) → 208 versions in mw-* (the eight tones'
+  Resurrection stichera mw-8, glory mw-9, dogmatika mw-10; Saturday's aposticha → new item `mw-a12-160` after mw-16; the eight
+  tones' troparia → ck-4 / ck-v9-79); XIII → 188 versions: feast troparia to their sd item, 16 saints the site lacked to new feast
+  items `sd-a13-<num>` with the book's old-style date (the user's choice „თითოეულს თავისი დღესასწაული“; ids and titles in
+  NEW_ITEMS), the Triodion/Pentecostarion to mx-*/zt-*, and the two paracleses — XIII №89–183 to the Theotokos, №184–237 to
+  Sweet Jesus — to the new tab „პარაკლისი“ (`PARAKLISI_CHANTS` in `riteChants.ts`, items pr-1 / pr-2; the user's choice).
+  XIII prints dates like „8 (21) სეკდემბერს“ that `head_num` takes for a number: three jobs were set to the contents page
+  (№8, 29, 30). Troparia of one tone share a tune: here a notes match is a duplicate only when it is a version of the same
+  target chant or has the same opening words (XIII №16 and №40 — the same common troparion with another saint — kept).
