@@ -147,7 +147,7 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
                       {right.listen && (
                       <button
                         type="button"
-                        onClick={() => player.toggle(id)}
+                        onClick={() => player.toggle(id, { title, artist: name })}
                         className={`shrink-0 w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#b4620e] ${
                           on ? 'bg-[#dc8a22] text-white shadow-[0_6px_14px_-6px_rgba(180,98,14,0.75)]' : 'bg-[#dc8a22]/[0.1] text-[#b4620e] hover:bg-[#dc8a22]/[0.16]'
                         }`}

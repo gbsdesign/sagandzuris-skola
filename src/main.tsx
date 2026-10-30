@@ -5,6 +5,7 @@ import './index.css';
 import { startOffline } from './utils/offlineFiles';
 import { applyKhutsuri, isKhutsuri } from './utils/khutsuri';
 import { markAndroidApp } from './utils/androidApp';
+import { recordingSounds } from './utils/mediaControls';
 
 // Auto-clean stale Service Workers on dev/preview so the app never freezes or serves stale assets
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
@@ -32,7 +33,8 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
   });
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
-      if (pending && !notesOpen()) window.location.reload();
+      // not while a recording sounds in the background (utils/mediaControls.ts): the next time the app is hidden
+      if (pending && !notesOpen() && !recordingSounds()) window.location.reload();
     } else {
       freshSince = Date.now();
       sw.getRegistration().then(r => r?.update()).catch(() => {});

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react';
+import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { Play, Pause, RefreshCw, Check, Download, CloudDownload, Headphones, Music, Video, RotateCcw, RotateCw, Repeat, Gauge, Music2, ChevronRight, ChevronUp, SlidersHorizontal } from 'lucide-react';
 import * as Tone from 'tone';
 import soundTouchProcessorUrl from '@soundtouchjs/audio-worklet/processor?url';
@@ -12,6 +12,7 @@ import { ChantWaveformSeekBar } from './ChantWaveformSeekBar';
 import { Stepper } from './Stepper';
 import { saveBlob } from '../utils/chantSynth';
 import { NpStepper } from '../pages/notes/NpStepper';
+import { keepAlive } from '../utils/mediaControls';
 
 // The recording player: a chant version's recording (chantId + variantId) or a folk song's (media).
 // Used by the notes page (layout 'panel') and the folk-songs map (layout 'card').
@@ -132,7 +133,11 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
   const displayTitle = title ?? chant?.title;
   const displaySubtitle = subtitle ?? variant?.label;
 
-  const activeTracks = mediaItem.tracks;
+  // The callers build `media` afresh on every render (a song page re-renders while it scrolls), so the list is kept
+  // while its addresses stay the same — a new array would tear the audio down and stop the playing recording.
+  const tracksKey = mediaItem.tracks.join('|');
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const activeTracks = useMemo(() => mediaItem.tracks, [tracksKey]);
   const notes = mediaItem.notes;
   const lyrics = mediaItem.lyrics;
   const notesTitle = mediaItem.title;
@@ -147,6 +152,8 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
   const [duration, setDuration] = useState<number>(mediaItem.duration ?? 153);
   const [loopStart, setLoopStart] = useState<number | null>(null);
   const [loopEnd, setLoopEnd] = useState<number | null>(null);
+  const loopRef = useRef({ on: false, start: 0 });
+  loopRef.current = { on: isLoopEnabled, start: loopStart ?? 0 };
   const [isNotesModalOpen, setIsNotesModalOpen] = useState(false);
 
   // 3 Voices state + dedicated 'სამივე' mode
@@ -358,6 +365,23 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
 
         if (isCancelled) return;
 
+        // The recording's end, also while the app is in the background (no animation frames run there): stop, or go
+        // round again when the repeat is on.
+        const primary = newAudios[3] || newAudios[0];
+        primary?.addEventListener('ended', () => {
+          if (isCancelled) return;
+          const loop = loopRef.current;
+          if (loop.on) {
+            newAudios.forEach(a => { if (a) { a.currentTime = loop.start; void a.play().catch(() => {}); } });
+            currentTimeRef.current = loop.start;
+            return;
+          }
+          newAudios.forEach(a => { try { a?.pause(); } catch (_) {} });
+          currentTimeRef.current = 0;
+          setCurrentTime(0);
+          setIsPlaying(false);
+        });
+
         audioElementsRef.current = newAudios;
         mediaSourcesRef.current = newSources;
         channelsRef.current = newChannels;
@@ -563,6 +587,16 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
   playToggleRef.current = handlePlayToggle;
   seekRef.current = handleSeek;
   isPlayingRef.current = isPlaying;
+
+  // The phone's controls and the background: a silent companion element sounds while the recording does
+  // (utils/mediaControls.ts). When the phone stops it (a call, another app's music), the recording pauses too.
+  const keeperRef = useRef({});
+  useEffect(() => {
+    const me = keeperRef.current;
+    if (isPlaying) keepAlive.start(me, () => { if (isPlayingRef.current) playToggleRef.current(); });
+    else keepAlive.stop(me);
+  }, [isPlaying]);
+  useEffect(() => () => keepAlive.stop(keeperRef.current), []);
 
   useEffect(() => {
     if (!('mediaSession' in navigator)) return;

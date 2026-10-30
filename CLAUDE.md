@@ -121,6 +121,13 @@
   **Every `<audio>` / `new Audio()` that plays a Worker URL must set `crossOrigin = 'anonymous'`** (as `ChantPlayer` does):
   the Worker answers only requests carrying the site's `Origin`, and a plain media request sends none → 403, silence
   (the „დღის ჰანგი“ bug of 2026-10-28).
+- **Recordings go on in the background** and show ▶/⏸ in the phone's pull-down panel (2026-10-30, `utils/mediaControls.ts`):
+  `ChantPlayer` sounds through Web Audio, which Android does not count as media, so a silent looping `<audio>` (`keepAlive`)
+  plays beside it; the albums' player and a list's quick listen are named with `showInControls`. Nothing pauses on
+  `visibilitychange` any more (only a list's synth preview stops), and `main.tsx` does not restart for a new version while
+  `recordingSounds()`. `ChantPlayer` keys its audio on the tracks' addresses — callers build `media` afresh each render, and a
+  new array used to stop the recording when a song page scrolled. The Drive folders „🎵 გალობა და სიმღერა“ and „ფოლკლორის
+  ცენტრი“ must stay „anyone with the link“ (a closed folder = the Worker gets Google's sign-in page → 502, silence).
 - Book notes (`public/notes/<book>/`) come from the chant-book PDFs by OMR; the books' OMR scripts are not in the repo —
   only the anthology's (`scripts/omr/`, also in the cloud). Chant tabs ხელდასხმა · ჯვრისწერა · პანაშვიდი (2026-10-29) are
   `data/riteChants.ts`; anthology versions everywhere come from `data/anthologyChants.ts` (East Georgian vols II–IV:

@@ -2,9 +2,11 @@ import { useEffect, useSyncExternalStore } from 'react';
 import { ChantSynth, loadBookScore } from './chantSynth';
 import { getCachedAudioUrl } from './audioCache';
 import { hasTrack } from './offlineFiles';
+import { followElement, hideFromControls, showInControls } from './mediaControls';
 
 // A quick listen from a list: the synthesizer of a chant version or the recording of a song. Only one sounds at a
-// time; tapping it again, opening a notes or song page, hiding the app or folding the list away stops it.
+// time; tapping it again, opening a notes or song page or folding the list away stops it. Hiding the app stops the
+// synthesizer only: a recording goes on in the background and shows in the phone's controls (utils/mediaControls.ts).
 
 type Phase = 'loading' | 'playing';
 type Player = { play: () => Promise<unknown>; stop: () => void; progress: () => number };
@@ -13,6 +15,7 @@ let state: { id: string; phase: Phase } | null = null;
 let token: object | null = null;
 let stopCurrent: (() => void) | null = null;
 let progressOf: (() => number) | null = null;
+let synthSounds = false; // the quick listen is the synthesizer's (it stops when the app is hidden)
 const listeners = new Set<() => void>();
 const set = (s: typeof state) => { state = s; listeners.forEach(l => l()); };
 
@@ -48,6 +51,7 @@ const start = async (id: string, prepare: (ended: () => void) => Promise<Player>
 /** Play a chant version on the synthesizer (the notes file named after its first book number), or stop it */
 export const toggleSynthPreview = (id: string, firstNum: number, book?: string) => {
   if (state?.id === id) return stopPreview();
+  synthSounds = true;
   void start(id, async ended => {
     const synth = new ChantSynth(await loadBookScore(firstNum, book));
     synth.onEnd = ended;
@@ -55,18 +59,24 @@ export const toggleSynthPreview = (id: string, firstNum: number, book?: string) 
   });
 };
 
-/** Play a recording, or stop it */
-export const toggleAudioPreview = (id: string, url: string) => {
+/** Play a recording, or stop it; `name` is what the phone's controls call it */
+export const toggleAudioPreview = (id: string, url: string, name?: { title: string; artist?: string }) => {
   if (state?.id === id) return stopPreview();
+  synthSounds = false;
   void start(id, async ended => {
     // a recording kept for offline use plays from the device
     const local = hasTrack(url) ? await getCachedAudioUrl(url) : null;
-    const audio = new Audio(local ?? url);
-    audio.onended = ended;
-    audio.onerror = ended;
+    const audio = new Audio();
+    // the audio Worker answers only requests that carry the site's Origin
+    audio.crossOrigin = 'anonymous';
+    audio.src = local ?? url;
+    followElement(audio);
+    showInControls(audio, name?.title || 'ჩანაწერი', name?.artist);
+    audio.onended = () => { hideFromControls(audio); ended(); };
+    audio.onerror = () => { hideFromControls(audio); ended(); };
     return {
       play: () => audio.play(),
-      stop: () => { audio.pause(); audio.removeAttribute('src'); audio.load(); if (local) URL.revokeObjectURL(local); },
+      stop: () => { audio.pause(); hideFromControls(audio); audio.removeAttribute('src'); audio.load(); if (local) URL.revokeObjectURL(local); },
       progress: () => (audio.duration ? audio.currentTime / audio.duration : 0),
     };
   });
@@ -85,5 +95,5 @@ export const usePreview = (id: string): Phase | null => {
 };
 
 if (typeof document !== 'undefined') {
-  document.addEventListener('visibilitychange', () => { if (document.hidden) stopPreview(); });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && synthSounds) stopPreview(); });
 }

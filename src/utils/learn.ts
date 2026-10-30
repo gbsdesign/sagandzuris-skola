@@ -127,17 +127,37 @@ const LINE_RIGHT = 0.03;
  * square root of its length), and a beat between two starts is placed between their places.
  */
 export const markerAt = (score: BookScore, sys: number, beat: number): number => {
-  const [, , , , , t0, t1] = score.sys[sys];
-  const starts = [...new Set(score.voices.flatMap(v => v.filter(n => n[0] >= t0 - 1e-6 && n[0] < t1 - 1e-6).map(n => n[0])))].sort((a, b) => a - b);
-  if (!starts.length || starts[0] > t0 + 1e-6) starts.unshift(t0);
-  starts.push(t1);
-  const room = starts.slice(1).map((b, i) => Math.sqrt(Math.max(0.05, b - starts[i])));
-  const total = room.reduce((a, b) => a + b, 0);
+  const { starts, room, total } = lineRoom(score, sys);
   let k = 0;
   while (k < room.length - 1 && beat >= starts[k + 1]) k++;
   const before = room.slice(0, k).reduce((a, b) => a + b, 0);
   const within = Math.max(0, Math.min(1, (beat - starts[k]) / (starts[k + 1] - starts[k] || 1)));
   return LINE_LEFT + ((before + within * room[k]) / total) * (1 - LINE_LEFT - LINE_RIGHT);
+};
+
+// a line's note starts (and its end) with the room each step gets across the line
+const lineRoom = (score: BookScore, sys: number) => {
+  const [, , , , , t0, t1] = score.sys[sys];
+  const starts = [...new Set(score.voices.flatMap(v => v.filter(n => n[0] >= t0 - 1e-6 && n[0] < t1 - 1e-6).map(n => n[0])))].sort((a, b) => a - b);
+  if (!starts.length || starts[0] > t0 + 1e-6) starts.unshift(t0);
+  starts.push(t1);
+  const room = starts.slice(1).map((b, i) => Math.sqrt(Math.max(0.05, b - starts[i])));
+  return { starts, room, total: room.reduce((a, b) => a + b, 0) };
+};
+
+/**
+ * The other way round from markerAt: the note start nearest to `x` (0–1 of the line's width, as markerAt places it).
+ * The notes page's ball is dragged with it, so the music starts on a note where the ball is let go.
+ */
+export const beatAt = (score: BookScore, sys: number, x: number): number => {
+  const { starts, room, total } = lineRoom(score, sys);
+  let best = starts[0], dist = Infinity, before = 0;
+  for (let k = 0; k < starts.length - 1; k++) {
+    const at = LINE_LEFT + (before / total) * (1 - LINE_LEFT - LINE_RIGHT);
+    if (Math.abs(at - x) < dist) { dist = Math.abs(at - x); best = starts[k]; }
+    before += room[k];
+  }
+  return best;
 };
 
 // ---- progress ----------------------------------------------------------------------------------------------------
