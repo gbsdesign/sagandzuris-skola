@@ -20,6 +20,9 @@
 //   widgets show (habits, the path's percentages, the psalter kanon); the app's widgets, which carry no site Origin, read
 //   GET /widget/data?s=<secret> (that summary + today's ticks and counts, live from Firestore) and tick a habit with
 //   POST /widget/tick { s, id } or count with POST /widget/count { s, id, add }; POST /widget/unlink { s }.
+// • Games (2026-10-30): POST /game-invite { token, classId, roomId } — a game room just opened in a class („სამშვილდის
+//   ღამე“ online): its members and teachers whose device gets the group or assignment reminders hear „X გიწვევს“. The room
+//   is checked in Firestore (the caller's, still waiting for players, fresh) and told once.
 // • The phone's calendar (2026-10-29): GET /cal/<secret>.ics — great feasts, fasts and the member's lessons (ics.js);
 //   the secret is one of /widget/link's, asked for by the profile's „კალენდარი ტელეფონში“.
 // These pushes carry an encrypted text payload (RFC 8291, aes128gcm).
@@ -554,6 +557,43 @@ async function groupEvent(request, env) {
   return [200, 'ok'];
 }
 
+// ---- games: a room opened in a class ------------------------------------------------------------------------------
+
+async function gameInvite(request, env) {
+  const body = await readJson(request);
+  if (!body) return [400, 'bad json'];
+  let uid;
+  try {
+    uid = await verifyIdToken(env, body.token);
+  } catch {
+    return [401, 'bad token'];
+  }
+  const id = /^[A-Za-z0-9_-]{1,128}$/;
+  if (!id.test(String(body.classId)) || !id.test(String(body.roomId))) return [400, 'bad room'];
+  const [cls, room] = await Promise.all([
+    fsGet(env, `classes/${body.classId}`),
+    fsGet(env, `classes/${body.classId}/games/${body.roomId}`),
+  ]);
+  const fresh = room?.createdAt && Date.now() - new Date(room.createdAt).getTime() < 15 * 60_000;
+  if (!cls || cls.archived || !room || room.host !== uid || room.status !== 'lobby' || !fresh) return [409, 'no fresh room'];
+  const told = `game:${body.classId}/${body.roomId}`;
+  if (await metaGet(env, told)) return [200, 'told'];
+  await metaSet(env, told, new Date().toISOString());
+  const targets = [...new Set([...(cls.memberIds || []), ...(cls.teacherIds || [])])].filter((u) => u !== uid);
+  const name = firstName(String(room.hostName || '').trim());
+  const message = {
+    title: 'სამშვილდის ღამე',
+    body: `${name} გიწვევს თამაშში — ${cls.name || 'კლასი'}. შეეხე და შემოდი.`,
+    tag: `game-${body.roomId}`,
+    url: `/?open=samshvilde&c=${body.classId}&r=${body.roomId}`,
+  };
+  // a device with the group or the assignment reminders on, once
+  const rows = [...await rowsFor(env, targets, 'psalter'), ...await rowsFor(env, targets, 'assignments')];
+  const once = [...new Map(rows.map((r) => [r.key, r])).values()];
+  await deliver(env, once.map((r) => [r, message]));
+  return [200, 'ok'];
+}
+
 // ---- admins: a newcomer waits; Monday's overview --------------------------------------------------------
 
 // the admins who asked for a notice (adminPush/{uid}; firestore.rules lets only superadmins ask for `waiting`)
@@ -877,7 +917,7 @@ export default {
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers });
     const url = new URL(request.url);
     const routes = {
-      '/subscribe': subscribe, '/account': account, '/group-event': groupEvent, '/access-request': accessRequest,
+      '/subscribe': subscribe, '/account': account, '/group-event': groupEvent, '/access-request': accessRequest, '/game-invite': gameInvite,
       '/widget/link': widgetLink, '/widget/summary': widgetSummary,
     };
     // the app's widgets send no Origin: their secret is the proof

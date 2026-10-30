@@ -346,6 +346,58 @@ await t('the person does not read their note', assertFails(getDoc(doc(stu, 'admi
 await t('a teacher writes no note', assertFails(setDoc(doc(tch, 'adminNotes', 'stu2'), note('tch@x.ge'))));
 await t('admin deletes a note', assertSucceeds(deleteDoc(doc(adm, 'adminNotes', 'stu'))));
 
+// ---- an online game room of a class („სამშვილდის ღამე“ online): the host writes, a seat (a role) is its player's alone
+const gp1 = as('gp1', 'gp1@x.ge');
+const gp2 = as('gp2', 'gp2@x.ge');
+const gout = as('gout', 'gout@x.ge');
+await env.withSecurityRulesDisabled(async c => {
+  await setDoc(doc(c.firestore(), 'classes', 'cg'), { name: 'G', memberIds: ['gp1', 'gp2', 'stu'], members: [], teacherIds: ['tch'], teachers: [], program: [] });
+});
+const G = 'classes/cg/games';
+const room = (host, extra = {}) => ({ game: 'samshvilde', host, hostName: 'H', status: 'lobby', createdAt: serverTimestamp(), at: serverTimestamp(), uids: [], view: '', ...extra });
+await t('a member opens a game room as its host', assertSucceeds(setDoc(doc(gp1, G, 'r1'), room('gp1'))));
+await t('nobody opens a room for another host', assertFails(setDoc(doc(gp2, G, 'r2'), room('gp1'))));
+await t('an outsider opens no room', assertFails(setDoc(doc(gout, G, 'r3'), room('gout'))));
+await t('a room has only its fields', assertFails(setDoc(doc(gp1, G, 'r4'), room('gp1', { x: 1 }))));
+await t('the class reads the room', assertSucceeds(getDoc(doc(gp2, G, 'r1'))));
+await t('the class lists its open rooms', assertSucceeds(getDocs(query(collection(gp2, G), where('status', 'in', ['lobby', 'live', 'over'])))));
+await t('an outsider cannot read the room', assertFails(getDoc(doc(gout, G, 'r1'))));
+const join = uid => ({ uid, name: 'N', photoURL: '', at: serverTimestamp() });
+await t('a member joins as self', assertSucceeds(setDoc(doc(gp2, G, 'r1', 'joins', 'gp2'), join('gp2'))));
+await t('a teacher of the class joins too', assertSucceeds(setDoc(doc(tch, G, 'r1', 'joins', 'tch'), join('tch'))));
+await t('nobody joins for another', assertFails(setDoc(doc(gp2, G, 'r1', 'joins', 'stu'), join('stu'))));
+await t('an outsider cannot join', assertFails(setDoc(doc(gout, G, 'r1', 'joins', 'gout'), join('gout'))));
+await t('the host takes a player out of the lobby', assertSucceeds(deleteDoc(doc(gp1, G, 'r1', 'joins', 'tch'))));
+await t('a player cannot take another out', assertFails(deleteDoc(doc(gp2, G, 'r1', 'joins', 'gp1'))));
+await t('only the host changes the room', assertFails(updateDoc(doc(gp2, G, 'r1'), { status: 'live' })));
+await t('the host starts the game', assertSucceeds(updateDoc(doc(gp1, G, 'r1'), { status: 'live', uids: ['gp2', 'stu'], view: '{}', at: serverTimestamp() })));
+await t('the host cannot hand the room over', assertFails(updateDoc(doc(gp1, G, 'r1'), { host: 'gp2' })));
+await t('nobody joins a game that has begun', assertFails(setDoc(doc(stu, G, 'r1', 'joins', 'stu'), join('stu'))));
+await t('the host writes a seat', assertSucceeds(setDoc(doc(gp1, G, 'r1', 'seats', 'gp2'), { s: '{"role":"spy"}' })));
+await t('a player cannot write a seat', assertFails(setDoc(doc(gp2, G, 'r1', 'seats', 'gp2'), { s: '{}' })));
+await t('a player reads own seat', assertSucceeds(getDoc(doc(gp2, G, 'r1', 'seats', 'gp2'))));
+await t("a player cannot read another's seat", assertFails(getDoc(doc(stu, G, 'r1', 'seats', 'gp2'))));
+await t("the class's teacher cannot read a seat", assertFails(getDoc(doc(tch, G, 'r1', 'seats', 'gp2'))));
+await t('nobody lists the seats', assertFails(getDocs(collection(stu, G, 'r1', 'seats'))));
+await t('the host reads a seat', assertSucceeds(getDoc(doc(gp1, G, 'r1', 'seats', 'gp2'))));
+const act = (extra = {}) => ({ key: 'n2.spies', pick: 3, end: false, at: 1761850000000, ...extra });
+await t('a player answers as self', assertSucceeds(setDoc(doc(gp2, G, 'r1', 'acts', 'gp2'), act())));
+await t('a „no“ hand and an empty answer are answers', assertSucceeds(setDoc(doc(gp2, G, 'r1', 'acts', 'gp2'), act({ pick: null, end: true }))));
+await t('nobody answers for another', assertFails(setDoc(doc(stu, G, 'r1', 'acts', 'gp2'), act())));
+await t('an answer has only its fields', assertFails(setDoc(doc(gp2, G, 'r1', 'acts', 'gp2'), act({ role: 'spy' }))));
+await t('the host lists the answers', assertSucceeds(getDocs(collection(gp1, G, 'r1', 'acts'))));
+await t('a player cannot list the answers', assertFails(getDocs(collection(gp2, G, 'r1', 'acts'))));
+await t("a player cannot read another's answer", assertFails(getDoc(doc(stu, G, 'r1', 'acts', 'gp2'))));
+await t('the host keeps the whole game', assertSucceeds(setDoc(doc(gp1, G, 'r1', 'host', 'state'), { s: '{}' })));
+await t("a player cannot read the host's game", assertFails(getDoc(doc(gp2, G, 'r1', 'host', 'state'))));
+const peer = uid => ({ uid, name: 'N', photoURL: '', session: 's', audio: 'a', video: '', mic: true, cam: false, staff: false, at: 1 });
+await t('a player enters the game call', assertSucceeds(setDoc(doc(gp2, G, 'r1', 'peers', 'gp2'), peer('gp2'))));
+await t('an outsider cannot see the call', assertFails(getDocs(collection(gout, G, 'r1', 'peers'))));
+const gameMsg = (extra = {}) => ({ uid: 'gp1', name: 'H', photoURL: '', teacher: false, kind: 'game', text: '🌙', room: 'r1', createdAt: serverTimestamp(), ...extra });
+await t('the invitation goes into the class chat', assertSucceeds(setDoc(doc(gp1, 'classes', 'cg', 'messages', 'gm1'), gameMsg())));
+await t('an invitation names its room', assertFails(setDoc(doc(gp1, 'classes', 'cg', 'messages', 'gm2'), gameMsg({ room: 7 }))));
+await t('the host closes the room', assertSucceeds(deleteDoc(doc(gp1, G, 'r1'))));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);

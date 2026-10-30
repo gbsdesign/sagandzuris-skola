@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { MessageCircle, Mic, Send, Square, X, Trash2, Play, Pause, Loader2, Clock, Video, CheckCheck } from 'lucide-react';
+import { MessageCircle, Mic, Send, Square, X, Trash2, Play, Pause, Loader2, Clock, Video, CheckCheck, Moon } from 'lucide-react';
 import {
   sendTextMessage, sendVoiceMessage, deleteMessage, loadVoiceUrl, ChatMessage, ChatAuthor,
 } from '../../hooks/useClassChat';
@@ -132,6 +132,9 @@ const VoicePlayer: React.FC<{ seconds: number; wave: string; getUrl: () => Promi
 };
 
 // when a message was sent, or a clock while it is still on its way
+/** an invitation into a game room leads in this long */
+const GAME_INVITE_MS = 3 * 3600_000;
+
 const sentAt = (m: ChatMessage) => (
   <span className="inline-flex items-center tabular-nums">{m.pending ? <Clock className="w-3 h-3" /> : m.at && hhmm(m.at)}</span>
 );
@@ -167,6 +170,8 @@ export interface ChatPanelProps {
   onJoinCall?: () => void;
   /** the call is still on (otherwise its card is only a note, without the button) */
   callLive?: boolean;
+  /** a class's chat: an invitation into a game room leads into it (for a few hours) */
+  onOpenGame?: (m: ChatMessage) => void;
   canDelete: (m: ChatMessage) => boolean;
   /** a class: avatars and names over the others' messages; a private chat has only two people (or: whose messages) */
   showNames?: boolean | ((m: ChatMessage) => boolean);
@@ -195,7 +200,7 @@ const HoverDelete: React.FC<{ onClick: () => void }> = ({ onClick }) => (
 
 // A chat: text and voice messages (a class's chat, or a teacher's private chat with a student).
 export const ChatPanel: React.FC<ChatPanelProps> = ({
-  base, author, messages, loading, error, header, isCall = () => false, callTitle, onJoinCall, callLive = true, canDelete,
+  base, author, messages, loading, error, header, isCall = () => false, callTitle, onJoinCall, callLive = true, onOpenGame, canDelete,
   showNames = false, seenAt = null, onSent, listClassName = 'h-[56vh] min-h-[300px] max-h-[560px]', readOnly = false,
   staffLabel = 'მასწავლებელი', fill = false, listTop,
 }) => {
@@ -441,6 +446,26 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                                 შესვლა ზარში
                               </button>
                             ) : <span />}
+                            <span className={`text-[11px] leading-none ${mine ? 'text-[#fbf6ec]/70' : 'text-[#a89886]'}`}>{sentAt(m)}</span>
+                          </div>
+                        </div>
+                      ) : m.kind === 'game' ? (
+                        <div className="py-1 flex flex-col gap-2.5">
+                          <p className="flex items-center gap-2 font-semibold text-[15px] leading-snug">
+                            <Moon className={`w-5 h-5 shrink-0 ${mine ? 'text-[#e2c27a]' : 'text-[#7a2028]'}`} /> „სამშვილდის ღამე“ — ონლაინ თამაში
+                          </p>
+                          <div className="flex items-center justify-between gap-4">
+                            {onOpenGame && m.room && m.at && Date.now() - m.at.getTime() < GAME_INVITE_MS ? (
+                              <button
+                                type="button"
+                                onClick={e => { e.stopPropagation(); triggerHaptic(10); onOpenGame(m); }}
+                                className={`h-10 px-4 rounded-full text-sm font-bold cursor-pointer active:scale-95 transition ${
+                                  mine ? 'bg-[#fbf6ec] text-[#7a2028]' : 'bg-[#7a2028] text-[#fbf6ec]'
+                                }`}
+                              >
+                                {mine ? 'ოთახში დაბრუნება' : 'შესვლა'}
+                              </button>
+                            ) : <span className={`text-[12px] ${mine ? 'text-[#fbf6ec]/75' : 'text-[#8a7a6a]'}`}>თამაში დასრულდა</span>}
                             <span className={`text-[11px] leading-none ${mine ? 'text-[#fbf6ec]/70' : 'text-[#a89886]'}`}>{sentAt(m)}</span>
                           </div>
                         </div>

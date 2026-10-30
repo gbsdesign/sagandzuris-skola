@@ -9,7 +9,7 @@ export const openSearch = (query?: string) => window.dispatchEvent(new CustomEve
 
 // "Open this song / ancestor / tab / person (the admin panel)": the page takes the request when it mounts, or at once if it is
 // already on screen. One request at a time; a page that never opens simply leaves it unused.
-export type OpenTarget = 'simghera' | 'tsinaprebi' | 'biblioteka' | 'admin';
+export type OpenTarget = 'simghera' | 'tsinaprebi' | 'biblioteka' | 'admin' | 'samshvilde';
 const REQUEST_EVENT = 'sg-open-request';
 let pending: { target: OpenTarget; id: string } | null = null;
 

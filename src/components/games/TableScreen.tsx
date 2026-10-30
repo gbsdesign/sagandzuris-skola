@@ -1,11 +1,13 @@
 import React, { useEffect } from 'react';
 import { X } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
+import { useCall } from '../../utils/callSession';
 
 // „მაგიდის ეკრანი“: the full-screen face of a live game (games hub, 2026-10-28) — the one phone on the table shows big
 // text and big buttons, nothing else; the screen stays awake while it is open. Born with „ამიხსენი“, for every live game
 // after it. Respects the phone's safe areas (viewport-fit=cover). `tone="night"` dims it to the night's dark blue
-// („სამშვილდის ღამე“: the host reads the night by it while everybody's eyes are closed).
+// („სამშვილდის ღამე“: the host reads the night by it while everybody's eyes are closed). A call shrunk to its bar keeps
+// its place over the top.
 
 const useWakeLock = (on: boolean) => {
   useEffect(() => {
@@ -36,8 +38,12 @@ export const TableScreen: React.FC<{
     return () => { document.body.style.overflow = prev; };
   }, []);
   const night = tone === 'night';
+  // a call shrunk to its bar (a game's own call) floats over the top: the table starts under it
+  const call = useCall();
+  const bar = call.small && call.info && call.status !== 'idle' && call.status !== 'ended';
   return (
     <div className={`fixed inset-0 z-[70] flex flex-col safe-top safe-bottom safe-x ${night ? 'bg-[#1b1830] text-[#ece3d2]' : 'bg-[#fbf6ec] text-[#4a3426]'}`} role="dialog" aria-modal="true">
+      {bar && <div className="h-[66px] shrink-0" aria-hidden="true" />}
       <div className="flex items-center gap-2 px-3 h-14 shrink-0">
         <button
           type="button"

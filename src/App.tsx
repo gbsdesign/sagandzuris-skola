@@ -35,6 +35,7 @@ import { SignInPrompt } from './components/access/SignInPrompt';
 import { EmailLinkFinish } from './components/access/EmailLinkFinish';
 import { FirstMeeting } from './components/onboarding/FirstMeeting';
 import { CallLayer } from './components/calls/CallLayer';
+import { GameInvites } from './components/games/GameInvites';
 import { useKidsMode } from './hooks/useAccess';
 import { useClassMarksSync } from './hooks/useClassMarks';
 import { MembershipGate, WaitingBanner } from './components/access/MembershipGate';
@@ -67,7 +68,7 @@ export default function App() {
 
 function AppContent() {
   const { loading, user } = useAuth();
-  const { currentPage, openPrayer, navigateTo } = useNavigation();
+  const { currentPage, openPrayer, navigateTo, openMapItem } = useNavigation();
   // live recordings are for members a superadmin let in with them (set before the tree below renders)
   const membership = useMembership();
   setRecordingsHidden(!user || !membership.can('recordings'));
@@ -104,6 +105,16 @@ function AppContent() {
       const id = url.searchParams.get('id');
       if (id) requestShortcut(id);
     }
+    // „სამშვილდის ღამე“: an invitation into a class's game room
+    else if (page === 'samshvilde') {
+      const c = url.searchParams.get('c');
+      const r = url.searchParams.get('r');
+      if (c && r) {
+        requestOpen('samshvilde', `${c}/${r}`);
+        navigateTo('games');
+        openMapItem('samshvilde');
+      }
+    }
     // an admin's notice: the panel, with the newcomer's window open
     else if (page === 'admin') {
       const person = url.searchParams.get('person');
@@ -119,6 +130,8 @@ function AppContent() {
     url.searchParams.delete('open');
     url.searchParams.delete('person');
     url.searchParams.delete('id');
+    url.searchParams.delete('c');
+    url.searchParams.delete('r');
     window.history.replaceState(null, '', url.pathname + url.search + url.hash);
     openFromUrl(href);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -213,6 +226,11 @@ function AppContent() {
       {/* the one search over the whole app (header button, the home field, "/" or Ctrl+K) */}
       <ErrorBoundary>
         {membership.can('search') && <GlobalSearch />}
+      </ErrorBoundary>
+
+      {/* „სამშვილდის ღამე“ online: an invitation into a class's game room, or the way back into one's own game */}
+      <ErrorBoundary>
+        {membership.can('classes') && <GameInvites />}
       </ErrorBoundary>
 
       {/* the school's calls: the call screen and the incoming call (private chats and classes) */}

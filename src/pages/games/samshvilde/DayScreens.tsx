@@ -1,17 +1,19 @@
-import React from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Eye, EyeOff, Gavel, Lock, Moon, Play, RotateCcw, ScrollText, Sun, Users } from 'lucide-react';
 import {
   TIE_SPEECH, accusedOf, live, majority, speechOf, winner,
   type SamGame,
 } from '../../../utils/samshvilde';
+import { NO, type Hands as Ballots } from '../../../utils/samshvildeOnline';
 import { Btn } from '../../../components/ui/kit';
 import { TableScreen } from '../../../components/games/TableScreen';
-import type { AudioRef } from '../../../utils/gameSounds';
-import { Foot, Hands, Hint, NameGrid, RoleCard, Ring, Words, useCountdown } from './parts';
+import { openAudio, type AudioRef } from '../../../utils/gameSounds';
+import { Foot, Hands, HandsList, Hint, NameGrid, RoleCard, Ring, Words, useCountdown } from './parts';
 
 // The screens by day — the phone may lie on the table where everybody sees it, so they show names only, never a role:
 // the deal (each player alone), the morning, the first day's introductions, the speeches with their accusations, the
-// vote, a tie's speeches and the verdict.
+// vote, a tie's speeches and the verdict. Online the host's phone shows the same screens: the speaker ends their word on
+// their own phone, the clock the host starts runs on every phone (`clock`), and the hands come from the phones (`ballots`).
 
 const BIG = '!h-14 !text-[16px]';
 
@@ -44,28 +46,56 @@ export const DealScreen: React.FC<Omit<Common, 'onBack' | 'right'>> = ({ g, onCl
   );
 };
 
-/** whose turn to speak, with the clock the host starts */
-const Speaker: React.FC<{ name: string; total: number; audio: AudioRef; label?: string }> = ({ name, total, audio, label = 'ლაპარაკობს' }) => {
-  const c = useCountdown(total, audio);
+const seconds = (total: number) => (total === 60 ? '1 წუთი' : `${total} წამი`);
+
+/** whose turn to speak, with the clock the host starts. Online `clock` counts the host's starts: each change starts the
+ *  clock on this phone too — the host's button (`onClock`) starts it everywhere, a player's phone has no button. A phone
+ *  that opens mid-speech joins the running clock from the host's start (`clockAt`); a start seen live runs from it only
+ *  while the two phones' clocks agree (else from now). */
+export const Speaker: React.FC<{
+  name: string; total: number; audio: AudioRef; label?: string; clock?: number; clockAt?: number; onClock?: () => void; sound?: boolean; children?: React.ReactNode;
+}> = ({ name, total, audio, label = 'ლაპარაკობს', clock, clockAt = 0, onClock, sound = true, children }) => {
+  const c = useCountdown(total, audio, sound);
+  const seen = useRef<number | undefined>(undefined);
+  useEffect(() => {
+    if (clock === undefined || clock === seen.current) return;
+    const first = seen.current === undefined;
+    seen.current = clock;
+    if (clock <= 0) return;
+    const now = Date.now();
+    if (!clockAt) c.start();
+    else if (first) c.start(Math.min(clockAt, now));
+    else c.start(Math.abs(now - clockAt) < 5000 ? clockAt : now);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clock]);
+  const online = clock !== undefined;
+  const tap = () => {
+    if (onClock) { openAudio(audio); onClock(); } else if (c.started) c.reset(); else c.start();
+  };
   return (
     <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-4 py-4 flex items-center gap-4">
       <div className="min-w-0 flex-1">
         <p className="text-[13px] font-bold text-[#9a8b7b]">{label}</p>
         <p className="font-serif-ge text-[28px] font-bold leading-tight text-[#7a2028] [overflow-wrap:anywhere]">{name}</p>
-        <Btn size="sm" kind={c.started ? 'ghost' : 'primary'} icon={c.started ? <RotateCcw /> : <Play />} onClick={() => (c.started ? c.reset() : c.start())} className="mt-2.5">
-          {c.started ? 'თავიდან' : `${total === 60 ? '1 წუთი' : `${total} წამი`}`}
-        </Btn>
+        {(!online || onClock) && (
+          <Btn size="sm" kind={c.started ? 'ghost' : 'primary'} icon={c.started ? <RotateCcw /> : <Play />} onClick={tap} className="mt-2.5">
+            {c.started ? 'თავიდან' : seconds(total)}
+          </Btn>
+        )}
+        {online && !onClock && !c.started && <p className="mt-1.5 text-[12.5px] leading-snug text-[#9a8b7b]">{seconds(total)} — დროს მემატიანე ჩართავს</p>}
+        {children}
       </div>
       <Ring left={c.left} total={total} />
     </div>
   );
 };
 
-const Order: React.FC<{ g: SamGame; order: number[]; at: number; accused?: number[] }> = ({ g, order, at, accused = [] }) => (
+/** the speaking order: who spoke, who speaks, who is next; ⚖ by the day's accused */
+export const Order: React.FC<{ names: string[]; order: number[]; at: number; accused?: number[] }> = ({ names, order, at, accused = [] }) => (
   <ol className="flex flex-wrap gap-1.5" aria-label="რიგი">
     {order.map((i, k) => (
-      <li key={i} className={`inline-flex items-center gap-1 h-8 px-2.5 rounded-full text-[13px] font-bold ${k === at ? 'bg-[#7a2028] text-[#fbf6ec]' : k < at ? 'bg-[#f1e8d9] text-[#9a8b7b]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426]'}`}>
-        <span className="tabular-nums text-[11px] opacity-70">{k + 1}</span>{g.players[i].name}{accused.includes(i) && <Gavel className="w-3.5 h-3.5" aria-label="ბრალდებული" />}
+      <li key={i} className={`inline-flex items-center gap-1 min-h-8 px-2.5 py-1 rounded-full text-[13px] font-bold ${k === at ? 'bg-[#7a2028] text-[#fbf6ec]' : k < at ? 'bg-[#f1e8d9] text-[#9a8b7b]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426]'}`}>
+        <span className="tabular-nums text-[11px] opacity-70">{k + 1}</span>{names[i]}{accused.includes(i) && <Gavel className="w-3.5 h-3.5" aria-label="ბრალდებული" />}
       </li>
     ))}
   </ol>
@@ -114,7 +144,7 @@ export const MorningScreen: React.FC<Common> = ({ g, right, onBack, onClose, onN
   );
 };
 
-export const IntroScreen: React.FC<Common> = ({ g, right, onBack, onClose, onNext }) => {
+export const IntroScreen: React.FC<Common & { online?: boolean }> = ({ g, right, onBack, onClose, onNext, online }) => {
   const ph = g.phase;
   if (ph.kind !== 'intro') return null;
   const order = g.players.map((_, i) => i);
@@ -133,14 +163,17 @@ export const IntroScreen: React.FC<Common> = ({ g, right, onBack, onClose, onNex
           <p className="font-serif-ge text-[30px] font-bold leading-tight text-[#7a2028] [overflow-wrap:anywhere]">{g.players[ph.at].name}</p>
           <Hint className="mt-1">თავის ხელობას და ერთ წინადადებას თავის თავზე.</Hint>
         </div>
-        <Order g={g} order={order} at={ph.at} />
+        <Order names={g.players.map(p => p.name)} order={order} at={ph.at} />
+        {online && <Hint>მოლაპარაკე თავის ტელეფონზე აჭერს „დავასრულე“-ს და შემდეგი თავისით იწყებს.</Hint>}
         <Hint>ბრალდება და ხმის მიცემა დღეს არ არის — ბოლოს ისევ ღამე დგება.</Hint>
       </div>
     </TableScreen>
   );
 };
 
-export const DayScreen: React.FC<Common & { audio: AudioRef; onAccuse: (accused: number | null) => void }> = ({ g, audio, right, onBack, onClose, onNext, onAccuse }) => {
+export const DayScreen: React.FC<Common & { audio: AudioRef; onAccuse: (accused: number | null) => void; clock?: number; clockAt?: number; onClock?: () => void }> = ({
+  g, audio, right, onBack, onClose, onNext, onAccuse, clock, clockAt, onClock,
+}) => {
   const ph = g.phase;
   if (ph.kind !== 'day') return null;
   const speaker = ph.order[ph.at];
@@ -156,23 +189,52 @@ export const DayScreen: React.FC<Common & { audio: AudioRef; onAccuse: (accused:
     >
       <div className="py-2 space-y-4">
         {ph.at === 0 && <Words>„ბჭობა იწყება. თითოს ერთი სიტყვა აქვს: ვინ ეეჭვება და რატომ.“</Words>}
-        <Speaker key={`${ph.n}-${ph.at}`} name={g.players[speaker].name} total={speechOf(g)} audio={audio} />
+        <Speaker key={`${ph.n}-${ph.at}`} name={g.players[speaker].name} total={speechOf(g)} audio={audio} clock={clock} clockAt={clockAt} onClock={onClock} />
         <NameGrid
           players={g.players}
           ids={ph.order.filter(i => i !== speaker)}
           picked={mine !== null && mine !== undefined ? [mine] : []}
           onPick={i => onAccuse(mine === i ? null : i)}
-          label={<>სიტყვის ბოლოს შეუძლია ერთის დაბრალება: <span className="font-serif-ge whitespace-nowrap">„ვაბრალებ …“</span></>}
+          label={onClock
+            ? <>ბრალდებას მოლაპარაკე თავის ტელეფონზე ირჩევს — აქ ჩანს. საჭიროებისას შენც შეგიძლია მონიშნო.</>
+            : <>სიტყვის ბოლოს შეუძლია ერთის დაბრალება: <span className="font-serif-ge whitespace-nowrap">„ვაბრალებ …“</span></>}
         />
         {accused.length > 0 && <p className="text-[13.5px] leading-snug text-[#4a3426]"><span className="font-bold text-[#7a2028]">დღის ბრალდებულები:</span> {accused.map(i => g.players[i].name).join(', ')}</p>}
-        <Order g={g} order={ph.order} at={ph.at} accused={accused} />
+        <Order names={g.players.map(p => p.name)} order={ph.order} at={ph.at} accused={accused} />
+        {onClock && <Hint>„დავასრულე“-ს რომ დააჭერს, შემდეგი სიტყვა თავისით იწყება.</Hint>}
         <Hint>სხვები არ აწყვეტინებენ — ეს ბჭობის წესია. შეურაცხყოფა არ შეიძლება, მხოლოდ საბუთი.</Hint>
       </div>
     </TableScreen>
   );
 };
 
-export const VoteScreen: React.FC<Common & { onCounts: (counts: number[]) => void }> = ({ g, right, onBack, onClose, onNext, onCounts }) => {
+/** online: the hands as they come from the phones (the host only reads them) */
+const PhoneHands: React.FC<{ g: SamGame; candidates: number[]; ballots: (number | null)[] }> = ({ g, candidates, ballots }) => {
+  const one = candidates.length === 1;
+  const voters = live(g);
+  const waiting = voters.filter(i => ballots[i] === null || ballots[i] === undefined);
+  const rows = [
+    ...candidates.map(c => ({ key: String(c), label: one ? 'ციხეში' : g.players[c].name, n: voters.filter(i => ballots[i] === c).length })),
+    ...(one ? [{ key: 'no', label: 'არა', n: voters.filter(i => ballots[i] === NO).length }] : []),
+  ];
+  return (
+    <>
+      <ul className="space-y-2">
+        {rows.map(r => (
+          <li key={r.key} className="flex items-center gap-3 rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-4 py-3">
+            <span className="min-w-0 flex-1 font-serif-ge text-[18px] font-bold leading-tight text-[#4a3426] [overflow-wrap:anywhere]">{r.label}</span>
+            <span className="shrink-0 font-serif-ge text-[26px] font-bold tabular-nums text-[#7a2028]" aria-live="polite">{r.n}</span>
+          </li>
+        ))}
+      </ul>
+      <p className={`text-[13.5px] font-bold leading-snug tabular-nums ${waiting.length ? 'text-[#9a6a10]' : 'text-[#2f7d4f]'}`}>
+        ხმა მისცა {voters.length - waiting.length} / {voters.length}{waiting.length > 0 && ` · ელოდება: ${waiting.map(i => g.players[i].name).join(', ')}`}
+      </p>
+    </>
+  );
+};
+
+export const VoteScreen: React.FC<Common & { onCounts: (counts: number[]) => void; ballots?: (number | null)[] }> = ({ g, right, onBack, onClose, onNext, onCounts, ballots }) => {
   const ph = g.phase;
   if (ph.kind !== 'vote') return null;
   const voters = live(g).length;
@@ -180,6 +242,23 @@ export const VoteScreen: React.FC<Common & { onCounts: (counts: number[]) => voi
   const sum = ph.counts.reduce((a, b) => a + b, 0);
   const set = (k: number, v: number) => onCounts(ph.counts.map((c, i) => (i === k ? Math.max(0, Math.min(voters, v)) : c)));
   const first = g.players[ph.candidates[0]].name;
+  if (ballots) {
+    return (
+      <TableScreen
+        title={ph.round === 2 ? 'ხელახლა ხმის მიცემა' : 'ხმის მიცემა'}
+        right={right}
+        onClose={onClose}
+        footer={<Foot onBack={onBack}><Btn size="lg" full onClick={onNext} icon={<Gavel />} className={BIG}>შედეგი</Btn></Foot>}
+      >
+        <div className="py-2 space-y-4">
+          <Words>{one ? `„ვინ ამბობს, რომ ${first} ციხეში ჩაჯდეს? ხმა მიეცით ტელეფონზე.“` : '„ხმას ვაძლევთ ტელეფონზე: თითოეული ერთ ბრალდებულს ირჩევს.“'}</Words>
+          <PhoneHands g={g} candidates={ph.candidates} ballots={ballots} />
+          {one && <Hint>ციხეში ჯდება, თუ ხმების ნახევარზე მეტი აქვს: საჭიროა მინიმუმ <b>{majority(voters)}</b> ხმა {voters}-დან.</Hint>}
+          <Hint>ხმის შეცვლა შეიძლება, სანამ „შედეგს“ დააჭერ. ვინც ხმა არ მისცა, არავის მისცა.</Hint>
+        </div>
+      </TableScreen>
+    );
+  }
   return (
     <TableScreen
       title={ph.round === 2 ? 'ხელახლა ხმის მიცემა' : 'ხმის მიცემა'}
@@ -210,7 +289,7 @@ export const VoteScreen: React.FC<Common & { onCounts: (counts: number[]) => voi
   );
 };
 
-export const TieScreen: React.FC<Common & { audio: AudioRef }> = ({ g, audio, right, onBack, onClose, onNext }) => {
+export const TieScreen: React.FC<Common & { audio: AudioRef; clock?: number; clockAt?: number; onClock?: () => void }> = ({ g, audio, right, onBack, onClose, onNext, clock, clockAt, onClock }) => {
   const ph = g.phase;
   if (ph.kind !== 'tie') return null;
   const last = ph.at === ph.tied.length - 1;
@@ -223,14 +302,14 @@ export const TieScreen: React.FC<Common & { audio: AudioRef }> = ({ g, audio, ri
     >
       <div className="py-2 space-y-4">
         <Words>„ხმები გაიყო. {ph.tied.map(i => g.players[i].name).join(' და ')} თითო {TIE_SPEECH} წამს ლაპარაკობენ, მერე ხმას მხოლოდ მათზე ვაძლევთ.“</Words>
-        <Speaker key={`${ph.n}-${ph.at}`} name={g.players[ph.tied[ph.at]].name} total={TIE_SPEECH} audio={audio} />
+        <Speaker key={`${ph.n}-${ph.at}`} name={g.players[ph.tied[ph.at]].name} total={TIE_SPEECH} audio={audio} clock={clock} clockAt={clockAt} onClock={onClock} />
         <Hint>თუ ისევ ფრე იქნება, დღეს ციხეში არავინ ჯდება.</Hint>
       </div>
     </TableScreen>
   );
 };
 
-export const VerdictScreen: React.FC<Common> = ({ g, right, onBack, onClose, onNext }) => {
+export const VerdictScreen: React.FC<Common & { hands?: Ballots | null }> = ({ g, right, onBack, onClose, onNext, hands }) => {
   const ph = g.phase;
   if (ph.kind !== 'verdict') return null;
   const day = g.days.find(d => d.n === ph.n);
@@ -256,6 +335,7 @@ export const VerdictScreen: React.FC<Common> = ({ g, right, onBack, onClose, onN
             <Hint>{name} დამკვირვებელი ხდება{g.deal === 'cards' ? ', ბარათს პირქვე დებს ციხის ხალიჩაზე' : ''}. როლი არ ცხადდება.</Hint>
           </>
         ) : <Hint>{why}</Hint>}
+        {hands && <HandsList names={g.players.map(p => p.name)} hands={hands} />}
         <OverNote g={g} />
       </div>
     </TableScreen>
