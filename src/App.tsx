@@ -14,6 +14,7 @@ import {
   ChantSelectionProvider,
 } from './context';
 import { AppLinks, requestShortcut } from './components/app/AppLinks';
+import { requestWidgetLink } from './components/app/WidgetLinkAsk';
 import { NotesProvider } from './context/NotesContext';
 
 // Layout & Core Views
@@ -96,6 +97,8 @@ function AppContent() {
     if (prayerId && isPrayerId(prayerId)) openPrayer(prayerId);
     else if (page === 'psalter' || page === 'gz' || page === 'profile') navigateTo(page);
     else if (page === 'teacher') navigateTo('class');
+    // a widget not linked yet (android/ BaseWidget): the linking window
+    else if (page === 'widgets') requestWidgetLink();
     // the Android app's widgets and icon menu: a home-shelf button by its id
     else if (page === 'sc') {
       const id = url.searchParams.get('id');

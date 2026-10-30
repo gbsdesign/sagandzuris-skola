@@ -4,6 +4,6 @@
     <TextView android:id="@+id/title" android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:textColor="@color/wine" android:textSize="15sp" android:textStyle="bold" />
     <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="4dp"
-        android:gravity="center" android:text="დააკავშირე: აპი → პროფილი → „ვიჯეტის დაკავშირება“"
+        android:gravity="center" android:text="შეეხე და დააკავშირე"
         android:textColor="@color/muted" android:textSize="13sp" />
 </LinearLayout>
