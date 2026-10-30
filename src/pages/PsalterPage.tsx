@@ -8,6 +8,7 @@ import { KathismaGrid } from '../components/psalter/GroupBoard';
 import { MyKathismaCard } from '../components/psalter/MyKathismaCard';
 import { GroupHistory } from '../components/psalter/GroupHistory';
 import { GroupSettingsSheet } from '../components/psalter/GroupManage';
+import { DistributionSheet } from '../components/psalter/DistributionSheet';
 import { useKathismaActions } from '../components/psalter/useKathismaActions';
 import { openPsalterGroup, useSelectedGroupId } from '../components/psalter/selectedGroup';
 import { GroupMember, PsalterGroup, useGroupNow, useMyPsalterGroups } from '../hooks/usePsalter';
@@ -77,6 +78,7 @@ const GroupView: React.FC<{ group: PsalterGroup; canLead: boolean }> = ({ group,
   const { user } = useAuth();
   const uid = user!.uid;
   const [manage, setManage] = useState(false);
+  const [dist, setDist] = useState(false);
   const { cycle, slots, owners } = useGroupNow(group, uid);
   const actions = useKathismaActions(group, cycle);
   const isMember = group.memberIds.includes(uid);
@@ -102,7 +104,9 @@ const GroupView: React.FC<{ group: PsalterGroup; canLead: boolean }> = ({ group,
 
       <GroupHistory group={group} current={cycle} footer={<GroupExtras isMember={isMember} shiftDays={group.shiftDays} />} />
       {isMember && !canLead && <LeaveGroup group={group} />}
-      {canLead && <GroupSettingsSheet open={manage} onClose={() => setManage(false)} group={group} onDeleted={() => setManage(false)} />}
+      {canLead && <GroupSettingsSheet open={manage} onClose={() => setManage(false)} group={group} onDeleted={() => setManage(false)}
+        onDistribute={() => { setManage(false); setDist(true); }} />}
+      {canLead && <DistributionSheet open={dist} onClose={() => setDist(false)} group={group} owners={owners} />}
     </div>
   );
 };

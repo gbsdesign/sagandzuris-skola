@@ -490,7 +490,9 @@ async function runGroupHour(env, when) {
       const ks = due.get(row.uid) || [];
       if (shiftDay && (mine.get(row.uid) || []).length) {
         const list = mine.get(row.uid);
-        sends.push([row, { title: 'ფსალმუნთა ჯგუფი', body: `ამ ნახევარ თვეში შენი კანონია ${list.join(', ')} — ${group.name}`, tag: `shift-${group.id}`, url: `/?prayer=kathisma-${list[0]}` }]);
+        // „ნახევარი თვე“ is true only for the 1st and the 15th; other shift days just say „from today“
+        const when = shiftDaysOf(group).join() === '1,15' ? 'ამ ნახევარ თვეში' : 'დღეიდან';
+        sends.push([row, { title: 'ფსალმუნთა ჯგუფი', body: `${when} შენი კანონია ${list.join(', ')} — ${group.name}`, tag: `shift-${group.id}`, url: `/?prayer=kathisma-${list[0]}` }]);
       } else if (ks.length && (isDaily || isFinal)) {
         const body = isFinal
           ? `ციკლი დღეს მთავრდება — კანონი ${ks.join(', ')} ჯერ წაკითხული არ გაქვს.`

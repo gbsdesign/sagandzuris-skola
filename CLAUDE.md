@@ -399,7 +399,17 @@
   no standalone „ახალი ჯგუფი“, admin sees it on the class row). The user calls a kathisma „კანონი“ in the UI.
   Since 2026-10-28 the group's members follow its class (`addClassMember`/`removeClassMember`), who reads a kanon is set
   only in the kanon's window, the rest in one settings window (`GroupSettingsSheet`); „წავიკითხე“ on a kathisma also marks
-  my kanon.
+  my kanon (and, since 2026-10-30, one I took over to help — `useTakenByMe`).
+  Since 2026-10-30 (the user: „ხალხს ვერ ვუნაწილებ“; „1 კანონი 2 კაცი“): **at most two readers a kanon** (`MAX_READERS`; the
+  picker's `max`). The leader's „განაწილება“ row under the tiles (amber when kanons are free or people have none) opens
+  `psalter/DistributionSheet.tsx`: „ხალხი“ (a person → their 20 tiles, a tap gives/takes at once) and „კანონები“ (a kanon →
+  the picker). „ავტომატური შევსება“ = `fillDistribution` (keeps everyone, fills gaps: newcomer → free kanon, else one of a
+  busy reader's, else beside a lone reader; a free kanon → a shared kanon's second reader moves, else the least busy);
+  „ყველას თავიდან“ = `autoDistribute` (round by name, second readers past 20, extras past 40 wait). Every save goes through
+  `saveOwners` (failures shown) and keeps the old distribution in `psalterGroups.assignmentLog` (`withPast`, once per cycle,
+  last 12) so the history names who was to read then (`ownersThen`). A new class member gets a kanon at once
+  (`joinClassGroup` → `giveKanon`). The leader sees a line when the admin's section „ფსალმუნთა ჯგუფი“ isn't open (members
+  then see nothing). Two readers share one „წავიკითხე“ mark (either one's mark counts for the kanon).
 - **Teacher panel** (`pages/TeacherPage.tsx`, `components/teacher/`), **admin panel** (`pages/AdminPanelPage.tsx`,
   `components/admin/`): sections open/მალე/hidden (`settings/sections`); JSON export. The panel's recording-binding
   form and logo card were removed 2026-10-20 (the app still reads `settings/recordings` and `settings/logo`).

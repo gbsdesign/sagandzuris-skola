@@ -10,7 +10,7 @@ import { ReadingToolbar, useKhutsuri } from '../components/views/ReadingTools';
 import { useHabitsModel } from '../components/habits/useHabits';
 import { Btn } from '../components/ui/kit';
 import { useAccess } from '../hooks/useAccess';
-import { markRead, useMyPsalterGroups } from '../hooks/usePsalter';
+import { markRead, useMyPsalterGroups, useTakenByMe } from '../hooks/usePsalter';
 import { cycleOf, georgiaToday, kathismasOf, ownersIn } from '../utils/psalter';
 import { habitOfPrayer, rememberRead } from '../utils/prayerHabits';
 import {
@@ -177,8 +177,8 @@ export const PrayerPage: React.FC = () => {
 
 // At the end of a prayer: "წავიკითხე" ticks today's habit it belongs to (the morning prayers count for
 // "დილის და საღამოს ლოცვები"…; a chapter adds one თავი to "სახარება" or "სამოციქულო") and moves "გააგრძელე" past a finished chapter.
-// A kathisma ticks "ფსალმუნები" the same way, and when it is my kanon in a psalter group this cycle, the group's
-// kanon is marked read too (the one button for both).
+// A kathisma ticks "ფსალმუნები" the same way, and when it is my kanon in a psalter group this cycle — or one I took over
+// to help — the group's kanon is marked read too (the one button for both).
 const ReadMark: React.FC<{ prayerId: string }> = ({ prayerId }) => {
   const { user } = useAuth();
   const access = useAccess();
@@ -186,11 +186,13 @@ const ReadMark: React.FC<{ prayerId: string }> = ({ prayerId }) => {
   const [pressed, setPressed] = useState(false);
   useEffect(() => setPressed(false), [prayerId]);
   const { groups } = useMyPsalterGroups(user?.uid);
+  const taken = useTakenByMe(groups, user?.uid);
 
   const k = /^kathisma-(\d+)$/.exec(prayerId)?.[1];
   const kanonIn = !user || !k || access.section('medavitneoba') !== 'open' ? [] : groups.flatMap(g => {
     const c = cycleOf(georgiaToday(), g.cycleDays, g.shiftDays);
-    return g.memberIds.includes(user.uid) && kathismasOf(ownersIn(g.assignment, g.baseHalf, c.half), user.uid).includes(Number(k)) ? [{ g, c }] : [];
+    const mine = kathismasOf(ownersIn(g.assignment, g.baseHalf, c.half), user.uid).includes(Number(k)) || (taken[g.id] || []).includes(Number(k));
+    return g.memberIds.includes(user.uid) && mine ? [{ g, c }] : [];
   });
   const found = HABIT_ITEMS.find(h => h.id === habitOfPrayer(prayerId));
   const habit = found && access.section('chvevebi') === 'open' ? found : undefined;

@@ -4,6 +4,7 @@ import assert from 'node:assert/strict';
 import {
   cycleOf, previousCycle, nextCycle, georgiaToday, halfIndex, ownersIn, rebase, kathismasOf, wrap,
   autoDistribute, slotState, msLeft, formatRange, nextShiftDate, readCount,
+  fillDistribution, giveKanon, distributionState, changedReaders, withPast, ownersThen,
 } from '../src/utils/psalter';
 
 test('Georgian date, not the phone clock', () => {
@@ -63,11 +64,67 @@ test('a distribution edited now is stored for now', () => {
   assert.deepEqual(kathismasOf(owners, 'a'), [1, 4, 7, 10, 13, 16, 19]);
 });
 
-test('more than twenty readers: the rest wait in reserve', () => {
-  const ids = Array.from({ length: 23 }, (_, i) => `m${i}`);
-  const owners = autoDistribute(ids);
-  assert.deepEqual(kathismasOf(owners, 'm21'), []);
+const people = (n: number) => Array.from({ length: n }, (_, i) => `m${i}`);
+
+test('more than twenty readers: second readers, at most two a kathisma', () => {
+  const owners = autoDistribute(people(23));
   assert.deepEqual(kathismasOf(owners, 'm0'), [1]);
+  assert.deepEqual(owners[1], ['m0', 'm20']);
+  assert.deepEqual(kathismasOf(owners, 'm22'), [3]);
+  assert.deepEqual(distributionState(owners, people(23)).without, []);
+  // past forty only the extra ones wait
+  const big = autoDistribute(people(45));
+  assert.ok(Object.values(big).every(l => l.length === 2));
+  assert.deepEqual(distributionState(big, people(45)).without, ['m40', 'm41', 'm42', 'm43', 'm44']);
+});
+
+test('fewer than twenty readers: the round goes on, and the state says how many the busiest has', () => {
+  const owners = autoDistribute(people(7));
+  assert.deepEqual(kathismasOf(owners, 'm0'), [1, 8, 15]);
+  assert.deepEqual(distributionState(owners, people(7)).most, 3);
+  assert.deepEqual(distributionState(owners, people(7)).free, []);
+});
+
+test('filling keeps everyone in place: a newcomer takes one kathisma from the busiest reader', () => {
+  const before = autoDistribute(['a', 'b', 'c']);
+  const after = fillDistribution(before, ['a', 'b', 'c', 'd']);
+  assert.deepEqual(kathismasOf(after, 'd'), [19]);
+  assert.deepEqual(kathismasOf(after, 'a'), [1, 4, 7, 10, 13, 16]);
+  assert.deepEqual(changedReaders(before, after).sort(), ['a', 'd']);
+  // nothing to do → nothing changes
+  assert.deepEqual(changedReaders(after, fillDistribution(after, ['a', 'b', 'c', 'd'])), []);
+});
+
+test('filling: one who left frees their kathismas, and a shared reader moves to a free one', () => {
+  const twentyOne = autoDistribute(people(21)); // kathisma 1: m0 + m20
+  const readers = people(21).filter(u => u !== 'm5'); // m5 (kathisma 6) is gone
+  const after = fillDistribution(twentyOne, readers);
+  assert.deepEqual(after[6], ['m20']);
+  assert.deepEqual(after[1], ['m0']);
+  assert.deepEqual(changedReaders(twentyOne, after).sort(), ['m20', 'm5']);
+  // fewer than twenty: the freed kathismas go to the ones with the fewest
+  const small = fillDistribution(autoDistribute(['a', 'b', 'c']), ['a', 'c']);
+  assert.deepEqual(distributionState(small, ['a', 'c']).free, []);
+  assert.equal(kathismasOf(small, 'a').length + kathismasOf(small, 'c').length, 20);
+});
+
+test('giving one kathisma: free first, never a third reader', () => {
+  const full = autoDistribute(people(40));
+  assert.equal(giveKanon(full, 'new'), null);
+  assert.equal(giveKanon(full, 'm0'), null); // already reads one
+  const one = giveKanon({ 1: ['a'] }, 'b')!;
+  assert.deepEqual(one[2], ['b']);
+});
+
+test('history: a cycle before a change names the readers of its own distribution', () => {
+  const old = { assignment: rebase(autoDistribute(['a', 'b'])), baseHalf: halfIndex('2026-10-01'), shiftDays: [1, 15] };
+  const now = { assignment: rebase(autoDistribute(['c'])), baseHalf: halfIndex('2026-10-29'), shiftDays: [1, 15] };
+  const log = withPast([], '2026-10-29', old)!;
+  assert.equal(withPast(log, '2026-10-29', now), null); // once per cycle
+  const before = cycleOf('2026-10-27', 2);
+  assert.deepEqual(ownersThen(now, log, before.start, before.half)[1], ['b']); // the 15th moved a's 1 → 2
+  const after = cycleOf('2026-10-29', 2);
+  assert.deepEqual(ownersThen(now, log, after.start, after.half)[1], ['c']);
 });
 
 test('slot states', () => {

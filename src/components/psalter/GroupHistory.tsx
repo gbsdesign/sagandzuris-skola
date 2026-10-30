@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Check, ChevronDown, ChevronLeft, ChevronRight, History } from 'lucide-react';
 import { Card, CardTitle, IconBtn } from '../ui/kit';
-import { Cycle, KATHISMA_COUNT, Slots, formatRange, ownersIn, previousCycle } from '../../utils/psalter';
+import { Cycle, KATHISMA_COUNT, Slots, formatRange, ownersThen, previousCycle } from '../../utils/psalter';
 import { ALL_KATHISMAS, PsalterGroup, firstName, memberName, useCycleHistory } from '../../hooks/usePsalter';
 
 // The finished cycles, one at a time (‹ date ›, or pick from the list): who read which kathisma and which
@@ -25,8 +25,12 @@ export const GroupHistory: React.FC<{ group: PsalterGroup; current: Cycle; count
 
   const [at, setAt] = useState(0); // 0 = the latest finished cycle
   const row = rows[Math.min(at, rows.length - 1)];
-  // who was to read each kathisma then (by today's distribution turned to that cycle; whoever took it, if anyone)
-  const owners = useMemo(() => (row ? ownersIn(group.assignment, group.baseHalf, row.cycle.half) : {}), [row, group.assignment, group.baseHalf]);
+  // who was to read each kathisma then: the distribution that cycle used (kept in `assignmentLog` since 2026-10-30;
+  // older cycles fall back to today's), turned to its period; whoever took it, if anyone
+  const owners = useMemo(
+    () => (row ? ownersThen({ assignment: group.assignment, baseHalf: group.baseHalf, shiftDays: group.shiftDays }, group.assignmentLog, row.cycle.start, row.cycle.half) : {}),
+    [row, group.assignment, group.baseHalf, group.shiftDays, group.assignmentLog]
+  );
   const short = (uid?: string) => firstName(memberName(group, uid));
 
   const Frame: React.ElementType = bare ? 'div' : Card;

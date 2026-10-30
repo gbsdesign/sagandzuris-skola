@@ -1,14 +1,16 @@
 import { useEffect, useMemo, useState } from 'react';
 import {
-  collection, deleteField, doc, limit, onSnapshot, orderBy, query, runTransaction, setDoc, updateDoc, where,
+  arrayUnion, collection, deleteField, doc, limit, onSnapshot, orderBy, query, runTransaction, setDoc, updateDoc, where,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import {
-  Assignment, Cycle, KATHISMA_COUNT, Slot, Slots, cycleOf, georgiaToday, halfIndex, kathismasOf, normCycleDays, normShiftDays, ownersIn, responsible,
+  Assignment, Cycle, KATHISMA_COUNT, PastDistribution, Slot, Slots, cycleOf, georgiaToday, halfIndex, kathismasOf, normCycleDays, normShiftDays, ownersIn,
+  rebase, responsible, withPast,
 } from '../utils/psalter';
 
 // Firestore side of the psalter group:
-//   psalterGroups/{id}                 name, teachers, members, assignment (for baseHalf), cycleDays, reminders
+//   psalterGroups/{id}                 name, teachers, members, assignment (for baseHalf), cycleDays, reminders,
+//                                      assignmentLog (earlier distributions, for the history)
 //   psalterGroups/{id}/cycles/{start}  slots: { "7": { readBy, readAt, takenBy, takenAt, help } }
 
 export interface GroupMember {
@@ -33,6 +35,7 @@ export interface PsalterGroup {
   remindDaily: string; // "20:00" — a nudge to whoever hasn't read today; '' = off
   remindFinal: string; // "21:00" on the cycle's last day
   archived?: boolean; // its class is in the admin's archive: hidden with it
+  assignmentLog: PastDistribution[]; // earlier distributions (the history names who was to read then)
   createdAt?: string;
 }
 
@@ -53,8 +56,30 @@ export const toGroup = (id: string, d: any): PsalterGroup => ({
   remindDaily: typeof d.remindDaily === 'string' ? d.remindDaily : '20:00',
   remindFinal: typeof d.remindFinal === 'string' ? d.remindFinal : '21:00',
   ...(d.archived ? { archived: true } : {}),
+  assignmentLog: arr(d.assignmentLog)
+    .filter((e: any) => e && typeof e.until === 'string' && e.assignment && typeof e.baseHalf === 'number')
+    .map((e: any) => ({ until: e.until, assignment: e.assignment, baseHalf: e.baseHalf, shiftDays: normShiftDays(e.shiftDays) })),
   createdAt: d.createdAt || '',
 });
+
+/** The log field for a change of distribution now: the distribution in force so far is kept for the history. */
+export const distributionLog = (group: Pick<PsalterGroup, 'assignment' | 'baseHalf' | 'shiftDays' | 'assignmentLog'>, c: Cycle) => {
+  const next = withPast(group.assignmentLog, c.id, { assignment: group.assignment, baseHalf: group.baseHalf, shiftDays: group.shiftDays });
+  return next ? { assignmentLog: next } : {};
+};
+
+/** Who reads which kathisma, as of today's cycle (`owners` must be that cycle's); class members who are not in the
+ *  group yet (`joining`) join it. Throws when it can't be saved. */
+export const saveOwners = (group: PsalterGroup, owners: Record<number, string[]>, joining: GroupMember[] = []) => {
+  const c = cycleOf(georgiaToday(), group.cycleDays, group.shiftDays);
+  return updateDoc(doc(db, 'psalterGroups', group.id), {
+    assignment: rebase(owners),
+    baseHalf: c.half,
+    ...distributionLog(group, c),
+    ...(joining.length ? { members: arrayUnion(...joining), memberIds: arrayUnion(...joining.map(m => m.uid)) } : {}),
+    updatedAt: new Date().toISOString(),
+  });
+};
 
 const byName = (a: PsalterGroup, b: PsalterGroup) => a.name.localeCompare(b.name, 'ka');
 
@@ -120,6 +145,24 @@ export const useCycleSlots = (groupId?: string | null, cycleId?: string | null) 
       () => { setSlots({}); setLoading(false); });
   }, [groupId, cycleId]);
   return { slots, loading };
+};
+
+/** The kathismas I took over to help, per group, in each group's current cycle (live). */
+export const useTakenByMe = (groups: PsalterGroup[], uid?: string | null) => {
+  const [taken, setTaken] = useState<Record<string, number[]>>({});
+  const key = groups.map(g => `${g.id}:${cycleOf(georgiaToday(), g.cycleDays, g.shiftDays).id}`).join('|');
+  useEffect(() => {
+    if (!uid || !groups.length) { setTaken({}); return; }
+    const offs = groups.map(g => onSnapshot(doc(db, 'psalterGroups', g.id, 'cycles', cycleOf(georgiaToday(), g.cycleDays, g.shiftDays).id),
+      s => {
+        const slots = (s.data()?.slots as Slots) || {};
+        const mine = Object.entries(slots).filter(([, x]) => x?.takenBy === uid).map(([k]) => Number(k));
+        setTaken(t => ({ ...t, [g.id]: mine }));
+      },
+      () => setTaken(t => ({ ...t, [g.id]: [] }))));
+    return () => offs.forEach(off => off());
+  }, [key, uid]); // eslint-disable-line react-hooks/exhaustive-deps
+  return taken;
 };
 
 /** The latest cycles' marks, newest first (for the history). */
