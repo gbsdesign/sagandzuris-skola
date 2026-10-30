@@ -5,6 +5,7 @@ import { MARXVANI_CHANTS, ZATIKI_CHANTS } from './triodionBookChants';
 import { MOMIXSENENI_CHANTS } from './beatitudesBookChants';
 import { DZLISPIREBI_CHANTS, KATABASIEBI_CHANTS } from './irmosBookChants';
 import { DASADEBLEBI_CHANTS } from './sticheraBookChants';
+import { withAnthology } from './anthologyChants';
 
 // მწუხრი and ცისკარი chants of the Gelati school book (vol. I), in the book's table-of-contents order.
 // A chant that appears several times in the book is one item; each appearance is a version,
@@ -125,8 +126,9 @@ const buildChants = (prefix: string, entries: BookEntry[]): ChantItem[] => {
   });
 };
 
-export const MWUKHRI_CHANTS = buildChants('mw', MWUKHRI);
-export const CISKARI_CHANTS = buildChants('ck', CISKARI);
+// with the anthology's versions and new items (anthologyChants.ts), as the other tabs
+export const MWUKHRI_CHANTS = withAnthology(buildChants('mw', MWUKHRI));
+export const CISKARI_CHANTS = withAnthology(buildChants('ck', CISKARI));
 
 export const ALL_CHANTS: ChantItem[] = [...TSIRVA_CHANTS, ...MWUKHRI_CHANTS, ...CISKARI_CHANTS, ...SADGHESASWAULO_CHANTS,
   ...MARXVANI_CHANTS, ...ZATIKI_CHANTS, ...MOMIXSENENI_CHANTS, ...DZLISPIREBI_CHANTS, ...KATABASIEBI_CHANTS,
