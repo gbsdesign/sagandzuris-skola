@@ -10,7 +10,7 @@ import type { ChantItem, ChantVariant } from './tsirvaChants';
 import { EAST_ATTACH } from './anthologyEastChants';
 import { WEST_ATTACH } from './anthologyWestChants';
 
-export const ANTH_ROMAN: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 28: 'XXVIII', 29: 'XXIX' };
+export const ANTH_ROMAN: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X', 11: 'XI', 28: 'XXVIII', 29: 'XXIX' };
 // the East Georgian volumes: Kartli-Kakheti school (the school of the others is a guess from the volume)
 const ANTH_EAST = new Set([2, 3, 4, 10, 11]);
 
@@ -111,6 +111,15 @@ const NEW_ITEMS: { after?: string; before?: string; id: string; title: string; p
   // place of their own on the site
   { after: 'dz-8', id: 'dz-a8-12', title: 'ხმა უცნობია' },
   { after: 'dz-8', id: 'dz-a6-1', title: 'სხვა საგალობლები — ძლისპირთა წიგნებიდან' },
+  // vols X–XI (the Karbelashvilis' vigil): the opening of matins (from the midnight office), the weekdays' troparia,
+  // the eight tones' sessional hymns and hypakoe, two saints' troparia and the common magnifications
+  { before: 'ck-1', id: 'ck-a10-107', title: 'ცისკრის დასაწყისი (შუაღამისა ჟამნიდან)' },
+  { after: 'ck-v9-79', id: 'ck-a10-133', title: 'კვირის დღეების ტროპარები' },
+  { after: 'ck-v9-79', id: 'ck-a10-197', title: 'საცისკრო წარდგომანი რვა ხმისანი' },
+  { after: 'ck-10', id: 'ck-a11-40', title: 'იბაკონი აღდგომისანი რვა ხმისანი' },
+  { after: 'sd-16', id: 'sd-a10-93', title: 'წმიდა არჩილ მეფე — 15 იანვარი' },
+  { after: 'sd-17', id: 'sd-a10-94', title: 'ღირსნი ქსენოფონტე, მარიამი, არკადი და იოანე — 26 იანვარი' },
+  { after: 'sd-35', id: 'sd-a11-19', title: 'საზოგადო სადიდებლები — მოციქულთა, მღვდელთმთავართა, მოწამეთა, ღირსთა, მეფეთა' },
 ];
 
 // a group (feast, occasion of მარხვანი…) lists its own chants; a chant lists versions of itself

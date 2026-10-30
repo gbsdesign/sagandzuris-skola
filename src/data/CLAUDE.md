@@ -21,7 +21,7 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
 | `dasd1` / `dasd2` | „ჰიმნოგრაფიული კრებული" II (tones I–II, files 1–250) / III (tones III–IV, 1–277): stichera on "Lord, I have cried" + the psalm verses (plain and „ჭრელი"); code "ჰ.კ." | 0 | `sticheraBookChants.ts` — tab დასადებლები, 129 groups `ds-N` (tone · day — kind). A title with no music whose footnote says "იხილე — გვ. N, # M" is a cross-reference: its button opens the chant printed on p. N (no file of its own) |
 | `momix` | „ჰიმნოგრაფიული კრებული" I, troparia on the Beatitudes (Kereselidze mss., code "ე.კ."; no printed numbers — files 1–268 in book order) | 0 | `beatitudesBookChants.ts` — tab მომიხსენენი, 59 groups `mm-N` (tone + day) |
 
-| `a1`–`a8`, `a28`, `a29`, … | „ქართული გალობის ანთოლოგია“ (29 vols, galobani.ge PDFs: the user's Downloads, Drive „01 ანთოლოგიის ტომეულები“, or `https://pub-f947f7afe8cc44c4928fdba6e2fbb528.r2.dev/antologia_<vol>.pdf`), only versions the books above lack; number with a letter → file number (vols I–III and XXVIII: 76a = 761; from vol. IV on ×100: 12b = 1202, because vol. IV has both 12b and №122; `numLabel` shows „76a“); a litany of short numbers = one unit file named by its first number (`numLabel` „98–107“) | PDF = book | `src/data/anthologyChants.ts` (`ATTACH` by chant id — any tab — and `NEW_ITEMS` after or before an item; East Georgian vols II–IV in `anthologyEastChants.ts` → the ქ.კ. row, vol. V on in `anthologyWestChants.ts` → გ.ს.); the rite tabs in `riteChants.ts` |
+| `a1`–`a11`, `a28`, `a29`, … | „ქართული გალობის ანთოლოგია“ (29 vols, galobani.ge PDFs: the user's Downloads, Drive „01 ანთოლოგიის ტომეულები“, or `https://pub-f947f7afe8cc44c4928fdba6e2fbb528.r2.dev/antologia_<vol>.pdf`), only versions the books above lack; number with a letter → file number (vols I–III and XXVIII: 76a = 761; from vol. IV on ×100: 12b = 1202, because vol. IV has both 12b and №122; `numLabel` shows „76a“); a litany of short numbers = one unit file named by its first number (`numLabel` „98–107“) | PDF = book | `src/data/anthologyChants.ts` (`ATTACH` by chant id — any tab — and `NEW_ITEMS` after or before an item; East Georgian vols II–IV and X–XI in `anthologyEastChants.ts` → the ქ.კ. row, the others from vol. V in `anthologyWestChants.ts` → გ.ს.); the rite tabs in `riteChants.ts` |
 | `song` | Admission-program songs (files 1–10; 9–10 are scans: pictures only, no synth) | — | `songBookChants.ts` from `abituriProgram.ts` (`notes: N`); ids `sg-N`, in `NOTES_LISTS` only (no service tab, not in search) |
 
 - Song notes: Finale/Petrucci PDFs from the user's Drive (abituri page folders), read with the books' OMR + `NO_WIN2MAC=1`
@@ -225,3 +225,16 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   place of their own, to „სხვა საგალობლები — ძლისპირთა წიგნებიდან“ (`dz-a6-1`). A notes match with other words (a sticheron
   sung to an irmos' tune, vol. VIII's „ქება ქებულთა“ №203–220 vs vol. I) is not a duplicate: words are compared by their
   first 12 letters. Left out: VIII №202 „ფეხის-ბანა“ (the archdeacon's one-voice recitation). Placements are guesses.
+- Vols. IX–XI (2026-10-30): IX (Kereselidze's Pascha, ms. Q692, გ.ს.) → 101 versions: Holy Saturday's matins → mx-20, the
+  Paschal night → zt-1…7 (canon I–VI zt-2, VII–IX zt-3, praises zt-4, hours zt-5, liturgy and Bright Week prokeimena zt-6,
+  Thomas Sunday zt-7); its canon's troparia match vol. VIII's irmoi by notes but have other words — kept. X–XI (the Karbelashvilis'
+  vigil, ქ.კ.; X 83 + XI 188 versions, 94 + 16 duplicates mostly of `kk` and `karb`): vespers → mw-*, matins → ck-*, a feast's
+  vespers troparion („ოხითა“) and magnification („სადიდებელი“) → its sd item; new items (the user chose the weekdays „ცისკარში,
+  დღის მიხედვით“): ck-a10-107 „ცისკრის დასაწყისი (შუაღამისა ჟამნიდან)“ before ck-1, ck-a10-133 „კვირის დღეების ტროპარები“ and
+  ck-a10-197 „საცისკრო წარდგომანი რვა ხმისანი“ after ck-v9-79, ck-a11-40 „იბაკონი აღდგომისანი“ after ck-10, sd-a10-93
+  „წმიდა არჩილ მეფე — 15 იანვარი“, sd-a10-94 „ღირსნი ქსენოფონტე…“ (dates from the app's church calendar), sd-a11-19
+  „საზოგადო სადიდებლები“. The matins' anabathmoi of all eight tones (XI №48–133) are versions of ck-11. Vols. X–XI print
+  lettered numbers „55-b.“ (`head_num`); their TOC rows carry the section („ორშაბათსა“…) the placement uses. The words check
+  for same-tune duplicates applies only to matches in the books of shared tunes (dasd, momix, v8, a6–a8).
+  `MWUKHRI_CHANTS`/`CISKARI_CHANTS` were not `withAnthology` before 2026-10-30, so vol. VII–VIII's 14 pieces there were hidden.
+  The OMR warns of a voice 2 beats short in IX №70–82 (the 9th ode's refrains: a divided first voice) — not fixed.
