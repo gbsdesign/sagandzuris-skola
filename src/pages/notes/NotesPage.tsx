@@ -25,7 +25,7 @@ import { needsReflow, reflowScore, type Piece, type Reflow } from '../../utils/s
 import { ChantPlayer } from '../../components/ChantPlayer';
 import { LearnMode } from '../../components/learn/LearnMode';
 import { takeLearn } from '../../utils/learnOpen';
-import { markerAt } from '../../utils/learn';
+import { beatAt, markerAt } from '../../utils/learn';
 import type { Voice } from '../../utils/pathItems';
 import { NpStepper } from './NpStepper';
 import { getAudioArrayBufferFromIdb } from '../../utils/audioIdb';
@@ -166,6 +166,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const sheetsRef = useRef<HTMLDivElement>(null);
   const hlRef = useRef<HTMLDivElement>(null);
   const ballRef = useRef<HTMLDivElement>(null);
+  const colRef = useRef<HTMLDivElement>(null);
   const sysRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const fillRef = useRef<HTMLDivElement>(null);
   const knobRef = useRef<HTMLDivElement>(null);
@@ -223,6 +224,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const holdAnchor = useRef(true);
   const pinching = useRef(false);
   const draggingTrack = useRef(false);
+  const ballDrag = useRef<{ dx: number; dy: number; beat: number } | null>(null); // the ball held by a finger
 
   const land = orient === 'land', wide = orient === 'desk';
   const gutter = wide ? 28 : land ? 14 : 8;
@@ -305,21 +307,35 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     placeHL(false);
   }, [placeHL]);
 
-  // the ball: shown only while the synthesizer sounds, on the top edge of the playing line. The page has no note
-  // positions, so its place across the line is estimated from the note lengths (markerAt, as in „სწავლა“).
+  // the ball: on the top edge of the line the synthesizer plays, while it sounds or stands paused mid-way (it can be
+  // dragged then), and under it a narrow soft stripe over all the voices — the notes sounding now. The page has no note
+  // positions, so the place across the line is estimated from the note lengths (markerAt, as in „სწავლა“).
+  const lastBall = useRef({ k: -1, beat: 0 });
   const placeBall = useCallback((k: number, beat: number) => {
-    const ball = ballRef.current, sh = sheetsRef.current;
-    const el = k >= 0 ? sysRefs.current[k] : null;
-    if (!ball) return;
-    if (!sh || !el || !score) { ball.style.opacity = '0'; return; }
+    const ball = ballRef.current, col = colRef.current, sh = sheetsRef.current;
+    const el = k >= 0 && !church ? sysRefs.current[k] : null;
+    if (!ball || !col) return;
+    lastBall.current = { k, beat };
+    if (!sh || !el || !score) {
+      ball.style.opacity = col.style.opacity = '0';
+      ball.style.pointerEvents = 'none';
+      return;
+    }
     const s = score.sys[k];
     const px = s[1] + markerAt(score, k, beat) * s[3]; // x on the page picture, 0–1
     const x0 = Number(el.dataset.x0), x1 = Number(el.dataset.x1); // the part of the line this button covers
     const f = clamp((px - x0) / (x1 - x0 || 1), 0, 1);
     const sr = sh.getBoundingClientRect(), r = el.getBoundingClientRect();
-    ball.style.transform = `translate(${(r.left - sr.left + f * r.width).toFixed(1)}px, ${(r.top - sr.top).toFixed(1)}px)`;
+    const x = r.left - sr.left + f * r.width, y = r.top - sr.top;
+    ball.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
     ball.style.opacity = '1';
-  }, [score]);
+    ball.style.pointerEvents = 'auto';
+    const w = clamp(r.width * 0.045, 14, 30); // about one note wide
+    col.style.width = `${w.toFixed(1)}px`;
+    col.style.height = `${r.height.toFixed(1)}px`;
+    col.style.transform = `translate(${(x - w / 2).toFixed(1)}px, ${y.toFixed(1)}px)`;
+    col.style.opacity = '1';
+  }, [score, church]);
 
   // ---------- size: fit the screen width, times the zoom of this orientation
   const fitWidth = useCallback(() => {
@@ -329,6 +345,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const applyWidth = (w: number) => {
     if (sheetsRef.current) sheetsRef.current.style.width = `${Math.round(w)}px`;
     placeHL(true);
+    placeBall(lastBall.current.k, lastBall.current.beat); // a paused ball follows the new size
   };
 
   useLayoutEffect(() => {
@@ -554,9 +571,9 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     if (durRef.current) durRef.current.textContent = fmt(synth.duration / speed);
     if (miniRef.current && synth.playing) miniRef.current.style.width = `${f * 100}%`;
     const beat = synth.toBeat(sec);
-    const k = synth.playing || sec > 0 ? score.sys.findIndex(s => beat >= s[5] && beat < s[6]) : -1;
+    const k = synth.playing || sec > 0 || ballDrag.current ? score.sys.findIndex(s => beat >= s[5] && beat < s[6]) : -1;
     highlight(k);
-    placeBall(synth.playing && ballOnRef.current ? k : -1, beat);
+    placeBall(ballOnRef.current ? k : -1, beat);
   }, [synth, score, speed, highlight, placeBall]);
   useEffect(() => {
     if (!synth) return;
@@ -564,11 +581,14 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     paint(synth.position());
     if (!playing) return;
     let raf = 0;
-    const loopFrame = () => { if (!draggingTrack.current) paint(synth.position()); raf = requestAnimationFrame(loopFrame); };
+    const loopFrame = () => { if (!draggingTrack.current && !ballDrag.current) paint(synth.position()); raf = requestAnimationFrame(loopFrame); };
     raf = requestAnimationFrame(loopFrame);
     return () => cancelAnimationFrame(raf);
   }, [synth, playing, paint, highlight, placeBall]);
   useEffect(() => { setPlaying(false); }, [synth]);
+  // the ◉ switch shows or hides a paused ball at once
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(() => { if (synth) paint(synth.position()); }, [ballOn]);
   useEffect(() => { synth?.setSpeed(speed); }, [synth, speed]);
   useEffect(() => { synth?.setTranspose(transpose); }, [synth, transpose]);
   useEffect(() => { voiceOn.forEach((on, i) => synth?.setMuted(i, !on)); }, [synth, voiceOn]);
@@ -593,6 +613,49 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     synth.seek(sec);
     paint(sec);
     if (!synth.playing) { setRecPause(n => n + 1); await synth.play(); setPlaying(true); }
+  };
+  // Dragging the ball (the user's wish, 2026-10-30): it moves to the note start nearest the finger on whatever line the
+  // finger is over, and on release the synthesizer plays from that note — also when it stood paused.
+  const ballMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = ballDrag.current;
+    if (!d || !synth || !score) return;
+    const x = e.clientX + d.dx, y = e.clientY + d.dy + 6; // the ball's centre, a little inside the line under it
+    let k = -1, near = Infinity;
+    sysRefs.current.forEach((el, i) => {
+      if (!el || i >= score.sys.length) return;
+      const r = el.getBoundingClientRect();
+      const gap = y < r.top ? r.top - y : y > r.bottom ? y - r.bottom : 0;
+      if (gap < near) { near = gap; k = i; }
+    });
+    const el = k >= 0 ? sysRefs.current[k] : null;
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const f = clamp((x - r.left) / (r.width || 1), 0, 1);
+    const x0 = Number(el.dataset.x0), x1 = Number(el.dataset.x1);
+    const s = score.sys[k];
+    d.beat = beatAt(score, k, (x0 + f * (x1 - x0) - s[1]) / (s[3] || 1));
+    paint(synth.toSec(d.beat));
+  };
+  const ballDown = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!synth || church || (e.pointerType === 'mouse' && e.button !== 0)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    const r = e.currentTarget.getBoundingClientRect();
+    ballDrag.current = { dx: r.left + r.width / 2 - e.clientX, dy: r.top + r.height / 2 - e.clientY, beat: synth.toBeat(synth.position()) };
+    e.currentTarget.setPointerCapture(e.pointerId);
+    e.currentTarget.classList.add('drag');
+    triggerHaptic(8);
+  };
+  const ballUp = async (e: React.PointerEvent<HTMLDivElement>) => {
+    const d = ballDrag.current;
+    if (!d) return;
+    ballDrag.current = null;
+    e.currentTarget.classList.remove('drag');
+    if (!synth || church) return;
+    const sec = synth.toSec(d.beat);
+    synth.seek(sec);
+    paint(sec);
+    if (!synth.playing) { triggerHaptic(10); setRecPause(n => n + 1); await synth.play(); setPlaying(true); }
   };
   const restart = () => { if (!synth) return; triggerHaptic(8); const at = loop.a ?? 0; synth.seek(at); paint(at); };
   const trackFrac = (e: React.PointerEvent, el: HTMLElement) => { const r = el.getBoundingClientRect(); return clamp((e.clientX - r.left) / r.width, 0, 1); };
@@ -916,7 +979,17 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                 </React.Fragment>
               ))}
               <div ref={hlRef} className="np-hl" aria-hidden />
-              <div ref={ballRef} className="np-ball" aria-hidden />
+              <div ref={colRef} className="np-col" aria-hidden />
+              <div
+                ref={ballRef}
+                className="np-ball"
+                aria-hidden
+                onPointerDown={ballDown}
+                onPointerMove={ballMove}
+                onPointerUp={ballUp}
+                onPointerCancel={ballUp}
+                onClick={e => e.stopPropagation()}
+              />
             </div>
           </div>
 

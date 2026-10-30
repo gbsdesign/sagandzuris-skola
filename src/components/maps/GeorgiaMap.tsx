@@ -399,7 +399,7 @@ const SongItem: React.FC<SongItemProps> = ({ id, song, showRegion, isOpen: open,
                     {url ? (
                       <PreviewButton
                         id={`${song.id}~${i}`}
-                        onToggle={() => toggleAudioPreview(`${song.id}~${i}`, url)}
+                        onToggle={() => toggleAudioPreview(`${song.id}~${i}`, url, { title: song.title, artist: t.label })}
                         label={`მოსმენა: ${t.label}`}
                         inline
                       />

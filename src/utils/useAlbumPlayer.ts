@@ -4,13 +4,18 @@ import { stopPreview } from './listPreview';
 import { getCachedAudioUrl } from './audioCache';
 import { hasTrack } from './offlineFiles';
 import { triggerHaptic } from './haptics';
+import { followElement, hideFromControls, showInControls } from './mediaControls';
 
 // The player of a list of single recordings (the chant albums, the Folklore Centre's song albums): one recording
-// sounds at a time, from the device when it was kept for offline use; hiding the app pauses, leaving the page stops.
+// sounds at a time, from the device when it was kept for offline use. It goes on while the app is in the background
+// and shows in the phone's controls (utils/mediaControls.ts); leaving the page stops it.
 
 export const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 
 type Phase = 'loading' | 'playing' | 'paused';
+
+/** What the phone's controls call the recording */
+export interface TrackName { title: string; artist?: string }
 
 export const useAlbumPlayer = () => {
   const audio = useRef<HTMLAudioElement | null>(null);
@@ -21,15 +26,10 @@ export const useAlbumPlayer = () => {
   const [time, setTime] = useState(0);
   const [dur, setDur] = useState(0);
 
-  useEffect(() => {
-    // hiding the app pauses; leaving the album stops
-    const onHide = () => { if (document.hidden) audio.current?.pause(); };
-    document.addEventListener('visibilitychange', onHide);
-    return () => {
-      document.removeEventListener('visibilitychange', onHide);
-      const a = audio.current;
-      if (a) { a.pause(); a.removeAttribute('src'); a.load(); }
-    };
+  useEffect(() => () => {
+    // leaving the album stops
+    const a = audio.current;
+    if (a) { a.pause(); hideFromControls(a); a.removeAttribute('src'); a.load(); }
   }, []);
 
   const element = () => {
@@ -38,6 +38,7 @@ export const useAlbumPlayer = () => {
     // the audio Worker answers only requests that carry the site's Origin
     a.crossOrigin = 'anonymous';
     a.preload = 'metadata';
+    followElement(a);
     a.ontimeupdate = () => setTime(a.currentTime);
     a.ondurationchange = () => setDur(Number.isFinite(a.duration) ? a.duration : 0);
     a.onwaiting = () => setPhase('loading');
@@ -53,7 +54,7 @@ export const useAlbumPlayer = () => {
     a.play().catch(() => { if (current.current === id) setPhase('paused'); });
   };
 
-  const toggle = (id: string) => {
+  const toggle = (id: string, name?: TrackName) => {
     triggerHaptic(12);
     const a = element();
     if (current.current === id) {
@@ -62,6 +63,7 @@ export const useAlbumPlayer = () => {
       return;
     }
     current.current = id;
+    showInControls(a, name?.title || 'ჩანაწერი', name?.artist);
     setCur(id);
     setTime(0);
     setDur(0);

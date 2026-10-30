@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { afterTry, allLearned, assignedProgress, learnedShare, learnTakeId, markerAt, melodyIn, nextReviewDay, parseLearnTakeId, parseSongPiece, partState, partsAtBreaths, partsOfRecording, partsOfScore, reviewsDue, songPiece, timelineIn, wordsForPart } from '../src/utils/learn';
+import { afterTry, allLearned, assignedProgress, beatAt, learnedShare, learnTakeId, markerAt, melodyIn, nextReviewDay, parseLearnTakeId, parseSongPiece, partState, partsAtBreaths, partsOfRecording, partsOfScore, reviewsDue, songPiece, timelineIn, wordsForPart } from '../src/utils/learn';
 import type { BookScore } from '../src/utils/chantSynth';
 
 const score = (sys: BookScore['sys'], voices: BookScore['voices'] = [[]], dur = 40): BookScore =>
@@ -70,6 +70,17 @@ test('the marker moves across a line: after the clef at the start, near the end 
   // the long note (4 beats) gets more room than a short one, but not four times as much
   const short = xs[1] - xs[0], long = markerAt(s, 0, 6) - xs[2];
   assert.ok(long > short && long < 4 * short);
+});
+
+test('a dragged ball lands on the nearest note start of the line', () => {
+  const v: BookScore['voices'][number] = [[0, 1, 60], [1, 1, 62], [2, 4, 64], [6, 1, 65]];
+  const s = score([[0, 0, 0, 1, 1, 0, 7]], [v], 7);
+  // every note start's own place gives that start back
+  for (const b of [0, 1, 2, 6]) assert.equal(beatAt(s, 0, markerAt(s, 0, b)), b);
+  // a bit past a start stays on it; the far edges give the first and the last note
+  assert.equal(beatAt(s, 0, markerAt(s, 0, 2) + 0.01), 2);
+  assert.equal(beatAt(s, 0, 0), 0);
+  assert.equal(beatAt(s, 0, 1), 6);
 });
 
 test('a recording is cut at its pauses', () => {

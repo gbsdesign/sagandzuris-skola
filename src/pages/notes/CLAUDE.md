@@ -41,9 +41,12 @@ moving to the next chant in service order.
 - Resume where you stopped; next/previous chant in service or program order.
 - Tap-a-line plays only while the synth panel is open. Playing one player stops the other.
 - **Never auto-scroll** to the playing line.
-- **Synth ball** (2026-10-28): while the synthesizer plays, a small ball (`.np-ball`) glides on the top edge of the playing
-  line — its x is estimated from note lengths (`markerAt`, as in „სწავლა“), not exact. Shown only while playing (hidden on
-  pause). On/off by the ◉ button in the synth panel (`sagandzuri_ball`, on by default, remembered on the device).
+- **Synth ball** (2026-10-28, reworked 2026-10-30): a small ball (`.np-ball`, a 9.6px dot inside an invisible 40px handle)
+  glides on the top edge of the playing line — its x is estimated from note lengths (`markerAt`, as in „სწავლა“), not exact.
+  Shown while the synth plays and while it stands paused mid-way (hidden at the start/end and in church mode). Under it a
+  narrow soft stripe over all the voices (`.np-col`, `--dusk-col`) marks the notes sounding now. A finger drags the ball to
+  any line; it snaps to the nearest note start (`beatAt`, the inverse of `markerAt`) and on release the synth plays from there,
+  also from a pause. On/off by the ◉ button in the synth panel (`sagandzuri_ball`, on by default, remembered on the device).
 - **„გუნდი მომყვება“** (2026-10-29, the user's choice: the phones turn by themselves): on the program page the teacher turns
   it on (needs the program sent; `sg-lead` in sessionStorage); every chant they open from the program goes into the class
   document's `live` { vid, at, by } (`liturgy.lead`; no rules change — teachers may update their class). A member whose program

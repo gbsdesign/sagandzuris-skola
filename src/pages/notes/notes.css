@@ -5,7 +5,7 @@
   --chrome:rgba(251,247,240,.94); --chrome-line:#e4d8c4;
   --ink:#2a2017; --ink-2:#574739; --muted:#8c7c6b; --faint:#b8aa97; --line:#e4d8c4; --line-2:#d6c8b1;
   --wine:#7a2028; --wine-soft:#f5e8e5; --wine-ink:#fff; --ok:#2f7a4f;
-  --dusk:#6c5781; --dusk-2:#56456a; --dusk-soft:#efeaf3; --dusk-line:#dcd2e6; --dusk-hl:rgba(108,87,129,.13); --dusk-ring:rgba(108,87,129,.5); --sys-hover:rgba(108,87,129,.07);
+  --dusk:#6c5781; --dusk-2:#56456a; --dusk-soft:#efeaf3; --dusk-line:#dcd2e6; --dusk-hl:rgba(108,87,129,.13); --dusk-col:rgba(108,87,129,.24); --dusk-ring:rgba(108,87,129,.5); --sys-hover:rgba(108,87,129,.07);
   --synth-bg:linear-gradient(#f9f7fb,#f3eff7);
   --amber:#b4620e; --amber-btn:#dc8a22; --amber-soft:#fcf1df; --amber-line:#efd6a6;
   --rec-bg:linear-gradient(#fffaf2,#fcf2e2);
@@ -42,7 +42,7 @@
   --chrome:rgba(24,20,16,.94); --chrome-line:#372d24;
   --ink:#eee4d6; --ink-2:#cbbca8; --muted:#968672; --faint:#6b5f50; --line:#372d24; --line-2:#463a2f;
   --wine:#e08891; --wine-soft:#3a2327; --wine-ink:#1d0f11; --ok:#7cc79a;
-  --dusk:#a58fc0; --dusk-2:#cbb7e0; --dusk-soft:#2c2535; --dusk-line:#463b55; --dusk-hl:rgba(203,183,224,.15); --dusk-ring:rgba(203,183,224,.6); --sys-hover:rgba(203,183,224,.08);
+  --dusk:#a58fc0; --dusk-2:#cbb7e0; --dusk-soft:#2c2535; --dusk-line:#463b55; --dusk-hl:rgba(203,183,224,.15); --dusk-col:rgba(203,183,224,.22); --dusk-ring:rgba(203,183,224,.6); --sys-hover:rgba(203,183,224,.08);
   --synth-bg:linear-gradient(#201b26,#1c1821);
   --amber:#f0b062; --amber-btn:#d48a2b; --amber-soft:#34271a; --amber-line:#574024;
   --rec-bg:linear-gradient(#241d14,#1f1910);
@@ -326,8 +326,16 @@
 @keyframes np-flash{0%,100%{box-shadow:inset 0 0 0 0 transparent}35%{box-shadow:inset 0 0 0 1.5px var(--dusk-ring);background:var(--sys-hover)}}
 .np-hl{position:absolute;z-index:2;border-radius:8px;background:var(--dusk-hl);box-shadow:inset 0 0 0 1.5px var(--dusk-ring),0 0 22px -6px var(--dusk-ring);opacity:0;pointer-events:none;transition:top .55s cubic-bezier(.3,.7,.2,1),left .55s cubic-bezier(.3,.7,.2,1),width .55s cubic-bezier(.3,.7,.2,1),height .55s cubic-bezier(.3,.7,.2,1),opacity .35s}
 .np-hl.nt{transition:none}
-/* the ball over the notes while the synthesizer plays: its centre sits on the top edge of the playing line */
-.np-ball{position:absolute;left:-6px;top:-7px;z-index:3;width:12px;height:12px;border-radius:50%;background:var(--dusk);box-shadow:0 0 0 2px var(--surface),0 0 12px 1px var(--dusk-ring);opacity:0;pointer-events:none;transition:opacity .25s;will-change:transform}
+/* the ball over the notes (synthesizer): its centre sits on the top edge of the playing line, while the synthesizer plays
+   or stands paused mid-way. A finger drags it to any line; let go, the music plays from the note under it. The dot is
+   9.6px (12px until 2026-10-30, the user: 20% smaller) inside an invisible 40px handle. */
+.np-ball{position:absolute;left:-20px;top:-20px;z-index:3;width:40px;height:40px;display:grid;place-items:center;opacity:0;pointer-events:none;touch-action:none;cursor:grab;-webkit-tap-highlight-color:transparent;transition:opacity .25s;will-change:transform}
+.np-ball::after{content:"";width:9.6px;height:9.6px;border-radius:50%;background:var(--dusk);box-shadow:0 0 0 1.6px var(--surface),0 0 10px 1px var(--dusk-ring);transition:transform .15s ease}
+.np-ball.drag{cursor:grabbing}
+.np-ball.drag::after{transform:scale(1.4)}
+/* under the ball: a narrow soft stripe over all the voices of the line — the notes sounding now (their place is
+   estimated from the note lengths, so it sits on them only roughly) */
+.np-col{position:absolute;left:0;top:0;z-index:2;width:16px;height:0;border-radius:6px;background:linear-gradient(90deg,transparent,var(--dusk-col) 30%,var(--dusk-col) 70%,transparent);opacity:0;pointer-events:none;transition:opacity .25s;will-change:transform}
 .np-loading{height:260px;display:grid;place-items:center;color:var(--muted);font-size:13px;font-weight:600;text-align:center;padding:0 16px}
 .np-loading svg{width:26px;height:26px}
 .np-band{display:flex;align-items:center;justify-content:center;padding-top:14px;padding-bottom:4px;opacity:var(--orn-op);filter:var(--orn-filter)}
