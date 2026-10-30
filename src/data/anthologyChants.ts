@@ -10,7 +10,7 @@ import type { ChantItem, ChantVariant } from './tsirvaChants';
 import { EAST_ATTACH } from './anthologyEastChants';
 import { WEST_ATTACH } from './anthologyWestChants';
 
-export const ANTH_ROMAN: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X', 11: 'XI', 28: 'XXVIII', 29: 'XXIX' };
+export const ANTH_ROMAN: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X', 11: 'XI', 12: 'XII', 13: 'XIII', 28: 'XXVIII', 29: 'XXIX' };
 // the East Georgian volumes: Kartli-Kakheti school (the school of the others is a guess from the volume)
 const ANTH_EAST = new Set([2, 3, 4, 10, 11]);
 
@@ -119,11 +119,29 @@ const NEW_ITEMS: { after?: string; before?: string; id: string; title: string; p
   { after: 'ck-10', id: 'ck-a11-40', title: 'იბაკონი აღდგომისანი რვა ხმისანი' },
   { after: 'sd-16', id: 'sd-a10-93', title: 'წმიდა არჩილ მეფე — 15 იანვარი' },
   { after: 'sd-17', id: 'sd-a10-94', title: 'ღირსნი ქსენოფონტე, მარიამი, არკადი და იოანე — 26 იანვარი' },
-  { after: 'sd-35', id: 'sd-a11-19', title: 'საზოგადო სადიდებლები — მოციქულთა, მღვდელთმთავართა, მოწამეთა, ღირსთა, მეფეთა' },
+  { after: 'sd-35', id: 'sd-a11-19', title: 'საზოგადო სადიდებლები — მოციქულთა, მღვდელთმთავართა, მოწამეთა, ღირსთა, მეფეთა' },  // vol. XII: the aposticha of Saturday's great vespers, eight tones
+  { after: 'mw-16', id: 'mw-a12-160', title: 'სტიქარონის დასდებელნი აღდგომისანი რვა ხმისანი' },
+  // vol. XIII: saints the site had no feast for, with the book's old-style date (the user's choice)
+  { after: 'sd-4', id: 'sd-a13-10', title: 'წმიდა იოსებ ალავერდელი — 15 სექტემბერი' },
+  { after: 'sd-4', id: 'sd-a13-11', title: 'წმიდანი ბიძინა, შალვა და ელიზბარ — 18 სექტემბერი' },
+  { after: 'sd-6', id: 'sd-a13-15', title: 'წმიდანი დავით და კონსტანტინე — 2 ოქტომბერი' },
+  { after: 'sd-6', id: 'sd-a13-16', title: 'წმიდა გრიგოლ ხანძთელი — 5 ოქტომბერი' },
+  { after: 'sd-6', id: 'sd-a13-17', title: 'წმიდა დიდმოწამე დიმიტრი — 26 ოქტომბერი' },
+  { after: 'sd-6', id: 'sd-a13-18', title: 'წმიდა ნეოფიტე ურბნელი — 28 ოქტომბერი' },
+  { after: 'sd-8', id: 'sd-a13-21', title: 'წმიდა ილარიონ ქართველი — 19 ნოემბერი' },
+  { after: 'sd-9', id: 'sd-a13-23', title: 'წმიდა აბიბოს ნეკრესელი — 29 ნოემბერი' },
+  { after: 'sd-11', id: 'sd-a13-27', title: 'წმიდა საბა განწმედილი — 5 დეკემბერი' },
+  { after: 'sd-16', id: 'sd-a13-33', title: 'წმიდა ანტონ მარტყოფელი — 19 იანვარი' },
+  { after: 'sd-28', id: 'sd-a13-41', title: 'წმიდა მეფენი არჩილ და ლუარსაბ — 21 ივნისი' },
+  { after: 'sd-31', id: 'sd-a13-46', title: 'წმიდანი იოანე და გაბრიელ ათონელნი — 12 ივლისი' },
+  { after: 'sd-31', id: 'sd-a13-48', title: 'წმიდა ილია წინასწარმეტყველი — 20 ივლისი' },
+  { after: 'sd-31', id: 'sd-a13-49', title: 'წმიდა დიდმოწამე პანტელეიმონ მკურნალი — 27 ივლისი' },
+  { after: 'sd-31', id: 'sd-a13-50', title: 'წმიდა დიდმოწამე რაჟდენ — 3 აგვისტო' },
+  { after: 'sd-34', id: 'sd-a13-54', title: 'წმიდა დედოფალი შუშანიკი — 28 აგვისტო' },
 ];
 
 // a group (feast, occasion of მარხვანი…) lists its own chants; a chant lists versions of itself
-const isGroup = (chantId: string) => /^(sd|mx|zt|mm|dz|kt|ds)-/.test(chantId);
+const isGroup = (chantId: string) => /^(sd|mx|zt|mm|dz|kt|ds|pr)-/.test(chantId);
 // a chant's versions are named after it: chant-7 → v-7-…, mx-5 → mx-v-5-…, pn-3 → pn-v-3-…
 const idPrefix = (chantId: string) => chantId.startsWith('chant-') ? `v-${chantId.slice(6)}` : chantId.replace(/^([a-z]+)-/, '$1-v-');
 
