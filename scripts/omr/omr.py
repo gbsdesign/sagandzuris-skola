@@ -25,6 +25,10 @@ ACC = {'#': 1, 'b': -1, 'n': 0, 'N': 0, '(#)': 1, '(b)': -1, '(n)': 0}  # (x) = 
 REMAP_V1 = {'\x06': 'œ', '\x07': '˙', '¶': 'w', 't': 'W', '#': '#', 'Ü': 'b', 'ó': 'n', 'e': '(n)', 'S': '(b)', 'Ö': '(#)',
             'ì': 'j', 'a': 'J', '°': 'k', 'o': 'K', '4': '.', '\x10': 'Œ', '\x0f': 'Ó', '\x12': '∑', '\x13': '‰',
             's': 'V', 'Q': '?'}
+# Vol. VIII's subset numbers the heads and rests differently again (seen on its pages, 2026-10-30): \x05 filled head,
+# \x06 half head, \x11 quarter rest, \x12 eighth rest, \x15 half rest; the other codes are vol. I's.
+REMAP_V8 = {**{k: v for k, v in REMAP_V1.items() if k not in '\x06\x07\x0f\x10\x12\x13'},
+            '\x05': 'œ', '\x06': '˙', '\x11': 'Œ', '\x12': '‰', '\x15': 'Ó'}
 REMAP = None  # set by open_vol when the volume uses that encoding; glyphs missing from it are dropped
 
 
@@ -52,10 +56,10 @@ def open_vol(vol):
     REMAP = None
     for pi in range(min(40, doc.page_count), min(80, doc.page_count)):
         # a music font whose heads are control characters = vol. I's encoding
-        chars = (ch['c'] for b in doc[pi].get_text('rawdict')['blocks'] for ln in b.get('lines', [])
-                 for sp in ln['spans'] if 'Petrucci' in sp['font'] for ch in sp['chars'])
+        chars = {ch['c'] for b in doc[pi].get_text('rawdict')['blocks'] for ln in b.get('lines', [])
+                 for sp in ln['spans'] if 'Petrucci' in sp['font'] for ch in sp['chars']}
         if any(ord(c) < 32 for c in chars):
-            REMAP = REMAP_V1
+            REMAP = REMAP_V8 if '\x05' in chars else REMAP_V1
             break
     return doc
 

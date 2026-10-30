@@ -10,7 +10,7 @@ import type { ChantItem, ChantVariant } from './tsirvaChants';
 import { EAST_ATTACH } from './anthologyEastChants';
 import { WEST_ATTACH } from './anthologyWestChants';
 
-export const ANTH_ROMAN: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 28: 'XXVIII', 29: 'XXIX' };
+export const ANTH_ROMAN: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 28: 'XXVIII', 29: 'XXIX' };
 // the East Georgian volumes: Kartli-Kakheti school (the school of the others is a guess from the volume)
 const ANTH_EAST = new Set([2, 3, 4, 10, 11]);
 
@@ -107,6 +107,10 @@ const NEW_ITEMS: { after?: string; before?: string; id: string; title: string; p
   { after: 'chant-v5-99', id: 'chant-a4-95', title: 'ნეტარ არს კაცი (ზიარებისას)' },
   // vol. V №68–72: R. Khundadze's „შესხმანი“ of saints and feasts, sung at the feast's table (vol. V, introduction)
   { after: 'sd-35', id: 'sd-a5-68', title: 'შესხმანი — წმიდანთა და დღესასწაულთა' },
+  // vols VI–VIII (the Heirmologion): irmoi the manuscripts give no tone, then the chants of other kinds that have no
+  // place of their own on the site
+  { after: 'dz-8', id: 'dz-a8-12', title: 'ხმა უცნობია' },
+  { after: 'dz-8', id: 'dz-a6-1', title: 'სხვა საგალობლები — ძლისპირთა წიგნებიდან' },
 ];
 
 // a group (feast, occasion of მარხვანი…) lists its own chants; a chant lists versions of itself
