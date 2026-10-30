@@ -410,6 +410,11 @@
   last 12) so the history names who was to read then (`ownersThen`). A new class member gets a kanon at once
   (`joinClassGroup` → `giveKanon`). The leader sees a line when the admin's section „ფსალმუნთა ჯგუფი“ isn't open (members
   then see nothing). Two readers share one „წავიკითხე“ mark (either one's mark counts for the kanon).
+  Since 2026-10-31 a member **without a kanon picks one themself**: the kanon's window offers „ჩემს კანონად არჩევა“ on a
+  free kanon or beside one reader (asked once; changing it later is the teacher's) — `pickKanon` adds their uid to that
+  list of the stored distribution with a `pick {k, by, at}` note, and the rule `pickingKanon` in `firestore.rules` lets a
+  member write only that (own uid, one list under two readers, no kanon before). A pick writes no `assignmentLog`. The home
+  shelf's kanon tile (`KathismaTile`) opens the kanon's text, its ✓ marks it read (it opened the group page before).
 - **Teacher panel** (`pages/TeacherPage.tsx`, `components/teacher/`), **admin panel** (`pages/AdminPanelPage.tsx`,
   `components/admin/`): sections open/მალე/hidden (`settings/sections`); JSON export. The panel's recording-binding
   form and logo card were removed 2026-10-20 (the app still reads `settings/recordings` and `settings/logo`).
