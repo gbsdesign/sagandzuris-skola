@@ -8,7 +8,7 @@ import { ZipWriter, ZipSink } from './zipWriter';
 export interface ExportItem { book: string; nums: number[]; title: string }
 
 // the books in the order of their volumes
-export const EXPORT_BOOKS = ['book', 'feast', 'kk', 'triod', 'v5', 'karb', 'v9', 'pat', 'momix', 'v8', 'dasd1', 'dasd2', 'a1', 'a2', 'a3', 'a4', 'a28', 'a29'] as const;
+export const EXPORT_BOOKS = ['book', 'feast', 'kk', 'triod', 'v5', 'karb', 'v9', 'pat', 'momix', 'v8', 'dasd1', 'dasd2', 'a1', 'a2', 'a3', 'a4', 'a5', 'a28', 'a29'] as const;
 
 let items: ExportItem[] | null = null;
 /** One entry per notes file: the first chant version that uses it gives the name. */

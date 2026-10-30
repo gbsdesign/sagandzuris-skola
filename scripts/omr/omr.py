@@ -30,7 +30,8 @@ REMAP = None  # set by open_vol when the volume uses that encoding; glyphs missi
 
 def head_num(txt):
     """A chant's number from its title line: "203. title", "76a title", vol. I's bare "1." / "7.-8." (the title is
-    its own line there), "22.a." (= 22a) and vols II–III's "81-a" (= 81a)."""
+    its own line there), "22.a." (= 22a) and vols II–III's "81-a" (= 81a). Vol. V puts a stray „@“ before a few."""
+    txt = txt.lstrip('@ ')
     m = re.match(r'^(\d+)\.([a-z])\.', txt)
     if m:
         return m.group(1) + m.group(2)
