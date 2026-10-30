@@ -2,14 +2,15 @@
 // notes match one of theirs is left out (e.g. vol. XIX №8 = IX №8, vol. XXVIII №77b = I №158, most of vol. I = vol. V;
 // vol. II №282–285: alteration variants of one chant that match III №154).
 // Notes in the R2 bucket „sagandzuri-notes“ (a<vol>/…, utils/notesBase.ts), read from the PDFs' music font by scripts/omr; a number with a letter (76a) gets its
-// own file number (761); a unit of several short numbers (a litany) is one file named after its first number.
-// The East Georgian volumes (II–IV) are in anthologyEastChants.ts.
+// own file number (761; from vol. IV on ×100: 12b = 1202); a unit of several short numbers (a litany) is one file named after its first number.
+// The East Georgian volumes (II–IV) are in anthologyEastChants.ts, the western ones from vol. V on in anthologyWestChants.ts.
 // This file and that one import nothing but types and data, so every chant list can take its versions from here
 // without an import cycle.
 import type { ChantItem, ChantVariant } from './tsirvaChants';
 import { EAST_ATTACH } from './anthologyEastChants';
+import { WEST_ATTACH } from './anthologyWestChants';
 
-export const ANTH_ROMAN: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 28: 'XXVIII', 29: 'XXIX' };
+export const ANTH_ROMAN: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 28: 'XXVIII', 29: 'XXIX' };
 // the East Georgian volumes: Kartli-Kakheti school (the school of the others is a guess from the volume)
 const ANTH_EAST = new Set([2, 3, 4, 10, 11]);
 
@@ -68,7 +69,8 @@ const ATTACH: Record<string, AnthPiece[]> = {
 };
 
 /** The pieces of a chant: the western volumes' above and the East Georgian ones. */
-const piecesOf = (chantId: string): AnthPiece[] => [...(ATTACH[chantId] ?? []), ...(EAST_ATTACH[chantId] ?? [])];
+const piecesOf = (chantId: string): AnthPiece[] =>
+  [...(ATTACH[chantId] ?? []), ...(WEST_ATTACH[chantId] ?? []), ...(EAST_ATTACH[chantId] ?? [])];
 
 /** Chants the site has no place for in a list that exists: a new item right after the item `after` (or before `before`);
  *  its versions are its pieces here or, without them, its pieces above. */
@@ -101,6 +103,10 @@ const NEW_ITEMS: { after?: string; before?: string; id: string; title: string; p
   { after: 'chant-v5-99', id: 'chant-a3-383', title: 'ღმრთისმშობელი და ყოვლად პატიოსანი (ზიარებისას)' },
   // the Karbelashvili brothers (6 September new style): vol. II's ოხითა and კონდაკი
   { after: 'sd-34', id: 'sd-a2-karbelashvili', title: 'წმიდა ძმანი კარბელაშვილნი — 24 აგვისტო' },
+  // vol. IV: „ნეტარ არს კაცი“, sung while the clergy communes (vol. III p. 11)
+  { after: 'chant-v5-99', id: 'chant-a4-95', title: 'ნეტარ არს კაცი (ზიარებისას)' },
+  // vol. V №68–72: R. Khundadze's „შესხმანი“ of saints and feasts, sung at the feast's table (vol. V, introduction)
+  { after: 'sd-35', id: 'sd-a5-68', title: 'შესხმანი — წმიდანთა და დღესასწაულთა' },
 ];
 
 // a group (feast, occasion of მარხვანი…) lists its own chants; a chant lists versions of itself

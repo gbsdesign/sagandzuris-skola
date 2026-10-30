@@ -7,7 +7,8 @@ import { ChantItem, ChantVariant } from './tsirvaChants';
 import { AnthPiece, anthVariant, anthVariantsFor } from './anthologyChants';
 import { DZLISPIREBI_CHANTS, KATABASIEBI_CHANTS } from './irmosBookChants';
 
-type Item = { title: string; pieces?: AnthPiece[]; same?: string[] };
+// an item added later gets its own id (`id`), so the others keep theirs (prefix-1, prefix-2 … in their order)
+type Item = { title: string; pieces?: AnthPiece[]; same?: string[]; id?: string };
 
 const KORIDZE = 'ქორიძე';
 const p = (num: string, file: number, page: number, source?: string): AnthPiece =>
@@ -21,9 +22,10 @@ const sameAs = (chantId: string, title: string, id: string): ChantVariant => {
   return { ...v, id: `${chantId.replace(/^([a-z]+)-/, '$1-v-')}-${id}`, chantName: title };
 };
 
-const build = (prefix: string, items: Item[]): ChantItem[] =>
-  items.map(({ title, pieces = [], same = [] }, i) => {
-    const id = `${prefix}-${i + 1}`;
+const build = (prefix: string, items: Item[]): ChantItem[] => {
+  let n = 0;
+  return items.map(({ title, pieces = [], same = [], id: own }, i) => {
+    const id = own ?? `${prefix}-${++n}`;
     return {
       id,
       index: i + 1,
@@ -31,6 +33,7 @@ const build = (prefix: string, items: Item[]): ChantItem[] =>
       variants: [...pieces.map(a => anthVariant(id, title, a)), ...same.map(s => sameAs(id, title, s)), ...anthVariantsFor(id, title)],
     };
   });
+};
 
 // the circling of the wedding and the ordination: „ესაია, მხიარულ იყავ“, „წმიდანო მოწამენო“, „დიდება შენდა, ქრისტე ღმერთო“
 const ISAIAH: Item = { title: 'ესაია, მხიარულ იყავ', same: ['dz-v-5-8'] };
@@ -47,11 +50,17 @@ export const KHELDASKHMA_CHANTS: ChantItem[] = build('kh', [
 
 // the book prints these after the ordination's chants, under one heading „მღვდლის კურთხევისა და ქორწინებისა“;
 // that „მოსლვისა შენისა“ begins the wedding's part is a guess from the order
+// vol. IV (the Karbelashvili brothers) adds „შენ, რომელმან განანათლენ“ at the entrance, „ღმრთისმშობელი და ყოვლად
+// პატიოსანი“ beside „შენ ხარ ვენახი“ and the crowning's „დიდება შენდა, ღმერთო ჩვენო“ and „დაადგ თავსა მისსა გვირგვინი“
 export const JVRISWERA_CHANTS: ChantItem[] = build('jv', [
   { title: 'მოსლვისა შენისა', same: ['kt-v-7-2'] },
+  { title: 'შენ, რომელმან განანათლენ', id: 'jv-a4-192' },
   { title: 'ქორწილი წმიდა არს', pieces: [p('170', 170, 366)] },
   { title: 'შენ ხარ ვენახი', pieces: [p('171', 171, 368)] },
+  { title: 'ღმრთისმშობელი და ყოვლად პატიოსანი', id: 'jv-a4-194' },
   { title: 'განეღო სასძლო', pieces: [p('172', 172, 370)] },
+  { title: 'დიდება შენდა, ღმერთო ჩვენო', id: 'jv-a4-195' },
+  { title: 'დაადგ თავსა მისსა გვირგვინი', id: 'jv-a4-196' },
   ISAIAH,
   MARTYRS,
   GLORY,

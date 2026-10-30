@@ -31,4 +31,4 @@ at its number (e.g. only `01 - ტომი I.pdf` for vol. 1) and set `ANTH_DIR
 | `find.py` | finds a chant's name in all volumes and study collections (edit the patterns inside) |
 
 Read versions for comparing go to `%TEMP%/omr-cmp`, not into the repo. The rules (what counts as a duplicate,
-which tab, file numbers like 76a = 761) are in `src/data/CLAUDE.md` and `TSIRVA_ANTH` in `src/data/tsirvaChants.ts`.
+which tab, file numbers like 76a = 761, from vol. IV on 12b = 1202) are in `src/data/CLAUDE.md` and `TSIRVA_ANTH` in `src/data/tsirvaChants.ts`.
