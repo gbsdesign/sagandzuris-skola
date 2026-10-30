@@ -111,7 +111,8 @@
   goes through `askConfirm` (shown by `ConfirmHost` in `App.tsx`), never `window.confirm`; new text ≥12px, nothing
   below 11px anywhere; one paper background for every page in `App.tsx`. Signing out lives only at the profile's
   bottom (`views/ProfileActions.tsx`); the admin panel opens only from the profile's wine row (`views/AdminEntry.tsx`,
-  no header shield since 2026-10-27), and the profile's details are three folds with „შენახვა“ shown only while changed; today's saints are a folded line at the top of home (`TodaySaintsCard`).
+  no header shield since 2026-10-27), and the profile's details are three folds with „შენახვა“ shown only while changed; the top of home is one day card of thin lines (2026-10-31): today's saints (`TodaySaintsCard`, a calendar leaf + the first
+  commemoration, unfolds) and the reviews due (`home/LearnDue.tsx`); in the header the 🔍 sits in the top row on every phone (under sm).
 
 ## Audio and sheet music (details in `src/data/CLAUDE.md`)
 
@@ -131,7 +132,7 @@
 - Book notes (`public/notes/<book>/`) come from the chant-book PDFs by OMR; the books' OMR scripts are not in the repo —
   only the anthology's (`scripts/omr/`, also in the cloud). Chant tabs ხელდასხმა · ჯვრისწერა · პანაშვიდი (2026-10-29) are
   `data/riteChants.ts`; anthology versions everywhere come from `data/anthologyChants.ts` (East Georgian vols II–IV, X–XI:
-  `data/anthologyEastChants.ts`, the western ones from vol. V: `data/anthologyWestChants.ts`; done so far: vols I–XI, XXVIII/XXIX only for მხოლოდ-შობილი). The anthology's notes
+  `data/anthologyEastChants.ts`, the western ones from vol. V: `data/anthologyWestChants.ts`; done so far: vols I–XIII, XXVIII/XXIX only for მხოლოდ-შობილი). The anthology's notes
   files are not in the repo: Cloudflare R2 bucket `sagandzuri-notes` behind the Worker `worker/notes`
   (https://sagandzuri-notes.mr-gabunia.workers.dev, `utils/notesBase.ts`), uploaded by pushing a branch `notes-upload`
   (`.github/workflows/notes-r2.yml`, steps in `scripts/omr/README.md`) — the site may hold only 20 000 files.
@@ -155,7 +156,7 @@
   into the part's key from my first steady note); a soft band over the notes picture follows the playing beat
   (`markerAt` — x of notes is guessed from their lengths, no real positions); a recording is split at its quietest
   places between 6 and 16 s (`partsAtBreaths` over `utils/audioEnergy.ts`, falls back to equal parts); a song's words
-  beside every part (`wordsForPart`, only roughly — no timings); home card „დღეს გასამეორებელი“ (`home/LearnDue.tsx`,
+  beside every part (`wordsForPart`, only roughly — no timings); home line „დღეს გასამეორებელი“ (`home/LearnDue.tsx`,
   opens the piece through `utils/learnOpen.ts`) and one daily phone reminder on the reminders Worker
   (`utils/learnReminder.ts`, id `learn-review`, kept apart from the habits' list in `prayerReminders.ts`).
   A teacher's chant/song assignment (also 2026-10-28): the learning mode notes each piece's part count in
@@ -250,7 +251,7 @@
   so any old-script letter on the site is the app's alphabet.
 - **Android app** (Google Play, `android/`, 2026-10-29; memory `google-play-app`): a Trusted Web Activity of the live site
   (so the site's updates need no app update) plus the app's own Java parts in `android/app/src/main/java/ge/sagandzureli/app/`
-  (version 1.1.0, code 2; minSdk 26): six home-screen widgets — buttons (the home vine's places, picked in `ButtonsConfigActivity`),
+  (version 1.1.1, code 3; minSdk 26): six home-screen widgets — buttons (the home vine's places, picked in `ButtonsConfigActivity`),
   habits (tap ticks / counts), the path's five rings + reviews due, the church day, my psalter kanon, the saying of the day — the
   icon's long-press menu (`res/xml/shortcuts.xml`), „გაზიარება → საგანძური“ into a class chat (manifest share target → the site's
   `share_target` + `public/prayer-notify-sw.js` → `components/app/ShareHost.tsx`), church mode's „არ შემაწუხო“
@@ -428,6 +429,11 @@
   last 12) so the history names who was to read then (`ownersThen`). A new class member gets a kanon at once
   (`joinClassGroup` → `giveKanon`). The leader sees a line when the admin's section „ფსალმუნთა ჯგუფი“ isn't open (members
   then see nothing). Two readers share one „წავიკითხე“ mark (either one's mark counts for the kanon).
+  Since 2026-10-31 a member **without a kanon picks one themself**: the kanon's window offers „ჩემს კანონად არჩევა“ on a
+  free kanon or beside one reader (asked once; changing it later is the teacher's) — `pickKanon` adds their uid to that
+  list of the stored distribution with a `pick {k, by, at}` note, and the rule `pickingKanon` in `firestore.rules` lets a
+  member write only that (own uid, one list under two readers, no kanon before). A pick writes no `assignmentLog`. The home
+  shelf's kanon tile (`KathismaTile`) opens the kanon's text, its ✓ marks it read (it opened the group page before).
 - **Teacher panel** (`pages/TeacherPage.tsx`, `components/teacher/`), **admin panel** (`pages/AdminPanelPage.tsx`,
   `components/admin/`): sections open/მალე/hidden (`settings/sections`); JSON export. The panel's recording-binding
   form and logo card were removed 2026-10-20 (the app still reads `settings/recordings` and `settings/logo`).
@@ -544,9 +550,8 @@ listens (Gemini through Firebase AI Logic). 8 calls on Android (wake lock, push,
    2026-10-28: „მოსასმენი“ queue — ▶ fetches the take on demand, „ჩათვლა“ — and one table of members × chests). Since
    2026-10-28 every 5 shining pearls give the outfit of „ჩემი სამოსი“ its next part (`utils/pearlGifts.ts` + test,
    `hooks/usePearlGifts.ts`: the member's own app adds it from the path page — `PearlGiftBanner` in `PathOrbs` — and keeps
-   `students.pearlGifts {steps, parts, seen}`; the pearls panel shows „შემდეგი ჯილდო“), and the home page has
-   „დღის მარგალიტი“ (`home/PearlOfDay.tsx`: the same pearl for the whole school, hangi's `pickOfDay`; a tap opens it on the
-   path page through `utils/pearlWish.ts`). „AI მასწავლებელი“ (`utils/aiTeacher.ts`, gemini-3.8-flash through
+   `students.pearlGifts {steps, parts, seen}`; the pearls panel shows „შემდეგი ჯილდო“), and `utils/pearlWish.ts` opens a
+   wished pearl on the path page (the home card „დღის მარგალიტი“ was taken off at the user's wish, 2026-10-31). „AI მასწავლებელი“ (`utils/aiTeacher.ts`, gemini-3.8-flash through
    Firebase AI Logic with the try-on's App Check; 3 a day per device, superadmins unlimited) — works only on the
    deployed site. Tested in the emulator with a fake microphone WAV (Chromium `--use-file-for-fake-audio-capture`).
 - Birthdays and name days (redesign stage 4, 2026-10-25): page `birthdays` (`pages/BirthdaysPage.tsx`), records

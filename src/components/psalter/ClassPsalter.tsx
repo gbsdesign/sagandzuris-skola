@@ -6,12 +6,12 @@ import { useAuth, useNavigation } from '../../context';
 import { useAccess } from '../../hooks/useAccess';
 import { useSections } from '../../hooks/useSections';
 import { SchoolClass } from '../../hooks/useClasses';
-import { ALL_KATHISMAS, PsalterGroup, ergative, firstName, memberName, saveOwners, toGroup, useGroupNow } from '../../hooks/usePsalter';
-import { KATHISMA_COUNT, KATHISMA_PSALMS, MAX_READERS, formatLeft, formatRange, msLeft, readCount, responsible, slotState } from '../../utils/psalter';
+import { ALL_KATHISMAS, PsalterGroup, ergative, firstName, memberName, pickKanon, saveOwners, toGroup, useGroupNow } from '../../hooks/usePsalter';
+import { KATHISMA_COUNT, KATHISMA_PSALMS, MAX_READERS, formatLeft, formatRange, msLeft, readCount, responsible, shiftDaysText, slotState, wrap } from '../../utils/psalter';
 import { errorText } from '../../utils/errorText';
 import { pushSupported, setGroupPush, useGroupPush } from '../../utils/groupPush';
 import { triggerHaptic } from '../../utils/haptics';
-import { Bar, Btn, Flash, IconBtn, Sheet, useFlash } from '../ui/kit';
+import { Bar, Btn, Flash, IconBtn, Sheet, askConfirm, useFlash } from '../ui/kit';
 import { PeoplePicker } from '../people/PeoplePicker';
 import { CreateGroupSheet } from '../../pages/PsalterPage';
 import { GroupHistory } from './GroupHistory';
@@ -96,6 +96,8 @@ const GroupSection: React.FC<{ sectionRef: React.Ref<HTMLElement>; cls: SchoolCl
   const done = read >= KATHISMA_COUNT;
   const othersHelp = helpWanted.filter(h => h.by !== uid);
   const line = canLead ? distributionLine(owners, distributionPeople(group, cls)) : null;
+  // a member without a kanon may take a free one (or the second place beside one reader) from its tile
+  const canPick = isMember && !ALL_KATHISMAS.some(k => (owners[k] || []).includes(uid!)) && ALL_KATHISMAS.some(k => (owners[k] || []).length < MAX_READERS);
 
   return (
     <section ref={sectionRef} className={`${CARD} scroll-mt-4 px-3 sm:px-4 pt-1 pb-3`} aria-label="ფსალმუნი">
@@ -133,7 +135,9 @@ const GroupSection: React.FC<{ sectionRef: React.Ref<HTMLElement>; cls: SchoolCl
           {isMember && (
             <div className="mt-3 space-y-2">
               {mine.length === 0 && takenFromMe.length === 0 && (
-                <p className="px-1 text-[13px] text-[#8a7a6a]">ამ ციკლში კანონი არ გაქვს</p>
+                <p className={`px-1 text-[13px] ${canPick ? 'text-[#7a2028] font-semibold' : 'text-[#8a7a6a]'}`}>
+                  {canPick ? 'კანონი ჯერ არ გაქვს — შეეხე თავისუფალ კანონს და აირჩიე.' : 'ამ ციკლში კანონი არ გაქვს'}
+                </p>
               )}
               {mine.map(k => <MyLine key={k} group={group} k={k} uid={uid!} slots={slots} owners={owners} left={msLeft(cycle, now)} actions={actions} />)}
               {takenFromMe.map(k => (
@@ -206,7 +210,7 @@ const GroupSection: React.FC<{ sectionRef: React.Ref<HTMLElement>; cls: SchoolCl
       )}
 
       <TileSheet group={group} cls={cls} k={tile} uid={uid} slots={slots} owners={owners} isMember={isMember} canLead={canLead} actions={actions} onClose={() => setTile(null)}
-        onSaveError={e => saved.fail(`ვერ შეინახა. ${errorText(e)}`)} />
+        canPick={canPick} msg={saved} />
 
       {canLead && <GroupSettingsSheet open={manage} onClose={() => setManage(false)} group={group} cls={cls} onDeleted={() => setManage(false)}
         onDistribute={() => { setManage(false); setDist(true); }} />}
@@ -309,8 +313,8 @@ const Tile: React.FC<{ group: PsalterGroup; k: number; uid?: string; slots: Slot
  *  ask for help; the class's teachers also name who reads it (saved at once). */
 const TileSheet: React.FC<{
   group: PsalterGroup; cls: SchoolClass; k: number | null; uid?: string; slots: SlotsOf; owners: OwnersOf;
-  isMember: boolean; canLead: boolean; actions: Actions; onClose: () => void; onSaveError: (e: unknown) => void;
-}> = ({ group, cls, k, uid, slots, owners, isMember, canLead, actions, onClose, onSaveError }) => {
+  isMember: boolean; canLead: boolean; actions: Actions; onClose: () => void; canPick: boolean; msg: ReturnType<typeof useFlash>;
+}> = ({ group, cls, k, uid, slots, owners, isMember, canLead, actions, onClose, canPick, msg }) => {
   const { openPrayer } = useNavigation();
   const [picking, setPicking] = useState<number | null>(null);
   const shown = k ?? picking;
@@ -334,7 +338,26 @@ const TileSheet: React.FC<{
   const people = distributionPeople(group, cls);
   // saved at once; a class member not in the group yet joins it; a failure shows under the tiles
   const assign = (kk: number, uids: string[]) =>
-    saveOwners(group, { ...owners, [kk]: uids }, people.filter(p => uids.includes(p.uid) && !group.memberIds.includes(p.uid))).catch(onSaveError);
+    saveOwners(group, { ...owners, [kk]: uids }, people.filter(p => uids.includes(p.uid) && !group.memberIds.includes(p.uid)))
+      .catch(e => msg.fail(`ვერ შეინახა. ${errorText(e)}`));
+  // the member takes this kanon as theirs (asked once: it stays theirs, moving on at every shift day)
+  const pickable = canPick && !!uid && own.length < MAX_READERS;
+  const pick = async (kk: number) => {
+    onClose();
+    if (!(await askConfirm({
+      title: `კანონი ${kk} შენი იყოს?`,
+      text: `${own.length ? `${names(own)}-სთან ერთად კითხულობ. ` : ''}ყოველი თვის ${shiftDaysText(group.shiftDays)} რიცხვში შემდეგ კანონზე გადახვალ (${kk} → ${wrap(kk + 1)}). შეცვლა მერე მასწავლებელს შეუძლია.`,
+      ok: 'არჩევა',
+    }))) return;
+    try {
+      await pickKanon(group, kk, uid!);
+      msg.ok(`კანონი ${kk} შენია. ღმერთმა შეგეწიოს!`);
+    } catch (e) {
+      msg.fail(String((e as { code?: string })?.code || '').includes('permission-denied')
+        ? 'ვერ მოხერხდა — ეს კანონი ალბათ ახლახან სხვამ აირჩია. სცადე სხვა.'
+        : `ვერ შეინახა. ${errorText(e)}`);
+    }
+  };
 
   return (
     <>
@@ -349,6 +372,14 @@ const TileSheet: React.FC<{
           {ownerMine && state === 'unread' && (slot?.help
             ? <Btn kind="ghost" full icon={<LifeBuoy />} onClick={() => run(() => actions.cancelHelp(shown))}>დახმარების თხოვნის გაუქმება</Btn>
             : <Btn kind="ghost" full icon={<LifeBuoy />} onClick={() => run(() => actions.askHelp(shown))}>ვერ ვკითხულობ — დახმარება მჭირდება</Btn>)}
+          {pickable && (
+            <>
+              <p className="mt-1 text-[13px] leading-snug text-[#75685a]">
+                {own.length ? 'შეგიძლია მეორე მკითხველი გახდე — ეს კანონი შენიც იქნება.' : 'ეს კანონი თავისუფალია — შეგიძლია შენ აირჩიო.'}
+              </p>
+              <Btn full icon={<Plus />} onClick={() => void pick(shown)}>ჩემს კანონად არჩევა</Btn>
+            </>
+          )}
           {canLead && <Btn kind="soft" full icon={<Users />} onClick={() => { setPicking(shown); onClose(); }}>ვინ კითხულობს</Btn>}
         </div>
       </Sheet>

@@ -60,7 +60,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
         title={`${c.name} — კლასის გვერდი`}
         aria-label={`კლასი: ${c.name}`}
       >
-        <ClassLogo name={c.name} logo={c.logo} className="w-7 h-7 text-xs" />
+        <ClassLogo name={c.name} logo={c.logo} className="w-7 h-7 shrink-0 text-xs" />
         <span>კლასი</span>
       </button>
     </React.Fragment>
@@ -88,9 +88,10 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
         {/* independent work (icon + count) + profile (the admin panel opens from the profile; installing the app lives
             in the profile and on the offline page) */}
         <div className="order-2 lg:order-3 ml-auto flex items-center gap-1.5 sm:gap-2 min-w-0">
-          {/* the search sits beside the learning tools; with none of them shown, up here — and up here on a narrow
-              phone (under 400px), where the three chips need the whole row */}
-          {access.can('search') && <SearchButton className={showNav ? 'min-[400px]:hidden' : ''} />}
+          {/* the search sits beside the learning tools from sm up; with none of them shown, up here — and up here on
+              every phone (under sm), where the three chips need the whole row (beside them they spilled off the
+              screen and squeezed „კლასი“, 2026-10-31) */}
+          {access.can('search') && <SearchButton className={showNav ? 'sm:hidden' : ''} />}
           {/* offline mode: the cloud shows whether the app works without internet */}
           <OfflineButton />
 
@@ -179,14 +180,15 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                   className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-10 px-2 min-[400px]:px-3 rounded-full text-[13px] font-bold ${currentPage === page ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
                   title={label}
                 >
-                  <Icon className="w-4 h-4 text-[#7a2028] shrink-0" />
+                  {/* on the narrowest phones (under 380px) only the words, so the row still fits the screen */}
+                  <Icon className="w-4 h-4 text-[#7a2028] shrink-0 max-[379px]:hidden" />
                   <span>{label}</span>
                 </button>
               </React.Fragment>
             ))}
             {!tools.some(t => t.id === 'biblioteka') && classButtons}
           </div>
-          {access.can('search') && <SearchButton className="max-[399px]:hidden" />}
+          {access.can('search') && <SearchButton className="max-sm:hidden" />}
         </nav>
         )}
       </div>

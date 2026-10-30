@@ -1,10 +1,13 @@
 [
   {
-    "relation": ["delegate_permission/common.handle_all_urls"],
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
     "target": {
       "namespace": "android_app",
       "package_name": "ge.sagandzureli.app",
       "sha256_cert_fingerprints": [
+        "46:3D:C0:2E:33:36:41:45:55:50:16:5C:B7:A0:D4:31:1D:B8:0B:EE:4C:29:5D:7E:C9:EF:AA:A7:DD:2A:05:54",
         "A7:C8:89:DB:7F:98:ED:F7:F8:97:28:C1:2B:C7:AB:01:C0:A0:CD:A3:22:6B:80:61:DD:38:B7:19:51:11:8D:A8"
       ]
     }

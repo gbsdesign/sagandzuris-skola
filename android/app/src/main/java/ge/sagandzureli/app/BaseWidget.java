@@ -20,11 +20,11 @@ abstract class BaseWidget extends AppWidgetProvider {
         Widgets.drawAll(c);
     }
 
-    /** a widget of the member's own day before the app is linked: one line that opens the profile */
+    /** a widget of the member's own day before the app is linked: one line that opens the linking window (WidgetLinkAsk) */
     static RemoteViews notLinked(Context c, String title) {
         RemoteViews v = new RemoteViews(c.getPackageName(), R.layout.w_link);
         v.setTextViewText(R.id.title, title);
-        v.setOnClickPendingIntent(R.id.root, Look.open(c, "open=profile", 90));
+        v.setOnClickPendingIntent(R.id.root, Look.open(c, "open=widgets", 90));
         return v;
     }
 }

@@ -88,3 +88,11 @@ export const PANASHVIDI_CHANTS: ChantItem[] = build('pn', [
   { title: 'წმიდაო ღმერთო', pieces: [p('203', 203, 409)] },
   { title: 'ვგოდებ და ვიგლოვ', pieces: [p('204', 204, 410, 'დასდებელი, ხმა ვ')] },
 ]);
+
+// „პარაკლისი“ (vol. XIII, Kereselidze's ms. Q672, 2026-10-31): the two paracleses he wrote down to be sung whole — to the
+// Most Holy Theotokos (XIII №89–183) and to Sweet Jesus (№184–237); each is one item, its chants versions in the service's
+// order (anthologyWestChants.ts).
+export const PARAKLISI_CHANTS: ChantItem[] = build('pr', [
+  { title: 'ღმრთისმშობლის პარაკლისი' },
+  { title: 'იესო ტკბილის პარაკლისი' },
+]);
