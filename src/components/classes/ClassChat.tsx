@@ -8,6 +8,7 @@ import { startClassCall, joinClassCall } from '../calls/callActions';
 import { LessonChips, ScheduleSheet } from '../teacher/Schedule';
 import { Btn, IconBtn } from '../ui/kit';
 import { triggerHaptic } from '../../utils/haptics';
+import { useOpenGameRoom } from '../../utils/gameRoomOpen';
 import { ChatPanel } from './ChatPanel';
 
 // The class's chat: text and voice messages between members and teachers, and the class's call (the school's own,
@@ -28,6 +29,7 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
   const base = classChatBase(cls.id);
   const { messages, loading, error } = useChat(base);
   const [lessons, setLessons] = useState(false);
+  const openRoom = useOpenGameRoom();
 
   // read: the newest message, once the chat is (at least partly) in view
   const box = useRef<HTMLDivElement>(null);
@@ -66,6 +68,7 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
       error={error}
       showNames
       canDelete={m => m.uid === user.uid || isAdmin}
+      onOpenGame={m => openRoom(cls.id, m.room)}
       fill={fill}
       listClassName={compact ? '' : undefined}
       listTop={compact && messages.length > COMPACT ? (

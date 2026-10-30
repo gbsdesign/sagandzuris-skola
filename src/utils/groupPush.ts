@@ -9,6 +9,8 @@ import { auth } from '../firebase';
 //   "help needed" to the whole group. The Worker checks the facts in Firestore before it sends anything.
 // • /account with `admin` — an admin's notices (utils/adminPush.ts); POST /access-request { token } — a newcomer's
 //   request, told to the superadmins who asked for it.
+// • POST /game-invite { token, classId, roomId } — a game room just opened in a class: its members and teachers hear
+//   „X გიწვევს“ (the Worker checks the room in Firestore, and tells a room once).
 // Push needs the installed service worker; on iPhone the site must be added to the home screen first.
 
 const SERVER = 'https://sagandzuri-reminders.mr-gabunia.workers.dev';
@@ -107,6 +109,21 @@ export const notifyAccessRequest = async () => {
     });
   } catch {
     /* offline or the Worker isn't updated yet: the panel shows them anyway */
+  }
+};
+
+/** A game room just opened: the class hears it on their phones (best effort: the strip and the chat card show it anyway). */
+export const notifyGameInvite = async (classId: string, roomId: string) => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+    await fetch(`${SERVER}/game-invite`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await user.getIdToken(), classId, roomId }),
+    });
+  } catch {
+    /* offline or the Worker isn't updated yet */
   }
 };
 

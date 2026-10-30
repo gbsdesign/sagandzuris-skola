@@ -69,9 +69,17 @@ export const startClassCall = async (c: SchoolClass, user: User, kind: CallKind)
 
 export const joinClassCall = (c: SchoolClass, user: User, kind: CallKind) => joinCall(classCallInfo(c, user), kind);
 
-/** After leaving: a private call is over for both; a class's call ends when the last one leaves. */
+/** A game room's own call („სამშვილდის ღამე“ online): its players and its host, nobody rings — they are in the game
+ *  already; the host's video is always received. */
+export const gameCallInfo = (base: string, title: string, me: { uid: string; name: string; photoURL: string }, host: string): CallInfo => ({
+  base, title, oneToOne: false, canVideo: true, anonStaff: false, me: { ...me, staff: false }, leaders: [host],
+});
+
+/** After leaving: a private call is over for both; a class's call ends when the last one leaves (a game's has no ring). */
 export const afterLeave = (info: CallInfo, othersLeft: number) => {
-  const [kind, id] = info.base.split('/');
+  const parts = info.base.split('/');
+  if (parts.length !== 2) return;
+  const [kind, id] = parts;
   if (kind === 'dms') endChatCall(id).catch(() => {});
   else if (othersLeft === 0) endClassCall(id).catch(() => {});
 };

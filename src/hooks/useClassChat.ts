@@ -15,9 +15,11 @@ export interface ChatMessage {
   name: string;
   photoURL: string;
   teacher: boolean;
-  // 'call': a private call was started (the teacher's "ზარი" button)
-  kind: 'text' | 'voice' | 'call';
+  // 'call': a private call was started (the teacher's "ზარი" button); 'game': an invitation into a class's game room
+  kind: 'text' | 'voice' | 'call' | 'game';
   text: string;
+  /** a 'game' message's room (classes/{id}/games/{room}) */
+  room: string;
   seconds: number;
   wave: string;
   parts: number;
@@ -123,8 +125,9 @@ export const useChat = (base?: string | null) => {
             name: m.name || '',
             photoURL: m.photoURL || '',
             teacher: !!m.teacher,
-            kind: m.kind === 'voice' || m.kind === 'call' ? m.kind : 'text',
+            kind: m.kind === 'voice' || m.kind === 'call' || m.kind === 'game' ? m.kind : 'text',
             text: m.text || '',
+            room: typeof m.room === 'string' ? m.room : '',
             seconds: m.seconds || 0,
             wave: m.wave || '',
             parts: m.parts || 0,
@@ -151,6 +154,11 @@ const stamp = (author: ChatAuthor) => ({
 
 export const sendTextMessage = async (base: string, author: ChatAuthor, text: string) => {
   await addDoc(messagesOf(base), { ...stamp(author), kind: 'text', text: text.slice(0, 2000) });
+};
+
+/** „სამშვილდის ღამე“ online: the class is invited into a game room — a card with a button into the room */
+export const sendGameMessage = async (classId: string, author: ChatAuthor, room: string) => {
+  await addDoc(messagesOf(classChatBase(classId)), { ...stamp(author), kind: 'game', text: '🌙 „სამშვილდის ღამე“ — ონლაინ თამაში', room });
 };
 
 /** "a call started": shown in the chat as a card with a button into the call */

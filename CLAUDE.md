@@ -354,6 +354,24 @@
   the verdict, the end with every card open and the chronicle. Privacy: day screens never show roles or the quiet night's reason,
   „უკან“ never goes back into the deal, the host's table opens only after a confirm. Kept after every step (`sg-samshvilde-game`,
   settings `sg-samshvilde`), ✕ only pauses. No rules change, nothing in Firestore.
+- **„სამშვილდის ღამე“ online (2026-10-30)**: the user's answers „1ა 2ა + ზარი, 3ა“ — a მემატიანე who does not play hosts it on
+  their phone, every player sees their role and points at night on their own phone, the app counts hands and time; anyone in a
+  class (member or teacher) opens a room. The page's tabs „ონლაინ · ერთი ტელეფონით“ (`conf.mode`; online first when signed in).
+  Engine `utils/samshvildeOnline.ts` + test: the host's phone holds `OnlineState` (the hybrid `SamGame`, uids, the step's answers
+  `by`, the speech clock `clock`/`clockAt`, the hands) and writes in one batch the public view (`publicView` — no role before the
+  end), each changed seat (`seatView`: role, mates, checks) and `host/state` (a reload goes on); players write only `joins/{uid}`
+  and `acts/{uid}` `{key, pick, end, at}`, each applied once and only for the step's `keyOf` (`applyAct`). Store
+  `utils/gameRoom.ts` + test (`createRoom`, `roomPath`) over `utils/gameRoomFirestore.ts` (`rooms`, `useRoom`, `useClassRooms`).
+  Room `classes/{c}/games/{r}` + `joins`, `seats`, `acts`, `host/state`, `peers`: the host alone writes the room, seats and state; a
+  seat is read only by its player and the host (not teachers). Screens `pages/games/samshvilde/online/` (`OnlineSetup`,
+  `OnlineRoom`, `Lobby`, `HostGame` = the hybrid screens fed by the phones, `PlayerGame`); the hybrid screens take online props
+  (`NightScreen online`, `DayScreen`/`TieScreen` `clock`+`clockAt`+`onClock` — the clock runs on every phone from the host's start,
+  `VoteScreen ballots`, `VerdictScreen hands`). Invitations: a class-chat card (`sendGameMessage`, kind `game`), a push by the
+  reminders Worker's `/game-invite` (`notifyGameInvite` in `utils/groupPush.ts`; devices with group or assignment reminders; link
+  `/?open=samshvilde&c=&r=`) and the strip `components/games/GameInvites.tsx` (✕ = `dismissRoom`, this device); all open through
+  `useOpenGameRoom` (`utils/gameRoomOpen.ts`). The game's own call (`online/GameCall.tsx`): the school's calls on the room's path
+  (`gameCallInfo`), opened as the small bar (`TableScreen` and the strip sit under it); `useHush` turns the players' microphone and
+  camera off at night and an out player's microphone by day (not the farewell). Not yet tried by real people on several phones.
 - **Printable board games (2026-10-28, fourth PR)**: the „უტელეფონო“ variant of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in

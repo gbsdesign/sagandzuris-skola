@@ -52,10 +52,10 @@ export const GAMES: GameDef[] = [
 ];
 
 /** The six board games the school prints and makes itself — each a Georgian retheme on paper; „სამშვილდის ღამე“ also has
- *  its phone (hybrid) version inside the games page (pages/games/SamshvildeGame.tsx). */
+ *  its phone versions inside the games page (pages/games/SamshvildeGame.tsx): online with the class, and on one phone. */
 export const BOARD_GAMES: GameDef[] = [
   { id: 'okros-khana', title: 'ოქროს ხანა', original: 'კატანი', text: 'ერისთავები ოქროს ხანის საქართველოს აშენებენ: ხე, ქვა, მატყლი, პური, მადანი', category: 'live', modes: ['noPhone'], print: { href: '/games/print/okros-khana.pdf', sheets: 27 } },
-  { id: 'samshvildis-ghame', title: 'სამშვილდის ღამე', original: 'მაფია', text: 'ციხე-ქალაქის მცველები და ჯაშუშები; წამყვანი, დღე და ღამე, ხმის მიცემა', category: 'live', modes: ['hybrid', 'noPhone'], page: 'games', item: 'samshvilde', section: 'tamashebi', print: { href: '/games/print/samshvildis-game.pdf', sheets: 10 } },
+  { id: 'samshvildis-ghame', title: 'სამშვილდის ღამე', original: 'მაფია', text: 'ციხე-ქალაქის მცველები და ჯაშუშები; წამყვანი, დღე და ღამე, ხმის მიცემა', category: 'live', modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'samshvilde', section: 'tamashebi', print: { href: '/games/print/samshvildis-game.pdf', sheets: 10 } },
   { id: 'qaravani', title: 'ქარავანი', original: 'Ticket to Ride', text: 'საქართველოს რუკა: ქარავნის გზები და მომლოცველობა მცხეთიდან ბათუმამდე', category: 'live', modes: ['noPhone'], print: { href: '/games/print/qaravani.pdf', sheets: 31 } },
   { id: 'ori-takhti', title: 'ორი ტახტი', original: '7 Wonders Duel', text: 'ორი ქართული სამეფო სამ ეპოქაში: ვინ ააშენებს მეტ ძეგლს', category: 'live', modes: ['noPhone'], print: { href: '/games/print/ori-takhti.pdf', sheets: 19 } },
   { id: 'lurji-supra', title: 'ლურჯი სუფრა', original: 'Azul', text: 'ქართული ორნამენტებით მოხატული ფილები სუფრაზე დააწყვე', category: 'live', modes: ['noPhone'], print: { href: '/games/print/lurji-supra.pdf', sheets: 13 } },
