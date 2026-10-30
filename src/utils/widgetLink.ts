@@ -22,9 +22,11 @@ export const onWidgetsChanged = (fn: () => void) => {
   return () => window.removeEventListener(CHANGED, fn);
 };
 
-export const linkWidgets = async () => {
+/** Asks the Worker for this member's secret. Chrome hands a link to the app only straight from a tap, so the secret
+ *  is fetched first and `handToApp` runs in the next tap (WidgetLinkCard's second step). */
+export const widgetSecret = async () => {
   const user = auth.currentUser;
-  if (!user || !isAndroidApp()) return false;
+  if (!user || !isAndroidApp()) return null;
   const res = await fetch(`${WIDGET_SERVER}/widget/link`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -32,14 +34,18 @@ export const linkWidgets = async () => {
   });
   if (!res.ok) throw new Error(`widget link ${res.status}`);
   const { secret } = await res.json();
+  return secret as string;
+};
+
+/** must run inside a tap: gives the app its secret */
+export const handToApp = (secret: string) => {
+  openInApp(`link?s=${encodeURIComponent(secret)}`);
   try {
     localStorage.setItem(KEY, '1');
   } catch {
     /* storage off: the summary is still sent this visit */
   }
   window.dispatchEvent(new Event(CHANGED));
-  openInApp(`link?s=${encodeURIComponent(secret)}`);
-  return true;
 };
 
 export const sendWidgetSummary = async (summary: unknown) => {
