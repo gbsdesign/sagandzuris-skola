@@ -301,11 +301,14 @@
   „ჩათი“ (`ClassChat`; a dot while unread). „სასწავლო პროგრამა“ is the name everywhere (not „კლასის პროგრამა“). The timetable
   chips also sit under the chat's title on the messages page. Teacher-only parts never show to members; attendance is
   teacher-only in `firestore.rules` too (members no longer read it).
-- **Games hub** (`pages/GamesPage.tsx`, 2026-10-27): „თამაშები“ is a hub of three category tabs (მუსიკალური · ქართული ·
-  ცოცხალი) from `data/games.ts`; every game carries its variant chips (ონლაინ · ჰიბრიდული · უტელეფონო); only ready games show,
-  plus the one being built as a „მალე“ row (since 2026-10-28 the user had the other unbuilt plan games taken off — none is being
-  built since „რა? სად? როდის?“ was finished; the plan doc keeps the rest, don't bring them back unasked); the board games are
-  paper (a card + the print strip; „სამშვილდის ღამე“'s card also opens its phone version, below); the vine label „თამაშები“ opens it. The pearls game stays the round button of „საგანძურის გზა“ (below), now
+- **Games hub** (`pages/GamesPage.tsx`, 2026-10-27; **one list since 2026-10-30**, the user's „ყველა თამაში 1 სიად“ — no category
+  tabs): every game of `data/games.ts` `GAMES` (the board games too) is a card with a button per variant it has — ონლაინ ·
+  ჰიბრიდული · სამაგიდო (the user's word, was „უტელეფონო“); the app's variants open the game („სამშვილდის ღამე“ on the variant
+  tapped: `requestOpen('samshvilde', 'online' | 'table')`), სამაგიდო downloads the PDF (`<a download>`). A game that answers to a
+  known one shows it in brackets (`like`: მაფია, Wordle, Alias, კატანი…) and ⓘ unfolds 2–3 lines on what that game is and how
+  ours differs (`about`; „რა? სად? როდის?“ has ⓘ without brackets). Only what is ready shows — a game and a variant alike (since
+  2026-10-28 the user had the unbuilt plan games taken off; the plan doc keeps them, don't bring them back unasked); a game's app
+  variants follow its section, a printed kit always shows. The vine label „თამაშები“ opens it. The pearls game stays the round button of „საგანძურის გზა“ (below), now
   under its own section `margalitebi` (open/მალე/hidden switch in the admin panel; a member's feature for it is the games'
   one — `featureOf` in `hooks/useAccess.ts`). The plan with 42 games and the six Georgianized board games:
   https://claude.ai/artifact/Dw24amtHhQvSGUd1pPE4fg
@@ -345,8 +348,8 @@
   lends its slot; „სხვა კითხვა“ swaps one, „წინა პასუხი“ goes back to fix ticks. The game is kept after every step (`sg-rsr-game`,
   `parseGame`), so ✕ only pauses — the setup shows „გაგრძელება“. No rules change, nothing in Firestore.
 - **„სამშვილდის ღამე“ on the phone (2026-10-30)**: the hybrid variant of the printed Mafia (`pages/games/SamshvildeGame.tsx`,
-  screens `pages/games/samshvilde/`, `mapItem` `samshvilde`; rules `utils/samshvilde.ts` + test; the board game's entry in
-  `BOARD_GAMES` has `item`, so its hub card opens it while section `tamashebi` allows, else only the paper card). The user's answers
+  screens `pages/games/samshvilde/`, `mapItem` `samshvilde`; rules `utils/samshvilde.ts` + test; its entry in `GAMES` has
+  `item`, so its hub card's ონლაინ/ჰიბრიდული open it while section `tamashebi` allows, else only the PDF shows). The user's answers
   „1ა 2ა“: the printed kit's roles, table (6–16 players, piper optional 11–14, kids' variant ≤9) and words; the roles are dealt by
   the phone passed round (each sees their card secretly) or by the printed cards — then the host marks on the first night who
   wakes (`markAsks`), the boss among the spies. The phone is the host's (მემატიანე): the night in the dark `TableScreen tone="night"`
@@ -357,7 +360,7 @@
   settings `sg-samshvilde`), ✕ only pauses. No rules change, nothing in Firestore.
 - **„სამშვილდის ღამე“ online (2026-10-30)**: the user's answers „1ა 2ა + ზარი, 3ა“ — a მემატიანე who does not play hosts it on
   their phone, every player sees their role and points at night on their own phone, the app counts hands and time; anyone in a
-  class (member or teacher) opens a room. The page's tabs „ონლაინ · ერთი ტელეფონით“ (`conf.mode`; online first when signed in).
+  class (member or teacher) opens a room. The page's tabs „ონლაინ · ჰიბრიდული“ (`conf.mode`; online first when signed in).
   Engine `utils/samshvildeOnline.ts` + test: the host's phone holds `OnlineState` (the hybrid `SamGame`, uids, the step's answers
   `by`, the speech clock `clock`/`clockAt`, the hands) and writes in one batch the public view (`publicView` — no role before the
   end), each changed seat (`seatView`: role, mates, checks) and `host/state` (a reload goes on); players write only `joins/{uid}`
@@ -373,7 +376,7 @@
   `useOpenGameRoom` (`utils/gameRoomOpen.ts`). The game's own call (`online/GameCall.tsx`): the school's calls on the room's path
   (`gameCallInfo`), opened as the small bar (`TableScreen` and the strip sit under it); `useHush` turns the players' microphone and
   camera off at night and an out player's microphone by day (not the farewell). Not yet tried by real people on several phones.
-- **Printable board games (2026-10-28, fourth PR)**: the „უტელეფონო“ variant of the six board games (plan doc tab „6 სამაგიდო
+- **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
   `scripts/print-games/lib.mjs` (Noto Georgian fonts fetched into a gitignored folder, 3×3 sheets of 63×88 mm cards with crop marks,
@@ -393,8 +396,8 @@
   spline; `boardItems()` keeps each piece's bounding box so a printed window draws only what it shows; 110 caravan cards of 8 goods + 14
   locomotives, 40 + 6 „მგზავრის წერილი“ whose points are checked against the map's shortest paths at build time and must name every city,
   40 carts a player (35 with five), caravanserais = TTR stations, animals as score markers; the cover's back is a glossary of the 47 places).
-  A game with sheets gets `print: { href, sheets }` in `data/games.ts`; its hub card
-  shows a wine „დასაბეჭდი ფურცლები“ strip („PDF · N ფურცელი“, one line; „PDF · “ hidden below 400 px) and its „უტელეფონო“ chip turns wine.
+  A game with sheets gets `print: { href, sheets }` and `noPhone` in its `modes` in `data/games.ts`; its hub card shows the
+  „სამაგიდო · PDF“ button that downloads it.
   The app's word games got paper kits too (seventh PR): „დღის სიტყვა“ (grids for 4/5/6 letters, four A6 a side; 78 slips from
   `ANSWER_BANK`; the example coloured by `scoreGuess`), „ოთხეული“ (16 grids of 16 cards = the app's `buildGrid` with fixed seeds,
   kept only when every group of the list allows one answer, with variety rules; the host's answer sheet) and „ამიხსენი“ (36

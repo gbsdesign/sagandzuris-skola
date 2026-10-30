@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Brain, Castle, ChevronRight, Crown, Dice5, Flame, Gamepad2, Gem, Headphones, Landmark, LayoutGrid, Map, MessageCircle, Music, Printer, Route,
-  Shapes, SpellCheck, Users,
+  Brain, Castle, Crown, Dice5, Download, Flame, Gamepad2, Gem, Headphones, Info, Landmark, LayoutGrid, Map, MessageCircle, Route,
+  Shapes, SpellCheck, Users, Wifi,
 } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
 import { useAccess } from '../hooks/useAccess';
@@ -12,8 +12,9 @@ import { CHESTS } from '../data/pearls';
 import { pearlState } from '../utils/pearls';
 import { hangiMeta, tbilisiToday } from '../utils/hangi';
 import { otkheuliMeta } from '../utils/otkheuli';
-import { BOARD_GAMES, GAME_CATEGORIES, GAMES, GameCategory, GameDef, GameMode, MODE_HINT, MODE_LABEL } from '../data/games';
-import { Card, Pill, Tabs } from '../components/ui/kit';
+import { requestOpen } from '../utils/searchOpen';
+import { GAMES, GameDef, GameMode, MODE_HINT, MODE_LABEL } from '../data/games';
+import { Card, Pill } from '../components/ui/kit';
 import { Toast } from '../components/ui/Toast';
 import { askSignIn } from '../components/access/SignInPrompt';
 import { openPathPanel } from '../components/views/IndependentWorkCard';
@@ -27,16 +28,13 @@ import ChurchkhelaGame from './games/ChurchkhelaGame';
 import RaSadRodisGame from './games/RaSadRodisGame';
 import SamshvildeGame from './games/SamshvildeGame';
 
-// „თამაშები“: the hub of the games (2026-10-27). Three categories as tabs — მუსიკალური · ქართული · ცოცხალი — and a
-// row per game with the variants it gets (ონლაინ · ჰიბრიდული · უტელეფონო). A built game opens its page: the games that live
-// inside this page („დღის ჰანგი“, „ამიხსენი“ — pages/games/) are `mapItem`, so the top bar's „←“ returns to the hub; the pearls
-// game stays the round button of „საგანძურის გზა“, under a switch of its own in the admin panel. A game still being built is a
-// „მალე“ row that only says so when tapped; the board games are made on paper — a card and the strip that opens their
-// sheets („სამშვილდის ღამე“'s card also opens its phone version). The catalogue is data/games.ts.
+// „თამაშები“: the hub of the games (2026-10-27; one list since 2026-10-30, the user's „ყველა თამაში 1 სიად“). A card per
+// game: its name (the known game it answers to in brackets; ⓘ unfolds what that game is), one line, and a button per variant it
+// has — ონლაინ / ჰიბრიდული open it (the games that live inside this page are `mapItem`, so the top bar's „←“ returns here;
+// „სამშვილდის ღამე“ opens on the variant tapped), სამაგიდო downloads its PDF. The pearls game stays the round button of
+// „საგანძურის გზა“, under a switch of its own in the admin panel. The catalogue is data/games.ts.
 
 type Access = ReturnType<ReturnType<typeof useAccess>['section']>;
-
-const CAT_ICON: Record<GameCategory, React.ComponentType<{ className?: string }>> = { musical: Music, georgian: Castle, live: Users };
 
 const ICON: Record<string, React.ReactNode> = {
   margalitebi: <Gem />, 'dghis-hangi': <Headphones />, 'dghis-sitqva': <SpellCheck />, otkheuli: <Shapes />,
@@ -44,84 +42,83 @@ const ICON: Record<string, React.ReactNode> = {
   'okros-khana': <Map />, 'samshvildis-ghame': <Castle />, qaravani: <Route />, 'ori-takhti': <Crown />, 'lurji-supra': <LayoutGrid />, 'mepis-kari': <Landmark />,
 };
 
+const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string }>> = { online: Wifi, hybrid: Users, noPhone: Download };
+
 // the games that open inside this page, by their `mapItem`
 const INNER: Record<string, React.FC> = {
   hangi: HangiGame, amikhseni: AmikhseniGame, sitqva: SitqvaGame, otkheuli: OtkheuliGame, gatvla: GatvlaGame, churchkhela: ChurchkhelaGame, rsr: RaSadRodisGame,
   samshvilde: SamshvildeGame,
 };
 
-// the category stays chosen on this device
-const CAT_KEY = 'sg-games-cat';
-const rememberedCat = (): GameCategory => {
-  try {
-    const v = localStorage.getItem(CAT_KEY);
-    if (v === 'musical' || v === 'georgian' || v === 'live') return v;
-  } catch { /* storage off */ }
-  return 'musical';
-};
+const BTN = 'inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full text-[13.5px] font-bold transition-[background-color,transform] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#7a2028]/50';
 
-const GameRow: React.FC<{ g: GameDef; state: Access; meta?: string; onOpen?: () => void }> = ({ g, state, meta, onOpen }) => {
-  // a game made only on paper (the board games) has nothing to open in the app: a plain card, its strip opens the sheets
-  const paperOnly = !!g.print && !g.page && !g.item;
-  const ready = paperOnly || state === 'open' || state === 'locked';
-  const body = (
-    <>
-      <span className={`w-11 h-11 shrink-0 rounded-2xl flex items-center justify-center [&>svg]:w-5 [&>svg]:h-5 ${ready ? 'bg-[#7a2028]/[0.08] text-[#7a2028]' : 'bg-[#f1e8d9] text-[#9a8b7b]'}`}>
-        {ICON[g.id] ?? <Gamepad2 />}
-      </span>
-      <span className="min-w-0 flex-1">
-        <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className={`font-serif-ge text-[15px] font-bold leading-snug ${ready ? 'text-[#4a3426]' : 'text-[#6b5b4b]'}`}>{g.title}</span>
-          {g.original && <span className="text-[12px] text-[#9a8b7b]">{g.original}</span>}
-          {!ready && <Pill tone="amber" className="!h-6">მალე</Pill>}
-        </span>
-        <span className="block mt-0.5 text-[12.5px] leading-snug text-[#75685a]">{g.text}</span>
-        <span className="mt-1.5 flex flex-wrap items-center gap-1.5">
-          {g.modes.map(m => <Pill key={m} tone={ready || (m === 'noPhone' && g.print) ? 'wine' : 'muted'} className="!h-6">{MODE_LABEL[m]}</Pill>)}
-          {meta && <span className="text-[12px] font-bold tabular-nums text-[#7a2028]">{meta}</span>}
-        </span>
-      </span>
-      {ready && !paperOnly && <ChevronRight className="w-5 h-5 shrink-0 text-[#b3a593]" />}
-    </>
-  );
-  const look = ready ? 'bg-white/85 ring-[#e8dcc8] shadow-[0_1px_2px_rgba(74,52,38,0.05)]' : 'bg-white/50 ring-[#ece2d2]';
-
-  // a game already made on paper (the board games, the word games' „უტელეფონო“): a strip under the card opens its sheets
-  if (g.print) {
-    const head = 'w-full flex items-center gap-3 px-3 pt-3 pb-2.5 text-left';
+/** a variant's button: the app's variants open the game, the printed kit downloads */
+const ModeBtn: React.FC<{ g: GameDef; mode: GameMode; soon: boolean; onPlay: (mode: GameMode) => void }> = ({ g, mode, soon, onPlay }) => {
+  const Ic = MODE_ICON[mode];
+  if (mode === 'noPhone' && g.print) {
     return (
-      <li className={`rounded-2xl ring-1 overflow-hidden ${look}`}>
-        {paperOnly ? <div className={head}>{body}</div> : (
-          <button
-            type="button"
-            onClick={onOpen}
-            className={`${head} cursor-pointer transition-colors hover:bg-white/60 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-[#7a2028]/40`}
-          >
-            {body}
-          </button>
-        )}
-        <a
-          href={g.print.href}
-          target="_blank"
-          rel="noopener"
-          className="mx-3 mb-3 flex items-center gap-2.5 h-11 px-3.5 rounded-xl bg-[#7a2028] text-[#fbf6ec] shadow-[0_1px_2px_rgba(74,52,38,0.15)] transition-[background-color,transform] hover:bg-[#6a1b22] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#7a2028]/50"
-        >
-          <Printer className="w-[18px] h-[18px] shrink-0" />
-          <span className="min-w-0 truncate text-[14px] font-bold leading-none">დასაბეჭდი ფურცლები</span>
-          <span className="ml-auto shrink-0 whitespace-nowrap text-[12px] tabular-nums leading-none text-[#fbf6ec]/80"><span className="hidden min-[400px]:inline">PDF · </span>{g.print.sheets} ფურცელი</span>
-        </a>
-      </li>
+      <a
+        href={g.print.href}
+        download={`${g.title}.pdf`}
+        onClick={() => triggerHaptic(8)}
+        aria-label={`${g.title} — სამაგიდო: PDF, ${g.print.sheets} ფურცელი`}
+        className={`${BTN} bg-[#7a2028]/[0.08] text-[#7a2028] ring-1 ring-[#7a2028]/15 hover:bg-[#7a2028]/[0.14]`}
+      >
+        <Ic className="w-4 h-4 shrink-0" />{MODE_LABEL.noPhone}<span className="font-normal opacity-75">· PDF</span>
+      </a>
     );
   }
   return (
-    <li>
-      <button
-        type="button"
-        onClick={onOpen}
-        className={`w-full flex items-center gap-3 px-3 py-3 min-h-16 rounded-2xl text-left ring-1 cursor-pointer transition-[background-color,transform] active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a2028]/40 ${look} ${ready ? 'hover:bg-white' : 'hover:bg-white/70'}`}
-      >
-        {body}
-      </button>
+    <button
+      type="button"
+      onClick={() => onPlay(mode)}
+      className={`${BTN} cursor-pointer ${soon ? 'bg-[#f1e8d9] text-[#9a8b7b]' : 'bg-[#7a2028] text-[#fbf6ec] shadow-[0_1px_2px_rgba(74,52,38,0.15)] hover:bg-[#6a1b22]'}`}
+    >
+      <Ic className="w-4 h-4 shrink-0" />{MODE_LABEL[mode]}
+    </button>
+  );
+};
+
+const GameCard: React.FC<{ g: GameDef; state: Access; meta?: string; onPlay: (mode: GameMode) => void }> = ({ g, state, meta, onPlay }) => {
+  const [info, setInfo] = useState(false);
+  const soon = state === 'soon';
+  const infoId = `game-about-${g.id}`;
+  return (
+    <li className="rounded-2xl bg-white/85 ring-1 ring-[#e8dcc8] shadow-[0_1px_2px_rgba(74,52,38,0.05)] p-3">
+      <div className="flex items-start gap-3">
+        <span className={`w-11 h-11 shrink-0 rounded-2xl flex items-center justify-center [&>svg]:w-5 [&>svg]:h-5 ${soon ? 'bg-[#f1e8d9] text-[#9a8b7b]' : 'bg-[#7a2028]/[0.08] text-[#7a2028]'}`}>
+          {ICON[g.id] ?? <Gamepad2 />}
+        </span>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-start gap-1">
+            <h3 className="min-w-0 pt-[3px] font-serif-ge text-[15.5px] font-bold leading-snug text-[#4a3426] [overflow-wrap:anywhere]">
+              {g.title}{g.like && <span className="font-normal text-[#8a7a6a]"> ({g.like})</span>}
+            </h3>
+            {g.about && (
+              <button
+                type="button"
+                onClick={() => { triggerHaptic(5); setInfo(o => !o); }}
+                aria-expanded={info}
+                aria-controls={infoId}
+                aria-label={`რა არის „${g.title}“`}
+                title="რა არის"
+                className={`w-9 h-9 -my-1.5 shrink-0 rounded-full flex items-center justify-center cursor-pointer transition-colors ${info ? 'bg-[#7a2028]/[0.1] text-[#7a2028]' : 'text-[#a8998a] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.07]'}`}
+              >
+                <Info className="w-[18px] h-[18px]" />
+              </button>
+            )}
+            {soon && <Pill tone="amber" className="!h-6 shrink-0">მალე</Pill>}
+          </div>
+          <p className="mt-0.5 text-[12.5px] leading-snug text-[#75685a]">{g.text}</p>
+          {meta && <p className="mt-1 text-[12px] font-bold tabular-nums text-[#7a2028]">{meta}</p>}
+        </div>
+      </div>
+      {info && g.about && (
+        <p id={infoId} className="mt-2.5 rounded-xl bg-[#fbf6ec] ring-1 ring-[#efe3cf] px-3.5 py-2.5 text-[13px] leading-relaxed text-[#5a4a3c]">{g.about}</p>
+      )}
+      <div className="mt-2.5 flex flex-wrap gap-2">
+        {g.modes.map(m => <ModeBtn key={m} g={g} mode={m} soon={soon} onPlay={onPlay} />)}
+      </div>
     </li>
   );
 };
@@ -134,25 +131,21 @@ export const GamesPage: React.FC = () => {
   const hangi = useHangi();
   const sitqva = useDailyRecord('sitqva');
   const otkheuli = useDailyRecord('otkheuli');
-  const [cat, setCat] = useState<GameCategory>(rememberedCat);
   const [soon, setSoon] = useState<string | null>(null);
   const today = useMemo(() => tbilisiToday(), []);
 
   const Inner = mapItem ? INNER[mapItem] : undefined;
   if (Inner) return <Inner />;
 
-  const pick = (c: GameCategory) => {
-    setCat(c);
-    try { localStorage.setItem(CAT_KEY, c); } catch { /* storage off */ }
-  };
+  // a game's app variants follow its section's switch and the member's features; a printed kit is always there
+  const cards = GAMES.flatMap(g => {
+    const state = (g.section ? access.section(g.section) : 'open') as Access;
+    const modes = g.modes.filter(m => (m === 'noPhone' ? !!g.print : state !== 'hidden'));
+    return modes.length ? [{ g: { ...g, modes }, state }] : [];
+  });
+  const building = cards.filter(c => c.state === 'soon').length;
 
-  // a built game follows its section's switch and the member's features; the rest are „მალე“
-  const rows = GAMES.map(g => ({ g, state: (g.section ? access.section(g.section) : 'soon') as Access })).filter(r => r.state !== 'hidden');
-  const inCat = rows.filter(r => r.g.category === cat);
-  const building = rows.filter(r => r.state === 'soon').length;
-  const ready = rows.length - building + BOARD_GAMES.length; // the board games are ready on paper
-
-  // the pearls row shows how far the member is; the daily game's row today's result or the streak
+  // the pearls card shows how far the member is; a daily game's card today's result or the streak
   const pearlIds = CHESTS.flatMap(c => c.pearls);
   const polished = pearlIds.filter(id => { const s = pearlState(pearls[id], shine[id]); return s === 'polished' || s === 'shining'; }).length;
   const pearlMeta = user && loaded ? `გაპრიალებული ${polished}/${pearlIds.length}` : undefined;
@@ -163,57 +156,40 @@ export const GamesPage: React.FC = () => {
       : g.id === 'otkheuli' && otkheuli.loaded ? otkheuliMeta(otkheuli.days, today)
       : undefined;
 
-  const open = (g: GameDef, state: Access) => {
+  const play = (g: GameDef, state: Access, mode: GameMode) => {
     triggerHaptic(10);
     if (state === 'locked') { askSignIn(g.title); return; }
-    if (state === 'open' && g.item) { openMapItem(g.item); return; }
-    if (state === 'open' && g.page) { if (g.panel) openPathPanel(g.panel); navigateTo(g.page); return; }
-    setSoon(g.print ? `„${g.title}“: დასაბეჭდი ფურცლები მზადაა (ქვემოთ); აპის ვერსია მზადდება` : `„${g.title}“ ჯერ მზადდება — მალე დაემატება`);
+    if (state !== 'open') { setSoon(`„${g.title}“ ჯერ მზადდება — მალე დაემატება`); return; }
+    // „სამშვილდის ღამე“ has two app variants: its page opens on the one tapped
+    if (g.item === 'samshvilde') requestOpen('samshvilde', mode === 'online' ? 'online' : 'table');
+    if (g.item) { openMapItem(g.item); return; }
+    if (g.page) { if (g.panel) openPathPanel(g.panel); navigateTo(g.page); }
   };
-
-  const category = GAME_CATEGORIES.find(c => c.id === cat);
 
   return (
     <div className="w-full max-w-2xl space-y-4">
       <Card tone="wine" className="!p-4 sm:!p-5">
         <p className="font-serif-ge text-[17px] font-bold leading-snug">ითამაშე და ისწავლე</p>
-        <p className="mt-1 text-[13px] leading-snug text-[#fbf6ec]/85">სამი კატეგორია და სამი ვარიანტი:</p>
-        <ul className="mt-2 space-y-1 text-[12.5px] leading-snug text-[#fbf6ec]/85">
-          {(Object.keys(MODE_LABEL) as GameMode[]).map(m => (
-            <li key={m}><span className="font-bold text-[#fbf6ec]">{MODE_LABEL[m]}</span> — {MODE_HINT[m]}</li>
-          ))}
+        <p className="mt-1 text-[13px] leading-snug text-[#fbf6ec]/85">ყველა თამაში ერთ სიაშია, თითოეულს თავისი ვარიანტები აქვს:</p>
+        <ul className="mt-2 space-y-1.5 text-[12.5px] leading-snug text-[#fbf6ec]/85">
+          {(Object.keys(MODE_LABEL) as GameMode[]).map(m => {
+            const Ic = MODE_ICON[m];
+            return (
+              <li key={m} className="flex items-start gap-2">
+                <Ic className="w-4 h-4 mt-px shrink-0 text-[#e2c27a]" />
+                <span><span className="font-bold text-[#fbf6ec]">{MODE_LABEL[m]}</span> — {MODE_HINT[m]}</span>
+              </li>
+            );
+          })}
         </ul>
-        <p className="mt-2.5 text-[12px] tabular-nums text-[#fbf6ec]/70">მზადაა {ready}{building > 0 && ` · მზადდება ${building}`}</p>
+        <p className="mt-2.5 text-[12px] tabular-nums text-[#fbf6ec]/70">მზადაა {cards.length - building} თამაში{building > 0 && ` · მზადდება ${building}`}</p>
       </Card>
 
-      <Tabs items={GAME_CATEGORIES.map(c => ({ id: c.id, label: c.label, Icon: CAT_ICON[c.id] }))} value={cat} onChange={pick} />
-      {category && <p className="px-1 text-[13px] leading-snug text-[#8a7a6a]">{category.text}</p>}
-
       <ul className="space-y-2.5">
-        {inCat.map(({ g, state }) => (
-          <GameRow key={g.id} g={g} state={state} meta={meta(g)} onOpen={() => open(g, state)} />
+        {cards.map(({ g, state }) => (
+          <GameCard key={g.id} g={g} state={state} meta={meta(g)} onPlay={m => play(g, state, m)} />
         ))}
       </ul>
-
-      {cat === 'live' && (
-        <section className="pt-2">
-          <div className="flex items-center gap-2 px-1 mb-1">
-            <Printer className="w-4 h-4 shrink-0 text-[#7a2028]" />
-            <h2 className="font-serif-ge text-[15px] font-bold text-[#4a3426]">სამაგიდო თამაშები ქართულად</h2>
-          </div>
-          <p className="px-1 mb-2.5 text-[12.5px] leading-snug text-[#8a7a6a]">ექვსი ცნობილი თამაში ქართულ თემაზე — სკოლა თვითონ დაბეჭდავს და ააწყობს. „დასაბეჭდი ფურცლები“ — ბარათები, წესები და ყველაფერი ჭრის ნიშნებით.</p>
-          <ul className="space-y-2.5">
-            {BOARD_GAMES.map(g => {
-              // a board game with a phone version opens it while the games' section lets it; otherwise only its paper card
-              const state: Access = g.item && g.section ? access.section(g.section) : 'open';
-              const app = !!g.item && (state === 'open' || state === 'locked');
-              return app
-                ? <GameRow key={g.id} g={g} state={state} onOpen={() => open(g, state)} />
-                : <GameRow key={g.id} g={{ ...g, page: undefined, item: undefined, modes: ['noPhone'] }} state="open" />;
-            })}
-          </ul>
-        </section>
-      )}
 
       <Toast message={soon || ''} type="info" isVisible={!!soon} onClose={() => setSoon(null)} />
     </div>

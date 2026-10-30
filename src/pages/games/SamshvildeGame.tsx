@@ -110,7 +110,9 @@ const SamshvildeGame: React.FC = () => {
     setRoomOpen(true);
     if (conf.mode !== 'online') setC({ mode: 'online' });
   };
+  // the hub's variant buttons ask for a variant („online“ / „table“); an invitation names its room („classId/roomId“)
   useOpenRequest('samshvilde', id => {
+    if (id === 'online' || id === 'table') { setC({ mode: id }); return; }
     const [classId, roomId] = id.split('/');
     if (classId && roomId) void enter(classId, roomId);
   });
@@ -250,7 +252,7 @@ const SamshvildeGame: React.FC = () => {
         cols={2}
         value={mode}
         onChange={m => setC({ mode: m })}
-        items={[{ id: 'online', label: 'ონლაინ', Icon: Wifi }, { id: 'table', label: 'ერთი ტელეფონით', Icon: Smartphone }]}
+        items={[{ id: 'online', label: 'ონლაინ', Icon: Wifi }, { id: 'table', label: 'ჰიბრიდული', Icon: Users }]}
       />
 
       {mode === 'online' ? (
