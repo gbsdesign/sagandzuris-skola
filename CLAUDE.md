@@ -111,7 +111,8 @@
   goes through `askConfirm` (shown by `ConfirmHost` in `App.tsx`), never `window.confirm`; new text ≥12px, nothing
   below 11px anywhere; one paper background for every page in `App.tsx`. Signing out lives only at the profile's
   bottom (`views/ProfileActions.tsx`); the admin panel opens only from the profile's wine row (`views/AdminEntry.tsx`,
-  no header shield since 2026-10-27), and the profile's details are three folds with „შენახვა“ shown only while changed; today's saints are a folded line at the top of home (`TodaySaintsCard`).
+  no header shield since 2026-10-27), and the profile's details are three folds with „შენახვა“ shown only while changed; the top of home is one day card of thin lines (2026-10-31): today's saints (`TodaySaintsCard`, a calendar leaf + the first
+  commemoration, unfolds) and the reviews due (`home/LearnDue.tsx`); in the header the 🔍 sits in the top row on every phone (under sm).
 
 ## Audio and sheet music (details in `src/data/CLAUDE.md`)
 
@@ -155,7 +156,7 @@
   into the part's key from my first steady note); a soft band over the notes picture follows the playing beat
   (`markerAt` — x of notes is guessed from their lengths, no real positions); a recording is split at its quietest
   places between 6 and 16 s (`partsAtBreaths` over `utils/audioEnergy.ts`, falls back to equal parts); a song's words
-  beside every part (`wordsForPart`, only roughly — no timings); home card „დღეს გასამეორებელი“ (`home/LearnDue.tsx`,
+  beside every part (`wordsForPart`, only roughly — no timings); home line „დღეს გასამეორებელი“ (`home/LearnDue.tsx`,
   opens the piece through `utils/learnOpen.ts`) and one daily phone reminder on the reminders Worker
   (`utils/learnReminder.ts`, id `learn-review`, kept apart from the habits' list in `prayerReminders.ts`).
   A teacher's chant/song assignment (also 2026-10-28): the learning mode notes each piece's part count in
@@ -531,9 +532,8 @@ listens (Gemini through Firebase AI Logic). 8 calls on Android (wake lock, push,
    2026-10-28: „მოსასმენი“ queue — ▶ fetches the take on demand, „ჩათვლა“ — and one table of members × chests). Since
    2026-10-28 every 5 shining pearls give the outfit of „ჩემი სამოსი“ its next part (`utils/pearlGifts.ts` + test,
    `hooks/usePearlGifts.ts`: the member's own app adds it from the path page — `PearlGiftBanner` in `PathOrbs` — and keeps
-   `students.pearlGifts {steps, parts, seen}`; the pearls panel shows „შემდეგი ჯილდო“), and the home page has
-   „დღის მარგალიტი“ (`home/PearlOfDay.tsx`: the same pearl for the whole school, hangi's `pickOfDay`; a tap opens it on the
-   path page through `utils/pearlWish.ts`). „AI მასწავლებელი“ (`utils/aiTeacher.ts`, gemini-3.8-flash through
+   `students.pearlGifts {steps, parts, seen}`; the pearls panel shows „შემდეგი ჯილდო“), and `utils/pearlWish.ts` opens a
+   wished pearl on the path page (the home card „დღის მარგალიტი“ was taken off at the user's wish, 2026-10-31). „AI მასწავლებელი“ (`utils/aiTeacher.ts`, gemini-3.8-flash through
    Firebase AI Logic with the try-on's App Check; 3 a day per device, superadmins unlimited) — works only on the
    deployed site. Tested in the emulator with a fake microphone WAV (Chromium `--use-file-for-fake-audio-capture`).
 - Birthdays and name days (redesign stage 4, 2026-10-25): page `birthdays` (`pages/BirthdaysPage.tsx`), records

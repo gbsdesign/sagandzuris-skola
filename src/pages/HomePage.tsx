@@ -5,7 +5,6 @@ import { ShortcutShelf } from '../components/home/ShortcutShelf';
 import { TodaySaintsCard } from '../components/calendar/TodaySaintsCard';
 import { BirthdaysSoon } from '../components/home/BirthdaysSoon';
 import { LearnDue } from '../components/home/LearnDue';
-import { PearlOfDay } from '../components/home/PearlOfDay';
 import { SAYINGS_ABOVE, SAYINGS_BELOW, Saying } from '../data/sayings';
 
 interface HomePageProps {
@@ -51,14 +50,14 @@ export const HomePage: React.FC<HomePageProps> = ({ logoUrl }) => {
     <div className="relative overflow-hidden px-5 py-8 sm:px-10 sm:py-12 text-center flex flex-col items-center text-[#2a2017]">
       {/* School logo straight on the parchment (multiply drops its white background), vine ornament under it */}
       <PlateScatter />
-      {/* today's saints from the church calendar, until ✕ for the day */}
-      <TodaySaintsCard className="relative mb-3" />
+      {/* the day card: thin lines in one card — today's saints from the church calendar (until ✕ for the day) and
+          the learning mode's reviews due today; with neither, no card (empty:hidden) */}
+      <div className="relative mb-3 w-full max-w-md rounded-2xl bg-white/85 ring-1 ring-[#e8dcc8] shadow-[0_8px_18px_-14px_rgba(122,32,40,0.5)] overflow-hidden divide-y divide-[#f1e8d9] empty:hidden">
+        <TodaySaintsCard />
+        <LearnDue />
+      </div>
       {/* birthdays: within five days for teachers and admins, today's for members */}
       <BirthdaysSoon className="relative mb-3" />
-      {/* the learning mode's reviews due today */}
-      <LearnDue className="relative mb-3" />
-      {/* the day's pearl of the pearls game, the same for the whole school, until ✕ for the day */}
-      <PearlOfDay className="relative mb-3" />
       <div className="mb-3" aria-hidden />
       {/* holy fathers' words, changing every 15 minutes: toward God above the logo, toward people under the Patriarch's "cross" */}
       <FatherSaying key={`a${slot}`} {...SAYINGS_ABOVE[slot % SAYINGS_ABOVE.length]} className="mb-6" />
