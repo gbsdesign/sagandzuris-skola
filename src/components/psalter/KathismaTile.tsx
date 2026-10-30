@@ -5,12 +5,12 @@ import { KATHISMA_PSALMS } from '../../utils/psalter';
 import { PsalterGroup, useGroupNow } from '../../hooks/usePsalter';
 import { triggerHaptic } from '../../utils/haptics';
 import { useKathismaActions } from './useKathismaActions';
-import { openPsalterGroup } from './selectedGroup';
 
-// "ჩემი კანონი" as the first of "ჩემი ღილაკები": the tile opens the group page, its ✓ marks the kathisma read
-// (a second tap takes my own mark back). One tile per kathisma of mine; nothing in a cycle without one.
+// "ჩემი კანონი" as the first of "ჩემი ღილაკები": the tile opens the kathisma's text (the user's choice, 2026-10-31 —
+// it opened the group page before), its ✓ marks it read (a second tap takes my own mark back). One tile per kathisma of
+// mine; nothing in a cycle without one.
 export const KathismaTiles: React.FC<{ group: PsalterGroup; uid: string }> = ({ group, uid }) => {
-  const { navigateTo } = useNavigation();
+  const { openPrayer } = useNavigation();
   const { cycle, slots, mine } = useGroupNow(group, uid);
   const actions = useKathismaActions(group, cycle);
   if (!cycle || !group.memberIds.includes(uid)) return null;
@@ -24,8 +24,8 @@ export const KathismaTiles: React.FC<{ group: PsalterGroup; uid: string }> = ({ 
           <li key={`${group.id}-${k}`} className="relative">
             <button
               type="button"
-              onClick={() => { triggerHaptic(10); openPsalterGroup(group.id); navigateTo('psalter'); }}
-              aria-label={`ჩემი კანონი ${k} — ჯგუფის გვერდი`}
+              onClick={() => { triggerHaptic(10); openPrayer(`kathisma-${k}`); }}
+              aria-label={`ჩემი კანონი ${k} — კითხვა`}
               className="w-full h-20 rounded-[14px] bg-gradient-to-br from-[#7a2028] to-[#561820] text-[#fbf6ec] flex flex-col justify-between px-2.5 py-2 text-left cursor-pointer transition active:scale-[0.96] shadow-[0_4px_10px_-6px_rgba(122,32,40,0.8)]"
             >
               <span className="h-7 flex items-center font-serif-ge text-[22px] leading-none font-bold tabular-nums">{k}</span>

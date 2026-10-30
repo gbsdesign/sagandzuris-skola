@@ -573,6 +573,25 @@ service cloud.firestore {
           && incoming().memberIds == existing().memberIds.removeAll([uid()])
           && incoming().members.size() == existing().members.size() - 1;
       }
+      // a member without a kanon takes one themself (the user's wish, 2026-10-31): their uid joins the end of one
+      // kathisma's list that has fewer than two readers; nothing else in the distribution changes. `pick` names the list.
+      function noKanon(a) {
+        return !(uid() in a.get('1', [])) && !(uid() in a.get('2', [])) && !(uid() in a.get('3', [])) && !(uid() in a.get('4', [])) && !(uid() in a.get('5', [])) && !(uid() in a.get('6', [])) && !(uid() in a.get('7', [])) && !(uid() in a.get('8', [])) && !(uid() in a.get('9', [])) && !(uid() in a.get('10', [])) && !(uid() in a.get('11', [])) && !(uid() in a.get('12', [])) && !(uid() in a.get('13', [])) && !(uid() in a.get('14', [])) && !(uid() in a.get('15', [])) && !(uid() in a.get('16', [])) && !(uid() in a.get('17', [])) && !(uid() in a.get('18', [])) && !(uid() in a.get('19', [])) && !(uid() in a.get('20', []));
+      }
+      function pickingKanon() {
+        let before = existing().get('assignment', {});
+        let after = incoming().get('assignment', {});
+        let k = incoming().get('pick', {}).get('k', '');
+        return isSignedIn()
+          && uid() in existing().memberIds
+          && changed().hasOnly(['assignment', 'pick', 'updatedAt'])
+          && incoming().pick.by == uid()
+          && k in ['1', '2', '3', '4', '5', '6', '7', '8', '9', '10', '11', '12', '13', '14', '15', '16', '17', '18', '19', '20']
+          && after.diff(before).affectedKeys().hasOnly([k])
+          && before.get(k, []).size() < 2
+          && after[k] == before.get(k, []).concat([uid()])
+          && noKanon(before);
+      }
       // a member renames themself (their Georgian name for the commemoration list)
       function renamingSelf() {
         return isSignedIn()
@@ -586,7 +605,7 @@ service cloud.firestore {
       allow create: if isAdmin() || (isTeacher() && uid() in incoming().teacherIds);
       allow update: if isAdmin()
         || (isTeacher() && uid() in existing().get('teacherIds', []) && !changed().hasAny(['teacherIds', 'teachers', 'archived']))
-        || leavingGroup() || renamingSelf();
+        || leavingGroup() || renamingSelf() || pickingKanon();
       allow delete: if isAdmin() || (isTeacher() && uid() in existing().get('teacherIds', []));
 
       // One cycle (1 or 2 days) of reading all twenty kathismas: who read, took or asked for help

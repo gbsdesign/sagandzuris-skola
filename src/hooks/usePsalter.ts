@@ -5,7 +5,7 @@ import {
 import { db } from '../firebase';
 import {
   Assignment, Cycle, KATHISMA_COUNT, PastDistribution, Slot, Slots, cycleOf, georgiaToday, halfIndex, kathismasOf, normCycleDays, normShiftDays, ownersIn,
-  rebase, responsible, withPast,
+  rebase, responsible, withPast, wrap,
 } from '../utils/psalter';
 
 // Firestore side of the psalter group:
@@ -145,6 +145,18 @@ export const useCycleSlots = (groupId?: string | null, cycleId?: string | null) 
       () => { setSlots({}); setLoading(false); });
   }, [groupId, cycleId]);
   return { slots, loading };
+};
+
+/** A member without a kanon takes kathisma `k` (as numbered this period) themself: their uid joins that kathisma's list
+ *  in the stored distribution — free, or beside one reader. firestore.rules `pickingKanon` lets only that through. */
+export const pickKanon = (group: PsalterGroup, k: number, uid: string) => {
+  const c = cycleOf(georgiaToday(), group.cycleDays, group.shiftDays);
+  const key = String(wrap(k - (c.half - group.baseHalf)));
+  return updateDoc(doc(db, 'psalterGroups', group.id), {
+    [`assignment.${key}`]: arrayUnion(uid),
+    pick: { k: key, by: uid, at: new Date().toISOString() },
+    updatedAt: new Date().toISOString(),
+  });
 };
 
 /** The kathismas I took over to help, per group, in each group's current cycle (live). */

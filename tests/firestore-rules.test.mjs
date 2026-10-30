@@ -146,6 +146,13 @@ await t('member cannot write odd fields', assertFails(setDoc(doc(stu, 'psalterGr
 await t('outsider cannot read cycles', assertFails(getDoc(doc(stu2 === stu ? stu : as('zz', 'zz@x.ge'), 'psalterGroups', 'g1', 'cycles', '2026-10-06'))));
 await t('member cannot change assignment', assertFails(updateDoc(doc(stu, 'psalterGroups', 'g1'), { assignment: { 1: ['stu'] } })));
 await t('teacher changes assignment', assertSucceeds(updateDoc(doc(tch, 'psalterGroups', 'g1'), { assignment: { 1: ['stu'] } })));
+// a member without a kanon picks one themself: only their own uid, onto a list with fewer than two readers
+const pick = (db, k, who) => updateDoc(doc(db, 'psalterGroups', 'g1'), { [`assignment.${k}`]: arrayUnion(who), pick: { k: String(k), by: 'stu2', at: 'now' } });
+await t('member cannot pick a kanon for someone else', assertFails(pick(stu2, 3, 'stu')));
+await t('teacher fills kanon 1', assertSucceeds(updateDoc(doc(tch, 'psalterGroups', 'g1'), { assignment: { 1: ['stu', 'x9'] } })));
+await t('member cannot join a kanon with two readers', assertFails(pick(stu2, 1, 'stu2')));
+await t('member without a kanon picks a free one', assertSucceeds(pick(stu2, 2, 'stu2')));
+await t('member with a kanon cannot pick another', assertFails(pick(stu2, 3, 'stu2')));
 await t('member leaves group', assertSucceeds(updateDoc(doc(stu2, 'psalterGroups', 'g1'), { memberIds: arrayRemove('stu2'), members: arrayRemove({ uid: 'stu2', name: 'S2' }), assignment: {} })));
 await t('member renames self', assertSucceeds(updateDoc(doc(stu, 'psalterGroups', 'g1'), { members: [{ uid: 'stu', name: 'სანდრო' }] })));
 await t('teacher cannot archive the group', assertFails(updateDoc(doc(tch, 'psalterGroups', 'g1'), { archived: true })));
