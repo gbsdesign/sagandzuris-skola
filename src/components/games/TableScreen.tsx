@@ -4,7 +4,8 @@ import { triggerHaptic } from '../../utils/haptics';
 
 // „მაგიდის ეკრანი“: the full-screen face of a live game (games hub, 2026-10-28) — the one phone on the table shows big
 // text and big buttons, nothing else; the screen stays awake while it is open. Born with „ამიხსენი“, for every live game
-// after it. Respects the phone's safe areas (viewport-fit=cover).
+// after it. Respects the phone's safe areas (viewport-fit=cover). `tone="night"` dims it to the night's dark blue
+// („სამშვილდის ღამე“: the host reads the night by it while everybody's eyes are closed).
 
 const useWakeLock = (on: boolean) => {
   useEffect(() => {
@@ -26,21 +27,23 @@ export const TableScreen: React.FC<{
   onClose: () => void;
   children: React.ReactNode;
   footer?: React.ReactNode;
-}> = ({ title, right, onClose, children, footer }) => {
+  tone?: 'day' | 'night';
+}> = ({ title, right, onClose, children, footer, tone = 'day' }) => {
   useWakeLock(true);
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
     return () => { document.body.style.overflow = prev; };
   }, []);
+  const night = tone === 'night';
   return (
-    <div className="fixed inset-0 z-[70] flex flex-col bg-[#fbf6ec] text-[#4a3426] safe-top safe-bottom safe-x" role="dialog" aria-modal="true">
+    <div className={`fixed inset-0 z-[70] flex flex-col safe-top safe-bottom safe-x ${night ? 'bg-[#1b1830] text-[#ece3d2]' : 'bg-[#fbf6ec] text-[#4a3426]'}`} role="dialog" aria-modal="true">
       <div className="flex items-center gap-2 px-3 h-14 shrink-0">
         <button
           type="button"
           onClick={() => { triggerHaptic(10); onClose(); }}
           aria-label="დახურვა"
-          className="w-11 h-11 -ml-1 rounded-full flex items-center justify-center text-[#7a2028] hover:bg-[#7a2028]/[0.07] cursor-pointer"
+          className={`w-11 h-11 -ml-1 rounded-full flex items-center justify-center cursor-pointer ${night ? 'text-[#e2c27a] hover:bg-white/10' : 'text-[#7a2028] hover:bg-[#7a2028]/[0.07]'}`}
         >
           <X className="w-5 h-5" />
         </button>

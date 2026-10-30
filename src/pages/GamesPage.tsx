@@ -25,13 +25,14 @@ import OtkheuliGame from './games/OtkheuliGame';
 import GatvlaGame from './games/GatvlaGame';
 import ChurchkhelaGame from './games/ChurchkhelaGame';
 import RaSadRodisGame from './games/RaSadRodisGame';
+import SamshvildeGame from './games/SamshvildeGame';
 
 // „თამაშები“: the hub of the games (2026-10-27). Three categories as tabs — მუსიკალური · ქართული · ცოცხალი — and a
 // row per game with the variants it gets (ონლაინ · ჰიბრიდული · უტელეფონო). A built game opens its page: the games that live
 // inside this page („დღის ჰანგი“, „ამიხსენი“ — pages/games/) are `mapItem`, so the top bar's „←“ returns to the hub; the pearls
 // game stays the round button of „საგანძურის გზა“, under a switch of its own in the admin panel. A game still being built is a
-// „მალე“ row that only says so when tapped; the board games are paper only — a plain card and the strip that opens their
-// sheets. The catalogue is data/games.ts.
+// „მალე“ row that only says so when tapped; the board games are made on paper — a card and the strip that opens their
+// sheets („სამშვილდის ღამე“'s card also opens its phone version). The catalogue is data/games.ts.
 
 type Access = ReturnType<ReturnType<typeof useAccess>['section']>;
 
@@ -44,7 +45,10 @@ const ICON: Record<string, React.ReactNode> = {
 };
 
 // the games that open inside this page, by their `mapItem`
-const INNER: Record<string, React.FC> = { hangi: HangiGame, amikhseni: AmikhseniGame, sitqva: SitqvaGame, otkheuli: OtkheuliGame, gatvla: GatvlaGame, churchkhela: ChurchkhelaGame, rsr: RaSadRodisGame };
+const INNER: Record<string, React.FC> = {
+  hangi: HangiGame, amikhseni: AmikhseniGame, sitqva: SitqvaGame, otkheuli: OtkheuliGame, gatvla: GatvlaGame, churchkhela: ChurchkhelaGame, rsr: RaSadRodisGame,
+  samshvilde: SamshvildeGame,
+};
 
 // the category stays chosen on this device
 const CAT_KEY = 'sg-games-cat';
@@ -199,7 +203,14 @@ export const GamesPage: React.FC = () => {
           </div>
           <p className="px-1 mb-2.5 text-[12.5px] leading-snug text-[#8a7a6a]">ექვსი ცნობილი თამაში ქართულ თემაზე — სკოლა თვითონ დაბეჭდავს და ააწყობს. „დასაბეჭდი ფურცლები“ — ბარათები, წესები და ყველაფერი ჭრის ნიშნებით.</p>
           <ul className="space-y-2.5">
-            {BOARD_GAMES.map(g => <GameRow key={g.id} g={g} state="open" />)}
+            {BOARD_GAMES.map(g => {
+              // a board game with a phone version opens it while the games' section lets it; otherwise only its paper card
+              const state: Access = g.item && g.section ? access.section(g.section) : 'open';
+              const app = !!g.item && (state === 'open' || state === 'locked');
+              return app
+                ? <GameRow key={g.id} g={g} state={state} onOpen={() => open(g, state)} />
+                : <GameRow key={g.id} g={{ ...g, page: undefined, item: undefined, modes: ['noPhone'] }} state="open" />;
+            })}
           </ul>
         </section>
       )}
