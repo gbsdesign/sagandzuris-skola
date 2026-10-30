@@ -51,10 +51,11 @@ export const GAMES: GameDef[] = [
   { id: 'ra-sad-rodis', title: 'რა? სად? როდის?', text: 'გუნდური ვიქტორინა: ერთი წუთი, პასუხი ფურცელზე — წმინდანები, გალობა, კუთხეები, ისტორია და ჩანაწერის ნაწყვეტები', category: 'live', modes: ['hybrid', 'noPhone'], page: 'games', item: 'rsr', section: 'tamashebi', print: { href: '/games/print/ra-sad-rodis.pdf', sheets: 8 } },
 ];
 
-/** The six board games the school prints and makes itself — each a Georgian retheme, on paper only (no app variant). */
+/** The six board games the school prints and makes itself — each a Georgian retheme on paper; „სამშვილდის ღამე“ also has
+ *  its phone (hybrid) version inside the games page (pages/games/SamshvildeGame.tsx). */
 export const BOARD_GAMES: GameDef[] = [
   { id: 'okros-khana', title: 'ოქროს ხანა', original: 'კატანი', text: 'ერისთავები ოქროს ხანის საქართველოს აშენებენ: ხე, ქვა, მატყლი, პური, მადანი', category: 'live', modes: ['noPhone'], print: { href: '/games/print/okros-khana.pdf', sheets: 27 } },
-  { id: 'samshvildis-ghame', title: 'სამშვილდის ღამე', original: 'მაფია', text: 'ციხე-ქალაქის მცველები და ჯაშუშები; წამყვანი, დღე და ღამე, ხმის მიცემა', category: 'live', modes: ['noPhone'], print: { href: '/games/print/samshvildis-game.pdf', sheets: 10 } },
+  { id: 'samshvildis-ghame', title: 'სამშვილდის ღამე', original: 'მაფია', text: 'ციხე-ქალაქის მცველები და ჯაშუშები; წამყვანი, დღე და ღამე, ხმის მიცემა', category: 'live', modes: ['hybrid', 'noPhone'], page: 'games', item: 'samshvilde', section: 'tamashebi', print: { href: '/games/print/samshvildis-game.pdf', sheets: 10 } },
   { id: 'qaravani', title: 'ქარავანი', original: 'Ticket to Ride', text: 'საქართველოს რუკა: ქარავნის გზები და მომლოცველობა მცხეთიდან ბათუმამდე', category: 'live', modes: ['noPhone'], print: { href: '/games/print/qaravani.pdf', sheets: 31 } },
   { id: 'ori-takhti', title: 'ორი ტახტი', original: '7 Wonders Duel', text: 'ორი ქართული სამეფო სამ ეპოქაში: ვინ ააშენებს მეტ ძეგლს', category: 'live', modes: ['noPhone'], print: { href: '/games/print/ori-takhti.pdf', sheets: 19 } },
   { id: 'lurji-supra', title: 'ლურჯი სუფრა', original: 'Azul', text: 'ქართული ორნამენტებით მოხატული ფილები სუფრაზე დააწყვე', category: 'live', modes: ['noPhone'], print: { href: '/games/print/lurji-supra.pdf', sheets: 13 } },
@@ -62,4 +63,4 @@ export const BOARD_GAMES: GameDef[] = [
 ];
 
 /** The title of a game open inside the games page (its `mapItem`), for the top bar. */
-export const gameTitleOfItem = (item: string | null | undefined) => (item ? GAMES.find(g => g.item === item)?.title : undefined);
+export const gameTitleOfItem = (item: string | null | undefined) => (item ? [...GAMES, ...BOARD_GAMES].find(g => g.item === item)?.title : undefined);

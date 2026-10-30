@@ -304,7 +304,7 @@
   ცოცხალი) from `data/games.ts`; every game carries its variant chips (ონლაინ · ჰიბრიდული · უტელეფონო); only ready games show,
   plus the one being built as a „მალე“ row (since 2026-10-28 the user had the other unbuilt plan games taken off — none is being
   built since „რა? სად? როდის?“ was finished; the plan doc keeps the rest, don't bring them back unasked); the board games are
-  paper only (one „უტელეფონო“ chip, a plain card + the print strip); the vine label „თამაშები“ opens it. The pearls game stays the round button of „საგანძურის გზა“ (below), now
+  paper (a card + the print strip; „სამშვილდის ღამე“'s card also opens its phone version, below); the vine label „თამაშები“ opens it. The pearls game stays the round button of „საგანძურის გზა“ (below), now
   under its own section `margalitebi` (open/მალე/hidden switch in the admin panel; a member's feature for it is the games'
   one — `featureOf` in `hooks/useAccess.ts`). The plan with 42 games and the six Georgianized board games:
   https://claude.ai/artifact/Dw24amtHhQvSGUd1pPE4fg
@@ -343,6 +343,17 @@
   and plays 20 s from a random point. `drawGame` spreads the topics, asks the unasked first (`sg-rsr-seen`, last 60), a dry topic
   lends its slot; „სხვა კითხვა“ swaps one, „წინა პასუხი“ goes back to fix ticks. The game is kept after every step (`sg-rsr-game`,
   `parseGame`), so ✕ only pauses — the setup shows „გაგრძელება“. No rules change, nothing in Firestore.
+- **„სამშვილდის ღამე“ on the phone (2026-10-30)**: the hybrid variant of the printed Mafia (`pages/games/SamshvildeGame.tsx`,
+  screens `pages/games/samshvilde/`, `mapItem` `samshvilde`; rules `utils/samshvilde.ts` + test; the board game's entry in
+  `BOARD_GAMES` has `item`, so its hub card opens it while section `tamashebi` allows, else only the paper card). The user's answers
+  „1ა 2ა“: the printed kit's roles, table (6–16 players, piper optional 11–14, kids' variant ≤9) and words; the roles are dealt by
+  the phone passed round (each sees their card secretly) or by the printed cards — then the host marks on the first night who
+  wakes (`markAsks`), the boss among the spies. The phone is the host's (მემატიანე): the night in the dark `TableScreen tone="night"`
+  (each step's words, who wakes, whom they point at; the warden's nod; a role that is out keeps its words and an 8 s pause), the
+  morning, the speeches' clock with „ვაბრალებ“, the hands (one accused needs more than half, a tie talks 30 s and votes again),
+  the verdict, the end with every card open and the chronicle. Privacy: day screens never show roles or the quiet night's reason,
+  „უკან“ never goes back into the deal, the host's table opens only after a confirm. Kept after every step (`sg-samshvilde-game`,
+  settings `sg-samshvilde`), ✕ only pauses. No rules change, nothing in Firestore.
 - **Printable board games (2026-10-28, fourth PR)**: the „უტელეფონო“ variant of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
