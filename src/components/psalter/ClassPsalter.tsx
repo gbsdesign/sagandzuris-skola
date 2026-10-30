@@ -1,20 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { arrayUnion, doc, onSnapshot, updateDoc } from 'firebase/firestore';
-import { Bell, BellOff, BookOpen, Check, ChevronDown, HandHelping, LifeBuoy, Pencil, Plus, Undo2, Users } from 'lucide-react';
+import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import { Bell, BellOff, BookOpen, Check, ChevronDown, ChevronRight, EyeOff, HandHelping, LifeBuoy, Pencil, Plus, Undo2, Users } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth, useNavigation } from '../../context';
 import { useAccess } from '../../hooks/useAccess';
+import { useSections } from '../../hooks/useSections';
 import { SchoolClass } from '../../hooks/useClasses';
-import { ALL_KATHISMAS, GroupMember, PsalterGroup, ergative, firstName, memberName, toGroup, useGroupNow } from '../../hooks/usePsalter';
-import { KATHISMA_COUNT, KATHISMA_PSALMS, cycleOf, formatLeft, formatRange, georgiaToday, msLeft, readCount, rebase, responsible, slotState } from '../../utils/psalter';
+import { ALL_KATHISMAS, PsalterGroup, ergative, firstName, memberName, saveOwners, toGroup, useGroupNow } from '../../hooks/usePsalter';
+import { KATHISMA_COUNT, KATHISMA_PSALMS, MAX_READERS, formatLeft, formatRange, msLeft, readCount, responsible, slotState } from '../../utils/psalter';
+import { errorText } from '../../utils/errorText';
 import { pushSupported, setGroupPush, useGroupPush } from '../../utils/groupPush';
 import { triggerHaptic } from '../../utils/haptics';
-import { Bar, Btn, Flash, IconBtn, Sheet } from '../ui/kit';
-import { PeoplePicker, Person } from '../people/PeoplePicker';
+import { Bar, Btn, Flash, IconBtn, Sheet, useFlash } from '../ui/kit';
+import { PeoplePicker } from '../people/PeoplePicker';
 import { CreateGroupSheet } from '../../pages/PsalterPage';
 import { GroupHistory } from './GroupHistory';
 import { GroupSettingsSheet } from './GroupManage';
 import { useKathismaActions } from './useKathismaActions';
+import { DistributionSheet, distributionLine, distributionPeople } from './DistributionSheet';
 
 // „ფსალმუნი“ on the class page (redesign stage 2, 2026-10-25): the class's psalter group in one compact section
 // instead of a page of its own. Its head line (count, the cycle's dates, the reminders bell, ✎ for the class's
@@ -39,6 +42,8 @@ const CARD = 'bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8]';
 export const ClassPsalter: React.FC<{ cls: SchoolClass; canLead: boolean; focus?: boolean }> = ({ cls, canLead, focus }) => {
   // the admin's switch for „ფსალმუნთა ჯგუფი“ (open / მალე / hidden) still holds for the members
   const open = useAccess().section('medavitneoba') === 'open';
+  // what the members get (an admin's own view is always open): the leader is told when they can't see it
+  const membersSee = useSections().state.medavitneoba === 'open';
   const group = useClassGroup(open || canLead ? cls.psalterGroupId : undefined);
   const [creating, setCreating] = useState(false);
   const ref = useRef<HTMLElement>(null);
@@ -69,11 +74,11 @@ export const ClassPsalter: React.FC<{ cls: SchoolClass; canLead: boolean; focus?
       </section>
     );
   }
-  return <GroupSection key={group.id} sectionRef={ref} cls={cls} group={group} canLead={canLead} startOpen={!!focus} />;
+  return <GroupSection key={group.id} sectionRef={ref} cls={cls} group={group} canLead={canLead} startOpen={!!focus} membersSee={membersSee} />;
 };
 
-const GroupSection: React.FC<{ sectionRef: React.Ref<HTMLElement>; cls: SchoolClass; group: PsalterGroup; canLead: boolean; startOpen: boolean }> = ({
-  sectionRef, cls, group, canLead, startOpen,
+const GroupSection: React.FC<{ sectionRef: React.Ref<HTMLElement>; cls: SchoolClass; group: PsalterGroup; canLead: boolean; startOpen: boolean; membersSee: boolean }> = ({
+  sectionRef, cls, group, canLead, startOpen, membersSee,
 }) => {
   const { user } = useAuth();
   const uid = user?.uid;
@@ -81,13 +86,16 @@ const GroupSection: React.FC<{ sectionRef: React.Ref<HTMLElement>; cls: SchoolCl
   const actions = useKathismaActions(group, cycle);
   const [tile, setTile] = useState<number | null>(null);
   const [manage, setManage] = useState(false);
+  const [dist, setDist] = useState(false);
   const [history, setHistory] = useState(false);
+  const saved = useFlash(); // a reader named in a kanon's window: its failure shows here
   const [shut, setShut] = useState(!startOpen);
   const isMember = !!uid && group.memberIds.includes(uid);
   if (!cycle) return null;
   const read = readCount(slots);
   const done = read >= KATHISMA_COUNT;
   const othersHelp = helpWanted.filter(h => h.by !== uid);
+  const line = canLead ? distributionLine(owners, distributionPeople(group, cls)) : null;
 
   return (
     <section ref={sectionRef} className={`${CARD} scroll-mt-4 px-3 sm:px-4 pt-1 pb-3`} aria-label="ფსალმუნი">
@@ -159,6 +167,29 @@ const GroupSection: React.FC<{ sectionRef: React.Ref<HTMLElement>; cls: SchoolCl
           </ul>
 
           <Flash flash={actions.message} onClose={actions.clearMessage} />
+          {saved.flash && <div className="mt-2"><Flash flash={saved.flash} onClose={saved.clear} /></div>}
+
+          {/* the leader: how the distribution stands, and its window */}
+          {line && (
+            <button
+              type="button"
+              onClick={() => { triggerHaptic(8); setDist(true); }}
+              className={`mt-3 w-full min-h-12 px-3 py-2 rounded-2xl flex items-center gap-3 text-left cursor-pointer transition-colors ${line.warn ? 'bg-amber-50 ring-1 ring-amber-200 hover:bg-amber-100/70' : 'bg-white ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/35'}`}
+            >
+              <Users className={`w-5 h-5 shrink-0 ${line.warn ? 'text-amber-700' : 'text-[#7a2028]'}`} />
+              <span className="min-w-0 flex-1">
+                <span className="block text-[15px] font-bold text-[#2a2017]">განაწილება</span>
+                <span className={`block text-[13px] leading-snug ${line.warn ? 'text-amber-800 font-semibold' : 'text-[#8a7a6a]'}`}>{line.text}</span>
+              </span>
+              <ChevronRight className="w-5 h-5 shrink-0 text-[#b3a594]" />
+            </button>
+          )}
+          {canLead && !membersSee && (
+            <p className="mt-2 px-1 flex items-start gap-2 text-[13px] leading-snug text-[#8a7a6a]">
+              <EyeOff className="w-4 h-4 mt-0.5 shrink-0" />
+              წევრები ჯგუფს ჯერ ვერ ხედავენ: ადმინის პანელში (⚙ „სკოლა“ → განყოფილებები) „ფსალმუნთა ჯგუფი“ ღია არ არის.
+            </p>
+          )}
 
           {/* the finished cycles, folded */}
           <button
@@ -174,9 +205,12 @@ const GroupSection: React.FC<{ sectionRef: React.Ref<HTMLElement>; cls: SchoolCl
         </>
       )}
 
-      <TileSheet group={group} cls={cls} k={tile} uid={uid} slots={slots} owners={owners} isMember={isMember} canLead={canLead} actions={actions} onClose={() => setTile(null)} />
+      <TileSheet group={group} cls={cls} k={tile} uid={uid} slots={slots} owners={owners} isMember={isMember} canLead={canLead} actions={actions} onClose={() => setTile(null)}
+        onSaveError={e => saved.fail(`ვერ შეინახა. ${errorText(e)}`)} />
 
-      {canLead && <GroupSettingsSheet open={manage} onClose={() => setManage(false)} group={group} cls={cls} onDeleted={() => setManage(false)} />}
+      {canLead && <GroupSettingsSheet open={manage} onClose={() => setManage(false)} group={group} cls={cls} onDeleted={() => setManage(false)}
+        onDistribute={() => { setManage(false); setDist(true); }} />}
+      {canLead && <DistributionSheet open={dist} onClose={() => setDist(false)} group={group} cls={cls} owners={owners} />}
     </section>
   );
 };
@@ -245,7 +279,7 @@ const Tile: React.FC<{ group: PsalterGroup; k: number; uid?: string; slots: Slot
   const help = !!slot?.help && state !== 'read' && state !== 'taken';
   const name = state === 'read' ? firstName(memberName(group, slot?.readBy))
     : state === 'free' ? '—'
-    : firstName(memberName(group, who[0]));
+    : `${firstName(memberName(group, who[0]))}${who.length > 1 ? ` +${who.length - 1}` : ''}`;
   return (
     <li>
       <button
@@ -275,8 +309,8 @@ const Tile: React.FC<{ group: PsalterGroup; k: number; uid?: string; slots: Slot
  *  ask for help; the class's teachers also name who reads it (saved at once). */
 const TileSheet: React.FC<{
   group: PsalterGroup; cls: SchoolClass; k: number | null; uid?: string; slots: SlotsOf; owners: OwnersOf;
-  isMember: boolean; canLead: boolean; actions: Actions; onClose: () => void;
-}> = ({ group, cls, k, uid, slots, owners, isMember, canLead, actions, onClose }) => {
+  isMember: boolean; canLead: boolean; actions: Actions; onClose: () => void; onSaveError: (e: unknown) => void;
+}> = ({ group, cls, k, uid, slots, owners, isMember, canLead, actions, onClose, onSaveError }) => {
   const { openPrayer } = useNavigation();
   const [picking, setPicking] = useState<number | null>(null);
   const shown = k ?? picking;
@@ -294,29 +328,13 @@ const TileSheet: React.FC<{
       : state === 'taken' ? `${names([slot?.takenBy])} აიღო ${names(own) ? `(${names(own)}-ის ნაცვლად)` : ''}`
       : state === 'free' ? 'ჯერ არავის აბარია'
       : help ? `${names(who)} — დახმარებას ითხოვს`
-      : `კითხულობს: ${names(who)}`;
+      : `${who.length > 1 ? 'კითხულობენ' : 'კითხულობს'}: ${names(who)}`;
   const run = (fn: () => Promise<unknown>) => { onClose(); void fn(); };
 
-  const people: Person[] = [
-    ...cls.members.map(m => ({ uid: m.uid, name: m.name, photoURL: m.photoURL })),
-    ...group.members.filter(m => !cls.memberIds.includes(m.uid)).map(m => ({ uid: m.uid, name: m.name, photoURL: m.photoURL })),
-  ];
-  const assign = async (kk: number, uids: string[]) => {
-    const added: GroupMember[] = uids.filter(u => !group.memberIds.includes(u)).map(u => {
-      const m = cls.members.find(x => x.uid === u);
-      return { uid: u, name: m?.name || 'წევრი', prayer: '', photoURL: m?.photoURL || '' };
-    });
-    try {
-      await updateDoc(doc(db, 'psalterGroups', group.id), {
-        assignment: rebase({ ...owners, [kk]: uids }),
-        baseHalf: cycleOf(georgiaToday(), group.cycleDays, group.shiftDays).half,
-        ...(added.length ? { members: arrayUnion(...added), memberIds: arrayUnion(...added.map(m => m.uid)) } : {}),
-        updatedAt: new Date().toISOString(),
-      });
-    } catch {
-      /* the tile simply keeps its old reader; the teacher sees it at once */
-    }
-  };
+  const people = distributionPeople(group, cls);
+  // saved at once; a class member not in the group yet joins it; a failure shows under the tiles
+  const assign = (kk: number, uids: string[]) =>
+    saveOwners(group, { ...owners, [kk]: uids }, people.filter(p => uids.includes(p.uid) && !group.memberIds.includes(p.uid))).catch(onSaveError);
 
   return (
     <>
@@ -341,6 +359,7 @@ const TileSheet: React.FC<{
           title={picking ? `კანონი ${picking} — ვინ კითხულობს` : ''}
           people={people}
           selected={picking ? owners[picking] || [] : []}
+          max={MAX_READERS}
           doneLabel="შენახვა"
           empty="კლასში ჯერ წევრები არ არიან."
           onDone={uids => { if (picking) void assign(picking, uids); setPicking(null); }}

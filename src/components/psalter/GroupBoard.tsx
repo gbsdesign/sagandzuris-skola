@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
-import { arrayUnion, doc, updateDoc } from 'firebase/firestore';
 import { BookOpen, Check, HandHelping, Undo2, LifeBuoy, Pencil } from 'lucide-react';
-import { db } from '../../firebase';
 import { useNavigation } from '../../context';
-import { KATHISMA_PSALMS, Slots, cycleOf, georgiaToday, rebase, responsible, slotState } from '../../utils/psalter';
-import { ALL_KATHISMAS, GroupMember, PsalterGroup, ergative, firstName, memberName } from '../../hooks/usePsalter';
+import { KATHISMA_PSALMS, MAX_READERS, Slots, responsible, slotState } from '../../utils/psalter';
+import { ALL_KATHISMAS, PsalterGroup, ergative, firstName, memberName, saveOwners } from '../../hooks/usePsalter';
+import { errorText } from '../../utils/errorText';
+import { distributionPeople } from './DistributionSheet';
 import { useManagedClasses } from '../../hooks/useClasses';
 import { Flash, useFlash } from '../ui/kit';
-import { PeoplePicker, Person } from '../people/PeoplePicker';
+import { PeoplePicker } from '../people/PeoplePicker';
 import { useKathismaActions } from './useKathismaActions';
 
 type Act = { key: string; label: string; icon: React.ReactNode; onClick: () => void; strong?: boolean; on?: boolean };
@@ -30,25 +30,13 @@ export const KathismaGrid: React.FC<{
   const cls = classes.find(c => c.psalterGroupId === group.id);
   const [editK, setEditK] = useState<number | null>(null);
   const msg = useFlash();
-  const people: Person[] = [
-    ...(cls?.members || []).map(m => ({ uid: m.uid, name: m.name, photoURL: m.photoURL })),
-    ...group.members.filter(m => !cls?.memberIds.includes(m.uid)).map(m => ({ uid: m.uid, name: m.name, photoURL: m.photoURL })),
-  ];
+  const people = distributionPeople(group, cls);
   const assign = async (k: number, uids: string[]) => {
-    const added: GroupMember[] = uids.filter(u => !group.memberIds.includes(u)).map(u => {
-      const m = cls?.members.find(x => x.uid === u);
-      return { uid: u, name: m?.name || 'წევრი', prayer: '', photoURL: m?.photoURL || '' };
-    });
     try {
-      await updateDoc(doc(db, 'psalterGroups', group.id), {
-        assignment: rebase({ ...owners, [k]: uids }),
-        baseHalf: cycleOf(georgiaToday(), group.cycleDays, group.shiftDays).half,
-        ...(added.length ? { members: arrayUnion(...added), memberIds: arrayUnion(...added.map(m => m.uid)) } : {}),
-        updatedAt: new Date().toISOString(),
-      });
+      await saveOwners(group, { ...owners, [k]: uids }, people.filter(p => uids.includes(p.uid) && !group.memberIds.includes(p.uid)));
       msg.ok(`კანონი ${k}: ${uids.length ? uids.map(u => people.find(p => p.uid === u)?.name || 'წევრი').join(', ') : 'არავინ'}.`);
-    } catch {
-      msg.fail('ვერ შეინახა.');
+    } catch (e) {
+      msg.fail(`ვერ შეინახა. ${errorText(e)}`);
     }
   };
   return (
@@ -154,6 +142,7 @@ export const KathismaGrid: React.FC<{
           title={editK ? `კანონი ${editK} — ვინ კითხულობს` : ''}
           people={people}
           selected={editK ? owners[editK] || [] : []}
+          max={MAX_READERS}
           doneLabel="შენახვა"
           empty="კლასში ჯერ წევრები არ არიან."
           onDone={uids => { if (editK) void assign(editK, uids); }}

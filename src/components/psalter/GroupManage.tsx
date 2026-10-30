@@ -1,19 +1,21 @@
 import React, { useState } from 'react';
 import { arrayRemove, arrayUnion, collection, deleteDoc, doc, getDocs, updateDoc } from 'firebase/firestore';
-import { Save, Shuffle, Trash2 } from 'lucide-react';
+import { Save, Trash2, Users } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
 import { askConfirm, Btn, FIELD, Flash, Label, Sheet, Toggle, useFlash } from '../ui/kit';
 import type { SchoolClass } from '../../hooks/useClasses';
-import { MAX_CYCLE_DAYS, autoDistribute, cycleOf, georgiaToday, halfIndex, kathismasOf, ownersIn, parseCycleDays, parseShiftDays, rebase } from '../../utils/psalter';
-import { ALL_KATHISMAS, GroupMember, PsalterGroup } from '../../hooks/usePsalter';
+import { MAX_CYCLE_DAYS, cycleOf, georgiaToday, halfIndex, kathismasOf, ownersIn, parseCycleDays, parseShiftDays, rebase } from '../../utils/psalter';
+import { ALL_KATHISMAS, PsalterGroup, distributionLog } from '../../hooks/usePsalter';
 
 const TIMES = ['', '18:00', '19:00', '20:00', '21:00', '22:00'];
 
 // The leader's one window for a psalter group (the section's ✎): name, the cycle and its shift days, the two
-// reminders, „მეც ვკითხულობ“ and „ავტომატური განაწილება“ (both saved at once), the group's deletion at the bottom.
-// Who reads which kanon is named in the kanon's own window; the members are the class's (added and taken out there).
-export const GroupSettingsSheet: React.FC<{ open: boolean; onClose: () => void; group: PsalterGroup; cls?: SchoolClass; onDeleted: () => void }> = ({ open, onClose, group, cls, onDeleted }) => {
+// reminders, „მეც ვკითხულობ“ (saved at once), „განაწილება“ (opens its own window, DistributionSheet), the group's
+// deletion at the bottom. The members are the class's (added and taken out there).
+export const GroupSettingsSheet: React.FC<{
+  open: boolean; onClose: () => void; group: PsalterGroup; cls?: SchoolClass; onDeleted: () => void; onDistribute?: () => void;
+}> = ({ open, onClose, group, cls, onDeleted, onDistribute }) => {
   const { user } = useAuth();
   const msg = useFlash();
   const blank = () => ({
@@ -21,7 +23,8 @@ export const GroupSettingsSheet: React.FC<{ open: boolean; onClose: () => void; 
   });
   const [settings, setSettings] = useState(blank);
   const ref = doc(db, 'psalterGroups', group.id);
-  const half = cycleOf(georgiaToday(), group.cycleDays, group.shiftDays).half;
+  const cycle = cycleOf(georgiaToday(), group.cycleDays, group.shiftDays);
+  const half = cycle.half;
   const owners = ownersIn(group.assignment, group.baseHalf, half);
   const reading = !!user && group.memberIds.includes(user.uid);
   const close = () => { setSettings(blank()); msg.clear(); onClose(); };
@@ -55,6 +58,7 @@ export const GroupSettingsSheet: React.FC<{ open: boolean; onClose: () => void; 
         ...(sameDays ? {} : {
           assignment: rebase(ownersIn(group.assignment, group.baseHalf, halfIndex(today, group.shiftDays))),
           baseHalf: halfIndex(today, shiftDays),
+          ...distributionLog(group, cycle),
         }),
         updatedAt: new Date().toISOString(),
       });
@@ -77,34 +81,13 @@ export const GroupSettingsSheet: React.FC<{ open: boolean; onClose: () => void; 
         : {
           members: group.members.filter(m => m.uid !== user.uid),
           memberIds: arrayRemove(user.uid),
-          ...(mineNow.length ? { assignment: rebase(Object.fromEntries(ALL_KATHISMAS.map(k => [k, owners[k].filter(u => u !== user.uid)]))), baseHalf: half } : {}),
+          ...(mineNow.length ? {
+            assignment: rebase(Object.fromEntries(ALL_KATHISMAS.map(k => [k, owners[k].filter(u => u !== user.uid)]))), baseHalf: half, ...distributionLog(group, cycle),
+          } : {}),
           updatedAt: new Date().toISOString(),
         });
     } catch {
       msg.fail('ვერ შეინახა.');
-    }
-  };
-
-  // every reader gets a kanon in turn, by name: the class's members and the leaders who read
-  const distribute = async () => {
-    const readers: GroupMember[] = [
-      ...(cls ? cls.members.map(m => group.members.find(g => g.uid === m.uid) || { uid: m.uid, name: m.name, prayer: '', photoURL: m.photoURL || '' }) : []),
-      ...group.members.filter(m => !cls || !cls.memberIds.includes(m.uid)),
-    ];
-    if (!readers.length) { msg.fail('ჯერ არავინაა, ვისაც კანონი მიეცემა.'); return; }
-    if (Object.values(owners).some(l => l.length) && !(await askConfirm({ title: 'განაწილება თავიდან?', text: 'ყველას ახალი კანონი მიეცემა სახელების მიხედვით; არსებული განაწილება შეიცვლება.', ok: 'განაწილება' }))) return;
-    const ids = [...readers].sort((a, b) => a.name.localeCompare(b.name, 'ka')).map(m => m.uid);
-    try {
-      await updateDoc(ref, {
-        members: readers,
-        memberIds: readers.map(m => m.uid),
-        assignment: rebase(autoDistribute(ids)),
-        baseHalf: half,
-        updatedAt: new Date().toISOString(),
-      });
-      msg.ok(ids.length < ALL_KATHISMAS.length ? 'განაწილდა — ზოგს ორი კანონი შეხვდა.' : 'განაწილდა.');
-    } catch {
-      msg.fail('განაწილება ვერ შეინახა.');
     }
   };
 
@@ -168,7 +151,7 @@ export const GroupSettingsSheet: React.FC<{ open: boolean; onClose: () => void; 
           <Toggle on={reading} onChange={on => void setReading(on)} label="მეც ვკითხულობ" />
         </div>
 
-        <Btn kind="ghost" full icon={<Shuffle />} onClick={distribute}>ავტომატური განაწილება</Btn>
+        {onDistribute && <Btn kind="ghost" full icon={<Users />} onClick={onDistribute}>განაწილება — ვინ რომელ კანონს კითხულობს</Btn>}
 
         <div className="pt-2 border-t border-[#e8dcc8]">
           <Btn kind="danger" full icon={<Trash2 />} onClick={removeGroup}>ჯგუფის წაშლა</Btn>

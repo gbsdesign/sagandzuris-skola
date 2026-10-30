@@ -144,11 +144,94 @@ export const rebase = (owners: Record<number, string[]>): Assignment =>
 export const kathismasOf = (owners: Record<number, string[]>, uid: string) =>
   Object.entries(owners).filter(([, list]) => list.includes(uid)).map(([k]) => Number(k));
 
-/** Round-robin distribution: with fewer than twenty readers some get two; with more, the rest wait in reserve. */
-export const autoDistribute = (memberIds: string[]): Record<number, string[]> => {
-  const out: Record<number, string[]> = {};
-  for (let k = 1; k <= KATHISMA_COUNT; k++) out[k] = memberIds.length ? [memberIds[(k - 1) % memberIds.length]] : [];
-  return out;
+// ---- distribution (who reads which kathisma) -----------------------------------------------------
+
+/** A kathisma has at most two readers (the user's rule, 2026-10-30: „1 კანონი 2 კაცი“). */
+export const MAX_READERS = 2;
+
+type Owners = Record<number, string[]>;
+const KS = Array.from({ length: KATHISMA_COUNT }, (_, i) => i + 1);
+const copyOwners = (o: Owners): Owners => Object.fromEntries(KS.map(k => [k, [...(o[k] || [])]]));
+const countOf = (o: Owners, uid: string) => KS.filter(k => o[k].includes(uid)).length;
+
+/**
+ * One more reader gets a kathisma; everyone else keeps theirs where possible: a free kathisma first; else one that
+ * the busiest reader (two or more kathismas) reads alone passes over; else a second place beside a lone reader.
+ * Null when the reader already has one, or every kathisma has two readers.
+ */
+export const giveKanon = (owners: Owners, uid: string): Owners | null => {
+  const o = copyOwners(owners);
+  if (countOf(o, uid) > 0) return null;
+  const free = KS.find(k => o[k].length === 0);
+  if (free) { o[free] = [uid]; return o; }
+  const counts = new Map<string, number>();
+  KS.forEach(k => o[k].forEach(u => counts.set(u, (counts.get(u) || 0) + 1)));
+  const busiest = [...counts.entries()].filter(([, n]) => n >= 2).sort((a, b) => b[1] - a[1]);
+  for (const [u] of busiest) {
+    const alone = [...KS].reverse().find(k => o[k].length === 1 && o[k][0] === u);
+    if (alone) { o[alone] = [uid]; return o; }
+  }
+  const beside = KS.find(k => o[k].length < MAX_READERS);
+  if (beside) { o[beside] = [...o[beside], uid]; return o; }
+  return null;
+};
+
+/**
+ * „ავტომატური განაწილება“ that keeps what is there: people who are no longer readers come off, every reader without a
+ * kathisma gets one (`giveKanon`, in the given order), and each kathisma still free goes to the second reader of a
+ * shared one (they move) or, when none is shared, to whoever reads the fewest (ties: the given order).
+ * With no distribution yet this is the plain round of names: 1 → first, 2 → second, … and past twenty, second readers.
+ */
+export const fillDistribution = (owners: Owners, readers: string[]): Owners => {
+  let o: Owners = Object.fromEntries(KS.map(k => [k, (owners[k] || []).filter(u => readers.includes(u)).slice(0, MAX_READERS)]));
+  for (const uid of readers) o = giveKanon(o, uid) || o;
+  for (const k of KS) {
+    if (o[k].length) continue;
+    const shared = [...KS].reverse().find(x => o[x].length >= 2);
+    if (shared) {
+      const moving = o[shared][o[shared].length - 1];
+      o[shared] = o[shared].slice(0, -1);
+      o[k] = [moving];
+      continue;
+    }
+    const least = [...readers].sort((a, b) => countOf(o, a) - countOf(o, b) || readers.indexOf(a) - readers.indexOf(b))[0];
+    if (least) o[k] = [least];
+  }
+  return o;
+};
+
+/** A fresh distribution by the readers' order (the confirm-first „ყველას თავიდან“). */
+export const autoDistribute = (readers: string[]): Owners => fillDistribution({}, readers);
+
+/** How a distribution stands: free kathismas, shared ones, readers without one, and the most any reader has. */
+export const distributionState = (owners: Owners, readers: string[]) => ({
+  free: KS.filter(k => !(owners[k] || []).length),
+  shared: KS.filter(k => (owners[k] || []).length >= 2),
+  without: readers.filter(u => !KS.some(k => (owners[k] || []).includes(u))),
+  most: Math.max(0, ...readers.map(u => KS.filter(k => (owners[k] || []).includes(u)).length)),
+});
+
+/** Readers whose kathismas differ between two distributions. */
+export const changedReaders = (before: Owners, after: Owners) => {
+  const all = new Set(KS.flatMap(k => [...(before[k] || []), ...(after[k] || [])]));
+  const ks = (o: Owners, u: string) => KS.filter(k => (o[k] || []).includes(u)).join();
+  return [...all].filter(u => ks(before, u) !== ks(after, u));
+};
+
+/** Earlier distributions, so the history names who was to read each kathisma then. `until` = the first cycle (its
+ *  start) that no longer used it; `shiftDays` = the days its periods were counted by. */
+export interface PastDistribution { until: Iso; assignment: Assignment; baseHalf: number; shiftDays: number[] }
+const LOG_KEEP = 12;
+
+/** The log after the distribution changes during the cycle that starts `until`: the one in force so far is kept,
+ *  once per cycle (a second change in the same cycle replaces nothing). Null = nothing to add. */
+export const withPast = (log: PastDistribution[], until: Iso, prev: Omit<PastDistribution, 'until'>): PastDistribution[] | null =>
+  log.some(e => e.until === until) ? null : [...log, { until, ...prev }].sort((a, b) => a.until.localeCompare(b.until)).slice(-LOG_KEEP);
+
+/** Who was to read each kathisma in the cycle that starts `start`: the distribution it used, turned to its period. */
+export const ownersThen = (now: Omit<PastDistribution, 'until'>, log: PastDistribution[], start: Iso, half: number): Owners => {
+  const then = [...log].sort((a, b) => a.until.localeCompare(b.until)).find(e => start < e.until);
+  return then ? ownersIn(then.assignment, then.baseHalf, halfIndex(start, then.shiftDays)) : ownersIn(now.assignment, now.baseHalf, half);
 };
 
 // ---- one cycle's marks ------------------------------------------------------------------------

@@ -16,8 +16,8 @@ import { writePath } from './MemberPathEditor';
 import { linkTeachers } from '../../hooks/useTeaching';
 import { Avatar, Bar, Btn, Flash, Pill, Sheet, useFlash } from '../ui/kit';
 import { useClassAttendance, useGroupReading } from './StatsTab';
-import { GroupMember, PsalterGroup, toGroup } from '../../hooks/usePsalter';
-import { KATHISMA_COUNT, cycleOf, georgiaToday, ownersIn, rebase } from '../../utils/psalter';
+import { GroupMember, PsalterGroup, distributionLog, toGroup } from '../../hooks/usePsalter';
+import { KATHISMA_COUNT, cycleOf, georgiaToday, giveKanon, ownersIn, rebase } from '../../utils/psalter';
 import { shortDate } from '../../utils/dateNames';
 
 /**
@@ -114,12 +114,25 @@ export const saveClassTeachers = async (cls: SchoolClass, teachers: ClassMember[
   return n;
 };
 
-// the class's psalter group follows the class: a new member joins it (a kanon is named in the kanon's window or by
-// „ავტომატური განაწილება“), one taken out leaves it and their kanon goes free
+// the class's psalter group follows the class: a new member joins it and gets a kanon at once — a free one, else one of
+// a reader who has several, else a second place beside a lone reader (utils/psalter `giveKanon`; never a third reader).
+// One taken out leaves it and their kanon goes free (the section's „განაწილება“ line then says so).
 const joinClassGroup = async (cls: SchoolClass, p: { uid: string; name: string; photoURL?: string }) => {
   if (!cls.psalterGroupId) return;
   const me: GroupMember = { uid: p.uid, name: p.name, prayer: '', photoURL: p.photoURL || '' };
-  await updateDoc(doc(db, 'psalterGroups', cls.psalterGroupId), { members: arrayUnion(me), memberIds: arrayUnion(p.uid), updatedAt: new Date().toISOString() });
+  const ref = doc(db, 'psalterGroups', cls.psalterGroupId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return;
+  const g = toGroup(snap.id, snap.data());
+  if (g.memberIds.includes(p.uid)) return;
+  const cycle = cycleOf(georgiaToday(), g.cycleDays, g.shiftDays);
+  const given = giveKanon(ownersIn(g.assignment, g.baseHalf, cycle.half), p.uid);
+  await updateDoc(ref, {
+    members: arrayUnion(me),
+    memberIds: arrayUnion(p.uid),
+    ...(given ? { assignment: rebase(given), baseHalf: cycle.half, ...distributionLog(g, cycle) } : {}),
+    updatedAt: new Date().toISOString(),
+  });
 };
 const leaveClassGroup = async (cls: SchoolClass, uid: string) => {
   if (!cls.psalterGroupId) return;
@@ -135,6 +148,7 @@ const leaveClassGroup = async (cls: SchoolClass, uid: string) => {
     memberIds: g.memberIds.filter(x => x !== uid),
     assignment: rebase(Object.fromEntries(Object.entries(owners).map(([k, l]) => [k, l.filter(x => x !== uid)]))),
     baseHalf: half,
+    ...distributionLog(g, cycleOf(georgiaToday(), g.cycleDays, g.shiftDays)),
     updatedAt: new Date().toISOString(),
   });
 };

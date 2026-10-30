@@ -10,7 +10,9 @@ export interface Person {
 }
 
 // Choose people from a list (search by name): used to add members to a class or psalter group, and to
-// pick the readers of a kathisma. People already in are shown ticked and can be unticked when `multi`.
+// pick the readers of a kathisma. People already in are shown ticked and can be unticked. `max` caps the choice (a
+// kathisma has at most two readers): the rest stay greyed until one is unticked. The search field does not take the
+// focus by itself — on a phone the keyboard came up at once and hid „შენახვა“.
 export const PeoplePicker: React.FC<{
   open: boolean;
   onClose: () => void;
@@ -21,7 +23,8 @@ export const PeoplePicker: React.FC<{
   doneLabel?: string;
   loading?: boolean;
   empty?: string;
-}> = ({ open, onClose, title, people, selected, onDone, doneLabel = 'შენახვა', loading, empty = 'სია ცარიელია.' }) => {
+  max?: number;
+}> = ({ open, onClose, title, people, selected, onDone, doneLabel = 'შენახვა', loading, empty = 'სია ცარიელია.', max }) => {
   const [q, setQ] = useState('');
   const [picked, setPicked] = useState<string[]>(selected);
   useEffect(() => { if (open) { setPicked(selected); setQ(''); } }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -33,7 +36,8 @@ export const PeoplePicker: React.FC<{
     return [...list].sort((a, b) => Number(picked.includes(b.uid)) - Number(picked.includes(a.uid)));
   }, [people, q, picked]);
 
-  const toggle = (uid: string) => setPicked(p => (p.includes(uid) ? p.filter(x => x !== uid) : [...p, uid]));
+  const toggle = (uid: string) => setPicked(p => (p.includes(uid) ? p.filter(x => x !== uid) : max && p.length >= max ? p : [...p, uid]));
+  const atMax = !!max && picked.length >= max;
   const added = picked.filter(u => !selected.includes(u)).length;
   const removed = selected.filter(u => !picked.includes(u)).length;
 
@@ -45,7 +49,7 @@ export const PeoplePicker: React.FC<{
       footer={
         <div className="flex items-center gap-3">
           <span className="flex-1 text-[13px] text-[#8a7a6a]">
-            არჩეულია <b className="text-[#4a3426]">{picked.length}</b>
+            არჩეულია <b className="text-[#4a3426]">{picked.length}</b>{max ? <span> / {max}</span> : null}
             {added > 0 && <span className="text-emerald-700"> · +{added}</span>}
             {removed > 0 && <span className="text-red-700"> · −{removed}</span>}
           </span>
@@ -53,9 +57,10 @@ export const PeoplePicker: React.FC<{
         </div>
       }
     >
+      {atMax && max! < people.length && <p className="mb-2 text-[13px] font-semibold text-[#8a7a6a]">{max}-ზე მეტს ვერ აირჩევ — ჯერ ერთი მოხსენი.</p>}
       <div className="relative mb-3">
         <Search className="w-4 h-4 text-[#b3a594] absolute left-3.5 top-1/2 -translate-y-1/2" />
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="მოძებნე სახელით" className={`${FIELD} pl-10`} autoFocus />
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder="მოძებნე სახელით" className={`${FIELD} pl-10`} />
       </div>
       {loading ? (
         <p className="py-10 text-center text-sm text-[#8a7a6a]">იტვირთება…</p>
@@ -65,13 +70,15 @@ export const PeoplePicker: React.FC<{
         <ul className="-mx-2 divide-y divide-[#efe3cf]">
           {shown.map(p => {
             const on = picked.includes(p.uid);
+            const shut = !on && atMax;
             return (
               <li key={p.uid}>
                 <button
                   type="button"
                   onClick={() => toggle(p.uid)}
                   aria-pressed={on}
-                  className={`w-full flex items-center gap-3 px-2 py-2.5 rounded-xl text-left cursor-pointer transition-colors ${on ? 'bg-[#7a2028]/[0.05]' : 'hover:bg-white/70'}`}
+                  disabled={shut}
+                  className={`w-full flex items-center gap-3 px-2 py-2.5 rounded-xl text-left cursor-pointer transition-colors disabled:opacity-45 disabled:cursor-default ${on ? 'bg-[#7a2028]/[0.05]' : 'hover:bg-white/70'}`}
                 >
                   <Avatar name={p.name} photo={p.photoURL} size={40} />
                   <span className="min-w-0 flex-1">
