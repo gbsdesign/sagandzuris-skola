@@ -132,7 +132,7 @@
 - Book notes (`public/notes/<book>/`) come from the chant-book PDFs by OMR; the books' OMR scripts are not in the repo —
   only the anthology's (`scripts/omr/`, also in the cloud). Chant tabs ხელდასხმა · ჯვრისწერა · პანაშვიდი (2026-10-29) are
   `data/riteChants.ts`; anthology versions everywhere come from `data/anthologyChants.ts` (East Georgian vols II–IV, X–XI:
-  `data/anthologyEastChants.ts`, the western ones from vol. V: `data/anthologyWestChants.ts`; done so far: vols I–XIII, XXVIII/XXIX only for მხოლოდ-შობილი). The anthology's notes
+  `data/anthologyEastChants.ts`, the western ones from vol. V: `data/anthologyWestChants.ts`; done so far: vols I–XVIII, XXVIII/XXIX only for მხოლოდ-შობილი). The anthology's notes
   files are not in the repo: Cloudflare R2 bucket `sagandzuri-notes` behind the Worker `worker/notes`
   (https://sagandzuri-notes.mr-gabunia.workers.dev, `utils/notesBase.ts`), uploaded by pushing a branch `notes-upload`
   (`.github/workflows/notes-r2.yml`, steps in `scripts/omr/README.md`) — the site may hold only 20 000 files.

@@ -39,7 +39,7 @@ export const variantName = (v: Pick<ChantVariant, 'bookNums' | 'version' | 'book
 const BOOK_SHORT: Record<string, string> = {
   book: 'I ტომი', feast: 'II ტომი', kk: 'III ტომი', triod: 'IV ტომი', v5: 'V ტომი', karb: 'VII ტომი', v8: 'VIII ტომი',
   v9: 'IX ტომი', momix: 'კრებული I', dasd1: 'კრებული II', dasd2: 'კრებული III',
-  a1: 'ანთ. I ტომი', a2: 'ანთ. II ტომი', a3: 'ანთ. III ტომი', a4: 'ანთ. IV ტომი', a5: 'ანთ. V ტომი', a6: 'ანთ. VI ტომი', a7: 'ანთ. VII ტომი', a8: 'ანთ. VIII ტომი', a9: 'ანთ. IX ტომი', a10: 'ანთ. X ტომი', a11: 'ანთ. XI ტომი', a12: 'ანთ. XII ტომი', a13: 'ანთ. XIII ტომი', a28: 'ანთ. XXVIII ტომი', a29: 'ანთ. XXIX ტომი',
+  a1: 'ანთ. I ტომი', a2: 'ანთ. II ტომი', a3: 'ანთ. III ტომი', a4: 'ანთ. IV ტომი', a5: 'ანთ. V ტომი', a6: 'ანთ. VI ტომი', a7: 'ანთ. VII ტომი', a8: 'ანთ. VIII ტომი', a9: 'ანთ. IX ტომი', a10: 'ანთ. X ტომი', a11: 'ანთ. XI ტომი', a12: 'ანთ. XII ტომი', a13: 'ანთ. XIII ტომი', a14: 'ანთ. XIV ტომი', a15: 'ანთ. XV ტომი', a16: 'ანთ. XVI ტომი', a17: 'ანთ. XVII ტომი', a18: 'ანთ. XVIII ტომი', a28: 'ანთ. XXVIII ტომი', a29: 'ანთ. XXIX ტომი',
 };
 
 // A feast, an occasion of მარხვანი / ზატიკი, a group of მომიხსენენი or დასადებლები, a tone of ძლისპირები or a canon of

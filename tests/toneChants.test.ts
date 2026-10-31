@@ -38,10 +38,10 @@ test('every tone has its Sunday chants, each opening notes of that tone', () => 
 
 test('tone IV: the books\' own numbers', () => {
   const rows = Object.fromEntries(toneChants(4).flatMap(g => g.rows).map(r => [r.title, r.versions]));
-  assert.deepEqual(rows['ღმერთი უფალი'].map(v => [v.book, v.num]), [['გელათური', 90], ['ქართლ-კახური', 105]]);
+  assert.deepEqual(rows['ღმერთი უფალი'].map(v => [v.book, v.num]), [['გელათური', 90], ['ქართლ-კახური', 105], ['გელათური, ანთ. XIV', 99]]);
   assert.deepEqual(rows['აღდგომის ტროპარი'].map(v => v.book), ['გელათური', 'ქართლ-კახური', 'გელათური, IX ტ.']);
   assert.deepEqual(rows['აღდგომის ტროპარი'].map(v => v.num), [91, 106, 87]);
-  assert.deepEqual(rows['წარდგომა'].map(v => v.num), [171, 21, 22, 23, 24, 25]);
-  assert.deepEqual(rows['წარდგომა'].map(v => v.book).slice(1), Array(5).fill('ქართლ-კახური, ანთ. III'));
+  assert.deepEqual(rows['წარდგომა'].map(v => v.num), [171, 159, 21, 22, 23, 24, 25]);
+  assert.deepEqual(rows['წარდგომა'].map(v => v.book).slice(2), Array(5).fill('ქართლ-კახური, ანთ. III'));
   assert.deepEqual(rows['ალილუია'].map(v => v.num).slice(0, 1), [179]);
 });
