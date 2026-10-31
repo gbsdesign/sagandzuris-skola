@@ -46,6 +46,8 @@ export const KHELDASKHMA_CHANTS: ChantItem[] = build('kh', [
   ISAIAH,
   { title: 'კირიე, ელეისონ', pieces: [p('166', 166, 362), p('167', 167, 362)] },
   { title: 'აქსიოს', pieces: [p('168', 168, 363)] },
+  // vol. XXVIII: „საფრხე შეიმუსრა“ after „აქსიოს“
+  { title: 'საფრხე შეიმუსრა', id: 'kh-a28-218' },
 ]);
 
 // the book prints these after the ordination's chants, under one heading „მღვდლის კურთხევისა და ქორწინებისა“;

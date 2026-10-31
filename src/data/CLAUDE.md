@@ -21,7 +21,7 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
 | `dasd1` / `dasd2` | „ჰიმნოგრაფიული კრებული" II (tones I–II, files 1–250) / III (tones III–IV, 1–277): stichera on "Lord, I have cried" + the psalm verses (plain and „ჭრელი"); code "ჰ.კ." | 0 | `sticheraBookChants.ts` — tab დასადებლები, 129 groups `ds-N` (tone · day — kind). A title with no music whose footnote says "იხილე — გვ. N, # M" is a cross-reference: its button opens the chant printed on p. N (no file of its own) |
 | `momix` | „ჰიმნოგრაფიული კრებული" I, troparia on the Beatitudes (Kereselidze mss., code "ე.კ."; no printed numbers — files 1–268 in book order) | 0 | `beatitudesBookChants.ts` — tab მომიხსენენი, 59 groups `mm-N` (tone + day) |
 
-| `a1`–`a23`, `a28`, `a29`, … | „ქართული გალობის ანთოლოგია“ (29 vols, galobani.ge PDFs: the user's Downloads, Drive „01 ანთოლოგიის ტომეულები“, or `https://pub-f947f7afe8cc44c4928fdba6e2fbb528.r2.dev/antologia_<vol>.pdf`), only versions the books above lack; number with a letter → file number (vols I–III and XXVIII: 76a = 761; from vol. IV on ×100: 12b = 1202, because vol. IV has both 12b and №122; `numLabel` shows „76a“); a litany of short numbers = one unit file named by its first number (`numLabel` „98–107“) | PDF = book | `src/data/anthologyChants.ts` (`ATTACH` by chant id — any tab — and `NEW_ITEMS` after or before an item; East Georgian vols II–IV and X–XI in `anthologyEastChants.ts` → the ქ.კ. row, the others from vol. V in `anthologyWestChants.ts` → გ.ს.); the rite tabs in `riteChants.ts` |
+| `a1`–`a29` | „ქართული გალობის ანთოლოგია“ (29 vols, galobani.ge PDFs: the user's Downloads, Drive „01 ანთოლოგიის ტომეულები“, or `https://pub-f947f7afe8cc44c4928fdba6e2fbb528.r2.dev/antologia_<vol>.pdf`), only versions the books above lack; number with a letter → file number (vols I–III and XXVIII: 76a = 761; from vol. IV on ×100: 12b = 1202, because vol. IV has both 12b and №122 — vol. XXVIII's four მხოლოდ-შობილი files 761…771 stay ×10, its later ones ×100; `numLabel` shows „76a“); a litany of short numbers = one unit file named by its first number (`numLabel` „98–107“) | PDF = book | `src/data/anthologyChants.ts` (`ATTACH` by chant id — any tab — and `NEW_ITEMS` after or before an item; East Georgian vols II–IV and X–XI in `anthologyEastChants.ts` → the ქ.კ. row, the others from vol. V in `anthologyWestChants.ts` → გ.ს.); the rite tabs in `riteChants.ts` |
 | `song` | Admission-program songs (files 1–10; 9–10 are scans: pictures only, no synth) | — | `songBookChants.ts` from `abituriProgram.ts` (`notes: N`); ids `sg-N`, in `NOTES_LISTS` only (no service tab, not in search) |
 
 - Song notes: Finale/Petrucci PDFs from the user's Drive (abituri page folders), read with the books' OMR + `NO_WIN2MAC=1`
@@ -287,3 +287,16 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   own `pieces` now also shows the pieces the volumes attach to it (vol. IV's and XIX's „ზეცით გამოჩინებულისა“, XI's ფილიმონ
   were hidden before). XX №21: the head picked by page order was a feast date's „21“ — set to its page by hand. 13 pieces
   carry the reader's „!“ warning (one line whose voices end at different beats) — not checked.
+- Vols. XXIV–XXIX (2026-10-31, the last): 603 versions (XXIV 138, XXV 127, XXVI 25, XXVII 63, XXVIII 125, XXIX 125;
+  332 duplicates). XXIV–XXV Good Friday's and XXVI–XXVII Holy Saturday's whole service (Koridze, Kereselidze, Khundadze) —
+  in parts as XXII–XXIII: after mx-19 `mx-a24-1` ცისკარი: აღსავალნი (XXIV №1–101), `-102` სამსაგალობელი (კოზმასი), `-127`
+  ცისკრის დასასრული, `mx-a25-1` სამეფო ჟამები, `-29` მწუხრი (+ the psalm verses №99–146), `-48` კანონი ჯვარცმისათვის; after
+  mx-20 `mx-a26-1` ცისკარი: ქებანი (all of XXVI), `mx-a27-1` ცისკრის კანონი, `-47` ცისკრის დასასრული, `-64` მწუხრი, `-108`
+  ბასილი დიდის წირვა — and XIX №111–139 (Holy Saturday's vespers-liturgy, in mx-20 till then) moved into the last two.
+  XXVII prints №33 as „64.“ (read with `NEAR_ALL=1`, which ends a chant at any other number, into file 33); XXVI–XXVII's
+  stanza numbers „1.…36.“ inside a chant drop out by page order. XXVIII: №1–54 = the liturgy Andria Mrevlishvili wrote down
+  in 1842 (East Georgian) → `anthologyEastChants.ts` with `east: true` (`AnthPiece.east` overrides the volume's row, so these
+  show ქ.კ.), №55–178 Khundadze's liturgy (გ.ს.), №179–206 Holy Thursday, Basil's, the hours, the Presanctified, №207–219
+  ordination (+ new item `kh-a28-218` „საფრხე შეიმუსრა“ in `KHELDASKHMA_CHANTS`). XXIX: the three liturgies' chants the
+  earlier volumes lacked → წირვა (bishop's meeting, litanies, antiphons, prokeimena, alleluia, cherubic hymns, anaphora,
+  communion), the hours mx-5, the Presanctified mx-8, Basil's chant-31 / chant-a1-158, Holy Saturday's Cherubic mx-a27-108.

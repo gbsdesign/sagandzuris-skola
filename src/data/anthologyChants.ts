@@ -10,9 +10,10 @@ import type { ChantItem, ChantVariant } from './tsirvaChants';
 import { EAST_ATTACH } from './anthologyEastChants';
 import { WEST_ATTACH } from './anthologyWestChants';
 
-export const ANTH_ROMAN: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X', 11: 'XI', 12: 'XII', 13: 'XIII', 14: 'XIV', 15: 'XV', 16: 'XVI', 17: 'XVII', 18: 'XVIII', 19: 'XIX', 20: 'XX', 21: 'XXI', 22: 'XXII', 23: 'XXIII', 28: 'XXVIII', 29: 'XXIX' };
+export const ANTH_ROMAN: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X', 11: 'XI', 12: 'XII', 13: 'XIII', 14: 'XIV', 15: 'XV', 16: 'XVI', 17: 'XVII', 18: 'XVIII', 19: 'XIX', 20: 'XX', 21: 'XXI', 22: 'XXII', 23: 'XXIII', 24: 'XXIV', 25: 'XXV', 26: 'XXVI', 27: 'XXVII', 28: 'XXVIII', 29: 'XXIX' };
 // the East Georgian volumes: Kartli-Kakheti school (the school of the others is a guess from the volume)
 const ANTH_EAST = new Set([2, 3, 4, 10, 11]);
+const isEast = (a: AnthPiece) => a.east ?? ANTH_EAST.has(a.vol);
 
 /** One printed piece (or a unit of several): its number as printed, notes file, printed page, and how it is named. */
 export interface AnthPiece {
@@ -22,6 +23,7 @@ export interface AnthPiece {
   page: number;
   version: string;   // a chant's version: its source (ქორიძე, ხუნდაძე; may be empty); a group's chant: its own name
   source?: string;   // a chant's version: where in the book (ბასილი დიდის წირვა); a group's chant: its source
+  east?: boolean;    // East Georgian whatever its volume (vol. XXVIII №1–54, Mrevlishvili 1842 — set by anthologyEastChants.ts)
 }
 
 // vol. I: Philimon Koridze's printed liturgy (1895) and his collection of 1901 — Gelati school
@@ -156,6 +158,18 @@ const NEW_ITEMS: { after?: string; before?: string; id: string; title: string; p
   { after: 'mx-18', id: 'mx-a23-97', title: 'დიდი ხუთშაბათი — დასდებელნი' },
   { after: 'mx-18', id: 'mx-a23-114', title: 'დიდი ხუთშაბათი — ჟამი, მწუხრი და წირვა' },
   { after: 'mx-18', id: 'mx-a23-161', title: 'დიდი ხუთშაბათი — ფერხთბანა' },
+  // vols XXIV–XXVII: Good Friday's and Holy Saturday's whole service, in parts as above
+  { after: 'mx-19', id: 'mx-a24-1', title: 'დიდი პარასკევი — ცისკარი: აღსავალნი' },
+  { after: 'mx-19', id: 'mx-a24-102', title: 'დიდი პარასკევი — სამსაგალობელი (კოზმასი)' },
+  { after: 'mx-19', id: 'mx-a24-127', title: 'დიდი პარასკევი — ცისკრის დასასრული' },
+  { after: 'mx-19', id: 'mx-a25-1', title: 'დიდი პარასკევი — სამეფო ჟამები' },
+  { after: 'mx-19', id: 'mx-a25-29', title: 'დიდი პარასკევი — მწუხრი' },
+  { after: 'mx-19', id: 'mx-a25-48', title: 'დიდი პარასკევი — კანონი ჯვარცმისათვის' },
+  { after: 'mx-20', id: 'mx-a26-1', title: 'დიდი შაბათი — ცისკარი: ქებანი' },
+  { after: 'mx-20', id: 'mx-a27-1', title: 'დიდი შაბათი — ცისკრის კანონი' },
+  { after: 'mx-20', id: 'mx-a27-47', title: 'დიდი შაბათი — ცისკრის დასასრული' },
+  { after: 'mx-20', id: 'mx-a27-64', title: 'დიდი შაბათი — მწუხრი' },
+  { after: 'mx-20', id: 'mx-a27-108', title: 'დიდი შაბათი — ბასილი დიდის წირვა' },
 ];
 
 // a group (feast, occasion of მარხვანი…) lists its own chants; a chant lists versions of itself
@@ -164,7 +178,7 @@ const isGroup = (chantId: string) => /^(sd|mx|zt|mm|dz|kt|ds|pr)-/.test(chantId)
 const idPrefix = (chantId: string) => chantId.startsWith('chant-') ? `v-${chantId.slice(6)}` : chantId.replace(/^([a-z]+)-/, '$1-v-');
 
 export const anthVariant = (chantId: string, title: string, a: AnthPiece): ChantVariant => {
-  const east = ANTH_EAST.has(a.vol);
+  const east = isEast(a);
   const school = east ? 'ქ.კ.' : 'გ.ს.';
   const name = [a.num, a.version].filter(Boolean).join(' ');
   const extra = [name, a.source !== a.version && a.source, `გვ. ${a.page}`].filter(Boolean).join(', ');
@@ -186,7 +200,7 @@ export const anthVariant = (chantId: string, title: string, a: AnthPiece): Chant
 
 /** The anthology's versions of a chant that is on the site; `east` picks only the East Georgian volumes' or only the others'. */
 export const anthVariantsFor = (chantId: string, title: string, east?: boolean): ChantVariant[] =>
-  piecesOf(chantId).filter(a => east === undefined || ANTH_EAST.has(a.vol) === east).map(a => anthVariant(chantId, title, a));
+  piecesOf(chantId).filter(a => east === undefined || isEast(a) === east).map(a => anthVariant(chantId, title, a));
 
 /** A list with the anthology's versions added to its chants and its new chants put in place. */
 export const withAnthology = (items: ChantItem[], skipAttached = false): ChantItem[] => {

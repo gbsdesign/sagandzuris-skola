@@ -22,7 +22,7 @@ at its number (e.g. only `01 - ტომი I.pdf` for vol. 1) and set `ANTH_DIR
 
 | Script | What |
 |---|---|
-| `omr.py <vol> <num> <outDir> <startPdfPage> [--file N] [--to LAST] [--json-only]` | one chant (or, with `--to`, the numbers up to LAST as one unit) → JSON + pictures; prints `!` for a system whose voices end at different beats (a reading error to fix); `SAME_NUM_ENDS=1` ends the chant where its own number is printed again (vol. XVI's „62.“ twice) |
+| `omr.py <vol> <num> <outDir> <startPdfPage> [--file N] [--to LAST] [--json-only]` | one chant (or, with `--to`, the numbers up to LAST as one unit) → JSON + pictures; prints `!` for a system whose voices end at different beats (a reading error to fix); `SAME_NUM_ENDS=1` ends the chant where its own number is printed again (vol. XVI's „62.“ twice); `NEAR_ALL=1` ends it at any other number (vol. XXVII's №33 printed „64.“) |
 | `compare.py "vol:num:page,…" "book/157,kk/154,…"` | reads versions and ranks them against the site's versions (1.0 = same) |
 | `matrix.py "a2:277,…,kk/154"` | top / middle / bass similarity between read versions and site versions, exact pitches |
 | `diffv.py a2:284 kk/154` | where two versions differ, voice by voice |
