@@ -64,6 +64,8 @@ export const JVRISWERA_CHANTS: ChantItem[] = build('jv', [
   ISAIAH,
   MARTYRS,
   GLORY,
+  // vol. XXI: the songs of the wedding's table
+  { title: 'მოსალხენი (სუფრაზე)', id: 'jv-a21-134' },
 ]);
 
 const IRMOS = (ode: string) => `ძლისპირი, გალობა ${ode}, ხმა ვ`;

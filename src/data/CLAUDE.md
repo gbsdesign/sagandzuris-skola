@@ -21,7 +21,7 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
 | `dasd1` / `dasd2` | „ჰიმნოგრაფიული კრებული" II (tones I–II, files 1–250) / III (tones III–IV, 1–277): stichera on "Lord, I have cried" + the psalm verses (plain and „ჭრელი"); code "ჰ.კ." | 0 | `sticheraBookChants.ts` — tab დასადებლები, 129 groups `ds-N` (tone · day — kind). A title with no music whose footnote says "იხილე — გვ. N, # M" is a cross-reference: its button opens the chant printed on p. N (no file of its own) |
 | `momix` | „ჰიმნოგრაფიული კრებული" I, troparia on the Beatitudes (Kereselidze mss., code "ე.კ."; no printed numbers — files 1–268 in book order) | 0 | `beatitudesBookChants.ts` — tab მომიხსენენი, 59 groups `mm-N` (tone + day) |
 
-| `a1`–`a18`, `a28`, `a29`, … | „ქართული გალობის ანთოლოგია“ (29 vols, galobani.ge PDFs: the user's Downloads, Drive „01 ანთოლოგიის ტომეულები“, or `https://pub-f947f7afe8cc44c4928fdba6e2fbb528.r2.dev/antologia_<vol>.pdf`), only versions the books above lack; number with a letter → file number (vols I–III and XXVIII: 76a = 761; from vol. IV on ×100: 12b = 1202, because vol. IV has both 12b and №122; `numLabel` shows „76a“); a litany of short numbers = one unit file named by its first number (`numLabel` „98–107“) | PDF = book | `src/data/anthologyChants.ts` (`ATTACH` by chant id — any tab — and `NEW_ITEMS` after or before an item; East Georgian vols II–IV and X–XI in `anthologyEastChants.ts` → the ქ.კ. row, the others from vol. V in `anthologyWestChants.ts` → გ.ს.); the rite tabs in `riteChants.ts` |
+| `a1`–`a23`, `a28`, `a29`, … | „ქართული გალობის ანთოლოგია“ (29 vols, galobani.ge PDFs: the user's Downloads, Drive „01 ანთოლოგიის ტომეულები“, or `https://pub-f947f7afe8cc44c4928fdba6e2fbb528.r2.dev/antologia_<vol>.pdf`), only versions the books above lack; number with a letter → file number (vols I–III and XXVIII: 76a = 761; from vol. IV on ×100: 12b = 1202, because vol. IV has both 12b and №122; `numLabel` shows „76a“); a litany of short numbers = one unit file named by its first number (`numLabel` „98–107“) | PDF = book | `src/data/anthologyChants.ts` (`ATTACH` by chant id — any tab — and `NEW_ITEMS` after or before an item; East Georgian vols II–IV and X–XI in `anthologyEastChants.ts` → the ქ.კ. row, the others from vol. V in `anthologyWestChants.ts` → გ.ს.); the rite tabs in `riteChants.ts` |
 | `song` | Admission-program songs (files 1–10; 9–10 are scans: pictures only, no synth) | — | `songBookChants.ts` from `abituriProgram.ts` (`notes: N`); ids `sg-N`, in `NOTES_LISTS` only (no service tab, not in search) |
 
 - Song notes: Finale/Petrucci PDFs from the user's Drive (abituri page folders), read with the books' OMR + `NO_WIN2MAC=1`
@@ -269,3 +269,21 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   and XIV №109). The contents tables slip a row in XVI from №81 on — titles from the pages. Feast date lines
   („14 [27] სეკდემბერს“) read as numbers are dropped by page order. 17 pieces have one line whose voices end at different
   beats (the reader's „!“ warning) — not checked.
+- Vols. XIX–XXIII (2026-10-31): 601 versions (XIX 63, XX 67, XXI 106, XXII 217, XXIII 148; 348 duplicates — XX mostly of
+  vol. V/IX, Koridze's edition of the same Gelati chants). XIX–XXI = Kereselidze's Q674 goes on: XIX the liturgy's plain styles
+  (№1–59, „წირვის წესი“ №60–80) → წირვა, the hours №81–90 → mx-5, the Presanctified №91–98 → mx-8, Holy Thursday's vespers-liturgy
+  №99–110 → mx-a23-114, Holy Saturday's №111–139 → mx-20, Basil's anaphora → chant-28…31 / chant-a1-158; XX the feasts' liturgy
+  chants (antiphons' refrains, entrance verses, troparia, prokeimena, alleluia, the 9th ode instead of „ღირს არს“) → their feast
+  item (Lazarus Saturday mx-15, Pascha zt-1/5/6/7), the communion verses №188–206 → their feast (№188 to the three Theotokos
+  feasts, №194 to ფერისცვალება and სვეტიცხოვლობა, the saints'/the departed's to chant-38); XXI the Beatitudes' Resurrection
+  troparia → each tone's Sunday group in მომიხსენენი (`MOMIXSENENI_CHANTS` is `withAnthology` since then), hours, saints'
+  troparia, tone VI's sessional hymns, the funeral → pn-*, ordination → kh-*, wedding → jv-*, and its table songs → new
+  item `jv-a21-134` „მოსალხენი (სუფრაზე)“ (an explicit item of `JVRISWERA_CHANTS` — the rite tabs don't take NEW_ITEMS).
+  XXI prints №45 and №47 twice (tone VIII's two series): read as 45a/45b, 47a/47b (files 4501…). XXII (the Nativity's whole
+  service, Koridze, Kereselidze, Khundadze) and XXIII (Holy Thursday's) — the user's choice „ნაწილებად“: new items after
+  sd-13 `sd-a22-1` სამეფო ჟამები, `-38` დიდი მწუხრი, `-80` ცისკარი, `-96` ცისკრის კანონები, `-210` წირვა, and after mx-18
+  `mx-a23-1` სამსაგალობელი, `-44` ცისკარი: ტროპარი და კანონი, `-97` დასდებელნი, `-114` ჟამი, მწუხრი და წირვა, `-161` ფერხთბანა.
+  Left out: XXI №138 and XXIII №167, the archdeacon's one-voice foot-washing chant (as VIII №202). A NEW_ITEMS entry with its
+  own `pieces` now also shows the pieces the volumes attach to it (vol. IV's and XIX's „ზეცით გამოჩინებულისა“, XI's ფილიმონ
+  were hidden before). XX №21: the head picked by page order was a feast date's „21“ — set to its page by hand. 13 pieces
+  carry the reader's „!“ warning (one line whose voices end at different beats) — not checked.

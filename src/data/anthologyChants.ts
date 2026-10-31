@@ -10,7 +10,7 @@ import type { ChantItem, ChantVariant } from './tsirvaChants';
 import { EAST_ATTACH } from './anthologyEastChants';
 import { WEST_ATTACH } from './anthologyWestChants';
 
-export const ANTH_ROMAN: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X', 11: 'XI', 12: 'XII', 13: 'XIII', 14: 'XIV', 15: 'XV', 16: 'XVI', 17: 'XVII', 18: 'XVIII', 28: 'XXVIII', 29: 'XXIX' };
+export const ANTH_ROMAN: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X', 11: 'XI', 12: 'XII', 13: 'XIII', 14: 'XIV', 15: 'XV', 16: 'XVI', 17: 'XVII', 18: 'XVIII', 19: 'XIX', 20: 'XX', 21: 'XXI', 22: 'XXII', 23: 'XXIII', 28: 'XXVIII', 29: 'XXIX' };
 // the East Georgian volumes: Kartli-Kakheti school (the school of the others is a guess from the volume)
 const ANTH_EAST = new Set([2, 3, 4, 10, 11]);
 
@@ -145,6 +145,17 @@ const NEW_ITEMS: { after?: string; before?: string; id: string; title: string; p
   { before: 'ck-29', id: 'ck-a17-112', title: 'პირველი ჟამის საგალობლები' },
   { after: 'sd-22', id: 'sd-a15-91', title: 'წმიდა დიდმოწამე გიორგი — 23 აპრილი' },
   { before: 'chant-1', id: 'chant-a18-1', title: 'აღმოსავალითგან მზისა (მღვდელთმთავრის დახვედრა)' },
+  // vols XXII–XXIII: the whole service of the Nativity and of Holy Thursday, in parts (the user's choice „ნაწილებად“)
+  { after: 'sd-13', id: 'sd-a22-1', title: 'ქრისტეშობა — სამეფო ჟამები' },
+  { after: 'sd-13', id: 'sd-a22-38', title: 'ქრისტეშობა — დიდი მწუხრი' },
+  { after: 'sd-13', id: 'sd-a22-80', title: 'ქრისტეშობა — ცისკარი' },
+  { after: 'sd-13', id: 'sd-a22-96', title: 'ქრისტეშობა — ცისკრის კანონები' },
+  { after: 'sd-13', id: 'sd-a22-210', title: 'ქრისტეშობა — წირვა' },
+  { after: 'mx-18', id: 'mx-a23-1', title: 'დიდი ხუთშაბათი — სამსაგალობელი (ანდრია კრიტელისა)' },
+  { after: 'mx-18', id: 'mx-a23-44', title: 'დიდი ხუთშაბათი — ცისკარი: ტროპარი და კანონი' },
+  { after: 'mx-18', id: 'mx-a23-97', title: 'დიდი ხუთშაბათი — დასდებელნი' },
+  { after: 'mx-18', id: 'mx-a23-114', title: 'დიდი ხუთშაბათი — ჟამი, მწუხრი და წირვა' },
+  { after: 'mx-18', id: 'mx-a23-161', title: 'დიდი ხუთშაბათი — ფერხთბანა' },
 ];
 
 // a group (feast, occasion of მარხვანი…) lists its own chants; a chant lists versions of itself
@@ -183,7 +194,8 @@ export const withAnthology = (items: ChantItem[], skipAttached = false): ChantIt
     id: n.id,
     index,
     title: n.title,
-    variants: (n.pieces ?? piecesOf(n.id)).map(a => anthVariant(n.id, n.title, a)),
+    // its own pieces first, then any the volumes attach to it (vol. IV's and XIX's „ზეცით გამოჩინებულისა“, XI's ფილიმონ were hidden before)
+    variants: [...(n.pieces ?? []), ...piecesOf(n.id)].map(a => anthVariant(n.id, n.title, a)),
   });
   return items.flatMap(item => [
     ...NEW_ITEMS.filter(n => n.before === item.id).map(n => newItem(n, item.index)),
