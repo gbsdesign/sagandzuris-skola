@@ -414,8 +414,14 @@
   program)`: the room's class, on one phone all mine); one name once a game, the wrong three of the same service, old
   spelling one name (`nameKey`: ვ = უ, ჲ dropped); the asked ids on the device `sg-khmebi-seen` / `sg-notebi-seen`. A step
   moves on by its time or the host's „შემდეგი ხმა“ / „მეტი ნოტი“ (the hybrid keeps `HybridState.step`, `hybridStep`; its next
-  step plays at once); hybrid marks by the step the team wrote: 3 · 2 · 1 · ვერა 0; face `pages/games/chants/face.tsx`. Next:
-  ხმების ტურნირი. Not yet tried by real people on several phones.
+  step plays at once); hybrid marks by the step the team wrote: 3 · 2 · 1 · ვერა 0; face `pages/games/chants/face.tsx`. And
+  „ხმების ტურნირი“ (mapItem `turniri`, like SingStar; `utils/turniri.ts` + test): three rounds (`fixedRounds`), a round = a
+  known chant's first phrase (the same pool), every singer picks their voice I/II/III (`sg-turniri-voice`), hears its phrase
+  and sings it into the phone in any key — `pages/games/turniri/Sing.tsx` scores it as the pearls do (`scoreSinging`), the
+  share in per cent is the points (online sent as the act's `pick`, 0…100; a take may be sung again before sending, another
+  voice drops it — `Pick`'s `onPick(null)`); no piece of its own (`clip` none). Its hybrid goes one by one (`turns`, `sides`
+  „მომღერლები“): the phone passed hand to hand, each one's take kept as their mark; any name can sing (again) out of turn.
+  Every quick game is now built. Not yet tried by real people on several phones.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in

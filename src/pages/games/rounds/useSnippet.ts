@@ -23,6 +23,10 @@ export type Clip =
 let notesSeq = 0;
 let notesOwner = 0;
 
+// every screen's piece, to be silenced at once (a singer's microphone must not hear it)
+const hushers = new Set<() => void>();
+export const hushSnippets = () => hushers.forEach(stop => stop());
+
 /** the synthesizer may sound without a tap: it has been let once (else a short try, then the phone wants a tap) */
 const synthReady = async () => {
   if (lessonAudioReady()) return true;
@@ -175,6 +179,11 @@ export const useSnippet = (seconds: number) => {
     a.play().then(() => a.pause()).catch(() => { /* a later tap will do */ });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    hushers.add(stop);
+    return () => { hushers.delete(stop); };
+  }, [stop]);
 
   useEffect(() => () => {
     turn.current += 1;

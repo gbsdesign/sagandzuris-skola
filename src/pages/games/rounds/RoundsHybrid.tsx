@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronRight, Eye, Minus, Play, Plus, RotateCcw, Timer, Trophy, Users } from 'lucide-react';
+import { Check, ChevronRight, Eye, Mic, Minus, Play, Plus, RotateCcw, Timer, Trophy, Users } from 'lucide-react';
 import { MAX_TEAMS, MIN_TEAMS, ROUND_COUNTS, hybridNext, hybridScores, hybridStep, markTeam, rulesOf, type HybridState } from '../../../utils/roundGames';
 import { TEAM_NAMES } from '../../../utils/amikhseni';
 import { TableScreen } from '../../../components/games/TableScreen';
@@ -16,8 +16,9 @@ import { Podium, RoundHead, SnippetBox, Standings, TimerRing, useNow } from './p
 // piece plays on this phone and its time runs from the first ▶ (a round without one: from „დროის დაწყება“, once the host
 // has read it out); the teams talk it over and write their answer down; the
 // host opens the answer and marks each team — the phone adds it up. A round of steps (more of the piece at each) goes on
-// with the host's „შემდეგი ხმა“ / „მეტი ნოტი“, which plays the next piece at once. The game is kept on the device after
-// every step (the page keeps it), so ✕ only pauses it.
+// with the host's „შემდეგი ხმა“ / „მეტი ნოტი“, which plays the next piece at once. A game of turns (`face.turns`, the
+// singing tournament) goes one by one instead: the phone is passed hand to hand, each one's own `Pick` gives their points.
+// The game is kept on the device after every step (the page keeps it), so ✕ only pauses it.
 
 export interface HybridConf { teams: number; names: string[]; count: number }
 
@@ -31,7 +32,9 @@ export const readHybridConf = (raw: unknown): HybridConf => {
 export const HybridSetup: React.FC<{
   face: RoundFace; conf: HybridConf; setConf: (c: HybridConf) => void; paused: HybridState | null; empty: boolean;
   onStart: () => void; onResume: () => void;
-}> = ({ face, conf, setConf, paused, empty, onStart, onResume }) => (
+}> = ({ face, conf, setConf, paused, empty, onStart, onResume }) => {
+  const sides = face.sides ?? { many: 'გუნდები', one: 'გუნდი' };
+  return (
   <div className="space-y-4">
     {paused && (
       <Card className="!p-4">
@@ -46,10 +49,10 @@ export const HybridSetup: React.FC<{
     )}
     <Card className="!p-4 space-y-4">
       <div className="flex items-center justify-between gap-3">
-        <p className="text-[13.5px] font-bold text-[#4a3426] flex items-center gap-1.5"><Users className="w-4 h-4 text-[#7a2028]" /> გუნდები · {conf.teams}</p>
+        <p className="text-[13.5px] font-bold text-[#4a3426] flex items-center gap-1.5"><Users className="w-4 h-4 text-[#7a2028]" /> {sides.many} · {conf.teams}</p>
         <div className="flex items-center gap-1">
-          <button type="button" aria-label="ერთი გუნდით ნაკლები" disabled={conf.teams <= MIN_TEAMS} onClick={() => { triggerHaptic(5); setConf({ ...conf, teams: conf.teams - 1 }); }} className="w-11 h-11 rounded-full flex items-center justify-center text-[#7a2028] ring-1 ring-[#e8dcc8] bg-white disabled:opacity-35 cursor-pointer disabled:cursor-default"><Minus className="w-4 h-4" /></button>
-          <button type="button" aria-label="ერთი გუნდით მეტი" disabled={conf.teams >= MAX_TEAMS} onClick={() => { triggerHaptic(5); setConf({ ...conf, teams: conf.teams + 1 }); }} className="w-11 h-11 rounded-full flex items-center justify-center text-[#7a2028] ring-1 ring-[#e8dcc8] bg-white disabled:opacity-35 cursor-pointer disabled:cursor-default"><Plus className="w-4 h-4" /></button>
+          <button type="button" aria-label="ერთით ნაკლები" disabled={conf.teams <= MIN_TEAMS} onClick={() => { triggerHaptic(5); setConf({ ...conf, teams: conf.teams - 1 }); }} className="w-11 h-11 rounded-full flex items-center justify-center text-[#7a2028] ring-1 ring-[#e8dcc8] bg-white disabled:opacity-35 cursor-pointer disabled:cursor-default"><Minus className="w-4 h-4" /></button>
+          <button type="button" aria-label="ერთით მეტი" disabled={conf.teams >= MAX_TEAMS} onClick={() => { triggerHaptic(5); setConf({ ...conf, teams: conf.teams + 1 }); }} className="w-11 h-11 rounded-full flex items-center justify-center text-[#7a2028] ring-1 ring-[#e8dcc8] bg-white disabled:opacity-35 cursor-pointer disabled:cursor-default"><Plus className="w-4 h-4" /></button>
         </div>
       </div>
       <div className="grid grid-cols-2 gap-2">
@@ -58,25 +61,28 @@ export const HybridSetup: React.FC<{
             key={i}
             value={n}
             maxLength={16}
-            aria-label={`გუნდი ${i + 1}`}
+            aria-label={`${sides.one} ${i + 1}`}
             onChange={e => setConf({ ...conf, names: conf.names.map((x, k) => (k === i ? e.target.value : x)) })}
             onBlur={() => { if (!conf.names[i].trim()) setConf({ ...conf, names: conf.names.map((x, k) => (k === i ? TEAM_NAMES[i] : x)) }); }}
             className={`${FIELD} !h-11 !text-[14px] font-bold`}
           />
         ))}
       </div>
-      <div className="space-y-2">
-        <p className="text-[13.5px] font-bold text-[#4a3426]">რაუნდები</p>
-        <div className="flex flex-wrap gap-2" role="group" aria-label="რაუნდები">
-          {ROUND_COUNTS.map(c => <Chip key={c} on={conf.count === c} onClick={() => setConf({ ...conf, count: c })}>{c}</Chip>)}
+      {face.fixedRounds ? <p className="text-[13.5px] font-bold text-[#4a3426]">რაუნდები · {face.fixedRounds}</p> : (
+        <div className="space-y-2">
+          <p className="text-[13.5px] font-bold text-[#4a3426]">რაუნდები</p>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="რაუნდები">
+            {ROUND_COUNTS.map(c => <Chip key={c} on={conf.count === c} onClick={() => setConf({ ...conf, count: c })}>{c}</Chip>)}
+          </div>
         </div>
-      </div>
+      )}
       {face.Options && <face.Options />}
       {empty && <p className="rounded-2xl bg-amber-50 ring-1 ring-amber-200 px-4 py-2.5 text-[13px] font-bold leading-snug text-amber-800">{face.empty}</p>}
       <Btn size="lg" full onClick={onStart} icon={<Play />} className="!h-14 !text-[16px]">{paused ? 'ახალი თამაში' : 'თამაშის დაწყება'}</Btn>
     </Card>
   </div>
-);
+  );
+};
 
 export const HybridGame: React.FC<{ face: RoundFace; h: HybridState; setH: (h: HybridState) => void; onClose: () => void; onAgain: () => void }> = ({
   face, h, setH, onClose, onAgain,
@@ -123,6 +129,10 @@ export const HybridGame: React.FC<{ face: RoundFace; h: HybridState; setH: (h: H
   const startTime = () => { openAudio(audio); triggerHaptic(10); if (!endAt && asking) setEndAt(Date.now() + total * 1000); };
   const scores = hybridScores(h);
   const next = () => { triggerHaptic(12); snippet.stop(); setH(hybridNext(h)); };
+  // one by one (face.turns): whose turn it is (unchosen: the first who has not had it) and their take, not kept yet
+  const [turn, setTurn] = useState<number | null>(null);
+  const [take, setTake] = useState<number | null>(null);
+  useEffect(() => { setTurn(null); setTake(null); }, [h.at, h.phase]);
 
   if (h.phase === 'end') {
     return (
@@ -144,6 +154,90 @@ export const HybridGame: React.FC<{ face: RoundFace; h: HybridState; setH: (h: H
           </div>
           <Podium names={h.teams} scores={scores} />
           <Standings names={h.teams} scores={scores} />
+        </div>
+      </TableScreen>
+    );
+  }
+
+  if (face.turns) {
+    const marks = h.marks[h.at];
+    const last = h.at + 1 >= h.rounds.length;
+    if (h.phase === 'reveal') {
+      return (
+        <TableScreen
+          title={face.title}
+          onClose={onClose}
+          footer={<Btn size="lg" full onClick={next} icon={last ? <Trophy /> : <ChevronRight />} className="!h-14 !text-[16px]">{last ? 'შედეგები' : 'შემდეგი რაუნდი'}</Btn>}
+        >
+          <div className="py-2 space-y-4">
+            <RoundHead at={h.at} total={h.rounds.length} />
+            <face.Answer q={q} />
+            <face.Reveal q={q} picks={marks} />
+            <Standings names={h.teams} scores={scores} gained={marks.map(m => m ?? 0)} />
+          </div>
+        </TableScreen>
+      );
+    }
+    const waiting = marks.findIndex(m => m === null);
+    const cur = turn ?? (waiting >= 0 ? waiting : null);
+    const sung = marks.filter(m => m !== null).length;
+    const keep = () => {
+      if (cur === null || take === null) return;
+      triggerHaptic(15);
+      setH(markTeam(h, cur, take));
+      setTurn(null);
+      setTake(null);
+    };
+    const choose = (i: number) => { triggerHaptic(8); setTurn(i); setTake(null); };
+    const sides = face.sides ?? { many: 'გუნდები', one: 'გუნდი' };
+    return (
+      <TableScreen
+        title={face.title}
+        onClose={onClose}
+        footer={cur !== null ? (
+          <div className="flex gap-3">
+            <Btn kind="ghost" size="lg" onClick={next} icon={<Eye />} className="!h-14 !px-5">შედეგები</Btn>
+            <Btn size="lg" disabled={take === null} onClick={keep} icon={<Check />} className="!h-14 !text-[15.5px] flex-1">
+              {take === null ? face.confirm(q, null) : `შენახვა · ${face.pickName(q, take)}`}
+            </Btn>
+          </div>
+        ) : <Btn size="lg" full onClick={next} icon={<Eye />} className="!h-14 !text-[16px]">შედეგები</Btn>}
+      >
+        <div className="py-2 space-y-4">
+          <RoundHead at={h.at} total={h.rounds.length} />
+          {face.Ask && <face.Ask q={q} who="teams" step={h.step} steps={steps} />}
+          {cur !== null && (
+            <section className="space-y-3" aria-live="polite">
+              <div className="flex items-center gap-3 rounded-2xl bg-[#7a2028] px-4 py-3 text-[#fbf6ec]">
+                <Mic className="w-5 h-5 shrink-0" aria-hidden="true" />
+                <p className="min-w-0 flex-1 font-serif-ge text-[18px] font-bold leading-snug [overflow-wrap:anywhere]">ახლა: {h.teams[cur]}</p>
+                <span className="shrink-0 text-[12.5px] font-bold text-[#fbf6ec]/80">ტელეფონი გადაეცი</span>
+              </div>
+              <face.Pick key={`${h.at}.${cur}`} q={q} pick={take} onPick={setTake} />
+            </section>
+          )}
+          <section className="space-y-2">
+            <p className="text-[13.5px] font-bold text-[#4a3426]">{sides.many} · {sung} / {h.teams.length}</p>
+            <ul className="space-y-1.5">
+              {h.teams.map((t, i) => (
+                <li key={i}>
+                  <button
+                    type="button"
+                    onClick={() => choose(i)}
+                    aria-pressed={i === cur}
+                    className={`w-full flex items-center gap-3 min-h-12 rounded-2xl px-3 text-left cursor-pointer ${i === cur ? 'bg-[#7a2028]/[0.07] ring-2 ring-[#7a2028]' : 'bg-white ring-1 ring-[#e8dcc8] hover:bg-[#fbf6ec]'}`}
+                  >
+                    <span className="min-w-0 flex-1 text-[14px] font-bold leading-tight text-[#4a3426] [overflow-wrap:anywhere]">{t}</span>
+                    <span className={`shrink-0 text-[13.5px] font-bold tabular-nums ${marks[i] === null ? 'text-[#9a8b7b]' : 'text-[#2f7d4f]'}`}>
+                      {marks[i] === null ? 'ჯერ არა' : face.pickName(q, marks[i]!)}
+                    </span>
+                    {h.at > 0 && <span className="shrink-0 min-w-[4.5rem] text-right text-[13px] font-bold tabular-nums text-[#a0703c]">ჯამი {scores[i]}</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+            <Hint>შეეხე სახელს, რომ მისი რიგი ახლავე იყოს ან თავიდან იმღეროს.</Hint>
+          </section>
         </div>
       </TableScreen>
     );

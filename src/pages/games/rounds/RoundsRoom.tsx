@@ -69,7 +69,7 @@ export const RoundsRoom: React.FC<{
   };
   const start = () => {
     snippet.unlock();
-    const rounds = face.draw(opts.count, program);
+    const rounds = face.draw(face.fixedRounds ?? opts.count, program);
     if (!rounds.length) { setEmpty(true); return; }
     if (roundRooms.host.start({ game: face.game, rounds, sound: opts.sound })) face.remember(rounds);
   };

@@ -29,14 +29,20 @@ export interface RoundFace {
   clipSeconds: number;
   /** a round of several steps (more of the piece at each): the host's button that brings the next one sooner */
   nextLabel?: string;
+  /** a game of so many rounds only (no choice in the lobby or the one-phone setup) */
+  fixedRounds?: number;
+  /** the one-phone game goes one by one, the phone passed hand to hand: each one's own `Pick` gives their points (no
+   * marks); `sides` names them */
+  turns?: boolean;
+  sides?: { many: string; one: string };
   /** the round in words, when the game asks one (a question): under the clock on every screen while it is asked */
   Ask?: React.FC<{ q: PublicQ; who: 'host' | 'player' | 'teams'; step: number; steps: number }>;
   /** the game's own choices: under the rounds in the lobby (the host's) and in the one-phone setup */
   Options?: React.FC;
   /** more on the game's page, under both tabs (the teacher's own questions) */
   Extra?: React.FC;
-  /** a player's controls; `pick` is the answer marked, not sent yet */
-  Pick: React.FC<{ q: PublicQ; pick: number | null; onPick: (p: number) => void }>;
+  /** a player's controls; `pick` is the answer marked, not sent yet (null: taken back) */
+  Pick: React.FC<{ q: PublicQ; pick: number | null; onPick: (p: number | null) => void }>;
   /** an answer in words (the confirm button, „შენ: …“) */
   pickName(q: PublicQ, pick: number): string;
   /** the confirm button's words, with the answer marked */
