@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { roomPath, type Me, type RoomSnap } from '../../../../utils/gameRoom';
+import { roomPath, type Me } from '../../../../utils/gameRoom';
+import type { SamSnap } from '../../../../utils/samshvildeRoom';
 import { rooms } from '../../../../utils/gameRoomFirestore';
 import type { PubView } from '../../../../utils/samshvildeOnline';
 import { closeAudio } from '../../../../utils/gameSounds';
@@ -16,7 +17,7 @@ import { Waiting } from './bits';
 // ✕ only hides it — the room goes on and the invitation strip leads back. A room closed by its host leaves its players the
 // chronicle they were looking at. `who` is me as my class's list names me (it may come after the room was opened).
 
-export const OnlineRoom: React.FC<{ snap: RoomSnap; who?: Me; className: string; opts: LobbyOpts; setOpts: (o: LobbyOpts) => void; onHide: () => void }> = ({
+export const OnlineRoom: React.FC<{ snap: SamSnap; who?: Me; className: string; opts: LobbyOpts; setOpts: (o: LobbyOpts) => void; onHide: () => void }> = ({
   snap, who, className, opts, setOpts, onHide,
 }) => {
   const audio = useRef<AudioContext | null>(null);

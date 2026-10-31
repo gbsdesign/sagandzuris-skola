@@ -14,7 +14,8 @@ import { Avatar, firstName } from './bits';
 
 export interface LobbyOpts { piper: boolean; kids: boolean }
 
-const People: React.FC<{ joins: Joined[]; me: string; onKick?: (uid: string) => void }> = ({ joins, me, onKick }) => (
+/** who came into the room; the host sees ✕ by each name */
+export const People: React.FC<{ joins: Joined[]; me: string; onKick?: (uid: string) => void }> = ({ joins, me, onKick }) => (
   joins.length ? (
     <ul className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
       {joins.map(j => (

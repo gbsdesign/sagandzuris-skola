@@ -376,6 +376,28 @@
   `useOpenGameRoom` (`utils/gameRoomOpen.ts`). The game's own call (`online/GameCall.tsx`): the school's calls on the room's path
   (`gameCallInfo`), opened as the small bar (`TableScreen` and the strip sit under it); `useHush` turns the players' microphone and
   camera off at night and an out player's microphone by day (not the farewell). Not yet tried by real people on several phones.
+- **The quick games (2026-10-31, the tender's top five; the user: „გააკეთე 5-ვე ონლაინ და ჰიბრიდული“, answers „აააა“)**: one
+  engine of rounds, `utils/roundGames.ts` + test — a round is asked once, every player answers once on their own phone
+  (`Act.ms` = their own time), the last answer or the time reveals it; each game's `RoundRules` (steps, seconds, points,
+  `secret` fields kept from the view until the reveal, `valid`); the hybrid = one phone, 2–6 teams, the host marks each team
+  (`HybridState`, `markTeam`, kept on the device so ✕ only pauses). The room store is generic since then: `utils/gameRoom.ts`
+  `createRooms(be, engine, moves)` over a `RoomEngine` (`games` it plays; samshvilde's is `utils/samshvildeRoom.ts`), the
+  app's two stores in `utils/gameRoomFirestore.ts` (`rooms` = samshvilde, `roundRooms` = the quick games: `timeUp(key)`,
+  `reveal`, `next`); the rules let a room be opened for the six `ROOM_GAMES`, up to 40 players, an act may carry `ms`.
+  Invitations name their game: `data/roomGames.ts` (titles, the hub item, a chat card's `room` = `game:roomId` — a
+  samshvilde card keeps the bare id), the Worker's `GAME_TITLES`, `/?open=<game>&c=&r=`, icons
+  `components/games/roomGameIcons.ts`; the online tab of every room game is `components/games/RoomSetup.tsx`. Screens
+  `pages/games/rounds/` (`RoundsPage` = intro + tabs ონლაინ · ჰიბრიდული, `RoundsRoom`, `RoundsLobby` — 5/8/12 rounds, the
+  piece on every phone (from home) or only on the host's (one room) — `RoundsHost`, `RoundsPlayer`, `RoundsHybrid`;
+  `useSnippet` = one `<audio>` a screen, the piece starts at the same share `from` of the recording on every phone); a game
+  is a `RoundFace` (`rounds/face.ts`). Built so far: „საიდანაა სიმღერა?“ (mapItem `kutkhe`, like GeoGuessr; `utils/kutkhe.ts`
+  + test: the songs map's 13 regions, neighbours `KUTKHE_NEAR`, right 1000…700 / neighbour 400…300 by speed, 40 s, a 30 s
+  piece; `drawKutkhe` — a different song each round, never one region twice running, only regions with ≥3 songs, the songs
+  not asked lately on the device first (`sg-kutkhe-seen`); pool `data/kutkhePool.ts` = 688 songs' whole takes from
+  FOLK_SONGS — own versions that are not parts, archive recs, the Centre's mp3s, not the per-member albums — empty while the
+  recordings are hidden; face `pages/games/kutkhe/` — the map to tap + region chips, the reveal green / neighbours /
+  counts; hybrid marks კუთხე 2 · მეზობელი 1 · ვერა 0). Next, one PR each: ოთხიდან ერთი, ხმა-ხმად, სამ ნოტში!, ხმების
+  ტურნირი. Not yet tried by real people on several phones.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in

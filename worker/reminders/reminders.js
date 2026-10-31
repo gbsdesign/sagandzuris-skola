@@ -21,8 +21,9 @@
 //   GET /widget/data?s=<secret> (that summary + today's ticks and counts, live from Firestore) and tick a habit with
 //   POST /widget/tick { s, id } or count with POST /widget/count { s, id, add }; POST /widget/unlink { s }.
 // • Games (2026-10-30): POST /game-invite { token, classId, roomId } — a game room just opened in a class („სამშვილდის
-//   ღამე“ online): its members and teachers whose device gets the group or assignment reminders hear „X გიწვევს“. The room
-//   is checked in Firestore (the caller's, still waiting for players, fresh) and told once.
+//   ღამე“ online; since 2026-10-31 also the quick games, the notice names the room's game): its members and teachers
+//   whose device gets the group or assignment reminders hear „X გიწვევს“. The room is checked in Firestore (the caller's,
+//   still waiting for players, fresh) and told once.
 // • The phone's calendar (2026-10-29): GET /cal/<secret>.ics — great feasts, fasts and the member's lessons (ics.js);
 //   the secret is one of /widget/link's, asked for by the profile's „კალენდარი ტელეფონში“.
 // These pushes carry an encrypted text payload (RFC 8291, aes128gcm).
@@ -559,6 +560,11 @@ async function groupEvent(request, env) {
 
 // ---- games: a room opened in a class ------------------------------------------------------------------------------
 
+// the games a room is opened for (the app's data/roomGames.ts), as the notice names them
+const GAME_TITLES = {
+  samshvilde: 'სამშვილდის ღამე', kutkhe: 'საიდანაა სიმღერა?', otkhi: 'ოთხიდან ერთი', khmebi: 'ხმა-ხმად', notebi: 'სამ ნოტში!', turniri: 'ხმების ტურნირი',
+};
+
 async function gameInvite(request, env) {
   const body = await readJson(request);
   if (!body) return [400, 'bad json'];
@@ -581,11 +587,12 @@ async function gameInvite(request, env) {
   await metaSet(env, told, new Date().toISOString());
   const targets = [...new Set([...(cls.memberIds || []), ...(cls.teacherIds || [])])].filter((u) => u !== uid);
   const name = firstName(String(room.hostName || '').trim());
+  const game = GAME_TITLES[room.game] ? room.game : 'samshvilde';
   const message = {
-    title: 'სამშვილდის ღამე',
+    title: GAME_TITLES[game],
     body: `${name} გიწვევს თამაშში — ${cls.name || 'კლასი'}. შეეხე და შემოდი.`,
     tag: `game-${body.roomId}`,
-    url: `/?open=samshvilde&c=${body.classId}&r=${body.roomId}`,
+    url: `/?open=${game}&c=${body.classId}&r=${body.roomId}`,
   };
   // a device with the group or the assignment reminders on, once
   const rows = [...await rowsFor(env, targets, 'psalter'), ...await rowsFor(env, targets, 'assignments')];

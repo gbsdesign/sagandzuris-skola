@@ -37,6 +37,11 @@ export const GAMES: GameDef[] = [
     modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'samshvilde', section: 'tamashebi', print: { href: '/games/print/samshvildis-game.pdf', sheets: 10 },
   },
   {
+    id: 'saidanaa-simghera', title: 'საიდანაა სიმღერა?', like: 'GeoGuessr', text: 'ხალხური სიმღერის ნაწყვეტი ჟღერს — გამოიცანი, საქართველოს რომელი კუთხისაა, და მონიშნე რუკაზე',
+    about: '„GeoGuessr“ ცნობილი თამაშია: ქუჩის ფოტოს ხედავ და რუკაზე ნიშნავ, სად ხარ. ჩვენთან ფოტოს ნაცვლად სკოლის არქივის ხალხური სიმღერა ჟღერს და კუთხეს მისი ხმით გამოიცნობ: სწორი კუთხე ყველაზე მეტ ქულას იძლევა, მეზობელი — ნაწილს.',
+    modes: ['online', 'hybrid'], page: 'games', item: 'kutkhe', section: 'tamashebi',
+  },
+  {
     id: 'ra-sad-rodis', title: 'რა? სად? როდის?', text: 'გუნდური ვიქტორინა: ერთი წუთი, პასუხი ფურცელზე — წმინდანები, გალობა, კუთხეები, ისტორია და ჩანაწერის ნაწყვეტები',
     about: '„რა? სად? როდის?“ ცნობილი სატელევიზიო ვიქტორინაა: გუნდი ერთ წუთში ბჭობს და ერთ პასუხს ირჩევს. ჩვენთან ყველა გუნდი ერთსა და იმავე კითხვას ერთდროულად პასუხობს ფურცელზე; კითხვები სკოლის თემებზეა, ზოგი ჩანაწერის მოსმენით.',
     modes: ['hybrid', 'noPhone'], page: 'games', item: 'rsr', section: 'tamashebi', print: { href: '/games/print/ra-sad-rodis.pdf', sheets: 8 },

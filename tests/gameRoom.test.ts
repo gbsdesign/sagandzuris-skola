@@ -1,6 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createRoom, createRooms, roomPath, type Backend, type Data, type Rooms } from '../src/utils/gameRoom';
+import { createRoom, roomPath, type Backend, type Data } from '../src/utils/gameRoom';
+import { samshvildeRooms as createRooms, type SamRooms as Rooms } from '../src/utils/samshvildeRoom';
 import { NO } from '../src/utils/samshvildeOnline';
 import { mulberry32 } from '../src/utils/otkheuli';
 

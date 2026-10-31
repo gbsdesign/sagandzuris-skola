@@ -12,13 +12,13 @@ import { Hint } from '../parts';
 // faces. Nobody is rung — the players are in the game already. At night a player's microphone and camera go off by
 // themselves and come back in the morning as they were (useHush); the host keeps reading aloud.
 
-export const useGameCall = (base: string, me: Me, host: string) => {
+export const useGameCall = (base: string, me: Me, host: string, title = 'სამშვილდის ღამე') => {
   const call = useCall();
   const peers = useLivePeers(base);
   const inIt = call.info?.base === base && call.status !== 'idle' && call.status !== 'ended';
   const join = async (kind: CallKind) => {
     // the call screen would cover the game while it connects: it starts as the bar
-    const p = joinCall(gameCallInfo(base, 'სამშვილდის ღამე', me, host), kind);
+    const p = joinCall(gameCallInfo(base, title, me, host), kind);
     setCallSmall(true);
     if (await p) setCallSmall(true);
   };
@@ -45,8 +45,10 @@ export const CallBtn: React.FC<{ gc: GameCall; dark?: boolean }> = ({ gc, dark }
   );
 };
 
+const NIGHT_HINT = 'ზარში ერთმანეთს ხედავთ და ბჭობთ, მემატიანე ღამის სიტყვებს ხმამაღლა კითხულობს. ღამით მიკროფონი და კამერა თავისით ითიშება, დილით ისევ ირთვება.';
+
 /** the lobby's card: by voice or with the camera, and who is in the call */
-export const CallCard: React.FC<{ gc: GameCall }> = ({ gc }) => (
+export const CallCard: React.FC<{ gc: GameCall; hint?: string }> = ({ gc, hint = NIGHT_HINT }) => (
   <section className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-4 py-3.5 space-y-3">
     <div className="flex items-center gap-3">
       <span className={`w-11 h-11 shrink-0 rounded-full flex items-center justify-center ${gc.inIt ? 'bg-emerald-600 text-white' : 'bg-emerald-600/10 text-emerald-700'}`}>
@@ -70,7 +72,7 @@ export const CallCard: React.FC<{ gc: GameCall }> = ({ gc }) => (
         <Btn icon={<Video />} onClick={() => void gc.join('video')}>ვიდეოთი</Btn>
       </div>
     )}
-    <Hint>ზარში ერთმანეთს ხედავთ და ბჭობთ, მემატიანე ღამის სიტყვებს ხმამაღლა კითხულობს. ღამით მიკროფონი და კამერა თავისით ითიშება, დილით ისევ ირთვება.</Hint>
+    <Hint>{hint}</Hint>
   </section>
 );
 
