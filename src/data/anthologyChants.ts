@@ -10,7 +10,7 @@ import type { ChantItem, ChantVariant } from './tsirvaChants';
 import { EAST_ATTACH } from './anthologyEastChants';
 import { WEST_ATTACH } from './anthologyWestChants';
 
-export const ANTH_ROMAN: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X', 11: 'XI', 12: 'XII', 13: 'XIII', 28: 'XXVIII', 29: 'XXIX' };
+export const ANTH_ROMAN: Record<number, string> = { 1: 'I', 2: 'II', 3: 'III', 4: 'IV', 5: 'V', 6: 'VI', 7: 'VII', 8: 'VIII', 9: 'IX', 10: 'X', 11: 'XI', 12: 'XII', 13: 'XIII', 14: 'XIV', 15: 'XV', 16: 'XVI', 17: 'XVII', 18: 'XVIII', 28: 'XXVIII', 29: 'XXIX' };
 // the East Georgian volumes: Kartli-Kakheti school (the school of the others is a guess from the volume)
 const ANTH_EAST = new Set([2, 3, 4, 10, 11]);
 
@@ -138,6 +138,13 @@ const NEW_ITEMS: { after?: string; before?: string; id: string; title: string; p
   { after: 'sd-31', id: 'sd-a13-49', title: 'წმიდა დიდმოწამე პანტელეიმონ მკურნალი — 27 ივლისი' },
   { after: 'sd-31', id: 'sd-a13-50', title: 'წმიდა დიდმოწამე რაჟდენ — 3 აგვისტო' },
   { after: 'sd-34', id: 'sd-a13-54', title: 'წმიდა დედოფალი შუშანიკი — 28 აგვისტო' },
+  // vols XIV–XVIII (Kereselidze's mss. Q673–Q674): the matins' exapostilaria and the praises' stichera, the first hour,
+  // St George's spring feast (the site had only 10 November) and „აღმოსავალითგან მზისა“ of the bishop's meeting
+  { after: 'ck-22', id: 'ck-a16-131', title: 'განმანათლებელნი — აღდგომისანი და შვიდეულისანი' },
+  { after: 'ck-15', id: 'ck-a17-3', title: 'აქებდითსა ზედა დასდებელნი აღდგომისანი რვა ხმისანი' },
+  { before: 'ck-29', id: 'ck-a17-112', title: 'პირველი ჟამის საგალობლები' },
+  { after: 'sd-22', id: 'sd-a15-91', title: 'წმიდა დიდმოწამე გიორგი — 23 აპრილი' },
+  { before: 'chant-1', id: 'chant-a18-1', title: 'აღმოსავალითგან მზისა (მღვდელთმთავრის დახვედრა)' },
 ];
 
 // a group (feast, occasion of მარხვანი…) lists its own chants; a chant lists versions of itself

@@ -42,7 +42,7 @@ def head_num(txt):
     m = re.match(r'^(\d+)-([a-z])(?:$|\.(?:\s|$))', txt)  # vols II–III: "81-a"; vols X–XI: "55-b. title", "141-b."
     if m:
         return m.group(1) + m.group(2)
-    m = re.match(r'^(\d+)\.(?:-\d+\.)?$', txt)
+    m = re.match(r'^(\d+[a-z]?)\.(?:-\d+[a-z]?\.)?$', txt)  # also vols XIV, XVII's bare "78a." (the title is below)
     if m:
         return m.group(1)
     m = re.match(r'^(\d+[a-z]?)(?:\.\s*\S|\s+\S|$)', txt)
@@ -90,7 +90,8 @@ class Page:
                 # the footnotes begin with a line „1) …“ of small plain text (a bold „1) 2)“ is a marker over the music):
                 # music printed below it is an example quoted in a footnote (a manuscript's fragment), not the chant
                 if (re.match(r'\d\)\s*\S', txt) and len(txt) > 15 and size < 11 and 'Bold' not in ln['spans'][0]['font']
-                        and len(txt.split()) >= 4):
+                        and len(txt.split()) >= 4
+                        and not (len(txt) < 40 and re.search(r'Andante|Moderato|Allegro|Adagio|moZraobiT', txt))):  # „2) saSualo moZraobiT - Andante“ (vol. XVIII) is a marked tempo
                     self.foot_y = min(self.foot_y, ln['bbox'][1])
         self.words = [w for w in pg.get_text('words')]
         self.hlines, self.vlines, self.beams, self.curves = [], [], [], []
@@ -406,7 +407,10 @@ def chant_pages(doc, start_page, num, last=None):
     `num` to `last` read as one unit (a litany printed as several short numbers)."""
     lo = int(re.sub(r'\D', '', num))
     hi = int(re.sub(r'\D', '', last)) if last else None
-    in_unit = lambda h: h[0] == num or (hi is not None and lo <= int(re.sub(r'\D', '', h[0])) <= hi)
+    # a unit „78a–82a“ takes only the a's (vol. XIV prints the litany's versions a and b one after the other); „85a–85b“ both
+    let, last_let = re.sub(r'\d', '', num), re.sub(r'\d', '', last or '')
+    same = lambda h: let != last_let or re.sub(r'\d', '', h[0]) in ('', let)
+    in_unit = lambda h: h[0] == num or (hi is not None and lo <= int(re.sub(r'\D', '', h[0])) <= hi and same(h))
     out, pi = [], start_page - 1
     started = False
     while pi < doc.page_count:
@@ -430,6 +434,8 @@ def chant_pages(doc, start_page, num, last=None):
         near = lambda h: lo - 5 <= int(re.sub(r'\D', '', h[0])) <= (hi or lo) + 40
         others = sorted(((music_top(h) if music_top(h) is not None else h[1]), h) for h in heads if not in_unit(h) and near(h))
         others = [h for y, h in others if y > y_from]
+        if started and os.environ.get('SAME_NUM_ENDS'):  # the book repeats this number for the next chant (vol. XVI's „62.“)
+            others += [h for h in heads if h[0] == num]
         y_to = min((music_top(h) if music_top(h) is not None else h[1]) for h in others) if others else 1e9
         # (a chant whose own number stands below the footnotes' start is itself printed there: nothing is cut)
         foot = P.foot_y if not (mine and not started and mine[0][1] > P.foot_y) else 1e9
