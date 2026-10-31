@@ -81,12 +81,14 @@ export const RoundsLobby: React.FC<{
 
         {host && opts && (
           <section className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-4 py-3.5 space-y-3.5">
-            <div className="space-y-2">
-              <p className="text-[13.5px] font-bold text-[#4a3426]">რაუნდები</p>
-              <div className="flex flex-wrap gap-2" role="group" aria-label="რაუნდები">
-                {ROUND_COUNTS.map(c => <Chip key={c} on={opts.count === c} onClick={() => host.setOpts({ ...opts, count: c })}>{c}</Chip>)}
+            {face.fixedRounds ? <p className="text-[13.5px] font-bold text-[#4a3426]">რაუნდები · {face.fixedRounds}</p> : (
+              <div className="space-y-2">
+                <p className="text-[13.5px] font-bold text-[#4a3426]">რაუნდები</p>
+                <div className="flex flex-wrap gap-2" role="group" aria-label="რაუნდები">
+                  {ROUND_COUNTS.map(c => <Chip key={c} on={opts.count === c} onClick={() => host.setOpts({ ...opts, count: c })}>{c}</Chip>)}
+                </div>
               </div>
-            </div>
+            )}
             {face.Options && <face.Options />}
             {face.clip && (
               <div className="space-y-2">

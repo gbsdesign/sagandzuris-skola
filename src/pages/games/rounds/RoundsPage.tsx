@@ -104,7 +104,7 @@ export const RoundsPage: React.FC<{ face: RoundFace }> = ({ face }) => {
   useEffect(() => save(GAME_KEY, game && game.phase !== 'end' ? game : null), [game, GAME_KEY]);
   const startHybrid = async () => {
     if (game && game.phase !== 'end' && !(await askConfirm({ title: 'ახალი თამაში დაიწყოს?', text: 'შეჩერებული თამაში წაიშლება.', ok: 'ახალი თამაში' }))) return;
-    const rounds = face.draw(conf.hybrid.count, programOf(mine));
+    const rounds = face.draw(face.fixedRounds ?? conf.hybrid.count, programOf(mine));
     const h = rounds.length ? newHybrid(face.game, conf.hybrid.names.slice(0, conf.hybrid.teams).map(n => n.trim()), rounds) : null;
     if (!h) { setEmpty(true); return; }
     setEmpty(false);
