@@ -431,7 +431,7 @@ def chant_pages(doc, start_page, num, last=None):
         mt = music_top(mine[0]) if mine and not started else None
         y_from = (mt if mt is not None else mine[0][2]) if (mine and not started) else -1
         # a number far from this one is something else (a verse number, a tone): not where this chant ends
-        near = lambda h: lo - 5 <= int(re.sub(r'\D', '', h[0])) <= (hi or lo) + 40
+        near = lambda h: lo - 5 <= int(re.sub(r'\D', '', h[0])) <= (hi or lo) + 40 or bool(os.environ.get('NEAR_ALL'))
         others = sorted(((music_top(h) if music_top(h) is not None else h[1]), h) for h in heads if not in_unit(h) and near(h))
         others = [h for y, h in others if y > y_from]
         if started and os.environ.get('SAME_NUM_ENDS'):  # the book repeats this number for the next chant (vol. XVI's „62.“)
