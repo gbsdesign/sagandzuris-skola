@@ -1,4 +1,5 @@
 import { ChantItem, variantName } from './tsirvaChants';
+import { withAnthology } from './anthologyChants';
 
 // Troparia on the Beatitudes ("მომიხსენენი") from St. George the Hagiorite's Octoechos, with music from St. Ekvtime
 // the Confessor's (Kereselidze) manuscripts: „ჰიმნოგრაფიული კრებული" I (Tsalka, Cross monastery, ed. monks Giorgi
@@ -343,7 +344,8 @@ const GROUPS: BeatGroup[] = [
     ['აწ და', 268, 545, 'ვითარცა გვიშევ თავი']]],
 ];
 
-export const MOMIXSENENI_CHANTS: ChantItem[] = GROUPS.map(([title, model, chants], i) => ({
+// the anthology's versions (vol. XXI: the Resurrection troparia of each tone's Sunday) join their group
+export const MOMIXSENENI_CHANTS: ChantItem[] = withAnthology(GROUPS.map(([title, model, chants], i) => ({
   id: `mm-${i + 1}`,
   index: i + 1,
   title,
@@ -360,4 +362,4 @@ export const MOMIXSENENI_CHANTS: ChantItem[] = GROUPS.map(([title, model, chants
     source: incipit || undefined,
     book: BOOK,
   })),
-}));
+})));
