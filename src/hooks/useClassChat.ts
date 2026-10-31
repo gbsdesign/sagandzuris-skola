@@ -4,6 +4,8 @@ import {
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { VoiceTake } from '../utils/voiceRecorder';
+import type { RoomGame } from '../utils/gameRoom';
+import { ROOM_GAME_INFO, chatRoomRef } from '../data/roomGames';
 
 // A chat lives under a base document: a class's chat under classes/{classId}, a private one under
 // dms/{teacherUid}_{studentUid} (hooks/useDirectChat.ts). Messages are {base}/messages; a voice message's
@@ -157,8 +159,10 @@ export const sendTextMessage = async (base: string, author: ChatAuthor, text: st
 };
 
 /** „სამშვილდის ღამე“ online: the class is invited into a game room — a card with a button into the room */
-export const sendGameMessage = async (classId: string, author: ChatAuthor, room: string) => {
-  await addDoc(messagesOf(classChatBase(classId)), { ...stamp(author), kind: 'game', text: '🌙 „სამშვილდის ღამე“ — ონლაინ თამაში', room });
+/** an invitation into a game room of the class (its card leads into the room) */
+export const sendGameMessage = async (classId: string, author: ChatAuthor, roomId: string, game: RoomGame = 'samshvilde') => {
+  const text = `${game === 'samshvilde' ? '🌙' : '🎲'} „${ROOM_GAME_INFO[game].title}“ — ონლაინ თამაში`;
+  await addDoc(messagesOf(classChatBase(classId)), { ...stamp(author), kind: 'game', text, room: chatRoomRef(game, roomId) });
 };
 
 /** "a call started": shown in the chat as a card with a button into the call */

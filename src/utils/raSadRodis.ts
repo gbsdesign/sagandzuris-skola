@@ -50,22 +50,23 @@ export const topicPlan = (topics: string[], count: number, rnd: () => number = M
 
 /**
  * The game's questions: for every slot of the plan a question of its topic not asked before (else the one asked longest
- * ago), for a LISTEN slot one made from a recording; a topic that runs dry gives its slot to another.
+ * ago), for a LISTEN slot one made from a recording; a topic that runs dry gives its slot to another. „ოთხიდან ერთი“
+ * (utils/otkhi.ts) draws its questions the same way.
  */
-export const drawGame = ({ bank, topics, count, seen, listen, rnd = Math.random }: {
-  bank: RsrQuestion[];
+export const drawGame = <T extends { id: string; topic: string }>({ bank, topics, count, seen, listen, rnd = Math.random }: {
+  bank: T[];
   topics: string[];
   count: number;
   /** ids asked in earlier games, oldest first */
   seen: string[];
   /** makes a recording's question that is not one of `used` yet; null when none is left */
-  listen?: (used: Set<string>) => RsrPlay | null;
+  listen?: (used: Set<string>) => T | null;
   rnd?: () => number;
-}): RsrPlay[] => {
+}): T[] => {
   const age = new Map(seen.map((id, i) => [id, i]));
   const used = new Set<string>();
-  const out: RsrPlay[] = [];
-  const pickOf = (topic: string): RsrPlay | null => {
+  const out: T[] = [];
+  const pickOf = (topic: string): T | null => {
     if (topic === LISTEN) return listen?.(used) ?? null;
     const left = bank.filter(q => q.topic === topic && !used.has(q.id));
     if (!left.length) return null;
@@ -74,7 +75,7 @@ export const drawGame = ({ bank, topics, count, seen, listen, rnd = Math.random 
     return left.reduce((a, b) => ((age.get(a.id) ?? 0) <= (age.get(b.id) ?? 0) ? a : b));
   };
   for (const topic of topicPlan(topics, count, rnd)) {
-    const q = pickOf(topic) ?? shuffle(topics.filter(t => t !== topic), rnd).reduce<RsrPlay | null>((got, t) => got ?? pickOf(t), null);
+    const q = pickOf(topic) ?? shuffle(topics.filter(t => t !== topic), rnd).reduce<T | null>((got, t) => got ?? pickOf(t), null);
     if (!q) break;
     used.add(q.id);
     out.push(q);

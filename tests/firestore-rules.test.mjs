@@ -397,6 +397,16 @@ const gameMsg = (extra = {}) => ({ uid: 'gp1', name: 'H', photoURL: '', teacher:
 await t('the invitation goes into the class chat', assertSucceeds(setDoc(doc(gp1, 'classes', 'cg', 'messages', 'gm1'), gameMsg())));
 await t('an invitation names its room', assertFails(setDoc(doc(gp1, 'classes', 'cg', 'messages', 'gm2'), gameMsg({ room: 7 }))));
 await t('the host closes the room', assertSucceeds(deleteDoc(doc(gp1, G, 'r1'))));
+// the quick games (2026-10-31): a room of each, answers with their time, up to 40 players
+await t('a member opens a quick game room', assertSucceeds(setDoc(doc(gp1, G, 'q1'), room('gp1', { game: 'kutkhe' }))));
+await t('a room is only for a known game', assertFails(setDoc(doc(gp1, G, 'q2'), room('gp1', { game: 'chess' }))));
+await t('the host starts with up to 40 players', assertSucceeds(updateDoc(doc(gp1, G, 'q1'), { status: 'live', uids: Array.from({ length: 40 }, (_, i) => `u${i}`), view: '{}' })));
+await t('not more than 40', assertFails(updateDoc(doc(gp1, G, 'q1'), { uids: Array.from({ length: 41 }, (_, i) => `u${i}`) })));
+await t('an answer says how long it took', assertSucceeds(setDoc(doc(gp2, G, 'q1', 'acts', 'gp2'), act({ key: '1.0.ask.1', ms: 4200 }))));
+await t('its time is a whole number of milliseconds', assertFails(setDoc(doc(gp2, G, 'q1', 'acts', 'gp2'), act({ ms: 4.5 }))));
+await t('and never below nought', assertFails(setDoc(doc(gp2, G, 'q1', 'acts', 'gp2'), act({ ms: -1 }))));
+await t('a quick game invitation names its game and room', assertSucceeds(setDoc(doc(gp1, 'classes', 'cg', 'messages', 'gm3'), gameMsg({ room: 'kutkhe:q1' }))));
+await t('the host closes the quick game', assertSucceeds(deleteDoc(doc(gp1, G, 'q1'))));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();

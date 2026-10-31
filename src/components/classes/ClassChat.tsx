@@ -10,6 +10,7 @@ import { Btn, IconBtn } from '../ui/kit';
 import { triggerHaptic } from '../../utils/haptics';
 import { useOpenGameRoom } from '../../utils/gameRoomOpen';
 import { ChatPanel } from './ChatPanel';
+import { parseChatRoomRef } from '../../data/roomGames';
 
 // The class's chat: text and voice messages between members and teachers, and the class's call (the school's own,
 // components/calls): a teacher or an admin starts it, everyone in the class may join (with the camera off at first).
@@ -68,7 +69,7 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
       error={error}
       showNames
       canDelete={m => m.uid === user.uid || isAdmin}
-      onOpenGame={m => openRoom(cls.id, m.room)}
+      onOpenGame={m => { const r = parseChatRoomRef(m.room); if (r) openRoom(cls.id, r.roomId, r.game); }}
       fill={fill}
       listClassName={compact ? '' : undefined}
       listTop={compact && messages.length > COMPACT ? (

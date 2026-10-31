@@ -1,3 +1,4 @@
+import type { RoomGame } from './gameRoom';
 import { useEffect, useLayoutEffect, useRef } from 'react';
 
 // The one search (components/search): opening it from anywhere, and handing a page the item to show.
@@ -9,7 +10,8 @@ export const openSearch = (query?: string) => window.dispatchEvent(new CustomEve
 
 // "Open this song / ancestor / tab / person (the admin panel)": the page takes the request when it mounts, or at once if it is
 // already on screen. One request at a time; a page that never opens simply leaves it unused.
-export type OpenTarget = 'simghera' | 'tsinaprebi' | 'biblioteka' | 'admin' | 'samshvilde';
+/** a page that takes a picked item; a game played in a class's room takes a room (`classId/roomId`) or a variant */
+export type OpenTarget = 'simghera' | 'tsinaprebi' | 'biblioteka' | 'admin' | RoomGame;
 const REQUEST_EVENT = 'sg-open-request';
 let pending: { target: OpenTarget; id: string } | null = null;
 

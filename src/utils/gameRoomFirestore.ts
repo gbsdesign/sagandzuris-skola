@@ -2,6 +2,8 @@ import { useEffect, useState, useSyncExternalStore } from 'react';
 import { collection, doc, getDoc, onSnapshot, query, serverTimestamp, where, writeBatch, type DocumentData } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ROOM_FRESH_MS, createRooms, parseRoom, type Backend, type Data, type RoomDoc } from './gameRoom';
+import { samshvildeRooms } from './samshvildeRoom';
+import { ROUNDS_ROOM, nextRound, nextStep, revealRound, roundKey } from './roundGames';
 
 // The online rooms (utils/gameRoom.ts) in the app's Firestore: the backend, the one store of this phone, and the rooms of my
 // classes for the invitation strip and the game's own page.
@@ -31,10 +33,31 @@ const backend: Backend = {
 };
 
 export const roomsBackend = backend;
-/** this phone's one online room */
-export const rooms = createRooms(backend);
+/** this phone's room of „სამშვილდის ღამე“ */
+export const rooms = samshvildeRooms(backend);
 export const useRoom = () => useSyncExternalStore(rooms.subscribe, rooms.get);
-export const useRoomVisible = () => useSyncExternalStore(rooms.subscribe, rooms.isVisible);
+/** this phone's room of a quick game (utils/roundGames.ts) and the host's moves */
+export const roundRooms = createRooms(backend, ROUNDS_ROOM, step => ({
+  /** the step's time is over (named by its key: a second call does nothing) */
+  timeUp: (key: string) => step(s => (s.phase === 'ask' && roundKey(s) === key ? nextStep(s) : s), false),
+  /** the answer now, before the time is over */
+  reveal: () => step(revealRound, false),
+  /** after the reveal: the next round (after the last one, the end) */
+  next: () => step(nextRound, false),
+}));
+export const useRoundRoom = () => useSyncExternalStore(roundRooms.subscribe, roundRooms.get);
+const anyVisible = () => rooms.isVisible() || roundRooms.isVisible();
+const subscribeBoth = (f: () => void) => { const a = rooms.subscribe(f), b = roundRooms.subscribe(f); return () => { a(); b(); }; };
+/** a room's own screen is on (the invitation strip hides meanwhile) */
+export const useRoomVisible = () => useSyncExternalStore(subscribeBoth, anyVisible);
+/** the rooms this phone is in, of every game */
+let lastSnaps: [ReturnType<typeof rooms.get>, ReturnType<typeof roundRooms.get>] = [null, null];
+const bothSnaps = () => {
+  const a = rooms.get(), b = roundRooms.get();
+  if (a !== lastSnaps[0] || b !== lastSnaps[1]) lastSnaps = [a, b];
+  return lastSnaps;
+};
+export const useMyRooms = () => useSyncExternalStore(subscribeBoth, bothSnaps);
 
 export interface ClassRoom extends RoomDoc { id: string; classId: string }
 

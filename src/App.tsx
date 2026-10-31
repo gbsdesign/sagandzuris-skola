@@ -25,6 +25,8 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageSprinkles } from './components/home/PlateOrnaments';
 import { ConfirmHost, UndoHost } from './components/ui/kit';
 import { requestOpen } from './utils/searchOpen';
+import { isRoomGame } from './utils/gameRoom';
+import { ROOM_GAME_INFO } from './data/roomGames';
 import { SaintLifeOverlay } from './components/saints/SaintLifeOverlay';
 import { GlobalSearch } from './components/search/GlobalSearch';
 import { usePrayerReminderScheduler } from './utils/prayerReminders';
@@ -105,14 +107,14 @@ function AppContent() {
       const id = url.searchParams.get('id');
       if (id) requestShortcut(id);
     }
-    // „სამშვილდის ღამე“: an invitation into a class's game room
-    else if (page === 'samshvilde') {
+    // an invitation into a class's game room (/?open=<game>&c=<class>&r=<room>)
+    else if (isRoomGame(page)) {
       const c = url.searchParams.get('c');
       const r = url.searchParams.get('r');
       if (c && r) {
-        requestOpen('samshvilde', `${c}/${r}`);
+        requestOpen(page, `${c}/${r}`);
         navigateTo('games');
-        openMapItem('samshvilde');
+        openMapItem(ROOM_GAME_INFO[page].item);
       }
     }
     // an admin's notice: the panel, with the newcomer's window open

@@ -408,22 +408,23 @@ service cloud.firestore {
         allow delete: if isAdmin() || teachesClass() || (isSignedIn() && uid() == memberId);
       }
 
-      // „სამშვილდის ღამე“ online (2026-10-30, utils/gameRoom.ts): a game room of the class. Anyone in the class opens one
-      // and is its host (მემატიანე — they do not play): the host alone writes the room, the players' seats and the whole
-      // game; each player writes only their own join and answer. A seat holds a player's role: only that player and the
-      // host read it — nobody else, not even the class's teachers.
+      // A game room of the class (2026-10-30 „სამშვილდის ღამე“ online, 2026-10-31 the quick games of utils/roundGames.ts;
+      // utils/gameRoom.ts). Anyone in the class opens one and is its host (მემატიანე / წამყვანი — they do not play): the host
+      // alone writes the room, the players' seats and the whole game; each player writes only their own join and answer.
+      // A seat holds a player's role: only that player and the host read it — nobody else, not even the class's teachers.
       match /games/{roomId} {
         function room() { return get(/databases/$(database)/documents/classes/$(classId)/games/$(roomId)).data; }
         function hosting() { return isSignedIn() && uid() == room().host; }
         function roomOk() {
           return incoming().keys().hasOnly(['game', 'host', 'hostName', 'status', 'createdAt', 'at', 'uids', 'view'])
             && incoming().hostName is string && incoming().hostName.size() <= 120
-            && incoming().uids is list && incoming().uids.size() <= 16
+            && incoming().uids is list && incoming().uids.size() <= 40
             && incoming().view is string && incoming().view.size() <= 200000;
         }
         allow read: if inClass();
         allow create: if inClass() && roomOk()
-          && incoming().game == 'samshvilde' && incoming().host == uid() && incoming().status == 'lobby'
+          && incoming().game in ['samshvilde', 'kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri']
+          && incoming().host == uid() && incoming().status == 'lobby'
           && incoming().createdAt == request.time && incoming().uids.size() == 0;
         allow update: if inClass() && existing().host == uid() && roomOk()
           && !changed().hasAny(['game', 'host', 'createdAt'])
@@ -446,15 +447,16 @@ service cloud.firestore {
             && incoming().keys().hasOnly(['s']) && incoming().s is string && incoming().s.size() <= 20000;
           allow delete: if isAdmin() || hosting();
         }
-        // a player's latest answer (the step's key, a name's seat, „my word is over“)
+        // a player's latest answer (the step's key, a name's seat or an option, „my word is over“, how long it took)
         match /acts/{userId} {
           allow get: if isSignedIn() && (userId == uid() || hosting());
           allow list: if hosting();
           allow create, update: if inClass() && userId == uid()
-            && incoming().keys().hasOnly(['key', 'pick', 'end', 'at'])
+            && incoming().keys().hasOnly(['key', 'pick', 'end', 'at', 'ms'])
             && incoming().key is string && incoming().key.size() <= 40
             && (incoming().pick == null || incoming().pick is int)
-            && incoming().end is bool && incoming().at is int;
+            && incoming().end is bool && incoming().at is int
+            && (!('ms' in incoming()) || (incoming().ms is int && incoming().ms >= 0 && incoming().ms <= 600000));
           allow delete: if isAdmin() || (isSignedIn() && (userId == uid() || hosting()));
         }
         // the host's whole game, so a reload goes on

@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { MessageCircle, Mic, Send, Square, X, Trash2, Play, Pause, Loader2, Clock, Video, CheckCheck, Moon } from 'lucide-react';
+import { MessageCircle, Mic, Send, Square, X, Trash2, Play, Pause, Loader2, Clock, Video, CheckCheck } from 'lucide-react';
 import {
   sendTextMessage, sendVoiceMessage, deleteMessage, loadVoiceUrl, ChatMessage, ChatAuthor,
 } from '../../hooks/useClassChat';
@@ -9,6 +9,8 @@ import {
 import { triggerHaptic } from '../../utils/haptics';
 import { askConfirm } from '../ui/kit';
 import { MONTHS_GE } from '../../utils/dateNames';
+import { ROOM_GAME_INFO, parseChatRoomRef } from '../../data/roomGames';
+import { ROOM_GAME_ICON } from '../games/roomGameIcons';
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 export const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -132,6 +134,17 @@ const VoicePlayer: React.FC<{ seconds: number; wave: string; getUrl: () => Promi
 };
 
 // when a message was sent, or a clock while it is still on its way
+/** a game invitation's line: the room's game (an old card names only its room: „სამშვილდის ღამე“) */
+const GameCardTitle: React.FC<{ room?: string; mine: boolean }> = ({ room, mine }) => {
+  const game = parseChatRoomRef(room ?? '')?.game ?? 'samshvilde';
+  const Ic = ROOM_GAME_ICON[game];
+  return (
+    <p className="flex items-center gap-2 font-semibold text-[15px] leading-snug">
+      <Ic className={`w-5 h-5 shrink-0 ${mine ? 'text-[#e2c27a]' : 'text-[#7a2028]'}`} /> „{ROOM_GAME_INFO[game].title}“ — ონლაინ თამაში
+    </p>
+  );
+};
+
 /** an invitation into a game room leads in this long */
 const GAME_INVITE_MS = 3 * 3600_000;
 
@@ -451,9 +464,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                         </div>
                       ) : m.kind === 'game' ? (
                         <div className="py-1 flex flex-col gap-2.5">
-                          <p className="flex items-center gap-2 font-semibold text-[15px] leading-snug">
-                            <Moon className={`w-5 h-5 shrink-0 ${mine ? 'text-[#e2c27a]' : 'text-[#7a2028]'}`} /> „სამშვილდის ღამე“ — ონლაინ თამაში
-                          </p>
+                          <GameCardTitle room={m.room} mine={mine} />
                           <div className="flex items-center justify-between gap-4">
                             {onOpenGame && m.room && m.at && Date.now() - m.at.getTime() < GAME_INVITE_MS ? (
                               <button

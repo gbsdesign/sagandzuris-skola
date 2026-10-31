@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Brain, Castle, Crown, Dice5, Download, Flame, Gamepad2, Gem, Headphones, Info, Landmark, LayoutGrid, Map, MessageCircle, Route,
+  Brain, Castle, Crown, Dice5, Download, Flame, Gamepad2, Gem, Headphones, Info, Landmark, LayoutGrid, ListChecks, Map, MapPinned, MessageCircle, Route,
   Shapes, SpellCheck, Users, Wifi,
 } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
@@ -13,6 +13,7 @@ import { pearlState } from '../utils/pearls';
 import { hangiMeta, tbilisiToday } from '../utils/hangi';
 import { otkheuliMeta } from '../utils/otkheuli';
 import { requestOpen } from '../utils/searchOpen';
+import { isRoomGame } from '../utils/gameRoom';
 import { GAMES, GameDef, GameMode, MODE_HINT, MODE_LABEL } from '../data/games';
 import { Card, Pill } from '../components/ui/kit';
 import { Toast } from '../components/ui/Toast';
@@ -27,6 +28,8 @@ import GatvlaGame from './games/GatvlaGame';
 import ChurchkhelaGame from './games/ChurchkhelaGame';
 import RaSadRodisGame from './games/RaSadRodisGame';
 import SamshvildeGame from './games/SamshvildeGame';
+import KutkheGame from './games/KutkheGame';
+import OtkhiGame from './games/OtkhiGame';
 
 // „თამაშები“: the hub of the games (2026-10-27; one list since 2026-10-30, the user's „ყველა თამაში 1 სიად“). A card per
 // game: its name (the known game it answers to in brackets; ⓘ unfolds what that game is), one line, and a button per variant it
@@ -39,7 +42,7 @@ type Access = ReturnType<ReturnType<typeof useAccess>['section']>;
 const ICON: Record<string, React.ReactNode> = {
   margalitebi: <Gem />, 'dghis-hangi': <Headphones />, 'dghis-sitqva': <SpellCheck />, otkheuli: <Shapes />,
   amikhseni: <MessageCircle />, gatvla: <Dice5 />, 'tskheli-churchkhela': <Flame />, 'ra-sad-rodis': <Brain />,
-  'okros-khana': <Map />, 'samshvildis-ghame': <Castle />, qaravani: <Route />, 'ori-takhti': <Crown />, 'lurji-supra': <LayoutGrid />, 'mepis-kari': <Landmark />,
+  'okros-khana': <Map />, 'samshvildis-ghame': <Castle />, 'saidanaa-simghera': <MapPinned />, 'otkhidan-erti': <ListChecks />, qaravani: <Route />, 'ori-takhti': <Crown />, 'lurji-supra': <LayoutGrid />, 'mepis-kari': <Landmark />,
 };
 
 const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string }>> = { online: Wifi, hybrid: Users, noPhone: Download };
@@ -47,7 +50,7 @@ const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string }>> =
 // the games that open inside this page, by their `mapItem`
 const INNER: Record<string, React.FC> = {
   hangi: HangiGame, amikhseni: AmikhseniGame, sitqva: SitqvaGame, otkheuli: OtkheuliGame, gatvla: GatvlaGame, churchkhela: ChurchkhelaGame, rsr: RaSadRodisGame,
-  samshvilde: SamshvildeGame,
+  samshvilde: SamshvildeGame, kutkhe: KutkheGame, otkhi: OtkhiGame,
 };
 
 const BTN = 'inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full text-[13.5px] font-bold transition-[background-color,transform] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#7a2028]/50';
@@ -160,8 +163,8 @@ export const GamesPage: React.FC = () => {
     triggerHaptic(10);
     if (state === 'locked') { askSignIn(g.title); return; }
     if (state !== 'open') { setSoon(`„${g.title}“ ჯერ მზადდება — მალე დაემატება`); return; }
-    // „სამშვილდის ღამე“ has two app variants: its page opens on the one tapped
-    if (g.item === 'samshvilde') requestOpen('samshvilde', mode === 'online' ? 'online' : 'table');
+    // a game played in a class's room („სამშვილდის ღამე“, the quick games) opens on the variant tapped
+    if (isRoomGame(g.item)) requestOpen(g.item, mode === 'online' ? 'online' : 'table');
     if (g.item) { openMapItem(g.item); return; }
     if (g.page) { if (g.panel) openPathPanel(g.panel); navigateTo(g.page); }
   };
