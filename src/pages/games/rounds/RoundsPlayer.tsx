@@ -45,7 +45,8 @@ export const RoundsPlayer: React.FC<{
   const myPick = mine && mine.key === v.key ? mine.pick : null;
 
   // the piece: on this phone only when it sounds on every phone
-  const clip = v.sound === 'all' ? face.clip?.(v.q) ?? null : null;
+  const piece = face.clip?.(v.q) ?? null;
+  const clip = v.sound === 'all' ? piece : null;
   const played = useRef('');
   useEffect(() => {
     if (!asking) { snippet.stop(); return; }
@@ -134,7 +135,8 @@ export const RoundsPlayer: React.FC<{
           <TimerRing left={left} total={v.secs} size="sm" />
         </RoundHead>
         {watching}
-        {clip ? <SnippetBox state={snippet.state} prog={snippet.prog} onTap={tapClip} /> : face.clip && <HostSoundLine />}
+        {clip ? <SnippetBox state={snippet.state} prog={snippet.prog} onTap={tapClip} /> : piece && <HostSoundLine />}
+        {face.Ask && <face.Ask q={v.q} who="player" />}
         {answered ? (
           <div className="rounded-3xl bg-[#2f7d4f]/10 ring-1 ring-[#2f7d4f]/25 px-4 py-5 text-center" role="status">
             <Check className="w-8 h-8 mx-auto text-[#2f7d4f]" />
@@ -150,7 +152,7 @@ export const RoundsPlayer: React.FC<{
           </div>
         ) : (
           <>
-            {me >= 0 && <p className="font-serif-ge text-[18px] font-bold leading-snug text-[#4a3426]">{face.askPlayer}</p>}
+            {me >= 0 && !face.Ask && <p className="font-serif-ge text-[18px] font-bold leading-snug text-[#4a3426]">{face.askPlayer}</p>}
             {me >= 0 && <face.Pick q={v.q} pick={pick} onPick={setPick} />}
           </>
         )}

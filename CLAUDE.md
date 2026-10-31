@@ -390,14 +390,22 @@
   `pages/games/rounds/` (`RoundsPage` = intro + tabs ონლაინ · ჰიბრიდული, `RoundsRoom`, `RoundsLobby` — 5/8/12 rounds, the
   piece on every phone (from home) or only on the host's (one room) — `RoundsHost`, `RoundsPlayer`, `RoundsHybrid`;
   `useSnippet` = one `<audio>` a screen, the piece starts at the same share `from` of the recording on every phone); a game
-  is a `RoundFace` (`rounds/face.ts`). Built so far: „საიდანაა სიმღერა?“ (mapItem `kutkhe`, like GeoGuessr; `utils/kutkhe.ts`
+  is a `RoundFace` (`rounds/face.ts`; optional `Ask` = the round in words under the clock, `Options` = the game's own
+  choices in the lobby and the hybrid setup, `Extra` = more on its page; a hybrid round without a piece starts its time
+  with „დროის დაწყება“). Built so far: „საიდანაა სიმღერა?“ (mapItem `kutkhe`, like GeoGuessr; `utils/kutkhe.ts`
   + test: the songs map's 13 regions, neighbours `KUTKHE_NEAR`, right 1000…700 / neighbour 400…300 by speed, 40 s, a 30 s
   piece; `drawKutkhe` — a different song each round, never one region twice running, only regions with ≥3 songs, the songs
   not asked lately on the device first (`sg-kutkhe-seen`); pool `data/kutkhePool.ts` = 688 songs' whole takes from
   FOLK_SONGS — own versions that are not parts, archive recs, the Centre's mp3s, not the per-member albums — empty while the
   recordings are hidden; face `pages/games/kutkhe/` — the map to tap + region chips, the reveal green / neighbours /
-  counts; hybrid marks კუთხე 2 · მეზობელი 1 · ვერა 0). Next, one PR each: ოთხიდან ერთი, ხმა-ხმად, სამ ნოტში!, ხმების
-  ტურნირი. Not yet tried by real people on several phones.
+  counts; hybrid marks კუთხე 2 · მეზობელი 1 · ვერა 0) and „ოთხიდან ერთი“ (mapItem `otkhi`, like Kahoot; `utils/otkhi.ts` +
+  test: four answers in ა ბ გ დ colours, the right one 1000…500 by speed, 30 s; 121 questions in `data/otkhiQuestions.ts`, 8
+  topics, written by Claude from the app's texts with the right answer first — not yet checked by a teacher, the page says
+  so; „მოისმინე“ = `listenItem` over `hangiPool` (a feast's chant → which feast, a chant → which one, wrong ones from its own
+  service; a song → which song), a 20 s piece; the teacher's own (right + 1–3 wrong) on the device; `drawGame` of
+  raSadRodis.ts is shared; topics, own questions and the asked ids on the device — `pages/games/otkhi/store.ts`
+  `sg-otkhi-*`; hybrid marks სწორი 1 · ვერა 0). Next, one PR each: ხმა-ხმად, სამ ნოტში!, ხმების ტურნირი. Not yet tried by
+  real people on several phones.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in

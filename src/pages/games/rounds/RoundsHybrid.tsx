@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronRight, Eye, Minus, Play, Plus, RotateCcw, Trophy, Users } from 'lucide-react';
+import { ChevronRight, Eye, Minus, Play, Plus, RotateCcw, Timer, Trophy, Users } from 'lucide-react';
 import { MAX_TEAMS, MIN_TEAMS, ROUND_COUNTS, hybridNext, hybridScores, markTeam, rulesOf, type HybridState } from '../../../utils/roundGames';
 import { TEAM_NAMES } from '../../../utils/amikhseni';
 import { TableScreen } from '../../../components/games/TableScreen';
@@ -13,7 +13,8 @@ import { useSnippet } from './useSnippet';
 import { Podium, RoundHead, SnippetBox, Standings, TimerRing, useNow } from './parts';
 
 // A quick game on one phone (the user's „ჰიბრიდული“, 2026-10-31): the host holds it, the class plays in teams. The round's
-// piece plays on this phone and its time runs from the first ▶; the teams talk it over and write their answer down; the
+// piece plays on this phone and its time runs from the first ▶ (a round without one: from „დროის დაწყება“, once the host
+// has read it out); the teams talk it over and write their answer down; the
 // host opens the answer and marks each team — the phone adds it up. The game is kept on the device after every step (the
 // page keeps it), so ✕ only pauses it.
 
@@ -69,6 +70,7 @@ export const HybridSetup: React.FC<{
           {ROUND_COUNTS.map(c => <Chip key={c} on={conf.count === c} onClick={() => setConf({ ...conf, count: c })}>{c}</Chip>)}
         </div>
       </div>
+      {face.Options && <face.Options />}
       {empty && <p className="rounded-2xl bg-amber-50 ring-1 ring-amber-200 px-4 py-2.5 text-[13px] font-bold leading-snug text-amber-800">{face.empty}</p>}
       <Btn size="lg" full onClick={onStart} icon={<Play />} className="!h-14 !text-[16px]">{paused ? 'ახალი თამაში' : 'თამაშის დაწყება'}</Btn>
     </Card>
@@ -102,6 +104,7 @@ export const HybridGame: React.FC<{ face: RoundFace; h: HybridState; setH: (h: H
     snippet.play(clip.url, clip.from);
     if (!endAt && asking) setEndAt(Date.now() + total * 1000);
   };
+  const startTime = () => { openAudio(audio); triggerHaptic(10); if (!endAt && asking) setEndAt(Date.now() + total * 1000); };
   const scores = hybridScores(h);
   const next = () => { triggerHaptic(12); snippet.stop(); setH(hybridNext(h)); };
 
@@ -181,7 +184,9 @@ export const HybridGame: React.FC<{ face: RoundFace; h: HybridState; setH: (h: H
           <TimerRing left={left} total={total} />
           <p className="min-w-0 flex-1 font-serif-ge text-[19px] font-bold leading-snug text-[#4a3426]">{face.askTeams}</p>
         </div>
+        {face.Ask && <face.Ask q={q} who="teams" />}
         {clip && <SnippetBox state={snippet.state} prog={snippet.prog} onTap={tapClip} note={endAt ? undefined : 'დრო პირველ ▶-ზე დაიწყება'} />}
+        {!clip && !endAt && <Btn kind="ghost" size="lg" full onClick={startTime} icon={<Timer />} className="!h-12">დროის დაწყება · {total} წამი</Btn>}
         <Standings names={h.teams} scores={scores} />
       </div>
     </TableScreen>

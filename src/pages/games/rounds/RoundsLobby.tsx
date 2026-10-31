@@ -87,6 +87,7 @@ export const RoundsLobby: React.FC<{
                 {ROUND_COUNTS.map(c => <Chip key={c} on={opts.count === c} onClick={() => host.setOpts({ ...opts, count: c })}>{c}</Chip>)}
               </div>
             </div>
+            {face.Options && <face.Options />}
             {face.clip && (
               <div className="space-y-2">
                 <p className="text-[13.5px] font-bold text-[#4a3426]">სად ჟღერს ნაწყვეტი</p>

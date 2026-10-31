@@ -104,6 +104,7 @@ export const RoundsHost: React.FC<{
           <TimerRing left={left} total={v.secs} />
           <p className="min-w-0 flex-1 font-serif-ge text-[19px] font-bold leading-snug text-[#4a3426]">{face.askHost}</p>
         </div>
+        {face.Ask && <face.Ask q={v.q} who="host" />}
         {clip && (
           <SnippetBox
             state={snippet.state}

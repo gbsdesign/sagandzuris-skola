@@ -63,7 +63,7 @@ test('drawGame asks the recordings for a LISTEN slot', () => {
     assert.ok(!used.has(id));
     return { id, topic: LISTEN, q: 'listen', a: 'x', audio: { url: 'u', title: 't', sub: 's' } };
   };
-  const g = drawGame({ bank, topics: ['a', LISTEN], count: 4, seen: [], listen, rnd: mulberry32(6) });
+  const g = drawGame<RsrPlay>({ bank, topics: ['a', LISTEN], count: 4, seen: [], listen, rnd: mulberry32(6) });
   assert.equal(g.filter(q => q.topic === LISTEN).length, 2);
   assert.ok(g.filter(q => q.topic === LISTEN).every(q => q.audio));
   // no recordings at all: their slots go to the written questions

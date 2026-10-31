@@ -77,17 +77,18 @@ test('places: equal scores share a place', () => {
 test('while asked the players see no answer; at the reveal they see all', () => {
   let s = start();
   const v = publicView(s);
-  assert.equal(v.q.region, undefined);
-  assert.equal(v.q.song, undefined);
-  assert.equal(v.q.who, undefined);
+  const shown = v.q as Partial<KutkheQ>;
+  assert.equal(shown.region, undefined);
+  assert.equal(shown.song, undefined);
+  assert.equal(shown.who, undefined);
   assert.equal(v.q.url, 'https://x/1');
   assert.equal(v.picks, null);
   s = answerRound(s, 0, act(s, 4));
   assert.deepEqual(publicView(s).answered, [true, false, false]);
   s = nextStep(s);
   const open = publicView(s);
-  assert.equal(open.q.region, 4);
-  assert.equal(open.q.song, 'სიმღერა 1');
+  assert.equal((open.q as Partial<KutkheQ>).region, 4);
+  assert.equal((open.q as Partial<KutkheQ>).song, 'სიმღერა 1');
   assert.deepEqual(open.picks, [4, null, null]);
 });
 

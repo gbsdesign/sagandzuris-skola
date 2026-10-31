@@ -25,6 +25,12 @@ export interface RoundFace {
   /** the round's piece of a recording, when it has one */
   clip?: (q: PublicQ) => { url: string; from: number } | null;
   clipSeconds: number;
+  /** the round in words, when the game asks one (a question): under the clock on every screen while it is asked */
+  Ask?: React.FC<{ q: PublicQ; who: 'host' | 'player' | 'teams' }>;
+  /** the game's own choices: under the rounds in the lobby (the host's) and in the one-phone setup */
+  Options?: React.FC;
+  /** more on the game's page, under both tabs (the teacher's own questions) */
+  Extra?: React.FC;
   /** a player's controls; `pick` is the answer marked, not sent yet */
   Pick: React.FC<{ q: PublicQ; pick: number | null; onPick: (p: number) => void }>;
   /** an answer in words (the confirm button, „შენ: …“) */

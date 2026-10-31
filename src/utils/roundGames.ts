@@ -1,5 +1,6 @@
 import type { Act, RoomEngine, RoomGame } from './gameRoom';
 import { KUTKHE_RULES, type KutkheQ } from './kutkhe';
+import { OTKHI_RULES, type OtkhiQ } from './otkhi';
 
 // The quick games of a class's room (2026-10-31, the tender's five — the user's „გააკეთე 5-ვე ონლაინ და ჰიბრიდული“):
 // one engine of rounds. A round asks one thing — a song to place on the map, a question, a chant revealed voice by voice,
@@ -12,7 +13,7 @@ import { KUTKHE_RULES, type KutkheQ } from './kutkhe';
 export type RoundGame = Exclude<RoomGame, 'samshvilde'>;
 export const ROUND_GAMES: readonly RoundGame[] = ['kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri'];
 /** one round's content, by game (the answer included: `secret` keeps it from the players until the reveal) */
-export type RoundQ = KutkheQ;
+export type RoundQ = KutkheQ | OtkhiQ;
 
 export interface RoundAnswer { pick: number; ms: number; step: number }
 
@@ -30,8 +31,10 @@ export interface RoundRules<Q extends RoundQ> {
   valid(q: unknown): q is Q;
 }
 
-const RULES: Record<string, RoundRules<RoundQ>> = { kutkhe: KUTKHE_RULES };
-export const rulesOf = (q: RoundQ): RoundRules<RoundQ> => RULES[q.kind];
+/** each game's rules by its rounds' kind (a game not built yet has none, so its rounds are never read back) */
+const BY_KIND: { [K in RoundQ['kind']]: RoundRules<Extract<RoundQ, { kind: K }>> } = { kutkhe: KUTKHE_RULES, otkhi: OTKHI_RULES };
+const RULES = BY_KIND as unknown as Record<string, RoundRules<RoundQ> | undefined>;
+export const rulesOf = (q: RoundQ): RoundRules<RoundQ> => RULES[q.kind]!;
 
 export type Sound = 'all' | 'host';
 export type RoundPhase = 'ask' | 'reveal' | 'end';

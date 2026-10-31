@@ -175,6 +175,7 @@ export const RoundsPage: React.FC<{ face: RoundFace }> = ({ face }) => {
           onResume={() => setOpen(true)}
         />
       )}
+      {face.Extra && <face.Extra />}
     </div>
   );
 };
