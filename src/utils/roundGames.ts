@@ -1,6 +1,7 @@
 import type { Act, RoomEngine, RoomGame } from './gameRoom';
 import { KUTKHE_RULES, type KutkheQ } from './kutkhe';
 import { OTKHI_RULES, type OtkhiQ } from './otkhi';
+import { KHMEBI_RULES, NOTEBI_RULES, type ChantRoundQ } from './chantRounds';
 
 // The quick games of a class's room (2026-10-31, the tender's five — the user's „გააკეთე 5-ვე ონლაინ და ჰიბრიდული“):
 // one engine of rounds. A round asks one thing — a song to place on the map, a question, a chant revealed voice by voice,
@@ -13,7 +14,7 @@ import { OTKHI_RULES, type OtkhiQ } from './otkhi';
 export type RoundGame = Exclude<RoomGame, 'samshvilde'>;
 export const ROUND_GAMES: readonly RoundGame[] = ['kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri'];
 /** one round's content, by game (the answer included: `secret` keeps it from the players until the reveal) */
-export type RoundQ = KutkheQ | OtkhiQ;
+export type RoundQ = KutkheQ | OtkhiQ | ChantRoundQ;
 
 export interface RoundAnswer { pick: number; ms: number; step: number }
 
@@ -32,7 +33,9 @@ export interface RoundRules<Q extends RoundQ> {
 }
 
 /** each game's rules by its rounds' kind (a game not built yet has none, so its rounds are never read back) */
-const BY_KIND: { [K in RoundQ['kind']]: RoundRules<Extract<RoundQ, { kind: K }>> } = { kutkhe: KUTKHE_RULES, otkhi: OTKHI_RULES };
+const BY_KIND: { [K in RoundQ['kind']]: RoundRules<Extract<RoundQ, { kind: K }>> } = {
+  kutkhe: KUTKHE_RULES, otkhi: OTKHI_RULES, khmebi: KHMEBI_RULES, notebi: NOTEBI_RULES,
+};
 const RULES = BY_KIND as unknown as Record<string, RoundRules<RoundQ> | undefined>;
 export const rulesOf = (q: RoundQ): RoundRules<RoundQ> => RULES[q.kind]!;
 
@@ -251,6 +254,8 @@ export interface HybridState {
   rounds: RoundQ[];
   at: number;
   phase: RoundPhase;
+  /** while asking: the step on now, from 1 (more of the piece at each) */
+  step: number;
   /** a team's points in each round (null: not marked yet) */
   marks: (number | null)[][];
 }
@@ -258,7 +263,7 @@ export interface HybridState {
 export const newHybrid = (game: RoundGame, teams: string[], rounds: RoundQ[]): HybridState | null => {
   const list = rounds.filter(q => q.kind === game);
   if (teams.length < MIN_TEAMS || teams.length > MAX_TEAMS || !list.length) return null;
-  return { v: 1, game, teams, rounds: list, at: 0, phase: 'ask', marks: list.map(() => teams.map(() => null)) };
+  return { v: 1, game, teams, rounds: list, at: 0, phase: 'ask', step: 1, marks: list.map(() => teams.map(() => null)) };
 };
 export const hybridScores = (h: HybridState) => h.teams.map((_, t) => h.marks.reduce((sum, m) => sum + (m[t] ?? 0), 0));
 export const markTeam = (h: HybridState, team: number, points: number | null): HybridState => ({
@@ -266,8 +271,14 @@ export const markTeam = (h: HybridState, team: number, points: number | null): H
 });
 export const hybridNext = (h: HybridState): HybridState => {
   if (h.phase === 'ask') return { ...h, phase: 'reveal' };
-  if (h.phase === 'reveal') return h.at + 1 < h.rounds.length ? { ...h, at: h.at + 1, phase: 'ask' } : { ...h, phase: 'end' };
+  if (h.phase === 'reveal') return h.at + 1 < h.rounds.length ? { ...h, at: h.at + 1, phase: 'ask', step: 1 } : { ...h, phase: 'end' };
   return h;
+};
+/** the round's next step (the host moved on); after the last one, the answer */
+export const hybridStep = (h: HybridState): HybridState => {
+  if (h.phase !== 'ask') return h;
+  const q = h.rounds[h.at];
+  return h.step < rulesOf(q).steps(q) ? { ...h, step: h.step + 1 } : hybridNext(h);
 };
 export const parseHybrid = (raw: unknown): HybridState | null => {
   if (!raw || typeof raw !== 'object') return null;
@@ -279,5 +290,7 @@ export const parseHybrid = (raw: unknown): HybridState | null => {
   const marks = Array.isArray(o.marks) && o.marks.length === rounds.length
     ? (o.marks as unknown[]).map(m => (Array.isArray(m) && m.length === teams.length ? m.map(x => (isInt(x) ? x : null)) : teams.map(() => null)))
     : rounds.map(() => teams.map(() => null));
-  return { v: 1, game: o.game as RoundGame, teams, rounds, at: o.at, phase: o.phase as RoundPhase, marks };
+  const q = rounds[o.at];
+  const step = isInt(o.step) ? Math.min(rulesOf(q).steps(q), Math.max(1, o.step)) : 1;
+  return { v: 1, game: o.game as RoundGame, teams, rounds, at: o.at, phase: o.phase as RoundPhase, step, marks };
 };

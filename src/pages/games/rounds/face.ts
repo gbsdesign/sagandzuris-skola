@@ -1,6 +1,7 @@
 import type React from 'react';
 import type { LucideIcon } from 'lucide-react';
 import type { PublicQ, RoundGame, RoundQ } from '../../../utils/roundGames';
+import type { Clip } from './useSnippet';
 
 // A quick game's own face over the shared screens of pages/games/rounds/ (the room, the lobby, the host's and the player's
 // game, the one-phone game): its words, its rounds, how a player answers, how the answer is shown.
@@ -13,8 +14,9 @@ export interface RoundFace {
   intro: string;
   online: string;
   hybrid: string;
-  /** a game's rounds, as many as there are up to `count` (none without recordings) */
-  draw(count: number): RoundQ[];
+  /** a game's rounds, as many as there are up to `count` (none without recordings); `program` — the version ids of the
+   * class's program (the chant games ask its chants too) */
+  draw(count: number, program?: readonly string[]): RoundQ[];
   /** the rounds a game asked, kept on this phone so the next games ask others first */
   remember(rounds: RoundQ[]): void;
   /** the line over a round while it is asked (the host's, the player's) */
@@ -22,11 +24,13 @@ export interface RoundFace {
   askPlayer: string;
   /** the one-phone game: what the teams do meanwhile */
   askTeams: string;
-  /** the round's piece of a recording, when it has one */
-  clip?: (q: PublicQ) => { url: string; from: number } | null;
+  /** the round's piece at a step (a recording's, or a chant's on the synthesizer), when it has one */
+  clip?: (q: PublicQ, step: number) => Clip | null;
   clipSeconds: number;
+  /** a round of several steps (more of the piece at each): the host's button that brings the next one sooner */
+  nextLabel?: string;
   /** the round in words, when the game asks one (a question): under the clock on every screen while it is asked */
-  Ask?: React.FC<{ q: PublicQ; who: 'host' | 'player' | 'teams' }>;
+  Ask?: React.FC<{ q: PublicQ; who: 'host' | 'player' | 'teams'; step: number; steps: number }>;
   /** the game's own choices: under the rounds in the lobby (the host's) and in the one-phone setup */
   Options?: React.FC;
   /** more on the game's page, under both tabs (the teacher's own questions) */
@@ -41,8 +45,8 @@ export interface RoundFace {
   Reveal: React.FC<{ q: PublicQ; picks?: (number | null)[] | null; mine?: number | null }>;
   /** the answer's card (what it was, where from, who) */
   Answer: React.FC<{ q: PublicQ }>;
-  /** my answer, in words */
-  verdict(q: PublicQ, pick: number | null): { tone: 'right' | 'near' | 'wrong' | 'none'; text: string };
+  /** my answer, in words (`step`: the step it was sent at) */
+  verdict(q: PublicQ, pick: number | null, step?: number | null): { tone: 'right' | 'near' | 'wrong' | 'none'; text: string };
   /** the one-phone game: what the host may mark for a team */
   marks: readonly { points: number; label: string }[];
   /** the line when there is nothing to play (the recordings are not opened for this member) */

@@ -1,12 +1,34 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { clipStart } from '../../../utils/kutkhe';
+import { ChantSynth, lessonAudioReady, loadBookScore, playLessonNotes, stopLessonNotes } from '../../../utils/chantSynth';
+import { firstPitches, lowerVoices, notesLength } from '../../../utils/chantClips';
 
-// A round's piece of a recording (the quick games, pages/games/rounds/): one <audio> for the whole screen, so once a tap has
-// let it sound (a phone lets a page make sound only after a touch), every next round plays by itself. The piece starts at the
-// same share of the recording on every phone (`from`) and stops after `seconds`. Every Worker URL is fetched with
-// crossOrigin, as ChantPlayer does (the Worker answers only requests carrying the site's Origin).
+// A round's piece (the quick games, pages/games/rounds/): a recording's, through one <audio> for the whole screen, so once a
+// tap has let it sound (a phone lets a page make sound only after a touch), every next round plays by itself — the piece
+// starts at the same share of the recording on every phone (`from`) and stops after `seconds`; every Worker URL is fetched
+// with crossOrigin, as ChantPlayer does (the Worker answers only requests carrying the site's Origin). Or a chant's book
+// notes on the synthesizer (2026-10-31, „ხმა-ხმად“ and „სამ ნოტში!“): its opening with only its lower voices (from their
+// first note), or the top voice's first notes; the tap that unlocks the <audio> starts the synthesizer's sound too.
 
 export type SnipState = 'idle' | 'load' | 'play' | 'done' | 'error' | 'blocked';
+
+export interface ScoreRef { book: string; num: number }
+/** what a round plays: a piece of a recording, a chant's opening (`voices`: from this voice down, 0 = all) or its first notes */
+export type Clip =
+  | { url: string; from: number }
+  | { score: ScoreRef; voices: number; seconds: number }
+  | { score: ScoreRef; pitches: number; within: number };
+
+// the lesson notes are one stream for the whole app (a new call cuts the one before): whose notes are sounding now
+let notesSeq = 0;
+let notesOwner = 0;
+
+/** the synthesizer may sound without a tap: it has been let once (else a short try, then the phone wants a tap) */
+const synthReady = async () => {
+  if (lessonAudioReady()) return true;
+  await Promise.race([playLessonNotes([]), new Promise(r => setTimeout(r, 700))]);
+  return lessonAudioReady();
+};
 
 // a tenth of a second of silence: played in a tap, it lets the element sound later on its own
 const silence = (() => {
@@ -30,6 +52,10 @@ export const useSnippet = (seconds: number) => {
   const cur = useRef<{ url: string; from: number; start: number | null } | null>(null);
   const [state, setState] = useState<SnipState>('idle');
   const [prog, setProg] = useState(0);
+  // the synthesizer's piece now sounding, and the number of the last play (a later one wins)
+  const synth = useRef<(() => void) | null>(null);
+  const turn = useRef(0);
+  const stopSynth = () => { const s = synth.current; synth.current = null; s?.(); };
 
   const audio = () => {
     if (el.current) return el.current;
@@ -56,8 +82,63 @@ export const useSnippet = (seconds: number) => {
     return a;
   };
 
+  /** a chant's piece on the synthesizer: loaded, played, its progress followed until it ends */
+  const playScore = async (clip: Exclude<Clip, { url: string }>, my: number) => {
+    let score;
+    try { score = await loadBookScore(clip.score.num, clip.score.book); } catch { if (turn.current === my) setState('error'); return; }
+    if (turn.current !== my) return;
+    if (!(await synthReady())) { if (turn.current === my) setState('blocked'); return; }
+    if (turn.current !== my) return;
+    let length: number;
+    let position: () => number;
+    let stopMine: () => void;
+    if ('pitches' in clip) {
+      const notes = firstPitches(score, clip.pitches, clip.within);
+      length = Math.max(0.5, notesLength(notes));
+      const mine = ++notesSeq;
+      notesOwner = mine;
+      await playLessonNotes(notes);
+      const t0 = performance.now();
+      position = () => (performance.now() - t0) / 1000;
+      // stopped only while still its own: a newer piece of notes has already cut it
+      stopMine = () => { if (notesOwner === mine) { notesOwner = 0; stopLessonNotes(); } };
+    } else {
+      const s = new ChantSynth(score);
+      const low = lowerVoices(score, clip.voices);
+      score.voices.forEach((_, v) => s.setMuted(v, v < low.first));
+      const from = Math.max(0, Math.min(s.duration - 0.5, s.toSec(low.beat)));
+      length = Math.max(0.5, Math.min(clip.seconds, s.duration - from));
+      await s.play(from);
+      position = () => s.position() - from;
+      stopMine = () => s.dispose();
+    }
+    if (turn.current !== my) { stopMine(); return; }
+    setState('play');
+    const tick = window.setInterval(() => {
+      const p = position() / length;
+      if (p < 1) { setProg(Math.max(0, p)); return; }
+      stopSynth();
+      setProg(1);
+      setState('done');
+    }, 150);
+    synth.current = () => { window.clearInterval(tick); stopMine(); };
+  };
+
   /** the piece from its start (the same piece again when it is the same recording) */
-  const play = useCallback((url: string, from: number) => {
+  const play = useCallback((clip: Clip) => {
+    const my = ++turn.current;
+    stopSynth();
+    if (!('url' in clip)) {
+      // in a tap the synthesizer's sound is let here, before the notes load
+      if (!lessonAudioReady()) void playLessonNotes([]);
+      const a = el.current;
+      if (a && !a.paused) a.pause();
+      setProg(0);
+      setState('load');
+      void playScore(clip, my);
+      return;
+    }
+    const { url, from } = clip;
     const a = audio();
     const same = cur.current?.url === url && a.src === url && cur.current.start !== null;
     setProg(0);
@@ -78,6 +159,8 @@ export const useSnippet = (seconds: number) => {
   }, [seconds]);
 
   const stop = useCallback(() => {
+    turn.current += 1;
+    stopSynth();
     const a = el.current;
     if (a && !a.paused) a.pause();
     setState(s => (s === 'play' || s === 'load' ? 'done' : s));
@@ -85,6 +168,7 @@ export const useSnippet = (seconds: number) => {
 
   /** in a tap: lets this screen sound later by itself (the player's „შესვლა“, the host's „დაწყება“) */
   const unlock = useCallback(() => {
+    if (!lessonAudioReady()) void playLessonNotes([]);
     const a = audio();
     if (cur.current || !a.paused) return;
     a.src = silence();
@@ -93,6 +177,8 @@ export const useSnippet = (seconds: number) => {
   }, []);
 
   useEffect(() => () => {
+    turn.current += 1;
+    stopSynth();
     const a = el.current;
     if (!a) return;
     a.pause();

@@ -81,7 +81,7 @@ test('while asked the players see no answer; at the reveal they see all', () => 
   assert.equal(shown.region, undefined);
   assert.equal(shown.song, undefined);
   assert.equal(shown.who, undefined);
-  assert.equal(v.q.url, 'https://x/1');
+  assert.equal(shown.url, 'https://x/1');
   assert.equal(v.picks, null);
   s = answerRound(s, 0, act(s, 4));
   assert.deepEqual(publicView(s).answered, [true, false, false]);
