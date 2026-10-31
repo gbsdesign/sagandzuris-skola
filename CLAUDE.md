@@ -404,8 +404,18 @@
   so; „მოისმინე“ = `listenItem` over `hangiPool` (a feast's chant → which feast, a chant → which one, wrong ones from its own
   service; a song → which song), a 20 s piece; the teacher's own (right + 1–3 wrong) on the device; `drawGame` of
   raSadRodis.ts is shared; topics, own questions and the asked ids on the device — `pages/games/otkhi/store.ts`
-  `sg-otkhi-*`; hybrid marks სწორი 1 · ვერა 0). Next, one PR each: ხმა-ხმად, სამ ნოტში!, ხმების ტურნირი. Not yet tried by
-  real people on several phones.
+  `sg-otkhi-*`; hybrid marks სწორი 1 · ვერა 0; its four answers `rounds/four.tsx`, shared) and „ხმა-ხმად“ (mapItem `khmebi`,
+  like Bandle) + „სამ ნოტში!“ (mapItem `notebi`, like Name That Tune): rules `utils/chantRounds.ts` + test — a round of three
+  steps, four chant names, right 1000…800 / 650…520 / 350…280 by step and speed; the piece is the chant's book notes on the
+  synthesizer (`useSnippet`'s `Clip` = a recording's piece, `{score, voices}` = from that voice down — the bass alone, + the
+  middle voice, all three, from their first note, 16 s — or `{score, pitches, within}` = the top voice's first 3 / 6 different
+  pitches begun within 7 / 11 s, then its first phrase; `utils/chantClips.ts`); the chants `data/chantGamePool.ts` = the
+  pearls' sixty without the short answers, litanies and a tone's own pieces (41 names), plus the class's program (`draw(count,
+  program)`: the room's class, on one phone all mine); one name once a game, the wrong three of the same service, old
+  spelling one name (`nameKey`: ვ = უ, ჲ dropped); the asked ids on the device `sg-khmebi-seen` / `sg-notebi-seen`. A step
+  moves on by its time or the host's „შემდეგი ხმა“ / „მეტი ნოტი“ (the hybrid keeps `HybridState.step`, `hybridStep`; its next
+  step plays at once); hybrid marks by the step the team wrote: 3 · 2 · 1 · ვერა 0; face `pages/games/chants/face.tsx`. Next:
+  ხმების ტურნირი. Not yet tried by real people on several phones.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in

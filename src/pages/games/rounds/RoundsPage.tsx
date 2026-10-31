@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Users, Wifi } from 'lucide-react';
 import { useAuth } from '../../../context';
-import { useMyClasses, useTeachingClasses } from '../../../hooks/useClasses';
+import { useMyClasses, useTeachingClasses, type SchoolClass } from '../../../hooks/useClasses';
 import { newHybrid, parseHybrid, ROUND_COUNTS, type HybridState, type Sound } from '../../../utils/roundGames';
 import { roundRooms, useRoundRoom } from '../../../utils/gameRoomFirestore';
 import { useOpenRequest } from '../../../utils/searchOpen';
@@ -33,6 +33,9 @@ const readConf = (key: string): Conf => {
     hybrid: readHybridConf(o.hybrid),
   };
 };
+
+/** the chants of classes' programs (the chant games ask them too): their version ids, once each */
+const programOf = (list: SchoolClass[]) => [...new Set(list.flatMap(c => c.program.map(p => p.id ?? '').filter(Boolean)))];
 
 export const RoundsPage: React.FC<{ face: RoundFace }> = ({ face }) => {
   const KEY = `sg-${face.game}`;
@@ -101,7 +104,7 @@ export const RoundsPage: React.FC<{ face: RoundFace }> = ({ face }) => {
   useEffect(() => save(GAME_KEY, game && game.phase !== 'end' ? game : null), [game, GAME_KEY]);
   const startHybrid = async () => {
     if (game && game.phase !== 'end' && !(await askConfirm({ title: 'ახალი თამაში დაიწყოს?', text: 'შეჩერებული თამაში წაიშლება.', ok: 'ახალი თამაში' }))) return;
-    const rounds = face.draw(conf.hybrid.count);
+    const rounds = face.draw(conf.hybrid.count, programOf(mine));
     const h = rounds.length ? newHybrid(face.game, conf.hybrid.names.slice(0, conf.hybrid.teams).map(n => n.trim()), rounds) : null;
     if (!h) { setEmpty(true); return; }
     setEmpty(false);
@@ -111,7 +114,7 @@ export const RoundsPage: React.FC<{ face: RoundFace }> = ({ face }) => {
   };
   const again = () => {
     if (!game) return;
-    const rounds = face.draw(game.rounds.length);
+    const rounds = face.draw(game.rounds.length, programOf(mine));
     const h = rounds.length ? newHybrid(face.game, game.teams, rounds) : null;
     if (!h) return;
     face.remember(rounds);
@@ -125,6 +128,7 @@ export const RoundsPage: React.FC<{ face: RoundFace }> = ({ face }) => {
         face={face}
         who={user ? meOf(user, mine.find(c => c.id === session.classId)) : undefined}
         className={mine.find(c => c.id === session.classId)?.name ?? ''}
+        program={programOf(mine.filter(c => c.id === session.classId))}
         opts={{ count: conf.count, sound: conf.sound }}
         setOpts={(o: RoundsOpts) => setC(o)}
         onHide={() => setRoomOpen(false)}

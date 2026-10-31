@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import {
-  Brain, Castle, Crown, Dice5, Download, Flame, Gamepad2, Gem, Headphones, Info, Landmark, LayoutGrid, ListChecks, Map, MapPinned, MessageCircle, Route,
-  Shapes, SpellCheck, Users, Wifi,
+  AudioLines, Brain, Castle, Crown, Dice5, Download, Flame, Gamepad2, Gem, Headphones, Info, Landmark, LayoutGrid, ListChecks, Map, MapPinned, MessageCircle,
+  Music2, Route, Shapes, SpellCheck, Users, Wifi,
 } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
 import { useAccess } from '../hooks/useAccess';
@@ -30,6 +30,8 @@ import RaSadRodisGame from './games/RaSadRodisGame';
 import SamshvildeGame from './games/SamshvildeGame';
 import KutkheGame from './games/KutkheGame';
 import OtkhiGame from './games/OtkhiGame';
+import KhmebiGame from './games/KhmebiGame';
+import NotebiGame from './games/NotebiGame';
 
 // „თამაშები“: the hub of the games (2026-10-27; one list since 2026-10-30, the user's „ყველა თამაში 1 სიად“). A card per
 // game: its name (the known game it answers to in brackets; ⓘ unfolds what that game is), one line, and a button per variant it
@@ -42,7 +44,7 @@ type Access = ReturnType<ReturnType<typeof useAccess>['section']>;
 const ICON: Record<string, React.ReactNode> = {
   margalitebi: <Gem />, 'dghis-hangi': <Headphones />, 'dghis-sitqva': <SpellCheck />, otkheuli: <Shapes />,
   amikhseni: <MessageCircle />, gatvla: <Dice5 />, 'tskheli-churchkhela': <Flame />, 'ra-sad-rodis': <Brain />,
-  'okros-khana': <Map />, 'samshvildis-ghame': <Castle />, 'saidanaa-simghera': <MapPinned />, 'otkhidan-erti': <ListChecks />, qaravani: <Route />, 'ori-takhti': <Crown />, 'lurji-supra': <LayoutGrid />, 'mepis-kari': <Landmark />,
+  'okros-khana': <Map />, 'samshvildis-ghame': <Castle />, 'saidanaa-simghera': <MapPinned />, 'otkhidan-erti': <ListChecks />, 'khma-khmad': <AudioLines />, 'sam-notshi': <Music2 />, qaravani: <Route />, 'ori-takhti': <Crown />, 'lurji-supra': <LayoutGrid />, 'mepis-kari': <Landmark />,
 };
 
 const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string }>> = { online: Wifi, hybrid: Users, noPhone: Download };
@@ -50,7 +52,7 @@ const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string }>> =
 // the games that open inside this page, by their `mapItem`
 const INNER: Record<string, React.FC> = {
   hangi: HangiGame, amikhseni: AmikhseniGame, sitqva: SitqvaGame, otkheuli: OtkheuliGame, gatvla: GatvlaGame, churchkhela: ChurchkhelaGame, rsr: RaSadRodisGame,
-  samshvilde: SamshvildeGame, kutkhe: KutkheGame, otkhi: OtkhiGame,
+  samshvilde: SamshvildeGame, kutkhe: KutkheGame, otkhi: OtkhiGame, khmebi: KhmebiGame, notebi: NotebiGame,
 };
 
 const BTN = 'inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full text-[13.5px] font-bold transition-[background-color,transform] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#7a2028]/50';

@@ -34,8 +34,9 @@ const Waiting: React.FC<{ face: RoundFace; title: string; text: string; onClose:
 );
 
 export const RoundsRoom: React.FC<{
-  snap: RoundSnap; face: RoundFace; who?: Me; className: string; opts: RoundsOpts; setOpts: (o: RoundsOpts) => void; onHide: () => void;
-}> = ({ snap, face, who, className, opts, setOpts, onHide }) => {
+  snap: RoundSnap; face: RoundFace; who?: Me; className: string; program: readonly string[]; opts: RoundsOpts; setOpts: (o: RoundsOpts) => void;
+  onHide: () => void;
+}> = ({ snap, face, who, className, program, opts, setOpts, onHide }) => {
   const room = snap.room;
   const me = who && who.uid === snap.me.uid ? who : snap.me;
   const gc = useGameCall(roomPath(snap.classId, snap.roomId), me, room?.host ?? '', face.title);
@@ -68,14 +69,14 @@ export const RoundsRoom: React.FC<{
   };
   const start = () => {
     snippet.unlock();
-    const rounds = face.draw(opts.count);
+    const rounds = face.draw(opts.count, program);
     if (!rounds.length) { setEmpty(true); return; }
     if (roundRooms.host.start({ game: face.game, rounds, sound: opts.sound })) face.remember(rounds);
   };
   const again = () => {
     const s = snap.state;
     if (!s) return;
-    const rounds = face.draw(s.rounds.length);
+    const rounds = face.draw(s.rounds.length, program);
     const next = rounds.length ? againRounds(s, rounds) : null;
     if (!next) { setEmpty(true); return; }
     face.remember(rounds);

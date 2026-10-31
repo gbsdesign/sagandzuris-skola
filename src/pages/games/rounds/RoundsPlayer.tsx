@@ -45,18 +45,18 @@ export const RoundsPlayer: React.FC<{
   const myPick = mine && mine.key === v.key ? mine.pick : null;
 
   // the piece: on this phone only when it sounds on every phone
-  const piece = face.clip?.(v.q) ?? null;
+  const piece = face.clip?.(v.q, v.step) ?? null;
   const clip = v.sound === 'all' ? piece : null;
   const played = useRef('');
   useEffect(() => {
     if (!asking) { snippet.stop(); return; }
-    if (clip && played.current !== v.key) { played.current = v.key; snippet.play(clip.url, clip.from); }
+    if (clip && played.current !== v.key) { played.current = v.key; snippet.play(clip); }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [v.key, asking]);
   const tapClip = () => {
     if (!clip) return;
     if (snippet.state === 'play' || snippet.state === 'load') snippet.stop();
-    else snippet.play(clip.url, clip.from);
+    else snippet.play(clip);
   };
   const send = () => {
     if (pick === null || answered || left <= 0) return;
@@ -95,7 +95,7 @@ export const RoundsPlayer: React.FC<{
   }
 
   if (v.phase === 'reveal') {
-    const verdict = me >= 0 ? face.verdict(v.q, v.picks?.[me] ?? null) : null;
+    const verdict = me >= 0 ? face.verdict(v.q, v.picks?.[me] ?? null, v.pickSteps?.[me] ?? null) : null;
     const gained = me >= 0 ? v.gained?.[me] ?? 0 : 0;
     const place = me >= 0 ? placesOf(v.scores)[me] : 0;
     return (
@@ -136,7 +136,7 @@ export const RoundsPlayer: React.FC<{
         </RoundHead>
         {watching}
         {clip ? <SnippetBox state={snippet.state} prog={snippet.prog} onTap={tapClip} /> : piece && <HostSoundLine />}
-        {face.Ask && <face.Ask q={v.q} who="player" />}
+        {face.Ask && <face.Ask q={v.q} who="player" step={v.step} steps={v.steps} />}
         {answered ? (
           <div className="rounded-3xl bg-[#2f7d4f]/10 ring-1 ring-[#2f7d4f]/25 px-4 py-5 text-center" role="status">
             <Check className="w-8 h-8 mx-auto text-[#2f7d4f]" />

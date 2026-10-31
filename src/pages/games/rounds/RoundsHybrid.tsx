@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ChevronRight, Eye, Minus, Play, Plus, RotateCcw, Timer, Trophy, Users } from 'lucide-react';
-import { MAX_TEAMS, MIN_TEAMS, ROUND_COUNTS, hybridNext, hybridScores, markTeam, rulesOf, type HybridState } from '../../../utils/roundGames';
+import { MAX_TEAMS, MIN_TEAMS, ROUND_COUNTS, hybridNext, hybridScores, hybridStep, markTeam, rulesOf, type HybridState } from '../../../utils/roundGames';
 import { TEAM_NAMES } from '../../../utils/amikhseni';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { Chip } from '../../../components/games/Chip';
@@ -15,8 +15,9 @@ import { Podium, RoundHead, SnippetBox, Standings, TimerRing, useNow } from './p
 // A quick game on one phone (the user's „ჰიბრიდული“, 2026-10-31): the host holds it, the class plays in teams. The round's
 // piece plays on this phone and its time runs from the first ▶ (a round without one: from „დროის დაწყება“, once the host
 // has read it out); the teams talk it over and write their answer down; the
-// host opens the answer and marks each team — the phone adds it up. The game is kept on the device after every step (the
-// page keeps it), so ✕ only pauses it.
+// host opens the answer and marks each team — the phone adds it up. A round of steps (more of the piece at each) goes on
+// with the host's „შემდეგი ხმა“ / „მეტი ნოტი“, which plays the next piece at once. The game is kept on the device after
+// every step (the page keeps it), so ✕ only pauses it.
 
 export interface HybridConf { teams: number; names: string[]; count: number }
 
@@ -81,13 +82,15 @@ export const HybridGame: React.FC<{ face: RoundFace; h: HybridState; setH: (h: H
   face, h, setH, onClose, onAgain,
 }) => {
   const q = h.rounds[h.at];
+  const rules = rulesOf(q);
+  const steps = rules.steps(q);
   const snippet = useSnippet(face.clipSeconds);
   const audio = useRef<AudioContext | null>(null);
   useEffect(() => () => closeAudio(audio), []);
   const [endAt, setEndAt] = useState(0);
   const asking = h.phase === 'ask';
   const now = useNow(asking && endAt > 0);
-  const total = rulesOf(q).seconds(q, 1);
+  const total = rules.seconds(q, h.step);
   const left = endAt ? Math.max(0, (endAt - now) / 1000) : total;
   // a new round waits for its first ▶
   useEffect(() => { setEndAt(0); snippet.stop(); }, [h.at, h.phase]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -96,13 +99,26 @@ export const HybridGame: React.FC<{ face: RoundFace; h: HybridState; setH: (h: H
     if (asking && endAt && left <= 0 && rang.current !== endAt) { rang.current = endAt; bell(audio.current); triggerHaptic(40); }
   }, [asking, endAt, left]);
 
-  const clip = face.clip?.(q) ?? null;
+  // the step's piece; at the answer the whole of it
+  const clip = face.clip?.(q, asking ? h.step : steps) ?? null;
   const tapClip = () => {
     openAudio(audio);
     if (!clip) return;
     if (snippet.state === 'play' || snippet.state === 'load') { snippet.stop(); return; }
-    snippet.play(clip.url, clip.from);
+    snippet.play(clip);
     if (!endAt && asking) setEndAt(Date.now() + total * 1000);
+  };
+  const more = asking && h.step < steps;
+  // the next step: its piece plays at once (this tap lets it sound) and its time runs
+  const moveOn = () => {
+    triggerHaptic(12);
+    openAudio(audio);
+    const n = hybridStep(h);
+    setH(n);
+    if (n.phase !== 'ask') { snippet.stop(); return; }
+    const c = face.clip?.(q, n.step) ?? null;
+    if (c) snippet.play(c); else snippet.stop();
+    setEndAt(Date.now() + rules.seconds(q, n.step) * 1000);
   };
   const startTime = () => { openAudio(audio); triggerHaptic(10); if (!endAt && asking) setEndAt(Date.now() + total * 1000); };
   const scores = hybridScores(h);
@@ -176,7 +192,12 @@ export const HybridGame: React.FC<{ face: RoundFace; h: HybridState; setH: (h: H
     <TableScreen
       title={face.title}
       onClose={onClose}
-      footer={<Btn size="lg" full onClick={next} icon={<Eye />} className="!h-14 !text-[16px]">პასუხის ჩვენება</Btn>}
+      footer={more ? (
+        <div className="flex gap-3">
+          <Btn kind="ghost" size="lg" onClick={next} icon={<Eye />} className="!h-14 !px-5">პასუხი</Btn>
+          <Btn size="lg" onClick={moveOn} icon={<ChevronRight />} className="!h-14 !text-[16px] flex-1">{face.nextLabel ?? 'შემდეგი'}</Btn>
+        </div>
+      ) : <Btn size="lg" full onClick={next} icon={<Eye />} className="!h-14 !text-[16px]">პასუხის ჩვენება</Btn>}
     >
       <div className="py-2 space-y-4">
         <RoundHead at={h.at} total={h.rounds.length} />
@@ -184,7 +205,7 @@ export const HybridGame: React.FC<{ face: RoundFace; h: HybridState; setH: (h: H
           <TimerRing left={left} total={total} />
           <p className="min-w-0 flex-1 font-serif-ge text-[19px] font-bold leading-snug text-[#4a3426]">{face.askTeams}</p>
         </div>
-        {face.Ask && <face.Ask q={q} who="teams" />}
+        {face.Ask && <face.Ask q={q} who="teams" step={h.step} steps={steps} />}
         {clip && <SnippetBox state={snippet.state} prog={snippet.prog} onTap={tapClip} note={endAt ? undefined : 'დრო პირველ ▶-ზე დაიწყება'} />}
         {!clip && !endAt && <Btn kind="ghost" size="lg" full onClick={startTime} icon={<Timer />} className="!h-12">დროის დაწყება · {total} წამი</Btn>}
         <Standings names={h.teams} scores={scores} />

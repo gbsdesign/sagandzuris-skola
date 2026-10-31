@@ -64,7 +64,7 @@ export const KUTKHE_FACE: RoundFace = {
   askHost: 'საიდანაა ეს სიმღერა? მოთამაშეები კუთხეს რუკაზე ნიშნავენ.',
   askPlayer: 'მოისმინე და მონიშნე, საქართველოს რომელი კუთხისაა.',
   askTeams: 'საიდანაა ეს სიმღერა? გუნდები ბჭობენ და კუთხეს ფურცელზე წერენ.',
-  clip: q => (q.url ? { url: q.url, from: typeof q.from === 'number' ? q.from : 0.2 } : null),
+  clip: q => { const o = q$(q); return o.url ? { url: o.url, from: typeof o.from === 'number' ? o.from : 0.2 } : null; },
   clipSeconds: KUTKHE_CLIP,
   Pick,
   pickName: (_, pick) => regionName(pick),
