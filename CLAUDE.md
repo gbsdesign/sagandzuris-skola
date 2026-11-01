@@ -390,7 +390,7 @@
   (`HybridState`, `markTeam`, kept on the device so ✕ only pauses). The room store is generic since then: `utils/gameRoom.ts`
   `createRooms(be, engine, moves)` over a `RoomEngine` (`games` it plays; samshvilde's is `utils/samshvildeRoom.ts`), the
   app's two stores in `utils/gameRoomFirestore.ts` (`rooms` = samshvilde, `roundRooms` = the quick games: `timeUp(key)`,
-  `reveal`, `next`); the rules let a room be opened for the twelve `ROOM_GAMES`, up to 40 players, an act may carry `ms`.
+  `reveal`, `next`); the rules let a room be opened for the fourteen `ROOM_GAMES`, up to 40 players, an act may carry `ms`.
   Invitations name their game: `data/roomGames.ts` (titles, the hub item, a chat card's `room` = `game:roomId` — a
   samshvilde card keeps the bare id), the Worker's `GAME_TITLES`, `/?open=<game>&c=&r=`, icons
   `components/games/roomGameIcons.ts`; the online tab of every room game is `components/games/RoomSetup.tsx`. Screens
@@ -472,6 +472,20 @@
   (`data/hangebiPool.ts`). The first 13 `HANGEBI_WORDS` are the regions in `KUTKHE_REGIONS` order. Levels „ორივე · სიტყვით ·
   ყურით“ (`sg-hangebi-level`). Tabs „მარტო · ონლაინ · ჰიბრიდული“; on one phone the screen shows the clues, the boxes and the
   letters, the teams write the word, marks სწორი 1 · ვერა 0.
+  „ექო“ (mapItem `eqo`, like Simon; `utils/eqo.ts` + test) and „მფრინავი ნოტები“ (mapItem `mprinavi`, like Staff Wars;
+  `utils/mprinavi.ts` + test), 2026-11-01, both over `data/melodyPool.ts` — 42 melodies (the chant games' chants + the program's
+  songs: top voice and bass as they sound, a repeated pitch once, the first 40 notes) made by `node scripts/build-melody-pool.mjs`,
+  never edit by hand. ექო: a melody's opening (`eqoLine`, ≤ 8 different pitches = the keys) sounds even (`eqoTimed`) and is tapped
+  back on coloured bars (`eqo/Keys.tsx`; `useLit` lights them through `useSnippet`'s bus `useSounding` — what plays and when); round
+  r = 3 + r notes, the taps sent as one int (`encodeTaps`, base 9), 100 a note right from the start, 200 a note when whole; options
+  „ფერებით / მხოლოდ ყურით“. „მარტო“ = endless Simon (`eqo/Solo.tsx`, best `sg-eqo-best`); its hybrid tab is a circle
+  (`eqo/Circle.tsx`: the phone hand to hand, keys or singing judged by the host, a miss is out, the phrase grows once all who are in
+  have played — `EqoRing`; kept in `sg-eqo-circle`, ✕ only pauses). მფრინავი: online = four notes of a melody on a staff, named in
+  order (250 a note, half by the end, 20 s); „მარტო“ = notes fly from the right to the clef (`mprinavi/Flight.tsx`: three lives,
+  faster every four right — `flightSeconds`); its hybrid = the same flight round the circle with the class's record
+  (`sg-mprinavi-class-best`); clefs სოლის / ფას / ორივე, names დო რე მი / C D E (H = სი); the staff is drawn with abcjs's own signs
+  (`mprinavi/glyphs.ts`, `Staff.tsx`). `RoundsPage` takes `table` — a node in place of the hybrid setup;
+  `components/games/CircleNames.tsx` = the circle's names (`sg-circle`, a class in one tap), shared by both.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
@@ -520,6 +534,13 @@
   „ოთხი ჰანგი, ერთი სიტყვა“'s kit = 54 cards, one per puzzle by word but the songs' titles (four clues by `sureClues` in front with
   the answer's boxes, the word and the group's other words for a +1 bonus behind; five topic colours, a book — no church picture —
   for the faith's words), team and score sheets.
+  „ექო“'s kit = the host's book of 39 melodies (the app's own phrases, `eqoLine`: twelve even notes, numbered over the staff and
+  named under it) + a circle sheet (a row a player, a column a phrase's length, ✓/✗); „მფრინავი ნოტები“'s = 34 note cards (every
+  natural from two ledger lines under the staff to two over it, treble and bass; the answer, its place and octave behind, stars
+  for the ledger lines) + two help cards, a poster of both clefs and six teams' name cards (the syllable in front, the letter
+  behind). Both draw their staves with `scripts/print-games/staffSvg.mjs` (abcjs's signs from node_modules, the notes evenly
+  spaced so a word fits under each — abcjs's own layout squeezed them; `clefFor` takes the treble or the octave-down clef,
+  whichever needs fewer ledger lines).
 - **No religious pictures in the games (the user's rule, 2026-11-01; corrected the same day: „რელიგიური და მუსიკალური კითხვები
   დატოვე, უბრალოდ ვიზუალს ნუ გამოიყენებ“)**: no cross, church, icon or domed-church mark anywhere in a game or a print kit (the
   series emblem is `grapeEmblem` in `scripts/print-games/lib.mjs`, the Catan kit's shields carry an eight-rayed sun, the caravan

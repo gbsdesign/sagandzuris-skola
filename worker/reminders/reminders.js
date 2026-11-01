@@ -564,7 +564,7 @@ async function groupEvent(request, env) {
 const GAME_TITLES = {
   samshvilde: 'სამშვილდის ღამე', kutkhe: 'საიდანაა სიმღერა?', otkhi: 'ოთხიდან ერთი', khmebi: 'ხმა-ხმად', notebi: 'სამ ნოტში!', turniri: 'ხმების ტურნირი',
   hangi: 'დღის ჰანგი', akordi: 'ქართული აკორდი', rvakhma: 'რვა ხმა', ruka: 'რუკის ვიქტორინა', gagrdzele: 'გააგრძელე!',
-  hangebi: 'ოთხი ჰანგი, ერთი სიტყვა',
+  hangebi: 'ოთხი ჰანგი, ერთი სიტყვა', eqo: 'ექო', mprinavi: 'მფრინავი ნოტები',
 };
 
 async function gameInvite(request, env) {

@@ -16,7 +16,8 @@ import { HybridGame, HybridSetup, readHybridConf, type HybridConf } from './Roun
 // in a class: the opener hosts, everyone answers on their own phone) and „ჰიბრიდული“ (one phone, the class in teams). The
 // hub's variant buttons ask for a tab; an invitation (the strip, a chat card, a phone notice) names its room. Settings and
 // a paused one-phone game stay on the device. A game with a game of its own for one (`solo`, „დღის ჰანგი“'s daily one) shows
-// it as the first of three tabs, over the intro, and the hub's „ონლაინ“ opens that one.
+// it as the first of three tabs, over the intro, and the hub's „ონლაინ“ opens that one. A game with a one-phone game of its own
+// (`table`: the circle of „ექო“ and „მფრინავი ნოტები“, the phone passed on) shows it under „ჰიბრიდული“ instead of the teams'.
 
 type Mode = 'solo' | 'online' | 'table';
 interface Conf { mode?: Mode; count: number; sound: Sound; hybrid: HybridConf }
@@ -39,7 +40,7 @@ const readConf = (key: string): Conf => {
 /** the chants of classes' programs (the chant games ask them too): their version ids, once each */
 const programOf = (list: SchoolClass[]) => [...new Set(list.flatMap(c => c.program.map(p => p.id ?? '').filter(Boolean)))];
 
-export const RoundsPage: React.FC<{ face: RoundFace; solo?: SoloTab }> = ({ face, solo }) => {
+export const RoundsPage: React.FC<{ face: RoundFace; solo?: SoloTab; table?: React.ReactNode }> = ({ face, solo, table }) => {
   const KEY = face.store ?? `sg-${face.game}`;
   const GAME_KEY = `${KEY}-game`;
   const [conf, setConf] = useState(() => readConf(KEY));
@@ -182,7 +183,7 @@ export const RoundsPage: React.FC<{ face: RoundFace; solo?: SoloTab }> = ({ face
           onEnter={(c, r) => { void enter(c, r); }}
           onResume={() => setRoomOpen(true)}
         />
-      ) : (
+      ) : table ?? (
         <HybridSetup
           face={face}
           conf={conf.hybrid}
