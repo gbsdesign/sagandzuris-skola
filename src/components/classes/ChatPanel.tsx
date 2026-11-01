@@ -11,6 +11,7 @@ import { askConfirm } from '../ui/kit';
 import { MONTHS_GE } from '../../utils/dateNames';
 import { ROOM_GAME_INFO, parseChatRoomRef } from '../../data/roomGames';
 import { ROOM_GAME_ICON } from '../games/roomGameIcons';
+import { DrawRiddle } from './DrawRiddle';
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 export const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -228,7 +229,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const stopHold = () => { if (hold.current) window.clearTimeout(hold.current); hold.current = null; };
   const holdToPick = (id: string) => ({
     onPointerDown: (e: React.PointerEvent) => {
-      if (e.pointerType === 'mouse' || (e.target as HTMLElement).closest('button, a')) return;
+      if (e.pointerType === 'mouse' || (e.target as HTMLElement).closest('button, a, input')) return;
       stopHold();
       hold.current = window.setTimeout(() => { hold.current = null; triggerHaptic(20); setActive(id); }, 500);
     },
@@ -236,7 +237,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     onPointerLeave: stopHold,
     onPointerCancel: stopHold,
     onContextMenu: (e: React.MouseEvent) => {
-      if ((e.target as HTMLElement).closest('a')) return;
+      if ((e.target as HTMLElement).closest('a, input')) return;
       e.preventDefault();
       stopHold();
       setActive(id);
@@ -480,6 +481,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                             <span className={`text-[11px] leading-none ${mine ? 'text-[#fbf6ec]/70' : 'text-[#a89886]'}`}>{sentAt(m)}</span>
                           </div>
                         </div>
+                      ) : m.kind === 'draw' ? (
+                        <DrawRiddle
+                          m={m}
+                          mine={mine}
+                          meta={<p className={`flex justify-end text-[11px] leading-none ${mine ? 'text-[#fbf6ec]/70' : 'text-[#a89886]'}`}>{sentAt(m)}</p>}
+                        />
                       ) : m.kind === 'voice' ? (
                         <div className="py-1">
                           <VoicePlayer seconds={m.seconds} wave={m.wave} onDark={mine} getUrl={() => loadVoiceUrl(base, m)} meta={sentAt(m)} />

@@ -782,6 +782,28 @@
   same stranger twice running (`nextRound`), „დასრულება“ = the podium. Its kit (`utskho-sopelshi.mjs`, 18 sheets): 210 place cards
   63×52 mm (two places and one „უცხო“ a sheet, one back for all), eight A6 lists of the places, the score sheet (12 rounds × 8 players);
   the kit checks its points against `roundPoints` and stops the build if the app's ever change.
+- **„ნახატობანა“** (2026-11-01, like Pictionary; mapItem `nakhati`, hub id `nakhatobana`; rules `utils/nakhati.ts` + test, the lines
+  `utils/ink.ts` — a drawing as text: strokes on 1000×1000, colour + width digits, 4 base64url characters a point, ≤ 40 000 —
+  drawn by `components/games/Ink.tsx` (`InkPad` with 7 colours + eraser, 3 widths, undo, clear, `aside` = the tools beside it on a
+  phone on its side, `extra`; `InkView` still / `grow` / `replay`; `inkPng`), screens `pages/games/nakhati/`): 154 words in seven
+  themes of 22 (`data/nakhatiWords.ts`, a note each, written by Claude, unchecked — the pages say so; no church thing to draw —
+  the test checks it). Online = a quick-games room (`nakhati` in `ROUND_GAMES`/`ROOM_GAMES`/the rules/the Worker's titles): the
+  host is the artist — the word only on their phone (`Secret`), they draw on the face's new `Tool` (RoundsHost renders it; it
+  calls the room's new move `edit` → `editRound`: only the round asked now, same kind, valid) about once a second, the round's
+  `ink` goes out in the view and grows on every phone; players pick the word out of four of its theme (`otkhiPoints`, 90 s); a
+  round's rules may have `spent` (what it keeps once passed — nakhati drops its lines, so host/state stays small); the face's
+  `hostLine` replaces the room setup's „წამყვანი“ line. „მარტო“ (`Riddle.tsx`): one of three words (`threeToDraw`) or one's own,
+  drawn full screen, sent to a class chat as kind `draw` (`sendDrawMessage`: `ink`, `ans` = the word folded by `foldWord` — not
+  secret, just not readable by chance —, `theme` = the theme's name; rules allow kind `draw` with those three fields' sizes) or
+  saved/shared as PNG; the draft stays in `sg-nakhati-draft`. The chat shows it as `components/classes/DrawRiddle.tsx`: replay,
+  a box a letter, a guess checked on the phone (`sameWord`: the word, or it without the last vowel), „ვნებდები“; what this phone
+  guessed in `sg-nakhati-solved`; the tab also lists the classmates' drawings from the class chats (folded). „ჰიბრიდული“
+  (`Table.tsx`, `NakhatiTable` kept in `sg-nakhati-game`, settings `sg-nakhati-table`): 2–6 teams, the artist draws on the board
+  (the phone in the host's hand) or on the screen; peek → „სხვა სიტყვა“ → 60/90/120 s → „გამოიცნეს!“ / „ვერ“; after every
+  circle, if chosen, „ყველა ხატავს“ (every team's artist, the same word, the host taps who guessed first); a turn's result can be
+  mended; 2–4 circles. Themes, seen words: `sg-nakhati-themes` / `-seen`. Its kit (`nakhatobana.mjs`, 7 sheets): „სახატავი გზა“
+  (56 squares, 7 a row, every row each theme once, ★ = „ყველა ხატავს“, start/finish), 22 cards of seven words — one a theme,
+  shuffled with a seed — + 5 blank, six standing pawns in the app's team colours, a die net, drawing frames, the rules.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in

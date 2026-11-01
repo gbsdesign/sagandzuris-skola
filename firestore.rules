@@ -345,10 +345,14 @@ service cloud.firestore {
           && incoming().uid == uid()
           && (incoming().teacher == false || teachesClass() || isAdmin())
           && incoming().createdAt == request.time
-          && incoming().kind in ['text', 'voice', 'game']
+          && incoming().kind in ['text', 'voice', 'game', 'draw']
           && incoming().text is string && incoming().text.size() <= 2000
           // an invitation into a game room of the class (its card leads into the room)
-          && (incoming().kind != 'game' || (incoming().room is string && incoming().room.size() <= 40));
+          && (incoming().kind != 'game' || (incoming().room is string && incoming().room.size() <= 40))
+          // a drawing to guess („ნახატობანა“): its lines, its word folded, its theme
+          && (incoming().kind != 'draw' || (incoming().ink is string && incoming().ink.size() <= 40000
+            && incoming().ans is string && incoming().ans.size() <= 200
+            && incoming().theme is string && incoming().theme.size() <= 40));
         allow delete: if isAdmin() || teachesClass() || (isSignedIn() && existing().uid == uid());
       }
 
@@ -423,7 +427,7 @@ service cloud.firestore {
         }
         allow read: if inClass();
         allow create: if inClass() && roomOk()
-          && incoming().game in ['samshvilde', 'kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri', 'hangi', 'akordi', 'rvakhma', 'ruka', 'gagrdzele', 'hangebi', 'eqo', 'mprinavi', 'tsqvilebi', 'mesame', 'chamotvale', 'pantomima']
+          && incoming().game in ['samshvilde', 'kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri', 'hangi', 'akordi', 'rvakhma', 'ruka', 'gagrdzele', 'hangebi', 'eqo', 'mprinavi', 'tsqvilebi', 'mesame', 'chamotvale', 'pantomima', 'nakhati']
           && incoming().host == uid() && incoming().status == 'lobby'
           && incoming().createdAt == request.time && incoming().uids.size() == 0;
         allow update: if inClass() && existing().host == uid() && roomOk()

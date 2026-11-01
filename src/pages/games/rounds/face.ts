@@ -43,6 +43,11 @@ export interface RoundFace {
   /** what only the host sees while a round is asked, from the whole round (2026-11-01: the word the host shows in
    * „პანტომიმა“) */
   Secret?: React.FC<{ q: RoundQ }>;
+  /** the host's own tool while a round is asked, under `Secret` (2026-11-01: „ნახატობანა“'s drawing pad): it may change the
+   * round's public part (`edit`), which reaches every phone at once */
+  Tool?: React.FC<{ q: RoundQ; edit: (q: RoundQ) => void }>;
+  /** the line under the online tab's „new room“ for its opener (else: the host leads and does not play) */
+  hostLine?: string;
   /** the game's own choices: under the rounds in the lobby (the host's) and in the one-phone setup */
   Options?: React.FC;
   /** more on the game's page, under both tabs (the teacher's own questions) */

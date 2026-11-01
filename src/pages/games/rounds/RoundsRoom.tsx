@@ -140,7 +140,7 @@ export const RoundsRoom: React.FC<{
           snippet={snippet}
           gc={gc}
           onHide={onHide}
-          moves={{ timeUp: roundRooms.host.timeUp, reveal: roundRooms.host.reveal, next: roundRooms.host.next, again, close: () => { void closeRoom(); } }}
+          moves={{ timeUp: roundRooms.host.timeUp, reveal: roundRooms.host.reveal, next: roundRooms.host.next, again, close: () => { void closeRoom(); }, edit: roundRooms.host.edit }}
         />
         {error}
       </>
