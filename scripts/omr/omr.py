@@ -90,11 +90,15 @@ def _bbox(pts):
 class Page:
     def __init__(self, pg):
         self.pg = pg
-        self.glyphs, self.words, self.heads_txt = [], [], []
+        self.glyphs, self.words, self.heads_txt, self.marks = [], [], [], []
         self.foot_y = 1e9
         for blk in pg.get_text('rawdict')['blocks']:
             for ln in blk.get('lines', []):
                 for sp in ln['spans']:
+                    if not ('Petrucci' in sp['font'] or 'Maestro' in sp['font']):
+                        t = ''.join(ch['c'] for ch in sp['chars']).strip()
+                        if t in ('3', '5', '6', '7'):
+                            self.marks.append(tuple(sp['bbox']) + (t,))
                     if 'Petrucci' in sp['font'] or 'Maestro' in sp['font']:
                         for ch in sp['chars']:
                             x, y = ch['origin']
@@ -117,6 +121,10 @@ class Page:
                         and not (len(txt) < 40 and re.search(r'Andante|Moderato|Allegro|Adagio|moZraobiT', txt))):  # „2) saSualo moZraobiT - Andante“ (vol. XVIII) is a marked tempo
                     self.foot_y = min(self.foot_y, ln['bbox'][1])
         self.words = [w for w in pg.get_text('words')]
+        # tuplets' numbers: the words „3“ „5“ „6“ „7“, and one printed against a note head (the words join them: „3œ“)
+        tw = [w for w in self.words if w[4] in ('3', '5', '6', '7')]
+        self.tuplets = tw + [m for m in self.marks if not any(w[4] == m[4] and abs((w[0] + w[2]) / 2 - (m[0] + m[2]) / 2) < 2
+                                                              and abs((w[1] + w[3]) / 2 - (m[1] + m[3]) / 2) < 3 for w in tw)]
         self.hlines, self.vlines, self.beams, self.curves = [], [], [], []
         for d in pg.get_drawings():
             r = d['rect']
@@ -311,7 +319,9 @@ def read_system(P, sysst, dbg=False):
                 print(f"  K p{P.pg.number + 1} sys y={sysst[0]['top']:.0f} staff {k} key change at x={row[0]['x']:.0f}: {''.join(g['c'] for g in row)} -> {nk}")
         events = []
         for g in rests:
-            events.append(dict(x=g['x'], beats=RESTS[g['c']], midi=None, rest=True))
+            # (a dot right after a rest lengthens it by half)
+            dot = any(g2['c'] == '.' and 0 < g2['x'] - g['bb'][2] < 5 and abs(g2['y'] - g['y']) < sp for g2 in mine)
+            events.append(dict(x=g['x'], beats=RESTS[g['c']] * (1.5 if dot and RESTS[g['c']] < 4 else 1), midi=None, rest=True))
         local, bar_i, key_i = {}, 0, 0
         for h in heads:
             while bar_i < len(bars) and bars[bar_i] < h['x']:
@@ -335,10 +345,14 @@ def read_system(P, sysst, dbg=False):
             base = HEADS[h['c']]
             # stems: up at the head's right edge, down at its left edge; a head with both is sung by two voices
             hx0, hx1 = h['bb'][0], h['bb'][2]
-            cand = [v for v in P.vlines if v[1] - 2 <= h['y'] <= v[2] + 2 and (v[2] - v[1]) < 4.5 * sp]
+            # (a beamed note's stem may be longer: one that ends on a beam is a stem still — a 16th's two beams far from
+            # its head made it look stemless, and it was taken for a second voice)
+            on_beam = lambda v: any(r.x0 - 1 <= v[0] <= r.x1 + 1 and (r.y0 - 2 <= v[1] <= r.y1 + 2 or r.y0 - 2 <= v[2] <= r.y1 + 2)
+                                    for r in P.beams)
+            cand = [v for v in P.vlines if v[1] - 2 <= h['y'] <= v[2] + 2 and ((v[2] - v[1]) < 7 * sp or (v[2] - v[1]) < 9 * sp and on_beam(v))]
             ups = [v for v in cand if abs(v[0] - hx1) < 1.2 and v[1] < h['y'] - 2]
             downs = [v for v in cand if abs(v[0] - hx0) < 1.2 and v[2] > h['y'] + 2]
-            if ups and downs and any(abs(g['x'] - h['x']) < 1 and abs(g['y'] - h['y']) < 1 and g['size'] <= normal * 0.88
+            if ups and downs and any(abs(g['x'] - h['x']) < 2 and abs(g['y'] - h['y']) < 1 and g['size'] <= normal * 0.88
                                      for g in mine if g['c'] in HEADS):
                 # a small (editorial) head on the same spot: the shorter stem is its own
                 if ups[0][2] - ups[0][1] < downs[0][2] - downs[0][1]:
@@ -363,7 +377,7 @@ def read_system(P, sysst, dbg=False):
                     beats = 1 / (2 ** nflag)
                 if dotted:
                     beats *= 1.5
-                events.append(dict(x=h['x'], beats=beats, midi=midi, recit=base == 0, step=stp, y=h['y'], rest=False, c=h['c'],
+                events.append(dict(x=h['x'], beats=beats, midi=midi, recit=base == 0, step=stp, y=h['y'], rest=False, c=h['c'], hw=hx1 - hx0,
                                    dir=sdir, sx=stem[0] if stem else None, li=li, octv=octv, acc=acc is not None))
         # editorial accidentals, printed in brackets above or below their note
         smalls = [g for g in mine if g['c'] in HEADS and g['size'] <= own * 0.88]
@@ -390,29 +404,35 @@ def read_system(P, sysst, dbg=False):
                 if g['c'] in ACC and id(g) not in used and g['size'] > own * 0.88 and not (g['c'] in ('#', 'b') and g['x'] < first_x - 8 and g['x'] < st['x0'] + 70):
                     print(f"  ? p{P.pg.number + 1} sys y={sysst[0]['top']:.0f} staff {k} unused {g['c']} x={g['x']:.0f} y={g['y']:.0f} step={step(g['y'])} first_x={first_x:.0f} x0={st['x0']:.0f} x1={st['x1']:.0f}")
         # triplets: a "3" over (or under) three notes
-        for w in P.words:
+        for w in P.tuplets:
             if w[4] == '3':
                 wx, wy = (w[0] + w[2]) / 2, (w[1] + w[3]) / 2
                 if not left <= wx <= right:
                     continue
                 if staff_of(sysst, wy) != k or not (st['top'] - 6 * sp <= wy <= st['bot'] + 6 * sp):
                     continue
-                cand = sorted([e for e in events if not e['rest'] and abs(e['x'] - wx) < 30 and not e.get('trip')], key=lambda e: abs(e['x'] - wx))
+                gx = lambda e: e['sx'] if e.get('sx') is not None else e['x'] + e.get('hw', 5) / 2
+                cand = sorted([e for e in events if not e['rest'] and abs(e['x'] - wx) < 30 and not e.get('trip')], key=lambda e: abs(gx(e) - wx))
                 if cand:
                     mid = cand[0]
                     row = sorted([e for e in events if not e['rest'] and not e.get('trip')], key=lambda e: e['x'])
-                    i = row.index(mid)
-                    wins = [row[j:j + n] for n in (3, 2) for j in range(max(0, i - n + 1), i + 1) if j + n <= len(row)]
+                    # (also among the notes of the middle one's stem direction only: a head both voices sing — a stem
+                    # up to the triplet's beam and one down — stands in the row twice; the window nearer the „3“ wins)
+                    rows = [row] + ([[e for e in row if e.get('dir') in (mid['dir'], None)]] if mid.get('dir') else [])
+                    wins = []
+                    for r in rows:
+                        i = r.index(mid)
+                        wins += [r[j:j + n] for n in (3, 2) for j in range(max(0, i - n + 1), i + 1) if j + n <= len(r)]
                     wins = [g for g in wins if round(sum(e['beats'] for e in g), 3) in (0.75, 1.5) or all(e['beats'] == 1 for e in g) and len(g) == 3]
                     if wins:
-                        best = min(wins, key=lambda g: abs((g[0]['x'] + g[-1]['x']) / 2 - wx))
+                        best = min(wins, key=lambda g: abs((gx(g[0]) + gx(g[-1])) / 2 - wx))
                         for e in best:
                             e['beats'] *= 2 / 3
                             e['trip'] = True
                     elif os.environ.get('OMR_AUDIT'):
                         print(f"  ? p{P.pg.number + 1} sys y={sysst[0]['top']:.0f} staff {k} unused 3 x={wx:.0f} y={wy:.0f}")
         # five, six or seven notes of one value under „5“ „6“ „7“ fill the time of four
-        for w in P.words:
+        for w in P.tuplets:
             if w[4] in ('5', '6', '7'):
                 wx, wy = (w[0] + w[2]) / 2, (w[1] + w[3]) / 2
                 if not left <= wx <= right or staff_of(sysst, wy) != k or not (st['top'] - 4 * sp <= wy <= st['bot'] + 4 * sp):
@@ -428,7 +448,7 @@ def read_system(P, sysst, dbg=False):
                         e['beats'] *= 4 / n
                         e['trip'] = True
         if os.environ.get('OMR_AUDIT'):
-            for w in P.words:  # other tuplets' numbers are not read at all
+            for w in P.tuplets:  # other tuplets' numbers are not read at all
                 wx, wy = (w[0] + w[2]) / 2, (w[1] + w[3]) / 2
                 if w[4] in ('5', '6', '7') and left <= wx <= right and staff_of(sysst, wy) == k and st['top'] - 4 * sp <= wy <= st['bot'] + 4 * sp \
                         and any(abs(e['x'] - wx) < 25 for e in events if not e['rest']) and not any(e.get('trip') and abs(e['x'] - wx) < 25 for e in events):
@@ -451,7 +471,8 @@ def read_system(P, sysst, dbg=False):
         e_c = lambda e: e.get('c', 'œ')
         on_col = lambda x: any(abs(o - x) < 1.5 for o in other_x)
         for e in events:
-            if e['rest'] or e.get('dir'):
+            # (only a whole note is printed with no stem: a stemless filled or half head is a stem not found)
+            if e['rest'] or e.get('dir') or HEADS[e_c(e)] < 4:
                 continue
             # (a unison too: a whole note printed beside a quarter of the same pitch is the other voice's)
             q = next((q for q in events if not q['rest'] and q.get('dir') and (q['midi'] != e['midi'] or HEADS[e_c(e)] >= 2)
@@ -475,6 +496,14 @@ def read_system(P, sysst, dbg=False):
                 q = cols[-1][-1] if cols else None
                 two = q is not None and not e['rest'] and not q['rest'] and abs(q['x'] - e['x']) < 9.5 and (
                     q.get('dir') and e.get('dir') and q['dir'] != e['dir'] and abs(q['sx'] - e['sx']) < 7)
+                # (a second's two notes printed side by side: the heads touching — the stems then stand on the outer
+                # sides —, or, the stem-up note the lower, a little apart beside their stems)
+                if not two and q is not None and not e['rest'] and not q['rest'] and q.get('dir') and e.get('dir') \
+                        and q['dir'] != e['dir'] and abs(q['step'] - e['step']) == 1:
+                    up, dn = (q, e) if q['dir'] == 'u' else (e, q)
+                    dx = abs(q['x'] - e['x'])
+                    touch = dx < 1.3 * max(q.get('hw', 5), e.get('hw', 5)) and q['dir'] == 'd' and e['dir'] == 'u'
+                    two = touch or dx < 11 and up['midi'] < dn['midi'] and abs(q['sx'] - e['sx']) < 7
                 cross = two and (q['midi'] >= e['midi']) != (q['dir'] == 'u')
                 crossed = crossed or cross
                 together = q is not None and e['rest'] and q['rest'] and abs(q['x'] - e['x']) < 3 or q is not None and not e['rest'] and not q['rest'] and (
@@ -490,7 +519,16 @@ def read_system(P, sysst, dbg=False):
             def put(l, e):
                 layers[l].append(dict(e))
                 clock[l] += e['beats']
+            prev_x = None
             for col in cols:
+                # at a barline the two voices of a staff are together again: one left behind by a misread length holds
+                # its last note until there (else every other note after it would go to the other voice)
+                if prev_x is not None and abs(clock['u'] - clock['d']) > 1e-6 and any(prev_x < b < col[0]['x'] for b in bars):
+                    lag = 'u' if clock['u'] < clock['d'] else 'd'
+                    if layers[lag]:
+                        layers[lag][-1]['beats'] += abs(clock['u'] - clock['d'])
+                    clock[lag] = max(clock.values())
+                prev_x = col[0]['x']
                 ups = [e for e in col if e.get('dir') == 'u']
                 downs = [e for e in col if e.get('dir') == 'd']
                 if ups and downs:
@@ -688,7 +726,10 @@ def main():
             for k, v in enumerate(ev):
                 for i, e in enumerate(v):
                     if not e['rest']:
-                        d = e['beats'] if i + 1 == len(v) else min(e['beats'], v[i + 1]['t'] - e['t'])
+                        # a note lasts until its voice's next note or rest — never running into it, and (a length
+                        # misread, the audit's „gap“) never falling silent where no rest is printed: the voices stay
+                        # together; a voice's last note lasts until the line ends (one cut short by a misread length)
+                        d = (v[i + 1]['t'] if i + 1 < len(v) else max(lens)) - e['t']
                         voices[k].append([round(t + e['t'], 3), round(d, 3), e['midi']])
                         spell[k].append([e['li'], e['midi'] - 12 * (e['octv'] + 1) - SEMI[e['li']]])
             t0, t = t, t + max(lens)
