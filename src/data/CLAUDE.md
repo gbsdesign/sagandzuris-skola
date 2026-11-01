@@ -317,6 +317,11 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   spellings and melodic steps listed. Eight more faults fixed (list in `scripts/omr/README.md`: smaller staves and
   small-headed voices, a key change before a line's first note, a small note's ♭/♯ landing on its neighbour, the 16th's
   4-pt beams, stacked rests, a whole-note unison, „5/6/7“ groups); 389 files changed again, 24 lines that were silent
-  now sound. Left: ~2 000 places in ~500 files where a voice falls silent inside a line with no rest printed (`gap` in
-  the audit log — divided voices, beams across stems up and down; each one different), 205 lines whose voices end at
-  different beats. The near-copies' differences and the E♯/C♭/F♭ that remain are the books' own.
+  now sound. The near-copies' differences and the E♯/C♭/F♭ that remain are the books' own.
+  Third round that night (the user: „გაასწორე ეგ 2000“ — the ~2 000 places where a voice fell silent inside a line with no
+  rest printed): the commonest causes fixed in the reader (list in `scripts/omr/README.md`: a 16th's long stem to its beam
+  — it made the note a second voice and every other note of the line was lost —, a second's two voices printed side by
+  side, a small head's stem, „3“ printed against a head and a triplet's window, a dotted rest); the audit's gaps fell
+  2 073 → 947, lines whose voices end apart 205 → 95. What is left is filled: a note lasts until its voice's next note or
+  rest, a voice's last note until the line ends, so the voices stay together (the pitch of a dropped note is still
+  missing there). 534 files changed (228 only longer notes; +909 notes found again).

@@ -69,7 +69,8 @@ holds its last note); a „3“ printed against a note head (the words join them
 a triplet's window is matched by its stems (a stem up stands at the head's right edge), also among one stem direction's
 notes (a head both voices sing stands in the row twice); a dot after a rest. Whatever gap is left is filled: a note
 lasts until its voice's next note or rest, and a voice's last note until the line ends (the audit still prints the gaps
-as read, before this). On a sample of 110 files with gaps: 473 → 208 gaps.
+as read, before this). All 4 153 files read again: gaps 2 073 → 947, lines whose voices end apart 205 → 95; 534 files
+changed and were uploaded.
 
 Read versions for comparing go to `%TEMP%/omr-cmp`, not into the repo. The rules (what counts as a duplicate,
 which tab, file numbers like 76a = 761, from vol. IV on 12b = 1202) are in `src/data/CLAUDE.md` and `TSIRVA_ANTH` in `src/data/tsirvaChants.ts`.
