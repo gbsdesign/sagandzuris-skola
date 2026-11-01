@@ -32,8 +32,8 @@ const Ask: NonNullable<RoundFace['Ask']> = ({ q }) => {
   );
 };
 
-/** the chant sung, and where its notes are */
-const Answer: RoundFace['Answer'] = ({ q }) => {
+/** the chant sung, and where its notes are (also „მესამე ხმა“'s) */
+export const Answer: RoundFace['Answer'] = ({ q }) => {
   const o = q$(q);
   if (!o.title) return null;
   return (
@@ -52,8 +52,8 @@ const Stat: React.FC<{ label: string; pct: number }> = ({ label, pct }) => (
   </div>
 );
 
-/** the round in three numbers: the best take, the average, mine */
-const Reveal: RoundFace['Reveal'] = ({ picks, mine }) => {
+/** the round in three numbers: the best take, the average, mine (also „მესამე ხმა“'s) */
+export const Reveal: RoundFace['Reveal'] = ({ picks, mine }) => {
   const list = (picks ?? []).filter((p): p is number => typeof p === 'number');
   if (!list.length) return <p className="text-center text-[13.5px] font-bold text-[#75685a]">ამ რაუნდში არავინ იმღერა.</p>;
   const best = Math.max(...list);

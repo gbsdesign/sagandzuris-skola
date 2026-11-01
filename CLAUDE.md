@@ -390,7 +390,7 @@
   (`HybridState`, `markTeam`, kept on the device so ✕ only pauses). The room store is generic since then: `utils/gameRoom.ts`
   `createRooms(be, engine, moves)` over a `RoomEngine` (`games` it plays; samshvilde's is `utils/samshvildeRoom.ts`), the
   app's two stores in `utils/gameRoomFirestore.ts` (`rooms` = samshvilde, `roundRooms` = the quick games: `timeUp(key)`,
-  `reveal`, `next`); the rules let a room be opened for the fifteen `ROOM_GAMES`, up to 40 players, an act may carry `ms`.
+  `reveal`, `next`); the rules let a room be opened for the sixteen `ROOM_GAMES`, up to 40 players, an act may carry `ms`.
   Invitations name their game: `data/roomGames.ts` (titles, the hub item, a chat card's `room` = `game:roomId` — a
   samshvilde card keeps the bare id), the Worker's `GAME_TITLES`, `/?open=<game>&c=&r=`, icons
   `components/games/roomGameIcons.ts`; the online tab of every room game is `components/games/RoomSetup.tsx`. Screens
@@ -496,6 +496,26 @@
   `encodeResult(pairs, moves)` and goes by itself — whole at once, else as the time runs out (the face's new `autoSend` /
   `sendLate`, RoundsPlayer). „მარტო“ = one board, fewest moves, the record per size and way (`sg-tsqvilebi-best-<cards>[-same]`);
   its hybrid tab = teams in turn on one phone (`tsqvilebi/Teams.tsx`, a pair goes again, kept in `sg-tsqvilebi-teams`).
+  „მესამე ხმა“ (2026-11-01, the plan's №6, like Smule; mapItem `mesame`, rules `utils/trio.ts` + test, screens `pages/games/mesame/`):
+  the phone sings two voices of a chant from its book notes, I sing the third. A take (`useTrioTake`): the microphone opens, my first
+  note sounds while 3-2-1 is counted, the synthesizer plays the others (`setMuted`, or mine softly with „ჩემი ხმაც ჩუმად“); the take
+  is laid on the score by the delay that fits best (`fitDelay`: the guess = play start + 50 ms + `LAG` 0.12 s, searched −0.1…+0.5 s)
+  and scored per note (`scoreTrio`: in tune = within ¾ semitone of the note in any octave, `pcOff`/`foldNear`; a note's credit = its
+  in-tune share ÷ 0.6, weighted by length; notes after a stop are not counted unless `strict`); the score shows at once, the MP3
+  follows (`making`). The mirror `Lane.tsx` (karaoke lane: my notes run to the „now“ line, my voice a line folded by octaves, passed
+  notes green when sung) + the book's line with the beat band (`components/learn/PartPicture.tsx`, moved out of LearnMode). Tabs
+  „მარტო · ონლაინ · ჰიბრიდული“: „მარტო“ (`Solo.tsx`) = a chant of the class program or the pearls' chests (`chants.ts`,
+  `ChantPicker` with 🎲), my voice, the opening (`openingEnd`: lines until ≥ 12 s, ≤ 3; a chant whose opening is all of it shows no
+  choice — `openingIsWhole`) or the whole, ×0.8 „ნელა“; then %, hits, each line's share, the best per chant·voice·length on the
+  device (`sg-mesame-best`), „მოუსმინე სამივეს“ (`mix.ts` `trioMix`: the others rendered offline, my take on them by the fitted
+  delay, one MP3) and „კლასის ჩატში“ (`ClassSend.tsx`: a line + the voice message; `useMine` = my classes and their program).
+  Online = three rounds of a known chant's opening (`knownChants`, `fixedRounds`), every player in earphones on their own phone,
+  the score = the round's points (sent as the act's `pick` 0…100, sung again before sending allowed, `strict` so a stop counts the
+  rest as missed); 120 s. Hybrid (`Table.tsx`) = one phone's speaker sings one or two voices (`sg-mesame-table`), the class the
+  rest; each voice's first note in turn, 3-2-1, the book's line on screen, the room recorded (≤ 290 s) and sent to the class chat.
+  Its kit (`scripts/print-games/games/mesame-khma.mjs`, 6 sheets): 12 openings in three voices, two a page with each voice's first
+  note named (the app's chant games' chants, seed 29), nine voice cards (I მთქმელი · II მოძახილი · III ბანი, three trios) with one
+  back, a jury sheet (six trios × three rounds × დაწყება · ხმა · ბოლო, 0–2 each); the trios sing, the cards move on after a round.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
