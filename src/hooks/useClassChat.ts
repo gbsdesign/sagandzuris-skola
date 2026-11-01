@@ -6,6 +6,7 @@ import { db } from '../firebase';
 import type { VoiceTake } from '../utils/voiceRecorder';
 import type { RoomGame } from '../utils/gameRoom';
 import { ROOM_GAME_INFO, chatRoomRef } from '../data/roomGames';
+import { foldWord } from '../utils/nakhati';
 
 // A chat lives under a base document: a class's chat under classes/{classId}, a private one under
 // dms/{teacherUid}_{studentUid} (hooks/useDirectChat.ts). Messages are {base}/messages; a voice message's
@@ -17,11 +18,16 @@ export interface ChatMessage {
   name: string;
   photoURL: string;
   teacher: boolean;
-  // 'call': a private call was started (the teacher's "ზარი" button); 'game': an invitation into a class's game room
-  kind: 'text' | 'voice' | 'call' | 'game';
+  // 'call': a private call was started (the teacher's "ზარი" button); 'game': an invitation into a class's game room;
+  // 'draw': a drawing to guess („ნახატობანა“)
+  kind: 'text' | 'voice' | 'call' | 'game' | 'draw';
   text: string;
   /** a 'game' message's room (classes/{id}/games/{room}) */
   room: string;
+  /** a 'draw' message's lines (utils/ink.ts), its word folded (utils/nakhati.ts `foldWord`) and its theme */
+  ink: string;
+  ans: string;
+  theme: string;
   seconds: number;
   wave: string;
   parts: number;
@@ -127,9 +133,12 @@ export const useChat = (base?: string | null) => {
             name: m.name || '',
             photoURL: m.photoURL || '',
             teacher: !!m.teacher,
-            kind: m.kind === 'voice' || m.kind === 'call' || m.kind === 'game' ? m.kind : 'text',
+            kind: m.kind === 'voice' || m.kind === 'call' || m.kind === 'game' || m.kind === 'draw' ? m.kind : 'text',
             text: m.text || '',
             room: typeof m.room === 'string' ? m.room : '',
+            ink: typeof m.ink === 'string' ? m.ink : '',
+            ans: typeof m.ans === 'string' ? m.ans : '',
+            theme: typeof m.theme === 'string' ? m.theme : '',
             seconds: m.seconds || 0,
             wave: m.wave || '',
             parts: m.parts || 0,
@@ -166,6 +175,13 @@ export const sendGameMessage = async (classId: string, author: ChatAuthor, roomI
 };
 
 /** "a call started": shown in the chat as a card with a button into the call */
+/** a drawing to guess into the class's chat (its word folded, so nobody reads it by chance) */
+export const sendDrawMessage = async (classId: string, author: ChatAuthor, d: { ink: string; word: string; theme: string }) => {
+  await addDoc(messagesOf(classChatBase(classId)), {
+    ...stamp(author), kind: 'draw', text: '🎨 გამოიცანი, რა დავხატე!', ink: d.ink, ans: foldWord(d.word), theme: d.theme.slice(0, 40),
+  });
+};
+
 export const sendCallMessage = async (base: string, author: ChatAuthor) => {
   await addDoc(messagesOf(base), { ...stamp(author), kind: 'call', text: '' });
 };

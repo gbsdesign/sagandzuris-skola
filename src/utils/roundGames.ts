@@ -15,6 +15,7 @@ import { TSQ_RULES, type TsqvilebiQ } from './tsqvilebi';
 import { TRIO_RULES, type TrioQ } from './trio';
 import { CHAMO_RULES, type ChamotvaleQ } from './chamotvale';
 import { PANTO_RULES, type PantoQ } from './pantomima';
+import { NAKHATI_RULES, type NakhatiQ } from './nakhati';
 
 // The quick games of a class's room (2026-10-31, the tender's five — the user's „გააკეთე 5-ვე ონლაინ და ჰიბრიდული“):
 // one engine of rounds. A round asks one thing — a song to place on the map, a question, a chant revealed voice by voice,
@@ -25,9 +26,9 @@ import { PANTO_RULES, type PantoQ } from './pantomima';
 // too: the same rounds, the host marks each team.
 
 export type RoundGame = Exclude<RoomGame, 'samshvilde'>;
-export const ROUND_GAMES: readonly RoundGame[] = ['kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri', 'hangi', 'akordi', 'rvakhma', 'ruka', 'gagrdzele', 'hangebi', 'eqo', 'mprinavi', 'tsqvilebi', 'mesame', 'chamotvale', 'pantomima'];
+export const ROUND_GAMES: readonly RoundGame[] = ['kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri', 'hangi', 'akordi', 'rvakhma', 'ruka', 'gagrdzele', 'hangebi', 'eqo', 'mprinavi', 'tsqvilebi', 'mesame', 'chamotvale', 'pantomima', 'nakhati'];
 /** one round's content, by game (the answer included: `secret` keeps it from the players until the reveal) */
-export type RoundQ = KutkheQ | OtkhiQ | ChantRoundQ | TurniriQ | HangiQ | AkordiQ | RvakhmaQ | RukaQ | GagrdzeleQ | HangebiQ | EqoQ | MprinaviQ | TsqvilebiQ | TrioQ | ChamotvaleQ | PantoQ;
+export type RoundQ = KutkheQ | OtkhiQ | ChantRoundQ | TurniriQ | HangiQ | AkordiQ | RvakhmaQ | RukaQ | GagrdzeleQ | HangebiQ | EqoQ | MprinaviQ | TsqvilebiQ | TrioQ | ChamotvaleQ | PantoQ | NakhatiQ;
 
 export interface RoundAnswer { pick: number; ms: number; step: number }
 
@@ -43,13 +44,15 @@ export interface RoundRules<Q extends RoundQ> {
   secret: readonly (keyof Q)[];
   /** a round read back from the host's own JSON */
   valid(q: unknown): q is Q;
+  /** what a round keeps once the game has moved past it (a drawing need not be written again with every move) */
+  spent?(q: Q): Q;
 }
 
 /** each game's rules by its rounds' kind (a game not built yet has none, so its rounds are never read back) */
 const BY_KIND: { [K in RoundQ['kind']]: RoundRules<Extract<RoundQ, { kind: K }>> } = {
   kutkhe: KUTKHE_RULES, otkhi: OTKHI_RULES, khmebi: KHMEBI_RULES, notebi: NOTEBI_RULES, turniri: TURNIRI_RULES, hangi: HANGI_RULES,
   akordi: AKORDI_RULES, rvakhma: RVAKHMA_RULES, ruka: RUKA_RULES, gagrdzele: GAGRDZELE_RULES, hangebi: HANGEBI_RULES,
-  eqo: EQO_RULES, mprinavi: MPRINAVI_RULES, tsqvilebi: TSQ_RULES, mesame: TRIO_RULES, chamotvale: CHAMO_RULES, pantomima: PANTO_RULES,
+  eqo: EQO_RULES, mprinavi: MPRINAVI_RULES, tsqvilebi: TSQ_RULES, mesame: TRIO_RULES, chamotvale: CHAMO_RULES, pantomima: PANTO_RULES, nakhati: NAKHATI_RULES,
 };
 const RULES = BY_KIND as unknown as Record<string, RoundRules<RoundQ> | undefined>;
 export const rulesOf = (q: RoundQ): RoundRules<RoundQ> => RULES[q.kind]!;
@@ -135,7 +138,10 @@ export const nextStep = (s: RoundsState, now = Date.now()): RoundsState => {
 export const nextRound = (s: RoundsState, now = Date.now()): RoundsState => {
   if (s.phase === 'ask') return s;
   if (s.phase === 'end') return s;
-  return s.at + 1 < s.rounds.length ? fresh(s, s.at + 1, now) : { ...s, phase: 'end' };
+  const q = s.rounds[s.at];
+  const spent = rulesOf(q).spent;
+  const done = spent ? { ...s, rounds: s.rounds.map((r, i) => (i === s.at ? spent(r) : r)) } : s;
+  return s.at + 1 < s.rounds.length ? fresh(done, s.at + 1, now) : { ...done, phase: 'end' };
 };
 
 /** a player's answer: once a round, only while it is asked; the last one in reveals the round */
@@ -150,6 +156,15 @@ export const answerRound = (s: RoundsState, seat: number, a: Act): RoundsState =
   const answers = s.answers.map((x, i) => (i === seat ? { pick: a.pick!, ms, step: k.step } : x));
   const next = { ...s, answers };
   return allAnswered(next) ? revealRound(next) : next;
+};
+
+/** the host changed the round being asked — its public part, as „ნახატობანა“'s drawing that grows on every phone: only that
+ * round, only while it is asked, only into a round of its own kind that reads right */
+export const editRound = (s: RoundsState, key: string, q: RoundQ): RoundsState => {
+  if (s.phase !== 'ask' || roundKey(s) !== key) return s;
+  const cur = s.rounds[s.at];
+  if (!cur || cur.kind !== q.kind || !RULES[q.kind]?.valid(q)) return s;
+  return { ...s, rounds: s.rounds.map((r, i) => (i === s.at ? q : r)) };
 };
 
 /** places by score (equal scores share a place) */

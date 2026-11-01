@@ -407,6 +407,14 @@ await t('its time is a whole number of milliseconds', assertFails(setDoc(doc(gp2
 await t('and never below nought', assertFails(setDoc(doc(gp2, G, 'q1', 'acts', 'gp2'), act({ ms: -1 }))));
 await t('a quick game invitation names its game and room', assertSucceeds(setDoc(doc(gp1, 'classes', 'cg', 'messages', 'gm3'), gameMsg({ room: 'kutkhe:q1' }))));
 await t('the host closes the quick game', assertSucceeds(deleteDoc(doc(gp1, G, 'q1'))));
+// „ნახატობანა“ (2026-11-01): a room of it, and a drawing to guess in the class chat
+await t('a member opens a drawing room', assertSucceeds(setDoc(doc(gp1, G, 'n1'), room('gp1', { game: 'nakhati' }))));
+const drawMsg = (extra = {}) => ({ uid: 'gp1', name: 'H', photoURL: '', teacher: false, kind: 'draw', text: '🎨', ink: '01AAAAAAAA', ans: 'x', theme: 'სუფრა', createdAt: serverTimestamp(), ...extra });
+await t('a drawing goes into the class chat', assertSucceeds(setDoc(doc(gp1, 'classes', 'cg', 'messages', 'dm1'), drawMsg())));
+await t('a drawing has its lines', assertFails(setDoc(doc(gp1, 'classes', 'cg', 'messages', 'dm2'), drawMsg({ ink: 5 }))));
+await t('not too many of them', assertFails(setDoc(doc(gp1, 'classes', 'cg', 'messages', 'dm3'), drawMsg({ ink: 'A'.repeat(40001) }))));
+await t('its word is short', assertFails(setDoc(doc(gp1, 'classes', 'cg', 'messages', 'dm4'), drawMsg({ ans: 'A'.repeat(201) }))));
+await t('an outsider cannot post a drawing', assertFails(setDoc(doc(gout, 'classes', 'cg', 'messages', 'dm5'), drawMsg({ uid: 'gout' }))));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();

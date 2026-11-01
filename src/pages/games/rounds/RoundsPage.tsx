@@ -178,7 +178,7 @@ export const RoundsPage: React.FC<{ face: RoundFace; solo?: SoloTab; table?: Rea
           classes={mine}
           session={session}
           closeMine={roundRooms.host.close}
-          hostLine="შენ იქნები წამყვანი: არ თამაშობ, რაუნდებს უძღვები. კლასის წევრებს მოწვევა მიუვათ ჩატში და ტელეფონზე; ვინც შემოვა, ის თამაშობს (40-მდე)."
+          hostLine={face.hostLine ?? 'შენ იქნები წამყვანი: არ თამაშობ, რაუნდებს უძღვები. კლასის წევრებს მოწვევა მიუვათ ჩატში და ტელეფონზე; ვინც შემოვა, ის თამაშობს (40-მდე).'}
           other="ჰიბრიდული, ერთი ტელეფონით"
           onEnter={(c, r) => { void enter(c, r); }}
           onResume={() => setRoomOpen(true)}

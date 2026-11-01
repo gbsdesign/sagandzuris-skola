@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { ChevronRight, Eye, RotateCcw, Trophy } from 'lucide-react';
-import { publicView, type RoundsState } from '../../../utils/roundGames';
+import { publicView, type RoundQ, type RoundsState } from '../../../utils/roundGames';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { Btn } from '../../../components/ui/kit';
 import { triggerHaptic } from '../../../utils/haptics';
@@ -15,7 +15,7 @@ import { AnsweredList, Podium, RoundHead, SnippetBox, Standings, TimerRing, useN
 
 export const RoundsHost: React.FC<{
   s: RoundsState; face: RoundFace; snippet: Snippet; gc: GameCall; onHide: () => void;
-  moves: { timeUp: (key: string) => void; reveal: () => void; next: () => void; again: () => void; close: () => void };
+  moves: { timeUp: (key: string) => void; reveal: () => void; next: () => void; again: () => void; close: () => void; edit: (key: string, q: RoundQ) => void };
 }> = ({ s, face, snippet, gc, onHide, moves }) => {
   const v = publicView(s);
   const asking = s.phase === 'ask';
@@ -113,6 +113,7 @@ export const RoundsHost: React.FC<{
         </div>
         {face.Ask && <face.Ask q={v.q} who="host" step={v.step} steps={v.steps} />}
         {face.Secret && <face.Secret q={s.rounds[s.at]} />}
+        {face.Tool && <face.Tool key={key} q={s.rounds[s.at]} edit={q => moves.edit(key, q)} />}
         {clip && (
           <SnippetBox
             state={snippet.state}
