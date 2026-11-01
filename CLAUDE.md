@@ -428,7 +428,10 @@
   share in per cent is the points (online sent as the act's `pick`, 0…100; a take may be sung again before sending, another
   voice drops it — `Pick`'s `onPick(null)`); no piece of its own (`clip` none). Its hybrid goes one by one (`turns`, `sides`
   „მომღერლები“): the phone passed hand to hand, each one's take kept as their mark; any name can sing (again) out of turn.
-  Every quick game is now built. Not yet tried by real people on several phones.
+  Every quick game is now built. Not yet tried by real people on several phones. Its kit (`khmebis-turniri.mjs`, 7 sheets, 2026-11-01)
+  is a knockout tournament: 18 chants' first phrases, each voice on its own staff with its first note (`openingOf`, seed 31), the
+  brackets for 8 and 16 singers (duels numbered, „№“ of the chant), nine voting cards (ა one side, ბ the other — the class votes
+  for the better of the two who sang the same phrase in the same voice) and the points sheet (three rounds, 0–3, as in the app).
   „დღის ჰანგი“ with a class (2026-11-01, the whole-list stage 1): a room game too (`hangi`, `utils/hangiRounds.ts` + test: six
   steps of the recording's start 1·2·4·7·11·16 s, four names of the same kind and service/region, 1000…250 by step; face
   `pages/games/hangi/face.tsx`, device keys under `store: 'sg-hangi-klasi'` because `sg-hangi` is the daily record). `RoundsPage`
@@ -532,6 +535,23 @@
   every pattern's syllables in 2 and 3, twelve conductor's cards (a little stage of who is in; „ფინალი“ kept aside), the ensemble
   map (six roles × eight passes). `music.mjs` since: a score's voices on a 32nd's grid counted from its start (`onGrid` — a fast run
   no longer pushes its voice late) and a staff too full for its box is drawn again smaller.
+  „ჩამოთვალე!“ (2026-11-01, the plan's №9, like Sporcle; mapItem `chamotvale`, rules `utils/chamotvale.ts` + test, screens
+  `pages/games/chamotvale/`): name every member of a list against the clock (`chamoSeconds`: 15 s + 8 a member, 40–150 s). 17 lists
+  in `data/chamotvaleLists.ts` (five topics: საქართველო, სარწმუნოება, მუსიკა, მსოფლიო, პატარებს; a member's `alt` names, a box's
+  `hint` — a date, a value, a kind —, a list's `also` = notes for near misses; `kutkheebi` = the songs map's 13 regions in
+  `KUTKHE_REGIONS` order, `map: true` fills the map). Written by Claude from well-known facts and the app's data, unchecked — the
+  page says so. Matching (`tryName`): while typing only a whole strict name counts (letters only), and it waits while another
+  unfound member's name goes on from it; a member's own longer name typed after its short one is swallowed (`continuesForm`,
+  Entry's `tail`); Enter tries the lenient form (a last ი dropped), the `also` notes, then one or two letters' slip
+  (`editDistance`, `slipsFor`) when only one member is that near. Latin typing turns Georgian; the screen keys
+  (`sg-chamotvale-keys`, on by default on touch phones; `GeoKeyboard onSpace` adds „ჰარი“) stick to the screen's bottom. Tabs „მარტო ·
+  ონლაინ · ჰიბრიდული“: „მარტო“ (`Solo.tsx`, the best per list `sg-chamotvale-best`); online = a round per list, the found ones
+  as a bitmask (`maskOf`, ≤ 30 members), 100 each, a whole list +100 and up to +300 by time left, sent whole at once or as the
+  time runs out; the reveal counts how many named each one. Hybrid (`Teams.tsx`, kept in `sg-chamotvale-teams`): 2–6 teams take
+  turns on one phone (a turn's clock, a find keeps its team's colour and passes the turn, „ვერ თქვეს“ passes it, every team
+  passing in a row ends it). Its kit (`chamotvale.mjs`, 9 sheets): ten lists a page each (the boxes with the app's hints, the
+  numbered map for the regions), a blank page for the teacher's own list, the host's key on two pages with the other names
+  that count, and the score sheet.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
