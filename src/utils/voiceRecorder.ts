@@ -16,7 +16,8 @@ export interface VoiceTake {
 
 export const WAVE_BARS = 40;
 
-const waveOf = (samples: Float32Array) => {
+/** a take's loudness along it, WAVE_BARS digits 0–9 (a voice message's waveform) */
+export const waveOf = (samples: Float32Array) => {
   const size = Math.max(1, Math.floor(samples.length / WAVE_BARS));
   const rms = Array.from({ length: WAVE_BARS }, (_, b) => {
     let sum = 0;
