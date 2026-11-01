@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
+import { useCallback, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { clipStart } from '../../../utils/kutkhe';
 import { ChantSynth, lessonAudioReady, loadBookScore, playLessonNotes, stopLessonNotes, type BookScore } from '../../../utils/chantSynth';
 import { firstPitches, lowerVoices, notesLength, type Timed } from '../../../utils/chantClips';
@@ -26,6 +26,13 @@ export type Clip =
 // the lesson notes are one stream for the whole app (a new call cuts the one before): whose notes are sounding now
 let notesSeq = 0;
 let notesOwner = 0;
+
+/** a screen's own notes now sounding and when they began (performance.now(), ms): „ექო“ lights its keys by them */
+export interface Sounding { notes: Timed[]; t0: number }
+let sounding: Sounding | null = null;
+const soundSubs = new Set<() => void>();
+const setSounding = (s: Sounding | null) => { sounding = s; soundSubs.forEach(f => f()); };
+export const useSounding = () => useSyncExternalStore(f => { soundSubs.add(f); return () => { soundSubs.delete(f); }; }, () => sounding);
 
 // every screen's piece, to be silenced at once (a singer's microphone must not hear it)
 const hushers = new Set<() => void>();
@@ -110,8 +117,14 @@ export const useSnippet = (seconds: number) => {
       await playLessonNotes(notes);
       const t0 = performance.now();
       position = () => (performance.now() - t0) / 1000;
+      // the synthesizer starts them a little later (chantSynth: 0.06 s ahead)
+      const live: Sounding = { notes, t0: t0 + 60 };
+      setSounding(live);
       // stopped only while still its own: a newer piece of notes has already cut it
-      stopMine = () => { if (notesOwner === mine) { notesOwner = 0; stopLessonNotes(); } };
+      stopMine = () => {
+        if (sounding === live) setSounding(null);
+        if (notesOwner === mine) { notesOwner = 0; stopLessonNotes(); }
+      };
     } else {
       if (!score) return;
       const s = new ChantSynth(score);
