@@ -1,14 +1,14 @@
 import React, { useState } from 'react';
 import { Check, Loader2, Send } from 'lucide-react';
-import { useAuth } from '../../../context';
-import { classChatBase, sendTextMessage, sendVoiceMessage, type ChatAuthor } from '../../../hooks/useClassChat';
-import type { VoiceTake } from '../../../utils/voiceRecorder';
-import { Btn } from '../../../components/ui/kit';
-import { Chip } from '../../../components/games/Chip';
+import { useAuth } from '../../context';
+import { classChatBase, sendTextMessage, sendVoiceMessage, type ChatAuthor } from '../../hooks/useClassChat';
+import type { VoiceTake } from '../../utils/voiceRecorder';
+import { Btn } from '../ui/kit';
+import { Chip } from './Chip';
 import { useMine } from './useMine';
 
-// „მესამე ხმა“'s take to a class chat: a line of what it is and the take as a voice message (the class studio sends its
-// mix the same way). Shown only to one in a class; with several classes the class is picked first.
+// A game's take to a class chat („მესამე ხმა“, „ჩემი გუნდი“): a line of what it is and the take as a voice message (the class
+// studio sends its mix the same way). Shown only to one in a class; with several classes the class is picked first.
 
 export const ClassSend: React.FC<{ text: string; make: () => Promise<VoiceTake> }> = ({ text, make }) => {
   const { user, isAdmin } = useAuth();

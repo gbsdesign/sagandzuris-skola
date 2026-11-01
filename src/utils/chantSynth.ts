@@ -90,7 +90,7 @@ export const singleStrike = (voices: BookScore['voices']): [beat: number, beats:
 };
 
 let sharedCtx: AudioContext | null = null;
-const getCtx = () => {
+export const getCtx = () => {
   if (!sharedCtx) {
     const Ctor = window.AudioContext || (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
     sharedCtx = new Ctor();
@@ -99,7 +99,7 @@ const getCtx = () => {
 };
 
 // Soft "choir pad": two slightly detuned oscillators through a low-pass filter
-const playNote = (ctx: BaseAudioContext, dest: AudioNode, midi: number, bass: boolean, at: number, len: number, gain = 1) => {
+export const playNote = (ctx: BaseAudioContext, dest: AudioNode, midi: number, bass: boolean, at: number, len: number, gain = 1) => {
   const freq = 440 * Math.pow(2, (midi - 69) / 12);
   const env = ctx.createGain();
   const filter = ctx.createBiquadFilter();
@@ -131,7 +131,7 @@ const playNote = (ctx: BaseAudioContext, dest: AudioNode, midi: number, bass: bo
 
 // voice gains -> pans -> master -> compressor -> makeup gain -> soft saturation -> limiter -> output;
 // returns the master, one input per voice and its pan (left -1 … right 1; the middle unless set)
-const buildMix = (ctx: BaseAudioContext, gains: number[]) => {
+export const buildMix = (ctx: BaseAudioContext, gains: number[]) => {
   // last safety only: the saturation below keeps the mix under it
   const limiter = ctx.createDynamicsCompressor();
   limiter.threshold.value = -0.5;

@@ -11,12 +11,12 @@ import { PartPicture } from '../../../components/learn/PartPicture';
 import { pctTone } from '../turniri/Sing';
 import { trioChants } from './chants';
 import { ChantPicker } from './ChantPicker';
-import { ClassSend } from './ClassSend';
+import { ClassSend } from '../../../components/games/ClassSend';
 import { Lane, hintOf } from './Lane';
 import { trioMix } from './mix';
 import { SLOW, VOICE_LABELS, VOICE_SHORT, lengthText, openingIsWhole, sectionOf, systemAt, trioVoices, useChantScore, type LoadedChant, type Section } from './plan';
 import { keepBest, readConf, saveConf, useBest, type TrioConf } from './store';
-import { useMine } from './useMine';
+import { useMine } from '../../../components/games/useMine';
 import { useTrioTake, type TrioTake } from './useTrioTake';
 
 // „მესამე ხმა“ alone (the plan's „ონლაინ“: in the app, in earphones): a chant, my voice, its opening or the whole, the

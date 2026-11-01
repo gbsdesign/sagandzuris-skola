@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
-import { useAuth } from '../../../context';
-import { useMyClasses, useTeachingClasses } from '../../../hooks/useClasses';
+import { useAuth } from '../../context';
+import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
 
 /** my classes (as a member or their teacher), by name, and the chants of their programs (version ids, once each) */
 export const useMine = () => {

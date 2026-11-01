@@ -508,7 +508,7 @@
   `ChantPicker` with 🎲), my voice, the opening (`openingEnd`: lines until ≥ 12 s, ≤ 3; a chant whose opening is all of it shows no
   choice — `openingIsWhole`) or the whole, ×0.8 „ნელა“; then %, hits, each line's share, the best per chant·voice·length on the
   device (`sg-mesame-best`), „მოუსმინე სამივეს“ (`mix.ts` `trioMix`: the others rendered offline, my take on them by the fitted
-  delay, one MP3) and „კლასის ჩატში“ (`ClassSend.tsx`: a line + the voice message; `useMine` = my classes and their program).
+  delay, one MP3) and „კლასის ჩატში“ (`components/games/ClassSend.tsx`: a line + the voice message; `useMine` there = my classes and their program).
   Online = three rounds of a known chant's opening (`knownChants`, `fixedRounds`), every player in earphones on their own phone,
   the score = the round's points (sent as the act's `pick` 0…100, sung again before sending allowed, `strict` so a stop counts the
   rest as missed); 120 s. Hybrid (`Table.tsx`) = one phone's speaker sings one or two voices (`sg-mesame-table`), the class the
@@ -516,6 +516,22 @@
   Its kit (`scripts/print-games/games/mesame-khma.mjs`, 6 sheets): 12 openings in three voices, two a page with each voice's first
   note named (the app's chant games' chants, seed 29), nine voice cards (I მთქმელი · II მოძახილი · III ბანი, three trios) with one
   back, a jury sheet (six trios × three rounds × დაწყება · ხმა · ბოლო, 0–2 each); the trios sing, the cards move on after a round.
+  „ჩემი გუნდი“ (2026-11-01, like Incredibox; mapItem `gundi`, the hub opens its tab by `requestOpen('gundi',
+  'online' | 'table')`; rules `utils/gundi.ts` + test, screens `pages/games/gundi/`): a little theatre of six (`Stage.tsx`, SVG,
+  moved by rAF without React) — მთქმელი, მოძახილი, ბანი stand (the book's voices I–III), ტაში, დოლი, ფანდური sit — over a folk
+  song's phrase that goes round (`loopsOf`: 6–22 s, on a bar line when the song's meter is sure — `songMeter` —, its end going back
+  into its start, ≤ 3 a song; the songs = `SONG_ITEMS` with notes but 9 and 10, `gundi/songs.ts`). Each role has variants
+  (`VARIANTS`: the bass ჰანგი / ბურდონი, claps, drum, panduri patterns — `trackOf`; the syllables a class says, `patternWords`). The
+  engine `gundi/engine.ts` (`GundiStage`: a role joins at once, a new phrase at the pass's end; sounds `gundi/sounds.ts` — clap,
+  drum, Karplus–Strong panduri; a take ≤ 120 s rendered offline from its log, `renderTake`). Tabs „სცენა“ (`Studio.tsx`: ▶, 🎲
+  `randomStage`, ● → save or the class chat) and „ჰიბრიდული“ (`ClassStage.tsx`: each role phone / class / nobody — `CLASS_PARTS`;
+  the conductor's screen: the class's first notes, 3-2-1, a class group tapped comes in at the next pass, beat dots, the players'
+  syllables, the book's lines with the beat band, the room recorded ≤ 290 s). Device keys `sg-gundi`, `sg-gundi-klasi`,
+  `sg-gundi-tab`. Its kit (`chemi-gundi.mjs`, 6 sheets): the eight songs' phrase 1 in three voices between repeat signs (first
+  notes, the drone, the count), six role cards with the app's own figures (`FigureCard` through esbuild + react-dom/server) and
+  every pattern's syllables in 2 and 3, twelve conductor's cards (a little stage of who is in; „ფინალი“ kept aside), the ensemble
+  map (six roles × eight passes). `music.mjs` since: a score's voices on a 32nd's grid counted from its start (`onGrid` — a fast run
+  no longer pushes its voice late) and a staff too full for its box is drawn again smaller.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
