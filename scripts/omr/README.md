@@ -58,5 +58,19 @@ note printed beside a quarter of the same pitch is the other voice's (a unison);
 under „5“ „6“ „7“ fill the time of four. Tried and dropped: a second printed as two stems the same way read as one
 chord (more gaps elsewhere); comparing near-copies of one chant across the volumes (their differences are the editions').
 
+Third round (2026-11-01 night, the user: „გაასწორე ეგ 2000“ — the ~2 000 gaps the second round's audit found). Fixed:
+a beamed note's stem may be up to 9 line spaces long when it ends on a beam (any stem up to 7) — a 16th whose two beams
+stand far from its head looked stemless and was taken for a second voice, after which every other note of the line went
+to that voice and was lost (the most common cause); only a whole note is paired with its neighbour as a second voice (a
+stemless filled or half head is a stem not found); a small head up to 2 pt beside a full one keeps its own stem; a
+second's two notes printed side by side, stems up and down, are two voices (heads touching with the stems on the outer
+sides, or — the stem-up note the lower — a little apart); at a barline a staff's two voices meet again (one left behind
+holds its last note); a „3“ printed against a note head (the words join them: „3œ“) is read from its own text span, and
+a triplet's window is matched by its stems (a stem up stands at the head's right edge), also among one stem direction's
+notes (a head both voices sing stands in the row twice); a dot after a rest. Whatever gap is left is filled: a note
+lasts until its voice's next note or rest, and a voice's last note until the line ends (the audit still prints the gaps
+as read, before this). All 4 153 files read again: gaps 2 073 → 947, lines whose voices end apart 205 → 95; 534 files
+changed and were uploaded.
+
 Read versions for comparing go to `%TEMP%/omr-cmp`, not into the repo. The rules (what counts as a duplicate,
 which tab, file numbers like 76a = 761, from vol. IV on 12b = 1202) are in `src/data/CLAUDE.md` and `TSIRVA_ANTH` in `src/data/tsirvaChants.ts`.
