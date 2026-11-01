@@ -611,6 +611,20 @@
   round goes to its end; turn clock 0/30/60 s, „წინა სვლის გაუქმება“, kept in `sg-khazi-teams`; on a computer the line stands left
   of the card. Its kit (`drois-khazi.mjs`, 9 sheets): eighteen cards of each deck (the event in front, the year + note behind), two
   sheets a deck, rules with a drawn line.
+- **„ჩემი ვაზი“** (2026-11-01, the plan's Georgian game №1, like Tamagotchi; mapItem `vazi`, rules `utils/vazi.ts` + test, picture
+  `utils/vineShape.ts` + `pages/games/vazi/VineArt.tsx`): every member's vine grows from what they did — nothing new is stored, it is
+  read from `students/{uid}` (`deedsOf`: habits ticked, daily games `done`, the learning mode's parts by `at`, polished pearls, drills'
+  last days; a guest's from the device's `sg-<game>` daily records only — `vazi/useVine.ts`). A deed = a leaf, ≤ `LEAF_CAP` 8 a day;
+  a month's leaves give bunches at `BUNCH_AT` 12 · 30 · 50, green that month, ripe (purple and golden by month) after; the season
+  runs from November (`seasonOf`), earlier seasons' bunches are in the qvevri (`cellar`). The wood grows from every leaf ever
+  (`leaves`), the leaves drawn are the last `RECENT_DAYS` 30 days' (`recent`, picked over all the wood by `leafPlaces` — a thin vine
+  loses them all over); three idle days yellow it (`yellowShare`), a month bare, never dead. Tabs „ონლაინ · ჰიბრიდული“ (`VaziGame`):
+  „ონლაინ“ = my vine (`vazi/Mine.tsx`: picture, today's deeds, the month's bunch bar, the last 14 days, how it grows); „ჰიბრიდული“ =
+  „რთველი“ (`vazi/Harvest.tsx`): a teacher picks a class, every member's vine on one screen (`useClassStudents`), „დავითვალოთ!“
+  counts the season's bunches vine by vine. No rules change. Its kit (`chemi-vazi.mjs`, 6 sheets): a month's vine to colour (one
+  cane winding up the page — the app's vine is too dense to colour —, 63 numbered leaves, the bunches under the 12th, 30th and
+  50th) with „ჩემი თვე“ behind it (the deeds, 31 days × 8 little leaves), leaf and bunch stickers, the class's harvest chart with
+  the class qvevri (210 numbered grapes) behind it, four certificates.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in

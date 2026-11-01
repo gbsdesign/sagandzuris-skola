@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
-  AudioLines, Bird, Brain, Castle, Compass, Crown, Dice5, Download, Drama, Flame, Gamepad2, Gem, Grid2x2Check, Headphones, Hourglass, Layers3, Info, Landmark, LayoutGrid, ListChecks, ListMusic, ListOrdered, Map, MapPinned, MessageCircle,
+  AudioLines, Bird, Brain, Castle, Compass, Crown, Dice5, Download, Drama, Flame, Gamepad2, Gem, Grape, Grid2x2Check, Headphones, Hourglass, Layers3, Info, Landmark, LayoutGrid, ListChecks, ListMusic, ListOrdered, Map, MapPinned, MessageCircle,
   MicVocal, Music2, Piano, Puzzle, Repeat, Route, Shapes, ScrollText, SpellCheck, TextSearch, Users, Waves, Wifi,
 } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
@@ -50,6 +50,8 @@ import ChamotvaleGame from './games/ChamotvaleGame';
 import BadeGame from './games/BadeGame';
 import TsartseraGame from './games/TsartseraGame';
 import KhaziGame from './games/KhaziGame';
+import VaziGame from './games/VaziGame';
+import { useVine } from './games/vazi/useVine';
 
 // „თამაშები“: the hub of the games (2026-10-27; one list since 2026-10-30, the user's „ყველა თამაში 1 სიად“). A card per
 // game: its name (the known game it answers to in brackets; ⓘ unfolds what that game is), one line, and a button per variant it
@@ -62,7 +64,7 @@ type Access = ReturnType<ReturnType<typeof useAccess>['section']>;
 const ICON: Record<string, React.ReactNode> = {
   margalitebi: <Gem />, 'dghis-hangi': <Headphones />, 'dghis-sitqva': <SpellCheck />, otkheuli: <Shapes />,
   amikhseni: <MessageCircle />, gatvla: <Dice5 />, 'tskheli-churchkhela': <Flame />, 'ra-sad-rodis': <Brain />,
-  'okros-khana': <Map />, 'samshvildis-ghame': <Castle />, 'saidanaa-simghera': <MapPinned />, 'otkhidan-erti': <ListChecks />, 'khma-khmad': <AudioLines />, 'sam-notshi': <Music2 />, 'khmebis-turniri': <MicVocal />, 'kartuli-akordi': <Piano />, 'rva-khma': <Waves />, 'rukis-viktorina': <Compass />, gagrdzele: <ListMusic />, hangebi: <Puzzle />, eqo: <Repeat />, 'mprinavi-notebi': <Bird />, 'khmis-tsqvilebi': <Grid2x2Check />, 'mesame-khma': <Layers3 />, 'chemi-gundi': <Drama />, chamotvale: <ListOrdered />, 'asoebis-bade': <TextSearch />, 'khutsuri-tsartsera': <ScrollText />, 'drois-khazi': <Hourglass />, qaravani: <Route />, 'ori-takhti': <Crown />, 'lurji-supra': <LayoutGrid />, 'mepis-kari': <Landmark />,
+  'okros-khana': <Map />, 'samshvildis-ghame': <Castle />, 'saidanaa-simghera': <MapPinned />, 'otkhidan-erti': <ListChecks />, 'khma-khmad': <AudioLines />, 'sam-notshi': <Music2 />, 'khmebis-turniri': <MicVocal />, 'kartuli-akordi': <Piano />, 'rva-khma': <Waves />, 'rukis-viktorina': <Compass />, gagrdzele: <ListMusic />, hangebi: <Puzzle />, eqo: <Repeat />, 'mprinavi-notebi': <Bird />, 'khmis-tsqvilebi': <Grid2x2Check />, 'mesame-khma': <Layers3 />, 'chemi-gundi': <Drama />, chamotvale: <ListOrdered />, 'asoebis-bade': <TextSearch />, 'khutsuri-tsartsera': <ScrollText />, 'drois-khazi': <Hourglass />, 'chemi-vazi': <Grape />, qaravani: <Route />, 'ori-takhti': <Crown />, 'lurji-supra': <LayoutGrid />, 'mepis-kari': <Landmark />,
 };
 
 const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string }>> = { online: Wifi, hybrid: Users, noPhone: Download };
@@ -72,7 +74,7 @@ const INNER: Record<string, React.FC> = {
   hangi: HangiGame, amikhseni: AmikhseniGame, sitqva: SitqvaGame, otkheuli: OtkheuliGame, gatvla: GatvlaGame, churchkhela: ChurchkhelaGame, rsr: RaSadRodisGame,
   samshvilde: SamshvildeGame, kutkhe: KutkheGame, otkhi: OtkhiGame, khmebi: KhmebiGame, notebi: NotebiGame, turniri: TurniriGame,
   akordi: AkordiGame, rvakhma: RvakhmaGame, ruka: RukaGame, gagrdzele: GagrdzeleGame, hangebi: HangebiGame,
-  eqo: EqoGame, mprinavi: MprinaviGame, tsqvilebi: TsqvilebiGame, mesame: MesameGame, gundi: GundiGame, chamotvale: ChamotvaleGame, bade: BadeGame, tsartsera: TsartseraGame, khazi: KhaziGame,
+  eqo: EqoGame, mprinavi: MprinaviGame, tsqvilebi: TsqvilebiGame, mesame: MesameGame, gundi: GundiGame, chamotvale: ChamotvaleGame, bade: BadeGame, tsartsera: TsartseraGame, khazi: KhaziGame, vazi: VaziGame,
 };
 
 const BTN = 'inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full text-[13.5px] font-bold transition-[background-color,transform] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#7a2028]/50';
@@ -159,6 +161,7 @@ export const GamesPage: React.FC = () => {
   const bade = useDailyRecord('bade');
   const tsartsera = useDailyRecord('tsartsera');
   const khazi = useDailyRecord('khazi');
+  const vazi = useVine();
   const [soon, setSoon] = useState<string | null>(null);
   const today = useMemo(() => tbilisiToday(), []);
 
@@ -185,6 +188,7 @@ export const GamesPage: React.FC = () => {
       : g.id === 'asoebis-bade' && bade.loaded ? badeMeta(bade.days, today)
       : g.id === 'khutsuri-tsartsera' && tsartsera.loaded ? tsMeta(tsartsera.days, today)
       : g.id === 'drois-khazi' && khazi.loaded ? khaziMeta(khazi.days, today)
+      : g.id === 'chemi-vazi' && vazi.loaded && vazi.vine.leaves ? `${vazi.vine.recent} ფოთოლი · ${vazi.vine.seasonBunches} მტევანი`
       : undefined;
 
   const play = (g: GameDef, state: Access, mode: GameMode) => {
@@ -193,7 +197,7 @@ export const GamesPage: React.FC = () => {
     if (state !== 'open') { setSoon(`„${g.title}“ ჯერ მზადდება — მალე დაემატება`); return; }
     // a game played in a class's room („სამშვილდის ღამე“, the quick games), „ჩემი გუნდი“ and the word games with teams open
     // on the variant tapped
-    if (isRoomGame(g.item) || g.item === 'gundi' || g.item === 'sitqva' || g.item === 'otkheuli' || g.item === 'bade' || g.item === 'tsartsera' || g.item === 'khazi') requestOpen(g.item, mode === 'online' ? 'online' : 'table');
+    if (isRoomGame(g.item) || g.item === 'gundi' || g.item === 'sitqva' || g.item === 'otkheuli' || g.item === 'bade' || g.item === 'tsartsera' || g.item === 'khazi' || g.item === 'vazi') requestOpen(g.item, mode === 'online' ? 'online' : 'table');
     if (g.item) { openMapItem(g.item); return; }
     if (g.page) { if (g.panel) openPathPanel(g.panel); navigateTo(g.page); }
   };
