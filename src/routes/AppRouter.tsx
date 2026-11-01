@@ -171,7 +171,10 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   // a member still waiting to be let in: the profile shows who they are, not the member's tools
   const waiting = useMembership().status === 'pending';
   // „მარგალიტები“ (section margalitebi) shows on the path only while the admin's switch and the member's access let it
-  const pathOrbs = PATH_ORBS.filter(o => o.id !== 'pearls' || access.section('margalitebi') === 'open');
+  // every round button has its own switch too (data/sections EXTRA_SWITCHES)
+  const pathOrbs = PATH_ORBS.filter(o => (o.id === 'pearls' ? access.section('margalitebi') === 'open' : access.on(o.id)));
+  const pathToday = access.section('gza') === 'open';
+  const habitsOpen = access.section('chvevebi') === 'open';
   const {
     selectedChantVariants,
     handleToggleSong,
@@ -233,7 +236,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
         {/* the head card, the admin panel's row (admins), my outfit and home buttons, ხუცური, then the details folded */}
         <StudentProfileCard waiting={waiting} slot={<>
           <AdminEntry />
-          {!waiting && <ChemiSamosi side={
+          {!waiting && access.on('samosi') && <ChemiSamosi side={
             <span className="block">
               <span className="block font-serif-ge text-[15px] font-bold text-[#4a3426]">ჩემი სამოსი</span>
               <span className="block text-[13px] text-[#8a7a6a] leading-snug">ჩოხა და ქართული კაბა — ნაწილი ნაწილ</span>
@@ -245,7 +248,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           {/* the Android app's home-screen widgets */}
           {!waiting && <WidgetLinkCard />}
           {/* the feasts, fasts and my lessons in the phone's calendar */}
-          {!waiting && <CalendarLinkCard />}
+          {!waiting && access.on('calendar') && <CalendarLinkCard />}
         </>} />
         {/* install the app · leave the account (asks first) */}
         <div className="max-w-lg mx-auto mt-3"><ProfileActions /></div>
@@ -276,10 +279,10 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
               {/* „ჩემი დღე“: the page title sits in the top bar; PathToday's „დღეს“ card first (a lesson, an assignment, a review —
                   when there is one), the five round buttons (სამოსი, ნასწავლი — with the teacher's assignments —, ოსტატობა,
                   სამუშაო, მარგალიტები) in the member's order, the habits under them */}
-              <PathToday />
+              {pathToday && <PathToday />}
               <PathTabs
-                orbs={{ labels: pathOrbs, render: order => <PathOrbs order={order} /> }}
-                cards={[
+                orbs={pathOrbs.length ? { labels: pathOrbs, render: order => <PathOrbs order={order} /> } : undefined}
+                cards={!habitsOpen ? [] : [
                   {
                     id: 'habits',
                     label: 'ჩვევები',

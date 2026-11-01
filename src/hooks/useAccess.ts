@@ -3,7 +3,7 @@ import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import type { PageType } from '../context/NavigationContext';
-import { KidsMode, SECTIONS, SectionId, sectionOfPage } from '../data/sections';
+import { ExtraId, KidsMode, SECTIONS, SectionId, sectionOfPage } from '../data/sections';
 import { useSections } from './useSections';
 import { FeatureId, useMembership } from '../utils/memberAccess';
 
@@ -67,12 +67,27 @@ export const useAccess = () => {
     if (!member && !GUEST_OPEN.includes(id)) return 'locked';
     return 'open';
   };
+  // a part of the site with its own switch (data/sections EXTRA_SWITCHES): admins always, others while it is open
+  const on = (id: ExtraId): boolean => isAdmin || state[id] === 'open';
   const page = (p: PageType): Access => {
+    // „საგანძურის გზა“ holds the habits, the outfit, the pearls…: it stays while any of its parts is open
+    if (p === 'gz') {
+      const g = section('gza');
+      if (g === 'open' || g === 'locked') return g;
+      const parts = [section('chvevebi'), section('margalitebi')];
+      if (parts.includes('open')) return 'open';
+      if (parts.includes('locked')) return 'locked';
+      if (member && (['samosi', 'learn', 'manera', 'work'] as ExtraId[]).some(on)) return 'open';
+      return g;
+    }
     const id = sectionOfPage(p);
     if (id) return section(id);
-    if (p === 'class') return membership.can('classes') ? 'open' : 'hidden';
+    if (p === 'class' || p === 'teacher') return membership.can('classes') ? 'open' : 'hidden';
     if (p === 'messages' || p === 'dm') return membership.can('messages') ? 'open' : 'hidden';
+    if (p === 'prayer' || p === 'commemoration') return on('prayers') ? 'open' : 'hidden';
+    if (p === 'abituri') return on('abituri') ? 'open' : 'hidden';
+    if (p === 'birthdays') return on('birthdays') ? 'open' : 'hidden';
     return 'open';
   };
-  return { section, page, kids, member, can: membership.can, status: membership.status };
+  return { section, page, on, kids, member, can: membership.can, status: membership.status };
 };

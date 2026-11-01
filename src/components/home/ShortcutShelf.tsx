@@ -18,7 +18,7 @@ import { useMyPsalterGroups } from '../../hooks/usePsalter';
 import { useAccess } from '../../hooks/useAccess';
 import { cycleOf, georgiaToday, kathismasOf, ownersIn } from '../../utils/psalter';
 import {
-  MAX_SHORTCUTS, coreOf, habitOfShortcut, kindOf, markShortcutDone, refOf, roleAllows, saveShortcuts, sectionOfShortcut,
+  MAX_SHORTCUTS, coreOf, habitOfShortcut, kindOf, markShortcutDone, refOf, roleAllows, saveShortcuts, sectionOfShortcut, switchOfShortcut,
   shortcutLabel, useMyShortcuts,
 } from '../../utils/shortcuts';
 import { triggerHaptic } from '../../utils/haptics';
@@ -179,6 +179,8 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
       if (!shortcutLabel(id) || !roleAllows(id, { isTeacher, isAdmin, isSuperAdmin })) return false;
       // a habit taken off my list takes its button with it
       if (kindOf(id) === 'habit' && !myHabits.some(h => h.id === refOf(id))) return false;
+      const sw = switchOfShortcut(id);
+      if (sw && !access.on(sw)) return false;
       const sec = sectionOfShortcut(id);
       return !sec || access.section(sec) !== 'hidden';
     }),

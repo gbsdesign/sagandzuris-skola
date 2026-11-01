@@ -47,7 +47,7 @@ export const GrapeNav: React.FC = () => {
     .filter(s => s.access !== 'hidden')
     .map(s => (s.access === 'soon' ? { ...s, go: undefined } : s));
 
-  const galobaOpen = shown.some(s => s.id === 'galoba' && s.access === 'open');
+  const galobaOpen = shown.some(s => s.id === 'galoba' && s.access === 'open') && access.on('abituri');
 
   const press = (s: (typeof shown)[number]) => {
     triggerHaptic(10);

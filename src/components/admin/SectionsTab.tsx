@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { deleteField, doc, setDoc } from 'firebase/firestore';
-import { LayoutGrid, Baby, Check, CalendarClock, X } from 'lucide-react';
+import { LayoutGrid, Baby, Check, CalendarClock, EyeOff, X } from 'lucide-react';
 import { db } from '../../firebase';
-import { SECTIONS, SectionId, SectionState } from '../../data/sections';
+import { EXTRA_SWITCHES, SECTIONS, SectionId, SectionState, SwitchId } from '../../data/sections';
 import { useSections } from '../../hooks/useSections';
 import { tbilisiToday } from '../../utils/hangi';
 import { shortDate } from '../../utils/dateNames';
 import { Fold } from './Fold';
 import { changed } from './changed';
-import { Btn } from '../ui/kit';
+import { Btn, askConfirm } from '../ui/kit';
 
 // each state with its own colour, so the list reads at a glance
 const STATES: { id: SectionState; label: string; dot: string; on: string }[] = [
@@ -29,7 +29,7 @@ export const SectionsTab: React.FC<{ onMessage: (t: string, type: 'success' | 'e
   const [kids, setKids] = useState<SectionId[]>(saved.kidsDefault);
   useEffect(() => { setState(saved.state); setKids(saved.kidsDefault); }, [saved]);
 
-  type Put = { state?: Partial<typeof state>; kidsDefault?: SectionId[]; openOn?: Partial<Record<SectionId, string | ReturnType<typeof deleteField>>> };
+  type Put = { state?: Partial<typeof state>; kidsDefault?: SectionId[]; openOn?: Partial<Record<SwitchId, string | ReturnType<typeof deleteField>>> };
   const put = (next: Put) =>
     setDoc(doc(db, 'settings', 'sections'), { ...next, updatedAt: new Date().toISOString() }, { merge: true });
   const write = async (next: Put) => {
@@ -44,11 +44,11 @@ export const SectionsTab: React.FC<{ onMessage: (t: string, type: 'success' | 'e
     }
   };
   // every tap is logged and can be taken back for a few seconds (only that section goes back)
-  const nameOf = (id: SectionId) => SECTIONS.find(s => s.id === id)?.label || id;
+  const nameOf = (id: SwitchId) => [...SECTIONS, ...EXTRA_SWITCHES].find(s => s.id === id)?.label || id;
   const stateName = (st: SectionState) => STATES.find(x => x.id === st)?.label || st;
   // a day kept for the section, or the field's removal
   const dayOr = (day?: string) => day || deleteField();
-  const setSection = async (id: SectionId, st: SectionState) => {
+  const setSection = async (id: SwitchId, st: SectionState) => {
     const was = state[id];
     if (was === st) return;
     const wasStored = saved.stored[id], wasDay = saved.openOn[id];
@@ -56,6 +56,19 @@ export const SectionsTab: React.FC<{ onMessage: (t: string, type: 'success' | 'e
     if (await write({ state: { [id]: st }, openOn: { [id]: deleteField() } })) {
       changed('section', `„${nameOf(id)}“ — ${stateName(st)} (იყო ${stateName(was)})`, id,
         () => put({ state: { [id]: wasStored }, openOn: { [id]: dayOr(wasDay) } }));
+    }
+  };
+  // „ყველას დამალვა“: every section and part hidden at once (asks first; „გაუქმება“ puts each one back as it was)
+  const ALL: SwitchId[] = [...SECTIONS.map(x => x.id), ...EXTRA_SWITCHES.map(x => x.id)];
+  const hideAll = async () => {
+    const ok = await askConfirm({ title: 'ყველაფრის დამალვა?', text: 'ყველა განყოფილება და ნაწილი დაიმალება ყველასთვის, ადმინების გარდა. შემდეგ სასურველებს თითო-თითოდ გახსნი.', ok: 'დამალვა', danger: true });
+    if (!ok) return;
+    const was = { ...saved.stored };
+    const next = Object.fromEntries(ALL.map(id => [id, 'hidden'])) as Record<SwitchId, SectionState>;
+    setState({ ...state, ...next });
+    if (await write({ state: next })) {
+      changed('section', 'ყველა განყოფილება დაიმალა', 'all',
+        () => put({ state: Object.fromEntries(ALL.map(id => [id, was[id]])) as Record<SwitchId, SectionState> }));
     }
   };
   // the day a „მალე“ section opens by itself ('' = no day)
@@ -83,7 +96,7 @@ export const SectionsTab: React.FC<{ onMessage: (t: string, type: 'success' | 'e
   };
 
   // the folded card's line: how many sections stand in each state
-  const summary = STATES.map(st => ({ st, n: SECTIONS.filter(s => state[s.id] === st.id).length }))
+  const summary = STATES.map(st => ({ st, n: ALL.filter(id => state[id] === st.id).length }))
       .filter(x => x.n > 0)
       .map(({ st, n }, i) => (
         <React.Fragment key={st.id}>
@@ -98,6 +111,10 @@ export const SectionsTab: React.FC<{ onMessage: (t: string, type: 'success' | 'e
         <Baby className="w-4 h-4 shrink-0 text-[#7a2028]" />
         <span>„ბავშვებს“ — განყოფილება ჩანს საბავშვო რეჟიმშიც (ახლად ჩართული რეჟიმის საწყისი სია).</span>
       </p>
+      <p className="mb-1 text-[12.5px] text-[#8a7a6a] leading-snug">ადმინები ყველაფერს ყოველთვის ხედავენ — დამალული სხვებს აღარ უჩანთ.</p>
+      <div className="py-2">
+        <Btn size="sm" icon={<EyeOff />} onClick={hideAll}>ყველას დამალვა</Btn>
+      </div>
       <ul>
         {SECTIONS.map(sec => {
           const kid = kids.includes(sec.id);
@@ -158,6 +175,29 @@ export const SectionsTab: React.FC<{ onMessage: (t: string, type: 'success' | 'e
             </li>
           );
         })}
+      </ul>
+      <p className="mt-4 mb-1 text-[13px] font-bold text-[#4a3426]">საიტის სხვა ნაწილები</p>
+      <ul>
+        {EXTRA_SWITCHES.map(x => (
+          <li key={x.id} className="py-2.5 border-b border-[#f1e8d9] last:border-0 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3">
+            <span className="min-w-0">
+              <span className="block text-[14.5px] font-semibold text-[#2a2017] leading-tight">{x.label}</span>
+              <span className="block text-[12px] text-[#8a7a6a] leading-snug">{x.hint}</span>
+            </span>
+            <span className="grid grid-cols-2 p-0.5 rounded-full bg-[#f4ece0] shrink-0">
+              {STATES.filter(st => st.id !== 'soon').map(st => {
+                const on = (state[x.id] === 'open') === (st.id === 'open');
+                return (
+                  <button key={st.id} type="button" aria-pressed={on} onClick={() => !on && setSection(x.id, st.id)}
+                    className={`h-10 px-2.5 inline-flex items-center justify-center gap-1.5 rounded-full text-[12.5px] font-bold cursor-pointer transition ${on ? `bg-white shadow-[0_1px_3px_rgba(74,52,38,0.14)] ${st.on}` : 'text-[#8a7a6a] hover:text-[#4a3426]'}`}>
+                    {on && <span className={`w-1.5 h-1.5 rounded-full ${st.dot}`} />}
+                    {st.label}
+                  </button>
+                );
+              })}
+            </span>
+          </li>
+        ))}
       </ul>
     </Fold>
   );

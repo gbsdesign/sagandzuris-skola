@@ -5,6 +5,7 @@ import { ShortcutShelf } from '../components/home/ShortcutShelf';
 import { TodaySaintsCard } from '../components/calendar/TodaySaintsCard';
 import { BirthdaysSoon } from '../components/home/BirthdaysSoon';
 import { LearnDue } from '../components/home/LearnDue';
+import { useAccess } from '../hooks/useAccess';
 import { SAYINGS_ABOVE, SAYINGS_BELOW, Saying } from '../data/sayings';
 
 interface HomePageProps {
@@ -46,6 +47,7 @@ const FatherSaying: React.FC<Saying & { className?: string }> = ({ text, author,
 
 export const HomePage: React.FC<HomePageProps> = ({ logoUrl }) => {
   const slot = useSayingSlot();
+  const access = useAccess();
   return (
     <div className="relative overflow-hidden px-5 py-8 sm:px-10 sm:py-12 text-center flex flex-col items-center text-[#2a2017]">
       {/* School logo straight on the parchment (multiply drops its white background), vine ornament under it */}
@@ -54,10 +56,10 @@ export const HomePage: React.FC<HomePageProps> = ({ logoUrl }) => {
           the learning mode's reviews due today; with neither, no card (empty:hidden) */}
       <div className="relative mb-3 w-full max-w-md rounded-2xl bg-white/85 ring-1 ring-[#e8dcc8] shadow-[0_8px_18px_-14px_rgba(122,32,40,0.5)] overflow-hidden divide-y divide-[#f1e8d9] empty:hidden">
         <TodaySaintsCard />
-        <LearnDue />
+        {access.on('learn') && <LearnDue />}
       </div>
       {/* birthdays: within five days for teachers and admins, today's for members */}
-      <BirthdaysSoon className="relative mb-3" />
+      {access.on('birthdays') && <BirthdaysSoon className="relative mb-3" />}
       <div className="mb-3" aria-hidden />
       {/* holy fathers' words, changing every 15 minutes: toward God above the logo, toward people under the Patriarch's "cross" */}
       <FatherSaying key={`a${slot}`} {...SAYINGS_ABOVE[slot % SAYINGS_ABOVE.length]} className="mb-6" />
