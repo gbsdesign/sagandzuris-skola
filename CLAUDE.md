@@ -389,7 +389,7 @@
   (`HybridState`, `markTeam`, kept on the device so ✕ only pauses). The room store is generic since then: `utils/gameRoom.ts`
   `createRooms(be, engine, moves)` over a `RoomEngine` (`games` it plays; samshvilde's is `utils/samshvildeRoom.ts`), the
   app's two stores in `utils/gameRoomFirestore.ts` (`rooms` = samshvilde, `roundRooms` = the quick games: `timeUp(key)`,
-  `reveal`, `next`); the rules let a room be opened for the nine `ROOM_GAMES`, up to 40 players, an act may carry `ms`.
+  `reveal`, `next`); the rules let a room be opened for the ten `ROOM_GAMES`, up to 40 players, an act may carry `ms`.
   Invitations name their game: `data/roomGames.ts` (titles, the hub item, a chat card's `room` = `game:roomId` — a
   samshvilde card keeps the bare id), the Worker's `GAME_TITLES`, `/?open=<game>&c=&r=`, icons
   `components/games/roomGameIcons.ts`; the online tab of every room game is `components/games/RoomSetup.tsx`. Screens
@@ -443,6 +443,14 @@
   files 8t+1…8t+8; five left out whose first phrase another tone's heirmos shares note for note — the test checks it on the notes),
   12 s then 26 s on the synthesizer, eight buttons, the reveal plays the tone's model to compare (`modelOf`), the eight models listed
   under the tabs. Shared: `rounds/steps.tsx` (the step bar), `rounds/samples.tsx` (a sample's ▶, `useSampler`).
+  „რუკის ვიქტორინა“ (2026-11-01, the plan's №11, like Seterra; mapItem `ruka`, `utils/ruka.ts` + test): a name — a town, a lake, a
+  dish, a fortress, a person — or a folk song is put on the songs map's 13 regions (`KutkheMap` with `near={false}`, Tbilisi for
+  ქალაქური — `rukaRegionName`), right 1000…500 by speed, 15 s (a song 20 s); 121 places of five topics in `data/rukaPlaces.ts`
+  (a note each, written by Claude, unchecked; no name may name its region — `NAMES_A_REGION`, the test checks it) + the songs
+  (`data/rukaPool.ts`: `kutkhePool` takes when they can be heard — „მხოლოდ ჰანგით“ hides every title —, else the known titles);
+  `drawRuka` turns the topics, spreads the regions (the least asked first, never one twice running), the unseen first. Its tabs
+  „მარტო · ონლაინ · ჰიბრიდული“: „მარტო“ (`ruka/Solo.tsx`) = ten in a row on my phone, the best run kept on the device (`sg-ruka-*`
+  in `ruka/store.ts`); hybrid marks 1 · 0.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
@@ -483,7 +491,9 @@
   back = the app's reveal colours on a small map), „ქართული აკორდი“ (a guide a team — the nine kinds on the bass რე, the plainest four
   big on its back —, the host's four games of ten chords drawn by the app's rules with fixed seeds, three singers or a piano; chords by
   `abcChords`, `staff(abc, { zoom })` sizes one box) and „რვა ხმა“ (the eight tones' models, two heirmoi each, a sheet a child; the
-  teacher's 24 more, three a tone, two games of twelve; every staff on the octave-down clef).
+  teacher's 24 more, three a tone, two games of twelve; every staff on the octave-down clef). The big region map of these two
+  map kits is `scripts/print-games/regionMap.mjs` (`mapBoard`, `miniMap`, `regionKey`); „რუკის ვიქტორინა“'s kit = that map + 52
+  place cards (four a region, the name in front, the region, a small map and the note behind), team and score sheets.
 - **No religious pictures in the games (the user's rule, 2026-11-01; corrected the same day: „რელიგიური და მუსიკალური კითხვები
   დატოვე, უბრალოდ ვიზუალს ნუ გამოიყენებ“)**: no cross, church, icon or domed-church mark anywhere in a game or a print kit (the
   series emblem is `grapeEmblem` in `scripts/print-games/lib.mjs`, the Catan kit's shields carry an eight-rayed sun, the caravan

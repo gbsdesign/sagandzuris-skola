@@ -7,7 +7,8 @@ import { triggerHaptic } from '../../../utils/haptics';
 
 // „საიდანაა სიმღერა?“'s map: the songs map's wooden puzzle (components/maps/RegionPuzzleMap.tsx). To answer, a region is
 // tapped on the map or on its roomy chip below (the map's pieces are small on a phone); at the reveal the right region is
-// green, its neighbours light green, my own pick ringed, and the host sees how many put the song where.
+// green, its neighbours light green, my own pick ringed, and the host sees how many put the song where. „რუკის ვიქტორინა“
+// (2026-11-01) uses it too: its own names (`nameOf` — Tbilisi for ქალაქური) and no neighbours' shade (`near={false}`).
 
 const { width, height } = GEORGIA_MAP_SIZE;
 const regionOf = (i: number) => FOLK_REGIONS.find(r => r.id === KUTKHE_REGIONS[i])!;
@@ -17,17 +18,18 @@ const RIGHT = '#2f7d4f';
 const NEAR = '#a8d1b4';
 const REST = '#e9dfcd';
 
-type Props =
+type Props = { nameOf?: (i: number) => string; near?: boolean } & (
   | { mode: 'pick'; pick: number | null; onPick: (i: number) => void }
-  | { mode: 'reveal'; right: number; mine?: number | null; counts?: number[] | null };
+  | { mode: 'reveal'; right: number; mine?: number | null; counts?: number[] | null });
 
 export const KutkheMap: React.FC<Props> = props => {
+  const name = props.nameOf ?? regionName;
   const pick = props.mode === 'pick' ? props.pick : null;
   const tap = (i: number) => { if (props.mode !== 'pick') return; triggerHaptic(8); props.onPick(i); };
   const fill = (i: number) => {
     if (props.mode === 'pick') return regionOf(i).color;
     if (i === props.right) return RIGHT;
-    return isNear(props.right, i) ? NEAR : REST;
+    return props.near !== false && isNear(props.right, i) ? NEAR : REST;
   };
   const ringed = props.mode === 'pick' ? pick : props.mine ?? null;
   const tbilisi = GEORGIA_MAP_SHAPES.kalakuri.label;
@@ -54,10 +56,10 @@ export const KutkheMap: React.FC<Props> = props => {
               strokeLinejoin="round"
               filter="url(#kutkhe-shadow)"
               {...(props.mode === 'pick' ? {
-                role: 'button', tabIndex: 0, 'aria-label': regionName(i), 'aria-pressed': ring,
+                role: 'button', tabIndex: 0, 'aria-label': name(i), 'aria-pressed': ring,
                 onClick: () => tap(i),
                 onKeyDown: (e: React.KeyboardEvent) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tap(i); } },
-              } : { 'aria-label': regionName(i) })}
+              } : { 'aria-label': name(i) })}
               className={props.mode === 'pick' ? 'cursor-pointer outline-none' : undefined}
               style={{ opacity: props.mode === 'pick' && pick !== null && !ring ? 0.6 : 1, transition: 'opacity 0.15s' }}
             />
@@ -94,7 +96,7 @@ export const KutkheMap: React.FC<Props> = props => {
 const lone = (i: number) => i === KUTKHE_REGIONS.length - 1 && KUTKHE_REGIONS.length % 2 === 1;
 
 /** the regions as roomy chips (to answer), each with its map colour */
-export const RegionChips: React.FC<{ pick: number | null; onPick: (i: number) => void }> = ({ pick, onPick }) => (
+export const RegionChips: React.FC<{ pick: number | null; onPick: (i: number) => void; nameOf?: (i: number) => string }> = ({ pick, onPick, nameOf = regionName }) => (
   <div className="grid grid-cols-2 gap-1.5" role="group" aria-label="კუთხე">
     {KUTKHE_REGIONS.map((_, i) => {
       const on = i === pick;
@@ -107,7 +109,7 @@ export const RegionChips: React.FC<{ pick: number | null; onPick: (i: number) =>
           className={`flex items-center gap-2 min-h-11 rounded-2xl px-3 py-1.5 text-left text-[13.5px] font-bold leading-tight ring-1 transition cursor-pointer active:scale-[0.98] ${on ? 'bg-[#7a2028] text-[#fbf6ec] ring-[#7a2028]' : 'bg-white text-[#4a3426] ring-[#e8dcc8] hover:ring-[#7a2028]/40'} ${lone(i) ? 'col-span-2' : ''}`}
         >
           <span className="w-3.5 h-3.5 shrink-0 rounded-full ring-1 ring-black/10" style={{ background: regionOf(i).color }} aria-hidden="true" />
-          <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{regionName(i)}</span>
+          <span className="min-w-0 flex-1 [overflow-wrap:anywhere]">{nameOf(i)}</span>
           {on && <Check className="w-4 h-4 shrink-0" aria-hidden="true" />}
         </button>
       );
@@ -116,10 +118,10 @@ export const RegionChips: React.FC<{ pick: number | null; onPick: (i: number) =>
 );
 
 /** the reveal's key: what the colours say */
-export const MapKey: React.FC<{ mine?: boolean }> = ({ mine }) => (
+export const MapKey: React.FC<{ mine?: boolean; near?: boolean }> = ({ mine, near = true }) => (
   <p className="flex flex-wrap items-center gap-x-3.5 gap-y-1 px-1 text-[12px] font-bold text-[#75685a]">
     <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm" style={{ background: RIGHT }} />სწორი კუთხე</span>
-    <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm" style={{ background: NEAR }} />მეზობელი</span>
+    {near && <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm" style={{ background: NEAR }} />მეზობელი</span>}
     {mine && <span className="inline-flex items-center gap-1.5"><span className="w-3 h-3 rounded-sm ring-2 ring-[#7a2028]" />შენი პასუხი</span>}
   </p>
 );
