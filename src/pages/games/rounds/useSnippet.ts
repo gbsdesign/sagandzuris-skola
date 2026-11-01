@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { clipStart } from '../../../utils/kutkhe';
-import { ChantSynth, lessonAudioReady, loadBookScore, playLessonNotes, stopLessonNotes } from '../../../utils/chantSynth';
-import { firstPitches, lowerVoices, notesLength } from '../../../utils/chantClips';
+import { ChantSynth, lessonAudioReady, loadBookScore, playLessonNotes, stopLessonNotes, type BookScore } from '../../../utils/chantSynth';
+import { firstPitches, lowerVoices, notesLength, type Timed } from '../../../utils/chantClips';
 
 // A round's piece (the quick games, pages/games/rounds/): a recording's, through one <audio> for the whole screen, so once a
 // tap has let it sound (a phone lets a page make sound only after a touch), every next round plays by itself — the piece
@@ -9,17 +9,19 @@ import { firstPitches, lowerVoices, notesLength } from '../../../utils/chantClip
 // with crossOrigin, as ChantPlayer does (the Worker answers only requests carrying the site's Origin). Or a chant's book
 // notes on the synthesizer (2026-10-31, „ხმა-ხმად“ and „სამ ნოტში!“): its opening with only its lower voices (from their
 // first note), or the top voice's first notes; the tap that unlocks the <audio> starts the synthesizer's sound too. A
-// recording's piece may name its own length (2026-11-01, „დღის ჰანგი“ with the class: 1, 2, 4… seconds from its start).
+// recording's piece may name its own length (2026-11-01, „დღის ჰანგი“ with the class: 1, 2, 4… seconds from its start). Or
+// notes of its own, [at, length, MIDI] in seconds (2026-11-01, „ქართული აკორდი“: a chord, at once or voice by voice).
 
 export type SnipState = 'idle' | 'load' | 'play' | 'done' | 'error' | 'blocked';
 
 export interface ScoreRef { book: string; num: number }
 /** what a round plays: a piece of a recording (`seconds`: its own length, else the screen's), a chant's opening (`voices`:
- * from this voice down, 0 = all) or its first notes */
+ * from this voice down, 0 = all), its first notes, or notes of the round's own */
 export type Clip =
   | { url: string; from: number; seconds?: number }
   | { score: ScoreRef; voices: number; seconds: number }
-  | { score: ScoreRef; pitches: number; within: number };
+  | { score: ScoreRef; pitches: number; within: number }
+  | { notes: Timed[] };
 
 // the lesson notes are one stream for the whole app (a new call cuts the one before): whose notes are sounding now
 let notesSeq = 0;
@@ -90,16 +92,18 @@ export const useSnippet = (seconds: number) => {
 
   /** a chant's piece on the synthesizer: loaded, played, its progress followed until it ends */
   const playScore = async (clip: Exclude<Clip, { url: string }>, my: number) => {
-    let score;
-    try { score = await loadBookScore(clip.score.num, clip.score.book); } catch { if (turn.current === my) setState('error'); return; }
-    if (turn.current !== my) return;
+    let score: BookScore | null = null;
+    if (!('notes' in clip)) {
+      try { score = await loadBookScore(clip.score.num, clip.score.book); } catch { if (turn.current === my) setState('error'); return; }
+      if (turn.current !== my) return;
+    }
     if (!(await synthReady())) { if (turn.current === my) setState('blocked'); return; }
     if (turn.current !== my) return;
     let length: number;
     let position: () => number;
     let stopMine: () => void;
-    if ('pitches' in clip) {
-      const notes = firstPitches(score, clip.pitches, clip.within);
+    if ('notes' in clip || 'pitches' in clip) {
+      const notes = 'notes' in clip ? clip.notes : firstPitches(score!, clip.pitches, clip.within);
       length = Math.max(0.5, notesLength(notes));
       const mine = ++notesSeq;
       notesOwner = mine;
@@ -109,6 +113,7 @@ export const useSnippet = (seconds: number) => {
       // stopped only while still its own: a newer piece of notes has already cut it
       stopMine = () => { if (notesOwner === mine) { notesOwner = 0; stopLessonNotes(); } };
     } else {
+      if (!score) return;
       const s = new ChantSynth(score);
       const low = lowerVoices(score, clip.voices);
       score.voices.forEach((_, v) => s.setMuted(v, v < low.first));

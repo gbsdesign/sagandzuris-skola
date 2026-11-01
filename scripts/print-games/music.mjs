@@ -114,15 +114,42 @@ export const abcScore = (voices, { names = [], gap = 20 } = {}) => {
   }).join('\n');
 };
 
-/** a box the script fills with the staff; `w` — its width in mm */
-export const staff = (abc, { cls = '' } = {}) => `<div class="abc ${cls}" data-abc="${esc(abc)}"></div>`;
+/**
+ * Chords on one staff (2026-11-01, „ქართული აკორდი“): each a list of MIDI notes struck together, `len` eighths long, a note
+ * sung by two voices at once drawn once; the accidentals as in a voice (on every note that has one, a natural after), `marks`
+ * — text over the n-th chord (1-based).
+ */
+export const abcChords = (chords, { len = 4, marks = {} } = {}) => {
+  const c = clefOf(chords.flat().map(midi => ({ midi })));
+  const shift = c === 'treble-8' ? 12 : 0;
+  const held = {};
+  const body = chords.map((chord, i) => {
+    const notes = [...new Set(chord)].sort((a, b) => a - b).map(m0 => {
+      const m = m0 + shift;
+      const name = NAMES[((m % 12) + 12) % 12];
+      const acc = name.length > 1 ? name[0] : '';
+      const letter = name.slice(-1);
+      const oct = Math.floor(m / 12) - 1;
+      const key = letter + oct;
+      const write = acc || (held[key] ? '=' : '');
+      held[key] = acc;
+      return write + (oct >= 5 ? letter.toLowerCase() + "'".repeat(oct - 5) : letter + ','.repeat(4 - oct));
+    });
+    const mark = marks[i + 1] ? `"^${marks[i + 1]}"` : '';
+    return `${mark}${notes.length > 1 ? `[${notes.join('')}]` : notes[0]}${len}`;
+  }).join(' ');
+  return `X:1\nM:none\nL:1/8\n%%annotationfont SansKa 10\nK:C clef=${c}\n${body} |]`;
+};
+
+/** a box the script fills with the staff; `zoom` — its own (more = smaller notes), else the kit's */
+export const staff = (abc, { cls = '', zoom = null } = {}) => `<div class="abc ${cls}" data-abc="${esc(abc)}"${zoom ? ` data-zoom="${zoom}"` : ''}></div>`;
 
 const ABCJS = path.join(ROOT, 'node_modules', 'abcjs', 'dist', 'abcjs-basic-min.js');
 /** the kit's `head`: abcjs itself, inline (the page is a local file) */
 export const musicHead = () => `<script>${fs.readFileSync(ABCJS, 'utf8')}</script>`;
-/** the kit's `script`: every box drawn at its own width (`staffwidth` in the box's CSS pixels times `zoom`) */
+/** the kit's `script`: every box drawn at its own width (`staffwidth` in the box's CSS pixels times `zoom`, or the box's own) */
 export const musicScript = (zoom = 1.25) => `document.querySelectorAll('.abc').forEach(el => {
-  const w = el.clientWidth * ${zoom};
+  const w = el.clientWidth * (parseFloat(el.dataset.zoom) || ${zoom});
   ABCJS.renderAbc(el, el.dataset.abc, { staffwidth: w, responsive: 'resize', paddingtop: 0, paddingbottom: 0, paddingleft: 0, paddingright: 0, add_classes: false, foregroundColor: '#3b2a1f' });
 });`;
 

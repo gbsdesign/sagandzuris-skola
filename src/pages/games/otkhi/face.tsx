@@ -55,7 +55,7 @@ export const OTKHI_FACE: RoundFace = {
     const topics = activeTopics(readTopics(), topicList(pool.length > 0, mine).map(t => t.id));
     return drawOtkhi({ bank: [...OTKHI_QUESTIONS, ...mine], topics, count, seen: readSeen(), pool });
   },
-  remember: rounds => rememberAsked(rounds.map(r => r.id)),
+  remember: rounds => rememberAsked(rounds.flatMap(r => (r.kind === 'otkhi' ? [r.id] : []))),
   askHost: 'მოთამაშეები პასუხს თავის ტელეფონზე ნიშნავენ.',
   askPlayer: 'მონიშნე სწორი პასუხი.',
   askTeams: 'წაიკითხე ხმამაღლა. გუნდები სწორის ასოს ფურცელზე წერენ.',
