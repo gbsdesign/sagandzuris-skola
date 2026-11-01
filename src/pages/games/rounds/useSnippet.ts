@@ -8,14 +8,16 @@ import { firstPitches, lowerVoices, notesLength } from '../../../utils/chantClip
 // starts at the same share of the recording on every phone (`from`) and stops after `seconds`; every Worker URL is fetched
 // with crossOrigin, as ChantPlayer does (the Worker answers only requests carrying the site's Origin). Or a chant's book
 // notes on the synthesizer (2026-10-31, „ხმა-ხმად“ and „სამ ნოტში!“): its opening with only its lower voices (from their
-// first note), or the top voice's first notes; the tap that unlocks the <audio> starts the synthesizer's sound too.
+// first note), or the top voice's first notes; the tap that unlocks the <audio> starts the synthesizer's sound too. A
+// recording's piece may name its own length (2026-11-01, „დღის ჰანგი“ with the class: 1, 2, 4… seconds from its start).
 
 export type SnipState = 'idle' | 'load' | 'play' | 'done' | 'error' | 'blocked';
 
 export interface ScoreRef { book: string; num: number }
-/** what a round plays: a piece of a recording, a chant's opening (`voices`: from this voice down, 0 = all) or its first notes */
+/** what a round plays: a piece of a recording (`seconds`: its own length, else the screen's), a chant's opening (`voices`:
+ * from this voice down, 0 = all) or its first notes */
 export type Clip =
-  | { url: string; from: number }
+  | { url: string; from: number; seconds?: number }
   | { score: ScoreRef; voices: number; seconds: number }
   | { score: ScoreRef; pitches: number; within: number };
 
@@ -53,7 +55,7 @@ const silence = (() => {
 
 export const useSnippet = (seconds: number) => {
   const el = useRef<HTMLAudioElement | null>(null);
-  const cur = useRef<{ url: string; from: number; start: number | null } | null>(null);
+  const cur = useRef<{ url: string; from: number; start: number | null; secs: number } | null>(null);
   const [state, setState] = useState<SnipState>('idle');
   const [prog, setProg] = useState(0);
   // the synthesizer's piece now sounding, and the number of the last play (a later one wins)
@@ -69,7 +71,7 @@ export const useSnippet = (seconds: number) => {
     a.addEventListener('loadedmetadata', () => {
       const c = cur.current;
       if (!c || a.src !== c.url) return;
-      c.start = clipStart(a.duration, c.from, seconds);
+      c.start = clipStart(a.duration, c.from, c.secs);
       try { a.currentTime = c.start; } catch { c.start = 0; }
     });
     a.addEventListener('playing', () => { if (cur.current && a.src === cur.current.url) setState('play'); });
@@ -77,7 +79,7 @@ export const useSnippet = (seconds: number) => {
     a.addEventListener('timeupdate', () => {
       const c = cur.current;
       if (!c || a.src !== c.url || c.start === null) return;
-      const p = (a.currentTime - c.start) / seconds;
+      const p = (a.currentTime - c.start) / c.secs;
       if (p >= 1) { a.pause(); setState('done'); setProg(1); } else setProg(Math.max(0, p));
     });
     a.addEventListener('ended', () => { if (cur.current && a.src === cur.current.url) { setState('done'); setProg(1); } });
@@ -143,14 +145,16 @@ export const useSnippet = (seconds: number) => {
       return;
     }
     const { url, from } = clip;
+    const secs = clip.seconds ?? seconds;
     const a = audio();
     const same = cur.current?.url === url && a.src === url && cur.current.start !== null;
     setProg(0);
     setState('load');
     if (same) {
+      cur.current!.secs = secs;
       try { a.currentTime = cur.current!.start!; } catch { /* not seekable yet */ }
     } else {
-      cur.current = { url, from, start: null };
+      cur.current = { url, from, start: null, secs };
       a.src = url;
     }
     a.play().catch((e: unknown) => {

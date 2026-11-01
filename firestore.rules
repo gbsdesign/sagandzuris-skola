@@ -423,7 +423,7 @@ service cloud.firestore {
         }
         allow read: if inClass();
         allow create: if inClass() && roomOk()
-          && incoming().game in ['samshvilde', 'kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri']
+          && incoming().game in ['samshvilde', 'kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri', 'hangi']
           && incoming().host == uid() && incoming().status == 'lobby'
           && incoming().createdAt == request.time && incoming().uids.size() == 0;
         allow update: if inClass() && existing().host == uid() && roomOk()

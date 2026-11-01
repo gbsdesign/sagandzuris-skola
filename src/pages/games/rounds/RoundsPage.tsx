@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Users, Wifi } from 'lucide-react';
+import { Users, Wifi, type LucideIcon } from 'lucide-react';
 import { useAuth } from '../../../context';
 import { useMyClasses, useTeachingClasses, type SchoolClass } from '../../../hooks/useClasses';
 import { newHybrid, parseHybrid, ROUND_COUNTS, type HybridState, type Sound } from '../../../utils/roundGames';
@@ -15,10 +15,12 @@ import { HybridGame, HybridSetup, readHybridConf, type HybridConf } from './Roun
 // A quick game's page in the games hub (pages/games/rounds/, 2026-10-31): what the game is, then two tabs — „ონლაინ“ (a room
 // in a class: the opener hosts, everyone answers on their own phone) and „ჰიბრიდული“ (one phone, the class in teams). The
 // hub's variant buttons ask for a tab; an invitation (the strip, a chat card, a phone notice) names its room. Settings and
-// a paused one-phone game stay on the device.
+// a paused one-phone game stay on the device. A game with a game of its own for one (`solo`, „დღის ჰანგი“'s daily one) shows
+// it as the first of three tabs, over the intro, and the hub's „ონლაინ“ opens that one.
 
-type Mode = 'online' | 'table';
+type Mode = 'solo' | 'online' | 'table';
 interface Conf { mode?: Mode; count: number; sound: Sound; hybrid: HybridConf }
+export interface SoloTab { label: string; Icon: LucideIcon; node: React.ReactNode }
 
 const load = (key: string): unknown => { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; } };
 const save = (key: string, value: unknown) => {
@@ -27,7 +29,7 @@ const save = (key: string, value: unknown) => {
 const readConf = (key: string): Conf => {
   const o = (load(key) ?? {}) as Partial<Conf>;
   return {
-    mode: o.mode === 'online' || o.mode === 'table' ? o.mode : undefined,
+    mode: o.mode === 'solo' || o.mode === 'online' || o.mode === 'table' ? o.mode : undefined,
     count: ROUND_COUNTS.includes(Number(o.count)) ? Number(o.count) : 8,
     sound: o.sound === 'host' ? 'host' : 'all',
     hybrid: readHybridConf(o.hybrid),
@@ -37,9 +39,9 @@ const readConf = (key: string): Conf => {
 /** the chants of classes' programs (the chant games ask them too): their version ids, once each */
 const programOf = (list: SchoolClass[]) => [...new Set(list.flatMap(c => c.program.map(p => p.id ?? '').filter(Boolean)))];
 
-export const RoundsPage: React.FC<{ face: RoundFace }> = ({ face }) => {
-  const KEY = `sg-${face.game}`;
-  const GAME_KEY = `sg-${face.game}-game`;
+export const RoundsPage: React.FC<{ face: RoundFace; solo?: SoloTab }> = ({ face, solo }) => {
+  const KEY = face.store ?? `sg-${face.game}`;
+  const GAME_KEY = `${KEY}-game`;
   const [conf, setConf] = useState(() => readConf(KEY));
   const setC = (patch: Partial<Conf>) => setConf(c => { const next = { ...c, ...patch }; save(KEY, next); return next; });
 
@@ -59,7 +61,7 @@ export const RoundsPage: React.FC<{ face: RoundFace }> = ({ face }) => {
   const showRoom = roomOpen && !!session;
   const joinWish = useRef<{ key: string; at: number } | null>(null);
   const [nudge, setNudge] = useState(0);
-  const mode: Mode = conf.mode ?? (uid ? 'online' : 'table');
+  const mode: Mode = conf.mode === 'solo' && !solo ? 'online' : conf.mode ?? (solo ? 'solo' : uid ? 'online' : 'table');
   useEffect(() => { roundRooms.setVisible(showRoom); }, [showRoom]);
   useEffect(() => () => roundRooms.setVisible(false), []);
 
@@ -77,7 +79,7 @@ export const RoundsPage: React.FC<{ face: RoundFace }> = ({ face }) => {
     if (conf.mode !== 'online') setC({ mode: 'online' });
   };
   useOpenRequest(face.game, id => {
-    if (id === 'online' || id === 'table') { setC({ mode: id }); return; }
+    if (id === 'online' || id === 'table') { setC({ mode: id === 'online' && solo ? 'solo' : id }); return; }
     const [classId, roomId] = id.split('/');
     if (classId && roomId) void enter(classId, roomId);
   });
@@ -139,20 +141,32 @@ export const RoundsPage: React.FC<{ face: RoundFace }> = ({ face }) => {
     return <HybridGame face={face} h={game} setH={setGame} onClose={() => setOpen(false)} onAgain={again} />;
   }
 
+  const tabs: { id: Mode; label: string; Icon: LucideIcon }[] = [
+    ...(solo ? [{ id: 'solo' as const, label: solo.label, Icon: solo.Icon }] : []),
+    { id: 'online', label: 'ონლაინ', Icon: Wifi },
+    { id: 'table', label: 'ჰიბრიდული', Icon: Users },
+  ];
+  const tabBar = <Tabs cols={solo ? 3 : 2} value={mode} onChange={m => setC({ mode: m })} items={tabs} />;
+
+  if (solo && mode === 'solo') {
+    return (
+      <div className="w-full max-w-2xl space-y-4">
+        {tabBar}
+        {solo.node}
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-2xl space-y-4">
+      {solo && tabBar}
       <Card tone="wine" className="!p-4 sm:!p-5">
         <p className="font-serif-ge text-[17px] font-bold leading-snug">{face.title}</p>
         <p className="mt-1.5 text-[12.5px] leading-snug text-[#fbf6ec]/85">{face.intro}</p>
         <p className="mt-2 text-[12.5px] leading-snug text-[#fbf6ec]/85">{mode === 'online' ? face.online : face.hybrid}</p>
       </Card>
 
-      <Tabs
-        cols={2}
-        value={mode}
-        onChange={m => setC({ mode: m })}
-        items={[{ id: 'online', label: 'ონლაინ', Icon: Wifi }, { id: 'table', label: 'ჰიბრიდული', Icon: Users }]}
-      />
+      {!solo && tabBar}
 
       {mode === 'online' ? (
         <RoomSetup

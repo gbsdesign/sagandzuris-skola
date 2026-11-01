@@ -11,17 +11,20 @@ import { Btn, Card, Empty, FIELD, Stat } from '../../components/ui/kit';
 import { Toast } from '../../components/ui/Toast';
 import { triggerHaptic } from '../../utils/haptics';
 import { MONTHS_GE } from '../../utils/dateNames';
+import { RoundsPage } from './rounds/RoundsPage';
+import { HANGI_FACE } from './hangi/face';
 
 // „დღის ჰანგი“ (games hub, 2026-10-28): one recording a day for the whole school. The player hears its first second, names
 // the chant or song from the pool's titles, and every try opens a little more (1 · 2 · 4 · 7 · 11 · 16 s, six tries). The
 // day, the pick and the record are utils/hangi.ts; the pool data/hangiPool.ts; the saved days hooks/useHangi.ts. Nothing
-// sounds before the play button is tapped.
+// sounds before the play button is tapped. Since 2026-11-01 the page's other two tabs play it with the class — online in a
+// class's room or on one phone with the class in teams (the quick games' screens, pages/games/hangi/face.tsx).
 
 const LAST = SNIPPETS[SNIPPETS.length - 1];
 
 const dateLabel = (iso: string) => `${+iso.slice(8, 10)} ${MONTHS_GE[+iso.slice(5, 7) - 1]}`;
 
-const HangiGame: React.FC = () => {
+const HangiDay: React.FC = () => {
   const { can } = useMembership();
   const recordings = can('recordings');
   const { days, loaded, save, member } = useHangi();
@@ -273,5 +276,7 @@ const HangiGame: React.FC = () => {
     </div>
   );
 };
+
+const HangiGame: React.FC = () => <RoundsPage face={HANGI_FACE} solo={{ label: 'დღის ჰანგი', Icon: Headphones, node: <HangiDay /> }} />;
 
 export default HangiGame;
