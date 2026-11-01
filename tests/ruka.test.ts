@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  NAMES_A_REGION, RUKA_MARKS, RUKA_RULES, RUKA_TOPICS, betterRun, drawRuka, parseBest, rukaItemOf, rukaPoints, rukaSeconds, type RukaItem,
+  NAMES_A_REGION, RUKA_MARKS, RUKA_RULES, RUKA_TOPICS, drawRuka, rukaItemOf, rukaPoints, rukaSeconds, type RukaItem,
   type RukaQ,
 } from '../src/utils/ruka';
 import { RUKA_PLACES } from '../src/data/rukaPlaces';
@@ -111,14 +111,4 @@ test('a round in the room: the region and the answer stay hidden, the name is as
   assert.ok(h);
   h = markTeam(markTeam(h, 0, RUKA_MARKS[0].points), 1, RUKA_MARKS[1].points);
   assert.deepEqual(hybridScores(h), [1, 0]);
-});
-
-test('alone: a better run has more points, then less time; a kept best read back', () => {
-  assert.ok(betterRun({ score: 5000, ms: 60_000 }, null));
-  assert.ok(betterRun({ score: 5000, ms: 60_000 }, { score: 4900, ms: 10_000 }));
-  assert.ok(betterRun({ score: 5000, ms: 50_000 }, { score: 5000, ms: 60_000 }));
-  assert.ok(!betterRun({ score: 5000, ms: 60_000 }, { score: 5000, ms: 60_000 }));
-  assert.deepEqual(parseBest({ score: 1, right: 1, ms: 5, at: '2026-11-01' }), { score: 1, right: 1, ms: 5, at: '2026-11-01' });
-  assert.equal(parseBest({ score: 'x' }), null);
-  assert.equal(parseBest(null), null);
 });

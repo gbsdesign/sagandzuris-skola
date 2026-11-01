@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import {
-  AudioLines, Brain, Castle, Compass, Crown, Dice5, Download, Flame, Gamepad2, Gem, Headphones, Info, Landmark, LayoutGrid, ListChecks, Map, MapPinned, MessageCircle,
+  AudioLines, Brain, Castle, Compass, Crown, Dice5, Download, Flame, Gamepad2, Gem, Headphones, Info, Landmark, LayoutGrid, ListChecks, ListMusic, Map, MapPinned, MessageCircle,
   MicVocal, Music2, Piano, Route, Shapes, SpellCheck, Users, Waves, Wifi,
 } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
@@ -36,6 +36,7 @@ import TurniriGame from './games/TurniriGame';
 import AkordiGame from './games/AkordiGame';
 import RvakhmaGame from './games/RvakhmaGame';
 import RukaGame from './games/RukaGame';
+import GagrdzeleGame from './games/GagrdzeleGame';
 
 // „თამაშები“: the hub of the games (2026-10-27; one list since 2026-10-30, the user's „ყველა თამაში 1 სიად“). A card per
 // game: its name (the known game it answers to in brackets; ⓘ unfolds what that game is), one line, and a button per variant it
@@ -48,7 +49,7 @@ type Access = ReturnType<ReturnType<typeof useAccess>['section']>;
 const ICON: Record<string, React.ReactNode> = {
   margalitebi: <Gem />, 'dghis-hangi': <Headphones />, 'dghis-sitqva': <SpellCheck />, otkheuli: <Shapes />,
   amikhseni: <MessageCircle />, gatvla: <Dice5 />, 'tskheli-churchkhela': <Flame />, 'ra-sad-rodis': <Brain />,
-  'okros-khana': <Map />, 'samshvildis-ghame': <Castle />, 'saidanaa-simghera': <MapPinned />, 'otkhidan-erti': <ListChecks />, 'khma-khmad': <AudioLines />, 'sam-notshi': <Music2 />, 'khmebis-turniri': <MicVocal />, 'kartuli-akordi': <Piano />, 'rva-khma': <Waves />, 'rukis-viktorina': <Compass />, qaravani: <Route />, 'ori-takhti': <Crown />, 'lurji-supra': <LayoutGrid />, 'mepis-kari': <Landmark />,
+  'okros-khana': <Map />, 'samshvildis-ghame': <Castle />, 'saidanaa-simghera': <MapPinned />, 'otkhidan-erti': <ListChecks />, 'khma-khmad': <AudioLines />, 'sam-notshi': <Music2 />, 'khmebis-turniri': <MicVocal />, 'kartuli-akordi': <Piano />, 'rva-khma': <Waves />, 'rukis-viktorina': <Compass />, gagrdzele: <ListMusic />, qaravani: <Route />, 'ori-takhti': <Crown />, 'lurji-supra': <LayoutGrid />, 'mepis-kari': <Landmark />,
 };
 
 const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string }>> = { online: Wifi, hybrid: Users, noPhone: Download };
@@ -57,7 +58,7 @@ const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string }>> =
 const INNER: Record<string, React.FC> = {
   hangi: HangiGame, amikhseni: AmikhseniGame, sitqva: SitqvaGame, otkheuli: OtkheuliGame, gatvla: GatvlaGame, churchkhela: ChurchkhelaGame, rsr: RaSadRodisGame,
   samshvilde: SamshvildeGame, kutkhe: KutkheGame, otkhi: OtkhiGame, khmebi: KhmebiGame, notebi: NotebiGame, turniri: TurniriGame,
-  akordi: AkordiGame, rvakhma: RvakhmaGame, ruka: RukaGame,
+  akordi: AkordiGame, rvakhma: RvakhmaGame, ruka: RukaGame, gagrdzele: GagrdzeleGame,
 };
 
 const BTN = 'inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full text-[13.5px] font-bold transition-[background-color,transform] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#7a2028]/50';
