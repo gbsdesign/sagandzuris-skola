@@ -23,6 +23,7 @@ export const ROOM_GAME_INFO: Record<RoomGame, RoomGameInfo> = {
   akordi: { title: 'ქართული აკორდი', item: 'akordi', host: 'წამყვანი' },
   rvakhma: { title: 'რვა ხმა', item: 'rvakhma', host: 'წამყვანი' },
   ruka: { title: 'რუკის ვიქტორინა', item: 'ruka', host: 'წამყვანი' },
+  gagrdzele: { title: 'გააგრძელე!', item: 'gagrdzele', host: 'წამყვანი' },
 };
 
 /** the chat card's `room`: „სამშვილდის ღამე“ names its room alone (its cards came first), every other game `game:roomId` */

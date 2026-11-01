@@ -155,19 +155,3 @@ export const drawRuka = ({ items, topics, count, hideTitles = false, seen = [], 
 
 /** the item's id from its round (the phone remembers the items it asked) */
 export const rukaItemOf = (q: Pick<RukaQ, 'id'>) => q.id.split('|')[0];
-
-// ——— alone: ten in a row, the score and the time
-
-export const RUKA_SOLO_ROUNDS = 10;
-
-export interface RukaSoloBest { score: number; right: number; ms: number; at: string }
-
-/** a run is better with more points, then with less time */
-export const betterRun = (a: Pick<RukaSoloBest, 'score' | 'ms'>, b: Pick<RukaSoloBest, 'score' | 'ms'> | null) =>
-  !b || a.score > b.score || (a.score === b.score && a.ms < b.ms);
-
-export const parseBest = (v: unknown): RukaSoloBest | null => {
-  const o = v as Partial<RukaSoloBest> | null;
-  return o && Number.isInteger(o.score) && Number.isInteger(o.right) && Number.isFinite(o.ms) && typeof o.at === 'string'
-    ? { score: o.score!, right: o.right!, ms: o.ms!, at: o.at } : null;
-};

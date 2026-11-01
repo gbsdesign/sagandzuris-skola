@@ -1,13 +1,13 @@
 import { useSyncExternalStore } from 'react';
-import { isRukaTopic, parseBest, type RukaSoloBest, type RukaTopic } from '../../../utils/ruka';
+import { isRukaTopic, type RukaTopic } from '../../../utils/ruka';
 
 // „რუკის ვიქტორინა“'s things kept on this phone: the topics chosen (none = all), whether a song is asked by its tune alone,
-// the items asked lately (the next games ask others first) and the best run alone. The choices' chips show them as they change.
+// the items asked lately (the next games ask others first). The choices' chips show them as they change; the best run alone is
+// rounds/soloStore.ts.
 
 const TOPICS = 'sg-ruka-topics';
 const HIDE = 'sg-ruka-hide';
 const SEEN = 'sg-ruka-seen';
-const BEST = 'sg-ruka-best';
 
 const load = (key: string): unknown => { try { return JSON.parse(localStorage.getItem(key) || 'null'); } catch { return null; } };
 const save = (key: string, value: unknown) => { try { localStorage.setItem(key, JSON.stringify(value)); } catch { /* private mode */ } };
@@ -31,8 +31,3 @@ export const readSeen = (): string[] => {
   return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
 };
 export const rememberAsked = (ids: string[]) => save(SEEN, [...readSeen().filter(x => !ids.includes(x)), ...ids].slice(-150));
-
-let best: RukaSoloBest | null | undefined;
-export const readBest = (): RukaSoloBest | null => (best === undefined ? (best = parseBest(load(BEST))) : best);
-export const setBest = (b: RukaSoloBest) => { best = b; save(BEST, b); ping(); };
-export const useBest = () => useSyncExternalStore(subscribe, readBest);

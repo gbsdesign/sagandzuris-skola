@@ -77,6 +77,11 @@ export const GAMES: GameDef[] = [
     modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'ruka', section: 'tamashebi', print: { href: '/games/print/rukis-viktorina.pdf', sheets: 11 },
   },
   {
+    id: 'gagrdzele', title: 'გააგრძელე!', like: "Don't Forget the Lyrics!", text: 'ხალხური სიმღერა ჩერდება — გაიხსენე, რომელი სტრიქონი მოდის შემდეგ',
+    about: '„Don\'t Forget the Lyrics!“ სატელევიზიო შოუა: სიმღერა უეცრად ჩერდება და მომღერალმა ტექსტი ზეპირად უნდა გააგრძელოს. ჩვენთან 70-ზე მეტი ხალხური სიმღერის ტექსტია: ჩანს სიმღერის სახელი და ბოლო სტრიქონი (ჩანაწერიანს ჯერ დასაწყისი ჟღერს), შემდეგს კი ოთხიდან ირჩევ — ან კლასში ზეპირად მღერით. სამაგიდო ვარიანტში 30 სიმღერის ტექსტის წიგნია წამყვანისთვის. თამაშ-თამაშით ბევრ ტექსტს ისწავლი.',
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'gagrdzele', section: 'tamashebi', print: { href: '/games/print/gagrdzele.pdf', sheets: 4 },
+  },
+  {
     id: 'ra-sad-rodis', title: 'რა? სად? როდის?', text: 'გუნდური ვიქტორინა: ერთი წუთი, პასუხი ფურცელზე — ისტორია, გმირები, კინო, სუფრა, წმინდანები, გალობა და ჩანაწერის ნაწყვეტები',
     about: '„რა? სად? როდის?“ ცნობილი სატელევიზიო ვიქტორინაა: გუნდი ერთ წუთში ბჭობს და ერთ პასუხს ირჩევს. ჩვენთან ყველა გუნდი ერთსა და იმავე კითხვას ერთდროულად პასუხობს ფურცელზე; კითხვები ქართულ ისტორიაზე, კულტურაზე, ბუნებაზე, სარწმუნოებასა და გალობაზეა, ზოგი ჩანაწერის მოსმენით.',
     modes: ['hybrid', 'noPhone'], page: 'games', item: 'rsr', section: 'tamashebi', print: { href: '/games/print/ra-sad-rodis.pdf', sheets: 12 },
