@@ -6,6 +6,7 @@ import { TURNIRI_RULES, type TurniriQ } from './turniri';
 import { HANGI_RULES, type HangiQ } from './hangiRounds';
 import { AKORDI_RULES, type AkordiQ } from './akordi';
 import { RVAKHMA_RULES, type RvakhmaQ } from './rvakhma';
+import { RUKA_RULES, type RukaQ } from './ruka';
 
 // The quick games of a class's room (2026-10-31, the tender's five — the user's „გააკეთე 5-ვე ონლაინ და ჰიბრიდული“):
 // one engine of rounds. A round asks one thing — a song to place on the map, a question, a chant revealed voice by voice,
@@ -16,9 +17,9 @@ import { RVAKHMA_RULES, type RvakhmaQ } from './rvakhma';
 // too: the same rounds, the host marks each team.
 
 export type RoundGame = Exclude<RoomGame, 'samshvilde'>;
-export const ROUND_GAMES: readonly RoundGame[] = ['kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri', 'hangi', 'akordi', 'rvakhma'];
+export const ROUND_GAMES: readonly RoundGame[] = ['kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri', 'hangi', 'akordi', 'rvakhma', 'ruka'];
 /** one round's content, by game (the answer included: `secret` keeps it from the players until the reveal) */
-export type RoundQ = KutkheQ | OtkhiQ | ChantRoundQ | TurniriQ | HangiQ | AkordiQ | RvakhmaQ;
+export type RoundQ = KutkheQ | OtkhiQ | ChantRoundQ | TurniriQ | HangiQ | AkordiQ | RvakhmaQ | RukaQ;
 
 export interface RoundAnswer { pick: number; ms: number; step: number }
 
@@ -39,7 +40,7 @@ export interface RoundRules<Q extends RoundQ> {
 /** each game's rules by its rounds' kind (a game not built yet has none, so its rounds are never read back) */
 const BY_KIND: { [K in RoundQ['kind']]: RoundRules<Extract<RoundQ, { kind: K }>> } = {
   kutkhe: KUTKHE_RULES, otkhi: OTKHI_RULES, khmebi: KHMEBI_RULES, notebi: NOTEBI_RULES, turniri: TURNIRI_RULES, hangi: HANGI_RULES,
-  akordi: AKORDI_RULES, rvakhma: RVAKHMA_RULES,
+  akordi: AKORDI_RULES, rvakhma: RVAKHMA_RULES, ruka: RUKA_RULES,
 };
 const RULES = BY_KIND as unknown as Record<string, RoundRules<RoundQ> | undefined>;
 export const rulesOf = (q: RoundQ): RoundRules<RoundQ> => RULES[q.kind]!;
