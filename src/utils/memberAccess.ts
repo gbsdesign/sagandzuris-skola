@@ -4,7 +4,8 @@ import { doc, getDoc, increment, onSnapshot, setDoc, updateDoc } from 'firebase/
 import { notifyAccessRequest } from './groupPush';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
-import type { SectionId } from '../data/sections';
+import type { ExtraId, SectionId } from '../data/sections';
+import { useSections } from '../hooks/useSections';
 
 // A new member waits for a superadmin before anything for members opens:
 // • memberAccess/{uid} { status: 'pending' | 'approved' | 'rejected', features: 'all' | FeatureId[], requestedAt,
@@ -136,8 +137,18 @@ export interface Membership {
   can: (f: FeatureId) => boolean;
 }
 
+// the admin's site-wide switches (settings/sections) close a feature for everyone but admins
+const SWITCH_OF: Partial<Record<FeatureId, ExtraId>> = {
+  recordings: 'recordings', classes: 'classes', messages: 'messages', search: 'search', calendar: 'calendar', samosiPhoto: 'samosi',
+};
+
 export const useMembership = (): Membership => {
-  const { user, isTeacher } = useAuth();
+  const { user, isTeacher, isAdmin } = useAuth();
+  const { state: site } = useSections();
+  const siteOff = (f: FeatureId) => {
+    const sw = SWITCH_OF[f];
+    return !isAdmin && !!sw && site[sw] !== 'open';
+  };
   const [, setTick] = useState(0);
   useEffect(() => {
     watch(user?.uid ?? null);
@@ -146,12 +157,12 @@ export const useMembership = (): Membership => {
     return () => { listeners.delete(l); };
   }, [user?.uid]);
   if (!user) return { status: 'guest', isMember: false, can: () => false };
-  if (isTeacher) return { status: 'staff', isMember: true, can: () => true };
+  if (isTeacher) return { status: 'staff', isMember: true, can: f => !siteOff(f) };
   const mine = live.uid === user.uid ? live : { status: 'loading' as const, features: [] as FeatureId[] };
   const isMember = mine.status === 'legacy' || mine.status === 'approved';
   return {
     status: mine.status,
     isMember,
-    can: f => isMember && (mine.features === 'all' || mine.features.includes(f)),
+    can: f => isMember && !siteOff(f) && (mine.features === 'all' || mine.features.includes(f)),
   };
 };

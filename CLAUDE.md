@@ -797,6 +797,11 @@
   list but the chip „გასულები“, birthdays/name days and the Worker's Monday count skip them. ⚙ „სკოლა“ → „განცხადება
   კლასებს“ (`admin/Announce.tsx`): one text into the chat of every ticked class, as the admin's message. „განყოფილებები“:
   one row per section with its „ბავშვებს“ toggle (no second list).
+  Since 2026-11-01 (the user: „გამთიშველები ყველასი ცალკ-ცალკე“) the same list has „საიტის სხვა ნაწილები“ — `EXTRA_SWITCHES` in
+  `data/sections.ts` (სამოსი, ნასწავლი, ოსტატობა, სამუშაო, ლოცვანი, კლასი, მიმოწერა, ძიება, კალენდარი, ჩანაწერები, აბიტურიენტს,
+  დაბადების დღეები; ღია/დამალული only, kept in the same `settings/sections.state`) and „ყველას დამალვა“ (asks, undo). `useAccess().on(id)`
+  reads them (admins always on); `useMembership().can` follows them for the member features of the same id; the path page `gz` stays
+  while any of its parts (გზა's „დღეს“ card, ჩვევები, მარგალიტები, the orbs) is open, each part shown by its own switch.
   Ideas 7–10, 12–14 (2026-10-28, the review's last PR): under the filters „მასწავლებლები“/„ადმინები“ a teaching person's row
   says what they lead (`admin/TeacherOverview.tsx`: `TeachLine` + `useLastLessons`, one listener per class on its last
   attendance; amber = no class, or no lesson for 14+ days). „მონიშვნა“ on the members list picks several people

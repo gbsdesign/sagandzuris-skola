@@ -41,19 +41,45 @@ export const sectionOfPage = (page: PageType): SectionId | null => {
 
 export type SectionState = 'open' | 'soon' | 'hidden';
 
+/** The site's other parts, each with its own switch in the same list (settings/sections.state; 2026-11-01, the user:
+ *  „გამთიშველები ყველასი ცალკ-ცალკე“). Only „ღია“ / „დამალული“; hidden = gone for everyone but admins. The ids of the
+ *  member's features (utils/memberAccess) are the same, so `useMembership().can` follows these switches too. */
+export type ExtraId =
+  | 'samosi' | 'learn' | 'manera' | 'work' | 'prayers' | 'classes' | 'messages' | 'search' | 'calendar' | 'recordings'
+  | 'abituri' | 'birthdays';
+export type SwitchId = SectionId | ExtraId;
+
+export const EXTRA_SWITCHES: { id: ExtraId; label: string; hint: string }[] = [
+  { id: 'samosi', label: 'ჩემი სამოსი', hint: 'ჩოხა და კაბა — გზის მრგვალი ღილაკი და პროფილის ბარათი, ფოტოზე ჩაცმაც' },
+  { id: 'learn', label: 'ნასწავლი', hint: 'სასწავლო რეჟიმი, დავალებები, „დღეს გასამეორებელი“' },
+  { id: 'manera', label: 'ოსტატობა', hint: 'სავარჯიშოები და რჩევები' },
+  { id: 'work', label: 'სამუშაო', hint: 'დამოუკიდებელი სამუშაო გზაზე' },
+  { id: 'prayers', label: 'ლოცვანი', hint: 'ლოცვები, ფსალმუნი, აკათისტოები, ბიბლია, მოსახსენებელი' },
+  { id: 'classes', label: 'კლასი და კლასის ჩატი', hint: 'კლასის გვერდი, ჩატი, ზარები, თამაშის მოსაწვევები' },
+  { id: 'messages', label: 'პირადი მიმოწერა', hint: 'წერილები და ზარები' },
+  { id: 'search', label: 'ძიება', hint: '🔍 სათაურში და მთავარზე' },
+  { id: 'calendar', label: 'საეკლესიო კალენდარი', hint: 'გვერდის ბოლოს, დღის წმიდანები' },
+  { id: 'recordings', label: 'ჩანაწერები', hint: 'აუდიოჩანაწერები — თამაშებიც მათ იყენებს' },
+  { id: 'abituri', label: 'აბიტურიენტს', hint: 'გალობის უნივერსიტეტში მისაღები პროგრამა' },
+  { id: 'birthdays', label: 'დაბადების დღეები', hint: 'გვერდი და მთავარის ოქროსფერი ხაზი' },
+];
+export const isExtra = (id: string): id is ExtraId => EXTRA_SWITCHES.some(x => x.id === id);
+
 /** Without the admin's settings: everything built is open; the psalter group and მედავითნეობა are "მალე". */
-export const DEFAULT_SECTION_STATE: Record<SectionId, SectionState> = {
+export const DEFAULT_SECTION_STATE: Record<SwitchId, SectionState> = {
   galoba: 'open', simghera: 'open', mtkmeli: 'open', sakravebi: 'open', medavitneoba: 'soon', medavitneobaTopic: 'soon',
   chvevebi: 'open', tamashebi: 'open', margalitebi: 'open', tsinaprebi: 'open', gza: 'open', biblioteka: 'open',
+  samosi: 'open', learn: 'open', manera: 'open', work: 'open', prayers: 'open', classes: 'open', messages: 'open',
+  search: 'open', calendar: 'open', recordings: 'open', abituri: 'open', birthdays: 'open',
 };
 
 /** A „მალე“ section the admin gave a day (settings/sections.openOn, YYYY-MM-DD) opens by itself on that day in Georgia;
  *  `today` = the Georgian day. Every other state stays as it was set. */
 export const stateOnDay = (
-  state: Record<SectionId, SectionState>, openOn: Partial<Record<SectionId, string>>, today: string,
-): Record<SectionId, SectionState> => {
+  state: Record<SwitchId, SectionState>, openOn: Partial<Record<SwitchId, string>>, today: string,
+): Record<SwitchId, SectionState> => {
   const out = { ...state };
-  for (const [id, day] of Object.entries(openOn) as [SectionId, string][]) {
+  for (const [id, day] of Object.entries(openOn) as [SwitchId, string][]) {
     if (out[id] === 'soon' && /^\d{4}-\d{2}-\d{2}$/.test(day || '') && day <= today) out[id] = 'open';
   }
   return out;

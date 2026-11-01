@@ -1,20 +1,20 @@
 import { useEffect, useMemo, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-import { DEFAULT_KIDS_SECTIONS, DEFAULT_SECTION_STATE, SectionId, SectionState, stateOnDay } from '../data/sections';
+import { DEFAULT_KIDS_SECTIONS, DEFAULT_SECTION_STATE, SectionId, SectionState, SwitchId, stateOnDay } from '../data/sections';
 import { tbilisiToday } from '../utils/hangi';
 
 // settings/sections (admins write, everyone reads): { state: { galoba: 'open' | 'soon' | 'hidden', … },
 // openOn: { medavitneobaTopic: '2026-11-01', … }, kidsDefault: SectionId[] } — which sections the home page and header
 // show, the day a „მალე“ one opens by itself, and the kids' mode default.
 interface Stored {
-  state: Record<SectionId, SectionState>;
-  openOn: Partial<Record<SectionId, string>>;
+  state: Record<SwitchId, SectionState>;
+  openOn: Partial<Record<SwitchId, string>>;
   kidsDefault: SectionId[];
 }
 export interface SectionSettings extends Stored {
   /** as set, before the days (the admin's list) */
-  stored: Record<SectionId, SectionState>;
+  stored: Record<SwitchId, SectionState>;
 }
 
 let cache: Stored = { state: DEFAULT_SECTION_STATE, openOn: {}, kidsDefault: DEFAULT_KIDS_SECTIONS };

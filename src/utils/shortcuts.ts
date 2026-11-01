@@ -3,7 +3,7 @@ import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { AKATHISTS, KATHISMAS, MORNING_EVENING, PRAYER_HOURS, prayerTitle } from '../data/prayers';
 import { HABIT_ITEMS } from '../data/habitsAndManera';
-import { SECTIONS, SectionId } from '../data/sections';
+import { ExtraId, SECTIONS, SectionId } from '../data/sections';
 import { findVersion } from '../data/chantLookup';
 import { dayKey } from './habitsWeek';
 
@@ -152,6 +152,18 @@ export const sectionOfShortcut = (id: string): SectionId | null => {
   if (kind === 'habit') return 'chvevebi';
   if (kind === 'song') return 'simghera';
   if (kind === 'ancestor') return 'tsinaprebi';
+  return null;
+};
+
+/** The site-wide switch (data/sections EXTRA_SWITCHES) a button belongs to, besides its section. */
+export const switchOfShortcut = (id: string): ExtraId | null => {
+  const kind = kindOf(id);
+  if (kind === 'prayer' || id === 'special:commemoration') return 'prayers';
+  if (id === 'special:class' || id === 'special:teacher' || kind === 'teacher') return 'classes';
+  if (id === 'special:birthdays') return 'birthdays';
+  if (id === 'special:calendar') return 'calendar';
+  if (id === 'page:messages') return 'messages';
+  if (id === 'page:abituri') return 'abituri';
   return null;
 };
 
