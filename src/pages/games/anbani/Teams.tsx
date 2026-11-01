@@ -9,6 +9,7 @@ import { triggerHaptic } from '../../../utils/haptics';
 import { anbaniLines, anbaniWords } from '../../../data/anbaniWords';
 import { Chip } from '../../../components/games/Chip';
 import { TableScreen } from '../../../components/games/TableScreen';
+import { KeyStrip } from '../../../components/games/KeyStrip';
 import { Btn, Card, askConfirm, useWide } from '../../../components/ui/kit';
 import { Hint } from '../samshvilde/parts';
 import { TEAM_TINT, TeamChips, TeamsEditor, readTeams, teamNames, type TeamsConf } from '../rounds/teams';
@@ -37,17 +38,6 @@ const WHAT_LABEL: Record<ReadWhat, string> = { letters: 'ასოები', wo
 const SCRIPT_CHOICE: { id: ReadScript; label: string }[] = [...OLD_SCRIPTS.map(s => ({ id: s as ReadScript, label: SCRIPT_LABEL[s] })), { id: 'both', label: 'ორივე' }];
 
 /** the old alphabet with today's letters under it, for those who still need it */
-const KeyStrip: React.FC<{ script: 'asomtavruli' | 'nuskhuri'; big: boolean }> = ({ script, big }) => (
-  <ul className={`grid w-full mx-auto ${big ? 'grid-cols-17 gap-1 max-w-4xl' : 'grid-cols-11 gap-[3px] max-w-xl'}`} aria-label="ანბანის გასაღები">
-    {ALPHABET.map(ch => (
-      <li key={ch} className="rounded-lg bg-white ring-1 ring-[#efe5d3] py-0.5 flex flex-col items-center">
-        <span className={`font-serif-ge leading-tight text-[#7a2028] ${big ? 'text-[26px]' : 'text-[17px]'}`}>{toScript(ch, script)}</span>
-        <span className={`leading-none pb-0.5 text-[#75685a] ${big ? 'text-[14px]' : 'text-[11px]'}`}>{ch}</span>
-      </li>
-    ))}
-  </ul>
-);
-
 const ReadGame: React.FC<{ g: ReadTeams; setG: (g: ReadTeams) => void; onClose: () => void; onAgain: () => void }> = ({ g, setG, onClose, onAgain }) => {
   const wide = useWide();
   const scores = readScores(g);

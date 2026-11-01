@@ -657,6 +657,23 @@
   a script (each step's letters and six words of the letters so far, then twelve long words and six lines with the key), 99 letter
   cards (33 × 3 scripts, number + old name in the corner, one back) for „სამეული“ (Happy Families), „ჰოპ!“ (Snap) and memory, the
   answers and the class game with two score tables.
+- **„ციხის გასაღები“** (2026-11-01, the plan's Georgian game №12 „ტაძრის გასაღები“ turned into castles — no church pictures; like an
+  Escape room; mapItem `tsikhe`, rules `utils/tsikhe.ts` + test, screens `pages/games/tsikhe/`): four castles (`data/tsikheRooms.ts`:
+  ნარიყალა ადვილი, ანანური and გონიო საშუალო, ქაჯეთის ციხე რთული — written by Claude, unchecked, the page says so), five doors each, then
+  the gate. A door is a lock (`Door.kind`): word (may carry an old-script inscription, read with `components/games/KeyStrip.tsx`, moved
+  out of anbani), code (padlock wheels; the old letters' numbers ა1…ჩ1000 — `NUMERALS`), pick, listen (a chant's or a song's opening
+  from the book notes on the synthesizer — `tune`, the test checks it is in `MELODY_POOL`), order, echo (the bells of „ექო“). A door
+  opened gives a letter of the key word, the five scrambled (`piecesOf`); the gate = putting them in order. 30 minutes counted up
+  (`Clock {spent, t0}`, `t0` 0 = paused), hints 1 + 1 + 3 min (the third is the answer), a wrong try 30 s; the clock waits while a
+  door's note shows (`solved`); ★★★ in time without hints, ★★ in time, ★ late. Tabs „ონლაინ · ჰიბრიდული“: online (`Solo.tsx`) = alone
+  or friends round one phone, the run in `sg-tsikhe-run` (✕ pauses), the best per castle `sg-tsikhe-best`; hybrid (`Teams.tsx`,
+  `TsikheTable`, kept in `sg-tsikhe-table`) = 1–6 teams (or the whole class as one) with the printed cards and the host's phone as
+  the locks — a team brings its answer, the host taps the team and tries it on its door (options and items in the cards' order: the
+  seed is `printSeed(room)`), then hands the next card; one clock, each team's own penalty, the first through the gate wins. Its kit
+  (`tsikhis-gasaghebi.mjs`, 13 sheets): a castle = two sheets of four 99×140 mm cards (five doors + the gate, each from №2 showing the
+  piece the door before gave; the castle's story; its scroll — the old script's key, ნარიყალა's with the numbers), a teacher's page a
+  castle (answers, both hints, the tune's opening on a staff, the bells' phrase, the notes to read aloud), the teams' sheet and the
+  hint tokens (two hints + one answer a team). A door card's empty part holds a faint castle (`.ts-fill`, dropped when too small).
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
