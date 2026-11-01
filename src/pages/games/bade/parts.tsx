@@ -6,10 +6,10 @@ import { Chip } from '../../../components/games/Chip';
 // The pieces of „ასოების ბადე“ shared by the day's grid and the teams' screen: the script's choice, the alphabet's key under
 // an old-script grid and the list of words to find.
 
-/** მხედრული · ნუსხური · ასომთავრული, each with its first letter */
-export const ScriptChips: React.FC<{ value: Script; onChange: (s: Script) => void }> = ({ value, onChange }) => (
+/** მხედრული · ნუსხური · ასომთავრული (or the scripts given), each with its first letter */
+export const ScriptChips: React.FC<{ value: Script; onChange: (s: Script) => void; only?: Script[] }> = ({ value, onChange, only = SCRIPTS }) => (
   <div className="flex flex-wrap gap-1.5" role="group" aria-label="დამწერლობა">
-    {SCRIPTS.map(s => (
+    {only.map(s => (
       <Chip key={s} on={value === s} onClick={() => onChange(s)}>
         <span className="inline-flex items-center gap-1.5">
           <span className="font-serif-ge text-[17px] leading-none" aria-hidden="true">{toScript('ა', s)}</span>

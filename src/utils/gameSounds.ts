@@ -59,3 +59,22 @@ export const tick = (ctx: AudioContext | null, accent = false) => {
     tone(c, c.currentTime, accent ? 1320 : 880, accent ? 0.12 : 0.05, accent ? 0.4 : 0.2, 'triangle');
   } catch { /* no audio */ }
 };
+
+/** a letter found: as many quick rising notes as boxes it opened (up to six) */
+export const chime = (ctx: AudioContext | null, n = 1) => {
+  try {
+    const c = wake(ctx);
+    if (!c) return;
+    const now = c.currentTime;
+    for (let i = 0; i < Math.min(6, Math.max(1, n)); i++) tone(c, now + i * 0.09, 660 * 2 ** ((i * 2) / 12), 0.14, 0.25, 'sine');
+  } catch { /* no audio */ }
+};
+
+/** a miss: one low, short tone */
+export const buzz = (ctx: AudioContext | null) => {
+  try {
+    const c = wake(ctx);
+    if (!c) return;
+    tone(c, c.currentTime, 196, 0.34, 0.35, 'triangle');
+  } catch { /* no audio */ }
+};

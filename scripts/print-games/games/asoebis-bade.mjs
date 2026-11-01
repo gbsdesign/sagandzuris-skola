@@ -3,15 +3,15 @@
 // sheet cut in half gives each child an A5 card with a grid on both sides; under an old-script grid the alphabet's key. Then
 // the big key of the 33 letters in the three scripts with their names (two empty grids behind it for the teacher's own) and
 // the answers. The grids are the app's own `buildBade` with fixed seeds; the old letters are the app's fonts (public/fonts).
-import path from 'node:path';
-import { C, ROOT, SERIES, SCHOOL, aso, esc, icon, page, stripe, foot, duplex, sheetNo, coverCss } from '../lib.mjs';
+import { C, SERIES, SCHOOL, aso, esc, icon, page, stripe, foot, duplex, sheetNo, coverCss } from '../lib.mjs';
 import { appData } from '../appData.mjs';
+import { oldHead, letterCls, keyStrip, keyColumns, scriptsNote, oldCss } from '../oldScript.mjs';
 
-const { BADE_THEMES, buildBade, indexCells, LEVELS, mulberry32, toScript, ALPHABET, LETTER_NAMES, SCRIPT_LABEL, SCRIPT_BY } = await appData({
+const { BADE_THEMES, buildBade, indexCells, LEVELS, mulberry32, toScript, SCRIPT_LABEL } = await appData({
   'data/badeThemes.ts': ['BADE_THEMES'],
   'utils/bade.ts': ['buildBade', 'indexCells', 'LEVELS'],
   'utils/otkheuli.ts': ['mulberry32'],
-  'utils/oldScripts.ts': ['toScript', 'ALPHABET', 'LETTER_NAMES', 'SCRIPT_LABEL', 'SCRIPT_BY'],
+  'utils/oldScripts.ts': ['toScript', 'SCRIPT_LABEL'],
 });
 
 export const id = 'asoebis-bade';
@@ -38,15 +38,9 @@ const GRIDS = PLAN.flatMap(([script, ids]) => ids.map(tid => {
   throw new Error(`${tid}: no grid of ${WANT} words`);
 })).map((x, i) => ({ ...x, no: i + 1 }));
 
-// the app's own old letters (index.css): only for the old scripts' code points, drawn ~1.5× wide — brought to size by 70%
-const FONTS_DIR = path.join(ROOT, 'public', 'fonts');
-export const head = `<style>
-@font-face{font-family:'SGOld';src:url('file://${path.join(FONTS_DIR, 'sg-nuskhuri.woff')}') format('woff');unicode-range:U+2D00-2D25;size-adjust:70%}
-@font-face{font-family:'SGOld';src:url('file://${path.join(FONTS_DIR, 'sg-asomtavruli.woff')}') format('woff');unicode-range:U+10A0-10C5;size-adjust:70%}
-</style>`;
+export const head = oldHead;
 
 const DIR_ARROWS = ['arrow-right', 'arrow-down', 'arrow-down-right', 'arrow-up-right'];
-const letterCls = script => (script === 'mkhedruli' ? 'mk' : 'old');
 
 // ---------- a grid ----------
 const gridHtml = (g, script, cell, { capsules = false, blank = false } = {}) => {
@@ -59,12 +53,6 @@ const gridHtml = (g, script, cell, { capsules = false, blank = false } = {}) => 
   }).join('')}</svg>` : '';
   const cells = Array.from({ length: n * n }, (_, i) => (blank ? '' : esc(toScript(g.cells[i], script))));
   return `<div class="bd-grid ${letterCls(script)}" style="width:${n * cell}mm;height:${n * cell}mm;grid-template-columns:repeat(${n},${cell}mm);grid-template-rows:repeat(${n},${cell}mm)">${caps}${cells.map(c => `<span>${c}</span>`).join('')}</div>`;
-};
-
-/** the alphabet's key under an old-script grid: two rows, the old letter over today's */
-const keyStrip = script => {
-  const rows = [ALPHABET.slice(0, 17), ALPHABET.slice(17)];
-  return `<div class="bd-key"><div class="bd-keyLabel">ანბანის გასაღები: ზემოთ ${esc(SCRIPT_LABEL[script])}, ქვემოთ დღევანდელი ასო</div>${rows.map(r => `<div class="bd-keyRow">${r.map(ch => `<span><b class="old">${toScript(ch, script)}</b><i>${ch}</i></span>`).join('')}</div>`).join('')}</div>`;
 };
 
 const half = ({ g, script, no }, top) => `<div class="bd-half" style="top:${top}mm">
@@ -93,17 +81,11 @@ const gridSheets = PLAN.map(([script], k) => {
 });
 
 // ---------- the big key and the teacher's own grids ----------
-const SCRIPTS3 = ['mkhedruli', 'nuskhuri', 'asomtavruli'];
-const HEAD3 = { mkhedruli: 'მხედ&shy;რული', nuskhuri: 'ნუს&shy;ხური', asomtavruli: 'ასომ&shy;თავ&shy;რული' };
 const keyPage = page(`${stripe(TAG, 'ანბანის გასაღები')}
 <div class="bd-kp">
   <div class="rhead"><div class="aso rtitle">${aso('ანბანი')}</div><div class="rsub">33 ასო სამ დამწერლობაში — და თითოეულის ძველი სახელი</div></div>
-  <div class="bd-kcols">${[0, 1, 2].map(c => `<table class="bd-kt"><tr>${SCRIPTS3.map(s => `<th>${HEAD3[s]}</th>`).join('')}<th>სახელი</th></tr>${ALPHABET.slice(c * 11, c * 11 + 11).map((ch, i) => `<tr>${SCRIPTS3.map(s => `<td class="${letterCls(s)}">${toScript(ch, s)}</td>`).join('')}<td class="nm">${esc(LETTER_NAMES[c * 11 + i])}</td></tr>`).join('')}</table>`).join('')}</div>
-  <div class="box bd-hist">
-    <p><b>ასომთავრული</b> — ქართული დამწერლობის უძველესი სახე, V საუკუნის წარწერებიდან ვიცნობთ: დიდი, მრგვალი ასოები.</p>
-    <p><b>ნუსხური</b> — IX საუკუნიდან ხელნაწერი წიგნების ასოები. ასომთავრულს და ნუსხურს ერთად <b>ხუცური</b> ჰქვია.</p>
-    <p><b>მხედრული</b> — X საუკუნიდან; დღეს ამ ასოებით ვწერთ. სამივეს ერთი და იგივე 33 ასო და ერთი რიგი აქვს.</p>
-  </div>
+  ${keyColumns()}
+  ${scriptsNote}
 </div>
 ${foot(`<span>${esc(title)} · ანბანის გასაღები</span><span>${esc(SCHOOL)}</span>`)}`, 'bdKey');
 
@@ -203,13 +185,12 @@ const rulesPage = no => page(`${stripe(TAG, 'წესები')}
 </div>
 ${foot(`<span>${esc(title)} · წესები</span><span>${esc(SCHOOL)}</span>`)}`, 'rulesP');
 
-export const css = `${coverCss}
+export const css = `${coverCss}${oldCss}
 .rtitle{white-space:nowrap}
 .cover .lead{margin-bottom:4mm}
 .sq-h3{margin:0 0 2mm;color:var(--wine);font-size:12pt}
 .cover table.comp{margin-bottom:1.5mm}
 .cover .two{margin-top:4mm}
-.old{font-family:'SGOld','SansKa',sans-serif}
 .bdPage .bd-half{position:absolute;left:0;width:210mm;height:148.5mm}
 .bd-head{position:absolute;left:12mm;right:12mm;top:7.5mm;display:flex;align-items:center;gap:3mm;border-bottom:.3mm solid var(--gold);padding-bottom:1.2mm}
 .bd-head b{font-size:14pt;color:var(--wine)}
@@ -235,27 +216,12 @@ export const css = `${coverCss}
 .bd-score{display:flex;align-items:flex-end;gap:1.6mm;font-size:10pt;margin-top:2.6mm}
 .bd-score i{width:16mm;border-bottom:.25mm solid #bba98f;height:4mm}
 .bd-score i.s{width:8mm}
-.bd-key{position:absolute;left:12mm;right:12mm;top:114.5mm}
-.bd-keyLabel{font-size:8.6pt;color:var(--muted);margin-bottom:1mm}
-.bd-keyRow{display:flex;gap:.6mm;margin-bottom:.8mm}
-.bd-keyRow span{width:10.1mm;height:10.6mm;border:.2mm solid var(--line);border-radius:.9mm;background:var(--paper);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.5mm}
-.bd-keyRow b{font-size:15pt;font-weight:400;line-height:1;color:#2f2018}
-.bd-keyRow i{font-style:normal;font-family:'SansKa',sans-serif;font-weight:700;font-size:8.2pt;line-height:1;color:var(--muted)}
+.bd-half .os-key{position:absolute;left:12mm;right:12mm;top:114.5mm}
 .bd-tip{position:absolute;left:12mm;right:12mm;top:117mm;display:flex;gap:2mm;align-items:flex-start;font-size:10pt;line-height:1.35;background:var(--paper);border:.25mm solid var(--gold);border-radius:2mm;padding:2.6mm 3.4mm}
 .bd-tip svg{flex:none;margin-top:.4mm}
 .bd-cut{position:absolute;left:0;top:145.5mm}
 .bd-scissors{position:absolute;left:4mm;top:146.1mm;background:#fff;line-height:0}
 .bd-kp{padding:6mm 12mm 0}
-.bd-kcols{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5mm;margin-top:2mm}
-table.bd-kt{border-collapse:collapse;width:100%;table-layout:fixed}
-table.bd-kt th{font-size:7.6pt;color:var(--wine);font-weight:700;padding:1mm .3mm;border-bottom:.3mm solid var(--gold);text-align:center;vertical-align:bottom;line-height:1.15;hyphens:manual}
-table.bd-kt td{height:17.4mm;text-align:center;border-bottom:.15mm solid var(--line);line-height:1}
-table.bd-kt td.mk{font-family:'SansKa',sans-serif;font-weight:700;font-size:22pt}
-table.bd-kt td.old{font-size:27pt}
-table.bd-kt td.nm{font-size:10.5pt;color:var(--brown);font-weight:700}
-.bd-hist{margin-top:4mm;font-size:9.6pt;line-height:1.35}
-.bd-hist p{margin:0 0 1.2mm}
-.bd-hist b{color:var(--wine)}
 .bd-ans{display:grid;grid-template-columns:repeat(3,1fr);gap:6mm 5mm;padding:7mm 12mm 0}
 .bd-mini{display:flex;flex-direction:column;align-items:center}
 .bd-mh{font-size:9.6pt;margin-bottom:1.6mm;align-self:stretch;text-align:center}

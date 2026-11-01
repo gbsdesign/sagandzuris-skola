@@ -5,13 +5,13 @@ import { useAuth } from '../context';
 import { useMembership } from '../utils/memberAccess';
 import { type HangiDay } from '../utils/hangi';
 
-// The record of a daily game („დღის ჰანგი“, „დღის სიტყვა“, „ოთხეული“, „ასოების ბადე“): one entry per day played, keyed by the Tbilisi
+// The record of a daily game („დღის ჰანგი“, „დღის სიტყვა“, „ოთხეული“, „ასოების ბადე“, „ხუცური წარწერა“): one entry per day played, keyed by the Tbilisi
 // day. A member keeps it in students/{uid}.games.<game>.days (the member writes it; teachers and admins may read the
 // document already); a guest or a newcomer not let in yet keeps it on the device — as the abituri progress does. The
 // device copy is kept for a member too, so the day's game goes on offline and reaches Firestore when the network is
 // back (setDoc queues it).
 
-export type DailyGame = 'hangi' | 'sitqva' | 'otkheuli' | 'bade';
+export type DailyGame = 'hangi' | 'sitqva' | 'otkheuli' | 'bade' | 'tsartsera';
 type Days = Record<string, HangiDay>;
 
 const MAX_GUESSES = 20;
