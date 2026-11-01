@@ -20,6 +20,8 @@ export const ROOM_GAME_INFO: Record<RoomGame, RoomGameInfo> = {
   notebi: { title: 'სამ ნოტში!', item: 'notebi', host: 'წამყვანი' },
   turniri: { title: 'ხმების ტურნირი', item: 'turniri', host: 'წამყვანი' },
   hangi: { title: 'დღის ჰანგი', item: 'hangi', host: 'წამყვანი' },
+  akordi: { title: 'ქართული აკორდი', item: 'akordi', host: 'წამყვანი' },
+  rvakhma: { title: 'რვა ხმა', item: 'rvakhma', host: 'წამყვანი' },
 };
 
 /** the chat card's `room`: „სამშვილდის ღამე“ names its room alone (its cards came first), every other game `game:roomId` */
