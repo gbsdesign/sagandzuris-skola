@@ -637,6 +637,26 @@
   paper dolls drawn at 1:1 in `scripts/print-games/dolls.mjs` (a piece = its drawing + the shapes its grey cut line goes round,
   `halo`), the chokha's ten pieces (four hats) and the dress's five, their backs mirrored with what each goes on after (`afterOf`,
   read from the app's `needs`), the host's sheet (reasons, stories, „რომელი ქუდი?“) with the scores behind it.
+- **„სამი დამწერლობა“** (2026-11-01, the plan's Georgian game №2, like Duolingo; mapItem `anbani`, rules `utils/anbani.ts` + test,
+  screens `pages/games/anbani/`): the old scripts learned step by step. A script's path = nine steps (`UNITS`): seven of letters,
+  most frequent first so words come early (`LETTER_UNITS`: აეიმდ · ოსრლბ · ნვგთუ · კცხშქ · ტყწპზ · ჩძჯღ · ფჭჰჟ), then words
+  (`WORDS_UNIT`), then lines (`LINES_UNIT`). A lesson (`buildLesson`, `Lesson.tsx`) = a new letter met („intro“: the three scripts
+  and its old name), asked both ways (`pick` old → today's, `find` today's → old), traced with a finger (`trace`, `Trace.tsx`: the
+  app's „SG Old Script“ drawn faint; the check paints letter and ink on 120 px masks — `traceScore`: ≥ 60 % of the letter covered,
+  ≥ 70 % of the ink on it; „გამოტოვება“ after two misses), words of the letters learned so far (`readable`; four options) and a
+  line's words put in order (`order`). Three hearts (`HEARTS`): a miss costs one and the exercise comes back once at the end
+  (`answered`); none left — „თავიდან“. The words (`data/anbaniWords.ts`) = „დღის სიტყვა“'s answers + „ოთხეული“'s groups but the
+  songs' and chants' titles; the lines = „ხუცური წარწერა“'s of 3–7 words. Progress is the daily record (`useDailyRecord('anbani')`,
+  a day's `guesses` = the lesson ids done, `a1`…`a9` / `n1`…`n9`, `ap`/`np` = practice), so a step is done once its id is anywhere
+  (`unitsDone`) and the streak is `streakOf`; the letters missed most stay on the device (`sg-anbani-weak`, `updateWeak`) and lead
+  „გაიმეორე ნასწავლი“ (practice). Tabs „ონლაინ · ჰიბრიდული“: the path (`Path.tsx`: script chips `sg-anbani-script`, streak / today /
+  steps, nine round steps zig-zag) and „სწრაფი კითხვა“ (`Teams.tsx`, rules `ReadTeams`: an old letter, word or line on one screen,
+  the host taps the team that read it first — a line 2 points —, the key strip shown or hidden, 10/15/20, kept in
+  `sg-anbani-teams`; on a computer everything larger). Its kit (`sami-damtserloba.mjs`, 11 sheets): the big key + an asomtavruli
+  copybook, a nuskhuri copybook + „ჩემი გზა“ (both paths to colour, a six-week streak calendar, the master's badge), a reading sheet
+  a script (each step's letters and six words of the letters so far, then twelve long words and six lines with the key), 99 letter
+  cards (33 × 3 scripts, number + old name in the corner, one back) for „სამეული“ (Happy Families), „ჰოპ!“ (Snap) and memory, the
+  answers and the class game with two score tables.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
