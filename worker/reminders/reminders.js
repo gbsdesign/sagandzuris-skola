@@ -563,6 +563,7 @@ async function groupEvent(request, env) {
 // the games a room is opened for (the app's data/roomGames.ts), as the notice names them
 const GAME_TITLES = {
   samshvilde: 'სამშვილდის ღამე', kutkhe: 'საიდანაა სიმღერა?', otkhi: 'ოთხიდან ერთი', khmebi: 'ხმა-ხმად', notebi: 'სამ ნოტში!', turniri: 'ხმების ტურნირი',
+  hangi: 'დღის ჰანგი',
 };
 
 async function gameInvite(request, env) {

@@ -389,7 +389,7 @@
   (`HybridState`, `markTeam`, kept on the device so ✕ only pauses). The room store is generic since then: `utils/gameRoom.ts`
   `createRooms(be, engine, moves)` over a `RoomEngine` (`games` it plays; samshvilde's is `utils/samshvildeRoom.ts`), the
   app's two stores in `utils/gameRoomFirestore.ts` (`rooms` = samshvilde, `roundRooms` = the quick games: `timeUp(key)`,
-  `reveal`, `next`); the rules let a room be opened for the six `ROOM_GAMES`, up to 40 players, an act may carry `ms`.
+  `reveal`, `next`); the rules let a room be opened for the seven `ROOM_GAMES`, up to 40 players, an act may carry `ms`.
   Invitations name their game: `data/roomGames.ts` (titles, the hub item, a chat card's `room` = `game:roomId` — a
   samshvilde card keeps the bare id), the Worker's `GAME_TITLES`, `/?open=<game>&c=&r=`, icons
   `components/games/roomGameIcons.ts`; the online tab of every room game is `components/games/RoomSetup.tsx`. Screens
@@ -428,6 +428,11 @@
   voice drops it — `Pick`'s `onPick(null)`); no piece of its own (`clip` none). Its hybrid goes one by one (`turns`, `sides`
   „მომღერლები“): the phone passed hand to hand, each one's take kept as their mark; any name can sing (again) out of turn.
   Every quick game is now built. Not yet tried by real people on several phones.
+  „დღის ჰანგი“ with a class (2026-11-01, the whole-list stage 1): a room game too (`hangi`, `utils/hangiRounds.ts` + test: six
+  steps of the recording's start 1·2·4·7·11·16 s, four names of the same kind and service/region, 1000…250 by step; face
+  `pages/games/hangi/face.tsx`, device keys under `store: 'sg-hangi-klasi'` because `sg-hangi` is the daily record). `RoundsPage`
+  takes an optional `solo` tab — the daily game stays its first tab („დღის ჰანგი · ონლაინ · ჰიბრიდული“); `useSnippet`'s `Clip` may
+  carry its own `seconds`.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
@@ -458,6 +463,14 @@
   their stripe shows a label („ქართული · უტელეფონო“) instead of a number. „რა? სად? როდის?“ has one too (12 sheets): 72 question
   cards = the first four of each of the 18 topics (question in front, answer + note on the back), 9 blank cards, a two-sided score sheet
   (18 questions × 6 teams) and 24 answer slips — so keep the first four of every topic print-worthy.
+  The musical games' kits (2026-11-01, stage 1; the host sings, so the melodies come from the book notes): `scripts/print-games/music.mjs`
+  draws staves with abcjs inside the print page (`abcOf` one voice, every accidental written, numbered marks; `abcScore` three voices
+  under each other on one clef, tied to keep time), `melodies.mjs` = the chants of the app's chant games + the program's songs with
+  notes, `kitParts.mjs` = the shared score sheet and steps. „დღის ჰანგი“ (48 melodies, the host sings 2·3·4·6·8·11 notes), „სამ ნოტში!“
+  (49 bidding cards: the clue in front, the staff behind), „ხმა-ხმად“ (24 chants in three voices with four answers, three singers),
+  „საიდანაა სიმღერა?“ (a 39×28 cm map of the songs map's 13 numbered regions from two A4 pieces — racha's and samtskhe's labels moved
+  off the seam — and 40 song cards from `FOLK_SONGS` by a quota per region, most recorded first, no title that names a region; the
+  back = the app's reveal colours on a small map).
 - **No religious pictures in the games (the user's rule, 2026-11-01; corrected the same day: „რელიგიური და მუსიკალური კითხვები
   დატოვე, უბრალოდ ვიზუალს ნუ გამოიყენებ“)**: no cross, church, icon or domed-church mark anywhere in a game or a print kit (the
   series emblem is `grapeEmblem` in `scripts/print-games/lib.mjs`, the Catan kit's shields carry an eight-rayed sun, the caravan

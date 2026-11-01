@@ -8,6 +8,9 @@ import type { Clip } from './useSnippet';
 
 export interface RoundFace {
   game: RoundGame;
+  /** the stem of its keys on this phone (the settings, a paused one-phone game): `sg-<game>` unless named — „დღის ჰანგი“'s
+   * daily record already holds that one */
+  store?: string;
   title: string;
   Icon: LucideIcon;
   /** the intro card: what the game is, then how each variant goes */
