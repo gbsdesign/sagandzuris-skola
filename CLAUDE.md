@@ -390,7 +390,7 @@
   (`HybridState`, `markTeam`, kept on the device so ✕ only pauses). The room store is generic since then: `utils/gameRoom.ts`
   `createRooms(be, engine, moves)` over a `RoomEngine` (`games` it plays; samshvilde's is `utils/samshvildeRoom.ts`), the
   app's two stores in `utils/gameRoomFirestore.ts` (`rooms` = samshvilde, `roundRooms` = the quick games: `timeUp(key)`,
-  `reveal`, `next`); the rules let a room be opened for the eleven `ROOM_GAMES`, up to 40 players, an act may carry `ms`.
+  `reveal`, `next`); the rules let a room be opened for the twelve `ROOM_GAMES`, up to 40 players, an act may carry `ms`.
   Invitations name their game: `data/roomGames.ts` (titles, the hub item, a chat card's `room` = `game:roomId` — a
   samshvilde card keeps the bare id), the Worker's `GAME_TITLES`, `/?open=<game>&c=&r=`, icons
   `components/games/roomGameIcons.ts`; the online tab of every room game is `components/games/RoomSetup.tsx`. Screens
@@ -462,6 +462,16 @@
   it can give a round), never edit by hand, run it again after a song's text changes. A cut = a line sung once after a line sung
   once (`cutsOf`). Tabs „მარტო · ონლაინ · ჰიბრიდული“; on one phone no options show: the teams sing or write the line from memory,
   marks ზუსტად 2 · თითქმის 1 · ვერა 0.
+  „ოთხი ჰანგი, ერთი სიტყვა“ (2026-11-01, the plan's №12, like 4 Pics 1 Word; mapItem `hangebi`, `utils/hangebi.ts` + test): four
+  clues, one word built from a bank of letters (`pages/games/hangebi/Bank.tsx`: a box a letter, a tap puts / gives back; a full
+  word that is one of `HANGEBI_WORDS` is the pick — sent as its index, so alone it answers at once — any other says „no such
+  answer“), right 1000…500 by speed. By word (40 s): the groups of „ოთხეული“ under the word that names them (`data/hangebiWords.ts`
+  `KEY`; four rivers → მდინარე, a region's song titles → that region; a clue holding the answer's stem or a region's adjective is
+  left out — `cluesOf`; four clues no other answer's group holds three of — `sureClues`); by ear (60 s, only when the recordings
+  may be heard): a region with ≥ 4 `kutkhePool` songs, four 6 s pieces each with its own ▶ (`useSampler`), the answer the region
+  (`data/hangebiPool.ts`). The first 13 `HANGEBI_WORDS` are the regions in `KUTKHE_REGIONS` order. Levels „ორივე · სიტყვით ·
+  ყურით“ (`sg-hangebi-level`). Tabs „მარტო · ონლაინ · ჰიბრიდული“; on one phone the screen shows the clues, the boxes and the
+  letters, the teams write the word, marks სწორი 1 · ვერა 0.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
@@ -507,6 +517,9 @@
   place cards (four a region, the name in front, the region, a small map and the note behind), team and score sheets.
   „გააგრძელე!“'s kit = the host's book of 30 songs' words (recorded most first, ≤ 20 lines, four a region; two columns, a song
   never split — `heightOf` holds the print's measured heights) with ✋ at up to three lines to stop before, and a score sheet.
+  „ოთხი ჰანგი, ერთი სიტყვა“'s kit = 54 cards, one per puzzle by word but the songs' titles (four clues by `sureClues` in front with
+  the answer's boxes, the word and the group's other words for a +1 bonus behind; five topic colours, a book — no church picture —
+  for the faith's words), team and score sheets.
 - **No religious pictures in the games (the user's rule, 2026-11-01; corrected the same day: „რელიგიური და მუსიკალური კითხვები
   დატოვე, უბრალოდ ვიზუალს ნუ გამოიყენებ“)**: no cross, church, icon or domed-church mark anywhere in a game or a print kit (the
   series emblem is `grapeEmblem` in `scripts/print-games/lib.mjs`, the Catan kit's shields carry an eight-rayed sun, the caravan

@@ -1,7 +1,7 @@
-import { AudioLines, Compass, Headphones, ListChecks, ListMusic, MapPinned, MicVocal, Moon, Music2, Piano, Waves, type LucideIcon } from 'lucide-react';
+import { AudioLines, Compass, Headphones, ListChecks, ListMusic, MapPinned, MicVocal, Moon, Music2, Piano, Puzzle, Waves, type LucideIcon } from 'lucide-react';
 import type { RoomGame } from '../../utils/gameRoom';
 
 /** a room game's mark on its invitations (the strip, the chat's card) */
 export const ROOM_GAME_ICON: Record<RoomGame, LucideIcon> = {
-  samshvilde: Moon, kutkhe: MapPinned, otkhi: ListChecks, khmebi: AudioLines, notebi: Music2, turniri: MicVocal, hangi: Headphones, akordi: Piano, rvakhma: Waves, ruka: Compass, gagrdzele: ListMusic,
+  samshvilde: Moon, kutkhe: MapPinned, otkhi: ListChecks, khmebi: AudioLines, notebi: Music2, turniri: MicVocal, hangi: Headphones, akordi: Piano, rvakhma: Waves, ruka: Compass, gagrdzele: ListMusic, hangebi: Puzzle,
 };
