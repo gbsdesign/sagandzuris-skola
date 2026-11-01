@@ -3,19 +3,22 @@ import { BookOpen, Flame, Lightbulb, Search, Share2 } from 'lucide-react';
 import { useDailyRecord } from '../../hooks/useDailyRecord';
 import { loadCalendarYearDays, type CalendarDay } from '../../data/churchCalendar';
 import { openSaintLife } from '../../data/saintLives';
-import { ANSWER_BANK, ANSWER_WORDS } from '../../data/sitqvaAnswers';
+import { ANSWER_WORDS } from '../../data/sitqvaAnswers';
 import { loadSitqvaWords } from '../../utils/sitqvaDictionary';
 import {
-  KIND_HINT, LATIN_TO_GEORGIAN, LETTERS, MAX_TRIES, afterTry, candidatesOfDay, dayIndex, isGeorgian, keyMarks, scoreGuess, sitqvaShareText, wordOfDay,
+  KIND_HINT, LATIN_TO_GEORGIAN, LETTERS, MAX_TRIES, afterTry, dayIndex, isGeorgian, keyMarks, scoreGuess, sitqvaShareText,
   type Mark, type SitqvaKind,
 } from '../../utils/sitqva';
-import { dayBefore, emptyDay, hangiStats, tbilisiToday, type HangiDay } from '../../utils/hangi';
+import { emptyDay, hangiStats, tbilisiToday, type HangiDay } from '../../utils/hangi';
 import { GeoKeyboard } from '../../components/games/GeoKeyboard';
 import { Btn, Card, Stat } from '../../components/ui/kit';
 import { Toast } from '../../components/ui/Toast';
 import { triggerHaptic } from '../../utils/haptics';
 import { openSearch } from '../../utils/searchOpen';
 import { MONTHS_GE } from '../../utils/dateNames';
+import { VariantPage } from './rounds/variants';
+import { SitqvaTeams } from './sitqva/Teams';
+import { dayPick } from './sitqva/dayPick';
 
 // „დღის სიტყვა“ (games hub, 2026-10-28): one hidden word a day for the whole school, six tries, Wordle's colours. The word
 // comes from the church calendar's day (its feast, on every third day a saint's name) or from the broad bank of places,
@@ -33,7 +36,7 @@ const dateLabel = (iso: string) => `${+iso.slice(8, 10)} ${MONTHS_GE[+iso.slice(
 /** the kinds the app's own search finds something for (a place, a song or dance, a hero or author, a church word) */
 const SEARCHABLE = new Set<SitqvaKind>(['region', 'culture', 'hero', 'church', 'feast']);
 
-const SitqvaGame: React.FC = () => {
+const SitqvaDaily: React.FC = () => {
   const { days, loaded, save, member } = useDailyRecord('sitqva');
   const [today, setToday] = useState(tbilisiToday);
   const [cal, setCal] = useState<Record<string, CalendarDay> | null>(null);
@@ -55,12 +58,7 @@ const SitqvaGame: React.FC = () => {
   }, [today]);
   useEffect(() => { loadSitqvaWords().then(setDict); }, []);
 
-  const pick = useMemo(() => {
-    if (!cal) return undefined;
-    const wordOn = (iso: string, skip?: string) => wordOfDay(iso, candidatesOfDay(cal[iso]), ANSWER_BANK, skip)?.word;
-    const yesterday = dayBefore(today);
-    return wordOfDay(today, candidatesOfDay(cal[today]), ANSWER_BANK, wordOn(yesterday, wordOn(dayBefore(yesterday))));
-  }, [cal, today]);
+  const pick = useMemo(() => (cal ? dayPick(cal, today) : undefined), [cal, today]);
 
   const saved = days[today];
   const day: HangiDay = pick && saved && saved.id === pick.word ? saved : emptyDay(pick?.word ?? '');
@@ -209,5 +207,8 @@ const SitqvaGame: React.FC = () => {
     </div>
   );
 };
+
+/** „ონლაინ“ = the day's word alone, „ჰიბრიდული“ = teams on one phone (sitqva/Teams.tsx) */
+const SitqvaGame: React.FC = () => <VariantPage target="sitqva" store="sg-sitqva-tab" online={<SitqvaDaily />} table={<SitqvaTeams />} />;
 
 export default SitqvaGame;

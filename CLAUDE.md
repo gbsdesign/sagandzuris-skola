@@ -334,6 +334,17 @@
   knight's virtues); the day's grid `gridOfDay` + unlimited extra grids
   with a random seed, not saved). Both records go through `hooks/useDailyRecord.ts` (`students.games.<game>.days[iso]`, the device
   for guests; `useHangi` is now a wrapper of it), no rules change. All three daily games count days from 2026-10-28.
+  Both got „ჰიბრიდული“ (2026-11-01): the page has two tabs „ონლაინ · ჰიბრიდული“ (`pages/games/rounds/variants.tsx` `VariantPage`, the
+  tab kept in `sg-sitqva-tab` / `sg-otkheuli-tab`; the hub's buttons open their tab — `requestOpen('sitqva' | 'otkheuli', …)`).
+  „ოთხეული“'s (`pages/games/otkheuli/Teams.tsx`, rules `utils/otkheuliTeams.ts` + test): 2–6 teams in turn pick four on one grid, a
+  found group = 2 points in its team's colour, its link said before „ჯგუფის ჩვენება“ = +1 (the host marks it); every pick passes
+  the turn, a wrong one too („ერთი აკლია!“ shows), the turn's clock (30/60/90 s) passes it as well; after three groups the last four
+  join by themselves and the next team may name their link. 1–3 grids, none of a group twice. „დღის სიტყვა“'s (`pages/games/sitqva/
+  Teams.tsx`, rules `utils/sitqvaTeams.ts` + test; like Lingo): a bank word (never the day's — `sitqva/dayPick.ts`), teams in turn try
+  a word on one board (each row with its team's dot), found in row r = 7 − r points, the clock (30/45/60 s) passes the turn without a
+  row; 3/5/7 words; „პირველი ასო ჩანს“ = easier. Kept in `sg-otkheuli-teams` / `sg-sitqva-teams`, settings `sg-*-table`. The
+  teams' editor, chips and turn clock are shared: `pages/games/rounds/teams.tsx` (`TeamsEditor`, `TeamChips`, `useTurnClock`,
+  `TEAM_TINT`; „ჩამოთვალე!“ uses them too).
 - **Live games (2026-10-28, third PR)**: „გათვლა“ (`pages/games/GatvlaGame.tsx`; rules `utils/gatvla.ts` + test; one phone in
   the circle: names light up per beat of a rhyme and the last beat picks who starts, the picked are skipped next time; the
   „ვისი ჯერია?“ wheel picks the one asked least (counts on the device); teams of 2–4. Rhymes: the old alphabet names, numbers,

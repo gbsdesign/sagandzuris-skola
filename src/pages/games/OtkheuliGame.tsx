@@ -11,6 +11,8 @@ import { Btn, Card, Stat } from '../../components/ui/kit';
 import { Toast } from '../../components/ui/Toast';
 import { triggerHaptic } from '../../utils/haptics';
 import { MONTHS_GE } from '../../utils/dateNames';
+import { VariantPage } from './rounds/variants';
+import { OtkheuliTeams } from './otkheuli/Teams';
 
 // „ოთხეული“ (games hub, 2026-10-28): sixteen words, four hidden groups of four. One grid a day for the whole school —
 // its record counts for the streak and the statistics — and as many extra grids as one likes (a random seed, nothing
@@ -34,7 +36,7 @@ const GroupBar: React.FC<{ group: OtkheuliGroup; tone: string }> = ({ group, ton
   </div>
 );
 
-const OtkheuliGame: React.FC = () => {
+const OtkheuliDaily: React.FC = () => {
   const { days, loaded, save, member } = useDailyRecord('otkheuli');
   const [today, setToday] = useState(tbilisiToday);
   const [seed, setSeed] = useState<number | null>(null); // null = the day's grid
@@ -216,5 +218,8 @@ const OtkheuliGame: React.FC = () => {
     </div>
   );
 };
+
+/** „ონლაინ“ = the day's grid and more alone, „ჰიბრიდული“ = teams on one phone (otkheuli/Teams.tsx) */
+const OtkheuliGame: React.FC = () => <VariantPage target="otkheuli" store="sg-otkheuli-tab" online={<OtkheuliDaily />} table={<OtkheuliTeams />} />;
 
 export default OtkheuliGame;

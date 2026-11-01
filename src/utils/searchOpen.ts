@@ -10,9 +10,9 @@ export const openSearch = (query?: string) => window.dispatchEvent(new CustomEve
 
 // "Open this song / ancestor / tab / person (the admin panel)": the page takes the request when it mounts, or at once if it is
 // already on screen. One request at a time; a page that never opens simply leaves it unused.
-/** a page that takes a picked item; a game played in a class's room takes a room (`classId/roomId`) or a variant, as does
- *  „ჩემი გუნდი“ (a variant: its tab) */
-export type OpenTarget = 'simghera' | 'tsinaprebi' | 'biblioteka' | 'admin' | 'gundi' | RoomGame;
+/** a page that takes a picked item; a game played in a class's room takes a room (`classId/roomId`) or a variant, as do
+ *  „ჩემი გუნდი“, „დღის სიტყვა“ and „ოთხეული“ (a variant: its tab) */
+export type OpenTarget = 'simghera' | 'tsinaprebi' | 'biblioteka' | 'admin' | 'gundi' | 'sitqva' | 'otkheuli' | RoomGame;
 const REQUEST_EVENT = 'sg-open-request';
 let pending: { target: OpenTarget; id: string } | null = null;
 
