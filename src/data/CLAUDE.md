@@ -312,3 +312,11 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   reader's `!`, mostly vols II–IV's divided voices and IX №70–82) and 284 lines where two voices sing one letter with
   different accidentals at once (many are the books' own: per-voice key signatures, the editors' bracketed suggestions).
   The lists: re-make them with `OMR_AUDIT=1 OMR_SPELL=1` (each file's log, `spell`).
+  Second round the same evening (the user: „სხვადასხვა ხერხებით … რამე ხომ არ გამოიპარა“): every sign on the pages counted
+  against what the reader used, the voices' timing checked inside each line, near-copies of one chant compared, odd
+  spellings and melodic steps listed. Eight more faults fixed (list in `scripts/omr/README.md`: smaller staves and
+  small-headed voices, a key change before a line's first note, a small note's ♭/♯ landing on its neighbour, the 16th's
+  4-pt beams, stacked rests, a whole-note unison, „5/6/7“ groups); 389 files changed again, 24 lines that were silent
+  now sound. Left: ~2 000 places in ~500 files where a voice falls silent inside a line with no rest printed (`gap` in
+  the audit log — divided voices, beams across stems up and down; each one different), 205 lines whose voices end at
+  different beats. The near-copies' differences and the E♯/C♭/F♭ that remain are the books' own.

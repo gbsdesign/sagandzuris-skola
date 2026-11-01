@@ -66,6 +66,27 @@ def open_vol(vol):
     return doc
 
 
+def beam_parts(items):
+    """the closed outlines of a filled drawing: rectangles one by one, lines grouped while each starts where the last ended"""
+    parts, cur, last = [], [], None
+    for it in items:
+        if it[0] == 're':
+            parts.append(pymupdf.Rect(it[1]))
+            continue
+        a, b = it[1], it[2]
+        if cur and last is not None and (abs(a.x - last.x) > 0.05 or abs(a.y - last.y) > 0.05):
+            parts.append(_bbox(cur)); cur = []
+        cur += [a, b]
+        last = b
+    if cur:
+        parts.append(_bbox(cur))
+    return parts
+
+
+def _bbox(pts):
+    return pymupdf.Rect(min(p.x for p in pts), min(p.y for p in pts), max(p.x for p in pts), max(p.y for p in pts))
+
+
 class Page:
     def __init__(self, pg):
         self.pg = pg
@@ -101,8 +122,12 @@ class Page:
             r = d['rect']
             items = d['items']
             if d.get('fill') is not None and d.get('type') in ('f', 'fs'):
-                if (all(it[0] == 'l' for it in items) and len(items) >= 3 and r.height < 12 or all(it[0] == 're' for it in items) and r.height < 4) and r.width > 4:
-                    self.beams.append(r)
+                if (all(it[0] == 'l' for it in items) and len(items) >= 3 and r.height < 12 or all(it[0] == 're' for it in items) and r.height < 4) and r.width > 2.5:  # (a 16th's short beam is 4 pt)
+                    # one drawing may hold several beams (a 16th's short second beam beside its 8th beam): each
+                    # closed outline is a beam of its own
+                    for part in beam_parts(items):
+                        if part.width > 2.5:
+                            self.beams.append(part)
                 elif any(it[0] == 'c' for it in items):
                     self.curves.append(r)
                 continue
@@ -142,6 +167,11 @@ class Page:
         return sorted(out, key=lambda s: (s['top'], s['x0']))
 
     def systems(self):
+        if not hasattr(self, '_systems'):
+            self._systems = self._find_systems()
+        return self._systems
+
+    def _find_systems(self):
         # staves joined by the system's left line (a vertical line through all of them); staves are taken column by
         # column, so side-by-side systems stay apart, and the systems come back in reading order
         cols = []
@@ -179,9 +209,26 @@ def read_system(P, sysst, dbg=False):
     left, right = sysst[0]['x0'] - 25, sysst[0]['x1'] + 10
     gl = [g for g in P.glyphs if top <= g['y'] <= bot and left <= g['x'] <= right]
     # small (cue-size) heads are the editors' alternatives or guesses: not played
+    # a head's size goes with its staff's line spacing (a page may print smaller staves — a footnote's example, a
+    # whole piece set smaller): the page's usual head size per line space, times this system's spacing
+    if not hasattr(P, 'head_ratio'):
+        staves = [s for sy in P.systems() for s in sy]
+        rs = sorted(g['size'] / min(staves, key=lambda s: abs((s['top'] + s['bot']) / 2 - g['y']))['sp']
+                    for g in P.glyphs if g['c'] in HEADS) if staves else []
+        P.head_ratio = rs[len(rs) // 2] if rs else None
     sizes = sorted(g['size'] for g in P.glyphs if g['c'] in HEADS)
-    normal = sizes[len(sizes) // 2] if sizes else 17.5
+    normal = P.head_ratio * sysst[0]['sp'] if P.head_ratio else (sizes[len(sizes) // 2] if sizes else 17.5)
+    # (but a short small system beside the music — a cue „თა! მომიხს…“ of what is sung next — keeps the page's size)
+    page_sy = P.systems()
+    big_sp = max((sy[0]['sp'] for sy in page_sy), default=sysst[0]['sp'])
+    big_w = max((sy[0]['x1'] - sy[0]['x0'] for sy in page_sy), default=1)
+    if P.head_ratio and sysst[0]['sp'] < 0.9 * big_sp and sysst[0]['x1'] - sysst[0]['x0'] < 0.5 * big_w:
+        normal = P.head_ratio * big_sp
     res, alts = [], {}
+    # a staff printed with smaller heads all through (vol. II's bass) is still sung when the other staves have
+    # notes: its own size is its normal one (a line of only small notes — a cue of what follows — stays silent)
+    full = [any(g['c'] in HEADS and g['size'] > normal * 0.88 and staff_of(sysst, g['y']) == j for g in gl)
+            for j in range(len(sysst))]
     for k, st in enumerate(sysst):
         sp = st['sp']
         mine = [g for g in gl if staff_of(sysst, g['y']) == k and st['top'] - 6 * sp <= g['y'] <= st['bot'] + 6 * sp]
@@ -195,7 +242,10 @@ def read_system(P, sysst, dbg=False):
         near_y = lambda w, g: abs((w[1] + w[3]) / 2 - g['y']) < 1.2 * sp
         bracketed = lambda g: any(w[4] == '(' and -1 < g['x'] - w[2] < 8 and near_y(w, g) for w in parens) and any(
             w[4] == ')' and 0 < w[0] - g['x'] < 18 and near_y(w, g) for w in parens)
-        for g in sorted([g for g in mine if g['c'] in HEADS and g['size'] > normal * 0.88 and not bracketed(g)], key=lambda g: g['x']):
+        own = normal
+        if not full[k] and any(full):
+            own = max((g['size'] for g in mine if g['c'] in HEADS), default=normal)
+        for g in sorted([g for g in mine if g['c'] in HEADS and g['size'] > own * 0.88 and not bracketed(g)], key=lambda g: g['x']):
             if not any(q['c'] == g['c'] and abs(q['x'] - g['x']) < 0.6 and abs(q['y'] - g['y']) < 0.6 for q in heads):
                 heads.append(g)  # a head printed twice (two voices on one note) is one head with two stems
         rests = [g for g in mine if g['c'] in RESTS]
@@ -222,7 +272,9 @@ def read_system(P, sysst, dbg=False):
         bars = sorted(x for x, y0, y1 in P.vlines if y0 <= st['top'] + 0.5 and y1 >= st['bot'] - 0.5 and x > st['x0'] + 5)
         # a key change inside the line: a row of accidentals (each a few points after the other) that is not one
         # chord's, or a lone one no note takes that stands right after a barline or at the same place on another staff
-        accs = sorted([g for g in mine if g['c'] in ('#', 'b', 'n') and g['x'] >= first_x - 3 and id(g) not in used], key=lambda g: g['x'])
+        # (also before the first note when it stands past the line's opening: a line that starts with rests)
+        accs = sorted([g for g in mine if g['c'] in ('#', 'b', 'n') and g['x'] >= min(first_x - 3, st['x0'] + 70) and id(g) not in used],
+                      key=lambda g: g['x'])
         rows = []
         for g in accs:
             if rows and 2 < g['x'] - rows[-1][-1]['x'] <= 8:
@@ -311,11 +363,15 @@ def read_system(P, sysst, dbg=False):
                     beats = 1 / (2 ** nflag)
                 if dotted:
                     beats *= 1.5
-                events.append(dict(x=h['x'], beats=beats, midi=midi, recit=base == 0, step=stp, y=h['y'], rest=False,
+                events.append(dict(x=h['x'], beats=beats, midi=midi, recit=base == 0, step=stp, y=h['y'], rest=False, c=h['c'],
                                    dir=sdir, sx=stem[0] if stem else None, li=li, octv=octv, acc=acc is not None))
         # editorial accidentals, printed in brackets above or below their note
+        smalls = [g for g in mine if g['c'] in HEADS and g['size'] <= own * 0.88]
         for g in mine:
             if g['c'] in ACC and id(g) not in used and g['x'] >= first_x - 14:
+                # (a small sign, or one in front of a small head, is the small note's own: it is not played)
+                if g['size'] <= own * 0.88 or any(1 < h['x'] - g['x'] < reach_of(g) and step(h['y']) == step(g['y']) for h in smalls):
+                    continue
                 gc = (g['bb'][0] + g['bb'][2]) / 2  # (a bracketed one is wide: its middle stands over the note's)
                 near = [e for e in events if not e['rest'] and abs(e['x'] + 2.5 - gc) < 7 and abs(e['y'] - g['y']) >= sp * 0.6]
                 if near:
@@ -331,8 +387,8 @@ def read_system(P, sysst, dbg=False):
                     used.add(id(g))
         if os.environ.get('OMR_AUDIT'):
             for g in mine:
-                if g['c'] in ACC and id(g) not in used and not (g['c'] in ('#', 'b') and g['x'] < first_x - 8 and g['x'] < st['x0'] + 70):
-                    print(f"  ? sys y={sysst[0]['top']:.0f} staff {k} unused {g['c']} x={g['x']:.0f} y={g['y']:.0f} step={step(g['y'])} first_x={first_x:.0f} x0={st['x0']:.0f} x1={st['x1']:.0f}")
+                if g['c'] in ACC and id(g) not in used and g['size'] > own * 0.88 and not (g['c'] in ('#', 'b') and g['x'] < first_x - 8 and g['x'] < st['x0'] + 70):
+                    print(f"  ? p{P.pg.number + 1} sys y={sysst[0]['top']:.0f} staff {k} unused {g['c']} x={g['x']:.0f} y={g['y']:.0f} step={step(g['y'])} first_x={first_x:.0f} x0={st['x0']:.0f} x1={st['x1']:.0f}")
         # triplets: a "3" over (or under) three notes
         for w in P.words:
             if w[4] == '3':
@@ -353,20 +409,56 @@ def read_system(P, sysst, dbg=False):
                         for e in best:
                             e['beats'] *= 2 / 3
                             e['trip'] = True
+                    elif os.environ.get('OMR_AUDIT'):
+                        print(f"  ? p{P.pg.number + 1} sys y={sysst[0]['top']:.0f} staff {k} unused 3 x={wx:.0f} y={wy:.0f}")
+        # five, six or seven notes of one value under „5“ „6“ „7“ fill the time of four
+        for w in P.words:
+            if w[4] in ('5', '6', '7'):
+                wx, wy = (w[0] + w[2]) / 2, (w[1] + w[3]) / 2
+                if not left <= wx <= right or staff_of(sysst, wy) != k or not (st['top'] - 4 * sp <= wy <= st['bot'] + 4 * sp):
+                    continue
+                n = int(w[4])
+                row = sorted([e for e in events if not e['rest'] and not e.get('trip')], key=lambda e: e['x'])
+                wins = [row[j:j + n] for j in range(len(row) - n + 1)]
+                wins = [g for g in wins if len({e['beats'] for e in g}) == 1 and g[0]['x'] < wx < g[-1]['x']
+                        and abs((g[0]['x'] + g[-1]['x']) / 2 - wx) < (g[-1]['x'] - g[0]['x']) / 6 + 4]
+                if wins:
+                    best = min(wins, key=lambda g: abs((g[0]['x'] + g[-1]['x']) / 2 - wx))
+                    for e in best:
+                        e['beats'] *= 4 / n
+                        e['trip'] = True
+        if os.environ.get('OMR_AUDIT'):
+            for w in P.words:  # other tuplets' numbers are not read at all
+                wx, wy = (w[0] + w[2]) / 2, (w[1] + w[3]) / 2
+                if w[4] in ('5', '6', '7') and left <= wx <= right and staff_of(sysst, wy) == k and st['top'] - 4 * sp <= wy <= st['bot'] + 4 * sp \
+                        and any(abs(e['x'] - wx) < 25 for e in events if not e['rest']) and not any(e.get('trip') and abs(e['x'] - wx) < 25 for e in events):
+                    print(f"  ? p{P.pg.number + 1} sys y={sysst[0]['top']:.0f} staff {k} unused tuplet {w[4]} x={wx:.0f} y={wy:.0f}")
+            for g in mine:
+                if g['size'] <= own * 0.88:
+                    continue  # (a small head's own signs)
+                if g['c'] == '.':
+                    beside = [h for h in heads if abs(g['y'] - h['y']) < sp * 0.7 and 0 < g['x'] - h['x'] < 24]
+                    if beside and not any(4 < g['x'] - h['x'] < 12 for h in beside):
+                        print(f"  ? p{P.pg.number + 1} sys y={sysst[0]['top']:.0f} staff {k} unused dot x={g['x']:.0f} y={g['y']:.0f} dx={min(g['x'] - h['x'] for h in beside):.1f}")
+                if g['c'] in FLAGS and not any(e.get('sx') is not None and abs(g['x'] - e['sx']) < 4 and abs(g['y'] - e['y']) < 4.5 * sp for e in events if not e['rest']):
+                    print(f"  ? p{P.pg.number + 1} sys y={sysst[0]['top']:.0f} staff {k} unused flag {g['c']} x={g['x']:.0f} y={g['y']:.0f}",
+                          [(round(e['x']), e.get('sx') and round(e['sx'], 1), round(e['y'])) for e in events if not e['rest'] and abs(e['x'] - g['x']) < 8] if os.environ.get('OMR_FLAGDBG') else '')
         # a stemless (whole) note struck beside a stemmed one of another pitch is a second voice on the staff:
         # it takes the other stem direction (vol. I's divided bass)
         # — unless it stands right of the stemmed one, the other staves striking a note with it and none with the stemmed
         # one: then it simply follows it (vol. II's whole note after a 16th a second higher)
         other_x = [g['x'] for g in gl if g['c'] in HEADS and staff_of(sysst, g['y']) != k]
+        e_c = lambda e: e.get('c', 'œ')
         on_col = lambda x: any(abs(o - x) < 1.5 for o in other_x)
         for e in events:
             if e['rest'] or e.get('dir'):
                 continue
-            q = next((q for q in events if not q['rest'] and q.get('dir') and q['midi'] != e['midi']
+            # (a unison too: a whole note printed beside a quarter of the same pitch is the other voice's)
+            q = next((q for q in events if not q['rest'] and q.get('dir') and (q['midi'] != e['midi'] or HEADS[e_c(e)] >= 2)
                       and abs(q['x'] - e['x']) < 9.5), None)
             if q and e['x'] > q['x'] + 1 and on_col(e['x']) and not on_col(q['x']):
                 q = None
-            if q and (e['midi'] < q['midi']) == (q['dir'] == 'u'):
+            if q and (e['midi'] == q['midi'] or (e['midi'] < q['midi']) == (q['dir'] == 'u')):
                 e['dir'], e['sx'] = ('d' if q['dir'] == 'u' else 'u'), q['sx']
         events.sort(key=lambda e: (e['x'], -(e['midi'] or 0)))
         bass = k == len(sysst) - 1
@@ -385,7 +477,7 @@ def read_system(P, sysst, dbg=False):
                     q.get('dir') and e.get('dir') and q['dir'] != e['dir'] and abs(q['sx'] - e['sx']) < 7)
                 cross = two and (q['midi'] >= e['midi']) != (q['dir'] == 'u')
                 crossed = crossed or cross
-                together = q is not None and not e['rest'] and not q['rest'] and (
+                together = q is not None and e['rest'] and q['rest'] and abs(q['x'] - e['x']) < 3 or q is not None and not e['rest'] and not q['rest'] and (
                     abs(q['x'] - e['x']) < 1.5 or two and (crossed_two or not cross)
                     or abs(q['x'] - e['x']) < 9.5 and q.get('sx') is not None and e.get('sx') is not None and abs(q['sx'] - e['sx']) < 1)  # one stem
                 if together:
@@ -582,6 +674,17 @@ def main():
             lens = [round(v[-1]['t'] + v[-1]['beats'], 3) if v else 0 for v in ev]
             if max(lens) - min(lens) > 0.01:
                 print(f'  ! p{pi + 1} system y={s[0]["top"]:.0f} line {len(sysinfo) + 1}: voice lengths differ {lens}')
+            if os.environ.get('OMR_AUDIT'):
+                # inside a line: a voice that falls silent with no rest printed, or a note cut by its voice's next one —
+                # the other voices' notes struck at the same place set the time, so a misread length shows here
+                for k, v in enumerate(ev):
+                    for i in range(len(v) - 1):
+                        e, n = v[i], v[i + 1]
+                        if e.get('recit'):
+                            continue
+                        gap = round(n['t'] - (e['t'] + e['beats']), 3)
+                        if abs(gap) > 0.01:
+                            print(f"  ? p{pi + 1} sys y={s[0]['top']:.0f} line {len(sysinfo) + 1} staff {k} {'gap' if gap > 0 else 'cut'} {abs(gap):g} at t={e['t'] + e['beats']:g} x={e['x']:.0f}")
             for k, v in enumerate(ev):
                 for i, e in enumerate(v):
                     if not e['rest']:
