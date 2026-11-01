@@ -112,6 +112,7 @@ export const RoundsHost: React.FC<{
           <p className="min-w-0 flex-1 font-serif-ge text-[19px] font-bold leading-snug text-[#4a3426]">{face.askHost}</p>
         </div>
         {face.Ask && <face.Ask q={v.q} who="host" step={v.step} steps={v.steps} />}
+        {face.Secret && <face.Secret q={s.rounds[s.at]} />}
         {clip && (
           <SnippetBox
             state={snippet.state}

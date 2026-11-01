@@ -711,6 +711,22 @@
   sixteen a sheet, + 12 blank, a score sheet, an example card on the cover) and `erti-minishneba.mjs` (11 sheets: 60 cards of five
   numbered words — 300 nouns hand-picked from the „ამიხსენი“ bank, five themes a card, the build stops if one leaves the bank —, 3
   blank, eight A6 clue boards whose back is the board turned down, a score sheet of ten games with the scale).
+- **„პანტომიმა“** (2026-11-01, like Charades; mapItem `pantomima`, the hub opens its tab by `requestOpen('pantomima', 'online' |
+  'table')`; rules `utils/pantomima.ts` + test, screens `pages/games/pantomima/`): 150 words in eight themes (`data/pantomimaCards.ts`
+  `PANTO_THEMES`, each with the verb that says how it is shown — დაუკარი, იცეკვე, გადაიქეცი, ითამაშე, იმუშავე, ჩაიცვი, მიირთვი,
+  გაითამაშე; written by Claude, unchecked — the page says so; no saint to act). Online = a quick-games room (`pantomima` in
+  `ROUND_GAMES`/`ROOM_GAMES`/the rules' list/the Worker's titles): the host is the actor in the room's call, the word only on their phone
+  (the face's new `Secret` hook — RoundsHost shows it under `Ask`, since `publicView` hides `secret` fields from the host too), the
+  players pick it out of four of its theme (`drawPantomima`, `PANTO_RULES`: 60 s, 1000…500 by speed; `talk` = the little ones' way, set
+  by the host's draw). Device keys `sg-pantomima-themes` / `-talk` / `-seen` (`pantomima/store.ts`). „ჰიბრიდული“ = `PantomimaTable`
+  (`Table.tsx`, kept in `sg-pantomima-game`, settings `sg-pantomima-table`): 2–6 teams, 1/1.5/2 minutes, 1–3 rounds; the actor holds the
+  phone („გამოიცნეს“ / „გამოტოვება“), or „შუბლზე“ — a 3-2-1 lead, then the word huge on a full-screen face (`Forehead`, z-75), a nod
+  down = guessed, up = skipped (`facingOf` = cos β · cos γ, the screen's up-component in both ways of holding; `readTilt` with
+  hysteresis, armed only once the phone stands; iPhones ask `DeviceOrientationEvent.requestPermission` in the tap), the screen's halves
+  tap the same; the turn's list can be mended before its points; a skip costs nothing. Its kit (`pantomima.mjs`, 12 sheets): the 150
+  cards 47×66 mm, sixteen a sheet (the verb in the theme's band, the word big, two words on two lines) + 10 blank, the theme on the
+  back's strip, a score sheet (12 rounds × 6 teams, the app's settings to tick) and rules with the forehead and little ones' ways and
+  the customary signs.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
