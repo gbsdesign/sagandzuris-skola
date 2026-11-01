@@ -625,6 +625,18 @@
   cane winding up the page — the app's vine is too dense to colour —, 63 numbered leaves, the bunches under the 12th, 30th and
   50th) with „ჩემი თვე“ behind it (the deeds, 31 days × 8 little leaves), leaf and bunch stickers, the class's harvest chart with
   the class qvevri (210 numbered grapes) behind it, four certificates.
+- **„ჩაიცვი ქართულად“** (2026-11-01, the plan's Georgian game №8, like Dress-up; mapItem `chaitsvi`, rules `utils/chaitsvi.ts` +
+  test, screens `pages/games/chaitsvi/`): dress the chokha — or the Georgian dress — part by part in the order it is worn, against
+  the clock. Parts, pictures and stories are „ჩემი სამოსი“'s (`SAMOSI_PARTS`, `KABA_PARTS`; the dress only while its pictures are
+  published — `useKaba`); the order is `CHOKHA_STEPS` / `KABA_STEPS` (a part's `needs` + the `why` said when it comes too early; the
+  chokha's hat = one of `HATS` a game, `pickHat(seed)`); a part too early goes back and costs `PENALTY_MS` 3 s. `DressBoard`
+  (`Dress.tsx`): 3-2-1, then the tray in a shuffled order (`shuffled(seed)`), the figure filling as „ჩემი სამოსი“'s layers. Tabs
+  „ონლაინ · ჰიბრიდული“: alone (`Solo.tsx`: with names or „მხოლოდ სურათებით“, the best per way in `sg-chaitsvi-best`, then every
+  part's story) and teams in turn on one phone (`Teams.tsx`, `newDressTeams`/`recordTurn`/`ranking`, kept in `sg-chaitsvi-teams`,
+  ✕ only pauses) — or a real chokha, the host tapping each part as it goes on. Its kit (`chaitsvi-qartulad.mjs`, 6 sheets): two
+  paper dolls drawn at 1:1 in `scripts/print-games/dolls.mjs` (a piece = its drawing + the shapes its grey cut line goes round,
+  `halo`), the chokha's ten pieces (four hats) and the dress's five, their backs mirrored with what each goes on after (`afterOf`,
+  read from the app's `needs`), the host's sheet (reasons, stories, „რომელი ქუდი?“) with the scores behind it.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
