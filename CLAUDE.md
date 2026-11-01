@@ -743,6 +743,26 @@
   sheet — the name, role, birth, facts and the yes-tags all on the front (the back faces the guesser) —, the board of „ვინ
   ჩაიფიქრა?“ (two players: a row a person, the tags as dots in the questions' columns, so a „no“ crosses out a column), the question
   counter (twenty circles a turn in the points' colours) and the rules of three games (forehead, the duel, „ფაქტებით“ 5…1).
+- **„საიდუმლო სახელები“** (2026-11-01, like Codenames; mapItem `saidumlo`, the hub opens its tab by `requestOpen('saidumlo', 'online' |
+  'table')`; rules `utils/saidumlo.ts` + test, screens `pages/games/saidumlo/`): 25 words on a board, a hidden key says whose each is.
+  Alone (`Solo.tsx`): the app is the captain — the day's board for the whole school (`soloOfDay`) gives four clues one after another,
+  each a group of „ოთხეული“ with its count („მწერლები და პოეტები · 3“, sizes 3·3·2·2); `buildSolo` keeps the songs' and chants' title
+  groups off the board (`TITLE_FAMILIES`), puts on it no other word of a clue's group, one group of a family, and no word whose stem the
+  clue's name holds (`stemIn`: „სიკეთე“ in „ქართველის სიკეთეები“) — fifteen other groups' words around them, one the trap. A word of a
+  later clue counts too, four misses or the trap lose; ★★★ without a miss. The day's record `students.games.saidumlo.days[iso]`
+  through `useDailyRecord('saidumlo')` (`guesses` = the words touched), then free boards (`sg-saidumlo-free`), stats, share
+  (`saidumloShare`), the hub's meta (`saidumloMeta`); the vine counts it. The class (`Table.tsx`): one phone (or the class's screen) is
+  the board of a four-digit code (`boardOfCode` over `data/saidumloWords.ts` = the „ამიხსენი“ bank's one-word cards but songs, saints
+  and ancestors, ≤ 3 a theme; the key by `sidesFor`: the first team 9, the other 8, nobody's 7, the trap 1); the captains type the
+  code in „კაპიტნის გასაღები“ on their own phones — the same words and key come up, nothing is sent (one phone only: 🔑 behind a
+  confirm). A touch opens a word: a team's own keeps the turn, any other passes it, the trap loses (`tableView` over the moves);
+  „სვლის დასრულება“, undo, a turn's clock none/1/1.5/2 min (`TURN_SECONDS`), wins counted across boards; kept in `sg-saidumlo-game`
+  (✕ only pauses), settings `sg-saidumlo-table`; a phone on its side puts the teams and buttons beside a board that fills the height
+  (`useShort`, the tiles' `size="fill"`). Its kit (`saidumlo-sakhelebi.mjs`, 9 sheets): 120 word cards 48×42 mm with a word on each
+  side (240 words, every theme in turn, the word also upside down for the far side), 24 key cards with a key on each side (48, the
+  app's `sidesFor`, half blue first, the frame in the first team's colour, ▲ = the row farthest from the captains), 27 covers (9 + 9
+  of the teams — the first team takes nine —, 8 passers-by with one spare, the trap) and the turn card (blue / red); every colour also
+  has its mark (waves, flame, footprints, a bolt) for a print without colour.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
