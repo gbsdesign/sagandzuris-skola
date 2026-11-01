@@ -216,3 +216,14 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
 @keyframes gundi-note { from { opacity: 0.95; transform: translate(0, 0) scale(0.8); } to { opacity: 0; transform: translate(9px, -30px) scale(1.25); } }
 .gundi-note { font-size: 15px; font-weight: 700; animation: gundi-note 1.25s ease-out forwards; transform-box: fill-box; }
 @media (prefers-reduced-motion: reduce) { .gundi-note { display: none; } }
+
+/* „ციხის გასაღები“: an opened door's two leaves swing inward on the key's piece */
+.tsikhe-gate { perspective: 520px; }
+@keyframes tsikhe-left { from { transform: rotateY(0deg); } to { transform: rotateY(-80deg); } }
+@keyframes tsikhe-right { from { transform: rotateY(0deg); } to { transform: rotateY(80deg); } }
+.tsikhe-leaf-l { transform-origin: left center; animation: tsikhe-left 0.95s cubic-bezier(0.3, 0.7, 0.3, 1) 0.2s both; }
+.tsikhe-leaf-r { transform-origin: right center; animation: tsikhe-right 0.95s cubic-bezier(0.3, 0.7, 0.3, 1) 0.2s both; }
+@media (prefers-reduced-motion: reduce) {
+  .tsikhe-leaf-l { animation: none; transform: rotateY(-80deg); }
+  .tsikhe-leaf-r { animation: none; transform: rotateY(80deg); }
+}
