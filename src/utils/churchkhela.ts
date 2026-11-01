@@ -1,6 +1,7 @@
 // „ცხელი ჩურჩხელა“ (games hub, 2026-10-28, live, Hot Potato): the phone plays a recording of the school through its
 // speaker while a churchkhela (or the phone itself) goes round the circle; the music stops at a moment nobody knows, and
-// whoever holds it then is „burnt“: a task card comes up (sing the next phrase, name the chant, say which region…). Pure;
+// whoever holds it then is „burnt“: a task card comes up (sing the next phrase, name the chant, say which region, a toast, a
+// dance step, a proverb…). Pure;
 // tests in tests/churchkhela.test.ts; the page pages/games/ChurchkhelaGame.tsx; the recordings data/hangiPool.ts.
 
 export type TaskKind = 'sing' | 'name' | 'where' | 'fun';
@@ -16,12 +17,22 @@ export const TASKS: Task[] = [
   { id: 'name-kind', kind: 'name', text: 'რა სახის ჰანგია — სადიდებელი, სუფრული, ნანა თუ საცეკვაო?' },
   { id: 'where-region', kind: 'where', text: 'რომელი კუთხის სიმღერაა ან რომელი სკოლის გალობა?' },
   { id: 'where-service', kind: 'where', text: 'რომელ მსახურებაზე იგალობება — წირვაზე, მწუხრზე თუ ცისკარზე?' },
+  { id: 'where-dish', kind: 'where', text: 'რომელი კუთხის ჰანგია? დაასახელე და ამ კუთხის ერთი კერძიც თქვი' },
+  { id: 'where-map', kind: 'where', text: 'დაასახელე ამ ჰანგის კუთხის მეზობელი ორი კუთხე' },
   { id: 'where-when', kind: 'where', text: 'როდის მღერიან ამას — დღესასწაულზე, სუფრაზე, საქმეზე თუ ბავშვის დასაძინებლად?' },
   { id: 'fun-clap', kind: 'fun', text: 'ტაშით დაუკარი ამ ჰანგის რიტმი' },
   { id: 'fun-teach', kind: 'fun', text: 'ასწავლე მეზობელს ამ ჰანგის პირველი სიტყვები' },
   { id: 'fun-word', kind: 'fun', text: 'თქვი ერთი სიტყვა, რაც ამ ჰანგმა გაგახსენა' },
   { id: 'fun-kind', kind: 'fun', text: 'უთხარი მარჯვენა მეზობელს ერთი კეთილი სიტყვა' },
   { id: 'fun-hum', kind: 'fun', text: 'ჩაიბურტყუნე ჰანგი პირმოკუმული — სხვებმა გამოიცნონ' },
+  { id: 'fun-toast', kind: 'fun', text: 'თქვი მოკლე სადღეგრძელო — მშვიდობის, მეგობრის ან სამშობლოსი' },
+  { id: 'fun-dance', kind: 'fun', text: 'აჩვენე ქართული ცეკვის ერთი მოძრაობა — ყველამ გაიმეოროს' },
+  { id: 'fun-proverb', kind: 'fun', text: 'თქვი ერთი ქართული ანდაზა' },
+  { id: 'fun-dishes', kind: 'fun', text: 'დაასახელე სამი ქართული კერძი — ხუთ წამში!' },
+  { id: 'fun-tongue', kind: 'fun', text: 'სწრაფად სამჯერ თქვი: „ბაყაყი წყალში ყიყინებს“' },
+  { id: 'fun-regions', kind: 'fun', text: 'დაასახელე საქართველოს ხუთი კუთხე — ათ წამში!' },
+  { id: 'fun-poem', kind: 'fun', text: 'თქვი ქართული ლექსის ორი სტრიქონი — ზეპირად' },
+  { id: 'fun-hero', kind: 'fun', text: 'დაასახელე ერთი ქართველი გმირი და თქვი, რით არის ცნობილი' },
 ];
 
 export const KIND_LABEL: Record<TaskKind, string> = { sing: 'იმღერე', name: 'დაასახელე', where: 'საიდანაა', fun: 'სახალისო' };

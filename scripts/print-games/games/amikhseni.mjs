@@ -1,5 +1,5 @@
-// „ამიხსენი“ on paper — the „უტელეფონო“ variant of the app's Alias-like table game (plan doc): 36 cards of six numbered
-// words (216 words from the app's own `data/amikhseniWords.ts`, its ten themes), a die picks the number for the whole turn,
+// „ამიხსენი“ on paper — the „უტელეფონო“ variant of the app's Alias-like table game (plan doc): 45 cards of six numbered
+// words (270 words from the app's own `data/amikhseniWords.ts`, its fifteen themes), a die picks the number for the whole turn,
 // a sand timer keeps the time and a score sheet (two games, one a side) the points. The settings are the app's own
 // (`utils/amikhseni.ts`: 60/90/120 s, 20/30/50 points, a skip −1 or 0, teams named after instruments).
 import { C, SERIES, SCHOOL, aso, esc, icon, corners, page, stripe, foot, duplex, sheetNo, cardSheet, coverCss } from '../lib.mjs';
@@ -17,18 +17,23 @@ const TAG = 'ცოცხალი · უტელეფონო';
 const META = '4–24 მოთამაშე, 2–6 გუნდი · 8 წლიდან · 20–40 წუთი';
 const PER_CARD = 6;
 
-// the ten themes: colour, icon and how many cards each gets (36 in all, four sheets of nine)
+// the fifteen themes: colour, icon and how many cards each gets (45 in all, five sheets of nine)
 const THEMES = {
-  galoba: { color: '#7a2028', icon: 'church', cards: 5 },
-  musika: { color: '#2f5d8a', icon: 'music', cards: 4 },
+  galoba: { color: '#4a55a0', icon: 'music-4', cards: 3 },
+  musika: { color: '#2f5d8a', icon: 'music', cards: 3 },
   sakravebi: { color: '#a0522d', icon: 'guitar', cards: 3 },
   simgera: { color: '#6b4c9a', icon: 'mic-vocal', cards: 3 },
-  kutkhe: { color: '#2f7d4f', icon: 'mountain', cards: 4 },
+  kutkhe: { color: '#2f7d4f', icon: 'mountain', cards: 3 },
   samosi: { color: '#b0475f', icon: 'shirt', cards: 3 },
-  tsmindanebi: { color: '#b0841f', icon: 'sparkles', cards: 4 },
-  tsinaprebi: { color: '#5a4636', icon: 'scroll-text', cards: 3 },
-  qopa: { color: '#c7701e', icon: 'grape', cards: 4 },
-  istoria: { color: '#3d6b6b', icon: 'landmark', cards: 3 },
+  samzareulo: { color: '#c7701e', icon: 'utensils', cards: 3 },
+  buneba: { color: '#6f8a1f', icon: 'trees', cards: 3 },
+  gmirebi: { color: '#7a2028', icon: 'swords', cards: 3 },
+  kino: { color: '#3f4652', icon: 'clapperboard', cards: 3 },
+  sporti: { color: '#1c7f86', icon: 'trophy', cards: 3 },
+  tsmindanebi: { color: '#8e3d7f', icon: 'sparkles', cards: 3 },
+  tsinaprebi: { color: '#3d6b6b', icon: 'scroll-text', cards: 3 },
+  qopa: { color: '#5a4636', icon: 'house', cards: 3 },
+  istoria: { color: '#b0841f', icon: 'landmark', cards: 3 },
 };
 // the songs' list is the archive's 616 titles: on paper only the ones every class knows
 const KNOWN_SONGS = ['ჩაკრულო', 'სულიკო', 'მრავალჟამიერი', 'ლილე', 'ხასანბეგურა', 'ურმული', 'მაყრული', 'ცანგალა და გოგონა', 'ვოისა',
@@ -168,7 +173,7 @@ const RULES = [
 const rulesPage = page(`${stripe(TAG, 'წესები')}
 <div class="rulesWrap">
   <div class="rhead"><div class="aso rtitle">${aso(title)}</div><div class="rsub">წესები · ${META}</div></div>
-  <p class="lead">„ამიხსენი“ სიტყვების თამაშია მთელი კლასისთვის: ამხსნელი თავის გუნდს სიტყვას სხვა სიტყვებით უხსნის, გუნდი გამოიცნობს. ბარათებზე სკოლის სიტყვებია — გალობა, საკრავები, კუთხეები, წმიდანები, წინაპრები, სუფრა, ისტორია.</p>
+  <p class="lead">„ამიხსენი“ სიტყვების თამაშია მთელი კლასისთვის: ამხსნელი თავის გუნდს სიტყვას სხვა სიტყვებით უხსნის, გუნდი გამოიცნობს. ბარათებზე ქართული სიტყვებია — გალობა და სიმღერა, ცეკვა, საკრავები, კუთხეები, სამზარეულო, ბუნება, გმირები, კინო, სპორტი, წმიდანები, წინაპრები, ისტორია.</p>
   <div class="rules"><ol>${RULES.map(([h, t]) => `<li><b>${h}.</b> ${t}</li>`).join('')}</ol></div>
   <div class="am-more box"><b>აპშიც</b> იგივე თამაშია: ტელეფონი ამხსნელის ხელშია, სიტყვას აჩვენებს, დროს და ქულებს თვითონ ითვლის — sagandzureli.ge → თამაშები → ამიხსენი.</div>
 </div>

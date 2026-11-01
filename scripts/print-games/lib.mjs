@@ -98,12 +98,17 @@ export const braid = (w, h, { color = C.gold, bg = C.wine, id = 'br' } = {}) => 
 <defs><pattern id="${id}" patternUnits="userSpaceOnUse" width="8" height="${h}"><path d="M0 ${h / 2} C2 ${h * 0.12} 6 ${h * 0.12} 8 ${h / 2}" fill="none" stroke="${color}" stroke-width=".7"/><path d="M0 ${h / 2} C2 ${h * 0.88} 6 ${h * 0.88} 8 ${h / 2}" fill="none" stroke="${color}" stroke-width=".7"/><circle cx="4" cy="${h / 2}" r=".7" fill="${color}"/></pattern></defs>
 <rect width="${w}" height="${h}" fill="${bg}"/><rect width="${w}" height="${h}" fill="url(#${id})"/></svg>`;
 
-/** ბოლნისის ჯვარი — flared arms in a ring (viewBox 0 0 100 100). */
-export const bolnisiCross = (size, color = C.gold) => {
-  const arm = 'M50 50 L37 10 A17 7 0 0 1 63 10 Z';
-  return `<svg viewBox="0 0 100 100" width="${size}mm" height="${size}mm" fill="${color}" stroke="${color}" stroke-width="1.2" stroke-linejoin="round">
+/** ვაზის მტევანი — a grape bunch with its leaf and tendril in a double ring (viewBox 0 0 100 100). The games' emblem since
+ *  2026-11-01, when the user took every religious sign (the Bolnisi cross it replaced among them) out of the games. */
+export const grapeEmblem = (size, color = C.gold) => {
+  const rows = [[40, 4], [50.5, 3], [61, 2], [71.5, 1]];
+  const grapes = rows.flatMap(([y, n]) => Array.from({ length: n }, (_, k) => `<circle cx="${(50 + (k - (n - 1) / 2) * 11.4).toFixed(1)}" cy="${y}" r="5.6"/>`));
+  return `<svg viewBox="0 0 100 100" width="${size}mm" height="${size}mm" fill="${color}" stroke="${color}" stroke-linecap="round" stroke-linejoin="round">
 <circle cx="50" cy="50" r="47" fill="none" stroke-width="1.6"/><circle cx="50" cy="50" r="42" fill="none" stroke-width=".8"/>
-${[0, 90, 180, 270].map(a => `<path d="${arm}" transform="rotate(${a} 50 50)"/>`).join('')}<circle cx="50" cy="50" r="7"/></svg>`;
+<path d="M50 34 C50 29 48 25 45 21" fill="none" stroke-width="2.2"/>
+<path d="M51 27 C55 17 66 13 75 18 C70 20 69 25 73 29 C65 31 57 31 51 27 Z" fill-opacity=".85" stroke-width="1"/>
+<path d="M45 21 C38 17 32 21 34 26 C36 30 31 32 28 28" fill="none" stroke-width="1.4"/>
+<g stroke="none">${grapes.join('')}</g></svg>`;
 };
 /** ბორჯღალი — seven curved rays (viewBox -50 -50 100 100). */
 export const borjgali = (size, color = C.gold) => `<svg viewBox="-50 -50 100 100" width="${size}mm" height="${size}mm" fill="none" stroke="${color}" stroke-width="5" stroke-linecap="round">
@@ -254,14 +259,14 @@ export const coverCss = `
 /** The script that shrinks `.fit` titles until they fit their width (run after fonts load). */
 export const fitScript = `document.querySelectorAll('.fit').forEach(el=>{const s=el.firstElementChild;if(!s)return;let size=parseFloat(getComputedStyle(el).fontSize);let n=0;while(s.scrollWidth>el.clientWidth+0.5&&size>6&&n++<60){size-=0.25;el.style.fontSize=size+'px';}});`;
 
-export const document_ = ({ title, css = '', pages }) => `<!doctype html><html lang="ka"><head><meta charset="utf-8"><title>${esc(title)}</title><style>${baseCss()}${css}</style></head><body>${pages.join('\n')}</body></html>`;
+export const document_ = ({ title, css = '', head = '', pages }) => `<!doctype html><html lang="ka"><head><meta charset="utf-8"><title>${esc(title)}</title><style>${baseCss()}${css}</style>${head}</head><body>${pages.join('\n')}</body></html>`;
 
 /** Writes the HTML, prints it to a PDF with Chromium and (optionally) makes PNG previews with pdftoppm. */
 export const build = async (game, { previews = null, dpi = 55 } = {}) => {
   ensureFonts();
   fs.mkdirSync(BUILD_DIR, { recursive: true });
   fs.mkdirSync(OUT_DIR, { recursive: true });
-  const html = document_({ title: game.title, css: game.css ?? '', pages: game.pages });
+  const html = document_({ title: game.title, css: game.css ?? '', head: game.head ?? '', pages: game.pages });
   const htmlPath = path.join(BUILD_DIR, `${game.id}.html`);
   fs.writeFileSync(htmlPath, html);
   const { chromium } = require('playwright'); // pre-installed outside the project in the cloud container
@@ -270,6 +275,8 @@ export const build = async (game, { previews = null, dpi = 55 } = {}) => {
     const p = await browser.newPage();
     await p.goto(`file://${htmlPath}`, { waitUntil: 'load' });
     await p.evaluate(() => document.fonts.ready);
+    // a kit's own drawing before the print (kit.mjs: the melodies on their staves)
+    if (game.script) await p.evaluate(game.script);
     await p.evaluate(fitScript);
     const pdf = path.join(OUT_DIR, `${game.id}.pdf`);
     await p.pdf({ path: pdf, format: 'A4', printBackground: true, preferCSSPageSize: true });

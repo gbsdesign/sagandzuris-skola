@@ -7,7 +7,7 @@ import { ANSWER_BANK, ANSWER_WORDS } from '../../data/sitqvaAnswers';
 import { loadSitqvaWords } from '../../utils/sitqvaDictionary';
 import {
   KIND_HINT, LATIN_TO_GEORGIAN, LETTERS, MAX_TRIES, afterTry, candidatesOfDay, dayIndex, isGeorgian, keyMarks, scoreGuess, sitqvaShareText, wordOfDay,
-  type Mark,
+  type Mark, type SitqvaKind,
 } from '../../utils/sitqva';
 import { dayBefore, emptyDay, hangiStats, tbilisiToday, type HangiDay } from '../../utils/hangi';
 import { GeoKeyboard } from '../../components/games/GeoKeyboard';
@@ -18,8 +18,8 @@ import { openSearch } from '../../utils/searchOpen';
 import { MONTHS_GE } from '../../utils/dateNames';
 
 // „დღის სიტყვა“ (games hub, 2026-10-28): one hidden word a day for the whole school, six tries, Wordle's colours. The word
-// comes from the church calendar's day (its feast or a saint's name) or from the bank of church words and places; the
-// hint says which. The rules and the pick are utils/sitqva.ts, the record hooks/useDailyRecord.ts ('sitqva'), the
+// comes from the church calendar's day (its feast, on every third day a saint's name) or from the broad bank of places,
+// the table, nature, heroes, culture and church words; the hint says which. The rules and the pick are utils/sitqva.ts, the record hooks/useDailyRecord.ts ('sitqva'), the
 // keyboard components/games/GeoKeyboard.tsx. A physical keyboard types too (Georgian or the Latin layout).
 
 const TILE: Record<Mark, string> = {
@@ -29,6 +29,9 @@ const TILE: Record<Mark, string> = {
 };
 
 const dateLabel = (iso: string) => `${+iso.slice(8, 10)} ${MONTHS_GE[+iso.slice(5, 7) - 1]}`;
+
+/** the kinds the app's own search finds something for (a place, a song or dance, a hero or author, a church word) */
+const SEARCHABLE = new Set<SitqvaKind>(['region', 'culture', 'hero', 'church', 'feast']);
 
 const SitqvaGame: React.FC = () => {
   const { days, loaded, save, member } = useDailyRecord('sitqva');
@@ -172,7 +175,7 @@ const SitqvaGame: React.FC = () => {
           <div className="mt-3 flex flex-wrap gap-2">
             {pick.life
               ? <Btn kind="ghost" icon={<BookOpen />} onClick={() => openSaintLife(pick.life!)}>წმინდანის ცხოვრება</Btn>
-              : <Btn kind="ghost" icon={<Search />} onClick={() => openSearch(pick.word)}>ნახე აპში</Btn>}
+              : SEARCHABLE.has(pick.kind) && <Btn kind="ghost" icon={<Search />} onClick={() => openSearch(pick.word)}>ნახე აპში</Btn>}
             <Btn kind="ghost" icon={<Share2 />} onClick={share}>გაზიარება</Btn>
           </div>
           <p className="mt-3 text-[12.5px] leading-snug text-[#9a8b7b]">ხვალ ახალი სიტყვა იქნება. {member ? 'შედეგი შენს ჩანაწერშია.' : 'შედეგი ამ ტელეფონზე ინახება.'}</p>

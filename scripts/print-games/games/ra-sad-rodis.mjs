@@ -1,5 +1,5 @@
-// „რა? სად? როდის?“ on paper — the „უტელეფონო“ variant of the app's team quiz: 40 question cards (the first five of each of
-// the eight topics of `data/raSadRodisQuestions.ts`; the question on the front, the answer and its note on the back), five
+// „რა? სად? როდის?“ on paper — the „უტელეფონო“ variant of the app's team quiz: 72 question cards (the first four of each of
+// the eighteen topics of `data/raSadRodisQuestions.ts`; the question on the front, the answer and its note on the back), nine
 // blank cards for the teacher's own questions, a score sheet (two games, one a side) and answer slips for the teams. The
 // settings are the app's own (`utils/raSadRodis.ts`: a minute a question, 6/12/18 questions, 2–6 teams named after instruments).
 import { C, SERIES, SCHOOL, aso, esc, icon, page, stripe, foot, duplex, sheetNo, cardSheet, gridSheet, coverCss } from '../lib.mjs';
@@ -15,19 +15,29 @@ export const id = 'ra-sad-rodis';
 export const title = 'რა? სად? როდის?';
 const TAG = 'ცოცხალი · უტელეფონო';
 const META = `${MIN_TEAMS}–${MAX_TEAMS} გუნდი, თითოში 2–6 მოთამაშე · 10 წლიდან · 15–30 წუთი`;
-const PER_TOPIC = 5;
-const BLANKS = 5;
+const PER_TOPIC = 4;
+const BLANKS = 9;
 
 // each topic's colour and icon (the band on both sides of its cards)
 const LOOK = {
-  tsmindanebi: { color: '#b0841f', icon: 'sparkles' },
-  sagmrto: { color: '#5a4636', icon: 'book-open' },
-  galoba: { color: '#7a2028', icon: 'church' },
-  simgera: { color: '#6b4c9a', icon: 'music' },
   istoria: { color: '#3d6b6b', icon: 'landmark' },
-  kutkhe: { color: '#2f7d4f', icon: 'mountain' },
+  gmirebi: { color: '#8a2432', icon: 'swords' },
+  adamianebi: { color: '#a87d14', icon: 'star' },
+  mtserloba: { color: '#5a4636', icon: 'feather' },
+  kino: { color: '#3f4652', icon: 'clapperboard' },
+  simgera: { color: '#6b4c9a', icon: 'music' },
+  tsekva: { color: '#8e3d7f', icon: 'footprints' },
+  samzareulo: { color: '#c7701e', icon: 'utensils' },
   samosi: { color: '#b0475f', icon: 'shirt' },
+  kutkhe: { color: '#2f7d4f', icon: 'mountain' },
+  dzeglebi: { color: '#a0522d', icon: 'castle' },
+  buneba: { color: '#6b7f1a', icon: 'trees' },
+  zgaprebi: { color: '#4a55a0', icon: 'scroll-text' },
+  sporti: { color: '#2a7aa8', icon: 'trophy' },
   musika: { color: '#2f5d8a', icon: 'music-4' },
+  tsmindanebi: { color: '#c69214', icon: 'sparkles' },
+  sagmrto: { color: '#7b5e3b', icon: 'book-open' },
+  galoba: { color: '#1d5c63', icon: 'audio-lines' },
 };
 const TOPICS = RSR_TOPICS.map(t => {
   if (!LOOK[t.id]) throw new Error(`no look for the topic ${t.id}`);
@@ -106,7 +116,7 @@ const coverPage = no => page(`${stripe(TAG)}
 <div class="cover">
   <div class="aso title">${aso(title)}</div>
   <h1 class="gameTitle">${title}</h1>
-  <div class="lead">გუნდური ვიქტორინა ჩვენი თემებით. წამყვანი კითხვას ხმამაღლა კითხულობს, ყველა გუნდი ერთ წუთში თათბირობს და პასუხს ბარათზე წერს. სწორი პასუხი — ერთი ქულა. ტელეფონი არ სჭირდება.<br><b>${META}</b></div>
+  <div class="lead">გუნდური ვიქტორინა ქართულ ყველაფერზე. წამყვანი კითხვას ხმამაღლა კითხულობს, ყველა გუნდი ერთ წუთში თათბირობს და პასუხს ბარათზე წერს. სწორი პასუხი — ერთი ქულა. ტელეფონი არ სჭირდება.<br><b>${META}</b></div>
   <div class="rs-ex box">
     <div class="rs-exCards"><div class="rs-exCard">${cardFront(EX)}</div><div class="rs-exCard">${cardBack(EX)}</div></div>
     <div class="rs-exR">
@@ -161,7 +171,7 @@ const RULES = [
 const rulesPage = page(`${stripe(TAG, 'წესები')}
 <div class="rulesWrap">
   <div class="rhead"><div class="aso rtitle">${aso(title)}</div><div class="rsub">წესები · ${META}</div></div>
-  <p class="lead">„რა? სად? როდის?“ ცოდნისა და გუნდური ფიქრის თამაშია: ყველა გუნდი ერთსა და იმავე კითხვას ერთდროულად პასუხობს. კითხვები სკოლის თემებზეა — წმინდანები, საღმრთო ისტორია, გალობა, სიმღერა და საკრავი, ისტორია, კუთხეები, სამოსი და სუფრა, მუსიკის ანბანი.</p>
+  <p class="lead">„რა? სად? როდის?“ ცოდნისა და გუნდური ფიქრის თამაშია: ყველა გუნდი ერთსა და იმავე კითხვას ერთდროულად პასუხობს. კითხვები ქართულ ყველაფერზეა — ისტორია და გმირები, დიდი ქართველები, მწერლობა, კინო, სიმღერა და ცეკვა, სამზარეულო, სამოსი, კუთხეები, ძეგლები, ბუნება, ზღაპრები, სპორტი, მუსიკის ანბანი, წმინდანები, საღმრთო ისტორია და გალობა.</p>
   <div class="rules"><ol>${RULES.map(([h, t]) => `<li><b>${h}.</b> ${t}</li>`).join('')}</ol></div>
   <div class="rs-more box"><b>აპშიც</b> იგივე თამაშია: ტელეფონი კითხვას აჩვენებს, წუთს ზარით ითვლის, „მოისმინე“ კითხვებზე სკოლის ჩანაწერის ნაწყვეტს უკრავს და ქულებს თვითონ ინახავს — sagandzureli.ge → თამაშები → რა? სად? როდის?</div>
 </div>

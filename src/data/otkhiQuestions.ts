@@ -1,26 +1,27 @@
 // „ოთხიდან ერთი“ — the written questions of the quiz (games hub, 2026-10-31; the user's „~100 ახალი კითხვა აპის ტექსტებიდან“).
-// Written from the app's own texts — the church calendar (2026), the Sacred History for children (library), the chanters'
-// biographies („წინაპრები“), the songs' archive (genres, regions), the costume parts' stories, the მთქმელი map's authors and
-// works, the music lessons of „აბიტურიენტს“ — and kept apart from „რა? სად? როდის?“'s facts. Each: the question, its four
-// answers with the right one first (a round shows them shuffled), and where it helps one line shown at the reveal. Not yet
-// checked by a teacher (the page says so). Ids are stable: the device remembers the questions already asked by their id.
+// The game's own ones were written from the app's own texts — the church calendar (2026), the Sacred History for children
+// (library), the chanters' biographies („წინაპრები“), the songs' archive (genres, regions), the costume parts' stories, the
+// მთქმელი map's authors and works, the music lessons of „აბიტურიენტს“ — and kept apart from „რა? სად? როდის?“'s facts. Since
+// 2026-11-01 the broad Georgian bank of `data/kartuliQuiz.ts` is added after them, its three wrong answers beside the right
+// one. Each: the question, its four answers with the right one first (a round shows them shuffled), and where it helps one
+// line shown at the reveal. Not yet checked by a teacher (the page says so). Ids are stable: the device remembers the
+// questions already asked by their id.
 import type { OtkhiItem } from '../utils/otkhi';
+import { KARTULI_QUIZ, QUIZ_TOPICS, type QuizTopicDef } from './kartuliQuiz';
 
-export interface OtkhiTopicDef { id: string; label: string }
+export type OtkhiTopicDef = QuizTopicDef;
 
-/** The written topics, in the order of the chips; the recordings and the teacher's own are added by the page. */
+/** The written topics, in the order of the chips: the broad ones (shared with „რა? სად? როდის?“), then faith and chant; the
+ *  recordings and the teacher's own are added by the page. */
 export const OTKHI_TOPICS: OtkhiTopicDef[] = [
+  ...QUIZ_TOPICS,
   { id: 'tsmindanebi', label: 'წმინდანები' },
   { id: 'sagmrto', label: 'საღმრთო ისტორია' },
   { id: 'dgesastsauli', label: 'დღესასწაულები' },
   { id: 'galoba', label: 'გალობა' },
-  { id: 'simgera', label: 'სიმღერა და საკრავი' },
-  { id: 'mtserloba', label: 'მწერლობა' },
-  { id: 'samosi', label: 'სამოსი და სუფრა' },
-  { id: 'musika', label: 'მუსიკის ანბანი' },
 ];
 
-export const OTKHI_QUESTIONS: OtkhiItem[] = [
+const OWN: OtkhiItem[] = [
   // წმინდანები
   { id: 'o-tsm-01', topic: 'tsmindanebi', q: 'VI საუკუნეში ასურეთიდან ქართლში ბერები მოვიდნენ და მონასტრები დააარსეს. რამდენი იყო ისინი?', a: ['ცამეტი', 'შვიდი', 'თორმეტი', 'ორმოცი'], note: 'მათ იოანე ზედაზნელი წინამძღოლობდა.' },
   { id: 'o-tsm-02', topic: 'tsmindanebi', q: 'დავით გარეჯელის მოწაფე მშიერ ბერებს ირმების რძით კვებავდა. რა ერქვა მას?', a: ['ლუკიანე', 'დოდო', 'შიო', 'ევაგრე'], note: 'კალენდარი მათ ერთად იხსენიებს: „ღირსი დავით გარეჯელი და მოწაფე მისი, ღირსი ლუკიანე“.' },
@@ -128,17 +129,17 @@ export const OTKHI_QUESTIONS: OtkhiItem[] = [
   { id: 'o-mtk-16', topic: 'mtserloba', q: 'ვინ დაწერა მოთხრობა „იავნანამ რა ჰქმნა?“', a: ['იაკობ გოგებაშვილმა', 'დუტუ მეგრელმა', 'აკაკი წერეთელმა', 'ნიკო ლორთქიფანიძემ'] },
   { id: 'o-mtk-17', topic: 'mtserloba', q: 'ვისია მოთხრობების წიგნი „ნატვრის ხე“?', a: ['გიორგი ლეონიძის', 'ნოდარ დუმბაძის', 'რევაზ ინანიშვილის', 'დავით კლდიაშვილის'] },
 
-  // სამოსი და სუფრა
+  // სამოსი და ადათი (05–10 — „სამზარეულო და სუფრა“)
   { id: 'o-sam-01', topic: 'samosi', q: 'რა იარაღი ეკიდება ჩოხის ვიწრო, ვერცხლით მოჭედილ ქამარზე?', a: ['ხანჯალი', 'ნაჯახი', 'შუბი', 'ისარი'] },
   { id: 'o-sam-02', topic: 'samosi', q: 'რისგან კეთდება ფაფახი?', a: ['ცხვრის ბეწვისგან', 'თექისგან', 'ხავერდისგან', 'ჩალისგან'] },
   { id: 'o-sam-03', topic: 'samosi', q: 'რისგან კეთდება სვანური ქუდი?', a: ['ცხვრის მატყლის თექისგან', 'ცხვრის ბეწვისგან', 'ტყავისგან', 'აბრეშუმისგან'] },
   { id: 'o-sam-04', topic: 'samosi', q: 'რა ჰქვია ქართული კაბის წელზე შემოსარტყმელ გრძელ, ნაქარგ ქამარს, რომლის ბოლოები წინ ეშვება?', a: ['სარტყელი', 'გულისპირი', 'ქათიბი', 'ლეჩაქი'] },
-  { id: 'o-sam-05', topic: 'samosi', q: 'რა ჰქვია სუფრაზე ღვინის მსხმელს, თამადის თანაშემწეს?', a: ['მერიქიფე', 'მეზურნე', 'მემინდვრე', 'მეჯინიბე'] },
-  { id: 'o-sam-06', topic: 'samosi', q: 'რას ნიშნავს სუფრაზე „ალავერდი“?', a: ['სადღეგრძელოს სხვისთვის გადაცემას', 'სუფრის დასრულებას', 'სიმღერის დაწყებას', 'ღვინის მორთმევას'] },
-  { id: 'o-sam-07', topic: 'samosi', q: 'ძაფზე აცმულ კაკალს ყურძნის ტკბილის ფელამუშში ავლებენ და აშრობენ. რა გამოდის?', a: ['ჩურჩხელა', 'გოზინაყი', 'ტყლაპი', 'ჩირი'] },
-  { id: 'o-sam-08', topic: 'samosi', q: 'სადაა მიწაში ჩაფლული ქვევრები, რომლებშიც ღვინო დგება?', a: ['მარანში', 'ბოსელში', 'სასიმინდეში', 'ბეღელში'] },
-  { id: 'o-sam-09', topic: 'samosi', q: 'რა ჰქვია თიხის მრგვალ ღუმელს, რომლის კედლებზეც შოთის პური ცხვება?', a: ['თონე', 'ბუხარი', 'კეცი', 'ქვევრი'] },
-  { id: 'o-sam-10', topic: 'samosi', q: 'რაში წურავდნენ ყურძენს ფეხით?', a: ['საწნახელში', 'ქვევრში', 'კიდობანში', 'გობში'] },
+  { id: 'o-sam-05', topic: 'samzareulo', q: 'რა ჰქვია სუფრაზე ღვინის მსხმელს, თამადის თანაშემწეს?', a: ['მერიქიფე', 'მეზურნე', 'მემინდვრე', 'მეჯინიბე'] },
+  { id: 'o-sam-06', topic: 'samzareulo', q: 'რას ნიშნავს სუფრაზე „ალავერდი“?', a: ['სადღეგრძელოს სხვისთვის გადაცემას', 'სუფრის დასრულებას', 'სიმღერის დაწყებას', 'ღვინის მორთმევას'] },
+  { id: 'o-sam-07', topic: 'samzareulo', q: 'ძაფზე აცმულ კაკალს ყურძნის ტკბილის ფელამუშში ავლებენ და აშრობენ. რა გამოდის?', a: ['ჩურჩხელა', 'გოზინაყი', 'ტყლაპი', 'ჩირი'] },
+  { id: 'o-sam-08', topic: 'samzareulo', q: 'სადაა მიწაში ჩაფლული ქვევრები, რომლებშიც ღვინო დგება?', a: ['მარანში', 'ბოსელში', 'სასიმინდეში', 'ბეღელში'] },
+  { id: 'o-sam-09', topic: 'samzareulo', q: 'რა ჰქვია თიხის მრგვალ ღუმელს, რომლის კედლებზეც შოთის პური ცხვება?', a: ['თონე', 'ბუხარი', 'კეცი', 'ქვევრი'] },
+  { id: 'o-sam-10', topic: 'samzareulo', q: 'რაში წურავდნენ ყურძენს ფეხით?', a: ['საწნახელში', 'ქვევრში', 'კიდობანში', 'გობში'] },
   { id: 'o-sam-11', topic: 'samosi', q: 'მწყემსისა და მხედრის თექის მოსასხამი წვიმასაც უძლებს და ყინვასაც. რა ჰქვია მას?', a: ['ნაბადი', 'ქათიბი', 'ყაბალახი', 'ახალუხი'] },
   { id: 'o-sam-12', topic: 'samosi', q: 'ჩოხის ქვეშ ჩაცმული ახალუხი სად მოჩანს?', a: ['ჩოხის გულისპირში', 'სახელოების ბოლოზე', 'კალთის ქვემოთ', 'ზურგზე'] },
 
@@ -158,3 +159,6 @@ export const OTKHI_QUESTIONS: OtkhiItem[] = [
   { id: 'o-mus-13', topic: 'musika', q: 'სოლ მაჟორს გასაღებთან ერთი ნიშანი აქვს. რომელი?', a: ['ფა დიეზი', 'სი ბემოლი', 'დო დიეზი', 'მი ბემოლი'] },
   { id: 'o-mus-14', topic: 'musika', q: 'რა ჰქვია დო–ფა ინტერვალს?', a: ['კვარტა', 'ტერცია', 'კვინტა', 'სექსტა'] },
 ];
+
+/** The game's own questions, then the broad bank. */
+export const OTKHI_QUESTIONS: OtkhiItem[] = [...OWN, ...KARTULI_QUIZ.map(({ a, wrong, ...q }) => ({ ...q, a: [a, ...wrong] }))];

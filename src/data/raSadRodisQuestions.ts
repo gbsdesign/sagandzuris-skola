@@ -1,22 +1,22 @@
-// „რა? სად? როდის?“ — the questions of the team quiz (games hub, 2026-10-28). Written from the app's own texts: the church
-// calendar, the saints' lives, the Sacred History for children, the songs' archive (regions, genres), the costume parts'
-// stories, the chant ancestors, the reader's course and the music lessons — each with the answer the host reads out and,
-// where it helps, one line on where it comes from. Not yet checked by a teacher (the setup screen says so). The print kit
-// (scripts/print-games/games/ra-sad-rodis.mjs) takes the first five of every topic. Ids are stable: the device remembers the
-// questions already asked by their id (utils/raSadRodis.ts).
+// „რა? სად? როდის?“ — the questions of the team quiz (games hub, 2026-10-28). The game's own ones were written from the app's
+// texts: the church calendar, the saints' lives, the Sacred History for children, the songs' archive (regions, genres), the
+// costume parts' stories, the chant ancestors, the reader's course and the music lessons. Since 2026-11-01 the broad Georgian
+// bank of `data/kartuliQuiz.ts` — history, heroes, great people, literature, film, dance, the table, monuments, nature, myths,
+// sport — is added after them (the user: games on everything Georgian; faith and chant stay as questions, only no religious
+// pictures). Each has the answer the host reads out and, where it helps, one line under it. Not yet checked by a teacher
+// (the setup screen says so). The print kit (scripts/print-games/games/ra-sad-rodis.mjs) takes the first four of every topic.
+// Ids are stable: the device remembers the questions already asked by their id (utils/raSadRodis.ts).
+import { KARTULI_QUIZ, QUIZ_TOPICS, type QuizTopicDef } from './kartuliQuiz';
 
-export interface RsrTopicDef { id: string; label: string }
+export type RsrTopicDef = QuizTopicDef;
 
-/** The written topics, in the order of the setup's chips; the recordings and the teacher's own are added by the page. */
+/** The written topics, in the order of the setup's chips: the broad ones (shared with „ოთხიდან ერთი“), then faith and chant;
+ *  the recordings and the teacher's own are added by the page. */
 export const RSR_TOPICS: RsrTopicDef[] = [
+  ...QUIZ_TOPICS,
   { id: 'tsmindanebi', label: 'წმინდანები' },
   { id: 'sagmrto', label: 'საღმრთო ისტორია' },
   { id: 'galoba', label: 'გალობა' },
-  { id: 'simgera', label: 'სიმღერა და საკრავი' },
-  { id: 'istoria', label: 'ისტორია' },
-  { id: 'kutkhe', label: 'კუთხეები' },
-  { id: 'samosi', label: 'სამოსი და სუფრა' },
-  { id: 'musika', label: 'მუსიკის ანბანი' },
 ];
 
 export interface RsrQuestion {
@@ -30,7 +30,7 @@ export interface RsrQuestion {
   note?: string;
 }
 
-export const RSR_QUESTIONS: RsrQuestion[] = [
+const OWN: RsrQuestion[] = [
   // წმინდანები
   { id: 'tsm-01', topic: 'tsmindanebi', q: 'ეს ქალწული კაბადოკიიდან მოვიდა ქართლში. ღვთისმშობლისგან მიღებული ვაზის ჯვარი საკუთარი თმით შეკრა. ვინ არის ის?', a: 'წმიდა ნინო', note: 'ქართველთა განმანათლებელი, IV საუკუნე. ხსენება 27 იანვარს.' },
   { id: 'tsm-02', topic: 'tsmindanebi', q: 'ბაღდადელი ჭაბუკი სურნელოვანი ზეთების დამზადების ოსტატი იყო. ქართლში ქრისტიანი გახდა და 786 წელს თბილისში ეწამა. ვინ არის ის?', a: 'წმიდა აბო ტფილელი', note: 'ხსენება 21 იანვარს.' },
@@ -128,18 +128,18 @@ export const RSR_QUESTIONS: RsrQuestion[] = [
   { id: 'kut-12', topic: 'kutkhe', q: 'რომელ ქალაქშია მეტეხის ტაძარი, სადაც წმიდა შუშანიკ დედოფალია დაკრძალული?', a: 'თბილისში' },
   { id: 'kut-13', topic: 'kutkhe', q: 'რომელ კუთხეშია ოზურგეთი, სადაც გალობის სახელგანთქმული მასწავლებლები ცხოვრობდნენ და ასწავლიდნენ?', a: 'გურიაში' },
 
-  // სამოსი და სუფრა
+  // სამოსი და ადათი (sam-04, 10, 11 — „სამზარეულო და სუფრა“)
   { id: 'sam-01', topic: 'samosi', q: 'ჩოხის მკერდზე რიგად დაკერებულ ლულებს დღეს სამკაულად ატარებენ. რას ინახავდნენ მათში ძველად?', a: 'დენთს — თოფის ერთ გასროლაზე გათვლილს', note: 'ამ ლულებს მასრები ჰქვია.' },
   { id: 'sam-02', topic: 'samosi', q: 'რას ნიშნავდა ძველად ძახილი „ქუდზე კაცი!“?', a: 'ყველა ქუდოსანი, ანუ ყველა მამაკაცი, ერთად უნდა დამდგარიყო', note: 'ქუდი კაცის ღირსების ნიშანი იყო.' },
   { id: 'sam-03', topic: 'samosi', q: 'ქართული კაბის მკერდზე დამაგრებული ნაქარგი, ოქრომკედით, მარგალიტით და ძვირფასი ქვებით მორთული. რა ჰქვია?', a: 'გულისპირი' },
-  { id: 'sam-04', topic: 'samosi', q: 'რა ჰქვია სუფრის ხელმძღვანელს, რომელიც სადღეგრძელოებს ამბობს?', a: 'თამადა' },
+  { id: 'sam-04', topic: 'samzareulo', q: 'რა ჰქვია სუფრის ხელმძღვანელს, რომელიც სადღეგრძელოებს ამბობს?', a: 'თამადა' },
   { id: 'sam-05', topic: 'samosi', q: 'შობის დღეს მგალობლები და ბავშვები სოფელ-სოფელ დადიან, გალობენ და ტკბილეულს აგროვებენ. რა ჰქვია ამ მსვლელობას?', a: 'ალილო' },
   { id: 'sam-06', topic: 'samosi', q: 'მაღალსაყელოიანი სამოსი იცმევა ჩოხის ქვეშ და ჩოხის გულისპირში მოჩანს. რა ჰქვია?', a: 'ახალუხი' },
   { id: 'sam-07', topic: 'samosi', q: 'გრძელბოლოიანი კაპიუშონი, რომელსაც სამეგრელოში თავზე ჩალმასავით იხვევდნენ. რა ჰქვია?', a: 'ყაბალახი' },
   { id: 'sam-08', topic: 'samosi', q: 'ქალი თავზე თავსაკრავს იკეთებდა, მისგან კი თხელი, თეთრი ქსოვილი მხრებზე ეშვებოდა. რა ჰქვია ამ ქსოვილს?', a: 'ლეჩაქი' },
   { id: 'sam-09', topic: 'samosi', q: 'ხავერდის ზედა სამოსი, რომელსაც ქალი კაბაზე იცვამდა დღესასწაულზე და სიცივეში. რა ჰქვია?', a: 'ქათიბი' },
-  { id: 'sam-10', topic: 'samosi', q: 'თიხის დიდი ჭურჭელი მიწაშია ჩაფლული და მასში ღვინო დგება. რა ჰქვია?', a: 'ქვევრი' },
-  { id: 'sam-11', topic: 'samosi', q: 'რქისგან გაკეთებული სასმისი, რომლითაც სუფრაზე სადღეგრძელოს სვამენ. რა ჰქვია?', a: 'ყანწი' },
+  { id: 'sam-10', topic: 'samzareulo', q: 'თიხის დიდი ჭურჭელი მიწაშია ჩაფლული და მასში ღვინო დგება. რა ჰქვია?', a: 'ქვევრი' },
+  { id: 'sam-11', topic: 'samzareulo', q: 'რქისგან გაკეთებული სასმისი, რომლითაც სუფრაზე სადღეგრძელოს სვამენ. რა ჰქვია?', a: 'ყანწი' },
   { id: 'sam-12', topic: 'samosi', q: 'ცხვრის მატყლისგან ხელით აგორებული თექის ქუდი, გადაკეცილი კიდით და თავზე ჯვრისებრი ზონრით. რა ჰქვია?', a: 'კახური ქუდი' },
   { id: 'sam-13', topic: 'samosi', q: 'რბილი ტყავის ჩექმები, რომლებსაც ჩოხასთან იცვამდნენ ცხენზე ჯდომისა და ცეკვისთვის. რა ჰქვია?', a: 'აზიურები' },
 
@@ -158,3 +158,6 @@ export const RSR_QUESTIONS: RsrQuestion[] = [
   { id: 'mus-12', topic: 'musika', q: 'ნოტის ნაცვლად იმავე ხანგრძლივობის სიჩუმე იწერება. რა ჰქვია ამ ნიშანს?', a: 'პაუზა' },
   { id: 'mus-13', topic: 'musika', q: 'მოკლე წინა ბგერა, რომელიც მთავარ ნოტს წინ უსწრებს და მელოდიას ამშვენებს. რა ჰქვია?', a: 'ფორშლაგი' },
 ];
+
+/** The game's own questions, then the broad bank (its wrong answers are „ოთხიდან ერთი“'s). */
+export const RSR_QUESTIONS: RsrQuestion[] = [...OWN, ...KARTULI_QUIZ.map(({ wrong: _w, ...q }) => q)];
