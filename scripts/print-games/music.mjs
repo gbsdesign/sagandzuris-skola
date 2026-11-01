@@ -45,17 +45,34 @@ const lengthOf = beats => {
   const e = Math.min(12, Math.max(1, Math.round(beats * 4)) / 2);
   return e === 1 ? '' : Number.isInteger(e) ? String(e) : `${e * 2}/2`;
 };
-/** the same length in pieces a staff can draw, to be tied (voices of one score must keep their time exactly) */
-const PIECES = [8, 6, 4, 3, 2, 1.5, 1, 0.5];
+/** the same length in pieces a staff can draw, to be tied (voices of one score must keep their time exactly): eighths on a
+ * 32nd's grid (a run of seven notes in one beat is written as 32nds) */
+const PIECES = [8, 6, 4, 3, 2, 1.5, 1, 0.75, 0.5, 0.25];
 const piecesOf = beats => {
-  let e = Math.max(0.5, Math.round(beats * 4) / 2);
+  let e = Math.max(0.25, Math.round(beats * 8) / 4);
   const out = [];
   while (e > 1e-6) {
-    const p = PIECES.find(x => x <= e + 1e-6) ?? 0.5;
-    out.push(p === 1 ? '' : Number.isInteger(p) ? String(p) : `${p * 2}/2`);
+    const p = PIECES.find(x => x <= e + 1e-6) ?? 0.25;
+    out.push(p === 1 ? '' : Number.isInteger(p) ? String(p) : (p * 4) % 2 ? `${p * 4}/4` : `${p * 2}/2`);
     e -= p;
   }
   return out;
+};
+
+/** a beat in 32nds: the grid of a score's voices */
+const GRID = 8;
+const onGridAt = t => Math.round(t * GRID) / GRID;
+/**
+ * A score's voice on the grid: each note's start and end rounded as times counted from the score's start, not one length after
+ * another (rounding each short note of a fast run up would push the rest of its voice late), never two notes on one point.
+ */
+const onGrid = (notes, to) => {
+  const starts = [];
+  notes.forEach(n => starts.push(Math.max(onGridAt(n.beat), (starts[starts.length - 1] ?? -Infinity) + 1 / GRID)));
+  return notes.map((n, i) => {
+    const next = starts[i + 1] ?? Math.max(starts[i] + 1 / GRID, onGridAt(to));
+    return { beat: starts[i], beats: Math.max(1 / GRID, Math.min(onGridAt(n.beat + n.beats), next) - starts[i]) };
+  });
 };
 
 /** the clef of a voice: a low one on the octave-down treble clef, as the chant books write the bass */
@@ -71,10 +88,13 @@ const voiceOf = (notes, { marks = {}, clef, exact = null }) => {
   const shift = clef === 'treble-8' ? 12 : 0;
   const held = {};
   const len = (beats, tie) => (exact ? piecesOf(beats).map((p, i, all) => (i < all.length - 1 && tie ? `${p}-` : p)) : [lengthOf(beats)]);
-  let t = exact ? exact.from : notes[0]?.beat ?? 0;
+  const timed = exact ? onGrid(notes, exact.to) : null;
+  let t = exact ? onGridAt(exact.from) : notes[0]?.beat ?? 0;
   const out = [];
-  notes.forEach((n, i) => {
-    if (n.beat - t > 0.2) out.push(len(n.beat - t, false).map(p => `z${p}`).join(' '));
+  notes.forEach((n0, i) => {
+    const n = timed ? { ...n0, ...timed[i] } : n0;
+    // a score writes every rest, however short (its voices keep time); one line skips a breath under a fifth of a beat
+    if (n.beat - t > (exact ? 1e-6 : 0.2)) out.push(len(n.beat - t, false).map(p => `z${p}`).join(' '));
     const m = n.midi + shift;
     const name = NAMES[((m % 12) + 12) % 12];
     const acc = name.length > 1 ? name[0] : '';
@@ -89,7 +109,7 @@ const voiceOf = (notes, { marks = {}, clef, exact = null }) => {
     out.push((marks[i + 1] ? `"^${marks[i + 1]}"` : '') + pieces.map((p, k) => (k ? '' : write) + pitch + p).join(' '));
     t = n.beat + n.beats;
   });
-  if (exact && exact.to - t > 0.2) out.push(len(exact.to - t, false).map(p => `z${p}`).join(' '));
+  if (exact && onGridAt(exact.to) - t > 1e-6) out.push(len(onGridAt(exact.to) - t, false).map(p => `z${p}`).join(' '));
   return out.join(' ');
 };
 
@@ -147,10 +167,19 @@ export const staff = (abc, { cls = '', zoom = null } = {}) => `<div class="abc $
 const ABCJS = path.join(ROOT, 'node_modules', 'abcjs', 'dist', 'abcjs-basic-min.js');
 /** the kit's `head`: abcjs itself, inline (the page is a local file) */
 export const musicHead = () => `<script>${fs.readFileSync(ABCJS, 'utf8')}</script>`;
-/** the kit's `script`: every box drawn at its own width (`staffwidth` in the box's CSS pixels times `zoom`, or the box's own) */
+/** the kit's `script`: every box drawn at its own width (`staffwidth` in the box's CSS pixels times `zoom`, or the box's own);
+ * a line too full for it (abcjs then draws past its end) is drawn again wider — smaller notes — until it fits */
 export const musicScript = (zoom = 1.25) => `document.querySelectorAll('.abc').forEach(el => {
-  const w = el.clientWidth * (parseFloat(el.dataset.zoom) || ${zoom});
-  ABCJS.renderAbc(el, el.dataset.abc, { staffwidth: w, responsive: 'resize', paddingtop: 0, paddingbottom: 0, paddingleft: 0, paddingright: 0, add_classes: false, foregroundColor: '#3b2a1f' });
+  let w = el.clientWidth * (parseFloat(el.dataset.zoom) || ${zoom});
+  for (let n = 0; n < 4; n++) {
+    ABCJS.renderAbc(el, el.dataset.abc, { staffwidth: w, responsive: 'resize', paddingtop: 0, paddingbottom: 0, paddingleft: 0, paddingright: 0, add_classes: false, foregroundColor: '#3b2a1f' });
+    const svg = el.querySelector('svg');
+    const vb = svg && svg.viewBox && svg.viewBox.baseVal;
+    if (!vb || !vb.width) break;
+    const box = svg.getBBox();
+    if (box.x + box.width <= vb.width + 1) break;
+    w *= ((box.x + box.width) / vb.width) * 1.03;
+  }
 });`;
 
 export const musicCss = `

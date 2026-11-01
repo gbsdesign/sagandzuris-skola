@@ -10,10 +10,10 @@ import { PartPicture } from '../../../components/learn/PartPicture';
 import { hushSnippets } from '../rounds/useSnippet';
 import { trioChants } from './chants';
 import { ChantPicker } from './ChantPicker';
-import { ClassSend } from './ClassSend';
+import { ClassSend } from '../../../components/games/ClassSend';
 import { SLOW, VOICE_LABELS, VOICE_SHORT, lengthText, openingIsWhole, sectionOf, systemAt, trioVoices, useChantScore, type LoadedChant, type Section } from './plan';
 import { readTable, saveTable, type TableConf } from './store';
-import { useMine } from './useMine';
+import { useMine } from '../../../components/games/useMine';
 
 // „მესამე ხმა“ on one phone (ჰიბრიდული): the phone's speaker sings one or two voices of a chant, the class sings the rest
 // live. Before the start each voice's first note sounds in turn; then the book's line being sung is on the screen with a

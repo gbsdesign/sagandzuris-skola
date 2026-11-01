@@ -211,3 +211,8 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
 @keyframes tsq-bar { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
 .tsq-bar { transform-origin: bottom; animation: tsq-bar 0.8s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .tsq-inner { transition: none; } .tsq-bar { animation: none; } }
+
+/* „ჩემი გუნდი“: a ♪ rises from a singer's head at each new note and fades */
+@keyframes gundi-note { from { opacity: 0.95; transform: translate(0, 0) scale(0.8); } to { opacity: 0; transform: translate(9px, -30px) scale(1.25); } }
+.gundi-note { font-size: 15px; font-weight: 700; animation: gundi-note 1.25s ease-out forwards; transform-box: fill-box; }
+@media (prefers-reduced-motion: reduce) { .gundi-note { display: none; } }
