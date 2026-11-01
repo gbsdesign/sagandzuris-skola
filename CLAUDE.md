@@ -598,6 +598,19 @@
   signature in old letters too („ვინ თქვა?“), a secret letter of one's own, the big key with an asomtavruli copybook behind it,
   the answers and the class game's sheet (letters called, the teams' points). The old scripts' fonts, key strip and big key are
   shared with „ასოების ბადე“'s kit: `scripts/print-games/oldScript.mjs`.
+- **„დროის ხაზი“** (2026-11-01, the plan's Georgian game №7, like Timeline; mapItem `khazi`, rules `utils/khazi.ts` + test, screens
+  `pages/games/khazi/`): an event without its year is put into a line of cards in time order — between, before or after; the year
+  opens and judges, a wrong card still joins at its right place, marked (the line stays true). Cards `data/khaziCards.ts` (105, four
+  decks: ისტორია h1–h30 and კულტურა k1–k26 written by Claude, unchecked — the page says so; ქართველები = the births of `MTKMELI_AUTHORS`
+  and of `ANCESTORS` with a year; წირვის რიგი t1–t18 = the Liturgy's parts, `when` = their place, label „№ N“; ids stay, add at the
+  end). Equal years fit either side (`fits`). Tabs „ონლაინ · ჰიბრიდული“: online = the day's line for the whole school (`dealOfDay`:
+  ten cards of the three year decks, distinct years, ≤ 4 a deck; record `students.games.khazi.days[iso]` through
+  `useDailyRecord('khazi')`, the marks `r:<0/1 a card>`; the line on the way in `sg-khazi-now`) + the endless game of one deck with
+  three lives, its best per deck on the device (`sg-khazi-best`). Hybrid (`khazi/Teams.tsx`, rules `utils/khaziTeams.ts` + test) =
+  2–6 teams in turn on one screen: right = a point and the card in the team's colour, the turn always passes, goal 5/7/10, the
+  round goes to its end; turn clock 0/30/60 s, „წინა სვლის გაუქმება“, kept in `sg-khazi-teams`; on a computer the line stands left
+  of the card. Its kit (`drois-khazi.mjs`, 9 sheets): eighteen cards of each deck (the event in front, the year + note behind), two
+  sheets a deck, rules with a drawn line.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
