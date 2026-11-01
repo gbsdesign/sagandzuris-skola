@@ -763,6 +763,25 @@
   app's `sidesFor`, half blue first, the frame in the first team's colour, ▲ = the row farthest from the captains), 27 covers (9 + 9
   of the teams — the first team takes nine —, 8 passers-by with one spare, the trap) and the turn card (blue / red); every colour also
   has its mark (waves, flame, footprints, a bolt) for a print without colour.
+- **„უცხო სოფელში“** (2026-11-01, like Spyfall; mapItem `utskho`, the hub opens its tab by `requestOpen('utskho', 'online' | 'table')`;
+  rules `utils/utskho.ts` + test, screens `pages/games/utskho/`): everybody knows the place but the stranger. 30 Georgian places in
+  `data/utskhoPlaces.ts` (seven roles, five villagers' answers vaguest first, a note; `icon` = a lucide name of `UtskhoIcon`, the app's
+  `PLACE_ICON` holds them all; written by Claude, unchecked — the pages say so; no answer holds its place's name — the test checks it;
+  ids stay). Alone (`Solo.tsx`): I am the stranger — the day's place for the whole school (`placeOfDay`: each once in a round of 30
+  days, `dayDeal` = it among 25 by name), the answers come one by one; 10 points, an answer more −1, a hint (`HINT_CUT` 4 places crossed
+  out, three hints) −1, a wrong guess −2 (behind a confirm), three wrong lose (`soloView`, `soloStep` keeps only steps that do
+  something). The day's record `students.games.utskho.days[iso]` through `useDailyRecord('utskho')` (`guesses` = the steps: `a`, `h`,
+  `g:<place>`), then free games (`sg-utskho-free`), stats, share (`utskhoShare`: 💬💡❌✅), the hub's meta (`utskhoMeta`); the vine
+  counts it. The class (`Table.tsx`, `UTable` kept in `sg-utskho-game`, minutes 6/8/10 in `sg-utskho-table`, names = `CircleNames`,
+  3–12): the phone goes round — „მე ვარ X — ბარათის ნახვა“, the card (`SecretCard`: the place + a role or „უცხო!“, both alike from
+  afar; on its side the icon beside the words), „დავიმახსოვრე“; the last card starts the clock (`dealNext`). Play: the clock, who asks
+  first, every place listed, „ჩემი ბარათის ხელახლა ნახვა“; „ბრალდება“ stops the clock (who accuses — once a round, `accusers` —, whom,
+  „ყველა თანახმაა“ or `accusationFailed`), „უცხო ვარ“ (who are you — only the stranger goes on —, the place, `guess`); the time over =
+  the village's one vote or „ვერ შევთანხმდით“ (`timeout`); ✕ pauses the clock. Points as the original (`roundPoints`: the village 1
+  each, the accuser 2; the stranger 2, or 4 for the place or an early wrong vote), the end shows every role, „შემდეგი რაუნდი“ never the
+  same stranger twice running (`nextRound`), „დასრულება“ = the podium. Its kit (`utskho-sopelshi.mjs`, 18 sheets): 210 place cards
+  63×52 mm (two places and one „უცხო“ a sheet, one back for all), eight A6 lists of the places, the score sheet (12 rounds × 8 players);
+  the kit checks its points against `roundPoints` and stops the build if the app's ever change.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
