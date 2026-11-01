@@ -1,6 +1,6 @@
 // „სამშვილდის ღამე“ — the school's Mafia (plan doc, tab „6 სამაგიდო თამაში“): 24 role cards, 4 reminder cards, the
 // chronicler's sheet (night script, roles table, chronicle grid), the day/night disk, two mats and a box label. Series №2.
-import { C, SERIES, SCHOOL, aso, esc, icon, corners, braid, bolnisiCross, borjgali, crescentStars, cardSheet, page, stripe, foot, duplex, sheetNo } from '../lib.mjs';
+import { C, SERIES, SCHOOL, aso, esc, icon, corners, braid, grapeEmblem, borjgali, crescentStars, cardSheet, page, stripe, foot, duplex, sheetNo } from '../lib.mjs';
 
 export const id = 'samshvildis-game';
 export const title = 'სამშვილდის ღამე';
@@ -36,7 +36,7 @@ const roleCard = ({ name, kind, icons, text, label }) => `<div class="card ${kin
 const spareCard = `<div class="card">${frame}<div class="body"><div class="kind">სათადარიგო</div><div class="short">&nbsp;</div><div class="portrait"></div><div class="txt small">დაკარგულის ნაცვლად — როლი და ტექსტი მარკერით.</div></div></div>`;
 
 const cardBack = `<div class="card dark"><div class="frame"></div>${corners(C.gold, 10, 5)}
-<div class="cross">${bolnisiCross(34, C.gold)}</div><div class="series">${esc(SERIES)}</div></div>`;
+<div class="emblem">${grapeEmblem(34, C.gold)}</div><div class="series">${esc(SERIES)}</div></div>`;
 
 const reminderFront = `<div class="card">${frame}<div class="body rem">
   <div class="band"><div class="aso">ႶႠႫႤ</div><div class="bandSub">ღამე · რიგი</div></div>
@@ -230,7 +230,7 @@ ${mat('ტყვეობა', `<div class="tentArt">${icon('tent', { size: 30, 
 const labelPage = page(`<div class="label">
   <div class="lTop">${braid(190, 6, { id: 'l1' })}</div>
   <div class="lBody">
-    <div class="lCross">${bolnisiCross(22, C.gold)}</div>
+    <div class="lEmblem">${grapeEmblem(22, C.gold)}</div>
     <div class="aso lTitle">${aso(title)}</div>
     <div class="lName">სამშვილდის ღამე</div>
     <div class="lScene"><svg viewBox="0 0 200 70" width="120mm" height="42mm" fill="none" stroke="${C.gold}" stroke-width="1.4" stroke-linejoin="round">
@@ -261,7 +261,7 @@ export const css = `
 .card.spy .portrait{background:radial-gradient(ellipse at 50% 38%,#8d3a42 0%,var(--wine) 60%,var(--wine2) 100%);border-color:var(--gold2)}
 .card.spy .portrait .wm{color:#f0d9a0;opacity:.12}
 .card.spy .kind{color:var(--wine)}
-.card.dark .cross{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);line-height:0}
+.card.dark .emblem{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);line-height:0}
 .card.dark .series{position:absolute;bottom:7.5mm;left:0;right:0;text-align:center;font-size:7pt;color:var(--gold);opacity:.85;letter-spacing:.1em}
 .rem .band{background:var(--wine);color:var(--paper);text-align:center;padding:1mm 1.5mm 1.2mm;border-radius:1.5mm;margin-bottom:1.6mm}
 .rem .band .aso{font-size:12pt;color:#f0d9a0}
@@ -334,7 +334,7 @@ table.roles{font-size:9pt}
 .label{padding:8mm 10mm 0}
 .lTop,.lBot{line-height:0}
 .lBody{height:136mm;background:var(--paper);border:.2mm dashed #999;border-top:0;border-bottom:0;display:flex;flex-direction:column;align-items:center;padding:5mm 10mm 0;text-align:center}
-.lCross{line-height:0}
+.lEmblem{line-height:0}
 .lTitle{font-size:26pt;color:var(--wine);letter-spacing:.1em;margin-top:2mm}
 .lName{font-size:16pt;font-weight:800;color:var(--brown)}
 .lScene{margin:2mm 0 1mm;background:var(--night);border-radius:3mm;padding:3mm 6mm 0;line-height:0}

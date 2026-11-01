@@ -1,6 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { afterTry, candidatesOfDay, dayIndex, keyMarks, nameWord, scoreGuess, sitqvaShareText, wordOfDay, type SitqvaCandidate } from '../src/utils/sitqva';
+import {
+  KIND_HINT, afterTry, candidatesOfDay, dayIndex, fits, isSaintDay, keyMarks, nameWord, scoreGuess, sitqvaShareText,
+  wordOfDay, type SitqvaCandidate, type SitqvaKind,
+} from '../src/utils/sitqva';
 import { ANSWER_BANK } from '../src/data/sitqvaAnswers';
 import { emptyDay } from '../src/utils/hangi';
 
@@ -48,29 +51,52 @@ test('candidatesOfDay gives the feast and the saints of the day, each once', () 
   assert.deepEqual(candidatesOfDay(null), []);
 });
 
-test('wordOfDay is the same for the same day, prefers the day itself and skips yesterday\'s word', () => {
-  const day: SitqvaCandidate[] = [{ word: 'გიორგი', kind: 'saint' }, { word: 'ნინო', kind: 'saint' }];
-  const a = wordOfDay('2026-11-23', day, ANSWER_BANK);
-  const b = wordOfDay('2026-11-23', day, ANSWER_BANK);
-  assert.deepEqual(a, b);
+// the bank's own kinds; a feast and a saint come only from the calendar
+const BANK_KINDS: SitqvaKind[] = ['church', 'region', 'food', 'nature', 'hero', 'culture'];
+
+test('the bank: every word once, 4–6 Georgian letters, a kind with a hint, all six kinds', () => {
+  assert.ok(ANSWER_BANK.length >= 150);
+  assert.equal(new Set(ANSWER_BANK.map(c => c.word)).size, ANSWER_BANK.length);
+  for (const c of ANSWER_BANK) {
+    assert.ok(fits(c.word), c.word);
+    assert.ok(BANK_KINDS.includes(c.kind), c.word);
+    assert.ok(KIND_HINT[c.kind], c.word);
+  }
+  for (const k of BANK_KINDS) assert.ok(ANSWER_BANK.some(c => c.kind === k), k);
+});
+
+test('wordOfDay: a feast always, a saint every third day, else the bank — the same for the whole day', () => {
+  const saints: SitqvaCandidate[] = [{ word: 'გიორგი', kind: 'saint' }, { word: 'ნინო', kind: 'saint' }];
+  // 2026-11-23 is day 27 — a saint's day
+  assert.equal(isSaintDay('2026-11-23'), true);
+  const a = wordOfDay('2026-11-23', saints, ANSWER_BANK);
+  assert.deepEqual(a, wordOfDay('2026-11-23', saints, ANSWER_BANK));
   assert.equal(a?.kind, 'saint');
-  assert.ok(a && a.word.length >= 4 && a.word.length <= 6);
-  const other = wordOfDay('2026-11-23', day, ANSWER_BANK, a!.word);
+  const other = wordOfDay('2026-11-23', saints, ANSWER_BANK, a!.word);
   assert.notEqual(other?.word, a!.word);
-  const bank = wordOfDay('2026-11-23', [], ANSWER_BANK);
-  assert.ok(bank && ['church', 'region'].includes(bank.kind));
   // a saint's name too long for the grid is skipped
-  assert.equal(wordOfDay('2026-11-23', [{ word: 'შუშანიკი', kind: 'saint' }], ANSWER_BANK)?.kind !== 'saint', true);
+  assert.notEqual(wordOfDay('2026-11-23', [{ word: 'შუშანიკი', kind: 'saint' }], ANSWER_BANK)?.kind, 'saint');
+  // the next day the bank speaks, though the day has saints
+  assert.equal(isSaintDay('2026-11-24'), false);
+  const bank = wordOfDay('2026-11-24', saints, ANSWER_BANK);
+  assert.ok(bank && BANK_KINDS.includes(bank.kind));
+  // a feast wins on any day
+  const feast: SitqvaCandidate = { word: 'ხარება', kind: 'feast' };
+  assert.deepEqual(wordOfDay('2026-11-24', [...saints, feast], ANSWER_BANK), feast);
+  // the words differ from day to day
+  const week = ['2026-11-01', '2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06', '2026-11-07'];
+  assert.ok(new Set(week.map(d => wordOfDay(d, [], ANSWER_BANK)?.word)).size >= 6);
+  assert.equal(wordOfDay('2026-11-23', [], [{ word: 'შუშანიკიანი', kind: 'hero' }]), undefined);
 });
 
 test('afterTry ends the day on the word or after six tries', () => {
-  let d = emptyDay('ლოცვა');
-  d = afterTry(d, 'ტაძარი');
+  let d = emptyDay('ხორუმი');
+  d = afterTry(d, 'სამაია');
   assert.equal(d.done, false);
-  d = afterTry(d, 'ლოცვა');
+  d = afterTry(d, 'ხორუმი');
   assert.equal(d.won, true);
   assert.equal(d.done, true);
-  assert.equal(afterTry(d, 'ხატი').guesses.length, 2);
+  assert.equal(afterTry(d, 'ლეკური').guesses.length, 2);
   let lost = emptyDay('ლოცვა');
   for (const g of ['ტაძარი', 'ჯვარი', 'ხატი', 'კანონი', 'გალობა', 'ბერი']) lost = afterTry(lost, g);
   assert.equal(lost.done, true);

@@ -20,7 +20,7 @@ const dist = (a, b) => Math.hypot(b[0] - a[0], b[1] - a[1]);
 const rnd = (() => { let s = 20261028; return () => ((s = (s * 1103515245 + 12345) % 2147483648) / 2147483648); })();
 
 // ---------- the map's cities ----------
-// key, name, lat, lon, look (c city — a tower, s shrine — a domed church, p port — a sail), x and y on the board in mm
+// key, name, lat, lon, look (c city — a tower, s shrine — an old gate, p port — a sail), x and y on the board in mm
 const CITY_ROWS = [
   ['bichvinta', 'ბიჭვინთა', 43.160, 40.340, 's', 85, 75], ['sokhumi', 'სოხუმი', 43.000, 41.020, 'p', 145, 85],
   ['zugdidi', 'ზუგდიდი', 42.508, 41.871, 'c', 230, 158], ['poti', 'ფოთი', 42.146, 41.672, 'p', 215, 235],
@@ -500,13 +500,13 @@ const smooth = pts => pts.reduce((d, p, i) => {
   return `${d}C${P2([p1[0] + (p[0] - p0[0]) / 6, p1[1] + (p[1] - p0[1]) / 6])} ${P2([p[0] - (p3[0] - p1[0]) / 6, p[1] - (p3[1] - p1[1]) / 6])} ${P2(p)}`;
 }, '');
 
-/** The marks inside the city circles (±4 mm): a tower for a city, a domed church for a shrine, a sail for a port. */
+/** The marks inside the city circles (±4 mm): a tower for a city, an old gate between two towers for a shrine (no church
+ * picture: the user's rule, 2026-11-01), a sail for a port. */
 const CITY_GLYPH = {
   c: `<path d="M-2.5 3.6L-2.1 -1.4H-2.9V-3.7H-1.8V-2.7H-.55V-3.7H.55V-2.7H1.8V-3.7H2.9V-1.4H2.1L2.5 3.6Z" fill="${C.wine}"/>
 <path d="M-.85 3.6V1.8A.85 .85 0 0 1 .85 1.8V3.6Z" fill="${ONPAPER}"/><rect x="-.45" y="-1" width=".9" height="1.3" rx=".35" fill="${ONPAPER}"/>`,
-  s: `<path d="M-3.7 3.6V.8L0 -.8L3.7 .8V3.6Z" fill="${C.wine}"/><rect x="-1.3" y="-2.5" width="2.6" height="2.3" fill="${C.wine}"/>
-<path d="M-1.65 -2.35L0 -4.1L1.65 -2.35Z" fill="${C.wine}"/><path d="M0 -4V-5.1M-.5 -4.65H.5" stroke="${C.wine}" stroke-width=".4"/>
-<path d="M-.7 3.6V2.1A.7 .7 0 0 1 .7 2.1V3.6Z" fill="${ONPAPER}"/>`,
+  s: `<path d="M-3.7 3.6V-2.6H-3.1V-3.6H-2.5V-2.6H-1.9V-1.2H1.9V-2.6H2.5V-3.6H3.1V-2.6H3.7V3.6Z" fill="${C.wine}"/>
+<path d="M-1.15 3.6V1.5A1.15 1.15 0 0 1 1.15 1.5V3.6Z" fill="${ONPAPER}"/><rect x="-3.1" y="-1.4" width=".7" height="1.1" rx=".3" fill="${ONPAPER}"/><rect x="2.4" y="-1.4" width=".7" height="1.1" rx=".3" fill="${ONPAPER}"/>`,
   p: `<path d="M-3.7 1.5H3.7L2.5 3.5H-2.5Z" fill="${C.wine}"/><path d="M0 1.5V-4" stroke="${C.wine}" stroke-width=".55"/>
 <path d="M.5 -3.7L3.3 .9H.5Z" fill="${C.wine}"/><path d="M-.5 -2.7L-2.9 .9H-.5Z" fill="${C.wine}"/>`,
 };
@@ -597,9 +597,9 @@ const cartSvg = (cx, cy, w, { color = INK, load = '' } = {}) => `<g transform="t
 ${load}<path d="M30 28H96V34H30Z" fill="${color}"/><path d="M33 28V13M47 28V13M61 28V13M75 28V13M89 28V13M31 14H95" stroke="${color}" stroke-width="2.4" stroke-linecap="round"/>
 <path d="M33 31L3 42" stroke="${color}" stroke-width="3.2" stroke-linecap="round"/><path d="M1 35L7 49" stroke="${color}" stroke-width="2.6" stroke-linecap="round"/>
 ${wheel(64, 40, 18, color, 2.4)}</g>`;
-/** Bolnisi cross (the lib's, drawn in the board's own units). */
-const boCross = (cx, cy, s, color = C.gold) => `<g transform="translate(${f(cx - s / 2)} ${f(cy - s / 2)}) scale(${f(s / 100)})" fill="${color}" stroke="${color}" stroke-width="1.2" stroke-linejoin="round">
-<circle cx="50" cy="50" r="47" fill="none" stroke-width="2.4"/>${[0, 90, 180, 270].map(a => `<path d="M50 50 L37 10 A17 7 0 0 1 63 10 Z" transform="rotate(${a} 50 50)"/>`).join('')}<circle cx="50" cy="50" r="7"/></g>`;
+/** An eight-rayed sun in a ring, the folk ornament (no church sign anywhere: the user's rule, 2026-11-01), ±s/2. */
+const sunMark = (cx, cy, s, color = C.gold) => `<g transform="translate(${f(cx - s / 2)} ${f(cy - s / 2)}) scale(${f(s / 100)})" fill="${color}" stroke="${color}" stroke-width="1.2" stroke-linejoin="round">
+<circle cx="50" cy="50" r="47" fill="none" stroke-width="2.4"/>${Array.from({ length: 8 }, (_, i) => `<path d="M50 9L56 32H44Z" transform="rotate(${i * 45} 50 50)"/>`).join('')}<circle cx="50" cy="50" r="15"/></g>`;
 /** A caravanserai (ქარვასლა): a low house with a big arched gate, ±s/2. */
 const innGlyph = (cx, cy, s, color) => `<g transform="translate(${f(cx)} ${f(cy)}) scale(${f(s / 10)})"><path d="M-5 4.6V-1.2L0 -4.8L5 -1.2V4.6Z" fill="${color}"/><path d="M-2.2 4.6V1.2A2.2 2.2 0 0 1 2.2 1.2V4.6Z" fill="${C.wine}"/><rect x="-4.1" y="-.6" width="1.3" height="1.5" fill="${C.wine}"/><rect x="2.8" y="-.6" width="1.3" height="1.5" fill="${C.wine}"/></g>`;
 const compass = (cx, cy, r) => {
@@ -609,9 +609,9 @@ const compass = (cx, cy, r) => {
   return `<g transform="translate(${f(cx)} ${f(cy)})"><circle r="${f(r * 0.72)}" fill="none" stroke="${INK}" stroke-width=".3"/>${pts}<circle r="1" fill="${INK}"/>
 ${textSvg('ჩ', [0, -r - 3.2], { size: 4.2, fill: C.wine, halo: null })}</g>`;
 };
-const panel = ([x0, y0, x1, y1], inner, { crosses = false } = {}) => `<g><rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" rx="3" fill="${ONPAPER}" stroke="${C.wine}" stroke-width="1"/>
+const panel = ([x0, y0, x1, y1], inner, { suns = false } = {}) => `<g><rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" rx="3" fill="${ONPAPER}" stroke="${C.wine}" stroke-width="1"/>
 <rect x="${x0 + 1.8}" y="${y0 + 1.8}" width="${x1 - x0 - 3.6}" height="${y1 - y0 - 3.6}" rx="1.8" fill="none" stroke="${C.gold}" stroke-width=".45"/>
-${crosses ? [[x0 + 6.5, y0 + 6.5], [x1 - 6.5, y0 + 6.5], [x1 - 6.5, y1 - 6.5], [x0 + 6.5, y1 - 6.5]].map(([x, y]) => boCross(x, y, 7)).join('') : ''}${inner}</g>`;
+${suns ? [[x0 + 6.5, y0 + 6.5], [x1 - 6.5, y0 + 6.5], [x1 - 6.5, y1 - 6.5], [x0 + 6.5, y1 - 6.5]].map(([x, y]) => sunMark(x, y, 7)).join('') : ''}${inner}</g>`;
 const titleSvg = () => {
   const [x0, y0, x1] = ZONES.title, cx = (x0 + x1) / 2;
   return panel(ZONES.title, `${cartSvg(cx, y0 + 25, 44, { color: C.brown, load: `<path d="M40 27C40 15 46 9 58 9H76C88 9 92 15 92 27Z" fill="${C.wine}"/><path d="M52 9.5V27M66 9V27M80 10V27" stroke="#f0d9a0" stroke-width="1.4"/>` })}
@@ -620,7 +620,7 @@ ${textSvg('ქარავანი', [cx, y0 + 64], { size: 6.4, fill: INK, wei
 ${textSvg('საქართველოს გზები', [cx, y0 + 73], { size: 4.4, fill: INK, weight: 700, family: 'SerifKa', halo: null })}
 ${textSvg('XIX საუკუნის მიწურული', [cx, y0 + 80], { size: 3.6, fill: '#6b5440', weight: 400, family: 'SerifKa', italic: true, halo: null })}
 <path d="M${x0 + 14} ${y0 + 85.5}H${x1 - 14}" stroke="${C.gold}" stroke-width=".4"/>
-${textSvg(`${SERIES} · №${NO}`, [cx, y0 + 91], { size: 3.5, fill: C.wine, weight: 700, halo: null })}`, { crosses: true });
+${textSvg(`${SERIES} · №${NO}`, [cx, y0 + 91], { size: 3.5, fill: C.wine, weight: 700, halo: null })}`, { suns: true });
 };
 const legendSvg = () => {
   const [x0, y0, x1, y1] = ZONES.legend, ix = x0 + 17, tx = x0 + 31;
@@ -727,7 +727,7 @@ const GOOD_ART = {
 <path d="M45 46C56 44 64 36 66 26C56 26 48 34 45 46Z" fill="${c}" stroke="${d}" stroke-width="2.2" stroke-linejoin="round"/>`,
   blue: (c, d, p) => `<path d="M50 8L92 50L50 92L8 50Z" fill="${c}" stroke="${d}" stroke-width="2.6" stroke-linejoin="round"/>
 <path d="M50 20L80 50L50 80L20 50Z" fill="none" stroke="${p}" stroke-width="2"/>
-<g fill="${p}">${[0, 90, 180, 270].map(a => `<path d="M50 50C46 42 46 36 50 30C54 36 54 42 50 50Z" transform="rotate(${a} 50 50)"/>`).join('')}<circle cx="50" cy="50" r="4"/></g>
+<g fill="${p}">${[0, 45, 90, 135, 180, 225, 270, 315].map(a => `<path d="M50 50C47.2 43.5 47.2 37.5 50 32C52.8 37.5 52.8 43.5 50 50Z" transform="rotate(${a} 50 50)"/>`).join('')}<circle cx="50" cy="50" r="5"/></g>
 <g fill="${p}">${[[50, 14], [86, 50], [50, 86], [14, 50]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="2.6"/>`).join('')}</g>
 <path d="M92 50l4 4M88 54l4 4M84 58l4 4M80 62l4 4M76 66l4 4M72 70l4 4M8 50l-4 4M12 54l-4 4M16 58l-4 4M20 62l-4 4M24 66l-4 4M28 70l-4 4" stroke="${d}" stroke-width="2" stroke-linecap="round"/>`,
   black: (c, d, p) => `<path d="M38 14C42 10 58 10 62 14L66 20L86 26C90 28 92 32 90 36L84 88C83 92 80 94 76 94H24C20 94 17 92 16 88L10 36C8 32 10 28 14 26L34 20Z" fill="${c}" stroke="${p === '#fff' ? '#000' : '#5a524b'}" stroke-width="2.4" stroke-linejoin="round"/>
@@ -1201,7 +1201,7 @@ const CITY_INFO = {
 };
 if (Object.keys(CITY_INFO).length !== Object.keys(CITIES).length) throw new Error('qaravani: every city needs a line in CITY_INFO');
 const glossaryPage = page(`${stripe(NO, 'ქალაქები')}<div class="rulesWrap">${head('47 ქალაქი და სალოცავი')}
-<p class="lead">ფრჩხილებში — XIX საუკუნის ან უფრო ძველი სახელი. ნიშნები რუკაზე: <b>კოშკი</b> — ქალაქი, <b>გუმბათი</b> — სალოცავი, <b>იალქანი</b> — ნავსადგური.</p>
+<p class="lead">ფრჩხილებში — XIX საუკუნის ან უფრო ძველი სახელი. ნიშნები რუკაზე: <b>კოშკი</b> — ქალაქი, <b>კარიბჭე</b> — სალოცავი, <b>იალქანი</b> — ნავსადგური.</p>
 <div class="gloss">${Object.values(CITIES).sort((a, b) => a.name.localeCompare(b.name, 'ka')).map(c => {
   const [old, t] = CITY_INFO[c.key];
   return `<p><b>${esc(c.name)}</b>${old ? ` <i>(${esc(old)})</i>` : ''} — ${esc(t)}</p>`;

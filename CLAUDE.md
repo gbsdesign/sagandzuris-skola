@@ -316,17 +316,21 @@
   `data/hangiPool.ts` = every recording the member may hear — `VARIANT_MEDIA` via `codeBoundMedia()`, `CHANT_RECORDINGS`, folk
   mp3s; the day's pick = rendezvous hash of `date|id`, the same for the whole school, Tbilisi day; six tries 1·2·4·7·11·16 s;
   record `students.games.hangi.days[iso]` through `hooks/useHangi.ts`, the device for guests, no rules change) and „ამიხსენი“
-  (`pages/games/AmikhseniGame.tsx`; rules `utils/amikhseni.ts` + test; ~1000 cards in `data/amikhseniWords.ts` built from the
-  app's own data; settings stay on the device). `components/games/TableScreen.tsx` is the full-screen face of every live game
+  (`pages/games/AmikhseniGame.tsx`; rules `utils/amikhseni.ts` + test; ~1370 cards in `data/amikhseniWords.ts`, 15 themes — the
+  app's own data (chant and church, saints, ancestors, songs, instruments…) + the wider Georgian world since 2026-11-01; settings
+  stay on the device, a device that had the old ten themes all on gets all fifteen). `components/games/TableScreen.tsx` is the full-screen face of every live game
   (wake lock, safe areas). Both open inside the hub as `mapItem` (`GameDef.item`; the bar title from `gameTitleOfItem`).
 - **Word games (2026-10-28, same day, second PR)**: „დღის სიტყვა“ (`pages/games/SitqvaGame.tsx`; rules `utils/sitqva.ts` + test;
-  Wordle-like, 4–6 letters, six tries, one word a day for the whole school: the day's feast or a saint of the church calendar
-  (`candidatesOfDay` over `calendar/<year>.json`), else the bank `data/sitqvaAnswers.ts` (church words, places); the hint kind is
+  Wordle-like, 4–6 letters, six tries, one word a day for the whole school: the day's feast always, a saint of the church calendar
+  every third day (`isSaintDay`; `candidatesOfDay` over `calendar/<year>.json`), else the bank `data/sitqvaAnswers.ts` (~300 words of
+  six kinds: church, region, food, nature, hero, culture — widened 2026-11-01); the hint kind is
   shown from the start; guesses must be in the bank or in `data/sitqvaWords.ts` (lazy chunk, `utils/sitqvaDictionary.ts`);
   screen keyboard `components/games/GeoKeyboard.tsx`, a physical keyboard works too; „ნახე აპში“ opens the search with the word —
   `openSearch(query)`) and „ოთხეული“ (`pages/games/OtkheuliGame.tsx`; rules `utils/otkheuli.ts` + test; Connections-like, 16 words
-  in four hidden groups, four mistakes; ~50 groups in `data/otkheuliGroups.ts` — curated + instruments, costume parts, the archive's
-  songs by region and chants by service, at most one group of a family per grid; the day's grid `gridOfDay` + unlimited extra grids
+  in four hidden groups, four mistakes; 70 groups in `data/otkheuliGroups.ts` — curated (church, saints, chant, regions… and since
+  2026-11-01 heroes, battles, castles, animals, birds, trees, films, painters, cheese, sport…) + instruments, costume parts, the
+  archive's songs by region and chants by service, at most one group of a family per grid (family `virtues` = the church's and the
+  knight's virtues); the day's grid `gridOfDay` + unlimited extra grids
   with a random seed, not saved). Both records go through `hooks/useDailyRecord.ts` (`students.games.<game>.days[iso]`, the device
   for guests; `useHangi` is now a wrapper of it), no rules change. All three daily games count days from 2026-10-28.
 - **Live games (2026-10-28, third PR)**: „გათვლა“ (`pages/games/GatvlaGame.tsx`; rules `utils/gatvla.ts` + test; one phone in
@@ -340,7 +344,9 @@
   `components/games/Chip.tsx`. Nothing saved but settings; no rules change.
 - **„რა? სად? როდის?“ (2026-10-28)**: the team quiz (`pages/games/RaSadRodisGame.tsx`, `mapItem` `rsr`; rules
   `utils/raSadRodis.ts` + test). The user's answers „1ა 2ა 3ა“: ~100 questions written by Claude from the app's own texts — 111 in
-  `data/raSadRodisQuestions.ts`, 8 topics, stable ids, not yet checked by a teacher (the setup says so) — plus the teacher's own
+  `data/raSadRodisQuestions.ts` (+ since 2026-11-01 the shared broad bank `data/kartuliQuiz.ts`: 153 facts with three wrong answers
+  each in 15 topics — history, heroes, great people, literature, film, song, dance, cuisine, costume, regions, monuments, nature,
+  tales, sport, music; 264 questions, 18 topics: the faith ones — saints, sacred history, chant — after them), stable ids, not yet checked by a teacher (the setup says so) — plus the teacher's own
   („ჩემი კითხვები“, device only, `sg-rsr-mine`); every team answers the same question on paper at once, the host's phone shows it,
   counts the minute (tick at 10 and 3-2-1, bell), shows the answer + note and the host ticks who got it; topic „მოისმინე“ makes a
   question from a `hangiPool` recording (`listenQuestion`: a feast's chant → which feast, a song → its region, else the chant's name)
@@ -399,8 +405,8 @@
   FOLK_SONGS — own versions that are not parts, archive recs, the Centre's mp3s, not the per-member albums — empty while the
   recordings are hidden; face `pages/games/kutkhe/` — the map to tap + region chips, the reveal green / neighbours /
   counts; hybrid marks კუთხე 2 · მეზობელი 1 · ვერა 0) and „ოთხიდან ერთი“ (mapItem `otkhi`, like Kahoot; `utils/otkhi.ts` +
-  test: four answers in ა ბ გ დ colours, the right one 1000…500 by speed, 30 s; 121 questions in `data/otkhiQuestions.ts`, 8
-  topics, written by Claude from the app's texts with the right answer first — not yet checked by a teacher, the page says
+  test: four answers in ა ბ გ დ colours, the right one 1000…500 by speed, 30 s; 121 own questions in `data/otkhiQuestions.ts` + the
+  broad bank `data/kartuliQuiz.ts` (274, 19 topics), written by Claude from the app's texts with the right answer first — not yet checked by a teacher, the page says
   so; „მოისმინე“ = `listenItem` over `hangiPool` (a feast's chant → which feast, a chant → which one, wrong ones from its own
   service; a song → which song), a 20 s piece; the teacher's own (right + 1–3 wrong) on the device; `drawGame` of
   raSadRodis.ts is shared; topics, own questions and the asked ids on the device — `pages/games/otkhi/store.ts`
@@ -446,12 +452,17 @@
   „სამაგიდო · PDF“ button that downloads it.
   The app's word games got paper kits too (seventh PR): „დღის სიტყვა“ (grids for 4/5/6 letters, four A6 a side; 78 slips from
   `ANSWER_BANK`; the example coloured by `scoreGuess`), „ოთხეული“ (16 grids of 16 cards = the app's `buildGrid` with fixed seeds,
-  kept only when every group of the list allows one answer, with variety rules; the host's answer sheet) and „ამიხსენი“ (36
-  cards of six words numbered by a die — ten themes, the songs only well-known titles — and a two-sided score sheet). Their
+  kept only when every group of the list allows one answer, with variety rules; the host's answer sheet) and „ამიხსენი“ (45
+  cards of six words numbered by a die — fifteen themes, three cards each, the songs only well-known titles — and a two-sided score sheet). Their
   modules read the app's TypeScript data through `scripts/print-games/appData.mjs` (esbuild in memory, firebase/React stubbed);
-  their stripe shows a label („ქართული · უტელეფონო“) instead of a number. „რა? სად? როდის?“ has one too (8 sheets): 40 question
-  cards = the first five of each topic (question in front, answer + note on the back), 5 blank cards, a two-sided score sheet
-  (18 questions × 6 teams) and 24 answer slips — so keep the first five of every topic print-worthy.
+  their stripe shows a label („ქართული · უტელეფონო“) instead of a number. „რა? სად? როდის?“ has one too (12 sheets): 72 question
+  cards = the first four of each of the 18 topics (question in front, answer + note on the back), 9 blank cards, a two-sided score sheet
+  (18 questions × 6 teams) and 24 answer slips — so keep the first four of every topic print-worthy.
+- **No religious pictures in the games (the user's rule, 2026-11-01; corrected the same day: „რელიგიური და მუსიკალური კითხვები
+  დატოვე, უბრალოდ ვიზუალს ნუ გამოიყენებ“)**: no cross, church, icon or domed-church mark anywhere in a game or a print kit (the
+  series emblem is `grapeEmblem` in `scripts/print-games/lib.mjs`, the Catan kit's shields carry an eight-rayed sun, the caravan
+  map's shrines an old gate); a monument card that will get a picture is a secular one. Faith and chant stay as content —
+  questions, words, feasts and saints, chant audio, place names — beside the wider Georgian topics.
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 

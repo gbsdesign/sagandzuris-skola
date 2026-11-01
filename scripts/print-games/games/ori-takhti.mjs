@@ -79,7 +79,7 @@ const AGE1 = [
   { n: 'ხის საწყობი', t: 'yellow', cost: '3', eff: { trade: 'W' }, pic: 'warehouse' }, // Wood Reserve
   { n: 'ფუნდუკი', t: 'yellow', cost: '', eff: { coins: 4 }, to: 'gasaghebi', pic: 'bed-double' }, // Tavern
   { n: 'უფლისციხის დარბაზი', t: 'blue', cost: '', eff: { vp: 3 }, to: 'nighabi', pic: 'theater' }, // Theater
-  { n: 'ბოლნისის სიონი', t: 'blue', cost: '', eff: { vp: 3 }, to: 'mtvare', pic: 'church' }, // Altar
+  { n: 'ქალაქის კარიბჭე', t: 'blue', cost: '', eff: { vp: 3 }, to: 'mtvare', pic: 'door-open' }, // Altar
   { n: 'გოგირდის აბანო', t: 'blue', cost: 'S', eff: { vp: 3 }, to: 'tsveti', pic: 'bath' }, // Baths
 ];
 const AGE2 = [
@@ -94,12 +94,12 @@ const AGE2 = [
   { n: 'მოისრები', t: 'red', cost: 'SWP', eff: { shields: 2 }, to: 'samizne', pic: 'bow-arrow' }, // Archery Range
   { n: 'დიდგორის ლაშქარი', t: 'red', cost: 'KKG', eff: { shields: 2 }, to: 'drosha', pic: 'medal' }, // Parade Ground
   { n: 'წიგნსაცავი', t: 'green', cost: 'SWG', eff: { sci: 'anbani', vp: 2 }, from: 'tsigni', pic: 'library' }, // Library
-  { n: 'სამკურნალო', t: 'green', cost: 'KKS', eff: { sci: 'karabadini', vp: 2 }, from: 'borbali', pic: 'hospital' }, // Dispensary
+  { n: 'სამკურნალო', t: 'green', cost: 'KKS', eff: { sci: 'karabadini', vp: 2 }, from: 'borbali', pic: 'stethoscope' }, // Dispensary
   { n: 'გალობის სკოლა', t: 'green', cost: 'WPP', eff: { sci: 'galoba', vp: 1 }, to: 'zari', pic: 'school' }, // School
   { n: 'ტაძრის ხუროები', t: 'green', cost: 'WGG', eff: { sci: 'khuroba', vp: 1 }, to: 'lampari', pic: 'ruler' }, // Laboratory
   { n: 'სააჯო კარი', t: 'blue', cost: 'WWG', eff: { vp: 5 }, pic: 'gavel' }, // Courthouse
   { n: 'გეგუთის სასახლე', t: 'blue', cost: 'KK', eff: { vp: 4 }, from: 'nighabi', to: 'sveti', pic: 'crown' }, // Statue
-  { n: 'ყინწვისის ტაძარი', t: 'blue', cost: 'WP', eff: { vp: 4 }, from: 'mtvare', to: 'mze', pic: 'church' }, // Temple
+  { n: 'ნოქალაქევი', t: 'blue', cost: 'WP', eff: { vp: 4 }, from: 'mtvare', to: 'mze', pic: 'brick-wall' }, // Temple
   { n: 'წყალსადენი', t: 'blue', cost: 'SSS', eff: { vp: 5 }, from: 'tsveti', pic: 'waves' }, // Aqueduct
   { n: 'ბესლეთის ხიდი', t: 'blue', cost: 'SW', eff: { vp: 4 }, to: 'tvali', pic: 'bridge' }, // Rostrum
   { n: 'ბაზარი', t: 'yellow', cost: '3K', eff: { one: 'GP' }, pic: 'store' }, // Forum
@@ -121,7 +121,7 @@ const AGE3 = [
   { n: 'თბილისის ოპერა', t: 'blue', cost: 'SSSWW', eff: { vp: 7 }, pic: 'music-4' }, // Town Hall
   { n: 'ქართული თეატრი', t: 'blue', cost: 'SSG', eff: { vp: 5 }, pic: 'theater' }, // Obelisk
   { n: 'ალექსანდრეს ბაღი', t: 'blue', cost: 'KKWW', eff: { vp: 6 }, from: 'sveti', pic: 'flower-2' }, // Gardens
-  { n: 'მამადავითი', t: 'blue', cost: 'KWPP', eff: { vp: 6 }, from: 'mze', pic: 'church' }, // Pantheon
+  { n: 'ეროვნული გალერეა', t: 'blue', cost: 'KWPP', eff: { vp: 6 }, from: 'mze', pic: 'image' }, // Pantheon
   { n: 'წერა-კითხვის საზოგადოება', t: 'blue', cost: 'KKSP', eff: { vp: 5 }, from: 'tvali', pic: 'book-text' }, // Senate
   { n: 'ვაჭართა რიგი', t: 'yellow', cost: 'PP', eff: { per: 'grey', coins: 3, vp: 3 }, pic: 'shopping-basket' }, // Chamber of Commerce
   { n: 'ფოთის ნავსადგური', t: 'yellow', cost: 'WGP', eff: { per: 'brown', coins: 2, vp: 3 }, pic: 'sailboat' }, // Port
@@ -142,16 +142,16 @@ AGE1.forEach(c => (c.age = 1)); AGE2.forEach(c => (c.age = 2)); [...AGE3, ...GUI
 
 /** The twelve monuments (the original's wonders, in the same order of effects). */
 const WONDERS = [
-  { n: 'სვეტიცხოველი', cost: 'SSSP', eff: { vp: 9 }, text: '9 დიდების ქულა.', hist: 'მცხეთა · 1010–1029 · ხუროთმოძღვარი არსუკისძე; საქართველოს დედა ტაძარი.' }, // Pyramids
-  { n: 'იყალთოს აკადემია', cost: 'WWWGP', eff: { token: true, vp: 4 }, text: 'ყუთში დაბრუნებული 5 ცოდნის ნიშნიდან ბრმად აიღე 3, ერთი დაიტოვე, 2 დააბრუნე. 4 ქულა.', hist: 'კახეთი · XII ს. · დავით აღმაშენებლის დროს დაარსდა, აქ ასწავლიდა არსენ იყალთოელი.' }, // Great Library
-  { n: 'ჯვარი', cost: 'SKGG', eff: { again: true, vp: 6 }, text: 'კიდევ ერთი სვლა. 6 ქულა.', hist: 'მცხეთა · 586–605 · ერისმთავარ სტეფანოზის დროს, წმინდა ნინოს ჯვრის ადგილას.' }, // Sphinx
+  { n: 'სიღნაღის გალავანი', cost: 'SSSP', eff: { vp: 9 }, text: '9 დიდების ქულა.', hist: 'კახეთი · XVIII ს. · ერეკლე II-ის აშენებული გალავანი, 20-ზე მეტი კოშკით.' }, // Pyramids
+  { n: 'ფაზისის აკადემია', cost: 'WWWGP', eff: { token: true, vp: 4 }, text: 'ყუთში დაბრუნებული 5 ცოდნის ნიშნიდან ბრმად აიღე 3, ერთი დაიტოვე, 2 დააბრუნე. 4 ქულა.', hist: 'კოლხეთი · IV ს. · რიტორიკისა და ფილოსოფიის სკოლა ფაზისთან.' }, // Great Library
+  { n: 'სურამის ციხე', cost: 'SKGG', eff: { again: true, vp: 6 }, text: 'კიდევ ერთი სვლა. 6 ქულა.', hist: 'შიდა ქართლი · XII ს. · ციხე სურამის უღელტეხილთან; მასზეა ცნობილი თქმულება.' }, // Sphinx
   { n: 'ნარიყალა', cost: 'KKKG', eff: { shields: 2, vp: 3 }, text: '2 ფარი — მხედარი 2 უჯრით მეტოქისკენ. 3 ქულა.', hist: 'თბილისი · IV ს. · ძველად შურისციხე; ქალაქის მცველი ციხე მტკვრის თავზე.' }, // Colossus
-  { n: 'ბაგრატი', cost: 'WSGP', eff: { coins: 12, again: true }, text: 'ბანკიდან 12 თეთრი. კიდევ ერთი სვლა.', hist: 'ქუთაისი · 1003 · ბაგრატ III-ის ტაძარი, გაერთიანებული საქართველოს პირველი მეფისა.' }, // Temple of Artemis
-  { n: 'ალავერდი', cost: 'WWGP', eff: { coins: 6, again: true, vp: 3 }, text: 'ბანკიდან 6 თეთრი. კიდევ ერთი სვლა. 3 ქულა.', hist: 'კახეთი · XI ს. · კახთა მეფე კვირიკე III-ის აშენებული დიდი ტაძარი.' }, // Hanging Gardens
-  { n: 'ვარძია', cost: 'KKGGP', eff: { discard: true, vp: 2 }, text: 'გადაგდებული ბარათებიდან ერთი აირჩიე და უფასოდ ააშენე. 2 ქულა.', hist: 'ჯავახეთი · 1185 · თამარ მეფის კლდეში ნაკვეთი ქალაქი-მონასტერი.' }, // Mausoleum
+  { n: 'ვანი', cost: 'WSGP', eff: { coins: 12, again: true }, text: 'ბანკიდან 12 თეთრი. კიდევ ერთი სვლა.', hist: 'კოლხეთი · ძვ. წ. VIII–I სს. · „ოქროს ქვეყნის“ ქალაქი; აქ ოქროს განძი იპოვეს.' }, // Temple of Artemis
+  { n: 'ბოტანიკური ბაღი', cost: 'WWGP', eff: { coins: 6, again: true, vp: 3 }, text: 'ბანკიდან 6 თეთრი. კიდევ ერთი სვლა. 3 ქულა.', hist: 'თბილისი · XVII ს. · ძველი სამეფო ბაღი ნარიყალას ძირას.' }, // Hanging Gardens
+  { n: 'ბირთვისი', cost: 'KKGGP', eff: { discard: true, vp: 2 }, text: 'გადაგდებული ბარათებიდან ერთი აირჩიე და უფასოდ ააშენე. 2 ქულა.', hist: 'ქვემო ქართლი · X–XIV სს. · აუღებელი ციხე ალგეთის ხეობის კლდეებზე.' }, // Mausoleum
   { n: 'უშგულის კოშკები', cost: 'SWKPP', eff: { shields: 1, ruin: 'brown', vp: 3 }, text: '1 ფარი. მეტოქის ერთი ყავისფერი ბარათი (შენი არჩეული) გადაგდებულში მიდის. 3 ქულა.', hist: 'სვანეთი · IX–XII სს. · ევროპის ერთ-ერთი ყველაზე მაღლა მდებარე სოფლის კოშკები.' }, // Statue of Zeus
-  { n: 'დავით გარეჯა', cost: 'WWSK', eff: { one: 'GP', again: true, vp: 2 }, text: 'ყოველ სვლაზე: მინანქარი ან ეტრატი (ერთი). კიდევ ერთი სვლა. 2 ქულა.', hist: 'გარეჯის უდაბნო · VI ს. · დავით გარეჯელის დაარსებული კლდის მონასტრები.' }, // Piraeus
-  { n: 'ნიკორწმინდა', cost: 'WSPP', eff: { one: 'WSK', vp: 4 }, text: 'ყოველ სვლაზე: ხე, ქვა ან თიხა (ერთი). 4 ქულა.', hist: 'რაჭა · 1010–1014 · ბაგრატ III-ის დროს; ფასადები ჩუქურთმით არის მოჩუქურთმებული.' }, // Great Lighthouse
+  { n: 'გონიო', cost: 'WWSK', eff: { one: 'GP', again: true, vp: 2 }, text: 'ყოველ სვლაზე: მინანქარი ან ეტრატი (ერთი). კიდევ ერთი სვლა. 2 ქულა.', hist: 'აჭარა · I–II სს. · რომაული ციხე აფსაროსი ჭოროხის შესართავთან.' }, // Piraeus
+  { n: 'სამშვილდე', cost: 'WSPP', eff: { one: 'WSK', vp: 4 }, text: 'ყოველ სვლაზე: ხე, ქვა ან თიხა (ერთი). 4 ქულა.', hist: 'ქვემო ქართლი · VIII–XI სს. · ციხე-ქალაქი ხრამის ხეობის კლდეზე.' }, // Great Lighthouse
   { n: 'ხერთვისი', cost: 'PPKKSS', eff: { coins: 3, steal: 3, again: true, vp: 3 }, text: 'ბანკიდან 3 თეთრი, მეტოქე ბანკს 3 თეთრს უხდის. კიდევ ერთი სვლა. 3 ქულა.', hist: 'მესხეთი · ძვ. წ. II ს. – XIV ს. · ციხე მტკვრისა და ფარავნის შესართავთან.' }, // Appian Way
   { n: 'შატილი', cost: 'SSWG', eff: { shields: 1, ruin: 'grey', vp: 3 }, text: '1 ფარი. მეტოქის ერთი ნაცრისფერი ბარათი (შენი არჩეული) გადაგდებულში მიდის. 3 ქულა.', hist: 'ხევსურეთი · VII–XIII სს. · ციხე-სოფელი, სადაც სახლები ერთმანეთზეა მიშენებული.' }, // Circus Maximus
 ];
@@ -159,7 +159,7 @@ const WONDERS = [
 /** The ten tokens of knowledge (the original's progress tokens). */
 const TOKENS = [
   { n: 'ვენახი', icon: 'grape', short: '+6 თეთრი · 4 ქულა', text: 'ახლავე 6 თეთრი ბანკიდან; ბოლოს 4 ქულა.' }, // Agriculture
-  { n: 'არსუკისძის სკოლა', icon: 'church', short: 'ძეგლი −2 რესურსი', text: 'ყოველი შემდეგი ძეგლი 2 რესურსით იაფია (შენ ირჩევ, რომელი 2).' }, // Architecture
+  { n: 'არსუკისძის სკოლა', icon: 'drafting-compass', short: 'ძეგლი −2 რესურსი', text: 'ყოველი შემდეგი ძეგლი 2 რესურსით იაფია (შენ ირჩევ, რომელი 2).' }, // Architecture
   { n: 'აბრეშუმის გზა', icon: 'route', short: 'მეტოქის ყიდვა — შენ', text: 'რა თეთრსაც მეტოქე ბანკს რესურსის საყიდლად უხდის, შენ გერგება.' }, // Economy
   { n: 'სამართლის წიგნი', icon: 'scale', short: 'სიბრძნის მე-7 ნიშანი', text: 'სიბრძნის ნიშანია — „სამართალი“; წყვილს არ ქმნის, აკადემიისთვის ითვლება.' }, // Law
   { n: 'ქვისმთლელები', icon: 'hammer', short: 'ლურჯი −2 რესურსი', text: 'ყოველი შემდეგი ლურჯი ბარათი 2 რესურსით იაფია.' }, // Masonry
@@ -490,7 +490,7 @@ const riderTent = `<svg width="15mm" height="52mm" viewBox="0 0 15 52" style="di
 <path d="M0 26H15" stroke="${GOLD_L}" stroke-width=".3" stroke-dasharray="1 .8"/>
 ${glyph('knight', 1.5, 32.5, 12, GOLD_L)}<path d="M2.5 30.4h10" stroke="${GOLD}" stroke-width=".4"/></svg>`;
 const riderFlat = `<svg width="18mm" height="18mm" viewBox="-9 -9 18 18" style="display:block;overflow:visible"><circle r="9.6" fill="${C.wine}"/><circle r="7.6" fill="none" stroke="${GOLD}" stroke-width=".35"/>${glyph('knight', -5.6, -6.2, 11.2, GOLD_L)}</svg>`;
-const discardMat = `<div class="mat"><b>გადაგდებული ბარათები</b><span>პირქვე, ერთ დასტად. ვარძია აქედან ირჩევს.</span></div>`;
+const discardMat = `<div class="mat"><b>გადაგდებული ბარათები</b><span>პირქვე, ერთ დასტად. ბირთვისი აქედან ირჩევს.</span></div>`;
 
 const TOKEN_X = k => 28 + k * 38.5, COIN_X = k => 25 + k * 27.5, COIN_Y = r => 112 + r * 27.5;
 const COINS = [...Array(14).fill(1), ...Array(10).fill(3), ...Array(7).fill(6), 1, 1, 3, 6];
@@ -598,7 +598,7 @@ const scorePage = page(`${[[0, 0], [105, 0], [0, 148.5], [105, 148.5]].map(([x, 
 // ---------- the rules: four pages ----------
 const RULES = [
   ['მომზადება', 'ტახტები წილით აირჩიეთ და პირისპირ დასხედით. „ლიხის გზა“ გვერდზე დადეთ: ქუთაისის ბოლო — დასავლეთის ტახტთან, თბილისისა — აღმოსავლეთისასთან. მხედარი შუა უჯრაზე დადგით, ლიხის ქედზე. ხარკის ნიშნები თავის ადგილას: −2 „ციხეში“, −5 „კარიბჭეში“, ორივე მხარეს. 10 ცოდნის ნიშანი აურიეთ: 5 პირაღმა დაფის წრეებზე, 5 უნახავად ყუთში. თითოეულს 7 თეთრი; დანარჩენი ბანკია.'],
-  ['ძეგლები', '12 ძეგლი აურიეთ და 4 პირაღმა გაშალეთ. ერთი იღებს 1-ს, მეორე — 2-ს, დარჩენილს — პირველი. კიდევ 4 გაშალეთ, ახლა მეორე იწყებს. თითოეულს 4 ძეგლი აქვს, 4 ყუთში ბრუნდება. <b>პირველ პარტიაში</b> არ აირჩიოთ: ერთს — სვეტიცხოველი, ნიკორწმინდა, ბაგრატი, უშგულის კოშკები; მეორეს — შატილი, დავით გარეჯა, ხერთვისი, ნარიყალა.'],
+  ['ძეგლები', '12 ძეგლი აურიეთ და 4 პირაღმა გაშალეთ. ერთი იღებს 1-ს, მეორე — 2-ს, დარჩენილს — პირველი. კიდევ 4 გაშალეთ, ახლა მეორე იწყებს. თითოეულს 4 ძეგლი აქვს, 4 ყუთში ბრუნდება. <b>პირველ პარტიაში</b> არ აირჩიოთ: ერთს — სიღნაღის გალავანი, სამშვილდე, ვანი, უშგულის კოშკები; მეორეს — შატილი, გონიო, ხერთვისი, ნარიყალა.'],
   ['ეპოქის დასტა', 'სამივე დასტა ცალ-ცალკე აურიეთ და თითოდან 3 ბარათი უნახავად ყუთში ჩადეთ. 7 ამქრიდან 3 უნახავად III ეპოქას შეურიეთ, 4 ყუთში. I ეპოქის 20 ბარათი განლაგების ბარათით გაშალეთ: ზემოდან 2 პირაღმა, 3 პირქვე, 4 პირაღმა, 5 პირქვე, 6 პირაღმა — ყოველი რიგი ზედას ნახევრად ფარავს. ვინ იწყებს — წილით.'],
   ['სვლა', 'რიგრიგობით, ყოველ სვლაზე <b>ერთი თავისუფალი ბარათი</b> აიღეთ — რომელსაც ზემოდან არაფერი ადევს — და ერთ-ერთი გააკეთეთ: <b>ა) ააშენეთ</b> — ფასი გადაიხადეთ და ბარათი თქვენს სამეფოში ფერების მიხედვით დადეთ; <b>ბ) გადააგდეთ</b> — ბანკიდან 2 თეთრი + 1 ყოველ თქვენს ყვითელ ბარათზე, ბარათი პირქვე „გადაგდებულში“ მიდის; <b>გ) ძეგლი ააშენეთ</b> — თქვენი ძეგლის ფასი გადაიხადეთ, ბარათი პირქვე მის ქვეშ შეუდეთ. პირქვე ბარათი რომ გათავისუფლდება, მაშინვე გადმოაბრუნეთ.'],
   ['ფასი', 'ფასი ბარათის მარცხენა სვეტშია: მონეტა — თეთრი, ფერადი კვადრატი — რესურსი. ცარიელი სვეტი — უფასოა. თეთრი ბანკს ეძლევა. რესურსები არ იხარჯება: რასაც თქვენი ყავისფერი და ნაცრისფერი ბარათები აწარმოებს, ყოველ სვლაზე ისევ თქვენია.'],

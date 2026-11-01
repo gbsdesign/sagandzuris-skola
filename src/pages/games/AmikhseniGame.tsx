@@ -20,12 +20,15 @@ type Phase = 'setup' | 'ready' | 'play' | 'review' | 'board' | 'end';
 
 const SETTINGS_KEY = 'sg-amikhseni';
 const ALL_CATS = WORD_CATEGORIES.map(c => c.id);
+// the themes before 2026-11-01: a device that had every one of them on gets the new ones on too
+const OLD_ALL = ['galoba', 'musika', 'sakravebi', 'simgera', 'kutkhe', 'samosi', 'tsmindanebi', 'tsinaprebi', 'qopa', 'istoria'];
 
 const readSettings = (): { settings: AliasSettings; names: string[] } => {
   try {
     const o = JSON.parse(localStorage.getItem(SETTINGS_KEY) || 'null') as { settings?: Partial<AliasSettings>; names?: string[] } | null;
     const s = { ...DEFAULT_SETTINGS, categories: ALL_CATS, ...(o?.settings ?? {}) };
     s.teams = Math.min(MAX_TEAMS, Math.max(2, s.teams | 0));
+    if (OLD_ALL.every(c => s.categories.includes(c))) s.categories = ALL_CATS;
     s.categories = s.categories.filter(c => ALL_CATS.includes(c));
     if (!s.categories.length) s.categories = ALL_CATS;
     const names = TEAM_NAMES.map((n, i) => (o?.names?.[i] || n).slice(0, 16));

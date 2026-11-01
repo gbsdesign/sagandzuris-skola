@@ -15,25 +15,30 @@ export const title = 'დღის სიტყვა';
 const TAG = 'ქართული · უტელეფონო';
 const META = '2 მოთამაშე ან მთელი კლასი · 8 წლიდან · 10 წუთი';
 
-// the slips: every 4-letter word of the bank and 27 of the 5- and 6-letter ones, both kinds („კახეთი“ is the example's)
-const PICK = {
-  5: ['ჯვარი', 'ლოცვა', 'მადლი', 'ალილო', 'წირვა', 'გუნდი', 'მამაო', 'უფალი', 'კვირა', 'ბზობა', 'ღვინო', 'კვერი', 'იმედი', 'წიგნი', 'ისონი',
-    'გურია', 'აჭარა', 'ფშავი', 'ბოდბე', 'რიონი', 'შხარა', 'აბაშა', 'წალკა', 'კასპი', 'გაგრა', 'სიონი', 'ომალო'],
-  6: ['ტაძარი', 'მარხვა', 'გალობა', 'სამება', 'ქრისტე', 'ზატიკი', 'დიდება', 'მწუხრი', 'ფრესკა', 'ნათლია', 'ღმერთი', 'რწმენა', 'შაბათი', 'ხარება',
-    'მესტია', 'თუშეთი', 'ქართლი', 'ჰერეთი', 'სამცხე', 'მცხეთა', 'ბათუმი', 'გელათი', 'ვარძია', 'შატილი', 'უშგული', 'თელავი', 'ენგური'],
+// the slips: 24 four-letter words (three blanks are for own words) and 27 of 5 and 6 letters, every kind of the bank, about
+// a quarter of them church words („კახეთი“ is the example's)
+const SLIPS = {
+  4: ['რაჭა', 'ხევი', 'გორი', 'უშბა', 'ვანი', 'ღომი', 'ქადა', 'შოთი', 'პური', 'ტურა', 'მელა', 'მუხა', 'ილია', 'ვაჟა', 'ჯაყო',
+    'ჩოხა', 'დოლი', 'კინო', 'ბერი', 'ზარი', 'შობა', 'ხატი', 'სული', 'ზეცა'],
+  5: ['გურია', 'აჭარა', 'ფშავი', 'რიონი', 'ომალო', 'ლობიო', 'მჭადი', 'ფხალი', 'ხარჩო', 'ღვინო', 'ჯიხვი', 'ირემი', 'მგელი', 'დათვი',
+    'ცოტნე', 'აკაკი', 'მედეა', 'ცეკვა', 'ჩანგი', 'ლექსი', 'რაგბი', 'ჯვარი', 'ლოცვა', 'ალილო', 'წირვა', 'ისონი', 'ბზობა'],
+  6: ['თუშეთი', 'ქართლი', 'ვარძია', 'შატილი', 'უშგული', 'საცივი', 'ქვევრი', 'თამადა', 'მწვადი', 'ზღარბი', 'არწივი', 'ხოხობი', 'ყაყაჩო',
+    'თამარი', 'ერეკლე', 'ქაქუცა', 'კომბლე', 'ხორუმი', 'ნაბადი', 'სულიკო', 'ხანუმა', 'ტაძარი', 'გალობა', 'მარხვა', 'ხარება', 'სამება', 'მწუხრი'],
 };
-const SLIPS = { 4: [...new Set(ANSWER_BANK.filter(c => [...c.word].length === 4).map(c => c.word))], ...PICK };
+// each kind's icon on the slips and its short name on the grids' hint line (no church picture: the user's rule, 2026-11-01)
+const KIND_ICON = { region: 'map-pin', food: 'utensils', nature: 'trees', hero: 'swords', culture: 'music', church: 'sparkles' };
+const KIND_SHORT = { region: 'ადგილი', food: 'სუფრა', nature: 'ბუნება', hero: 'გმირი', culture: 'კულტურა', church: 'საეკლესიო' };
 const kindOf = w => {
   const found = ANSWER_BANK.filter(c => c.word === w);
   if (!found.length) throw new Error(`${w}: not in the answer bank`);
-  return found.some(c => c.kind === 'church') ? 'church' : found[0].kind;
+  return found[0].kind;
 };
 for (const [n, words] of Object.entries(SLIPS)) {
   for (const w of words) if ([...w].length !== Number(n)) throw new Error(`${w}: not ${n} letters`);
   if (words.length > 27) throw new Error(`${n} letters: ${words.length} slips, a sheet holds 27`);
 }
 
-const EXAMPLE = { answer: 'კახეთი', tries: ['სამება', 'ხატები', 'კახეთი'] };
+const EXAMPLE = { answer: 'კახეთი', tries: ['თამადა', 'ხორუმი', 'კახეთი'] };
 const tile = (ch, mark, size) => `<span class="sq-t ${mark}" style="width:${size}mm;height:${size}mm;font-size:${(size * 1.45).toFixed(1)}pt">${esc(ch)}</span>`;
 const tryRow = (word, answer, size = 11) => `<div class="sq-row">${scoreGuess(word, answer).map((m, i) => tile([...word][i], m, size)).join('')}</div>`;
 
@@ -50,8 +55,8 @@ const coverPage = no => page(`${stripe(TAG)}
     <div class="sq-exR">
       <div class="sq-leg">${tile('ა', 'hit', 7)}<span><b>მწვანე</b> — ასო სიტყვაშია და ამ ადგილზეა</span></div>
       <div class="sq-leg">${tile('ხ', 'near', 7)}<span><b>ყვითელი</b> — სიტყვაშია, ოღონდ სხვა ადგილზე</span></div>
-      <div class="sq-leg">${tile('ს', 'miss', 7)}<span><b>უფერო</b> — ასეთი ასო სიტყვაში არ არის</span></div>
-      <p>პირველ ცდაში „ა“ და „ე“ ადგილზეა, მეორე „ა“ კი უფეროა — სიტყვაში ერთი „ა“-ა. მეორე ცდამ აჩვენა, რომ „ხ“ სხვაგანაა. მესამე — „კახეთი“: ექვსივე მწვანე!</p>
+      <div class="sq-leg">${tile('მ', 'miss', 7)}<span><b>უფერო</b> — ასეთი ასო სიტყვაში არ არის</span></div>
+      <p>პირველ ცდაში „ა“ ადგილზეა, „თ“ — სხვაგან, დანარჩენი ორი „ა“ კი უფეროა: სიტყვაში ერთი „ა“-ა. მეორე ცდამ „ი“ ადგილზე იპოვა და აჩვენა, რომ „ხ“ სხვაგანაა. მესამე — „კახეთი“: ექვსივე მწვანე!</p>
     </div>
   </div>
   <h3 class="sq-h3">რა არის ამ ფაილში</h3>
@@ -83,7 +88,7 @@ ${foot(`<span>${esc(title)} · ${esc(SERIES)} · ${esc(TAG)}</span><span>${esc(S
 
 const RULES = [
   ['რა გჭირდებათ', 'ბადე თითოეულს, სიტყვების ბარათები (ან საკუთარი სიტყვა), მწვანე და ყვითელი ფანქარი. ორი როლია: <b>მცოდნე</b> სიტყვას მალავს, <b>მაძიებელი</b> ეძებს.'],
-  ['სიტყვა', 'მცოდნე ირჩევს სიგრძეს — 4, 5 ან 6 ასო — და ამ ციფრიანი დასტიდან ზედა ბარათს იღებს. ფარულად კითხულობს და მაძიებელს მინიშნებას ეუბნება: „საეკლესიო სიტყვა“ ან „საქართველოს კუთხე ან ადგილი“. მაძიებელი მინიშნებას ბადის თავში მონიშნავს.'],
+  ['სიტყვა', 'მცოდნე ირჩევს სიგრძეს — 4, 5 ან 6 ასო — და ამ ციფრიანი დასტიდან ზედა ბარათს იღებს. ფარულად კითხულობს და მაძიებელს ბარათზე დაწერილ მინიშნებას ეუბნება — ადგილი, სუფრა, ბუნება, გმირი, კულტურა (ცეკვა, სიმღერა, სამოსი, კინო) თუ საეკლესიო სიტყვა. მაძიებელი მინიშნებას ბადის თავში მონიშნავს.'],
   ['ცდა', 'მაძიებელი პირველ სტრიქონში წერს ნამდვილ ქართულ სიტყვას იმავე სიგრძით — ერთი ასო ერთ უჯრაში. სიტყვა სახელობით ბრუნვაში უნდა იყოს (სახელიც შეიძლება: „ნინო“, „გორი“); ასოების უაზრო რიგი არ ითვლება.'],
   ['ფერები', 'მცოდნე ყოველ ასოს ამოწმებს: <b>მწვანე</b> — ასო სიტყვაშია და ზუსტად ამ ადგილზე; <b>ყვითელი</b> — სიტყვაშია, ოღონდ სხვა ადგილზე; <b>უფერო</b> — ასეთი ასო სიტყვაში არ არის. ფანქრები არ გაქვთ? წრე ასოს გარშემო ნიშნავს მწვანეს, ხაზი ასოს ქვეშ — ყვითელს.'],
   ['ორჯერ დაწერილი ასო', 'თუ ცდაში ასო ორჯერაა, სიტყვაში კი ერთხელ, ფერს მხოლოდ ერთი იღებს: ის, რომელიც ადგილზეა, თუ არადა — მარცხნიდან პირველი. მეორე უფეროა. თუ სიტყვაშიც ორჯერაა, ორივე ფერადდება.'],
@@ -91,7 +96,7 @@ const RULES = [
   ['მოგება', 'ექვს ცდაში გამოიცანი — მოიგე: ბადის ბოლოს შემოხაზე, მერამდენე ცდაზე. ვერ გამოიცანი — მცოდნე ბარათს გაჩვენებს. მერე როლებს ცვლით; ორი რაუნდის შემდეგ იმარჯვებს, ვისაც ნაკლები ცდა დასჭირდა (ვერ გამოცნობა = 7).'],
   ['მთელი კლასი', 'მცოდნე მასწავლებელია: სიტყვას ირჩევს, დაფაზე ბადეს ხაზავს და მინიშნებას ამბობს. კლასი გუნდებად იყოფა; გუნდები რიგრიგობით ასახელებენ სიტყვას (თათბირს — 30 წამი). მასწავლებელი დაფაზე წერს და აფერადებს, ყველა თავის ბადეში იწერს. ვინც გამოიცნობს, მის გუნდს ქულა: პირველ ცდაზე 6, მეორეზე 5 … მეექვსეზე 1.'],
   ['საკუთარი სიტყვა', 'მცოდნეს შეუძლია თვითონ მოიფიქროს სიტყვა — ნამდვილი, 4–6 ასო, სახელობით ბრუნვაში — და მინიშნებაც თვითონ თქვას (მაგ., „ცხოველი“, „საკრავი“). ოთხასოიან ფურცელზე სამი ცარიელი ბარათი ამისთვისაა.'],
-  ['აპშიც', 'იგივე თამაში საგანძურის სკოლის აპშია: ყოველდღე ერთი სიტყვა მთელი სკოლისთვის — დღის დღესასწაული, წმინდანი ან საეკლესიო სიტყვა.'],
+  ['აპშიც', 'იგივე თამაში საგანძურის სკოლის აპშია: ყოველდღე ერთი სიტყვა მთელი სკოლისთვის — დღესასწაულის დღეს დღესასწაული, ყოველ მესამე დღეს დღის წმინდანი, სხვა დღეს კუთხე, კერძი, ცხოველი, გმირი, ცეკვა ან საეკლესიო სიტყვა.'],
 ];
 
 const rulesPage = page(`${stripe(TAG, 'წესები')}
@@ -118,7 +123,7 @@ const ABC = [LETTERS.slice(0, 11), LETTERS.slice(11, 22), LETTERS.slice(22)].map
 const quarter = n => `<div class="sq-q">
   <div class="sq-qHead"><b>${title}</b><span class="sq-len">${n} ასო</span></div>
   <div class="sq-line">სახელი<span></span></div>
-  <div class="sq-hint">მინიშნება: <span class="chk"></span>საეკლესიო <span class="chk"></span>კუთხე, ადგილი <span class="chk"></span><span class="sq-blank"></span></div>
+  <div class="sq-hint">მინიშნება:${Object.values(KIND_SHORT).map(k => `<span class="opt"><span class="chk"></span>${k}</span>`).join('')}</div>
   <div class="sq-rows">${Array.from({ length: 6 }, (_, r) => `<div class="sq-gr"><span class="sq-n">${r + 1}</span>${'<span class="sq-box"></span>'.repeat(n)}<span class="sq-n"></span></div>`).join('')}</div>
   <div class="sq-abcLabel">უფერო ასო გადახაზე, ფერადი შემოხაზე</div>
   <div class="sq-abc">${ABC.map(r => `<div>${r.map(ch => `<span>${ch}</span>`).join('')}</div>`).join('')}</div>
@@ -133,7 +138,7 @@ const gridPage = n => page(`${quarterCuts}${[0, 1, 2, 3].map(i => `<div class="s
 const SLIP_H = 264 / 9;
 const slip = w => {
   const k = kindOf(w);
-  return `<div class="sq-slip"><div class="sq-ic">${icon(k === 'church' ? 'church' : 'map-pin', { size: 5.6, color: C.wine, width: 1.7 })}</div><div class="sq-sw"><div class="sq-word">${esc(w)}</div><div class="sq-kind">${esc(KIND_HINT[k])}</div></div></div>`;
+  return `<div class="sq-slip"><div class="sq-ic">${icon(KIND_ICON[k], { size: 5.6, color: C.wine, width: 1.7 })}</div><div class="sq-sw"><div class="sq-word">${esc(w)}</div><div class="sq-kind">${esc(KIND_HINT[k])}</div></div></div>`;
 };
 const ownSlip = n => `<div class="sq-slip"><div class="sq-ic">${icon('pencil', { size: 5.2, color: C.wine, width: 1.7 })}</div><div class="sq-sw"><div class="sq-own">${'<i></i>'.repeat(n)}</div><div class="sq-kind">მინიშნება: ……………………………</div></div></div>`;
 const slipBack = n => `<div class="sq-slip back"><span class="sq-big">${n}</span><span class="sq-bl">ასო<span class="sq-sq">${'<i></i>'.repeat(n)}</span></span><span class="sq-ba">${esc(title)}</span></div>`;
@@ -179,13 +184,13 @@ table.sq-pts td,table.sq-pts th{text-align:center;padding:1.2mm}
 .sq-len{background:var(--wine);color:var(--paper);font-weight:700;font-size:9.5pt;padding:.3mm 2.4mm .5mm;border-radius:2mm}
 .sq-line{display:flex;gap:2mm;align-items:flex-end;font-size:9.5pt;height:6.5mm}
 .sq-line span{flex:1;border-bottom:.25mm solid #bba98f;height:4mm}
-.sq-hint{display:flex;align-items:center;gap:1mm;white-space:nowrap;font-size:9pt;margin:2mm 0 3.2mm}
-.sq-hint .chk{margin:0 .6mm 0 1.4mm}
-.sq-blank{flex:1;border-bottom:.25mm solid #bba98f;height:3.6mm}
+.sq-hint{display:flex;flex-wrap:wrap;align-items:center;row-gap:.9mm;font-size:8.5pt;margin:2mm 0 2.4mm}
+.sq-hint .opt{display:inline-flex;align-items:center;white-space:nowrap}
+.sq-hint .chk{margin:0 .5mm 0 1.8mm}
 .sq-rows{display:flex;flex-direction:column;align-items:center;gap:1.4mm}
 .sq-gr{display:flex;align-items:center;gap:1.4mm}
 .sq-box{width:10.5mm;height:10.5mm;border:.35mm solid var(--brown);border-radius:1.2mm;background:#fff}
-.sq-abcLabel{font-size:8pt;color:var(--muted);text-align:center;margin:3.4mm 0 1.2mm}
+.sq-abcLabel{font-size:8pt;color:var(--muted);text-align:center;margin:2.8mm 0 1.2mm}
 .sq-abc>div{display:flex;justify-content:center;gap:.7mm;margin-bottom:.7mm}
 .sq-abc span{width:7mm;height:7mm;border:.2mm solid var(--line);border-radius:.8mm;background:var(--paper);display:flex;align-items:center;justify-content:center;font-family:'SansKa',sans-serif;font-weight:700;font-size:10.5pt;color:var(--brown)}
 .sq-done{display:flex;align-items:center;justify-content:center;gap:1.2mm;font-size:8.6pt;margin-top:2.6mm;white-space:nowrap}

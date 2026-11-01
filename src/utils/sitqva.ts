@@ -1,12 +1,13 @@
+import { hash32, type HangiDay } from './hangi';
 import { nameGender } from '../data/georgianNames';
 import type { CalendarDay } from '../data/churchCalendar';
-import { hash32, type HangiDay } from './hangi';
 
 // „დღის სიტყვა“ (games hub, 2026-10-28): one hidden Georgian word a day for the whole school, six tries, the letters
 // coloured as Wordle does (green = right letter in its place, amber = in the word elsewhere). The word is 4–6 letters
-// and comes from the day itself — a feast or a saint of the church calendar — or, when the day gives none, from the
-// bank of church words and places (data/sitqvaAnswers.ts). Pure; tests in tests/sitqva.test.ts. The day's record is
-// the daily-game record of utils/hangi.ts (id = the word, guesses = the words tried).
+// and comes from the day itself — a feast of the church calendar, or on every third day a saint it names — or else from
+// the bank of data/sitqvaAnswers.ts: places, the table, nature, heroes, culture and church words (since 2026-11-01, the
+// user: games on everything Georgian, faith kept). Pure; tests in tests/sitqva.test.ts. The day's record is the
+// daily-game record of utils/hangi.ts (id = the word, guesses = the words tried).
 
 /** the 33 letters of today's alphabet, in their order — the on-screen keyboard's three rows of eleven */
 export const LETTERS = 'აბგდევზთიკლმნოპჟრსტუფქღყშჩცძწჭხჯჰ';
@@ -61,14 +62,18 @@ export const keyMarks = (guesses: string[], answer: string): Record<string, Mark
   return out;
 };
 
-export type SitqvaKind = 'feast' | 'saint' | 'church' | 'region';
+export type SitqvaKind = 'feast' | 'saint' | 'church' | 'region' | 'food' | 'nature' | 'hero' | 'culture';
 export interface SitqvaCandidate { word: string; kind: SitqvaKind; life?: string }
 
 export const KIND_HINT: Record<SitqvaKind, string> = {
   feast: 'დღევანდელი დღესასწაული',
   saint: 'დღევანდელი წმინდანის სახელი',
   church: 'საეკლესიო სიტყვა',
-  region: 'საქართველოს კუთხე ან ადგილი',
+  region: 'საქართველოს კუთხე, ქალაქი, მდინარე ან მთა',
+  food: 'ქართული სამზარეულო და სუფრა',
+  nature: 'ბუნება: ცხოველი, ფრინველი, ხე, ხილი ან ამინდი',
+  hero: 'გმირი, მეფე, მწერალი ან თქმულების პერსონაჟი',
+  culture: 'ცეკვა, სიმღერა, საკრავი, სამოსი, კინო ან თამაში',
 };
 
 // the case endings a name wears in the calendar's lines (nameDayMatch.ts has the same set), longest first
@@ -105,9 +110,15 @@ export const candidatesOfDay = (day: CalendarDay | null | undefined): SitqvaCand
 const ranked = (iso: string, list: SitqvaCandidate[], skip?: string) =>
   list.filter(c => fits(c.word) && c.word !== skip).sort((a, b) => hash32(`${iso}|${b.word}`) - hash32(`${iso}|${a.word}`));
 
-/** the day's word: the day's feast first, then a saint of the day, then the bank — the same on every phone; `skip` = yesterday's word */
+/** a saint's day: every third day of the game (the 3rd, 6th, …), so the saints keep their place beside the broad bank */
+export const isSaintDay = (iso: string) => dayIndex(iso) % 3 === 0;
+
+/** the day's word — the same on every phone; `skip` = yesterday's word: the day's feast; on a saint's day a saint the
+ *  calendar names; else (or when no name fits) the bank */
 export const wordOfDay = (iso: string, day: SitqvaCandidate[], bank: SitqvaCandidate[], skip?: string): SitqvaCandidate | undefined =>
-  ranked(iso, day.filter(c => c.kind === 'feast'), skip)[0] ?? ranked(iso, day.filter(c => c.kind === 'saint'), skip)[0] ?? ranked(iso, bank, skip)[0];
+  ranked(iso, day.filter(c => c.kind === 'feast'), skip)[0]
+  ?? (isSaintDay(iso) ? ranked(iso, day.filter(c => c.kind === 'saint'), skip)[0] : undefined)
+  ?? ranked(iso, bank, skip)[0];
 
 /** the record after a try; the word is accepted by the caller */
 export const afterTry = (day: HangiDay, guess: string): HangiDay => {

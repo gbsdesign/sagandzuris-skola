@@ -63,7 +63,7 @@ const pickGrids = () => {
     out.push({ seed, ...g });
   }
   if (out.length < N) throw new Error(`only ${out.length} grids with one answer`);
-  const tuned = o => o.groups.some(x => x.family);
+  const tuned = o => o.groups.some(x => x.family === 'songs' || x.family === 'chants');
   return [...out.filter(o => !tuned(o)), ...out.filter(tuned)];
 };
 const GRIDS = pickGrids();
@@ -108,7 +108,7 @@ const coverPage = no => page(`${stripe(TAG)}
 <div class="cover">
   <div class="aso title">${aso(title)}</div>
   <h1 class="gameTitle">${title}</h1>
-  <div class="lead">თექვსმეტი ბარათი, ოთხი ფარული ჯგუფი. რა აერთიანებს ამ სიტყვებს — მთები, ხმები გალობაში, ჩოხის ნაწილები? იპოვეთ ოთხივე ოთხეული, სანამ ოთხჯერ შეცდებით.<br><b>${META}</b></div>
+  <div class="lead">თექვსმეტი ბარათი, ოთხი ფარული ჯგუფი. რა აერთიანებს ამ სიტყვებს — მთები, ქართული ფილმები, ხმები გალობაში, ჩოხის ნაწილები? იპოვეთ ოთხივე ოთხეული, სანამ ოთხჯერ შეცდებით.<br><b>${META}</b></div>
   <div class="ot-ex box">
     <div class="ot-exBoard">
       ${EXAMPLE.solved.map(([label, words], k) => `<div class="ot-exRow"><span class="ot-tag" style="background:${TONE[k][0]};color:${TONE[k][1]}">${esc(label)}</span>${words.map(miniCard).join('')}</div>`).join('')}

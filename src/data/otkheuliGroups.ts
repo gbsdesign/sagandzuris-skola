@@ -6,11 +6,14 @@ import { NOTES_LISTS } from './chantLookup';
 import type { OtkheuliGroup } from '../utils/otkheuli';
 
 // The groups of „ოთხეული“ (games hub, 2026-10-28): the app's own world — the church, chant, the saints, the regions,
-// songs and instruments, the costume, the land and the table. A group needs four words, most carry more so the grid
-// differs from day to day; a word may belong to two groups (that is the trick). Every word fits a tile: at most eleven
-// letters. The lists the app already has (instruments, regions, costume parts, songs and chants by their list) join the
-// curated ones below, so a new song or instrument lands in the game by itself. (songsData.ts is not imported: its chain
-// reaches firebase.ts, which the tests cannot load — the regions are written here, the songs come from the archive.)
+// songs and instruments, the costume, the land and the table — and since 2026-11-01 the wider Georgian one too: history and
+// heroes, castles, battles, nature (animals, birds, trees, flowers, lakes), films, painters, composers, the tales, cheese and
+// sweets, sport, the supra's toasts (the user: think wider; faith and chant stay as words, only pictures are left out).
+// A group needs four words, most carry more so the grid differs from day to day; a word may belong to two groups (that is
+// the trick). Every word fits a tile: at most eleven letters. The lists the app already has (instruments, regions, costume
+// parts, songs and chants by their list) join the curated ones below, so a new song or instrument lands in the game by
+// itself. (songsData.ts is not imported: its chain reaches firebase.ts, which the tests cannot load — the regions are
+// written here, the songs come from the archive.)
 
 const MAX_CHARS = 11;
 const fits = (w: string) => w.length > 0 && w.length <= MAX_CHARS && !/[\d()]/.test(w);
@@ -35,7 +38,7 @@ const CURATED: OtkheuliGroup[] = [
   group('mepeebi', 'მეფეები და დედოფლები', ['თამარი', 'დავითი', 'ვახტანგი', 'ფარნავაზი', 'გიორგი', 'ბაგრატი', 'ერეკლე', 'მირიანი', 'ლუარსაბი', 'ქეთევანი', 'ლაშა']),
   group('mtserlebi', 'მწერლები და პოეტები', ['რუსთაველი', 'ილია', 'აკაკი', 'ვაჟა', 'გალაკტიონი', 'გურამიშვილი', 'ჩავჩავაძე', 'ორბელიანი', 'ბარათაშვილი']),
   group('mdinareebi', 'მდინარეები', ['მტკვარი', 'რიონი', 'არაგვი', 'ალაზანი', 'ენგური', 'ლიახვი', 'ჭოროხი', 'იორი', 'ქსანი', 'ხრამი', 'სუფსა']),
-  group('mtebi', 'მთები', ['ყაზბეგი', 'შხარა', 'უშბა', 'თეთნულდი', 'მთაწმინდა', 'ლომისი']),
+  group('mtebi', 'მთები', ['ყაზბეგი', 'შხარა', 'უშბა', 'თეთნულდი', 'მთაწმინდა', 'ლომისი', 'ლაილა', 'აილამა', 'ტებულოსმთა', 'შანი', 'დიდი აბული']),
   group('tadzrebi', 'ტაძრები და მონასტრები', ['ჯვარი', 'ალავერდი', 'გელათი', 'ბაგრატი', 'სიონი', 'ბოდბე', 'ვარძია', 'ნეკრესი', 'იყალთო', 'მეტეხი', 'ანჩისხატი', 'შიომღვიმე', 'ზედაზენი']),
   group('kalakebi', 'ქალაქები', ['თბილისი', 'ქუთაისი', 'ბათუმი', 'თელავი', 'გორი', 'ზუგდიდი', 'ფოთი', 'რუსთავი', 'მცხეთა', 'ახალციხე', 'ოზურგეთი']),
   // the map's regions (data/songsData.ts FOLK_REGIONS), those short enough for a tile
@@ -47,12 +50,33 @@ const CURATED: OtkheuliGroup[] = [
   group('khili', 'ხილი', ['ვაშლი', 'მსხალი', 'ატამი', 'ბროწეული', 'ყურძენი', 'ლეღვი', 'ხურმა', 'კომში', 'ტყემალი', 'ბალი', 'ალუბალი']),
   group('damtserloba', 'ქართული დამწერლობა', ['ასომთავრული', 'ნუსხური', 'მხედრული', 'ხუცური']),
   group('kviris-dgheebi', 'კვირის დღეები', ['ორშაბათი', 'სამშაბათი', 'ოთხშაბათი', 'ხუთშაბათი', 'პარასკევი', 'შაბათი', 'კვირა']),
-  group('satnoebebi', 'სათნოებები', ['სიყვარული', 'სიმდაბლე', 'მოთმინება', 'რწმენა', 'იმედი', 'სიკეთე', 'სიწმინდე', 'მორჩილება', 'სიმშვიდე']),
+  group('satnoebebi', 'სათნოებები', ['სიყვარული', 'სიმდაბლე', 'მოთმინება', 'რწმენა', 'იმედი', 'სიკეთე', 'სიწმინდე', 'მორჩილება', 'სიმშვიდე'], 'virtues'),
   group('sakhli', 'ქართული სახლი', ['ქვევრი', 'თონე', 'კერა', 'ფარდაგი', 'დარბაზი', 'მარანი', 'აივანი', 'ბუხარი', 'ტახტი']),
   group('supra', 'სუფრა', ['თამადა', 'ალავერდი', 'სადღეგრძელო', 'ყანწი', 'ჭიქა', 'მერიქიფე', 'ტოლუმბაში', 'სუფრული', 'ღვინო', 'პური']),
   group('natesaoba', 'ნათესაობა', ['დედა', 'მამა', 'ბებია', 'ბაბუა', 'ბიძა', 'მამიდა', 'დეიდა', 'სიძე', 'რძალი', 'მაზლი', 'მული']),
   group('musikis-terminebi', 'მუსიკის ტერმინები', ['ნოტა', 'გასაღები', 'ბემოლი', 'დიეზი', 'პაუზა', 'ტაქტი', 'აკორდი', 'ოქტავა', 'მაჟორი', 'მინორი', 'ინტერვალი', 'გამა']),
   group('tamashebi', 'ქართული თამაშები', ['ლელო', 'ჭიდაობა', 'ცხენბურთი', 'ლახტი', 'კრივი', 'ჯირითი', 'ყაბახი', 'ბურთაობა']),
+  // the wider Georgian world (2026-11-01)
+  group('tsikheebi', 'ციხეები', ['ნარიყალა', 'ანანური', 'ხერთვისი', 'გონიო', 'რაბათი', 'შატილი', 'მუცო', 'სურამი', 'უჯარმა', 'ბახტრიონი']),
+  group('kartvelis-siketeebi', 'ქართველის სიკეთეები', ['ვაჟკაცობა', 'ერთგულება', 'სიყვარული', 'მოთმინება', 'სიმართლე', 'ღირსება', 'სიკეთე', 'პატიოსნება', 'სიმშვიდე'], 'virtues'),
+  group('sadghegrdzeloebi', 'სადღეგრძელოები', ['მშვიდობა', 'სამშობლო', 'მშობლები', 'წინაპრები', 'მეგობრები', 'ბავშვები', 'მასპინძელი', 'ოჯახი', 'სიყვარული']),
+  group('tskhovelebi', 'ცხოველები', ['მგელი', 'დათვი', 'ირემი', 'ჯიხვი', 'არჩვი', 'შველი', 'ტურა', 'მელა', 'კურდღელი', 'ზღარბი', 'ციყვი', 'ფოცხვერი', 'ჯიქი']),
+  group('prinvelebi', 'ფრინველები', ['არწივი', 'მიმინო', 'შევარდენი', 'ხოხობი', 'მწყერი', 'ბატკანძერი', 'ყორანი', 'მერცხალი', 'შაშვი', 'ბულბული', 'ოფოფი', 'ყარყატი']),
+  group('kheebi', 'ხეები', ['მუხა', 'წიფელი', 'ნაძვი', 'ფიჭვი', 'ცაცხვი', 'წაბლი', 'კაკალი', 'ურთხელი', 'ბზა', 'იფანი', 'ვერხვი', 'ტირიფი']),
+  group('yvavilebi', 'ყვავილები', ['ენძელა', 'ია', 'ზამბახი', 'ყაყაჩო', 'გვირილა', 'ვარდი', 'შროშანი', 'დეკა', 'ნარგიზი', 'იასამანი', 'ტიტა']),
+  group('tbebi', 'ტბები', ['ფარავანი', 'რიწა', 'ბაზალეთი', 'ტაბაწყური', 'ლისი', 'კუს ტბა', 'ჯანდარი', 'პალიასტომი', 'ამტყელი']),
+  group('gmirebi', 'გმირები', ['სააკაძე', 'ქაქუცა', 'ცოტნე', 'არსენა', 'ბაგრატიონი', 'შეფიცულები', 'არაგველები', 'იუნკრები']),
+  group('brdzolebi', 'ბრძოლები', ['დიდგორი', 'ბასიანი', 'შამქორი', 'კრწანისი', 'ასპინძა', 'მარტყოფი', 'ბახტრიონი', 'მარაბდა']),
+  group('filmebi', 'ქართული ფილმები', ['მიმინო', 'ფიროსმანი', 'კინ-ძა-ძა', 'შერეკილები', 'ნატვრის ხე', 'არ დაიდარდო', 'ხანუმა', 'ბაში-აჩუკი']),
+  group('mkhatvrebi', 'მხატვრები', ['ფიროსმანი', 'გუდიაშვილი', 'კაკაბაძე', 'ახვლედიანი', 'გაბაშვილი', 'თოიძე', 'ჯაფარიძე', 'ქიქოძე']),
+  group('kompozitorebi', 'კომპოზიტორები', ['ფალიაშვილი', 'არაყიშვილი', 'დოლიძე', 'ყანჩელი', 'ცინცაძე', 'ლაღიძე', 'მაჭავარიანი']),
+  group('vepkhistkaosani', 'ვეფხისტყაოსნის გმირები', ['ტარიელი', 'ავთანდილი', 'ფრიდონი', 'თინათინი', 'ნესტანი', 'ასმათი', 'როსტევანი', 'ფატმანი', 'შერმადინი']),
+  group('zgaprebi', 'ზღაპრისა და თქმულების გმირები', ['ნაცარქექია', 'ამირანი', 'კომბლე', 'მზეთუნახავი', 'ოჩოკოჩი', 'ჭინჭრაქა', 'დევი', 'ქაჯი']),
+  group('qveli', 'ქართული ყველი', ['სულგუნი', 'იმერული', 'გუდის ყველი', 'ნადუღი', 'ტენილი', 'დამბალხაჭო', 'ჭყინტი', 'ხაჭო']),
+  group('tkbileuli', 'ტკბილეული', ['ჩურჩხელა', 'გოზინაყი', 'ტყლაპი', 'ფელამუში', 'თათარა', 'ნაზუქი', 'ქადა', 'მურაბა']),
+  group('sporti', 'სპორტი', ['ფეხბურთი', 'რაგბი', 'ჭიდაობა', 'ძიუდო', 'კრივი', 'ჭადრაკი', 'ძალოსნობა', 'ცურვა', 'კალათბურთი', 'ფარიკაობა']),
+  group('kurortebi', 'კურორტები', ['ბორჯომი', 'წყალტუბო', 'ბაკურიანი', 'გუდაური', 'საირმე', 'აბასთუმანი', 'შოვი', 'ურეკი', 'ქობულეთი']),
+  group('khelobebi', 'ძველი ხელობები', ['მჭედელი', 'მეთუნე', 'ფეიქარი', 'ხარატი', 'მეჩექმე', 'მკერავი', 'მექვევრე', 'მეფუტკრე', 'მწყემსი', 'მეურმე']),
 ];
 
 // the lists the app already keeps

@@ -32,24 +32,24 @@ const icIn = (name, o = {}) => CUSTOM[name] ? svgIcon(name, `x="${o.x ?? 0}" y="
 // ---------- the 19 lands; `at` = the place in the learning layout (axial q, r; north on top) ----------
 const LANDS = [
   { name: 'სვანეთი', res: 'ore', mon: 'სვანური კოშკები', at: [0, -2] },
-  { name: 'რაჭა', res: 'wood', mon: 'ნიკორწმინდა', at: [1, -2] },
+  { name: 'რაჭა', res: 'wood', mon: 'შაორის ტბა', at: [1, -2] },
   { name: 'ხევი', res: 'ore', mon: 'მყინვარწვერი', at: [2, -2] },
-  { name: 'აფხაზეთი', res: 'wood', mon: 'ბიჭვინთა', at: [-1, -1] },
-  { name: 'იმერეთი', res: 'grain', mon: 'ბაგრატის ტაძარი', at: [0, -1] },
+  { name: 'აფხაზეთი', res: 'wood', mon: 'ბიჭვინთის ფიჭვნარი', at: [-1, -1] },
+  { name: 'იმერეთი', res: 'grain', mon: 'სათაფლია', at: [0, -1] },
   { name: 'მთიულეთი', res: 'wool', mon: 'არაგვის ხეობა', at: [1, -1] },
   { name: 'თუშეთი', res: 'wool', mon: 'თუშური ფარა', at: [2, -1] },
-  { name: 'სამეგრელო', res: 'wood', mon: 'მარტვილი', at: [-2, 0] },
+  { name: 'სამეგრელო', res: 'wood', mon: 'ნოქალაქევი', at: [-2, 0] },
   { name: 'ჯავახეთი', res: 'wool', mon: 'ფარავნის ტბა', at: [-1, 0] },
-  { name: 'ქვათახევი', res: 'stone', mon: 'მონასტერი', at: [0, 0] },
+  { name: 'კლდეკარი', res: 'stone', mon: 'კლდეკარის ციხე', at: [0, 0] },
   { name: 'შიდა ქართლი', res: 'grain', mon: 'უფლისციხე', at: [1, 0] },
-  { name: 'კახეთი', res: 'grain', mon: 'ალავერდი', at: [2, 0] },
+  { name: 'კახეთი', res: 'grain', mon: 'ალაზნის ველი', at: [2, 0] },
   { name: 'აჭარა', res: 'wood', mon: 'გონიო', at: [-2, 1] },
-  { name: 'სამცხე', res: 'grain', mon: 'საფარა', at: [-1, 1] },
-  { name: 'თრიალეთი', res: 'wool', mon: 'ბეთანია', at: [0, 1] },
+  { name: 'სამცხე', res: 'grain', mon: 'ხერთვისის ციხე', at: [-1, 1] },
+  { name: 'თრიალეთი', res: 'wool', mon: 'თრიალეთის თასი', at: [0, 1] },
   { name: 'საყდრისი', res: 'ore', mon: 'ოქროს მაღარო', at: [1, 1] },
   { name: 'დმანისი', res: 'stone', mon: 'დმანისის ციხე', at: [-2, 2] },
-  { name: 'ბოლნისი', res: 'stone', mon: 'ბოლნისის სიონი', at: [-1, 2] },
-  { name: 'ელდარი', res: null, mon: 'გარეჯის უდაბნო', at: [0, 2] },
+  { name: 'ალგეთი', res: 'stone', mon: 'ბირთვისის ციხე', at: [-1, 2] },
+  { name: 'ელდარი', res: null, mon: 'ვაშლოვანი', at: [0, 2] },
 ];
 
 // ---------- board geometry (mm, y down, centre of the island at 0,0) ----------
@@ -343,22 +343,24 @@ const resBack = cardBack(C.wine, 'მოსავალი');
 const spareCard = (color = C.wine) => `<div class="card">${cardFrame(color)}<div class="body"><div class="spare">სათადარიგო ბარათი<br><span>დაკარგულის ნაცვლად — სახელი მარკერით</span></div></div></div>`;
 
 // ---------- development cards (63×88): 14 + 2 + 2 + 2 + 5 treasures ----------
-const flared = (cx, cy, s, color) => `<g transform="translate(${cx} ${cy}) scale(${s})" fill="${color}">${[0, 90, 180, 270].map(a => `<path d="M0 0L-2.6 -8A2.8 1.2 0 0 1 2.6 -8Z" transform="rotate(${a})"/>`).join('')}<circle r="1.3"/></g>`;
+// an eight-rayed sun, the folk ornament on the shields and banners
+const sunMark = (cx, cy, s, color) => `<g transform="translate(${cx} ${cy}) scale(${s})" fill="${color}">${Array.from({ length: 8 }, (_, i) => `<path d="M0 -8.2L1.6 -4.1H-1.6Z" transform="rotate(${i * 45})"/>`).join('')}<circle r="3.3"/></g>`;
 const DEV_ART = {
   knight: () => `${icIn('swords', { x: 10, y: 1.5, size: 30, color: C.goldDark, width: 1.1, opacity: 0.55 })}
 <path d="M25 4.5L35 8V17C35 23.5 30.6 28 25 30C19.4 28 15 23.5 15 17V8Z" fill="${C.wine}" stroke="${C.gold}" stroke-width=".7"/>
-<path d="M25 7L32.6 9.8V17C32.6 22 29.3 25.8 25 27.4C20.7 25.8 17.4 22 17.4 17V9.8Z" fill="none" stroke="${C.gold}" stroke-width=".3"/>${flared(25, 17, 0.78, C.gold)}`,
+<path d="M25 7L32.6 9.8V17C32.6 22 29.3 25.8 25 27.4C20.7 25.8 17.4 22 17.4 17V9.8Z" fill="none" stroke="${C.gold}" stroke-width=".3"/>${sunMark(25, 17, 0.78, C.gold)}`,
   bridge: () => `<path d="M3 26 q5.5 -2.4 11 0 t11 0 t11 0 t11 0" stroke="#5d93bf" stroke-width=".8" fill="none"/><path d="M3 29 q5.5 -2.4 11 0 t11 0 t11 0 t11 0" stroke="#86b6dc" stroke-width=".6" fill="none"/>
 <path d="M4 13Q25 3 46 13V16H4Z" fill="#b7a58a" stroke="${C.brown}" stroke-width=".6" stroke-linejoin="round"/><path d="M8 16.4H42V24H36A11 9 0 0 0 14 24H8Z" fill="#cdbb9c" stroke="${C.brown}" stroke-width=".6"/>
 ${[11, 17, 23, 29, 35].map(x => `<path d="M${x} 9.6v-.1" stroke="${C.brown}" stroke-width=".4"/>`).join('')}<path d="M4 13Q25 3 46 13" fill="none" stroke="${C.brown}" stroke-width=".4" stroke-dasharray="1.6 1.2" transform="translate(0 1.6)"/>
 ${icIn('hammer', { x: 38, y: 0.6, size: 9, color: C.wine, width: 1.8 })}`,
   plenty: () => `${icIn('sun', { x: 19, y: 0.4, size: 12, color: C.gold, width: 1.5 })}${icIn('grape', { x: 4.5, y: 7.5, size: 21, color: C.wine, width: 1.5 })}${icIn('wheat', { x: 24.5, y: 7.5, size: 21, color: C.goldDark, width: 1.5 })}`,
   toll: () => `${icIn('warehouse', { x: 4, y: 7, size: 20, color: C.brown, width: 1.4 })}${icIn('stamp', { x: 26, y: 3.5, size: 18, color: C.wine, width: 1.5 })}${icIn('coins', { x: 42.2, y: 20.8, size: 8, color: C.goldDark, width: 1.7 })}`,
-  gelati: () => `${icIn('church', { x: 5, y: 3, size: 25, color: C.wine, width: 1.3 })}${icIn('book-open', { x: 28, y: 9, size: 17, color: C.brown, width: 1.5 })}`,
-  ikalto: () => `${icIn('landmark', { x: 4.5, y: 4, size: 23, color: C.wine, width: 1.35 })}${icIn('scroll-text', { x: 28, y: 8, size: 17, color: C.brown, width: 1.5 })}`,
-  vardzia: () => `<path d="M2 29L13 8L20 14L27 3L38 15L48 29Z" fill="#d9c3a0" stroke="${C.brown}" stroke-width=".6" stroke-linejoin="round"/>
-${[[14, 19], [19.5, 18], [25, 15.5], [30.5, 18], [36, 21], [17, 24], [23, 23], [29, 23.5], [35, 25.6]].map(([x, y]) => `<path d="M${x - 1.3} ${y + 1.6}v-1.6a1.3 1.3 0 0 1 2.6 0v1.6z" fill="${C.brown}"/>`).join('')}`,
-  sveti: () => `${icIn('church', { x: 9.5, y: 1, size: 29, color: C.wine, width: 1.25 })}`,
+  gegeuti: () => `${icIn('castle', { x: 5, y: 2.5, size: 26, color: C.wine, width: 1.3 })}${icIn('crown', { x: 30, y: 7, size: 16, color: C.goldDark, width: 1.5 })}`,
+  kronika: () => `${icIn('scroll-text', { x: 5, y: 3, size: 25, color: C.wine, width: 1.3 })}${icIn('crown', { x: 30, y: 8, size: 15, color: C.goldDark, width: 1.5 })}`,
+  moneta: () => `<circle cx="33" cy="18" r="9" fill="#d9b85c" stroke="${C.goldDark}" stroke-width=".6"/><circle cx="33" cy="18" r="7" fill="none" stroke="${C.goldDark}" stroke-width=".3"/>
+<circle cx="20" cy="15.5" r="12.5" fill="#e6c76f" stroke="${C.goldDark}" stroke-width=".8"/><circle cx="20" cy="15.5" r="10" fill="none" stroke="${C.goldDark}" stroke-width=".4" stroke-dasharray=".8 .7"/>
+<text x="20" y="20.3" font-size="13" font-weight="900" text-anchor="middle" fill="${C.wine}" font-family="SansKa">${aso('თ')}</text>`,
+  didgori: () => `${icIn('swords', { x: 5, y: 3, size: 24, color: C.wine, width: 1.3 })}${icIn('flag', { x: 30, y: 5, size: 17, color: C.goldDark, width: 1.5 })}`,
   vepkhis: () => `${icIn('book-open', { x: 4, y: 5, size: 24, color: C.wine, width: 1.35 })}${icIn('feather', { x: 28, y: 4, size: 18, color: C.goldDark, width: 1.5 })}`,
 };
 const devArt = kind => `<svg width="50mm" height="31mm" viewBox="0 0 50 31" style="display:block">${DEV_ART[kind]()}</svg>`;
@@ -369,10 +371,10 @@ const DEV = [
   { key: 'toll', n: 2, name: 'სამეფო ბაჟი', rule: 'დაასახელე ერთი მოსავალი — ყველა მოთამაშე ასეთ ყველა ბარათს შენ გაძლევს.', cap: 'მეფის ბეჭედი და ქარვასლა' },
 ];
 const TREASURES = [
-  { key: 'gelati', name: 'გელათის აკადემია', date: '1106', about: 'დავით აღმაშენებლის აკადემია ქუთაისთან' },
-  { key: 'ikalto', name: 'იყალთოს აკადემია', date: 'XII ს.', about: 'არსენ იყალთოელის სკოლა კახეთში' },
-  { key: 'vardzia', name: 'ვარძია', date: '1185', about: 'თამარ მეფის კლდის მონასტერი' },
-  { key: 'sveti', name: 'სვეტიცხოველი', date: '1029', about: 'მცხეთის დიდი ტაძარი' },
+  { key: 'gegeuti', name: 'გეგუთის სასახლე', date: 'XII ს.', about: 'მეფეთა სასახლე ქუთაისთან' },
+  { key: 'kronika', name: 'ქართლის ცხოვრება', date: 'XI–XIV ს.', about: 'ქართველ მეფეთა მატიანე' },
+  { key: 'moneta', name: 'თამარის მონეტა', date: '1187', about: 'ფული თამარ მეფის მონოგრამით' },
+  { key: 'didgori', name: 'დიდგორის ბრძოლა', date: '1121', about: 'დავით აღმაშენებლის დიდი გამარჯვება' },
   { key: 'vepkhis', name: '„ვეფხისტყაოსანი“', date: '≈1200', about: 'შოთა რუსთაველის პოემა' },
 ];
 const devCard = d => `<div class="card dev">${cardFrame(C.wine)}${corners(C.gold, 7, 4.2)}
@@ -434,8 +436,8 @@ const SPECIAL = [
 ${[[6, 52], [34, 30], [64, 34], [86, 10]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.3" fill="${C.wine}" stroke="#f6ecd6" stroke-width=".7"/>`).join('')}
 ${icIn('warehouse', { x: 39, y: 6, size: 15, color: C.brown, width: 1.4 })}${icIn('sailboat', { x: 4, y: 20, size: 15, color: SEA, width: 1.5 })}${icIn('mountain-snow', { x: 66, y: 38, size: 16, color: '#53647b', width: 1.4 })}` },
   { key: 'army', name: 'დიდი ლაშქარი', rule: 'ვინც პირველი გახსნის 3 მეციხოვნეს, ეს ბარათი მისია. ვინც მეტს გახსნის, წაართმევს; თანაბარზე ბარათი პატრონთან რჩება.', cap: 'ქვეყნის დაცვა და არა თავდასხმა · დიდგორი, 1121',
-    art: `${[[18, 8, -12], [74, 8, 12]].map(([x, y, a]) => `<g transform="rotate(${a} ${x} ${y + 24})"><line x1="${x}" y1="${y}" x2="${x}" y2="${y + 48}" stroke="${C.brown}" stroke-width="1.1"/><path d="M${x} ${y + 1}h13l-3 5 3 5h-13z" fill="${C.wine}"/>${flared(x + 5.6, y + 6, 0.32, C.gold)}</g>`).join('')}
-<path d="M46 6L64 12.5V29C64 41 56 49 46 53C36 49 28 41 28 29V12.5Z" fill="${C.wine}" stroke="${C.gold}" stroke-width="1"/><path d="M46 10L60.4 15.2V29C60.4 38.6 54 45.4 46 48.8C38 45.4 31.6 38.6 31.6 29V15.2Z" fill="none" stroke="${C.gold}" stroke-width=".4"/>${flared(46, 29, 1.45, C.gold)}` },
+    art: `${[[18, 8, -12], [74, 8, 12]].map(([x, y, a]) => `<g transform="rotate(${a} ${x} ${y + 24})"><line x1="${x}" y1="${y}" x2="${x}" y2="${y + 48}" stroke="${C.brown}" stroke-width="1.1"/><path d="M${x} ${y + 1}h13l-3 5 3 5h-13z" fill="${C.wine}"/>${sunMark(x + 5.6, y + 6, 0.32, C.gold)}</g>`).join('')}
+<path d="M46 6L64 12.5V29C64 41 56 49 46 53C36 49 28 41 28 29V12.5Z" fill="${C.wine}" stroke="${C.gold}" stroke-width="1"/><path d="M46 10L60.4 15.2V29C60.4 38.6 54 45.4 46 48.8C38 45.4 31.6 38.6 31.6 29V15.2Z" fill="none" stroke="${C.gold}" stroke-width=".4"/>${sunMark(46, 29, 1.45, C.gold)}` },
 ];
 const specialCard = s => a6(`${carpet(IW, IH, { id: `cp${s.key}` })}<div class="spc"><div class="aso sk">${aso('ოქროს ხანა')}</div><div class="sn">${esc(s.name)}</div>
 <svg width="70mm" height="44.1mm" viewBox="0 0 92 58" style="display:block;margin:2mm auto 0;overflow:visible">${s.art}</svg>
