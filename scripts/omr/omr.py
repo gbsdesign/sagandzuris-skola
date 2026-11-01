@@ -16,8 +16,10 @@ SEMI = [0, 2, 4, 5, 7, 9, 11]
 CLEF = {'&': (2, 4), 'V': (2, 3), '?': (4, 2)}
 HEADS = {'œ': 1, '˙': 2, 'Ç': 2, 'w': 4, 'W': 0}  # W = breve, recitation: length from its syllables
 RESTS = {'Œ': 1, 'Ó': 2, '‰': 0.5, '≈': 0.25, '∑': 4, 'î': 4}
-FLAGS = {'J': 1, 'j': 1, 'K': 2, 'k': 2, 'L': 3, 'l': 3}
-ACC = {'#': 1, 'b': -1, 'n': 0, 'N': 0, '(#)': 1, '(b)': -1, '(n)': 0}  # (x) = one bracketed glyph (vol. I)
+FLAGS = {'J': 1, 'j': 1, 'K': 2, 'k': 2, 'R': 2, 'r': 2, 'L': 3, 'l': 3}  # R/r: the 16th's flags of vols II–XXIX
+ACC = {'#': 1, 'b': -1, 'n': 0, 'N': 0, '(#)': 1, '(b)': -1, '(n)': 0,  # (x) = one bracketed glyph (vol. I)
+       'a': 1, 'A': -1, '[': 1, '{': -1}  # the other volumes' bracketed ♯ ♭ (N = ♮): before the note, or over / under it
+BRACKETED = {'N', 'a', 'A', '[', '{'}
 
 # Vol. I's Petrucci subset gives its glyphs other codes (control characters for the heads); each was identified on
 # the page pictures (2026-10-29) and is read as the standard Petrucci character it draws. Dynamics and fermatas
@@ -173,11 +175,13 @@ def staff_of(st_list, y):
 def read_system(P, sysst, dbg=False):
     """events per staff: list of [x, beats, midi|None(rest)]"""
     top, bot = sysst[0]['top'] - 30, sysst[-1]['bot'] + 30
-    gl = [g for g in P.glyphs if top <= g['y'] <= bot]
+    # only this system's own width: two systems printed side by side in one row must not read each other's notes
+    left, right = sysst[0]['x0'] - 25, sysst[0]['x1'] + 10
+    gl = [g for g in P.glyphs if top <= g['y'] <= bot and left <= g['x'] <= right]
     # small (cue-size) heads are the editors' alternatives or guesses: not played
     sizes = sorted(g['size'] for g in P.glyphs if g['c'] in HEADS)
     normal = sizes[len(sizes) // 2] if sizes else 17.5
-    res = []
+    res, alts = [], {}
     for k, st in enumerate(sysst):
         sp = st['sp']
         mine = [g for g in gl if staff_of(sysst, g['y']) == k and st['top'] - 6 * sp <= g['y'] <= st['bot'] + 6 * sp]
@@ -187,8 +191,10 @@ def read_system(P, sysst, dbg=False):
         heads = []
         # a head in round brackets is the editors' alternative (vol. I prints it full size): not played
         parens = [w for w in P.words if w[4] in ('(', ')') and abs((w[1] + w[3]) / 2 - (st['top'] + st['bot']) / 2) < 4 * sp]
-        bracketed = lambda g: any(w[4] == '(' and -1 < g['x'] - w[2] < 8 for w in parens) and any(
-            w[4] == ')' and 0 < w[0] - g['x'] < 18 for w in parens)
+        # (the brackets stand at the head's height: a bracketed fermata over the note does not count)
+        near_y = lambda w, g: abs((w[1] + w[3]) / 2 - g['y']) < 1.2 * sp
+        bracketed = lambda g: any(w[4] == '(' and -1 < g['x'] - w[2] < 8 and near_y(w, g) for w in parens) and any(
+            w[4] == ')' and 0 < w[0] - g['x'] < 18 and near_y(w, g) for w in parens)
         for g in sorted([g for g in mine if g['c'] in HEADS and g['size'] > normal * 0.88 and not bracketed(g)], key=lambda g: g['x']):
             if not any(q['c'] == g['c'] and abs(q['x'] - g['x']) < 0.6 and abs(q['y'] - g['y']) < 0.6 for q in heads):
                 heads.append(g)  # a head printed twice (two voices on one note) is one head with two stems
@@ -202,31 +208,77 @@ def read_system(P, sysst, dbg=False):
             idx = cl_letter + stp
             return idx % 7, cl_oct + idx // 7
 
-        # key signature: accidentals before the first note, not touching a head
+        # an accidental belongs to the head right after it on the same staff step (printed 4–6 pt before it; a chord's
+        # second column further left; a bracketed one is wider)
+        reach_of = lambda g: 20 if len(g['c']) > 1 or g['c'] in BRACKETED else 11
+        attached = lambda g, lim=None: any(1 < h['x'] - g['x'] < (lim or reach_of(g)) and step(h['y']) == step(g['y']) for h in heads)
+        # key signature: accidentals before the first note that are not its own (its own stands closer than 7 pt)
         key = {}
+        used = set()
         for g in mine:
-            if g['c'] in ('#', 'b') and g['x'] < first_x - 8 and g['x'] < st['x0'] + 70:
+            if g['c'] in ('#', 'b') and g['x'] < first_x - 3 and g['x'] < st['x0'] + 70 and not attached(g, 7):
                 key[pitch_of(step(g['y']))[0]] = ACC[g['c']]
+                used.add(id(g))
         bars = sorted(x for x, y0, y1 in P.vlines if y0 <= st['top'] + 0.5 and y1 >= st['bot'] - 0.5 and x > st['x0'] + 5)
+        # a key change inside the line: a row of accidentals (each a few points after the other) that is not one
+        # chord's, or a lone one no note takes that stands right after a barline or at the same place on another staff
+        accs = sorted([g for g in mine if g['c'] in ('#', 'b', 'n') and g['x'] >= first_x - 3 and id(g) not in used], key=lambda g: g['x'])
+        rows = []
+        for g in accs:
+            if rows and 2 < g['x'] - rows[-1][-1]['x'] <= 8:
+                rows[-1].append(g)
+            else:
+                rows.append([g])
+        others = [g2 for g2 in gl if g2['c'] in ('#', 'b', 'n') and staff_of(sysst, g2['y']) != k]
+        changes = []  # (x, glyphs)
+        for row in rows:
+            if len(row) >= 2:
+                after = [h for h in heads if 0 < h['x'] - row[-1]['x'] < 25]
+                col = [h for h in after if abs(h['x'] - min(a['x'] for a in after)) < 3] if after else []
+                chord = col and all(any(step(h['y']) == step(g['y']) for h in col) for g in row)
+                if not chord:
+                    changes.append(row)
+            elif not attached(row[0]) and -2 <= step(row[0]['y']) <= 10 and not any(abs(h['x'] - row[0]['x']) < 7 for h in heads):
+                # (an editors' accidental printed over or under its note is not one)
+                g = row[0]
+                after_bar = any(0 < g['x'] - b <= 10 for b in bars)
+                wide = any(abs(g2['x'] - g['x']) <= 3 for g2 in others)
+                if after_bar or wide:
+                    changes.append(row)
+        keys = [(-1e9, key)]
+        for row in changes:
+            nk = dict(keys[-1][1])
+            for g in row:
+                used.add(id(g))
+                if g['c'] == 'n':
+                    nk.pop(pitch_of(step(g['y']))[0], None)
+            if any(g['c'] != 'n' for g in row):
+                nk = {pitch_of(step(g['y']))[0]: ACC[g['c']] for g in row if g['c'] != 'n'}
+            keys.append((row[0]['x'], nk))
+            if os.environ.get('OMR_AUDIT'):
+                print(f"  K p{P.pg.number + 1} sys y={sysst[0]['top']:.0f} staff {k} key change at x={row[0]['x']:.0f}: {''.join(g['c'] for g in row)} -> {nk}")
         events = []
         for g in rests:
             events.append(dict(x=g['x'], beats=RESTS[g['c']], midi=None, rest=True))
-        local, bar_i = {}, 0
-        used = set()
+        local, bar_i, key_i = {}, 0, 0
         for h in heads:
             while bar_i < len(bars) and bars[bar_i] < h['x']:
                 local, bar_i = {}, bar_i + 1
+            while key_i + 1 < len(keys) and keys[key_i + 1][0] < h['x']:
+                local, key_i = {}, key_i + 1
+            key = keys[key_i][1]
             stp = step(h['y'])
             li, octv = pitch_of(stp)
             acc = None
             for g in mine:
-                reach = 20 if len(g['c']) > 1 else 14  # a bracketed accidental is wider
-                if g['c'] in ACC and id(g) not in used and h['x'] - reach < g['x'] < h['x'] - 1 and abs(g['y'] - h['y']) < sp * 0.6 and g['x'] >= first_x - reach:
+                if g['c'] in ACC and id(g) not in used and h['x'] - reach_of(g) < g['x'] < h['x'] - 1 and step(g['y']) == stp and g['x'] >= first_x - reach_of(g):
                     acc = ACC[g['c']]
                     used.add(id(g))
             if acc is not None:
                 local[(li, octv)] = acc
             alt = local.get((li, octv), key.get(li, 0))
+            if os.environ.get('OMR_ACCDBG') == f"{sysst[0]['top']:.0f}/{k}":
+                print(f"   head x={h['x']:.0f} step={stp} acc={acc} alt={alt} key={key} local={local}")
             midi = 12 * (octv + 1) + SEMI[li] + alt
             base = HEADS[h['c']]
             # stems: up at the head's right edge, down at its left edge; a head with both is sung by two voices
@@ -264,16 +316,29 @@ def read_system(P, sysst, dbg=False):
         # editorial accidentals, printed in brackets above or below their note
         for g in mine:
             if g['c'] in ACC and id(g) not in used and g['x'] >= first_x - 14:
-                near = [e for e in events if not e['rest'] and abs(e['x'] - g['x']) < 7 and abs(e['y'] - g['y']) >= sp * 0.6]
+                gc = (g['bb'][0] + g['bb'][2]) / 2  # (a bracketed one is wide: its middle stands over the note's)
+                near = [e for e in events if not e['rest'] and abs(e['x'] + 2.5 - gc) < 7 and abs(e['y'] - g['y']) >= sp * 0.6]
                 if near:
                     e = min(near, key=lambda e: abs(e['y'] - g['y']))
-                    if not e['acc']:
-                        e['midi'] = 12 * (e['octv'] + 1) + SEMI[e['li']] + ACC[g['c']]
+                    # (over a printed one too: „(♯)“ over a ♮F is the editors' reading, F♯)
+                    e['midi'] = 12 * (e['octv'] + 1) + SEMI[e['li']] + ACC[g['c']]
+                    # (and the same note sung again right after it: „(♯)“ over the first of a recitation's notes)
+                    row = sorted([q for q in events if not q['rest'] and q.get('dir') == e.get('dir')], key=lambda q: q['x'])
+                    for q in row[row.index(e) + 1:]:
+                        if (q['li'], q['octv']) != (e['li'], e['octv']) or q['acc'] or any(e['x'] < b < q['x'] for b in bars):
+                            break
+                        q['midi'] = e['midi']
                     used.add(id(g))
+        if os.environ.get('OMR_AUDIT'):
+            for g in mine:
+                if g['c'] in ACC and id(g) not in used and not (g['c'] in ('#', 'b') and g['x'] < first_x - 8 and g['x'] < st['x0'] + 70):
+                    print(f"  ? sys y={sysst[0]['top']:.0f} staff {k} unused {g['c']} x={g['x']:.0f} y={g['y']:.0f} step={step(g['y'])} first_x={first_x:.0f} x0={st['x0']:.0f} x1={st['x1']:.0f}")
         # triplets: a "3" over (or under) three notes
         for w in P.words:
             if w[4] == '3':
                 wx, wy = (w[0] + w[2]) / 2, (w[1] + w[3]) / 2
+                if not left <= wx <= right:
+                    continue
                 if staff_of(sysst, wy) != k or not (st['top'] - 6 * sp <= wy <= st['bot'] + 6 * sp):
                     continue
                 cand = sorted([e for e in events if not e['rest'] and abs(e['x'] - wx) < 30 and not e.get('trip')], key=lambda e: abs(e['x'] - wx))
@@ -290,68 +355,91 @@ def read_system(P, sysst, dbg=False):
                             e['trip'] = True
         # a stemless (whole) note struck beside a stemmed one of another pitch is a second voice on the staff:
         # it takes the other stem direction (vol. I's divided bass)
+        # — unless it stands right of the stemmed one, the other staves striking a note with it and none with the stemmed
+        # one: then it simply follows it (vol. II's whole note after a 16th a second higher)
+        other_x = [g['x'] for g in gl if g['c'] in HEADS and staff_of(sysst, g['y']) != k]
+        on_col = lambda x: any(abs(o - x) < 1.5 for o in other_x)
         for e in events:
             if e['rest'] or e.get('dir'):
                 continue
             q = next((q for q in events if not q['rest'] and q.get('dir') and q['midi'] != e['midi']
                       and abs(q['x'] - e['x']) < 9.5), None)
+            if q and e['x'] > q['x'] + 1 and on_col(e['x']) and not on_col(q['x']):
+                q = None
             if q and (e['midi'] < q['midi']) == (q['dir'] == 'u'):
                 e['dir'], e['sx'] = ('d' if q['dir'] == 'u' else 'u'), q['sx']
         events.sort(key=lambda e: (e['x'], -(e['midi'] or 0)))
-        # columns of heads struck together: chords (one stem) or two voices (stems up and down)
-        cols = []
-        for e in events:
-            q = cols[-1][-1] if cols else None
-            together = q is not None and not e['rest'] and not q['rest'] and (
-                abs(q['x'] - e['x']) < 1.5 or abs(q['x'] - e['x']) < 9.5 and (
-                    q.get('dir') and e.get('dir') and q['dir'] != e['dir'] and abs(q['sx'] - e['sx']) < 7  # two voices: stems close
-                    or q.get('sx') is not None and e.get('sx') is not None and abs(q['sx'] - e['sx']) < 1))  # one stem
-            if together:
-                cols[-1].append(e)
-            else:
-                cols.append([e])
         bass = k == len(sysst) - 1
-        layers = {'u': [], 'd': []}
-        clock = {'u': 0.0, 'd': 0.0}
-
-        def put(l, e):
-            layers[l].append(dict(e))
-            clock[l] += e['beats']
-        for col in cols:
-            ups = [e for e in col if e.get('dir') == 'u']
-            downs = [e for e in col if e.get('dir') == 'd']
-            if ups and downs:
-                put('u', max(ups, key=lambda e: e['midi']))
-                put('d', min(downs, key=lambda e: e['midi']))
-                continue
-            e = min(col, key=lambda e: e['midi']) if (bass and not col[0]['rest']) else max(col, key=lambda e: e['midi'] or 0)
-            if os.environ.get('OMR_DBG') == str(k):
-                print('   col', round(col[0]['x']), [(c.get('dir'), c['beats'], c['midi']) for c in col], dict(clock))
-            if abs(clock['u'] - clock['d']) < 1e-6:
-                put('u', e)
-                put('d', e)
-            else:
-                put('u' if clock['u'] < clock['d'] else 'd', e)
-        events = layers['d' if bass else 'u']
         # recitation notes: half a beat per syllable sung on them
         # (counted under every staff of the system, the fullest line wins: all voices recite the same words)
         bands = [[w for w in P.words if s2['bot'] + 4 <= (w[1] + w[3]) / 2 <= s2['bot'] + 4.2 * s2['sp'] + 8 and re.search(r'\w', w[4])]
                  for s2 in sysst]
-        for i, e in enumerate(events):
-            if e.get('recit'):
-                nx = events[i + 1]['x'] if i + 1 < len(events) else st['x1']
-                n = max(sum(1 for w in toks if e['x'] - 3 <= w[0] < nx - 3) for toks in bands)
-                e['beats'] = max(1, n) * 0.5
-        # ties: a curve from one head to the next of the same pitch
-        out = []
-        for i, e in enumerate(events):
-            if out and not e['rest'] and not out[-1]['rest'] and out[-1]['midi'] == e['midi']:
-                p = out[-1]
-                if any(p['x'] - 2 <= r.x0 <= p['x'] + 9 and e['x'] - 4 <= r.x1 <= e['x'] + 9 and abs((r.y0 + r.y1) / 2 - (p['y'] + e['y']) / 2) < 12 for r in P.curves):
-                    p['beats'] += e['beats']
+
+        def voice(crossed_two):
+            """the staff's voice: columns of heads struck together — chords (one stem) or two voices (stems up and
+            down; `crossed_two`: also when the stem-up one is the lower, else such a pair follows each other)"""
+            cols, crossed = [], False
+            for e in events:
+                q = cols[-1][-1] if cols else None
+                two = q is not None and not e['rest'] and not q['rest'] and abs(q['x'] - e['x']) < 9.5 and (
+                    q.get('dir') and e.get('dir') and q['dir'] != e['dir'] and abs(q['sx'] - e['sx']) < 7)
+                cross = two and (q['midi'] >= e['midi']) != (q['dir'] == 'u')
+                crossed = crossed or cross
+                together = q is not None and not e['rest'] and not q['rest'] and (
+                    abs(q['x'] - e['x']) < 1.5 or two and (crossed_two or not cross)
+                    or abs(q['x'] - e['x']) < 9.5 and q.get('sx') is not None and e.get('sx') is not None and abs(q['sx'] - e['sx']) < 1)  # one stem
+                if together:
+                    cols[-1].append(e)
+                else:
+                    cols.append([e])
+            layers = {'u': [], 'd': []}
+            clock = {'u': 0.0, 'd': 0.0}
+
+            def put(l, e):
+                layers[l].append(dict(e))
+                clock[l] += e['beats']
+            for col in cols:
+                ups = [e for e in col if e.get('dir') == 'u']
+                downs = [e for e in col if e.get('dir') == 'd']
+                if ups and downs:
+                    put('u', max(ups, key=lambda e: e['midi']))
+                    put('d', min(downs, key=lambda e: e['midi']))
                     continue
-            out.append(dict(e))
+                e = min(col, key=lambda e: e['midi']) if (bass and not col[0]['rest']) else max(col, key=lambda e: e['midi'] or 0)
+                if os.environ.get('OMR_DBG') == str(k):
+                    print('   col', round(col[0]['x']), [(c.get('dir'), c['beats'], c['midi']) for c in col], dict(clock))
+                if abs(clock['u'] - clock['d']) < 1e-6:
+                    put('u', e)
+                    put('d', e)
+                else:
+                    put('u' if clock['u'] < clock['d'] else 'd', e)
+            evs = layers['d' if bass else 'u']
+            for i, e in enumerate(evs):
+                if e.get('recit'):
+                    nx = evs[i + 1]['x'] if i + 1 < len(evs) else st['x1']
+                    n = max(sum(1 for w in toks if e['x'] - 3 <= w[0] < nx - 3) for toks in bands)
+                    e['beats'] = max(1, n) * 0.5
+            # ties: a curve from one head to the next of the same pitch
+            out = []
+            for i, e in enumerate(evs):
+                if out and not e['rest'] and not out[-1]['rest'] and out[-1]['midi'] == e['midi']:
+                    p = out[-1]
+                    if any(p['x'] - 2 <= r.x0 <= p['x'] + 9 and e['x'] - 4 <= r.x1 <= e['x'] + 9 and abs((r.y0 + r.y1) / 2 - (p['y'] + e['y']) / 2) < 12 for r in P.curves):
+                        p['beats'] += e['beats']
+                        continue
+                out.append(dict(e))
+            return out, crossed
+        out, crossed = voice(True)
+        # a crossed pair of stems is read both ways: the reading whose length the other staves have wins (below)
+        alts[k] = voice(False)[0] if crossed else None
         res.append(out)
+    total = lambda v: round(sum(e['beats'] for e in v), 3)
+    for k, alt in alts.items():
+        if alt is None:
+            continue
+        others = sorted(total(v) for j, v in enumerate(res) if j != k and v)
+        if others and total(res[k]) != others[len(others) // 2] and total(alt) == others[len(others) // 2]:
+            res[k] = alt
     return sync_recit(res)
 
 
@@ -482,6 +570,7 @@ def main():
         print('not found'); return
     nst = max(len(s) for _, _, syss, _ in parts for s in syss)
     voices = [[] for _ in range(nst)]
+    spell = [[] for _ in range(nst)]  # OMR_SPELL=1: each note's letter (0 = C … 6 = B) and alteration, for checks
     t = 0.0
     sysinfo = []
     for pi, P, syss, y_from in parts:
@@ -492,12 +581,13 @@ def main():
             # each note starts where the voices' common timeline puts it (sync_recit), never running into the next one
             lens = [round(v[-1]['t'] + v[-1]['beats'], 3) if v else 0 for v in ev]
             if max(lens) - min(lens) > 0.01:
-                print(f'  ! p{pi + 1} system y={s[0]["top"]:.0f}: voice lengths differ {lens}')
+                print(f'  ! p{pi + 1} system y={s[0]["top"]:.0f} line {len(sysinfo) + 1}: voice lengths differ {lens}')
             for k, v in enumerate(ev):
                 for i, e in enumerate(v):
                     if not e['rest']:
                         d = e['beats'] if i + 1 == len(v) else min(e['beats'], v[i + 1]['t'] - e['t'])
                         voices[k].append([round(t + e['t'], 3), round(d, 3), e['midi']])
+                        spell[k].append([e['li'], e['midi'] - 12 * (e['octv'] + 1) - SEMI[e['li']]])
             t0, t = t, t + max(lens)
             sysinfo.append((pi, s, t0, t))
     os.makedirs(outdir, exist_ok=True)
@@ -509,6 +599,8 @@ def main():
     nums = list(range(int(re.sub(r'\D', '', num)), int(re.sub(r'\D', '', last)) + 1)) if last else [fileno]
     score = dict(nums=nums, page=printed[parts[0][0]], tempos=[[0, 72]], dur=round(t, 3),
                  voices=voices, img=[], sys=[])
+    if os.environ.get('OMR_SPELL'):
+        score['spell'] = spell
     SC = 2.0
     for ii, (pi, P, syss, y_from) in enumerate(parts):
         X0, X1 = 36, P.pg.rect.width - 36

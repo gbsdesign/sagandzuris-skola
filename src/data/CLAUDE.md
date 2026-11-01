@@ -300,3 +300,15 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   ordination (+ new item `kh-a28-218` „საფრხე შეიმუსრა“ in `KHELDASKHMA_CHANTS`). XXIX: the three liturgies' chants the
   earlier volumes lacked → წირვა (bishop's meeting, litanies, antiphons, prokeimena, alleluia, cherubic hymns, anaphora,
   communion), the hours mx-5, the Presanctified mx-8, Basil's chant-31 / chant-a1-158, Holy Saturday's Cherubic mx-a27-108.
+- **Whole anthology read again (2026-11-01, the user: „დეტალურად შეამოწმე … ბევრია“)**: nine faults of the reader were found
+  on the page pictures and fixed (list in `scripts/omr/README.md`): a key signature's ♭/♯ taken by a neighbouring first
+  note (A → A♭ and the line without its key), key changes inside a line ignored, two lines side by side reading each other
+  (played twice), the bracketed ♯ ♭ `a A [ {` unknown (~7 600 signs), the 16th flags `R r` read as quarters, a bracketed
+  fermata dropping its note, crossed stems of a divided voice dropping half a line. All 4 153 files of the site were read
+  again with each piece's `page` as the start page (specials: XXI №45/47 as num 45/47 on pp. 86/89/97; XXVII №33 as
+  num 64 with `NEAR_ALL=1` from p. 78); 2 335 changed — 34 327 notes another pitch, 136 with another timing, 11 with new
+  pictures (I №129 „ამინ“ had read №130's lines; XIII №45 had lost its first page, p. 155; ossia lines and empty end
+  lines dropped). Left, not checked on the pictures: 244 lines in 160 files whose voices end at different beats (the
+  reader's `!`, mostly vols II–IV's divided voices and IX №70–82) and 284 lines where two voices sing one letter with
+  different accidentals at once (many are the books' own: per-voice key signatures, the editors' bracketed suggestions).
+  The lists: re-make them with `OMR_AUDIT=1 OMR_SPELL=1` (each file's log, `spell`).

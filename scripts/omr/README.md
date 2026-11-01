@@ -30,5 +30,19 @@ at its number (e.g. only `01 - ტომი I.pdf` for vol. 1) and set `ANTH_DIR
 | `render.py <vol> <pdfPage> <dpi> <out.png>` | a page as a picture, to look at |
 | `find.py` | finds a chant's name in all volumes and study collections (edit the patterns inside) |
 
+Checks (2026-11-01): `OMR_AUDIT=1` prints each key change found inside a line (`K …`) and accidentals no note took
+(`? …`); `OMR_SPELL=1` adds each note's letter and alteration to the JSON (`spell`, for same-letter clash checks — strip it
+before uploading); `OMR_ACCDBG=<systemTop>/<staff>` prints how every note of one staff got its accidental. A warning `!`
+names the line (`line N`). What the reader now handles (all 4 153 files of the site were read again with it):
+an accidental belongs only to a note on its own staff step (a key signature's last ♭ beside a neighbouring first note
+was taken for that note's: A read as A♭, E as E♯); a key signature whose last sign stands < 8 pt before the first note;
+key changes inside a line (a row of ♮/♯/♭, or one sign after a barline or at the same place on every staff; an editors'
+sign over or under a note is not one); each line reads only its own width (two lines printed side by side read each
+other's notes, and a piece played twice); the bracketed ♯ ♭ of vols II–XXIX (`a A [ {`, ♮ = `N`; one over or under a
+note is matched by its middle, wins over a printed accidental — „(♯)“ over a ♮F is the editors' F♯ — and also holds for the
+same note repeated right after it); the 16th flags `R r`; a bracketed fermata does not drop the
+note under it; a crossed pair of stems (the stem-up note the lower) is read both as two voices and as notes that follow
+each other, and the reading whose length the other staves have wins.
+
 Read versions for comparing go to `%TEMP%/omr-cmp`, not into the repo. The rules (what counts as a duplicate,
 which tab, file numbers like 76a = 761, from vol. IV on 12b = 1202) are in `src/data/CLAUDE.md` and `TSIRVA_ANTH` in `src/data/tsirvaChants.ts`.
