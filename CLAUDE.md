@@ -569,7 +569,7 @@
   day's), 12×12 · 9 · backwards too; `buildBade` hides each word exactly once (`countWord`), none inside another, the filler from
   the words' own letters + the alphabet. Themes `data/badeThemes.ts` = the „ოთხეული“ groups but songs/chants + five „ჩამოთვალე!“
   lists. The grid may be drawn in nuskhuri or asomtavruli (`utils/oldScripts.ts`: `toScript` moves mkhedruli by code point, shared
-  with the coming „ხუცური წარწერა“; the app's „SG Old Script“ draws them), the words stay mkhedruli and the alphabet's key
+  with „ხუცური წარწერა“; the app's „SG Old Script“ draws them), the words stay mkhedruli and the alphabet's key
   (`AlphabetKey`) shows under the grid. Tabs „ონლაინ · ჰიბრიდული“: online = one grid a day for the whole school (`gridOfDay`,
   record `students.games.bade.days[iso]` through `useDailyRecord('bade')` — found words, `t:<secs>`, `s:<script>`; the clock
   starts at the first touch and stops while hidden) + endless extra grids of any level (not saved); hybrid (`bade/Teams.tsx`,
@@ -579,6 +579,25 @@
   sheets): twelve 10×10 grids, four a script (mkhedruli, nuskhuri, asomtavruli — the old ones with the key strip), two a page
   cut into A5 cards; the big key (33 letters in three scripts + their old names) with two own grids behind it (not cut), the
   answers with coloured capsules.
+- **„ხუცური წარწერა“** (2026-11-01, the plan's Georgian game №4, like Cryptogram; mapItem `tsartsera`, rules `utils/tsartsera.ts`
+  + test, screens `pages/games/tsartsera/`): a known line in asomtavruli or nuskhuri (`TS_SCRIPTS`), an empty box under each old
+  letter; the player names today's letter of each (`Guesses` keyed by the true letter — one guess fills all its boxes, a guess
+  used under another letter moves). Lines `data/tsartseraLines.ts` (68: Rustaveli, poems from the app's მთქმელი texts, the fathers'
+  sayings, proverbs written by Claude and unchecked — the page says so; only today's 33 letters, `usable`; ids stay, add at the
+  end of a kind). Ways (`sg-tsartsera-mode`): „საიდუმლო“ = 1–3 letters given (`givenLetters`), wrong guesses allowed,
+  „შეცდომები“ shows them for a hint; „გასაღებით“ = the key under the board, a wrong letter refused. Tabs „ონლაინ · ჰიბრიდული“:
+  online = one line a day for the whole school (`lineOfDay`, record `students.games.tsartsera.days[iso]` through
+  `useDailyRecord('tsartsera')` — `t:` secs, `h:` hints, `s:` script, `m:` mode; the way there in `sg-tsartsera-now`) + endless
+  extra lines (`sg-tsartsera-seen`); the letters a player read themself, without a hint, are kept per script
+  (`sg-tsartsera-known`, „შენი ანბანი“). Hybrid (`tsartsera/Teams.tsx`, rules `utils/tsartseraTeams.ts` + test) = „სასწაულების
+  ველი“: teams in turn call a letter — present = a point a box and the turn stays, absent = it passes; a team may read the line
+  (right = the boxes left + `READ_BONUS` 5, wrong = it opens for nobody); 3/5/7 lines, a turn's clock 0/30/45/60 s, kept in
+  `sg-tsartsera-teams`; the screen keyboard's back key is „უკან“ (`GeoKeyboard` `backLabel`), on a computer the board stands
+  left of the keys. Its kit (`khutsuri-tsartsera.mjs`, 6 sheets): twenty lines four a page (asomtavruli 1–12, nuskhuri 13–20,
+  each page with the key strip; the kit's `script` sizes the boxes to fill the page and stops the build on an overflow), the
+  signature in old letters too („ვინ თქვა?“), a secret letter of one's own, the big key with an asomtavruli copybook behind it,
+  the answers and the class game's sheet (letters called, the teams' points). The old scripts' fonts, key strip and big key are
+  shared with „ასოების ბადე“'s kit: `scripts/print-games/oldScript.mjs`.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in

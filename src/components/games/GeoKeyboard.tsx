@@ -23,7 +23,10 @@ export const GeoKeyboard: React.FC<{
   enterLabel?: string;
   disabled?: boolean;
   onSpace?: () => void;
-}> = ({ marks, onKey, onBack, onEnter, enterLabel = 'შემოწმება', disabled, onSpace }) => (
+  /** the back key's own face and state (the teams of „ხუცური წარწერა“: „უკან“ takes the last call back) */
+  backLabel?: React.ReactNode;
+  backDisabled?: boolean;
+}> = ({ marks, onKey, onBack, onEnter, enterLabel = 'შემოწმება', disabled, onSpace, backLabel, backDisabled }) => (
   <div className="space-y-1.5 select-none" role="group" aria-label="კლავიატურა">
     {KEY_ROWS.map((row, i) => (
       <div key={i} className="flex gap-1">
@@ -43,12 +46,12 @@ export const GeoKeyboard: React.FC<{
     <div className="flex gap-1.5 pt-0.5">
       <button
         type="button"
-        disabled={disabled}
+        disabled={disabled || backDisabled}
         onClick={() => { triggerHaptic(5); onBack(); }}
-        aria-label="წაშლა"
+        aria-label={typeof backLabel === 'string' ? backLabel : 'წაშლა'}
         className="w-[30%] h-12 rounded-lg bg-white ring-1 ring-[#e8dcc8] text-[#7a2028] flex items-center justify-center gap-1.5 text-[14px] font-bold active:scale-[0.97] disabled:opacity-50 cursor-pointer"
       >
-        <Delete className="w-5 h-5" /> წაშლა
+        {backLabel ?? <><Delete className="w-5 h-5" /> წაშლა</>}
       </button>
       {onSpace && (
         <button
