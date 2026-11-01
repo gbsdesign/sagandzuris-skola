@@ -6,7 +6,7 @@ import { triggerHaptic } from '../../utils/haptics';
 // The 33-letter Georgian keyboard on the screen (games hub, 2026-10-28): three rows of eleven in the alphabet's order,
 // then a row of „წაშლა“ and „შემოწმება“. A key wears what the game learnt about its letter (green · amber · grey).
 // Born with „დღის სიტყვა“, for every word game after it. Keys are 48 px tall; eleven in a row is what a phone's own
-// Georgian keyboard does.
+// Georgian keyboard does. A game of names of two words („ჩამოთვალე!“) asks for a space key too (`onSpace`).
 
 const KEY: Record<Mark | 'none', string> = {
   none: 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:bg-[#fbf6ec]',
@@ -22,7 +22,8 @@ export const GeoKeyboard: React.FC<{
   onEnter: () => void;
   enterLabel?: string;
   disabled?: boolean;
-}> = ({ marks, onKey, onBack, onEnter, enterLabel = 'შემოწმება', disabled }) => (
+  onSpace?: () => void;
+}> = ({ marks, onKey, onBack, onEnter, enterLabel = 'შემოწმება', disabled, onSpace }) => (
   <div className="space-y-1.5 select-none" role="group" aria-label="კლავიატურა">
     {KEY_ROWS.map((row, i) => (
       <div key={i} className="flex gap-1">
@@ -49,6 +50,17 @@ export const GeoKeyboard: React.FC<{
       >
         <Delete className="w-5 h-5" /> წაშლა
       </button>
+      {onSpace && (
+        <button
+          type="button"
+          disabled={disabled}
+          onClick={() => { triggerHaptic(5); onSpace(); }}
+          aria-label="ჰარი"
+          className="w-[24%] h-12 rounded-lg bg-white ring-1 ring-[#e8dcc8] text-[#8c7b66] text-[13px] font-bold active:scale-[0.97] disabled:opacity-50 cursor-pointer"
+        >
+          ჰარი
+        </button>
+      )}
       <button
         type="button"
         disabled={disabled}
