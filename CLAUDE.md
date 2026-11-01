@@ -563,6 +563,22 @@
   passing in a row ends it). Its kit (`chamotvale.mjs`, 9 sheets): ten lists a page each (the boxes with the app's hints, the
   numbered map for the regions), a blank page for the teacher's own list, the host's key on two pages with the other names
   that count, and the score sheet.
+- **„ასოების ბადე“** (2026-11-01, the plan's Georgian game №3, like Word search; mapItem `bade`, rules `utils/bade.ts` + test,
+  screens `pages/games/bade/`): words of a theme hidden in a square of letters, found by a finger's drag or by tapping the first
+  and the last letter (`lineOf` snaps to the eight ways). Levels `LEVELS`: 8×8 · 6 words · → ↓, 10×10 · 8 · + diagonals (the
+  day's), 12×12 · 9 · backwards too; `buildBade` hides each word exactly once (`countWord`), none inside another, the filler from
+  the words' own letters + the alphabet. Themes `data/badeThemes.ts` = the „ოთხეული“ groups but songs/chants + five „ჩამოთვალე!“
+  lists. The grid may be drawn in nuskhuri or asomtavruli (`utils/oldScripts.ts`: `toScript` moves mkhedruli by code point, shared
+  with the coming „ხუცური წარწერა“; the app's „SG Old Script“ draws them), the words stay mkhedruli and the alphabet's key
+  (`AlphabetKey`) shows under the grid. Tabs „ონლაინ · ჰიბრიდული“: online = one grid a day for the whole school (`gridOfDay`,
+  record `students.games.bade.days[iso]` through `useDailyRecord('bade')` — found words, `t:<secs>`, `s:<script>`; the clock
+  starts at the first touch and stops while hidden) + endless extra grids of any level (not saved); hybrid (`bade/Teams.tsx`,
+  rules `utils/badeTeams.ts` + test) = 2–6 teams before one screen, a team calls a word, the host draws it and taps who found it
+  (or picks it in the list), 2/3/5 minutes a grid, 1–3 grids, the list shown or only the theme; ✕ pauses the clock
+  (`spent` + `t0`), kept in `sg-bade-teams`; on a computer the grid stands left of the list. Its kit (`asoebis-bade.mjs`, 6
+  sheets): twelve 10×10 grids, four a script (mkhedruli, nuskhuri, asomtavruli — the old ones with the key strip), two a page
+  cut into A5 cards; the big key (33 letters in three scripts + their old names) with two own grids behind it (not cut), the
+  answers with coloured capsules.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
