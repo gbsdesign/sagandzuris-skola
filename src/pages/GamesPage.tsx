@@ -179,8 +179,9 @@ export const GamesPage: React.FC = () => {
     triggerHaptic(10);
     if (state === 'locked') { askSignIn(g.title); return; }
     if (state !== 'open') { setSoon(`„${g.title}“ ჯერ მზადდება — მალე დაემატება`); return; }
-    // a game played in a class's room („სამშვილდის ღამე“, the quick games) and „ჩემი გუნდი“ open on the variant tapped
-    if (isRoomGame(g.item) || g.item === 'gundi') requestOpen(g.item, mode === 'online' ? 'online' : 'table');
+    // a game played in a class's room („სამშვილდის ღამე“, the quick games), „ჩემი გუნდი“ and the word games with teams open
+    // on the variant tapped
+    if (isRoomGame(g.item) || g.item === 'gundi' || g.item === 'sitqva' || g.item === 'otkheuli') requestOpen(g.item, mode === 'online' ? 'online' : 'table');
     if (g.item) { openMapItem(g.item); return; }
     if (g.page) { if (g.panel) openPathPanel(g.panel); navigateTo(g.page); }
   };

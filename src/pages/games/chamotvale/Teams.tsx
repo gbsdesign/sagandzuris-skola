@@ -1,19 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Minus, Play, Plus, RotateCcw, SkipForward, Timer, Trophy, Users } from 'lucide-react';
+import { Play, RotateCcw, SkipForward, Timer, Trophy } from 'lucide-react';
 import { chamoListById } from '../../../data/chamotvaleLists';
 import {
   TURN_SECONDS, newTeams, parseTeams, teamCounts, teamFind, teamPass, toQ, tryName, type ChamoList, type ChamoTeams,
 } from '../../../utils/chamotvale';
-import { MAX_TEAMS, MIN_TEAMS } from '../../../utils/roundGames';
-import { TEAM_NAMES } from '../../../utils/amikhseni';
-import { bell, closeAudio, openAudio, tick, type AudioRef } from '../../../utils/gameSounds';
+import { bell, closeAudio, openAudio, type AudioRef } from '../../../utils/gameSounds';
 import { triggerHaptic } from '../../../utils/haptics';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { Chip } from '../../../components/games/Chip';
-import { Btn, Card, FIELD, askConfirm } from '../../../components/ui/kit';
+import { Btn, Card, askConfirm } from '../../../components/ui/kit';
 import { Hint } from '../samshvilde/parts';
-import { Podium, Standings, TimerRing, useNow } from '../rounds/parts';
-import { TEAM_TINT } from '../tsqvilebi/Board';
+import { Podium, Standings, TimerRing } from '../rounds/parts';
+import { TEAM_TINT, TeamChips, TeamsEditor, readTeams, useTurnClock, type TeamsConf } from '../rounds/teams';
 import { FillMap, Slots, type SlotState } from './Board';
 import { Entry } from './Entry';
 import { ListPicker } from './Picker';
@@ -25,60 +23,25 @@ import { TEAMS_CONF, TEAMS_GAME, loadKey, rememberPlayed, save } from './store';
 // end passes it. Once every team has passed in a row nobody remembers more: the rest shows in red. The game is kept on this
 // phone after every turn, so ✕ only pauses it.
 
-interface Conf { teams: number; names: string[]; secs: number; list: string | null }
+interface Conf extends TeamsConf { secs: number; list: string | null }
 const readConf = (raw: unknown): Conf => {
   const o = (raw && typeof raw === 'object' ? raw : {}) as Partial<Conf>;
-  const teams = Math.min(MAX_TEAMS, Math.max(MIN_TEAMS, Math.round(Number(o.teams)) || 2));
-  const names = TEAM_NAMES.map((n, i) => { const v = o.names?.[i]; return (typeof v === 'string' && v.trim() ? v.trim() : n).slice(0, 16); });
   const secs = TURN_SECONDS.includes(o.secs as typeof TURN_SECONDS[number]) ? o.secs! : 15;
   const list = typeof o.list === 'string' && chamoListById(o.list) ? o.list : null;
-  return { teams, names, secs, list };
-};
-
-const TeamChips: React.FC<{ g: ChamoTeams }> = ({ g }) => {
-  const counts = teamCounts(g);
-  return (
-    <ul className="flex flex-wrap gap-1.5" aria-label="გუნდები">
-      {g.names.map((n, t) => {
-        const on = t === g.turn && !g.over;
-        return (
-          <li
-            key={t}
-            className={`h-10 pl-2.5 pr-3 rounded-full inline-flex items-center gap-2 text-[13.5px] font-bold ${on ? 'text-white shadow-[0_2px_6px_rgba(74,52,38,0.25)]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426]'}`}
-            style={on ? { background: TEAM_TINT[t] } : undefined}
-            aria-current={on ? 'true' : undefined}
-          >
-            <span className="w-3 h-3 rounded-full" style={{ background: on ? '#ffffff' : TEAM_TINT[t] }} aria-hidden="true" />
-            <span className="max-w-[8rem] truncate">{n}</span>
-            <span className="tabular-nums">{counts[t]}</span>
-          </li>
-        );
-      })}
-    </ul>
-  );
+  return { ...readTeams(o), secs, list };
 };
 
 const TeamsGame: React.FC<{ g: ChamoTeams; setG: (g: ChamoTeams) => void; onClose: () => void; onAgain: () => void }> = ({ g, setG, onClose, onAgain }) => {
   const { q } = g;
   const audio: AudioRef = useRef<AudioContext | null>(null);
   useEffect(() => { openAudio(audio); return () => closeAudio(audio); }, []);
-  const now = useNow(!g.over);
-  const left = g.over ? 0 : Math.max(0, g.secs - (now - g.t0) / 1000);
+  const left = useTurnClock(audio, g.t0, g.secs, !g.over, () => setG(teamPass(g)));
   const [fresh, setFresh] = useState<number | null>(null);
   useEffect(() => {
     if (fresh === null) return;
     const t = window.setTimeout(() => setFresh(null), 900);
     return () => window.clearTimeout(t);
   }, [fresh]);
-  // the last three seconds tick; the end of a turn rings and passes it
-  const lastTick = useRef(-1);
-  const whole = Math.ceil(left);
-  useEffect(() => {
-    if (g.over) return;
-    if (whole <= 3 && whole > 0 && lastTick.current !== whole) { lastTick.current = whole; tick(audio.current, whole === 1); }
-    if (left <= 0) { lastTick.current = -1; bell(audio.current); setG(teamPass(g)); }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [whole, g.over]);
   useEffect(() => { if (g.over) bell(audio.current); }, [g.over]);
 
   const owner = (i: number) => g.owner[i];
@@ -122,7 +85,6 @@ const TeamsGame: React.FC<{ g: ChamoTeams; setG: (g: ChamoTeams) => void; onClos
     if (t.kind === 'found') {
       triggerHaptic(15);
       setFresh(t.item);
-      lastTick.current = -1;
       setG(teamFind(g, t.item));
     }
     return t;
@@ -130,7 +92,7 @@ const TeamsGame: React.FC<{ g: ChamoTeams; setG: (g: ChamoTeams) => void; onClos
   return (
     <TableScreen title={q.title} onClose={onClose}>
       <div className="py-2 space-y-3">
-        <TeamChips g={g} />
+        <TeamChips names={g.names} scores={teamCounts(g)} turn={g.turn} />
         <div className="flex items-center gap-3">
           <p className="min-w-0 flex-1 font-serif-ge text-[18px] font-bold leading-snug" role="status" style={{ color: TEAM_TINT[g.turn] }}>
             {last && last.item >= 0 ? `${g.names[last.team]} — სწორია! ახლა: ${who}`
@@ -140,7 +102,7 @@ const TeamsGame: React.FC<{ g: ChamoTeams; setG: (g: ChamoTeams) => void; onClos
           <TimerRing left={left} total={g.secs} size="sm" />
         </div>
         <Entry items={q.items} onTry={onTry} forTeam>
-          <Btn kind="ghost" full onClick={() => { triggerHaptic(10); lastTick.current = -1; setG(teamPass(g)); }} icon={<SkipForward />}>ვერ თქვეს — შემდეგი გუნდი</Btn>
+          <Btn kind="ghost" full onClick={() => { triggerHaptic(10); setG(teamPass(g)); }} icon={<SkipForward />}>ვერ თქვეს — შემდეგი გუნდი</Btn>
           {q.map && <FillMap state={state} tint={tint} />}
           <Slots items={q.items} state={state} tint={tint} fresh={fresh} />
         </Entry>
@@ -187,28 +149,7 @@ export const ChamotvaleTeams: React.FC = () => {
         </Card>
       )}
       <Card className="!p-4 space-y-4">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-[13.5px] font-bold text-[#4a3426] flex items-center gap-1.5"><Users className="w-4 h-4 text-[#7a2028]" /> გუნდები · {conf.teams}</p>
-          <div className="flex items-center gap-1">
-            <button type="button" aria-label="ერთით ნაკლები" disabled={conf.teams <= MIN_TEAMS} onClick={() => { triggerHaptic(5); setConf({ ...conf, teams: conf.teams - 1 }); }} className="w-11 h-11 rounded-full flex items-center justify-center text-[#7a2028] ring-1 ring-[#e8dcc8] bg-white disabled:opacity-35 cursor-pointer disabled:cursor-default"><Minus className="w-4 h-4" /></button>
-            <button type="button" aria-label="ერთით მეტი" disabled={conf.teams >= MAX_TEAMS} onClick={() => { triggerHaptic(5); setConf({ ...conf, teams: conf.teams + 1 }); }} className="w-11 h-11 rounded-full flex items-center justify-center text-[#7a2028] ring-1 ring-[#e8dcc8] bg-white disabled:opacity-35 cursor-pointer disabled:cursor-default"><Plus className="w-4 h-4" /></button>
-          </div>
-        </div>
-        <div className="grid grid-cols-2 gap-2">
-          {conf.names.slice(0, conf.teams).map((n, i) => (
-            <div key={i} className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 w-3 h-3 rounded-full" style={{ background: TEAM_TINT[i] }} aria-hidden="true" />
-              <input
-                value={n}
-                maxLength={16}
-                aria-label={`გუნდი ${i + 1}`}
-                onChange={e => setConf({ ...conf, names: conf.names.map((x, k) => (k === i ? e.target.value : x)) })}
-                onBlur={() => { if (!conf.names[i].trim()) setConf({ ...conf, names: conf.names.map((x, k) => (k === i ? TEAM_NAMES[i] : x)) }); }}
-                className={`${FIELD} !h-11 !pl-8 !text-[14px] font-bold`}
-              />
-            </div>
-          ))}
-        </div>
+        <TeamsEditor conf={conf} onChange={c => setConf({ ...conf, ...c })} />
         <div className="space-y-2">
           <p className="text-[13.5px] font-bold text-[#4a3426] flex items-center gap-1.5"><Timer className="w-4 h-4 text-[#7a2028]" /> სვლის დრო</p>
           <div className="flex flex-wrap gap-1.5" role="group" aria-label="სვლის დრო">

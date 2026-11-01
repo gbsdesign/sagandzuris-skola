@@ -18,7 +18,7 @@ export const clipOf = (s: TsqSound): Clip => ('url' in s
   : { score: { book: s.book, num: s.num }, voices: 0, seconds: TSQ_CLIP });
 
 /** the teams' colours on one phone (a found pair takes its finder's) */
-export const TEAM_TINT = ['#2b5f8a', '#cf7428', '#4f8a3c', '#5b3f8c', '#b23a48', '#24827e'];
+export { TEAM_TINT } from '../rounds/teams';
 const FOUND = '#2f7d4f';
 
 export interface BoardPlay {
