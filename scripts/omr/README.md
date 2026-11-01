@@ -44,5 +44,19 @@ same note repeated right after it); the 16th flags `R r`; a bracketed fermata do
 note under it; a crossed pair of stems (the stem-up note the lower) is read both as two voices and as notes that follow
 each other, and the reading whose length the other staves have wins.
 
+Second round (2026-11-01 evening, the user: „სხვადასხვა ხერხებით … რამე ხომ არ გამოიპარა“). `OMR_AUDIT=1` now also
+prints, per line, a voice that falls silent with no rest printed or a note cut by its next one (`? … gap|cut` — the
+other voices' notes struck at the same place set the time, so a misread length shows here), and flags, dots, „3“s and
+„5/6/7“s that no note took (`? … unused flag|dot|3|tuplet`; signs of small notes are skipped; most unused dots are
+repeat signs and staccatos). Fixed after looking at what they found: a head's normal size goes with its staff's line
+spacing (smaller staves — a footnote's or a whole piece's — lost their ♭/♯), and a staff whose heads are all smaller
+than the other staves' is still sung (vol. II's bass) — a short small system beside the music (a cue „თა! მომიხს…“)
+stays silent; a key change before a line's first note (a line that starts with rests); a small note's own ♭/♯ no longer
+lands on the full-size note beside it (C read as C♭); a drawing's beams are read with their short 16th beams (4 pt wide —
+they were dropped, so a dotted 8th + 16th read 8th + 8th); two voices' rests printed at one place are one rest; a whole
+note printed beside a quarter of the same pitch is the other voice's (a unison); five, six or seven notes of one value
+under „5“ „6“ „7“ fill the time of four. Tried and dropped: a second printed as two stems the same way read as one
+chord (more gaps elsewhere); comparing near-copies of one chant across the volumes (their differences are the editions').
+
 Read versions for comparing go to `%TEMP%/omr-cmp`, not into the repo. The rules (what counts as a duplicate,
 which tab, file numbers like 76a = 761, from vol. IV on 12b = 1202) are in `src/data/CLAUDE.md` and `TSIRVA_ANTH` in `src/data/tsirvaChants.ts`.
