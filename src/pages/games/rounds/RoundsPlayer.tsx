@@ -58,11 +58,20 @@ export const RoundsPlayer: React.FC<{
     if (snippet.state === 'play' || snippet.state === 'load') snippet.stop();
     else snippet.play(clip);
   };
-  const send = () => {
-    if (pick === null || answered || left <= 0) return;
+  // the round this phone has sent an answer for: an answer that sends itself goes once (a tap may send again)
+  const sentFor = useRef('');
+  const send = (auto = false) => {
+    if (pick === null || answered || left <= 0 || (auto && sentFor.current === v.key)) return;
+    sentFor.current = v.key;
     triggerHaptic(15);
     onAnswer(pick, Date.now() - start);
   };
+  // an answer that grows as one plays: whole, it goes in by itself; else what there is, as the time runs out
+  const late = asking && !!face.sendLate && left > 0 && left < 1.6;
+  useEffect(() => {
+    if (pick !== null && (late || face.autoSend?.(v.q, pick))) send(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pick, late]);
 
   const right = <CallBtn gc={gc} />;
   const watching = me < 0 && (
@@ -127,7 +136,7 @@ export const RoundsPlayer: React.FC<{
       right={right}
       onClose={onHide}
       footer={!done && (
-        <Btn size="lg" full disabled={pick === null} onClick={send} icon={<Send />} className="!h-14 !text-[15.5px]">{face.confirm(v.q, pick)}</Btn>
+        <Btn size="lg" full disabled={pick === null} onClick={() => send()} icon={<Send />} className="!h-14 !text-[15.5px]">{face.confirm(v.q, pick)}</Btn>
       )}
     >
       <div className="py-2 space-y-4">

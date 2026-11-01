@@ -390,7 +390,7 @@
   (`HybridState`, `markTeam`, kept on the device so ✕ only pauses). The room store is generic since then: `utils/gameRoom.ts`
   `createRooms(be, engine, moves)` over a `RoomEngine` (`games` it plays; samshvilde's is `utils/samshvildeRoom.ts`), the
   app's two stores in `utils/gameRoomFirestore.ts` (`rooms` = samshvilde, `roundRooms` = the quick games: `timeUp(key)`,
-  `reveal`, `next`); the rules let a room be opened for the fourteen `ROOM_GAMES`, up to 40 players, an act may carry `ms`.
+  `reveal`, `next`); the rules let a room be opened for the fifteen `ROOM_GAMES`, up to 40 players, an act may carry `ms`.
   Invitations name their game: `data/roomGames.ts` (titles, the hub item, a chat card's `room` = `game:roomId` — a
   samshvilde card keeps the bare id), the Worker's `GAME_TITLES`, `/?open=<game>&c=&r=`, icons
   `components/games/roomGameIcons.ts`; the online tab of every room game is `components/games/RoomSetup.tsx`. Screens
@@ -486,6 +486,16 @@
   (`sg-mprinavi-class-best`); clefs სოლის / ფას / ორივე, names დო რე მი / C D E (H = სი); the staff is drawn with abcjs's own signs
   (`mprinavi/glyphs.ts`, `Staff.tsx`). `RoundsPage` takes `table` — a node in place of the hybrid setup;
   `components/games/CircleNames.tsx` = the circle's names (`sg-circle`, a class in one tap), shared by both.
+  „ხმის წყვილები“ (2026-11-01, the plan's №3, like Memory; mapItem `tsqvilebi`, `utils/tsqvilebi.ts` + test): cards face down, a
+  sound card plays a chant's opening on the synthesizer (book notes, `voices: 0`, 6 s) or a folk song's take (`kutkhePool`, else the
+  program's songs with notes — `data/tsqvilebiPool.ts`), its pair is its name or (easier) the same sound; 8 / 12 / 16 cards (three
+  columns for twelve), chants / songs / both, kept in `sg-tsqvilebi-*`. The board (`tsqvilebi/Board.tsx`, `useBoardPlay`): a 3-D turn
+  (`.tsq-*` in index.css), a miss closes once its sound is over, an open or found sound card plays again, a found pair keeps green or
+  its team's colour; long names break between syllables (`softBreaks`, soft hyphens). Online = three boards (`fixedRounds`), the
+  same deal on every phone, 30 s + 14 s a pair; 100 a pair + up to 600 for a cleared board by fewer moves; the answer is
+  `encodeResult(pairs, moves)` and goes by itself — whole at once, else as the time runs out (the face's new `autoSend` /
+  `sendLate`, RoundsPlayer). „მარტო“ = one board, fewest moves, the record per size and way (`sg-tsqvilebi-best-<cards>[-same]`);
+  its hybrid tab = teams in turn on one phone (`tsqvilebi/Teams.tsx`, a pair goes again, kept in `sg-tsqvilebi-teams`).
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
@@ -541,6 +551,10 @@
   behind). Both draw their staves with `scripts/print-games/staffSvg.mjs` (abcjs's signs from node_modules, the notes evenly
   spaced so a word fits under each — abcjs's own layout squeezed them; `clefFor` takes the treble or the octave-down clef,
   whichever needs fewer ledger lines).
+  „ხმის წყვილები“'s kit = three Memory decks of 13 pairs, each back its own colour: ა a melody's opening on a staff (the host sings
+  it) ↔ its name, ბ a note on the treble staff ↔ its key on a two-octave keyboard, named, გ each region's first song of „საიდანაა
+  სიმღერა?“'s kit (`SONGS`, now exported) ↔ its region on the small map; each deck's 27th card is the host's key (ბ: the notes'
+  guide), taken out before play.
 - **No religious pictures in the games (the user's rule, 2026-11-01; corrected the same day: „რელიგიური და მუსიკალური კითხვები
   დატოვე, უბრალოდ ვიზუალს ნუ გამოიყენებ“)**: no cross, church, icon or domed-church mark anywhere in a game or a print kit (the
   series emblem is `grapeEmblem` in `scripts/print-games/lib.mjs`, the Catan kit's shields carry an eight-rayed sun, the caravan
