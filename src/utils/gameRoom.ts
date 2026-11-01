@@ -14,7 +14,7 @@
 // utils/gameRoomFirestore.ts.
 
 /** the games played in a room; firestore.rules lets a room be opened only for these */
-export const ROOM_GAMES = ['samshvilde', 'kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri', 'hangi', 'akordi', 'rvakhma', 'ruka', 'gagrdzele', 'hangebi', 'eqo', 'mprinavi', 'tsqvilebi', 'mesame', 'chamotvale'] as const;
+export const ROOM_GAMES = ['samshvilde', 'kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri', 'hangi', 'akordi', 'rvakhma', 'ruka', 'gagrdzele', 'hangebi', 'eqo', 'mprinavi', 'tsqvilebi', 'mesame', 'chamotvale', 'pantomima'] as const;
 export type RoomGame = typeof ROOM_GAMES[number];
 export const isRoomGame = (v: unknown): v is RoomGame => typeof v === 'string' && (ROOM_GAMES as readonly string[]).includes(v);
 

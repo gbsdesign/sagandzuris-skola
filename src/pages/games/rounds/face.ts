@@ -40,6 +40,9 @@ export interface RoundFace {
   sides?: { many: string; one: string };
   /** the round in words, when the game asks one (a question): under the clock on every screen while it is asked */
   Ask?: React.FC<{ q: PublicQ; who: 'host' | 'player' | 'teams'; step: number; steps: number }>;
+  /** what only the host sees while a round is asked, from the whole round (2026-11-01: the word the host shows in
+   * „პანტომიმა“) */
+  Secret?: React.FC<{ q: RoundQ }>;
   /** the game's own choices: under the rounds in the lobby (the host's) and in the one-phone setup */
   Options?: React.FC;
   /** more on the game's page, under both tabs (the teacher's own questions) */
