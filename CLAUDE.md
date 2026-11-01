@@ -690,6 +690,27 @@
   then the type steps down, room left becomes more note lines), the book's own „ჩემი გზა“ strip, ა ბ გ cards for six teams (the
   letter on both sides, the back in the team's colour), „ჩემი გზა“ for all four stories with „ჩემი წინაპრის გზა“ (ask the family)
   and the class's score sheet behind it, the teacher's key (the letters there are the book's; the app's hybrid shuffles anew).
+- **„ნუ იტყვი!“ and „ერთი მინიშნება“** (2026-11-01, like Taboo and Just One; mapItems `tabu`, `minishneba`, the hub opens their tab by
+  `requestOpen('tabu' | 'minishneba', …)`): one deck for both — `data/tabuCards.ts`, 180 cards in 12 themes (`TABU_THEMES`), a word +
+  five forbidden words from the vaguest to the most telling (written by Claude, unchecked — the pages say so; one word a card, none
+  holding another — the test checks it). „ნუ იტყვი!“ (`utils/tabu.ts` + test, `pages/games/tabu/`): „ონლაინ“ = the day's 20 cards for
+  the whole school (`dayDeal`), the forbidden words come one by one as clues and the word is typed into letter boxes (`LetterBoxes`,
+  `WordField` — the screen keys of `sg-chamotvale-keys`): 5 points with the first clue, one less a clue, a wrong word opens the next,
+  after the fifth the card is lost (`tryWord`); the day's record `students.games.tabu.days[iso]` through `useDailyRecord('tabu')`
+  (`p:<a digit a card>`, `pointsOf`), the run in `sg-tabu-now`; after the day free cards by theme (`sg-tabu-themes`), stats, share and
+  the hub's meta line (`tabuMeta`); the vine counts it. „ჰიბრიდული“ (`tabu/Teams.tsx`, `TabuTable`, kept in `sg-tabu-teams`, settings
+  `sg-tabu-table`): 2–6 teams, the explainer's phone shows the card to them and to a watcher of the next team; გამოიცნო +1 · აკრძალა −1 ·
+  გამოტოვება −1 or 0; 60/90/120 s; 10/20/30 points; the turn's list can be mended before its points; the winner at the round's end
+  (`tabuWinner`). „ერთი მინიშნება“ (`utils/minishneba.ts` + test, `pages/games/minishneba/`): thirteen cards (`JO_CARDS`), one try a
+  word: right +1, wrong loses the next card too (the last: a won one), „არ ვიცი“ only this one (`judgeGuess`), the original's scale
+  (`joVerdict`). Alone (`Solo.tsx`; `sg-minishneba-run`, `-seen`, `-best`): the clues are a card's forbidden words with the last one or
+  two struck as „the same“ (`newJoRun`). The class (`Table.tsx`, `JoTable`, `sg-minishneba-table`): 3–8 names, one phone goes round —
+  each giver opens the word and writes a clue in secret, the same ones and parts of the word strike themselves (`judgeClues`, `baseOf`:
+  plural and last vowel off), the givers then check the notes and strike by hand what the app missed (`strikeClue`, `off`, `notesOf`),
+  the phone goes to the guesser, a reveal can be mended (`mendGuess`). Kits: `nu-itqvi.mjs` (14 sheets: the 180 cards 47×66 mm,
+  sixteen a sheet, + 12 blank, a score sheet, an example card on the cover) and `erti-minishneba.mjs` (11 sheets: 60 cards of five
+  numbered words — 300 nouns hand-picked from the „ამიხსენი“ bank, five themes a card, the build stops if one leaves the bank —, 3
+  blank, eight A6 clue boards whose back is the board turned down, a score sheet of ten games with the scale).
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
