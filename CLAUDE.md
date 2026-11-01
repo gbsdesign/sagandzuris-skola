@@ -727,6 +727,22 @@
   cards 47×66 mm, sixteen a sheet (the verb in the theme's band, the word big, two words on two lines) + 10 blank, the theme on the
   back's strip, a score sheet (12 rounds × 6 teams, the app's settings to tick) and rules with the forehead and little ones' ways and
   the customary signs.
+- **„ვინ ვარ მე?“** (2026-11-01, like Guess Who? and Headbanz; mapItem `vin`, the hub opens its tab by `requestOpen('vin', 'online' |
+  'table')`; rules `utils/vin.ts` + test, screens `pages/games/vin/`): 50 famous Georgians in `data/vinPeople.ts` (all deceased; sex,
+  birth year, kinds, the lari note, 4–5 facts — written by Claude, unchecked, the pages say so; ids stay). 19 ready yes/no questions
+  (`VIN_QUESTIONS`: 12 „who“ from the kinds + 7 „born before“ `VIN_YEARS`, none anybody's year). Alone (`Solo.tsx`): the day's person
+  for the whole school (`hiddenOfDay`, each once in a round of 50 days) among 24 names (`dayRun`; `boardFor` leaves out the hidden
+  one's twins — people every question answers alike), the questions in a sheet, each answer greys the board out (`ruledOut`), a name
+  tapped is a guess and a question too, 20 at most; the record `students.games.vin.days[iso]` through `useDailyRecord('vin')` —
+  `guesses` = the asked `q:<id>` / `g:<person>`, so the day goes on on any phone; then free games of 24 or all 50 (`sg-vin-free`),
+  stats, share, the hub's meta (`vinMeta`); the vine counts it. „ჰიბრიდული“ (`Table.tsx`, kept in `sg-vin-game`, settings
+  `sg-vin-table`): 2–6 teams, 1–3 rounds, a turn's clock none / 2 / 3 min (`VIN_SECONDS`); the guesser's back to the screen or the phone
+  on the forehead, the class sees the name and the facts and answers; „+1 კითხვა“, „გამოიცნო!“ (the guess is the last question),
+  „კითხვა −1“, „ვერ გამოიცნო“; 3 points within 5 questions, 2 within 10, 1 within 20 (`vinPoints`); a phone on its side gets the
+  controls in one row and the facts in two columns (`useShort`). Its kit (`vin-var-me.mjs`, 9 sheets): 50 cards + 4 blank, nine a
+  sheet — the name, role, birth, facts and the yes-tags all on the front (the back faces the guesser) —, the board of „ვინ
+  ჩაიფიქრა?“ (two players: a row a person, the tags as dots in the questions' columns, so a „no“ crosses out a column), the question
+  counter (twenty circles a turn in the points' colours) and the rules of three games (forehead, the duel, „ფაქტებით“ 5…1).
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
