@@ -9,7 +9,7 @@ const previews = args.find(a => a.startsWith('--previews='))?.slice('--previews=
 const ALL = ['mepis-kari', 'samshvildis-game', 'okros-khana', 'lurji-supra', 'ori-takhti', 'qaravani', 'dghis-sitqva', 'otkheuli', 'amikhseni', 'ra-sad-rodis',
   'dghis-hangi', 'sam-notshi', 'khma-khmad', 'saidanaa-simghera', 'kartuli-akordi', 'rva-khma', 'rukis-viktorina', 'gagrdzele', 'hangebi', 'eqo', 'mprinavi-notebi', 'khmis-tsqvilebi',
   'mesame-khma', 'chemi-gundi', 'khmebis-turniri', 'chamotvale', 'asoebis-bade', 'khutsuri-tsartsera', 'drois-khazi', 'chemi-vazi', 'chaitsvi-qartulad', 'sami-damtserloba', 'tsikhis-gasaghebi', 'tsinapris-gza',
-  'nu-itqvi', 'erti-minishneba', 'pantomima', 'vin-var-me', 'saidumlo-sakhelebi'];
+  'nu-itqvi', 'erti-minishneba', 'pantomima', 'vin-var-me', 'saidumlo-sakhelebi', 'utskho-sopelshi'];
 
 for (const id of ids.length ? ids : ALL) {
   const game = await import(`./games/${id}.mjs`);
