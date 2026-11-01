@@ -674,6 +674,22 @@
   piece the door before gave; the castle's story; its scroll — the old script's key, ნარიყალა's with the numbers), a teacher's page a
   castle (answers, both hints, the tune's opening on a staff, the bells' phrase, the notes to read aloud), the teams' sheet and the
   hint tokens (two hints + one answer a team). A door card's empty part holds a faint castle (`.ts-fill`, dropped when too small).
+- **„წინაპრის გზა“** (2026-11-01, the plan's Georgian game №10, like Choose Your Own Adventure; mapItem `tsinapari`, rules
+  `utils/tsinapari.ts` + test, screens `pages/games/tsinapari/`): a real ancestor's life told as forks — at each one three ways, the
+  one the ancestor took and two what-ifs, each with where it would have led (`then`) and what really happened (`real`). Four stories in
+  `data/tsinapariStories.ts` (ფილიმონ ქორიძე, კარბელაშვილები, ექვთიმე კერესელიძე, არტემ ერქომაიშვილი; 5–8 forks each, their facts from
+  the app's „წინაპრები“ biographies — `ancestor` = the bio's id —, the scenes and what-ifs written by Claude, unchecked, the page says
+  so). The ways' order a fork = `choiceOrder(seed, step)`; stars by the ways the ancestor took (`starsOf`: all but one ★★★, half ★★).
+  The monogram (`Medallion`) is the initials in asomtavruli — no portraits, and no ქ (its old capital looks like a cross). Tabs
+  „ონლაინ · ჰიბრიდული“: alone (`Solo.tsx`: the run in `sg-tsinapari-run`, ✕ pauses, the best per story `sg-tsinapari-best`, the end shows
+  the real path and opens the ancestor's biography when its section is open) and the class (`Teams.tsx`, `PathTable`, kept in
+  `sg-tsinapari-table`): teams hold up their ა ბ გ cards, the host taps each team's letter, „რა მოხდა სინამდვილეში?“ gives a point to
+  the ancestor's way (a tap after it mends a slip), or the whole class as one team picks a way. Its kit (`tsinapris-gza.mjs`, 13
+  sheets): each story a gamebook of four pages (§ 1 + one § a way, numbers shuffled by a seed of its id; the print's script flows the
+  sections over the pages, a § may go on in the next column but never over a page, a tight last page drops its note lines first,
+  then the type steps down, room left becomes more note lines), the book's own „ჩემი გზა“ strip, ა ბ გ cards for six teams (the
+  letter on both sides, the back in the team's colour), „ჩემი გზა“ for all four stories with „ჩემი წინაპრის გზა“ (ask the family)
+  and the class's score sheet behind it, the teacher's key (the letters there are the book's; the app's hybrid shuffles anew).
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
