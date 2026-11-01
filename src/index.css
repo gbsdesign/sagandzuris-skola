@@ -201,3 +201,13 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
 /* a wrong pick in „ოთხეული“ / „დღის სიტყვა“ shakes the chosen tiles once */
 @keyframes sg-shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-6px); } 40%, 80% { transform: translateX(6px); } }
 .sg-shake { animation: sg-shake 0.4s ease-in-out; }
+
+/* „ხმის წყვილები“: a card turns over (its back and its face are two sides of one plate); a sounding card's three bars */
+.tsq-card { perspective: 900px; }
+.tsq-inner { transform-style: preserve-3d; transition: transform 0.4s cubic-bezier(0.2, 0.8, 0.2, 1); }
+.tsq-inner.up { transform: rotateY(180deg); }
+.tsq-side { backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.tsq-face { transform: rotateY(180deg); }
+@keyframes tsq-bar { 0%, 100% { transform: scaleY(0.3); } 50% { transform: scaleY(1); } }
+.tsq-bar { transform-origin: bottom; animation: tsq-bar 0.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .tsq-inner { transition: none; } .tsq-bar { animation: none; } }

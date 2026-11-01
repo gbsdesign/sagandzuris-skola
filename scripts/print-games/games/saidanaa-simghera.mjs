@@ -40,7 +40,8 @@ const firstWords = s => {
 
 const regionsOfTitle = new Map();
 for (const s of FOLK_SONGS) if (!s.ownerOnly) regionsOfTitle.set(norm(s.title), new Set([...(regionsOfTitle.get(norm(s.title)) ?? []), s.region]));
-const SONGS = REGIONS.flatMap(r => {
+/** the songs picked for each region, the most recorded first (also „ხმის წყვილები“'s third deck takes each region's first) */
+export const SONGS = REGIONS.flatMap(r => {
   const pool = FOLK_SONGS
     .filter(s => s.region === r.id && !s.ownerOnly && regionsOfTitle.get(norm(s.title)).size === 1 && !NAMES_A_REGION.test(s.title)
       && !NOT_A_SONG.test(norm(s.title)) && s.genre !== 'საკრავიერი')

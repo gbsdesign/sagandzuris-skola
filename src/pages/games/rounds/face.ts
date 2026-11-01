@@ -44,6 +44,10 @@ export interface RoundFace {
   Options?: React.FC;
   /** more on the game's page, under both tabs (the teacher's own questions) */
   Extra?: React.FC;
+  /** an answer that grows as the player plays (2026-11-01, „ხმის წყვილები“: the pairs found so far): it goes in by itself
+   * once it is whole (`autoSend`), and what is marked goes in by itself as the time runs out (`sendLate`) */
+  autoSend?: (q: PublicQ, pick: number) => boolean;
+  sendLate?: boolean;
   /** a player's controls; `pick` is the answer marked, not sent yet (null: taken back) */
   Pick: React.FC<{ q: PublicQ; pick: number | null; onPick: (p: number | null) => void }>;
   /** an answer in words (the confirm button, „შენ: …“) */
