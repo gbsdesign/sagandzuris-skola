@@ -32,6 +32,7 @@ export const ROOM_GAME_INFO: Record<RoomGame, RoomGameInfo> = {
   chamotvale: { title: 'ჩამოთვალე!', item: 'chamotvale', host: 'წამყვანი' },
   pantomima: { title: 'პანტომიმა', item: 'pantomima', host: 'მსახიობი' },
   nakhati: { title: 'ნახატობანა', item: 'nakhati', host: 'მხატვარი' },
+  loto: { title: 'საგალობო ლოტო', item: 'loto', host: 'წამყვანი' },
 };
 
 /** the chat card's `room`: „სამშვილდის ღამე“ names its room alone (its cards came first), every other game `game:roomId` */

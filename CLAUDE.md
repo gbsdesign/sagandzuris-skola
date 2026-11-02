@@ -804,6 +804,24 @@
   mended; 2–4 circles. Themes, seen words: `sg-nakhati-themes` / `-seen`. Its kit (`nakhatobana.mjs`, 7 sheets): „სახატავი გზა“
   (56 squares, 7 a row, every row each theme once, ★ = „ყველა ხატავს“, start/finish), 22 cards of seven words — one a theme,
   shuffled with a seed — + 5 blank, six standing pawns in the app's team colours, a die net, drawing frames, the rules.
+- **„საგალობო ლოტო“** (2026-11-01, like Bingo; mapItem `loto`, hub id `sagalobo-loto`; rules `utils/loto.ts` + test, screens
+  `pages/games/loto/`): a card of nine names three by three (`cardOf(seed, seat, n)`: the least used names first, every card a
+  different set; `LINES` = 8, `linesOf`, `lineCells`, `toLine`). Online = a quick-games room (`loto` in `ROUND_GAMES`/`ROOM_GAMES`/the
+  rules/the Worker's titles): 13 rounds, every name once (`lotoRounds`); a seat's card comes from the round's seed and the seat, and
+  the marks ride on from round to round inside the round itself (the rounds engine's new `carry`; `points` now gets the seat): a
+  pick on my card = 100 + up to 100 by speed, each new line +300 („საგანძური!“), `NOT_MINE` = „ჩემს ბარათზე არ არის“. The face's new
+  `keepPick` keeps the card on the phone after sending; `Reveal` and `verdict` get the seat, `Reveal` the names (the host: who
+  closed a line, who is one short). Decks (`loto/decks.ts`, `sg-loto-deck`): chants — the pearls' known chants without
+  `PLAIN_OPENINGS` (`data/lotoKit.ts`: openings on a reciting tone cannot be told by their sound — `plainOpening`, the test checks
+  the list against the notes), the class program's first — on the synthesizer, 16 s from the start; songs and regions only while
+  the recordings may be heard. „მარტო“ (`Solo.tsx`, `newLotoSolo`/`soloAnswer`): my card against the deck in a random order, a wrong
+  tap erases my last mark and puts it back, a piece of mine let pass comes again; the run in `sg-loto-solo`, the best time per deck
+  `sg-loto-best`. „ჰიბრიდული“ (`Table.tsx`, `LotoTable`, kept in `sg-loto-table`): one phone plays; printed cards (`kitCards`: 30
+  cards over `LOTO_KIT`'s 20 chants, seed `KIT_SEED` 1501 — never reorder that list) are checked by their number (`checkKitCard`),
+  own cards by the names tapped (`checkNames`); the wins with undo. On a phone on its side the card stands beside the rest
+  (`Card.tsx` `side`, `useShort`, `CARD_SIDE`). Its kit (`sagalobo-loto.mjs`, 10 sheets): the 30 cards 98×90 mm six a sheet (each
+  name with its service's colour, the number behind), the host's list of the 20 openings on staves, 20 slips to draw, „რა ჟღერდა“
+  (four games a side: the order written by each chant — a line counts when its three names have numbers), six blank cards.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
