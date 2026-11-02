@@ -415,6 +415,8 @@ await t('a drawing has its lines', assertFails(setDoc(doc(gp1, 'classes', 'cg', 
 await t('not too many of them', assertFails(setDoc(doc(gp1, 'classes', 'cg', 'messages', 'dm3'), drawMsg({ ink: 'A'.repeat(40001) }))));
 await t('its word is short', assertFails(setDoc(doc(gp1, 'classes', 'cg', 'messages', 'dm4'), drawMsg({ ans: 'A'.repeat(201) }))));
 await t('an outsider cannot post a drawing', assertFails(setDoc(doc(gout, 'classes', 'cg', 'messages', 'dm5'), drawMsg({ uid: 'gout' }))));
+// „საგალობო ლოტო“ (2026-11-01): a room of it
+await t('a member opens a bingo room', assertSucceeds(setDoc(doc(gp1, G, 'l1'), room('gp1', { game: 'loto' }))));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();

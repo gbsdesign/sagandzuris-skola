@@ -56,18 +56,22 @@ export interface RoundFace {
    * once it is whole (`autoSend`), and what is marked goes in by itself as the time runs out (`sendLate`) */
   autoSend?: (q: PublicQ, pick: number) => boolean;
   sendLate?: boolean;
-  /** a player's controls; `pick` is the answer marked, not sent yet (null: taken back) */
-  Pick: React.FC<{ q: PublicQ; pick: number | null; onPick: (p: number | null) => void }>;
+  /** a player's controls; `pick` is the answer marked, not sent yet (null: taken back); `seat` — the player's own (a game
+   * with a card of each one's own, „საგალობო ლოტო“); `locked` — the answer is sent, the controls only show it */
+  Pick: React.FC<{ q: PublicQ; pick: number | null; onPick: (p: number | null) => void; seat?: number; locked?: boolean }>;
+  /** the controls stay on the screen once the answer is sent (locked, showing it): a card one keeps looking at */
+  keepPick?: boolean;
   /** an answer in words (the confirm button, „შენ: …“) */
   pickName(q: PublicQ, pick: number): string;
   /** the confirm button's words, with the answer marked */
   confirm(q: PublicQ, pick: number | null): string;
-  /** the reveal's picture: the right answer, how many picked what, my own pick */
-  Reveal: React.FC<{ q: PublicQ; picks?: (number | null)[] | null; mine?: number | null }>;
+  /** the reveal's picture: the right answer, how many picked what, my own pick (`seat`: mine, on a player's phone; `names`:
+   * everybody's, by seat) */
+  Reveal: React.FC<{ q: PublicQ; picks?: (number | null)[] | null; mine?: number | null; seat?: number; names?: string[] }>;
   /** the answer's card (what it was, where from, who) */
   Answer: React.FC<{ q: PublicQ }>;
-  /** my answer, in words (`step`: the step it was sent at) */
-  verdict(q: PublicQ, pick: number | null, step?: number | null): { tone: 'right' | 'near' | 'wrong' | 'none'; text: string };
+  /** my answer, in words (`step`: the step it was sent at; `seat`: mine) */
+  verdict(q: PublicQ, pick: number | null, step?: number | null, seat?: number): { tone: 'right' | 'near' | 'wrong' | 'none'; text: string };
   /** the one-phone game: what the host may mark for a team */
   marks: readonly { points: number; label: string }[];
   /** the line when there is nothing to play (the recordings are not opened for this member) */

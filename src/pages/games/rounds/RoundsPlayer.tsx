@@ -104,7 +104,7 @@ export const RoundsPlayer: React.FC<{
   }
 
   if (v.phase === 'reveal') {
-    const verdict = me >= 0 ? face.verdict(v.q, v.picks?.[me] ?? null, v.pickSteps?.[me] ?? null) : null;
+    const verdict = me >= 0 ? face.verdict(v.q, v.picks?.[me] ?? null, v.pickSteps?.[me] ?? null, me) : null;
     const gained = me >= 0 ? v.gained?.[me] ?? 0 : 0;
     const place = me >= 0 ? placesOf(v.scores)[me] : 0;
     return (
@@ -119,7 +119,7 @@ export const RoundsPlayer: React.FC<{
             </div>
           )}
           <face.Answer q={v.q} />
-          <face.Reveal q={v.q} picks={v.picks} mine={me >= 0 ? v.picks?.[me] ?? null : undefined} />
+          <face.Reveal q={v.q} picks={v.picks} mine={me >= 0 ? v.picks?.[me] ?? null : undefined} seat={me >= 0 ? me : undefined} names={v.names} />
           {me >= 0 && <p className="text-center text-[13.5px] font-bold text-[#4a3426]">{placeText(place)} · {v.scores[me]} ქულა</p>}
           <Standings names={v.names} scores={v.scores} gained={v.gained} me={me} limit={5} />
           <Hint className="text-center">შემდეგ რაუნდს წამყვანი დაიწყებს.</Hint>
@@ -147,12 +147,15 @@ export const RoundsPlayer: React.FC<{
         {clip ? <SnippetBox state={snippet.state} prog={snippet.prog} onTap={tapClip} /> : piece && <HostSoundLine />}
         {face.Ask && <face.Ask q={v.q} who="player" step={v.step} steps={v.steps} />}
         {answered ? (
-          <div className="rounded-3xl bg-[#2f7d4f]/10 ring-1 ring-[#2f7d4f]/25 px-4 py-5 text-center" role="status">
-            <Check className="w-8 h-8 mx-auto text-[#2f7d4f]" />
-            <p className="mt-1 font-serif-ge text-[19px] font-bold text-[#24603d]">პასუხი გაგზავნილია</p>
-            {myPick !== null && <p className="mt-0.5 text-[14px] font-bold text-[#24603d]">{face.pickName(v.q, myPick)}</p>}
-            <Hint className="mt-1.5">უპასუხა {v.answered.filter(Boolean).length} / {v.names.length}. პასუხი ყველასთან ერთად გაიხსნება.</Hint>
-          </div>
+          <>
+            <div className="rounded-3xl bg-[#2f7d4f]/10 ring-1 ring-[#2f7d4f]/25 px-4 py-5 text-center" role="status">
+              <Check className="w-8 h-8 mx-auto text-[#2f7d4f]" />
+              <p className="mt-1 font-serif-ge text-[19px] font-bold text-[#24603d]">პასუხი გაგზავნილია</p>
+              {myPick !== null && <p className="mt-0.5 text-[14px] font-bold text-[#24603d]">{face.pickName(v.q, myPick)}</p>}
+              <Hint className="mt-1.5">უპასუხა {v.answered.filter(Boolean).length} / {v.names.length}. პასუხი ყველასთან ერთად გაიხსნება.</Hint>
+            </div>
+            {face.keepPick && me >= 0 && <face.Pick q={v.q} pick={myPick} onPick={() => {}} seat={me} locked />}
+          </>
         ) : me >= 0 && left <= 0 ? (
           <div className="rounded-3xl bg-[#4a3426]/[0.06] px-4 py-5 text-center" role="status">
             <Clock className="w-8 h-8 mx-auto text-[#75685a]" />
@@ -162,7 +165,7 @@ export const RoundsPlayer: React.FC<{
         ) : (
           <>
             {me >= 0 && !face.Ask && <p className="font-serif-ge text-[18px] font-bold leading-snug text-[#4a3426]">{face.askPlayer}</p>}
-            {me >= 0 && <face.Pick q={v.q} pick={pick} onPick={setPick} />}
+            {me >= 0 && <face.Pick q={v.q} pick={pick} onPick={setPick} seat={me} />}
           </>
         )}
       </div>

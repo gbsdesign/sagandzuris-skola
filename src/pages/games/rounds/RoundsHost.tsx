@@ -82,7 +82,7 @@ export const RoundsHost: React.FC<{
         <div className="py-2 space-y-4">
           <RoundHead at={s.at} total={s.rounds.length} />
           <face.Answer q={v.q} />
-          <face.Reveal q={v.q} picks={v.picks} />
+          <face.Reveal q={v.q} picks={v.picks} names={v.names} />
           {clip && <SnippetBox state={snippet.state} prog={snippet.prog} onTap={tapClip} />}
           <section className="space-y-2">
             <p className="text-[13.5px] font-bold text-[#4a3426]">ქულები</p>
