@@ -8,9 +8,10 @@ const kit = (id: string, sheets: number) => ({
   sheets,
 });
 
-// The games hub („თამაშები“, 2026-10-27; one list since 2026-10-30, the user's „ყველა თამაში 1 სიად“): every game in one
-// list with the variants it has — ონლაინ (in the app, alone or with the class), ჰიბრიდული (played live, a phone helps) and
-// სამაგიდო (a printed kit, no phone; its button downloads the PDF). Only what is ready shows (the user's rule, 2026-10-28): a
+// The games hub („თამაშები“, 2026-10-27; one list since 2026-10-30, the user's „ყველა თამაში 1 სიად“ — headed since 2026-11-04 by
+// the user's own three kinds of 10-27, `GAME_GROUPS`): every game with the variants it has — ონლაინ (each on their own phone, alone
+// or with the class), ჰიბრიდული (played live in one room, one phone helps) and სამაგიდო (a printed kit, no phone; its button makes
+// the PDF on the phone). Only what is ready shows (the user's rule, 2026-10-28): a
 // variant joins its game's buttons once it is built. A game that answers to a known one names it in brackets (`like`), and its
 // ⓘ says what that game is and how ours differs (`about`). The whole plan (42 games with their three variants, the six board
 // games) lives in the Claude doc „ქართული თამაშები სკოლისთვის“ — https://claude.ai/artifact/Dw24amtHhQvSGUd1pPE4fg
@@ -34,9 +35,9 @@ export interface GameDef {
 
 export const MODE_LABEL: Record<GameMode, string> = { online: 'ონლაინ', hybrid: 'ჰიბრიდული', noPhone: 'სამაგიდო' };
 export const MODE_HINT: Record<GameMode, string> = {
-  online: 'აპში, თავისთვის ან კლასელებთან',
-  hybrid: 'ცოცხლად, ტელეფონი ეხმარება',
-  noPhone: 'დასაბეჭდი PDF, ტელეფონის გარეშე',
+  online: 'ყველა თავის ტელეფონზე, სახლიდანაც',
+  hybrid: 'ერთ ოთახში, ერთი ტელეფონი გეხმარებათ',
+  noPhone: 'ამობეჭდე და ითამაშე ქაღალდზე',
 };
 
 export const GAMES: GameDef[] = [
@@ -283,6 +284,36 @@ export const GAMES: GameDef[] = [
     modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'kari', section: 'tamashebi', print: kit('mepis-kari', 8),
   },
 ];
+
+/** The hub's headings, in the user's own three kinds of games (2026-10-27: მუსიკალური · ქართული · ცოცხალი) and the big board
+ * games; one list still (2026-10-30), each game under one heading, in this order (tests/gameGroups.test.ts checks every game is
+ * under exactly one). */
+export interface GameGroup { id: string; title: string; hint: string; games: string[] }
+export const GAME_GROUPS: GameGroup[] = [
+  {
+    id: 'music', title: 'მუსიკალური', hint: 'გამოიცანი სმენით, იმღერე შენი ხმა, იცანი აკორდი და კილო',
+    games: ['dghis-hangi', 'saidanaa-simghera', 'khma-khmad', 'sam-notshi', 'khmebis-turniri', 'mesame-khma', 'chemi-gundi', 'kartuli-akordi',
+      'rva-khma', 'gagrdzele', 'hangebi', 'eqo', 'mprinavi-notebi', 'khmis-tsqvilebi', 'sagalobo-loto', 'margalitebi'],
+  },
+  {
+    id: 'georgia', title: 'ქართული', hint: 'სიტყვები, ძველი დამწერლობა, ისტორია, კუთხეები და ტრადიციები',
+    games: ['dghis-sitqva', 'otkheuli', 'asoebis-bade', 'khutsuri-tsartsera', 'sami-damtserloba', 'drois-khazi', 'otkhidan-erti', 'ra-sad-rodis',
+      'rukis-viktorina', 'chamotvale', 'tsikhis-gasaghebi', 'tsinapris-gza', 'sagandzuris-dzebna', 'chaitsvi-qartulad', 'chemi-vazi'],
+  },
+  {
+    id: 'live', title: 'ცოცხალი', hint: 'ერთად, ხმამაღლა: ახსენი, დახატე, გაითამაშე, გამოიცანი',
+    games: ['samshvildis-ghame', 'amikhseni', 'nu-itqvi', 'erti-minishneba', 'pantomima', 'nakhatobana', 'vin-var-me', 'saidumlo-sakhelebi',
+      'utskho-sopelshi', 'gatvla', 'tskheli-churchkhela', 'ezos-msaji'],
+  },
+  {
+    id: 'board', title: 'დაფის თამაშები', hint: 'რუკა, ბარათები და სტრატეგია — ხანგრძლივი თამაში მეგობრებთან',
+    games: ['okros-khana', 'qaravani', 'ori-takhti', 'lurji-supra', 'mepis-kari'],
+  },
+];
+
+/** The daily games: one for the whole school each day (their online variant), counted on the hub's „დღის თამაშები“. */
+export const DAILY_GAMES = ['dghis-hangi', 'dghis-sitqva', 'otkheuli', 'asoebis-bade', 'khutsuri-tsartsera', 'drois-khazi', 'nu-itqvi',
+  'vin-var-me', 'saidumlo-sakhelebi', 'utskho-sopelshi', 'sagandzuris-dzebna'];
 
 /** The title of a game open inside the games page (its `mapItem`), for the top bar. */
 export const gameTitleOfItem = (item: string | null | undefined) => (item ? GAMES.find(g => g.item === item)?.title : undefined);

@@ -1,7 +1,7 @@
 import React, { Suspense, lazy, useMemo, useState } from 'react';
 import {
-  AudioLines, Bird, Brain, Brush, Castle, Compass, Crown, Dice5, Download, Drama, Feather, Flag, Flame, Footprints, Gamepad2, Gem, Grape, Grid2x2Check, Grid3x3, HatGlasses, Headphones, Hourglass, KeyRound, Layers3, Info, Landmark, LayoutGrid, Lightbulb, ListChecks, ListMusic, ListOrdered, Loader2, Map, MapPinned, MessageCircle, MessageSquareOff,
-  MicVocal, Music2, Piano, Puzzle, Repeat, Route, Shapes, ScrollText, Shirt, SpellCheck, TextSearch, TicketCheck, UserRoundSearch, Users, VenetianMask, Waves, Wifi,
+  AudioLines, Bird, Brain, Brush, Castle, Check, Compass, Crown, Dice5, Drama, Feather, Flag, Flame, Footprints, Gamepad2, Gem, Grape, Grid2x2Check, Grid3x3, HatGlasses, Headphones, Hourglass, KeyRound, Layers3, Info, Landmark, LayoutGrid, Lightbulb, ListChecks, ListMusic, ListOrdered, Loader2, Map as MapIcon, MapPinned, MessageCircle, MessageSquareOff,
+  MicVocal, Music2, Piano, Printer, Puzzle, Repeat, Route, Search, Shapes, ScrollText, Shirt, SpellCheck, TextSearch, TicketCheck, UserRoundSearch, Users, VenetianMask, Waves, Wifi, X,
 } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
 import { useAccess } from '../hooks/useAccess';
@@ -23,7 +23,7 @@ import { utskhoMeta } from '../utils/utskho';
 import { dzebnaMeta } from '../utils/dzebna';
 import { requestOpen } from '../utils/searchOpen';
 import { isRoomGame } from '../utils/gameRoom';
-import { GAMES, GameDef, GameMode, MODE_HINT, MODE_LABEL } from '../data/games';
+import { DAILY_GAMES, GAMES, GAME_GROUPS, GameDef, GameMode, MODE_HINT, MODE_LABEL } from '../data/games';
 import { Card, Pill } from '../components/ui/kit';
 import { Toast } from '../components/ui/Toast';
 import { askSignIn } from '../components/access/SignInPrompt';
@@ -86,21 +86,23 @@ const Qaravani: React.FC = () => (
 );
 import { useVine } from './games/vazi/useVine';
 
-// „თამაშები“: the hub of the games (2026-10-27; one list since 2026-10-30, the user's „ყველა თამაში 1 სიად“). A card per
-// game: its name (the known game it answers to in brackets; ⓘ unfolds what that game is), one line, and a button per variant it
-// has — ონლაინ / ჰიბრიდული open it (the games that live inside this page are `mapItem`, so the top bar's „←“ returns here;
-// „სამშვილდის ღამე“ opens on the variant tapped), სამაგიდო downloads its PDF. The pearls game stays the round button of
-// „საგანძურის გზა“, under a switch of its own in the admin panel. The catalogue is data/games.ts.
+// „თამაშები“: the hub of the games (2026-10-27; one list since 2026-10-30, the user's „ყველა თამაში 1 სიად“; made clearer
+// 2026-11-04, the user's „დახვეწე, გაათანამედროვე და არ იყოს დამაბნეველი“). On top what the three variants are and a search
+// field; then „დღის თამაშები“ — the daily games with today's mark, a tap opens the day's game; then every game under its kind
+// (`GAME_GROUPS`, the user's own მუსიკალური · ქართული · ცოცხალი and the board games), the kinds' chips jumping to them. A card per
+// game: its name (the known game it answers to in brackets; ⓘ unfolds what that game is), one line, the day's result, and a
+// button per variant it has — ონლაინ / ჰიბრიდული open it (the games that live inside this page are `mapItem`, so the top bar's „←“
+// returns here; some open on the variant tapped), სამაგიდო makes its PDF on the phone. The catalogue is data/games.ts.
 
 type Access = ReturnType<ReturnType<typeof useAccess>['section']>;
 
 const ICON: Record<string, React.ReactNode> = {
   margalitebi: <Gem />, 'dghis-hangi': <Headphones />, 'dghis-sitqva': <SpellCheck />, otkheuli: <Shapes />,
   amikhseni: <MessageCircle />, gatvla: <Dice5 />, 'tskheli-churchkhela': <Flame />, 'ra-sad-rodis': <Brain />,
-  'okros-khana': <Map />, 'samshvildis-ghame': <Castle />, 'saidanaa-simghera': <MapPinned />, 'otkhidan-erti': <ListChecks />, 'khma-khmad': <AudioLines />, 'sam-notshi': <Music2 />, 'khmebis-turniri': <MicVocal />, 'kartuli-akordi': <Piano />, 'rva-khma': <Waves />, 'rukis-viktorina': <Compass />, gagrdzele: <ListMusic />, hangebi: <Puzzle />, eqo: <Repeat />, 'mprinavi-notebi': <Bird />, 'khmis-tsqvilebi': <Grid2x2Check />, 'mesame-khma': <Layers3 />, 'chemi-gundi': <Drama />, chamotvale: <ListOrdered />, 'asoebis-bade': <TextSearch />, 'khutsuri-tsartsera': <ScrollText />, 'drois-khazi': <Hourglass />, 'chemi-vazi': <Grape />, 'chaitsvi-qartulad': <Shirt />, 'sami-damtserloba': <Feather />, 'tsikhis-gasaghebi': <KeyRound />, 'tsinapris-gza': <Footprints />, 'nu-itqvi': <MessageSquareOff />, 'erti-minishneba': <Lightbulb />, pantomima: <VenetianMask />, 'vin-var-me': <UserRoundSearch />, 'saidumlo-sakhelebi': <Grid3x3 />, 'utskho-sopelshi': <HatGlasses />, nakhatobana: <Brush />, 'sagalobo-loto': <TicketCheck />, 'sagandzuris-dzebna': <Gem />, 'ezos-msaji': <Flag />, qaravani: <Route />, 'ori-takhti': <Crown />, 'lurji-supra': <LayoutGrid />, 'mepis-kari': <Landmark />,
+  'okros-khana': <MapIcon />, 'samshvildis-ghame': <Castle />, 'saidanaa-simghera': <MapPinned />, 'otkhidan-erti': <ListChecks />, 'khma-khmad': <AudioLines />, 'sam-notshi': <Music2 />, 'khmebis-turniri': <MicVocal />, 'kartuli-akordi': <Piano />, 'rva-khma': <Waves />, 'rukis-viktorina': <Compass />, gagrdzele: <ListMusic />, hangebi: <Puzzle />, eqo: <Repeat />, 'mprinavi-notebi': <Bird />, 'khmis-tsqvilebi': <Grid2x2Check />, 'mesame-khma': <Layers3 />, 'chemi-gundi': <Drama />, chamotvale: <ListOrdered />, 'asoebis-bade': <TextSearch />, 'khutsuri-tsartsera': <ScrollText />, 'drois-khazi': <Hourglass />, 'chemi-vazi': <Grape />, 'chaitsvi-qartulad': <Shirt />, 'sami-damtserloba': <Feather />, 'tsikhis-gasaghebi': <KeyRound />, 'tsinapris-gza': <Footprints />, 'nu-itqvi': <MessageSquareOff />, 'erti-minishneba': <Lightbulb />, pantomima: <VenetianMask />, 'vin-var-me': <UserRoundSearch />, 'saidumlo-sakhelebi': <Grid3x3 />, 'utskho-sopelshi': <HatGlasses />, nakhatobana: <Brush />, 'sagalobo-loto': <TicketCheck />, 'sagandzuris-dzebna': <Gem />, 'ezos-msaji': <Flag />, qaravani: <Route />, 'ori-takhti': <Crown />, 'lurji-supra': <LayoutGrid />, 'mepis-kari': <Landmark />,
 };
 
-const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string }>> = { online: Wifi, hybrid: Users, noPhone: Download };
+const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string }>> = { online: Wifi, hybrid: Users, noPhone: Printer };
 
 // the games that open inside this page, by their `mapItem`
 const INNER: Record<string, React.FC> = {
@@ -110,11 +112,16 @@ const INNER: Record<string, React.FC> = {
   eqo: EqoGame, mprinavi: MprinaviGame, tsqvilebi: TsqvilebiGame, mesame: MesameGame, gundi: GundiGame, chamotvale: ChamotvaleGame, bade: BadeGame, tsartsera: TsartseraGame, khazi: KhaziGame, vazi: VaziGame, chaitsvi: ChaitsviGame, anbani: AnbaniGame, tsikhe: TsikheGame, tsinapari: TsinapariGame, tabu: TabuGame, minishneba: MinishnebaGame, pantomima: PantomimaGame, vin: VinGame, saidumlo: SaidumloGame, utskho: UtskhoGame, nakhati: NakhatiGame, loto: LotoGame, dzebna: DzebnaGame, ezo: EzoGame, margalitebi: MargalitebiGame, kari: KariGame, lurji: LurjiGame, takhti: TakhtiGame, qaravani: Qaravani, okros: OkrosGame,
 };
 
-const BTN = 'inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full text-[13.5px] font-bold transition-[background-color,transform] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#7a2028]/50';
+const BTN = 'inline-flex w-full min-w-0 items-center justify-center gap-1.5 h-11 px-2 rounded-xl text-[13.5px] font-bold transition-[background-color,transform] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#7a2028]/50 cursor-pointer';
+const LOOK: Record<GameMode, string> = {
+  online: 'bg-[#7a2028] text-[#fbf6ec] shadow-[0_1px_2px_rgba(74,52,38,0.15)] hover:bg-[#6a1b22]',
+  hybrid: 'bg-[#7a2028]/[0.08] text-[#7a2028] ring-1 ring-[#7a2028]/20 hover:bg-[#7a2028]/[0.14]',
+  noPhone: 'bg-[#f4ecdf] text-[#5a4a3c] ring-1 ring-[#e3d5bf] hover:bg-[#ede1cd]',
+};
 
-/** the printed variant's button: the kit is made in the browser and saved */
-const KitModeBtn: React.FC<{ g: GameDef; make: KitMake }> = ({ g, make }) => {
-  const { busy, note, run } = useKitMaker(make, g.title);
+/** the printed variant's button: the kit is made on the phone and saved */
+const KitModeBtn: React.FC<{ g: GameDef; make: KitMake; iconCls: string }> = ({ g, make, iconCls }) => {
+  const { busy, failed, share, run } = useKitMaker(make, g.title);
   const Ic = MODE_ICON.noPhone;
   return (
     <button
@@ -122,25 +129,24 @@ const KitModeBtn: React.FC<{ g: GameDef; make: KitMake }> = ({ g, make }) => {
       onClick={() => { void run(); }}
       aria-busy={busy}
       aria-label={`${g.title} — სამაგიდო: PDF, ${g.print?.sheets ?? 0} ფურცელი`}
-      className={`${BTN} cursor-pointer bg-[#7a2028]/[0.08] text-[#7a2028] ring-1 ring-[#7a2028]/15 hover:bg-[#7a2028]/[0.14]`}
+      title={`PDF · ${g.print?.sheets ?? 0} ფურცელი`}
+      className={`${BTN} ${LOOK.noPhone}`}
     >
-      {busy ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" /> : <Ic className="w-4 h-4 shrink-0" />}{MODE_LABEL.noPhone}
-      <span className="font-normal opacity-75 tabular-nums">· {note || 'PDF'}</span>
+      {busy ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" /> : <Ic className={iconCls} />}
+      <span className="truncate tabular-nums" aria-live="polite">{busy ? (share > 0 ? `${share}%` : 'მზადდება…') : failed ? 'ვერ შეიქმნა' : MODE_LABEL.noPhone}</span>
     </button>
   );
 };
 
-/** a variant's button: the app's variants open the game, the printed kit is made in the browser and saved */
+/** a variant's button: the app's variants open the game, the printed kit is made on the phone and saved */
 const ModeBtn: React.FC<{ g: GameDef; mode: GameMode; soon: boolean; onPlay: (mode: GameMode) => void }> = ({ g, mode, soon, onPlay }) => {
-  if (mode === 'noPhone' && g.print) return <KitModeBtn g={g} make={g.print.make} />;
+  // three buttons in a row leave a phone (and two columns of cards on a tablet) no room for the icons: the words stay
+  const iconCls = `w-4 h-4 shrink-0 ${g.modes.length > 2 ? 'hidden lg:block' : ''}`;
+  if (mode === 'noPhone' && g.print) return <KitModeBtn g={g} make={g.print.make} iconCls={iconCls} />;
   const Ic = MODE_ICON[mode];
   return (
-    <button
-      type="button"
-      onClick={() => onPlay(mode)}
-      className={`${BTN} cursor-pointer ${soon ? 'bg-[#f1e8d9] text-[#9a8b7b]' : 'bg-[#7a2028] text-[#fbf6ec] shadow-[0_1px_2px_rgba(74,52,38,0.15)] hover:bg-[#6a1b22]'}`}
-    >
-      <Ic className="w-4 h-4 shrink-0" />{MODE_LABEL[mode]}
+    <button type="button" onClick={() => onPlay(mode)} className={`${BTN} ${soon ? 'bg-[#f1e8d9] text-[#9a8b7b]' : LOOK[mode]}`}>
+      <Ic className={iconCls} /><span className="truncate">{MODE_LABEL[mode]}</span>
     </button>
   );
 };
@@ -150,16 +156,17 @@ const GameCard: React.FC<{ g: GameDef; state: Access; meta?: string; onPlay: (mo
   const soon = state === 'soon';
   const infoId = `game-about-${g.id}`;
   return (
-    <li className="rounded-2xl bg-white/85 ring-1 ring-[#e8dcc8] shadow-[0_1px_2px_rgba(74,52,38,0.05)] p-3">
+    <li className="flex flex-col rounded-2xl bg-white/90 ring-1 ring-[#e8dcc8] shadow-[0_1px_2px_rgba(74,52,38,0.05)] p-3">
       <div className="flex items-start gap-3">
         <span className={`w-11 h-11 shrink-0 rounded-2xl flex items-center justify-center [&>svg]:w-5 [&>svg]:h-5 ${soon ? 'bg-[#f1e8d9] text-[#9a8b7b]' : 'bg-[#7a2028]/[0.08] text-[#7a2028]'}`}>
           {ICON[g.id] ?? <Gamepad2 />}
         </span>
         <div className="min-w-0 flex-1">
           <div className="flex items-start gap-1">
-            <h3 className="min-w-0 pt-[3px] font-serif-ge text-[15.5px] font-bold leading-snug text-[#4a3426] [overflow-wrap:anywhere]">
+            <h3 className="min-w-0 flex-1 pt-[3px] font-serif-ge text-[15.5px] font-bold leading-snug text-[#4a3426] [overflow-wrap:anywhere]">
               {g.title}{g.like && <span className="font-normal text-[#8a7a6a]"> ({g.like})</span>}
             </h3>
+            {soon && <Pill tone="amber" className="!h-6 shrink-0 mt-0.5">მალე</Pill>}
             {g.about && (
               <button
                 type="button"
@@ -168,25 +175,43 @@ const GameCard: React.FC<{ g: GameDef; state: Access; meta?: string; onPlay: (mo
                 aria-controls={infoId}
                 aria-label={`რა არის „${g.title}“`}
                 title="რა არის"
-                className={`w-9 h-9 -my-1.5 shrink-0 rounded-full flex items-center justify-center cursor-pointer transition-colors ${info ? 'bg-[#7a2028]/[0.1] text-[#7a2028]' : 'text-[#a8998a] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.07]'}`}
+                className={`w-9 h-9 -my-1 -mr-1 shrink-0 rounded-full flex items-center justify-center cursor-pointer transition-colors ${info ? 'bg-[#7a2028]/[0.1] text-[#7a2028]' : 'text-[#a8998a] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.07]'}`}
               >
                 <Info className="w-[18px] h-[18px]" />
               </button>
             )}
-            {soon && <Pill tone="amber" className="!h-6 shrink-0">მალე</Pill>}
           </div>
-          <p className="mt-0.5 text-[12.5px] leading-snug text-[#75685a]">{g.text}</p>
-          {meta && <p className="mt-1 text-[12px] font-bold tabular-nums text-[#7a2028]">{meta}</p>}
+          <p className="mt-0.5 text-[13px] leading-snug text-[#75685a]">{g.text}</p>
+          {meta && <p className="mt-1.5 inline-flex rounded-full bg-[#7a2028]/[0.07] px-2.5 py-0.5 text-[12px] font-bold tabular-nums text-[#7a2028]">{meta}</p>}
         </div>
       </div>
       {info && g.about && (
         <p id={infoId} className="mt-2.5 rounded-xl bg-[#fbf6ec] ring-1 ring-[#efe3cf] px-3.5 py-2.5 text-[13px] leading-relaxed text-[#5a4a3c]">{g.about}</p>
       )}
-      <div className="mt-2.5 flex flex-wrap gap-2">
+      <div className="mt-auto pt-3 grid gap-2" style={{ gridTemplateColumns: `repeat(${g.modes.length}, minmax(0, 1fr))` }}>
         {g.modes.map(m => <ModeBtn key={m} g={g} mode={m} soon={soon} onPlay={onPlay} />)}
       </div>
     </li>
   );
+};
+
+/** how well a search fits a game: every word must be in its name, its known game, its line or its ⓘ — the name counts most */
+const fold = (t: string) => t.toLocaleLowerCase('ka').replace(/[„“"'()!?.,:;·—–-]/g, ' ').replace(/\s+/g, ' ').trim();
+const scoreOf = (g: GameDef, q: string) => {
+  const parts: [string, number][] = [[fold(g.title), 8], [fold(g.like ?? ''), 4], [fold(g.text), 2], [fold(g.about ?? ''), 1]];
+  let total = 0;
+  for (const w of fold(q).split(' ').filter(Boolean)) {
+    const best = Math.max(0, ...parts.map(([t, weight]) => (t.includes(w) ? weight : 0)));
+    if (!best) return 0;
+    total += best;
+  }
+  return total;
+};
+
+/** the kinds' chips: a tap scrolls to that heading */
+const jumpTo = (id: string) => {
+  triggerHaptic(5);
+  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
 };
 
 export const GamesPage: React.FC = () => {
@@ -208,6 +233,7 @@ export const GamesPage: React.FC = () => {
   const dzebna = useDailyRecord('dzebna');
   const vazi = useVine();
   const [soon, setSoon] = useState<string | null>(null);
+  const [query, setQuery] = useState('');
   const today = useMemo(() => tbilisiToday(), []);
 
   const Inner = mapItem ? INNER[mapItem] : undefined;
@@ -242,6 +268,13 @@ export const GamesPage: React.FC = () => {
       : g.id === 'chemi-vazi' && vazi.loaded && vazi.vine.leaves ? `${vazi.vine.recent} ფოთოლი · ${vazi.vine.seasonBunches} მტევანი`
       : undefined;
 
+  // a daily game played today (its record: the member's, the device's for guests)
+  const RECORD: Record<string, { days: Record<string, { done?: boolean }>; loaded: boolean }> = {
+    'dghis-hangi': hangi, 'dghis-sitqva': sitqva, otkheuli, 'asoebis-bade': bade, 'khutsuri-tsartsera': tsartsera, 'drois-khazi': khazi,
+    'nu-itqvi': tabu, 'vin-var-me': vin, 'saidumlo-sakhelebi': saidumlo, 'utskho-sopelshi': utskho, 'sagandzuris-dzebna': dzebna,
+  };
+  const dayDone = (id: string) => { const r = RECORD[id]; return !!r?.loaded && !!r.days[today]?.done; };
+
   const play = (g: GameDef, state: Access, mode: GameMode) => {
     triggerHaptic(10);
     if (state === 'locked') { askSignIn(g.title); return; }
@@ -253,30 +286,118 @@ export const GamesPage: React.FC = () => {
     if (g.page) { if (g.panel) openPathPanel(g.panel); navigateTo(g.page); }
   };
 
+  const byId = new Map(cards.map(c => [c.g.id, c]));
+  const card = ({ g, state }: { g: GameDef; state: Access }) => <GameCard key={g.id} g={g} state={state} meta={meta(g)} onPlay={m => play(g, state, m)} />;
+  const found = query.trim()
+    ? cards.map(c => ({ c, score: scoreOf(c.g, query) })).filter(x => x.score > 0).sort((a, b) => b.score - a.score).map(x => x.c)
+    : null;
+  const groups = GAME_GROUPS.map(gr => ({ ...gr, list: gr.games.flatMap(id => byId.get(id) ?? []) })).filter(gr => gr.list.length);
+  // the daily games whose day's game (online) is there, with today's mark
+  const daily = DAILY_GAMES.flatMap(id => {
+    const c = byId.get(id);
+    return c && c.g.modes.includes('online') && c.state !== 'hidden' ? [{ ...c, done: !!dayDone(id) }] : [];
+  });
+  const doneToday = daily.filter(d => d.done).length;
+
   return (
-    <div className="w-full max-w-2xl space-y-4">
+    <div className="w-full max-w-2xl md:max-w-5xl space-y-5">
       <Card tone="wine" className="!p-4 sm:!p-5">
-        <p className="font-serif-ge text-[17px] font-bold leading-snug">ითამაშე და ისწავლე</p>
-        <p className="mt-1 text-[13px] leading-snug text-[#fbf6ec]/85">ყველა თამაში ერთ სიაშია, თითოეულს თავისი ვარიანტები აქვს:</p>
-        <ul className="mt-2 space-y-1.5 text-[12.5px] leading-snug text-[#fbf6ec]/85">
+        <p className="font-serif-ge text-[18px] font-bold leading-snug">ითამაშე და ისწავლე</p>
+        <p className="mt-0.5 text-[13px] leading-snug tabular-nums text-[#fbf6ec]/85">
+          {cards.length - building} თამაში{building > 0 && ` · მზადდება ${building}`} — თითოეულს სამამდე ვარიანტი აქვს:
+        </p>
+        <ul className="mt-3 grid gap-2 sm:grid-cols-3">
           {(Object.keys(MODE_LABEL) as GameMode[]).map(m => {
             const Ic = MODE_ICON[m];
             return (
-              <li key={m} className="flex items-start gap-2">
-                <Ic className="w-4 h-4 mt-px shrink-0 text-[#e2c27a]" />
-                <span><span className="font-bold text-[#fbf6ec]">{MODE_LABEL[m]}</span> — {MODE_HINT[m]}</span>
+              <li key={m} className="flex items-center gap-2.5 rounded-xl bg-white/[0.07] px-2.5 py-2 ring-1 ring-white/10 sm:flex-col sm:items-start sm:gap-1.5">
+                <span className="w-8 h-8 shrink-0 rounded-full bg-[#e2c27a]/15 flex items-center justify-center"><Ic className="w-4 h-4 text-[#e2c27a]" /></span>
+                <span className="min-w-0 text-[12.5px] leading-snug text-[#fbf6ec]/80">
+                  <span className="block text-[13.5px] font-bold text-[#fbf6ec]">{MODE_LABEL[m]}</span>{MODE_HINT[m]}
+                </span>
               </li>
             );
           })}
         </ul>
-        <p className="mt-2.5 text-[12px] tabular-nums text-[#fbf6ec]/70">მზადაა {cards.length - building} თამაში{building > 0 && ` · მზადდება ${building}`}</p>
       </Card>
 
-      <ul className="space-y-2.5">
-        {cards.map(({ g, state }) => (
-          <GameCard key={g.id} g={g} state={state} meta={meta(g)} onPlay={m => play(g, state, m)} />
-        ))}
-      </ul>
+      <div>
+        <label className="relative block">
+          <span className="sr-only">თამაშის ძებნა</span>
+          <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#a8998a]" />
+          <input
+            type="text"
+            inputMode="search"
+            enterKeyHint="search"
+            value={query}
+            onChange={e => setQuery(e.target.value)}
+            placeholder="მოძებნე თამაში"
+            className="h-12 w-full rounded-full bg-white pl-11 pr-12 text-[15px] text-[#4a3426] ring-1 ring-[#e8dcc8] placeholder:text-[#a8998a] focus:outline-none focus:ring-2 focus:ring-[#7a2028]/40"
+          />
+          {query && (
+            <button type="button" onClick={() => setQuery('')} aria-label="ძებნის გასუფთავება" className="absolute right-1.5 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-[#8a7a6a] hover:bg-[#7a2028]/[0.07] cursor-pointer">
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </label>
+      </div>
+
+      {found ? (
+        <section aria-label="ნაპოვნი თამაშები" className="space-y-2.5">
+          <p className="px-1 text-[13px] font-bold tabular-nums text-[#8a7a6a]" role="status">{found.length ? `ნაპოვნია ${found.length}` : 'ასეთი თამაში ვერ ვიპოვე'}</p>
+          {found.length > 0 && <ul className="grid gap-2.5 md:grid-cols-2">{found.map(card)}</ul>}
+        </section>
+      ) : (
+        <>
+          {daily.length > 0 && (
+            <section aria-labelledby="games-daily-h" className="rounded-2xl bg-white/85 ring-1 ring-[#e8dcc8] p-3 sm:p-4">
+              <div className="flex items-baseline justify-between gap-3 px-1">
+                <h2 id="games-daily-h" className="font-serif-ge text-[17px] font-bold text-[#4a3426]">დღის თამაშები</h2>
+                <span className="shrink-0 text-[13px] font-bold tabular-nums text-[#7a2028]">დღეს {doneToday}/{daily.length}</span>
+              </div>
+              <p className="px-1 text-[12.5px] leading-snug text-[#8a7a6a]">ყოველ დღე ახალი, მთელ სკოლას ერთი და იგივე</p>
+              <ul className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+                {daily.map(({ g, state, done }) => (
+                  <li key={g.id} className="min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => play(g, state, 'online')}
+                      aria-label={`${g.title}${done ? ' — დღეს გაკეთებულია' : ''}`}
+                      className={`flex w-full min-h-11 items-center gap-2 rounded-2xl py-1.5 pl-1.5 pr-2.5 text-left text-[13px] font-bold leading-tight ring-1 cursor-pointer transition-colors ${done ? 'bg-[#2f7d4f]/[0.08] text-[#25603d] ring-[#2f7d4f]/25' : 'bg-white text-[#4a3426] ring-[#e8dcc8] hover:ring-[#7a2028]/35'}`}
+                    >
+                      <span className={`w-8 h-8 shrink-0 rounded-full flex items-center justify-center [&>svg]:w-4 [&>svg]:h-4 ${done ? 'bg-[#2f7d4f] text-white' : 'bg-[#7a2028]/[0.08] text-[#7a2028]'}`}>
+                        {done ? <Check /> : ICON[g.id] ?? <Gamepad2 />}
+                      </span>
+                      <span className="min-w-0 [overflow-wrap:anywhere]">{g.title}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
+          <div className="space-y-2.5">
+            <h2 className="px-1 flex items-baseline gap-2 font-serif-ge text-[17px] font-bold text-[#4a3426]">ყველა თამაში<span className="text-[13px] font-bold tabular-nums text-[#a8998a]">{cards.length}</span></h2>
+            <nav aria-label="თამაშების სახეები" className="flex flex-wrap gap-2">
+              {groups.map(gr => (
+                <button key={gr.id} type="button" onClick={() => jumpTo(`games-${gr.id}`)} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-white/80 px-3.5 text-[13.5px] font-bold text-[#4a3426] ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/35 cursor-pointer">
+                  {gr.title}<span className="font-normal tabular-nums text-[#a8998a]">{gr.list.length}</span>
+                </button>
+              ))}
+            </nav>
+          </div>
+          {groups.map(gr => (
+            <section key={gr.id} id={`games-${gr.id}`} aria-labelledby={`games-${gr.id}-h`} className="scroll-mt-4 space-y-2.5">
+              <div className="px-1">
+                <h2 id={`games-${gr.id}-h`} className="flex items-baseline gap-2 font-serif-ge text-[19px] font-bold leading-snug text-[#4a3426]">
+                  {gr.title}<span className="text-[13px] font-bold tabular-nums text-[#a8998a]">{gr.list.length}</span>
+                </h2>
+                <p className="mt-0.5 text-[12.5px] leading-snug text-[#8a7a6a]">{gr.hint}</p>
+              </div>
+              <ul className="grid gap-2.5 md:grid-cols-2">{gr.list.map(card)}</ul>
+            </section>
+          ))}
+        </>
+      )}
 
       <Toast message={soon || ''} type="info" isVisible={!!soon} onClose={() => setSoon(null)} />
     </div>
