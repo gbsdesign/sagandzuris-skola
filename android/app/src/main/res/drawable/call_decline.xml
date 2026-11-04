@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- the incoming call's „უარი“ (IncomingCallActivity), the colours of the site's call screen -->
+<ripple xmlns:android="http://schemas.android.com/apk/res/android" android:color="#40FFFFFF">
+    <item><shape android:shape="oval"><solid android:color="#D6402F" /></shape></item>
+</ripple>

@@ -4,6 +4,8 @@
     <!-- the widgets read the reminders Worker and the site themselves (Widgets.java, Net.java) -->
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- a call rings on a locked screen (IncomingCallActivity through the ring's full-screen intent, BellDelegationService) -->
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
     <!-- church mode silences the phone („არ შემაწუხო“), SilenceActivity -->
     <uses-permission android:name="android.permission.ACCESS_NOTIFICATION_POLICY" />
 
@@ -51,6 +53,10 @@
             <meta-data
                 android:name="android.app.shortcuts"
                 android:resource="@xml/shortcuts" />
+            <!-- a phone with no browser that can hold the app (no Chrome): the app opens in its own window (WebView) -->
+            <meta-data
+                android:name="android.support.customtabs.trusted.FALLBACK_STRATEGY"
+                android:value="webview" />
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -89,6 +95,20 @@
                 <data android:scheme="sagandzuri" android:host="link" />
             </intent-filter>
         </activity>
+        <activity
+            android:name="com.google.androidbrowserhelper.trusted.WebViewFallbackActivity"
+            android:configChanges="orientation|screenSize|screenLayout|keyboardHidden"
+            android:exported="false" />
+        <!-- the incoming call on a locked or dark screen -->
+        <activity
+            android:name=".IncomingCallActivity"
+            android:excludeFromRecents="true"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:showWhenLocked="true"
+            android:taskAffinity="ge.sagandzureli.app.call"
+            android:theme="@style/Theme.Call"
+            android:turnScreenOn="true" />
         <activity
             android:name=".SilenceActivity"
             android:excludeFromRecents="true"
