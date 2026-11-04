@@ -298,7 +298,10 @@
   only its status (my voices, else the learning bar; a teacher sees how many know it), a tap opens `ItemSheet` (ნოტები /
   სიმღერა, სწავლა, my voice marks, who knows each voice); under it folded cards: ოსტატობა (`ClassLessons fold`), the
   teachers' pearls, the psalter group (folded head line with „შენი: N“; `focus` opens it) — „დავალებები“
-  (`classes/ClassWork.tsx`: `AssignmentsFold` for teachers, `WorkItems` for members; a dot = a member's assignment to do) —
+  (`classes/ClassWork.tsx`: `AssignmentsFold` for teachers, `WorkItems` for members; a dot = a member's assignment to do;
+  since 2026-11-04 a card = `WorkCardHead` — the chant's own name big + one grey line (`utils/assignmentLines.ts` + test), a tap
+  opens its notes / song / exercise (`hooks/usePathItemOpener.ts`, moved out of PathOrbs); the teacher's footer = `dueUntil`
+  „10 ნოემბრამდე“ + „ისწავლა N/M ▾“, which unfolds the book's place, the members' bars and „დავალების წაშლა“) —
   „ჩათი“ (`ClassChat`; a dot while unread). „სასწავლო პროგრამა“ is the name everywhere (not „კლასის პროგრამა“). The timetable
   chips also sit under the chat's title on the messages page. Teacher-only parts never show to members; attendance is
   teacher-only in `firestore.rules` too (members no longer read it).

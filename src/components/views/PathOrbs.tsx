@@ -2,13 +2,10 @@ import React, { Suspense, lazy, useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { Bookmark, Check, ChevronDown, ChevronRight, GraduationCap, Lock, Pencil, X } from 'lucide-react';
 import { db } from '../../firebase';
-import { useAuth, useChants, useNavigation } from '../../context';
-import { useNotes } from '../../context/NotesContext';
-import { findVersion, canOpenNotes } from '../../data/chantLookup';
-import { FOLK_SONGS } from '../../data/songsData';
-import { PathItem, categoryOf, usesVoices, voicesOf } from '../../utils/pathItems';
-import { requestOpen } from '../../utils/searchOpen';
+import { useAuth, useChants } from '../../context';
+import { PathItem, usesVoices, voicesOf } from '../../utils/pathItems';
 import { usePathMarks } from '../../hooks/usePathMarks';
+import { usePathItemOpener } from '../../hooks/usePathItemOpener';
 import { triggerHaptic } from '../../utils/haptics';
 import { useSamosiSrc } from '../../utils/samosiDye';
 import { SAMOSI_COLORS, SAMOSI_DEFAULT_COLOR, SAMOSI_PARTS, SAMOSI_TOTAL, samosiDone, samosiThumb } from '../../data/samosiData';
@@ -245,23 +242,8 @@ const LearnLine: React.FC<{ s: ReturnType<typeof usePathStats> }> = ({ s }) => (
   <span className="tabular-nums">{s.learned}/{s.total}{s.voiceSlots ? ` · ${s.voices}/${s.voiceSlots} ხმა` : ''}</span>
 );
 
-/** What tapping an item's name does: a chant opens its notes, a song its place on the map; null when neither can.
- *  Also used by the class program (ClassProgram). */
-export const usePathItemOpener = () => {
-  const { openNotes } = useNotes();
-  const { navigateTo } = useNavigation();
-  return (id: string): (() => void) | null => {
-    const kind = categoryOf(id);
-    if (kind === 'galoba') {
-      const v = findVersion(id);
-      return v && canOpenNotes(v.chant, v.variant) ? () => { triggerHaptic(10); openNotes(id, 'bookmark'); } : null;
-    }
-    if (kind === 'simghera' && FOLK_SONGS.some(x => x.id === id)) {
-      return () => { triggerHaptic(10); requestOpen('simghera', id); navigateTo('simghera'); };
-    }
-    return null;
-  };
-};
+// what tapping an item's name does lives in hooks/usePathItemOpener (kept importable from here too)
+export { usePathItemOpener };
 
 // "ნასწავლი" opened: the teacher's assignments and lessons at the top (MyClassWork), then the learned items, one slim
 // line each (under a heading per kind — გალობა, სიმღერა, მთქმელი, საკრავები — when the path has more than one), and

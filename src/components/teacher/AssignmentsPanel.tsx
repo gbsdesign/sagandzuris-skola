@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
-import { Check, ChevronDown, ClipboardList, Dumbbell, Plus, Trash2, Music, Users } from 'lucide-react';
+import { BookOpen, Check, ChevronDown, ChevronRight, ClipboardList, Clock, Dumbbell, MessageSquareText, Plus, Trash2, Music, Users } from 'lucide-react';
 import { useAuth } from '../../context';
 import { SchoolClass } from '../../hooks/useClasses';
-import { Assignment, StudentRecord, createAssignment, deleteAssignment, dueLabel, daysUntil, localIso, shortDate, useAssignments, useClassStudents } from '../../hooks/useTeaching';
+import { Assignment, StudentRecord, createAssignment, deleteAssignment, dueLabel, dueUntil, daysUntil, localIso, shortDate, useAssignments, useClassStudents } from '../../hooks/useTeaching';
 import { CatalogEntry, CATEGORY_LABEL, PathItem, Voice, findCatalogEntry, sortPathItems, usesVoices, voicesOf } from '../../utils/pathItems';
 import { filterValidVariants } from '../../utils/variantValidation';
 import { writePath } from '../admin/MemberPathEditor';
@@ -13,6 +13,9 @@ import { askConfirm, Btn, Card, CardTitle, Empty, FIELD, Flash, IconBtn, Label, 
 import { DRILL_GROUPS, MANERA_DRILL_GROUP, findDrill, drillGroupTitle } from '../../data/vocalDrills';
 import { allLearned, assignedProgress } from '../../utils/learn';
 import { PartsBar } from '../learn/PartsBar';
+import { DrillSheet } from '../mastery/ManeraLessonSheet';
+import { usePathItemOpener } from '../../hooks/usePathItemOpener';
+import { assignmentLines } from '../../utils/assignmentLines';
 
 const VOICE_LABEL: Record<string, string> = { '1': 'I ხმა', '2': 'II ხმა', '3': 'III ხმა' };
 const ROMAN: Record<string, string> = { '1': 'I', '2': 'II', '3': 'III' };
@@ -135,15 +138,39 @@ const WhoLearns: React.FC<{ a: Assignment; cls: SchoolClass; records: Record<str
   </ul>
 );
 
-/** The class page's „დავალებები“ fold (ClassProgram), for the class's teachers: the current assignments in slim rows —
- *  voices, deadline, for whom, how many did it (a chant's count unfolds into each member's bar of its parts) — with 🗑,
- *  „ახალი დავალება“, and the older ones (`past`, latest first) folded under „ძველი · N“ with their results. The
- *  members' records (for the counts) are read only while it is open. */
+/** The top of an assignment's card: the name big, one grey line under it, „›“ when a tap opens the chant (its notes), the
+ *  song or the exercise. Shared by the teacher's cards (AssignmentsFold) and the member's (MyClassWork's WorkItems). */
+export const WorkCardHead: React.FC<{ name: string; line?: string; icon?: React.ReactNode; open: (() => void) | null; className?: string }> = ({ name, line, icon, open, className = '' }) => {
+  const body = (
+    <>
+      {icon && <span className="w-10 h-10 rounded-xl bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center shrink-0 [&>svg]:w-5 [&>svg]:h-5">{icon}</span>}
+      <span className="min-w-0 flex-1">
+        <span className="block text-[15.5px] font-bold leading-snug text-[#2a2017] break-words">{name}</span>
+        {line && <span className="block mt-0.5 text-[13px] leading-snug text-[#8a7a6a] break-words">{line}</span>}
+      </span>
+      {open && <ChevronRight className="w-5 h-5 shrink-0 text-[#b3a594]" aria-hidden />}
+    </>
+  );
+  const look = `w-full flex items-center gap-3 text-left ${className}`;
+  return open ? (
+    <button type="button" onClick={open} className={`${look} cursor-pointer hover:bg-[#fbf6ec] active:bg-[#f6efe4] transition-colors`}>{body}</button>
+  ) : (
+    <div className={look}>{body}</div>
+  );
+};
+
+/** The class page's „დავალებები“ tab, for the class's teachers (2026-11-04, simplified: „დამაბნეველი ბარათი თვალს ღლის“): a
+ *  card per assignment — a tap opens its notes, song or exercise; the name big, one grey line, the teacher's note; under a
+ *  line the deadline („10 ნოემბრამდე“), the voices and for whom, and „ისწავლა N/M ▾“, which unfolds the book's place, each
+ *  member's bar of its parts and „დავალების წაშლა“. „ახალი დავალება“ on top, the older ones (`past`, latest first) folded
+ *  under „ძველი · N“. The members' records (for the counts) are read only while it is open. */
 export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; past?: Assignment[] }> = ({ cls, list, past = [] }) => {
   const records = useClassStudents(cls);
+  const openerOf = usePathItemOpener();
   const [adding, setAdding] = useState(false);
   const [old, setOld] = useState(false);
   const [shown, setShown] = useState<string | null>(null);
+  const [drill, setDrill] = useState<string | null>(null);
   const msg = useFlash();
 
   const remove = async (a: Assignment) => {
@@ -152,33 +179,55 @@ export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; p
   };
 
   const rows = (items: Assignment[]) => (
-    <ul className="-mt-1 divide-y divide-[#efe5d4]">
+    <ul className="space-y-2.5">
       {items.map(a => {
         const { targets, done } = progressOf(a, cls, records);
         const n = daysUntil(a.due);
+        const unfolded = shown === a.id;
+        const entry = a.variantId ? findCatalogEntry(a.variantId) : undefined;
+        const lines = a.exercise ? { name: a.title, line: `სავარჯიშო · ${a.code || ''}`, book: '' } : assignmentLines(a.variantId, a.title);
+        const open = a.exercise ? () => setDrill(a.exercise!) : a.variantId ? openerOf(a.variantId) : null;
+        const counted = Boolean(a.variantId || a.exercise);
         return (
-          <li key={a.id} className="flex items-start gap-2 py-2.5">
-            <div className="min-w-0 flex-1">
-              <p className="text-[14px] font-semibold leading-snug text-[#2a2017] break-words">{a.title}</p>
-              {/* the voices in one chip; „for whom“ only when it isn't the whole class */}
-              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
-                {a.voices.length > 0 && <Pill>{a.voices.map(v => ROMAN[v]).join(' · ')} ხმა</Pill>}
-                <Pill tone={n < 0 ? 'muted' : n <= 2 ? 'amber' : 'brown'}>{shortDate(a.due)} · {dueLabel(a.due)}</Pill>
-                {a.studentIds.length > 0 && <Pill tone="muted"><Users /> {targets.length} მოსწავლე</Pill>}
-                {a.exercise && <Pill tone="muted"><Dumbbell /> სავარჯიშო</Pill>}
-                {a.exercise && <Pill tone="green"><Check /> შეასრულა {done.length}/{targets.length}</Pill>}
-                {a.variantId && targets.length > 0 && (
-                  <button type="button" aria-expanded={shown === a.id} onClick={() => setShown(s => (s === a.id ? null : a.id))}
-                    className="inline-flex items-center gap-1 h-9 pl-3 pr-2 rounded-full text-xs font-bold whitespace-nowrap bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 cursor-pointer hover:bg-emerald-100 transition-colors">
-                    <Check className="w-3.5 h-3.5" /> ისწავლა {done.length}/{targets.length}
-                    <ChevronDown className={`w-4 h-4 transition-transform ${shown === a.id ? 'rotate-180' : ''}`} />
-                  </button>
-                )}
-              </div>
-              {a.note && <p className="mt-1.5 text-[12.5px] leading-snug text-[#75685a] whitespace-pre-line">{a.note}</p>}
-              {shown === a.id && <WhoLearns a={a} cls={cls} records={records} targets={targets} done={done} />}
+          <li key={a.id} className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] overflow-hidden">
+            <WorkCardHead
+              name={lines.name}
+              line={lines.line || (entry ? CATEGORY_LABEL[entry.category] : '')}
+              icon={a.exercise ? <Dumbbell /> : <Music />}
+              open={open}
+              className="px-3.5 py-3"
+            />
+            {a.note && (
+              <p className="px-3.5 pb-2.5 flex items-start gap-1.5 text-[13px] leading-snug text-[#75685a]">
+                <MessageSquareText className="w-3.5 h-3.5 mt-0.5 shrink-0 text-[#b3a594]" />
+                <span className="min-w-0 whitespace-pre-line">{a.note}</span>
+              </p>
+            )}
+            {/* the deadline, the voices and for whom on the left; how many learned it (unfolds) on the right */}
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3.5 py-2.5 border-t border-[#efe5d4]">
+              <span className={`inline-flex items-center gap-1.5 text-[13px] font-semibold ${n < 0 ? 'text-[#8a7a6a]' : n <= 2 ? 'text-amber-700' : 'text-[#4a3426]'}`}>
+                <Clock className="w-4 h-4" /> {dueUntil(a.due)}
+              </span>
+              {a.voices.length > 0 && <span className="text-[13px] font-semibold text-[#4a3426]">{a.voices.map(v => ROMAN[v]).join(' · ')} ხმა</span>}
+              {a.studentIds.length > 0 && <span className="inline-flex items-center gap-1 text-[13px] text-[#75685a]"><Users className="w-4 h-4" /> {targets.length} მოსწავლე</span>}
+              <button type="button" aria-expanded={unfolded} onClick={() => setShown(s => (s === a.id ? null : a.id))}
+                className={`ml-auto inline-flex items-center gap-1 h-9 pl-3 pr-2 rounded-full text-[13px] font-bold whitespace-nowrap cursor-pointer transition-colors ${counted ? 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100' : 'bg-[#f6efe4] text-[#75685a] hover:bg-[#efe5d4]'}`}>
+                {counted ? <><Check className="w-4 h-4" /> {a.exercise ? 'შეასრულა' : 'ისწავლა'} {done.length}/{targets.length}</> : 'დეტალები'}
+                <ChevronDown className={`w-4 h-4 transition-transform ${unfolded ? 'rotate-180' : ''}`} />
+              </button>
             </div>
-            <IconBtn label="წაშლა" tone="danger" onClick={() => remove(a)}><Trash2 /></IconBtn>
+            {unfolded && (
+              <div className="sg-in px-3.5 pb-3">
+                {lines.book && <p className="flex items-center gap-1.5 text-[12.5px] text-[#8a7a6a]"><BookOpen className="w-3.5 h-3.5 shrink-0" /> {lines.book}</p>}
+                {a.variantId && targets.length > 0 && <WhoLearns a={a} cls={cls} records={records} targets={targets} done={done} />}
+                <div className="mt-2 flex justify-end">
+                  <button type="button" onClick={() => remove(a)}
+                    className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full text-[13px] font-bold text-[#a3242b] cursor-pointer hover:bg-red-50 transition-colors">
+                    <Trash2 className="w-4 h-4" /> დავალების წაშლა
+                  </button>
+                </div>
+              </div>
+            )}
           </li>
         );
       })}
@@ -189,6 +238,7 @@ export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; p
     <div className="space-y-2.5">
       <Btn kind="soft" full icon={<Plus />} onClick={() => setAdding(true)}>ახალი დავალება</Btn>
       <Flash flash={msg.flash} onClose={msg.clear} />
+      <DrillSheet drillId={drill} onClose={() => setDrill(null)} />
       {list.length === 0 ? <p className="pt-1 text-sm text-[#8a7a6a]">მიმდინარე დავალება არ არის.</p> : <div className="pt-1">{rows(list)}</div>}
       {past.length > 0 && (
         <div className="border-t border-[#efe5d4]">
