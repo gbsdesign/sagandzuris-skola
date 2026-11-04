@@ -171,6 +171,8 @@ const Conductor: React.FC<{ song: LoadedSong; phrase: Phrase; conf: ClassConf; o
   const badges = byRole(r => (conf.parts[r] === 'phone' ? <Smartphone className="w-3 h-3" /> : conf.parts[r] === 'class' ? <Users className="w-3 h-3" /> : null));
   const left = loop.beats - tick.beat;
   const coming = ROLES.filter(r => pending[r]);
+  // the class's groups not singing yet: the line under the stage says how to bring them in (2026-11-04, the games' review)
+  const out = classRoles.filter(r => !inClass[r] && !pending[r]);
   // the class's players see their syllables (the panduri's too, said by voice when nobody has one)
   const drums = classRoles.filter(r => !SINGERS.includes(r) && (inClass[r] || pending[r]));
   const ours = classRoles.map(r => ROLE_NAMES[r]);
@@ -240,6 +242,7 @@ const Conductor: React.FC<{ song: LoadedSong; phrase: Phrase; conf: ClassConf; o
                 {coming.length && left <= 4
                   ? <>{join(coming.map(r => ROLE_NAMES[r]))} შემოდის: <span className="font-serif-ge text-[18px] text-[#7a2028] tabular-nums">{left}</span></>
                   : coming.length ? <>{join(coming.map(r => ROLE_NAMES[r]))} შემოვა შემდეგ წრეზე</>
+                  : out.length ? `წრე ${tick.pass + 1} · შეეხე კლასის ფიგურას — შემოვა`
                   : `წრე ${tick.pass + 1}`}
               </span>
             </div>

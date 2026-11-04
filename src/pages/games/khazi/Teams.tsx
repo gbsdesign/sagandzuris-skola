@@ -12,6 +12,7 @@ import { Podium, Standings, TimerRing } from '../rounds/parts';
 import { TEAM_TINT, TeamChips, TeamsEditor, readTeams, teamNames, useTurnClock, type TeamsConf } from '../rounds/teams';
 import { HandCard, PickChips, TimeLine, type Reveal } from './parts';
 import { HowTo } from '../../../components/games/HowTo';
+import { winLine } from '../rounds/winLine';
 
 // „დროის ხაზი“ on one screen (the hub's „ჰიბრიდული“, 2026-11-01): the phone on the table or a projector shows the one line of
 // the class. In turn a team gets the next card, says where it goes, the host taps that gap; the year opens and judges. Right —
@@ -87,7 +88,7 @@ const TeamsGame: React.FC<{ g: KhaziTeams; setG: (g: KhaziTeams) => void; onClos
       >
         <div className="my-auto space-y-5 py-4">
           <Podium names={g.names} scores={g.scores} />
-          <p className="text-center text-[15px] font-bold text-[#4a3426]">{win.length > 1 ? `ფრეა: ${win.join(', ')}` : `გაიმარჯვა „${win[0]}“-მა`}</p>
+          <p className="text-center text-[15px] font-bold text-[#4a3426]">{winLine(win, Math.max(...g.scores), n => `გაიმარჯვა „${n}“-მა`)}</p>
           <Standings names={g.names} scores={g.scores} />
           <Card className="!p-3">
             <TimeLine line={sortLine(g.placed, khaziCard)} card={khaziCard} tint={t => TEAM_TINT[t]} big={wide} />

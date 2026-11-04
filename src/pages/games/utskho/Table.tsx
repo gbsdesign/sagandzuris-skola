@@ -11,9 +11,11 @@ import { TableScreen } from '../../../components/games/TableScreen';
 import { Chip } from '../../../components/games/Chip';
 import { CircleNames, useCircleNames } from '../../../components/games/CircleNames';
 import { Btn, Card, askConfirm } from '../../../components/ui/kit';
-import { Foot, Hint, NameGrid, Ring } from '../samshvilde/parts';
+import { Foot, NameGrid, Ring } from '../samshvilde/parts';
 import { Podium, Standings, useNow } from '../rounds/parts';
 import { PLACE_ICON, PlaceBadge, PlaceGrid, PlaceTile, SecretCard, StrangerIcon } from './parts';
+import { winLine } from '../rounds/winLine';
+import { HowTo } from '../../../components/games/HowTo';
 
 // „უცხო სოფელში“ on one phone (the hub's „ჰიბრიდული“, 2026-11-01): the phone goes round the circle and each sees their card in
 // secret — the place and a role, or „უცხო ხარ“. Then the clock (6/8/10 minutes) runs on the table with the thirty places
@@ -138,10 +140,10 @@ const TableGame: React.FC<{ g: UTable; setG: (g: UTable) => void; onClose: () =>
         )}
       >
         <div className="my-auto space-y-5 py-4 w-full max-w-2xl mx-auto">
-          <Trophy className="w-10 h-10 mx-auto text-[#b8860b]" aria-hidden="true" />
+          {best > 0 && <Trophy className="w-10 h-10 mx-auto text-[#b8860b]" aria-hidden="true" />}
           <Podium names={g.names} scores={g.scores} />
           <p className="text-center text-[15px] font-bold text-[#4a3426]">
-            {winners.length > 1 ? `ფრეა: ${winners.join(', ')}` : `გაიმარჯვა „${winners[0]}“-მა`} · {g.played} რაუნდი
+            {winLine(winners, best, n => `გაიმარჯვა „${n}“-მა`)} · {g.played} რაუნდი
           </p>
           <Standings names={g.names} scores={g.scores} />
         </div>
@@ -403,6 +405,13 @@ export const UtskhoTable: React.FC = () => {
           </div>
         </Card>
       )}
+      <HowTo id="utskho-table" steps={[
+        'ყველა ერთ ადგილას ხართ — ერთის გარდა: უცხომ არ იცის, სად.',
+        'ტელეფონი წრეში გადადის: თითოეული ფარულად ხედავს თავის ბარათს — ადგილს და როლს, ან „უცხო ხარ“.',
+        'ერთმანეთს კითხვებს უსვამთ („აქ ხშირად მოდიხარ?“, „რა გაცვია?“): სოფლელებმა ერთმანეთი იცნონ, უცხომ კი ვერ მიხვდეს, სად ხართ.',
+        'ნებისმიერ დროს შეგიძლიათ ვინმეს დაადანაშაულოთ; უცხოს კი — გაიმხილოს თავი და ადგილი თქვას.',
+        POINTS_LINE,
+      ]} />
       <Card className="!p-4 space-y-4">
         <CircleNames hint={`${MIN_PLAYERS}–${MAX_PLAYERS} მოთამაშე. ერთ-ერთი უცხო იქნება — ვინ, ტელეფონი იცის.`} />
         {names.length > MAX_PLAYERS && <p className="text-[12.5px] text-[#8a6d12]">ითამაშებს პირველი {MAX_PLAYERS} — დანარჩენები მომდევნო თამაშში.</p>}
@@ -416,12 +425,6 @@ export const UtskhoTable: React.FC = () => {
       <Btn size="lg" full icon={<Play />} disabled={few} onClick={() => { void start(); }} className="!h-14 !text-[15.5px]">
         {few ? `საჭიროა ${MIN_PLAYERS} მოთამაშე მაინც` : 'დაწყება'}
       </Btn>
-      <Hint>
-        ყველა ერთ ადგილას ხართ — ერთის გარდა: უცხომ არ იცის, სად. ტელეფონი წრეში გადადის და თითოეული საიდუმლოდ ხედავს თავის ბარათს:
-        ადგილს და როლს, ან „უცხო ხარ“. მერე ერთმანეთს კითხვებს უსვამთ („აქ ხშირად მოდიხარ?“, „რა გაცვია?“) — ისე, რომ სოფლელებმა
-        ერთმანეთი იცნონ, უცხომ კი ვერ მიხვდეს. ნებისმიერ დროს შეგიძლიათ ვინმეს ბრალდება; უცხოს კი — გაიმხილოს თავი და ადგილი თქვას.
-      </Hint>
-      <Hint>{POINTS_LINE}</Hint>
       <p className="px-1 text-[12px] leading-snug text-[#9a8b7b]">ადგილები და როლები Claude-მა დაწერა სკოლისთვის — მასწავლებელს ჯერ არ შეუმოწმებია.</p>
     </div>
   );

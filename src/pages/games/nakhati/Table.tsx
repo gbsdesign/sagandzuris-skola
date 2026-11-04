@@ -11,11 +11,11 @@ import { TableScreen } from '../../../components/games/TableScreen';
 import { Chip } from '../../../components/games/Chip';
 import { InkPad, InkView, inkWidth } from '../../../components/games/Ink';
 import { Btn, Card, Toggle, askConfirm } from '../../../components/ui/kit';
-import { Hint } from '../samshvilde/parts';
 import { Podium, Standings, TimerRing } from '../rounds/parts';
 import { TEAM_TINT, TeamsEditor, readTeams, teamNames, useTurnClock, type TeamsConf } from '../rounds/teams';
 import { DRAW_RULE, NakhatiOptions, SHORT_SIDE, ThemeTag, UNCHECKED, chosenWords, useShort } from './parts';
 import { readThemes, useThemes } from './store';
+import { winLine } from '../rounds/winLine';
 
 // „ნახატობანა“ on one phone (the hub's „ჰიბრიდული“, 2026-11-01): the class in teams. A team's artist comes to the phone, sees
 // the word (another one if they wish, before the clock starts), and draws it — on the class's board or a paper, the phone in
@@ -105,10 +105,10 @@ const TableGame: React.FC<{ g: NakhatiTable; setG: (g: NakhatiTable) => void; on
         )}
       >
         <div className="my-auto space-y-5 py-4 w-full max-w-2xl mx-auto">
-          <Trophy className="w-10 h-10 mx-auto text-[#b8860b]" aria-hidden="true" />
+          {best > 0 && <Trophy className="w-10 h-10 mx-auto text-[#b8860b]" aria-hidden="true" />}
           <Podium names={g.names} scores={scores} />
           <p className="text-center text-[15px] font-bold text-[#4a3426]">
-            {winners.length > 1 ? `ფრეა: ${winners.join(', ')}` : `გაიმარჯვა „${winners[0]}“-მა`} · {g.rounds} წრე
+            {winLine(winners, best, n => `გაიმარჯვა „${n}“-მა`)} · {g.rounds} წრე
           </p>
           <Standings names={g.names} scores={scores} />
         </div>
@@ -339,10 +339,6 @@ export const NakhatiTeams: React.FC = () => {
         <NakhatiOptions />
       </Card>
       <Btn size="lg" full icon={<Play />} onClick={() => { void start(); }} disabled={!size} className="!h-14 !text-[15.5px]">დაწყება · {size} სიტყვა</Btn>
-      <Hint>
-        კლასი გუნდებად იყოფა, თითო გუნდს თავისი სვლა აქვს. მხატვარი ტელეფონზე სიტყვას ნახავს და {conf.where === 'screen' ? 'ეკრანზე' : 'დაფაზე ან ფურცელზე'} ხატავს;
-        {' '}გუნდი ხმამაღლა იცნობს — დრომდე გამოცნობილი სიტყვა ერთი ქულაა. {DRAW_RULE}
-      </Hint>
       <p className="px-1 text-[12px] leading-snug text-[#9a8b7b]">{UNCHECKED}</p>
     </div>
   );

@@ -14,6 +14,7 @@ import { Toast } from '../../../components/ui/Toast';
 import { GeoKeyboard } from '../../../components/games/GeoKeyboard';
 import { triggerHaptic } from '../../../utils/haptics';
 import { ClueChips, LetterBoxes, ThemeChip, ThemePicker, useLetterKeys } from './parts';
+import { Steps } from '../../../components/games/HowTo';
 
 // „ნუ იტყვი!“ alone (the hub's „ონლაინ“, 2026-11-01): the card turned round — its five forbidden words come one by one as
 // clues, the vaguest first, and the word is typed into its boxes. Guessed after one clue = 5 points, after all five = 1; a
@@ -224,10 +225,10 @@ export const TabuSolo: React.FC = () => {
           </div>
         )}
         {fresh && !showResult && (
-          <p className="mt-3 text-[13.5px] leading-snug text-[#4a3426]">
-            ბარათის ამხსნელს ხუთი სიტყვა ეკრძალება — აქ ისინი მინიშნებებია და სათითაოდ ჩნდება. გამოიცანი სიტყვა: პირველივე მინიშნებით
-            5 ქულაა, ყოველი შემდეგით ერთით ნაკლები.
-          </p>
+          <Steps className="mt-3" steps={[
+            'ბარათის ამხსნელს ხუთი სიტყვა ეკრძალება — აქ ისინი მინიშნებებია და სათითაოდ ჩნდება.',
+            'გამოიცანი სიტყვა: პირველივე მინიშნებით 5 ქულაა, ყოველი შემდეგით ერთით ნაკლები.',
+          ]} />
         )}
       </Card>
 
