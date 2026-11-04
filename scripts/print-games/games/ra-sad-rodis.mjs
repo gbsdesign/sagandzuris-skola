@@ -4,6 +4,7 @@
 // settings are the app's own (`utils/raSadRodis.ts`: a minute a question, 6/12/18 questions, 2–6 teams named after instruments).
 import { C, SERIES, SCHOOL, aso, esc, icon, page, stripe, foot, duplex, sheetNo, cardSheet, gridSheet, coverCss } from '../lib.mjs';
 import { appData } from '../appData.mjs';
+import { lookedTopics } from '../quizLook.mjs';
 
 const { RSR_QUESTIONS, RSR_TOPICS, COUNT_CHOICES, SECONDS, MIN_TEAMS, MAX_TEAMS, TEAM_NAMES } = await appData({
   'data/raSadRodisQuestions.ts': ['RSR_QUESTIONS', 'RSR_TOPICS'],
@@ -18,31 +19,8 @@ const META = `${MIN_TEAMS}–${MAX_TEAMS} გუნდი, თითოში 2�
 const PER_TOPIC = 4;
 const BLANKS = 9;
 
-// each topic's colour and icon (the band on both sides of its cards)
-const LOOK = {
-  istoria: { color: '#3d6b6b', icon: 'landmark' },
-  gmirebi: { color: '#8a2432', icon: 'swords' },
-  adamianebi: { color: '#a87d14', icon: 'star' },
-  mtserloba: { color: '#5a4636', icon: 'feather' },
-  kino: { color: '#3f4652', icon: 'clapperboard' },
-  simgera: { color: '#6b4c9a', icon: 'music' },
-  tsekva: { color: '#8e3d7f', icon: 'footprints' },
-  samzareulo: { color: '#c7701e', icon: 'utensils' },
-  samosi: { color: '#b0475f', icon: 'shirt' },
-  kutkhe: { color: '#2f7d4f', icon: 'mountain' },
-  dzeglebi: { color: '#a0522d', icon: 'castle' },
-  buneba: { color: '#6b7f1a', icon: 'trees' },
-  zgaprebi: { color: '#4a55a0', icon: 'scroll-text' },
-  sporti: { color: '#2a7aa8', icon: 'trophy' },
-  musika: { color: '#2f5d8a', icon: 'music-4' },
-  tsmindanebi: { color: '#c69214', icon: 'sparkles' },
-  sagmrto: { color: '#7b5e3b', icon: 'book-open' },
-  galoba: { color: '#1d5c63', icon: 'audio-lines' },
-};
-const TOPICS = RSR_TOPICS.map(t => {
-  if (!LOOK[t.id]) throw new Error(`no look for the topic ${t.id}`);
-  return { ...t, ...LOOK[t.id] };
-});
+// each topic's colour and icon (the band on both sides of its cards): `quizLook.mjs`, shared with „ოთხიდან ერთი“
+const TOPICS = lookedTopics(RSR_TOPICS);
 const CARDS = TOPICS.flatMap(t => {
   const qs = RSR_QUESTIONS.filter(q => q.topic === t.id).slice(0, PER_TOPIC);
   if (qs.length < PER_TOPIC) throw new Error(`${t.id}: ${qs.length} of ${PER_TOPIC} questions`);

@@ -3,7 +3,7 @@ import { collection, doc, getDoc, onSnapshot, query, serverTimestamp, where, wri
 import { db } from '../firebase';
 import { ROOM_FRESH_MS, createRooms, parseRoom, type Backend, type Data, type RoomDoc } from './gameRoom';
 import { samshvildeRooms } from './samshvildeRoom';
-import { ROUNDS_ROOM, editRound, nextRound, nextStep, revealRound, roundKey, type RoundQ } from './roundGames';
+import { ROUNDS_ROOM, editRound, judgeRound, nextRound, nextStep, revealRound, roundKey, type RoundQ } from './roundGames';
 
 // The online rooms (utils/gameRoom.ts) in the app's Firestore: the backend, the one store of this phone, and the rooms of my
 // classes for the invitation strip and the game's own page.
@@ -46,6 +46,8 @@ export const roundRooms = createRooms(backend, ROUNDS_ROOM, step => ({
   next: () => step(nextRound, false),
   /** the round asked now, changed by the host's own tool (its drawing) */
   edit: (key: string, q: RoundQ) => step(s => editRound(s, key, q), false),
+  /** an answer in words judged again by the host while its round is shown */
+  judge: (seat: number, ok: boolean) => step(s => judgeRound(s, seat, ok), false),
 }));
 export const useRoundRoom = () => useSyncExternalStore(roundRooms.subscribe, roundRooms.get);
 const anyVisible = () => rooms.isVisible() || roundRooms.isVisible();

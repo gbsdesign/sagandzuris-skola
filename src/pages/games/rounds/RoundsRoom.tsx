@@ -140,7 +140,7 @@ export const RoundsRoom: React.FC<{
           snippet={snippet}
           gc={gc}
           onHide={onHide}
-          moves={{ timeUp: roundRooms.host.timeUp, reveal: roundRooms.host.reveal, next: roundRooms.host.next, again, close: () => { void closeRoom(); }, edit: roundRooms.host.edit }}
+          moves={{ timeUp: roundRooms.host.timeUp, reveal: roundRooms.host.reveal, next: roundRooms.host.next, again, close: () => { void closeRoom(); }, edit: roundRooms.host.edit, judge: roundRooms.host.judge }}
         />
         {error}
       </>
@@ -158,7 +158,7 @@ export const RoundsRoom: React.FC<{
         face={face}
         snippet={snippet}
         gc={gc}
-        onAnswer={(pick, ms) => roundRooms.act(view.key, pick, false, ms)}
+        onAnswer={(pick, ms, text) => roundRooms.act(view.key, pick, false, ms, text)}
         onHide={onHide}
         onLeave={leave}
       />

@@ -17,6 +17,7 @@ import { CHAMO_RULES, type ChamotvaleQ } from './chamotvale';
 import { PANTO_RULES, type PantoQ } from './pantomima';
 import { NAKHATI_RULES, type NakhatiQ } from './nakhati';
 import { LOTO_RULES, type LotoQ } from './loto';
+import { RSR_RULES, type RsrQ } from './raSadRodis';
 
 // The quick games of a class's room (2026-10-31, the tender's five — the user's „გააკეთე 5-ვე ონლაინ და ჰიბრიდული“):
 // one engine of rounds. A round asks one thing — a song to place on the map, a question, a chant revealed voice by voice,
@@ -24,14 +25,23 @@ import { LOTO_RULES, type LotoQ } from './loto';
 // not play) reveals it, the points are counted, the next round comes. Each game's own part is its `RoundRules`: how many
 // steps, how long each, what an answer earns and what the players may not see before the reveal. The room around it:
 // utils/gameRoom.ts; the screens: pages/games/rounds/. The hybrid game (one phone, the class in teams) is in this file
-// too: the same rounds, the host marks each team.
+// too: the same rounds, the host marks each team. A game answered in words (`typed`, 2026-11-04: „რა? სად? როდის?“) gets
+// each one's words in their act; its rules judge them at the reveal and the host may judge each one again (`judgeRound`).
 
 export type RoundGame = Exclude<RoomGame, 'samshvilde'>;
-export const ROUND_GAMES: readonly RoundGame[] = ['kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri', 'hangi', 'akordi', 'rvakhma', 'ruka', 'gagrdzele', 'hangebi', 'eqo', 'mprinavi', 'tsqvilebi', 'mesame', 'chamotvale', 'pantomima', 'nakhati', 'loto'];
+export const ROUND_GAMES: readonly RoundGame[] = ['kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri', 'hangi', 'akordi', 'rvakhma', 'ruka', 'gagrdzele', 'hangebi', 'eqo', 'mprinavi', 'tsqvilebi', 'mesame', 'chamotvale', 'pantomima', 'nakhati', 'loto', 'rsr'];
 /** one round's content, by game (the answer included: `secret` keeps it from the players until the reveal) */
-export type RoundQ = KutkheQ | OtkhiQ | ChantRoundQ | TurniriQ | HangiQ | AkordiQ | RvakhmaQ | RukaQ | GagrdzeleQ | HangebiQ | EqoQ | MprinaviQ | TsqvilebiQ | TrioQ | ChamotvaleQ | PantoQ | NakhatiQ | LotoQ;
+export type RoundQ = KutkheQ | OtkhiQ | ChantRoundQ | TurniriQ | HangiQ | AkordiQ | RvakhmaQ | RukaQ | GagrdzeleQ | HangebiQ | EqoQ | MprinaviQ | TsqvilebiQ | TrioQ | ChamotvaleQ | PantoQ | NakhatiQ | LotoQ | RsrQ;
 
-export interface RoundAnswer { pick: number; ms: number; step: number }
+export interface RoundAnswer {
+  pick: number;
+  ms: number;
+  step: number;
+  /** a game answered in words: the words */
+  text?: string;
+  /** …and the host's judgement once given (none: the rules' own) */
+  ok?: boolean;
+}
 
 export interface RoundRules<Q extends RoundQ> {
   steps(q: Q): number;
@@ -51,6 +61,8 @@ export interface RoundRules<Q extends RoundQ> {
   /** the next round as the game so far leaves it (2026-11-01, „საგალობო ლოტო“: each one's marks ride on to the next round,
    * from the answers of the round just shown) */
   carry?(next: Q, s: RoundsState): Q;
+  /** the answer is words typed on the phone (`Act.text`, `pick` 0): `points` judges them, the host may judge again */
+  typed?: boolean;
 }
 
 /** each game's rules by its rounds' kind (a game not built yet has none, so its rounds are never read back) */
@@ -58,7 +70,7 @@ const BY_KIND: { [K in RoundQ['kind']]: RoundRules<Extract<RoundQ, { kind: K }>>
   kutkhe: KUTKHE_RULES, otkhi: OTKHI_RULES, khmebi: KHMEBI_RULES, notebi: NOTEBI_RULES, turniri: TURNIRI_RULES, hangi: HANGI_RULES,
   akordi: AKORDI_RULES, rvakhma: RVAKHMA_RULES, ruka: RUKA_RULES, gagrdzele: GAGRDZELE_RULES, hangebi: HANGEBI_RULES,
   eqo: EQO_RULES, mprinavi: MPRINAVI_RULES, tsqvilebi: TSQ_RULES, mesame: TRIO_RULES, chamotvale: CHAMO_RULES, pantomima: PANTO_RULES, nakhati: NAKHATI_RULES,
-  loto: LOTO_RULES,
+  loto: LOTO_RULES, rsr: RSR_RULES,
 };
 const RULES = BY_KIND as unknown as Record<string, RoundRules<RoundQ> | undefined>;
 export const rulesOf = (q: RoundQ): RoundRules<RoundQ> => RULES[q.kind]!;
@@ -154,18 +166,42 @@ export const nextRound = (s: RoundsState, now = Date.now()): RoundsState => {
   return fresh(carried, s.at + 1, now);
 };
 
+/** the longest answer in words a round keeps */
+export const TEXT_MAX = 80;
+const words = (t: unknown) => (typeof t === 'string' ? t.replace(/\s+/g, ' ').trim().slice(0, TEXT_MAX) : '');
+
 /** a player's answer: once a round, only while it is asked; the last one in reveals the round */
 export const answerRound = (s: RoundsState, seat: number, a: Act): RoundsState => {
   const k = parseKey(a.key);
   if (s.phase !== 'ask' || !k || k.n !== s.n || k.at !== s.at || k.step < 1 || k.step > s.step) return s;
   if (seat < 0 || seat >= s.players.length || s.answers[seat] || a.pick === null) return s;
   const q = s.rounds[s.at];
-  if (!rulesOf(q).ok(q, a.pick)) return s;
-  const limit = rulesOf(q).seconds(q, k.step) * 1000;
+  const r = rulesOf(q);
+  const text = r.typed ? words(a.text) : '';
+  if (r.typed ? !text : !r.ok(q, a.pick)) return s;
+  const limit = r.seconds(q, k.step) * 1000;
   const ms = Math.min(limit, Math.max(0, Math.round(a.ms ?? limit)));
-  const answers = s.answers.map((x, i) => (i === seat ? { pick: a.pick!, ms, step: k.step } : x));
+  const answer: RoundAnswer = r.typed ? { pick: 0, ms, step: k.step, text } : { pick: a.pick, ms, step: k.step };
+  const answers = s.answers.map((x, i) => (i === seat ? answer : x));
   const next = { ...s, answers };
   return allAnswered(next) ? revealRound(next) : next;
+};
+
+/** the host judges one answer in words again (right or not) while its round is shown: its points and the score follow */
+export const judgeRound = (s: RoundsState, seat: number, ok: boolean): RoundsState => {
+  const q = s.rounds[s.at];
+  const r = q && rulesOf(q);
+  const a = s.answers[seat];
+  if (s.phase !== 'reveal' || !r?.typed || !a || a.ok === ok) return s;
+  const judged = { ...a, ok };
+  const gained = Math.max(0, Math.round(r.points(q, judged, r.seconds(q, a.step) * 1000, seat)));
+  const diff = gained - (s.gained[seat] ?? 0);
+  return {
+    ...s,
+    answers: s.answers.map((x, i) => (i === seat ? judged : x)),
+    gained: s.gained.map((g, i) => (i === seat ? gained : g)),
+    players: s.players.map((p, i) => (i === seat ? { ...p, score: p.score + diff } : p)),
+  };
 };
 
 /** the host changed the round being asked — its public part, as „ნახატობანა“'s drawing that grows on every phone: only that
@@ -208,6 +244,8 @@ export interface RoundsView {
   picks: (number | null)[] | null;
   pickSteps: (number | null)[] | null;
   gained: number[] | null;
+  /** at the reveal of a game answered in words: what each one wrote */
+  texts?: (string | null)[] | null;
 }
 
 export const publicView = (s: RoundsState): RoundsView => {
@@ -223,6 +261,7 @@ export const publicView = (s: RoundsState): RoundsView => {
     picks: open ? s.answers.map(a => a?.pick ?? null) : null,
     pickSteps: open ? s.answers.map(a => a?.step ?? null) : null,
     gained: open ? s.gained : null,
+    ...(rulesOf(q).typed ? { texts: open ? s.answers.map(a => a?.text ?? null) : null } : {}),
   };
 };
 
@@ -244,7 +283,11 @@ export const parseRoundsState = (raw: unknown): RoundsState | null => {
   const rounds = Array.isArray(o.rounds) ? (o.rounds as unknown[]).filter(isQ) : [];
   if (!players.length || !rounds.length || !isInt(o.at) || o.at < 0 || o.at >= rounds.length || !isInt(o.n) || !isInt(o.step) || !isInt(o.t0)) return null;
   const answers = Array.isArray(o.answers) && o.answers.length === players.length
-    ? (o.answers as (RoundAnswer | null)[]).map(a => (a && isInt(a.pick) && isInt(a.ms) && isInt(a.step) ? a : null)) : players.map(() => null);
+    ? (o.answers as (RoundAnswer | null)[]).map(a => (a && isInt(a.pick) && isInt(a.ms) && isInt(a.step) ? {
+      pick: a.pick, ms: a.ms, step: a.step,
+      ...(typeof a.text === 'string' && a.text ? { text: words(a.text) } : {}),
+      ...(typeof a.ok === 'boolean' ? { ok: a.ok } : {}),
+    } : null)) : players.map(() => null);
   const gained = Array.isArray(o.gained) && o.gained.length === players.length && o.gained.every(isInt) ? (o.gained as number[]) : players.map(() => 0);
   return {
     v: 1, game: o.game as RoundGame, n: o.n, players, rounds, at: o.at, phase: o.phase as RoundPhase, step: Math.max(1, o.step), t0: o.t0,
@@ -266,6 +309,7 @@ export const parseRoundsView = (raw: unknown): RoundsView | null => {
     picks: list<number | null>(v.picks, v.names.length),
     pickSteps: list<number | null>(v.pickSteps, v.names.length),
     gained: list<number>(v.gained, v.names.length),
+    ...(v.texts !== undefined ? { texts: list<string | null>(v.texts, v.names.length) } : {}),
   };
 };
 

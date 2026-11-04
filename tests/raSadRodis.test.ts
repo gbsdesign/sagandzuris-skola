@@ -2,7 +2,8 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { RSR_QUESTIONS, RSR_TOPICS, type RsrQuestion } from '../src/data/raSadRodisQuestions';
 import {
-  A_MAX, LISTEN, MINE, Q_MAX, SEEN_KEEP, drawGame, listenQuestion, parseGame, parseMine, placesOf, rememberSeen, scoresOf, topicPlan,
+  A_MAX, LISTEN, MINE, Q_MAX, RSR_RULES, SEEN_KEEP, answerForms, drawGame, listenQuestion, parseGame, parseMine, placesOf, rememberSeen,
+  rsrMatch, sameWord, scoresOf, stemOf, toRsrRound, topicPlan,
   type RsrPlay,
 } from '../src/utils/raSadRodis';
 import { mulberry32 } from '../src/utils/otkheuli';
@@ -127,4 +128,75 @@ test('parseGame reads back a kept game and refuses a broken one', () => {
   assert.equal(parseGame({ ...game, names: ['ა'] }), null);
   assert.equal(parseGame({ ...game, phase: 'think' }), null);
   assert.equal(parseGame('junk'), null);
+});
+
+// ——— online (2026-11-04): the answer judge and the room's rules
+
+test('rsrMatch takes the answer in any case, its bracket forms and one slip in a long word', () => {
+  assert.ok(rsrMatch('ფარნავაზს', 'ფარნავაზი'));
+  assert.ok(rsrMatch('ფარნავაზს', 'ფარნავაზმა'));
+  assert.ok(rsrMatch('ფარნავაზს', '  ფარნავაზ!  '));
+  assert.ok(!rsrMatch('ფარნავაზს', 'მირიანი'));
+  assert.ok(!rsrMatch('თამარი', 'თამაზი'));
+  assert.ok(rsrMatch('ივირონი (ივერთა მონასტერი)', 'ივერთა მონასტერი'));
+  assert.ok(rsrMatch('ივირონი (ივერთა მონასტერი)', 'ივირონში'));
+  assert.ok(rsrMatch('ნიკო ფიროსმანაშვილი', 'ნიკო ფიროსმანშვილი'));
+  assert.ok(!rsrMatch('ფარნავაზს', ''));
+});
+
+test('rsrMatch: a question of two things wants both; titles and kinds may be left out', () => {
+  assert.ok(rsrMatch('ქეთევან დედოფალი, შირაზში', 'ქეთევანი შირაზში'));
+  assert.ok(!rsrMatch('ქეთევან დედოფალი, შირაზში', 'ქეთევანი'));
+  assert.ok(rsrMatch('მირიან მეფემ და ნანა დედოფალმა', 'მირიანმა და ნანამ'));
+  assert.ok(!rsrMatch('მირიან მეფემ და ნანა დედოფალმა', 'მირიანმა'));
+  assert.ok(rsrMatch('დავით აღმაშენებელი, გელათის მონასტრის კარიბჭეში', 'დავით აღმაშენებელი, გელათში'));
+  assert.ok(!rsrMatch('ოქრო, გუნდრუკი და მური', 'ოქრო და გუნდრუკი'));
+  assert.ok(rsrMatch('ოქრო, გუნდრუკი და მური', 'მური, ოქრო, გუნდრუკი'));
+});
+
+test('rsrMatch: numbers must be the same (written any way), a date with its month', () => {
+  assert.ok(rsrMatch('40 დღე', '40'));
+  assert.ok(rsrMatch('40 დღე', 'ორმოცი დღე'));
+  assert.ok(!rsrMatch('40 დღე', '30 დღე'));
+  assert.ok(rsrMatch('26 მაისს', '26 მაისი'));
+  assert.ok(!rsrMatch('26 მაისს', '26 მარტს'));
+  assert.ok(rsrMatch('ბაგრატ III-მ', 'ბაგრატ მესამე'));
+  assert.ok(rsrMatch('ბაგრატ III-მ', 'ბაგრატ 3'));
+  assert.ok(!rsrMatch('ბაგრატ III-მ', 'ბაგრატ IV'));
+});
+
+test('stemOf and sameWord: endings off, three letters always left, a number is itself', () => {
+  assert.equal(stemOf('ფარნავაზმა'), 'ფარნავაზ');
+  assert.equal(stemOf('გელათში'), 'გელათ');
+  assert.equal(stemOf('ქვით'), 'ქვი');
+  assert.equal(stemOf('ქვა'), 'ქვა');
+  assert.ok(sameWord('მონასტერი', 'მონასტრის'));
+  assert.ok(!sameWord('40', '400'));
+  assert.deepEqual(answerForms('ჯორჯ ბალანჩინი (ბალანჩივაძე)'), [['ჯორჯ', 'ბალანჩინი'], ['ბალანჩივაძე']]);
+});
+
+test('a question as a round of the room: its piece starts inside the recording, and the rules read it back', () => {
+  const written = RSR_QUESTIONS[0];
+  const r = toRsrRound(written, mulberry32(3));
+  assert.equal(r.kind, 'rsr');
+  assert.equal(r.a, written.a);
+  assert.equal(r.url, undefined);
+  assert.ok(RSR_RULES.valid(r));
+  const heard = toRsrRound(listenQuestion({ id: 'p1', title: 'ჩაკრულო', sub: 'სიმღერა · კახეთი', url: 'https://x/p1', kind: 'song' }), mulberry32(3));
+  assert.equal(heard.url, 'https://x/p1');
+  assert.ok(heard.from! >= 0.05 && heard.from! < 0.55);
+  assert.ok(RSR_RULES.valid(heard));
+  assert.ok(!RSR_RULES.valid({ ...r, a: '' }));
+  assert.ok(!RSR_RULES.valid({ ...r, kind: 'otkhi' }));
+  // the answer and its note are not shown while it is asked
+  assert.deepEqual([...RSR_RULES.secret].sort(), ['a', 'id', 'note']);
+  // one point a right answer; the host's judgement wins
+  assert.equal(RSR_RULES.points(r, { pick: 0, ms: 9000, step: 1, text: written.a }, 60000), 1);
+  assert.equal(RSR_RULES.points(r, { pick: 0, ms: 9000, step: 1, text: 'არ ვიცი' }, 60000), 0);
+  assert.equal(RSR_RULES.points(r, { pick: 0, ms: 9000, step: 1, text: 'არ ვიცი', ok: true }, 60000), 1);
+  assert.equal(RSR_RULES.points(r, { pick: 0, ms: 9000, step: 1, text: written.a, ok: false }, 60000), 0);
+});
+
+test('every written answer is taken in its own words', () => {
+  for (const q of RSR_QUESTIONS) assert.ok(rsrMatch(q.a, q.a), `${q.id}: ${q.a}`);
 });

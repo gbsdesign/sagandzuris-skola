@@ -4,7 +4,7 @@
 //                                      only its host writes it; `view` = the game's public view as JSON (never a secret)
 //   …/joins/{uid}    {uid, name, photoURL, at}   the lobby: each player writes their own
 //   …/seats/{uid}    {s}   a player's own seat (JSON), for a game with secrets (a role) — read by that player and the host
-//   …/acts/{uid}     {key, pick, end, at, ms?}   a player's latest answer — read by that player and the host
+//   …/acts/{uid}     {key, pick, end, at, ms?, text?}   a player's latest answer — read by that player and the host
 //   …/host/state     {s}   the host's whole game (JSON), so a reload goes on where it stopped — the host only
 //   …/peers/{uid}    the game's own call (utils/callSession.ts, base classes/{classId}/games/{roomId})
 // One room at a time per phone and game engine: a module store (like the calls), so the game goes on while the host looks
@@ -14,7 +14,7 @@
 // utils/gameRoomFirestore.ts.
 
 /** the games played in a room; firestore.rules lets a room be opened only for these */
-export const ROOM_GAMES = ['samshvilde', 'kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri', 'hangi', 'akordi', 'rvakhma', 'ruka', 'gagrdzele', 'hangebi', 'eqo', 'mprinavi', 'tsqvilebi', 'mesame', 'chamotvale', 'pantomima', 'nakhati', 'loto'] as const;
+export const ROOM_GAMES = ['samshvilde', 'kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri', 'hangi', 'akordi', 'rvakhma', 'ruka', 'gagrdzele', 'hangebi', 'eqo', 'mprinavi', 'tsqvilebi', 'mesame', 'chamotvale', 'pantomima', 'nakhati', 'loto', 'rsr'] as const;
 export type RoomGame = typeof ROOM_GAMES[number];
 export const isRoomGame = (v: unknown): v is RoomGame => typeof v === 'string' && (ROOM_GAMES as readonly string[]).includes(v);
 
@@ -32,9 +32,11 @@ export interface Backend {
   stamp(): unknown;
 }
 
-/** a player's answer to the step named by `key`: a seat or an option (`pick`), „my word is over“ (`end`), and how long
- *  they took on their own phone (`ms`, the quick games) */
-export interface Act { key: string; pick: number | null; end?: boolean; ms?: number }
+/** a player's answer to the step named by `key`: a seat or an option (`pick`), „my word is over“ (`end`), how long they
+ *  took on their own phone (`ms`, the quick games) and an answer in words (`text`, 2026-11-04: „რა? სად? როდის?“) */
+export interface Act { key: string; pick: number | null; end?: boolean; ms?: number; text?: string }
+/** the longest answer in words an act may carry (firestore.rules says the same) */
+export const ACT_TEXT_MAX = 80;
 export interface MyAct extends Act { at: number }
 
 /** a game as the room plays it: the host's whole state `S`, the public view `V` everybody reads, a player's seat */
@@ -107,7 +109,11 @@ const parseJoin = (d: Data): Joined | null =>
   (typeof d.uid === 'string' && d.uid ? { uid: d.uid, name: str(d.name, 120) || 'მოთამაშე', photoURL: str(d.photoURL, 2000), at: num(d.at) } : null);
 export const parseMine = (d: Data | null): MyAct | null =>
   (d && typeof d.key === 'string' && (d.pick === null || Number.isInteger(d.pick)) && num(d.at) > 0
-    ? { key: d.key, pick: d.pick as number | null, end: d.end === true, at: num(d.at), ...(Number.isInteger(d.ms) ? { ms: d.ms as number } : {}) } : null);
+    ? {
+      key: d.key, pick: d.pick as number | null, end: d.end === true, at: num(d.at),
+      ...(Number.isInteger(d.ms) ? { ms: d.ms as number } : {}),
+      ...(typeof d.text === 'string' ? { text: d.text.slice(0, ACT_TEXT_MAX) } : {}),
+    } : null);
 
 export const newRoomId = () => `${Date.now().toString(36)}${Math.random().toString(36).slice(2, 8)}`;
 
@@ -274,14 +280,16 @@ export const createRooms = <S, V, Seat, O, X extends object = Record<string, nev
       if (!snap) return;
       await be.write([{ path: path('joins', snap.me.uid), data: null }]).catch(fail);
     },
-    /** my answer to the step `key` (shown at once, sent in order); `ms` — how long I took, on my own phone */
-    act: (key: string, pick: number | null, end = false, ms?: number) => {
+    /** my answer to the step `key` (shown at once, sent in order); `ms` — how long I took, on my own phone; `text` — an
+     *  answer in words */
+    act: (key: string, pick: number | null, end = false, ms?: number, text?: string) => {
       if (!snap) return;
       const at = Math.max(Date.now(), lastAt + 1);
       lastAt = at;
       const timed = ms === undefined ? {} : { ms: Math.min(600_000, Math.max(0, Math.round(ms))) };
-      patch({ mine: { key, pick, end, at, ...timed } });
-      void send([{ path: path('acts', snap.me.uid), data: { key, pick, end, at, ...timed } }]);
+      const words = text === undefined ? {} : { text: text.trim().slice(0, ACT_TEXT_MAX) };
+      patch({ mine: { key, pick, end, at, ...timed, ...words } });
+      void send([{ path: path('acts', snap.me.uid), data: { key, pick, end, at, ...timed, ...words } }]);
     },
 
     // ——— the host
