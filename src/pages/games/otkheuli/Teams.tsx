@@ -14,6 +14,8 @@ import { Btn, Card, askConfirm } from '../../../components/ui/kit';
 import { Hint } from '../samshvilde/parts';
 import { Podium, Standings, TimerRing } from '../rounds/parts';
 import { TEAM_TINT, TeamChips, TeamsEditor, readTeams, teamNames, useTurnClock, type TeamsConf } from '../rounds/teams';
+import { softBreaks } from '../../../utils/tsqvilebi';
+import { HowTo } from '../../../components/games/HowTo';
 
 // „ოთხეული“ on one phone (the plan's hybrid, 2026-11-01): the grid on the screen (or a projector), 2–6 teams in turn say
 // four words, the teacher taps them. A group found takes its team's colour; before its name shows the team says what joins
@@ -213,7 +215,7 @@ const TeamsGame: React.FC<{ g: OtkTeams; setG: (g: OtkTeams) => void; onClose: (
                     className={`min-h-[60px] rounded-xl px-1 py-1.5 font-bold leading-tight text-center [overflow-wrap:anywhere] transition active:scale-95 cursor-pointer ${w.length > 8 ? 'text-[12px]' : 'text-[13.5px]'} ${on ? 'text-white shadow-[0_6px_14px_-8px_rgba(74,52,38,0.9)]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:bg-[#fbf6ec]'} ${on && shaking ? 'sg-shake' : ''}`}
                     style={on ? { background: tint } : undefined}
                   >
-                    {w}
+                    {softBreaks(w)}
                   </button>
                 );
               })}
@@ -266,6 +268,12 @@ export const OtkheuliTeams: React.FC = () => {
           </div>
         </Card>
       )}
+      <HowTo id="otkheuli-table" steps={[
+        'ტელეფონი ან ეკრანი მთელ კლასს უჩვენებს 16 სიტყვას. მათში ოთხი ფარული ჯგუფია.',
+        'გუნდი თავის სვლაზე ოთხ სიტყვას ასახელებს, მასწავლებელი მათ აჭერს და ამოწმებს.',
+        `ნაპოვნი ჯგუფი ${OTK_FIND} ქულაა. თუ გუნდი იტყვის, რა აერთიანებს, კიდევ ${OTK_LINK}.`,
+        'ყოველი ცდის მერე, სწორის თუ არასწორის, ჯერი შემდეგ გუნდზე გადადის. სამი ჯგუფის მერე ბოლო ოთხი თავისით რჩება — შემდეგ გუნდს მხოლოდ კავშირის თქმა შეუძლია.',
+      ]} />
       <Card className="!p-4 space-y-4">
         <TeamsEditor conf={conf} onChange={c => setConf({ ...conf, ...c })} />
         <div className="space-y-2">
@@ -282,11 +290,6 @@ export const OtkheuliTeams: React.FC = () => {
         </div>
       </Card>
       <Btn size="lg" full icon={<Play />} onClick={() => { void start(); }} className="!h-14 !text-[15.5px]">დაწყება</Btn>
-      <Hint>
-        ტელეფონი (ან ეკრანი) კლასს უჩვენებს 16 სიტყვას. გუნდი თავის სვლაზე ოთხ სიტყვას ასახელებს, მასწავლებელი აჭერს და ამოწმებს.
-        ნაპოვნი ჯგუფი — {OTK_FIND} ქულა, და თუ გუნდი იტყვის, რა აერთიანებს, კიდევ {OTK_LINK}. ყოველი ცდის მერე, სწორის თუ არასწორის, სვლა
-        შემდეგ გუნდზე გადადის. სამი ჯგუფის მერე ბოლო ოთხი თავისით რჩება — შემდეგ გუნდს მხოლოდ კავშირის თქმა შეუძლია.
-      </Hint>
     </div>
   );
 };

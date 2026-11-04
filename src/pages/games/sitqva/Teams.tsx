@@ -14,10 +14,10 @@ import { TableScreen } from '../../../components/games/TableScreen';
 import { GeoKeyboard } from '../../../components/games/GeoKeyboard';
 import { Chip } from '../../../components/games/Chip';
 import { Btn, Card, askConfirm } from '../../../components/ui/kit';
-import { Hint } from '../samshvilde/parts';
 import { Podium, Standings, TimerRing } from '../rounds/parts';
 import { TEAM_TINT, TeamChips, TeamsEditor, readTeams, teamNames, useTurnClock, type TeamsConf } from '../rounds/teams';
 import { dayPick } from './dayPick';
+import { HowTo } from '../../../components/games/HowTo';
 
 // „დღის სიტყვა“ on one phone (the plan's hybrid, 2026-11-01): the board on the screen, 2–6 teams in turn say a word, the
 // teacher types it; the colours help every team. The words come from the bank (never the day's word, so the daily game
@@ -252,6 +252,12 @@ export const SitqvaTeams: React.FC = () => {
           </div>
         </Card>
       )}
+      <HowTo id="sitqva-table" steps={[
+        'ტელეფონი ან ეკრანი მთელ კლასს უჩვენებს დაფას და მინიშნებას.',
+        'გუნდი თავის სვლაზე ერთ სიტყვას ამბობს, მასწავლებელი მას კლავიატურაზე წერს. ფერები ყველა გუნდს ეხმარება.',
+        `ვინც სიტყვას გამოიცნობს, ქულას იღებს: პირველ ცდაზე ${sqPoints(1)}, მეორეზე ${sqPoints(2)} … მეექვსეზე ${sqPoints(MAX_TRIES)}.`,
+        'სვლის დრო თუ გავიდა, ჯერი შემდეგ გუნდზე გადადის. სიტყვები დღის სიტყვას არ ემთხვევა.',
+      ]} />
       <Card className="!p-4 space-y-4">
         <TeamsEditor conf={conf} onChange={c => setConf({ ...conf, ...c })} />
         <div className="space-y-2">
@@ -275,11 +281,6 @@ export const SitqvaTeams: React.FC = () => {
         </div>
       </Card>
       <Btn size="lg" full icon={<Play />} onClick={() => { void start(); }} className="!h-14 !text-[15.5px]">დაწყება</Btn>
-      <Hint>
-        ტელეფონი (ან ეკრანი) კლასს უჩვენებს დაფას და მინიშნებას. გუნდი თავის სვლაზე ერთ სიტყვას ამბობს, მასწავლებელი წერს — ფერები
-        ყველა გუნდს ეხმარება. ვინც გამოიცნობს, იღებს {sqPoints(1)} ქულას პირველ ცდაზე, {sqPoints(2)}-ს მეორეზე… {sqPoints(MAX_TRIES)}-ს
-        მეექვსეზე. სიტყვები დღის სიტყვისგან განსხვავებულია, ასე რომ დღის თამაშს არ გაგიფუჭებთ.
-      </Hint>
     </div>
   );
 };

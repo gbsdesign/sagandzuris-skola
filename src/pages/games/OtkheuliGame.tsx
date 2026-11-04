@@ -13,6 +13,7 @@ import { triggerHaptic } from '../../utils/haptics';
 import { MONTHS_GE } from '../../utils/dateNames';
 import { VariantPage } from './rounds/variants';
 import { OtkheuliTeams } from './otkheuli/Teams';
+import { softBreaks } from '../../utils/tsqvilebi';
 
 // „ოთხეული“ (games hub, 2026-10-28): sixteen words, four hidden groups of four. One grid a day for the whole school —
 // its record counts for the streak and the statistics — and as many extra grids as one likes (a random seed, nothing
@@ -141,7 +142,7 @@ const OtkheuliDaily: React.FC = () => {
                   onClick={() => toggle(w)}
                   className={`min-h-[60px] rounded-xl px-1 py-1.5 font-bold leading-tight text-center [overflow-wrap:anywhere] transition active:scale-95 cursor-pointer ${w.length > 8 ? 'text-[12px]' : 'text-[13.5px]'} ${on ? 'bg-[#7a2028] text-[#fbf6ec] shadow-[0_6px_14px_-8px_rgba(122,32,40,0.9)]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:bg-[#fbf6ec]'} ${on && shaking ? 'sg-shake' : ''}`}
                 >
-                  {w}
+                  {softBreaks(w)}
                 </button>
               );
             })}
