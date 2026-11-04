@@ -254,11 +254,19 @@
   so any old-script letter on the site is the app's alphabet.
 - **Android app** (Google Play, `android/`, 2026-10-29; memory `google-play-app`): a Trusted Web Activity of the live site
   (so the site's updates need no app update) plus the app's own Java parts in `android/app/src/main/java/ge/sagandzureli/app/`
-  (version 1.1.1, code 3; minSdk 26): six home-screen widgets — buttons (the home vine's places, picked in `ButtonsConfigActivity`),
+  (version 1.1.2, code 4; minSdk 26): six home-screen widgets — buttons (the home vine's places, picked in `ButtonsConfigActivity`),
   habits (tap ticks / counts), the path's five rings + reviews due, the church day, my psalter kanon, the saying of the day — the
   icon's long-press menu (`res/xml/shortcuts.xml`), „გაზიარება → საგანძური“ into a class chat (manifest share target → the site's
   `share_target` + `public/prayer-notify-sw.js` → `components/app/ShareHost.tsx`), church mode's „არ შემაწუხო“
-  (`SilenceActivity`, back after 3 h) and the prayer reminders' bell (`BellDelegationService`, `res/raw/bell.ogg`). The member's
+  (`SilenceActivity`, back after 3 h) and the prayer reminders' bell (`BellDelegationService`, `res/raw/bell.ogg`).
+  Since 1.1.2 (code 4, 2026-11-05) `BellDelegationService` also turns the site's ring (tag `call-d-…` / `call-c-…` with its two
+  buttons) into a phone call — channel „ზარები“ with the phone's ringtone, `FLAG_INSISTENT`, `CATEGORY_CALL`, gone after 45 s —
+  and opens `IncomingCallActivity` on a locked or dark screen (full-screen intent, `USE_FULL_SCREEN_INTENT`; Android 14+ grants
+  it by default only after the Play Console's calling declaration — without it the ring is a heads-up that still rings):
+  „პასუხი“ opens the app at `/?open=call&b=<base>`, „უარი“ sends Chrome's own „უარი“ of the notice (the service worker ends the
+  call); the window closes once the ring's notice is gone. The same tag without buttons („გამოტოვებული ზარი“) replaces the ring.
+  Messages (`chat-d-…` / `chat-c-…`) go to „პირადი შეტყობინებები“ / „კლასის ჩათები“ (high, heads-up; each mutable in the phone's
+  settings). With no browser that can hold a TWA the app opens in its own WebView (`FALLBACK_STRATEGY` webview). The member's
   widgets read the reminders Worker's `/widget/*` (a secret from the profile's „ვიჯეტის დაკავშირება“, `utils/widgetLink.ts`; the
   open site leaves the summary there, `components/app/WidgetSync.tsx`); the day and saying widgets read `public/widget/days-<year>.json`
   (`node scripts/build-widget-days.mjs`). The site knows it runs in the app by `utils/androidApp.ts` and talks to the app through

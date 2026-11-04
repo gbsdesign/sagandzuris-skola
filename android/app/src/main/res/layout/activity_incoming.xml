@@ -1,0 +1,58 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The incoming call on a locked or dark screen (IncomingCallActivity) — like the site's own call screen
+     (src/components/calls/CallLayer.tsx Incoming): the caller big in the middle, „უარი“ and „პასუხი“ below. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent" android:layout_height="match_parent"
+    android:background="#1C1513" android:fitsSystemWindows="true"
+    android:gravity="center_horizontal" android:orientation="vertical" android:paddingHorizontal="24dp">
+
+    <View android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="1" />
+
+    <TextView android:id="@+id/initial" android:layout_width="128dp" android:layout_height="128dp"
+        android:background="@drawable/call_face" android:gravity="center" android:textColor="#FBF6EC"
+        android:textSize="52sp" android:textStyle="bold" />
+
+    <TextView android:id="@+id/name" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginTop="22dp" android:gravity="center" android:maxLines="2" android:ellipsize="end"
+        android:textColor="#FFFFFF" android:textSize="26sp" android:textStyle="bold" />
+
+    <TextView android:id="@+id/line" android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginTop="6dp" android:gravity="center" android:maxLines="2"
+        android:textColor="#A6FFFFFF" android:textSize="16sp" />
+
+    <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="14dp"
+        android:text="საგანძურის სკოლა" android:textColor="#66FFFFFF" android:textSize="13sp" />
+
+    <View android:layout_width="1dp" android:layout_height="0dp" android:layout_weight="1.4" />
+
+    <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_marginBottom="64dp" android:orientation="horizontal">
+
+        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:gravity="center_horizontal" android:orientation="vertical">
+            <FrameLayout android:id="@+id/decline" android:layout_width="76dp" android:layout_height="76dp"
+                android:background="@drawable/call_decline" android:clickable="true" android:focusable="true"
+                android:contentDescription="უარი">
+                <ImageView android:layout_width="34dp" android:layout_height="34dp" android:layout_gravity="center"
+                    android:importantForAccessibility="no" android:src="@drawable/lc_phone_off" android:tint="#FFFFFF" />
+            </FrameLayout>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp"
+                android:text="უარი" android:textColor="#CCFFFFFF" android:textSize="15sp" />
+        </LinearLayout>
+
+        <Space android:layout_width="88dp" android:layout_height="1dp" />
+
+        <LinearLayout android:layout_width="wrap_content" android:layout_height="wrap_content"
+            android:gravity="center_horizontal" android:orientation="vertical">
+            <FrameLayout android:id="@+id/answer" android:layout_width="76dp" android:layout_height="76dp"
+                android:background="@drawable/call_answer" android:clickable="true" android:focusable="true"
+                android:contentDescription="პასუხი">
+                <ImageView android:id="@+id/answer_icon" android:layout_width="34dp" android:layout_height="34dp"
+                    android:layout_gravity="center" android:importantForAccessibility="no"
+                    android:src="@drawable/lc_phone" android:tint="#FFFFFF" />
+            </FrameLayout>
+            <TextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="10dp"
+                android:text="პასუხი" android:textColor="#CCFFFFFF" android:textSize="15sp" />
+        </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

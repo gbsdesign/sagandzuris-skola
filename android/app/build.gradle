@@ -1,6 +1,7 @@
 // The Play Store app = the site in a Trusted Web Activity (Chrome without its address bar).
 // The site's own updates reach the app at once; only this wrapper needs a new versionCode.
-// Its own parts (src/main/java): home-screen widgets, the icon's menu, church silence, the prayer bell.
+// Its own parts (src/main/java): home-screen widgets, the icon's menu, church silence, the prayer bell, and since 1.1.2
+// the calls' ring (the phone's ringtone, a locked screen) and the chat messages' own channels.
 plugins {
     id 'com.android.application'
 }
@@ -15,8 +16,8 @@ android {
         applicationId 'ge.sagandzureli.app'
         minSdk 26
         targetSdk 36
-        versionCode 3
-        versionName '1.1.1'
+        versionCode 4
+        versionName '1.1.2'
 
         manifestPlaceholders = [host: host, launchUrl: "https://${host}/"]
         resValue 'string', 'app_name', 'საგანძურის სკოლა'
