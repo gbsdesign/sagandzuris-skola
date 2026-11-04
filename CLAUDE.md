@@ -358,6 +358,14 @@
   after a random 5–45 s, the bell rings, a task card comes up, „შეასრულა/ვერ“ tallied; source „ჩემი ხმით“ = the teacher sings
   and the phone only times — the mode guests get). Shared: `utils/gameSounds.ts` (openAudio in the tap, bell, tick),
   `components/games/Chip.tsx`. Nothing saved but settings; no rules change.
+  Since 2026-11-04 „გათვლა“'s one-phone tool is its „ჰიბრიდული“ tab (`pages/games/gatvla/Table.tsx`, store `gatvla/store.ts` over
+  `sg-gatvla`, tiles `gatvla/parts.tsx`) and „ონლაინ“ is a quick-games room „ვის შეხვდება?“ (`gatvla` in `ROUND_GAMES`/`ROOM_GAMES`/
+  the rules/the Worker's titles; rules `utils/gatvlaRounds.ts` + test; face `gatvla/face.tsx`): the host reads the rhyme in the
+  room's call, every phone shows the circle of the room's names (`shortNames`: first names, the whole name where two share one)
+  and the rhyme's words; a player taps the one its last word lands on (`landing` = `countOut`), 1000…500 by speed, 30 s. The
+  reveal counts it on every phone, a beat a name (`GATVLA_BEAT_MS`), and the one it lands on starts and leaves the circle: a
+  round's `before` = who was picked so far, so the rounds give the whole order (`drawGatvla`: one round fewer than the players at
+  most, the rhymes in turn). The draw gets the room's names: `RoundFace.draw(count, program, players)`.
 - **„რა? სად? როდის?“ (2026-10-28)**: the team quiz (`pages/games/RaSadRodisGame.tsx`, `mapItem` `rsr`; rules
   `utils/raSadRodis.ts` + test). The user's answers „1ა 2ა 3ა“: ~100 questions written by Claude from the app's own texts — 111 in
   `data/raSadRodisQuestions.ts` (+ since 2026-11-01 the shared broad bank `data/kartuliQuiz.ts`: 153 facts with three wrong answers
@@ -428,7 +436,7 @@
   (`HybridState`, `markTeam`, kept on the device so ✕ only pauses). The room store is generic since then: `utils/gameRoom.ts`
   `createRooms(be, engine, moves)` over a `RoomEngine` (`games` it plays; samshvilde's is `utils/samshvildeRoom.ts`), the
   app's two stores in `utils/gameRoomFirestore.ts` (`rooms` = samshvilde, `roundRooms` = the quick games: `timeUp(key)`,
-  `reveal`, `next`); the rules let a room be opened for every `ROOM_GAMES` game (22 since 2026-11-04), up to 40 players, an act may carry `ms` (and `text`).
+  `reveal`, `next`); the rules let a room be opened for every `ROOM_GAMES` game (23 since 2026-11-04), up to 40 players, an act may carry `ms` (and `text`).
   Invitations name their game: `data/roomGames.ts` (titles, the hub item, a chat card's `room` = `game:roomId` — a
   samshvilde card keeps the bare id), the Worker's `GAME_TITLES`, `/?open=<game>&c=&r=`, icons
   `components/games/roomGameIcons.ts`; the online tab of every room game is `components/games/RoomSetup.tsx`. Screens
@@ -920,6 +928,10 @@
   each letter once a topic) and the right letter, answer and note behind; 5 blank cards, six square team cards (four coloured
   corners — the letter held at the top is the answer; the back shows the same letters where they are from behind, ბ left and დ
   right) and a score sheet. Both kits' topic colours and icons: `scripts/print-games/quizLook.mjs`.
+  „გათვლა“'s (2026-11-04, `gatvla.mjs`, 4 sheets): the app's three rhymes with every word's beat numbered and where the last word
+  lands in circles of 2–12 (`countOut`) + three frames for the class's own; „ვისი ჯერია?“ = wheels of 12 and 24 places spun with a
+  paper clip on a pencil point and the fair-turns sheet (30 names, a box a turn — a pick with more boxes than the fewest spins
+  again); 64 team tokens ⌀23 mm (four colours, each with its mark, 1–16) and 8 ★ „იწყებს“ to draw from a bag.
   The musical games' kits (2026-11-01, stage 1; the host sings, so the melodies come from the book notes): `scripts/print-games/music.mjs`
   draws staves with abcjs inside the print page (`abcOf` one voice, every accidental written, numbered marks; `abcScore` three voices
   under each other on one clef, tied to keep time), `melodies.mjs` = the chants of the app's chant games + the program's songs with

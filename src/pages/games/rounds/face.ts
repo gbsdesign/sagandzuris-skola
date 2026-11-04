@@ -18,8 +18,9 @@ export interface RoundFace {
   online: string;
   hybrid: string;
   /** a game's rounds, as many as there are up to `count` (none without recordings); `program` — the version ids of the
-   * class's program (the chant games ask its chants too) */
-  draw(count: number, program?: readonly string[]): RoundQ[];
+   * class's program (the chant games ask its chants too); `players` — the room's names in seat order, when it starts
+   * („გათვლა“ counts round them) */
+  draw(count: number, program?: readonly string[], players?: readonly string[]): RoundQ[];
   /** the rounds a game asked, kept on this phone so the next games ask others first */
   remember(rounds: RoundQ[]): void;
   /** the line over a round while it is asked (the host's, the player's) */
