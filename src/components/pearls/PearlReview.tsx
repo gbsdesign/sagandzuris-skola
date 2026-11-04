@@ -19,6 +19,11 @@ const bestsText = (rec: PearlRecord) => {
   return VOICE_IDS.filter(v => b[v] != null).map(v => `${ROMAN[v]} ${b[v]}%`).join(' · ');
 };
 
+/** How many of a member's pearls wait for a teacher's ear: polished, not yet „ჩათვლილი“ — the 💎 beside their name on
+ *  the class page (since 2026-11-04 the class's own „მარგალიტები“ card is gone; each member's window has them). */
+export const waitingPearls = (pearls: Record<string, PearlRecord> = {}, shine: Record<string, PearlShine> = {}) =>
+  CHESTS.flatMap(c => c.pearls).filter(id => pearlState(pearls[id], shine[id]) === 'polished').length;
+
 export const PearlReview: React.FC<{ uid: string; pearls?: Record<string, PearlRecord>; shine?: Record<string, PearlShine> }> = ({ uid, pearls = {}, shine = {} }) => {
   const { user } = useAuth();
   const ids = CHESTS.flatMap(c => c.pearls).filter(id => pearls[id] || shine[id]);

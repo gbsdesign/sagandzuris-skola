@@ -164,7 +164,8 @@ export const WorkCardHead: React.FC<{ name: string; line?: string; icon?: React.
  *  line the deadline („10 ნოემბრამდე“), the voices and for whom, and „ისწავლა N/M ▾“, which unfolds the book's place, each
  *  member's bar of its parts and „დავალების წაშლა“. „ახალი დავალება“ on top, the older ones (`past`, latest first) folded
  *  under „ძველი · N“. The members' records (for the counts) are read only while it is open. */
-export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; past?: Assignment[] }> = ({ cls, list, past = [] }) => {
+// `only` (2026-11-04, the class page's two places): the chants' card gives chants, „ოსტატობა“ exercises.
+export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; past?: Assignment[]; only?: 'chant' | 'drill' }> = ({ cls, list, past = [], only }) => {
   const records = useClassStudents(cls);
   const openerOf = usePathItemOpener();
   const [adding, setAdding] = useState(false);
@@ -236,7 +237,7 @@ export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; p
 
   return (
     <div className="space-y-2.5">
-      <Btn kind="soft" full icon={<Plus />} onClick={() => setAdding(true)}>ახალი დავალება</Btn>
+      <Btn kind="soft" full icon={<Plus />} onClick={() => setAdding(true)}>{only === 'drill' ? 'სავარჯიშოს მიცემა' : 'ახალი დავალება'}</Btn>
       <Flash flash={msg.flash} onClose={msg.clear} />
       <DrillSheet drillId={drill} onClose={() => setDrill(null)} />
       {list.length === 0 ? <p className="pt-1 text-sm text-[#8a7a6a]">მიმდინარე დავალება არ არის.</p> : <div className="pt-1">{rows(list)}</div>}
@@ -250,7 +251,7 @@ export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; p
           {old && <div className="sg-in pt-1">{rows(past)}</div>}
         </div>
       )}
-      <NewAssignment open={adding} onClose={() => setAdding(false)} cls={cls} onDone={t => msg.ok(t)} />
+      {adding && <NewAssignment open only={only} onClose={() => setAdding(false)} cls={cls} onDone={t => msg.ok(t)} />}
     </div>
   );
 };
@@ -259,15 +260,18 @@ export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; p
 export interface MadeAssignment { id: string; title: string; variantId?: string; exercise?: string; due: string; note: string }
 
 /** The „ახალი დავალება“ window. From a chat (2026-11-04) it is for one member already (`forWhom`, no „ვისთვის“ choice)
- *  and `onMade` gets the assignment, so the chat can put its card in. */
+ *  and `onMade` gets the assignment, so the chat can put its card in. On the class page (2026-11-04) `only` keeps it to
+ *  one kind (the chants' card gives chants, „ოსტატობა“ exercises) and `preset` starts with a chant picked (a program
+ *  item's „დავალებად მიცემა“) — mount it only while open there, so each opening starts afresh. */
 export const NewAssignment: React.FC<{
   open: boolean; onClose: () => void; cls: SchoolClass; onDone: (text: string) => void;
   forWhom?: { uid: string; name: string }; onMade?: (a: MadeAssignment) => void | Promise<void>;
-}> = ({ open, onClose, cls, onDone, forWhom, onMade }) => {
+  only?: 'chant' | 'drill'; preset?: CatalogEntry | null;
+}> = ({ open, onClose, cls, onDone, forWhom, onMade, only, preset }) => {
   const { user } = useAuth();
-  const [kind, setKind] = useState<'chant' | 'drill'>('chant');
+  const [kind, setKind] = useState<'chant' | 'drill'>(only || 'chant');
   const [drillId, setDrillId] = useState('');
-  const [entry, setEntry] = useState<CatalogEntry | null>(null);
+  const [entry, setEntry] = useState<CatalogEntry | null>(preset || null);
   const [voices, setVoices] = useState<string[]>([]);
   const [due, setDue] = useState(() => { const d = new Date(); d.setDate(d.getDate() + 7); return localIso(d); });
   const [note, setNote] = useState('');
@@ -337,13 +341,15 @@ export const NewAssignment: React.FC<{
   };
 
   return (
-    <Sheet open={open} onClose={onClose} title="ახალი დავალება"
+    <Sheet open={open} onClose={onClose} title={only === 'drill' ? 'სავარჯიშოს მიცემა' : 'ახალი დავალება'}
       footer={<Btn full size="lg" icon={<Plus />} disabled={busy || (kind === 'drill' ? !drill : !entry)} onClick={save}>{busy ? 'იქმნება…' : 'დავალების მიცემა'}</Btn>}>
       <div className="space-y-4">
-        <Tabs<'chant' | 'drill'> cols={2} value={kind} onChange={k => { setKind(k); setError(''); }} items={[
-          { id: 'chant', label: 'საგალობელი', Icon: Music },
-          { id: 'drill', label: 'სავარჯიშო', Icon: Dumbbell },
-        ]} />
+        {!only && (
+          <Tabs<'chant' | 'drill'> cols={2} value={kind} onChange={k => { setKind(k); setError(''); }} items={[
+            { id: 'chant', label: 'საგალობელი', Icon: Music },
+            { id: 'drill', label: 'სავარჯიშო', Icon: Dumbbell },
+          ]} />
+        )}
         {kind === 'drill' ? (
           <div>
             <Label hint="„ოსტატობიდან“">სავარჯიშო</Label>

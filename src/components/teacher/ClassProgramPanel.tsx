@@ -119,6 +119,44 @@ export const ProgramEditor: React.FC<{ cls: SchoolClass; onDone: () => void }> =
   );
 };
 
+/** „+ დამატება“ under the program (2026-11-04): the same tree opened straight from the program tab. What is ticked is
+ *  saved once, when the window closes (or before 👁 leaves the page) — the members' paths with it; the order and „✕“
+ *  stay in the ✎'s „სასწავლო პროგრამა“. */
+export const ProgramQuickAdd: React.FC<{ cls: SchoolClass; onClose: () => void; onError: (text: string) => void }> = ({ cls, onClose, onError }) => {
+  const openShortcut = useOpenShortcut();
+  const [draft, setDraft] = useState<ProgramItem[]>(cls.program);
+  const pending = useRef<ProgramItem[] | null>(null);
+  const saved = useRef(false);
+  pending.current = JSON.stringify(draft) !== JSON.stringify(cls.program) ? draft : null;
+
+  const flush = async () => {
+    const next = pending.current;
+    if (!next || saved.current) return;
+    saved.current = true;
+    try {
+      const failed = await saveClassProgram(cls, next);
+      if (failed) onError(`პროგრამა შენახულია, მაგრამ ${failed} წევრის გზა ვერ განახლდა.`);
+    } catch {
+      onError('პროგრამა ვერ შეინახა.');
+    }
+  };
+  // leaving the page with the window open keeps what was ticked
+  useEffect(() => () => { void flush(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const toggle = (item: ProgramItem) => {
+    triggerHaptic(10);
+    setDraft(d => (d.some(p => p.id === item.id) ? d.filter(p => p.id !== item.id) : [...d, item]));
+  };
+  const look = async (id: string) => {
+    await flush();
+    onClose();
+    openShortcut(id);
+  };
+  const close = () => { void flush(); onClose(); };
+
+  return <ProgramPicker picked={draft} onToggle={toggle} onLook={look} onClose={close} />;
+};
+
 const RowIcon: React.FC<{ label: string; onClick: () => void; danger?: boolean; disabled?: boolean; children: React.ReactNode }> = ({ label, onClick, danger, disabled, children }) => (
   <button type="button" onClick={onClick} disabled={disabled} aria-label={label} title={label}
     className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-[#c2b092] cursor-pointer transition disabled:opacity-40 [&>svg]:w-[17px] [&>svg]:h-[17px] ${danger ? 'hover:bg-red-50 hover:text-red-700' : 'hover:bg-[#7a2028]/[0.06] hover:text-[#7a2028]'}`}>

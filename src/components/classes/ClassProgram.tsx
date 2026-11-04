@@ -1,20 +1,21 @@
 import React, { useState } from 'react';
-import { AudioLines, Check, CheckCheck, ChevronRight, GraduationCap, Music, Plus, Users } from 'lucide-react';
+import { AudioLines, Check, CheckCheck, ChevronRight, ClipboardList, GraduationCap, Music, Plus, Users } from 'lucide-react';
 import { useAuth, useChants } from '../../context';
 import type { ProgramItem, SchoolClass } from '../../hooks/useClasses';
 import { usePathMarks } from '../../hooks/usePathMarks';
 import { ownVoices, useClassMarks } from '../../hooks/useClassMarks';
-import { CATEGORY_LABEL, PathCategory, Voice, categoryOf, usesVoices } from '../../utils/pathItems';
+import { CATEGORY_LABEL, CatalogEntry, PathCategory, Voice, categoryOf, findCatalogEntry, usesVoices } from '../../utils/pathItems';
 import { triggerHaptic } from '../../utils/haptics';
 import { assignedProgress } from '../../utils/learn';
 import { useAllLearning } from '../../hooks/useLearning';
 import { usePathItemOpener } from '../views/PathOrbs';
 import { Avatar } from './ChatPanel';
 import { triggerFireworks } from '../views/StudentBookmarkView';
-import { ProgramEditor, programLines } from '../teacher/ClassProgramPanel';
+import { ProgramEditor, ProgramQuickAdd, programLines } from '../teacher/ClassProgramPanel';
+import { NewAssignment } from '../teacher/AssignmentsPanel';
 import { PartsBar } from '../learn/PartsBar';
 import { learnPieceOf, useOpenLearning } from '../learn/openLearning';
-import { Btn, Sheet } from '../ui/kit';
+import { Btn, Flash, Sheet, useFlash } from '../ui/kit';
 import { StudioMix, StudioRecord, studioPiece } from '../studio/ClassStudio';
 
 type Listed = ProgramItem & { id: string; key: string };
@@ -26,7 +27,9 @@ const VOICE_NAME: Record<Voice, string> = { '1': 'პირველი ხმ�
 // (green once a teacher confirmed them), else the learning mode's bar of parts; a teacher sees how many members know
 // it. A tap opens the item's window (ItemSheet): its notes or song, „სწავლა“, the member's own voice marks (the same
 // marks as on the path) and who in the class knows each voice (their own path marks or a teacher's confirmation, copied
-// by useClassMarksSync). The teachers change the program from the page's one ✎ (`editing`, ProgramEditor).
+// by useClassMarksSync). The teachers change the program from the page's one ✎ (`editing`, ProgramEditor); since
+// 2026-11-04 „+ დამატება“ under the list adds to it at once (ProgramQuickAdd) and an item's window gives it as an
+// assignment („დავალებად მიცემა“ → NewAssignment; the assignments live in their own card over the program).
 export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; editing?: boolean; onEditing?: (on: boolean) => void }> = ({
   cls, canEdit, editing, onEditing,
 }) => {
@@ -41,6 +44,9 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; editi
   // the item whose window is open (its key)
   const [shown, setShown] = useState<string | null>(null);
   const [studio, setStudio] = useState<string | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [assigning, setAssigning] = useState<CatalogEntry | null>(null);
+  const msg = useFlash();
   const iAmMember = !!user && cls.memberIds.includes(user.uid);
 
   const listed: Listed[] = cls.program.flatMap((p, i) => (p.id ? [{ ...p, id: p.id, key: `${i}:${p.id}` }] : []));
@@ -155,10 +161,7 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; editi
       {editing && canEdit ? (
         <ProgramEditor cls={cls} onDone={() => onEditing?.(false)} />
       ) : cls.program.length === 0 ? (
-        <div className="py-1 space-y-3">
-          <p className="text-sm text-[#8a7a6a]">პროგრამა ჯერ არ არის შედგენილი.</p>
-          {canEdit && onEditing && <Btn kind="soft" size="sm" icon={<Plus />} onClick={() => onEditing(true)}>პროგრამის შედგენა</Btn>}
-        </div>
+        <p className="py-1 text-sm text-[#8a7a6a]">პროგრამა ჯერ არ არის შედგენილი.</p>
       ) : (
         <div className="space-y-3">
           {/* one list for everyone, in the teacher's order */}
@@ -181,6 +184,16 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; editi
         </div>
       )}
 
+      {/* the teachers: add to the program right here (its order and ✕ stay in ✎ → „სასწავლო პროგრამა“) */}
+      {canEdit && !editing && (
+        <Btn kind="soft" full icon={<Plus />} className="mt-3" onClick={() => setAdding(true)}>დამატება</Btn>
+      )}
+      {msg.flash && <div className="mt-3"><Flash flash={msg.flash} onClose={msg.clear} /></div>}
+      {adding && <ProgramQuickAdd cls={cls} onClose={() => setAdding(false)} onError={t => msg.fail(t)} />}
+      {assigning && (
+        <NewAssignment open only="chant" preset={assigning} cls={cls} onClose={() => setAssigning(null)} onDone={t => msg.ok(t)} />
+      )}
+
       {open && (
         <ItemSheet
           p={open}
@@ -189,6 +202,7 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; editi
           piece={learnPieceOf(open.id)}
           onLearn={piece => { setShown(null); openLearning(piece); }}
           onStudio={studioPiece(open.id) && (iAmMember || canEdit) ? () => { setShown(null); setStudio(open.id); } : null}
+          onAssign={canEdit && findCatalogEntry(open.id) ? () => { setShown(null); setAssigning(findCatalogEntry(open.id) || null); } : null}
           member={iAmMember}
           own={mine(open.id)}
           locked={locked}
@@ -215,12 +229,13 @@ const ItemSheet: React.FC<{
   piece: string | null;
   onLearn: (piece: string) => void;
   onStudio: (() => void) | null;
+  onAssign: (() => void) | null;
   member: boolean;
   own: { known: Voice[]; confirmed: Voice[] };
   locked: boolean;
   onMark: (v: Voice) => void;
   knowers: (v: Voice) => Knower[];
-}> = ({ p, onClose, go, piece, onLearn, onStudio, member, own, locked, onMark, knowers }) => {
+}> = ({ p, onClose, go, piece, onLearn, onStudio, onAssign, member, own, locked, onMark, knowers }) => {
   const lines = programLines(p);
   const voiced = usesVoices(p.id);
   const list: Voice[] = voiced ? ['1', '2', '3'] : ['1'];
@@ -246,6 +261,7 @@ const ItemSheet: React.FC<{
             {member ? 'სტუდია — ჩემი ხმის ჩაწერა' : 'სტუდია — ჯგუფური ჩანაწერი'}
           </Btn>
         )}
+        {onAssign && <Btn kind="soft" size="lg" full icon={<ClipboardList />} onClick={onAssign}>დავალებად მიცემა</Btn>}
 
         {member && (
           <div>

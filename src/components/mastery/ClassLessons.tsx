@@ -13,13 +13,23 @@ import { Bar, Btn, FIELD, Flash, IconBtn, Label, Sheet, askConfirm, useFlash } f
 // „ოსტატობა“ of one class: its lessons, step by step. A member opens a lesson and goes through it one step at a time,
 // marking each „შესრულდა“; the class's teachers build them in place (+ and ✎) from tips, exercises, chants of the
 // class program and links, and see how many members finished each one. `bare`: inside the path page's panel (no card).
-// `fold`: the class page shows the card as one line that unfolds the lessons (2026-10-28).
+// `fold`: the class page shows the card as one line that unfolds the lessons (2026-10-28). `work`: the class's exercises
+// given as assignments, over the lessons (2026-11-04, ClassWork's DrillWork); `toDo`: a member has one of them to do —
+// a chip on the folded line.
 
 const KIND_ICON: Record<StepKind, React.ReactNode> = {
   text: <Lightbulb />, exercise: <Dumbbell />, chant: <Music4 />, link: <Link2 />,
 };
 
-export const ClassLessons: React.FC<{ cls: SchoolClass; canEdit: boolean; bare?: boolean; showClassName?: boolean; fold?: boolean }> = ({ cls, canEdit, bare, showClassName, fold }) => {
+export const ClassLessons: React.FC<{
+  cls: SchoolClass;
+  canEdit: boolean;
+  bare?: boolean;
+  showClassName?: boolean;
+  fold?: boolean;
+  work?: React.ReactNode;
+  toDo?: boolean;
+}> = ({ cls, canEdit, bare, showClassName, fold, work, toDo }) => {
   const { user } = useAuth();
   const lessons = useClassLessons(cls.id);
   const iAmMember = !!user && cls.memberIds.includes(user.uid);
@@ -30,7 +40,7 @@ export const ClassLessons: React.FC<{ cls: SchoolClass; canEdit: boolean; bare?:
   const [shut, setShut] = useState(true);
 
   if (!lessons) return null;
-  if (!lessons.length && !canEdit) return null;
+  if (!lessons.length && !canEdit && !work) return null;
   // how many members finished a lesson (the teachers' line)
   const finished = (l: Lesson) => cls.members.filter(m => l.steps.length && doneCount(l, everyone[m.uid] || {}) === l.steps.length).length;
   const folded = !!fold && shut;
@@ -48,6 +58,9 @@ export const ClassLessons: React.FC<{ cls: SchoolClass; canEdit: boolean; bare?:
               ოსტატობა
               {lessons.length > 0 && <span className="ml-2 font-sans text-sm font-bold text-[#a4927c] tabular-nums">{lessons.length}</span>}
             </h2>
+            {toDo && shut && (
+              <span className="shrink-0 h-7 px-2.5 rounded-full inline-flex items-center text-[12px] font-bold bg-amber-100 text-amber-900">დავალება</span>
+            )}
             {iAmMember && lessons.length > 0 && (
               <span className={`shrink-0 text-[12.5px] font-bold tabular-nums ${mineDone === lessons.length ? 'text-emerald-700' : 'text-[#8a7a6a]'}`}>{mineDone}/{lessons.length}</span>
             )}
@@ -66,11 +79,14 @@ export const ClassLessons: React.FC<{ cls: SchoolClass; canEdit: boolean; bare?:
         </div>
       )}
 
+      {!folded && work}
       {folded ? null : lessons.length === 0 ? (
-        <button type="button" onClick={() => setEditing('new')}
-          className="w-full mt-1 min-h-14 rounded-2xl border border-dashed border-[#e0d0b6] text-[#8a7a6a] hover:text-[#7a2028] hover:border-[#7a2028]/40 flex items-center justify-center gap-2 text-sm font-bold cursor-pointer transition">
-          <Plus className="w-4 h-4" /> პირველი გაკვეთილი
-        </button>
+        canEdit && (
+          <button type="button" onClick={() => setEditing('new')}
+            className="w-full mt-1 min-h-14 rounded-2xl border border-dashed border-[#e0d0b6] text-[#8a7a6a] hover:text-[#7a2028] hover:border-[#7a2028]/40 flex items-center justify-center gap-2 text-sm font-bold cursor-pointer transition">
+            <Plus className="w-4 h-4" /> პირველი გაკვეთილი
+          </button>
+        )
       ) : (
         <ul className="mt-1 divide-y divide-[#f1e8d9]">
           {lessons.map(l => {
