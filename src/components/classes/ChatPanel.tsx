@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { MessageCircle, Mic, Paperclip, Send, Square, X, Trash2, Play, Pause, Loader2, Clock, Video, CheckCheck } from 'lucide-react';
 import {
   sendTextMessage, sendVoiceMessage, deleteMessage, loadVoiceUrl, ChatMessage, ChatAuthor,
@@ -220,9 +220,12 @@ const HoverDelete: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   </button>
 );
 
+/** the default of `isCall`: one function for every render, so the drawn messages are kept (see listBody) */
+const NEVER = () => false;
+
 // A chat: text and voice messages (a class's chat, or a teacher's private chat with a student).
 export const ChatPanel: React.FC<ChatPanelProps> = ({
-  base, author, messages, loading, error, header, isCall = () => false, callTitle, onJoinCall, callLive = true, onOpenGame, canDelete,
+  base, author, messages, loading, error, header, isCall = NEVER, callTitle, onJoinCall, callLive = true, onOpenGame, canDelete,
   showNames = false, seenAt = null, onSent, listClassName = 'h-[56vh] min-h-[300px] max-h-[560px]', readOnly = false,
   staffLabel = 'მასწავლებელი', fill = false, listTop, renderCard, onAttach, onDelete, personOpener,
 }) => {
@@ -393,6 +396,143 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   const round = 'w-12 h-12 shrink-0 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition disabled:opacity-40 disabled:cursor-default';
 
+  // The messages are drawn apart from the field: typing, the recording clock or a voice message playing elsewhere
+  // no longer redraw every message (with 150 of them a phone stuttered at each letter — 2026-11-05).
+  const listBody = useMemo(() => (loading ? (
+      <div className="h-full flex items-center justify-center text-[#b3a594]"><Loader2 className="w-6 h-6 animate-spin" /></div>
+    ) : error ? (
+      <p className="h-full flex items-center justify-center text-center text-sm text-[#8a7a6a] px-6">ჩათი ახლა ვერ ჩაიტვირთა.</p>
+    ) : messages.length === 0 ? (
+      <div className="h-full flex flex-col items-center justify-center text-center gap-2 px-6 text-[#8a7a6a]">
+        <MessageCircle className="w-9 h-9 text-[#d9c9b0]" />
+        <p className="text-sm">ჯერ შეტყობინება არ არის.</p>
+      </div>
+    ) : (
+      <>
+      {listTop}
+      {messages.map((m, i) => {
+        const prev = messages[i - 1];
+        const mine = m.uid === author.uid;
+        const newDay = !!m.at && (!prev?.at || prev.at.toDateString() !== m.at.toDateString());
+        const first = newDay || prev?.uid !== m.uid;
+        const canDel = !readOnly && canDelete(m);
+        const named = typeof showNames === 'function' ? showNames(m) : showNames;
+        const card = renderCard?.(m, mine) ?? null;
+        const openPerson = named && !mine && first ? personOpener?.(m) ?? null : null;
+        return (
+          <React.Fragment key={m.id}>
+            {newDay && (
+              <div className="flex justify-center my-3">
+                <span className="px-3 py-1 rounded-full bg-white/90 ring-1 ring-[#e8dcc8] text-xs font-semibold text-[#8a7a6a]">{dayLabel(m.at!)}</span>
+              </div>
+            )}
+            <div className={`group flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'} ${first ? 'mt-3' : 'mt-1'}`}>
+              {named && !mine && (first
+                ? openPerson
+                  ? <button type="button" onClick={openPerson} aria-label={`${m.name} — გზა და პროფილი`} className="shrink-0 rounded-full cursor-pointer active:scale-95 transition"><Avatar name={m.name} photoURL={m.photoURL} /></button>
+                  : <Avatar name={m.name} photoURL={m.photoURL} />
+                : <span className="w-8 shrink-0" />)}
+              {mine && canDel && <HoverDelete onClick={() => askRemove(m)} />}
+              <div className={`${card ? 'w-[88%] max-w-[360px]' : 'max-w-[82%]'} flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
+                {named && first && !mine && (
+                  <p className="text-xs font-semibold text-[#7a2028] mb-1 px-1 flex items-center gap-1.5">
+                    {openPerson ? <button type="button" onClick={openPerson} className="cursor-pointer hover:underline underline-offset-2">{m.name}</button> : m.name}
+                    {m.teacher && <span className="px-1.5 py-px rounded-full bg-[#7a2028]/10 text-[11px] font-bold">{staffLabel}</span>}
+                  </p>
+                )}
+                {card ? (
+                  <div {...(canDel ? holdToPick(m.id) : {})} className={`w-full ${canDel ? '[-webkit-touch-callout:none]' : ''}`}>{card}</div>
+                ) : (
+                <div
+                  // a long press on the message (as in any messenger; a right click on a computer) shows „წაშლა“ under
+                  // it; a plain tap does nothing, so playing a voice message or opening a link never shows it
+                  {...(canDel ? holdToPick(m.id) : {})}
+                  className={`rounded-[20px] px-3.5 py-2 shadow-[0_1px_1px_rgba(74,52,38,0.06)] ${canDel ? '[-webkit-touch-callout:none]' : ''} ${
+                    mine
+                      ? `bg-[#7a2028] text-[#fbf6ec] ${first ? 'rounded-tr-md' : ''}`
+                      : `bg-white ring-1 ring-[#e8dcc8] text-[#2a2017] ${first ? 'rounded-tl-md' : ''}`
+                  }`}
+                >
+                  {isCall(m) ? (
+                    <div className="py-1 flex flex-col gap-2.5">
+                      <p className="flex items-center gap-2 font-semibold text-[15px]">
+                        <Video className="w-5 h-5 shrink-0" /> {callTitle}
+                      </p>
+                      <div className="flex items-center justify-between gap-4">
+                        {callLive && m.id === lastCallId ? (
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); onJoinCall?.(); }}
+                            className={`h-10 px-4 rounded-full text-sm font-bold cursor-pointer active:scale-95 transition ${
+                              mine ? 'bg-[#fbf6ec] text-[#7a2028]' : 'bg-[#7a2028] text-[#fbf6ec]'
+                            }`}
+                          >
+                            შესვლა ზარში
+                          </button>
+                        ) : <span />}
+                        <span className={`text-[11px] leading-none ${mine ? 'text-[#fbf6ec]/70' : 'text-[#a89886]'}`}>{sentAt(m)}</span>
+                      </div>
+                    </div>
+                  ) : m.kind === 'game' ? (
+                    <div className="py-1 flex flex-col gap-2.5">
+                      <GameCardTitle room={m.room} mine={mine} />
+                      <div className="flex items-center justify-between gap-4">
+                        {onOpenGame && m.room && m.at && Date.now() - m.at.getTime() < GAME_INVITE_MS ? (
+                          <button
+                            type="button"
+                            onClick={e => { e.stopPropagation(); triggerHaptic(10); onOpenGame(m); }}
+                            className={`h-10 px-4 rounded-full text-sm font-bold cursor-pointer active:scale-95 transition ${
+                              mine ? 'bg-[#fbf6ec] text-[#7a2028]' : 'bg-[#7a2028] text-[#fbf6ec]'
+                            }`}
+                          >
+                            {mine ? 'ოთახში დაბრუნება' : 'შესვლა'}
+                          </button>
+                        ) : <span className={`text-[12px] ${mine ? 'text-[#fbf6ec]/75' : 'text-[#8a7a6a]'}`}>თამაში დასრულდა</span>}
+                        <span className={`text-[11px] leading-none ${mine ? 'text-[#fbf6ec]/70' : 'text-[#a89886]'}`}>{sentAt(m)}</span>
+                      </div>
+                    </div>
+                  ) : m.kind === 'draw' ? (
+                    <DrawRiddle
+                      m={m}
+                      mine={mine}
+                      meta={<p className={`flex justify-end text-[11px] leading-none ${mine ? 'text-[#fbf6ec]/70' : 'text-[#a89886]'}`}>{sentAt(m)}</p>}
+                    />
+                  ) : m.kind === 'voice' ? (
+                    <div className="py-1">
+                      <VoicePlayer seconds={m.seconds} wave={m.wave} onDark={mine} getUrl={() => loadVoiceUrl(base, m)} meta={sentAt(m)} />
+                    </div>
+                  ) : (
+                    <>
+                      <p className="whitespace-pre-wrap break-words text-[15px] leading-snug"><Linkified text={m.text} /></p>
+                      <p className={`flex justify-end text-[11px] leading-none mt-1 ${mine ? 'text-[#fbf6ec]/70' : 'text-[#a89886]'}`}>{sentAt(m)}</p>
+                    </>
+                  )}
+                </div>
+                )}
+                {seenId === m.id && (
+                  <p className="mt-1 px-1 flex items-center gap-1 text-[11px] font-semibold text-[#8a7a6a]">
+                    <CheckCheck className="w-3.5 h-3.5 text-[#7a2028]" /> ნანახია
+                  </p>
+                )}
+                {active === m.id && (
+                  <button
+                    type="button"
+                    onClick={() => remove(m)}
+                    className="mt-1.5 h-9 px-3.5 rounded-full bg-white ring-1 ring-[#e8dcc8] text-sm font-semibold text-[#a02c2c] inline-flex items-center gap-1.5 cursor-pointer active:scale-95"
+                  >
+                    <Trash2 className="w-4 h-4" /> წაშლა
+                  </button>
+                )}
+              </div>
+              {!mine && canDel && <HoverDelete onClick={() => askRemove(m)} />}
+            </div>
+          </React.Fragment>
+        );
+      })}
+      </>
+  )), [messages, loading, error, listTop, active, seenId, lastCallId, callLive, callTitle, readOnly, showNames, staffLabel,
+    author.uid, base, isCall, canDelete, renderCard, personOpener, onOpenGame, onJoinCall, onDelete]); // eslint-disable-line react-hooks/exhaustive-deps
+
   return (
     <section className={`bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] overflow-hidden ${fill ? 'h-full flex flex-col' : ''}`}>
       {header}
@@ -405,139 +545,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         }}
         className={`${fill ? 'flex-1 min-h-0' : listClassName} overflow-y-auto overscroll-contain px-3 sm:px-5 py-3 bg-[#fbf6ec]/70 border-y border-[#efe5d4]`}
       >
-        {loading ? (
-          <div className="h-full flex items-center justify-center text-[#b3a594]"><Loader2 className="w-6 h-6 animate-spin" /></div>
-        ) : error ? (
-          <p className="h-full flex items-center justify-center text-center text-sm text-[#8a7a6a] px-6">ჩათი ახლა ვერ ჩაიტვირთა.</p>
-        ) : messages.length === 0 ? (
-          <div className="h-full flex flex-col items-center justify-center text-center gap-2 px-6 text-[#8a7a6a]">
-            <MessageCircle className="w-9 h-9 text-[#d9c9b0]" />
-            <p className="text-sm">ჯერ შეტყობინება არ არის.</p>
-          </div>
-        ) : (
-          <>
-          {listTop}
-          {messages.map((m, i) => {
-            const prev = messages[i - 1];
-            const mine = m.uid === author.uid;
-            const newDay = !!m.at && (!prev?.at || prev.at.toDateString() !== m.at.toDateString());
-            const first = newDay || prev?.uid !== m.uid;
-            const canDel = !readOnly && canDelete(m);
-            const named = typeof showNames === 'function' ? showNames(m) : showNames;
-            const card = renderCard?.(m, mine) ?? null;
-            const openPerson = named && !mine && first ? personOpener?.(m) ?? null : null;
-            return (
-              <React.Fragment key={m.id}>
-                {newDay && (
-                  <div className="flex justify-center my-3">
-                    <span className="px-3 py-1 rounded-full bg-white/90 ring-1 ring-[#e8dcc8] text-xs font-semibold text-[#8a7a6a]">{dayLabel(m.at!)}</span>
-                  </div>
-                )}
-                <div className={`group flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'} ${first ? 'mt-3' : 'mt-1'}`}>
-                  {named && !mine && (first
-                    ? openPerson
-                      ? <button type="button" onClick={openPerson} aria-label={`${m.name} — გზა და პროფილი`} className="shrink-0 rounded-full cursor-pointer active:scale-95 transition"><Avatar name={m.name} photoURL={m.photoURL} /></button>
-                      : <Avatar name={m.name} photoURL={m.photoURL} />
-                    : <span className="w-8 shrink-0" />)}
-                  {mine && canDel && <HoverDelete onClick={() => askRemove(m)} />}
-                  <div className={`${card ? 'w-[88%] max-w-[360px]' : 'max-w-[82%]'} flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
-                    {named && first && !mine && (
-                      <p className="text-xs font-semibold text-[#7a2028] mb-1 px-1 flex items-center gap-1.5">
-                        {openPerson ? <button type="button" onClick={openPerson} className="cursor-pointer hover:underline underline-offset-2">{m.name}</button> : m.name}
-                        {m.teacher && <span className="px-1.5 py-px rounded-full bg-[#7a2028]/10 text-[11px] font-bold">{staffLabel}</span>}
-                      </p>
-                    )}
-                    {card ? (
-                      <div {...(canDel ? holdToPick(m.id) : {})} className={`w-full ${canDel ? '[-webkit-touch-callout:none]' : ''}`}>{card}</div>
-                    ) : (
-                    <div
-                      // a long press on the message (as in any messenger; a right click on a computer) shows „წაშლა“ under
-                      // it; a plain tap does nothing, so playing a voice message or opening a link never shows it
-                      {...(canDel ? holdToPick(m.id) : {})}
-                      className={`rounded-[20px] px-3.5 py-2 shadow-[0_1px_1px_rgba(74,52,38,0.06)] ${canDel ? '[-webkit-touch-callout:none]' : ''} ${
-                        mine
-                          ? `bg-[#7a2028] text-[#fbf6ec] ${first ? 'rounded-tr-md' : ''}`
-                          : `bg-white ring-1 ring-[#e8dcc8] text-[#2a2017] ${first ? 'rounded-tl-md' : ''}`
-                      }`}
-                    >
-                      {isCall(m) ? (
-                        <div className="py-1 flex flex-col gap-2.5">
-                          <p className="flex items-center gap-2 font-semibold text-[15px]">
-                            <Video className="w-5 h-5 shrink-0" /> {callTitle}
-                          </p>
-                          <div className="flex items-center justify-between gap-4">
-                            {callLive && m.id === lastCallId ? (
-                              <button
-                                type="button"
-                                onClick={e => { e.stopPropagation(); onJoinCall?.(); }}
-                                className={`h-10 px-4 rounded-full text-sm font-bold cursor-pointer active:scale-95 transition ${
-                                  mine ? 'bg-[#fbf6ec] text-[#7a2028]' : 'bg-[#7a2028] text-[#fbf6ec]'
-                                }`}
-                              >
-                                შესვლა ზარში
-                              </button>
-                            ) : <span />}
-                            <span className={`text-[11px] leading-none ${mine ? 'text-[#fbf6ec]/70' : 'text-[#a89886]'}`}>{sentAt(m)}</span>
-                          </div>
-                        </div>
-                      ) : m.kind === 'game' ? (
-                        <div className="py-1 flex flex-col gap-2.5">
-                          <GameCardTitle room={m.room} mine={mine} />
-                          <div className="flex items-center justify-between gap-4">
-                            {onOpenGame && m.room && m.at && Date.now() - m.at.getTime() < GAME_INVITE_MS ? (
-                              <button
-                                type="button"
-                                onClick={e => { e.stopPropagation(); triggerHaptic(10); onOpenGame(m); }}
-                                className={`h-10 px-4 rounded-full text-sm font-bold cursor-pointer active:scale-95 transition ${
-                                  mine ? 'bg-[#fbf6ec] text-[#7a2028]' : 'bg-[#7a2028] text-[#fbf6ec]'
-                                }`}
-                              >
-                                {mine ? 'ოთახში დაბრუნება' : 'შესვლა'}
-                              </button>
-                            ) : <span className={`text-[12px] ${mine ? 'text-[#fbf6ec]/75' : 'text-[#8a7a6a]'}`}>თამაში დასრულდა</span>}
-                            <span className={`text-[11px] leading-none ${mine ? 'text-[#fbf6ec]/70' : 'text-[#a89886]'}`}>{sentAt(m)}</span>
-                          </div>
-                        </div>
-                      ) : m.kind === 'draw' ? (
-                        <DrawRiddle
-                          m={m}
-                          mine={mine}
-                          meta={<p className={`flex justify-end text-[11px] leading-none ${mine ? 'text-[#fbf6ec]/70' : 'text-[#a89886]'}`}>{sentAt(m)}</p>}
-                        />
-                      ) : m.kind === 'voice' ? (
-                        <div className="py-1">
-                          <VoicePlayer seconds={m.seconds} wave={m.wave} onDark={mine} getUrl={() => loadVoiceUrl(base, m)} meta={sentAt(m)} />
-                        </div>
-                      ) : (
-                        <>
-                          <p className="whitespace-pre-wrap break-words text-[15px] leading-snug"><Linkified text={m.text} /></p>
-                          <p className={`flex justify-end text-[11px] leading-none mt-1 ${mine ? 'text-[#fbf6ec]/70' : 'text-[#a89886]'}`}>{sentAt(m)}</p>
-                        </>
-                      )}
-                    </div>
-                    )}
-                    {seenId === m.id && (
-                      <p className="mt-1 px-1 flex items-center gap-1 text-[11px] font-semibold text-[#8a7a6a]">
-                        <CheckCheck className="w-3.5 h-3.5 text-[#7a2028]" /> ნანახია
-                      </p>
-                    )}
-                    {active === m.id && (
-                      <button
-                        type="button"
-                        onClick={() => remove(m)}
-                        className="mt-1.5 h-9 px-3.5 rounded-full bg-white ring-1 ring-[#e8dcc8] text-sm font-semibold text-[#a02c2c] inline-flex items-center gap-1.5 cursor-pointer active:scale-95"
-                      >
-                        <Trash2 className="w-4 h-4" /> წაშლა
-                      </button>
-                    )}
-                  </div>
-                  {!mine && canDel && <HoverDelete onClick={() => askRemove(m)} />}
-                </div>
-              </React.Fragment>
-            );
-          })}
-          </>
-        )}
+        {listBody}
       </div>
 
       {err && <p className="px-5 pt-3 text-sm text-[#a02c2c]">{err}</p>}
