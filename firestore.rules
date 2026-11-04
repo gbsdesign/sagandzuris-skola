@@ -28,6 +28,24 @@ service cloud.firestore {
     function existing() { return resource.data; }
     function changed() { return incoming().diff(existing()).affectedKeys(); }
 
+    // A teacher's (or an admin's) card for one member in a chat (2026-11-04, hooks/useChatPins.ts): a comment ('note') or
+    // an assignment ('work' — it points at the real one in classes/{wcls}/assignments). In a class's chat it lives in
+    // classes/{c}/pins, in a private chat among the messages.
+    function pinCard(d) {
+      return d.kind in ['note', 'work']
+        && d.keys().hasOnly(['uid', 'name', 'photoURL', 'teacher', 'kind', 'text', 'to', 'toName', 'work', 'wcls', 'vid', 'drill',
+             'due', 'note', 'createdAt'])
+        && d.text is string && d.text.size() <= 2000
+        && d.to is string && d.to.size() <= 128
+        && d.get('toName', '') is string && d.get('toName', '').size() <= 120
+        && (d.kind == 'note'
+            || (d.work is string && d.work.size() <= 64 && d.wcls is string && d.wcls.size() <= 64
+                && d.get('vid', '') is string && d.get('vid', '').size() <= 120
+                && d.get('drill', '') is string && d.get('drill', '').size() <= 120
+                && d.get('due', '') is string && d.get('due', '').size() <= 10
+                && d.get('note', '') is string && d.get('note', '').size() <= 2000));
+    }
+
     // Default deny
     match /{document=**} {
       allow read, write: if false;
@@ -356,6 +374,21 @@ service cloud.firestore {
         allow delete: if isAdmin() || teachesClass() || (isSignedIn() && existing().uid == uid());
       }
 
+      // A card for one member (pinCard above): read by that member, the class's teachers and the admins only — the
+      // others never learn it is there (a member asks for theirs: where to == uid)
+      match /pins/{pinId} {
+        allow read: if isAdmin() || teachesClass()
+          || (isSignedIn() && resource.data.to == uid() && uid() in cls().memberIds && !cls().get('archived', false));
+        allow create: if (isAdmin() || teachesClass())
+          && incoming().uid == uid()
+          && incoming().teacher == true
+          && incoming().createdAt == request.time
+          && incoming().to in cls().memberIds
+          && pinCard(incoming())
+          && (incoming().kind == 'note' || incoming().wcls == classId);
+        allow delete: if isAdmin() || teachesClass();
+      }
+
       // A voice message's MP3, in parts below Firestore's 1 MiB document limit
       match /voice/{partId} {
         allow read: if inClass();
@@ -607,7 +640,10 @@ service cloud.firestore {
           && incoming().teacher == speaksAsStaff()
           && incoming().createdAt == request.time
           && (incoming().kind in ['text', 'voice']
-              || (incoming().kind == 'call' && ((kindOf(thread()) == 'teach' && uid() == thread().teacherUid) || staffOf(thread()))))
+              || (incoming().kind == 'call' && ((kindOf(thread()) == 'teach' && uid() == thread().teacherUid) || staffOf(thread())))
+              // a teacher's (an admin's) card for the student of this chat
+              || (incoming().kind in ['note', 'work'] && incoming().teacher == true && kindOf(thread()) != 'peer'
+                  && incoming().to in thread().members && incoming().to != uid() && pinCard(incoming())))
           && incoming().text is string && incoming().text.size() <= 2000;
         allow delete: if isSuperAdmin() || (isSignedIn() && existing().uid == uid());
       }

@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Video, Loader2, ShieldCheck, Phone } from 'lucide-react';
 import { BackBtn } from '../components/ui/kit';
 import { useAuth } from '../context';
@@ -10,6 +10,9 @@ import {
 import { useCall, useLivePeers, setCallSmall } from '../utils/callSession';
 import { startChatCall, answerChatCall } from '../components/calls/callActions';
 import { ChatPanel, Avatar } from '../components/classes/ChatPanel';
+import { PinCard } from '../components/classes/PinCard';
+import { PinSheet } from '../components/classes/PinSheet';
+import { pinPreview, sendDmPin } from '../hooks/useChatPins';
 
 /** The call buttons over a chat: start (📞 📹), join a call that is on, or back to one's own call. */
 export const CallButtons: React.FC<{
@@ -82,6 +85,7 @@ export const DirectChat: React.FC<{ id: string; classes: SchoolClass[]; logoUrl?
   const member = !!thread && thread.members.includes(uid);
   const canWrite = member || staff;
   const livePeers = useLivePeers(thread && canWrite ? dmBase(thread.id) : null);
+  const [pinning, setPinning] = useState(false);
 
   // opened, or a new message came in while open: mark it read
   useEffect(() => {
@@ -127,6 +131,12 @@ export const DirectChat: React.FC<{ id: string; classes: SchoolClass[]; logoUrl?
   const canStart = iTeach || staff;
   const joinCall = () => answerChatCall(thread, user);
 
+  // the teacher (or an admin answering the administration's chat) pins a comment or an assignment for the student
+  // (hooks/useChatPins.ts); an assignment is made in a class of theirs that the student is in
+  const student = thread.kind === 'teach' ? thread.studentUid : thread.kind === 'admin' ? thread.members[0] : '';
+  const canPin = canWrite && (iTeach || staff) && !!student;
+  const pinClasses = iTeach ? classes.filter(c => c.teacherIds.includes(uid)) : classes;
+
   return (
     <ChatPanel
       base={dmBase(thread.id)}
@@ -145,6 +155,8 @@ export const DirectChat: React.FC<{ id: string; classes: SchoolClass[]; logoUrl?
       onJoinCall={joinCall}
       callLive={livePeers.length > 0}
       canDelete={m => m.uid === uid}
+      renderCard={m => (m.kind === 'note' || m.kind === 'work' ? <PinCard m={m} forMe={m.to === uid} /> : null)}
+      onAttach={canPin ? () => setPinning(true) : undefined}
       onSent={(kind, text) => noteSent(thread, uid, kind === 'voice' ? VOICE_PREVIEW : text).catch(e => console.warn('dm: ', e?.code || e))}
       header={
         <div className="flex items-center gap-2 px-3 sm:px-4 py-3">
@@ -157,6 +169,14 @@ export const DirectChat: React.FC<{ id: string; classes: SchoolClass[]; logoUrl?
               onStart={kind => startChatCall(thread, user, kind)}
               onJoin={joinCall}
             />
+          )}
+          {canPin && (
+            <PinSheet open={pinning} onClose={() => setPinning(false)} inClass={false} classes={pinClasses}
+              people={[{ uid: student, name: thread.names[student] || other.name || 'მოსწავლე', photoURL: thread.photos[student] || '' }]}
+              onSend={async p => {
+                await sendDmPin(dmBase(thread.id), author, p);
+                noteSent(thread, uid, pinPreview(p)).catch(e => console.warn('dm: ', e?.code || e));
+              }} />
           )}
         </div>
       }

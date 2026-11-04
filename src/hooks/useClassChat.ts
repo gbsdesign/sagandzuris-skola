@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import {
-  addDoc, Bytes, collection, doc, getDoc, limit, onSnapshot, orderBy, query, serverTimestamp, updateDoc, writeBatch,
+  addDoc, Bytes, collection, doc, getDoc, limit, onSnapshot, orderBy, query, QueryDocumentSnapshot, serverTimestamp, updateDoc, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { VoiceTake } from '../utils/voiceRecorder';
@@ -19,8 +19,9 @@ export interface ChatMessage {
   photoURL: string;
   teacher: boolean;
   // 'call': a private call was started (the teacher's "ზარი" button); 'game': an invitation into a class's game room;
-  // 'draw': a drawing to guess („ნახატობანა“)
-  kind: 'text' | 'voice' | 'call' | 'game' | 'draw';
+  // 'draw': a drawing to guess („ნახატობანა“); 'note' / 'work': a teacher's card for one member — a comment or an
+  // assignment (hooks/useChatPins.ts; in a class's chat it lives apart, in classes/{id}/pins, so only they see it)
+  kind: 'text' | 'voice' | 'call' | 'game' | 'draw' | 'note' | 'work';
   text: string;
   /** a 'game' message's room (classes/{id}/games/{room}) */
   room: string;
@@ -33,7 +34,53 @@ export interface ChatMessage {
   parts: number;
   at: Date | null;
   pending: boolean;
+  /** a 'note' / 'work' card: for whom, and (a work card) its assignment — id, class, chant or exercise, deadline, note */
+  to?: string;
+  toName?: string;
+  work?: string;
+  wcls?: string;
+  vid?: string;
+  drill?: string;
+  due?: string;
+  note?: string;
+  /** a class chat's card from classes/{id}/pins (deleted there, not among the messages) */
+  pinned?: boolean;
 }
+
+const str = (v: unknown) => (typeof v === 'string' ? v : '');
+const KINDS = ['voice', 'call', 'game', 'draw', 'note', 'work'] as const;
+
+/** A message (or a class's pin) as the chat shows it. */
+export const toChatMessage = (d: QueryDocumentSnapshot, pinned = false): ChatMessage => {
+  const m = d.data({ serverTimestamps: 'estimate' });
+  return {
+    id: d.id,
+    uid: m.uid || '',
+    name: m.name || '',
+    photoURL: m.photoURL || '',
+    teacher: !!m.teacher,
+    kind: (KINDS as readonly string[]).includes(m.kind) ? m.kind : 'text',
+    text: m.text || '',
+    room: str(m.room),
+    ink: str(m.ink),
+    ans: str(m.ans),
+    theme: str(m.theme),
+    seconds: m.seconds || 0,
+    wave: m.wave || '',
+    parts: m.parts || 0,
+    at: m.createdAt?.toDate?.() || null,
+    pending: d.metadata.hasPendingWrites,
+    to: str(m.to),
+    toName: str(m.toName),
+    work: str(m.work),
+    wcls: str(m.wcls),
+    vid: str(m.vid),
+    drill: str(m.drill),
+    due: str(m.due),
+    note: str(m.note),
+    pinned,
+  };
+};
 
 export interface ChatAuthor {
   uid: string;
@@ -125,27 +172,7 @@ export const useChat = (base?: string | null) => {
       q,
       { includeMetadataChanges: true },
       snap => {
-        setMessages(snap.docs.map(d => {
-          const m = d.data({ serverTimestamps: 'estimate' });
-          return {
-            id: d.id,
-            uid: m.uid || '',
-            name: m.name || '',
-            photoURL: m.photoURL || '',
-            teacher: !!m.teacher,
-            kind: m.kind === 'voice' || m.kind === 'call' || m.kind === 'game' || m.kind === 'draw' ? m.kind : 'text',
-            text: m.text || '',
-            room: typeof m.room === 'string' ? m.room : '',
-            ink: typeof m.ink === 'string' ? m.ink : '',
-            ans: typeof m.ans === 'string' ? m.ans : '',
-            theme: typeof m.theme === 'string' ? m.theme : '',
-            seconds: m.seconds || 0,
-            wave: m.wave || '',
-            parts: m.parts || 0,
-            at: m.createdAt?.toDate?.() || null,
-            pending: d.metadata.hasPendingWrites,
-          } as ChatMessage;
-        }).reverse());
+        setMessages(snap.docs.map(d => toChatMessage(d)).reverse());
         setLoading(false);
         setError(false);
       },

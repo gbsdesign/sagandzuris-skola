@@ -2,7 +2,9 @@ import React, { useEffect, useRef, useState } from 'react';
 import { CalendarClock, History, MessageCircle, Pencil, Plus } from 'lucide-react';
 import { useAuth, useNavigation } from '../../context';
 import type { SchoolClass } from '../../hooks/useClasses';
-import { useChat, classChatBase, ChatAuthor, markChatSeen } from '../../hooks/useClassChat';
+import { useChat, classChatBase, ChatAuthor, ChatMessage, deleteMessage, markChatSeen } from '../../hooks/useClassChat';
+import { deleteClassPin, sendClassPin, useClassPins, withPins } from '../../hooks/useChatPins';
+import { openAdminThread, openThread } from '../../hooks/useDirectChat';
 import { CallButtons } from '../../pages/DirectChatPage';
 import { startClassCall, joinClassCall } from '../calls/callActions';
 import { LessonChips, ScheduleSheet } from '../teacher/Schedule';
@@ -10,6 +12,8 @@ import { Btn, IconBtn } from '../ui/kit';
 import { triggerHaptic } from '../../utils/haptics';
 import { useOpenGameRoom } from '../../utils/gameRoomOpen';
 import { ChatPanel } from './ChatPanel';
+import { PinCard } from './PinCard';
+import { PinSheet } from './PinSheet';
 import { parseChatRoomRef } from '../../data/roomGames';
 
 // The class's chat: text and voice messages between members and teachers, and the class's call (the school's own,
@@ -28,8 +32,12 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
   // this class's teachers (and the school's admins) speak as teachers here
   const isAdmin = isSchoolAdmin || (!!user && cls.teacherIds.includes(user.uid));
   const base = classChatBase(cls.id);
-  const { messages, loading, error } = useChat(base);
+  const { messages: said, loading, error } = useChat(base);
+  // a teacher's cards for one member (hooks/useChatPins.ts): a teacher sees all of them, a member only theirs
+  const pins = useClassPins(cls.id, user?.uid, isAdmin);
+  const messages = withPins(said, pins);
   const [lessons, setLessons] = useState(false);
+  const [pinning, setPinning] = useState(false);
   const openRoom = useOpenGameRoom();
 
   // read: the newest message, once the chat is (at least partly) in view
@@ -59,6 +67,20 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
 
   const shown = compact ? messages.slice(-COMPACT) : messages;
 
+  // „პასუხი“ on a card for me: my private chat with the one who wrote it (an admin who doesn't teach here: the administration's)
+  const reply = async (m: ChatMessage) => {
+    const teacher = cls.teachers.find(t => t.uid === m.uid);
+    const meHere = { uid: user.uid, name: me?.name || user.displayName || '', photoURL: me?.photoURL || user.photoURL || '' };
+    try {
+      const id = teacher
+        ? await openThread({ uid: teacher.uid, name: teacher.name, photoURL: teacher.photoURL || '' }, meHere, cls.id)
+        : await openAdminThread(meHere);
+      openDm(id);
+    } catch (e) {
+      console.warn('pin reply: ', e);
+    }
+  };
+
   return (
     <div ref={box} className={fill ? 'h-full' : ''}>
     <ChatPanel
@@ -69,6 +91,11 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
       error={error}
       showNames
       canDelete={m => m.uid === user.uid || isAdmin}
+      onDelete={m => (m.pinned ? deleteClassPin(cls.id, m.id) : deleteMessage(base, m))}
+      renderCard={m => (m.kind === 'note' || m.kind === 'work'
+        ? <PinCard m={m} forMe={m.to === user.uid} inClass onReply={m.to === user.uid ? () => reply(m) : undefined} />
+        : null)}
+      onAttach={isAdmin && cls.members.length ? () => setPinning(true) : undefined}
       onOpenGame={m => { const r = parseChatRoomRef(m.room); if (r) openRoom(cls.id, r.roomId, r.game); }}
       fill={fill}
       listClassName={compact ? '' : undefined}
@@ -111,6 +138,10 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
             </div>
           )}
           <ScheduleSheet cls={cls} open={lessons} onClose={() => setLessons(false)} />
+          {isAdmin && (
+            <PinSheet open={pinning} onClose={() => setPinning(false)} people={cls.members} classes={[cls]} inClass
+              onSend={async p => { await sendClassPin(cls.id, author, p); }} />
+          )}
         </div>
       }
     />
