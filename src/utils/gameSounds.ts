@@ -78,3 +78,99 @@ export const buzz = (ctx: AudioContext | null) => {
     tone(c, c.currentTime, 196, 0.34, 0.35, 'triangle');
   } catch { /* no audio */ }
 };
+
+// ——— „ეზოს მსაჯი“ (2026-11-04): the referee's whistle and the sea of „ზღვა ღელავს“
+
+/** one blast of a pea whistle: a high tone trilled by the pea */
+const blast = (ctx: AudioContext, at: number, len: number) => {
+  const o = ctx.createOscillator();
+  const lfo = ctx.createOscillator();
+  const depth = ctx.createGain();
+  const g = ctx.createGain();
+  o.type = 'sine';
+  o.frequency.value = 2650;
+  lfo.type = 'sine';
+  lfo.frequency.value = 27;
+  depth.gain.value = 190;
+  lfo.connect(depth);
+  depth.connect(o.frequency);
+  o.connect(g);
+  g.connect(ctx.destination);
+  g.gain.setValueAtTime(0.0001, at);
+  g.gain.exponentialRampToValueAtTime(0.34, at + 0.018);
+  g.gain.setValueAtTime(0.34, at + Math.max(0.03, len - 0.05));
+  g.gain.exponentialRampToValueAtTime(0.0001, at + len);
+  o.start(at);
+  lfo.start(at);
+  o.stop(at + len + 0.02);
+  lfo.stop(at + len + 0.02);
+};
+
+/** the whistle: „s“ a short blast, „l“ a long one, in a row */
+export const whistle = (ctx: AudioContext | null, pattern: string) => {
+  try {
+    const c = wake(ctx);
+    if (!c) return;
+    let t = c.currentTime + 0.02;
+    for (const p of pattern) {
+      const len = p === 'l' ? 0.85 : 0.2;
+      blast(c, t, len);
+      t += len + 0.13;
+    }
+  } catch { /* no audio */ }
+};
+
+/** the sea: a soft noise that swells and falls like waves; returns its stop (a short fade) */
+export const seaWaves = (ctx: AudioContext | null): (() => void) => {
+  try {
+    const c = wake(ctx);
+    if (!c) return () => { /* silent */ };
+    const len = Math.round(4 * c.sampleRate);
+    const buf = c.createBuffer(1, len, c.sampleRate);
+    const d = buf.getChannelData(0);
+    let last = 0;
+    const edge = Math.round(0.04 * c.sampleRate);
+    for (let i = 0; i < len; i++) {
+      last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02;
+      const fade = Math.min(1, i / edge, (len - 1 - i) / edge);
+      d[i] = last * 3.5 * fade;
+    }
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    src.loop = true;
+    const lp = c.createBiquadFilter();
+    lp.type = 'lowpass';
+    lp.frequency.value = 750;
+    const swell = c.createGain();
+    swell.gain.value = 0.38;
+    const lfo = c.createOscillator();
+    lfo.frequency.value = 0.18;
+    const lfoDepth = c.createGain();
+    lfoDepth.gain.value = 0.28;
+    lfo.connect(lfoDepth);
+    lfoDepth.connect(swell.gain);
+    const out = c.createGain();
+    const now = c.currentTime;
+    out.gain.setValueAtTime(0.0001, now);
+    out.gain.exponentialRampToValueAtTime(0.9, now + 0.6);
+    src.connect(lp);
+    lp.connect(swell);
+    swell.connect(out);
+    out.connect(c.destination);
+    src.start(now);
+    lfo.start(now);
+    let stopped = false;
+    return () => {
+      if (stopped) return;
+      stopped = true;
+      try {
+        const t = c.currentTime;
+        out.gain.cancelScheduledValues(t);
+        out.gain.setValueAtTime(Math.max(0.0001, out.gain.value), t);
+        out.gain.exponentialRampToValueAtTime(0.0001, t + 0.25);
+        src.stop(t + 0.3);
+        lfo.stop(t + 0.3);
+      } catch { /* already gone */ }
+    };
+  } catch { return () => { /* no audio */ }; }
+};

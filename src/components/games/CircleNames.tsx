@@ -28,7 +28,7 @@ const set = (next: string[]) => {
 };
 export const useCircleNames = () => useSyncExternalStore(f => { subs.add(f); return () => { subs.delete(f); }; }, get);
 
-export const CircleNames: React.FC<{ hint?: string }> = ({ hint }) => {
+export const CircleNames: React.FC<{ hint?: string; label?: string }> = ({ hint, label = 'წრეში' }) => {
   const list = useCircleNames();
   const [draft, setDraft] = useState('');
   const { classes } = useManagedClasses();
@@ -47,7 +47,7 @@ export const CircleNames: React.FC<{ hint?: string }> = ({ hint }) => {
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-[13.5px] font-bold text-[#4a3426] flex items-center gap-1.5"><Users className="w-4 h-4 text-[#7a2028]" /> წრეში · {list.length}</p>
+        <p className="text-[13.5px] font-bold text-[#4a3426] flex items-center gap-1.5"><Users className="w-4 h-4 text-[#7a2028]" /> {label} · {list.length}</p>
         {list.length > 0 && (
           <div className="flex items-center gap-1">
             {list.length > 2 && (

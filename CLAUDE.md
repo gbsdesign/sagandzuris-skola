@@ -838,6 +838,26 @@
   in four colours (fixed seeds, no chant; an answer's letter = the station's letter of the word, the wrong ones' letters the word
   has not; an old word's key ≤ 12 letters), six 96×90 mm cards a hunt with a line for where the next hides, team sheets for any hunt,
   the key, the chest's sign and arrivals.
+- **„ეზოს მსაჯი“** (2026-11-04, the plan's „ეზოს მსაჯი“, like Capture the Flag; mapItem `ezo`, hub id `ezos-msaji`, the hub opens
+  its tab by `requestOpen('ezo', 'online' | 'table')`; rules `utils/ezo.ts` + test, texts `data/ezoGames.ts`, the fields' drawings
+  `utils/ezoFields.ts` (one SVG for the app and the kit), screens `pages/games/ezo/`): the teacher's phone referees five yard games —
+  ორდროშობანა and ლელობურთი (two teams on a clock), დამალობანა, ზღვა ღელავს (everybody for themself), კლასობანა (one at a time). The
+  plan named four; ქალაქობანა (a word game elsewhere in the plan) and „ვისი სული გსურს“ gave way to the last three. Texts written by
+  Claude, unchecked — the pages say so; ids stay. „ონლაინ“ (`Rules.tsx`) = each game's rules with its field, the whistle's signs
+  (`EZO_SIGNALS`, ▶ plays each — `whistle(ctx, 's' | 'l' | …)` in `utils/gameSounds.ts`) and a quiz of ten (`quizDeal`: one of each
+  game at least; best in `sg-ezo-quiz-best`). „ჰიბრიდული“ (`Referee.tsx`) = the referee: names by `CircleNames` (its new `label`), teams
+  split fairly by the season (`splitTeams`: snake order by `strengthOf`, a player moved by a tap; „რევანში“ keeps them —
+  `keepTeams`); a match (`Match.tsx`, `EzoMatch` in `sg-ezo-match`, ✕ only pauses): 3-2-1, the long whistle, +1 a team with two
+  short ones, the last minute shown, the time or an early end whistles three and records the round; hide and seek (`Seek.tsx`): the
+  phone counts 20/30/50 aloud with the seeker, a long whistle, 3/5/8 minutes, two long = „ყველა შინ!“, each hider tapped found /
+  home, the not found win, the first found seeks next; the sea (`Sea.tsx`): `seaWaves` 6–18 s (`seaStop`), „გაშეშდი!“ with a theme
+  of `EZO_FIGURES` (never the last one twice), 10 s still, the best statue wins and leads next; hopscotch (`Turns.tsx`, `EzoTurns` in
+  `sg-ezo-turns`: ten classes, „შეცდა / გაიარა“, undo). The class's season (`Season.tsx`, `sg-ezo-season`): a win 3, a draw 1, every
+  member of the winning side wins (`standings`), the last line can be undone, „ახალი სეზონი“ asks first; settings `sg-ezo-conf`, the
+  tab `sg-ezo-tab`. Nothing in Firestore. Its kit (`ezos-msaji.mjs`, 7 sheets): the cover with the referee's page (signs, fair teams,
+  disputes), a page a game (field, what to bring, how to play, who wins, safety; the sea's 18 themes, a hopscotch tracking table),
+  the rules quiz (12, answers upside down), 32 team cards drawn from a bag (8 blue + 8 red a sheet, numbered, one back), the
+  season's wall table (30 names × 12 games) with the match sheet (two matches) behind it.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
