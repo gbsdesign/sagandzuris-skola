@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { BellOff, BellRing, Check, CheckCheck, ClipboardList, Dumbbell, GraduationCap, MessageSquareText } from 'lucide-react';
 import { db } from '../../firebase';
-import { useAuth, useChants } from '../../context';
+import { useAuth, useChants, useViewing } from '../../context';
 import { useMyClasses } from '../../hooks/useClasses';
 import { Assignment, daysUntil, dueUntil, useMyAssignments } from '../../hooks/useTeaching';
 import { Confirmations, useConfirmations } from '../../hooks/useConfirmations';
@@ -168,6 +168,8 @@ export const useNewWork = () => {
 // reminder on the eve of a deadline. `bare`: no card of its own, a line under it instead.
 export const MyClassWork: React.FC<{ bare?: boolean }> = ({ bare }) => {
   const { user } = useAuth();
+  // a student's page (ViewAsStudent): the bell is this phone's, so it stays the viewer's own
+  const viewing = !!useViewing();
   const classes = useMyClasses(user?.uid);
   const assignments = useMyAssignments(classes.map(c => c.id), user?.uid);
   const push = useGroupPush();
@@ -198,7 +200,7 @@ export const MyClassWork: React.FC<{ bare?: boolean }> = ({ bare }) => {
           <h2 className={`flex-1 min-w-0 ${PATH_LABEL}`}>
             <ClipboardList className={PATH_LABEL_ICON} /> დავალებები
           </h2>
-          {pushSupported() && (
+          {pushSupported() && !viewing && (
             <button
               type="button"
               onClick={toggleReminder}

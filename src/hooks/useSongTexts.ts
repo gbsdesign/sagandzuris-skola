@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { arrayRemove, arrayUnion, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { useAuth } from '../context';
+import { useRealAuth } from '../context';
 
 // Song words written in the app: songTexts/{songId} { text, by, at } (everyone reads). Admins write them on every song,
 // and the members an admin picked: settings/songTextEditors { uids } (admins write, everyone reads).
@@ -38,7 +38,7 @@ export const useSongTextEditors = () => {
 
 /** May the signed-in person write song words? */
 export const useCanEditSongText = () => {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin } = useRealAuth();
   const uids = useSongTextEditors();
   return isAdmin || (!!user && uids.includes(user.uid));
 };

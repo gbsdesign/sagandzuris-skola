@@ -3,7 +3,7 @@ import type { User } from 'firebase/auth';
 import { doc, getDoc, increment, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { notifyAccessRequest } from './groupPush';
 import { db } from '../firebase';
-import { useAuth } from '../context/AuthContext';
+import { useRealAuth } from '../context/AuthContext';
 import type { ExtraId, SectionId } from '../data/sections';
 import { useSections } from '../hooks/useSections';
 
@@ -143,7 +143,7 @@ const SWITCH_OF: Partial<Record<FeatureId, ExtraId>> = {
 };
 
 export const useMembership = (): Membership => {
-  const { user, isTeacher, isAdmin } = useAuth();
+  const { user, isTeacher, isAdmin } = useRealAuth();
   const { state: site } = useSections();
   const siteOff = (f: FeatureId) => {
     const sw = SWITCH_OF[f];

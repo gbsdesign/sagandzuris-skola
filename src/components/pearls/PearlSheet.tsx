@@ -7,7 +7,7 @@ import {
   phraseOf, PearlRecord, PearlShine, pearlState, VOICE_NAMES, noteName, missedNotes, pearlPatch, voiceBests, isGolden, POLISH_PCT, VOICE_IDS, chantName,
 } from '../../utils/pearls';
 import { POLISH_SHARE, notesFromFrames, scoreSinging } from '../../utils/pitch';
-import { startSinging, singingSupported, SingSession } from '../../utils/singCapture';
+import { startSinging, singingSupported, singingOnOthersPage, SingSession } from '../../utils/singCapture';
 import { savePearl, saveTake } from '../../hooks/usePearls';
 import { askAiTeacher, aiTriesLeft, AiTeacherError, AI_PROBLEM_TEXT } from '../../utils/aiTeacher';
 import { useNotes } from '../../context/NotesContext';
@@ -315,7 +315,9 @@ export const PearlSheet: React.FC<{
         </div>
 
         {!singingSupported() && !error && (
-          <p className="rounded-2xl bg-amber-50 ring-1 ring-amber-200 px-3.5 py-2.5 text-[13px] text-amber-900">ამ ბრაუზერში მიკროფონი ვერ ჩაირთვება — სცადე Chrome ან Safari.</p>
+          <p className="rounded-2xl bg-amber-50 ring-1 ring-amber-200 px-3.5 py-2.5 text-[13px] text-amber-900">
+            {singingOnOthersPage() ? 'მარგალიტს მოსწავლე თავისი ხმით აპრიალებს — მისივე ტელეფონიდან.' : 'ამ ბრაუზერში მიკროფონი ვერ ჩაირთვება — სცადე Chrome ან Safari.'}
+          </p>
         )}
         {error && <p className="rounded-2xl bg-red-50 ring-1 ring-red-200 px-3.5 py-2.5 text-[13px] text-red-800">{error}</p>}
 

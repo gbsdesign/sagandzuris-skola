@@ -2,6 +2,7 @@
 // and the take itself (MP3) for the teacher and the AI teacher. One stream feeds both.
 import { detectPitch, freqToMidi } from './pitch';
 import { pickMime, toMp3 } from './voiceRecorder';
+import { singingOnOthersPage } from './othersPage';
 
 /** one look at the microphone: ms since the start, the sung note (null: no voice) and the loudness (RMS) */
 export interface SingFrame { t: number; midi: number | null; rms: number }
@@ -9,8 +10,11 @@ export interface SingTake { frames: SingFrame[]; mp3: Blob | null; seconds: numb
 /** `frames` grows while listening (an exercise's score reads it round by round); `t0` is its performance.now() zero */
 export interface SingSession { stop: () => Promise<SingTake>; cancel: () => void; frames: SingFrame[]; t0: number }
 
+export { singingOnOthersPage } from './othersPage';
+
 export const singingSupported = () =>
-  typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia && typeof window.AudioContext !== 'undefined';
+  !singingOnOthersPage()
+  && typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia && typeof window.AudioContext !== 'undefined';
 
 // iPhone (Safari 16.4+): with the microphone on, sound goes to the quiet ear speaker and may stay there after it
 // is off, so „მოსმენა“ grew faint after singing. The audio session is set for recording only while singing.

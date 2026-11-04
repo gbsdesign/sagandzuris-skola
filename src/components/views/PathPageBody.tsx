@@ -1,0 +1,39 @@
+import React from 'react';
+import { useAccess } from '../../hooks/useAccess';
+import { ChvevebiContent } from './ChvevebiPanel';
+import { PATH_ORBS, PathOrbs } from './PathOrbs';
+import { PathTabs } from './PathTabs';
+import { PathToday } from './PathToday';
+
+/** The body of „საგანძურის გზა“ (page `gz`) — also a student's own page opened by their teacher (pages/StudentPage.tsx,
+ *  inside ViewAsStudent, so every part reads that student's record). „მარგალიტები“ (section margalitebi) shows only while
+ *  the admin's switch and the member's access let it; every round button has its own switch too (data/sections
+ *  EXTRA_SWITCHES). */
+export const PathPageBody: React.FC = () => {
+  const access = useAccess();
+  const pathOrbs = PATH_ORBS.filter(o => (o.id === 'pearls' ? access.section('margalitebi') === 'open' : access.on(o.id)));
+  const pathToday = access.section('gza') === 'open';
+  const habitsOpen = access.section('chvevebi') === 'open';
+  return (
+    <div className="w-full max-w-2xl mx-auto mb-2 px-1 space-y-5">
+      {/* „ჩემი დღე“: the page title sits in the top bar; PathToday's „დღეს“ card first (a lesson, an assignment, a review —
+          when there is one), the five round buttons (სამოსი, ნასწავლი — with the teacher's assignments —, ოსტატობა,
+          სამუშაო, მარგალიტები) in the member's order, the habits under them */}
+      {pathToday && <PathToday />}
+      <PathTabs
+        orbs={pathOrbs.length ? { labels: pathOrbs, render: order => <PathOrbs order={order} /> } : undefined}
+        cards={!habitsOpen ? [] : [
+          {
+            id: 'habits',
+            label: 'ჩვევები',
+            node: (
+              <section id="path-habits" className="w-full scroll-mt-4 rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] px-3 py-3.5 sm:p-4">
+                <ChvevebiContent />
+              </section>
+            ),
+          },
+        ]}
+      />
+    </div>
+  );
+};

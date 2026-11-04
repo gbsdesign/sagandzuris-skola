@@ -28,7 +28,7 @@ const COMPACT = 3;
 
 export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fill?: boolean; timetable?: boolean; compact?: boolean }> = ({ cls, title, fill, timetable = true, compact = false }) => {
   const { user, isAdmin: isSchoolAdmin } = useAuth();
-  const { openDm } = useNavigation();
+  const { openDm, openStudent } = useNavigation();
   // this class's teachers (and the school's admins) speak as teachers here
   const isAdmin = isSchoolAdmin || (!!user && cls.teacherIds.includes(user.uid));
   const base = classChatBase(cls.id);
@@ -96,6 +96,7 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
         ? <PinCard m={m} forMe={m.to === user.uid} inClass onReply={m.to === user.uid ? () => reply(m) : undefined} />
         : null)}
       onAttach={isAdmin && cls.members.length ? () => setPinning(true) : undefined}
+      personOpener={isAdmin ? m => (cls.memberIds.includes(m.uid) && !m.teacher ? () => openStudent(m.uid, cls.id) : null) : undefined}
       onOpenGame={m => { const r = parseChatRoomRef(m.room); if (r) openRoom(cls.id, r.roomId, r.game); }}
       fill={fill}
       listClassName={compact ? '' : undefined}

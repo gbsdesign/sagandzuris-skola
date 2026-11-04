@@ -3,6 +3,7 @@ import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { LearnRecord, PartRecord } from '../utils/learn';
 import { syncLearnReminder } from '../utils/learnReminder';
+import { useViewing } from '../context/AuthContext';
 
 // The learning mode's progress, one record per piece (chant version or song recording):
 //   students/{uid}.learning  {piece: {part: {best, level, due, at}}}  (the member writes it)
@@ -15,6 +16,8 @@ const readLocal = (piece: string): LearnRecord => {
 };
 
 export const useLearning = (uid: string | null | undefined, piece: string) => {
+  // a student's page opened by a teacher (context/AuthContext ViewAsStudent): this phone's reminder stays the viewer's
+  const viewing = !!useViewing();
   const [rec, setRec] = useState<LearnRecord>(() => (uid ? {} : readLocal(piece)));
   const [all, setAll] = useState<Record<string, LearnRecord>>({});
   const [loaded, setLoaded] = useState(!uid);
@@ -30,7 +33,7 @@ export const useLearning = (uid: string | null | undefined, piece: string) => {
         setAll(learning);
         setNoted(s.data()?.learnParts?.[piece]);
         setLoaded(true);
-        syncLearnReminder(learning); // the review reminder follows every change
+        if (!viewing) syncLearnReminder(learning); // the review reminder follows every change
       },
       err => { console.warn('learning:', err?.code || err); setLoaded(true); },
     );
@@ -58,6 +61,7 @@ export const useLearning = (uid: string | null | undefined, piece: string) => {
 
 /** Everything the member learns, with the part counts (the home page's review line, their assignments). */
 export const useAllLearning = (uid: string | null | undefined) => {
+  const viewing = !!useViewing();
   const [all, setAll] = useState<{ learning: Record<string, LearnRecord>; parts: Record<string, number> } | null>(null);
   useEffect(() => {
     if (!uid) { setAll(null); return; }
@@ -66,7 +70,7 @@ export const useAllLearning = (uid: string | null | undefined) => {
       s => {
         const learning = (s.data()?.learning || {}) as Record<string, LearnRecord>;
         setAll({ learning, parts: s.data()?.learnParts || {} });
-        syncLearnReminder(learning);
+        if (!viewing) syncLearnReminder(learning);
       },
       err => console.warn('learning:', err?.code || err),
     );

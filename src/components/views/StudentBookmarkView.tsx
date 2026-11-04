@@ -7,9 +7,10 @@ import {
   Pencil
 } from 'lucide-react';
 import confetti from 'canvas-confetti';
-import { auth, db, handleFirestoreError, OperationType } from '../../firebase';
+import { db, handleFirestoreError, OperationType } from '../../firebase';
 import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { triggerHaptic } from '../../utils/haptics';
+import { useAuth } from '../../context';
 import { MONTHS_GE, WEEKDAYS_GE } from '../../utils/dateNames';
 import { Btn, IconBtn } from '../ui/kit';
 import { WorkSchedule, WorkScheduleEditor } from './WorkScheduleEditor';
@@ -105,6 +106,8 @@ interface StudentBookmarkViewProps {
 
 // "დამოუკიდებელი სამუშაო" COMPONENT ONLY
 export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack, onGoToGaloba }) => {
+  // the signed-in member — or, on a student's page opened by their teacher (ViewAsStudent), that student
+  const { user: me } = useAuth();
   const [profile, setProfile] = useState<StudentProfile>({ firstName: '', lastName: '' });
   const [completedSessions, setCompletedSessions] = useState<{ [key: string]: boolean }>({});
   const [isLoaded, setIsLoaded] = useState<boolean>(false);
@@ -119,7 +122,7 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
   );
 
   useEffect(() => {
-    const user = auth.currentUser;
+    const user = me;
     if (!user) {
       setProfile({ firstName: '', lastName: '' });
       setCompletedSessions({});
@@ -157,12 +160,12 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [me?.uid]);
 
   // the whole map is replaced, so a day whose hours were all taken off is gone from the saved timetable too
   const saveSchedule = (ws: WorkSchedule) => {
     setProfile(prev => ({ ...prev, workSchedule: ws }));
-    const user = auth.currentUser;
+    const user = me;
     if (!user) return;
     const ref = doc(db, 'students', user.uid);
     updateDoc(ref, { 'profile.workSchedule': ws, updatedAt: new Date().toISOString() })
@@ -191,7 +194,7 @@ export const StudentBookmarkView: React.FC<StudentBookmarkViewProps> = ({ onBack
   };
 
   const handleToggleCompleted = async (dateKey: string, hour: string) => {
-    const user = auth.currentUser;
+    const user = me;
     if (!user) return;
 
     triggerHaptic(10);

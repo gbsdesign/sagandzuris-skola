@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { arrayRemove, arrayUnion, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { useAuth } from '../context';
+import { useRealAuth } from '../context';
 
 // settings/centreDownload (admins write, everyone reads): { everyone: boolean, uids: string[] } — who may save the
 // Folklore Centre's recordings (MP3 / offline). Staff always may; a member when `everyone` is on or their uid is listed.
@@ -39,7 +39,7 @@ export const useCentreDownloadSettings = () => {
 
 /** May the signed-in person save the Centre's recordings? */
 export const useCanDownloadCentre = () => {
-  const { user, isTeacher } = useAuth();
+  const { user, isTeacher } = useRealAuth();
   const s = useCentreDownloadSettings();
   return isTeacher || (!!user && (s.everyone || s.uids.includes(user.uid)));
 };

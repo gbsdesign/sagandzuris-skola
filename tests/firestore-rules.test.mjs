@@ -99,7 +99,13 @@ await t('teacher cannot read other student', assertFails(getDoc(doc(tch, 'studen
 await t('teacher edits path', assertSucceeds(setDoc(doc(tch, 'students', 'stu'), { selectedChantVariants: { a: 1 } }, { mergeFields: ['selectedChantVariants'] })));
 await t('teacher cannot rewrite the teacher list', assertFails(updateDoc(doc(tch, 'students', 'stu'), { teacherIds: ['tch', 'tch2'], selectedChantVariants: {} })));
 await t('teacher switches kids mode', assertSucceeds(updateDoc(doc(tch, 'students', 'stu'), { kidsMode: { on: true, sections: ['galoba'] } })));
-await t('teacher cannot edit profile', assertFails(updateDoc(doc(tch, 'students', 'stu'), { firstName: 'x' })));
+// on the student's own page (pages/StudentPage.tsx) the teacher changes what the student may — not the account
+await t("teacher edits the student's profile", assertSucceeds(updateDoc(doc(tch, 'students', 'stu'), { profile: { firstName: 'x' } })));
+await t("teacher ticks the student's habit", assertSucceeds(setDoc(doc(tch, 'students', 'stu'), { habitLog: { '2026-11-04': ['h1'] } }, { mergeFields: ['habitLog'] })));
+await t("teacher cannot change the student's account", assertFails(updateDoc(doc(tch, 'students', 'stu'), { email: 'x@x.ge' })));
+await t('another teacher cannot edit the student', assertFails(updateDoc(doc(tch2, 'students', 'stu'), { profile: { firstName: 'y' } })));
+await t("teacher writes the student's name in the directory", assertSucceeds(setDoc(doc(tch, 'directory', 'stu'), { uid: 'stu', firstName: 'x', lastName: 'y' }, { merge: true })));
+await t("teacher cannot write another's name", assertFails(setDoc(doc(tch, 'directory', 'stu2'), { uid: 'stu2', firstName: 'x' }, { merge: true })));
 await t('teacher writes confirmations', assertSucceeds(setDoc(doc(tch, 'confirmations', 'stu'), { a: ['1'] })));
 await t('teacher cannot confirm others', assertFails(setDoc(doc(tch, 'confirmations', 'stu2'), { a: ['1'] })));
 await t('student reads own confirmations', assertSucceeds(getDoc(doc(stu, 'confirmations', 'stu'))));
