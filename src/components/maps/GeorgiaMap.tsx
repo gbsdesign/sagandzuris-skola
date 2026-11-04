@@ -15,6 +15,7 @@ import {
   songRecordingCount,
 } from '../../data/songsData';
 import { RegionPuzzleMap, RegionLocator } from './RegionPuzzleMap';
+import folkCentreLogo from '../../assets/images/folk-centre-logo.png';
 import { SongPage, TakePlayer, openSongPage, songTakes } from './SongPage';
 import { SongAlbumPage } from './SongAlbumPage';
 import { CentreAlbums, useShownAlbums } from './CentreAlbums';
@@ -106,6 +107,7 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
         />
       ) : (
         <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
+          <CentreBanner />
           <SongSearchField
             value={query}
             onChange={setQuery}
@@ -141,6 +143,15 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
     </>
   );
 };
+
+// The Folklore Centre's mark over the songs map: the recordings here are theirs (the user's request, 2026-11-05).
+// Only on the map, not inside a region.
+const CentreBanner: React.FC = () => (
+  <div className="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl bg-white border border-[#e4d8c4] shadow-[0_1px_2px_rgba(42,32,23,0.05)]">
+    <img src={folkCentreLogo} alt="ფოლკლორის ცენტრის ლოგო" className="shrink-0 w-16 h-16 object-contain" draggable={false} />
+    <h2 className="min-w-0 text-[21px] sm:text-2xl font-black leading-tight text-[#2a2017] text-balance">ფოლკლორის ცენტრის ჩანაწერები</h2>
+  </div>
+);
 
 const SongSearchField: React.FC<{ value: string; onChange: (v: string) => void; placeholder: string }> = ({ value, onChange, placeholder }) => (
   <label className="relative block">

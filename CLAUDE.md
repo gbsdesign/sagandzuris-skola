@@ -175,7 +175,9 @@
   3 534 sure takes in their songs; each album opened per member by admins — 🎧 / ⬇ apart (`data/albumAccess.ts`). Its „სხვა“
   folder (same day): two albums under the მთქმელი map and „მელექსეები“ in a region (`maps/Reciters.tsx`), an instrument with
   recordings opens a window (`views/SakravebiView.tsx`); details in `src/data/CLAUDE.md`.
-- **Folk songs map** (`data/songsData.ts`, `components/maps/GeorgiaMap.tsx`) and **მთქმელი authors map**
+- **Folk songs map** (`data/songsData.ts`, `components/maps/GeorgiaMap.tsx`; on top of the map, for everyone, the Folklore
+  Centre's banner `CentreBanner` — its logo + „ფოლკლორის ცენტრის ჩანაწერები“, 2026-11-05; logo `assets/images/folk-centre-logo.png`
+  cut from the user's screenshot) and **მთქმელი authors map**
   (`data/mtkmeliData.ts`, `MtkmeliMap.tsx`, shared `RegionPuzzleMap.tsx`). Full texts only for authors who
   died before 1956; others get title + description + wiki link.
 - **Prayers** (`data/prayers.ts`, `public/prayers/`, `public/bible/`), psalter kathismas, 73 akathists,
