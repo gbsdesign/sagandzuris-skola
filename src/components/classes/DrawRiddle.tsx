@@ -67,7 +67,8 @@ export const DrawRiddle: React.FC<{ m: ChatMessage; mine: boolean; meta?: React.
         </button>
       </div>
       {m.theme && <p className={`-mt-1.5 text-[12.5px] font-bold ${sub}`}>თემა: {m.theme}</p>}
-      <InkView ink={m.ink} mode="replay" replayKey={replay} width="100%" label="კლასელის ნახატი" />
+      {/* still at first — several drawings re-drawing themselves at once made a phone stutter when the chat opened; ↺ plays it */}
+      <InkView ink={m.ink} mode={replay ? 'replay' : 'still'} replayKey={replay} width="100%" label="კლასელის ნახატი" />
       {word && <Boxes word={word} open={open} dark={mine} />}
       {mine ? (
         <p className={`text-[13px] font-bold ${sub}`}>შენი სიტყვა: „{word}“</p>

@@ -131,20 +131,50 @@ const deviceSeen = (): Record<string, number> => {
   try { return JSON.parse(localStorage.getItem(SEEN_KEY) || '{}') || {}; } catch { return {}; }
 };
 
+// this device's marks reach every useChatSeen at once (the record follows later, see markChatSeen)
+const seenSubs = new Set<() => void>();
+const sameSeen = (a: Record<string, number>, b: Record<string, number>) => {
+  const ka = Object.keys(a);
+  return ka.length === Object.keys(b).length && ka.every(k => a[k] === b[k]);
+};
+
 /** When I last read each class chat (live): classId → ms. */
 export const useChatSeen = (uid?: string | null) => {
   const [seen, setSeen] = useState<Record<string, number>>(deviceSeen);
   useEffect(() => {
-    if (!uid) return;
-    return onSnapshot(doc(db, 'students', uid), snap => {
-      const kept = (snap.data()?.chatSeen || {}) as Record<string, unknown>;
+    let kept: Record<string, unknown> = {};
+    const merge = () => {
       const next = deviceSeen();
       for (const [id, at] of Object.entries(kept)) if (typeof at === 'number' && at > (next[id] || 0)) next[id] = at;
-      setSeen(next);
-    }, () => {});
+      setSeen(prev => (sameSeen(prev, next) ? prev : next));
+    };
+    seenSubs.add(merge);
+    const off = uid
+      ? onSnapshot(doc(db, 'students', uid), snap => { kept = (snap.data()?.chatSeen || {}) as Record<string, unknown>; merge(); }, () => {})
+      : undefined;
+    return () => { seenSubs.delete(merge); off?.(); };
   }, [uid]);
   return seen;
 };
+
+// My record (students/{uid}) is read live in many places of the app, so every write to it redraws much of the page.
+// Writing „read up to“ on each new message of a busy class made phones stutter (2026-11-05): the record now gets it
+// at most once a minute a chat, and the newest mark goes out when the page is hidden or closed.
+const SEEN_EVERY = 60_000;
+const seenWritten = new Map<string, number>();
+const seenWaiting = new Map<string, { uid: string; at: number; timer: number }>();
+const writeSeen = (uid: string, classId: string, at: number) => {
+  seenWritten.set(classId, Date.now());
+  updateDoc(doc(db, 'students', uid), { [`chatSeen.${classId}`]: at }).catch(() => { /* no record yet: this device keeps it */ });
+};
+const flushSeen = () => {
+  for (const [id, w] of seenWaiting) { window.clearTimeout(w.timer); writeSeen(w.uid, id, w.at); }
+  seenWaiting.clear();
+};
+if (typeof window !== 'undefined') {
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'hidden') flushSeen(); });
+  window.addEventListener('pagehide', flushSeen);
+}
 
 /** I have read a class chat up to `at` (its newest message): this device at once, my record in the background. */
 export const markChatSeen = (uid: string, classId: string, at: number) => {
@@ -152,7 +182,17 @@ export const markChatSeen = (uid: string, classId: string, at: number) => {
   if ((mine[classId] || 0) >= at) return;
   mine[classId] = at;
   try { localStorage.setItem(SEEN_KEY, JSON.stringify(mine)); } catch { /* private window */ }
-  updateDoc(doc(db, 'students', uid), { [`chatSeen.${classId}`]: at }).catch(() => { /* no record yet: this device keeps it */ });
+  seenSubs.forEach(f => f());
+  const waiting = seenWaiting.get(classId);
+  if (waiting) { waiting.uid = uid; waiting.at = at; return; }
+  const since = Date.now() - (seenWritten.get(classId) ?? 0);
+  if (since >= SEEN_EVERY) { writeSeen(uid, classId, at); return; }
+  const timer = window.setTimeout(() => {
+    const w = seenWaiting.get(classId);
+    seenWaiting.delete(classId);
+    if (w) writeSeen(w.uid, classId, w.at);
+  }, SEEN_EVERY - since);
+  seenWaiting.set(classId, { uid, at, timer });
 };
 
 /** someone else wrote after I last read it */
@@ -168,11 +208,23 @@ export const useChat = (base?: string | null) => {
     if (!base) return;
     setLoading(true);
     const q = query(messagesOf(base), orderBy('createdAt', 'desc'), limit(SHOWN));
+    // a message never changes once it has arrived: the same object is kept (and the same list, when nothing changed),
+    // so a snapshot that only confirms a send or comes from the cache does not redraw the chat
+    let known = new Map<string, ChatMessage>();
     return onSnapshot(
       q,
       { includeMetadataChanges: true },
       snap => {
-        setMessages(snap.docs.map(d => toChatMessage(d)).reverse());
+        const next = new Map<string, ChatMessage>();
+        const list = snap.docs.map(d => {
+          const fresh = toChatMessage(d);
+          const old = known.get(d.id);
+          const m = old && old.pending === fresh.pending && old.at?.getTime() === fresh.at?.getTime() ? old : fresh;
+          next.set(d.id, m);
+          return m;
+        }).reverse();
+        known = next;
+        setMessages(prev => (prev.length === list.length && prev.every((m, i) => m === list[i]) ? prev : list));
         setLoading(false);
         setError(false);
       },
