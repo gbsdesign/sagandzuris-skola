@@ -22,7 +22,8 @@ export const saveFile = (blob: Blob, name: string) => {
   setTimeout(() => URL.revokeObjectURL(url), 10000);
 };
 
-/** making the kit: `run` makes and saves it as `<name>.pdf`; `note` = „მზადდება… N%“ / „ვერ შეიქმნა“ / '' */
+/** making the kit: `run` makes and saves it as `<name>.pdf`; `share` = the pages drawn in per cent (-1 before the first);
+ * `note` = „მზადდება… N%“ / „ვერ შეიქმნა“ / '' */
 export const useKitMaker = (make: KitMake, name: string) => {
   const [state, setState] = useState<'' | 'busy' | 'failed'>('');
   const [share, setShare] = useState(-1);
@@ -41,7 +42,7 @@ export const useKitMaker = (make: KitMake, name: string) => {
     }
   };
   const note = state === 'busy' ? `მზადდება…${share > 0 ? ` ${share}%` : ''}` : state === 'failed' ? 'ვერ შეიქმნა' : '';
-  return { busy: state === 'busy', note, run };
+  return { busy: state === 'busy', failed: state === 'failed', share, note, run };
 };
 
 /** a game page's own kit button: its icon becomes a spinner while the kit is made, the note follows the label */

@@ -339,7 +339,11 @@
   known one shows it in brackets (`like`: მაფია, Wordle, Alias, კატანი…) and ⓘ unfolds 2–3 lines on what that game is and how
   ours differs (`about`; „რა? სად? როდის?“ has ⓘ without brackets). Only what is ready shows — a game and a variant alike (since
   2026-10-28 the user had the unbuilt plan games taken off; the plan doc keeps them, don't bring them back unasked); a game's app
-  variants follow its section, a printed kit always shows. The vine label „თამაშები“ opens it. The pearls game stays the round button of „საგანძურის გზა“ (below), now
+  variants follow its section, a printed kit always shows. Since 2026-11-04 (the user's „დახვეწე, გაათანამედროვე და არ იყოს დამაბნეველი“): the three variants' legend, a search field
+  (name · known game · line · ⓘ — the name counts most), „დღის თამაშები“ (`DAILY_GAMES`: a tile each, ✓ when played today, a tap
+  opens the day's game), then the list under four headings (`GAME_GROUPS`: the user's own მუსიკალური · ქართული · ცოცხალი of 10-27 +
+  დაფის თამაშები — still one list, no tabs; `tests/gameGroups.test.ts` keeps every game under exactly one) with chips that jump
+  to them; a card's buttons stand in one row (ონლაინ filled, ჰიბრიდული tinted, სამაგიდო beige; icons only from `lg`). The vine label „თამაშები“ opens it. The pearls game stays the round button of „საგანძურის გზა“ (below), now
   under its own section `margalitebi` (open/მალე/hidden switch in the admin panel; a member's feature for it is the games'
   one — `featureOf` in `hooks/useAccess.ts`). The plan with 42 games and the six Georgianized board games:
   https://claude.ai/artifact/Dw24amtHhQvSGUd1pPE4fg
