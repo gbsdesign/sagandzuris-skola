@@ -465,7 +465,7 @@
   (`HybridState`, `markTeam`, kept on the device so ✕ only pauses). The room store is generic since then: `utils/gameRoom.ts`
   `createRooms(be, engine, moves)` over a `RoomEngine` (`games` it plays; samshvilde's is `utils/samshvildeRoom.ts`), the
   app's two stores in `utils/gameRoomFirestore.ts` (`rooms` = samshvilde, `roundRooms` = the quick games: `timeUp(key)`,
-  `reveal`, `next`); the rules let a room be opened for every `ROOM_GAMES` game (25 since 2026-11-04), up to 40 players, an act may carry `ms` (and `text`).
+  `reveal`, `next`); the rules let a room be opened for every `ROOM_GAMES` game (26 since 2026-11-04), up to 40 players, an act may carry `ms` (and `text`).
   Invitations name their game: `data/roomGames.ts` (titles, the hub item, a chat card's `room` = `game:roomId` — a
   samshvilde card keeps the bare id), the Worker's `GAME_TITLES`, `/?open=<game>&c=&r=`, icons
   `components/games/roomGameIcons.ts`; the online tab of every room game is `components/games/RoomSetup.tsx`. Screens
@@ -939,6 +939,23 @@
   the step's story `storyOf` — second person for „შენ“), `Pads.tsx` (the actions, the step's clock, `sg-kari-hide` hides my cards,
   a tap peeks 4 s), `Play.tsx` (online), `Table.tsx` (hybrid), `Room.tsx` (lobby), `look.tsx` (colours, icons, cards, chronicle).
   Not yet tried by real people on several phones.
+- **„ლურჯი სუფრა“ on phones** (2026-11-04, the printed Azul №5 gets its app variants; mapItem `lurji`, its entry in `GAMES` has
+  `item`, the hub opens its tab by `requestOpen('lurji', 'online' | 'table')`, tab `sg-lurji-tab`; rules `utils/lurjiSupra.ts` +
+  test, screens `pages/games/lurji/`): the kit's words and its apprentice side — 100 stamps of five ornaments (`ORN_NAMES`, the
+  kit's own drawings in `lurji/ornaments.ts`), 2–4 players or teams, 5/7/9 trays (`traysFor`), the meidan with the უსტაბაში token,
+  five lines, the wall `ornAt(r, c) = (c − r) mod 5`, the dye −1 −1 −2 −2 −2 −3 −3 (`FLOOR`), the bag refilled from the lid. A
+  take (`take`) = all of one ornament from a tray (the rest to the meidan) or from the meidan (the day's first takes the token),
+  onto a line from the right or straight onto the dye; the evening prints, scores (`pointsAt`) and charges the dye; the evening a
+  row is full ends it with +2 a row, +7 a column, +10 an ornament (`bonusOf`), a tie → more full rows, else shared. „ონლაინ“ = a
+  room of its own engine (`utils/lurjiRoom.ts` `LURJI_ROOM`, no seats — nothing is secret; `lurji` in `ROOM_GAMES`/the rules/the
+  Worker's titles; `lurjiRooms` / `useLurjiRoom` in `gameRoomFirestore.ts`, whose visible-room hooks loop over the four stores,
+  `STORES`): the host may play („მეც ვთამაშობ“), a take is the act's `pick` (`takePick`), 75 s a take, then the phone takes for the
+  late one (`autoTake`: fewest spilt, most laid, lowest line), the evening's report stays 14 s (`LURJI_SECS`); „კიდევ ერთხელ“ starts
+  with the player after the winner. „ჰიბრიდული“ (`Table.tsx`, kept in `sg-lurji-table`, who begins in `sg-lurji-conf`, names =
+  `CircleNames`) = one phone passed round or lying in the middle: it lays the trays, prints and counts; „უკან“ takes back a take
+  of the same day; ✕ only pauses. Screens: `Play.tsx` (`LurjiPlay`: the story card, trays + meidan, my board big with the legal
+  lines ringed and the take's ghost, the others small; a phone on its side or a computer = two columns), `look.tsx` (`Stamp`,
+  `Trays`, `Meidan`, `Loom`, `useCell`), `Room.tsx` (lobby, the step's clock). Not yet tried by real people on several phones.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in

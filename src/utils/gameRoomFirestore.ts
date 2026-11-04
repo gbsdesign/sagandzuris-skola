@@ -4,6 +4,7 @@ import { db } from '../firebase';
 import { ROOM_FRESH_MS, createRooms, parseRoom, type Backend, type Data, type RoomDoc } from './gameRoom';
 import { samshvildeRooms } from './samshvildeRoom';
 import { kariRooms as makeKariRooms } from './kariRoom';
+import { lurjiRooms as makeLurjiRooms } from './lurjiRoom';
 import { ROUNDS_ROOM, editRound, judgeRound, nextRound, nextStep, revealRound, roundKey, type RoundQ } from './roundGames';
 
 // The online rooms (utils/gameRoom.ts) in the app's Firestore: the backend, the one store of this phone, and the rooms of my
@@ -54,15 +55,20 @@ export const useRoundRoom = () => useSyncExternalStore(roundRooms.subscribe, rou
 /** this phone's room of „მეფის კარი“ (utils/kariRoom.ts) */
 export const kariRooms = makeKariRooms(backend);
 export const useKariRoom = () => useSyncExternalStore(kariRooms.subscribe, kariRooms.get);
-const anyVisible = () => rooms.isVisible() || roundRooms.isVisible() || kariRooms.isVisible();
-const subscribeAll = (f: () => void) => { const a = rooms.subscribe(f), b = roundRooms.subscribe(f), c = kariRooms.subscribe(f); return () => { a(); b(); c(); }; };
+/** this phone's room of „ლურჯი სუფრა“ (utils/lurjiRoom.ts) */
+export const lurjiRooms = makeLurjiRooms(backend);
+export const useLurjiRoom = () => useSyncExternalStore(lurjiRooms.subscribe, lurjiRooms.get);
+const STORES = [rooms, roundRooms, kariRooms, lurjiRooms] as const;
+type AnySnap = ReturnType<(typeof STORES)[number]['get']>;
+const anyVisible = () => STORES.some(st => st.isVisible());
+const subscribeAll = (f: () => void) => { const offs = STORES.map(st => st.subscribe(f)); return () => offs.forEach(off => off()); };
 /** a room's own screen is on (the invitation strip hides meanwhile) */
 export const useRoomVisible = () => useSyncExternalStore(subscribeAll, anyVisible);
 /** the rooms this phone is in, of every game */
-let lastSnaps: [ReturnType<typeof rooms.get>, ReturnType<typeof roundRooms.get>, ReturnType<typeof kariRooms.get>] = [null, null, null];
+let lastSnaps: AnySnap[] = STORES.map(() => null);
 const allSnaps = () => {
-  const a = rooms.get(), b = roundRooms.get(), c = kariRooms.get();
-  if (a !== lastSnaps[0] || b !== lastSnaps[1] || c !== lastSnaps[2]) lastSnaps = [a, b, c];
+  const now = STORES.map(st => st.get());
+  if (now.some((x, i) => x !== lastSnaps[i])) lastSnaps = now;
   return lastSnaps;
 };
 export const useMyRooms = () => useSyncExternalStore(subscribeAll, allSnaps);
