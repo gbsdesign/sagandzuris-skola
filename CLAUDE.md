@@ -296,6 +296,9 @@
   University of Chant admission — 2026 chant/boys/girls lists from galoba.edu.ge PDFs merged with the old site
   sites.google.com/view/asabituri (its Drive folders), colloquium, registration. Opened from the small label under
   „გალობა“ on the home vine. Tracks "e:<path>" play through the audio Worker's `/edu/` route.
+  Theory tab since 2026-11-05 one way through (the user: „სწავლა გაამარტივე … ეფექტური გახადე“): a card „მომზადება — 3
+  ნაბიჯი“ (lessons · practice · mock test, each with where I am and a jump to its section) + one „დაიწყე / გააგრძელე: <the next
+  lesson not done>“ button; the test's 7 tasks and the official samples fold under it; then ① lessons, ② practice, ③ mock test.
   Theory tab (2026-10-08): 11 lessons in `data/abituriLessons.ts` built on the university's own samples (theory test =
   7 tasks: modes, intervals, chords 5/3·6·6/4, transposition, grouping, letter names, rests; 3-voice dictation), solved
   inside. Notation by abcjs (lazy, `pages/abituri/Staff.tsx`), sound by `playLessonNotes` in `utils/chantSynth.ts`;

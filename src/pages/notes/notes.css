@@ -159,7 +159,7 @@
 .np-panel.collapsed .np-details{display:none}
 .np-root.land .np-panel{padding:8px 12px}
 .np-root:is(.land,.wide) .np-panel:is(.synth,.rec) .np-pin{flex-direction:row;flex-wrap:wrap;align-items:center;gap:8px}
-.np-root:is(.land,.wide) .np-panel:is(.synth,.rec) :is(.np-row,.np-details,.np-dA,.np-dB,.np-steps){display:contents}
+.np-root:is(.land,.wide) .np-panel:is(.synth,.rec) :is(.np-row,.np-details,.np-dA,.np-dB,.np-steps,.np-tools){display:contents}
 .np-root:is(.land,.wide) .np-panel:is(.synth,.rec).collapsed .np-details{display:contents}
 .np-root:is(.land,.wide) .np-panel:is(.synth,.rec).collapsed :is(.np-mixbtn,.np-mix,.np-steps,.np-loop,.np-ballbtn,.np-video){display:none}
 .np-root:is(.land,.wide) .np-panel:is(.synth,.rec) .np-prog{order:4;flex:1 1 120px}
@@ -192,6 +192,17 @@
 .np-mix label em{font-style:normal;font-weight:700;color:var(--muted)}
 .np-mix input{width:100%;margin:0;accent-color:var(--acc);height:22px}
 .np-steps{display:flex;align-items:center;gap:8px;min-width:0}
+/* the synth's three tools, each with its name: one row of equal pills on a phone, in the panel's row when wide */
+.np-tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+.np-tl{flex:none;min-width:0;height:40px;padding:0 7px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:12.5px;font-weight:800;color:var(--ink-2);background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);white-space:nowrap;transition:background .15s,color .15s,box-shadow .15s,transform .12s}
+.np-tl svg{flex:none;width:16px;height:16px}
+.np-tl span{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.np-tl:active{transform:scale(.96)}
+.np-tl[aria-pressed="true"],.np-tl.half{background:var(--acc-soft);color:var(--acc-2);box-shadow:inset 0 0 0 1.5px var(--acc-line)}
+.np-tl.half{box-shadow:inset 0 0 0 1.5px var(--acc)}
+.np-tl.lit{background:var(--acc);color:#fff;box-shadow:none}
+.np-root:is(.land,.wide) .np-panel.synth .np-tl{padding:0 12px}
+@media (max-width:379px){.np-tools .np-tl svg{display:none}}
 .np-stepper{flex:1 1 0;min-width:122px;height:44px;display:flex;align-items:center;gap:1px;padding:0 3px 0 11px;border-radius:999px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}
 .np-stepper .lbl{margin-right:auto;display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:800;color:var(--muted);white-space:nowrap}
 .np-stepper .lbl svg{width:14px;height:14px;color:var(--acc-2,var(--dusk-2))}
@@ -239,6 +250,16 @@
 .np-mrow[aria-checked="true"] .np-sw::after{transform:translateX(16px)}
 .np-msep{height:1px;margin:5px 8px;background:var(--line)}
 .np-mrow.sub{padding-left:22px}
+.np-mrow:disabled{opacity:1;cursor:default}
+.np-mrow:disabled:hover{background:none}
+/* a file in several voices: its name, then a button per voice */
+.np-mfiles{display:flex;flex-direction:column;gap:7px;padding:6px 10px 8px 22px}
+.np-mfiles .lb{display:flex;align-items:center;gap:11px;font-size:13px;font-weight:700;color:var(--ink)}
+.np-mfiles .lb svg{width:18px;height:18px;color:var(--ink-2)}
+.np-mfiles .ch{display:flex;flex-wrap:wrap;gap:5px;padding-left:29px}
+.np-mfiles .ch button{min-width:44px;height:36px;padding:0 10px;border-radius:999px;font-size:12.5px;font-weight:800;color:var(--ink-2);background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}
+.np-mfiles .ch button:hover{color:var(--wine);box-shadow:inset 0 0 0 1px var(--wine)}
+.np-mfiles .ch button:active{transform:scale(.95)}
 .np-mrow .np-mchev{transition:transform .2s}
 .np-mrow .np-mchev.up{transform:rotate(180deg)}
 
