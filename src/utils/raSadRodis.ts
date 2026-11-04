@@ -3,7 +3,9 @@
 // helpers are pure and tested in tests/raSadRodis.test.ts; the page is pages/games/RaSadRodisGame.tsx, the written questions
 // data/raSadRodisQuestions.ts, the recordings of the „მოისმინე“ questions data/hangiPool.ts.
 import type { RsrQuestion } from '../data/raSadRodisQuestions';
+import type { RoundAnswer, RoundRules } from './roundGames';
 import { shuffle } from './amikhseni';
+import { editDistance } from './chamotvale';
 
 /** the topic of the questions made from a recording of the school */
 export const LISTEN = 'mosmena';
@@ -151,4 +153,114 @@ export const parseGame = (raw: unknown): RsrGame | null => {
   if (!Number.isInteger(g.index) || (g.index as number) < 0 || (g.index as number) >= g.questions.length) return null;
   if (g.phase !== 'ask' && g.phase !== 'answer' && g.phase !== 'end') return null;
   return { names: g.names, questions: g.questions, index: g.index as number, marks: g.marks, phase: g.phase };
+};
+
+// ——— online (2026-11-04): a class's room over the quick games' engine (utils/roundGames.ts). Every player writes the
+// answer on their own phone within the minute; at the reveal the words are judged by `rsrMatch` and the host may judge
+// each one again — a right answer is one point, as on paper.
+
+/** a round online: the question, its answer (secret until the reveal) and for a „მოისმინე“ one the recording's piece —
+ *  `from`, the share of the recording where it starts, the same on every phone */
+export interface RsrQ {
+  kind: 'rsr';
+  id: string;
+  topic: string;
+  q: string;
+  a: string;
+  note?: string;
+  url?: string;
+  from?: number;
+}
+
+/** a question of the game as a round of the room */
+export const toRsrRound = (p: RsrPlay, rnd: () => number = Math.random): RsrQ => ({
+  kind: 'rsr', id: p.id, topic: p.topic, q: p.q, a: p.a,
+  ...(p.note ? { note: p.note } : {}),
+  ...(p.audio ? { url: p.audio.url, from: 0.05 + rnd() * 0.5 } : {}),
+});
+
+// the answer and the words written, as tokens: letters and digits only, numerals (III, მესამე, ორმოცი) as digits
+const NOT_WORD = /[^0-9a-zა-ჺ]+/g;
+const ROMAN: Record<string, number> = { i: 1, ii: 2, iii: 3, iv: 4, v: 5, vi: 6, vii: 7, viii: 8, ix: 9, x: 10, xi: 11, xii: 12 };
+const CARDINAL: Record<string, number> = {
+  ერთი: 1, ორი: 2, სამი: 3, სამ: 3, ოთხი: 4, ოთხ: 4, ხუთი: 5, ხუთ: 5, ექვსი: 6, შვიდი: 7, რვა: 8, ცხრა: 9, ათი: 10,
+  თერთმეტი: 11, თორმეტი: 12, ოცი: 20, ორმოცი: 40, ასი: 100,
+};
+const ORDINAL = ['პირველ', 'მეორე', 'მესამე', 'მეოთხე', 'მეხუთე', 'მეექვსე', 'მეშვიდე', 'მერვე', 'მეცხრე', 'მეათე', 'მეთერთმეტე', 'მეთორმეტე'];
+const numeral = (t: string): string => {
+  if (ROMAN[t]) return String(ROMAN[t]);
+  if (CARDINAL[t]) return String(CARDINAL[t]);
+  const o = ORDINAL.findIndex(w => t.startsWith(w) && t.length - w.length <= 3);
+  return o >= 0 ? String(o + 1) : t;
+};
+const tokens = (s: string) => s.toLowerCase().replace(NOT_WORD, ' ').trim().split(' ').filter(Boolean).map(numeral);
+const isNumber = (t: string) => /^\d+$/.test(t);
+
+// a case's ending off a word (the longest that leaves three letters), so ფარნავაზს, ფარნავაზი and ფარნავაზმა are one
+const ENDINGS = [
+  'ებისთვის', 'ისთვის', 'თვის', 'ებიდან', 'იდან', 'დან', 'ებამდე', 'ამდე', 'მდე', 'ებისგან', 'ისგან', 'სგან', 'ებთან', 'თან',
+  'ებში', 'ში', 'ებზე', 'ზე', 'ებით', 'ით', 'ებად', 'ად', 'ების', 'ის', 'ებმა', 'მა', 'ებს', 'ები', 'ებო', 'ს', 'ი', 'მ', 'ო', 'დ', 'თ',
+];
+export const stemOf = (w: string) => {
+  if (isNumber(w)) return w;
+  const e = ENDINGS.find(x => w.endsWith(x) && w.length - x.length >= 3);
+  return e ? w.slice(0, -e.length) : w;
+};
+/** two words are one: the same stem, or a long one with one slip (მონასტერი · მონასტრის) */
+export const sameWord = (a: string, b: string) => {
+  if (isNumber(a) || isNumber(b)) return a === b;
+  const x = stemOf(a), y = stemOf(b);
+  return x === y || (Math.min(x.length, y.length) >= 6 && editDistance(x, y) <= 1);
+};
+
+// words an answer may go without (titles, kinds, units): „ქეთევანი“ is „ქეთევან დედოფალი“
+const LIGHT = [
+  'და', 'ან', 'წმიდა', 'წმინდა', 'მეფე', 'დედოფალი', 'მონასტერი', 'ქალაქი', 'სოფელი', 'მთა', 'მდინარე', 'ტბა', 'ციხე',
+  'ტაძარი', 'ეკლესია', 'ბრძოლა', 'წელი', 'დღე', 'საუკუნე', 'თვე', 'კვირა',
+];
+const MONTHS = ['იანვარი', 'თებერვალი', 'მარტი', 'აპრილი', 'მაისი', 'ივნისი', 'ივლისი', 'აგვისტო', 'სექტემბერი', 'ოქტომბერი', 'ნოემბერი', 'დეკემბერი'];
+const isLight = (t: string) => LIGHT.some(w => sameWord(t, w));
+const isMonth = (t: string) => MONTHS.some(w => sameWord(t, w));
+
+/** the forms an answer is accepted in: the words outside its brackets, and each bracket's */
+export const answerForms = (answer: string): string[][] => {
+  const inner = [...answer.matchAll(/\(([^)]*)\)/g)].map(m => m[1]);
+  return [answer.replace(/\([^)]*\)/g, ' '), ...inner].map(tokens).filter(f => f.length > 0);
+};
+
+/**
+ * Are the words written the answer? The host's helper (the host judges again at the reveal): every number of the answer
+ * written (with its month, if it has one — „26 მაისს“), else three quarters of its weighty words, each in any case or
+ * with one slip in a long one. A question asking two things (who and where) wants both.
+ */
+export const rsrMatch = (answer: string, written: string): boolean => {
+  const said = tokens(written);
+  if (!said.length) return false;
+  const has = (t: string) => said.some(w => sameWord(t, w));
+  return answerForms(answer).some(form => {
+    const numbers = form.filter(isNumber);
+    if (numbers.length) return numbers.every(has) && form.filter(isMonth).every(has);
+    const weighty = form.filter(t => t.length >= 3 && !isLight(t));
+    const keys = weighty.length ? weighty : form.filter(t => t.length >= 2);
+    if (!keys.length) return false;
+    return keys.filter(has).length >= Math.ceil(keys.length * 0.75);
+  });
+};
+
+/** the minute, one point a right answer; what the players may not see while it is asked: the answer, its note, its id */
+export const RSR_RULES: RoundRules<RsrQ> = {
+  steps: () => 1,
+  seconds: () => SECONDS,
+  ok: () => true,
+  typed: true,
+  points: (q, a: RoundAnswer) => ((a.ok ?? rsrMatch(q.a, a.text ?? '')) ? 1 : 0),
+  secret: ['id', 'a', 'note'],
+  valid: (q): q is RsrQ => {
+    const o = q as Partial<RsrQ>;
+    const text = (v: unknown, max: number) => typeof v === 'string' && v.trim().length > 0 && v.length <= max;
+    return o.kind === 'rsr' && text(o.id, 120) && text(o.topic, 40) && text(o.q, Q_MAX + 60) && text(o.a, A_MAX + 60)
+      && (o.note === undefined || text(o.note, Q_MAX + 60))
+      && (o.url === undefined || text(o.url, 400))
+      && (o.from === undefined || (typeof o.from === 'number' && o.from >= 0 && o.from < 1));
+  },
 };

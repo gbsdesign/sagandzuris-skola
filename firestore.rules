@@ -427,7 +427,7 @@ service cloud.firestore {
         }
         allow read: if inClass();
         allow create: if inClass() && roomOk()
-          && incoming().game in ['samshvilde', 'kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri', 'hangi', 'akordi', 'rvakhma', 'ruka', 'gagrdzele', 'hangebi', 'eqo', 'mprinavi', 'tsqvilebi', 'mesame', 'chamotvale', 'pantomima', 'nakhati', 'loto']
+          && incoming().game in ['samshvilde', 'kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri', 'hangi', 'akordi', 'rvakhma', 'ruka', 'gagrdzele', 'hangebi', 'eqo', 'mprinavi', 'tsqvilebi', 'mesame', 'chamotvale', 'pantomima', 'nakhati', 'loto', 'rsr']
           && incoming().host == uid() && incoming().status == 'lobby'
           && incoming().createdAt == request.time && incoming().uids.size() == 0;
         allow update: if inClass() && existing().host == uid() && roomOk()
@@ -451,12 +451,14 @@ service cloud.firestore {
             && incoming().keys().hasOnly(['s']) && incoming().s is string && incoming().s.size() <= 20000;
           allow delete: if isAdmin() || hosting();
         }
-        // a player's latest answer (the step's key, a name's seat or an option, „my word is over“, how long it took)
+        // a player's latest answer (the step's key, a name's seat or an option, „my word is over“, how long it took, and since
+        // 2026-11-04 an answer in words — „რა? სად? როდის?“: the app sends at most 80 letters)
         match /acts/{userId} {
           allow get: if isSignedIn() && (userId == uid() || hosting());
           allow list: if hosting();
           allow create, update: if inClass() && userId == uid()
-            && incoming().keys().hasOnly(['key', 'pick', 'end', 'at', 'ms'])
+            && incoming().keys().hasOnly(['key', 'pick', 'end', 'at', 'ms', 'text'])
+            && (!('text' in incoming()) || (incoming().text is string && incoming().text.size() <= 240))
             && incoming().key is string && incoming().key.size() <= 40
             && (incoming().pick == null || incoming().pick is int)
             && incoming().end is bool && incoming().at is int

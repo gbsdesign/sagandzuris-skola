@@ -61,6 +61,10 @@ export interface RoundFace {
   Pick: React.FC<{ q: PublicQ; pick: number | null; onPick: (p: number | null) => void; seat?: number; locked?: boolean }>;
   /** the controls stay on the screen once the answer is sent (locked, showing it): a card one keeps looking at */
   keepPick?: boolean;
+  /** a game answered in words (2026-11-04, „რა? სად? როდის?“; its rules are `typed`): the player writes the answer in a
+   *  field instead of `Pick` (sent as the act's `text`, a draft by itself as the time runs out); at the reveal the host
+   *  judges each one again and every phone shows what each wrote (rounds/typed.tsx) */
+  typed?: { placeholder: string };
   /** an answer in words (the confirm button, „შენ: …“) */
   pickName(q: PublicQ, pick: number): string;
   /** the confirm button's words, with the answer marked */

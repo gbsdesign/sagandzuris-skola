@@ -368,6 +368,18 @@
   and plays 20 s from a random point. `drawGame` spreads the topics, asks the unasked first (`sg-rsr-seen`, last 60), a dry topic
   lends its slot; „სხვა კითხვა“ swaps one, „წინა პასუხი“ goes back to fix ticks. The game is kept after every step (`sg-rsr-game`,
   `parseGame`), so ✕ only pauses — the setup shows „გაგრძელება“. No rules change, nothing in Firestore.
+  Since 2026-11-04 that one-phone game is the „ჰიბრიდული“ tab (`pages/games/rsr/Table.tsx`; store `rsr/store.ts`, topics
+  `rsr/topics.ts` + `rsr/Topics.tsx`, „ჩემი კითხვები“ `rsr/MineEditor.tsx` under both tabs) and „ონლაინ“ is a quick-games room
+  (`rsr` in `ROUND_GAMES`/`ROOM_GAMES`/the rules/the Worker's titles; face `rsr/face.tsx`, device keys under `store: 'sg-rsr-klasi'`
+  — `sg-rsr` is the one phone's): the host reads the question in the room's call (it is on every phone too), each player writes the
+  answer on their own phone in the minute. The first game **answered in words**: a face's `typed: { placeholder }` gives the field
+  and its send button in the screen's bottom bar (`rounds/typed.tsx`), the act carries `text` (≤ 80; rules: a string ≤ 240), a
+  `RoundRules.typed` round keeps it in the answer and `publicView` shows everybody's `texts` only at the reveal. The app judges the
+  words (`rsrMatch` in `utils/raSadRodis.ts` + test: every form of the answer — outside brackets and each bracket's content —, a
+  word's stem by its endings (`stemOf`), one letter's slip in a long word, numbers as digits — roman, cardinal and ordinal words
+  too — and a date's month must match; 75 % of an answer's weighty words), and at the reveal the host taps a line to judge it again
+  (`judgeRound`, the room's move `judge`; the points follow). One point a right answer. A teacher's own question's other forms go
+  in brackets (the editor says so).
 - **„სამშვილდის ღამე“ on the phone (2026-10-30)**: the hybrid variant of the printed Mafia (`pages/games/SamshvildeGame.tsx`,
   screens `pages/games/samshvilde/`, `mapItem` `samshvilde`; rules `utils/samshvilde.ts` + test; its entry in `GAMES` has
   `item`, so its hub card's ონლაინ/ჰიბრიდული open it while section `tamashebi` allows, else only the PDF shows). The user's answers
@@ -404,7 +416,7 @@
   (`HybridState`, `markTeam`, kept on the device so ✕ only pauses). The room store is generic since then: `utils/gameRoom.ts`
   `createRooms(be, engine, moves)` over a `RoomEngine` (`games` it plays; samshvilde's is `utils/samshvildeRoom.ts`), the
   app's two stores in `utils/gameRoomFirestore.ts` (`rooms` = samshvilde, `roundRooms` = the quick games: `timeUp(key)`,
-  `reveal`, `next`); the rules let a room be opened for the sixteen `ROOM_GAMES`, up to 40 players, an act may carry `ms`.
+  `reveal`, `next`); the rules let a room be opened for every `ROOM_GAMES` game (21 since 2026-11-04), up to 40 players, an act may carry `ms` (and `text`).
   Invitations name their game: `data/roomGames.ts` (titles, the hub item, a chat card's `room` = `game:roomId` — a
   samshvilde card keeps the bare id), the Worker's `GAME_TITLES`, `/?open=<game>&c=&r=`, icons
   `components/games/roomGameIcons.ts`; the online tab of every room game is `components/games/RoomSetup.tsx`. Screens
@@ -890,7 +902,12 @@
   modules read the app's TypeScript data through `scripts/print-games/appData.mjs` (esbuild in memory, firebase/React stubbed);
   their stripe shows a label („ქართული · უტელეფონო“) instead of a number. „რა? სად? როდის?“ has one too (12 sheets): 72 question
   cards = the first four of each of the 18 topics (question in front, answer + note on the back), 9 blank cards, a two-sided score sheet
-  (18 questions × 6 teams) and 24 answer slips — so keep the first four of every topic print-worthy.
+  (18 questions × 6 teams) and 24 answer slips — so keep the first four of every topic print-worthy. „ოთხიდან ერთი“'s (2026-11-04,
+  `otkhidan-erti.mjs`, 12 sheets): 76 question cards — four a topic of its 19, the first that fit a card (≤ 110 letters, answers
+  ≤ 26) and are not on „რა? სად? როდის?“'s cards — with ა ბ გ დ in the app's colours in front (the right one's place by seed 4041,
+  each letter once a topic) and the right letter, answer and note behind; 5 blank cards, six square team cards (four coloured
+  corners — the letter held at the top is the answer; the back shows the same letters where they are from behind, ბ left and დ
+  right) and a score sheet. Both kits' topic colours and icons: `scripts/print-games/quizLook.mjs`.
   The musical games' kits (2026-11-01, stage 1; the host sings, so the melodies come from the book notes): `scripts/print-games/music.mjs`
   draws staves with abcjs inside the print page (`abcOf` one voice, every accidental written, numbered marks; `abcScore` three voices
   under each other on one clef, tied to keep time), `melodies.mjs` = the chants of the app's chant games + the program's songs with

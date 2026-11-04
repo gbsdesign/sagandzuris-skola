@@ -417,6 +417,11 @@ await t('its word is short', assertFails(setDoc(doc(gp1, 'classes', 'cg', 'messa
 await t('an outsider cannot post a drawing', assertFails(setDoc(doc(gout, 'classes', 'cg', 'messages', 'dm5'), drawMsg({ uid: 'gout' }))));
 // „საგალობო ლოტო“ (2026-11-01): a room of it
 await t('a member opens a bingo room', assertSucceeds(setDoc(doc(gp1, G, 'l1'), room('gp1', { game: 'loto' }))));
+// „რა? სად? როდის?“ online (2026-11-04): a room of it, and answers in words
+await t('a member opens a quiz room', assertSucceeds(setDoc(doc(gp1, G, 'w1'), room('gp1', { game: 'rsr' }))));
+await t('an answer may be in words', assertSucceeds(setDoc(doc(gp2, G, 'w1', 'acts', 'gp2'), act({ key: '1.0.ask.1', pick: 0, ms: 31000, text: 'ფარნავაზი' }))));
+await t('its words are a text', assertFails(setDoc(doc(gp2, G, 'w1', 'acts', 'gp2'), act({ text: 7 }))));
+await t('and not too long', assertFails(setDoc(doc(gp2, G, 'w1', 'acts', 'gp2'), act({ text: 'ა'.repeat(241) }))));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();

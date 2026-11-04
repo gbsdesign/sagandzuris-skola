@@ -10,11 +10,13 @@ import { CallBtn, type GameCall } from '../samshvilde/online/GameCall';
 import type { RoundFace } from './face';
 import type { Snippet } from './useSnippet';
 import { HostSoundLine, Podium, RoundHead, SnippetBox, Standings, TimerRing, placeText, useNow } from './parts';
+import { TYPED_HINT, TypedAnswers, TypedField, typedVerdict } from './typed';
 
 // A player's phone in a quick game's room (pages/games/rounds/): the round's piece (when it sounds on every phone), the
 // answer marked and sent once, then the wait; at the reveal what I earned and the answer; at the end the podium and my
 // place. Time is counted on this phone from the moment the round reached it (a phone's clock may differ from the host's),
-// and the answer says how long it took. One who is not in the game only watches.
+// and the answer says how long it took. One who is not in the game only watches. A game answered in words (`face.typed`)
+// gives a field to write in instead of the game's own controls.
 
 const TONE = {
   right: 'bg-[#2f7d4f] text-white',
@@ -25,7 +27,7 @@ const TONE = {
 
 export const RoundsPlayer: React.FC<{
   view: RoundsView; uids: string[]; uid: string; mine: MyAct | null; face: RoundFace; snippet: Snippet; gc: GameCall;
-  onAnswer: (pick: number, ms: number) => void; onHide: () => void; onLeave: () => void;
+  onAnswer: (pick: number, ms: number, text?: string) => void; onHide: () => void; onLeave: () => void;
 }> = ({ view: v, uids, uid, mine, face, snippet, gc, onAnswer, onHide, onLeave }) => {
   const me = uids.indexOf(uid);
   const asking = v.phase === 'ask';
@@ -39,7 +41,10 @@ export const RoundsPlayer: React.FC<{
   const now = useNow(asking);
   const left = asking ? Math.max(0, v.secs - (now - start) / 1000) : 0;
   const [pick, setPick] = useState<number | null>(null);
-  useEffect(() => { setPick(null); }, [v.at, v.n]);
+  const [draft, setDraft] = useState('');
+  useEffect(() => { setPick(null); setDraft(''); }, [v.at, v.n]);
+  const typed = !!face.typed;
+  const marked = typed ? (draft.trim() ? 0 : null) : pick;
 
   const answered = me >= 0 && (v.answered[me] || (mine?.key === v.key && mine.pick !== null));
   const myPick = mine && mine.key === v.key ? mine.pick : null;
@@ -61,17 +66,19 @@ export const RoundsPlayer: React.FC<{
   // the round this phone has sent an answer for: an answer that sends itself goes once (a tap may send again)
   const sentFor = useRef('');
   const send = (auto = false) => {
-    if (pick === null || answered || left <= 0 || (auto && sentFor.current === v.key)) return;
+    if (marked === null || answered || left <= 0 || (auto && sentFor.current === v.key)) return;
     sentFor.current = v.key;
     triggerHaptic(15);
-    onAnswer(pick, Date.now() - start);
+    if (typed) onAnswer(0, Date.now() - start, draft.trim());
+    else onAnswer(marked, Date.now() - start);
   };
-  // an answer that grows as one plays: whole, it goes in by itself; else what there is, as the time runs out
-  const late = asking && !!face.sendLate && left > 0 && left < 1.6;
+  // an answer that grows as one plays: whole, it goes in by itself; else what there is, as the time runs out (words
+  // written always do)
+  const late = asking && (!!face.sendLate || typed) && left > 0 && left < 1.6;
   useEffect(() => {
-    if (pick !== null && (late || face.autoSend?.(v.q, pick))) send(true);
+    if (marked !== null && (late || (!typed && face.autoSend?.(v.q, marked)))) send(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pick, late]);
+  }, [marked, late]);
 
   const right = <CallBtn gc={gc} />;
   const watching = me < 0 && (
@@ -104,8 +111,9 @@ export const RoundsPlayer: React.FC<{
   }
 
   if (v.phase === 'reveal') {
-    const verdict = me >= 0 ? face.verdict(v.q, v.picks?.[me] ?? null, v.pickSteps?.[me] ?? null, me) : null;
     const gained = me >= 0 ? v.gained?.[me] ?? 0 : 0;
+    const written = me >= 0 ? v.texts?.[me] ?? null : null;
+    const verdict = me < 0 ? null : typed ? typedVerdict(written, gained) : face.verdict(v.q, v.picks?.[me] ?? null, v.pickSteps?.[me] ?? null, me);
     const place = me >= 0 ? placesOf(v.scores)[me] : 0;
     return (
       <TableScreen title={face.title} right={right} onClose={onHide}>
@@ -114,12 +122,17 @@ export const RoundsPlayer: React.FC<{
           {watching}
           {verdict && (
             <div className={`rounded-3xl px-4 py-4 flex items-center gap-3 ${TONE[verdict.tone]}`} role="status">
-              <p className="min-w-0 flex-1 font-serif-ge text-[19px] font-bold leading-snug">{verdict.text}</p>
+              <div className="min-w-0 flex-1">
+                <p className="font-serif-ge text-[19px] font-bold leading-snug">{verdict.text}</p>
+                {typed && written && <p className="mt-0.5 text-[13.5px] leading-snug opacity-85 [overflow-wrap:anywhere]">შენ დაწერე: „{written}“</p>}
+              </div>
               <p className="shrink-0 font-serif-ge text-[24px] font-bold tabular-nums">{gained > 0 ? `+${gained}` : '0'}</p>
             </div>
           )}
           <face.Answer q={v.q} />
-          <face.Reveal q={v.q} picks={v.picks} mine={me >= 0 ? v.picks?.[me] ?? null : undefined} seat={me >= 0 ? me : undefined} names={v.names} />
+          {typed
+            ? <TypedAnswers names={v.names} texts={v.texts} gained={v.gained} me={me} />
+            : <face.Reveal q={v.q} picks={v.picks} mine={me >= 0 ? v.picks?.[me] ?? null : undefined} seat={me >= 0 ? me : undefined} names={v.names} />}
           {me >= 0 && <p className="text-center text-[13.5px] font-bold text-[#4a3426]">{placeText(place)} · {v.scores[me]} ქულა</p>}
           <Standings names={v.names} scores={v.scores} gained={v.gained} me={me} limit={5} />
           <Hint className="text-center">შემდეგ რაუნდს წამყვანი დაიწყებს.</Hint>
@@ -135,8 +148,9 @@ export const RoundsPlayer: React.FC<{
       title={face.title}
       right={right}
       onClose={onHide}
-      footer={!done && (
-        <Btn size="lg" full disabled={pick === null} onClick={() => send()} icon={<Send />} className="!h-14 !text-[15.5px]">{face.confirm(v.q, pick)}</Btn>
+      footer={!done && (face.typed
+        ? <TypedField value={draft} onChange={setDraft} onSend={() => send()} placeholder={face.typed.placeholder} />
+        : <Btn size="lg" full disabled={marked === null} onClick={() => send()} icon={<Send />} className="!h-14 !text-[15.5px]">{face.confirm(v.q, pick)}</Btn>
       )}
     >
       <div className="py-2 space-y-4">
@@ -151,7 +165,8 @@ export const RoundsPlayer: React.FC<{
             <div className="rounded-3xl bg-[#2f7d4f]/10 ring-1 ring-[#2f7d4f]/25 px-4 py-5 text-center" role="status">
               <Check className="w-8 h-8 mx-auto text-[#2f7d4f]" />
               <p className="mt-1 font-serif-ge text-[19px] font-bold text-[#24603d]">პასუხი გაგზავნილია</p>
-              {myPick !== null && <p className="mt-0.5 text-[14px] font-bold text-[#24603d]">{face.pickName(v.q, myPick)}</p>}
+              {typed ? mine?.key === v.key && mine.text && <p className="mt-0.5 text-[14px] font-bold text-[#24603d] [overflow-wrap:anywhere]">„{mine.text}“</p>
+                : myPick !== null && <p className="mt-0.5 text-[14px] font-bold text-[#24603d]">{face.pickName(v.q, myPick)}</p>}
               <Hint className="mt-1.5">უპასუხა {v.answered.filter(Boolean).length} / {v.names.length}. პასუხი ყველასთან ერთად გაიხსნება.</Hint>
             </div>
             {face.keepPick && me >= 0 && <face.Pick q={v.q} pick={myPick} onPick={() => {}} seat={me} locked />}
@@ -165,7 +180,7 @@ export const RoundsPlayer: React.FC<{
         ) : (
           <>
             {me >= 0 && !face.Ask && <p className="font-serif-ge text-[18px] font-bold leading-snug text-[#4a3426]">{face.askPlayer}</p>}
-            {me >= 0 && <face.Pick q={v.q} pick={pick} onPick={setPick} seat={me} />}
+            {me >= 0 && (typed ? <Hint>{TYPED_HINT}</Hint> : <face.Pick q={v.q} pick={pick} onPick={setPick} seat={me} />)}
           </>
         )}
       </div>

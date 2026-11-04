@@ -9,13 +9,18 @@ import { CallBtn, type GameCall } from '../samshvilde/online/GameCall';
 import type { RoundFace } from './face';
 import type { Snippet } from './useSnippet';
 import { AnsweredList, Podium, RoundHead, SnippetBox, Standings, TimerRing, useNow } from './parts';
+import { TypedAnswers } from './typed';
 
 // The host's phone in a quick game's room (pages/games/rounds/): it plays the round's piece, counts the time and moves the
 // round on when it is over (or when the host opens it sooner), shows the answer and the points, and at the end the podium.
+// In a game answered in words the reveal lists what each one wrote, and a tap judges one again.
 
 export const RoundsHost: React.FC<{
   s: RoundsState; face: RoundFace; snippet: Snippet; gc: GameCall; onHide: () => void;
-  moves: { timeUp: (key: string) => void; reveal: () => void; next: () => void; again: () => void; close: () => void; edit: (key: string, q: RoundQ) => void };
+  moves: {
+    timeUp: (key: string) => void; reveal: () => void; next: () => void; again: () => void; close: () => void; edit: (key: string, q: RoundQ) => void;
+    judge: (seat: number, ok: boolean) => void;
+  };
 }> = ({ s, face, snippet, gc, onHide, moves }) => {
   const v = publicView(s);
   const asking = s.phase === 'ask';
@@ -82,7 +87,9 @@ export const RoundsHost: React.FC<{
         <div className="py-2 space-y-4">
           <RoundHead at={s.at} total={s.rounds.length} />
           <face.Answer q={v.q} />
-          <face.Reveal q={v.q} picks={v.picks} names={v.names} />
+          {face.typed
+            ? <TypedAnswers names={v.names} texts={v.texts} gained={v.gained} onJudge={moves.judge} />
+            : <face.Reveal q={v.q} picks={v.picks} names={v.names} />}
           {clip && <SnippetBox state={snippet.state} prog={snippet.prog} onTap={tapClip} />}
           <section className="space-y-2">
             <p className="text-[13.5px] font-bold text-[#4a3426]">ქულები</p>

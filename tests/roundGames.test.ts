@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  answerRound, againRounds, hybridNext, hybridScores, markTeam, newHybrid, newRounds, nextRound, nextStep, parseHybrid,
+  answerRound, againRounds, hybridNext, hybridScores, judgeRound, markTeam, newHybrid, newRounds, nextRound, nextStep, parseHybrid,
   parseRoundsState, parseRoundsView, placesOf, publicView, roundKey, type RoundsState,
 } from '../src/utils/roundGames';
 import { KUTKHE_SECONDS, type KutkheQ } from '../src/utils/kutkhe';
@@ -116,4 +116,42 @@ test('the one-phone game: the host marks the teams, the scores add up', () => {
   assert.equal(h.phase, 'end');
   assert.deepEqual(parseHybrid(JSON.parse(JSON.stringify(h))), h);
   assert.equal(parseHybrid({ v: 1, game: 'kutkhe' }), null);
+});
+
+// ——— a game answered in words (2026-11-04, „რა? სად? როდის?“): the words go with the answer, are judged at the reveal
+// and the host may judge one again
+
+test('answers in words: kept, judged at the reveal, judged again by the host', () => {
+  const rq = (n: number, a: string) => ({ kind: 'rsr' as const, id: `q${n}`, topic: 'istoria', q: `კითხვა ${n}?`, a });
+  let s = newRounds(players, { game: 'rsr', rounds: [rq(1, 'ფარნავაზს'), rq(2, '1121')], sound: 'all', now: 1000 })!;
+  const key = roundKey(s);
+  // words are needed: no text, no answer
+  assert.equal(answerRound(s, 0, { key, pick: 0, ms: 5000 }), s);
+  assert.equal(answerRound(s, 0, { key, pick: 0, ms: 5000, text: '   ' }), s);
+  s = answerRound(s, 0, { key, pick: 0, ms: 5000, text: '  ფარნავაზი  ' });
+  assert.equal(s.answers[0]!.text, 'ფარნავაზი');
+  s = answerRound(s, 1, { key, pick: 0, ms: 9000, text: 'ფარსმანი' });
+  // while it is asked nobody sees the words
+  assert.equal(publicView(s).texts, null);
+  s = answerRound(s, 2, { key, pick: 0, ms: 9000, text: 'მეფე ფარნავაზი, ქართლის პირველი მეფე' });
+  assert.equal(s.phase, 'reveal');
+  assert.deepEqual(s.gained, [1, 0, 1]);
+  assert.deepEqual(publicView(s).texts, ['ფარნავაზი', 'ფარსმანი', 'მეფე ფარნავაზი, ქართლის პირველი მეფე']);
+  // the host judges the second one right after all, and the third one not
+  s = judgeRound(s, 1, true);
+  s = judgeRound(s, 2, false);
+  assert.deepEqual(s.gained, [1, 1, 0]);
+  assert.deepEqual(s.players.map(p => p.score), [1, 1, 0]);
+  // the same judgement twice changes nothing
+  assert.equal(judgeRound(s, 1, true), s);
+  // kept and read back with the judgement
+  const back = parseRoundsState(JSON.stringify(s))!;
+  assert.equal(back.answers[1]!.ok, true);
+  assert.equal(back.answers[0]!.text, 'ფარნავაზი');
+  assert.deepEqual(parseRoundsView(JSON.stringify(publicView(s)))!.texts, publicView(s).texts);
+  // only while its round is shown
+  const next = nextRound(s, 2000);
+  assert.equal(judgeRound(next, 0, false), next);
+  // a game of picks has no words
+  assert.equal(publicView(start()).texts, undefined);
 });
