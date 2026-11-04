@@ -425,7 +425,7 @@ await t('and not too long', assertFails(setDoc(doc(gp2, G, 'w1', 'acts', 'gp2'),
 // „ამიხსენი“ online (2026-11-04): a room of it
 await t('a member opens a room of „ამიხსენი“', assertSucceeds(setDoc(doc(gp1, G, 'a1'), room('gp1', { game: 'amikhseni' }))));
 await t('a member opens a room of „გათვლა“', assertSucceeds(setDoc(doc(gp1, G, 'g1'), room('gp1', { game: 'gatvla' }))));
-await t('a member opens a room of „ცხელი ჩურჩხელა“', assertSucceeds(setDoc(doc(gp1, G, 'g1'), room('gp1', { game: 'churchkhela' }))));
+await t('a member opens a room of „ცხელი ჩურჩხელა“', assertSucceeds(setDoc(doc(gp1, G, 'ck1'), room('gp1', { game: 'churchkhela' }))));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
