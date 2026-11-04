@@ -297,7 +297,23 @@
   sketch): title bar (🎵 + one ✎ for teachers — its list opens name/logo/mode, the timetable `ScheduleSheet`, the program
   `ProgramEditor`, adding a member `AddMemberSheet`; 💬 to the teacher for a member), the timetable chips, the members as one
   line „N წევრი ›“ that opens their window on a phone (a sticky left column on a computer, `lg`); the class's teachers get
-  `ClassRoll` (`teacher/StudentsOverview.tsx`: attendance ✓, 💬, a name opens the member's window, „მიწერა“/„ამოღება“).
+  `ClassRoll` (`teacher/StudentsOverview.tsx`: attendance ✓, 💬, a name opens the member's own page, „მიწერა“/„ამოღება“).
+  **A student's own page** (2026-11-04, page `student`, `pages/StudentPage.tsx`, `openStudent(uid, classId)` — mapItem
+  „uid|classId“; the user: „მის გზაზე გადავდივართ, მის პირად პროფილზე და თან მაქვს ცვლილებების უფლება ზუსტად ისე როგორც მას“):
+  opened by a teacher or an admin from the class roll, a member's photo / name in the class chat (`ChatPanel personOpener`)
+  and the private chat's head (`PaneTitle onOpen`). On top who it is (`StudentHead`), then their „საგანძურის გზა“
+  (`views/PathPageBody.tsx`, the same body as page `gz`) and their profile (`StudentProfileCard member` + outfit + home
+  buttons) inside `ViewAsStudent` (`context/AuthContext.tsx`): there `useAuth()` is the student (a Proxy of the real User
+  with their uid, name, photo; a member's role) and a nested `ChantSelectionProvider` holds their path, so every part reads
+  and writes their record; the sign-in stays the viewer's. One-place-for-the-app caches go by `useRealAuth()` (membership,
+  kids' mode, `useAccess`, album rights, centre downloads, song-text editors); `useMyClasses` / `useMyPsalterGroups` list the
+  viewer's own classes / groups the student is in (a teacher may not list by the student); device side effects stay off
+  there (`useViewing()`: the habits' and the review's phone reminders, the assignments' bell) and so does the microphone
+  (`utils/othersPage.ts` `holdSinging` → `singingSupported()` false: the student sings their pearls and exercises
+  themself). Rules: a teacher of the student (`teachesMe`) updates any field but `teacherIds`, `teacherVia`, `userId`,
+  `email`, `authProvider` and the sung scores `pearls`, `drillScore`, and their `directory` name (`teachesThem`). At the bottom „მასწავლებლისთვის“ (`StudentTools` = the
+  old member's window inline: pearls/takes to hear, figures, attendance, the path editor, the manera's marks, the kids'
+  mode, „მიწერა“, „ამოღება“) — never shown to the student.
   Since 2026-11-04 two tabs (kept per visit in sessionStorage; the user: „პროგრამა პროგრამაა“): „პროგრამა“ (a dot = a
   member's assignment to do) — on top the chants' and songs' assignments in their own card (`ClassAssignments` in
   `classes/ClassWork.tsx`: `AssignmentsFold only="chant"` for teachers, `WorkItems` for members, who see the card only while

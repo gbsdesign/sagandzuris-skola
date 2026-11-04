@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
+import { holdSinging } from '../utils/othersPage';
 import {
   User,
   signInWithPopup,
@@ -224,4 +225,56 @@ export const useAuth = (): AuthContextType => {
     throw new Error('useAuth must be used within an AuthProvider');
   }
   return context;
+};
+
+// ---- a student's own page, opened by their teacher or an admin (2026-11-04) ---------------------------------------------
+// The user: „მოსწავლეზე დაჭერისას … მის გზაზე გადავდივართ, მის პირად პროფილზე და თან მაქვს ცვლილებების უფლება ზუსტად ისე
+// როგორც მას“. Inside <ViewAsStudent> useAuth() is the student — their uid, name and photo, a member's role — so every part
+// of the path reads and writes their record as their own app does; the sign-in (its token, what Firestore checks) stays the
+// teacher's, and firestore.rules let a teacher of the student (or an admin) write what the student may. Things kept per
+// person in one place for the whole app (membership, kids' mode, album rights) go by useRealAuth(), so the viewer's own
+// app does not turn into the student's.
+
+export interface ViewedStudent { uid: string; name: string; photoURL: string }
+
+const ViewingContext = createContext<{ viewer: AuthContextType; student: ViewedStudent } | null>(null);
+
+/** Inside a student's page: who looks (their real sign-in) and whose page it is; null everywhere else. */
+export const useViewing = () => useContext(ViewingContext);
+
+/** The signed-in person themself, also inside a student's page. */
+export const useRealAuth = (): AuthContextType => {
+  const viewing = useContext(ViewingContext);
+  const auth = useAuth();
+  return viewing ? viewing.viewer : auth;
+};
+
+/** The student's page: its parts see the student as the signed-in member (see above). */
+export const ViewAsStudent: React.FC<{ student: ViewedStudent; children: React.ReactNode }> = ({ student, children }) => {
+  const viewer = useRealAuth();
+  const real = viewer.user;
+  const value = React.useMemo<AuthContextType>(() => {
+    // the real User keeps its methods (getIdToken = the viewer's own token); only who it is changes
+    const asStudent = real
+      ? (new Proxy(real, {
+          get(target, key) {
+            if (key === 'uid') return student.uid;
+            if (key === 'displayName') return student.name;
+            if (key === 'photoURL') return student.photoURL || null;
+            if (key === 'email') return null;
+            const v = Reflect.get(target, key, target);
+            return typeof v === 'function' ? v.bind(target) : v;
+          },
+        }) as User)
+      : null;
+    return { ...viewer, user: asStudent, role: 'member', isOwner: false, isAdmin: false, isSuperAdmin: false, isTeacher: false };
+  }, [viewer, real, student.uid, student.name, student.photoURL]);
+  const viewing = React.useMemo(() => ({ viewer, student }), [viewer, student]);
+  // the student's pearls and exercises are sung by the student only (utils/singCapture)
+  useEffect(() => holdSinging(), []);
+  return (
+    <ViewingContext.Provider value={viewing}>
+      <AuthContext.Provider value={value}>{children}</AuthContext.Provider>
+    </ViewingContext.Provider>
+  );
 };

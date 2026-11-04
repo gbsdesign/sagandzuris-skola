@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { Users, Clock, Sparkles, ClipboardCheck, Baby, Lock, UserMinus, UserPlus, Loader2, MessageCircle, ChevronDown, Gem } from 'lucide-react';
 import { db } from '../../firebase';
-import { useAuth } from '../../context';
+import { useAuth, useNavigation } from '../../context';
 import type { ClassMember, SchoolClass } from '../../hooks/useClasses';
 import { AttendanceDay, StudentRecord, agoLabel, useClassStudents } from '../../hooks/useTeaching';
 import { AttendanceDays, AttendanceStrip, CameCheck, useClassAttendance } from './AttendancePanel';
@@ -169,21 +169,11 @@ export const ClassRoll: React.FC<{
 }> = ({ cls, shown, me, onWrite, writing }) => {
   const records = useClassStudents(cls);
   const att = useClassAttendance(cls);
-  const [open, setOpen] = useState<string | null>(null);
+  // a name opens the member's own page — their path and profile, the teacher's part under them (pages/StudentPage.tsx)
+  const { openStudent, navigateTo } = useNavigation();
   const f = classFigures(cls.members.map(m => summarize(records[m.uid]?.data)), att.last);
   // until every member's record has come, the figures would read 0
   const loading = cls.members.some(m => !records[m.uid]);
-
-  const remove = async (m: ClassMember) => {
-    if (!(await askConfirm({ title: `ამოვიღო „${m.name}“ კლასიდან?`, text: 'მისი ანგარიში და ნასწავლი არ წაიშლება.', ok: 'ამოღება', danger: true }))) return false;
-    try {
-      await removeClassMember(cls, m.uid);
-      return true;
-    } catch {
-      att.msg.fail('წევრი ვერ ამოიღო.');
-      return false;
-    }
-  };
 
   return (
     <>
@@ -194,7 +184,7 @@ export const ClassRoll: React.FC<{
           const pearls = waitingPearls(records[m.uid]?.data?.pearls, records[m.uid]?.data?.pearlShine);
           return (
             <li key={m.uid} className={`min-h-12 flex items-center gap-1 pl-1.5 pr-1 py-1 rounded-xl transition-colors ${here ? 'bg-emerald-50' : m.uid === me ? 'bg-[#7a2028]/[0.05]' : 'hover:bg-[#fbf6ec]'}`}>
-              <button type="button" onClick={() => setOpen(m.uid)} title="დეტალები და რედაქტირება"
+              <button type="button" onClick={() => (m.uid === me ? navigateTo('gz') : openStudent(m.uid, cls.id))} title={`${m.name} — გზა და პროფილი`}
                 className="flex-1 min-w-0 min-h-10 flex items-center gap-2.5 text-left cursor-pointer">
                 <Face name={m.name} photoURL={m.photoURL} className="w-8 h-8 text-sm" />
                 <span className="flex-1 min-w-0 truncate text-[14px] font-semibold text-[#2a2017]">
@@ -221,8 +211,6 @@ export const ClassRoll: React.FC<{
         <span title="აქტიური ბოლო 7 დღეში">აქტიური <b className="text-[#4a3426]">{loading ? '—' : `${f.active}/${cls.members.length}`}</b></span>
         <span title="დასწრება ბოლო გაკვეთილებზე, საშუალოდ">დასწრება <b className="text-[#4a3426]">{f.attendance === null ? '—' : `${f.attendance}%`}</b></span>
       </p>
-      <StudentSheet cls={cls} uid={open} record={open ? records[open] : undefined} onClose={() => setOpen(null)} attendance={att.last}
-        onWrite={onWrite} onRemove={remove} />
     </>
   );
 };
@@ -249,7 +237,9 @@ const StudentSheet: React.FC<{
   // the class page's own actions on the member (ClassRoll): a private message, out of the class (true when taken out)
   onWrite?: (m: ClassMember) => void;
   onRemove?: (m: ClassMember) => Promise<boolean>;
-}> = ({ cls, uid, record, attendance, onClose, onWrite, onRemove }) => {
+  /** on the student's own page (StudentTools): a card at its bottom instead of a window */
+  inline?: boolean;
+}> = ({ cls, uid, record, attendance, onClose, onWrite, onRemove, inline = false }) => {
   const { user } = useAuth();
   const [view, setView] = useState<'info' | 'path' | 'manera'>('info');
   const [error, setError] = useState('');
@@ -274,14 +264,26 @@ const StudentSheet: React.FC<{
     }
   };
 
-  return (
-    <Sheet open onClose={close} title={m?.name || 'მოსწავლე'} wide
-      footer={m && (onWrite || onRemove) ? (
-        <div className="flex gap-2 [&>*]:flex-1">
-          {onWrite && m.uid !== user?.uid && <Btn kind="soft" icon={<MessageCircle />} onClick={() => onWrite(m)}>მიწერა</Btn>}
-          {onRemove && <Btn kind="danger" icon={<UserMinus />} title="კლასიდან ამოღება" onClick={async () => { if (await onRemove(m)) close(); }}>ამოღება</Btn>}
-        </div>
-      ) : undefined}>
+  const actions = m && (onWrite || onRemove) ? (
+    <div className="flex gap-2 [&>*]:flex-1">
+      {onWrite && m.uid !== user?.uid && <Btn kind="soft" icon={<MessageCircle />} onClick={() => onWrite(m)}>მიწერა</Btn>}
+      {onRemove && <Btn kind="danger" icon={<UserMinus />} title="კლასიდან ამოღება" onClick={async () => { if (await onRemove(m)) close(); }}>ამოღება</Btn>}
+    </div>
+  ) : undefined;
+  // a function, not a component made in render (that would remount the editors inside on every render)
+  const frame = (children: React.ReactNode) => inline ? (
+    <section className="rounded-3xl bg-white/70 ring-1 ring-[#e8dcc8] px-4 min-[400px]:px-5 py-4 space-y-4" aria-label="მასწავლებლისთვის">
+      <h2 className="flex items-center gap-2 font-serif-ge text-lg font-bold text-[#4a3426]"><Lock className="w-5 h-5 text-[#7a2028]" /> მასწავლებლისთვის</h2>
+      <p className="-mt-2 text-[13px] text-[#8a7a6a]">ეს ნაწილი მოსწავლეს არ უჩანს.</p>
+      <div>{children}</div>
+      {actions}
+    </section>
+  ) : (
+    <Sheet open onClose={close} title={m?.name || 'მოსწავლე'} wide footer={actions}>{children}</Sheet>
+  );
+
+  return frame(
+    <>
       <div className="grid grid-cols-3 gap-1 p-1 mb-4 rounded-2xl bg-white ring-1 ring-[#e8dcc8]">
         {(['info', 'path', 'manera'] as const).map(v => (
           <button key={v} type="button" onClick={() => setView(v)}
@@ -381,8 +383,22 @@ const StudentSheet: React.FC<{
           {error && <p className="text-sm font-semibold text-red-700">{error}</p>}
         </div>
       )}
-    </Sheet>
+    </>
   );
+};
+
+/** The teacher's part at the bottom of a student's own page (pages/StudentPage.tsx; 2026-11-04 — it was the member's
+ *  window): their pearls and takes to hear and „ჩათვლა“, figures, attendance, the path's chants, the manera's marks, the
+ *  kids' mode, „მიწერა“ and „ამოღება“. */
+export const StudentTools: React.FC<{
+  cls: SchoolClass;
+  uid: string;
+  onWrite?: (m: ClassMember) => void;
+  onRemove?: (m: ClassMember) => Promise<boolean>;
+}> = ({ cls, uid, onWrite, onRemove }) => {
+  const records = useClassStudents(cls);
+  const att = useClassAttendance(cls);
+  return <StudentSheet inline cls={cls} uid={uid} record={records[uid]} attendance={att.last} onClose={() => {}} onWrite={onWrite} onRemove={onRemove} />;
 };
 
 /** One of the member's window's three small figures. */

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Video, Loader2, ShieldCheck, Phone } from 'lucide-react';
 import { BackBtn } from '../components/ui/kit';
-import { useAuth } from '../context';
+import { useAuth, useNavigation } from '../context';
 import { useChat, ChatAuthor } from '../hooks/useClassChat';
 import type { SchoolClass } from '../hooks/useClasses';
 import {
@@ -63,21 +63,34 @@ export const AdminAvatar: React.FC<{ logoUrl?: string; className?: string }> = (
 );
 
 /** The bar over an open chat: back (phones only, where the chat takes the whole page), face, name and what links us. */
-export const PaneTitle: React.FC<{ face: React.ReactNode; title: string; sub: string; onBack: () => void }> = ({ face, title, sub, onBack }) => (
-  <div className="flex items-center gap-2.5 min-w-0 flex-1">
-    <BackBtn onClick={onBack} className="lg:hidden" />
-    {face}
-    <div className="min-w-0">
-      <h2 className="text-[15px] sm:text-base font-bold text-[#2a2017] truncate leading-tight">{title}</h2>
-      <p className="text-xs text-[#8a7a6a] truncate mt-0.5">{sub}</p>
+export const PaneTitle: React.FC<{ face: React.ReactNode; title: string; sub: string; onBack: () => void; onOpen?: () => void }> = ({ face, title, sub, onBack, onOpen }) => {
+  const who = (
+    <>
+      {face}
+      <span className="min-w-0 block">
+        <span className="block text-[15px] sm:text-base font-bold text-[#2a2017] truncate leading-tight">{title}</span>
+        <span className="block text-xs text-[#8a7a6a] truncate mt-0.5">{sub}</span>
+      </span>
+    </>
+  );
+  return (
+    <div className="flex items-center gap-2.5 min-w-0 flex-1">
+      <BackBtn onClick={onBack} className="lg:hidden" />
+      {/* a teacher's (an admin's) tap on the student: their own page (pages/StudentPage.tsx) */}
+      {onOpen ? (
+        <button type="button" onClick={onOpen} title={`${title} — გზა და პროფილი`} className="min-w-0 flex items-center gap-2.5 text-left cursor-pointer rounded-xl hover:bg-[#fbf6ec] -m-1 p-1 transition-colors">{who}</button>
+      ) : (
+        <div className="min-w-0 flex items-center gap-2.5">{who}</div>
+      )}
     </div>
-  </div>
-);
+  );
+};
 
 // One open private chat on the messages page: a teacher and their student, two classmates, or a member and the
 // administration (any admin answers; the member sees only „ადმინისტრაცია“). The superadmin may open anyone's, read only.
 export const DirectChat: React.FC<{ id: string; classes: SchoolClass[]; logoUrl?: string; onBack: () => void }> = ({ id, classes, logoUrl, onBack }) => {
   const { user, isAdmin } = useAuth();
+  const { openStudent } = useNavigation();
   const { thread, loading: threadLoading } = useThread(user ? id : null);
   const { messages, loading, error } = useChat(thread ? dmBase(thread.id) : null);
   const uid = user?.uid || '';
@@ -160,7 +173,7 @@ export const DirectChat: React.FC<{ id: string; classes: SchoolClass[]; logoUrl?
       onSent={(kind, text) => noteSent(thread, uid, kind === 'voice' ? VOICE_PREVIEW : text).catch(e => console.warn('dm: ', e?.code || e))}
       header={
         <div className="flex items-center gap-2 px-3 sm:px-4 py-3">
-          <PaneTitle face={face} title={title} sub={sub} onBack={onBack} />
+          <PaneTitle face={face} title={title} sub={sub} onBack={onBack} onOpen={canPin ? () => openStudent(student, thread.classId || '') : undefined} />
           {canWrite && (
             <CallButtons
               base={dmBase(thread.id)}

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { triggerHaptic } from '../utils/haptics';
 import { wignebiParent } from '../utils/wignebiPath';
 
-export type PageType = 'home' | 'profile' | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'gz' | 'tsinaprebi' | 'bookmark' | 'admin' | 'teacher' | 'class' | 'prayer' | 'commemoration' | 'biblioteka' | 'psalter' | 'messages' | 'dm' | 'abituri' | 'offline' | 'birthdays' | 'medavitneoba' | 'games';
+export type PageType = 'home' | 'profile' | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'gz' | 'tsinaprebi' | 'bookmark' | 'admin' | 'teacher' | 'class' | 'prayer' | 'commemoration' | 'biblioteka' | 'psalter' | 'messages' | 'dm' | 'abituri' | 'offline' | 'birthdays' | 'medavitneoba' | 'games' | 'student';
 export type ServiceType = 'წირვა' | 'მწუხრი' | 'ცისკარი' | 'სადღესასწაულო' | 'მარხვანი' | 'ზატიკი' | 'პანაშვიდი' | 'ჯვრისწერა' | 'ხელდასხმა' | 'პარაკლისი' | 'მომიხსენენი' | 'ძლისპირები' | 'კატაბასიები' | 'დასადებლები' | null;
 
 export interface NavigationContextType {
@@ -22,6 +22,9 @@ export interface NavigationContextType {
   openPrayer: (prayerId: string) => void;
   // "მოსახსენებელი": the student's name lists
   openCommemoration: () => void;
+  // a student's own page ('student', pages/StudentPage.tsx), opened by their teacher or an admin: its path and profile as
+  // they see them; mapItem = "uid|classId" (the class it was opened from, or '')
+  openStudent: (uid: string, classId?: string) => void;
   // the region open on the songs / მთქმელი map, or the instrument open on the instruments page
   // (its own history step, so "back" first returns to the map); in the library a book ("lives") or a part
   // of it ("lives:m9"). `replace` turns pages in place (the next chapter) instead of adding a step.
@@ -163,6 +166,12 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     else window.scrollTo({ top: 0 });
   };
 
+  const openStudent = (uid: string, classId = '') => {
+    navigateTo('student');
+    setMapItem(`${uid}|${classId}`);
+    window.setTimeout(() => window.scrollTo({ top: 0 }), 0);
+  };
+
   const openMapItem = (id: string, replace = false) => {
     triggerHaptic(10);
     markLeave();
@@ -241,6 +250,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
         selectedPrayerId,
         openPrayer,
         openCommemoration,
+        openStudent,
         mapItem,
         openMapItem,
         handleGoBack,

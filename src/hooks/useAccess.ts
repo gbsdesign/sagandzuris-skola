@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../firebase';
-import { useAuth } from '../context/AuthContext';
+import { useRealAuth } from '../context/AuthContext';
 import type { PageType } from '../context/NavigationContext';
 import { ExtraId, KidsMode, SECTIONS, SectionId, sectionOfPage } from '../data/sections';
 import { useSections } from './useSections';
@@ -34,7 +34,7 @@ const watchKids = (uid: string | null) => {
 };
 
 export const useKidsMode = (): KidsMode | null => {
-  const { user, isTeacher } = useAuth();
+  const { user, isTeacher } = useRealAuth();
   const [, setTick] = useState(0);
   useEffect(() => {
     watchKids(user?.uid ?? null);
@@ -50,7 +50,7 @@ export const useKidsMode = (): KidsMode | null => {
 const featureOf = (id: SectionId): FeatureId => (id === 'margalitebi' ? 'tamashebi' : id);
 
 export const useAccess = () => {
-  const { isAdmin } = useAuth();
+  const { isAdmin } = useRealAuth();
   const { state } = useSections();
   const kids = useKidsMode();
   // a member a superadmin has not let in yet sees what guests see; one let in sees only what was given

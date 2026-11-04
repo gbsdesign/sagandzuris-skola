@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, Check, ChevronDown, Flame, Info, Pencil, Sparkles, X } from 'lucide-react';
-import { useAuth, useModal, useNavigation } from '../../context';
+import { useAuth, useModal, useNavigation, useViewing } from '../../context';
 import { useMyHabits } from '../../hooks/useMyHabits';
 import { useAccess } from '../../hooks/useAccess';
 import { HabitLink } from '../../utils/myHabits';
@@ -184,17 +184,19 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
   const { sheet, open, close, swap } = useHabitSheet();
   const { model, blessing } = useHabitsModel(id => open(`habit:${id}`));
   const { user } = useAuth();
+  const viewing = !!useViewing();
   const mine = useMyHabits(user?.uid);
-  // the habits with a time and reminders become this browser's reminders (and the push server's)
+  // the habits with a time and reminders become this browser's reminders (and the push server's) — not a student's
+  // habits on their teacher's phone (a student's page, ViewAsStudent)
   useEffect(() => {
-    if (!user) return;
+    if (!user || viewing) return;
     setHabitReminders(
       mine.groups
         .flatMap(g => g.items)
         .filter(h => h.time && h.alerts?.length)
         .map(h => ({ id: h.id, title: h.label, at: h.time!.from, alerts: h.alerts!, ...(h.schedule ? { plan: h.schedule } : {}) }))
     );
-  }, [mine.groups, user]);
+  }, [mine.groups, user, viewing]);
   const [view, setView] = useState<ViewId>('day');
   const [date, setDate] = useState(() => new Date());
   const access = useAccess();

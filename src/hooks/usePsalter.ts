@@ -3,6 +3,7 @@ import {
   arrayUnion, collection, deleteField, doc, limit, onSnapshot, orderBy, query, runTransaction, setDoc, updateDoc, where,
 } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useViewing } from '../context/AuthContext';
 import {
   Assignment, Cycle, KATHISMA_COUNT, PastDistribution, Slot, Slots, cycleOf, georgiaToday, halfIndex, kathismasOf, normCycleDays, normShiftDays, ownersIn,
   rebase, responsible, withPast, wrap,
@@ -88,18 +89,22 @@ export const useMyPsalterGroups = (uid?: string | null) => {
   const [asMember, setAsMember] = useState<PsalterGroup[]>([]);
   const [asTeacher, setAsTeacher] = useState<PsalterGroup[]>([]);
   const [loaded, setLoaded] = useState({ m: false, t: false });
+  // a student's page opened by their teacher (ViewAsStudent): the teacher may list only the groups they lead, so the
+  // student's groups there are those of them the student reads in (as useMyClasses)
+  const viewing = useViewing();
+  const byTeacher = viewing && !viewing.viewer.isAdmin && uid === viewing.student.uid ? viewing.viewer.user?.uid ?? null : null;
   useEffect(() => {
     if (!uid) { setAsMember([]); setAsTeacher([]); setLoaded({ m: true, t: true }); return; }
     setLoaded({ m: false, t: false });
     const coll = collection(db, 'psalterGroups');
-    const off1 = onSnapshot(query(coll, where('memberIds', 'array-contains', uid)),
-      s => { setAsMember(s.docs.map(d => toGroup(d.id, d.data()))); setLoaded(l => ({ ...l, m: true })); },
+    const off1 = onSnapshot(query(coll, byTeacher ? where('teacherIds', 'array-contains', byTeacher) : where('memberIds', 'array-contains', uid)),
+      s => { setAsMember(s.docs.map(d => toGroup(d.id, d.data())).filter(g => !byTeacher || g.memberIds.includes(uid))); setLoaded(l => ({ ...l, m: true })); },
       () => { setAsMember([]); setLoaded(l => ({ ...l, m: true })); });
     const off2 = onSnapshot(query(coll, where('teacherIds', 'array-contains', uid)),
       s => { setAsTeacher(s.docs.map(d => toGroup(d.id, d.data()))); setLoaded(l => ({ ...l, t: true })); },
       () => { setAsTeacher([]); setLoaded(l => ({ ...l, t: true })); });
     return () => { off1(); off2(); };
-  }, [uid]);
+  }, [uid, byTeacher]);
   const groups = useMemo(() => {
     const map = new Map<string, PsalterGroup>();
     [...asMember, ...asTeacher].filter(g => !g.archived).forEach(g => map.set(g.id, g));

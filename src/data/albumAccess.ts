@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
-import { useAuth } from '../context';
+import { useRealAuth } from '../context';
 import { useMembership } from '../utils/memberAccess';
 
 // Who hears and who saves each album of the song albums (centreSongs.ts). Staff (teachers and admins) have every album;
@@ -48,7 +48,7 @@ let stopMine: (() => void) | null = null;
 
 /** The app's root keeps the rights of whoever is signed in (App.tsx) */
 export const useAlbumAccessSync = () => {
-  const { user, isTeacher } = useAuth();
+  const { user, isTeacher } = useRealAuth();
   const isMember = useMembership().isMember;
   const uid = user?.uid ?? null;
   useEffect(() => {

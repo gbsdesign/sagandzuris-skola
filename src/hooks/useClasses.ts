@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { collection, onSnapshot, query, where } from 'firebase/firestore';
 import { db } from '../firebase';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, useViewing } from '../context/AuthContext';
 
 // A class (group of students) made by an admin: shown to its members in the header and on its own page.
 // Member names/photos are copied into the class so members can see each other without reading
@@ -80,15 +80,21 @@ const active = (docs: { id: string; data: () => any }[]) => docs.map(d => toClas
 /** Classes the given user belongs to (live). */
 export const useMyClasses = (uid?: string | null) => {
   const [classes, setClasses] = useState<SchoolClass[]>([]);
+  // a student's page opened by their teacher (ViewAsStudent): a teacher may list only the classes they lead
+  // (firestore.rules), so the student's classes there are those of them the student is in; an admin lists them all
+  const viewing = useViewing();
+  const byTeacher = viewing && !viewing.viewer.isAdmin && uid === viewing.student.uid ? viewing.viewer.user?.uid ?? null : null;
   useEffect(() => {
     if (!uid) { setClasses([]); return; }
-    const q = query(collection(db, 'classes'), where('memberIds', 'array-contains', uid));
+    const q = byTeacher
+      ? query(collection(db, 'classes'), where('teacherIds', 'array-contains', byTeacher))
+      : query(collection(db, 'classes'), where('memberIds', 'array-contains', uid));
     return onSnapshot(
       q,
-      snap => setClasses(active(snap.docs)),
+      snap => setClasses(active(snap.docs).filter(c => !byTeacher || c.memberIds.includes(uid))),
       err => { console.warn('classes: ', err?.code || err); setClasses([]); }
     );
-  }, [uid]);
+  }, [uid, byTeacher]);
   return classes;
 };
 

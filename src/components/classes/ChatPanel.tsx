@@ -208,6 +208,8 @@ export interface ChatPanelProps {
   onAttach?: () => void;
   /** how a message is deleted, when not among the chat's own messages (a class's pins) */
   onDelete?: (m: ChatMessage) => Promise<void>;
+  /** a teacher's (an admin's) tap on a member's photo or name: their own page (null = not a member's message) */
+  personOpener?: (m: ChatMessage) => (() => void) | null;
 }
 
 /** A computer's quiet 🗑 beside a message one may delete; it shows when the pointer is over the message. */
@@ -222,7 +224,7 @@ const HoverDelete: React.FC<{ onClick: () => void }> = ({ onClick }) => (
 export const ChatPanel: React.FC<ChatPanelProps> = ({
   base, author, messages, loading, error, header, isCall = () => false, callTitle, onJoinCall, callLive = true, onOpenGame, canDelete,
   showNames = false, seenAt = null, onSent, listClassName = 'h-[56vh] min-h-[300px] max-h-[560px]', readOnly = false,
-  staffLabel = 'მასწავლებელი', fill = false, listTop, renderCard, onAttach, onDelete,
+  staffLabel = 'მასწავლებელი', fill = false, listTop, renderCard, onAttach, onDelete, personOpener,
 }) => {
   const [text, setText] = useState('');
   const [mode, setMode] = useState<Mode>({ k: 'idle' });
@@ -423,6 +425,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             const canDel = !readOnly && canDelete(m);
             const named = typeof showNames === 'function' ? showNames(m) : showNames;
             const card = renderCard?.(m, mine) ?? null;
+            const openPerson = named && !mine && first ? personOpener?.(m) ?? null : null;
             return (
               <React.Fragment key={m.id}>
                 {newDay && (
@@ -431,12 +434,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   </div>
                 )}
                 <div className={`group flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'} ${first ? 'mt-3' : 'mt-1'}`}>
-                  {named && !mine && (first ? <Avatar name={m.name} photoURL={m.photoURL} /> : <span className="w-8 shrink-0" />)}
+                  {named && !mine && (first
+                    ? openPerson
+                      ? <button type="button" onClick={openPerson} aria-label={`${m.name} — გზა და პროფილი`} className="shrink-0 rounded-full cursor-pointer active:scale-95 transition"><Avatar name={m.name} photoURL={m.photoURL} /></button>
+                      : <Avatar name={m.name} photoURL={m.photoURL} />
+                    : <span className="w-8 shrink-0" />)}
                   {mine && canDel && <HoverDelete onClick={() => askRemove(m)} />}
                   <div className={`${card ? 'w-[88%] max-w-[360px]' : 'max-w-[82%]'} flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
                     {named && first && !mine && (
                       <p className="text-xs font-semibold text-[#7a2028] mb-1 px-1 flex items-center gap-1.5">
-                        {m.name}
+                        {openPerson ? <button type="button" onClick={openPerson} className="cursor-pointer hover:underline underline-offset-2">{m.name}</button> : m.name}
                         {m.teacher && <span className="px-1.5 py-px rounded-full bg-[#7a2028]/10 text-[11px] font-bold">{staffLabel}</span>}
                       </p>
                     )}
