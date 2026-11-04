@@ -9,7 +9,7 @@ import { Chip } from '../../../components/games/Chip';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { KitButton } from '../../../components/games/KitButton';
 import { Btn, Card, askConfirm, useWide } from '../../../components/ui/kit';
-import { Hint } from '../samshvilde/parts';
+import { HowTo } from '../../../components/games/HowTo';
 import { Podium } from '../rounds/parts';
 import { TEAM_TINT, TeamsEditor, readTeams, teamNames, type TeamsConf } from '../rounds/teams';
 import { Stars } from '../tsikhe/parts';
@@ -228,6 +228,16 @@ export const TsinapariTableGame: React.FC = () => {
           </div>
         </Card>
       )}
+      <HowTo id="tsinapari-table" steps={conf.whole ? [
+        'მასწავლებელი გასაყარს ხმამაღლა კითხულობს.',
+        'კლასი სამ გზაზე ხელის აწევით აძლევს ხმას. შეეხეთ იმ გზას, რომელმაც მეტი ხმა მიიღო.',
+        '„რა მოხდა სინამდვილეში?“ — ტელეფონი ნამდვილ გზას გეტყვით და იმასაც, სად წაიყვანდა სხვები.',
+      ] : [
+        'დაბეჭდეთ ა ბ გ ბარათები (ღილაკი ქვემოთაა): თითო გუნდს სამი.',
+        'მასწავლებელი გასაყარს ხმამაღლა კითხულობს. გუნდები თათბირობენ და ერთ ბარათს ერთდროულად სწევენ.',
+        'შეეხეთ თითოეული გუნდის ასოს, მერე — „რა მოხდა სინამდვილეში?“.',
+        'ტელეფონი ნამდვილ გზას გეტყვით. ვინც წინაპრის გზა აირჩია, ქულას იღებს.',
+      ]} />
       <Card className="!p-4 space-y-4">
         <div className="space-y-2">
           <p className="text-[13.5px] font-bold text-[#4a3426]">ვისი გზა?</p>
@@ -270,13 +280,6 @@ export const TsinapariTableGame: React.FC = () => {
       >
         ა ბ გ ბარათები და წიგნი-თამაში · PDF
       </KitButton>
-      <Hint>
-        {conf.whole ? (
-          <>მასწავლებელი გასაყარს ხმამაღლა კითხულობს, კლასი სამ გზაზე ხელის აწევით აძლევს ხმას. შეეხეთ იმ გზას, რომელმაც მეტი ხმა მიიღო, და მერე „რა მოხდა სინამდვილეში?“ — ტელეფონი ნამდვილ გზას გეტყვით და იმასაც, სად წაიყვანდა სხვები.</>
-        ) : (
-          <>დაბეჭდეთ ა ბ გ ბარათები — თითო გუნდს სამი. მასწავლებელი გასაყარს ხმამაღლა კითხულობს, გუნდები თათბირობენ და ერთ ბარათს ერთდროულად სწევენ. შეეხეთ თითოეული გუნდის ასოს და მერე „რა მოხდა სინამდვილეში?“ — ტელეფონი ნამდვილ გზას გეტყვით, ქულებს თვითონ დაითვლის.</>
-        )}
-      </Hint>
       <p className="text-[12.5px] leading-snug text-[#75685a]">{UNCHECKED}</p>
     </div>
   );

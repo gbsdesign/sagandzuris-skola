@@ -184,6 +184,9 @@ export const TaskNote: React.FC<{ task: Task }> = ({ task }) => (task.note ? (
 
 /** the letters put in order: a tap moves a letter into the first empty box, a tap on a box gives it back; `onFull` hears the
  *  word once every box is filled (none: a scratch pad, nothing is checked) */
+/** how many letters a row of the pad holds: all of them up to five, else half (rounded up) */
+const rowOf = (n: number) => (n <= 5 ? n : Math.ceil(n / 2));
+
 export const LetterPad: React.FC<{
   letters: string[];
   onFull?: (word: string) => boolean;
@@ -220,7 +223,8 @@ export const LetterPad: React.FC<{
       <p className={`min-h-[1.25rem] text-center text-[13.5px] font-bold ${bad ? 'text-[#b23a48]' : 'text-[#75685a]'}`} role="status">
         {bad ? wrongText : placed.length ? '' : 'შეეხე ასოებს იმ რიგით, როგორც სიტყვაშია'}
       </p>
-      <div className="flex flex-wrap justify-center gap-2" role="group" aria-label="ასოები">
+      {/* rows of even length: six letters are 3 + 3, not 5 + 1 (2026-11-04) */}
+      <div className="mx-auto flex flex-wrap justify-center gap-2" style={{ maxWidth: `${rowOf(n) * (big ? 5 : 3.5) + (rowOf(n) - 1) * 0.5 + 0.25}rem` }} role="group" aria-label="ასოები">
         {letters.map((ch, t) => {
           const used = placed.includes(t);
           return (

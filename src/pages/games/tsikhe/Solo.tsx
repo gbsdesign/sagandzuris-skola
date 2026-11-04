@@ -271,23 +271,26 @@ export const TsikheSolo: React.FC = () => {
               <button
                 type="button"
                 onClick={() => { void enter(r); }}
-                className="w-full h-full text-left rounded-3xl bg-white ring-1 ring-[#e8dcc8] p-3 flex flex-col gap-3 cursor-pointer active:scale-[0.99] transition hover:ring-[#7a2028]/30"
+                className="w-full h-full text-left rounded-3xl bg-white ring-1 ring-[#e8dcc8] p-3 flex items-center sm:items-stretch sm:flex-col gap-3 cursor-pointer active:scale-[0.99] transition hover:ring-[#7a2028]/30"
               >
-                <CastleArt room={r.id} className="w-full rounded-2xl" />
-                <div className="px-1 flex items-start gap-2">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-serif-ge text-[19px] font-bold leading-tight" style={{ color: look.tint }}>{r.title}</p>
-                    <p className="mt-0.5 text-[13px] text-[#75685a]">{r.where}</p>
+                {/* on a phone the picture stands beside the words, so all four castles fit one screen (2026-11-04) */}
+                <CastleArt room={r.id} className="w-[7.5rem] shrink-0 sm:w-full rounded-2xl" />
+                <div className="min-w-0 flex-1 flex flex-col gap-2 sm:gap-3">
+                  <div className="px-1 flex flex-wrap items-start gap-x-2 gap-y-1">
+                    <div className="min-w-0 flex-1 basis-28">
+                      <p className="font-serif-ge text-[18px] sm:text-[19px] font-bold leading-tight" style={{ color: look.tint }}>{r.title}</p>
+                      <p className="mt-0.5 text-[13px] text-[#75685a]">{r.where}</p>
+                    </div>
+                    <span className="shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold" style={{ background: `${look.tint}14`, color: look.tint }}>{LEVEL_LABEL[r.level]}</span>
                   </div>
-                  <span className="shrink-0 rounded-full px-2.5 py-1 text-[12px] font-bold" style={{ background: `${look.tint}14`, color: look.tint }}>{LEVEL_LABEL[r.level]}</span>
-                </div>
-                <div className="px-1 flex items-center justify-between gap-2 min-h-11">
-                  {b ? (
-                    <span className="flex items-center gap-2"><Stars n={b.stars} /><span className="text-[13px] font-bold tabular-nums text-[#4a3426]">{mmss(b.ms)}</span></span>
-                  ) : <span className="text-[13px] text-[#9a8b7b]">ჯერ არ გაგივლია</span>}
-                  <span className="h-11 px-4 rounded-full inline-flex items-center gap-1.5 text-[14px] font-bold text-[#fbf6ec]" style={{ background: look.tint }}>
-                    {going ? <><Play className="w-4 h-4" />{going.door < r.doors.length ? `კარი ${going.door + 1}` : 'ჭიშკარი'}</> : <><DoorOpen className="w-4 h-4" />შესვლა</>}
-                  </span>
+                  <div className="px-1 flex flex-wrap items-center justify-between gap-2 min-h-11">
+                    {b ? (
+                      <span className="flex items-center gap-2"><Stars n={b.stars} /><span className="text-[13px] font-bold tabular-nums text-[#4a3426]">{mmss(b.ms)}</span></span>
+                    ) : <span className="text-[13px] text-[#9a8b7b]">ჯერ არ გაგივლია</span>}
+                    <span className="h-11 px-4 rounded-full inline-flex items-center gap-1.5 text-[14px] font-bold text-[#fbf6ec]" style={{ background: look.tint }}>
+                      {going ? <><Play className="w-4 h-4" />{going.door < r.doors.length ? `კარი ${going.door + 1}` : 'ჭიშკარი'}</> : <><DoorOpen className="w-4 h-4" />შესვლა</>}
+                    </span>
+                  </div>
                 </div>
               </button>
             </li>
