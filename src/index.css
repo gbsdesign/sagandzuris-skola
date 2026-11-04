@@ -212,6 +212,11 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
 .tsq-bar { transform-origin: bottom; animation: tsq-bar 0.8s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .tsq-inner { transition: none; } .tsq-bar { animation: none; } }
 
+/* „ეზოს მსაჯი“: the waves of „ზღვა ღელავს“ run left, a wave a loop (the band is twice as wide as its box) */
+@keyframes ezo-wave { from { transform: translateX(0); } to { transform: translateX(-50%); } }
+.ezo-wave { animation: ezo-wave 3.5s linear infinite; }
+@media (prefers-reduced-motion: reduce) { .ezo-wave { animation: none; } }
+
 /* „საგალობო ლოტო“: a name just marked pops in; the „საგანძური!“ banner glows once */
 @keyframes loto-pop { 0% { transform: scale(0.82); } 60% { transform: scale(1.06); } 100% { transform: scale(1); } }
 @keyframes loto-glow { 0% { box-shadow: 0 0 0 0 rgba(226, 185, 59, 0.75); } 100% { box-shadow: 0 0 0 18px rgba(226, 185, 59, 0); } }
