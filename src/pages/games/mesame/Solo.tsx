@@ -17,7 +17,7 @@ import { trioMix } from './mix';
 import { SLOW, VOICE_LABELS, VOICE_SHORT, lengthText, openingIsWhole, sectionOf, systemAt, trioVoices, useChantScore, type LoadedChant, type Section } from './plan';
 import { keepBest, readConf, saveConf, useBest, type TrioConf } from './store';
 import { useMine } from '../../../components/games/useMine';
-import { useTrioTake, type TrioTake } from './useTrioTake';
+import { SILENT, useTrioTake, type TrioTake } from './useTrioTake';
 
 // „მესამე ხმა“ alone (the plan's „ონლაინ“: in the app, in earphones): a chant, my voice, its opening or the whole, the
 // speed. The phone sings the other two voices, I sing mine, the mirror shows how I follow; then the score, how each line
@@ -138,6 +138,7 @@ const SingScreen: React.FC<{
             <div className="text-center pt-2" role="status">
               <p className={`font-serif-ge text-[56px] font-bold leading-none tabular-nums ${pctTone(r.pct)}`}>{r.pct}%</p>
               <p className="mt-2 text-[14px] font-bold text-[#75685a]">{hits} / {counted} ნოტი სწორად</p>
+              {r.frames.every(f => f.midi === null) && <p className="mt-2 text-[13.5px] font-bold leading-snug text-[#b3261e]">{SILENT}</p>}
               {record === true && <p className="mt-2 inline-flex items-center gap-1.5 h-8 px-3 rounded-full bg-[#c9962a]/15 text-[13.5px] font-bold text-[#8a6d12]"><Trophy className="w-4 h-4" />ახალი რეკორდი!</p>}
               {!r.complete && <p className="mt-2 text-[13px] leading-snug text-[#75685a]">შუაში გაჩერდი: ქულა ნამღერს ითვლის, რეკორდი — მხოლოდ ბოლომდე ნამღერს.</p>}
             </div>

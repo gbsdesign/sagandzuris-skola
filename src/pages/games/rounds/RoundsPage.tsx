@@ -11,6 +11,7 @@ import type { RoundFace } from './face';
 import { RoundsRoom, type RoundSnap } from './RoundsRoom';
 import type { RoundsOpts } from './RoundsLobby';
 import { HybridGame, HybridSetup, readHybridConf, type HybridConf } from './RoundsHybrid';
+import { HowTo } from '../../../components/games/HowTo';
 
 // A quick game's page in the games hub (pages/games/rounds/, 2026-10-31): what the game is, then two tabs — „ონლაინ“ (a room
 // in a class: the opener hosts, everyone answers on their own phone) and „ჰიბრიდული“ (one phone, the class in teams). The
@@ -36,6 +37,16 @@ const readConf = (key: string): Conf => {
     hybrid: readHybridConf(o.hybrid),
   };
 };
+
+/** a mode's words as numbered steps (2026-11-04, the games' review): its sentences — a „;“ ends one too — without the
+ *  „ონლაინ:“ / „ჰიბრიდული:“ the tab already says */
+const stepsOf = (text: string) => text
+  .replace(/^(ონლაინ|ჰიბრიდული)[^:]{0,40}:\s*/, '')
+  .replace(/([.!?;])\s+(?=\S)/g, '$1\n')
+  .replace(/, მერე /g, '.\nმერე ')
+  .split('\n')
+  .map(x => x.trim().replace(/;$/, '.'))
+  .filter(Boolean);
 
 /** the chants of classes' programs (the chant games ask them too): their version ids, once each */
 const programOf = (list: SchoolClass[]) => [...new Set(list.flatMap(c => c.program.map(p => p.id ?? '').filter(Boolean)))];
@@ -163,11 +174,11 @@ export const RoundsPage: React.FC<{ face: RoundFace; solo?: SoloTab; table?: Rea
       {solo && tabBar}
       <Card tone="wine" className="!p-4 sm:!p-5">
         <p className="font-serif-ge text-[17px] font-bold leading-snug">{face.title}</p>
-        <p className="mt-1.5 text-[12.5px] leading-snug text-[#fbf6ec]/85">{face.intro}</p>
-        <p className="mt-2 text-[12.5px] leading-snug text-[#fbf6ec]/85">{mode === 'online' ? face.online : face.hybrid}</p>
+        <p className="mt-1.5 text-[13px] leading-snug text-[#fbf6ec]/90">{face.intro}</p>
       </Card>
 
       {!solo && tabBar}
+      <HowTo key={mode} id={`rounds-${face.game}-${mode}`} steps={stepsOf(mode === 'online' ? face.online : face.hybrid)} />
 
       {mode === 'online' ? (
         <RoomSetup

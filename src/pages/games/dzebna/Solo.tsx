@@ -96,7 +96,7 @@ const Clues: React.FC<{ h: SoloHunt; r: SoloRun }> = ({ h, r }) => {
 };
 
 /** a hunt being played: the trail and the clock, then the station's map, its task, the letter, and the chest */
-const Play: React.FC<{ h: SoloHunt; r: SoloRun; setRun: (r: SoloRun) => void; title: string; onDone: (r: SoloRun) => void }> = ({ h, r, setRun, title, onDone }) => {
+const Play: React.FC<{ h: SoloHunt; r: SoloRun; setRun: (r: SoloRun) => void; title: string; sub?: string; onDone: (r: SoloRun) => void }> = ({ h, r, setRun, title, sub, onDone }) => {
   const now = useNow(r.phase !== 'done');
   const secs = runSeconds(r, now);
   const sounds = useTsikheSounds();
@@ -139,7 +139,11 @@ const Play: React.FC<{ h: SoloHunt; r: SoloRun; setRun: (r: SoloRun) => void; ti
     <div ref={top} className="space-y-3 scroll-mt-24">
       <Card className="!p-4 space-y-3">
         <div className="flex items-center gap-2">
-          <p className="min-w-0 flex-1 truncate font-serif-ge text-[16px] font-bold leading-snug text-[#4a3426]">{title}</p>
+          {/* the day's date on its own line: „დღის ძებნა №9 · 5 ნოემბერი“ did not fit beside the clock (2026-11-04) */}
+          <div className="min-w-0 flex-1">
+            <p className="truncate font-serif-ge text-[16px] font-bold leading-snug text-[#4a3426]">{title}</p>
+            {sub && <p className="text-[12.5px] font-bold leading-snug text-[#9a8b7b]">{sub}</p>}
+          </div>
           {bump && <span key={bump.n} className="samosi-pop shrink-0 whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-[12.5px] font-bold text-amber-900" role="status">{bump.text}</span>}
           <TimePill secs={secs} />
         </div>
@@ -294,8 +298,8 @@ export const DzebnaSolo: React.FC = () => {
   );
 
   if (run && hunt && run.phase !== 'done') {
-    const title = run.iso ? `დღის ძებნა №${dayNumber(today)} · ${dateLabel(today)}` : 'თავისუფალი ძებნა';
-    return <div className="space-y-4"><Play h={hunt} r={run} setRun={setRun} title={title} onDone={finish} />{unchecked}</div>;
+    const title = run.iso ? `დღის ძებნა №${dayNumber(today)}` : 'თავისუფალი ძებნა';
+    return <div className="space-y-4"><Play h={hunt} r={run} setRun={setRun} title={title} sub={run.iso ? dateLabel(today) : undefined} onDone={finish} />{unchecked}</div>;
   }
 
   // a free hunt's end

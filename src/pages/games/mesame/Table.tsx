@@ -236,12 +236,10 @@ export const TrioTable: React.FC = () => {
   return (
     <>
       <Card className="!p-4 sm:!p-5 space-y-4">
-        <div className="flex items-start gap-3">
+        {/* how it goes is the „როგორ ვითამაშოთ“ steps above (2026-11-04): the card only names itself */}
+        <div className="flex items-center gap-3">
           <span className="w-11 h-11 shrink-0 rounded-full bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center"><Users className="w-5 h-5" /></span>
-          <div className="min-w-0">
-            <p className="font-serif-ge text-[17px] font-bold leading-snug text-[#4a3426]">ტელეფონი და კლასი</p>
-            <p className="mt-0.5 text-[13px] leading-snug text-[#75685a]">ტელეფონი დინამიკით ერთ ან ორ ხმას გალობს, დანარჩენს კლასი ცოცხლად ამბობს.</p>
-          </div>
+          <p className="min-w-0 font-serif-ge text-[17px] font-bold leading-snug text-[#4a3426]">ტელეფონი და კლასი</p>
         </div>
         <ChantPicker chants={chants} value={chant} onChange={c => setConf({ chant: c.id })} />
         <div className="space-y-2">
