@@ -10,6 +10,7 @@ CREATE TABLE IF NOT EXISTS subs (
   psalter INTEGER NOT NULL DEFAULT 0,
   assignments INTEGER NOT NULL DEFAULT 0,
   admin INTEGER NOT NULL DEFAULT 0, -- an admin's notices (adminPush/{uid} in Firestore says which)
+  chat INTEGER NOT NULL DEFAULT 0,  -- calls and chat messages of the signed-in person (2026-11-05)
   updated_at TEXT
 );
 CREATE INDEX IF NOT EXISTS subs_uid ON subs (uid);

@@ -294,7 +294,31 @@
   (`classes/PinCard.tsx`, `hooks/useChatPins.ts`): in a class's chat it lives in `classes/{c}/pins` (rules: read by that
   member — `where to == uid` —, the class's teachers and admins only), laid in among the messages, with 🔒 and the member's
   „პასუხი“ = their private chat with the writer; in a private chat it is a message of kind `note` / `work` (`pinCard` in the rules); calls are the app's own (`components/calls/`, `utils/callSession.ts`), Jitsi is gone. Voice MP3s are Firestore Bytes
-  (no Firebase Storage).
+  (no Firebase Storage). Kept light on phones (2026-11-05, the user: „ჩათი ჭედავს“): `markChatSeen` writes `students.chatSeen` at
+  most once a minute a chat (and when the page hides) — that record has ~16 live listeners, each write redrew much of the app —,
+  this device's marks reach `useChatSeen` at once; `useChat` keeps an arrived message's object (and the list when nothing
+  changed); `ChatPanel` draws the messages in a `useMemo` (`listBody`), so typing and the recording clock do not redraw them —
+  give it stable props (a default like `isCall` is the module's `NEVER`); a drawing in the chat stays still until ↺.
+- **Calls and messages on the phone with the app closed (2026-11-05, the user: „ზარი შედიოდეს ტელზე, როგორც მესენჯერი“)**:
+  the reminders Worker's `POST /ring { token, base, end? }` (the caller's own call of the last minute in `dms/{id}` — callBy,
+  callAt — or `classes/{id}/call/state` — by, at; `end` within two minutes = „გამოტოვებული ზარი“, sent by the caller's app only
+  when nobody answered: `giveUpAfter`, a failed join, or `afterLeave(…, unanswered)` from the call screen's hang-up while
+  „waiting“/„connecting“), `POST /chat-notify { token, base, id, pin? }` (the writer's own message of the last two minutes; text,
+  voice, drawing and a teacher's card — a class's `pins/{id}` goes to its member alone; calls and games have their own pushes)
+  and `POST /decline { base, uid, at, t }` (the ring's own HMAC `ringTicket`, made in the Worker from `VAPID_PRIVATE_JWK`, so the
+  service worker's „უარი“ ends a private call — writes `callEnd` — without a sign-in). Who hears it: `chatTargets` in
+  `reminders.js` (+ `tests/chatPush.test.mjs`): a class's members and teachers (admins may call or write without teaching it), a
+  private chat's other member, the administration's chat: the member hears „ადმინისტრაცია“, a member's message goes to all staff
+  (a member's call rings nobody). Devices: column `subs.chat` (schema 4; rows already bound to a person got 1), bound by
+  `bindChatDevice` (`utils/groupPush.ts`; `/account` now keeps every switch the call does not name) — quietly once a day where
+  notifications are allowed, else `components/calls/PhoneRingSetup.tsx` asks once at the bottom (4 s after opening, never during
+  a service or a call, „მოგვიანებით“ = a week). The site calls `notifyRing` in `callActions.ts` and `notifyChat` in the senders
+  (`useClassChat.ts`, `useChatPins.ts`). `public/prayer-notify-sw.js` `showTalk`: nothing while a window of the site is
+  visible (the app rings itself); a ring = tag `call-d-<id>` (private) / `call-c-<id>` (a class), „პასუხი“ / „უარი“, kept until touched; `call-end` replaces it
+  silently; a message = tag `chat-d-<id>` / `chat-c-<id>` (a private chat's each message sounds — `renotify` —, a class's once, then only updated).
+  Taps open `/?open=chat&id=<dmId | class:id>` or `/?open=call&b=<base>` (App.tsx: the chat + `wantAnswer`, and the incoming
+  screen answers or joins once it sees the call — `takeAnswer`/`useAnswerWanted`). The Worker needs only its publish (the
+  workflow does it on main).
 - **Class page** (`pages/ClassPage.tsx`, rebuilt 2026-10-24, simplified 2026-10-28 „ერთი რამ, ერთ ადგილას“ from an approved
   sketch): title bar (🎵 + one ✎ for teachers — its list opens name/logo/mode, the timetable `ScheduleSheet`, the program
   `ProgramEditor`, adding a member `AddMemberSheet`; 💬 to the teacher for a member), the timetable chips, the members as one

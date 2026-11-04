@@ -1,7 +1,9 @@
+import { useSyncExternalStore } from 'react';
 import type { User } from 'firebase/auth';
 import type { SchoolClass } from '../../hooks/useClasses';
 import { ADMIN_NAME, DirectThread, isStaffSide, notePrivateCall, otherOf } from '../../hooks/useDirectChat';
 import { CallInfo, CallKind, endChatCall, endClassCall, giveUpAfter, joinCall, ringClass, watchEnd } from '../../utils/callSession';
+import { notifyRing } from '../../utils/groupPush';
 
 // Starting, answering and leaving the school's calls (utils/callSession.ts), the same from every button.
 
@@ -44,11 +46,13 @@ const chatEnded = (d: Record<string, unknown>) => ms(d.callEnd) > 0 && ms(d.call
  *  Gives up after 45 s. */
 export const startChatCall = async (t: DirectThread, user: User, kind: CallKind) => {
   const info = chatCallInfo(t, user);
-  await notePrivateCall(t, { uid: user.uid, name: info.me.name, photoURL: info.me.photoURL, teacher: true }, kind)
-    .catch(e => console.warn('call ring: ', e?.code || e));
-  if (!(await joinCall(info, kind))) { endChatCall(t.id).catch(() => {}); return; }
+  const rang = await notePrivateCall(t, { uid: user.uid, name: info.me.name, photoURL: info.me.photoURL, teacher: true }, kind)
+    .then(() => true, e => { console.warn('call ring: ', e?.code || e); return false; });
+  // the other side's phone rings even with the app closed (worker/reminders /ring)
+  if (rang) void notifyRing(info.base);
+  if (!(await joinCall(info, kind))) { endChatCall(t.id).catch(() => {}); if (rang) void notifyRing(info.base, true); return; }
   watchEnd(info.base, chatEnded, info.base);
-  giveUpAfter(45_000, () => { endChatCall(t.id).catch(() => {}); });
+  giveUpAfter(45_000, () => { endChatCall(t.id).catch(() => {}); void notifyRing(info.base, true); });
 };
 
 /** Answering (or joining) a private chat's call. */
@@ -63,8 +67,10 @@ export const declineChatCall = (t: DirectThread) => endChatCall(t.id).catch(e =>
  *  is still joining); anyone joins it. A call that could not start is taken back. */
 export const startClassCall = async (c: SchoolClass, user: User, kind: CallKind) => {
   const info = classCallInfo(c, user);
-  await ringClass(c.id, { uid: user.uid, name: info.me.name }, kind).catch(e => console.warn('call ring: ', e?.code || e));
-  if (!(await joinCall(info, kind))) endClassCall(c.id).catch(() => {});
+  const rang = await ringClass(c.id, { uid: user.uid, name: info.me.name }, kind)
+    .then(() => true, e => { console.warn('call ring: ', e?.code || e); return false; });
+  if (rang) void notifyRing(info.base);
+  if (!(await joinCall(info, kind))) { endClassCall(c.id).catch(() => {}); if (rang) void notifyRing(info.base, true); }
 };
 
 export const joinClassCall = (c: SchoolClass, user: User, kind: CallKind) => joinCall(classCallInfo(c, user), kind);
@@ -75,11 +81,36 @@ export const gameCallInfo = (base: string, title: string, me: { uid: string; nam
   base, title, oneToOne: false, canVideo: true, anonStaff: false, me: { ...me, staff: false }, leaders: [host],
 });
 
-/** After leaving: a private call is over for both; a class's call ends when the last one leaves (a game's has no ring). */
-export const afterLeave = (info: CallInfo, othersLeft: number) => {
+/** After leaving: a private call is over for both; a class's call ends when the last one leaves (a game's has no ring).
+ *  `unanswered`: the one who rang hung up before anybody came — the phones still ringing say „გამოტოვებული ზარი“ (the
+ *  Worker sends it only for the caller's own call of the last two minutes). */
+export const afterLeave = (info: CallInfo, othersLeft: number, unanswered = false) => {
   const parts = info.base.split('/');
   if (parts.length !== 2) return;
   const [kind, id] = parts;
   if (kind === 'dms') endChatCall(id).catch(() => {});
   else if (othersLeft === 0) endClassCall(id).catch(() => {});
+  if (unanswered && (kind === 'dms' || kind === 'classes')) void notifyRing(info.base, true);
 };
+
+// ---- answering from the phone's ring (2026-11-05) -------------------------------------------------------------
+// A tap on the ring the phone showed with the app closed (or its „პასუხი“) opens the app at /?open=call&b=<base>
+// (App.tsx): the call is answered as soon as the app sees it ringing — within a minute, else the wish is forgotten.
+let wanted: { base: string; until: number } | null = null;
+const wantedSubs = new Set<() => void>();
+const wantedSub = (f: () => void) => { wantedSubs.add(f); return () => { wantedSubs.delete(f); }; };
+
+export const wantAnswer = (base: string) => {
+  wanted = { base, until: Date.now() + 60_000 };
+  wantedSubs.forEach(f => f());
+};
+
+/** the wish to answer `base`, taken once (true) — or none */
+export const takeAnswer = (base: string) => {
+  if (!wanted || wanted.base !== base || Date.now() > wanted.until) return false;
+  wanted = null;
+  wantedSubs.forEach(f => f());
+  return true;
+};
+
+export const useAnswerWanted = () => useSyncExternalStore(wantedSub, () => wanted);

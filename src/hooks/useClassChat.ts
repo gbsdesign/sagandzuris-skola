@@ -7,6 +7,7 @@ import type { VoiceTake } from '../utils/voiceRecorder';
 import type { RoomGame } from '../utils/gameRoom';
 import { ROOM_GAME_INFO, chatRoomRef } from '../data/roomGames';
 import { foldWord } from '../utils/nakhati';
+import { notifyChat } from '../utils/groupPush';
 
 // A chat lives under a base document: a class's chat under classes/{classId}, a private one under
 // dms/{teacherUid}_{studentUid} (hooks/useDirectChat.ts). Messages are {base}/messages; a voice message's
@@ -242,8 +243,10 @@ const stamp = (author: ChatAuthor) => ({
   createdAt: serverTimestamp(),
 });
 
+// after a message is written, the chat's other people see it on their phones (utils/groupPush notifyChat; best effort)
 export const sendTextMessage = async (base: string, author: ChatAuthor, text: string) => {
-  await addDoc(messagesOf(base), { ...stamp(author), kind: 'text', text: text.slice(0, 2000) });
+  const ref = await addDoc(messagesOf(base), { ...stamp(author), kind: 'text', text: text.slice(0, 2000) });
+  void notifyChat(base, ref.id);
 };
 
 /** „სამშვილდის ღამე“ online: the class is invited into a game room — a card with a button into the room */
@@ -256,9 +259,10 @@ export const sendGameMessage = async (classId: string, author: ChatAuthor, roomI
 /** "a call started": shown in the chat as a card with a button into the call */
 /** a drawing to guess into the class's chat (its word folded, so nobody reads it by chance) */
 export const sendDrawMessage = async (classId: string, author: ChatAuthor, d: { ink: string; word: string; theme: string }) => {
-  await addDoc(messagesOf(classChatBase(classId)), {
+  const ref = await addDoc(messagesOf(classChatBase(classId)), {
     ...stamp(author), kind: 'draw', text: '🎨 გამოიცანი, რა დავხატე!', ink: d.ink, ans: foldWord(d.word), theme: d.theme.slice(0, 40),
   });
+  void notifyChat(classChatBase(classId), ref.id);
 };
 
 export const sendCallMessage = async (base: string, author: ChatAuthor) => {
@@ -275,6 +279,7 @@ export const sendVoiceMessage = async (base: string, author: ChatAuthor, { mp3, 
   }
   batch.set(ref, { ...stamp(author), kind: 'voice', text: '', seconds: Math.round(seconds * 10) / 10, wave, parts });
   await batch.commit();
+  void notifyChat(base, ref.id);
 };
 
 export const deleteMessage = async (base: string, m: ChatMessage) => {

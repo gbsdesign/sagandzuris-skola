@@ -11,6 +11,9 @@ import { auth } from '../firebase';
 //   request, told to the superadmins who asked for it.
 // • POST /game-invite { token, classId, roomId } — a game room just opened in a class: its members and teachers hear
 //   „X გიწვევს“ (the Worker checks the room in Firestore, and tells a room once).
+// • Calls and messages (2026-11-05): /account with `chat: true` (bindChatDevice) — this browser rings for the person's
+//   calls and shows their chat messages; POST /ring { token, base, end? } after a call starts (or goes unanswered),
+//   POST /chat-notify { token, base, id } after a message is written. The Worker checks both in Firestore.
 // Push needs the installed service worker; on iPhone the site must be added to the home screen first.
 
 const SERVER = 'https://sagandzuri-reminders.mr-gabunia.workers.dev';
@@ -150,4 +153,65 @@ export const notifyGroup = async (groupId: string, kind: 'taken' | 'help', kathi
   } catch {
     /* offline or the Worker isn't updated yet */
   }
+};
+
+// ---- calls and messages (2026-11-05) ---------------------------------------------------------------------
+
+const post = async (path: string, body: Record<string, unknown>) => {
+  try {
+    const user = auth.currentUser;
+    if (!user) return;
+    await fetch(`${SERVER}${path}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await user.getIdToken(), ...body }),
+    });
+  } catch {
+    /* offline or the Worker isn't updated yet: the open app shows it anyway */
+  }
+};
+
+/** A call just started in `base` (dms/{id} or classes/{id}): the others' phones ring. `end`: nobody answered. */
+export const notifyRing = (base: string, end = false) => post('/ring', end ? { base, end: true } : { base });
+
+/** A message `id` was just written in `base`: the chat's other people see it on their phones. `pin`: a teacher's card
+ *  in a class (classes/{id}/pins) — only its member hears it. */
+export const notifyChat = (base: string, id: string, pin = false) => post('/chat-notify', pin ? { base, id, pin: true } : { base, id });
+
+const CHAT_BOUND = 'sg-chat-push';
+
+/**
+ * This browser rings for the signed-in person's calls and shows their messages. `ask`: may ask for the permission (only
+ * from a tap); otherwise binds only where notifications are already allowed. Returns '' when bound, else why not.
+ */
+export const bindChatDevice = async (ask: boolean): Promise<string> => {
+  const user = auth.currentUser;
+  if (!user) return 'ჯერ შედი ანგარიშში.';
+  if (!pushSupported()) return 'ეს ბრაუზერი შეტყობინებებს ვერ მიიღებს.';
+  if (Notification.permission !== 'granted') {
+    if (!ask || Notification.permission === 'denied') return 'შეტყობინებები დაბლოკილია — ჩართე ტელეფონის პარამეტრებში.';
+    if ((await Notification.requestPermission()) !== 'granted') return 'შეტყობინებები დაბლოკილია — ჩართე ტელეფონის პარამეტრებში.';
+  }
+  try {
+    const reg = await navigator.serviceWorker.getRegistration();
+    if (!reg?.pushManager) return 'შეტყობინებები მხოლოდ გამოქვეყნებულ საიტზე მუშაობს.';
+    const sub = (await reg.pushManager.getSubscription())
+      ?? await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(VAPID_PUBLIC_KEY) });
+    const res = await fetch(`${SERVER}/account`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ subscription: sub.toJSON(), token: await user.getIdToken(), chat: true }),
+    });
+    if (!res.ok) return 'შეხსენებების სერვერმა ვერ მიიღო. სცადე მოგვიანებით.';
+    localStorage.setItem(CHAT_BOUND, `${user.uid}|${sub.endpoint.slice(-24)}|${new Date().toISOString().slice(0, 10)}`);
+    return '';
+  } catch {
+    return 'შეხსენებების სერვერთან კავშირი ვერ მოხერხდა.';
+  }
+};
+
+/** this browser was bound for this person today (a quiet re-bind once a day keeps a renewed subscription in place) */
+export const chatBoundToday = (uid: string) => {
+  const v = localStorage.getItem(CHAT_BOUND) || '';
+  return v.startsWith(`${uid}|`) && v.endsWith(`|${new Date().toISOString().slice(0, 10)}`);
 };
