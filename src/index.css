@@ -238,3 +238,12 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
   .tsikhe-leaf-l { animation: none; transform: rotateY(-80deg); }
   .tsikhe-leaf-r { animation: none; transform: rotateY(80deg); }
 }
+
+/* „ცხელი ჩურჩხელა“: the hot churchkhela sways on its string and steams; burnt, its flames flicker and smoke rises */
+@keyframes chk-steam { 0% { transform: translateY(6px); opacity: 0; } 40% { opacity: 0.75; } 100% { transform: translateY(-12px); opacity: 0; } }
+.chk-steam { animation: chk-steam 2.2s ease-in-out infinite; }
+@keyframes chk-sway { 0%, 100% { transform: rotate(-2.5deg); } 50% { transform: rotate(2.5deg); } }
+.chk-hot { transform-box: view-box; transform-origin: 50% 3%; animation: chk-sway 1.9s ease-in-out infinite; }
+@keyframes chk-flame { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(0.88, 1.12); } }
+.chk-flame { transform-box: fill-box; transform-origin: 50% 100%; animation: chk-flame 0.5s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) { .chk-steam, .chk-hot, .chk-flame { animation: none; } }

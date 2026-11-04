@@ -34,6 +34,13 @@ const soundSubs = new Set<() => void>();
 const setSounding = (s: Sounding | null) => { sounding = s; soundSubs.forEach(f => f()); };
 export const useSounding = () => useSyncExternalStore(f => { soundSubs.add(f); return () => { soundSubs.delete(f); }; }, () => sounding);
 
+/** the screen's piece: its state and since when (performance.now(), ms), the last one to change (2026-11-04: „ცხელი ჩურჩხელა“
+ * times its round by the music itself — when it began playing on this phone, and when it stopped) */
+export interface PieceState { state: SnipState; since: number }
+let piece: PieceState = { state: 'idle', since: 0 };
+const pieceSubs = new Set<() => void>();
+export const usePieceState = () => useSyncExternalStore(f => { pieceSubs.add(f); return () => { pieceSubs.delete(f); }; }, () => piece);
+
 // every screen's piece, to be silenced at once (a singer's microphone must not hear it)
 const hushers = new Set<() => void>();
 export const hushSnippets = () => hushers.forEach(stop => stop());
@@ -67,6 +74,7 @@ export const useSnippet = (seconds: number) => {
   const cur = useRef<{ url: string; from: number; start: number | null; secs: number } | null>(null);
   const [state, setState] = useState<SnipState>('idle');
   const [prog, setProg] = useState(0);
+  useEffect(() => { piece = { state, since: performance.now() }; pieceSubs.forEach(f => f()); }, [state]);
   // the synthesizer's piece now sounding, and the number of the last play (a later one wins)
   const synth = useRef<(() => void) | null>(null);
   const turn = useRef(0);

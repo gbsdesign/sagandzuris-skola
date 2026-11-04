@@ -366,6 +366,17 @@
   reveal counts it on every phone, a beat a name (`GATVLA_BEAT_MS`), and the one it lands on starts and leaves the circle: a
   round's `before` = who was picked so far, so the rounds give the whole order (`drawGatvla`: one round fewer than the players at
   most, the rhymes in turn). The draw gets the room's names: `RoundFace.draw(count, program, players)`.
+  Since 2026-11-04 „ცხელი ჩურჩხელა“'s one phone is its „ჰიბრიდული“ tab (`pages/games/churchkhela/Table.tsx`) and „ონლაინ“ is a
+  quick-games room (`churchkhela` in `ROUND_GAMES`/`ROOM_GAMES`/the rules/the Worker's titles; rules `utils/churchkhelaRounds.ts` +
+  test; face `churchkhela/face.tsx`, the art and the clock `churchkhela/parts.tsx`): everybody holds the churchkhela on their own
+  phone while a pool recording plays there; a round burns at a random `burn` (6–24 s, a tenth of a second) and whoever has not let
+  go by then is burnt and does the round's task in the call (`taskSeats`; nobody burnt → the first to let go); a let-go earns its
+  share of the time held, 10…1000 (`holdPoints`, the pick = tenths + 1, 0 = burnt). Each phone keeps the time by its own music
+  (`useHeat`: `burn` after the music began on this phone — `usePieceState`, `useSnippet`'s bus —, or after `FALLBACK` 2.5 s when it
+  has not; at the burn `hushSnippets` stops it), so a slow download burns nobody; the room's clock = the burn + `BURN_GRACE` 5 s.
+  New face hooks: `everyPhone` (the piece always sounds on every phone, no lobby choice — on the host's phone alone its delay would
+  tell), `selfTimed` (no clock, no send button; the Pick sends by itself) and `Sent` (my card once sent). On a phone on its side
+  the churchkhela stands beside its button (`[@media(max-height:500px)]` classes).
 - **„რა? სად? როდის?“ (2026-10-28)**: the team quiz (`pages/games/RaSadRodisGame.tsx`, `mapItem` `rsr`; rules
   `utils/raSadRodis.ts` + test). The user's answers „1ა 2ა 3ა“: ~100 questions written by Claude from the app's own texts — 111 in
   `data/raSadRodisQuestions.ts` (+ since 2026-11-01 the shared broad bank `data/kartuliQuiz.ts`: 153 facts with three wrong answers
@@ -436,7 +447,7 @@
   (`HybridState`, `markTeam`, kept on the device so ✕ only pauses). The room store is generic since then: `utils/gameRoom.ts`
   `createRooms(be, engine, moves)` over a `RoomEngine` (`games` it plays; samshvilde's is `utils/samshvildeRoom.ts`), the
   app's two stores in `utils/gameRoomFirestore.ts` (`rooms` = samshvilde, `roundRooms` = the quick games: `timeUp(key)`,
-  `reveal`, `next`); the rules let a room be opened for every `ROOM_GAMES` game (23 since 2026-11-04), up to 40 players, an act may carry `ms` (and `text`).
+  `reveal`, `next`); the rules let a room be opened for every `ROOM_GAMES` game (24 since 2026-11-04), up to 40 players, an act may carry `ms` (and `text`).
   Invitations name their game: `data/roomGames.ts` (titles, the hub item, a chat card's `room` = `game:roomId` — a
   samshvilde card keeps the bare id), the Worker's `GAME_TITLES`, `/?open=<game>&c=&r=`, icons
   `components/games/roomGameIcons.ts`; the online tab of every room game is `components/games/RoomSetup.tsx`. Screens
@@ -932,6 +943,10 @@
   lands in circles of 2–12 (`countOut`) + three frames for the class's own; „ვისი ჯერია?“ = wheels of 12 and 24 places spun with a
   paper clip on a pencil point and the fair-turns sheet (30 names, a box a turn — a pick with more boxes than the fewest spins
   again); 64 team tokens ⌀23 mm (four colours, each with its mark, 1–16) and 8 ★ „იწყებს“ to draw from a bag.
+  „ცხელი ჩურჩხელა“'s (2026-11-04, `tskheli-churchkhela.mjs`, 6 sheets): the app's 25 tasks (`TASKS`) as cards + 2 blank, the backs
+  in the kind's colour (a host may draw from one pile), four two-sided 20 cm paper churchkhelas (the app's drawing at 0.95 mm a
+  unit, a tab with a hole for a thread, cut round by `halo` of `dolls.mjs`) with what a churchkhela is behind, and the tally
+  „ვინ დაიწვა?“ (20 rounds, both sides) with the stop by a die thrown in secret (× 5 s, × 3 for the little ones).
   The musical games' kits (2026-11-01, stage 1; the host sings, so the melodies come from the book notes): `scripts/print-games/music.mjs`
   draws staves with abcjs inside the print page (`abcOf` one voice, every accidental written, numbered marks; `abcScore` three voices
   under each other on one clef, tied to keep time), `melodies.mjs` = the chants of the app's chant games + the program's songs with

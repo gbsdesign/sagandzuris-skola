@@ -149,19 +149,21 @@ export const RoundsPlayer: React.FC<{
       title={face.title}
       right={right}
       onClose={onHide}
-      footer={!done && (face.typed
+      footer={!done && !face.selfTimed && (face.typed
         ? <TypedField value={draft} onChange={setDraft} onSend={() => send()} placeholder={face.typed.placeholder} />
         : <Btn size="lg" full disabled={marked === null} onClick={() => send()} icon={<Send />} className="!h-14 !text-[15.5px]">{face.confirm(v.q, pick)}</Btn>
       )}
     >
       <div className="py-2 space-y-4">
         <RoundHead at={v.at} total={v.total}>
-          <TimerRing left={left} total={v.secs} size="sm" />
+          {!face.selfTimed && <TimerRing left={left} total={v.secs} size="sm" />}
         </RoundHead>
         {watching}
         {clip ? <SnippetBox state={snippet.state} prog={snippet.prog} onTap={tapClip} /> : piece && <HostSoundLine />}
         {face.Ask && <face.Ask q={v.q} who="player" step={v.step} steps={v.steps} />}
-        {answered ? (
+        {answered && face.Sent ? (
+          <face.Sent q={v.q} pick={myPick} answered={v.answered.filter(Boolean).length} total={v.names.length} />
+        ) : answered ? (
           <>
             <div className="rounded-3xl bg-[#2f7d4f]/10 ring-1 ring-[#2f7d4f]/25 px-4 py-5 text-center" role="status">
               <Check className="w-8 h-8 mx-auto text-[#2f7d4f]" />
