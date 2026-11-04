@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 
 export type ToastType = 'success' | 'error' | 'info';
@@ -18,13 +18,15 @@ export const Toast: React.FC<ToastProps> = ({
   onClose,
   duration = 3000,
 }) => {
+  // the latest onClose, so a parent's new arrow on every render does not start the time again (2026-11-04: while a word
+  // game was typed, its „ასეთი სიტყვა ლექსიკონში არ არის“ never went away); a new message starts it again
+  const close = useRef(onClose);
+  useEffect(() => { close.current = onClose; });
   useEffect(() => {
     if (!isVisible) return;
-    const timer = setTimeout(() => {
-      onClose();
-    }, duration);
+    const timer = setTimeout(() => close.current(), duration);
     return () => clearTimeout(timer);
-  }, [isVisible, duration, onClose]);
+  }, [isVisible, message, duration]);
 
   if (!isVisible) return null;
 

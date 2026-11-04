@@ -14,11 +14,11 @@ import { GeoKeyboard } from '../../../components/games/GeoKeyboard';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { Chip } from '../../../components/games/Chip';
 import { Btn, Card, askConfirm, useWide } from '../../../components/ui/kit';
-import { Hint } from '../samshvilde/parts';
 import { Podium, Standings, TimerRing } from '../rounds/parts';
 import { TEAM_TINT, TeamChips, TeamsEditor, readTeams, teamNames, useTurnClock, type TeamsConf } from '../rounds/teams';
 import { ScriptChips } from '../bade/parts';
 import { TsBoard, type Tone } from './Board';
+import { HowTo } from '../../../components/games/HowTo';
 
 // „ხუცური წარწერა“ on one screen (the hub's „ჰიბრიდული“, 2026-11-01), the way of the TV's „სასწაულების ველი“: the line in the
 // old letters big on the phone or a projector, the teams in turn name a letter, the teacher taps it on the screen's keys. The
@@ -258,6 +258,12 @@ export const TsartseraTable: React.FC = () => {
           </div>
         </Card>
       )}
+      <HowTo id="tsartsera-table" steps={[
+        `ეკრანზე წარწერაა ${SCRIPT_BY[conf.script]}, ყოველი ასოს ქვეშ ცარიელი უჯრით (როგორც „სასწაულების ველში“).`,
+        'გუნდები რიგრიგობით ასოს ასახელებენ, მასწავლებელი მას ეკრანის კლავიატურაზე აჭერს.',
+        'ასო წარწერაშია — ყველა ასეთი იხსნება, გუნდს თითო ასოზე ქულა ეწერება და ისევ ის ასახელებს. არ არის — ჯერი გადადის.',
+        `ვინც წარწერას ამოიკითხავს, ამბობს „ვკითხულობ!“. სწორია — დარჩენილი ასოების ქულა და კიდევ ${READ_BONUS}; არასწორია — ქულა არავის ერგება.`,
+      ]} />
       <Card className="!p-4 space-y-4">
         <TeamsEditor conf={conf} onChange={c => setConf({ ...conf, ...c })} />
         <div className="space-y-2">
@@ -278,13 +284,6 @@ export const TsartseraTable: React.FC = () => {
         </div>
       </Card>
       <Btn size="lg" full icon={<Play />} onClick={() => { void start(); }} className="!h-14 !text-[15.5px]">დაწყება</Btn>
-      <Hint>
-        როგორც „სასწაულების ველში“: ეკრანზე წარწერაა {SCRIPT_BY[conf.script]}, ასოების ქვეშ ცარიელი უჯრებით. გუნდები რიგრიგობით ასოს
-        ასახელებენ, მასწავლებელი მას ეკრანის კლავიატურაზე აჭერს. თუ წარწერაში არის — ყველა ასეთი ასო გაიხსნება, გუნდს იმდენი ქულა
-        ეწერება, რამდენი ასოც გაიხსნა, და ისევ ის ასახელებს. თუ არ არის — ჯერი გადადის. ვინც მთელ წარწერას ამოიკითხავს, ამბობს
-        „ვკითხულობ!“: მასწავლებელი აჭერს „ამოიკითხეს!“-ს, უსმენს და ხსნის. სწორია — დარჩენილი ასოები და კიდევ {READ_BONUS} ქულა;
-        არასწორია — წარწერა იხსნება და ქულა არავის ერგება. ყოველ წარწერას შემდეგი გუნდი იწყებს.
-      </Hint>
     </div>
   );
 };

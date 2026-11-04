@@ -109,6 +109,13 @@ const SitqvaDaily: React.FC = () => {
     } catch { /* the share sheet was closed */ }
   };
 
+  // while the word is guessed a warning shows over the keys (a toast would cover them) and goes by itself
+  useEffect(() => {
+    if (!toast || day.done) return;
+    const t = window.setTimeout(() => setToast(null), 2500);
+    return () => window.clearTimeout(t);
+  }, [toast, day.done]);
+
   if (!loaded || !cal || !pick) return <div className="w-full max-w-2xl px-1 py-6 text-center text-[13px] text-[#8a7a6a]">იტვირთება…</div>;
 
   const rows = Array.from({ length: MAX_TRIES }, (_, r) => {
@@ -164,7 +171,11 @@ const SitqvaDaily: React.FC = () => {
       </div>
 
       {!day.done ? (
-        <GeoKeyboard marks={marks} onKey={type} onBack={back} onEnter={submit} />
+        // the keys stay at the screen's foot: on a phone the board pushes „შემოწმება“ below the fold (the review, 2026-11-04)
+        <div className="sticky bottom-0 z-10 -mx-4 px-4 pt-2 pb-3 bg-[#fbf6ec]/95 backdrop-blur-sm border-t border-[#e8dcc8]/70">
+          {toast && <p role="status" className="mb-2 rounded-xl bg-[#7a2028]/[0.08] px-3 py-1.5 text-center text-[13.5px] font-bold leading-snug text-[#7a2028]">{toast}</p>}
+          <GeoKeyboard marks={marks} onKey={type} onBack={back} onEnter={submit} />
+        </div>
       ) : (
         <Card tone="paper" className="!p-4">
           <p className="font-serif-ge text-[17px] font-bold leading-snug text-[#4a3426]">{day.won ? `გამოიცანი ${day.guesses.length} ცდაში! 🎉` : 'დღეს ვერ გამოიცანი'}</p>
@@ -203,7 +214,7 @@ const SitqvaDaily: React.FC = () => {
         </ul>
       </Card>
 
-      <Toast message={toast || ''} type="info" isVisible={!!toast} onClose={() => setToast(null)} />
+      <Toast message={toast || ''} type="info" isVisible={!!toast && day.done} onClose={() => setToast(null)} />
     </div>
   );
 };

@@ -11,8 +11,8 @@ import { Chip } from '../../../components/games/Chip';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { KeyStrip } from '../../../components/games/KeyStrip';
 import { Btn, Card, askConfirm, useWide } from '../../../components/ui/kit';
-import { Hint } from '../samshvilde/parts';
 import { TEAM_TINT, TeamChips, TeamsEditor, readTeams, teamNames, type TeamsConf } from '../rounds/teams';
+import { HowTo } from '../../../components/games/HowTo';
 
 // „სამი დამწერლობა“ before one screen (the hub's „ჰიბრიდული“, 2026-11-01): „სწრაფი კითხვა“ — an old letter, word or line on
 // the screen (a TV or the teacher's phone), the teams read it aloud, the host taps who read it first; then the answer opens.
@@ -158,6 +158,12 @@ export const AnbaniTable: React.FC = () => {
           </div>
         </Card>
       )}
+      <HowTo id="anbani-table" steps={[
+        'ეკრანზე ძველი ასო, სიტყვა ან სტრიქონი ჩნდება.',
+        'გუნდები ხმამაღლა კითხულობენ. ვინც პირველი წაიკითხავს სწორად, მასწავლებელი იმ გუნდს ეხება და პასუხი იხსნება.',
+        'ასო და სიტყვა ერთი ქულაა, სტრიქონი — ორი.',
+        'დასაწყისში ანბანის გასაღები ეკრანზე დატოვეთ, მერე დამალეთ. ტელეფონი ტელევიზორზეც შეგიძლიათ გამოიტანოთ.',
+      ]} />
       <Card className="!p-4 space-y-4">
         <TeamsEditor conf={conf} onChange={c => setConf({ ...conf, ...c })} />
         <div className="space-y-2">
@@ -184,11 +190,6 @@ export const AnbaniTable: React.FC = () => {
         </div>
       </Card>
       <Btn size="lg" full icon={<Play />} onClick={() => { void start(); }} className="!h-14 !text-[15.5px]">დაწყება</Btn>
-      <Hint>
-        ეკრანზე ძველი ასო, სიტყვა ან სტრიქონი ჩნდება. გუნდები ხმამაღლა კითხულობენ — ვინც პირველი წაიკითხავს სწორად, მასწავლებელი იმ
-        გუნდს ეხება და პასუხი იხსნება. ასო და სიტყვა ერთი ქულაა, სტრიქონი — ორი. დასაწყისში გასაღები დატოვეთ, მერე — დამალეთ.
-        ტელეფონი ტელევიზორზეც შეგიძლიათ გამოიტანოთ.
-      </Hint>
     </div>
   );
 };

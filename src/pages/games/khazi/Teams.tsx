@@ -8,10 +8,10 @@ import { triggerHaptic } from '../../../utils/haptics';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { Chip } from '../../../components/games/Chip';
 import { Btn, Card, askConfirm, useWide } from '../../../components/ui/kit';
-import { Hint } from '../samshvilde/parts';
 import { Podium, Standings, TimerRing } from '../rounds/parts';
 import { TEAM_TINT, TeamChips, TeamsEditor, readTeams, teamNames, useTurnClock, type TeamsConf } from '../rounds/teams';
 import { HandCard, PickChips, TimeLine, type Reveal } from './parts';
+import { HowTo } from '../../../components/games/HowTo';
 
 // „დროის ხაზი“ on one screen (the hub's „ჰიბრიდული“, 2026-11-01): the phone on the table or a projector shows the one line of
 // the class. In turn a team gets the next card, says where it goes, the host taps that gap; the year opens and judges. Right —
@@ -177,6 +177,12 @@ export const KhaziTable: React.FC = () => {
           </div>
         </Card>
       )}
+      <HowTo id="khazi-table" steps={[
+        'ეკრანი მთელ კლასს ერთ ხაზს აჩვენებს: ის ერთი ბარათით იწყება, თავისი წლით.',
+        'თითო გუნდი რიგრიგობით იღებს ახალ ბარათს (წელი არ ჩანს) და ამბობს, სად ჩაჯდება: ზემოთ ადრეა, ქვემოთ — გვიან.',
+        'მასწავლებელი იქ აჭერს „აქ ჩასვი“-ს და წელი იხსნება. სწორია — ბარათი გუნდის ფერით რჩება და გუნდს ქულა ეწერება; არასწორია — ბარათი თავის ადგილზე დგება.',
+        'ჯერი ყოველთვის გადადის. ვინც მიზანს მიაღწევს, წრე მაინც ბოლომდე მიდის, რომ ყველას თანაბარი სვლა ჰქონდეს. „წირვის რიგში“ წლის ნაცვლად წირვის ნაწილის ადგილია.',
+      ]} />
       <Card className="!p-4 space-y-4">
         <TeamsEditor conf={conf} onChange={c => setConf({ ...conf, ...c })} />
         <div className="space-y-2">
@@ -198,13 +204,6 @@ export const KhaziTable: React.FC = () => {
         </div>
       </Card>
       <Btn size="lg" full icon={<Play />} onClick={() => { void start(); }} className="!h-14 !text-[15.5px]">დაწყება</Btn>
-      <Hint>
-        ტელეფონი ან პროექტორი მთელ კლასს ერთ ხაზს აჩვენებს — ერთი ბარათით იწყება, წლით. რიგრიგობით თითო გუნდი იღებს ახალ ბარათს
-        (წელი არ ჩანს) და ამბობს, სად ჩაჯდება: ზემოთ ადრეა, ქვემოთ გვიან. მასწავლებელი ეხება „აქ ჩასვი“-ს — წელი იხსნება. სწორია —
-        ბარათი გუნდის ფერით რჩება და გუნდს ქულა ეწერება; არასწორია — ბარათი თავის ადგილზე დგება, ქულა არავის. ჯერი ყოველთვის
-        გადადის. როცა გუნდი მიზანს მიაღწევს, წრე ბოლომდე მიდის, რომ ყველას თანაბარი სვლა ჰქონდეს. „წირვის რიგში“ წლის ნაცვლად
-        წირვის ნაწილის ადგილია.
-      </Hint>
     </div>
   );
 };

@@ -12,11 +12,11 @@ import { triggerHaptic } from '../../../utils/haptics';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { Chip } from '../../../components/games/Chip';
 import { Btn, Card, askConfirm } from '../../../components/ui/kit';
-import { Hint } from '../samshvilde/parts';
 import { Podium, Standings, TimerRing } from '../rounds/parts';
 import { TEAM_TINT, TeamChips, TeamsEditor, readTeams, teamNames, useTurnClock, type TeamsConf } from '../rounds/teams';
 import { BadeGrid, type Mark } from './Grid';
 import { AlphabetKey, ScriptChips, WordList } from './parts';
+import { HowTo } from '../../../components/games/HowTo';
 
 // „ასოების ბადე“ on one phone (the plan's hybrid, 2026-11-01): the grid big on the screen or a projector, one clock for the
 // grid. The teams look at once and shout what they see; the teacher draws the word on the grid (or taps it in the list) and
@@ -219,6 +219,12 @@ export const BadeTable: React.FC = () => {
           </div>
         </Card>
       )}
+      <HowTo id="bade-table" steps={[
+        'ტელეფონი ან ეკრანი მთელ კლასს ბადეს უჩვენებს და დროს ითვლის.',
+        'გუნდები ერთდროულად ეძებენ და ნაპოვნ სიტყვას ხმამაღლა ამბობენ.',
+        'მასწავლებელი სიტყვას ბადეზე თითით ხაზავს (ან სიაში აჭერს) და ირჩევს, რომელმა გუნდმა იპოვა. სიტყვა ერთი ქულაა.',
+        '„მხოლოდ თემა“ უფრო რთულია: სიტყვები არ ჩანს, მხოლოდ თემა და რაოდენობა.',
+      ]} />
       <Card className="!p-4 space-y-4">
         <TeamsEditor conf={conf} onChange={c => setConf({ ...conf, ...c })} />
         <div className="space-y-2">
@@ -254,11 +260,6 @@ export const BadeTable: React.FC = () => {
         </div>
       </Card>
       <Btn size="lg" full icon={<Play />} onClick={() => { void start(); }} className="!h-14 !text-[15.5px]">დაწყება</Btn>
-      <Hint>
-        ტელეფონი (ან ეკრანი) კლასს ბადეს უჩვენებს და საათს ითვლის. გუნდები ერთდროულად ეძებენ და ნაპოვნ სიტყვას ყვირიან; მასწავლებელი
-        სიტყვას ბადეზე თითით ხაზავს (ან სიაში აჭერს) და ირჩევს, რომელმა გუნდმა იპოვა — სიტყვა ერთი ქულაა. „მხოლოდ თემა“ უფრო რთულია:
-        სიტყვები არ ჩანს, მხოლოდ თემა და რაოდენობა.
-      </Hint>
     </div>
   );
 };
