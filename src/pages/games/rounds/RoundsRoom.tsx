@@ -71,7 +71,7 @@ export const RoundsRoom: React.FC<{
     snippet.unlock();
     const rounds = face.draw(face.fixedRounds ?? opts.count, program, snap.joins.map(j => j.name));
     if (!rounds.length) { setEmpty(true); return; }
-    if (roundRooms.host.start({ game: face.game, rounds, sound: opts.sound })) face.remember(rounds);
+    if (roundRooms.host.start({ game: face.game, rounds, sound: face.everyPhone ? 'all' : opts.sound })) face.remember(rounds);
   };
   const again = () => {
     const s = snap.state;

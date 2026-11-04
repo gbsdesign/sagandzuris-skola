@@ -31,6 +31,11 @@ export interface RoundFace {
   /** the round's piece at a step (a recording's, or a chant's on the synthesizer), when it has one */
   clip?: (q: PublicQ, step: number) => Clip | null;
   clipSeconds: number;
+  /** the piece always sounds on every phone — no choice in the lobby (2026-11-04, „ცხელი ჩურჩხელა“: each phone times its own) */
+  everyPhone?: boolean;
+  /** the round's end is the game's secret and its `Pick` sends by itself (`autoSend`): the player's screen shows no clock and no
+   * send button („ცხელი ჩურჩხელა“: the music stops at a moment nobody knows) */
+  selfTimed?: boolean;
   /** a round of several steps (more of the piece at each): the host's button that brings the next one sooner */
   nextLabel?: string;
   /** a game of so many rounds only (no choice in the lobby or the one-phone setup) */
@@ -63,6 +68,8 @@ export interface RoundFace {
   Pick: React.FC<{ q: PublicQ; pick: number | null; onPick: (p: number | null) => void; seat?: number; locked?: boolean }>;
   /** the controls stay on the screen once the answer is sent (locked, showing it): a card one keeps looking at */
   keepPick?: boolean;
+  /** the player's card once the answer is sent, in place of „პასუხი გაგზავნილია“ (`answered` of `total` so far) */
+  Sent?: React.FC<{ q: PublicQ; pick: number | null; answered: number; total: number }>;
   /** a game answered in words (2026-11-04, „რა? სად? როდის?“; its rules are `typed`): the player writes the answer in a
    *  field instead of `Pick` (sent as the act's `text`, a draft by itself as the time runs out); at the reveal the host
    *  judges each one again and every phone shows what each wrote (rounds/typed.tsx) */

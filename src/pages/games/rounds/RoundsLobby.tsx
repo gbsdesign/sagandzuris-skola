@@ -94,7 +94,7 @@ export const RoundsLobby: React.FC<{
               </div>
             )}
             {face.Options && <face.Options />}
-            {face.clip && (
+            {face.clip && !face.everyPhone && (
               <div className="space-y-2">
                 <p className="text-[13.5px] font-bold text-[#4a3426]">სად ჟღერს ნაწყვეტი</p>
                 <div className="flex flex-wrap gap-2" role="group" aria-label="სად ჟღერს ნაწყვეტი">
