@@ -427,7 +427,7 @@ service cloud.firestore {
         }
         allow read: if inClass();
         allow create: if inClass() && roomOk()
-          && incoming().game in ['samshvilde', 'kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri', 'hangi', 'akordi', 'rvakhma', 'ruka', 'gagrdzele', 'hangebi', 'eqo', 'mprinavi', 'tsqvilebi', 'mesame', 'chamotvale', 'pantomima', 'nakhati', 'loto', 'rsr', 'amikhseni', 'gatvla', 'churchkhela']
+          && incoming().game in ['samshvilde', 'kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri', 'hangi', 'akordi', 'rvakhma', 'ruka', 'gagrdzele', 'hangebi', 'eqo', 'mprinavi', 'tsqvilebi', 'mesame', 'chamotvale', 'pantomima', 'nakhati', 'loto', 'rsr', 'amikhseni', 'gatvla', 'churchkhela', 'kari']
           && incoming().host == uid() && incoming().status == 'lobby'
           && incoming().createdAt == request.time && incoming().uids.size() == 0;
         allow update: if inClass() && existing().host == uid() && roomOk()
