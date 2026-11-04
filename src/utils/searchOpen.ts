@@ -12,7 +12,7 @@ export const openSearch = (query?: string) => window.dispatchEvent(new CustomEve
 // already on screen. One request at a time; a page that never opens simply leaves it unused.
 /** a page that takes a picked item; a game played in a class's room takes a room (`classId/roomId`) or a variant, as do
  *  „ჩემი გუნდი“, „დღის სიტყვა“ and „ოთხეული“ (a variant: its tab) */
-export type OpenTarget = 'simghera' | 'tsinaprebi' | 'biblioteka' | 'admin' | 'gundi' | 'sitqva' | 'otkheuli' | 'bade' | 'tsartsera' | 'khazi' | 'vazi' | 'chaitsvi' | 'anbani' | 'tsikhe' | 'tsinapari' | 'tabu' | 'minishneba' | 'vin' | 'saidumlo' | 'utskho' | 'dzebna' | 'ezo' | RoomGame;
+export type OpenTarget = 'simghera' | 'tsinaprebi' | 'biblioteka' | 'admin' | 'gundi' | 'sitqva' | 'otkheuli' | 'bade' | 'tsartsera' | 'khazi' | 'vazi' | 'chaitsvi' | 'anbani' | 'tsikhe' | 'tsinapari' | 'tabu' | 'minishneba' | 'vin' | 'saidumlo' | 'utskho' | 'dzebna' | 'ezo' | 'margalitebi' | RoomGame;
 const REQUEST_EVENT = 'sg-open-request';
 let pending: { target: OpenTarget; id: string } | null = null;
 

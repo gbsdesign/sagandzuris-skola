@@ -377,6 +377,13 @@
   New face hooks: `everyPhone` (the piece always sounds on every phone, no lobby choice — on the host's phone alone its delay would
   tell), `selfTimed` (no clock, no send button; the Pick sends by itself) and `Sent` (my card once sent). On a phone on its side
   the churchkhela stands beside its button (`[@media(max-height:500px)]` classes).
+  Since 2026-11-04 „მარგალიტები“ is a hub game too (item `margalitebi`, `pages/games/MargalitebiGame.tsx` = `VariantPage`, the hub
+  opens its tab by `requestOpen('margalitebi', …)`): „ონლაინ“ = `PearlChests` (the path's round button stays), „ჰიბრიდული“ = „კლასის
+  სკივრი“ (`pages/games/margalitebi/ClassChest.tsx`, rules `utils/pearlTeams.ts` + test): 2–6 teams in turn, a pearl of the chosen
+  chest a turn (2/3/4 a team), the singer picks a voice and sings into the phone (turniri's `Sing`, whose `onScore` now also gives
+  the voice); the per cent = the points, 80 % polishes — on the class's own chest too, kept on the phone (`sg-margalitebi-chest`,
+  the best per voice; the pearls the class has polished in fewest voices come first); a game's takes join that chest when it ends
+  (`chestWith`), so a turn can be undone till then; kept in `sg-margalitebi-teams`, settings `sg-margalitebi-table`, ✕ only pauses.
 - **„რა? სად? როდის?“ (2026-10-28)**: the team quiz (`pages/games/RaSadRodisGame.tsx`, `mapItem` `rsr`; rules
   `utils/raSadRodis.ts` + test). The user's answers „1ა 2ა 3ა“: ~100 questions written by Claude from the app's own texts — 111 in
   `data/raSadRodisQuestions.ts` (+ since 2026-11-01 the shared broad bank `data/kartuliQuiz.ts`: 153 facts with three wrong answers
@@ -947,6 +954,11 @@
   in the kind's colour (a host may draw from one pile), four two-sided 20 cm paper churchkhelas (the app's drawing at 0.95 mm a
   unit, a tab with a hole for a thread, cut round by `halo` of `dolls.mjs`) with what a churchkhela is behind, and the tally
   „ვინ დაიწვა?“ (20 rounds, both sides) with the stop by a die thrown in secret (× 5 s, × 3 for the little ones).
+  „მარგალიტები“'s (2026-11-04, `margalitebi.mjs`, 12 sheets): every pearl's three phrases note for note the app's (`phraseOf`'s count
+  over `lineOf`; a voice over 26 notes on two lines — `abcOf`'s new `breaks`), a chest's twenty flowed over its five pages by the
+  print's script (each staff's box trimmed to what abcjs drew; the build stops if a chest needs more), each chest's class table (a
+  circle a voice, ★ golden), 70 tokens ⌀25 mm (three rows a chest with a spare, a row of spares), „ჩემი სკივრები“ to colour (both
+  sides) and the rules: a team draws a token, the host sings the voice's phrase, the jury gives 2 (four notes of five — 80 %) · 1 · 0.
   The musical games' kits (2026-11-01, stage 1; the host sings, so the melodies come from the book notes): `scripts/print-games/music.mjs`
   draws staves with abcjs inside the print page (`abcOf` one voice, every accidental written, numbered marks; `abcScore` three voices
   under each other on one clef, tied to keep time), `melodies.mjs` = the chants of the app's chant games + the program's songs with

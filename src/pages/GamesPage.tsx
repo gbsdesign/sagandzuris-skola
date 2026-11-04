@@ -71,6 +71,7 @@ import NakhatiGame from './games/NakhatiGame';
 import LotoGame from './games/LotoGame';
 import DzebnaGame from './games/DzebnaGame';
 import EzoGame from './games/EzoGame';
+import MargalitebiGame from './games/MargalitebiGame';
 import { useVine } from './games/vazi/useVine';
 
 // „თამაშები“: the hub of the games (2026-10-27; one list since 2026-10-30, the user's „ყველა თამაში 1 სიად“). A card per
@@ -94,7 +95,7 @@ const INNER: Record<string, React.FC> = {
   hangi: HangiGame, amikhseni: AmikhseniGame, sitqva: SitqvaGame, otkheuli: OtkheuliGame, gatvla: GatvlaGame, churchkhela: ChurchkhelaGame, rsr: RaSadRodisGame,
   samshvilde: SamshvildeGame, kutkhe: KutkheGame, otkhi: OtkhiGame, khmebi: KhmebiGame, notebi: NotebiGame, turniri: TurniriGame,
   akordi: AkordiGame, rvakhma: RvakhmaGame, ruka: RukaGame, gagrdzele: GagrdzeleGame, hangebi: HangebiGame,
-  eqo: EqoGame, mprinavi: MprinaviGame, tsqvilebi: TsqvilebiGame, mesame: MesameGame, gundi: GundiGame, chamotvale: ChamotvaleGame, bade: BadeGame, tsartsera: TsartseraGame, khazi: KhaziGame, vazi: VaziGame, chaitsvi: ChaitsviGame, anbani: AnbaniGame, tsikhe: TsikheGame, tsinapari: TsinapariGame, tabu: TabuGame, minishneba: MinishnebaGame, pantomima: PantomimaGame, vin: VinGame, saidumlo: SaidumloGame, utskho: UtskhoGame, nakhati: NakhatiGame, loto: LotoGame, dzebna: DzebnaGame, ezo: EzoGame,
+  eqo: EqoGame, mprinavi: MprinaviGame, tsqvilebi: TsqvilebiGame, mesame: MesameGame, gundi: GundiGame, chamotvale: ChamotvaleGame, bade: BadeGame, tsartsera: TsartseraGame, khazi: KhaziGame, vazi: VaziGame, chaitsvi: ChaitsviGame, anbani: AnbaniGame, tsikhe: TsikheGame, tsinapari: TsinapariGame, tabu: TabuGame, minishneba: MinishnebaGame, pantomima: PantomimaGame, vin: VinGame, saidumlo: SaidumloGame, utskho: UtskhoGame, nakhati: NakhatiGame, loto: LotoGame, dzebna: DzebnaGame, ezo: EzoGame, margalitebi: MargalitebiGame,
 };
 
 const BTN = 'inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full text-[13.5px] font-bold transition-[background-color,transform] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#7a2028]/50';
@@ -229,7 +230,7 @@ export const GamesPage: React.FC = () => {
     if (state !== 'open') { setSoon(`„${g.title}“ ჯერ მზადდება — მალე დაემატება`); return; }
     // a game played in a class's room („სამშვილდის ღამე“, the quick games), „ჩემი გუნდი“ and the word games with teams open
     // on the variant tapped
-    if (isRoomGame(g.item) || g.item === 'gundi' || g.item === 'sitqva' || g.item === 'otkheuli' || g.item === 'bade' || g.item === 'tsartsera' || g.item === 'khazi' || g.item === 'vazi' || g.item === 'chaitsvi' || g.item === 'anbani' || g.item === 'tsikhe' || g.item === 'tsinapari' || g.item === 'tabu' || g.item === 'minishneba' || g.item === 'vin' || g.item === 'saidumlo' || g.item === 'utskho' || g.item === 'dzebna' || g.item === 'ezo') requestOpen(g.item, mode === 'online' ? 'online' : 'table');
+    if (isRoomGame(g.item) || g.item === 'gundi' || g.item === 'sitqva' || g.item === 'otkheuli' || g.item === 'bade' || g.item === 'tsartsera' || g.item === 'khazi' || g.item === 'vazi' || g.item === 'chaitsvi' || g.item === 'anbani' || g.item === 'tsikhe' || g.item === 'tsinapari' || g.item === 'tabu' || g.item === 'minishneba' || g.item === 'vin' || g.item === 'saidumlo' || g.item === 'utskho' || g.item === 'dzebna' || g.item === 'ezo' || g.item === 'margalitebi') requestOpen(g.item, mode === 'online' ? 'online' : 'table');
     if (g.item) { openMapItem(g.item); return; }
     if (g.page) { if (g.panel) openPathPanel(g.panel); navigateTo(g.page); }
   };
