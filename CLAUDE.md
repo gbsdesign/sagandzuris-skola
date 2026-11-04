@@ -822,6 +822,22 @@
   (`Card.tsx` `side`, `useShort`, `CARD_SIDE`). Its kit (`sagalobo-loto.mjs`, 10 sheets): the 30 cards 98×90 mm six a sheet (each
   name with its service's colour, the number behind), the host's list of the 20 openings on staves, 20 slips to draw, „რა ჟღერდა“
   (four games a side: the order written by each chant — a line counts when its three names have numbers), six blank cards.
+- **„საგანძურის ძებნა“** (2026-11-04, the plan's №5, like Geocaching; mapItem `dzebna`, its own tabs in `DzebnaGame.tsx` — the hub
+  opens one by `requestOpen('dzebna', 'online' | 'table')`; rules `utils/dzebna.ts` + test, pools `data/dzebnaPools.ts`, screens
+  `pages/games/dzebna/`): stations with a task each — კითხვა („ოთხიდან ერთი“'s), კუთხე („რუკის ვიქტორინა“'s places), დრო (the earliest
+  of three „დროის ხაზი“ cards), ხუცური (a „სამი დამწერლობა“ word in old letters), მოისმინე (a chant's opening on the synthesizer) — a
+  letter for each solved, scrambled (`letterOrder`); the word (`huntBank`, 4–8 letters) opens the chest (`chestCheck`: whose word /
+  right letters, other order / none). „ონლაინ“ (`Solo.tsx`) = the day's hunt for the school (`soloHunt`: six regions found on the map
+  by three clues, then their tasks; misses cost 10/15/10 s, the clock pauses while hidden), record `useDailyRecord('dzebna')`
+  (`t:`, `x:`), free hunts after, the vine counts it. „ჰიბრიდული“ (`Table.tsx`): the teacher's phone sets it up (`Setup.tsx`: 4–8
+  stations, 1–6 teams, kinds, hiding places ≤ 40 letters) — the hunt is an eight-digit code (`huntCode`, two check digits), so every
+  phone works out the same tasks, team words and letters and nothing is sent; „ბარათები (PDF)“ is made in the browser (`cards.ts`:
+  QR cards `/?open=dzebna&h=&s=&n=<next place packed>` read by App.tsx, team slips, the key); the teacher's phone is the chest
+  (`Chest.tsx`: clock, arrivals); a scanned card opens its station on a team's phone (`Station.tsx`: team picked once, 15 s wait after a
+  miss) — team phones must be signed in, the games are members'. Kit `sagandzuris-dzebna.mjs` (8 sheets): four hunts of six stations
+  in four colours (fixed seeds, no chant; an answer's letter = the station's letter of the word, the wrong ones' letters the word
+  has not; an old word's key ≤ 12 letters), six 96×90 mm cards a hunt with a line for where the next hides, team sheets for any hunt,
+  the key, the chest's sign and arrivals.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in

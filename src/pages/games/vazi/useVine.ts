@@ -9,7 +9,7 @@ import { deedsOf, vineOf, type Vine } from '../../../utils/vazi';
 // The member's own vine, live from their record (students/{uid}); a guest's grows only from the daily games played on this
 // device (useDailyRecord keeps them under `sg-<game>`).
 
-const DAILY = ['hangi', 'sitqva', 'otkheuli', 'bade', 'tsartsera', 'khazi', 'anbani', 'tabu', 'vin', 'saidumlo', 'utskho'];
+const DAILY = ['hangi', 'sitqva', 'otkheuli', 'bade', 'tsartsera', 'khazi', 'anbani', 'tabu', 'vin', 'saidumlo', 'utskho', 'dzebna'];
 const deviceData = () => ({
   games: Object.fromEntries(DAILY.map(g => {
     try { return [g, { days: JSON.parse(localStorage.getItem(`sg-${g}`) || 'null') ?? {} }]; } catch { return [g, { days: {} }]; }

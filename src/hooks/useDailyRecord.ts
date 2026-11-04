@@ -11,7 +11,7 @@ import { type HangiDay } from '../utils/hangi';
 // device copy is kept for a member too, so the day's game goes on offline and reaches Firestore when the network is
 // back (setDoc queues it).
 
-export type DailyGame = 'hangi' | 'sitqva' | 'otkheuli' | 'bade' | 'tsartsera' | 'khazi' | 'anbani' | 'tabu' | 'vin' | 'saidumlo' | 'utskho';
+export type DailyGame = 'hangi' | 'sitqva' | 'otkheuli' | 'bade' | 'tsartsera' | 'khazi' | 'anbani' | 'tabu' | 'vin' | 'saidumlo' | 'utskho' | 'dzebna';
 type Days = Record<string, HangiDay>;
 
 const MAX_GUESSES = 20;

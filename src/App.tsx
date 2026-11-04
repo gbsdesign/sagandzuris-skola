@@ -25,6 +25,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageSprinkles } from './components/home/PlateOrnaments';
 import { ConfirmHost, UndoHost } from './components/ui/kit';
 import { requestOpen } from './utils/searchOpen';
+import { stationRequest } from './utils/dzebna';
 import { isRoomGame } from './utils/gameRoom';
 import { ROOM_GAME_INFO } from './data/roomGames';
 import { SaintLifeOverlay } from './components/saints/SaintLifeOverlay';
@@ -117,6 +118,16 @@ function AppContent() {
         openMapItem(ROOM_GAME_INFO[page].item);
       }
     }
+    // a station's card of „საგანძურის ძებნა“ (/?open=dzebna&h=<code>&s=<station>&n=<next place>): its station on the games page
+    else if (page === 'dzebna') {
+      const h = url.searchParams.get('h');
+      const s = url.searchParams.get('s');
+      if (h && s) {
+        requestOpen('dzebna', stationRequest(h, s, url.searchParams.get('n') ?? ''));
+        navigateTo('games');
+        openMapItem('dzebna');
+      }
+    }
     // an admin's notice: the panel, with the newcomer's window open
     else if (page === 'admin') {
       const person = url.searchParams.get('person');
@@ -134,6 +145,9 @@ function AppContent() {
     url.searchParams.delete('id');
     url.searchParams.delete('c');
     url.searchParams.delete('r');
+    url.searchParams.delete('h');
+    url.searchParams.delete('s');
+    url.searchParams.delete('n');
     window.history.replaceState(null, '', url.pathname + url.search + url.hash);
     openFromUrl(href);
     // eslint-disable-next-line react-hooks/exhaustive-deps
