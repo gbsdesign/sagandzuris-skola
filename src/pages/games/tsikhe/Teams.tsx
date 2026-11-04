@@ -10,11 +10,11 @@ import { TableScreen } from '../../../components/games/TableScreen';
 import { Chip } from '../../../components/games/Chip';
 import { KitButton } from '../../../components/games/KitButton';
 import { Btn, Card, askConfirm, useWide } from '../../../components/ui/kit';
-import { Hint } from '../samshvilde/parts';
 import { useNow } from '../rounds/parts';
 import { TEAM_TINT, TeamsEditor, readTeams, teamNames, type TeamsConf } from '../rounds/teams';
 import { CastleArt, ClockPill, OpenedDoor, lookOf } from './parts';
 import { DoorPanel, GatePanel, useTsikheSounds, type TsikheSounds } from './Door';
+import { HowTo } from '../../../components/games/HowTo';
 
 // „ციხის გასაღები“ with the class (the hub's „ჰიბრიდული“, 2026-11-01): every team has the castle's printed cards — a door a
 // card, the next one face down until the lock opens — and the phone on the teacher's desk is the castle's locks. A team comes
@@ -289,6 +289,12 @@ export const TsikheTableGame: React.FC = () => {
           </div>
         </Card>
       )}
+      <HowTo id="tsikhe-table" steps={[
+        'დაბეჭდეთ ციხის ბარათები (ღილაკი ქვემოთაა): თითო გუნდს ექვსი ბარათი, ზურგით ზემოთ, ნომრების რიგით.',
+        'გუნდი ბარათს აბრუნებს და ამოცანას ხსნის. ჰანგს ტელეფონი უკრავს, ზარებს გუნდი თვითონ უკრავს ტელეფონზე.',
+        'პასუხით გუნდი მასწავლებელთან მოდის: შეეხეთ გუნდს და შეიყვანეთ. სწორია — ტელეფონი იტყვის, რომელი ბარათი აიღონ, და გასაღების ნაწილს მისცემს.',
+        'ჭიშკართან ნაწილებიდან სიტყვა უნდა ააწყონ. საათი ყველასთვის ერთია, ჯარიმა — თითოეულის თავისი. ვინც პირველი გავა, ის იგებს.',
+      ]} />
       <Card className="!p-4 space-y-4">
         <div className="space-y-2">
           <p className="text-[13.5px] font-bold text-[#4a3426]">ციხე</p>
@@ -332,12 +338,6 @@ export const TsikheTableGame: React.FC = () => {
       >
         ბარათები დასაბეჭდად · PDF
       </KitButton>
-      <Hint>
-        დაბეჭდეთ ციხის ბარათები — თითო გუნდს თავისი ნაკრები: ექვსი ბარათი, ზურგით ზემოთ, ნომრების რიგით. გუნდი პირველ ბარათს
-        აბრუნებს და ამოცანას ხსნის. პასუხით მასწავლებელთან მოდის — შეეხეთ გუნდს და შეიყვანეთ: სწორია — ტელეფონი გეტყვით,
-        რომელი ბარათი აიღოს შემდეგ, და გასაღების ნაწილს. ჰანგს ტელეფონი უკრავს, ზარებს გუნდი თვითონ უკრავს ტელეფონზე. ჭიშკართან
-        ნაწილებიდან სიტყვა უნდა ააწყონ. საათი ყველასთვის ერთია, ჯარიმა — თითოეულის თავისი; ვინც პირველი გავა, ის იგებს.
-      </Hint>
     </div>
   );
 };

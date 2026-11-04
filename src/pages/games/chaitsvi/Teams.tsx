@@ -1,14 +1,14 @@
 import React, { useCallback, useState } from 'react';
-import { Flag, Play, RotateCcw, Timer, Trophy } from 'lucide-react';
+import { Flag, Play, RotateCcw, Trophy } from 'lucide-react';
 import { newDressTeams, parseDressTeams, ranking, recordTurn, timeText, turnOf, type DressTeams, type Outfit } from '../../../utils/chaitsvi';
 import { triggerHaptic } from '../../../utils/haptics';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { Btn, Card, askConfirm } from '../../../components/ui/kit';
-import { Hint } from '../samshvilde/parts';
 import { TEAM_TINT, TeamsEditor, readTeams, teamNames, type TeamsConf } from '../rounds/teams';
 import { DressBoard } from './Dress';
 import { pickHat, useKaba } from './Doll';
 import { DressOptions, OUTFIT_LABEL } from './Solo';
+import { HowTo } from '../../../components/games/HowTo';
 
 // „ჩაიცვი ქართულად“ on one phone (the hub's „ჰიბრიდული“, 2026-11-01): the teams dress in turn — the phone goes to the team on
 // turn, 3-2-1, and the fastest dressing wins (each mistake +3 s). Each team gets the parts in its own shuffled order and the
@@ -148,6 +148,12 @@ export const DressTable: React.FC = () => {
           </div>
         </Card>
       )}
+      <HowTo id="chaitsvi-table" steps={[
+        'გუნდები რიგრიგობით იღებენ ტელეფონს: 3, 2, 1 — და ნაწილები სწორი რიგით უნდა ჩაიცვან.',
+        'ადრე აღებული ნაწილი უკან ბრუნდება და დროს 3 წამს უმატებს. ყველაზე სწრაფი გუნდი იგებს.',
+        'ყოველ გუნდს ნაწილები სხვა რიგით უწყვია, ქუდი კი ერთი და იგივეა.',
+        'გაქვთ ნამდვილი ჩოხა? გუნდი თავის „მოდელს“ აცმევს, მასწავლებელი ყოველ ჩაცმულ ნაწილზე ეხება ტელეფონს. რიგს და დროს ტელეფონი ითვლის.',
+      ]} />
       <Card className="!p-4 space-y-4">
         <TeamsEditor conf={conf} onChange={c => setConf({ ...conf, ...c })} />
         <div className="space-y-2">
@@ -159,13 +165,6 @@ export const DressTable: React.FC = () => {
         </div>
       </Card>
       <Btn size="lg" full icon={<Play />} onClick={() => { void start(); }} className="!h-14 !text-[15.5px]">დაწყება</Btn>
-      <Hint>
-        <Timer className="inline w-4 h-4 -mt-0.5 mr-1 text-[#7a2028]" aria-hidden="true" />
-        გუნდები რიგრიგობით იღებენ ტელეფონს: 3, 2, 1 — და ნაწილები სწორი რიგით უნდა ჩაიცვან. ადრე აღებული ნაწილი უკან ბრუნდება და
-        დროს 3 წამს უმატებს. ყველაზე სწრაფი გუნდი იგებს. ყოველ გუნდს ნაწილები სხვა რიგით უწყვია, ქუდი კი ერთი და იგივეა. გაქვთ
-        ნამდვილი ჩოხა? გუნდი თავის „მოდელს“ აცმევს, მასწავლებელი კი ყოველ ჩაცმულ ნაწილზე ეხება ტელეფონს — რიგს ტელეფონი ამოწმებს,
-        დროს თვითონ ითვლის.
-      </Hint>
     </div>
   );
 };

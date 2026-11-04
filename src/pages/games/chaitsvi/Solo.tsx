@@ -6,6 +6,7 @@ import { Chip } from '../../../components/games/Chip';
 import { Btn, Card } from '../../../components/ui/kit';
 import { DressBoard, type Dressed } from './Dress';
 import { PartPic, partLook, pickHat, useKaba, type HatPick } from './Doll';
+import { HowTo } from '../../../components/games/HowTo';
 
 // „ჩაიცვი ქართულად“ alone (the hub's „ონლაინ“): choose the chokha or the dress, with the parts' names or by their pictures
 // only, dress against the clock; the best time of each way stays on this phone, and every part's story comes after.
@@ -130,12 +131,12 @@ export const DressSolo: React.FC = () => {
       </Card>
 
       {!result && (
-        <Card tone="paper" className="!p-4 space-y-1.5 text-[13.5px] leading-snug text-[#4a3426]">
-          <p className="font-serif-ge text-[15px] font-bold text-[#7a2028]">როგორ ვთამაშობთ</p>
-          <p>ეკრანზე ნაწილებია არეულად. შეეხე იმას, რაც ჯერ იცმევა — ის ფიგურაზე ჩაჯდება. ადრე შეეხე? ნაწილი უკან ბრუნდება და გეტყვის, რა უნდა ჩაიცვა ჯერ.</p>
-          <p>{kaba ? 'ჩოხა: ახალუხი, ჩოხა, მასრები და ქამარი, ხანჯალი ქამარზე, ქუდი ბოლოს. კაბა: კაბა, გულისპირი და სარტყელი, ქათიბი, ლეჩაქი ბოლოს.' : 'ახალუხი, ჩოხა, მასრები და ქამარი, ხანჯალი ქამარზე, ქუდი ბოლოს — ქუდი ყოველ თამაშში სხვაა.'}</p>
-          <p>„მხოლოდ სურათებით“ უფრო რთულია: სახელები არ ჩანს — ნაწილი სურათით უნდა იცნო.</p>
-        </Card>
+        <HowTo id="chaitsvi-solo" steps={[
+          'ეკრანზე ნაწილებია არეულად. შეეხე იმას, რაც ჯერ იცმევა — ის ფიგურაზე ჩაჯდება.',
+          'ადრე შეეხე? ნაწილი უკან ბრუნდება და გეტყვის, რა უნდა ჩაიცვა ჯერ.',
+          kaba ? 'ჩოხა: ახალუხი, ჩოხა, მასრები და ქამარი, ხანჯალი ქამარზე, ქუდი ბოლოს. კაბა: კაბა, გულისპირი და სარტყელი, ქათიბი, ლეჩაქი ბოლოს.' : 'ახალუხი, ჩოხა, მასრები და ქამარი, ხანჯალი ქამარზე, ქუდი ბოლოს — ქუდი ყოველ თამაშში სხვაა.',
+          '„მხოლოდ სურათებით“ უფრო რთულია: სახელები არ ჩანს — ნაწილი სურათით უნდა იცნო.',
+        ]} />
       )}
     </div>
   );

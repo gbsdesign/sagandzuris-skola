@@ -133,12 +133,13 @@ export const Podium: React.FC<{ names: string[]; scores: number[]; me?: number }
   const top = order.slice(0, 3);
   // the second on the left, the first in the middle, the third on the right
   const steps = top.length === 3 ? [top[1], top[0], top[2]] : top.length === 2 ? [top[1], top[0]] : top;
+  // nobody scored: no crown (2026-11-04 — a 0 : 0 game crowned everybody)
   const height = (i: number) => (places[i] === 1 ? 'h-24' : places[i] === 2 ? 'h-16' : 'h-12');
   return (
     <div className="flex items-end justify-center gap-2 pt-2" aria-label="გამარჯვებულები">
       {steps.map(i => (
         <div key={i} className="flex-1 max-w-[8.5rem] min-w-0 flex flex-col items-center">
-          {places[i] === 1 && <Crown className="w-7 h-7 text-[#c9a227] mb-1" aria-hidden="true" />}
+          {places[i] === 1 && scores[i] > 0 && <Crown className="w-7 h-7 text-[#c9a227] mb-1" aria-hidden="true" />}
           <p className={`w-full text-center text-[13.5px] font-bold leading-tight [overflow-wrap:anywhere] ${i === me ? 'text-[#7a2028]' : 'text-[#4a3426]'}`}>{names[i]}</p>
           <p className="mt-0.5 text-[12.5px] font-bold tabular-nums text-[#a0703c]">{scores[i]}</p>
           <div className={`mt-1.5 w-full ${height(i)} rounded-t-2xl flex items-start justify-center pt-2 font-serif-ge text-[20px] font-bold ${places[i] === 1 ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#e8dcc8] text-[#7a2028]'}`}>
