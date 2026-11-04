@@ -3,7 +3,7 @@ import { addDoc, arrayUnion, collection, deleteDoc, doc, limit, onSnapshot, orde
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { SchoolClass } from './useClasses';
-import { MONTHS_SHORT_GE, WEEKDAYS_GE, WEEKDAYS_SHORT_GE } from '../utils/dateNames';
+import { MONTHS_GEN_GE, MONTHS_SHORT_GE, WEEKDAYS_GE, WEEKDAYS_SHORT_GE } from '../utils/dateNames';
 
 // The teacher's side of a class: the members' records, assignments and attendance.
 //   classes/{id}/assignments/{a}  { title, variantId, code, voices, due, note, studentIds, createdAt, createdBy }
@@ -167,6 +167,19 @@ export const dueLabel = (iso: string) => {
   if (n === 0) return 'ვადა დღეს';
   if (n === 1) return 'ვადა ხვალ';
   return `ვადამდე ${n} დღე`;
+};
+
+/** The deadline said once, as an assignment's card shows it: „10 ნოემბრამდე“, „ვადა: ხვალ“, „ვადა გავიდა (2 ნოე)“. */
+export const dueUntil = (iso: string) => {
+  const n = daysUntil(iso);
+  if (n < 0) return `ვადა გავიდა (${shortDate(iso)})`;
+  if (n === 0) return 'ვადა: დღეს';
+  if (n === 1) return 'ვადა: ხვალ';
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y) return iso;
+  // „ნოემბრის“ → „ნოემბრამდე“, „აგვისტოს“ → „აგვისტომდე“
+  const gen = MONTHS_GEN_GE[m - 1];
+  return `${d} ${gen.endsWith('ოს') ? `${gen.slice(0, -1)}მდე` : `${gen.slice(0, -2)}ამდე`}`;
 };
 
 export const shortDate = (iso: string) => {

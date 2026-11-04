@@ -69,6 +69,10 @@ export const variantLines = (chantId: string, chantTitle: string, v: ChantVarian
   return {
     top,
     sub,
+    /** the parts on their own (an assignment's card builds its name and grey line from them) */
+    name,
+    version,
+    source,
     meta: [page && book, name !== title && name, page, sub].filter(Boolean).join(' · '),
     // a version's card under its chant's own title: "III ტომი · №159 · გვ. 240" over "გამშვენებული"
     // (a group's chant keeps its own name, below)

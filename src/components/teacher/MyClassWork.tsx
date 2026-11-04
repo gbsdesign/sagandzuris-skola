@@ -15,15 +15,12 @@ import { useAllLearning } from '../../hooks/useLearning';
 import { allLearned, assignedProgress } from '../../utils/learn';
 import { PartsBar } from '../learn/PartsBar';
 import { learnPieceOf, useOpenLearning } from '../learn/openLearning';
+import { usePathItemOpener } from '../../hooks/usePathItemOpener';
+import { assignmentLines } from '../../utils/assignmentLines';
+import { WorkCardHead } from './AssignmentsPanel';
 import { CHIP_SOFT, CHIP_STRONG, PATH_CARD, PATH_LABEL, PATH_LABEL_ICON } from '../views/pathStyle';
 
 const VOICE: Record<string, string> = { '1': 'I', '2': 'II', '3': 'III' };
-
-// a book reference closing the title — "… (145 ხუნდაძე, გვ. 205)" — goes on a small line of its own
-const splitTitle = (title: string) => {
-  const m = title.match(/^(.*\S)\s*\(([^()]+)\)\s*$/);
-  return m ? { main: m[1], ref: m[2] } : { main: title, ref: '' };
-};
 
 // the deadline, said once: "13 ოქტ · 5 დღეში"
 const dueText = (iso: string, n: number) =>
@@ -69,6 +66,7 @@ export const WorkItems: React.FC<{ list: Assignment[] }> = ({ list }) => {
   const drillDone = useDrillDone(user?.uid);
   const mine = useAllLearning(user?.uid);
   const openLearning = useOpenLearning();
+  const openerOf = usePathItemOpener();
   const [drill, setDrill] = useState<string | null>(null);
   return (
     <ul className="divide-y divide-[#f1e8d9]">
@@ -81,15 +79,16 @@ export const WorkItems: React.FC<{ list: Assignment[] }> = ({ list }) => {
         const piece = a.variantId ? learnt?.piece ?? learnPieceOf(a.variantId) : null;
         const n = daysUntil(a.due);
         const tone = TONE[done ? 'done' : n < 0 ? 'past' : n <= 1 ? 'soon' : 'later'];
-        const { main, ref } = a.exercise ? { main: a.title, ref: `სავარჯიშო · ${a.code || ''}` } : splitTitle(a.title);
+        const { name, line } = a.exercise ? { name: a.title, line: `სავარჯიშო · ${a.code || ''}` } : assignmentLines(a.variantId, a.title);
+        // a tap on the name opens the chant's notes, the song, or the exercise (2026-11-04)
+        const open = a.exercise ? () => setDrill(a.exercise!) : a.variantId ? openerOf(a.variantId) : null;
         return (
           <li key={`${a.classId}-${a.id}`} className="py-2.5 last:pb-0">
             <div className="relative pl-3.5">
               <span aria-hidden className={`absolute left-0 top-0.5 bottom-0.5 w-1 rounded-full ${tone.bar}`} />
-              <p className="text-[14.5px] font-semibold leading-snug text-[#2a2017] break-words">{main}</p>
-              {/* the reference and the voices on the left, the deadline on the right (it drops under them on a narrow phone) */}
-              <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                {ref && <span className="min-w-0 mr-1 text-xs text-[#8a7a6a]">{ref}</span>}
+              <WorkCardHead name={name} line={line} open={open} className="-ml-1 pl-1 py-1 rounded-xl" />
+              {/* the voices on the left, the deadline on the right */}
+              <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
                 {!done && a.voices.length > 0 && (
                   <>
                     <span className="mr-0.5 text-[11px] font-semibold text-[#a08f7c]">ხმა</span>
