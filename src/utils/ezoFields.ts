@@ -1,7 +1,7 @@
 import type { EzoId } from '../data/ezoGames';
 
 // „ეზოს მსაჯი“: each yard game's field as a small drawing (an SVG string, viewBox 200×120) — the rules' picture in the app
-// (pages/games/ezo/Field.tsx) and in the printed kit (scripts/print-games/games/ezos-msaji.mjs). Plain shapes only, no words
+// (pages/games/ezo/Field.tsx) and in the printed kit (src/print/games/ezos-msaji.js). Plain shapes only, no words
 // but the few labels the rules name; built from constants, never from what anybody typed.
 
 const BLUE = '#2b5f8a';

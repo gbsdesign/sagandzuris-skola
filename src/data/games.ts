@@ -1,5 +1,12 @@
 import type { PageType } from '../context/NavigationContext';
 import type { SectionId } from './sections';
+import type { KitProgress } from '../print/makeKit';
+
+/** a kit of src/print/games/<id>.js, made in the browser when its button is tapped */
+const kit = (id: string, sheets: number) => ({
+  make: (progress?: KitProgress) => import('../print/makeKit').then(m => m.makeKit(id, progress)),
+  sheets,
+});
 
 // The games hub („თამაშები“, 2026-10-27; one list since 2026-10-30, the user's „ყველა თამაში 1 სიად“): every game in one
 // list with the variants it has — ონლაინ (in the app, alone or with the class), ჰიბრიდული (played live, a phone helps) and
@@ -20,9 +27,9 @@ export interface GameDef {
   panel?: string;          // a panel of that page to open first (the path page's round buttons)
   item?: string;           // opens inside the games page: its `mapItem` (pages/games/)
   section?: SectionId;     // the admin's switch and the member's feature that show or hide its app variants
-  // the სამაგიდო kit, printed two-sided: a ready PDF in public/games/print/<id>.pdf (scripts/print-games), or `make` — the app draws
-  // it in the browser when the button is tapped (the user's rule since 2026-11-04: no PDF is built ahead for a new kit)
-  print?: { href: string; sheets: number } | { make: () => Promise<Blob>; sheets: number };
+  // the სამაგიდო kit, printed two-sided: the app makes its PDF when the button is tapped (the user's rule, 2026-11-04: no
+  // ready PDFs, so a kit follows every change of its game) — `make` gives the file, or null when it opened the print window
+  print?: { make: (progress?: KitProgress) => Promise<Blob | null>; sheets: number };
 }
 
 export const MODE_LABEL: Record<GameMode, string> = { online: 'ონლაინ', hybrid: 'ჰიბრიდული', noPhone: 'სამაგიდო' };
@@ -36,244 +43,244 @@ export const GAMES: GameDef[] = [
   {
     id: 'samshvildis-ghame', title: 'სამშვილდის ღამე', like: 'მაფია', text: 'ციხე-ქალაქის მცველები და ჯაშუშები; მემატიანე, დღე და ღამე, ხმის მიცემა',
     about: '„მაფია“ ცნობილი წრის თამაშია: ღამით მაფია ფარულად ირჩევს მსხვერპლს, დღით ქალაქი ბჭობს და ეჭვმიტანილს ხმით ირჩევს. ჩვენთან ეს სამშვილდის ციხე-ქალაქია: ჯაშუშები, ციხისთავი, მკურნალი და მემატიანე. არავინ „კვდება“: ჯაშუშებს ღამით ტყვედ მიჰყავთ, დღით ქალაქი ეჭვმიტანილს ციხეში სვამს.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'samshvilde', section: 'tamashebi', print: { href: '/games/print/samshvildis-game.pdf', sheets: 10 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'samshvilde', section: 'tamashebi', print: kit('samshvildis-game', 10),
   },
   {
     id: 'saidanaa-simghera', title: 'საიდანაა სიმღერა?', like: 'GeoGuessr', text: 'ხალხური სიმღერის ნაწყვეტი ჟღერს — გამოიცანი, საქართველოს რომელი კუთხისაა, და მონიშნე რუკაზე',
     about: '„GeoGuessr“ ცნობილი თამაშია: ქუჩის ფოტოს ხედავ და რუკაზე ნიშნავ, სად ხარ. ჩვენთან ფოტოს ნაცვლად სკოლის არქივის ხალხური სიმღერა ჟღერს და კუთხეს მისი ხმით გამოიცნობ: სწორი კუთხე ყველაზე მეტ ქულას იძლევა, მეზობელი — ნაწილს. სამაგიდო ვარიანტში სიმღერის სახელს წამყვანი კითხულობს ან მღერის, გუნდები კი დიდ ქაღალდის რუკაზე ეძებენ.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'kutkhe', section: 'tamashebi', print: { href: '/games/print/saidanaa-simghera.pdf', sheets: 10 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'kutkhe', section: 'tamashebi', print: kit('saidanaa-simghera', 10),
   },
   {
     id: 'otkhidan-erti', title: 'ოთხიდან ერთი', like: 'Kahoot', text: 'კითხვა და ოთხი პასუხი ყველას ტელეფონზე — ვინც სწორს უფრო მალე მონიშნავს, მეტ ქულას იღებს',
     about: '„Kahoot“ კლასის ვიქტორინაა: კითხვა და ოთხი პასუხი, ყველა თავის ტელეფონზე ნიშნავს და სისწრაფეც ითვლება. ჩვენთან კითხვები ქართულ ყველაფერზეა — ისტორია, გმირები, მწერლობა, კინო, სუფრა, ბუნება, სპორტი, წმინდანები, დღესასწაულები, გალობა — ზოგი ჩანაწერის მოსმენით; მასწავლებელს თავისი კითხვების დამატებაც შეუძლია. სამაგიდო ვარიანტში 76 ბარათია, გუნდები კი არჩეულ ასოს ფერადი ბარათით სწევენ.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'otkhi', section: 'tamashebi', print: { href: '/games/print/otkhidan-erti.pdf', sheets: 12 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'otkhi', section: 'tamashebi', print: kit('otkhidan-erti', 12),
   },
   {
     id: 'khma-khmad', title: 'ხმა-ხმად', like: 'Bandle', text: 'ცნობილი საგალობელი ხმა-ხმად ჟღერს: ჯერ ბანი, მერე ორი ხმა, ბოლოს სამივე — რაც ადრე მიხვდები, მით მეტი ქულა',
     about: '„Bandle“ სიმღერის გამოცნობის თამაშია: ჯერ მხოლოდ დასარტყამები ისმის, მერე ბასი, გიტარა, ბოლოს მთელი ჯგუფი. ჩვენთან ცნობილი საგალობელი წიგნის ნოტებით ჟღერს სინთეზატორზე: ჯერ მარტო ბანი, მერე მოძახილიც, ბოლოს სამივე ხმა; ოთხი სახელიდან სწორს ირჩევ. სამაგიდო ვარიანტში სამი მომღერალი გალობს ხმა-ხმად, ფურცლიდან.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'khmebi', section: 'tamashebi', print: { href: '/games/print/khma-khmad.pdf', sheets: 7 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'khmebi', section: 'tamashebi', print: kit('khma-khmad', 7),
   },
   {
     id: 'sam-notshi', title: 'სამ ნოტში!', like: 'Name That Tune', text: 'საგალობლის პირველი სამი ნოტი, მერე ექვსი, მერე მთელი ფრაზა — გამოიცანი რაც შეიძლება მალე',
     about: '„Name That Tune“ ცნობილი სატელევიზიო თამაშია: ვინ რამდენ ნოტში იცნობს მელოდიას. ჩვენთან ცნობილი საგალობლის ზედა ხმა ჟღერს წიგნის ნოტებით: ჯერ სამი ნოტი, მერე ექვსი, ბოლოს მთელი პირველი ფრაზა; ოთხი სახელიდან სწორს ირჩევ. სამაგიდო ვარიანტში გუნდები ფსონს დებენ, რამდენ ნოტში იცნობენ, წამყვანი კი ბარათიდან მღერის.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'notebi', section: 'tamashebi', print: { href: '/games/print/sam-notshi.pdf', sheets: 8 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'notebi', section: 'tamashebi', print: kit('sam-notshi', 8),
   },
   {
     id: 'khmebis-turniri', title: 'ხმების ტურნირი', like: 'SingStar', text: 'ყველა ერთსა და იმავე ფრაზას მღერის თავისი ხმით — ტელეფონი ითვლის, რამდენი ნოტი იმღერე სწორად',
     about: '„SingStar“ სიმღერის თამაშია: მიკროფონში მღერი და თამაში ითვლის, რამდენად ზუსტად. ჩვენთან ცნობილი საგალობლის პირველ ფრაზას მღერი შენი ხმით (I, II ან III), ნებისმიერ ტონში; სამი რაუნდი და ქულების ცხრილი — ონლაინ თითო ტელეფონზე, ან ერთი ტელეფონით, რომელიც ხელიდან ხელში გადადის. სამაგიდო ვარიანტი ტურნირია: ორი მომღერალი ერთსა და იმავე ფრაზას მღერის, კლასი „ა“ და „ბ“ ბარათებით ირჩევს უკეთესს და გამარჯვებული ბადეზე წინ მიდის.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'turniri', section: 'tamashebi', print: { href: '/games/print/khmebis-turniri.pdf', sheets: 7 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'turniri', section: 'tamashebi', print: kit('khmebis-turniri', 7),
   },
   {
     id: 'kartuli-akordi', title: 'ქართული აკორდი', like: 'Perfect Ear', text: 'ნამდვილი აკორდი საგალობლიდან ან სიმღერიდან — 1-5-8, 1-3-5, 1-5-7… გამოიცანი, რომელია',
     about: '„Perfect Ear“ სმენის სავარჯიშო აპია: ინტერვალს ან აკორდს ისმენ და ამბობ, რომელია. ჩვენთან ყველა აკორდი ნამდვილი საგალობლის ან ხალხური სიმღერის ნოტებიდანაა, სახელებიც ქართული თეორიისაა — ბანიდან დათვლილი: 1-5-8, 1-4-5, 1-5-7, 1-6-8… ჯერ სამივე ხმა ერთად ჟღერს, მერე ხმა-ხმად; სამაგიდო ვარიანტში აკორდს სამი მგალობელი ან საკრავი ცოცხლად აჟღერებს.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'akordi', section: 'tamashebi', print: { href: '/games/print/kartuli-akordi.pdf', sheets: 6 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'akordi', section: 'tamashebi', print: kit('kartuli-akordi', 6),
   },
   {
     id: 'rva-khma', title: 'რვა ხმა', like: 'Functional Ear Trainer', text: 'VIII ტომის ძლისპირი ჟღერს — გამოიცანი, რომელი ხმაა რვიდან',
     about: '„Functional Ear Trainer“ სმენის აპია, რომელიც ბგერას კილოს მიხედვით გაცნობს. ჩვენთან რვა ხმის ცნობას ვსწავლობთ — ყოველი მგალობლის აუცილებელ ცოდნას: VIII ტომის („რვახმა საცისკრო ძლისპირები“) ძლისპირი ჟღერს და რვიდან ერთ ხმას ირჩევ; ჯერ რვავე ხმის ნიმუშს მოისმენ, პასუხის მერე კი სხვა ძლისპირს შეადარებ. სამაგიდო ვარიანტში ძლისპირს მასწავლებელი გალობს.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'rvakhma', section: 'tamashebi', print: { href: '/games/print/rva-khma.pdf', sheets: 6 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'rvakhma', section: 'tamashebi', print: kit('rva-khma', 6),
   },
   {
     id: 'rukis-viktorina', title: 'რუკის ვიქტორინა', like: 'Seterra', text: 'ქალაქი, ტბა, კერძი, ციხე, პოეტი ან სიმღერა — სწრაფად მონიშნე მისი კუთხე საქართველოს რუკაზე',
     about: '„Seterra“ გეოგრაფიის თამაშია: ადგილის სახელს გეუბნება და რუკაზე სწრაფად უნდა მონიშნო. ჩვენთან საქართველოს 13 კუთხეა: ქალაქები და სოფლები, ბუნება, სუფრა და ღვინო, ისტორია, ცნობილი ადამიანები და ხალხური სიმღერები (სახელით ან მხოლოდ ჰანგით). ყოველი პასუხის მერე ერთი სტრიქონი გეტყვის, რითაა ეს ადგილი ცნობილი; მარტოც ითამაშებ, ათი კითხვა ზედიზედ და შენი რეკორდი. სამაგიდო ვარიანტში დიდი ქაღალდის რუკა და 52 ბარათია.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'ruka', section: 'tamashebi', print: { href: '/games/print/rukis-viktorina.pdf', sheets: 11 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'ruka', section: 'tamashebi', print: kit('rukis-viktorina', 11),
   },
   {
     id: 'gagrdzele', title: 'გააგრძელე!', like: "Don't Forget the Lyrics!", text: 'ხალხური სიმღერა ჩერდება — გაიხსენე, რომელი სტრიქონი მოდის შემდეგ',
     about: '„Don\'t Forget the Lyrics!“ სატელევიზიო შოუა: სიმღერა უეცრად ჩერდება და მომღერალმა ტექსტი ზეპირად უნდა გააგრძელოს. ჩვენთან 70-ზე მეტი ხალხური სიმღერის ტექსტია: ჩანს სიმღერის სახელი და ბოლო სტრიქონი (ჩანაწერიანს ჯერ დასაწყისი ჟღერს), შემდეგს კი ოთხიდან ირჩევ — ან კლასში ზეპირად მღერით. სამაგიდო ვარიანტში 30 სიმღერის ტექსტის წიგნია წამყვანისთვის. თამაშ-თამაშით ბევრ ტექსტს ისწავლი.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'gagrdzele', section: 'tamashebi', print: { href: '/games/print/gagrdzele.pdf', sheets: 4 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'gagrdzele', section: 'tamashebi', print: kit('gagrdzele', 4),
   },
   {
     id: 'hangebi', title: 'ოთხი ჰანგი, ერთი სიტყვა', like: '4 Pics 1 Word', text: 'ოთხი სიტყვა ან ოთხი სიმღერის ნაწყვეტი — ასოებით ააწყე მათი საერთო სიტყვა',
     about: '„4 Pics 1 Word“ ტელეფონის თამაშია: ოთხ სურათს ერთი სიტყვა აერთიანებს და მას მოცემული ასოებით აწყობ. ჩვენთან სურათების ნაცვლად ოთხი სიტყვაა — მდინარეები, ციხეები, ყველი, ფილმები, კომპოზიტორები… — ან ერთი კუთხის ოთხი სიმღერის ნაწყვეტი, და კუთხე ყურით უნდა იცნო. 60-ზე მეტი თავსატეხია; მარტოც ითამაშებ, ათი ზედიზედ და შენი რეკორდი. სამაგიდო ვარიანტში 54 ბარათია, ზურგზე პასუხით და ბონუსის სიტყვებით.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'hangebi', section: 'tamashebi', print: { href: '/games/print/hangebi.pdf', sheets: 9 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'hangebi', section: 'tamashebi', print: kit('hangebi', 9),
   },
   {
     id: 'eqo', title: 'ექო', like: 'Simon', text: 'ტელეფონი საგალობლის ან სიმღერის დასაწყისს უკრავს — ჯერ სამ ნოტს, მერე ოთხს, ხუთს… გაიმეორე კლავიშებზე',
     about: '„Simon“ ცნობილი სათამაშოა: ფერადი ღილაკები ნათდება და ჟღერს, შენ კი რიგი უნდა გაიმეორო — ყოველ ჯერზე ერთით გრძელი. ჩვენთან ღილაკები ნამდვილი მელოდიის ბგერებია (დო, რე, მი…), ფრაზა კი ცნობილი საგალობლის ან ხალხური სიმღერის დასაწყისია — ბოლოს გაიგებ, რომლის. მარტოც ითამაშებ, ონლაინ კლასთან ერთად, ან წრეში ერთი ტელეფონით: ვინც შეცდება, გადის. სამაგიდო ვარიანტში მასწავლებელი მღერის, ბავშვები იმეორებენ.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'eqo', section: 'tamashebi', print: { href: '/games/print/eqo.pdf', sheets: 4 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'eqo', section: 'tamashebi', print: kit('eqo', 4),
   },
   {
     id: 'mprinavi-notebi', title: 'მფრინავი ნოტები', like: 'Staff Wars', text: 'ნოტები ხაზზე მიფრინავს — დაასახელე, სანამ გასაღებამდე მიაღწევს: დო, რე, მი… ან C, D, E',
     about: '„Staff Wars“ ნოტების კითხვის თამაშია: ნოტები ხაზზე მიფრინავენ და სანამ მიაღწევენ, სახელი უნდა დაარქვა. ჩვენთან ყველა ნოტი ნამდვილი საგალობლის ან სიმღერის მელოდიიდანაა: ზედა ხმა სოლის გასაღებზე, ბანი — ფას გასაღებზე; სახელები დო-რე-მით ან ასოებით (H = სი). სამი სიცოცხლე, სულ უფრო ჩქარი ნოტები და რეკორდი; კლასში ტელეფონი წრეში გადადის და კლასის რეკორდი ითვლება. სამაგიდო ვარიანტში ნოტების ბარათებია, პასუხი ზურგზე.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'mprinavi', section: 'tamashebi', print: { href: '/games/print/mprinavi-notebi.pdf', sheets: 7 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'mprinavi', section: 'tamashebi', print: kit('mprinavi-notebi', 7),
   },
   {
     id: 'khmis-tsqvilebi', title: 'ხმის წყვილები', like: 'Memory', text: 'ბარათები პირქვე: ზოგი ჟღერს, ზოგზე სახელია — იპოვე წყვილები და დაიმახსოვრე, სად რა იყო',
     about: '„Memory“ ბარათების ცნობილი თამაშია: ბარათები პირქვე აწყვია და ორ-ორს ხსნი, სანამ ყველა წყვილს არ იპოვი. ჩვენთან სურათების ნაცვლად ხმაა: ზოგი ბარათი ცნობილი საგალობლის ან ხალხური სიმღერის დასაწყისს უკრავს, მისი წყვილი კი მისი სახელია — ან, ადვილად, იგივე ხმა. მარტოც ითამაშებ (რეკორდი სვლებით), ონლაინ კლასთან ერთად დროზე, ან ერთი ტელეფონით გუნდებად. სამაგიდო ვარიანტში სამი დასტაა: მელოდია და სახელი (მელოდიას წამყვანი მღერის), ნოტი და კლავიში, სიმღერა და მისი კუთხე.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'tsqvilebi', section: 'tamashebi', print: { href: '/games/print/khmis-tsqvilebi.pdf', sheets: 10 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'tsqvilebi', section: 'tamashebi', print: kit('khmis-tsqvilebi', 10),
   },
   {
     id: 'mesame-khma', title: 'მესამე ხმა', like: 'Smule', text: 'ტელეფონი საგალობლის ორ ხმას გალობს, მესამეს — შენ; ეკრანზე ჩანს, სწორად მიჰყვები თუ არა',
     about: '„Smule“ კარაოკე-აპია, სადაც სხვასთან დუეტს მღერი. ჩვენთან სამხმიანობაა: ტელეფონი წიგნის ნოტებით ორ ხმას გალობს, მესამეს შენ — I, II ან III. ეკრანზე შენი ხმის ნოტები მოდის და შენი ხმა ხაზად იხატება; ბოლოს ქულას იღებ, სამივე ხმას ერთად მოისმენ და კლასის ჩატშიც გაგზავნი. ონლაინ კლასი სამი საგალობლის დასაწყისს მღერის, ჰიბრიდულად ტელეფონი დინამიკით ერთ-ორ ხმას გალობს, კლასი — დანარჩენს. სამაგიდო ვარიანტში საგალობლები სამ ხმადაა, ხმის ბარათები და ჟიურის ფურცელი.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'mesame', section: 'tamashebi', print: { href: '/games/print/mesame-khma.pdf', sheets: 6 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'mesame', section: 'tamashebi', print: kit('mesame-khma', 6),
   },
   {
     id: 'chemi-gundi', title: 'ჩემი გუნდი', like: 'Incredibox', text: 'სცენაზე ექვსნი: მთქმელი, მოძახილი, ბანი, ტაში, დოლი და ფანდური — ჩართე, შეცვალე და ააწყე შენი ანსამბლი',
     about: '„Incredibox“ მუსიკალური თამაშია: პერსონაჟებს ხმებს აძლევ და მათგან სიმღერას აწყობ. ჩვენთან სცენაზე ქართული ანსამბლია: სამი მომღერალი — მთქმელი, მოძახილი, ბანი — და ტაში, დოლი, ფანდური. ხალხური სიმღერის ფრაზა წიგნის ნოტებით წრეზე ბრუნავს: შემსრულებელს ჩართავ, გამორთავ ან მის რიტმს შეცვლი, ჩაწერ და კლასის ჩატში გაგზავნი. ჰიბრიდულად ტელეფონი რამდენიმე როლს უკრავს, დანარჩენს კლასი ცოცხლად ასრულებს. სამაგიდო ვარიანტში კლასი თვითონაა ანსამბლი: როლის ბარათები, რვა სიმღერის ფრაზა სამ ხმაზე, დირიჟორის ბარათები და „გუნდის რუკა“.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'gundi', section: 'tamashebi', print: { href: '/games/print/chemi-gundi.pdf', sheets: 6 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'gundi', section: 'tamashebi', print: kit('chemi-gundi', 6),
   },
   {
     id: 'chamotvale', title: 'ჩამოთვალე!', like: 'Sporcle', text: 'დროზე ჩამოთვალე სიის ყველა წევრი: 12 მოციქული, რუკის 13 კუთხე, ლარის ბანკნოტების სახეები…',
     about: '„Sporcle“ ვიქტორინების საიტია: სიის ყველა წევრი დროზე უნდა ჩამოთვალო — მაგალითად, მსოფლიოს ყველა ქვეყანა. ჩვენთან 17 სიაა: საქართველო, სარწმუნოება, მუსიკა, მსოფლიო და პატარებისთვის. ბეჭდავ ქართულად, აპი ერთ-ორ ასოს შეცდომას გაპატიებს და ყუთს (ან რუკას) ავსებს; ბოლოს გამორჩენილებს ნახავ. მარტოც ითამაშებ, კლასთან ერთად ონლაინ, გუნდებად ერთი ტელეფონით ან ქაღალდზე — ათი სიის ფურცლებით და პასუხების გასაღებით.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'chamotvale', section: 'tamashebi', print: { href: '/games/print/chamotvale.pdf', sheets: 9 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'chamotvale', section: 'tamashebi', print: kit('chamotvale', 9),
   },
   {
     id: 'asoebis-bade', title: 'ასოების ბადე', like: 'Word search', text: 'ბადეში დამალული სიტყვები — ცხოველები, ციხეები, ხილი, გმირები… მხედრულით, ნუსხურით ან ასომთავრულით',
     about: '„Word search“ ცნობილი თავსატეხია: ასოების ბადეში სიტყვები იმალება — მარჯვნივ, ქვევით, დიაგონალზე — და თითს გადაატარებ. ჩვენთან ბადე ძველი ქართული ასოებითაც იხატება, ნუსხურით ან ასომთავრულით, ქვეშ ანბანის გასაღებით — ასე ძველ ანბანს თამაშით სწავლობ. ყოველდღე ერთი ბადე მთელი სკოლისთვის; კლასში გუნდები ერთ ეკრანზე ეძებენ, ქაღალდზე კი 12 ბადეა სამივე ანბანით, ანბანის დიდი გასაღებით და პასუხებით.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'bade', section: 'tamashebi', print: { href: '/games/print/asoebis-bade.pdf', sheets: 6 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'bade', section: 'tamashebi', print: kit('asoebis-bade', 6),
   },
   {
     id: 'khutsuri-tsartsera', title: 'ხუცური წარწერა', like: 'Cryptogram', text: 'სტრიქონი ძველი ასოებით — რუსთაველი, ბარათაშვილი, ვაჟა, მამათა სიტყვები, ანდაზები… ასო-ასო ამოიკითხე',
     about: '„Cryptogram“ ცნობილი თავსატეხია: ტექსტში ყოველი ასო სხვა ნიშნითაა შეცვლილი და ასო-ასო ხსნი. ჩვენთან შიფრი თავად ძველი ქართული ანბანია — სტრიქონი ასომთავრულით ან ნუსხურით წერია, შენ კი ქვეშ დღევანდელ ასოებს აწერ; ნაცნობი სიტყვები გასაღებს გიხსნის, ბოლოს ავტორი ჩანს. ყოველდღე ერთი წარწერა მთელი სკოლისთვის; კლასში გუნდები „სასწაულების ველის“ წესით ასოებს ასახელებენ; ქაღალდზე 20 წარწერაა ანბანის გასაღებით.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'tsartsera', section: 'tamashebi', print: { href: '/games/print/khutsuri-tsartsera.pdf', sheets: 6 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'tsartsera', section: 'tamashebi', print: kit('khutsuri-tsartsera', 6),
   },
   {
     id: 'drois-khazi', title: 'დროის ხაზი', like: 'Timeline', text: 'მოვლენა ხელში, წელი არა: ჩასვი თავის ადგილას — დიდგორი, „ვეფხისტყაოსანი“, „მიმინო“, თბილისის მეტრო, მწერლების დაბადება…',
     about: '„Timeline“ ბარათების თამაშია: მოვლენას წელს არ უწერია და ხაზში უნდა ჩასვა — უფრო ადრე იყო თუ გვიან, ვიდრე უკვე დადებული. ჩვენთან ქართული ისტორიაა, ქართველების დაბადება (პოეტები, მწერლები, მგალობლები), კულტურა და სპორტი, ცალკე დასტა კი — წირვის რიგი: რომელი გალობა რომლის შემდეგ ისმის. ყოველდღე ერთი ხაზი მთელი სკოლისთვის და უსასრულო თამაში სამი სიცოცხლით; კლასში გუნდები ერთ ხაზს რიგრიგობით აწყობენ.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'khazi', section: 'tamashebi', print: { href: '/games/print/drois-khazi.pdf', sheets: 9 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'khazi', section: 'tamashebi', print: kit('drois-khazi', 9),
   },
   {
     id: 'chemi-vazi', title: 'ჩემი ვაზი', like: 'Tamagotchi', text: 'შენი ვაზი შენი საქმეებით იზრდება — ჩვევა, დღის თამაში, სწავლა, მარგალიტი: ფოთოლი, ყლორტი, მტევანი',
     about: '„Tamagotchi“ ჯიბის ცხოველია, რომელსაც ყოველდღე უნდა მოუარო. ჩვენთან ყველას თავისი ვაზი აქვს: მონიშნული ჩვევა, დასრულებული დღის თამაში, სწავლის რეჟიმი, გაპრიალებული მარგალიტი ვაზს ფოთოლს უმატებს, თვეში კი მტევანი მწიფდება. უქმად დარჩენილი ვაზი ყვითლდება, მაგრამ არ კვდება. რთველზე მასწავლებელი კლასის ყველა ვაზს ერთ ეკრანზე აჩვენებს და მტევნებს ერთად ითვლიან; ქაღალდზე — თვის ვაზი გასაფერადებლად, ფოთლისა და მტევნის სტიკერები, კლასის რთველის ცხრილი, ქვევრი და სიგელები.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'vazi', section: 'tamashebi', print: { href: '/games/print/chemi-vazi.pdf', sheets: 6 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'vazi', section: 'tamashebi', print: kit('chemi-vazi', 6),
   },
   {
     id: 'chaitsvi-qartulad', title: 'ჩაიცვი ქართულად', like: 'Dress-up', text: 'ჩოხა ნაწილ-ნაწილ, სწორი რიგით და დროზე: ახალუხი, ჩოხა, მასრები, ქამარი, ხანჯალი, ქუდი — რა რას მოსდევს?',
     about: 'ჩაცმის თამაშებში (Dress-up) თოჯინას ტანსაცმელს არჩევ. ჩვენთან ჩოხა ზუსტად ისე უნდა ჩაიცვა, როგორც იცმევა: ჯერ ახალუხი, მერე ჩოხა, მასრები და ქამარი, ხანჯალი ქამარზე, ქუდი ბოლოს — ადრე აღებული ნაწილი უკან ბრუნდება და გეტყვის, რატომ. ბოლოს ყოველი ნაწილის ამბავს გაიგებ; კლასში გუნდები ერთ ტელეფონზე ეჯიბრებიან, ვინ უფრო სწრაფად ჩაიცვამს — ან ქაღალდის თოჯინებს აცმევენ (ჩოხა და ქართული კაბა ამოსაჭრელად).',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'chaitsvi', section: 'tamashebi', print: { href: '/games/print/chaitsvi-qartulad.pdf', sheets: 6 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'chaitsvi', section: 'tamashebi', print: kit('chaitsvi-qartulad', 6),
   },
   {
     id: 'sami-damtserloba', title: 'სამი დამწერლობა', like: 'Duolingo', text: 'ასომთავრული და ნუსხური ასო-ასო: ყოველდღე 5 წუთი, სამი გული და სერია — ბოლოს კი ძველი სიტყვები და სტრიქონები თავისუფლად იკითხება.',
     about: 'Duolingo ენის სწავლის აპია: ყოველდღე პატარა გაკვეთილი, გულები და სერია. ჩვენთან ენა ჩვენივეა — ვსწავლობთ მის ორ ძველ დამწერლობას, ასომთავრულსა და ნუსხურს: ასოს ცნობა, თითით მოხაზვა, სიტყვის წაკითხვა. კლასში გუნდები ეჯიბრებიან, ვინ წაიკითხავს ძველ ასოებს ყველაზე სწრაფად; ქაღალდზე — რვეულები, საკითხავი ფურცლები და 99 ასოს ბარათი სამეულისთვის.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'anbani', section: 'tamashebi', print: { href: '/games/print/sami-damtserloba.pdf', sheets: 11 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'anbani', section: 'tamashebi', print: kit('sami-damtserloba', 11),
   },
   {
     id: 'tsikhis-gasaghebi', title: 'ციხის გასაღები', like: 'Escape room', text: 'ციხეში ჩაგკეტეს: ხუთი კარი — ძველი წარწერა, კოდის საკეტი, გამოცანა, ჰანგი სმენით — და 30 წუთი, სანამ მცველი დაბრუნდება',
     about: 'Escape room („ოთახიდან გაქცევა“) თამაშია, სადაც ჩაკეტილი ოთახიდან ამოცანების ამოხსნით უნდა გახვიდე — დროზე. ჩვენთან ოთახები ქართული ციხეებია: ნარიყალა, ანანური, გონიო და „ვეფხისტყაოსნის“ ქაჯეთი. ყოველი კარი სხვა ამოცანაა — ასომთავრული და ნუსხური წარწერა, ძველი ასო-რიცხვები, საგალობლისა და სიმღერის ცნობა სმენით, ზარების ჰანგი, ამბავი რიგზე — და გასაღების ერთ ნაწილს იძლევა. კლასში გუნდები დაბეჭდილი ბარათებით ეჯიბრებიან, ტელეფონი კი საკეტია: პასუხს ამოწმებს, მინიშნებას იძლევა და ჰანგს უკრავს.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'tsikhe', section: 'tamashebi', print: { href: '/games/print/tsikhis-gasaghebi.pdf', sheets: 13 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'tsikhe', section: 'tamashebi', print: kit('tsikhis-gasaghebi', 13),
   },
   {
     id: 'tsinapris-gza', title: 'წინაპრის გზა', like: 'Choose Your Own Adventure', text: 'ფილიმონ ქორიძე, კარბელაშვილები, ექვთიმე კერესელიძე, არტემ ერქომაიშვილი: ყოველ გასაყარზე სამი გზა — გამოიცანი, რომელი აირჩია წინაპარმა',
     about: '„აირჩიე შენი თავგადასავალი“ წიგნებში მკითხველი თვითონ წყვეტს, რა გააკეთოს გმირმა, და ამბავი მის არჩევანს მიჰყვება. ჩვენთან ამბები ნამდვილია — დიდი მგალობლების ცხოვრება, რომლებმაც ქართული გალობა გადაარჩინეს. ყოველ გასაყარზე სამი გზაა: ერთი ის, რაც წინაპარმა მართლა აირჩია, ორი კი — „რა მოხდებოდა, რომ…“. აირჩიე და გაიგე, როგორ იყო სინამდვილეში; კლასში გუნდები ა ბ გ ბარათებით აძლევენ ხმას, ქაღალდზე კი ამბები წიგნი-თამაშებად იკითხება, დანომრილი პარაგრაფებით.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'tsinapari', section: 'tamashebi', print: { href: '/games/print/tsinapris-gza.pdf', sheets: 13 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'tsinapari', section: 'tamashebi', print: kit('tsinapris-gza', 13),
   },
   {
     id: 'nu-itqvi', title: 'ნუ იტყვი!', like: 'Taboo', text: 'ახსენი სიტყვა ისე, რომ ხუთი აკრძალული სიტყვა არ თქვა — სუფრა, ბუნება, გმირები, კინო, სპორტი, გალობა; მარტო კი ის ხუთი მინიშნებაა',
     about: '„Taboo“ გუნდური თამაშია: ბარათზე სიტყვაა და ხუთი სიტყვა, რომელსაც ამხსნელი ვერ იტყვის — სწორედ ისინი, რომლებიც პირველად მოგივა თავში. მოწინააღმდეგე გუნდი უყურებს და აკრძალულ სიტყვაზე ზარს რეკავს. ჩვენთან 180 ქართული ბარათია, თორმეტ თემაში. მარტო თამაშისას ბარათი შებრუნებულია: ხუთი აკრძალული სიტყვა სათითაოდ ჩნდება როგორც მინიშნება — რაც ნაკლები დაგჭირდება, მით მეტი ქულა; დღეში ოცი ბარათი, მთელი სკოლისთვის ერთი.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'tabu', section: 'tamashebi', print: { href: '/games/print/nu-itqvi.pdf', sheets: 14 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'tabu', section: 'tamashebi', print: kit('nu-itqvi', 14),
   },
   {
     id: 'erti-minishneba', title: 'ერთი მინიშნება', like: 'Just One', text: 'ყველა თითო სიტყვა-მინიშნებას წერს, ერთნაირები იშლება — ერთმა უნდა გამოიცნოს; კლასი ერთად თამაშობს დასტის წინააღმდეგ',
     about: '„Just One“ ერთად სათამაშო თამაშია: ერთი გამოიცნობს, დანარჩენები ფარულად წერენ თითო სიტყვა-მინიშნებას. ერთნაირი მინიშნებები იშლება, ამიტომ ყველა ცდილობს, თავისებური სიტყვა მოიფიქროს. გამომცნობს ერთი ცდა აქვს, ცამეტი ბარათი — რამდენს გამოიცნობთ ერთად? ჩვენთან ერთი ტელეფონი წრეზე გადადის და ერთნაირ მინიშნებებს თვითონ შლის; მარტოც შეიძლება — ხუთი „მოთამაშის“ მინიშნებებით.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'minishneba', section: 'tamashebi', print: { href: '/games/print/erti-minishneba.pdf', sheets: 11 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'minishneba', section: 'tamashebi', print: kit('erti-minishneba', 11),
   },
   {
     id: 'pantomima', title: 'პანტომიმა', like: 'Charades', text: 'აჩვენე სიტყვა უსიტყვოდ: დაუკარი ჩონგურზე, იცეკვე ხორუმი, გადაიქეცი ზღარბად — ან ტელეფონი შუბლზე და გუნდი გაჩვენებს',
     about: '„Charades“ ძველი თამაშია: სიტყვას სხეულით აჩვენებ, ლაპარაკის გარეშე, და შენი გუნდი იცნობს; ტელეფონის ვერსიაში („Heads Up!“) ტელეფონი შუბლზე გიდევს და გუნდი გაჩვენებს. ჩვენთან 150 სიტყვაა რვა თემაში — საკრავები, ცეკვა, ცხოველები, სპორტი, ხელობა, სამოსი, სუფრა, ზღაპარი. ონლაინ მსახიობი თამაშის ზარში აჩვენებს და ყველა თავის ტელეფონზე ოთხიდან ირჩევს; კლასში ერთი ტელეფონი გუნდიდან გუნდზე გადადის; ქაღალდზე 150 ბარათია. პატარებთან სიტყვებით ახსნაც შეიძლება.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'pantomima', section: 'tamashebi', print: { href: '/games/print/pantomima.pdf', sheets: 12 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'pantomima', section: 'tamashebi', print: kit('pantomima', 12),
   },
   {
     id: 'vin-var-me', title: 'ვინ ვარ მე?', like: 'Guess Who?', text: 'ცნობილი ქართველი ოც კითხვაში: მეფე იყო? პოეტი? 1800 წლამდე დაიბადა? — ყოველი პასუხი დაფიდან შლის ყველას, ვინც არ ერგება',
     about: '„Guess Who?“ ცნობილი საბავშვო თამაშია: დაფაზე ბევრი სახეა და კი/არა კითხვებით პოულობ, ვინ ჩაიფიქრა მეტოქემ; „ვინ ვარ მე?“ კი წვეულების თამაშია — სახელი შუბლზე გიწერია და სხვებს ეკითხები. ჩვენთან 50 ცნობილი ქართველია: მეფეები, წმინდანები, მწერლები, მგალობლები, მხატვრები, მეცნიერები, მსახიობები, სპორტსმენები. ონლაინ ყოველდღე ერთი ადამიანია მთელი სკოლისთვის, 24 სახელის დაფით და მზა კითხვებით; კლასში სახელი გამომცნობის შუბლზეა და კლასი პასუხობს; ქაღალდზე 50 ბარათია, უკან ფაქტებით.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'vin', section: 'tamashebi', print: { href: '/games/print/vin-var-me.pdf', sheets: 9 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'vin', section: 'tamashebi', print: kit('vin-var-me', 9),
   },
   {
     id: 'saidumlo-sakhelebi', title: 'საიდუმლო სახელები', like: 'Codenames', text: '25 სიტყვა ბადეზე, ორი გუნდი: კაპიტანი ერთი სიტყვითა და რიცხვით ანიშნებს, რომელი სიტყვებია მისი გუნდის — შავ ხაფანგს კი მოერიდე',
     about: '„Codenames“ ცნობილი გუნდური თამაშია: ბადეზე 25 სიტყვაა, კაპიტნებმა იციან, რომელი ვისია, და გუნდს ერთი სიტყვითა და რიცხვით ანიშნებენ. ჩვენთან სიტყვები ქართულია: კერძები, ცეკვები, ციხეები, ბუნება, გმირები, საკრავები. ონლაინ ყოველდღე ერთი ბადეა მთელი სკოლისთვის და მინიშნებას თვითონ აპი გაძლევს; კლასში ბადე ერთ ტელეფონზეა, კაპიტნები გასაღებს თავიანთ ტელეფონზე ოთხციფრიანი კოდით ხედავენ; ქაღალდზე სიტყვების ბარათები, გასაღებები და ფერადი საფარებია.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'saidumlo', section: 'tamashebi', print: { href: '/games/print/saidumlo-sakhelebi.pdf', sheets: 9 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'saidumlo', section: 'tamashebi', print: kit('saidumlo-sakhelebi', 9),
   },
   {
     id: 'utskho-sopelshi', title: 'უცხო სოფელში', like: 'Spyfall', text: 'ყველამ იცის, სად ვართ — მარანში, რთველზე, ჭიდაობაზე — ერთის გარდა: კითხვებით იპოვე უცხო, სანამ ის ადგილს მიხვდება',
     about: '„Spyfall“ ცნობილი წვეულების თამაშია: ყველამ იცის ადგილი, ჯაშუშმა — არა; ერთმანეთს კითხვებს უსვამენ და ცდილობენ ჯაშუში იპოვონ, ჯაშუში კი — ადგილი. ჩვენთან ჯაშუში „უცხოა“, ადგილები კი ქართული: მარანი, ალილო, სვანური კოშკი, ბათუმის ბულვარი, ლელობურთი, ჩოხის სახელოსნო — ოცდაათი, თითოს შვიდი როლით. ონლაინ შენ ხარ უცხო: ყოველდღე ერთი ადგილი მთელი სკოლისთვის, სოფლელების პასუხებით ეძებ; კლასში ერთი ტელეფონი წრეში გადადის და თითოეული საიდუმლოდ ხედავს თავის ბარათს; ქაღალდზე ბარათებია ყველა ადგილისთვის.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'utskho', section: 'tamashebi', print: { href: '/games/print/utskho-sopelshi.pdf', sheets: 18 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'utskho', section: 'tamashebi', print: kit('utskho-sopelshi', 18),
   },
   {
     id: 'nakhatobana', title: 'ნახატობანა', like: 'Pictionary', text: 'ერთი ხატავს, დანარჩენები ცნობენ: ხინკალი, ჩონგური, ჯიხვი, სვანური კოშკი, ნაცარქექია — ასოებისა და ციფრების გარეშე',
     about: '„Pictionary“ ცნობილი გუნდური თამაშია: მხატვარი სიტყვას ხატავს, ლაპარაკისა და ასოების გარეშე, გუნდი კი დროზე იცნობს. ჩვენთან 154 სიტყვაა შვიდ თემაში — სუფრა, სამოსი და სახლი, საკრავები და ცეკვა, ბუნება, ადგილები, საქმე და თამაში, ზღაპრები. მარტო ნახატს კლასის ჩატში გზავნი და კლასელები გამოიცნობენ; ონლაინ მხატვარი თავის ტელეფონზე ხატავს და ნახატი ყველას ეხატება, ოთხი სიტყვიდან ირჩევენ; კლასში ერთი ტელეფონი სიტყვას აჩვენებს და დროს ითვლის, ხატავენ დაფაზე ან ეკრანზე; ქაღალდზე — სახატავი გზა, 22 ბარათი შვიდ-შვიდი სიტყვით, ფიგურები და კამათელი.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'nakhati', section: 'tamashebi', print: { href: '/games/print/nakhatobana.pdf', sheets: 7 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'nakhati', section: 'tamashebi', print: kit('nakhatobana', 7),
   },
   {
     id: 'sagalobo-loto', title: 'საგალობო ლოტო', like: 'Bingo', text: 'ბარათზე ცხრა საგალობელია: ჟღერს — ცნობ და ნიშნავ, სამი ერთ რიგში — „საგანძური!“ ხალხური სიმღერებითა და კუთხეებითაც',
     about: '„Bingo“ (ლოტო) ცნობილი თამაშია: წამყვანი რიცხვებს იძახებს, მოთამაშეები ბარათზე ნიშნავენ, ვინც პირველი შეკრავს ხაზს — იგებს. ჩვენთან რიცხვების ნაცვლად საგალობლების ან ხალხური სიმღერების ნაწყვეტები ჟღერს და ყურით უნდა იცნო; ბარათი 3 × 3-ია. მარტო ბარათი ბოლომდე უნდა შეავსო — შეცდომა ბოლო მონიშვნას შლის; ონლაინ ყველას თავის ტელეფონზე საკუთარი ბარათი აქვს; კლასში მასწავლებლის ტელეფონი უკრავს, ბავშვები ქაღალდის ბარათზე ლობიოთი ნიშნავენ და ტელეფონი გამარჯვებულს ამოწმებს; ქაღალდზე — 30 ბარათი და წამყვანის 20 საგალობელი ნოტებით.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'loto', section: 'tamashebi', print: { href: '/games/print/sagalobo-loto.pdf', sheets: 10 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'loto', section: 'tamashebi', print: kit('sagalobo-loto', 10),
   },
   {
     id: 'sagandzuris-dzebna', title: 'საგანძურის ძებნა', like: 'Geocaching', text: 'სადგურიდან სადგურამდე: მინიშნება, დავალება და ასო — ყველა ასოთი სიტყვა დგება, სიტყვა კი სკივრს ხსნის. რუკაზე ან ნამდვილად, ეზოში',
     about: '„Geocaching“ თამაშია, სადაც რუკითა და მინიშნებებით დამალულ „საგანძურს“ ეძებენ; სკოლებში მსგავსი ძებნა ეზოში იმართება. ჩვენთან თითო სადგურზე დავალებაა — კითხვა, კუთხე, თარიღი, ხუცური სიტყვა ან საგალობლის მოსმენა — და სწორი პასუხი ერთ ასოს იძლევა; ასოები არეულად მოდის, ყველასგან სიტყვა დგება, სიტყვა კი სკივრს ხსნის. ონლაინ ყოველდღე ერთი ძებნაა მთელი სკოლისთვის: ექვსი კუთხე, თითოს მინიშნებებით რუკაზე პოულობ, დრო და შეცდომები ითვლება; კლასში მასწავლებელი QR ბარათებს ბეჭდავს და მალავს, გუნდები ტელეფონით ასკანერებენ, თითო გუნდს თავისი სიტყვა აქვს, მასწავლებლის ტელეფონი კი სკივრია; ქაღალდზე — ოთხი მზა ძებნა ბარათებით, გუნდების ფურცლებითა და გასაღებით.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'dzebna', section: 'tamashebi', print: { href: '/games/print/sagandzuris-dzebna.pdf', sheets: 8 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'dzebna', section: 'tamashebi', print: kit('sagandzuris-dzebna', 8),
   },
   {
     id: 'ezos-msaji', title: 'ეზოს მსაჯი', like: 'Capture the Flag', text: 'ეზოს ხუთი თამაში — ორდროშობანა, ლელობურთი, დამალობანა, ზღვა ღელავს, კლასობანა: წესები სურათებით, ტელეფონი კი მსაჯია',
     about: '„Capture the Flag“ ეზოს თამაშია: ორი გუნდი თავის დროშას იცავს და მოწინააღმდეგისას იტაცებს — ქართულად ორდროშობანა. ჩვენთან მასწავლებლის ტელეფონი ეზოს ხუთი თამაშის მსაჯია: გუნდებს სამართლიანად ყოფს (სეზონის მოგებებით), უსტვენს, ითვლის დროსა და ქულებს, დამალობანაში მეძებართან ერთად ითვლის, „ზღვა ღელავს“-ში ზღვის ხმას უშვებს და მოულოდნელად „გაშეშდი!“-ს ამბობს, კლასობანაში რიგს ადევნებს თვალს, ყოველი თამაშის გამარჯვებულს კი კლასის სეზონის ცხრილში წერს. ონლაინ — წესები სურათებით და ვიქტორინა; ქაღალდზე — წესები, გუნდების კენჭისყრის ბარათები და სეზონის ცხრილი კედელზე.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'ezo', section: 'tamashebi', print: { href: '/games/print/ezos-msaji.pdf', sheets: 7 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'ezo', section: 'tamashebi', print: kit('ezos-msaji', 7),
   },
   {
     id: 'ra-sad-rodis', title: 'რა? სად? როდის?', text: 'გუნდური ვიქტორინა: ერთი წუთი, პასუხი ფურცელზე ან ტელეფონზე — ისტორია, გმირები, კინო, სუფრა, წმინდანები, გალობა და ჩანაწერის ნაწყვეტები',
     about: '„რა? სად? როდის?“ ცნობილი სატელევიზიო ვიქტორინაა: გუნდი ერთ წუთში ბჭობს და ერთ პასუხს ირჩევს. ჩვენთან ყველა გუნდი ერთსა და იმავე კითხვას ერთდროულად პასუხობს ფურცელზე, ონლაინ კი — ყველა თავის ტელეფონზე, პასუხებს წამყვანი ამოწმებს; კითხვები ქართულ ისტორიაზე, კულტურაზე, ბუნებაზე, სარწმუნოებასა და გალობაზეა, ზოგი ჩანაწერის მოსმენით.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'rsr', section: 'tamashebi', print: { href: '/games/print/ra-sad-rodis.pdf', sheets: 12 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'rsr', section: 'tamashebi', print: kit('ra-sad-rodis', 12),
   },
   {
     id: 'amikhseni', title: 'ამიხსენი', like: 'Alias', text: 'ახსენი სიტყვა მისი თქმის გარეშე, გუნდმა გამოიცნოს — ტელეფონი დროსა და ქულებს ითვლის',
     about: '„Alias“ გუნდური თამაშია: სიტყვას ხსნი ისე, რომ თვითონ არ თქვა, გუნდი კი დროზე გამოიცნობს. ჩვენთან ათასზე მეტი ქართული ბარათია: გალობა და სიმღერა, ცეკვა, კუთხეები, სამზარეულო, ბუნება, გმირები, წმინდანები, კინო, სპორტი. ონლაინ ამხსნელი ზარში ხსნის, ყველა სიტყვას თავის ტელეფონზე წერს და ვინც უფრო სწრაფად გამოიცნობს, მეტ ქულას იღებს.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'amikhseni', section: 'tamashebi', print: { href: '/games/print/amikhseni.pdf', sheets: 7 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'amikhseni', section: 'tamashebi', print: kit('amikhseni', 7),
   },
   {
     id: 'dghis-sitqva', title: 'დღის სიტყვა', like: 'Wordle', text: 'ქართული სიტყვა ექვს ცდაში — დღესასწაული, წმინდანი, კუთხე, კერძი, ცხოველი ან გმირი, ყოველდღე ერთი მთელი სკოლისთვის',
     about: '„Wordle“ დღის სიტყვის თამაშია: ექვს ცდაში ფარულ სიტყვას გამოიცნობ, ფერები კი გეუბნება, რომელი ასოა სწორ ადგილას. ჩვენთან ქართული სიტყვაა, 4–6 ასო: დღესასწაულის დღეს დღესასწაული, ყოველ მესამე დღეს დღის წმინდანი, სხვა დღეს კუთხე, კერძი, ცხოველი, გმირი, ცეკვა ან საეკლესიო სიტყვა — მინიშნებაც გაქვს. ჰიბრიდულში გუნდები ერთ დაფაზე რიგრიგობით ცდილობენ, როგორც სატელევიზიო „ლინგოში“.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'sitqva', section: 'tamashebi', print: { href: '/games/print/dghis-sitqva.pdf', sheets: 7 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'sitqva', section: 'tamashebi', print: kit('dghis-sitqva', 7),
   },
   {
     id: 'otkheuli', title: 'ოთხეული', like: 'Connections', text: '16 სიტყვა, ოთხი ფარული ჯგუფი: გმირები, ციხეები, ფრინველები, წმიდანები, ხმები… — დღის ბადე და კიდევ რამდენიც გინდა',
     about: '„Connections“ დღის თავსატეხია: 16 სიტყვა ოთხ ფარულ ჯგუფად უნდა დაყო, ოთხი შეცდომის უფლებით. ჩვენთან ჯგუფები ქართულია: გმირები და ბრძოლები, კუთხეები და ციხეები, ცხოველები, ფილმები, წმინდანები, საკრავები, სიმღერები და საგალობლები. ჰიბრიდულში გუნდები ერთ ბადეზე რიგრიგობით ეძებენ და ამბობენ, რა აერთიანებს ოთხს.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'otkheuli', section: 'tamashebi', print: { href: '/games/print/otkheuli.pdf', sheets: 18 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'otkheuli', section: 'tamashebi', print: kit('otkheuli', 18),
   },
   {
     id: 'dghis-hangi', title: 'დღის ჰანგი', like: 'Heardle', text: 'ყოველდღე ერთი საგალობელი ან სიმღერა: 1 წამი, 2, 4… — გამოიცანი რაც შეიძლება მალე; კლასთან ერთადაც',
     about: '„Heardle“ სიმღერის ცნობის თამაშია: ჯერ 1 წამს გესმის, მერე 2-ს, 4-ს… და რაც შეიძლება ადრე უნდა იცნო. ჩვენთან სკოლის საგალობლები და ხალხური სიმღერებია, დღის ჰანგი კი ერთია მთელი სკოლისთვის. კლასთან ერთადაც ითამაშებ: ონლაინ ოთახში ან ერთი ტელეფონით, გუნდებად; სამაგიდო ვარიანტში კი წამყვანი ნოტებიდან მღერის — ჯერ 2 ნოტს, მერე 3-ს, 4-ს…',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'hangi', section: 'tamashebi', print: { href: '/games/print/dghis-hangi.pdf', sheets: 6 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'hangi', section: 'tamashebi', print: kit('dghis-hangi', 6),
   },
   {
     id: 'margalitebi', title: 'მარგალიტები', text: 'მოისმინე საგალობლის ფრაზა, ჩამღერე მიკროფონში და გააპრიალე მარგალიტი',
     about: 'სამ სკივრში — წირვის, მწუხრისა და ცისკრის — სამოცი საგალობელია, თითო მარგალიტი: მისი პირველი ფრაზა I, II ან III ხმით უნდა იმღერო. 80 %-ზე მარგალიტი პრიალდება, სამივე ხმით — ოქროსფერი ხდება. ონლაინ შენი სკივრებია (იგივე, რაც „საგანძურის გზაზე“); ჰიბრიდულში — „კლასის სკივრი“: გუნდები რიგრიგობით მღერიან ერთ ტელეფონში და კლასი თავის სამ სკივრს ავსებს; სამაგიდოში ფრაზები ნოტებით არის დაბეჭდილი, წამყვანი მღერის და ჟიური აფასებს.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'margalitebi', section: 'margalitebi', print: { href: '/games/print/margalitebi.pdf', sheets: 12 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'margalitebi', section: 'margalitebi', print: kit('margalitebi', 12),
   },
   {
     id: 'gatvla', title: 'გათვლა', text: 'ვინ იწყებს, ვისი ჯერია, ვინ რომელ გუნდშია — გათვლის ლექსით, ბორბლით და წილისყრით',
     about: 'ბავშვების ძველი გათვლა: წრეში ლექსს ითვლით, ვისზეც ბოლო სიტყვა დაეცემა, ის იწყებს. ჰიბრიდულში ერთი ტელეფონი ითვლის, ბორბლით ირჩევს და გუნდებად ყოფს; ონლაინ — „ვის შეხვდება?“: წამყვანი ზარში ლექსს კითხულობს, ყველა თავის ტელეფონზე ნიშნავს, ვისზე დაეცემა, და ასე ირკვევა მთელი რიგი.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'gatvla', section: 'tamashebi', print: { href: '/games/print/gatvla.pdf', sheets: 4 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'gatvla', section: 'tamashebi', print: kit('gatvla', 4),
   },
   {
     id: 'tskheli-churchkhela', title: 'ცხელი ჩურჩხელა', like: 'ცხელი კარტოფილი', text: 'სკოლის ჩანაწერი მოულოდნელად ჩერდება — ვისაც ჩურჩხელა ხელში რჩება, ის დავალებას ასრულებს',
     about: '„ცხელი კარტოფილი“ ბავშვების ცნობილი თამაშია: საგანს ხელიდან ხელში გადასცემთ, სანამ მუსიკა უკრავს, ვისთანაც გაჩერდება, ის ასრულებს დავალებას. ჩვენთან ჩურჩხელა გადადის, ჟღერს სკოლის ჩანაწერი, დავალება კი სიმღერა ან ჰანგის ცნობაა. ონლაინ ყველას თავის ტელეფონზე უჭირავს: რაც უფრო გვიან გაუშვებ, მით მეტი ქულა — ოღონდ თუ მუსიკა მანამდე გაჩერდა, დაიწვი.',
     modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'churchkhela', section: 'tamashebi',
-    print: { href: '/games/print/tskheli-churchkhela.pdf', sheets: 6 },
+    print: kit('tskheli-churchkhela', 6),
   },
   // the board games the school prints and makes itself
   {
     id: 'okros-khana', title: 'ოქროს ხანა', text: 'მხედარი 13 კუთხეში: აგროვე ნივთები, ააშენე მამულები, დაეხმარე მეფის დიდ საქმეებს',
     about: 'ჩვენი სამაგიდო თამაში შეგროვებისა და მშენებლობის ჟანრში. საქართველოს 13 კუთხის რუკაზე შენი მხედარი დადის: კუთხეებიდან ხეს, ქვას, პურს, ღვინოს და ოქროს აგროვებს, მამულებს აშენებს, სუფრებს შლის და მეფის დიდ საქმეებს — ციხეებს, ხიდს, სასახლეს, აკადემიას — ეხმარება. მეფე ყოველ წელს სხვა კუთხეშია. ონლაინ ყველა თავის ტელეფონზე თამაშობს; ჰიბრიდულში ერთი ტელეფონი მაგიდის შუაშია.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'okros', section: 'tamashebi', print: { href: '/games/print/okros-khana.pdf', sheets: 16 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'okros', section: 'tamashebi', print: kit('okros-khana', 16),
   },
   {
     id: 'qaravani', title: 'ქარავანი', text: 'XIX საუკუნის საქართველო: კამათლები გზას გიხსნის, ქარავანი ქალაქებს და ტვირთს აგროვებს',
     about: 'ჩვენი სამაგიდო თამაში გზების ჟანრში. XIX საუკუნის საქართველოს რუკაზე 47 ქალაქია: კამათლები გზას გიხსნის (მთაში წყვილი სჭირდება, ზღვაზე — ექვსიანი), აბაზით კამათელს ცვლი და ქარვასლებს აშენებ. ბოლოს ქალაქი იმისაა, ვისაც იქ მეტი გზა შედის, და ითვლება, რამდენ ტვირთს — ღვინოს, თაფლს, ჩაის… — აღწევს შენი ქარავანი. ონლაინ ყველა თავის ტელეფონზე თამაშობს; ჰიბრიდულში ერთი ტელეფონი მაგიდის შუაშია.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'qaravani', section: 'tamashebi', print: { href: '/games/print/qaravani.pdf', sheets: 16 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'qaravani', section: 'tamashebi', print: kit('qaravani', 16),
   },
   {
     id: 'ori-takhti', title: 'ორი ტახტი', text: 'ორი მეფე ლიხის ქედზე: ერთი ძღვენს ყოფს, მეორე ირჩევს',
     about: 'ჩვენი სამაგიდო თამაში ორისთვის. დასავლეთის (ქუთაისი) და აღმოსავლეთის (თბილისი) მეფეები რვაჯერ ხვდებიან და ხუთ ბარათს ინაწილებენ: ერთი ორ წილად ყოფს, მეორე ირჩევს. ციხე თავის ქულას იძლევა, უფრო ძლიერი ლაშქარი — 8-ს, ვაზი ჭურჭელთან ერთად ღვინოა, წიგნი მით მეტია, რაც უფრო მრავალფეროვანია კარი, ელჩი კი მეორე წილიდან ბარათს გადმოიბირებს. ონლაინ ორივე თავის ტელეფონზე თამაშობს; ჰიბრიდულში ერთი ტელეფონი ორს შორის დევს და ყველაფერს თვითონ ითვლის.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'takhti', section: 'tamashebi', print: { make: () => import('../pages/games/takhti/printKit').then(m => m.takhtiPdf()), sheets: 7 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'takhti', section: 'tamashebi', print: { make: progress => import('../pages/games/takhti/printKit').then(m => m.takhtiPdf(progress)), sheets: 7 },
   },
   {
     id: 'lurji-supra', title: 'ლურჯი სუფრა', like: 'Azul', text: 'ქართული ორნამენტებით მოხატული ფილები სუფრაზე დააწყვე',
     about: '„Azul“ ცნობილი სამაგიდო თამაშია: ფერად ფილებს არჩევ და შენს დაფაზე ნიმუშად აწყობ. ჩვენთან ერეკლე II-ის თბილისია, ფილებზე კი ქართული ორნამენტებია. ონლაინ ყველა თავის ტელეფონზე იღებს ბეჭდებს; ჰიბრიდულში ერთი ტელეფონი ხელიდან ხელში გადადის, ქებას კი თვითონ ითვლის.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'lurji', section: 'tamashebi', print: { href: '/games/print/lurji-supra.pdf', sheets: 13 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'lurji', section: 'tamashebi', print: kit('lurji-supra', 13),
   },
   {
     id: 'mepis-kari', title: 'მეფის კარი', like: 'Coup', text: 'მეფის კარის როლები: ვინ ვინ არის — ბლეფი და გამჭრიახობა',
     about: '„Coup“ მოკლე ბლეფის თამაშია: ორი ფარული როლი გაქვს, მათ ძალას იყენებ ან იტყუები, ბოლოს კი ერთი რჩება. ჩვენთან თამარ მეფის კარია: მეჭურჭლეთუხუცესი, მანდატურთუხუცესი და სხვა კარისკაცები, ფული კი თეთრია. ონლაინ ყველას თავის ტელეფონზე უჭირავს ბარათები და ბლეფი თამაშის ზარში მიდის; ჰიბრიდულში ბარათები დაბეჭდილია, ტელეფონი კი თეთრს და რიგს ითვლის.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'kari', section: 'tamashebi', print: { href: '/games/print/mepis-kari.pdf', sheets: 8 },
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'kari', section: 'tamashebi', print: kit('mepis-kari', 8),
   },
 ];
 

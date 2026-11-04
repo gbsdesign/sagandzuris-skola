@@ -8,6 +8,7 @@ import {
 import { triggerHaptic } from '../../../utils/haptics';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { Chip } from '../../../components/games/Chip';
+import { KitButton } from '../../../components/games/KitButton';
 import { Btn, Card, askConfirm, useWide } from '../../../components/ui/kit';
 import { Hint } from '../samshvilde/parts';
 import { useNow } from '../rounds/parts';
@@ -23,7 +24,6 @@ import { DoorPanel, GatePanel, useTsikheSounds, type TsikheSounds } from './Door
 
 const GAME_KEY = 'sg-tsikhe-table';
 const CONF_KEY = 'sg-tsikhe-table-conf';
-const PDF = '/games/print/tsikhis-gasaghebi.pdf';
 const load = (k: string): unknown => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } };
 const save = (k: string, v: unknown) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } };
 
@@ -324,13 +324,14 @@ export const TsikheTableGame: React.FC = () => {
         {!conf.whole && <TeamsEditor conf={conf} onChange={c => setConf({ ...conf, ...c })} />}
       </Card>
       <Btn size="lg" full icon={<Play />} onClick={() => { void start(); }} className="!h-14 !text-[15.5px]">დაწყება · {ROOM_MINUTES} წუთი</Btn>
-      <a
-        href={PDF}
-        download
-        className="flex items-center justify-center gap-2 h-12 rounded-full bg-white ring-1 ring-[#e8dcc8] text-[14px] font-bold text-[#7a2028] hover:ring-[#7a2028]/40"
+      <KitButton
+        id="tsikhis-gasaghebi"
+        name="ციხის გასაღები"
+        icon={<Printer className="w-4.5 h-4.5" />}
+        className="flex w-full items-center justify-center gap-2 h-12 rounded-full bg-white ring-1 ring-[#e8dcc8] text-[14px] font-bold text-[#7a2028] hover:ring-[#7a2028]/40"
       >
-        <Printer className="w-4.5 h-4.5" />ბარათები დასაბეჭდად · PDF
-      </a>
+        ბარათები დასაბეჭდად · PDF
+      </KitButton>
       <Hint>
         დაბეჭდეთ ციხის ბარათები — თითო გუნდს თავისი ნაკრები: ექვსი ბარათი, ზურგით ზემოთ, ნომრების რიგით. გუნდი პირველ ბარათს
         აბრუნებს და ამოცანას ხსნის. პასუხით მასწავლებელთან მოდის — შეეხეთ გუნდს და შეიყვანეთ: სწორია — ტელეფონი გეტყვით,

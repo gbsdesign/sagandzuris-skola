@@ -335,7 +335,7 @@
 - **Games hub** (`pages/GamesPage.tsx`, 2026-10-27; **one list since 2026-10-30**, the user's „ყველა თამაში 1 სიად“ — no category
   tabs): every game of `data/games.ts` `GAMES` (the board games too) is a card with a button per variant it has — ონლაინ ·
   ჰიბრიდული · სამაგიდო (the user's word, was „უტელეფონო“); the app's variants open the game („სამშვილდის ღამე“ on the variant
-  tapped: `requestOpen('samshvilde', 'online' | 'table')`), სამაგიდო downloads the PDF (`<a download>`). A game that answers to a
+  tapped: `requestOpen('samshvilde', 'online' | 'table')`), სამაგიდო makes the PDF on the phone (see „Kits drawn in the browser“). A game that answers to a
   known one shows it in brackets (`like`: მაფია, Wordle, Alias, კატანი…) and ⓘ unfolds 2–3 lines on what that game is and how
   ours differs (`about`; „რა? სად? როდის?“ has ⓘ without brackets). Only what is ready shows — a game and a variant alike (since
   2026-10-28 the user had the unbuilt plan games taken off; the plan doc keeps them, don't bring them back unasked); a game's app
@@ -519,7 +519,7 @@
   share in per cent is the points (online sent as the act's `pick`, 0…100; a take may be sung again before sending, another
   voice drops it — `Pick`'s `onPick(null)`); no piece of its own (`clip` none). Its hybrid goes one by one (`turns`, `sides`
   „მომღერლები“): the phone passed hand to hand, each one's take kept as their mark; any name can sing (again) out of turn.
-  Every quick game is now built. Not yet tried by real people on several phones. Its kit (`khmebis-turniri.mjs`, 7 sheets, 2026-11-01)
+  Every quick game is now built. Not yet tried by real people on several phones. Its kit (`khmebis-turniri.js`, 7 sheets, 2026-11-01)
   is a knockout tournament: 18 chants' first phrases, each voice on its own staff with its first note (`openingOf`, seed 31), the
   brackets for 8 and 16 singers (duels numbered, „№“ of the chant), nine voting cards (ა one side, ბ the other — the class votes
   for the better of the two who sang the same phrase in the same voice) and the points sheet (three rounds, 0–3, as in the app).
@@ -607,7 +607,7 @@
   the score = the round's points (sent as the act's `pick` 0…100, sung again before sending allowed, `strict` so a stop counts the
   rest as missed); 120 s. Hybrid (`Table.tsx`) = one phone's speaker sings one or two voices (`sg-mesame-table`), the class the
   rest; each voice's first note in turn, 3-2-1, the book's line on screen, the room recorded (≤ 290 s) and sent to the class chat.
-  Its kit (`scripts/print-games/games/mesame-khma.mjs`, 6 sheets): 12 openings in three voices, two a page with each voice's first
+  Its kit (`src/print/games/mesame-khma.js`, 6 sheets): 12 openings in three voices, two a page with each voice's first
   note named (the app's chant games' chants, seed 29), nine voice cards (I მთქმელი · II მოძახილი · III ბანი, three trios) with one
   back, a jury sheet (six trios × three rounds × დაწყება · ხმა · ბოლო, 0–2 each); the trios sing, the cards move on after a round.
   „ჩემი გუნდი“ (2026-11-01, like Incredibox; mapItem `gundi`, the hub opens its tab by `requestOpen('gundi',
@@ -621,10 +621,10 @@
   `randomStage`, ● → save or the class chat) and „ჰიბრიდული“ (`ClassStage.tsx`: each role phone / class / nobody — `CLASS_PARTS`;
   the conductor's screen: the class's first notes, 3-2-1, a class group tapped comes in at the next pass, beat dots, the players'
   syllables, the book's lines with the beat band, the room recorded ≤ 290 s). Device keys `sg-gundi`, `sg-gundi-klasi`,
-  `sg-gundi-tab`. Its kit (`chemi-gundi.mjs`, 6 sheets): the eight songs' phrase 1 in three voices between repeat signs (first
+  `sg-gundi-tab`. Its kit (`chemi-gundi.js`, 6 sheets): the eight songs' phrase 1 in three voices between repeat signs (first
   notes, the drone, the count), six role cards with the app's own figures (`FigureCard` through esbuild + react-dom/server) and
   every pattern's syllables in 2 and 3, twelve conductor's cards (a little stage of who is in; „ფინალი“ kept aside), the ensemble
-  map (six roles × eight passes). `music.mjs` since: a score's voices on a 32nd's grid counted from its start (`onGrid` — a fast run
+  map (six roles × eight passes). `music.js` since: a score's voices on a 32nd's grid counted from its start (`onGrid` — a fast run
   no longer pushes its voice late) and a staff too full for its box is drawn again smaller.
   „ჩამოთვალე!“ (2026-11-01, the plan's №9, like Sporcle; mapItem `chamotvale`, rules `utils/chamotvale.ts` + test, screens
   `pages/games/chamotvale/`): name every member of a list against the clock (`chamoSeconds`: 15 s + 8 a member, 40–150 s). 17 lists
@@ -640,7 +640,7 @@
   as a bitmask (`maskOf`, ≤ 30 members), 100 each, a whole list +100 and up to +300 by time left, sent whole at once or as the
   time runs out; the reveal counts how many named each one. Hybrid (`Teams.tsx`, kept in `sg-chamotvale-teams`): 2–6 teams take
   turns on one phone (a turn's clock, a find keeps its team's colour and passes the turn, „ვერ თქვეს“ passes it, every team
-  passing in a row ends it). Its kit (`chamotvale.mjs`, 9 sheets): ten lists a page each (the boxes with the app's hints, the
+  passing in a row ends it). Its kit (`chamotvale.js`, 9 sheets): ten lists a page each (the boxes with the app's hints, the
   numbered map for the regions), a blank page for the teacher's own list, the host's key on two pages with the other names
   that count, and the score sheet.
 - **„ასოების ბადე“** (2026-11-01, the plan's Georgian game №3, like Word search; mapItem `bade`, rules `utils/bade.ts` + test,
@@ -655,7 +655,7 @@
   starts at the first touch and stops while hidden) + endless extra grids of any level (not saved); hybrid (`bade/Teams.tsx`,
   rules `utils/badeTeams.ts` + test) = 2–6 teams before one screen, a team calls a word, the host draws it and taps who found it
   (or picks it in the list), 2/3/5 minutes a grid, 1–3 grids, the list shown or only the theme; ✕ pauses the clock
-  (`spent` + `t0`), kept in `sg-bade-teams`; on a computer the grid stands left of the list. Its kit (`asoebis-bade.mjs`, 6
+  (`spent` + `t0`), kept in `sg-bade-teams`; on a computer the grid stands left of the list. Its kit (`asoebis-bade.js`, 6
   sheets): twelve 10×10 grids, four a script (mkhedruli, nuskhuri, asomtavruli — the old ones with the key strip), two a page
   cut into A5 cards; the big key (33 letters in three scripts + their old names) with two own grids behind it (not cut), the
   answers with coloured capsules.
@@ -673,11 +673,11 @@
   ველი“: teams in turn call a letter — present = a point a box and the turn stays, absent = it passes; a team may read the line
   (right = the boxes left + `READ_BONUS` 5, wrong = it opens for nobody); 3/5/7 lines, a turn's clock 0/30/45/60 s, kept in
   `sg-tsartsera-teams`; the screen keyboard's back key is „უკან“ (`GeoKeyboard` `backLabel`), on a computer the board stands
-  left of the keys. Its kit (`khutsuri-tsartsera.mjs`, 6 sheets): twenty lines four a page (asomtavruli 1–12, nuskhuri 13–20,
+  left of the keys. Its kit (`khutsuri-tsartsera.js`, 6 sheets): twenty lines four a page (asomtavruli 1–12, nuskhuri 13–20,
   each page with the key strip; the kit's `script` sizes the boxes to fill the page and stops the build on an overflow), the
   signature in old letters too („ვინ თქვა?“), a secret letter of one's own, the big key with an asomtavruli copybook behind it,
   the answers and the class game's sheet (letters called, the teams' points). The old scripts' fonts, key strip and big key are
-  shared with „ასოების ბადე“'s kit: `scripts/print-games/oldScript.mjs`.
+  shared with „ასოების ბადე“'s kit: `src/print/oldScript.js`.
 - **„დროის ხაზი“** (2026-11-01, the plan's Georgian game №7, like Timeline; mapItem `khazi`, rules `utils/khazi.ts` + test, screens
   `pages/games/khazi/`): an event without its year is put into a line of cards in time order — between, before or after; the year
   opens and judges, a wrong card still joins at its right place, marked (the line stays true). Cards `data/khaziCards.ts` (105, four
@@ -689,7 +689,7 @@
   three lives, its best per deck on the device (`sg-khazi-best`). Hybrid (`khazi/Teams.tsx`, rules `utils/khaziTeams.ts` + test) =
   2–6 teams in turn on one screen: right = a point and the card in the team's colour, the turn always passes, goal 5/7/10, the
   round goes to its end; turn clock 0/30/60 s, „წინა სვლის გაუქმება“, kept in `sg-khazi-teams`; on a computer the line stands left
-  of the card. Its kit (`drois-khazi.mjs`, 9 sheets): eighteen cards of each deck (the event in front, the year + note behind), two
+  of the card. Its kit (`drois-khazi.js`, 9 sheets): eighteen cards of each deck (the event in front, the year + note behind), two
   sheets a deck, rules with a drawn line.
 - **„ჩემი ვაზი“** (2026-11-01, the plan's Georgian game №1, like Tamagotchi; mapItem `vazi`, rules `utils/vazi.ts` + test, picture
   `utils/vineShape.ts` + `pages/games/vazi/VineArt.tsx`): every member's vine grows from what they did — nothing new is stored, it is
@@ -701,7 +701,7 @@
   loses them all over); three idle days yellow it (`yellowShare`), a month bare, never dead. Tabs „ონლაინ · ჰიბრიდული“ (`VaziGame`):
   „ონლაინ“ = my vine (`vazi/Mine.tsx`: picture, today's deeds, the month's bunch bar, the last 14 days, how it grows); „ჰიბრიდული“ =
   „რთველი“ (`vazi/Harvest.tsx`): a teacher picks a class, every member's vine on one screen (`useClassStudents`), „დავითვალოთ!“
-  counts the season's bunches vine by vine. No rules change. Its kit (`chemi-vazi.mjs`, 6 sheets): a month's vine to colour (one
+  counts the season's bunches vine by vine. No rules change. Its kit (`chemi-vazi.js`, 6 sheets): a month's vine to colour (one
   cane winding up the page — the app's vine is too dense to colour —, 63 numbered leaves, the bunches under the 12th, 30th and
   50th) with „ჩემი თვე“ behind it (the deeds, 31 days × 8 little leaves), leaf and bunch stickers, the class's harvest chart with
   the class qvevri (210 numbered grapes) behind it, four certificates.
@@ -713,8 +713,8 @@
   (`Dress.tsx`): 3-2-1, then the tray in a shuffled order (`shuffled(seed)`), the figure filling as „ჩემი სამოსი“'s layers. Tabs
   „ონლაინ · ჰიბრიდული“: alone (`Solo.tsx`: with names or „მხოლოდ სურათებით“, the best per way in `sg-chaitsvi-best`, then every
   part's story) and teams in turn on one phone (`Teams.tsx`, `newDressTeams`/`recordTurn`/`ranking`, kept in `sg-chaitsvi-teams`,
-  ✕ only pauses) — or a real chokha, the host tapping each part as it goes on. Its kit (`chaitsvi-qartulad.mjs`, 6 sheets): two
-  paper dolls drawn at 1:1 in `scripts/print-games/dolls.mjs` (a piece = its drawing + the shapes its grey cut line goes round,
+  ✕ only pauses) — or a real chokha, the host tapping each part as it goes on. Its kit (`chaitsvi-qartulad.js`, 6 sheets): two
+  paper dolls drawn at 1:1 in `src/print/dolls.js` (a piece = its drawing + the shapes its grey cut line goes round,
   `halo`), the chokha's ten pieces (four hats) and the dress's five, their backs mirrored with what each goes on after (`afterOf`,
   read from the app's `needs`), the host's sheet (reasons, stories, „რომელი ქუდი?“) with the scores behind it.
 - **„სამი დამწერლობა“** (2026-11-01, the plan's Georgian game №2, like Duolingo; mapItem `anbani`, rules `utils/anbani.ts` + test,
@@ -732,7 +732,7 @@
   „გაიმეორე ნასწავლი“ (practice). Tabs „ონლაინ · ჰიბრიდული“: the path (`Path.tsx`: script chips `sg-anbani-script`, streak / today /
   steps, nine round steps zig-zag) and „სწრაფი კითხვა“ (`Teams.tsx`, rules `ReadTeams`: an old letter, word or line on one screen,
   the host taps the team that read it first — a line 2 points —, the key strip shown or hidden, 10/15/20, kept in
-  `sg-anbani-teams`; on a computer everything larger). Its kit (`sami-damtserloba.mjs`, 11 sheets): the big key + an asomtavruli
+  `sg-anbani-teams`; on a computer everything larger). Its kit (`sami-damtserloba.js`, 11 sheets): the big key + an asomtavruli
   copybook, a nuskhuri copybook + „ჩემი გზა“ (both paths to colour, a six-week streak calendar, the master's badge), a reading sheet
   a script (each step's letters and six words of the letters so far, then twelve long words and six lines with the key), 99 letter
   cards (33 × 3 scripts, number + old name in the corner, one back) for „სამეული“ (Happy Families), „ჰოპ!“ (Snap) and memory, the
@@ -750,7 +750,7 @@
   `TsikheTable`, kept in `sg-tsikhe-table`) = 1–6 teams (or the whole class as one) with the printed cards and the host's phone as
   the locks — a team brings its answer, the host taps the team and tries it on its door (options and items in the cards' order: the
   seed is `printSeed(room)`), then hands the next card; one clock, each team's own penalty, the first through the gate wins. Its kit
-  (`tsikhis-gasaghebi.mjs`, 13 sheets): a castle = two sheets of four 99×140 mm cards (five doors + the gate, each from №2 showing the
+  (`tsikhis-gasaghebi.js`, 13 sheets): a castle = two sheets of four 99×140 mm cards (five doors + the gate, each from №2 showing the
   piece the door before gave; the castle's story; its scroll — the old script's key, ნარიყალა's with the numbers), a teacher's page a
   castle (answers, both hints, the tune's opening on a staff, the bells' phrase, the notes to read aloud), the teams' sheet and the
   hint tokens (two hints + one answer a team). A door card's empty part holds a faint castle (`.ts-fill`, dropped when too small).
@@ -764,7 +764,7 @@
   „ონლაინ · ჰიბრიდული“: alone (`Solo.tsx`: the run in `sg-tsinapari-run`, ✕ pauses, the best per story `sg-tsinapari-best`, the end shows
   the real path and opens the ancestor's biography when its section is open) and the class (`Teams.tsx`, `PathTable`, kept in
   `sg-tsinapari-table`): teams hold up their ა ბ გ cards, the host taps each team's letter, „რა მოხდა სინამდვილეში?“ gives a point to
-  the ancestor's way (a tap after it mends a slip), or the whole class as one team picks a way. Its kit (`tsinapris-gza.mjs`, 13
+  the ancestor's way (a tap after it mends a slip), or the whole class as one team picks a way. Its kit (`tsinapris-gza.js`, 13
   sheets): each story a gamebook of four pages (§ 1 + one § a way, numbers shuffled by a seed of its id; the print's script flows the
   sections over the pages, a § may go on in the next column but never over a page, a tight last page drops its note lines first,
   then the type steps down, room left becomes more note lines), the book's own „ჩემი გზა“ strip, ა ბ გ cards for six teams (the
@@ -787,8 +787,8 @@
   two struck as „the same“ (`newJoRun`). The class (`Table.tsx`, `JoTable`, `sg-minishneba-table`): 3–8 names, one phone goes round —
   each giver opens the word and writes a clue in secret, the same ones and parts of the word strike themselves (`judgeClues`, `baseOf`:
   plural and last vowel off), the givers then check the notes and strike by hand what the app missed (`strikeClue`, `off`, `notesOf`),
-  the phone goes to the guesser, a reveal can be mended (`mendGuess`). Kits: `nu-itqvi.mjs` (14 sheets: the 180 cards 47×66 mm,
-  sixteen a sheet, + 12 blank, a score sheet, an example card on the cover) and `erti-minishneba.mjs` (11 sheets: 60 cards of five
+  the phone goes to the guesser, a reveal can be mended (`mendGuess`). Kits: `nu-itqvi.js` (14 sheets: the 180 cards 47×66 mm,
+  sixteen a sheet, + 12 blank, a score sheet, an example card on the cover) and `erti-minishneba.js` (11 sheets: 60 cards of five
   numbered words — 300 nouns hand-picked from the „ამიხსენი“ bank, five themes a card, the build stops if one leaves the bank —, 3
   blank, eight A6 clue boards whose back is the board turned down, a score sheet of ten games with the scale).
 - **„პანტომიმა“** (2026-11-01, like Charades; mapItem `pantomima`, the hub opens its tab by `requestOpen('pantomima', 'online' |
@@ -803,7 +803,7 @@
   phone („გამოიცნეს“ / „გამოტოვება“), or „შუბლზე“ — a 3-2-1 lead, then the word huge on a full-screen face (`Forehead`, z-75), a nod
   down = guessed, up = skipped (`facingOf` = cos β · cos γ, the screen's up-component in both ways of holding; `readTilt` with
   hysteresis, armed only once the phone stands; iPhones ask `DeviceOrientationEvent.requestPermission` in the tap), the screen's halves
-  tap the same; the turn's list can be mended before its points; a skip costs nothing. Its kit (`pantomima.mjs`, 12 sheets): the 150
+  tap the same; the turn's list can be mended before its points; a skip costs nothing. Its kit (`pantomima.js`, 12 sheets): the 150
   cards 47×66 mm, sixteen a sheet (the verb in the theme's band, the word big, two words on two lines) + 10 blank, the theme on the
   back's strip, a score sheet (12 rounds × 6 teams, the app's settings to tick) and rules with the forehead and little ones' ways and
   the customary signs.
@@ -819,7 +819,7 @@
   `sg-vin-table`): 2–6 teams, 1–3 rounds, a turn's clock none / 2 / 3 min (`VIN_SECONDS`); the guesser's back to the screen or the phone
   on the forehead, the class sees the name and the facts and answers; „+1 კითხვა“, „გამოიცნო!“ (the guess is the last question),
   „კითხვა −1“, „ვერ გამოიცნო“; 3 points within 5 questions, 2 within 10, 1 within 20 (`vinPoints`); a phone on its side gets the
-  controls in one row and the facts in two columns (`useShort`). Its kit (`vin-var-me.mjs`, 9 sheets): 50 cards + 4 blank, nine a
+  controls in one row and the facts in two columns (`useShort`). Its kit (`vin-var-me.js`, 9 sheets): 50 cards + 4 blank, nine a
   sheet — the name, role, birth, facts and the yes-tags all on the front (the back faces the guesser) —, the board of „ვინ
   ჩაიფიქრა?“ (two players: a row a person, the tags as dots in the questions' columns, so a „no“ crosses out a column), the question
   counter (twenty circles a turn in the points' colours) and the rules of three games (forehead, the duel, „ფაქტებით“ 5…1).
@@ -838,7 +838,7 @@
   confirm). A touch opens a word: a team's own keeps the turn, any other passes it, the trap loses (`tableView` over the moves);
   „სვლის დასრულება“, undo, a turn's clock none/1/1.5/2 min (`TURN_SECONDS`), wins counted across boards; kept in `sg-saidumlo-game`
   (✕ only pauses), settings `sg-saidumlo-table`; a phone on its side puts the teams and buttons beside a board that fills the height
-  (`useShort`, the tiles' `size="fill"`). Its kit (`saidumlo-sakhelebi.mjs`, 9 sheets): 120 word cards 48×42 mm with a word on each
+  (`useShort`, the tiles' `size="fill"`). Its kit (`saidumlo-sakhelebi.js`, 9 sheets): 120 word cards 48×42 mm with a word on each
   side (240 words, every theme in turn, the word also upside down for the far side), 24 key cards with a key on each side (48, the
   app's `sidesFor`, half blue first, the frame in the first team's colour, ▲ = the row farthest from the captains), 27 covers (9 + 9
   of the teams — the first team takes nine —, 8 passers-by with one spare, the trap) and the turn card (blue / red); every colour also
@@ -859,7 +859,7 @@
   „ყველა თანახმაა“ or `accusationFailed`), „უცხო ვარ“ (who are you — only the stranger goes on —, the place, `guess`); the time over =
   the village's one vote or „ვერ შევთანხმდით“ (`timeout`); ✕ pauses the clock. Points as the original (`roundPoints`: the village 1
   each, the accuser 2; the stranger 2, or 4 for the place or an early wrong vote), the end shows every role, „შემდეგი რაუნდი“ never the
-  same stranger twice running (`nextRound`), „დასრულება“ = the podium. Its kit (`utskho-sopelshi.mjs`, 18 sheets): 210 place cards
+  same stranger twice running (`nextRound`), „დასრულება“ = the podium. Its kit (`utskho-sopelshi.js`, 18 sheets): 210 place cards
   63×52 mm (two places and one „უცხო“ a sheet, one back for all), eight A6 lists of the places, the score sheet (12 rounds × 8 players);
   the kit checks its points against `roundPoints` and stops the build if the app's ever change.
 - **„ნახატობანა“** (2026-11-01, like Pictionary; mapItem `nakhati`, hub id `nakhatobana`; rules `utils/nakhati.ts` + test, the lines
@@ -881,7 +881,7 @@
   (`Table.tsx`, `NakhatiTable` kept in `sg-nakhati-game`, settings `sg-nakhati-table`): 2–6 teams, the artist draws on the board
   (the phone in the host's hand) or on the screen; peek → „სხვა სიტყვა“ → 60/90/120 s → „გამოიცნეს!“ / „ვერ“; after every
   circle, if chosen, „ყველა ხატავს“ (every team's artist, the same word, the host taps who guessed first); a turn's result can be
-  mended; 2–4 circles. Themes, seen words: `sg-nakhati-themes` / `-seen`. Its kit (`nakhatobana.mjs`, 7 sheets): „სახატავი გზა“
+  mended; 2–4 circles. Themes, seen words: `sg-nakhati-themes` / `-seen`. Its kit (`nakhatobana.js`, 7 sheets): „სახატავი გზა“
   (56 squares, 7 a row, every row each theme once, ★ = „ყველა ხატავს“, start/finish), 22 cards of seven words — one a theme,
   shuffled with a seed — + 5 blank, six standing pawns in the app's team colours, a die net, drawing frames, the rules.
 - **„საგალობო ლოტო“** (2026-11-01, like Bingo; mapItem `loto`, hub id `sagalobo-loto`; rules `utils/loto.ts` + test, screens
@@ -899,7 +899,7 @@
   `sg-loto-best`. „ჰიბრიდული“ (`Table.tsx`, `LotoTable`, kept in `sg-loto-table`): one phone plays; printed cards (`kitCards`: 30
   cards over `LOTO_KIT`'s 20 chants, seed `KIT_SEED` 1501 — never reorder that list) are checked by their number (`checkKitCard`),
   own cards by the names tapped (`checkNames`); the wins with undo. On a phone on its side the card stands beside the rest
-  (`Card.tsx` `side`, `useShort`, `CARD_SIDE`). Its kit (`sagalobo-loto.mjs`, 10 sheets): the 30 cards 98×90 mm six a sheet (each
+  (`Card.tsx` `side`, `useShort`, `CARD_SIDE`). Its kit (`sagalobo-loto.js`, 10 sheets): the 30 cards 98×90 mm six a sheet (each
   name with its service's colour, the number behind), the host's list of the 20 openings on staves, 20 slips to draw, „რა ჟღერდა“
   (four games a side: the order written by each chant — a line counts when its three names have numbers), six blank cards.
 - **„საგანძურის ძებნა“** (2026-11-04, the plan's №5, like Geocaching; mapItem `dzebna`, its own tabs in `DzebnaGame.tsx` — the hub
@@ -914,7 +914,7 @@
   phone works out the same tasks, team words and letters and nothing is sent; „ბარათები (PDF)“ is made in the browser (`cards.ts`:
   QR cards `/?open=dzebna&h=&s=&n=<next place packed>` read by App.tsx, team slips, the key); the teacher's phone is the chest
   (`Chest.tsx`: clock, arrivals); a scanned card opens its station on a team's phone (`Station.tsx`: team picked once, 15 s wait after a
-  miss) — team phones must be signed in, the games are members'. Kit `sagandzuris-dzebna.mjs` (8 sheets): four hunts of six stations
+  miss) — team phones must be signed in, the games are members'. Kit `sagandzuris-dzebna.js` (8 sheets): four hunts of six stations
   in four colours (fixed seeds, no chant; an answer's letter = the station's letter of the word, the wrong ones' letters the word
   has not; an old word's key ≤ 12 letters), six 96×90 mm cards a hunt with a line for where the next hides, team sheets for any hunt,
   the key, the chest's sign and arrivals.
@@ -934,7 +934,7 @@
   of `EZO_FIGURES` (never the last one twice), 10 s still, the best statue wins and leads next; hopscotch (`Turns.tsx`, `EzoTurns` in
   `sg-ezo-turns`: ten classes, „შეცდა / გაიარა“, undo). The class's season (`Season.tsx`, `sg-ezo-season`): a win 3, a draw 1, every
   member of the winning side wins (`standings`), the last line can be undone, „ახალი სეზონი“ asks first; settings `sg-ezo-conf`, the
-  tab `sg-ezo-tab`. Nothing in Firestore. Its kit (`ezos-msaji.mjs`, 7 sheets): the cover with the referee's page (signs, fair teams,
+  tab `sg-ezo-tab`. Nothing in Firestore. Its kit (`ezos-msaji.js`, 7 sheets): the cover with the referee's page (signs, fair teams,
   disputes), a page a game (field, what to bring, how to play, who wins, safety; the sea's 18 themes, a hopscotch tracking table),
   the rules quiz (12, answers upside down), 32 team cards drawn from a bag (8 blue + 8 red a sheet, numbered, one back), the
   season's wall table (30 names × 12 games) with the match sheet (two matches) behind it.
@@ -1038,18 +1038,17 @@
   table; „უკან“ takes back a move that showed nothing new; ✕ only pauses. Screens: `Board.tsx` (the map: each region's mark, its
   estates' places, the riders, the crown, the open work's castle; while a house rides, the regions it may reach stay bright and
   take a tap), `Play.tsx`, `Room.tsx`, `look.tsx` (the goods' and houses' colours and marks, shared with the kit). Its kit
-  (`okros-khana.mjs`, 16 sheets) reads the numbers, works and names from the app: a 56×39 cm board of four A4 pieces (the regions
+  (`okros-khana.js`, 16 sheets) reads the numbers, works and names from the app: a 56×39 cm board of four A4 pieces (the regions
   in their goods' tints, each with a plate — the work's castle place, two estate places, the good's mark, the name —, a footprint
   on every border (`crossing`; crowded ones placed by hand, `CROSS_AT`; the build stops if a plate lies across a seam or a
   footprint under a plate), the years' track, the turn panel, the points track 0–49), 12 work cards A6, 12 chronicle cards with
   the houses', the first house's and the market's cards, 4 aid cards A6, 110 goods' chits, estates, markers, five folded figures,
   four rule pages (page 1 sums up a turn and the board's marks) and a box label. Not yet tried by real people on several phones.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
-  თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
-  Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
-  `scripts/print-games/lib.mjs` (Noto Georgian fonts fetched into a gitignored folder, 3×3 sheets of 63×88 mm cards with crop marks,
+  თამაში“) as A4 sheets, made by the button since 2026-11-04 (see „Kits drawn in the browser“) — HTML pages; shared pieces in
+  `src/print/lib.js` (Noto Georgian fonts in `public/fonts/print/`, 3×3 sheets of 63×88 mm cards with crop marks,
   backs mirrored for long-edge duplex, ⌀25 mm token sheets, series stripe „საგანძურის თამაშები №N“, lucide icons as SVG), one module per
-  game in `scripts/print-games/games/`. Every file prints „ყველაფერი ორმხრივად“: a module lists its physical sheets
+  game in `src/print/games/`. Every file prints „ყველაფერი ორმხრივად“: a module lists its physical sheets
   (`{ key, front, back? }`), `duplex()` makes each sheet two pages (a missing back = a labelled blank page) and the cover names
   sheets by number (`sheetNo`). Portraits are ornament placeholders until the user approves Gemini pictures. Built so far:
   „მეფის კარი“ (№6) and „სამშვილდის ღამე“ (№2); then (fifth PR) „ოქროს ხანა“ (№1 — since 2026-11-04 the school's own game, see
@@ -1064,38 +1063,38 @@
   track, its golden stops by the number of players), three cargo maps, 22 carts and four caravanserais a house, the animals as score
   markers, 55 + 11 abazi, three dice nets, a score sheet with every city west to east, four rule pages with figures and an example the
   build counts by the app's `scoreOf` (it stops if the rows don't add up); the cover's back is a glossary of the 47 places).
-  A game with sheets gets `print: { href, sheets }` and `noPhone` in its `modes` in `data/games.ts`; its hub card shows the
-  „სამაგიდო · PDF“ button that downloads it.
+  A game with sheets gets `print: kit('<id>', sheets)` and `noPhone` in its `modes` in `data/games.ts`; its hub card shows the
+  „სამაგიდო · PDF“ button that makes it.
   The app's word games got paper kits too (seventh PR): „დღის სიტყვა“ (grids for 4/5/6 letters, four A6 a side; 78 slips from
   `ANSWER_BANK`; the example coloured by `scoreGuess`), „ოთხეული“ (16 grids of 16 cards = the app's `buildGrid` with fixed seeds,
   kept only when every group of the list allows one answer, with variety rules; the host's answer sheet) and „ამიხსენი“ (45
   cards of six words numbered by a die — fifteen themes, three cards each, the songs only well-known titles — and a two-sided score sheet). Their
-  modules read the app's TypeScript data through `scripts/print-games/appData.mjs` (esbuild in memory, firebase/React stubbed);
+  modules import the app's own data;
   their stripe shows a label („ქართული · უტელეფონო“) instead of a number. „რა? სად? როდის?“ has one too (12 sheets): 72 question
   cards = the first four of each of the 18 topics (question in front, answer + note on the back), 9 blank cards, a two-sided score sheet
   (18 questions × 6 teams) and 24 answer slips — so keep the first four of every topic print-worthy. „ოთხიდან ერთი“'s (2026-11-04,
-  `otkhidan-erti.mjs`, 12 sheets): 76 question cards — four a topic of its 19, the first that fit a card (≤ 110 letters, answers
+  `otkhidan-erti.js`, 12 sheets): 76 question cards — four a topic of its 19, the first that fit a card (≤ 110 letters, answers
   ≤ 26) and are not on „რა? სად? როდის?“'s cards — with ა ბ გ დ in the app's colours in front (the right one's place by seed 4041,
   each letter once a topic) and the right letter, answer and note behind; 5 blank cards, six square team cards (four coloured
   corners — the letter held at the top is the answer; the back shows the same letters where they are from behind, ბ left and დ
-  right) and a score sheet. Both kits' topic colours and icons: `scripts/print-games/quizLook.mjs`.
-  „გათვლა“'s (2026-11-04, `gatvla.mjs`, 4 sheets): the app's three rhymes with every word's beat numbered and where the last word
+  right) and a score sheet. Both kits' topic colours and icons: `src/print/quizLook.js`.
+  „გათვლა“'s (2026-11-04, `gatvla.js`, 4 sheets): the app's three rhymes with every word's beat numbered and where the last word
   lands in circles of 2–12 (`countOut`) + three frames for the class's own; „ვისი ჯერია?“ = wheels of 12 and 24 places spun with a
   paper clip on a pencil point and the fair-turns sheet (30 names, a box a turn — a pick with more boxes than the fewest spins
   again); 64 team tokens ⌀23 mm (four colours, each with its mark, 1–16) and 8 ★ „იწყებს“ to draw from a bag.
-  „ცხელი ჩურჩხელა“'s (2026-11-04, `tskheli-churchkhela.mjs`, 6 sheets): the app's 25 tasks (`TASKS`) as cards + 2 blank, the backs
+  „ცხელი ჩურჩხელა“'s (2026-11-04, `tskheli-churchkhela.js`, 6 sheets): the app's 25 tasks (`TASKS`) as cards + 2 blank, the backs
   in the kind's colour (a host may draw from one pile), four two-sided 20 cm paper churchkhelas (the app's drawing at 0.95 mm a
-  unit, a tab with a hole for a thread, cut round by `halo` of `dolls.mjs`) with what a churchkhela is behind, and the tally
+  unit, a tab with a hole for a thread, cut round by `halo` of `dolls.js`) with what a churchkhela is behind, and the tally
   „ვინ დაიწვა?“ (20 rounds, both sides) with the stop by a die thrown in secret (× 5 s, × 3 for the little ones).
-  „მარგალიტები“'s (2026-11-04, `margalitebi.mjs`, 12 sheets): every pearl's three phrases note for note the app's (`phraseOf`'s count
+  „მარგალიტები“'s (2026-11-04, `margalitebi.js`, 12 sheets): every pearl's three phrases note for note the app's (`phraseOf`'s count
   over `lineOf`; a voice over 26 notes on two lines — `abcOf`'s new `breaks`), a chest's twenty flowed over its five pages by the
   print's script (each staff's box trimmed to what abcjs drew; the build stops if a chest needs more), each chest's class table (a
   circle a voice, ★ golden), 70 tokens ⌀25 mm (three rows a chest with a spare, a row of spares), „ჩემი სკივრები“ to colour (both
   sides) and the rules: a team draws a token, the host sings the voice's phrase, the jury gives 2 (four notes of five — 80 %) · 1 · 0.
-  The musical games' kits (2026-11-01, stage 1; the host sings, so the melodies come from the book notes): `scripts/print-games/music.mjs`
+  The musical games' kits (2026-11-01, stage 1; the host sings, so the melodies come from the book notes): `src/print/music.js`
   draws staves with abcjs inside the print page (`abcOf` one voice, every accidental written, numbered marks; `abcScore` three voices
-  under each other on one clef, tied to keep time), `melodies.mjs` = the chants of the app's chant games + the program's songs with
-  notes, `kitParts.mjs` = the shared score sheet and steps. „დღის ჰანგი“ (48 melodies, the host sings 2·3·4·6·8·11 notes), „სამ ნოტში!“
+  under each other on one clef, tied to keep time), `melodies.js` = the chants of the app's chant games + the program's songs with
+  notes, `kitParts.js` = the shared score sheet and steps. „დღის ჰანგი“ (48 melodies, the host sings 2·3·4·6·8·11 notes), „სამ ნოტში!“
   (49 bidding cards: the clue in front, the staff behind), „ხმა-ხმად“ (24 chants in three voices with four answers, three singers),
   „საიდანაა სიმღერა?“ (a 39×28 cm map of the songs map's 13 numbered regions from two A4 pieces — racha's and samtskhe's labels moved
   off the seam — and 40 song cards from `FOLK_SONGS` by a quota per region, most recorded first, no title that names a region; the
@@ -1103,7 +1102,7 @@
   big on its back —, the host's four games of ten chords drawn by the app's rules with fixed seeds, three singers or a piano; chords by
   `abcChords`, `staff(abc, { zoom })` sizes one box) and „რვა ხმა“ (the eight tones' models, two heirmoi each, a sheet a child; the
   teacher's 24 more, three a tone, two games of twelve; every staff on the octave-down clef). The big region map of these two
-  map kits is `scripts/print-games/regionMap.mjs` (`mapBoard`, `miniMap`, `regionKey`); „რუკის ვიქტორინა“'s kit = that map + 52
+  map kits is `src/print/regionMap.js` (`mapBoard`, `miniMap`, `regionKey`); „რუკის ვიქტორინა“'s kit = that map + 52
   place cards (four a region, the name in front, the region, a small map and the note behind), team and score sheets.
   „გააგრძელე!“'s kit = the host's book of 30 songs' words (recorded most first, ≤ 20 lines, four a region; two columns, a song
   never split — `heightOf` holds the print's measured heights) with ✋ at up to three lines to stop before, and a score sheet.
@@ -1114,19 +1113,25 @@
   named under it) + a circle sheet (a row a player, a column a phrase's length, ✓/✗); „მფრინავი ნოტები“'s = 34 note cards (every
   natural from two ledger lines under the staff to two over it, treble and bass; the answer, its place and octave behind, stars
   for the ledger lines) + two help cards, a poster of both clefs and six teams' name cards (the syllable in front, the letter
-  behind). Both draw their staves with `scripts/print-games/staffSvg.mjs` (abcjs's signs from node_modules, the notes evenly
+  behind). Both draw their staves with `src/print/staffSvg.js` (abcjs's signs from node_modules, the notes evenly
   spaced so a word fits under each — abcjs's own layout squeezed them; `clefFor` takes the treble or the octave-down clef,
   whichever needs fewer ledger lines).
   „ხმის წყვილები“'s kit = three Memory decks of 13 pairs, each back its own colour: ა a melody's opening on a staff (the host sings
   it) ↔ its name, ბ a note on the treble staff ↔ its key on a two-octave keyboard, named, გ each region's first song of „საიდანაა
   სიმღერა?“'s kit (`SONGS`, now exported) ↔ its region on the small map; each deck's 27th card is the host's key (ბ: the notes'
   guide), taken out before play.
-- **Kits drawn in the browser (the user's rule, 2026-11-04: „შენ კი არ აკეთო პდფ … პდფ ღილაკი იქნება … იქ დააგენერირებს თავად“)**:
-  no new kit is built with Playwright — the hub's button (`GameDef.print.make`, a lazy import) draws it on canvases from the app's
-  data (an A4 page = one JPEG, 1617 px = 190.24 mm, in `utils/scorePdf.ts` `buildPdf`; cards at their true size, backs mirrored for
-  long-edge duplex) and saves the PDF; the button says „მზადდება…“ meanwhile. First: `takhti/printKit.ts` (7 sheets: two rules pages,
-  the 42 cards + two thrones + „ლიხის ქვა“ 63×88 mm, score boxes with the card list and the Likhi story behind them). The older
-  kits keep their ready PDFs (`print.href`).
+- **Kits drawn in the browser (the user's rule, 2026-11-04: „შენ კი არ აკეთო პდფ … პდფ ღილაკი იქნება … იქ დააგენერირებს თავად“, for every
+  kit since 19:14 — „რომ შენ მარტივად ცვალო მერე რაც გინდა“)**: no ready PDFs, no Playwright, no previews — the hub's „სამაგიდო · PDF“
+  (`GameDef.print.make`, a lazy import; a game page's own button = `components/games/KitButton.tsx`) makes the kit on the phone and
+  saves it („მზადდება… N%“). `takhti/printKit.ts` draws on canvases (7 sheets: rules, the 42 cards + two thrones + „ლიხის ქვა“, score
+  boxes). The other 47 are the old print modules moved into the app: `src/print/games/<id>.js` → `{ title, css, head, script, pages }`
+  (may import the app's modules, never a top-level await); `print/makeKit.ts` lays the pages out in a hidden frame (the fonts of
+  `public/fonts/print/`, abcjs, the kit's `script`, then `fitScript`), turns each A4 page into an SVG picture of its own markup with the
+  fonts inside, draws it at 200 dpi and gives the JPEGs to `utils/scorePdf.ts` `buildPdf` (`margin: 0`); a browser that refuses (old
+  Safari) gets the frame's print window. A musical kit reads book notes at once (`music.js` `loadScore`): list them in `print/kits.js`
+  `SCORES` (a missed one is fetched on the spot with a console warning). Icons by name: `src/print/icons.js`, made by
+  `node scripts/print-icons.mjs` — run it after a kit names a new lucide icon. scripts/ tools read the app and the kits through
+  `scripts/lib/appData.mjs` (esbuild in memory; `globalThis.__sgLoadScore` reads the notes files).
 - **Our own games, not copies (2026-11-04)**: a board or party game is the school's own game in its genre — its own mechanics and
   Georgian content —, never a known game copied one-to-one under another name. „ოქროს ხანა“, „ქარავანი“ and „ორი ტახტი“ are rebuilt;
   then the user stopped (2026-11-04 18:56: no new games, no more reworks — ლურჯი სუფრა, მეფის კარი and the word and party games
@@ -1134,7 +1139,7 @@
   general idea (a daily word, a team quiz, a map to tap) may stay; the hub's `like` bracket names only a game ours still resembles.
 - **No religious pictures in the games (the user's rule, 2026-11-01; corrected the same day: „რელიგიური და მუსიკალური კითხვები
   დატოვე, უბრალოდ ვიზუალს ნუ გამოიყენებ“)**: no cross, church, icon or domed-church mark anywhere in a game or a print kit (the
-  series emblem is `grapeEmblem` in `scripts/print-games/lib.mjs`, the caravan map's shrines an old gate); a monument card that will get a picture is a secular one. Faith and chant stay as content —
+  series emblem is `grapeEmblem` in `src/print/lib.js`, the caravan map's shrines an old gate); a monument card that will get a picture is a secular one. Faith and chant stay as content —
   questions, words, feasts and saints, chant audio, place names — beside the wider Georgian topics.
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)

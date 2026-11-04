@@ -2,7 +2,7 @@
 // their rules, what to bring, the safety lines and a few questions each for the rules quiz. Written by Claude from the
 // games as children commonly play them, not yet checked by a teacher (the pages say so). The plan named four games;
 // ქალაქობანა (a word game elsewhere in the plan) and „ვისი სული გსურს“ gave way to ლელობურთი, ზღვა ღელავს and კლასობანა.
-// Ids stay; the kit (scripts/print-games/games/ezos-msaji.mjs) prints these same texts.
+// Ids stay; the kit (src/print/games/ezos-msaji.js) prints these same texts.
 
 export type EzoId = 'ordrosha' | 'lelo' | 'damalobana' | 'zghva' | 'klasobana';
 /** two teams on a clock · everybody for themself · one at a time */

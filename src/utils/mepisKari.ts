@@ -1,6 +1,6 @@
 import { mulberry32, shuffle } from './otkheuli';
 
-// „მეფის კარი“ on phones (2026-11-04): the printed kit's Coup (scripts/print-games/games/mepis-kari.mjs) as rules — five
+// „მეფის კარი“ on phones (2026-11-04): the printed kit's Coup (src/print/games/mepis-kari.js) as rules — five
 // courtiers, seven actions, the blocks and „არ მჯერა!“ in the kit's order: claim → doubt → block → doubt on the block →
 // result. One engine for both variants: online (utils/kariRoom.ts) every phone holds its own two cards and the host's phone
 // the deck; on paper (the hybrid, `paper`) the printed cards stay in the players' hands and the phone keeps the coins, the

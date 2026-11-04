@@ -246,7 +246,7 @@ const Figure: React.FC<{ role: Role; on: boolean; parts: (p: Partial<Parts>) => 
   );
 };
 
-/** one performer alone, in their colours on their light (`on`) or grey: the print kit's cards draw it (scripts/print-games/games/chemi-gundi.mjs) */
+/** one performer alone, in their colours on their light (`on`) or grey: the print kit's cards draw it (src/print/games/chemi-gundi.js) */
 export const FigureCard: React.FC<{ role: Role; on?: boolean }> = ({ role, on = true }) => {
   const { x, y, seated } = PLACE[role];
   const h = seated ? 128 : 150;

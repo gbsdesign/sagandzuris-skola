@@ -11,7 +11,7 @@ import { TAB_KEY } from './dzebna/store';
 // „საგანძურის ძებნა“ (2026-11-04, the plan's №5, like Geocaching and a school's treasure hunt): the day's hunt across Georgia's
 // map alone — „ონლაინ“ — and the hunt in the yard with printed QR cards, a phone a team and the teacher's phone the chest —
 // „ჰიბრიდული“. A card's link (/?open=dzebna&h=<code>&s=<station>&n=<next place>, App.tsx) opens its station over the tabs; the
-// hub's buttons open their tab (requestOpen('dzebna', 'online' | 'table')). Its printed kit is public/games/print/sagandzuris-dzebna.pdf.
+// hub's buttons open their tab (requestOpen('dzebna', 'online' | 'table')). Its printed kit is src/print/games/sagandzuris-dzebna.js.
 
 type Tab = 'online' | 'table';
 interface Open { code: string; s: number; next: string }

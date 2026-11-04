@@ -10,7 +10,7 @@ import { FLOOR } from '../../utils/lurjiSupra';
 import { LurjiRoom } from './lurji/Room';
 import { LurjiTable } from './lurji/Table';
 
-// „ლურჯი სუფრა“ on phones (games hub, 2026-11-04): the printed Azul of the school (public/games/print/lurji-supra.pdf) gets its
+// „ლურჯი სუფრა“ on phones (games hub, 2026-11-04): the printed Azul of the school (src/print/games/lurji-supra.js) gets its
 // two app variants. Online: a class's room, everybody takes on their own phone (utils/lurjiRoom.ts over utils/lurjiSupra.ts; the
 // opener may play too). Hybrid: one phone goes round the table (pages/games/lurji/Table.tsx). The tab is kept on the device
 // (`sg-lurji-tab`).

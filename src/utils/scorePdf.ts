@@ -14,7 +14,8 @@ const pdfText = (s: string) => {
 
 export interface PdfImage { jpeg: Uint8Array; w: number; h: number }
 
-export const buildPdf = (images: PdfImage[], title: string): Blob => {
+/** `margin` in points round each page's picture (a print kit's pages are drawn edge to edge: 0) */
+export const buildPdf = (images: PdfImage[], title: string, { margin = MARGIN }: { margin?: number } = {}): Blob => {
   const parts: Uint8Array[] = [];
   const offsets: number[] = [];
   let size = 0;
@@ -34,9 +35,9 @@ export const buildPdf = (images: PdfImage[], title: string): Blob => {
   begin(3); put(`<< /Title ${pdfText(title)} /Producer (Sagandzuri) >>`); end();
   images.forEach((im, i) => {
     const p = pageId(i), c = p + 1, x = p + 2;
-    const s = Math.min((A4W - 2 * MARGIN) / im.w, (A4H - 2 * MARGIN) / im.h);
+    const s = Math.min((A4W - 2 * margin) / im.w, (A4H - 2 * margin) / im.h);
     const dw = im.w * s, dh = im.h * s;
-    const draw = `q ${dw.toFixed(2)} 0 0 ${dh.toFixed(2)} ${((A4W - dw) / 2).toFixed(2)} ${(A4H - MARGIN - dh).toFixed(2)} cm /Im0 Do Q`;
+    const draw = `q ${dw.toFixed(2)} 0 0 ${dh.toFixed(2)} ${((A4W - dw) / 2).toFixed(2)} ${(A4H - margin - dh).toFixed(2)} cm /Im0 Do Q`;
     begin(p);
     put(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${A4W} ${A4H}] /Resources << /XObject << /Im0 ${x} 0 R >> >> /Contents ${c} 0 R >>`);
     end();

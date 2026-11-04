@@ -5,6 +5,11 @@ import {defineConfig} from 'vite';
 import { VitePWA } from 'vite-plugin-pwa';
 import { offlinePacks } from './scripts/lib/offline-manifest.mjs';
 
+// the print kits (src/print/, made on the phone by the games hub's PDF button) and the abcjs file their pages load are kept in
+// assets/print/, outside the precache: fetched the first time a kit is made, then kept by the assets' runtime cache below
+const inPrint = (id: string) => id.includes('/src/print/');
+const PRINT_ASSET = /^abcjs-basic-min\./;
+
 export default defineConfig(() => {
   return {
     plugins: [
@@ -23,12 +28,13 @@ export default defineConfig(() => {
           globIgnores: [
             '**/node_modules/**/*',
             'notes/**', 'hymn/**', 'lives/**', 'prayers/**', 'bible/**', 'mtkmeli/**', 'audio/**', 'offline/**', 'wignebi/**',
+            'assets/print/**',
           ],
           // opens the prayer when a reminder notification is tapped
           importScripts: ['prayer-notify-sw.js'],
           // a shared notes link (/?c=…&v=…) opens the app even without internet
           navigateFallback: '/index.html',
-          navigateFallbackDenylist: [/^\/notes\//, /^\/hymn\//, /^\/audio\//, /^\/lives\//, /^\/mtkmeli\//, /^\/prayers\//, /^\/bible\//, /^\/offline\//, /^\/wignebi\//, /^\/centre\//, /^\/games\/print\//, /^\/\.well-known\//, /^\/privacy/],
+          navigateFallbackDenylist: [/^\/notes\//, /^\/hymn\//, /^\/audio\//, /^\/lives\//, /^\/mtkmeli\//, /^\/prayers\//, /^\/bible\//, /^\/offline\//, /^\/wignebi\//, /^\/centre\//, /^\/\.well-known\//, /^\/privacy/],
           runtimeCaching: [
             {
               // notes, hymnography drawings, prayers, the New Testament, მთქმელი texts, the saints' lives and the
@@ -134,6 +140,9 @@ export default defineConfig(() => {
       chunkSizeWarningLimit: 1500,
       rollupOptions: {
         output: {
+          chunkFileNames: chunk => ((chunk.facadeModuleId ? inPrint(chunk.facadeModuleId) : chunk.moduleIds.length > 0 && chunk.moduleIds.every(inPrint))
+            ? 'assets/print/[name]-[hash].js' : 'assets/[name]-[hash].js'),
+          assetFileNames: asset => (asset.names.some(n => PRINT_ASSET.test(n)) ? 'assets/print/[name]-[hash][extname]' : 'assets/[name]-[hash][extname]'),
           manualChunks(id) {
             if (id.includes('node_modules/firebase')) {
               return 'vendor-firebase';

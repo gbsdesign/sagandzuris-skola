@@ -12,7 +12,7 @@ import { OkrosTable } from './okros/Table';
 import { WorkCard } from './okros/look';
 
 // „ოქროს ხანა“ on phones (games hub, 2026-11-04): the school's own board game of the Golden Age (rules utils/okrosKhana.ts; the
-// printed kit №1, public/games/print/okros-khana.pdf, draws the same map) gets its two app variants. Online: a class's room,
+// printed kit №1, src/print/games/okros-khana.js, draws the same map) gets its two app variants. Online: a class's room,
 // every house on its own phone (utils/okrosRoom.ts; the opener may play too, the rest of the class may watch). Hybrid: one phone
 // in the middle of the table (pages/games/okros/Table.tsx). The tab is kept on the device (`sg-okros-tab`).
 

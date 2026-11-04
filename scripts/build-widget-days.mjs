@@ -4,8 +4,7 @@
 // Run: node scripts/build-widget-days.mjs   (after the calendar is fetched for a new year) — never edit the output by hand.
 import fs from 'node:fs';
 import path from 'node:path';
-import { appData } from './print-games/appData.mjs';
-import { ROOT } from './print-games/lib.mjs';
+import { appData, ROOT } from './lib/appData.mjs';
 
 const SHOWN = 4;
 const MAX = 90;

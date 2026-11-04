@@ -1,4 +1,4 @@
-// made by `node scripts/build-qaravani-map.mjs` from the print kit (scripts/print-games/games/qaravani.mjs) — never edit by hand
+// made by `node scripts/build-qaravani-map.mjs` from the print kit (src/print/games/qaravani.js) — never edit by hand
 // „ქარავანი“'s map for the screens (pages/games/qaravani/): the printed board's drawing in mm, without its score track and panels.
 
 /** the part of the board the app shows: [x, y, w, h] in mm */

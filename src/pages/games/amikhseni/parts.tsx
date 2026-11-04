@@ -9,7 +9,7 @@ import { Chip } from '../../../components/games/Chip';
 import { ALL_CATS, setSettings, useConf } from './store';
 
 // The pieces of „ამიხსენი“ both tabs share (2026-11-04): each theme's colour and mark (the print kit's,
-// scripts/print-games/games/amikhseni.mjs), its chip, and the themes to choose — in the room's lobby and in the one-phone
+// src/print/games/amikhseni.js), its chip, and the themes to choose — in the room's lobby and in the one-phone
 // setup alike.
 
 export const THEME_LOOK: Record<string, { color: string; Icon: LucideIcon }> = {
