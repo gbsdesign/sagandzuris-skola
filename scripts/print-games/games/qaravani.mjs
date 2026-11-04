@@ -664,36 +664,38 @@ const boardItems = (() => {
   const grow = (bb, d) => [bb[0] - d, bb[1] - d, bb[2] + d, bb[3] + d];
   return () => {
     if (cache) return cache;
-    const items = [{ svg: `<rect width="${BW}" height="${BH}" fill="${LAND}"/>` }];
+    const items = [{ layer: 'land', svg: `<rect width="${BW}" height="${BH}" fill="${LAND}"/>` }];
     for (const [k, r] of Object.entries(SHAPES)) {
       const polys = r.polys.map(poly => poly.map(bendU));
-      items.push({ bb: grow(bboxOf(polys.flat()), 1), svg: `<path d="${polys.map(poly => `M${poly.map(P2).join('L')}Z`).join('')}" fill="${REGION_COLOR[k]}" fill-opacity=".36" stroke="#9c7b5c" stroke-opacity=".55" stroke-width=".3" stroke-dasharray="1.2 .8"/>` });
+      items.push({ layer: 'bg', bb: grow(bboxOf(polys.flat()), 1), svg: `<path d="${polys.map(poly => `M${poly.map(P2).join('L')}Z`).join('')}" fill="${REGION_COLOR[k]}" fill-opacity=".36" stroke="#9c7b5c" stroke-opacity=".55" stroke-width=".3" stroke-dasharray="1.2 .8"/>` });
     }
     const seaD = `M${SEA.poly.map(P2).join('L')}Z`, coastD = `M${SEA.coast.map(P2).join('L')}`;
     const water = [7.2, 4.8, 2.4].map(d => `<path d="${coastD}" fill="none" stroke="${SEA_LINE}" stroke-opacity=".5" stroke-width="${2 * d}" stroke-linejoin="round"/><path d="${coastD}" fill="none" stroke="${SEA_C}" stroke-width="${2 * d - 0.45}" stroke-linejoin="round"/>`).join('');
-    items.push({ bb: grow(bboxOf(SEA.poly), 8), svg: `<defs><clipPath id="seaClip"><path d="${seaD}"/></clipPath></defs><path d="${seaD}" fill="${SEA_C}"/><g clip-path="url(#seaClip)">${water}</g>
+    items.push({ layer: 'bg', bb: grow(bboxOf(SEA.poly), 8), svg: `<defs><clipPath id="seaClip"><path d="${seaD}"/></clipPath></defs><path d="${seaD}" fill="${SEA_C}"/><g clip-path="url(#seaClip)">${water}</g>
 <path d="${coastD}" fill="none" stroke="${SEA_LINE}" stroke-width=".75" stroke-linejoin="round"/>` });
     const ring = OUTLINE.ring.map(bendU);
-    items.push({ bb: grow(bboxOf(ring), 1), svg: `<path d="M${ring.map(P2).join('L')}Z" fill="none" stroke="${C.wine}" stroke-opacity=".55" stroke-width=".6" stroke-dasharray="3 1.4 .8 1.4"/>` });
-    for (const r of RIVERS) items.push({ bb: grow(bboxOf(r.line), 1.5), svg: `<path d="${smooth(r.line)}" fill="none" stroke="${RIVER_C}" stroke-width=".95" stroke-linecap="round" stroke-linejoin="round"/>` });
-    for (const n of RIVER_NAMES) items.push({ bb: around(n.at, textW(n.name, RIVER_NAME) / 2 + 2), svg: textSvg(n.name, n.at, { size: RIVER_NAME, ang: n.ang, fill: '#3f7896', weight: 400, family: 'SerifKa', italic: true, halo: null }) });
-    for (const p of PEAKS) items.push({ bb: around(p.at, p.w / 2 + 1, p.h / 2 + 1), svg: peakSvg(p) });
-    for (const r of REGION_LABELS) items.push({ bb: around(r.at, textW(r.name, REGION) / 2 + r.name.length * SPACING / 2 + 3, REGION), svg: textSvg(r.name, r.at, { size: REGION, fill: '#7a5a3a', weight: 700, family: 'SerifKa', spacing: SPACING, halo: null, opacity: 0.55 }) });
-    items.push({ bb: around([64, 140], 48), svg: seaName() });
-    for (const r of ROUTES.filter(r => RAILWAY.has(r.key))) items.push({ bb: grow(bboxOf([CITIES[r.from].p, CITIES[r.to].p]), 3), svg: railSvg(r) });
+    items.push({ layer: 'bg', bb: grow(bboxOf(ring), 1), svg: `<path d="M${ring.map(P2).join('L')}Z" fill="none" stroke="${C.wine}" stroke-opacity=".55" stroke-width=".6" stroke-dasharray="3 1.4 .8 1.4"/>` });
+    for (const r of RIVERS) items.push({ layer: 'river', line: r.line, bb: grow(bboxOf(r.line), 1.5), svg: `<path d="${smooth(r.line)}" fill="none" stroke="${RIVER_C}" stroke-width=".95" stroke-linecap="round" stroke-linejoin="round"/>` });
+    for (const n of RIVER_NAMES) items.push({ layer: 'bg', bb: around(n.at, textW(n.name, RIVER_NAME) / 2 + 2), svg: textSvg(n.name, n.at, { size: RIVER_NAME, ang: n.ang, fill: '#3f7896', weight: 400, family: 'SerifKa', italic: true, halo: null }) });
+    for (const p of PEAKS) items.push({ layer: 'peak', peak: p, bb: around(p.at, p.w / 2 + 1, p.h / 2 + 1), svg: peakSvg(p) });
+    for (const r of REGION_LABELS) items.push({ layer: 'bg', bb: around(r.at, textW(r.name, REGION) / 2 + r.name.length * SPACING / 2 + 3, REGION), svg: textSvg(r.name, r.at, { size: REGION, fill: '#7a5a3a', weight: 700, family: 'SerifKa', spacing: SPACING, halo: null, opacity: 0.55 }) });
+    items.push({ layer: 'bg', bb: around([64, 140], 48), svg: seaName() });
+    for (const r of ROUTES.filter(r => RAILWAY.has(r.key))) items.push({ layer: 'bg', bb: grow(bboxOf([CITIES[r.from].p, CITIES[r.to].p]), 3), svg: railSvg(r) });
     for (const r of ROUTES) {
       const shipAt = r.ships === 1 ? [0] : r.ships === 2 ? [1, r.n - 2] : [];
       items.push({
+        layer: 'cells',
         bb: grow(bboxOf(r.tracks.flatMap(t => t.cells.map(c => c.p))), 13),
         svg: r.tracks.map(t => t.cells.map((c, k) => cellSvg(c, t.color, { mountain: !!r.pass, ship: shipAt.includes(k) })).join('')).join(''),
       });
     }
-    for (const p of PASSES) items.push({ bb: around(p.at, textW(p.name, PASS) / 2 + 2), svg: textSvg(p.name, p.at, { size: PASS, ang: p.ang, fill: '#5e3f22', weight: 700, family: 'SerifKa', italic: true, haloW: 0.9 }) });
-    for (const c of Object.values(CITIES)) items.push({ bb: around(c.p, CITY_R + 1), svg: `<g transform="translate(${P2(c.p)})"><circle r="${CITY_R}" fill="${ONPAPER}" stroke="${C.wine}" stroke-width=".9"/><circle r="${CITY_R - 1.15}" fill="none" stroke="${C.gold}" stroke-width=".35"/>${CITY_GLYPH[c.look]}</g>` });
+    for (const p of PASSES) items.push({ layer: 'top', bb: around(p.at, textW(p.name, PASS) / 2 + 2), svg: textSvg(p.name, p.at, { size: PASS, ang: p.ang, fill: '#5e3f22', weight: 700, family: 'SerifKa', italic: true, haloW: 0.9 }) });
+    for (const c of Object.values(CITIES)) items.push({ layer: 'city', bb: around(c.p, CITY_R + 1), svg: `<g transform="translate(${P2(c.p)})"><circle r="${CITY_R}" fill="${ONPAPER}" stroke="${C.wine}" stroke-width=".9"/><circle r="${CITY_R - 1.15}" fill="none" stroke="${C.gold}" stroke-width=".35"/>${CITY_GLYPH[c.look]}</g>` });
     for (const c of Object.values(CITIES)) {
       const L = LABELS[c.key], anchor = L.dir === 'e' || L.dir === 'ne' || L.dir === 'se' ? 'start' : L.dir === 'w' || L.dir === 'nw' || L.dir === 'sw' ? 'end' : 'middle';
       const x = anchor === 'start' ? L.at[0] - L.w / 2 : anchor === 'end' ? L.at[0] + L.w / 2 : L.at[0], top = L.at[1] - L.h / 2;
       items.push({
+        layer: 'label',
         bb: around(L.at, L.w / 2 + 2, L.h / 2 + 2),
         svg: textSvg(c.name, [x, top + NAME * 0.56], { size: NAME, anchor, haloW: 1.3 })
           + (L.sub ? textSvg(L.sub, [x, top + NAME * 1.08 + SUBNAME * 0.6], { size: SUBNAME, anchor, weight: 400, family: 'SerifKa', italic: true, fill: '#6b5440', haloW: 1 }) : ''),
@@ -706,6 +708,89 @@ const boardItems = (() => {
 /** The board's drawing for a window `view` = [x, y, w, h] (only the pieces that reach into it). */
 const boardInner = (view = [0, 0, BW, BH]) => boardItems().filter(({ bb }) => !bb
   || (bb[0] <= view[0] + view[2] + 2 && bb[2] >= view[0] - 2 && bb[1] <= view[1] + view[3] + 2 && bb[3] >= view[1] - 2)).map(it => it.svg).join('');
+/** The map for the app's „ქარავანი“ (`node scripts/build-qaravani-map.mjs` writes src/data/qaravaniRoutes.ts and
+ * src/data/qaravaniMap.ts from it): the board's drawing without the score track, the title, the legend and the score table, in
+ * two layers (under the roads and over them), the roads' cells and the cities as data so the app colours them by their owners.
+ * The fonts become the app's own (Noto Sans / Serif Georgian, the same the kit prints with). */
+export const appMap = () => {
+  const items = boardItems();
+  const font = svg => svg.replaceAll('font-family="SansKa"', 'font-family="Noto Sans Georgian, sans-serif"')
+    .replaceAll('font-family="SerifKa"', 'font-family="Noto Serif Georgian, serif"');
+  const pts = [...Object.values(CITIES).map(c => c.p), ...ROUTES.flatMap(r => r.tracks.flatMap(t => t.cells.map(c => c.p)))];
+  const labelBoxes = Object.values(LABELS).flatMap(L => [[L.at[0] - L.w / 2, L.at[1] - L.h / 2], [L.at[0] + L.w / 2, L.at[1] + L.h / 2]]);
+  const [x0, y0, x1, y1] = bboxOf([...pts, ...labelBoxes]);
+  const m = 12, box = [Math.max(0, Math.floor(x0 - m)), Math.max(0, Math.floor(y0 - m))];
+  box.push(Math.min(BW, Math.ceil(x1 + m)) - box[0], Math.min(BH, Math.ceil(y1 + m)) - box[1]);
+  const layer = k => font(items.filter(it => it.layer === k).map(it => it.svg).join(''));
+  // a phone needs fewer of a river's points than the print: thinned (Douglas–Peucker, 0.3 mm) before they are smoothed
+  const thin = (pts, tol) => {
+    const keep = pts.map((_, i) => i === 0 || i === pts.length - 1), stack = [[0, pts.length - 1]];
+    while (stack.length) {
+      const [i, j] = stack.pop(), [a, b] = [pts[i], pts[j]], L = dist(a, b) || 1e-9;
+      let best = -1, k = -1;
+      for (let q = i + 1; q < j; q++) {
+        const d = Math.abs((b[0] - a[0]) * (a[1] - pts[q][1]) - (a[0] - pts[q][0]) * (b[1] - a[1])) / L;
+        if (d > best) { best = d; k = q; }
+      }
+      if (best > tol) { keep[k] = true; stack.push([i, k], [k, j]); }
+    }
+    return pts.filter((_, q) => keep[q]);
+  };
+  // the mountains in a dozen sizes, each drawn once and placed by <use> (the print gives every one its own size)
+  const peakDefs = new Map();
+  const peakUse = ({ at, w, h, snow }) => {
+    const qw = 6.6 + Math.min(2, Math.round((w - 6.6) / 1.1)) * 1.1, base = snow ? 5.4 : 3.8, qh = base + Math.min(1, Math.round((h - base) / 1.2)) * 1.2;
+    const k = `${f(qw)}-${f(qh)}-${snow ? 1 : 0}`;
+    if (!peakDefs.has(k)) peakDefs.set(k, { id: `qp${peakDefs.size}`, svg: peakSvg({ at: [0, 0], w: qw, h: qh, snow }) });
+    return `<use href="#${peakDefs.get(k).id}" x="${f(at[0])}" y="${f(at[1])}"/>`;
+  };
+  const bgItems = items.filter(it => ['land', 'bg', 'river', 'peak'].includes(it.layer)).map(it => (it.layer === 'river'
+    ? `<path d="${smooth(thin(it.line, 0.3))}" fill="none" stroke="${RIVER_C}" stroke-width=".95" stroke-linecap="round" stroke-linejoin="round"/>`
+    : it.layer === 'peak' ? peakUse(it.peak) : it.svg)).join('');
+  const bg = `<defs>${[...peakDefs.values()].map(d => `<g id="${d.id}">${d.svg}</g>`).join('')}</defs>${bgItems}`;
+  const keys = CITY_ROWS.map(c => c[0]), at = k => keys.indexOf(k);
+  const COLORS = [...Object.keys(GOODS), 'gray'];
+  return {
+    box,
+    bg: font(bg),
+    top: layer('top'),
+    /** the marks inside the cities' circles (±4 mm), by `look`; the app draws the circles itself */
+    glyphs: CITY_GLYPH,
+    ring: { r: CITY_R, wine: C.wine, gold: C.gold, paper: ONPAPER },
+    /** each city with its name's place as the print lays it: `dir` from the circle, and in mm the name's anchor point `lx, ly`
+     *  (`anchor` start / middle / end, its central line) and the second line's `sy` (the app draws the names itself) */
+    cities: CITY_ROWS.map(([key, name, , , look, x, y]) => {
+      const L = LABELS[key], anchor = /e/.test(L.dir) ? 'start' : /w/.test(L.dir) ? 'end' : 'middle';
+      const top = L.at[1] - L.h / 2;
+      return {
+        key, name, x, y, look, outside: OUTSIDE.has(key), sub: SUB[key] ?? '', dir: L.dir, anchor,
+        lx: f(anchor === 'start' ? L.at[0] - L.w / 2 : anchor === 'end' ? L.at[0] + L.w / 2 : L.at[0]),
+        ly: f(top + NAME * 0.56), sy: f(top + NAME * 1.08 + SUBNAME * 0.6),
+      };
+    }),
+    names: { size: NAME, sub: SUBNAME, ink: INK, paper: ONPAPER },
+    routes: ROUTES.map(r => ({
+      a: at(r.from), b: at(r.to), n: r.n, color: COLORS.indexOf(r.color), double: r.double ? COLORS.indexOf(r.double) : -1,
+      pass: r.pass ?? '', ships: r.ships,
+      shipAt: r.ships === 1 ? [0] : r.ships === 2 ? [1, r.n - 2] : [],
+      tracks: r.tracks.map(t => t.cells.map(c => [f(c.p[0]), f(c.p[1]), deg(upright(c.ang))])),
+    })),
+    tickets: [...TICKETS, ...LONG].map(([a, b, v, text]) => ({ a: at(a), b: at(b), v, text })),
+    long: LONG.length,
+    goods: Object.entries(GOODS).map(([k, g]) => ({ k, name: g.name, adj: g.adj, color: g.color, dark: g.dark, from: g.from })),
+    gray: GRAY,
+    score: SCORE,
+    /** the cards' pictures (a 100×100 box): the goods on paper, the locomotive in the night's colours (a 100×60 box) */
+    art: Object.fromEntries(Object.entries(GOODS).map(([k, g]) => [k, GOOD_ART[k](g.color, g.dark, C.paper)])),
+    loco: locomotive(GOLD_L, C.night),
+    /** the players' colours and animals (a 100×80 box, filled with currentColor), the inn (±5) and the envelope (12×12) */
+    players: PLAYERS.map(p => ({ color: p.color, ink: p.ink, animal: p.animal, name: animalName(p.animal) })),
+    animals: ANIMAL,
+    inn: innGlyph(0, 0, 10, 'currentColor'),
+    envelope: ENVELOPE,
+    info: CITY_ROWS.map(([key]) => CITY_INFO[key] ?? ['', '']),
+  };
+};
 /** The board, or a window of it: `view` = [x, y, w, h] in mm. */
 const boardSvg = (view = [0, 0, BW, BH], scale = 1) => `<svg width="${f(view[2] * scale)}mm" height="${f(view[3] * scale)}mm" viewBox="${view.join(' ')}" style="display:block">${boardInner(view)}</svg>`;
 
@@ -1111,7 +1196,7 @@ const RULES = [
   ['რა ჩანს', 'დარჩენილი ურმები და ქარვასლები ყველას უნდა ჩანდეს. ხელის ბარათები და წერილები საიდუმლოა — თამაშის ბოლომდე.'],
   ['სვლა', 'იწყებს ის, ვისაც ყველაზე მეტი ქართული ქალაქი უნახავს, მერე — საათის ისრის მიმართულებით. სვლაში ზუსტად ერთ რამეს აკეთებ: <b>ა)</b> იღებ ბარათებს, <b>ბ)</b> იკავებ გზას, <b>გ)</b> იღებ წერილებს ან <b>დ)</b> აშენებ ქარვასლას.'],
   ['ა) ბარათები', 'იღებ 2 ბარათს — ღიადან ან დასტიდან, როგორც გინდა. აღებული ღია ბარათის ადგილას მაშინვე დასტიდან ახალი იშლება. ღიად აღებული ორთქლმავალი ამ სვლის ერთადერთი ბარათია; დასტიდან ბრმად ამოსული ორთქლმავალი ჩვეულებრივად ითვლება. თუ ღია 5-დან 3 ორთქლმავალია, ხუთივე იყრება და ახალი 5 იშლება. ხელში რამდენი ბარათიც გინდა, იმდენი შეიძლება გქონდეს.'],
-  ['ბ) გზა', 'ორ ქალაქს შორის გზის დასაკავებლად გადადე გზის ფერის იმდენი ბარათი, რამდენი უჯრაც მას აქვს; ორთქლმავალი ნებისმიერ ფერს ცვლის. ნაცრისფერი „ქვის გზა“ ნებისმიერი ერთი ფერის ბარათებით იკავება. ყოველ უჯრაზე შენი ურემი დადგი, ბარათები გადაყარე და ქულა მაშინვე ბილიკზე გადაითვალე: 1 უჯრა — 1, 2 — 2, 3 — 4, 4 — 7, 5 — 10, 6 — 15, 7 — 18, 8 — 21. გზა მთლიანად ერთ სვლაში იკავება და შენს სხვა გზებს არ უნდა ებმოდეს.'],
+  ['ბ) გზა', 'ორ ქალაქს შორის გზის დასაკავებლად გადადე გზის ფერის იმდენი ბარათი, რამდენი უჯრაც მას აქვს; ორთქლმავალი ნებისმიერ ფერს ცვლის. ნაცრისფერი „ქვის გზა“ ნებისმიერი ერთი ფერის ბარათებით იკავება. ყოველ უჯრაზე შენი ურემი დადგი, ბარათები გადაყარე და ქულა მაშინვე ბილიკზე გადაითვალე: 1 უჯრა — 1, 2 — 2, 3 — 4, 4 — 7, 5 — 10, 6 — 15, 7 — 18, 8 — 21. გზა მთლიანად ერთ სვლაში იკავება; ის შენს სხვა გზებს შეიძლება არ ებმოდეს.'],
   ['ორმაგი გზა', '8 ადგილას ორ ქალაქს ორი გზა აკავშირებს. ერთ მოთამაშეს ორივე არ შეუძლია. 2–3 მოთამაშით მხოლოდ ერთი გამოიყენება: ვინც პირველი დაიკავებს, მეორე ბოლომდე იკეტება. 4–5 მოთამაშით ორივე ღიაა — სხვადასხვა მოთამაშისთვის.'],
   ['მთის გზა', 'წყვეტილკიდიანი უჯრები თოვლიანი მწვერვალით უღელტეხილზე გადის (13 ასეთი გზაა). ჯერ ბარათები გადადე, მერე დასტიდან 3 ბარათი გახსენი — ეს „ამინდია მთაში“. ყოველ გახსნილ ბარათზე, რომელიც შენს ფერს ემთხვევა (ორთქლმავალი ყოველთვის ემთხვევა), კიდევ 1 ამ ფერის ბარათი ან ორთქლმავალი უნდა დაამატო. თუ არ გინდა ან არ შეგიძლია — ბარათები ხელში დაიბრუნე, სვლა დამთავრდა. გახსნილი 3 ბარათი იყრება.'],
   ['გემის გზა', 'ზღვისა და რიონის გზებზე გემის ნიშნებია (4 ასეთი გზაა). ყოველ ნიშანზე 1 ორთქლმავალი სავალდებულოა, დანარჩენი უჯრები — ერთი ფერის ბარათებით ან ორთქლმავლებით.'],

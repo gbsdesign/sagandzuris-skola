@@ -444,6 +444,7 @@ await t('a member opens a room of „ცხელი ჩურჩხელა“
 await t('a member opens a room of „მეფის კარი“', assertSucceeds(setDoc(doc(gp1, G, 'mk1'), room('gp1', { game: 'kari' }))));
 await t('a member opens a room of „ლურჯი სუფრა“', assertSucceeds(setDoc(doc(gp1, G, 'ls1'), room('gp1', { game: 'lurji' }))));
 await t('a member opens a room of „ორი ტახტი“', assertSucceeds(setDoc(doc(gp1, G, 'ot1'), room('gp1', { game: 'takhti' }))));
+await t('a member opens a room of „ქარავანი“', assertSucceeds(setDoc(doc(gp1, G, 'qr1'), room('gp1', { game: 'qaravani' }))));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();

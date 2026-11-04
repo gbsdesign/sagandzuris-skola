@@ -465,7 +465,7 @@
   (`HybridState`, `markTeam`, kept on the device so ✕ only pauses). The room store is generic since then: `utils/gameRoom.ts`
   `createRooms(be, engine, moves)` over a `RoomEngine` (`games` it plays; samshvilde's is `utils/samshvildeRoom.ts`), the
   app's two stores in `utils/gameRoomFirestore.ts` (`rooms` = samshvilde, `roundRooms` = the quick games: `timeUp(key)`,
-  `reveal`, `next`); the rules let a room be opened for every `ROOM_GAMES` game (27 since 2026-11-04), up to 40 players, an act may carry `ms` (and `text`).
+  `reveal`, `next`); the rules let a room be opened for every `ROOM_GAMES` game (28 since 2026-11-04), up to 40 players, an act may carry `ms` (and `text`).
   Invitations name their game: `data/roomGames.ts` (titles, the hub item, a chat card's `room` = `game:roomId` — a
   samshvilde card keeps the bare id), the Worker's `GAME_TITLES`, `/?open=<game>&c=&r=`, icons
   `components/games/roomGameIcons.ts`; the online tab of every room game is `components/games/RoomSetup.tsx`. Screens
@@ -975,6 +975,32 @@
   `CardSheet` — build · sell · tuck; the kingdoms' `CityPanel` → `CitySheet`; the chronicle `lineText`), `look.tsx` (the kit's marks,
   `CardFace` with the kit's pictures faint, `CardBack` with the age's numeral in the visible top half), `words.ts`, a phone on its
   side or a computer = two columns (`useTwoCols`, `useCardW`). Not yet tried by real people on several phones.
+- **„ქარავანი“ on phones** (2026-11-04, the printed Ticket to Ride: Europe №3 gets its app variants; mapItem `qaravani`, its entry in
+  `GAMES` has `item`, the hub opens its tab by `requestOpen('qaravani', 'online' | 'table')`, tab `sg-qaravani-tab`; the page is
+  `React.lazy` in GamesPage — its map is ~100 KB): the board is the kit's own. `node scripts/build-qaravani-map.mjs` writes
+  `data/qaravaniRoutes.ts` (47 cities, 74 roads, 46 letters, for the rules) and `data/qaravaniMap.ts` (the drawing from the kit's
+  `appMap()`: land, rivers and peaks, the passes, the print's names, cards, animals, inns — lines thinned) — never edit them by hand,
+  run it again after the kit's map changes. Rules `utils/qaravani.ts` + test: cards 0–7 = the kit's goods (ღვინო, თაფლი, ჩაი, ლურჯი
+  სუფრა, ნაბადი, სულგუნი, სპილენძი, აბრეშუმი), 8 = the locomotive (an open one is the turn's only card; three open wash the five);
+  2–5 players, `cartsFor` (40, 35 with five), 3 inns (1 / 2 / 3 cards of one colour; at the end an inn lends its owner one other's road
+  out of its city for the letters, an unused one +4); a road = its colour's cards (gray = any one colour, a ship needs a locomotive), a
+  mountain turns 3 from the deck — a match or a locomotive asks one more, or the player gives up (`tunnelOptions`); a double road is
+  never one player's twice, with ≤ 3 players one lane only (`roadOpen`); letters: four keep ≥ 2 at the start, three keep ≥ 1; ≤ 2
+  carts left → everyone plays once more; the longest road +10; a tie → more letters done, then fewer inns. One number a move
+  (`FACE_PICK`, `DECK_PICK`, `TICKETS_PICK`, `PASS_PICK`, `keepPick`, `tunnelPick`, `QUIT_PICK`, `claimPick`, `innPick`). „ონლაინ“ = a
+  room of its own engine (`utils/qaravaniRoom.ts` `QARAVANI_ROOM`; `qaravani` in `ROOM_GAMES`/the rules/the Worker's titles;
+  `qaravaniRooms` / `useQaravaniRoom`): a seat = my hand and letters (`qSeat`), the view only counts (`qView`; `roadPays`, `innPays`,
+  `canMove` read it), 2–5 play, the host may be one („მეც ვთამაშობ“; a new room's opener joins by itself), the rest watch; a step's
+  clock (`QARAVANI_SECS`), then the host's phone moves (`timeUp`). „ჰიბრიდული“ (`Table.tsx`, kept in `sg-qaravani-table`, who begins
+  in `sg-qaravani-conf`, names = `CircleNames`) = one phone passed round: between two players only „გადაეცი ტელეფონი: X“ and the
+  last move; „უკან“ only for a move that showed nothing new (`canBack`); ✕ only pauses. Screens `pages/games/qaravani/`: `Map.tsx`
+  (pinch, drag, ctrl+wheel, + / − / ⤢; a tap picks a road or a city; at the whole map's size the names are 12 px screen labels that
+  give way to each other — my letters' cities always, in wine, drawn under the circles —, from 2.5 px a mm the print's own names;
+  owned roads glow in the player's colour with cart marks), `Play.tsx` (story, letters to keep, the mountain's weather, the market,
+  my cards, my letters ✓, „რომელი გზის დაკავება შეგიძლია“, the players, the chronicle, the results; a phone on its side or a
+  computer = two columns, the map sticky), `Sheets.tsx` (`RoadSheet` with the ways to pay, `CitySheet` with the inn), `look.tsx`
+  (cards, `lineText`), `Room.tsx`. The kit's rule said a road must not join one's other roads — fixed the same day („შეიძლება არ
+  ებმოდეს“). Not yet tried by real people on several phones.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
