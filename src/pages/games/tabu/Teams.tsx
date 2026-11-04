@@ -10,10 +10,10 @@ import { triggerHaptic } from '../../../utils/haptics';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { Chip } from '../../../components/games/Chip';
 import { Btn, Card, Toggle, askConfirm } from '../../../components/ui/kit';
-import { Hint } from '../samshvilde/parts';
 import { Podium, Standings, TimerRing } from '../rounds/parts';
 import { TEAM_TINT, TeamsEditor, readTeams, teamNames, useTurnClock, type TeamsConf } from '../rounds/teams';
 import { ThemeChip, ThemePicker } from './parts';
+import { HowTo } from '../../../components/games/HowTo';
 
 // „ნუ იტყვი!“ in a class (the hub's „ჰიბრიდული“, 2026-11-01, like Taboo): the phone is in the explainer's hand. The card shows
 // the word and five words that may not be said; the team guesses, „გამოიცნო“ is a point, a forbidden word — „აკრძალა“ (a
@@ -258,6 +258,13 @@ export const TabuTeams: React.FC = () => {
           </div>
         </Card>
       )}
+      <HowTo id="tabu-table" steps={[
+        'კლასი გუნდებად იყოფა. რიგრიგობით თითო გუნდიდან ერთი ხსნის.',
+        'ტელეფონი მას სიტყვას აჩვენებს და ხუთ სიტყვას, რომელიც არ უნდა თქვას.',
+        'გუნდი გამოიცნობს — ქულა. აკრძალული სიტყვა თქვა — მეორე გუნდის „მეთვალყურე“ ზარს რეკავს და ქულა აკლდება.',
+        'ხელით, ჟესტით ან სიტყვის ნაწილით ახსნა არ შეიძლება.',
+        'დრო რომ ამოიწურება, ტელეფონი შემდეგ გუნდს გადაეცემა.',
+      ]} />
       <Card className="!p-4 space-y-4">
         <TeamsEditor conf={conf} onChange={c => setConf({ ...conf, ...c })} />
         <div className="space-y-2">
@@ -279,11 +286,6 @@ export const TabuTeams: React.FC = () => {
         </div>
       </Card>
       <Btn size="lg" full icon={<Play />} onClick={() => { void start(); }} className="!h-14 !text-[15.5px]">დაწყება</Btn>
-      <Hint>
-        კლასი გუნდებად იყოფა. რიგრიგობით თითო გუნდიდან ერთი ხსნის: ტელეფონი სიტყვას აჩვენებს და ხუთ სიტყვას, რომელიც არ უნდა
-        თქვას. გუნდი გამოიცნობს — ქულა; აკრძალული სიტყვა თქვა — მეორე გუნდის „მეთვალყურე“ ზარს რეკავს და ქულა აკლდება. დრო რომ
-        ამოიწურება, ტელეფონი შემდეგ გუნდს გადაეცემა. ხელით, ჟესტით ან ნაწილით სიტყვის თქმა არ შეიძლება.
-      </Hint>
     </div>
   );
 };

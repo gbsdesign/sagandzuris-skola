@@ -1143,6 +1143,12 @@
   then the user stopped (2026-11-04 18:56: no new games, no more reworks — ლურჯი სუფრა, მეფის კარი and the word and party games
   stay as built unless asked; next is a review of every built game and the hub page, after the user's OK on its cost). A genre's
   general idea (a daily word, a team quiz, a map to tap) may stay; the hub's `like` bracket names only a game ours still resembles.
+- **The games' review (2026-11-04, the user's „ყველა, ბოლომდე“; log https://claude.ai/artifact/Gok8rRVTkDm38eYB185Jo8)**: how a
+  game is played is numbered steps — `components/games/HowTo.tsx` (`HowTo` = a fold, open the first time, `sg-howto`; `Steps` = the
+  bare list for a game's first card) — never a long grey paragraph under „დაწყება“. A quick game's steps come from its face's
+  `online` / `hybrid` words (`stepsOf` in `RoundsPage`), so a `table` setup under it has none of its own. An end screen names the
+  winner through `pages/games/rounds/winLine.ts` (`winLine`: nobody above 0 → „ამჯერად ქულა არავის აქვს“, and no trophy); the
+  Podium crowns only a score above 0.
 - **No religious pictures in the games (the user's rule, 2026-11-01; corrected the same day: „რელიგიური და მუსიკალური კითხვები
   დატოვე, უბრალოდ ვიზუალს ნუ გამოიყენებ“)**: no cross, church, icon or domed-church mark anywhere in a game or a print kit (the
   series emblem is `grapeEmblem` in `src/print/lib.js`, the caravan map's shrines an old gate); a monument card that will get a picture is a secular one. Faith and chant stay as content —

@@ -10,10 +10,11 @@ import { triggerHaptic } from '../../../utils/haptics';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { Chip } from '../../../components/games/Chip';
 import { Btn, Card, askConfirm } from '../../../components/ui/kit';
-import { Hint } from '../samshvilde/parts';
 import { Podium, Standings, useNow } from '../rounds/parts';
 import { TEAM_TINT, TeamsEditor, readTeams, teamNames, useTurnClock, type TeamsConf } from '../rounds/teams';
 import { Facts, PersonHead, bornLabel } from './parts';
+import { winLine } from '../rounds/winLine';
+import { HowTo } from '../../../components/games/HowTo';
 
 // „ვინ ვარ მე?“ on one phone (the hub's „ჰიბრიდული“, 2026-11-01): the class in teams; in a team's turn one of them is the
 // guesser — back to the screen, or the phone on their forehead, the screen to the class. The class sees the name (and the
@@ -212,10 +213,10 @@ const TableGame: React.FC<{ g: VinTable; setG: (g: VinTable) => void; onClose: (
         )}
       >
         <div className="my-auto space-y-5 py-4 w-full max-w-2xl mx-auto">
-          <Trophy className="w-10 h-10 mx-auto text-[#b8860b]" aria-hidden="true" />
+          {best > 0 && <Trophy className="w-10 h-10 mx-auto text-[#b8860b]" aria-hidden="true" />}
           <Podium names={g.names} scores={scores} />
           <p className="text-center text-[15px] font-bold text-[#4a3426]">
-            {winners.length > 1 ? `ფრეა: ${winners.join(', ')}` : `გაიმარჯვა „${winners[0]}“-მა`} · {g.rounds} წრე
+            {winLine(winners, best, n => `გაიმარჯვა „${n}“-მა`)} · {g.rounds} წრე
           </p>
           <Standings names={g.names} scores={scores} />
         </div>
@@ -332,6 +333,12 @@ export const VinTableGame: React.FC = () => {
           </div>
         </Card>
       )}
+      <HowTo id="vin-table" steps={[
+        'კლასი გუნდებად იყოფა. გუნდის სვლაში ერთი გამომცნობია — დგას ეკრანს ზურგით, ან ტელეფონი შუბლზე უდევს.',
+        'კლასი ხედავს ცნობილი ქართველის სახელს და ფაქტებს.',
+        'გამომცნობი კითხვებს სვამს, კლასი პასუხობს მხოლოდ „კი“ ან „არა“.',
+        `ტელეფონი კითხვებს ითვლის: ${POINTS_LINE}.`,
+      ]} />
       <Card className="!p-4 space-y-4">
         <TeamsEditor conf={conf} onChange={c => setConf({ ...conf, ...c })} />
         <div className="space-y-2">
@@ -348,10 +355,6 @@ export const VinTableGame: React.FC = () => {
         </div>
       </Card>
       <Btn size="lg" full icon={<Play />} onClick={() => { void start(); }} className="!h-14 !text-[15.5px]">დაწყება · {deck.length} ადამიანი</Btn>
-      <Hint>
-        კლასი გუნდებად იყოფა. გუნდის სვლაში ერთი გამომცნობია — დგას ეკრანს ზურგით, ან ტელეფონი შუბლზე უდევს. კლასი ხედავს ცნობილი
-        ქართველის სახელს და ფაქტებს, და პასუხობს მხოლოდ „კი“ ან „არა“. ტელეფონი კითხვებს ითვლის: {POINTS_LINE}.
-      </Hint>
       <p className="px-1 text-[12px] leading-snug text-[#9a8b7b]">ადამიანები და ფაქტები Claude-მა შეარჩია სკოლისთვის — მასწავლებელს ჯერ არ შეუმოწმებია.</p>
     </div>
   );

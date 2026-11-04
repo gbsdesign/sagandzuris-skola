@@ -10,11 +10,11 @@ import { triggerHaptic } from '../../../utils/haptics';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { Chip } from '../../../components/games/Chip';
 import { Btn, Card, askConfirm } from '../../../components/ui/kit';
-import { Hint } from '../samshvilde/parts';
 import { Podium, Standings, TimerRing, useNow } from '../rounds/parts';
 import { TEAM_TINT, TeamsEditor, readTeams, teamNames, useTurnClock, type TeamsConf } from '../rounds/teams';
 import { PantoOptions, ThemeTag, chosenWords } from './parts';
-import { readTalk, readThemes, useTalk, useThemes } from './store';
+import { readTalk, readThemes, useThemes } from './store';
+import { winLine } from '../rounds/winLine';
 
 // „პანტომიმა“ on one phone (the hub's „ჰიბრიდული“, 2026-11-01): the class in teams, each team's turn a minute or two. Either
 // the actor holds the phone and shows its word to their team (a tap: „გამოიცნეს“ or „გამოტოვება“), or the phone stands on
@@ -201,10 +201,10 @@ const TableGame: React.FC<{ g: PantoTable; setG: (g: PantoTable) => void; onClos
         )}
       >
         <div className="my-auto space-y-5 py-4 w-full max-w-2xl mx-auto">
-          <Trophy className="w-10 h-10 mx-auto text-[#b8860b]" aria-hidden="true" />
+          {best > 0 && <Trophy className="w-10 h-10 mx-auto text-[#b8860b]" aria-hidden="true" />}
           <Podium names={g.names} scores={scores} />
           <p className="text-center text-[15px] font-bold text-[#4a3426]">
-            {winners.length > 1 ? `ფრეა: ${winners.join(', ')}` : `გაიმარჯვა „${winners[0]}“-მა`} · {g.rounds} წრე
+            {winLine(winners, best, n => `გაიმარჯვა „${n}“-მა`)} · {g.rounds} წრე
           </p>
           <Standings names={g.names} scores={scores} />
         </div>
@@ -312,7 +312,6 @@ export const PantomimaTable: React.FC = () => {
   const [conf, setConfState] = useState<Conf>(() => readConf(load(CONF_KEY)));
   const setConf = (c: Conf) => { setConfState(c); save(CONF_KEY, c); };
   const themes = useThemes();
-  const talk = useTalk();
   const [game, setGameState] = useState<PantoTable | null>(() => {
     const g = parsePantoTable(load(GAME_KEY), KNOWN);
     return g && !pantoOver(g) ? g : null;
@@ -388,12 +387,6 @@ export const PantomimaTable: React.FC = () => {
         <PantoOptions />
       </Card>
       <Btn size="lg" full icon={<Play />} onClick={() => { void start(); }} disabled={!size} className="!h-14 !text-[15.5px]">დაწყება · {size} სიტყვა</Btn>
-      <Hint>
-        კლასი გუნდებად იყოფა, თითო გუნდს თავისი სვლა აქვს. {conf.how === 'forehead'
-          ? 'ტელეფონი გამომცნობს შუბლზე უდევს, ეკრანით გუნდისკენ: გუნდი აჩვენებს, გამომცნობი იცნობს. თავი დახარა — გამოიცნო, ზევით აიხედა — გამოტოვება (ან გუნდი ეკრანის ნახევრებზე დააჭერს).'
-          : 'მსახიობი ტელეფონზე სიტყვას ნახავს და თავის გუნდს აჩვენებს; გამოიცნეს — „გამოიცნეს“, ვერა — „გამოტოვება“.'}
-        {' '}{talk ? 'სიტყვებით ახსნაც შეიძლება.' : 'ლაპარაკი არ შეიძლება.'} გამოცნობილი სიტყვა ქულაა.
-      </Hint>
       <p className="px-1 text-[12px] leading-snug text-[#9a8b7b]">სიტყვები Claude-მა შეარჩია სკოლისთვის — მასწავლებელს ჯერ არ შეუმოწმებია.</p>
     </div>
   );

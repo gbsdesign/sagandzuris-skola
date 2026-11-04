@@ -10,9 +10,9 @@ import { triggerHaptic } from '../../../utils/haptics';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { Chip } from '../../../components/games/Chip';
 import { Btn, Card, askConfirm } from '../../../components/ui/kit';
-import { Hint } from '../samshvilde/parts';
 import { useTurnClock } from '../rounds/teams';
 import { Board, SIDE_LOOK, TEAM, TeamsLeft, Tile, type TileLook } from './parts';
+import { HowTo } from '../../../components/games/HowTo';
 
 // „საიდუმლო სახელები“ for the class (the hub's „ჰიბრიდული“, 2026-11-01): one phone (or the class's screen) lies on the table
 // with the board of 25 words and its four-digit code; the two captains open „კაპიტნის გასაღები“ on their own phones and type
@@ -274,6 +274,13 @@ export const SaidumloTable: React.FC = () => {
           </div>
         </Card>
       )}
+      <HowTo id="saidumlo-table" steps={[
+        'ორი გუნდი — ლურჯები და წითლები, თითოს თავისი კაპიტანი.',
+        'კაპიტნები გასაღებს ხედავენ, გუნდები — მხოლოდ სიტყვებს.',
+        'კაპიტანი ამბობს ერთ სიტყვას და რიცხვს („ზღვა 2“), გუნდი ბადეში ამდენ სიტყვას ეხება.',
+        'თავისი სიტყვა — გუნდი აგრძელებს; სხვისი ან არავისი — ჯერი გადადის; შავი ხაფანგი — წააგო.',
+        'იგებს, ვინც პირველი გახსნის ყველა თავის სიტყვას.',
+      ]} />
       <Card className="!p-4 space-y-4">
         <div className="flex items-center gap-3">
           <span className="w-11 h-11 rounded-2xl bg-[#7a2028] text-[#fbf6ec] inline-flex items-center justify-center shrink-0"><LayoutGrid className="w-5 h-5" /></span>
@@ -311,11 +318,6 @@ export const SaidumloTable: React.FC = () => {
           <Btn type="submit" size="lg" icon={<Eye />} disabled={code === null} className="!h-12 shrink-0">ნახვა</Btn>
         </form>
       </Card>
-      <Hint>
-        ორი გუნდი — ლურჯები და წითლები, თითოს თავისი კაპიტანი. კაპიტნები გასაღებს ხედავენ, გუნდები — მხოლოდ სიტყვებს. კაპიტანი ამბობს ერთ
-        სიტყვას და რიცხვს („ზღვა 2“), გუნდი ბადეში ამდენ სიტყვას ეხება: თავისი — აგრძელებს, სხვისი ან არავისი — ჯერი გადადის, შავი ხაფანგი —
-        წააგო. იგებს, ვინც პირველი გახსნის ყველა თავის სიტყვას.
-      </Hint>
       <p className="px-1 text-[12px] leading-snug text-[#9a8b7b]">სიტყვები „ამიხსენის“ ბანკიდანაა. ერთი ტელეფონია? კაპიტნებს გასაღები ბადის ეკრანზეც აქვთ — 🔑 ღილაკით.</p>
     </div>
   );

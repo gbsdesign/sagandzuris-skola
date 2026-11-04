@@ -13,6 +13,7 @@ import { Btn, Card, Stat, askConfirm } from '../../../components/ui/kit';
 import { Toast } from '../../../components/ui/Toast';
 import { triggerHaptic } from '../../../utils/haptics';
 import { Answers, PlaceBadge, PlaceGrid, PlaceTile, Stars, StrangerIcon, type PlaceLook } from './parts';
+import { Steps } from '../../../components/games/HowTo';
 
 // „უცხო სოფელში“ alone (the hub's „ონლაინ“, 2026-11-01): I am the stranger. The villagers' answers come one by one („რა
 // სუნია?“ — „ცოტა მჟავე…“); I find the place on a board of 25. Ten points: an answer more −1, a hint (four places crossed
@@ -222,11 +223,12 @@ export const UtskhoSolo: React.FC = () => {
                 </div>
               </div>
               {!acts.length && (
-                <p className="text-[13.5px] leading-snug text-[#4a3426]">
-                  შენ უცხო ხარ: სოფლელებმა იციან, სად ხართ — შენ არა. ისინი ერთმანეთს კითხვებს უსვამენ და პასუხობენ; უსმინე და იპოვე ადგილი
-                  ამ {d.board.length}-დან. გაქვს {START_POINTS} ქულა: ყოველი ახალი პასუხი −1, მინიშნება ({HINT_CUT} ადგილს შლის) −1,
-                  შეცდომა −2. სამი შეცდომა — და სოფელმა გიცნო.
-                </p>
+                <Steps steps={[
+                  'შენ უცხო ხარ: სოფლელებმა იციან, სად ხართ — შენ არა.',
+                  `ისინი ერთმანეთს კითხვებს უსვამენ და პასუხობენ. უსმინე და იპოვე ადგილი ამ ${d.board.length}-დან.`,
+                  `გაქვს ${START_POINTS} ქულა: ყოველი ახალი პასუხი −1, მინიშნება (${HINT_CUT} ადგილს შლის) −1, შეცდომა −2.`,
+                  'სამი შეცდომა — და სოფელმა გიცნო.',
+                ]} />
               )}
             </Card>
           )}

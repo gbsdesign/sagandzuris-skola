@@ -22,10 +22,10 @@ export const SongPicker: React.FC<{ value: number; onChange: (num: number) => vo
           type="button"
           aria-expanded={open}
           onClick={() => { triggerHaptic(5); setOpen(o => !o); }}
-          className="min-w-0 flex-1 h-14 rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-3 flex items-center justify-center gap-1.5 cursor-pointer hover:ring-[#7a2028]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a2028]/50"
+          className="min-w-0 flex-1 min-h-14 rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-3 py-1.5 flex items-center justify-center gap-1.5 cursor-pointer hover:ring-[#7a2028]/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a2028]/50"
         >
           <span className="min-w-0 text-center">
-            <span className="block truncate font-serif-ge text-[16.5px] font-bold leading-tight text-[#4a3426]">{song.title}</span>
+            <span className="block font-serif-ge text-[16.5px] font-bold leading-tight text-[#4a3426]">{song.title}</span>
             <span className="block text-[12px] font-bold leading-tight text-[#75685a]">{song.region} · {i + 1}/{GUNDI_SONGS.length}</span>
           </span>
           <ChevronDown className={`w-4 h-4 shrink-0 text-[#9a8b7b] transition-transform ${open ? 'rotate-180' : ''}`} />

@@ -14,6 +14,7 @@ import { Podium } from '../rounds/parts';
 import { TEAM_TINT, TeamsEditor, readTeams, teamNames, type TeamsConf } from '../rounds/teams';
 import { Stars } from '../tsikhe/parts';
 import { AMBER, FactBox, ForkDots, ForkHead, GREEN, Medallion, RealPath, UNCHECKED, WayButton, waysOf } from './parts';
+import { winLine } from '../rounds/winLine';
 
 // „წინაპრის გზა“ with the class (the hub's „ჰიბრიდული“, 2026-11-01): the host reads a fork from the phone, every team holds up
 // one of its printed letter cards ა ბ გ at once, the host taps each team's letter — or, the whole class as one, the letter
@@ -147,7 +148,7 @@ const EndTable: React.FC<{ story: PathStory; g: PathTable; whole: boolean }> = (
         </div>
       ) : (
         <>
-          <p className="text-center text-[16px] font-bold text-[#4a3426]">{best.length > 1 ? `ფრეა: ${best.join(', ')}` : `გაიმარჯვა: ${best[0]}`}</p>
+          <p className="text-center text-[16px] font-bold text-[#4a3426]">{winLine(best, Math.max(...g.teams.map(t => t.points)), n => `გაიმარჯვა: ${n}`)}</p>
           <Podium names={g.teams.map(t => t.name)} scores={g.teams.map(t => t.points)} />
         </>
       )}

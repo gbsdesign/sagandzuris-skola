@@ -21,6 +21,23 @@ import { OnlineSetup, meOf } from './samshvilde/online/OnlineSetup';
 import { NightScreen } from './samshvilde/NightScreen';
 import { DayScreen, DealScreen, IntroScreen, MorningScreen, TieScreen, VerdictScreen, VoteScreen } from './samshvilde/DayScreens';
 import { EndScreen, RosterScreen } from './samshvilde/EndScreen';
+import { HowTo } from '../../components/games/HowTo';
+
+/** how a game goes, in steps (2026-11-04, the games' review: it was a paragraph on the wine card) */
+const HOW: Record<'online' | 'table', string[]> = {
+  online: [
+    'ერთი არ თამაშობს — მემატიანე: ოთახს ხსნის, კლასს იწვევს და თამაშს უძღვება.',
+    'ყველა თავის ტელეფონზე ფარულად ნახულობს თავის როლს.',
+    'ღამით მემატიანე ღამის სიტყვებს თამაშის ზარში კითხულობს, ყველა თავის არჩევანს თავის ტელეფონზე აკეთებს.',
+    'დილით ქალაქი ბჭობს და ხმას ტელეფონზე აძლევს — დროს და ხმებს აპი ითვლის.',
+  ],
+  table: [
+    'ერთი არ თამაშობს — ის მემატიანეა და ტელეფონი მას უჭირავს.',
+    'როლებს ტელეფონი არიგებს (წრეში გადადის, თითოეული ფარულად ნახულობს) ან დაბეჭდილი ბარათები.',
+    'ღამით ტელეფონი მემატიანეს ღამის სიტყვებს აჩვენებს და ღამეს თვითონ ითვლის.',
+    'დილით, ბჭობაზე, ტელეფონი დროს ზომავს და ხმებს ითვლის; ბოლოს მატიანეს ჰყვება.',
+  ],
+};
 
 // „სამშვილდის ღამე“ on the phone (games hub, 2026-10-30, live, hybrid): the school's Mafia, the same game as the printed
 // kit (src/print/games/samshvildis-game.js). The user's answers „1ა 2ა“: the printed roles and words; the roles are
@@ -241,11 +258,6 @@ const SamshvildeGame: React.FC = () => {
           დილით ქალაქი ბჭობს და ხმით წყვეტს, ვინ ჩასვას ციხეში. ქალაქი იმარჯვებს, როცა ყველა ჯაშუში ციხეშია; ჯაშუშები — როცა
           მათი რიცხვი დანარჩენებს გაუტოლდება.
         </p>
-        <p className="mt-2 text-[12.5px] leading-snug text-[#fbf6ec]/85">
-          {mode === 'online'
-            ? 'ონლაინ: ყველა თავის ტელეფონზე ფარულად ნახულობს თავის როლს, ღამის არჩევანს თვითონ აკეთებს და ხმასაც ტელეფონზე აძლევს. ერთი არ თამაშობს — მემატიანე: ოთახს ხსნის, კლასს იწვევს და თამაშს უძღვება, ღამის სიტყვებს თამაშის ზარში კითხულობს.'
-            : 'ერთი არ თამაშობს — ის მემატიანეა და ტელეფონი მას უჭირავს: ტელეფონი ღამის სიტყვებს აჩვენებს, ღამეს თვითონ ითვლის, ბჭობაზე დროს ზომავს და ხმებს ითვლის, ბოლოს კი მატიანეს ჰყვება.'}
-        </p>
       </Card>
 
       <Tabs
@@ -254,6 +266,7 @@ const SamshvildeGame: React.FC = () => {
         onChange={m => setC({ mode: m })}
         items={[{ id: 'online', label: 'ონლაინ', Icon: Wifi }, { id: 'table', label: 'ჰიბრიდული', Icon: Users }]}
       />
+      <HowTo key={mode} id={`samshvilde-${mode}`} steps={HOW[mode]} />
 
       {mode === 'online' ? (
         <OnlineSetup user={user} isAdmin={isAdmin} classes={mine} session={session} onEnter={(c, r) => { void enter(c, r); }} onResume={() => setRoomOpen(true)} />

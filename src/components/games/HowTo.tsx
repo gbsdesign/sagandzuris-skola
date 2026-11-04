@@ -31,16 +31,19 @@ export const HowTo: React.FC<{ id: string; steps: React.ReactNode[]; title?: str
         <span className="min-w-0 flex-1 text-[14.5px] font-bold leading-snug text-[#4a3426]">{title}</span>
         <ChevronDown className={`w-5 h-5 shrink-0 text-[#8a7a6a] transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
-      {open && (
-        <ol id={listId} className="px-4 pb-4 -mt-0.5 space-y-2.5">
-          {steps.map((s, i) => (
-            <li key={i} className="flex items-start gap-2.5">
-              <span className="w-6 h-6 shrink-0 rounded-full bg-[#7a2028] text-[#fbf6ec] text-[12.5px] font-bold flex items-center justify-center tabular-nums">{i + 1}</span>
-              <span className="min-w-0 pt-[2px] text-[13.5px] leading-snug text-[#4a3426]">{s}</span>
-            </li>
-          ))}
-        </ol>
-      )}
+      {open && <Steps id={listId} steps={steps} className="px-4 pb-4 -mt-0.5" />}
     </section>
   );
 };
+
+/** the numbered steps alone — for a card that shows how to play only until the first move (2026-11-04) */
+export const Steps: React.FC<{ steps: React.ReactNode[]; id?: string; className?: string }> = ({ steps, id, className = '' }) => (
+  <ol id={id} className={`space-y-2.5 ${className}`}>
+    {steps.map((s, i) => (
+      <li key={i} className="flex items-start gap-2.5">
+        <span className="w-6 h-6 shrink-0 rounded-full bg-[#7a2028] text-[#fbf6ec] text-[12.5px] font-bold flex items-center justify-center tabular-nums">{i + 1}</span>
+        <span className="min-w-0 pt-[2px] text-[13.5px] leading-snug text-[#4a3426]">{s}</span>
+      </li>
+    ))}
+  </ol>
+);

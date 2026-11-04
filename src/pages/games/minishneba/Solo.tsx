@@ -6,6 +6,7 @@ import { Btn, Card, askConfirm } from '../../../components/ui/kit';
 import { triggerHaptic } from '../../../utils/haptics';
 import { ThemeChip, WordField } from '../tabu/parts';
 import { JoDots, Notes, RESULT_TEXT, Verdict, type Note } from './parts';
+import { Steps } from '../../../components/games/HowTo';
 
 // „ერთი მინიშნება“ alone (the hub's „ონლაინ“, 2026-11-01): thirteen words; for each, five players' clues — the „ნუ იტყვი!“
 // card's forbidden words — with the most telling one or two struck as the same, as at a real table. One try a word: right
@@ -47,10 +48,11 @@ export const MinishnebaSolo: React.FC = () => {
       <div className="space-y-4">
         <Card className="!p-4 space-y-3">
           <p className="font-serif-ge text-[17px] font-bold text-[#4a3426]">ცამეტი სიტყვა, ერთი ცდა თითოზე</p>
-          <p className="text-[14px] leading-relaxed text-[#4a3426]">
-            ხუთმა მოთამაშემ ერთსა და იმავე სიტყვაზე თითო მინიშნება დაწერა — ერთნაირები წაიშალა, როგორც ნამდვილ თამაშში. დარჩენილი
-            მინიშნებებით გამოიცანი სიტყვა. სწორია — ქულა; არასწორი პასუხი შემდეგ ბარათსაც წაიღებს, ამიტომ თუ არ იცი, ჯობია „არ ვიცი“.
-          </p>
+          <Steps steps={[
+            'ხუთმა მოთამაშემ ერთსა და იმავე სიტყვაზე თითო მინიშნება დაწერა — ერთნაირები წაიშალა, როგორც ნამდვილ თამაშში.',
+            'დარჩენილი მინიშნებებით გამოიცანი სიტყვა: ერთი ცდა გაქვს.',
+            'სწორია — ქულა. არასწორი პასუხი შემდეგ ბარათსაც წაიღებს, ამიტომ თუ არ იცი, ჯობია „არ ვიცი“.',
+          ]} />
           <Btn size="lg" full icon={<Play />} onClick={start} className="!h-12">დაწყება{best !== null ? ` · რეკორდი ${best}/${JO_CARDS}` : ''}</Btn>
         </Card>
         <p className="px-1 text-[12px] leading-snug text-[#9a8b7b]">

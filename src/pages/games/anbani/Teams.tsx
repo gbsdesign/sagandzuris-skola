@@ -13,6 +13,7 @@ import { KeyStrip } from '../../../components/games/KeyStrip';
 import { Btn, Card, askConfirm, useWide } from '../../../components/ui/kit';
 import { TEAM_TINT, TeamChips, TeamsEditor, readTeams, teamNames, type TeamsConf } from '../rounds/teams';
 import { HowTo } from '../../../components/games/HowTo';
+import { winLine } from '../rounds/winLine';
 
 // „სამი დამწერლობა“ before one screen (the hub's „ჰიბრიდული“, 2026-11-01): „სწრაფი კითხვა“ — an old letter, word or line on
 // the screen (a TV or the teacher's phone), the teams read it aloud, the host taps who read it first; then the answer opens.
@@ -57,8 +58,8 @@ const ReadGame: React.FC<{ g: ReadTeams; setG: (g: ReadTeams) => void; onClose: 
       >
         <div className="my-auto w-full max-w-md mx-auto space-y-4 py-4">
           <div className="text-center">
-            <Trophy className="mx-auto w-10 h-10 text-[#c9a227]" aria-hidden="true" />
-            <p className="mt-2 font-serif-ge text-[22px] font-bold text-[#7a2028] leading-tight">{first.length > 1 ? `ფრეა: ${first.map(r => r.name).join(', ')}` : `გაიმარჯვა „${first[0]?.name}“`}</p>
+            {(rank[0]?.points ?? 0) > 0 && <Trophy className="mx-auto w-10 h-10 text-[#c9a227]" aria-hidden="true" />}
+            <p className="mt-2 font-serif-ge text-[22px] font-bold text-[#7a2028] leading-tight">{winLine(first.map(r => r.name), rank[0]?.points ?? 0, n => `გაიმარჯვა „${n}“`)}</p>
           </div>
           <ol className="space-y-1.5">
             {rank.map(r => (

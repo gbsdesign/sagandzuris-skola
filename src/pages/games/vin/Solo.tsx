@@ -14,6 +14,7 @@ import { Chip } from '../../../components/games/Chip';
 import { Toast } from '../../../components/ui/Toast';
 import { triggerHaptic } from '../../../utils/haptics';
 import { AskedLine, Facts, NameBoard, PersonHead, QuestionDots, QuestionSheet } from './parts';
+import { Steps } from '../../../components/games/HowTo';
 
 // „ვინ ვარ მე?“ alone (the hub's „ონლაინ“, 2026-11-01): the day's person — the same for the whole school — hides among 24
 // names; the questions sit in a sheet, each answer rules names out on the board, a name tapped is a guess. The day's record is
@@ -195,10 +196,12 @@ export const VinSolo: React.FC = () => {
               </div>
               <QuestionDots run={run} max={MAX_QUESTIONS} />
               {!run.asked.length && (
-                <p className="text-[13.5px] leading-snug text-[#4a3426]">
-                  აპმა ჩაიფიქრა ერთი ცნობილი ქართველი — ამ {run.board.length} სახელიდან ერთ-ერთი. დასვი კი/არა კითხვები: პასუხი თვითონ წაშლის
-                  დაფიდან ყველას, ვინც არ ერგება. სახელზე შეხება გამოცნობაა და ისიც კითხვად ითვლება. გაქვს {MAX_QUESTIONS} კითხვა — რაც ნაკლები, მით უკეთესი.
-                </p>
+                <Steps steps={[
+                  `აპმა ჩაიფიქრა ერთი ცნობილი ქართველი — ამ ${run.board.length} სახელიდან ერთ-ერთი.`,
+                  'დასვი კი/არა კითხვები: პასუხი თვითონ წაშლის დაფიდან ყველას, ვინც არ ერგება.',
+                  'სახელზე შეხება გამოცნობაა და ისიც კითხვად ითვლება.',
+                  `გაქვს ${MAX_QUESTIONS} კითხვა — რაც ნაკლები, მით უკეთესი.`,
+                ]} />
               )}
             </Card>
           )}

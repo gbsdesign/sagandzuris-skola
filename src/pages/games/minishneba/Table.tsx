@@ -10,9 +10,9 @@ import { triggerHaptic } from '../../../utils/haptics';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { CircleNames, useCircleNames } from '../../../components/games/CircleNames';
 import { Btn, Card, askConfirm, useWide } from '../../../components/ui/kit';
-import { Hint } from '../samshvilde/parts';
 import { ThemeChip, ThemePicker, WordField } from '../tabu/parts';
 import { JoDots, Notes, RESULT_TEXT, Verdict, type Note } from './parts';
+import { HowTo } from '../../../components/games/HowTo';
 
 // „ერთი მინიშნება“ round one phone (the hub's „ჰიბრიდული“, 2026-11-01, like Just One): in turn one player guesses, the others
 // get the phone one by one, see the word and write one clue in secret. The same clues — and a clue holding the word — are
@@ -216,6 +216,13 @@ export const MinishnebaTable: React.FC = () => {
           </div>
         </Card>
       )}
+      <HowTo id="minishneba-table" steps={[
+        'კლასი ერთად თამაშობს დასტის წინააღმდეგ: ცამეტი სიტყვა.',
+        'რიგრიგობით ერთი გამოიცნობს და ეკრანს არ უყურებს.',
+        'დანარჩენები ტელეფონს ერთმანეთს გადასცემენ: თითოეული სიტყვას ხედავს და ერთ სიტყვა-მინიშნებას წერს ისე, რომ სხვებმა არ დაინახონ.',
+        'ტელეფონი ერთნაირ მინიშნებებს შლის — ამიტომ ჯობია თავისებური სიტყვა.',
+        'გამომცნობს ერთი ცდა აქვს: სწორია — ქულა; არასწორი — შემდეგი ბარათიც იკარგება; „არ ვიცი“ — მხოლოდ ეს ბარათი.',
+      ]} />
       <Card className="!p-4 space-y-4">
         <CircleNames hint={`${MIN_PLAYERS}–${MAX_PLAYERS} მოთამაშე, წრის რიგით: რიგრიგობით თითო გამოიცნობს, დანარჩენები მინიშნებას წერენ.`} />
         {names.length > MAX_PLAYERS && <p className="text-[12.5px] text-[#8a6d12]">ითამაშებს პირველი {MAX_PLAYERS} — დანარჩენები მომდევნო თამაშში.</p>}
@@ -227,12 +234,6 @@ export const MinishnebaTable: React.FC = () => {
       <Btn size="lg" full icon={<Play />} disabled={few} onClick={() => { void start(); }} className="!h-14 !text-[15.5px]">
         {few ? `საჭიროა ${MIN_PLAYERS} მოთამაშე მაინც` : 'დაწყება'}
       </Btn>
-      <Hint>
-        კლასი ერთად თამაშობს დასტის წინააღმდეგ: ცამეტი სიტყვა. რიგრიგობით ერთი გამოიცნობს და ეკრანს არ უყურებს. დანარჩენები
-        ტელეფონს ერთმანეთს გადასცემენ — თითოეული სიტყვას ხედავს და ერთ სიტყვა-მინიშნებას წერს ისე, რომ სხვებმა არ დაინახონ. ტელეფონი
-        ერთნაირ მინიშნებებს შლის — ამიტომ ჯობია თავისებური სიტყვა. გამომცნობს ერთი ცდა აქვს: სწორია — ქულა; არასწორი — შემდეგი ბარათიც
-        იკარგება; „არ ვიცი“ — მხოლოდ ეს ბარათი.
-      </Hint>
     </div>
   );
 };

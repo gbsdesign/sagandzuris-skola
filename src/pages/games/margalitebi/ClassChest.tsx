@@ -14,10 +14,11 @@ import { ChestIcon } from '../../../components/pearls/PearlChests';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { Chip } from '../../../components/games/Chip';
 import { Bar, Btn, Card, askConfirm } from '../../../components/ui/kit';
-import { Hint } from '../samshvilde/parts';
 import { TEAM_TINT, TeamChips, TeamsEditor, readTeams, teamNames, type TeamsConf } from '../rounds/teams';
 import { Sing, pctTone } from '../turniri/Sing';
 import { triggerHaptic } from '../../../utils/haptics';
+import { winLine } from '../rounds/winLine';
+import { HowTo } from '../../../components/games/HowTo';
 
 // „კლასის სკივრი“ — „მარგალიტები“ on one phone (the hub's „ჰიბრიდული“, 2026-11-04): 2–6 teams take the phone in turn, a pearl
 // of the chosen chest a turn; the team's singer picks a voice, hears its first phrase and sings it, scored as the pearls are
@@ -99,7 +100,7 @@ const Standings: React.FC<{ g: PearlTeams }> = ({ g }) => (
   <ol className="space-y-1.5">
     {standings(g).map(r => (
       <li key={r.i} className="flex items-center gap-3 min-h-12 rounded-2xl px-3 bg-white ring-1 ring-[#e8dcc8] text-[#4a3426]">
-        <span className="w-7 shrink-0 text-center text-[14px] font-bold tabular-nums text-[#a0703c]">{r.place === 1 ? <Trophy className="inline w-4 h-4 text-[#c9a227]" aria-label="პირველი" /> : r.place}</span>
+        <span className="w-7 shrink-0 text-center text-[14px] font-bold tabular-nums text-[#a0703c]">{r.place === 1 && r.points > 0 ? <Trophy className="inline w-4 h-4 text-[#c9a227]" aria-label="პირველი" /> : r.place}</span>
         <Dot team={r.i} />
         <span className="min-w-0 flex-1 text-[14px] font-bold leading-tight [overflow-wrap:anywhere]">{r.name}</span>
         {r.polished > 0 && <span className="shrink-0 inline-flex items-center gap-1 text-[12.5px] font-bold text-[#2f7d4f] tabular-nums"><Gem className="w-3.5 h-3.5" aria-hidden="true" />{r.polished}</span>}
@@ -142,6 +143,7 @@ const ClassGame: React.FC<{
   if (isOver(g)) {
     const rows = standings(g);
     const first = rows.filter(r => r.place === 1).map(r => r.name);
+    const top = Math.max(0, ...rows.map(r => r.points));
     const n = chestCounts(have, g.chest);
     return (
       <TableScreen
@@ -156,8 +158,8 @@ const ClassGame: React.FC<{
       >
         <div className="my-auto w-full max-w-md mx-auto space-y-4 py-4">
           <div className="text-center">
-            <Trophy className="mx-auto w-10 h-10 text-[#c9a227]" aria-hidden="true" />
-            <p className="mt-2 font-serif-ge text-[22px] font-bold text-[#7a2028] leading-tight">{first.length > 1 ? `ფრეა: ${first.join(', ')}` : `გაიმარჯვა გუნდმა „${first[0]}“`}</p>
+            {top > 0 && <Trophy className="mx-auto w-10 h-10 text-[#c9a227]" aria-hidden="true" />}
+            <p className="mt-2 font-serif-ge text-[22px] font-bold text-[#7a2028] leading-tight">{winLine(first, top, n => `გაიმარჯვა გუნდმა „${n}“`)}</p>
           </div>
           <Standings g={g} />
           <p className="flex items-center gap-2.5 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] px-3 py-2.5 text-[13.5px] leading-snug text-[#4a3426]">
@@ -271,6 +273,12 @@ export const ClassChestTable: React.FC = () => {
           </div>
         </Card>
       )}
+      <HowTo id="margalitebi-table" steps={[
+        'გუნდები რიგრიგობით იღებენ ტელეფონს. ყოველ სვლაზე — სკივრის ერთი მარგალიტი.',
+        'გუნდის მომღერალი ირჩევს ხმას, ისმენს მის პირველ ფრაზას და მღერის მას ტელეფონში — თავისთვის მოსახერხებელ ტონში.',
+        'რამდენი პროცენტიც, იმდენი ქულა. 80 %-ზე მარგალიტი პრიალდება — კლასის სკივრშიც, რომელიც ამ ტელეფონზე ინახება.',
+        'ჯერ ის მარგალიტები მოდის, რომლებიც კლასს ყველაზე ნაკლებ ხმაში აქვს გაპრიალებული — ასე კლასი სამივე სკივრს ავსებს.',
+      ]} />
       <Card className="!p-4 space-y-4">
         <div className="space-y-2.5">
           <p className="text-[13.5px] font-bold text-[#4a3426]">კლასის სკივრი</p>
@@ -301,12 +309,6 @@ export const ClassChestTable: React.FC = () => {
         </div>
       </Card>
       <Btn size="lg" full icon={<Play />} onClick={() => { void start(); }} className="!h-14 !text-[15.5px]">დაწყება</Btn>
-      <Hint>
-        გუნდები რიგრიგობით იღებენ ტელეფონს. ყოველ სვლაზე — სკივრის ერთი მარგალიტი: გუნდის მომღერალი ირჩევს ხმას, ისმენს მის პირველ
-        ფრაზას და მღერის მას ტელეფონში — თავისთვის მოსახერხებელ ტონში. რამდენი პროცენტიც, იმდენი ქულა; 80 %-ზე მარგალიტი
-        პრიალდება — კლასის სკივრშიც, რომელიც ამ ტელეფონზე ინახება. ჯერ ის მარგალიტები მოდის, რომლებიც კლასს ყველაზე ნაკლებ ხმაში
-        აქვს გაპრიალებული, ასე რომ გაკვეთილიდან გაკვეთილამდე კლასი სამივე სკივრს ავსებს.
-      </Hint>
       {Object.keys(chest).length > 0 && (
         <button type="button" onClick={() => { void clear(); }} className="min-h-11 text-[13px] font-bold text-[#7a2028] underline underline-offset-2 cursor-pointer">
           კლასის სკივრის გასუფთავება
