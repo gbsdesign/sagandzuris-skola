@@ -126,9 +126,10 @@ service cloud.firestore {
       allow create: if (isSelf() && !incoming().keys().hasAny(['maneraReview', 'marksLock', 'pearlShine'])) || isAdmin();
       // a teacher of the student changes on the student's own page (pages/StudentPage.tsx, 2026-11-04) whatever the
       // student may — the path, habits, profile, outfit… — and what only teachers do (the kids' mode, the manera's marks,
-      // the marking's lock, pearls approved); never the list of teachers nor the account's own fields
+      // the marking's lock, pearls approved); never the list of teachers, the account's own fields, nor what the student
+      // sang (the pearls' and the exercises' scores)
       allow update: if (isSelf() && !changed().hasAny(['maneraReview', 'marksLock', 'pearlShine'])) || isAdmin()
-        || (teachesMe() && !changed().hasAny(['teacherIds', 'teacherVia', 'userId', 'email', 'authProvider']))
+        || (teachesMe() && !changed().hasAny(['teacherIds', 'teacherVia', 'userId', 'email', 'authProvider', 'pearls', 'drillScore']))
         || becomingTeacher() || leavingTeachers();
       allow delete: if isAdmin();
 

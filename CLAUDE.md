@@ -311,7 +311,7 @@
   there (`useViewing()`: the habits' and the review's phone reminders, the assignments' bell) and so does the microphone
   (`utils/othersPage.ts` `holdSinging` → `singingSupported()` false: the student sings their pearls and exercises
   themself). Rules: a teacher of the student (`teachesMe`) updates any field but `teacherIds`, `teacherVia`, `userId`,
-  `email`, `authProvider`, and their `directory` name (`teachesThem`). At the bottom „მასწავლებლისთვის“ (`StudentTools` = the
+  `email`, `authProvider` and the sung scores `pearls`, `drillScore`, and their `directory` name (`teachesThem`). At the bottom „მასწავლებლისთვის“ (`StudentTools` = the
   old member's window inline: pearls/takes to hear, figures, attendance, the path editor, the manera's marks, the kids'
   mode, „მიწერა“, „ამოღება“) — never shown to the student.
   Since 2026-11-04 two tabs (kept per visit in sessionStorage; the user: „პროგრამა პროგრამაა“): „პროგრამა“ (a dot = a
