@@ -465,7 +465,7 @@
   (`HybridState`, `markTeam`, kept on the device so ✕ only pauses). The room store is generic since then: `utils/gameRoom.ts`
   `createRooms(be, engine, moves)` over a `RoomEngine` (`games` it plays; samshvilde's is `utils/samshvildeRoom.ts`), the
   app's two stores in `utils/gameRoomFirestore.ts` (`rooms` = samshvilde, `roundRooms` = the quick games: `timeUp(key)`,
-  `reveal`, `next`); the rules let a room be opened for every `ROOM_GAMES` game (24 since 2026-11-04), up to 40 players, an act may carry `ms` (and `text`).
+  `reveal`, `next`); the rules let a room be opened for every `ROOM_GAMES` game (25 since 2026-11-04), up to 40 players, an act may carry `ms` (and `text`).
   Invitations name their game: `data/roomGames.ts` (titles, the hub item, a chat card's `room` = `game:roomId` — a
   samshvilde card keeps the bare id), the Worker's `GAME_TITLES`, `/?open=<game>&c=&r=`, icons
   `components/games/roomGameIcons.ts`; the online tab of every room game is `components/games/RoomSetup.tsx`. Screens
@@ -922,6 +922,23 @@
   disputes), a page a game (field, what to bring, how to play, who wins, safety; the sea's 18 themes, a hopscotch tracking table),
   the rules quiz (12, answers upside down), 32 team cards drawn from a bag (8 blue + 8 red a sheet, numbered, one back), the
   season's wall table (30 names × 12 games) with the match sheet (two matches) behind it.
+- **„მეფის კარი“ on phones** (2026-11-04, the printed Coup №6 gets its app variants; mapItem `kari`, its entry in `GAMES` has `item`,
+  the hub opens its tab by `requestOpen('kari', 'online' | 'table')`, tab `sg-kari-tab`; rules `utils/mepisKari.ts` + test, screens
+  `pages/games/kari/`): the kit's five courtiers (`ROLES`: ხაზინადარი = Duke, მანდატური = Assassin, სპასალარი = Captain,
+  მსახურთუხუცესი = Ambassador, დედოფალი = Contessa) and seven actions (`ACTS`, the original's costs; 10 თეთრი = a must coup), 2–8
+  players, a deck of 15 (20 from 7). One engine for both: a claim opens a doubt window, then a block, a doubt on the block, then the
+  result (`declare`, `doubt`, `block`, `letGo`, `lose`, `keep`); the chronicle `Line` (≤ 40). „ონლაინ“ = a room of its own engine
+  (`utils/kariRoom.ts` `KARI_ROOM` over `createRooms`; `kari` in `ROOM_GAMES`/the rules/the Worker's titles; store `kariRooms` /
+  `useKariRoom` in `gameRoomFirestore.ts` beside `rooms` and `roundRooms`): the host's phone holds the deck and the hands, a seat
+  (`kariSeat`) gets only its own cards, the view only how many each has and the turned ones (all at the end). The host may play too
+  (the lobby's „მეც ვთამაშობ“; the rules let the host write its own join and acts; a new room's opener joins by itself). Every step
+  has a clock (`KARI_SECS`) and the host's phone answers for the late (`timeUp`: let go; income, or the coup at 10; the first card;
+  the old cards); the bluff is in the room's call. „ჰიბრიდული“ = the printed cards in hand, one phone keeps the coins, the turns and
+  the order (`paper: true`: hands unknown, a doubt asks „აჩვენა?“ — phase `proof` —, the host taps the card turned), kept in
+  `sg-kari-table` (✕ only pauses, an ended game is not kept), who starts in `sg-kari-conf`. Screens: `Court.tsx` (a tile a player,
+  the step's story `storyOf` — second person for „შენ“), `Pads.tsx` (the actions, the step's clock, `sg-kari-hide` hides my cards,
+  a tap peeks 4 s), `Play.tsx` (online), `Table.tsx` (hybrid), `Room.tsx` (lobby), `look.tsx` (colours, icons, cards, chronicle).
+  Not yet tried by real people on several phones.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
