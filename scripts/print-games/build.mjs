@@ -6,7 +6,7 @@ import { build } from './lib.mjs';
 const args = process.argv.slice(2);
 const ids = args.filter(a => !a.startsWith('--'));
 const previews = args.find(a => a.startsWith('--previews='))?.slice('--previews='.length) ?? null;
-const ALL = ['mepis-kari', 'samshvildis-game', 'okros-khana', 'lurji-supra', 'ori-takhti', 'qaravani', 'dghis-sitqva', 'otkheuli', 'amikhseni', 'ra-sad-rodis',
+const ALL = ['mepis-kari', 'samshvildis-game', 'okros-khana', 'lurji-supra', 'qaravani', 'dghis-sitqva', 'otkheuli', 'amikhseni', 'ra-sad-rodis',
   'dghis-hangi', 'sam-notshi', 'khma-khmad', 'saidanaa-simghera', 'kartuli-akordi', 'rva-khma', 'rukis-viktorina', 'gagrdzele', 'hangebi', 'eqo', 'mprinavi-notebi', 'khmis-tsqvilebi',
   'mesame-khma', 'chemi-gundi', 'khmebis-turniri', 'chamotvale', 'asoebis-bade', 'khutsuri-tsartsera', 'drois-khazi', 'chemi-vazi', 'chaitsvi-qartulad', 'sami-damtserloba', 'tsikhis-gasaghebi', 'tsinapris-gza',
   'nu-itqvi', 'erti-minishneba', 'pantomima', 'vin-var-me', 'saidumlo-sakhelebi', 'utskho-sopelshi', 'nakhatobana', 'sagalobo-loto', 'sagandzuris-dzebna', 'ezos-msaji', 'otkhidan-erti', 'gatvla', 'tskheli-churchkhela', 'margalitebi'];

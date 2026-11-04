@@ -1,22 +1,22 @@
 import React, { useEffect, useState } from 'react';
-import { Castle, Crown, Play, Undo2 } from 'lucide-react';
-import { CAPITALS, PLACES, ROMAN, SIDES, applyPick, isGone, isUp, newTakhti, parseTakhti, scoreOf, winnersOf, type TakhtiGame } from '../../../utils/oriTakhti';
+import { Crown, Play, Undo2 } from 'lucide-react';
+import { CAPITALS, ROUNDS, SIDES, applyPick, newTakhti, parseTakhti, scoreOf, winnersOf, type TakhtiGame } from '../../../utils/oriTakhti';
 import { Chip } from '../../../components/games/Chip';
 import { Btn, Card, FIELD, Label, askConfirm } from '../../../components/ui/kit';
 import { triggerHaptic } from '../../../utils/haptics';
 import { TakhtiPlay } from './Play';
-import { SIDE_COLOR } from './words';
+import { ThroneMark } from './look';
 
-// „ორი ტახტი“ on one phone (the hybrid): the phone lies between the two thrones and the one on turn plays on it — the phone lays
-// the ages out, keeps the coins, prices every card, moves the rider and counts the points, so nobody sorts 73 cards. „უკან“
-// takes the last move back while nothing new has turned up; the game is kept on the device (✕ only pauses).
+// „ორი ტახტი“ on one phone (the hybrid): the phone lies between the two kings and the one on turn touches it — it turns the
+// gifts up, keeps both courts and counts them, so nobody sorts cards. „უკან“ takes the last move back while the meeting goes
+// on (a new meeting has turned new cards up); the game is kept on the device (✕ only pauses).
 
 const GAME_KEY = 'sg-takhti-table';
 const CONF_KEY = 'sg-takhti-conf';
 const NAME_MAX = 24;
 const load = (k: string): unknown => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } };
 const save = (k: string, v: unknown) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } };
-const readGame = () => { const g = parseTakhti(load(GAME_KEY)); return g && g.phase.k !== 'end' ? g : null; };
+const readGame = () => { const g = parseTakhti(load(GAME_KEY)); return g && g.phase.k !== 'end' && g.deck.length ? g : null; };
 interface Conf { names: [string, string]; first: number }
 const readConf = (): Conf => {
   const v = load(CONF_KEY) as Partial<Conf> | null;
@@ -24,12 +24,8 @@ const readConf = (): Conf => {
   return { names: [names[0] ?? '', names[1] ?? ''], first: v?.first === 0 || v?.first === 1 ? v.first : -1 };
 };
 
-/** the cards face up so far (taken ones included): more of them = something new was seen */
-const seen = (g: TakhtiGame) => PLACES[g.age].filter((_, s) => isGone(g, s) || isUp(g, s)).length;
-/** a move may be taken back while its age goes on and it showed nothing new (a card turned up, the draft's second four, the
- *  academy's three tokens) */
-const canBack = (prev: TakhtiGame | undefined, g: TakhtiGame) => !!prev && g.phase.k !== 'end' && prev.age === g.age
-  && seen(prev) === seen(g) && prev.draft.length === g.draft.length && !(g.phase.k === 'token' && g.phase.lib);
+/** a move may be taken back while its meeting goes on (the next meeting's cards are already seen) */
+const canBack = (prev: TakhtiGame | undefined, g: TakhtiGame) => !!prev && g.phase.k !== 'end' && prev.round === g.round;
 
 export const TakhtiTable: React.FC = () => {
   const [game, setGame] = useState<TakhtiGame | null>(readGame);
@@ -54,10 +50,11 @@ export const TakhtiTable: React.FC = () => {
     if (!game) return;
     const next = applyPick(game, n);
     if (next === game) return;
-    setHist(h => [...h.slice(-30), game]);
+    setHist(h => [...h.slice(-20), game]);
     setGame(next);
   };
   const close = () => { setOpen(false); if (game?.phase.k === 'end') setGame(null); };
+  // the loser divides first next time (a shared throne: by lot)
   const again = () => {
     if (!game) return;
     const w = winnersOf(game);
@@ -77,15 +74,14 @@ export const TakhtiTable: React.FC = () => {
     return <TakhtiPlay g={game} me={-1} one right={back} acts={{ pick: step, again, close }} onHide={close} />;
   }
 
-  const where = game && (game.phase.k === 'draft' ? 'ძეგლების არჩევა' : `${ROMAN[game.age]} ეპოქა`);
   return (
     <div className="space-y-4">
       {game && (
         <Card className="!p-4">
           <div className="flex flex-wrap items-center gap-3">
             <div className="min-w-0 flex-1 basis-52">
-              <p className="text-[14px] font-bold text-[#4a3426]">შეჩერებული თამაში · {where}</p>
-              <p className="mt-0.5 text-[12.5px] leading-snug tabular-nums text-[#75685a]">{game.names.map((x, i) => `${x} ${scoreOf(game, i).total}`).join(' · ')}</p>
+              <p className="text-[14px] font-bold text-[#4a3426]">შეჩერებული თამაში · შეხვედრა {Math.min(game.round + 1, ROUNDS)} / {ROUNDS}</p>
+              <p className="mt-0.5 text-[12.5px] leading-snug tabular-nums text-[#75685a]">{game.names.map((x, i) => `${x} ${scoreOf(game.courts, i).total}`).join(' · ')}</p>
             </div>
             <Btn onClick={() => { triggerHaptic(10); setHist([]); setOpen(true); }} icon={<Play />}>გაგრძელება</Btn>
           </div>
@@ -96,7 +92,7 @@ export const TakhtiTable: React.FC = () => {
           {[0, 1].map(i => (
             <div key={i}>
               <Label htmlFor={`takhti-name-${i}`}>
-                <span className="inline-flex items-center gap-1.5"><Castle className="w-4 h-4" style={{ color: SIDE_COLOR[i] }} />{SIDES[i]} · {CAPITALS[i]}</span>
+                <span className="inline-flex items-center gap-1.5"><ThroneMark side={i} size={20} />{SIDES[i]} · {CAPITALS[i]}</span>
               </Label>
               <input
                 id={`takhti-name-${i}`}
@@ -110,23 +106,23 @@ export const TakhtiTable: React.FC = () => {
             </div>
           ))}
         </div>
-        {sameNames && <p className="text-[12.5px] font-bold text-[#9a6a10]">ორ ტახტს ერთი სახელი აქვს — ერთ-ერთს სხვა დაარქვი.</p>}
+        {sameNames && <p className="text-[12.5px] font-bold text-[#9a6a10]">ორ მეფეს ერთი სახელი აქვს — ერთ-ერთს სხვა დაარქვი.</p>}
         <div className="space-y-2">
-          <p className="text-[13px] font-bold text-[#4a3426]">ვინ იწყებს ძეგლების არჩევას?</p>
+          <p className="text-[13px] font-bold text-[#4a3426]">ვინ ყოფს პირველად?</p>
           <div className="flex flex-wrap gap-2">
             <Chip on={conf.first < 0} onClick={() => setConf({ ...conf, first: -1 })}>წილისყრით</Chip>
             {[0, 1].map(i => <Chip key={i} on={conf.first === i} onClick={() => setConf({ ...conf, first: i })}>{names[i]}</Chip>)}
           </div>
-          <p className="text-[12px] leading-snug text-[#9a8b7b]">ვინც ძეგლების არჩევას იწყებს, ის იწყებს პირველ ეპოქასაც.</p>
+          <p className="text-[12px] leading-snug text-[#9a8b7b]">მერე ყოფა რიგრიგობით გადადის: ყოველი მეფე ოთხჯერ ყოფს და ოთხჯერ ირჩევს.</p>
         </div>
         <Btn size="lg" full disabled={sameNames} onClick={() => { void begin(); }} icon={<Crown />} className="!h-14 !text-[16px]">თამაშის დაწყება</Btn>
       </Card>
       <Card className="!p-4">
         <p className="text-[13px] font-bold text-[#4a3426]">როგორ ვთამაშობთ</p>
         <p className="mt-1 text-[12.5px] leading-snug text-[#75685a]">
-          ტელეფონი ორ ტახტს შორის დევს: ვისი სვლაცაა, ის ეხება ამოწეულ ბარათს და ირჩევს — აშენება, გაყიდვა თუ ძეგლის ქვეშ შედება.
-          ეპოქებს ტელეფონი შლის, თეთრს ინახავს, ფასს ითვლის, მხედარს აჩოჩებს და ბოლოს ქულებს ითვლის. ორი გუნდიც შეიძლება —
-          მაშინ გუნდი თათბირობს და ერთი ეხება. „უკან“ ბოლო სვლას აუქმებს, სანამ ახალი ბარათი არ ამოტრიალდება.
+          ტელეფონი ორ მეფეს შორის დევს. გამყოფი ბარათებს ეხება და ორ წილად ყოფს, მერე ტელეფონს მეორეს აჩვენებს — ის წილს
+          ირჩევს. ელჩს ტელეფონი თავად ახსენებს. ბარათებს ტელეფონი შლის, ორივე კარს ინახავს და ბოლოს ითვლის. ორი გუნდიც შეიძლება —
+          მაშინ გუნდი თათბირობს და ერთი ეხება. „უკან“ ბოლო სვლას აუქმებს, სანამ შეხვედრა გრძელდება.
         </p>
       </Card>
     </div>

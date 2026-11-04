@@ -972,25 +972,24 @@
   of the same day; ✕ only pauses. Screens: `Play.tsx` (`LurjiPlay`: the story card, trays + meidan, my board big with the legal
   lines ringed and the take's ghost, the others small; a phone on its side or a computer = two columns), `look.tsx` (`Stamp`,
   `Trays`, `Meidan`, `Loom`, `useCell`), `Room.tsx` (lobby, the step's clock). Not yet tried by real people on several phones.
-- **„ორი ტახტი“ on phones** (2026-11-04, the printed 7 Wonders Duel №4 gets its app variants; mapItem `takhti`, its entry in `GAMES`
-  has `item`, the hub opens its tab by `requestOpen('takhti', 'online' | 'table')`, tab `sg-takhti-tab`; data `data/takhtiCards.ts` =
-  the kit's 73 cards, 12 monuments, 10 tokens (ids: age I 0–22, II 23–45, III 46–65, guilds 66–72 — copied from the kit's module, keep
-  both in step), rules `utils/oriTakhti.ts` + test, screens `pages/games/takhti/`): seat 0 = west (ქუთაისი, left), 1 = east (თბილისი);
-  the draft 1-2-1 / 1-2-1 (`DRAFT`), the ages' layouts `PLACES` (x in half cards; a place is covered by the next row's |dx| = 1 —
-  `COVERS`), a card built (`priceFor`: the flexible sources tried every way, the bank's price 2 + the other side's production or 1 with
-  a store, the master's mark free, ქვისმთლელები/არსუკისძის სკოლა −2 dearest), sold (2 + yellow) or tucked under a monument; the rider
-  −9…+9 (+ toward Tbilisi), tolls 2/5 once a side (`loot`), a capital = the army's win; a pair of wisdom = a token, six = the science
-  win; seven monuments at most; the weaker side (the rider on its half, even → who took the last card) says who begins an age; the
-  end counts `scoreOf`, a tie → blue points. One number a move (`playPick` / `applyPick`). „ონლაინ“ = a room of its own engine
-  (`utils/takhtiRoom.ts` `TAKHTI_ROOM`, no seats: the view is `publicOf` — the face-down cards, the later ages, the draft's second
-  four and the box hidden; `takhti` in `ROOM_GAMES`/the rules/the Worker's titles; `takhtiRooms` / `useTakhtiRoom`): exactly two
-  play, the host may be one („მეც ვთამაშობ“) or only hold the game, the rest watch; a step's clock (`TAKHTI_SECS`: 120 s a card), then
-  the host's phone moves (`timeUp`: the first free card sold, the first of a choice). „ჰიბრიდული“ (`Table.tsx`, kept in
-  `sg-takhti-table`, names + who begins in `sg-takhti-conf`) = one phone between the thrones; „უკან“ only while nothing new turned
-  up (`canBack`). Screens: `Play.tsx` (story, `Track` „ლიხის გზა“, `Pyramid` with the price on each free card, a tap opens
-  `CardSheet` — build · sell · tuck; the kingdoms' `CityPanel` → `CitySheet`; the chronicle `lineText`), `look.tsx` (the kit's marks,
-  `CardFace` with the kit's pictures faint, `CardBack` with the age's numeral in the visible top half), `words.ts`, a phone on its
-  side or a computer = two columns (`useTwoCols`, `useCardW`). Not yet tried by real people on several phones.
+- **„ორი ტახტი“ — our own game (2026-11-04; the printed №4 was a 7 Wonders Duel, now rebuilt on its own rules)**: mapItem `takhti`,
+  its entry in `GAMES` has `item` and no `like`, the hub opens its tab by `requestOpen('takhti', 'online' | 'table')`, tab
+  `sg-takhti-tab`; cards `data/takhtiCards.ts` (42: 12 castles of 1–3 points, 9 warriors of strength 1–3, 5 vines + 5 vessels, 6 books,
+  5 envoys; notes by Claude, unchecked; ids stay), rules `utils/oriTakhti.ts` + test, screens `pages/games/takhti/`. Seat 0 = west
+  (ქუთაისი), 1 = east (თბილისი); eight meetings (`ROUNDS`): five cards turn up (`OFFER`), the divider splits them into two shares (one
+  card at least each — `split`, a bit a card), the chooser takes one, the divider the rest; an envoy takes one card (not an envoy)
+  from the other share for its king — the chooser's envoys first, then the divider's; the roles change every meeting; 40 cards are
+  laid, 2 stay in the box. The count (`scoreOf`): a castle its points, the stronger army `ARMY_PTS` 8 (a tie `ARMY_TIE` 4 each), a vine
+  with a vessel = a wine of `WINE_PTS` 5, a book as many points as the court's other kinds; a tie → the army's strength, then the
+  castles. One number a move (`applyPick`); `botPick` = the careful move (bot against bot 199:201 over 400 seeds). „ონლაინ“ = a room of
+  its own engine (`utils/takhtiRoom.ts` `TAKHTI_ROOM`, no seats: all is open but the deck — `publicOf`; `takhti` in `ROOM_GAMES`/the
+  rules/the Worker's titles; `takhtiRooms` / `useTakhtiRoom`): exactly two play, the host may be one; a step's clock (`TAKHTI_SECS`:
+  split 90 s, choose 60, an envoy 40), then the host's phone moves (`timeUp` → `botPick`). „ჰიბრიდული“ (`Table.tsx`, kept in
+  `sg-takhti-table`, names + who divides first in `sg-takhti-conf`) = one phone between the kings; „უკან“ only within the meeting
+  (`canBack`). Screens: `Play.tsx` (the story with the eight meetings, the shares with what each would give both kings now —
+  `gainsIf` —, the courts kind by kind, the results, the chronicle `lineText`; two columns on a phone on its side or a computer —
+  `components/games/useTwoCols.ts`), `look.tsx`, `words.ts` (`KIND_INFO`: names, colours, one-line rules — the kit's too). Its kit is
+  drawn in the browser (`takhti/printKit.ts`, see „Kits drawn in the browser“). Not yet tried by real people on several phones.
 - **„ქარავანი“ — our own game (2026-11-04; the printed №3 was a Ticket to Ride, now rebuilt on its own rules the same day)**: mapItem
   `qaravani`, its entry in `GAMES` has `item` and no `like`, the hub opens its tab by `requestOpen('qaravani', 'online' | 'table')`,
   tab `sg-qaravani-tab`; the page is `React.lazy` in GamesPage — its map is ~95 KB. The board is the kit's own:
@@ -1056,9 +1055,8 @@
   „მეფის კარი“ (№6) and „სამშვილდის ღამე“ (№2); then (fifth PR) „ოქროს ხანა“ (№1 — since 2026-11-04 the school's own game, see
   „ოქროს ხანა“ above) and „ლურჯი სუფრა“ (№5, Azul in Erekle II's Tbilisi: 105 stamps of 20 mm on one sheet whose back
   is one indigo field, four A4-landscape boards turned onto portrait pages — apprentice / master side, trays ⌀90 mm, the უსტაბაში
-  token tile-sized to fit a floor place); then (sixth PR) „ორი ტახტი“ (№4, 7 Wonders Duel between the western (ქუთაისი) and eastern
-  (თბილისი) thrones: 73 age cards with the original costs/effects under Georgian names, 8 help cards, 12 Georgian monuments 96×62 mm,
-  board „ლიხის გზა“ in two A4-landscape pieces, the knight as a fold-up tent, coins 1/3/6 თეთრი) and „ქარავანი“ (№3, since 2026-11-04 the school's own
+  token tile-sized to fit a floor place); then (sixth PR) „ორი ტახტი“ (№4 — since 2026-11-04 the school's own game, its kit drawn in the
+  browser, see below) and „ქარავანი“ (№3, since 2026-11-04 the school's own
   game — see „ქარავანი“ above; 16 sheets: a 78×56 cm map from eight one-sided A4 pieces — 47 hand-placed cities with their worth and
   cargo, 74 roads (13 mountain, 4 ship, 8 double; the 1872 railway between the doubles, only to look at), the app's region shapes,
   coast, rivers and ridges bent onto the cities by a thin-plate spline; `boardItems()` keeps each piece's bounding box so a printed
@@ -1123,10 +1121,17 @@
   it) ↔ its name, ბ a note on the treble staff ↔ its key on a two-octave keyboard, named, გ each region's first song of „საიდანაა
   სიმღერა?“'s kit (`SONGS`, now exported) ↔ its region on the small map; each deck's 27th card is the host's key (ბ: the notes'
   guide), taken out before play.
+- **Kits drawn in the browser (the user's rule, 2026-11-04: „შენ კი არ აკეთო პდფ … პდფ ღილაკი იქნება … იქ დააგენერირებს თავად“)**:
+  no new kit is built with Playwright — the hub's button (`GameDef.print.make`, a lazy import) draws it on canvases from the app's
+  data (an A4 page = one JPEG, 1617 px = 190.24 mm, in `utils/scorePdf.ts` `buildPdf`; cards at their true size, backs mirrored for
+  long-edge duplex) and saves the PDF; the button says „მზადდება…“ meanwhile. First: `takhti/printKit.ts` (7 sheets: two rules pages,
+  the 42 cards + two thrones + „ლიხის ქვა“ 63×88 mm, score boxes with the card list and the Likhi story behind them). The older
+  kits keep their ready PDFs (`print.href`).
 - **Our own games, not copies (2026-11-04)**: a board or party game is the school's own game in its genre — its own mechanics and
-  Georgian content —, never a known game copied one-to-one under another name. „ოქროს ხანა“ and „ქარავანი“ are rebuilt; ორი ტახტი,
-  ლურჯი სუფრა, მეფის კარი and then the word and party games are reviewed the same way, one PR a game. A genre's general idea (a
-  daily word, a team quiz, a map to tap) may stay; the hub's `like` bracket names only a game ours still resembles.
+  Georgian content —, never a known game copied one-to-one under another name. „ოქროს ხანა“, „ქარავანი“ and „ორი ტახტი“ are rebuilt;
+  then the user stopped (2026-11-04 18:56: no new games, no more reworks — ლურჯი სუფრა, მეფის კარი and the word and party games
+  stay as built unless asked; next is a review of every built game and the hub page, after the user's OK on its cost). A genre's
+  general idea (a daily word, a team quiz, a map to tap) may stay; the hub's `like` bracket names only a game ours still resembles.
 - **No religious pictures in the games (the user's rule, 2026-11-01; corrected the same day: „რელიგიური და მუსიკალური კითხვები
   დატოვე, უბრალოდ ვიზუალს ნუ გამოიყენებ“)**: no cross, church, icon or domed-church mark anywhere in a game or a print kit (the
   series emblem is `grapeEmblem` in `scripts/print-games/lib.mjs`, the caravan map's shrines an old gate); a monument card that will get a picture is a secular one. Faith and chant stay as content —

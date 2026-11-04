@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useMemo, useState } from 'react';
 import {
-  AudioLines, Bird, Brain, Brush, Castle, Compass, Crown, Dice5, Download, Drama, Feather, Flag, Flame, Footprints, Gamepad2, Gem, Grape, Grid2x2Check, Grid3x3, HatGlasses, Headphones, Hourglass, KeyRound, Layers3, Info, Landmark, LayoutGrid, Lightbulb, ListChecks, ListMusic, ListOrdered, Map, MapPinned, MessageCircle, MessageSquareOff,
+  AudioLines, Bird, Brain, Brush, Castle, Compass, Crown, Dice5, Download, Drama, Feather, Flag, Flame, Footprints, Gamepad2, Gem, Grape, Grid2x2Check, Grid3x3, HatGlasses, Headphones, Hourglass, KeyRound, Layers3, Info, Landmark, LayoutGrid, Lightbulb, ListChecks, ListMusic, ListOrdered, Loader2, Map, MapPinned, MessageCircle, MessageSquareOff,
   MicVocal, Music2, Piano, Puzzle, Repeat, Route, Shapes, ScrollText, Shirt, SpellCheck, TextSearch, TicketCheck, UserRoundSearch, Users, VenetianMask, Waves, Wifi,
 } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
@@ -111,18 +111,48 @@ const INNER: Record<string, React.FC> = {
 
 const BTN = 'inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full text-[13.5px] font-bold transition-[background-color,transform] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#7a2028]/50';
 
-/** a variant's button: the app's variants open the game, the printed kit downloads */
+/** a file the browser made, saved under a readable name */
+const saveFile = (blob: Blob, name: string) => {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+};
+
+/** a variant's button: the app's variants open the game, the printed kit downloads (a kit the app draws is made first) */
 const ModeBtn: React.FC<{ g: GameDef; mode: GameMode; soon: boolean; onPlay: (mode: GameMode) => void }> = ({ g, mode, soon, onPlay }) => {
+  const [making, setMaking] = useState<'' | 'busy' | 'failed'>('');
   const Ic = MODE_ICON[mode];
-  if (mode === 'noPhone' && g.print) {
+  const kitCls = `${BTN} bg-[#7a2028]/[0.08] text-[#7a2028] ring-1 ring-[#7a2028]/15 hover:bg-[#7a2028]/[0.14]`;
+  const label = `${g.title} — სამაგიდო: PDF, ${g.print?.sheets ?? 0} ფურცელი`;
+  if (mode === 'noPhone' && g.print && 'make' in g.print) {
+    const { make } = g.print;
+    const run = async () => {
+      if (making === 'busy') return;
+      triggerHaptic(8);
+      setMaking('busy');
+      try {
+        saveFile(await make(), `${g.title}.pdf`);
+        setMaking('');
+      } catch {
+        setMaking('failed');
+        setTimeout(() => setMaking(''), 4000);
+      }
+    };
     return (
-      <a
-        href={g.print.href}
-        download={`${g.title}.pdf`}
-        onClick={() => triggerHaptic(8)}
-        aria-label={`${g.title} — სამაგიდო: PDF, ${g.print.sheets} ფურცელი`}
-        className={`${BTN} bg-[#7a2028]/[0.08] text-[#7a2028] ring-1 ring-[#7a2028]/15 hover:bg-[#7a2028]/[0.14]`}
-      >
+      <button type="button" onClick={() => { void run(); }} aria-busy={making === 'busy'} aria-label={label} className={`${kitCls} cursor-pointer`}>
+        {making === 'busy' ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" /> : <Ic className="w-4 h-4 shrink-0" />}{MODE_LABEL.noPhone}
+        <span className="font-normal opacity-75">· {making === 'busy' ? 'მზადდება…' : making === 'failed' ? 'ვერ შეიქმნა' : 'PDF'}</span>
+      </button>
+    );
+  }
+  if (mode === 'noPhone' && g.print && 'href' in g.print) {
+    return (
+      <a href={g.print.href} download={`${g.title}.pdf`} onClick={() => triggerHaptic(8)} aria-label={label} className={kitCls}>
         <Ic className="w-4 h-4 shrink-0" />{MODE_LABEL.noPhone}<span className="font-normal opacity-75">· PDF</span>
       </a>
     );

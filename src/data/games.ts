@@ -20,7 +20,9 @@ export interface GameDef {
   panel?: string;          // a panel of that page to open first (the path page's round buttons)
   item?: string;           // opens inside the games page: its `mapItem` (pages/games/)
   section?: SectionId;     // the admin's switch and the member's feature that show or hide its app variants
-  print?: { href: string; sheets: number }; // the სამაგიდო kit: public/games/print/<id>.pdf, printed two-sided (scripts/print-games)
+  // the სამაგიდო kit, printed two-sided: a ready PDF in public/games/print/<id>.pdf (scripts/print-games), or `make` — the app draws
+  // it in the browser when the button is tapped (the user's rule since 2026-11-04: no PDF is built ahead for a new kit)
+  print?: { href: string; sheets: number } | { make: () => Promise<Blob>; sheets: number };
 }
 
 export const MODE_LABEL: Record<GameMode, string> = { online: 'ონლაინ', hybrid: 'ჰიბრიდული', noPhone: 'სამაგიდო' };
@@ -259,9 +261,9 @@ export const GAMES: GameDef[] = [
     modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'qaravani', section: 'tamashebi', print: { href: '/games/print/qaravani.pdf', sheets: 16 },
   },
   {
-    id: 'ori-takhti', title: 'ორი ტახტი', like: '7 Wonders Duel', text: 'ორი ქართული სამეფო სამ ეპოქაში: ვინ ააშენებს მეტ ძეგლს',
-    about: '„7 Wonders Duel“ ორი მოთამაშის სამაგიდო თამაშია: სამ ეპოქაში ბარათებით ქალაქს აშენებ და მეცნიერებით, ჯარით ან ქულებით იმარჯვებ. ჩვენთან დასავლეთის (ქუთაისი) და აღმოსავლეთის (თბილისი) ტახტები ეცილება ერთმანეთს, საოცრებების ნაცვლად კი 12 ქართული ძეგლია. ონლაინ ორივე თავის ტელეფონზე თამაშობს; ჰიბრიდულში ერთი ტელეფონი ორს შორის დევს და ფასს, ლაშქარს და ქულებს თვითონ ითვლის.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'takhti', section: 'tamashebi', print: { href: '/games/print/ori-takhti.pdf', sheets: 19 },
+    id: 'ori-takhti', title: 'ორი ტახტი', text: 'ორი მეფე ლიხის ქედზე: ერთი ძღვენს ყოფს, მეორე ირჩევს',
+    about: 'ჩვენი სამაგიდო თამაში ორისთვის. დასავლეთის (ქუთაისი) და აღმოსავლეთის (თბილისი) მეფეები რვაჯერ ხვდებიან და ხუთ ბარათს ინაწილებენ: ერთი ორ წილად ყოფს, მეორე ირჩევს. ციხე თავის ქულას იძლევა, უფრო ძლიერი ლაშქარი — 8-ს, ვაზი ჭურჭელთან ერთად ღვინოა, წიგნი მით მეტია, რაც უფრო მრავალფეროვანია კარი, ელჩი კი მეორე წილიდან ბარათს გადმოიბირებს. ონლაინ ორივე თავის ტელეფონზე თამაშობს; ჰიბრიდულში ერთი ტელეფონი ორს შორის დევს და ყველაფერს თვითონ ითვლის.',
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'takhti', section: 'tamashebi', print: { make: () => import('../pages/games/takhti/printKit').then(m => m.takhtiPdf()), sheets: 7 },
   },
   {
     id: 'lurji-supra', title: 'ლურჯი სუფრა', like: 'Azul', text: 'ქართული ორნამენტებით მოხატული ფილები სუფრაზე დააწყვე',

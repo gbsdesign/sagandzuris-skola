@@ -8,7 +8,7 @@ import {
 import { TableScreen } from '../../../components/games/TableScreen';
 import { Btn } from '../../../components/ui/kit';
 import { triggerHaptic } from '../../../utils/haptics';
-import { useTwoCols } from '../takhti/Board';
+import { useTwoCols } from '../../../components/games/useTwoCols';
 import { OkrosBoard } from './Board';
 import { GOLD, GOOD_LOOK, GoodDot, GoodsLine, HOUSES, HouseMark, MarketMark, RiderMark, WORK_ICON, WorkCard, goodsText, lineText } from './look';
 
