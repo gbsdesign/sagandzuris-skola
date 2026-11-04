@@ -18,6 +18,7 @@ import { PANTO_RULES, type PantoQ } from './pantomima';
 import { NAKHATI_RULES, type NakhatiQ } from './nakhati';
 import { LOTO_RULES, type LotoQ } from './loto';
 import { RSR_RULES, type RsrQ } from './raSadRodis';
+import { AMIK_RULES, type AmikQ } from './amikhseniRounds';
 
 // The quick games of a class's room (2026-10-31, the tender's five — the user's „გააკეთე 5-ვე ონლაინ და ჰიბრიდული“):
 // one engine of rounds. A round asks one thing — a song to place on the map, a question, a chant revealed voice by voice,
@@ -29,9 +30,9 @@ import { RSR_RULES, type RsrQ } from './raSadRodis';
 // each one's words in their act; its rules judge them at the reveal and the host may judge each one again (`judgeRound`).
 
 export type RoundGame = Exclude<RoomGame, 'samshvilde'>;
-export const ROUND_GAMES: readonly RoundGame[] = ['kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri', 'hangi', 'akordi', 'rvakhma', 'ruka', 'gagrdzele', 'hangebi', 'eqo', 'mprinavi', 'tsqvilebi', 'mesame', 'chamotvale', 'pantomima', 'nakhati', 'loto', 'rsr'];
+export const ROUND_GAMES: readonly RoundGame[] = ['kutkhe', 'otkhi', 'khmebi', 'notebi', 'turniri', 'hangi', 'akordi', 'rvakhma', 'ruka', 'gagrdzele', 'hangebi', 'eqo', 'mprinavi', 'tsqvilebi', 'mesame', 'chamotvale', 'pantomima', 'nakhati', 'loto', 'rsr', 'amikhseni'];
 /** one round's content, by game (the answer included: `secret` keeps it from the players until the reveal) */
-export type RoundQ = KutkheQ | OtkhiQ | ChantRoundQ | TurniriQ | HangiQ | AkordiQ | RvakhmaQ | RukaQ | GagrdzeleQ | HangebiQ | EqoQ | MprinaviQ | TsqvilebiQ | TrioQ | ChamotvaleQ | PantoQ | NakhatiQ | LotoQ | RsrQ;
+export type RoundQ = KutkheQ | OtkhiQ | ChantRoundQ | TurniriQ | HangiQ | AkordiQ | RvakhmaQ | RukaQ | GagrdzeleQ | HangebiQ | EqoQ | MprinaviQ | TsqvilebiQ | TrioQ | ChamotvaleQ | PantoQ | NakhatiQ | LotoQ | RsrQ | AmikQ;
 
 export interface RoundAnswer {
   pick: number;
@@ -70,7 +71,7 @@ const BY_KIND: { [K in RoundQ['kind']]: RoundRules<Extract<RoundQ, { kind: K }>>
   kutkhe: KUTKHE_RULES, otkhi: OTKHI_RULES, khmebi: KHMEBI_RULES, notebi: NOTEBI_RULES, turniri: TURNIRI_RULES, hangi: HANGI_RULES,
   akordi: AKORDI_RULES, rvakhma: RVAKHMA_RULES, ruka: RUKA_RULES, gagrdzele: GAGRDZELE_RULES, hangebi: HANGEBI_RULES,
   eqo: EQO_RULES, mprinavi: MPRINAVI_RULES, tsqvilebi: TSQ_RULES, mesame: TRIO_RULES, chamotvale: CHAMO_RULES, pantomima: PANTO_RULES, nakhati: NAKHATI_RULES,
-  loto: LOTO_RULES, rsr: RSR_RULES,
+  loto: LOTO_RULES, rsr: RSR_RULES, amikhseni: AMIK_RULES,
 };
 const RULES = BY_KIND as unknown as Record<string, RoundRules<RoundQ> | undefined>;
 export const rulesOf = (q: RoundQ): RoundRules<RoundQ> => RULES[q.kind]!;

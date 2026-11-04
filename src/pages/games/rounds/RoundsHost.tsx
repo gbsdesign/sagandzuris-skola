@@ -100,6 +100,16 @@ export const RoundsHost: React.FC<{
     );
   }
 
+  const ask = (
+    <>
+      <div className="flex items-center gap-4">
+        <TimerRing left={left} total={v.secs} />
+        <p className="min-w-0 flex-1 font-serif-ge text-[19px] font-bold leading-snug text-[#4a3426]">{face.askHost}</p>
+      </div>
+      {face.Ask && <face.Ask q={v.q} who="host" step={v.step} steps={v.steps} />}
+    </>
+  );
+
   return (
     <TableScreen
       title={face.title}
@@ -114,13 +124,14 @@ export const RoundsHost: React.FC<{
     >
       <div className="py-2 space-y-4">
         <RoundHead at={s.at} total={s.rounds.length} />
-        <div className="flex items-center gap-4">
-          <TimerRing left={left} total={v.secs} />
-          <p className="min-w-0 flex-1 font-serif-ge text-[19px] font-bold leading-snug text-[#4a3426]">{face.askHost}</p>
-        </div>
-        {face.Ask && <face.Ask q={v.q} who="host" step={v.step} steps={v.steps} />}
-        {face.Secret && <face.Secret q={s.rounds[s.at]} />}
-        {face.Tool && <face.Tool key={key} q={s.rounds[s.at]} edit={q => moves.edit(key, q)} />}
+        {face.Secret ? (
+          // what only the host sees stands beside the clock on a wide screen (a phone on its side), so it is in view at once
+          <div className="grid gap-4 sm:grid-cols-2 sm:items-center">
+            <div className="min-w-0 space-y-4">{ask}</div>
+            <div className="min-w-0"><face.Secret q={s.rounds[s.at]} /></div>
+          </div>
+        ) : ask}
+        {face.Tool && <face.Tool key={key} q={s.rounds[s.at]} edit={q => moves.edit(key, q)} answered={v.answered.filter(Boolean).length} />}
         {clip && (
           <SnippetBox
             state={snippet.state}

@@ -322,7 +322,8 @@
   record `students.games.hangi.days[iso]` through `hooks/useHangi.ts`, the device for guests, no rules change) and „ამიხსენი“
   (`pages/games/AmikhseniGame.tsx`; rules `utils/amikhseni.ts` + test; ~1370 cards in `data/amikhseniWords.ts`, 15 themes — the
   app's own data (chant and church, saints, ancestors, songs, instruments…) + the wider Georgian world since 2026-11-01; settings
-  stay on the device, a device that had the old ten themes all on gets all fifteen). `components/games/TableScreen.tsx` is the full-screen face of every live game
+  stay on the device, a device that had the old ten themes all on gets all fifteen; since 2026-11-04 that one-phone game is the
+  „ჰიბრიდული“ tab, `pages/games/amikhseni/Table.tsx`, see the quick games below for „ონლაინ“). `components/games/TableScreen.tsx` is the full-screen face of every live game
   (wake lock, safe areas). Both open inside the hub as `mapItem` (`GameDef.item`; the bar title from `gameTitleOfItem`).
 - **Word games (2026-10-28, same day, second PR)**: „დღის სიტყვა“ (`pages/games/SitqvaGame.tsx`; rules `utils/sitqva.ts` + test;
   Wordle-like, 4–6 letters, six tries, one word a day for the whole school: the day's feast always, a saint of the church calendar
@@ -379,7 +380,18 @@
   word's stem by its endings (`stemOf`), one letter's slip in a long word, numbers as digits — roman, cardinal and ordinal words
   too — and a date's month must match; 75 % of an answer's weighty words), and at the reveal the host taps a line to judge it again
   (`judgeRound`, the room's move `judge`; the points follow). One point a right answer. A teacher's own question's other forms go
-  in brackets (the editor says so).
+  in brackets (the editor says so). `rsrMatch` also takes a written word with the copula („ფარნავაზია“ = ფარნავაზი) and refuses a
+  list of guesses: more weighty written words than the form's + `extra` (`RSR_EXTRA` 3) is no answer.
+  „ამიხსენი“ online (2026-11-04, the second game answered in words; `amikhseni` in `ROUND_GAMES`/`ROOM_GAMES`/the rules/the
+  Worker's titles; rules `utils/amikhseniRounds.ts` + test, kept free of the cards' data since the room's store is in the first
+  bundle; face `pages/games/amikhseni/face.tsx`, device keys under `store: 'sg-amikhseni-klasi'`): the host is the explainer
+  (`ROOM_GAME_INFO.host` „ამხსნელი“ — the lobby and the player's lines now name each game's own leader), the word is on their
+  phone only (`Secret`; on a wide screen the round screens put `Secret` beside the clock), the players see its theme and write
+  the word, one try, 1000 at once … 500 at the last second (`amikMatch` = `rsrMatch` with `AMIK_EXTRA` 2); before anybody
+  answers the host may take „სხვა სიტყვა“ of the same theme (the face's `Tool`, which now gets `answered`; `swapAmikhseni`). The
+  draw (`drawAmikhseni` over `drawGame`) turns the chosen themes, the words shown lately last (`sg-amikhseni-seen`, 200). Both tabs
+  share the themes (`amikhseni/store.ts` over `sg-amikhseni`, chips `AmikThemes` with the print kit's colours and marks in
+  `amikhseni/parts.tsx`).
 - **„სამშვილდის ღამე“ on the phone (2026-10-30)**: the hybrid variant of the printed Mafia (`pages/games/SamshvildeGame.tsx`,
   screens `pages/games/samshvilde/`, `mapItem` `samshvilde`; rules `utils/samshvilde.ts` + test; its entry in `GAMES` has
   `item`, so its hub card's ონლაინ/ჰიბრიდული open it while section `tamashebi` allows, else only the PDF shows). The user's answers
@@ -416,7 +428,7 @@
   (`HybridState`, `markTeam`, kept on the device so ✕ only pauses). The room store is generic since then: `utils/gameRoom.ts`
   `createRooms(be, engine, moves)` over a `RoomEngine` (`games` it plays; samshvilde's is `utils/samshvildeRoom.ts`), the
   app's two stores in `utils/gameRoomFirestore.ts` (`rooms` = samshvilde, `roundRooms` = the quick games: `timeUp(key)`,
-  `reveal`, `next`); the rules let a room be opened for every `ROOM_GAMES` game (21 since 2026-11-04), up to 40 players, an act may carry `ms` (and `text`).
+  `reveal`, `next`); the rules let a room be opened for every `ROOM_GAMES` game (22 since 2026-11-04), up to 40 players, an act may carry `ms` (and `text`).
   Invitations name their game: `data/roomGames.ts` (titles, the hub item, a chat card's `room` = `game:roomId` — a
   samshvilde card keeps the bare id), the Worker's `GAME_TITLES`, `/?open=<game>&c=&r=`, icons
   `components/games/roomGameIcons.ts`; the online tab of every room game is `components/games/RoomSetup.tsx`. Screens

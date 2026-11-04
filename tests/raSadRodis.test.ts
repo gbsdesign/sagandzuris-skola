@@ -165,6 +165,17 @@ test('rsrMatch: numbers must be the same (written any way), a date with its mont
   assert.ok(!rsrMatch('ბაგრატ III-მ', 'ბაგრატ IV'));
 });
 
+test('rsrMatch: an answer in a sentence counts, a list of guesses does not', () => {
+  assert.ok(rsrMatch('ფარნავაზს', 'მგონი, ეს ფარნავაზ მეფეა'));
+  assert.ok(rsrMatch('ქეთევან დედოფალი', 'ჩემი აზრით ქეთევან დედოფალი'));
+  assert.ok(!rsrMatch('ფარნავაზს', 'მირიანი, ვახტანგი, ფარნავაზი, დავითი, თამარი'));
+  assert.ok(!rsrMatch('ფარნავაზს', 'მირიანი ვახტანგი ფარნავაზი დავითი', 2));
+  assert.ok(rsrMatch('ფარნავაზს', 'ეს ფარნავაზია', 2));
+  assert.ok(rsrMatch('ჩონგური', 'ჩონგურია'));
+  assert.ok(rsrMatch('ღვინო', 'ღვინოა'));
+  assert.ok(!rsrMatch('ქვა', 'ქ'));
+});
+
 test('stemOf and sameWord: endings off, three letters always left, a number is itself', () => {
   assert.equal(stemOf('ფარნავაზმა'), 'ფარნავაზ');
   assert.equal(stemOf('გელათში'), 'გელათ');

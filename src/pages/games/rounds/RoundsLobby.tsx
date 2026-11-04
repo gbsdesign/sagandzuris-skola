@@ -10,6 +10,7 @@ import { CallBtn, CallCard, type GameCall } from '../samshvilde/online/GameCall'
 import { People } from '../samshvilde/online/Lobby';
 import { firstName } from '../samshvilde/online/bits';
 import type { RoundFace } from './face';
+import { ROOM_GAME_INFO } from '../../../data/roomGames';
 
 // A quick game's room before the game (pages/games/rounds/): who came in, and the host's choices — how many rounds, where the
 // sound plays (on every phone, everybody at home; or only on the host's, everybody in one room). The host starts, a player
@@ -31,6 +32,9 @@ export const RoundsLobby: React.FC<{
   const n = joins.length;
   const fits = n >= 1 && n <= MAX_ROUND_PLAYERS;
   const joined = joins.some(j => j.uid === me);
+  // who leads it (the explainer of „ამიხსენი“, the actor of „პანტომიმა“…) and how one answers
+  const lead = ROOM_GAME_INFO[face.game].host;
+  const answerVerb = face.typed ? 'დაწერ' : 'მონიშნავ';
   const join = async () => {
     if (!player || busy) return;
     setBusy(true);
@@ -50,19 +54,19 @@ export const RoundsLobby: React.FC<{
     <TableScreen title={className ? `ოთახი · ${className}` : 'ოთახი'} right={<CallBtn gc={gc} />} onClose={onHide} footer={footer}>
       <div className="py-2 space-y-4">
         <div className="rounded-3xl bg-gradient-to-br from-[#7a2028] to-[#5e1820] text-[#fbf6ec] px-4 py-4 shadow-[0_14px_30px_-20px_rgba(122,32,40,0.9)]">
-          <p className="text-[12px] font-bold text-[#f0d9a8] inline-flex items-center gap-1.5"><face.Icon className="w-4 h-4" />{face.title}</p>
+          <p className="text-[12px] font-bold text-[#f0d9a8] flex items-center gap-1.5"><face.Icon className="w-4 h-4" />{face.title}</p>
           {host ? (
             <>
-              <p className="mt-1 font-serif-ge text-[19px] font-bold leading-snug">შენ ხარ წამყვანი. კლასს მოწვევა გაეგზავნა — ჩატში და ტელეფონზე.</p>
+              <p className="mt-1 font-serif-ge text-[19px] font-bold leading-snug">შენ ხარ {lead}. კლასს მოწვევა გაეგზავნა — ჩატში და ტელეფონზე.</p>
               <p className="mt-1.5 text-[13px] leading-snug text-[#fbf6ec]/85">შენ არ თამაშობ: რაუნდებს უძღვები. როცა ყველა შემოვა, დაიწყე.</p>
             </>
           ) : (
             <>
-              <p className="mt-1 font-serif-ge text-[19px] font-bold leading-snug inline-flex items-center gap-2">
+              <p className="mt-1 font-serif-ge text-[19px] font-bold leading-snug flex items-center gap-2">
                 {joined ? <><Check className="w-5 h-5 text-[#f0d9a8]" />ოთახში ხარ</> : `${firstName(room.hostName)} გიწვევს თამაშში`}
               </p>
               <p className="mt-1.5 text-[13px] leading-snug text-[#fbf6ec]/85">
-                {joined ? 'დაელოდე — წამყვანი თამაშს მალე დაიწყებს. პასუხს შენს ტელეფონზე მონიშნავ.' : `წამყვანი · ${room.hostName}. შემოდი და პასუხს შენს ტელეფონზე მონიშნავ.`}
+                {joined ? `დაელოდე — ${lead} თამაშს მალე დაიწყებს. პასუხს შენს ტელეფონზე ${answerVerb}.` : `${lead} · ${room.hostName}. შემოდი და პასუხს შენს ტელეფონზე ${answerVerb}.`}
               </p>
             </>
           )}
