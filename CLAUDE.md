@@ -335,7 +335,8 @@
   (`useClassChat.ts`, `useChatPins.ts`). `public/prayer-notify-sw.js` `showTalk`: nothing while a window of the site is
   visible (the app rings itself); a ring = tag `call-d-<id>` (private) / `call-c-<id>` (a class), „პასუხი“ / „უარი“, kept until touched; `call-end` replaces it
   silently; a message = tag `chat-d-<id>` / `chat-c-<id>` (a private chat's each message sounds — `renotify` —, a class's once, then only updated).
-  Taps open `/?open=chat&id=<dmId | class:id>` or `/?open=call&b=<base>` (App.tsx: the chat + `wantAnswer`, and the incoming
+  A tap on a notice opens `/?open=chat&id=<dmId | class:id>` (a ring's: the chat with the app's own ringing screen), a ring's
+  „პასუხი“ `/?open=call&b=<base>` (App.tsx: the chat + `wantAnswer`, and the incoming
   screen answers or joins once it sees the call — `takeAnswer`/`useAnswerWanted`). The Worker needs only its publish (the
   workflow does it on main).
 - **Class page** (`pages/ClassPage.tsx`, rebuilt 2026-10-24, simplified 2026-10-28 „ერთი რამ, ერთ ადგილას“ from an approved
@@ -371,6 +372,10 @@
   names; under them two small buttons: the studio — „ჩემი ხმის ჩაწერა“, a teacher's „ჯგუფური ჩანაწერი“ — and a teacher's
   „დავალებად მიცემა“ = `NewAssignment` with `preset`), and for teachers „+ პროგრამაში დამატება“ under the list
   (`ProgramQuickAdd`: the catalogue tree, saved once when it closes — order and ✕ stay in ✎ → „სასწავლო პროგრამა“); under it
+  „პროგრამის ჩამოწერა ოფლაინისთვის“ under the list (2026-11-05, `classes/ProgramOffline.tsx`, `utils/programOffline.ts`): a chant
+  version's book pages, drawings and school recording by `saveOffline` (offlineNotes), a folk song's recordings through the
+  offline queue (`chooseItems` in offlineFiles — items `s:<song>`, the header's cloud shows them); the size at the right, then the
+  count; the notes' JSON and poems' texts are in the automatic packs already. Then
   folded cards: ოსტატობა (`ClassLessons fold`; its „+ ახალი გაკვეთილი“ inside, under the lessons), the psalter group
   (folded head line with „შენი: N“; `focus` opens it) — „ჩათი“ (`ClassChat`; a dot while unread). An assignment card =
   `WorkCardHead` — the chant's own name big + one grey line (`utils/assignmentLines.ts` + test), a tap opens its notes / song

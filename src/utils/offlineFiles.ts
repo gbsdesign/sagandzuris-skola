@@ -386,6 +386,14 @@ export const setItem = async (group: RecGroupRef, itemId: string, on: boolean) =
   await afterRecChange(on);
 };
 
+/** Several recordings on at once (a class program's „ჩამოწერა“, utils/programOffline.ts): one plan, one run. */
+export const chooseItems = async (itemIds: string[]) => {
+  const fresh = itemIds.filter(id => !state.choice.items.includes(id));
+  if (!fresh.length) return;
+  saveChoice({ ...state.choice, items: [...state.choice.items, ...fresh] });
+  await afterRecChange(true);
+};
+
 export type OfflineStatus = 'run' | 'offline' | 'pending' | 'ready' | 'starting';
 /** One word for the header's cloud and the page's top line. */
 export const offlineStatus = (s: OfflineState): OfflineStatus => {

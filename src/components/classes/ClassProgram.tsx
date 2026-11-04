@@ -17,6 +17,7 @@ import { PartsBar } from '../learn/PartsBar';
 import { learnPieceOf, useOpenLearning } from '../learn/openLearning';
 import { Btn, Flash, Sheet, useFlash } from '../ui/kit';
 import { Studio, studioPiece } from '../studio/ClassStudio';
+import { ProgramOffline } from './ProgramOffline';
 
 type Listed = ProgramItem & { id: string; key: string };
 
@@ -190,6 +191,9 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; editi
           )}
         </div>
       )}
+
+      {/* the whole program on the phone, for church and the road (notes and recordings, components/classes/ProgramOffline) */}
+      {!editing && listed.length > 0 && <ProgramOffline ids={listed.map(p => p.id)} />}
 
       {/* the teachers: add to the program right here (its order and ✕ stay in ✎ → „სასწავლო პროგრამა“) */}
       {canEdit && !editing && (

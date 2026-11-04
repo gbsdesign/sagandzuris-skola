@@ -744,7 +744,8 @@ async function ring(request, env) {
     : call.video ? 'ვიდეოზარი…' : 'გირეკავს…';
   const answer = `/?open=call&b=${encodeURIComponent(`${kind}/${id}`)}`;
   const sends = await Promise.all(rows.map(async (r) => [r, {
-    kind: 'call', title, body: line, tag, url: answer, video: call.video, ttl: 45, urgency: 'high',
+    // a tap on the notice opens the chat (the app's own ringing screen); its „პასუხი“ answers at once
+    kind: 'call', title, body: line, tag, url, answer, video: call.video, ttl: 45, urgency: 'high',
     // „უარი“ ends a private call for both; a class's call only stops ringing here
     decline: kind === 'dms' ? { base: `dms/${id}`, uid: r.uid, at: call.at, t: await ringTicket(env, `dms/${id}`, r.uid, call.at) } : null,
   }]));
