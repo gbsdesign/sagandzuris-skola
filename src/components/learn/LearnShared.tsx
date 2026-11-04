@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Bell, Check, ChevronDown, Headphones, Lightbulb, Mic, Send, Sparkles, Square } from 'lucide-react';
+import { ArrowLeft, Bell, Check, ChevronDown, Headphones, Lightbulb, Mic, Music, Repeat, Send, SlidersHorizontal, Sparkles, Sprout, Square } from 'lucide-react';
 import { Btn } from '../ui/kit';
 import { playStartNotes } from '../../utils/chantSynth';
 import { notesFromFrames, scoreSinging } from '../../utils/pitch';
@@ -110,6 +110,16 @@ export const PartsBar: React.FC<{
           </button>
         )}
       </div>
+      {states.some(x => x !== 'new') && (
+        <p className="flex flex-wrap gap-x-3 gap-y-1 text-[12px] font-semibold text-[#8c7c6b]" aria-hidden>
+          {(['new', 'learning', 'learned', 'due', 'kept'] as PartState[]).filter(k => states.includes(k)).map(k => (
+            <span key={k} className="inline-flex items-center gap-1.5">
+              <span className="w-3 h-3 rounded-full" style={{ background: STATE_LOOK[k].bg, boxShadow: `inset 0 0 0 1.5px ${STATE_LOOK[k].ring}` }} />
+              {STATE_LOOK[k].label}
+            </span>
+          ))}
+        </p>
+      )}
     </section>
   );
 };
@@ -137,42 +147,103 @@ export function Choice<T extends string | number>({ label, value, options, onCha
 
 export const SPEEDS = [{ value: 0.5, label: '50%' }, { value: 0.75, label: '75%' }, { value: 1, label: '100%' }];
 
-type Phase = 'idle' | 'cue' | 'singing' | 'scoring' | 'done';
-interface Result { pct: number; hits: boolean[]; mp3: Blob | null }
+// ---- the two ways: „მარტივი“ (small pieces, hear and sing back) and „სრული“ (the whole phrase, three steps) ----------
+
+export type LearnLevel = 'easy' | 'full';
+const LEVEL_KEY = 'sg-learn-level';
+export const getLearnLevel = (): LearnLevel => {
+  try { return localStorage.getItem(LEVEL_KEY) === 'full' ? 'full' : 'easy'; } catch { return 'easy'; }
+};
+export const setLearnLevel = (l: LearnLevel) => { try { localStorage.setItem(LEVEL_KEY, l); } catch { /* the choice still holds here */ } };
+
+/** მარტივი · სრული, with a line on what the chosen one does. Remembered on the device. */
+export const LevelSwitch: React.FC<{ value: LearnLevel; onChange: (l: LearnLevel) => void }> = ({ value, onChange }) => {
+  const ways: { id: LearnLevel; label: string; icon: React.ReactNode; about: string }[] = [
+    { id: 'easy', label: 'მარტივი', icon: <Sprout className="w-[18px] h-[18px]" />, about: 'დამწყებისთვის: პატარა ნაწყვეტი — მოისმინე და გაიმეორე.' },
+    { id: 'full', label: 'სრული', icon: <Music className="w-[18px] h-[18px]" />, about: 'მთლიანი ფრაზა სამ ნაბიჯად, ხმები ერთად და ყველა პარამეტრი.' },
+  ];
+  return (
+    <div className="flex flex-col gap-1.5">
+      <div role="radiogroup" aria-label="სწავლის გზა" className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-[#efe6d6]/70 ring-1 ring-[#e4d8c4]">
+        {ways.map(w => (
+          <button key={w.id} type="button" role="radio" aria-checked={value === w.id} onClick={() => { triggerHaptic(8); onChange(w.id); }}
+            className={`h-11 rounded-xl inline-flex items-center justify-center gap-2 text-[14px] font-bold cursor-pointer transition ${
+              value === w.id ? 'bg-white text-[#7a2028] shadow-[0_1px_3px_rgba(74,52,38,0.18)]' : 'text-[#75685a] hover:text-[#4a3426]'}`}>
+            {w.icon}{w.label}
+          </button>
+        ))}
+      </div>
+      <p className="px-1 text-[12.5px] leading-snug text-[#8c7c6b]">{ways.find(w => w.id === value)!.about}</p>
+    </div>
+  );
+};
+
+// the book's three voices by their names (a chant of two voices or more than three has only the numbers)
+const VOICE_ROLES: Record<Voice, string> = { '1': 'მთქმელი', '2': 'მოძახილი', '3': 'ბანი' };
+
+/** Which voice I learn: a big button each, the voice's name under its number when the chant has three. */
+export const VoiceChoice: React.FC<{ count: number; value: Voice; onChange: (v: Voice) => void; names: Record<Voice, string> }> = ({ count, value, onChange, names }) => (
+  <div className="flex flex-col gap-1.5">
+    <span className="px-0.5 text-[12px] font-bold text-[#8c7c6b]">ჩემი ხმა</span>
+    <div role="radiogroup" aria-label="ჩემი ხმა" className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${count}, minmax(0, 1fr))` }}>
+      {(['1', '2', '3'] as Voice[]).slice(0, count).map(v => {
+        const on = value === v;
+        return (
+          <button key={v} type="button" role="radio" aria-checked={on} onClick={() => { triggerHaptic(8); onChange(v); }}
+            className={`min-h-12 px-2 py-1.5 rounded-xl flex flex-col items-center justify-center leading-tight cursor-pointer transition ${
+              on ? 'bg-[#7a2028] text-[#fbf6ec] shadow-[0_6px_14px_-10px_rgba(122,32,40,0.9)]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40'}`}>
+            <span className="text-[14px] font-bold">{names[v]}</span>
+            {count === 3 && <span className={`text-[12px] font-semibold ${on ? 'text-[#fbf6ec]/80' : 'text-[#8c7c6b]'}`}>{VOICE_ROLES[v]}</span>}
+          </button>
+        );
+      })}
+    </div>
+  </div>
+);
+
+/** The hand-set controls (speed, what sounds), folded under one line that says what they are set to now. */
+export const SettingsFold: React.FC<{ summary: string; children: React.ReactNode }> = ({ summary, children }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-xl bg-[#fbf6ec] ring-1 ring-[#efe5d4]">
+      <button type="button" onClick={() => { triggerHaptic(8); setOpen(o => !o); }} aria-expanded={open}
+        className="w-full min-h-11 px-3 flex items-center gap-2 text-left cursor-pointer">
+        <SlidersHorizontal className="w-4 h-4 shrink-0 text-[#8c7c6b]" />
+        <span className="shrink-0 text-[13px] font-bold text-[#4a3426]">მორგება</span>
+        <span className="flex-1 min-w-0 truncate text-[12.5px] text-[#8c7c6b]">{summary}</span>
+        <ChevronDown className={`w-4 h-4 shrink-0 text-[#8c7c6b] transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && <div className="px-3 pb-3 flex flex-col gap-3">{children}</div>}
+    </div>
+  );
+};
+
+export type SingPhase = 'idle' | 'cue' | 'singing' | 'scoring' | 'done';
+export interface SingResult { pct: number; hits: boolean[]; mp3: Blob | null }
 
 /**
- * Sing the part: its first note sounds as a cue, then the phone listens. With book notes the take is checked (any
- * key) and 80% learns the part; a recording's part has no notes to check, so the member says whether they know it.
- * Then: hear myself, ask the AI teacher, send the take to my teachers.
+ * Singing a bit back: its first note sounds as a cue, then the phone listens, and stops by itself after a pause once
+ * something was sung (or at a time limit). With notes (`target`) the take is scored in any key. A new `resetKey`
+ * (another part, piece or voice) drops the old take. Shared by the singing panel and the beginners' way.
  */
-export const SingPanel: React.FC<{
-  target: number[] | null;      // the melody to check, or null (a recording)
-  cue: number | null;           // midi of the first note
-  seconds: number;              // the part's length at full speed
-  uid: string | null;
-  unlimited: boolean;
-  voice: Voice;
-  about: Omit<TakeAbout, 'hit' | 'notes'>;
-  sendId: string;               // where the take goes for the teacher
-  approved: boolean;            // the teacher already approved this one
-  onBeforeSing: () => void;     // stop the music
-  onTry: (pct: number, ok: boolean) => void;
-  timeline?: [number, number, number][]; // the part's notes for the mirror (none for a recording)
-  focus?: boolean;              // the path's last step („მარტო“): this card is where to go now
-}> = ({ target, cue, seconds, uid, unlimited, voice, about, sendId, approved, onBeforeSing, onTry, timeline = [], focus }) => {
-  const [phase, setPhase] = useState<Phase>('idle');
-  const [result, setResult] = useState<Result | null>(null);
+export const useSinging = ({ target, cue, seconds, resetKey, onBeforeSing, onScored }: {
+  target: number[] | null; cue: number | null; seconds: number; resetKey: string;
+  onBeforeSing: () => void; onScored?: (pct: number, hits: boolean[]) => void;
+}) => {
+  const [phase, setPhase] = useState<SingPhase>('idle');
+  const [result, setResult] = useState<SingResult | null>(null);
   const [live, setLive] = useState<number | null>(null);
   const [error, setError] = useState('');
-  const [ai, setAi] = useState<{ busy: boolean; text: string; problem: string }>({ busy: false, text: '', problem: '' });
-  const [sent, setSent] = useState<'no' | 'busy' | 'yes' | 'failed'>('no');
-  const [marked, setMarked] = useState(false);
   const session = useRef<SingSession | null>(null);
   const cueTimer = useRef(0);
   const takeAudio = useRef<HTMLAudioElement | null>(null);
   // the mirror: what the phone heard, and my key against the notes' (from my first steady note)
   const frames = useRef<MirrorFrame[]>([]);
   const offset = useRef<number | null>(null);
+  const scored = useRef(onScored);
+  scored.current = onScored;
+  const targetRef = useRef(target);
+  targetRef.current = target;
 
   const reset = () => {
     window.clearTimeout(cueTimer.current);
@@ -184,10 +255,9 @@ export const SingPanel: React.FC<{
   // another part or voice: the old take does not belong to it
   useEffect(() => {
     reset();
-    setPhase('idle'); setResult(null); setLive(null); setError(''); setSent('no'); setMarked(false);
-    setAi({ busy: false, text: '', problem: '' });
+    setPhase('idle'); setResult(null); setLive(null); setError('');
     frames.current = []; offset.current = null;
-  }, [sendId, voice]);
+  }, [resetKey]);
 
   const finish = async () => {
     const s = session.current;
@@ -195,13 +265,13 @@ export const SingPanel: React.FC<{
     session.current = null;
     setPhase('scoring');
     const take = await s.stop();
+    const goal = targetRef.current;
     let pct = -1, hits: boolean[] = [];
-    if (target?.length) {
-      const r = scoreSinging(target, notesFromFrames(take.frames));
+    if (goal?.length) {
+      const r = scoreSinging(goal, notesFromFrames(take.frames));
       pct = Math.round(r.share * 100);
       hits = r.hits;
-      onTry(pct, pct >= LEARNED_SHARE);
-      triggerHaptic(pct >= LEARNED_SHARE ? 30 : 12);
+      scored.current?.(pct, hits);
     }
     setResult({ pct, hits, mp3: take.mp3 });
     setPhase('done');
@@ -212,8 +282,7 @@ export const SingPanel: React.FC<{
     if (phase === 'cue') { reset(); setPhase('idle'); return; }
     onBeforeSing();
     reset();
-    setError(''); setResult(null); setSent('no'); setMarked(false);
-    setAi({ busy: false, text: '', problem: '' });
+    setError(''); setResult(null);
     frames.current = []; offset.current = null;
     triggerHaptic(12);
     setPhase('cue');
@@ -231,9 +300,10 @@ export const SingPanel: React.FC<{
           const tr = frames.current;
           tr.push({ t, midi });
           // the key: from the first steady note (four readings within a quarter tone)
-          if (midi != null && offset.current == null && target?.length && tr.length >= 4) {
+          const goal = targetRef.current;
+          if (midi != null && offset.current == null && goal?.length && tr.length >= 4) {
             const last = tr.slice(-4).map(f => f.midi);
-            if (last.every(m => m != null && Math.abs(m - midi) < 0.5)) offset.current = midi - target[0];
+            if (last.every(m => m != null && Math.abs(m - midi) < 0.5)) offset.current = midi - goal[0];
           }
           setLive(midi);
           // stops by itself at the time limit, or after a pause once something was sung
@@ -257,6 +327,45 @@ export const SingPanel: React.FC<{
     a.onended = () => URL.revokeObjectURL(url);
     takeAudio.current = a;
     a.play().catch(() => undefined);
+  };
+
+  const busy = phase === 'cue' || phase === 'singing' || phase === 'scoring';
+  return { phase, result, live, error, busy, sing, playTake, frames, offset };
+};
+
+/**
+ * Sing the part: its first note sounds as a cue, then the phone listens. With book notes the take is checked (any
+ * key) and 80% learns the part; a recording's part has no notes to check, so the member says whether they know it.
+ * Then: hear myself, ask the AI teacher, send the take to my teachers.
+ */
+export const SingPanel: React.FC<{
+  target: number[] | null;      // the melody to check, or null (a recording)
+  cue: number | null;           // midi of the first note
+  seconds: number;              // the part's length at full speed
+  uid: string | null;
+  unlimited: boolean;
+  voice: Voice;
+  about: Omit<TakeAbout, 'hit' | 'notes'>;
+  sendId: string;               // where the take goes for the teacher
+  approved: boolean;            // the teacher already approved this one
+  onBeforeSing: () => void;     // stop the music
+  onTry: (pct: number, ok: boolean) => void;
+  timeline?: [number, number, number][]; // the part's notes for the mirror (none for a recording)
+  focus?: boolean;              // the path's last step („მარტო“): this card is where to go now
+  title?: string;
+}> = ({ target, cue, seconds, uid, unlimited, voice, about, sendId, approved, onBeforeSing, onTry, timeline = [], focus, title }) => {
+  const [ai, setAi] = useState<{ busy: boolean; text: string; problem: string }>({ busy: false, text: '', problem: '' });
+  const [sent, setSent] = useState<'no' | 'busy' | 'yes' | 'failed'>('no');
+  const [marked, setMarked] = useState(false);
+  const singing = useSinging({
+    target, cue, seconds, resetKey: `${sendId}|${voice}`, onBeforeSing,
+    onScored: pct => { onTry(pct, pct >= LEARNED_SHARE); triggerHaptic(pct >= LEARNED_SHARE ? 30 : 12); },
+  });
+  const { phase, result, live, error, busy, frames, offset, playTake } = singing;
+  useEffect(() => { setSent('no'); setMarked(false); setAi({ busy: false, text: '', problem: '' }); }, [sendId, voice]);
+  const sing = () => {
+    if (phase === 'idle' || phase === 'done') { setSent('no'); setMarked(false); setAi({ busy: false, text: '', problem: '' }); }
+    singing.sing();
   };
 
   const askAi = async () => {
@@ -288,12 +397,11 @@ export const SingPanel: React.FC<{
   const mark = (ok: boolean) => { setMarked(true); onTry(-1, ok); triggerHaptic(ok ? 30 : 10); };
 
   const left = uid ? aiTriesLeft(uid, unlimited) : 0;
-  const busy = phase === 'cue' || phase === 'singing' || phase === 'scoring';
   const learnedNow = result && result.pct >= LEARNED_SHARE;
 
   return (
     <section className={`rounded-2xl bg-white p-3.5 flex flex-col gap-3 transition-shadow ${focus ? 'ring-2 ring-[#7a2028] shadow-[0_10px_24px_-16px_rgba(122,32,40,0.7)]' : 'ring-1 ring-[#e8dcc8]'}`}>
-      <h2 className="text-[13px] font-extrabold text-[#7a2028]">იმღერე{target?.length ? ' · აპი შეგიმოწმებს' : ''}</h2>
+      <h2 className="text-[13px] font-extrabold text-[#7a2028]">{title ?? `იმღერე${target?.length ? ' · აპი შეგიმოწმებს' : ''}`}</h2>
       <div className="flex items-center gap-3.5">
         <button type="button" onClick={sing} disabled={phase === 'scoring' || !singingSupported()}
           aria-label={phase === 'singing' ? 'გაჩერება' : 'იმღერე'}
@@ -376,9 +484,15 @@ export const SingPanel: React.FC<{
 };
 
 /** The ways the mode teaches, in a few words, folded. */
-export const LearnTips: React.FC<{ song?: boolean }> = ({ song }) => {
+export const LearnTips: React.FC<{ song?: boolean; easy?: boolean }> = ({ song, easy }) => {
   const [open, setOpen] = useState(false);
-  const tips = [
+  const tips = easy ? [
+    ['პატარა ნაწყვეტი', 'ფრაზა რამდენიმე ნოტად არის დაყოფილი. ნოტებზე ის ნაწილი ოქროსფრად ჩანს, დანარჩენი — მკრთალად.'],
+    ['მოისმინე და გაიმეორე', 'ჯერ მოისმინე, მერე იგივე იმღერე. ტონალობა შენთვის მოსახერხებელი აირჩიე — აპი ნოტებს ამოწმებს და არა სიმაღლეს.'],
+    ['მთლიანად', 'როცა ყველა ნაწყვეტი გამოგივა, მთლიანი ფრაზა იმღერე. 80% — და ფრაზა ნასწავლია.'],
+    ['ნელა', '„ნელა“ ნოტებს უფრო ნელა დაუკრავს — გამოიყენე, როცა ნაწყვეტი ძნელია.'],
+    ['გამეორება', 'ნასწავლ ფრაზას აპი 1, 3 და 7 დღის მერე გაგახსენებს — ასე მეხსიერებაში რჩება.'],
+  ] : [
     ['ნაწილ-ნაწილ', 'ერთ ჯერზე ერთი პატარა ნაწილი. როცა ორი ისწავლე, „ერთად“ შეაერთებს.'],
     ['სამი ნაბიჯი', 'მოისმინე ნელა (50%) → იმღერე ერთად (75%) → მარტო (100%). სამჯერ მოსმენის მერე აპი თავად გადაგიყვანს შემდეგზე.'],
     song ? ['ხმა ცალკე', 'თუ სიმღერას ხმები ცალ-ცალკე აქვს, ჯერ მარტო შენი ხმა ისწავლე.']
@@ -436,10 +550,9 @@ export const StepBar: React.FC<{ step: Step; loops: number; onStep: (s: Step) =>
       <p className="flex items-center gap-2 px-0.5 text-[12.5px] text-[#75685a]">
         <span className="min-w-0 flex-1">{hints[step - 1]}</span>
         {step < 3 && (
-          <span className="shrink-0 flex gap-1" aria-label={`მოსმენა ${Math.min(loops, LOOPS_PER_STEP)} / ${LOOPS_PER_STEP}`}>
-            {Array.from({ length: LOOPS_PER_STEP }, (_, i) => (
-              <span key={i} className={`w-2 h-2 rounded-full transition-colors ${i < loops ? 'bg-[#7a2028]' : 'bg-[#e8dcc8]'}`} />
-            ))}
+          <span className="shrink-0 inline-flex items-center gap-1.5 text-[12px] font-bold text-[#8c7c6b] tabular-nums" title="ფრაზა წრეზე ჟღერს; სამის მერე აპი შემდეგ ნაბიჯზე გადაგიყვანს">
+            <Repeat className="w-3.5 h-3.5" aria-hidden />
+            <span aria-label={`მოსმენა ${Math.min(loops, LOOPS_PER_STEP)} / ${LOOPS_PER_STEP}`}>{Math.min(loops, LOOPS_PER_STEP)}/{LOOPS_PER_STEP}</span>
           </span>
         )}
       </p>

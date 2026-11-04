@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { afterTry, allLearned, assignedProgress, beatAt, learnedShare, learnTakeId, markerAt, melodyIn, nextReviewDay, parseLearnTakeId, parseSongPiece, partState, partsAtBreaths, partsOfRecording, partsOfScore, reviewsDue, songPiece, timelineIn, wordsForPart } from '../src/utils/learn';
+import { afterTry, allLearned, assignedProgress, beatAt, chunksOfPart, learnedShare, learnTakeId, markerAt, melodyIn, nextReviewDay, parseLearnTakeId, parseSongPiece, partState, partsAtBreaths, partsOfRecording, partsOfScore, reviewsDue, songPiece, timelineIn, wordsForPart } from '../src/utils/learn';
 import type { BookScore } from '../src/utils/chantSynth';
 
 const score = (sys: BookScore['sys'], voices: BookScore['voices'] = [[]], dur = 40): BookScore =>
@@ -129,4 +129,34 @@ test('an assigned piece: the bar of its parts, a song by its best-learned record
   // not opened yet (no part count): nothing to show
   assert.equal(assignedProgress('v-2', learning, parts), null);
   assert.equal(assignedProgress('v-1', learning, {}), null);
+});
+
+test('the beginners\' pieces: a short part stays whole, a long one is cut after its longest note', () => {
+  const up = (n: number, long = -1): BookScore['voices'][number] => {
+    const out: BookScore['voices'][number] = [];
+    let b = 0;
+    for (let i = 0; i < n; i++) { const d = i === long ? 2 : 1; out.push([b, d, 60 + (i % 5)]); b += d; }
+    return out;
+  };
+  const six = up(6);
+  assert.deepEqual(chunksOfPart(score([], [six]), 0, { b0: 0, b1: 6 }).map(c => [c.b0, c.b1]), [[0, 6]]);
+  // twelve notes, the fifth held two beats: the cut falls after it
+  const twelve = up(12, 4);
+  const pieces = chunksOfPart(score([], [twelve]), 0, { b0: 0, b1: 13 });
+  assert.deepEqual(pieces.map(c => [c.b0, c.b1]), [[0, 6], [6, 13]]);
+  assert.equal(pieces[1].s0, 6); // 60 bpm: a beat is a second
+  // the pieces always cover the part, one after another, 3–7 notes each
+  const long = up(30, 9);
+  const cut = chunksOfPart(score([], [long]), 0, { b0: 0, b1: 31 });
+  assert.equal(cut[0].b0, 0);
+  assert.equal(cut[cut.length - 1].b1, 31);
+  cut.forEach((c, i) => { if (i) assert.equal(c.b0, cut[i - 1].b1); });
+  cut.forEach(c => { const n = long.filter(x => x[0] >= c.b0 && x[0] < c.b1).length; assert.ok(n >= 3 && n <= 7, `${n} notes`); });
+});
+
+test('a piece sung on one pitch joins its neighbour', () => {
+  // five notes reciting on one pitch, held at the end, then a moving tune
+  const v: BookScore['voices'][number] = [[0, 1, 62], [1, 1, 62], [2, 1, 62], [3, 1, 62], [4, 3, 62], [7, 1, 64], [8, 1, 65], [9, 1, 67], [10, 1, 65], [11, 1, 64], [12, 2, 62]];
+  const pieces = chunksOfPart(score([], [v]), 0, { b0: 0, b1: 14 });
+  assert.deepEqual(pieces.map(c => [c.b0, c.b1]), [[0, 14]]);
 });
