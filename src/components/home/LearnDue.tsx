@@ -5,7 +5,7 @@ import { useAllLearning } from '../../hooks/useLearning';
 import { reviewsDue } from '../../utils/learn';
 import { georgiaToday } from '../../utils/psalter';
 import { triggerHaptic } from '../../utils/haptics';
-import { pieceTitle } from '../learn/LearnReview';
+import { pieceName } from '../learn/LearnReview';
 import { useOpenLearning } from '../learn/openLearning';
 
 // The home page's line of the learning mode: what waits for its review today (1, 3 and 7 days after a part was
@@ -45,7 +45,7 @@ export const LearnDue: React.FC = () => {
         <button type="button" onClick={() => open(d.piece)} className={rowLook}
           title={`დღეს გასამეორებელი: ${d.parts.map(p => p + 1).join(', ')} ${d.parts.length === 1 ? 'ნაწილი' : 'ნაწილები'}`}>
           <CapTile />
-          <span className="min-w-0 flex-1 truncate text-[14px] font-bold text-[#2a2017]">{pieceTitle(d.piece)}</span>
+          <span className="min-w-0 flex-1 truncate text-[14px] font-bold text-[#2a2017]">{pieceName(d.piece)}</span>
           <PartsChip n={d.parts.length} />
           <ChevronRight className="w-[18px] h-[18px] shrink-0 text-[#b08a4a]" aria-hidden />
         </button>
@@ -68,7 +68,7 @@ export const LearnDue: React.FC = () => {
             <li key={d.piece}>
               <button type="button" onClick={() => open(d.piece)}
                 className="w-full min-h-11 flex items-center gap-2 pl-[3.25rem] pr-2.5 text-left cursor-pointer hover:bg-[#fbf6ec] active:bg-[#f5ecdc] transition-colors">
-                <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-[#2a2017]">{pieceTitle(d.piece)}</span>
+                <span className="min-w-0 flex-1 truncate text-[14px] font-semibold text-[#2a2017]">{pieceName(d.piece)}</span>
                 <span className="shrink-0 text-[12px] font-semibold text-[#8c7c6b]">{partsLabel(d.parts.length)}</span>
                 <ChevronRight className="w-4 h-4 shrink-0 text-[#b08a4a]" aria-hidden />
               </button>

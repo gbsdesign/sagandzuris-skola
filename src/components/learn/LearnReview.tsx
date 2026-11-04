@@ -21,6 +21,10 @@ export const pieceTitle = (piece: string) => {
   return info ? `${info.variant.bookNums?.[0] ? `№${info.variant.bookNums[0]} ` : ''}${chantName(info.chant.title)}` : piece;
 };
 
+/** The piece's name alone, without the book's number in front („№158 მხოლოდ-შობილი“ → „მხოლოდ-შობილი“) — for a line
+ *  the member reads at a glance (the path's „დღეს“ card, the home's line). */
+export const pieceName = (piece: string) => pieceTitle(piece).replace(/^№\d+\s+/, '');
+
 export const LearnReview: React.FC<{
   uid: string; learning?: Record<string, LearnRecord>; parts?: Record<string, number>; shine?: Record<string, PearlShine>;
 }> = ({ uid, learning = {}, parts = {}, shine = {} }) => {

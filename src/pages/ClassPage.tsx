@@ -12,7 +12,7 @@ import { LessonChips, ScheduleSheet } from '../components/teacher/Schedule';
 import { ClassLogo } from '../components/classes/ClassLogo';
 import { ClassChat } from '../components/classes/ClassChat';
 import { ClassProgram } from '../components/classes/ClassProgram';
-import { ClassAssignments, DrillWork, useClassWork } from '../components/classes/ClassWork';
+import { WorkButton, WorkPanel, useClassWork } from '../components/classes/ClassWork';
 import { AddMemberSheet } from '../components/classes/MembersWindow';
 import { ClassTeachersSheet } from '../components/classes/ClassTeachersSheet';
 import { archiveClass } from '../components/admin/ClassesAdmin';
@@ -54,10 +54,10 @@ const savedTab = (id: string): Tab | null => {
 // liturgy and one ✎ for its teachers — its list opens the class's details, the timetable, the program and adding a
 // member —, 💬 to the teacher for a member), the timetable as one line of chips, the members (one line „N წევრი ›“ that
 // opens their window on a phone, a column of their own on a computer; teachers get the roll with attendance and a 💎 by
-// a member whose pearls wait to be heard — their window has them), then two tabs (2026-11-04): „პროგრამა“ (the chants'
-// assignments in their own card, the program with „+ დამატება“, folded under it „ოსტატობა“ with the exercises given and
-// the psalter group — `focus` = opened for it; a dot while a member has an assignment to do) and „ჩათი“ (a dot while
-// unread). Nothing that manages shows to the members.
+// a member whose pearls wait to be heard — their window has them), then the assignments' round 📋 (2026-11-05: every
+// assignment drops down from it under the tabs; it lights up red for a member's new one — classes/ClassWork.tsx) beside two
+// tabs (2026-11-04): „პროგრამა“ (the program with „+ დამატება“, folded under it „ოსტატობა“ and the psalter group —
+// `focus` = opened for it) and „ჩათი“ (a dot while unread). Nothing that manages shows to the members.
 export const ClassPage: React.FC<{ classId?: string; focus?: 'psalter' }> = ({ classId, focus }) => {
   const { user, isAdmin, isTeacher } = useAuth();
   const { selectedClassId, handleGoBack } = useNavigation();
@@ -95,6 +95,8 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolCl
   const [panel, setPanel] = useState<Panel | null>(null);
   const [tab, setTabState] = useState<Tab>(() => (focus === 'psalter' ? 'program' : savedTab(cls.id) ?? 'program'));
   const [editingProgram, setEditingProgram] = useState(false);
+  // the assignments' list dropped down from the round 📋 (opening it puts out a member's „new“ light)
+  const [workOpen, setWorkOpen] = useState(false);
   const msg = useFlash();
 
   // private chats: a member writes to the class's teachers, a teacher of the class to its members
@@ -109,6 +111,10 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolCl
   const seen = useChatSeen(user?.uid);
   const unread = !!user && tab !== 'chat' && isClassUnread(lasts[cls.id], seen[cls.id], user.uid);
 
+  const toggleWork = () => {
+    if (!workOpen) work.markSeen();
+    setWorkOpen(!workOpen);
+  };
   const setTab = (t: Tab) => {
     setTabState(t);
     try { sessionStorage.setItem(TAB_KEY + cls.id, t); } catch { /* private window: this visit only */ }
@@ -248,26 +254,26 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolCl
           </ClassMembers>
         )}
         <div className="min-w-0 space-y-4">
-          <Tabs
-            cols={2}
-            value={tab}
-            onChange={setTab}
-            items={[
-              { id: 'program', label: 'პროგრამა', Icon: ListChecks, dot: work.dot },
-              { id: 'chat', label: 'ჩათი', Icon: MessageCircle, dot: unread },
-            ]}
-          />
+          {/* the assignments' round button left of the two tabs; its list drops down under them */}
+          <div className="flex items-center gap-2">
+            <WorkButton state={work} canEdit={canEdit} open={workOpen} onToggle={toggleWork} />
+            <div className="flex-1 min-w-0">
+              <Tabs
+                cols={2}
+                value={tab}
+                onChange={setTab}
+                items={[
+                  { id: 'program', label: 'პროგრამა', Icon: ListChecks },
+                  { id: 'chat', label: 'ჩათი', Icon: MessageCircle, dot: unread },
+                ]}
+              />
+            </div>
+          </div>
+          {workOpen && <WorkPanel cls={cls} canEdit={canEdit} state={work} />}
           {tab === 'program' && (
             <>
-              <ClassAssignments cls={cls} canEdit={canEdit} state={work} />
               <ClassProgram cls={cls} canEdit={canEdit} editing={editingProgram} onEditing={setEditingProgram} />
-              <ClassLessons
-                cls={cls}
-                canEdit={canEdit}
-                fold
-                work={canEdit || work.drills.length ? <DrillWork cls={cls} canEdit={canEdit} state={work} /> : undefined}
-                toDo={work.drillDot}
-              />
+              <ClassLessons cls={cls} canEdit={canEdit} fold />
               <ClassPsalter cls={cls} canLead={canEdit} focus={focus === 'psalter'} />
             </>
           )}

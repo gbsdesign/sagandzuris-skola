@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowUp, ArrowDown, X, Check, CheckCheck } from 'lucide-react';
+import { ArrowUp, ArrowDown, X, Check, CheckCheck, ArrowUpDown } from 'lucide-react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
@@ -7,7 +7,7 @@ import { filterValidVariants } from '../../utils/variantValidation';
 import { PathItem, Voice, sortPathItems, categoryOf, CATEGORY_LABEL, PathCategory, usesVoices, voicesOf } from '../../utils/pathItems';
 import { useConfirmations, saveConfirmation } from '../../hooks/useConfirmations';
 import { useMarksLock, saveMarksLock } from '../../hooks/usePathMarks';
-import { askConfirm, Toggle } from '../ui/kit';
+import { Btn, askConfirm, Toggle } from '../ui/kit';
 import { CatalogPicker } from './CatalogPicker';
 import { errorText } from '../../utils/errorText';
 
@@ -23,12 +23,15 @@ export const writePath = (uid: string, map: PathMap) =>
 // Teacher's view of one student's "საგანძურის გზა": add, remove, reorder; each voice goes round with a tap — not known →
 // marked → confirmed ("ჩათვლა") → not known — so a wrong mark of the student's can be taken back; and the student's own
 // marking can be locked (marksLock), after which only teachers mark.
+// 2026-11-05 (the user: „დამაბნეველია“): the switch says what it does, one legend tells the voices' three looks, and the
+// ↑ ↓ arrows wait behind „რიგის შეცვლა“ (while ordering, the voices and ✕ step aside).
 export const MemberPathEditor: React.FC<{ uid: string; name: string; onError: (t: string) => void }> = ({ uid, name, onError }) => {
   const { user } = useAuth();
   const [map, setMap] = useState<PathMap>({});
   const [loaded, setLoaded] = useState(false);
   const conf = useConfirmations(uid);
   const lock = useMarksLock(uid);
+  const [ordering, setOrdering] = useState(false);
 
   useEffect(() => {
     setLoaded(false);
@@ -96,16 +99,37 @@ export const MemberPathEditor: React.FC<{ uid: string; name: string; onError: (t
           on={!lock?.on}
           onChange={on => setLocked(!on)}
           label="მოსწავლე თავად ნიშნავს"
+          hint={lock?.on ? 'გამორთულია: ნასწავლ ხმებს მხოლოდ მასწავლებელი ნიშნავს.' : 'ჩართულია: მოსწავლე თვითონ ნიშნავს ნასწავლ ხმებს, შენ კი ჩათვლი.'}
         />
       </div>
 
       <CatalogPicker
-        placeholder={`დაამატე ${name}-ის გზაზე`}
+        placeholder="საგალობლის ან სიმღერის დამატება"
         isTaken={id => !!map[id]}
         onPick={e => save([...sorted, e.make()])}
       />
 
       {groups.length === 0 && <p className="py-4 text-center text-sm text-[#8a7a6a]">საგანძურის გზა ცარიელია.</p>}
+
+      {groups.length > 0 && (
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+          {/* the voices' three looks, said once; a tap moves a voice on: not known → marked → confirmed → not known */}
+          {!ordering && (
+            <p className="flex-1 min-w-[14rem] flex flex-wrap items-center gap-x-3 gap-y-1 text-[12.5px] font-semibold text-[#75685a]">
+              <span className="inline-flex items-center gap-1"><span className="w-4 h-4 rounded-full bg-white ring-1 ring-[#d9ccb8]" /> არ იცის</span>
+              <span className="inline-flex items-center gap-1"><span className="w-4 h-4 rounded-full bg-[#7a2028]/10 ring-1 ring-[#7a2028]/30 text-[#7a2028] flex items-center justify-center"><Check className="w-3 h-3" /></span> მოსწავლემ მონიშნა</span>
+              <span className="inline-flex items-center gap-1"><span className="w-4 h-4 rounded-full bg-emerald-700 text-white flex items-center justify-center"><CheckCheck className="w-3 h-3" /></span> ჩათვლილია</span>
+            </p>
+          )}
+          {ordering && <p className="flex-1 min-w-[12rem] text-[13px] font-semibold text-[#75685a]">ისრებით გადაალაგე, მერე „მზადაა“.</p>}
+          {sorted.length > 1 && (
+            <Btn kind={ordering ? 'primary' : 'ghost'} size="sm" icon={ordering ? <Check /> : <ArrowUpDown />} onClick={() => setOrdering(o => !o)}>
+              {ordering ? 'მზადაა' : 'რიგის შეცვლა'}
+            </Btn>
+          )}
+        </div>
+      )}
+      {!ordering && groups.length > 0 && <p className="-mt-2 text-[12px] text-[#8a7a6a]">ხმაზე შეხება: მონიშვნა → ჩათვლა → მოხსნა.</p>}
 
       {groups.map(({ c, items }) => (
         <div key={c} className="space-y-2">
@@ -126,18 +150,24 @@ export const MemberPathEditor: React.FC<{ uid: string; name: string; onError: (t
                       {it.chantName}
                       <span className="ml-1.5 px-1.5 py-0.5 rounded-md bg-[#efe5d4] text-[#75685a] text-[11px] font-bold align-middle">{it.code}</span>
                     </span>
-                    <button type="button" onClick={() => move(it.variantId, -1)} disabled={i === 0} title="ზემოთ" className="w-9 h-9 shrink-0 rounded-full text-[#8a7a6a] hover:bg-[#fbf6ec] disabled:opacity-30 flex items-center justify-center cursor-pointer"><ArrowUp className="w-4 h-4" /></button>
-                    <button type="button" onClick={() => move(it.variantId, 1)} disabled={i === items.length - 1} title="ქვემოთ" className="w-9 h-9 shrink-0 rounded-full text-[#8a7a6a] hover:bg-[#fbf6ec] disabled:opacity-30 flex items-center justify-center cursor-pointer"><ArrowDown className="w-4 h-4" /></button>
+                    {ordering ? (
+                      <>
+                        <button type="button" onClick={() => move(it.variantId, -1)} disabled={i === 0} title="ზემოთ" aria-label="ზემოთ" className="w-10 h-10 shrink-0 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[#7a2028] disabled:opacity-30 flex items-center justify-center cursor-pointer"><ArrowUp className="w-4 h-4" /></button>
+                        <button type="button" onClick={() => move(it.variantId, 1)} disabled={i === items.length - 1} title="ქვემოთ" aria-label="ქვემოთ" className="w-10 h-10 shrink-0 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[#7a2028] disabled:opacity-30 flex items-center justify-center cursor-pointer"><ArrowDown className="w-4 h-4" /></button>
+                      </>
+                    ) : (
                     <button
                       type="button"
                       onClick={async () => { if (await askConfirm({ title: `მოვხსნა „${it.chantName}“ ${name}-ის გზიდან?`, ok: 'მოხსნა', danger: true })) save(sorted.filter(x => x.variantId !== it.variantId)); }}
-                      title="მოხსნა"
+                      title="გზიდან მოხსნა"
+                      aria-label="გზიდან მოხსნა"
                       className="w-9 h-9 shrink-0 rounded-full text-[#8a7a6a] hover:text-red-600 hover:bg-red-50 flex items-center justify-center cursor-pointer"
                     >
                       <X className="w-4 h-4" />
                     </button>
+                    )}
                   </div>
-                  <div className="flex flex-wrap items-center justify-end gap-1.5">
+                  {!ordering && <div className="flex flex-wrap items-center justify-end gap-1.5">
                     {voiceList.map(v => {
                       const isMarked = marked.includes(v);
                       const isConf = confirmed.includes(v);
@@ -161,7 +191,7 @@ export const MemberPathEditor: React.FC<{ uid: string; name: string; onError: (t
                         </button>
                       );
                     })}
-                  </div>
+                  </div>}
                 </li>
               );
             })}

@@ -1,6 +1,10 @@
 // "დღევანდელი წირვა": the teacher's program for the service. The teacher dates it, orders it (drag the dots),
 // keeps templates, shows a QR code, makes one PDF and sends it to a class; everyone can start the service
 // in church mode or keep the whole program on the phone for singing without internet.
+// 2026-11-05 (the user: „დამაბნეველია, დახვეწე და იპოვე უკეთესი გზები“): seven buttons stood over the list. Now the
+// teacher's page goes in the order of the work — 1 „შეადგინე“ (the list, „+ საგალობლის დამატება“, შაბლონები beside the
+// step), 2 „გაუგზავნე კლასს“, 3 „ტაძარში“ (start, keep offline, „გუნდი მომყვება“) — and QR / PDF are one small
+// „გაზიარება“ row at the end; a member's page starts with „წირვის დაწყება“, then the list.
 import React, { useEffect, useRef, useState } from 'react';
 import {
   CalendarDays, PenLine, Check, Radio, ChevronLeft, CloudDownload, Copy, FileText, GripVertical, Headphones, Church, Plus, QrCode, Send, Trash2, Users, X, LayoutTemplate, CircleCheck,
@@ -170,6 +174,44 @@ export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
       ? (liturgy.sentInSync && program?.sentAt ? `გაგზავნილია ${formatTime(program.sentAt)}` : program?.sentAt ? 'შეცვლილია, ჯერ არ გაგზავნილა' : 'ჯერ არ გაგზავნილა')
       : program?.sentAt ? `მასწავლებელმა გამოგზავნა ${formatTime(program.sentAt)}` : '';
 
+  const startBtn = (
+    <button type="button" className="pp-primary" onClick={start} disabled={!items.length}><Church /><span>წირვის დაწყება · ტაძრის რეჟიმი</span></button>
+  );
+  const offlineBtn = (
+    <button type="button" className={`pp-secondary ${allOffline ? 'done' : ''}`} onClick={keepAll} disabled={!items.length || Boolean(dl)}>
+      {allOffline ? <CircleCheck /> : <CloudDownload />}
+      <span>{dl ? `ჩამოიწერება… ${dl.done}/${dl.total}` : allOffline ? 'ჩამოწერილია — ინტერნეტის გარეშეც გაიხსნება' : `ჩამოწერა ოფლაინისთვის · ~${estimateMb(items)} MB`}</span>
+      {dl && <i className="pp-bar" style={{ width: `${(100 * dl.done) / Math.max(1, dl.total)}%` }} />}
+    </button>
+  );
+  const list = (
+    <>
+      <ol ref={listRef} className="pp-list">
+        {!items.length && (
+          <li className="pp-empty">{regent ? 'პროგრამა ცარიელია — დაამატე საგალობლები ან აირჩიე შაბლონი.' : 'პროგრამა ცარიელია.'}</li>
+        )}
+        {items.map((id, i) => {
+          const l = labelOf(id);
+          return (
+            <li key={id} className="pp-row" style={{ animationDelay: `${i * 40}ms` }}>
+              <span className="pp-num">{i + 1}</span>
+              <button type="button" className="pp-open" onClick={() => { triggerHaptic(10); openNotes(id, 'program'); }}>
+                <b>{l.title}</b><small>{l.sub}</small>
+              </button>
+              <span className="pp-icons">
+                {l.rec && <Headphones className="r" aria-label="ჩანაწერი" />}
+                {isOffline(id) && <CircleCheck className="ok" aria-label="ჩამოწერილია" />}
+              </span>
+              {regent && <button type="button" className="pp-x" onClick={e => removeItem(id, e.currentTarget.closest('li')!)} aria-label="ამოღება"><X /></button>}
+              {regent && <span className="pp-drag" onPointerDown={startDrag} aria-label="გადაადგილება" title="გადაადგილება"><GripVertical /></span>}
+            </li>
+          );
+        })}
+      </ol>
+      {regent && <button type="button" className="pp-add" onClick={() => setPicking(true)}><Plus /><span>საგალობლის დამატება</span></button>}
+    </>
+  );
+
   return (
     <div className="np-root pp-root" hidden={hidden} role="dialog" aria-modal="true" aria-label="დღევანდელი წირვა">
       <div className="pp-scroll">
@@ -201,72 +243,61 @@ export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
                   ) : (
                     <span>{program.className || (regent ? 'კლასი ჯერ არ არის' : 'ჩემი კლასი')}</span>
                   )}
-                  {sentNote && <span className={`pp-sent ${liturgy.sentInSync || !regent ? 'ok' : ''}`}>{sentNote}</span>}
+                  {/* the teacher's sending state is in step 2 */}
+                  {!regent && sentNote && <span className="pp-sent ok">{sentNote}</span>}
                 </span>
               </div>
 
-              <div className={`pp-actions ${regent ? 'three' : 'two'}`}>
-                {regent && <button type="button" className="pp-act" onClick={() => setSheet('tpl')}><LayoutTemplate /><span>შაბლონები</span></button>}
-                <button type="button" className="pp-act" onClick={() => setSheet('qr')} disabled={!items.length}><QrCode /><span>QR კოდი</span></button>
-                <button type="button" className="pp-act" onClick={makePdf} disabled={!items.length || busy === 'pdf'}><FileText /><span>{busy === 'pdf' ? 'მზადდება…' : 'PDF'}</span></button>
-              </div>
+              {regent ? (
+                <>
+                  <div className="pp-step">
+                    <span className="n">1</span>
+                    <h2>შეადგინე</h2>
+                    <button type="button" className="side" onClick={() => setSheet('tpl')}><LayoutTemplate /><span>შაბლონები</span></button>
+                  </div>
+                  {list}
 
-              {/* the teacher's main step: sending the list to the class (bright while the class has an older one) */}
-              {regent && (
-                <button type="button" className={`pp-send ${liturgy.sentInSync ? 'done' : ''}`} onClick={send} disabled={!items.length || busy === 'send'}>
-                  {liturgy.sentInSync ? <CircleCheck /> : <Send />}
-                  <span>{busy === 'send' ? 'იგზავნება…' : liturgy.sentInSync ? 'კლასს გაგზავნილია' : 'კლასს გაგზავნა'}</span>
-                </button>
-              )}
-
-              <button type="button" className="pp-primary" onClick={start} disabled={!items.length}><Church /><span>წირვის დაწყება · ტაძრის რეჟიმი</span></button>
-              <button type="button" className={`pp-secondary ${allOffline ? 'done' : ''}`} onClick={keepAll} disabled={!items.length || Boolean(dl)}>
-                {allOffline ? <CircleCheck /> : <CloudDownload />}
-                <span>{dl ? `ჩამოიწერება… ${dl.done}/${dl.total}` : allOffline ? 'ჩამოწერილია' : `ჩამოწერა ოფლაინისთვის · ~${estimateMb(items)} MB`}</span>
-                {dl && <i className="pp-bar" style={{ width: `${(100 * dl.done) / Math.max(1, dl.total)}%` }} />}
-              </button>
-
-              {/* „გუნდი მომყვება“: the teacher's page turns open the same chant on the class's phones */}
-              {regent && (
-                <button type="button" className={`pp-secondary pp-lead ${leading ? 'on' : ''}`} disabled={!program.sentAt}
-                  onClick={() => { triggerHaptic(10); setLeading(!leading); say(leading ? 'გუნდი აღარ მოგყვება' : 'გუნდი მოგყვება: რასაც გადაშლი, მათთანაც გადაიშლება', 3600); }}>
-                  <Radio />
-                  <span>{leading ? 'გუნდი მოგყვება · გამორთვა' : program.sentAt ? 'გუნდი მომყვება — ფურცლები ყველასთან გადაიშლება' : 'გუნდი მომყვება — ჯერ კლასს გაუგზავნე'}</span>
-                </button>
-              )}
-              {!regent && liveTurn && (
-                <div className="pp-live">
-                  <Radio />
-                  <span className="tx"><b>რეგენტი ახლა:</b> {labelOf(liveTurn.vid).title}</span>
-                  <button type="button" className={following ? 'on' : ''} onClick={() => { triggerHaptic(8); setFollowing(!following); }} aria-pressed={following}>
-                    {following ? 'მივყვები' : 'მიყოლა'}
+                  <div className="pp-step"><span className="n">2</span><h2>გაუგზავნე კლასს</h2></div>
+                  <button type="button" className={`pp-send ${liturgy.sentInSync ? 'done' : ''}`} onClick={send} disabled={!items.length || busy === 'send'}>
+                    {liturgy.sentInSync ? <CircleCheck /> : <Send />}
+                    <span>{busy === 'send' ? 'იგზავნება…' : liturgy.sentInSync ? `გაგზავნილია${program.sentAt ? ` ${formatTime(program.sentAt)}` : ''}` : 'გაგზავნა'}</span>
                   </button>
-                </div>
+                  {!liturgy.sentInSync && program.sentAt && <p className="pp-note">შეცვალე გაგზავნის მერე — ხელახლა გაუგზავნე, რომ კლასმაც ნახოს.</p>}
+
+                  <div className="pp-step"><span className="n">3</span><h2>ტაძარში</h2></div>
+                  {startBtn}
+                  {offlineBtn}
+                  {/* „გუნდი მომყვება“: the teacher's page turns open the same chant on the class's phones */}
+                  <button type="button" className={`pp-secondary pp-lead ${leading ? 'on' : ''}`} disabled={!program.sentAt}
+                    onClick={() => { triggerHaptic(10); setLeading(!leading); say(leading ? 'გუნდი აღარ მოგყვება' : 'გუნდი მოგყვება: რასაც გადაშლი, მათთანაც გადაიშლება', 3600); }}>
+                    <Radio />
+                    <span>{leading ? 'გუნდი მოგყვება · გამორთვა' : program.sentAt ? 'გუნდი მომყვება — ფურცლები ყველასთან გადაიშლება' : 'გუნდი მომყვება — ჯერ გაუგზავნე კლასს'}</span>
+                  </button>
+                </>
+              ) : (
+                <>
+                  {startBtn}
+                  {offlineBtn}
+                  {liveTurn && (
+                    <div className="pp-live">
+                      <Radio />
+                      <span className="tx"><b>რეგენტი ახლა:</b> {labelOf(liveTurn.vid).title}</span>
+                      <button type="button" className={following ? 'on' : ''} onClick={() => { triggerHaptic(8); setFollowing(!following); }} aria-pressed={following}>
+                        {following ? 'მივყვები' : 'მიყოლა'}
+                      </button>
+                    </div>
+                  )}
+                  <div className="pp-step"><h2>პროგრამა</h2></div>
+                  {list}
+                </>
               )}
 
-              <ol ref={listRef} className="pp-list">
-                {!items.length && (
-                  <li className="pp-empty">პროგრამა ცარიელია.</li>
-                )}
-                {items.map((id, i) => {
-                  const l = labelOf(id);
-                  return (
-                    <li key={id} className="pp-row" style={{ animationDelay: `${i * 40}ms` }}>
-                      <span className="pp-num">{i + 1}</span>
-                      <button type="button" className="pp-open" onClick={() => { triggerHaptic(10); openNotes(id, 'program'); }}>
-                        <b>{l.title}</b><small>{l.sub}</small>
-                      </button>
-                      <span className="pp-icons">
-                        {l.rec && <Headphones className="r" aria-label="ჩანაწერი" />}
-                        {isOffline(id) && <CircleCheck className="ok" aria-label="ჩამოწერილია" />}
-                      </span>
-                      {regent && <button type="button" className="pp-x" onClick={e => removeItem(id, e.currentTarget.closest('li')!)} aria-label="ამოღება"><X /></button>}
-                      {regent && <span className="pp-drag" onPointerDown={startDrag} aria-label="გადაადგილება" title="გადაადგილება"><GripVertical /></span>}
-                    </li>
-                  );
-                })}
-              </ol>
-              {regent && <button type="button" className="pp-add" onClick={() => setPicking(true)}><Plus /><span>საგალობლის დამატება</span></button>}
+              {/* QR and PDF: one small row at the end */}
+              <div className="pp-share">
+                <span className="lb">გაზიარება</span>
+                <button type="button" onClick={() => setSheet('qr')} disabled={!items.length}><QrCode /><span>QR კოდი</span></button>
+                <button type="button" onClick={makePdf} disabled={!items.length || busy === 'pdf'}><FileText /><span>{busy === 'pdf' ? 'მზადდება…' : 'PDF'}</span></button>
+              </div>
             </>
           )}
         </div>

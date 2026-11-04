@@ -264,12 +264,19 @@ const StudentSheet: React.FC<{
     }
   };
 
-  const actions = m && (onWrite || onRemove) ? (
-    <div className="flex gap-2 [&>*]:flex-1">
-      {onWrite && m.uid !== user?.uid && <Btn kind="soft" icon={<MessageCircle />} onClick={() => onWrite(m)}>მიწერა</Btn>}
-      {onRemove && <Btn kind="danger" icon={<UserMinus />} title="კლასიდან ამოღება" onClick={async () => { if (await onRemove(m)) close(); }}>ამოღება</Btn>}
-    </div>
+  // „მიწერა“ at the bottom; „კლასიდან ამოღება“ apart from it, small, at the end of the overview (2026-11-05: side by side
+  // the two were easy to mix up)
+  const actions = m && onWrite && m.uid !== user?.uid ? (
+    <Btn kind="soft" full icon={<MessageCircle />} onClick={() => onWrite(m)}>მიწერა</Btn>
   ) : undefined;
+  const removal = m && onRemove ? (
+    <div className="pt-1 flex justify-center">
+      <button type="button" onClick={async () => { if (await onRemove(m)) close(); }}
+        className="h-10 px-4 rounded-full inline-flex items-center gap-1.5 text-[13px] font-bold text-[#a3242b] hover:bg-red-50 cursor-pointer transition-colors">
+        <UserMinus className="w-4 h-4" /> კლასიდან ამოღება
+      </button>
+    </div>
+  ) : null;
   // a function, not a component made in render (that would remount the editors inside on every render)
   const frame = (children: React.ReactNode) => inline ? (
     <section className="rounded-3xl bg-white/70 ring-1 ring-[#e8dcc8] px-4 min-[400px]:px-5 py-4 space-y-4" aria-label="მასწავლებლისთვის">
@@ -381,6 +388,7 @@ const StudentSheet: React.FC<{
             )}
           </div>
           {error && <p className="text-sm font-semibold text-red-700">{error}</p>}
+          {removal}
         </div>
       )}
     </>

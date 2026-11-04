@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AudioLines, Check, CheckCheck, ChevronRight, ClipboardList, GraduationCap, Music, Plus, Users } from 'lucide-react';
+import { AudioLines, Check, CheckCheck, ChevronDown, ChevronRight, ClipboardList, GraduationCap, ListChecks, Music, Plus, Users } from 'lucide-react';
 import { useAuth, useChants } from '../../context';
 import type { ProgramItem, SchoolClass } from '../../hooks/useClasses';
 import { usePathMarks } from '../../hooks/usePathMarks';
@@ -16,7 +16,7 @@ import { NewAssignment } from '../teacher/AssignmentsPanel';
 import { PartsBar } from '../learn/PartsBar';
 import { learnPieceOf, useOpenLearning } from '../learn/openLearning';
 import { Btn, Flash, Sheet, useFlash } from '../ui/kit';
-import { StudioMix, StudioRecord, studioPiece } from '../studio/ClassStudio';
+import { Studio, studioPiece } from '../studio/ClassStudio';
 
 type Listed = ProgramItem & { id: string; key: string };
 
@@ -29,7 +29,9 @@ const VOICE_NAME: Record<Voice, string> = { '1': 'პირველი ხმ�
 // marks as on the path) and who in the class knows each voice (their own path marks or a teacher's confirmation, copied
 // by useClassMarksSync). The teachers change the program from the page's one ✎ (`editing`, ProgramEditor); since
 // 2026-11-04 „+ დამატება“ under the list adds to it at once (ProgramQuickAdd) and an item's window gives it as an
-// assignment („დავალებად მიცემა“ → NewAssignment; the assignments live in their own card over the program).
+// assignment („დავალებად მიცემა“ → NewAssignment; the assignments live in the page's round 📋 — classes/ClassWork.tsx).
+// 2026-11-05 (the user: „დამაბნეველია“): the card has its name on top; the window shows the voices once — a row a voice
+// with my mark and who knows it —, the studio and „დავალებად მიცემა“ as two small buttons under them.
 export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; editing?: boolean; onEditing?: (on: boolean) => void }> = ({
   cls, canEdit, editing, onEditing,
 }) => {
@@ -143,9 +145,14 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; editi
   const open = listed.find(p => p.key === shown);
 
   return (
-    <section className="bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] px-4 min-[400px]:px-5 sm:px-6 py-4" aria-label="სასწავლო პროგრამა">
+    <section className="bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] px-4 min-[400px]:px-5 sm:px-6 pt-1 pb-4" aria-label="სასწავლო პროგრამა">
+      <h2 className="min-h-12 flex items-center gap-2">
+        <ListChecks className="w-5 h-5 shrink-0 text-[#7a2028]" />
+        <span className="font-serif-ge text-lg font-bold text-[#4a3426] truncate">სასწავლო პროგრამა</span>
+        {cls.program.length > 0 && <span className="text-sm font-bold text-[#a4927c] tabular-nums">{cls.program.length}</span>}
+      </h2>
       {iAmMember && total > 0 && !editing && (
-        <div className="mb-3 flex items-center gap-3">
+        <div className="mb-2 flex items-center gap-3">
           <div className="flex-1 h-2 rounded-full bg-[#ece2d1] overflow-hidden">
             <div
               className={`h-full rounded-full transition-[width] duration-700 ${learned === total ? 'bg-gradient-to-r from-emerald-400 to-emerald-600' : 'bg-gradient-to-r from-[#c2414c] to-[#7a2028]'}`}
@@ -153,7 +160,7 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; editi
             />
           </div>
           <span className="shrink-0 text-[12.5px] font-bold tabular-nums text-[#8a7a6a]">
-            ნასწავლი {learned}/{total}{voiceSlots ? ` · ${voices}/${voiceSlots} ხმა` : ''}
+            შენ იცი {learned}/{total}{voiceSlots ? ` · ხმები ${voices}/${voiceSlots}` : ''}
           </span>
         </div>
       )}
@@ -186,7 +193,7 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; editi
 
       {/* the teachers: add to the program right here (its order and ✕ stay in ✎ → „სასწავლო პროგრამა“) */}
       {canEdit && !editing && (
-        <Btn kind="soft" full icon={<Plus />} className="mt-3" onClick={() => setAdding(true)}>დამატება</Btn>
+        <Btn kind="soft" full icon={<Plus />} className="mt-3" onClick={() => setAdding(true)}>პროგრამაში დამატება</Btn>
       )}
       {msg.flash && <div className="mt-3"><Flash flash={msg.flash} onClose={msg.clear} /></div>}
       {adding && <ProgramQuickAdd cls={cls} onClose={() => setAdding(false)} onError={t => msg.fail(t)} />}
@@ -204,24 +211,24 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; editi
           onStudio={studioPiece(open.id) && (iAmMember || canEdit) ? () => { setShown(null); setStudio(open.id); } : null}
           onAssign={canEdit && findCatalogEntry(open.id) ? () => { setShown(null); setAssigning(findCatalogEntry(open.id) || null); } : null}
           member={iAmMember}
+          teacher={!!canEdit}
           own={mine(open.id)}
           locked={locked}
           onMark={v => toggle(open.id, v)}
           knowers={v => knowers(open.id, v)}
         />
       )}
-      {studio && (canEdit
-        ? <StudioMix cls={cls} vid={studio} onClose={() => setStudio(null)} />
-        : <StudioRecord vid={studio} onClose={() => setStudio(null)} />)}
+      {studio && <Studio cls={cls} vid={studio} canEdit={!!canEdit} onClose={() => setStudio(null)} />}
     </section>
   );
 };
 
 type Knower = { m: SchoolClass['members'][number]; ok: boolean; me: boolean };
 
-/** One program item's window: open it (its notes, or the song), „სწავლა“ (its learning mode), the member's voice marks
- *  — a voice a teacher confirmed is green and only the teacher takes it back; while a teacher has locked marking they
- *  only show — and who in the class knows each voice. */
+/** One program item's window: open it (its notes, or the song) and „სწავლა“ big on top; then the voices once — a row per
+ *  voice with the member's own mark (a voice a teacher confirmed is green and only the teacher takes it back; while a
+ *  teacher has locked marking it only shows) and who in the class knows it (a tap unfolds the names); under them the
+ *  studio and a teacher's „დავალებად მიცემა“ as two small buttons. */
 const ItemSheet: React.FC<{
   p: Listed;
   onClose: () => void;
@@ -231,15 +238,19 @@ const ItemSheet: React.FC<{
   onStudio: (() => void) | null;
   onAssign: (() => void) | null;
   member: boolean;
+  teacher: boolean;
   own: { known: Voice[]; confirmed: Voice[] };
   locked: boolean;
   onMark: (v: Voice) => void;
   knowers: (v: Voice) => Knower[];
-}> = ({ p, onClose, go, piece, onLearn, onStudio, onAssign, member, own, locked, onMark, knowers }) => {
+}> = ({ p, onClose, go, piece, onLearn, onStudio, onAssign, member, teacher, own, locked, onMark, knowers }) => {
   const lines = programLines(p);
   const voiced = usesVoices(p.id);
   const list: Voice[] = voiced ? ['1', '2', '3'] : ['1'];
   const song = categoryOf(p.id) === 'simghera';
+  // the voice whose names are unfolded
+  const [names, setNames] = useState<Voice | null>(null);
+  const hint = locked ? 'მონიშვნას ახლა მასწავლებელი აკეთებს.' : voiced ? 'წრეს შეეხე, როცა ხმას ისწავლი.' : 'წრეს შეეხე, როცა ისწავლი.';
   return (
     <Sheet open onClose={onClose} title={lines.title}>
       <div className="space-y-5">
@@ -256,63 +267,67 @@ const ItemSheet: React.FC<{
             {piece && <Btn size="lg" icon={<GraduationCap />} onClick={() => onLearn(piece)}>სწავლა</Btn>}
           </div>
         )}
-        {onStudio && (
-          <Btn kind="soft" size="lg" full icon={<AudioLines />} onClick={onStudio}>
-            {member ? 'სტუდია — ჩემი ხმის ჩაწერა' : 'სტუდია — ჯგუფური ჩანაწერი'}
-          </Btn>
-        )}
-        {onAssign && <Btn kind="soft" size="lg" full icon={<ClipboardList />} onClick={onAssign}>დავალებად მიცემა</Btn>}
 
-        {member && (
-          <div>
-            <p className="text-[13.5px] font-bold text-[#4a3426]">{voiced ? 'რომელი ხმა იცი?' : 'იცი?'}</p>
-            <div className="mt-2 flex items-center gap-2.5">
-              {list.map(v => {
-                const okOne = own.confirmed.includes(v);
-                const on = okOne || own.known.includes(v);
-                return (
-                  <button
-                    key={v}
-                    type="button"
-                    disabled={locked || okOne}
-                    onClick={() => { triggerHaptic(on ? 8 : 15); onMark(v); }}
-                    aria-pressed={on}
-                    aria-label={voiced ? VOICE_NAME[v] : 'ნასწავლი'}
-                    title={okOne ? 'მასწავლებელმა ჩათვალა' : locked ? 'მონიშვნას მასწავლებელი აკეთებს' : on ? 'ნასწავლია — შეეხე მოსახსნელად' : 'შეეხე, როცა ისწავლი'}
-                    className={`w-12 h-12 shrink-0 rounded-full text-[16px] font-bold tabular-nums flex items-center justify-center transition active:scale-90 disabled:active:scale-100 ${
-                      okOne ? 'bg-emerald-600 text-white'
-                        : on ? 'bg-[#7a2028] text-white shadow-[0_2px_6px_-2px_rgba(122,32,40,0.6)]'
-                        : 'bg-white ring-1 ring-[#e3d6c1] text-[#8a7a6a] enabled:hover:ring-[#7a2028]/50 enabled:hover:text-[#7a2028]'
-                    } ${locked && !okOne ? 'opacity-60' : ''} ${locked || okOne ? 'cursor-default' : 'cursor-pointer'}`}
-                  >
-                    {voiced ? v : <Check className="w-5 h-5 stroke-[3]" />}
-                  </button>
-                );
-              })}
-              <span className="ml-1 text-[12.5px] leading-snug text-[#8a7a6a]">
-                {locked ? 'მონიშვნას ახლა მასწავლებელი აკეთებს' : 'შეეხე, როცა ისწავლი'}
-              </span>
-            </div>
-          </div>
-        )}
-
+        {/* the voices: one row each — my mark, then who in the class knows it */}
         <div>
-          <p className="text-[13.5px] font-bold text-[#4a3426]">კლასში ვინ იცის</p>
-          <div className="mt-2 space-y-3">
+          <p className="text-[13.5px] font-bold text-[#4a3426]">{voiced ? 'ხმები' : 'ვინ იცის'}</p>
+          {member && <p className="mt-0.5 text-[12.5px] leading-snug text-[#8a7a6a]">{hint} მწვანე — მასწავლებელმა ჩათვალა.</p>}
+          <ul className="mt-2 rounded-2xl bg-white ring-1 ring-[#e8dcc8] divide-y divide-[#f1e8d9]">
             {list.map(v => {
               const people = knowers(v);
+              const okOne = own.confirmed.includes(v);
+              const on = okOne || own.known.includes(v);
+              const unfolded = names === v && people.length > 0;
               return (
-                <div key={v}>
-                  <p className="text-[12.5px] font-bold text-[#8a7a6a]">
-                    {voiced ? VOICE_NAME[v] : 'ნასწავლი'} · {people.length ? `იცის ${people.length}` : 'ჯერ არავის აქვს მონიშნული'}
-                  </p>
-                  {people.length > 0 && (
-                    <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                <li key={v}>
+                  <div className="min-h-[60px] flex items-center gap-3 px-3 py-2">
+                    {member ? (
+                      <button
+                        type="button"
+                        disabled={locked || okOne}
+                        onClick={() => { triggerHaptic(on ? 8 : 15); onMark(v); }}
+                        aria-pressed={on}
+                        aria-label={`${voiced ? VOICE_NAME[v] : 'ნასწავლი'} — ${okOne ? 'ჩათვლილია' : on ? 'ნასწავლია' : 'ჯერ არა'}`}
+                        title={okOne ? 'მასწავლებელმა ჩათვალა' : locked ? 'მონიშვნას მასწავლებელი აკეთებს' : on ? 'ნასწავლია — შეეხე მოსახსნელად' : 'შეეხე, როცა ისწავლი'}
+                        className={`w-11 h-11 shrink-0 rounded-full flex items-center justify-center transition active:scale-90 disabled:active:scale-100 ${
+                          okOne ? 'bg-emerald-600 text-white'
+                            : on ? 'bg-[#7a2028] text-white shadow-[0_2px_6px_-2px_rgba(122,32,40,0.6)]'
+                            : 'bg-white ring-2 ring-[#e3d6c1] text-transparent enabled:hover:ring-[#7a2028]/50 enabled:hover:text-[#7a2028]/40'
+                        } ${locked && !okOne ? 'opacity-60' : ''} ${locked || okOne ? 'cursor-default' : 'cursor-pointer'}`}
+                      >
+                        {okOne ? <CheckCheck className="w-5 h-5" /> : <Check className="w-5 h-5 stroke-[3]" />}
+                      </button>
+                    ) : null}
+                    <button
+                      type="button"
+                      disabled={!people.length}
+                      aria-expanded={unfolded}
+                      onClick={() => { triggerHaptic(6); setNames(n => (n === v ? null : v)); }}
+                      className="flex-1 min-w-0 min-h-11 flex items-center gap-2.5 text-left enabled:cursor-pointer"
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="block text-[14.5px] font-bold text-[#2a2017]">{voiced ? VOICE_NAME[v] : 'ნასწავლი'}</span>
+                        <span className="block text-[12.5px] text-[#8a7a6a]">{people.length ? `კლასში იცის ${people.length}` : 'კლასში ჯერ არავინ'}</span>
+                      </span>
+                      {people.length > 0 && (
+                        <>
+                          <span aria-hidden className="flex -space-x-2 shrink-0">
+                            {people.slice(0, 4).map(({ m }) => (
+                              <span key={m.uid} className="rounded-full ring-2 ring-white"><Avatar name={m.name} photoURL={m.photoURL} className="w-7 h-7 text-xs" /></span>
+                            ))}
+                          </span>
+                          <ChevronDown className={`w-4 h-4 shrink-0 text-[#b3a594] transition-transform ${unfolded ? 'rotate-180' : ''}`} />
+                        </>
+                      )}
+                    </button>
+                  </div>
+                  {unfolded && (
+                    <ul className="sg-in px-3 pb-3 flex flex-wrap gap-1.5">
                       {people.map(({ m, ok, me }) => (
                         <li
                           key={m.uid}
                           className={`h-9 max-w-full pl-1 pr-3 rounded-full inline-flex items-center gap-1.5 text-[13px] font-semibold ${
-                            me ? 'bg-[#7a2028]/[0.06] ring-1 ring-[#7a2028]/20' : 'bg-white ring-1 ring-[#e8dcc8]'
+                            me ? 'bg-[#7a2028]/[0.06] ring-1 ring-[#7a2028]/20' : 'bg-[#fbf6ec] ring-1 ring-[#e8dcc8]'
                           } text-[#2a2017]`}
                           title={ok ? 'მასწავლებელმა ჩათვალა' : undefined}
                         >
@@ -324,11 +339,19 @@ const ItemSheet: React.FC<{
                       ))}
                     </ul>
                   )}
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
         </div>
+
+        {/* the rest, small: the studio and a teacher's assignment */}
+        {(onStudio || onAssign) && (
+          <div className={`grid gap-2.5 ${onStudio && onAssign ? 'grid-cols-1 min-[440px]:grid-cols-2' : 'grid-cols-1'}`}>
+            {onStudio && <Btn kind="soft" icon={<AudioLines />} onClick={onStudio}>{teacher ? 'ჯგუფური ჩანაწერი' : 'ჩემი ხმის ჩაწერა'}</Btn>}
+            {onAssign && <Btn kind="soft" icon={<ClipboardList />} onClick={onAssign}>დავალებად მიცემა</Btn>}
+          </div>
+        )}
       </div>
     </Sheet>
   );

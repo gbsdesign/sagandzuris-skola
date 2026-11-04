@@ -2,7 +2,7 @@ import React from 'react';
 import { CalendarClock, ChevronRight, ClipboardList, GraduationCap, RotateCcw } from 'lucide-react';
 import { useAuth, useNavigation } from '../../context';
 import { useMyClasses } from '../../hooks/useClasses';
-import { daysUntil, useMyAssignments } from '../../hooks/useTeaching';
+import { daysUntil, dueUntil, useMyAssignments } from '../../hooks/useTeaching';
 import { useConfirmations } from '../../hooks/useConfirmations';
 import { triggerHaptic } from '../../utils/haptics';
 import { assignedProgress, reviewsDue } from '../../utils/learn';
@@ -13,22 +13,18 @@ import { nextLesson } from '../teacher/Schedule';
 import { currentWork, workDone } from '../teacher/MyClassWork';
 import { useAllLearning } from '../../hooks/useLearning';
 import { openPathPanel } from './IndependentWorkCard';
-import { PATH_CARD, PATH_LABEL } from './pathStyle';
-import { findVersion } from '../../data/chantLookup';
+import { PATH_CARD } from './pathStyle';
+import { assignmentLines } from '../../utils/assignmentLines';
 import { PartsBar } from '../learn/PartsBar';
-import { pieceTitle } from '../learn/LearnReview';
+import { pieceName } from '../learn/LearnReview';
 import { learnPieceOf, useOpenLearning } from '../learn/openLearning';
 import { Btn } from '../ui/kit';
 
-const DAY_SHORT = ['კვ', 'ორშ', 'სამ', 'ოთხ', 'ხუთ', 'პარ', 'შაბ'];
-const whenWord = (n: number) => (n === 0 ? 'დღეს' : n === 1 ? 'ხვალ' : `${n} დღეში`);
-// the name alone, so one line holds it: a chant's own title (not „გ.ხ. I ტომი · …“), else the title without its
-// closing book reference "… (145 ხუნდაძე, გვ. 205)"
-const shortTitle = (t: string, variantId?: string) =>
-  (variantId && findVersion(variantId)?.chant.title) || t.replace(/\s*\([^()]+\)\s*$/, '');
+// a lesson's day: only today and tomorrow get a word of their own (the date says the rest)
+const soonWord = (n: number) => (n === 0 ? 'დღეს' : n === 1 ? 'ხვალ' : '');
 
-/** One tappable line of the card: an icon, what it is, and a badge at the right (or `tail`: a button of its own beside
- *  the line, with no „›“). */
+/** One tappable line of the card: an icon, what it is (big) with when or how much under it (grey), and a badge at the
+ *  right (or `tail`: a button of its own beside the line, with no „›“). The same order as an assignment's card. */
 const Line: React.FC<{ icon: React.ReactNode; title: string; sub: string; subTone?: string; badge?: React.ReactNode; tail?: React.ReactNode; onClick: () => void }> = ({
   icon, title, sub, subTone = 'text-[#8a7a6a]', badge, tail, onClick,
 }) => (
@@ -40,8 +36,8 @@ const Line: React.FC<{ icon: React.ReactNode; title: string; sub: string; subTon
     >
       <span className="w-9 h-9 shrink-0 rounded-full bg-[#7a2028]/[0.07] text-[#7a2028] flex items-center justify-center">{icon}</span>
       <span className="flex-1 min-w-0">
-        <span className={`block text-[12px] font-semibold leading-tight ${subTone}`}>{sub}</span>
-        <span className="block mt-0.5 truncate text-[14.5px] font-semibold leading-snug text-[#2a2017]">{title}</span>
+        <span className="block truncate text-[15px] font-bold leading-snug text-[#2a2017]">{title}</span>
+        <span className={`block mt-0.5 truncate text-[12.5px] font-semibold leading-tight ${subTone}`}>{sub}</span>
       </span>
       {badge}
       {!tail && <ChevronRight className="w-4 h-4 shrink-0 text-[#c4b49c] group-hover:text-[#7a2028]" />}
@@ -90,30 +86,35 @@ export const PathToday: React.FC = () => {
 
   return (
     <section className={`${PATH_CARD} !py-2.5`} aria-label="დღეს">
-      <p className={`px-1 pt-1 pb-0.5 ${PATH_LABEL}`}>
-        დღეს · {WEEKDAYS_GE[now.getDay()]}, {now.getDate()} {MONTHS_GE[now.getMonth()]}
-      </p>
+      <h2 className="px-1 pt-1 flex items-baseline gap-2">
+        <span className="font-serif-ge text-[17px] font-bold text-[#4a3426]">დღეს</span>
+        <span className="text-[13px] font-semibold text-[#8a7a6a]">{WEEKDAYS_GE[now.getDay()]}, {now.getDate()} {MONTHS_GE[now.getMonth()]}</span>
+      </h2>
       <ul className="divide-y divide-[#f1e8d9]">
-        {lesson && (
-          <li><Line
-            icon={<CalendarClock className="w-[18px] h-[18px]" />}
-            sub={classes.length > 1 ? `შემდეგი გაკვეთილი · ${lesson.cls.name}` : 'შემდეგი გაკვეთილი'}
-            title={`${DAY_SHORT[lesson.slot.day]} ${lesson.slot.start}${lesson.slot.end ? `–${lesson.slot.end}` : ''}${lesson.slot.note ? ` · ${lesson.slot.note}` : ''}`}
-            badge={<span className={`${BADGE} ${lesson.inDays === 0 ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#7a2028]/[0.07] text-[#7a2028]'}`}>{whenWord(lesson.inDays)}</span>}
-            onClick={() => openClass(lesson.cls.id)}
-          /></li>
-        )}
+        {lesson && (() => {
+          const day = new Date(now.getFullYear(), now.getMonth(), now.getDate() + lesson.inDays);
+          const word = soonWord(lesson.inDays);
+          const time = `${lesson.slot.start}${lesson.slot.end ? `–${lesson.slot.end}` : ''}`;
+          return (
+            <li><Line
+              icon={<CalendarClock className="w-[18px] h-[18px]" />}
+              title={`${WEEKDAYS_GE[lesson.slot.day]}, ${day.getDate()} ${MONTHS_GE[day.getMonth()]}`}
+              sub={['გაკვეთილი', time, lesson.slot.note, classes.length > 1 && lesson.cls.name].filter(Boolean).join(' · ')}
+              badge={word ? <span className={`${BADGE} ${lesson.inDays === 0 ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#7a2028]/[0.07] text-[#7a2028]'}`}>{word}</span> : undefined}
+              onClick={() => openClass(lesson.cls.id)}
+            /></li>
+          );
+        })()}
         {next && (() => {
-          const n = daysUntil(next.due);
-          const soon = n <= 1;
+          const soon = daysUntil(next.due) <= 1;
+          const more = work.length > 1 ? ` · კიდევ ${work.length - 1}` : '';
           return (
             <li>
               <Line
                 icon={<ClipboardList className="w-[18px] h-[18px]" />}
-                sub={piece ? `დავალება · ${whenWord(n)}${work.length > 1 ? ` · კიდევ ${work.length - 1}` : ''}` : work.length > 1 ? `დავალება · კიდევ ${work.length - 1}` : 'დავალება'}
-                subTone={piece && soon ? 'text-amber-700' : undefined}
-                title={shortTitle(next.title, next.variantId)}
-                badge={piece ? undefined : <span className={`${BADGE} ${soon ? 'bg-amber-500 text-white' : 'bg-[#7a2028]/[0.07] text-[#7a2028]'}`}>{whenWord(n)}</span>}
+                title={assignmentLines(next.variantId, next.title).name}
+                sub={`დავალება · ${dueUntil(next.due)}${more}`}
+                subTone={soon ? 'text-amber-700' : undefined}
                 tail={piece ? <Btn size="sm" icon={<GraduationCap />} onClick={() => openLearning(piece, next.voices[0] as Voice | undefined)}>სწავლა</Btn> : undefined}
                 onClick={() => openPathPanel('learn')}
               />
@@ -131,8 +132,8 @@ export const PathToday: React.FC = () => {
           <li>
             <Line
               icon={<RotateCcw className="w-[18px] h-[18px]" />}
+              title={due.length > 1 ? `${pieceName(due[0].piece)} და კიდევ ${due.length - 1}` : pieceName(due[0].piece)}
               sub={`დღეს გასამეორებელი · ${dueParts} ნაწილი`}
-              title={due.length > 1 ? `${pieceTitle(due[0].piece)} და კიდევ ${due.length - 1}` : pieceTitle(due[0].piece)}
               onClick={() => openLearning(due[0].piece)}
             />
           </li>
