@@ -254,9 +254,9 @@ export const GAMES: GameDef[] = [
     modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'okros', section: 'tamashebi', print: { href: '/games/print/okros-khana.pdf', sheets: 16 },
   },
   {
-    id: 'qaravani', title: 'ქარავანი', like: 'Ticket to Ride', text: 'საქართველოს რუკა: ქარავნის გზები და მომლოცველობა მცხეთიდან ბათუმამდე',
-    about: '„Ticket to Ride“ ცნობილი სამაგიდო თამაშია: ფერადი ბარათებით გზებს იკავებ და ქალაქებს აკავშირებ. ჩვენთან XIX საუკუნის საქართველოს რუკაა: 47 ქალაქი, ქარავნის გზები, ქარვასლები და მგზავრის წერილები. ონლაინ ყველას თავის ტელეფონზე უჭირავს ბარათები და წერილები; ჰიბრიდულში ერთი ტელეფონი ხელიდან ხელში გადადის.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'qaravani', section: 'tamashebi', print: { href: '/games/print/qaravani.pdf', sheets: 31 },
+    id: 'qaravani', title: 'ქარავანი', text: 'XIX საუკუნის საქართველო: კამათლები გზას გიხსნის, ქარავანი ქალაქებს და ტვირთს აგროვებს',
+    about: 'ჩვენი სამაგიდო თამაში გზების ჟანრში. XIX საუკუნის საქართველოს რუკაზე 47 ქალაქია: კამათლები გზას გიხსნის (მთაში წყვილი სჭირდება, ზღვაზე — ექვსიანი), აბაზით კამათელს ცვლი და ქარვასლებს აშენებ. ბოლოს ქალაქი იმისაა, ვისაც იქ მეტი გზა შედის, და ითვლება, რამდენ ტვირთს — ღვინოს, თაფლს, ჩაის… — აღწევს შენი ქარავანი. ონლაინ ყველა თავის ტელეფონზე თამაშობს; ჰიბრიდულში ერთი ტელეფონი მაგიდის შუაშია.',
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'qaravani', section: 'tamashebi', print: { href: '/games/print/qaravani.pdf', sheets: 16 },
   },
   {
     id: 'ori-takhti', title: 'ორი ტახტი', like: '7 Wonders Duel', text: 'ორი ქართული სამეფო სამ ეპოქაში: ვინ ააშენებს მეტ ძეგლს',

@@ -6,30 +6,30 @@ import { Card, Tabs, askConfirm } from '../../components/ui/kit';
 import { RoomSetup, meOf } from '../../components/games/RoomSetup';
 import { useOpenRequest } from '../../utils/searchOpen';
 import { qaravaniRooms, useQaravaniRoom } from '../../utils/gameRoomFirestore';
-import { MAX_Q } from '../../utils/qaravani';
+import { CARGO_PTS, GUEST, INNS, INN_COST, INN_PTS, MAX_Q, START_MAX, TRADE, cartsFor, roundsFor } from '../../utils/qaravani';
 import { QaravaniRoom } from './qaravani/Room';
 import { QaravaniTable } from './qaravani/Table';
 
-// „ქარავანი“ on phones (games hub, 2026-11-04): the printed kit №3 (public/games/print/qaravani.pdf — a Ticket to Ride: Europe on a
-// map of Georgia at the end of the XIX century) gets its two app variants. Online: a class's room, every caravan on its own phone
-// with its own cards and letters (utils/qaravaniRoom.ts over utils/qaravani.ts; the opener may play too, the rest of the class
-// may watch). Hybrid: one phone passed round the table (pages/games/qaravani/Table.tsx). The map is the kit's own
-// (data/qaravaniMap.ts, made by scripts/build-qaravani-map.mjs) and loads only with this page. The tab is kept on the device
-// (`sg-qaravani-tab`).
+// „ქარავანი“ on phones (games hub, 2026-11-04): the printed kit №3 (public/games/print/qaravani.pdf) and its two app variants — since
+// the same day on the school's own rules (utils/qaravani.ts: dice open roads, cities go to the house with most roads into them,
+// cargo and caravanserais count; no more cards and letters). Online: a class's room, every caravan on its own phone (utils/
+// qaravaniRoom.ts; the opener may play too, the rest of the class may watch). Hybrid: one phone in the middle of the table
+// (pages/games/qaravani/Table.tsx). The map is the kit's own (data/qaravaniMap.ts, made by scripts/build-qaravani-map.mjs) and loads
+// only with this page. The tab is kept on the device (`sg-qaravani-tab`).
 
 type Tab = 'online' | 'table';
 const TAB_KEY = 'sg-qaravani-tab';
 const readTab = (): Tab | null => { try { const v = localStorage.getItem(TAB_KEY); return v === 'online' || v === 'table' ? v : null; } catch { return null; } };
 
 const RULES: readonly [string, string][] = [
-  ['სვლა', 'სვლაში ერთ რამეს აკეთებ: იღებ 2 ბარათს, იკავებ გზას, იღებ წერილებს ან აშენებ ქარვასლას.'],
-  ['ბარათები', 'ღიადან ან დასტიდან — როგორც გინდა. ღიად აღებული ორთქლმავალი ამ სვლის ერთადერთი ბარათია. ღია ხუთიდან სამი ორთქლმავალი რომ აღმოჩნდეს, ხუთივე იყრება და ახალი იშლება.'],
-  ['გზა', 'გადადე გზის ფერის იმდენი ბარათი, რამდენი უჯრაც მას აქვს — ორთქლმავალი ნებისმიერ ფერს ცვლის, ნაცრისფერი გზა ნებისმიერი ერთი ფერით იკავება. ქულა მაშინვე ემატება: 1, 2, 4, 7, 10, 15, 18 ან 21. გზა შენს სხვა გზებს შეიძლება არ ებმოდეს.'],
-  ['მთის და გემის გზა', 'მთაში დასტიდან 3 ბარათი იხსნება: ყოველ შენი ფერის ბარათზე და ორთქლმავალზე კიდევ ერთი ბარათი გჭირდება — ან უარს ამბობ და ბარათები ხელში გრჩება. გემის ყოველ ნიშანზე ორთქლმავალი აუცილებელია.'],
-  ['ორმაგი გზა', 'ორივე ზოლს ერთი მოთამაშე ვერ დაიკავებს. 2–3 მოთამაშით მხოლოდ ერთი ზოლი გამოიყენება.'],
-  ['წერილები', 'დასაწყისში 4 წერილიდან 2 მაინც დაიტოვე, მერე დასტიდან 3-დან — 1 მაინც. შესრულებული წერილი (ორი ქალაქი შენი უწყვეტი გზით) ქულას მატებს, შეუსრულებელი — აკლებს.'],
-  ['ქარვასლა', 'პირველი 1 ბარათი ღირს, მეორე — ერთი ფერის 2, მესამე — ერთი ფერის 3. თამაშის ბოლოს ქალაქიდან გამავალ სხვის ერთ გზას შენად ითვლი წერილებისთვის; უხმარი ქარვასლა +4.'],
-  ['დასასრული', 'როცა ვინმეს 2 ან ნაკლები ურემი დარჩება, ყველა — ისიც — კიდევ ერთ სვლას აკეთებს. ყველაზე გრძელი უწყვეტი გზა +10. ტოლობისას იგებს, ვისაც მეტი წერილი შეუსრულდა, მერე — ვინც ნაკლები ქარვასლა ააშენა.'],
+  ['დასაწყისი', `ყველა სახლი პირველ ქარვასლას დგამს პატარა ქალაქში (ღირსება 1–${START_MAX}), რომელიც სხვის ქარვასლას არ ესაზღვრება. დგამენ უკუღმა: პირველი მოთამაშე — ბოლოს, და მაშინვე იწყებს.`],
+  ['სვლა', `ტელეფონი სამ კამათელს აგორებს. დაიკავე ერთი თავისუფალი გზა, რომლის უჯრების რაოდენობასაც ერთი, ორი ან სამი კამათლის ჯამი უდრის — ან ივაჭრე: +${TRADE} აბაზი. ორივე სვლას ამთავრებს.`],
+  ['გზა', 'გზა შენს ქარავანს უნდა ეხებოდეს — შენი გზის ბოლოს ან შენი ქარვასლის ქალაქს; სხვაგან მხოლოდ მაშინ, როცა შენს ქალაქებთან თავისუფალი გზა აღარ დარჩა. გზა იმდენ ურემს ხარჯავს, რამდენი უჯრაც აქვს.'],
+  ['მთა და ზღვა', 'მთის გზას კამათლებში წყვილიც სჭირდება (კარგი ამინდი), ზღვის გზას — ექვსიანი (წყნარი ზღვა).'],
+  ['აბაზი', 'ერთი აბაზი ერთ კამათელს ერთით ცვლის (1-დან 6-მდე) — რამდენჯერაც გინდა, სანამ გზას აირჩევ. დასაწყისში ერთი აბაზი გაქვს.'],
+  ['ქარვასლა', `სვლაში, გზამდე, ${INN_COST} აბაზად ააშენე ქარვასლა შენი ქარავნის ქალაქში (თითოს ${INNS}, ერთ ქალაქში ერთი). სხვისი გზა რომ შენი ქარვასლის ქალაქში შემოვა, +${GUEST} აბაზი შენია.`],
+  ['ორმაგი გზა', 'ორივე ზოლს ერთი სახლი ვერ დაიკავებს; 2–3 მოთამაშით მხოლოდ ერთი ზოლი გამოიყენება.'],
+  ['დასასრული', `${[2, 3, 4, 5].map(n => roundsFor(n)).join('/')} მოგზაურობის შემდეგ (2/3/4/5 მოთამაშით; ურემი თითოს ${[2, 3, 4, 5].map(n => cartsFor(n)).join('/')}): ყოველ ქალაქს იღებს, ვისაც იქ მეტი გზა შედის (ქარვასლა ორ გზად ითვლება; ტოლობისას ღირსება იყოფა). ტვირთის სახეობები შენს ქალაქებში: ${CARGO_PTS.slice(1).join(', ')} ქულა; ყოველი ქარვასლა — ${INN_PTS}. ტოლობისას — მეტი ქალაქი, მერე მეტი აბაზი.`],
 ];
 
 const Rules: React.FC = () => {
@@ -123,14 +123,14 @@ const QaravaniGame: React.FC = () => {
       <section className="rounded-3xl p-4 sm:p-5 bg-gradient-to-br from-[#3b2a1c] to-[#2b1e14] text-[#fbf6ec] shadow-[0_8px_24px_-12px_rgba(43,30,20,0.6)]">
         <p className="font-serif-ge text-[17px] font-bold leading-snug">ქარავანი</p>
         <p className="mt-1.5 text-[12.5px] leading-snug text-[#fbf6ec]/85">
-          XIX საუკუნის ბოლოა: ქარავნები საქართველოს გზებზე ღვინოს, თაფლს, ჩაის, სულგუნს, სპილენძს და აბრეშუმს ეზიდებიან, ფოთიდან
-          თბილისამდე კი პირველი მატარებელი დადის. დაიკავე გზები ქალაქებს შორის, შეასრულე მგზავრების წერილები, ააშენე ქარვასლები —
-          და ააწყვე ყველაზე გრძელი გზა.
+          XIX საუკუნის ბოლოა: ქარავნები საქართველოს გზებზე ღვინოს, თაფლს, ჩაის, ნაბადს, სულგუნს, სპილენძს და აბრეშუმს ეზიდებიან.
+          კამათლები გზას გიხსნის: გაიყვანე ქარავანი ქალაქიდან ქალაქში, ააშენე ქარვასლები, მოიპოვე ქალაქები და შეაგროვე რაც შეიძლება
+          მეტი ტვირთის სახეობა.
         </p>
         <p className="mt-2 text-[12.5px] leading-snug text-[#fbf6ec]/85">
           {tab === 'online'
-            ? 'ონლაინ: ყველას თავის ტელეფონზე უჭირავს ბარათები და წერილები, რუკა ყველასთვის ერთია; ქულებს, წერილებს და გრძელ გზას ტელეფონი ითვლის.'
-            : 'ჰიბრიდული: ერთი ტელეფონი ხელიდან ხელში გადადის — სვლებს შორის მხოლოდ იმას აჩვენებს, ვისი ჯერია, ბოლოს კი ყველაფერს ითვლის.'}
+            ? 'ონლაინ: ყველა თავის ტელეფონზე თამაშობს — რუკა და კამათლები ყველასთვის ერთია, ქულებს ტელეფონი ითვლის.'
+            : 'ჰიბრიდული: ერთი ტელეფონი მაგიდის შუაშია — კამათლებს ის აგორებს, გზებს და ქულებს ის ინახავს; ამობეჭდილი რუკა გვერდით შეიძლება იდოს.'}
         </p>
       </section>
 

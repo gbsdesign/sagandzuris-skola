@@ -1,16 +1,17 @@
 import React, { memo, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { Maximize, Minus, Plus } from 'lucide-react';
-import { CITY_TRACKS, ROUTE_TRACKS, TRACKS } from '../../../utils/qaravani';
+import { CITY_CARGO, CITY_TRACKS, CITY_VALUE, ROUTE_TRACKS, TRACKS, holdersOf } from '../../../utils/qaravani';
 import {
-  QMAP_BG, QMAP_BOX, QMAP_GLYPH, QMAP_NAMES, QMAP_RING, QMAP_TOP, Q_CELLS, Q_CITIES, Q_INN_ART, Q_PLAYERS, Q_SHIP_AT,
+  QMAP_BG, QMAP_BOX, QMAP_NAMES, QMAP_RING, QMAP_TOP, Q_BADGES, Q_CARGO_AT, Q_CELLS, Q_CITIES, Q_GOODS, Q_INN_ART, Q_SHIP_AT,
 } from '../../../data/qaravaniMap';
 import { triggerHaptic } from '../../../utils/haptics';
-import { GOLD, INK, PAPER, WINE, roadLook } from './look';
+import { GOLD, INK, PAPER, ROAD, WINE, houseOf } from './look';
 
-// „ქარავანი“'s map on screen: the printed board's drawing (data/qaravaniMap.ts) with the roads coloured by their owners, the inns
-// and the letters' cities ringed. Two fingers (or ctrl + the wheel) zoom, one finger moves a zoomed map, +/− and „all of it“ sit
-// in its corner; a tap opens the road or the city under it. The cities' names are the print's once they are big enough, before
-// that the screen's own (12 px) — as many as fit, the letters' cities first.
+// „ქარავანი“'s map on screen: the printed board's drawing (data/qaravaniMap.ts) — each city's worth in its circle (the bigger ones
+// golden) and its cargo's mark beside it —, the roads in their owners' colours, the caravanserais, and round every city the
+// colour of the house that would take it now (shared when tied). Two fingers (or ctrl + the wheel) zoom, one finger moves a zoomed
+// map, +/− and „all of it“ sit in its corner; a tap opens the road or the city under it. The cities' names are the print's once
+// they are big enough, before that the screen's own (12 px) — as many as fit, the ringed cities and my caravan's first.
 
 const [BX, BY, BW, BH] = QMAP_BOX;
 const R = QMAP_RING.r;
@@ -40,9 +41,6 @@ const LINES = CELLS.map(cells => {
 /** the cities with the most roads first (their names win a crowded screen) */
 const BY_ROADS = Q_CITIES.map((_, x) => x).sort((a, b) => CITY_TRACKS[b].length - CITY_TRACKS[a].length);
 
-const STONES = [-6.3, 0, 6.3].flatMap(x => [-1.95, 1.95].map(y => (
-  <rect key={`${x}${y}`} x={x - 2.75} y={y - 1.4} width="5.5" height="2.8" rx="1" fill="#d6d0c7" stroke="#8d857b" strokeWidth=".22" />
-)));
 const SNOW = <path d="M-3.5 2.4L-.9 -2.2L.3 -.7L1.2 -1.7L3.5 2.4Z" fill="#fff" stroke={INK} strokeWidth=".42" strokeLinejoin="round" />;
 const SHIP = (
   <>
@@ -59,7 +57,7 @@ const SHIP = (
 const TrackShape = memo<{ t: number; owner: number; closed: boolean }>(({ t, owner, closed }) => {
   const tr = TRACKS[t];
   if (owner >= 0) {
-    const P = Q_PLAYERS[owner] ?? Q_PLAYERS[0];
+    const P = houseOf(owner);
     return (
       <g fill="none" strokeLinecap="round" strokeLinejoin="round">
         <path d={LINES[t]} stroke={P.color} strokeOpacity=".3" strokeWidth="17" />
@@ -71,16 +69,15 @@ const TrackShape = memo<{ t: number; owner: number; closed: boolean }>(({ t, own
       </g>
     );
   }
-  const L = roadLook(tr.color), gray = tr.color === 8, white = tr.color === 5;
-  const ships = tr.ships ? Q_SHIP_AT[tr.route] ?? [] : [];
+  const ships = tr.water ? Q_SHIP_AT[tr.route] ?? [] : [];
   return (
     <g opacity={closed ? 0.3 : 1}>
       {CELLS[t].map(([x, y, a], i) => (
         <g key={i} transform={`translate(${x} ${y})`}>
           <g transform={`rotate(${a})`}>
             {tr.mountain && <path d="M-10 -5.8H10M-10 5.8H10" stroke={INK} strokeWidth=".8" strokeDasharray="1.6 1" />}
-            <rect x="-10" y="-4.5" width="20" height="9" rx="1.4" fill={L.color} stroke={L.dark} strokeWidth={white ? 0.5 : 0.4} />
-            {gray ? STONES : <path d="M-8.4 -2.15H8.4M-8.4 2.15H8.4" stroke={white ? '#b3a99c' : L.dark} strokeOpacity={white ? 1 : 0.6} strokeWidth=".45" strokeDasharray="2.4 .9" />}
+            <rect x="-10" y="-4.5" width="20" height="9" rx="1.4" fill={ROAD.color} stroke={ROAD.dark} strokeWidth=".45" />
+            <path d="M-8.4 -2.15H8.4M-8.4 2.15H8.4" stroke={ROAD.dark} strokeOpacity=".55" strokeWidth=".45" strokeDasharray="2.4 .9" />
           </g>
           {tr.mountain && SNOW}
           {ships.includes(i) && SHIP}
@@ -90,21 +87,46 @@ const TrackShape = memo<{ t: number; owner: number; closed: boolean }>(({ t, own
   );
 });
 
-const Cities = memo<{ k: number; inn: readonly number[] }>(({ k, inn }) => (
+/** the caravanserais' places round a city (up to five), away from its cargo's mark */
+const INN_DIRS = [-135, 135, -45, 45, 180, 0, -90, 90];
+const INN_PLACES = Q_CITIES.map((_, x) => {
+  const b = Q_CARGO_AT[x];
+  const ba = b ? (Math.atan2(b[1], b[0]) * 180) / Math.PI : null;
+  return INN_DIRS.filter(d => ba === null || Math.abs(((d - ba + 540) % 360) - 180) > 50).slice(0, 5)
+    .map(d => [Math.cos(rad(d)) * (R + 2.4), Math.sin(rad(d)) * (R + 2.4)] as const);
+});
+const HR = R + 0.95;
+const HC = 2 * Math.PI * HR;
+
+/** the cities: who would take each now (a ring of its colour, shared when tied), the circle with its worth, the cargo's mark,
+ *  the caravanserais */
+const Cities = memo<{ k: number; inn: readonly number[]; holders: readonly (readonly number[])[]; digits: boolean }>(({ k, inn, holders, digits }) => (
   <g>
-    {Q_CITIES.map((c, x) => (
-      <g key={c.key} transform={`translate(${c.x} ${c.y}) scale(${k})`}>
-        <circle r={R} fill={PAPER} stroke={WINE} strokeWidth=".9" />
-        <circle r={R - 1.15} fill="none" stroke={GOLD} strokeWidth=".35" />
-        <g dangerouslySetInnerHTML={{ __html: QMAP_GLYPH[c.look] }} />
-        {inn[x] >= 0 && (
-          <g transform="translate(6.6 -6.6) scale(1.2)" style={{ color: (Q_PLAYERS[inn[x]] ?? Q_PLAYERS[0]).color }}>
-            <circle r="5.9" fill={PAPER} stroke={INK} strokeWidth=".55" />
-            <g dangerouslySetInnerHTML={{ __html: Q_INN_ART }} />
-          </g>
-        )}
-      </g>
-    ))}
+    {Q_CITIES.map((c, x) => {
+      const w = CITY_VALUE[x], hs = holders[x] ?? [], cargo = CITY_CARGO[x], at = Q_CARGO_AT[x];
+      const inns = [0, 1, 2, 3, 4].filter(p => inn[x] & (1 << p));
+      return (
+        <g key={c.key} transform={`translate(${c.x} ${c.y}) scale(${k})`}>
+          {hs.length === 1 && <circle r={HR} fill="none" stroke={houseOf(hs[0]).color} strokeWidth="1.9" />}
+          {hs.length > 1 && hs.map((p, i) => (
+            <circle key={p} r={HR} fill="none" stroke={houseOf(p).color} strokeWidth="1.9" strokeDasharray={`${HC / hs.length} ${HC}`} strokeDashoffset={(-i * HC) / hs.length} transform="rotate(-90)" />
+          ))}
+          <circle r={R} fill={QMAP_RING.fill[w] || PAPER} stroke={WINE} strokeWidth=".9" />
+          <circle r={R - 1.15} fill="none" stroke={GOLD} strokeWidth=".35" />
+          {digits && <text y={R * 0.05} fontSize={R * 1.25} fontWeight="900" textAnchor="middle" dominantBaseline="central" fill={WINE}>{w}</text>}
+          {cargo >= 0 && at && <g transform={`translate(${at[0]} ${at[1]}) scale(${QMAP_RING.badge / 10})`} dangerouslySetInnerHTML={{ __html: Q_BADGES[Q_GOODS[cargo].k] }} />}
+          {inns.map((p, i) => {
+            const [ix, iy] = INN_PLACES[x][i] ?? [0, -R - 2.4];
+            return (
+              <g key={p} transform={`translate(${ix.toFixed(2)} ${iy.toFixed(2)}) scale(.78)`} style={{ color: houseOf(p).color }}>
+                <circle r="5.6" fill={PAPER} stroke={INK} strokeWidth=".55" />
+                <g dangerouslySetInnerHTML={{ __html: Q_INN_ART }} />
+              </g>
+            );
+          })}
+        </g>
+      );
+    })}
   </g>
 ));
 
@@ -138,23 +160,31 @@ const hits = (a: Box, b: Box) => a[0] < b[2] && a[2] > b[0] && a[1] < b[3] && a[
 
 export interface MapRing { x: number; tone: 'gold' | 'wine' }
 
+/** the cargo's marks, for the names to keep clear of (mm, at scale 1) */
+const BADGES = Q_CITIES.flatMap((c, x) => {
+  const at = Q_CARGO_AT[x];
+  return CITY_CARGO[x] >= 0 && at ? [{ x, dx: at[0], dy: at[1] }] : [];
+});
+
 export const QaravaniMap: React.FC<{
   owner: readonly number[];
   inn: readonly number[];
   players: number;
-  /** cities ringed: the letters' (gold), the chosen letter's (wine) */
+  /** cities ringed, their names first: the chosen one (wine) */
   rings?: readonly MapRing[];
+  /** cities lit in gold, their names not first: where one may build now */
+  spots?: readonly number[];
   /** tracks lit from under: the roads that may be taken now */
   hot?: readonly number[];
   sel?: number | null;
-  /** cities whose names go first */
+  /** cities whose names go first (my caravan's) */
   first?: readonly number[];
   /** shown whole again, or brought to these cities, when `key` changes */
   focus?: { key: string; cities: readonly number[] } | null;
   onRoad?: (t: number) => void;
   onCity?: (x: number) => void;
   className?: string;
-}> = ({ owner, inn, players, rings = [], hot = [], sel = null, first = [], focus, onRoad, onCity, className = 'aspect-[735/459]' }) => {
+}> = ({ owner, inn, players, rings = [], spots = [], hot = [], sel = null, first = [], focus, onRoad, onCity, className = 'aspect-[735/459]' }) => {
   const box = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState<Size>({ w: 0, h: 0 });
   useLayoutEffect(() => {
@@ -175,6 +205,9 @@ export const QaravaniMap: React.FC<{
   const kRef = useRef(k);
   kRef.current = k;
   const zoomed = view.s > fit * 1.02;
+  const holders = useMemo(() => Q_CITIES.map((_, x) => holdersOf(owner, inn, players, x)), [owner, inn, players]);
+  /** a city's worth is written in it once its circle is big enough to read it */
+  const digits = R * k * view.s >= 5.6;
 
   // ---------- moving the map ----------
   const tween = useRef(0);
@@ -311,6 +344,9 @@ export const QaravaniMap: React.FC<{
     const circles: Box[] = dots.map(([px, py]) => [px - rpx, py - rpx, px + rpx, py + rpx]);
     // the zoom buttons in the top right corner are kept clear
     const labels: Box[] = [[size.w - 48, 0, size.w, zoomed ? 132 : 48]];
+    // the cargo's marks: a name keeps clear of them (a ringed city's name may cover one at a cost)
+    const br = QMAP_RING.badge * k * s;
+    const marks: Box[] = BADGES.map(b => { const [px, py] = scr(Q_CITIES[b.x].x + b.dx * k, Q_CITIES[b.x].y + b.dy * k); return [px - br, py - br, px + br, py + br]; });
     // the cities in a ring (my letters' ends) are always named, in the ring's wine: when no side is free, the name may run
     // under a neighbour's circle (the circles are drawn over the names) — the side covering least wins; a circle's middle
     // costs more, a name set farther out more still, and a name whose near end is closer to another city costs most
@@ -337,6 +373,7 @@ export const QaravaniMap: React.FC<{
         if (b[0] < 2 || b[2] > size.w - 2 || b[1] < 1 || b[3] > size.h - 1) continue;
         if (labels.some(o => hits(o, b))) continue;
         let cost = more ? 500 : 0, blocked = false;
+        for (const m of marks) if (hits(m, b)) { if (!sure.has(x)) { blocked = true; break; } cost += 300; }
         const ax = e ? b[0] : wv ? b[2] : tx, ay = n ? b[3] : so ? b[1] : ty, mine = Math.hypot(ax - px, ay - py);
         for (let y = 0; y < circles.length && !blocked; y++) {
           if (y === x) continue;
@@ -395,11 +432,15 @@ export const QaravaniMap: React.FC<{
               ))}
             </g>
           )}
+          {spots.map(x => {
+            const c = Q_CITIES[x];
+            return <circle key={`s${x}`} cx={c.x} cy={c.y} r={R * k + 2.2} fill={GOLD} fillOpacity=".3" stroke={GOLD} strokeWidth={1.6 * Math.max(1, 1.2 / view.s)} />;
+          })}
           {rings.map(r => {
             const c = Q_CITIES[r.x];
             return <circle key={`r${r.x}`} cx={c.x} cy={c.y} r={R * k + 2.6} fill={r.tone === 'wine' ? '#7a2028' : '#c9a24b'} fillOpacity=".22" stroke={r.tone === 'wine' ? WINE : GOLD} strokeWidth={(r.tone === 'wine' ? 2.6 : 2) * Math.max(1, 1.2 / view.s)} />;
           })}
-          <Cities k={k} inn={inn} />
+          <Cities k={k} inn={inn} holders={holders} digits={digits} />
           {big && (
             <g fontWeight="700" strokeLinejoin="round" style={{ paintOrder: 'stroke' }}>
               {Q_CITIES.map((c, x) => {
