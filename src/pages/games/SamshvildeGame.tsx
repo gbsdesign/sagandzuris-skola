@@ -279,9 +279,9 @@ const SamshvildeGame: React.FC = () => {
             {n > 0 ? (
               <ul className="flex flex-wrap gap-1.5">
                 {conf.names.map(x => (
-                  <li key={x} className="inline-flex items-center h-9 pl-3 pr-1 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[13.5px] font-bold text-[#4a3426]">
+                  <li key={x} className="inline-flex items-center h-9 pl-3 pr-0 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[13.5px] font-bold text-[#4a3426]">
                     {x}
-                    <button type="button" onClick={() => removeName(x)} aria-label={`${x} — წაშლა`} className="w-7 h-7 ml-0.5 rounded-full flex items-center justify-center text-[#9a8b7b] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.07] cursor-pointer"><X className="w-3.5 h-3.5" /></button>
+                    <button type="button" onClick={() => removeName(x)} aria-label={`${x} — წაშლა`} className="w-9 h-9 rounded-full flex items-center justify-center text-[#9a8b7b] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.07] cursor-pointer"><X className="w-4 h-4" /></button>
                   </li>
                 ))}
               </ul>
