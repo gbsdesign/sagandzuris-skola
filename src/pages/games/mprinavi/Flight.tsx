@@ -150,7 +150,7 @@ const FlightScreen: React.FC<{
           </p>
         )}
         <section className="rounded-3xl bg-white ring-1 ring-[#e8dcc8] px-2 pt-2 pb-1">
-          <p className="px-2 text-[12px] font-bold leading-snug text-[#75685a] truncate">{note ? `„${note.title}“-ის ნოტები · ${note.clef === 'treble' ? 'სოლის გასაღები' : 'ფას გასაღები'}` : ''}</p>
+          <p className="px-2 text-[12px] font-bold leading-snug text-[#75685a] truncate" title={note?.title}>{note ? `${note.clef === 'treble' ? 'სოლის გასაღები' : 'ფას გასაღები'} · „${note.title}“` : ''}</p>
           <div className="relative">
             <Staff clef={note?.clef ?? 'treble'} width={W}>
               {note && phase !== 'wait' && (

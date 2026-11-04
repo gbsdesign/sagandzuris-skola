@@ -62,9 +62,9 @@ export const CircleNames: React.FC<{ hint?: string; label?: string }> = ({ hint,
       {list.length > 0 ? (
         <ol className="flex flex-wrap gap-1.5">
           {list.map((n, i) => (
-            <li key={n} className="inline-flex items-center h-9 pl-2 pr-1 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[13.5px] font-bold text-[#4a3426]">
+            <li key={n} className="inline-flex items-center h-9 pl-2.5 pr-0 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[13.5px] font-bold text-[#4a3426]">
               <span className="mr-1.5 text-[11.5px] tabular-nums text-[#9a8b7b]">{i + 1}</span>{n}
-              <button type="button" onClick={() => { triggerHaptic(5); set(list.filter(x => x !== n)); }} aria-label={`${n} — წაშლა`} className="w-7 h-7 ml-0.5 rounded-full flex items-center justify-center text-[#9a8b7b] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.07] cursor-pointer"><X className="w-3.5 h-3.5" /></button>
+              <button type="button" onClick={() => { triggerHaptic(5); set(list.filter(x => x !== n)); }} aria-label={`${n} — წაშლა`} className="w-9 h-9 rounded-full flex items-center justify-center text-[#9a8b7b] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.07] cursor-pointer"><X className="w-4 h-4" /></button>
             </li>
           ))}
         </ol>

@@ -39,6 +39,9 @@ export interface TakeResult {
   making: boolean;
 }
 
+/** said when the microphone heard nothing at all (2026-11-04, the games' review: a silent take only showed 0 %) */
+export const SILENT = 'ხმა ვერ გავიგე — ტელეფონი ახლოს დაიჭირე და ხმამაღლა იმღერე.';
+
 /** what the phone plays reaches the ear this much later, and the microphone hears the voice later too (a first guess) */
 const LAG = 0.12;
 const COUNT_MS = 800;

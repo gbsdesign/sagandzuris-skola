@@ -350,13 +350,8 @@ export const LotoTableGame: React.FC = () => {
 
   return (
     <Card className="!p-4 sm:!p-5 space-y-4">
-      <div>
-        <p className="font-serif-ge text-[18px] font-bold text-[#4a3426]">ერთი ტელეფონი, ქაღალდის ბარათები</p>
-        <p className="mt-1.5 text-[13px] leading-snug text-[#75685a]">
-          ტელეფონი ნაწყვეტებს დინამიკით უკრავს, ბავშვები ბარათზე ლობიოს მარცვლით ნიშნავენ. ვინც ხაზს შეკრავს, დაიძახებს „საგანძური!“ — ტელეფონი
-          მის ბარათს შეამოწმებს.
-        </p>
-      </div>
+      {/* how it goes is the „როგორ ვითამაშოთ“ steps above (2026-11-04): the card asks only which cards */}
+      <p className="font-serif-ge text-[18px] font-bold text-[#4a3426]">რომელი ბარათებით?</p>
       <div className="space-y-2" role="radiogroup" aria-label="ბარათები">
         {choice('print', 'დაბეჭდილი ბარათები', `${KIT_CARDS} ბარათი, ოცი საგალობელი — ამობეჭდე ერთხელ, ითამაშე ბევრჯერ.`, Printer)}
         {choice('own', 'საკუთარი ბარათები', 'ყველა თავად ხაზავს 3 × 3 ბადეს და ეკრანზე ნაჩვენები სიიდან ცხრა სახელს წერს.', PenLine)}

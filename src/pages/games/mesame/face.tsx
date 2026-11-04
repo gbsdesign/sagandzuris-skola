@@ -13,7 +13,7 @@ import { pctTone } from '../turniri/Sing';
 import { Lane, hintOf } from './Lane';
 import { VOICE_LABELS, sectionOf, trioVoices, useChantScore } from './plan';
 import { readConf, readSeen, saveConf, saveSeen } from './store';
-import { useTrioTake } from './useTrioTake';
+import { SILENT, useTrioTake } from './useTrioTake';
 
 // „მესამე ხმა“ in a class's room (the quick games' screens): three rounds, a chant's opening each; every player picks
 // their voice and sings it on their own phone in earphones while the phone sings the other two — the share sung right is
@@ -102,7 +102,10 @@ const Round: React.FC<{ q: PublicQ; onScore: (pct: number | null) => void }> = (
           )}
           {take.state === 'score' && <p className="flex items-center gap-2 text-[13.5px] font-bold text-[#75685a]"><Loader2 className="w-4 h-4 animate-spin" />ვითვლი…</p>}
           {r && take.state === 'done' && (
-            <p className={`text-center font-serif-ge text-[40px] font-bold leading-none tabular-nums ${pctTone(r.pct)}`} role="status">{r.pct}%</p>
+            <>
+              <p className={`text-center font-serif-ge text-[40px] font-bold leading-none tabular-nums ${pctTone(r.pct)}`} role="status">{r.pct}%</p>
+              {r.frames.every(f => f.midi === null) && <p className="text-center text-[13.5px] font-bold leading-snug text-[#b3261e]">{SILENT}</p>}
+            </>
           )}
           {!busy && take.state !== 'score' && !r && (
             <p className="flex items-start gap-2 text-[13px] leading-snug text-[#75685a]">

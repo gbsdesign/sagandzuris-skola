@@ -93,11 +93,11 @@ export const Taps: React.FC<{ keys: readonly number[]; taps: readonly number[]; 
       const k = taps[i];
       const bad = wrongFrom >= 0 && i >= wrongFrom && k !== undefined;
       return k === undefined ? (
-        <li key={i} className="w-8 h-8 rounded-full border border-dashed border-[#cdb998] bg-[#f6efe2]" />
+        <li key={i} className="w-9 h-9 rounded-full border border-dashed border-[#cdb998] bg-[#f6efe2]" />
       ) : (
         <li
           key={i}
-          className={`w-8 h-8 rounded-full flex items-center justify-center font-serif-ge text-[10.5px] font-bold text-white ${bad ? 'ring-2 ring-amber-500 ring-offset-1' : ''}`}
+          className={`w-9 h-9 rounded-full flex items-center justify-center font-serif-ge text-[12px] font-bold text-white ${bad ? 'ring-2 ring-amber-500 ring-offset-1' : ''}`}
           style={{ background: KEY_TINT[k % KEY_TINT.length] }}
         >
           {pitchName(keys[k])}
