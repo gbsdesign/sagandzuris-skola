@@ -465,7 +465,7 @@
   (`HybridState`, `markTeam`, kept on the device so ✕ only pauses). The room store is generic since then: `utils/gameRoom.ts`
   `createRooms(be, engine, moves)` over a `RoomEngine` (`games` it plays; samshvilde's is `utils/samshvildeRoom.ts`), the
   app's two stores in `utils/gameRoomFirestore.ts` (`rooms` = samshvilde, `roundRooms` = the quick games: `timeUp(key)`,
-  `reveal`, `next`); the rules let a room be opened for every `ROOM_GAMES` game (26 since 2026-11-04), up to 40 players, an act may carry `ms` (and `text`).
+  `reveal`, `next`); the rules let a room be opened for every `ROOM_GAMES` game (27 since 2026-11-04), up to 40 players, an act may carry `ms` (and `text`).
   Invitations name their game: `data/roomGames.ts` (titles, the hub item, a chat card's `room` = `game:roomId` — a
   samshvilde card keeps the bare id), the Worker's `GAME_TITLES`, `/?open=<game>&c=&r=`, icons
   `components/games/roomGameIcons.ts`; the online tab of every room game is `components/games/RoomSetup.tsx`. Screens
@@ -956,6 +956,25 @@
   of the same day; ✕ only pauses. Screens: `Play.tsx` (`LurjiPlay`: the story card, trays + meidan, my board big with the legal
   lines ringed and the take's ghost, the others small; a phone on its side or a computer = two columns), `look.tsx` (`Stamp`,
   `Trays`, `Meidan`, `Loom`, `useCell`), `Room.tsx` (lobby, the step's clock). Not yet tried by real people on several phones.
+- **„ორი ტახტი“ on phones** (2026-11-04, the printed 7 Wonders Duel №4 gets its app variants; mapItem `takhti`, its entry in `GAMES`
+  has `item`, the hub opens its tab by `requestOpen('takhti', 'online' | 'table')`, tab `sg-takhti-tab`; data `data/takhtiCards.ts` =
+  the kit's 73 cards, 12 monuments, 10 tokens (ids: age I 0–22, II 23–45, III 46–65, guilds 66–72 — copied from the kit's module, keep
+  both in step), rules `utils/oriTakhti.ts` + test, screens `pages/games/takhti/`): seat 0 = west (ქუთაისი, left), 1 = east (თბილისი);
+  the draft 1-2-1 / 1-2-1 (`DRAFT`), the ages' layouts `PLACES` (x in half cards; a place is covered by the next row's |dx| = 1 —
+  `COVERS`), a card built (`priceFor`: the flexible sources tried every way, the bank's price 2 + the other side's production or 1 with
+  a store, the master's mark free, ქვისმთლელები/არსუკისძის სკოლა −2 dearest), sold (2 + yellow) or tucked under a monument; the rider
+  −9…+9 (+ toward Tbilisi), tolls 2/5 once a side (`loot`), a capital = the army's win; a pair of wisdom = a token, six = the science
+  win; seven monuments at most; the weaker side (the rider on its half, even → who took the last card) says who begins an age; the
+  end counts `scoreOf`, a tie → blue points. One number a move (`playPick` / `applyPick`). „ონლაინ“ = a room of its own engine
+  (`utils/takhtiRoom.ts` `TAKHTI_ROOM`, no seats: the view is `publicOf` — the face-down cards, the later ages, the draft's second
+  four and the box hidden; `takhti` in `ROOM_GAMES`/the rules/the Worker's titles; `takhtiRooms` / `useTakhtiRoom`): exactly two
+  play, the host may be one („მეც ვთამაშობ“) or only hold the game, the rest watch; a step's clock (`TAKHTI_SECS`: 120 s a card), then
+  the host's phone moves (`timeUp`: the first free card sold, the first of a choice). „ჰიბრიდული“ (`Table.tsx`, kept in
+  `sg-takhti-table`, names + who begins in `sg-takhti-conf`) = one phone between the thrones; „უკან“ only while nothing new turned
+  up (`canBack`). Screens: `Play.tsx` (story, `Track` „ლიხის გზა“, `Pyramid` with the price on each free card, a tap opens
+  `CardSheet` — build · sell · tuck; the kingdoms' `CityPanel` → `CitySheet`; the chronicle `lineText`), `look.tsx` (the kit's marks,
+  `CardFace` with the kit's pictures faint, `CardBack` with the age's numeral in the visible top half), `words.ts`, a phone on its
+  side or a computer = two columns (`useTwoCols`, `useCardW`). Not yet tried by real people on several phones.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
