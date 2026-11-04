@@ -1,40 +1,53 @@
-import { Q_CITY_COUNT, Q_LONG, Q_ROUTES, Q_TICKETS } from '../data/qaravaniRoutes';
+import { Q_CITY_CARGO, Q_CITY_COUNT, Q_CITY_VALUE, Q_ROUTES } from '../data/qaravaniRoutes';
 
-// „ქარავანი“ on phones — the rules of the printed kit №3 (scripts/print-games/games/qaravani.mjs: a Ticket to Ride: Europe on a map
-// of Georgia at the end of the XIX century) for the app's two variants: one phone passed round (pages/games/qaravani/Table.tsx)
-// and a class's room (utils/qaravaniRoom.ts). The map's roads and the travellers' letters come from the kit
-// (data/qaravaniRoutes.ts). Cards: the eight goods 0–7 (data/qaravaniMap.ts Q_GOODS' order) and the locomotive 8; a road's colour
-// 8 is the gray stone road. A move is one number (`pick`), so the room sends a number and the phone's undo keeps whole games.
-// Everything random after the deal (the deck shuffled again from the discards) runs on the game's own seed, so a move is pure.
+// „ქარავანი“ — the school's own game of caravan roads (series №3; since 2026-11-04 on its own rules, no longer a Ticket to Ride).
+// Each house first places a caravanserai in a town (the house before the first one chooses first). A journey (round) = every house
+// once: it rolls three dice and opens one free road touching its caravan's cities whose cells some of its dice add up to — a
+// mountain road wants a pair among the dice (good weather in the pass), a water road a six (calm water); an abazi moves a die by
+// one; a turn without a road is a trade (two abazi). Three abazi build another caravanserai in a city of one's caravan (a guest's
+// road into it brings its owner an abazi). After the last journey every city goes to the house with most roads into it (a
+// caravanserai counts as two; a tie shares its worth, rounded down), the kinds of cargo one's caravan reaches count by CARGO_PTS,
+// and every caravanserai is two points. Played on one phone (pages/games/qaravani/Table.tsx), in a class's room
+// (utils/qaravaniRoom.ts) and on paper (scripts/print-games/games/qaravani.mjs reads these numbers). A move is one number (`pick`);
+// the dice fall on the game's own seed, so a move is pure and the phone's undo keeps whole games.
 
-export const LOCO = 8;
-export const GRAY = 8;
-export const KINDS = 9;
-export const GOODS_N = 8;
-export const DECK_EACH = 12;
-export const DECK_LOCOS = 14;
-export const FACE_N = 5;
-export const HAND0 = 4;
 export const MIN_Q = 2;
 export const MAX_Q = 5;
+export const DICE_N = 3;
+/** a house's caravanserais, their price in abazi, and what one counts for in its city */
 export const INNS = 3;
-export const INN_POINTS = 4;
-export const LONGEST_POINTS = 10;
-/** a road's points by its cells: 1 → 1, 2 → 2, 3 → 4, 4 → 7, 5 → 10, 6 → 15, 7 → 18, 8 → 21 */
-export const SCORE = [0, 1, 2, 4, 7, 10, 15, 18, 21] as const;
-/** the last round begins when someone ends a turn with this many carts or fewer */
-export const LAST_CARTS = 2;
-export const cartsFor = (players: number) => (players >= 5 ? 35 : 40);
+export const INN_COST = 3;
+export const INN_WEIGHT = 2;
+export const INN_PTS = 2;
+/** a turn without a road: this many abazi; a guest's road into one's caravanserai's city: one */
+export const TRADE = 2;
+export const GUEST = 1;
+export const COINS0 = 1;
+export const COINS_MAX = 30;
+/** the journeys (rounds) a game has, and each house's carts */
+export const roundsFor = (players: number) => [0, 0, 12, 10, 9, 8][players] ?? 8;
+export const cartsFor = (players: number) => [0, 0, 20, 18, 16, 15][players] ?? 15;
+/** the kinds of cargo one's caravan reaches (0–8) → points */
+export const CARGO_PTS = [0, 1, 3, 5, 8, 11, 15, 20, 25] as const;
+export const CARGO_N = 8;
+/** a start caravanserai stands in a town (worth ≤ START_MAX), not next to another caravanserai */
+export const START_MAX = 2;
 export const LOG_MAX = 40;
 
+/** each city's worth (the house with most roads into it takes it at the end; a tie shares it, rounded down) and its cargo (0–7 as
+ *  data/qaravaniMap.ts Q_GOODS: ღვინო, თაფლი, ჩაი, ლურჯი სუფრა, ნაბადი, სულგუნი, სპილენძი, აბრეშუმი; −1 none) — the kit's map
+ *  sets both (scripts/print-games/games/qaravani.mjs) */
+export const CITY_VALUE: readonly number[] = Q_CITY_VALUE;
+export const CITY_CARGO: readonly number[] = Q_CITY_CARGO;
+
 /** a track: one lane of a road (a double road has two, `twin` names the other) */
-export interface Track { route: number; a: number; b: number; n: number; color: number; mountain: boolean; ships: number; twin: number }
+export interface Track { route: number; a: number; b: number; n: number; mountain: boolean; water: boolean; twin: number }
 export const TRACKS: readonly Track[] = (() => {
   const out: Track[] = [];
-  Q_ROUTES.forEach(([a, b, n, color, second, m, ships], route) => {
+  Q_ROUTES.forEach(([a, b, n, double, m, ships], route) => {
     const t0 = out.length;
-    out.push({ route, a, b, n, color, mountain: !!m, ships, twin: second >= 0 ? t0 + 1 : -1 });
-    if (second >= 0) out.push({ route, a, b, n, color: second, mountain: !!m, ships, twin: t0 });
+    out.push({ route, a, b, n, mountain: !!m, water: ships > 0, twin: double ? t0 + 1 : -1 });
+    if (double) out.push({ route, a, b, n, mountain: !!m, water: ships > 0, twin: t0 });
   });
   return out;
 })();
@@ -43,551 +56,394 @@ export const ROUTE_TRACKS: readonly (readonly number[])[] = Q_ROUTES.map((_, r) 
 /** the tracks touching each city */
 export const CITY_TRACKS: readonly (readonly number[])[] = Array.from({ length: Q_CITY_COUNT }, (_, x) => TRACKS.flatMap((t, i) => (t.a === x || t.b === x ? [i] : [])));
 
-export interface Ticket { a: number; b: number; v: number; long: boolean }
-/** the 40 travellers' letters, then the 6 long journeys */
-export const TICKETS: readonly Ticket[] = Q_TICKETS.map(([a, b, v], i) => ({ a, b, v, long: i >= Q_TICKETS.length - Q_LONG }));
-export const SHORT_N = Q_TICKETS.length - Q_LONG;
+/** the cities next to each city */
+export const NEXT: readonly (readonly number[])[] = Array.from({ length: Q_CITY_COUNT }, (_, x) =>
+  [...new Set(CITY_TRACKS[x].map(t => (TRACKS[t].a === x ? TRACKS[t].b : TRACKS[t].a)))]);
 
 export interface QPlayer {
   name: string;
-  /** cards in hand: a count for each kind (0–7 the goods, 8 locomotives) */
-  hand: number[];
-  /** the letters kept */
-  tickets: number[];
   carts: number;
-  /** inns not yet built */
+  coins: number;
+  /** caravanserais not yet built */
   inns: number;
-  /** the roads' points so far */
-  pts: number;
 }
 
 export type QPhase =
-  /** the deal: everyone keeps 2, 3 or all 4 of their letters (one long journey and three) — all at once */
-  | { k: 'start'; offer: number[][]; kept: (number[] | null)[] }
+  /** each house places its first caravanserai, the house before the first one first */
+  | { k: 'start' }
+  /** the dice are rolled: abazi may move them and a caravanserai may be built, then a road or a trade ends the turn */
   | { k: 'turn' }
-  /** one card taken (not a face-up locomotive): one more — `face` the kinds taken face up, `blind` from the deck */
-  | { k: 'second'; face: number[]; blind: number }
-  /** three letters drawn: keep 1, 2 or 3 */
-  | { k: 'tickets'; offer: number[] }
-  /** a mountain road: the cards (`c` the colour, 8 = locomotives only, `l` of them locomotives) are still in hand, three cards
-   *  were turned up (`drawn`) and the road wants `extra` more */
-  | { k: 'tunnel'; t: number; c: number; l: number; drawn: number[]; extra: number }
   | { k: 'end' };
 
 export type QLine =
-  | { k: 'cards'; p: number; face: number[]; blind: number }
-  | { k: 'road'; p: number; t: number; c: number; l: number; extra: number }
-  | { k: 'tunnel'; p: number; t: number; extra: number }
-  | { k: 'tickets'; p: number; kept: number; of: number }
-  | { k: 'start'; p: number; kept: number }
+  | { k: 'road'; p: number; t: number; spent: number }
+  | { k: 'trade'; p: number; spent: number }
   | { k: 'inn'; p: number; x: number }
-  | { k: 'wash' }
-  | { k: 'last'; p: number }
-  | { k: 'pass'; p: number };
+  | { k: 'guest'; p: number; x: number; from: number }
+  | { k: 'round'; r: number };
 
 export interface QGame {
-  v: 1;
+  v: 2;
   players: QPlayer[];
-  /** the draw pile, its top last */
-  deck: number[];
-  pile: number[];
-  /** the five face-up cards (−1 = an empty place) */
-  face: number[];
-  /** the letters' pile, its top last (letters given back go under it) */
-  tdeck: number[];
+  /** the turn's dice as they stand (an abazi moves one) and as they fell */
+  dice: number[];
+  rolled: number[];
+  /** abazi spent on the dice this turn */
+  spent: number;
   /** each track's owner, −1 free */
   owner: number[];
-  /** each city's inn: its owner, −1 none */
+  /** each city's caravanserais: a mask of the houses */
   inn: number[];
   turn: number;
   first: number;
   phase: QPhase;
-  /** −1, or the turns left in the last round */
-  left: number;
-  /** turns passed in a row (everyone passing ends the game) */
-  idle: number;
+  /** the journey (round) now, from 1 */
+  round: number;
   step: number;
   seed: number;
   log: QLine[];
 }
 
-// ---------- the seeded shuffles ----------
+// ---------- the dice ----------
 const rand = (g: { seed: number }) => {
   let t = (g.seed = (g.seed + 0x6d2b79f5) | 0);
   t = Math.imul(t ^ (t >>> 15), t | 1);
   t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
   return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
 };
-const shuffleBy = <T,>(xs: T[], r: () => number) => {
-  const a = [...xs];
-  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
-  return a;
+const roll = (g: QGame) => {
+  g.dice = Array.from({ length: DICE_N }, () => 1 + Math.floor(rand(g) * 6));
+  g.rolled = [...g.dice];
+  g.spent = 0;
 };
 const clone = (g: QGame): QGame => JSON.parse(JSON.stringify(g)) as QGame;
-const bits = (m: number) => { let k = 0; for (let x = m; x; x &= x - 1) k++; return k; };
 const push = (g: QGame, line: QLine) => { g.log = [...g.log, line].slice(-LOG_MAX); };
+const has = (mask: number, p: number) => (mask & (1 << p)) !== 0;
 
-/** a card from the deck (the discards shuffled into a new deck when it is empty), −1 when there is none */
-const drawCard = (g: QGame) => {
-  if (!g.deck.length) {
-    if (!g.pile.length) return -1;
-    g.deck = shuffleBy(g.pile, () => rand(g));
-    g.pile = [];
+/** what some of the dice (one, two or all three) add up to */
+export const sumsOf = (dice: readonly number[]): number[] => {
+  const out = new Set<number>();
+  for (let m = 1; m < 1 << dice.length; m++) out.add(dice.reduce((s, d, i) => (m & (1 << i) ? s + d : s), 0));
+  return [...out].sort((a, b) => a - b);
+};
+export const hasPair = (dice: readonly number[]) => dice.some((d, i) => dice.indexOf(d) !== i);
+export const hasSix = (dice: readonly number[]) => dice.includes(6);
+/** the dice that add up to `n` (the first such choice, the fewest dice first), or null */
+export const diceFor = (dice: readonly number[], n: number): number[] | null => {
+  let best: number[] | null = null;
+  for (let m = 1; m < 1 << dice.length; m++) {
+    const idx = dice.flatMap((_, i) => (m & (1 << i) ? [i] : []));
+    if (idx.reduce((s, i) => s + dice[i], 0) === n && (!best || idx.length < best.length)) best = idx;
   }
-  return g.deck.pop() as number;
-};
-const fillFace = (g: QGame) => {
-  for (let i = 0; i < FACE_N; i++) if (g.face[i] < 0) { const c = drawCard(g); if (c < 0) return; g.face[i] = c; }
-};
-/** three face-up locomotives: all five go and five new are laid (at most three times in a row) */
-const washFace = (g: QGame) => {
-  for (let k = 0; k < 3 && g.face.filter(c => c === LOCO).length >= 3; k++) {
-    g.pile.push(...g.face.filter(c => c >= 0));
-    g.face = g.face.map(() => -1);
-    fillFace(g);
-    push(g, { k: 'wash' });
-  }
+  return best;
 };
 
-export const newQaravani = ({ names, first, rnd }: { names: string[]; first?: number; rnd: () => number }): QGame | null => {
-  const n = names.length;
-  if (n < MIN_Q || n > MAX_Q) return null;
-  const deck = shuffleBy([...Array.from({ length: GOODS_N * DECK_EACH }, (_, i) => i % GOODS_N), ...Array(DECK_LOCOS).fill(LOCO)], rnd);
-  const shorts = shuffleBy(Array.from({ length: SHORT_N }, (_, i) => i), rnd);
-  const longs = shuffleBy(Array.from({ length: Q_LONG }, (_, i) => SHORT_N + i), rnd);
-  const players: QPlayer[] = names.map(name => {
-    const hand = Array(KINDS).fill(0);
-    for (const c of deck.splice(-HAND0)) hand[c]++;
-    return { name, hand, tickets: [], carts: cartsFor(n), inns: INNS, pts: 0 };
-  });
-  const offer = names.map(() => [longs.pop() as number, ...shorts.splice(-3)]);
-  const f0 = first !== undefined && first >= 0 && first < n ? first : Math.floor(rnd() * n);
-  const g: QGame = {
-    v: 1, players, deck, pile: [], face: Array(FACE_N).fill(-1), tdeck: shorts, owner: TRACKS.map(() => -1), inn: Array(Q_CITY_COUNT).fill(-1),
-    turn: f0, first: f0, phase: { k: 'start', offer, kept: names.map(() => null) }, left: -1, idle: 0, step: 0,
-    seed: Math.floor(rnd() * 2147483647), log: [],
-  };
-  fillFace(g);
-  washFace(g);
-  return g;
-};
-
-/** a step's key: the deal is one step for everyone (they answer at once), every move after it a new one */
-export const keyOf = (g: QGame) => (g.phase.k === 'start' ? 'start' : String(g.step));
-/** who the game waits on */
-export const waitingOn = (g: QGame): number[] => {
-  const ph = g.phase;
-  if (ph.k === 'end') return [];
-  if (ph.k === 'start') return ph.kept.flatMap((k, i) => (k ? [] : [i]));
-  return [g.turn];
-};
-
-// ---------- the moves as numbers ----------
-export const FACE_PICK = 100; // + the place 0–4
-export const DECK_PICK = 105;
-export const TICKETS_PICK = 106;
-export const PASS_PICK = 107;
-/** the letters kept: a mask over the offer */
-export const keepPick = (mask: number) => 200 + mask;
-/** a mountain road's extra cards, `l` of them locomotives */
-export const tunnelPick = (l: number) => 300 + l;
-export const QUIT_PICK = 399;
-/** a road: its track, the cards' colour (8 = locomotives only) and how many locomotives */
-export const claimPick = (t: number, c: number, l: number) => 10000 + t * 100 + c * 10 + l;
-export const innPick = (x: number, c: number, l: number) => 30000 + x * 100 + c * 10 + l;
-const unpay = (p: number, base: number) => ({ id: Math.floor((p - base) / 100), c: Math.floor(((p - base) % 100) / 10), l: (p - base) % 10 });
-
-// ---------- what may be paid ----------
-export interface Pay { c: number; l: number }
-/** the ways to pay `n` cards of `color` (8 = any one colour, as a gray road or an inn wants) with at least `locos` locomotives,
- *  from `hand`; c = 8 means locomotives only. The fewest locomotives first for each colour. */
-export const payments = (hand: readonly number[], n: number, color: number, locos = 0): Pay[] => {
-  const out: Pay[] = [];
-  const colours = color === GRAY ? Array.from({ length: GOODS_N }, (_, i) => i) : [color];
-  for (const c of colours) for (let l = Math.max(locos, n - hand[c]); l < n && l <= hand[LOCO]; l++) if (n - l >= 1) out.push({ c, l });
-  if (hand[LOCO] >= n && n >= Math.max(1, locos)) out.push({ c: LOCO, l: n });
-  return out;
-};
-const pays = (hand: readonly number[], n: number, color: number, locos: number, c: number, l: number) =>
-  payments(hand, n, color, locos).some(p => p.c === c && p.l === l);
-const spend = (g: QGame, p: number, c: number, l: number, n: number) => {
-  const h = g.players[p].hand;
-  if (c !== LOCO) { h[c] -= n - l; for (let i = 0; i < n - l; i++) g.pile.push(c); }
-  h[LOCO] -= l;
-  for (let i = 0; i < l; i++) g.pile.push(LOCO);
-};
-
-/** may `p` (with `carts` left, in a game of `players`) take track `t` (not counting the cards)? The screens ask it of the view */
+/** may `p` (with `carts` left, in a game of `players`) take track `t`, the dice aside? The screens ask it of the view too */
 export const roadOpen = (owner: readonly number[], carts: number, players: number, p: number, t: number) => {
   const tr = TRACKS[t];
   if (!tr || owner[t] !== -1 || carts < tr.n) return false;
   if (tr.twin >= 0 && (owner[tr.twin] === p || (players <= 3 && owner[tr.twin] !== -1))) return false;
   return true;
 };
-export const trackOpen = (g: QGame, p: number, t: number) => roadOpen(g.owner, g.players[p].carts, g.players.length, p, t);
-/** the ways `p` can pay for track `t` now (empty: not now) */
-export const trackPayments = (g: QGame, p: number, t: number): Pay[] =>
-  trackOpen(g, p, t) ? payments(g.players[p].hand, TRACKS[t].n, TRACKS[t].color, TRACKS[t].ships) : [];
-/** an inn costs 1, then 2, then 3 cards of one colour */
-export const innCost = (pl: QPlayer) => INNS - pl.inns + 1;
-export const innPayments = (g: QGame, p: number, x: number): Pay[] =>
-  g.players[p].inns > 0 && g.inn[x] === -1 ? payments(g.players[p].hand, innCost(g.players[p]), GRAY) : [];
-/** a mountain road's extra cards from `hand`: `l` of them locomotives (only locomotives when the road was paid with locomotives
- *  only) */
-export const tunnelOptions = (ph: Extract<QPhase, { k: 'tunnel' }>, hand: readonly number[]): number[] => {
-  const n = TRACKS[ph.t].n;
-  const left = ph.c === LOCO ? 0 : hand[ph.c] - (n - ph.l), locos = hand[LOCO] - ph.l;
-  const out: number[] = [];
-  for (let l = 0; l <= ph.extra; l++) if (l <= locos && ph.extra - l <= left && (ph.c !== LOCO || l === ph.extra)) out.push(l);
+/** the cities `p`'s caravan reaches: its roads' ends and its caravanserais */
+export const netOf = (owner: readonly number[], inn: readonly number[], p: number) => {
+  const out = new Set<number>();
+  owner.forEach((o, t) => { if (o === p) { out.add(TRACKS[t].a); out.add(TRACKS[t].b); } });
+  inn.forEach((m, x) => { if (has(m, p)) out.add(x); });
   return out;
 };
-export const tunnelPayments = (g: QGame): number[] => (g.phase.k === 'tunnel' ? tunnelOptions(g.phase, g.players[g.turn].hand) : []);
-const canSecond = (g: QGame) => g.deck.length + g.pile.length > 0 || g.face.some(c => c >= 0 && c !== LOCO);
-const canDraw = (g: QGame) => g.deck.length + g.pile.length > 0 || g.face.some(c => c >= 0);
-/** can `p` do anything but pass? */
-const canAct = (g: QGame, p: number) => canDraw(g) || g.tdeck.length > 0
-  || TRACKS.some((_, t) => trackPayments(g, p, t).length > 0) || g.inn.some((_, x) => innPayments(g, p, x).length > 0);
+/** does track `t` join `p`'s caravan? It may start elsewhere only when no free road touches `p`'s cities */
+export const joins = (owner: readonly number[], inn: readonly number[], carts: number, players: number, p: number, t: number) => {
+  const mine = netOf(owner, inn, p);
+  if (!mine.size) return true;
+  const tr = TRACKS[t];
+  if (mine.has(tr.a) || mine.has(tr.b)) return true;
+  return !TRACKS.some((u, i) => (mine.has(u.a) || mine.has(u.b)) && roadOpen(owner, carts, players, p, i));
+};
+/** do these dice open track `t` (its cells, the pass's pair, the water's six)? */
+export const diceOpen = (dice: readonly number[], t: number) => {
+  const tr = TRACKS[t];
+  return !!tr && sumsOf(dice).includes(tr.n) && (!tr.mountain || hasPair(dice)) && (!tr.water || hasSix(dice));
+};
+export const canTake = (g: QGame, p: number, t: number) =>
+  g.phase.k === 'turn' && p === g.turn && roadOpen(g.owner, g.players[p].carts, g.players.length, p, t) && diceOpen(g.dice, t)
+  && joins(g.owner, g.inn, g.players[p].carts, g.players.length, p, t);
+/** the tracks `p` may take with the dice as they stand */
+export const takeable = (g: QGame, p = g.turn) => TRACKS.flatMap((_, t) => (canTake(g, p, t) ? [t] : []));
+/** where `p` may build a caravanserai now: at the start any city without one (free), later a city of its caravan (three abazi) */
+export const innSpots = (g: QGame, p = g.turn): number[] => {
+  const pl = g.players[p];
+  if (!pl || p !== g.turn) return [];
+  if (g.phase.k === 'start') return g.inn.flatMap((m, x) => (m === 0 && CITY_VALUE[x] <= START_MAX && !NEXT[x].some(y => g.inn[y]) ? [x] : []));
+  if (g.phase.k !== 'turn' || pl.inns <= 0 || pl.coins < INN_COST) return [];
+  return [...netOf(g.owner, g.inn, p)].filter(x => !has(g.inn[x], p)).sort((a, b) => a - b);
+};
+
+export const newQaravani = ({ names, first, rnd }: { names: string[]; first?: number; rnd: () => number }): QGame | null => {
+  const n = names.length;
+  if (n < MIN_Q || n > MAX_Q) return null;
+  const f0 = first !== undefined && first >= 0 && first < n ? first : Math.floor(rnd() * n);
+  return {
+    v: 2, players: names.map(name => ({ name: name.slice(0, 40), carts: cartsFor(n), coins: COINS0, inns: INNS })),
+    dice: [], rolled: [], spent: 0, owner: TRACKS.map(() => -1), inn: Array(Q_CITY_COUNT).fill(0),
+    // the caravanserais of the start are placed backwards: the house before the first one chooses first
+    turn: (f0 + n - 1) % n, first: f0, phase: { k: 'start' }, round: 1, step: 0, seed: Math.floor(rnd() * 2147483647), log: [],
+  };
+};
+
+/** a step's key: every move a new one */
+export const keyOf = (g: QGame) => String(g.step);
+
+// ---------- the moves as numbers ----------
+/** an abazi moves die `d` up or down by one */
+export const tweakPick = (d: number, up: boolean) => 100 + d * 2 + (up ? 1 : 0);
+export const TRADE_PICK = 110;
+export const claimPick = (t: number) => 1000 + t;
+export const innPick = (x: number) => 2000 + x;
 
 // ---------- the turn's end ----------
-const endTurn = (g: QGame, passed = false) => {
+const endTurn = (g: QGame) => {
   const p = g.turn, n = g.players.length;
-  g.idle = passed ? g.idle + 1 : 0;
-  if (g.left > 0) g.left--;
-  else if (g.left < 0 && g.players[p].carts <= LAST_CARTS) { g.left = n; push(g, { k: 'last', p }); }
-  if (g.left === 0 || g.idle >= n) { g.phase = { k: 'end' }; return; }
   g.turn = (p + 1) % n;
+  if (g.turn === g.first) {
+    if (g.round >= roundsFor(n)) { g.phase = { k: 'end' }; g.dice = []; g.rolled = []; g.spent = 0; return; }
+    g.round++;
+    push(g, { k: 'round', r: g.round });
+  }
   g.phase = { k: 'turn' };
-};
-const cardsDone = (g: QGame, face: number[], blind: number) => { push(g, { k: 'cards', p: g.turn, face, blind }); endTurn(g); };
-const claimDone = (g: QGame, t: number, c: number, l: number, extra: number) => {
-  const p = g.turn, tr = TRACKS[t];
-  g.owner[t] = p;
-  g.players[p].carts -= tr.n;
-  g.players[p].pts += SCORE[tr.n];
-  push(g, { k: 'road', p, t, c, l, extra });
-  endTurn(g);
+  roll(g);
 };
 
 /** the game after `seat`'s move, or the same game when the move is not allowed now */
 export const applyPick = (g0: QGame, seat: number, pick: number): QGame => {
-  const ph0 = g0.phase;
-  if (ph0.k === 'end' || !Number.isInteger(pick) || seat < 0 || seat >= g0.players.length) return g0;
-  if (ph0.k === 'start') {
-    const offer = ph0.offer[seat], mask = pick - 200;
-    if (ph0.kept[seat] || mask < 0 || mask >= 1 << offer.length || bits(mask) < 2) return g0;
-    const g = clone(g0), ph = g.phase as Extract<QPhase, { k: 'start' }>;
-    const kept = offer.filter((_, i) => mask & (1 << i));
-    ph.kept[seat] = kept;
-    g.players[seat].tickets = kept;
-    push(g, { k: 'start', p: seat, kept: kept.length });
-    if (ph.kept.every(Boolean)) { g.phase = { k: 'turn' }; g.turn = g.first; }
-    g.step++;
-    return g;
-  }
-  if (seat !== g0.turn) return g0;
-  const g = clone(g0), ph = g.phase, p = seat, me = g.players[p];
-
-  if (ph.k === 'turn' || ph.k === 'second') {
-    const first = ph.k === 'turn';
-    if (pick >= FACE_PICK && pick < FACE_PICK + FACE_N) {
-      const i = pick - FACE_PICK, c = g.face[i];
-      if (c < 0 || (!first && c === LOCO)) return g0;
-      me.hand[c]++;
-      g.face[i] = -1;
-      fillFace(g);
-      washFace(g);
-      const face = first ? [c] : [...(ph as { face: number[] }).face, c], blind = first ? 0 : (ph as { blind: number }).blind;
-      if (!first || c === LOCO || !canSecond(g)) cardsDone(g, face, blind);
-      else g.phase = { k: 'second', face, blind };
-    } else if (pick === DECK_PICK) {
-      const c = drawCard(g);
-      if (c < 0) return g0;
-      me.hand[c]++;
-      const face = first ? [] : (ph as { face: number[] }).face, blind = (first ? 0 : (ph as { blind: number }).blind) + 1;
-      if (!first || !canSecond(g)) cardsDone(g, face, blind);
-      else g.phase = { k: 'second', face, blind };
-    } else if (!first) {
-      return g0;
-    } else if (pick === TICKETS_PICK) {
-      if (!g.tdeck.length) return g0;
-      g.phase = { k: 'tickets', offer: g.tdeck.splice(-3).reverse() };
-    } else if (pick === PASS_PICK) {
-      if (canAct(g, p)) return g0;
-      push(g, { k: 'pass', p });
-      endTurn(g, true);
-    } else if (pick >= 10000 && pick < 20000) {
-      const { id: t, c, l } = unpay(pick, 10000), tr = TRACKS[t];
-      if (!tr || !trackOpen(g, p, t) || !pays(me.hand, tr.n, tr.color, tr.ships, c, l)) return g0;
-      if (!tr.mountain) { spend(g, p, c, l, tr.n); claimDone(g, t, c, l, 0); }
-      else {
-        const drawn: number[] = [];
-        for (let k = 0; k < 3; k++) { const d = drawCard(g); if (d < 0) break; drawn.push(d); }
-        const extra = drawn.filter(d => d === LOCO || (c !== LOCO && d === c)).length;
-        if (!extra) { g.pile.push(...drawn); spend(g, p, c, l, tr.n); claimDone(g, t, c, l, 0); }
-        else g.phase = { k: 'tunnel', t, c, l, drawn, extra };
-      }
-    } else if (pick >= 30000 && pick < 40000) {
-      const { id: x, c, l } = unpay(pick, 30000);
-      if (x >= Q_CITY_COUNT || !innPayments(g, p, x).some(q => q.c === c && q.l === l)) return g0;
-      spend(g, p, c, l, innCost(me));
-      g.inn[x] = p;
-      me.inns--;
-      push(g, { k: 'inn', p, x });
-      endTurn(g);
-    } else return g0;
-  } else if (ph.k === 'tickets') {
-    const mask = pick - 200;
-    if (mask < 1 || mask >= 1 << ph.offer.length) return g0;
-    const kept = ph.offer.filter((_, i) => mask & (1 << i));
-    me.tickets.push(...kept);
-    g.tdeck.unshift(...ph.offer.filter((_, i) => !(mask & (1 << i))));
-    push(g, { k: 'tickets', p, kept: kept.length, of: ph.offer.length });
+  const ph = g0.phase;
+  if (ph.k === 'end' || !Number.isInteger(pick) || seat !== g0.turn) return g0;
+  const g = clone(g0), p = seat, me = g.players[p];
+  if (ph.k === 'turn' && pick >= 100 && pick < 100 + 2 * DICE_N) {
+    const d = (pick - 100) >> 1, up = (pick - 100) % 2 === 1, v = g.dice[d] + (up ? 1 : -1);
+    if (me.coins < 1 || v < 1 || v > 6) return g0;
+    g.dice[d] = v;
+    me.coins--;
+    g.spent++;
+  } else if (ph.k === 'turn' && pick === TRADE_PICK) {
+    me.coins = Math.min(COINS_MAX, me.coins + TRADE);
+    push(g, { k: 'trade', p, spent: g.spent });
     endTurn(g);
-  } else if (ph.k === 'tunnel') {
-    const tr = TRACKS[ph.t];
-    if (pick === QUIT_PICK) {
-      g.pile.push(...ph.drawn);
-      push(g, { k: 'tunnel', p, t: ph.t, extra: ph.extra });
-      endTurn(g);
-    } else {
-      const xl = pick - 300;
-      if (!tunnelPayments(g).includes(xl)) return g0;
-      g.pile.push(...ph.drawn);
-      spend(g, p, ph.c, ph.l, tr.n);
-      if (ph.c === LOCO) spend(g, p, LOCO, ph.extra, ph.extra);
-      else spend(g, p, ph.c, xl, ph.extra);
-      claimDone(g, ph.t, ph.c, ph.l, ph.extra);
+  } else if (ph.k === 'turn' && pick >= 1000 && pick < 1000 + TRACKS.length) {
+    const t = pick - 1000, tr = TRACKS[t];
+    if (!canTake(g, p, t)) return g0;
+    g.owner[t] = p;
+    me.carts -= tr.n;
+    push(g, { k: 'road', p, t, spent: g.spent });
+    for (const x of new Set([tr.a, tr.b])) {
+      g.players.forEach((pl, q) => {
+        if (q !== p && has(g.inn[x], q)) { pl.coins = Math.min(COINS_MAX, pl.coins + GUEST); push(g, { k: 'guest', p: q, x, from: p }); }
+      });
     }
-  }
+    endTurn(g);
+  } else if (pick >= 2000 && pick < 2000 + Q_CITY_COUNT) {
+    const x = pick - 2000;
+    if (!innSpots(g, p).includes(x)) return g0;
+    if (ph.k === 'turn') me.coins -= INN_COST;
+    me.inns--;
+    g.inn[x] |= 1 << p;
+    push(g, { k: 'inn', p, x });
+    if (ph.k === 'start') {
+      if (p === g.first) { g.phase = { k: 'turn' }; roll(g); } else g.turn = (p + g.players.length - 1) % g.players.length;
+    }
+  } else return g0;
   g.step++;
   return g;
 };
 
-/** every move `seat` may make now (the tests' random games, and the late player's fallback) */
-export const legalPicks = (g: QGame, seat: number): number[] => {
-  const ph = g.phase;
-  if (ph.k === 'end') return [];
-  if (ph.k === 'start') {
-    if (ph.kept[seat]) return [];
-    const n = ph.offer[seat].length;
-    return Array.from({ length: 1 << n }, (_, m) => m).filter(m => bits(m) >= 2).map(keepPick);
-  }
-  if (seat !== g.turn) return [];
-  if (ph.k === 'tickets') return Array.from({ length: (1 << ph.offer.length) - 1 }, (_, m) => keepPick(m + 1));
-  if (ph.k === 'tunnel') return [...tunnelPayments(g).map(tunnelPick), QUIT_PICK];
+/** every move the house on turn may make now (the tests' random games) */
+export const legalPicks = (g: QGame, seat = g.turn): number[] => {
+  if (g.phase.k === 'end' || seat !== g.turn) return [];
   const out: number[] = [];
-  g.face.forEach((c, i) => { if (c >= 0 && (ph.k === 'turn' || c !== LOCO)) out.push(FACE_PICK + i); });
-  if (g.deck.length + g.pile.length) out.push(DECK_PICK);
-  if (ph.k === 'second') return out;
-  if (g.tdeck.length) out.push(TICKETS_PICK);
-  TRACKS.forEach((_, t) => { for (const q of trackPayments(g, seat, t)) out.push(claimPick(t, q.c, q.l)); });
-  g.inn.forEach((_, x) => { for (const q of innPayments(g, seat, x)) out.push(innPick(x, q.c, q.l)); });
-  if (!out.length) out.push(PASS_PICK);
+  if (g.phase.k === 'start') return innSpots(g, seat).map(innPick);
+  if (g.players[seat].coins > 0) g.dice.forEach((d, i) => { if (d > 1) out.push(tweakPick(i, false)); if (d < 6) out.push(tweakPick(i, true)); });
+  out.push(...takeable(g, seat).map(claimPick), TRADE_PICK, ...innSpots(g, seat).map(innPick));
   return out;
 };
 
-/** time is up (the room): the deal keeps the two cheapest letters, a turn takes two cards from the deck (or what lies face up),
- *  a second card the same, new letters keep the cheapest one, a mountain road is given up */
-export const timeUp = (g: QGame): QGame => {
-  const ph = g.phase;
-  if (ph.k === 'end') return g;
-  if (ph.k === 'start') {
-    let x = g;
-    ph.offer.forEach((o, s) => {
-      if (ph.kept[s]) return;
-      const two = o.map((id, i) => ({ id, i })).filter(e => !TICKETS[e.id].long).sort((a, b) => TICKETS[a.id].v - TICKETS[b.id].v).slice(0, 2);
-      x = applyPick(x, s, keepPick(two.reduce((m, e) => m | (1 << e.i), 0)));
-    });
-    return x;
-  }
-  const p = g.turn;
-  if (ph.k === 'tickets') {
-    const i = ph.offer.reduce((b, id, k) => (TICKETS[id].v < TICKETS[ph.offer[b]].v ? k : b), 0);
-    return applyPick(g, p, keepPick(1 << i));
-  }
-  if (ph.k === 'tunnel') return applyPick(g, p, QUIT_PICK);
-  const cardPick = (x: QGame) => (x.deck.length + x.pile.length ? DECK_PICK
-    : FACE_PICK + Math.max(0, x.face.findIndex(c => c >= 0 && (x.phase.k === 'turn' || c !== LOCO))));
-  let x = applyPick(g, p, cardPick(g));
-  if (x === g) {
-    const h = clone(g);
-    push(h, { k: 'pass', p });
-    endTurn(h, true);
-    h.step++;
-    return h;
-  }
-  if (x.phase.k === 'second') {
-    const y = applyPick(x, p, cardPick(x));
-    if (y !== x) return y;
-    const h = clone(x), s = h.phase as Extract<QPhase, { k: 'second' }>;
-    cardsDone(h, s.face, s.blind);
-    h.step++;
-    x = h;
-  }
-  return x;
-};
-
-/** how long a step waits in the room (s) */
-export const QARAVANI_SECS: Record<QPhase['k'], number> = { start: 150, turn: 90, second: 45, tickets: 75, tunnel: 45, end: 0 };
-
 // ---------- the score ----------
-const root = (up: number[], x: number): number => { while (up[x] !== x) { up[x] = up[up[x]]; x = up[x]; } return x; };
-const linked = (tracks: readonly number[]) => {
-  const up = Array.from({ length: Q_CITY_COUNT }, (_, i) => i);
-  for (const t of tracks) up[root(up, TRACKS[t].a)] = root(up, TRACKS[t].b);
-  return (a: number, b: number) => root(up, a) === root(up, b);
-};
-export const ownedBy = (owner: readonly number[], p: number) => owner.flatMap((o, t) => (o === p ? [t] : []));
-export const tracksOf = (g: QGame, p: number) => ownedBy(g.owner, p);
-/** is a letter done by `p`'s own roads (the inns are counted only at the end) */
-export const doneBy = (owner: readonly number[], p: number, id: number) => linked(ownedBy(owner, p))(TICKETS[id].a, TICKETS[id].b);
-export const ticketDone = (g: QGame, p: number, id: number) => doneBy(g.owner, p, id);
-/** the longest chain of one's own roads, in cells (a road once; a city may be passed again) */
-export const longestOf = (tracks: readonly number[]) => {
-  const adj = new Map<number, number[]>();
-  tracks.forEach((t, i) => { for (const x of [TRACKS[t].a, TRACKS[t].b]) adj.set(x, [...(adj.get(x) ?? []), i]); });
-  const used = tracks.map(() => false);
-  let best = 0, budget = 400000;
-  const walk = (x: number, len: number) => {
-    if (len > best) best = len;
-    if (--budget < 0) return;
-    for (const i of adj.get(x) ?? []) {
-      if (used[i]) continue;
-      used[i] = true;
-      const tr = TRACKS[tracks[i]];
-      walk(tr.a === x ? tr.b : tr.a, len + tr.n);
-      used[i] = false;
-    }
-  };
-  for (const x of adj.keys()) walk(x, 0);
-  return best;
-};
-
 export interface QRow {
+  /** the cells of one's roads */
   roads: number;
-  tickets: { id: number; done: boolean }[];
-  ticketPts: number;
-  done: number;
-  /** inns not built, and their points */
-  innsLeft: number;
-  innPts: number;
-  /** the opponents' tracks the inns lend (the best choice for the letters) */
-  borrowed: number[];
-  longest: number;
-  bonus: number;
+  /** the cities taken (their numbers) and their worth */
+  cities: number[];
+  cityPts: number;
+  /** the kinds of cargo one's roads reach */
+  cargo: number[];
+  cargoPts: number;
+  /** the caravanserais standing */
+  inns: number;
   total: number;
 }
 export interface QResult { rows: QRow[]; order: number[]; winners: number[] }
 
-/** the inns' best loans: each inn lends one of the opponents' roads out of its city (or none), the same for every letter */
-const bestLoans = (g: QGame, p: number, own: number[]) => {
-  const cities = g.inn.flatMap((o, x) => (o === p ? [x] : []));
-  const options = cities.map(x => [-1, ...CITY_TRACKS[x].filter(t => g.owner[t] >= 0 && g.owner[t] !== p)]);
-  const tickets = g.players[p].tickets;
-  const value = (loan: number[]) => {
-    const ok = linked([...own, ...loan.filter(t => t >= 0)]);
-    return tickets.reduce((s, id) => s + (ok(TICKETS[id].a, TICKETS[id].b) ? TICKETS[id].v : -TICKETS[id].v), 0);
-  };
-  let best = options.map(() => -1), bestV = value(best);
-  const walk = (i: number, cur: number[]) => {
-    if (i === options.length) { const v = value(cur); if (v > bestV) { bestV = v; best = [...cur]; } return; }
-    for (const t of options[i]) walk(i + 1, [...cur, t]);
-  };
-  walk(0, []);
-  return best.filter(t => t >= 0);
+/** each house's weight in a city: its roads into it, a caravanserai two more */
+export const weightIn = (owner: readonly number[], inn: readonly number[], n: number, x: number) => {
+  const w = Array(n).fill(0);
+  for (const t of CITY_TRACKS[x]) if (owner[t] >= 0) w[owner[t]]++;
+  for (let p = 0; p < n; p++) if (has(inn[x], p)) w[p] += INN_WEIGHT;
+  return w;
+};
+/** who takes city `x` now: the houses with most weight there (none while nobody is there) */
+export const holdersOf = (owner: readonly number[], inn: readonly number[], n: number, x: number) => {
+  const w = weightIn(owner, inn, n, x), top = Math.max(...w);
+  return top > 0 ? w.flatMap((v, p) => (v === top ? [p] : [])) : [];
 };
 
-export const resultOf = (g: QGame): QResult => {
-  const rows = g.players.map((pl, p): QRow => {
-    const own = tracksOf(g, p), borrowed = bestLoans(g, p, own), ok = linked([...own, ...borrowed]);
-    const tickets = pl.tickets.map(id => ({ id, done: ok(TICKETS[id].a, TICKETS[id].b) }));
-    const ticketPts = tickets.reduce((s, t) => s + (t.done ? TICKETS[t.id].v : -TICKETS[t.id].v), 0);
-    return {
-      roads: pl.pts, tickets, ticketPts, done: tickets.filter(t => t.done).length, innsLeft: pl.inns, innPts: pl.inns * INN_POINTS,
-      borrowed, longest: longestOf(own), bonus: 0, total: 0,
-    };
-  });
-  const top = Math.max(...rows.map(r => r.longest));
-  for (const r of rows) {
-    r.bonus = top > 0 && r.longest === top ? LONGEST_POINTS : 0;
-    r.total = r.roads + r.ticketPts + r.innPts + r.bonus;
+export const scoreOf = (owner: readonly number[], inn: readonly number[], n: number): QRow[] => {
+  const rows: QRow[] = Array.from({ length: n }, () => ({ roads: 0, cities: [], cityPts: 0, cargo: [], cargoPts: 0, inns: 0, total: 0 }));
+  owner.forEach((o, t) => { if (o >= 0) rows[o].roads += TRACKS[t].n; });
+  for (let x = 0; x < Q_CITY_COUNT; x++) {
+    const hs = holdersOf(owner, inn, n, x);
+    const pts = Math.floor(CITY_VALUE[x] / hs.length);
+    for (const p of hs) { rows[p].cities.push(x); rows[p].cityPts += pts; }
   }
-  const rank = (a: QRow, b: QRow) => b.total - a.total || b.done - a.done || b.innsLeft - a.innsLeft || b.bonus - a.bonus;
-  const order = rows.map((_, i) => i).sort((a, b) => rank(rows[a], rows[b]) || a - b);
-  const winners = order.filter(i => rank(rows[i], rows[order[0]]) === 0);
+  rows.forEach((r, p) => {
+    r.cargo = [...new Set([...netOf(owner, inn, p)].map(x => CITY_CARGO[x]).filter(c => c >= 0))].sort((a, b) => a - b);
+    r.cargoPts = CARGO_PTS[r.cargo.length];
+    r.inns = inn.reduce((c, m) => c + (has(m, p) ? 1 : 0), 0);
+    r.total = r.cityPts + r.cargoPts + r.inns * INN_PTS;
+  });
+  return rows;
+};
+
+export const resultOf = (g: Pick<QGame, 'owner' | 'inn' | 'players'>): QResult => {
+  const rows = scoreOf(g.owner, g.inn, g.players.length);
+  const rank = (a: number, b: number) => rows[b].total - rows[a].total || rows[b].cities.length - rows[a].cities.length
+    || g.players[b].coins - g.players[a].coins;
+  const order = rows.map((_, i) => i).sort((a, b) => rank(a, b) || a - b);
+  const winners = order.filter(i => rank(i, order[0]) === 0);
   return { rows, order, winners };
 };
+
+// ---------- the careful move (the late player's in the room, the tests' games) ----------
+const W_CART = 0.6, W_TRADE = 1, W_TWEAK = 1, W_INN = 1.5;
+const gainOf = (g: QGame, p: number, owner: number[], inn: number[]) => {
+  const before = scoreOf(g.owner, g.inn, g.players.length), after = scoreOf(owner, inn, g.players.length);
+  const mine = after[p].total - before[p].total;
+  const theirs = after.reduce((s, r, q) => (q === p ? s : s + r.total - before[q].total), 0);
+  return mine - theirs / Math.max(1, g.players.length - 1) / 2;
+};
+/** how much of the game is still ahead (1 at the start, ~0 at the last turn) */
+const ahead = (g: QGame) => {
+  const n = g.players.length, done = (g.round - 1) * n + ((g.turn - g.first + n) % n);
+  return Math.max(0, 1 - done / (roundsFor(n) * n));
+};
+const roadGain = (g: QGame, p: number, t: number) => {
+  const owner = [...g.owner];
+  owner[t] = p;
+  const left = g.players[p].carts, per = left / Math.max(1, ahead(g) * roundsFor(g.players.length));
+  return gainOf(g, p, owner, g.inn) - W_CART * TRACKS[t].n * Math.min(1.5, cartsFor(g.players.length) / roundsFor(g.players.length) / Math.max(0.5, per)) * ahead(g);
+};
+const innGain = (g: QGame, p: number, x: number) => {
+  const inn = [...g.inn];
+  inn[x] |= 1 << p;
+  return gainOf(g, p, g.owner, inn);
+};
+/** the best road for these dice, and what it gains */
+const bestRoad = (g: QGame, p: number, dice: readonly number[]): [number, number] => {
+  let best = -1, bestV = -Infinity;
+  for (let t = 0; t < TRACKS.length; t++) {
+    if (!roadOpen(g.owner, g.players[p].carts, g.players.length, p, t) || !diceOpen(dice, t) || !joins(g.owner, g.inn, g.players[p].carts, g.players.length, p, t)) continue;
+    const v = roadGain(g, p, t);
+    if (v > bestV) { bestV = v; best = t; }
+  }
+  return [best, bestV];
+};
+
+/** how good a start city is: its worth and cargo and its neighbours', less where another caravan already stands near */
+const startValue = (g: QGame, x: number) => {
+  const near = (y: number) => CITY_VALUE[y] / 2 + (CITY_CARGO[y] >= 0 ? 1 : 0) - (g.inn[y] ? 2 : 0);
+  return CITY_VALUE[x] + (CITY_CARGO[x] >= 0 ? 1.5 : 0) + NEXT[x].reduce((s, y) => s + near(y), 0) / 1.5;
+};
+
+export const botPick = (g: QGame): number => {
+  const p = g.turn, me = g.players[p];
+  if (g.phase.k === 'end' || !me) return -1;
+  if (g.phase.k === 'start') {
+    const spots = innSpots(g, p);
+    return innPick(spots.reduce((b, x) => (startValue(g, x) > startValue(g, b) ? x : b), spots[0]));
+  }
+  const spots = innSpots(g, p);
+  const bestInn = spots.reduce<[number, number]>((b, x) => { const v = innGain(g, p, x); return v > b[1] ? [x, v] : b; }, [-1, 0]);
+  if (bestInn[0] >= 0 && bestInn[1] >= (W_INN * INN_COST / 2) * ahead(g) + 0.5) return innPick(bestInn[0]);
+  const [road, gain] = bestRoad(g, p, g.dice);
+  const tradeV = W_TRADE * ahead(g);
+  const now = road >= 0 ? Math.max(gain, tradeV) : tradeV;
+  // an abazi on a die, when it opens a clearly better road
+  if (me.coins > 0) {
+    let tweak = -1, tweakV = now + W_TWEAK;
+    g.dice.forEach((d, i) => {
+      for (const up of [false, true]) {
+        const v = d + (up ? 1 : -1);
+        if (v < 1 || v > 6) continue;
+        const dice = g.dice.map((x, j) => (j === i ? v : x)), [t, val] = bestRoad(g, p, dice);
+        if (t >= 0 && val > tweakV) { tweakV = val; tweak = tweakPick(i, up); }
+      }
+    });
+    if (tweak >= 0) return tweak;
+  }
+  return road >= 0 && gain >= tradeV ? claimPick(road) : TRADE_PICK;
+};
+
+/** time is up (the room): the careful move */
+export const timeUp = (g: QGame): QGame => {
+  if (g.phase.k === 'end') return g;
+  const x = applyPick(g, g.turn, botPick(g));
+  if (x !== g) return x;
+  return applyPick(g, g.turn, TRADE_PICK);
+};
+
+/** how long a step waits in the room (s) */
+export const QARAVANI_SECS: Record<QPhase['k'], number> = { start: 60, turn: 75, end: 0 };
 
 // ---------- reading a kept game ----------
 const isInt = (v: unknown, lo: number, hi: number): v is number => typeof v === 'number' && Number.isInteger(v) && v >= lo && v <= hi;
 const ints = (v: unknown, lo: number, hi: number, len?: number): number[] | null =>
   (Array.isArray(v) && (len === undefined || v.length === len) && v.every(x => isInt(x, lo, hi)) ? (v as number[]) : null);
-const TID = TICKETS.length - 1;
 
 export const parseLine = (raw: unknown, n: number): QLine | null => {
   const o = raw as Record<string, unknown> | null;
-  if (!o || typeof o !== 'object') return null;
-  const p = isInt(o.p, 0, n - 1) ? o.p : -1;
+  if (o && typeof o === 'object' && o.k === 'round') return isInt(o.r, 1, 99) ? { k: 'round', r: o.r } : null;
+  if (!o || typeof o !== 'object' || !isInt(o.p, 0, n - 1)) return null;
+  const p = o.p;
   switch (o.k) {
-    case 'cards': { const face = ints(o.face, 0, 8); return p >= 0 && face && face.length <= 2 && isInt(o.blind, 0, 2) ? { k: 'cards', p, face, blind: o.blind } : null; }
-    case 'road': return p >= 0 && isInt(o.t, 0, TRACKS.length - 1) && isInt(o.c, 0, 8) && isInt(o.l, 0, 8) && isInt(o.extra, 0, 3) ? { k: 'road', p, t: o.t, c: o.c, l: o.l, extra: o.extra } : null;
-    case 'tunnel': return p >= 0 && isInt(o.t, 0, TRACKS.length - 1) && isInt(o.extra, 0, 3) ? { k: 'tunnel', p, t: o.t, extra: o.extra } : null;
-    case 'tickets': return p >= 0 && isInt(o.kept, 1, 3) && isInt(o.of, 1, 3) ? { k: 'tickets', p, kept: o.kept, of: o.of } : null;
-    case 'start': return p >= 0 && isInt(o.kept, 2, 4) ? { k: 'start', p, kept: o.kept } : null;
-    case 'inn': return p >= 0 && isInt(o.x, 0, Q_CITY_COUNT - 1) ? { k: 'inn', p, x: o.x } : null;
-    case 'wash': return { k: 'wash' };
-    case 'last': return p >= 0 ? { k: 'last', p } : null;
-    case 'pass': return p >= 0 ? { k: 'pass', p } : null;
+    case 'road': return isInt(o.t, 0, TRACKS.length - 1) && isInt(o.spent, 0, 99) ? { k: 'road', p, t: o.t, spent: o.spent } : null;
+    case 'trade': return isInt(o.spent, 0, 99) ? { k: 'trade', p, spent: o.spent } : null;
+    case 'inn': return isInt(o.x, 0, Q_CITY_COUNT - 1) ? { k: 'inn', p, x: o.x } : null;
+    case 'guest': return isInt(o.x, 0, Q_CITY_COUNT - 1) && isInt(o.from, 0, n - 1) ? { k: 'guest', p, x: o.x, from: o.from } : null;
     default: return null;
   }
 };
 export const parseLog = (raw: unknown, n: number): QLine[] => (Array.isArray(raw) ? raw.map(x => parseLine(x, n)).filter((x): x is QLine => !!x).slice(-LOG_MAX) : []);
-
-export const parsePhase = (raw: unknown, n: number): QPhase | null => {
-  const o = raw as Record<string, unknown> | null;
-  if (!o || typeof o !== 'object') return null;
-  switch (o.k) {
-    case 'start': {
-      if (!Array.isArray(o.offer) || o.offer.length !== n || !Array.isArray(o.kept) || o.kept.length !== n) return null;
-      const offer = o.offer.map(x => ints(x, 0, TID));
-      const kept = o.kept.map(x => (x === null ? null : ints(x, 0, TID) ?? undefined));
-      if (offer.some(x => !x || x.length < 2 || x.length > 4) || kept.some(x => x === undefined)) return null;
-      return { k: 'start', offer: offer as number[][], kept: kept as (number[] | null)[] };
-    }
-    case 'turn': return { k: 'turn' };
-    case 'second': { const face = ints(o.face, 0, 8); return face && face.length <= 1 && isInt(o.blind, 0, 1) ? { k: 'second', face, blind: o.blind } : null; }
-    case 'tickets': { const offer = ints(o.offer, 0, TID); return offer && offer.length >= 1 && offer.length <= 3 ? { k: 'tickets', offer } : null; }
-    case 'tunnel': {
-      const drawn = ints(o.drawn, 0, 8);
-      return isInt(o.t, 0, TRACKS.length - 1) && isInt(o.c, 0, 8) && isInt(o.l, 0, 8) && drawn && drawn.length <= 3 && isInt(o.extra, 1, 3)
-        ? { k: 'tunnel', t: o.t, c: o.c, l: o.l, drawn, extra: o.extra } : null;
-    }
-    case 'end': return { k: 'end' };
-    default: return null;
-  }
+const parsePhase = (raw: unknown): QPhase | null => {
+  const k = (raw as { k?: unknown } | null)?.k;
+  return k === 'start' || k === 'turn' || k === 'end' ? { k } : null;
 };
 
 export const parseQaravani = (raw: unknown): QGame | null => {
   const o = raw as Partial<QGame> | null;
-  if (!o || typeof o !== 'object' || o.v !== 1 || !Array.isArray(o.players) || o.players.length < MIN_Q || o.players.length > MAX_Q) return null;
+  if (!o || typeof o !== 'object' || o.v !== 2 || !Array.isArray(o.players) || o.players.length < MIN_Q || o.players.length > MAX_Q) return null;
   const n = o.players.length;
   const players: QPlayer[] = [];
   for (const x of o.players as unknown[]) {
     const pl = x as Partial<QPlayer> | null;
-    const hand = pl && ints(pl.hand, 0, 200, KINDS), tickets = pl && ints(pl.tickets, 0, TID);
-    if (!pl || typeof pl.name !== 'string' || !hand || !tickets || !isInt(pl.carts, 0, 45) || !isInt(pl.inns, 0, INNS) || !isInt(pl.pts, 0, 2000)) return null;
-    players.push({ name: pl.name.slice(0, 40), hand, tickets, carts: pl.carts, inns: pl.inns, pts: pl.pts });
+    if (!pl || typeof pl.name !== 'string' || !isInt(pl.carts, 0, 30) || !isInt(pl.coins, 0, COINS_MAX) || !isInt(pl.inns, 0, INNS)) return null;
+    players.push({ name: pl.name.slice(0, 40), carts: pl.carts, coins: pl.coins, inns: pl.inns });
   }
-  const deck = ints(o.deck, 0, 8), pile = ints(o.pile, 0, 8), face = ints(o.face, -1, 8, FACE_N), tdeck = ints(o.tdeck, 0, TID);
-  const owner = ints(o.owner, -1, n - 1, TRACKS.length), inn = ints(o.inn, -1, n - 1, Q_CITY_COUNT), phase = parsePhase(o.phase, n);
-  if (!deck || !pile || !face || !tdeck || !owner || !inn || !phase || !isInt(o.turn, 0, n - 1) || !isInt(o.first, 0, n - 1)
-    || !isInt(o.left, -1, MAX_Q) || !isInt(o.step, 0, 1e7) || !isInt(o.seed, -2147483648, 2147483647)) return null;
+  const phase = parsePhase(o.phase);
+  const over = phase?.k !== 'turn';
+  const dice = ints(o.dice, 1, 6, over ? undefined : DICE_N), rolled = ints(o.rolled, 1, 6, over ? undefined : DICE_N);
+  const owner = ints(o.owner, -1, n - 1, TRACKS.length), inn = ints(o.inn, 0, (1 << n) - 1, Q_CITY_COUNT);
+  if (!phase || !dice || !rolled || !owner || !inn || !isInt(o.spent, 0, 99) || !isInt(o.turn, 0, n - 1) || !isInt(o.first, 0, n - 1)
+    || !isInt(o.round, 1, roundsFor(n)) || !isInt(o.step, 0, 1e7) || !isInt(o.seed, -2147483648, 2147483647)) return null;
   return {
-    v: 1, players, deck, pile, face, tdeck, owner, inn, turn: o.turn, first: o.first, phase, left: o.left,
-    idle: isInt(o.idle, 0, MAX_Q) ? o.idle : 0, step: o.step, seed: o.seed, log: parseLog(o.log, n),
+    v: 2, players, dice, rolled, spent: o.spent, owner, inn, turn: o.turn, first: o.first, phase, round: o.round,
+    step: o.step, seed: o.seed, log: parseLog(o.log, n),
   };
 };
-
-/** every card of the game is somewhere (the tests' check): 110 */
-export const cardsIn = (g: QGame) => g.deck.length + g.pile.length + g.face.filter(c => c >= 0).length
-  + g.players.reduce((s, p) => s + p.hand.reduce((a, b) => a + b, 0), 0) + (g.phase.k === 'tunnel' ? g.phase.drawn.length : 0);

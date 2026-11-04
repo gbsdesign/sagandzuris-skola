@@ -1,4 +1,4 @@
-// „ქარავანი“ in the app: writes the roads and letters for its rules (src/data/qaravaniRoutes.ts) and the map's drawing
+// „ქარავანი“ in the app: writes the roads and the cities' worth and cargo for its rules (src/data/qaravaniRoutes.ts) and the map's drawing
 // (src/data/qaravaniMap.ts) from the print kit (scripts/print-games/games/qaravani.mjs), so the app's board is the printed one.
 // Run `node scripts/build-qaravani-map.mjs` again after the kit's map changes; never edit the two files by hand.
 import fs from 'node:fs';
@@ -59,21 +59,19 @@ m.top = slim(m.top, 'qt');
 const HEAD = '// made by `node scripts/build-qaravani-map.mjs` from the print kit (scripts/print-games/games/qaravani.mjs) — never edit by hand\n';
 const rows = list => list.map(r => `  ${JSON.stringify(r)},`).join('\n');
 
-const routes = `${HEAD}// „ქარავანი“'s roads and travellers' letters for the app's rules (utils/qaravani.ts); the cities' names and the drawing are in
+const routes = `${HEAD}// „ქარავანი“'s roads and cities for the app's rules (utils/qaravani.ts); the cities' names and the drawing are in
 // data/qaravaniMap.ts (only the screens load it).
 
 /** how many cities the map has (a city is its number; names in data/qaravaniMap.ts) */
 export const Q_CITY_COUNT = ${m.cities.length};
-/** the roads: [city a, city b, cells, colour (0–7 the goods, 8 gray), the second track's colour (−1: a single road), a mountain
- *  road 1/0, the ships on it] */
+/** each city's worth (the house with most roads into it takes it at the end) */
+export const Q_CITY_VALUE: readonly number[] = ${JSON.stringify(m.worth)};
+/** each city's cargo: 0–7 the goods (Q_GOODS in data/qaravaniMap.ts), −1 none */
+export const Q_CITY_CARGO: readonly number[] = ${JSON.stringify(m.cargo)};
+/** the roads: [city a, city b, cells, a double road 1/0, a mountain road 1/0, the ships on it] */
 export const Q_ROUTES: readonly (readonly number[])[] = [
-${rows(m.routes.map(r => [r.a, r.b, r.n, r.color, r.double, r.pass ? 1 : 0, r.ships]))}
+${rows(m.routes.map(r => [r.a, r.b, r.n, r.double, r.pass ? 1 : 0, r.ships]))}
 ];
-/** the travellers' letters: [city a, city b, points]; the last ${m.long} are the long journeys */
-export const Q_TICKETS: readonly (readonly number[])[] = [
-${rows(m.tickets.map(t => [t.a, t.b, t.v]))}
-];
-export const Q_LONG = ${m.long};
 `;
 
 const map = `${HEAD}// „ქარავანი“'s map for the screens (pages/games/qaravani/): the printed board's drawing in mm, without its score track and panels.
@@ -86,14 +84,14 @@ export const QMAP_BG = ${JSON.stringify(m.bg)};
 export const QMAP_TOP = ${JSON.stringify(m.top)};
 /** the cities' names as the print sets them: sizes in mm and colours */
 export const QMAP_NAMES = ${JSON.stringify(m.names)};
-/** the marks inside the cities' circles (±4 mm): c a city, s a shrine (an old gate), p a port */
-export const QMAP_GLYPH: Record<'c' | 's' | 'p', string> = ${JSON.stringify(m.glyphs)};
-/** a city's circle: its radius in mm and colours */
+/** a city's circle: its radius in mm, colours, the fill by its worth, and the cargo disc's radius */
 export const QMAP_RING = ${JSON.stringify(m.ring)};
-/** a city: its place in mm, its mark, outside today's border, a second line (ტაო, საინგილო) and its name's place as printed —
+/** where each city's cargo disc stands from its centre (mm; null: no cargo) */
+export const Q_CARGO_AT: readonly (readonly [number, number] | null)[] = ${JSON.stringify(m.cargoAt)};
+/** a city: its place in mm, outside today's border, a second line (ტაო, საინგილო) and its name's place as printed —
  *  dir from the circle; the anchor point lx, ly (anchor: start / middle / end) and the second line's sy, in mm */
 export interface QCity {
-  key: string; name: string; x: number; y: number; look: 'c' | 's' | 'p'; outside: boolean; sub: string;
+  key: string; name: string; x: number; y: number; outside: boolean; sub: string;
   dir: 'n' | 'ne' | 'e' | 'se' | 's' | 'sw' | 'w' | 'nw'; anchor: 'start' | 'middle' | 'end'; lx: number; ly: number; sy: number;
 }
 export const Q_CITIES: readonly QCity[] = [
@@ -107,24 +105,17 @@ ${rows(m.routes.map(r => r.tracks))}
 export const Q_SHIP_AT: readonly (readonly number[])[] = ${JSON.stringify(m.routes.map(r => r.shipAt))};
 /** a mountain road's pass ('' for the others) */
 export const Q_PASS: readonly string[] = ${JSON.stringify(m.routes.map(r => r.pass))};
-/** the letters' stories (Q_TICKETS' order) */
-export const Q_TICKET_TEXT: readonly string[] = [
-${rows(m.tickets.map(t => t.text))}
-];
-/** the eight goods (the cards' and the roads' colours 0–7) and the stone road (8) */
-export const Q_GOODS: readonly { k: string; name: string; adj: string; color: string; dark: string; from: string }[] = [
+/** the eight goods (the cargo kinds 0–7) */
+export const Q_GOODS: readonly { k: string; name: string; color: string; dark: string; from: string }[] = [
 ${rows(m.goods)}
 ];
-export const Q_GRAY = ${JSON.stringify(m.gray)};
-/** the cards' pictures as the kit prints them: each good in a 100×100 box, the locomotive in a 100×60 one */
-export const Q_ART: Record<string, string> = ${JSON.stringify(m.art)};
-export const Q_LOCO_ART = ${JSON.stringify(m.loco)};
+/** the goods' marks as the board prints them: a disc of r 10 around 0, 0 (its colour, its picture), by Q_GOODS' k */
+export const Q_BADGES: Record<string, string> = ${JSON.stringify(m.badges)};
 /** the five players' colours and animals (an animal in a 100×80 box, filled with currentColor) */
 export const Q_PLAYERS: readonly { color: string; ink: string; animal: string; name: string }[] = ${JSON.stringify(m.players)};
 export const Q_ANIMALS: Record<string, string> = ${JSON.stringify(m.animals)};
-/** the inn (±5, currentColor) and the letter's envelope (12×12) */
+/** the inn (±5, currentColor) */
 export const Q_INN_ART = ${JSON.stringify(m.inn)};
-export const Q_ENVELOPE = ${JSON.stringify(m.envelope)};
 /** each city's old name ('' when the same) and a line about it, from the kit's glossary (Q_CITIES' order) */
 export const Q_CITY_INFO: readonly (readonly [string, string])[] = [
 ${rows(m.info)}
@@ -133,4 +124,4 @@ ${rows(m.info)}
 
 fs.writeFileSync(path.join(ROOT, 'src', 'data', 'qaravaniRoutes.ts'), routes);
 fs.writeFileSync(path.join(ROOT, 'src', 'data', 'qaravaniMap.ts'), map);
-console.log(`qaravani: ${m.cities.length} cities, ${m.routes.length} roads, ${m.tickets.length} letters; map ${(map.length / 1024).toFixed(0)} KB, box ${m.box.join(' ')}`);
+console.log(`qaravani: ${m.cities.length} cities, ${m.routes.length} roads; map ${(map.length / 1024).toFixed(0)} KB, box ${m.box.join(' ')}`);

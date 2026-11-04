@@ -991,32 +991,35 @@
   `CardSheet` — build · sell · tuck; the kingdoms' `CityPanel` → `CitySheet`; the chronicle `lineText`), `look.tsx` (the kit's marks,
   `CardFace` with the kit's pictures faint, `CardBack` with the age's numeral in the visible top half), `words.ts`, a phone on its
   side or a computer = two columns (`useTwoCols`, `useCardW`). Not yet tried by real people on several phones.
-- **„ქარავანი“ on phones** (2026-11-04, the printed Ticket to Ride: Europe №3 gets its app variants; mapItem `qaravani`, its entry in
-  `GAMES` has `item`, the hub opens its tab by `requestOpen('qaravani', 'online' | 'table')`, tab `sg-qaravani-tab`; the page is
-  `React.lazy` in GamesPage — its map is ~100 KB): the board is the kit's own. `node scripts/build-qaravani-map.mjs` writes
-  `data/qaravaniRoutes.ts` (47 cities, 74 roads, 46 letters, for the rules) and `data/qaravaniMap.ts` (the drawing from the kit's
-  `appMap()`: land, rivers and peaks, the passes, the print's names, cards, animals, inns — lines thinned) — never edit them by hand,
-  run it again after the kit's map changes. Rules `utils/qaravani.ts` + test: cards 0–7 = the kit's goods (ღვინო, თაფლი, ჩაი, ლურჯი
-  სუფრა, ნაბადი, სულგუნი, სპილენძი, აბრეშუმი), 8 = the locomotive (an open one is the turn's only card; three open wash the five);
-  2–5 players, `cartsFor` (40, 35 with five), 3 inns (1 / 2 / 3 cards of one colour; at the end an inn lends its owner one other's road
-  out of its city for the letters, an unused one +4); a road = its colour's cards (gray = any one colour, a ship needs a locomotive), a
-  mountain turns 3 from the deck — a match or a locomotive asks one more, or the player gives up (`tunnelOptions`); a double road is
-  never one player's twice, with ≤ 3 players one lane only (`roadOpen`); letters: four keep ≥ 2 at the start, three keep ≥ 1; ≤ 2
-  carts left → everyone plays once more; the longest road +10; a tie → more letters done, then fewer inns. One number a move
-  (`FACE_PICK`, `DECK_PICK`, `TICKETS_PICK`, `PASS_PICK`, `keepPick`, `tunnelPick`, `QUIT_PICK`, `claimPick`, `innPick`). „ონლაინ“ = a
-  room of its own engine (`utils/qaravaniRoom.ts` `QARAVANI_ROOM`; `qaravani` in `ROOM_GAMES`/the rules/the Worker's titles;
-  `qaravaniRooms` / `useQaravaniRoom`): a seat = my hand and letters (`qSeat`), the view only counts (`qView`; `roadPays`, `innPays`,
-  `canMove` read it), 2–5 play, the host may be one („მეც ვთამაშობ“; a new room's opener joins by itself), the rest watch; a step's
-  clock (`QARAVANI_SECS`), then the host's phone moves (`timeUp`). „ჰიბრიდული“ (`Table.tsx`, kept in `sg-qaravani-table`, who begins
-  in `sg-qaravani-conf`, names = `CircleNames`) = one phone passed round: between two players only „გადაეცი ტელეფონი: X“ and the
-  last move; „უკან“ only for a move that showed nothing new (`canBack`); ✕ only pauses. Screens `pages/games/qaravani/`: `Map.tsx`
-  (pinch, drag, ctrl+wheel, + / − / ⤢; a tap picks a road or a city; at the whole map's size the names are 12 px screen labels that
-  give way to each other — my letters' cities always, in wine, drawn under the circles —, from 2.5 px a mm the print's own names;
-  owned roads glow in the player's colour with cart marks), `Play.tsx` (story, letters to keep, the mountain's weather, the market,
-  my cards, my letters ✓, „რომელი გზის დაკავება შეგიძლია“, the players, the chronicle, the results; a phone on its side or a
-  computer = two columns, the map sticky), `Sheets.tsx` (`RoadSheet` with the ways to pay, `CitySheet` with the inn), `look.tsx`
-  (cards, `lineText`), `Room.tsx`. The kit's rule said a road must not join one's other roads — fixed the same day („შეიძლება არ
-  ებმოდეს“). Not yet tried by real people on several phones.
+- **„ქარავანი“ — our own game (2026-11-04; the printed №3 was a Ticket to Ride, now rebuilt on its own rules the same day)**: mapItem
+  `qaravani`, its entry in `GAMES` has `item` and no `like`, the hub opens its tab by `requestOpen('qaravani', 'online' | 'table')`,
+  tab `sg-qaravani-tab`; the page is `React.lazy` in GamesPage — its map is ~95 KB. The board is the kit's own:
+  `node scripts/build-qaravani-map.mjs` writes `data/qaravaniRoutes.ts` (47 cities with their worth 1–5 and cargo, 74 roads, for the
+  rules) and `data/qaravaniMap.ts` (the drawing from the kit's `appMap()`: land, rivers and peaks, the passes, the print's names, the
+  worth circles, the goods' marks) — never edit them by hand, run it again after the kit's map changes. Rules `utils/qaravani.ts` +
+  test (no cards, no letters): each house places its first caravanserai in reverse order (the first house last) in a town of worth
+  ≤ `START_MAX` 2 with no caravanserai in it or next to it; a turn = three dice (`DICE_N`), an abazi moves one die by one (1–6, as
+  often as one has them), then a caravanserai (`INN_COST` 3, in a city of one's caravan, `INNS` 3 a house with the first) and one
+  road whose cells some one, two or three dice add up to (`sumsOf`, `diceFor`; a mountain road wants a pair among the dice, a water
+  road a six — `hasPair`/`hasSix`), touching one's caravan unless no free road does (`joins`, `netOf`) — or a trade (+`TRADE` 2). A
+  guest's road into another's caravanserai city gives its owner +`GUEST` 1; a double road is never one house's twice, with ≤ 3 players
+  one lane only (`roadOpen`). Journeys `roundsFor` 12/10/9/8, carts `cartsFor` 20/18/16/15 for 2/3/4/5. The end (`scoreOf`,
+  `holdersOf`, `resultOf`): a city's worth to the house with most weight there (roads + `INN_WEIGHT` 2 a caravanserai; a tie shares it,
+  rounded down), the kinds of cargo one's net reaches by `CARGO_PTS` (1, 3, 5, 8, 11, 15, 20, 25), `INN_PTS` 2 a caravanserai; a tie →
+  more cities, then more abazi. The dice fall on the game's seed, so a move (`tweakPick`, `TRADE_PICK`, `claimPick`, `innPick`) is
+  pure; `botPick` = the careful move, `timeUp` plays it for the late. „ონლაინ“ = a room of its own engine (`utils/qaravaniRoom.ts`
+  `QARAVANI_ROOM`, no seats — nothing is secret; `qaravani` in `ROOM_GAMES`/the rules/the Worker's titles; `qaravaniRooms` /
+  `useQaravaniRoom`): 2–5 play, the host may be one („მეც ვთამაშობ“; a new room's opener joins by itself), the rest watch; a turn's
+  clock (`QARAVANI_SECS`: 60 s a start town, 75 a turn — an abazi does not stop it), then the host's phone moves. „ჰიბრიდული“
+  (`Table.tsx`, kept in `sg-qaravani-table`, who begins in `sg-qaravani-conf`, names = `CircleNames`) = one phone in the middle of the
+  table, the printed board beside it if one likes; „უკან“ only for a move that rolled nothing new (`canBack`); ✕ only pauses. Screens
+  `pages/games/qaravani/`: `Map.tsx` (pinch, drag, ctrl+wheel, + / − / ⤢; a tap picks a road or a city; every city's worth in its circle
+  and its cargo beside it, the roads in their owners' colours, a ring round each city in the colour of who would take it now; names as
+  12 px screen labels that give way to each other — my caravan's first —, from 2.5 px a mm the print's own), `Play.tsx` (story, the
+  dice — a gold mark on a die's ± says how many new roads it opens —, the roads the dice open with what each brings, the caravanserai
+  to build, my caravan's points and cargo now, the houses, the chronicle, the results with every city counted; a phone on its side or
+  a computer = two columns, the map sticky), `Sheets.tsx` (`RoadSheet`, `CitySheet`: what a road or a caravanserai would add, or why
+  not), `look.tsx`, `Room.tsx`. Not yet tried by real people on several phones.
 - **„ოქროს ხანა“ — our own game (2026-11-04; the printed №1 was a Catan, now rebuilt on its own rules)**: mapItem `okros`, its entry
   in `GAMES` has `item` and no `like`, the hub opens its tab by `requestOpen('okros', 'online' | 'table')`, tab `sg-okros-tab`; rules
   `utils/okrosKhana.ts` + test, screens `pages/games/okros/`. The board is the songs map's 13 regions (`KUTKHE_REGIONS` order,
@@ -1055,12 +1058,14 @@
   is one indigo field, four A4-landscape boards turned onto portrait pages — apprentice / master side, trays ⌀90 mm, the უსტაბაში
   token tile-sized to fit a floor place); then (sixth PR) „ორი ტახტი“ (№4, 7 Wonders Duel between the western (ქუთაისი) and eastern
   (თბილისი) thrones: 73 age cards with the original costs/effects under Georgian names, 8 help cards, 12 Georgian monuments 96×62 mm,
-  board „ლიხის გზა“ in two A4-landscape pieces, the knight as a fold-up tent, coins 1/3/6 თეთრი) and „ქარავანი“ (№3, Ticket to Ride
-  Europe in late-XIX-century Georgia: a 78×56 cm map from eight one-sided A4 pieces — 47 hand-placed cities, 74 roads (13 mountain, 4 ship,
-  8 double; the 1872 railway between the doubles), the app's region shapes, coast, rivers and ridges bent onto the cities by a thin-plate
-  spline; `boardItems()` keeps each piece's bounding box so a printed window draws only what it shows; 110 caravan cards of 8 goods + 14
-  locomotives, 40 + 6 „მგზავრის წერილი“ whose points are checked against the map's shortest paths at build time and must name every city,
-  40 carts a player (35 with five), caravanserais = TTR stations, animals as score markers; the cover's back is a glossary of the 47 places).
+  board „ლიხის გზა“ in two A4-landscape pieces, the knight as a fold-up tent, coins 1/3/6 თეთრი) and „ქარავანი“ (№3, since 2026-11-04 the school's own
+  game — see „ქარავანი“ above; 16 sheets: a 78×56 cm map from eight one-sided A4 pieces — 47 hand-placed cities with their worth and
+  cargo, 74 roads (13 mountain, 4 ship, 8 double; the 1872 railway between the doubles, only to look at), the app's region shapes,
+  coast, rivers and ridges bent onto the cities by a thin-plate spline; `boardItems()` keeps each piece's bounding box so a printed
+  window draws only what it shows; five help cards (a turn in front, the end's points behind), „პირველი ქარავანი“ (the journeys'
+  track, its golden stops by the number of players), three cargo maps, 22 carts and four caravanserais a house, the animals as score
+  markers, 55 + 11 abazi, three dice nets, a score sheet with every city west to east, four rule pages with figures and an example the
+  build counts by the app's `scoreOf` (it stops if the rows don't add up); the cover's back is a glossary of the 47 places).
   A game with sheets gets `print: { href, sheets }` and `noPhone` in its `modes` in `data/games.ts`; its hub card shows the
   „სამაგიდო · PDF“ button that downloads it.
   The app's word games got paper kits too (seventh PR): „დღის სიტყვა“ (grids for 4/5/6 letters, four A6 a side; 78 slips from
@@ -1119,7 +1124,7 @@
   სიმღერა?“'s kit (`SONGS`, now exported) ↔ its region on the small map; each deck's 27th card is the host's key (ბ: the notes'
   guide), taken out before play.
 - **Our own games, not copies (2026-11-04)**: a board or party game is the school's own game in its genre — its own mechanics and
-  Georgian content —, never a known game copied one-to-one under another name. „ოქროს ხანა“ was rebuilt first; ქარავანი, ორი ტახტი,
+  Georgian content —, never a known game copied one-to-one under another name. „ოქროს ხანა“ and „ქარავანი“ are rebuilt; ორი ტახტი,
   ლურჯი სუფრა, მეფის კარი and then the word and party games are reviewed the same way, one PR a game. A genre's general idea (a
   daily word, a team quiz, a map to tap) may stay; the hub's `like` bracket names only a game ours still resembles.
 - **No religious pictures in the games (the user's rule, 2026-11-01; corrected the same day: „რელიგიური და მუსიკალური კითხვები

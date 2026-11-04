@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Loader2, LogIn, LogOut, Play, Route } from 'lucide-react';
 import { roomPath, type Joined, type Me, type MyAct, type RoomDoc } from '../../../utils/gameRoom';
-import { qSeat, qView, type QSeat, type QView, type QaravaniSnap } from '../../../utils/qaravaniRoom';
-import { MAX_Q, MIN_Q, cartsFor } from '../../../utils/qaravani';
+import { qView, type QView, type QaravaniSnap } from '../../../utils/qaravaniRoom';
+import { INNS, MAX_Q, MIN_Q, cartsFor, roundsFor } from '../../../utils/qaravani';
 import { qaravaniRooms } from '../../../utils/gameRoomFirestore';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { Btn, Toggle, askConfirm } from '../../../components/ui/kit';
@@ -16,12 +16,12 @@ import { StepClock } from '../kari/Pads';
 import { QaravaniPlay } from './Play';
 
 // „ქარავანი“'s room on screen (full screen, over the games page): the lobby, the map, the end. ✕ only hides it — the room goes on
-// and the invitation strip leads back. The opener may play too („მეც ვთამაშობ“: their own join). Every step has its clock and
-// the host's phone moves for the late one (two cards from the deck, the cheapest letters, the mountain given up). A room closed
-// at the end leaves its players the last map they saw.
+// and the invitation strip leads back. The opener may play too („მეც ვთამაშობ“: their own join); their phone holds the game, rolls
+// the dice and moves for whoever is late. A turn's clock runs while its dice are moved (an abazi does not stop it). A room closed at
+// the end leaves its players the last map they saw.
 
 const TITLE = 'ქარავანი';
-const CALL_HINT = 'ზარში ერთმანეთს ხედავთ და გესმით. ბარათები და წერილები მხოლოდ შენს ტელეფონზე ჩანს.';
+const CALL_HINT = 'ზარში ერთმანეთს ხედავთ და გესმით. რუკა და კამათლები ყველა ტელეფონზე ერთნაირად ჩანს.';
 
 const Wait: React.FC<{ title: string; text: string; onClose: () => void; action?: { label: string; onClick: () => void }; spin?: boolean }> = ({ title, text, onClose, action, spin }) => (
   <TableScreen title={TITLE} onClose={onClose} footer={action && <Btn kind="ghost" size="lg" full onClick={action.onClick}>{action.label}</Btn>}>
@@ -56,35 +56,35 @@ const Lobby: React.FC<{
     ? <Btn size="lg" full disabled={!fits} onClick={host.start} icon={<Play />} className="!h-14 !text-[16px]">თამაშის დაწყება</Btn>
     : joined
       ? <Btn kind="ghost" size="lg" full onClick={player?.leave} icon={<LogOut />} className="!h-14 !text-[16px]">ოთახიდან გასვლა</Btn>
-      : <Btn size="lg" full disabled={busy || n >= MAX_Q} onClick={join} icon={<LogIn />} className="!h-14 !text-[16px]">{n >= MAX_Q ? 'ადგილი აღარ არის' : 'შესვლა'}</Btn>;
+      : <Btn size="lg" full disabled={busy} onClick={join} icon={<LogIn />} className="!h-14 !text-[16px]">შესვლა</Btn>;
   return (
     <TableScreen title={className ? `ოთახი · ${className}` : 'ოთახი'} right={<CallBtn gc={gc} />} onClose={onHide} footer={footer}>
       <div className="py-2 space-y-4">
-        <div className="rounded-3xl bg-gradient-to-br from-[#3b2a1c] to-[#2b1e14] text-[#fbf6ec] px-4 py-4 shadow-[0_14px_30px_-20px_rgba(43,30,20,0.9)]">
-          <p className="text-[12px] font-bold text-[#e2c27a] flex items-center gap-1.5"><Route className="w-4 h-4" />{TITLE}</p>
+        <div className="rounded-3xl bg-gradient-to-br from-[#4a2e1a] to-[#2b1a0e] text-[#fbf6ec] px-4 py-4 shadow-[0_14px_30px_-20px_rgba(58,36,21,0.9)]">
+          <p className="text-[12px] font-bold text-[#f0d9a8] flex items-center gap-1.5"><Route className="w-4 h-4" />{TITLE}</p>
           {host ? (
             <>
               <p className="mt-1 font-serif-ge text-[19px] font-bold leading-snug">კლასს მოწვევა გაეგზავნა — ჩატში და ტელეფონზე.</p>
-              <p className="mt-1.5 text-[13px] leading-snug text-[#fbf6ec]/85">შენი ტელეფონი თამაშს ითვლის: დასტას ურევს და ვინც დააგვიანებს, მის ნაცვლად ორ ბარათს იღებს. შენც შეგიძლია ითამაშო — ბარათებს და წერილებს მხოლოდ შენსას დაინახავ.</p>
+              <p className="mt-1.5 text-[13px] leading-snug text-[#fbf6ec]/85">შენი ტელეფონი თამაშს ითვლის: კამათლებს აგორებს, ქულებს ითვლის და ვინც დააგვიანებს, მის ნაცვლად დადის. შენც შეგიძლია ითამაშო.</p>
             </>
           ) : (
             <>
               <p className="mt-1 font-serif-ge text-[19px] font-bold leading-snug inline-flex items-center gap-2">
-                {joined ? <><Check className="w-5 h-5 text-[#e2c27a]" />ოთახში ხარ</> : `${firstName(room.hostName)} გიწვევს თამაშში`}
+                {joined ? <><Check className="w-5 h-5 text-[#f0d9a8]" />ოთახში ხარ</> : `${firstName(room.hostName)} გიწვევს თამაშში`}
               </p>
-              <p className="mt-1.5 text-[13px] leading-snug text-[#fbf6ec]/85">ბარათებს და წერილებს შენს ტელეფონზე ნახავ, გზებს რუკაზე თავად დაიკავებ. სვლას თავისი დრო აქვს.</p>
+              <p className="mt-1.5 text-[13px] leading-snug text-[#fbf6ec]/85">შენს სვლაზე კამათლები გზას გიხსნის — შენს ტელეფონზე აირჩევ, რომელს დაიკავებ. ქულებს ტელეფონი ითვლის.</p>
             </>
           )}
         </div>
         {failed && !joined && <p className="rounded-2xl bg-amber-50 ring-1 ring-amber-200 px-4 py-2.5 text-[13px] font-bold text-amber-800">ვერ შევედი. შეიძლება თამაში უკვე დაიწყო — სცადე თავიდან.</p>}
-        {host && <Toggle on={joined} onChange={host.play} label="მეც ვთამაშობ" hint="გამორთე, თუ მხოლოდ უძღვები — მაშინ რუკას ყველა ბარათის გარეშე უყურებ." />}
+        {host && <Toggle on={joined} onChange={host.play} label="მეც ვთამაშობ" hint="გამორთე, თუ მხოლოდ უძღვები — მაშინ თამაშს უყურებ." />}
         <section className="space-y-2">
           <div className="flex items-baseline justify-between gap-3">
             <p className="text-[13.5px] font-bold text-[#4a3426]">მოთამაშეები · {n}</p>
             <p className={`text-[12.5px] font-bold tabular-nums text-right ${fits ? 'text-[#2f7d4f]' : 'text-[#9a6a10]'}`}>{countLine(n)}</p>
           </div>
           <People joins={joins} me={me} onKick={host?.kick} />
-          {fits && <Hint>თითოს {cartsFor(n)} ურემი, 3 ქარვასლა, 4 ბარათი და 4 წერილი — მათგან 2 მაინც უნდა დაიტოვოს.{n <= 3 ? ' 2–3 მოთამაშით ორმაგი გზის მხოლოდ ერთი ზოლი გამოიყენება.' : ''}</Hint>}
+          {fits && <Hint>{roundsFor(n)} მოგზაურობა, თითოს {cartsFor(n)} ურემი და {INNS} ქარვასლა. რიგს ტელეფონი შემთხვევით აწყობს.</Hint>}
         </section>
         <CallCard gc={gc} hint={CALL_HINT} />
         {host && (
@@ -98,47 +98,65 @@ const Lobby: React.FC<{
   );
 };
 
-interface Host { timeUp: (key: string) => void; again: () => void; close: () => void }
-
-/** the game in the room: the step's clock (the host's own; a player's from when the step reached this phone, the host's clock
- *  trusted for 4 s) and the host's phone answering for the late one */
-const Game: React.FC<{
-  v: QView; seat: QSeat | null; me: number; mine: MyAct | null; gc: GameCall; host?: Host;
-  onAct: (pick: number) => void; onHide: () => void; onLeave: () => void;
-}> = ({ v, seat, me, mine, gc, host, onAct, onHide, onLeave }) => {
+/** a turn's clock (an abazi on a die is a new step but the same turn): the host's own; a player's from when the turn reached this
+ *  phone (the host's clock trusted for 4 s) */
+const useClock = (v: QView, host: boolean) => {
   const seen = useRef({ key: '', start: 0 });
-  if (seen.current.key !== v.key) {
+  const turn = `${v.g.round}.${v.g.turn}.${v.g.phase.k}`;
+  if (host) seen.current = { key: turn, start: v.t0 };
+  else if (seen.current.key !== turn) {
     const at = Date.now();
-    seen.current = { key: v.key, start: host ? v.t0 : at - Math.min(4000, Math.max(0, at - v.t0)) };
+    seen.current = { key: turn, start: at - Math.min(4000, Math.max(0, at - v.t0)) };
   }
-  const over = v.phase.k === 'end';
-  const ticking = v.secs > 0 && !over;
+  const ticking = v.secs > 0 && v.g.phase.k !== 'end';
   const now = useNow(ticking);
-  const left = ticking ? Math.max(0, v.secs - (now - seen.current.start) / 1000) : 0;
+  return ticking ? <StepClock left={Math.max(0, v.secs - (now - seen.current.start) / 1000)} total={v.secs} /> : undefined;
+};
+
+const Game: React.FC<{
+  v: QView; me: number; mine: MyAct | null; gc: GameCall; host?: { timeUp: (key: string) => void; again: () => void; close: () => void };
+  onHide: () => void; onLeave: () => void; error: React.ReactNode;
+}> = ({ v, me, mine, gc, host, onHide, onLeave, error }) => {
+  const clock = useClock(v, !!host);
+  const ph = v.g.phase.k;
+  // the host's phone moves for whoever is late
   const timeUp = host?.timeUp;
   useEffect(() => {
-    if (!timeUp || !v.secs || over) return;
+    if (!timeUp || !v.secs || ph === 'end') return;
     const t = setTimeout(() => timeUp(v.key), Math.max(0, v.t0 + v.secs * 1000 - Date.now()) + 300);
     return () => clearTimeout(t);
-  }, [timeUp, v.key, v.t0, v.secs, over]);
+  }, [timeUp, v.key, v.t0, v.secs, ph]);
   const sent = mine?.key === v.key && mine.pick !== null;
-  // the clock shows for the one the game waits on (at the deal: everyone still choosing)
-  const waitsOnMe = v.waiting.includes(me);
-  const note = me < 0 && !over ? (
+  const myTurn = ph !== 'end' && me >= 0 && v.g.turn === me;
+  const note = me < 0 && ph !== 'end' && (
     <p className="rounded-2xl bg-[#4a3426]/[0.06] px-3.5 py-2.5 text-[13px] font-bold leading-snug text-[#75685a]">ამ თამაშში არ ხარ — უყურებ.</p>
-  ) : null;
+  );
   return (
-    <QaravaniPlay
-      v={v}
-      seat={seat}
-      me={me}
-      sent={sent}
-      clock={ticking && (waitsOnMe || me < 0 || v.phase.k !== 'start') ? <StepClock left={left} total={v.secs} /> : undefined}
-      acts={over ? (host ? { again: host.again, close: host.close } : { leave: onLeave }) : me >= 0 ? { pick: onAct } : {}}
-      right={<CallBtn gc={gc} />}
-      note={note}
-      onHide={onHide}
-    />
+    <>
+      <QaravaniPlay
+        g={v.g}
+        me={me}
+        sent={sent}
+        clock={clock}
+        right={<CallBtn gc={gc} />}
+        note={<>
+          {note}
+          {host && ph !== 'end' && (
+            <div className="flex justify-center -my-1">
+              <button type="button" onClick={host.close} className="h-10 px-4 rounded-full text-[12.5px] font-bold text-[#7a2028] hover:bg-[#7a2028]/[0.07] cursor-pointer">ოთახის დახურვა</button>
+            </div>
+          )}
+        </>}
+        acts={{
+          pick: myTurn ? n => { void qaravaniRooms.act(v.key, n); } : undefined,
+          again: host?.again,
+          close: host?.close,
+          leave: host ? undefined : onLeave,
+        }}
+        onHide={onHide}
+      />
+      {error}
+    </>
   );
 };
 
@@ -146,9 +164,9 @@ export const QaravaniRoom: React.FC<{ snap: QaravaniSnap; who?: Me; className: s
   const room = snap.room;
   const me = who && who.uid === snap.me.uid ? who : snap.me;
   const gc = useGameCall(roomPath(snap.classId, snap.roomId), me, room?.host ?? '', TITLE);
-  // the last map seen: a room closed at the end still shows it
-  const last = useRef<{ view: QView; uids: string[]; seat: QSeat | null } | null>(null);
-  if (room?.view) last.current = { view: room.view, uids: room.uids, seat: snap.seat };
+  // the last table seen: a room closed at the end still shows it
+  const last = useRef<{ view: QView; uids: string[] } | null>(null);
+  if (room?.view) last.current = { view: room.view, uids: room.uids };
   const [slow, setSlow] = useState(false);
   useEffect(() => {
     setSlow(false);
@@ -161,12 +179,12 @@ export const QaravaniRoom: React.FC<{ snap: QaravaniSnap; who?: Me; className: s
 
   const leave = () => { dismissRoom(snap.roomId); qaravaniRooms.close(); onHide(); };
   const closeRoom = async () => {
-    const done = room?.status === 'over';
+    const over = room?.status === 'over';
     const ok = await askConfirm({
       title: 'ოთახი დაიხუროს?',
-      text: done ? 'ოთახი წაიშლება. მოთამაშეებს ბოლო რუკა ეკრანზე დარჩებათ.' : 'ოთახი და თამაში წაიშლება ყველასთვის.',
+      text: over ? 'ოთახი წაიშლება. მოთამაშეებს ბოლო რუკა ეკრანზე დარჩებათ.' : 'ოთახი და თამაში წაიშლება ყველასთვის.',
       ok: 'დახურვა',
-      danger: !done,
+      danger: !over,
     });
     if (!ok) return;
     await qaravaniRooms.host.close();
@@ -183,9 +201,7 @@ export const QaravaniRoom: React.FC<{ snap: QaravaniSnap; who?: Me; className: s
   }
   if (room === null) {
     const lv = last.current;
-    if (lv && lv.view.phase.k === 'end') {
-      return <Game v={lv.view} seat={lv.seat} me={lv.uids.indexOf(snap.me.uid)} mine={null} gc={gc} onAct={() => {}} onHide={leave} onLeave={leave} />;
-    }
+    if (lv && lv.view.g.phase.k === 'end') return <Game v={lv.view} me={lv.uids.indexOf(snap.me.uid)} mine={null} gc={gc} onHide={leave} onLeave={leave} error={null} />;
     return <Wait title="ოთახი დაიხურა" text="მასპინძელმა ოთახი დახურა, ან თამაში აღარ არსებობს." onClose={leave} action={{ label: 'დახურვა', onClick: leave }} />;
   }
   if (room.status === 'lobby') {
@@ -215,21 +231,9 @@ export const QaravaniRoom: React.FC<{ snap: QaravaniSnap; who?: Me; className: s
     if (!state || !hostView) {
       return <Wait spin title="თამაში იტვირთება…" text="შენი ტელეფონი თამაშს ითვლის — ერთი წამი." onClose={onHide} action={slow ? { label: 'ოთახის დახურვა', onClick: () => { void closeRoom(); } } : undefined} />;
     }
-    const i = state.uids.indexOf(snap.me.uid);
-    const moves: Host = { timeUp: qaravaniRooms.host.timeUp, again: () => qaravaniRooms.host.again(), close: () => { void closeRoom(); } };
-    return (
-      <>
-        <Game v={hostView} seat={i >= 0 ? qSeat(state, i) : null} me={i} mine={snap.mine} gc={gc} host={moves} onAct={p => qaravaniRooms.act(hostView.key, p)} onHide={onHide} onLeave={onHide} />
-        {error}
-      </>
-    );
+    const moves = { timeUp: qaravaniRooms.host.timeUp, again: () => qaravaniRooms.host.again(), close: () => { void closeRoom(); } };
+    return <Game v={hostView} me={state.uids.indexOf(snap.me.uid)} mine={snap.mine} gc={gc} host={moves} onHide={onHide} onLeave={onHide} error={error} />;
   }
   if (!room.view) return <Wait spin title="თამაში იწყება…" text="ერთი წამი." onClose={onHide} />;
-  const view = room.view;
-  return (
-    <>
-      <Game v={view} seat={snap.seat} me={room.uids.indexOf(snap.me.uid)} mine={snap.mine} gc={gc} onAct={p => qaravaniRooms.act(view.key, p)} onHide={onHide} onLeave={leave} />
-      {error}
-    </>
-  );
+  return <Game v={room.view} me={room.uids.indexOf(snap.me.uid)} mine={snap.mine} gc={gc} onHide={onHide} onLeave={leave} error={error} />;
 };

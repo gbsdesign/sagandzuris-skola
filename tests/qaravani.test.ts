@@ -2,12 +2,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { mulberry32 } from '../src/utils/otkheuli';
 import { Q_CITY_COUNT, Q_ROUTES } from '../src/data/qaravaniRoutes';
-import { Q_CITIES } from '../src/data/qaravaniMap';
+import { Q_CITIES, Q_GOODS } from '../src/data/qaravaniMap';
 import {
-  DECK_PICK, FACE_PICK, LOCO, PASS_PICK, QUIT_PICK, ROUTE_TRACKS, SCORE, TICKETS, TICKETS_PICK, TRACKS, applyPick, cardsIn, claimPick,
-  innPick, keepPick, keyOf, legalPicks, longestOf, newQaravani, parseQaravani, payments, resultOf, ticketDone, timeUp, trackPayments,
-  tunnelPayments, tunnelPick, waitingOn,
-  type QGame,
+  CARGO_PTS, CITY_CARGO, CITY_VALUE, COINS0, GUEST, INNS, INN_COST, INN_PTS, NEXT, ROUTE_TRACKS, START_MAX, TRACKS, TRADE,
+  TRADE_PICK, applyPick, botPick, canTake, cartsFor, claimPick, diceFor, diceOpen, hasPair, hasSix, holdersOf, innPick, innSpots,
+  joins, keyOf, legalPicks, netOf, newQaravani, parseQaravani, resultOf, roadOpen, roundsFor, scoreOf, sumsOf, takeable, timeUp,
+  tweakPick, type QGame,
 } from '../src/utils/qaravani';
 
 const city = (key: string) => { const i = Q_CITIES.findIndex(c => c.key === key); assert.ok(i >= 0, key); return i; };
@@ -16,272 +16,257 @@ const track = (a: string, b: string, lane = 0) => {
   assert.ok(r >= 0, `${a}-${b}`);
   return ROUTE_TRACKS[r][lane];
 };
-const hand = (cards: Partial<Record<number, number>>) => Array.from({ length: 9 }, (_, i) => cards[i] ?? 0);
-const deal = (n = 3, seed = 7) => newQaravani({ names: ['ანა', 'ბექა', 'გიო', 'დათო', 'ეკა'].slice(0, n), first: 0, rnd: mulberry32(seed) })!;
-/** past the deal: everyone keeps the first two letters offered */
-const dealt = (n = 3, seed = 7) => { let g = deal(n, seed); for (let s = 0; s < n; s++) g = applyPick(g, s, keepPick(0b0011)); return g; };
-/** a turn of player 0 with the hand given, the deck's top cards (the last one first) as given */
-const turnWith = (cards: Partial<Record<number, number>>, top: number[] = [], n = 3): QGame => {
-  const g = dealt(n);
-  return { ...g, players: g.players.map((p, i) => (i === 0 ? { ...p, hand: hand(cards) } : p)), deck: [...g.deck, ...top] };
+const NAMES = ['ანა', 'ბექა', 'გიო', 'დათო', 'ეკა'];
+const fresh = (n = 3, seed = 7) => newQaravani({ names: NAMES.slice(0, n), first: 0, rnd: mulberry32(seed) })!;
+/** past the start: the houses' first caravanserais in the towns given (the last house first, as the game asks) */
+const started = (towns: string[], seed = 7) => {
+  const n = towns.length;
+  let g = fresh(n, seed);
+  for (let k = 0; k < n; k++) {
+    const p = g.turn, next = applyPick(g, p, innPick(city(towns[p])));
+    assert.notEqual(next, g, `${towns[p]} for ${p}`);
+    g = next;
+  }
+  return g;
 };
+/** the same game with these dice on the table */
+const withDice = (g: QGame, dice: number[]): QGame => ({ ...g, dice: [...dice], rolled: [...dice] });
 
-test('the map is the kit\'s: 47 cities, 74 roads with 82 tracks, 40 letters and 6 long journeys', () => {
+test('the map is the kit\'s: 47 cities with their worth and cargo, 74 roads with 82 tracks', () => {
   assert.equal(Q_CITY_COUNT, 47);
   assert.equal(Q_CITIES.length, 47);
   assert.equal(Q_ROUTES.length, 74);
   assert.equal(TRACKS.length, 82);
-  assert.equal(TRACKS.filter(t => t.mountain).length / 1, 13);
-  assert.equal(new Set(TRACKS.filter(t => t.ships).map(t => t.route)).size, 4);
-  assert.equal(TICKETS.length, 46);
-  assert.equal(TICKETS.filter(t => t.long).length, 6);
-  // a letter's points are the fewest cells between its cities (the kit checks it too)
-  const fewest = (a: number, b: number) => {
-    const d = new Map([[a, 0]]), done = new Set<number>();
-    for (;;) {
-      let u = -1;
-      for (const [k, v] of d) if (!done.has(k) && (u < 0 || v < d.get(u)!)) u = k;
-      if (u < 0 || u === b) break;
-      done.add(u);
-      for (const t of TRACKS) { const v = t.a === u ? t.b : t.b === u ? t.a : -1; if (v >= 0 && (!d.has(v) || d.get(u)! + t.n < d.get(v)!)) d.set(v, d.get(u)! + t.n); }
-    }
-    return d.get(b);
-  };
-  for (const t of TICKETS) assert.equal(fewest(t.a, t.b), t.v);
+  assert.equal(TRACKS.filter(t => t.mountain).length, 13);
+  assert.equal(new Set(TRACKS.filter(t => t.water).map(t => t.route)).size, 4);
+  assert.equal(CITY_VALUE.length, 47);
+  assert.equal(CITY_CARGO.length, 47);
+  assert.equal(CITY_VALUE[city('tbilisi')], 5);
+  assert.equal(CITY_VALUE[city('kutaisi')], 4);
+  assert.ok(CITY_VALUE.every(v => v >= 1 && v <= 5));
+  // eight kinds: wine in three places, the blue tablecloth in Tbilisi alone, the rest in two
+  const count = Q_GOODS.map((_, k) => CITY_CARGO.filter(c => c === k).length);
+  assert.deepEqual(count, [3, 2, 2, 1, 2, 2, 2, 2]);
+  assert.equal(Q_GOODS[CITY_CARGO[city('tbilisi')]].name, 'ლურჯი სუფრა');
+  assert.equal(Q_GOODS[CITY_CARGO[city('telavi')]].name, 'ღვინო');
+  // the map is one piece: every city reaches every other
+  const seen = new Set([0]), todo = [0];
+  while (todo.length) for (const y of NEXT[todo.pop()!]) if (!seen.has(y)) { seen.add(y); todo.push(y); }
+  assert.equal(seen.size, 47);
 });
 
-test('the deal: four cards each, five face up, one long journey and three letters to choose from', () => {
-  const g = deal(4);
-  assert.equal(cardsIn(g), 110);
-  assert.equal(g.players.every(p => p.hand.reduce((a, b) => a + b, 0) === 4), true);
-  assert.equal(g.face.filter(c => c >= 0).length, 5);
-  assert.ok(g.face.filter(c => c === LOCO).length < 3);
-  assert.equal(g.players.every(p => p.carts === 40), true);
-  assert.equal(deal(5).players[0].carts, 35);
+test('the dice: sums of one, two or three, the pair, the six, the dice a road uses', () => {
+  assert.deepEqual(sumsOf([1, 2, 4]), [1, 2, 3, 4, 5, 6, 7]);
+  assert.deepEqual(sumsOf([3, 3, 3]), [3, 6, 9]);
+  assert.equal(hasPair([2, 5, 2]), true);
+  assert.equal(hasPair([1, 2, 3]), false);
+  assert.equal(hasSix([6, 1, 1]), true);
+  assert.deepEqual(diceFor([1, 2, 4], 4), [2]);
+  assert.deepEqual(diceFor([1, 2, 4], 3), [0, 1]);
+  assert.deepEqual(diceFor([1, 2, 4], 7), [0, 1, 2]);
+  assert.equal(diceFor([5, 5, 5], 4), null);
+  // a mountain road wants a pair, a water road a six
+  const pass = track('ananuri', 'stepantsminda'), water = track('poti', 'samtredia');
+  assert.equal(TRACKS[pass].mountain, true);
+  assert.equal(diceOpen([3, 5, 1], pass), false, 'three cells, but no pair');
+  assert.equal(diceOpen([3, 1, 1], pass), true);
+  assert.equal(diceOpen([2, 1, 4], water), false);
+  assert.equal(diceOpen([2, 6, 4], water), true);
+});
+
+test('the start: every house places a caravanserai in a town, the last house first, then the first house rolls', () => {
+  let g = fresh(3);
   assert.equal(g.phase.k, 'start');
-  if (g.phase.k !== 'start') return;
-  assert.equal(g.phase.offer.every(o => o.length === 4 && TICKETS[o[0]].long && o.slice(1).every(id => !TICKETS[id].long)), true);
-  assert.equal(g.tdeck.length, 40 - 4 * 3);
-  assert.deepEqual(waitingOn(g), [0, 1, 2, 3]);
-  // everyone at once: one key for the whole deal; at least two kept
-  assert.equal(applyPick(g, 1, keepPick(0b0001)), g);
-  const a = applyPick(g, 2, keepPick(0b1010));
-  assert.equal(keyOf(a), 'start');
-  assert.equal(a.players[2].tickets.length, 2);
-  assert.equal(applyPick(a, 2, keepPick(0b0011)), a);
-  let b = a;
-  for (const s of [0, 1, 3]) b = applyPick(b, s, keepPick(0b1111));
-  assert.equal(b.phase.k, 'turn');
-  assert.equal(b.turn, 0);
-  assert.notEqual(keyOf(b), 'start');
+  assert.equal(g.turn, 2, 'the house before the first one chooses first');
+  const spots = innSpots(g);
+  assert.ok(spots.length > 20);
+  assert.ok(spots.every(x => CITY_VALUE[x] <= START_MAX));
+  assert.ok(!spots.includes(city('tbilisi')) && !spots.includes(city('kutaisi')) && !spots.includes(city('batumi')));
+  assert.equal(applyPick(g, 0, innPick(city('mestia'))), g, 'not the first house yet');
+  g = applyPick(g, 2, innPick(city('sagarejo')));
+  assert.equal(g.turn, 1);
+  // not next to another caravanserai
+  assert.ok(!innSpots(g).includes(city('gurjaani')));
+  assert.ok(!innSpots(g).includes(city('sagarejo')));
+  g = applyPick(g, 1, innPick(city('mestia')));
+  g = applyPick(g, 0, innPick(city('ozurgeti')));
+  assert.equal(g.phase.k, 'turn');
+  assert.equal(g.turn, 0);
+  assert.equal(g.round, 1);
+  assert.equal(g.dice.length, 3);
+  assert.ok(g.dice.every(d => d >= 1 && d <= 6));
+  assert.deepEqual(g.players.map(p => p.inns), [INNS - 1, INNS - 1, INNS - 1]);
+  assert.deepEqual(g.players.map(p => p.coins), [COINS0, COINS0, COINS0], 'the start caravanserai is free');
+  assert.deepEqual([...netOf(g.owner, g.inn, 1)], [city('mestia')]);
 });
 
-test('cards: two a turn; a face-up locomotive is the only one, and never the second', () => {
-  const g = dealt();
-  const loco = { ...g, face: [LOCO, 0, 1, 2, 3] };
-  const a = applyPick(loco, 0, FACE_PICK);
-  assert.equal(a.players[0].hand[LOCO], g.players[0].hand[LOCO] + 1);
-  assert.equal(a.turn, 1);
-  const b = applyPick(loco, 0, FACE_PICK + 1);
-  assert.equal(b.phase.k, 'second');
-  assert.equal(b.turn, 0);
-  if (b.phase.k === 'second') b.face[0] = LOCO;
-  assert.equal(applyPick(b, 0, FACE_PICK), b);
-  const c = applyPick(b, 0, DECK_PICK);
-  assert.equal(c.turn, 1);
-  assert.equal(c.players[0].hand.reduce((x, y) => x + y, 0), g.players[0].hand.reduce((x, y) => x + y, 0) + 2);
-  assert.equal(c.log.at(-1)?.k, 'cards');
-  assert.equal(cardsIn(c), 110);
-  // another player may not move
-  assert.equal(applyPick(g, 1, DECK_PICK), g);
+test('a road: its cells are some dice\'s sum, it touches the caravan, the carts pay for it', () => {
+  const g = withDice(started(['ozurgeti', 'mestia', 'sagarejo']), [1, 4, 5]);
+  const toKob = track('kobuleti', 'ozurgeti'), toSam = track('ozurgeti', 'samtredia'), far = track('batumi', 'kobuleti');
+  assert.equal(canTake(g, 0, toKob), true);
+  assert.equal(canTake(g, 0, toSam), false, 'two cells: no die nor sum gives 2');
+  assert.equal(canTake(g, 0, far), false, 'not at my caravan');
+  assert.deepEqual(takeable(g).sort(), [toKob]);
+  const x = applyPick(g, 0, claimPick(toKob));
+  assert.equal(x.owner[toKob], 0);
+  assert.equal(x.players[0].carts, cartsFor(3) - 1);
+  assert.equal(x.turn, 1, 'a road ends the turn');
+  assert.deepEqual(x.log.at(-1), { k: 'road', p: 0, t: toKob, spent: 0 });
+  // now Kobuleti is mine: Batumi's road joins
+  assert.equal(joins(x.owner, x.inn, 20, 3, 0, far), true);
+  assert.equal(applyPick(g, 1, claimPick(toKob)), g, 'not your turn');
 });
 
-test('three locomotives face up: all five go and five new are laid', () => {
-  const g = dealt();
-  const h = { ...g, face: [LOCO, LOCO, 0, 1, 2], deck: [...g.deck.filter(c => c !== LOCO), LOCO] };
-  const a = applyPick(h, 0, FACE_PICK + 2);
-  assert.ok(a.face.filter(c => c === LOCO).length < 3);
-  assert.equal(a.log.some(l => l.k === 'wash'), true);
+test('an abazi moves a die by one; a trade brings two and ends the turn', () => {
+  const g = withDice(started(['ozurgeti', 'mestia', 'sagarejo']), [3, 4, 5]);
+  const toSam = track('ozurgeti', 'samtredia');
+  assert.equal(canTake(g, 0, toSam), false);
+  const t = applyPick(g, 0, tweakPick(0, false));
+  assert.deepEqual(t.dice, [2, 4, 5]);
+  assert.deepEqual(t.rolled, [3, 4, 5]);
+  assert.equal(t.players[0].coins, COINS0 - 1);
+  assert.equal(t.spent, 1);
+  assert.equal(t.turn, 0, 'still my turn');
+  assert.equal(canTake(t, 0, toSam), true);
+  assert.equal(applyPick(t, 0, tweakPick(1, true)), t, 'no abazi left');
+  const six = withDice(g, [6, 4, 5]);
+  assert.equal(applyPick(six, 0, tweakPick(0, true)), six, 'a die stays within 1–6');
+  const tr = applyPick(g, 0, TRADE_PICK);
+  assert.equal(tr.players[0].coins, COINS0 + TRADE);
+  assert.equal(tr.turn, 1);
+  assert.deepEqual(tr.log.at(-1), { k: 'trade', p: 0, spent: 0 });
+  assert.notEqual(keyOf(tr), keyOf(g));
 });
 
-test('a road: the colour and its cells, locomotives for any colour, gray for any one colour, points at once', () => {
-  const t = track('kutaisi', 'tsageri'); // yellow, 2
-  assert.equal(TRACKS[t].color, 1);
-  const g = turnWith({ 1: 1, 8: 1, 0: 5 });
-  assert.deepEqual(trackPayments(g, 0, t), [{ c: 1, l: 1 }]);
-  assert.equal(applyPick(g, 0, claimPick(t, 0, 0)), g);
-  const a = applyPick(g, 0, claimPick(t, 1, 1));
-  assert.equal(a.owner[t], 0);
-  assert.equal(a.players[0].carts, 38);
-  assert.equal(a.players[0].pts, SCORE[2]);
-  assert.deepEqual(a.players[0].hand, hand({ 0: 5 }));
-  assert.equal(cardsIn(a), cardsIn(g));
-  const gray = track('gori', 'tskhinvali'); // gray, 1
-  assert.deepEqual(trackPayments(g, 0, gray).map(p => p.c), [0, 1, LOCO]);
-  // a gray road of 4 cells takes four of one colour, never two and two
-  assert.equal(payments(hand({ 0: 2, 1: 2 }), 4, 8).length, 0);
-  assert.deepEqual(payments(hand({ 0: 2, 1: 2, 8: 2 }), 4, 8), [{ c: 0, l: 2 }, { c: 1, l: 2 }]);
+test('a caravanserai: three abazi, a city of one\'s caravan, once a city; a guest\'s road brings its owner an abazi', () => {
+  let g = started(['ozurgeti', 'mestia', 'sagarejo']);
+  g = { ...g, players: g.players.map((p, i) => (i === 0 ? { ...p, coins: 7 } : p)) };
+  const toKob = track('kobuleti', 'ozurgeti');
+  g = applyPick(withDice(g, [1, 2, 3]), 0, claimPick(toKob));
+  // round the table to me again: the others trade
+  g = applyPick(g, 1, TRADE_PICK);
+  g = applyPick(g, 2, TRADE_PICK);
+  assert.equal(g.turn, 0);
+  assert.deepEqual(innSpots(g), [city('kobuleti')], 'Ozurgeti has mine already');
+  const x = applyPick(g, 0, innPick(city('kobuleti')));
+  assert.equal(x.players[0].coins, 7 - INN_COST);
+  assert.equal(x.players[0].inns, INNS - 2);
+  assert.equal(x.turn, 0, 'building does not end the turn');
+  assert.deepEqual(innSpots(x), []);
+  assert.equal(applyPick(g, 0, innPick(city('batumi'))), g, 'not at my caravan');
+  // a guest's road into Kobuleti: house 1 jumps there (its own roads are far) — it may only when nothing touches its caravan
+  const blocked = { ...x, turn: 1, owner: x.owner.map((o, t) => (TRACKS[t].a === city('mestia') || TRACKS[t].b === city('mestia') ? 2 : o)) };
+  const bk = track('batumi', 'kobuleti');
+  assert.equal(joins(blocked.owner, blocked.inn, 20, 3, 1, bk), true, 'no free road touches Mestia: anywhere');
+  const y = applyPick(withDice(blocked, [1, 1, 1]), 1, claimPick(bk));
+  assert.equal(y.owner[bk], 1);
+  assert.equal(y.players[0].coins, 7 - INN_COST + GUEST);
+  assert.deepEqual(y.log.slice(-2).map(l => l.k), ['road', 'guest']);
 });
 
-test('ships want a locomotive each; double roads: one for two or three players, both for four or five but not the same one', () => {
-  const sea = track('bichvinta', 'sokhumi'); // gray, 2, one ship
-  assert.equal(TRACKS[sea].ships, 1);
-  assert.equal(trackPayments(turnWith({ 0: 2 }), 0, sea).length, 0);
-  assert.deepEqual(trackPayments(turnWith({ 0: 2, 8: 1 }), 0, sea), [{ c: 0, l: 1 }]);
-  const a = track('poti', 'senaki', 0), b = track('poti', 'senaki', 1);
+test('double roads: never both lanes for one house, one lane only with three or fewer', () => {
+  const owner = TRACKS.map(() => -1);
+  const a = track('mtskheta', 'tbilisi', 0), b = track('mtskheta', 'tbilisi', 1);
   assert.equal(TRACKS[a].twin, b);
-  const three = turnWith({ 7: 1, 2: 1 });
-  const x = { ...three, owner: three.owner.map((o, i) => (i === a ? 1 : o)) };
-  assert.equal(trackPayments(x, 0, b).length, 0);
-  const four = turnWith({ 7: 1, 2: 1 }, [], 4);
-  const y = { ...four, owner: four.owner.map((o, i) => (i === a ? 1 : o)) };
-  assert.deepEqual(trackPayments(y, 0, b), [{ c: 2, l: 0 }]);
-  const z = { ...four, owner: four.owner.map((o, i) => (i === a ? 0 : o)) };
-  assert.equal(trackPayments(z, 0, b).length, 0);
+  owner[a] = 0;
+  assert.equal(roadOpen(owner, 20, 3, 1, b), false);
+  assert.equal(roadOpen(owner, 20, 4, 1, b), true);
+  assert.equal(roadOpen(owner, 20, 4, 0, b), false);
+  assert.equal(roadOpen(owner, 0, 4, 1, b), false, 'no carts');
 });
 
-test('a mountain road: three cards turned up, each matching one wants another, or the road is given up', () => {
-  const t = track('ananuri', 'stepantsminda'); // gray, 3, ჯვარი
-  assert.equal(TRACKS[t].mountain, true);
-  const g = turnWith({ 3: 4, 8: 1 }, [5, 3, LOCO]);
-  const a = applyPick(g, 0, claimPick(t, 3, 0));
-  assert.equal(a.phase.k, 'tunnel');
-  if (a.phase.k !== 'tunnel') return;
-  assert.equal(a.phase.extra, 2);
-  assert.deepEqual(tunnelPayments(a), [1]); // one blue left + the locomotive
-  assert.equal(cardsIn(a), cardsIn(g));
-  const paid = applyPick(a, 0, tunnelPick(1));
-  assert.equal(paid.owner[t], 0);
-  assert.deepEqual(paid.players[0].hand, hand({}));
-  assert.equal(cardsIn(paid), cardsIn(g));
-  const quit = applyPick(a, 0, QUIT_PICK);
-  assert.equal(quit.owner[t], -1);
-  assert.deepEqual(quit.players[0].hand, hand({ 3: 4, 8: 1 }));
-  assert.equal(quit.turn, 1);
-  // nothing matching: the road at once
-  const b = applyPick(turnWith({ 3: 3 }, [5, 0, 1]), 0, claimPick(t, 3, 0));
-  assert.equal(b.owner[t], 0);
-  // paid with locomotives only: only locomotives count, only locomotives pay
-  const c = applyPick(turnWith({ 8: 5, 3: 3 }, [3, 3, LOCO]), 0, claimPick(t, LOCO, 3));
-  assert.equal(c.phase.k === 'tunnel' && c.phase.extra, 1);
-  assert.deepEqual(tunnelPayments(c), [1]);
-});
-
-test('letters: three drawn, at least one kept, the rest under the pile', () => {
-  const g = dealt();
-  const a = applyPick(g, 0, TICKETS_PICK);
-  assert.equal(a.phase.k, 'tickets');
-  if (a.phase.k !== 'tickets') return;
-  const offer = a.phase.offer;
-  assert.equal(offer.length, 3);
-  assert.equal(applyPick(a, 0, keepPick(0)), a);
-  const b = applyPick(a, 0, keepPick(0b010));
-  assert.deepEqual(b.players[0].tickets.slice(-1), [offer[1]]);
-  assert.deepEqual(b.tdeck.slice(0, 2), [offer[0], offer[2]]);
-  assert.equal(b.turn, 1);
-});
-
-test('inns: one card, then two, then three of one colour; one a city', () => {
-  const g = turnWith({ 0: 6, 8: 1 });
-  const x = city('tbilisi'), y = city('kutaisi');
-  const a = applyPick(g, 0, innPick(x, 0, 0));
-  assert.equal(a.inn[x], 0);
-  assert.equal(a.players[0].inns, 2);
-  const a2 = { ...a, turn: 0, phase: { k: 'turn' as const } };
-  assert.equal(applyPick(a2, 0, innPick(x, 0, 1)), a2);
-  const b = applyPick(a2, 0, innPick(y, 0, 1));
-  assert.equal(b.players[0].hand[0], 4);
-  assert.equal(b.players[0].hand[LOCO], 0);
-  const b2 = { ...b, turn: 0, phase: { k: 'turn' as const } };
-  const c = applyPick(b2, 0, innPick(city('gori'), 0, 0));
-  assert.equal(c.players[0].inns, 0);
-  assert.equal(c.players[0].hand[0], 1);
-});
-
-test('the last round: two carts or fewer — everyone, that one too, plays once more', () => {
-  const g = turnWith({ 0: 1 });
-  const t = track('zugdidi', 'senaki'); // red, 1
-  const low = { ...g, players: g.players.map((p, i) => (i === 0 ? { ...p, carts: 3 } : p)) };
-  let a = applyPick(low, 0, claimPick(t, 0, 0));
-  assert.equal(a.left, 3);
-  assert.equal(a.log.at(-1)?.k, 'last');
-  for (const s of [1, 2]) { a = applyPick(a, s, DECK_PICK); a = applyPick(a, s, DECK_PICK); }
-  assert.equal(a.turn, 0);
-  assert.equal(a.phase.k, 'turn');
-  a = applyPick(a, 0, DECK_PICK);
-  a = applyPick(a, 0, DECK_PICK);
-  assert.equal(a.phase.k, 'end');
-});
-
-test('the score: letters done or not, an inn lends one road, unused inns, the longest chain', () => {
-  const g = dealt(2);
-  const own = [track('poti', 'senaki'), track('senaki', 'samtredia'), track('samtredia', 'kutaisi')];
-  const other = track('kutaisi', 'zestaponi');
-  const done = TICKETS.findIndex(t => (t.a === city('poti') && t.b === city('tbilisi')) || (t.b === city('poti') && t.a === city('tbilisi')));
-  const near = TICKETS.findIndex(t => t.a === city('khashuri') && t.b === city('poti'));
-  assert.ok(done >= 0 && near >= 0);
-  const owner = g.owner.map((_, t) => (own.includes(t) ? 0 : t === other ? 1 : -1));
-  const end: QGame = { ...g, owner, phase: { k: 'end' }, players: g.players.map((p, i) => (i === 0 ? { ...p, tickets: [done, near], pts: 3 } : { ...p, tickets: [], pts: 1 })) };
-  let r = resultOf(end);
-  assert.deepEqual(r.rows[0].tickets.map(t => t.done), [false, false]);
-  assert.equal(r.rows[0].ticketPts, -TICKETS[done].v - TICKETS[near].v);
-  assert.equal(r.rows[0].innPts, 12);
-  assert.equal(r.rows[0].longest, 3);
-  assert.equal(r.rows[0].bonus, 10);
-  // the khashuri letter by own roads to zestaponi, then the opponent's road lent by an inn in kutaisi
-  const more = [...own, track('zestaponi', 'khashuri')];
-  const lent: QGame = { ...end, owner: g.owner.map((_, t) => (more.includes(t) ? 0 : t === other ? 1 : -1)), inn: end.inn.map((o, x) => (x === city('kutaisi') ? 0 : o)), players: end.players.map((p, i) => (i === 0 ? { ...p, inns: 2 } : p)) };
-  assert.equal(ticketDone(lent, 0, near), false);
-  r = resultOf(lent);
-  assert.deepEqual(r.rows[0].borrowed, [other]);
-  assert.deepEqual(r.rows[0].tickets.map(t => t.done), [false, true]);
-  assert.equal(r.rows[0].longest, 3); // the lent road does not join the two chains
-  assert.equal(r.rows[0].innPts, 8);
-  assert.deepEqual(r.winners, [0]);
-  assert.equal(longestOf([track('tbilisi', 'mtskheta'), track('mtskheta', 'gori'), track('gori', 'khashuri'), track('gori', 'tskhinvali')]), 4);
-});
-
-test('time up: the deal keeps the two cheapest letters, a turn takes two cards, a mountain is given up', () => {
-  const g = deal();
-  const a = timeUp(g);
-  assert.equal(a.phase.k, 'turn');
-  assert.equal(a.players.every(p => p.tickets.length === 2 && p.tickets.every(id => !TICKETS[id].long)), true);
-  const b = timeUp(a);
-  assert.equal(b.turn, 1);
-  assert.equal(b.players[0].hand.reduce((x, y) => x + y, 0), a.players[0].hand.reduce((x, y) => x + y, 0) + 2);
-  const t = track('ananuri', 'stepantsminda');
-  const m = applyPick(turnWith({ 3: 4 }, [3, 3, 3]), 0, claimPick(t, 3, 0));
-  assert.equal(m.phase.k, 'tunnel');
-  assert.equal(timeUp(m).owner[t], -1);
-});
-
-test('random games run to the end with every card kept, and a kept game reads back', () => {
-  for (let k = 0; k < 120; k++) {
-    const r = mulberry32(1000 + k), n = 2 + (k % 4);
-    let g = newQaravani({ names: Array.from({ length: n }, (_, i) => `მოთამაშე ${i + 1}`), rnd: r })!;
-    let moves = 0;
-    while (g.phase.k !== 'end' && moves < 3000) {
-      const seat = waitingOn(g)[0];
-      const picks = legalPicks(g, seat);
-      assert.ok(picks.length > 0);
-      // claims first (a real game moves on), then anything
-      const claims = picks.filter(p => p >= 10000 && p < 20000);
-      const pick = claims.length && r() < 0.7 ? claims[Math.floor(r() * claims.length)] : picks[Math.floor(r() * picks.length)];
-      const next = applyPick(g, seat, pick);
-      assert.notEqual(next, g, `move ${pick} in ${g.phase.k}`);
-      g = next;
-      assert.equal(cardsIn(g), 110);
-      moves++;
-    }
-    assert.equal(g.phase.k, 'end', `game ${k} ended`);
-    const res = resultOf(g);
-    assert.equal(res.rows.length, n);
-    assert.ok(res.winners.length >= 1);
-    assert.deepEqual(parseQaravani(JSON.parse(JSON.stringify(g))), g);
+test('the journeys: the game ends after the last house of the last round', () => {
+  for (const n of [2, 3, 4, 5]) {
+    let g = started(['ozurgeti', 'mestia', 'sagarejo', 'akhalkalaki', 'lagodekhi'].slice(0, n));
+    let turns = 0;
+    while (g.phase.k !== 'end') { g = applyPick(g, g.turn, TRADE_PICK); turns++; }
+    assert.equal(turns, roundsFor(n) * n);
+    if (n === 2) assert.equal(g.log.filter(l => l.k === 'round').length, roundsFor(2) - 1);
+    assert.equal(applyPick(g, g.turn, TRADE_PICK), g);
   }
 });
 
-test('a pass only when nothing else can be done', () => {
-  const g = dealt();
-  assert.equal(applyPick(g, 0, PASS_PICK), g);
+test('the score: cities by most roads (a caravanserai counts two, a tie shares rounded down), cargo kinds, caravanserais', () => {
+  const owner = TRACKS.map(() => -1), inn = Array(Q_CITY_COUNT).fill(0);
+  const tb = city('tbilisi'), mt = city('mtskheta'), sg = city('sagarejo');
+  owner[track('mtskheta', 'tbilisi', 0)] = 0;
+  owner[track('tbilisi', 'sagarejo', 0)] = 1;
+  assert.deepEqual(holdersOf(owner, inn, 3, tb), [0, 1]);
+  let rows = scoreOf(owner, inn, 3);
+  // Tbilisi (5) shared: 2 each; Mtskheta to 0, Sagarejo to 1
+  assert.equal(rows[0].cityPts, Math.floor(5 / 2) + CITY_VALUE[mt]);
+  assert.equal(rows[1].cityPts, Math.floor(5 / 2) + CITY_VALUE[sg]);
+  // both reach Tbilisi's tablecloth
+  assert.deepEqual(rows[0].cargo, [CITY_CARGO[tb]]);
+  assert.equal(rows[0].cargoPts, CARGO_PTS[1]);
+  inn[tb] = 1 << 1;
+  rows = scoreOf(owner, inn, 3);
+  assert.deepEqual(holdersOf(owner, inn, 3, tb), [1]);
+  assert.equal(rows[1].cityPts, 5 + CITY_VALUE[sg]);
+  assert.equal(rows[1].inns, 1);
+  assert.equal(rows[1].total, rows[1].cityPts + rows[1].cargoPts + INN_PTS);
+  assert.equal(rows[2].total, 0);
+  // the cargo table
+  assert.deepEqual([...CARGO_PTS], [0, 1, 3, 5, 8, 11, 15, 20, 25]);
+});
+
+test('the result: most points, then most cities, then most abazi', () => {
+  const g = started(['ozurgeti', 'mestia', 'sagarejo']);
+  const r = resultOf(g);
+  // three lone caravanserais: each holds its town + 2 for the caravanserai; Ozurgeti's tea and Mestia's honey are cargo too
+  assert.equal(r.rows[0].total, CITY_VALUE[city('ozurgeti')] + CARGO_PTS[1] + INN_PTS);
+  assert.equal(r.rows[2].total, CITY_VALUE[city('sagarejo')] + INN_PTS);
+  assert.deepEqual(r.winners, [0, 1], 'the same points, cities and abazi');
+  assert.equal(r.order[2], 2);
+  const tied = { ...g, inn: g.inn.map(() => 0) };
+  const t = resultOf({ ...tied, players: tied.players.map((p, i) => ({ ...p, coins: i === 2 ? 5 : 1 })) });
+  assert.deepEqual(t.winners, [2], 'all zero: the most abazi');
+});
+
+test('random games end, every move is legal, the bot never stalls, a kept game reads back', () => {
+  for (const n of [2, 3, 4, 5]) for (let k = 0; k < 6; k++) {
+    const rnd = mulberry32(100 * n + k);
+    let g = newQaravani({ names: NAMES.slice(0, n), rnd })!;
+    let steps = 0;
+    while (g.phase.k !== 'end' && steps < 2000) {
+      const legal = legalPicks(g);
+      assert.ok(legal.length > 0);
+      const pick = k % 2 ? botPick(g) : legal[Math.floor(rnd() * legal.length)];
+      assert.ok(legal.includes(pick), `bot's ${pick} is legal`);
+      const x = applyPick(g, g.turn, pick);
+      assert.notEqual(x, g);
+      g = x;
+      steps++;
+      if (steps % 17 === 0) assert.deepEqual(parseQaravani(JSON.parse(JSON.stringify(g))), g);
+    }
+    assert.equal(g.phase.k, 'end');
+    assert.ok(g.players.every(p => p.carts >= 0 && p.coins >= 0 && p.inns >= 0));
+    assert.deepEqual(parseQaravani(JSON.parse(JSON.stringify(g))), g);
+    const r = resultOf(g);
+    assert.equal(r.order.length, n);
+    assert.ok(r.winners.length >= 1);
+  }
+});
+
+test('time up: the careful move, and the game moves on', () => {
+  const g = fresh(4, 3);
+  let x = g, guard = 0;
+  while (x.phase.k !== 'end' && guard++ < 500) {
+    const y = timeUp(x);
+    assert.notEqual(y, x);
+    x = y;
+  }
+  assert.equal(x.phase.k, 'end');
+  assert.equal(timeUp(x), x);
+});
+
+test('a kept game must be whole', () => {
+  const g = started(['ozurgeti', 'mestia', 'sagarejo']);
+  assert.equal(parseQaravani(null), null);
+  assert.equal(parseQaravani({ ...g, v: 1 }), null);
+  assert.equal(parseQaravani({ ...g, owner: g.owner.slice(1) }), null);
+  assert.equal(parseQaravani({ ...g, dice: [1, 2] }), null);
+  assert.equal(parseQaravani({ ...g, players: g.players.slice(0, 1) }), null);
+  assert.equal(parseQaravani({ ...g, round: roundsFor(3) + 1 }), null);
+  assert.equal(parseQaravani({ ...g, inn: g.inn.map(() => 8) }), null);
 });
