@@ -314,8 +314,8 @@
   notifications are allowed, else `components/calls/PhoneRingSetup.tsx` asks once at the bottom (4 s after opening, never during
   a service or a call, „მოგვიანებით“ = a week). The site calls `notifyRing` in `callActions.ts` and `notifyChat` in the senders
   (`useClassChat.ts`, `useChatPins.ts`). `public/prayer-notify-sw.js` `showTalk`: nothing while a window of the site is
-  visible (the app rings itself); a ring = tag `call-<id>`, „პასუხი“ / „უარი“, kept until touched; `call-end` replaces it
-  silently; a message = tag `chat-<id>` (a private chat's each message sounds — `renotify` —, a class's once, then only updated).
+  visible (the app rings itself); a ring = tag `call-d-<id>` (private) / `call-c-<id>` (a class), „პასუხი“ / „უარი“, kept until touched; `call-end` replaces it
+  silently; a message = tag `chat-d-<id>` / `chat-c-<id>` (a private chat's each message sounds — `renotify` —, a class's once, then only updated).
   Taps open `/?open=chat&id=<dmId | class:id>` or `/?open=call&b=<base>` (App.tsx: the chat + `wantAnswer`, and the incoming
   screen answers or joins once it sees the call — `takeAnswer`/`useAnswerWanted`). The Worker needs only its publish (the
   workflow does it on main).

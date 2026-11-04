@@ -60,7 +60,7 @@ self.addEventListener('push', (event) => {
 // ---- calls and messages (worker/reminders /ring and /chat-notify, 2026-11-05) -----------------------------------
 // While the site is on screen it rings and shows the message itself, so the phone's notice is left out then (an „ended“
 // ring still clears its notice). A ring: „პასუხი“ / „უარი“, kept until touched, vibrating; the Android app turns it into
-// a real ring (android/ BellDelegationService, by the tag `call-…` and its two buttons). „უარი“ ends a private call for
+// a real ring (android/ BellDelegationService, by the tag `call-d-…` / `call-c-…` and its two buttons). „უარი“ ends a private call for
 // both through the Worker with the ring's own signature.
 const RING_VIBRATE = [700, 400, 700, 400, 700, 400, 700, 400, 700, 400, 700];
 const onScreen = () =>

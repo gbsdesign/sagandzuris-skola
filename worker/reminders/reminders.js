@@ -731,7 +731,8 @@ async function ring(request, env) {
   const caller = kind === 'classes' ? firstName(String(state?.name || '').trim()) : who.title;
   const title = kind === 'classes' ? who.title : caller;
   const url = kind === 'classes' ? `/?open=chat&id=class:${id}` : `/?open=chat&id=${id}`;
-  const tag = `call-${id}`;
+  // the Android app reads the tag: call-d-… a private call, call-c-… a class's (android/ BellDelegationService)
+  const tag = `call-${kind === 'dms' ? 'd' : 'c'}-${id}`;
   const rows = await rowsFor(env, to, 'chat');
   if (end) {
     const message = { kind: 'call-end', title, body: kind === 'classes' ? `${caller} — გამოტოვებული ზარი` : 'გამოტოვებული ზარი', tag, url, ttl: 3600 };
@@ -803,7 +804,7 @@ async function chatNotify(request, env) {
     kind: 'chat',
     title: who.title,
     body: who.group ? `${firstName(writer)}: ${text}` : text,
-    tag: `chat-${id}`,
+    tag: `chat-${kind === 'dms' ? 'd' : 'c'}-${id}`,
     url: `/?open=chat&id=${kind === 'classes' ? `class:${id}` : id}`,
     // a private chat sounds at each message; a class's chat once, then its notice is only updated
     renotify: !who.group,
