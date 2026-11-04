@@ -7,6 +7,7 @@ import {
 import { triggerHaptic } from '../../../utils/haptics';
 import { Chip } from '../../../components/games/Chip';
 import { TableScreen } from '../../../components/games/TableScreen';
+import { KitButton } from '../../../components/games/KitButton';
 import { Btn, Card, askConfirm, useWide } from '../../../components/ui/kit';
 import { Hint } from '../samshvilde/parts';
 import { Podium } from '../rounds/parts';
@@ -21,7 +22,6 @@ import { AMBER, FactBox, ForkDots, ForkHead, GREEN, Medallion, RealPath, UNCHECK
 
 const GAME_KEY = 'sg-tsinapari-table';
 const CONF_KEY = 'sg-tsinapari-table-conf';
-const PDF = '/games/print/tsinapris-gza.pdf';
 const load = (k: string): unknown => { try { return JSON.parse(localStorage.getItem(k) || 'null'); } catch { return null; } };
 const save = (k: string, v: unknown) => { try { if (v === null) localStorage.removeItem(k); else localStorage.setItem(k, JSON.stringify(v)); } catch { /* private mode */ } };
 
@@ -262,13 +262,14 @@ export const TsinapariTableGame: React.FC = () => {
         {!conf.whole && <TeamsEditor conf={conf} onChange={c => setConf({ ...conf, ...c })} />}
       </Card>
       <Btn size="lg" full icon={<Play />} onClick={() => { void start(); }} className="!h-14 !text-[15.5px]">დაწყება</Btn>
-      <a
-        href={PDF}
-        download
-        className="flex items-center justify-center gap-2 h-12 rounded-full bg-white ring-1 ring-[#e8dcc8] text-[14px] font-bold text-[#7a2028] hover:ring-[#7a2028]/40"
+      <KitButton
+        id="tsinapris-gza"
+        name="წინაპრის გზა"
+        icon={<Printer className="w-4.5 h-4.5" />}
+        className="flex w-full items-center justify-center gap-2 h-12 rounded-full bg-white ring-1 ring-[#e8dcc8] text-[14px] font-bold text-[#7a2028] hover:ring-[#7a2028]/40"
       >
-        <Printer className="w-4.5 h-4.5" />ა ბ გ ბარათები და წიგნი-თამაში · PDF
-      </a>
+        ა ბ გ ბარათები და წიგნი-თამაში · PDF
+      </KitButton>
       <Hint>
         {conf.whole ? (
           <>მასწავლებელი გასაყარს ხმამაღლა კითხულობს, კლასი სამ გზაზე ხელის აწევით აძლევს ხმას. შეეხეთ იმ გზას, რომელმაც მეტი ხმა მიიღო, და მერე „რა მოხდა სინამდვილეში?“ — ტელეფონი ნამდვილ გზას გეტყვით და იმასაც, სად წაიყვანდა სხვები.</>

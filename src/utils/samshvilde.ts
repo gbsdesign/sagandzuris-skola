@@ -1,7 +1,7 @@
 import { shuffle } from './otkheuli';
 
 // „სამშვილდის ღამე“ on the phone (games hub, 2026-10-30, live, hybrid): the school's Mafia with the printed kit's roles,
-// table and night words (scripts/print-games/games/samshvildis-game.mjs — keep the two alike). The phone deals the roles
+// table and night words (src/print/games/samshvildis-game.js — keep the two alike). The phone deals the roles
 // as it is passed round, or the host deals the printed cards and marks on the first night who woke up; then the host taps
 // the night's choices and the phone works out the morning, keeps the speaking order, counts the votes and at the end
 // tells the chronicle. Every step is a pure function of the game, so the page keeps the game after every tap and goes

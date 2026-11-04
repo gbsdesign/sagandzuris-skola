@@ -1,6 +1,6 @@
 import { mulberry32 } from './otkheuli';
 
-// „ლურჯი სუფრა“ — the printed kit's game (scripts/print-games/games/lurji-supra.mjs; like Michael Kiesling's Azul, 2017) as code,
+// „ლურჯი სუფრა“ — the printed kit's game (src/print/games/lurji-supra.js; like Michael Kiesling's Azul, 2017) as code,
 // for the app's two variants: one phone passed round the table (pages/games/lurji/Table.tsx) and a class's room
 // (utils/lurjiRoom.ts). The apprentice side: a stamp always goes onto its own ornament's place in the row. Nothing is hidden,
 // so one state serves every phone. Words as the kit's: ბეჭედი (a tile), ლანგარი (a factory), მეიდანი (the centre), დაზგის

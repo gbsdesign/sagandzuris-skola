@@ -1,7 +1,7 @@
 // „ჩემი ვაზი“'s picture (2026-11-01): one fixed vine on a trellis, worked out once — a trunk up a stake, two arms along the
 // wire, eight canes rising from them — and its leaf places in the order the vine grows (from the root out). The app draws
 // the first N of them (pages/games/vazi/VineArt.tsx) and the paper sheet draws them all as places to glue a leaf
-// (scripts/print-games/games/chemi-vazi.mjs). Pure numbers: a box of 360×280, y down.
+// (src/print/games/chemi-vazi.js). Pure numbers: a box of 360×280, y down.
 
 export interface Pt { x: number; y: number }
 export interface Branch { id: string; pts: Pt[]; kind: 'trunk' | 'arm' | 'cane' }

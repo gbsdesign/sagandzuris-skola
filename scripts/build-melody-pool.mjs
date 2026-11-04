@@ -6,11 +6,11 @@
 //   node scripts/build-melody-pool.mjs
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { CHANTS, SONGS } from './print-games/melodies.mjs';
-import { lineOf } from './print-games/music.mjs';
+import { appData, ROOT } from './lib/appData.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+// the print kits' melodies (src/print/melodies.js) read the book notes from the files
+globalThis.__sgLoadScore = (book, num) => JSON.parse(fs.readFileSync(path.join(ROOT, 'public', 'notes', book, `${String(num).padStart(3, '0')}.json`), 'utf8'));
+const { CHANTS, SONGS, lineOf } = await appData({ 'print/melodies.js': ['CHANTS', 'SONGS'], 'print/music.js': ['lineOf'] });
 const OUT = path.join(ROOT, 'src', 'data', 'melodyPool.ts');
 const MAX = 40;
 

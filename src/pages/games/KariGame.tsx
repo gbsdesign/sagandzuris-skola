@@ -11,7 +11,7 @@ import { KariRoom } from './kari/Room';
 import { KariTable } from './kari/Table';
 import { ACT_DOES, ROLE_LOOK } from './kari/look';
 
-// „მეფის კარი“ on phones (games hub, 2026-11-04): the printed Coup of the school (public/games/print/mepis-kari.pdf) gets
+// „მეფის კარი“ on phones (games hub, 2026-11-04): the printed Coup of the school (src/print/games/mepis-kari.js) gets
 // its two app variants. Online: a class's room, everybody on their own phone with two hidden cards, the bluff in the game's
 // call (utils/kariRoom.ts over utils/mepisKari.ts; the opener may play too). Hybrid: the printed cards in hand, one phone
 // keeps the coins, the turns and the order (pages/games/kari/Table.tsx). The tab is kept on the device (`sg-kari-tab`).

@@ -688,12 +688,13 @@ const jpeg = (c: HTMLCanvasElement) => new Promise<PdfImage>((ok, fail) => c.toB
 }, 'image/jpeg', 0.85));
 
 /** the whole kit as one PDF, page by page (one canvas at a time — a phone's memory) */
-export const takhtiPdf = async (): Promise<Blob> => {
+export const takhtiPdf = async (progress?: (done: number, total: number) => void): Promise<Blob> => {
   try {
     await Promise.all(['400 40px "Noto Serif Georgian"', '700 40px "Noto Serif Georgian"', '800 40px "Noto Serif Georgian"', '700 40px "Noto Sans Georgian"', '900 40px "Noto Sans Georgian"']
       .map(f => document.fonts.load(f, `ორი ტახტი ${aso('ორი ტახტი')}`)));
   } catch { /* the system's font draws it */ }
   const out: PdfImage[] = [];
+  progress?.(0, PAGES.length);
   for (const p of PAGES) {
     const c = document.createElement('canvas');
     c.width = W;
@@ -706,6 +707,7 @@ export const takhtiPdf = async (): Promise<Blob> => {
     out.push(await jpeg(c));
     c.width = 1;
     c.height = 1;
+    progress?.(out.length, PAGES.length);
   }
   return buildPdf(out, TITLE);
 };

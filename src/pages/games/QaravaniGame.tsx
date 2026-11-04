@@ -10,7 +10,7 @@ import { CARGO_PTS, GUEST, INNS, INN_COST, INN_PTS, MAX_Q, START_MAX, TRADE, car
 import { QaravaniRoom } from './qaravani/Room';
 import { QaravaniTable } from './qaravani/Table';
 
-// „ქარავანი“ on phones (games hub, 2026-11-04): the printed kit №3 (public/games/print/qaravani.pdf) and its two app variants — since
+// „ქარავანი“ on phones (games hub, 2026-11-04): the printed kit №3 (src/print/games/qaravani.js) and its two app variants — since
 // the same day on the school's own rules (utils/qaravani.ts: dice open roads, cities go to the house with most roads into them,
 // cargo and caravanserais count; no more cards and letters). Online: a class's room, every caravan on its own phone (utils/
 // qaravaniRoom.ts; the opener may play too, the rest of the class may watch). Hybrid: one phone in the middle of the table

@@ -29,6 +29,7 @@ import { Toast } from '../components/ui/Toast';
 import { askSignIn } from '../components/access/SignInPrompt';
 import { openPathPanel } from '../components/views/IndependentWorkCard';
 import { triggerHaptic } from '../utils/haptics';
+import { useKitMaker, type KitMake } from '../components/games/KitButton';
 import HangiGame from './games/HangiGame';
 import AmikhseniGame from './games/AmikhseniGame';
 import SitqvaGame from './games/SitqvaGame';
@@ -111,52 +112,28 @@ const INNER: Record<string, React.FC> = {
 
 const BTN = 'inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full text-[13.5px] font-bold transition-[background-color,transform] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#7a2028]/50';
 
-/** a file the browser made, saved under a readable name */
-const saveFile = (blob: Blob, name: string) => {
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = name;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 10000);
+/** the printed variant's button: the kit is made in the browser and saved */
+const KitModeBtn: React.FC<{ g: GameDef; make: KitMake }> = ({ g, make }) => {
+  const { busy, note, run } = useKitMaker(make, g.title);
+  const Ic = MODE_ICON.noPhone;
+  return (
+    <button
+      type="button"
+      onClick={() => { void run(); }}
+      aria-busy={busy}
+      aria-label={`${g.title} — სამაგიდო: PDF, ${g.print?.sheets ?? 0} ფურცელი`}
+      className={`${BTN} cursor-pointer bg-[#7a2028]/[0.08] text-[#7a2028] ring-1 ring-[#7a2028]/15 hover:bg-[#7a2028]/[0.14]`}
+    >
+      {busy ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" /> : <Ic className="w-4 h-4 shrink-0" />}{MODE_LABEL.noPhone}
+      <span className="font-normal opacity-75 tabular-nums">· {note || 'PDF'}</span>
+    </button>
+  );
 };
 
-/** a variant's button: the app's variants open the game, the printed kit downloads (a kit the app draws is made first) */
+/** a variant's button: the app's variants open the game, the printed kit is made in the browser and saved */
 const ModeBtn: React.FC<{ g: GameDef; mode: GameMode; soon: boolean; onPlay: (mode: GameMode) => void }> = ({ g, mode, soon, onPlay }) => {
-  const [making, setMaking] = useState<'' | 'busy' | 'failed'>('');
+  if (mode === 'noPhone' && g.print) return <KitModeBtn g={g} make={g.print.make} />;
   const Ic = MODE_ICON[mode];
-  const kitCls = `${BTN} bg-[#7a2028]/[0.08] text-[#7a2028] ring-1 ring-[#7a2028]/15 hover:bg-[#7a2028]/[0.14]`;
-  const label = `${g.title} — სამაგიდო: PDF, ${g.print?.sheets ?? 0} ფურცელი`;
-  if (mode === 'noPhone' && g.print && 'make' in g.print) {
-    const { make } = g.print;
-    const run = async () => {
-      if (making === 'busy') return;
-      triggerHaptic(8);
-      setMaking('busy');
-      try {
-        saveFile(await make(), `${g.title}.pdf`);
-        setMaking('');
-      } catch {
-        setMaking('failed');
-        setTimeout(() => setMaking(''), 4000);
-      }
-    };
-    return (
-      <button type="button" onClick={() => { void run(); }} aria-busy={making === 'busy'} aria-label={label} className={`${kitCls} cursor-pointer`}>
-        {making === 'busy' ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" /> : <Ic className="w-4 h-4 shrink-0" />}{MODE_LABEL.noPhone}
-        <span className="font-normal opacity-75">· {making === 'busy' ? 'მზადდება…' : making === 'failed' ? 'ვერ შეიქმნა' : 'PDF'}</span>
-      </button>
-    );
-  }
-  if (mode === 'noPhone' && g.print && 'href' in g.print) {
-    return (
-      <a href={g.print.href} download={`${g.title}.pdf`} onClick={() => triggerHaptic(8)} aria-label={label} className={kitCls}>
-        <Ic className="w-4 h-4 shrink-0" />{MODE_LABEL.noPhone}<span className="font-normal opacity-75">· PDF</span>
-      </a>
-    );
-  }
   return (
     <button
       type="button"

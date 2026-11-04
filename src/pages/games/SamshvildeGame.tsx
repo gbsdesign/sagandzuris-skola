@@ -10,6 +10,7 @@ import {
 import { MAX_NAMES, MAX_NAME_LEN, cleanName } from '../../utils/gatvla';
 import { Btn, Card, FIELD, Tabs, Toggle, askConfirm } from '../../components/ui/kit';
 import { Chip } from '../../components/games/Chip';
+import { KitButton } from '../../components/games/KitButton';
 import { closeAudio } from '../../utils/gameSounds';
 import { triggerHaptic } from '../../utils/haptics';
 import { useOpenRequest } from '../../utils/searchOpen';
@@ -22,7 +23,7 @@ import { DayScreen, DealScreen, IntroScreen, MorningScreen, TieScreen, VerdictSc
 import { EndScreen, RosterScreen } from './samshvilde/EndScreen';
 
 // „სამშვილდის ღამე“ on the phone (games hub, 2026-10-30, live, hybrid): the school's Mafia, the same game as the printed
-// kit (public/games/print/samshvildis-game.pdf). The user's answers „1ა 2ა“: the printed roles and words; the roles are
+// kit (src/print/games/samshvildis-game.js). The user's answers „1ა 2ა“: the printed roles and words; the roles are
 // dealt by the phone passed round, or the printed cards are dealt and the host marks on the first night who woke up.
 // The phone is the host's (მემატიანე) helper: the night's words and choices, the morning, the speeches' clock, the
 // accusations, the hands, and the chronicle at the end. The game is kept on the device after every step (✕ only pauses)
@@ -33,7 +34,6 @@ import { EndScreen, RosterScreen } from './samshvilde/EndScreen';
 
 const KEY = 'sg-samshvilde';
 const GAME_KEY = 'sg-samshvilde-game';
-const PRINT = '/games/print/samshvildis-game.pdf';
 
 type Mode = 'online' | 'table';
 interface Conf { names: string[]; piper: boolean; kids: boolean; deal: Deal; mode?: Mode }
@@ -353,9 +353,14 @@ const SamshvildeGame: React.FC = () => {
                 : 'მემატიანე დაბეჭდილ ბარათებს ურიგებს. პირველ ღამეს, როცა როლები იღვიძებენ, ტელეფონში მონიშნავს, ვინ ვინაა.'}
             </p>
             {conf.deal === 'cards' && (
-              <a href={PRINT} target="_blank" rel="noopener" className="inline-flex items-center gap-2 h-10 px-3.5 rounded-full bg-[#7a2028]/[0.08] text-[13px] font-bold text-[#7a2028] hover:bg-[#7a2028]/[0.14]">
-                <Printer className="w-4 h-4" /> დასაბეჭდი ფურცლები (PDF)
-              </a>
+              <KitButton
+                id="samshvildis-game"
+                name="სამშვილდის ღამე"
+                icon={<Printer className="w-4 h-4" />}
+                className="inline-flex items-center gap-2 h-10 px-3.5 rounded-full bg-[#7a2028]/[0.08] text-[13px] font-bold text-[#7a2028] hover:bg-[#7a2028]/[0.14]"
+              >
+                დასაბეჭდი ფურცლები (PDF)
+              </KitButton>
             )}
           </Card>
 

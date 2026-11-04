@@ -2,7 +2,7 @@ import { mulberry32 } from './otkheuli';
 import { KUTKHE_NEAR, KUTKHE_REGIONS } from './kutkhe';
 
 // „ოქროს ხანა“ (2026-11-04) — the school's own board game of the Golden Age, on the songs map's 13 regions (the app's
-// data/georgiaMapShapes.ts; the print kit scripts/print-games/games/okros-khana.mjs draws the same map). Each great house sends
+// data/georgiaMapShapes.ts; the print kit src/print/games/okros-khana.js draws the same map). Each great house sends
 // its rider round Georgia: a turn is a ride of up to two regions, the region's goods (one, one more for an estate of mine there,
 // one more where the king is this year), then one deed there — an estate (ხე + ქვა + პური), a share of the king's great work
 // that stands in that region (a point a good, the one who finishes it takes its card), or a feast at one's own estate (ღვინო +

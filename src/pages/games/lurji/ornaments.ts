@@ -1,4 +1,4 @@
-// The five ornaments of „ლურჯი სუფრა“'s stamps, drawn as in the printed kit (scripts/print-games/games/lurji-supra.mjs — keep
+// The five ornaments of „ლურჯი სუფრა“'s stamps, drawn as in the printed kit (src/print/games/lurji-supra.js — keep
 // them the same): white on their colour, `bg` cuts the details out, in a 100×100 box; in the order of `ORNS` (utils/lurjiSupra.ts).
 export const ORNAMENT: ((fg: string, bg: string) => string)[] = [
   /* tevzi */ (fg: string, bg: string) => `<path d="M24 50L6 31Q13 50 6 69Z" fill="${fg}"/>

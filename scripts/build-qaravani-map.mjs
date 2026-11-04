@@ -1,12 +1,11 @@
 // „ქარავანი“ in the app: writes the roads and the cities' worth and cargo for its rules (src/data/qaravaniRoutes.ts) and the map's drawing
-// (src/data/qaravaniMap.ts) from the print kit (scripts/print-games/games/qaravani.mjs), so the app's board is the printed one.
+// (src/data/qaravaniMap.ts) from the print kit (src/print/games/qaravani.js), so the app's board is the printed one.
 // Run `node scripts/build-qaravani-map.mjs` again after the kit's map changes; never edit the two files by hand.
 import fs from 'node:fs';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
-import { appMap } from './print-games/games/qaravani.mjs';
+import { appData, ROOT } from './lib/appData.mjs';
 
-const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
+const { appMap } = await appData({ 'print/games/qaravani.js': ['appMap'] });
 const m = appMap();
 
 // the print's drawing is finer than a phone needs: lines are thinned (Douglas–Peucker, 0.2 mm), numbers kept to 0.1 mm, and a
@@ -56,7 +55,7 @@ const slim = (svg, tag) => {
 };
 m.bg = slim(m.bg, 'qb');
 m.top = slim(m.top, 'qt');
-const HEAD = '// made by `node scripts/build-qaravani-map.mjs` from the print kit (scripts/print-games/games/qaravani.mjs) — never edit by hand\n';
+const HEAD = '// made by `node scripts/build-qaravani-map.mjs` from the print kit (src/print/games/qaravani.js) — never edit by hand\n';
 const rows = list => list.map(r => `  ${JSON.stringify(r)},`).join('\n');
 
 const routes = `${HEAD}// „ქარავანი“'s roads and cities for the app's rules (utils/qaravani.ts); the cities' names and the drawing are in

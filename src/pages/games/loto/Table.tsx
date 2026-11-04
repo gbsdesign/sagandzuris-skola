@@ -9,6 +9,7 @@ import { triggerHaptic } from '../../../utils/haptics';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { Btn, Card, askConfirm } from '../../../components/ui/kit';
 import { Chip } from '../../../components/games/Chip';
+import { KitButton } from '../../../components/games/KitButton';
 import { useMine } from '../../../components/games/useMine';
 import { Hint } from '../samshvilde/parts';
 import { SnippetBox } from '../rounds/parts';
@@ -23,7 +24,6 @@ import { TABLE_CONF, TABLE_GAME, loadKey, save } from './store';
 // cards they write themselves, nine names of the deck in a 3 × 3 grid. Whoever calls „საგანძური!“ is checked here: a printed
 // card by its number, an own card by the names the child reads out. The game stays on this phone (✕ only pauses).
 
-const PDF = '/games/print/sagalobo-loto.pdf';
 type Cards = LotoTable['cards'];
 interface Conf { cards: Cards; deck: LotoDeck }
 const readConf = (): Conf => {
@@ -362,9 +362,14 @@ export const LotoTableGame: React.FC = () => {
         {choice('own', 'საკუთარი ბარათები', 'ყველა თავად ხაზავს 3 × 3 ბადეს და ეკრანზე ნაჩვენები სიიდან ცხრა სახელს წერს.', PenLine)}
       </div>
       {conf.cards === 'print' ? (
-        <a href={PDF} download className="flex min-h-[48px] items-center gap-2.5 rounded-2xl bg-[#4a3426]/[0.06] px-4 py-2.5 text-[14px] font-bold text-[#4a3426] hover:bg-[#4a3426]/[0.1]">
-          <Download className="h-4 w-4 shrink-0" />ბარათების PDF (ორმხრივად ამოსაბეჭდი)
-        </a>
+        <KitButton
+          id="sagalobo-loto"
+          name="საგალობო ლოტო"
+          icon={<Download className="h-4 w-4 shrink-0" />}
+          className="flex w-full min-h-[48px] items-center gap-2.5 rounded-2xl bg-[#4a3426]/[0.06] px-4 py-2.5 text-left text-[14px] font-bold text-[#4a3426] hover:bg-[#4a3426]/[0.1]"
+        >
+          ბარათების PDF (ორმხრივად ამოსაბეჭდი)
+        </KitButton>
       ) : (
         <div className="space-y-2">
           <p className="text-[13.5px] font-bold text-[#4a3426]">რა ჟღერს</p>

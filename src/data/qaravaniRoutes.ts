@@ -1,4 +1,4 @@
-// made by `node scripts/build-qaravani-map.mjs` from the print kit (scripts/print-games/games/qaravani.mjs) — never edit by hand
+// made by `node scripts/build-qaravani-map.mjs` from the print kit (src/print/games/qaravani.js) — never edit by hand
 // „ქარავანი“'s roads and cities for the app's rules (utils/qaravani.ts); the cities' names and the drawing are in
 // data/qaravaniMap.ts (only the screens load it).
 

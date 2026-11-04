@@ -1,6 +1,6 @@
 import type { LotoPiece } from '../utils/loto';
 
-// „საგალობო ლოტო“'s printed kit (scripts/print-games/games/sagalobo-loto.mjs): twenty well-known chants — six of the
+// „საგალობო ლოტო“'s printed kit (src/print/games/sagalobo-loto.js): twenty well-known chants — six of the
 // Liturgy (vol. IX), six of vespers and eight of matins (vol. I), each with a melodic opening (none of PLAIN_OPENINGS) — and
 // thirty cards over them (utils/loto.ts kitCards). The list is written out here, not drawn from the pearls, so the cards on
 // paper and on the phone (the hybrid's „დაბეჭდილი ბარათები“) stay the same if the chests ever change. Never reorder it: a

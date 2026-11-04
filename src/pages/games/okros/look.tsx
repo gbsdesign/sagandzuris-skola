@@ -2,7 +2,7 @@ import React from 'react';
 import { BrickWall, Castle, Coins, Grape, Store, TreePine, Wheat, type LucideIcon } from 'lucide-react';
 import { GOOD_NAMES, REGION_IN, REGION_NAMES, WORKS, needCount, type Good, type OkLine, type OkOpen } from '../../../utils/okrosKhana';
 
-// „ოქროს ხანა“'s looks, shared by the board, the play screen and the kit's colours (scripts/print-games/games/okros-khana.mjs keeps
+// „ოქროს ხანა“'s looks, shared by the board, the play screen and the kit's colours (src/print/games/okros-khana.js keeps
 // the same): the five goods' colours and marks, the four houses' colours, the chronicle's lines, a work's card.
 
 export const GOOD_LOOK: readonly { color: string; tint: string; ink: string; Icon: LucideIcon }[] = [

@@ -8,7 +8,7 @@ import { Q_CITY_CARGO, Q_CITY_COUNT, Q_CITY_VALUE, Q_ROUTES } from '../data/qara
 // road into it brings its owner an abazi). After the last journey every city goes to the house with most roads into it (a
 // caravanserai counts as two; a tie shares its worth, rounded down), the kinds of cargo one's caravan reaches count by CARGO_PTS,
 // and every caravanserai is two points. Played on one phone (pages/games/qaravani/Table.tsx), in a class's room
-// (utils/qaravaniRoom.ts) and on paper (scripts/print-games/games/qaravani.mjs reads these numbers). A move is one number (`pick`);
+// (utils/qaravaniRoom.ts) and on paper (src/print/games/qaravani.js reads these numbers). A move is one number (`pick`);
 // the dice fall on the game's own seed, so a move is pure and the phone's undo keeps whole games.
 
 export const MIN_Q = 2;
@@ -36,7 +36,7 @@ export const LOG_MAX = 40;
 
 /** each city's worth (the house with most roads into it takes it at the end; a tie shares it, rounded down) and its cargo (0–7 as
  *  data/qaravaniMap.ts Q_GOODS: ღვინო, თაფლი, ჩაი, ლურჯი სუფრა, ნაბადი, სულგუნი, სპილენძი, აბრეშუმი; −1 none) — the kit's map
- *  sets both (scripts/print-games/games/qaravani.mjs) */
+ *  sets both (src/print/games/qaravani.js) */
 export const CITY_VALUE: readonly number[] = Q_CITY_VALUE;
 export const CITY_CARGO: readonly number[] = Q_CITY_CARGO;
 

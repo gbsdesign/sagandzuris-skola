@@ -4,7 +4,7 @@
 // bank of `data/kartuliQuiz.ts` — history, heroes, great people, literature, film, dance, the table, monuments, nature, myths,
 // sport — is added after them (the user: games on everything Georgian; faith and chant stay as questions, only no religious
 // pictures). Each has the answer the host reads out and, where it helps, one line under it. Not yet checked by a teacher
-// (the setup screen says so). The print kit (scripts/print-games/games/ra-sad-rodis.mjs) takes the first four of every topic.
+// (the setup screen says so). The print kit (src/print/games/ra-sad-rodis.js) takes the first four of every topic.
 // Ids are stable: the device remembers the questions already asked by their id (utils/raSadRodis.ts).
 import { KARTULI_QUIZ, QUIZ_TOPICS, type QuizTopicDef } from './kartuliQuiz';
 
