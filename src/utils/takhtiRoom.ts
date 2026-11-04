@@ -2,10 +2,10 @@ import { createRooms, type Backend, type RoomEngine, type RoomSnap } from './gam
 import { shuffle } from './otkheuli';
 import { TAKHTI_SECS, applyPick, keyOf, newTakhti, parseTakhti, publicOf, timeUp, winnersOf, type TakhtiGame } from './oriTakhti';
 
-// „ორი ტახტი“ in a class's room (utils/gameRoom.ts): the two thrones on their own phones, the host's phone holds the game and
-// applies the moves. What lies face down, the later ages, the draft's second round and the box stay on the host's phone: the
-// view is `publicOf` the game, the same for both, so there are no seats. The room's opener may play too. A move not made in
-// time is made by the host's phone (`timeUp`: a free card thrown away, the first of a choice).
+// „ორი ტახტი“ in a class's room (utils/gameRoom.ts): the two kings on their own phones, the host's phone holds the game and
+// applies the moves. Everything lies open but the deck's order, so the view is `publicOf` the game (the deck dropped), the
+// same for both — there are no seats. The room's opener may play too. A move not made in time is made by the host's phone
+// (`timeUp`: the careful split, share or envoy's card).
 
 export interface TakhtiOnline { g: TakhtiGame; uids: string[]; t0: number }
 export interface TakhtiView {
@@ -30,7 +30,7 @@ export const takhtiTimeUp = (s: TakhtiOnline, key: string, now = Date.now()): Ta
 
 export const takhtiView = (s: TakhtiOnline): TakhtiView => ({ v: 1, key: keyOf(s.g), g: publicOf(s.g), t0: s.t0, secs: TAKHTI_SECS[s.g.phase.k] });
 
-/** two players: who is west and who begins the draft by lot */
+/** two players: who is west and who divides first, by lot */
 export const startTakhti = (players: { uid: string; name: string }[], rnd: () => number, now = Date.now()): TakhtiOnline | null => {
   if (players.length !== 2) return null;
   const seated = shuffle(players, rnd);
@@ -38,7 +38,7 @@ export const startTakhti = (players: { uid: string; name: string }[], rnd: () =>
   return g ? { g, uids: seated.map(p => p.uid), t0: now } : null;
 };
 
-/** the same two once more: the loser begins the draft (both shared it — by lot) */
+/** the same two once more: the loser divides first (a shared throne: by lot) */
 export const againTakhti = (s: TakhtiOnline, rnd: () => number, now = Date.now()): TakhtiOnline | null => {
   const w = winnersOf(s.g);
   const g = newTakhti({ names: s.g.names, first: w.length === 1 ? 1 - w[0] : undefined, rnd });

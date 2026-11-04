@@ -4,15 +4,16 @@ import { useAuth } from '../../context';
 import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
 import { Card, Tabs, askConfirm } from '../../components/ui/kit';
 import { RoomSetup, meOf } from '../../components/games/RoomSetup';
+import { ARMY_PTS, ARMY_TIE, WINE_PTS } from '../../utils/oriTakhti';
 import { useOpenRequest } from '../../utils/searchOpen';
 import { takhtiRooms, useTakhtiRoom } from '../../utils/gameRoomFirestore';
 import { TakhtiRoom } from './takhti/Room';
 import { TakhtiTable } from './takhti/Table';
 
-// „ორი ტახტი“ on phones (games hub, 2026-11-04): the printed duel of the school (public/games/print/ori-takhti.pdf) gets its
-// two app variants. Online: a class's room, each throne on its own phone (utils/takhtiRoom.ts over utils/oriTakhti.ts; the
-// opener may play too, the rest of the class may watch). Hybrid: one phone between the two thrones
-// (pages/games/takhti/Table.tsx). The tab is kept on the device (`sg-takhti-tab`).
+// „ორი ტახტი“ (games hub; rebuilt 2026-11-04 on the school's own rules — one divides, the other chooses, utils/oriTakhti.ts):
+// online, a class's room, each king on his own phone (utils/takhtiRoom.ts; the opener may play too, the rest of the class may
+// watch); hybrid, one phone between the two kings (pages/games/takhti/Table.tsx); the print kit
+// (pages/games/takhti/printKit.ts — the hub's button draws the PDF in the browser). The tab is kept on the device (`sg-takhti-tab`).
 
 type Tab = 'online' | 'table';
 const TAB_KEY = 'sg-takhti-tab';
@@ -28,13 +29,13 @@ const Rules: React.FC = () => {
       </button>
       {open && (
         <ol className="mt-2 space-y-2 text-[13px] leading-snug text-[#4a3426] list-decimal pl-5">
-          <li><b>ძეგლები.</b> დასაწყისში თითო ტახტი ოთხ ძეგლს ირჩევს: ოთხიდან ერთს იღებს პირველი, ორს — მეორე, ბოლო პირველს რჩება; მერე ახალ ოთხს მეორე იწყებს.</li>
-          <li><b>სვლა.</b> იღებ ერთ ამოწეულ ბარათს — რომელსაც არაფერი ფარავს — და ან აშენებ (ფასს იხდი), ან ყიდი (2 თეთრი და 1 ყოველ შენს ყვითელზე), ან ძეგლის ქვეშ დებ და ძეგლს აშენებ. აღებულის ქვეშ ბარათი შეიძლება ამოტრიალდეს.</li>
-          <li><b>ფასი.</b> ნედლეულს და ხელოსნობას შენი ყავისფერი და ნაცრისფერი ბარათები გაძლევს. რაც გაკლია, ბანკიდან ყიდულობ: 2 თეთრი და კიდევ იმდენი, რამდენსაც იმავეს მეტოქე აწარმოებს. ოსტატის ნიშანი წინა ეპოქის ბარათიდან ბარათს უფასოს ხდის.</li>
-          <li><b>ლაშქარი.</b> ყოველი ფარი მხედარს ლიხის გზაზე ერთი უჯრით მეტოქის დედაქალაქისკენ აჩოჩებს; ხარკის ნიშანთან მეტოქე ბანკს 2 ან 5 თეთრს უხდის. მხედარი დედაქალაქში შევიდა — მაშინვე გამარჯვებაა.</li>
-          <li><b>სიბრძნე.</b> ორი ერთნაირი სიბრძნე — დაფიდან ერთი ცოდნის ნიშანი შენია. ექვსი სხვადასხვა სიბრძნე — მაშინვე გამარჯვებაა.</li>
-          <li><b>ეპოქის ბოლო.</b> ახალ ეპოქას ირჩევს, ვინ დაიწყოს, ის, ვისი დედაქალაქისკენაც დგას მხედარი. სულ შვიდი ძეგლი შენდება — მერვე თამაშიდან გადის.</li>
-          <li><b>დასასრული.</b> მესამე ეპოქის ბოლოს ქულები ითვლება: ლურჯი, მწვანე და ყვითელი ბარათები, ამქრები, ძეგლები, ნიშნები, ყოველ 3 თეთრზე 1 და ლაშქარი (2, 5 ან 10). ტოლობისას ლურჯი ბარათების ქულები წყვეტს.</li>
+          <li><b>შეხვედრა.</b> ხუთი ბარათი ამოტრიალდება. ერთი მეფე მათ ორ წილად ყოფს (ორივეში ერთი ბარათი მაინც), მეორე წილს ირჩევს, დანარჩენი გამყოფს რჩება. შემდეგ შეხვედრაზე როლები იცვლება; სულ რვა შეხვედრაა.</li>
+          <li><b>ელჩი.</b> ვისაც ელჩი ერგო, ის მეორე წილიდან ერთ ბარათს თავისთან გადმოიბირებს (ელჩს — არა). ჯერ ამრჩევის ელჩები, მერე გამყოფის.</li>
+          <li><b>ციხე</b> იმდენი ქულაა, რამდენიც აწერია (1–3).</li>
+          <li><b>ლაშქარი.</b> ბოლოს უფრო ძლიერ ლაშქარს (ძალების ჯამი) {ARMY_PTS} ქულა აქვს, ტოლობისას — {ARMY_TIE}-{ARMY_TIE}.</li>
+          <li><b>ღვინო.</b> ვაზი და ჭურჭელი (ქვევრი, ჭური, ხელადა…) ერთად ერთი ღვინოა — {WINE_PTS} ქულა. მარტო ვაზი ან მარტო ჭურჭელი არაფერია.</li>
+          <li><b>წიგნი</b> იმდენი ქულაა, რამდენი სხვა სახის ბარათიც გაქვს: ციხე, ლაშქარი, ღვინო, ელჩი — 0-დან 4-მდე.</li>
+          <li><b>ტახტი.</b> ვისაც მეტი ქულა აქვს, იმის ქალაქში დგება ერთიანი საქართველოს ტახტი. ტოლობისას — უფრო ძლიერი ლაშქრისა, მერე ციხეების მეტი ქულისა.</li>
         </ol>
       )}
     </Card>
@@ -115,14 +116,14 @@ const TakhtiGame: React.FC = () => {
       <section className="rounded-3xl p-4 sm:p-5 bg-gradient-to-br from-[#3b2a1c] to-[#2b1e14] text-[#fbf6ec] shadow-[0_8px_24px_-12px_rgba(43,30,20,0.6)]">
         <p className="font-serif-ge text-[17px] font-bold leading-snug">ორი ტახტი</p>
         <p className="mt-1.5 text-[12.5px] leading-snug text-[#fbf6ec]/85">
-          დასავლეთის ტახტი ქუთაისშია, აღმოსავლეთისა — თბილისში. სამი ეპოქის განმავლობაში ორივე თავის სამეფოს აშენებს: ბარათებს
-          პირამიდიდან იღებს, ძეგლებს აგებს, სიბრძნეს აგროვებს და მხედარს ლიხის გზაზე მეტოქის დედაქალაქისკენ აჩოჩებს. გაიმარჯვებ
-          ლაშქრით, სიბრძნით ან ბოლოს — დიდების ქულებით.
+          ორი მეფე — დასავლეთისა ქუთაისში და აღმოსავლეთისა თბილისში — ლიხის ქედზე რვაჯერ ხვდება და ქვეყნის ძღვენს ინაწილებს:
+          ერთი ყოფს, მეორე ირჩევს. ციხეები, ლაშქარი, ვაზი და ქვევრი, წიგნები და ელჩები — ვისი კარიც უფრო დიდებული გამოვა, იმის
+          ქალაქში დადგება ერთიანი საქართველოს ტახტი. ბარათების განმარტებები ჯერ მასწავლებელს არ შეუმოწმებია.
         </p>
         <p className="mt-2 text-[12.5px] leading-snug text-[#fbf6ec]/85">
           {tab === 'online'
-            ? 'ონლაინ: ორივე თავის ტელეფონზე თამაშობს და ორივე სამეფოს ხედავს; ფასს, ხარკს და ქულებს ტელეფონი ითვლის. დანარჩენ კლასს ყურება შეუძლია.'
-            : 'ჰიბრიდული: ერთი ტელეფონი ორ ტახტს შორის დევს — ვისი სვლაცაა, ის ეხება; ეპოქებს ტელეფონი შლის და ყველაფერს ითვლის.'}
+            ? 'ონლაინ: ორივე თავის ტელეფონზე თამაშობს და ორივე კარს ხედავს; ბარათებს და ქულებს ტელეფონი ითვლის. დანარჩენ კლასს ყურება შეუძლია.'
+            : 'ჰიბრიდული: ერთი ტელეფონი ორ მეფეს შორის დევს — ვისი სვლაცაა, ის ეხება; ბარათებს ტელეფონი შლის და ყველაფერს ითვლის.'}
         </p>
       </section>
 

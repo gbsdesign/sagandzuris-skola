@@ -19,7 +19,7 @@ import { TakhtiPlay } from './Play';
 // hold the game; the opener's phone moves for whoever is late. The rest of the class may watch.
 
 const TITLE = 'ორი ტახტი';
-const CALL_HINT = 'ზარში ერთმანეთს ხედავთ და გესმით. ბარათები, ლიხის გზა და ორივე სამეფო ყველა ტელეფონზე ერთნაირად ჩანს.';
+const CALL_HINT = 'ზარში ერთმანეთს ხედავთ და გესმით. ძღვენი, წილები და ორივე კარი ყველა ტელეფონზე ერთნაირად ჩანს.';
 
 const Wait: React.FC<{ title: string; text: string; onClose: () => void; action?: { label: string; onClick: () => void }; spin?: boolean }> = ({ title, text, onClose, action, spin }) => (
   <TableScreen title={TITLE} onClose={onClose} footer={action && <Btn kind="ghost" size="lg" full onClick={action.onClick}>{action.label}</Btn>}>
@@ -62,14 +62,14 @@ const Lobby: React.FC<{
           {host ? (
             <>
               <p className="mt-1 font-serif-ge text-[19px] font-bold leading-snug">კლასს მოწვევა გაეგზავნა — ჩატში და ტელეფონზე.</p>
-              <p className="mt-1.5 text-[13px] leading-snug text-[#fbf6ec]/85">შენი ტელეფონი თამაშს ითვლის: ეპოქებს შლის, ფასს და ქულებს ითვლის და ვინც დააგვიანებს, მის ნაცვლად ბარათს აგდებს. თამაშობს ორი — შენც შეგიძლია.</p>
+              <p className="mt-1.5 text-[13px] leading-snug text-[#fbf6ec]/85">შენი ტელეფონი თამაშს ითვლის: ბარათებს შლის, ორივე კარს ინახავს და ქულებს ითვლის; ვინც დააგვიანებს, მის ნაცვლად ფრთხილად ყოფს ან ირჩევს. თამაშობს ორი — შენც შეგიძლია.</p>
             </>
           ) : (
             <>
               <p className="mt-1 font-serif-ge text-[19px] font-bold leading-snug inline-flex items-center gap-2">
                 {joined ? <><Check className="w-5 h-5 text-[#e2c27a]" />ოთახში ხარ</> : `${firstName(room.hostName)} გიწვევს თამაშში`}
               </p>
-              <p className="mt-1.5 text-[13px] leading-snug text-[#fbf6ec]/85">შენს სვლაზე ბარათს შენს ტელეფონზე აირჩევ: ააშენებ, გაყიდი ან ძეგლის ქვეშ შედებ. ფასს და ქულებს ტელეფონი ითვლის.</p>
+              <p className="mt-1.5 text-[13px] leading-snug text-[#fbf6ec]/85">შენს სვლაზე ძღვენს შენს ტელეფონზე ორ წილად ყოფ, ან წილს ირჩევ. ქულებს ტელეფონი ითვლის.</p>
             </>
           )}
         </div>
@@ -81,7 +81,7 @@ const Lobby: React.FC<{
             <p className={`text-[12.5px] font-bold tabular-nums text-right ${fits ? 'text-[#2f7d4f]' : 'text-[#9a6a10]'}`}>{countLine(n)}</p>
           </div>
           <People joins={joins} me={me} onKick={host?.kick} />
-          {fits && <Hint>ვინ იქნება ქუთაისი და ვინ თბილისი, ტელეფონი წილისყრით წყვეტს; ძეგლების არჩევასაც წილისყრით იწყებს ერთ-ერთი.</Hint>}
+          {fits && <Hint>ვინ იქნება ქუთაისი, ვინ — თბილისი და ვინ გაყოფს პირველად, ტელეფონი წილისყრით წყვეტს.</Hint>}
         </section>
         <CallCard gc={gc} hint={CALL_HINT} />
         {host && (

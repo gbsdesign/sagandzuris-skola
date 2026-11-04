@@ -7,7 +7,7 @@ import {
 import { TableScreen } from '../../../components/games/TableScreen';
 import { Btn } from '../../../components/ui/kit';
 import { triggerHaptic } from '../../../utils/haptics';
-import { useTwoCols } from '../takhti/Board';
+import { useTwoCols } from '../../../components/games/useTwoCols';
 import { QaravaniMap, type MapRing } from './Map';
 import { CitySheet, RoadSheet, diceText, gainText, gainWith } from './Sheets';
 import { ALL_GOODS, Animal, CartMark, Coin, Die, GoodBadge, InnMark, RoadCells, abazi, cargoOf, cityName, lineText, roadName, worthOf } from './look';
