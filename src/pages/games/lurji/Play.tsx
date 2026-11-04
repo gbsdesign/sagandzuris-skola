@@ -93,8 +93,12 @@ export const LurjiPlay: React.FC<{
     sub = 'სავსე ზოლის ბეჭედი სუფრაზე გადავიდა და ქება მოიტანა; საღებავმა დააკლო.';
   } else {
     const w = ph.winners;
-    head = w.length > 1 ? <>{w.map(i => g.names[i]).join(' და ')} — ორივე უსტაბაშია!</> : w[0] === me ? 'შენ გაიმარჯვე!' : <>{g.names[w[0]]} იმარჯვებს!</>;
-    sub = 'ამქარმა უსტაბაში აირჩია — ყველაზე მეტი ქება.';
+    // the praise tied: the end says the full rows decided (2026-11-04, the games' review)
+    const tied = w.length === 1 ? g.boards.findIndex((b, i) => i !== w[0] && b.score === g.boards[w[0]].score) : -1;
+    head = w.length > 1 ? <>{w.map(i => g.names[i]).join(' და ')} — {w.length === 2 ? 'ორივე' : 'ყველა'} უსტაბაშია!</> : w[0] === me ? 'შენ გაიმარჯვე!' : <>{g.names[w[0]]} იმარჯვებს!</>;
+    sub = w.length > 1 ? 'ქება და სავსე რიგები ტოლია — უსტაბაშობა იყოფა.'
+      : tied >= 0 ? <>ქება ტოლია — გადაწყვიტა სავსე რიგებმა: {g.names[w[0]]} {fullRows(g.boards[w[0]])}, {g.names[tied]} {fullRows(g.boards[tied])}.</>
+      : 'ამქარმა უსტაბაში აირჩია — ყველაზე მეტი ქება.';
   }
   const story = (
     <section className="rounded-3xl text-[#fbf6ec] px-4 py-3.5 shadow-[0_14px_30px_-20px_rgba(31,58,95,0.9)]" style={{ background: `linear-gradient(135deg, ${LILA}, ${LILA_DEEP})` }} aria-live="polite">

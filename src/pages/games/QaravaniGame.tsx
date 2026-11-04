@@ -9,6 +9,7 @@ import { qaravaniRooms, useQaravaniRoom } from '../../utils/gameRoomFirestore';
 import { CARGO_PTS, GUEST, INNS, INN_COST, INN_PTS, MAX_Q, START_MAX, TRADE, cartsFor, roundsFor } from '../../utils/qaravani';
 import { QaravaniRoom } from './qaravani/Room';
 import { QaravaniTable } from './qaravani/Table';
+import { HowTo } from '../../components/games/HowTo';
 
 // „ქარავანი“ on phones (games hub, 2026-11-04): the printed kit №3 (src/print/games/qaravani.js) and its two app variants — since
 // the same day on the school's own rules (utils/qaravani.ts: dice open roads, cities go to the house with most roads into them,
@@ -18,6 +19,21 @@ import { QaravaniTable } from './qaravani/Table';
 // only with this page. The tab is kept on the device (`sg-qaravani-tab`).
 
 type Tab = 'online' | 'table';
+
+/** how a game goes on phones, in steps (2026-11-04, the games' review: the dark card and the table's card said it twice) */
+const HOW: Record<Tab, string[]> = {
+  online: [
+    'ყველა თავის ტელეფონზე თამაშობს: რუკა და კამათლები ყველასთვის ერთია.',
+    'შენს სვლაზე კამათლები გაგორდება: აბაზით შეცვალე და აირჩიე გზა, ქარვასლა ან ვაჭრობა.',
+    'ქულებს ტელეფონი ითვლის: ბოლოს ყველა ქალაქი და ტვირთი ითვლება.',
+  ],
+  table: [
+    'ერთი ტელეფონი მაგიდის შუაშია ან ხელიდან ხელში გადადის.',
+    'ვისი სვლაცაა, ის ხედავს კამათლებს, ცვლის მათ აბაზით და ირჩევს გზას ან ვაჭრობას.',
+    'კამათლებს ტელეფონი აგორებს; გზებს, აბაზს და ქარვასლებს ის ინახავს, ბოლოს კი ყველა ქალაქს და ტვირთს ის ითვლის.',
+    'ამობეჭდილი რუკა მაგიდაზეც შეიძლება იდოს — ურმები მასზე დააწყვეთ.',
+  ],
+};
 const TAB_KEY = 'sg-qaravani-tab';
 const readTab = (): Tab | null => { try { const v = localStorage.getItem(TAB_KEY); return v === 'online' || v === 'table' ? v : null; } catch { return null; } };
 
@@ -127,14 +143,10 @@ const QaravaniGame: React.FC = () => {
           კამათლები გზას გიხსნის: გაიყვანე ქარავანი ქალაქიდან ქალაქში, ააშენე ქარვასლები, მოიპოვე ქალაქები და შეაგროვე რაც შეიძლება
           მეტი ტვირთის სახეობა.
         </p>
-        <p className="mt-2 text-[12.5px] leading-snug text-[#fbf6ec]/85">
-          {tab === 'online'
-            ? 'ონლაინ: ყველა თავის ტელეფონზე თამაშობს — რუკა და კამათლები ყველასთვის ერთია, ქულებს ტელეფონი ითვლის.'
-            : 'ჰიბრიდული: ერთი ტელეფონი მაგიდის შუაშია — კამათლებს ის აგორებს, გზებს და ქულებს ის ინახავს; ამობეჭდილი რუკა გვერდით შეიძლება იდოს.'}
-        </p>
       </section>
 
       <Tabs cols={2} value={tab} onChange={setTab} items={[{ id: 'online', label: 'ონლაინ', Icon: Wifi }, { id: 'table', label: 'ჰიბრიდული', Icon: Users }]} />
+      <HowTo key={tab} id={`qaravani-${tab}`} steps={HOW[tab]} />
 
       {tab === 'online' ? (
         <RoomSetup

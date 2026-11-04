@@ -117,14 +117,6 @@ export const TakhtiTable: React.FC = () => {
         </div>
         <Btn size="lg" full disabled={sameNames} onClick={() => { void begin(); }} icon={<Crown />} className="!h-14 !text-[16px]">თამაშის დაწყება</Btn>
       </Card>
-      <Card className="!p-4">
-        <p className="text-[13px] font-bold text-[#4a3426]">როგორ ვთამაშობთ</p>
-        <p className="mt-1 text-[12.5px] leading-snug text-[#75685a]">
-          ტელეფონი ორ მეფეს შორის დევს. გამყოფი ბარათებს ეხება და ორ წილად ყოფს, მერე ტელეფონს მეორეს აჩვენებს — ის წილს
-          ირჩევს. ელჩს ტელეფონი თავად ახსენებს. ბარათებს ტელეფონი შლის, ორივე კარს ინახავს და ბოლოს ითვლის. ორი გუნდიც შეიძლება —
-          მაშინ გუნდი თათბირობს და ერთი ეხება. „უკან“ ბოლო სვლას აუქმებს, სანამ შეხვედრა გრძელდება.
-        </p>
-      </Card>
     </div>
   );
 };

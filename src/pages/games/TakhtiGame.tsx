@@ -9,6 +9,7 @@ import { useOpenRequest } from '../../utils/searchOpen';
 import { takhtiRooms, useTakhtiRoom } from '../../utils/gameRoomFirestore';
 import { TakhtiRoom } from './takhti/Room';
 import { TakhtiTable } from './takhti/Table';
+import { HowTo } from '../../components/games/HowTo';
 
 // „ორი ტახტი“ (games hub; rebuilt 2026-11-04 on the school's own rules — one divides, the other chooses, utils/oriTakhti.ts):
 // online, a class's room, each king on his own phone (utils/takhtiRoom.ts; the opener may play too, the rest of the class may
@@ -16,6 +17,21 @@ import { TakhtiTable } from './takhti/Table';
 // (pages/games/takhti/printKit.ts — the hub's button draws the PDF in the browser). The tab is kept on the device (`sg-takhti-tab`).
 
 type Tab = 'online' | 'table';
+
+/** how a game goes on phones, in steps (2026-11-04, the games' review: the dark card and the table's card said it twice) */
+const HOW: Record<Tab, string[]> = {
+  online: [
+    'ორივე თავის ტელეფონზე თამაშობს და ორივე კარს ხედავს.',
+    'ყოველ შეხვედრაზე ერთი ხუთ ბარათს ორ წილად ყოფს, მეორე წილს ირჩევს; მერე როლები იცვლება.',
+    'ბარათებს და ქულებს ტელეფონი ითვლის.',
+  ],
+  table: [
+    'ტელეფონი ორ მეფეს შორის დევს.',
+    'გამყოფი ბარათებს ეხება და ორ წილად ყოფს, მერე ტელეფონს მეორეს აჩვენებს — ის წილს ირჩევს. ელჩს ტელეფონი თავად ახსენებს.',
+    'ბარათებს ტელეფონი შლის, ორივე კარს ინახავს და ბოლოს ითვლის.',
+    'ორი გუნდიც შეიძლება — მაშინ გუნდი თათბირობს და ერთი ეხება. „უკან“ ბოლო სვლას აუქმებს, სანამ შეხვედრა გრძელდება.',
+  ],
+};
 const TAB_KEY = 'sg-takhti-tab';
 const readTab = (): Tab | null => { try { const v = localStorage.getItem(TAB_KEY); return v === 'online' || v === 'table' ? v : null; } catch { return null; } };
 
@@ -120,14 +136,10 @@ const TakhtiGame: React.FC = () => {
           ერთი ყოფს, მეორე ირჩევს. ციხეები, ლაშქარი, ვაზი და ქვევრი, წიგნები და ელჩები — ვისი კარიც უფრო დიდებული გამოვა, იმის
           ქალაქში დადგება ერთიანი საქართველოს ტახტი. ბარათების განმარტებები ჯერ მასწავლებელს არ შეუმოწმებია.
         </p>
-        <p className="mt-2 text-[12.5px] leading-snug text-[#fbf6ec]/85">
-          {tab === 'online'
-            ? 'ონლაინ: ორივე თავის ტელეფონზე თამაშობს და ორივე კარს ხედავს; ბარათებს და ქულებს ტელეფონი ითვლის. დანარჩენ კლასს ყურება შეუძლია.'
-            : 'ჰიბრიდული: ერთი ტელეფონი ორ მეფეს შორის დევს — ვისი სვლაცაა, ის ეხება; ბარათებს ტელეფონი შლის და ყველაფერს ითვლის.'}
-        </p>
       </section>
 
       <Tabs cols={2} value={tab} onChange={setTab} items={[{ id: 'online', label: 'ონლაინ', Icon: Wifi }, { id: 'table', label: 'ჰიბრიდული', Icon: Users }]} />
+      <HowTo key={tab} id={`takhti-${tab}`} steps={HOW[tab]} />
 
       {tab === 'online' ? (
         <RoomSetup

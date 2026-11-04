@@ -101,14 +101,6 @@ export const OkrosTable: React.FC = () => {
         )}
         <Btn size="lg" full disabled={!fitsN} onClick={() => { void begin(); }} icon={<MapIcon />} className="!h-14 !text-[16px]">თამაშის დაწყება</Btn>
       </Card>
-      <Card className="!p-4">
-        <p className="text-[13px] font-bold text-[#4a3426]">როგორ ვთამაშობთ</p>
-        <p className="mt-1 text-[12.5px] leading-snug text-[#75685a]">
-          ტელეფონი მაგიდის შუაშია ან ხელიდან ხელში გადადის: ვისი სვლაცაა, ის ირჩევს კუთხეს და საქმეს. ნივთებს, მამულებს და საქმეების
-          უჯრებს ტელეფონი ინახავს, ყოველ წელს მეფეს ის აგზავნის და ქულებს ის ითვლის. ამობეჭდილი რუკა მაგიდაზეც შეიძლება იდოს —
-          მხედრები მასზე გადაადგილეთ.
-        </p>
-      </Card>
     </div>
   );
 };

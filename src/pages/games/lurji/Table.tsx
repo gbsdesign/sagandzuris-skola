@@ -109,12 +109,6 @@ export const LurjiTable: React.FC = () => {
         )}
         <Btn size="lg" full disabled={!fitsN} onClick={() => { void begin(); }} icon={<LayoutGrid />} className="!h-14 !text-[16px]">თამაშის დაწყება</Btn>
       </Card>
-      <Card className="!p-4">
-        <p className="text-[13px] font-bold text-[#4a3426]">როგორ ვთამაშობთ</p>
-        <p className="mt-1 text-[12.5px] leading-snug text-[#75685a]">
-          ტელეფონი ხელიდან ხელში გადადის ან მაგიდის შუაშია: ვისი სვლაცაა, ის ირჩევს ბეჭდებს და ზოლს. ლანგრებს ტელეფონი ავსებს, საღამოს თვითონ ბეჭდავს და ქებას ითვლის. დაბეჭდილი ნაკრები არ გჭირდებათ — ან მისი დაფები გვერდზე დადეთ და იქაც აწყვეთ.
-        </p>
-      </Card>
     </div>
   );
 };

@@ -10,6 +10,7 @@ import { ACTS, ROLES, type Role } from '../../utils/mepisKari';
 import { KariRoom } from './kari/Room';
 import { KariTable } from './kari/Table';
 import { ACT_DOES, ROLE_LOOK } from './kari/look';
+import { HowTo } from '../../components/games/HowTo';
 
 // „მეფის კარი“ on phones (games hub, 2026-11-04): the printed Coup of the school (src/print/games/mepis-kari.js) gets
 // its two app variants. Online: a class's room, everybody on their own phone with two hidden cards, the bluff in the game's
@@ -17,6 +18,21 @@ import { ACT_DOES, ROLE_LOOK } from './kari/look';
 // keeps the coins, the turns and the order (pages/games/kari/Table.tsx). The tab is kept on the device (`sg-kari-tab`).
 
 type Tab = 'online' | 'table';
+
+/** how a game goes on phones, in steps (2026-11-04, the games' review: the dark card and the table's card said it twice) */
+const HOW: Record<Tab, string[]> = {
+  online: [
+    'ყველა თავის ტელეფონზე ხედავს თავის ორ ბარათს; თეთრს და რიგს ტელეფონი ითვლის.',
+    'შენს სვლაზე ერთ მოქმედებას აცხადებ; სხვებს შეუძლიათ თქვან „არ მჯერა!“ ან დაგიბლოკონ.',
+    'ბლეფი თამაშის ზარში მიდის. იგებს, ვინც ბოლოს კარზე დარჩება.',
+  ],
+  table: [
+    'ყველას ხელში დაბეჭდილი ბარათებია; ტელეფონი მაგიდის შუაშია ან ერთს უჭირავს.',
+    'ვისი სვლაცაა, ის მოქმედებას აცხადებს; ტელეფონზე აჭერენ, რასაც მაგიდა ამბობს.',
+    'თუ თქვეს „არ მჯერა!“, მოთამაშემ ბარათი უნდა აჩვენოს — ტელეფონი იკითხავს, აჩვენა თუ არა.',
+    'თეთრს, რიგს და წესრიგს ტელეფონი ითვლის. იგებს, ვინც ბოლოს კარზე დარჩება.',
+  ],
+};
 const TAB_KEY = 'sg-kari-tab';
 const readTab = (): Tab | null => { try { const v = localStorage.getItem(TAB_KEY); return v === 'online' || v === 'table' ? v : null; } catch { return null; } };
 
@@ -129,14 +145,10 @@ const KariGame: React.FC = () => {
           თამარ მეფის კარი: ხაზინადარი, მანდატური, სპასალარი, მსახურთუხუცესი და რუსუდან დედოფალი. ორი ფარული ბარათი გაქვს —
           მათ ძალას იყენებ ან იტყუები, სხვები კი ან გენდობიან, ან იტყვიან: „არ მჯერა!“ ბოლო, ვინც კარზე დარჩება, იმარჯვებს.
         </p>
-        <p className="mt-2 text-[12.5px] leading-snug text-[#fbf6ec]/85">
-          {tab === 'online'
-            ? 'ონლაინ: ყველა თავის ტელეფონზე ხედავს თავის ორ ბარათს, თეთრს და რიგს ტელეფონი ითვლის, ბლეფი კი თამაშის ზარში მიდის. ოთახის გამხსნელიც თამაშობს.'
-            : 'ჰიბრიდული: დაბეჭდილი ბარათები ხელშია, ერთი ტელეფონი კი თეთრს, რიგს და „არ მჯერა!“-ს წესრიგს ითვლის — თეთრის ამოჭრა აღარ გჭირდებათ.'}
-        </p>
       </Card>
 
       <Tabs cols={2} value={tab} onChange={setTab} items={[{ id: 'online', label: 'ონლაინ', Icon: Wifi }, { id: 'table', label: 'ჰიბრიდული', Icon: Users }]} />
+      <HowTo key={tab} id={`kari-${tab}`} steps={HOW[tab]} />
 
       {tab === 'online' ? (
         <RoomSetup
