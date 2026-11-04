@@ -287,7 +287,11 @@
   program). Progress (`hooks/useAbituriProgress.ts`) in `students/{uid}.abituri` for members (device for others);
   teachers see a line in StudentsOverview. Dictations: `data/abituriDictations.ts` (the university's + 6 written here).
 - **Class chat** with voice messages (`components/classes/ClassChat.tsx`, `hooks/useClassChat.ts`,
-  `utils/voiceRecorder.ts`); calls are the app's own (`components/calls/`, `utils/callSession.ts`), Jitsi is gone. Voice MP3s are Firestore Bytes
+  `utils/voiceRecorder.ts`); since 2026-11-04 a teacher's / an admin's 📎 (`classes/PinSheet.tsx`: who → „კომენტარი“ or
+  „დავალება“ — a real assignment for that member alone, `NewAssignment` `forWhom` + `onMade`) puts a card for one member
+  (`classes/PinCard.tsx`, `hooks/useChatPins.ts`): in a class's chat it lives in `classes/{c}/pins` (rules: read by that
+  member — `where to == uid` —, the class's teachers and admins only), laid in among the messages, with 🔒 and the member's
+  „პასუხი“ = their private chat with the writer; in a private chat it is a message of kind `note` / `work` (`pinCard` in the rules); calls are the app's own (`components/calls/`, `utils/callSession.ts`), Jitsi is gone. Voice MP3s are Firestore Bytes
   (no Firebase Storage).
 - **Class page** (`pages/ClassPage.tsx`, rebuilt 2026-10-24, simplified 2026-10-28 „ერთი რამ, ერთ ადგილას“ from an approved
   sketch): title bar (🎵 + one ✎ for teachers — its list opens name/logo/mode, the timetable `ScheduleSheet`, the program

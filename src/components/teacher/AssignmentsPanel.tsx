@@ -255,7 +255,15 @@ export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; p
   );
 };
 
-const NewAssignment: React.FC<{ open: boolean; onClose: () => void; cls: SchoolClass; onDone: (text: string) => void }> = ({ open, onClose, cls, onDone }) => {
+/** What a new assignment was, for the chat's card (components/classes/PinSheet.tsx). */
+export interface MadeAssignment { id: string; title: string; variantId?: string; exercise?: string; due: string; note: string }
+
+/** The „ახალი დავალება“ window. From a chat (2026-11-04) it is for one member already (`forWhom`, no „ვისთვის“ choice)
+ *  and `onMade` gets the assignment, so the chat can put its card in. */
+export const NewAssignment: React.FC<{
+  open: boolean; onClose: () => void; cls: SchoolClass; onDone: (text: string) => void;
+  forWhom?: { uid: string; name: string }; onMade?: (a: MadeAssignment) => void | Promise<void>;
+}> = ({ open, onClose, cls, onDone, forWhom, onMade }) => {
   const { user } = useAuth();
   const [kind, setKind] = useState<'chant' | 'drill'>('chant');
   const [drillId, setDrillId] = useState('');
@@ -270,6 +278,7 @@ const NewAssignment: React.FC<{ open: boolean; onClose: () => void; cls: SchoolC
 
   const reset = () => { setEntry(null); setDrillId(''); setVoices([]); setNote(''); setWhom([]); setError(''); };
   const drill = findDrill(drillId);
+  const whomIds = forWhom ? [forWhom.uid] : whom;
 
   // an exercise of „ოსტატობა“: nothing goes onto the path; it counts as done once the member presses „შევასრულე“
   const saveDrill = async () => {
@@ -278,9 +287,10 @@ const NewAssignment: React.FC<{ open: boolean; onClose: () => void; cls: SchoolC
     setBusy(true);
     setError('');
     try {
-      await createAssignment(cls.id, {
-        title: drill.title, exercise: drill.id, code: drillGroupTitle(drill.id), voices: [], due, note: note.trim(), studentIds: whom,
+      const ref = await createAssignment(cls.id, {
+        title: drill.title, exercise: drill.id, code: drillGroupTitle(drill.id), voices: [], due, note: note.trim(), studentIds: whomIds,
       }, user.uid);
+      await onMade?.({ id: ref.id, title: drill.title, exercise: drill.id, due, note: note.trim() });
       onDone('დავალება შეიქმნა: მოსწავლე სავარჯიშოს „ოსტატობაში“ და დავალებებში ნახავს.');
       reset();
       onClose();
@@ -298,11 +308,12 @@ const NewAssignment: React.FC<{ open: boolean; onClose: () => void; cls: SchoolC
     setBusy(true);
     setError('');
     try {
-      await createAssignment(cls.id, {
-        title: entry.title, variantId: entry.id, code: entry.code, voices: withVoices ? voices : [], due, note: note.trim(), studentIds: whom,
+      const ref = await createAssignment(cls.id, {
+        title: entry.title, variantId: entry.id, code: entry.code, voices: withVoices ? voices : [], due, note: note.trim(), studentIds: whomIds,
       }, user.uid);
+      await onMade?.({ id: ref.id, title: entry.title, variantId: entry.id, due, note: note.trim() });
       // the chant goes onto each student's path, if it isn't there yet
-      const targets = whom.length ? whom : cls.memberIds;
+      const targets = whomIds.length ? whomIds : cls.memberIds;
       let failed = 0;
       for (const uid of targets) {
         try {
@@ -381,6 +392,12 @@ const NewAssignment: React.FC<{ open: boolean; onClose: () => void; cls: SchoolC
           <Label>ვადა</Label>
           <input type="date" className={FIELD} value={due} min={localIso()} onChange={e => setDue(e.target.value)} />
         </div>
+        {forWhom ? (
+          <div>
+            <Label>ვისთვის</Label>
+            <p className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full bg-[#7a2028] text-[#fbf6ec] text-[13px] font-bold"><Users className="w-4 h-4" /> {forWhom.name}</p>
+          </div>
+        ) : (
         <div>
           <Label hint={whom.length ? `${whom.length} არჩეული` : 'მთელი კლასი'}>ვისთვის</Label>
           <div className="flex flex-wrap gap-2">
@@ -395,6 +412,7 @@ const NewAssignment: React.FC<{ open: boolean; onClose: () => void; cls: SchoolC
             })}
           </div>
         </div>
+        )}
         <div>
           <Label>შენიშვნა</Label>
           <textarea className={`${FIELD} !h-24 py-2.5 resize-none`} value={note} onChange={e => setNote(e.target.value)} placeholder="მაგ: ყურადღება მიაქციე მესამე მუხლის ბანს" />

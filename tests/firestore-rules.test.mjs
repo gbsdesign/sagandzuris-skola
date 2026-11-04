@@ -193,6 +193,20 @@ await t('admin cannot read the chat', assertFails(getDoc(doc(adm, 'dms', 'tch2_s
 await t('superadmin reads the chat', assertSucceeds(getDoc(doc(sup, 'dms', 'tch2_stu3', 'messages', 'm1'))));
 await t('superadmin lists every chat', assertSucceeds(getDocs(collection(owner, 'dms'))));
 await t('superadmin cannot write in the chat', assertFails(setDoc(doc(sup, 'dms', 'tch2_stu3', 'messages', 'm6'), msg('sup', false))));
+// a teacher's card for one member (hooks/useChatPins.ts): in the class's chat only that member, the teachers and admins see it
+const pin = (uid, extra = {}) => ({ uid, name: 'x', photoURL: '', teacher: true, kind: 'note', text: 'ბანი უფრო რბილად', to: 'stu3', toName: 'S3', createdAt: serverTimestamp(), ...extra });
+const work = { kind: 'work', text: 'ამინ', work: 'a1', wcls: 'c9', vid: 'v-1', drill: '', due: '2026-11-10', note: '' };
+await t('teacher pins a comment for one member', assertSucceeds(setDoc(doc(tch2, 'classes', 'c9', 'pins', 'p1'), pin('tch2'))));
+await t('teacher pins an assignment for one member', assertSucceeds(setDoc(doc(tch2, 'classes', 'c9', 'pins', 'p2'), pin('tch2', work))));
+await t("a pin's assignment must be this class's", assertFails(setDoc(doc(tch2, 'classes', 'c9', 'pins', 'p3'), pin('tch2', { ...work, wcls: 'c1' }))));
+await t('a pin only for a member of the class', assertFails(setDoc(doc(tch2, 'classes', 'c9', 'pins', 'p4'), pin('tch2', { to: 'stu' }))));
+await t('a member cannot pin', assertFails(setDoc(doc(stu2, 'classes', 'c9', 'pins', 'p5'), pin('stu2', { to: 'stu3' }))));
+await t('the member reads their pins', assertSucceeds(getDocs(query(collection(stu3, 'classes', 'c9', 'pins'), where('to', '==', 'stu3')))));
+await t("another member cannot read someone's pin", assertFails(getDoc(doc(stu2, 'classes', 'c9', 'pins', 'p1'))));
+await t("another member cannot list the class's pins", assertFails(getDocs(collection(stu2, 'classes', 'c9', 'pins'))));
+await t('the teacher lists every pin', assertSucceeds(getDocs(collection(tch2, 'classes', 'c9', 'pins'))));
+await t('teacher sends a card in the private chat', assertSucceeds(setDoc(doc(tch2, 'dms', 'tch2_stu3', 'messages', 'p6'), pin('tch2', work))));
+await t('student cannot send a card', assertFails(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'p7'), pin('stu3', { teacher: false, to: 'tch2' }))));
 // a class in the archive links nobody: its private chats and its own chat close until it comes back
 const archiveC9 = on => env.withSecurityRulesDisabled(async c => { await updateDoc(doc(c.firestore(), 'classes', 'c9'), { archived: on }); });
 await archiveC9(true);
