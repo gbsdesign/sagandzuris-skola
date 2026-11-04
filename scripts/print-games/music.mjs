@@ -82,9 +82,9 @@ const clefOf = notes => (notes.reduce((s, n) => s + n.midi, 0) / Math.max(1, not
  * One voice's notes in ABC: a sharp or flat on every note that has one and a natural after it (no bar lines to end them),
  * rests between the notes, and `marks` — text over the n-th note (1-based), the ladder of „დღის ჰანგი“. `exact`: from beat
  * `from` to beat `to`, long notes and rests tied in pieces (the voices of one score); else every length at most a dotted
- * whole.
+ * whole. `breaks`: the notes (0-based) that start a new line of the staff (a long phrase in two lines).
  */
-const voiceOf = (notes, { marks = {}, clef, exact = null }) => {
+const voiceOf = (notes, { marks = {}, clef, exact = null, breaks = null }) => {
   const shift = clef === 'treble-8' ? 12 : 0;
   const held = {};
   const len = (beats, tie) => (exact ? piecesOf(beats).map((p, i, all) => (i < all.length - 1 && tie ? `${p}-` : p)) : [lengthOf(beats)]);
@@ -93,6 +93,7 @@ const voiceOf = (notes, { marks = {}, clef, exact = null }) => {
   const out = [];
   notes.forEach((n0, i) => {
     const n = timed ? { ...n0, ...timed[i] } : n0;
+    if (i > 0 && breaks?.has(i)) out.push('\n');
     // a score writes every rest, however short (its voices keep time); one line skips a breath under a fifth of a beat
     if (n.beat - t > (exact ? 1e-6 : 0.2)) out.push(len(n.beat - t, false).map(p => `z${p}`).join(' '));
     const m = n.midi + shift;
@@ -113,10 +114,11 @@ const voiceOf = (notes, { marks = {}, clef, exact = null }) => {
   return out.join(' ');
 };
 
-/** One voice as an ABC tune (its clef by its range unless named). */
-export const abcOf = (notes, { marks = {}, clef = null } = {}) => {
+/** One voice as an ABC tune (its clef by its range unless named); `breaks` — the notes that begin a new line, every line then
+ * stretched over the box. */
+export const abcOf = (notes, { marks = {}, clef = null, breaks = null } = {}) => {
   const c = clef ?? clefOf(notes);
-  return `X:1\nM:none\nL:1/8\n%%annotationfont SansKa 10\nK:C clef=${c}\n${voiceOf(notes, { marks, clef: c })} |]`;
+  return `X:1\nM:none\nL:1/8\n${breaks?.size ? '%%stretchlast\n' : ''}%%annotationfont SansKa 10\nK:C clef=${c}\n${voiceOf(notes, { marks, clef: c, breaks })} |]`;
 };
 
 /**

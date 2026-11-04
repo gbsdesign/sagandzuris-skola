@@ -26,7 +26,8 @@ type State = 'load' | 'ready' | 'listen' | 'sing' | 'score' | 'done' | 'error';
 /** a take's colour: polished as a pearl (80%), half way, below */
 export const pctTone = (pct: number) => (pct >= 80 ? 'text-[#2f7d4f]' : pct >= 50 ? 'text-[#a0703c]' : 'text-[#7a2028]');
 
-export const Sing: React.FC<{ q: PublicQ; onScore: (pct: number | null) => void }> = ({ q, onScore }) => {
+/** `onScore`: the take's per cent and its voice (0 = I), or null once the take is dropped */
+export const Sing: React.FC<{ q: PublicQ; onScore: (pct: number | null, voice: number) => void }> = ({ q, onScore }) => {
   const o = q as Partial<TurniriQ>;
   const [voice, setVoice] = useState(readVoice);
   const [score, setScore] = useState<BookScore | null>(null);
@@ -64,7 +65,7 @@ export const Sing: React.FC<{ q: PublicQ; onScore: (pct: number | null) => void 
     saveVoice(v);
     setVoice(v);
     // the take was of the other voice
-    if (result) { setResult(null); onScore(null); }
+    if (result) { setResult(null); onScore(null, v); }
     setState(s => (s === 'load' || s === 'error' ? s : 'ready'));
   };
 
@@ -90,7 +91,7 @@ export const Sing: React.FC<{ q: PublicQ; onScore: (pct: number | null) => void 
     setResult({ pct, hits: r.hits });
     setState('done');
     triggerHaptic(pct >= 80 ? 30 : 12);
-    onScore(pct);
+    onScore(pct, voice);
   };
 
   const sing = async () => {
