@@ -25,6 +25,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { PageSprinkles } from './components/home/PlateOrnaments';
 import { ConfirmHost, UndoHost } from './components/ui/kit';
 import { requestOpen } from './utils/searchOpen';
+import { wantAnswer } from './components/calls/callActions';
 import { stationRequest } from './utils/dzebna';
 import { isRoomGame } from './utils/gameRoom';
 import { ROOM_GAME_INFO } from './data/roomGames';
@@ -38,6 +39,7 @@ import { SignInPrompt } from './components/access/SignInPrompt';
 import { EmailLinkFinish } from './components/access/EmailLinkFinish';
 import { FirstMeeting } from './components/onboarding/FirstMeeting';
 import { CallLayer } from './components/calls/CallLayer';
+import { PhoneRingSetup } from './components/calls/PhoneRingSetup';
 import { GameInvites } from './components/games/GameInvites';
 import { useKidsMode } from './hooks/useAccess';
 import { useClassMarksSync } from './hooks/useClassMarks';
@@ -71,7 +73,7 @@ export default function App() {
 
 function AppContent() {
   const { loading, user } = useAuth();
-  const { currentPage, openPrayer, navigateTo, openMapItem } = useNavigation();
+  const { currentPage, openPrayer, navigateTo, openMapItem, openDm } = useNavigation();
   // live recordings are for members a superadmin let in with them (set before the tree below renders)
   const membership = useMembership();
   setRecordingsHidden(!user || !membership.can('recordings'));
@@ -128,6 +130,19 @@ function AppContent() {
         openMapItem('dzebna');
       }
     }
+    // a message on the phone (worker/reminders /chat-notify): its chat — a private one by its id, a class's as class:<id>
+    else if (page === 'chat') {
+      const id = url.searchParams.get('id');
+      if (id && /^(class:)?[A-Za-z0-9_-]{1,128}$/.test(id)) openDm(id);
+    }
+    // a ring on the phone (its „პასუხი“ or the notice itself): the chat, and the call answered once the app sees it
+    else if (page === 'call') {
+      const m = /^(dms|classes)\/([A-Za-z0-9_-]{1,128})$/.exec(url.searchParams.get('b') || '');
+      if (m) {
+        wantAnswer(`${m[1]}/${m[2]}`);
+        openDm(m[1] === 'dms' ? m[2] : `class:${m[2]}`);
+      }
+    }
     // an admin's notice: the panel, with the newcomer's window open
     else if (page === 'admin') {
       const person = url.searchParams.get('person');
@@ -148,6 +163,7 @@ function AppContent() {
     url.searchParams.delete('h');
     url.searchParams.delete('s');
     url.searchParams.delete('n');
+    url.searchParams.delete('b');
     window.history.replaceState(null, '', url.pathname + url.search + url.hash);
     openFromUrl(href);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -249,9 +265,11 @@ function AppContent() {
         {membership.can('classes') && <GameInvites />}
       </ErrorBoundary>
 
-      {/* the school's calls: the call screen and the incoming call (private chats and classes) */}
+      {/* the school's calls: the call screen and the incoming call (private chats and classes); and this phone rings for
+          calls and shows messages with the app closed (asked once, components/calls/PhoneRingSetup) */}
       <ErrorBoundary>
         {membership.can('messages') && <CallLayer logoUrl={currentLogo} />}
+        {(membership.can('messages') || membership.can('classes')) && <PhoneRingSetup />}
       </ErrorBoundary>
     </div>
   );

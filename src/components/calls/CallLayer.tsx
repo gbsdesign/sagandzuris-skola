@@ -10,7 +10,7 @@ import { useInbox, isRinging, ADMIN_NAME, otherOf, DirectThread } from '../../ho
 import {
   useCall, useLivePeers, leaveCall, dismissCall, toggleMic, toggleCam, flipCamera, setCallSmall, RemotePeer, RING_MS,
 } from '../../utils/callSession';
-import { afterLeave, answerChatCall, declineChatCall, joinClassCall } from './callActions';
+import { afterLeave, answerChatCall, declineChatCall, joinClassCall, takeAnswer, useAnswerWanted } from './callActions';
 
 // The call on top of the app: the full call screen (or a small bar while one reads the chat), and the incoming
 // call — a private one rings, a class's shows „ზარი მიმდინარეობს“. Nothing sounds while the notes, the liturgy
@@ -121,8 +121,10 @@ const CallScreen: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const label = (p: RemotePeer) => (info.anonStaff && p.staff ? { name: ADMIN_NAME, photoURL: logoUrl } : { name: p.name || 'უსახელო', photoURL: p.photoURL });
   const hang = async () => {
     const others = call.peers.length;
+    // still „ირეკება…“ / alone: nobody came (the Worker only tells the phones of a call this one started)
+    const unanswered = call.status === 'waiting' || call.status === 'connecting';
     await leaveCall();
-    afterLeave(info, others);
+    afterLeave(info, others, unanswered);
   };
   const status = call.status === 'connecting' ? 'ერთდება…'
     : call.status === 'ended' ? call.note || 'ზარი დასრულდა.'
@@ -339,6 +341,20 @@ const Incoming: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const classCall = candidate && (Date.now() - candidate.at < RING_MS || inClassCall.length > 0) ? candidate : undefined;
   const quiet = notes || programOpen || church || call.status !== 'idle';
   useRingTone(!quiet && (!!ringing || (!!classCall && Date.now() - classCall.at < RING_MS)));
+
+  // „პასუხი“ on the phone's ring opened the app: answered here as soon as the call is seen
+  const wanted = useAnswerWanted();
+  useEffect(() => {
+    if (!user || !wanted) return;
+    if (ringing && takeAnswer(`dms/${ringing.id}`)) {
+      setGone(g => [...g, `${ringing.id}:${ringing.callAt?.getTime()}`]);
+      answerChatCall(ringing, user);
+    } else if (classCall && takeAnswer(`classes/${classCall.cls.id}`)) {
+      setGone(g => [...g, `${classCall.cls.id}:${classCall.at}`]);
+      joinClassCall(classCall.cls, user, 'audio');
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, wanted, ringing?.id, classCall?.cls.id]);
 
   if (!user || (!ringing && !classCall)) return null;
   const hide = (k: string) => setGone(g => [...g, k]);

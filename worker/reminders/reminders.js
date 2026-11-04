@@ -26,6 +26,14 @@
 //   still waiting for players, fresh) and told once.
 // • The phone's calendar (2026-10-29): GET /cal/<secret>.ics — great feasts, fasts and the member's lessons (ics.js);
 //   the secret is one of /widget/link's, asked for by the profile's „კალენდარი ტელეფონში“.
+// • Calls and messages (2026-11-05): /account with `chat: true` binds the browser to the person's calls and chat messages
+//   (the site does it by itself once notifications are allowed; devices already bound to a person got it on). POST /ring
+//   { token, base, end? } — a call just started in a private chat (dms/{id}) or a class (classes/{id}): the others' phones
+//   ring („X გირეკავს“, with „პასუხი“ / „უარი“); `end` — the caller gave up unanswered: the ring becomes „გამოტოვებული ზარი“.
+//   POST /chat-notify { token, base, id } — a message just written: the chat's other people see it on their phones (a
+//   private chat's each message sounds, a class's first one in a row). POST /decline { base, uid, at, t } — „უარი“ on the
+//   phone's notice: `t` is the ring's own signature (made here, sent in the push), so the service worker needs no sign-in.
+//   Every fact is checked in Firestore first (the caller's own fresh call, the writer's own fresh message, membership).
 // These pushes carry an encrypted text payload (RFC 8291, aes128gcm).
 //
 // Bindings (wrangler.toml): D1 database DB (schema.sql), KV namespace REMINDERS (old storage, read once to
@@ -153,6 +161,18 @@ async function ensureSchema(env) {
       env.DB.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema', '3')"),
     ]);
   }
+  // calls and messages (2026-11-05): a browser already bound to a person gets them at once
+  if (!v || Number(v.value) < 4) {
+    try {
+      await env.DB.prepare('ALTER TABLE subs ADD COLUMN chat INTEGER NOT NULL DEFAULT 0').run();
+    } catch {
+      /* already there (schema.sql of a fresh install has it) */
+    }
+    await env.DB.batch([
+      env.DB.prepare('UPDATE subs SET chat = 1 WHERE uid IS NOT NULL'),
+      env.DB.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema', '4')"),
+    ]);
+  }
   schemaReady = true;
 }
 
@@ -190,8 +210,8 @@ async function subscribe(request, env) {
   const tz = typeof body.tz === 'string' && validTz(body.tz) ? body.tz : 'Asia/Tbilisi';
   const reminders = cleanReminders(body.reminders);
   const key = await sha256(sub.endpoint);
-  const row = await env.DB.prepare('SELECT uid, psalter, assignments, admin FROM subs WHERE key = ?').bind(key).first();
-  if (!Object.keys(reminders).length && !(row && (row.psalter || row.assignments || row.admin))) {
+  const row = await env.DB.prepare('SELECT uid, psalter, assignments, admin, chat FROM subs WHERE key = ?').bind(key).first();
+  if (!Object.keys(reminders).length && !(row && (row.psalter || row.assignments || row.admin || row.chat))) {
     await env.DB.prepare('DELETE FROM subs WHERE key = ?').bind(key).run();
     return [200, 'ok'];
   }
@@ -217,13 +237,16 @@ async function account(request, env) {
   } catch {
     return [401, 'bad token'];
   }
-  const psalter = body.psalter ? 1 : 0;
-  const assignments = body.assignments ? 1 : 0;
   const key = await sha256(sub.endpoint);
-  const row = await env.DB.prepare('SELECT reminders, admin FROM subs WHERE key = ?').bind(key).first();
-  // an admin's notices: set when the call says so, otherwise kept (the group switches do not know of them)
-  const admin = typeof body.admin === 'boolean' ? (body.admin ? 1 : 0) : (row?.admin ? 1 : 0);
-  if (!psalter && !assignments && !admin && (!row || row.reminders === '{}')) {
+  const row = await env.DB.prepare('SELECT reminders, psalter, assignments, admin, chat FROM subs WHERE key = ?').bind(key).first();
+  // each switch is set when the call names it, otherwise kept: the group switches, an admin's notices and the calls
+  // and messages are bound from different places of the site, each knowing only its own
+  const keep = (v, was) => (typeof v === 'boolean' ? (v ? 1 : 0) : (was ? 1 : 0));
+  const psalter = keep(body.psalter, row?.psalter);
+  const assignments = keep(body.assignments, row?.assignments);
+  const admin = keep(body.admin, row?.admin);
+  const chat = keep(body.chat, row?.chat);
+  if (!psalter && !assignments && !admin && !chat && (!row || row.reminders === '{}')) {
     await env.DB.prepare('DELETE FROM subs WHERE key = ?').bind(key).run();
     return [200, 'ok'];
   }
@@ -232,12 +255,12 @@ async function account(request, env) {
     if (n >= MAX_SUBS) return [503, 'full'];
   }
   await env.DB.prepare(
-    `INSERT INTO subs (key, endpoint, p256dh, auth, tz, reminders, uid, psalter, assignments, admin, updated_at)
-     VALUES (?, ?, ?, ?, 'Asia/Tbilisi', '{}', ?, ?, ?, ?, ?)
+    `INSERT INTO subs (key, endpoint, p256dh, auth, tz, reminders, uid, psalter, assignments, admin, chat, updated_at)
+     VALUES (?, ?, ?, ?, 'Asia/Tbilisi', '{}', ?, ?, ?, ?, ?, ?)
      ON CONFLICT(key) DO UPDATE SET endpoint = excluded.endpoint, p256dh = excluded.p256dh, auth = excluded.auth,
        uid = excluded.uid, psalter = excluded.psalter, assignments = excluded.assignments, admin = excluded.admin,
-       updated_at = excluded.updated_at`
-  ).bind(key, sub.endpoint, sub.keys.p256dh, sub.keys.auth, uid, psalter, assignments, admin, new Date().toISOString()).run();
+       chat = excluded.chat, updated_at = excluded.updated_at`
+  ).bind(key, sub.endpoint, sub.keys.p256dh, sub.keys.auth, uid, psalter, assignments, admin, chat, new Date().toISOString()).run();
   return [200, 'ok'];
 }
 
@@ -286,10 +309,13 @@ async function encryptPayload(p256dh, auth, text) {
   return concat(header, sealed);
 }
 
-/** An empty push (prayer hours) or one with a message { title, body, tag, url }. */
+/** An empty push (prayer hours) or one with a message { title, body, tag, url }; a message's own `ttl` (seconds) and
+ *  `urgency` go into the headers (a ring is worth nothing a minute later, and must wake a sleeping phone). */
 async function sendPush(env, row, message) {
   const jwt = await vapidJwt(env, new URL(row.endpoint).origin);
-  const headers = { TTL: message ? '21600' : '120', Urgency: message ? 'normal' : 'high', Authorization: `vapid t=${jwt}, k=${env.VAPID_PUBLIC_KEY}` };
+  const ttl = message ? String(message.ttl || 21600) : '120';
+  const urgency = message ? (message.urgency || 'normal') : 'high';
+  const headers = { TTL: ttl, Urgency: urgency, Authorization: `vapid t=${jwt}, k=${env.VAPID_PUBLIC_KEY}` };
   if (!message) return fetch(row.endpoint, { method: 'POST', headers: { ...headers, 'Content-Length': '0' } });
   const body = await encryptPayload(row.p256dh, row.auth, JSON.stringify(message));
   return fetch(row.endpoint, { method: 'POST', headers: { ...headers, 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream' }, body });
@@ -602,6 +628,189 @@ async function gameInvite(request, env) {
   const rows = [...await rowsFor(env, targets, 'psalter'), ...await rowsFor(env, targets, 'assignments')];
   const once = [...new Map(rows.map((r) => [r.key, r])).values()];
   await deliver(env, once.map((r) => [r, message]));
+  return [200, 'ok'];
+}
+
+// ---- calls and messages (2026-11-05) ---------------------------------------------------------------------
+
+const DOC_ID = /^[A-Za-z0-9_-]{1,128}$/;
+const ADMIN_NAME = 'ადმინისტრაცია';
+const msOf = (t) => (t ? new Date(t).getTime() || 0 : 0);
+/** `classes/{id}` or `dms/{id}` → [kind, id] (anything else: null) */
+const chatBase = (base) => {
+  const m = /^(classes|dms)\/([A-Za-z0-9_-]{1,128})$/.exec(String(base || ''));
+  return m ? [m[1], m[2]] : null;
+};
+
+/** The current staff (admins/{email}.userId), for the administration's chat. */
+async function staffUids(env) {
+  const staff = await fsList(env, 'admins', ['role', 'userId']);
+  return staff.filter((s) => s.userId && (s.role === 'admin' || s.role === 'superadmin' || s.role === 'owner')).map((s) => s.userId);
+}
+
+/**
+ * Whom a chat's message or call reaches, and how the writer is named there; null when `uid` is not in it.
+ * A class: its members and teachers (an archived class: nobody). A private chat: its other member; the administration's
+ * chat (`kind: 'admin'`, members[0] = the member): the member hears „ადმინისტრაცია“, the staff hear the member.
+ */
+function chatTargets(kind, doc, uid, staff = []) {
+  if (!doc) return null;
+  if (kind === 'classes') {
+    const people = [...new Set([...(doc.memberIds || []), ...(doc.teacherIds || [])])];
+    // the school's admins may call a class or write to it (an announcement) without teaching it
+    if (doc.archived || !(people.includes(uid) || staff.includes(uid))) return null;
+    return { to: people.filter((u) => u !== uid), title: String(doc.name || 'კლასი'), group: true };
+  }
+  const members = Array.isArray(doc.members) ? doc.members : [];
+  const name = (doc.names || {})[uid] || '';
+  if (doc.kind === 'admin') {
+    const member = members[0];
+    if (uid === member) return { to: staff.filter((u) => u !== uid), title: name || 'წევრი', group: false };
+    if (!staff.includes(uid)) return null;
+    return { to: member ? [member] : [], title: ADMIN_NAME, group: false };
+  }
+  if (!members.includes(uid)) return null;
+  return { to: members.filter((u) => u !== uid), title: name || 'შეტყობინება', group: false };
+}
+
+/** chatTargets, reading the staff only when it matters (the administration's chat; someone outside a class) */
+async function targetsFor(env, kind, chat, uid) {
+  const plain = kind === 'dms' && chat?.kind === 'admin' ? null : chatTargets(kind, chat, uid, []);
+  return plain ?? chatTargets(kind, chat, uid, chat ? await staffUids(env) : []);
+}
+
+/** A message's line on the phone. */
+function chatBody(m) {
+  const text = String(m.text || '').replace(/\s+/g, ' ').trim();
+  const short = text.length > 140 ? `${text.slice(0, 139)}…` : text;
+  if (m.kind === 'voice') return '🎤 ხმოვანი შეტყობინება';
+  if (m.kind === 'draw') return '🎨 გამოიცანი, რა დავხატე!';
+  if (m.kind === 'note') return `📌 ${short || 'კომენტარი შენთვის'}`;
+  if (m.kind === 'work') return short ? `📝 დავალება: ${short}` : '📝 დავალება შენთვის';
+  return short;
+}
+
+// a ring's signature: lets the phone's „უარი“ end that one call without a sign-in (the key never leaves the Worker)
+let ticketKey;
+async function ringTicket(env, base, uid, at) {
+  ticketKey ??= await crypto.subtle.importKey('raw', await crypto.subtle.digest('SHA-256', enc.encode(`ring|${env.VAPID_PRIVATE_JWK}`)),
+    { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  return b64url(await crypto.subtle.sign('HMAC', ticketKey, enc.encode(`${base}|${uid}|${at}`)));
+}
+
+const RING_FRESH = 60_000;
+
+async function ring(request, env) {
+  const body = await readJson(request);
+  if (!body) return [400, 'bad json'];
+  let uid;
+  try {
+    uid = await verifyIdToken(env, body.token);
+  } catch {
+    return [401, 'bad token'];
+  }
+  const parsed = chatBase(body.base);
+  if (!parsed) return [400, 'bad base'];
+  const [kind, id] = parsed;
+  const end = body.end === true;
+  const [chat, state] = await Promise.all([
+    fsGet(env, `${kind}/${id}`),
+    kind === 'classes' ? fsGet(env, `classes/${id}/call/state`) : null,
+  ]);
+  // the caller's own call, started a moment ago (an „ended“ notice: only within two minutes of its start)
+  const call = kind === 'dms'
+    ? { by: chat?.callBy, at: msOf(chat?.callAt), over: msOf(chat?.callEnd) >= msOf(chat?.callAt), video: chat?.callKind === 'video' }
+    : { by: state?.by, at: msOf(state?.at), over: msOf(state?.end) >= msOf(state?.at), video: state?.kind === 'video' };
+  const age = Date.now() - call.at;
+  if (call.by !== uid || !call.at || age > (end ? 2 * RING_FRESH : RING_FRESH) || (!end && call.over)) return [409, 'no fresh call'];
+  const who = await targetsFor(env, kind, chat, uid);
+  if (!who) return [403, 'not in this chat'];
+  // a member calling the administration rings nobody (the staff answer in the chat)
+  const to = kind === 'dms' && chat.kind === 'admin' && uid === chat.members?.[0] ? [] : who.to;
+  if (!to.length) return [200, 'nobody'];
+  const caller = kind === 'classes' ? firstName(String(state?.name || '').trim()) : who.title;
+  const title = kind === 'classes' ? who.title : caller;
+  const url = kind === 'classes' ? `/?open=chat&id=class:${id}` : `/?open=chat&id=${id}`;
+  const tag = `call-${id}`;
+  const rows = await rowsFor(env, to, 'chat');
+  if (end) {
+    const message = { kind: 'call-end', title, body: kind === 'classes' ? `${caller} — გამოტოვებული ზარი` : 'გამოტოვებული ზარი', tag, url, ttl: 3600 };
+    await deliver(env, rows.map((r) => [r, message]));
+    return [200, 'ok'];
+  }
+  const line = kind === 'classes'
+    ? `${caller} ${call.video ? 'ვიდეოზარს' : 'ზარს'} იწყებს — შემოდი`
+    : call.video ? 'ვიდეოზარი…' : 'გირეკავს…';
+  const answer = `/?open=call&b=${encodeURIComponent(`${kind}/${id}`)}`;
+  const sends = await Promise.all(rows.map(async (r) => [r, {
+    kind: 'call', title, body: line, tag, url: answer, video: call.video, ttl: 45, urgency: 'high',
+    // „უარი“ ends a private call for both; a class's call only stops ringing here
+    decline: kind === 'dms' ? { base: `dms/${id}`, uid: r.uid, at: call.at, t: await ringTicket(env, `dms/${id}`, r.uid, call.at) } : null,
+  }]));
+  await deliver(env, sends);
+  return [200, 'ok'];
+}
+
+async function decline(request, env) {
+  const body = await readJson(request);
+  if (!body) return [400, 'bad json'];
+  const parsed = chatBase(body.base);
+  if (!parsed || parsed[0] !== 'dms' || !DOC_ID.test(String(body.uid)) || !Number.isFinite(body.at)) return [400, 'bad call'];
+  if ((await ringTicket(env, body.base, body.uid, body.at)) !== body.t) return [403, 'bad ticket'];
+  const chat = await fsGet(env, body.base);
+  const at = msOf(chat?.callAt);
+  if (!chat || at !== body.at || msOf(chat.callEnd) >= at || Date.now() - at > 2 * RING_FRESH) return [200, 'over'];
+  if (!(chat.members || []).includes(body.uid)) return [403, 'not in this chat'];
+  const res = await fetch(`${fsBase(env)}/${body.base}?updateMask.fieldPaths=callEnd&currentDocument.exists=true`, {
+    method: 'PATCH',
+    headers: { Authorization: `Bearer ${await accessToken(env)}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ fields: { callEnd: { timestampValue: new Date().toISOString() } } }),
+  });
+  if (!res.ok) throw new Error(`firestore ${res.status}`);
+  return [200, 'ok'];
+}
+
+async function chatNotify(request, env) {
+  const body = await readJson(request);
+  if (!body) return [400, 'bad json'];
+  let uid;
+  try {
+    uid = await verifyIdToken(env, body.token);
+  } catch {
+    return [401, 'bad token'];
+  }
+  const parsed = chatBase(body.base);
+  if (!parsed || !DOC_ID.test(String(body.id))) return [400, 'bad message'];
+  const [kind, id] = parsed;
+  // a teacher's card for one member of a class lives apart (classes/{id}/pins): only that member hears it
+  const pin = kind === 'classes' && body.pin === true;
+  const [chat, m] = await Promise.all([fsGet(env, `${kind}/${id}`), fsGet(env, `${kind}/${id}/${pin ? 'pins' : 'messages'}/${body.id}`)]);
+  // the writer's own message of the last two minutes, of a kind worth a notice (a call and a game have their own)
+  if (!m || m.uid !== uid || Date.now() - msOf(m.createdAt) > 2 * 60_000) return [409, 'no fresh message'];
+  if (m.kind === 'call' || m.kind === 'game') return [200, 'has its own'];
+  let who = pin ? null : await targetsFor(env, kind, chat, uid);
+  if (pin) {
+    // the class's teachers and the school's admins may pin; the card goes to its member alone
+    const may = (chat?.teacherIds || []).includes(uid) || (await staffUids(env)).includes(uid);
+    if (!chat || chat.archived || !may || !(chat.memberIds || []).includes(m.to)) return [403, 'not for this class'];
+    who = { to: [m.to], title: String(chat.name || 'კლასი'), group: false };
+  }
+  if (!who) return [403, 'not in this chat'];
+  const text = chatBody(m);
+  if (!who.to.length || !text) return [200, 'nobody'];
+  const writer = String(m.name || '').trim();
+  const message = {
+    kind: 'chat',
+    title: who.title,
+    body: who.group ? `${firstName(writer)}: ${text}` : text,
+    tag: `chat-${id}`,
+    url: `/?open=chat&id=${kind === 'classes' ? `class:${id}` : id}`,
+    // a private chat sounds at each message; a class's chat once, then its notice is only updated
+    renotify: !who.group,
+    ttl: 86400,
+  };
+  const rows = await rowsFor(env, who.to, 'chat');
+  await deliver(env, rows.map((r) => [r, message]));
   return [200, 'ok'];
 }
 
@@ -929,6 +1138,7 @@ export default {
     const url = new URL(request.url);
     const routes = {
       '/subscribe': subscribe, '/account': account, '/group-event': groupEvent, '/access-request': accessRequest, '/game-invite': gameInvite,
+      '/ring': ring, '/chat-notify': chatNotify, '/decline': decline,
       '/widget/link': widgetLink, '/widget/summary': widgetSummary,
     };
     // the app's widgets send no Origin: their secret is the proof
@@ -968,4 +1178,4 @@ export default {
 };
 
 // for tests (tests/reminders-worker.test.mjs, tests/adminTools.test.ts)
-export { encryptPayload, cycleOf, ownersIn, weekText };
+export { encryptPayload, cycleOf, ownersIn, weekText, chatTargets, chatBody, ringTicket };

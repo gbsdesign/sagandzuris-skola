@@ -21,6 +21,10 @@ self.addEventListener('push', (event) => {
   } catch (e) {
     message = null;
   }
+  if (message && (message.kind === 'call' || message.kind === 'call-end' || message.kind === 'chat')) {
+    event.waitUntil(showTalk(message));
+    return;
+  }
   if (message && message.title) {
     event.waitUntil(
       self.registration.showNotification(message.title, {
@@ -53,12 +57,54 @@ self.addEventListener('push', (event) => {
   event.waitUntil(self.registration.showNotification(title, { ...options, icon: '/pwa-192x192.png', badge: '/pwa-192x192.png' }));
 });
 
+// ---- calls and messages (worker/reminders /ring and /chat-notify, 2026-11-05) -----------------------------------
+// While the site is on screen it rings and shows the message itself, so the phone's notice is left out then (an „ended“
+// ring still clears its notice). A ring: „პასუხი“ / „უარი“, kept until touched, vibrating; the Android app turns it into
+// a real ring (android/ BellDelegationService, by the tag `call-…` and its two buttons). „უარი“ ends a private call for
+// both through the Worker with the ring's own signature.
+const RING_VIBRATE = [700, 400, 700, 400, 700, 400, 700, 400, 700, 400, 700];
+const onScreen = () =>
+  self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => list.some((c) => c.visibilityState === 'visible'));
+
+async function showTalk(m) {
+  const visible = await onScreen();
+  if (m.kind === 'call-end') {
+    const open = await self.registration.getNotifications({ tag: m.tag });
+    open.forEach((n) => n.close());
+    if (visible || !open.length) return;
+    return self.registration.showNotification(m.title, {
+      body: m.body || '', tag: m.tag, silent: true, data: { url: m.url || '/' }, icon: '/pwa-192x192.png', badge: '/pwa-192x192.png',
+    });
+  }
+  if (visible) return;
+  if (m.kind === 'call') {
+    return self.registration.showNotification(m.title, {
+      body: m.body || '', tag: m.tag, renotify: true, requireInteraction: true, vibrate: RING_VIBRATE,
+      actions: [{ action: 'answer', title: 'პასუხი' }, { action: 'decline', title: 'უარი' }],
+      data: { url: m.url || '/', decline: m.decline || null }, icon: '/pwa-192x192.png', badge: '/pwa-192x192.png',
+    });
+  }
+  return self.registration.showNotification(m.title, {
+    body: m.body || '', tag: m.tag, renotify: !!m.renotify, data: { url: m.url || '/' }, icon: '/pwa-192x192.png', badge: '/pwa-192x192.png',
+  });
+}
+
+const REMINDERS = 'https://sagandzuri-reminders.mr-gabunia.workers.dev';
+const declineCall = (d) =>
+  fetch(`${REMINDERS}/decline`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(d) }).catch(() => {});
+
 // A tap on a prayer reminder focuses the open site and opens that prayer, or opens the site.
 // A group reminder opens its page (/?prayer=kathisma-8, /?open=psalter …).
 self.addEventListener('notificationclick', (event) => {
   const prayerId = event.notification.data && event.notification.data.prayerId;
   const url = event.notification.data && event.notification.data.url;
+  const decline = event.notification.data && event.notification.data.decline;
   event.notification.close();
+  // „უარი“ on a ring: the call ends (a class's call only stops ringing); the site stays closed
+  if (event.action === 'decline') {
+    if (decline) event.waitUntil(declineCall(decline));
+    return;
+  }
   if (url) {
     event.waitUntil(
       self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((clients) => {

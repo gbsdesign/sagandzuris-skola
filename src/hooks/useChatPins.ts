@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { addDoc, collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, serverTimestamp, where } from 'firebase/firestore';
 import { db } from '../firebase';
 import { ChatAuthor, ChatMessage, toChatMessage } from './useClassChat';
+import { notifyChat } from '../utils/groupPush';
 
 // A teacher's (or an admin's) card for one member, in a chat (2026-11-04, the user: „ჩათში თითოეულ მოსწავლეს მასწავლებელი
 // და ადმინებს უნდა შეეძლოს დავალების ან კომენტარის მიმაგრება კლასშიც და პირადშიც“ — „მარტო მასწი და ის კონკრეტული მოსწი
@@ -44,10 +45,18 @@ const pinDoc = (author: ChatAuthor, p: PinInput) => ({
 const pinsOf = (classId: string) => collection(db, 'classes', classId, 'pins');
 
 /** A card into a class's chat, seen only by `p.to`, the class's teachers and the admins. */
-export const sendClassPin = (classId: string, author: ChatAuthor, p: PinInput) => addDoc(pinsOf(classId), pinDoc(author, p));
+export const sendClassPin = async (classId: string, author: ChatAuthor, p: PinInput) => {
+  const ref = await addDoc(pinsOf(classId), pinDoc(author, p));
+  void notifyChat(`classes/${classId}`, ref.id, true);
+  return ref;
+};
 
 /** A card into a private chat (dms/{id}): a message of its own kind. */
-export const sendDmPin = (base: string, author: ChatAuthor, p: PinInput) => addDoc(collection(db, base, 'messages'), pinDoc(author, p));
+export const sendDmPin = async (base: string, author: ChatAuthor, p: PinInput) => {
+  const ref = await addDoc(collection(db, base, 'messages'), pinDoc(author, p));
+  void notifyChat(base, ref.id);
+  return ref;
+};
 
 export const deleteClassPin = (classId: string, id: string) => deleteDoc(doc(pinsOf(classId), id));
 
