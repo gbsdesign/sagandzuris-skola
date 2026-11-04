@@ -110,8 +110,14 @@ export const QaravaniPlay: React.FC<{
       : last;
   } else if (result) {
     const w = result.winners;
+    // the points tied: the end says what decided it (2026-11-04, the games' review)
+    const [a, b] = result.order, A = result.rows[a], B = b === undefined ? null : result.rows[b];
     head = w.length > 1 ? <>{w.map(i => nm(i)).join(' და ')} — ტოლია!</> : w[0] === me ? 'შენ გაიმარჯვე!' : <>{g.players[w[0]].name} იმარჯვებს!</>;
-    sub = 'დაითვალა ქალაქები (ვისაც მეტი გზა შედის), ტვირთის სახეობები და ქარვასლები.';
+    sub = w.length > 1 ? 'ქულა, ქალაქები და აბაზიც ტოლია — გამარჯვება იყოფა.'
+      : B && B.total === A.total ? (A.cities.length !== B.cities.length
+        ? <>ქულა ტოლია — გადაწყვიტა ქალაქების რიცხვმა: {nm(a)} {A.cities.length}, {nm(b)} {B.cities.length}.</>
+        : <>ქულა და ქალაქების რიცხვი ტოლია — გადაწყვიტა დარჩენილმა აბაზმა: {nm(a)} {g.players[a].coins}, {nm(b)} {g.players[b].coins}.</>)
+      : 'დაითვალა ქალაქები (ვისაც მეტი გზა შედის), ტვირთის სახეობები და ქარვასლები.';
   }
   const story = (
     <section className="rounded-3xl text-[#fbf6ec] px-4 py-3.5 shadow-[0_14px_30px_-20px_rgba(58,36,21,0.9)] bg-gradient-to-br from-[#4a2e1a] to-[#2b1a0e]" aria-live="polite">

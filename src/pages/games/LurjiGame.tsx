@@ -9,6 +9,7 @@ import { lurjiRooms, useLurjiRoom } from '../../utils/gameRoomFirestore';
 import { FLOOR } from '../../utils/lurjiSupra';
 import { LurjiRoom } from './lurji/Room';
 import { LurjiTable } from './lurji/Table';
+import { HowTo } from '../../components/games/HowTo';
 
 // „ლურჯი სუფრა“ on phones (games hub, 2026-11-04): the printed Azul of the school (src/print/games/lurji-supra.js) gets its
 // two app variants. Online: a class's room, everybody takes on their own phone (utils/lurjiRoom.ts over utils/lurjiSupra.ts; the
@@ -16,6 +17,21 @@ import { LurjiTable } from './lurji/Table';
 // (`sg-lurji-tab`).
 
 type Tab = 'online' | 'table';
+
+/** how a game goes on phones, in steps (2026-11-04, the games' review: the dark card and the table's card said it twice) */
+const HOW: Record<Tab, string[]> = {
+  online: [
+    'ყველა თავის ტელეფონზე იღებს ბეჭდებს და ყველას სუფრას ხედავს.',
+    'შენს სვლაზე ლანგრიდან ან მეიდნიდან აიღე ერთი ორნამენტის ყველა ბეჭედი და დააწყე ერთ ზოლზე.',
+    'საღამოს ტელეფონი თვითონ ბეჭდავს და ქებას ითვლის.',
+  ],
+  table: [
+    'ტელეფონი ხელიდან ხელში გადადის ან მაგიდის შუაშია.',
+    'ვისი სვლაცაა, ის ირჩევს ბეჭდებს და ზოლს.',
+    'ლანგრებს ტელეფონი ავსებს, საღამოს თვითონ ბეჭდავს და ქებას ითვლის.',
+    'დაბეჭდილი ნაკრები არ გჭირდებათ — ან მისი დაფები გვერდზე დადეთ და იქაც აწყვეთ.',
+  ],
+};
 const TAB_KEY = 'sg-lurji-tab';
 const readTab = (): Tab | null => { try { const v = localStorage.getItem(TAB_KEY); return v === 'online' || v === 'table' ? v : null; } catch { return null; } };
 
@@ -117,14 +133,10 @@ const LurjiGame: React.FC = () => {
           ერეკლე II-ის თბილისი: მეიდანზე მღებავების ამქრის ოსტატები ეჯიბრებიან, ვინ დაბეჭდავს ყველაზე ლამაზ ლურჯ სუფრას. ლანგრებიდან
           ბეჭდებს იღებ, დაზგის ზოლებს ავსებ, საღამოს სუფრაზე ბეჭდავ — გვერდიგვერდ დაბეჭდილი ორნამენტები ქებას მოგიტანს, ზედმეტი კი საღებავს დაღვრის.
         </p>
-        <p className="mt-2 text-[12.5px] leading-snug text-[#fbf6ec]/85">
-          {tab === 'online'
-            ? 'ონლაინ: ყველა თავის ტელეფონზე იღებს ბეჭდებს და ყველას სუფრას ხედავს; ქებას ტელეფონი ითვლის. ოთახის გამხსნელიც თამაშობს.'
-            : 'ჰიბრიდული: ერთი ტელეფონი ხელიდან ხელში გადადის — ვისი სვლაცაა, ის იღებს; ლანგრებს ავსებს და ქებას ტელეფონი ითვლის.'}
-        </p>
       </section>
 
       <Tabs cols={2} value={tab} onChange={setTab} items={[{ id: 'online', label: 'ონლაინ', Icon: Wifi }, { id: 'table', label: 'ჰიბრიდული', Icon: Users }]} />
+      <HowTo key={tab} id={`lurji-${tab}`} steps={HOW[tab]} />
 
       {tab === 'online' ? (
         <RoomSetup

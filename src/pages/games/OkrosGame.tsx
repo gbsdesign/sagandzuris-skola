@@ -10,6 +10,7 @@ import { MAX_OK, WORKS } from '../../utils/okrosKhana';
 import { OkrosRoom } from './okros/Room';
 import { OkrosTable } from './okros/Table';
 import { WorkCard } from './okros/look';
+import { HowTo } from '../../components/games/HowTo';
 
 // „ოქროს ხანა“ on phones (games hub, 2026-11-04): the school's own board game of the Golden Age (rules utils/okrosKhana.ts; the
 // printed kit №1, src/print/games/okros-khana.js, draws the same map) gets its two app variants. Online: a class's room,
@@ -17,6 +18,21 @@ import { WorkCard } from './okros/look';
 // in the middle of the table (pages/games/okros/Table.tsx). The tab is kept on the device (`sg-okros-tab`).
 
 type Tab = 'online' | 'table';
+
+/** how a game goes on phones, in steps (2026-11-04, the games' review: the dark card and the table's card said it twice) */
+const HOW: Record<Tab, string[]> = {
+  online: [
+    'ყველა თავის ტელეფონზე თამაშობს: რუკა და საქმეები ყველასთვის ერთია.',
+    'შენს სვლაზე: იარე, აიღე ნივთები და გააკეთე ერთი საქმე — წესები მოკლედ ქვემოთაა.',
+    'ნივთებს და ქულებს ტელეფონი ითვლის. ბოლო წლის მერე იგებს, ვისაც მეტი ქულა აქვს.',
+  ],
+  table: [
+    'ერთი ტელეფონი მაგიდის შუაშია ან ხელიდან ხელში გადადის.',
+    'ვისი სვლაცაა, ის ირჩევს კუთხეს და საქმეს.',
+    'ნივთებს, მამულებს და საქმეების უჯრებს ტელეფონი ინახავს; ყოველ წელს მეფეს ის აგზავნის და ქულებს ის ითვლის.',
+    'ამობეჭდილი რუკა მაგიდაზეც შეიძლება იდოს — მხედრები მასზე გადაადგილეთ.',
+  ],
+};
 const TAB_KEY = 'sg-okros-tab';
 const readTab = (): Tab | null => { try { const v = localStorage.getItem(TAB_KEY); return v === 'online' || v === 'table' ? v : null; } catch { return null; } };
 
@@ -143,15 +159,11 @@ const OkrosGame: React.FC = () => {
           ღვინოს და ოქროს, აშენებს მამულებს, შლის სუფრებს და მეფის დიდ საქმეებს ეხმარება — ციხეებს, ხიდს, სასახლეს, აკადემიას. მეფე
           ყოველ წელს სხვა კუთხეშია და იქ ყველაფერი მეტს იძლევა.
         </p>
-        <p className="mt-2 text-[12.5px] leading-snug text-[#fbf6ec]/85">
-          {tab === 'online'
-            ? 'ონლაინ: ყველა თავის ტელეფონზე თამაშობს, რუკა და საქმეები ყველასთვის ერთია; ქულებს ტელეფონი ითვლის.'
-            : 'ჰიბრიდული: ერთი ტელეფონი მაგიდის შუაშია — ვისი ჯერიცაა, ის ირჩევს; ნივთებს და ქულებს ტელეფონი ითვლის.'}
-        </p>
         <p className="mt-2 text-[12px] leading-snug text-[#fbf6ec]/70">საქმეების ისტორიული ცნობები Claude-მა დაწერა — მასწავლებელს ჯერ არ შეუმოწმებია.</p>
       </section>
 
       <Tabs cols={2} value={tab} onChange={setTab} items={[{ id: 'online', label: 'ონლაინ', Icon: Wifi }, { id: 'table', label: 'ჰიბრიდული', Icon: Users }]} />
+      <HowTo key={tab} id={`okros-${tab}`} steps={HOW[tab]} />
 
       {tab === 'online' ? (
         <RoomSetup

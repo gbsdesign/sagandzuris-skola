@@ -100,14 +100,6 @@ export const QaravaniTable: React.FC = () => {
         )}
         <Btn size="lg" full disabled={!fitsN} onClick={() => { void begin(); }} icon={<Route />} className="!h-14 !text-[16px]">თამაშის დაწყება</Btn>
       </Card>
-      <Card className="!p-4">
-        <p className="text-[13px] font-bold text-[#4a3426]">როგორ ვთამაშობთ</p>
-        <p className="mt-1 text-[12.5px] leading-snug text-[#75685a]">
-          ტელეფონი მაგიდის შუაშია ან ხელიდან ხელში გადადის: ვისი სვლაცაა, ის ხედავს კამათლებს, ცვლის მათ აბაზით და ირჩევს გზას
-          ან ვაჭრობას. კამათლებს ტელეფონი აგორებს, გზებს, აბაზს და ქარვასლებს ის ინახავს, ბოლოს კი ყველა ქალაქს და ტვირთს ის ითვლის.
-          ამობეჭდილი რუკა მაგიდაზეც შეიძლება იდოს — ურმები მასზე დააწყვეთ.
-        </p>
-      </Card>
     </div>
   );
 };

@@ -1148,7 +1148,9 @@
   bare list for a game's first card) — never a long grey paragraph under „დაწყება“. A quick game's steps come from its face's
   `online` / `hybrid` words (`stepsOf` in `RoundsPage`), so a `table` setup under it has none of its own. An end screen names the
   winner through `pages/games/rounds/winLine.ts` (`winLine`: nobody above 0 → „ამჯერად ქულა არავის აქვს“, and no trophy); the
-  Podium crowns only a score above 0.
+  Podium crowns only a score above 0. A board game's end says what broke a tie on points (ოქროს ხანა: works, then estates;
+  ქარავანი: the number of cities, then abazi; ლურჯი სუფრა: full rows; ორი ტახტი: the army, then castles), and its online
+  steps leave out who opens the room — the room card's `hostLine` says it.
 - **No religious pictures in the games (the user's rule, 2026-11-01; corrected the same day: „რელიგიური და მუსიკალური კითხვები
   დატოვე, უბრალოდ ვიზუალს ნუ გამოიყენებ“)**: no cross, church, icon or domed-church mark anywhere in a game or a print kit (the
   series emblem is `grapeEmblem` in `src/print/lib.js`, the caravan map's shrines an old gate); a monument card that will get a picture is a secular one. Faith and chant stay as content —

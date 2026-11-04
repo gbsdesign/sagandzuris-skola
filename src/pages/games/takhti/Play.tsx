@@ -198,7 +198,12 @@ export const TakhtiPlay: React.FC<{
   } else if (result) {
     const w = ph.winners;
     head = w.length > 1 ? 'ტოლია — ორი ტახტი ერთად დგას!' : `ტახტი ${IN_CAPITAL[w[0]]} დადგა!`;
-    sub = w.length > 1 ? 'ქულა, ლაშქარიც და ციხეებიც ტოლია.' : `${w[0] === me ? 'შენ გაიმარჯვე' : `${g.names[w[0]]} იმარჯვებს`} — ერთიანი საქართველოს დედაქალაქი ${CAPITALS[w[0]]} ხდება.`;
+    // the points tied: the end says what decided it (2026-11-04, the games' review)
+    const [W, L] = w.length === 1 ? [result[w[0]], result[1 - w[0]]] : [null, null];
+    const why = !W || !L || W.total !== L.total ? ''
+      : W.strength !== L.strength ? ` ქულა ტოლია — გადაწყვიტა ლაშქრის ძალამ: ${W.strength} და ${L.strength}.`
+      : ` ქულა და ლაშქარი ტოლია — გადაწყვიტა ციხეებმა: ${W.castle} და ${L.castle}.`;
+    sub = w.length > 1 ? 'ქულა, ლაშქარიც და ციხეებიც ტოლია.' : `${w[0] === me ? 'შენ გაიმარჯვე' : `${g.names[w[0]]} იმარჯვებს`} — ერთიანი საქართველოს დედაქალაქი ${CAPITALS[w[0]]} ხდება.${why}`;
   }
   const dots = (
     <span className="flex items-center gap-1" aria-hidden>

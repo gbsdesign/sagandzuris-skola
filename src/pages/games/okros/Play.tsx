@@ -9,6 +9,7 @@ import { TableScreen } from '../../../components/games/TableScreen';
 import { Btn } from '../../../components/ui/kit';
 import { triggerHaptic } from '../../../utils/haptics';
 import { useTwoCols } from '../../../components/games/useTwoCols';
+import { NOBODY_WON } from '../rounds/winLine';
 import { OkrosBoard } from './Board';
 import { GOLD, GOOD_LOOK, GoodDot, GoodsLine, HOUSES, HouseMark, MarketMark, RiderMark, WORK_ICON, WorkCard, goodsText, lineText } from './look';
 
@@ -99,8 +100,17 @@ export const OkrosPlay: React.FC<{
     sub = mine ? (ph.got.some(c => c) ? <>მიიღე: {goodsText(ph.got)}. ერთი საქმე — ან სვლის დასრულება.</> : 'ხელი სავსეა: ათზე მეტს ვერ წაიღებ. ერთი საქმე — ან სვლის დასრულება.') : last;
   } else {
     const w = ph.winners;
-    head = w.length > 1 ? <>{w.map(i => nm(i)).join(' და ')} — ტოლია!</> : w[0] === me ? 'შენ გაიმარჯვე!' : <>{g.players[w[0]].name} იმარჯვებს!</>;
-    sub = 'ოქროს ხანა დასრულდა: ყველაზე მეტი ქულა — მამულებით, დიდი საქმეებით და სუფრებით.';
+    // the points tied: the end says what decided it (2026-11-04, the games' review: „20 · 20“ read as a mistake)
+    const [a, b] = ph.order;
+    const A = g.players[a], B = b === undefined ? null : g.players[b];
+    const built = (p: typeof A) => ESTATES - p.left;
+    head = A.pts <= 0 ? NOBODY_WON : w.length > 1 ? <>{w.map(i => nm(i)).join(' და ')} — ტოლია!</> : w[0] === me ? 'შენ გაიმარჯვე!' : <>{g.players[w[0]].name} იმარჯვებს!</>;
+    sub = A.pts <= 0 ? 'ამ თამაშში არც მამული აშენდა, არც საქმე დასრულდა და არც სუფრა გაიშალა.'
+      : w.length > 1 ? 'ქულა, დასრულებული საქმეები და მამულები ტოლია — გამარჯვება იყოფა.'
+      : B && B.pts === A.pts ? (A.works.length !== B.works.length
+        ? <>ქულა ტოლია — გადაწყვიტა დასრულებულმა საქმეებმა: {nm(a)} {A.works.length}, {nm(b)} {B.works.length}.</>
+        : <>ქულა და საქმეები ტოლია — გადაწყვიტა მამულებმა: {nm(a)} {built(A)}, {nm(b)} {built(B)}.</>)
+      : 'ოქროს ხანა დასრულდა: ყველაზე მეტი ქულა — მამულებით, დიდი საქმეებით და სუფრებით.';
   }
   const story = (
     <section className="rounded-3xl text-[#fbf6ec] px-4 py-3.5 shadow-[0_14px_30px_-20px_rgba(58,36,21,0.9)] bg-gradient-to-br from-[#4a2e1a] to-[#2b1a0e]" aria-live="polite">
@@ -241,7 +251,7 @@ export const OkrosPlay: React.FC<{
         {ordered.map(i => {
           const p = g.players[i];
           const turn = ph.k !== 'end' && g.turn === i;
-          const won = ph.k === 'end' && ph.winners.includes(i);
+          const won = ph.k === 'end' && ph.winners.includes(i) && p.pts > 0;
           return (
             <li key={i} className={`min-w-0 rounded-2xl px-2.5 py-2 ${turn || won ? 'bg-[#fffaf0] ring-2 ring-[#e2c27a]' : 'bg-white ring-1 ring-[#e8dcc8]'}`}>
               <p className="flex items-center justify-between gap-1.5">
