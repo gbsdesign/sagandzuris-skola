@@ -163,8 +163,8 @@
   A teacher's chant/song assignment (also 2026-10-28): the learning mode notes each piece's part count in
   `students.learnParts.{piece}` (no rules change); `assignedProgress`/`allLearned` (`utils/learn.ts` + test) — a song counts
   by its best-learned recording. Every part learned = the assignment is done (`workDone(…, mine)`; the member sees
-  „ნასწავლია“, a teacher's „ჩათვლა“ still shows „ჩათვლილია“; marking on the path still counts for the teacher). The class's
-  „დავალებები“ chip „ისწავლა N/M“ unfolds each member's bar (`WhoLearns`, `learn/PartsBar.tsx`); the member's window lists a
+  „ნასწავლია“, a teacher's „ჩათვლა“ still shows „ჩათვლილია“; marking on the path still counts for the teacher). A teacher's
+  assignment card's „ისწავლა N/M ▾“ unfolds each member's bar (`WhoLearns`, `learn/PartsBar.tsx`); the member's window lists a
   bar per piece (`LearnReview`). The member's „სწავლა“ on an assignment opens the learning mode on the assigned voice
   (`learn/openLearning.ts`: `learnPieceOf`, `useOpenLearning`; `requestLearn(piece, voice)`).
 - **კლასის სტუდია** (2026-10-29, `components/studio/ClassStudio.tsx`): a program chant with book notes gets „სტუდია“ in its
@@ -298,15 +298,22 @@
   `ProgramEditor`, adding a member `AddMemberSheet`; 💬 to the teacher for a member), the timetable chips, the members as one
   line „N წევრი ›“ that opens their window on a phone (a sticky left column on a computer, `lg`); the class's teachers get
   `ClassRoll` (`teacher/StudentsOverview.tsx`: attendance ✓, 💬, a name opens the member's window, „მიწერა“/„ამოღება“).
-  Then three tabs (kept per visit in sessionStorage): „პროგრამა“ — `ClassProgram`: thin progress bar, a line per item with
-  only its status (my voices, else the learning bar; a teacher sees how many know it), a tap opens `ItemSheet` (ნოტები /
-  სიმღერა, სწავლა, my voice marks, who knows each voice); under it folded cards: ოსტატობა (`ClassLessons fold`), the
-  teachers' pearls, the psalter group (folded head line with „შენი: N“; `focus` opens it) — „დავალებები“
-  (`classes/ClassWork.tsx`: `AssignmentsFold` for teachers, `WorkItems` for members; a dot = a member's assignment to do;
-  since 2026-11-04 a card = `WorkCardHead` — the chant's own name big + one grey line (`utils/assignmentLines.ts` + test), a tap
-  opens its notes / song / exercise (`hooks/usePathItemOpener.ts`, moved out of PathOrbs); the teacher's footer = `dueUntil`
-  „10 ნოემბრამდე“ + „ისწავლა N/M ▾“, which unfolds the book's place, the members' bars and „დავალების წაშლა“) —
-  „ჩათი“ (`ClassChat`; a dot while unread). „სასწავლო პროგრამა“ is the name everywhere (not „კლასის პროგრამა“). The timetable
+  Since 2026-11-04 two tabs (kept per visit in sessionStorage; the user: „პროგრამა პროგრამაა“): „პროგრამა“ (a dot = a
+  member's assignment to do) — on top the chants' and songs' assignments in their own card (`ClassAssignments` in
+  `classes/ClassWork.tsx`: `AssignmentsFold only="chant"` for teachers, `WorkItems` for members, who see the card only while
+  there is one); then `ClassProgram`: thin progress bar, a line per item with only its status (my voices, else the learning
+  bar; a teacher sees how many know it), a tap opens `ItemSheet` (ნოტები / სიმღერა, სწავლა, my voice marks, who knows each
+  voice; a teacher's „დავალებად მიცემა“ = `NewAssignment` with `preset`), and for teachers „+ დამატება“ under the list
+  (`ProgramQuickAdd`: the catalogue tree, saved once when it closes — order and ✕ stay in ✎ → „სასწავლო პროგრამა“); under it
+  folded cards: ოსტატობა (`ClassLessons fold`, the exercises given as assignments on top — `DrillWork` as its `work`,
+  `AssignmentsFold only="drill"` / `WorkItems`; an amber „დავალება“ chip on the folded line for a member), the psalter group
+  (folded head line with „შენი: N“; `focus` opens it) — „ჩათი“ (`ClassChat`; a dot while unread). An assignment card =
+  `WorkCardHead` — the chant's own name big + one grey line (`utils/assignmentLines.ts` + test), a tap opens its notes / song
+  / exercise (`hooks/usePathItemOpener.ts`, moved out of PathOrbs); the deadline is `dueUntil` „10 ნოემბრამდე“ on both cards —
+  **no „N დღეში“** (the user, 2026-11-04); the teacher's „ისწავლა N/M ▾“ unfolds the book's place, the members' bars and
+  „დავალების წაშლა“. No class „მარგალიტები“ card any more (removed 2026-11-04): a teacher sees 💎 N by a member's name in the
+  roll (`PearlsWaiting`, `waitingPearls` in `pearls/PearlReview.tsx`) and on the phone's members line; the member's window
+  shows `PearlReview` first. „სასწავლო პროგრამა“ is the name everywhere (not „კლასის პროგრამა“). The timetable
   chips also sit under the chat's title on the messages page. Teacher-only parts never show to members; attendance is
   teacher-only in `firestore.rules` too (members no longer read it).
 - **Games hub** (`pages/GamesPage.tsx`, 2026-10-27; **one list since 2026-10-30**, the user's „ყველა თამაში 1 სიად“ — no category
@@ -1145,8 +1152,8 @@ listens (Gemini through Firebase AI Logic). 8 calls on Android (wake lock, push,
    the mirror). Each voice keeps its own best (`pearls[id].voices`); all three polished = a golden pearl (`isGolden`),
    three dots under each pearl. Sheet `components/pearls/PearlSheet.tsx`. Best try in `students.pearls`, best take (MP3) in
    `pearlTakes/{uid}/takes/{versionId}`; the teacher hears it and approves („ჩათვლა“ → `students.pearlShine`, teachers
-   only) in the member's window (`PearlReview`) or on the class page (`pearls/ClassPearls.tsx`, teachers only, since
-   2026-10-28: „მოსასმენი“ queue — ▶ fetches the take on demand, „ჩათვლა“ — and one table of members × chests). Since
+   only) in the member's window (`PearlReview`, first in it; the class page's own pearls card was removed 2026-11-04 — a
+   💎 N by the member's name in the class roll says whose window to open). Since
    2026-10-28 every 5 shining pearls give the outfit of „ჩემი სამოსი“ its next part (`utils/pearlGifts.ts` + test,
    `hooks/usePearlGifts.ts`: the member's own app adds it from the path page — `PearlGiftBanner` in `PathOrbs` — and keeps
    `students.pearlGifts {steps, parts, seen}`; the pearls panel shows „შემდეგი ჯილდო“), and `utils/pearlWish.ts` opens a

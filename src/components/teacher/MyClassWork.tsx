@@ -4,7 +4,7 @@ import { BellOff, BellRing, Check, CheckCheck, ClipboardList, Dumbbell, Graduati
 import { db } from '../../firebase';
 import { useAuth, useChants } from '../../context';
 import { useMyClasses } from '../../hooks/useClasses';
-import { Assignment, daysUntil, shortDate, useMyAssignments } from '../../hooks/useTeaching';
+import { Assignment, daysUntil, dueUntil, useMyAssignments } from '../../hooks/useTeaching';
 import { Confirmations, useConfirmations } from '../../hooks/useConfirmations';
 import { Voice, voicesOf } from '../../utils/pathItems';
 import { Btn } from '../ui/kit';
@@ -21,10 +21,6 @@ import { WorkCardHead } from './AssignmentsPanel';
 import { CHIP_SOFT, CHIP_STRONG, PATH_CARD, PATH_LABEL, PATH_LABEL_ICON } from '../views/pathStyle';
 
 const VOICE: Record<string, string> = { '1': 'I', '2': 'II', '3': 'III' };
-
-// the deadline, said once: "13 ოქტ · 5 დღეში"
-const dueText = (iso: string, n: number) =>
-  `${shortDate(iso)} · ${n < 0 ? 'ვადა გავიდა' : n === 0 ? 'დღეს' : n === 1 ? 'ხვალ' : `${n} დღეში`}`;
 
 // an assignment's colours (the bar beside it and its deadline badge)
 const TONE = {
@@ -108,7 +104,7 @@ export const WorkItems: React.FC<{ list: Assignment[] }> = ({ list }) => {
                   </>
                 )}
                 <span className={`ml-auto shrink-0 h-6 px-2.5 rounded-full text-[11.5px] font-bold tabular-nums whitespace-nowrap inline-flex items-center gap-1 ${tone.badge}`}>
-                  {done ? <><CheckCheck className="w-3.5 h-3.5" /> {counted ? 'ჩათვლილია' : 'ნასწავლია'}</> : dueText(a.due, n)}
+                  {done ? <><CheckCheck className="w-3.5 h-3.5" /> {counted ? 'ჩათვლილია' : 'ნასწავლია'}</> : dueUntil(a.due)}
                 </span>
               </div>
               {a.note && (
