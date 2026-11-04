@@ -247,11 +247,11 @@ export const GAMES: GameDef[] = [
     modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'churchkhela', section: 'tamashebi',
     print: { href: '/games/print/tskheli-churchkhela.pdf', sheets: 6 },
   },
-  // the board games the school prints and makes itself, each a Georgian retheme on paper
+  // the board games the school prints and makes itself
   {
-    id: 'okros-khana', title: 'ოქროს ხანა', like: 'კატანი', text: 'ერისთავები ოქროს ხანის საქართველოს აშენებენ: ხე, ქვა, მატყლი, პური, მადანი',
-    about: '„კატანი“ ცნობილი სამაგიდო თამაშია: ფილებზე ნედლეულს აგროვებ, ვაჭრობ, გზებს, სოფლებს და ქალაქებს აშენებ. ჩვენთან ოქროს ხანის საქართველოა: ერისთავები და ქართული ადგილები; წესები თითქმის იგივეა.',
-    modes: ['noPhone'], print: { href: '/games/print/okros-khana.pdf', sheets: 27 },
+    id: 'okros-khana', title: 'ოქროს ხანა', text: 'მხედარი 13 კუთხეში: აგროვე ნივთები, ააშენე მამულები, დაეხმარე მეფის დიდ საქმეებს',
+    about: 'ჩვენი სამაგიდო თამაში შეგროვებისა და მშენებლობის ჟანრში. საქართველოს 13 კუთხის რუკაზე შენი მხედარი დადის: კუთხეებიდან ხეს, ქვას, პურს, ღვინოს და ოქროს აგროვებს, მამულებს აშენებს, სუფრებს შლის და მეფის დიდ საქმეებს — ციხეებს, ხიდს, სასახლეს, აკადემიას — ეხმარება. მეფე ყოველ წელს სხვა კუთხეშია. ონლაინ ყველა თავის ტელეფონზე თამაშობს; ჰიბრიდულში ერთი ტელეფონი მაგიდის შუაშია.',
+    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'okros', section: 'tamashebi', print: { href: '/games/print/okros-khana.pdf', sheets: 16 },
   },
   {
     id: 'qaravani', title: 'ქარავანი', like: 'Ticket to Ride', text: 'საქართველოს რუკა: ქარავნის გზები და მომლოცველობა მცხეთიდან ბათუმამდე',
