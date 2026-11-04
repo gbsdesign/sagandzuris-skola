@@ -81,7 +81,7 @@ async function showTalk(m) {
     return self.registration.showNotification(m.title, {
       body: m.body || '', tag: m.tag, renotify: true, requireInteraction: true, vibrate: RING_VIBRATE,
       actions: [{ action: 'answer', title: 'პასუხი' }, { action: 'decline', title: 'უარი' }],
-      data: { url: m.url || '/', decline: m.decline || null }, icon: '/pwa-192x192.png', badge: '/pwa-192x192.png',
+      data: { url: m.url || '/', answer: m.answer || null, decline: m.decline || null }, icon: '/pwa-192x192.png', badge: '/pwa-192x192.png',
     });
   }
   return self.registration.showNotification(m.title, {
@@ -97,7 +97,9 @@ const declineCall = (d) =>
 // A group reminder opens its page (/?prayer=kathisma-8, /?open=psalter …).
 self.addEventListener('notificationclick', (event) => {
   const prayerId = event.notification.data && event.notification.data.prayerId;
-  const url = event.notification.data && event.notification.data.url;
+  const answer = event.notification.data && event.notification.data.answer;
+  // a ring's „პასუხი“ opens the app on the call itself; a tap on the notice, its chat with the ringing screen
+  const url = event.action === 'answer' && answer ? answer : event.notification.data && event.notification.data.url;
   const decline = event.notification.data && event.notification.data.decline;
   event.notification.close();
   // „უარი“ on a ring: the call ends (a class's call only stops ringing); the site stays closed
