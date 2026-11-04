@@ -6,6 +6,7 @@ import { samshvildeRooms } from './samshvildeRoom';
 import { kariRooms as makeKariRooms } from './kariRoom';
 import { lurjiRooms as makeLurjiRooms } from './lurjiRoom';
 import { takhtiRooms as makeTakhtiRooms } from './takhtiRoom';
+import { qaravaniRooms as makeQaravaniRooms } from './qaravaniRoom';
 import { ROUNDS_ROOM, editRound, judgeRound, nextRound, nextStep, revealRound, roundKey, type RoundQ } from './roundGames';
 
 // The online rooms (utils/gameRoom.ts) in the app's Firestore: the backend, the one store of this phone, and the rooms of my
@@ -62,7 +63,10 @@ export const useLurjiRoom = () => useSyncExternalStore(lurjiRooms.subscribe, lur
 /** this phone's room of „ორი ტახტი“ (utils/takhtiRoom.ts) */
 export const takhtiRooms = makeTakhtiRooms(backend);
 export const useTakhtiRoom = () => useSyncExternalStore(takhtiRooms.subscribe, takhtiRooms.get);
-const STORES = [rooms, roundRooms, kariRooms, lurjiRooms, takhtiRooms] as const;
+/** this phone's room of „ქარავანი“ (utils/qaravaniRoom.ts) */
+export const qaravaniRooms = makeQaravaniRooms(backend);
+export const useQaravaniRoom = () => useSyncExternalStore(qaravaniRooms.subscribe, qaravaniRooms.get);
+const STORES = [rooms, roundRooms, kariRooms, lurjiRooms, takhtiRooms, qaravaniRooms] as const;
 type AnySnap = ReturnType<(typeof STORES)[number]['get']>;
 const anyVisible = () => STORES.some(st => st.isVisible());
 const subscribeAll = (f: () => void) => { const offs = STORES.map(st => st.subscribe(f)); return () => offs.forEach(off => off()); };
