@@ -13,9 +13,9 @@ import { Bar, Btn, FIELD, Flash, IconBtn, Label, Sheet, askConfirm, useFlash } f
 // „ოსტატობა“ of one class: its lessons, step by step. A member opens a lesson and goes through it one step at a time,
 // marking each „შესრულდა“; the class's teachers build them in place (+ and ✎) from tips, exercises, chants of the
 // class program and links, and see how many members finished each one. `bare`: inside the path page's panel (no card).
-// `fold`: the class page shows the card as one line that unfolds the lessons (2026-10-28). `work`: the class's exercises
-// given as assignments, over the lessons (2026-11-04, ClassWork's DrillWork); `toDo`: a member has one of them to do —
-// a chip on the folded line.
+// `fold`: the class page shows the card as one line that unfolds the lessons (2026-10-28); its „+ ახალი გაკვეთილი“ is
+// inside, under the list (2026-11-05: a wine ＋ on the folded line said nothing). The exercises given as assignments live in
+// the class page's round 📋 since 2026-11-05 (classes/ClassWork.tsx).
 
 const KIND_ICON: Record<StepKind, React.ReactNode> = {
   text: <Lightbulb />, exercise: <Dumbbell />, chant: <Music4 />, link: <Link2 />,
@@ -27,9 +27,7 @@ export const ClassLessons: React.FC<{
   bare?: boolean;
   showClassName?: boolean;
   fold?: boolean;
-  work?: React.ReactNode;
-  toDo?: boolean;
-}> = ({ cls, canEdit, bare, showClassName, fold, work, toDo }) => {
+}> = ({ cls, canEdit, bare, showClassName, fold }) => {
   const { user } = useAuth();
   const lessons = useClassLessons(cls.id);
   const iAmMember = !!user && cls.memberIds.includes(user.uid);
@@ -40,7 +38,7 @@ export const ClassLessons: React.FC<{
   const [shut, setShut] = useState(true);
 
   if (!lessons) return null;
-  if (!lessons.length && !canEdit && !work) return null;
+  if (!lessons.length && !canEdit) return null;
   // how many members finished a lesson (the teachers' line)
   const finished = (l: Lesson) => cls.members.filter(m => l.steps.length && doneCount(l, everyone[m.uid] || {}) === l.steps.length).length;
   const folded = !!fold && shut;
@@ -58,15 +56,11 @@ export const ClassLessons: React.FC<{
               ოსტატობა
               {lessons.length > 0 && <span className="ml-2 font-sans text-sm font-bold text-[#a4927c] tabular-nums">{lessons.length}</span>}
             </h2>
-            {toDo && shut && (
-              <span className="shrink-0 h-7 px-2.5 rounded-full inline-flex items-center text-[12px] font-bold bg-amber-100 text-amber-900">დავალება</span>
-            )}
             {iAmMember && lessons.length > 0 && (
               <span className={`shrink-0 text-[12.5px] font-bold tabular-nums ${mineDone === lessons.length ? 'text-emerald-700' : 'text-[#8a7a6a]'}`}>{mineDone}/{lessons.length}</span>
             )}
             <ChevronDown className={`w-5 h-5 shrink-0 text-[#a4927c] transition-transform ${shut ? '' : 'rotate-180'}`} />
           </button>
-          {canEdit && <IconBtn label="ახალი გაკვეთილი" tone="wine" onClick={() => setEditing('new')}><Plus /></IconBtn>}
         </div>
       ) : (
         <div className={`flex items-center gap-2 ${bare ? 'min-h-11' : 'min-h-14 px-1'}`}>
@@ -79,7 +73,6 @@ export const ClassLessons: React.FC<{
         </div>
       )}
 
-      {!folded && work}
       {folded ? null : lessons.length === 0 ? (
         canEdit && (
           <button type="button" onClick={() => setEditing('new')}
@@ -120,6 +113,10 @@ export const ClassLessons: React.FC<{
             );
           })}
         </ul>
+      )}
+      {/* the folded card's way to add one: inside, under the lessons */}
+      {fold && !folded && canEdit && lessons.length > 0 && (
+        <Btn kind="soft" full icon={<Plus />} className="mt-2" onClick={() => setEditing('new')}>ახალი გაკვეთილი</Btn>
       )}
 
       {open && <LessonView cls={cls} lesson={open} done={mine} member={iAmMember} onClose={() => setOpen(null)} />}

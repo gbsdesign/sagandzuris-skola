@@ -1,31 +1,49 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { ClipboardList } from 'lucide-react';
+import { db } from '../../firebase';
 import { useAuth } from '../../context';
 import type { SchoolClass } from '../../hooks/useClasses';
 import { Assignment, daysUntil, useAssignments } from '../../hooks/useTeaching';
 import { useConfirmations } from '../../hooks/useConfirmations';
 import { useAllLearning } from '../../hooks/useLearning';
 import { useDrillDone } from '../../utils/drillTakes';
+import { triggerHaptic } from '../../utils/haptics';
 import { WorkItems, currentWork, workDone } from '../teacher/MyClassWork';
 import { AssignmentsFold } from '../teacher/AssignmentsPanel';
 
-// The class's assignments on the „პროგრამა“ tab (2026-11-04: the „დავალებები“ tab is gone — the user: „პროგრამა
-// პროგრამაა“, the program's list stays as it is). Chants and songs in their own card over the program
-// (ClassAssignments), the exercises of „ოსტატობა“ inside its card (DrillWork, ClassLessons' `work`). A teacher manages
-// them (AssignmentsFold), a member sees those for the whole class or for them (WorkItems).
+// The class's assignments (2026-11-05, the user: „დავალება მინდა რომ პროგრამის მარცხნივ იყოს მრგვალი სიმბოლო და მასზე
+// დაჭერისას ხდებოდეს ჩამოშლა და ნახვა, ასევე თუ დავალება მოსულია აინთოს ინდიკატორი“): one round 📋 button left of the
+// page's „პროგრამა · ჩათი“ tabs (WorkButton) and the list it drops down under them (WorkPanel) — every assignment, the
+// chants' and songs' and the exercises of „ოსტატობა“ alike, in one place. A member's button lights up red while an
+// assignment came that they have not opened yet (students/{uid}.workSeenAt, the same mark as the path's „ნასწავლი“); opening
+// the list puts it out, and the number of those still to do stays on it. A teacher manages them in the list
+// (AssignmentsFold: „ახალი დავალება“ asks chant or exercise, „ისწავლა N/M“, the older ones under „ძველი“).
 
 export interface ClassWorkState {
-  /** current chants and songs (due no more than three days ago) */
-  chants: Assignment[];
-  /** current exercises of „ოსტატობა“ */
-  drills: Assignment[];
+  /** the current assignments (due no more than three days ago), chants and exercises together */
+  all: Assignment[];
   /** the older ones, newest first (teachers only) */
-  pastChants: Assignment[];
-  pastDrills: Assignment[];
-  /** a member's assignment still to do — the program tab's dot; `drillDot` = the „ოსტატობა“ line's chip */
-  dot: boolean;
-  drillDot: boolean;
+  past: Assignment[];
+  /** a member's: how many are still to do, and how many came since they last opened the list */
+  toDo: number;
+  fresh: number;
+  /** the list was opened: the fresh ones count as seen */
+  markSeen: () => void;
 }
+
+/** students/{uid}.workSeenAt: the newest assignment's time the member has seen (null until the record answers). */
+const useSeenAt = (uid?: string) => {
+  const [seenAt, setSeenAt] = useState<string | null>(null);
+  useEffect(() => {
+    if (!uid) { setSeenAt(null); return; }
+    return onSnapshot(doc(db, 'students', uid), snap => {
+      const v = snap.data()?.workSeenAt;
+      setSeenAt(typeof v === 'string' ? v : '');
+    }, () => setSeenAt(''));
+  }, [uid]);
+  return [seenAt, setSeenAt] as const;
+};
 
 export const useClassWork = (cls: SchoolClass, canEdit: boolean): ClassWorkState => {
   const { user } = useAuth();
@@ -33,46 +51,69 @@ export const useClassWork = (cls: SchoolClass, canEdit: boolean): ClassWorkState
   const confirmed = useConfirmations(user?.uid);
   const drillDone = useDrillDone(user?.uid);
   const mine = useAllLearning(user?.uid);
+  const [seenAt, setSeenAt] = useSeenAt(canEdit ? undefined : user?.uid);
   const forMe = canEdit ? assignments : assignments.filter(a => !a.studentIds.length || (!!user && a.studentIds.includes(user.uid)));
-  const work = currentWork(forMe);
-  const past = canEdit ? assignments.filter(a => daysUntil(a.due) < 0 && !work.includes(a)).reverse() : [];
-  const toDo = (list: Assignment[]) => !canEdit && list.some(a => daysUntil(a.due) >= 0 && !workDone(a, confirmed, drillDone, mine));
-  const drills = work.filter(a => a.exercise);
-  return {
-    chants: work.filter(a => !a.exercise),
-    drills,
-    pastChants: past.filter(a => !a.exercise),
-    pastDrills: past.filter(a => a.exercise),
-    dot: toDo(work),
-    drillDot: toDo(drills),
+  const all = currentWork(forMe);
+  const past = canEdit ? assignments.filter(a => daysUntil(a.due) < 0 && !all.includes(a)).reverse() : [];
+  const open = canEdit ? [] : all.filter(a => daysUntil(a.due) >= 0 && !workDone(a, confirmed, drillDone, mine));
+  // (an old assignment without a time never counts as new; nothing is new before the record answers)
+  const fresh = seenAt === null ? [] : open.filter(a => (a.createdAt || '') > seenAt);
+  const markSeen = () => {
+    if (!user || !fresh.length) return;
+    // the newest one's own time, so the teacher's and the member's clocks never meet
+    const last = fresh.reduce((m, a) => (a.createdAt && a.createdAt > m ? a.createdAt : m), seenAt || '');
+    setSeenAt(last);
+    setDoc(doc(db, 'students', user.uid), { workSeenAt: last }, { mergeFields: ['workSeenAt'] }).catch(() => {});
   };
+  return { all, past, toDo: open.length, fresh: fresh.length, markSeen };
 };
 
-/** The chants' and songs' assignments: a card of their own over the program. A member sees it only while there is one;
- *  a teacher always (with „ახალი დავალება“; a program item's window also has „დავალებად მიცემა“). */
-export const ClassAssignments: React.FC<{ cls: SchoolClass; canEdit: boolean; state: ClassWorkState }> = ({ cls, canEdit, state }) => {
-  if (!canEdit && !state.chants.length) return null;
+/** The round 📋 left of the tabs, as tall as they are. Its badge: red and pulsing while a new assignment waits unseen,
+ *  quiet with the number still to do after that; a teacher's shows how many are current. */
+export const WorkButton: React.FC<{ state: ClassWorkState; canEdit: boolean; open: boolean; onToggle: () => void }> = ({ state, canEdit, open, onToggle }) => {
+  const n = canEdit ? state.all.length : state.toDo;
+  const lit = !canEdit && state.fresh > 0;
+  const label = lit
+    ? `დავალებები — ახალი: ${state.fresh}`
+    : canEdit ? `დავალებები${n ? ` · ${n}` : ''}` : n ? `დავალებები — შესასრულებელი: ${n}` : 'დავალებები';
   return (
-    <section className="bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] px-4 min-[400px]:px-5 sm:px-6 pt-1 pb-4" aria-label="დავალებები">
-      <h2 className="min-h-14 flex items-center gap-2">
-        <ClipboardList className="w-5 h-5 shrink-0 text-[#7a2028]" />
-        <span className="font-serif-ge text-lg font-bold text-[#4a3426] truncate">დავალებები</span>
-        {state.chants.length > 0 && <span className="text-sm font-bold text-[#a4927c] tabular-nums">{state.chants.length}</span>}
-      </h2>
-      {canEdit ? <AssignmentsFold cls={cls} list={state.chants} past={state.pastChants} only="chant" /> : <WorkItems list={state.chants} />}
-    </section>
+    <button
+      type="button"
+      onClick={() => { triggerHaptic(10); onToggle(); }}
+      aria-expanded={open}
+      aria-label={label}
+      title={label}
+      className={`relative shrink-0 w-[54px] h-[54px] rounded-full flex items-center justify-center cursor-pointer transition active:scale-95 ${
+        open ? 'bg-[#7a2028] text-[#fbf6ec] shadow-sm' : 'bg-white/85 ring-1 ring-[#e8dcc8] text-[#7a2028] hover:bg-white'
+      }`}
+    >
+      <ClipboardList className="w-[22px] h-[22px]" />
+      {n > 0 && (
+        <span className="absolute -top-1 -right-1 flex">
+          {lit && <span aria-hidden className="absolute inset-0 rounded-full bg-red-500/70 motion-safe:animate-ping" />}
+          <span className={`relative min-w-[22px] h-[22px] px-1.5 rounded-full ring-2 ring-[#fbf6ec] text-[12px] font-bold leading-[22px] tabular-nums text-center ${
+            lit ? 'bg-red-600 text-white' : 'bg-[#efe5d4] text-[#7a2028]'
+          }`}>{n}</span>
+        </span>
+      )}
+    </button>
   );
 };
 
-/** The exercises given as assignments, at the top of the class's „ოსტატობა“ card; a teacher gives one from here. */
-export const DrillWork: React.FC<{ cls: SchoolClass; canEdit: boolean; state: ClassWorkState }> = ({ cls, canEdit, state }) => {
-  if (!canEdit && !state.drills.length) return null;
-  return (
-    <div className="mt-1 mb-2 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#efe5d4] px-3 pt-2.5 pb-3">
-      <p className="px-0.5 mb-2 text-[12.5px] font-bold text-[#a0703c]">
-        დავალებები{state.drills.length > 0 ? ` · ${state.drills.length}` : ''}
-      </p>
-      {canEdit ? <AssignmentsFold cls={cls} list={state.drills} past={state.pastDrills} only="drill" /> : <WorkItems list={state.drills} />}
-    </div>
-  );
-};
+/** The list the button drops down, under the tabs. */
+export const WorkPanel: React.FC<{ cls: SchoolClass; canEdit: boolean; state: ClassWorkState }> = ({ cls, canEdit, state }) => (
+  <section className="sg-in bg-white/80 rounded-3xl ring-1 ring-[#e8dcc8] px-4 min-[400px]:px-5 sm:px-6 pt-1 pb-4" aria-label="დავალებები">
+    <h2 className="min-h-12 flex items-center gap-2">
+      <ClipboardList className="w-5 h-5 shrink-0 text-[#7a2028]" />
+      <span className="font-serif-ge text-lg font-bold text-[#4a3426] truncate">დავალებები</span>
+      {state.all.length > 0 && <span className="text-sm font-bold text-[#a4927c] tabular-nums">{state.all.length}</span>}
+    </h2>
+    {canEdit ? (
+      <AssignmentsFold cls={cls} list={state.all} past={state.past} />
+    ) : state.all.length ? (
+      <WorkItems list={state.all} />
+    ) : (
+      <p className="pb-1 text-[14px] text-[#8a7a6a]">ახლა დავალება არ გაქვს. ახალი რომ მოვა, ეს ღილაკი აინთება.</p>
+    )}
+  </section>
+);

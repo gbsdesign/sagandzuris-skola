@@ -11,7 +11,10 @@ moving to the next chant in service order.
   five (ტექსტი is a row in „მეტი“ there; under 360px icons only). Pinch-zoom, remembered separately
   for upright / turned / computer. The tone is set once, beside „საწყისი ბგერა“ (the recording panel's own is 🎧 ტონი).
   „ტაძრის რეჟიმი“ is the round ⛪ beside „სწავლა“ (not in „მეტი“).
-- `ProgramPage.tsx` + `program.css`: „დღევანდელი წირვა“ — the teacher's chosen versions for a date.
+- `ProgramPage.tsx` + `program.css`: „დღევანდელი წირვა“ — the teacher's chosen versions for a date. Since 2026-11-05 the
+  teacher's page is three numbered steps (`.pp-step`): 1 „შეადგინე“ (list + add, „შაბლონები“ beside the step), 2 „გაუგზავნე
+  კლასს“, 3 „ტაძარში“ (start, offline, „გუნდი მომყვება“); a member's starts with „წირვის დაწყება“; QR / PDF = the small
+  „გაზიარება“ row at the end (`.pp-share`).
 - `NpStepper.tsx`: small +/- stepper (tone ±7).
 - „სწავლა“ (`.np-learn`, beside the zoom; not in the crowded top bar) opens `components/learn/LearnMode.tsx` over
   the page (portal on body, its own `sgLearn` history entry). The home card „დღეს გასამეორებელი“ opens it straight away

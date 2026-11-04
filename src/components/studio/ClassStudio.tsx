@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
-import { Check, Headphones, Loader2, Mic, Pause, Play, RotateCcw, Send, Square, Users } from 'lucide-react';
+import { Check, Loader2, Megaphone, Mic, Pause, Play, RotateCcw, Send, Square, Users } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
 import type { SchoolClass } from '../../hooks/useClasses';
@@ -12,12 +12,17 @@ import { SMALL_MAX_SECONDS, VOICE_MAX_SECONDS, WAVE_BARS, startVoiceRecording, t
 import type { Voice } from '../../utils/pathItems';
 import { triggerHaptic } from '../../utils/haptics';
 import { Avatar } from '../classes/ChatPanel';
-import { Btn, Sheet } from '../ui/kit';
+import { Btn, Sheet, Tabs } from '../ui/kit';
+import { Steps } from '../games/HowTo';
+import { assignmentLines } from '../../utils/assignmentLines';
 
 // „კლასის სტუდია“ (2026-10-29): every member records their own voice of a program chant at home, singing with the
 // synth's other voices in the earphones; the take starts where the synth starts, so the takes lie on one another.
 // It goes to the teachers through the pearls' store (pearlTakes, id `studio~<version>`, no rules change). The teacher
 // picks whose takes go in, hears them together and sends the mix to the class chat as one voice message.
+// One window since 2026-11-05 (Studio; the user: „დამაბნეველია“ — a teacher who is also a member pressed „ჩემი ხმის
+// ჩაწერა“ and got the mixing window): a member records (RecordBody); a teacher gets two tabs, „კლასის ჩანაწერები“
+// (MixBody: the takes, or — none yet — the three steps and „კლასს ვთხოვ“, a line in the class chat) and „ჩემი ხმა“.
 
 export const studioTakeId = (vid: string) => `studio~${vid}`;
 /** a program item the studio can make: a chant version with book notes */
@@ -40,10 +45,32 @@ const useScore = (vid: string) => {
   return { score, failed };
 };
 
-const titleOf = (vid: string) => findVersion(vid)?.chant.title.replace(/[;\s]+$/, '') ?? 'გალობა';
+// the chant's own name (a chant of a service's list has the service as its book title)
+const titleOf = (vid: string) => assignmentLines(vid, findVersion(vid)?.chant.title.replace(/[;\s]+$/, '') ?? 'გალობა').name;
 
-/** The member's side: record my voice over the others, listen, send. */
-export const StudioRecord: React.FC<{ vid: string; onClose: () => void }> = ({ vid, onClose }) => {
+/** The studio's window: the chant's name as its title; a teacher's two tabs (hidden while something is being made). */
+export const Studio: React.FC<{ cls: SchoolClass; vid: string; canEdit: boolean; onClose: () => void }> = ({ cls, vid, canEdit, onClose }) => {
+  const [view, setView] = useState<'mix' | 'record'>(canEdit ? 'mix' : 'record');
+  const [busy, setBusy] = useState(false);
+  return (
+    <Sheet open onClose={onClose} title={titleOf(vid)} locked={busy}>
+      <div className="space-y-4">
+        {canEdit && !busy && (
+          <Tabs<'mix' | 'record'> cols={2} value={view} onChange={setView} items={[
+            { id: 'mix', label: 'კლასის ჩანაწერები', Icon: Users },
+            { id: 'record', label: 'ჩემი ხმა', Icon: Mic },
+          ]} />
+        )}
+        {view === 'mix' && canEdit
+          ? <MixBody cls={cls} vid={vid} onBusy={setBusy} onRecord={() => setView('record')} />
+          : <RecordBody vid={vid} onBusy={setBusy} teacher={canEdit} />}
+      </div>
+    </Sheet>
+  );
+};
+
+/** Recording my voice over the others, listening, sending (a teacher's take joins the class's takes too). */
+const RecordBody: React.FC<{ vid: string; onBusy: (b: boolean) => void; teacher: boolean }> = ({ vid, onBusy, teacher }) => {
   const { user } = useAuth();
   const { score, failed } = useScore(vid);
   const sent = usePearlTakes(user?.uid)[studioTakeId(vid)];
@@ -53,6 +80,7 @@ export const StudioRecord: React.FC<{ vid: string; onClose: () => void }> = ({ v
   const [problem, setProblem] = useState('');
   const run = useRef<{ rec: VoiceRecording; synth: ChantSynth; t0: number; lag: number } | null>(null);
   const voices = Math.min(3, score?.voices.length ?? 3);
+  useEffect(() => onBusy(phase === 'rec' || phase === 'making' || phase === 'sending'), [phase]); // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => () => {
     run.current?.synth.dispose();
@@ -109,18 +137,19 @@ export const StudioRecord: React.FC<{ vid: string; onClose: () => void }> = ({ v
   };
 
   return (
-    <Sheet open onClose={onClose} title="სტუდია" locked={phase === 'rec' || phase === 'making' || phase === 'sending'}>
-      <div className="space-y-4">
-        <p className="font-serif-ge text-[16px] font-bold text-[#4a3426]">{titleOf(vid)}</p>
-        <p className="flex items-start gap-2 text-[14px] leading-snug text-[#75685a]">
-          <Headphones className="w-5 h-5 shrink-0 text-[#7a2028]" />
-          ყურსასმენი გაიკეთე: დანარჩენ ხმებს ყურში გაიგებ, მიკროფონი კი მხოლოდ შენს ხმას ჩაწერს. მასწავლებელი ყველას ჩანაწერს ერთად შეაერთებს.
-        </p>
+    <div className="space-y-4">
+        {(phase === 'idle' || phase === 'error') && (
+          <Steps steps={[
+            'ყურსასმენი გაიკეთე — დანარჩენ ხმებს ყურში გაიგებ, მიკროფონი მხოლოდ შენს ხმას ჩაწერს.',
+            'აირჩიე შენი ხმა, დააჭირე „ჩაწერა“ და იმღერე ბოლომდე.',
+            teacher ? 'მოუსმინე და დაამატე — „კლასის ჩანაწერებში“ სხვებთან ერთად გამოჩნდება.' : 'მოუსმინე და გაუგზავნე მასწავლებელს — ის ყველას ხმას ერთად შეაერთებს.',
+          ]} />
+        )}
         {failed && <p className="text-[14px] text-[#b3261e]">ამ გალობის ნოტები ვერ ჩაიტვირთა.</p>}
         {!voiceRecordingSupported() && <p className="text-[14px] text-[#b3261e]">ამ ბრაუზერში ჩაწერა ვერ მუშაობს.</p>}
         {score && voices > 1 && (phase === 'idle' || phase === 'error') && (
           <div>
-            <p className="text-[13px] font-bold text-[#8a7a6a]">რომელ ხმას იმღერებ?</p>
+            <p className="text-[13.5px] font-bold text-[#4a3426]">შენი ხმა</p>
             <div className="mt-2 flex gap-2">
               {(['1', '2', '3'] as Voice[]).slice(0, voices).map(v => (
                 <button key={v} type="button" aria-pressed={voice === v} onClick={() => { triggerHaptic(8); setVoice(v); }}
@@ -132,7 +161,7 @@ export const StudioRecord: React.FC<{ vid: string; onClose: () => void }> = ({ v
           </div>
         )}
         {sent && phase === 'idle' && (
-          <p className="flex items-center gap-2 text-[13.5px] font-semibold text-[#2f7d4f]"><Check className="w-4 h-4" /> შენი ჩანაწერი ({VOICE_LABEL[sent.voice]}) მასწავლებელთანაა. ახალი ჩანაწერი მას შეცვლის.</p>
+          <p className="flex items-center gap-2 text-[13.5px] font-semibold text-[#2f7d4f]"><Check className="w-4 h-4" /> შენი ჩანაწერი ({VOICE_LABEL[sent.voice]}) უკვე გაგზავნილია. ახალი ჩანაწერი მას შეცვლის.</p>
         )}
         {problem && <p className="text-[14px] text-[#b3261e]">{problem}</p>}
 
@@ -151,17 +180,16 @@ export const StudioRecord: React.FC<{ vid: string; onClose: () => void }> = ({ v
           <div className="space-y-3">
             <audio controls src={take.url} className="w-full" />
             {phase === 'sent' ? (
-              <p className="flex items-center gap-2 text-[15px] font-bold text-[#2f7d4f]"><Check className="w-5 h-5" /> გაეგზავნა მასწავლებელს</p>
+              <p className="flex items-center gap-2 text-[15px] font-bold text-[#2f7d4f]"><Check className="w-5 h-5" /> {teacher ? 'დაემატა კლასის ჩანაწერებს' : 'გაეგზავნა მასწავლებელს'}</p>
             ) : (
               <div className="grid grid-cols-2 gap-2.5">
                 <Btn kind="ghost" size="lg" icon={<RotateCcw />} disabled={phase === 'sending'} onClick={() => { setTake(null); setPhase('idle'); }}>თავიდან</Btn>
-                <Btn size="lg" icon={phase === 'sending' ? <Loader2 className="animate-spin" /> : <Send />} disabled={phase === 'sending'} onClick={send}>გაგზავნა</Btn>
+                <Btn size="lg" icon={phase === 'sending' ? <Loader2 className="animate-spin" /> : <Send />} disabled={phase === 'sending'} onClick={send}>{teacher ? 'დამატება' : 'გაგზავნა'}</Btn>
               </div>
             )}
           </div>
         )}
-      </div>
-    </Sheet>
+    </div>
   );
 };
 
@@ -181,11 +209,14 @@ const waveOf = (samples: Float32Array) => {
 };
 
 /** The teacher's side: the class's takes of one chant, picked, heard together and sent to the class chat. */
-export const StudioMix: React.FC<{ cls: SchoolClass; vid: string; onClose: () => void }> = ({ cls, vid, onClose }) => {
+const MixBody: React.FC<{ cls: SchoolClass; vid: string; onBusy: (b: boolean) => void; onRecord: () => void }> = ({ cls, vid, onBusy, onRecord }) => {
   const { user } = useAuth();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const [state, setState] = useState<'idle' | 'playing' | 'sending' | 'sent' | 'error'>('idle');
+  // „კლასს ვთხოვ“: a line in the class chat asking the members to record their voices
+  const [asked, setAsked] = useState<'no' | 'asking' | 'yes' | 'error'>('no');
+  useEffect(() => onBusy(state === 'sending'), [state]); // eslint-disable-line react-hooks/exhaustive-deps
   const playing = useRef<{ ctx: AudioContext; srcs: AudioBufferSourceNode[] } | null>(null);
   const one = useRef<HTMLAudioElement | null>(null);
   const [oneId, setOneId] = useState<string | null>(null);
@@ -251,6 +282,23 @@ export const StudioMix: React.FC<{ cls: SchoolClass; vid: string; onClose: () =>
     setState('playing');
   };
 
+  const authorOf = (): ChatAuthor => ({
+    uid: user!.uid, name: cls.teachers.find(t => t.uid === user!.uid)?.name || user!.displayName || 'მასწავლებელი',
+    photoURL: user!.photoURL || '', teacher: true,
+  });
+  const askClass = async () => {
+    if (!user) return;
+    triggerHaptic(10);
+    setAsked('asking');
+    try {
+      await sendTextMessage(classChatBase(cls.id), authorOf(),
+        `🎙 ჩაწერეთ თქვენი ხმა — „${titleOf(vid)}“\nკლასის „პროგრამაში“ გახსენით ეს საგალობელი და დააჭირეთ „ჩემი ხმის ჩაწერა“. ყურსასმენი გაიკეთეთ.`);
+      setAsked('yes');
+    } catch {
+      setAsked('error');
+    }
+  };
+
   const send = async () => {
     if (!user || !picked.length) return;
     triggerHaptic(12);
@@ -275,10 +323,7 @@ export const StudioMix: React.FC<{ cls: SchoolClass; vid: string; onClose: () =>
       for (let i = 0; i < data.length; i++) peak = Math.max(peak, Math.abs(data[i]));
       if (peak > 0) for (let i = 0; i < data.length; i++) data[i] *= 0.9 / peak;
       const mp3 = await encodeMp3(mix, undefined, 48);
-      const author: ChatAuthor = {
-        uid: user.uid, name: cls.teachers.find(t => t.uid === user.uid)?.name || user.displayName || 'მასწავლებელი',
-        photoURL: user.photoURL || '', teacher: true,
-      };
+      const author = authorOf();
       const base = classChatBase(cls.id);
       const names = picked.map(r => `${r.name} (${VOICE_LABEL[r.take.voice]})`).join(', ');
       await sendTextMessage(base, author, `🎵 ჯგუფური გალობა — ${titleOf(vid)}\n${names}`);
@@ -290,15 +335,27 @@ export const StudioMix: React.FC<{ cls: SchoolClass; vid: string; onClose: () =>
   };
 
   return (
-    <Sheet open onClose={onClose} title="სტუდია" locked={state === 'sending'}>
-      <div className="space-y-4">
-        <p className="font-serif-ge text-[16px] font-bold text-[#4a3426]">{titleOf(vid)}</p>
+    <div className="space-y-4">
         {!rows ? (
           <p className="flex items-center gap-2 text-[14px] text-[#8a7a6a]"><Loader2 className="w-4 h-4 animate-spin" /> ვეძებ ჩანაწერებს…</p>
         ) : !rows.length ? (
-          <p className="text-[14px] leading-relaxed text-[#75685a]">
-            ჯერ არავის ჩაუწერია. წევრები გალობის ფანჯარაში „სტუდიას“ დააჭერენ, თავიანთ ხმას ჩაწერენ და აქ გამოჩნდება.
-          </p>
+          <div className="space-y-4">
+            <p className="text-[15px] font-bold text-[#4a3426]">ჯერ არავის ჩაუწერია</p>
+            <Steps steps={[
+              'წევრები ამ საგალობელს „პროგრამაში“ გახსნიან, დააჭერენ „ჩემი ხმის ჩაწერა“ და ყურსასმენით თავიანთ ხმას ჩაწერენ.',
+              'ჩანაწერები აქ გამოჩნდება — მონიშნავ, ვისი შევიდეს, და ერთად მოისმენ.',
+              '„კლასის ჩატში“ — ყველა ხმა ერთ ჩანაწერად წავა კლასში.',
+            ]} />
+            <div className="grid grid-cols-1 min-[420px]:grid-cols-2 gap-2.5">
+              <Btn kind="soft" icon={asked === 'asking' ? <Loader2 className="animate-spin" /> : asked === 'yes' ? <Check /> : <Megaphone />}
+                disabled={asked === 'asking' || asked === 'yes'} onClick={askClass}>
+                {asked === 'yes' ? 'კლასს ვთხოვე' : 'კლასს ვთხოვ'}
+              </Btn>
+              <Btn kind="ghost" icon={<Mic />} onClick={onRecord}>ჩემი ხმის ჩაწერა</Btn>
+            </div>
+            {asked === 'yes' && <p className="text-[13px] text-[#2f7d4f]">კლასის ჩატში ჩაიწერა თხოვნა.</p>}
+            {asked === 'error' && <p className="text-[13px] text-[#b3261e]">ვერ გაიგზავნა — სცადე ხელახლა.</p>}
+          </div>
         ) : (
           <>
             <p className="text-[13.5px] text-[#75685a]">მონიშნე, ვისი ჩანაწერი შევიდეს. ყველა ერთად ჟღერს, ერთ დროს იწყება.</p>
@@ -337,7 +394,6 @@ export const StudioMix: React.FC<{ cls: SchoolClass; vid: string; onClose: () =>
             {state === 'error' && <p className="text-[13.5px] text-[#b3261e]">ვერ გაიგზავნა — სცადე ხელახლა.</p>}
           </>
         )}
-      </div>
-    </Sheet>
+    </div>
   );
 };

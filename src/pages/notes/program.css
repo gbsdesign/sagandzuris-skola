@@ -14,18 +14,22 @@
 .pp-chip select{font:inherit;font-weight:700;color:var(--ink);background:transparent;border:0;padding:0 2px;max-width:170px}
 .pp-sent{font-weight:600}
 .pp-sent.ok{color:var(--ok);font-weight:700}
-.pp-actions{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
-.pp-actions.two{grid-template-columns:repeat(2,1fr)}
-.pp-actions.three{grid-template-columns:repeat(3,1fr)}
+.pp-step{display:flex;align-items:center;gap:8px;min-height:40px;margin-top:10px}
+.pp-step h2{margin:0;font-size:15px;font-weight:800;color:var(--ink)}
+.pp-step .n{width:26px;height:26px;border-radius:999px;background:var(--wine);color:#fff;font-size:13px;font-weight:800;display:inline-flex;align-items:center;justify-content:center;flex:none}
+.pp-step .side{margin-left:auto;min-height:38px;padding:0 13px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--wine);background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}
+.pp-step .side svg{width:16px;height:16px}
+.pp-note{margin:0;font-size:12.5px;line-height:1.4;color:var(--muted);text-align:center}
+.pp-share{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;margin-top:14px;padding-top:12px;border-top:1px solid var(--line)}
+.pp-share .lb{font-size:12.5px;font-weight:700;color:var(--muted)}
+.pp-share button{min-height:40px;padding:0 15px;border-radius:999px;display:inline-flex;align-items:center;gap:6px;font-size:13px;font-weight:700;color:var(--ink-2);background:var(--surface);box-shadow:inset 0 0 0 1px var(--line)}
+.pp-share button svg{width:16px;height:16px;color:var(--wine)}
+.pp-share button:disabled{opacity:.45}
 .pp-send{width:100%;min-height:48px;padding:8px 16px;border-radius:16px;display:flex;align-items:center;justify-content:center;gap:9px;font-size:14px;font-weight:800;color:var(--wine);background:var(--surface);box-shadow:inset 0 0 0 1.5px var(--wine);transition:transform .12s}
 .pp-send:active{transform:scale(.985)}
 .pp-send:disabled{opacity:.5}
 .pp-send svg{width:19px;height:19px}
 .pp-send.done{color:var(--ok);box-shadow:inset 0 0 0 1px #a8d3b8;font-weight:700}
-.pp-act{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;min-height:68px;padding:10px 2px 9px;border-radius:14px;background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);font-size:12.5px;font-weight:700;color:var(--ink-2);text-align:center;line-height:1.25;transition:transform .12s}
-.pp-act:active{transform:scale(.95)}
-.pp-act:disabled{opacity:.45}
-.pp-act svg{width:20px;height:20px;color:var(--wine)}
 .pp-primary{width:100%;min-height:52px;padding:8px 16px;border-radius:16px;display:flex;align-items:center;justify-content:center;gap:10px;background:linear-gradient(135deg,#8a2630,#5e1820);color:#fff;font-size:14px;font-weight:800;box-shadow:0 14px 26px -16px rgba(94,24,32,.9);transition:transform .12s}
 .pp-primary:active{transform:scale(.985)}
 .pp-primary:disabled{opacity:.5}

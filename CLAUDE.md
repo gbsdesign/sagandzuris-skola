@@ -168,7 +168,8 @@
   bar per piece (`LearnReview`). The member's „სწავლა“ on an assignment opens the learning mode on the assigned voice
   (`learn/openLearning.ts`: `learnPieceOf`, `useOpenLearning`; `requestLearn(piece, voice)`).
 - **კლასის სტუდია** (2026-10-29, `components/studio/ClassStudio.tsx`): a program chant with book notes gets „სტუდია“ in its
-  window (`ItemSheet` in `classes/ClassProgram.tsx`). A member sings their voice over the synth (their own voice muted) and the
+  window (`ItemSheet` in `classes/ClassProgram.tsx`). One window `Studio` since 2026-11-05: a member records; a teacher gets two
+  tabs „კლასის ჩანაწერები“ (none yet → three steps, „კლასს ვთხოვ“ = a line in the class chat) and „ჩემი ხმა“. A member sings their voice over the synth (their own voice muted) and the
   take, cut by the output lag, goes to the pearls' store as `studio~<vid>` (no rules change). The class's teacher ticks whose
   takes go in, hears them together and „კლასის ჩატში“ sends one mixed MP3 (made in the browser) as a voice message.
 - **Song albums** (2026-10-29; chants later): 329 albums from Drive „ფოლკლორის ცენტრი“ under the songs map („ალბომები“),
@@ -183,7 +184,9 @@
 - **Prayers** (`data/prayers.ts`, `public/prayers/`, `public/bible/`), psalter kathismas, 73 akathists,
   commemoration name lists (`utils/commemoration.ts`), prayer reminders via Web Push Worker
   `sagandzuri-reminders` (`worker/reminders/`; push works only on the deployed site).
-- **საგანძურის გზა** (page `gz`) = „ჩემი დღე“ since 2026-10-28: `views/PathToday.tsx` „დღეს“ card (next lesson; the nearest
+- **საგანძურის გზა** (page `gz`) = „ჩემი დღე“ since 2026-10-28: `views/PathToday.tsx` „დღეს“ card (each line: what big, when
+  grey under it — 2026-11-05; the lesson's day and date, „დღეს/ხვალ“ only; the assignment's own chant name + „დავალება ·
+  10 ნოემბრამდე“; a piece's name without its book №, `pieceName`) (next lesson; the nearest
   assignment with „სწავლა“ + its parts bar when it has a learning mode; „დღეს გასამეორებელი“ — no habits line), the five
   round buttons (`PathOrbs`), then the habits card.
 - **Habits** ticked per day (`students/{uid}.habitLog`, kept whole since 2026-10-16; each tick writes only its day),
@@ -348,15 +351,19 @@
   `email`, `authProvider` and the sung scores `pearls`, `drillScore`, and their `directory` name (`teachesThem`). At the bottom „მასწავლებლისთვის“ (`StudentTools` = the
   old member's window inline: pearls/takes to hear, figures, attendance, the path editor, the manera's marks, the kids'
   mode, „მიწერა“, „ამოღება“) — never shown to the student.
-  Since 2026-11-04 two tabs (kept per visit in sessionStorage; the user: „პროგრამა პროგრამაა“): „პროგრამა“ (a dot = a
-  member's assignment to do) — on top the chants' and songs' assignments in their own card (`ClassAssignments` in
-  `classes/ClassWork.tsx`: `AssignmentsFold only="chant"` for teachers, `WorkItems` for members, who see the card only while
-  there is one); then `ClassProgram`: thin progress bar, a line per item with only its status (my voices, else the learning
-  bar; a teacher sees how many know it), a tap opens `ItemSheet` (ნოტები / სიმღერა, სწავლა, my voice marks, who knows each
-  voice; a teacher's „დავალებად მიცემა“ = `NewAssignment` with `preset`), and for teachers „+ დამატება“ under the list
+  Since 2026-11-04 two tabs (kept per visit in sessionStorage; the user: „პროგრამა პროგრამაა“), and since 2026-11-05 a round
+  📋 left of them (`WorkButton` in `classes/ClassWork.tsx`; the user: „მრგვალი სიმბოლო … ჩამოშლა … აინთოს ინდიკატორი“): a tap
+  drops every assignment — chants, songs and „ოსტატობა“'s exercises together — down under the tabs (`WorkPanel`:
+  `AssignmentsFold` without `only` for teachers, its „ახალი დავალება“ asks chant or exercise; `WorkItems` for members). A
+  member's badge is red and pulsing while an assignment came that they have not opened (`students.workSeenAt`, the same mark
+  as the path's „ნასწავლი“; opening the list moves it), then quiet with the number still to do; a teacher's = how many are
+  current. „პროგრამა“: `ClassProgram` with its name on top („სასწავლო პროგრამა“ N), the member's bar „შენ იცი N/M · ხმები“,
+  a line per item with only its status (my voices, else the learning bar; a teacher sees how many know it), a tap opens
+  `ItemSheet` (ნოტები / სიმღერა and სწავლა big; „ხმები“ = one row a voice: my round mark + who knows it, a tap unfolds the
+  names; under them two small buttons: the studio — „ჩემი ხმის ჩაწერა“, a teacher's „ჯგუფური ჩანაწერი“ — and a teacher's
+  „დავალებად მიცემა“ = `NewAssignment` with `preset`), and for teachers „+ პროგრამაში დამატება“ under the list
   (`ProgramQuickAdd`: the catalogue tree, saved once when it closes — order and ✕ stay in ✎ → „სასწავლო პროგრამა“); under it
-  folded cards: ოსტატობა (`ClassLessons fold`, the exercises given as assignments on top — `DrillWork` as its `work`,
-  `AssignmentsFold only="drill"` / `WorkItems`; an amber „დავალება“ chip on the folded line for a member), the psalter group
+  folded cards: ოსტატობა (`ClassLessons fold`; its „+ ახალი გაკვეთილი“ inside, under the lessons), the psalter group
   (folded head line with „შენი: N“; `focus` opens it) — „ჩათი“ (`ClassChat`; a dot while unread). An assignment card =
   `WorkCardHead` — the chant's own name big + one grey line (`utils/assignmentLines.ts` + test), a tap opens its notes / song
   / exercise (`hooks/usePathItemOpener.ts`, moved out of PathOrbs); the deadline is `dueUntil` „10 ნოემბრამდე“ on both cards —
