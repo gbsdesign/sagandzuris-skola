@@ -363,6 +363,10 @@
   names; under them two small buttons: the studio — „ჩემი ხმის ჩაწერა“, a teacher's „ჯგუფური ჩანაწერი“ — and a teacher's
   „დავალებად მიცემა“ = `NewAssignment` with `preset`), and for teachers „+ პროგრამაში დამატება“ under the list
   (`ProgramQuickAdd`: the catalogue tree, saved once when it closes — order and ✕ stay in ✎ → „სასწავლო პროგრამა“); under it
+  „პროგრამის ჩამოწერა ოფლაინისთვის“ under the list (2026-11-05, `classes/ProgramOffline.tsx`, `utils/programOffline.ts`): a chant
+  version's book pages, drawings and school recording by `saveOffline` (offlineNotes), a folk song's recordings through the
+  offline queue (`chooseItems` in offlineFiles — items `s:<song>`, the header's cloud shows them); the size at the right, then the
+  count; the notes' JSON and poems' texts are in the automatic packs already. Then
   folded cards: ოსტატობა (`ClassLessons fold`; its „+ ახალი გაკვეთილი“ inside, under the lessons), the psalter group
   (folded head line with „შენი: N“; `focus` opens it) — „ჩათი“ (`ClassChat`; a dot while unread). An assignment card =
   `WorkCardHead` — the chant's own name big + one grey line (`utils/assignmentLines.ts` + test), a tap opens its notes / song
