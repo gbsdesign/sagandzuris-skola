@@ -663,12 +663,13 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     if (!synth) return;
     triggerHaptic(8);
     const pos = synth.position();
-    if (loop.stage === 0) setLoop({ stage: 1, a: pos, b: null });
+    if (loop.stage === 0) { setLoop({ stage: 1, a: pos, b: null }); showToast('A მონიშნულია. სადაც უნდა დამთავრდეს, იქ კიდევ დააჭირე — B', 3600); }
     else if (loop.stage === 1 && loop.a !== null) {
       const [a, b] = pos > loop.a ? [loop.a, pos] : [pos, loop.a];
       if (b - a < 0.3) return;
       setLoop({ stage: 2, a, b });
-    } else setLoop({ stage: 0, a: null, b: null });
+      showToast('A–B წრეზე მეორდება. გამოსართავად კიდევ დააჭირე', 3200);
+    } else { setLoop({ stage: 0, a: null, b: null }); showToast('გამეორება გამოირთო'); }
   };
 
   // ---------- starting notes: top voice first, 0.8 s each, 0.5 s apart; quietly in church
@@ -1080,7 +1081,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                   </div>
                   <div className="np-time"><span ref={curRef}>0:00</span><span ref={durRef}>0:00</span></div>
                 </div>
-                <button type="button" className="np-ib np-chev" aria-expanded={!f.synth} onClick={() => fold('synth')} aria-label="დეტალები" title="ჩაკეცვა / გაშლა"><ChevronUp /></button>
+                <button type="button" className="np-ib np-chev" aria-expanded={!f.synth} onClick={() => fold('synth')} aria-label={f.synth ? 'პანელის გაშლა' : 'პანელის ჩაკეცვა'} title={f.synth ? 'გაშლა' : 'ჩაკეცვა'}><ChevronUp /></button>
               </div>
               <div className="np-details">
                 <div className="np-dA">
@@ -1092,15 +1093,6 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                       ))}
                       <button type="button" className={`all ${voiceOn.slice(0, VOICES.length).every(Boolean) ? 'on' : ''}`} onClick={() => { triggerHaptic(8); setVoiceOn(VOICE_NAMES.map(() => true)); }}>{allVoices}</button>
                     </div>
-                    <button type="button" className="np-ib np-mixbtn" aria-pressed={mixOpen} onClick={() => setMixOpen(o => !o)} aria-label="ხმების სიძლიერე" title="ხმების სიძლიერე"><SlidersHorizontal /></button>
-                    <button type="button" className={`np-ib np-loop ${loop.stage ? 'pill' : ''} ${loop.stage === 1 ? 'half' : ''} ${loop.stage === 2 ? 'lit' : ''}`} onClick={handleLoop} title={loopTitle} aria-label="გამეორება">
-                      <Repeat />{loop.stage === 1 && <span>A→</span>}{loop.stage === 2 && <span>A–B</span>}
-                    </button>
-                    <button
-                      type="button" className="np-ib np-ballbtn" aria-pressed={ballOn}
-                      onClick={() => { triggerHaptic(8); const next = !ballOn; setBallOn(next); store.set('sagandzuri_ball', next); showToast(next ? 'ბურთულა ნოტებზე ჩაირთო' : 'ბურთულა ნოტებზე გამოირთო'); }}
-                      aria-label="ბურთულა ნოტებზე" title={ballOn ? 'ბურთულა ნოტებზე: ჩართულია' : 'ბურთულა ნოტებზე: გამორთულია'}
-                    ><CircleDot /></button>
                   </div>
                   {mixOpen && (
                     <div className={`np-mix ${VOICES.length > 4 ? 'many' : VOICES.length > 3 ? 'four' : ''}`}>
@@ -1121,6 +1113,20 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                       minusDisabled={speedIdx === 0} plusDisabled={speedIdx === SPEEDS.length - 1}
                     />
                     {/* the tone is set once, beside „საწყისი ბგერა“ under the title */}
+                  </div>
+                  {/* the three tools with their names (icons alone were guesses) */}
+                  <div className="np-tools">
+                    <button type="button" className="np-tl np-mixbtn" aria-pressed={mixOpen} onClick={() => { triggerHaptic(8); setMixOpen(o => !o); }} title="ხმების სიძლიერე">
+                      <SlidersHorizontal /><span>სიძლიერე</span>
+                    </button>
+                    <button type="button" className={`np-tl np-loop ${loop.stage === 1 ? 'half' : ''} ${loop.stage === 2 ? 'lit' : ''}`} onClick={handleLoop} title={loopTitle} aria-label={loopTitle}>
+                      <Repeat /><span>{loop.stage === 0 ? 'გამეორება' : loop.stage === 1 ? 'ახლა — B' : 'A–B ✕'}</span>
+                    </button>
+                    <button
+                      type="button" className="np-tl np-ballbtn" aria-pressed={ballOn}
+                      onClick={() => { triggerHaptic(8); const next = !ballOn; setBallOn(next); store.set('sagandzuri_ball', next); showToast(next ? 'ბურთულა ნოტებზე ჩაირთო: აჩვენებს, სად ჟღერს' : 'ბურთულა ნოტებზე გამოირთო'); }}
+                      title={ballOn ? 'ბურთულა ნოტებზე: ჩართულია' : 'ბურთულა ნოტებზე: გამორთულია'}
+                    ><CircleDot /><span>ბურთულა</span></button>
                   </div>
                 </div>
               </div>
@@ -1290,37 +1296,47 @@ const MoreMenu: React.FC<{
           <TextAlignStart /><span className="txt">ტექსტი</span><span className="np-sw" aria-hidden />
         </button>
       )}
-      <button type="button" className="np-mrow" role="menuitem" onClick={p.keepOffline} disabled={p.offlineBusy}>
-        <CloudDownload /><span className="txt">ინტერნეტის გარეშე</span>
-        <span className={`state ${p.offline ? 'ok' : ''}`}>{p.offlineBusy ? 'იწერება…' : p.offline ? 'ჩამოწერილია' : 'ჩამოწერა'}</span>
-      </button>
-      {p.pinned !== null && (
-        <button type="button" className="np-mrow" role="menuitemcheckbox" aria-checked={p.pinned} onClick={p.togglePin}>
-          <Pin /><span className="txt">მთავარ გვერდზე</span>
-          <span className={`state ${p.pinned ? 'ok' : ''}`}>{p.pinned ? 'გატანილია' : 'გატანა'}</span>
-        </button>
-      )}
+      {/* the switches first, then the one-off actions */}
       <button type="button" className="np-mrow" role="menuitemcheckbox" aria-checked={p.wakeOn} onClick={p.toggleWake}>
         <Sun /><span className="txt">ეკრანი არ ჩაქრეს{p.wakeNote && <small>{p.wakeNote}</small>}</span><span className="np-sw" aria-hidden />
       </button>
-      {(p.hasScore || p.recTracks.length > 0) && (
-        <button type="button" className="np-mrow" aria-expanded={dl} onClick={() => setDl(o => !o)}>
-          <Download /><span className="txt">ჩამოტვირთვა</span><ChevronDown className={`np-mchev ${dl ? 'up' : ''}`} />
+      {p.pinned !== null && (
+        <button type="button" className="np-mrow" role="menuitemcheckbox" aria-checked={p.pinned} onClick={p.togglePin}>
+          <Pin /><span className="txt">მთავარ გვერდზე ღილაკად</span><span className="np-sw" aria-hidden />
         </button>
       )}
-      {dl && p.recTracks.map(i => (
-        <button key={`r${i}`} type="button" className="np-mrow sub" role="menuitem" onClick={() => { p.onClose(); p.saveRecMp3(i); }}>
-          <Headphones /><span className="txt">ჩანაწერი MP3 · {['I ხმა', 'II ხმა', 'III ხმა', 'სამივე ხმა'][i]}</span><Download />
+      <button type="button" className="np-mrow" role="menuitem" onClick={p.keepOffline} disabled={p.offlineBusy || p.offline}>
+        <CloudDownload /><span className="txt">ინტერნეტის გარეშე</span>
+        <span className={`state ${p.offline ? 'ok' : ''}`}>{p.offlineBusy ? 'იწერება…' : p.offline ? '✓ ჩამოწერილია' : 'ჩამოწერა'}</span>
+      </button>
+      {(p.hasScore || p.recTracks.length > 0) && (
+        <button type="button" className="np-mrow" aria-expanded={dl} onClick={() => setDl(o => !o)}>
+          <Download /><span className="txt">ფაილები<small>ნოტები PDF-ად, ხმა MP3-ად</small></span><ChevronDown className={`np-mchev ${dl ? 'up' : ''}`} />
         </button>
-      ))}
+      )}
       {dl && p.hasScore && (
-        <>
-          <button type="button" className="np-mrow sub" role="menuitem" onClick={p.exportPdf}><FileText /><span className="txt">ნოტები (PDF)</span><Download /></button>
-          <button type="button" className="np-mrow sub" role="menuitem" onClick={() => p.exportMp3('all')}><Music2 /><span className="txt">სინთეზატორი MP3 · {p.allVoices} ხმა</span><Download /></button>
-          {p.voices.map((v, i) => (
-            <button key={v} type="button" className="np-mrow sub" role="menuitem" onClick={() => p.exportMp3(i)}><Music2 /><span className="txt">სინთეზატორი MP3 · {v} ხმა</span><Download /></button>
-          ))}
-        </>
+        <button type="button" className="np-mrow sub" role="menuitem" onClick={p.exportPdf}><FileText /><span className="txt">ნოტები · PDF</span><Download /></button>
+      )}
+      {dl && p.hasScore && (
+        <div className="np-mfiles" role="group" aria-label="სინთეზატორი MP3">
+          <span className="lb"><Music2 />სინთეზატორი · MP3</span>
+          <div className="ch">
+            <button type="button" role="menuitem" onClick={() => p.exportMp3('all')}>{p.allVoices}</button>
+            {p.voices.map((v, i) => <button key={v} type="button" role="menuitem" onClick={() => p.exportMp3(i)} aria-label={`${v} ხმა`}>{v}</button>)}
+          </div>
+        </div>
+      )}
+      {dl && p.recTracks.length > 0 && (
+        <div className="np-mfiles" role="group" aria-label="ჩანაწერი MP3">
+          <span className="lb"><Headphones />ჩანაწერი · MP3</span>
+          <div className="ch">
+            {p.recTracks.map(i => (
+              <button key={i} type="button" role="menuitem" onClick={() => { p.onClose(); p.saveRecMp3(i); }} aria-label={`ჩანაწერი, ${['I ხმა', 'II ხმა', 'III ხმა', 'სამივე ხმა'][i]}`}>
+                {['I', 'II', 'III', 'სამივე'][i]}
+              </button>
+            ))}
+          </div>
+        </div>
       )}
     </div>
   );

@@ -15,7 +15,8 @@ import { useNotes, shareProgramUrl } from '../../context/NotesContext';
 import { findVersion } from '../../data/chantLookup';
 import { versionMeta } from '../../data/tsirvaChants';
 import { getChantMedia } from '../../data/chantMediaRegistry';
-import { formatLiturgyDate, formatTime } from '../../hooks/useLiturgy';
+import { formatLiturgyDate, formatTime, liturgyTitle } from '../../hooks/useLiturgy';
+import { georgiaToday } from '../../utils/psalter';
 import { isOffline, onOfflineChange, saveOffline, estimateMb, offlineSupported } from '../../utils/offlineNotes';
 import { loadBookScore, saveBlob, BookScore } from '../../utils/chantSynth';
 import { GrapeBunch } from '../../components/home/PlateOrnaments';
@@ -217,7 +218,7 @@ export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
       <div className="pp-scroll">
         <header className="pp-top">
           <button type="button" className="np-back" onClick={() => { triggerHaptic(8); closeProgram(); }} aria-label="უკან"><ChevronLeft strokeWidth={2.4} /></button>
-          <h1>დღევანდელი წირვა</h1>
+          <h1>{liturgyTitle(program?.date, georgiaToday())}</h1>
           <GrapeBunch color="#c4262e" curls className="pp-top-orn orn-in orn-swing" />
         </header>
         <div className="pp-wrap">

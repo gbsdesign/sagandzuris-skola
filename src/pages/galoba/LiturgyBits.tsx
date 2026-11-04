@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronRight, CircleCheck, Download, ListOrdered, Loader2 } from 'lucide-react';
+import { ChevronRight, CircleCheck, CloudDownload, ListOrdered, Loader2 } from 'lucide-react';
 import { useNotes } from '../../context/NotesContext';
 import { ChantItem } from '../../data';
 import { canOpenNotes } from '../../data/chantLookup';
-import { formatLiturgyDate } from '../../hooks/useLiturgy';
+import { formatLiturgyDate, liturgyTitle } from '../../hooks/useLiturgy';
+import { georgiaToday } from '../../utils/psalter';
 import { estimateMb, offlineCount, offlineSupported, onOfflineChange, saveOffline } from '../../utils/offlineNotes';
 import { GrapeBunch } from '../../components/home/PlateOrnaments';
 import { triggerHaptic } from '../../utils/haptics';
@@ -23,7 +24,7 @@ export const ProgramCard: React.FC = () => {
     >
       <span className="shrink-0 w-11 h-11 rounded-[14px] grid place-items-center bg-white/15"><ListOrdered className="w-6 h-6" /></span>
       <span className="relative z-[1] flex-1 min-w-0 flex flex-col gap-0.5">
-        <b className="font-serif-ge text-[17px] font-bold">დღევანდელი წირვა</b>
+        <b className="font-serif-ge text-[17px] font-bold">{liturgyTitle(program?.date, georgiaToday())}</b>
         <small className="text-xs font-semibold opacity-90">{meta || 'ჯერ ცარიელია'}</small>
       </span>
       <GrapeBunch color="#fbe9d7" curls className="absolute right-11 -top-2 w-[70px] opacity-20 pointer-events-none" />
@@ -74,7 +75,7 @@ export const ServiceDownload: React.FC<{ chants: ChantItem[]; label: string }> =
               : 'bg-white text-[#574739] shadow-[inset_0_0_0_1px_#e4d8c4] hover:shadow-[inset_0_0_0_1px_rgba(122,32,40,0.4)]'
         }`}
       >
-        {progress ? <Loader2 className="w-4 h-4 animate-spin" /> : all ? <CircleCheck className="w-4 h-4" /> : <Download className="w-4 h-4" />}
+        {progress ? <Loader2 className="w-4 h-4 animate-spin" /> : all ? <CircleCheck className="w-4 h-4" /> : <CloudDownload className="w-4 h-4" />}
         {progress ? <span className="tabular-nums">{progress.done}/{progress.total}</span> : all ? 'ჩამოწერილია' : confirm ? `~${mb} MB · დადასტურება` : 'ჩამოწერა'}
         {!progress && !all && !confirm && saved > 0 && (
           <span className="text-[11px] font-semibold text-[#8c7c6b] tabular-nums">{saved}/{ids.length}</span>

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, BookOpen, Check, ChevronDown, ChevronRight, Dumbbell, FileText } from 'lucide-react';
+import { ArrowRight, BookOpen, Check, ChevronDown, ChevronRight, ClipboardCheck, Dumbbell, FileText, ListChecks, Play } from 'lucide-react';
 import { OFFICIAL_PDFS, THEORY_TOPICS } from '../../data/abituriProgram';
 import type { Lesson } from '../../data/abituriLessons';
 import { useAbituriProgress } from '../../hooks/useAbituriProgress';
@@ -11,8 +11,11 @@ import { DRILLS, Trainer } from './drills/Trainer';
 import { MockTest } from './drills/MockTest';
 
 // II round — music theory, written: the test „მუსიკალური ანბანი“ (seven tasks) and the dictation.
-// Practice (new tasks every time) and a mock test, then the lessons (data/abituriLessons.ts, loaded when the tab
-// opens). Progress — lessons done, practice counts, test scores — stays on the member's account.
+// One way through it, top to bottom (2026-11-05, the user: „სწავლა გაამარტივე … ეფექტური გახადე“): the three steps
+// with where I am in each and one „გააგრძელე“ button (the next lesson not done), then ① the lessons
+// (data/abituriLessons.ts, loaded when the tab opens), ② practice (new tasks every time) and ③ the mock test. The
+// test's seven tasks fold under the steps. Progress — lessons done, practice counts, test scores — stays on the
+// member's account.
 
 let cache: Lesson[] | null = null;
 const useLessons = () => {
@@ -51,51 +54,62 @@ export const TheoryTab: React.FC = () => {
   const practise = (k: TaskKind) => { triggerHaptic(10); setDrill(k); setJump('trainer'); };
   const byTask = (task: number) => lessons?.find(l => l.task === task);
 
+  const lessonsDone = lessons ? lessons.filter(l => done.includes(l.id)).length : 0;
+  const nextLesson = lessons?.find(l => !done.includes(l.id)) ?? null;
+  const solved = Object.values(progress.progress.drills).reduce((n, [, all]) => n + all, 0);
+  const right = Object.values(progress.progress.drills).reduce((n, [r]) => n + r, 0);
+  const lastTest = progress.progress.tests[progress.progress.tests.length - 1];
+  const steps: { n: number; icon: React.ReactNode; title: string; note: string; done: boolean; go: () => void }[] = [
+    { n: 1, icon: <BookOpen className="w-[18px] h-[18px]" />, title: 'გაკვეთილები', done: !!lessons && lessonsDone === lessons.length,
+      note: lessons ? (lessonsDone ? `გავლილია ${lessonsDone} / ${lessons.length}` : `${lessons.length} გაკვეთილი, საფუძვლებიდან`) : 'საფუძვლებიდან',
+      go: () => { triggerHaptic(8); setJump('lessons'); } },
+    { n: 2, icon: <Dumbbell className="w-[18px] h-[18px]" />, title: 'ვარჯიში', done: solved >= 50,
+      note: solved ? `ამოხსნილი ${solved} · სწორი ${Math.round((right / solved) * 100)}%` : 'ყოველ ჯერზე ახალი დავალებები',
+      go: () => { triggerHaptic(8); setJump('trainer'); } },
+    { n: 3, icon: <ClipboardCheck className="w-[18px] h-[18px]" />, title: 'საცდელი ტესტი', done: !!lastTest && lastTest.score >= lastTest.max * 0.8,
+      note: lastTest ? `ბოლო: ${lastTest.score} / ${lastTest.max} ქულა` : 'როგორც გამოცდაზე, 32 ქულა',
+      go: () => { triggerHaptic(8); setJump('mock'); } },
+  ];
+
   return (
     <div className="space-y-7">
       <section>
-        <SectionHead title="მუსიკის თეორია" sub="II ტური · ტესტის 7 დავალება და კარნახი" />
-        <div className={`${CARD} p-3.5 sm:p-4`}>
-          <ol className="grid sm:grid-cols-2 gap-x-3 gap-y-1">
-            {THEORY_TOPICS.map((t, i) => {
-              const lesson = byTask(i + 1);
-              return (
-                <li key={t}>
-                  <button
-                    type="button"
-                    disabled={!lesson}
-                    onClick={() => lesson && show(lesson.id)}
-                    className="w-full flex items-center gap-2.5 min-h-11 px-1.5 py-1.5 rounded-xl text-left cursor-pointer hover:bg-[#fbf6ec] disabled:cursor-default group"
-                  >
-                    <span className="shrink-0 grid place-items-center w-6 h-6 rounded-full bg-[#7a2028]/[0.08] text-[#7a2028] text-[12.5px] font-bold">{i + 1}</span>
-                    <span className="flex-1 min-w-0 text-[14px] font-semibold leading-snug text-[#2a2017] group-hover:text-[#7a2028]">{t}</span>
-                    {lesson && <ChevronRight className="w-4 h-4 shrink-0 text-[#b8a68e] group-hover:text-[#7a2028]" />}
-                  </button>
-                </li>
-              );
-            })}
+        <SectionHead title="მუსიკის თეორია" sub="II ტური · წერითი: ტესტი (7 დავალება) და კარნახი" />
+        <div className={`${CARD} p-3.5 sm:p-4 flex flex-col gap-3`}>
+          <p className="px-0.5 text-[12px] font-black uppercase tracking-wide text-[#a0703c]">მომზადება — 3 ნაბიჯი</p>
+          <ol className="flex flex-col gap-1">
+            {steps.map(st => (
+              <li key={st.n}>
+                <button type="button" onClick={st.go}
+                  className="w-full flex items-center gap-3 min-h-14 px-1.5 py-1.5 rounded-xl text-left cursor-pointer hover:bg-[#fbf6ec] group">
+                  <span className={`shrink-0 grid place-items-center w-9 h-9 rounded-full font-serif-ge text-[15px] font-bold ${st.done ? 'bg-[#2f6b43] text-white' : 'bg-[#7a2028]/[0.08] text-[#7a2028]'}`}>
+                    {st.done ? <Check className="w-5 h-5" aria-label="შესრულებულია" /> : st.n}
+                  </span>
+                  <span className="flex-1 min-w-0">
+                    <span className="flex items-center gap-1.5 text-[15px] font-bold leading-snug text-[#2a2017] group-hover:text-[#7a2028]">
+                      <span className="text-[#a0703c]">{st.icon}</span>{st.title}
+                    </span>
+                    <span className="block mt-0.5 text-[12.5px] font-semibold leading-snug text-[#8a7a6a]">{st.note}</span>
+                  </span>
+                  <ChevronRight className="w-4 h-4 shrink-0 text-[#b8a68e] group-hover:text-[#7a2028]" />
+                </button>
+              </li>
+            ))}
           </ol>
-          <div className="mt-3 pt-3 border-t border-[#efe5d4] flex flex-wrap gap-2">
-            <Pill href={OFFICIAL_PDFS.theoryTest} icon={<FileText className="w-4 h-4" />}>ტესტის ნიმუში</Pill>
-            <Pill href={OFFICIAL_PDFS.dictation} icon={<FileText className="w-4 h-4" />}>კარნახის ნიმუში</Pill>
-          </div>
+          {lessons && (
+            <button type="button" onClick={() => (nextLesson ? show(nextLesson.id) : practise(DRILLS[0].kind))}
+              className="w-full min-h-12 px-4 rounded-2xl bg-[#7a2028] text-[#fbf6ec] inline-flex items-center justify-center gap-2 text-[14.5px] font-bold cursor-pointer hover:bg-[#5e1820] active:scale-[0.99] transition shadow-[0_8px_18px_-10px_rgba(122,32,40,0.8)]">
+              <Play className="w-4 h-4 shrink-0" fill="currentColor" />
+              <span className="min-w-0 truncate">{nextLesson ? `${lessonsDone ? 'გააგრძელე' : 'დაიწყე'}: ${nextLesson.title}` : 'ყველა გაკვეთილი გავლილია — ივარჯიშე'}</span>
+            </button>
+          )}
+          <TestTasks onOpen={task => { const l = byTask(task); if (l) show(l.id); }} hasLesson={task => Boolean(byTask(task))} />
         </div>
       </section>
 
-      <section id="trainer" className="scroll-mt-24">
+      <section id="lessons" className="scroll-mt-24">
         <SectionHead
-          title="ვარჯიში"
-          sub="ყოველ ჯერზე ახალი"
-        />
-        <div className="space-y-3">
-          <Trainer progress={progress} kind={drill} setKind={setDrill} />
-          <MockTest progress={progress} />
-        </div>
-      </section>
-
-      <section>
-        <SectionHead
-          title="გაკვეთილები"
+          title="① გაკვეთილები"
           sub={lessons && done.length ? `გავლილია ${lessons.filter(l => done.includes(l.id)).length} / ${lessons.length}` : 'საფუძვლებიდან — ტესტამდე და კარნახამდე'}
         />
         {failed && <p className="px-1 text-sm text-[#8a7a6a]">გაკვეთილები ვერ ჩაიტვირთა — შეამოწმე ინტერნეტი.</p>}
@@ -175,6 +189,52 @@ export const TheoryTab: React.FC = () => {
           </ol>
         )}
       </section>
+
+      <section id="trainer" className="scroll-mt-24">
+        <SectionHead title="② ვარჯიში" sub="ყოველ ჯერზე ახალი დავალებები — ტესტის თითოეულ თემაზე და სმენაზე" />
+        <Trainer progress={progress} kind={drill} setKind={setDrill} />
+      </section>
+
+      <section id="mock" className="scroll-mt-24">
+        <SectionHead title="③ საცდელი ტესტი" sub="როგორც გამოცდაზე: 7 დავალება, 32 ქულა" />
+        <MockTest progress={progress} />
+      </section>
     </div>
   );
 };
+
+/** The test's seven tasks (as the university lists them), folded: each opens its lesson; the official samples under them. */
+const TestTasks: React.FC<{ onOpen: (task: number) => void; hasLesson: (task: number) => boolean }> = ({ onOpen, hasLesson }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="rounded-xl bg-[#fbf6ec] ring-1 ring-[#efe5d4]">
+      <button type="button" onClick={() => { triggerHaptic(8); setOpen(o => !o); }} aria-expanded={open}
+        className="w-full min-h-11 px-3 flex items-center gap-2 text-left cursor-pointer">
+        <ListChecks className="w-4 h-4 shrink-0 text-[#a0703c]" />
+        <span className="flex-1 min-w-0 text-[13.5px] font-bold text-[#4a3426]">რა არის ტესტში — 7 დავალება და ნიმუშები</span>
+        <ChevronDown className={`w-4 h-4 shrink-0 text-[#8a7a6a] transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="px-2 pb-3">
+          <ol className="grid sm:grid-cols-2 gap-x-3 gap-y-0.5">
+            {THEORY_TOPICS.map((t, i) => (
+              <li key={t}>
+                <button type="button" disabled={!hasLesson(i + 1)} onClick={() => onOpen(i + 1)}
+                  className="w-full flex items-center gap-2.5 min-h-11 px-1.5 py-1.5 rounded-xl text-left cursor-pointer hover:bg-white disabled:cursor-default group">
+                  <span className="shrink-0 grid place-items-center w-6 h-6 rounded-full bg-[#7a2028]/[0.08] text-[#7a2028] text-[12.5px] font-bold">{i + 1}</span>
+                  <span className="flex-1 min-w-0 text-[13.5px] font-semibold leading-snug text-[#2a2017] group-hover:text-[#7a2028]">{t}</span>
+                  {hasLesson(i + 1) && <ChevronRight className="w-4 h-4 shrink-0 text-[#b8a68e] group-hover:text-[#7a2028]" />}
+                </button>
+              </li>
+            ))}
+          </ol>
+          <div className="mt-2 px-1.5 flex flex-wrap gap-2">
+            <Pill href={OFFICIAL_PDFS.theoryTest} icon={<FileText className="w-4 h-4" />}>ტესტის ნიმუში</Pill>
+            <Pill href={OFFICIAL_PDFS.dictation} icon={<FileText className="w-4 h-4" />}>კარნახის ნიმუში</Pill>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+

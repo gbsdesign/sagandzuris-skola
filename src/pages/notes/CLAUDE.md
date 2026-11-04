@@ -58,6 +58,12 @@ moving to the next chant in service order.
 - **Many voices** (2026-10-29): up to X (the anthology's 10-voice litanies, vol. II №211–217). Over four voices the synth's
   voice buttons take their own row and wrap into a grid (≥44 px each), the mixer wraps too; the synth's level drops by
   √(3/n) so any number of voices sounds as loud as three; bass timbre for 5 or 7–10 voices by each voice's average pitch.
+- **Synth tools with names** (2026-11-05, the user: „არ იყოს დამაბნეველი“): the voices' row stands alone; under the tempo
+  one row `.np-tools` of three labelled pills — „სიძლიერე“ (mixer), „გამეორება“ (A–B: „ახლა — B“, „A–B ✕“, a toast says each
+  step) and „ბურთულა“ (icons hidden under 380 px so the words fit). „მეტი“: the switches first (ეკრანი არ ჩაქრეს, მთავარ
+  გვერდზე ღილაკად — a switch now), then „ინტერნეტის გარეშე · ჩამოწერა“ and „ფაილები“ (was „ჩამოტვირთვა“, too like
+  „ჩამოწერა“): PDF, then „სინთეზატორი · MP3“ / „ჩანაწერი · MP3“ with a button per voice (`.np-mfiles`) instead of a row each.
+  The program is named by its date (`liturgyTitle`): დღევანდელი / მომავალი / ბოლო წირვა (card and program page).
 - Book notes only — no Drive `ნოტები` fallback anywhere.
 - Share: WhatsApp / Facebook / Messenger / Instagram inside "მეტი" (Instagram copies the link; on phones use
   `navigator.share`).
