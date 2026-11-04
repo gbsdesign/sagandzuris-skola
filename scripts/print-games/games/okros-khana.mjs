@@ -1,721 +1,675 @@
-// „ოქროს ხანა“ — the school's Catan (plan doc, tab „6 სამაგიდო თამაში“), series №1: 19 lands (79 mm flat to flat, the
-// original's size), a sea-and-mountains frame of six A4 pieces with nine named gates, 18 number and 9 trade tokens,
-// 95 harvest and 25 development cards, 8 A6 cards, paper figures in four colours, four rule pages and a box label.
-import { C, SERIES, SCHOOL, aso, esc, icon, iconIn, corners, cardSheet, placedSheet, hexPts, ptsAttr, page, stripe, foot, duplex, sheetNo } from '../lib.mjs';
+// „ოქროს ხანა“ (series №1) — the school's own game of riding, gathering and building on the songs map's 13 regions. Since
+// 2026-11-04 it is no longer a copy of a known game: the rules are the app's (utils/okrosKhana.ts), and the kit reads its
+// numbers, works and names from there and its colours from pages/games/okros/look.tsx, so paper and phone stay one game.
+// A board of four A4 pieces (56×39 cm: the regions tinted by their good, each with its mark, two estate places, the work's
+// place and footprints on the borders, the year track and the points track), 12 work cards A6, 12 chronicle cards with the
+// four houses', the first house's and the market's cards, 4 aid cards A6, the goods' chits, estates, markers, five folded
+// figures, four rule pages and a box label.
+import { C, SERIES, SCHOOL, aso, esc, icon, iconIn, corners, cardSheet, placedSheet, page, stripe, foot, duplex, sheetNo } from '../lib.mjs';
+import { REGIONS, MINI, f } from '../regionMap.mjs';
+import { appData } from '../appData.mjs';
+
+const {
+  WORKS, REGION_GOOD, REGION_NAMES, REGION_IN, GOOD_NAMES, TBILISI, ESTATE_COST, FEAST_COST, ESTATE_PTS, FEAST_PTS, KING_FEAST,
+  GUEST_PTS, BASE, HAND_MAX, RIDE, ESTATES, PLACES, OPEN_WORKS, MIN_OK, MAX_OK, yearsFor, needCount, NEAR,
+  GOOD_LOOK, HOUSES, MARKET, GOLD, DEEP,
+} = await appData({
+  'utils/okrosKhana.ts': ['WORKS', 'REGION_GOOD', 'REGION_NAMES', 'REGION_IN', 'GOOD_NAMES', 'TBILISI', 'ESTATE_COST', 'FEAST_COST',
+    'ESTATE_PTS', 'FEAST_PTS', 'KING_FEAST', 'GUEST_PTS', 'BASE', 'HAND_MAX', 'RIDE', 'ESTATES', 'PLACES', 'OPEN_WORKS', 'MIN_OK',
+    'MAX_OK', 'yearsFor', 'needCount', 'NEAR'],
+  'pages/games/okros/look.tsx': ['GOOD_LOOK', 'HOUSES', 'MARKET', 'GOLD', 'DEEP'],
+});
 
 export const id = 'okros-khana';
 export const title = 'ოქროს ხანა';
 const NO = 1;
-const META = '3–4 მოთამაშე · 10 წლიდან · 60–120 წუთი';
-const MONO = aso('ოხ');
+const META = `${MIN_OK}–${MAX_OK} მოთამაშე · 8 წლიდან · 40–70 წუთი`;
+const YEARS = [2, 3, 4].map(n => [n, yearsFor(n)]);
 
-// ---------- harvests ----------
-const RES = {
-  wood: { name: 'ხე', land: 'ტყე', color: '#2e5e3e', ink: '#5f9c6d', soft: '#e1ecdc', icon: 'tree-pine', builds: 'გზა · სოფელი' },
-  stone: { name: 'ქვა', land: 'ბორცვი', color: '#a65f45', ink: '#d39479', soft: '#f4e2d9', icon: 'brick-wall', builds: 'გზა · სოფელი' },
-  wool: { name: 'მატყლი', land: 'საძოვარი', color: '#6c9a43', ink: '#a6cd7d', soft: '#e8f1dc', icon: 'sheep', builds: 'სოფელი · განვითარება' },
-  grain: { name: 'პური', land: 'ყანა', color: '#c39120', ink: '#e9c86a', soft: '#f7ecd1', icon: 'wheat', builds: 'სოფელი · ქალაქი · განვითარება' },
-  ore: { name: 'მადანი', land: 'მთა', color: '#53647b', ink: '#8e9fb5', soft: '#e0e5ec', icon: 'pickaxe', builds: 'ქალაქი · განვითარება' },
+// ---------- the goods: the app's colours (look.tsx) and the same lucide marks ----------
+const GOOD_ICON = ['tree-pine', 'brick-wall', 'wheat', 'grape', 'coins'];
+const GL = GOOD_LOOK.map((l, k) => ({ color: l.color, tint: l.tint, ink: l.ink, name: GOOD_NAMES[k], icon: GOOD_ICON[k] }));
+const goodOf = r => REGION_GOOD[r];
+const tintOf = r => (goodOf(r) < 0 ? '#ecd9c4' : GL[goodOf(r)].tint);
+const regionsOf = k => REGION_NAMES.filter((_, r) => goodOf(r) === k);
+const needList = w => w.need.flatMap((n, k) => Array(n).fill(k));
+const costList = cost => cost.flatMap((n, k) => Array(n).fill(k));
+
+/** a good's chip (HTML) */
+const chip = (k, s = 6) => `<span class="chip" style="background:${GL[k].color};width:${s}mm;height:${s}mm">${icon(GL[k].icon, { size: s * 0.64, color: '#fff', width: 2.1 })}</span>`;
+const chips = (list, s) => list.map(k => chip(k, s)).join('<i class="plus">+</i>');
+/** the board's footprint mark, in a line of text */
+const FOOT_MARK = `<span class="fm">${icon('footprints', { size: 3.3, color: C.brown, width: 2.1 })}</span>`;
+/** the same inside an SVG drawn in mm */
+const chipIn = (k, x, y, s = 5.4) => `<rect x="${f(x)}" y="${f(y)}" width="${s}" height="${s}" rx="${f(s * 0.22)}" fill="${GL[k].color}" stroke="#fffaf0" stroke-width=".35"/>${iconIn(GL[k].icon, { x: f(x + s * 0.18), y: f(y + s * 0.18), size: f(s * 0.64), color: '#fff', width: 2.2 })}`;
+
+// a rider (the app's mark: head and shoulders) and an estate (a house), in their own units
+const RIDER_D = 'M12 2.6a4.6 4.6 0 1 1 0 9.2a4.6 4.6 0 1 1 0-9.2ZM4.6 22c0-6.4 3.4-9.1 7.4-9.1s7.4 2.7 7.4 9.1Z';
+const HOUSE_D = 'M.6 6.6L7.5.6L14.4 6.6V14.4H.6Z';
+const houseIn = (x, y, s, fill, { door = true, line = '#fffaf0', dash = false, stroke = null } = {}) => {
+  const k = s / 15;
+  return `<g transform="translate(${f(x)} ${f(y)}) scale(${f(k)})"><path d="${HOUSE_D}" fill="${fill}" stroke="${stroke ?? line}" stroke-width="${dash ? 0.7 : 0.9}" stroke-linejoin="round"${dash ? ' stroke-dasharray="1.6 1.2"' : ''}/>${door ? `<rect x="6.1" y="9.4" width="2.8" height="5" fill="${line}"/>` : ''}</g>`;
 };
-const RK = ['wood', 'stone', 'wool', 'grain', 'ore'];
-const DESERT = { land: 'უდაბნო', color: '#d8c38e', ink: '#f0e3bb' };
 
-// two drawings lucide lacks, in its 24-unit grid
-const CUSTOM = {
-  sheep: c => `<path d="M8 12.5A2 2 0 0 1 9.6 9A2.2 2.2 0 0 1 13.5 8A2.2 2.2 0 0 1 17.4 9A2 2 0 0 1 19.6 12.5A2 2 0 0 1 17.4 16A2.2 2.2 0 0 1 13.5 17A2.2 2.2 0 0 1 9.6 16A2 2 0 0 1 8 12.5Z"/><ellipse cx="6" cy="11.6" rx="2.3" ry="1.8" fill="${c}"/><path d="M5.2 9.9 3.6 9"/><path d="M10.8 17v3.4M16.2 17v3.4"/>`,
-  robber: c => `<path d="M12 2.5c2.3 0 4 1.9 4 4.3 0 1.4-.6 2.6-1.5 3.4 2.6 1.1 4.3 3.9 4.6 7.8l.4 3.5h-15l.4-3.5c.3-3.9 2-6.7 4.6-7.8-.9-.8-1.5-2-1.5-3.4 0-2.4 1.7-4.3 4-4.3z" fill="${c}" stroke="none"/>`,
+/** the small map: every region in its good's tint, one region (`hl`) in `color` with a mark at its plate */
+const mini = (hl, color, { mark = null, markColor = '#fff' } = {}) => {
+  const [mx, my] = anchorOf(hl);
+  return `<svg viewBox="-8 -8 1016 545" style="display:block;width:100%;height:auto">${REGIONS.map((r, i) =>
+    `<path d="${MINI[r.id]}" fill="${i === hl ? color : tintOf(i)}" stroke="#fffaf0" stroke-width="7" stroke-linejoin="round"/>`).join('')}
+${mark ? `<circle cx="${mx}" cy="${my}" r="44" fill="${color}" stroke="#fffaf0" stroke-width="8"/>${iconIn(mark, { x: mx - 27, y: my - 27, size: 54, color: markColor, width: 2.2 })}` : ''}</svg>`;
 };
-const svgIcon = (name, attrs, color, width) => `<svg ${attrs} viewBox="0 0 24 24" fill="none" stroke="${color}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round">${CUSTOM[name](color)}</svg>`;
-const ic = (name, o = {}) => CUSTOM[name] ? svgIcon(name, `style="${o.style ?? ''}" width="${o.size ?? 6}mm" height="${o.size ?? 6}mm"`, o.color ?? C.gold, o.width ?? 1.75) : icon(name, o);
-const icIn = (name, o = {}) => CUSTOM[name] ? svgIcon(name, `x="${o.x ?? 0}" y="${o.y ?? 0}" width="${o.size ?? 6}" height="${o.size ?? 6}" opacity="${o.opacity ?? 1}"`, o.color ?? C.gold, o.width ?? 1.75) : iconIn(name, o);
 
-// ---------- the 19 lands; `at` = the place in the learning layout (axial q, r; north on top) ----------
-const LANDS = [
-  { name: 'სვანეთი', res: 'ore', mon: 'სვანური კოშკები', at: [0, -2] },
-  { name: 'რაჭა', res: 'wood', mon: 'შაორის ტბა', at: [1, -2] },
-  { name: 'ხევი', res: 'ore', mon: 'მყინვარწვერი', at: [2, -2] },
-  { name: 'აფხაზეთი', res: 'wood', mon: 'ბიჭვინთის ფიჭვნარი', at: [-1, -1] },
-  { name: 'იმერეთი', res: 'grain', mon: 'სათაფლია', at: [0, -1] },
-  { name: 'მთიულეთი', res: 'wool', mon: 'არაგვის ხეობა', at: [1, -1] },
-  { name: 'თუშეთი', res: 'wool', mon: 'თუშური ფარა', at: [2, -1] },
-  { name: 'სამეგრელო', res: 'wood', mon: 'ნოქალაქევი', at: [-2, 0] },
-  { name: 'ჯავახეთი', res: 'wool', mon: 'ფარავნის ტბა', at: [-1, 0] },
-  { name: 'კლდეკარი', res: 'stone', mon: 'კლდეკარის ციხე', at: [0, 0] },
-  { name: 'შიდა ქართლი', res: 'grain', mon: 'უფლისციხე', at: [1, 0] },
-  { name: 'კახეთი', res: 'grain', mon: 'ალაზნის ველი', at: [2, 0] },
-  { name: 'აჭარა', res: 'wood', mon: 'გონიო', at: [-2, 1] },
-  { name: 'სამცხე', res: 'grain', mon: 'ხერთვისის ციხე', at: [-1, 1] },
-  { name: 'თრიალეთი', res: 'wool', mon: 'თრიალეთის თასი', at: [0, 1] },
-  { name: 'საყდრისი', res: 'ore', mon: 'ოქროს მაღარო', at: [1, 1] },
-  { name: 'დმანისი', res: 'stone', mon: 'დმანისის ციხე', at: [-2, 2] },
-  { name: 'ალგეთი', res: 'stone', mon: 'ბირთვისის ციხე', at: [-1, 2] },
-  { name: 'ელდარი', res: null, mon: 'ვაშლოვანი', at: [0, 2] },
-];
+// ---------- the board: 560×390 mm in four A4 pieces of 280×195 (two rows of two) ----------
+const BW = 560, BH = 390, S = 0.54, MX = 10, MY = 44;
+const SEAM_X = 280, SEAM_Y = 195;
+const bx = x => MX + x * S, by = y => MY + y * S;
+const halo = w => `paint-order="stroke" stroke="#fffaf0" stroke-width="${w}" stroke-linejoin="round"`;
+const txt = (s, x, y, o = {}) => `<text x="${f(x)}" y="${f(y)}" text-anchor="${o.anchor ?? 'middle'}" font-family="${o.font ?? 'SerifKa'}" font-size="${o.size ?? 3.6}" font-weight="${o.weight ?? 700}" fill="${o.fill ?? C.brown}"${o.halo ? ` ${halo(o.halo)}` : ''}${o.style ? ` style="${o.style}"` : ''}>${esc(s)}</text>`;
 
-// ---------- board geometry (mm, y down, centre of the island at 0,0) ----------
-const S3 = Math.sqrt(3);
-const HW = 79, HR = HW / S3, HH = 2 * HR;          // a land: 79 mm flat to flat, 91.2 corner to corner
-const hexC = ([q, r]) => [HW * (q + r / 2), 1.5 * HR * r];
-const inIsland = ([q, r]) => Math.abs(q) <= 2 && Math.abs(r) <= 2 && Math.abs(q + r) <= 2;
-const ISLAND = LANDS.map(l => l.at);
-const NB = [[1, -1], [1, 0], [0, 1], [-1, 1], [-1, 0], [0, -1]]; // across the edges facing −60°, 0°, 60°, 120°, 180°, 240°
-const adjacent = (a, b) => NB.some(([dq, dr]) => a[0] + dq === b[0] && a[1] + dr === b[1]);
-const angOf = (x, y) => ((Math.atan2(y, x) * 180 / Math.PI) + 360.0001) % 360;
-const rot = ([x, y], deg) => { const a = deg * Math.PI / 180; return [x * Math.cos(a) - y * Math.sin(a), x * Math.sin(a) + y * Math.cos(a)]; };
-const add = (a, b, k = 1) => [a[0] + b[0] * k, a[1] + b[1] * k];
-const dirOf = deg => [Math.cos(deg * Math.PI / 180), Math.sin(deg * Math.PI / 180)];
+// where a region's plate stands (map units): its label point, moved off the pieces' seams (x 500, y 280) and into narrow land
+const AT = { 0: [190, 112], 3: [440, 206], 4: [426, 322], 5: [300, 325], 6: [292, 404], 7: [452, 440], 8: [592, 322], 9: [640, 462], 10: [716, 238], 12: [714, 398] };
+function anchorOf(r) { return AT[r] ?? REGIONS[r].label; }
 
-// the 30 coast edges, clockwise from the one facing east; e0, e5 … e25 are cut in half by the frame's joints
-const COAST = (() => {
-  const out = [];
-  for (const h of ISLAND) {
-    const pts = hexPts(...hexC(h), HR);
-    NB.forEach(([dq, dr], i) => {
-      if (inIsland([h[0] + dq, h[1] + dr])) return;
-      const a = pts[i], b = pts[(i + 1) % 6], m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2], ang = angOf(...m);
-      const rel = p => ((angOf(...p) - ang + 540) % 360) - 180;
-      const [lo, hi] = rel(a) < rel(b) ? [a, b] : [b, a];
-      out.push({ hex: h, face: -60 + 60 * i, m, lo, hi, ang });
-    });
+// the footprints on the borders: the middle of the longest stretch of one region's outline lying on its neighbour's
+const POLY = REGIONS.map(r => [...r.d.matchAll(/(-?\d*\.?\d+),(-?\d*\.?\d+)/g)].map(m => [+m[1], +m[2]]));
+const segDist = (p, a, b) => {
+  const dx = b[0] - a[0], dy = b[1] - a[1], L = dx * dx + dy * dy;
+  const t = L ? Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / L)) : 0;
+  return Math.hypot(p[0] - a[0] - t * dx, p[1] - a[1] - t * dy);
+};
+const onPoly = (p, poly) => poly.some((q, i) => segDist(p, q, poly[(i + 1) % poly.length]) < 2.5);
+const crossing = (a, b) => {
+  const A = POLY[a], on = A.map(p => onPoly(p, POLY[b])), n = A.length;
+  if (!on.some(Boolean)) return null;
+  let best = [], run = [];
+  for (let k = 0; k < 2 * n; k++) {
+    const i = k % n;
+    if (on[i]) { run.push(A[i]); if (run.length > best.length && run.length <= n) best = [...run]; } else run = [];
   }
-  return out.sort((x, y) => x.ang - y.ang);
-})();
-if (COAST.length !== 30 || [0, 5, 10, 15, 20, 25].some((j, k) => Math.abs(COAST[j].ang % 360 - 60 * k) > 0.01)) throw new Error('coast geometry');
+  let L = 0;
+  const cum = best.map((p, i) => (L += i ? Math.hypot(p[0] - best[i - 1][0], p[1] - best[i - 1][1]) : 0));
+  const i = cum.findIndex(c => c >= L / 2);
+  return best[Math.max(0, i)];
+};
+// hand-placed (map units, points of the two outlines) where the border's middle is crowded by a plate, a seam or Tbilisi
+const CROSS_AT = { '0-2': [237, 223], '1-3': [481, 179], '2-4': [356, 234], '2-5': [252, 292], '4-8': [519, 310], '5-6': [341, 360], '9-10': [667, 388] };
+const PAIRS = REGIONS.flatMap((_, a) => NEAR[a].filter(b => b > a).map(b => [a, b]));
 
-const FIT = 1.006;             // the frame's opening is ~1 mm wider than the island
-const A_OUT = 216;             // the frame's outer hexagon: apothem; its corners sit on the joints
-const R_OUT = A_OUT * 2 / S3;
-const SLOT_R = 13.6, SLOT_GAP = 4; // the round place of a trade token (⌀25) beside its coast edge
-
-// nine gates: the coast edge, the name, where it is, and what it trades in the learning layout
-const GATES = [
-  { e: 3, name: 'განძის კარი', learn: '3' },
-  { e: 6, name: 'ლორე', learn: 'ore' },
-  { e: 9, name: 'ტაო-კლარჯეთი', learn: 'stone' },
-  { e: 13, name: 'ფოთი', learn: 'wood' },
-  { e: 16, name: 'ცხუმი', learn: '3' },
-  { e: 19, name: 'ნიკოფსია', learn: '3' },
-  { e: 23, name: 'დარიალი', learn: 'wool' },
-  { e: 26, name: 'დარუბანდი', learn: '3' },
-  { e: 29, name: 'ჰერეთი', learn: 'grain' },
-];
-const gateAt = g => { const ed = COAST[g.e], m = [ed.m[0] * FIT, ed.m[1] * FIT]; return { ...g, edge: ed, c: add(m, dirOf(ed.face), SLOT_GAP + SLOT_R), a: [ed.lo[0] * FIT, ed.lo[1] * FIT], b: [ed.hi[0] * FIT, ed.hi[1] * FIT] }; };
-const GATE_POS = GATES.map(gateAt);
-
-// the six frame pieces: k spans the angles 60k…60(k+1); the people's numbers go clockwise from the north (k = 4)
-const userNo = k => ((k + 2) % 6) + 1;
-const PIECES = [
-  { k: 4, name: 'დიდი კავკასიონი', look: 'mount', note: 'ჩრდილოეთი' },
-  { k: 5, name: 'დიდი კავკასიონი', look: 'mount' },
-  { k: 0, name: 'მტკვრის ველი', look: 'valley' },
-  { k: 1, name: 'მცირე კავკასიონი', look: 'hills' },
-  { k: 2, name: 'შავი ზღვა', look: 'sea' },
-  { k: 3, name: 'შავი ზღვა', look: 'sea' },
-];
-const piecePoly = k => {
-  const chain = [COAST[(5 * k) % 30].m, ...[0, 1, 2, 3, 4].map(i => COAST[(5 * k + i) % 30].hi), COAST[(5 * k + 5) % 30].m].map(([x, y]) => [x * FIT, y * FIT]);
-  return [dirOf(60 * k).map(v => v * R_OUT), dirOf(60 * k + 60).map(v => v * R_OUT), ...chain.reverse()];
-};
-
-// ---------- the number tokens: letters ა…ს go round the island, outside in (the original's A…R) ----------
-const LETTERS = 'ა ბ გ დ ე ვ ზ თ ი კ ლ მ ნ ო პ ჟ რ ს'.split(' ');
-const SPIRAL_NUMS = [5, 2, 6, 3, 8, 10, 9, 12, 11, 4, 8, 10, 9, 4, 5, 6, 3, 11];
-const NUMERAL = { 2: 'ბ', 3: 'გ', 4: 'დ', 5: 'ე', 6: 'ვ', 8: 'ჱ', 9: 'თ', 10: 'ი', 11: 'ია', 12: 'იბ' };
-const PIPS = n => 6 - Math.abs(7 - n);
-const spiralOrder = (startDeg) => {
-  const ringOf = d => ISLAND.filter(h => (Math.abs(h[0]) + Math.abs(h[1]) + Math.abs(h[0] + h[1])) / 2 === d);
-  const fromStart = h => ((startDeg - angOf(...hexC(h)) + 360.5) % 360);
-  return [...ringOf(2).sort((a, b) => fromStart(a) - fromStart(b)), ...ringOf(1).sort((a, b) => fromStart(a) - fromStart(b)), ...ringOf(0)];
-};
-const numbersFor = (desertAt, startDeg) => {
-  const nums = new Map(); let i = 0;
-  for (const h of spiralOrder(startDeg)) { if (h[0] === desertAt[0] && h[1] === desertAt[1]) continue; nums.set(h.join(), { n: SPIRAL_NUMS[i], letter: LETTERS[i] }); i++; }
-  return nums;
-};
-const redsApart = nums => ISLAND.every(a => ISLAND.every(b => !(adjacent(a, b) && [6, 8].includes(nums.get(a.join())?.n) && [6, 8].includes(nums.get(b.join())?.n))));
-// the learning layout: of the six corners to start the spiral from, the one that keeps 6 and 8 apart and shares the
-// harvests most evenly (pips = how many of the 36 dice throws bring a land in)
-const LEARN = (() => {
-  const desert = LANDS.find(l => !l.res).at;
-  const spread = nums => { const by = Object.fromEntries(RK.map(k => [k, 0])); for (const l of LANDS) if (l.res) by[l.res] += PIPS(nums.get(l.at.join()).n); const v = Object.values(by); return Math.max(...v) - Math.min(...v); };
-  const ok = [0, 60, 120, 180, 240, 300].map(s => ({ start: s, nums: numbersFor(desert, s) })).filter(o => redsApart(o.nums));
-  if (!ok.length) throw new Error('no spiral start keeps 6 and 8 apart');
-  return ok.sort((a, b) => spread(a.nums) - spread(b.nums))[0];
-})();
-
-// ---------- a land: front and back ----------
-const LOOK = k => (k ? RES[k] : DESERT);
-const SPOTS = [[11, 27.5], [68, 27.5], [8.5, 43], [70.5, 43], [12, 56.5], [67, 56.5], [24.5, 26.5], [54.5, 26.5]];
-const tuft = ([x, y], c) => `<path d="M${x} ${y}l-1.1-2.3M${x} ${y}v-2.9M${x} ${y}l1.1-2.3" stroke="${c}" stroke-width=".55" stroke-linecap="round" fill="none"/>`;
-const stones = ([x, y], c) => [[-4.6, 0], [0.2, 0], [-2.2, -2.7]].map(([dx, dy]) => `<rect x="${x + dx}" y="${y + dy}" width="4.2" height="2.3" rx=".6" fill="none" stroke="${c}" stroke-width=".55"/>`).join('');
-const landDecor = (res, ink) => {
-  const at = (name, i, size = 9, width = 1.5) => icIn(name, { x: SPOTS[i][0] - size / 2, y: SPOTS[i][1] - size / 2, size, color: ink, width });
-  if (res === 'wood') return SPOTS.map((_, i) => at('tree-pine', i, i < 6 ? 9.5 : 7.5)).join('');
-  if (res === 'ore') return SPOTS.map((_, i) => at('mountain-snow', i, i < 6 ? 10 : 7.5, 1.4)).join('');
-  if (res === 'grain') return Array.from({ length: 16 }, (_, i) => `<path d="M-10 ${i * 7 - 8} l100 -34" stroke="${ink}" stroke-width=".5" opacity=".75"/>`).join('') + [0, 1, 4, 5].map(i => at('wheat', i, 9, 1.5)).join('');
-  if (res === 'wool') return [[18, 36], [61, 36], [15, 49], [64, 49], [30, 58.5], [49, 58.5], [20, 18], [59, 18], [39.5, 7.5]].map(p => tuft(p, ink)).join('') + [0, 5].map(i => at('sheep', i, 10.5, 1.3)).join('') + [2, 3].map(i => at('sheep', i, 7.5, 1.4)).join('');
-  if (res === 'stone') return SPOTS.map(p => stones(p, ink)).join('') + `<path d="M-4 40 q12 -8 24 0 M58 40 q12 -8 24 0" stroke="${ink}" stroke-width=".6" fill="none"/>`;
-  return Array.from({ length: 9 }, (_, i) => `<path d="M-6 ${i * 11 + 2} q10 -4 20 0 t20 0 t20 0 t20 0 t20 0" stroke="${ink}" stroke-width=".6" fill="none"/>`).join('');
-};
-let clipN = 0;
-const landFront = l => {
-  const look = LOOK(l.res), pts = hexPts(HW / 2, HR, HR), inner = hexPts(HW / 2, HR, HR - 3), id = `lf${clipN++}`;
-  const pill = l.res
-    ? `<rect x="25" y="11.6" width="29" height="7.6" rx="3.8" fill="#000" fill-opacity=".38"/>${icIn(RES[l.res].icon, { x: 27.3, y: 12.4, size: 6, color: '#fbf6ec', width: 1.9 })}<text x="35.2" y="17.25" font-size="3.5" font-weight="700" fill="#fbf6ec">${esc(RES[l.res].name)}</text>`
-    : `<rect x="24.5" y="11.6" width="30" height="7.6" rx="3.8" fill="#000" fill-opacity=".3"/><text x="39.5" y="17.25" font-size="3.4" font-weight="700" fill="#fbf6ec" text-anchor="middle">უდაბნო</text>`;
-  const middle = l.res
-    ? `<circle cx="39.5" cy="${HR}" r="13.4" fill="#fbf6ec" fill-opacity=".3" stroke="#fbf6ec" stroke-opacity=".75" stroke-width=".45"/>`
-    : `${icIn('robber', { x: 29, y: HR - 11.5, size: 21, color: '#3b2b1f', opacity: 0.55 })}<text x="39.5" y="${HR + 13.6}" font-size="2.9" fill="#4a3426" text-anchor="middle" opacity=".85">მოთარეშე აქ იწყებს</text>`;
-  return `<svg width="83mm" height="${HH + 4}mm" viewBox="-2 -2 83 ${HH + 4}" font-family="SerifKa">
-<defs><clipPath id="${id}"><polygon points="${ptsAttr(pts)}"/></clipPath></defs>
-<polygon points="${ptsAttr(pts)}" fill="${look.color}" stroke="${look.color}" stroke-width="3" stroke-linejoin="miter"/>
-<g clip-path="url(#${id})">${landDecor(l.res, look.ink)}</g>
-<polygon points="${ptsAttr(inner)}" fill="none" stroke="#fbf6ec" stroke-opacity=".85" stroke-width=".45"/>
-${pill}${middle}
-<rect x="14" y="61" width="51" height="14.2" rx="2" fill="#f6ecd6" stroke="${C.gold}" stroke-width=".4"/>
-<text x="39.5" y="68.4" font-size="4.7" font-weight="800" fill="${C.wine}" text-anchor="middle">${esc(l.name)}</text>
-<text x="39.5" y="72.9" font-size="2.85" fill="${C.brown}" text-anchor="middle">${esc(l.mon)}</text>
-<path d="M39.5 78.6l1.6 1.6-1.6 1.6-1.6-1.6z" fill="#fbf6ec" fill-opacity=".85"/>
-<polygon points="${ptsAttr(pts)}" fill="none" stroke="#3a3027" stroke-width=".22"/>
-</svg>`;
-};
-const landBack = () => {
-  const pts = hexPts(HW / 2, HR, HR), inner = hexPts(HW / 2, HR, HR - 3.4);
-  return `<svg width="83mm" height="${HH + 4}mm" viewBox="-2 -2 83 ${HH + 4}" font-family="SansKa">
-<polygon points="${ptsAttr(pts)}" fill="${C.wine}" stroke="${C.wine}" stroke-width="3.4" stroke-linejoin="miter"/>
-<polygon points="${ptsAttr(inner)}" fill="none" stroke="${C.gold}" stroke-width=".5"/>
-${inner.map(([x, y]) => `<circle cx="${(x * 0.82 + HW / 2 * 0.18).toFixed(2)}" cy="${(y * 0.82 + HR * 0.18).toFixed(2)}" r="1" fill="${C.gold}"/>`).join('')}
-<g transform="translate(39.5 ${HR})" fill="none" stroke="${C.gold}"><circle r="17" stroke-width=".45"/><circle r="14.6" stroke-width=".3" stroke-dasharray="1 1.4"/>
-${Array.from({ length: 12 }, (_, k) => `<path d="M0 -17 C1.6 -15.6 1.6 -14 0 -12.6 C-1.6 -14 -1.6 -15.6 0 -17Z" fill="${C.gold}" fill-opacity=".75" stroke="none" transform="rotate(${k * 30})"/>`).join('')}</g>
-<text x="39.5" y="${HR + 3.2}" font-size="8.6" font-weight="900" fill="${C.gold}" text-anchor="middle" letter-spacing=".3">${MONO}</text>
-</svg>`;
-};
-
-// ---------- tokens (⌀25 mm) ----------
-const numFront = n => {
-  const red = n === 6 || n === 8, nm = aso(NUMERAL[n]), w = nm.length * 1.25 + 0.4;
-  return `<svg width="25mm" height="25mm" viewBox="0 0 25 25" font-family="SerifKa"><circle cx="12.5" cy="12.5" r="12.2" fill="#f6ecd6" stroke="${C.gold}" stroke-width=".5"/><circle cx="12.5" cy="12.5" r="10.8" fill="none" stroke="${C.goldDark}" stroke-width=".22"/>
-<text x="12.5" y="${red ? 12.9 : 12.5}" font-size="${red ? 9.2 : 8.2}" font-weight="800" fill="${red ? C.wine : C.brown}" text-anchor="middle">${n}</text>
-<line x1="${12.5 - w}" x2="${12.5 + w}" y1="14.15" y2="14.15" stroke="${red ? C.wine : C.brown}" stroke-width=".3"/>
-<text x="12.5" y="17.3" font-size="2.7" font-family="SansKa" font-weight="900" fill="${red ? C.wine : C.brown}" text-anchor="middle">${nm}</text>
-${Array.from({ length: PIPS(n) }, (_, i) => `<circle cx="${12.5 + (i - (PIPS(n) - 1) / 2) * 1.75}" cy="20.2" r=".62" fill="${red ? C.wine : C.brown}"/>`).join('')}</svg>`;
-};
-const numBack = letter => `<svg width="25mm" height="25mm" viewBox="0 0 25 25" font-family="SerifKa" style="overflow:visible"><circle cx="12.5" cy="12.5" r="13.4" fill="${C.wine}"/><circle cx="12.5" cy="12.5" r="10.8" fill="none" stroke="${C.gold}" stroke-width=".35"/>
-<text x="12.5" y="16.4" font-size="11" font-weight="800" fill="#f0d9a0" text-anchor="middle">${letter}</text></svg>`;
-const SEA = '#2d6a96', SEA_DEEP = '#234f72';
-const tradeFront = k => {
-  const r = k === '3' ? null : RES[k];
-  return `<svg width="25mm" height="25mm" viewBox="0 0 25 25" font-family="SerifKa"><circle cx="12.5" cy="12.5" r="12.2" fill="${r ? r.color : SEA}" stroke="#f6ecd6" stroke-width=".5"/><circle cx="12.5" cy="12.5" r="10.8" fill="none" stroke="#f6ecd6" stroke-opacity=".6" stroke-width=".25"/>
-${icIn(r ? r.icon : 'anchor', { x: 9.4, y: 2.6, size: 6.2, color: '#fbf6ec', width: 2 })}
-<text x="12.5" y="16.3" font-size="6.6" font-weight="800" fill="#fbf6ec" text-anchor="middle">${r ? '2:1' : '3:1'}</text>
-<text x="12.5" y="20.6" font-size="${r ? 2.9 : 2.7}" fill="#fbf6ec" text-anchor="middle">${r ? esc(r.name) : 'ნებისმიერი'}</text></svg>`;
-};
-const tradeBack = `<svg width="25mm" height="25mm" viewBox="0 0 25 25" font-family="SerifKa" style="overflow:visible"><circle cx="12.5" cy="12.5" r="13.4" fill="${SEA_DEEP}"/><circle cx="12.5" cy="12.5" r="10.8" fill="none" stroke="#f0d9a0" stroke-width=".3"/>
-${icIn('landmark', { x: 8, y: 4.6, size: 9, color: '#f0d9a0', width: 1.6 })}<text x="12.5" y="19.6" font-size="2.6" fill="#f0d9a0" text-anchor="middle">კარიბჭე</text></svg>`;
-const spareToken = `<svg width="25mm" height="25mm" viewBox="0 0 25 25" font-family="SerifKa"><circle cx="12.5" cy="12.5" r="12.2" fill="#fff" stroke="${C.gold}" stroke-width=".4" stroke-dasharray="1 1"/><text x="12.5" y="13.4" font-size="2.8" fill="${C.muted}" text-anchor="middle">სათადარიგო</text></svg>`;
-
-// the robber, folded from one strip: foot · figure · figure upside down · foot
-const robberStrip = (() => {
-  const fig = (y, flip) => `<g transform="translate(0 ${y})${flip ? ' rotate(180 12 20)' : ''}"><rect width="24" height="40" fill="#e9dfcc"/>${icIn('robber', { x: 1, y: 3, size: 22, color: '#2f241b' })}<text x="12" y="36.5" font-size="2.9" fill="${C.brown}" text-anchor="middle" font-family="SerifKa">მოთარეშე</text></g>`;
-  return `<svg width="24mm" height="98mm" viewBox="0 0 24 98"><rect y="0" width="24" height="9" fill="#cdbf9f"/>${fig(9, false)}${fig(49, true)}<rect y="89" width="24" height="9" fill="#cdbf9f"/>
-<rect width="24" height="98" fill="none" stroke="#555" stroke-width=".25"/><g stroke="#777" stroke-width=".25" stroke-dasharray="1.6 1.2"><line x1="0" x2="24" y1="9" y2="9"/><line x1="0" x2="24" y1="49" y2="49"/><line x1="0" x2="24" y1="89" y2="89"/></g></svg>`;
-})();
-
-// ---------- the frame: six pieces, drawn as the southern one (k = 1) and turned ----------
-const canon = (p, k) => rot(p, 60 - 60 * k);
-const CANON_POLY = piecePoly(1);
-const LOOKS = {
-  sea: { base: SEA, a: '#86b6dc', b: '#9cc8ea' },
-  mount: { base: '#7a8376', a: '#a3ab9c', b: '#5f685c' },
-  hills: { base: '#7c8a63', a: '#a1ad83', b: '#64714f' },
-  valley: { base: '#c1ab72', a: '#ad965c', b: '#5d93bf' },
-};
-const JOINT = 'ა ბ გ დ ე ვ'.split(' ');
-const jointOfRay = j => JOINT[(j + 1) % 6];
-const peaks = (y0, step, hBase, hVar, fill, snow, seed) => {
-  let s = '';
-  for (let i = 0, x = -140 + (seed % step); x < 140; i++, x += step) {
-    const h = hBase + hVar * Math.sin(i * 1.7 + seed), w = step * 0.75;
-    s += `<polygon points="${(x - w).toFixed(1)},${y0} ${x.toFixed(1)},${(y0 - h).toFixed(1)} ${(x + w).toFixed(1)},${y0}" fill="${fill}"/>`;
-    s += `<polygon points="${(x - w * 0.32).toFixed(1)},${(y0 - h * 0.68).toFixed(1)} ${x.toFixed(1)},${(y0 - h).toFixed(1)} ${(x + w * 0.32).toFixed(1)},${(y0 - h * 0.68).toFixed(1)} ${(x + w * 0.12).toFixed(1)},${(y0 - h * 0.6).toFixed(1)} ${(x - w * 0.1).toFixed(1)},${(y0 - h * 0.66).toFixed(1)}" fill="${snow}"/>`;
+const TB = (() => { const [x, y] = anchorOf(TBILISI); return { x: bx(x), y: by(y), r: 15 }; })();
+const footAt = (a, b) => {
+  const key = `${a}-${b}`;
+  if (CROSS_AT[key]) return CROSS_AT[key].map((v, i) => (i ? by(v) : bx(v)));
+  if (a === TBILISI || b === TBILISI) {
+    // Tbilisi's three: on its plate's rim, toward the neighbour
+    const o = a === TBILISI ? b : a, [ox, oy] = anchorOf(o);
+    const dx = bx(ox) - TB.x, dy = by(oy) - TB.y, d = Math.hypot(dx, dy);
+    return [TB.x + (dx / d) * (TB.r + 1.2), TB.y + (dy / d) * (TB.r + 1.2)];
   }
-  return s;
+  const p = crossing(a, b) ?? crossing(b, a);
+  return p ? [bx(p[0]), by(p[1])] : null;
 };
-const pieceArt = look => {
-  const L = LOOKS[look];
-  if (look === 'sea') {
-    let s = '';
-    for (let r = 0, y = 166; y < 218; r++, y += 6.2) for (let x = -136 + (r % 2) * 5.5; x < 136; x += 11) s += `<path d="M${x} ${y.toFixed(1)}q2.75 -1.8 5.5 0t5.5 0" stroke="${L.a}" stroke-width=".45" fill="none"/>`;
-    return s + `<polyline points="${ptsAttr(CANON_POLY.slice(2))}" fill="none" stroke="${L.b}" stroke-opacity=".5" stroke-width="7"/>`;
+const footprint = (x, y) => `<g transform="translate(${f(x)} ${f(y)})"><circle r="3.5" fill="#fffaf0" stroke="${C.brown}" stroke-width=".35"/>${iconIn('footprints', { x: -2.45, y: -2.45, size: 4.9, color: C.brown, width: 2 })}</g>`;
+
+/** a region's plate: the work's place, the good's mark, two estate places, the name */
+const nameLinesOf = r => (REGION_NAMES[r].includes('-') ? REGION_NAMES[r].replace('-', '-\n').split('\n') : [REGION_NAMES[r]]);
+const PLATE = { castleDy: -13.4, houseDx: 15.4, nameDy: 10.6, half: 23, top: 20, bottom: 13, line: 4.4 };
+const plateBox = r => {
+  const [ux, uy] = anchorOf(r), X = bx(ux), Y = by(uy), lines = nameLinesOf(r).length;
+  return { X, Y, x0: X - PLATE.half, x1: X + PLATE.half, y0: Y - PLATE.top, y1: Y + PLATE.bottom + (lines - 1) * PLATE.line };
+};
+const plate = r => {
+  const { X, Y } = plateBox(r), L = GL[goodOf(r)];
+  const castle = `<circle cx="${f(X)}" cy="${f(Y + PLATE.castleDy)}" r="6.4" fill="#fffaf0" fill-opacity=".9" stroke="${DEEP}" stroke-width=".4" stroke-dasharray="1.3 1"/>${iconIn('castle', { x: X - 3.6, y: Y + PLATE.castleDy - 3.6, size: 7.2, color: DEEP, width: 1.6, opacity: 0.45 })}`;
+  const houses = [-1, 1].map(s => houseIn(X + s * PLATE.houseDx - 7.6, Y - 7.4, 15.2, '#fffaf0', { door: false, dash: true, stroke: '#7d6a58' })).join('');
+  const badge = `<circle cx="${f(X)}" cy="${f(Y)}" r="6.2" fill="${L.color}" stroke="#fffaf0" stroke-width="1.1"/>${iconIn(L.icon, { x: X - 4, y: Y - 4, size: 8, color: '#fff', width: 2.1 })}`;
+  const names = nameLinesOf(r).map((l, k) => txt(l, X, Y + PLATE.nameDy + k * PLATE.line, { size: 4.3, weight: 800, halo: 1.3 })).join('');
+  return castle + houses + badge + names;
+};
+const tbilisiPlate = () => {
+  const { x, y, r } = TB;
+  return `<circle cx="${f(x)}" cy="${f(y + 0.8)}" r="${r}" fill="#6b4423" opacity=".22"/>
+<circle cx="${f(x)}" cy="${f(y)}" r="${r}" fill="${MARKET.tint}" stroke="${MARKET.color}" stroke-width="1"/>
+<circle cx="${f(x)}" cy="${f(y)}" r="${r - 1.8}" fill="none" stroke="${GOLD}" stroke-width=".35"/>
+${iconIn('store', { x: x - 4.2, y: y - 11.4, size: 8.4, color: MARKET.color, width: 1.9 })}
+${txt('თბილისი', x, y + 2.6, { size: 4.1, weight: 800, fill: MARKET.color })}
+${txt(`ნებისმიერი ${BASE}`, x, y + 6.8, { size: 2.8, weight: 700, fill: C.brown })}
+${txt('აქ იწყება', x, y + 10.4, { size: 2.4, weight: 400, fill: '#7a6a58' })}`;
+};
+
+const compass = (x, y) => `<g transform="translate(${x} ${y})"><circle r="8" fill="#fffaf0" stroke="${C.gold}" stroke-width=".45"/>
+<path d="M0 -6.4 L2.2 0 L0 1.3 L-2.2 0 Z" fill="${C.wine}"/><path d="M0 6.4 L2.2 0 L0 1.3 L-2.2 0 Z" fill="${C.gold}" opacity=".7"/>
+${txt('ჩ', 0, -9.8, { size: 3.8, weight: 800, fill: C.wine })}</g>`;
+/** a row of small peaks (the Caucasus over the map's north) */
+const ridge = (x, y, n) => Array.from({ length: n }, (_, k) => { const px = x + k * 12.4, hh = 7 + ((k * 37) % 5); return `<path d="M${f(px)} ${y}l${f(6.2)} ${f(-hh)}l${f(6.2)} ${f(hh)}" fill="#e6dccb" stroke="#b9a78f" stroke-width=".45" stroke-linejoin="round"/><path d="M${f(px + 4.4)} ${f(y - hh * 0.72)}l${f(1.8)} ${f(-hh * 0.28)}l${f(1.8)} ${f(hh * 0.28)}" fill="#fffaf0" stroke="none"/>`; }).join('');
+const waves = (x, y) => [0, 1, 2].map(k => `<path d="M${f(x + k * 3.4)} ${f(y + k * 4.6)} q3.4 -2 6.8 0 t6.8 0 t6.8 0" fill="none" stroke="#7d9cbc" stroke-width=".5" stroke-linecap="round"/>`).join('');
+
+// the years: twelve circles in the north-east, the last year of each table marked
+const YEAR_ROW = { x0: 302, step: 21.4, y: 84, r: 8.6 };
+const NUMERALS = ['ა', 'ბ', 'გ', 'დ', 'ე', 'ვ', 'ზ', 'ჱ', 'თ', 'ი', 'ია', 'იბ'];
+const yearTrack = () => {
+  const { x0, step, y, r } = YEAR_ROW;
+  const ends = Object.fromEntries(YEARS.map(([n, y]) => [y, n]));
+  const circles = NUMERALS.map((nm, i) => {
+    const x = x0 + i * step, end = ends[i + 1];
+    return `<circle cx="${f(x)}" cy="${y}" r="${r}" fill="${end ? '#f7e9ad' : '#fffaf0'}" stroke="${end ? C.wine : C.gold}" stroke-width="${end ? 0.7 : 0.45}"/>
+${txt(String(i + 1), x, y + 1.6, { size: 6, weight: 800, fill: end ? C.wine : C.brown })}
+${txt(aso(nm), x, y + 5.6, { font: 'SansKa', size: 2.4, weight: 900, fill: C.goldDark })}
+${end ? `${iconIn('flag', { x: x - 2.6, y: y + r + 1.6, size: 5.2, color: C.wine, width: 2 })}${txt(`${end} სახლი`, x, y + r + 10.6, { size: 3, weight: 800, fill: C.wine })}${txt('ბოლო წელი', x, y + r + 14, { size: 2.5, weight: 400, fill: C.wine })}` : ''}`;
+  }).join('');
+  return `${iconIn('hourglass', { x: x0 - r, y: 58.6, size: 7, color: C.wine, width: 2 })}${txt('წლები', x0 - r + 9, 65, { anchor: 'start', size: 6.2, weight: 800, fill: C.wine })}
+${txt('ყოველ წელს მეფე სხვა კუთხეშია — მატიანის ბარათი ამბობს, სად.', x0 + 34 - r, 64.6, { anchor: 'start', size: 3.4, weight: 400, fill: '#6a5848' })}
+${circles}
+${txt('წლის ნიშანი აქ დგას. როცა რიგი პირველ სახლს დაუბრუნდება, წელი სრულდება:', x0 - r, 117, { anchor: 'start', size: 3.3, weight: 400 })}
+${txt('ნიშანი ერთით წინ, მატიანის ახალი ბარათი — და მეფე ახალ კუთხეშია.', x0 - r, 121.4, { anchor: 'start', size: 3.3, weight: 400 })}`;
+};
+
+// how a turn goes, on the sea (lines short enough for the panel; costs and points in a column of their own)
+const PANEL = { x: 14, y: 201, w: 102, h: 126 };
+const howPanel = () => {
+  const { x, y, w, h } = PANEL, L = x + 4.5, T = x + 12, C2 = x + 50, R = x + w - 4;
+  const step = (n, yy, head) => `<circle cx="${f(L + 2.9)}" cy="${f(yy - 1.4)}" r="3.4" fill="${C.wine}"/>${txt(String(n), L + 2.9, yy, { size: 4, weight: 800, fill: '#fffaf0' })}${txt(head, T, yy + 0.2, { anchor: 'start', size: 4.4, weight: 800, fill: C.wine })}`;
+  const line = (s, yy, o = {}) => txt(s, o.x ?? T, yy, { anchor: o.anchor ?? 'start', size: o.size ?? 3.3, weight: o.weight ?? 400, fill: o.fill ?? C.brown });
+  const deed = (yy, iconName, head, cost, pts, note) => `<circle cx="${f(T + 2.6)}" cy="${f(yy - 1.6)}" r="3.1" fill="${DEEP}"/>${iconIn(iconName, { x: T + 0.4, y: yy - 3.8, size: 4.4, color: GOLD, width: 2 })}
+${txt(head, T + 7, yy, { anchor: 'start', size: 3.6, weight: 800, fill: C.brown })}${cost.map((k, i) => chipIn(k, C2 + i * 6.3, yy - 4.4, 5.4)).join('')}
+${line(pts, yy, { x: R, anchor: 'end', size: 3.4, weight: 800, fill: C.wine })}${line(note, yy + 4.6, { x: T + 7, size: 3.1 })}`;
+  const out = [`<rect x="${x + 0.7}" y="${y + 1}" width="${w}" height="${h}" rx="3" fill="#6b4423" opacity=".16"/>
+<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="3" fill="#fffaf0" stroke="${C.gold}" stroke-width=".55"/>
+<rect x="${x + 1.6}" y="${y + 1.6}" width="${w - 3.2}" height="${h - 3.2}" rx="2" fill="none" stroke="${C.gold}" stroke-width=".22"/>
+${txt('შენი სვლა', x + w / 2, y + 10, { size: 5.4, weight: 800, fill: C.wine })}`];
+  let yy = y + 20;
+  out.push(step(1, yy, 'იარე'));
+  out.push(line(`0, 1 ან ${RIDE} ნაბიჯი — მეზობელ კუთხეში:`, yy + 5.8));
+  out.push(footprint(T + 2.4, yy + 11) + line('ეს ნიშანი საზღვარზეა. დარჩენაც შეიძლება.', yy + 12.2, { x: T + 7 }));
+  yy += 21.4;
+  out.push(step(2, yy, 'აიღე ამ კუთხის ნივთი'));
+  out.push(line(`${BASE} · შენი მამულით +1 · მეფესთან +1`, yy + 5.8));
+  out.push(line(`თბილისის ბაზარზე — ნებისმიერი ${BASE}.`, yy + 10.2));
+  out.push(line(`ხელში ${HAND_MAX} ნივთზე მეტი არ გეჭიროს.`, yy + 14.6));
+  yy += 24;
+  out.push(step(3, yy, 'ერთი საქმე — ან არაფერი'));
+  out.push(deed(yy + 8.4, 'house', 'მამული', costList(ESTATE_COST), `→ ${ESTATE_PTS} ქულა`, `${PLACES} ადგილი კუთხეში, შენი — ერთი.`));
+  out.push(deed(yy + 21.4, 'castle', 'მეფის საქმე', [], 'ნივთი → 1 (მეფესთან 2)', 'ვინც ბოლო ყუთს შეავსებს — ბონუსი.'));
+  out.push(deed(yy + 34.4, 'utensils', 'სუფრა', costList(FEAST_COST), `→ ${FEAST_PTS} (მეფესთან ${FEAST_PTS + KING_FEAST})`, `შენს მამულში; სტუმრებს +${GUEST_PTS}.`));
+  yy += 50;
+  const cw = (w - 8) / 5;
+  out.push(GL.map((g, k) => `${chipIn(k, x + 4 + k * cw + cw / 2 - 2.9, yy - 4.6, 5.8)}${txt(g.name, x + 4 + k * cw + cw / 2, yy + 4.6, { size: 3.2, weight: 700 })}`).join(''));
+  return out.join('\n');
+};
+
+// the points: 0–49 in two rows along the bottom (a box's edge on the seam), the marker turned over past 49
+const SCORE = { x0: 49.6, w: 19.2, y0: 336, h: 15.4, gap: 1.6, per: 25 };
+const scoreTrack = () => {
+  const { x0, w, y0, h, gap, per } = SCORE, out = [];
+  for (let n = 0; n < 2 * per; n++) {
+    const row = Math.floor(n / per), col = n % per, x = x0 + col * w, y = y0 + row * (h + gap);
+    const five = n % 5 === 0, ten = n % 10 === 0;
+    out.push(`<rect x="${f(x + 0.3)}" y="${f(y)}" width="${f(w - 0.6)}" height="${h}" rx="1.6" fill="${ten ? '#f7e9ad' : five ? '#fbf3dc' : '#fffaf0'}" stroke="${ten ? C.wine : C.gold}" stroke-width="${ten ? 0.55 : 0.35}"/>
+${txt(String(n), x + w / 2, y + h / 2 + 2, { size: ten ? 5.4 : 4.6, weight: ten ? 800 : 700, fill: ten ? C.wine : C.brown })}`);
   }
-  if (look === 'valley') {
-    let s = '';
-    for (let i = 0; i < 9; i++) s += `<path d="M${-140 + i * 32} 214 q16 -11 32 0" fill="${L.a}" opacity=".55"/>`;
-    s += `<path d="M-140 196 C-100 186 -80 206 -40 197 S20 186 60 198 S120 206 140 195" stroke="${L.b}" stroke-width="3" fill="none"/><path d="M-140 196 C-100 186 -80 206 -40 197 S20 186 60 198 S120 206 140 195" stroke="#a9cfe9" stroke-width="1" fill="none"/>`;
-    for (let i = 0; i < 16; i++) s += `<circle cx="${-118 + i * 15.5}" cy="${184 + (i % 3) * 3.5}" r="1.9" fill="#8a7442" opacity=".7"/><circle cx="${-115.6 + i * 15.5}" cy="${185.2 + (i % 3) * 3.5}" r="1.4" fill="#8a7442" opacity=".55"/>`;
-    return s;
-  }
-  const back = peaks(212, 15, look === 'mount' ? 24 : 16, look === 'mount' ? 8 : 5, L.a, '#f2efe7', 3);
-  const front = peaks(218, 19, look === 'mount' ? 15 : 10, look === 'mount' ? 5 : 3, L.b, '#e9e5da', 7);
-  return back + front + (look === 'hills' ? [-96, -40, 18, 74].map(x => icIn('tree-pine', { x, y: 199, size: 7, color: '#4c5e3a', width: 1.6 })).join('') : '');
-};
-const framePiece = P => {
-  const id = `fp${P.k}`, slots = GATE_POS.filter(g => Math.floor(g.e / 5) === P.k).map(g => ({ ...g, c: canon(g.c, P.k), a: canon(g.a, P.k), b: canon(g.b, P.k) }));
-  const nameX = slots.length === 1 ? 46 : 0;
-  const slotSvg = g => {
-    const pier = p => { const d = [g.c[0] - p[0], g.c[1] - p[1]], len = Math.hypot(...d), e = add(p, d, (len - SLOT_R + 0.4) / len); return `<line x1="${p[0].toFixed(2)}" y1="${p[1].toFixed(2)}" x2="${e[0].toFixed(2)}" y2="${e[1].toFixed(2)}" stroke="#6b4b2e" stroke-width="2" stroke-linecap="round"/><line x1="${p[0].toFixed(2)}" y1="${p[1].toFixed(2)}" x2="${e[0].toFixed(2)}" y2="${e[1].toFixed(2)}" stroke="#c9a26b" stroke-width=".8" stroke-linecap="round"/>`; };
-    const w = g.name.length * 2.05 + 5;
-    return `${pier(g.a)}${pier(g.b)}<circle cx="${g.c[0].toFixed(2)}" cy="${g.c[1].toFixed(2)}" r="${SLOT_R}" fill="#f6ecd6" stroke="#6b4b2e" stroke-width=".5" stroke-dasharray="1.6 1"/>
-<text x="${g.c[0].toFixed(2)}" y="${(g.c[1] + 1).toFixed(2)}" font-size="2.9" fill="${C.muted}" text-anchor="middle">კარიბჭე</text>
-<rect x="${(g.c[0] - w / 2).toFixed(2)}" y="${(g.c[1] + SLOT_R + 1.2).toFixed(2)}" width="${w.toFixed(2)}" height="5.6" rx="1.2" fill="#f6ecd6" stroke="${C.gold}" stroke-width=".35"/>
-<text x="${g.c[0].toFixed(2)}" y="${(g.c[1] + SLOT_R + 5.2).toFixed(2)}" font-size="3.4" font-weight="700" fill="${C.wine}" text-anchor="middle">${esc(g.name)}</text>`;
-  };
-  const joint = (side) => { // side +1: the right end (ray 60k), −1: the left end (ray 60k + 60)
-    const x = 110.8 * side, y = 201.8, j = side > 0 ? P.k : (P.k + 1) % 6;
-    return `<circle cx="${x}" cy="${y}" r="3.8" fill="#f6ecd6" stroke="${C.gold}" stroke-width=".4"/><text x="${x}" y="${y + 1.25}" font-size="3.6" font-weight="800" fill="${C.wine}" text-anchor="middle">${jointOfRay(j)}</text>`;
-  };
-  return `<svg width="58.6mm" height="252.6mm" viewBox="159 ${-R_OUT / 2 - 1.6} 58.6 252.6" font-family="SerifKa"><g transform="rotate(-90)">
-<defs><clipPath id="${id}"><polygon points="${ptsAttr(CANON_POLY)}"/></clipPath></defs>
-<polygon points="${ptsAttr(CANON_POLY)}" fill="${LOOKS[P.look].base}" stroke="${LOOKS[P.look].base}" stroke-width="3.2" stroke-linejoin="miter"/>
-<g clip-path="url(#${id})">${pieceArt(P.look)}</g>
-${slots.map(slotSvg).join('')}
-${P.note ? `<text x="${nameX}" y="201.5" font-size="3.2" fill="#fbf6ec" text-anchor="middle" stroke="#000" stroke-opacity=".35" stroke-width=".5" paint-order="stroke">${esc(P.note)}</text>` : ''}
-<text x="${nameX}" y="209.6" font-size="5.2" font-weight="800" fill="#fbf6ec" text-anchor="middle" letter-spacing=".2" stroke="#000" stroke-opacity=".4" stroke-width=".7" paint-order="stroke">${userNo(P.k)} · ${esc(P.name)}</text>
-${joint(1)}${joint(-1)}
-<polygon points="${ptsAttr(CANON_POLY)}" fill="none" stroke="#3a3027" stroke-width=".22"/>
-</g></svg>`;
+  const lx = 14, lw = x0 - 2 - lx, rx = x0 + per * w + 1.6, rw = BW - 14 - rx, H = 2 * h + gap;
+  out.push(`<rect x="${lx}" y="${y0}" width="${f(lw)}" height="${f(H)}" rx="2" fill="${C.wine}"/>
+${iconIn('trophy', { x: lx + lw / 2 - 3.8, y: y0 + 3, size: 7.6, color: '#f0d9a0', width: 1.8 })}
+${txt('ქულები', lx + lw / 2, y0 + 17.4, { size: 4.6, weight: 800, fill: '#fffaf0' })}
+${txt('ყოველი სახლის', lx + lw / 2, y0 + 23, { size: 2.6, weight: 400, fill: '#f0d9a0' })}
+${txt('ნიშანი აქ დადის', lx + lw / 2, y0 + 26.4, { size: 2.6, weight: 400, fill: '#f0d9a0' })}
+<rect x="${f(rx)}" y="${y0}" width="${f(rw)}" height="${f(H)}" rx="2" fill="#fffaf0" stroke="${C.wine}" stroke-width=".5"/>
+${txt('50+', rx + rw / 2, y0 + 10.4, { size: 4.6, weight: 800, fill: C.wine })}
+${iconIn('refresh-cw', { x: rx + rw / 2 - 3.6, y: y0 + 14.4, size: 7.2, color: C.wine, width: 2 })}
+${txt('0-დან', rx + rw / 2, y0 + 28, { size: 2.8, weight: 700 })}`);
+  return out.join('\n');
 };
 
-// ---------- the pieces' shapes: a darbazi house (village), a tower with a dome (city), a road ----------
-const PLAYERS = [
-  { name: 'ღვინისფერი', color: '#7a2028' },
-  { name: 'ოქროსფერი', color: '#c08f2a' },
-  { name: 'ლურჯი', color: '#1f4e9c' },
-  { name: 'მწვანე', color: '#1d7f5f' },
-];
-const FIG = {
-  village: { w: 16, h: 16, d: 'M0 7L8 0L16 7V16H0Z', inner: '<path d="M6.3 16v-5.2h3.4V16"/><path d="M7 3.6h2v1.8H7z"/>' },
-  city: { w: 20, h: 25, d: 'M0 25V11H5V5A5 5 0 0 1 15 5V11H20V25Z', inner: '<path d="M7.6 25v-5a2.4 2.4 0 0 1 4.8 0v5"/><path d="M3 14.5h3v3H3zM14 14.5h3v3h-3z"/>' },
-  road: { w: 38, h: 6, d: 'M.8 0H37.2A.8 .8 0 0 1 38 .8V5.2A.8 .8 0 0 1 37.2 6H.8A.8 .8 0 0 1 0 5.2V.8A.8 .8 0 0 1 .8 0Z', inner: '<path d="M3 3H35" stroke-dasharray="2.2 1.6"/>' },
-};
-/** A piece drawn `w`×`h` mm (its own units), filled with `color`, white details; `bleed` grows the fill for cutting. */
-const figSvg = (kind, color, { scale = 1, bleed = 0, cut = false, line = '#fbf6ec' } = {}) => {
-  const f = FIG[kind], pad = 1.5, w = f.w * scale, h = f.h * scale;
-  return `<svg width="${w + 2 * pad * scale}mm" height="${h + 2 * pad * scale}mm" viewBox="${-pad} ${-pad} ${f.w + 2 * pad} ${f.h + 2 * pad}" style="display:block">
-<path d="${f.d}" fill="${color}" stroke="${color}" stroke-width="${bleed * 2}" stroke-linejoin="miter"/>
-<g fill="none" stroke="${line}" stroke-width=".55" stroke-linecap="round" stroke-linejoin="round">${f.inner}</g>
-${cut ? `<path d="${f.d}" fill="none" stroke="#3a3027" stroke-width=".2"/>` : `<path d="${f.d}" fill="none" stroke="${line}" stroke-opacity=".7" stroke-width=".35"/>`}</svg>`;
-};
+const BOARD = `<rect width="${BW}" height="${BH}" fill="#f8f0df"/>
+<rect x="4" y="4" width="${BW - 8}" height="${BH - 8}" rx="3.4" fill="none" stroke="${C.gold}" stroke-width=".8"/>
+<rect x="5.8" y="5.8" width="${BW - 11.6}" height="${BH - 11.6}" rx="2.4" fill="none" stroke="${C.gold}" stroke-width=".3"/>
+${txt(aso(title), 16, 25, { anchor: 'start', font: 'SansKa', weight: 900, size: 12, fill: C.wine, style: 'letter-spacing:.06em' })}
+${txt('მხედრები საქართველოს 13 კუთხეში · ნივთები, მამულები, სუფრები და მეფის დიდი საქმეები', 16, 35.4, { anchor: 'start', size: 4, weight: 400, fill: '#7a6a58' })}
+${compass(538, 25)}
+<g transform="translate(${MX + 1} ${MY + 1.4}) scale(${S})" fill="#6b4423" opacity=".2">${REGIONS.map(r => `<path d="${r.d}"/>`).join('')}</g>
+<g transform="translate(${MX} ${MY}) scale(${S})">${REGIONS.map((r, i) => `<path d="${r.d}" fill="${tintOf(i)}" stroke="#fffaf0" stroke-width="3.2" stroke-linejoin="round"/>`).join('')}</g>
+${ridge(168, 86, 9)}${txt('კავკასიონი', 222, 68, { size: 4.6, weight: 400, fill: '#8a7560', style: 'font-style:italic;letter-spacing:.18em' })}
+${txt('შავი ზღვა', 64, 182.4, { size: 5.4, weight: 400, fill: '#5f7f9f', style: 'font-style:italic;letter-spacing:.12em' })}
+${waves(34, 187)}${waves(76, 188.6)}
+${PAIRS.map(([a, b]) => { const p = footAt(a, b); return p ? footprint(...p) : ''; }).join('')}
+${REGIONS.map((_, r) => (r === TBILISI ? '' : plate(r))).join('')}
+${tbilisiPlate()}
+${yearTrack()}
+${howPanel()}
+${scoreTrack()}
+${txt(`${aso(SERIES)} · №${NO}`, 16, 381, { anchor: 'start', font: 'SansKa', weight: 900, size: 3.4, fill: C.goldDark, style: 'letter-spacing:.08em' })}
+${txt(SCHOOL, BW - 16, 381, { anchor: 'end', size: 3.4, weight: 400, fill: '#9a8b7b' })}`;
 
-// ---------- harvest cards (63×88): 19 of each, one back for all ----------
-const RES_LANDS = Object.fromEntries(RK.map(k => [k, LANDS.filter(l => l.res === k).map(l => l.name)]));
-const NEEDS = { wood: ['road', 'village'], stone: ['road', 'village'], wool: ['village', 'dev'], grain: ['village', 'city', 'dev'], ore: ['city', 'dev'] };
-const devMini = (h = 5.4) => `<svg width="${h * 0.72}mm" height="${h}mm" viewBox="0 0 7.2 10" style="display:block"><rect x=".3" y=".3" width="6.6" height="9.4" rx=".9" fill="${C.brown}"/><rect x="1.1" y="1.1" width="5" height="7.8" rx=".5" fill="none" stroke="${C.gold}" stroke-width=".4"/><circle cx="3.6" cy="5" r="1.4" fill="none" stroke="${C.gold}" stroke-width=".4"/></svg>`;
-const needIcon = (kind, color = C.brown) => kind === 'dev' ? devMini() : figSvg(kind, color, { scale: kind === 'road' ? 0.2 : kind === 'city' ? 0.22 : 0.3 });
-const cardFrame = color => `<div class="frame" style="border-color:${color}"></div><div class="frame2"></div>`;
-const resIndex = (k, pos) => `<div class="idx ${pos}" style="background:${RES[k].color}">${ic(RES[k].icon, { size: 5.4, color: '#fbf6ec', width: 2 })}</div>`;
-const resArt = k => {
-  const r = RES[k], id = `ra${clipN++}`, shape = 'M0 44V18A26 18 0 0 1 52 18V44Z';
-  return `<svg width="52mm" height="44mm" viewBox="0 0 52 44" style="display:block">
-<defs><clipPath id="${id}"><path d="${shape}"/></clipPath></defs>
-<path d="${shape}" fill="${r.color}"/>
-<g clip-path="url(#${id})"><g transform="translate(-1 0) scale(.68 .72)">${landDecor(k, r.ink)}</g></g>
-<path d="${shape}" fill="none" stroke="${C.gold}" stroke-width=".5"/>
-<circle cx="26" cy="24.5" r="13" fill="#fbf6ec" stroke="${C.gold}" stroke-width=".5"/>
-${icIn(r.icon, { x: 16, y: 14.5, size: 20, color: r.color, width: 1.6 })}</svg>`;
-};
-const resCard = k => {
-  const r = RES[k];
-  return `<div class="card res" style="background:${r.soft}">${cardFrame(r.color)}${resIndex(k, 'tl')}${resIndex(k, 'br')}
-<div class="body"><div class="rname" style="color:${r.color}">${esc(r.name)}</div>
-<div class="art">${resArt(k)}</div>
-<div class="from"><b style="color:${r.color}">${esc(r.land)}:</b> ${RES_LANDS[k].map(esc).join(' · ')}</div>
-<div class="need"><span>სჭირდება:</span>${NEEDS[k].map(n => needIcon(n)).join('')}</div></div></div>`;
-};
-const leafRing = (r, color, n = 12) => `<circle r="${r}" fill="none" stroke="${color}" stroke-width=".45"/><circle r="${r - 2.4}" fill="none" stroke="${color}" stroke-width=".3" stroke-dasharray="1 1.4"/>
-${Array.from({ length: n }, (_, i) => `<path d="M0 ${-r} C1.6 ${-r + 1.4} 1.6 ${-r + 3} 0 ${-r + 4.4} C-1.6 ${-r + 3} -1.6 ${-r + 1.4} 0 ${-r}Z" fill="${color}" fill-opacity=".8" transform="rotate(${(i * 360) / n})"/>`).join('')}`;
-const cardBack = (bg, word) => `<div class="card dark" style="background:${bg}"><div class="frame"></div>${corners(C.gold, 9, 4.6)}
-<svg class="backArt" width="63mm" height="88mm" viewBox="0 0 63 88" font-family="SansKa"><g transform="translate(31.5 41)">${leafRing(18, C.gold)}</g>
-<text x="31.5" y="45.2" font-size="11" font-weight="900" fill="${C.gold}" text-anchor="middle" letter-spacing=".3">${MONO}</text>
-<text x="31.5" y="70" font-size="4.6" font-family="SerifKa" font-weight="800" fill="#f0d9a0" text-anchor="middle">${esc(word)}</text>
-<text x="31.5" y="79.2" font-size="2.9" fill="${C.gold}" text-anchor="middle" letter-spacing=".5">${aso(title)}</text></svg></div>`;
-const resBack = cardBack(C.wine, 'მოსავალი');
-const spareCard = (color = C.wine) => `<div class="card">${cardFrame(color)}<div class="body"><div class="spare">სათადარიგო ბარათი<br><span>დაკარგულის ნაცვლად — სახელი მარკერით</span></div></div></div>`;
+// nothing printed may lie across a seam, and a footprint never under a plate: the build stops if one does
+const BOXES = REGIONS.map((_, r) => (r === TBILISI ? null : plateBox(r)));
+BOXES.forEach((b, r) => {
+  if (b && ((b.x0 < SEAM_X && b.x1 > SEAM_X) || (b.y0 < SEAM_Y && b.y1 > SEAM_Y))) throw new Error(`okros board: ${REGION_NAMES[r]}'s plate lies across a seam`);
+});
+for (const [a, b] of PAIRS) {
+  const p = footAt(a, b);
+  if (!p) throw new Error(`okros board: no border found between ${REGION_NAMES[a]} and ${REGION_NAMES[b]}`);
+  const [x, y] = p, m = 3.6, name = `${REGION_NAMES[a]}–${REGION_NAMES[b]}`;
+  if (Math.abs(x - SEAM_X) < m || Math.abs(y - SEAM_Y) < m) throw new Error(`okros board: the footprint ${name} lies across a seam`);
+  // a plate = the work's circle on top + the band of houses, mark and name under it
+  const under = BOXES.findIndex(bb => bb && (Math.hypot(x - bb.X, y - (bb.Y + PLATE.castleDy)) < 6.4 + m
+    || (x > bb.x0 - m && x < bb.x1 + m && y > bb.Y - 7.6 - m && y < bb.y1 + m)));
+  if (under >= 0) throw new Error(`okros board: the footprint ${name} lies under ${REGION_NAMES[under]}'s plate`);
+  if (a !== TBILISI && b !== TBILISI && Math.hypot(x - TB.x, y - TB.y) < TB.r + 4.5) throw new Error(`okros board: the footprint ${name} lies on Tbilisi`);
+}
 
-// ---------- development cards (63×88): 14 + 2 + 2 + 2 + 5 treasures ----------
-// an eight-rayed sun, the folk ornament on the shields and banners
-const sunMark = (cx, cy, s, color) => `<g transform="translate(${cx} ${cy}) scale(${s})" fill="${color}">${Array.from({ length: 8 }, (_, i) => `<path d="M0 -8.2L1.6 -4.1H-1.6Z" transform="rotate(${i * 45})"/>`).join('')}<circle r="3.3"/></g>`;
-const DEV_ART = {
-  knight: () => `${icIn('swords', { x: 10, y: 1.5, size: 30, color: C.goldDark, width: 1.1, opacity: 0.55 })}
-<path d="M25 4.5L35 8V17C35 23.5 30.6 28 25 30C19.4 28 15 23.5 15 17V8Z" fill="${C.wine}" stroke="${C.gold}" stroke-width=".7"/>
-<path d="M25 7L32.6 9.8V17C32.6 22 29.3 25.8 25 27.4C20.7 25.8 17.4 22 17.4 17V9.8Z" fill="none" stroke="${C.gold}" stroke-width=".3"/>${sunMark(25, 17, 0.78, C.gold)}`,
-  bridge: () => `<path d="M3 26 q5.5 -2.4 11 0 t11 0 t11 0 t11 0" stroke="#5d93bf" stroke-width=".8" fill="none"/><path d="M3 29 q5.5 -2.4 11 0 t11 0 t11 0 t11 0" stroke="#86b6dc" stroke-width=".6" fill="none"/>
-<path d="M4 13Q25 3 46 13V16H4Z" fill="#b7a58a" stroke="${C.brown}" stroke-width=".6" stroke-linejoin="round"/><path d="M8 16.4H42V24H36A11 9 0 0 0 14 24H8Z" fill="#cdbb9c" stroke="${C.brown}" stroke-width=".6"/>
-${[11, 17, 23, 29, 35].map(x => `<path d="M${x} 9.6v-.1" stroke="${C.brown}" stroke-width=".4"/>`).join('')}<path d="M4 13Q25 3 46 13" fill="none" stroke="${C.brown}" stroke-width=".4" stroke-dasharray="1.6 1.2" transform="translate(0 1.6)"/>
-${icIn('hammer', { x: 38, y: 0.6, size: 9, color: C.wine, width: 1.8 })}`,
-  plenty: () => `${icIn('sun', { x: 19, y: 0.4, size: 12, color: C.gold, width: 1.5 })}${icIn('grape', { x: 4.5, y: 7.5, size: 21, color: C.wine, width: 1.5 })}${icIn('wheat', { x: 24.5, y: 7.5, size: 21, color: C.goldDark, width: 1.5 })}`,
-  toll: () => `${icIn('warehouse', { x: 4, y: 7, size: 20, color: C.brown, width: 1.4 })}${icIn('stamp', { x: 26, y: 3.5, size: 18, color: C.wine, width: 1.5 })}${icIn('coins', { x: 42.2, y: 20.8, size: 8, color: C.goldDark, width: 1.7 })}`,
-  gegeuti: () => `${icIn('castle', { x: 5, y: 2.5, size: 26, color: C.wine, width: 1.3 })}${icIn('crown', { x: 30, y: 7, size: 16, color: C.goldDark, width: 1.5 })}`,
-  kronika: () => `${icIn('scroll-text', { x: 5, y: 3, size: 25, color: C.wine, width: 1.3 })}${icIn('crown', { x: 30, y: 8, size: 15, color: C.goldDark, width: 1.5 })}`,
-  moneta: () => `<circle cx="33" cy="18" r="9" fill="#d9b85c" stroke="${C.goldDark}" stroke-width=".6"/><circle cx="33" cy="18" r="7" fill="none" stroke="${C.goldDark}" stroke-width=".3"/>
-<circle cx="20" cy="15.5" r="12.5" fill="#e6c76f" stroke="${C.goldDark}" stroke-width=".8"/><circle cx="20" cy="15.5" r="10" fill="none" stroke="${C.goldDark}" stroke-width=".4" stroke-dasharray=".8 .7"/>
-<text x="20" y="20.3" font-size="13" font-weight="900" text-anchor="middle" fill="${C.wine}" font-family="SansKa">${aso('თ')}</text>`,
-  didgori: () => `${icIn('swords', { x: 5, y: 3, size: 24, color: C.wine, width: 1.3 })}${icIn('flag', { x: 30, y: 5, size: 17, color: C.goldDark, width: 1.5 })}`,
-  vepkhis: () => `${icIn('book-open', { x: 4, y: 5, size: 24, color: C.wine, width: 1.35 })}${icIn('feather', { x: 28, y: 4, size: 18, color: C.goldDark, width: 1.5 })}`,
+const boardSvg = (view, width) => `<svg viewBox="${view.join(' ')}" width="${width}mm" height="${f(width * view[3] / view[2])}mm" style="display:block">${BOARD}</svg>`;
+// a piece: the landscape A4 page (297×210) with the 280×195 window of the board, crop marks and where its neighbours join
+const TILE = { w: 280, h: 195, x: 8.5, y: 7.5 };
+const PIECE_NAME = ['ზედა მარცხენა', 'ზედა მარჯვენა', 'ქვედა მარცხენა', 'ქვედა მარჯვენა'];
+const tileSvg = n => {
+  const c = n % 2, r = Math.floor(n / 2), { x, y, w, h } = TILE, M = 5;
+  const marks = [[x, y], [x + w, y], [x, y + h], [x + w, y + h]].map(([cx, cy]) =>
+    `<path d="M${cx < 100 ? cx - M - 1 : cx + 1} ${cy}h${M}M${cx} ${cy < 100 ? cy - M - 1 : cy + 1}v${M}"/>`).join('');
+  const hint = (s, hx, hy, rot = 0) => `<text transform="translate(${hx} ${hy}) rotate(${rot})" text-anchor="middle" font-family="SerifKa" font-size="3" fill="#8a7a68">${esc(s)}</text>`;
+  const hints = [
+    c === 0 ? hint(`აქ ებმის ნაწილი ${n + 2} →`, x + w + 4.6, y + h / 2, 90) : hint(`← აქ ებმის ნაწილი ${n}`, x - 3, y + h / 2, -90),
+    r === 0 ? hint(`↓ აქ ებმის ნაწილი ${n + 3}`, x + w / 2, y + h + 5) : hint(`↑ აქ ებმის ნაწილი ${n - 1}`, x + w / 2, y - 2.4),
+  ].join('');
+  return `<svg viewBox="0 0 297 210" width="297mm" height="210mm" style="position:absolute;left:0;top:0">
+<svg x="${x}" y="${y}" width="${w}" height="${h}" viewBox="${c * w} ${r * h} ${w} ${h}">${BOARD}
+<text x="${c * w + (c ? w - 9 : 9)}" y="${r * h + (r ? h - 9 : 12)}" text-anchor="middle" font-family="SansKa" font-weight="900" font-size="4" fill="${C.goldDark}" opacity=".55">${n + 1}</text></svg>
+<g stroke="#666" stroke-width=".25" fill="none">${marks}</g>${hints}</svg>`;
 };
-const devArt = kind => `<svg width="50mm" height="31mm" viewBox="0 0 50 31" style="display:block">${DEV_ART[kind]()}</svg>`;
-const DEV = [
-  { key: 'knight', n: 14, name: 'მეციხოვნე', rule: 'მოთარეშე სხვა მხარეზე გადაიყვანე და იქ მდგომ ერთ მოთამაშეს 1 მოსავლის ბარათი ამოფარებით წაართვი.', cap: 'გაშლილი შენ წინ რჩება · სამი — დიდი ლაშქარი' },
-  { key: 'bridge', n: 2, name: 'ხიდის ოსტატი', rule: 'ააშენე 2 გზა უფასოდ.', cap: 'ბესლეთისა და დანდალოს ქვის ხიდები' },
-  { key: 'plenty', n: 2, name: 'ბარაქა', rule: 'აიღე ბანკიდან ნებისმიერი 2 მოსავალი — შეიძლება ორივე ერთნაირი.', cap: 'რთველი და კალო' },
-  { key: 'toll', n: 2, name: 'სამეფო ბაჟი', rule: 'დაასახელე ერთი მოსავალი — ყველა მოთამაშე ასეთ ყველა ბარათს შენ გაძლევს.', cap: 'მეფის ბეჭედი და ქარვასლა' },
-];
-const TREASURES = [
-  { key: 'gegeuti', name: 'გეგუთის სასახლე', date: 'XII ს.', about: 'მეფეთა სასახლე ქუთაისთან' },
-  { key: 'kronika', name: 'ქართლის ცხოვრება', date: 'XI–XIV ს.', about: 'ქართველ მეფეთა მატიანე' },
-  { key: 'moneta', name: 'თამარის მონეტა', date: '1187', about: 'ფული თამარ მეფის მონოგრამით' },
-  { key: 'didgori', name: 'დიდგორის ბრძოლა', date: '1121', about: 'დავით აღმაშენებლის დიდი გამარჯვება' },
-  { key: 'vepkhis', name: '„ვეფხისტყაოსანი“', date: '≈1200', about: 'შოთა რუსთაველის პოემა' },
-];
-const devCard = d => `<div class="card dev">${cardFrame(C.wine)}${corners(C.gold, 7, 4.2)}
-<div class="body"><div class="kind aso">${aso('განვითარება')}</div><div class="dname">${esc(d.name)}</div>
-<div class="art">${devArt(d.key)}</div><div class="rule">${esc(d.rule)}</div><div class="cap">${esc(d.cap)}</div></div></div>`;
-const treasureCard = t => `<div class="card dev tre">${cardFrame(C.wine)}${corners(C.gold, 7, 4.2)}
-<div class="body"><div class="kind aso">${aso('საგანძური')}</div><div class="dname fit"><span>${esc(t.name)}</span></div>
-<div class="art">${devArt(t.key)}<div class="date">${esc(t.date)}</div><div class="pt"><b>1</b>ქულა</div></div>
-<div class="rule">ფარულად შეინახე. გახსენი, როცა 10 ქულა შეგიგროვდება.</div><div class="cap">${esc(t.about)}</div></div></div>`;
-const devBack = cardBack(C.brown, 'განვითარება');
+/** the landscape page turned onto the portrait one (the board's top edge on the page's left) */
+const turned = svg => `<div style="position:absolute;left:0;top:0;width:297mm;height:210mm;transform-origin:0 0;transform:translate(0,297mm) rotate(-90deg)">${svg}</div>`;
+const tileSheet = n => ({
+  key: `board${n + 1}`,
+  front: placedSheet([{ x: 0, y: 0, w: 210, h: 297, html: turned(tileSvg(n)) }], { label: `ოქროს ხანა · რუკა · ნაწილი ${n + 1}/4 (${PIECE_NAME[n]}) — ცალმხრივი`, cls: 'placed boardS' }),
+});
 
-// ---------- A6 cards (105×148.5, four to a sheet; a 5 mm white edge, so a printer's margin never touches them) ----------
+// ---------- A6 cards (105×148.5, four a sheet, a 5 mm white edge) ----------
 const A6W = 105, A6H = 148.5;
 const a6 = (inner, { bg = C.paper, border = C.wine, cls = '' } = {}) => `<div class="a6 ${cls}"><div class="a6in" style="background:${bg};border-color:${border}">${inner}</div></div>`;
-// cut marks only where no card is: ticks at the edges and a cross in the middle (the cards keep a 5 mm white edge)
 const a6Cuts = `<svg viewBox="0 0 210 297" width="210mm" height="297mm" style="position:absolute;left:0;top:0" stroke="#8a7a68" stroke-width=".25"><path d="M105 3V11M105 286V294M3 148.5H11M199 148.5H207M105 141V156M97.5 148.5H112.5"/></svg>`;
 const a6Sheet = (cards, opts) => placedSheet([{ x: 0, y: 0, w: 210, h: 297, html: a6Cuts }, ...cards.map((html, i) => ({ x: (i % 2) * A6W, y: Math.floor(i / 2) * A6H, w: A6W, h: A6H, html }))], { ...opts, cls: 'placed a6sheet' });
 
-const chip = (k, s = 7.6) =>`<span class="chip" style="background:${RES[k].color};width:${s}mm;height:${s}mm">${ic(RES[k].icon, { size: s * 0.66, color: '#fbf6ec', width: 2.1 })}</span>`;
-const COSTS = [
-  { what: 'გზა', fig: 'road', need: ['wood', 'stone'], note: 'შენი გზის, სოფლის ან ქალაქის გვერდით' },
-  { what: 'სოფელი', fig: 'village', pts: '1 ქულა', need: ['wood', 'stone', 'wool', 'grain'], note: 'შენი გზის ბოლოს · მეზობელ კუთხეებში არავინ დგას' },
-  { what: 'ციხე-ქალაქი', fig: 'city', pts: '2 ქულა', need: ['ore', 'ore', 'ore', 'grain', 'grain'], note: 'შენი სოფლის ადგილას — სოფელი მარაგში ბრუნდება' },
-  { what: 'განვითარება', fig: 'dev', need: ['ore', 'wool', 'grain'], note: 'დასტის ზედა ბარათი — არავის აჩვენო' },
-];
-const costFig = (fig, color, k = 1) => fig === 'dev' ? devMini(12 * k) : figSvg(fig, color, { scale: (fig === 'road' ? 0.36 : fig === 'city' ? 0.5 : 0.62) * k });
-const costRows = color => COSTS.map(c => `<div class="crow"><div class="cfig">${costFig(c.fig, color)}</div><div class="cwhat"><b>${esc(c.what)}</b>${c.pts ? `<span class="pts">${c.pts}</span>` : ''}</div>
-<div class="cneed">${c.need.map(k => chip(k)).join('')}</div><div class="cnote">${esc(c.note)}</div></div>`).join('');
+// a work: where, what it needs (boxes the given goods are laid on), its bonus, its note
+const needBoxes = w => {
+  const list = needList(w), per = list.length > 4 ? 3 : 4;
+  const rows = [];
+  for (let i = 0; i < list.length; i += per) rows.push(list.slice(i, i + per));
+  return rows.map(row => `<div class="nrow">${row.map(k => `<span class="nbox" style="background:${GL[k].tint};border-color:${GL[k].color}">${icon(GL[k].icon, { size: 8.6, color: GL[k].color, width: 1.8, style: 'opacity:.6' })}<em style="color:${GL[k].ink}">${esc(GL[k].name)}</em></span>`).join('')}</div>`).join('');
+};
+const workFront = w => a6(`<div class="wband"><div class="aso">${aso('მეფის დიდი საქმე')}</div><div class="wn fit"><span>${esc(w.name)}</span></div></div>
+<div class="wbody">
+  <div class="wwhere">${icon('map-pin', { size: 4.4, color: C.wine, width: 2.2 })}<b>${esc(REGION_NAMES[w.region])}</b><span>— აქ მიდიან და აქ აძლევენ</span></div>
+  <div class="wmap">${mini(w.region, C.wine, { mark: 'castle' })}</div>
+  <div class="wneedT">რა სჭირდება — ${needCount(w)} ნივთი. ჩადე ყუთებზე:</div>
+  <div class="wneed">${needBoxes(w)}</div>
+  <div class="wpts"><span class="medal"><b>+${w.bonus}</b>ბონუსი</span><span>ყოველი ნივთი — <b>1 ქულა</b>, მეფის კუთხეში — <b>2</b>. ვინც <b>ბოლო ყუთს</b> შეავსებს, ამ ბარათს იღებს და <b>+${w.bonus}</b>-ს.</span></div>
+  <div class="wnote">${esc(w.note)}</div>
+</div>`, { border: DEEP, cls: 'work' });
+const ringEmblem = (name, size, { bg, ring, ink }) => `<svg width="${size}mm" height="${size}mm" viewBox="-30 -30 60 60" style="display:block">
+<circle r="28.5" fill="none" stroke="${ring}" stroke-width=".8"/><circle r="25.6" fill="none" stroke="${ring}" stroke-width=".4" stroke-dasharray="1.4 1.6"/>
+<circle r="21.5" fill="${bg}" stroke="${ring}" stroke-width="1"/>${iconIn(name, { x: -12.5, y: -12.5, size: 25, color: ink, width: 1.5 })}</svg>`;
+const workBack = a6(`<div class="cback">${corners(GOLD, 11, 4.5)}<div class="aso ck">${aso(title)}</div>${ringEmblem('castle', 48, { bg: DEEP, ring: GOLD, ink: GOLD })}<div class="cbn">მეფის დიდი საქმე</div><div class="cbs">${WORKS.length} ბარათი · ღიად ${OPEN_WORKS} დევს</div></div>`, { bg: DEEP, border: GOLD });
+
+// four aid cards: the turn on the front, the points and the end behind
 const band = (text, color, sub = '') => `<div class="band" style="background:${color}"><div class="aso">${aso(title)}</div><div class="bt">${esc(text)}</div>${sub ? `<div class="bs">${esc(sub)}</div>` : ''}</div>`;
-const costCard = p => a6(`${band('მშენებლობის ფასები', p.color, p.name)}<div class="a6body">${costRows(p.color)}
-<div class="ptsBox"><b>ქულები:</b> სოფელი 1 · ციხე-ქალაქი 2 · აბრეშუმის გზა 2 · დიდი ლაშქარი 2 · საგანძური 1.<br><b class="win">10 ქულა შენს სვლაზე — გამარჯვება!</b><div class="stock">მარაგი: 5 სოფელი · 4 ციხე-ქალაქი · 15 გზა</div></div></div>`, { border: p.color });
-const diceChart = () => {
-  const bars = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12].map((n, i) => {
-    const pips = 6 - Math.abs(7 - n), x = 4 + i * 7.6, red = n === 7;
-    return `${Array.from({ length: pips }, (_, j) => `<circle cx="${x + 3}" cy="${20 - j * 3}" r="1.1" fill="${red || n === 6 || n === 8 ? C.wine : C.brown}" fill-opacity="${red ? 1 : n === 6 || n === 8 ? 0.85 : 0.7}"/>`).join('')}
-<text x="${x + 3}" y="26" font-size="3.4" font-weight="${red || n === 6 || n === 8 ? 800 : 400}" fill="${red ? C.wine : C.brown}" text-anchor="middle">${n}</text>`;
-  }).join('');
-  return `<svg width="88mm" height="27mm" viewBox="0 0 88 27" font-family="SerifKa" style="display:block;margin:0 auto">${bars}</svg>`;
-};
-const turnCard = p => a6(`${band('შენი სვლა', p.color, 'სამი ნაბიჯი')}<div class="a6body steps">
-<div class="st"><span class="n" style="background:${p.color}">1</span><div><b>კამათელი.</b> აგორე ორი კამათელი. ამოსული რიცხვის მხარეები მოსავალს აძლევს — სოფელს 1 ბარათს, ქალაქს 2-ს.</div></div>
-<div class="st seven"><span class="n" style="background:${C.wine}">7</span><div><b>7-იანი:</b> მოსავალი არავის. ვისაც 8 ან მეტი მოსავლის ბარათი აქვს, ნახევარს აგდებს. შენ მოთარეშე გადაიყვანე და მეზობელს 1 ბარათი წაართვი.</div></div>
-<div class="st"><span class="n" style="background:${p.color}">2</span><div><b>ვაჭრობა.</b> მოთამაშეებთან — როგორც შეთანხმდებით. ბანკთან 4 ერთნაირი → 1; შენს კარიბჭესთან 3:1 ან 2:1.</div></div>
-<div class="st"><span class="n" style="background:${p.color}">3</span><div><b>მშენებლობა.</b> ააშენე და იყიდე, რაც გეყოფა — ფასები მეორე მხარესაა.</div></div>
-<div class="devNote">განვითარების ბარათი: სვლაში ერთი, ნებისმიერ დროს — ოღონდ არა ამ სვლაში ნაყიდი.</div>
-<div class="chartT">36 გაგორებიდან რამდენჯერ ამოდის ყოველი რიცხვი</div>${diceChart()}<div class="chartC">6 და 8 ყველაზე ხშირია · 7 — მოთარეშის რიცხვია</div></div>`, { border: p.color });
+const aidFront = i => a6(`${band('შენი სვლა', HOUSES[i].color, `${HOUSES[i].name} სახლი`)}<div class="a6body steps">
+<div class="st"><span class="n" style="background:${HOUSES[i].color}">1</span><div><b>იარე</b> — 0, 1 ან ${RIDE} ნაბიჯი. ნაბიჯი მეზობელ კუთხეშია — საზღვარზე ${FOOT_MARK} ნიშანია. დარჩენაც შეიძლება.</div></div>
+<div class="st"><span class="n" style="background:${HOUSES[i].color}">2</span><div><b>აიღე</b> ამ კუთხის ნივთი: <b>${BASE}</b>, შენი მამულით <b>+1</b>, მეფესთან <b>+1</b>. თბილისის ბაზარზე — ნებისმიერი ${BASE}. ხელში ${HAND_MAX}-მდე ეტევა.</div></div>
+<div class="st"><span class="n" style="background:${HOUSES[i].color}">3</span><div><b>ერთი საქმე</b> — ან არაფერი:</div></div>
+<div class="deed"><div class="dh">${icon('house', { size: 4.6, color: C.wine, width: 2 })}<b>მამული</b><span class="cost">${chips(costList(ESTATE_COST), 5.6)}</span><span class="pt">+${ESTATE_PTS}</span></div><p>კუთხეში ${PLACES} ადგილია, თითო სახლს — ერთი. თბილისში არა. სულ ${ESTATES} გაქვს.</p></div>
+<div class="deed"><div class="dh">${icon('castle', { size: 4.6, color: C.wine, width: 2 })}<b>მეფის საქმე</b><span class="pt">+1 / ნივთი</span></div><p>აქაურ ღია საქმეს მიეცი მისთვის საჭირო ნივთები. მეფის კუთხეში +2 ნივთზე. ბოლო ყუთი = ბარათი და ბონუსი.</p></div>
+<div class="deed"><div class="dh">${icon('utensils', { size: 4.6, color: C.wine, width: 2 })}<b>სუფრა</b><span class="cost">${chips(costList(FEAST_COST), 5.6)}</span><span class="pt">+${FEAST_PTS}</span></div><p>მხოლოდ შენს მამულში. მეფესთან +${FEAST_PTS + KING_FEAST}. ვინც ამ კუთხეშია, სტუმარია: +${GUEST_PTS}.</p></div>
+</div>`, { border: HOUSES[i].color, cls: 'aid' });
+const aidBack = i => a6(`${band('ქულები და დასასრული', HOUSES[i].color, `${HOUSES[i].name} სახლი`)}<div class="a6body pts">
+<table class="t"><tr><td>მამული</td><td><b>${ESTATE_PTS}</b></td></tr>
+<tr><td>ნივთი მეფის საქმეს</td><td><b>1</b> · მეფესთან <b>2</b></td></tr>
+<tr><td>საქმე დაასრულე</td><td>ბარათის ბონუსი <b>+2…+4</b></td></tr>
+<tr><td>სუფრა</td><td><b>${FEAST_PTS}</b> · მეფესთან <b>${FEAST_PTS + KING_FEAST}</b></td></tr>
+<tr><td>სტუმარი სხვის სუფრაზე</td><td><b>${GUEST_PTS}</b></td></tr></table>
+<div class="yrs"><b>წლები:</b> ${YEARS.map(([n, y]) => `${n} სახლი — <b>${y}</b>`).join(' · ')}</div>
+<p><b>დასასრული:</b> ბოლო წლის ბოლო სვლის მერე, ან როცა მეფის ყველა საქმე დასრულდება.</p>
+<p><b>იგებს</b> მეტი ქულა; ტოლობისას — მეტი დასრულებული საქმე, მერე — მეტი მამული.</p>
+<p class="mini">მეფე ყოველ წელს სხვა კუთხეშია: იქ <b>+1</b> ნივთი, საქმე და სუფრა მეტად ფასობს.</p>
+</div>`, { border: HOUSES[i].color, cls: 'aid' });
 
-// the two big 2-point cards, framed with a carpet's border
-const carpet = (w, h, { bg = C.wine, fg = C.gold, field = C.paper, id }) => {
-  const tw = w / Math.round(w / 8), th = h / Math.round(h / 8);
-  return `<svg width="${w}mm" height="${h}mm" viewBox="0 0 ${w} ${h}" style="position:absolute;left:0;top:0;display:block">
-<defs><pattern id="${id}" patternUnits="userSpaceOnUse" width="${tw}" height="${th}"><rect width="${tw}" height="${th}" fill="${bg}"/><path d="M${tw / 2} .7L${tw - 0.7} ${th / 2}L${tw / 2} ${th - 0.7}L.7 ${th / 2}Z" fill="none" stroke="${fg}" stroke-width=".55"/><path d="M${tw / 2} ${th / 2 - 1.5}L${tw / 2 + 1.5} ${th / 2}L${tw / 2} ${th / 2 + 1.5}L${tw / 2 - 1.5} ${th / 2}Z" fill="${fg}"/></pattern></defs>
-<rect width="${w}" height="${h}" fill="url(#${id})"/>${field ? `<rect x="${tw}" y="${th}" width="${w - 2 * tw}" height="${h - 2 * th}" fill="${field}" stroke="${fg}" stroke-width=".6"/><rect x="${tw - 1.3}" y="${th - 1.3}" width="${w - 2 * tw + 2.6}" height="${h - 2 * th + 2.6}" fill="none" stroke="${fg}" stroke-width=".3"/>` : ''}</svg>`;
-};
-const IW = A6W - 10 - 1.6, IH = A6H - 10 - 1.6; // inside an A6 card's border
-const SPECIAL = [
-  { key: 'road', name: 'აბრეშუმის გზა', rule: 'ვინც პირველი ააშენებს 5 ან მეტ გადაბმულ გზას, ეს ბარათი მისია. ვინც უფრო გრძელს ააშენებს, წაართმევს; თანაბარზე ბარათი პატრონთან რჩება.', cap: 'გზა, რომელიც მეზობლებს აკავშირებს',
-    art: `<path d="M6 52C20 44 18 30 34 30S50 44 64 34S74 12 86 10" fill="none" stroke="#b39a73" stroke-width="7" stroke-linecap="round"/><path d="M6 52C20 44 18 30 34 30S50 44 64 34S74 12 86 10" fill="none" stroke="#f6ecd6" stroke-width=".7" stroke-dasharray="2.4 2"/>
-${[[6, 52], [34, 30], [64, 34], [86, 10]].map(([x, y]) => `<circle cx="${x}" cy="${y}" r="3.3" fill="${C.wine}" stroke="#f6ecd6" stroke-width=".7"/>`).join('')}
-${icIn('warehouse', { x: 39, y: 6, size: 15, color: C.brown, width: 1.4 })}${icIn('sailboat', { x: 4, y: 20, size: 15, color: SEA, width: 1.5 })}${icIn('mountain-snow', { x: 66, y: 38, size: 16, color: '#53647b', width: 1.4 })}` },
-  { key: 'army', name: 'დიდი ლაშქარი', rule: 'ვინც პირველი გახსნის 3 მეციხოვნეს, ეს ბარათი მისია. ვინც მეტს გახსნის, წაართმევს; თანაბარზე ბარათი პატრონთან რჩება.', cap: 'ქვეყნის დაცვა და არა თავდასხმა · დიდგორი, 1121',
-    art: `${[[18, 8, -12], [74, 8, 12]].map(([x, y, a]) => `<g transform="rotate(${a} ${x} ${y + 24})"><line x1="${x}" y1="${y}" x2="${x}" y2="${y + 48}" stroke="${C.brown}" stroke-width="1.1"/><path d="M${x} ${y + 1}h13l-3 5 3 5h-13z" fill="${C.wine}"/>${sunMark(x + 5.6, y + 6, 0.32, C.gold)}</g>`).join('')}
-<path d="M46 6L64 12.5V29C64 41 56 49 46 53C36 49 28 41 28 29V12.5Z" fill="${C.wine}" stroke="${C.gold}" stroke-width="1"/><path d="M46 10L60.4 15.2V29C60.4 38.6 54 45.4 46 48.8C38 45.4 31.6 38.6 31.6 29V15.2Z" fill="none" stroke="${C.gold}" stroke-width=".4"/>${sunMark(46, 29, 1.45, C.gold)}` },
-];
-const specialCard = s => a6(`${carpet(IW, IH, { id: `cp${s.key}` })}<div class="spc"><div class="aso sk">${aso('ოქროს ხანა')}</div><div class="sn">${esc(s.name)}</div>
-<svg width="70mm" height="44.1mm" viewBox="0 0 92 58" style="display:block;margin:2mm auto 0;overflow:visible">${s.art}</svg>
-<div class="medal"><b>2</b><span>ქულა</span></div><div class="sr">${esc(s.rule)}</div><div class="sc">${esc(s.cap)}</div></div>`, { border: C.gold, cls: 'special' });
-const specialBack = s => a6(`${carpet(IW, IH, { id: `cb${s.key}`, field: null })}<div class="sback"><svg width="60mm" height="60mm" viewBox="-30 -30 60 60" font-family="SansKa">${leafRing(26, C.gold, 16)}<circle r="21" fill="${C.wine}"/>
-<text y="5" font-size="14" font-weight="900" fill="${C.gold}" text-anchor="middle">${MONO}</text></svg><div class="sbn">${esc(s.name)} · 2 ქულა</div></div>`, { border: C.gold, cls: 'special' });
+// ---------- the small cards (63×88): 12 chronicle cards, the four houses, the first house, the market ----------
+const chronFront = r => `<div class="card chron"><div class="frame" style="border-color:${GOLD}"></div><div class="frame2"></div><div class="body">
+<div class="ck aso">${aso('მეფის მატიანე')}</div>
+<div class="crown">${icon('crown', { size: 8.4, color: '#3a2415', width: 2 })}</div>
+<div class="cl">ამ წელს მეფე</div>
+<div class="cn fit"><span>${esc(REGION_IN[r])}ა</span></div>
+<div class="cmap">${mini(r, GOLD, { mark: 'crown', markColor: DEEP })}</div>
+<div class="cgive">${chip(goodOf(r), 5.2)}<span>აქ <b>+1 ${esc(GL[goodOf(r)].name)}</b></span></div>
+<div class="crule">საქმეს — <b>2</b> ქულა ნივთზე<br>სუფრა — <b>${FEAST_PTS + KING_FEAST}</b> ქულა</div>
+</div></div>`;
+const cardBack = (bg, ring, iconName, word, sub = '') => `<div class="card dark cb" style="background:${bg}"><div class="frame" style="border-color:${ring}"></div>${corners(ring, 8, 4.4)}
+<div class="cbIn">${ringEmblem(iconName, 30, { bg, ring, ink: ring })}<div class="cbw" style="color:${ring}">${esc(word)}</div>${sub ? `<div class="cbs2">${esc(sub)}</div>` : ''}</div></div>`;
+const chronBack = cardBack(C.wine, '#f0d9a0', 'crown', 'მატიანე', 'ყოველ წელს — ერთი');
+const riderSvg = (color, size) => `<svg width="${size}mm" height="${size}mm" viewBox="0 0 24 24" style="display:block"><path d="${RIDER_D}" fill="${color}" stroke="#fffaf0" stroke-width="1.2" stroke-linejoin="round"/></svg>`;
+const houseSvg = (color, size) => `<svg width="${size}mm" height="${size}mm" viewBox="0 0 15 15" style="display:block">${houseIn(0, 0, 15, color)}</svg>`;
+const houseFront = i => `<div class="card hcard"><div class="frame" style="border-color:${HOUSES[i].color}"></div><div class="frame2"></div>
+<div class="hband" style="background:${HOUSES[i].color}"><span class="aso">${aso('სახლი')}</span><b>${esc(HOUSES[i].name)}</b></div>
+<div class="body hb">
+<div class="hfig">${riderSvg(HOUSES[i].color, 17)}${houseSvg(HOUSES[i].color, 13)}</div>
+<div class="hlist"><p><b>1</b> მხედარი</p><p><b>${ESTATES}</b> მამული</p><p><b>1</b> ქულის ნიშანი</p></div>
+<div class="hstart">დასაწყისში:<br>${chips(costList(ESTATE_COST), 5.4)}</div>
+</div></div>`;
+const houseBack = i => cardBack(HOUSES[i].color, '#fffaf0', 'user', `${HOUSES[i].name} სახლი`);
+const firstFront = `<div class="card first"><div class="frame" style="border-color:${GOLD}"></div><div class="frame2"></div><div class="body">
+<div class="ck aso">${aso('პირველი სახლი')}</div>
+<div class="crown">${icon('hourglass', { size: 8, color: '#3a2415', width: 2 })}</div>
+<div class="fn">წელი შენით იწყება</div>
+<p>ეს ბარათი პირველ სახლთან დევს მთელი თამაში.</p>
+<p>როცა რიგი ისევ მას მოუწევს, <b>წელი დასრულდა</b>: წლის ნიშანი ერთით წინ, მატიანის ახალი ბარათი — მეფე სხვა კუთხეშია.</p>
+<p class="f2">ბოლო წლის მერე თამაში მთავრდება.</p>
+</div></div>`;
+const firstBack = cardBack('#c9a227', '#3a2415', 'hourglass', 'პირველი სახლი');
+const marketFront = `<div class="card first"><div class="frame" style="border-color:${MARKET.color}"></div><div class="frame2"></div><div class="body">
+<div class="ck aso" style="color:${MARKET.color}">${aso('თბილისის ბაზარი')}</div>
+<div class="crown" style="background:${MARKET.tint};border-color:${MARKET.color}">${icon('store', { size: 8, color: MARKET.color, width: 2 })}</div>
+<div class="fn">ნებისმიერი ${BASE} ნივთი</div>
+<p>ვინც თბილისში დაასრულებს სვლას, რომელ ${BASE} ნივთსაც უნდა, იმას იღებს — ერთნაირს ან სხვადასხვას.</p>
+<p>თბილისში მამული არ შენდება, სუფრა არ იშლება, მეფე არ ჩამოდის.</p>
+<p class="f2">ერთ ნაბიჯზე: მთიანეთი, ქვემო ქართლი, კახეთი.</p>
+</div></div>`;
+const marketBack = cardBack(MARKET.color, '#f0d9a0', 'store', 'ბაზარი');
 
-// the setup card: steps on the front, the token spiral of the learning layout on the back
-const spiralSvg = () => {
-  const s = 0.17, order = spiralOrder(LEARN.start), desert = LANDS.find(l => !l.res).at, pts = order.map(hexC);
-  const hexes = ISLAND.map(h => { const [x, y] = hexC(h), d = h.join() === desert.join(); return `<polygon points="${ptsAttr(hexPts(x, y, HR - 1.5))}" fill="${d ? DESERT.color : '#f6ecd6'}" stroke="${C.gold}" stroke-width="2.2"/>`; }).join('');
-  const marks = order.map(h => { const [x, y] = hexC(h), v = LEARN.nums.get(h.join()); return v ? `<circle cx="${x}" cy="${y}" r="15" fill="${C.wine}"/><text x="${x}" y="${y + 6.6}" font-size="19" font-weight="800" fill="#f0d9a0" text-anchor="middle">${v.letter}</text>` : `<text x="${x}" y="${y + 4}" font-size="11.5" fill="${C.brown}" text-anchor="middle">უდაბნო</text><text x="${x}" y="${y + 17}" font-size="9.5" fill="${C.brown}" text-anchor="middle">გამოტოვე</text>`; }).join('');
-  const path = `<polyline points="${ptsAttr(pts)}" fill="none" stroke="${C.goldDark}" stroke-width="3.2" stroke-dasharray="8 5" marker-mid="url(#arw)"/>`;
-  const [sx, sy] = pts[0];
-  return `<svg width="${430 * s}mm" height="${410 * s}mm" viewBox="-215 -205 430 410" font-family="SerifKa" style="display:block;margin:0 auto">
-<defs><marker id="arw" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="5" markerHeight="5" orient="auto"><path d="M1 1L9 5L1 9Z" fill="${C.goldDark}"/></marker></defs>
-${hexes}${path}${marks}<text x="${sx - 26}" y="${sy - 34}" font-size="16" font-weight="800" fill="${C.wine}" text-anchor="middle">დაწყება ▸</text></svg>`;
+// ---------- the pieces: goods' chits (16 mm), estates, markers, five folded figures ----------
+const CHIT = 16, PER_GOOD = 22, CHIT_COLS = 11;
+const chitSvg = k => `<svg width="${CHIT}mm" height="${CHIT}mm" viewBox="0 0 16 16" style="display:block"><rect width="16" height="16" fill="${GL[k].color}"/>
+<rect x="1.4" y="1.4" width="13.2" height="13.2" rx="2" fill="none" stroke="#fff" stroke-opacity=".5" stroke-width=".35"/>${iconIn(GL[k].icon, { x: 3.1, y: 3.1, size: 9.8, color: '#fff', width: 2 })}</svg>`;
+const spareChit = `<svg width="${CHIT}mm" height="${CHIT}mm" viewBox="0 0 16 16" style="display:block"><rect x=".4" y=".4" width="15.2" height="15.2" rx="2" fill="#fff" stroke="${C.gold}" stroke-width=".35" stroke-dasharray="1 .9"/><text x="8" y="8.4" font-size="2.2" fill="${C.muted}" text-anchor="middle" font-family="SerifKa">სათადა-</text><text x="8" y="11" font-size="2.2" fill="${C.muted}" text-anchor="middle" font-family="SerifKa">რიგო</text></svg>`;
+const CHITS_X = (210 - CHIT_COLS * CHIT) / 2, CHITS_Y = 14;
+const chitItems = () => {
+  const list = GL.flatMap((_, k) => Array(PER_GOOD).fill(k));
+  return list.map((k, i) => ({ x: CHITS_X + (i % CHIT_COLS) * CHIT, y: CHITS_Y + Math.floor(i / CHIT_COLS) * CHIT, w: CHIT, h: CHIT, html: chitSvg(k) }));
 };
-const LETTER_TABLE = LETTERS.map((l, i) => `<span><b>${l}</b>${SPIRAL_NUMS[i]}</span>`).join('');
-const setupCard = a6(`${band('მომზადება', C.wine, 'წესი 1–4 · მოკლედ')}<div class="a6body list"><ol>
-<li><b>ჩარჩო:</b> 6 ნაწილი ასოებით შეაერთე (ა-ს ა…), 1 — ჩრდილოეთი — ზემოთ.</li>
-<li><b>მხარეები:</b> 19 ამოფარებით აურიე, ჩაალაგე 3-4-5-4-3 — ან სასწავლო განლაგება (წესები, გვ. 3).</li>
-<li><b>კარიბჭეები:</b> 9 ჟეტონი ამოფარებით, თითო მრგვალ ადგილზე.</li>
-<li><b>რიცხვები:</b> ასოებით ზემოთ, ა → ს სპირალით (ზურგზე), მერე გადააბრუნე.</li>
-<li><b>მოთარეშე</b> — უდაბნოზე.</li>
-<li><b>ბანკი:</b> მოსავალი 5 დასტად; განვითარება არეული, პირქვე.</li>
-<li><b>ყველას:</b> 5 სოფელი, 4 ქალაქი, 15 გზა და ფასების ბარათი.</li>
-<li><b>პირველი სოფლები:</b> ორ წრედ — საათის ისრით, მერე უკან; მეორე სოფელი პირველ მოსავალს იძლევა.</li></ol></div>`);
-const spiralCard = a6(`${band('რიცხვების სპირალი', C.wine, 'სასწავლო განლაგება')}<div class="a6body spiral">${spiralSvg()}
-<p>დაიწყე კუთხიდან და იარე <b>საათის ისრის საწინააღმდეგოდ</b>: ჯერ გარე წრე, მერე შიდა, ბოლოს შუა. ყოველ შემთხვევით დაფაზეც ასე.</p>
-<div class="lt">${LETTER_TABLE}</div><p class="small">ასო → რიცხვი: დაკარგულ ჟეტონს ასე აღადგენ.</p></div>`);
-const teacherCard = a6(`${band('მასწავლებლისთვის', C.brown, 'ბანკი · 7-იანი · მოთარეშე')}<div class="a6body list"><ul>
-<li><b>ბანკი შენ ხარ:</b> არიგებ მოსავალს და ამოწმებ ფასებს — ბავშვები ითვლიან, შენ ადასტურებ.</li>
-<li><b>7-იანი:</b> „ვის აქვს 8 ან მეტი მოსავალი?“ — ყველა ხმამაღლა ითვლის, ნახევარი (დაბლა დამრგვალებით) ბანკში.</li>
-<li><b>მოთარეშე:</b> ჯერ გადაიყვანე, მერე იქ მდგომთაგან ერთს ამოფარებით 1 ბარათი.</li>
-<li><b>ვაჭრობა:</b> მხოლოდ მოსიარულეს; ხმაურში — „ვაჭრობის ერთი წუთი“.</li>
-<li><b>დავა:</b> ჯერ წესს ვკითხულობთ (წესები, 13 პუნქტი), მერე ვწყვეტთ.</li>
-<li><b>ქება:</b> ყოველ სვლაზე ერთი კარგი სიტყვა — ვინ კარგად ივაჭრა, ვინ სიტყვა შეასრულა.</li></ul></div>`, { border: C.brown });
-const variantCard = a6(`${band('სასკოლო ვარიანტი', C.brown, '45–60 წუთი · ერთი გაკვეთილი')}<div class="a6body list"><ul>
-<li><b>8 ქულამდე</b> ითამაშეთ, არა 10-მდე.</li>
-<li><b>სასწავლო განლაგება</b> — წესების მე-3 გვერდიდან; შემთხვევითი დაფა — როცა უკვე იციან.</li>
-<li><b>ოთხ ჯგუფად:</b> დიდ კლასში თითო ფერს 2–3 ბავშვი თამაშობს და ერთად წყვეტს.</li>
-<li><b>სვლის საათი:</b> 90 წამი — ქვიშის საათით ან ტელეფონით.</li>
-<li><b>ბოლოს ყველამ თქვას:</b> რომელ მხარეებზე იდგა მისი სოფლები და რა ძეგლია იქ?</li></ul>
-<div class="hint">„ვაჭრობა ნათქვამი სიტყვის შესრულებაა“ — შეთანხმება ბოლომდე სრულდება.</div></div>`, { border: C.brown });
+const chitRows = Math.ceil((GL.length * PER_GOOD) / CHIT_COLS);
+const chitGrid = () => {
+  const x0 = CHITS_X, y0 = CHITS_Y, x1 = x0 + CHIT_COLS * CHIT, y1 = y0 + chitRows * CHIT;
+  const v = Array.from({ length: CHIT_COLS + 1 }, (_, i) => `M${x0 + i * CHIT} ${y0 - 4}V${y0 - 1}M${x0 + i * CHIT} ${y1 + 1}V${y1 + 4}`).join('');
+  const h = Array.from({ length: chitRows + 1 }, (_, i) => `M${x0 - 4} ${y0 + i * CHIT}H${x0 - 1}M${x1 + 1} ${y0 + i * CHIT}H${x1 + 4}`).join('');
+  return { x: 0, y: 0, w: 210, h: 297, html: `<svg viewBox="0 0 210 297" width="210mm" height="297mm" style="display:block" stroke="#777" stroke-width=".2"><path d="${v}${h}"/></svg>` };
+};
+const SPARE_Y = CHITS_Y + chitRows * CHIT + 7;
+const spareItems = () => Array.from({ length: 6 }, (_, i) => ({ x: CHITS_X + i * (CHIT + 2), y: SPARE_Y, w: CHIT, h: CHIT, html: spareChit }));
+const chitInfo = { x: CHITS_X, y: SPARE_Y + CHIT + 6, w: CHIT_COLS * CHIT, h: 40, html: `<div class="tokInfo"><b>ნივთები</b> — ${PER_GOOD}-${PER_GOOD}: ${GL.map(g => g.name).join(', ')}. ორივე მხარე ერთნაირია: ჭერი ზოლებზე, ქაღალდის საჭრელით ან მაკრატლით.<br><b>თუ რომელიმე შემოგელიათ</b>, მის ნაცვლად ნებისმიერი ნიშანი გამოდგება (ღილი, კენჭი) — ან სათადარიგო კვადრატი, ფერით შეღებილი.<br><b>„ბანკი“</b> — ხუთი გროვა მაგიდაზე: აქედან იღებენ და აქ აბრუნებენ.</div>` };
 
-// ---------- the paper pieces (one sheet, four colours, coloured on both sides) ----------
-const figuresSheet = (back) => {
+const disc = (d, fill, inner, { ring = '#fffaf0', stroke = null } = {}) => `<svg width="${d}mm" height="${d}mm" viewBox="0 0 ${d} ${d}" style="display:block;overflow:visible"><circle cx="${d / 2}" cy="${d / 2}" r="${d / 2 + 0.6}" fill="${fill}"${stroke ? ` stroke="${stroke}" stroke-width=".25"` : ''}/><circle cx="${d / 2}" cy="${d / 2}" r="${d / 2 - 1.1}" fill="none" stroke="${ring}" stroke-opacity=".6" stroke-width=".3"/>${inner}</svg>`;
+const castleToken = disc(16, DEEP, iconIn('castle', { x: 3.2, y: 3, size: 9.6, color: GOLD, width: 1.8 }) + `<text x="8" y="14.3" font-size="1.9" fill="${GOLD}" text-anchor="middle" font-family="SerifKa">ღია საქმე</text>`, { ring: GOLD });
+const scoreToken = (i, back) => disc(11, HOUSES[i].color, back
+  ? `<text x="5.5" y="7.1" font-size="4.6" font-weight="800" fill="#fffaf0" text-anchor="middle" font-family="SerifKa">+50</text>`
+  : `<g transform="translate(1.9 1.6) scale(.3)"><path d="${RIDER_D}" fill="#fffaf0"/></g>`);
+const yearToken = back => disc(15, GOLD, back
+  ? `<text x="7.5" y="9.2" font-size="5" font-weight="800" fill="#3a2415" text-anchor="middle" font-family="SerifKa">წელი</text>`
+  : iconIn('hourglass', { x: 3.7, y: 2.4, size: 7.6, color: '#3a2415', width: 2 }) + `<text x="7.5" y="13" font-size="2.4" fill="#3a2415" text-anchor="middle" font-family="SerifKa">წელი</text>`, { ring: '#3a2415' });
+const estateToken = i => `<svg width="15mm" height="15mm" viewBox="-.6 -.6 16.2 16.2" style="display:block;overflow:visible"><path d="${HOUSE_D}" fill="${HOUSES[i].color}" stroke="${HOUSES[i].color}" stroke-width="1.4" stroke-linejoin="miter"/><rect x="6.1" y="9.4" width="2.8" height="5" fill="#fffaf0"/><rect x="3" y="7.4" width="2" height="2" fill="#fffaf0" opacity=".8"/><rect x="10" y="7.4" width="2" height="2" fill="#fffaf0" opacity=".8"/><path d="${HOUSE_D}" fill="none" stroke="#3a3027" stroke-width=".18"/></svg>`;
+
+// a figure folded from one strip: foot · face · face upside down · foot (the two faces glued back to back)
+const STRIP = { w: 22, foot: 9, face: 28 };
+const stripSvg = (bg, ink, face, word) => {
+  const { w, foot: ft, face: fc } = STRIP, H = 2 * ft + 2 * fc;
+  const side = (y, flip) => `<g transform="translate(0 ${y})${flip ? ` rotate(180 ${w / 2} ${fc / 2})` : ''}"><rect width="${w}" height="${fc}" fill="${bg}"/>${face}<text x="${w / 2}" y="${fc - 2.6}" font-size="${f(Math.min(2.9, (w - 2.6) / (word.length * 0.7)))}" font-weight="800" fill="${ink}" text-anchor="middle" font-family="SerifKa">${esc(word)}</text></g>`;
+  return `<svg width="${w}mm" height="${H}mm" viewBox="0 0 ${w} ${H}" style="display:block"><rect width="${w}" height="${ft}" fill="#d9ccb0"/>${side(ft, false)}${side(ft + fc, true)}<rect y="${H - ft}" width="${w}" height="${ft}" fill="#d9ccb0"/>
+<rect width="${w}" height="${H}" fill="none" stroke="#555" stroke-width=".25"/><g stroke="#777" stroke-width=".25" stroke-dasharray="1.6 1.2"><line x1="0" x2="${w}" y1="${ft}" y2="${ft}"/><line x1="0" x2="${w}" y1="${ft + fc}" y2="${ft + fc}"/><line x1="0" x2="${w}" y1="${H - ft}" y2="${H - ft}"/></g></svg>`;
+};
+const riderStrip = i => stripSvg(HOUSES[i].color, '#fffaf0', `<g transform="translate(3.6 2.2) scale(.62)"><path d="${RIDER_D}" fill="#fffaf0"/></g>`, HOUSES[i].name);
+const kingStrip = stripSvg(GOLD, '#3a2415', iconIn('crown', { x: 3.4, y: 3, size: 15.2, color: '#3a2415', width: 1.8 }), 'მეფე');
+const STRIP_H = 2 * STRIP.foot + 2 * STRIP.face;
+const figureItems = back => {
   const items = [];
-  PLAYERS.forEach((p, i) => {
-    const bx = 12 + (i % 2) * 96, by = 16 + Math.floor(i / 2) * 136;
-    items.push({ x: bx, y: by, w: 90, h: 7, html: `<div class="fhead" style="color:${p.color}">${back ? '' : `${esc(p.name)} · 5 სოფელი · 4 ციხე-ქალაქი · 15 გზა`}</div>` });
-    for (let v = 0; v < 5; v++) items.push({ x: bx + v * 18.4 - 1.5, y: by + 9 - 1.5, w: 19, h: 19, html: figSvg('village', p.color, { bleed: 0.7, cut: true }) });
-    for (let c = 0; c < 4; c++) items.push({ x: bx + c * 23 - 1.5, y: by + 30 - 1.5, w: 23, h: 28, html: figSvg('city', p.color, { bleed: 0.7, cut: true }) });
-    for (let r = 0; r < 15; r++) items.push({ x: bx + (r % 2) * 46 - 1.5, y: by + 60 + Math.floor(r / 2) * 8.6 - 1.5, w: 41, h: 9, html: figSvg('road', p.color, { bleed: 0.7, cut: true }) });
+  // estates: a row a house, five and one spare
+  HOUSES.forEach((_, i) => {
+    for (let k = 0; k <= ESTATES; k++) items.push({ x: 16 + k * 18, y: 20 + i * 19, w: 15, h: 15, html: estateToken(i) });
   });
+  // the markers beside them
+  const mx = 132;
+  HOUSES.forEach((_, i) => items.push({ x: mx + (i % 2) * 15, y: 20 + Math.floor(i / 2) * 15, w: 11, h: 11, html: scoreToken(i, back) }));
+  items.push({ x: mx + 33, y: 20, w: 15, h: 15, html: yearToken(back) });
+  for (let k = 0; k < 4; k++) items.push({ x: mx + (k % 2) * 21, y: 54 + Math.floor(k / 2) * 20, w: 16, h: 16, html: castleToken });
+  // the five figures (one-sided: their backs stay white)
+  if (!back) {
+    [...HOUSES.map((_, i) => riderStrip(i)), kingStrip].forEach((html, k) => items.push({ x: 20 + k * 36, y: 118, w: STRIP.w, h: STRIP_H, html }));
+    items.push({ x: 16, y: 118 + STRIP_H + 8, w: 178, h: 46, html: `<div class="tokInfo"><b>მამულები</b> (თითო ფერში ${ESTATES} + 1 სათადარიგო) და <b>ნიშნები</b> ორივე მხარეს ფერადია — ჭერი კონტურზე. <b>ქულის ნიშანი</b>: ზურგზე „+50“ — ორმოცდაცხრამეტის მერე გადააბრუნე და ქულების გზა თავიდან დაიწყე. <b>ღია საქმის ნიშანი</b> (3 + 1) რუკაზე, ღია საქმის ციხის ადგილზე დევს.<br><b>მხედრები და მეფე</b>: ზოლი წყვეტილ ხაზებზე მოკეცე — ორი ნახატი ზურგით ერთმანეთს მიაწებე, ფეხები გვერდებზე გაშალე. ზოლების ზურგი თეთრია.</div>` });
+  }
   return items;
 };
 
-// ---------- the whole board, small: the learning layout for the rules, the assembly drawing for the cover ----------
-const boardSvg = (mode, width) => {
-  const [padX, padTop, padBot] = mode === 'learn' ? [40, 40, 40] : [30, 58, 30];
-  const vb = [-R_OUT - padX, -A_OUT - padTop, 2 * (R_OUT + padX), 2 * A_OUT + padTop + padBot];
-  const frame = PIECES.map(P => `<polygon points="${ptsAttr(piecePoly(P.k))}" fill="${LOOKS[P.look].base}" stroke="#fbf6ec" stroke-width="2.4"/>`).join('');
-  let inner = '';
-  if (mode === 'assembly') {
-    inner += ISLAND.map(h => `<polygon points="${ptsAttr(hexPts(...hexC(h), HR))}" fill="#efe4cc" stroke="#fbf6ec" stroke-width="2.4"/>`).join('');
-    inner += PIECES.map(P => { const [x, y] = dirOf(60 * P.k + 30).map(v => v * 200); return `<text x="${x}" y="${y + 15}" font-size="42" font-weight="800" fill="#fbf6ec" text-anchor="middle" stroke="#000" stroke-opacity=".35" stroke-width="2" paint-order="stroke">${userNo(P.k)}</text>`; }).join('');
-    inner += [0, 1, 2, 3, 4, 5].map(j => { const [x, y] = dirOf(60 * j).map(v => v * (R_OUT + 2)); return `<circle cx="${x}" cy="${y}" r="17" fill="#f6ecd6" stroke="${C.gold}" stroke-width="2"/><text x="${x}" y="${y + 7.5}" font-size="22" font-weight="800" fill="${C.wine}" text-anchor="middle">${jointOfRay(j)}</text>`; }).join('');
-    inner += `<text x="0" y="${-A_OUT - 26}" font-size="26" font-weight="700" fill="${C.wine}" text-anchor="middle">▲ ჩრდილოეთი</text>`;
-  } else {
-    inner += GATE_POS.map(g => [g.a, g.b].map(p => `<line x1="${g.c[0]}" y1="${g.c[1]}" x2="${p[0]}" y2="${p[1]}" stroke="#f6ecd6" stroke-width="3" stroke-linecap="round"/>`).join('')).join('');
-    inner += LANDS.map(l => {
-      const [x, y] = hexC(l.at), look = LOOK(l.res), v = LEARN.nums.get(l.at.join()), red = v && (v.n === 6 || v.n === 8);
-      const words = l.name.split(' '), two = words.length > 1, w = two ? 46 : 60;
-      const name = two ? words.map((t, i) => `<text x="${x}" y="${y + 20.5 + i * 9.5}" font-size="9" font-weight="700" fill="${C.wine}" text-anchor="middle">${esc(t)}</text>`).join('')
-        : `<text x="${x}" y="${y + 23.2}" font-size="9" font-weight="700" fill="${C.wine}" text-anchor="middle">${esc(l.name)}</text>`;
-      return `<polygon points="${ptsAttr(hexPts(x, y, HR))}" fill="${look.color}" stroke="#fbf6ec" stroke-width="2.4"/>
-${l.res ? icIn(RES[l.res].icon, { x: x - 7, y: y - 38, size: 14, color: '#fbf6ec', width: 2 }) : icIn('robber', { x: x - 12, y: y - 20, size: 24, color: '#3b2b1f', opacity: 0.6 })}
-${v ? `<circle cx="${x}" cy="${y - 5}" r="13" fill="#f6ecd6" stroke="${C.gold}" stroke-width="1.2"/><text x="${x}" y="${y + 0.6}" font-size="16" font-weight="800" fill="${red ? C.wine : C.brown}" text-anchor="middle">${v.n}</text>` : ''}
-<rect x="${x - w / 2}" y="${y + 13}" width="${w}" height="${two ? 20 : 13.5}" rx="3" fill="#f6ecd6" fill-opacity=".94"/>${name}`;
-    }).join('');
-    inner += GATE_POS.map(g => {
-      const r = g.learn === '3' ? null : RES[g.learn], ang = angOf(...g.c), phi = (((ang % 60) + 60) % 60) - 30;
-      const d = A_OUT / Math.cos(phi * Math.PI / 180) + 9, [x, y] = dirOf(ang).map(v => v * d);
-      const anchor = Math.abs(x) < 70 ? 'middle' : x < 0 ? 'end' : 'start', y0 = y < -100 ? y - 15 : y > 100 ? y + 11 : y - 2;
-      return `<circle cx="${g.c[0]}" cy="${g.c[1]}" r="${SLOT_R}" fill="${r ? r.color : SEA}" stroke="#f6ecd6" stroke-width="2"/>
-<text x="${g.c[0]}" y="${g.c[1] + 3.6}" font-size="10.5" font-weight="800" fill="#fbf6ec" text-anchor="middle">${r ? '2:1' : '3:1'}</text>
-<text x="${x}" y="${y0}" font-size="11" font-weight="700" fill="${C.wine}" text-anchor="${anchor}">${esc(g.name)}</text>
-${r ? `<text x="${x}" y="${y0 + 11.5}" font-size="9.5" fill="${C.brown}" text-anchor="${anchor}">2:1 · ${esc(r.name)}</text>` : ''}`;
-    }).join('');
-  }
-  return `<svg width="${width}mm" height="${(width * vb[3] / vb[2]).toFixed(2)}mm" viewBox="${vb.join(' ')}" font-family="SerifKa" style="display:block;margin:0 auto">${frame}${inner}</svg>`;
-};
-
 // ---------- rules: four pages ----------
-const RULES = [
-  ['ჩარჩო და მხარეები', 'ჩარჩოს ექვსი ნაწილი წრედ შეაერთეთ — ბოლოებზე ასოები ერთმანეთს უნდა დაემთხვეს (ა-ს ა, ბ-ს ბ …); 1 — „ჩრდილოეთი“ — ზემოთ. 19 მხარე ზურგით ზემოთ აურიეთ, გადააბრუნეთ და ჩარჩოში ჩააწყვეთ 3-4-5-4-3 რიგებად. პირველ თამაშებში ჯობია სასწავლო განლაგება (გვ. 3). კარიბჭის 9 ჟეტონი ზურგით ზემოთ აურიეთ, ჩარჩოს 9 მრგვალ ადგილზე დაალაგეთ და გადააბრუნეთ. მოთარეშე უდაბნოზე დადგით.'],
-  ['რიცხვები და ბანკი', 'რიცხვის 18 ჟეტონი ასოებით ზემოთ დააწყვეთ, ა-დან ს-მდე: დაიწყეთ ნებისმიერი კუთხის მხარიდან და იარეთ საათის ისრის საწინააღმდეგოდ — ჯერ გარე წრე, მერე შიდა, ბოლოს შუა; უდაბნოს გამოტოვებთ. მერე ყველა ჟეტონი რიცხვით ზემოთ გადააბრუნეთ — ასე 6 და 8 ერთმანეთის გვერდით არასოდეს მოხვდება. მოსავლის ბარათები ხუთ დასტად დააწყვეთ — ეს „ბანკია“. განვითარების ბარათები აურიეთ და პირქვე დადეთ; „აბრეშუმის გზა“, „დიდი ლაშქარი“ და კამათელი — გვერდით.'],
-  ['მოთამაშეები', 'თითოეული იღებს ერთი ფერის ფიგურებს — 5 სოფელს, 4 ციხე-ქალაქს, 15 გზას — და ფასების ბარათს. სამნი თუ ხართ, ერთი ფერი არ თამაშობს. ვინც ორი კამათლით ყველაზე მეტს აგორებს, ის არის დამწყები.'],
-  ['პირველი სოფლები', 'პირველ წრეზე დამწყები, მერე დანარჩენები საათის ისრით, დგამს 1 სოფელს მხარეების რომელიმე კუთხეში და 1 გზას მის გვერდით, კიდეზე. მეორე წრეზე ბოლო მოთამაშე იწყებს და რიგი უკან ბრუნდება — დამწყები ბოლოს დგამს. მეორე სოფლის ყოველი მეზობელი მხარიდან თითო მოსავალს იღებ ბანკიდან. მერე თამაშს დამწყები იწყებს. <b>მანძილის წესი</b> ყოველთვის მოქმედებს: სოფელი ვერ დადგება იქ, სადაც მეზობელ კუთხეში, ერთი გზის მოშორებით, უკვე დგას სოფელი ან ქალაქი — საკუთარიც.'],
-  ['სვლა: კამათელი', 'სვლა სამი ნაბიჯია: კამათელი, ვაჭრობა, მშენებლობა. აგორე ორივე კამათელი. ყოველი მხარე, რომლის რიცხვიც ამოვიდა, მოსავალს აძლევს ყველას, ვისაც მის კუთხეში დგას სოფელი (1 ბარათი) ან ქალაქი (2 ბარათი) — შენც და სხვებსაც. მოთარეშიანი მხარე არაფერს იძლევა. თუ ბანკში რომელიმე მოსავალი ყველას არ ეყოფა, იმ მოსავალს არავინ იღებს (თუ მხოლოდ ერთ მოთამაშეს ეკუთვნის — ის იღებს, რაც დარჩა).'],
-  ['სვლა: ვაჭრობა', 'შენს სვლაზე შეგიძლია ივაჭრო სხვებთან — როგორც შეთანხმდებით; სხვები ერთმანეთში არ ვაჭრობენ. ერთნაირი ბარათების გაცვლა, საჩუქრად მიცემა და განვითარების ბარათით ვაჭრობა არ შეიძლება. ბანკთან: 4 ერთნაირი ბარათი — 1 ნებისმიერში. თუ შენი სოფელი ან ქალაქი კარიბჭის ორი ბოძიდან ერთ-ერთთან დგას, უკეთესი კურსი გაქვს: 3:1 კარიბჭესთან ნებისმიერ 3 ერთნაირს 1-ში ცვლი, 2:1 კარიბჭესთან — 2 იმ მოსავალს, რაც ჟეტონზე ხატია. რამდენი ბარათი გიჭირავს, ყველამ უნდა იცოდეს; რა გიჭირავს — არა.'],
-  ['სვლა: მშენებლობა', '<b>გზა</b> = ხე + ქვა: შენი გზის, სოფლის ან ქალაქის გვერდით; ერთ კიდეზე ერთი გზა; სხვისი სოფელი ან ქალაქი შენს გზას წყვეტს. <b>სოფელი</b> = ხე + ქვა + მატყლი + პური: შენი გზის ბოლოს, მანძილის წესით (1 ქულა). <b>ციხე-ქალაქი</b> = 3 მადანი + 2 პური: შენი სოფლის ადგილას — სოფელი მარაგში ბრუნდება (2 ქულა). <b>განვითარების ბარათი</b> = მადანი + მატყლი + პური: იღებ დასტის ზედას და არავის აჩვენებ. ააშენე, რამდენიც გინდა და გეყოფა — ოღონდ მარაგში დარჩენილი ფიგურებით.'],
-  ['7-იანი', 'ვინც 7-იანს აგორებს, იმ სვლაზე მოსავალს არავინ იღებს. ჯერ ყველა, ვისაც ხელში 8 ან მეტი მოსავლის ბარათი აქვს, ნახევარს ბანკში აბრუნებს — თვითონ ირჩევს რომელს (9-დან 4-ს, 11-დან 5-ს); განვითარების ბარათები არ ითვლება. მერე ამგორებელი მოთარეშეს სხვა მხარეზე (ან უდაბნოში) გადაიყვანს და იქ მდგომი სოფლის ან ქალაქის ერთ პატრონს ამოფარებით 1 მოსავლის ბარათს წაართმევს. სანამ მოთარეშე მხარეზე დგას, ის მოსავალს არ იძლევა.'],
-  ['განვითარების ბარათები', 'სვლაში მხოლოდ ერთს გახსნი, შენი სვლის ნებისმიერ დროს — კამათლამდეც; ამავე სვლაში ნაყიდს — არა. <b>მეციხოვნე</b>: მოთარეშე გადაიყვანე და 1 ბარათი წაართვი, როგორც 7-იანზე, ოღონდ ბარათების დაყრის გარეშე; გახსნილი მეციხოვნე შენ წინ რჩება. <b>ხიდის ოსტატი</b>: 2 გზა უფასოდ. <b>ბარაქა</b>: 2 ნებისმიერი მოსავალი ბანკიდან. <b>სამეფო ბაჟი</b>: ასახელებ ერთ მოსავალს და ყველა ასეთ ბარათს ყველა მოთამაშე შენ გაძლევს. <b>საგანძური</b>: 1 ქულა; ფარულად ინახავ და გამარჯვებისას ხსნი — ყიდვის სვლაშიც, თუ ის შენი მეათე ქულაა.'],
-  ['აბრეშუმის გზა', 'ვინც პირველი ააშენებს 5 ან მეტ ერთმანეთზე გადაბმულ გზას, ამ ბარათს იღებს (2 ქულა). განშტოებებიდან მხოლოდ ერთი, ყველაზე გრძელი ბილიკი ითვლება. ვინც უფრო გრძელს ააშენებს, ბარათს წაართმევს; თანაბარზე ბარათი პატრონთან რჩება. თუ სხვისმა სოფელმა გზა გაგიწყვიტა და ახლა უგრძესი არავის აქვს ან ორს თანაბრად აქვს, ბარათი გვერდზე იდება.'],
-  ['დიდი ლაშქარი', 'ვინც პირველი გახსნის 3 მეციხოვნეს, ამ ბარათს იღებს (2 ქულა). ვინც მეტს გახსნის, წაართმევს; თანაბარზე ბარათი პატრონთან რჩება.'],
-  ['დასასრული', 'სვლის ბოლოს კამათელი მარცხნივ მჯდომს გადაეცი. ვინც თავის სვლაზე 10 ქულას მოაგროვებს, იგებს — ოქროს ხანა დგება! ქულები: სოფელი 1, ციხე-ქალაქი 2, აბრეშუმის გზა 2, დიდი ლაშქარი 2, საგანძური 1. სხვის სვლაზე მოგროვებული 10 ქულა ჯერ არ ითვლება — შენს სვლას დაელოდე.'],
-  ['სასკოლო ვარიანტი', 'ერთ გაკვეთილზე ითამაშეთ 8 ქულამდე (≈45–60 წუთი), სასწავლო განლაგებით. 10–12 წლის ბავშვებთან ბანკი მასწავლებელია — ის არიგებს მოსავალს და ამოწმებს ფასებს. თამაშის ბოლოს ყველამ თქვას: რომელ მხარეებზე იდგა მისი სოფლები და რა ძეგლია იქ.'],
+const SETUP = [
+  ['რუკა', 'ოთხი ნაწილი შეაერთეთ: 1 და 2 ზემოთ, 3 და 4 ქვემოთ (კიდეებზე წერია, რომელი რომელს ებმის). ნივთები ხუთ გროვად დააწყვეთ — ეს „ბანკია“.'],
+  ['სახლები', `თითო მოთამაშე ერთ ფერს იღებს: სახლის ბარათს, მხედარს, ${ESTATES} მამულს, ქულის ნიშანს და სვლის ბარათს. მხედრები <b>თბილისში</b> დადეთ, ქულის ნიშნები — ქულების გზის <b>0</b>-ზე. ყველა იღებს 1 ხეს, 1 ქვას და 1 პურს.`],
+  ['მეფის საქმეები', `${WORKS.length} საქმის ბარათი აურიეთ და პირქვე დადეთ. ${OPEN_WORKS} ამოაბრუნეთ და რუკის გვერდით დაალაგეთ; თითოს კუთხეში, ციხის ადგილზე, ღია საქმის ნიშანი დადეთ.`],
+  ['მეფე და წლები', `მატიანის ${REGIONS.length - 1} ბარათი აურიეთ, ერთი ამოაბრუნეთ და მეფე იმ კუთხეში დადგით. წლის ნიშანი — წლების გზის <b>1</b>-ზე. თამაში გრძელდება: ${YEARS.map(([n, y]) => `${n} სახლი — ${y} წელი`).join(', ')}.`],
+  ['ვინ იწყებს', 'ყველაზე უმცროსი იწყებს და „პირველი სახლის“ ბარათს იღებს. მერე რიგი საათის ისრის მიმართულებით მიდის.'],
 ];
-const rulesList = (items, start) => `<ol start="${start}">${items.map(([h, t]) => `<li><b>${h}.</b> ${t}</li>`).join('')}</ol>`;
-const costTable = `<table class="t costs"><tr><th>რა</th><th>ფასი</th><th>ქულა</th></tr>${COSTS.map(c => `<tr><td><div class="cf"><span class="cfi">${costFig(c.fig, C.wine, 0.62)}</span><b>${esc(c.what)}</b></div></td><td class="cc">${c.need.map(k => chip(k, 6)).join('')}</td><td>${c.pts ? c.pts.split(' ')[0] : '—'}</td></tr>`).join('')}</table>`;
-const NUMERALS = [['ა', 1], ['ბ', 2], ['გ', 3], ['დ', 4], ['ე', 5], ['ვ', 6], ['ზ', 7], ['ჱ', 8], ['თ', 9], ['ი', 10], ['ია', 11], ['იბ', 12]];
-const GLOSS = [['ერისთავი', 'მეფის მიერ დანიშნული მხარის მმართველი'], ['მეციხოვნე', 'ციხის მცველი'], ['ბაჟი', 'სავაჭრო გადასახადი'], ['ქარვასლა', 'ვაჭრების სადგომი გზაზე'], ['ბარაქა', 'უხვი მოსავალი'], ['კალო', 'პურის სალეწი მოედანი'], ['რთველი', 'ყურძნის კრეფა'], ['კარიბჭე', 'დიდი კარი, შესასვლელი']];
-const GATE_NOTES = {
-  'ნიკოფსია': 'ჩრდილო-დასავლეთის საზღვარი შავ ზღვაზე', 'ცხუმი': 'დღევანდელი სოხუმი', 'ფოთი': 'ძველი ფაზისი, რიონის შესართავთან',
-  'ტაო-კლარჯეთი': 'სამხრეთ-დასავლეთის ქართული მხარე', 'ლორე': 'ციხე-ქალაქი სამხრეთით, დავით აღმაშენებელმა აიღო', 'განძის კარი': 'დემეტრე I-მა განძის კარი გელათში ჩამოიტანა',
-  'ჰერეთი': 'აღმოსავლეთის მხარე', 'დარუბანდი': 'დერბენტი კასპიის ზღვაზე', 'დარიალი': 'კავკასიონის კარი',
-};
+const TURN = [
+  ['იარე', `შენი მხედარი ${RIDE}-მდე ნაბიჯს გადის. ნაბიჯი მეზობელ კუთხეშია — იმაში, რომელთანაც საზღვარი აქვს საერთო (საზღვარზე ${FOOT_MARK} ნიშანია). შეგიძლია ადგილზეც დარჩე. ერთ კუთხეში რამდენი მხედარიც გინდა, დადგება.`],
+  ['აიღე', `იმ კუთხიდან, სადაც გაჩერდი, ბანკიდან იღებ მის ნივთს: <b>${BASE}</b>; თუ აქ შენი მამულია — <b>+1</b>; თუ მეფე აქაა — <b>+1</b>. <b>თბილისის ბაზარზე</b> რომელ ${BASE} ნივთსაც გინდა, იმას იღებ — ერთნაირს ან სხვადასხვას. ხელში <b>${HAND_MAX}</b> ნივთზე მეტი არ გეჭიროს: რაც არ ეტევა, არ იღებ.`],
+  ['ერთი საქმე', 'მერე იქვე, სადაც დგახარ, ერთ საქმეს აკეთებ — ან არაფერს (მაშინ სვლა დასრულდა):'],
+];
+const DEEDS = [
+  ['მამული', `გადაიხადე ხე + ქვა + პური და ამ კუთხის თავისუფალ ადგილზე მამული დადე: <b>+${ESTATE_PTS}</b>. კუთხეში ${PLACES} ადგილია, თითო სახლს იქ მხოლოდ ერთი მამული აქვს; თბილისში არ შენდება. შენი მამული ამ კუთხეს ყოველთვის +1 ნივთს გაძლევს.`],
+  ['მეფის საქმე', `თუ ამ კუთხეში საქმე ღიაა, მის ბარათზე დადე ნივთები, რომლებიც მას ჯერ კიდევ სჭირდება (ყუთზე მისი ნივთი). თითო ნივთი <b>1 ქულაა</b>, მეფის კუთხეში — <b>2</b>. ვინც <b>ბოლო ყუთს</b> შეავსებს, ბარათს თავისთან ინახავს და მის ბონუსს იღებს (+2…+4); ნივთები ბანკში ბრუნდება, ახალი საქმე ამოდის და ნიშანი მის კუთხეში გადადის.`],
+  ['სუფრა', `მხოლოდ შენს მამულში: გადაიხადე პური + ღვინო — <b>+${FEAST_PTS}</b>, თუ მეფე აქაა — <b>+${FEAST_PTS + KING_FEAST}</b>. ყოველი სხვა მხედარი ამ კუთხეში სტუმარია და <b>+${GUEST_PTS}</b>-ს იღებს.`],
+];
 const FAQ = [
-  ['ზღვის ან მთის პირას სოფელი შეიძლება?', 'კი — ჩარჩოს გასწვრივ კუთხეებიც ითვლება. თუ ის კარიბჭის ბოძთანაა, კარიბჭეც შენია.'],
-  ['7-იანზე განვითარების ბარათები ითვლება?', 'არა. 8+ წესი მხოლოდ მოსავლის ბარათებს ეხება; მოთარეშეც მხოლოდ მოსავალს ართმევს.'],
-  ['სხვის გზაზე გავლა შეიძლება?', 'არა — ერთ კიდეზე ერთი გზაა, სხვისი სოფელი კი შენს გზას წყვეტს.'],
-  ['ვაჭრობა რამდენჯერ შეიძლება?', 'შენს სვლაზე — რამდენჯერაც გინდა. სხვის სვლაზე მხოლოდ მოსიარულესთან ივაჭრებ.'],
+  ['ორ კუთხეში სიარულისას შუა კუთხიდანაც ვიღებ ნივთს?', 'არა — მხოლოდ იქიდან, სადაც გაჩერდი.'],
+  ['ბარათზე ყველა ნივთი ერთად უნდა მივიტანო?', 'არა. რამდენიც გაქვს და რამდენიც სჭირდება — იმდენი. ქულა ყოველ მიტანილ ნივთზეა.'],
+  ['სხვის სუფრაზე სტუმრად ყოფნა რამე მიჯდება?', `არაფერი: სტუმარი უბრალოდ +${GUEST_PTS} ქულას იღებს.`],
+  ['რა ხდება, თუ ბანკში ნივთი გათავდა?', 'ნივთის ნაცვლად ნებისმიერი ნიშანი გამოიყენეთ (ღილი, კენჭი).'],
+  ['მატიანის ბარათები გათავდა?', `${yearsFor(MIN_OK)} წელი ყველაზე გრძელი თამაშია — ბარათი სწორედ ეყოფა. მოკლე თამაშში ზოგი ბარათი ამოუღებელი რჩება.`],
+  ['შეიძლება ერთ სვლაში ორი საქმე?', 'არა, მხოლოდ ერთი: ან მამული, ან საქმე, ან სუფრა.'],
 ];
-const TIMELINE = [
-  ['1089', 'დავით აღმაშენებელი მეფდება'], ['1106', 'გელათის მონასტრისა და აკადემიის დაარსება'], ['1121', 'დიდგორის ბრძოლა'],
-  ['1122', 'თბილისის განთავისუფლება — დედაქალაქი თბილისში გადადის'], ['1139', 'დემეტრე I განძას იღებს — მისი კარი გელათშია'],
-  ['1184', 'თამარის ერთპიროვნული მეფობის დასაწყისი'], ['1185', 'ვარძიის მთავარი ტაძარი'], ['≈1200', 'შოთა რუსთაველის „ვეფხისტყაოსანი“'], ['1213', 'თამარ მეფის გარდაცვალება'],
-];
-const head = (sub) =>`<div class="rhead"><div class="aso rtitle">${aso(title)}</div><div class="rsub">${esc(sub)}</div></div>`;
+const head = sub => `<div class="rhead"><div class="aso rtitle">${aso(title)}</div><div class="rsub">${esc(sub)}</div></div>`;
 const rulesFoot = n => foot(`<span>${esc(title)} · წესები ${n}/4</span><span>${esc(SCHOOL)}</span>`);
-const rulesPage1 = page(`${stripe(NO, 'წესები · 1')}<div class="rulesWrap">${head(`ოქროს ხანა — წესები · ${META}`)}
-<p class="lead">საქართველოს ოქროს ხანაა — დავით აღმაშენებლის გამეფებიდან (1089) თამარ მეფის გარდაცვალებამდე (1213). თქვენ მეფის ერისთავები ხართ: ყოველი თავის მხარეებში გზებს, სოფლებსა და ციხე-ქალაქებს აშენებს, მოსავალს აგროვებს და მეზობლებთან ვაჭრობს — „პურს გაძლევ, ქვა მომეცი!“ ვინც პირველი მოაგროვებს <b>10 ქულას</b>, იმარჯვებს — ოქროს ხანა დგება.</p>
-<div class="rules">${rulesList(RULES.slice(0, 7), 1)}</div></div>${rulesFoot(1)}`, 'rulesP');
-const rulesPage2 = page(`${stripe(NO, 'წესები · 2')}<div class="rulesWrap"><div class="rules">${rulesList(RULES.slice(7), 8)}</div>
-<div class="two2"><div><h3>ფასები ერთი შეხედვით</h3>${costTable}</div><div><h3>ქულები</h3><table class="t"><tr><td>სოფელი</td><td>1</td></tr><tr><td>ციხე-ქალაქი</td><td>2</td></tr><tr><td>აბრეშუმის გზა (5+ გზა)</td><td>2</td></tr><tr><td>დიდი ლაშქარი (3+ მეციხოვნე)</td><td>2</td></tr><tr><td>საგანძური (ფარული)</td><td>1</td></tr><tr><th>გამარჯვება — შენს სვლაზე</th><th>10</th></tr></table>
-<p class="small">მარაგი თითო ფერზე: 5 სოფელი, 4 ციხე-ქალაქი, 15 გზა. ბანკი: 19-19 მოსავალი; 25 განვითარება.</p></div></div>
-<div class="faq"><h3>ხშირი კითხვები</h3><div class="qa">${FAQ.map(([q, a]) => `<p><b>${esc(q)}</b> ${esc(a)}</p>`).join('')}</div></div></div>${rulesFoot(2)}`, 'rulesP');
-const rulesPage3 = page(`${stripe(NO, 'წესები · 3')}<div class="rulesWrap">${head('სასწავლო განლაგება — პირველი თამაშებისთვის')}
-<div class="mapBox">${boardSvg('learn', 176)}</div>
-<div class="legend">${RK.map(k => `<span><i style="background:${RES[k].color}"></i>${esc(RES[k].land)} — ${esc(RES[k].name)}</span>`).join('')}<span><i style="background:${DESERT.color}"></i>უდაბნო — მოთარეშე</span></div>
-<p class="mapNote">მხარეები, რიცხვები და კარიბჭის ჟეტონები ისე დააწყვეთ, როგორც ნახატზეა. კარიბჭეების სახელები ჩარჩოზე მუდმივია, ჟეტონი კი (რას და რა კურსით ცვლის) შემთხვევითი დაფისას ამოფარებით იდება. კარიბჭე იმ ორ კუთხეს ემსახურება, რომლებთანაც მისი ბოძები მიდის.</p>
-<h3 class="landsT">მხარეები და ძეგლები</h3>
-<div class="lands">${LANDS.map(l => `<div><b>${esc(l.name)}</b> <span class="k">· ${l.res ? esc(RES[l.res].land) : 'უდაბნო'}</span><br>${esc(l.mon)}</div>`).join('')}</div></div>${rulesFoot(3)}`, 'rulesP');
-const rulesPage4 = page(`${stripe(NO, 'წესები · 4')}<div class="rulesWrap">${head('კარიბჭეები, საგანძურები, სიტყვები')}
-<div class="two2 first"><div><h3>კარიბჭეები</h3>${GATES.map(g => `<p class="pp"><b>${esc(g.name)}</b> — ${esc(GATE_NOTES[g.name])}</p>`).join('')}
-<p class="pp small">„ნიკოფსიიდან დარუბანდამდე“ — ასე აღწერდნენ ოქროს ხანის საქართველოს საზღვრებს.</p></div>
-<div><h3>საგანძურები</h3>${TREASURES.map(t => `<p class="pp"><b>${esc(t.name)}</b> · ${esc(t.date)} — ${esc(t.about)}</p>`).join('')}
-<h3>ქართული ასო-რიცხვები</h3><div class="nums">${NUMERALS.map(([l, n]) => `<span><b class="aso">${aso(l)}</b>${l} = ${n}</span>`).join('')}</div>
-<h3>ძველი სიტყვები</h3><p class="gl">${GLOSS.map(([w, d]) => `<b>${w}</b> — ${d}`).join('; ')}.</p></div></div>
-<div class="two2"><div><h3>ოქროს ხანა — თარიღები</h3><div class="tl">${TIMELINE.map(([y, t]) => `<p><b>${y}</b><span>${esc(t)}</span></p>`).join('')}</div></div>
-<div><h3>რას ასწავლის</h3><p class="pp"><b>ისტორია და გეოგრაფია:</b> 19 მხარე თავისი სიმდიდრით, ოქროს ხანის ძეგლები და თარიღები, სავაჭრო კარიბჭეები და გზები.</p>
-<p class="pp"><b>კულტურა:</b> ასომთავრული, ქართული ასო-რიცხვები ჟეტონებზე, ჩუქურთმა და ვაზი; ხის, ქვის, მატყლისა და პურის ხელობები.</p>
-<p class="pp"><b>ხასიათი:</b> რამდენიმე სვლით წინ დაგეგმვა, პატიოსანი ვაჭრობა და ნათქვამი სიტყვის შესრულება, წაგებისა და „7-იანის“ მშვიდად მიღება, თანამშრომლობა მეტოქეობის დროსაც.</p></div></div>
-<div class="box credits"><b>წყარო და უფლებები.</b> შექმნილია „კატანის“ (კლაუს ტოიბერი, 1995) წესების მიხედვით; სახელი, ნახატები და წესების ტექსტი საგანძურის სკოლისაა. მხოლოდ სასკოლო, არაკომერციული გამოყენებისთვის — არ იყიდება. მხარეების, ძეგლებისა და თარიღების სია ისტორიის მასწავლებელმა ერთხელ გადახედოს.</div></div>${rulesFoot(4)}`, 'rulesP');
+const ol = (items, start = 1) => `<ol start="${start}">${items.map(([h, t]) => `<li><b>${h}.</b> ${t}</li>`).join('')}</ol>`;
+// the board's marks for the legend, drawn as on the board
+const markSvg = (box, inner, s) => `<svg viewBox="${box}" width="${s}mm" height="${s}mm" class="lgm">${inner}</svg>`;
+const castleMark = s => markSvg('-7 -7 14 14', `<circle r="6.4" fill="#fffaf0" stroke="${DEEP}" stroke-width=".5" stroke-dasharray="1.3 1"/>${iconIn('castle', { x: -3.6, y: -3.6, size: 7.2, color: DEEP, width: 1.6, opacity: 0.45 })}`, s);
+const placeMark = s => markSvg('-.4 -.4 16 16', houseIn(0, 0, 15.2, '#fffaf0', { door: false, dash: true, stroke: '#7d6a58' }), s);
+const badgeMark = (k, s) => markSvg('-7 -7 14 14', `<circle r="6.2" fill="${GL[k].color}" stroke="#fffaf0" stroke-width="1.1"/>${iconIn(GL[k].icon, { x: -4, y: -4, size: 8, color: '#fff', width: 2.1 })}`, s);
+const footMark = s => markSvg('-4 -4 8 8', footprint(0, 0), s);
+// a piece of the board round რაჭა's plate, with its footprint toward სვანეთი
+const LEGEND_R = 3;
+const legendMap = () => {
+  const { X, Y } = plateBox(LEGEND_R), ft = footAt(1, LEGEND_R);
+  return `<svg viewBox="${f(X - 27)} ${f(Y - 23)} 56 37" width="48mm" height="${f(48 * 37 / 56)}mm" style="display:block"><rect width="${BW}" height="${BH}" fill="#f8f0df"/>
+<g transform="translate(${MX} ${MY}) scale(${S})">${REGIONS.map((r, i) => `<path d="${r.d}" fill="${tintOf(i)}" stroke="#fffaf0" stroke-width="3.2" stroke-linejoin="round"/>`).join('')}</g>${ft ? footprint(...ft) : ''}${plate(LEGEND_R)}</svg>`;
+};
+const legend = () => `<div class="legend"><div class="lgMap">${legendMap()}</div><div class="lgList">
+<p>${castleMark(5.6)}<span><b>ციხის ადგილი</b>ღია საქმის ნიშანს</span></p>
+<p>${placeMark(5.6)}<span><b>მამულის ${PLACES} ადგილი</b>ორ სხვადასხვა სახლს</span></p>
+<p>${badgeMark(goodOf(LEGEND_R), 5.6)}<span><b>კუთხის ნივთი</b>რას იღებ აქ</span></p>
+<p>${footMark(5.6)}<span><b>საზღვარი</b>გზა მეზობლისკენ</span></p></div></div>`;
+const turnStrip = () => `<div class="strip"><h3>სვლა მოკლედ <span>დაწვრილებით — მე-2 გვერდზე</span></h3><div class="sbox">
+<div><i>1</i><b>იარე</b><p>${RIDE}-მდე ნაბიჯი მეზობელ კუთხეში ${FOOT_MARK} — ან დარჩი იქვე.</p></div>
+<div><i>2</i><b>აიღე</b><p>კუთხის ნივთი: <b>${BASE}</b>, შენი მამული აქ — <b>+1</b>, მეფე აქ — <b>+1</b>. თბილისი: ნებისმიერი ${BASE}.</p></div>
+<div><i>3</i><b>ერთი საქმე</b><p class="sd"><span>მამული</span><span>${chips(costList(ESTATE_COST), 4.6)}</span><em>+${ESTATE_PTS}</em></p>
+<p class="sd"><span>მეფის საქმე</span><span>ნივთი</span><em>+1 · მეფე +2</em></p>
+<p class="sd"><span>სუფრა</span><span>${chips(costList(FEAST_COST), 4.6)}</span><em>+${FEAST_PTS} · მეფე +${FEAST_PTS + KING_FEAST}</em></p></div></div>
+<div class="sbox two"><div><i>${icon('hourglass', { size: 3.4, color: '#fffaf0', width: 2.4 })}</i><b>წლის ბოლოს</b><p>როცა ყველამ ერთხელ იარა: წლის ნიშანი ერთით წინ, მატიანის ახალი ბარათი ამოდის და მეფე იმ კუთხეში გადადის.</p></div>
+<div><i>${icon('trophy', { size: 3.4, color: '#fffaf0', width: 2.4 })}</i><b>დასასრული</b><p>${YEARS.map(([n, y]) => `${n} სახლი — ${y}`).join(', ')} წელი, ან როცა მეფის ყველა საქმე დასრულდება. იგებს, ვისაც მეტი ქულა აქვს.</p></div></div></div>`;
+const rulesPage1 = page(`${stripe(NO, 'წესები · 1')}<div class="rulesWrap">${head(`წესები · ${META}`)}
+<p class="lead">XII საუკუნეა — <b>ოქროს ხანა</b>, დავით აღმაშენებლისა და თამარ მეფის დრო. თქვენ ქვეყნის დიდი სახლები ხართ — <b>წითელი, ლურჯი, ფირუზისფერი და შავი</b>. თქვენი მხედრები საქართველოს 13 კუთხეში დადიან: კუთხეებიდან ხეს, ქვას, პურს, ღვინოს და ოქროს აგროვებენ, მამულებს აშენებენ, სუფრებს შლიან და <b>მეფის დიდ საქმეებს</b> — ციხეებს, ხიდს, სასახლეს, აკადემიას — ეხმარებიან. მეფე ყოველ წელს სხვა კუთხეშია, და სადაც ის არის, იქ ყველაფერი მეტად ფასობს. ვინც ბოლოს მეტ ქულას დააგროვებს, ის იგებს.</p>
+<div class="two2 first"><div><h3>მომზადება</h3>${ol(SETUP)}</div>
+<div><h3>ნივთები და კუთხეები</h3><div class="goods">${GL.map((g, k) => `<p>${chip(k, 6.4)}<b>${esc(g.name)}</b><span>${regionsOf(k).map(esc).join(', ')}</span></p>`).join('')}
+<p><span class="chip mk" style="background:${MARKET.color};width:6.4mm;height:6.4mm">${icon('store', { size: 4.1, color: '#fff', width: 2.1 })}</span><b>ბაზარი</b><span>თბილისი — ნებისმიერი ${BASE}</span></p></div>
+<h3>კუთხე რუკაზე</h3>${legend()}</div></div>
+${turnStrip()}</div>${rulesFoot(1)}`, 'rulesP');
+
+const EXAMPLE = [
+  'ნინო (წითელი) იმერეთშია, მეფე კახეთშია. ღიაა „გეგუთის სასახლე“ (იმერეთი) და „გორის ციხე“ (შიდა ქართლი).',
+  'ნინო ერთ ნაბიჯს შიდა ქართლში გადადის და ბანკიდან 2 პურს იღებს. ხელში ახლა: 1 ხე, 2 ქვა, 3 პური, 1 ღვინო.',
+  'საქმედ „გორის ციხეს“ 1 ხეს, 2 ქვას და 1 ღვინოს აძლევს — ეს ბარათის ოთხივე ყუთია. 4 ნივთი = 4 ქულა, დასრულებისთვის +2 — სულ 6. ბარათი ნინოსია, ახალი საქმე ამოდის.',
+  'შემდეგ წელს მეფე შიდა ქართლში რომ ყოფილიყო, ნინო 3 პურს აიღებდა, ნივთები კი ორმაგად ჩაეთვლებოდა: 8 + 2 = 10.',
+];
+const rulesPage2 = page(`${stripe(NO, 'წესები · 2')}<div class="rulesWrap">${head('სვლა, მეფე და დასასრული')}
+<div class="flow"><h3>სვლა — სამი ნაბიჯი</h3>
+<p class="pp">თამაშს პირველი სახლი იწყებს, მერე რიგი საათის ისრის მიმართულებით მიდის. შენს სვლაზე სამ რამეს აკეთებ, ამ რიგით:</p>
+<ol class="turn">${TURN.map(([h, t], i) => `<li><b>${h}.</b> ${t}${i === TURN.length - 1 ? `<ul class="deeds">${DEEDS.map(([dh, dt]) => `<li><b>${dh}.</b> ${dt}</li>`).join('')}</ul>` : ''}</li>`).join('')}</ol>
+<h3>მეფე და წლები</h3>
+<p class="pp">წელიწადში ყოველი სახლი ერთხელ დადის — პირველი სახლიდან დაწყებული. როცა რიგი ისევ პირველ სახლს მოუწევს, <b>წელი სრულდება</b>: წლის ნიშანი ერთით წინ, მატიანის ახალი ბარათი ამოდის და მეფე იმ კუთხეში გადადის.</p>
+<p class="pp">მეფის კუთხეში: <b>+1 ნივთი</b> შეგროვებისას, საქმის ნივთი <b>2 ქულაა</b>, სუფრა — <b>${FEAST_PTS + KING_FEAST}</b>. მეფე თბილისში არ ჩამოდის.</p>
+<h3>დასასრული</h3>
+<p class="pp">თამაში მთავრდება ბოლო წლის ბოლო სვლის მერე (${YEARS.map(([n, y]) => `${n} სახლი — ${y}`).join(', ')} წელი) ან მაშინვე, როცა მეფის ყველა საქმე დასრულდება.</p>
+<p class="pp"><b>იგებს</b>, ვისაც მეტი ქულა აქვს. ტოლობისას — ვინც მეტი საქმე დაასრულა (ბარათები), მერე — ვინც მეტი მამული ააშენა; კვლავ ტოლობისას გამარჯვება საერთოა.</p>
+<h3>ქულები ერთი შეხედვით</h3>
+<table class="t"><tr><th>რა</th><th>ქულა</th></tr><tr><td>მამული</td><td>${ESTATE_PTS}</td></tr><tr><td>ნივთი მეფის საქმეს</td><td>1 · მეფესთან 2</td></tr><tr><td>საქმის დასრულება</td><td>ბარათის ბონუსი (+2…+4)</td></tr><tr><td>სუფრა</td><td>${FEAST_PTS} · მეფესთან ${FEAST_PTS + KING_FEAST}</td></tr><tr><td>სტუმარი სხვის სუფრაზე</td><td>${GUEST_PTS}</td></tr></table></div>
+<h3 class="exH">მაგალითი</h3><div class="ex">${EXAMPLE.map(p => `<p>${esc(p)}</p>`).join('')}</div></div>${rulesFoot(2)}`, 'rulesP');
+
+const rulesPage3 = page(`${stripe(NO, 'წესები · 3')}<div class="rulesWrap">${head('მეფის 12 დიდი საქმე — თითო კუთხეში')}
+<div class="works">${WORKS.map(w => `<div class="wk"><div class="wkh"><b>${esc(w.name)}</b><span>${esc(REGION_NAMES[w.region])}</span><i>+${w.bonus}</i></div><div class="wkn">${chips(needList(w), 4.8)}</div><p>${esc(w.note)}</p></div>`).join('')}</div>
+<p class="claude">საქმეებისა და კუთხეების ცნობები Claude-მა დაწერა — მასწავლებელს ჯერ არ შეუმოწმებია.</p></div>${rulesFoot(3)}`, 'rulesP');
+
+const TIPS = [
+  'მამული ადრე ააშენე: ყოველ მოსვლაზე +1 ნივთს იძლევა და სუფრის ადგილიცაა.',
+  'უყურე მატიანეს: მეფის კუთხეში მიტანილი ნივთი ორმაგად ფასობს.',
+  'სუფრა იქ გაშალე, სადაც სხვები არ არიან — ან, პირიქით, მეგობრებს ქულა აჩუქე.',
+  'საქმის ბოლო ყუთს ყველა უმიზნებს: დაითვალე, ვინ მიუსწრებს.',
+  'ხელში ბევრი ნივთი ნუ დაგიგროვდება: ზღვარს რომ მიაღწევ, კუთხე ვეღარაფერს მოგცემს.',
+];
+const GLOSS = [['მამული', 'მიწა და სახლი, რომელსაც სახლის (გვარის) ხალხი უვლის'], ['მატიანე', 'წლების ჩანაწერი — ვინ, სად, როდის'], ['სუფრა', 'ქართული ნადიმი, სადაც სტუმარი ღვთის მოვლენილია'], ['ბაზარი', 'ქალაქის მოედანი, სადაც ყველაფერი იყიდება'], ['ერისთავი', 'მეფის მიერ დანიშნული მხარის მმართველი']];
+const rulesPage4 = page(`${stripe(NO, 'წესები · 4')}<div class="rulesWrap">${head('კითხვები, რჩევები, ვარიანტები')}
+<div class="faq first"><h3>ხშირი კითხვები</h3><div class="qa">${FAQ.map(([q, a]) => `<p><b>${esc(q)}</b> ${esc(a)}</p>`).join('')}</div></div>
+<div class="two2"><div><h3>რჩევები</h3><ul class="tips">${TIPS.map(t => `<li>${esc(t)}</li>`).join('')}</ul>
+<h3>ვარიანტები</h3>
+<p class="pp"><b>მოკლე თამაში (ერთი გაკვეთილი):</b> ${YEARS.map(([n, y]) => `${n} სახლი — ${Math.ceil(y * 2 / 3)}`).join(', ')} წელი.</p>
+<p class="pp"><b>გუნდებით:</b> 6–8 მოსწავლე ოთხ სახლად; გუნდი ერთად წყვეტს, ერთი მოსწავლე დადის.</p>
+<p class="pp"><b>უმცროსებისთვის:</b> ხელში ნივთების ზღვარი არ არის, სტუმრის ქულა არ ითვლება — მხოლოდ მამული, საქმე და სუფრა.</p>
+<p class="pp"><b>ტელეფონით:</b> აპში „ოქროს ხანა“ ონლაინაც თამაშდება (ყველა თავის ტელეფონზე) და ჰიბრიდულადაც — ერთი ტელეფონი მაგიდის შუაშია და ყველაფერს ითვლის.</p></div>
+<div><h3>რას ასწავლის</h3><p class="pp"><b>გეოგრაფია:</b> 13 კუთხე, მათი მეზობლები და რას იძლევა თითოეული.</p>
+<p class="pp"><b>ისტორია:</b> ოქროს ხანის ციხეები, სასახლე, ხიდი, აკადემია — სად დგას და რატომ აშენდა.</p>
+<p class="pp"><b>ანგარიში:</b> ნივთების დათვლა, ხელის ზღვარი, ქულების შედარება.</p>
+<p class="pp"><b>ხასიათი:</b> რამდენიმე სვლით წინ დაგეგმვა, საერთო საქმისთვის წვლილის შეტანა, სტუმართმოყვარეობა სუფრაზე.</p>
+<h3>ძველი სიტყვები</h3><p class="gl">${GLOSS.map(([w, d]) => `<b>${w}</b> — ${d}`).join('; ')}.</p>
+<h3>ქართული ასო-რიცხვები</h3><div class="nums">${NUMERALS.map((l, i) => `<span><b class="aso">${aso(l)}</b>${i + 1}</span>`).join('')}</div></div></div>
+<div class="box credits"><b>წყარო და უფლებები.</b> „ოქროს ხანა“ საგანძურის სკოლის საკუთარი თამაშია შეგროვებისა და მშენებლობის ჟანრში: წესები, რუკა, სახელები და ნახატები სკოლისაა. მხოლოდ სასკოლო, არაკომერციული გამოყენებისთვის — არ იყიდება. საქმეებისა და კუთხეების ცნობები Claude-მა დაწერა — მასწავლებელს ჯერ არ შეუმოწმებია.</div></div>${rulesFoot(4)}`, 'rulesP');
 
 // ---------- cover and box label ----------
+const assembly = () => `<div class="asm">${boardSvg([0, 0, BW, BH], 80)}<svg class="asmGrid" viewBox="0 0 ${BW} ${BH}"><path d="M${SEAM_X} 0V${BH}M0 ${SEAM_Y}H${BW}" stroke="${C.wine}" stroke-width="2.4" stroke-dasharray="9 6"/>${[0, 1, 2, 3].map(n => `<circle cx="${(n % 2) * 280 + 140}" cy="${Math.floor(n / 2) * 195 + 98}" r="28" fill="${C.wine}" opacity=".88"/><text x="${(n % 2) * 280 + 140}" y="${Math.floor(n / 2) * 195 + 113}" text-anchor="middle" font-family="SansKa" font-weight="900" font-size="42" fill="#fffaf0">${n + 1}</text>`).join('')}</svg></div>`;
 const coverPage = no => page(`${stripe(NO)}
 <div class="cover">
   <div class="aso title">${aso(title)}</div>
   <h1 class="gameTitle">ოქროს ხანა</h1>
-  <div class="lead">ერისთავები აშენებენ, ვაჭრობენ და ქვეყანას აღადგენენ — დავით აღმაშენებლიდან თამარ მეფემდე.<br><b>${META}</b></div>
+  <div class="lead">მხედრები საქართველოს 13 კუთხეში: აგროვე ნივთები, ააშენე მამულები, გაშალე სუფრა და დაეხმარე მეფის დიდ საქმეებს.<br><b>${META}</b></div>
   <div class="two">
     <div>
       <h3>რა არის ამ ფაილში</h3>
       <table class="t comp">
         <tr><th>კომპონენტი</th><th>ცალი</th><th>ფურცელი</th><th>✓</th></tr>
         <tr><td>წესები</td><td>4 გვ.</td><td>${no('rules1')}–${no('rules2')}</td><td><span class="chk"></span></td></tr>
-        <tr><td>მხარეები — ექვსკუთხა, 79 მმ</td><td>19</td><td>${no('hex1')}–${no('tokens')}</td><td><span class="chk"></span></td></tr>
-        <tr><td>რიცხვის ჟეტონები ⌀25 მმ</td><td>18</td><td>${no('tokens')}</td><td><span class="chk"></span></td></tr>
-        <tr><td>კარიბჭის ჟეტონები ⌀25 მმ</td><td>9</td><td>${no('tokens')}</td><td><span class="chk"></span></td></tr>
-        <tr><td>მოთარეშე (ქაღალდის)</td><td>1</td><td>${no('tokens')}</td><td><span class="chk"></span></td></tr>
-        <tr><td>მოსავლის ბარათები</td><td>95 + 4*</td><td>${no('res1')}–${no('res11')}</td><td><span class="chk"></span></td></tr>
-        <tr><td>განვითარების ბარათები</td><td>25 + 2*</td><td>${no('dev1')}–${no('dev3')}</td><td><span class="chk"></span></td></tr>
-        <tr><td>დიდი ბარათები (A6)</td><td>8</td><td>${no('a6a')}–${no('a6b')}</td><td><span class="chk"></span></td></tr>
-        <tr><td>ქაღალდის ფიგურები</td><td>4 ფერი</td><td>${no('figures')}</td><td><span class="chk"></span></td></tr>
-        <tr><td>ჩარჩო — ზღვა და მთები</td><td>6</td><td>${no('frame1')}–${no('frame2')}</td><td><span class="chk"></span></td></tr>
+        <tr><td>რუკა — 4 ნაწილი, 56×39 სმ</td><td>1</td><td>${no('board1')}–${no('board4')}</td><td><span class="chk"></span></td></tr>
+        <tr><td>მეფის საქმის ბარათები (A6)</td><td>${WORKS.length}</td><td>${no('works1')}–${no('works3')}</td><td><span class="chk"></span></td></tr>
+        <tr><td>მატიანე, სახლები, პირველი სახლი, ბაზარი</td><td>12 + 4 + 2</td><td>${no('cards1')}–${no('cards2')}</td><td><span class="chk"></span></td></tr>
+        <tr><td>სვლის ბარათები (A6)</td><td>4</td><td>${no('aid')}</td><td><span class="chk"></span></td></tr>
+        <tr><td>ნივთები (16 მმ)</td><td>${GL.length * PER_GOOD} + 6*</td><td>${no('chits')}</td><td><span class="chk"></span></td></tr>
+        <tr><td>მამულები, ნიშნები, მხედრები, მეფე</td><td>24 + 9 + 5</td><td>${no('figures')}</td><td><span class="chk"></span></td></tr>
         <tr><td>ყუთის იარლიყი</td><td>1</td><td>${no('label')}</td><td><span class="chk"></span></td></tr>
-        <tr><td>2 კამათელი; სურვილით ხის ფიგურები</td><td>—</td><td>საყიდელია</td><td><span class="chk"></span></td></tr>
       </table>
-      <p class="small">* სათადარიგო, სახელი მარკერით. ხის ფიგურები: სოფელი — 15 მმ კუბი, ქალაქი — ორი შეწებებული კუბი, გზა — 6×6 მმ ლარტყა, 40 მმ.</p>
-      <div class="box legal"><b>წყარო და უფლებები.</b> შექმნილია „კატანის“ (კლაუს ტოიბერი, 1995) წესების მიხედვით. სახელი, ნახატები და წესების ტექსტი საგანძურის სკოლისაა. მხოლოდ სასკოლო, არაკომერციული გამოყენებისთვის — არ იყიდება.</div>
-      <p class="small">ნახატების ადგილას ჯერ ორნამენტი და ნიშნებია — სურათები მერე დაემატება.</p>
+      <p class="small">* სათადარიგო. კამათელი არ სჭირდება — ყველაფერს არჩევანი წყვეტს.</p>
+      <div class="box legal"><b>ჩვენი თამაში.</b> „ოქროს ხანა“ საგანძურის სკოლის საკუთარი თამაშია შეგროვებისა და მშენებლობის ჟანრში — წესები, რუკა და სახელები სკოლისაა. მხოლოდ სასკოლო, არაკომერციული გამოყენებისთვის. საქმეების ცნობები Claude-მა დაწერა — მასწავლებელს ჯერ არ შეუმოწმებია.</div>
     </div>
     <div>
       <h3>როგორ დავბეჭდოთ</h3>
       <ol class="how">
-        <li><b>ყველაფერი ორმხრივად</b>, გრძელი კიდით, <b>100%-ზე</b> („fit to page“ გამორთული) — ყოველ ფურცელს თავისი ზურგი მოსდევს. ჯერ ერთი საცდელი ფურცელი: მხარე 79 მმ გვერდიდან გვერდამდე, ბარათი 63×88 მმ.</li>
-        <li>ქაღალდი: წესები — ჩვეულებრივი; ფურცლები ${no('hex1')}–${no('figures')} — <b>300 გ მუყაო</b>; ჩარჩო (${no('frame1')}–${no('frame2')}) ცალმხრივია — 2 მმ რუხ მუყაოზე დააკარი და მერე ამოჭერი.</li>
-        <li>მხარეები და ჟეტონები — სურვილით მქრქალი ლამინაცია 125 მკმ: გამაგრდება და გაუძლებს.</li>
-        <li>ჭრა: მხარეები და ჩარჩო — წვრილ ხაზზე, დანით ლითონის სახაზავთან (უფროსები ჭრიან); ბარათები — ნიშნულებზე; A6 — შუა ხაზებზე; ჟეტონები — 25 მმ წრიული პერფორატორით ან მაკრატლით.</li>
-        <li>მოთარეშე: ზოლი წყვეტილ ხაზებზე მოკეცე — ორი ნახატი ზურგით ერთმანეთს, ფეხები გვერდებზე.</li>
+        <li><b>ყველაფერი ორმხრივად</b>, გრძელი კიდით, <b>100%-ზე</b> („fit to page“ გამორთული) — ყოველ ფურცელს თავისი ზურგი მოსდევს.</li>
+        <li>ქაღალდი: წესები — ჩვეულებრივი; ბარათები და ნიშნები (${no('works1')}–${no('figures')}) — <b>250–300 გ მუყაო</b>. რუკის ოთხი ნაწილი ცალმხრივია: ჩვეულებრივ ქაღალდზე დაბეჭდე და 2 მმ მუყაოზე დააკარი.</li>
+        <li>ჭრა: რუკა — წვრილ ნიშნულებზე, ლითონის სახაზავთან (უფროსები ჭრიან); A6 ბარათები — შუა ხაზებზე; პატარა ბარათები და ნივთები — ნიშნულებზე.</li>
+        <li>მხედრები და მეფე: ზოლი მოკეცე, ორი ნახატი ზურგით მიაწებე, ფეხები გაშალე.</li>
       </ol>
-      <h3 class="asmT">ჩარჩოს აწყობა</h3>
-      ${boardSvg('assembly', 72)}
-      <p class="asmP">1 — „დიდი კავკასიონი, ჩრდილოეთი“ — ზემოთ, მერე საათის ისრით 2–6; ბოლოებზე ასოები ემთხვევა: ა-ს ა, ბ-ს ბ … ზომა ≈50×43 სმ — მერხს ეტევა. ზურგიდან ქაღალდის ლენტით შეაერთე ან უბრალოდ მიადგი.</p>
+      <h3 class="asmT">რუკის აწყობა</h3>
+      ${assembly()}
+      <p class="asmP">1 და 2 ზემოთ, 3 და 4 ქვემოთ — კიდეებზე წერია, რომელი რომელს ებმის. ზურგიდან ქაღალდის ლენტით შეაერთე. ზომა 56×39 სმ.</p>
     </div>
   </div>
 </div>
 ${foot(`<span>${esc(title)} · ${esc(SERIES)} №${NO}</span><span>${esc(SCHOOL)}</span>`)}`, 'coverP');
 
-const islandMini = (width) => `<svg width="${width}mm" height="${(width * 410 / 430).toFixed(2)}mm" viewBox="-215 -205 430 410" style="display:block">${LANDS.map(l => `<polygon points="${ptsAttr(hexPts(...hexC(l.at), HR - 1))}" fill="${LOOK(l.res).color}" stroke="#f6ecd6" stroke-width="3"/>`).join('')}</svg>`;
 const labelPage = page(`<div class="lbl lid"><div class="lin">
-<div class="lt"><div class="aso big">${aso(title)}</div><div class="nm">ოქროს ხანა</div><div class="sub">ერისთავები აშენებენ, ვაჭრობენ და ქვეყანას აღადგენენ</div><div class="meta">${esc(META)}</div><div class="ser aso">${aso(SERIES)} · №${NO}</div><div class="sch">${esc(SCHOOL)}</div></div>
-<div class="map">${islandMini(76)}</div></div></div>
-<div class="lbl list"><h3>ყუთში უნდა იყოს</h3><div class="items">${['19 მხარე', '6 ჩარჩოს ნაწილი', '18 რიცხვის ჟეტონი', '9 კარიბჭის ჟეტონი', 'მოთარეშე', '95 მოსავლის ბარათი', '25 განვითარების ბარათი', '8 დიდი ბარათი', '4 ფერის ფიგურები', '2 კამათელი', 'წესები (4 გვერდი)', 'სათადარიგო ბარათები'].map(t => `<span><i class="chk"></i>${esc(t)}</span>`).join('')}</div></div>
+<div class="lt"><div class="aso big">${aso(title)}</div><div class="nm">ოქროს ხანა</div><div class="sub">მხედრები 13 კუთხეში · მამულები · მეფის დიდი საქმეები</div><div class="meta">${esc(META)}</div><div class="ser aso">${aso(SERIES)} · №${NO}</div><div class="sch">${esc(SCHOOL)}</div></div>
+<div class="map">${mini(TBILISI, MARKET.color)}</div></div></div>
+<div class="lbl list"><h3>ყუთში უნდა იყოს</h3><div class="items">${['რუკა (4 ნაწილი)', `${WORKS.length} საქმის ბარათი`, '12 მატიანის ბარათი', '4 სახლის ბარათი', 'პირველი სახლი, ბაზარი', '4 სვლის ბარათი', `${GL.length * PER_GOOD} ნივთი`, '20 მამული (+4)', '4 მხედარი, მეფე', '9 ნიშანი', 'წესები (4 გვერდი)'].map(s => `<span><i class="chk"></i>${esc(s)}</span>`).join('')}</div></div>
 ${[0, 1].map(i => `<div class="lbl side s${i}"><span class="aso">${aso(title)}</span><b>ოქროს ხანა</b><span>${esc(META)}</span><span class="aso">№${NO}</span></div>`).join('')}
 <div class="lblNote">იარლიყი ფოტოქაღალდის ან ფეხსაცმლის ყუთზე (≈A4): დიდი — სახურავზე, ზოლები — გვერდებზე. მთლიანი ხაზი იჭრება.</div>`, 'labelP');
 
 export const css = `
-.card.res .frame{border-width:.9mm}
-.card .idx{position:absolute;width:8.2mm;height:8.2mm;border-radius:50%;display:flex;align-items:center;justify-content:center;border:.35mm solid #fbf6ec;box-shadow:0 0 0 .25mm ${C.gold};z-index:2}
-.card .idx.tl{left:4.5mm;top:4.5mm}.card .idx.br{right:4.5mm;bottom:4.5mm;transform:rotate(180deg)}
-.card.res .body{align-items:center}
-.rname{font-weight:800;font-size:17pt;line-height:1;margin:.6mm 0 1.6mm}
-.card .art{position:relative;line-height:0}
-.from{margin-top:1.8mm;font-size:8.6pt;line-height:1.25;text-align:center;padding:0 1mm}
-.need{margin-top:2.4mm;display:flex;align-items:center;justify-content:center;gap:1.4mm;font-size:8pt;color:var(--muted)}
-.need svg{display:block}
-.backArt{position:absolute;left:0;top:0}
-.spare{margin:auto;text-align:center;color:var(--muted);font-size:11pt}
-.spare span{font-size:8.5pt}
-.card.dev .body{align-items:center}
-.card.dev .kind{font-size:7.6pt;color:var(--gold2);letter-spacing:.12em;margin-top:.4mm}
-.card.dev .dname{font-weight:800;font-size:15pt;color:var(--wine);line-height:1.1;margin:.6mm 0 1.4mm;text-align:center;max-width:44mm}
-.card.dev .art{width:50mm;height:31mm;border:.3mm solid var(--gold);border-radius:24mm 24mm 2mm 2mm;background:radial-gradient(ellipse at 50% 40%,#fbf3e2 0%,var(--cream) 60%,#e6d6b6 100%);overflow:hidden}
-.card.dev .rule{margin-top:2mm;font-size:10pt;line-height:1.28;text-align:center}
-.card.dev .cap{margin-top:auto;font-size:8pt;color:var(--muted);text-align:center;line-height:1.2;border-top:.2mm solid var(--line);padding:1mm 5.4mm 0;width:100%}
-.card.tre .date{position:absolute;left:2mm;bottom:1.6mm;background:var(--wine);color:#f0d9a0;font-size:8.5pt;font-weight:700;padding:.2mm 1.6mm .4mm;border-radius:1.2mm;line-height:1.2}
-.card.tre .pt{position:absolute;right:1.6mm;bottom:1.2mm;width:10.5mm;height:10.5mm;border-radius:50%;background:var(--gold);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;font-size:6.4pt;border:.35mm solid #fbf6ec}
-.card.tre .pt b{font-size:12pt;line-height:.95}
+.boardS .sheetLabel{top:1.5mm;font-size:7.5pt}
+.chip{display:inline-flex;align-items:center;justify-content:center;border-radius:1.4mm;border:.3mm solid #fbf6ec;box-shadow:0 0 0 .2mm #0002;vertical-align:middle;flex:none}
+.fm{display:inline-flex;align-items:center;justify-content:center;width:4.8mm;height:4.8mm;border-radius:50%;border:.25mm solid var(--brown);background:#fffaf0;vertical-align:-1.2mm}
+.plus{font-style:normal;color:var(--muted);font-size:8pt;margin:0 .5mm;vertical-align:middle}
 .a6{width:105mm;height:148.5mm;padding:5mm}
 .a6in{position:relative;width:100%;height:100%;border:.8mm solid;border-radius:3mm;overflow:hidden}
 .a6sheet .sheetLabel{top:146.6mm;left:14mm}
 .band{color:#fbf6ec;text-align:center;padding:2.2mm 3mm 2.4mm}
 .band .aso{font-size:8pt;color:#f0d9a0;letter-spacing:.14em}
 .band .bt{font-weight:800;font-size:15pt;line-height:1.15}
-.band .bs{font-size:9pt;opacity:.9}
-.a6body{padding:3mm 4mm 0}
-.crow{display:grid;grid-template-columns:15mm 1fr auto;grid-template-rows:auto auto;column-gap:2mm;align-items:center;padding:2.2mm 0;border-bottom:.2mm solid var(--line)}
-.crow .cfig{grid-row:1/3;display:flex;justify-content:center}
-.crow .cwhat{font-size:11.5pt;line-height:1.1}
-.crow .cwhat b{color:var(--wine)}
-.crow .pts{display:inline-block;margin-left:1.6mm;background:var(--gold);color:#fff;font-size:8.5pt;font-weight:700;padding:.1mm 1.4mm .3mm;border-radius:1mm;vertical-align:.4mm}
-.crow .cneed{display:flex;align-items:center;gap:1mm}
-.crow .cnote{grid-column:2/4;font-size:8.6pt;color:var(--muted);line-height:1.2;margin-top:.8mm}
-.chip{display:inline-flex;align-items:center;justify-content:center;border-radius:1.6mm;border:.3mm solid #fbf6ec;box-shadow:0 0 0 .2mm #0002;vertical-align:middle}
-.ptsBox{margin-top:3mm;font-size:9.4pt;line-height:1.35;background:#fff8;border:.3mm solid var(--gold);border-radius:2mm;padding:2mm 3mm}
-.ptsBox b{color:var(--wine)}.ptsBox .win{display:block;margin-top:.8mm;font-size:10.5pt}
-.ptsBox .stock{font-size:8.6pt;color:var(--muted);margin-top:.6mm}
-.steps .st{display:flex;gap:2.4mm;align-items:flex-start;font-size:9.8pt;line-height:1.3;margin-bottom:2.2mm}
-.steps .st .n{flex:none;width:7mm;height:7mm;border-radius:50%;color:#fbf6ec;font-weight:800;font-size:11pt;display:flex;align-items:center;justify-content:center}
-.steps .st b{color:var(--wine)}
-.steps .seven{background:#7a20280f;border-radius:2mm;padding:1.4mm 1.6mm;margin-left:-1.6mm;margin-right:-1.6mm}
-.devNote{font-size:9pt;line-height:1.3;border-top:.2mm solid var(--line);border-bottom:.2mm solid var(--line);padding:1.4mm 0;margin:.4mm 0 2mm;color:var(--brown)}
-.chartT{font-size:8.6pt;text-align:center;color:var(--muted)}
-.chartC{font-size:8.4pt;text-align:center;color:var(--wine)}
-.special .spc{position:absolute;inset:9.5mm;display:flex;flex-direction:column;align-items:center;text-align:center}
-.spc .sk{font-size:8pt;color:var(--gold2);letter-spacing:.14em;margin-top:2mm}
-.spc .sn{font-weight:800;font-size:19pt;color:var(--wine);line-height:1.1;margin-top:.6mm}
-.spc .medal{width:17mm;height:17mm;border-radius:50%;background:var(--gold);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;border:.5mm solid #fbf6ec;box-shadow:0 0 0 .35mm var(--gold2);margin-top:1mm;font-size:8pt}
-.spc .medal b{font-size:19pt;line-height:.9}
-.spc .sr{margin-top:2.6mm;font-size:10.4pt;line-height:1.32;padding:0 1.5mm}
-.spc .sc{margin-top:auto;margin-bottom:1mm;font-size:8.6pt;color:var(--muted);line-height:1.2}
-.special .sback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:5mm}
-.sback .sbn{background:var(--wine);color:#f0d9a0;font-weight:700;font-size:11pt;padding:1mm 4mm 1.4mm;border-radius:2mm;border:.3mm solid var(--gold)}
-.list ol,.list ul{margin:0;padding-left:5mm;font-size:10pt;line-height:1.32}
-.list li{margin-bottom:2mm}
-.list li b{color:var(--wine)}
-.list .hint{margin-top:3mm;font-size:9.4pt;font-style:italic;color:var(--brown);border-left:.8mm solid var(--gold);padding-left:2.4mm}
-.spiral p{margin:2mm 0 0;font-size:9.4pt;line-height:1.3;text-align:center}
-.spiral .lt{display:grid;grid-template-columns:repeat(9,1fr);gap:.8mm;margin-top:2mm;font-size:8.8pt;text-align:center}
-.spiral .lt span{border:.2mm solid var(--line);border-radius:1mm;padding:.4mm 0;background:#fff8}
-.spiral .lt b{display:block;color:var(--wine);font-size:10pt}
-.spiral .small{margin-top:1mm}
-.fhead{font-size:9pt;font-weight:700;white-space:nowrap}
+.band .bs{font-size:9.4pt;opacity:.92}
+.a6body{padding:3mm 4.2mm 0}
+.steps .st{display:flex;gap:2.4mm;align-items:flex-start;font-size:10pt;line-height:1.3;margin-bottom:2.2mm}
+.steps .st .n{flex:none;width:6.6mm;height:6.6mm;border-radius:50%;color:#fbf6ec;font-weight:800;font-size:10.5pt;display:flex;align-items:center;justify-content:center}
+.steps .st b,.deed b,.pts b{color:var(--wine)}
+.deed{margin:0 0 2.2mm 9mm;border-left:.6mm solid var(--gold);padding-left:2.4mm}
+.deed .dh{display:flex;align-items:center;gap:1.6mm;font-size:10.5pt}
+.deed .cost{display:inline-flex;align-items:center;margin-left:auto}
+.deed .pt{background:var(--gold);color:#fff;font-size:9pt;font-weight:700;padding:.2mm 1.6mm .4mm;border-radius:1mm;white-space:nowrap}
+.deed .cost+.pt{margin-left:1.4mm}
+.deed .dh>b+.pt{margin-left:auto}
+.deed p{margin:.6mm 0 0;font-size:9.4pt;line-height:1.27;color:var(--brown)}
+.pts table.t{font-size:9.8pt;margin-bottom:2.4mm}
+.pts table.t td:last-child{white-space:nowrap}
+.pts .yrs{font-size:10pt;margin-bottom:2mm;background:#fff8;border:.3mm solid var(--gold);border-radius:1.6mm;padding:1.4mm 2.2mm}
+.pts p{margin:0 0 1.8mm;font-size:10pt;line-height:1.3}
+.pts p.mini{font-size:9.4pt;color:var(--muted)}
+.work .wband{background:${DEEP};color:#fbf6ec;text-align:center;padding:2.4mm 3mm 2.2mm}
+.work .wband .aso{font-size:7.6pt;color:${GOLD};letter-spacing:.14em}
+.work .wn{font-weight:800;font-size:15pt;line-height:1.2;color:#f7e9ad}
+.work .wbody{padding:2.2mm 4mm 0;display:flex;flex-direction:column;align-items:center}
+.wwhere{display:flex;align-items:center;gap:1.2mm;font-size:10.5pt;align-self:stretch;justify-content:center}
+.wwhere b{color:var(--wine);font-size:11.5pt}
+.wwhere span{color:var(--muted);font-size:9pt}
+.wmap{width:62mm;margin:1.4mm 0 1.6mm}
+.wneedT{font-size:9.4pt;color:var(--brown);margin-bottom:1.4mm}
+.wneed{display:flex;flex-direction:column;gap:2mm;align-items:center}
+.nrow{display:flex;gap:2.4mm}
+.nbox{width:17mm;height:17mm;border:.45mm dashed;border-radius:2mm;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:.4mm}
+.nbox em{font-style:normal;font-size:7.4pt;font-weight:700;line-height:1}
+.wpts{display:flex;gap:2.4mm;align-items:center;margin-top:2.4mm;font-size:9.2pt;line-height:1.28;align-self:stretch}
+.wpts b{color:var(--wine)}
+.medal{flex:none;width:12.5mm;height:12.5mm;border-radius:50%;background:var(--gold);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1;border:.4mm solid #fbf6ec;box-shadow:0 0 0 .3mm var(--gold2);font-size:6.6pt}
+.medal b{color:#fff !important;font-size:13pt;line-height:.95}
+.wnote{margin-top:auto;position:absolute;left:4mm;right:4mm;bottom:2.6mm;font-size:8.8pt;line-height:1.26;color:#6a5848;font-style:italic;border-top:.2mm solid var(--line);padding-top:1.2mm;text-align:center}
+.cback{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4mm;color:#f7e9ad}
+.cback .ck{font-size:12pt;color:${GOLD};letter-spacing:.14em}
+.cback .cbn{font-weight:800;font-size:16pt}
+.cback .cbs{font-size:9.6pt;opacity:.85}
+.card.chron,.card.first{background:#fffaf0}
+.card .body{align-items:center;text-align:center}
+.ck{font-size:7.4pt;color:var(--gold2);letter-spacing:.12em;margin-top:.6mm}
+.crown{width:12.5mm;height:12.5mm;border-radius:50%;background:#f7e9ad;border:.45mm solid ${GOLD};display:flex;align-items:center;justify-content:center;margin:1.4mm 0 1mm}
+.cl{font-size:9.4pt;color:var(--muted)}
+.cn{font-weight:800;font-size:15pt;color:var(--wine);line-height:1.15;width:100%}
+.cmap{width:47mm;margin:1.2mm 0 1.4mm}
+.cgive{display:flex;align-items:center;gap:1.4mm;font-size:10pt}
+.cgive b{color:var(--wine)}
+.crule{margin-top:auto;font-size:9pt;line-height:1.3;color:var(--brown);border-top:.2mm solid var(--line);padding-top:1mm;width:100%}
+.crule b{color:var(--wine)}
+.cb .cbIn{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3mm}
+.cb .cbw{font-weight:800;font-size:13pt;text-align:center;padding:0 6mm;line-height:1.15}
+.cb .cbs2{font-size:8.6pt;color:#f0d9a0;opacity:.9}
+.hcard .hband{position:absolute;left:3.4mm;right:3.4mm;top:3.4mm;height:13mm;border-radius:1.8mm 1.8mm 0 0;color:#fffaf0;display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.1}
+.hcard .hband .aso{font-size:7pt;letter-spacing:.14em;opacity:.85}
+.hcard .hband b{font-size:14pt}
+.hcard .hb{top:19mm}
+.hfig{display:flex;align-items:flex-end;gap:4mm;margin:1mm 0 2mm}
+.hlist{font-size:10.5pt;line-height:1.25}
+.hlist p{margin:0}
+.hlist b{color:var(--wine)}
+.hstart{margin-top:auto;font-size:9.4pt;color:var(--muted);line-height:1.6}
+.first .fn{font-weight:800;font-size:12.5pt;color:var(--wine);margin-bottom:1.4mm;line-height:1.15}
+.first p{margin:0 0 1.4mm;font-size:9.4pt;line-height:1.28}
+.first p b{color:var(--wine)}
+.first p.f2{margin-top:auto;color:var(--muted);font-size:9pt}
+.tokInfo{font-size:9pt;line-height:1.38;color:var(--brown);border:.3mm solid var(--gold);border-radius:2mm;padding:2.6mm 3.4mm;background:var(--paper)}
+.tokInfo b{color:var(--wine)}
 .cover{padding:8mm 14mm 0}
 .cover .title{font-size:24pt;color:var(--gold2);letter-spacing:.08em}
 .cover .lead{font-size:12pt;margin:2mm 0 5mm;line-height:1.4}
@@ -723,126 +677,138 @@ export const css = `
 .cover h3{margin:0 0 2mm;color:var(--wine);font-size:12pt}
 .cover table.comp{font-size:9.2pt}
 .cover table.comp td,.cover table.comp th{padding:.9mm 1.3mm}
+table.comp td:nth-child(n+2),table.comp th:nth-child(n+2){white-space:nowrap}
 .cover .how{margin:0;padding-left:4.5mm;font-size:9.6pt;line-height:1.33}
 .cover .how li{margin-bottom:1.5mm}
-.cover .asmT{margin-top:4mm}
-.cover .asmP{margin:1.5mm 0 0;font-size:9.4pt;line-height:1.35}
-table.comp td:nth-child(n+2),table.comp th:nth-child(n+2){white-space:nowrap}
 .cover .legal{font-size:9pt;margin:3mm 0 2mm}
+.cover .asmT{margin-top:4mm}
+.asm{position:relative;width:80mm}
+.asm .asmGrid{position:absolute;left:0;top:0;width:80mm;height:${f(80 * BH / BW)}mm}
+.cover .asmP{margin:1.5mm 0 0;font-size:9.4pt;line-height:1.35}
 .rulesWrap{padding:6mm 12mm 0}
 .rhead{display:flex;align-items:baseline;gap:5mm;border-bottom:.3mm solid var(--gold);padding-bottom:1.5mm;margin-bottom:3mm}
 .rtitle{font-size:20pt;color:var(--wine)}
 .rsub{font-size:10.5pt;color:var(--muted)}
 .lead{font-size:10.8pt;line-height:1.4;margin:0 0 3mm}
 .lead b{color:var(--wine)}
-.two2{display:grid;grid-template-columns:1fr 1fr;gap:8mm;margin-top:4mm;font-size:10pt;line-height:1.35}
-.two2 h3{margin:0 0 1.5mm;color:var(--wine);font-size:11pt}
-.two2 h3+*{margin-top:0}
+.two2{display:grid;grid-template-columns:1fr 1fr;gap:8mm;margin-top:4mm;font-size:10.4pt;line-height:1.36}
 .two2.first{margin-top:0}
-.two2 table.t{font-size:9.6pt;margin-bottom:2mm}
-.two2 .pp,.two2 .gl{margin:0 0 1.4mm}
-.two2 .pp b,.two2 .gl b{color:var(--wine)}
-table.costs td{vertical-align:middle}
-table.costs .cf{display:flex;align-items:center;gap:1.6mm}
-table.costs .cfi{width:11mm;display:flex;justify-content:center}
-table.costs .cc{white-space:nowrap}
-table.costs .chip{margin-right:.6mm}
-.mapBox{margin:1mm 0 2mm}
-.legend{display:flex;flex-wrap:wrap;justify-content:center;gap:2mm 5mm;font-size:9.6pt}
-.legend span{display:flex;align-items:center;gap:1.4mm}
-.legend i{display:inline-block;width:4mm;height:4mm;border-radius:1mm}
-.mapNote{font-size:10pt;line-height:1.38;margin:3mm 6mm 0;text-align:center}
-.landsT{margin:4mm 0 1.6mm;color:var(--wine);font-size:11pt}
-.lands{display:grid;grid-template-columns:repeat(5,1fr);gap:1.6mm 4mm;font-size:9.4pt;line-height:1.28}
-.lands b{color:var(--wine)}
-.lands .k{color:var(--muted);font-size:8.6pt}
-.nums{display:grid;grid-template-columns:repeat(6,1fr);gap:1mm;margin-bottom:2mm;font-size:9.4pt;text-align:center}
+.two2 h3{margin:0 0 1.5mm;color:var(--wine);font-size:11.5pt}
+.two2 h3:not(:first-child){margin-top:3mm}
+.two2 ol{margin:0;padding-left:5mm}
+.two2 li{margin-bottom:1.6mm}
+.two2 li b,.two2 .pp b,.two2 .gl b{color:var(--wine)}
+.two2 .pp,.two2 .gl{margin:0 0 1.6mm}
+.two2 table.t{font-size:10pt}
+.goods p{display:flex;align-items:center;gap:2mm;margin:0 0 1.6mm;font-size:10.4pt}
+.goods b{color:var(--wine);min-width:14mm}
+.goods span:last-child{color:var(--brown);font-size:9.8pt}
+.note{font-size:9.6pt;color:var(--muted);margin:2mm 0 0}
+.lgm{display:block;flex:none}
+.legend{display:grid;grid-template-columns:48mm 1fr;gap:3.4mm;align-items:center;margin-top:1mm}
+.lgMap{border:.3mm solid var(--line);border-radius:2mm;overflow:hidden;background:#fffaf0}
+.lgList p{display:flex;align-items:center;gap:1.8mm;margin:0 0 1.4mm;font-size:9.6pt;line-height:1.22}
+.lgList b{display:block;color:var(--wine)}
+.lgList span{color:var(--brown)}
+.strip{margin-top:5mm;border-top:.3mm solid var(--gold);padding-top:2.6mm}
+.strip h3{margin:0 0 2mm;color:var(--wine);font-size:12pt}
+.strip h3 span{font-weight:400;font-size:9.6pt;color:var(--muted);margin-left:2mm}
+.sbox{display:grid;grid-template-columns:1fr 1fr 1.5fr;gap:3mm}
+.sbox>div{position:relative;background:var(--paper);border:.3mm solid var(--gold);border-radius:2.4mm;padding:2.4mm 3mm 2.4mm 10.4mm;font-size:10pt;line-height:1.32}
+.sbox>div>i{position:absolute;left:2.4mm;top:2.2mm;width:5.8mm;height:5.8mm;border-radius:50%;background:var(--wine);color:#fffaf0;font-style:normal;font-weight:800;font-size:10.5pt;display:flex;align-items:center;justify-content:center}
+.sbox>div>b{display:block;color:var(--wine);font-size:11pt;margin-bottom:.8mm}
+.sbox p{margin:0}
+.sbox p b{color:var(--wine)}
+.sbox .sd{display:grid;grid-template-columns:20mm 1fr auto;align-items:center;gap:1.4mm;margin-bottom:.9mm}
+.sbox .sd span:first-child{font-weight:700}
+.sbox .sd em{font-style:normal;font-weight:800;color:var(--wine);white-space:nowrap}
+.sbox .plus{display:none}
+.sbox.two{grid-template-columns:1fr 1fr;margin-top:3mm}
+.sbox .sd .chip{margin-right:.6mm}
+.flow{column-count:2;column-gap:8mm;font-size:10.4pt;line-height:1.36}
+.flow h3{margin:0 0 1.5mm;color:var(--wine);font-size:11.5pt;break-after:avoid}
+.flow h3:not(:first-child){margin-top:3mm}
+.flow b{color:var(--wine)}
+.flow .pp{margin:0 0 1.6mm}
+.flow ol.turn{margin:0;padding-left:5mm}
+.flow ol.turn>li{margin-bottom:1.6mm}
+.flow ol.turn>li:not(:last-child),.flow ul.deeds li,.flow .pp{break-inside:avoid}
+.flow ul.deeds{margin:1.2mm 0 0;padding-left:4mm;list-style:'— '}
+.flow ul.deeds li{margin-bottom:1.6mm}
+.flow table.t{font-size:10pt;break-inside:avoid}
+.exH{margin:4mm 0 1.5mm;color:var(--wine);font-size:11.5pt}
+.tips{margin:0 0 1.6mm;padding-left:4.4mm}
+.tips li{margin-bottom:1.2mm}
+.faq.first{margin-top:0;border-top:0;padding-top:0}
+.ex{background:var(--paper);border:.3mm solid var(--gold);border-radius:2mm;padding:2.4mm 3mm;font-size:10pt;line-height:1.34}
+.ex p{margin:0 0 1.4mm;break-inside:avoid}
+.rulesP .ex{column-count:2;column-gap:7mm}
+.faq{margin-top:4mm;border-top:.3mm solid var(--gold);padding-top:2mm}
+.faq h3{margin:0 0 1.5mm;color:var(--wine);font-size:11.5pt}
+.faq .qa{column-count:2;column-gap:8mm;font-size:10pt;line-height:1.32}
+.faq .qa p{margin:0 0 1.8mm;break-inside:avoid}
+.faq .qa b{color:var(--wine);display:block}
+.works{display:grid;grid-template-columns:1fr 1fr;gap:3mm 6mm}
+.wk{border:.3mm solid var(--line);border-radius:2mm;padding:2mm 2.6mm;background:var(--paper);break-inside:avoid}
+.wkh{display:flex;align-items:baseline;gap:2mm;font-size:10.6pt}
+.wkh b{color:var(--wine)}
+.wkh span{color:var(--muted);font-size:9.4pt}
+.wkh i{margin-left:auto;font-style:normal;background:var(--gold);color:#fff;font-weight:700;font-size:9pt;padding:0 1.6mm .2mm;border-radius:1mm}
+.wkn{margin:1.2mm 0 1mm;display:flex;align-items:center;flex-wrap:wrap}
+.wkn .plus{display:none}
+.wkn .chip{margin-right:.8mm}
+.wk p{margin:0;font-size:9.6pt;line-height:1.3}
+.claude{margin-top:3mm;font-size:9.4pt;color:var(--muted);text-align:center}
+.nums{display:grid;grid-template-columns:repeat(6,1fr);gap:1mm;font-size:9.4pt;text-align:center}
 .nums span{border:.2mm solid var(--line);border-radius:1mm;padding:.5mm 0;background:var(--paper)}
 .nums b{display:block;color:var(--wine);font-size:12pt}
-.credits{margin-top:4mm;font-size:9.2pt;line-height:1.35}
-.faq{margin-top:4mm;border-top:.3mm solid var(--gold);padding-top:2mm}
-.faq h3{margin:0 0 1.5mm;color:var(--wine);font-size:11pt}
-.faq .qa{column-count:2;column-gap:8mm;font-size:9.4pt;line-height:1.32}
-.faq .qa p{margin:0 0 1.6mm;break-inside:avoid}
-.faq .qa b{color:var(--wine);display:block}
-.tl p{display:flex;gap:3mm;margin:0 0 1.2mm;font-size:9.8pt;line-height:1.3}
-.tl b{flex:none;width:12mm;color:var(--wine);text-align:right}
+.credits{margin-top:5mm;font-size:9.4pt;line-height:1.36}
 .labelP .lbl{position:absolute;left:10mm;width:190mm;border:.25mm solid #777}
-.labelP .lid{top:12mm;height:124mm;background:${C.wine};padding:5mm}
-.labelP .lid .lin{position:relative;height:100%;border:.4mm solid var(--gold);border-radius:2mm;display:flex;align-items:center;gap:6mm;padding:0 9mm}
+.labelP .lid{top:12mm;height:124mm;background:${DEEP};padding:5mm}
+.labelP .lid .lin{position:relative;height:100%;border:.4mm solid ${GOLD};border-radius:2mm;display:flex;align-items:center;gap:6mm;padding:0 8mm}
 .labelP .lid .lt{flex:1;color:#fbf6ec}
-.labelP .lid .big{font-size:24pt;color:#f0d9a0;letter-spacing:.1em}
-.labelP .lid .nm{font-weight:800;font-size:34pt;line-height:1.1}
-.labelP .lid .sub{font-size:12pt;opacity:.95;margin:2mm 0 4mm}
+.labelP .lid .big{font-size:22pt;color:${GOLD};letter-spacing:.1em}
+.labelP .lid .nm{font-weight:800;font-size:32pt;line-height:1.1;color:#f7e9ad}
+.labelP .lid .sub{font-size:11.5pt;opacity:.95;margin:2mm 0 4mm}
 .labelP .lid .meta{font-size:11pt}
-.labelP .lid .ser{font-size:9pt;color:#f0d9a0;letter-spacing:.1em;margin-top:6mm}
+.labelP .lid .ser{font-size:9pt;color:${GOLD};letter-spacing:.1em;margin-top:6mm}
 .labelP .lid .sch{font-size:9.5pt;opacity:.85}
+.labelP .lid .map{width:84mm;background:#fffaf0;border-radius:2mm;padding:2mm}
 .labelP .list{top:144mm;height:44mm;background:var(--paper);padding:4mm 7mm}
 .labelP .list h3{margin:0 0 2.4mm;color:var(--wine);font-size:13pt}
-.labelP .list .items{display:grid;grid-template-columns:1fr 1fr 1fr;gap:2mm 4mm;font-size:10.5pt}
+.labelP .list .items{display:grid;grid-template-columns:1fr 1fr 1fr;gap:1.8mm 4mm;font-size:10.2pt}
 .labelP .list .chk{display:inline-block;width:3.6mm;height:3.6mm;border:.3mm solid var(--brown);border-radius:.6mm;vertical-align:-.6mm;margin-right:1.6mm}
-.labelP .side{height:22mm;background:${C.wine};color:#fbf6ec;display:flex;align-items:center;justify-content:space-around;font-size:11pt}
-.labelP .side .aso{color:#f0d9a0;letter-spacing:.1em}
-.labelP .side b{font-size:16pt}
+.labelP .side{height:22mm;background:${DEEP};color:#fbf6ec;display:flex;align-items:center;justify-content:space-around;font-size:11pt}
+.labelP .side .aso{color:${GOLD};letter-spacing:.1em}
+.labelP .side b{font-size:16pt;color:#f7e9ad}
 .labelP .s0{top:198mm}.labelP .s1{top:228mm}
 .lblNote{position:absolute;left:10mm;right:10mm;top:258mm;font-size:9pt;color:var(--muted);text-align:center}
-.tokInfo{font-size:9pt;line-height:1.38;color:var(--brown);border:.3mm solid var(--gold);border-radius:2mm;padding:3mm 3.4mm;background:var(--paper);height:100%}
-.tokInfo b{color:var(--wine)}
 `;
 
 // ---------- the sheets, in printing order ----------
-const LANDS_PRINT = RK.flatMap(k => LANDS.filter(l => l.res === k));
-const HEX_AT = [[19, 7], [108, 7], [19, 102], [108, 102], [19, 197], [108, 197]];
-const hexSheet = (i) => ({
-  key: `hex${i + 1}`,
-  front: placedSheet(LANDS_PRINT.slice(i * 6, i * 6 + 6).map((l, j) => ({ x: HEX_AT[j][0], y: HEX_AT[j][1], w: 83, h: HH + 4, html: landFront(l) })), { label: `ოქროს ხანა · მხარეები ${i + 1}/3 — წინა მხარე` }),
-  back: placedSheet(HEX_AT.map(([x, y]) => ({ x, y, w: 83, h: HH + 4, html: landBack() })), { back: true, label: `ოქროს ხანა · მხარეები ${i + 1}/3 — ზურგი` }),
-});
-const NUM_AT = SPIRAL_NUMS.map((_, i) => [110 + (i % 3) * 27, 9 + Math.floor(i / 3) * 27]);
-const TRADES = ['3', '3', '3', '3', ...RK];
-const TRADE_AT = TRADES.map((_, i) => [21 + (i % 3) * 27, 112 + Math.floor(i / 3) * 27]);
-const SPARE_AT = [[140, 180], [167, 180], [140, 207], [167, 207], [140, 234], [167, 234]];
-const tokenInfo = `<div class="tokInfo"><b>ჟეტონები</b> — 25 მმ წრიული პერფორატორით ან მაკრატლით.<br><b>რიცხვები:</b> ზურგზე ასოა (ა–ს) — დასაწყობად.<br><b>კარიბჭეები:</b> ზურგზე „კარიბჭე“ — ამოფარებით იდება.<br><b>მოთარეშე:</b> ზოლი წყვეტილ ხაზებზე მოკეცე — ორი ნახატი ზურგით ერთმანეთს, ფეხები გვერდებზე.<br><b>სათადარიგო</b> წრეები — დაკარგულის ნაცვლად, მარკერით.</div>`;
-const tokenSheet2 = {
-  key: 'tokens',
-  front: placedSheet([
-    { x: 19, y: 7, w: 83, h: HH + 4, html: landFront(LANDS.find(l => !l.res)) },
-    ...SPIRAL_NUMS.map((n, i) => ({ x: NUM_AT[i][0], y: NUM_AT[i][1], w: 25, h: 25, html: numFront(n) })),
-    ...TRADES.map((k, i) => ({ x: TRADE_AT[i][0], y: TRADE_AT[i][1], w: 25, h: 25, html: tradeFront(k) })),
-    { x: 110, y: 180, w: 24, h: 98, html: robberStrip },
-    ...SPARE_AT.map(([x, y]) => ({ x, y, w: 25, h: 25, html: spareToken })),
-    { x: 21, y: 199, w: 79, h: 80, html: tokenInfo },
-  ], { label: 'ოქროს ხანა · უდაბნო, 18 რიცხვი, 9 კარიბჭე, მოთარეშე — წინა მხარე' }),
-  back: placedSheet([
-    { x: 19, y: 7, w: 83, h: HH + 4, html: landBack() },
-    ...LETTERS.map((l, i) => ({ x: NUM_AT[i][0], y: NUM_AT[i][1], w: 25, h: 25, html: numBack(l) })),
-    ...TRADES.map((_, i) => ({ x: TRADE_AT[i][0], y: TRADE_AT[i][1], w: 25, h: 25, html: tradeBack })),
-  ], { back: true, label: 'ოქროს ხანა · ჟეტონები — ზურგი' }),
-};
-const cards = (key, fronts, back, label) => ({
+const cards = (key, fronts, backs, label) => ({
   key,
   front: cardSheet(fronts, { label: `ოქროს ხანა · ${label} — წინა მხარე` }),
-  back: cardSheet(fronts.map(() => back), { back: true, label: `ოქროს ხანა · ${label} — ზურგი` }),
+  back: cardSheet(backs, { back: true, label: `ოქროს ხანა · ${label} — ზურგი` }),
 });
-const resSheets = [
-  ...RK.flatMap((k, j) => [0, 1].map(h => cards(`res${j * 2 + h + 1}`, Array(9).fill(resCard(k)), resBack, `მოსავალი ${j * 2 + h + 1}/11 · ${RES[k].name}`))),
-  cards('res11', [...RK.map(resCard), spareCard(), spareCard(), spareCard(), spareCard()], resBack, 'მოსავალი 11/11 · თითო და სათადარიგო'),
-];
-const DEV_FRONTS = [...DEV.flatMap(d => Array(d.n).fill(devCard(d))), ...TREASURES.map(treasureCard), spareCard(C.brown), spareCard(C.brown)];
-const devSheets = [0, 1, 2].map(i => cards(`dev${i + 1}`, DEV_FRONTS.slice(i * 9, i * 9 + 9), devBack, `განვითარება ${i + 1}/3`));
+const CHRON = REGIONS.map((_, r) => r).filter(r => r !== TBILISI);
+const SMALL = [...CHRON.map(r => [chronFront(r), chronBack]), ...HOUSES.map((_, i) => [houseFront(i), houseBack(i)]), [firstFront, firstBack], [marketFront, marketBack]];
+const workSheet = i => ({
+  key: `works${i + 1}`,
+  front: a6Sheet(WORKS.slice(i * 4, i * 4 + 4).map(workFront), { label: `ოქროს ხანა · მეფის საქმეები ${i + 1}/3 — წინა მხარე` }),
+  back: a6Sheet(WORKS.slice(i * 4, i * 4 + 4).map(() => workBack), { back: true, label: `ოქროს ხანა · მეფის საქმეები ${i + 1}/3 — ზურგი` }),
+});
 const SHEETS = [
   { key: 'cover' },
   { key: 'rules1', front: rulesPage1, back: rulesPage2 },
   { key: 'rules2', front: rulesPage3, back: rulesPage4 },
-  hexSheet(0), hexSheet(1), hexSheet(2),
-  tokenSheet2,
-  ...resSheets,
-  ...devSheets,
-  { key: 'a6a', front: a6Sheet(PLAYERS.map(costCard), { label: 'ოქროს ხანა · ფასები A6 — წინა მხარე' }), back: a6Sheet(PLAYERS.map(turnCard), { back: true, label: 'ოქროს ხანა · ფასები A6 — ზურგი' }) },
-  { key: 'a6b', front: a6Sheet([...SPECIAL.map(specialCard), setupCard, teacherCard], { label: 'ოქროს ხანა · დიდი ბარათები A6 — წინა მხარე' }), back: a6Sheet([...SPECIAL.map(specialBack), spiralCard, variantCard], { back: true, label: 'ოქროს ხანა · დიდი ბარათები — ზურგი' }) },
-  { key: 'figures', front: placedSheet(figuresSheet(false), { label: 'ოქროს ხანა · ქაღალდის ფიგურები — წინა მხარე' }), back: placedSheet(figuresSheet(true), { back: true, label: 'ოქროს ხანა · ქაღალდის ფიგურები — ზურგი' }) },
-  { key: 'frame1', front: placedSheet(PIECES.slice(0, 3).map((P, i) => ({ x: 12.1 + i * 63.6, y: 22.2, w: 58.6, h: 252.6, html: framePiece(P) })), { label: 'ოქროს ხანა · ჩარჩო 1–3 — დააკარი 2 მმ მუყაოზე, მერე ამოჭერი' }) },
-  { key: 'frame2', front: placedSheet(PIECES.slice(3).map((P, i) => ({ x: 12.1 + i * 63.6, y: 22.2, w: 58.6, h: 252.6, html: framePiece(P) })), { label: 'ოქროს ხანა · ჩარჩო 4–6 — დააკარი 2 მმ მუყაოზე, მერე ამოჭერი' }) },
+  ...[0, 1, 2, 3].map(tileSheet),
+  ...[0, 1, 2].map(workSheet),
+  cards('cards1', SMALL.slice(0, 9).map(c => c[0]), SMALL.slice(0, 9).map(c => c[1]), 'მატიანე 1–9'),
+  cards('cards2', SMALL.slice(9).map(c => c[0]), SMALL.slice(9).map(c => c[1]), 'მატიანე 10–12, სახლები, პირველი სახლი, ბაზარი'),
+  { key: 'aid', front: a6Sheet(HOUSES.map((_, i) => aidFront(i)), { label: 'ოქროს ხანა · სვლის ბარათები A6 — წინა მხარე' }), back: a6Sheet(HOUSES.map((_, i) => aidBack(i)), { back: true, label: 'ოქროს ხანა · სვლის ბარათები A6 — ზურგი' }) },
+  { key: 'chits', front: placedSheet([chitGrid(), ...chitItems(), ...spareItems(), chitInfo], { label: 'ოქროს ხანა · ნივთები — წინა მხარე' }), back: placedSheet([...chitItems(), ...spareItems()], { back: true, label: 'ოქროს ხანა · ნივთები — ზურგი (იგივე)' }) },
+  { key: 'figures', front: placedSheet(figureItems(false), { label: 'ოქროს ხანა · მამულები, ნიშნები, მხედრები — წინა მხარე' }), back: placedSheet(figureItems(true), { back: true, label: 'ოქროს ხანა · მამულები და ნიშნები — ზურგი' }) },
   { key: 'label', front: labelPage },
 ];
 SHEETS[0].front = coverPage(k => sheetNo(SHEETS, k));

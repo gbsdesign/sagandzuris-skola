@@ -465,7 +465,7 @@
   (`HybridState`, `markTeam`, kept on the device so ✕ only pauses). The room store is generic since then: `utils/gameRoom.ts`
   `createRooms(be, engine, moves)` over a `RoomEngine` (`games` it plays; samshvilde's is `utils/samshvildeRoom.ts`), the
   app's two stores in `utils/gameRoomFirestore.ts` (`rooms` = samshvilde, `roundRooms` = the quick games: `timeUp(key)`,
-  `reveal`, `next`); the rules let a room be opened for every `ROOM_GAMES` game (28 since 2026-11-04), up to 40 players, an act may carry `ms` (and `text`).
+  `reveal`, `next`); the rules let a room be opened for every `ROOM_GAMES` game (29 since 2026-11-04), up to 40 players, an act may carry `ms` (and `text`).
   Invitations name their game: `data/roomGames.ts` (titles, the hub item, a chat card's `room` = `game:roomId` — a
   samshvilde card keeps the bare id), the Worker's `GAME_TITLES`, `/?open=<game>&c=&r=`, icons
   `components/games/roomGameIcons.ts`; the online tab of every room game is `components/games/RoomSetup.tsx`. Screens
@@ -1001,6 +1001,31 @@
   computer = two columns, the map sticky), `Sheets.tsx` (`RoadSheet` with the ways to pay, `CitySheet` with the inn), `look.tsx`
   (cards, `lineText`), `Room.tsx`. The kit's rule said a road must not join one's other roads — fixed the same day („შეიძლება არ
   ებმოდეს“). Not yet tried by real people on several phones.
+- **„ოქროს ხანა“ — our own game (2026-11-04; the printed №1 was a Catan, now rebuilt on its own rules)**: mapItem `okros`, its entry
+  in `GAMES` has `item` and no `like`, the hub opens its tab by `requestOpen('okros', 'online' | 'table')`, tab `sg-okros-tab`; rules
+  `utils/okrosKhana.ts` + test, screens `pages/games/okros/`. The board is the songs map's 13 regions (`KUTKHE_REGIONS` order,
+  neighbours `NEAR` from `KUTKHE_NEAR`), each giving one good (`REGION_GOOD`: ხე, ქვა, პური, ღვინო, ოქრო; Tbilisi = the market, any
+  two). A turn: ride up to `RIDE` 2 steps or stay, gather where you stop (`BASE` 2, +1 for one's estate there, +1 when the king is
+  there; a hand holds ≤ `HAND_MAX` 10), then one deed or none — an estate (ხე + ქვა + პური → 2; `PLACES` 2 a region, one a house, not in
+  Tbilisi, `ESTATES` 5 a house), goods for the open work here (`WORKS`: 12, one a region but Tbilisi, notes written by Claude,
+  unchecked; a good = 1, 2 with the king; who fills the last box takes the card and its bonus +2…+4, a new one is drawn; `OPEN_WORKS`
+  3 open) or a feast at one's own estate (პური + ღვინო → 3, 5 with the king; every other rider there +1). A year = everyone once,
+  then the chronicle's next card moves the king (12 cards, regions 0–11); 2 houses play 12 years, 3 — 10, 4 — 9 (`yearsFor`), or
+  until no work is open; ties → works, then estates. One number a move (`ridePick` — Tbilisi `TBILISI_PICK` + its two goods —,
+  `PASS_PICK`, `BUILD_PICK`, `FEAST_PICK`, `givePick` = the counts in base 4); `botPick` = the careful move (`bestRide`,
+  `bestDeed`). „ონლაინ“ = a room of its own engine (`utils/okrosRoom.ts` `OKROS_ROOM`, no seats — nothing is secret; `okros` in
+  `ROOM_GAMES`/the rules/the Worker's titles; `okrosRooms` / `useOkrosRoom`): 2–4 play, the host may be one („მეც ვთამაშობ“), a
+  step's clock (`OKROS_SECS`: 75 s a ride, 60 a deed), then the host's phone moves (`okrosTimeUp` → `botPick`). „ჰიბრიდული“
+  (`Table.tsx`, kept in `sg-okros-table`, who begins in `sg-okros-conf`, names = `CircleNames`) = one phone in the middle of the
+  table; „უკან“ takes back a move that showed nothing new; ✕ only pauses. Screens: `Board.tsx` (the map: each region's mark, its
+  estates' places, the riders, the crown, the open work's castle; while a house rides, the regions it may reach stay bright and
+  take a tap), `Play.tsx`, `Room.tsx`, `look.tsx` (the goods' and houses' colours and marks, shared with the kit). Its kit
+  (`okros-khana.mjs`, 16 sheets) reads the numbers, works and names from the app: a 56×39 cm board of four A4 pieces (the regions
+  in their goods' tints, each with a plate — the work's castle place, two estate places, the good's mark, the name —, a footprint
+  on every border (`crossing`; crowded ones placed by hand, `CROSS_AT`; the build stops if a plate lies across a seam or a
+  footprint under a plate), the years' track, the turn panel, the points track 0–49), 12 work cards A6, 12 chronicle cards with
+  the houses', the first house's and the market's cards, 4 aid cards A6, 110 goods' chits, estates, markers, five folded figures,
+  four rule pages (page 1 sums up a turn and the board's marks) and a box label. Not yet tried by real people on several phones.
 - **Printable board games (2026-10-28, fourth PR)**: the სამაგიდო variant (was „უტელეფონო“) of the six board games (plan doc tab „6 სამაგიდო
   თამაში“) as A4 PDFs in `public/games/print/<id>.pdf` (not precached; `/games/print/` is in the PWA's navigateFallbackDenylist).
   Made by `node scripts/print-games/build.mjs [id…] [--previews=<dir>]` — HTML printed by Playwright's Chromium; shared pieces in
@@ -1009,9 +1034,8 @@
   game in `scripts/print-games/games/`. Every file prints „ყველაფერი ორმხრივად“: a module lists its physical sheets
   (`{ key, front, back? }`), `duplex()` makes each sheet two pages (a missing back = a labelled blank page) and the cover names
   sheets by number (`sheetNo`). Portraits are ornament placeholders until the user approves Gemini pictures. Built so far:
-  „მეფის კარი“ (№6) and „სამშვილდის ღამე“ (№2); then (fifth PR) „ოქროს ხანა“ (№1, Catan: 19 hexes 79 mm, a frame of six A4 pieces
-  ≈50×43 cm whose ends meet by letters ა–ვ, 18 numbers laid by the letters' spiral so 6 and 8 never touch, 9 gates with fixed place
-  names, A6 cards via `placedSheet`) and „ლურჯი სუფრა“ (№5, Azul in Erekle II's Tbilisi: 105 stamps of 20 mm on one sheet whose back
+  „მეფის კარი“ (№6) and „სამშვილდის ღამე“ (№2); then (fifth PR) „ოქროს ხანა“ (№1 — since 2026-11-04 the school's own game, see
+  „ოქროს ხანა“ above) and „ლურჯი სუფრა“ (№5, Azul in Erekle II's Tbilisi: 105 stamps of 20 mm on one sheet whose back
   is one indigo field, four A4-landscape boards turned onto portrait pages — apprentice / master side, trays ⌀90 mm, the უსტაბაში
   token tile-sized to fit a floor place); then (sixth PR) „ორი ტახტი“ (№4, 7 Wonders Duel between the western (ქუთაისი) and eastern
   (თბილისი) thrones: 73 age cards with the original costs/effects under Georgian names, 8 help cards, 12 Georgian monuments 96×62 mm,
@@ -1078,10 +1102,13 @@
   it) ↔ its name, ბ a note on the treble staff ↔ its key on a two-octave keyboard, named, გ each region's first song of „საიდანაა
   სიმღერა?“'s kit (`SONGS`, now exported) ↔ its region on the small map; each deck's 27th card is the host's key (ბ: the notes'
   guide), taken out before play.
+- **Our own games, not copies (2026-11-04)**: a board or party game is the school's own game in its genre — its own mechanics and
+  Georgian content —, never a known game copied one-to-one under another name. „ოქროს ხანა“ was rebuilt first; ქარავანი, ორი ტახტი,
+  ლურჯი სუფრა, მეფის კარი and then the word and party games are reviewed the same way, one PR a game. A genre's general idea (a
+  daily word, a team quiz, a map to tap) may stay; the hub's `like` bracket names only a game ours still resembles.
 - **No religious pictures in the games (the user's rule, 2026-11-01; corrected the same day: „რელიგიური და მუსიკალური კითხვები
   დატოვე, უბრალოდ ვიზუალს ნუ გამოიყენებ“)**: no cross, church, icon or domed-church mark anywhere in a game or a print kit (the
-  series emblem is `grapeEmblem` in `scripts/print-games/lib.mjs`, the Catan kit's shields carry an eight-rayed sun, the caravan
-  map's shrines an old gate); a monument card that will get a picture is a secular one. Faith and chant stay as content —
+  series emblem is `grapeEmblem` in `scripts/print-games/lib.mjs`, the caravan map's shrines an old gate); a monument card that will get a picture is a secular one. Faith and chant stay as content —
   questions, words, feasts and saints, chant audio, place names — beside the wider Georgian topics.
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)

@@ -566,7 +566,7 @@ const GAME_TITLES = {
   hangi: 'დღის ჰანგი', akordi: 'ქართული აკორდი', rvakhma: 'რვა ხმა', ruka: 'რუკის ვიქტორინა', gagrdzele: 'გააგრძელე!',
   hangebi: 'ოთხი ჰანგი, ერთი სიტყვა', eqo: 'ექო', mprinavi: 'მფრინავი ნოტები', tsqvilebi: 'ხმის წყვილები',
   mesame: 'მესამე ხმა', chamotvale: 'ჩამოთვალე!', pantomima: 'პანტომიმა', nakhati: 'ნახატობანა', loto: 'საგალობო ლოტო',
-  rsr: 'რა? სად? როდის?', amikhseni: 'ამიხსენი', gatvla: 'გათვლა', churchkhela: 'ცხელი ჩურჩხელა', kari: 'მეფის კარი', lurji: 'ლურჯი სუფრა', takhti: 'ორი ტახტი', qaravani: 'ქარავანი',
+  rsr: 'რა? სად? როდის?', amikhseni: 'ამიხსენი', gatvla: 'გათვლა', churchkhela: 'ცხელი ჩურჩხელა', kari: 'მეფის კარი', lurji: 'ლურჯი სუფრა', takhti: 'ორი ტახტი', qaravani: 'ქარავანი', okros: 'ოქროს ხანა',
 };
 
 async function gameInvite(request, env) {
