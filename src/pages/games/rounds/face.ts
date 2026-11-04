@@ -44,8 +44,9 @@ export interface RoundFace {
    * „პანტომიმა“) */
   Secret?: React.FC<{ q: RoundQ }>;
   /** the host's own tool while a round is asked, under `Secret` (2026-11-01: „ნახატობანა“'s drawing pad): it may change the
-   * round's public part (`edit`), which reaches every phone at once */
-  Tool?: React.FC<{ q: RoundQ; edit: (q: RoundQ) => void }>;
+   * round's public part (`edit`), which reaches every phone at once; `answered` — how many have answered it so far
+   * („ამიხსენი“'s „სხვა სიტყვა“ only before anybody has) */
+  Tool?: React.FC<{ q: RoundQ; edit: (q: RoundQ) => void; answered: number }>;
   /** the line under the online tab's „new room“ for its opener (else: the host leads and does not play) */
   hostLine?: string;
   /** the game's own choices: under the rounds in the lobby (the host's) and in the one-phone setup */

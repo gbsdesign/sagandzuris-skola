@@ -228,16 +228,25 @@ export const answerForms = (answer: string): string[][] => {
   return [answer.replace(/\([^)]*\)/g, ' '), ...inner].map(tokens).filter(f => f.length > 0);
 };
 
+/** how many weighty words more than the answer's a written one may have („მგონი, ქეთევან დედოფალი“) — a list of guesses
+ *  is none */
+export const RSR_EXTRA = 3;
+
 /**
  * Are the words written the answer? The host's helper (the host judges again at the reveal): every number of the answer
  * written (with its month, if it has one — „26 მაისს“), else three quarters of its weighty words, each in any case or
- * with one slip in a long one. A question asking two things (who and where) wants both.
+ * with one slip in a long one. A question asking two things (who and where) wants both. Words written past the answer's
+ * own and `extra` more are a list of guesses, not an answer.
  */
-export const rsrMatch = (answer: string, written: string): boolean => {
+export const rsrMatch = (answer: string, written: string, extra = RSR_EXTRA): boolean => {
   const said = tokens(written);
   if (!said.length) return false;
-  const has = (t: string) => said.some(w => sameWord(t, w));
+  // a written word may end in the copula too: „ფარნავაზია“, „ჩონგურია“, „ღვინოა“
+  const has = (t: string) => said.some(w => sameWord(t, w) || (w.length > 3 && w.endsWith('ა') && sameWord(t, w.slice(0, -1))));
+  // the written words that weigh (a short or a light one — „ეს“, „მეფე“ — does not), against a list of guesses
+  const loud = said.filter(t => t.length >= 3 && !isLight(t)).length;
   return answerForms(answer).some(form => {
+    if (loud > form.length + extra) return false;
     const numbers = form.filter(isNumber);
     if (numbers.length) return numbers.every(has) && form.filter(isMonth).every(has);
     const weighty = form.filter(t => t.length >= 3 && !isLight(t));

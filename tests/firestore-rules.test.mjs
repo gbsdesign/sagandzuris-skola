@@ -422,6 +422,8 @@ await t('a member opens a quiz room', assertSucceeds(setDoc(doc(gp1, G, 'w1'), r
 await t('an answer may be in words', assertSucceeds(setDoc(doc(gp2, G, 'w1', 'acts', 'gp2'), act({ key: '1.0.ask.1', pick: 0, ms: 31000, text: 'ფარნავაზი' }))));
 await t('its words are a text', assertFails(setDoc(doc(gp2, G, 'w1', 'acts', 'gp2'), act({ text: 7 }))));
 await t('and not too long', assertFails(setDoc(doc(gp2, G, 'w1', 'acts', 'gp2'), act({ text: 'ა'.repeat(241) }))));
+// „ამიხსენი“ online (2026-11-04): a room of it
+await t('a member opens a room of „ამიხსენი“', assertSucceeds(setDoc(doc(gp1, G, 'a1'), room('gp1', { game: 'amikhseni' }))));
 
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();

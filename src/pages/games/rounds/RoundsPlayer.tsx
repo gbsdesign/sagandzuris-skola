@@ -7,6 +7,7 @@ import { Btn } from '../../../components/ui/kit';
 import { triggerHaptic } from '../../../utils/haptics';
 import { Hint } from '../samshvilde/parts';
 import { CallBtn, type GameCall } from '../samshvilde/online/GameCall';
+import { ROOM_GAME_INFO } from '../../../data/roomGames';
 import type { RoundFace } from './face';
 import type { Snippet } from './useSnippet';
 import { HostSoundLine, Podium, RoundHead, SnippetBox, Standings, TimerRing, placeText, useNow } from './parts';
@@ -104,7 +105,7 @@ export const RoundsPlayer: React.FC<{
           </div>
           <Podium names={v.names} scores={v.scores} me={me} />
           <Standings names={v.names} scores={v.scores} me={me} />
-          <Hint className="text-center">წამყვანი შეიძლება კიდევ ერთ თამაშს დაიწყებს — ამ ეკრანზე გამოჩნდება.</Hint>
+          <Hint className="text-center">{ROOM_GAME_INFO[face.game].host} შეიძლება კიდევ ერთ თამაშს დაიწყებს — ამ ეკრანზე გამოჩნდება.</Hint>
         </div>
       </TableScreen>
     );
@@ -135,7 +136,7 @@ export const RoundsPlayer: React.FC<{
             : <face.Reveal q={v.q} picks={v.picks} mine={me >= 0 ? v.picks?.[me] ?? null : undefined} seat={me >= 0 ? me : undefined} names={v.names} />}
           {me >= 0 && <p className="text-center text-[13.5px] font-bold text-[#4a3426]">{placeText(place)} · {v.scores[me]} ქულა</p>}
           <Standings names={v.names} scores={v.scores} gained={v.gained} me={me} limit={5} />
-          <Hint className="text-center">შემდეგ რაუნდს წამყვანი დაიწყებს.</Hint>
+          <Hint className="text-center">შემდეგ რაუნდს {ROOM_GAME_INFO[face.game].host} დაიწყებს.</Hint>
         </div>
       </TableScreen>
     );
