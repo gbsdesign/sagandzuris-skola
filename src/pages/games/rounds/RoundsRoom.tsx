@@ -69,14 +69,14 @@ export const RoundsRoom: React.FC<{
   };
   const start = () => {
     snippet.unlock();
-    const rounds = face.draw(face.fixedRounds ?? opts.count, program);
+    const rounds = face.draw(face.fixedRounds ?? opts.count, program, snap.joins.map(j => j.name));
     if (!rounds.length) { setEmpty(true); return; }
     if (roundRooms.host.start({ game: face.game, rounds, sound: opts.sound })) face.remember(rounds);
   };
   const again = () => {
     const s = snap.state;
     if (!s) return;
-    const rounds = face.draw(s.rounds.length, program);
+    const rounds = face.draw(s.rounds.length, program, s.players.map(p => p.name));
     const next = rounds.length ? againRounds(s, rounds) : null;
     if (!next) { setEmpty(true); return; }
     face.remember(rounds);
