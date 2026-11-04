@@ -269,6 +269,8 @@ export class ChantSynth {
   private loopA: number | null = null; // loop A -> B (or A -> end while B is unset)
   private loopB: number | null = null;
   playing = false;
+  /** with a loop set: play A -> B once, then stop back at A (the learning mode's „მარტივი“ way) */
+  once = false;
   private starting = false;
 
   constructor(score: BookScore) {
@@ -407,13 +409,13 @@ export class ChantSynth {
       if (len > 0.02) this.voice(n.m + this.transpose, n.v, Math.max(at, ctx.currentTime), len, n.g);
     }
     if (this.position() >= end) {
-      if (this.loopA !== null) {
+      if (this.loopA !== null && !this.once) {
         this.silence();
         this.startAt(this.loopA);
         return;
       }
       this.pause();
-      this.pausedAt = 0;
+      this.pausedAt = this.loopA ?? 0;
       this.onEnd?.();
     }
   }

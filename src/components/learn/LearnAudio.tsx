@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Pause, Play, Repeat } from 'lucide-react';
+import { Pause, Play } from 'lucide-react';
 import { useAuth } from '../../context';
 import type { ChantMediaItem } from '../../data/chantMediaRegistry';
 import { LearnPart, afterTry, learnTakeId, parseSongPiece, partsAtBreaths, partsOfRecording, wordsForPart } from '../../utils/learn';
@@ -12,7 +12,7 @@ import { useLearning } from '../../hooks/useLearning';
 import { usePearls } from '../../hooks/usePearls';
 import { triggerHaptic } from '../../utils/haptics';
 import type { Voice } from '../../utils/pathItems';
-import { Choice, LOOPS_PER_STEP, LearnFrame, LearnTips, PartWords, PartsBar, ReviewReminder, SPEEDS, SingPanel, Step, StepBar } from './LearnShared';
+import { Choice, LOOPS_PER_STEP, LearnFrame, LearnTips, PartWords, PartsBar, ReviewReminder, SPEEDS, SettingsFold, SingPanel, Step, StepBar } from './LearnShared';
 
 // „სასწავლო რეჟიმი“ of a song that has a recording but no notes: the recording cut where the singers breathe (parts
 // of 6–16 s; every 12 s when it cannot be decoded). A part goes by the same three steps as a chant's — მოისმინე (50%),
@@ -23,6 +23,7 @@ import { Choice, LOOPS_PER_STEP, LearnFrame, LearnTips, PartWords, PartsBar, Rev
 const ordinal = (n: number) => (n === 1 ? 'პირველი' : `მე-${n}`);
 const VOICES: Voice[] = ['1', '2', '3'];
 type Mix = 'mine' | 'all' | 'others';
+const MIX_NAMES: Record<Mix, string> = { mine: 'მხოლოდ ჩემი ხმა', all: 'ყველა ხმა', others: 'ჩემ გარეშე' };
 
 export const LearnAudio: React.FC<{
   piece: string; media: ChantMediaItem; title: string; subtitle: string; words?: string; voice?: Voice; onClose: () => void;
@@ -212,10 +213,7 @@ export const LearnAudio: React.FC<{
           )}
 
           <section className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] p-3.5 flex flex-col gap-3">
-            <div className="flex items-center justify-between gap-2">
-              <h2 className="text-[13px] font-extrabold text-[#7a2028]">{partName}</h2>
-              <span className="shrink-0 inline-flex items-center gap-1 text-[12px] font-bold text-[#8c7c6b]"><Repeat className="w-3.5 h-3.5" />წრეზე</span>
-            </div>
+            <h2 className="text-[13px] font-extrabold text-[#7a2028]">{partName}</h2>
             <StepBar step={step} loops={loops} onStep={n => goStep(n)} hints={[
               split ? 'ნელა, მხოლოდ შენი ხმა. მოისმინე სამჯერ.' : 'ნელა. მოისმინე სამჯერ და დაიმახსოვრე.',
               split ? 'შენი ხმა ჩუმადაა: იმღერე დანარჩენებთან ერთად.' : 'იმღერე ჩანაწერთან ერთად.',
@@ -231,14 +229,17 @@ export const LearnAudio: React.FC<{
                 <div className="h-1.5 rounded-full bg-[#efe6d6] overflow-hidden" aria-hidden>
                   <div className="h-full bg-[#7a2028] rounded-full" style={{ width: `${head * 100}%` }} />
                 </div>
-                <p className="text-[12px] font-bold text-[#8c7c6b] tabular-nums">{fmt(range.s0)} – {fmt(range.s1)}</p>
+                <p className="text-[12px] font-bold text-[#8c7c6b] tabular-nums">{fmt(range.s0)} – {fmt(range.s1)} · {split ? MIX_NAMES[mix] : 'ჩანაწერი'} · {Math.round(speed * 100)}%</p>
               </div>
             </div>
-            <Choice<number> label="სისწრაფე" value={speed} onChange={setSpeed} options={SPEEDS} />
-            {split && (
-              <Choice<Mix> label="რა ისმის" value={mix} onChange={setMix}
-                options={[{ value: 'mine', label: 'ჩემი ხმა' }, { value: 'all', label: 'ყველა' }, { value: 'others', label: 'ჩემ გარეშე' }]} />
-            )}
+            <SettingsFold summary={split ? 'სისწრაფე, რა ისმის' : 'სისწრაფე'}>
+              <Choice<number> label="სისწრაფე" value={speed} onChange={setSpeed} options={SPEEDS} />
+              {split && (
+                <Choice<Mix> label="რა ისმის" value={mix} onChange={setMix}
+                  options={[{ value: 'mine', label: 'ჩემი ხმა' }, { value: 'all', label: 'ყველა' }, { value: 'others', label: 'ჩემ გარეშე' }]} />
+              )}
+              <p className="text-[12.5px] leading-snug text-[#8c7c6b]">ნაბიჯები ამას თავად აყენებს — აქ მხოლოდ მაშინ შეცვალე, თუ სხვანაირად გინდა.</p>
+            </SettingsFold>
           </section>
 
           <SingPanel

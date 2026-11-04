@@ -105,6 +105,48 @@ export const melodyIn = (score: BookScore, voice: number, b0: number, b1: number
   return out;
 };
 
+// ---- the beginners' way („მარტივი“): a part in small pieces to hear and sing back ---------------------------------
+
+/** A few notes of my voice inside a part: heard once, sung back, then the next. */
+export interface LearnChunk { b0: number; b1: number; s0: number; s1: number }
+
+// notes of my voice in a piece: at least, about, at most
+const CHUNK_MIN = 3;
+const CHUNK_AIM = 5;
+const CHUNK_MAX = 7;
+
+/**
+ * A part cut into small pieces of my voice for the beginners' way: 3–7 notes each, cut where a breath falls — after
+ * the longest note (or a rest) near five notes. A piece whose melody would be one pitch joins its neighbour. The
+ * pieces cover the whole part, one after another; a part of seven notes or fewer stays whole.
+ */
+export const chunksOfPart = (score: BookScore, voice: number, part: Pick<LearnPart, 'b0' | 'b1'>): LearnChunk[] => {
+  const { toSec } = makeTimeMap(score.tempos);
+  const line = lineIn(score, voice, part.b0, part.b1);
+  const cuts: number[] = [0]; // a piece starts at note cuts[i]
+  while (line.length - cuts[cuts.length - 1] > CHUNK_MAX) {
+    const from = cuts[cuts.length - 1];
+    let best = -1, bestScore = -Infinity;
+    for (let k = from + CHUNK_MIN; k <= Math.min(from + CHUNK_MAX, line.length - CHUNK_MIN); k++) {
+      const [beat, beats] = line[k - 1];
+      const rest = Math.max(0, line[k][0] - (beat + beats));
+      const score = beats + rest * 2 - Math.abs(k - from - CHUNK_AIM) * 0.15;
+      if (score > bestScore) { bestScore = score; best = k; }
+    }
+    if (best < 0) break;
+    cuts.push(best);
+  }
+  let bounds = cuts.map((c, i) => [i === 0 ? part.b0 : line[c][0], i === cuts.length - 1 ? part.b1 : line[cuts[i + 1]][0]]);
+  // a piece of one pitch (a reciting tone) has nothing to sing back: it goes with the one after (the last with the one before)
+  for (let i = 0; i < bounds.length && bounds.length > 1;) {
+    if (melodyIn(score, voice, bounds[i][0], bounds[i][1]).length >= 2) { i++; continue; }
+    if (i < bounds.length - 1) bounds = [...bounds.slice(0, i), [bounds[i][0], bounds[i + 1][1]], ...bounds.slice(i + 2)];
+    else bounds = [...bounds.slice(0, i - 1), [bounds[i - 1][0], bounds[i][1]]];
+    i = Math.max(0, i - 1);
+  }
+  return bounds.map(([b0, b1]) => ({ b0, b1, s0: toSec(b0), s1: toSec(b1) }));
+};
+
 /** The same voice as a timeline for the singing mirror: [start, length, midi] in seconds from the part's start (at
  *  the score's tempo); a note sounds until the next one starts. */
 export const timelineIn = (score: BookScore, voice: number, b0: number, b1: number): [number, number, number][] => {

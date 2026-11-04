@@ -167,6 +167,14 @@
   assignment card's „ისწავლა N/M ▾“ unfolds each member's bar (`WhoLearns`, `learn/PartsBar.tsx`); the member's window lists a
   bar per piece (`LearnReview`). The member's „სწავლა“ on an assignment opens the learning mode on the assigned voice
   (`learn/openLearning.ts`: `learnPieceOf`, `useOpenLearning`; `requestLearn(piece, voice)`).
+  Two ways since 2026-11-05 (the user: „არ იყოს დამაბნეველი … დამწყებებსაც შეეძლოთ“): `LevelSwitch` „მარტივი · სრული“ on top
+  (`sg-learn-level`, „მარტივი“ by default). „მარტივი“ (`learn/LearnEasy.tsx`, chants only) cuts a phrase into pieces of my voice
+  (`chunksOfPart` in `utils/learn.ts` + test: 3–7 notes, cut after the longest note/rest near five, a one-pitch piece joins its
+  neighbour); a piece is golden on the notes, the rest veiled (`PartPicture span`), heard once (`ChantSynth.once`), sung back (70%
+  passes), then the whole phrase (80% learns it — the same `students.learning` record); one big button says what to do; „ნელა“
+  (`sg-learn-slow`); without a microphone the member marks it. „სრული“ = the three steps, speed and „რა ისმის“ folded under
+  „მორგება“ (`SettingsFold`, the songs' `LearnAudio` too). The singing engine is the hook `useSinging` (LearnShared); the voice
+  picker `VoiceChoice` names the three voices (მთქმელი · მოძახილი · ბანი).
 - **კლასის სტუდია** (2026-10-29, `components/studio/ClassStudio.tsx`): a program chant with book notes gets „სტუდია“ in its
   window (`ItemSheet` in `classes/ClassProgram.tsx`). One window `Studio` since 2026-11-05: a member records; a teacher gets two
   tabs „კლასის ჩანაწერები“ (none yet → three steps, „კლასს ვთხოვ“ = a line in the class chat) and „ჩემი ხმა“. A member sings their voice over the synth (their own voice muted) and the
