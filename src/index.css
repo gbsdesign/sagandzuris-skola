@@ -247,3 +247,50 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
 @keyframes chk-flame { 0%, 100% { transform: scale(1, 1); } 50% { transform: scale(0.88, 1.12); } }
 .chk-flame { transform-box: fill-box; transform-origin: 50% 100%; animation: chk-flame 0.5s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) { .chk-steam, .chk-hot, .chk-flame { animation: none; } }
+
+/* „ნასწავლი“'s pearls (components/pearls/PearlIcon.tsx): a shining pearl's halo breathes and its sparks twinkle now and then
+   (each pearl at its own moment, --sg-pearl-delay) and a sheen crosses it; a pearl that has just moved up pops with a sheen */
+.sg-pearl { overflow: visible; }
+.sg-pearl-sheen { transform-box: fill-box; transform-origin: center; transform: translateX(0) skewX(-20deg); opacity: 0; }
+.sg-pearl.shining .sg-pearl-sheen { animation: sg-pearl-sheen 6s ease-in-out infinite; animation-delay: var(--sg-pearl-delay, 0s); }
+.sg-pearl.is-pop .sg-pearl-sheen { animation: sg-pearl-sweep 0.9s ease-out 0.15s 1 both; }
+@keyframes sg-pearl-sheen {
+  0%, 78% { transform: translateX(0) skewX(-20deg); opacity: 0; }
+  81% { opacity: 1; }
+  94% { transform: translateX(72px) skewX(-20deg); opacity: 0.9; }
+  100% { transform: translateX(72px) skewX(-20deg); opacity: 0; }
+}
+@keyframes sg-pearl-sweep {
+  0% { transform: translateX(0) skewX(-20deg); opacity: 0; }
+  15% { opacity: 1; }
+  100% { transform: translateX(72px) skewX(-20deg); opacity: 0; }
+}
+.sg-pearl-halo { transform-box: fill-box; transform-origin: center; animation: sg-pearl-halo 4s ease-in-out infinite; animation-delay: var(--sg-pearl-delay, 0s); }
+@keyframes sg-pearl-halo { 0%, 60%, 100% { opacity: 0.8; transform: scale(0.96); } 75% { opacity: 1; transform: scale(1.07); } }
+.sg-pearl-spark { transform-box: fill-box; transform-origin: center; animation: sg-pearl-spark 4s ease-in-out infinite; }
+@keyframes sg-pearl-spark {
+  0%, 62%, 100% { opacity: 0.85; transform: scale(0.8) rotate(0deg); }
+  76% { opacity: 1; transform: scale(1.4) rotate(45deg); }
+  88% { opacity: 0.55; transform: scale(0.6) rotate(90deg); }
+}
+.sg-pearl.is-pop { animation: sg-pearl-pop 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.35); }
+@keyframes sg-pearl-pop { 0% { transform: scale(0.6); } 55% { transform: scale(1.22); } 100% { transform: scale(1); } }
+
+/* „ნასწავლი“'s chests (components/pearls/LearnChests.tsx): a chest that has just opened jumps, glows and its sparks fly */
+.sg-chest-glow { transform-box: fill-box; transform-origin: center; }
+.sg-chest.is-new { animation: sg-chest-jump 1.1s cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
+.sg-chest.is-new .sg-chest-glow { animation: sg-chest-glow 1.4s ease-out 3; }
+.sg-chest.is-new .sg-chest-ray { animation: sg-chest-rays 2.2s ease-out both; }
+.sg-chest.open .sg-chest-ray { transform-box: view-box; transform-origin: 36px 32px; }
+@keyframes sg-chest-jump {
+  0% { transform: scale(0.55) translateY(10px); }
+  35% { transform: scale(1.18) translateY(-6px) rotate(-4deg); }
+  55% { transform: scale(0.96) rotate(3deg); }
+  75% { transform: scale(1.04) rotate(-1deg); }
+  100% { transform: scale(1) rotate(0); }
+}
+@keyframes sg-chest-glow { 0% { opacity: 0.4; transform: scale(0.7); } 40% { opacity: 1; transform: scale(1.12); } 100% { opacity: 0.75; transform: scale(1); } }
+@keyframes sg-chest-rays { 0% { opacity: 0; transform: scale(0.4) rotate(-20deg); } 30% { opacity: 1; } 100% { opacity: 0.55; transform: scale(1) rotate(0); } }
+@media (prefers-reduced-motion: reduce) {
+  .sg-pearl, .sg-pearl *, .sg-chest, .sg-chest * { animation: none !important; }
+}

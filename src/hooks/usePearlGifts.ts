@@ -6,9 +6,10 @@ import { useKabaSettings } from '../utils/kabaArt';
 import { SAMOSI_DEFAULT_COLOR, SAMOSI_PARTS, SamosiKinds } from '../data/samosiData';
 import { KABA_PARTS } from '../data/kabaData';
 import { giftDue, nextGift, outfitOf, readGifts, shiningCount } from '../utils/pearlGifts';
+import { useConfirmations } from './useConfirmations';
 
 // The pearls' gifts to „ჩემი სამოსი“ (utils/pearlGifts.ts) for the signed-in member. With `give` the hook also adds
-// the parts owed (the path page, PathOrbs, does; the pearls panel only shows the way to the next one).
+// the parts owed (the path page, PathOrbs, does; the chests in „ნასწავლი“ only show the way to the next one).
 
 const SAMOSI_IDS = new Set(SAMOSI_PARTS.map(p => p.id));
 const KABA_IDS = new Set(KABA_PARTS.map(p => p.id));
@@ -35,7 +36,9 @@ export const usePearlGifts = (give = false) => {
   const outfit = outfitOf(d?.samosiOutfit, typeof d?.profile?.firstName === 'string' ? d.profile.firstName : '', kaba.published || isOwner);
   const owned = outfit === 'kaba' ? idsOf(d?.kaba, KABA_IDS) : idsOf(d?.samosi, SAMOSI_IDS);
   const gifts = readGifts(d?.pearlGifts);
-  const shining = shiningCount(d?.pearlShine);
+  const confirmed = useConfirmations(uid);
+  // the pearls of „ნასწავლი“ a teacher has confirmed (utils/pathPearls)
+  const shining = shiningCount(d?.selectedChantVariants, confirmed);
   // the outfit is known only once both answers have come
   const ready = !!uid && !!d && kaba.loaded;
   const ownedKey = owned.join(',');

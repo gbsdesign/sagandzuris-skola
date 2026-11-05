@@ -5,18 +5,17 @@ import { PATH_ORBS, PathOrbs } from './PathOrbs';
 import { PathTabs } from './PathTabs';
 
 /** The body of „საგანძურის გზა“ (page `gz`) — also a student's own page opened by their teacher (pages/StudentPage.tsx,
- *  inside ViewAsStudent, so every part reads that student's record). „მარგალიტები“ (section margalitebi) shows only while
- *  the admin's switch and the member's access let it; every round button has its own switch too (data/sections
- *  EXTRA_SWITCHES). */
+ *  inside ViewAsStudent, so every part reads that student's record). Every round button has its own switch (data/sections
+ *  EXTRA_SWITCHES); the pearls and their chests live in „ნასწავლი“ since 2026-11-05. */
 export const PathPageBody: React.FC = () => {
   const access = useAccess();
-  const pathOrbs = PATH_ORBS.filter(o => (o.id === 'pearls' ? access.section('margalitebi') === 'open' : access.on(o.id)));
+  const pathOrbs = PATH_ORBS.filter(o => access.on(o.id));
   const habitsOpen = access.section('chvevebi') === 'open';
   return (
     <div className="w-full max-w-2xl mx-auto mb-2 px-1 space-y-5">
-      {/* „ჩემი დღე“: the page title sits in the top bar; the five round buttons (სამოსი, ნასწავლი — with the teacher's
-          assignments —, ოსტატობა, სამუშაო, მარგალიტები) in the member's order, the habits under them. The „დღეს“ card on top
-          was taken off at the user's wish (2026-11-05). */}
+      {/* „ჩემი დღე“: the page title sits in the top bar; the four round buttons (სამოსი, ნასწავლი — with the pearls, the
+          chests and the teacher's assignments —, ოსტატობა, სამუშაო) in the member's order, the habits under them. The „დღეს“
+          card on top was taken off at the user's wish (2026-11-05). */}
       <PathTabs
         orbs={pathOrbs.length ? { labels: pathOrbs, render: order => <PathOrbs order={order} /> } : undefined}
         cards={!habitsOpen ? [] : [

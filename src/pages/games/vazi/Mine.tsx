@@ -1,5 +1,5 @@
 import React from 'react';
-import { BookOpenCheck, CalendarCheck, Dumbbell, Gamepad2, Gem, Grape } from 'lucide-react';
+import { BookOpenCheck, CalendarCheck, Dumbbell, Gamepad2, Grape } from 'lucide-react';
 import { useNavigation } from '../../../context';
 import { Btn, Card, Stat } from '../../../components/ui/kit';
 import { MONTHS_GE } from '../../../utils/dateNames';
@@ -11,7 +11,7 @@ import { useVine } from './useVine';
 // „ჩემი ვაზი“ alone (the hub's „ონლაინ“): my vine, what grew it today, this month's bunch on its way, the last two weeks.
 
 const KIND_ICON: Record<DeedKind, React.FC<{ className?: string }>> = {
-  habits: CalendarCheck, games: Gamepad2, learn: BookOpenCheck, pearls: Gem, drills: Dumbbell,
+  habits: CalendarCheck, games: Gamepad2, learn: BookOpenCheck, drills: Dumbbell,
 };
 
 /** the season's bunches as the picture shows them: each finished month's ripe ones (purple and golden in turn), then this
@@ -78,7 +78,7 @@ export const VineMine: React.FC = () => {
           <Btn kind="ghost" full icon={<CalendarCheck />} onClick={() => navigateTo('gz')}>ჩვევების მონიშვნა</Btn>
         ) : (
           <p className="text-[13px] leading-snug text-[#75685a]">
-            შედი სკოლაში — ჩვევები, სწავლა და მარგალიტებიც გაზრდის ვაზს. ახლა მხოლოდ ამ ტელეფონზე ნათამაშები დღის თამაშები ითვლება.
+            შედი სკოლაში — ჩვევები, სწავლა და სავარჯიშოებიც გაზრდის ვაზს. ახლა მხოლოდ ამ ტელეფონზე ნათამაშები დღის თამაშები ითვლება.
           </p>
         )}
       </Card>
@@ -131,7 +131,7 @@ export const VineMine: React.FC = () => {
 
       <Card tone="paper" className="!p-4 space-y-1.5 text-[13.5px] leading-snug text-[#4a3426]">
         <p className="font-serif-ge text-[15px] font-bold text-[#7a2028]">როგორ იზრდება ვაზი</p>
-        <p>ყოველი საქმე ფოთოლია: მონიშნული ჩვევა, დასრულებული დღის თამაში, სწავლის რეჟიმში ნავარჯიშები ნაწილი, გაპრიალებული მარგალიტი, ოსტატობის სავარჯიშო. დღეში {LEAF_CAP} ფოთოლამდე.</p>
+        <p>ყოველი საქმე ფოთოლია: მონიშნული ჩვევა, დასრულებული დღის თამაში, სწავლის რეჟიმში ნავარჯიშები ნაწილი, ოსტატობის სავარჯიშო. დღეში {LEAF_CAP} ფოთოლამდე.</p>
         <p>თვეში {BUNCH_AT[0]} ფოთოლი — მტევანი, {BUNCH_AT[1]} — მეორე, {BUNCH_AT[2]} — მესამე. მტევანი მწვანეა, თვე რომ დამთავრდება — მწიფდება.</p>
         <p>წელიწადი ნოემბრიდან ოქტომბრამდეა: შემოდგომის რთველზე კლასი მტევნებს ერთად ითვლის, 1 ნოემბერს კი ისინი ქვევრში მიდის.</p>
         <p>ფოთოლი ვაზზე {RECENT_DAYS} დღე რჩება, მერე ცვივა — ვაზი კი ყოველი ფოთლით იზრდება და ძირი უმსხვილდება{vine.leaves ? ` (სულ ${vine.leaves} ფოთოლი გამოიტანა)` : ''}.</p>

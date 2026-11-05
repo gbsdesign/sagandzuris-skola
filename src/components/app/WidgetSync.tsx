@@ -8,7 +8,8 @@ import { dueDailyOf } from '../habits/useHabits';
 import { usePathStats } from '../views/PathSummary';
 import { useMastery } from '../views/ManeraPanel';
 import { useIndependentWork } from '../views/IndependentWorkCard';
-import { usePearlSummary, useSamosiSummary } from '../views/PathOrbs';
+import { useSamosiSummary } from '../views/PathOrbs';
+import { usePathPearls } from '../pearls/LearnChests';
 import { SAMOSI_TOTAL } from '../../data/samosiData';
 import { reviewsDue } from '../../utils/learn';
 import { cycleOf, georgiaToday, kathismasOf, ownersIn } from '../../utils/psalter';
@@ -27,7 +28,9 @@ const Sync: React.FC<{ uid: string }> = ({ uid }) => {
   const path = usePathStats();
   const manera = useMastery();
   const work = useIndependentWork();
-  const pearls = usePearlSummary();
+  // the widget's „მარგალიტები“ ring: the share of „ნასწავლი“'s pearls that shine (a teacher confirmed them)
+  const pearls = usePathPearls();
+  const pearlPct = pearls.total ? (100 * pearls.shining) / pearls.total : 0;
   const samosi = useSamosiSummary();
   const learning = useAllLearning(uid);
   const { groups } = useMyPsalterGroups(uid);
@@ -64,14 +67,14 @@ const Sync: React.FC<{ uid: string }> = ({ uid }) => {
         learn: round(path.percent),
         manera: round(manera.average),
         work: round(work.planned?.percent),
-        pearls: round(pearls.percent),
+        pearls: round(pearlPct),
         samosi: round((100 * samosi.count) / SAMOSI_TOTAL),
       },
       due: reviewsDue(learning?.learning, today).length,
       kanon,
       buttons: (shortcuts ?? []).slice(0, 12).map(id => ({ id, t: shortcutLabel(id)?.label || '' })).filter(b => b.t),
     };
-  }, [mine, path.percent, manera.average, work.planned?.percent, pearls.percent, samosi.count, learning, groups, shortcuts, uid, today]);
+  }, [mine, path.percent, manera.average, work.planned?.percent, pearlPct, samosi.count, learning, groups, shortcuts, uid, today]);
 
   const text = JSON.stringify(summary);
   useEffect(() => {

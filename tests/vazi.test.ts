@@ -3,22 +3,20 @@ import assert from 'node:assert/strict';
 import { LEAF_CAP, addDays, bunchesOf, deedsOf, harvestOf, leavesOfDay, nextBunchAt, seasonOf, vineMood, vineOf, yellowShare } from '../src/utils/vazi';
 import { BUNCH_SLOTS, LEAF_SLOTS, grownTo, leafPlaces } from '../src/utils/vineShape';
 
-test('a record gives deeds by day: habits, finished daily games, practised parts, polished pearls, exercises', () => {
+test('a record gives deeds by day: habits, finished daily games, practised parts, exercises', () => {
   const deeds = deedsOf({
     habitLog: { '2026-10-30': ['prayer', 'psalms', 'prayer'], '2026-10-31': [], bad: ['x'] },
     games: { hangi: { days: { '2026-10-30': { done: true }, '2026-10-29': { done: false } } }, sitqva: { days: { '2026-10-31': { done: true } } } },
     learning: { piece: { 0: { level: 1, at: '2026-10-30' }, 1: { level: 0, at: '2026-10-31' } } },
-    pearls: { a: { best: 85, at: '2026-10-30T21:30:00.000Z' }, b: { best: 40, at: '2026-10-30T10:00:00.000Z' } },
     drillDone: { 'tip-1': '2026-10-28' },
   });
-  // 21:30 UTC is already the next day in Tbilisi
   assert.deepEqual(deeds, {
     '2026-10-30': { habits: 2, games: 1, learn: 1 },
-    '2026-10-31': { games: 1, learn: 1, pearls: 1 },
+    '2026-10-31': { games: 1, learn: 1 },
     '2026-10-28': { drills: 1 },
   });
   assert.deepEqual(deedsOf(null), {});
-  assert.deepEqual(deedsOf({ habitLog: 'junk', games: [1, 2], pearls: { x: null } }), {});
+  assert.deepEqual(deedsOf({ habitLog: 'junk', games: [1, 2], drillDone: { x: null } }), {});
 });
 
 test('leaves a day are capped; a month gives bunches at 12, 30 and 50 leaves', () => {

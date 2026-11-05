@@ -7,7 +7,7 @@ import { useAuth, useNavigation } from '../context';
 import { useNotes } from '../context/NotesContext';
 import { useMyClasses, useAllClasses, useTeachingClasses } from '../hooks/useClasses';
 import { ClassHeader } from '../components/teacher/ClassHeader';
-import { ClassRoll, PearlsWaiting } from '../components/teacher/StudentsOverview';
+import { ClassRoll } from '../components/teacher/StudentsOverview';
 import { LessonChips, ScheduleSheet } from '../components/teacher/Schedule';
 import { ClassLogo } from '../components/classes/ClassLogo';
 import { ClassChat } from '../components/classes/ClassChat';
@@ -19,8 +19,6 @@ import { archiveClass } from '../components/admin/ClassesAdmin';
 import { changed } from '../components/admin/changed';
 import { ClassPsalter } from '../components/psalter/ClassPsalter';
 import { ClassLessons } from '../components/mastery/ClassLessons';
-import { waitingPearls } from '../components/pearls/PearlReview';
-import { useClassStudents } from '../hooks/useTeaching';
 import { Avatar } from '../components/classes/ChatPanel';
 import { Btn, Flash, IconBtn, PageBar, Sheet, Tabs, useFlash, useWide } from '../components/ui/kit';
 import { openThread, Person } from '../hooks/useDirectChat';
@@ -53,8 +51,7 @@ const savedTab = (id: string): Tab | null => {
 // workplace. Simplified 2026-10-28 („ერთი რამ, ერთ ადგილას“): the title bar (the class's logo and name; 🎵 today's
 // liturgy and one ✎ for its teachers — its list opens the class's details, the timetable, the program and adding a
 // member —, 💬 to the teacher for a member), the timetable as one line of chips, the members (one line „N წევრი ›“ that
-// opens their window on a phone, a column of their own on a computer; teachers get the roll with attendance and a 💎 by
-// a member whose pearls wait to be heard — their window has them), then the assignments' round 📋 (2026-11-05: every
+// opens their window on a phone, a column of their own on a computer; teachers get the roll with attendance), then the assignments' round 📋 (2026-11-05: every
 // assignment drops down from it under the tabs; it lights up red for a member's new one — classes/ClassWork.tsx) beside two
 // tabs (2026-11-04): „პროგრამა“ (the program with „+ დამატება“, folded under it „ოსტატობა“ and the psalter group —
 // `focus` = opened for it) and „ჩათი“ (a dot while unread). Nothing that manages shows to the members.
@@ -104,9 +101,6 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolCl
   const iAmMember = !!user && cls.memberIds.includes(user.uid);
   const canEdit = iTeach || isAdmin;
   const work = useClassWork(cls, canEdit);
-  // the teachers: how many pearls wait to be heard (the members' line shows it; each member's 💎 is in their row)
-  const records = useClassStudents(canEdit ? cls : null);
-  const pearls = canEdit ? cls.members.reduce((n, m) => n + waitingPearls(records[m.uid]?.data?.pearls, records[m.uid]?.data?.pearlShine), 0) : 0;
   const lasts = useClassLasts([cls.id]);
   const seen = useChatSeen(user?.uid);
   const unread = !!user && tab !== 'chat' && isClassUnread(lasts[cls.id], seen[cls.id], user.uid);
@@ -239,7 +233,6 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolCl
               {canEdit ? 'დასწრება და მიწერა' : teacherNames ? `მასწავლებელი: ${teacherNames}` : 'ვინ არის კლასში'}
             </span>
           </span>
-          {pearls > 0 && <PearlsWaiting n={pearls} />}
           <ChevronRight className="w-5 h-5 shrink-0 text-[#b08a4a]" />
         </button>
       )}

@@ -46,8 +46,8 @@ export const useKidsMode = (): KidsMode | null => {
   return !isTeacher && kidsCache.uid === (user?.uid ?? null) ? kidsCache.mode : null;
 };
 
-// a member's features are given per section; the pearls game goes with the games (one switch to give)
-const featureOf = (id: SectionId): FeatureId => (id === 'margalitebi' ? 'tamashebi' : id);
+// a member's features are given per section
+const featureOf = (id: SectionId): FeatureId => id;
 
 export const useAccess = () => {
   const { isAdmin } = useRealAuth();
@@ -70,13 +70,12 @@ export const useAccess = () => {
   // a part of the site with its own switch (data/sections EXTRA_SWITCHES): admins always, others while it is open
   const on = (id: ExtraId): boolean => isAdmin || state[id] === 'open';
   const page = (p: PageType): Access => {
-    // „საგანძურის გზა“ holds the habits, the outfit, the pearls…: it stays while any of its parts is open
+    // „საგანძურის გზა“ holds the habits, the outfit, the learned…: it stays while any of its parts is open
     if (p === 'gz') {
       const g = section('gza');
       if (g === 'open' || g === 'locked') return g;
-      const parts = [section('chvevebi'), section('margalitebi')];
-      if (parts.includes('open')) return 'open';
-      if (parts.includes('locked')) return 'locked';
+      const habits = section('chvevebi');
+      if (habits === 'open' || habits === 'locked') return habits;
       if (member && (['samosi', 'learn', 'manera', 'work'] as ExtraId[]).some(on)) return 'open';
       return g;
     }

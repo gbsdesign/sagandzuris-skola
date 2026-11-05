@@ -1,15 +1,13 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { giftDue, joinGe, nextGift, outfitOf, partsLeft, readGifts, shiningCount } from '../src/utils/pearlGifts';
-import { CHESTS } from '../src/data/pearls';
 
 const none = readGifts(undefined);
-const pearls = CHESTS.flatMap(c => c.pearls);
-const shine = (n: number) => Object.fromEntries(pearls.slice(0, n).map(id => [id, { voice: '1', by: 't', at: '' }]));
 
-test('only the chests\' pearls count as shining (other approvals share the map)', () => {
-  assert.equal(shiningCount({ ...shine(3), 'learn~x~0': { voice: '1' }, 'read~y': { voice: '1' } }), 3);
-  assert.equal(shiningCount(undefined), 0);
+test('the path\'s items a teacher confirmed shine; confirmations of items not on the path don\'t count', () => {
+  const path = { a: { voices: ['1'] }, b: { voices: [] }, c: { voices: ['2'] }, d: { isLearned: true } };
+  assert.equal(shiningCount(path, { a: ['1'], b: ['2'], c: [], gone: ['1'] }), 2);
+  assert.equal(shiningCount(undefined, undefined), 0);
 });
 
 test('a broken or missing record reads as nothing given', () => {

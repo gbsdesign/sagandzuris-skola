@@ -15,13 +15,6 @@ const gundi = async () => {
   const [{ GUNDI_SONGS }, { SONG_BOOK }] = await Promise.all([import('../pages/games/gundi/songs'), import('../data/songBookChants')]);
   return GUNDI_SONGS.map(s => [SONG_BOOK, s.num]);
 };
-const pearls = async () => {
-  const [{ CHESTS }, { findVersion }] = await Promise.all([import('../data/pearls'), import('../data/chantLookup')]);
-  return CHESTS.flatMap(c => c.pearls.flatMap(pid => {
-    const v = findVersion(pid)?.variant;
-    return v?.bookNums?.length ? [[v.book || 'book', v.bookNums[0]]] : [];
-  }));
-};
 const heirmoi = async () => (await import('../data/rvakhmaPool')).HEIRMOI.map(h => ['v8', h.num]);
 const loto = async () => (await import('../data/lotoKit')).LOTO_KIT.map(c => [c.book, c.num]);
 const castles = async () => (await import('../data/tsikheRooms')).TSIKHE_ROOMS
@@ -37,7 +30,6 @@ const SCORES = {
   'sam-notshi': [melodies],
   'sagalobo-loto': [melodies, loto],
   'chemi-gundi': [gundi],
-  margalitebi: [pearls],
   'rva-khma': [heirmoi],
   'tsikhis-gasaghebi': [castles],
 };

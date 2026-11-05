@@ -192,9 +192,27 @@
 - **Prayers** (`data/prayers.ts`, `public/prayers/`, `public/bible/`), psalter kathismas, 73 akathists,
   commemoration name lists (`utils/commemoration.ts`), prayer reminders via Web Push Worker
   `sagandzuri-reminders` (`worker/reminders/`; push works only on the deployed site).
-- **საგანძურის გზა** (page `gz`) = „ჩემი დღე“ since 2026-10-28: the five round buttons (`PathOrbs`), then the habits card. The
+- **საგანძურის გზა** (page `gz`) = „ჩემი დღე“ since 2026-10-28: the round buttons (`PathOrbs`; four since 2026-11-05 — the pearls
+  game's fifth was removed), then the habits card. The
   „დღეს“ card on top (`PathToday`: next lesson, nearest assignment, reviews due) was taken off at the user's wish (2026-11-05) —
   don't bring it back unasked. A piece's name without its book № = `pieceName` (LearnReview), used by the home's line.
+- **„ნასწავლი“'s pearls and chests (2026-11-05, the user: „მარგალიტები ცალკე გავაუქმოთ … თითოეული მარგალიტი იყოს თითო საგალობლის
+  წინ ნასწავლში … მაღლა სკივრები“, answers „ყველაფერი · გაპრიალებული · ყველას · ჯილდო დარჩეს“)**: the old pearls game is gone
+  (its path button and chests panel, the hub game with its class chest and print kit, the teacher's 💎 and `PearlReview`, section
+  `margalitebi`, its search line and home button, `pearlWish`, `pearlTeams`; the vine no longer counts sung pearls). Every item of
+  the path — chant, song, poem, instrument — has a pearl before its name in „ნასწავლი“ (`LearnPanel` in `views/PathOrbs.tsx`;
+  rules `utils/pathPearls.ts` + test): matte while new, polished once the member marks a voice (or the poem / instrument), shining
+  once a teacher confirmed one (`confirmations/{uid}`, „ჩათვლა“ in `MemberPathEditor`). The pearl is `pearls/PearlIcon.tsx`
+  (nacre lustre, a glint, a gold halo with sparks and a sheen for a shining one; a pearl that moves up pops — `.sg-pearl…` in
+  index.css, still under „reduce motion“). On top three chests (`pearls/LearnChests.tsx`): one opens on every 10 polished pearls
+  (`chestsOf`, `CHEST_SIZE` 10, `CHEST_COUNT` 3, no more), ten little beads each; a chest opened since this device last saw it
+  jumps, glows and fires fireworks once (`sg-chests-seen:<uid>`, never on a teacher's look — `useViewing`). Under them what the two
+  pearls mean and `NextGiftLine`: every 5 shining pearls still give „ჩემი სამოსი“ its next part (`utils/pearlGifts.ts`
+  `shiningCount(path, confirmations)`, `PearlGiftBanner` on the path page while „ნასწავლი“ is there). The admin's activity counts
+  the polished ones (`personActivity`); the Android widget's „მარგალიტები“ ring = the share that shines (`WidgetSync`, no app
+  change). `data/pearls.ts` (`CHESTS`, 60 chants) stays only as the chant games' pool; `utils/pearls.ts` keeps `phraseOf`,
+  `chantName`, `VOICE_NAMES`, `noteName`, `PearlShine`; `hooks/usePearls.ts` = the takes' store + approvals the learning mode,
+  studio and readings use (`pearlTakes`, `students.pearlShine`; `students.pearls` is no longer read or written).
 - **Habits** ticked per day (`students/{uid}.habitLog`, kept whole since 2026-10-16; each tick writes only its day),
   goals in `habitsAndManera.ts`. Views „დღე · კვირა · თვე · წელი“ + a habit's own page in `components/habits/`
   (one shared model `useHabits.tsx`; a new view = one entry in `VIEWS` in `ChvevebiPanel.tsx`), stats in
@@ -359,10 +377,10 @@
   kids' mode, `useAccess`, album rights, centre downloads, song-text editors); `useMyClasses` / `useMyPsalterGroups` list the
   viewer's own classes / groups the student is in (a teacher may not list by the student); device side effects stay off
   there (`useViewing()`: the habits' and the review's phone reminders, the assignments' bell) and so does the microphone
-  (`utils/othersPage.ts` `holdSinging` → `singingSupported()` false: the student sings their pearls and exercises
+  (`utils/othersPage.ts` `holdSinging` → `singingSupported()` false: the student sings their parts and exercises
   themself). Rules: a teacher of the student (`teachesMe`) updates any field but `teacherIds`, `teacherVia`, `userId`,
   `email`, `authProvider` and the sung scores `pearls`, `drillScore`, and their `directory` name (`teachesThem`). At the bottom „მასწავლებლისთვის“ (`StudentTools` = the
-  old member's window inline: pearls/takes to hear, figures, attendance, the path editor, the manera's marks, the kids'
+  old member's window inline: takes to hear, figures, attendance, the path editor, the manera's marks, the kids'
   mode, „მიწერა“, „ამოღება“) — never shown to the student.
   Since 2026-11-04 two tabs (kept per visit in sessionStorage; the user: „პროგრამა პროგრამაა“), and since 2026-11-05 a round
   📋 left of them (`WorkButton` in `classes/ClassWork.tsx`; the user: „მრგვალი სიმბოლო … ჩამოშლა … აინთოს ინდიკატორი“): a tap
@@ -385,9 +403,8 @@
   `WorkCardHead` — the chant's own name big + one grey line (`utils/assignmentLines.ts` + test), a tap opens its notes / song
   / exercise (`hooks/usePathItemOpener.ts`, moved out of PathOrbs); the deadline is `dueUntil` „10 ნოემბრამდე“ on both cards —
   **no „N დღეში“** (the user, 2026-11-04); the teacher's „ისწავლა N/M ▾“ unfolds the book's place, the members' bars and
-  „დავალების წაშლა“. No class „მარგალიტები“ card any more (removed 2026-11-04): a teacher sees 💎 N by a member's name in the
-  roll (`PearlsWaiting`, `waitingPearls` in `pearls/PearlReview.tsx`) and on the phone's members line; the member's window
-  shows `PearlReview` first. „სასწავლო პროგრამა“ is the name everywhere (not „კლასის პროგრამა“). The timetable
+  „დავალების წაშლა“. No pearls on the class page any more (the card went 2026-11-04, the 💎 N and `PearlReview` 2026-11-05 with
+  the pearls game). „სასწავლო პროგრამა“ is the name everywhere (not „კლასის პროგრამა“). The timetable
   chips also sit under the chat's title on the messages page. Teacher-only parts never show to members; attendance is
   teacher-only in `firestore.rules` too (members no longer read it).
 - **Games hub** (`pages/GamesPage.tsx`, 2026-10-27; **one list since 2026-10-30**, the user's „ყველა თამაში 1 სიად“ — no category
@@ -401,9 +418,7 @@
   (name · known game · line · ⓘ — the name counts most), „დღის თამაშები“ (`DAILY_GAMES`: a tile each, ✓ when played today, a tap
   opens the day's game), then the list under four headings (`GAME_GROUPS`: the user's own მუსიკალური · ქართული · ცოცხალი of 10-27 +
   დაფის თამაშები — still one list, no tabs; `tests/gameGroups.test.ts` keeps every game under exactly one) with chips that jump
-  to them; a card's buttons stand in one row (ონლაინ filled, ჰიბრიდული tinted, სამაგიდო beige; icons only from `lg`). The vine label „თამაშები“ opens it. The pearls game stays the round button of „საგანძურის გზა“ (below), now
-  under its own section `margalitebi` (open/მალე/hidden switch in the admin panel; a member's feature for it is the games'
-  one — `featureOf` in `hooks/useAccess.ts`). The plan with 42 games and the six Georgianized board games:
+  to them; a card's buttons stand in one row (ონლაინ filled, ჰიბრიდული tinted, სამაგიდო beige; icons only from `lg`). The vine label „თამაშები“ opens it. The pearls game was removed 2026-11-05 (its pearls live in „ნასწავლი“). The plan with 42 games and the six Georgianized board games:
   https://claude.ai/artifact/Dw24amtHhQvSGUd1pPE4fg
 - **First two games (2026-10-28)**: „დღის ჰანგი“ (`pages/games/HangiGame.tsx`; logic `utils/hangi.ts` + test; pool
   `data/hangiPool.ts` = every recording the member may hear — `VARIANT_MEDIA` via `codeBoundMedia()`, `CHANT_RECORDINGS`, folk
@@ -466,13 +481,6 @@
   New face hooks: `everyPhone` (the piece always sounds on every phone, no lobby choice — on the host's phone alone its delay would
   tell), `selfTimed` (no clock, no send button; the Pick sends by itself) and `Sent` (my card once sent). On a phone on its side
   the churchkhela stands beside its button (`[@media(max-height:500px)]` classes).
-  Since 2026-11-04 „მარგალიტები“ is a hub game too (item `margalitebi`, `pages/games/MargalitebiGame.tsx` = `VariantPage`, the hub
-  opens its tab by `requestOpen('margalitebi', …)`): „ონლაინ“ = `PearlChests` (the path's round button stays), „ჰიბრიდული“ = „კლასის
-  სკივრი“ (`pages/games/margalitebi/ClassChest.tsx`, rules `utils/pearlTeams.ts` + test): 2–6 teams in turn, a pearl of the chosen
-  chest a turn (2/3/4 a team), the singer picks a voice and sings into the phone (turniri's `Sing`, whose `onScore` now also gives
-  the voice); the per cent = the points, 80 % polishes — on the class's own chest too, kept on the phone (`sg-margalitebi-chest`,
-  the best per voice; the pearls the class has polished in fewest voices come first); a game's takes join that chest when it ends
-  (`chestWith`), so a turn can be undone till then; kept in `sg-margalitebi-teams`, settings `sg-margalitebi-table`, ✕ only pauses.
 - **„რა? სად? როდის?“ (2026-10-28)**: the team quiz (`pages/games/RaSadRodisGame.tsx`, `mapItem` `rsr`; rules
   `utils/raSadRodis.ts` + test). The user's answers „1ა 2ა 3ა“: ~100 questions written by Claude from the app's own texts — 111 in
   `data/raSadRodisQuestions.ts` (+ since 2026-11-01 the shared broad bank `data/kartuliQuiz.ts`: 153 facts with three wrong answers
@@ -755,7 +763,7 @@
   sheets a deck, rules with a drawn line.
 - **„ჩემი ვაზი“** (2026-11-01, the plan's Georgian game №1, like Tamagotchi; mapItem `vazi`, rules `utils/vazi.ts` + test, picture
   `utils/vineShape.ts` + `pages/games/vazi/VineArt.tsx`): every member's vine grows from what they did — nothing new is stored, it is
-  read from `students/{uid}` (`deedsOf`: habits ticked, daily games `done`, the learning mode's parts by `at`, polished pearls, drills'
+  read from `students/{uid}` (`deedsOf`: habits ticked, daily games `done`, the learning mode's parts by `at`, drills'
   last days; a guest's from the device's `sg-<game>` daily records only — `vazi/useVine.ts`). A deed = a leaf, ≤ `LEAF_CAP` 8 a day;
   a month's leaves give bunches at `BUNCH_AT` 12 · 30 · 50, green that month, ripe (purple and golden by month) after; the season
   runs from November (`seasonOf`), earlier seasons' bunches are in the qvevri (`cellar`). The wood grows from every leaf ever
@@ -1148,11 +1156,6 @@
   in the kind's colour (a host may draw from one pile), four two-sided 20 cm paper churchkhelas (the app's drawing at 0.95 mm a
   unit, a tab with a hole for a thread, cut round by `halo` of `dolls.js`) with what a churchkhela is behind, and the tally
   „ვინ დაიწვა?“ (20 rounds, both sides) with the stop by a die thrown in secret (× 5 s, × 3 for the little ones).
-  „მარგალიტები“'s (2026-11-04, `margalitebi.js`, 12 sheets): every pearl's three phrases note for note the app's (`phraseOf`'s count
-  over `lineOf`; a voice over 26 notes on two lines — `abcOf`'s new `breaks`), a chest's twenty flowed over its five pages by the
-  print's script (each staff's box trimmed to what abcjs drew; the build stops if a chest needs more), each chest's class table (a
-  circle a voice, ★ golden), 70 tokens ⌀25 mm (three rows a chest with a spare, a row of spares), „ჩემი სკივრები“ to colour (both
-  sides) and the rules: a team draws a token, the host sings the voice's phrase, the jury gives 2 (four notes of five — 80 %) · 1 · 0.
   The musical games' kits (2026-11-01, stage 1; the host sings, so the melodies come from the book notes): `src/print/music.js`
   draws staves with abcjs inside the print page (`abcOf` one voice, every accidental written, numbered marks; `abcScore` three voices
   under each other on one clef, tied to keep time), `melodies.js` = the chants of the app's chant games + the program's songs with
@@ -1291,7 +1294,7 @@
   `data/sections.ts` (სამოსი, ნასწავლი, ოსტატობა, სამუშაო, ლოცვანი, კლასი, მიმოწერა, ძიება, კალენდარი, ჩანაწერები, აბიტურიენტს,
   დაბადების დღეები; ღია/დამალული only, kept in the same `settings/sections.state`) and „ყველას დამალვა“ (asks, undo). `useAccess().on(id)`
   reads them (admins always on); `useMembership().can` follows them for the member features of the same id; the path page `gz` stays
-  while any of its parts (გზა's „დღეს“ card, ჩვევები, მარგალიტები, the orbs) is open, each part shown by its own switch.
+  while any of its parts (ჩვევები, the orbs) is open, each part shown by its own switch.
   Ideas 7–10, 12–14 (2026-10-28, the review's last PR): under the filters „მასწავლებლები“/„ადმინები“ a teaching person's row
   says what they lead (`admin/TeacherOverview.tsx`: `TeachLine` + `useLastLessons`, one listener per class on its last
   attendance; amber = no class, or no lesson for 14+ days). „მონიშვნა“ on the members list picks several people
@@ -1349,7 +1352,7 @@ psalter group inside the class). 3 library lighter (no plates under the books). 
 listens (Gemini through Firebase AI Logic). 8 calls on Android (wake lock, push, TURN key from the user).
 
 1–3. Built (see above).
-4. Pearls/chests game — built 2026-10-25 (redesign stage 7, branch `claude/dazzling-goodall-inv60p`). Since 2026-10-27
+4. Pearls/chests game — **removed 2026-11-05** (see „ნასწავლი“'s pearls and chests above; kept here as history) — built 2026-10-25 (redesign stage 7, branch `claude/dazzling-goodall-inv60p`). Since 2026-10-27
    the fifth round button „მარგალიტები“ of „საგანძურის გზა“ (`PathOrbs`, body `pearls/PearlChests.tsx`; the games page is
    the hub above), shown while section `margalitebi` is open (open by default). Three chests in `data/pearls.ts` (cards on
    top: წირვა vol. IX №58–77, მწუხრი and ცისკარი from vol. I), the first phrase of the chosen voice from the book notes

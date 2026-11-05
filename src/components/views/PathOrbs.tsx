@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { Bookmark, Check, ChevronDown, ChevronRight, GraduationCap, Lock, Pencil, X } from 'lucide-react';
 import { db } from '../../firebase';
@@ -18,16 +18,12 @@ import { triggerFireworks } from './StudentBookmarkView';
 import { ManeraAverageBadge, ManeraContent, useMastery } from './ManeraPanel';
 import { MasteryContent } from '../mastery/MasteryContent';
 import { WorkMonthLine, WorkPanel, useIndependentWork, usePanelWish } from './IndependentWorkCard';
-import { PearlIcon } from '../pearls/PearlIcon';
+import { PEARL_WORDS, PearlIcon } from '../pearls/PearlIcon';
 import { PearlGiftBanner } from '../pearls/PearlGift';
-import { usePearls } from '../../hooks/usePearls';
-import { isGolden, pearlState } from '../../utils/pearls';
-import { CHESTS } from '../../data/pearls';
+import { LearnChests } from '../pearls/LearnChests';
+import { pearlCounts, pearlOf } from '../../utils/pathPearls';
 
-// the chests and the singing load only when „მარგალიტები“ is opened
-const PearlChests = lazy(() => import('../pearls/PearlChests'));
-
-type OrbId = 'samosi' | 'learn' | 'manera' | 'work' | 'pearls';
+type OrbId = 'samosi' | 'learn' | 'manera' | 'work';
 
 /** The round buttons as the "რიგი" list names them; the member's order of these ids comes in `order`. */
 export const PATH_ORBS: { id: OrbId; label: string }[] = [
@@ -35,8 +31,6 @@ export const PATH_ORBS: { id: OrbId; label: string }[] = [
   { id: 'learn', label: 'ნასწავლი' },
   { id: 'manera', label: 'ოსტატობა' },
   { id: 'work', label: 'სამუშაო' },
-  // the pearls game (section „margalitebi“: the router leaves it out when the admin closes it)
-  { id: 'pearls', label: 'მარგალიტები' },
 ];
 
 const SAMOSI_IDS = new Set(SAMOSI_PARTS.map(p => p.id));
@@ -73,25 +67,14 @@ const SamosiOrb: React.FC<{ count: number; color: string; open: boolean; onClick
   );
 };
 
-// "მარგალიტები": how many pearls of all the chests are polished, and how many shine (approved by a teacher)
-export const usePearlSummary = () => {
-  const { user } = useAuth();
-  const { pearls, shine } = usePearls(user?.uid);
-  const ids = CHESTS.flatMap(c => c.pearls);
-  const states = ids.map(id => pearlState(pearls[id], shine[id]));
-  const polished = states.filter(s => s === 'polished' || s === 'shining').length;
-  const shining = states.filter(s => s === 'shining').length;
-  const golden = ids.filter(id => isGolden(pearls[id])).length;
-  return { total: ids.length, polished, shining, golden, percent: ids.length ? (100 * polished) / ids.length : 0 };
-};
-
 // the manera ring follows the colour rule of its percentages (<50 red, 50–79 amber, 80+ green)
 const maneraHue = (v: number): OrbHue => (v >= 80 ? 'done' : v >= 50 ? 'amber' : 'rose');
 
-// The top of "საგანძურის გზა": five round buttons in a row — სამოსი, ნასწავლი, ოსტატობა, სამუშაო, მარგალიტები — each a ring of its
+// The top of "საგანძურის გზა": four round buttons in a row — სამოსი, ნასწავლი, ოსტატობა, სამუშაო — each a ring of its
 // progress with only its name under it. A tap opens its card under the row (one at a time); a second tap or ✕ folds
-// it. "ნასწავლი" also holds the teacher's assignments and carries the number of new ones. Other places open "მანერა"
-// or "სამუშაო" with openPathPanel().
+// it. "ნასწავლი" also holds the pearls, their chests and the teacher's assignments, and carries the number of new ones
+// (the pearls game's own fifth button was removed 2026-11-05). Other places open "მანერა" or "სამუშაო" with
+// openPathPanel().
 // The member sets their order under "რიგი" (PathTabs), which hands it over as `order`.
 export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map(o => o.id) }) => {
   const [open, setOpen] = useState<OrbId | null>(null);
@@ -102,7 +85,6 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
   const work = useIndependentWork();
   const samosi = useSamosiSummary();
   const newWork = useNewWork();
-  const pearls = usePearlSummary();
 
   // the number on "ნასწავლი" goes once its window shows the new assignments (also ones coming while it is open)
   useEffect(() => {
@@ -110,7 +92,7 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, newWork.count]);
 
-  usePanelWish(['learn', 'manera', 'work', 'pearls'], id => setOpen(id as OrbId));
+  usePanelWish(['learn', 'manera', 'work'], id => setOpen(id as OrbId));
   const toggle = (id: OrbId) => { triggerHaptic(10); setEditing(false); setOpen(o => (o === id ? null : id)); };
   const close = () => { setEditing(false); setOpen(null); };
 
@@ -152,13 +134,6 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
             {work.planned ? <OrbPercent value={work.planned.percent} /> : <Bookmark className="w-6 h-6 sm:w-7 sm:h-7 text-[#1e2f5a] fill-[#1e2f5a]/10" strokeWidth={1.8} />}
           </PathOrb>
         );
-      case 'pearls':
-        // a pearl while none is polished, then the share polished
-        return (
-          <PathOrb key={id} label="მარგალიტები" title="მარგალიტები" percent={pearls.percent} hue="pearl" open={open === id} onClick={() => toggle(id)} index={index}>
-            {pearls.polished ? <OrbPercent value={pearls.percent} /> : <PearlIcon state="tried" size={40} />}
-          </PathOrb>
-        );
     }
   };
   const orbs = ids.map(orb);
@@ -181,15 +156,6 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
     },
     manera: { title: 'ოსტატობა', sub: 'გაკვეთილები და რჩევები', aside: <ManeraAverageBadge />, body: <MasteryContent /> },
     work: { title: 'დამოუკიდებელი სამუშაო', sub: <WorkMonthLine work={work} />, body: <WorkPanel /> },
-    pearls: {
-      title: 'მარგალიტები',
-      sub: `გაპრიალებული ${pearls.polished} / ${pearls.total}${pearls.golden ? ` · ოქროსფერი ${pearls.golden}` : ''}${pearls.shining ? ` · ბრწყინავს ${pearls.shining}` : ''}`,
-      body: (
-        <Suspense fallback={<p className="py-8 text-center text-sm text-[#8a7a6a]">იტვირთება…</p>}>
-          <PearlChests />
-        </Suspense>
-      ),
-    },
   };
   const card = open ? cards[open] : null;
 
@@ -205,8 +171,8 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
           {orbs}
         </div>
       )}
-      {/* the parts of the outfit the shining pearls have given (it also adds them), where the pearls game is */}
-      {ids.includes('pearls') && <PearlGiftBanner onShow={() => { setEditing(false); setOpen('samosi'); }} />}
+      {/* the parts of the outfit the shining pearls of „ნასწავლი“ have given (it also adds them) */}
+      {ids.includes('learn') && <PearlGiftBanner onShow={() => { setEditing(false); setOpen('samosi'); }} />}
       {card && (
         // same card look as the other tiles of "საგანძურის გზა" (PATH_TILE), without the hover lift
         <section
@@ -245,8 +211,9 @@ const LearnLine: React.FC<{ s: ReturnType<typeof usePathStats> }> = ({ s }) => (
 // what tapping an item's name does lives in hooks/usePathItemOpener (kept importable from here too)
 export { usePathItemOpener };
 
-// "ნასწავლი" opened: the teacher's assignments and lessons at the top (MyClassWork), then the learned items, one slim
-// line each (under a heading per kind — გალობა, სიმღერა, მთქმელი, საკრავები — when the path has more than one), and
+// "ნასწავლი" opened: the three chests on top (LearnChests: one opens on every ten polished pearls), the teacher's
+// assignments and lessons (MyClassWork), then the learned items, one slim line each with its pearl in front (matte, polished
+// once marked, shining once a teacher confirmed it — utils/pathPearls) (under a heading per kind — გალობა, სიმღერა, მთქმელი, საკრავები — when the path has more than one), and
 // the ones still to learn folded under "სასწავლი". The whole path's progress is the bar in the card's head. The
 // student marks what they know right here (a voice, or a whole poem or instrument) unless a teacher has locked
 // marking; a voice the teacher confirmed is green and only the teacher takes it back. `editing` (✎ in the card's
@@ -261,6 +228,7 @@ const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats>; editing: boolea
   const several = s.categories.length > 1;
   const todo = s.categories.filter(c => c.todo.length);
   const todoCount = todo.reduce((a, c) => a + c.todo.length, 0);
+  const counts = pearlCounts(Object.fromEntries(s.categories.flatMap(c => [...c.done, ...c.todo]).map(it => [it.variantId, it])), confirmed);
 
   const opener = (it: PathItem) => openerOf(it.variantId);
 
@@ -289,8 +257,11 @@ const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats>; editing: boolea
       </>
     );
     const nameCls = 'group flex-1 min-w-0 min-h-10 flex items-center gap-1 px-1 text-left';
+    const pearl = pearlOf(it, ok);
     return (
-      <li key={id} className="flex items-center gap-2 py-0.5">
+      <li key={id} className="flex items-center gap-1.5 py-0.5">
+        {/* its pearl: matte, polished once marked, shining once a teacher confirmed it */}
+        <PearlIcon state={pearl} size={34} seed={id} label={PEARL_WORDS[pearl]} className="shrink-0" />
         {go ? (
           <button type="button" onClick={go} className={`${nameCls} rounded-lg cursor-pointer transition-colors hover:bg-[#fbf6ec]`}>{name}</button>
         ) : (
@@ -347,6 +318,8 @@ const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats>; editing: boolea
 
   return (
     <div className="space-y-3">
+      <LearnChests polished={counts.polished} shining={counts.shining} />
+
       <MyClassWork bare />
 
       {locked && !editing && (

@@ -22,8 +22,8 @@ test('CSV cells: quotes only where needed, formulas never run', () => {
 test('a member\'s short picture comes from their own record', () => {
   const today = new Date(2026, 9, 28);
   const a = personActivity({
-    pearls: { p1: { best: 90, voice: '1', at: '' }, p2: { best: 40, voice: '2', at: '' } },
-    pearlShine: { p3: { voice: '3', by: 't', at: '' } },
+    // the polished pearls of „ნასწავლი“: the path's items marked as learned
+    selectedChantVariants: { a: { voices: ['1'] }, b: { voices: [] }, c: { isLearned: true } },
     learning: { v1: { 0: { level: 1 }, 1: { level: 0 }, 2: { level: 4 } }, v2: { 0: { level: 2 } } },
     habitLog: { '2026-10-28': ['a', 'b'], '2026-10-22': ['c'], '2026-10-21': ['old'], '2026-10-29': ['future'] },
     drillDone: { d1: '2026-10-01', 'tip-3': '2026-10-27' },
