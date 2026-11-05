@@ -6,6 +6,9 @@
 
 ## How to work with this user (most important)
 
+- **Talk simply and briefly (the user's rule, 2026-11-05: „მარტივად მელაპარაკე … არ დამღალო“).** Short, plain Georgian
+  sentences; no technical words (file, code, script, function, branch, JSON…) — say what changes for the user, not how it
+  is done. Progress notes = one or two lines; no long lists, tables or explanations unless the user asks. Few, short questions.
 - **Write every message in Georgian**, including short progress notes deep inside long technical tasks.
   The user is a beginner: before acting, say in Georgian what you are about to do; after each step, say what
   was done ("✅ …"). Say which stage you are at on long tasks. No long silent tool chains.
@@ -155,7 +158,10 @@
   Since 2026-10-28: three steps per part (`StepBar`: მოისმინე 50% my voice → ერთად 75% everyone but me → მარტო 100%, sing;
   three loops move on by themselves); a singing mirror (`LearnMirror`: the part's notes as bars, my voice as a line, moved
   into the part's key from my first steady note); a soft band over the notes picture follows the playing beat
-  (`markerAt` — x of notes is guessed from their lengths, no real positions); a recording is split at its quietest
+  (`markerAt` — since 2026-11-05 on the sounding note's head, gliding on in its last 15%: the books' note places were read
+  from the pictures by `scripts/notepos/notepos.py` into each score's `nx` (x per note start) and `ny` (each voice's staff); a
+  line not read — 28 of 11 567, mostly songs — falls back to the old guess from note lengths; the anthology on R2 not yet;
+  run the script on a book's folder after its notes or pictures change); a recording is split at its quietest
   places between 6 and 16 s (`partsAtBreaths` over `utils/audioEnergy.ts`, falls back to equal parts); a song's words
   beside every part (`wordsForPart`, only roughly — no timings); home line „დღეს გასამეორებელი“ (`home/LearnDue.tsx`,
   opens the piece through `utils/learnOpen.ts`) and one daily phone reminder on the reminders Worker

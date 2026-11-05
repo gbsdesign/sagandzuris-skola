@@ -163,12 +163,33 @@ export const timelineIn = (score: BookScore, voice: number, b0: number, b1: numb
 const LINE_LEFT = 0.1;
 const LINE_RIGHT = 0.03;
 
+// a line's note starts (all voices, sorted, unique) and, when the picture was read, where each one sits
+const lineStarts = (score: BookScore, sys: number) => {
+  const [, , , , , t0, t1] = score.sys[sys];
+  const starts = [...new Set(score.voices.flatMap(v => v.filter(n => n[0] >= t0 - 1e-6 && n[0] < t1 - 1e-6).map(n => n[0])))].sort((a, b) => a - b);
+  const found = score.nx?.[sys];
+  return { starts, xs: found && starts.length && found.length === starts.length ? found : null };
+};
+
+// a note's share of its length after which the mark moves on to the next note's place
+const GLIDE_FROM = 0.85;
+
 /**
- * Where a beat sits across a line of the book's notes, 0–1 of the line's width. The page has no note positions, so it
- * is estimated the way music is engraved: every note start gets its place, a longer note a little more room (the
- * square root of its length), and a beat between two starts is placed between their places.
+ * Where a beat sits across a line of the book's notes, 0–1 of the line's width. Where the picture was read (score.nx)
+ * the mark stands on the sounding note's head and glides to the next one only at the note's end. Otherwise it is
+ * estimated the way music is engraved: every note start gets its place, a longer note a little more room (the square
+ * root of its length), and a beat between two starts is placed between their places.
  */
 export const markerAt = (score: BookScore, sys: number, beat: number): number => {
+  const { starts: s, xs } = lineStarts(score, sys);
+  if (xs) {
+    let k = 0;
+    while (k < s.length - 1 && beat >= s[k + 1]) k++;
+    if (k === s.length - 1 || beat <= s[k]) return xs[k];
+    const within = (beat - s[k]) / (s[k + 1] - s[k]);
+    const f = within <= GLIDE_FROM ? 0 : (within - GLIDE_FROM) / (1 - GLIDE_FROM);
+    return xs[k] + f * (xs[k + 1] - xs[k]);
+  }
   const { starts, room, total } = lineRoom(score, sys);
   let k = 0;
   while (k < room.length - 1 && beat >= starts[k + 1]) k++;
@@ -192,6 +213,12 @@ const lineRoom = (score: BookScore, sys: number) => {
  * The notes page's ball is dragged with it, so the music starts on a note where the ball is let go.
  */
 export const beatAt = (score: BookScore, sys: number, x: number): number => {
+  const { starts: s, xs } = lineStarts(score, sys);
+  if (xs) {
+    let k = 0;
+    for (let i = 1; i < xs.length; i++) if (Math.abs(xs[i] - x) < Math.abs(xs[k] - x)) k = i;
+    return s[k];
+  }
   const { starts, room, total } = lineRoom(score, sys);
   let best = starts[0], dist = Infinity, before = 0;
   for (let k = 0; k < starts.length - 1; k++) {
@@ -200,6 +227,26 @@ export const beatAt = (score: BookScore, sys: number, x: number): number => {
     before += room[k];
   }
   return best;
+};
+
+/**
+ * The stretch of a line that the beats lo…hi cover, 0–1 of its width (the beginners' piece shown clear on the notes):
+ * where the picture was read, from halfway after the note before it to halfway before the note after it; the line's
+ * edge when the stretch goes on past it.
+ */
+export const spanAt = (score: BookScore, sys: number, lo: number, hi: number): [number, number] => {
+  const [, , , , , t0, t1] = score.sys[sys];
+  const { starts: s, xs } = lineStarts(score, sys);
+  if (xs) {
+    const first = s.findIndex(b => b >= lo - 1e-6);
+    const next = s.findIndex(b => b >= hi - 1e-6);
+    const a = lo <= t0 + 1e-6 || first <= 0 ? 0 : (xs[first - 1] + xs[first]) / 2;
+    const b = hi >= t1 - 1e-6 || next < 0 ? 1 : next === 0 ? xs[0] : (xs[next - 1] + xs[next]) / 2;
+    return [a, b];
+  }
+  const a = lo <= t0 + 1e-6 ? 0 : Math.max(0, markerAt(score, sys, lo) - 0.02);
+  const b = hi >= t1 - 1e-6 ? 1 : Math.min(1, markerAt(score, sys, hi) - 0.01);
+  return [a, b];
 };
 
 // ---- progress ----------------------------------------------------------------------------------------------------

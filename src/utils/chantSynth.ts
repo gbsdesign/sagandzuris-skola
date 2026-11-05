@@ -13,6 +13,10 @@ export interface BookScore {
   img: { src: string; w: number; h: number; page: number }[];
   // one entry per system (line of music): image index, box as fractions of the image, beat range
   sys: [img: number, x: number, y: number, w: number, h: number, t0: number, t1: number][];
+  // found on the pictures (scripts/notepos): per system the x of each note start (the line's sorted unique starts, all
+  // voices), 0–1 of the line's width, and each voice's staff [top, bottom], 0–1 of its height; null = not read
+  nx?: (number[] | null)[];
+  ny?: ([number, number][] | null)[];
   base: string; // folder of the images (added on load)
 }
 
