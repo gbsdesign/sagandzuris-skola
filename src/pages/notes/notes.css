@@ -275,8 +275,13 @@
 .np-pos{display:inline-block;margin-left:6px;padding:0 7px;border-radius:999px;font-size:11px;line-height:18px;color:var(--wine);box-shadow:inset 0 0 0 1px var(--wine);white-space:nowrap;vertical-align:1px}
 .np-cap-title{margin:2px 0 1px;font-family:var(--serif);font-size:17px;line-height:1.3;font-weight:600;color:var(--ink);text-wrap:balance}
 .np-cap-meta{font-size:12.5px;font-weight:600;color:var(--ink-2)}
-.np-cap-orn{order:2;position:relative;flex:none;width:96px;height:62px;margin:-2px -2px 0 0;opacity:var(--orn-op);filter:var(--orn-filter)}
-.np-cap-orn>*{position:absolute}
+/* beside the title: this chant's QR code · the camera that reads one (two round buttons in one pill) */
+.np-cap-qr{order:2;flex:none;display:flex;gap:2px;margin-top:2px;padding:3px;border-radius:999px;background:var(--wine-soft);box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--wine) 22%,transparent)}
+.np-cap-qr button{position:relative;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--wine);transition:transform .12s,background .18s}
+.np-cap-qr button+button::before{content:"";position:absolute;left:-2px;top:11px;bottom:11px;width:1px;background:color-mix(in srgb,var(--wine) 22%,transparent)}
+.np-cap-qr svg{width:20px;height:20px}
+.np-cap-qr button:active{transform:scale(.9);background:color-mix(in srgb,var(--wine) 12%,transparent)}
+@media (hover:hover){.np-cap-qr button:hover{background:color-mix(in srgb,var(--wine) 9%,transparent)}}
 .np-cap-tools{order:3;flex-basis:100%;min-width:0;display:flex;flex-wrap:wrap;align-items:center;gap:8px;--acc:var(--dusk);--acc-2:var(--dusk-2);--acc-soft:var(--dusk-soft);--acc-line:var(--dusk-line)}
 .np-start{flex:1 1 100%;min-width:0;height:40px;padding:0 12px 0 10px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;background:var(--dusk-soft);color:var(--dusk-2);box-shadow:inset 0 0 0 1px var(--dusk-line);font-size:12.5px;font-weight:800;white-space:nowrap;transition:transform .12s}
 .np-start:active{transform:scale(.97)}
@@ -314,7 +319,6 @@
 .np-root:is(.land,.wide) .np-cap-tools .np-stepper{flex:0 0 auto}
 .np-root:is(.land,.wide) .np-cap-title{display:inline;font-size:16px}
 .np-root:is(.land,.wide) .np-cap-meta{display:inline-block;margin-left:8px;white-space:nowrap}
-.np-root.land .np-cap-orn{display:none}
 .np-root.land.land .np-cap-meta{display:block;margin-left:0}
 .np-root.land .np-cap-title{display:block}
 .np-sheetswrap{display:flex;justify-content:center;width:max-content;min-width:100%;padding:0 var(--np-gut,8px) 6px}
@@ -409,3 +413,49 @@
 .np-toast button{flex:none;white-space:nowrap;height:30px;padding:0 12px;border-radius:999px;background:var(--toast-btn);color:inherit;font-size:12px;font-weight:800}
 
 @media (prefers-reduced-motion:reduce){.np-root,.np-root *{transition:none!important;animation:none!important}}
+
+/* this chant's QR code: a sheet from the bottom */
+.np-qr-scrim{position:absolute;inset:0;z-index:44;background:rgba(20,14,10,.42);animation:np-qr-fade .2s ease}
+.np-qr-sheet{position:absolute;left:0;right:0;bottom:0;z-index:45;max-height:92%;overflow:auto;padding:8px 20px calc(20px + env(safe-area-inset-bottom,0px));border-radius:24px 24px 0 0;background:var(--surface);color:var(--ink);text-align:center;box-shadow:0 -20px 40px -20px rgba(0,0,0,.45);animation:np-qr-up .32s cubic-bezier(.2,.8,.2,1)}
+@media (min-width:640px){.np-qr-sheet{left:calc(50% - 220px);right:auto;width:440px}}
+.np-qr-grip{width:40px;height:4px;margin:0 auto 10px;border-radius:2px;background:var(--line-2)}
+.np-qr-x{position:absolute;top:10px;right:10px;width:40px;height:40px;border-radius:50%;display:grid;place-items:center;color:var(--ink-2);background:var(--surface-3)}
+.np-qr-x svg{width:19px;height:19px}
+.np-qr-sheet h3{margin:6px 44px 2px;font-family:var(--serif);font-size:18px;line-height:1.3;font-weight:700;text-wrap:balance}
+.np-qr-sub{margin:0 12px;font-size:13px;font-weight:600;color:var(--ink-2)}
+.np-qr-code{width:min(250px,74%);aspect-ratio:1;margin:14px auto 12px;padding:14px;border-radius:20px;background:#fff;display:grid;place-items:center;color:#8c7c6b;box-shadow:0 0 0 1px var(--line),0 10px 24px -16px rgba(42,32,23,.45)}
+.np-qr-svg{width:100%;height:100%}
+.np-qr-svg svg{width:100%;height:100%;display:block}
+.np-qr-hint{margin:0 auto 14px;max-width:300px;font-size:14px;font-weight:600;line-height:1.5;color:var(--ink-2)}
+.np-qr-copy{height:44px;padding:0 18px;border-radius:999px;display:inline-flex;align-items:center;gap:8px;background:var(--wine-soft);color:var(--wine);font-size:14px;font-weight:800;box-shadow:inset 0 0 0 1px color-mix(in srgb,var(--wine) 22%,transparent);transition:transform .12s}
+.np-qr-copy svg{width:17px;height:17px}
+.np-qr-copy:active{transform:scale(.96)}
+@keyframes np-qr-fade{from{opacity:0}}
+@keyframes np-qr-up{from{transform:translateY(100%)}}
+
+/* the camera that reads a QR code: full screen, on <body> */
+.np-scan{position:fixed;inset:0;z-index:300;background:#0d0b09;color:#fff;overflow:hidden;animation:np-qr-fade .2s ease}
+.np-scan-video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.np-scan-frame{--s:min(70vw,58vh,290px);position:absolute;left:50%;top:46%;width:var(--s);height:var(--s);transform:translate(-50%,-50%);border-radius:26px;box-shadow:0 0 0 200vmax rgba(10,8,6,.52);pointer-events:none}
+.np-scan-frame i{position:absolute;width:34px;height:34px;border:0 solid #f4d27a}
+.np-scan-frame .tl{left:-2px;top:-2px;border-left-width:4px;border-top-width:4px;border-top-left-radius:26px}
+.np-scan-frame .tr{right:-2px;top:-2px;border-right-width:4px;border-top-width:4px;border-top-right-radius:26px}
+.np-scan-frame .bl{left:-2px;bottom:-2px;border-left-width:4px;border-bottom-width:4px;border-bottom-left-radius:26px}
+.np-scan-frame .br{right:-2px;bottom:-2px;border-right-width:4px;border-bottom-width:4px;border-bottom-right-radius:26px}
+.np-scan-beam{position:absolute;left:10%;right:10%;top:12%;height:2px;border-radius:1px;background:linear-gradient(90deg,transparent,#f4d27a,transparent);box-shadow:0 0 12px 2px rgba(244,210,122,.45);animation:np-scan-beam 2.4s ease-in-out infinite alternate}
+@keyframes np-scan-beam{to{top:88%}}
+@media (prefers-reduced-motion:reduce){.np-scan-beam{animation:none;top:50%}}
+.np-scan-top{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:12px;padding:calc(12px + env(safe-area-inset-top,0px)) calc(14px + env(safe-area-inset-right,0px)) 12px calc(14px + env(safe-area-inset-left,0px));background:linear-gradient(rgba(0,0,0,.5),transparent);font-size:15px;font-weight:800}
+.np-scan-x{flex:none;width:44px;height:44px;border-radius:50%;display:grid;place-items:center;color:#fff;background:rgba(255,255,255,.16);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+.np-scan-x svg{width:22px;height:22px}
+.np-scan-wait{position:absolute;inset:0;display:grid;place-items:center;color:rgba(255,255,255,.75)}
+.np-scan-wait svg{width:30px;height:30px}
+.np-scan-hint{position:absolute;left:16px;right:16px;bottom:calc(28px + env(safe-area-inset-bottom,0px));width:fit-content;max-width:calc(100% - 32px);margin:0 auto;padding:10px 16px;border-radius:999px;background:rgba(0,0,0,.5);-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px);font-size:14.5px;font-weight:700;line-height:1.35;text-align:center}
+.np-scan-card{position:absolute;left:12px;right:12px;bottom:calc(16px + env(safe-area-inset-bottom,0px));max-width:420px;margin:0 auto;padding:18px 18px 16px;border-radius:22px;background:#fff;color:#2a2017;box-shadow:0 20px 40px -16px rgba(0,0,0,.6);animation:np-qr-up .3s cubic-bezier(.2,.8,.2,1)}
+.np-scan-card b{display:block;font-size:16px;font-weight:800}
+.np-scan-card p{margin:6px 0 14px;font-size:14px;line-height:1.5;color:#574739}
+.np-scan-text{max-height:4.5em;overflow:auto;overflow-wrap:anywhere}
+.np-scan-row{display:flex;gap:8px}
+.np-scan-row>*{flex:1;height:46px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:14.5px;font-weight:800;background:#f1e9dc;color:#2a2017;text-decoration:none}
+.np-scan-row>.main{background:#7a2028;color:#fff}
+.np-scan-row svg{width:17px;height:17px}
