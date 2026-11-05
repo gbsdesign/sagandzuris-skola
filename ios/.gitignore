@@ -1,0 +1,5 @@
+# made from project.yml by XcodeGen (.github/workflows/ios.yml)
+Sagandzuri.xcodeproj/
+Sagandzuri/Info.plist
+Sagandzuri/Sagandzuri.entitlements
+build/

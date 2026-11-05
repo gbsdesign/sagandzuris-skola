@@ -177,6 +177,13 @@ function AppContent() {
     return () => sw.removeEventListener('message', onMessage);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  // ... and the iPhone app, for a tapped notice or a link into the site (ios/Sagandzuri/WebViewController.swift open)
+  useEffect(() => {
+    const w = window as unknown as { sgOpenUrl?: (href: string) => void };
+    w.sgOpenUrl = (href: string) => openFromUrl(href);
+    return () => { delete w.sgOpenUrl; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   useEffect(() => {
     const unsubscribe = onSnapshot(

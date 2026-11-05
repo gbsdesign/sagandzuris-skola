@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { isIosApp } from '../utils/iosApp';
 
 interface BeforeInstallPromptEvent extends Event {
   prompt: () => Promise<void>;
@@ -11,8 +12,9 @@ export function usePWAInstall() {
   const [isIOS, setIsIOS] = useState(false);
 
   useEffect(() => {
-    // Detect standalone mode (already installed)
+    // Detect standalone mode (already installed) — the App Store app (utils/iosApp) is the app already
     const isStandalone =
+      isIosApp() ||
       window.matchMedia('(display-mode: standalone)').matches ||
       (window.navigator as any).standalone === true;
     setIsInstalled(isStandalone);

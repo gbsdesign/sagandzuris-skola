@@ -35,6 +35,12 @@
 //   phone's notice: `t` is the ring's own signature (made here, sent in the push), so the service worker needs no sign-in.
 //   Every fact is checked in Firestore first (the caller's own fresh call, the writer's own fresh message, membership).
 // These pushes carry an encrypted text payload (RFC 8291, aes128gcm).
+// • The iPhone app (2026-11-05, ios/): its device rows have the endpoint https://ios.sagandzureli.ge/fcm/<FCM token>
+//   (ios/Sagandzuri/Shim.swift hands the site that as a push subscription); they are sent through Firebase Cloud
+//   Messaging (the same service-account key) as APNs notices — a ring with its own sound and „პასუხი“ / „უარი“, a
+//   prayer hour's text worked out here (a browser's service worker works it out itself from an empty push).
+// • POST /delete-account { token } (2026-11-05): „ანგარიშის წაშლა“ — the person's own records, their place in classes and
+//   psalter groups, their devices here, and last their sign-in. Messages written in chats stay.
 //
 // Bindings (wrangler.toml): D1 database DB (schema.sql), KV namespace REMINDERS (old storage, read once to
 // move the subscriptions into D1), vars VAPID_PUBLIC_KEY, FIREBASE_PROJECT_ID, FIRESTORE_DB,
@@ -312,6 +318,7 @@ async function encryptPayload(p256dh, auth, text) {
 /** An empty push (prayer hours) or one with a message { title, body, tag, url }; a message's own `ttl` (seconds) and
  *  `urgency` go into the headers (a ring is worth nothing a minute later, and must wake a sleeping phone). */
 async function sendPush(env, row, message) {
+  if (isIosRow(row)) return sendFcm(env, row, message);
   const jwt = await vapidJwt(env, new URL(row.endpoint).origin);
   const ttl = message ? String(message.ttl || 21600) : '120';
   const urgency = message ? (message.urgency || 'normal') : 'high';
@@ -319,6 +326,74 @@ async function sendPush(env, row, message) {
   if (!message) return fetch(row.endpoint, { method: 'POST', headers: { ...headers, 'Content-Length': '0' } });
   const body = await encryptPayload(row.p256dh, row.auth, JSON.stringify(message));
   return fetch(row.endpoint, { method: 'POST', headers: { ...headers, 'Content-Encoding': 'aes128gcm', 'Content-Type': 'application/octet-stream' }, body });
+}
+
+// ---- the iPhone app: Firebase Cloud Messaging → APNs (2026-11-05) -------------------------------------------------
+
+const IOS_PREFIX = 'https://ios.sagandzureli.ge/fcm/';
+const isIosRow = (row) => typeof row.endpoint === 'string' && row.endpoint.startsWith(IOS_PREFIX);
+
+// the prayer hours as the site's service worker words them (public/prayer-notify-sw.js)
+const PRAYER_HOUR_WORDS = [
+  ['hour-6', 6, 'დილის 6 საათის'], ['hour-9', 9, 'დილის 9 საათის'], ['hour-12', 12, 'დღის 12 საათის'], ['hour-15', 15, 'დღის 3 საათის'],
+  ['hour-18', 18, 'საღამოს 6 საათის'], ['hour-21', 21, 'საღამოს 9 საათის'], ['hour-24', 0, 'ღამის 12 საათის'],
+];
+
+/** An empty push's words for a phone that cannot work them out itself: the nearest hour within 15 minutes. */
+function prayerMessage(tz, when = new Date()) {
+  const now = localMinutes(when, validTz(tz) ? tz : 'Asia/Tbilisi');
+  let best = null;
+  for (const [id, hour, label] of PRAYER_HOUR_WORDS) {
+    const left = (hour * 60 - now + 1440) % 1440;
+    if (!best || left < best.left) best = { id, label, left };
+  }
+  const title = 'შვიდგზის ლოცვა';
+  if (!best || best.left > 15) return { kind: 'prayer', title, body: 'ლოცვის დრო ახლოვდება', tag: 'prayer-hour', url: '/' };
+  const minutes = Math.max(1, best.left);
+  return { kind: 'prayer', title, body: `${best.label} ლოცვამდე ${minutes} წუთი დარჩა`, tag: `${best.id}-${minutes}`, url: `/?prayer=${best.id}` };
+}
+
+/** The APNs notice of a message (what the browser's service worker would show), with the app's sounds and buttons. */
+function apnsOf(m) {
+  const aps = { alert: { title: m.title || 'საგანძური', body: m.body || '' } };
+  if (m.kind === 'call') {
+    aps.sound = 'ring.wav';
+    aps.category = 'CALL';
+    aps['interruption-level'] = 'time-sensitive';
+  } else if (m.kind === 'prayer') {
+    aps.sound = 'bell.wav';
+    aps['interruption-level'] = 'time-sensitive';
+  } else if (m.kind !== 'call-end') {
+    aps.sound = 'default';
+  }
+  if (m.tag) aps['thread-id'] = String(m.tag).slice(0, 64);
+  const payload = { aps, kind: m.kind || '', url: m.url || '/' };
+  if (m.answer) payload.answer = m.answer;
+  if (m.decline) payload.decline = m.decline;
+  const headers = {
+    'apns-push-type': 'alert',
+    'apns-priority': '10',
+    'apns-expiration': String(Math.floor(Date.now() / 1000) + Number(m.ttl || 21600)),
+  };
+  // a ring's „ended“ notice takes the ring's place; a chat keeps one notice
+  if (m.tag) headers['apns-collapse-id'] = String(m.tag).slice(0, 64);
+  return { headers, payload };
+}
+
+async function sendFcm(env, row, message) {
+  const token = decodeURIComponent(row.endpoint.slice(IOS_PREFIX.length));
+  const m = message || prayerMessage(row.tz);
+  const res = await fetch(`https://fcm.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/messages:send`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${await accessToken(env, MESSAGING)}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ message: { token, apns: apnsOf(m) } }),
+  });
+  if (res.ok) return res;
+  const text = await res.text();
+  // a token the phone no longer has: forgotten like a browser's ended subscription (deliver)
+  if (res.status === 404 || /UNREGISTERED|registration token is not a valid/i.test(text)) return { status: 410 };
+  console.warn('fcm:', res.status, text.slice(0, 200));
+  return { status: res.status };
 }
 
 /** Sends and forgets subscriptions the push service says are gone. */
@@ -362,13 +437,17 @@ async function verifyIdClaims(env, token) {
   return claims;
 }
 
-let googleToken = null;
-async function accessToken(env) {
+const DATASTORE = 'https://www.googleapis.com/auth/datastore';
+const MESSAGING = 'https://www.googleapis.com/auth/firebase.messaging';
+const CLOUD = 'https://www.googleapis.com/auth/cloud-platform';
+const googleTokens = new Map();
+async function accessToken(env, scope = DATASTORE) {
   const now = Math.floor(Date.now() / 1000);
-  if (googleToken && googleToken.exp - 120 > now) return googleToken.token;
+  const cached = googleTokens.get(scope);
+  if (cached && cached.exp - 120 > now) return cached.token;
   const sa = JSON.parse(env.FIREBASE_SA);
   const unsigned = `${b64urlText(JSON.stringify({ alg: 'RS256', typ: 'JWT' }))}.${b64urlText(JSON.stringify({
-    iss: sa.client_email, scope: 'https://www.googleapis.com/auth/datastore', aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3600,
+    iss: sa.client_email, scope, aud: 'https://oauth2.googleapis.com/token', iat: now, exp: now + 3600,
   }))}`;
   const der = Uint8Array.from(atob(sa.private_key.replace(/-----[^-]+-----/g, '').replace(/\s+/g, '')), (c) => c.charCodeAt(0));
   const key = await crypto.subtle.importKey('pkcs8', der, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['sign']);
@@ -380,8 +459,8 @@ async function accessToken(env) {
   });
   const data = await res.json();
   if (!data.access_token) throw new Error('google token');
-  googleToken = { token: data.access_token, exp: now + (data.expires_in || 3600) };
-  return googleToken.token;
+  googleTokens.set(scope, { token: data.access_token, exp: now + (data.expires_in || 3600) });
+  return data.access_token;
 }
 
 const fsBase = (env) => `https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/${env.FIRESTORE_DB}/documents`;
@@ -1132,6 +1211,80 @@ async function calendarFeed(request, env) {
   return [200, buildIcs(classes), 'text/calendar; charset=utf-8'];
 }
 
+// ---- „ანგარიშის წაშლა“ (2026-11-05, src/utils/deleteAccount.ts; the App Store asks for it) ----------------------------
+
+// the person's own documents, keyed by their uid (and the takes and settings under some of them)
+const OWN_DOCS = ['students', 'directory', 'memberAccess', 'accessDecisions', 'birthdays', 'birthYears', 'nameDays', 'confirmations',
+  'albumAccess', 'adminNotes', 'adminPush', 'samosiTryOn', 'chatFlags', 'teachers', 'pearlTakes', 'drillTakes', 'users'];
+const OWN_SUBS = [['pearlTakes', 'takes'], ['drillTakes', 'takes'], ['users', 'settings']];
+
+const docName = (env, path) => `projects/${env.FIREBASE_PROJECT_ID}/databases/${env.FIRESTORE_DB}/documents/${path}`;
+
+const toValue = (v) => {
+  if (v === null || v === undefined) return { nullValue: null };
+  if (typeof v === 'string') return { stringValue: v };
+  if (typeof v === 'boolean') return { booleanValue: v };
+  if (typeof v === 'number') return Number.isInteger(v) ? { integerValue: String(v) } : { doubleValue: v };
+  if (Array.isArray(v)) return { arrayValue: { values: v.map(toValue) } };
+  return { mapValue: { fields: Object.fromEntries(Object.entries(v).map(([k, x]) => [k, toValue(x)])) } };
+};
+
+async function fsCommit(env, writes) {
+  for (let i = 0; i < writes.length; i += 400) {
+    const res = await fetch(`https://firestore.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/databases/${env.FIRESTORE_DB}/documents:commit`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${await accessToken(env)}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ writes: writes.slice(i, i + 400) }),
+    });
+    if (!res.ok) throw new Error(`firestore commit ${res.status} ${(await res.text()).slice(0, 200)}`);
+  }
+}
+
+async function deleteAccount(request, env) {
+  const body = await readJson(request);
+  let uid;
+  try {
+    uid = await verifyIdToken(env, body && body.token);
+  } catch {
+    return [401, 'bad token'];
+  }
+  const writes = [];
+  for (const [col, sub] of OWN_SUBS) {
+    for (const d of await fsList(env, `${col}/${uid}/${sub}`, ['__none__'])) writes.push({ delete: docName(env, `${col}/${uid}/${sub}/${d.id}`) });
+  }
+  for (const col of OWN_DOCS) writes.push({ delete: docName(env, `${col}/${uid}`) });
+  // out of the classes and psalter groups (a group's members / teachers are { uid, name } entries)
+  const remove = (doc, fields) => {
+    const fieldTransforms = fields
+      .filter(([, values]) => values.length)
+      .map(([fieldPath, values]) => ({ fieldPath, removeAllFromArray: { values: values.map(toValue) } }));
+    if (fieldTransforms.length) writes.push({ transform: { document: doc, fieldTransforms } });
+  };
+  for (const c of await fsList(env, 'classes', ['memberIds', 'teacherIds'])) {
+    remove(docName(env, `classes/${c.id}`), [['memberIds', (c.memberIds || []).filter((x) => x === uid)], ['teacherIds', (c.teacherIds || []).filter((x) => x === uid)]]);
+  }
+  for (const g of await fsList(env, 'psalterGroups', ['memberIds', 'teacherIds', 'members', 'teachers'])) {
+    const mine = (list) => (list || []).filter((x) => x && (x === uid || x.uid === uid));
+    remove(docName(env, `psalterGroups/${g.id}`), [['memberIds', mine(g.memberIds)], ['teacherIds', mine(g.teacherIds)], ['members', mine(g.members)], ['teachers', mine(g.teachers)]]);
+  }
+  // a staff role (admins/{email}) of this person
+  for (const a of await fsList(env, 'admins', ['userId'])) if (a.userId === uid) writes.push({ delete: docName(env, `admins/${a.id}`) });
+  await fsCommit(env, writes);
+  await env.DB.batch([
+    env.DB.prepare('DELETE FROM subs WHERE uid = ?').bind(uid),
+    env.DB.prepare('DELETE FROM widgets WHERE uid = ?').bind(uid),
+    env.DB.prepare('DELETE FROM widget_summary WHERE uid = ?').bind(uid),
+  ]);
+  // last, the sign-in itself
+  const res = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/accounts:delete`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${await accessToken(env, CLOUD)}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ localId: uid }),
+  });
+  if (!res.ok) throw new Error(`auth delete ${res.status} ${(await res.text()).slice(0, 200)}`);
+  return [200, 'ok'];
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
@@ -1140,7 +1293,7 @@ export default {
     const url = new URL(request.url);
     const routes = {
       '/subscribe': subscribe, '/account': account, '/group-event': groupEvent, '/access-request': accessRequest, '/game-invite': gameInvite,
-      '/ring': ring, '/chat-notify': chatNotify, '/decline': decline,
+      '/ring': ring, '/chat-notify': chatNotify, '/decline': decline, '/delete-account': deleteAccount,
       '/widget/link': widgetLink, '/widget/summary': widgetSummary,
     };
     // the app's widgets send no Origin: their secret is the proof
@@ -1180,4 +1333,4 @@ export default {
 };
 
 // for tests (tests/reminders-worker.test.mjs, tests/adminTools.test.ts)
-export { encryptPayload, cycleOf, ownersIn, weekText, chatTargets, chatBody, ringTicket };
+export { encryptPayload, cycleOf, ownersIn, weekText, chatTargets, chatBody, ringTicket, prayerMessage, apnsOf };

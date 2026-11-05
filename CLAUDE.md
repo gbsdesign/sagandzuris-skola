@@ -322,6 +322,26 @@
   (`node scripts/build-widget-days.mjs`). The site knows it runs in the app by `utils/androidApp.ts` and talks to the app through
   `sagandzuri://` links (`openInApp`). Widget links open `/?open=sc&id=<home button id>`. Icons: `node scripts/android/icons.mjs`.
   Only GitHub Actions can build it (`.github/workflows/android.yml` → branch `android-build`, unsigned); sign in a session.
+- **iPhone app** (App Store, `ios/`, 2026-11-05; published under the user's friend's Apple developer account — the user is an
+  Admin of that team): the live site https://sagandzureli.ge in the app's own WKWebView (site updates need no app update), bundle
+  `ge.sagandzureli.app`, iPhone only, iOS 16+. Swift in `ios/Sagandzuri/`; the Xcode project, Info.plist and entitlements are made
+  from `ios/project.yml` by XcodeGen on GitHub's Mac (`.github/workflows/ios.yml`: a PR = simulator build; main or „Run workflow“ =
+  archive with automatic signing by the App Store Connect API key, export by Apple's cloud certificate, upload → TestFlight; build
+  number = run_number×10 + attempt; `.github/scripts/asc.py` makes the bundle id, says whether the app's page exists, and revokes the
+  „Created via API“ development certificate each run makes). Secrets: `ASC_KEY_ID`, `ASC_ISSUER_ID`, `ASC_KEY_P8` (Admin team key),
+  `APPLE_TEAM_ID`. App-bound domains (sagandzureli.ge, www, pages.dev) keep other sites out of the app (they open in Safari's sheet)
+  and give the site its service worker (offline notes). `Shim.swift` puts `window.sgIOS` (the bridge, `NativeBridge.swift`) into
+  every page, plus a `Notification` and a service worker `pushManager` made of the app's parts: the subscription's endpoint is
+  `https://ios.sagandzureli.ge/fcm/<FCM token>` with keys `ios`, so `groupPush.ts` / `prayerReminders.ts` bind the phone unchanged and
+  the reminders Worker sends those rows through FCM v1 (`sendFcm`, `apnsOf`; a ring = `ring.wav` + category CALL „პასუხი“ / „უარი“,
+  time-sensitive; „ended“ replaces it by `apns-collapse-id`; a prayer hour's words are made by `prayerMessage` + `bell.wav`; test
+  `tests/iosPush.test.mjs`). The app leaves calls and chat notices out while it is on screen. Sign-in: Google blocks its page in a web
+  view, so `AuthContext` asks the app (`utils/iosApp.ts` `iosCall('google' | 'apple')`, `SignIn.swift`) and signs in with
+  `signInWithCredential`; „შესვლა Apple-ით“ shows only in the app (`SignInChoices`). Needs `ios/Sagandzuri/GoogleService-Info.plist`
+  (Firebase console → the iOS app; its REVERSED_CLIENT_ID is put into the URL scheme by the workflow) — without it the app builds
+  without Google sign-in and notifications. A tapped notice / universal link goes through `window.sgOpenUrl` (App.tsx). Files the site
+  saves come to the share sheet (WKDownload). „ანგარიშის წაშლა“ (profile bottom, everyone; `utils/deleteAccount.ts` → Worker
+  `/delete-account`: own docs, classes/psalter groups arrays, admins role, D1 rows, then the Auth user; chat messages stay).
 - **Library** page (`biblioteka`): საღმრთო ისტორია, დღესასწაულები, წმიდანთა ცხოვრება.
   Footer church calendar (`data/churchCalendar.ts`, `data/calendar/<year>.json`, made by
   `node scripts/fetch-church-calendar.mjs <year>`). **The 2026 file ends 13 Jan 2027 — re-run for 2027 once
