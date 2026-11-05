@@ -26,6 +26,7 @@ import { openPathPanel } from '../views/IndependentWorkCard';
 import { askSignIn } from '../access/SignInPrompt';
 import { IconBtn, Sheet } from '../ui/kit';
 import { KathismaTiles } from '../psalter/KathismaTile';
+import { SHELF_GRID, TileCheck, TileIcon, TileName, tileClass } from './ShelfTile';
 
 const SECTION_ICON: Record<SectionId, React.ReactNode> = {
   galoba: <Music2 />, simghera: <Music />, mtkmeli: <Feather />, sakravebi: <Guitar />, medavitneoba: <BookOpen />, medavitneobaTopic: <BookOpen />,
@@ -263,7 +264,7 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
           )
         )}
       </div>
-      <ul className={`grid grid-cols-3 min-[480px]:grid-cols-4 gap-2 select-none ${editing ? 'touch-none' : ''}`}>
+      <ul className={`${SHELF_GRID} select-none ${editing ? 'touch-none' : ''}`}>
         {readingIn.map(g => <KathismaTiles key={g.id} group={g} uid={user.uid} />)}
         {order.map((id, i) => {
           const l = shortcutLabel(id)!;
@@ -271,9 +272,9 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
           // a prayer, akathist or kathisma gets a "✓ წავიკითხე" corner; the tile then lays out to the left
           const habit = variant === 'home' ? habitOfShortcut(id) : null;
           const isDone = !!habit && (kindOf(id) === 'habit' ? todayHabits.includes(habit) : done.includes(id));
-          const longest = Math.max(...l.label.split(/\s+/).map(w => w.length));
           return (
             <li key={id} data-tile={i} className="relative">
+              {/* half height since 2026-11-05: icon, the name shortened to two lines, the ✓ (ShelfTile) */}
               <button
                 type="button"
                 onPointerDown={onDown(i)}
@@ -282,29 +283,17 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
                 onPointerCancel={() => { if (press.current) window.clearTimeout(press.current.t); press.current = null; setDrag(null); }}
                 onContextMenu={e => e.preventDefault()}
                 aria-label={l.label}
-                className={`w-full h-20 rounded-[14px] ring-1 flex flex-col cursor-pointer transition shadow-[0_1px_3px_-1px_rgba(74,52,38,0.14)] ${
-                  habit ? 'justify-between px-2 py-2 text-left' : 'items-center justify-center gap-1 px-1.5 text-center'
-                } ${isDone ? 'bg-emerald-50/80 ring-emerald-200' : 'bg-white ring-[#ebe0cd]'} ${
-                  editing ? 'animate-[sg-wiggle_0.35s_ease-in-out_infinite_alternate]' : 'hover:ring-[#7a2028]/35 active:scale-[0.96]'
+                title={l.label}
+                className={`${tileClass(isDone ? 'done' : 'paper', !!habit)} ${
+                  editing ? 'animate-[sg-wiggle_0.35s_ease-in-out_infinite_alternate]' : 'hover:ring-[#7a2028]/35 active:scale-[0.97]'
                 } ${dragging ? 'ring-2 !ring-[#7a2028] scale-105 z-10' : ''}`}
               >
-                <span className={`flex items-center text-[#7a2028] [&>svg]:w-[18px] [&>svg]:h-[18px] [&>svg]:stroke-[1.9] ${habit ? 'h-7' : 'h-6 justify-center'}`}>{shortcutIcon(id)}</span>
-                {/* a long single word gets a size smaller rather than being split on a 360px phone */}
-                <span className={`w-full line-clamp-2 break-words leading-[1.2] font-bold text-[#4a3426] ${
-                  longest > 9 ? 'text-[12.5px] tracking-[-0.02em]' : 'text-[13px]'
-                }`}>{l.label}</span>
+                <TileIcon>{shortcutIcon(id)}</TileIcon>
+                <TileName label={l.label} room={habit ? 'tight' : 'roomy'} />
               </button>
-              {/* a 28px ring, tapped anywhere in its 40px corner */}
               {habit && !editing && (
-                <button type="button" onClick={() => markDone(id, habit)} aria-pressed={isDone}
-                  aria-label={isDone ? `${l.label} — მონიშვნის მოხსნა` : `${l.label} — წავიკითხე`} title={isDone ? 'დღეს წაკითხულია' : 'წავიკითხე'}
-                  className="group absolute top-0.5 right-0.5 w-10 h-10 flex items-center justify-center cursor-pointer transition active:scale-90">
-                  <span className={`w-7 h-7 rounded-full flex items-center justify-center transition ${
-                    isDone ? 'bg-emerald-500 text-white shadow-sm' : 'ring-1 ring-[#dccdb4] text-[#bcae9c] group-hover:text-[#7a2028] group-hover:ring-[#7a2028]/40'
-                  }`}>
-                    <Check className="w-[15px] h-[15px] stroke-[3]" />
-                  </span>
-                </button>
+                <TileCheck on={isDone} onClick={() => markDone(id, habit)}
+                  label={isDone ? `${l.label} — მონიშვნის მოხსნა` : `${l.label} — წავიკითხე`} title={isDone ? 'დღეს წაკითხულია' : 'წავიკითხე'} />
               )}
               {editing && (
                 <button type="button" onClick={() => remove(id)} aria-label={`${l.label} — წაშლა`}
@@ -318,8 +307,8 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
         {ids.length < MAX_SHORTCUTS && (editing || variant === 'profile') && (
           <li>
             <button type="button" onClick={() => setAdding(true)} aria-label="ღილაკის დამატება"
-              className="w-full h-20 rounded-[14px] border-[1.5px] border-dashed border-[#d9c8ac] text-[#8a7a6a] hover:text-[#7a2028] hover:border-[#7a2028]/40 flex flex-col items-center justify-center gap-0.5 cursor-pointer transition">
-              <Plus className="w-5 h-5" />
+              className="w-full h-11 rounded-[13px] border-[1.5px] border-dashed border-[#d9c8ac] text-[#8a7a6a] hover:text-[#7a2028] hover:border-[#7a2028]/40 flex items-center justify-center gap-1.5 cursor-pointer transition">
+              <Plus className="w-[18px] h-[18px]" />
               <span className="text-xs font-bold">დამატება</span>
             </button>
           </li>
