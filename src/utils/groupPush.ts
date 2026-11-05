@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { auth } from '../firebase';
+import { isAndroidApp } from './androidApp';
 
 // Group notifications through the reminders Worker (worker/reminders):
 // • POST /account { subscription, token, psalter, assignments } — this browser receives the signed-in
@@ -180,6 +181,15 @@ export const notifyChat = (base: string, id: string, pin = false) => post('/chat
 
 const CHAT_BOUND = 'sg-chat-push';
 
+// a step of the phone's that never answers (2026-11-05: the Play app before 1.1.3 could not show Android's permission
+// window, and „ირთვება…“ stayed for ever) gives up after a while and says why
+const LATE = Symbol('late');
+const within = <T>(p: Promise<T>, ms: number): Promise<T | typeof LATE> =>
+  Promise.race([p, new Promise<typeof LATE>(r => window.setTimeout(() => r(LATE), ms))]);
+const NO_WINDOW = () => (isAndroidApp()
+  ? 'ნებართვის ფანჯარა ვერ გაიხსნა. განაახლე „საგანძური“ Play Store-ში და სცადე თავიდან.'
+  : 'ნებართვის ფანჯარა არ გამოჩნდა — სცადე თავიდან.');
+
 /**
  * This browser rings for the signed-in person's calls and shows their messages. `ask`: may ask for the permission (only
  * from a tap); otherwise binds only where notifications are already allowed. Returns '' when bound, else why not.
@@ -190,13 +200,16 @@ export const bindChatDevice = async (ask: boolean): Promise<string> => {
   if (!pushSupported()) return 'ეს ბრაუზერი შეტყობინებებს ვერ მიიღებს.';
   if (Notification.permission !== 'granted') {
     if (!ask || Notification.permission === 'denied') return 'შეტყობინებები დაბლოკილია — ჩართე ტელეფონის პარამეტრებში.';
-    if ((await Notification.requestPermission()) !== 'granted') return 'შეტყობინებები დაბლოკილია — ჩართე ტელეფონის პარამეტრებში.';
+    const answer = await within(Notification.requestPermission(), 45_000);
+    if (answer === LATE) return NO_WINDOW();
+    if (answer !== 'granted') return 'შეტყობინებები დაბლოკილია — ჩართე ტელეფონის პარამეტრებში.';
   }
   try {
     const reg = await navigator.serviceWorker.getRegistration();
     if (!reg?.pushManager) return 'შეტყობინებები მხოლოდ გამოქვეყნებულ საიტზე მუშაობს.';
     const sub = (await reg.pushManager.getSubscription())
-      ?? await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(VAPID_PUBLIC_KEY) });
+      ?? await within(reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(VAPID_PUBLIC_KEY) }), 30_000);
+    if (sub === LATE) return 'ტელეფონმა შეტყობინებები ვერ ჩართო — სცადე თავიდან.';
     const res = await fetch(`${SERVER}/account`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

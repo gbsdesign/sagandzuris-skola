@@ -192,11 +192,9 @@
 - **Prayers** (`data/prayers.ts`, `public/prayers/`, `public/bible/`), psalter kathismas, 73 akathists,
   commemoration name lists (`utils/commemoration.ts`), prayer reminders via Web Push Worker
   `sagandzuri-reminders` (`worker/reminders/`; push works only on the deployed site).
-- **საგანძურის გზა** (page `gz`) = „ჩემი დღე“ since 2026-10-28: `views/PathToday.tsx` „დღეს“ card (each line: what big, when
-  grey under it — 2026-11-05; the lesson's day and date, „დღეს/ხვალ“ only; the assignment's own chant name + „დავალება ·
-  10 ნოემბრამდე“; a piece's name without its book №, `pieceName`) (next lesson; the nearest
-  assignment with „სწავლა“ + its parts bar when it has a learning mode; „დღეს გასამეორებელი“ — no habits line), the five
-  round buttons (`PathOrbs`), then the habits card.
+- **საგანძურის გზა** (page `gz`) = „ჩემი დღე“ since 2026-10-28: the five round buttons (`PathOrbs`), then the habits card. The
+  „დღეს“ card on top (`PathToday`: next lesson, nearest assignment, reviews due) was taken off at the user's wish (2026-11-05) —
+  don't bring it back unasked. A piece's name without its book № = `pieceName` (LearnReview), used by the home's line.
 - **Habits** ticked per day (`students/{uid}.habitLog`, kept whole since 2026-10-16; each tick writes only its day),
   goals in `habitsAndManera.ts`. Views „დღე · კვირა · თვე · წელი“ + a habit's own page in `components/habits/`
   (one shared model `useHabits.tsx`; a new view = one entry in `VIEWS` in `ChvevebiPanel.tsx`), stats in
@@ -265,11 +263,14 @@
   so any old-script letter on the site is the app's alphabet.
 - **Android app** (Google Play, `android/`, 2026-10-29; memory `google-play-app`): a Trusted Web Activity of the live site
   (so the site's updates need no app update) plus the app's own Java parts in `android/app/src/main/java/ge/sagandzureli/app/`
-  (version 1.1.2, code 4; minSdk 26): six home-screen widgets — buttons (the home vine's places, picked in `ButtonsConfigActivity`),
+  (version 1.1.3, code 5; minSdk 26): six home-screen widgets — buttons (the home vine's places, picked in `ButtonsConfigActivity`),
   habits (tap ticks / counts), the path's five rings + reviews due, the church day, my psalter kanon, the saying of the day — the
   icon's long-press menu (`res/xml/shortcuts.xml`), „გაზიარება → საგანძური“ into a class chat (manifest share target → the site's
   `share_target` + `public/prayer-notify-sw.js` → `components/app/ShareHost.tsx`), church mode's „არ შემაწუხო“
   (`SilenceActivity`, back after 3 h) and the prayer reminders' bell (`BellDelegationService`, `res/raw/bell.ogg`).
+  1.1.3 (code 5, 2026-11-05) declares androidbrowserhelper's `NotificationPermissionRequestActivity` (the library does not):
+  on Android 13+ the site's notification request goes Chrome → `BellDelegationService` → that screen; without it the request never
+  came back and „ჩართვა“ hung on „ირთვება…“ (`bindChatDevice` now gives up after 45 s / 30 s and says to update the app).
   Since 1.1.2 (code 4, 2026-11-05) `BellDelegationService` also turns the site's ring (tag `call-d-…` / `call-c-…` with its two
   buttons) into a phone call — channel „ზარები“ with the phone's ringtone, `FLAG_INSISTENT`, `CATEGORY_CALL`, gone after 45 s —
   and opens `IncomingCallActivity` on a locked or dark screen (full-screen intent, `USE_FULL_SCREEN_INTENT`; Android 14+ grants

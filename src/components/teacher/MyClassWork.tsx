@@ -164,7 +164,7 @@ export const useNewWork = () => {
 };
 
 // Inside "ნასწავლი" (the round button on the path page), at the top: the teacher's assignments with their
-// deadlines (the timetable lives on the class page, the next lesson in the path's „დღეს“ card — PathToday). The bell beside "დავალებები" turns on the
+// deadlines (the timetable lives on the class page). The bell beside "დავალებები" turns on the
 // reminder on the eve of a deadline. `bare`: no card of its own, a line under it instead.
 export const MyClassWork: React.FC<{ bare?: boolean }> = ({ bare }) => {
   const { user } = useAuth();
