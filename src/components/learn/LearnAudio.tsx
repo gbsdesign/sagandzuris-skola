@@ -54,6 +54,10 @@ export const LearnAudio: React.FC<{
   const [head, setHead] = useState(0);
   const els = useRef<HTMLAudioElement[]>([]);
   const raf = useRef(0);
+  const gapTimer = useRef(0);
+  const toastTimer = useRef(0);
+  const [toast, setToast] = useState('');
+  useEffect(() => () => { window.clearTimeout(gapTimer.current); window.clearTimeout(toastTimer.current); }, []);
   const recRef = useRef(rec);
   recRef.current = rec;
   const stepRef = useRef<Step>(1);
@@ -149,29 +153,52 @@ export const LearnAudio: React.FC<{
     else if (n === 2) { setSpeed(0.75); setMix(split ? 'others' : 'all'); }
     else { setSpeed(1); setMix('mine'); stop(); }
   };
-  // loop the part: back to its start when it ends; the voices are kept in step
+  // loop the part: back to its start when it ends, after a breath (1.5 s); the voices are kept in step
   const follow = () => {
     const [lead, ...rest] = els.current;
     if (!lead) return;
     const { s0, s1 } = rangeRef.current;
     if (lead.currentTime >= s1 - 0.05 || lead.currentTime < s0 - 0.5) {
+      const atEnd = lead.currentTime >= s1 - 0.05;
       seekAll(s0);
       // once more round; after three the path moves on
       loopsRef.current += 1;
       setLoops(loopsRef.current);
-      if (loopsRef.current >= LOOPS_PER_STEP && stepRef.current < 3) goStep((stepRef.current + 1) as Step);
+      if (loopsRef.current >= LOOPS_PER_STEP && stepRef.current < 3) {
+        const next = (stepRef.current + 1) as Step;
+        goStep(next);
+        triggerHaptic(30);
+        window.clearTimeout(toastTimer.current);
+        setToast(`${LOOPS_PER_STEP} წრე მორჩა — ახლა: ${next === 2 ? 'ერთად' : 'მარტო'}`);
+        toastTimer.current = window.setTimeout(() => setToast(''), 3000);
+      }
       if (stepRef.current === 3) return;
+      if (atEnd) {
+        els.current.forEach(a => a.pause());
+        setHead(0);
+        gapTimer.current = window.setTimeout(() => {
+          Promise.all(els.current.map(a => a.play()))
+            .then(() => { raf.current = requestAnimationFrame(follow); })
+            .catch(() => stop());
+        }, 1500);
+        return;
+      }
     } else rest.forEach(a => { if (Math.abs(a.currentTime - lead.currentTime) > 0.12) a.currentTime = lead.currentTime; });
     setHead(s1 > s0 ? Math.max(0, Math.min(1, (lead.currentTime - s0) / (s1 - s0))) : 0);
     if (!lead.paused) raf.current = requestAnimationFrame(follow);
   };
 
-  const stop = () => { els.current.forEach(a => a.pause()); setPlaying(false); cancelAnimationFrame(raf.current); };
+  const stop = () => {
+    window.clearTimeout(gapTimer.current);
+    els.current.forEach(a => a.pause());
+    setPlaying(false);
+    cancelAnimationFrame(raf.current);
+  };
   const toggle = async () => {
     const lead = els.current[0];
     if (!lead) return;
     triggerHaptic(10);
-    if (!lead.paused) { stop(); return; }
+    if (!lead.paused || playing) { stop(); return; }
     seekAll(lead.currentTime < range.s0 || lead.currentTime >= range.s1 - 0.05 ? range.s0 : lead.currentTime);
     try {
       await Promise.all(els.current.map(a => { a.playbackRate = speed; return a.play(); }));
@@ -219,6 +246,9 @@ export const LearnAudio: React.FC<{
               split ? 'შენი ხმა ჩუმადაა: იმღერე დანარჩენებთან ერთად.' : 'იმღერე ჩანაწერთან ერთად.',
               'ახლა მარტო იმღერე ქვემოთ. შეგიძლია ჯერ კიდევ ერთხელ მოისმინო.',
             ]} />
+            {toast && (
+              <p role="status" className="rounded-xl bg-[#fbf3df] ring-1 ring-[#e9cf8f] px-3 py-2 text-[13.5px] font-bold text-[#8a6a1e] text-center">{toast}</p>
+            )}
             {current !== 'all' && <PartWords lines={wordsForPart(lines, current, parts.length)} />}
             <div className="flex items-center gap-3">
               <button type="button" onClick={toggle} aria-label={playing ? 'გაჩერება' : 'მოსმენა'}

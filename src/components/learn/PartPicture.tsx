@@ -4,8 +4,13 @@ import { markerAt, spanAt } from '../../utils/learn';
 
 /** The part's lines cut out of the book's page, one under another; while it sounds a mark stands on the sounding note
  *  (its place read from the picture — `score.nx`; a line not read gets an estimate, so it is a soft band, not a hairline).
- *  `span` (beats): the bit being learned now (the beginners' piece) stays clear and golden-tinted, the rest is veiled. */
-export const PartPicture: React.FC<{ score: BookScore; sys: number[]; beat: number | null; span?: [number, number] | null }> = ({ score, sys, beat, span }) => {
+ *  `span` (beats): the bit being learned now (a small piece) stays clear and golden-tinted, the rest is veiled.
+ *  `marks`: after singing, each of my voice's notes (`voice`, from 0) tinted on its staff — green sung right, red not;
+ *  only on lines whose staves were read (`score.ny`). */
+export const PartPicture: React.FC<{
+  score: BookScore; sys: number[]; beat: number | null; span?: [number, number] | null;
+  marks?: { beat: number; ok: boolean }[] | null; voice?: number;
+}> = ({ score, sys, beat, span, marks, voice = 0 }) => {
   if (!sys.length) return null;
   return (
     <div className="flex flex-col gap-1.5 rounded-xl bg-[#fffdf8] ring-1 ring-[#e8dcc8] p-1.5">
@@ -38,6 +43,15 @@ export const PartPicture: React.FC<{ score: BookScore; sys: number[]; beat: numb
                 </>
               ) : <span aria-hidden className="absolute inset-0 bg-[#fffdf8]/65 pointer-events-none" />
             )}
+            {marks && score.ny?.[k]?.[voice] && marks.filter(m => m.beat >= t0 - 1e-6 && m.beat < t1 - 1e-6).map(m => {
+              const [top, bot] = score.ny![k]![voice];
+              const pad = (bot - top) * 0.25;
+              return (
+                <span key={m.beat} aria-hidden className={`absolute w-2.5 -ml-[5px] rounded-full pointer-events-none ${
+                  m.ok ? 'bg-[#2f8a4f]/25 ring-1 ring-[#2f8a4f]/75' : 'bg-[#c0392b]/25 ring-1 ring-[#c0392b]/80'}`}
+                  style={{ left: `${markerAt(score, k, m.beat) * 100}%`, top: `${(top - pad) * 100}%`, height: `${(bot - top + 2 * pad) * 100}%` }} />
+              );
+            })}
             {here && (
               <span aria-hidden className="absolute top-0 bottom-0 w-[14px] -ml-[7px] rounded-full bg-[#7a2028]/15 ring-1 ring-[#7a2028]/30 pointer-events-none transition-[left] duration-150 ease-linear"
                 style={{ left: `${markerAt(score, k, beat) * 100}%` }} />

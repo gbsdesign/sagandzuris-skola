@@ -105,7 +105,20 @@ export const melodyIn = (score: BookScore, voice: number, b0: number, b1: number
   return out;
 };
 
-// ---- the beginners' way („მარტივი“): a part in small pieces to hear and sing back ---------------------------------
+/** The notes behind each pitch of `melodyIn` (a repeated pitch is one entry there): their start beats — so a sung
+ *  take's hits can be shown on the notes themselves. */
+export const melodyGroups = (score: BookScore, voice: number, b0: number, b1: number): number[][] => {
+  const out: number[][] = [];
+  let last: number | null = null;
+  for (const n of lineIn(score, voice, b0, b1)) {
+    if (out.length && last === n[2]) out[out.length - 1].push(n[0]);
+    else out.push([n[0]]);
+    last = n[2];
+  }
+  return out;
+};
+
+// ---- small pieces of a phrase to hear and sing back (the learning mode's first steps) ---------------------------------
 
 /** A few notes of my voice inside a part: heard once, sung back, then the next. */
 export interface LearnChunk { b0: number; b1: number; s0: number; s1: number }

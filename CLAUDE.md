@@ -173,14 +173,21 @@
   assignment card's „ისწავლა N/M ▾“ unfolds each member's bar (`WhoLearns`, `learn/PartsBar.tsx`); the member's window lists a
   bar per piece (`LearnReview`). The member's „სწავლა“ on an assignment opens the learning mode on the assigned voice
   (`learn/openLearning.ts`: `learnPieceOf`, `useOpenLearning`; `requestLearn(piece, voice)`).
-  Two ways since 2026-11-05 (the user: „არ იყოს დამაბნეველი … დამწყებებსაც შეეძლოთ“): `LevelSwitch` „მარტივი · სრული“ on top
-  (`sg-learn-level`, „მარტივი“ by default). „მარტივი“ (`learn/LearnEasy.tsx`, chants only) cuts a phrase into pieces of my voice
-  (`chunksOfPart` in `utils/learn.ts` + test: 3–7 notes, cut after the longest note/rest near five, a one-pitch piece joins its
-  neighbour); a piece is golden on the notes, the rest veiled (`PartPicture span`), heard once (`ChantSynth.once`), sung back (70%
-  passes), then the whole phrase (80% learns it — the same `students.learning` record); one big button says what to do; „ნელა“
-  (`sg-learn-slow`); without a microphone the member marks it. „სრული“ = the three steps, speed and „რა ისმის“ folded under
-  „მორგება“ (`SettingsFold`, the songs' `LearnAudio` too). The singing engine is the hook `useSinging` (LearnShared); the voice
-  picker `VoiceChoice` names the three voices (მთქმელი · მოძახილი · ბანი).
+  **One way since 2026-11-05** (the user: „მეორე გვერდის ფუნქციები აქ გადმოიტანე და ერთი კარგი სასწავლო თემა შექმენი“; the
+  „მარტივი · სრული“ switch and `LearnFull` are gone; answers „ა ა“): `learn/LearnEasy.tsx`, one big button saying what to do. A
+  phrase = small pieces of my voice (`chunksOfPart` in `utils/learn.ts` + test: 3–7 notes; golden on the notes, the rest veiled —
+  `PartPicture span`; heard once, sung back, 70% passes) → „ერთად“ (two voices or more; practice, not checked: my first note + two
+  soft taps at the phrase's pace — `countIn` in chantSynth —, then the phrase goes round with a 1.5 s breath — `ChantSynth.loopGap`,
+  the place stays at the start meanwhile —, three rounds → „მარტო“ with a haptic and a 3 s line) → „მარტო“ (the whole phrase sung,
+  80% learns it — `students.learning`). After singing my notes turn green / red on the picture (`PartPicture marks` over the staff of
+  `score.ny`; `melodyGroups` maps a hit to its notes; lines not read show the old dots); „დეტალურად“ unfolds the mirror
+  (`LearnMirror`); hear myself, AI teacher, send to the teacher. A learned phrase (a review) opens on „მარტო“; all learned → „ყველა
+  ფრაზა ერთად“ (`current` 'all': „ერთად“ + „მარტო“ over the phrases learned from the first, practice only). „მორგება“: სისწრაფე
+  50/75/100 (`sg-learn-speed`, the old `sg-learn-slow` read once; the „ნელა“ chip is the same setting), რა ისმის — ჩემი ხმა · ჩემი
+  ხმა წინ (the others at 35%, `setVolume`) · ყველა · ჩემ გარეშე, set anew by each step —, ტონი −7…+7 (`sg-learn-tone`, the cue note
+  too — `useSinging transpose`), ყურსასმენი (`sg-learn-phones`: me left, the others right, only on ყველა / ჩემი ხმა წინ). Songs'
+  `LearnAudio` keeps its three steps, with the same breath between rounds and the 3 s line when a step moves on. The singing engine
+  is the hook `useSinging` (LearnShared); the voice picker `VoiceChoice` names the three voices (მთქმელი · მოძახილი · ბანი).
 - **კლასის სტუდია** (2026-10-29, `components/studio/ClassStudio.tsx`): a program chant with book notes gets „სტუდია“ in its
   window (`ItemSheet` in `classes/ClassProgram.tsx`). One window `Studio` since 2026-11-05: a member records; a teacher gets two
   tabs „კლასის ჩანაწერები“ (none yet → three steps, „კლასს ვთხოვ“ = a line in the class chat) and „ჩემი ხმა“. A member sings their voice over the synth (their own voice muted) and the

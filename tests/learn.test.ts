@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { afterTry, allLearned, assignedProgress, beatAt, spanAt, chunksOfPart, learnedShare, learnTakeId, markerAt, melodyIn, nextReviewDay, parseLearnTakeId, parseSongPiece, partState, partsAtBreaths, partsOfRecording, partsOfScore, reviewsDue, songPiece, timelineIn, wordsForPart } from '../src/utils/learn';
+import { afterTry, allLearned, assignedProgress, beatAt, spanAt, melodyGroups, chunksOfPart, learnedShare, learnTakeId, markerAt, melodyIn, nextReviewDay, parseLearnTakeId, parseSongPiece, partState, partsAtBreaths, partsOfRecording, partsOfScore, reviewsDue, songPiece, timelineIn, wordsForPart } from '../src/utils/learn';
 import type { BookScore } from '../src/utils/chantSynth';
 
 const score = (sys: BookScore['sys'], voices: BookScore['voices'] = [[]], dur = 40): BookScore =>
@@ -99,6 +99,13 @@ test('a line read from the picture: the mark stands on the sounding note and gli
   // places that don't fit the line's starts are ignored (the estimate is used)
   const off = { ...s, nx: [[0.2, 0.3]] };
   assert.equal(markerAt(off, 0, 0), markerAt(score([[0, 0, 0, 1, 1, 0, 7]], [v], 7), 0, 0));
+});
+
+test('a melody pitch stands for its notes: a repeated pitch is one entry with every note under it', () => {
+  const v: BookScore['voices'][number] = [[0, 1, 60], [1, 1, 60], [2, 1, 62], [3, 1, 60], [9, 1, 64]];
+  const s = score([], [v]);
+  assert.deepEqual(melodyGroups(s, 0, 0, 8), [[0, 1], [2], [3]]);
+  assert.equal(melodyGroups(s, 0, 0, 8).length, melodyIn(s, 0, 0, 8).length);
 });
 
 test('a recording is cut at its pauses', () => {
