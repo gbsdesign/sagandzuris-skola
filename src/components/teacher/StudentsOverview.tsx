@@ -165,7 +165,11 @@ export const ClassRoll: React.FC<{
   me?: string;
   onWrite?: (m: ClassMember) => void;
   writing?: string | null;
-}> = ({ cls, shown, me, onWrite, writing }) => {
+  /** shown after the figures (the class page: its teachers) */
+  top?: React.ReactNode;
+  /** shown right above the names (the class page: the search) */
+  search?: React.ReactNode;
+}> = ({ cls, shown, me, onWrite, writing, top, search }) => {
   const records = useClassStudents(cls);
   const att = useClassAttendance(cls);
   // a name opens the member's own page — their path and profile, the teacher's part under them (pages/StudentPage.tsx)
@@ -174,27 +178,36 @@ export const ClassRoll: React.FC<{
   // until every member's record has come, the figures would read 0
   const loading = cls.members.some(m => !records[m.uid]);
 
+  // the order (2026-11-05, the user's „დახვეწე“): the class's three figures as tiles on top, its teachers, the attendance
+  // block, the search, then the names — each with 💬 and the day's ✓
   return (
     <>
+      <div className="mb-3 grid grid-cols-3 rounded-2xl bg-white ring-1 ring-[#e8dcc8] divide-x divide-[#f1e8d9] text-center">
+        <RollFigure value={loading ? '—' : `${f.work}%`} label="სამუშაო" sub="ამ თვეში" title="დამოუკიდებელი მუშაობა ამ თვეში, საშუალოდ" />
+        <RollFigure value={loading ? '—' : `${f.active}/${cls.members.length}`} label="აქტიური" sub="7 დღეში" title="აქტიური ბოლო 7 დღეში" />
+        <RollFigure value={f.attendance === null ? '—' : `${f.attendance}%`} label="დასწრება" sub="საშუალოდ" title="დასწრება ბოლო გაკვეთილებზე, საშუალოდ" />
+      </div>
+      {top}
       <AttendanceDays a={att} total={cls.members.length} />
-      <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-x-3">
+      {search}
+      <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-x-3 gap-y-0.5">
         {shown.map(m => {
           const here = att.present.includes(m.uid);
           return (
-            <li key={m.uid} className={`min-h-12 flex items-center gap-1 pl-1.5 pr-1 py-1 rounded-xl transition-colors ${here ? 'bg-emerald-50' : m.uid === me ? 'bg-[#7a2028]/[0.05]' : 'hover:bg-[#fbf6ec]'}`}>
+            <li key={m.uid} className={`min-h-[52px] flex items-center gap-1 pl-1.5 pr-1 py-1 rounded-2xl transition-colors ${here ? 'bg-emerald-50' : m.uid === me ? 'bg-[#7a2028]/[0.05]' : 'hover:bg-[#fbf6ec]'}`}>
               <button type="button" onClick={() => (m.uid === me ? navigateTo('gz') : openStudent(m.uid, cls.id))} title={`${m.name} — გზა და პროფილი`}
-                className="flex-1 min-w-0 min-h-10 flex items-center gap-2.5 text-left cursor-pointer">
-                <Face name={m.name} photoURL={m.photoURL} className="w-8 h-8 text-sm" />
-                <span className="flex-1 min-w-0 truncate text-[14px] font-semibold text-[#2a2017]">
+                className="flex-1 min-w-0 min-h-11 flex items-center gap-2.5 text-left cursor-pointer">
+                <Face name={m.name} photoURL={m.photoURL} className="w-9 h-9 text-[15px] shrink-0" />
+                <span className="flex-1 min-w-0 line-clamp-2 break-words text-[14.5px] leading-snug font-semibold text-[#2a2017]">
                   {m.name}
-                  {m.uid === me && <span className="ml-1.5 text-xs font-normal text-[#8a7a6a]">(შენ)</span>}
+                  {m.uid === me && <span className="ml-1.5 text-[13px] font-normal text-[#8a7a6a]">(შენ)</span>}
                 </span>
               </button>
               {onWrite && m.uid !== me && (
                 <button type="button" onClick={() => onWrite(m)} disabled={writing === m.uid}
                   title={`პირადი მიწერა: ${m.name}`} aria-label={`პირადი მიწერა: ${m.name}`}
                   className="w-9 h-9 shrink-0 rounded-full text-[#7a2028] hover:bg-[#7a2028]/[0.07] flex items-center justify-center cursor-pointer active:scale-95 transition disabled:opacity-60">
-                  {writing === m.uid ? <Loader2 className="w-4 h-4 animate-spin" /> : <MessageCircle className="w-4 h-4" />}
+                  {writing === m.uid ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : <MessageCircle className="w-[18px] h-[18px]" />}
                 </button>
               )}
               <CameCheck on={here} name={m.name} onToggle={() => att.toggle(m.uid)} />
@@ -203,14 +216,18 @@ export const ClassRoll: React.FC<{
         })}
       </ul>
       {shown.length === 0 && <p className="px-1.5 py-3 text-sm text-[#8a7a6a]">ვერ მოიძებნა.</p>}
-      <p className="mt-2 pt-2.5 px-1.5 border-t border-[#f1e8d9] flex flex-wrap gap-x-3 gap-y-1 text-xs font-semibold tabular-nums text-[#8a7a6a]">
-        <span title="დამოუკიდებელი მუშაობა ამ თვეში, საშუალოდ">სამუშაო <b className="text-[#4a3426]">{loading ? '—' : `${f.work}%`}</b></span>
-        <span title="აქტიური ბოლო 7 დღეში">აქტიური <b className="text-[#4a3426]">{loading ? '—' : `${f.active}/${cls.members.length}`}</b></span>
-        <span title="დასწრება ბოლო გაკვეთილებზე, საშუალოდ">დასწრება <b className="text-[#4a3426]">{f.attendance === null ? '—' : `${f.attendance}%`}</b></span>
-      </p>
     </>
   );
 };
+
+/** One of the class's three figures on top of the roll: the number, what it is, and over what time. */
+const RollFigure: React.FC<{ value: string; label: string; sub: string; title: string }> = ({ value, label, sub, title }) => (
+  <div title={title} className="px-1.5 py-2.5">
+    <p className="text-[18px] font-bold tabular-nums leading-tight text-[#4a3426]">{value}</p>
+    <p className="mt-0.5 text-[12.5px] font-bold text-[#6a5a4a] leading-tight">{label}</p>
+    <p className="text-[11.5px] font-semibold text-[#a4927c] leading-tight">{sub}</p>
+  </div>
+);
 
 /** One small figure on a student's row: icon + value (the meaning in `title`); amber when it lags. */
 const Meta: React.FC<{ icon: React.ReactNode; title: string; warn?: boolean; children: React.ReactNode }> = ({ icon, title, warn, children }) => (

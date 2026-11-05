@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   Users, MessageCircle, Loader2, Pencil, Music4, Search, X, CalendarClock, Plus, ChevronRight, ListChecks,
   UserPlus, Palette, GraduationCap, Archive, TriangleAlert,
@@ -27,21 +27,21 @@ import { triggerHaptic } from '../utils/haptics';
 import { errorText } from '../utils/errorText';
 import type { ClassMember, SchoolClass } from '../hooks/useClasses';
 
-// the teacher's windows opened from the class page: the one ✎'s list ('edit') and what it opens; 'people' is the members'
-// window on a phone
-type Panel = 'edit' | 'class' | 'teachers' | 'members' | 'schedule' | 'people';
+// the teacher's windows opened from the class page: the one ✎'s list ('edit') and what it opens
+type Panel = 'edit' | 'class' | 'teachers' | 'members' | 'schedule';
 // a panel's card shown inside a window loses its own frame (no box in a box)
 const FLAT = 'space-y-4 [&>section]:p-0 [&>section]:bg-transparent [&>section]:ring-0 [&>section]:shadow-none';
 // the round buttons in the title bar
 const BAR_BTN = 'bg-white/85 ring-1 ring-[#e8dcc8] !text-[#7a2028] hover:!bg-white';
 
-// the page's two tabs; the one open is kept for the tab's visit (a chant opened from it comes back to it)
-type Tab = 'program' | 'chat';
+// the page's tabs; the one open is kept for the tab's visit (a chant opened from it comes back to it). „წევრები“ is a tab
+// on a phone only (2026-11-05, the user: „ჩათის გვერდით ღილაკად … ამომხტარი ფანჯრის გარეშე“); a computer keeps its column.
+type Tab = 'program' | 'chat' | 'people';
 const TAB_KEY = 'sg-class-tab:';
 const savedTab = (id: string): Tab | null => {
   try {
     const t = sessionStorage.getItem(TAB_KEY + id);
-    return t === 'program' || t === 'chat' ? t : null;
+    return t === 'program' || t === 'chat' || t === 'people' ? t : null;
   } catch {
     return null;
   }
@@ -50,11 +50,12 @@ const savedTab = (id: string): Tab | null => {
 // A class's shared page and, since the teacher panel was removed (redesign stage 2, 2026-10-25), its teachers' only
 // workplace. Simplified 2026-10-28 („ერთი რამ, ერთ ადგილას“): the title bar (the class's logo and name; 🎵 today's
 // liturgy and one ✎ for its teachers — its list opens the class's details, the timetable, the program and adding a
-// member —, 💬 to the teacher for a member), the timetable as one line of chips, the members (one line „N წევრი ›“ that
-// opens their window on a phone, a column of their own on a computer; teachers get the roll with attendance), then the assignments' round 📋 (2026-11-05: every
-// assignment drops down from it under the tabs; it lights up red for a member's new one — classes/ClassWork.tsx) beside two
-// tabs (2026-11-04): „პროგრამა“ (the program with „+ დამატება“, folded under it „ოსტატობა“ and the psalter group —
-// `focus` = opened for it) and „ჩათი“ (a dot while unread). Nothing that manages shows to the members.
+// member —, 💬 to the teacher for a member), the timetable as one line of chips, then the assignments' round 📋 (2026-11-05:
+// every assignment drops down from it under the tabs; it lights up red for a member's new one — classes/ClassWork.tsx) beside
+// the tabs (2026-11-04): „პროგრამა“ (the program with „+ დამატება“, folded under it „ოსტატობა“ and the psalter group —
+// `focus` = opened for it), „ჩათი“ (a dot while unread; on a phone it fills the screen, the newest message and the field in
+// view) and on a phone „წევრები“ (since 2026-11-05 a tab, not a window; a computer has them in a column of their own;
+// teachers get the roll with attendance). Nothing that manages shows to the members.
 export const ClassPage: React.FC<{ classId?: string; focus?: 'psalter' }> = ({ classId, focus }) => {
   const { user, isAdmin, isTeacher } = useAuth();
   const { selectedClassId, handleGoBack } = useNavigation();
@@ -90,7 +91,12 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolCl
   const [opening, setOpening] = useState<string | null>(null);
   const [dmErr, setDmErr] = useState('');
   const [panel, setPanel] = useState<Panel | null>(null);
-  const [tab, setTabState] = useState<Tab>(() => (focus === 'psalter' ? 'program' : savedTab(cls.id) ?? 'program'));
+  const [tabState, setTabState] = useState<Tab>(() => (focus === 'psalter' ? 'program' : savedTab(cls.id) ?? 'program'));
+  // a computer has the members in their column, so a phone's „წევრები“ opens the program there
+  const tab: Tab = wide && tabState === 'people' ? 'program' : tabState;
+  // the chat on a phone: shown whole when its tab is tapped (the page goes down to its field)
+  const chatBox = useRef<HTMLDivElement>(null);
+  const showChat = useRef(false);
   const [editingProgram, setEditingProgram] = useState(false);
   // the assignments' list dropped down from the round 📋 (opening it puts out a member's „new“ light)
   const [workOpen, setWorkOpen] = useState(false);
@@ -110,9 +116,16 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolCl
     setWorkOpen(!workOpen);
   };
   const setTab = (t: Tab) => {
+    if (t === 'chat' && !wide) showChat.current = true;
     setTabState(t);
     try { sessionStorage.setItem(TAB_KEY + cls.id, t); } catch { /* private window: this visit only */ }
   };
+  useEffect(() => {
+    if (tab !== 'chat' || !showChat.current) return;
+    showChat.current = false;
+    const id = requestAnimationFrame(() => chatBox.current?.scrollIntoView({ block: 'end', behavior: 'smooth' }));
+    return () => cancelAnimationFrame(id);
+  }, [tab]);
   const person = (p: ClassMember): Person => ({ uid: p.uid, name: p.name || '', photoURL: p.photoURL || '' });
   const meHere = (): Person => {
     const p = cls.members.find(m => m.uid === user?.uid) || cls.teachers.find(m => m.uid === user?.uid);
@@ -148,8 +161,16 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolCl
   };
   const teacherNames = cls.teachers.map(t => t.name).filter(Boolean).join(', ');
   const members = (
-    <MembersList cls={cls} canEdit={canEdit} me={user?.uid} onWrite={iTeach ? m => writeTo(m, false) : undefined} writing={opening} />
+    <MembersList
+      cls={cls}
+      canEdit={canEdit}
+      me={user?.uid}
+      onWrite={iTeach ? m => writeTo(m, false) : undefined}
+      onWriteTeacher={iAmMember ? t => writeTo(t, true) : undefined}
+      writing={opening}
+    />
   );
+  const addMember = canEdit ? <AddBtn onClick={() => setPanel('members')} /> : null;
 
   return (
     <div className="w-full max-w-2xl lg:max-w-5xl mx-auto px-1 py-4 sm:py-6 space-y-4 text-[#2a2017]">
@@ -209,40 +230,12 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolCl
         <Btn kind="soft" size="sm" icon={<Plus />} onClick={() => setPanel('schedule')}>გაკვეთილების ცხრილი</Btn>
       ) : null}
 
-      {/* a phone: the members in one line that opens their window */}
-      {!wide && (
-        <button
-          type="button"
-          onClick={() => { triggerHaptic(8); setPanel('people'); }}
-          className="w-full min-h-14 pl-2.5 pr-3 py-2 rounded-2xl bg-white/85 ring-1 ring-[#e8dcc8] flex items-center gap-3 text-left cursor-pointer transition-colors hover:bg-white"
-        >
-          {cls.members.length > 0 ? (
-            <span aria-hidden className="flex -space-x-2.5 shrink-0">
-              {cls.members.slice(0, 4).map(m => (
-                <span key={m.uid} className="rounded-full ring-2 ring-white">
-                  <Avatar name={m.name} photoURL={m.photoURL} className="w-8 h-8 text-sm" />
-                </span>
-              ))}
-            </span>
-          ) : (
-            <span className="w-9 h-9 shrink-0 rounded-full bg-[#7a2028]/[0.07] text-[#7a2028] flex items-center justify-center"><Users className="w-[18px] h-[18px]" /></span>
-          )}
-          <span className="min-w-0 flex-1">
-            <span className="block text-[14.5px] font-bold text-[#2a2017]">{cls.members.length} წევრი</span>
-            <span className="block truncate text-[12.5px] text-[#8a7a6a]">
-              {canEdit ? 'დასწრება და მიწერა' : teacherNames ? `მასწავლებელი: ${teacherNames}` : 'ვინ არის კლასში'}
-            </span>
-          </span>
-          <ChevronRight className="w-5 h-5 shrink-0 text-[#b08a4a]" />
-        </button>
-      )}
-
       {dmErr && <p className="text-sm text-[#a02c2c]">{dmErr}</p>}
       {msg.flash && <Flash flash={msg.flash} onClose={msg.clear} />}
 
       <div className="space-y-4 lg:space-y-0 lg:grid lg:grid-cols-[360px_minmax(0,1fr)] lg:gap-6 lg:items-start">
         {wide && (
-          <ClassMembers cls={cls} edit={canEdit && <IconBtn label="წევრის დამატება" onClick={() => setPanel('members')}><Plus /></IconBtn>}>
+          <ClassMembers cls={cls} title="კლასის წევრები" edit={addMember} sticky>
             {members}
           </ClassMembers>
         )}
@@ -252,12 +245,14 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolCl
             <WorkButton state={work} canEdit={canEdit} open={workOpen} onToggle={toggleWork} />
             <div className="flex-1 min-w-0">
               <Tabs
-                cols={2}
+                cols={wide ? 2 : 3}
+                stack={!wide}
                 value={tab}
                 onChange={setTab}
                 items={[
                   { id: 'program', label: 'პროგრამა', Icon: ListChecks },
                   { id: 'chat', label: 'ჩათი', Icon: MessageCircle, dot: unread },
+                  ...(wide ? [] : [{ id: 'people' as const, label: 'წევრები', Icon: Users }]),
                 ]}
               />
             </div>
@@ -270,16 +265,22 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolCl
               <ClassPsalter cls={cls} canLead={canEdit} focus={focus === 'psalter'} />
             </>
           )}
-          {tab === 'chat' && <ClassChat cls={cls} timetable={false} compact />}
+          {tab === 'chat' && (wide ? (
+            <ClassChat cls={cls} timetable={false} compact />
+          ) : (
+            // a phone: the chat fills the screen under the tabs — its messages scroll inside, the newest at the bottom, the
+            // field always in view; at the list's ends the page itself moves on (`chain`)
+            <div ref={chatBox} className="h-[calc(100dvh-5.5rem)] min-h-[26rem] scroll-mb-3">
+              <ClassChat cls={cls} timetable={false} fill chain />
+            </div>
+          ))}
+          {tab === 'people' && (
+            <ClassMembers cls={cls} title="წევრები" edit={addMember}>
+              {members}
+            </ClassMembers>
+          )}
         </div>
       </div>
-
-      {!wide && (
-        <Sheet open={panel === 'people'} onClose={close} title={`კლასის წევრები · ${cls.members.length}`}>
-          {canEdit && <Btn kind="soft" full icon={<UserPlus />} className="mb-3" onClick={() => setPanel('members')}>წევრის დამატება</Btn>}
-          {members}
-        </Sheet>
-      )}
 
       {canEdit && (
         <>
@@ -324,73 +325,108 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolCl
   );
 };
 
-/** „კლასის წევრები“ on a computer: a column of its own, always open and staying in view (a phone has one line that opens
- *  the same list in a window). */
-const ClassMembers: React.FC<{ cls: SchoolClass; edit: React.ReactNode; children: React.ReactNode }> = ({ cls, edit, children }) => (
-  <section className="bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] overflow-hidden lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:flex lg:flex-col">
-    <div className="shrink-0 flex items-center">
-      <h2 className="flex-1 min-w-0 min-h-14 flex items-center gap-2 px-5 py-3">
-        <Users className="w-5 h-5 shrink-0 text-[#7a2028]" />
-        <span className="font-serif-ge text-lg font-bold text-[#4a3426] truncate">კლასის წევრები</span>
-        <span className="text-sm font-bold text-[#a4927c] tabular-nums">{cls.members.length}</span>
-      </h2>
-      {edit && <span className="shrink-0 pr-3">{edit}</span>}
+/** „კლასის წევრები“: on a computer a column of its own, always open and staying in view (`sticky`); on a phone the
+ *  „წევრები“ tab. `edit`: the teachers' small „+ დამატება“ at the title's end. */
+const ClassMembers: React.FC<{ cls: SchoolClass; title: string; edit: React.ReactNode; sticky?: boolean; children: React.ReactNode }> = ({ cls, title, edit, sticky, children }) => (
+  <section aria-label="კლასის წევრები"
+    className={`bg-white/80 rounded-3xl ring-1 ring-[#e8dcc8] overflow-hidden ${sticky ? 'lg:sticky lg:top-4 lg:max-h-[calc(100dvh-2rem)] lg:flex lg:flex-col' : 'sg-in'}`}>
+    <div className="shrink-0 min-h-14 flex items-center gap-2 pl-4 min-[400px]:pl-5 pr-3 py-2">
+      <Users className="w-5 h-5 shrink-0 text-[#7a2028]" />
+      <h2 className="min-w-0 truncate font-serif-ge text-lg font-bold text-[#4a3426]">{title}</h2>
+      <span className="text-sm font-bold text-[#a4927c] tabular-nums">{cls.members.length}</span>
+      {edit && <span className="ml-auto shrink-0">{edit}</span>}
     </div>
-    <div className="lg:flex-1 lg:min-h-0 lg:overflow-y-auto overscroll-contain px-3 sm:px-4 pt-1 pb-3">{children}</div>
+    <div className={`${sticky ? 'lg:flex-1 lg:min-h-0 lg:overflow-y-auto overscroll-contain' : ''} px-3 min-[400px]:px-4 pt-1 pb-4`}>{children}</div>
   </section>
 );
 
-/** The members: a search over the names once the class is big; the class's teachers get the roll (ClassRoll:
- *  attendance, 💬, each member's window), the members only the names. */
+/** The teachers' small „+ დამატება“ beside the members' title (it was a big button over the list). */
+const AddBtn: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+  <button type="button" onClick={() => { triggerHaptic(8); onClick(); }} aria-label="წევრის დამატება" title="წევრის დამატება"
+    className="h-9 pl-2.5 pr-3.5 max-[359px]:w-9 max-[359px]:p-0 rounded-full bg-[#7a2028]/[0.07] hover:bg-[#7a2028]/[0.12] text-[#7a2028] text-[13.5px] font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition">
+    {/* the narrowest phones: only the icon, so the title keeps its room */}
+    <UserPlus className="w-4 h-4" /> <span className="max-[359px]:sr-only">დამატება</span>
+  </button>
+);
+
+/** The class's teachers on top of the members (2026-11-05; a phone named them only in the old members' line): a member
+ *  writes to one by 💬. */
+const TeachersRows: React.FC<{ cls: SchoolClass; me?: string; onWrite?: (t: ClassMember) => void; writing: string | null }> = ({ cls, me, onWrite, writing }) =>
+  cls.teachers.length ? (
+    <div className="mb-3">
+      <p className="px-1.5 pb-1 text-[13px] font-bold text-[#8a7a6a]">{cls.teachers.length > 1 ? 'მასწავლებლები' : 'მასწავლებელი'}</p>
+      <ul className="space-y-1">
+        {cls.teachers.map(t => (
+          <li key={t.uid} className="min-h-[52px] flex items-center gap-3 pl-1.5 pr-1 py-1 rounded-2xl bg-[#b08a4a]/[0.09]">
+            <Avatar name={t.name} photoURL={t.photoURL} className="w-9 h-9 text-[15px] shrink-0" />
+            <span className="flex-1 min-w-0 line-clamp-2 break-words text-[14.5px] leading-snug font-semibold text-[#2a2017]">
+              {t.name}
+              {t.uid === me && <span className="ml-1.5 text-[13px] font-normal text-[#8a7a6a]">(შენ)</span>}
+            </span>
+            {onWrite && t.uid !== me && (
+              <button type="button" onClick={() => onWrite(t)} disabled={writing === t.uid}
+                title={`მიწერა: ${t.name}`} aria-label={`მიწერა: ${t.name}`}
+                className="w-9 h-9 shrink-0 rounded-full text-[#7a2028] hover:bg-[#7a2028]/[0.07] flex items-center justify-center cursor-pointer active:scale-95 transition disabled:opacity-60">
+                {writing === t.uid ? <Loader2 className="w-[18px] h-[18px] animate-spin" /> : <MessageCircle className="w-[18px] h-[18px]" />}
+              </button>
+            )}
+          </li>
+        ))}
+      </ul>
+    </div>
+  ) : null;
+
+/** The members: the class's teachers on top, a search over the names once the class is big; the class's teachers get the
+ *  roll (ClassRoll: the class's figures, attendance, 💬, each member's page), the members only the names. */
 const MembersList: React.FC<{
   cls: SchoolClass;
   canEdit: boolean;
   me?: string;
   onWrite?: (m: ClassMember) => void;
+  onWriteTeacher?: (t: ClassMember) => void;
   writing: string | null;
-}> = ({ cls, canEdit, me, onWrite, writing }) => {
+}> = ({ cls, canEdit, me, onWrite, onWriteTeacher, writing }) => {
   const [q, setQ] = useState('');
   const needle = q.trim().toLowerCase();
   const found = needle ? cls.members.filter(m => (m.name || '').toLowerCase().includes(needle)) : cls.members;
+  const teachers = <TeachersRows cls={cls} me={me} onWrite={onWriteTeacher} writing={writing} />;
+  const search = cls.members.length > 8 && (
+    <label className="relative block mb-2">
+      <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a89886] pointer-events-none" />
+      <input
+        type="search"
+        value={q}
+        onChange={e => setQ(e.target.value)}
+        placeholder="ძებნა სახელით…"
+        aria-label="ძებნა"
+        className="w-full h-11 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] pl-10 pr-10 text-base text-[#2a2017] placeholder:text-[#b3a594] focus:outline-none focus:ring-2 focus:ring-[#7a2028]/35 [&::-webkit-search-cancel-button]:hidden"
+      />
+      {q && (
+        <button type="button" onClick={() => setQ('')} aria-label="გასუფთავება" className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-[#a89886] hover:text-[#4a3426] cursor-pointer">
+          <X className="w-4 h-4" />
+        </button>
+      )}
+    </label>
+  );
 
+  if (canEdit) return <ClassRoll cls={cls} shown={found} me={me} onWrite={onWrite} writing={writing} top={teachers} search={search} />;
   return (
     <>
-      {cls.members.length > 8 && (
-        <label className="relative block mb-2">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#a89886] pointer-events-none" />
-          <input
-            type="search"
-            value={q}
-            onChange={e => setQ(e.target.value)}
-            placeholder="ძებნა სახელით…"
-            aria-label="ძებნა"
-            className="w-full h-11 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] pl-10 pr-10 text-base text-[#2a2017] placeholder:text-[#b3a594] focus:outline-none focus:ring-2 focus:ring-[#7a2028]/35 [&::-webkit-search-cancel-button]:hidden"
-          />
-          {q && (
-            <button type="button" onClick={() => setQ('')} aria-label="გასუფთავება" className="absolute right-1 top-1/2 -translate-y-1/2 w-9 h-9 rounded-full flex items-center justify-center text-[#a89886] hover:text-[#4a3426] cursor-pointer">
-              <X className="w-4 h-4" />
-            </button>
-          )}
-        </label>
-      )}
-      {canEdit ? (
-        <ClassRoll cls={cls} shown={found} me={me} onWrite={onWrite} writing={writing} />
-      ) : (
-        <>
-          <ul className="grid grid-cols-1 gap-x-3">
-            {found.map(m => (
-              <li key={m.uid} className={`min-h-12 flex items-center gap-2.5 px-2 py-1 rounded-xl ${m.uid === me ? 'bg-[#7a2028]/[0.05]' : ''}`}>
-                <Avatar name={m.name} photoURL={m.photoURL} className="w-8 h-8 text-sm" />
-                <span className="flex-1 min-w-0 text-[14px] font-semibold text-[#2a2017] truncate">
-                  {m.name}
-                  {m.uid === me && <span className="ml-1.5 text-xs font-normal text-[#8a7a6a]">(შენ)</span>}
-                </span>
-              </li>
-            ))}
-          </ul>
-          {found.length === 0 && <p className="px-2 py-3 text-sm text-[#8a7a6a]">ვერ მოიძებნა.</p>}
-        </>
-      )}
+      {teachers}
+      <p className="px-1.5 pb-1 text-[13px] font-bold text-[#8a7a6a]">წევრები · {cls.members.length}</p>
+      {search}
+      <ul className="grid grid-cols-1 gap-y-0.5">
+        {found.map(m => (
+          <li key={m.uid} className={`min-h-[52px] flex items-center gap-3 px-1.5 py-1 rounded-2xl ${m.uid === me ? 'bg-[#7a2028]/[0.05]' : ''}`}>
+            <Avatar name={m.name} photoURL={m.photoURL} className="w-9 h-9 text-[15px] shrink-0" />
+            <span className="flex-1 min-w-0 line-clamp-2 break-words text-[14.5px] leading-snug font-semibold text-[#2a2017]">
+              {m.name}
+              {m.uid === me && <span className="ml-1.5 text-[13px] font-normal text-[#8a7a6a]">(შენ)</span>}
+            </span>
+          </li>
+        ))}
+      </ul>
+      {found.length === 0 && <p className="px-2 py-3 text-sm text-[#8a7a6a]">ვერ მოიძებნა.</p>}
     </>
   );
 };
