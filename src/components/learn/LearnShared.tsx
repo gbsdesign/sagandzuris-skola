@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, Bell, Check, ChevronDown, Headphones, Lightbulb, Mic, Music, Repeat, Send, SlidersHorizontal, Sparkles, Sprout, Square } from 'lucide-react';
+import { ArrowLeft, Bell, Check, ChevronDown, Headphones, Lightbulb, Mic, Repeat, Send, SlidersHorizontal, Sparkles, Square } from 'lucide-react';
 import { Btn } from '../ui/kit';
 import { playStartNotes } from '../../utils/chantSynth';
 import { notesFromFrames, scoreSinging } from '../../utils/pitch';
@@ -147,37 +147,6 @@ export function Choice<T extends string | number>({ label, value, options, onCha
 
 export const SPEEDS = [{ value: 0.5, label: '50%' }, { value: 0.75, label: '75%' }, { value: 1, label: '100%' }];
 
-// ---- the two ways: „მარტივი“ (small pieces, hear and sing back) and „სრული“ (the whole phrase, three steps) ----------
-
-export type LearnLevel = 'easy' | 'full';
-const LEVEL_KEY = 'sg-learn-level';
-export const getLearnLevel = (): LearnLevel => {
-  try { return localStorage.getItem(LEVEL_KEY) === 'full' ? 'full' : 'easy'; } catch { return 'easy'; }
-};
-export const setLearnLevel = (l: LearnLevel) => { try { localStorage.setItem(LEVEL_KEY, l); } catch { /* the choice still holds here */ } };
-
-/** მარტივი · სრული, with a line on what the chosen one does. Remembered on the device. */
-export const LevelSwitch: React.FC<{ value: LearnLevel; onChange: (l: LearnLevel) => void }> = ({ value, onChange }) => {
-  const ways: { id: LearnLevel; label: string; icon: React.ReactNode; about: string }[] = [
-    { id: 'easy', label: 'მარტივი', icon: <Sprout className="w-[18px] h-[18px]" />, about: 'დამწყებისთვის: პატარა ნაწყვეტი — მოისმინე და გაიმეორე.' },
-    { id: 'full', label: 'სრული', icon: <Music className="w-[18px] h-[18px]" />, about: 'მთლიანი ფრაზა სამ ნაბიჯად, ხმები ერთად და ყველა პარამეტრი.' },
-  ];
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div role="radiogroup" aria-label="სწავლის გზა" className="grid grid-cols-2 gap-1 p-1 rounded-2xl bg-[#efe6d6]/70 ring-1 ring-[#e4d8c4]">
-        {ways.map(w => (
-          <button key={w.id} type="button" role="radio" aria-checked={value === w.id} onClick={() => { triggerHaptic(8); onChange(w.id); }}
-            className={`h-11 rounded-xl inline-flex items-center justify-center gap-2 text-[14px] font-bold cursor-pointer transition ${
-              value === w.id ? 'bg-white text-[#7a2028] shadow-[0_1px_3px_rgba(74,52,38,0.18)]' : 'text-[#75685a] hover:text-[#4a3426]'}`}>
-            {w.icon}{w.label}
-          </button>
-        ))}
-      </div>
-      <p className="px-1 text-[12.5px] leading-snug text-[#8c7c6b]">{ways.find(w => w.id === value)!.about}</p>
-    </div>
-  );
-};
-
 // the book's three voices by their names (a chant of two voices or more than three has only the numbers)
 const VOICE_ROLES: Record<Voice, string> = { '1': 'მთქმელი', '2': 'მოძახილი', '3': 'ბანი' };
 
@@ -226,9 +195,10 @@ export interface SingResult { pct: number; hits: boolean[]; mp3: Blob | null }
  * something was sung (or at a time limit). With notes (`target`) the take is scored in any key. A new `resetKey`
  * (another part, piece or voice) drops the old take. Shared by the singing panel and the beginners' way.
  */
-export const useSinging = ({ target, cue, seconds, resetKey, onBeforeSing, onScored }: {
+export const useSinging = ({ target, cue, seconds, resetKey, onBeforeSing, onScored, transpose = 0 }: {
   target: number[] | null; cue: number | null; seconds: number; resetKey: string;
   onBeforeSing: () => void; onScored?: (pct: number, hits: boolean[]) => void;
+  transpose?: number; // the first note in the key the music is heard in („ტონი“)
 }) => {
   const [phase, setPhase] = useState<SingPhase>('idle');
   const [result, setResult] = useState<SingResult | null>(null);
@@ -286,7 +256,7 @@ export const useSinging = ({ target, cue, seconds, resetKey, onBeforeSing, onSco
     frames.current = []; offset.current = null;
     triggerHaptic(12);
     setPhase('cue');
-    if (cue != null) await playStartNotes([cue], 0, false, 0.5, 0.9).catch(() => undefined);
+    if (cue != null) await playStartNotes([cue], transpose, false, 0.5, 0.9).catch(() => undefined);
     cueTimer.current = window.setTimeout(async () => {
       const limit = (seconds * 2.5 + 8) * 1000;
       let lastVoiced = 0, voiced = 0, prevT = -1, prevMidi: number | null = null;
@@ -484,19 +454,18 @@ export const SingPanel: React.FC<{
 };
 
 /** The ways the mode teaches, in a few words, folded. */
-export const LearnTips: React.FC<{ song?: boolean; easy?: boolean }> = ({ song, easy }) => {
+export const LearnTips: React.FC<{ song?: boolean }> = ({ song }) => {
   const [open, setOpen] = useState(false);
-  const tips = easy ? [
-    ['პატარა ნაწყვეტი', 'ფრაზა რამდენიმე ნოტად არის დაყოფილი. ნოტებზე ის ნაწილი ოქროსფრად ჩანს, დანარჩენი — მკრთალად.'],
-    ['მოისმინე და გაიმეორე', 'ჯერ მოისმინე, მერე იგივე იმღერე. ტონალობა შენთვის მოსახერხებელი აირჩიე — აპი ნოტებს ამოწმებს და არა სიმაღლეს.'],
-    ['მთლიანად', 'როცა ყველა ნაწყვეტი გამოგივა, მთლიანი ფრაზა იმღერე. 80% — და ფრაზა ნასწავლია.'],
-    ['ნელა', '„ნელა“ ნოტებს უფრო ნელა დაუკრავს — გამოიყენე, როცა ნაწყვეტი ძნელია.'],
+  const tips = !song ? [
+    ['პატარა ნაწყვეტებით', 'ფრაზა რამდენიმე ნოტად არის დაყოფილი: მოისმინე და გაიმეორე. ნოტებზე ის ნაწილი ოქროსფრად ჩანს.'],
+    ['ერთად', 'მერე დანარჩენი ხმები ჟღერს და შენ შენს ხმას მღერი. სამი წრის მერე აპი თავად გადაგიყვანს „მარტოზე“.'],
+    ['მარტო', 'მთლიანი ფრაზა თავად იმღერე. 80% — და ფრაზა ნასწავლია. მწვანე ნოტები გამოგივიდა, წითელი — ჯერ არა.'],
+    ['მორგება', 'სისწრაფე, ტონი, რა ისმის და ყურსასმენი — ტელეფონი დაიმახსოვრებს.'],
     ['გამეორება', 'ნასწავლ ფრაზას აპი 1, 3 და 7 დღის მერე გაგახსენებს — ასე მეხსიერებაში რჩება.'],
   ] : [
     ['ნაწილ-ნაწილ', 'ერთ ჯერზე ერთი პატარა ნაწილი. როცა ორი ისწავლე, „ერთად“ შეაერთებს.'],
     ['სამი ნაბიჯი', 'მოისმინე ნელა (50%) → იმღერე ერთად (75%) → მარტო (100%). სამჯერ მოსმენის მერე აპი თავად გადაგიყვანს შემდეგზე.'],
-    song ? ['ხმა ცალკე', 'თუ სიმღერას ხმები ცალ-ცალკე აქვს, ჯერ მარტო შენი ხმა ისწავლე.']
-      : ['ხმა ცალკე', 'ჯერ მარტო შენი ხმა მოისმინე, მერე „ჩემ გარეშე“ — დანარჩენებთან ერთად იმღერე.'],
+    ['ხმა ცალკე', 'თუ სიმღერას ხმები ცალ-ცალკე აქვს, ჯერ მარტო შენი ხმა ისწავლე.'],
     ['თავად იმღერე', 'მოსმენა საკმარისი არ არის: იმღერე და მოუსმინე საკუთარ თავს.'],
     ['გამეორება', 'ნასწავლ ნაწილს აპი 1, 3 და 7 დღის მერე გაგახსენებს — ასე მეხსიერებაში რჩება.'],
   ];

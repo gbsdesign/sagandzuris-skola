@@ -214,6 +214,39 @@ export const playStartNotes = async (midis: (number | null)[], transpose = 0, qu
   return starts.map(i => 60 + i * gap * 1000);
 };
 
+/**
+ * Before singing along: my first note, then two soft taps a beat apart (`beat` seconds, the speed already in it).
+ * Returns the milliseconds from now to where the music should begin (the beat after the second tap).
+ */
+export const countIn = async (midi: number | null, beat: number, transpose = 0) => {
+  const ctx = getCtx();
+  if (ctx.state !== 'running') await ctx.resume();
+  if (!startMix) startMix = buildMix(ctx, [1, 1, 1, 1]);
+  startMix.master.gain.setValueAtTime(0.22, ctx.currentTime);
+  const b = Math.max(0.3, Math.min(1.5, beat));
+  const t0 = ctx.currentTime + 0.06;
+  let at = t0;
+  if (midi != null) {
+    playNote(ctx, startMix.voices[0], midi + transpose, midi + transpose < 55, t0, 0.9);
+    at = t0 + 1.2;
+  }
+  for (let i = 0; i < 2; i++) {
+    const t = at + i * b;
+    const osc = ctx.createOscillator();
+    const env = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.value = i ? 880 : 1046;
+    env.gain.setValueAtTime(0.0001, t);
+    env.gain.exponentialRampToValueAtTime(0.16, t + 0.005);
+    env.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+    osc.connect(env).connect(ctx.destination);
+    osc.start(t);
+    osc.stop(t + 0.1);
+    osc.onended = () => env.disconnect();
+  }
+  return (at + 2 * b - ctx.currentTime) * 1000;
+};
+
 let lessonMix: { master: GainNode; voices: GainNode[] } | null = null;
 let lessonBus: GainNode | null = null;
 /**
@@ -273,8 +306,10 @@ export class ChantSynth {
   private loopA: number | null = null; // loop A -> B (or A -> end while B is unset)
   private loopB: number | null = null;
   playing = false;
-  /** with a loop set: play A -> B once, then stop back at A (the learning mode's „მარტივი“ way) */
+  /** with a loop set: play A -> B once, then stop back at A (the learning mode's listening) */
   once = false;
+  /** with a loop going round: seconds of silence before it starts again — a breath (0 = none, as on the notes page) */
+  loopGap = 0;
   private starting = false;
 
   constructor(score: BookScore) {
@@ -294,7 +329,8 @@ export class ChantSynth {
   /** Current position in score seconds */
   position() {
     if (!this.playing || !this.ctx) return this.pausedAt;
-    return Math.min(this.duration, this.startSec + (this.ctx.currentTime - this.startCtx) * this.speed);
+    // before the start (a loop's breath) the place stays at the start
+    return Math.min(this.duration, this.startSec + Math.max(0, this.ctx.currentTime - this.startCtx) * this.speed);
   }
 
   async play(from = this.pausedAt) {
@@ -416,6 +452,7 @@ export class ChantSynth {
       if (this.loopA !== null && !this.once) {
         this.silence();
         this.startAt(this.loopA);
+        this.startCtx += this.loopGap; // the breath: the notes wait, the place stays at the start
         return;
       }
       this.pause();
