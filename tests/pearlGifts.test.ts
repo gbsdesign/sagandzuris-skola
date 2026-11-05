@@ -1,18 +1,14 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { giftDue, joinGe, nextGift, outfitOf, partsLeft, readGifts, shiningCount } from '../src/utils/pearlGifts';
+import { giftDue, joinGe, nextChest, outfitOf, partInChest, partsLeft, readGifts } from '../src/utils/pearlGifts';
 
 const none = readGifts(undefined);
 
-test('the path\'s items a teacher confirmed shine; confirmations of items not on the path don\'t count', () => {
-  const path = { a: { voices: ['1'] }, b: { voices: [] }, c: { voices: ['2'] }, d: { isLearned: true } };
-  assert.equal(shiningCount(path, { a: ['1'], b: ['2'], c: [], gone: ['1'] }), 2);
-  assert.equal(shiningCount(undefined, undefined), 0);
-});
-
 test('a broken or missing record reads as nothing given', () => {
-  assert.deepEqual(none, { steps: 0, parts: [], seen: 0 });
-  assert.deepEqual(readGifts({ steps: 2.7, parts: ['kamari', 3], seen: 9 }), { steps: 2, parts: ['kamari'], seen: 1 });
+  assert.deepEqual(none, { chestParts: [], parts: [], seen: 0 });
+  assert.deepEqual(readGifts({ steps: 2, chestParts: ['kamari', '', 4, 'x', 'y'], parts: ['kamari', 3], seen: 9 }), {
+    chestParts: ['kamari', '', 'x'], parts: ['kamari'], seen: 1,
+  });
 });
 
 test('the chokha\'s parts come in order, and its extra hats as one', () => {
@@ -23,24 +19,39 @@ test('the chokha\'s parts come in order, and its extra hats as one', () => {
   assert.deepEqual(partsLeft('kaba', ['kaba']), ['gulispiri', 'sartqeli', 'katibi', 'lechaki']);
 });
 
-test('every five shining pearls owe one part, once', () => {
-  assert.equal(giftDue(4, none, 'chokha', []), null);
-  assert.deepEqual(giftDue(5, none, 'chokha', []), { steps: 1, parts: ['chokha'] });
-  // a member who already had twelve shining gets two parts at once
-  assert.deepEqual(giftDue(12, none, 'chokha', ['chokha']), { steps: 2, parts: ['akhalukhi', 'masrebi'] });
+test('every chest that opens owes one part, once', () => {
+  assert.equal(giftDue(0, none, 'chokha', []), null);
+  assert.deepEqual(giftDue(1, none, 'chokha', ['chokha']), { chestParts: ['akhalukhi'], parts: ['akhalukhi'] });
+  // a member whose two chests were already open gets two parts at once
+  assert.deepEqual(giftDue(2, none, 'chokha', ['chokha']), { chestParts: ['akhalukhi', 'masrebi'], parts: ['akhalukhi', 'masrebi'] });
   // rewarded already
-  assert.equal(giftDue(9, { steps: 1, parts: ['chokha'], seen: 1 }, 'chokha', ['chokha']), null);
-  // a complete outfit: the five is counted, nothing is given
+  const one = { chestParts: ['akhalukhi'], parts: ['akhalukhi'], seen: 1 };
+  assert.equal(giftDue(1, one, 'chokha', ['chokha', 'akhalukhi']), null);
+  assert.deepEqual(giftDue(3, one, 'chokha', ['chokha', 'akhalukhi']), { chestParts: ['akhalukhi', 'masrebi', 'kamari'], parts: ['masrebi', 'kamari'] });
+  // a complete outfit: the chest is counted, nothing is given
   const all = ['chokha', 'akhalukhi', 'masrebi', 'kamari', 'khanjali', 'aziurebi', 'papanaki', 'svanuri'];
-  assert.deepEqual(giftDue(5, none, 'chokha', all), { steps: 1, parts: [] });
+  assert.deepEqual(giftDue(1, none, 'chokha', all), { chestParts: [''], parts: [] });
+  // the kaba's parts come the same way
+  assert.deepEqual(giftDue(1, none, 'kaba', ['kaba']), { chestParts: ['gulispiri'], parts: ['gulispiri'] });
 });
 
-test('a five a teacher took back is not rewarded again', () => {
-  const gifts = { steps: 2, parts: ['chokha', 'akhalukhi'], seen: 2 };
-  assert.equal(giftDue(10, gifts, 'chokha', ['chokha', 'akhalukhi']), null);
-  assert.equal(giftDue(14, gifts, 'chokha', ['chokha', 'akhalukhi']), null);
-  assert.deepEqual(nextGift(8, gifts, 'chokha', ['chokha', 'akhalukhi']), { left: 7, part: 'masrebi' });
-  assert.deepEqual(nextGift(13, gifts, 'chokha', ['chokha', 'akhalukhi']), { left: 2, part: 'masrebi' });
+test('a chest that closes again is not rewarded twice; each chest shows its own part', () => {
+  const one = { chestParts: ['akhalukhi'], parts: ['akhalukhi'], seen: 1 };
+  assert.equal(giftDue(0, one, 'chokha', ['chokha', 'akhalukhi']), null);
+  const left = partsLeft('chokha', ['chokha', 'akhalukhi']);
+  // the next part waits in chest II even while chest I is shut again
+  assert.equal(nextChest(0, 1), 1);
+  assert.equal(partInChest(0, one.chestParts, left), 'akhalukhi');
+  assert.equal(partInChest(1, one.chestParts, left), 'masrebi');
+  assert.equal(partInChest(2, one.chestParts, left), 'kamari');
+  // a chest just opened shows its part before the record has caught up
+  assert.equal(nextChest(1, 0), 1);
+  assert.equal(partInChest(0, [], partsLeft('chokha', ['chokha'])), 'akhalukhi');
+  assert.equal(partInChest(1, [], partsLeft('chokha', ['chokha'])), 'masrebi');
+  // all three rewarded: no next chest; a chest that gave nothing shows nothing
+  assert.equal(nextChest(3, 3), null);
+  assert.equal(nextChest(1, 3), null);
+  assert.equal(partInChest(0, [''], []), null);
 });
 
 test('the outfit follows the member\'s choice once the kaba is out', () => {

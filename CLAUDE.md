@@ -217,11 +217,18 @@
   rules `utils/pathPearls.ts` + test): matte while new, polished once the member marks a voice (or the poem / instrument), shining
   once a teacher confirmed one (`confirmations/{uid}`, „ჩათვლა“ in `MemberPathEditor`). The pearl is `pearls/PearlIcon.tsx`
   (nacre lustre, a glint, a gold halo with sparks and a sheen for a shining one; a pearl that moves up pops — `.sg-pearl…` in
-  index.css, still under „reduce motion“). On top three chests (`pearls/LearnChests.tsx`): one opens on every 10 polished pearls
-  (`chestsOf`, `CHEST_SIZE` 10, `CHEST_COUNT` 3, no more), ten little beads each; a chest opened since this device last saw it
-  jumps, glows and fires fireworks once (`sg-chests-seen:<uid>`, never on a teacher's look — `useViewing`). Under them what the two
-  pearls mean and `NextGiftLine`: every 5 shining pearls still give „ჩემი სამოსი“ its next part (`utils/pearlGifts.ts`
-  `shiningCount(path, confirmations)`, `PearlGiftBanner` on the path page while „ნასწავლი“ is there). The admin's activity counts
+  index.css, still under „reduce motion“). On top one card (`pearls/LearnChests.tsx`; hooks in `LearnChests`, the picture in
+  `ChestsView`): `NextGiftLine` first (the next part, the chest it waits in, „კიდევ N მარგალიტი“), then three chests — one opens on
+  every 10 polished pearls (`chestsOf`, `CHEST_SIZE` 10, `CHEST_COUNT` 3, no more), ten little beads each —, then the two pearls'
+  meaning with their counts. **Every chest that opens gives „ჩემი სამოსი“ its next part** (the user, 2026-11-05 evening: „3 სკივრის
+  გახსნაზე თითო ჩოხის ნაწილს“, „მხოლოდ სკივრები“ — the old „every 5 shining pearls“ rule is gone): `utils/pearlGifts.ts`
+  `giftDue(opened, …)`, record `students.pearlGifts.chestParts` (the part each chest gave, '' = none; a chest closed again is not
+  rewarded twice; the old `steps` is no longer read), `partInChest`, `nextChest`; `PearlGiftBanner` („ჯილდო სკივრიდან!“) on the
+  path page adds it. The chests are Georgian კიდობნები (the user's pick „ჩუქურთმა + ბორჯღალი“): a gold braid on the lid, two carved
+  rosettes, a gold borjgali lock that turns on the chest being filled (which shakes now and then when ≤ 2 are left and hops as a
+  pearl drops in — `sg-bead-in`); an open chest holds its part standing in a gold light (`sg-chest-gift`). A chest opened since
+  this device last saw it plays the opening once (`sg-chest-open`: shake, the shut lid swings away and the open one rises, light,
+  sparks and pearls, the part rises; fireworks; `sg-chests-seen:<uid>`, never on a teacher's look — `useViewing`). The admin's activity counts
   the polished ones (`personActivity`); the Android widget's „მარგალიტები“ ring = the share that shines (`WidgetSync`, no app
   change). `data/pearls.ts` (`CHESTS`, 60 chants) stays only as the chant games' pool; `utils/pearls.ts` keeps `phraseOf`,
   `chantName`, `VOICE_NAMES`, `noteName`, `PearlShine`; `hooks/usePearls.ts` = the takes' store + approvals the learning mode,
