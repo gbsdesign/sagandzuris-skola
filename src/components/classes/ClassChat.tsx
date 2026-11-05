@@ -22,11 +22,12 @@ import { parseChatRoomRef } from '../../data/roomGames';
 // The lesson timetable is one line under the title; the class's teachers change it by ✎ (the same window as on the
 // class page). The class page shows it under its own title bar, so there `timetable={false}` leaves it out.
 // `compact` (the class page): only the newest few messages, growing with the page instead of scrolling inside it;
-// the earlier ones open on the messages page.
+// the earlier ones open on the messages page. `chain` (the class page on a phone, where it fills the screen): at the list's
+// ends a swipe moves the page on.
 // The chat counts as read (for the 💬 count) while it is on screen.
 const COMPACT = 3;
 
-export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fill?: boolean; timetable?: boolean; compact?: boolean }> = ({ cls, title, fill, timetable = true, compact = false }) => {
+export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fill?: boolean; chain?: boolean; timetable?: boolean; compact?: boolean }> = ({ cls, title, fill, chain, timetable = true, compact = false }) => {
   const { user, isAdmin: isSchoolAdmin } = useAuth();
   const { openDm, openStudent } = useNavigation();
   // this class's teachers (and the school's admins) speak as teachers here
@@ -99,6 +100,7 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
       personOpener={isAdmin ? m => (cls.memberIds.includes(m.uid) && !m.teacher ? () => openStudent(m.uid, cls.id) : null) : undefined}
       onOpenGame={m => { const r = parseChatRoomRef(m.room); if (r) openRoom(cls.id, r.roomId, r.game); }}
       fill={fill}
+      chain={chain}
       listClassName={compact ? '' : undefined}
       listTop={compact && messages.length > COMPACT ? (
         <div className="flex justify-center pb-1">

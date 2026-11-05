@@ -363,9 +363,15 @@
   workflow does it on main).
 - **Class page** (`pages/ClassPage.tsx`, rebuilt 2026-10-24, simplified 2026-10-28 „ერთი რამ, ერთ ადგილას“ from an approved
   sketch): title bar (🎵 + one ✎ for teachers — its list opens name/logo/mode, the timetable `ScheduleSheet`, the program
-  `ProgramEditor`, adding a member `AddMemberSheet`; 💬 to the teacher for a member), the timetable chips, the members as one
-  line „N წევრი ›“ that opens their window on a phone (a sticky left column on a computer, `lg`); the class's teachers get
-  `ClassRoll` (`teacher/StudentsOverview.tsx`: attendance ✓, 💬, a name opens the member's own page, „მიწერა“/„ამოღება“).
+  `ProgramEditor`, adding a member `AddMemberSheet`; 💬 to the teacher for a member), the timetable chips; the members are a
+  sticky left column on a computer (`lg`) and on a phone, since 2026-11-05, a third tab „წევრები“ (no window; the user: „ჩათის
+  გვერდით ღილაკად … ამომხტარი ფანჯრის გარეშე“; the kit's `Tabs stack` puts the icon over the label under 460 px). Both show the
+  class's teachers on top (a member's 💬 to each) and a small „+ დამატება“ by the title; the class's teachers get `ClassRoll`
+  (`teacher/StudentsOverview.tsx`: the three figures as tiles on top — `RollFigure` —, „დასწრება“ as a block of its own with
+  „მოვიდა N / M“ and a worded „ყველა მოვიდა“ — `AttendanceDays`, no „სა,“ on the chips when the lessons share a weekday —,
+  then the names with 💬 and ✓; a name opens the member's own page, „მიწერა“/„ამოღება“). On a phone the „ჩათი“ tab fills the
+  screen (`ClassChat fill chain`, `h-[calc(100dvh-5.5rem)]`; a tap on the tab takes the page down to its field), a computer keeps
+  the newest three. The 📋 is wine-tinted with a wine badge (the user: „თითქოს არ ჩანს“).
   **A student's own page** (2026-11-04, page `student`, `pages/StudentPage.tsx`, `openStudent(uid, classId)` — mapItem
   „uid|classId“; the user: „მის გზაზე გადავდივართ, მის პირად პროფილზე და თან მაქვს ცვლილებების უფლება ზუსტად ისე როგორც მას“):
   opened by a teacher or an admin from the class roll, a member's photo / name in the class chat (`ChatPanel personOpener`)

@@ -200,6 +200,8 @@ export interface ChatPanelProps {
   staffLabel?: string;
   /** fill the parent's height (the messages page); the list takes what the header and the field leave */
   fill?: boolean;
+  /** at the list's top or bottom a swipe goes on to the page (the class page, where the chat sits in a page that scrolls) */
+  chain?: boolean;
   /** over the messages, inside the list (the class page's way to the earlier ones) */
   listTop?: React.ReactNode;
   /** a message drawn as a card of its own instead of a bubble (a teacher's card for one member); null = a bubble */
@@ -227,7 +229,7 @@ const NEVER = () => false;
 export const ChatPanel: React.FC<ChatPanelProps> = ({
   base, author, messages, loading, error, header, isCall = NEVER, callTitle, onJoinCall, callLive = true, onOpenGame, canDelete,
   showNames = false, seenAt = null, onSent, listClassName = 'h-[56vh] min-h-[300px] max-h-[560px]', readOnly = false,
-  staffLabel = 'მასწავლებელი', fill = false, listTop, renderCard, onAttach, onDelete, personOpener,
+  staffLabel = 'მასწავლებელი', fill = false, chain = false, listTop, renderCard, onAttach, onDelete, personOpener,
 }) => {
   const [text, setText] = useState('');
   const [mode, setMode] = useState<Mode>({ k: 'idle' });
@@ -543,7 +545,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           const el = e.currentTarget;
           stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
         }}
-        className={`${fill ? 'flex-1 min-h-0' : listClassName} overflow-y-auto overscroll-contain px-3 sm:px-5 py-3 bg-[#fbf6ec]/70 border-y border-[#efe5d4]`}
+        className={`${fill ? 'flex-1 min-h-0' : listClassName} overflow-y-auto ${chain ? '' : 'overscroll-contain'} px-3 sm:px-5 py-3 bg-[#fbf6ec]/70 border-y border-[#efe5d4]`}
       >
         {listBody}
       </div>

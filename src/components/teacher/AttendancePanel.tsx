@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
-import { CalendarDays, Check, CheckCheck } from 'lucide-react';
+import { CalendarCheck, CalendarDays, Check, CheckCheck, X } from 'lucide-react';
 import { useAuth } from '../../context';
 import { SchoolClass } from '../../hooks/useClasses';
 import { AttendanceDay, localIso, saveAttendance, shortDate, useAttendance, weekdayOf } from '../../hooks/useTeaching';
-import { Flash, IconBtn, useFlash } from '../ui/kit';
+import { Flash, useFlash } from '../ui/kit';
 import { triggerHaptic } from '../../utils/haptics';
 import { WEEKDAYS_GE, WEEKDAYS_SHORT_GE } from '../../utils/dateNames';
 
@@ -49,18 +49,32 @@ export const useClassAttendance = (cls: SchoolClass) => {
 };
 export type ClassAttendance = ReturnType<typeof useClassAttendance>;
 
-/** The day being marked: the latest lesson days, any other through 📅 (then shown as a day of its own); at the line's
- *  end — how many came and one ✓✓ that marks everyone (pressed again, no one). */
+/** „დასწრება“ as a block of its own (2026-11-05, the user: the bare „—/25“ and ✓✓ were unclear): its name and how many came
+ *  in words, the day being marked — the latest lesson days, any other through 📅 (then shown as a day of its own) —, and a
+ *  worded „ყველა მოვიდა“ (pressed again, „მონიშვნის მოხსნა“); one line says the ✓ beside each name marks one member. */
 export const AttendanceDays: React.FC<{ a: ClassAttendance; total: number }> = ({ a, total }) => {
   const days = a.choices.includes(a.date) ? a.choices : [...a.choices, a.date];
   const all = total > 0 && a.present.length >= total;
+  // lessons on one weekday need no „სა,“ on every chip (and so the days fit one line on a phone)
+  const oneDay = new Set(days.map(weekdayOf)).size === 1;
   return (
-    <div className="mb-3">
-      <div className="flex flex-wrap items-center gap-1.5">
+    <div className="mb-3 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#efe5d4] px-3 pt-2.5 pb-3">
+      <div className="min-h-8 flex items-center gap-2">
+        <CalendarCheck className="w-[18px] h-[18px] shrink-0 text-[#7a2028]" />
+        <span className="flex-1 min-w-0 text-[15px] font-bold text-[#4a3426]">დასწრება</span>
+        {a.marked ? (
+          <span className="shrink-0 h-7 px-2.5 rounded-full bg-emerald-50 ring-1 ring-emerald-200 text-[13px] font-bold tabular-nums text-emerald-800 inline-flex items-center">
+            მოვიდა {a.present.length} / {total}
+          </span>
+        ) : (
+          <span className="shrink-0 text-[13px] font-semibold text-[#8a7a6a]">ჯერ არ მონიშნულა</span>
+        )}
+      </div>
+      <div className="mt-2 flex flex-wrap items-center gap-1.5">
         {days.map(d => (
           <button key={d} type="button" onClick={() => a.setDate(d)} aria-pressed={d === a.date}
             className={`h-9 px-3 rounded-full text-[13px] font-bold cursor-pointer transition ${d === a.date ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40'}`}>
-            {d === localIso() ? 'დღეს' : `${WEEKDAYS_SHORT_GE[weekdayOf(d)]}, ${shortDate(d)}`}
+            {d === localIso() ? 'დღეს' : oneDay ? shortDate(d) : `${WEEKDAYS_SHORT_GE[weekdayOf(d)]}, ${shortDate(d)}`}
           </button>
         ))}
         {/* the date field lies unseen over the round button and opens the device's own calendar */}
@@ -71,15 +85,16 @@ export const AttendanceDays: React.FC<{ a: ClassAttendance; total: number }> = (
             onClick={e => { try { e.currentTarget.showPicker(); } catch { /* the browser opens its own */ } }}
             className="absolute inset-0 w-full h-full opacity-0 cursor-pointer" />
         </label>
-        <span className="ml-auto flex items-center gap-1.5">
-          <span title="მოვიდა" className={`text-[13px] font-bold tabular-nums ${a.marked ? 'text-emerald-800' : 'text-[#8a7a6a]'}`}>
-            {a.marked ? a.present.length : '—'}/{total}
-          </span>
-          <IconBtn label={all ? 'მონიშვნის მოხსნა' : 'ყველა მოვიდა'} aria-pressed={all} onClick={all ? a.clear : a.allCame}
-            className={all ? 'bg-emerald-600 !text-white hover:!bg-emerald-700' : 'bg-white ring-1 ring-[#e8dcc8] !text-emerald-700 hover:!bg-emerald-50'}>
-            <CheckCheck />
-          </IconBtn>
-        </span>
+      </div>
+      <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-2">
+        <button type="button" onClick={() => { triggerHaptic(10); (all ? a.clear : a.allCame)(); }} aria-pressed={all}
+          className={`h-10 pl-3 pr-4 rounded-full inline-flex items-center gap-1.5 text-[13.5px] font-bold cursor-pointer transition active:scale-95 ${
+            all ? 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40' : 'bg-emerald-600 text-white hover:bg-emerald-700 shadow-[0_4px_12px_-6px_rgba(5,150,105,0.8)]'
+          }`}>
+          {all ? <X className="w-4 h-4" /> : <CheckCheck className="w-[18px] h-[18px]" />}
+          {all ? 'მონიშვნის მოხსნა' : 'ყველა მოვიდა'}
+        </button>
+        <span className="flex-1 min-w-[9rem] text-[12.5px] leading-snug text-[#8a7a6a]">ან თითოეული — ✓ სახელის გასწვრივ</span>
       </div>
       {a.msg.flash && <div className="mt-2.5"><Flash flash={a.msg.flash} onClose={a.msg.clear} /></div>}
     </div>

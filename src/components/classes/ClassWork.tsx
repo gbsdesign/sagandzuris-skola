@@ -69,7 +69,8 @@ export const useClassWork = (cls: SchoolClass, canEdit: boolean): ClassWorkState
 };
 
 /** The round 📋 left of the tabs, as tall as they are. Its badge: red and pulsing while a new assignment waits unseen,
- *  quiet with the number still to do after that; a teacher's shows how many are current. */
+ *  wine with the number still to do after that; a teacher's shows how many are current. Since 2026-11-05 (the user: „თითქოს
+ *  არ ჩანს“) it is wine-tinted with a bigger mark, so it reads as a button beside the white tabs; open = solid wine. */
 export const WorkButton: React.FC<{ state: ClassWorkState; canEdit: boolean; open: boolean; onToggle: () => void }> = ({ state, canEdit, open, onToggle }) => {
   const n = canEdit ? state.all.length : state.toDo;
   const lit = !canEdit && state.fresh > 0;
@@ -84,15 +85,17 @@ export const WorkButton: React.FC<{ state: ClassWorkState; canEdit: boolean; ope
       aria-label={label}
       title={label}
       className={`relative shrink-0 w-[54px] h-[54px] rounded-full flex items-center justify-center cursor-pointer transition active:scale-95 ${
-        open ? 'bg-[#7a2028] text-[#fbf6ec] shadow-sm' : 'bg-white/85 ring-1 ring-[#e8dcc8] text-[#7a2028] hover:bg-white'
+        open
+          ? 'bg-[#7a2028] text-[#fbf6ec] shadow-[0_6px_16px_-8px_rgba(122,32,40,0.8)]'
+          : 'bg-[#f2e1de] ring-[1.5px] ring-[#7a2028]/35 text-[#7a2028] shadow-[0_4px_12px_-8px_rgba(122,32,40,0.6)] hover:bg-[#ecd5d1]'
       }`}
     >
-      <ClipboardList className="w-[22px] h-[22px]" />
+      <ClipboardList className="w-[26px] h-[26px]" strokeWidth={2.2} />
       {n > 0 && (
-        <span className="absolute -top-1 -right-1 flex">
+        <span className="absolute -top-1.5 -right-1.5 flex">
           {lit && <span aria-hidden className="absolute inset-0 rounded-full bg-red-500/70 motion-safe:animate-ping" />}
-          <span className={`relative min-w-[22px] h-[22px] px-1.5 rounded-full ring-2 ring-[#fbf6ec] text-[12px] font-bold leading-[22px] tabular-nums text-center ${
-            lit ? 'bg-red-600 text-white' : 'bg-[#efe5d4] text-[#7a2028]'
+          <span className={`relative min-w-6 h-6 px-1.5 rounded-full ring-2 ring-[#fbf6ec] text-[13px] font-bold leading-6 tabular-nums text-center shadow-sm ${
+            lit ? 'bg-red-600 text-white' : open ? 'bg-[#fbf6ec] text-[#7a2028]' : 'bg-[#7a2028] text-white'
           }`}>{n}</span>
         </span>
       )}
