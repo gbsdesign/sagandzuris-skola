@@ -192,8 +192,10 @@
 .np-mix label em{font-style:normal;font-weight:700;color:var(--muted)}
 .np-mix input{width:100%;margin:0;accent-color:var(--acc);height:22px}
 .np-steps{display:flex;align-items:center;gap:8px;min-width:0}
-/* the synth's three tools, each with its name: one row of equal pills on a phone, in the panel's row when wide */
-.np-tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
+/* the synth's three tools, each with its name: one row of equal pills on a phone, in the panel's row when wide.
+   Scoped to .np-panel: the top bar's tool row is also .np-tools, and a bare grid of 3 pushed its 4th tool onto a
+   second row that spilled over the notes (2026-11-05) */
+.np-panel .np-tools{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}
 .np-tl{flex:none;min-width:0;height:40px;padding:0 7px;border-radius:12px;display:inline-flex;align-items:center;justify-content:center;gap:5px;font-size:12.5px;font-weight:800;color:var(--ink-2);background:var(--surface);box-shadow:inset 0 0 0 1px var(--line);white-space:nowrap;transition:background .15s,color .15s,box-shadow .15s,transform .12s}
 .np-tl svg{flex:none;width:16px;height:16px}
 .np-tl span{min-width:0;overflow:hidden;text-overflow:ellipsis}
