@@ -45,7 +45,8 @@ moving to the next chant in service order.
 - Tap-a-line plays only while the synth panel is open. Playing one player stops the other.
 - **Never auto-scroll** to the playing line.
 - **Synth ball** (2026-10-28, reworked 2026-10-30): a small ball (`.np-ball`, a 9.6px dot inside an invisible 40px handle)
-  glides on the top edge of the playing line — its x is estimated from note lengths (`markerAt`, as in „სწავლა“), not exact.
+  glides on the top edge of the playing line — its x is the sounding note's place read from the picture (`markerAt` over the score's `nx`, as in „სწავლა“;
+  an unread line or the anthology still gets the old estimate from note lengths).
   Shown while the synth plays and while it stands paused mid-way (hidden at the start/end and in church mode). Under it a
   narrow soft stripe over all the voices (`.np-col`, `--dusk-col`) marks the notes sounding now. A finger drags the ball to
   any line; it snaps to the nearest note start (`beatAt`, the inverse of `markerAt`) and on release the synth plays from there,

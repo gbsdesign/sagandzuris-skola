@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { afterTry, allLearned, assignedProgress, beatAt, chunksOfPart, learnedShare, learnTakeId, markerAt, melodyIn, nextReviewDay, parseLearnTakeId, parseSongPiece, partState, partsAtBreaths, partsOfRecording, partsOfScore, reviewsDue, songPiece, timelineIn, wordsForPart } from '../src/utils/learn';
+import { afterTry, allLearned, assignedProgress, beatAt, spanAt, chunksOfPart, learnedShare, learnTakeId, markerAt, melodyIn, nextReviewDay, parseLearnTakeId, parseSongPiece, partState, partsAtBreaths, partsOfRecording, partsOfScore, reviewsDue, songPiece, timelineIn, wordsForPart } from '../src/utils/learn';
 import type { BookScore } from '../src/utils/chantSynth';
 
 const score = (sys: BookScore['sys'], voices: BookScore['voices'] = [[]], dur = 40): BookScore =>
@@ -81,6 +81,24 @@ test('a dragged ball lands on the nearest note start of the line', () => {
   assert.equal(beatAt(s, 0, markerAt(s, 0, 2) + 0.01), 2);
   assert.equal(beatAt(s, 0, 0), 0);
   assert.equal(beatAt(s, 0, 1), 6);
+});
+
+test('a line read from the picture: the mark stands on the sounding note and glides on only at its end', () => {
+  const v: BookScore['voices'][number] = [[0, 1, 60], [1, 1, 62], [2, 4, 64], [6, 1, 65]];
+  const s = { ...score([[0, 0, 0, 1, 1, 0, 7]], [v], 7), nx: [[0.2, 0.3, 0.7, 0.9]] };
+  assert.equal(markerAt(s, 0, 0), 0.2);
+  assert.equal(markerAt(s, 0, 2.5), 0.7); // early in the long note: on its head, not halfway to the next
+  assert.equal(markerAt(s, 0, 4), 0.7);
+  assert.ok(markerAt(s, 0, 5.8) > 0.7 && markerAt(s, 0, 5.8) < 0.9); // its last moments: on the way
+  assert.equal(markerAt(s, 0, 6.9), 0.9); // the line's last note holds
+  // a drag lands on the nearest read note; a piece is lit from halfway after the note before to halfway before the next
+  assert.equal(beatAt(s, 0, 0.62), 2);
+  assert.equal(beatAt(s, 0, 0.45), 1);
+  assert.deepEqual(spanAt(s, 0, 1, 6), [0.25, 0.8]);
+  assert.deepEqual(spanAt(s, 0, 0, 2), [0, 0.5]);
+  // places that don't fit the line's starts are ignored (the estimate is used)
+  const off = { ...s, nx: [[0.2, 0.3]] };
+  assert.equal(markerAt(off, 0, 0), markerAt(score([[0, 0, 0, 1, 1, 0, 7]], [v], 7), 0, 0));
 });
 
 test('a recording is cut at its pauses', () => {

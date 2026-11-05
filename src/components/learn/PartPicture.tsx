@@ -1,9 +1,9 @@
 import React from 'react';
 import { bookImageUrl, type BookScore } from '../../utils/chantSynth';
-import { markerAt } from '../../utils/learn';
+import { markerAt, spanAt } from '../../utils/learn';
 
-/** The part's lines cut out of the book's page, one under another; while it sounds a mark runs over the notes (its place
- *  on the line is estimated — the page has no note positions — so it is a soft band, not a hairline).
+/** The part's lines cut out of the book's page, one under another; while it sounds a mark stands on the sounding note
+ *  (its place read from the picture — `score.nx`; a line not read gets an estimate, so it is a soft band, not a hairline).
  *  `span` (beats): the bit being learned now (the beginners' piece) stays clear and golden-tinted, the rest is veiled. */
 export const PartPicture: React.FC<{ score: BookScore; sys: number[]; beat: number | null; span?: [number, number] | null }> = ({ score, sys, beat, span }) => {
   if (!sys.length) return null;
@@ -19,8 +19,7 @@ export const PartPicture: React.FC<{ score: BookScore; sys: number[]; beat: numb
         if (span) {
           const lo = Math.max(t0, span[0]), hi = Math.min(t1, span[1]);
           if (hi > lo + 1e-6) {
-            const a = lo <= t0 + 1e-6 ? 0 : Math.max(0, markerAt(score, k, lo) - 0.02);
-            const b = hi >= t1 - 1e-6 ? 1 : Math.min(1, markerAt(score, k, hi) - 0.01);
+            const [a, b] = spanAt(score, k, lo, hi);
             lit = [a, Math.max(a + 0.04, b)];
           }
         }
