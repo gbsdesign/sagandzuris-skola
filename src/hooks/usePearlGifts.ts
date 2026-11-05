@@ -5,11 +5,13 @@ import { useAuth } from '../context';
 import { useKabaSettings } from '../utils/kabaArt';
 import { SAMOSI_DEFAULT_COLOR, SAMOSI_PARTS, SamosiKinds } from '../data/samosiData';
 import { KABA_PARTS } from '../data/kabaData';
-import { giftDue, nextGift, outfitOf, readGifts, shiningCount } from '../utils/pearlGifts';
+import { giftDue, outfitOf, partsLeft, readGifts } from '../utils/pearlGifts';
+import { chestsOf, pearlCounts } from '../utils/pathPearls';
+import { filterValidVariants } from '../utils/variantValidation';
 import { useConfirmations } from './useConfirmations';
 
-// The pearls' gifts to „ჩემი სამოსი“ (utils/pearlGifts.ts) for the signed-in member. With `give` the hook also adds
-// the parts owed (the path page, PathOrbs, does; the chests in „ნასწავლი“ only show the way to the next one).
+// The chests' gifts to „ჩემი სამოსი“ (utils/pearlGifts.ts) for the signed-in member. With `give` the hook also adds
+// the parts owed (the path page, PathOrbs, does; the chests in „ნასწავლი“ only show them).
 
 const SAMOSI_IDS = new Set(SAMOSI_PARTS.map(p => p.id));
 const KABA_IDS = new Set(KABA_PARTS.map(p => p.id));
@@ -37,25 +39,26 @@ export const usePearlGifts = (give = false) => {
   const owned = outfit === 'kaba' ? idsOf(d?.kaba, KABA_IDS) : idsOf(d?.samosi, SAMOSI_IDS);
   const gifts = readGifts(d?.pearlGifts);
   const confirmed = useConfirmations(uid);
-  // the pearls of „ნასწავლი“ a teacher has confirmed (utils/pathPearls)
-  const shining = shiningCount(d?.selectedChantVariants, confirmed);
+  // the chests of „ნასწავლი“ the polished pearls have opened (utils/pathPearls)
+  const polished = pearlCounts(filterValidVariants(d?.selectedChantVariants || {}), confirmed).polished;
+  const opened = chestsOf(polished).filter(c => c.open).length;
   // the outfit is known only once both answers have come
   const ready = !!uid && !!d && kaba.loaded;
   const ownedKey = owned.join(',');
 
   useEffect(() => {
     if (!give || !ready || !uid) return;
-    const due = giftDue(shining, gifts, outfit, owned);
+    const due = giftDue(opened, gifts, outfit, owned);
     if (!due) return;
-    const key = `${uid}:${due.steps}`;
+    const key = `${uid}:${due.chestParts.length}`;
     if (giving.has(key)) return;
     giving.add(key);
     const field = outfit === 'kaba' ? 'kaba' : 'samosi';
     const data: Record<string, unknown> = {
       [field]: [...owned, ...due.parts],
-      pearlGifts: { steps: due.steps, parts: [...gifts.parts, ...due.parts], seen: gifts.seen },
+      pearlGifts: { chestParts: due.chestParts, parts: [...gifts.parts, ...due.parts] },
     };
-    const fields = [field, 'pearlGifts'];
+    const fields = [field, 'pearlGifts.chestParts', 'pearlGifts.parts'];
     // a hat given goes on the head, as when the member adds one (ChemiSamosi)
     const hat = outfit === 'chokha' ? [...due.parts].reverse().find(id => HATS.has(id)) : undefined;
     if (hat) { data.samosiHead = hat; fields.push('samosiHead'); }
@@ -65,7 +68,7 @@ export const usePearlGifts = (give = false) => {
     });
     // the record's own numbers decide; `gifts` and `owned` are read fresh from it
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [give, ready, uid, shining, gifts.steps, outfit, ownedKey]);
+  }, [give, ready, uid, opened, gifts.chestParts.length, outfit, ownedKey]);
 
   /** The member has seen the parts given (the path page's card goes). */
   const markSeen = () => {
@@ -83,10 +86,12 @@ export const usePearlGifts = (give = false) => {
   return {
     ready,
     outfit,
-    shining,
+    /** the part each rewarded chest gave ('' = none) */
+    chestParts: gifts.chestParts,
+    /** the outfit's parts still to collect, in order */
+    left: partsLeft(outfit, owned),
     /** parts given that the member has not seen yet */
     unseen: gifts.parts.slice(gifts.seen),
-    next: nextGift(shining, gifts, outfit, owned),
     look,
     markSeen,
   };

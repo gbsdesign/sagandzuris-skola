@@ -2,14 +2,14 @@ import React, { useEffect } from 'react';
 import { Gift, X } from 'lucide-react';
 import { SAMOSI_COLORS, SAMOSI_DEFAULT_COLOR, SAMOSI_DYED, SAMOSI_PARTS, samosiHex, samosiPhotoOf, samosiThumb } from '../../data/samosiData';
 import { DyeWay, useSamosiSrc } from '../../utils/samosiDye';
-import { GIFT_EVERY, giftPartLabel, joinGe } from '../../utils/pearlGifts';
+import { giftPartLabel, joinGe } from '../../utils/pearlGifts';
 import { OutfitLook, usePearlGifts } from '../../hooks/usePearlGifts';
 import { fireworks } from '../../utils/samosiFireworks';
 import { SamosiArt } from '../views/SamosiArt';
 import { Btn, IconBtn } from '../ui/kit';
 
-// „ჯილდო სამოსისთვის“ (utils/pearlGifts.ts): the path page's card for parts the pearls have just given
-// (PearlGiftBanner, which also adds them) and the pearls panel's line on the way to the next one (NextGiftLine).
+// „ჯილდო სამოსისთვის“ (utils/pearlGifts.ts): the path page's card for parts the chests have just given
+// (PearlGiftBanner, which also adds them) and the chests' line on the way to the next one (NextGiftLine).
 
 const COLOR_IDS = new Set(SAMOSI_COLORS.map(c => c.id));
 
@@ -38,7 +38,7 @@ export const GiftPartPic: React.FC<{ id: string; look: OutfitLook; className?: s
   return <Dyed src={samosiThumb(id)} dye={SAMOSI_DYED.has(id) && c !== SAMOSI_DEFAULT_COLOR ? samosiHex(c) : null} className={className} />;
 };
 
-/** The path page's gold card: „ჯილდო მარგალიტებისთვის!“ for the parts given and not yet seen, with fireworks. It is
+/** The path page's gold card: „ჯილდო სკივრიდან!“ for the parts given and not yet seen, with fireworks. It is
  *  also where the parts owed are added. `onShow` opens „სამოსი“. */
 export const PearlGiftBanner: React.FC<{ onShow: () => void }> = ({ onShow }) => {
   const g = usePearlGifts(true);
@@ -63,11 +63,11 @@ export const PearlGiftBanner: React.FC<{ onShow: () => void }> = ({ onShow }) =>
         )}
       </span>
       <div className="flex-1 min-w-0 pt-0.5">
-        <p className="text-[15px] font-black leading-tight text-[#5a3d14]">ჯილდო მარგალიტებისთვის!</p>
+        <p className="text-[15px] font-black leading-tight text-[#5a3d14]">ჯილდო სკივრიდან!</p>
         <p className="mt-1 text-[14px] leading-snug text-[#5a3d14]">
           {onChokha ? 'ჩოხას' : 'კაბას'} დაემატა: <b>{joinGe(g.unseen.map(giftPartLabel))}</b>
         </p>
-        <p className="mt-0.5 text-[12px] leading-snug text-[#7a5a26]">ყოველი {GIFT_EVERY} ბრწყინავი მარგალიტი — ერთი ახალი ნაწილი</p>
+        <p className="mt-0.5 text-[12px] leading-snug text-[#7a5a26]">ყოველი გახსნილი სკივარი — ერთი ახალი ნაწილი</p>
         <Btn kind="primary" size="sm" className="mt-2.5" onClick={() => { g.markSeen(); onShow(); }}>
           {onChokha ? 'ჩოხის ნახვა' : 'კაბის ნახვა'}
         </Btn>
@@ -77,32 +77,21 @@ export const PearlGiftBanner: React.FC<{ onShow: () => void }> = ({ onShow }) =>
   );
 };
 
-/** The pearls panel's line: the next part and how many more pearls must shine for it (five dots, gold as they do). */
-export const NextGiftLine: React.FC = () => {
-  const g = usePearlGifts();
-  if (!g.ready || !g.next.part) return null;
-  const filled = Math.max(0, GIFT_EVERY - g.next.left);
-  // more than five to go once a teacher took some back
-  const label = g.next.left > GIFT_EVERY ? `კიდევ ${g.next.left}` : `${filled} / ${GIFT_EVERY}`;
-  return (
-    <div className="flex items-center gap-3 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] pl-2 pr-3 py-2">
-      <span className="w-11 h-11 shrink-0 rounded-xl bg-white ring-1 ring-[#e8dcc8] flex items-center justify-center">
-        <GiftPartPic id={g.next.part} look={g.look} className="w-9 h-9" />
+const ROMAN = ['I', 'II', 'III'];
+
+/** The chests' top line: the outfit's next part, the chest it waits in and how many more pearls open it. */
+export const NextGiftLine: React.FC<{ part: string; chest: number; left: number; outfit: 'chokha' | 'kaba'; look: OutfitLook }> = ({ part, chest, left, outfit, look }) => (
+  <div aria-label={`შემდეგი ჯილდო — ${outfit === 'kaba' ? 'კაბის' : 'ჩოხის'} ნაწილი: ${giftPartLabel(part)}`} className="flex items-center gap-2.5 rounded-xl bg-white/75 ring-1 ring-[#ead9b8] pl-1.5 pr-3 py-1.5">
+    <span className="relative w-11 h-11 shrink-0 rounded-lg bg-gradient-to-b from-[#fffaf0] to-[#f6e7c6] ring-1 ring-[#e3c98f] flex items-center justify-center overflow-hidden">
+      <GiftPartPic id={part} look={look} className="w-9 h-9" />
+    </span>
+    <span className="flex-1 min-w-0">
+      <span className="block text-[13.5px] font-black leading-snug text-[#4a3426] truncate">
+        შემდეგი ჯილდო: <span className="text-[#7a2028]">{giftPartLabel(part)}</span>
       </span>
-      <span className="flex-1 min-w-0">
-        <span className="block text-[13px] font-bold leading-snug text-[#4a3426]">შემდეგი ჯილდო: {giftPartLabel(g.next.part)}</span>
-        <span className="block text-[12px] leading-snug text-[#8a7a6a]">
-          {g.outfit === 'kaba' ? 'კაბის' : 'ჩოხის'} ახალი ნაწილი ყოველ {GIFT_EVERY} ბრწყინავ მარგალიტზე
-        </span>
+      <span className="block text-[12px] leading-snug text-[#7a6450]">
+        {ROMAN[chest]} სკივარში · <b className="font-bold tabular-nums text-[#9a6a1c]">კიდევ {left}</b> მარგალიტი
       </span>
-      <span className="shrink-0 flex flex-col items-end gap-1" role="img" aria-label={`ბრწყინავს ${label}`}>
-        <span className="flex gap-1">
-          {Array.from({ length: GIFT_EVERY }, (_, i) => (
-            <span key={i} className={`w-2.5 h-2.5 rounded-full ${i < filled ? 'bg-[#c9962a] shadow-[0_0_0_2px_rgba(201,150,42,0.2)]' : 'bg-[#e3d6c1]'}`} />
-          ))}
-        </span>
-        <span className="text-[12px] font-bold tabular-nums text-[#7a5a26]">{label}</span>
-      </span>
-    </div>
-  );
-};
+    </span>
+  </div>
+);

@@ -276,21 +276,73 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
 .sg-pearl.is-pop { animation: sg-pearl-pop 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.35); }
 @keyframes sg-pearl-pop { 0% { transform: scale(0.6); } 55% { transform: scale(1.22); } 100% { transform: scale(1); } }
 
-/* „ნასწავლი“'s chests (components/pearls/LearnChests.tsx): a chest that has just opened jumps, glows and its sparks fly */
-.sg-chest-glow { transform-box: fill-box; transform-origin: center; }
-.sg-chest.is-new { animation: sg-chest-jump 1.1s cubic-bezier(0.2, 0.9, 0.3, 1.3) both; }
-.sg-chest.is-new .sg-chest-glow { animation: sg-chest-glow 1.4s ease-out 3; }
-.sg-chest.is-new .sg-chest-ray { animation: sg-chest-rays 2.2s ease-out both; }
-.sg-chest.open .sg-chest-ray { transform-box: view-box; transform-origin: 36px 32px; }
-@keyframes sg-chest-jump {
-  0% { transform: scale(0.55) translateY(10px); }
-  35% { transform: scale(1.18) translateY(-6px) rotate(-4deg); }
-  55% { transform: scale(0.96) rotate(3deg); }
-  75% { transform: scale(1.04) rotate(-1deg); }
-  100% { transform: scale(1) rotate(0); }
+/* „ნასწავლი“'s chests (components/pearls/LearnChests.tsx), Georgian კიდობნები. The one being filled turns its borjgali and,
+   a pearl or two short, gives a little shake now and then; a pearl dropping in makes it hop. Opening (once): it shakes, the
+   shut lid swings away as the open one rises from the hinge, light, sparks and pearls burst out, and the outfit's part rises */
+.sg-chest { overflow: visible; transform-origin: 50% 88%; }
+.sg-chest-glow, .sg-borjgali, .sg-chest-bead, .sg-chest-spark { transform-box: fill-box; transform-origin: center; }
+.sg-chest-lidshut, .sg-chest-lidopen { transform-box: view-box; transform-origin: 36px 31px; }
+.sg-chest.open .sg-chest-ray { transform-box: view-box; transform-origin: 36px 26px; }
+.sg-chest.spin .sg-borjgali { animation: sg-borjgali 16s linear infinite; }
+@keyframes sg-borjgali { to { transform: rotate(360deg); } }
+.sg-chest.near { animation: sg-chest-near 5s ease-in-out infinite; }
+@keyframes sg-chest-near {
+  0%, 86%, 100% { transform: none; }
+  89% { transform: rotate(-3deg); }
+  92% { transform: rotate(3deg); }
+  95% { transform: rotate(-1.5deg); }
 }
-@keyframes sg-chest-glow { 0% { opacity: 0.4; transform: scale(0.7); } 40% { opacity: 1; transform: scale(1.12); } 100% { opacity: 0.75; transform: scale(1); } }
-@keyframes sg-chest-rays { 0% { opacity: 0; transform: scale(0.4) rotate(-20deg); } 30% { opacity: 1; } 100% { opacity: 0.55; transform: scale(1) rotate(0); } }
+.sg-chest.nudge { animation: sg-chest-nudge 0.6s ease-out; }
+@keyframes sg-chest-nudge {
+  30% { transform: translateY(-3px) scale(1.04, 0.97); }
+  60% { transform: translateY(0) scale(0.98, 1.02); }
+  100% { transform: none; }
+}
+.sg-chest.is-new { animation: sg-chest-open 1.5s cubic-bezier(0.3, 0.8, 0.3, 1.1) both; }
+@keyframes sg-chest-open {
+  0% { transform: none; }
+  6% { transform: rotate(-6deg); }
+  12% { transform: rotate(6deg); }
+  18% { transform: rotate(-5deg); }
+  24% { transform: rotate(4deg); }
+  30% { transform: rotate(-2deg); }
+  38% { transform: translateY(2px) scale(1.06, 0.9); }
+  52% { transform: translateY(-8px) scale(1.1); }
+  66% { transform: translateY(0) scale(0.97, 1.03); }
+  80% { transform: scale(1.02); }
+  100% { transform: none; }
+}
+.sg-chest.is-new .sg-chest-lidshut { animation: sg-lid-shut 1.5s ease-in both; }
+@keyframes sg-lid-shut { 0%, 36% { transform: scaleY(1); opacity: 1; } 46% { transform: scaleY(0.1); opacity: 0.6; } 47%, 100% { transform: scaleY(0); opacity: 0; } }
+.sg-chest.is-new .sg-chest-lidopen { animation: sg-lid-open 1.5s ease-out both; }
+@keyframes sg-lid-open { 0%, 44% { transform: scaleY(0); opacity: 0; } 47% { opacity: 1; } 56% { transform: scaleY(1.14); } 66% { transform: scaleY(0.95); } 76%, 100% { transform: scaleY(1); opacity: 1; } }
+.sg-chest.is-new .sg-chest-glow { animation: sg-glow-in 1.5s ease-out both, sg-glow-pulse 1.4s ease-in-out 1.5s 2; }
+@keyframes sg-glow-in { 0%, 44% { opacity: 0; transform: scale(0.4); } 62% { opacity: 1; transform: scale(1.25); } 100% { opacity: 0.8; transform: scale(1); } }
+@keyframes sg-glow-pulse { 50% { opacity: 1; transform: scale(1.1); } }
+.sg-chest.is-new .sg-chest-ray { animation: sg-rays-in 2s ease-out both; }
+@keyframes sg-rays-in { 0%, 40% { opacity: 0; transform: scale(0.3) rotate(-50deg); } 70% { opacity: 1; transform: scale(1.18) rotate(8deg); } 100% { opacity: 0.6; transform: scale(1) rotate(0); } }
+.sg-chest.is-new .sg-chest-bead { animation: sg-bead-pop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.5) both; }
+@keyframes sg-bead-pop { 0% { opacity: 0; transform: translateY(7px) scale(0); } 70% { opacity: 1; transform: translateY(-3px) scale(1.25); } 100% { opacity: 1; transform: none; } }
+.sg-chest-spark { opacity: 0; animation: sg-spark 0.9s ease-out both; }
+@keyframes sg-spark { 0% { opacity: 0; transform: translate(0, 0) scale(0.4); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.1); } }
+/* the part a chest gave stands up out of it in a gold light; as it opens, it rises from inside */
+.sg-chest-gift { filter: drop-shadow(0 0 4px rgba(246, 201, 78, 0.95)) drop-shadow(0 2px 2px rgba(90, 61, 20, 0.35)); }
+.sg-chest-gift.is-new { animation: sg-gift-rise 1.3s cubic-bezier(0.2, 0.9, 0.3, 1.2) 0.8s both; }
+@keyframes sg-gift-rise {
+  0% { opacity: 0; transform: translateY(20px) scale(0.3); }
+  55% { opacity: 1; transform: translateY(-12px) scale(1.3); }
+  75% { transform: translateY(-2px) scale(0.96); }
+  100% { opacity: 1; transform: none; }
+}
+.sg-chest-card-new { animation: sg-chest-card 1.6s ease-out 0.6s both; }
+@keyframes sg-chest-card { 0% { box-shadow: 0 0 0 0 rgba(231, 197, 111, 0.9); } 60% { box-shadow: 0 0 0 9px rgba(231, 197, 111, 0); } 100% { box-shadow: 0 8px 18px -12px rgba(176, 128, 36, 0.9); } }
+/* a pearl just polished drops into its chest's row */
+.sg-bead-in { animation: sg-bead-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.5) both; }
+@keyframes sg-bead-in { 0% { opacity: 0; transform: translateY(-12px) scale(0.3); } 65% { opacity: 1; transform: translateY(1px) scale(1.35); } 100% { transform: none; } }
 @media (prefers-reduced-motion: reduce) {
-  .sg-pearl, .sg-pearl *, .sg-chest, .sg-chest * { animation: none !important; }
+  .sg-pearl, .sg-pearl *, .sg-chest, .sg-chest *, .sg-chest-gift, .sg-chest-card-new, .sg-bead-in { animation: none !important; }
+  .sg-chest-lidshut.sg-chest-lidshut { display: none; }
+  .sg-chest:not(.open) .sg-chest-lidshut { display: inline; }
+  .sg-chest-spark { display: none; }
 }
+
