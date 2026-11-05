@@ -1,7 +1,6 @@
-// The pearls game (redesign stage 7): chests of chants, each chant a pearl. A member listens to the chant's first
-// phrase, sings it back into the microphone, and the pearl is polished when the phrase was sung right
-// (utils/pitch.ts); it shines when a teacher has heard it and approved it. Every pearl is sung in three voices: one
-// polished in all three turns golden.
+// Sixty well-known chants in three groups by service — the old pearls game's three chests (the game was removed
+// 2026-11-05; „ნასწავლი“'s pearls and chests are utils/pathPearls.ts). Kept as the pool of the chant games
+// (data/chantGamePool.ts) and of „მესამე ხმა“'s picker (pages/games/mesame/chants.ts), which name a group by its `label`.
 
 export interface Chest {
   id: string;

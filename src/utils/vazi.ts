@@ -1,18 +1,18 @@
-import { POLISH_SHARE } from './pitch';
 import { tbilisiToday } from './hangi';
 
 // „ჩემი ვაზი“ (2026-11-01, the plan's Georgian game №1, like Tamagotchi): every member's vine grows from what they did in the
 // app, day by day. Nothing new is stored — it is all read from the member's own record (students/{uid}): a habit ticked, a
-// daily game finished, a part practised in the learning mode, a pearl polished, an exercise done. Each deed is a leaf, at most
+// daily game finished, a part practised in the learning mode, an exercise done (the old pearls game's
+// polished pearls counted too until it was removed, 2026-11-05). Each deed is a leaf, at most
 // LEAF_CAP a day. A month's leaves give bunches (BUNCH_AT); they ripen when the month is over. The season runs from November
 // to October, so the autumn's „რთველი“ counts the whole year; on 1 November the bunches go into the qvevri. A leaf stays on
 // the vine RECENT_DAYS days, the wood grows from every leaf ever: a vine cared for lately is thick with leaves, one left alone
 // yellows and then stands bare — it never dies, and a deed makes it green again.
 
-export type DeedKind = 'habits' | 'games' | 'learn' | 'pearls' | 'drills';
-export const DEED_KINDS: DeedKind[] = ['habits', 'games', 'learn', 'pearls', 'drills'];
+export type DeedKind = 'habits' | 'games' | 'learn' | 'drills';
+export const DEED_KINDS: DeedKind[] = ['habits', 'games', 'learn', 'drills'];
 export const DEED_LABEL: Record<DeedKind, string> = {
-  habits: 'ჩვევები', games: 'დღის თამაშები', learn: 'სწავლის რეჟიმი', pearls: 'მარგალიტები', drills: 'ოსტატობის სავარჯიშოები',
+  habits: 'ჩვევები', games: 'დღის თამაშები', learn: 'სწავლის რეჟიმი', drills: 'ოსტატობის სავარჯიშოები',
 };
 export type DayDeeds = Partial<Record<DeedKind, number>>;
 /** iso day → what was done that day */
@@ -55,11 +55,6 @@ export const deedsOf = (data: Record<string, unknown> | null | undefined): Deeds
   }
   // the learning mode keeps each part's last day of practice
   for (const piece of Object.values(obj(d.learning))) for (const part of Object.values(obj(piece))) add(dayOf(obj(part).at), 'learn');
-  // a pearl counts on the day of its best try, once it is polished
-  for (const rec of Object.values(obj(d.pearls))) {
-    const r = obj(rec);
-    if (typeof r.best === 'number' && r.best >= POLISH_SHARE * 100) add(dayOf(r.at), 'pearls');
-  }
   for (const day of Object.values(obj(d.drillDone))) add(dayOf(day), 'drills');
   return out;
 };

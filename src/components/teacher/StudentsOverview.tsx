@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { Users, Clock, Sparkles, ClipboardCheck, Baby, Lock, UserMinus, UserPlus, Loader2, MessageCircle, ChevronDown, Gem } from 'lucide-react';
+import { Users, Clock, Sparkles, ClipboardCheck, Baby, Lock, UserMinus, UserPlus, Loader2, MessageCircle, ChevronDown } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth, useNavigation } from '../../context';
 import type { ClassMember, SchoolClass } from '../../hooks/useClasses';
@@ -18,7 +18,6 @@ import { WEEKDAYS_SHORT_GE } from '../../utils/dateNames';
 import { abilitiesText, interestsText } from '../../utils/profileFields';
 import { syncKidsFlag } from '../../hooks/useDirectChat';
 import { Avatar as Face } from '../classes/ChatPanel';
-import { PearlReview, waitingPearls } from '../pearls/PearlReview';
 import { DrillReview } from '../mastery/DrillReview';
 import { LearnReview } from '../learn/LearnReview';
 import { MedavitneReview } from '../learn/MedavitneReview';
@@ -181,7 +180,6 @@ export const ClassRoll: React.FC<{
       <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-1 gap-x-3">
         {shown.map(m => {
           const here = att.present.includes(m.uid);
-          const pearls = waitingPearls(records[m.uid]?.data?.pearls, records[m.uid]?.data?.pearlShine);
           return (
             <li key={m.uid} className={`min-h-12 flex items-center gap-1 pl-1.5 pr-1 py-1 rounded-xl transition-colors ${here ? 'bg-emerald-50' : m.uid === me ? 'bg-[#7a2028]/[0.05]' : 'hover:bg-[#fbf6ec]'}`}>
               <button type="button" onClick={() => (m.uid === me ? navigateTo('gz') : openStudent(m.uid, cls.id))} title={`${m.name} — გზა და პროფილი`}
@@ -191,7 +189,6 @@ export const ClassRoll: React.FC<{
                   {m.name}
                   {m.uid === me && <span className="ml-1.5 text-xs font-normal text-[#8a7a6a]">(შენ)</span>}
                 </span>
-                {pearls > 0 && <PearlsWaiting n={pearls} />}
               </button>
               {onWrite && m.uid !== me && (
                 <button type="button" onClick={() => onWrite(m)} disabled={writing === m.uid}
@@ -214,14 +211,6 @@ export const ClassRoll: React.FC<{
     </>
   );
 };
-
-/** 💎 N beside a member's name: their pearls waiting to be heard and „ჩათვლა“ (in their window). */
-export const PearlsWaiting: React.FC<{ n: number }> = ({ n }) => (
-  <span title={`მოსასმენი მარგალიტი: ${n}`} aria-label={`მოსასმენი მარგალიტი: ${n}`}
-    className="shrink-0 h-7 pl-2 pr-2.5 rounded-full inline-flex items-center gap-1 text-[12px] font-bold tabular-nums bg-[#7a2028]/[0.08] text-[#7a2028]">
-    <Gem className="w-3.5 h-3.5" /> {n}
-  </span>
-);
 
 /** One small figure on a student's row: icon + value (the meaning in `title`); amber when it lags. */
 const Meta: React.FC<{ icon: React.ReactNode; title: string; warn?: boolean; children: React.ReactNode }> = ({ icon, title, warn, children }) => (
@@ -312,9 +301,6 @@ const StudentSheet: React.FC<{
             {(s.profile.voices || []).map((v: string) => VOICE[v] || v).join(', ') || 'ხმა არ არის მითითებული'} · {agoLabel(s.lastActive)}
           </p>
 
-          {/* the member's pearls first: the 💎 beside their name on the class page leads here */}
-          <PearlReview uid={uid} pearls={record.data.pearls} shine={record.data.pearlShine} />
-
           {/* three small figures; the rest waits in „მეტი“ */}
           <div className="grid grid-cols-3 rounded-2xl bg-white ring-1 ring-[#e8dcc8] divide-x divide-[#f1e8d9] text-center">
             <Figure value={s.work.planned ? `${s.work.percent}%` : '—'} label="სამუშაო" warn={s.work.missed > 2} />
@@ -396,7 +382,7 @@ const StudentSheet: React.FC<{
 };
 
 /** The teacher's part at the bottom of a student's own page (pages/StudentPage.tsx; 2026-11-04 — it was the member's
- *  window): their pearls and takes to hear and „ჩათვლა“, figures, attendance, the path's chants, the manera's marks, the
+ *  window): their takes to hear and „ჩათვლა“, figures, attendance, the path's chants, the manera's marks, the
  *  kids' mode, „მიწერა“ and „ამოღება“. */
 export const StudentTools: React.FC<{
   cls: SchoolClass;

@@ -4,10 +4,9 @@ import { useAuth } from '../../context';
 import { findVersion } from '../../data/chantLookup';
 import { FOLK_SONGS } from '../../data/songsData';
 import { LearnRecord, parseLearnTakeId, parseSongPiece, pieceProgress } from '../../utils/learn';
-import { PearlShine, VOICE_NAMES } from '../../utils/pearls';
+import { PearlShine, VOICE_NAMES, chantName } from '../../utils/pearls';
 import { shinePearl, takeUrl, usePearlTakes } from '../../hooks/usePearls';
 import { askConfirm, Btn } from '../ui/kit';
-import { chantName } from '../pearls/PearlSheet';
 import { PartsBar } from './PartsBar';
 
 // The member's learning mode in their window (teachers, admins): each piece's bar of parts (gold = learned), and the

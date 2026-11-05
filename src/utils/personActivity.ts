@@ -1,10 +1,10 @@
-import { pearlState, type PearlRecord, type PearlShine } from './pearls';
+import { pearlCounts } from './pathPearls';
 
 // The admin's short picture of one member (the person's window, 2026-10-28): what they did in the app, from their own
 // record (students/{uid}) — nothing new is stored. Attendance comes from the classes' lists, apart from this.
 
 export interface PersonActivity {
-  /** pearls sung right (polished) or approved by a teacher (shining) */
+  /** polished pearls of „ნასწავლი“: the path's items the member marked as learned (utils/pathPearls) */
   pearls: number;
   /** parts of chants and songs learned in the learning mode (level ≥ 1) */
   parts: number;
@@ -19,10 +19,8 @@ const isoDay = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padSt
 /** `today` is the local day; the week is it and the six days before. */
 export const personActivity = (data: Record<string, any> | null | undefined, today: Date = new Date()): PersonActivity => {
   const d = data || {};
-  const pearls: Record<string, PearlRecord> = d.pearls && typeof d.pearls === 'object' ? d.pearls : {};
-  const shine: Record<string, PearlShine> = d.pearlShine && typeof d.pearlShine === 'object' ? d.pearlShine : {};
-  const ids = new Set([...Object.keys(pearls), ...Object.keys(shine)]);
-  const pearlCount = [...ids].filter(id => ['polished', 'shining'].includes(pearlState(pearls[id], shine[id]))).length;
+  const path = d.selectedChantVariants && typeof d.selectedChantVariants === 'object' ? d.selectedChantVariants : {};
+  const pearlCount = pearlCounts(path, null).polished;
 
   const learning: Record<string, Record<string, { level?: number }>> = d.learning && typeof d.learning === 'object' ? d.learning : {};
   const parts = Object.values(learning).reduce(

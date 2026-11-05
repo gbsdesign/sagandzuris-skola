@@ -6,7 +6,7 @@ import type { PageType } from '../context/NavigationContext';
 // • the home buttons ("ჩემი ღილაკები").
 export type SectionId =
   | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'medavitneoba' | 'medavitneobaTopic' | 'chvevebi' | 'tamashebi' | 'tsinaprebi'
-  | 'gza' | 'biblioteka' | 'margalitebi';
+  | 'gza' | 'biblioteka';
 
 export interface SectionDef {
   id: SectionId;
@@ -25,8 +25,6 @@ export const SECTIONS: SectionDef[] = [
   { id: 'medavitneobaTopic', label: 'მედავითნეობა', page: 'medavitneoba', hint: 'მედავითნის სასწავლო კურსი' },
   { id: 'chvevebi', label: 'ჩვევები', page: 'gz', hint: 'ლოცვები ჩვევებიდან იხსნება' },
   { id: 'tamashebi', label: 'თამაშები', page: 'games', hint: 'მუსიკალური · ქართული · ცოცხალი' },
-  // the pearls game: the fifth round button of „საგანძურის გზა“, with a switch of its own (its feature is the games' one)
-  { id: 'margalitebi', label: 'მარგალიტები', page: 'gz', hint: 'მოისმინე, იმღერე, გააპრიალე' },
   { id: 'tsinaprebi', label: 'გაიცანი წინაპრები', page: 'tsinaprebi' },
   { id: 'gza', label: 'საგანძურის გზა', page: 'gz' },
   { id: 'biblioteka', label: 'ბიბლიოთეკა', page: 'biblioteka' },
@@ -35,7 +33,7 @@ export const SECTIONS: SectionDef[] = [
 export const sectionOfPage = (page: PageType): SectionId | null => {
   if (page === 'galoba') return 'galoba';
   if (page === 'psalter') return 'medavitneoba';
-  const s = SECTIONS.find(x => x.page === page && x.id !== 'chvevebi' && x.id !== 'margalitebi');
+  const s = SECTIONS.find(x => x.page === page && x.id !== 'chvevebi');
   return s ? s.id : null;
 };
 
@@ -51,7 +49,7 @@ export type SwitchId = SectionId | ExtraId;
 
 export const EXTRA_SWITCHES: { id: ExtraId; label: string; hint: string }[] = [
   { id: 'samosi', label: 'ჩემი სამოსი', hint: 'ჩოხა და კაბა — გზის მრგვალი ღილაკი და პროფილის ბარათი, ფოტოზე ჩაცმაც' },
-  { id: 'learn', label: 'ნასწავლი', hint: 'სასწავლო რეჟიმი, დავალებები, „დღეს გასამეორებელი“' },
+  { id: 'learn', label: 'ნასწავლი', hint: 'მარგალიტები და სკივრები, სასწავლო რეჟიმი, დავალებები, „დღეს გასამეორებელი“' },
   { id: 'manera', label: 'ოსტატობა', hint: 'სავარჯიშოები და რჩევები' },
   { id: 'work', label: 'სამუშაო', hint: 'დამოუკიდებელი სამუშაო გზაზე' },
   { id: 'prayers', label: 'ლოცვანი', hint: 'ლოცვები, ფსალმუნი, აკათისტოები, ბიბლია, მოსახსენებელი' },
@@ -68,7 +66,7 @@ export const isExtra = (id: string): id is ExtraId => EXTRA_SWITCHES.some(x => x
 /** Without the admin's settings: everything built is open; the psalter group and მედავითნეობა are "მალე". */
 export const DEFAULT_SECTION_STATE: Record<SwitchId, SectionState> = {
   galoba: 'open', simghera: 'open', mtkmeli: 'open', sakravebi: 'open', medavitneoba: 'soon', medavitneobaTopic: 'soon',
-  chvevebi: 'open', tamashebi: 'open', margalitebi: 'open', tsinaprebi: 'open', gza: 'open', biblioteka: 'open',
+  chvevebi: 'open', tamashebi: 'open', tsinaprebi: 'open', gza: 'open', biblioteka: 'open',
   samosi: 'open', learn: 'open', manera: 'open', work: 'open', prayers: 'open', classes: 'open', messages: 'open',
   search: 'open', calendar: 'open', recordings: 'open', abituri: 'open', birthdays: 'open',
 };

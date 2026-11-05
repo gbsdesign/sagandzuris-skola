@@ -1,10 +1,11 @@
 import { SAMOSI_PARTS } from '../data/samosiData';
 import { KABA_PARTS } from '../data/kabaData';
-import { CHESTS } from '../data/pearls';
+import { pearlCounts } from './pathPearls';
 import { nameGender } from '../data/georgianNames';
 
 // „ჯილდო სამოსისთვის“ (2026-10-28): every GIFT_EVERY pearls a teacher has approved (they shine) give the member's
-// outfit in „ჩემი სამოსი“ its next part, so the two games go together. The member's own app adds the part
+// outfit in „ჩემი სამოსი“ its next part. Since 2026-11-05 the pearls are the items of „ნასწავლი“ and a pearl shines once a
+// teacher confirmed it there (utils/pathPearls.ts). The member's own app adds the part
 // (hooks/usePearlGifts.ts) and the path page shows it once (components/pearls/PearlGift.tsx). Kept in
 // students/{uid}.pearlGifts = { steps, parts, seen }:
 //   steps  the fives already rewarded (one a teacher takes back is not rewarded again)
@@ -16,12 +17,12 @@ export const GIFT_EVERY = 5;
 export type Outfit = 'chokha' | 'kaba';
 export interface PearlGifts { steps: number; parts: string[]; seen: number }
 
-const PEARL_IDS = new Set(CHESTS.flatMap(c => c.pearls));
 const EXTRA_HATS = new Set(SAMOSI_PARTS.filter(p => p.extraHat).map(p => p.id));
 
-/** How many of the chests' pearls shine (students.pearlShine also keeps other approvals: learn~…, read~…). */
-export const shiningCount = (shine: Record<string, unknown> | null | undefined) =>
-  Object.entries(shine || {}).filter(([id, v]) => !!v && PEARL_IDS.has(id)).length;
+/** How many pearls of „ნასწავლი“ shine: items of the path (students.selectedChantVariants) a teacher has confirmed
+ *  (confirmations/{uid}.voices). */
+export const shiningCount = (path: Record<string, any> | null | undefined, confirmed: Record<string, unknown> | null | undefined) =>
+  pearlCounts(path, confirmed).shining;
 
 /** The record as Firestore holds it, made safe. */
 export const readGifts = (v: unknown): PearlGifts => {
