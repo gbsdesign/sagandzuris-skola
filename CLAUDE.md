@@ -439,11 +439,13 @@
   `ItemSheet` (ნოტები / სიმღერა and სწავლა big; „ხმები“ = one row a voice: my round mark + who knows it, a tap unfolds the
   names; under them two small buttons: the studio — „ჩემი ხმის ჩაწერა“, a teacher's „ჯგუფური ჩანაწერი“ — and a teacher's
   „დავალებად მიცემა“ = `NewAssignment` with `preset`), and for teachers „+ პროგრამაში დამატება“ under the list
-  (`ProgramQuickAdd`: the catalogue tree, saved once when it closes — order and ✕ stay in ✎ → „სასწავლო პროგრამა“); under it
-  „პროგრამის ჩამოწერა ოფლაინისთვის“ under the list (2026-11-05, `classes/ProgramOffline.tsx`, `utils/programOffline.ts`): a chant
+  (`ProgramQuickAdd`: the catalogue tree, saved once when it closes — order and ✕ stay in ✎ → „სასწავლო პროგრამა“); the
+  program's offline save is a round 36px ☁ at the right of the card's title (2026-11-05 evening — the big box under the list was
+  too big, the user: „სადმე სხვაგან პატარაზე“; `OfflineButton` + one short line under the title only while it works or just
+  finished, `OfflineNote`, both over `useProgramOffline` in `classes/ProgramOffline.tsx`; `utils/programOffline.ts`): a chant
   version's book pages, drawings and school recording by `saveOffline` (offlineNotes), a folk song's recordings through the
-  offline queue (`chooseItems` in offlineFiles — items `s:<song>`, the header's cloud shows them); the size at the right, then the
-  count; the notes' JSON and poems' texts are in the automatic packs already. Then
+  offline queue (`chooseItems` in offlineFiles — items `s:<song>`, the header's cloud shows them); the size in the ☁'s label, a ring
+  fills round it while it works, green ✓ once saved; the notes' JSON and poems' texts are in the automatic packs already. Then
   folded cards: ოსტატობა (`ClassLessons fold`; its „+ ახალი გაკვეთილი“ inside, under the lessons), the psalter group
   (folded head line with „შენი: N“; `focus` opens it) — „ჩათი“ (`ClassChat`; a dot while unread). An assignment card =
   `WorkCardHead` — the chant's own name big + one grey line (`utils/assignmentLines.ts` + test), a tap opens its notes / song

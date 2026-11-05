@@ -17,7 +17,7 @@ import { PartsBar } from '../learn/PartsBar';
 import { learnPieceOf, useOpenLearning } from '../learn/openLearning';
 import { Btn, Flash, Sheet, useFlash } from '../ui/kit';
 import { Studio, studioPiece } from '../studio/ClassStudio';
-import { ProgramOffline } from './ProgramOffline';
+import { OfflineButton, OfflineNote, useProgramOffline } from './ProgramOffline';
 
 type Listed = ProgramItem & { id: string; key: string };
 
@@ -54,6 +54,8 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; editi
 
   const listed: Listed[] = cls.program.flatMap((p, i) => (p.id ? [{ ...p, id: p.id, key: `${i}:${p.id}` }] : []));
   const free = cls.program.filter(p => !p.id);
+  // the whole program on the phone, for church and the road: a round ☁ beside the title (components/classes/ProgramOffline)
+  const offline = useProgramOffline(editing ? [] : listed.map(p => p.id));
   const mine = (id: string) => (iAmMember ? ownVoices(selectedChantVariants, confirmed, id) : { known: [] as Voice[], confirmed: [] as Voice[] });
 
   // the members who know one voice of one item: the viewer from their own live marks, the others from their copies
@@ -147,11 +149,15 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; editi
 
   return (
     <section className="bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] px-4 min-[400px]:px-5 sm:px-6 pt-1 pb-4" aria-label="სასწავლო პროგრამა">
-      <h2 className="min-h-12 flex items-center gap-2">
-        <ListChecks className="w-5 h-5 shrink-0 text-[#7a2028]" />
-        <span className="font-serif-ge text-lg font-bold text-[#4a3426] truncate">სასწავლო პროგრამა</span>
-        {cls.program.length > 0 && <span className="text-sm font-bold text-[#a4927c] tabular-nums">{cls.program.length}</span>}
-      </h2>
+      <div className="min-h-12 flex items-center gap-2">
+        <h2 className="min-w-0 flex items-center gap-2">
+          <ListChecks className="w-5 h-5 shrink-0 text-[#7a2028]" />
+          <span className="font-serif-ge text-lg font-bold text-[#4a3426] truncate">სასწავლო პროგრამა</span>
+          {cls.program.length > 0 && <span className="text-sm font-bold text-[#a4927c] tabular-nums">{cls.program.length}</span>}
+        </h2>
+        <OfflineButton o={offline} />
+      </div>
+      <OfflineNote o={offline} />
       {iAmMember && total > 0 && !editing && (
         <div className="mb-2 flex items-center gap-3">
           <div className="flex-1 h-2 rounded-full bg-[#ece2d1] overflow-hidden">
@@ -191,9 +197,6 @@ export const ClassProgram: React.FC<{ cls: SchoolClass; canEdit?: boolean; editi
           )}
         </div>
       )}
-
-      {/* the whole program on the phone, for church and the road (notes and recordings, components/classes/ProgramOffline) */}
-      {!editing && listed.length > 0 && <ProgramOffline ids={listed.map(p => p.id)} />}
 
       {/* the teachers: add to the program right here (its order and ✕ stay in ✎ → „სასწავლო პროგრამა“) */}
       {canEdit && !editing && (
