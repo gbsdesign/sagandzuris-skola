@@ -1,0 +1,91 @@
+# The iPhone app (App Store): the live site https://sagandzureli.ge inside the app's own WKWebView, plus the app's own
+# parts — sign-in with Google and Apple, notifications (Firebase Cloud Messaging → APNs), files saved through the share
+# sheet, recordings that go on with the screen locked. The Xcode project is made from this file by XcodeGen on GitHub's
+# Mac (.github/workflows/ios.yml) — nobody needs a Mac. Never commit Sagandzuri.xcodeproj, Info.plist or the
+# entitlements file: they are written from here.
+name: Sagandzuri
+options:
+  bundleIdPrefix: ge.sagandzureli
+  deploymentTarget:
+    iOS: "16.0"
+  createIntermediateGroups: true
+packages:
+  GoogleSignIn:
+    url: https://github.com/google/GoogleSignIn-iOS
+    majorVersion: 9.0.0
+  Firebase:
+    url: https://github.com/firebase/firebase-ios-sdk
+    majorVersion: 12.19.0
+settings:
+  base:
+    MARKETING_VERSION: 1.0.0
+    CURRENT_PROJECT_VERSION: 1
+    SWIFT_VERSION: "5.0"
+targets:
+  Sagandzuri:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sagandzuri
+    dependencies:
+      - package: GoogleSignIn
+      - package: Firebase
+        product: FirebaseMessaging
+    scheme: {}
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: ge.sagandzureli.app
+        PRODUCT_NAME: Sagandzuri
+        TARGETED_DEVICE_FAMILY: "1"
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        CODE_SIGN_STYLE: Automatic
+        # the workflow puts the real value from GoogleService-Info.plist here (Google's sign-in comes back by it)
+        GOOGLE_REVERSED_CLIENT_ID: com.googleusercontent.apps.not-set
+    info:
+      path: Sagandzuri/Info.plist
+      properties:
+        CFBundleDisplayName: საგანძური
+        CFBundleDevelopmentRegion: en
+        LSRequiresIPhoneOS: true
+        ITSAppUsesNonExemptEncryption: false
+        UILaunchScreen:
+          UIColorName: LaunchBackground
+          UIImageName: LaunchLogo
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+        UIBackgroundModes:
+          - audio
+          - remote-notification
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+          UISceneConfigurations:
+            UIWindowSceneSessionRoleApplication:
+              - UISceneConfigurationName: Default Configuration
+                UISceneDelegateClassName: $(PRODUCT_MODULE_NAME).SceneDelegate
+        # the site's own pages: only they open inside the app, and the site's service worker (offline) needs this list
+        WKAppBoundDomains:
+          - sagandzureli.ge
+          - www.sagandzureli.ge
+          - sagandzuris-skola.pages.dev
+        CFBundleURLTypes:
+          - CFBundleURLName: google-sign-in
+            CFBundleURLSchemes:
+              - $(GOOGLE_REVERSED_CLIENT_ID)
+        # Push.swift hands the phone's token to Firebase itself
+        FirebaseAppDelegateProxyEnabled: false
+        NSMicrophoneUsageDescription: მიკროფონი საჭიროა, რომ აპმა მოისმინოს და შეაფასოს შენი გალობა, ჩაწეროს ხმოვანი შეტყობინება და ზარის დროს გაგაგონოს სხვებს.
+        NSCameraUsageDescription: კამერა საჭიროა ვიდეოზარისთვის და ფოტოს გადასაღებად.
+        NSPhotoLibraryAddUsageDescription: საჭიროა, რომ შენახული სურათი ფოტოებში ჩაიწეროს.
+    entitlements:
+      path: Sagandzuri/Sagandzuri.entitlements
+      properties:
+        aps-environment: development
+        com.apple.developer.applesignin:
+          - Default
+        com.apple.developer.associated-domains:
+          - applinks:sagandzureli.ge
+          - applinks:www.sagandzureli.ge
+          - webcredentials:sagandzureli.ge
+        com.apple.developer.usernotifications.time-sensitive: true

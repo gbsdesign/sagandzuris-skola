@@ -3,9 +3,12 @@ import { holdSinging } from '../utils/othersPage';
 import {
   User,
   signInWithPopup,
+  signInWithCredential,
   signOut,
   onAuthStateChanged,
+  updateProfile,
   GoogleAuthProvider,
+  OAuthProvider,
 } from 'firebase/auth';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase';
@@ -13,6 +16,7 @@ import { triggerHaptic } from '../utils/haptics';
 import { writeDirectory } from '../utils/directory';
 import { registerTeacher } from '../hooks/useDirectChat';
 import { ensureMembership } from '../utils/memberAccess';
+import { iosCall, iosWord, isIosApp } from '../utils/iosApp';
 
 export const SUPER_ADMIN_EMAIL = 'mr.gabunia@gmail.com';
 
@@ -47,6 +51,8 @@ export interface AuthContextType {
   accessToken: string | null;
   errorMessage: string | null;
   signInWithGoogle: () => Promise<string | null>;
+  /** the iPhone app only (utils/iosApp): Apple's own sign-in, which the App Store asks for beside Google's */
+  signInWithApple: () => Promise<void>;
   signOutUser: () => Promise<void>;
   getOrPromptDriveToken: () => Promise<string | null>;
   clearErrorMessage: () => void;
@@ -152,11 +158,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     return () => unsubscribe();
   }, []);
 
+  // in the iPhone app Google's page cannot open (Google refuses it inside an app): the app signs in natively and its
+  // tokens sign in to Firebase (ios/Sagandzuri/SignIn.swift)
+  const iosSignInError = (e: unknown, fallback: string) => {
+    const word = iosWord(e);
+    const code = (e as { code?: string } | null)?.code;
+    if (word === 'cancelled') return;
+    if (word === 'not-ready') setErrorMessage('ამ გზით შესვლა აპში ჯერ არ არის ჩართული — სცადე სხვა გზით.');
+    else if (code === 'auth/account-exists-with-different-credential') setErrorMessage('ეს ელფოსტა სხვა გზითაა დარეგისტრირებული — შედი ისე, როგორც პირველად შეხვედი.');
+    else setErrorMessage(fallback);
+  };
+
   const signInWithGoogle = async (): Promise<string | null> => {
     triggerHaptic(20);
     try {
       setSigningIn(true);
       setErrorMessage(null);
+      if (isIosApp()) {
+        const r = await iosCall<{ idToken: string; accessToken?: string }>('google');
+        await signInWithCredential(auth, GoogleAuthProvider.credential(r.idToken, r.accessToken || null));
+        if (r.accessToken) setAccessToken(r.accessToken);
+        return r.accessToken || null;
+      }
       const result = await signInWithPopup(auth, googleProvider);
       const credential = GoogleAuthProvider.credentialFromResult(result);
       const token = credential?.accessToken || null;
@@ -165,7 +188,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       }
       return token;
     } catch (error: any) {
-      if (error.code === 'auth/popup-closed-by-user') {
+      if (isIosApp()) {
+        iosSignInError(error, 'ავტორიზაციისას დაფიქსირდა შეცდომა. გთხოვთ, სცადოთ ხელახლა.');
+      } else if (error.code === 'auth/popup-closed-by-user') {
         setErrorMessage('ავტორიზაციის ფანჯარა დაიხურა.');
       } else if (error.code === 'auth/cancelled-popup-request') {
         // Ignored
@@ -173,6 +198,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setErrorMessage('ავტორიზაციისას დაფიქსირდა შეცდომა. გთხოვთ, სცადოთ ხელახლა.');
       }
       return null;
+    } finally {
+      setSigningIn(false);
+    }
+  };
+
+  const signInWithApple = async (): Promise<void> => {
+    triggerHaptic(20);
+    try {
+      setSigningIn(true);
+      setErrorMessage(null);
+      const r = await iosCall<{ idToken: string; rawNonce: string; givenName?: string; familyName?: string }>('apple');
+      const result = await signInWithCredential(auth, new OAuthProvider('apple.com').credential({ idToken: r.idToken, rawNonce: r.rawNonce }));
+      // Apple tells the name only on the very first sign-in
+      const name = [r.givenName, r.familyName].filter(Boolean).join(' ').trim();
+      if (name && !result.user.displayName) await updateProfile(result.user, { displayName: name }).catch(() => {});
+    } catch (error) {
+      iosSignInError(error, 'Apple-ით შესვლისას დაფიქსირდა შეცდომა. სცადე ხელახლა.');
     } finally {
       setSigningIn(false);
     }
@@ -209,6 +251,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         accessToken,
         errorMessage,
         signInWithGoogle,
+        signInWithApple,
         signOutUser,
         getOrPromptDriveToken,
         clearErrorMessage,

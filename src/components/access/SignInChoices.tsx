@@ -3,9 +3,17 @@ import { ArrowLeft, LogIn, Mail, MailCheck, Send } from 'lucide-react';
 import { useAuth } from '../../context';
 import { Btn } from '../ui/kit';
 import { emailLinkError, looksLikeEmail, rememberedEmail, sendEmailLink } from '../../utils/emailLink';
+import { isIosApp } from '../../utils/iosApp';
 
 // The two ways in: the Google account, or a link sent to any e-mail address (no password). Large type and
-// plain words: many who use the e-mail road are older members of the psalter group.
+// plain words: many who use the e-mail road are older members of the psalter group. In the iPhone app Apple's own
+// sign-in stands beside Google's, as big (the App Store asks it of every app with a Google sign-in).
+
+const AppleMark: React.FC = () => (
+  <svg viewBox="0 0 17 20" aria-hidden="true" className="w-[18px] h-[18px] fill-current">
+    <path d="M14.1 10.6c0-2.6 2.1-3.8 2.2-3.9-1.2-1.8-3.1-2-3.7-2-1.6-.2-3.1.9-3.9.9-.8 0-2-.9-3.4-.9C3.6 4.8 2 5.8 1.1 7.4c-1.9 3.2-.5 8 1.3 10.6.9 1.3 1.9 2.7 3.3 2.6 1.3-.1 1.8-.8 3.4-.8 1.6 0 2 .8 3.4.8 1.4 0 2.3-1.3 3.2-2.6 1-1.5 1.4-2.9 1.4-3-.1 0-2.9-1.1-3-4.4zM11.5 3c.7-.9 1.2-2.1 1.1-3.3-1 0-2.3.7-3 1.6-.7.8-1.3 2-1.1 3.2 1.1.1 2.3-.6 3-1.5z" />
+  </svg>
+);
 
 export const EMAIL_FIELD =
   'w-full h-12 px-4 rounded-2xl bg-white ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/40 text-[17px] text-[#2a2017] placeholder:text-[#b3a594] outline-none transition';
@@ -16,7 +24,8 @@ export type SignInStep = 'choose' | 'email' | 'sent';
 
 /** `onStep` lets the sheet around it hide its own introduction once the e-mail road is taken. */
 export const SignInChoices: React.FC<{ onStep?: (step: SignInStep) => void }> = ({ onStep }) => {
-  const { signInWithGoogle, signingIn } = useAuth();
+  const { signInWithGoogle, signInWithApple, signingIn } = useAuth();
+  const inIosApp = isIosApp();
   const [step, setStep] = useState<SignInStep>('choose');
   const [email, setEmail] = useState(rememberedEmail);
   const [busy, setBusy] = useState(false);
@@ -55,6 +64,17 @@ export const SignInChoices: React.FC<{ onStep?: (step: SignInStep) => void }> = 
         <Btn size="lg" full icon={<LogIn />} onClick={() => void signInWithGoogle()} disabled={signingIn}>
           {signingIn ? 'შესვლა…' : 'შესვლა Google-ით'}
         </Btn>
+        {inIosApp && (
+          <button
+            type="button"
+            onClick={() => void signInWithApple()}
+            disabled={signingIn}
+            className="w-full h-12 px-6 rounded-full bg-black text-white text-[15px] font-bold inline-flex items-center justify-center gap-2 select-none active:scale-[0.97] transition disabled:opacity-50"
+          >
+            <AppleMark />
+            შესვლა Apple-ით
+          </button>
+        )}
         <Btn size="lg" kind="ghost" full icon={<Mail />} onClick={() => { setError(''); setStep('email'); }}>
           შესვლა ელფოსტით
         </Btn>

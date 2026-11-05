@@ -1,0 +1,128 @@
+# The iPhone app (ios/): made on GitHub's own Mac, so nobody needs one. On a pull request it is only built for the
+# simulator (does it compile?). On main — or by hand (Actions → iPhone app → Run workflow) — it is signed by Apple's
+# cloud certificate and uploaded to App Store Connect, where it shows in TestFlight in a few minutes.
+#
+# One-time setup (repository → Settings → Secrets and variables → Actions):
+#   secrets ASC_KEY_ID, ASC_ISSUER_ID, ASC_KEY_P8 — an App Store Connect API key with the Admin role
+#           (App Store Connect → Users and Access → Integrations → Team Keys; ASC_KEY_P8 = the whole .p8 file's text)
+#   secret  APPLE_TEAM_ID — the developer account's Team ID (developer.apple.com → Account → Membership details)
+#   and once, the app's page in App Store Connect (Apps → + → New App, Bundle ID ge.sagandzureli.app): until it exists
+#   the run builds and signs the app but does not upload it.
+# ios/Sagandzuri/GoogleService-Info.plist (Firebase console → the iOS app) gives the app Google sign-in and notifications.
+name: iPhone app
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths: ['ios/**', '.github/workflows/ios.yml', '.github/scripts/asc.py']
+  pull_request:
+    paths: ['ios/**', '.github/workflows/ios.yml', '.github/scripts/asc.py']
+
+concurrency:
+  group: ios-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: macos-26
+    timeout-minutes: 75
+    env:
+      ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+      ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+      ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+      APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Pick the newest Xcode 26
+        run: |
+          XC=$(ls -d /Applications/Xcode_26*.app | grep -v -i beta | sort -V | tail -1)
+          sudo xcode-select -s "$XC"
+          xcodebuild -version
+
+      - name: Make the Xcode project
+        working-directory: ios
+        run: |
+          brew install xcodegen
+          F=Sagandzuri/GoogleService-Info.plist
+          if [ -f "$F" ]; then
+            R=$(/usr/libexec/PlistBuddy -c 'Print :REVERSED_CLIENT_ID' "$F")
+            sed -i '' "s/com.googleusercontent.apps.not-set/$R/" project.yml
+          else
+            echo "::warning::ios/Sagandzuri/GoogleService-Info.plist is missing — the app is built without Google sign-in and notifications."
+          fi
+          xcodegen generate
+
+      - name: Which way
+        id: mode
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ] && [ -n "$ASC_KEY_ID" ] && [ -n "$ASC_ISSUER_ID" ] && [ -n "$ASC_KEY_P8" ] && [ -n "$APPLE_TEAM_ID" ]; then
+            echo "release=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "release=false" >> "$GITHUB_OUTPUT"
+            [ "${{ github.event_name }}" = "pull_request" ] || echo "::warning::The App Store Connect secrets are missing — only a simulator build is made (see the top of .github/workflows/ios.yml)."
+          fi
+
+      - name: Build for the simulator
+        if: steps.mode.outputs.release != 'true'
+        working-directory: ios
+        run: |
+          xcodebuild -project Sagandzuri.xcodeproj -scheme Sagandzuri -configuration Release \
+            -destination 'generic/platform=iOS Simulator' -derivedDataPath build CODE_SIGNING_ALLOWED=NO build -quiet
+
+      - name: App Store Connect key
+        if: steps.mode.outputs.release == 'true'
+        id: asc
+        run: |
+          printf '%s\n' "$ASC_KEY_P8" > "$RUNNER_TEMP/AuthKey.p8"
+          echo "ASC_KEY_PATH=$RUNNER_TEMP/AuthKey.p8" >> "$GITHUB_ENV"
+          python3 -m venv "$RUNNER_TEMP/py"
+          "$RUNNER_TEMP/py/bin/pip" install -q pyjwt cryptography requests
+          ASC_KEY_PATH="$RUNNER_TEMP/AuthKey.p8" "$RUNNER_TEMP/py/bin/python" .github/scripts/asc.py prepare
+
+      - name: Archive
+        if: steps.mode.outputs.release == 'true'
+        working-directory: ios
+        run: |
+          BUILD=$(( ${{ github.run_number }} * 10 + ${{ github.run_attempt }} ))
+          echo "Build number $BUILD"
+          xcodebuild -project Sagandzuri.xcodeproj -scheme Sagandzuri -configuration Release \
+            -destination 'generic/platform=iOS' -archivePath "$RUNNER_TEMP/Sagandzuri.xcarchive" -derivedDataPath build \
+            DEVELOPMENT_TEAM="$APPLE_TEAM_ID" CODE_SIGN_STYLE=Automatic CURRENT_PROJECT_VERSION="$BUILD" \
+            -allowProvisioningUpdates -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID" \
+            archive -quiet
+
+      - name: Upload to App Store Connect
+        if: steps.mode.outputs.release == 'true' && steps.asc.outputs.has_app == 'true'
+        run: |
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<EOF
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>upload</string>
+            <key>signingStyle</key><string>automatic</string>
+            <key>teamID</key><string>${APPLE_TEAM_ID}</string>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          EOF
+          xcodebuild -exportArchive -archivePath "$RUNNER_TEMP/Sagandzuri.xcarchive" \
+            -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist" -exportPath "$RUNNER_TEMP/export" \
+            -allowProvisioningUpdates -authenticationKeyPath "$ASC_KEY_PATH" \
+            -authenticationKeyID "$ASC_KEY_ID" -authenticationKeyIssuerID "$ASC_ISSUER_ID"
+          echo "### ✅ აიტვირთა App Store Connect-ში — რამდენიმე წუთში TestFlight-ში გამოჩნდება" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: No app page yet
+        if: steps.mode.outputs.release == 'true' && steps.asc.outputs.has_app != 'true'
+        run: |
+          echo "::warning::The app's page is not in App Store Connect yet (Apps → + → New App, Bundle ID ge.sagandzureli.app) — the app was built and signed but not uploaded. Run this workflow again once the page exists."
+          echo "### ⚠️ App Store Connect-ში აპის გვერდი ჯერ არ არის — შექმენი (Bundle ID: ge.sagandzureli.app) და ხელახლა გაუშვი" >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Revoke this run's development certificate
+        if: always() && steps.mode.outputs.release == 'true'
+        run: '"$RUNNER_TEMP/py/bin/python" .github/scripts/asc.py cleanup || true'
