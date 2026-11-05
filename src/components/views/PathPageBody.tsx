@@ -3,7 +3,6 @@ import { useAccess } from '../../hooks/useAccess';
 import { ChvevebiContent } from './ChvevebiPanel';
 import { PATH_ORBS, PathOrbs } from './PathOrbs';
 import { PathTabs } from './PathTabs';
-import { PathToday } from './PathToday';
 
 /** The body of „საგანძურის გზა“ (page `gz`) — also a student's own page opened by their teacher (pages/StudentPage.tsx,
  *  inside ViewAsStudent, so every part reads that student's record). „მარგალიტები“ (section margalitebi) shows only while
@@ -12,14 +11,12 @@ import { PathToday } from './PathToday';
 export const PathPageBody: React.FC = () => {
   const access = useAccess();
   const pathOrbs = PATH_ORBS.filter(o => (o.id === 'pearls' ? access.section('margalitebi') === 'open' : access.on(o.id)));
-  const pathToday = access.section('gza') === 'open';
   const habitsOpen = access.section('chvevebi') === 'open';
   return (
     <div className="w-full max-w-2xl mx-auto mb-2 px-1 space-y-5">
-      {/* „ჩემი დღე“: the page title sits in the top bar; PathToday's „დღეს“ card first (a lesson, an assignment, a review —
-          when there is one), the five round buttons (სამოსი, ნასწავლი — with the teacher's assignments —, ოსტატობა,
-          სამუშაო, მარგალიტები) in the member's order, the habits under them */}
-      {pathToday && <PathToday />}
+      {/* „ჩემი დღე“: the page title sits in the top bar; the five round buttons (სამოსი, ნასწავლი — with the teacher's
+          assignments —, ოსტატობა, სამუშაო, მარგალიტები) in the member's order, the habits under them. The „დღეს“ card on top
+          was taken off at the user's wish (2026-11-05). */}
       <PathTabs
         orbs={pathOrbs.length ? { labels: pathOrbs, render: order => <PathOrbs order={order} /> } : undefined}
         cards={!habitsOpen ? [] : [
