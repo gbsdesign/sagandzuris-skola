@@ -16,6 +16,11 @@ moving to the next chant in service order.
   კლასს“, 3 „ტაძარში“ (start, offline, „გუნდი მომყვება“); a member's starts with „წირვის დაწყება“; QR / PDF = the small
   „გაზიარება“ row at the end (`.pp-share`).
 - `NpStepper.tsx`: small +/- stepper (tone ±7).
+- `QrTools.tsx` (2026-11-05, the user: „ყველა ნოტს მაღლა პატარაზე დაამატე ქიუარი და კამერა“; in the grapes' old place right of the
+  title, `.np-cap-qr`): QR = a bottom sheet with this page's code (`shareNotesUrl`, qrcode-generator); camera = full-screen reader
+  on `<body>` (`BarcodeDetector` where the phone has one, else jsQR lazily on the frame's middle square). What a code points at:
+  `utils/qrLink.ts` `qrTarget` + test — a chant of the school's sites opens in place (`goTo`), another page of the app opens here,
+  another site / plain words show a card first. Both take a history entry (`sgQr`, `sgScan`), so the phone's back closes them.
 - „სწავლა“ (`.np-learn`, beside the zoom; not in the crowded top bar) opens `components/learn/LearnMode.tsx` over
   the page (portal on body, its own `sgLearn` history entry). The home card „დღეს გასამეორებელი“ opens it straight away
   through `requestLearn(piece)` → `takeLearn(vid)` once the score has loaded.

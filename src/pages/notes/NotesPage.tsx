@@ -5,7 +5,7 @@ import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useSta
 import {
   ArrowLeft, ArrowRight, BookmarkCheck, BookmarkPlus, Check, ChevronDown, ChevronLeft, ChevronUp, Church, CloudDownload, Download, Ellipsis,
   FileText, Flame, GraduationCap, Headphones, ListPlus, LoaderCircle, Minus, Moon, Music2, Pause, Piano, Play, Plus, Repeat, RotateCcw,
-  CircleDot, Scan, SlidersHorizontal, Sun, SunMoon, TextAlignStart, X, ZoomIn, ZoomOut, Pin,
+  CircleDot, Scan, SlidersHorizontal, Sun, SunMoon, TextAlignStart, X, ZoomIn, ZoomOut, Pin, QrCode, Camera,
 } from 'lucide-react';
 import './notes.css';
 import { useNotes, shareNotesUrl, NotesOrigin } from '../../context/NotesContext';
@@ -28,8 +28,9 @@ import { takeLearn } from '../../utils/learnOpen';
 import { beatAt, markerAt } from '../../utils/learn';
 import type { Voice } from '../../utils/pathItems';
 import { NpStepper } from './NpStepper';
+import { QrScanner, QrSheet } from './QrTools';
 import { getAudioArrayBufferFromIdb } from '../../utils/audioIdb';
-import { GrapeBunch, VineLeaf, Rosette, Sprig, PlateBand } from '../../components/home/PlateOrnaments';
+import { Rosette, Sprig, PlateBand } from '../../components/home/PlateOrnaments';
 import { isOffline, onOfflineChange, saveOffline, offlineSupported } from '../../utils/offlineNotes';
 import { triggerHaptic } from '../../utils/haptics';
 import { stopPreview } from '../../utils/listPreview';
@@ -189,6 +190,8 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     if (asked) { setLearnVoice(asked.voice); setLearning(true); }
   }, [score, vid]);
   const [moreOpen, setMoreOpen] = useState(false);
+  // beside the title: this chant's QR code / the camera that reads one
+  const [qr, setQr] = useState<'code' | 'scan' | null>(null);
   const [paper, setPaper] = useState<Paper>(() => store.get<Paper>('sagandzuri_paper', 'day'));
   const [darkOS, setDarkOS] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
   const [wakeOn, setWakeOn] = useState(() => store.get('sagandzuri_wake', true));
@@ -930,10 +933,15 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
               <h2 className="np-cap-title">{title}</h2>
               <div className="np-cap-meta">{name}</div>
             </div>
-            <div className="np-cap-orn" aria-hidden>
-              <VineLeaf color="#b3cbbd" className="orn-in" style={{ left: 2, top: 4, width: 30, transform: 'rotate(-24deg)' }} />
-              <GrapeBunch color="#c4262e" curls className="orn-in" style={{ left: 24, top: -2, width: 50, transform: 'rotate(6deg)' }} />
-              <Rosette color="#eab53a" petals={10} className="orn-in orn-spin" style={{ right: 2, top: 32, width: 17 }} />
+            <div className="np-cap-qr" role="group" aria-label="QR კოდი">
+              <button type="button" onClick={() => { triggerHaptic(8); setMoreOpen(false); setQr('code'); }}
+                aria-label="ამ ნოტების QR კოდი" title="QR კოდი — მეორე ტელეფონისთვის">
+                <QrCode strokeWidth={1.9} />
+              </button>
+              <button type="button" onClick={() => { triggerHaptic(8); setMoreOpen(false); setQr('scan'); }}
+                aria-label="QR კოდის წაკითხვა კამერით" title="კამერა — QR კოდის წაკითხვა">
+                <Camera strokeWidth={1.9} />
+              </button>
             </div>
             <div className="np-cap-tools">
               {startGroup}
@@ -1220,6 +1228,17 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
         <span>{toast.msg}</span>
         {toast.action && <button type="button" onClick={() => { toast.action!.run(); setToast(t => ({ ...t, on: false })); }}>{toast.action.label}</button>}
       </div>
+      {qr === 'code' && <QrSheet url={shareUrl} title={title} sub={name} say={msg => showToast(msg)} onClose={() => setQr(null)} />}
+      {qr === 'scan' && (
+        <QrScanner onClose={found => {
+          setQr(null);
+          if (!found) return;
+          if (found === vid) { showToast('ეს ნოტები უკვე გახსნილია'); return; }
+          goTo(found, 1);
+          const next = findVersion(found);
+          if (next) showToast(`გაიხსნა: ${next.chant.title.replace(/[;\s]+$/, '')}`);
+        }} />
+      )}
       {learning && score && <LearnMode vid={vid} score={score} voice={learnVoice} onClose={() => { setLearning(false); setLearnVoice(undefined); }} />}
     </div>
   );
