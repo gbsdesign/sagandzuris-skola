@@ -261,6 +261,12 @@
   `python3 scripts/etnofori/build.py /tmp/etno.tsv` (places → regions in `scripts/etnofori/places.py`; episodes' ordinal words → №
   in `episodes.py`). 2026-11-07: 1814 songs, 331 episodes; ~150 titles that name no place (the 2020 „დარჩი სახლში“ home takes, talk
   shows) and the announcements are left out. Not updated by itself — re-run when the user asks.
+  **„მონასტრები“** (the same day, the user: „მონასტრებზე ვიდეოები იპოვე“, answers „ა ა ა“): a third tab — the tabs are now
+  „სიმღერები · მონასტრები · გადაცემები“ (`sg-videos-tab`) —, TV reports on 72 monasteries (106 films: Imedi, GPB, ერთსულოვნება…;
+  history and life, no short news) on the same map + an „უცხოეთი“ card (Athos, Jerusalem, Petritsoni, Istanbul…); a region = its
+  monasteries as chips; `mapItem` „m:<region>[/<id>]“. Data `data/monasteryVideos.ts`, picked by hand: each monastery's region
+  checked in two places (OpenStreetMap + the Georgian Encyclopedia / Wikipedia / georgia.travel, or the report's title) — six
+  that could not be checked were left out. Add new films at the end of their region.
 - **Prayers** (`data/prayers.ts`, `public/prayers/`, `public/bible/`), psalter kathismas, 73 akathists,
   commemoration name lists (`utils/commemoration.ts`), prayer reminders via Web Push Worker
   `sagandzuri-reminders` (`worker/reminders/`; push works only on the deployed site).
