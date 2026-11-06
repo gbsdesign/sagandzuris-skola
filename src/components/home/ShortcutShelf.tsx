@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useMemo, useRef, useState } from 'react';
-import { BookMarked, BookOpen, CalendarDays, Check, Clock, Compass, Feather, GraduationCap, Library, Moon, Music, Music2, Music4, Pencil, Plus, ScrollText, Sparkles, Star, Sun, Users, X, Pin, PinOff, Guitar, Church, NotebookPen, HandHeart, Flame, Heart, MessageCircle, ListMusic, School, ClipboardList, ClipboardCheck, CalendarClock, Settings2, Cake, ChevronDown, ChevronUp } from 'lucide-react';
+import { BookMarked, BookOpen, CalendarDays, Check, Clock, Compass, Feather, GraduationCap, Library, Moon, Music, Music2, Music4, Pencil, Plus, ScrollText, Sparkles, Star, Sun, Users, X, Pin, PinOff, Guitar, Church, NotebookPen, HandHeart, Flame, Heart, MessageCircle, ListMusic, School, ClipboardList, ClipboardCheck, CalendarClock, Settings2, Cake, ChevronDown, ChevronUp, MonitorPlay } from 'lucide-react';
 import { useAuth, useChants, useNavigation } from '../../context';
 import { useNotes } from '../../context/NotesContext';
 import { dayKey } from '../../utils/habitsWeek';
@@ -30,7 +30,7 @@ import { SHELF_GRID, TileCheck, TileIcon, TileName, tileClass } from './ShelfTil
 
 const SECTION_ICON: Record<SectionId, React.ReactNode> = {
   galoba: <Music2 />, simghera: <Music />, mtkmeli: <Feather />, sakravebi: <Guitar />, medavitneoba: <BookOpen />, medavitneobaTopic: <BookOpen />,
-  chvevebi: <Sparkles />, tamashebi: <Star />, tsinaprebi: <Users />, gza: <Compass />, biblioteka: <Library />,
+  chvevebi: <Sparkles />, tamashebi: <Star />, tsinaprebi: <Users />, gza: <Compass />, biblioteka: <Library />, videoebi: <MonitorPlay />,
 };
 const SPECIAL_ICON: Record<string, React.ReactNode> = {
   kathisma: <BookMarked />, liturgy: <Music4 />, commemoration: <ScrollText />, calendar: <CalendarDays />, class: <GraduationCap />, teacher: <GraduationCap />, birthdays: <Cake />,

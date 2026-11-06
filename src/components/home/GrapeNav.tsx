@@ -37,6 +37,8 @@ export const GrapeNav: React.FC = () => {
     // signed in: habits fold open on the path page; guests get the sign-in prompt
     { id: 'chvevebi', label: 'ჩვევები', x: 62, y: 8, nx: 66, ny: 8, go: () => (user ? (openPathPanel('habits'), navigateTo('gz')) : openModal('chvevebi')) },
     { id: 'tamashebi', label: 'თამაშები', x: 86, y: 28, nx: 83, ny: 20, go: () => navigateTo('games') },
+    // „ეთნოფორი“'s films, right of the trunk above the ground
+    { id: 'videoebi', label: 'ვიდეოები', x: 80, y: 62, nx: 81, ny: 63, go: () => navigateTo('videos') },
     // in the qvevri
     { id: 'tsinaprebi', label: 'გაიცანი წინაპრები', x: 51, y: 82, go: () => navigateTo('tsinaprebi') },
   ];

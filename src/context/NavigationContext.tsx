@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { triggerHaptic } from '../utils/haptics';
 import { wignebiParent } from '../utils/wignebiPath';
 
-export type PageType = 'home' | 'profile' | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'gz' | 'tsinaprebi' | 'bookmark' | 'admin' | 'teacher' | 'class' | 'prayer' | 'commemoration' | 'biblioteka' | 'psalter' | 'messages' | 'dm' | 'abituri' | 'offline' | 'birthdays' | 'medavitneoba' | 'games' | 'student';
+export type PageType = 'home' | 'profile' | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'gz' | 'tsinaprebi' | 'bookmark' | 'admin' | 'teacher' | 'class' | 'prayer' | 'commemoration' | 'biblioteka' | 'psalter' | 'messages' | 'dm' | 'abituri' | 'offline' | 'birthdays' | 'medavitneoba' | 'games' | 'student' | 'videos';
 export type ServiceType = 'წირვა' | 'მწუხრი' | 'ცისკარი' | 'სადღესასწაულო' | 'მარხვანი' | 'ზატიკი' | 'პანაშვიდი' | 'ჯვრისწერა' | 'ხელდასხმა' | 'პარაკლისი' | 'მომიხსენენი' | 'ძლისპირები' | 'კატაბასიები' | 'დასადებლები' | null;
 
 export interface NavigationContextType {
@@ -27,9 +27,10 @@ export interface NavigationContextType {
   openStudent: (uid: string, classId?: string) => void;
   // the region open on the songs / მთქმელი map, or the instrument open on the instruments page
   // (its own history step, so "back" first returns to the map); in the library a book ("lives") or a part
-  // of it ("lives:m9"). `replace` turns pages in place (the next chapter) instead of adding a step.
+  // of it ("lives:m9"). `replace` turns pages in place (the next chapter) instead of adding a step; `stay` keeps the
+  // page where it is (a film opened over a list, the videos page).
   mapItem: string | null;
-  openMapItem: (id: string, replace?: boolean) => void;
+  openMapItem: (id: string, replace?: boolean, stay?: boolean) => void;
   handleGoBack: () => void;
   setSelectedService: (service: ServiceType) => void;
   setExpandedChantId: React.Dispatch<React.SetStateAction<string | null>>;
@@ -44,7 +45,7 @@ const NavigationContext = createContext<NavigationContextType | undefined>(undef
 interface NavSnap { page: PageType; service: ServiceType; classId: string | null; prayerId: string | null; mapItem?: string | null; dmId?: string | null }
 const HOME: NavSnap = { page: 'home', service: null, classId: null, prayerId: null, mapItem: null, dmId: null };
 // pages whose open item (a map region, an instrument, a chant album, a library book) is a step of its own in history
-const MAP_PAGES: PageType[] = ['simghera', 'mtkmeli', 'sakravebi', 'galoba', 'biblioteka', 'medavitneoba', 'games'];
+const MAP_PAGES: PageType[] = ['simghera', 'mtkmeli', 'sakravebi', 'galoba', 'biblioteka', 'medavitneoba', 'games', 'videos'];
 const makeSnap = (page: PageType, service: ServiceType, classId: string | null, prayerId: string | null, mapItem: string | null, dmId: string | null = null): NavSnap => ({
   page,
   service: page === 'galoba' ? service : null,
@@ -172,13 +173,13 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     window.setTimeout(() => window.scrollTo({ top: 0 }), 0);
   };
 
-  const openMapItem = (id: string, replace = false) => {
+  const openMapItem = (id: string, replace = false, stay = false) => {
     triggerHaptic(10);
     markLeave();
     if (replace) replaceNext.current = performance.now();
     setMapItem(id);
     // the list starts at its top; "back" brings the map back where it was
-    window.setTimeout(() => window.scrollTo({ top: 0 }), 0);
+    if (!stay) window.setTimeout(() => window.scrollTo({ top: 0 }), 0);
   };
 
   const pushReturn = () => setReturnStack(stack => [...stack, { page: currentPage, scroll: window.scrollY, prayerId: selectedPrayerId }]);

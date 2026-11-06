@@ -248,6 +248,18 @@
   cut from the user's screenshot) and **მთქმელი authors map**
   (`data/mtkmeliData.ts`, `MtkmeliMap.tsx`, shared `RegionPuzzleMap.tsx`). Full texts only for authors who
   died before 1956; others get title + description + wiki link.
+- **ვიდეოები** (2026-11-07, page `videos`, section `videoebi`, `pages/VideosPage.tsx`; the user: „საქართველოს კუთხეების მიხედვით …
+  ვაზზე დაამატე ვიდეოების ღილაკი … საქ. რუკა როგორც მთქმელში … ეთნოფორის ვიდეოები მიამაგრე“, answers „ა ა ა“): the vine's label
+  „ვიდეოები“ (right of the trunk) opens the Adjara TV programme „ეთნოფორი“ (YouTube @etnofori, მიხეილ გაბაიძე) — tabs „კუთხეებით“
+  (the songs on `RegionPuzzleMap` like მთქმელი, Tbilisi for ქალაქური, cards ლაზეთი + „უცხოეთი“ `ABROAD`; a region = its places as chips
+  + a search line + the films) · „სრული გადაცემები“ (by date, year chips). A film plays in a `Sheet` (youtube-nocookie embed, ‹ › through
+  the list shown); `mapItem` = region id or „ep“, + „/<YouTube id>“ while a film is open (`openMapItem(…, replace, stay)` — `stay` keeps
+  the list's scroll). Open to everyone, guests too (`GUEST_OPEN`, `FOR_EVERYONE` in useAccess: a member needs no superadmin's grant; the
+  admin's switch still hides it). Data `data/etnoforiVideos.json` (lazy chunk via `data/etnofori.ts`) — **generated, never edit by hand**:
+  `yt-dlp --flat-playlist --print "%(id)s\t%(title)s\t%(duration)s" https://www.youtube.com/@etnofori/videos > /tmp/etno.tsv` then
+  `python3 scripts/etnofori/build.py /tmp/etno.tsv` (places → regions in `scripts/etnofori/places.py`; episodes' ordinal words → №
+  in `episodes.py`). 2026-11-07: 1814 songs, 331 episodes; ~150 titles that name no place (the 2020 „დარჩი სახლში“ home takes, talk
+  shows) and the announcements are left out. Not updated by itself — re-run when the user asks.
 - **Prayers** (`data/prayers.ts`, `public/prayers/`, `public/bible/`), psalter kathismas, 73 akathists,
   commemoration name lists (`utils/commemoration.ts`), prayer reminders via Web Push Worker
   `sagandzuri-reminders` (`worker/reminders/`; push works only on the deployed site).
