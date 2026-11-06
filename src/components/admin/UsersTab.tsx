@@ -11,7 +11,8 @@ import { downloadCsv } from '../../utils/csv';
 import type { KidsMode } from '../../data/sections';
 import { AccessRecord, DecisionRecord } from './AccessRequests';
 import type { LeftMembers } from '../../utils/leftMembers';
-import { duplicatesOf } from '../../utils/duplicates';
+import { duplicatesOf, whyLabel } from '../../utils/duplicates';
+import { useNotTwins } from '../../utils/notTwins';
 import { TeachLine, useLastLessons } from './TeacherOverview';
 import { BulkBar } from './BulkActions';
 import { PersonSheet, ROLE_ICON, roleName, roleOf } from './PersonSheet';
@@ -173,10 +174,12 @@ export const UsersTab: React.FC<{
   // a computer: the list on the left, the person's window as the right column (stage IV, 2026-10-28)
   const wide = useWide();
 
-  // „შესაძლო ორმაგი“: the same phone or the same full name (a name only when the person wrote one)
-  const twins = useMemo(() => duplicatesOf(users.map(u => ({
+  // „შესაძლო ორმაგი“: the same phone or the same full name (a name only when the person wrote one); the members marked
+  // „გასული“ and the pairs an admin found to be two people („სხვა ადამიანია“) are left out
+  const notTwins = useNotTwins();
+  const twins = useMemo(() => duplicatesOf(users.filter(u => !left.uids.has(u.userId)).map(u => ({
     userId: u.userId, name: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.displayName, phone: u.phone,
-  }))), [users]);
+  })), notTwins), [users, left.uids, notTwins]);
   const twinIds = useMemo(() => new Set(twins.keys()), [twins]);
   const { statusOf, test } = filterTests(staff, access, isSuperAdmin, classes, left.uids, twinIds);
   const classNames = (uid: string) => classes.filter(c => c.memberIds.includes(uid)).map(c => c.name).join(', ');
@@ -363,7 +366,7 @@ export const UsersTab: React.FC<{
                         filters: what they lead */}
                     {teaches ? <TeachLine uid={u.userId} classes={classes} last={lastLessons} teacher={role === 'teacher'} /> : (
                       <span className="block text-xs text-[#8a7a6a] truncate">
-                        {twinIds.has(u.userId) && <span className="font-semibold text-[#9a6212]">შესაძლო ორმაგი · </span>}
+                        {twinIds.has(u.userId) && <span className="font-semibold text-[#9a6212]">{whyLabel(twins.get(u.userId))} · </span>}
                         {classNames(u.userId) || u.email || 'ელფოსტა არ არის'} · {status === 'pending' ? `მოთხოვნა ${agoLabel(a?.requestedAt)}` : agoLabel(u.lastActiveAt)}
                         {limited !== null && ` · წვდომა ${limited}/${ALL_FEATURES.length}`}
                         {u.kidsMode?.on && ' · საბავშვო'}

@@ -24,6 +24,7 @@ import { addClassMember, removeClassMember } from './ClassesAdmin';
 import { changed } from './changed';
 import { logChange } from '../../utils/adminLog';
 import { setLeft } from '../../utils/leftMembers';
+import { setNotTwins } from '../../utils/notTwins';
 import { NOTE_MAX, saveAdminNote, useAdminNote } from '../../utils/adminNotes';
 import type { StaffRecord, UserRecord } from './UsersTab';
 import { errorText } from '../../utils/errorText';
@@ -220,6 +221,30 @@ export const PersonSheet: React.FC<{
     }
   };
 
+  // „შესაძლო ორმაგი“: two people after all — the pair leaves the list; or the twin is the spare account — it is marked „გასული“
+  const markTwo = async (other: string, name: string) => {
+    setBusy(true);
+    try {
+      await setNotTwins(u.userId, other, true);
+      changed('member', `${u.name} და ${name} — სხვადასხვა ადამიანია`, u.userId, () => setNotTwins(u.userId, other, false));
+    } catch (e) {
+      note.fail('ვერ შეინახა: ' + errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+  const markTwinLeft = async (other: string, name: string) => {
+    setBusy(true);
+    try {
+      await setLeft(other, true);
+      changed('member', `${name} — ზედმეტი ანგარიში, გასული (${u.name}-ის ორმაგი)`, other, () => setLeft(other, false));
+    } catch (e) {
+      note.fail('ვერ შეინახა: ' + errorText(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   // „გასული“: a member who finished or left keeps the app, but the school's lists and birthdays leave them out
   const markLeft = async (on: boolean) => {
     setBusy(true);
@@ -318,9 +343,12 @@ export const PersonSheet: React.FC<{
               <p className="flex items-center gap-1.5 text-[13px] font-bold text-[#9a6212]">
                 <Copy className="w-4 h-4 shrink-0" /> შესაძლო ორმაგი ანგარიში
               </p>
-              <ul className="mt-1.5 space-y-1">
+              <p className="mt-1 text-[13px] leading-snug text-[#6b5a48]">
+                ერთი ადამიანია? ზედმეტი მონიშნე გასულად. სხვადასხვა ადამიანია? დააჭირე „სხვა ადამიანია“.
+              </p>
+              <ul className="mt-2 divide-y divide-amber-200/70">
                 {twins.map(t => (
-                  <li key={t.uid}>
+                  <li key={t.uid} className="py-2 first:pt-0 last:pb-0">
                     <button type="button" onClick={() => onOpenPerson?.(t.uid)}
                       className="w-full min-h-11 -mx-1 px-1 flex items-center gap-2.5 rounded-xl text-left cursor-pointer hover:bg-amber-100/60 transition">
                       <Avatar name={t.person.name} photo={t.person.photoURL} size={32} />
@@ -332,6 +360,14 @@ export const PersonSheet: React.FC<{
                       </span>
                       <ChevronRight className="w-4 h-4 shrink-0 text-[#9a6212]/70" />
                     </button>
+                    <div className="mt-1.5 flex flex-wrap gap-2">
+                      <Btn kind="ghost" size="sm" icon={<Check />} disabled={busy} onClick={() => markTwo(t.uid, t.person.name)}>
+                        სხვა ადამიანია
+                      </Btn>
+                      <Btn kind="ghost" size="sm" icon={<DoorOpen />} disabled={busy} onClick={() => markTwinLeft(t.uid, t.person.name)}>
+                        ეს ზედმეტია — გასულად
+                      </Btn>
+                    </div>
                   </li>
                 ))}
               </ul>
