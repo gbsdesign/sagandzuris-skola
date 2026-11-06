@@ -1,47 +1,34 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowRight, BookOpen, Check, ChevronDown, ChevronRight, ClipboardCheck, Dumbbell, FileText, ListChecks, Play } from 'lucide-react';
+import { ArrowRight, Check, ChevronDown, ChevronRight, Dumbbell, FileText, ListChecks, Play } from 'lucide-react';
 import { OFFICIAL_PDFS, THEORY_TOPICS } from '../../data/abituriProgram';
 import type { Lesson } from '../../data/abituriLessons';
-import { useAbituriProgress } from '../../hooks/useAbituriProgress';
+import type { AbituriProgressApi } from '../../hooks/useAbituriProgress';
+import { PRACTICE_GOAL, lastTest, solvedOf } from '../../utils/abituriPrep';
 import type { TaskKind } from '../../utils/theoryDrills';
 import { triggerHaptic } from '../../utils/haptics';
 import { LessonBody } from './LessonBody';
-import { CARD, Pill, SectionHead } from './shared';
+import { CARD, Pill, SectionHead, useFocus, useLessons, type Focus } from './shared';
 import { DRILLS, Trainer } from './drills/Trainer';
 import { MockTest } from './drills/MockTest';
 
 // II round — music theory, written: the test „მუსიკალური ანბანი“ (seven tasks) and the dictation.
-// One way through it, top to bottom (2026-11-05, the user: „სწავლა გაამარტივე … ეფექტური გახადე“): the three steps
-// with where I am in each and one „გააგრძელე“ button (the next lesson not done), then ① the lessons
-// (data/abituriLessons.ts, loaded when the tab opens), ② practice (new tasks every time) and ③ the mock test. The
-// test's seven tasks fold under the steps. Progress — lessons done, practice counts, test scores — stays on the
-// member's account.
-
-let cache: Lesson[] | null = null;
-const useLessons = () => {
-  const [lessons, setLessons] = useState<Lesson[] | null>(cache);
-  const [failed, setFailed] = useState(false);
-  useEffect(() => {
-    if (cache) return;
-    let gone = false;
-    import('../../data/abituriLessons')
-      .then(m => { cache = m.LESSONS; if (!gone) setLessons(m.LESSONS); })
-      .catch(() => { if (!gone) setFailed(true); });
-    return () => { gone = true; };
-  }, []);
-  return { lessons, failed };
-};
+// One way through it, top to bottom (2026-11-05, the user: „სწავლა გაამარტივე … ეფექტური გახადე“; lighter since
+// 2026-11-06 — the page's top card now shows where I am, so this tab keeps only one „გააგრძელე“ button and the fold
+// with the test's seven tasks), then ① the lessons (data/abituriLessons.ts, loaded when needed), ② practice (new tasks
+// every time) and ③ the mock test. Progress — lessons done, practice counts, test scores — stays on the member's account.
 
 // a lesson's own practice: the test's task, or listening for the dictation
 const drillOf = (l: Lesson): TaskKind | null => (l.task ? DRILLS[l.task - 1].kind : l.id === 'karnaxi' ? 'dictation' : null);
 
-export const TheoryTab: React.FC = () => {
+export const TheoryTab: React.FC<{ api: AbituriProgressApi; focus?: Focus }> = ({ api: progress, focus }) => {
   const { lessons, failed } = useLessons();
-  const progress = useAbituriProgress();
   const done = progress.progress.lessons;
   const [open, setOpen] = useState<string | null>(null);
   const [drill, setDrill] = useState<TaskKind | null>(null);
   const [jump, setJump] = useState<string | null>(null);
+
+  // a tap on the top card: a lesson opens, the other places only come into view
+  useFocus(focus, id => { if (id.startsWith('lesson-')) setOpen(id.slice('lesson-'.length)); });
 
   // what was opened from elsewhere on the tab (a task, „შემდეგი“, „ივარჯიშე“) comes into view
   useEffect(() => {
@@ -56,46 +43,18 @@ export const TheoryTab: React.FC = () => {
 
   const lessonsDone = lessons ? lessons.filter(l => done.includes(l.id)).length : 0;
   const nextLesson = lessons?.find(l => !done.includes(l.id)) ?? null;
-  const solved = Object.values(progress.progress.drills).reduce((n, [, all]) => n + all, 0);
-  const right = Object.values(progress.progress.drills).reduce((n, [r]) => n + r, 0);
-  const lastTest = progress.progress.tests[progress.progress.tests.length - 1];
-  const steps: { n: number; icon: React.ReactNode; title: string; note: string; done: boolean; go: () => void }[] = [
-    { n: 1, icon: <BookOpen className="w-[18px] h-[18px]" />, title: 'გაკვეთილები', done: !!lessons && lessonsDone === lessons.length,
-      note: lessons ? (lessonsDone ? `გავლილია ${lessonsDone} / ${lessons.length}` : `${lessons.length} გაკვეთილი, საფუძვლებიდან`) : 'საფუძვლებიდან',
-      go: () => { triggerHaptic(8); setJump('lessons'); } },
-    { n: 2, icon: <Dumbbell className="w-[18px] h-[18px]" />, title: 'ვარჯიში', done: solved >= 50,
-      note: solved ? `ამოხსნილი ${solved} · სწორი ${Math.round((right / solved) * 100)}%` : 'ყოველ ჯერზე ახალი დავალებები',
-      go: () => { triggerHaptic(8); setJump('trainer'); } },
-    { n: 3, icon: <ClipboardCheck className="w-[18px] h-[18px]" />, title: 'საცდელი ტესტი', done: !!lastTest && lastTest.score >= lastTest.max * 0.8,
-      note: lastTest ? `ბოლო: ${lastTest.score} / ${lastTest.max} ქულა` : 'როგორც გამოცდაზე, 32 ქულა',
-      go: () => { triggerHaptic(8); setJump('mock'); } },
-  ];
+  const solved = solvedOf(progress.progress);
+  const test = lastTest(progress.progress);
+  const line = lessons
+    ? [`გაკვეთილი ${lessonsDone} / ${lessons.length}`, `ვარჯიში ${Math.min(solved, PRACTICE_GOAL)} / ${PRACTICE_GOAL}`, test ? `ტესტი ${test.score} / ${test.max}` : 'ტესტი —'].join(' · ')
+    : 'გაკვეთილები · ვარჯიში · საცდელი ტესტი';
 
   return (
     <div className="space-y-7">
       <section>
         <SectionHead title="მუსიკის თეორია" sub="II ტური · წერითი: ტესტი (7 დავალება) და კარნახი" />
         <div className={`${CARD} p-3.5 sm:p-4 flex flex-col gap-3`}>
-          <p className="px-0.5 text-[12px] font-black uppercase tracking-wide text-[#a0703c]">მომზადება — 3 ნაბიჯი</p>
-          <ol className="flex flex-col gap-1">
-            {steps.map(st => (
-              <li key={st.n}>
-                <button type="button" onClick={st.go}
-                  className="w-full flex items-center gap-3 min-h-14 px-1.5 py-1.5 rounded-xl text-left cursor-pointer hover:bg-[#fbf6ec] group">
-                  <span className={`shrink-0 grid place-items-center w-9 h-9 rounded-full font-serif-ge text-[15px] font-bold ${st.done ? 'bg-[#2f6b43] text-white' : 'bg-[#7a2028]/[0.08] text-[#7a2028]'}`}>
-                    {st.done ? <Check className="w-5 h-5" aria-label="შესრულებულია" /> : st.n}
-                  </span>
-                  <span className="flex-1 min-w-0">
-                    <span className="flex items-center gap-1.5 text-[15px] font-bold leading-snug text-[#2a2017] group-hover:text-[#7a2028]">
-                      <span className="text-[#a0703c]">{st.icon}</span>{st.title}
-                    </span>
-                    <span className="block mt-0.5 text-[12.5px] font-semibold leading-snug text-[#8a7a6a]">{st.note}</span>
-                  </span>
-                  <ChevronRight className="w-4 h-4 shrink-0 text-[#b8a68e] group-hover:text-[#7a2028]" />
-                </button>
-              </li>
-            ))}
-          </ol>
+          <p className="px-0.5 text-[12.5px] font-semibold text-[#8a7a6a]">{line}</p>
           {lessons && (
             <button type="button" onClick={() => (nextLesson ? show(nextLesson.id) : practise(DRILLS[0].kind))}
               className="w-full min-h-12 px-4 rounded-2xl bg-[#7a2028] text-[#fbf6ec] inline-flex items-center justify-center gap-2 text-[14.5px] font-bold cursor-pointer hover:bg-[#5e1820] active:scale-[0.99] transition shadow-[0_8px_18px_-10px_rgba(122,32,40,0.8)]">
@@ -155,15 +114,6 @@ export const TheoryTab: React.FC = () => {
                         >
                           <Check className="w-4 h-4" /> {isDone ? 'გავლილია' : 'გავიარე'}
                         </button>
-                        {kind && (
-                          <button
-                            type="button"
-                            onClick={() => practise(kind)}
-                            className="inline-flex items-center gap-1.5 min-h-11 px-4 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[13.5px] font-bold text-[#4a3426] hover:text-[#7a2028] cursor-pointer"
-                          >
-                            <Dumbbell className="w-4 h-4" /> ივარჯიშე ამ თემაზე
-                          </button>
-                        )}
                         {next && (
                           <button
                             type="button"
@@ -173,13 +123,15 @@ export const TheoryTab: React.FC = () => {
                             შემდეგი: {next.title} <ArrowRight className="w-4 h-4 shrink-0" />
                           </button>
                         )}
-                        <button
-                          type="button"
-                          onClick={() => { triggerHaptic(10); setOpen(null); setJump(`lesson-${l.id}`); }}
-                          className="inline-flex items-center gap-1.5 min-h-11 px-4 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[13.5px] font-bold text-[#4a3426] hover:text-[#7a2028] cursor-pointer"
-                        >
-                          <BookOpen className="w-4 h-4" /> დახურვა
-                        </button>
+                        {kind && (
+                          <button
+                            type="button"
+                            onClick={() => practise(kind)}
+                            className="inline-flex items-center gap-1.5 min-h-11 px-2.5 rounded-full text-[13.5px] font-bold text-[#6b5c4d] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.05] cursor-pointer"
+                          >
+                            <Dumbbell className="w-4 h-4" /> ივარჯიშე ამ თემაზე
+                          </button>
+                        )}
                       </div>
                     </div>
                   )}

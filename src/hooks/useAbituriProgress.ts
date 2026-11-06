@@ -4,20 +4,28 @@ import { db } from '../firebase';
 import { useAuth } from '../context';
 import { useMembership } from '../utils/memberAccess';
 
-// The abituri theory progress: lessons marked „გავიარე“, practice counts and the mock tests' scores.
+// The abituri progress: lessons marked „გავიარე“, practice counts, the mock tests' scores, the I exam's pieces marked
+// „ვიცი“, the registration's documents ticked and which song list is mine (boys / girls; 2026-11-06).
 // A member keeps it in students/{uid}.abituri (their teachers may read it, the rules allow it already); a guest or a
 // newcomer not let in yet keeps it on the device — so a waiting newcomer never gets a students document this way.
 
 export interface TestResult { at: number; score: number; max: number; parts: number[] }
+export type AbituriWho = 'boys' | 'girls';
 export interface AbituriProgress {
   lessons: string[];
+  /** I exam — the pieces I know (`<list>:<title>`) */
+  pieces: string[];
+  /** registration — the documents ready (their index in DOCUMENTS) */
+  docs: number[];
+  /** whose song list is mine (asked once) */
+  who?: AbituriWho;
   /** per practice kind: [right, all] */
   drills: Record<string, [number, number]>;
   /** the latest mock tests, newest last */
   tests: TestResult[];
 }
 
-const EMPTY: AbituriProgress = { lessons: [], drills: {}, tests: [] };
+const EMPTY: AbituriProgress = { lessons: [], pieces: [], docs: [], drills: {}, tests: [] };
 const KEY = 'abituriProgress';
 const KEEP_TESTS = 20;
 
@@ -29,8 +37,12 @@ const clean = (a: unknown): AbituriProgress => {
       if (Array.isArray(v) && v.length === 2 && v.every(x => typeof x === 'number')) drills[k] = [v[0], v[1]];
     }
   }
+  const strings = (v: unknown) => (Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : []);
   return {
-    lessons: Array.isArray(o.lessons) ? o.lessons.filter((x): x is string => typeof x === 'string') : [],
+    lessons: strings(o.lessons),
+    pieces: strings(o.pieces),
+    docs: Array.isArray(o.docs) ? o.docs.filter((x): x is number => typeof x === 'number') : [],
+    ...(o.who === 'boys' || o.who === 'girls' ? { who: o.who } : {}),
     drills,
     tests: Array.isArray(o.tests)
       ? o.tests.filter((t): t is TestResult => Boolean(t) && typeof (t as TestResult).score === 'number' && typeof (t as TestResult).max === 'number')
@@ -43,7 +55,7 @@ const readLocal = () => {
 const writeLocal = (p: AbituriProgress) => {
   try { localStorage.setItem(KEY, JSON.stringify(p)); } catch { /* private mode: kept for this visit only */ }
 };
-const isEmpty = (p: AbituriProgress) => !p.lessons.length && !Object.keys(p.drills).length && !p.tests.length;
+const isEmpty = (p: AbituriProgress) => !p.lessons.length && !p.pieces.length && !p.docs.length && !p.who && !Object.keys(p.drills).length && !p.tests.length;
 
 export const useAbituriProgress = () => {
   const { user } = useAuth();
@@ -81,6 +93,16 @@ export const useAbituriProgress = () => {
     ...p, lessons: p.lessons.includes(id) ? p.lessons.filter(x => x !== id) : [...p.lessons, id],
   })), [update]);
 
+  const togglePiece = useCallback((key: string) => update(p => ({
+    ...p, pieces: p.pieces.includes(key) ? p.pieces.filter(x => x !== key) : [...p.pieces, key],
+  })), [update]);
+
+  const toggleDoc = useCallback((i: number) => update(p => ({
+    ...p, docs: p.docs.includes(i) ? p.docs.filter(x => x !== i) : [...p.docs, i],
+  })), [update]);
+
+  const setWho = useCallback((who: AbituriWho) => update(p => ({ ...p, who })), [update]);
+
   const countDrill = useCallback((kind: string, right: boolean) => update(p => {
     const [r, all] = p.drills[kind] ?? [0, 0];
     return { ...p, drills: { ...p.drills, [kind]: [r + (right ? 1 : 0), all + 1] } };
@@ -88,7 +110,7 @@ export const useAbituriProgress = () => {
 
   const addTest = useCallback((t: TestResult) => update(p => ({ ...p, tests: [...p.tests, t].slice(-KEEP_TESTS) })), [update]);
 
-  return { progress, toggleLesson, countDrill, addTest, onAccount: Boolean(uid) };
+  return { progress, toggleLesson, togglePiece, toggleDoc, setWho, countDrill, addTest, onAccount: Boolean(uid) };
 };
 
 export type AbituriProgressApi = ReturnType<typeof useAbituriProgress>;

@@ -1,11 +1,41 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { ExternalLink, Info } from 'lucide-react';
 import { FOLK_SONGS, type FolkRegionId } from '../../data/songsData';
 import { useAuth } from '../../context';
 import { useAccess } from '../../hooks/useAccess';
 import { UNIVERSITY_PAGE } from '../../data/abituriProgram';
+import type { Lesson } from '../../data/abituriLessons';
 
 // Shared bits of the "აბიტურიენტს" page
+
+// the theory lessons, loaded once when first needed (the top card and the theory tab both read them)
+let lessonsCache: Lesson[] | null = null;
+export const useLessons = () => {
+  const [lessons, setLessons] = useState<Lesson[] | null>(lessonsCache);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    if (lessonsCache) return;
+    let gone = false;
+    import('../../data/abituriLessons')
+      .then(m => { lessonsCache = m.LESSONS; if (!gone) setLessons(m.LESSONS); })
+      .catch(() => { if (!gone) setFailed(true); });
+    return () => { gone = true; };
+  }, []);
+  return { lessons, failed };
+};
+
+/** Where a tap on the top card sends the open tab: an element id to scroll to (`n` makes the same place work twice). */
+export interface Focus { id: string; n: number }
+export const useFocus = (focus: Focus | undefined, onFocus?: (id: string) => void) => {
+  useEffect(() => {
+    if (!focus) return;
+    onFocus?.(focus.id);
+    // the tab may be drawing the element right now — give it a moment
+    const t = window.setTimeout(() => document.getElementById(focus.id)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+    return () => window.clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [focus?.id, focus?.n]);
+};
 
 export const CARD = 'rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)]';
 
