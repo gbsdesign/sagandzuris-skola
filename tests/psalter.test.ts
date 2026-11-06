@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import {
   cycleOf, previousCycle, nextCycle, georgiaToday, halfIndex, ownersIn, rebase, kathismasOf, wrap,
   autoDistribute, slotState, msLeft, formatRange, nextShiftDate, readCount,
-  fillDistribution, giveKanon, distributionState, changedReaders, withPast, ownersThen,
+  fillDistribution, giveKanon, distributionState, changedReaders, withPast, ownersThen, pickableKanons,
 } from '../src/utils/psalter';
 
 test('Georgian date, not the phone clock', () => {
@@ -150,4 +150,15 @@ test('labels', () => {
   assert.equal(nextShiftDate('2026-10-07').from, '15 ოქტომბრიდან');
   assert.equal(nextShiftDate('2026-04-20').from, '1 მაისიდან');
   assert.equal(nextShiftDate('2026-12-20').iso, '2027-01-01');
+});
+
+test('a member picks a free kanon first, then beside a lone reader, never a third', () => {
+  const owners: Record<number, string[]> = Object.fromEntries(Array.from({ length: 20 }, (_, i) => [i + 1, [`m${i}`]]));
+  owners[4] = []; owners[9] = [];
+  assert.deepEqual(pickableKanons(owners), [4, 9]);
+  owners[4] = ['a']; owners[9] = ['b', 'c'];
+  assert.deepEqual(pickableKanons(owners), Array.from({ length: 20 }, (_, i) => i + 1).filter(k => k !== 9));
+  const full = Object.fromEntries(Array.from({ length: 20 }, (_, i) => [i + 1, ['x', 'y']]));
+  assert.deepEqual(pickableKanons(full), []);
+  assert.deepEqual(pickableKanons({}), Array.from({ length: 20 }, (_, i) => i + 1));
 });

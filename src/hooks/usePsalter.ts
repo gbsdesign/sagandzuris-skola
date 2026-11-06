@@ -164,6 +164,23 @@ export const pickKanon = (group: PsalterGroup, k: number, uid: string) => {
   });
 };
 
+/** `pickKanon` for „აირჩიე შენი კანონი“ (KanonGate): it goes through only while kathisma `k` still has `readers` readers —
+ *  two members may tap the same free one at once; the second hears `TakenError` and picks again. Needs the server. */
+export const pickKanonIf = (groupId: string, k: number, uid: string, readers: number) =>
+  runTransaction(db, async tx => {
+    const ref = doc(db, 'psalterGroups', groupId);
+    const snap = await tx.get(ref);
+    if (!snap.exists()) throw new TakenError('');
+    const g = toGroup(snap.id, snap.data());
+    const c = cycleOf(georgiaToday(), g.cycleDays, g.shiftDays);
+    const key = String(wrap(k - (c.half - g.baseHalf)));
+    const list: string[] = arr(g.assignment[key]);
+    if (list.includes(uid)) return;
+    if (list.length !== readers) throw new TakenError(list[list.length - 1] || '');
+    const at = new Date().toISOString();
+    tx.update(ref, { [`assignment.${key}`]: [...list, uid], pick: { k: key, by: uid, at }, updatedAt: at });
+  });
+
 /** The kathismas I took over to help, per group, in each group's current cycle (live). */
 export const useTakenByMe = (groups: PsalterGroup[], uid?: string | null) => {
   const [taken, setTaken] = useState<Record<string, number[]>>({});

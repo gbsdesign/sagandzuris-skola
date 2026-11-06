@@ -203,6 +203,15 @@ export const fillDistribution = (owners: Owners, readers: string[]): Owners => {
 /** A fresh distribution by the readers' order (the confirm-first „ყველას თავიდან“). */
 export const autoDistribute = (readers: string[]): Owners => fillDistribution({}, readers);
 
+/**
+ * What a member without a kathisma may pick in „აირჩიე შენი კანონი“ (the user, 2026-11-06: „ჯერ თავისუფლები“): the free ones
+ * while any is free, so all twenty get read; then a place beside a lone reader. Empty when every kathisma has two readers.
+ */
+export const pickableKanons = (owners: Owners): number[] => {
+  const free = KS.filter(k => !(owners[k] || []).length);
+  return free.length ? free : KS.filter(k => (owners[k] || []).length < MAX_READERS);
+};
+
 /** How a distribution stands: free kathismas, shared ones, readers without one, and the most any reader has. */
 export const distributionState = (owners: Owners, readers: string[]) => ({
   free: KS.filter(k => !(owners[k] || []).length),
