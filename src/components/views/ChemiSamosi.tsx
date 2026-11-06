@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { Check, X } from 'lucide-react';
+import { Check, ChevronDown, X } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
@@ -64,7 +64,9 @@ const SLOT_PLACE: Record<string, string> = { aziurebi: '-left-[72px] bottom-[12%
 // Folded at first into a round button with only "სამოსი" under it; shown on the profile and at the top of the
 // path page, where `side` (the path's progress) sits on the right of the button.
 // `bare`: only the open chokha, without its round button and card (under the path page's round buttons, PathOrbs).
-export const ChemiSamosi: React.FC<{ side?: React.ReactNode; bare?: boolean }> = ({ side, bare }) => {
+// `row`: on the profile (2026-11-06) the head is a card like the rows under it — the chokha in a tile, the name, how far it
+// is, and a ▾ that turns while the outfit is open.
+export const ChemiSamosi: React.FC<{ side?: React.ReactNode; bare?: boolean; row?: boolean }> = ({ side, bare, row }) => {
   const { user, isOwner } = useAuth();
   const [open, setOpen] = useState(!!bare);
   // the chokha or „ქართული კაბა“ (redesign stage 5; once the owner has published the kaba's pictures): the member's
@@ -252,7 +254,27 @@ export const ChemiSamosi: React.FC<{ side?: React.ReactNode; bare?: boolean }> =
 
   return (
     <div className="w-full space-y-3">
-      {!bare && (
+      {!bare && row && (
+        <button
+          type="button"
+          onClick={toggleOpen}
+          aria-expanded={open}
+          className={`w-full rounded-2xl bg-white ring-1 shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] px-4 py-3 flex items-center gap-3.5 text-left cursor-pointer transition active:scale-[0.99] ${
+            open ? 'ring-[#7a2028]/35' : 'ring-[#2a2017]/[0.07] hover:ring-[#7a2028]/25'}`}
+        >
+          <span aria-hidden className="w-11 h-11 shrink-0 rounded-2xl bg-[#7a2028]/[0.07] ring-1 ring-[#7a2028]/10 flex items-center justify-center overflow-hidden">
+            <SamosiImg src={samosiThumb('chokha')} dye={dyeFor('chokha')} className="w-9 h-9" />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-serif-ge text-[15px] font-bold text-[#4a3426]">ჩემი სამოსი</span>
+            <span className="block text-[13px] text-[#8a7a6a] leading-snug">
+              {shown === 'chokha' && complete ? 'ჩოხა სრულად შეკრებილია' : shown === 'chokha' && done > 0 ? `ჩოხა · შეკრებილია ${done} / ${TOTAL} ნაწილი` : 'ჩოხა და ქართული კაბა — ნაწილი ნაწილ'}
+            </span>
+          </span>
+          <ChevronDown className={`w-5 h-5 shrink-0 text-[#a08a76] transition-transform duration-300 ${open ? 'rotate-180 text-[#7a2028]' : ''}`} />
+        </button>
+      )}
+      {!bare && !row && (
       <div className="flex flex-wrap items-start gap-x-4 gap-y-2">
         {/* the round button: a tap opens and folds the chokha; a wine rim while it is open */}
         <button

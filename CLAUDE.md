@@ -142,7 +142,13 @@
   once — meta `announce:<id>`; every device with `subs.chat`), kind `notice`, a tap opens `/?open=bell` → `requestOpen('bell')`.
   **„რჩეული“ prayers** (2026-11-06, `components/prayers/FavPrayers.tsx`): ☆ beside 📌 on a prayer page's bar (`FavButton`), the
   chosen ones at the top of ლოცვანი (`FavPrayers` in `PrayersTab`, ★ takes one off with „გაუქმება“); `students.favPrayers` (≤ 40),
-  the device's `sg-fav-prayers` for guests.
+  the device's `sg-fav-prayers` for guests. Since the evening of 2026-11-06 (the user: „დახვეწე, თვალისთვის მარტივი გახადე“) the
+  ★ sits inside the pill (no chevron), and the book (`PrayerBook` in `views/HabitPrayerMenu.tsx`) is three groups with small
+  headings — `BOOK_GROUPS`: ყოველდღიური · წმინდა წერილი · განსაკუთრებული დღეებისთვის —, each pill's icon in a soft round.
+  **Profile the same evening**: small headings „ჩემი“ · „პარამეტრები“ · „ჩემი მონაცემები“ (`ProfileCaption` in `AppRouter`),
+  „ჩემი სამოსი“ as a card row like the others (`ChemiSamosi row`: tile + name + how far the chokha is + ▾; the path page keeps
+  the round button), „ჩემი ღილაკები“ two a row on the profile with a line „მთავარ გვერდზე, ვაზის ქვეშ · N / 30“ (the home shelf
+  keeps `SHELF_GRID`).
 
 ## Audio and sheet music (details in `src/data/CLAUDE.md`)
 

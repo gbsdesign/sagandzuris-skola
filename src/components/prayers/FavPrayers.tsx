@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { ChevronRight, Star } from 'lucide-react';
+import { Star } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
 import { isPrayerId, prayerTitle } from '../../data/prayers';
@@ -119,14 +119,15 @@ export const FavPrayers: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen 
       </h2>
       <ul className="space-y-1.5">
         {fav.list.map((id, i) => (
-          <li key={id} className="flex items-stretch gap-1.5">
+          // one pill: the name opens the prayer, the ★ at its right end takes it off (2026-11-06 — a star floating beside
+          // the pill looked like a separate thing)
+          <li key={id} className="relative">
             <button
               type="button"
               onClick={() => { triggerHaptic(8); onOpen(id); }}
-              className="flex-1 min-w-0 min-h-12 px-3.5 py-2 rounded-2xl bg-white ring-1 ring-[#eadfcd] hover:ring-[#7a2028]/30 text-left flex items-center gap-2 cursor-pointer active:scale-[0.99] transition"
+              className="w-full min-h-12 pl-3.5 pr-[52px] py-2 rounded-2xl bg-white ring-1 ring-[#eadfcd] hover:ring-[#7a2028]/30 text-left flex items-center gap-2 cursor-pointer active:scale-[0.99] transition"
             >
               <span className="flex-1 min-w-0 text-[14px] font-bold leading-snug text-[#2a2017]">{prayerTitle(id)}</span>
-              <ChevronRight className="w-5 h-5 shrink-0 text-[#c4b49c]" />
             </button>
             <button
               type="button"
@@ -137,7 +138,7 @@ export const FavPrayers: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen 
               }}
               aria-label={`${prayerTitle(id)} — რჩეულიდან მოხსნა`}
               title="რჩეულიდან მოხსნა"
-              className="shrink-0 w-11 rounded-2xl grid place-items-center text-[#b07d12] hover:bg-[#b07d12]/10 cursor-pointer active:scale-95 transition"
+              className="absolute top-1/2 -translate-y-1/2 right-1 w-11 h-10 rounded-xl grid place-items-center text-[#b07d12] hover:bg-[#b07d12]/10 cursor-pointer active:scale-95 transition"
             >
               <Star className="w-[18px] h-[18px]" fill="currentColor" />
             </button>
