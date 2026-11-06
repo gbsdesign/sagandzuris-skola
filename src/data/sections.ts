@@ -6,7 +6,7 @@ import type { PageType } from '../context/NavigationContext';
 // • the home buttons ("ჩემი ღილაკები").
 export type SectionId =
   | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'medavitneoba' | 'medavitneobaTopic' | 'chvevebi' | 'tamashebi' | 'tsinaprebi'
-  | 'gza' | 'biblioteka' | 'videoebi';
+  | 'gza' | 'biblioteka' | 'videoebi' | 'eklesiebi';
 
 export interface SectionDef {
   id: SectionId;
@@ -30,6 +30,8 @@ export const SECTIONS: SectionDef[] = [
   { id: 'biblioteka', label: 'ბიბლიოთეკა', page: 'biblioteka' },
   // „ეთნოფორი“'s films: songs on the map by region + the full episodes (pages/VideosPage.tsx), open to everyone
   { id: 'videoebi', label: 'ვიდეოები', page: 'videos', hint: '„ეთნოფორი“ — სიმღერები კუთხეებით' },
+  // every church and monastery of Georgia on the map, the nearest ones, the way there (pages/ChurchesPage.tsx), open to everyone
+  { id: 'eklesiebi', label: 'ეკლესია-მონასტრები', page: 'churches', hint: 'ტაძრები რუკაზე, უახლოესი და გზა' },
 ];
 
 export const sectionOfPage = (page: PageType): SectionId | null => {
@@ -68,7 +70,7 @@ export const isExtra = (id: string): id is ExtraId => EXTRA_SWITCHES.some(x => x
 /** Without the admin's settings: everything built is open; the psalter group and მედავითნეობა are "მალე". */
 export const DEFAULT_SECTION_STATE: Record<SwitchId, SectionState> = {
   galoba: 'open', simghera: 'open', mtkmeli: 'open', sakravebi: 'open', medavitneoba: 'soon', medavitneobaTopic: 'soon',
-  chvevebi: 'open', tamashebi: 'open', tsinaprebi: 'open', gza: 'open', biblioteka: 'open', videoebi: 'open',
+  chvevebi: 'open', tamashebi: 'open', tsinaprebi: 'open', gza: 'open', biblioteka: 'open', videoebi: 'open', eklesiebi: 'open',
   samosi: 'open', learn: 'open', manera: 'open', work: 'open', prayers: 'open', classes: 'open', messages: 'open',
   search: 'open', calendar: 'open', recordings: 'open', abituri: 'open', birthdays: 'open',
 };

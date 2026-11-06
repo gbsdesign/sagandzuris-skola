@@ -2,6 +2,7 @@ import React from 'react';
 import { KeyRound } from 'lucide-react';
 import { setCentreEveryone, setCentreMember, useCentreDownloadSettings } from '../../hooks/useCentreDownload';
 import { setSongTextEditor, useSongTextEditors } from '../../hooks/useSongTexts';
+import { setChurchContactViewer, useChurchContactViewers } from '../../hooks/useChurchExtras';
 import { Avatar, Switch, Toggle } from '../ui/kit';
 import { FAIL } from './CentreDownload';
 import { Fold } from './Fold';
@@ -18,7 +19,10 @@ export const ExtraRightsFold: React.FC<{ users: UserRecord[]; onMessage: Msg }> 
   const writers = useSongTextEditors();
   const saving = users.filter(u => centre.uids.includes(u.userId));
   const writing = users.filter(u => writers.includes(u.userId));
-  const summary = `ჩამოწერა: ${centre.everyone ? 'ყველა წევრს' : `${saving.length} წევრს`} · ტექსტები: ${writing.length ? `ადმინებს და ${writing.length} წევრს` : 'ადმინებს'}`;
+  const churchViewers = useChurchContactViewers();
+  const seeing = users.filter(u => churchViewers.includes(u.userId));
+  const summary = `ჩამოწერა: ${centre.everyone ? 'ყველა წევრს' : `${saving.length} წევრს`} · ტექსტები: ${writing.length ? `ადმინებს და ${writing.length} წევრს` : 'ადმინებს'}`
+    + ` · ტაძრების კონტაქტები: ${seeing.length ? `ადმინებს და ${seeing.length} წევრს` : 'ადმინებს'}`;
 
   return (
     <Fold icon={<KeyRound />} title="დამატებითი უფლებები" summary={summary}>
@@ -45,6 +49,14 @@ export const ExtraRightsFold: React.FC<{ users: UserRecord[]; onMessage: Msg }> 
           {writing.length > 0
             ? <People people={writing} off="ტექსტის ჩაწერის გამორთვა" onOff={u => setSongTextEditor(u.userId, false).then(
               () => changed('right', `${nameOf(u)} — სიმღერის ტექსტის ჩაწერა გამოირთო`, u.userId, () => setSongTextEditor(u.userId, true)),
+              () => onMessage(FAIL, 'error'))} />
+            : <p className="py-1 text-[13px] text-[#8a7a6a]">წევრებიდან ჯერ არავის.</p>}
+        </div>
+        <div>
+          <Head title="ტაძრების კონტაქტების ნახვა" sub="„ეკლესია-მონასტრებში“ · ადმინები ყოველთვის ხედავენ" />
+          {seeing.length > 0
+            ? <People people={seeing} off="კონტაქტების ნახვის გამორთვა" onOff={u => setChurchContactViewer(u.userId, false).then(
+              () => changed('right', `${nameOf(u)} — ტაძრების კონტაქტების ნახვა გამოირთო`, u.userId, () => setChurchContactViewer(u.userId, true)),
               () => onMessage(FAIL, 'error'))} />
             : <p className="py-1 text-[13px] text-[#8a7a6a]">წევრებიდან ჯერ არავის.</p>}
         </div>

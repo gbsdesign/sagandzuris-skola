@@ -13,9 +13,9 @@ import { FeatureId, useMembership } from '../utils/memberAccess';
 // • a student whose teacher turned on the kids' mode sees only the chosen sections;
 // • guests may open only the chant books, songs and მთქმელი lists (and the prayers); the rest asks to sign in.
 export type Access = 'open' | 'soon' | 'hidden' | 'locked';
-export const GUEST_OPEN: SectionId[] = ['galoba', 'simghera', 'mtkmeli', 'videoebi'];
+export const GUEST_OPEN: SectionId[] = ['galoba', 'simghera', 'mtkmeli', 'videoebi', 'eklesiebi'];
 // sections for everyone: a member sees them without a superadmin giving them (the admin's switch still hides them)
-const FOR_EVERYONE: SectionId[] = ['videoebi'];
+const FOR_EVERYONE: SectionId[] = ['videoebi', 'eklesiebi'];
 
 // the signed-in person's kids' mode (live; one listener for the whole app)
 let kidsCache: { uid: string | null; mode: KidsMode | null } = { uid: null, mode: null };
