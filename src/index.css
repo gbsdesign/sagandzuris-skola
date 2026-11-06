@@ -359,3 +359,18 @@ html[data-sg-autoscroll] .sg-float-back { opacity: 0 !important; pointer-events:
 .sg-night hr { border-color: #3a312a; }
 .sg-night .sg-night-bar { background: rgba(31, 26, 22, 0.94); }
 .sg-night .sg-night-bar :is(button:not([aria-pressed="true"]), [role="group"]) { background: #2a2420; }
+
+/* The whole screen in the night paper while a prayer page has 🌙 on (html.sg-night-page, set by PrayerPage): the paper,
+   the header, the page bar, the cards round the text. Utility classes are matched by their names ([class*=…]), which
+   is enough for the few warm tints the kit uses; the text card itself is .sg-night above. */
+html.sg-night-page, html.sg-night-page body, html.sg-night-page .sg-paper { background: #1f1a16; color: #e8dfd0; }
+html.sg-night-page .sg-paper { background-image: none; }
+html.sg-night-page .sprinkles { display: none; }
+html.sg-night-page header { background: #231e1a; border-color: #3a312a; }
+html.sg-night-page :is(header, main) :is([class*="bg-white"], [class*="bg-[#fbf6ec]"], [class*="bg-[#fff8e6]"], [class*="bg-[#f6efe3]"]) { background: #2a2420; background-image: none; --tw-ring-color: #4a3f36; }
+html.sg-night-page :is(header, main) :is([class*="text-[#2a2017]"], [class*="text-[#4a3426]"], [class*="text-[#5a4630]"]) { color: #e8dfd0; }
+html.sg-night-page :is(header, main) :is([class*="text-[#8a7a6a]"], [class*="text-[#a08a76]"], [class*="text-[#75685a]"]) { color: #b8ab98; }
+html.sg-night-page :is(header, main) [class*="text-[#7a2028]"] { color: #e3c37a; }
+html.sg-night-page :is(header, main) :is([class*="ring-[#e8dcc8]"], [class*="ring-[#eadfcd]"], [class*="border-[#e8dcc8]"]) { --tw-ring-color: #4a3f36; border-color: #3a312a; }
+html.sg-night-page main :is(h1, h2, h3) { color: #e3c37a; }
+html.sg-night-page :is(header, main) [class*="bg-[#7a2028]"]:not([class*="/"]) { background: #8a2630; color: #fbf6ec; }

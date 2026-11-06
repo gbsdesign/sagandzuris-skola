@@ -216,7 +216,7 @@ function AppContent() {
 
   return (
     // one warm paper for every page (the notes page has its own)
-    <div className="relative isolate min-h-screen safe-x text-[#2a2017] flex flex-col font-sans bg-gradient-to-b from-[#fdfaf4] via-[#faf4ea] to-[#f6eedf]">
+    <div className="sg-paper relative isolate min-h-screen safe-x text-[#2a2017] flex flex-col font-sans bg-gradient-to-b from-[#fdfaf4] via-[#faf4ea] to-[#f6eedf]">
       {/* plate ornaments at the window edges, behind everything (the home page has its own) */}
       {currentPage !== 'home' && <PageSprinkles seed={currentPage} />}
 
