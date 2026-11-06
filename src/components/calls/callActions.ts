@@ -13,13 +13,18 @@ const ms = (v: unknown) => {
   return t?.toMillis ? t.toMillis() : t?.toDate ? t.toDate().getTime() : 0;
 };
 
+/** who may start a call in a private chat: either side of a teacher's or classmates' chat; in the administration's
+ *  chat only an admin answering it (the member answers, never rings — the user's rule, 2026-11-06) */
+export const mayStartChatCall = (t: DirectThread, uid: string) => (t.kind === 'admin' ? isStaffSide(t, uid) : t.members.includes(uid));
+
 export const chatCallInfo = (t: DirectThread, user: User): CallInfo => {
   const staff = isStaffSide(t, user.uid);
   return {
     base: `dms/${t.id}`,
     title: t.kind === 'admin' && !staff ? ADMIN_NAME : otherOf(t, user.uid).name || 'ზარი',
     oneToOne: true,
-    canVideo: t.kind === 'teach',
+    // every private call may be by video (the administration's since 2026-11-06 — the member sees the admin's face)
+    canVideo: true,
     anonStaff: t.kind === 'admin' && !staff,
     me: { uid: user.uid, name: t.names[user.uid] || user.displayName || '', photoURL: t.photos[user.uid] || user.photoURL || '', staff },
   };
@@ -41,12 +46,14 @@ export const classCallInfo = (c: SchoolClass, user: User): CallInfo => {
 // the other side declined or hung up: callEnd came after callAt
 const chatEnded = (d: Record<string, unknown>) => ms(d.callEnd) > 0 && ms(d.callEnd) >= ms(d.callAt);
 
-/** The teacher (or an admin) calls: rings the other side at once and joins the chat's call meanwhile (joining
+/** One side calls (see mayStartChatCall): rings the other side at once and joins the chat's call meanwhile (joining
  *  can take seconds: the microphone's question, the connection); a call that could not start stops the ring.
  *  Gives up after 45 s. */
 export const startChatCall = async (t: DirectThread, user: User, kind: CallKind) => {
   const info = chatCallInfo(t, user);
-  const rang = await notePrivateCall(t, { uid: user.uid, name: info.me.name, photoURL: info.me.photoURL, teacher: true }, kind)
+  // the call card speaks as the teacher (the staff) only when this side is one
+  const teacher = (t.kind === 'teach' && t.teacherUid === user.uid) || info.me.staff;
+  const rang = await notePrivateCall(t, { uid: user.uid, name: info.me.name, photoURL: info.me.photoURL, teacher }, kind)
     .then(() => true, e => { console.warn('call ring: ', e?.code || e); return false; });
   // the other side's phone rings even with the app closed (worker/reminders /ring)
   if (rang) void notifyRing(info.base);

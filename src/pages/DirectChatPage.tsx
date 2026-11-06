@@ -8,7 +8,7 @@ import {
   useThread, dmBase, otherOf, isUnread, isStaffSide, seenByOther, markRead, noteSent, ADMIN_NAME,
 } from '../hooks/useDirectChat';
 import { useCall, useLivePeers, setCallSmall } from '../utils/callSession';
-import { startChatCall, answerChatCall } from '../components/calls/callActions';
+import { startChatCall, answerChatCall, mayStartChatCall } from '../components/calls/callActions';
 import { ChatPanel, Avatar } from '../components/classes/ChatPanel';
 import { PinCard } from '../components/classes/PinCard';
 import { PinSheet } from '../components/classes/PinSheet';
@@ -140,8 +140,8 @@ export const DirectChat: React.FC<{ id: string; classes: SchoolClass[]; logoUrl?
     ? <AdminAvatar logoUrl={logoUrl} />
     : <Avatar name={canWrite ? other.name : title} photoURL={canWrite ? other.photoURL : thread.photos[thread.members[thread.members.length - 1]]} className="w-10 h-10 text-base" />;
 
-  // the teacher calls (by voice or video); an admin answering the administration's chat, by voice only
-  const canStart = iTeach || staff;
+  // either side calls, by voice or video; in the administration's chat only the admin (the member answers)
+  const canStart = mayStartChatCall(thread, uid);
   const joinCall = () => answerChatCall(thread, user);
 
   // the teacher (or an admin answering the administration's chat) pins a comment or an assignment for the student
@@ -178,7 +178,7 @@ export const DirectChat: React.FC<{ id: string; classes: SchoolClass[]; logoUrl?
             <CallButtons
               base={dmBase(thread.id)}
               canStart={canStart}
-              canVideo={thread.kind === 'teach'}
+              canVideo
               onStart={kind => startChatCall(thread, user, kind)}
               onJoin={joinCall}
             />

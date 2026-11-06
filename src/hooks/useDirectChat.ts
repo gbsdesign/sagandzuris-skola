@@ -327,8 +327,8 @@ export const markRead = (t: DirectThread, uid: string) =>
   updateDoc(doc(db, 'dms', t.id), { [`read.${readKey(t, uid)}`]: serverTimestamp() });
 
 /**
- * The teacher's (or an admin's) call: a call card in the chat, and callAt/callBy/callKind, which ring on the other
- * side while its app is open (components/calls/CallLayer).
+ * A call (either side of a teacher's or classmates' chat; in the administration's chat only the admin): a call card in
+ * the chat, and callAt/callBy/callKind, which ring on the other side while its app is open (components/calls/CallLayer).
  */
 export const notePrivateCall = async (t: DirectThread, author: ChatAuthor, kind: 'audio' | 'video') => {
   await sendCallMessage(dmBase(t.id), author);

@@ -45,8 +45,6 @@ export const PhoneRingSetup: React.FC = () => {
     return () => window.clearTimeout(t);
   }, [done]);
 
-  if (!ask || !uid || notes || programOpen || church || call.status !== 'idle') return null;
-
   const turnOn = async () => {
     setBusy(true);
     setErr('');
@@ -55,6 +53,20 @@ export const PhoneRingSetup: React.FC = () => {
     if (e) setErr(e);
     else setDone(true);
   };
+
+  // the permission window could not open (the Android app, 2026-11-06): the person gives it in the phone's settings
+  // and comes back — the card then binds the phone by itself
+  useEffect(() => {
+    if (!err || !ask) return;
+    const back = () => {
+      if (document.visibilityState === 'visible' && pushSupported() && Notification.permission === 'granted') void turnOn();
+    };
+    document.addEventListener('visibilitychange', back);
+    return () => document.removeEventListener('visibilitychange', back);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [err, ask]);
+
+  if (!ask || !uid || notes || programOpen || church || call.status !== 'idle') return null;
   const later = () => {
     try { localStorage.setItem(LATER, String(Date.now())); } catch { /* private window */ }
     setAsk(false);

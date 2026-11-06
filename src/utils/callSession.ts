@@ -4,6 +4,8 @@ import { auth, db } from '../firebase';
 
 // The school's own calls: a private chat's (dms/{id}) and a class's (classes/{id}), audio or video, through
 // Cloudflare Realtime (an SFU: each phone sends its microphone and camera once and receives the others').
+// A screen may be shared too (2026-11-06, everyone in every call): a third track, `screen`, that every phone receives;
+// phones' browsers cannot capture their screen, so the button shows on computers only (canShareScreen).
 // The Worker worker/calls/calls.js holds the secret; Firestore keeps who is in the call:
 //   {base}/peers/{uid} — name, photo, the Realtime session and track names, mic/cam on, a heartbeat (at)
 // A private call rings through dms/{id}.callAt/callBy/callKind (ended: callEnd); a class's through
@@ -24,11 +26,15 @@ export interface Peer {
   session: string;
   audio: string;
   video: string;
+  /** the shared screen's track name ('' while none) */
+  screen: string;
   at: number;
 }
 
 export interface RemotePeer extends Peer {
   stream: MediaStream | null;
+  /** their shared screen */
+  screenStream: MediaStream | null;
 }
 
 export interface CallInfo {
@@ -55,6 +61,13 @@ const videoConstraints = (oneToOne: boolean, facing: 'user' | 'environment'): Me
 const sendLimits = (oneToOne: boolean) => (oneToOne
   ? { maxBitrate: 1_800_000, maxFramerate: 30 }
   : { maxBitrate: 550_000, maxFramerate: 24 });
+// a shared screen: sharp text matters more than motion
+const SCREEN_LIMITS = { maxBitrate: 2_500_000, maxFramerate: 15 };
+const screenConstraints: MediaTrackConstraints = { frameRate: { ideal: 15, max: 15 }, width: { max: 1920 }, height: { max: 1080 } };
+
+/** this browser can share its screen (phones' browsers cannot — Android's and iOS's have no screen capture) */
+export const canShareScreen = () =>
+  typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getDisplayMedia && !/Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 export interface CallState {
   info: CallInfo | null;
@@ -63,6 +76,8 @@ export interface CallState {
   note: string;
   mic: boolean;
   cam: boolean;
+  /** my screen is shared */
+  screen: boolean;
   facing: 'user' | 'environment';
   local: MediaStream | null;
   peers: RemotePeer[];
@@ -75,7 +90,7 @@ export interface CallState {
 }
 
 const IDLE: CallState = {
-  info: null, status: 'idle', note: '', mic: true, cam: false, facing: 'user', local: null, peers: [], speaking: [], since: 0, small: false, hint: '',
+  info: null, status: 'idle', note: '', mic: true, cam: false, screen: false, facing: 'user', local: null, peers: [], speaking: [], since: 0, small: false, hint: '',
 };
 
 // why a camera did not start, in words
@@ -109,7 +124,7 @@ const FRESH_MS = 75_000;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const toPeer = (d: any): Peer => ({
   uid: d.uid || '', name: d.name || '', photoURL: d.photoURL || '', staff: !!d.staff, mic: d.mic !== false, cam: !!d.cam,
-  session: d.session || '', audio: d.audio || '', video: d.video || '', at: d.at?.toMillis?.() ?? Date.now(),
+  session: d.session || '', audio: d.audio || '', video: d.video || '', screen: d.screen || '', at: d.at?.toMillis?.() ?? Date.now(),
 });
 const fresh = (p: Peer) => Date.now() - p.at < FRESH_MS;
 
@@ -155,11 +170,19 @@ class Call {
   local: MediaStream;
   audioName = '';
   videoName = '';
+  /** my screen: its track name once sent (kept across stops: the same sender shows a new screen), the capture, the sender */
+  screenName = '';
+  screenTrack: MediaStreamTrack | null = null;
+  screenTr: RTCRtpTransceiver | null = null;
   /** what was pulled: "uid:trackName" → mid */
   pulled = new Map<string, string>();
   midOwner = new Map<string, string>();
+  /** the mids that carry a shared screen */
+  midScreen = new Set<string>();
   failed = new Map<string, number>();
   streams = new Map<string, MediaStream>();
+  /** the others' shared screens */
+  screens = new Map<string, MediaStream>();
   others: Peer[] = [];
   queue: Promise<unknown> = Promise.resolve();
   offPeers: (() => void) | null = null;
@@ -189,8 +212,14 @@ class Call {
     const { iceServers } = await api('/ice', 'GET');
     this.pc = new RTCPeerConnection({ iceServers, bundlePolicy: 'max-bundle' });
     this.pc.ontrack = e => {
-      const owner = this.midOwner.get(e.transceiver.mid || '');
+      const mid = e.transceiver.mid || '';
+      const owner = this.midOwner.get(mid);
       if (!owner) return;
+      if (this.midScreen.has(mid)) {
+        this.screens.set(owner, new MediaStream([e.track]));
+        this.publishPeers();
+        return;
+      }
       let s = this.streams.get(owner);
       if (!s) { s = new MediaStream(); this.streams.set(owner, s); }
       s.getTracks().filter(t => t.kind === e.track.kind).forEach(t => s!.removeTrack(t));
@@ -260,8 +289,8 @@ class Call {
     return fresh(p) || Date.now() - (this.lastMedia.get(p.uid) ?? 0) < 20_000;
   }
 
-  /** send one's microphone or camera */
-  push(track: MediaStreamTrack) {
+  /** send one's microphone, camera or screen */
+  push(track: MediaStreamTrack, screen = false) {
     return this.run(async () => {
       const tr = this.pc.addTransceiver(track, { direction: 'sendonly' });
       await this.pc.setLocalDescription(await this.pc.createOffer());
@@ -270,13 +299,15 @@ class Call {
         tracks: [{ location: 'local', mid: tr.mid, trackName: track.id }],
       });
       await this.pc.setRemoteDescription(r.sessionDescription);
-      if (track.kind === 'audio') this.audioName = track.id; else this.videoName = track.id;
+      if (screen) { this.screenName = track.id; this.screenTr = tr; }
+      else if (track.kind === 'audio') this.audioName = track.id;
+      else this.videoName = track.id;
       if (track.kind === 'video') {
         // a clear picture from the start, but never more than the call can carry
         try {
           const p = tr.sender.getParameters();
           if (!p.encodings?.length) p.encodings = [{}];
-          Object.assign(p.encodings[0], sendLimits(this.info.oneToOne));
+          Object.assign(p.encodings[0], screen ? SCREEN_LIMITS : sendLimits(this.info.oneToOne));
           await tr.sender.setParameters(p);
         } catch { /* the browser's own limits stay */ }
       }
@@ -301,13 +332,14 @@ class Call {
     const seeVideo = this.videoFrom(live);
     const wanted = new Set<string>();
     for (const p of live) {
-      const names = [p.audio, seeVideo.has(p.uid) ? p.video : ''].filter(Boolean);
+      // a shared screen is always received (it is what the call is about then)
+      const names = [p.audio, seeVideo.has(p.uid) ? p.video : '', p.screen].filter(Boolean);
       names.forEach(n => wanted.add(`${p.uid}:${n}`));
       const want = names.filter(n => !this.pulled.has(`${p.uid}:${n}`));
       const retry = want.filter(n => (this.failed.get(`${p.uid}:${n}`) ?? 0) < Date.now());
       if (retry.length) this.pull(p, retry).catch(e => console.warn('call pull: ', e));
     }
-    // those who left, and videos no longer received (a class's 7th camera, a camera turned off)
+    // those who left, and videos no longer received (a class's 7th camera, a camera turned off, a screen no longer shared)
     const gone = [...this.pulled.keys()].filter(k => !wanted.has(k));
     if (gone.length) this.drop(gone);
     this.publishPeers();
@@ -333,6 +365,7 @@ class Call {
           }
           this.pulled.set(key, t.mid);
           this.midOwner.set(t.mid, p.uid);
+          if (names[i] === p.screen) this.midScreen.add(t.mid);
         });
         if (r.requiresImmediateRenegotiation) {
           await this.pc.setRemoteDescription(r.sessionDescription);
@@ -355,7 +388,8 @@ class Call {
     mids.forEach(mid => {
       const owner = this.midOwner.get(mid);
       const track = this.pc.getTransceivers().find(t => t.mid === mid)?.receiver.track;
-      if (owner && track) this.streams.get(owner)?.removeTrack(track);
+      if (this.midScreen.has(mid)) { if (owner) this.screens.delete(owner); this.midScreen.delete(mid); }
+      else if (owner && track) this.streams.get(owner)?.removeTrack(track);
       this.midOwner.delete(mid);
     });
     keys.forEach(k => {
@@ -372,7 +406,7 @@ class Call {
   publishPeers() {
     if (this.closed) return;
     const peers = this.others.filter(p => this.alive(p) && p.session)
-      .map(p => ({ ...p, stream: this.streams.get(p.uid) || null }));
+      .map(p => ({ ...p, stream: this.streams.get(p.uid) || null, screenStream: p.screen ? this.screens.get(p.uid) || null : null }));
     set({ peers, status: peers.length ? 'live' : this.everJoined ? 'live' : 'waiting' });
   }
 
@@ -402,7 +436,7 @@ class Call {
     const { me, base } = this.info;
     return setDoc(doc(db, base, 'peers', me.uid), {
       uid: me.uid, name: me.name, photoURL: me.photoURL, staff: me.staff,
-      session: this.session, audio: this.audioName, video: this.videoName,
+      session: this.session, audio: this.audioName, video: this.videoName, screen: state.screen ? this.screenName : '',
       mic: state.mic, cam: state.cam, at: serverTimestamp(),
     });
   }
@@ -414,6 +448,7 @@ class Call {
     this.offPeers?.();
     this.offEnd?.();
     this.local.getTracks().forEach(t => t.stop());
+    this.screenTrack?.stop();
     try { this.pc?.close(); } catch { /* closed */ }
     this.audioCtx?.close().catch(() => {});
     return deleteDoc(doc(db, this.info.base, 'peers', this.info.me.uid)).catch(() => {});
@@ -570,6 +605,51 @@ export const toggleCam = async () => {
       return;
     }
   }
+  call.writeMe().catch(() => {});
+};
+
+/** Shares this computer's screen with everyone in the call, or stops sharing it (the browser's own „stop sharing“ too). */
+export const toggleScreen = async () => {
+  const call = current;
+  if (!call) return;
+  if (state.screen) { stopScreen(); return; }
+  if (!canShareScreen()) { showHint('ეკრანის გაზიარება მხოლოდ კომპიუტერიდან შეიძლება.'); return; }
+  let track: MediaStreamTrack;
+  try {
+    const s = await navigator.mediaDevices.getDisplayMedia({ video: screenConstraints, audio: false });
+    track = s.getVideoTracks()[0];
+    if (!track) return;
+  } catch (e) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    if ((e as any)?.name !== 'NotAllowedError') { console.warn('call screen: ', e); showHint('ეკრანის გაზიარება ვერ ჩაირთო.'); }
+    return;
+  }
+  if (current !== call) { track.stop(); return; }
+  try { track.contentHint = 'detail'; } catch { /* no hint */ }
+  call.screenTrack = track;
+  // the browser's own „stop sharing“ button
+  track.addEventListener('ended', () => { if (current === call && call.screenTrack === track) stopScreen(); });
+  try {
+    if (call.screenTr) await call.screenTr.sender.replaceTrack(track);
+    else await call.push(track, true);
+  } catch (e) {
+    console.warn('call screen: ', e);
+    track.stop();
+    call.screenTrack = null;
+    showHint('ეკრანის გაზიარება ვერ ჩაირთო.');
+    return;
+  }
+  set({ screen: true });
+  call.writeMe().catch(() => {});
+};
+
+const stopScreen = () => {
+  const call = current;
+  if (!call) return;
+  call.screenTrack?.stop();
+  call.screenTrack = null;
+  call.screenTr?.sender.replaceTrack(null).catch(() => {});
+  set({ screen: false });
   call.writeMe().catch(() => {});
 };
 

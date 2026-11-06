@@ -438,7 +438,18 @@
   „დავალება“ — a real assignment for that member alone, `NewAssignment` `forWhom` + `onMade`) puts a card for one member
   (`classes/PinCard.tsx`, `hooks/useChatPins.ts`): in a class's chat it lives in `classes/{c}/pins` (rules: read by that
   member — `where to == uid` —, the class's teachers and admins only), laid in among the messages, with 🔒 and the member's
-  „პასუხი“ = their private chat with the writer; in a private chat it is a message of kind `note` / `work` (`pinCard` in the rules); calls are the app's own (`components/calls/`, `utils/callSession.ts`), Jitsi is gone. Voice MP3s are Firestore Bytes
+  „პასუხი“ = their private chat with the writer; in a private chat it is a message of kind `note` / `work` (`pinCard` in the rules); calls are the app's own (`components/calls/`, `utils/callSession.ts`), Jitsi is gone.
+  **Who calls whom (2026-11-06, the user: „ადმინს შეეძლოს ვიდეო ზარი, მოსწავლეს არა … ეკრანის გაზიარება ყველას ყველასთან“):**
+  `mayStartChatCall` in `callActions.ts` + the rules — either side of a teacher's or classmates' chat starts a call, by voice or
+  video (`canVideo` is true for every private chat now); in the administration's chat only an admin answering it, voice or video
+  (the member sees the admin's face, the name stays „ადმინისტრაცია“; the member never rings — only answers). A class's call is
+  still started by a teacher or an admin. **Screen sharing**: a third track `screen` on the peer card (rules: `peers` keys in
+  all three places), sent by `toggleScreen` (`getDisplayMedia`, 15 fps, 2.5 Mbit, `contentHint` detail; stopping = `replaceTrack(null)`
+  on the same sender, so a new share reuses the track name), always received by everyone (`sync` pulls `p.screen` outside `MAX_VIDEOS`,
+  `midScreen` keeps it apart from the camera; `RemotePeer.screenStream`); the call screen shows it whole on top (`ScreenTile`) with
+  the people in a strip below; the button shows only where `canShareScreen()` — phones' browsers (Android, iOS) have no screen
+  capture, so from computers only. The phone-ring card (`PhoneRingSetup`) gives up after 20 s and tells the Android app's user to
+  allow notifications in the phone's settings (then binds by itself on coming back). Voice MP3s are Firestore Bytes
   (no Firebase Storage). Kept light on phones (2026-11-05, the user: „ჩათი ჭედავს“): `markChatSeen` writes `students.chatSeen` at
   most once a minute a chat (and when the page hides) — that record has ~16 live listeners, each write redrew much of the app —,
   this device's marks reach `useChatSeen` at once; `useChat` keeps an arrived message's object (and the list when nothing
