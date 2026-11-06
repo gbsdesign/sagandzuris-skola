@@ -895,6 +895,39 @@ async function chatNotify(request, env) {
   return [200, 'ok'];
 }
 
+// ---- an admin's notice for everyone (the site's 🔔 „ყველას მიწერა“, 2026-11-06) -------------------------------------
+
+/** POST /announce { token, id }: the writer's own fresh announcements/{id} goes to every device bound for messages, once. */
+async function announce(request, env) {
+  const body = await readJson(request);
+  if (!body) return [400, 'bad json'];
+  let uid;
+  try {
+    uid = await verifyIdToken(env, body.token);
+  } catch {
+    return [401, 'bad token'];
+  }
+  if (!DOC_ID.test(String(body.id))) return [400, 'bad notice'];
+  const [a, staff] = await Promise.all([fsGet(env, `announcements/${body.id}`), staffUids(env)]);
+  if (!a || a.by !== uid || !staff.includes(uid) || Date.now() - msOf(a.at) > 5 * 60_000) return [409, 'no fresh notice'];
+  const told = `announce:${body.id}`;
+  if (await metaGet(env, told)) return [200, 'told'];
+  await metaSet(env, told, new Date().toISOString());
+  const text = String(a.text || '').replace(/\s+/g, ' ').trim();
+  if (!text) return [200, 'nobody'];
+  const message = {
+    kind: 'notice',
+    title: ADMIN_NAME,
+    body: text.length > 180 ? `${text.slice(0, 179)}…` : text,
+    tag: `notice-${body.id}`,
+    url: '/?open=bell',
+    ttl: 3 * 86400,
+  };
+  const res = await env.DB.prepare('SELECT key, endpoint, p256dh, auth, uid FROM subs WHERE chat = 1 AND uid IS NOT NULL AND uid != ?').bind(uid).all();
+  await deliver(env, res.results.map((r) => [r, message]));
+  return [200, 'ok'];
+}
+
 // ---- admins: a newcomer waits; Monday's overview --------------------------------------------------------
 
 // the admins who asked for a notice (adminPush/{uid}; firestore.rules lets only superadmins ask for `waiting`)
@@ -1293,7 +1326,7 @@ export default {
     const url = new URL(request.url);
     const routes = {
       '/subscribe': subscribe, '/account': account, '/group-event': groupEvent, '/access-request': accessRequest, '/game-invite': gameInvite,
-      '/ring': ring, '/chat-notify': chatNotify, '/decline': decline, '/delete-account': deleteAccount,
+      '/ring': ring, '/chat-notify': chatNotify, '/announce': announce, '/decline': decline, '/delete-account': deleteAccount,
       '/widget/link': widgetLink, '/widget/summary': widgetSummary,
     };
     // the app's widgets send no Origin: their secret is the proof

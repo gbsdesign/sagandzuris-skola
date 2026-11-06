@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   addDoc, collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, serverTimestamp, setDoc, where,
 } from 'firebase/firestore';
@@ -6,18 +6,21 @@ import { db } from '../firebase';
 import { APP_NEWS } from '../data/appNews';
 import type { SchoolClass } from './useClasses';
 import { ChatMessage, toChatMessage } from './useClassChat';
-import { ADMIN_NAME, DirectThread } from './useDirectChat';
+import { ADMIN_NAME, DirectThread, isStaffSide, otherOf } from './useDirectChat';
 
 // The header's 🔔 (2026-11-06, the user: „შეტყობინება აპის განახლებაზე ან სხვა ფუნქციებზე ყველა მანდ მოდიოდეს ასევე
 // მასწავლებელი ან ადმინი თუ მწერს, კლასს ან ყველას წერს რამეს — მანდ მოდიოდეს, ჩამოსაშლელი იყოს“; answers: all four
 // kinds). One list, newest first, of:
 //  - news: what a new version of the app brings (data/appNews.ts, written with each release);
 //  - all: an admin's notice for everyone (announcements/{id} { text, by, byName, at }; rules: admins write, the signed-in read);
-//  - dm: a teacher's or the administration's private message to me (my dms, the last message by their side);
+//  - dm: a private message to me — a teacher's, the administration's or (since the same day, the user: „მოსწავლე მოსწავლეს თუ
+//    მისწერს, ანუ პირადი მიმოწერები“) anybody's: my dms (and an admin's the administration's), the last message by the other side;
 //  - class: a teacher's or an admin's message in a class chat of mine (the newest messages of each, `teacher` or a teacher
 //    of the class), and a teacher's card for me alone (classes/{c}/pins, `to == me`).
 // The bell's number = what came since I last opened it (students/{uid}.bellSeenAt in ms, the device for guests); the chats'
-// own unread marks stay theirs (the 💬).
+// own unread marks stay theirs (the 💬). A notice swiped aside is hidden for me on every device (students.bellHidden, its
+// ids; a private chat's id carries its last message's time, so the next message comes back). An admin's notice also goes to
+// the phones (utils/groupPush.ts notifyAnnouncement → worker/reminders /announce; a tap opens the list: `/?open=bell`).
 
 export type NoticeKind = 'news' | 'all' | 'dm' | 'class';
 
@@ -35,6 +38,8 @@ export interface Notice {
   cls?: SchoolClass;
   /** a teacher's card for me alone */
   card?: boolean;
+  /** the writer's photo (a private message) */
+  photo?: string;
 }
 
 /** how far back the bell looks */
@@ -110,22 +115,34 @@ const useStaffMessages = (classes: SchoolClass[], uid: string | undefined) => {
   return byClass;
 };
 
-// ---- when I last opened the bell -----------------------------------------------------------------------------
+// ---- when I last opened the bell, and what I swiped aside ----------------------------------------------------
 
 const SEEN_KEY = 'sg-bell-seen';
+const HIDDEN_KEY = 'sg-bell-hidden';
+/** how many swiped-aside ids are kept (the oldest go first; they are long out of the month by then) */
+const HIDDEN_MAX = 200;
 const deviceSeen = () => {
   try { return Number(localStorage.getItem(SEEN_KEY)) || 0; } catch { return 0; }
 };
+const deviceHidden = (): string[] => {
+  try {
+    const v = JSON.parse(localStorage.getItem(HIDDEN_KEY) || '[]');
+    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
+  } catch { return []; }
+};
 
-export const useBellSeen = (uid: string | undefined) => {
+export const useBellState = (uid: string | undefined) => {
   const [local, setLocal] = useState(deviceSeen);
   const [kept, setKept] = useState(0);
+  const [hiddenHere, setHiddenHere] = useState<string[]>(deviceHidden);
+  const [hiddenKept, setHiddenKept] = useState<string[] | null>(null);
   useEffect(() => {
-    if (!uid) { setKept(0); return; }
+    if (!uid) { setKept(0); setHiddenKept(null); return; }
     return onSnapshot(doc(db, 'students', uid), snap => {
-      const v = snap.data()?.bellSeenAt;
-      setKept(typeof v === 'number' ? v : 0);
-    }, () => setKept(0));
+      const d = snap.data();
+      setKept(typeof d?.bellSeenAt === 'number' ? d.bellSeenAt : 0);
+      setHiddenKept(Array.isArray(d?.bellHidden) ? d.bellHidden.filter((x: unknown): x is string => typeof x === 'string') : []);
+    }, () => { setKept(0); setHiddenKept([]); });
   }, [uid]);
   const seen = Math.max(local, kept);
   const markSeen = (at: number) => {
@@ -134,7 +151,26 @@ export const useBellSeen = (uid: string | undefined) => {
     try { localStorage.setItem(SEEN_KEY, String(at)); } catch { /* private window */ }
     if (uid) setDoc(doc(db, 'students', uid), { bellSeenAt: at }, { mergeFields: ['bellSeenAt'] }).catch(() => {});
   };
-  return { seen, markSeen };
+  // a signed-in person's list is the record's (on every device); a guest's, this device's
+  const hiddenList = uid ? hiddenKept ?? [] : hiddenHere;
+  const hidden = useMemo(() => new Set(hiddenList), [hiddenList]);
+  // (an undo comes seconds later: it changes the list as it is then)
+  const current = useRef(hiddenList);
+  current.current = hiddenList;
+  const setHidden = (next: string[]) => {
+    const list = [...new Set(next)].slice(-HIDDEN_MAX);
+    current.current = list;
+    if (uid) {
+      setHiddenKept(list);
+      setDoc(doc(db, 'students', uid), { bellHidden: list }, { mergeFields: ['bellHidden'] }).catch(() => {});
+    } else {
+      setHiddenHere(list);
+      try { localStorage.setItem(HIDDEN_KEY, JSON.stringify(list)); } catch { /* private window */ }
+    }
+  };
+  const hide = (id: string) => setHidden([...current.current, id]);
+  const unhide = (id: string) => setHidden(current.current.filter(x => x !== id));
+  return { seen, markSeen, hidden, hide, unhide };
 };
 
 // ---- the list --------------------------------------------------------------------------------------------------
@@ -156,14 +192,15 @@ export const useNotices = (opts: {
     for (const a of all) list.push({ id: `a:${a.id}`, kind: 'all', at: a.at, who: ADMIN_NAME, text: a.text });
     if (uid && chats) {
       for (const t of threads) {
-        if (!t.lastAt) continue;
-        const fromTeacher = t.kind === 'teach' && t.studentUid === uid && t.lastBy === t.teacherUid;
-        const fromAdmins = t.kind === 'admin' && t.members[0] === uid && t.lastBy !== uid;
-        if (!fromTeacher && !fromAdmins) continue;
+        if (!t.lastAt || !t.lastBy) continue;
+        // the other side wrote last (in the administration's chat seen by an admin: the member)
+        const fromOther = isStaffSide(t, uid) ? t.lastBy === t.members[0] : t.lastBy !== uid;
+        if (!fromOther) continue;
+        const other = otherOf(t, uid);
+        const at = t.lastAt.getTime();
         list.push({
-          id: `d:${t.id}`, kind: 'dm', at: t.lastAt.getTime(),
-          who: fromAdmins ? ADMIN_NAME : t.names[t.teacherUid] || 'მასწავლებელი',
-          text: t.lastText || 'ახალი შეტყობინება', chat: t.id,
+          id: `d:${t.id}:${at}`, kind: 'dm', at,
+          who: other.name || 'წერილი', text: t.lastText || 'ახალი შეტყობინება', chat: t.id, photo: other.photoURL,
         });
       }
       for (const cls of classes) {
