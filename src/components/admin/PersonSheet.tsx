@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { collection, deleteDoc, doc, limit, onSnapshot, orderBy, query, setDoc, updateDoc } from 'firebase/firestore';
 import {
   ArrowLeft, BookOpenCheck, CalendarCheck, Check, ChevronRight, Copy, Crown, Dumbbell, Gem, GraduationCap, Hourglass, ListChecks,
-  DoorOpen, MessageCircle, Pencil, Plus, ShieldAlert, ShieldCheck, Undo2, User as UserIcon, X,
+  DoorOpen, MessageCircle, Pencil, Plus, ShieldAlert, ShieldCheck, Undo2, User as UserIcon, X, ChevronDown,
 } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth, useNavigation, SUPER_ADMIN_EMAIL, MAX_EXTRA_SUPERADMINS, ROLE_LABEL, Role } from '../../context';
@@ -438,7 +438,7 @@ export const PersonSheet: React.FC<{
 
           {/* the rights beyond a member's, one short row each (the folklore centre's recordings are staff's anyway) */}
           {admitted && (role === 'member' || role === 'teacher') && (
-            <Part title="დამატებითი უფლებები">
+            <Part title="დამატებითი უფლებები" fold="ჩანაწერების ჩამოწერა · ტექსტების ჩაწერა">
               {!isStaff && <CentreDownloadSwitch uid={u.userId} name={u.name} onMessage={note.say} />}
               <SongTextSwitch uid={u.userId} name={u.name} onMessage={note.say} />
             </Part>
@@ -446,20 +446,20 @@ export const PersonSheet: React.FC<{
 
           {/* the song albums this member hears / saves (staff have them all) */}
           {admitted && role === 'member' && (
-            <Part title="ალბომები">
+            <Part title="ალბომები" fold="რომელ ალბომებს ისმენს და ინახავს">
               <MemberAlbums uid={u.userId} name={u.name} onMessage={note.say} />
             </Part>
           )}
 
           {admitted && role === 'member' && (
-            <Part title="საბავშვო რეჟიმი">
+            <Part title="საბავშვო რეჟიმი" fold={kidsOn ? 'ჩართულია' : 'გამორთულია'}>
               <Toggle on={kidsOn} onChange={setKids} label="მხოლოდ ბავშვების განყოფილებები"
                 hint={`ჩანს: ${SECTIONS.filter(x => kidsSections.includes(x.id)).map(x => x.label).join(', ')}`} />
             </Part>
           )}
 
           {admitted && role === 'member' && (
-            <Part title="სკოლაში">
+            <Part title="სკოლაში" fold={leftSince ? 'გასულად არის მონიშნული' : 'სკოლაშია'}>
               {leftSince ? (
                 <>
                   <p className="text-[13px] text-[#75685a] leading-snug">გასულად არის მონიშნული: აპით სარგებლობს, მაგრამ სიებში, რიცხვებში და დაბადების დღეებში აღარ ჩანს.</p>
@@ -475,7 +475,7 @@ export const PersonSheet: React.FC<{
           )}
 
           {manageAccess && (
-            <Part title="წვდომა" sub={admitted ? letIn : undefined}>
+            <Part title="წვდომა" sub={admitted ? letIn : undefined} fold={admitted ? (all ? 'ყველაფერზე' : `${picked.size} განყოფილება`) : undefined}>
               <AccessPicker all={all} picked={picked} onChange={(a, p) => { setAll(a); setPicked(p); }} />
               {admitted && (
                 <Btn kind="danger" size="sm" icon={<ShieldAlert />} className="mt-3" onClick={refuse} disabled={busy}>დამატების შეფერხება</Btn>
@@ -527,15 +527,36 @@ const PrivateNote: React.FC<{ uid: string; nameOf: (email?: string) => string; b
 };
 
 /** One part of the window under a thin line: a small label and, under it, a muted line. */
-const Part: React.FC<{ title: string; sub?: string; children: React.ReactNode }> = ({ title, sub, children }) => (
-  <section className="pt-4 border-t border-[#e8dcc8]">
-    <div className="mb-2.5">
-      <h4 className="text-[13px] font-bold text-[#75685a]">{title}</h4>
-      {sub && <p className="text-xs text-[#8a7a6a] break-all">{sub}</p>}
-    </div>
-    {children}
-  </section>
-);
+/** `fold`: the part opens folded (2026-11-06 — the window was too long): its head is a row with a one-line summary and ▾, a
+ *  tap unfolds it. */
+const Part: React.FC<{ title: string; sub?: string; fold?: string; children: React.ReactNode }> = ({ title, sub, fold, children }) => {
+  const [open, setOpen] = useState(fold === undefined);
+  if (fold !== undefined) {
+    return (
+      <section className="border-t border-[#e8dcc8]">
+        <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open}
+          className="w-full min-h-12 py-2.5 flex items-center gap-3 text-left cursor-pointer group">
+          <span className="flex-1 min-w-0">
+            <span className="block text-[13px] font-bold text-[#75685a] group-hover:text-[#7a2028]">{title}</span>
+            {!open && <span className="block text-[13px] text-[#2a2017] font-semibold leading-snug truncate">{fold}</span>}
+            {open && sub && <span className="block text-xs text-[#8a7a6a] break-all">{sub}</span>}
+          </span>
+          <ChevronDown className={`w-5 h-5 shrink-0 text-[#a08a76] transition-transform duration-300 ${open ? 'rotate-180 text-[#7a2028]' : ''}`} />
+        </button>
+        {open && <div className="pb-4 sg-in">{children}</div>}
+      </section>
+    );
+  }
+  return (
+    <section className="pt-4 border-t border-[#e8dcc8]">
+      <div className="mb-2.5">
+        <h4 className="text-[13px] font-bold text-[#75685a]">{title}</h4>
+        {sub && <p className="text-xs text-[#8a7a6a] break-all">{sub}</p>}
+      </div>
+      {children}
+    </section>
+  );
+};
 
 /** Class chips in the person's window: logo, name, „›“; a tap opens the class page. */
 const ClassChips: React.FC<{ label?: string; list: SchoolClass[]; onPick: (c: SchoolClass) => void; teacher?: boolean }> = ({ label, list, onPick, teacher }) => (
