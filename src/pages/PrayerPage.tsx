@@ -77,6 +77,11 @@ export const PrayerPage: React.FC = () => {
   const setNight = (on: boolean) => { setNightState(on); try { localStorage.setItem(NIGHT_KEY, on ? '1' : '0'); } catch { /* device only */ } };
   const [textEl, setTextEl] = useState<HTMLDivElement | null>(null);
   useKhutsuri(textEl, khutsuri);
+  // the whole screen goes dark with the card (the user, 2026-11-06: „მთლიანად ვრცელდებოდეს“) — html.sg-night-page, index.css
+  useEffect(() => {
+    document.documentElement.classList.toggle('sg-night-page', night);
+    return () => document.documentElement.classList.remove('sg-night-page');
+  }, [night]);
 
   useEffect(() => {
     if (!selectedPrayerId) return;
