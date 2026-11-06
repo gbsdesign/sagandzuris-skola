@@ -346,3 +346,5 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
   .sg-chest-spark { display: none; }
 }
 
+/* while a text reads itself (the auto-scroll bar at the bottom), the floating „უკან“ steps aside for the bar */
+html[data-sg-autoscroll] .sg-float-back { opacity: 0 !important; pointer-events: none !important; }

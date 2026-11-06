@@ -1,12 +1,16 @@
-import React, { useState } from 'react';
+import React, { useRef, useState } from 'react';
 import { Check, Pencil, TextAlignStart } from 'lucide-react';
 import { useAuth } from '../../context';
 import { saveSongText, useCanEditSongText, useWrittenSongText } from '../../hooks/useSongTexts';
 import { Btn, IconBtn } from '../ui/kit';
+import { AutoScrollButton } from '../views/ReadingTools';
 
 // The song page's „ტექსტი“: words written in the app (songTexts) come first, then the song's own or found ones.
-// Admins and the members an admin picked write them here (✎).
-export const SongWords: React.FC<{ songId: string; words: { text: string; source?: string } | null }> = ({ songId, words }) => {
+// Admins and the members an admin picked write them here (✎). ⏬ = the words read by themselves (`scroller` = the song
+// page's own scrolling box).
+export const SongWords: React.FC<{ songId: string; words: { text: string; source?: string } | null; scroller?: () => HTMLElement | null }> = ({
+  songId, words, scroller,
+}) => {
   const { user } = useAuth();
   const canEdit = useCanEditSongText();
   const written = useWrittenSongText(songId);
@@ -14,6 +18,7 @@ export const SongWords: React.FC<{ songId: string; words: { text: string; source
   const [draft, setDraft] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState(false);
+  const textRef = useRef<HTMLParagraphElement>(null);
 
   const save = async () => {
     if (draft === null || !user) return;
@@ -35,6 +40,7 @@ export const SongWords: React.FC<{ songId: string; words: { text: string; source
         <h2 className="flex-1 flex items-center gap-1.5 text-[13px] font-extrabold text-[#7a2028]">
           <TextAlignStart className="w-4 h-4" /> ტექსტი
         </h2>
+        {shown && draft === null && <AutoScrollButton source={() => textRef.current} scroller={scroller} />}
         {canEdit && draft === null && (
           <IconBtn label={shown ? 'ტექსტის შესწორება' : 'ტექსტის ჩაწერა'} onClick={() => { setError(false); setDraft(shown?.text ?? ''); }}>
             <Pencil />
@@ -62,7 +68,7 @@ export const SongWords: React.FC<{ songId: string; words: { text: string; source
         </>
       ) : shown ? (
         <>
-          <p className="text-[16px] leading-[1.75] text-[#2a2017] whitespace-pre-line">{shown.text}</p>
+          <p ref={textRef} className="text-[16px] leading-[1.75] text-[#2a2017] whitespace-pre-line">{shown.text}</p>
           {shown.source && <p className="mt-3 text-[11.5px] text-[#a0907c]">{shown.source}</p>}
         </>
       ) : (

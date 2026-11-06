@@ -260,7 +260,7 @@ export const SongPage: React.FC = () => {
           </section>
         )}
 
-        <SongWords songId={song.id} words={words} />
+        <SongWords songId={song.id} words={words} scroller={() => scrollRef.current} />
 
         {song.docs && song.docs.length > 0 && (
           <section className="flex flex-wrap gap-2">

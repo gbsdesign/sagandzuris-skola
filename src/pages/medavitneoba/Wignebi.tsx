@@ -6,6 +6,7 @@ import {
 import { useNavigation } from '../../context';
 import { WIGNEBI_COLLECTIONS, WIGNEBI_SHELVES, type WignebiCollection } from '../../data/wignebi';
 import { triggerHaptic } from '../../utils/haptics';
+import { AutoScrollButton } from '../../components/views/ReadingTools';
 
 // „წიგნები“ of მედავითნეობა: the liturgical books in the menu order of the „საღვთისმსახურო წიგნები“ app.
 // The place is `mapItem`: „w“ the shelves, „w:s:biblia“ the Bible's four books, „w:c:<collection>“ a book's list,
@@ -257,6 +258,7 @@ const Reader: React.FC<{ c: WignebiCollection; n: number; book: BookFile; part: 
   c, n, book, part, open, back,
 }) => {
   const size = useTextSize();
+  const textRef = useRef<HTMLElement>(null);
   const p = book.c[part];
   const many = book.c.length > 1;
   const go = (i: number) => { triggerHaptic(10); open(`w:c:${c.id}:${n}:${i}`, true); window.scrollTo({ top: 0 }); };
@@ -272,6 +274,7 @@ const Reader: React.FC<{ c: WignebiCollection; n: number; book: BookFile; part: 
             <p className="mt-1 text-[15px] font-bold text-[#7a2028] line-clamp-2">{partTitle}</p>
           )}
         </div>
+        <AutoScrollButton source={() => textRef.current} zoom={size.px / 17} className="mt-1" />
         {/* text size, kept on this device */}
         <div className="shrink-0 flex items-center gap-1 rounded-full bg-white ring-1 ring-[#e8dcc8] p-1">
           <button type="button" onClick={size.smaller} disabled={!size.smaller} aria-label="ტექსტი უფრო პატარა"
@@ -282,7 +285,7 @@ const Reader: React.FC<{ c: WignebiCollection; n: number; book: BookFile; part: 
         </div>
       </header>
 
-      <article className={`${CARD} px-5 py-6 sm:px-8 sm:py-8`} style={{ fontSize: size.px }}>
+      <article ref={textRef} className={`${CARD} px-5 py-6 sm:px-8 sm:py-8`} style={{ fontSize: size.px }}>
         {p.s.map(([h, paras], si) => (
           <section key={si} className={si ? 'mt-[1.4em]' : ''}>
             {h && <h3 className="font-serif-ge font-bold text-[0.92em] leading-snug text-[#9b1c23] mb-[0.5em] text-pretty">{h}</h3>}

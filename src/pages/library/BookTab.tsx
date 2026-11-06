@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, ChevronRight, Loader2 } from 'lucide-react';
 import { GrapeBunch } from '../../components/home/PlateOrnaments';
+import { AutoScrollButton } from '../../components/views/ReadingTools';
 import { BookHead, BookNav, SectionTitle, ToContents } from './BookHead';
 import { MiniCover } from './Shelf';
 import { lastChapter, saveChapter } from './readingPlace';
@@ -53,6 +54,7 @@ export const BookTab: React.FC<BookProps> = ({ nav, load = loadDzveli, cover, pl
   const [failed, setFailed] = useState(false);
   const chapter = Number(nav.part) || null;
   const [last, setLast] = useState<number | null>(() => lastChapter(place)?.n ?? null);
+  const textRef = useRef<HTMLElement>(null);
 
   useEffect(() => {
     let alive = true;
@@ -90,10 +92,13 @@ export const BookTab: React.FC<BookProps> = ({ nav, load = loadDzveli, cover, pl
       <div>
         <div className="flex items-center justify-between gap-3">
           <ToContents onClick={nav.up} />
-          <span className="text-[12.5px] font-bold text-[#8a7a6a] tabular-nums">თავი {ch.n} / {total}</span>
+          <span className="flex items-center gap-2.5">
+            <span className="text-[12.5px] font-bold text-[#8a7a6a] tabular-nums">თავი {ch.n} / {total}</span>
+            <AutoScrollButton source={() => textRef.current} />
+          </span>
         </div>
 
-        <article className="mt-3 rounded-2xl bg-[#fffdf8] ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_12px_30px_-22px_rgba(42,32,23,0.4)] px-4 py-5 sm:px-8 sm:py-7">
+        <article ref={textRef} className="mt-3 rounded-2xl bg-[#fffdf8] ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_12px_30px_-22px_rgba(42,32,23,0.4)] px-4 py-5 sm:px-8 sm:py-7">
           <p className="text-center text-[11px] font-bold tracking-wide text-[#b08a5a]">{book.part}</p>
           <h2 className="mt-1.5 text-center font-serif-ge text-[19px] sm:text-[23px] leading-snug font-bold text-[#7a2028] text-balance">{ch.title}</h2>
           <div className="mx-auto mt-3 mb-4 flex items-center justify-center gap-2" aria-hidden>

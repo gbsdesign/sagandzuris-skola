@@ -215,6 +215,11 @@
 - **Prayers** (`data/prayers.ts`, `public/prayers/`, `public/bible/`), psalter kathismas, 73 akathists,
   commemoration name lists (`utils/commemoration.ts`), prayer reminders via Web Push Worker
   `sagandzuri-reminders` (`worker/reminders/`; push works only on the deployed site).
+  **⏬ on every reading page** (2026-11-06; `AutoScrollButton` in `views/ReadingTools.tsx`: prayers, saints' lives, ancestors,
+  the library's books, the liturgical books, poems, songs' words — `source` = the text, `scroller` = an overlay's own box): the
+  bar's „სრულ ეკრანზე“ opens „წამყვანის ეკრანი“ (`views/Prompter.tsx`, the user: „წამყვანებს წინ რომ ეკრანი აქვთ“; no mirror —
+  declined): a copy of the text as on screen, big, past a reading line, 3-2-1, a tap pauses, მუქი/ღია + size kept on the device
+  (`sg-prompter-theme`/`-size`), the bar's speed = the same letters a second; it starts and gives the page back at the block read.
 - **საგანძურის გზა** (page `gz`) = „ჩემი დღე“ since 2026-10-28: the round buttons (`PathOrbs`; four since 2026-11-05 — the pearls
   game's fifth was removed), then the habits card. The
   „დღეს“ card on top (`PathToday`: next lesson, nearest assignment, reviews due) was taken off at the user's wish (2026-11-05) —
