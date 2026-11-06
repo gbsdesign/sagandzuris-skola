@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useAuth, useNavigation, useModal } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
-import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
+import { useMyClasses, useTeachingClasses, type SchoolClass } from '../../hooks/useClasses';
 import { ClassLogo } from '../classes/ClassLogo';
 import { useAccess } from '../../hooks/useAccess';
 import { askSignIn, openSignIn } from '../access/SignInPrompt';
@@ -9,12 +9,45 @@ import { SearchButton } from '../search/GlobalSearch';
 import { OfflineButton } from '../offline/OfflineButton';
 import { useInbox, isUnread } from '../../hooks/useDirectChat';
 import { useClassLasts, useChatSeen, isClassUnread } from '../../hooks/useClassChat';
-import { User as UserIcon, LogIn, Compass, Library, Baby, MessageCircle } from 'lucide-react';
+import { User as UserIcon, LogIn, Compass, Library, Baby, MessageCircle, ChevronDown, ChevronRight, Users } from 'lucide-react';
 import { WorkButton, WorkPanel, useClassWork } from '../classes/ClassWork';
 import { BellButton, BellPanel } from './Bell';
 import { useBellState, useNotices } from '../../hooks/useNotices';
 import { useOpenRequest } from '../../utils/searchOpen';
 import { useShownPhoto } from '../../hooks/useMyPhoto';
+
+/** The header's list of my classes, when there are several (2026-11-07, the user's pick „ერთი „კლასი ▾““: three „კლასი“
+ *  chips no longer fit a phone's row and pushed the page sideways). A row a class, the open one marked. */
+const ClassesPanel: React.FC<{ classes: SchoolClass[]; current: string | null; onOpen: (id: string) => void }> = ({ classes, current, onOpen }) => (
+  <section aria-label="ჩემი კლასები">
+    <h2 className="min-h-12 flex items-center gap-2">
+      <Users className="w-5 h-5 shrink-0 text-[#7a2028]" />
+      <span className="font-serif-ge text-lg font-bold text-[#4a3426] truncate">ჩემი კლასები</span>
+      <span className="text-sm font-bold text-[#a4927c] tabular-nums">{classes.length}</span>
+    </h2>
+    <ul className="space-y-2">
+      {classes.map(c => {
+        const here = c.id === current;
+        return (
+          <li key={c.id}>
+            <button
+              type="button"
+              onClick={() => onOpen(c.id)}
+              aria-current={here ? 'page' : undefined}
+              className={`w-full min-h-14 flex items-center gap-3 pl-2.5 pr-3 py-2 rounded-2xl text-left ring-1 transition-colors cursor-pointer active:scale-[0.99] ${
+                here ? 'bg-[#7a2028]/[0.06] ring-[#7a2028]/30' : 'bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40'
+              }`}
+            >
+              <ClassLogo name={c.name} logo={c.logo} className="w-10 h-10 shrink-0 text-sm" />
+              <span className={`min-w-0 flex-1 text-[15px] font-bold leading-snug line-clamp-2 ${here ? 'text-[#7a2028]' : 'text-[#4a3426]'}`}>{c.name}</span>
+              <ChevronRight className="w-5 h-5 shrink-0 text-[#b3a594]" />
+            </button>
+          </li>
+        );
+      })}
+    </ul>
+  </section>
+);
 
 interface HeaderProps {
   logoUrl: string;
@@ -43,7 +76,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
   const { user, signingIn, isAdmin, isTeacher } = useAuth();
   // my own cut photo when kept, else the account's
   const photo = useShownPhoto(user?.uid, user?.photoURL);
-  const { navigateTo, currentPage, openClass, openDm, mapItem, openMapItem } = useNavigation();
+  const { navigateTo, currentPage, openClass, openDm, mapItem, openMapItem, selectedClassId } = useNavigation();
   const memberOf = useMyClasses(user?.uid);
   // a teacher reaches their own classes' pages from the header too
   const { classes: teaching } = useTeachingClasses(isTeacher ? user?.uid : null);
@@ -71,8 +104,9 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
   const showNav = tools.length > 0 || classes.length > 0;
   const onPrayers = currentPage === 'biblioteka' && (mapItem ?? '').startsWith('prayers');
 
-  // 📋 and 🔔: one list open at a time, under the header
-  const [drop, setDrop] = useState<'work' | 'bell' | null>(null);
+  // 📋, 🔔 and (with several classes) „კლასი ▾“: one list open at a time, under the header
+  type Drop = 'work' | 'bell' | 'classes';
+  const [drop, setDrop] = useState<Drop | null>(null);
   const work = useClassWork(classes);
   const bell = useBellState(user?.uid);
   const allNotices = useNotices({ uid: user?.uid, chats: showChats, classes: access.can('classes') ? classes : [], threads });
@@ -82,17 +116,17 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
   const [seenBefore, setSeenBefore] = useState(0);
   const monthAgo = Date.now() - 30 * 86_400_000;
   const bellCount = notices.filter(n => n.at > bell.seen && n.at > monthAgo).length;
-  const toggle = (which: 'work' | 'bell') => {
+  const toggle = (which: Drop) => {
     if (drop === which) { setDrop(null); return; }
     if (which === 'work') work.markSeen();
-    else {
+    else if (which === 'bell') {
       setSeenBefore(bell.seen);
       bell.markSeen(Math.max(Date.now(), ...notices.map(n => n.at)));
     }
     setDrop(which);
   };
   // going anywhere (an assignment's notes, a chat) closes the list
-  useEffect(() => { setDrop(null); }, [currentPage, mapItem]);
+  useEffect(() => { setDrop(null); }, [currentPage, mapItem, selectedClassId]);
   // a tap on an admin's notice on the phone (`/?open=bell`) opens the list (after the page it may have changed to)
   const openBell = React.useRef(() => {});
   openBell.current = () => { if (drop !== 'bell') toggle('bell'); };
@@ -135,21 +169,40 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
     </button>
   );
 
-  const classButtons = classes.map((c, i) => (
-    <React.Fragment key={c.id}>
-      {(tools[0]?.id === 'gza' || i > 0) && <span aria-hidden className="w-px my-1.5 bg-[#e8dcc8] shrink-0" />}
-      <button
-        type="button"
-        onClick={() => { triggerHaptic(10); openClass(c.id); }}
-        className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-10 pl-1.5 pr-2 min-[400px]:pr-3 rounded-full text-[13px] font-bold ${currentPage === 'class' ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
-        title={`${c.name} — კლასის გვერდი`}
-        aria-label={`კლასი: ${c.name}`}
-      >
-        <ClassLogo name={c.name} logo={c.logo} className="w-7 h-7 shrink-0 text-xs" />
-        <span>კლასი</span>
-      </button>
-    </React.Fragment>
-  ));
+  // one class: its chip (with its logo) opens it; several: one „კლასი ▾“ drops the list of them (ClassesPanel)
+  const classChip = `flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-10 pl-1.5 pr-2 min-[400px]:pr-3 rounded-full text-[13px] font-bold ${currentPage === 'class' ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`;
+  const classButtons = classes.length > 0 && (
+    <>
+      {tools[0]?.id === 'gza' && <span aria-hidden className="w-px my-1.5 bg-[#e8dcc8] shrink-0" />}
+      {classes.length === 1 ? (
+        <button
+          type="button"
+          onClick={() => { triggerHaptic(10); openClass(classes[0].id); }}
+          className={classChip}
+          title={`${classes[0].name} — კლასის გვერდი`}
+          aria-label={`კლასი: ${classes[0].name}`}
+        >
+          <ClassLogo name={classes[0].name} logo={classes[0].logo} className="w-7 h-7 shrink-0 text-xs" />
+          <span>კლასი</span>
+        </button>
+      ) : (
+        // (the classes' logos are in the list; here the row's own look — an icon, the word and ▾ — so the three chips
+        // still fit a 360px phone, the icon going away under 380px like the others')
+        <button
+          type="button"
+          onClick={() => { triggerHaptic(10); toggle('classes'); }}
+          aria-expanded={drop === 'classes'}
+          className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-10 px-2 rounded-full text-[13px] font-bold ${currentPage === 'class' || drop === 'classes' ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
+          title="ჩემი კლასები"
+          aria-label={`ჩემი კლასები: ${classes.length}`}
+        >
+          <Users className="w-4 h-4 text-[#7a2028] shrink-0 max-[379px]:hidden" />
+          <span>კლასი</span>
+          <ChevronDown className={`w-3.5 h-3.5 shrink-0 -ml-0.5 transition-transform ${drop === 'classes' ? 'rotate-180' : ''}`} />
+        </button>
+      )}
+    </>
+  );
 
   return (
     <header className="relative z-50 safe-bleed safe-top bg-[#fbf6ec] border-b border-[#e8dcc8]">
@@ -287,9 +340,15 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
       {drop && (
         <div className="absolute inset-x-0 top-full">
           <div className="max-w-7xl mx-auto px-2 sm:px-4 pt-2">
-            <div className="sg-in w-full lg:w-[460px] max-h-[calc(100dvh-9rem)] overflow-y-auto overscroll-contain rounded-3xl bg-[#fffdf8] ring-1 ring-[#e8dcc8] shadow-[0_22px_48px_-20px_rgba(74,52,38,0.55)] px-4 min-[400px]:px-5 pb-4">
+            <div className={`sg-in w-full ${drop === 'classes' ? 'lg:w-[380px] lg:mx-auto' : 'lg:w-[460px]'} max-h-[calc(100dvh-9rem)] overflow-y-auto overscroll-contain rounded-3xl bg-[#fffdf8] ring-1 ring-[#e8dcc8] shadow-[0_22px_48px_-20px_rgba(74,52,38,0.55)] px-4 min-[400px]:px-5 pb-4`}>
               {drop === 'work' ? (
                 <WorkPanel state={work} />
+              ) : drop === 'classes' ? (
+                <ClassesPanel
+                  classes={classes}
+                  current={currentPage === 'class' ? selectedClassId : null}
+                  onOpen={id => { triggerHaptic(10); setDrop(null); openClass(id); }}
+                />
               ) : (
                 <BellPanel
                   notices={notices}
