@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useMemo, useRef, useState } from 'react';
-import { BookMarked, BookOpen, CalendarDays, Check, Clock, Compass, Feather, GraduationCap, Library, Moon, Music, Music2, Music4, Pencil, Plus, ScrollText, Sparkles, Star, Sun, Users, X, Pin, PinOff, Guitar, Church, NotebookPen, HandHeart, Flame, Heart, MessageCircle, ListMusic, School, ClipboardList, ClipboardCheck, CalendarClock, Settings2, Cake } from 'lucide-react';
+import { BookMarked, BookOpen, CalendarDays, Check, Clock, Compass, Feather, GraduationCap, Library, Moon, Music, Music2, Music4, Pencil, Plus, ScrollText, Sparkles, Star, Sun, Users, X, Pin, PinOff, Guitar, Church, NotebookPen, HandHeart, Flame, Heart, MessageCircle, ListMusic, School, ClipboardList, ClipboardCheck, CalendarClock, Settings2, Cake, ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth, useChants, useNavigation } from '../../context';
 import { useNotes } from '../../context/NotesContext';
 import { dayKey } from '../../utils/habitsWeek';
@@ -163,6 +163,8 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
   const open = useOpenShortcut();
   const [editing, setEditing] = useState(false);
   const [adding, setAdding] = useState(false);
+  // on the profile the card opens folded (2026-11-06, the user's pick): the first six, then „ყველა N“; editing shows all
+  const [showAll, setShowAll] = useState(false);
   const [drag, setDrag] = useState<{ from: number; to: number } | null>(null);
   const press = useRef<{ t: number; x: number; y: number; long: boolean; idx: number } | null>(null);
 
@@ -207,6 +209,9 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
     if (on && !(habitLog[dayKey(new Date())] || []).includes(habit)) toggleHabitToday(habit);
   };
   const order = drag ? (() => { const a = [...ids]; const [m] = a.splice(drag.from, 1); a.splice(drag.to, 0, m); return a; })() : ids;
+  const FOLD_AT = 6;
+  const folded = variant === 'profile' && !editing && !showAll && ids.length > FOLD_AT;
+  const shown = folded ? order.slice(0, FOLD_AT) : order;
 
   const onDown = (i: number) => (e: React.PointerEvent) => {
     press.current = { t: window.setTimeout(() => {
@@ -271,7 +276,7 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
       {/* on the profile two a row (2026-11-06): three left the names cut short — „დაუჯდ.“, „სამოციქ.“ */}
       <ul className={`${variant === 'profile' ? 'grid grid-cols-2 gap-2' : SHELF_GRID} select-none ${editing ? 'touch-none' : ''}`}>
         {readingIn.map(g => <KathismaTiles key={g.id} group={g} uid={user.uid} />)}
-        {order.map((id, i) => {
+        {shown.map((id, i) => {
           const l = shortcutLabel(id)!;
           const dragging = drag && order[drag.to] === id;
           // a prayer, akathist or kathisma gets a "✓ წავიკითხე" corner; the tile then lays out to the left
@@ -309,7 +314,15 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
             </li>
           );
         })}
-        {ids.length < MAX_SHORTCUTS && (editing || variant === 'profile') && (
+        {variant === 'profile' && !editing && ids.length > FOLD_AT && (
+          <li className="col-span-2">
+            <button type="button" onClick={() => setShowAll(v => !v)} aria-expanded={!folded}
+              className="w-full h-11 rounded-[13px] bg-[#7a2028]/[0.06] text-[#7a2028] hover:bg-[#7a2028]/10 flex items-center justify-center gap-1.5 text-[13px] font-bold cursor-pointer transition active:scale-[0.99]">
+              {folded ? <>ყველა ღილაკი · {ids.length} <ChevronDown className="w-4 h-4" /></> : <>ნაკლები <ChevronUp className="w-4 h-4" /></>}
+            </button>
+          </li>
+        )}
+        {ids.length < MAX_SHORTCUTS && (editing || (variant === 'profile' && !folded)) && (
           <li>
             <button type="button" onClick={() => setAdding(true)} aria-label="ღილაკის დამატება"
               className="w-full h-11 rounded-[13px] border-[1.5px] border-dashed border-[#d9c8ac] text-[#8a7a6a] hover:text-[#7a2028] hover:border-[#7a2028]/40 flex items-center justify-center gap-1.5 cursor-pointer transition">
