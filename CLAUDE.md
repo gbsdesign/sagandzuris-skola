@@ -1446,7 +1446,7 @@
   attendance; amber = no class, or no lesson for 14+ days). „მონიშვნა“ on the members list picks several people
   (`admin/BulkActions.tsx` `BulkBar`): „კლასში“ (`addClassMembers`/`removeClassMembers` in `ClassesAdmin.tsx`, with undo),
   „დაშვება“ for waiting ones (superadmins), „ჩანაწერები“ (the centre's right). Filter „შესაძლო ორმაგი“ (`utils/duplicates.ts`:
-  the same phone's last 9 digits, or the same two-word name) + an amber box in the person's window that opens the twin.
+  the same phone's last 9 digits, or the same two-word name) + an amber box in the person's window that opens the twin. Since 2026-11-06 the row says why („იგივე ტელეფონი“ / „იგივე სახელი“, `whyLabel`) and each twin in the box has „სხვა ადამიანია“ (the pair goes to `settings/notTwins` `pairs`, `utils/notTwins.ts`, and leaves the list) and „ეს ზედმეტია — გასულად“ (`setLeft` on the twin); members marked „გასული“ are never twins. No merging of accounts (the user's pick: the small version).
   „ჩანიშვნა“ in the person's window = an admin-only note (`utils/adminNotes.ts`, `adminNotes/{uid}` {text ≤2000, by = the
   writer's e-mail, at}; rules: admins only; in the backup). A „მალე“ section can get „გახსნის დღე“ (`settings/sections` `openOn`;
   `stateOnDay` in `data/sections.ts` opens it on that Tbilisi day; `useSections().stored` = the saved state). ⚙ „სკოლა“ →
