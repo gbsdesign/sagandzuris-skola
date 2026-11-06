@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth, useNavigation, useModal } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
@@ -10,22 +10,36 @@ import { OfflineButton } from '../offline/OfflineButton';
 import { useInbox, isUnread } from '../../hooks/useDirectChat';
 import { useClassLasts, useChatSeen, isClassUnread } from '../../hooks/useClassChat';
 import { User as UserIcon, LogIn, Compass, Library, Baby, MessageCircle } from 'lucide-react';
+import { WorkButton, WorkPanel, useClassWork } from '../classes/ClassWork';
+import { BellButton, BellPanel } from './Bell';
+import { useBellSeen, useNotices } from '../../hooks/useNotices';
 
 interface HeaderProps {
   logoUrl: string;
 }
 
-// learning tools: the path (skills and manner open from inside it) and the library (open to guests too)
+// the prayer book's mark: the library shelf's Bolnisi cross (pages/library/Shelf.tsx), in the text's colour
+const PrayerCross: React.FC<{ className?: string }> = ({ className }) => (
+  <svg viewBox="0 0 100 100" className={className} aria-hidden fill="currentColor">
+    {[0, 90, 180, 270].map(a => <path key={a} d="M43 50 L57 50 L66 10 Q50 20 34 10 Z" transform={`rotate(${a} 50 50)`} />)}
+    <circle cx="50" cy="50" r="8" />
+  </svg>
+);
+
+// learning tools: the path (skills and manner open from inside it) and, since 2026-11-06, the prayer book in the
+// library's place (the user: „ბიბლიოთეკის ადგილზე იხსნებოდეს ლოცვანი“) — the library itself is a round button before
+// the search. The prayer book is the library's, so the library's switch and sign-in hold for both.
 const TOOLS = [
   { id: 'gza', page: 'gz', label: 'საგანძურის გზა', Icon: Compass },
-  { id: 'biblioteka', page: 'biblioteka', label: 'ბიბლიოთეკა', Icon: Library },
+  { id: 'lotsvani', page: 'biblioteka', label: 'ლოცვანი', Icon: PrayerCross },
 ] as const;
 
-// Phone: [logo] … [🔖 ③] [შესვლა] / tools group below. The full independent-work card lives on the path page.
-// Desktop (lg): one row — logo + name · tools in the middle · independent work + profile.
+// Phone: [logo] [📋] [🔔] … [📚] [🔍] [☁] [💬] [👤] / the learning tools below. Desktop (lg): one row — logo + name, 📋, 🔔 ·
+// the tools in the middle with 📚 and 🔍 · the rest. 📋 and 🔔 drop their lists down under the header (2026-11-06, the
+// user: „დავალების ღილაკიც მაღლა აიტანე საგანძურის ლოგოს მარჯვნივ და აქვე იყოს შეტყობინებების ღილაკი … ჩამოსაშლელი იყოს“).
 export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
   const { user, signingIn, isAdmin, isTeacher } = useAuth();
-  const { navigateTo, currentPage, openClass } = useNavigation();
+  const { navigateTo, currentPage, openClass, openDm, mapItem, openMapItem } = useNavigation();
   const memberOf = useMyClasses(user?.uid);
   // a teacher reaches their own classes' pages from the header too
   const { classes: teaching } = useTeachingClasses(isTeacher ? user?.uid : null);
@@ -45,11 +59,72 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
     : 0;
   // kids' mode: no profile settings and no signing out (the teacher turns it off)
   const kids = Boolean(access.kids);
-  // the learning tools the admin's switches and the kids' mode leave visible
+  // the library's switch (the admin's, the kids' mode) holds for the library's button and the prayer book alike
+  const library = access.section('biblioteka');
   const tools = TOOLS.filter(t => access.section(t.id === 'gza' ? 'gza' : 'biblioteka') !== 'hidden');
-  // the student's (or teacher's) class(es) sit between the path and the library
+  // the student's (or teacher's) class(es) sit between the path and the prayer book
   const classes = access.can('classes') ? myClasses : [];
   const showNav = tools.length > 0 || classes.length > 0;
+  const onPrayers = currentPage === 'biblioteka' && (mapItem ?? '').startsWith('prayers');
+
+  // 📋 and 🔔: one list open at a time, under the header
+  const [drop, setDrop] = useState<'work' | 'bell' | null>(null);
+  const work = useClassWork(classes);
+  const notices = useNotices({ uid: user?.uid, chats: showChats && access.can('classes'), classes, threads });
+  const bell = useBellSeen(user?.uid);
+  // what was new at this look stays marked while the list is open
+  const [seenBefore, setSeenBefore] = useState(0);
+  const monthAgo = Date.now() - 30 * 86_400_000;
+  const bellCount = notices.filter(n => n.at > bell.seen && n.at > monthAgo).length;
+  const toggle = (which: 'work' | 'bell') => {
+    if (drop === which) { setDrop(null); return; }
+    if (which === 'work') work.markSeen();
+    else {
+      setSeenBefore(bell.seen);
+      bell.markSeen(Math.max(Date.now(), ...notices.map(n => n.at)));
+    }
+    setDrop(which);
+  };
+  // going anywhere (an assignment's notes, a chat) closes the list
+  useEffect(() => { setDrop(null); }, [currentPage, mapItem]);
+
+  const openTool = (id: typeof TOOLS[number]['id']) => {
+    triggerHaptic(10);
+    // the path is its own page; guests still get the sign-in prompt from the modal layer
+    if (id === 'gza') {
+      if (!user) openModal('gza');
+      else navigateTo('gz');
+    }
+    // guests see the prayer book's button, but need to sign in to open it
+    else if (library === 'locked') askSignIn('ლოცვანი');
+    // the library's page opened on its prayer book in one step, so „back“ goes where one came from
+    else {
+      navigateTo('biblioteka');
+      openMapItem('prayers');
+    }
+  };
+  // the library: a round button before the search (2026-11-06, the user: „ბიბლიოთეკა აიტანე მაღლა სერჩის წინ ლამაზი ღილაკით
+  // მრგვალად“); the search's place moves with the screen, and so does this
+  const libraryButton = (className: string) => library !== 'hidden' && (
+    <button
+      type="button"
+      onClick={() => {
+        triggerHaptic(10);
+        if (library === 'locked') askSignIn('ბიბლიოთეკა');
+        else navigateTo('biblioteka');
+      }}
+      className={`w-9 h-9 shrink-0 rounded-full ring-1 flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
+        currentPage === 'biblioteka' && !onPrayers
+          ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]'
+          : 'bg-white/80 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028]'
+      } ${className}`}
+      title="ბიბლიოთეკა"
+      aria-label="ბიბლიოთეკა"
+    >
+      <Library className="w-[18px] h-[18px]" />
+    </button>
+  );
+
   const classButtons = classes.map((c, i) => (
     <React.Fragment key={c.id}>
       {(tools[0]?.id === 'gza' || i > 0) && <span aria-hidden className="w-px my-1.5 bg-[#e8dcc8] shrink-0" />}
@@ -68,29 +143,36 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
 
   return (
     <header className="relative z-50 safe-bleed safe-top bg-[#fbf6ec] border-b border-[#e8dcc8]">
-      <div className="max-w-7xl mx-auto px-2 sm:px-4 py-2 flex flex-wrap lg:flex-nowrap items-center gap-2">
-        {/* logo (+ name from md up) */}
-        <button
-          type="button"
-          onClick={() => navigateTo('home')}
-          className="order-1 flex items-center gap-2.5 p-1 pr-2 rounded-2xl hover:bg-[#7a2028]/5 transition-all cursor-pointer text-left shrink-0 active:scale-95"
-          title="მთავარი"
-        >
-          <img
-            src={logoUrl}
-            alt="საგანძურის სკოლის ლოგო"
-            className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl object-contain bg-white ring-1 ring-[#e8dcc8] p-0.5"
-            referrerPolicy="no-referrer"
-          />
-          <span className="hidden md:inline font-serif-ge text-base font-bold text-[#4a3426]">საგანძურის სკოლა</span>
-        </button>
+      {/* an open list: a tap anywhere else closes it (the header's own buttons stay above this) */}
+      {drop && <div aria-hidden className="fixed inset-0 bg-[#2a2017]/15 sg-in" onClick={() => setDrop(null)} />}
 
-        {/* independent work (icon + count) + profile (the admin panel opens from the profile; installing the app lives
-            in the profile and on the offline page) */}
-        <div className="order-2 lg:order-3 ml-auto flex items-center gap-1.5 sm:gap-2 min-w-0">
-          {/* the search sits beside the learning tools from sm up; with none of them shown, up here — and up here on
-              every phone (under sm), where the three chips need the whole row (beside them they spilled off the
-              screen and squeezed „კლასი“, 2026-10-31) */}
+      <div className="relative max-w-7xl mx-auto px-2 sm:px-4 py-2 flex flex-wrap lg:flex-nowrap items-center gap-2">
+        {/* logo (+ name from md up), then 📋 and 🔔 */}
+        <div className="order-1 flex items-center gap-1.5 shrink-0">
+          <button
+            type="button"
+            onClick={() => navigateTo('home')}
+            className="flex items-center gap-2.5 p-0.5 md:p-1 md:pr-2 rounded-2xl hover:bg-[#7a2028]/5 transition-all cursor-pointer text-left shrink-0 active:scale-95"
+            title="მთავარი"
+          >
+            <img
+              src={logoUrl}
+              alt="საგანძურის სკოლის ლოგო"
+              className="w-10 h-10 sm:w-11 sm:h-11 rounded-xl object-contain bg-white ring-1 ring-[#e8dcc8] p-0.5"
+              referrerPolicy="no-referrer"
+            />
+            <span className="hidden md:inline font-serif-ge text-base font-bold text-[#4a3426]">საგანძურის სკოლა</span>
+          </button>
+          {classes.length > 0 && <WorkButton state={work} open={drop === 'work'} onToggle={() => toggle('work')} />}
+          <BellButton count={bellCount} open={drop === 'bell'} onToggle={() => toggle('bell')} />
+        </div>
+
+        {/* profile and the rest (the admin panel opens from the profile; installing the app lives in the profile and on
+            the offline page) */}
+        <div className="order-2 lg:order-3 ml-auto flex items-center gap-1.5 min-w-0">
+          {/* 📚 and 🔍 sit beside the learning tools from sm up; with none of them shown, up here — and up here on every
+              phone (under sm), where the three chips need the whole row (2026-10-31) */}
+          {libraryButton(showNav ? 'sm:hidden' : '')}
           {access.can('search') && <SearchButton className={showNav ? 'sm:hidden' : ''} />}
           {/* offline mode: the cloud shows whether the app works without internet */}
           <OfflineButton />
@@ -106,8 +188,8 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                       ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]'
                       : 'bg-white/80 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028]'
                   }`}
-                  title={unread ? `შეტყობინებები — ${unread} წაუკითხავი` : 'შეტყობინებები'}
-                  aria-label={unread ? `შეტყობინებები, ${unread} წაუკითხავი` : 'შეტყობინებები'}
+                  title={unread ? `წერილები — ${unread} წაუკითხავი` : 'წერილები'}
+                  aria-label={unread ? `წერილები, ${unread} წაუკითხავი` : 'წერილები'}
                 >
                   <MessageCircle className="w-[18px] h-[18px]" />
                   <span className="hidden lg:inline text-[13px] font-bold">წერილები</span>
@@ -119,8 +201,9 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                 </button>
               )}
               {kids && (
-                <span className="inline-flex items-center gap-1 h-9 px-2.5 rounded-full bg-amber-100 text-amber-900 text-xs font-bold shrink-0" title="საბავშვო რეჟიმი — მასწავლებელმა ჩართო">
-                  <Baby className="w-3.5 h-3.5" /> საბავშვო
+                // a phone keeps only the child's face: the row is full
+                <span className="inline-flex items-center gap-1 h-9 px-2.5 rounded-full bg-amber-100 text-amber-900 text-xs font-bold shrink-0" title="საბავშვო რეჟიმი — მასწავლებელმა ჩართო" aria-label="საბავშვო რეჟიმი">
+                  <Baby className="w-3.5 h-3.5" /> <span className="max-sm:hidden">საბავშვო</span>
                 </span>
               )}
               <button
@@ -158,40 +241,57 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
           )}
         </div>
 
-        {/* learning tools: one group, full width on phones, centred on desktop; the search beside it */}
-{showNav && (
+        {/* learning tools: one group, full width on phones, centred on desktop; 📚 and 🔍 beside it */}
+        {showNav && (
         <nav className="order-3 lg:order-2 w-full lg:w-auto lg:mx-auto flex justify-center gap-1.5 sm:gap-2" aria-label="სასწავლო მასალა">
           <div className="flex-1 sm:flex-none flex items-stretch rounded-full bg-white/80 ring-1 ring-[#e8dcc8] p-0.5">
-            {tools.map(({ id, page, label, Icon }, i) => (
-              <React.Fragment key={id}>
-                {/* the class(es) go in after the path, before the library */}
-                {id === 'biblioteka' && classButtons}
-                {(i > 0 || (id === 'biblioteka' && classes.length > 0)) && <span aria-hidden className="w-px my-1.5 bg-[#e8dcc8] shrink-0" />}
-                <button
-                  type="button"
-                  onClick={() => {
-                    triggerHaptic(10);
-                    // the path is its own page; guests still get the sign-in prompt from the modal layer
-                    if (id === 'gza' && !user) openModal('gza');
-                    // guests see the library's button, but need to sign in to open it
-                    else if (id === 'biblioteka' && access.section('biblioteka') === 'locked') askSignIn('ბიბლიოთეკა');
-                    else navigateTo(page);
-                  }}
-                  className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-10 px-2 min-[400px]:px-3 rounded-full text-[13px] font-bold ${currentPage === page ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
-                  title={label}
-                >
-                  {/* on the narrowest phones (under 380px) only the words, so the row still fits the screen */}
-                  <Icon className="w-4 h-4 text-[#7a2028] shrink-0 max-[379px]:hidden" />
-                  <span>{label}</span>
-                </button>
-              </React.Fragment>
-            ))}
-            {!tools.some(t => t.id === 'biblioteka') && classButtons}
+            {tools.map(({ id, page, label, Icon }, i) => {
+              const here = id === 'lotsvani' ? onPrayers : currentPage === page;
+              return (
+                <React.Fragment key={id}>
+                  {/* the class(es) go in after the path, before the prayer book */}
+                  {id === 'lotsvani' && classButtons}
+                  {(i > 0 || (id === 'lotsvani' && classes.length > 0)) && <span aria-hidden className="w-px my-1.5 bg-[#e8dcc8] shrink-0" />}
+                  <button
+                    type="button"
+                    onClick={() => openTool(id)}
+                    className={`flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-10 px-2 min-[400px]:px-3 rounded-full text-[13px] font-bold ${here ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`}
+                    title={label}
+                  >
+                    {/* on the narrowest phones (under 380px) only the words, so the row still fits the screen */}
+                    <Icon className="w-4 h-4 text-[#7a2028] shrink-0 max-[379px]:hidden" />
+                    <span>{label}</span>
+                  </button>
+                </React.Fragment>
+              );
+            })}
+            {!tools.some(t => t.id === 'lotsvani') && classButtons}
           </div>
-          {access.can('search') && <SearchButton className="max-sm:hidden" />}
+          {libraryButton('max-sm:hidden self-center')}
+          {access.can('search') && <SearchButton className="max-sm:hidden self-center" />}
         </nav>
         )}
       </div>
+
+      {/* the open list, under the header: the whole width on a phone, beside the logo on a computer */}
+      {drop && (
+        <div className="absolute inset-x-0 top-full">
+          <div className="max-w-7xl mx-auto px-2 sm:px-4 pt-2">
+            <div className="sg-in w-full lg:w-[460px] max-h-[calc(100dvh-9rem)] overflow-y-auto overscroll-contain rounded-3xl bg-[#fffdf8] ring-1 ring-[#e8dcc8] shadow-[0_22px_48px_-20px_rgba(74,52,38,0.55)] px-4 min-[400px]:px-5 pb-4">
+              {drop === 'work' ? (
+                <WorkPanel state={work} />
+              ) : (
+                <BellPanel
+                  notices={notices}
+                  seenBefore={seenBefore}
+                  admin={isAdmin && user ? { uid: user.uid, name: user.displayName || '' } : undefined}
+                  onOpenChat={chat => { setDrop(null); openDm(chat); }}
+                />
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </header>
   );
 };

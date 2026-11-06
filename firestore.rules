@@ -51,6 +51,19 @@ service cloud.firestore {
       allow read, write: if false;
     }
 
+    // Notices for everyone (the header's 🔔, hooks/useNotices.ts, 2026-11-06): an admin writes one, every signed-in person
+    // reads them; an admin takes one back. { text, by: the writer's uid, byName, at }
+    match /announcements/{id} {
+      allow read: if isSignedIn();
+      allow create: if isAdmin()
+        && incoming().keys().hasOnly(['text', 'by', 'byName', 'at'])
+        && incoming().by == uid()
+        && incoming().at == request.time
+        && incoming().text is string && incoming().text.size() > 0 && incoming().text.size() <= 1000
+        && incoming().byName is string && incoming().byName.size() <= 80;
+      allow delete: if isAdmin();
+    }
+
     // Public school settings: logo, recordings bound from the admin panel, which sections are open.
     // „placements“ (recordings moved to another region, song or album) is for the owner and superadmins only.
     match /settings/{settingId} {

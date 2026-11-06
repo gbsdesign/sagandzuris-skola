@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
@@ -122,6 +122,32 @@ export const PageBar: React.FC<{ title: React.ReactNode; subtitle?: React.ReactN
       )}
     </>
   );
+};
+
+/** A title kept on one line (a class's name, 2026-11-06): too long for its place, it grows smaller — down to `min` of
+ *  its size —, and only past that is it cut with „…“. */
+export const OneLine: React.FC<{ children: React.ReactNode; min?: number }> = ({ children, min = 0.68 }) => {
+  const ref = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    let last = -1;
+    const fit = () => {
+      const room = el.clientWidth;
+      if (!room || room === last) return;
+      last = room;
+      el.style.fontSize = '';
+      const full = el.scrollWidth;
+      el.style.fontSize = full > room ? `${Math.max(min, (room - 1) / full).toFixed(3)}em` : '';
+    };
+    fit();
+    const ro = typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(fit);
+    ro?.observe(el);
+    // the Georgian fonts may come after the first look
+    document.fonts?.ready.then(() => { last = -1; fit(); }).catch(() => {});
+    return () => ro?.disconnect();
+  }, [children, min]);
+  return <span ref={ref} className="block whitespace-nowrap overflow-hidden text-ellipsis">{children}</span>;
 };
 
 export const Card: React.FC<{ className?: string; children: React.ReactNode; tone?: 'white' | 'paper' | 'wine' }> = ({ className, children, tone = 'white' }) => (

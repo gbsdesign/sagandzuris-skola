@@ -12,7 +12,6 @@ import { LessonChips, ScheduleSheet } from '../components/teacher/Schedule';
 import { ClassLogo } from '../components/classes/ClassLogo';
 import { ClassChat } from '../components/classes/ClassChat';
 import { ClassProgram } from '../components/classes/ClassProgram';
-import { WorkButton, WorkPanel, useClassWork } from '../components/classes/ClassWork';
 import { AddMemberSheet } from '../components/classes/MembersWindow';
 import { ClassTeachersSheet } from '../components/classes/ClassTeachersSheet';
 import { archiveClass } from '../components/admin/ClassesAdmin';
@@ -20,7 +19,7 @@ import { changed } from '../components/admin/changed';
 import { ClassPsalter } from '../components/psalter/ClassPsalter';
 import { ClassLessons } from '../components/mastery/ClassLessons';
 import { Avatar } from '../components/classes/ChatPanel';
-import { Btn, Flash, IconBtn, PageBar, Sheet, Tabs, useFlash, useWide } from '../components/ui/kit';
+import { Btn, Flash, IconBtn, OneLine, PageBar, Sheet, Tabs, useFlash, useWide } from '../components/ui/kit';
 import { openThread, Person } from '../hooks/useDirectChat';
 import { isClassUnread, useChatSeen, useClassLasts } from '../hooks/useClassChat';
 import { triggerHaptic } from '../utils/haptics';
@@ -98,23 +97,16 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolCl
   const chatBox = useRef<HTMLDivElement>(null);
   const showChat = useRef(false);
   const [editingProgram, setEditingProgram] = useState(false);
-  // the assignments' list dropped down from the round 📋 (opening it puts out a member's „new“ light)
-  const [workOpen, setWorkOpen] = useState(false);
   const msg = useFlash();
 
   // private chats: a member writes to the class's teachers, a teacher of the class to its members
   const iTeach = !!user && cls.teacherIds.includes(user.uid);
   const iAmMember = !!user && cls.memberIds.includes(user.uid);
   const canEdit = iTeach || isAdmin;
-  const work = useClassWork(cls, canEdit);
   const lasts = useClassLasts([cls.id]);
   const seen = useChatSeen(user?.uid);
   const unread = !!user && tab !== 'chat' && isClassUnread(lasts[cls.id], seen[cls.id], user.uid);
 
-  const toggleWork = () => {
-    if (!workOpen) work.markSeen();
-    setWorkOpen(!workOpen);
-  };
   const setTab = (t: Tab) => {
     if (t === 'chat' && !wide) showChat.current = true;
     setTabState(t);
@@ -175,7 +167,8 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolCl
   return (
     <div className="w-full max-w-2xl lg:max-w-5xl mx-auto px-1 py-4 sm:py-6 space-y-4 text-[#2a2017]">
       <PageBar
-        title={cls.name}
+        // one line, however long the name (2026-11-06, the user: „ლამაზად და ერთ ხაზზე ეწეროს“): it grows smaller instead
+        title={<OneLine>{cls.name}</OneLine>}
         // on a phone the members' line under the timetable says who is in the class
         subtitle={<span className="hidden lg:inline">{`${cls.members.length} წევრი${teacherNames ? ` · ${teacherNames}` : ''}`}</span>}
         onBack={handleGoBack}
@@ -240,24 +233,18 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolCl
           </ClassMembers>
         )}
         <div className="min-w-0 space-y-4">
-          {/* the assignments' round button left of the two tabs; its list drops down under them */}
-          <div className="flex items-center gap-2">
-            <WorkButton state={work} canEdit={canEdit} open={workOpen} onToggle={toggleWork} />
-            <div className="flex-1 min-w-0">
-              <Tabs
-                cols={wide ? 2 : 3}
-                stack={!wide}
-                value={tab}
-                onChange={setTab}
-                items={[
-                  { id: 'program', label: 'პროგრამა', Icon: ListChecks },
-                  { id: 'chat', label: 'ჩათი', Icon: MessageCircle, dot: unread },
-                  ...(wide ? [] : [{ id: 'people' as const, label: 'წევრები', Icon: Users }]),
-                ]}
-              />
-            </div>
-          </div>
-          {workOpen && <WorkPanel cls={cls} canEdit={canEdit} state={work} />}
+          {/* the assignments moved up into the header's 📋 (2026-11-06, components/classes/ClassWork.tsx) */}
+          <Tabs
+            cols={wide ? 2 : 3}
+            stack={!wide}
+            value={tab}
+            onChange={setTab}
+            items={[
+              { id: 'program', label: 'პროგრამა', Icon: ListChecks },
+              { id: 'chat', label: 'ჩათი', Icon: MessageCircle, dot: unread },
+              ...(wide ? [] : [{ id: 'people' as const, label: 'წევრები', Icon: Users }]),
+            ]}
+          />
           {tab === 'program' && (
             <>
               <ClassProgram cls={cls} canEdit={canEdit} editing={editingProgram} onEditing={setEditingProgram} />

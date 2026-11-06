@@ -69,7 +69,7 @@ export interface Assignment {
   createdAt?: string;
 }
 
-const toAssignment = (classId: string, id: string, d: any): Assignment => ({
+export const toAssignment = (classId: string, id: string, d: any): Assignment => ({
   id,
   classId,
   title: d.title || 'დავალება',
