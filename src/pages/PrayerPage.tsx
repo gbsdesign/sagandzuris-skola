@@ -124,7 +124,7 @@ export const PrayerPage: React.FC = () => {
           </div>
         ) : (
           <>
-            <ReadingToolbar size={textSize} onSize={setTextSize} khutsuri={khutsuri} onKhutsuri={setKhutsuri} source={textEl} />
+            <ReadingToolbar size={textSize} onSize={setTextSize} khutsuri={khutsuri} onKhutsuri={setKhutsuri} source={textEl} psalter={kathisma ? Number(kathisma.id.replace('kathisma-', '')) || undefined : undefined} />
             {/* big sizes: a long word breaks rather than leaving the card; ხუცური off = the text drawn afresh */}
             <div key={khutsuri ? 'khutsuri' : 'mkhedruli'} ref={setTextEl} style={{ zoom: textSize / 100 }} className="break-words">
               {parseBibleId(selectedPrayerId) ? (

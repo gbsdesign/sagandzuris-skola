@@ -35,7 +35,9 @@ export const ReadingToolbar: React.FC<{
   onKhutsuri: (on: boolean) => void;
   /** the text the auto-scroll reads (and the prompter shows) */
   source?: HTMLElement | null;
-}> = ({ size, onSize, khutsuri, onKhutsuri, source }) => (
+  /** a psalter kanon's number: the prompter's own way for it */
+  psalter?: number;
+}> = ({ size, onSize, khutsuri, onKhutsuri, source, psalter }) => (
   // sticky: the tools stay at hand all down a long text (the page bar is not sticky)
   <div className="sticky top-[env(safe-area-inset-top,0px)] z-10 flex items-center justify-between gap-2 -mt-2 -mx-1.5 sm:-mx-3 mb-3 py-1.5 bg-white/90 backdrop-blur-md rounded-full">
     <button
@@ -51,7 +53,7 @@ export const ReadingToolbar: React.FC<{
       ხუცური
     </button>
     <div className="flex items-center gap-1.5">
-      <AutoScrollButton source={() => source ?? null} zoom={size / 100} />
+      <AutoScrollButton source={() => source ?? null} zoom={size / 100} psalter={psalter} />
       <div role="group" aria-label="ასოების ზომა" className={`inline-flex items-center rounded-full ${PILL}`}>
         <button type="button" aria-label="ასოების დაპატარავება" disabled={size <= 50} onClick={() => onSize(size - 10)} className={`${ROUND} text-[13px]`}>
           A
@@ -75,8 +77,8 @@ type Getter = () => HTMLElement | null;
 /** ⏬: the page moves up by itself (the bar at the bottom), and from the bar the full-screen prompter. `source` = the text
  * read, `scroller` = the box that scrolls when it is not the window (a full-screen reader), `zoom` = the letters' size
  * (1 = 100 %), `label` = a worded button in place of the round one. */
-export const AutoScrollButton: React.FC<{ source: Getter; scroller?: Getter; zoom?: number; label?: string; className?: string }> = ({
-  source, scroller, zoom = 1, label, className,
+export const AutoScrollButton: React.FC<{ source: Getter; scroller?: Getter; zoom?: number; label?: string; className?: string; psalter?: number }> = ({
+  source, scroller, zoom = 1, label, className, psalter,
 }) => {
   const [open, setOpen] = useState(false);
   return (
@@ -91,7 +93,7 @@ export const AutoScrollButton: React.FC<{ source: Getter; scroller?: Getter; zoo
         <ChevronsDown className={label ? 'w-4 h-4 text-[#b4620e]' : 'w-[18px] h-[18px]'} />
         {label}
       </button>
-      {open && <AutoScroll zoom={zoom} source={source} scroller={scroller} onClose={() => setOpen(false)} />}
+      {open && <AutoScroll zoom={zoom} source={source} scroller={scroller} psalter={psalter} onClose={() => setOpen(false)} />}
     </>
   );
 };
@@ -100,14 +102,15 @@ export const AutoScrollButton: React.FC<{ source: Getter; scroller?: Getter; zoo
 // 100 % (bigger letters → taller lines → faster)
 const SPEEDS: { label: string; px: number }[] = [
   ...[0.25, 0.5, 0.75].map(s => ({ label: String(s), px: 8 * s })),
-  ...[8, 12, 16, 20, 24, 29, 34, 40, 47, 55].map((px, i) => ({ label: String(i + 1), px })),
+  // 1…20 (up to 10 until 2026-11-06; the user: „სიჩქარის მომატება, შემეძლოს 20-მდე“)
+  ...[8, 12, 16, 20, 24, 29, 34, 40, 47, 55, 62, 70, 79, 88, 98, 109, 121, 134, 148, 163].map((px, i) => ({ label: String(i + 1), px })),
 ];
 const START_SPEED = SPEEDS.findIndex(s => s.label === '3');
 
 // The page moves up by itself; the bar stays at the bottom of the screen. A finger on the screen holds it, letting go
 // goes on; it stops once the text's end is on screen. The screen is kept awake meanwhile. „სრულ ეკრანზე“ over the bar
 // opens the prompter where the page is being read; closing it brings the page to where the prompter stopped.
-const AutoScroll: React.FC<{ zoom: number; onClose: () => void; source: Getter; scroller?: Getter }> = ({ zoom, onClose, source, scroller }) => {
+const AutoScroll: React.FC<{ zoom: number; onClose: () => void; source: Getter; scroller?: Getter; psalter?: number }> = ({ zoom, onClose, source, scroller, psalter }) => {
   const [running, setRunning] = useState(true);
   const [speed, setSpeed] = useState(START_SPEED);
   const [full, setFull] = useState<{ html: string; start: number } | null>(null);
@@ -187,7 +190,7 @@ const AutoScroll: React.FC<{ zoom: number; onClose: () => void; source: Getter; 
   const openFull = () => {
     const text = source();
     if (!text) return;
-    setFull({ html: prompterCopy(text), start: blockAtReading(text, scroller?.() ?? null) });
+    setFull({ html: prompterCopy(text, Boolean(psalter)), start: blockAtReading(text, scroller?.() ?? null) });
   };
   const closeFull = (block: number) => {
     setFull(null);
@@ -197,7 +200,7 @@ const AutoScroll: React.FC<{ zoom: number; onClose: () => void; source: Getter; 
   };
 
   if (full) {
-    return <Prompter html={full.html} start={full.start} speeds={SPEEDS} speed={speed} onSpeed={setSpeed} onClose={closeFull} />;
+    return <Prompter html={full.html} start={full.start} speeds={SPEEDS} speed={speed} onSpeed={setSpeed} onClose={closeFull} kanon={psalter} />;
   }
 
   return createPortal(
