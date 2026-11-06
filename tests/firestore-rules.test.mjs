@@ -453,6 +453,18 @@ await t('a member opens a room of „ორი ტახტი“', assertSuccee
 await t('a member opens a room of „ქარავანი“', assertSucceeds(setDoc(doc(gp1, G, 'qr1'), room('gp1', { game: 'qaravani' }))));
 await t('a member opens a room of „ოქროს ხანა“', assertSucceeds(setDoc(doc(gp1, G, 'ok1'), room('gp1', { game: 'okros' }))));
 
+// the header's 🔔 (2026-11-06): an admin writes to everyone, the signed-in read
+const notice = (by, extra = {}) => ({ text: 'ხვალ გაკვეთილი არ იქნება', by, byName: 'x', at: serverTimestamp(), ...extra });
+await t('an admin writes to everyone', assertSucceeds(setDoc(doc(adm, 'announcements', 'n1'), notice('adm'))));
+await t('a teacher does not', assertFails(setDoc(doc(tch, 'announcements', 'n2'), notice('tch'))));
+await t('nor a member', assertFails(setDoc(doc(stu, 'announcements', 'n3'), notice('stu'))));
+await t('an admin writes as themself', assertFails(setDoc(doc(adm, 'announcements', 'n4'), notice('sup'))));
+await t('and nothing else in it', assertFails(setDoc(doc(adm, 'announcements', 'n5'), notice('adm', { pin: true }))));
+await t('a member reads it', assertSucceeds(getDoc(doc(stu, 'announcements', 'n1'))));
+await t('a guest does not', assertFails(getDoc(doc(guest, 'announcements', 'n1'))));
+await t('a member cannot take it back', assertFails(deleteDoc(doc(stu, 'announcements', 'n1'))));
+await t('an admin can', assertSucceeds(deleteDoc(doc(adm, 'announcements', 'n1'))));
+
 console.log(`\n${pass} passed, ${fail} failed`);
 await env.cleanup();
 process.exit(fail ? 1 : 0);

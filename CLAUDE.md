@@ -117,6 +117,16 @@
   bottom (`views/ProfileActions.tsx`); the admin panel opens only from the profile's wine row (`views/AdminEntry.tsx`,
   no header shield since 2026-10-27), and the profile's details are three folds with „შენახვა“ shown only while changed; the top of home is one day card of thin lines (2026-10-31): today's saints (`TodaySaintsCard`, a calendar leaf + the first
   commemoration, unfolds) and the reviews due (`home/LearnDue.tsx`); in the header the 🔍 sits in the top row on every phone (under sm).
+  **Header since 2026-11-06** (`layout/Header.tsx`; the user: „ბიბლიოთეკა აიტანე მაღლა სერჩის წინ … მრგვალად, ბიბლიოთეკის ადგილზე
+  იხსნებოდეს ლოცვანი, დავალების ღილაკიც მაღლა … ლოგოს მარჯვნივ და აქვე შეტყობინებების ღილაკი … ჩამოსაშლელი“): [logo] [📋] [🔔] …
+  [📚] [🔍] [☁] [💬 „წერილები“] [👤]; the chips row = საგანძურის გზა · კლასი · ლოცვანი (opens `biblioteka` on `prayers` in one
+  step); 📚 and 🔍 move beside the chips from sm up. 📋 and 🔔 drop their list under the header (one at a time, a dim backdrop
+  closes it, going anywhere closes it). **🔔** (`layout/Bell.tsx`, `hooks/useNotices.ts`): app news (`data/appNews.ts` — **add a
+  plain line there whenever members will notice a change**), an admin's notice for everyone (`announcements/{id}`, written from
+  the list's „ყველას მიწერა“, taken back with 🗑; rules: admins create/delete, the signed-in read), a teacher's / the
+  administration's private message to me, a teacher's or admin's message in my class chats (the newest 25 of each, ≤ 3 shown)
+  and a teacher's card for me (`pins`, `to == me`); last 30 days, news always. Its number = what came since I last opened it
+  (`students.bellSeenAt` ms + the device's `sg-bell-seen`).
 
 ## Audio and sheet music (details in `src/data/CLAUDE.md`)
 
@@ -411,7 +421,7 @@
   „მოვიდა N / M“ and a worded „ყველა მოვიდა“ — `AttendanceDays`, no „სა,“ on the chips when the lessons share a weekday —,
   then the names with 💬 and ✓; a name opens the member's own page, „მიწერა“/„ამოღება“). On a phone the „ჩათი“ tab fills the
   screen (`ClassChat fill chain`, `h-[calc(100dvh-5.5rem)]`; a tap on the tab takes the page down to its field), a computer keeps
-  the newest three. The 📋 is wine-tinted with a wine badge (the user: „თითქოს არ ჩანს“).
+  the newest three. The class's name stays on one line, growing smaller when long (`OneLine` in kit, 2026-11-06).
   **A student's own page** (2026-11-04, page `student`, `pages/StudentPage.tsx`, `openStudent(uid, classId)` — mapItem
   „uid|classId“; the user: „მის გზაზე გადავდივართ, მის პირად პროფილზე და თან მაქვს ცვლილებების უფლება ზუსტად ისე როგორც მას“):
   opened by a teacher or an admin from the class roll, a member's photo / name in the class chat (`ChatPanel personOpener`)
@@ -428,9 +438,11 @@
   `email`, `authProvider` and the sung scores `pearls`, `drillScore`, and their `directory` name (`teachesThem`). At the bottom „მასწავლებლისთვის“ (`StudentTools` = the
   old member's window inline: takes to hear, figures, attendance, the path editor, the manera's marks, the kids'
   mode, „მიწერა“, „ამოღება“) — never shown to the student.
-  Since 2026-11-04 two tabs (kept per visit in sessionStorage; the user: „პროგრამა პროგრამაა“), and since 2026-11-05 a round
-  📋 left of them (`WorkButton` in `classes/ClassWork.tsx`; the user: „მრგვალი სიმბოლო … ჩამოშლა … აინთოს ინდიკატორი“): a tap
-  drops every assignment — chants, songs and „ოსტატობა“'s exercises together — down under the tabs (`WorkPanel`:
+  Since 2026-11-04 two tabs (kept per visit in sessionStorage; the user: „პროგრამა პროგრამაა“). The assignments' round 📋
+  (`WorkButton` in `classes/ClassWork.tsx`; the user: „მრგვალი სიმბოლო … ჩამოშლა … აინთოს ინდიკატორი“) sat left of them on
+  2026-11-05 and **since 2026-11-06 is in the header right of the logo, for all my classes at once** (`useClassWork(classes)`;
+  the class page has only its tabs now): a tap drops every assignment — chants, songs and „ოსტატობა“'s exercises together —
+  down under the header, a part a class with its name when there are several (`WorkPanel`:
   `AssignmentsFold` without `only` for teachers, its „ახალი დავალება“ asks chant or exercise; `WorkItems` for members). A
   member's badge is red and pulsing while an assignment came that they have not opened (`students.workSeenAt`, the same mark
   as the path's „ნასწავლი“; opening the list moves it), then quiet with the number still to do; a teacher's = how many are
