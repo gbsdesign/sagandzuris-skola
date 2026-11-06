@@ -41,10 +41,56 @@ export const showBlock = (source: HTMLElement, s: Scroller, i: number) => {
 // what the page shows only to work it (buttons, pictures, ornaments) stays out of the copy
 const DROP = 'button, svg, img, picture, figure, audio, video, iframe, input, select, textarea, nav, [aria-hidden="true"], [data-no-prompter]';
 
-/** The text of `source` as it is on screen now (ხუცური too), each block numbered for `blockAtReading`. */
-export const prompterCopy = (source: HTMLElement) => {
+// A psalter kanon (the user, 2026-11-06: „ფსალმუნის მუხლის ციფრები ან სათაურები არ ჩანდეს … მაღლა რომელი კანონია და რომელი
+// დიდება“): its psalms' headings and verses' numbers stay out of the copy, every block learns its glory and its psalm
+// (`data-glory`, `data-psalm`; a psalm's first block `data-psalm-start`) for the place line on top, and the page's
+// „დიდებაი ▾“ button becomes a plain golden „დიდებაი“ where the glory is said.
+const markPsalter = (copy: HTMLElement) => {
+  let glory = 1;
+  let psalm: number | null = null;
+  let fresh = false; // the next block is a psalm's first
+  // the page makes each „დიდებაი.“ a button; in the prayer's own ხუცური it stays the book's <em> (its letters turned)
+  const buttons = copy.querySelector('button[data-glory]') !== null;
+  const walker = document.createTreeWalker(copy, NodeFilter.SHOW_ELEMENT);
+  for (let n = walker.nextNode() as Element | null; n; n = walker.nextNode() as Element | null) {
+    const tag = n.tagName;
+    if (tag === 'H3' || tag === 'H2') {
+      const t = (n.textContent || '').trim();
+      const num = t.match(/^(\d+)\./)?.[1] ?? t.match(/(\d+)\s*$/)?.[1];
+      if (num) { psalm = Number(num); fresh = true; }
+      else if (tag === 'H2' && t && psalm !== null) { psalm += 1; fresh = true; } // the 151st, after the 150th
+      continue;
+    }
+    // the block holding the mark belongs to the glory it ends
+    if (n.hasAttribute('data-glory')) { glory += 1; continue; }
+    if (!buttons && tag === 'EM') { glory += 1; n.classList.add('sgp-glory'); continue; }
+    if (n.hasAttribute('data-sgp')) {
+      n.setAttribute('data-glory', String(Math.min(3, glory)));
+      if (psalm !== null) n.setAttribute('data-psalm', String(psalm));
+      if (fresh && psalm !== null) { n.setAttribute('data-psalm-start', ''); fresh = false; }
+    }
+  }
+  copy.querySelectorAll('button[data-glory]').forEach(b => {
+    const mark = document.createElement('span');
+    mark.className = 'sgp-glory';
+    mark.textContent = (b.textContent || '').replace(/[▾\s]+$/u, '').trim() || 'დიდებაი.';
+    b.replaceWith(mark);
+  });
+  copy.querySelectorAll('h2, h3').forEach(h => h.remove());
+  // the verses' numbers: „1. ნეტარ…“, „… ჟამსა თვისსა. 4. არა ესრე…“
+  const texts = document.createTreeWalker(copy, NodeFilter.SHOW_TEXT);
+  for (let t = texts.nextNode(); t; t = texts.nextNode()) {
+    const v = t.nodeValue || '';
+    if (/\d/.test(v)) t.nodeValue = v.replace(/(^|[\s(])\d{1,3}\.\s*/g, '$1');
+  }
+};
+
+/** The text of `source` as it is on screen now (ხუცური too), each block numbered for `blockAtReading`; `psalter` = a
+ * psalter kanon's own way (`markPsalter`). */
+export const prompterCopy = (source: HTMLElement, psalter = false) => {
   const copy = source.cloneNode(true) as HTMLElement;
   copy.querySelectorAll(BLOCKS).forEach((b, i) => b.setAttribute('data-sgp', String(i)));
+  if (psalter) markPsalter(copy);
   copy.querySelectorAll(DROP).forEach(n => n.remove());
   // a drop cap's letter is kept for screen readers only: here it is just the word's first letter again
   copy.querySelectorAll('.sr-only').forEach(n => n.classList.remove('sr-only'));
@@ -70,7 +116,7 @@ const SIZES = [22, 26, 30, 34, 40, 46, 54, 62];
 // when the reader turns them on (the user, 2026-11-06: „ნებით … აწევ-დაწევა ამ განივი ისრების“): then the arrows are
 // handles that move it up or down. Both kept on the device.
 const LINE = 0.36;
-const LINE_MIN = 0.15;
+const LINE_MIN = 0.22; // under the place line
 const LINE_MAX = 0.7;
 const GUIDE_KEY = 'sg-prompter-guide';
 // three ways of reading: the text goes up (as on television), one line goes sideways, one word at a time in one place
@@ -81,6 +127,10 @@ const MODES: { id: Mode; label: string; Icon: typeof ArrowUp }[] = [
   { id: 'word', label: 'სიტყვით', Icon: Focus },
 ];
 const MODE_KEY = 'sg-prompter-mode';
+const CHUNK_KEY = 'sg-prompter-chunk'; // „სიტყვით“: how many words show at once, 1…5
+const CHUNK_MAX = 5;
+const GLORY_NAMES = ['პირველი', 'მეორე', 'მესამე'];
+type Place = { glory: number; psalm: number | null };
 const LINE_KEY = 'sg-prompter-line';
 const PACE = 1.1; // letters a pixel of the page's text at 100 %: the bar's px a second × PACE = letters a second
 const THEME_KEY = 'sg-prompter-theme';
@@ -121,6 +171,8 @@ const CSS = `
 .sgp-body .float-left { float: none !important; margin: 0 !important; }
 .sgp-body section + section { margin-top: 1em !important; }
 .sgp-body ul, .sgp-body ol { padding-left: 1.2em !important; }
+.sgp-body .sgp-glory { display: block; text-align: center; margin-top: .35em; font-weight: 700; color: var(--sgp-accent) !important; }
+.sgp-body [data-psalm-start] { margin-top: 1.5em !important; }
 .sgp-body hr { border: 0; border-top: 1px solid var(--sgp-muted); opacity: .4; width: 30%; margin: 1em auto; }
 `;
 
@@ -145,7 +197,9 @@ export const Prompter: React.FC<{
   speed: number;
   onSpeed: (i: number) => void;
   onClose: (block: number) => void;
-}> = ({ html, start, speeds, speed, onSpeed, onClose }) => {
+  /** a psalter kanon's number: the place line on top says the kanon, the glory and the psalm */
+  kanon?: number;
+}> = ({ html, start, speeds, speed, onSpeed, onClose, kanon }) => {
   const [theme, setTheme] = useState<Theme>(() => (read(THEME_KEY) === 'light' ? 'light' : 'dark'));
   const [size, setSize] = useState(() => {
     const kept = Number(read(SIZE_KEY));
@@ -160,6 +214,13 @@ export const Prompter: React.FC<{
   const flow = useRef<FlowHandle | null>(null);
   const flowLeft = useRef(0); // letters left in a sideways / word-by-word reading
   const upBlock = useRef<number | null>(null); // where to stand once back to „ზემოთ“
+  const [chunk, setChunk] = useState(() => {
+    const kept = Number(read(CHUNK_KEY));
+    return kept >= 1 && kept <= CHUNK_MAX ? kept : 1;
+  });
+  // a psalter kanon: each block's glory and psalm, and where the reading is now
+  const places = useRef(new Map<number, Place>());
+  const [place, setPlace] = useState<Place | null>(null);
   const [guide, setGuide] = useState(() => read(GUIDE_KEY) === '1');
   const [line, setLine] = useState(() => {
     const kept = Number(read(LINE_KEY));
@@ -237,6 +298,15 @@ export const Prompter: React.FC<{
     const all = wordsOf(b);
     setWords(all);
     setFlowStart(firstWordOf(all, start));
+    if (kanon) {
+      b.querySelectorAll('[data-sgp]').forEach(el => {
+        const glory = Number(el.getAttribute('data-glory'));
+        if (!glory) return;
+        const psalm = el.getAttribute('data-psalm');
+        places.current.set(Number(el.getAttribute('data-sgp')), { glory, psalm: psalm ? Number(psalm) : null });
+      });
+      showPlace(start);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -340,6 +410,23 @@ export const Prompter: React.FC<{
   const flowProgress = (done: number, lettersLeft: number) => {
     flowLeft.current = lettersLeft;
     if (progressRef.current) progressRef.current.style.width = `${Math.min(100, done * 100)}%`;
+    if (kanon) { const w = words[flow.current?.word() ?? 0]; if (w) showPlace(w.block); }
+  };
+
+  // the place line follows the block being read (the nearest block before it that knows its place)
+  const showPlace = (block: number) => {
+    let best: Place | null = null;
+    let at = -1;
+    places.current.forEach((p, i) => { if (i <= block && i > at) { at = i; best = p; } });
+    if (!best) best = places.current.values().next().value ?? null;
+    setPlace(prev => (prev && best && prev.glory === (best as Place).glory && prev.psalm === (best as Place).psalm ? prev : best));
+  };
+
+  const stepChunk = (d: 1 | -1) => {
+    const next = Math.min(CHUNK_MAX, Math.max(1, chunk + d));
+    setChunk(next);
+    keep(CHUNK_KEY, String(next));
+    nudge();
   };
 
   // another way of reading: the same place, standing still until ▶ (3-2-1 again)
@@ -465,6 +552,7 @@ export const Prompter: React.FC<{
     bar.style.width = `${max > 0 ? Math.min(100, (sc.scrollTop / max) * 100) : 0}%`;
     // taken back up by hand after the end: ▶ goes on from there
     if (ended && sc.scrollTop < max - 4) setEnded(false);
+    if (kanon && mode === 'up') showPlace(blockAtLine());
   };
 
   // a mouse moved over a running text brings the controls back (not more than twice a second)
@@ -526,7 +614,7 @@ export const Prompter: React.FC<{
           {mode === 'side' ? (
             <Ticker key="side" words={words} start={flowStart} running={running} size={size} colors={look} pace={() => speeds[speedRef.current].px * PACE} held={held} handle={flow} onEnd={flowEnded} onProgress={flowProgress} />
           ) : (
-            <Flash key="word" words={words} start={flowStart} running={running} size={size} colors={look} pace={() => speeds[speedRef.current].px * PACE} held={held} handle={flow} onEnd={flowEnded} onProgress={flowProgress} />
+            <Flash key="word" words={words} start={flowStart} chunk={chunk} running={running} size={size} colors={look} pace={() => speeds[speedRef.current].px * PACE} held={held} handle={flow} onEnd={flowEnded} onProgress={flowProgress} />
           )}
         </div>
       )}
@@ -579,6 +667,29 @@ export const Prompter: React.FC<{
             <span className="mt-4 h-8 px-3.5 rounded-full inline-flex items-center font-sans text-[14px] font-bold" style={{ ...panel, color: look.text }}>
               ეკრანზე შეხება — გაჩერება
             </span>
+          </div>
+        </div>
+      )}
+
+      {/* a psalter kanon: where the reading is — კანონი · დიდება · ფსალმუნი */}
+      {kanon && place && (
+        <div
+          className="pointer-events-none absolute inset-x-0 flex justify-center px-4 transition-[top] duration-300"
+          style={{ top: chrome ? 'calc(env(safe-area-inset-top, 0px) + 118px)' : 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+          aria-live="polite"
+        >
+          <div className="h-9 px-4 rounded-full inline-flex items-center gap-2.5 font-sans text-[13.5px] font-bold whitespace-nowrap backdrop-blur" style={panel}>
+            <span style={{ color: look.muted }}>კანონი {kanon}</span>
+            <span aria-hidden className="w-1 h-1 rounded-full" style={{ background: look.muted }} />
+            <span style={{ color: look.muted }}>{GLORY_NAMES[place.glory - 1] ?? place.glory} დიდება</span>
+            {place.psalm !== null && (
+              <>
+                <span aria-hidden className="w-1 h-1 rounded-full" style={{ background: look.muted }} />
+                <span key={place.psalm} className="animate-in fade-in slide-in-from-bottom-1 duration-300" style={{ color: look.accent }}>
+                  {place.psalm} ფსალმუნი
+                </span>
+              </>
+            )}
           </div>
         </div>
       )}
@@ -655,11 +766,28 @@ export const Prompter: React.FC<{
         className={`absolute inset-x-0 bottom-0 flex flex-col items-center gap-2 px-4 transition-opacity duration-300 ${chrome ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 16px)' }}
       >
-        {leftText && (
-          <span className="h-7 px-3 rounded-full inline-flex items-center font-sans text-[13px] font-bold tabular-nums backdrop-blur" style={{ ...panel, color: look.muted }}>
-            {leftText}
-          </span>
-        )}
+        <div className="flex flex-wrap items-center justify-center gap-2">
+          {/* „სიტყვით“: how many words at once */}
+          {mode === 'word' && (
+            <div role="group" aria-label="რამდენი სიტყვა ერთად" className="h-9 pl-3 pr-1 rounded-full inline-flex items-center gap-1 backdrop-blur" style={panel}>
+              <span className="font-sans text-[13px] font-bold" style={{ color: look.muted }}>ერთად</span>
+              <button type="button" aria-label="ნაკლები სიტყვა" disabled={chunk <= 1} onClick={() => stepChunk(-1)} className={`${round} !w-8 !h-8`} style={{ color: look.btn }}>
+                <Minus className="w-4 h-4" />
+              </button>
+              <span className="min-w-[4.5rem] text-center font-sans text-[13.5px] font-black tabular-nums" style={{ color: look.btn }}>
+                {chunk} სიტყვა
+              </span>
+              <button type="button" aria-label="მეტი სიტყვა" disabled={chunk >= CHUNK_MAX} onClick={() => stepChunk(1)} className={`${round} !w-8 !h-8`} style={{ color: look.btn }}>
+                <Plus className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+          {leftText && (
+            <span className="h-9 px-3 rounded-full inline-flex items-center font-sans text-[13px] font-bold tabular-nums backdrop-blur" style={{ ...panel, color: look.muted }}>
+              {leftText}
+            </span>
+          )}
+        </div>
         <div className="flex items-center gap-1 p-1.5 rounded-full backdrop-blur" style={panel}>
           <button
             type="button"

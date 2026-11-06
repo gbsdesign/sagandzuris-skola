@@ -33,7 +33,7 @@ export const wordsOf = (body: HTMLElement): Word[] => {
       spaced = true;
       lastBlock = blockEl;
     }
-    const head = !!el?.closest('h1, h2, h3, h4, h5');
+    const head = !!el?.closest('h1, h2, h3, h4, h5, .sgp-glory');
     const parts = s.split(/\s+/);
     if (!spaced && !/^\s/.test(s) && parts[0] && out.length) out[out.length - 1].t += parts.shift();
     for (const t of parts) if (t) out.push({ t, block, head, end: /[.!?;:][»“”"']?$/.test(t) ? 1 : 0 });
@@ -216,7 +216,7 @@ export const Ticker: React.FC<FlowProps> = ({ words, start, running, size, color
   );
 };
 
-// ——— „სიტყვით“: one word in one place ———
+// ——— „სიტყვით“: one word in one place (or a few together, `chunk`) ———
 
 // the letter the eye rests on: a little left of the word's middle
 const keyLetter = (len: number) => (len <= 1 ? 0 : len <= 5 ? 1 : len <= 9 ? 2 : len <= 13 ? 3 : 4);
@@ -227,7 +227,17 @@ const durationOf = (w: Word, perSecond: number) => {
   return base * (w.end === 2 ? 2.4 : w.end === 1 ? 1.8 : /[,—–]$/.test(w.t) ? 1.35 : w.head ? 1.2 : 1);
 };
 
-export const Flash: React.FC<FlowProps> = ({ words, start, running, size, colors, pace, held, handle, onEnd, onProgress }) => {
+// a few words at once: up to `n`, but a sentence's or a block's end closes the group
+const groupEnd = (words: Word[], i: number, n: number) => {
+  let k = i;
+  while (k < words.length && k - i < n) {
+    k++;
+    if (words[k - 1].end > 0) break;
+  }
+  return Math.max(k, i + 1);
+};
+
+export const Flash: React.FC<FlowProps & { chunk: number }> = ({ words, start, chunk, running, size, colors, pace, held, handle, onEnd, onProgress }) => {
   const [i, setI] = useState(() => Math.min(start, Math.max(0, words.length - 1)));
   const at = useRef(i);
   const left = useMemo(() => lettersAfter(words), [words]);
@@ -254,23 +264,58 @@ export const Flash: React.FC<FlowProps> = ({ words, start, running, size, colors
     toWord: k => go(Math.max(0, Math.min(k, words.length - 1))),
   };
 
+  const chunkRef = useRef(chunk);
+  chunkRef.current = chunk;
+  const groupTime = (from: number) => {
+    const to = groupEnd(words, from, chunkRef.current);
+    let t = 0;
+    for (let k = from; k < to; k++) t += durationOf(words[k], pace());
+    // a group is read in one look: a little less than its words one by one
+    return t * (to - from > 1 ? 0.85 : 1);
+  };
+
   useEffect(() => {
     if (!running) return;
     let id = 0;
     const tick = () => {
       if (held.current) { id = window.setTimeout(tick, 100); return; }
-      const k = at.current + 1;
+      const k = groupEnd(words, at.current, chunkRef.current);
       if (k >= words.length) { onEnd(); return; }
       go(k);
-      id = window.setTimeout(tick, durationOf(words[k], pace()) * 1000);
+      id = window.setTimeout(tick, groupTime(k) * 1000);
     };
-    id = window.setTimeout(tick, durationOf(words[at.current], pace()) * 1000);
+    id = window.setTimeout(tick, groupTime(at.current) * 1000);
     return () => window.clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running]);
 
   const w = words[i];
   if (!w) return null;
+
+  // a few words: one line in the middle (two when long), the letters as big as fits
+  if (chunk > 1) {
+    const group = words.slice(i, groupEnd(words, i, chunk));
+    const letters = group.reduce((n, g) => n + g.t.length + 1, 0);
+    // up to three words on one line; four or five may take two
+    const lines = chunk <= 3 ? 1 : 1.8;
+    const font = Math.max(22, Math.min(size * 1.35, ((width - 48) * lines) / Math.max(1, letters * 0.6)));
+    return (
+      <div className="absolute inset-0 flex items-center font-serif-ge" style={{ touchAction: 'none' }}>
+        <div className="relative w-full flex items-center justify-center px-6" style={{ minHeight: size * 3.4 }}>
+          <div className="absolute inset-x-[6%] top-0 h-px opacity-30" style={{ background: colors.muted }} aria-hidden />
+          <div className="absolute inset-x-[6%] bottom-0 h-px opacity-30" style={{ background: colors.muted }} aria-hidden />
+          <p className="text-center text-balance" style={{ fontSize: font, lineHeight: 1.3 }}>
+            {group.map((g, k) => (
+              <React.Fragment key={k}>
+                {k > 0 && ' '}
+                <span style={{ color: g.head ? colors.accent : colors.text, fontWeight: g.head ? 700 : 400 }}>{g.t}</span>
+              </React.Fragment>
+            ))}
+          </p>
+        </div>
+      </div>
+    );
+  }
   const k = keyLetter(w.t.length);
   const before = w.t.slice(0, k);
   const letter = w.t.slice(k, k + 1);
