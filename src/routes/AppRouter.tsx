@@ -123,6 +123,7 @@ const OfflinePage = page(() => import('../pages/OfflinePage'), 'OfflinePage');
 const BirthdaysPage = page(() => import('../pages/BirthdaysPage'), 'BirthdaysPage');
 const GamesPage = page(() => import('../pages/GamesPage'), 'GamesPage');
 const MedavitneobaPage = page(() => import('../pages/MedavitneobaPage'), 'MedavitneobaPage');
+const VideosPage = page(() => import('../pages/VideosPage'), 'VideosPage');
 
 /** „ფსალმუნთა ჯგუფი“ (the vine, the home tile, a reminder): the class page of the group's class, opened at its psalter
  *  section; a group no class holds (made before 2026-10-20) keeps the old group page. Waits a moment for the classes. */
@@ -164,6 +165,7 @@ const PAGE_TITLES: Partial<Record<PageType, string>> = {
   birthdays: 'დაბადების დღეები',
   games: 'თამაშები',
   medavitneoba: 'მედავითნეობა',
+  videos: 'ვიდეოები',
 };
 // an open library book shows its own name in the bar (the shelf's covers; LibraryPage's `mapItem` „book:12“)
 const LIBRARY_BOOKS: Record<string, string> = {
@@ -324,6 +326,12 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
                 selectedChantVariants={selectedChantVariants}
                 onTogglePoem={handleTogglePoem}
               />
+            </div>
+          )}
+
+          {currentPage === 'videos' && (
+            <div className="w-full my-2 px-1">
+              <VideosPage />
             </div>
           )}
 
