@@ -185,12 +185,13 @@ export const notifyAnnouncement = (id: string) => post('/announce', { id });
 const CHAT_BOUND = 'sg-chat-push';
 
 // a step of the phone's that never answers (2026-11-05: the Play app before 1.1.3 could not show Android's permission
-// window, and „ირთვება…“ stayed for ever) gives up after a while and says why
+// window, and „ირთვება…“ stayed for ever) gives up after a while and says what to do instead: in the app the permission
+// can be given in the phone's own settings, and the card binds by itself once it is (PhoneRingSetup)
 const LATE = Symbol('late');
 const within = <T>(p: Promise<T>, ms: number): Promise<T | typeof LATE> =>
   Promise.race([p, new Promise<typeof LATE>(r => window.setTimeout(() => r(LATE), ms))]);
 const NO_WINDOW = () => (isAndroidApp()
-  ? 'ნებართვის ფანჯარა ვერ გაიხსნა. განაახლე „საგანძური“ Play Store-ში და სცადე თავიდან.'
+  ? 'ნებართვის ფანჯარა ვერ გაიხსნა. ჩართე ტელეფონის პარამეტრებში: პარამეტრები → აპები → საგანძური → შეტყობინებები → ჩართვა, და დაბრუნდი აქ. თუ ისევ არ ჩაირთო, განაახლე აპი Play Store-ში.'
   : 'ნებართვის ფანჯარა არ გამოჩნდა — სცადე თავიდან.');
 
 /**
@@ -203,7 +204,7 @@ export const bindChatDevice = async (ask: boolean): Promise<string> => {
   if (!pushSupported()) return 'ეს ბრაუზერი შეტყობინებებს ვერ მიიღებს.';
   if (Notification.permission !== 'granted') {
     if (!ask || Notification.permission === 'denied') return 'შეტყობინებები დაბლოკილია — ჩართე ტელეფონის პარამეტრებში.';
-    const answer = await within(Notification.requestPermission(), 45_000);
+    const answer = await within(Notification.requestPermission(), 20_000);
     if (answer === LATE) return NO_WINDOW();
     if (answer !== 'granted') return 'შეტყობინებები დაბლოკილია — ჩართე ტელეფონის პარამეტრებში.';
   }
@@ -212,7 +213,7 @@ export const bindChatDevice = async (ask: boolean): Promise<string> => {
     if (!reg?.pushManager) return 'შეტყობინებები მხოლოდ გამოქვეყნებულ საიტზე მუშაობს.';
     const sub = (await reg.pushManager.getSubscription())
       ?? await within(reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: keyBytes(VAPID_PUBLIC_KEY) }), 30_000);
-    if (sub === LATE) return 'ტელეფონმა შეტყობინებები ვერ ჩართო — სცადე თავიდან.';
+    if (sub === LATE) return 'ტელეფონმა შეტყობინებები ვერ ჩართო — გადატვირთე აპი და სცადე თავიდან.';
     const res = await fetch(`${SERVER}/account`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

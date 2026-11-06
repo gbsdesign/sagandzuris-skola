@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ChevronDown, Maximize2, Mic, MicOff, Phone, PhoneOff, SwitchCamera, Video, VideoOff, X } from 'lucide-react';
+import { ChevronDown, Maximize2, Mic, MicOff, Phone, PhoneOff, ScreenShare, ScreenShareOff, SwitchCamera, Video, VideoOff, X } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
@@ -8,7 +8,8 @@ import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
 import type { SchoolClass } from '../../hooks/useClasses';
 import { useInbox, isRinging, ADMIN_NAME, otherOf, DirectThread } from '../../hooks/useDirectChat';
 import {
-  useCall, useLivePeers, leaveCall, dismissCall, toggleMic, toggleCam, flipCamera, setCallSmall, RemotePeer, RING_MS,
+  useCall, useLivePeers, leaveCall, dismissCall, toggleMic, toggleCam, toggleScreen, flipCamera, setCallSmall, canShareScreen,
+  RemotePeer, RING_MS,
 } from '../../utils/callSession';
 import { afterLeave, answerChatCall, declineChatCall, joinClassCall, takeAnswer, useAnswerWanted } from './callActions';
 
@@ -52,11 +53,29 @@ const usePlaying = (ref: React.RefObject<HTMLMediaElement | null>, stream: Media
   }, [ref, stream, picture]);
 };
 
-const MediaVideo: React.FC<{ stream: MediaStream; mirror?: boolean }> = ({ stream, mirror }) => {
+const MediaVideo: React.FC<{ stream: MediaStream; mirror?: boolean; whole?: boolean }> = ({ stream, mirror, whole }) => {
   const ref = useRef<HTMLVideoElement>(null);
   usePlaying(ref, stream, true);
-  return <video ref={ref} autoPlay playsInline muted className={`absolute inset-0 w-full h-full object-cover ${mirror ? '-scale-x-100' : ''}`} />;
+  return <video ref={ref} autoPlay playsInline muted className={`absolute inset-0 w-full h-full ${whole ? 'object-contain' : 'object-cover'} ${mirror ? '-scale-x-100' : ''}`} />;
 };
+
+/** a shared screen, whole (never cut), with whose it is */
+const ScreenTile: React.FC<{ name: string; stream: MediaStream | null; mine?: boolean }> = ({ name, stream, mine }) => (
+  <div className="relative h-full overflow-hidden rounded-3xl bg-black ring-1 ring-white/10">
+    {stream ? (
+      <MediaVideo stream={stream} whole />
+    ) : (
+      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 text-white/70">
+        <ScreenShare className="w-10 h-10" />
+        <p className="text-sm font-semibold">{mine ? 'თქვენი ეკრანი ჩანს ყველასთვის' : 'ეკრანი იტვირთება…'}</p>
+      </div>
+    )}
+    <span className="absolute left-2 bottom-2 max-w-[calc(100%-16px)] inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-black/55 backdrop-blur text-[13px] font-semibold text-white">
+      <ScreenShare className="w-3.5 h-3.5 shrink-0" />
+      <span className="truncate">{mine ? 'ჩემი ეკრანი' : `${name} — ეკრანი`}</span>
+    </span>
+  </div>
+);
 
 const MediaAudio: React.FC<{ stream: MediaStream }> = ({ stream }) => {
   const ref = useRef<HTMLAudioElement>(null);
@@ -167,6 +186,9 @@ const CallScreen: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const other = call.peers[0];
   const n = call.peers.length + 1;
   const many = n > 4;
+  // a shared screen takes the room: someone else's first, else my own (as a sign); the people go into a strip below
+  const sharing = call.peers.find(p => p.screen);
+  const screen = sharing ? { name: label(sharing).name, stream: sharing.screenStream, mine: false } : call.screen ? { name: 'მე', stream: null, mine: true } : null;
 
   return (
     <div className="fixed inset-0 z-[90] bg-[#1c1513] text-white flex flex-col safe-top safe-bottom safe-x" role="dialog" aria-label={`ზარი: ${info.title}`}>
@@ -183,7 +205,20 @@ const CallScreen: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       </div>
 
       <div className="flex-1 min-h-0 px-3 sm:px-5 pb-3">
-        {one ? (
+        {screen ? (
+          <div className="h-full flex flex-col gap-2">
+            <div className="flex-1 min-h-0">
+              <ScreenTile {...screen} />
+            </div>
+            <div className="shrink-0 flex gap-2 overflow-x-auto pb-1">
+              <Tile {...me} className="w-24 h-24 sm:w-32 sm:h-32 shrink-0" />
+              {call.peers.map(p => (
+                <Tile key={p.uid} {...label(p)} stream={p.stream} cam={p.cam} mic={p.mic} speaking={call.speaking.includes(p.uid)}
+                  className="w-24 h-24 sm:w-32 sm:h-32 shrink-0" />
+              ))}
+            </div>
+          </div>
+        ) : one ? (
           <div className="relative h-full">
             {other ? (
               <Tile {...label(other)} stream={other.stream} cam={other.cam} mic={other.mic} speaking={call.speaking.includes(other.uid)} className="h-full" />
@@ -234,6 +269,11 @@ const CallScreen: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
           {call.cam && (
             <RoundBtn label="კამერის შებრუნება" onClick={flipCamera}>
               <SwitchCamera className="w-6 h-6" />
+            </RoundBtn>
+          )}
+          {canShareScreen() && (
+            <RoundBtn label={call.screen ? 'ეკრანის გაზიარების შეწყვეტა' : 'ეკრანის გაზიარება'} onClick={toggleScreen} tone={call.screen ? 'green' : 'plain'}>
+              {call.screen ? <ScreenShareOff className="w-6 h-6" /> : <ScreenShare className="w-6 h-6" />}
             </RoundBtn>
           )}
           <RoundBtn label="გათიშვა" onClick={hang} tone="red" big>

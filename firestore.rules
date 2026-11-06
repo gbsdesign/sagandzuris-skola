@@ -434,7 +434,7 @@ service cloud.firestore {
       match /peers/{peerId} {
         allow read: if inClass();
         allow create, update: if inClass() && peerId == uid() && incoming().uid == uid()
-          && incoming().keys().hasOnly(['uid', 'name', 'photoURL', 'session', 'audio', 'video', 'mic', 'cam', 'staff', 'at']);
+          && incoming().keys().hasOnly(['uid', 'name', 'photoURL', 'session', 'audio', 'video', 'screen', 'mic', 'cam', 'staff', 'at']);
         allow delete: if isSignedIn() && (peerId == uid() || teachesClass() || isAdmin());
       }
 
@@ -531,7 +531,7 @@ service cloud.firestore {
         match /peers/{peerId} {
           allow read: if inClass();
           allow create, update: if inClass() && peerId == uid() && incoming().uid == uid()
-            && incoming().keys().hasOnly(['uid', 'name', 'photoURL', 'session', 'audio', 'video', 'mic', 'cam', 'staff', 'at']);
+            && incoming().keys().hasOnly(['uid', 'name', 'photoURL', 'session', 'audio', 'video', 'screen', 'mic', 'cam', 'staff', 'at']);
           allow delete: if isSignedIn() && (peerId == uid() || hosting() || teachesClass() || isAdmin());
         }
       }
@@ -642,9 +642,9 @@ service cloud.firestore {
       allow list: if isSuperAdmin() || (isSignedIn() && uid() in resource.data.members)
         || (isAdmin() && resource.data.kind == 'admin');
       allow create: if isSignedIn() && (createTeach() || createPeer() || createAdmin());
-      // each marks only their own reading (the administration its shared one); only a teacher starts a call;
-      // classId may move to another class the two share
-      // a call: the teacher (or an admin answering an administration chat, by voice only) starts it; either side ends it
+      // each marks only their own reading (the administration its shared one); classId may move to another class
+      // the two share. A call (by voice or video): either side of a teacher's or classmates' chat starts it; in an
+      // administration chat only an admin answering it (the member only answers); either side ends it
       allow update: if isSignedIn() && (uid() in existing().members || staffOf(existing()))
         && changed().hasOnly(['classId', 'names', 'photos', 'lastAt', 'lastBy', 'lastText', 'read', 'callAt', 'callBy',
              'callKind', 'callEnd'])
@@ -653,9 +653,9 @@ service cloud.firestore {
              .hasOnly([staffOf(existing()) ? 'staff' : uid()])
         && (!changed().hasAny(['lastBy']) || incoming().lastBy == uid())
         && (!changed().hasAny(['callAt', 'callBy', 'callKind'])
-            || (((kindOf(existing()) == 'teach' && uid() == existing().teacherUid) || staffOf(existing()))
+            || ((kindOf(existing()) == 'admin' ? staffOf(existing()) : uid() in existing().members)
                 && incoming().callBy == uid() && changed().hasAll(['callAt'])
-                && incoming().get('callKind', 'video') in (kindOf(existing()) == 'admin' ? ['audio'] : ['audio', 'video'])));
+                && incoming().get('callKind', 'video') in ['audio', 'video']));
       allow delete: if isSuperAdmin();
 
       match /messages/{messageId} {
@@ -665,7 +665,7 @@ service cloud.firestore {
           && incoming().teacher == speaksAsStaff()
           && incoming().createdAt == request.time
           && (incoming().kind in ['text', 'voice']
-              || (incoming().kind == 'call' && ((kindOf(thread()) == 'teach' && uid() == thread().teacherUid) || staffOf(thread())))
+              || (incoming().kind == 'call' && (kindOf(thread()) != 'admin' || staffOf(thread())))
               // a teacher's (an admin's) card for the student of this chat
               || (incoming().kind in ['note', 'work'] && incoming().teacher == true && kindOf(thread()) != 'peer'
                   && incoming().to in thread().members && incoming().to != uid() && pinCard(incoming())))
@@ -677,7 +677,7 @@ service cloud.firestore {
       match /peers/{peerId} {
         allow read: if inThread();
         allow create, update: if inThread() && peerId == uid() && incoming().uid == uid()
-          && incoming().keys().hasOnly(['uid', 'name', 'photoURL', 'session', 'audio', 'video', 'mic', 'cam', 'staff', 'at']);
+          && incoming().keys().hasOnly(['uid', 'name', 'photoURL', 'session', 'audio', 'video', 'screen', 'mic', 'cam', 'staff', 'at']);
         allow delete: if isSignedIn() && (peerId == uid() || inThread());
       }
 

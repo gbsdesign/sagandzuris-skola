@@ -186,10 +186,20 @@ await t('two students cannot chat', assertFails(setDoc(doc(stu3, 'dms', 'stu2_st
 await t('student opens chat with own teacher', assertSucceeds(setDoc(doc(stu3, 'dms', 'tch2_stu3'), dm())));
 await t('student writes to own teacher', assertSucceeds(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm1'), msg('stu3', false))));
 await t('student cannot pose as teacher', assertFails(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm2'), msg('stu3', true))));
-await t('student cannot start a call', assertFails(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm3'), msg('stu3', false, 'call'))));
+await t('student starts a call', assertSucceeds(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm3'), msg('stu3', false, 'call'))));
+await t('student rings the teacher by video', assertSucceeds(updateDoc(doc(stu3, 'dms', 'tch2_stu3'), { callAt: serverTimestamp(), callBy: 'stu3', callKind: 'video' })));
+await t('student cannot ring in another name', assertFails(updateDoc(doc(stu3, 'dms', 'tch2_stu3'), { callAt: serverTimestamp(), callBy: 'tch2', callKind: 'audio' })));
 await t('teacher answers', assertSucceeds(setDoc(doc(tch2, 'dms', 'tch2_stu3', 'messages', 'm4'), msg('tch2', true))));
 await t('teacher starts a call', assertSucceeds(setDoc(doc(tch2, 'dms', 'tch2_stu3', 'messages', 'm5'), msg('tch2', true, 'call'))));
 await t('student marks own reading', assertSucceeds(updateDoc(doc(stu3, 'dms', 'tch2_stu3'), { 'read.stu3': serverTimestamp() })));
+// the administration's chat: the member only answers a call; an admin rings, by voice or video
+const adminDm = { kind: 'admin', members: ['stu3'], names: {}, photos: {}, createdAt: serverTimestamp(), lastAt: null, lastBy: '', lastText: '', read: {} };
+await t('member opens the administration chat', assertSucceeds(setDoc(doc(stu3, 'dms', 'a_stu3'), adminDm)));
+await t('member cannot ring the administration', assertFails(updateDoc(doc(stu3, 'dms', 'a_stu3'), { callAt: serverTimestamp(), callBy: 'stu3', callKind: 'audio' })));
+await t('member cannot start a call in the administration chat', assertFails(setDoc(doc(stu3, 'dms', 'a_stu3', 'messages', 'a1'), msg('stu3', false, 'call'))));
+await t('admin rings the member by video', assertSucceeds(updateDoc(doc(adm, 'dms', 'a_stu3'), { callAt: serverTimestamp(), callBy: 'adm', callKind: 'video' })));
+await t('member ends the administration call', assertSucceeds(updateDoc(doc(stu3, 'dms', 'a_stu3'), { callEnd: serverTimestamp() })));
+await t('member enters the call with a screen', assertSucceeds(setDoc(doc(stu3, 'dms', 'a_stu3', 'peers', 'stu3'), { uid: 'stu3', name: 'S3', photoURL: '', session: 's', audio: 'a', video: '', screen: 'sc', mic: true, cam: false, staff: false, at: serverTimestamp() })));
 await t("student cannot mark teacher's reading", assertFails(updateDoc(doc(stu3, 'dms', 'tch2_stu3'), { 'read.tch2': serverTimestamp() })));
 await t('member lists own chats', assertSucceeds(getDocs(query(collection(stu3, 'dms'), where('members', 'array-contains', 'stu3')))));
 await t('another student cannot read the chat', assertFails(getDoc(doc(stu2, 'dms', 'tch2_stu3'))));
