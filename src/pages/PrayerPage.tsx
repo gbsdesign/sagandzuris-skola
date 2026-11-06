@@ -63,6 +63,8 @@ const withoutBarTitle = (html: string, id: string): string => {
   return same ? html.slice(head[0].length) : html;
 };
 
+const NIGHT_KEY = 'sg-prayer-night';
+
 export const PrayerPage: React.FC = () => {
   const { selectedPrayerId, openPrayer } = useNavigation();
   const [html, setHtml] = useState<string | null>(null);
@@ -70,6 +72,9 @@ export const PrayerPage: React.FC = () => {
   // kept while reading on (next chapter or kathisma); every new visit starts at the standard size, in ordinary letters
   const [textSize, setTextSize] = useState(100);
   const [khutsuri, setKhutsuri] = useState(false);
+  // „ღამის ფურცელი“ — kept on the device, so the evening reader finds it dark again
+  const [night, setNightState] = useState(() => { try { return localStorage.getItem(NIGHT_KEY) === '1'; } catch { return false; } });
+  const setNight = (on: boolean) => { setNightState(on); try { localStorage.setItem(NIGHT_KEY, on ? '1' : '0'); } catch { /* device only */ } };
   const [textEl, setTextEl] = useState<HTMLDivElement | null>(null);
   useKhutsuri(textEl, khutsuri);
 
@@ -115,7 +120,7 @@ export const PrayerPage: React.FC = () => {
     <div className="w-full max-w-2xl mx-auto mb-6 px-1 space-y-4">
       {hour && <HourReminders hour={hour} />}
 
-      <article className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-4 py-5 sm:px-7 sm:py-6">
+      <article className={`rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-4 py-5 sm:px-7 sm:py-6 transition-colors ${night ? 'sg-night' : ''}`}>
         {/* the tools stay while the next kanon or chapter loads: the full-screen prompter goes on to it (ReadingTools) */}
         {!failed && (
           <ReadingToolbar
@@ -123,6 +128,8 @@ export const PrayerPage: React.FC = () => {
             onSize={setTextSize}
             khutsuri={khutsuri}
             onKhutsuri={setKhutsuri}
+            night={night}
+            onNight={setNight}
             source={html === null ? null : textEl}
             psalter={kathisma ? Number(kathisma.id.replace('kathisma-', '')) || undefined : undefined}
             neighbours={{

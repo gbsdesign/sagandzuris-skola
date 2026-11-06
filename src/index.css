@@ -348,3 +348,14 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
 
 /* while a text reads itself (the auto-scroll bar at the bottom), the floating „უკან“ steps aside for the bar */
 html[data-sg-autoscroll] .sg-float-back { opacity: 0 !important; pointer-events: none !important; }
+
+/* „ღამის ფურცელი“ (2026-11-06): the prayer page's text card in the dark, for the evening prayers — warm dark paper, soft
+   light letters, the wine headings turned to gold; the tools' bar follows. Kept on the device (sg-prayer-night). */
+.sg-night { background: #1f1a16; --tw-ring-color: #3a312a; color: #e8dfd0; }
+.sg-night :is(p, li, dd, dt, span, div) { color: #e8dfd0; }
+.sg-night :is(h2, h3, p.c, em, strong, button) { color: #e3c37a; }
+.sg-night button { --tw-ring-color: #5a4b36; }
+.sg-night blockquote { border-color: #4a3f36; color: #d8cfbf; }
+.sg-night hr { border-color: #3a312a; }
+.sg-night .sg-night-bar { background: rgba(31, 26, 22, 0.94); }
+.sg-night .sg-night-bar :is(button:not([aria-pressed="true"]), [role="group"]) { background: #2a2420; }

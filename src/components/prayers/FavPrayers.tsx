@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
-import { Star } from 'lucide-react';
+import { ArrowDown, ArrowUp, Check, Pencil, Star } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
 import { isPrayerId, prayerTitle } from '../../data/prayers';
 import { triggerHaptic } from '../../utils/haptics';
-import { offerUndo } from '../ui/kit';
+import { IconBtn, offerUndo } from '../ui/kit';
 
 // „რჩეული“ prayers (2026-11-06, the user: „დაამატე რჩეული ლოცვების ადგილი, ანუ სიის თავში გამოჩნდეს რასაც აირჩევს ლოცვებიდან“;
 // answer „ლოცვის გვერდზე ☆ ღილაკით“): the prayer page's bar has a ☆ beside its 📌 (FavButton), and the chosen prayers stand
@@ -63,6 +63,15 @@ export const useFavPrayers = () => {
       l.splice(Math.min(at, l.length), 0, id);
       save(l);
     },
+    /** moves one a step up or down (the list's ✎, 2026-11-06) */
+    move: (id: string, dir: -1 | 1) => {
+      const l = [...current.current];
+      const i = l.indexOf(id);
+      const j = i + dir;
+      if (i < 0 || j < 0 || j >= l.length) return;
+      [l[i], l[j]] = [l[j], l[i]];
+      save(l);
+    },
   };
 };
 
@@ -101,6 +110,8 @@ export const FavButton: React.FC<{ id: string }> = ({ id }) => {
 /** The top of the prayer book: the chosen prayers, a tap opens one, ★ takes it off (with „გაუქმება“). */
 export const FavPrayers: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) => {
   const fav = useFavPrayers();
+  // ✎ (2026-11-06): the rows get ▲ ▼ in place of the ★, so the most used stand on top
+  const [editing, setEditing] = useState(false);
   if (!fav.loaded) return null;
   if (!fav.list.length) {
     return (
@@ -112,10 +123,17 @@ export const FavPrayers: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen 
   }
   return (
     <section aria-label="რჩეული ლოცვები" className="rounded-3xl bg-gradient-to-b from-[#fff8e6] to-[#fffdf8] ring-1 ring-[#ecd9a8] p-2.5 pt-3">
-      <h2 className="px-2 pb-2 flex items-center gap-2">
+      <h2 className="pl-2 pr-1 pb-2 flex items-center gap-2 min-h-9">
         <Star className="w-[18px] h-[18px] text-[#b07d12]" fill="currentColor" />
         <span className="font-serif-ge text-[15px] font-bold text-[#4a3426]">რჩეული</span>
-        <span className="text-[13px] font-bold text-[#b9a27a] tabular-nums">{fav.list.length}</span>
+        <span className="flex-1 text-[13px] font-bold text-[#b9a27a] tabular-nums">{fav.list.length}</span>
+        {fav.list.length > 1 && (editing ? (
+          <button type="button" onClick={() => setEditing(false)} className="h-9 px-3.5 rounded-full bg-[#7a2028] text-[#fbf6ec] text-[13px] font-bold inline-flex items-center gap-1.5 cursor-pointer">
+            <Check className="w-4 h-4" /> მზადაა
+          </button>
+        ) : (
+          <IconBtn label="რიგის შეცვლა" onClick={() => setEditing(true)}><Pencil /></IconBtn>
+        ))}
       </h2>
       <ul className="space-y-1.5">
         {fav.list.map((id, i) => (
@@ -124,11 +142,23 @@ export const FavPrayers: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen 
           <li key={id} className="relative">
             <button
               type="button"
-              onClick={() => { triggerHaptic(8); onOpen(id); }}
-              className="w-full min-h-12 pl-3.5 pr-[52px] py-2 rounded-2xl bg-white ring-1 ring-[#eadfcd] hover:ring-[#7a2028]/30 text-left flex items-center gap-2 cursor-pointer active:scale-[0.99] transition"
+              onClick={() => { if (editing) return; triggerHaptic(8); onOpen(id); }}
+              className={`w-full min-h-12 pl-3.5 py-2 rounded-2xl bg-white ring-1 ring-[#eadfcd] hover:ring-[#7a2028]/30 text-left flex items-center gap-2 cursor-pointer active:scale-[0.99] transition ${editing ? 'pr-[96px]' : 'pr-[52px]'}`}
             >
               <span className="flex-1 min-w-0 text-[14px] font-bold leading-snug text-[#2a2017]">{prayerTitle(id)}</span>
             </button>
+            {editing ? (
+              <span className="absolute top-1/2 -translate-y-1/2 right-1 flex items-center">
+                <button type="button" disabled={i === 0} onClick={() => { triggerHaptic(8); fav.move(id, -1); }} aria-label={`${prayerTitle(id)} — ზემოთ`}
+                  className="w-11 h-10 rounded-xl grid place-items-center text-[#7a2028] hover:bg-[#7a2028]/[0.07] disabled:opacity-25 cursor-pointer disabled:cursor-default active:scale-95 transition">
+                  <ArrowUp className="w-[18px] h-[18px]" />
+                </button>
+                <button type="button" disabled={i === fav.list.length - 1} onClick={() => { triggerHaptic(8); fav.move(id, 1); }} aria-label={`${prayerTitle(id)} — ქვემოთ`}
+                  className="w-11 h-10 rounded-xl grid place-items-center text-[#7a2028] hover:bg-[#7a2028]/[0.07] disabled:opacity-25 cursor-pointer disabled:cursor-default active:scale-95 transition">
+                  <ArrowDown className="w-[18px] h-[18px]" />
+                </button>
+              </span>
+            ) : (
             <button
               type="button"
               onClick={() => {
@@ -142,6 +172,7 @@ export const FavPrayers: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen 
             >
               <Star className="w-[18px] h-[18px]" fill="currentColor" />
             </button>
+            )}
           </li>
         ))}
       </ul>
