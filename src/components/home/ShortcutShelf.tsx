@@ -30,7 +30,7 @@ import { SHELF_GRID, TileCheck, TileIcon, TileName, tileClass } from './ShelfTil
 
 const SECTION_ICON: Record<SectionId, React.ReactNode> = {
   galoba: <Music2 />, simghera: <Music />, mtkmeli: <Feather />, sakravebi: <Guitar />, medavitneoba: <BookOpen />, medavitneobaTopic: <BookOpen />,
-  chvevebi: <Sparkles />, tamashebi: <Star />, tsinaprebi: <Users />, gza: <Compass />, biblioteka: <Library />, videoebi: <MonitorPlay />,
+  chvevebi: <Sparkles />, tamashebi: <Star />, tsinaprebi: <Users />, gza: <Compass />, biblioteka: <Library />, videoebi: <MonitorPlay />, eklesiebi: <Church />,
 };
 const SPECIAL_ICON: Record<string, React.ReactNode> = {
   kathisma: <BookMarked />, liturgy: <Music4 />, commemoration: <ScrollText />, calendar: <CalendarDays />, class: <GraduationCap />, teacher: <GraduationCap />, birthdays: <Cake />,

@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { triggerHaptic } from '../utils/haptics';
 import { wignebiParent } from '../utils/wignebiPath';
 
-export type PageType = 'home' | 'profile' | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'gz' | 'tsinaprebi' | 'bookmark' | 'admin' | 'teacher' | 'class' | 'prayer' | 'commemoration' | 'biblioteka' | 'psalter' | 'messages' | 'dm' | 'abituri' | 'offline' | 'birthdays' | 'medavitneoba' | 'games' | 'student' | 'videos';
+export type PageType = 'home' | 'profile' | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'gz' | 'tsinaprebi' | 'bookmark' | 'admin' | 'teacher' | 'class' | 'prayer' | 'commemoration' | 'biblioteka' | 'psalter' | 'messages' | 'dm' | 'abituri' | 'offline' | 'birthdays' | 'medavitneoba' | 'games' | 'student' | 'videos' | 'churches';
 export type ServiceType = 'წირვა' | 'მწუხრი' | 'ცისკარი' | 'სადღესასწაულო' | 'მარხვანი' | 'ზატიკი' | 'პანაშვიდი' | 'ჯვრისწერა' | 'ხელდასხმა' | 'პარაკლისი' | 'მომიხსენენი' | 'ძლისპირები' | 'კატაბასიები' | 'დასადებლები' | null;
 
 export interface NavigationContextType {
@@ -45,7 +45,7 @@ const NavigationContext = createContext<NavigationContextType | undefined>(undef
 interface NavSnap { page: PageType; service: ServiceType; classId: string | null; prayerId: string | null; mapItem?: string | null; dmId?: string | null }
 const HOME: NavSnap = { page: 'home', service: null, classId: null, prayerId: null, mapItem: null, dmId: null };
 // pages whose open item (a map region, an instrument, a chant album, a library book) is a step of its own in history
-const MAP_PAGES: PageType[] = ['simghera', 'mtkmeli', 'sakravebi', 'galoba', 'biblioteka', 'medavitneoba', 'games', 'videos'];
+const MAP_PAGES: PageType[] = ['simghera', 'mtkmeli', 'sakravebi', 'galoba', 'biblioteka', 'medavitneoba', 'games', 'videos', 'churches'];
 const makeSnap = (page: PageType, service: ServiceType, classId: string | null, prayerId: string | null, mapItem: string | null, dmId: string | null = null): NavSnap => ({
   page,
   service: page === 'galoba' ? service : null,

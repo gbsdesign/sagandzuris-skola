@@ -1,5 +1,6 @@
 import React from 'react';
 import { setSongTextEditor, useSongTextEditors } from '../../hooks/useSongTexts';
+import { setChurchContactViewer, useChurchContactViewers } from '../../hooks/useChurchExtras';
 import { Toggle } from '../ui/kit';
 import { FAIL } from './CentreDownload';
 import { changed } from './changed';
@@ -22,6 +23,22 @@ export const SongTextSwitch: React.FC<{ uid: string; name: string; onMessage: Ms
           () => onMessage(FAIL, 'error'));
       }}
       label="სიმღერის ტექსტის ჩაწერა"
+    />
+  );
+};
+
+/** The person's window: may they see the churches' contacts in „ეკლესია-მონასტრები“ (hooks/useChurchExtras.ts)? */
+export const ChurchContactsSwitch: React.FC<{ uid: string; name: string; onMessage: Msg }> = ({ uid, name, onMessage }) => {
+  const uids = useChurchContactViewers();
+  return (
+    <Toggle
+      on={uids.includes(uid)}
+      onChange={v => {
+        setChurchContactViewer(uid, v).then(
+          () => changed('right', `${name} — ტაძრების კონტაქტების ნახვა ${v ? 'ჩაირთო' : 'გამოირთო'}`, uid, () => setChurchContactViewer(uid, !v)),
+          () => onMessage(FAIL, 'error'));
+      }}
+      label="ტაძრების კონტაქტების ნახვა"
     />
   );
 };

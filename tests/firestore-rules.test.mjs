@@ -349,6 +349,23 @@ await t('a guest reads song texts', assertSucceeds(getDoc(doc(guest, 'songTexts'
 await t('a guest cannot delete one', assertFails(deleteDoc(doc(guest, 'songTexts', 's1'))));
 await t('chosen member deletes a song text', assertSucceeds(deleteDoc(doc(stu, 'songTexts', 's1'))));
 
+// ---- „ეკლესია-მონასტრები“: hours for everyone, contacts for admins and the members they allow
+const ci = (by, extra = {}) => ({ hours: '9:00–19:00', note: 'წირვა კვირას', by, at: serverTimestamp(), ...extra });
+const cc = (by, extra = {}) => ({ person: 'მამა გიორგი', phone: '+995 555 00 00 00', other: '', by, at: serverTimestamp(), ...extra });
+await t('admin writes a church’s hours', assertSucceeds(setDoc(doc(adm, 'churchInfo', 'c1'), ci('adm'))));
+await t('a teacher cannot write the hours', assertFails(setDoc(doc(tch, 'churchInfo', 'c1'), ci('tch'))));
+await t('the hours have only their fields', assertFails(setDoc(doc(adm, 'churchInfo', 'c1'), ci('adm', { x: 1 }))));
+await t('a guest reads the hours', assertSucceeds(getDoc(doc(guest, 'churchInfo', 'c1'))));
+await t('admin writes a church’s contact', assertSucceeds(setDoc(doc(adm, 'churchContacts', 'c1'), cc('adm'))));
+await t('a member cannot write a contact', assertFails(setDoc(doc(stu, 'churchContacts', 'c1'), cc('stu'))));
+await t('a member not allowed cannot read a contact', assertFails(getDoc(doc(stu, 'churchContacts', 'c1'))));
+await t('a guest cannot read a contact', assertFails(getDoc(doc(guest, 'churchContacts', 'c1'))));
+await t('admin allows a member the contacts', assertSucceeds(setDoc(doc(adm, 'settings', 'churchContactViewers'), { uids: arrayUnion('stu') }, { merge: true })));
+await t('the allowed member reads a contact', assertSucceeds(getDoc(doc(stu, 'churchContacts', 'c1'))));
+await t('another member still cannot', assertFails(getDoc(doc(stu2, 'churchContacts', 'c1'))));
+await t('the allowed member cannot change it', assertFails(setDoc(doc(stu, 'churchContacts', 'c1'), cc('stu'))));
+await t('admin deletes a contact', assertSucceeds(deleteDoc(doc(adm, 'churchContacts', 'c1'))));
+
 // ---- the admins' change log and their phone notices
 const line = (by, extra = {}) => ({ at: '2026-10-28T20:00:00Z', by, byName: 'A', kind: 'role', text: 'ნინო — როლი: მასწავლებელი', target: 'stu', ...extra });
 await t('admin writes a log line signed with own e-mail', assertSucceeds(setDoc(doc(adm, 'adminLog', 'l1'), line('adm@x.ge'))));

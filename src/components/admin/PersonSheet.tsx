@@ -19,7 +19,7 @@ import { ClassLogo } from '../classes/ClassLogo';
 import { AccessPicker, AccessRecord, DecisionRecord, saveAccess } from './AccessRequests';
 import { CentreDownloadSwitch } from './CentreDownload';
 import { MemberAlbums } from './AlbumRights';
-import { SongTextSwitch } from './SongTextEditors';
+import { ChurchContactsSwitch, SongTextSwitch } from './SongTextEditors';
 import { addClassMember, removeClassMember } from './ClassesAdmin';
 import { changed } from './changed';
 import { logChange } from '../../utils/adminLog';
@@ -474,9 +474,10 @@ export const PersonSheet: React.FC<{
 
           {/* the rights beyond a member's, one short row each (the folklore centre's recordings are staff's anyway) */}
           {admitted && (role === 'member' || role === 'teacher') && (
-            <Part title="დამატებითი უფლებები" fold="ჩანაწერების ჩამოწერა · ტექსტების ჩაწერა">
+            <Part title="დამატებითი უფლებები" fold="ჩანაწერების ჩამოწერა · ტექსტების ჩაწერა · ტაძრების კონტაქტები">
               {!isStaff && <CentreDownloadSwitch uid={u.userId} name={u.name} onMessage={note.say} />}
               <SongTextSwitch uid={u.userId} name={u.name} onMessage={note.say} />
+              <ChurchContactsSwitch uid={u.userId} name={u.name} onMessage={note.say} />
             </Part>
           )}
 

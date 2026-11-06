@@ -267,6 +267,25 @@
   monasteries as chips; `mapItem` „m:<region>[/<id>]“. Data `data/monasteryVideos.ts`, picked by hand: each monastery's region
   checked in two places (OpenStreetMap + the Georgian Encyclopedia / Wikipedia / georgia.travel, or the report's title) — six
   that could not be checked were left out. Add new films at the end of their region.
+- **ეკლესია-მონასტრები** (2026-11-07, page `churches`, section `eklesiebi`, `pages/ChurchesPage.tsx` + `pages/churches/ChurchCard.tsx`;
+  the user: „ვაზზე ახალი ღილაკი … როგორც ვიდეობის შემთხვევაშია … საქ რუკა … ინფო, ფოტო … საკონტაქტო მარტო ადმინებს და ვისაც ჩაურთავს
+  … გუგლ მაპი იხსნებოდეს … ახლოს მდებარე ტაძრები … რომელი მოქმედია და რომელ საათებში“; he showed Tevdore Gogoladze's app „გზა
+  ტაძრისაკენ“ (a Google My Maps map) and asked to build our own the same way — nothing taken from that map): the vine's label left of
+  the trunk (x 19 y 52, phone 18/55) opens the regions' map (`RegionPuzzleMap`, Tbilisi for „ქალაქური“; Abkhazia has none — the
+  source leaves out the occupied lands), a search over all (name hits first, `byName`) and „ახლოს მდებარე ტაძრები“ (the phone's place,
+  the nearest 40 with their distance, kept for the visit in `lastFix`, asked again after 10 min). A region = kind chips (ყველა ·
+  მოქმედი · მონასტრები · არ მოქმედებს), a municipality list, a search line, rows in steps of 60. `mapItem` = region id, „near“ or
+  „all“, + „/<church id>“ while a church's window is open. The window: the Commons photo (credit link), where, მოქმედი / არ მოქმედებს /
+  მშენებარე, monastery, when built, the Wikidata line + the source's note, Wikipedia, „Google Maps-ში“ (the place, its Google photos),
+  „საათები და მსახურება“ (`churchInfo/{id}` — everyone reads), „კონტაქტი“ (`churchContacts/{id}` — only admins and the uids in
+  `settings/churchContactViewers`, switched on in the person's window „დამატებითი უფლებები“ → `ChurchContactsSwitch`, listed in
+  ⚙ „სკოლა“'s `ExtraRightsFold`), an admin's „საათების და კონტაქტის ჩაწერა“ form, and the footer's „გზა Google Maps-ით“
+  (`maps/dir/?api=1&destination=`). Hooks `hooks/useChurchExtras.ts`; rules + tests in `firestore.rules` / the rules test. Open to
+  everyone, guests too (`GUEST_OPEN`, `FOR_EVERYONE`). Data `data/churches.json` (lazy chunk via `data/churches.ts`; 3 407 churches,
+  212 photos, 134 Wikipedia links) — **generated, never edit by hand**: `scripts/churches/build.py` over the toc.ge sheet (Indigo,
+  2021 — its „განედი“/„გრძედი“ columns are swapped; 20 points far from their municipality dropped) and two Wikidata queries (a photo
+  joins only when close and sharing a name word — a saint's name alone within 150 m); steps in `scripts/churches/README.md`. Hours are
+  not in any open source — the admins write them. Test `tests/churches.test.ts`.
 - **Prayers** (`data/prayers.ts`, `public/prayers/`, `public/bible/`), psalter kathismas, 73 akathists,
   commemoration name lists (`utils/commemoration.ts`), prayer reminders via Web Push Worker
   `sagandzuri-reminders` (`worker/reminders/`; push works only on the deployed site).
