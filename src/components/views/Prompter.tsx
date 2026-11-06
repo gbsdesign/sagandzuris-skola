@@ -1,13 +1,16 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Minus, Moon, Pause, Play, Plus, RotateCcw, Sun, X } from 'lucide-react';
+import { ArrowLeft, ArrowUp, Focus, Minus, Moon, Pause, Play, Plus, RotateCcw, Sun, X } from 'lucide-react';
+import { Flash, Ticker, firstWordOf, wordsOf, type FlowHandle, type Word } from './PrompterFlow';
 
 // „წამყვანის ეკრანი“ (2026-11-06, the user: „ავტომატური კითხვის ჟურნალისტური ვერსია … წამყვანებს წინ რომ ეკრანი აქვთ“):
 // the text being read, big, over the whole screen, gliding up past a reading line as on a television prompter. Opened
 // from the auto-scroll bar's „სრულ ეკრანზე“ (`AutoScroll` in ReadingTools): it starts where the page was being read and
 // gives the page back where it stopped. Dark (light letters on black) or light, the reader's pick, kept on the device
-// with the letters' size. A tap pauses / goes on, a finger held stops it; the speed is the bar's own and means the same
-// reading pace here (letters a second), whatever the letters' size.
+// with the letters' size. It opens standing still (the user: „წამზომი არ უნდა თავად იწყებოდეს“): ▶ — or a tap — counts
+// 3-2-1 and sets it going; after a pause it goes on at once. A tap pauses / goes on, a finger held stops it; the speed is
+// the bar's own and means the same reading pace here (letters a second), whatever the letters' size. The text goes up, as
+// on a television prompter — a sideways crawl was offered and declined (harder on the eye for a long text).
 
 // the blocks a text is made of: the page and its copy here are matched by their order
 export const BLOCKS = 'p, h1, h2, h3, h4, h5, li, blockquote, pre';
@@ -63,7 +66,22 @@ const LOOK: Record<Theme, { bg: string; text: string; muted: string; accent: str
 };
 
 const SIZES = [22, 26, 30, 34, 40, 46, 54, 62];
-const LINE = 0.36; // the reading line, a third of the way down the screen
+// the reading line: where the eye reads, a third of the way down the screen by default. Its band and arrows show only
+// when the reader turns them on (the user, 2026-11-06: „ნებით … აწევ-დაწევა ამ განივი ისრების“): then the arrows are
+// handles that move it up or down. Both kept on the device.
+const LINE = 0.36;
+const LINE_MIN = 0.15;
+const LINE_MAX = 0.7;
+const GUIDE_KEY = 'sg-prompter-guide';
+// three ways of reading: the text goes up (as on television), one line goes sideways, one word at a time in one place
+type Mode = 'up' | 'side' | 'word';
+const MODES: { id: Mode; label: string; Icon: typeof ArrowUp }[] = [
+  { id: 'up', label: 'ზემოთ', Icon: ArrowUp },
+  { id: 'side', label: 'გვერდზე', Icon: ArrowLeft },
+  { id: 'word', label: 'სიტყვით', Icon: Focus },
+];
+const MODE_KEY = 'sg-prompter-mode';
+const LINE_KEY = 'sg-prompter-line';
 const PACE = 1.1; // letters a pixel of the page's text at 100 %: the bar's px a second × PACE = letters a second
 const THEME_KEY = 'sg-prompter-theme';
 const SIZE_KEY = 'sg-prompter-size';
@@ -107,8 +125,16 @@ const CSS = `
 `;
 
 const Arrow: React.FC<{ side: 'left' | 'right'; color: string }> = ({ side, color }) => (
-  <svg viewBox="0 0 10 14" className={`absolute top-1/2 -translate-y-1/2 w-2.5 h-3.5 ${side === 'left' ? 'left-1.5' : 'right-1.5'}`} aria-hidden>
+  <svg viewBox="0 0 10 14" className="w-3 h-4" aria-hidden>
     <path d={side === 'left' ? 'M0 0 L10 7 L0 14 Z' : 'M10 0 L0 7 L10 14 Z'} fill={color} />
+  </svg>
+);
+
+// the reading line's own mark for its on/off button: ▸ — ◂
+const LineIcon: React.FC = () => (
+  <svg viewBox="0 0 24 24" className="w-5 h-5" aria-hidden>
+    <path d="M2 7 L7 12 L2 17 Z M22 7 L17 12 L22 17 Z" fill="currentColor" />
+    <path d="M9 12 H15" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
   </svg>
 );
 
@@ -125,7 +151,23 @@ export const Prompter: React.FC<{
     const kept = Number(read(SIZE_KEY));
     return SIZES.includes(kept) ? kept : window.innerWidth >= 768 ? 40 : 30;
   });
-  const [count, setCount] = useState(3); // 3 · 2 · 1 before it moves
+  const [mode, setMode] = useState<Mode>(() => {
+    const kept = read(MODE_KEY);
+    return kept === 'side' || kept === 'word' ? kept : 'up';
+  });
+  const [words, setWords] = useState<Word[]>([]);
+  const [flowStart, setFlowStart] = useState(0);
+  const flow = useRef<FlowHandle | null>(null);
+  const flowLeft = useRef(0); // letters left in a sideways / word-by-word reading
+  const upBlock = useRef<number | null>(null); // where to stand once back to „ზემოთ“
+  const [guide, setGuide] = useState(() => read(GUIDE_KEY) === '1');
+  const [line, setLine] = useState(() => {
+    const kept = Number(read(LINE_KEY));
+    return kept >= LINE_MIN && kept <= LINE_MAX ? kept : LINE;
+  });
+  const [dragging, setDragging] = useState(false);
+  const [count, setCount] = useState(0); // 3 · 2 · 1 before it moves
+  const [fresh, setFresh] = useState(true); // not started yet (since opening or „თავიდან“): ▶ counts 3-2-1 first
   const [running, setRunning] = useState(false);
   const [ended, setEnded] = useState(false);
   const [chrome, setChrome] = useState(true);
@@ -165,15 +207,15 @@ export const Prompter: React.FC<{
     const sc = scrollerRef.current;
     const b = bodyRef.current;
     if (!sc || !b) return start;
-    const line = sc.getBoundingClientRect().top + sc.clientHeight * LINE + size * 0.5;
+    const at = sc.getBoundingClientRect().top + sc.clientHeight * line + size * 0.5;
     let found = -1;
     b.querySelectorAll('[data-sgp]').forEach(el => {
-      if (el.getBoundingClientRect().top <= line) found = Number(el.getAttribute('data-sgp'));
+      if (el.getBoundingClientRect().top <= at) found = Number(el.getAttribute('data-sgp'));
     });
     if (found >= 0) return found;
     const first = b.querySelector('[data-sgp]');
     return first ? Number(first.getAttribute('data-sgp')) : 0;
-  }, [size, start]);
+  }, [size, start, line]);
 
   // puts block `i` (or the nearest one before it) on the reading line
   const placeAt = (i: number) => {
@@ -183,10 +225,28 @@ export const Prompter: React.FC<{
     let el: Element | null = null;
     b.querySelectorAll('[data-sgp]').forEach(x => { if (Number(x.getAttribute('data-sgp')) <= i) el = x; });
     if (!el) { sc.scrollTop = 0; pos.current = 0; return; }
-    const target = sc.getBoundingClientRect().top + sc.clientHeight * LINE - size * 0.75;
+    const target = sc.getBoundingClientRect().top + sc.clientHeight * line - size * 0.75;
     sc.scrollTop += (el as Element).getBoundingClientRect().top - target;
     pos.current = sc.scrollTop;
   };
+
+  // the words for the other two ways, once; they start where the text was being read
+  useLayoutEffect(() => {
+    const b = bodyRef.current;
+    if (!b) return;
+    const all = wordsOf(b);
+    setWords(all);
+    setFlowStart(firstWordOf(all, start));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // back to „ზემოთ“: the text stands where the other way stopped
+  useLayoutEffect(() => {
+    if (mode !== 'up' || upBlock.current === null) return;
+    placeAt(upBlock.current);
+    upBlock.current = null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mode]);
 
   // a new size (or the first look): the same place stays on the line
   useLayoutEffect(() => {
@@ -201,6 +261,15 @@ export const Prompter: React.FC<{
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [size]);
 
+  // the line moved: the text stays where it is (its top room grows as much as its bottom room shrinks)
+  const lastLine = useRef(line);
+  useLayoutEffect(() => {
+    const sc = scrollerRef.current;
+    const by = (line - lastLine.current) * (sc?.clientHeight ?? 0);
+    lastLine.current = line;
+    if (sc && by) { sc.scrollTop += by; pos.current = sc.scrollTop; }
+  }, [line]);
+
   // 3 · 2 · 1
   useEffect(() => {
     if (count <= 0) return;
@@ -210,9 +279,9 @@ export const Prompter: React.FC<{
     return () => window.clearTimeout(id);
   }, [count]);
 
-  // the glide
+  // the glide (the text going up; the other two ways move themselves, PrompterFlow.tsx)
   useEffect(() => {
-    if (!running) return;
+    if (!running || mode !== 'up') return;
     const sc = scrollerRef.current;
     if (!sc) return;
     let last = performance.now();
@@ -237,7 +306,7 @@ export const Prompter: React.FC<{
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [running]);
+  }, [running, mode]);
 
   // the controls step aside while it moves
   useEffect(() => {
@@ -255,21 +324,60 @@ export const Prompter: React.FC<{
 
   const nudge = () => { setChrome(true); setPoke(p => p + 1); };
 
-  const fromTop = () => {
-    const sc = scrollerRef.current;
-    if (sc) { sc.scrollTop = 0; pos.current = 0; }
+  const toTop = () => {
+    if (mode === 'up') {
+      const sc = scrollerRef.current;
+      if (sc) { sc.scrollTop = 0; pos.current = 0; }
+    } else flow.current?.toWord(0);
     setEnded(false);
+  };
+
+  const flowEnded = () => {
     setRunning(false);
+    setEnded(true);
     setChrome(true);
-    setCount(3);
+  };
+  const flowProgress = (done: number, lettersLeft: number) => {
+    flowLeft.current = lettersLeft;
+    if (progressRef.current) progressRef.current.style.width = `${Math.min(100, done * 100)}%`;
+  };
+
+  // another way of reading: the same place, standing still until ▶ (3-2-1 again)
+  const pickMode = (m: Mode) => {
+    if (m === mode) return;
+    const at = mode === 'up' ? firstWordOf(words, blockAtLine()) : flow.current?.word() ?? 0;
+    if (m === 'up') upBlock.current = words[at]?.block ?? start;
+    else setFlowStart(at);
+    setRunning(false);
+    setCount(0);
+    setEnded(false);
+    setFresh(true);
+    setMode(m);
+    keep(MODE_KEY, m);
+    nudge();
+  };
+
+  // „თავიდან“: back to the start, standing still until ▶
+  const fromTop = () => {
+    toTop();
+    setRunning(false);
+    setCount(0);
+    setFresh(true);
+    setChrome(true);
   };
 
   const toggle = () => {
-    if (ended) return fromTop();
-    if (running || count > 0) {
+    if (ended) {
+      toTop();
+      setFresh(false);
+      setCount(3);
+    } else if (running || count > 0) {
       setCount(0);
       setRunning(false);
       setChrome(true);
+    } else if (fresh) {
+      setFresh(false);
+      setCount(3);
     } else {
       setRunning(true);
       nudge();
@@ -290,13 +398,34 @@ export const Prompter: React.FC<{
     nudge();
   };
 
+  const switchGuide = () => {
+    setGuide(g => { keep(GUIDE_KEY, g ? '0' : '1'); return !g; });
+    nudge();
+  };
+
+  // an arrow held and moved takes the line with it
+  const grab = (e: React.PointerEvent) => {
+    e.stopPropagation();
+    e.currentTarget.setPointerCapture(e.pointerId);
+    setDragging(true);
+  };
+  const drag = (e: React.PointerEvent) => {
+    if (!dragging) return;
+    setLine(Math.min(LINE_MAX, Math.max(LINE_MIN, e.clientY / window.innerHeight)));
+  };
+  const drop = () => {
+    if (!dragging) return;
+    setDragging(false);
+    keep(LINE_KEY, line.toFixed(3));
+  };
+
   const pickTheme = (t: Theme) => {
     setTheme(t);
     keep(THEME_KEY, t);
     nudge();
   };
 
-  const close = () => onClose(blockAtLine());
+  const close = () => onClose(mode === 'up' ? blockAtLine() : words[flow.current?.word() ?? 0]?.block ?? start);
 
   // a computer's keys: space pauses, ↑ ↓ the speed, + − the letters, Esc closes
   const keys = useRef({ toggle, stepSpeed, stepSize, close });
@@ -349,7 +478,9 @@ export const Prompter: React.FC<{
   };
 
   const sc = scrollerRef.current;
-  const left = sc ? Math.max(0, sc.scrollHeight - sc.clientHeight - sc.scrollTop) / pxPerSecond() : null;
+  const left =
+    mode !== 'up' ? (words.length ? flowLeft.current / (speeds[speed].px * PACE) : null)
+    : sc ? Math.max(0, sc.scrollHeight - sc.clientHeight - sc.scrollTop) / pxPerSecond() : null;
   const leftText = left === null ? '' : ended ? 'დასრულდა' : left < 60 ? 'დარჩა 1 წუთზე ნაკლები' : `დარჩა ≈ ${Math.round(left / 60)} წთ`;
 
   const round = `w-11 h-11 shrink-0 rounded-full flex items-center justify-center cursor-pointer active:scale-90 transition disabled:opacity-35 disabled:cursor-default ${look.hover}`;
@@ -369,7 +500,7 @@ export const Prompter: React.FC<{
       {/* the text */}
       <div
         ref={scrollerRef}
-        className="sgp-scroll absolute inset-0 overflow-y-auto overscroll-contain"
+        className={`sgp-scroll absolute inset-0 overflow-y-auto overscroll-contain ${mode === 'up' ? '' : 'invisible pointer-events-none'}`}
         onPointerDown={down}
         onPointerUp={up}
         onPointerCancel={cancel}
@@ -378,8 +509,8 @@ export const Prompter: React.FC<{
         <div
           style={{
             fontSize: size,
-            paddingTop: `calc(${LINE * 100}dvh - ${size * 0.75}px)`,
-            paddingBottom: `${(1 - LINE) * 100}dvh`,
+            paddingTop: `calc(${line * 100}dvh - ${size * 0.75}px)`,
+            paddingBottom: `${(1 - line) * 100}dvh`,
             paddingLeft: 'calc(env(safe-area-inset-left, 0px) + 28px)',
             paddingRight: 'calc(env(safe-area-inset-right, 0px) + 28px)',
           }}
@@ -389,17 +520,49 @@ export const Prompter: React.FC<{
         </div>
       </div>
 
-      {/* the edges fade, the reading line glows */}
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-[24%]" style={{ background: `linear-gradient(${look.bg}, ${look.bg}00)` }} />
-      <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[22%]" style={{ background: `linear-gradient(${look.bg}00, ${look.bg})` }} />
-      <div
-        className="pointer-events-none absolute inset-x-0"
-        style={{ top: `calc(${LINE * 100}% - ${size * 0.75}px)`, height: size * 1.5, background: look.band }}
-        aria-hidden
-      >
-        <Arrow side="left" color={look.accent} />
-        <Arrow side="right" color={look.accent} />
-      </div>
+      {/* the other two ways */}
+      {mode !== 'up' && words.length > 0 && (
+        <div className="absolute inset-0" onPointerDown={down} onPointerUp={up} onPointerCancel={cancel}>
+          {mode === 'side' ? (
+            <Ticker key="side" words={words} start={flowStart} running={running} size={size} colors={look} pace={() => speeds[speedRef.current].px * PACE} held={held} handle={flow} onEnd={flowEnded} onProgress={flowProgress} />
+          ) : (
+            <Flash key="word" words={words} start={flowStart} running={running} size={size} colors={look} pace={() => speeds[speedRef.current].px * PACE} held={held} handle={flow} onEnd={flowEnded} onProgress={flowProgress} />
+          )}
+        </div>
+      )}
+
+      {/* the edges fade; the reading line, when on, glows and moves by its arrows */}
+      {mode === 'up' && (
+        <>
+          <div className="pointer-events-none absolute inset-x-0 top-0" style={{ height: `${Math.max(8, (line - 0.12) * 100)}%`, background: `linear-gradient(${look.bg}, ${look.bg}00)` }} />
+          <div className="pointer-events-none absolute inset-x-0 bottom-0 h-[22%]" style={{ background: `linear-gradient(${look.bg}00, ${look.bg})` }} />
+        </>
+      )}
+      {mode === 'up' && guide && (
+        <div
+          className="absolute inset-x-0 pointer-events-none"
+          style={{ top: `calc(${line * 100}% - ${size * 0.75}px)`, height: size * 1.5, background: look.band, boxShadow: dragging ? `inset 0 0 0 1.5px ${look.accent}` : undefined }}
+        >
+          {(['left', 'right'] as const).map(side => (
+            <span
+              key={side}
+              role="slider"
+              aria-label="კითხვის ხაზის გადაწევა"
+              aria-valuemin={Math.round(LINE_MIN * 100)}
+              aria-valuemax={Math.round(LINE_MAX * 100)}
+              aria-valuenow={Math.round(line * 100)}
+              onPointerDown={grab}
+              onPointerMove={drag}
+              onPointerUp={drop}
+              onPointerCancel={drop}
+              className={`pointer-events-auto absolute top-1/2 -translate-y-1/2 ${side === 'left' ? 'left-0 justify-start pl-1.5' : 'right-0 justify-end pr-1.5'} w-12 h-14 flex items-center cursor-ns-resize`}
+              style={{ touchAction: 'none' }}
+            >
+              <Arrow side={side} color={look.accent} />
+            </span>
+          ))}
+        </div>
+      )}
 
       {/* how far */}
       <div className="pointer-events-none absolute inset-x-0 top-0 h-[3px]" style={{ background: `${look.muted}26` }}>
@@ -409,7 +572,7 @@ export const Prompter: React.FC<{
       {/* 3 · 2 · 1 */}
       {count > 0 && (
         <div className="pointer-events-none absolute inset-0 flex flex-col items-center" style={{ background: `${look.bg}d9` }}>
-          <div className="absolute inset-x-0 flex flex-col items-center" style={{ top: `calc(${LINE * 100}% - 64px)` }}>
+          <div className="absolute inset-x-0 flex flex-col items-center" style={{ top: `calc(${line * 100}% - 64px)` }}>
             <span key={count} className="font-sans font-black leading-none tabular-nums animate-in zoom-in-50 fade-in duration-300" style={{ fontSize: 96, color: look.accent }}>
               {count}
             </span>
@@ -422,13 +585,25 @@ export const Prompter: React.FC<{
 
       {/* the controls: close, colours, letters on top; play and speed at the bottom */}
       <div
-        className={`absolute inset-x-0 top-0 flex items-center gap-2 px-3 pt-2 transition-opacity duration-300 ${chrome ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        className={`absolute inset-x-0 top-0 flex flex-col items-center gap-2 transition-opacity duration-300 ${chrome ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 10px)', paddingLeft: 'calc(env(safe-area-inset-left, 0px) + 12px)', paddingRight: 'calc(env(safe-area-inset-right, 0px) + 12px)' }}
       >
+       <div className="w-full flex items-center gap-2">
         <button type="button" onClick={close} aria-label="დახურვა" title="დახურვა" className={`${round} backdrop-blur`} style={{ ...panel, color: look.btn }}>
           <X className="w-5 h-5" />
         </button>
         <span className="flex-1" />
+        {mode === 'up' && <button
+          type="button"
+          aria-pressed={guide}
+          onClick={switchGuide}
+          aria-label="კითხვის ხაზი"
+          title="კითხვის ხაზი"
+          className={`${round} backdrop-blur`}
+          style={guide ? { background: look.play, color: look.playText } : { ...panel, color: look.btn }}
+        >
+          <LineIcon />
+        </button>}
         <div role="group" aria-label="ფონის ფერი" className="flex items-center p-1 rounded-full backdrop-blur" style={panel}>
           {(['dark', 'light'] as const).map(t => {
             const on = theme === t;
@@ -455,6 +630,25 @@ export const Prompter: React.FC<{
             A
           </button>
         </div>
+       </div>
+        <div role="group" aria-label="როგორ მოძრაობდეს ტექსტი" className="flex items-center p-1 rounded-full backdrop-blur" style={panel}>
+          {MODES.map(({ id, label, Icon }) => {
+            const on = mode === id;
+            return (
+              <button
+                key={id}
+                type="button"
+                aria-pressed={on}
+                onClick={() => pickMode(id)}
+                className="h-9 px-3 rounded-full inline-flex items-center gap-1.5 font-sans text-[13px] font-bold cursor-pointer transition"
+                style={on ? { background: look.play, color: look.playText } : { color: look.btn }}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       <div
@@ -470,7 +664,7 @@ export const Prompter: React.FC<{
           <button
             type="button"
             onClick={toggle}
-            aria-label={ended ? 'თავიდან' : running || count > 0 ? 'გაჩერება' : 'გაგრძელება'}
+            aria-label={ended ? 'თავიდან' : running || count > 0 ? 'გაჩერება' : fresh ? 'დაწყება' : 'გაგრძელება'}
             className="w-12 h-12 shrink-0 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition"
             style={{ background: look.play, color: look.playText }}
           >

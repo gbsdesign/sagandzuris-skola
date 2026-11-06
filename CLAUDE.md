@@ -234,8 +234,13 @@
   **⏬ on every reading page** (2026-11-06; `AutoScrollButton` in `views/ReadingTools.tsx`: prayers, saints' lives, ancestors,
   the library's books, the liturgical books, poems, songs' words — `source` = the text, `scroller` = an overlay's own box): the
   bar's „სრულ ეკრანზე“ opens „წამყვანის ეკრანი“ (`views/Prompter.tsx`, the user: „წამყვანებს წინ რომ ეკრანი აქვთ“; no mirror —
-  declined): a copy of the text as on screen, big, past a reading line, 3-2-1, a tap pauses, მუქი/ღია + size kept on the device
-  (`sg-prompter-theme`/`-size`), the bar's speed = the same letters a second; it starts and gives the page back at the block read.
+  declined): a copy of the text as on screen, big, a tap pauses, მუქი/ღია + size kept on the device (`sg-prompter-theme`/`-size`),
+  the bar's speed = the same letters a second; it starts and gives the page back at the block read. It opens standing still: ▶
+  counts 3-2-1 (after a pause it goes on at once). Three ways (`sg-prompter-mode`, the user asked for all three after hearing the
+  sideways crawl is harder on the eye): „ზემოთ“ (the text goes up), „გვერდზე“ (one line crawls left, a finger drags it — `Ticker`)
+  and „სიტყვით“ (one word in one place, its key letter on a fixed spot — `Flash`), both in `views/PrompterFlow.tsx` over
+  `wordsOf`; a switch keeps the place. „ზემოთ“'s reading line (band + ▸ ◂) shows only when turned on (▸–◂ button,
+  `sg-prompter-guide`), and its arrows drag it up or down (`sg-prompter-line`, 15–70 %).
 - **საგანძურის გზა** (page `gz`) = „ჩემი დღე“ since 2026-10-28: the round buttons (`PathOrbs`; four since 2026-11-05 — the pearls
   game's fifth was removed), then the habits card. The
   „დღეს“ card on top (`PathToday`: next lesson, nearest assignment, reviews due) was taken off at the user's wish (2026-11-05) —
