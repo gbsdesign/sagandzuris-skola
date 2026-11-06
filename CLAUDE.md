@@ -294,6 +294,24 @@
   2021 — its „განედი“/„გრძედი“ columns are swapped; 20 points far from their municipality dropped) and two Wikidata queries (a photo
   joins only when close and sharing a name word — a saint's name alone within 150 m); steps in `scripts/churches/README.md`. Hours are
   not in any open source — the admins write them. Test `tests/churches.test.ts`.
+  **More the same night** (the user: „გოგოლაძეც გამოიყენე … გუგლ მაპიდან ფოტოები … იდეები“; picks: Gogoladze admins-only until his
+  permission, Google photos the official way, ideas 1 2 3 5): the first screen has tabs „კუთხეებით · რუკა“ (`sg-churches-tab`):
+  „რუკა“ = `pages/churches/PinsMap.tsx` (lazy; Leaflet over OpenStreetMap's tiles, every located church a canvas dot in its kind's
+  colour — monasteries bigger —, a green ring = visited, a tap opens the window, „ჩემი ადგილი“; on a phone ¾ step closer than the
+  whole width). **„დღეს ტაძრობაა“** (`data/churchFeasts.ts` + `tests/churchFeasts.test.ts`): `FEAST_RULES` read the feast from the name
+  (first match wins, the specific first; a plain „ღვთისმშობლის“ gets none), fixed dates checked against `calendar/2026.json` by
+  each rule's `check` word, Easter by the Julian computus +13; `FeastCard` (today, else the next day with feasts) → list „feast“;
+  the window's „ტაძრობა: …“. **„მომლოცველის წიგნაკი“** (`hooks/useChurchVisits.ts`: `students.churchVisits {id: day}`, the
+  device's `sg-church-visits` for guests; no rules change): the window's „ვიყავი აქ“ (undo), `BookCard` (12 region dots) → list
+  „book“ (a stamp a region, n / all, the churches newest first), a green ✓ on a row's picture, a „ვიყავი“ chip in the lists.
+  **TV reports** in the window (`data/churchFilms.ts` `FILM_CHURCH`: the videos page's monastery → a church id, picked by hand; the
+  test checks both sides): a tap opens „ვიდეოები“ at `m:<region>/<film>`. **Google Maps' photos** (`hooks/useGooglePhotos.ts`):
+  Google's terms forbid keeping them, so the window asks each visit — Text Search IDs-only (free) in a ~400 m box with
+  `includedType place_of_worship`, then the place's `photos` (Place Details Pro, 5 000/month free), each photo loaded only when
+  shown (Place Details Photos, 1 000/month free) with its author + „Google Maps“; the gallery shows Wikimedia's first, ‹ ›. The key
+  lives in `settings/googlePlaces { key }`, pasted by an admin in `GoogleKeyBox` at the page's bottom (the user makes it in the
+  Firebase project's Cloud console, held to the site's addresses and Places API (New)). Gogoladze's map waits for its link (the user
+  sends it from his app's ⋮ → share); its photos and list are to show only to admins until he gives permission (tedo881@gmail.com).
 - **Prayers** (`data/prayers.ts`, `public/prayers/`, `public/bible/`), psalter kathismas, 73 akathists,
   commemoration name lists (`utils/commemoration.ts`), prayer reminders via Web Push Worker
   `sagandzuri-reminders` (`worker/reminders/`; push works only on the deployed site).

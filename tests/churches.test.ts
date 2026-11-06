@@ -46,3 +46,15 @@ test('distances and kinds', () => {
   assert.ok(!passesKind(one({ kind: 'x' }), 'active'));
   assert.ok(passesKind(one({ kind: 'x' }), 'x'));
 });
+
+test('the TV reports point at churches that exist, under monasteries the videos page has', async () => {
+  const { FILM_CHURCH, filmsOfChurch } = await import('../src/data/churchFilms');
+  const { MONASTERY_FILMS } = await import('../src/data/monasteryVideos');
+  const { byId } = await loadChurches();
+  const monasteries = new Set(MONASTERY_FILMS.map(f => f[4]));
+  for (const [monastery, id] of Object.entries(FILM_CHURCH)) {
+    assert.ok(monasteries.has(monastery), `no films for „${monastery}“`);
+    assert.ok(byId.has(id), `„${monastery}“ → ${id} is not in the list`);
+  }
+  assert.ok(filmsOfChurch('cb4219ef').length >= 1, 'Bodbe has its report');
+});
