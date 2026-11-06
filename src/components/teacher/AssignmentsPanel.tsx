@@ -165,7 +165,9 @@ export const WorkCardHead: React.FC<{ name: string; line?: string; icon?: React.
  *  member's bar of its parts and „დავალების წაშლა“. „ახალი დავალება“ on top, the older ones (`past`, latest first) folded
  *  under „ძველი · N“. The members' records (for the counts) are read only while it is open. */
 // `only` (2026-11-04, the class page's two places): the chants' card gives chants, „ოსტატობა“ exercises.
-export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; past?: Assignment[]; only?: 'chant' | 'drill' }> = ({ cls, list, past = [], only }) => {
+/** A class's assignments for its teachers. `head` (the class's name) stands left of a small „+ ახალი“ (2026-11-07, the
+ *  user's „მოვაწესრიგო“: one full-width button a class made the header's list long). */
+export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; past?: Assignment[]; only?: 'chant' | 'drill'; head?: React.ReactNode }> = ({ cls, list, past = [], only, head }) => {
   const records = useClassStudents(cls);
   const openerOf = usePathItemOpener();
   const [adding, setAdding] = useState(false);
@@ -204,15 +206,21 @@ export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; p
                 <span className="min-w-0 whitespace-pre-line">{a.note}</span>
               </p>
             )}
-            {/* the deadline, the voices and for whom on the left; how many learned it (unfolds) on the right */}
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-2 px-3.5 py-2.5 border-t border-[#efe5d4]">
-              <span className={`inline-flex items-center gap-1.5 text-[13px] font-semibold ${n < 0 ? 'text-[#8a7a6a]' : n <= 2 ? 'text-amber-700' : 'text-[#4a3426]'}`}>
-                <Clock className="w-4 h-4" /> {dueUntil(a.due)}
-              </span>
-              {a.voices.length > 0 && <span className="text-[13px] font-semibold text-[#4a3426]">{a.voices.map(v => ROMAN[v]).join(' · ')} ხმა</span>}
-              {a.studentIds.length > 0 && <span className="inline-flex items-center gap-1 text-[13px] text-[#75685a]"><Users className="w-4 h-4" /> {targets.length} მოსწავლე</span>}
+            {/* one row: the deadline (the voices and for whom under it) on the left, how many learned it (unfolds) on the right */}
+            <div className="flex items-center gap-3 px-3.5 py-2.5 border-t border-[#efe5d4]">
+              <div className="min-w-0 flex-1 space-y-0.5">
+                <span className={`flex items-center gap-1.5 text-[13px] font-semibold ${n < 0 ? 'text-[#8a7a6a]' : n <= 2 ? 'text-amber-700' : 'text-[#4a3426]'}`}>
+                  <Clock className="w-4 h-4 shrink-0" /> {dueUntil(a.due)}
+                </span>
+                {(a.voices.length > 0 || a.studentIds.length > 0) && (
+                  <span className="flex flex-wrap items-center gap-x-2.5 gap-y-0.5 text-[12.5px] text-[#75685a]">
+                    {a.voices.length > 0 && <span className="font-semibold text-[#4a3426]">{a.voices.map(v => ROMAN[v]).join(' · ')} ხმა</span>}
+                    {a.studentIds.length > 0 && <span className="inline-flex items-center gap-1"><Users className="w-3.5 h-3.5 shrink-0" /> {targets.length} მოსწავლე</span>}
+                  </span>
+                )}
+              </div>
               <button type="button" aria-expanded={unfolded} onClick={() => setShown(s => (s === a.id ? null : a.id))}
-                className={`ml-auto inline-flex items-center gap-1 h-9 pl-3 pr-2 rounded-full text-[13px] font-bold whitespace-nowrap cursor-pointer transition-colors ${counted ? 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100' : 'bg-[#f6efe4] text-[#75685a] hover:bg-[#efe5d4]'}`}>
+                className={`shrink-0 inline-flex items-center gap-1 h-9 pl-3 pr-2 rounded-full text-[13px] font-bold whitespace-nowrap cursor-pointer transition-colors ${counted ? 'bg-emerald-50 text-emerald-800 ring-1 ring-emerald-200 hover:bg-emerald-100' : 'bg-[#f6efe4] text-[#75685a] hover:bg-[#efe5d4]'}`}>
                 {counted ? <><Check className="w-4 h-4" /> {a.exercise ? 'შეასრულა' : 'ისწავლა'} {done.length}/{targets.length}</> : 'დეტალები'}
                 <ChevronDown className={`w-4 h-4 transition-transform ${unfolded ? 'rotate-180' : ''}`} />
               </button>
@@ -237,10 +245,16 @@ export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; p
 
   return (
     <div className="space-y-2.5">
-      <Btn kind="soft" full icon={<Plus />} onClick={() => setAdding(true)}>{only === 'drill' ? 'სავარჯიშოს მიცემა' : 'ახალი დავალება'}</Btn>
+      <div className="min-h-10 flex items-center gap-2">
+        <div className="min-w-0 flex-1">{head}</div>
+        <Btn kind="soft" size="sm" icon={<Plus />} className="shrink-0" onClick={() => setAdding(true)}
+          aria-label={`${only === 'drill' ? 'სავარჯიშოს მიცემა' : 'ახალი დავალება'} — ${cls.name}`}>
+          {only === 'drill' ? 'სავარჯიშო' : 'ახალი'}
+        </Btn>
+      </div>
       <Flash flash={msg.flash} onClose={msg.clear} />
       <DrillSheet drillId={drill} onClose={() => setDrill(null)} />
-      {list.length === 0 ? <p className="pt-1 text-sm text-[#8a7a6a]">მიმდინარე დავალება არ არის.</p> : <div className="pt-1">{rows(list)}</div>}
+      {list.length === 0 ? <p className="text-[13.5px] text-[#8a7a6a]">მიმდინარე დავალება არ არის.</p> : rows(list)}
       {past.length > 0 && (
         <div className="border-t border-[#efe5d4]">
           <button type="button" aria-expanded={old} onClick={() => setOld(o => !o)}

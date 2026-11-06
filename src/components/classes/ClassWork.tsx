@@ -143,7 +143,16 @@ export const WorkButton: React.FC<{ state: ClassWorkState; open: boolean; onTogg
   );
 };
 
-/** The list the button drops down: a part a class (with its name when there are several). */
+/** A class's name over its part of the list. */
+const ClassHead: React.FC<{ cls: SchoolClass }> = ({ cls }) => (
+  <p className="flex items-center gap-2.5 min-w-0">
+    <ClassLogo name={cls.name} logo={cls.logo} className="w-8 h-8 shrink-0 text-xs" />
+    <span className="min-w-0 line-clamp-2 text-[15px] font-bold leading-snug text-[#4a3426]">{cls.name}</span>
+  </p>
+);
+
+/** The list the button drops down: a part a class, a thin line between them. A class's name heads its part when there
+ *  are several, and always for its teachers — their small „+ ახალი“ stands beside it (2026-11-07, the user's „მოვაწესრიგო“). */
 export const WorkPanel: React.FC<{ state: ClassWorkState }> = ({ state }) => {
   const several = state.groups.length > 1;
   const total = state.groups.reduce((n, g) => n + g.all.length, 0);
@@ -154,21 +163,20 @@ export const WorkPanel: React.FC<{ state: ClassWorkState }> = ({ state }) => {
         <span className="font-serif-ge text-lg font-bold text-[#4a3426] truncate">დავალებები</span>
         {total > 0 && <span className="text-sm font-bold text-[#a4927c] tabular-nums">{total}</span>}
       </h2>
-      <div className="space-y-4">
+      <div className="divide-y divide-[#efe5d4]">
         {state.groups.map(g => (
-          <div key={g.cls.id}>
-            {several && (
-              <p className="mb-1.5 flex items-center gap-2 text-[13px] font-bold text-[#8a7a6a]">
-                <ClassLogo name={g.cls.name} logo={g.cls.logo} className="w-6 h-6 shrink-0 text-[10px]" />
-                <span className="truncate">{g.cls.name}</span>
-              </p>
-            )}
+          <div key={g.cls.id} className="py-3.5 first:pt-0 last:pb-0">
             {g.canEdit ? (
-              <AssignmentsFold cls={g.cls} list={g.all} past={g.past} />
-            ) : g.all.length ? (
-              <WorkItems list={g.all} />
+              <AssignmentsFold cls={g.cls} list={g.all} past={g.past} head={<ClassHead cls={g.cls} />} />
             ) : (
-              <p className="pb-1 text-[14px] text-[#8a7a6a]">ახლა დავალება არ გაქვს. ახალი რომ მოვა, ეს ღილაკი აინთება.</p>
+              <>
+                {several && <div className="mb-2.5"><ClassHead cls={g.cls} /></div>}
+                {g.all.length ? (
+                  <WorkItems list={g.all} />
+                ) : (
+                  <p className="text-[14px] text-[#8a7a6a]">ახლა დავალება არ გაქვს. ახალი რომ მოვა, ეს ღილაკი აინთება.</p>
+                )}
+              </>
             )}
           </div>
         ))}

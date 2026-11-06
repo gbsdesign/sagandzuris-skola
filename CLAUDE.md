@@ -128,7 +128,8 @@
   **Header since 2026-11-06** (`layout/Header.tsx`; the user: „ბიბლიოთეკა აიტანე მაღლა სერჩის წინ … მრგვალად, ბიბლიოთეკის ადგილზე
   იხსნებოდეს ლოცვანი, დავალების ღილაკიც მაღლა … ლოგოს მარჯვნივ და აქვე შეტყობინებების ღილაკი … ჩამოსაშლელი“): [logo] [📋] [🔔] …
   [📚] [🔍] [☁] [💬 „წერილები“] [👤]; the chips row = საგანძურის გზა · კლასი · ლოცვანი (opens `biblioteka` on `prayers` in one
-  step); 📚 and 🔍 move beside the chips from sm up. 📋 and 🔔 drop their list under the header (one at a time, a dim backdrop
+  step; with several classes one „კლასი ▾“ drops `ClassesPanel` — a chip a class overflowed phones and pushed the page sideways,
+  2026-11-07; the three chips need ~362 px at 380 px wide, so keep any new chip as narrow); 📚 and 🔍 move beside the chips from sm up. 📋 and 🔔 drop their list under the header (one at a time, a dim backdrop
   closes it, going anywhere closes it). **🔔** (`layout/Bell.tsx`, `hooks/useNotices.ts`): app news (`data/appNews.ts` — **add a
   plain line there whenever members will notice a change**), an admin's notice for everyone (`announcements/{id}`, written from
   the list's „ყველას მიწერა“, taken back with 🗑; rules: admins create/delete, the signed-in read), a teacher's / the
@@ -530,7 +531,8 @@
   2026-11-05 and **since 2026-11-06 is in the header right of the logo, for all my classes at once** (`useClassWork(classes)`;
   the class page has only its tabs now): a tap drops every assignment — chants, songs and „ოსტატობა“'s exercises together —
   down under the header, a part a class with its name when there are several (`WorkPanel`:
-  `AssignmentsFold` without `only` for teachers, its „ახალი დავალება“ asks chant or exercise; `WorkItems` for members). A
+  `AssignmentsFold` without `only` for teachers — the class's name with a small „+ ახალი“ beside it, a line between classes,
+  2026-11-07 —, its „ახალი დავალება“ asks chant or exercise; `WorkItems` for members). A
   member's badge is red and pulsing while an assignment came that they have not opened (`students.workSeenAt`, the same mark
   as the path's „ნასწავლი“; opening the list moves it), then quiet with the number still to do; a teacher's = how many are
   current. „პროგრამა“: `ClassProgram` with its name on top („სასწავლო პროგრამა“ N), the member's bar „შენ იცი N/M · ხმები“,
