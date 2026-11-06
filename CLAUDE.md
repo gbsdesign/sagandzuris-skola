@@ -100,6 +100,11 @@
 ## Project basics
 
 - React + TypeScript + Vite + Tailwind v4, Firebase (Auth + Firestore), PWA (Workbox in `vite.config.ts`).
+  **Updates (2026-11-06):** `skipWaiting` + `clientsClaim` are written out in `vite.config.ts` — the plugin sets them only for
+  `injectRegister: 'auto'`; with the old `'inline'` a new version waited forever in the Android app (TWA) and the user had to
+  clear the app's storage to see news. `src/main.tsx` registers `/sw.js` itself with `updateViaCache: 'none'` (sagandzureli.ge
+  gives `.js` a 4-hour browser cache) and restarts on the new version: ≤30 s after opening, on hiding, or on coming back after
+  a minute — not while notes/program are open, a recording sounds or a text field is focused. Keep both when touching them.
 - `npm run dev` (Vite, port 5173), `npm run typecheck`, `npm run build` (`tsc && vite build`).
 - GitHub `gbsdesign/sagandzuris-skola`, branch `main` → https://sagandzuris-skola.pages.dev (auto-deploy on push).
 - Firebase project `psalms-reading-group-ge-dev`. Security rules live in `firestore.rules`.
