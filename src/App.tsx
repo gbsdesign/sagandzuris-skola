@@ -103,6 +103,8 @@ function AppContent() {
     if (prayerId && isPrayerId(prayerId)) openPrayer(prayerId);
     else if (page === 'psalter' || page === 'gz' || page === 'profile') navigateTo(page);
     else if (page === 'teacher') navigateTo('class');
+    // an admin's notice for everyone on the phone (worker/reminders /announce): the header's 🔔 list
+    else if (page === 'bell') requestOpen('bell', '1');
     // a widget not linked yet (android/ BaseWidget): the linking window
     else if (page === 'widgets') requestWidgetLink();
     // the Android app's widgets and icon menu: a home-shelf button by its id

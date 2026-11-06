@@ -115,8 +115,11 @@
   goes through `askConfirm` (shown by `ConfirmHost` in `App.tsx`), never `window.confirm`; new text ≥12px, nothing
   below 11px anywhere; one paper background for every page in `App.tsx`. Signing out lives only at the profile's
   bottom (`views/ProfileActions.tsx`); the admin panel opens only from the profile's wine row (`views/AdminEntry.tsx`,
-  no header shield since 2026-10-27), and the profile's details are three folds with „შენახვა“ shown only while changed; the top of home is one day card of thin lines (2026-10-31): today's saints (`TodaySaintsCard`, a calendar leaf + the first
-  commemoration, unfolds) and the reviews due (`home/LearnDue.tsx`); in the header the 🔍 sits in the top row on every phone (under sm).
+  no header shield since 2026-10-27), and the profile's details are three folds with „შენახვა“ shown only while changed; the home's
+  day card (today's saints + the reviews due, 2026-10-31) was taken off at the user's wish on 2026-11-06 („მოხსენი, ეს არ უნდა“) —
+  don't bring it back unasked (`TodaySaintsCard`, `home/LearnDue.tsx` stay unused); on the home vine „აბიტურიენტს“ hangs as a tab
+  under „გალობა“'s left side (one swaying group in `GrapeNav`, 2026-11-06; საკრავები/მთქმელი moved down a little on phones); in
+  the header the 🔍 sits in the top row on every phone (under sm).
   **Header since 2026-11-06** (`layout/Header.tsx`; the user: „ბიბლიოთეკა აიტანე მაღლა სერჩის წინ … მრგვალად, ბიბლიოთეკის ადგილზე
   იხსნებოდეს ლოცვანი, დავალების ღილაკიც მაღლა … ლოგოს მარჯვნივ და აქვე შეტყობინებების ღილაკი … ჩამოსაშლელი“): [logo] [📋] [🔔] …
   [📚] [🔍] [☁] [💬 „წერილები“] [👤]; the chips row = საგანძურის გზა · კლასი · ლოცვანი (opens `biblioteka` on `prayers` in one
@@ -124,9 +127,17 @@
   closes it, going anywhere closes it). **🔔** (`layout/Bell.tsx`, `hooks/useNotices.ts`): app news (`data/appNews.ts` — **add a
   plain line there whenever members will notice a change**), an admin's notice for everyone (`announcements/{id}`, written from
   the list's „ყველას მიწერა“, taken back with 🗑; rules: admins create/delete, the signed-in read), a teacher's / the
-  administration's private message to me, a teacher's or admin's message in my class chats (the newest 25 of each, ≤ 3 shown)
-  and a teacher's card for me (`pins`, `to == me`); last 30 days, news always. Its number = what came since I last opened it
-  (`students.bellSeenAt` ms + the device's `sg-bell-seen`).
+  administration's private message to me — since the same day every private message to me, a classmate's too —, a teacher's
+  or admin's message in my class chats (the newest 25 of each, ≤ 3 shown) and a teacher's card for me (`pins`, `to == me`); last
+  30 days, news always. Its number = what came since I last opened it (`students.bellSeenAt` ms + the device's `sg-bell-seen`).
+  The list (the user's pick, 2026-11-06): „ახალი“ (since the last look: white cards, a red dot) and „ადრე“; a row swiped aside
+  (`SwipeRow`) is hidden for me on every device — `students.bellHidden` (ids, ≤ 200; a private chat's id carries its last
+  message's time), the device's `sg-bell-hidden` for guests — with the kit's „გაუქმება“. An admin's notice also goes to the
+  phones: `notifyAnnouncement` → the reminders Worker's `/announce { token, id }` (the writer's own fresh notice, staff only,
+  once — meta `announce:<id>`; every device with `subs.chat`), kind `notice`, a tap opens `/?open=bell` → `requestOpen('bell')`.
+  **„რჩეული“ prayers** (2026-11-06, `components/prayers/FavPrayers.tsx`): ☆ beside 📌 on a prayer page's bar (`FavButton`), the
+  chosen ones at the top of ლოცვანი (`FavPrayers` in `PrayersTab`, ★ takes one off with „გაუქმება“); `students.favPrayers` (≤ 40),
+  the device's `sg-fav-prayers` for guests.
 
 ## Audio and sheet music (details in `src/data/CLAUDE.md`)
 

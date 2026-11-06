@@ -3,6 +3,7 @@ import { useNavigation, useChants, useAuth, PageType } from '../context';
 import { WifiOff, RefreshCw, Loader2 } from 'lucide-react';
 import { PageBar } from '../components/ui/kit';
 import { PinButton } from '../components/home/ShortcutShelf';
+import { FavButton } from '../components/prayers/FavPrayers';
 import { ProfileActions } from '../components/views/ProfileActions';
 import { KhutsuriSwitch } from '../components/views/KhutsuriSwitch';
 import { WidgetLinkCard } from '../components/app/WidgetLinkCard';
@@ -265,7 +266,13 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
     const title = currentPage === 'prayer' && selectedPrayerId ? prayerTitle(selectedPrayerId) : book ?? game ?? PAGE_TITLES[currentPage] ?? '';
     return (
       <div className="flex flex-col items-center px-1 py-3 sm:px-4 md:px-6">
-        <PageBar title={title} onBack={handleGoBack} right={pin ? <PinButton id={pin} /> : undefined} className="w-full mb-4" />
+        <PageBar
+          title={title}
+          onBack={handleGoBack}
+          // a prayer also gets ☆ — „რჩეული“ at the top of the prayer book (components/prayers/FavPrayers.tsx)
+          right={pin ? <>{currentPage === 'prayer' && selectedPrayerId && <FavButton id={selectedPrayerId} />}<PinButton id={pin} /></> : undefined}
+          className="w-full mb-4"
+        />
 
         <div className="w-full flex-1 min-h-[300px] flex flex-col justify-between items-center mt-1">
           {currentPage === 'galoba' && <GalobaPage />}

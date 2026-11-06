@@ -12,7 +12,8 @@ import { useClassLasts, useChatSeen, isClassUnread } from '../../hooks/useClassC
 import { User as UserIcon, LogIn, Compass, Library, Baby, MessageCircle } from 'lucide-react';
 import { WorkButton, WorkPanel, useClassWork } from '../classes/ClassWork';
 import { BellButton, BellPanel } from './Bell';
-import { useBellSeen, useNotices } from '../../hooks/useNotices';
+import { useBellState, useNotices } from '../../hooks/useNotices';
+import { useOpenRequest } from '../../utils/searchOpen';
 
 interface HeaderProps {
   logoUrl: string;
@@ -70,8 +71,10 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
   // 📋 and 🔔: one list open at a time, under the header
   const [drop, setDrop] = useState<'work' | 'bell' | null>(null);
   const work = useClassWork(classes);
-  const notices = useNotices({ uid: user?.uid, chats: showChats && access.can('classes'), classes, threads });
-  const bell = useBellSeen(user?.uid);
+  const bell = useBellState(user?.uid);
+  const allNotices = useNotices({ uid: user?.uid, chats: showChats, classes: access.can('classes') ? classes : [], threads });
+  // what I swiped aside stays away (on every device of mine)
+  const notices = allNotices.filter(n => !bell.hidden.has(n.id));
   // what was new at this look stays marked while the list is open
   const [seenBefore, setSeenBefore] = useState(0);
   const monthAgo = Date.now() - 30 * 86_400_000;
@@ -87,6 +90,10 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
   };
   // going anywhere (an assignment's notes, a chat) closes the list
   useEffect(() => { setDrop(null); }, [currentPage, mapItem]);
+  // a tap on an admin's notice on the phone (`/?open=bell`) opens the list (after the page it may have changed to)
+  const openBell = React.useRef(() => {});
+  openBell.current = () => { if (drop !== 'bell') toggle('bell'); };
+  useOpenRequest('bell', () => { window.setTimeout(() => openBell.current(), 0); });
 
   const openTool = (id: typeof TOOLS[number]['id']) => {
     triggerHaptic(10);
@@ -286,6 +293,8 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                   seenBefore={seenBefore}
                   admin={isAdmin && user ? { uid: user.uid, name: user.displayName || '' } : undefined}
                   onOpenChat={chat => { setDrop(null); openDm(chat); }}
+                  onHide={bell.hide}
+                  onUnhide={bell.unhide}
                 />
               )}
             </div>

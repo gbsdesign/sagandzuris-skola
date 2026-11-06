@@ -29,8 +29,8 @@ export const GrapeNav: React.FC = () => {
     { id: 'simghera', label: 'სიმღერა', x: 13, y: 36, nx: 18, ny: 43, go: () => navigateTo('simghera'), big: true },
     // chant, the main path, stands biggest at the heart of the vine
     { id: 'galoba', label: 'გალობა', x: 57, y: 31, nx: 56, ny: 33, go: () => navigateTo('galoba'), hero: true },
-    { id: 'mtkmeli', label: 'მთქმელი', x: 50, y: 58, nx: 47, ny: 59, go: () => navigateTo('mtkmeli'), big: true },
-    { id: 'sakravebi', label: 'საკრავები', x: 70, y: 48, nx: 73, ny: 48, go: () => navigateTo('sakravebi') },
+    { id: 'mtkmeli', label: 'მთქმელი', x: 50, y: 58, nx: 47, ny: 61, go: () => navigateTo('mtkmeli'), big: true },
+    { id: 'sakravebi', label: 'საკრავები', x: 70, y: 48, nx: 73, ny: 51, go: () => navigateTo('sakravebi') },
     // on the leaves
     // მედავითნეობა — the reader's course (not the psalter group)
     { id: 'medavitneobaTopic', label: 'მედავით­ნეობა', x: 35, y: 13, nx: 29, ny: 14, go: () => navigateTo('medavitneoba') },
@@ -68,50 +68,58 @@ export const GrapeNav: React.FC = () => {
           draggable={false}
         />
 
-        {shown.map((s, i) => (
-          <button
-            key={s.label}
-            type="button"
-            onClick={() => press(s)}
-            style={{ '--x': `${s.x}%`, '--y': `${s.y}%`, '--nx': `${s.nx ?? s.x}%`, '--ny': `${s.ny ?? s.y}%`, animationDelay: `${-i * 0.7}s` } as React.CSSProperties}
-            className="vine-sway absolute left-[var(--nx)] top-[var(--ny)] @md:left-[var(--x)] @md:top-[var(--y)] -translate-x-1/2 -translate-y-1/2 cursor-pointer focus-visible:outline-none group"
-          >
-            <span
-              className={`flex flex-col items-center justify-center rounded-full text-center transition-[transform,background-color] duration-200 group-hover:scale-105 group-active:scale-95 group-focus-visible:ring-4 group-focus-visible:ring-amber-300 ${
-                s.hero ? 'px-[1.1em] py-[0.45em] min-h-12' : 'px-[0.9em] py-[0.35em] min-h-9'
-              } ${
-                s.go
-                  ? 'bg-[#7a2028] text-[#fbf6ec] border-2 border-[#fbf6ec] shadow-[0_3px_10px_rgba(74,52,38,0.35)] group-hover:bg-[#5e1820]'
-                  : 'bg-[#fbf6ec] text-[#75685a] border border-dashed border-[#8a7a6a]/70'
-              }`}
+        {shown.map((s, i) => {
+          const vars = { '--x': `${s.x}%`, '--y': `${s.y}%`, '--nx': `${s.nx ?? s.x}%`, '--ny': `${s.ny ?? s.y}%`, animationDelay: `${-i * 0.7}s` } as React.CSSProperties;
+          const place = 'vine-sway absolute left-[var(--nx)] top-[var(--ny)] @md:left-[var(--x)] @md:top-[var(--y)] -translate-x-1/2 -translate-y-1/2';
+          const label = (
+            <button
+              key={s.label}
+              type="button"
+              onClick={() => press(s)}
+              style={s.id === 'galoba' && galobaOpen ? undefined : vars}
+              className={`${s.id === 'galoba' && galobaOpen ? 'relative z-10 block' : place} cursor-pointer focus-visible:outline-none group`}
             >
               <span
-                className={`font-serif-ge font-bold leading-tight hyphens-manual max-w-[6.5em] ${
-                  // the smallest phones (~320px wide) have no room left: there only, a touch smaller
-                  s.hero ? 'text-[clamp(20px,6cqw,30px)] @max-[300px]:text-[18px] tracking-wide' : s.big ? 'text-[clamp(14px,3.8cqw,18px)] @max-[300px]:text-[13px]' : 'text-[clamp(12px,3.2cqw,15px)] @max-[300px]:text-[11px]'
+                className={`flex flex-col items-center justify-center rounded-full text-center transition-[transform,background-color] duration-200 group-hover:scale-105 group-active:scale-95 group-focus-visible:ring-4 group-focus-visible:ring-amber-300 ${
+                  s.hero ? 'px-[1.1em] py-[0.45em] min-h-12' : 'px-[0.9em] py-[0.35em] min-h-9'
+                } ${
+                  s.go
+                    ? 'bg-[#7a2028] text-[#fbf6ec] border-2 border-[#fbf6ec] shadow-[0_3px_10px_rgba(74,52,38,0.35)] group-hover:bg-[#5e1820]'
+                    : 'bg-[#fbf6ec] text-[#75685a] border border-dashed border-[#8a7a6a]/70'
                 }`}
               >
-                {s.label}
+                <span
+                  className={`font-serif-ge font-bold leading-tight hyphens-manual max-w-[6.5em] ${
+                    // the smallest phones (~320px wide) have no room left: there only, a touch smaller
+                    s.hero ? 'text-[clamp(20px,6cqw,30px)] @max-[300px]:text-[18px] tracking-wide' : s.big ? 'text-[clamp(14px,3.8cqw,18px)] @max-[300px]:text-[13px]' : 'text-[clamp(12px,3.2cqw,15px)] @max-[300px]:text-[11px]'
+                  }`}
+                >
+                  {s.label}
+                </span>
+                {!s.go && <span className="text-[clamp(11px,2.5cqw,12px)] leading-tight opacity-80">მალე</span>}
               </span>
-              {!s.go && <span className="text-[clamp(11px,2.5cqw,12px)] leading-tight opacity-80">მალე</span>}
-            </span>
-          </button>
-        ))}
-
-        {/* a small extra label hanging under "გალობა": the university admission program */}
-        {galobaOpen && (
-          <button
-            type="button"
-            onClick={() => { triggerHaptic(10); navigateTo('abituri'); }}
-            style={{ '--x': '57%', '--y': '39%', '--nx': '56%', '--ny': '43.5%', animationDelay: '-0.35s' } as React.CSSProperties}
-            className="vine-sway absolute left-[var(--nx)] top-[var(--ny)] @md:left-[var(--x)] @md:top-[var(--y)] -translate-x-1/2 -translate-y-1/2 cursor-pointer focus-visible:outline-none group"
-          >
-            <span className="inline-flex items-center gap-1.5 min-h-9 px-3 rounded-full bg-[#fbf6ec] text-[#7a2028] border-[1.5px] border-[#7a2028]/70 shadow-[0_3px_10px_rgba(74,52,38,0.25)] transition-[transform,background-color] duration-200 group-hover:scale-105 group-hover:bg-white group-active:scale-95 group-focus-visible:ring-4 group-focus-visible:ring-amber-300">
-              <GraduationCap className="w-4 h-4 shrink-0" />
-              <span className="font-serif-ge font-bold leading-tight text-[clamp(12px,3.2cqw,14px)] @max-[300px]:text-[11px]">აბიტურიენტს</span>
-            </span>
-          </button>
-        )}
+            </button>
+          );
+          if (!(s.id === 'galoba' && galobaOpen)) return label;
+          // „აბიტურიენტს“ hangs right under „გალობა“, its left corner at გალობა's (2026-11-06, the user: „საკრავს ეფარება,
+          // აწიე მაღლა და გალობის ფანჯარას მიადე ლამაზად მარცხენა კუთხით“): one swaying group, „გალობა“ stays centred on its
+          // spot and the small label, out of the flow, tucks under its edge
+          return (
+            <div key={s.label} style={vars} className={place}>
+              {label}
+              <button
+                type="button"
+                onClick={() => { triggerHaptic(10); navigateTo('abituri'); }}
+                className="absolute left-3 top-full -mt-3 cursor-pointer focus-visible:outline-none group/abituri"
+              >
+                <span className="inline-flex items-center gap-1.5 min-h-9 pt-2 px-3 rounded-b-2xl rounded-t-md bg-[#fbf6ec] text-[#7a2028] border-[1.5px] border-t-0 border-[#7a2028]/60 shadow-[0_4px_10px_-4px_rgba(74,52,38,0.35)] whitespace-nowrap transition-[transform,background-color] duration-200 group-hover/abituri:bg-white group-active/abituri:scale-95 group-focus-visible/abituri:ring-4 group-focus-visible/abituri:ring-amber-300">
+                  <GraduationCap className="w-4 h-4 shrink-0" />
+                  <span className="font-serif-ge font-bold leading-tight text-[clamp(12px,3.2cqw,14px)] @max-[300px]:text-[11px]">აბიტურიენტს</span>
+                </span>
+              </button>
+            </div>
+          );
+        })}
       </div>
 
       <Toast message={soon || ''} type="info" isVisible={!!soon} onClose={() => setSoon(null)} />

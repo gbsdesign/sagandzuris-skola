@@ -2,12 +2,13 @@ import React from 'react';
 import { ScrollText } from 'lucide-react';
 import { useNavigation } from '../../context';
 import { PrayerBook } from '../../components/views/HabitPrayerMenu';
+import { FavPrayers } from '../../components/prayers/FavPrayers';
 import { NAME_LISTS, nameCount as countOf, useCommemoration } from '../../utils/commemoration';
 import { BookHead } from './BookHead';
 import { MiniCover } from './Shelf';
 
 // "ლოცვანი" on the library shelf: the same prayers the habits open, all in one book.
-// The small button at the right of the title opens მოსახსენებელი, the names read in these prayers.
+// The small button at the right of the title opens მოსახსენებელი, the names read in these prayers. „რჩეული“ (2026-11-06) on top.
 export const PrayersTab: React.FC<{ at?: string | null }> = ({ at }) => {
   const { openPrayer, openCommemoration } = useNavigation();
   const { lists } = useCommemoration();
@@ -32,6 +33,8 @@ export const PrayersTab: React.FC<{ at?: string | null }> = ({ at }) => {
           </button>
         }
       />
+      {/* the chosen prayers first (☆ on a prayer's page) */}
+      <FavPrayers onOpen={openPrayer} />
       <PrayerBook onOpen={openPrayer} at={at} />
     </div>
   );

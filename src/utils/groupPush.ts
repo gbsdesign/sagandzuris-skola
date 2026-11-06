@@ -179,6 +179,9 @@ export const notifyRing = (base: string, end = false) => post('/ring', end ? { b
  *  in a class (classes/{id}/pins) — only its member hears it. */
 export const notifyChat = (base: string, id: string, pin = false) => post('/chat-notify', pin ? { base, id, pin: true } : { base, id });
 
+/** An admin's notice for everyone (the header's 🔔 „ყველას მიწერა“): the Worker sends it to every phone bound for messages. */
+export const notifyAnnouncement = (id: string) => post('/announce', { id });
+
 const CHAT_BOUND = 'sg-chat-push';
 
 // a step of the phone's that never answers (2026-11-05: the Play app before 1.1.3 could not show Android's permission
