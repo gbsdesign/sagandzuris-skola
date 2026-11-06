@@ -148,7 +148,11 @@
   **Profile the same evening**: small headings „ჩემი“ · „პარამეტრები“ · „ჩემი მონაცემები“ (`ProfileCaption` in `AppRouter`),
   „ჩემი სამოსი“ as a card row like the others (`ChemiSamosi row`: tile + name + how far the chokha is + ▾; the path page keeps
   the round button), „ჩემი ღილაკები“ two a row on the profile with a line „მთავარ გვერდზე, ვაზის ქვეშ · N / 30“ (the home shelf
-  keeps `SHELF_GRID`).
+  keeps `SHELF_GRID`). **Later that evening (the user's picks 2 · 3 · 4):** „ღამის ფურცელი“ — 🌙 beside ხუცური on the prayer
+  page's bar (`ReadingToolbar night/onNight`, `PrayerPage` keeps it in `sg-prayer-night`): the text card gets class `sg-night`
+  and index.css turns it dark with gold headings; the favourites' ✎ shows ▲ ▼ in place of the ★ (`useFavPrayers().move`); a
+  search field over the book (`components/prayers/PrayerSearch.tsx`, `searchPrayers` over every prayer, akathist, kanon, hour and
+  Bible chapter — „ფს 50“ → its kanon, „მათე 5“ → the chapter; while typed, the favourites and the book step aside).
 
 ## Audio and sheet music (details in `src/data/CLAUDE.md`)
 

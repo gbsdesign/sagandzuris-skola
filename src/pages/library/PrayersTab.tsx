@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ScrollText } from 'lucide-react';
 import { useNavigation } from '../../context';
 import { PrayerBook } from '../../components/views/HabitPrayerMenu';
 import { FavPrayers } from '../../components/prayers/FavPrayers';
+import { PrayerSearch } from '../../components/prayers/PrayerSearch';
 import { NAME_LISTS, nameCount as countOf, useCommemoration } from '../../utils/commemoration';
 import { BookHead } from './BookHead';
 import { MiniCover } from './Shelf';
@@ -14,6 +15,8 @@ export const PrayersTab: React.FC<{ at?: string | null }> = ({ at }) => {
   const { lists } = useCommemoration();
   const nameCount = NAME_LISTS.reduce((n, l) => n + countOf(lists, l.id), 0);
   const label = `მოსახსენებელი · ${nameCount ? `${nameCount} სახელი` : 'ჩაწერე სახელები'}`;
+  // while a search is typed the favourites and the book step aside (2026-11-06)
+  const [searching, setSearching] = useState(false);
   return (
     <div className="space-y-4">
       <BookHead
@@ -33,9 +36,14 @@ export const PrayersTab: React.FC<{ at?: string | null }> = ({ at }) => {
           </button>
         }
       />
-      {/* the chosen prayers first (☆ on a prayer's page) */}
-      <FavPrayers onOpen={openPrayer} />
-      <PrayerBook onOpen={openPrayer} at={at} />
+      <PrayerSearch onOpen={openPrayer} onQuery={setSearching} />
+      {!searching && (
+        <>
+          {/* the chosen prayers first (☆ on a prayer's page) */}
+          <FavPrayers onOpen={openPrayer} />
+          <PrayerBook onOpen={openPrayer} at={at} />
+        </>
+      )}
     </div>
   );
 };

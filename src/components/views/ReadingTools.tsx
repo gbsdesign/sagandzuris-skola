@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronsDown, Maximize2, Minus, Pause, Play, Plus, X } from 'lucide-react';
+import { ChevronsDown, Maximize2, Minus, Moon, Pause, Play, Plus, X } from 'lucide-react';
 import { Prompter, blockAtReading, prompterCopy, showBlock } from './Prompter';
 
 // The tools over a prayer's text: ხუცური on the left; auto-scroll and the text's size on the right.
@@ -42,21 +42,38 @@ export const ReadingToolbar: React.FC<{
   psalter?: number;
   /** the kanon or chapter before and after: the prompter goes on to them */
   neighbours?: Neighbours;
-}> = ({ size, onSize, khutsuri, onKhutsuri, source, psalter, neighbours }) => (
+  /** „ღამის ფურცელი“ (2026-11-06): the text card in the dark; the 🌙 beside ხუცური turns it */
+  night?: boolean;
+  onNight?: (on: boolean) => void;
+}> = ({ size, onSize, khutsuri, onKhutsuri, source, psalter, neighbours, night, onNight }) => (
   // sticky: the tools stay at hand all down a long text (the page bar is not sticky)
-  <div className="sticky top-[env(safe-area-inset-top,0px)] z-10 flex items-center justify-between gap-2 -mt-2 -mx-1.5 sm:-mx-3 mb-3 py-1.5 bg-white/90 backdrop-blur-md rounded-full">
-    <button
-      type="button"
-      aria-pressed={khutsuri}
-      onClick={() => onKhutsuri(!khutsuri)}
-      title="ძველი ქართული დამწერლობით"
-      className={`h-9 pl-2.5 pr-3 rounded-full ring-1 inline-flex items-center gap-1.5 text-[13px] font-bold cursor-pointer active:scale-95 transition ${
-        khutsuri ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]' : 'bg-[#fbf6ec] ring-[#e8dcc8] text-[#7a2028] hover:ring-[#7a2028]/40'
-      }`}
-    >
-      <span aria-hidden className="font-serif-ge text-[17px] leading-none">Ⴞ</span>
-      ხუცური
-    </button>
+  <div className="sg-night-bar sticky top-[env(safe-area-inset-top,0px)] z-10 flex items-center justify-between gap-2 -mt-2 -mx-1.5 sm:-mx-3 mb-3 py-1.5 bg-white/90 backdrop-blur-md rounded-full">
+    <div className="flex items-center gap-1.5">
+      <button
+        type="button"
+        aria-pressed={khutsuri}
+        onClick={() => onKhutsuri(!khutsuri)}
+        title="ძველი ქართული დამწერლობით"
+        className={`h-9 pl-2.5 pr-3 rounded-full ring-1 inline-flex items-center gap-1.5 text-[13px] font-bold cursor-pointer active:scale-95 transition ${
+          khutsuri ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]' : 'bg-[#fbf6ec] ring-[#e8dcc8] text-[#7a2028] hover:ring-[#7a2028]/40'
+        }`}
+      >
+        <span aria-hidden className="font-serif-ge text-[17px] leading-none">Ⴞ</span>
+        ხუცური
+      </button>
+      {onNight && (
+        <button
+          type="button"
+          aria-pressed={!!night}
+          onClick={() => onNight(!night)}
+          title={night ? 'ღია ფურცელი' : 'ღამის ფურცელი — თვალის დამზოგავი'}
+          aria-label={night ? 'ღია ფურცელი' : 'ღამის ფურცელი'}
+          className={`${ROUND} ring-1 ${night ? '!bg-[#e3c37a] !text-[#1f1a16] ring-[#e3c37a]' : `${PILL}`}`}
+        >
+          <Moon className="w-[17px] h-[17px]" fill={night ? 'currentColor' : 'none'} />
+        </button>
+      )}
+    </div>
     <div className="flex items-center gap-1.5">
       <AutoScrollButton source={() => source ?? null} zoom={size / 100} psalter={psalter} neighbours={neighbours} />
       <div role="group" aria-label="ასოების ზომა" className={`inline-flex items-center rounded-full ${PILL}`}>
