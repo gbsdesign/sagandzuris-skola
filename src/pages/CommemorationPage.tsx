@@ -1,4 +1,4 @@
-import React, { useMemo, useRef, useState } from 'react';
+import React, { useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { Check, GripVertical, Plus, X } from 'lucide-react';
@@ -23,7 +23,7 @@ import { CLERGY_TITLES, Gender } from '../data/georgianNames';
 import { triggerHaptic } from '../utils/haptics';
 import { useAuth } from '../context';
 import { GroupMember, GroupPrayerName, PsalterGroup, firstName, groupPrayerText, useGroupPrayerNames, useMyPsalterGroups } from '../hooks/usePsalter';
-import { Btn, Sheet, Toggle } from '../components/ui/kit';
+import { Btn, Sheet, Toggle, offerUndo } from '../components/ui/kit';
 
 type Genders = Record<string, Gender>;
 
@@ -303,7 +303,7 @@ const NameList: React.FC<{
     : [];
 
   return (
-    <section className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] p-3.5 sm:p-4 space-y-3">
+    <section className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] p-3 sm:p-4 space-y-3">
       <h2 className="font-serif-ge text-[16px] font-bold text-[#7a2028]">
         {title} <span className="text-[13px] font-semibold text-[#b5a48c]">{count || ''}</span>
       </h2>
@@ -532,6 +532,22 @@ const moved = <T,>(list: T[], from: number, to: number) => {
   return next;
 };
 
+// a piece of a name, its width in em in the list's own font: a canvas measures it once, nothing is read from the layout
+let ruler: CanvasRenderingContext2D | null = null;
+const widths = new Map<string, number>();
+const emOf = (piece: string, weight: number, family: string) => {
+  const key = `${weight}|${family}|${piece}`;
+  let w = widths.get(key);
+  if (w === undefined) {
+    ruler ??= document.createElement('canvas').getContext('2d');
+    if (!ruler) return piece.length * 0.6;
+    ruler.font = `${weight} 100px ${family}`;
+    w = ruler.measureText(piece).width / 100;
+    widths.set(key, w);
+  }
+  return w;
+};
+
 /** One ordered run of names, side by side: drag ⠿ to reorder, tap a name to correct it, ✕ to remove.
  *  The group's names (onMove) bring their own label, can't be removed here and are tapped only where allowed. */
 const Rows: React.FC<{
@@ -544,6 +560,19 @@ const Rows: React.FC<{
 }> = ({ names, onChange, onTap, canTap, label, onMove }) => {
   const [drag, setDrag] = useState<{ from: number; to: number } | null>(null);
   const listRef = useRef<HTMLOListElement>(null);
+  const latest = useRef(names);
+  latest.current = names;
+  // the list's font, for measuring the names (again once the fonts have come)
+  const [font, setFont] = useState({ family: '', n: 0 });
+  const shown = names.length > 0;
+  useLayoutEffect(() => {
+    const el = listRef.current;
+    if (!el) return;
+    setFont(f => ({ ...f, family: getComputedStyle(el).fontFamily }));
+    let live = true;
+    document.fonts?.ready.then(() => { if (live) { widths.clear(); setFont(f => ({ ...f, n: f.n + 1 })); } }).catch(() => {});
+    return () => { live = false; };
+  }, [shown]);
 
   const onPointerDown = (i: number) => (e: React.PointerEvent) => {
     e.preventDefault();
@@ -572,8 +601,29 @@ const Rows: React.FC<{
   if (!names.length) return null;
   // while dragging, chips keep their own keys so the held one is never re-made
   const ids = drag ? moved(names.map((_, i) => i), drag.from, drag.to) : names.map((_, i) => i);
+  // three names a row on a phone (four from sm): the name takes the cell, ⠿ and ✕ stay narrow at its edges.
+  // A name breaks at a space or before „(“; its longest piece sets the letters' size so it
+  // fits the cell — 14px down to 11px on the narrowest phones — against the cell's own width (cqi)
+  const fit = (i: number) => {
+    const weight = label ? 600 : 500; // the group's names are bold
+    const pieces = names[i].split(/\s+|(?=\()/).filter(Boolean);
+    const em = 1.04 * Math.max(0.6, ...pieces.map(p => (font.family ? emOf(p, weight, font.family) : p.length * 0.6)));
+    return { fontSize: `clamp(11px, calc((100cqi - 38px) / ${em.toFixed(3)}), 14px)` };
+  };
+  const text = (i: number) => (label ? label(i) : names[i].replace(/\(/g, '\u200B('));
+  const nameCls = 'line-clamp-3 [overflow-wrap:anywhere] leading-[1.2] font-medium text-[#2a2017]';
+  // ✕ is small now, so a removal can be taken back for a few seconds
+  const remove = (i: number) => {
+    if (!onChange) return;
+    const name = names[i];
+    onChange(names.filter((_, j) => j !== i));
+    offerUndo(`„${name}“ წაიშალა`, () => {
+      const now = latest.current;
+      onChange([...now.slice(0, i), name, ...now.slice(i)]);
+    });
+  };
   return (
-    <ol ref={listRef} className="flex flex-wrap gap-1.5 select-none">
+    <ol ref={listRef} className="grid grid-cols-3 sm:grid-cols-4 gap-x-1 gap-y-1.5 select-none">
       {ids.map((i, pos) => {
         const name = names[i];
         const held = drag?.from === i;
@@ -581,7 +631,8 @@ const Rows: React.FC<{
           <li
             key={`${i}-${name}`}
             data-chip={pos}
-            className={`inline-flex items-center h-10 max-w-full pl-0.5 ${onChange ? 'pr-0.5' : 'pr-3'} rounded-full ring-1 transition-shadow ${
+            title={name}
+            className={`[container-type:inline-size] flex items-stretch min-w-0 min-h-10 ${onChange ? '' : 'pr-1.5'} rounded-xl ring-1 transition-shadow ${
               held ? 'z-10 bg-white ring-[#7a2028]/50 shadow-lg' : 'bg-[#fbf6ec] ring-[#e8dcc8]'
             }`}
           >
@@ -592,31 +643,28 @@ const Rows: React.FC<{
               onPointerMove={onPointerMove}
               onPointerUp={onPointerUp}
               onPointerCancel={onPointerUp}
-              className="w-7 h-9 shrink-0 flex items-center justify-center rounded-full text-[#c4b49c] hover:text-[#7a2028] cursor-grab active:cursor-grabbing touch-none"
+              className="w-3.5 shrink-0 flex items-center justify-center rounded-l-xl text-[#d6c8b0] hover:text-[#7a2028] cursor-grab active:cursor-grabbing touch-none"
             >
-              <GripVertical className="w-4 h-4" />
+              <GripVertical className="w-3.5 h-3.5" />
             </button>
             {!canTap || canTap(i) ? (
-              <button
-                type="button"
-                onClick={() => onTap(i)}
-                title="შესწორება"
-                className="min-w-0 h-9 px-1 truncate text-[15px] font-medium text-[#2a2017] cursor-pointer"
-              >
-                {label ? label(i) : name}
+              <button type="button" onClick={() => onTap(i)} className="flex-1 min-w-0 flex items-center py-1 pl-0.5 text-left cursor-pointer">
+                <span className={nameCls} style={fit(i)}>{text(i)}</span>
               </button>
             ) : (
-              <span className="min-w-0 px-1 truncate text-[15px] font-medium text-[#2a2017]">{label ? label(i) : name}</span>
+              <span className="flex-1 min-w-0 flex items-center py-1 pl-0.5">
+                <span className={nameCls} style={fit(i)}>{text(i)}</span>
+              </span>
             )}
             {onChange && (
               <button
                 type="button"
-                onClick={() => onChange(names.filter((_, j) => j !== i))}
+                onClick={() => remove(i)}
                 title="წაშლა"
                 aria-label={`${name} — წაშლა`}
-                className="w-8 h-8 shrink-0 flex items-center justify-center rounded-full text-[#b5a48c] hover:text-[#7a2028] hover:bg-white cursor-pointer"
+                className="w-5 shrink-0 flex items-center justify-center rounded-r-xl text-[#c4b49c] hover:text-[#7a2028] cursor-pointer"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             )}
           </li>
