@@ -18,8 +18,14 @@ export default defineConfig(() => {
       offlinePacks(path.resolve(import.meta.dirname || '.', 'public')),
       VitePWA({
         registerType: 'autoUpdate',
-        injectRegister: 'inline',
+        // registered by src/main.tsx itself (with updateViaCache 'none'), so nothing is injected here
+        injectRegister: false,
         workbox: {
+          // a new version takes over at once. Written out because the plugin turns these on by itself only for
+          // injectRegister 'auto': with the old 'inline' they were off, the new version waited until every window of
+          // the app was closed (in the Android app — never), and phones showed news only after clearing the storage.
+          skipWaiting: true,
+          clientsClaim: true,
           maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
           // the whole app — every page, picture and font — is downloaded in advance, so it opens without internet.
           // The data under public/ (notes, prayers, lives…) is not: the app keeps it in offline packs itself
