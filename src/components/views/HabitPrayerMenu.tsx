@@ -54,18 +54,36 @@ export const HabitPrayerMenu: React.FC<{ menu: HabitMenu; onOpen: (prayerId: str
   }
 };
 
-const BOOK_PARTS: { menu: Exclude<HabitMenu, 'book'> | 'confession' | 'andrew' | 'various' | 'paraklisi'; title: string; icon: React.ReactNode }[] = [
-  { menu: 'morning-evening', title: 'დილის და საღამოს ლოცვები', icon: <SunMoon /> },
-  { menu: 'hours', title: 'შვიდგზის ლოცვა', icon: <Clock /> },
-  { menu: 'psalms', title: 'ფსალმუნები', icon: <BookOpenText /> },
-  { menu: 'gospel', title: 'სახარება', icon: <BookHeart /> },
-  { menu: 'apostle', title: 'სამოციქულო', icon: <ScrollText /> },
-  { menu: 'akathists', title: 'დაუჯდომლები', icon: <Star /> },
-  { menu: 'paraklisi', title: 'პარაკლისი', icon: <Cross /> },
-  { menu: 'jesus', title: 'იესოს ლოცვა', icon: <Heart /> },
-  { menu: 'confession', title: 'აღსარების და ზიარების ლოცვები', icon: <Church /> },
-  { menu: 'andrew', title: 'ანდრია კრიტელის კანონი', icon: <Flame /> },
-  { menu: 'various', title: 'სხვადასხვა ლოცვები', icon: <HandHeart /> },
+type BookPart = { menu: Exclude<HabitMenu, 'book'> | 'confession' | 'andrew' | 'various' | 'paraklisi'; title: string; icon: React.ReactNode };
+// The book in three small groups (2026-11-06, the user: eleven alike pills in a row were hard to take in): the prayers of
+// every day, the Scripture, and the ones for an occasion.
+const BOOK_GROUPS: { title: string; parts: BookPart[] }[] = [
+  {
+    title: 'ყოველდღიური',
+    parts: [
+      { menu: 'morning-evening', title: 'დილის და საღამოს ლოცვები', icon: <SunMoon /> },
+      { menu: 'hours', title: 'შვიდგზის ლოცვა', icon: <Clock /> },
+      { menu: 'jesus', title: 'იესოს ლოცვა', icon: <Heart /> },
+    ],
+  },
+  {
+    title: 'წმინდა წერილი',
+    parts: [
+      { menu: 'psalms', title: 'ფსალმუნები', icon: <BookOpenText /> },
+      { menu: 'gospel', title: 'სახარება', icon: <BookHeart /> },
+      { menu: 'apostle', title: 'სამოციქულო', icon: <ScrollText /> },
+    ],
+  },
+  {
+    title: 'განსაკუთრებული დღეებისთვის',
+    parts: [
+      { menu: 'akathists', title: 'დაუჯდომლები', icon: <Star /> },
+      { menu: 'paraklisi', title: 'პარაკლისი', icon: <Cross /> },
+      { menu: 'confession', title: 'აღსარების და ზიარების ლოცვები', icon: <Church /> },
+      { menu: 'andrew', title: 'ანდრია კრიტელის კანონი', icon: <Flame /> },
+      { menu: 'various', title: 'სხვადასხვა ლოცვები', icon: <HandHeart /> },
+    ],
+  },
 ];
 // the open part survives a trip to a prayer and back
 const BOOK_PART_KEY = 'prayerBookPart';
@@ -97,37 +115,46 @@ export const PrayerBook: React.FC<{ onOpen: (prayerId: string) => void; at?: str
     try { next ? sessionStorage.setItem(BOOK_PART_KEY, next) : sessionStorage.removeItem(BOOK_PART_KEY); } catch { /* opens folded next time */ }
   };
   return (
-    // the parts as pills (like the footer's calendar button); the open one is filled, its prayers under it
-    <ul className="space-y-2">
-      {BOOK_PARTS.map(p => {
-        const on = open === p.menu;
-        return (
-          <li key={p.menu}>
-            <button
-              type="button"
-              onClick={() => toggle(p.menu)}
-              aria-expanded={on}
-              className={`w-full min-h-12 flex items-center gap-3 pl-4 pr-3.5 py-2 rounded-full ring-1 text-left cursor-pointer select-none active:scale-[0.99] transition-all duration-200 ${
-                on
-                  ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec] shadow-[0_6px_16px_-8px_rgba(122,32,40,0.7)]'
-                  : 'bg-white/80 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#2a2017]'
-              }`}
-            >
-              <span className={`shrink-0 [&>svg]:w-[18px] [&>svg]:h-[18px] ${on ? 'text-[#fbf6ec]' : 'text-[#7a2028]'}`}>{p.icon}</span>
-              <span className="flex-1 min-w-0 font-serif-ge text-[15px] font-bold leading-snug">{p.title}</span>
-              <ChevronDown className={`w-5 h-5 shrink-0 transition-transform duration-300 ${on ? 'rotate-180 text-[#fbf6ec]/80' : 'text-[#a08a76]'}`} />
-            </button>
-            {on && (
-              <div className="px-1 pt-3 pb-2 animate-in fade-in slide-in-from-top-1 duration-200">
-                {p.menu === 'various' || p.menu === 'confession' || p.menu === 'andrew' || p.menu === 'paraklisi'
-                  ? <PrayerList items={p.menu === 'various' ? VARIOUS_PRAYERS : p.menu === 'andrew' ? ANDREW_CANON : p.menu === 'paraklisi' ? PARAKLISES : CONFESSION_PRAYERS} onOpen={onOpen} />
-                  : <HabitPrayerMenu menu={p.menu} onOpen={onOpen} />}
-              </div>
-            )}
-          </li>
-        );
-      })}
-    </ul>
+    // three groups, each a small heading and its parts as pills; the open one is filled, its prayers under it
+    <div className="space-y-5">
+      {BOOK_GROUPS.map(g => (
+        <section key={g.title} aria-label={g.title}>
+          <h3 className="px-4 pb-2 text-[12.5px] font-bold text-[#a08a76]">{g.title}</h3>
+          <ul className="space-y-2">
+            {g.parts.map(p => {
+              const on = open === p.menu;
+              return (
+                <li key={p.menu}>
+                  <button
+                    type="button"
+                    onClick={() => toggle(p.menu)}
+                    aria-expanded={on}
+                    className={`w-full min-h-[52px] flex items-center gap-3 pl-2 pr-3.5 py-1.5 rounded-full ring-1 text-left cursor-pointer select-none active:scale-[0.99] transition-all duration-200 ${
+                      on
+                        ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec] shadow-[0_6px_16px_-8px_rgba(122,32,40,0.7)]'
+                        : 'bg-white/80 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#2a2017]'
+                    }`}
+                  >
+                    {/* the icon in a soft round, as the profile's rows have it */}
+                    <span className={`shrink-0 w-9 h-9 rounded-full flex items-center justify-center transition-colors [&>svg]:w-[18px] [&>svg]:h-[18px] ${
+                      on ? 'bg-white/15 text-[#fbf6ec]' : 'bg-[#7a2028]/[0.07] text-[#7a2028]'}`}>{p.icon}</span>
+                    <span className="flex-1 min-w-0 font-serif-ge text-[15px] font-bold leading-snug">{p.title}</span>
+                    <ChevronDown className={`w-5 h-5 shrink-0 transition-transform duration-300 ${on ? 'rotate-180 text-[#fbf6ec]/80' : 'text-[#a08a76]'}`} />
+                  </button>
+                  {on && (
+                    <div className="px-1 pt-3 pb-2 animate-in fade-in slide-in-from-top-1 duration-200">
+                      {p.menu === 'various' || p.menu === 'confession' || p.menu === 'andrew' || p.menu === 'paraklisi'
+                        ? <PrayerList items={p.menu === 'various' ? VARIOUS_PRAYERS : p.menu === 'andrew' ? ANDREW_CANON : p.menu === 'paraklisi' ? PARAKLISES : CONFESSION_PRAYERS} onOpen={onOpen} />
+                        : <HabitPrayerMenu menu={p.menu} onOpen={onOpen} />}
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+        </section>
+      ))}
+    </div>
   );
 };
 

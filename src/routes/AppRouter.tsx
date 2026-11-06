@@ -26,6 +26,11 @@ import { useAllClasses, useMyClasses, useTeachingClasses } from '../hooks/useCla
 import { useSelectedGroupId } from '../components/psalter/selectedGroup';
 import { gameTitleOfItem } from '../data/games';
 
+/** A small heading between the profile's groups of rows (the same as the prayer book's group titles). */
+const ProfileCaption: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <h3 className="px-4 pt-2 -mb-1 text-[12.5px] font-bold text-[#a08a76]">{children}</h3>
+);
+
 // Fetches the newest version of the app (the service worker takes over at once — registerType 'autoUpdate') and
 // starts it again. A page's file that is missing while online means a newer version was published after this tab
 // was opened: its old file is gone from the site.
@@ -230,19 +235,18 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
         {/* the head card, the admin panel's row (admins), my outfit and home buttons, ხუცური, then the details folded */}
         <StudentProfileCard waiting={waiting} slot={<>
           <AdminEntry />
-          {!waiting && access.on('samosi') && <ChemiSamosi side={
-            <span className="block">
-              <span className="block font-serif-ge text-[15px] font-bold text-[#4a3426]">ჩემი სამოსი</span>
-              <span className="block text-[13px] text-[#8a7a6a] leading-snug">ჩოხა და ქართული კაბა — ნაწილი ნაწილ</span>
-            </span>
-          } />}
+          {/* two small headings (2026-11-06): what is mine, then the settings — the rows all looked alike */}
+          {!waiting && <ProfileCaption>ჩემი</ProfileCaption>}
+          {!waiting && access.on('samosi') && <ChemiSamosi row />}
           {!waiting && <ShortcutShelf variant="profile" />}
+          <ProfileCaption>პარამეტრები</ProfileCaption>
           {/* ხუცური: the whole site in the old script, on this device */}
           <KhutsuriSwitch />
           {/* the Android app's home-screen widgets */}
           {!waiting && <WidgetLinkCard />}
           {/* the feasts, fasts and my lessons in the phone's calendar */}
           {!waiting && access.on('calendar') && <CalendarLinkCard />}
+          <ProfileCaption>ჩემი მონაცემები</ProfileCaption>
         </>} />
         {/* install the app · leave the account (asks first) */}
         <div className="max-w-lg mx-auto mt-3"><ProfileActions /></div>

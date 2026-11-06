@@ -252,7 +252,11 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
   return (
     <section className={variant === 'home' ? 'relative mt-6 w-[calc(100%+2.5rem)] sm:w-full max-w-md text-left' : 'rounded-3xl bg-white/80 ring-1 ring-[#e8dcc8] p-4 sm:p-5'}>
       <div className="flex items-center gap-2 mb-2.5 px-0.5">
-        <h2 className="flex-1 font-serif-ge text-[15px] font-bold text-[#4a3426]">ჩემი ღილაკები</h2>
+        <h2 className="flex-1 min-w-0">
+          <span className="block font-serif-ge text-[15px] font-bold text-[#4a3426]">ჩემი ღილაკები</span>
+          {/* on the profile a line says where these buttons live (2026-11-06) */}
+          {variant === 'profile' && <span className="block text-[13px] text-[#8a7a6a] leading-snug">მთავარ გვერდზე, ვაზის ქვეშ · {ids.length} / {MAX_SHORTCUTS}</span>}
+        </h2>
         {!own && ids.length > 0 && <span className="text-xs text-[#8a7a6a]">მასწავლებლის შერჩეული</span>}
         {(ids.length > 0 || variant === 'profile') && (
           editing ? (
@@ -264,7 +268,8 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
           )
         )}
       </div>
-      <ul className={`${SHELF_GRID} select-none ${editing ? 'touch-none' : ''}`}>
+      {/* on the profile two a row (2026-11-06): three left the names cut short — „დაუჯდ.“, „სამოციქ.“ */}
+      <ul className={`${variant === 'profile' ? 'grid grid-cols-2 gap-2' : SHELF_GRID} select-none ${editing ? 'touch-none' : ''}`}>
         {readingIn.map(g => <KathismaTiles key={g.id} group={g} uid={user.uid} />)}
         {order.map((id, i) => {
           const l = shortcutLabel(id)!;
