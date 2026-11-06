@@ -1339,7 +1339,14 @@
   Since 2026-10-31 a member **without a kanon picks one themself**: the kanon's window offers „ჩემს კანონად არჩევა“ on a
   free kanon or beside one reader (asked once; changing it later is the teacher's) — `pickKanon` adds their uid to that
   list of the stored distribution with a `pick {k, by, at}` note, and the rule `pickingKanon` in `firestore.rules` lets a
-  member write only that (own uid, one list under two readers, no kanon before). A pick writes no `assignmentLog`. The home
+  member write only that (own uid, one list under two readers, no kanon before). A pick writes no `assignmentLog`.
+  Since 2026-11-06 (the user: „ვისაც კანონი არ აქვთ … სანამ არ აირჩევენ ვერ გააგრძელონ მუშაობა“, answers „ჯერ თავისუფლები · ზარზე
+  და ტაძარში დაიცადოს“) a class member (not its teacher) in the group with no kanon gets a locked window over the app,
+  `psalter/KanonGate.tsx` (in `App.tsx` under `FirstMeeting`): the twenty tiles, only `pickableKanons` (utils/psalter + test: the
+  free ones while any is free, then beside a lone reader) can be tapped, „კანონი N — ჩემია“ saves by `pickKanonIf` (a
+  transaction: only while the kanon still has the readers shown, else „ახლახან სხვამ აირჩია“), then „შენია!“ + „გაგრძელება“.
+  None when every kanon has two readers, the psalter section is closed, offline, or while notes / program / church mode / a
+  call is open. A class member missing from the group's `memberIds` (older classes) can't read the group, so gets no window. The home
   shelf's kanon tile (`KathismaTile`) opens the kanon's text, its ✓ marks it read (it opened the group page before).
 - **Teacher panel** (`pages/TeacherPage.tsx`, `components/teacher/`), **admin panel** (`pages/AdminPanelPage.tsx`,
   `components/admin/`): sections open/მალე/hidden (`settings/sections`); JSON export. The panel's recording-binding

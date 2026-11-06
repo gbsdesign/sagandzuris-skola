@@ -38,6 +38,7 @@ import { startPlacements } from './data/placements';
 import { SignInPrompt } from './components/access/SignInPrompt';
 import { EmailLinkFinish } from './components/access/EmailLinkFinish';
 import { FirstMeeting } from './components/onboarding/FirstMeeting';
+import { KanonGate } from './components/psalter/KanonGate';
 import { CallLayer } from './components/calls/CallLayer';
 import { PhoneRingSetup } from './components/calls/PhoneRingSetup';
 import { GameInvites } from './components/games/GameInvites';
@@ -253,6 +254,12 @@ function AppContent() {
 
       {/* a new member's admission: „დამატება შეფერხებულია“ (and signing out) or the welcome */}
       <MembershipGate />
+
+      {/* „აირჩიე შენი კანონი“: a class member whose psalter group gives them no kanon picks one before going on (under the
+          profile form, which covers it while it is open) */}
+      <ErrorBoundary>
+        {membership.can('classes') && <KanonGate />}
+      </ErrorBoundary>
 
       {/* "პირველი გაცნობა": name, voice and goal, once */}
       <ErrorBoundary>
