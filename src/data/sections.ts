@@ -29,7 +29,7 @@ export const SECTIONS: SectionDef[] = [
   { id: 'gza', label: 'საგანძურის გზა', page: 'gz' },
   { id: 'biblioteka', label: 'ბიბლიოთეკა', page: 'biblioteka' },
   // „ეთნოფორი“'s films: songs on the map by region + the full episodes (pages/VideosPage.tsx), open to everyone
-  { id: 'videoebi', label: 'ვიდეოები', page: 'videos', hint: '„ეთნოფორი“ — სიმღერები კუთხეებით' },
+  { id: 'videoebi', label: 'ვიდეოები', page: 'videos', hint: '„ეთნოფორი“, მონასტრები, ქართული ფილმები' },
   // every church and monastery of Georgia on the map, the nearest ones, the way there (pages/ChurchesPage.tsx), open to everyone
   { id: 'eklesiebi', label: 'ეკლესია-მონასტრები', page: 'churches', hint: 'ტაძრები რუკაზე, უახლოესი და გზა' },
 ];
