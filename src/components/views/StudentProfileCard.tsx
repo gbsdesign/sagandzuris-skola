@@ -11,7 +11,9 @@ import {
   Mic,
   MapPin,
 } from 'lucide-react';
-import { useAuth } from '../../context';
+import { useAuth, useViewing } from '../../context';
+import { PhotoButton, PhotoCrop } from './PhotoCrop';
+import { saveMyPhoto } from '../../hooks/useMyPhoto';
 import { Pill } from '../ui/kit';
 import { Fold } from '../admin/Fold';
 import { WORK_DAYS, WorkScheduleEditor, hoursOf } from './WorkScheduleEditor';
@@ -55,6 +57,10 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
   const [voiceUnknown, setVoiceUnknown] = useState(false);
   const [savedUnknown, setSavedUnknown] = useState(false);
   const [birthError, setBirthError] = useState(false);
+  // my own photo cut on the phone (hooks/useMyPhoto); the picked file waits in the crop window
+  const [ownPhoto, setOwnPhoto] = useState('');
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const viewing = useViewing();
 
   // Sync profile only with Firestore on mount and prefill from Auth
   useEffect(() => {
@@ -85,6 +91,7 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
       if (snapshot.exists()) {
         const data = snapshot.data();
         setMet(!!data.firstMeeting);
+        setOwnPhoto(typeof data.photo === 'string' ? data.photo : '');
         setVoiceUnknown(!!data.firstMeeting?.voiceUnknown);
         setSavedUnknown(!!data.firstMeeting?.voiceUnknown);
         if (data.profile) {
@@ -236,7 +243,15 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
   const configuredDaysList = WORK_DAYS.filter(d => hoursOf(profile.workSchedule, d.id).length > 0);
 
   const currentUser = member || auth.currentUser;
-  const userPhoto = currentUser?.photoURL;
+  const userPhoto = ownPhoto || currentUser?.photoURL;
+  // the photo is changed only on one's own profile (not by an admin, not on a student's page)
+  const ownProfile = !member && !viewing && !!auth.currentUser;
+  const keepPhoto = (dataUrl: string | null) => {
+    const u = auth.currentUser;
+    if (!u) return;
+    setOwnPhoto(dataUrl || '');
+    saveMyPhoto(u.uid, dataUrl, u.photoURL || '').catch(() => setSaveFailed(true));
+  };
   const displayFullName = profile.firstName || profile.lastName
     ? `${profile.firstName} ${profile.lastName}`.trim()
     : currentUser?.displayName || 'მოსწავლის პროფილი';
@@ -277,14 +292,14 @@ export const StudentProfileCard: React.FC<{ member?: ProfileOwner; slot?: React.
         </div>
         <div className="px-4 sm:px-5 pb-4 flex items-start gap-3.5">
           <div className="relative shrink-0 -mt-9">
-            {userPhoto ? (
-              <img src={userPhoto} alt={displayFullName} referrerPolicy="no-referrer"
-                className="w-[72px] h-[72px] rounded-full object-cover ring-4 ring-white bg-[#efe5d4] shadow-md" />
-            ) : (
-              <div className="w-[72px] h-[72px] rounded-full bg-[#efe5d4] text-[#7a2028] flex items-center justify-center ring-4 ring-white shadow-md">
-                <User className="w-8 h-8" />
-              </div>
-            )}
+            <PhotoButton src={userPhoto} alt={displayFullName} own={ownProfile} onPick={setCropFile}
+              onRemove={ownPhoto ? () => keepPhoto(null) : undefined}
+              fallback={
+                <div className="w-[72px] h-[72px] rounded-full bg-[#efe5d4] text-[#7a2028] flex items-center justify-center ring-4 ring-white shadow-md">
+                  <User className="w-8 h-8" />
+                </div>
+              } />
+            {cropFile && <PhotoCrop file={cropFile} onClose={() => setCropFile(null)} onDone={url => { setCropFile(null); keepPhoto(url); }} />}
           </div>
           <div className="min-w-0 flex-1 pt-2.5">
             <h2 className="font-serif-ge text-[19px] leading-tight font-bold text-[#4a3426] truncate">{displayFullName}</h2>

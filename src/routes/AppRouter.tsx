@@ -9,6 +9,9 @@ import { KhutsuriSwitch } from '../components/views/KhutsuriSwitch';
 import { WidgetLinkCard } from '../components/app/WidgetLinkCard';
 import { CalendarLinkCard } from '../components/app/CalendarLinkCard';
 import { AdminEntry } from '../components/views/AdminEntry';
+import { RemindersCard } from '../components/app/RemindersCard';
+import { MyClassCard } from '../components/app/MyClassCard';
+import { MyMonthStrip } from '../components/app/MyMonthStrip';
 import { prayerTitle } from '../data/prayers';
 import { HomePage } from '../pages/HomePage';
 import { GalobaPage } from '../pages/GalobaPage';
@@ -236,10 +239,16 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
         <StudentProfileCard waiting={waiting} slot={<>
           <AdminEntry />
           {/* two small headings (2026-11-06): what is mine, then the settings — the rows all looked alike */}
+          {/* this month in three numbers (2026-11-06) */}
+          {!waiting && <MyMonthStrip />}
           {!waiting && <ProfileCaption>ჩემი</ProfileCaption>}
+          {/* my classes: a row each with the next lesson (2026-11-06) */}
+          {!waiting && access.on('classes') && <MyClassCard />}
           {!waiting && access.on('samosi') && <ChemiSamosi row />}
           {!waiting && <ShortcutShelf variant="profile" />}
           <ProfileCaption>პარამეტრები</ProfileCaption>
+          {/* every phone reminder in one window (2026-11-06) */}
+          {!waiting && <RemindersCard />}
           {/* ხუცური: the whole site in the old script, on this device */}
           <KhutsuriSwitch />
           {/* the Android app's home-screen widgets */}
