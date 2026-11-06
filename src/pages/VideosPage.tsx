@@ -1,22 +1,29 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, ExternalLink, Loader2, MapPin, Play, Search, Tv } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Church, ExternalLink, Loader2, MapPin, Play, Search, Tv } from 'lucide-react';
 import { useNavigation } from '../context';
 import { RegionLocator, RegionPuzzleMap } from '../components/maps/RegionPuzzleMap';
 import { Btn, FIELD, Sheet, Tabs } from '../components/ui/kit';
 import { triggerHaptic } from '../utils/haptics';
+import type { FolkRegion } from '../data/songsData';
 import {
-  ETNOFORI_CHANNEL, ETNO_EXTRA, EtnoData, clock, dayText, embedOf, etnoRegion, etnoRegionName, loadEtnofori, thumbOf, watchOf,
+  ABROAD, ETNOFORI_CHANNEL, ETNO_EXTRA, EtnoData, clock, dayText, embedOf, etnoRegion, etnoRegionName, loadEtnofori, thumbOf, watchOf,
 } from '../data/etnofori';
+import { MONASTERY_FILMS } from '../data/monasteryVideos';
 
-// „ვიდეოები“ (the vine's label): the programme „ეთნოფორი“'s songs on the map of Georgia, as on „მთქმელი“, and its full
-// episodes. The open list is `mapItem` — a region's id or „ep“ —, an open film adds „/<YouTube id>“, so the bar's „უკან“
-// (and the phone's) first closes the film, then the region.
-type Tab = 'map' | 'ep';
+// „ვიდეოები“ (the vine's label), three tabs: „ეთნოფორი“'s songs on the map of Georgia (as on „მთქმელი“), TV reports on the
+// monasteries on the same map, and „ეთნოფორი“'s full episodes. The open list is `mapItem` — a region's id for the songs,
+// „m:<region>“ for the monasteries, „ep“ for the episodes —, an open film adds „/<YouTube id>“, so the bar's „უკან“ (and the
+// phone's) first closes the film, then the region.
+type Tab = 'map' | 'mon' | 'ep';
 const TAB_KEY = 'sg-videos-tab';
-const readTab = (): Tab => { try { return sessionStorage.getItem(TAB_KEY) === 'ep' ? 'ep' : 'map'; } catch { return 'map'; } };
+const readTab = (): Tab => {
+  try { const t = sessionStorage.getItem(TAB_KEY); return t === 'ep' || t === 'mon' ? t : 'map'; } catch { return 'map'; }
+};
 
-/** one film of a list, as a row and in the player */
-interface Film { id: string; title: string; sub: string; secs: number }
+/** one film of a list, as a row and in the player; `place` = its chip (a municipality, a monastery) */
+interface Film { id: string; title: string; sub: string; secs: number; place?: string }
+
+const MON_EXTRA: FolkRegion[] = [ABROAD];
 
 export const VideosPage: React.FC = () => {
   const { mapItem, openMapItem, handleGoBack } = useNavigation();
@@ -30,8 +37,18 @@ export const VideosPage: React.FC = () => {
   }, []);
   const chooseTab = (t: Tab) => { setTab(t); try { sessionStorage.setItem(TAB_KEY, t); } catch { /* private mode */ } };
 
-  const [list, open] = (mapItem ?? '').split('/');
+  const item = mapItem ?? '';
+  const mon = item.startsWith('m:');
+  const [list, open] = (mon ? item.slice(2) : item).split('/');
   const region = list && list !== 'ep' ? etnoRegion(list) : null;
+  // a film opens over the list without moving it (`stay`); ‹ › turn it in place (`replace`)
+  const prefix = mon ? `m:${list}` : list;
+  const play = (id: string) => { triggerHaptic(10); openMapItem(`${prefix}/${id}`, false, true); };
+  const move = (id: string) => openMapItem(`${prefix}/${id}`, true, true);
+
+  if (mon && region) {
+    return <RegionFilms region={region} films={monasteryFilms(region.id)} kind="mon" open={open} onPlay={play} onMove={move} onClose={handleGoBack} />;
+  }
 
   if (!data) {
     return (
@@ -41,71 +58,93 @@ export const VideosPage: React.FC = () => {
     );
   }
 
-  const play = (id: string) => { triggerHaptic(10); openMapItem(`${list}/${id}`, false, true); };
-
   if (region) {
-    return <RegionFilms data={data} regionId={region.id} open={open} onPlay={play} onMove={id => openMapItem(`${list}/${id}`, true, true)} onClose={handleGoBack} />;
+    return <RegionFilms region={region} films={songFilms(data, region.id)} kind="songs" open={open} onPlay={play} onMove={move} onClose={handleGoBack} />;
   }
 
-  const showEp = list === 'ep' || (!list && tab === 'ep');
+  const shown: Tab = list === 'ep' ? 'ep' : tab;
   return (
     <div className="w-full flex flex-col gap-4 animate-in fade-in duration-200">
-      <p className="px-1 text-[13.5px] leading-relaxed text-[#574739]">
-        <b className="text-[#2a2017]">„ეთნოფორი“</b> — აჭარის ტელევიზიის გადაცემა ხალხურ სიმღერასა და გალობაზე. ავტორი და წამყვანი მიხეილ გაბაიძე.{' '}
-        <a href={ETNOFORI_CHANNEL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 font-bold text-[#8a4b12] hover:underline">
-          არხი YouTube-ზე <ExternalLink className="w-3 h-3" />
-        </a>
-      </p>
       <Tabs<Tab>
-        cols={2}
+        cols={3}
         stack
-        value={showEp ? 'ep' : 'map'}
-        onChange={t => { chooseTab(t); if (list) openMapItem(t === 'ep' ? 'ep' : '', true); }}
+        value={shown}
+        onChange={t => { chooseTab(t); if (list) openMapItem('', true); }}
         items={[
-          { id: 'map', label: 'კუთხეებით', Icon: MapPin, count: data.songs.length },
-          { id: 'ep', label: 'სრული გადაცემები', Icon: Tv, count: data.episodes.length },
+          { id: 'map', label: 'სიმღერები', Icon: MapPin, count: data.songs.length },
+          { id: 'mon', label: 'მონასტრები', Icon: Church, count: MONASTERY_FILMS.length },
+          { id: 'ep', label: 'გადაცემები', Icon: Tv, count: data.episodes.length },
         ]}
       />
-      {showEp
-        ? <Episodes data={data} open={list === 'ep' ? open : undefined} onPlay={id => { triggerHaptic(10); openMapItem(`ep/${id}`, false, true); }} onMove={id => openMapItem(`ep/${id}`, true, true)} onClose={handleGoBack} />
-        : <SongsMap data={data} onSelect={id => { triggerHaptic(10); openMapItem(id); }} />}
+      {shown === 'mon' ? (
+        <p className="px-1 text-[13.5px] leading-relaxed text-[#574739]">
+          <b className="text-[#2a2017]">მონასტრები</b> — სატელევიზიო რეპორტაჟები საქართველოს მონასტრებზე: მათი ისტორია და იქ მცხოვრებთა ცხოვრება.
+          იმედი, პირველი არხი, ერთსულოვნება და სხვა არხები.
+        </p>
+      ) : (
+        <p className="px-1 text-[13.5px] leading-relaxed text-[#574739]">
+          <b className="text-[#2a2017]">„ეთნოფორი“</b> — აჭარის ტელევიზიის გადაცემა ხალხურ სიმღერასა და გალობაზე. ავტორი და წამყვანი მიხეილ გაბაიძე.{' '}
+          <a href={ETNOFORI_CHANNEL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 font-bold text-[#8a4b12] hover:underline">
+            არხი YouTube-ზე <ExternalLink className="w-3 h-3" />
+          </a>
+        </p>
+      )}
+      {shown === 'ep' ? (
+        <Episodes data={data} open={list === 'ep' ? open : undefined} onPlay={id => { triggerHaptic(10); openMapItem(`ep/${id}`, false, true); }} onMove={id => openMapItem(`ep/${id}`, true, true)} onClose={handleGoBack} />
+      ) : shown === 'mon' ? (
+        <RegionMap counts={MON_COUNTS} title="მონასტრები" extra={MON_EXTRA} onSelect={id => { triggerHaptic(10); openMapItem(`m:${id}`); }} />
+      ) : (
+        <RegionMap counts={songCounts(data)} title="ეთნოფორი" extra={ETNO_EXTRA} onSelect={id => { triggerHaptic(10); openMapItem(id); }} />
+      )}
     </div>
   );
 };
 
-const SongsMap: React.FC<{ data: EtnoData; onSelect: (id: string) => void }> = ({ data, onSelect }) => {
-  const counts = useMemo(() => {
-    const c: Record<string, number> = {};
-    for (const s of data.songs) c[s[3]] = (c[s[3]] ?? 0) + 1;
-    return c;
-  }, [data]);
-  return (
-    <RegionPuzzleMap
-      onSelect={r => onSelect(r.id)}
-      count={id => counts[id] ?? 0}
-      countLabel={n => `${n} ვიდეო`}
-      regionName={etnoRegionName}
-      title="ეთნოფორი"
-      extraRegions={ETNO_EXTRA}
-    />
-  );
+const countBy = (regions: string[]) => {
+  const c: Record<string, number> = {};
+  for (const r of regions) c[r] = (c[r] ?? 0) + 1;
+  return c;
+};
+const MON_COUNTS = countBy(MONASTERY_FILMS.map(f => f[3]));
+let songCountsOf: { data: EtnoData; counts: Record<string, number> } | null = null;
+const songCounts = (data: EtnoData) => {
+  if (songCountsOf?.data !== data) songCountsOf = { data, counts: countBy(data.songs.map(s => s[3])) };
+  return songCountsOf.counts;
 };
 
-/** a region's songs: where it is, its places as chips, a search line for a long list, then the films */
-const RegionFilms: React.FC<{ data: EtnoData; regionId: string; open?: string; onPlay: (id: string) => void; onMove: (id: string) => void; onClose: () => void }> = ({ data, regionId, open, onPlay, onMove, onClose }) => {
-  const region = etnoRegion(regionId)!;
-  const songs = useMemo(() => data.songs.filter(s => s[3] === regionId), [data, regionId]);
+const songFilms = (data: EtnoData, regionId: string): Film[] => data.songs
+  .filter(s => s[3] === regionId)
+  .map(s => ({ id: s[0], title: s[1], sub: s[2] || s[4], secs: s[5], place: s[4] }));
+const monasteryFilms = (regionId: string): Film[] => MONASTERY_FILMS
+  .filter(f => f[3] === regionId)
+  .map(f => ({ id: f[0], title: f[1], sub: `${f[4]} · ${f[2]}`, secs: f[5], place: f[4] }));
+
+const RegionMap: React.FC<{ counts: Record<string, number>; title: string; extra: FolkRegion[]; onSelect: (id: string) => void }> = ({ counts, title, extra, onSelect }) => (
+  <RegionPuzzleMap
+    onSelect={r => onSelect(r.id)}
+    count={id => counts[id] ?? 0}
+    countLabel={n => `${n} ვიდეო`}
+    regionName={etnoRegionName}
+    title={title}
+    extraRegions={extra}
+  />
+);
+
+/** a region's films: where it is, its places (or monasteries) as chips, a search line for a long list, then the films */
+const RegionFilms: React.FC<{ region: FolkRegion; films: Film[]; kind: 'songs' | 'mon'; open?: string; onPlay: (id: string) => void; onMove: (id: string) => void; onClose: () => void }> = ({ region, films: all, kind, open, onPlay, onMove, onClose }) => {
   const places = useMemo(() => {
     const c = new Map<string, number>();
-    for (const s of songs) c.set(s[4], (c.get(s[4]) ?? 0) + 1);
+    for (const f of all) if (f.place) c.set(f.place, (c.get(f.place) ?? 0) + 1);
     return [...c.entries()].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ka'));
-  }, [songs]);
+  }, [all]);
   const [place, setPlace] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const query = q.trim().toLowerCase();
-  const films: Film[] = useMemo(() => songs
-    .filter(s => (!place || s[4] === place) && (!query || `${s[1]} ${s[2]} ${s[4]}`.toLowerCase().includes(query)))
-    .map(s => ({ id: s[0], title: s[1], sub: s[2] || s[4], secs: s[5] })), [songs, place, query]);
+  const films = useMemo(() => all.filter(f =>
+    (!place || f.place === place) && (!query || `${f.title} ${f.sub}`.toLowerCase().includes(query))), [all, place, query]);
+  const line = kind === 'mon'
+    ? `${places.length} მონასტერი · ${all.length} ვიდეო`
+    : `${all.length} ვიდეო · „ეთნოფორი“`;
 
   return (
     <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
@@ -113,20 +152,20 @@ const RegionFilms: React.FC<{ data: EtnoData; regionId: string; open?: string; o
         <RegionLocator region={region} className="w-28 sm:w-32 h-auto shrink-0" />
         <div className="min-w-0 flex flex-col gap-0.5">
           <h3 className="text-lg sm:text-xl font-black text-[#2a2017] leading-tight">{etnoRegionName(region)}</h3>
-          <span className="text-xs font-bold text-[#8a4b12]">{songs.length} ვიდეო · „ეთნოფორი“</span>
+          <span className="text-xs font-bold text-[#8a4b12]">{line}</span>
         </div>
       </div>
 
       {places.length > 1 && (
-        <div className="flex flex-wrap gap-1.5" role="group" aria-label="ადგილები">
-          <Chip on={!place} onClick={() => setPlace(null)} label="ყველა" n={songs.length} />
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label={kind === 'mon' ? 'მონასტრები' : 'ადგილები'}>
+          <Chip on={!place} onClick={() => setPlace(null)} label="ყველა" n={all.length} />
           {places.map(([p, n]) => <Chip key={p} on={place === p} onClick={() => setPlace(place === p ? null : p)} label={p} n={n} />)}
         </div>
       )}
-      {songs.length > 20 && (
+      {all.length > 20 && (
         <label className="relative block">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#b3a594]" aria-hidden />
-          <input value={q} onChange={e => setQ(e.target.value)} placeholder="სიმღერის ან სოფლის ძებნა" className={`${FIELD} pl-10`} type="search" />
+          <input value={q} onChange={e => setQ(e.target.value)} placeholder={kind === 'mon' ? 'მონასტრის ძებნა' : 'სიმღერის ან სოფლის ძებნა'} className={`${FIELD} pl-10`} type="search" />
         </label>
       )}
 
@@ -198,10 +237,10 @@ const FilmList: React.FC<{ films: Film[]; onPlay: (id: string) => void; empty: s
 
 /** the open film in a window: YouTube's own player, then ‹ › through the same list */
 const Player: React.FC<{ films: Film[]; open?: string; onMove: (id: string) => void; onClose: () => void }> = ({ films, open, onMove, onClose }) => {
-  const i = open ? films.findIndex(f => f.id === open) : -1;
+  if (!open) return null;
+  const i = films.findIndex(f => f.id === open);
   // a film no longer in the list (a chip changed meanwhile) still plays alone
   const film = i >= 0 ? films[i] : null;
-  if (!open) return null;
   const prev = i > 0 ? films[i - 1] : null;
   const next = i >= 0 && i < films.length - 1 ? films[i + 1] : null;
   return (
@@ -209,7 +248,7 @@ const Player: React.FC<{ films: Film[]; open?: string; onMove: (id: string) => v
       open
       wide
       onClose={onClose}
-      title={film?.title ?? '„ეთნოფორი“'}
+      title={film?.title ?? 'ვიდეო'}
       footer={
         <div className="flex items-center gap-2">
           <Btn kind="ghost" icon={<ChevronLeft />} disabled={!prev} onClick={() => prev && onMove(prev.id)} className="flex-1">წინა</Btn>
@@ -224,7 +263,7 @@ const Player: React.FC<{ films: Film[]; open?: string; onMove: (id: string) => v
             key={open}
             className="w-full h-full"
             src={embedOf(open)}
-            title={film?.title ?? 'ეთნოფორი'}
+            title={film?.title ?? 'ვიდეო'}
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
           />
