@@ -14,6 +14,7 @@ import { WorkButton, WorkPanel, useClassWork } from '../classes/ClassWork';
 import { BellButton, BellPanel } from './Bell';
 import { useBellState, useNotices } from '../../hooks/useNotices';
 import { useOpenRequest } from '../../utils/searchOpen';
+import { useShownPhoto } from '../../hooks/useMyPhoto';
 
 interface HeaderProps {
   logoUrl: string;
@@ -40,6 +41,8 @@ const TOOLS = [
 // user: „დავალების ღილაკიც მაღლა აიტანე საგანძურის ლოგოს მარჯვნივ და აქვე იყოს შეტყობინებების ღილაკი … ჩამოსაშლელი იყოს“).
 export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
   const { user, signingIn, isAdmin, isTeacher } = useAuth();
+  // my own cut photo when kept, else the account's
+  const photo = useShownPhoto(user?.uid, user?.photoURL);
   const { navigateTo, currentPage, openClass, openDm, mapItem, openMapItem } = useNavigation();
   const memberOf = useMyClasses(user?.uid);
   // a teacher reaches their own classes' pages from the header too
@@ -221,9 +224,9 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
                 title={`${user.displayName || user.email} — პროფილი`}
                 aria-label="პროფილის გახსნა"
               >
-                {user.photoURL ? (
+                {photo ? (
                   <img
-                    src={user.photoURL}
+                    src={photo}
                     alt={user.displayName || 'მოსწავლე'}
                     className="w-8 h-8 rounded-full ring-2 ring-[#e8dcc8] object-cover"
                     referrerPolicy="no-referrer"

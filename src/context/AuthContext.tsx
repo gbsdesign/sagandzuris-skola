@@ -10,7 +10,7 @@ import {
   GoogleAuthProvider,
   OAuthProvider,
 } from 'firebase/auth';
-import { doc, onSnapshot, setDoc } from 'firebase/firestore';
+import { doc, getDoc, onSnapshot, setDoc } from 'firebase/firestore';
 import { auth, db, googleProvider } from '../firebase';
 import { triggerHaptic } from '../utils/haptics';
 import { writeDirectory } from '../utils/directory';
@@ -125,8 +125,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         console.warn('Membership request error:', e);
         return;
       }
+      // a photo of their own cut on the phone (hooks/useMyPhoto) must not be covered by the account's again
+      let ownPhoto = false;
       try {
         const studentRef = doc(db, 'students', currentUser.uid);
+        ownPhoto = await getDoc(studentRef).then(s => typeof s.data()?.photo === 'string', () => false);
         await setDoc(
           studentRef,
           {
@@ -143,7 +146,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // name and photo for the teachers' people list
       void writeDirectory(currentUser.uid, {
         ...(currentUser.displayName ? { name: currentUser.displayName } : {}),
-        ...(currentUser.photoURL ? { photoURL: currentUser.photoURL } : {}),
+        ...(currentUser.photoURL && !ownPhoto ? { photoURL: currentUser.photoURL } : {}),
       });
 
       // the owner's own staff document, so the admin lists show them

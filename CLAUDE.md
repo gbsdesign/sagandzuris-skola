@@ -153,6 +153,16 @@
   and index.css turns it dark with gold headings; the favourites' ✎ shows ▲ ▼ in place of the ★ (`useFavPrayers().move`); a
   search field over the book (`components/prayers/PrayerSearch.tsx`, `searchPrayers` over every prayer, akathist, kanon, hour and
   Bible chapter — „ფს 50“ → its kanon, „მათე 5“ → the chapter; while typed, the favourites and the book step aside).
+  **Night over the whole screen** (PR #183, the user: „მინდა მთლიანად ვრცელდებოდეს“): `PrayerPage` puts `sg-night-page` on `<html>`
+  while 🌙 is on; index.css darkens the paper (`.sg-paper` on App's wrapper), header and every light card/text colour under it.
+  **Profile the same evening (ideas 5–8)**: `app/MyMonthStrip.tsx` under the head (this month: active days, habit ticks, phrases
+  practised — from `deedsOf`), `app/MyClassCard.tsx` under „ჩემი“ (a row a class, `nextLessonLine` „ხვალ 18:00“, opens the class),
+  `app/RemindersCard.tsx` under „პარამეტრები“ (one window: prayer hours, timed habits, the review's time — the same stores the
+  habits' ✎ and the prayer page use). **Own photo**: a tap on the profile's photo (`views/PhotoCrop.tsx` `PhotoButton` + the crop
+  window: drag, slider or two fingers) keeps a ≤192 px JPEG data URL in `students.photo` and a 96 px one in `directory.photoURL`
+  (`hooks/useMyPhoto.ts` `saveMyPhoto`; sign-in in `AuthContext` no longer covers the directory photo while `students.photo`
+  exists); shown on the profile head and the header (`useShownPhoto`). Class member lists, chats and psalter groups keep the
+  account's photo (copied at joining; a member may not rewrite the class) — no rules change.
 
 ## Audio and sheet music (details in `src/data/CLAUDE.md`)
 
