@@ -22,6 +22,11 @@ const RowIcon: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <span className="w-10 h-10 shrink-0 rounded-2xl bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center [&>svg]:w-5 [&>svg]:h-5">{children}</span>
 );
 
+// a small heading between the window's groups of cards (the same as the prayer book's and the profile's)
+const GroupTitle: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <h3 className="px-4 pt-2 -mb-1 text-[12.5px] font-bold text-[#a08a76] first:pt-0">{children}</h3>
+);
+
 // Firestore values made plain for JSON (times as ISO text; voice-message audio is left out).
 const plain = (v: unknown): unknown => {
   if (v instanceof Timestamp) return v.toDate().toISOString();
@@ -96,14 +101,18 @@ export const SchoolSheet: React.FC<{ users: UserRecord[]; classes: SchoolClass[]
       <div className="space-y-3">
         {/* the message stays in sight however far down the window was scrolled (the backup is at its bottom) */}
         {msg.flash && <div className="sticky top-0 z-10"><Flash flash={msg.flash} onClose={msg.clear} /></div>}
+        {/* three small groups since 2026-11-06 (the user: nine alike cards in a row): what goes out, how the school is set, the numbers */}
+        <GroupTitle>შეტყობინებები</GroupTitle>
         <Announce classes={classes} onMessage={onMessage} />
+        <PhoneNotices onMessage={onMessage} />
+        <GroupTitle>წყობა</GroupTitle>
         <SectionsTab onMessage={onMessage} />
-        <GrowthFold users={users} />
-        <TopChants users={users} />
         <ExtraRightsFold users={users} onMessage={onMessage} />
         <AlbumsFold onMessage={onMessage} />
-        <PhoneNotices onMessage={onMessage} />
         <RolesFold />
+        <GroupTitle>ციფრები</GroupTitle>
+        <GrowthFold users={users} />
+        <TopChants users={users} />
         {isSuperAdmin && <ChangeLog />}
 
         <Card className="!py-3">

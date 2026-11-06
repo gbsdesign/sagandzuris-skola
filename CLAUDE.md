@@ -1366,7 +1366,11 @@
   between the members and the classes, and ⚙ „სკოლა“ is one window (`SchoolSheet` in `admin/SchoolTab.tsx`: sections with
   40 px buttons, most listened, `admin/ExtraRights.tsx` = the centre's recordings + song texts in one card, backup).
   Every window shows its own messages inside it (sticky `Flash`). Empty filter chips hide; „ახალი კლასი“ is the dashed
-  last card. Numbers of the old სტატისტიკა tab live in `admin/StatsTab.tsx` hooks; old shortcut refs (`admin:sections`,
+  last card. **Tidied 2026-11-06 evening** (the user: „დახვეწე … თვალისთვის“): the members' chips stand in two labelled rows —
+  „ვინ“ (teachers, admins, active, habits) and „ყურადღება“ (no class, incomplete, 30+ days, twins, refused, left; amber) —
+  `CHIP_GROUPS` in `UsersTab`; ⚙ „სკოლა“'s cards under three small headings შეტყობინებები · წყობა · ციფრები (`GroupTitle`);
+  the person's window keeps who / activity / note / classes / role open and folds the rest — `Part fold="<one-line summary>"`
+  (უფლებები, ალბომები, საბავშვო, სკოლაში, and წვდომა for an admitted member). Numbers of the old სტატისტიკა tab live in `admin/StatsTab.tsx` hooks; old shortcut refs (`admin:sections`,
   `stats`, `recordings`, `requests`, `school`) still open the right part („სკოლა“ ones open the window once).
   Since 2026-10-28 (admin review, stage ①; review doc https://claude.ai/artifact/DbTEz3fwSDQkSbcxwY6yjb) a class is never
   deleted: its ✎ „არქივში“ sets `archived` on the class and its psalter group (every hook hides them, the rules close its chat,

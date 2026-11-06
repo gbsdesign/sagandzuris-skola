@@ -127,18 +127,21 @@ export const filterTests = (staff: StaffRecord[], access: Record<string, AccessR
 };
 
 // „ელოდება“ has no chip: its place is the panel's big number (superadmins; others never see who waits)
-const CHIPS: { id: Filter; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: 'month', label: 'აქტიური თვეში', Icon: CalendarDays },
-  { id: 'habits', label: 'ჩვევებს ინიშნავს', Icon: ListChecks },
-  { id: 'teacher', label: 'მასწავლებლები', Icon: GraduationCap },
-  { id: 'admin', label: 'ადმინები', Icon: Shield },
-  { id: 'refused', label: 'შეფერხებული', Icon: ShieldAlert },
-  { id: 'noClass', label: 'კლასის გარეშე', Icon: School },
-  { id: 'incomplete', label: 'პროფილი არასრული', Icon: UserRoundPen },
-  { id: 'away', label: '30+ დღე არ შემოსულა', Icon: MoonStar },
-  { id: 'twins', label: 'შესაძლო ორმაგი', Icon: Copy },
-  { id: 'left', label: 'გასულები', Icon: DoorOpen },
+// Two rows since 2026-11-06 (the user: nine alike chips in a cloud were hard to read): „ვინ“ = who they are, „ყურადღება“ =
+// what wants a look (amber).
+const CHIPS: { id: Filter; label: string; Icon: React.ComponentType<{ className?: string }>; group: 'who' | 'care' }[] = [
+  { id: 'teacher', label: 'მასწავლებლები', Icon: GraduationCap, group: 'who' },
+  { id: 'admin', label: 'ადმინები', Icon: Shield, group: 'who' },
+  { id: 'month', label: 'აქტიური თვეში', Icon: CalendarDays, group: 'who' },
+  { id: 'habits', label: 'ჩვევებს ინიშნავს', Icon: ListChecks, group: 'who' },
+  { id: 'noClass', label: 'კლასის გარეშე', Icon: School, group: 'care' },
+  { id: 'incomplete', label: 'პროფილი არასრული', Icon: UserRoundPen, group: 'care' },
+  { id: 'away', label: '30+ დღე არ შემოსულა', Icon: MoonStar, group: 'care' },
+  { id: 'twins', label: 'შესაძლო ორმაგი', Icon: Copy, group: 'care' },
+  { id: 'refused', label: 'შეფერხებული', Icon: ShieldAlert, group: 'care' },
+  { id: 'left', label: 'გასულები', Icon: DoorOpen, group: 'care' },
 ];
+const CHIP_GROUPS: { id: 'who' | 'care'; title: string }[] = [{ id: 'who', title: 'ვინ' }, { id: 'care', title: 'ყურადღება' }];
 
 // „წევრები“: everyone who signed in, in one list with one search. The panel's big numbers on top choose the
 // main filters (they live in AdminPanelPage); the chips here hold the rest, each with how many it holds (an empty one
@@ -266,16 +269,29 @@ export const UsersTab: React.FC<{
       </div>
       {/* the chips wrap into a second row instead of sliding out of sight; below 400px their icons step aside (as the
           bar's ⚙ does), so two fit in a row */}
-      {FILTERS.length > 0 && <div className="flex flex-wrap gap-1.5">
-        {FILTERS.map(({ id, label, Icon, n }) => {
-          const on = active === id;
+      {FILTERS.length > 0 && <div className="space-y-2.5">
+        {CHIP_GROUPS.map(g => {
+          const chips = FILTERS.filter(f => f.group === g.id);
+          if (!chips.length) return null;
+          const care = g.id === 'care';
           return (
-            <button key={id} type="button" onClick={() => onFilter(on ? 'all' : id)} aria-pressed={on}
-              className={`shrink-0 whitespace-nowrap h-9 px-3 min-[400px]:px-3.5 rounded-full text-[13px] font-bold cursor-pointer transition inline-flex items-center gap-1.5 ${on ? 'bg-[#7a2028]/[0.1] text-[#7a2028] ring-1 ring-[#7a2028]/30' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/30'}`}>
-              <Icon className={`hidden min-[400px]:block w-3.5 h-3.5 ${on ? '' : 'text-[#8a7a6a]'}`} />
-              {label}
-              <span className={`tabular-nums ${on ? 'text-[#7a2028]/70' : 'text-[#8a7a6a]'}`}>{n}</span>
-            </button>
+            <div key={g.id} className="flex flex-wrap items-center gap-1.5">
+              <span className="w-full text-[12px] font-bold text-[#a08a76] px-0.5">{g.title}</span>
+              {chips.map(({ id, label, Icon, n }) => {
+                const on = active === id;
+                return (
+                  <button key={id} type="button" onClick={() => onFilter(on ? 'all' : id)} aria-pressed={on}
+                    className={`shrink-0 whitespace-nowrap h-9 px-3 min-[400px]:px-3.5 rounded-full text-[13px] font-bold cursor-pointer transition inline-flex items-center gap-1.5 ${
+                      on ? 'bg-[#7a2028]/[0.1] text-[#7a2028] ring-1 ring-[#7a2028]/30'
+                        : care ? 'bg-[#fff8e6] ring-1 ring-[#ecd9a8] text-[#5a4630] hover:ring-[#b07d12]/50'
+                          : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/30'}`}>
+                    <Icon className={`hidden min-[400px]:block w-3.5 h-3.5 ${on ? '' : care ? 'text-[#b07d12]' : 'text-[#8a7a6a]'}`} />
+                    {label}
+                    <span className={`tabular-nums ${on ? 'text-[#7a2028]/70' : care ? 'text-[#b07d12]' : 'text-[#8a7a6a]'}`}>{n}</span>
+                  </button>
+                );
+              })}
+            </div>
           );
         })}
       </div>}
