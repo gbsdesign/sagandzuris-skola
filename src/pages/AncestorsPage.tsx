@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { SizePill } from '../components/views/ReadingTools';
+import { AutoScrollButton, SizePill } from '../components/views/ReadingTools';
 import { ChevronDown, ChevronLeft, ChevronRight, ExternalLink, Music, Play, Search, X } from 'lucide-react';
 import { ANCESTORS, type Ancestor, type BioBlock } from '../data/ancestorsBios';
 import { useOpenRequest } from '../utils/searchOpen';
@@ -330,6 +330,7 @@ const BioReader: React.FC<{ id: number; onNavigate: (id: number) => void; onClos
   const scroller = useRef<HTMLDivElement>(null);
   // the bar names the person only once the big name has scrolled under it
   const nameRef = useRef<HTMLHeadingElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
   const nameAway = useScrolledAway(nameRef, scroller, id, 60);
 
   const index = ANCESTORS.findIndex((a) => a.id === id);
@@ -429,6 +430,7 @@ const BioReader: React.FC<{ id: number; onNavigate: (id: number) => void; onClos
           >
             {a.name}
           </p>
+          {blocks && <AutoScrollButton source={() => textRef.current} scroller={() => scroller.current} zoom={font / 100} />}
           <SizePill onStep={changeFont} atMin={font === FONT_STEPS[0]} atMax={font === FONT_STEPS[FONT_STEPS.length - 1]} />
         </div>
       </div>
@@ -467,7 +469,7 @@ const BioReader: React.FC<{ id: number; onNavigate: (id: number) => void; onClos
           </nav>
         )}
 
-        <div className="mt-8 font-serif-ge text-[#2a2017] leading-[1.85]" style={{ fontSize: `${(17 * font) / 100}px` }}>
+        <div ref={textRef} className="mt-8 font-serif-ge text-[#2a2017] leading-[1.85]" style={{ fontSize: `${(17 * font) / 100}px` }}>
           {blocks ? (
             <BioBody blocks={blocks} />
           ) : (

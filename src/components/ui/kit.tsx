@@ -112,7 +112,7 @@ export const PageBar: React.FC<{ title: React.ReactNode; subtitle?: React.ReactN
           aria-label="უკან"
           title="უკან"
           className={cx(
-            'fixed z-40 left-[calc(env(safe-area-inset-left,0px)+16px)] bottom-[calc(env(safe-area-inset-bottom,0px)+18px)] lg:bottom-auto lg:top-4 lg:left-[max(12px,calc(50%-560px))] w-12 h-12 lg:w-10 lg:h-10 rounded-full grid place-items-center bg-[#fffdf8]/90 backdrop-blur-md ring-1 ring-[#e8dcc8] shadow-[0_10px_26px_-12px_rgba(74,52,38,0.55)] text-[#7a2028] hover:bg-white hover:ring-[#7a2028]/30 cursor-pointer transition-[opacity,transform,background-color] duration-300 ease-out active:scale-95',
+            'sg-float-back fixed z-40 left-[calc(env(safe-area-inset-left,0px)+16px)] bottom-[calc(env(safe-area-inset-bottom,0px)+18px)] lg:bottom-auto lg:top-4 lg:left-[max(12px,calc(50%-560px))] w-12 h-12 lg:w-10 lg:h-10 rounded-full grid place-items-center bg-[#fffdf8]/90 backdrop-blur-md ring-1 ring-[#e8dcc8] shadow-[0_10px_26px_-12px_rgba(74,52,38,0.55)] text-[#7a2028] hover:bg-white hover:ring-[#7a2028]/30 cursor-pointer transition-[opacity,transform,background-color] duration-300 ease-out active:scale-95',
             phoneShow ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none',
             away ? 'lg:opacity-100 lg:translate-y-0 lg:pointer-events-auto' : 'lg:opacity-0 lg:-translate-y-3 lg:pointer-events-none'
           )}

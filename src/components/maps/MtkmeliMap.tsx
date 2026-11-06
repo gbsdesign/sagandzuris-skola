@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { ChevronDown, BookOpen, ExternalLink, Feather, ScrollText, BookText } from 'lucide-react';
 import { FOLK_REGIONS, FolkRegion } from '../../data/songsData';
 import { MtkmeliAuthor, LiteraryWork, WorkKind, authorsInRegion } from '../../data/mtkmeliData';
 import { RegionPuzzleMap, RegionLocator } from './RegionPuzzleMap';
 import { AddToListButton } from '../ui/AddToListButton';
 import { triggerHaptic } from '../../utils/haptics';
+import { AutoScrollButton } from '../views/ReadingTools';
 import { useNavigation } from '../../context';
 import { askSignIn } from '../access/SignInPrompt';
 import { useAccess } from '../../hooks/useAccess';
@@ -189,9 +190,13 @@ const useWorkText = (work: LiteraryWork, open: boolean) => {
   return { text, failed };
 };
 
+const LINK_BTN =
+  'min-h-9 px-3 py-1.5 rounded-xl border border-[#e4d8c4] bg-white hover:bg-[#fcf1df] hover:border-[#efd6a6] text-xs font-bold text-[#4a3426] inline-flex items-center gap-1.5 transition-colors';
+
 const WorkItem: React.FC<WorkItemProps> = ({ work, isOpen, onToggleOpen, isSelected, onToggleSelect }) => {
 
   const { text, failed } = useWorkText(work, isOpen);
+  const textRef = useRef<HTMLParagraphElement>(null);
   return (
     <div className={`transition-colors ${isOpen ? 'bg-[#fffdf8]' : ''}`}>
       <div className="flex items-center gap-2 pr-2.5">
@@ -221,7 +226,7 @@ const WorkItem: React.FC<WorkItemProps> = ({ work, isOpen, onToggleOpen, isSelec
           {work.note && <p className="text-[11.5px] font-semibold text-[#8c7c6b]">{work.note}</p>}
           {work.hasText ? (
             text !== null ? (
-              <p className="font-serif text-[15px] sm:text-base text-[#2a2017] whitespace-pre-line leading-relaxed">{text}</p>
+              <p ref={textRef} className="font-serif text-[15px] sm:text-base text-[#2a2017] whitespace-pre-line leading-relaxed">{text}</p>
             ) : failed ? (
               <p className="text-sm text-[#8c7c6b]">ტექსტი ვერ ჩაიტვირთა — შეამოწმე ინტერნეტი.</p>
             ) : (
@@ -230,15 +235,20 @@ const WorkItem: React.FC<WorkItemProps> = ({ work, isOpen, onToggleOpen, isSelec
           ) : (
             <p className="text-sm text-[#574739] leading-relaxed">{work.description}</p>
           )}
-          <a
-            href={work.link.url}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="min-h-9 px-3 py-1.5 rounded-xl border border-[#e4d8c4] bg-white hover:bg-[#fcf1df] hover:border-[#efd6a6] text-xs font-bold text-[#4a3426] inline-flex items-center gap-1.5 transition-colors"
-          >
-            <ExternalLink className="w-4 h-4 text-[#b4620e]" />
-            {work.link.label}
-          </a>
+          <div className="flex flex-wrap gap-2">
+            {/* a long poem reads itself: the page moves up, or the whole screen as a prompter */}
+            {text && (
+              <AutoScrollButton
+                source={() => textRef.current}
+                label="ავტომატური კითხვა"
+                className={`${LINK_BTN} cursor-pointer`}
+              />
+            )}
+            <a href={work.link.url} target="_blank" rel="noopener noreferrer" className={LINK_BTN}>
+              <ExternalLink className="w-4 h-4 text-[#b4620e]" />
+              {work.link.label}
+            </a>
+          </div>
         </div>
       )}
     </div>

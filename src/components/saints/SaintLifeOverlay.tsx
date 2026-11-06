@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BookOpen, ChevronRight, Loader2, RotateCw } from 'lucide-react';
 import { BackBtn } from '../ui/kit';
-import { SizePill } from '../views/ReadingTools';
+import { AutoScrollButton, SizePill } from '../views/ReadingTools';
 
 import { triggerHaptic } from '../../utils/haptics';
 import { GrapeBunch } from '../home/PlateOrnaments';
@@ -67,7 +67,7 @@ const Icon: React.FC<{ block: Extract<LifeBlock, { img: string }>; lead?: boolea
   );
 };
 
-const Body: React.FC<{ life: Life; size: number }> = ({ life, size }) => {
+const Body: React.FC<{ life: Life; size: number; textRef?: (el: HTMLDivElement | null) => void }> = ({ life, size, textRef }) => {
   const firstText = life.b.findIndex(b => 'r' in b && !b.a);
   // icons that open the life one after another stand in one row (smaller) instead of a tall stack
   const firstImg = life.b.findIndex(b => 'img' in b);
@@ -75,7 +75,7 @@ const Body: React.FC<{ life: Life; size: number }> = ({ life, size }) => {
   while (firstImg >= 0 && firstImg < 3 && lastLead + 1 < life.b.length && 'img' in life.b[lastLead + 1]) lastLead++;
   const row = firstImg >= 0 && firstImg < 3 && lastLead > firstImg;
   return (
-    <div className="font-serif-ge text-[16.5px] sm:text-[17.5px] leading-[1.85] text-[#2a2017] text-pretty" style={size === 100 ? undefined : { fontSize: `${(17 * size) / 100}px` }}>
+    <div ref={textRef} className="font-serif-ge text-[16.5px] sm:text-[17.5px] leading-[1.85] text-[#2a2017] text-pretty" style={size === 100 ? undefined : { fontSize: `${(17 * size) / 100}px` }}>
       {life.b.map((b, i) => {
         if (row && i === firstImg) {
           return (
@@ -147,6 +147,7 @@ export const SaintLifeOverlay: React.FC = () => {
   const life = useLife(shown, attempt);
   const [titleGone, setTitleGone] = useState(false);
   const [size, setSize] = useState(100);
+  const [textEl, setTextEl] = useState<HTMLDivElement | null>(null);
   const stepSize = (dir: 1 | -1) => setSize(v => SIZE_STEPS[Math.min(SIZE_STEPS.length - 1, Math.max(0, SIZE_STEPS.indexOf(v) + dir))]);
   const titleRef = useRef<HTMLHeadingElement>(null);
 
@@ -263,6 +264,7 @@ export const SaintLifeOverlay: React.FC = () => {
           <p className={`flex-1 min-w-0 truncate font-serif-ge text-[15px] font-bold text-[#7a2028] transition-opacity duration-200 ${titleGone ? 'opacity-100' : 'opacity-0'}`}>
             {name}
           </p>
+          {life && <AutoScrollButton source={() => textEl} scroller={() => scrollRef.current} zoom={size / 100} />}
           <SizePill onStep={stepSize} atMin={size === SIZE_STEPS[0]} atMax={size === SIZE_STEPS[SIZE_STEPS.length - 1]} />
         </div>
       </div>
@@ -315,7 +317,7 @@ export const SaintLifeOverlay: React.FC = () => {
             </button>
           </div>
         )}
-        {life && <Body life={life} size={size} />}
+        {life && <Body life={life} size={size} textRef={setTextEl} />}
 
         {life && sameDay.length > 0 && (
           <section className="clear-both mt-12">

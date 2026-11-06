@@ -1,9 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronsDown, Minus, Pause, Play, Plus, X } from 'lucide-react';
+import { ChevronsDown, Maximize2, Minus, Pause, Play, Plus, X } from 'lucide-react';
+import { Prompter, blockAtReading, prompterCopy, showBlock } from './Prompter';
 
 // The tools over a prayer's text: ხუცური on the left; auto-scroll and the text's size on the right.
 // Nothing is remembered: every new visit starts in ordinary letters, standard size, standing still.
+// The auto-scroll (⏬) is every reading page's since 2026-11-06 (`AutoScrollButton`: prayers, saints' lives, ancestors,
+// the library's books, the liturgical books, poems, songs' words); its bar opens the full-screen prompter (Prompter.tsx).
 
 const ROUND =
   'w-9 h-9 shrink-0 rounded-full flex items-center justify-center font-bold leading-none text-[#7a2028] hover:bg-[#7a2028]/[0.07] cursor-pointer active:scale-90 transition disabled:opacity-35 disabled:cursor-default disabled:hover:bg-transparent disabled:active:scale-100';
@@ -30,50 +33,66 @@ export const ReadingToolbar: React.FC<{
   onSize: (size: number) => void;
   khutsuri: boolean;
   onKhutsuri: (on: boolean) => void;
-}> = ({ size, onSize, khutsuri, onKhutsuri }) => {
-  const [scroll, setScroll] = useState(false);
+  /** the text the auto-scroll reads (and the prompter shows) */
+  source?: HTMLElement | null;
+}> = ({ size, onSize, khutsuri, onKhutsuri, source }) => (
+  // sticky: the tools stay at hand all down a long text (the page bar is not sticky)
+  <div className="sticky top-[env(safe-area-inset-top,0px)] z-10 flex items-center justify-between gap-2 -mt-2 -mx-1.5 sm:-mx-3 mb-3 py-1.5 bg-white/90 backdrop-blur-md rounded-full">
+    <button
+      type="button"
+      aria-pressed={khutsuri}
+      onClick={() => onKhutsuri(!khutsuri)}
+      title="ძველი ქართული დამწერლობით"
+      className={`h-9 pl-2.5 pr-3 rounded-full ring-1 inline-flex items-center gap-1.5 text-[13px] font-bold cursor-pointer active:scale-95 transition ${
+        khutsuri ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]' : 'bg-[#fbf6ec] ring-[#e8dcc8] text-[#7a2028] hover:ring-[#7a2028]/40'
+      }`}
+    >
+      <span aria-hidden className="font-serif-ge text-[17px] leading-none">Ⴞ</span>
+      ხუცური
+    </button>
+    <div className="flex items-center gap-1.5">
+      <AutoScrollButton source={() => source ?? null} zoom={size / 100} />
+      <div role="group" aria-label="ასოების ზომა" className={`inline-flex items-center rounded-full ${PILL}`}>
+        <button type="button" aria-label="ასოების დაპატარავება" disabled={size <= 50} onClick={() => onSize(size - 10)} className={`${ROUND} text-[13px]`}>
+          A
+        </button>
+        {/* away from 100 %: the percent, a tap goes back */}
+        {size !== 100 && (
+          <button type="button" onClick={() => onSize(100)} title="ჩვეულებრივი ზომა" className="h-9 px-0.5 text-[12px] font-bold tabular-nums text-[#8a7a6a] hover:text-[#7a2028] cursor-pointer">
+            {size}%
+          </button>
+        )}
+        <button type="button" aria-label="ასოების გადიდება" disabled={size >= 200} onClick={() => onSize(size + 10)} className={`${ROUND} text-[19px]`}>
+          A
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+type Getter = () => HTMLElement | null;
+
+/** ⏬: the page moves up by itself (the bar at the bottom), and from the bar the full-screen prompter. `source` = the text
+ * read, `scroller` = the box that scrolls when it is not the window (a full-screen reader), `zoom` = the letters' size
+ * (1 = 100 %), `label` = a worded button in place of the round one. */
+export const AutoScrollButton: React.FC<{ source: Getter; scroller?: Getter; zoom?: number; label?: string; className?: string }> = ({
+  source, scroller, zoom = 1, label, className,
+}) => {
+  const [open, setOpen] = useState(false);
   return (
-    // sticky: the tools stay at hand all down a long text (the page bar is not sticky)
-    <div className="sticky top-[env(safe-area-inset-top,0px)] z-10 flex items-center justify-between gap-2 -mt-2 -mx-1.5 sm:-mx-3 mb-3 py-1.5 bg-white/90 backdrop-blur-md rounded-full">
+    <>
       <button
         type="button"
-        aria-pressed={khutsuri}
-        onClick={() => onKhutsuri(!khutsuri)}
-        title="ძველი ქართული დამწერლობით"
-        className={`h-9 pl-2.5 pr-3 rounded-full ring-1 inline-flex items-center gap-1.5 text-[13px] font-bold cursor-pointer active:scale-95 transition ${
-          khutsuri ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]' : 'bg-[#fbf6ec] ring-[#e8dcc8] text-[#7a2028] hover:ring-[#7a2028]/40'
-        }`}
+        onClick={() => setOpen(true)}
+        aria-label="ავტომატური გადახვევა"
+        title="ავტომატური გადახვევა"
+        className={label ? className : `${ROUND} ${PILL} ${className ?? ''}`}
       >
-        <span aria-hidden className="font-serif-ge text-[17px] leading-none">Ⴞ</span>
-        ხუცური
+        <ChevronsDown className={label ? 'w-4 h-4 text-[#b4620e]' : 'w-[18px] h-[18px]'} />
+        {label}
       </button>
-      <div className="flex items-center gap-1.5">
-        <button
-          type="button"
-          onClick={() => setScroll(true)}
-          aria-label="ავტომატური გადახვევა"
-          title="ავტომატური გადახვევა"
-          className={`${ROUND} ${PILL}`}
-        >
-          <ChevronsDown className="w-[18px] h-[18px]" />
-        </button>
-        <div role="group" aria-label="ასოების ზომა" className={`inline-flex items-center rounded-full ${PILL}`}>
-          <button type="button" aria-label="ასოების დაპატარავება" disabled={size <= 50} onClick={() => onSize(size - 10)} className={`${ROUND} text-[13px]`}>
-            A
-          </button>
-          {/* away from 100 %: the percent, a tap goes back */}
-          {size !== 100 && (
-            <button type="button" onClick={() => onSize(100)} title="ჩვეულებრივი ზომა" className="h-9 px-0.5 text-[12px] font-bold tabular-nums text-[#8a7a6a] hover:text-[#7a2028] cursor-pointer">
-              {size}%
-            </button>
-          )}
-          <button type="button" aria-label="ასოების გადიდება" disabled={size >= 200} onClick={() => onSize(size + 10)} className={`${ROUND} text-[19px]`}>
-            A
-          </button>
-        </div>
-      </div>
-      {scroll && <AutoScroll zoom={size / 100} onClose={() => setScroll(false)} />}
-    </div>
+      {open && <AutoScroll zoom={zoom} source={source} scroller={scroller} onClose={() => setOpen(false)} />}
+    </>
   );
 };
 
@@ -86,15 +105,38 @@ const SPEEDS: { label: string; px: number }[] = [
 const START_SPEED = SPEEDS.findIndex(s => s.label === '3');
 
 // The page moves up by itself; the bar stays at the bottom of the screen. A finger on the screen holds it, letting go
-// goes on; at the end it stops. The screen is kept awake meanwhile.
-const AutoScroll: React.FC<{ zoom: number; onClose: () => void }> = ({ zoom, onClose }) => {
+// goes on; it stops once the text's end is on screen. The screen is kept awake meanwhile. „სრულ ეკრანზე“ over the bar
+// opens the prompter where the page is being read; closing it brings the page to where the prompter stopped.
+const AutoScroll: React.FC<{ zoom: number; onClose: () => void; source: Getter; scroller?: Getter }> = ({ zoom, onClose, source, scroller }) => {
   const [running, setRunning] = useState(true);
   const [speed, setSpeed] = useState(START_SPEED);
+  const [full, setFull] = useState<{ html: string; start: number } | null>(null);
   const pxPerSecond = useRef(0);
   pxPerSecond.current = SPEEDS[speed].px * zoom;
+  const where = useRef({ source, scroller });
+  where.current = { source, scroller };
+
+  // the floating „უკან“ steps aside while the bar is here (index.css)
+  useEffect(() => {
+    document.documentElement.dataset.sgAutoscroll = '';
+    return () => { delete document.documentElement.dataset.sgAutoscroll; };
+  }, []);
 
   useEffect(() => {
-    if (!running) return;
+    if (!running || full) return;
+    const box = where.current.scroller?.() ?? null;
+    const top = () => (box ? box.scrollTop : window.scrollY);
+    const put = (y: number) => {
+      if (box) box.scrollTop = y;
+      else window.scrollTo({ top: y, behavior: 'instant' as ScrollBehavior });
+    };
+    const atEnd = () => {
+      const text = where.current.source();
+      const bottom = box ? box.getBoundingClientRect().bottom : window.innerHeight;
+      if (text && text.getBoundingClientRect().bottom <= bottom - 4) return true; // the text's last line is in view
+      return box ? box.scrollTop + box.clientHeight >= box.scrollHeight - 2 : window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2;
+    };
+
     let held = false;
     const hold = () => { held = true; };
     const letGo = () => { held = false; };
@@ -104,16 +146,16 @@ const AutoScroll: React.FC<{ zoom: number; onClose: () => void }> = ({ zoom, onC
 
     let last = performance.now();
     // its own position, in fractions of a pixel, so the slowest speeds glide instead of jumping now and then
-    let pos = window.scrollY;
+    let pos = top();
     let frame = 0;
     const step = (now: number) => {
       const dt = Math.min(100, now - last);
       last = now;
-      if (held || Math.abs(window.scrollY - pos) > 2) pos = window.scrollY; // moved by hand: go on from there
+      if (held || Math.abs(top() - pos) > 2) pos = top(); // moved by hand: go on from there
       if (!held) {
         pos += (pxPerSecond.current * dt) / 1000;
-        window.scrollTo({ top: pos, behavior: 'instant' as ScrollBehavior });
-        if (window.innerHeight + window.scrollY >= document.documentElement.scrollHeight - 2) {
+        put(pos);
+        if (atEnd()) {
           setRunning(false);
           return;
         }
@@ -140,13 +182,37 @@ const AutoScroll: React.FC<{ zoom: number; onClose: () => void }> = ({ zoom, onC
       document.removeEventListener('visibilitychange', awake);
       lock?.release().catch(() => {});
     };
-  }, [running]);
+  }, [running, full]);
+
+  const openFull = () => {
+    const text = source();
+    if (!text) return;
+    setFull({ html: prompterCopy(text), start: blockAtReading(text, scroller?.() ?? null) });
+  };
+  const closeFull = (block: number) => {
+    setFull(null);
+    setRunning(false);
+    const text = source();
+    if (text) requestAnimationFrame(() => showBlock(text, scroller?.() ?? null, block));
+  };
+
+  if (full) {
+    return <Prompter html={full.html} start={full.start} speeds={SPEEDS} speed={speed} onSpeed={setSpeed} onClose={closeFull} />;
+  }
 
   return createPortal(
     <div
-      className="fixed inset-x-0 bottom-0 z-40 flex justify-center px-4 pointer-events-none"
+      className="fixed inset-x-0 bottom-0 z-[90] flex flex-col items-center gap-2 px-4 pointer-events-none"
       style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 14px)' }}
     >
+      <button
+        type="button"
+        onClick={openFull}
+        className="pointer-events-auto h-9 pl-3 pr-3.5 rounded-full bg-white/95 backdrop-blur ring-1 ring-[#e8dcc8] shadow-[0_8px_22px_-12px_rgba(42,32,23,0.5)] inline-flex items-center gap-1.5 text-[13px] font-bold text-[#7a2028] hover:ring-[#7a2028]/40 cursor-pointer active:scale-95 transition animate-in fade-in slide-in-from-bottom-2 duration-200"
+      >
+        <Maximize2 className="w-4 h-4" />
+        სრულ ეკრანზე
+      </button>
       <div className="pointer-events-auto flex items-center gap-1 p-1.5 rounded-full bg-white/95 backdrop-blur ring-1 ring-[#e8dcc8] shadow-[0_12px_32px_-12px_rgba(42,32,23,0.5)] animate-in fade-in slide-in-from-bottom-2 duration-200">
         <button
           type="button"
