@@ -1,32 +1,55 @@
 import React from 'react';
-import { ExternalLink, FileCheck2, Globe, Heart, Landmark } from 'lucide-react';
+import { Check, ExternalLink, FileCheck2, Globe, Heart, Landmark } from 'lucide-react';
 import { DOCUMENTS, REASONS } from '../../data/abituriProgram';
-import { CARD, Pill, SectionHead } from './shared';
+import type { AbituriProgressApi } from '../../hooks/useAbituriProgress';
+import { triggerHaptic } from '../../utils/haptics';
+import { CARD, Pill, SectionHead, useFocus, type Focus } from './shared';
 
-// Admission: the documents for the university's own exams, the national exams, and why to study there
+// Admission: the documents for the university's own exams (a checklist since 2026-11-06 — a tick a document ready,
+// counted in „ჩემი მომზადება“), the national exams, and why to study there
 
-export const AdmissionTab: React.FC = () => (
+export const AdmissionTab: React.FC<{ api: AbituriProgressApi; focus?: Focus }> = ({ api, focus }) => {
+  const ready = api.progress.docs;
+  useFocus(focus);
+  return (
   <div className="space-y-7">
     <section>
       <SectionHead title="რეგისტრაცია გამოცდებზე" sub="ორი რეგისტრაცია — შიდა და ეროვნული" />
       <div className="grid gap-3">
-        <div className={`${CARD} p-3.5 sm:p-4`}>
+        <div id="docs" className={`${CARD} p-3.5 sm:p-4 scroll-mt-24`}>
           <div className="flex items-start gap-3">
             <span className="shrink-0 grid place-items-center w-10 h-10 rounded-full bg-[#7a2028]/[0.08] text-[#7a2028]">
               <FileCheck2 className="w-5 h-5" />
             </span>
             <div className="min-w-0">
               <h3 className="font-serif-ge text-[16px] font-bold leading-snug text-[#2a2017]">შიდა გამოცდები</h3>
-              <p className="mt-0.5 text-[13px] font-semibold text-[#8a7a6a]">უნივერსიტეტში წარსადგენი საბუთები:</p>
+              <p className="mt-0.5 text-[13px] font-semibold text-[#8a7a6a]">
+                უნივერსიტეტში წარსადგენი საბუთები — მონიშნე, რაც მზადაა
+                {ready.length > 0 && <span className="text-[#2f6b43]"> · {ready.length} / {DOCUMENTS.length}</span>}
+              </p>
             </div>
           </div>
-          <ol className="mt-3 space-y-2">
-            {DOCUMENTS.map((d, i) => (
-              <li key={d} className="flex gap-3 text-[14px] leading-snug text-[#2a2017]">
-                <span className="shrink-0 grid place-items-center w-6 h-6 rounded-full bg-[#f3ead9] text-[12px] font-black tabular-nums text-[#8a6a40]">{i + 1}</span>
-                <span className="pt-0.5">{d}</span>
-              </li>
-            ))}
+          <ol className="mt-2 -mx-1">
+            {DOCUMENTS.map((d, i) => {
+              const on = ready.includes(i);
+              return (
+                <li key={d}>
+                  <button
+                    type="button"
+                    onClick={() => { triggerHaptic(10); api.toggleDoc(i); }}
+                    aria-pressed={on}
+                    className="w-full flex items-center gap-3 min-h-12 px-2 py-1.5 rounded-xl text-left cursor-pointer hover:bg-[#fbf6ec]"
+                  >
+                    <span className={`shrink-0 grid place-items-center w-7 h-7 rounded-full text-[12px] font-black tabular-nums transition-colors ${
+                      on ? 'bg-[#2f6b43] text-white' : 'bg-[#f3ead9] text-[#8a6a40]'
+                    }`}>
+                      {on ? <Check className="w-4 h-4" /> : i + 1}
+                    </span>
+                    <span className={`flex-1 text-[14px] leading-snug ${on ? 'text-[#8a7a6a]' : 'text-[#2a2017]'}`}>{d}</span>
+                  </button>
+                </li>
+              );
+            })}
           </ol>
         </div>
 
@@ -77,4 +100,5 @@ export const AdmissionTab: React.FC = () => (
       </a>
     </figure>
   </div>
-);
+  );
+};

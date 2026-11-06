@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ChevronDown, CirclePlay, ExternalLink, Headphones, History, Music, X } from 'lucide-react';
+import { Check, ChevronDown, CirclePlay, ExternalLink, Headphones, History, Music, X } from 'lucide-react';
+import { Tabs } from '../../components/ui/kit';
 import { ChantPlayer } from '../../components/ChantPlayer';
 import { askSignIn } from '../../components/access/SignInPrompt';
 import { useNotes } from '../../context/NotesContext';
@@ -8,31 +9,34 @@ import {
   BOYS_SONGS, BOYS_SONGS_2025, CHANTS, GIRLS_SONGS, UNIVERSITY_PAGE, type ProgramItem,
 } from '../../data/abituriProgram';
 import { songVid } from '../../data/songBookChants';
-import { CARD, Pill, SectionHead, hasVoices, takeMedia, useCanListen } from './shared';
+import type { AbituriProgressApi, AbituriWho } from '../../hooks/useAbituriProgress';
+import { CARD, Pill, SectionHead, hasVoices, takeMedia, useCanListen, useFocus, type Focus } from './shared';
 import { RoundOnePractice } from './RoundOnePractice';
+import { WhoPicker } from './MyPrep';
 
-// I exam — chant and song: the three 2026 lists, each piece with its recordings (voice by voice), notes and links
+// I exam — chant and song. Two lists since 2026-11-06 (the user: „ღილაკები დამღლელი“): the chants and *my* songs
+// (boys or girls, asked once — `progress.who`; the other list folds under mine). A piece has one main button
+// „მოსმენა“, the rest (notes, links) in a quiet second row, and a round ✓ „ვიცი“ that counts in „ჩემი მომზადება“.
 
-const LISTS = [
-  { id: 'chant', label: 'გალობა', items: CHANTS, title: 'წირვის სადა კილოს საგალობლები', sub: 'I და III ტომი · ბიჭები და გოგონები' },
-  { id: 'boys', label: 'ბიჭები - სიმღერა', items: BOYS_SONGS, title: 'ქართული ხალხური სიმღერა', sub: 'ვაჟების პროგრამა · 2026' },
-  { id: 'girls', label: 'გოგონები - სიმღერა', items: GIRLS_SONGS, title: 'ქართული ხალხური სიმღერა', sub: 'გოგონების პროგრამა · 2026' },
-] as const;
-type ListId = typeof LISTS[number]['id'];
+const SONGS: Record<AbituriWho, { items: ProgramItem[]; sub: string; other: string }> = {
+  boys: { items: BOYS_SONGS, sub: 'ვაჟების პროგრამა · 2026', other: 'გოგონების' },
+  girls: { items: GIRLS_SONGS, sub: 'გოგონების პროგრამა · 2026', other: 'ვაჟების' },
+};
+const OTHER: Record<AbituriWho, AbituriWho> = { boys: 'girls', girls: 'boys' };
+type ListId = 'chant' | 'song';
 
 const LIST_KEY = 'abituriList';
 
-export const ProgramTab: React.FC = () => {
+export const ProgramTab: React.FC<{ api: AbituriProgressApi; focus?: Focus }> = ({ api, focus }) => {
+  const { progress, togglePiece, setWho } = api;
+  const who = progress.who;
   const [listId, setListId] = useState<ListId>(() => {
-    try {
-      const saved = localStorage.getItem(LIST_KEY);
-      return (LISTS.some(l => l.id === saved) ? saved : 'chant') as ListId;
-    } catch { return 'chant'; }
+    try { return localStorage.getItem(LIST_KEY) === 'song' ? 'song' : 'chant'; } catch { return 'chant'; }
   });
   // one player open at a time
   const [open, setOpen] = useState<string | null>(null);
   const [showOld, setShowOld] = useState(false);
-  const list = LISTS.find(l => l.id === listId)!;
+  const [showOther, setShowOther] = useState(false);
 
   const pick = (id: ListId) => {
     triggerHaptic(10);
@@ -41,76 +45,127 @@ export const ProgramTab: React.FC = () => {
     try { localStorage.setItem(LIST_KEY, id); } catch { /* ignore */ }
   };
 
+  // a tap on the top card: open the right list (and the other list's fold) before scrolling
+  useFocus(focus, id => {
+    if (!id.startsWith('piece-')) return;
+    const list = id.slice('piece-'.length).split(':')[0];
+    if (list === 'chant') setListId('chant');
+    else { setListId('song'); if (who && list !== who) setShowOther(true); }
+  });
+
+  const known = (key: string) => progress.pieces.includes(key);
+  const card = (list: string, item: ProgramItem, i: number, n?: number) => {
+    const key = `${list}:${item.title}`;
+    return (
+      <ProgramCard
+        key={key}
+        n={n}
+        item={item}
+        id={n ? `piece-${key}` : undefined}
+        known={n ? known(key) : undefined}
+        onKnown={n ? () => { triggerHaptic(12); togglePiece(key); } : undefined}
+        active={activeOf(open, `${list}-${i}`)}
+        onActive={w => setOpen(w ? `${list}-${i}|${w}` : null)}
+      />
+    );
+  };
+  const knownOf = (list: string, items: ProgramItem[]) => items.filter(it => known(`${list}:${it.title}`)).length;
+  const mine = who ? SONGS[who] : null;
+  const other = who ? OTHER[who] : null;
+
   return (
     <div>
-      <div role="tablist" aria-label="პროგრამა" className="grid grid-cols-3 gap-1 sm:w-fit sm:mx-auto mb-5 rounded-[20px] sm:rounded-full bg-white/80 ring-1 ring-[#e8dcc8] p-1">
-        {LISTS.map(l => (
-          <button
-            key={l.id}
-            type="button"
-            role="tab"
-            aria-selected={listId === l.id}
-            onClick={() => pick(l.id)}
-            className={`inline-flex items-center justify-center gap-1.5 min-h-12 sm:min-h-10 px-2 sm:px-5 rounded-2xl sm:rounded-full text-[14px] leading-tight text-center font-bold transition-all cursor-pointer select-none active:scale-[0.97] ${
-              listId === l.id
-                ? 'bg-[#2a2017] text-[#fbf6ec] shadow-[0_6px_14px_-8px_rgba(42,32,23,0.7)]'
-                : 'text-[#4a3426] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.04]'
-            }`}
-          >
-            {/* "ბიჭები - სიმღერა": on a phone the two words stand on two lines, never broken elsewhere */}
-            <span className="flex flex-wrap justify-center gap-x-1">
-              {l.label.split(' - ').map((w, k, all) => (
-                <span key={w} className="whitespace-nowrap">{w}{k < all.length - 1 ? ' -' : ''}</span>
-              ))}
-            </span>
-            <span className={`max-sm:hidden text-[11px] font-black tabular-nums rounded-full px-1.5 py-0.5 ${listId === l.id ? 'bg-white/15' : 'bg-[#f3ead9] text-[#8a7a6a]'}`}>{l.items.length}</span>
-          </button>
-        ))}
+      <div className="mb-5">
+        <Tabs
+          cols={2}
+          value={listId}
+          onChange={pick}
+          items={[
+            { id: 'chant', label: 'გალობა', count: CHANTS.length },
+            { id: 'song', label: 'სიმღერა', count: mine?.items.length },
+          ]}
+        />
       </div>
 
-      <SectionHead
-        title={list.title}
-        sub={list.sub}
-        extra={<Pill href={UNIVERSITY_PAGE} icon={<ExternalLink className="w-4 h-4" />}>პროგრამა</Pill>}
-      />
+      {listId === 'chant' ? (
+        <>
+          <SectionHead
+            title="წირვის სადა კილოს საგალობლები"
+            sub={`I და III ტომი · ვიცი ${knownOf('chant', CHANTS)} / ${CHANTS.length}`}
+            extra={<Pill href={UNIVERSITY_PAGE} icon={<ExternalLink className="w-4 h-4" />}>პროგრამა</Pill>}
+          />
+          <ol className="space-y-3">{CHANTS.map((item, i) => card('chant', item, i, i + 1))}</ol>
+        </>
+      ) : !who || !mine || !other ? (
+        <WhoPicker onPick={setWho} />
+      ) : (
+        <>
+          <SectionHead
+            title="ქართული ხალხური სიმღერა"
+            sub={`${mine.sub} · ვიცი ${knownOf(who, mine.items)} / ${mine.items.length}`}
+            extra={<Pill href={UNIVERSITY_PAGE} icon={<ExternalLink className="w-4 h-4" />}>პროგრამა</Pill>}
+          />
+          <ol className="space-y-3">{mine.items.map((item, i) => card(who, item, i, i + 1))}</ol>
 
-      <ol className="space-y-3">
-        {list.items.map((item, i) => {
-          const key = `${listId}-${i}`;
-          return <ProgramCard key={key} n={i + 1} item={item} active={activeOf(open, key)} onActive={w => setOpen(w ? `${key}|${w}` : null)} />;
-        })}
-      </ol>
+          {/* the other list, folded: to look at, or to make it mine */}
+          <section className="mt-6">
+            <Fold
+              open={showOther}
+              onToggle={() => setShowOther(v => !v)}
+              title={`${mine.other} პროგრამა`}
+              sub="სხვა სია — თუ შეცდომით აირჩიე, აქვე შეცვლი"
+            />
+            {showOther && (
+              <>
+                <button
+                  type="button"
+                  onClick={() => { triggerHaptic(10); setWho(other); setShowOther(false); }}
+                  className="mt-3 inline-flex items-center gap-1.5 min-h-10 px-4 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[13px] font-bold text-[#4a3426] hover:text-[#7a2028] cursor-pointer"
+                >
+                  <Check className="w-4 h-4" /> ეს არის ჩემი სია
+                </button>
+                <ol className="mt-3 space-y-3">{SONGS[other].items.map((item, i) => card(other, item, i))}</ol>
+              </>
+            )}
+          </section>
 
-      {listId === 'boys' && (
-        <section className="mt-6">
-          <button
-            type="button"
-            onClick={() => { triggerHaptic(10); setShowOld(v => !v); }}
-            aria-expanded={showOld}
-            className="w-full flex items-center gap-3 min-h-12 px-4 rounded-2xl bg-[#f6efe2] ring-1 ring-[#e8dcc8] text-left cursor-pointer hover:ring-[#7a2028]/25 transition-all"
-          >
-            <History className="w-5 h-5 shrink-0 text-[#8a7a6a]" />
-            <span className="flex-1 min-w-0">
-              <span className="block text-[14px] font-bold text-[#4a3426]">2025 წლის პროგრამიდან</span>
-              <span className="block text-xs font-semibold text-[#8a7a6a]">2026-ში შეიცვალა — ჩანაწერები და ნოტები აქ რჩება</span>
-            </span>
-            <ChevronDown className={`w-5 h-5 shrink-0 text-[#8a7a6a] transition-transform ${showOld ? 'rotate-180' : ''}`} />
-          </button>
-          {showOld && (
-            <ol className="mt-3 space-y-3">
-              {BOYS_SONGS_2025.map((item, i) => {
-                const key = `old-${i}`;
-                return <ProgramCard key={key} item={item} active={activeOf(open, key)} onActive={w => setOpen(w ? `${key}|${w}` : null)} />;
-              })}
-            </ol>
+          {who === 'boys' && (
+            <section className="mt-6">
+              <Fold open={showOld} onToggle={() => setShowOld(v => !v)} title="2025 წლის პროგრამიდან" sub="2026-ში შეიცვალა — ჩანაწერები და ნოტები აქ რჩება" />
+              {showOld && <ol className="mt-3 space-y-3">{BOYS_SONGS_2025.map((item, i) => card('old', item, i))}</ol>}
+            </section>
           )}
-        </section>
+        </>
       )}
 
       {/* practice for the first round, after the program itself */}
       <RoundOnePractice />
     </div>
   );
+};
+
+const Fold: React.FC<{ open: boolean; onToggle: () => void; title: string; sub: string }> = ({ open, onToggle, title, sub }) => (
+  <button
+    type="button"
+    onClick={() => { triggerHaptic(10); onToggle(); }}
+    aria-expanded={open}
+    className="w-full flex items-center gap-3 min-h-12 px-4 rounded-2xl bg-[#f6efe2] ring-1 ring-[#e8dcc8] text-left cursor-pointer hover:ring-[#7a2028]/25 transition-all"
+  >
+    <History className="w-5 h-5 shrink-0 text-[#8a7a6a]" />
+    <span className="flex-1 min-w-0">
+      <span className="block text-[14px] font-bold text-[#4a3426]">{title}</span>
+      <span className="block text-xs font-semibold text-[#8a7a6a]">{sub}</span>
+    </span>
+    <ChevronDown className={`w-5 h-5 shrink-0 text-[#8a7a6a] transition-transform ${open ? 'rotate-180' : ''}`} />
+  </button>
+);
+
+// a quiet second-row button: no ring, no fill — the card's one main button stays the loud one
+const Quiet: React.FC<{ icon: React.ReactNode; children: React.ReactNode; href?: string; onClick?: () => void }> = ({ icon, children, href, onClick }) => {
+  const cls = 'inline-flex items-center gap-1.5 min-h-10 px-2.5 rounded-full text-[13px] font-bold text-[#6b5c4d] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.05] cursor-pointer select-none';
+  return href
+    ? <a href={href} target="_blank" rel="noopener noreferrer" className={cls}>{icon}<span>{children}</span></a>
+    : <button type="button" onClick={onClick} className={cls}>{icon}<span>{children}</span></button>;
 };
 
 // what is open in a card: 'rec' (the recordings) or a link's url (its embedded player)
@@ -125,7 +180,9 @@ const embedOf = (url: string): { src: string; video?: boolean } | null => {
   return null;
 };
 
-const ProgramCard: React.FC<{ n?: number; item: ProgramItem; active: string | null; onActive: (what: string | null) => void }> = ({ n, item, active, onActive }) => {
+const ProgramCard: React.FC<{
+  n?: number; id?: string; item: ProgramItem; known?: boolean; onKnown?: () => void; active: string | null; onActive: (what: string | null) => void;
+}> = ({ n, id, item, known, onKnown, active, onActive }) => {
   const open = active === 'rec';
   const onToggle = () => onActive(open ? null : 'rec');
   const embedUrl = active && active !== 'rec' ? active : null;
@@ -145,15 +202,15 @@ const ProgramCard: React.FC<{ n?: number; item: ProgramItem; active: string | nu
   };
 
   return (
-    <li className={`${CARD} px-3.5 py-3.5 sm:px-4 ${active ? 'ring-[#7a2028]/25' : ''}`}>
+    <li id={id} className={`${CARD} px-3.5 py-3.5 sm:px-4 scroll-mt-24 ${active ? 'ring-[#7a2028]/25' : known ? 'ring-[#2f6b43]/25' : ''}`}>
       <div className="flex items-start gap-3">
         <span
           className={`shrink-0 grid place-items-center w-9 h-9 rounded-full font-serif-ge text-[15px] font-bold tabular-nums ${
-            n ? 'bg-[#7a2028]/[0.07] text-[#7a2028]' : 'bg-[#f3ead9] text-[#8a7a6a]'
+            known ? 'bg-[#2f6b43] text-white' : n ? 'bg-[#7a2028]/[0.07] text-[#7a2028]' : 'bg-[#f3ead9] text-[#8a7a6a]'
           }`}
           aria-hidden
         >
-          {n ?? '·'}
+          {known ? <Check className="w-5 h-5" /> : n ?? '·'}
         </span>
         <div className="flex-1 min-w-0 pt-0.5">
           <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
@@ -165,6 +222,19 @@ const ProgramCard: React.FC<{ n?: number; item: ProgramItem; active: string | nu
           <p className="mt-0.5 text-[13px] font-semibold text-[#8a7a6a] leading-snug">{item.sub}</p>
           {item.book && <p className="mt-0.5 text-[12px] font-semibold text-[#a08f7c] leading-snug">{item.book}</p>}
         </div>
+        {onKnown && (
+          <button
+            type="button"
+            onClick={onKnown}
+            aria-pressed={known}
+            title={known ? 'ვიცი — მოხსნა' : 'ვიცი'}
+            className={`shrink-0 inline-flex items-center gap-1 min-h-9 px-3 rounded-full text-[12.5px] font-bold cursor-pointer transition-colors ${
+              known ? 'bg-[#2f6b43] text-white' : 'bg-[#edf6ef] text-[#24563a] ring-1 ring-[#7fb893] hover:bg-[#e2f0e5]'
+            }`}
+          >
+            <Check className="w-4 h-4" /> {known ? 'ვიცი' : 'ვიცი?'}
+          </button>
+        )}
       </div>
 
       <div className="mt-3 flex flex-wrap gap-2 sm:pl-12">
@@ -174,9 +244,9 @@ const ProgramCard: React.FC<{ n?: number; item: ProgramItem; active: string | nu
           </Pill>
         )}
         {notesVid && (
-          <Pill icon={<Music className="w-4 h-4" />} onClick={() => { triggerHaptic(10); openNotes(notesVid, 'list'); }}>
+          <Quiet icon={<Music className="w-4 h-4" />} onClick={() => { triggerHaptic(10); openNotes(notesVid, 'list'); }}>
             ნოტები
-          </Pill>
+          </Quiet>
         )}
         {item.links?.map(l => (embedOf(l.url) ? (
           <Pill
@@ -192,7 +262,7 @@ const ProgramCard: React.FC<{ n?: number; item: ProgramItem; active: string | nu
             {embedUrl === l.url ? 'დახურვა' : l.label}
           </Pill>
         ) : (
-          <Pill key={l.url} href={l.url} icon={<ExternalLink className="w-4 h-4" />}>{l.label}</Pill>
+          <Quiet key={l.url} href={l.url} icon={<ExternalLink className="w-4 h-4" />}>{l.label}</Quiet>
         )))}
       </div>
 

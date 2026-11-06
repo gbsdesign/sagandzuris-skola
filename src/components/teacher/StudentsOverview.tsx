@@ -40,6 +40,8 @@ const summarize = (data: Record<string, any> | undefined) => {
 const abituriText = (a: any): string => {
   if (!a || typeof a !== 'object') return '';
   const parts: string[] = [];
+  const pieces = Array.isArray(a.pieces) ? a.pieces.length : 0;
+  if (pieces) parts.push(`${pieces} ნაწარმოები იცის`);
   const lessons = Array.isArray(a.lessons) ? a.lessons.length : 0;
   if (lessons) parts.push(`${lessons} გაკვეთილი გავლილი`);
   const last = Array.isArray(a.tests) ? a.tests[a.tests.length - 1] : null;

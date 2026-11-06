@@ -3,22 +3,23 @@ import { CirclePlay, Play, X } from 'lucide-react';
 import { COLLOQUIUM_CHANTS, COLLOQUIUM_SONGS, COLLOQUIUM_VIDEOS, type ColloquiumGroup, type ColloquiumItem } from '../../data/abituriProgram';
 import { askSignIn } from '../../components/access/SignInPrompt';
 import { triggerHaptic } from '../../utils/haptics';
-import { CARD, Pill, SectionHead, useCanListen } from './shared';
+import { CARD, Pill, SectionHead, useCanListen, useFocus, type Focus } from './shared';
 import { ColloquiumQuiz } from './ColloquiumQuiz';
 
 // III exam — the colloquium: excerpts are played, the student names them. Every item plays its own part of the
 // university's listening video right here (an embedded player opens under the row; one at a time).
 
-export const ColloquiumTab: React.FC = () => {
+export const ColloquiumTab: React.FC<{ focus?: Focus }> = ({ focus }) => {
   const [open, setOpen] = useState<string | null>(null);
   const canListen = useCanListen();
+  useFocus(focus);
   // the whole video on YouTube: like every recording, for members (a guest is asked to sign in)
   const allTogether = (id: string) => canListen
     ? <Pill href={watchUrl(id)} icon={<CirclePlay className="w-4 h-4" />}>ყველა ერთად</Pill>
     : <Pill onClick={() => askSignIn('ჩანაწერები')} icon={<CirclePlay className="w-4 h-4" />}>ყველა ერთად</Pill>;
   return (
     <div className="space-y-7">
-      <ColloquiumQuiz />
+      <div id="quiz" className="scroll-mt-24"><ColloquiumQuiz /></div>
 
       <section>
         <SectionHead

@@ -411,9 +411,17 @@
   University of Chant admission — 2026 chant/boys/girls lists from galoba.edu.ge PDFs merged with the old site
   sites.google.com/view/asabituri (its Drive folders), colloquium, registration. Opened from the small label under
   „გალობა“ on the home vine. Tracks "e:<path>" play through the audio Worker's `/edu/` route.
-  Theory tab since 2026-11-05 one way through (the user: „სწავლა გაამარტივე … ეფექტური გახადე“): a card „მომზადება — 3
-  ნაბიჯი“ (lessons · practice · mock test, each with where I am and a jump to its section) + one „დაიწყე / გააგრძელე: <the next
-  lesson not done>“ button; the test's 7 tasks and the official samples fold under it; then ① lessons, ② practice, ③ mock test.
+  **Simplified 2026-11-06** (the user: „გაამარტივე … ღილაკები დამღლელი … რომ მიზანს არ მოწყდეს მოსწავლე“): on top one card
+  „ჩემი მომზადება“ (`abituri/MyPrep.tsx` over `utils/abituriPrep.ts` + test: a row an exam with its share and note, one big
+  „შემდეგი ნაბიჯი“ button = the first open step of the exam furthest behind; a tap opens that tab at the place — `Focus` /
+  `useFocus` in `abituri/shared.tsx`, element ids `piece-<list>:<title>`, `lesson-<id>`, `trainer`, `mock`, `quiz`, `docs`). The
+  progress record (`students.abituri`, device for guests) grew: `pieces` (the I exam's „ვიცი“ ✓ per piece, keys `chant:` /
+  `boys:` / `girls:` + title), `docs` (the registration's documents ticked) and `who` (boys / girls, asked once in the top card
+  or the song list). I exam = two lists „გალობა · სიმღერა“ (my song list; the other folds under it with „ეს არის ჩემი სია“,
+  the 2025 boys' list folds too); a card has one main „მოსმენა“ pill, notes/links as quiet text buttons (`Quiet`), the ✓ at
+  the right. Theory tab's top card = one progress line + „დაიწყე / გააგრძელე“ + the fold with the test's 7 tasks (the three-step
+  list went into the page's card); a lesson's bottom row = „გავიარე“, „შემდეგი“, a quiet „ივარჯიშე“ (no „დახურვა“). The
+  lessons load through `useLessons` in shared.tsx. The teacher's line in StudentsOverview counts the pieces known.
   Theory tab (2026-10-08): 11 lessons in `data/abituriLessons.ts` built on the university's own samples (theory test =
   7 tasks: modes, intervals, chords 5/3·6·6/4, transposition, grouping, letter names, rests; 3-voice dictation), solved
   inside. Notation by abcjs (lazy, `pages/abituri/Staff.tsx`), sound by `playLessonNotes` in `utils/chantSynth.ts`;
