@@ -232,12 +232,14 @@
   commemoration name lists (`utils/commemoration.ts`), prayer reminders via Web Push Worker
   `sagandzuri-reminders` (`worker/reminders/`; push works only on the deployed site).
   **⏬ on every reading page** (2026-11-06; `AutoScrollButton` in `views/ReadingTools.tsx`: prayers, saints' lives, ancestors,
-  the library's books, the liturgical books, poems, songs' words — `source` = the text, `scroller` = an overlay's own box): the
-  bar's „სრულ ეკრანზე“ opens „წამყვანის ეკრანი“ (`views/Prompter.tsx`, the user: „წამყვანებს წინ რომ ეკრანი აქვთ“; no mirror —
+  the library's books, the liturgical books, poems, songs' words — `source` = the text, `scroller` = an overlay's own box): a tap
+  on ⏬ drops a small menu at the button (the user's pick, 2026-11-06) — „აქ გადახვევა“ (the page's own bar) or „სრულ ეკრანზე“,
+  which opens „წამყვანის ეკრანი“ (`views/Prompter.tsx`, the user: „წამყვანებს წინ რომ ეკრანი აქვთ“; no mirror —
   declined): a copy of the text as on screen, big, a tap pauses, მუქი/ღია + size kept on the device (`sg-prompter-theme`/`-size`),
   the bar's speed = the same letters a second; it starts and gives the page back at the block read. It opens standing still: ▶
   counts 3-2-1 (after a pause it goes on at once). Three ways (`sg-prompter-mode`, the user asked for all three after hearing the
-  sideways crawl is harder on the eye): „ზემოთ“ (the text goes up), „გვერდზე“ (one line crawls left, a finger drags it — `Ticker`)
+  sideways crawl is harder on the eye; since 2026-11-06 the two last only for admins — others always get „ზემოთ“): „ზემოთ“ (the
+  text goes up), „გვერდზე“ (one line crawls left, a finger drags it — `Ticker`)
   and „სიტყვით“ (one word in one place, its key letter on a fixed spot — `Flash`), both in `views/PrompterFlow.tsx` over
   `wordsOf`; a switch keeps the place. „ზემოთ“'s reading line (band + ▸ ◂) shows only when turned on (▸–◂ button,
   `sg-prompter-guide`), and its arrows drag it up or down (`sg-prompter-line`, 22–70 %). Speeds 1…20 since 2026-11-06 (`SPEEDS`, the
@@ -245,7 +247,10 @@
   A psalter kanon (`ReadingToolbar psalter` = its number → `prompterCopy(…, true)` → `markPsalter`): no psalm headings, no verse
   numbers, „დიდებაი“ golden on its own line, each psalm's first block spaced; a line on top „კანონი N · პირველი დიდება · 18
   ფსალმუნი“ follows the reading in all three ways (the glory = the „დიდებაი“ marks passed, the psalm = the last h3's number;
-  the 151st = the h2 after the 150th).
+  the 151st = the h2 after the 150th). Next / previous kanon (or Bible chapter) from inside it: `ReadingToolbar neighbours`
+  (`PrayerPage`; the toolbar stays mounted while the next text loads) → the place card's ‹ › and, at the text's end, a big
+  „კანონი N+1 ›“ card; the host (`FullScreen` in ReadingTools) opens the page's neighbour, waits for its new text, copies it
+  again and the prompter counts 3-2-1 and goes on by itself (`autoStart`).
 - **საგანძურის გზა** (page `gz`) = „ჩემი დღე“ since 2026-10-28: the round buttons (`PathOrbs`; four since 2026-11-05 — the pearls
   game's fifth was removed), then the habits card. The
   „დღეს“ card on top (`PathToday`: next lesson, nearest assignment, reviews due) was taken off at the user's wish (2026-11-05) —
