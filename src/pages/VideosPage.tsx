@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Church, ExternalLink, Loader2, MapPin, Play, Search, Tv } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Church, Clapperboard, ExternalLink, ListVideo, Loader2, MapPin, Play, Search, Tv, Users, X } from 'lucide-react';
 import { useNavigation } from '../context';
 import { RegionLocator, RegionPuzzleMap } from '../components/maps/RegionPuzzleMap';
 import { Btn, FIELD, Sheet, Tabs } from '../components/ui/kit';
@@ -9,19 +9,26 @@ import {
   ABROAD, ETNOFORI_CHANNEL, ETNO_EXTRA, EtnoData, clock, dayText, embedOf, etnoRegion, etnoRegionName, loadEtnofori, thumbOf, watchOf,
 } from '../data/etnofori';
 import { MONASTERY_FILMS } from '../data/monasteryVideos';
+import { FilmGenre, FilmKind, GENRE_NAMES, GENRE_ORDER, KIND_NAMES, KINO, KinoItem } from '../data/georgianFilms';
+import { PAISI_PARTS } from '../data/paisiVideos';
 
-// „ვიდეოები“ (the vine's label), three tabs: „ეთნოფორი“'s songs on the map of Georgia (as on „მთქმელი“), TV reports on the
-// monasteries on the same map, and „ეთნოფორი“'s full episodes. The open list is `mapItem` — a region's id for the songs,
-// „m:<region>“ for the monasteries, „ep“ for the episodes —, an open film adds „/<YouTube id>“, so the bar's „უკან“ (and the
+// „ვიდეოები“ (the vine's label), five tabs: „ეთნოფორი“'s songs on the map of Georgia (as on „მთქმელი“), TV reports on the
+// monasteries on the same map, „ეთნოფორი“'s full episodes, Georgian films / plays / cartoons by genre, and the series on
+// St Paisios. The open list is `mapItem` — a region's id for the songs, „m:<region>“ for the monasteries, „ep“ for the
+// episodes, „k“ for the films, „p“ for St Paisios —, an open film adds „/<YouTube id>“, so the bar's „უკან“ (and the
 // phone's) first closes the film, then the region.
-type Tab = 'map' | 'mon' | 'ep';
+type Tab = 'map' | 'mon' | 'ep' | 'kino' | 'paisi';
 const TAB_KEY = 'sg-videos-tab';
+const TABS: Tab[] = ['map', 'mon', 'ep', 'kino', 'paisi'];
 const readTab = (): Tab => {
-  try { const t = sessionStorage.getItem(TAB_KEY); return t === 'ep' || t === 'mon' ? t : 'map'; } catch { return 'map'; }
+  try { const t = sessionStorage.getItem(TAB_KEY) as Tab; return TABS.includes(t) ? t : 'map'; } catch { return 'map'; }
 };
+/** a list's `mapItem` → its tab (a region's id is none of these) */
+const LIST_TAB: Record<string, Tab> = { ep: 'ep', k: 'kino', p: 'paisi' };
 
-/** one film of a list, as a row and in the player; `place` = its chip (a municipality, a monastery) */
-interface Film { id: string; title: string; sub: string; secs: number; place?: string }
+/** one film of a list, as a row and in the player; `place` = its chip (a municipality, a monastery); `meta` = a quiet line
+ *  under it (a film's genres), `tag` = a small mark („უფროსებისთვის“); `parts` = a film in parts, played from the window */
+interface Film { id: string; title: string; sub: string; secs: number; place?: string; meta?: string; tag?: string; parts?: { id: string; label: string }[] }
 
 const MON_EXTRA: FolkRegion[] = [ABROAD];
 
@@ -40,17 +47,24 @@ export const VideosPage: React.FC = () => {
   const item = mapItem ?? '';
   const mon = item.startsWith('m:');
   const [list, open] = (mon ? item.slice(2) : item).split('/');
-  const region = list && list !== 'ep' ? etnoRegion(list) : null;
+  const listTab = LIST_TAB[list] as Tab | undefined;
+  const region = list && !listTab ? etnoRegion(list) : null;
   // a film opens over the list without moving it (`stay`); ‹ › turn it in place (`replace`)
   const prefix = mon ? `m:${list}` : list;
   const play = (id: string) => { triggerHaptic(10); openMapItem(`${prefix}/${id}`, false, true); };
   const move = (id: string) => openMapItem(`${prefix}/${id}`, true, true);
+  // the films' and St Paisios' lists open from the tab itself, under „k“ / „p“
+  const playIn = (l: string) => (id: string) => { triggerHaptic(10); openMapItem(`${l}/${id}`, false, true); };
+  const moveIn = (l: string) => (id: string) => openMapItem(`${l}/${id}`, true, true);
 
   if (mon && region) {
     return <RegionFilms region={region} films={monasteryFilms(region.id)} kind="mon" open={open} onPlay={play} onMove={move} onClose={handleGoBack} />;
   }
 
-  if (!data) {
+  const shown: Tab = listTab ?? tab;
+  // „ეთნოფორი“'s lists wait for its file; the other tabs need nothing more
+  const waiting = !data && (shown === 'map' || shown === 'ep' || !!region);
+  if (waiting) {
     return (
       <div className="w-full py-24 flex flex-col items-center gap-3 text-[#8a7a6a]">
         {failed ? <p className="text-sm font-bold">ვიდეოები ვერ ჩაიტვირთა — შეამოწმე ინტერნეტი.</p> : <Loader2 className="w-7 h-7 animate-spin text-[#7a2028]" />}
@@ -58,25 +72,35 @@ export const VideosPage: React.FC = () => {
     );
   }
 
-  if (region) {
+  if (region && data) {
     return <RegionFilms region={region} films={songFilms(data, region.id)} kind="songs" open={open} onPlay={play} onMove={move} onClose={handleGoBack} />;
   }
 
-  const shown: Tab = list === 'ep' ? 'ep' : tab;
   return (
     <div className="w-full flex flex-col gap-4 animate-in fade-in duration-200">
       <Tabs<Tab>
-        cols={3}
+        cols={5}
         stack
         value={shown}
         onChange={t => { chooseTab(t); if (list) openMapItem('', true); }}
         items={[
-          { id: 'map', label: 'სიმღერები', Icon: MapPin, count: data.songs.length },
+          { id: 'map', label: 'სიმღერები', Icon: MapPin, count: data?.songs.length },
           { id: 'mon', label: 'მონასტრები', Icon: Church, count: MONASTERY_FILMS.length },
-          { id: 'ep', label: 'გადაცემები', Icon: Tv, count: data.episodes.length },
+          { id: 'ep', label: 'გადაცემები', Icon: Tv, count: data?.episodes.length },
+          { id: 'kino', label: 'ქართული ფილმები', Icon: Clapperboard, count: KINO.length },
+          { id: 'paisi', label: 'წმინდა პაისი', Icon: ListVideo, count: PAISI_COUNT },
         ]}
       />
-      {shown === 'mon' ? (
+      {shown === 'kino' ? (
+        <p className="px-1 text-[13.5px] leading-relaxed text-[#574739]">
+          <b className="text-[#2a2017]">ქართული ფილმები</b> — ქართული კინოს კლასიკა, სპექტაკლები და მულტფილმები.
+        </p>
+      ) : shown === 'paisi' ? (
+        <p className="px-1 text-[13.5px] leading-relaxed text-[#574739]">
+          <b className="text-[#2a2017]">წმინდა პაისი ათონელი</b> — სერიალი წმინდანის ცხოვრებაზე: „იმედის“ ორი სეზონი და „პაისი ათონელი“
+          ქართული გახმოვანებით.
+        </p>
+      ) : shown === 'mon' ? (
         <p className="px-1 text-[13.5px] leading-relaxed text-[#574739]">
           <b className="text-[#2a2017]">მონასტრები</b> — სატელევიზიო რეპორტაჟები საქართველოს მონასტრებზე: მათი ისტორია და იქ მცხოვრებთა ცხოვრება.
           იმედი, პირველი არხი, ერთსულოვნება და სხვა არხები.
@@ -89,13 +113,105 @@ export const VideosPage: React.FC = () => {
           </a>
         </p>
       )}
-      {shown === 'ep' ? (
-        <Episodes data={data} open={list === 'ep' ? open : undefined} onPlay={id => { triggerHaptic(10); openMapItem(`ep/${id}`, false, true); }} onMove={id => openMapItem(`ep/${id}`, true, true)} onClose={handleGoBack} />
+      {shown === 'kino' ? (
+        <Kino open={list === 'k' ? open : undefined} onPlay={playIn('k')} onMove={moveIn('k')} onClose={handleGoBack} />
+      ) : shown === 'paisi' ? (
+        <Paisi open={list === 'p' ? open : undefined} onPlay={playIn('p')} onMove={moveIn('p')} onClose={handleGoBack} />
+      ) : shown === 'ep' && data ? (
+        <Episodes data={data} open={list === 'ep' ? open : undefined} onPlay={playIn('ep')} onMove={moveIn('ep')} onClose={handleGoBack} />
       ) : shown === 'mon' ? (
         <RegionMap counts={MON_COUNTS} title="მონასტრები" extra={MON_EXTRA} onSelect={id => { triggerHaptic(10); openMapItem(`m:${id}`); }} />
-      ) : (
+      ) : data ? (
         <RegionMap counts={songCounts(data)} title="ეთნოფორი" extra={ETNO_EXTRA} onSelect={id => { triggerHaptic(10); openMapItem(id); }} />
-      )}
+      ) : null}
+    </div>
+  );
+};
+
+const PAISI_COUNT = PAISI_PARTS.reduce((n, p) => n + p.eps.length, 0);
+
+/** a film's row: the year and the note, its parts' count; its genres as a quiet line, the grown-ups' mark */
+const kinoFilm = (k: KinoItem): Film => {
+  const parts = k.parts?.length ?? 0;
+  const partsWord = parts ? `${parts} ${k.parts![0].label.includes('სერია') ? 'სერია' : 'ნაწილი'}` : '';
+  return {
+    id: k.id,
+    title: k.title,
+    sub: [k.year ? String(k.year) : '', k.note, partsWord].filter(Boolean).join(' · '),
+    secs: k.secs,
+    meta: k.genres.map(g => GENRE_NAMES[g]).join(' · '),
+    tag: k.adult ? 'უფროსებისთვის' : undefined,
+    parts: k.parts?.map(p => ({ id: p.id, label: p.label })),
+  };
+};
+const KINDS: FilmKind[] = ['film', 'theatre', 'cartoon'];
+
+/** Georgian films, plays and cartoons: their kind, a genre, „ბავშვებთან ერთად“ (no grown-ups' mark), a search line */
+const Kino: React.FC<{ open?: string; onPlay: (id: string) => void; onMove: (id: string) => void; onClose: () => void }> = ({ open, onPlay, onMove, onClose }) => {
+  const [kind, setKind] = useState<FilmKind | null>(null);
+  const [genre, setGenre] = useState<FilmGenre | null>(null);
+  const [family, setFamily] = useState(false);
+  const [q, setQ] = useState('');
+  const query = q.trim().toLowerCase();
+  const ofKind = useMemo(() => KINO.filter(k => (!kind || k.kind === kind) && (!family || !k.adult)), [kind, family]);
+  const genres = useMemo(() => GENRE_ORDER
+    .map(g => [g, ofKind.some(k => k.genres.includes(g))] as const)
+    .filter(([, any]) => any), [ofKind]);
+  // a genre the chosen kind has none of counts as „ყველა“
+  const g = genre && genres.some(([x]) => x === genre) ? genre : null;
+  const films = useMemo(() => ofKind
+    .filter(k => (!g || k.genres.includes(g)) && (!query || `${k.title} ${k.note}`.toLowerCase().includes(query)))
+    .map(kinoFilm), [ofKind, g, query]);
+  const kindCount = (x: FilmKind) => KINO.filter(k => k.kind === x && (!family || !k.adult)).length;
+
+  return (
+    <div className="w-full flex flex-col gap-3">
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="რა სახის">
+        <Chip on={!kind} onClick={() => setKind(null)} label="ყველა" n={KINO.filter(k => !family || !k.adult).length} />
+        {KINDS.map(x => <Chip key={x} on={kind === x} onClick={() => setKind(kind === x ? null : x)} label={KIND_NAMES[x]} n={kindCount(x)} />)}
+      </div>
+      {/* a genre is a toggle — none chosen = every genre; the chosen one shows ✕ */}
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="ჟანრები">
+        {genres.map(([x]) => <Chip key={x} on={g === x} soft x={g === x} onClick={() => setGenre(g === x ? null : x)} label={GENRE_NAMES[x]} />)}
+      </div>
+      <div className="flex gap-2">
+        <label className="relative block flex-1 min-w-0">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#b3a594]" aria-hidden />
+          <input value={q} onChange={e => setQ(e.target.value)} placeholder="ძებნა" className={`${FIELD} pl-10`} type="search" />
+        </label>
+        <button
+          type="button"
+          onClick={() => { triggerHaptic(8); setFamily(!family); }}
+          aria-pressed={family}
+          className={`shrink-0 min-h-11 px-3.5 rounded-2xl inline-flex items-center justify-center gap-2 text-[13.5px] font-bold transition-colors cursor-pointer ${
+            family ? 'bg-[#2f6b3a] text-white shadow-sm' : 'bg-white text-[#4a3426] ring-1 ring-[#e8dcc8] hover:bg-[#2f6b3a]/[0.06]'
+          }`}
+        >
+          <Users className="w-4 h-4" />
+          ბავშვებთან ერთად
+        </button>
+      </div>
+      <FilmList films={films} onPlay={onPlay} empty="ასეთი ფილმი ვერ მოიძებნა" />
+      <Player films={films} open={open} onMove={onMove} onClose={onClose} />
+    </div>
+  );
+};
+
+/** St Paisios: a chip a season (and the Georgian-voiced one), its episodes in order */
+const Paisi: React.FC<{ open?: string; onPlay: (id: string) => void; onMove: (id: string) => void; onClose: () => void }> = ({ open, onPlay, onMove, onClose }) => {
+  // after a reload the open episode picks its own part
+  const [partId, setPartId] = useState(() => PAISI_PARTS.find(p => p.eps.some(e => e[0] === open))?.id ?? PAISI_PARTS[0].id);
+  const part = PAISI_PARTS.find(p => p.id === partId) ?? PAISI_PARTS[0];
+  const films: Film[] = useMemo(() => part.eps.map(([id, n, secs]) => ({
+    id, title: `სერია ${n}`, sub: `${part.label} · ${part.sub}`, secs,
+  })), [part]);
+  return (
+    <div className="w-full flex flex-col gap-3">
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="სეზონები">
+        {PAISI_PARTS.map(p => <Chip key={p.id} on={p.id === part.id} onClick={() => setPartId(p.id)} label={p.label} n={p.eps.length} />)}
+      </div>
+      <FilmList films={films} onPlay={onPlay} empty="სერიები ვერ მოიძებნა" />
+      <Player films={films} open={open} onMove={onMove} onClose={onClose} />
     </div>
   );
 };
@@ -194,17 +310,20 @@ const Episodes: React.FC<{ data: EtnoData; open?: string; onPlay: (id: string) =
   );
 };
 
-const Chip: React.FC<{ on: boolean; onClick: () => void; label: string; n?: number }> = ({ on, onClick, label, n }) => (
+/** `soft` = a second row of chips (the films' genres): gold when chosen, so the two rows read apart */
+const Chip: React.FC<{ on: boolean; onClick: () => void; label: string; n?: number; soft?: boolean; x?: boolean }> = ({ on, onClick, label, n, soft, x }) => (
   <button
     type="button"
     onClick={() => { triggerHaptic(8); onClick(); }}
     aria-pressed={on}
     className={`min-h-9 px-3 py-1 rounded-full text-[13px] font-bold inline-flex items-center gap-1.5 transition-colors cursor-pointer ${
-      on ? 'bg-[#7a2028] text-[#fbf6ec] shadow-sm' : 'bg-white text-[#4a3426] ring-1 ring-[#e8dcc8] hover:bg-[#7a2028]/[0.05]'
+      on ? (soft ? 'bg-[#a8641c] text-white shadow-sm' : 'bg-[#7a2028] text-[#fbf6ec] shadow-sm')
+        : soft ? 'bg-[#fbf4e6] text-[#6b4a22] ring-1 ring-[#ead9bb] hover:bg-[#a8641c]/[0.08]' : 'bg-white text-[#4a3426] ring-1 ring-[#e8dcc8] hover:bg-[#7a2028]/[0.05]'
     }`}
   >
     {label}
     {n !== undefined && <span className={`text-xs tabular-nums ${on ? 'text-[#fbf6ec]/75' : 'text-[#8a7a6a]'}`}>{n}</span>}
+    {x && <X className="w-3.5 h-3.5 -mr-0.5" aria-hidden />}
   </button>
 );
 
@@ -227,6 +346,12 @@ const FilmList: React.FC<{ films: Film[]; onPlay: (id: string) => void; empty: s
             <span className="flex-1 min-w-0 flex flex-col gap-0.5">
               <span className="text-[15px] font-bold text-[#2a2017] leading-snug line-clamp-2 break-words group-hover:text-[#7a2028] transition-colors">{f.title}</span>
               <span className="text-[12.5px] font-semibold text-[#8a7a6a] leading-snug line-clamp-2 break-words">{f.sub}</span>
+              {(f.meta || f.tag) && (
+                <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                  {f.tag && <span className="px-2 rounded-full bg-[#fdeee0] text-[#9a3b12] ring-1 ring-[#f3cfae] text-[11.5px] font-bold leading-[20px]">{f.tag}</span>}
+                  {f.meta && <span className="text-[12px] font-bold text-[#a0703c] leading-snug">{f.meta}</span>}
+                </span>
+              )}
             </span>
           </button>
         </li>
@@ -235,10 +360,10 @@ const FilmList: React.FC<{ films: Film[]; onPlay: (id: string) => void; empty: s
   );
 };
 
-/** the open film in a window: YouTube's own player, then ‹ › through the same list */
+/** the open film in a window: YouTube's own player, a film's parts as chips, then ‹ › through the same list */
 const Player: React.FC<{ films: Film[]; open?: string; onMove: (id: string) => void; onClose: () => void }> = ({ films, open, onMove, onClose }) => {
   if (!open) return null;
-  const i = films.findIndex(f => f.id === open);
+  const i = films.findIndex(f => f.id === open || !!f.parts?.some(p => p.id === open));
   // a film no longer in the list (a chip changed meanwhile) still plays alone
   const film = i >= 0 ? films[i] : null;
   const prev = i > 0 ? films[i - 1] : null;
@@ -268,6 +393,11 @@ const Player: React.FC<{ films: Film[]; open?: string; onMove: (id: string) => v
             allowFullScreen
           />
         </div>
+        {film?.parts && (
+          <div className="flex flex-wrap gap-1.5" role="group" aria-label="ნაწილები">
+            {film.parts.map(p => <Chip key={p.id} on={p.id === open} soft onClick={() => p.id !== open && onMove(p.id)} label={p.label} />)}
+          </div>
+        )}
         {film && <p className="text-[14px] font-semibold text-[#574739] leading-snug">{film.sub}</p>}
         <a href={watchOf(open)} target="_blank" rel="noopener noreferrer" className="self-start inline-flex items-center gap-1 text-[13px] font-bold text-[#8a4b12] hover:underline">
           YouTube-ზე გახსნა <ExternalLink className="w-3.5 h-3.5" />

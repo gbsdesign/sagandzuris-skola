@@ -267,6 +267,14 @@
   monasteries as chips; `mapItem` „m:<region>[/<id>]“. Data `data/monasteryVideos.ts`, picked by hand: each monastery's region
   checked in two places (OpenStreetMap + the Georgian Encyclopedia / Wikipedia / georgia.travel, or the report's title) — six
   that could not be checked were left out. Add new films at the end of their region.
+  **„ქართული ფილმები“ and „წმინდა პაისი“** (the same night, the user: „ქართული კინოები და თეატრების ჩანაწერები … ღირებული … არ
+  ეწინააღმდეგება მართლმადიდებლურ სულს … ჟანრების მიხედვით თეგები“, answers „სამივე · უფროსებისას ცალკე ნიშნით · კერძო არხებიც ·
+  დაიწყე“; then „ეს სერიალი … ყველა სეზონი … ცალკე სექციად“ + „ესეც მიაბი“): tabs four and five (`Tabs cols={5}` in the kit = three
+  over two on a phone, one row from md). Films: `data/georgianFilms.ts` (78, picked by hand — 41 films, 16 plays, 21 cartoons; kind
+  chips, genre toggles drama · comedy · history · war · music · kids · lit · faith, „ბავშვებთან ერთად“ hides `adult` = war, violence,
+  heavy tragedy; a film in `parts` plays them from the window's chips); `mapItem` „k/<id>“. Mostly ordinary people's uploads — they
+  may vanish. St Paisios: `data/paisiVideos.ts` — TV Imedi's two seasons (9 + 12, all its channel has) and „პაისი ათონელი“ in Georgian
+  (7, Irakli Aslanikashvili), chips per part; `mapItem` „p/<id>“. Every video checked embeddable (YouTube oEmbed 200).
 - **ეკლესია-მონასტრები** (2026-11-07, page `churches`, section `eklesiebi`, `pages/ChurchesPage.tsx` + `pages/churches/ChurchCard.tsx`;
   the user: „ვაზზე ახალი ღილაკი … როგორც ვიდეობის შემთხვევაშია … საქ რუკა … ინფო, ფოტო … საკონტაქტო მარტო ადმინებს და ვისაც ჩაურთავს
   … გუგლ მაპი იხსნებოდეს … ახლოს მდებარე ტაძრები … რომელი მოქმედია და რომელ საათებში“; he showed Tevdore Gogoladze's app „გზა

@@ -244,16 +244,19 @@ export function Tabs<T extends string>({ items, value, onChange, cols = 3, stack
   items: { id: T; label: string; over?: string; under?: string; Icon?: React.ComponentType<{ className?: string }>; count?: number; dot?: boolean }[];
   value: T;
   onChange: (id: T) => void;
-  cols?: 2 | 3 | 4 | 'wide';
+  cols?: 2 | 3 | 4 | 5 | 'wide';
   stack?: boolean;
 }) {
-  // (whole class names only: Tailwind finds them in the source; `stack` is for two or three tabs)
-  const layout = stack
+  // (whole class names only: Tailwind finds them in the source; `stack` is for two or three tabs; five tabs = three over
+  // two on a phone, one row from md — with `stack` the icon still stands over the label under 460 px)
+  const layout = cols === 5
+    ? 'grid grid-cols-6 md:grid-cols-5'
+    : stack
     ? (cols === 2 ? 'flex min-[460px]:grid min-[460px]:grid-cols-2' : 'flex min-[460px]:grid min-[460px]:grid-cols-3')
     : cols === 2 ? 'grid grid-cols-2' : cols === 4 ? 'grid grid-cols-2 min-[480px]:grid-cols-4' : cols === 'wide' ? 'grid grid-cols-2 min-[600px]:grid-cols-3' : 'grid grid-cols-3';
   return (
     <div className={cx('gap-1 p-1 rounded-2xl bg-white/75 ring-1 ring-[#e8dcc8]', layout)}>
-      {items.map(({ id, label, over, under, Icon, count, dot }) => {
+      {items.map(({ id, label, over, under, Icon, count, dot }, i) => {
         const on = id === value;
         return (
           <button
@@ -264,6 +267,7 @@ export function Tabs<T extends string>({ items, value, onChange, cols = 3, stack
             className={cx(
               'relative min-h-11 px-2 py-1.5 rounded-xl flex items-center justify-center gap-1.5 text-[13px] sm:text-sm font-bold transition-colors cursor-pointer',
               stack && 'flex-[1_1_auto] max-[459px]:flex-col max-[459px]:gap-0.5 max-[459px]:px-1.5 max-[459px]:py-1',
+              cols === 5 && (i < 3 ? 'col-span-2 md:col-span-1' : 'col-span-3 md:col-span-1'),
               on ? 'bg-[#7a2028] text-[#fbf6ec] shadow-sm' : 'text-[#4a3426] hover:bg-[#7a2028]/[0.05]'
             )}
           >
