@@ -6,7 +6,10 @@ import { Prompter, blockAtReading, prompterCopy, showBlock } from './Prompter';
 // The tools over a prayer's text: ხუცური on the left; auto-scroll and the text's size on the right.
 // Nothing is remembered: every new visit starts in ordinary letters, standard size, standing still.
 // The auto-scroll (⏬) is every reading page's since 2026-11-06 (`AutoScrollButton`: prayers, saints' lives, ancestors,
-// the library's books, the liturgical books, poems, songs' words); its bar opens the full-screen prompter (Prompter.tsx).
+// the library's books, the liturgical books, poems, songs' words). A tap opens a small menu right at the button (the user:
+// „რომ დავაჭერ ისარს … მანდვე მთავაზობდეს სრულ ეკრანს კომპაქტურად“): „აქ გადახვევა“ = the page moves up by itself (the bar
+// at the bottom), „სრულ ეკრანზე“ = the full-screen prompter (Prompter.tsx), which can also go on to the previous / next
+// kanon or chapter (`neighbours`).
 
 const ROUND =
   'w-9 h-9 shrink-0 rounded-full flex items-center justify-center font-bold leading-none text-[#7a2028] hover:bg-[#7a2028]/[0.07] cursor-pointer active:scale-90 transition disabled:opacity-35 disabled:cursor-default disabled:hover:bg-transparent disabled:active:scale-100';
@@ -37,7 +40,9 @@ export const ReadingToolbar: React.FC<{
   source?: HTMLElement | null;
   /** a psalter kanon's number: the prompter's own way for it */
   psalter?: number;
-}> = ({ size, onSize, khutsuri, onKhutsuri, source, psalter }) => (
+  /** the kanon or chapter before and after: the prompter goes on to them */
+  neighbours?: Neighbours;
+}> = ({ size, onSize, khutsuri, onKhutsuri, source, psalter, neighbours }) => (
   // sticky: the tools stay at hand all down a long text (the page bar is not sticky)
   <div className="sticky top-[env(safe-area-inset-top,0px)] z-10 flex items-center justify-between gap-2 -mt-2 -mx-1.5 sm:-mx-3 mb-3 py-1.5 bg-white/90 backdrop-blur-md rounded-full">
     <button
@@ -53,7 +58,7 @@ export const ReadingToolbar: React.FC<{
       ხუცური
     </button>
     <div className="flex items-center gap-1.5">
-      <AutoScrollButton source={() => source ?? null} zoom={size / 100} psalter={psalter} />
+      <AutoScrollButton source={() => source ?? null} zoom={size / 100} psalter={psalter} neighbours={neighbours} />
       <div role="group" aria-label="ასოების ზომა" className={`inline-flex items-center rounded-full ${PILL}`}>
         <button type="button" aria-label="ასოების დაპატარავება" disabled={size <= 50} onClick={() => onSize(size - 10)} className={`${ROUND} text-[13px]`}>
           A
@@ -73,33 +78,169 @@ export const ReadingToolbar: React.FC<{
 );
 
 type Getter = () => HTMLElement | null;
+export type Neighbour = { label: string; go: () => void };
+export type Neighbours = { prev?: Neighbour; next?: Neighbour };
 
-/** ⏬: the page moves up by itself (the bar at the bottom), and from the bar the full-screen prompter. `source` = the text
- * read, `scroller` = the box that scrolls when it is not the window (a full-screen reader), `zoom` = the letters' size
- * (1 = 100 %), `label` = a worded button in place of the round one. */
-export const AutoScrollButton: React.FC<{ source: Getter; scroller?: Getter; zoom?: number; label?: string; className?: string; psalter?: number }> = ({
-  source, scroller, zoom = 1, label, className, psalter,
-}) => {
-  const [open, setOpen] = useState(false);
+const MENU_ITEM =
+  'w-full h-11 pl-3 pr-4 rounded-xl inline-flex items-center gap-2.5 text-[14px] font-bold text-[#4a3426] hover:bg-[#fcf1df] hover:text-[#7a2028] cursor-pointer active:scale-[0.98] transition whitespace-nowrap';
+
+/** ⏬: a small menu at the button — the page moves up by itself (the bar at the bottom) or the full-screen prompter.
+ * `source` = the text read, `scroller` = the box that scrolls when it is not the window (a full-screen reader), `zoom` =
+ * the letters' size (1 = 100 %), `label` = a worded button in place of the round one (its menu opens to the left edge). */
+export const AutoScrollButton: React.FC<{
+  source: Getter;
+  scroller?: Getter;
+  zoom?: number;
+  label?: string;
+  className?: string;
+  psalter?: number;
+  neighbours?: Neighbours;
+}> = ({ source, scroller, zoom = 1, label, className, psalter, neighbours }) => {
+  const [menu, setMenu] = useState(false);
+  const [open, setOpen] = useState<null | 'page' | 'full'>(null);
+  const [speed, setSpeed] = useState(START_SPEED); // one pace for the page and the prompter
+  const wrap = useRef<HTMLSpanElement>(null);
+
+  // a tap anywhere else (or Esc) closes the menu
+  useEffect(() => {
+    if (!menu) return;
+    const away = (e: PointerEvent) => { if (!wrap.current?.contains(e.target as Node)) setMenu(false); };
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(false); };
+    document.addEventListener('pointerdown', away);
+    document.addEventListener('keydown', esc);
+    return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', esc); };
+  }, [menu]);
+
+  const pick = (way: 'page' | 'full') => {
+    setMenu(false);
+    if (way === 'full' && !source()) return;
+    setOpen(way);
+  };
+
   return (
-    <>
+    <span ref={wrap} className="relative inline-flex">
       <button
         type="button"
-        onClick={() => setOpen(true)}
-        aria-label="ავტომატური გადახვევა"
-        title="ავტომატური გადახვევა"
-        className={label ? className : `${ROUND} ${PILL} ${className ?? ''}`}
+        onClick={() => setMenu(m => !m)}
+        aria-haspopup="menu"
+        aria-expanded={menu}
+        aria-label="ავტომატური კითხვა"
+        title="ავტომატური კითხვა"
+        className={label ? className : `${ROUND} ${PILL} ${menu ? '!bg-[#7a2028] !text-[#fbf6ec] !ring-[#7a2028]' : ''} ${className ?? ''}`}
       >
         <ChevronsDown className={label ? 'w-4 h-4 text-[#b4620e]' : 'w-[18px] h-[18px]'} />
         {label}
       </button>
-      {open && <AutoScroll zoom={zoom} source={source} scroller={scroller} psalter={psalter} onClose={() => setOpen(false)} />}
-    </>
+      {menu && (
+        <span
+          role="menu"
+          className={`absolute top-full mt-2 ${label ? 'left-0 origin-top-left' : 'right-0 origin-top-right'} z-[60] w-max p-1.5 rounded-2xl bg-white ring-1 ring-[#e8dcc8] shadow-[0_14px_36px_-14px_rgba(42,32,23,0.45)] flex flex-col animate-in fade-in zoom-in-95 duration-150`}
+        >
+          <button type="button" role="menuitem" onClick={() => pick('page')} className={MENU_ITEM}>
+            <ChevronsDown className="w-[18px] h-[18px] text-[#b4620e]" />
+            აქ გადახვევა
+          </button>
+          <button type="button" role="menuitem" onClick={() => pick('full')} className={MENU_ITEM}>
+            <Maximize2 className="w-[18px] h-[18px] text-[#b4620e]" />
+            სრულ ეკრანზე
+          </button>
+        </span>
+      )}
+      {open === 'page' && <AutoScroll zoom={zoom} source={source} scroller={scroller} speed={speed} onSpeed={setSpeed} onClose={() => setOpen(null)} />}
+      {open === 'full' && (
+        <FullScreen
+          source={source}
+          scroller={scroller}
+          psalter={psalter}
+          neighbours={neighbours}
+          speed={speed}
+          onSpeed={setSpeed}
+          onClose={() => setOpen(null)}
+        />
+      )}
+    </span>
   );
 };
 
-// The speeds −/+ step through (by quarters up to 1, then by ones up to 10) and px a second at each, for text at
-// 100 % (bigger letters → taller lines → faster)
+// The prompter, with the way on to the kanon or chapter before / after: the page itself moves there (its own pager's
+// step), and once the new text is on the page it is copied in afresh and goes on after 3-2-1 (the user's pick).
+const FullScreen: React.FC<{
+  source: Getter;
+  scroller?: Getter;
+  psalter?: number;
+  neighbours?: Neighbours;
+  speed: number;
+  onSpeed: (i: number) => void;
+  onClose: () => void;
+}> = props => {
+  const { source, scroller, speed, onSpeed, onClose } = props;
+  const latest = useRef(props);
+  latest.current = props;
+  const [full, setFull] = useState<{ html: string; start: number; n: number; auto: boolean } | null>(null);
+  const [loading, setLoading] = useState<string | null>(null);
+  const timer = useRef(0);
+
+  useEffect(() => {
+    const text = source();
+    if (!text) { onClose(); return; }
+    setFull({ html: prompterCopy(text, Boolean(props.psalter)), start: blockAtReading(text, scroller?.() ?? null), n: 0, auto: false });
+    return () => window.clearInterval(timer.current);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const go = (dir: -1 | 1) => {
+    const step = dir < 0 ? latest.current.neighbours?.prev : latest.current.neighbours?.next;
+    if (!step || loading) return;
+    const before = (latest.current.source()?.textContent || '').slice(0, 400);
+    setLoading(step.label);
+    step.go();
+    const t0 = Date.now();
+    window.clearInterval(timer.current);
+    timer.current = window.setInterval(() => {
+      const el = latest.current.source();
+      const now = (el?.textContent || '').slice(0, 400);
+      if (el && now.length > 40 && now !== before) {
+        window.clearInterval(timer.current);
+        // one more frame: the page finishes drawing its text (ხუცური, the glory marks)
+        requestAnimationFrame(() => {
+          const fresh = latest.current.source();
+          if (fresh) setFull(f => ({ html: prompterCopy(fresh, Boolean(latest.current.psalter)), start: 0, n: (f?.n ?? 0) + 1, auto: true }));
+          setLoading(null);
+        });
+      } else if (Date.now() - t0 > 12000) {
+        window.clearInterval(timer.current);
+        setLoading(null);
+      }
+    }, 120);
+  };
+
+  const close = (block: number) => {
+    const text = source();
+    onClose();
+    if (text) requestAnimationFrame(() => showBlock(text, scroller?.() ?? null, block));
+  };
+
+  if (!full) return null;
+  const nb = props.neighbours;
+  return (
+    <Prompter
+      key={full.n}
+      html={full.html}
+      start={full.start}
+      speeds={SPEEDS}
+      speed={speed}
+      onSpeed={onSpeed}
+      onClose={close}
+      kanon={props.psalter}
+      autoStart={full.auto}
+      prev={nb?.prev?.label}
+      next={nb?.next?.label}
+      onGo={go}
+      loading={loading}
+    />
+  );
+};
+
 const SPEEDS: { label: string; px: number }[] = [
   ...[0.25, 0.5, 0.75].map(s => ({ label: String(s), px: 8 * s })),
   // 1…20 (up to 10 until 2026-11-06; the user: „სიჩქარის მომატება, შემეძლოს 20-მდე“)
@@ -108,12 +249,12 @@ const SPEEDS: { label: string; px: number }[] = [
 const START_SPEED = SPEEDS.findIndex(s => s.label === '3');
 
 // The page moves up by itself; the bar stays at the bottom of the screen. A finger on the screen holds it, letting go
-// goes on; it stops once the text's end is on screen. The screen is kept awake meanwhile. „სრულ ეკრანზე“ over the bar
-// opens the prompter where the page is being read; closing it brings the page to where the prompter stopped.
-const AutoScroll: React.FC<{ zoom: number; onClose: () => void; source: Getter; scroller?: Getter; psalter?: number }> = ({ zoom, onClose, source, scroller, psalter }) => {
+// goes on; it stops once the text's end is on screen. The screen is kept awake meanwhile.
+const AutoScroll: React.FC<{ zoom: number; onClose: () => void; source: Getter; scroller?: Getter; speed: number; onSpeed: (i: number) => void }> = ({
+  zoom, onClose, source, scroller, speed, onSpeed,
+}) => {
   const [running, setRunning] = useState(true);
-  const [speed, setSpeed] = useState(START_SPEED);
-  const [full, setFull] = useState<{ html: string; start: number } | null>(null);
+  const setSpeed = (f: (s: number) => number) => onSpeed(f(speed));
   const pxPerSecond = useRef(0);
   pxPerSecond.current = SPEEDS[speed].px * zoom;
   const where = useRef({ source, scroller });
@@ -126,7 +267,7 @@ const AutoScroll: React.FC<{ zoom: number; onClose: () => void; source: Getter; 
   }, []);
 
   useEffect(() => {
-    if (!running || full) return;
+    if (!running) return;
     const box = where.current.scroller?.() ?? null;
     const top = () => (box ? box.scrollTop : window.scrollY);
     const put = (y: number) => {
@@ -185,37 +326,13 @@ const AutoScroll: React.FC<{ zoom: number; onClose: () => void; source: Getter; 
       document.removeEventListener('visibilitychange', awake);
       lock?.release().catch(() => {});
     };
-  }, [running, full]);
-
-  const openFull = () => {
-    const text = source();
-    if (!text) return;
-    setFull({ html: prompterCopy(text, Boolean(psalter)), start: blockAtReading(text, scroller?.() ?? null) });
-  };
-  const closeFull = (block: number) => {
-    setFull(null);
-    setRunning(false);
-    const text = source();
-    if (text) requestAnimationFrame(() => showBlock(text, scroller?.() ?? null, block));
-  };
-
-  if (full) {
-    return <Prompter html={full.html} start={full.start} speeds={SPEEDS} speed={speed} onSpeed={setSpeed} onClose={closeFull} kanon={psalter} />;
-  }
+  }, [running]);
 
   return createPortal(
     <div
       className="fixed inset-x-0 bottom-0 z-[90] flex flex-col items-center gap-2 px-4 pointer-events-none"
       style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 14px)' }}
     >
-      <button
-        type="button"
-        onClick={openFull}
-        className="pointer-events-auto h-9 pl-3 pr-3.5 rounded-full bg-white/95 backdrop-blur ring-1 ring-[#e8dcc8] shadow-[0_8px_22px_-12px_rgba(42,32,23,0.5)] inline-flex items-center gap-1.5 text-[13px] font-bold text-[#7a2028] hover:ring-[#7a2028]/40 cursor-pointer active:scale-95 transition animate-in fade-in slide-in-from-bottom-2 duration-200"
-      >
-        <Maximize2 className="w-4 h-4" />
-        სრულ ეკრანზე
-      </button>
       <div className="pointer-events-auto flex items-center gap-1 p-1.5 rounded-full bg-white/95 backdrop-blur ring-1 ring-[#e8dcc8] shadow-[0_12px_32px_-12px_rgba(42,32,23,0.5)] animate-in fade-in slide-in-from-bottom-2 duration-200">
         <button
           type="button"

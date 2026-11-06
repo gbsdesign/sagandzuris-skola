@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ArrowLeft, ArrowUp, Focus, Minus, Moon, Pause, Play, Plus, RotateCcw, Sun, X } from 'lucide-react';
+import { ArrowLeft, ArrowUp, ChevronLeft, ChevronRight, Focus, Loader2, Minus, Moon, Pause, Play, Plus, RotateCcw, Sun, X } from 'lucide-react';
+import { useAuth } from '../../context/AuthContext';
 import { Flash, Ticker, firstWordOf, wordsOf, type FlowHandle, type Word } from './PrompterFlow';
 
 // „წამყვანის ეკრანი“ (2026-11-06, the user: „ავტომატური კითხვის ჟურნალისტური ვერსია … წამყვანებს წინ რომ ეკრანი აქვთ“):
@@ -199,13 +200,23 @@ export const Prompter: React.FC<{
   onClose: (block: number) => void;
   /** a psalter kanon's number: the place line on top says the kanon, the glory and the psalm */
   kanon?: number;
-}> = ({ html, start, speeds, speed, onSpeed, onClose, kanon }) => {
+  /** opened on the next / previous kanon by its button: 3-2-1 and it goes on by itself */
+  autoStart?: boolean;
+  /** the kanon or chapter before / after (its label), and the step there */
+  prev?: string;
+  next?: string;
+  onGo?: (dir: -1 | 1) => void;
+  /** the label of the one being opened, while it loads */
+  loading?: string | null;
+}> = ({ html, start, speeds, speed, onSpeed, onClose, kanon, autoStart = false, prev, next, onGo, loading }) => {
+  // „გვერდზე“ and „სიტყვით“ are the admins' only (the user, 2026-11-06); everybody else reads going up
+  const { isAdmin } = useAuth();
   const [theme, setTheme] = useState<Theme>(() => (read(THEME_KEY) === 'light' ? 'light' : 'dark'));
   const [size, setSize] = useState(() => {
     const kept = Number(read(SIZE_KEY));
     return SIZES.includes(kept) ? kept : window.innerWidth >= 768 ? 40 : 30;
   });
-  const [mode, setMode] = useState<Mode>(() => {
+  const [chosenMode, setMode] = useState<Mode>(() => {
     const kept = read(MODE_KEY);
     return kept === 'side' || kept === 'word' ? kept : 'up';
   });
@@ -227,8 +238,9 @@ export const Prompter: React.FC<{
     return kept >= LINE_MIN && kept <= LINE_MAX ? kept : LINE;
   });
   const [dragging, setDragging] = useState(false);
-  const [count, setCount] = useState(0); // 3 · 2 · 1 before it moves
-  const [fresh, setFresh] = useState(true); // not started yet (since opening or „თავიდან“): ▶ counts 3-2-1 first
+  const mode: Mode = isAdmin ? chosenMode : 'up';
+  const [count, setCount] = useState(autoStart ? 3 : 0); // 3 · 2 · 1 before it moves
+  const [fresh, setFresh] = useState(!autoStart); // not started yet (since opening or „თავიდან“): ▶ counts 3-2-1 first
   const [running, setRunning] = useState(false);
   const [ended, setEnded] = useState(false);
   const [chrome, setChrome] = useState(true);
@@ -569,7 +581,8 @@ export const Prompter: React.FC<{
   const left =
     mode !== 'up' ? (words.length ? flowLeft.current / (speeds[speed].px * PACE) : null)
     : sc ? Math.max(0, sc.scrollHeight - sc.clientHeight - sc.scrollTop) / pxPerSecond() : null;
-  const leftText = left === null ? '' : ended ? 'დასრულდა' : left < 60 ? 'დარჩა 1 წუთზე ნაკლები' : `დარჩა ≈ ${Math.round(left / 60)} წთ`;
+  const endCard = ended && !loading && Boolean(onGo) && Boolean(prev || next);
+  const leftText = left === null ? '' : ended ? (endCard ? '' : 'დასრულდა') :left < 60 ? 'დარჩა 1 წუთზე ნაკლები' : `დარჩა ≈ ${Math.round(left / 60)} წთ`;
 
   const round = `w-11 h-11 shrink-0 rounded-full flex items-center justify-center cursor-pointer active:scale-90 transition disabled:opacity-35 disabled:cursor-default ${look.hover}`;
   const panel = { background: look.bar, boxShadow: `inset 0 0 0 1px ${look.ring}, 0 12px 32px -14px rgba(0,0,0,0.5)` };
@@ -671,26 +684,91 @@ export const Prompter: React.FC<{
         </div>
       )}
 
-      {/* a psalter kanon: where the reading is — კანონი · დიდება · ფსალმუნი */}
+      {/* a psalter kanon: where the reading is — კანონი · დიდება · ფსალმუნი. While reading one quiet line at the very top;
+          with the controls a card under them, the kanon between ‹ › that open the one before / after */}
       {kanon && place && (
         <div
           className="pointer-events-none absolute inset-x-0 flex justify-center px-4 transition-[top] duration-300"
-          style={{ top: chrome ? 'calc(env(safe-area-inset-top, 0px) + 118px)' : 'calc(env(safe-area-inset-top, 0px) + 12px)' }}
+          style={{ top: `calc(env(safe-area-inset-top, 0px) + ${chrome ? (isAdmin ? 118 : 66) : 12}px)` }}
           aria-live="polite"
         >
-          <div className="h-9 px-4 rounded-full inline-flex items-center gap-2.5 font-sans text-[13.5px] font-bold whitespace-nowrap backdrop-blur" style={panel}>
-            <span style={{ color: look.muted }}>კანონი {kanon}</span>
-            <span aria-hidden className="w-1 h-1 rounded-full" style={{ background: look.muted }} />
-            <span style={{ color: look.muted }}>{GLORY_NAMES[place.glory - 1] ?? place.glory} დიდება</span>
-            {place.psalm !== null && (
-              <>
-                <span aria-hidden className="w-1 h-1 rounded-full" style={{ background: look.muted }} />
-                <span key={place.psalm} className="animate-in fade-in slide-in-from-bottom-1 duration-300" style={{ color: look.accent }}>
-                  {place.psalm} ფსალმუნი
-                </span>
-              </>
+          {chrome ? (
+            <div className="pointer-events-auto px-1.5 pt-1 pb-2 rounded-2xl flex flex-col items-center font-sans backdrop-blur" style={panel}>
+              <div className="flex items-center gap-1">
+                <button type="button" onClick={() => onGo?.(-1)} disabled={!prev || !onGo || !!loading} aria-label={prev ? `წინა: ${prev}` : 'წინა არ არის'} className={`${round} !w-10 !h-10`} style={{ color: look.btn }}>
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <span className="min-w-[6.5rem] text-center text-[16px] font-black" style={{ color: look.text }}>კანონი {kanon}</span>
+                <button type="button" onClick={() => onGo?.(1)} disabled={!next || !onGo || !!loading} aria-label={next ? `შემდეგი: ${next}` : 'შემდეგი არ არის'} className={`${round} !w-10 !h-10`} style={{ color: look.btn }}>
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+              <div className="flex items-center gap-2 px-3 text-[13px] font-bold whitespace-nowrap">
+                <span style={{ color: look.muted }}>{GLORY_NAMES[place.glory - 1] ?? place.glory} დიდება</span>
+                {place.psalm !== null && (
+                  <>
+                    <span aria-hidden className="w-1 h-1 rounded-full" style={{ background: look.muted }} />
+                    <span style={{ color: look.accent }}>{place.psalm} ფსალმუნი</span>
+                  </>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="h-9 px-4 rounded-full inline-flex items-center gap-2.5 font-sans text-[13.5px] font-bold whitespace-nowrap backdrop-blur" style={panel}>
+              <span style={{ color: look.muted }}>კანონი {kanon}</span>
+              <span aria-hidden className="w-1 h-1 rounded-full" style={{ background: look.muted }} />
+              <span style={{ color: look.muted }}>{GLORY_NAMES[place.glory - 1] ?? place.glory} დიდება</span>
+              {place.psalm !== null && (
+                <>
+                  <span aria-hidden className="w-1 h-1 rounded-full" style={{ background: look.muted }} />
+                  <span key={place.psalm} className="animate-in fade-in slide-in-from-bottom-1 duration-300" style={{ color: look.accent }}>
+                    {place.psalm} ფსალმუნი
+                  </span>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* the end: on to the kanon or chapter before / after */}
+      {endCard && onGo && (
+        <div className="absolute inset-x-0 flex justify-center px-5" style={{ top: '52%' }}>
+          <div className="w-full max-w-sm p-4 rounded-3xl flex flex-col items-center gap-3 font-sans backdrop-blur animate-in fade-in zoom-in-95 duration-200" style={panel}>
+            <span className="text-[13px] font-bold" style={{ color: look.muted }}>დასრულდა</span>
+            {next && (
+              <button
+                type="button"
+                onClick={() => onGo(1)}
+                className="w-full h-14 rounded-2xl inline-flex items-center justify-center gap-2 text-[17px] font-black cursor-pointer active:scale-[0.98] transition"
+                style={{ background: look.play, color: look.playText }}
+              >
+                {next}
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            )}
+            {prev && (
+              <button
+                type="button"
+                onClick={() => onGo(-1)}
+                className={`h-11 px-4 rounded-full inline-flex items-center gap-1.5 text-[14px] font-bold cursor-pointer active:scale-95 transition ${look.hover}`}
+                style={{ color: look.btn }}
+              >
+                <ChevronLeft className="w-4 h-4" />
+                {prev}
+              </button>
             )}
           </div>
+        </div>
+      )}
+
+      {/* the next one opening */}
+      {loading && (
+        <div className="absolute inset-0 flex items-center justify-center" style={{ background: `${look.bg}cc` }}>
+          <span className="h-11 px-5 rounded-full inline-flex items-center gap-2.5 font-sans text-[15px] font-bold backdrop-blur" style={{ ...panel, color: look.text }}>
+            <Loader2 className="w-5 h-5 animate-spin" style={{ color: look.accent }} />
+            {loading}
+          </span>
         </div>
       )}
 
@@ -742,7 +820,7 @@ export const Prompter: React.FC<{
           </button>
         </div>
        </div>
-        <div role="group" aria-label="როგორ მოძრაობდეს ტექსტი" className="flex items-center p-1 rounded-full backdrop-blur" style={panel}>
+        {isAdmin && <div role="group" aria-label="როგორ მოძრაობდეს ტექსტი" className="flex items-center p-1 rounded-full backdrop-blur" style={panel}>
           {MODES.map(({ id, label, Icon }) => {
             const on = mode === id;
             return (
@@ -759,7 +837,7 @@ export const Prompter: React.FC<{
               </button>
             );
           })}
-        </div>
+        </div>}
       </div>
 
       <div

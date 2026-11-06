@@ -116,6 +116,21 @@ export const PrayerPage: React.FC = () => {
       {hour && <HourReminders hour={hour} />}
 
       <article className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-4 py-5 sm:px-7 sm:py-6">
+        {/* the tools stay while the next kanon or chapter loads: the full-screen prompter goes on to it (ReadingTools) */}
+        {!failed && (
+          <ReadingToolbar
+            size={textSize}
+            onSize={setTextSize}
+            khutsuri={khutsuri}
+            onKhutsuri={setKhutsuri}
+            source={html === null ? null : textEl}
+            psalter={kathisma ? Number(kathisma.id.replace('kathisma-', '')) || undefined : undefined}
+            neighbours={{
+              prev: prev && { label: prev.label, go: () => openPrayer(prev.id) },
+              next: next && { label: next.label, go: () => openPrayer(next.id) },
+            }}
+          />
+        )}
         {failed ? (
           <p className="text-center text-sm text-[#8a7a6a]">ტექსტის ჩატვირთვა ვერ მოხერხდა. სცადე ხელახლა.</p>
         ) : html === null ? (
@@ -124,7 +139,6 @@ export const PrayerPage: React.FC = () => {
           </div>
         ) : (
           <>
-            <ReadingToolbar size={textSize} onSize={setTextSize} khutsuri={khutsuri} onKhutsuri={setKhutsuri} source={textEl} psalter={kathisma ? Number(kathisma.id.replace('kathisma-', '')) || undefined : undefined} />
             {/* big sizes: a long word breaks rather than leaving the card; ხუცური off = the text drawn afresh */}
             <div key={khutsuri ? 'khutsuri' : 'mkhedruli'} ref={setTextEl} style={{ zoom: textSize / 100 }} className="break-words">
               {parseBibleId(selectedPrayerId) ? (
