@@ -10,7 +10,8 @@
 // Never while held — church mode, a call, the synthesizer sounding (`holdUpdates`) —, while a recording sounds
 // (utils/mediaControls.ts) or while words typed in a field would be lost; on screen also not while notes or the Liturgy
 // program are open or a field is in use.
-// The site is asked for a newer version on opening, on coming back and every 5 minutes while on screen. sagandzureli.ge
+// The site is asked for a newer version on opening, on coming back and every 5 minutes while on screen — every minute
+// on the owner's account (`setUpdateCheckEvery`, AuthContext; the user's wish, 2026-11-07, to see a change at once). sagandzureli.ge
 // tells phones to keep .js files for 4 hours, so the worker is registered with updateViaCache 'none' and /sw.js is asked
 // again past the cache before each check, for browsers that ignore that setting.
 
@@ -25,6 +26,9 @@ const holds = new Set<string>();
 export const holdUpdates = (why: string, on: boolean) => { if (on) holds.add(why); else holds.delete(why); };
 
 let pending = false;
+let checkEvery = CHECK_EVERY;
+/** How often the site is asked while the app is on screen (the owner: every minute). */
+export const setUpdateCheckEvery = (ms: number) => { checkEvery = ms; };
 
 const notesOpen = () => { const q = new URLSearchParams(window.location.search); return q.has('v') || q.has('p'); };
 const TEXT_INPUTS = new Set(['text', 'search', 'email', 'tel', 'url', 'number', 'password']);
@@ -91,8 +95,8 @@ export const startAppUpdates = () => {
     check();
   });
   window.setInterval(() => {
-    if (document.visibilityState === 'visible' && Date.now() - lastCheck >= CHECK_EVERY - 5_000) check();
-  }, 60_000);
+    if (document.visibilityState === 'visible' && Date.now() - lastCheck >= checkEvery - 5_000) check();
+  }, 15_000);
 
   // a part of the old version that the site no longer has (it was published anew): the new version has it
   window.addEventListener('vite:preloadError', (e) => {

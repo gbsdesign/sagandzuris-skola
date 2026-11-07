@@ -17,6 +17,7 @@ import { writeDirectory } from '../utils/directory';
 import { registerTeacher } from '../hooks/useDirectChat';
 import { ensureMembership } from '../utils/memberAccess';
 import { iosCall, iosWord, isIosApp } from '../utils/iosApp';
+import { setUpdateCheckEvery } from '../utils/appUpdate';
 
 export const SUPER_ADMIN_EMAIL = 'mr.gabunia@gmail.com';
 
@@ -73,6 +74,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isSuperAdmin = role === 'superadmin';
   const isAdmin = isSuperAdmin || role === 'admin';
   const isTeacher = isAdmin || role === 'teacher';
+  // the owner sees a newly published version within a minute, everyone else within five (utils/appUpdate.ts)
+  useEffect(() => { setUpdateCheckEvery(isOwner ? 60_000 : 5 * 60_000); }, [isOwner]);
 
   // the signed-in person's staff document, live: a role given or taken away applies at once
   useEffect(() => {

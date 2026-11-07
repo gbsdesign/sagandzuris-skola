@@ -105,7 +105,7 @@
   clear the app's storage to see news. **Since 2026-11-07** (the user: „ყველა სიახლე მაქსიმალურად მალე ყველასთვის“) it all lives
   in `src/utils/appUpdate.ts` (`startAppUpdates` from `main.tsx`): `/sw.js` registered with `updateViaCache: 'none'`
   (sagandzureli.ge gives `.js` a 4-hour browser cache, so `/sw.js` is also fetched with `no-cache` before each check), a check on
-  opening, on coming back and every 5 min on screen; the restart: ≤30 s after opening, on hiding (notes too — they reopen at
+  opening, on coming back and every 5 min on screen (the owner's account every minute — `setUpdateCheckEvery` in AuthContext); the restart: ≤30 s after opening, on hiding (notes too — they reopen at
   their place), on coming back after a minute, and on screen at the next page change (`atPageChange` in NavigationContext);
   a lazy part the site no longer has (`vite:preloadError`) restarts too. Never while `holdUpdates` holds it — church mode
   (NotesContext), a call (callSession `set`), the synth sounding (ChantSynth play/pause) — a recording sounds or typed words
