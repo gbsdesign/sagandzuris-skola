@@ -235,6 +235,9 @@
   too — `useSinging transpose`), ყურსასმენი (`sg-learn-phones`: me left, the others right, only on ყველა / ჩემი ხმა წინ). Songs'
   `LearnAudio` keeps its three steps, with the same breath between rounds and the 3 s line when a step moves on. The singing engine
   is the hook `useSinging` (LearnShared); the voice picker `VoiceChoice` names the three voices (მთქმელი · მოძახილი · ბანი).
+  **Clearer screen (2026-11-07, stage 1 of the plan https://claude.ai/artifact/QPKSZiwP5MWiy8JpGBZGut):** the step row says „ნაბიჯი N / M“
+  with › between the pills and the open piece named („ნაწყვეტი 2“); a legend under the phrase dots names only the states the chant
+  has (`DOT_LEGEND`); `ReviewReminder` is one folded row (the hour or „გამორთულია“, the switch and hours inside).
 - **კლასის სტუდია** (2026-10-29, `components/studio/ClassStudio.tsx`): a program chant with book notes gets „სტუდია“ in its
   window (`ItemSheet` in `classes/ClassProgram.tsx`). One window `Studio` since 2026-11-05: a member records; a teacher gets two
   tabs „კლასის ჩანაწერები“ (none yet → three steps, „კლასს ვთხოვ“ = a line in the class chat) and „ჩემი ხმა“. A member sings their voice over the synth (their own voice muted) and the

@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Headphones, Mic, Minus, Play, Plus, Repeat, RotateCcw, Send, Snail, Sparkles, Square, Users } from 'lucide-react';
 import { BookScore, ChantSynth, countIn, makeTimeMap } from '../../utils/chantSynth';
-import { LEARNED_SHARE, LearnPart, LearnRecord, chunksOfPart, learnTakeId, melodyGroups, melodyIn, partState, timelineIn } from '../../utils/learn';
+import { LEARNED_SHARE, LearnPart, LearnRecord, PartState, chunksOfPart, learnTakeId, melodyGroups, melodyIn, partState, timelineIn } from '../../utils/learn';
 import { noteName } from '../../utils/pearls';
 import { singingSupported } from '../../utils/singCapture';
 import { saveTake } from '../../hooks/usePearls';
@@ -42,6 +42,10 @@ const readSpeed = () => {
 };
 const readTone = () => { try { const v = Number(localStorage.getItem(TONE_KEY)); return Number.isInteger(v) && Math.abs(v) <= 7 ? v : 0; } catch { return 0; } };
 const readPhones = () => { try { return localStorage.getItem(PHONES_KEY) === '1'; } catch { return false; } };
+
+/** The phrase dots' colours by state, and their words under the dots. */
+const DOT_COLOR: Record<PartState, string> = { new: '#efe6d6', learning: '#efd6a6', due: '#d79aa0', learned: '#c9962a', kept: '#c9962a' };
+const DOT_LEGEND: [PartState[], string][] = [[['new'], 'ახალი'], [['learning'], 'ვსწავლობ'], [['due'], 'დღეს გასამეორებელი'], [['learned', 'kept'], 'ნასწავლი']];
 
 type Stage = number | 'together' | 'whole';
 type Mix = 'mine' | 'lead' | 'all' | 'others';
@@ -359,7 +363,9 @@ export const LearnEasy: React.FC<{
 
   const learned = parts.filter((_, i) => (rec[i]?.level ?? 0) >= 1).length;
   const due = parts.filter((_, i) => partState(rec[i], today) === 'due').length;
-  const stepLabel = typeof stage === 'number' ? `ნაწყვეტი ${stage + 1} / ${pieces.length}` : together ? 'ერთად' : 'მარტო';
+  // where I am on the phrase's path: „ნაბიჯი 2 / 4“ (the pills beside it name the steps)
+  const stepAt = steps.indexOf(stage);
+  const stepLabel = stepAt >= 0 ? `ნაბიჯი ${stepAt + 1} / ${steps.length}` : together ? 'ერთად' : 'მარტო';
   const doneOf = (s: Stage) => (s === 'whole' ? (joined ? false : learnedHere) : s === 'together' ? togetherDone : passed[s as number]);
   const timeline = useMemo(() => (whole ? timelineIn(score, vi, range.b0, range.b1) : []), [whole, score, vi, range.b0, range.b1]);
   const summary = `${Math.round(speed * 100)}%${many ? ` · ${MIX_LABEL[mix]}` : ''}${tone ? ` · ტონი ${signed(tone)}` : ''}${many && phones ? ' · ყურსასმენი' : ''}`;
@@ -394,9 +400,17 @@ export const LearnEasy: React.FC<{
             const s = partState(rec[i], today);
             const here = joined ? i < Math.max(1, run) : i === at;
             return <span key={i} className={`flex-1 rounded-full ${here ? 'outline outline-2 outline-offset-1 outline-[#7a2028]/60' : ''}`}
-              style={{ background: s === 'new' ? '#efe6d6' : s === 'learning' ? '#efd6a6' : s === 'due' ? '#d79aa0' : '#c9962a' }} />;
+              style={{ background: DOT_COLOR[s] }} />;
           })}
         </div>
+        {/* what the colours mean — only the states this chant has */}
+        <p className="flex flex-wrap justify-center gap-x-3 gap-y-0.5 px-1 text-[12px] font-semibold text-[#8c7c6b]" aria-hidden>
+          {DOT_LEGEND.filter(([ss]) => parts.some((_, i) => ss.includes(partState(rec[i], today)))).map(([ss, word]) => (
+            <span key={word} className="inline-flex items-center gap-1.5">
+              <span className="w-2.5 h-2.5 rounded-full ring-1 ring-[#d9cdb9]" style={{ background: DOT_COLOR[ss[0]] }} />{word}
+            </span>
+          ))}
+        </p>
         {run >= 2 && !joined && (
           <button type="button" onClick={() => pick('all')}
             className="self-center h-9 px-3.5 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[12.5px] font-bold text-[#4a3426] inline-flex items-center gap-1.5 cursor-pointer hover:ring-[#7a2028]/40">
@@ -407,21 +421,25 @@ export const LearnEasy: React.FC<{
 
       <section className="rounded-2xl bg-white ring-2 ring-[#7a2028]/80 shadow-[0_10px_24px_-18px_rgba(122,32,40,0.7)] p-3.5 flex flex-col gap-3">
         {/* the steps of this phrase: pieces, together, alone — done ones golden; a tap goes to one */}
-        <div className="flex items-center gap-2">
-          <span className="shrink-0 text-[12px] font-bold text-[#8c7c6b]">{stepLabel}</span>
-          <div role="radiogroup" aria-label="ნაბიჯები" className="flex-1 min-w-0 flex flex-wrap justify-end gap-1.5">
-            {steps.map(s => {
+        <div className="flex flex-col gap-1.5">
+          <span className="text-[12px] font-bold text-[#8c7c6b]">{stepLabel}</span>
+          <div role="radiogroup" aria-label="ნაბიჯები" className="flex flex-wrap items-center gap-y-1.5 gap-x-1">
+            {steps.map((s, i) => {
               const on = stage === s;
               const done = doneOf(s);
-              const word = s === 'together' ? 'ერთად' : s === 'whole' ? 'მარტო' : null;
+              const word = s === 'together' ? 'ერთად' : s === 'whole' ? 'მარტო' : on ? `ნაწყვეტი ${(s as number) + 1}` : null;
               return (
-                <button key={String(s)} type="button" role="radio" aria-checked={on} onClick={() => { triggerHaptic(8); goStage(s, s === 'whole' && togetherDone); }}
-                  aria-label={word ?? `ნაწყვეტი ${(s as number) + 1}`}
-                  className={`h-8 rounded-full text-[12.5px] font-bold cursor-pointer transition inline-flex items-center justify-center gap-1 ${word ? 'px-3' : 'w-8'} ${
-                    on ? 'bg-[#7a2028] text-[#fbf6ec]' : done ? 'bg-[#c9962a] text-white' : 'bg-[#f6efe3] text-[#75685a] ring-1 ring-[#e8dcc8]'}`}>
-                  {done && !on ? <Check className="w-4 h-4" /> : null}
-                  {word ?? (done && !on ? null : (s as number) + 1)}
-                </button>
+                // the arrow stays with its pill, so a wrapped row never ends on a loose „›“
+                <span key={String(s)} className="inline-flex items-center gap-1">
+                  {i > 0 && <ChevronRight className="w-3.5 h-3.5 shrink-0 text-[#c9bca6]" aria-hidden />}
+                  <button type="button" role="radio" aria-checked={on} onClick={() => { triggerHaptic(8); goStage(s, s === 'whole' && togetherDone); }}
+                    aria-label={typeof s === 'number' ? `ნაწყვეტი ${s + 1}` : word ?? ''}
+                    className={`h-8 rounded-full text-[12.5px] font-bold cursor-pointer transition inline-flex items-center justify-center gap-1 ${word ? 'px-3' : 'w-8'} ${
+                      on ? 'bg-[#7a2028] text-[#fbf6ec]' : done ? 'bg-[#c9962a] text-white' : 'bg-[#f6efe3] text-[#75685a] ring-1 ring-[#e8dcc8]'}`}>
+                    {done && !on ? <Check className="w-4 h-4" /> : null}
+                    {word ?? (done && !on ? null : (s as number) + 1)}
+                  </button>
+                </span>
               );
             })}
           </div>
