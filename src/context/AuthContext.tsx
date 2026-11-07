@@ -74,8 +74,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const isSuperAdmin = role === 'superadmin';
   const isAdmin = isSuperAdmin || role === 'admin';
   const isTeacher = isAdmin || role === 'teacher';
-  // the owner sees a newly published version within a minute, everyone else within five (utils/appUpdate.ts)
-  useEffect(() => { setUpdateCheckEvery(isOwner ? 60_000 : 5 * 60_000); }, [isOwner]);
+  // the owner sees a newly published version within a minute, everyone else within two (utils/appUpdate.ts)
+  useEffect(() => { setUpdateCheckEvery(isOwner ? 60_000 : undefined); }, [isOwner]);
 
   // the signed-in person's staff document, live: a role given or taken away applies at once
   useEffect(() => {
