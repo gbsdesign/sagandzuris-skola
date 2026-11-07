@@ -122,6 +122,71 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      // A browser too old for the site (Tailwind v4 needs oklch, color-mix and @property — Chrome 111, Safari 16.4,
+      // Firefox 128) shows parts wrong or not at all, and no update of ours can help. Say so plainly with a way to
+      // update it (the user's pick, 2026-11-07). Old-style script, so the oldest browsers still run it; ✕ hides it for a week.
+      (function () {
+        try {
+          var css = window.CSS;
+          var ok = css && css.supports && css.supports('color', 'oklch(50% 0.1 100)') &&
+            css.supports('color', 'color-mix(in srgb, red, blue)') && typeof css.registerProperty === 'function';
+          if (ok) return;
+          var KEY = 'sg-old-browser';
+          try { if (Date.now() - Number(localStorage.getItem(KEY) || 0) < 7 * 864e5) return; } catch (e) { /* storage off */ }
+          var ua = navigator.userAgent;
+          var ios = /iPad|iPhone|iPod/.test(ua) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+          var android = /Android/.test(ua);
+          var play = 'https://play.google.com/store/apps/details?id=';
+          var link = '', label = 'ბრაუზერის განახლება', how = '';
+          if (ios) how = 'განაახლე ტელეფონი: პარამეტრები → ზოგადი → პროგრამის განახლება.';
+          else if (android && /; wv\)/.test(ua)) link = play + 'com.google.android.webview';
+          else if (android && /SamsungBrowser/.test(ua)) link = play + 'com.sec.android.app.sbrowser';
+          else if (android && /Firefox/.test(ua)) link = play + 'org.mozilla.firefox';
+          else if (android) { link = play + 'com.android.chrome'; label = 'Chrome-ის განახლება'; }
+          else if (/Firefox/.test(ua)) link = 'https://www.mozilla.org/firefox/new/';
+          else link = 'https://www.google.com/chrome/';
+          var show = function () {
+            var box = document.createElement('div');
+            box.setAttribute('role', 'alert');
+            box.style.cssText = 'position:fixed;left:8px;right:8px;bottom:8px;bottom:calc(8px + env(safe-area-inset-bottom));' +
+              'z-index:2147483000;max-width:520px;margin:0 auto;background:#fbf6ec;color:#2a2017;border:1px solid #e8dcc8;' +
+              'border-radius:16px;box-shadow:0 8px 28px rgba(42,32,23,.22);padding:14px 48px 14px 16px;' +
+              'font:500 15px/1.45 "Noto Sans Georgian",system-ui,sans-serif;';
+            var title = document.createElement('div');
+            title.style.cssText = 'font-weight:700;font-size:16px;color:#7a2028;margin-bottom:2px;';
+            title.textContent = 'შენი ბრაუზერი ძველია';
+            var text = document.createElement('div');
+            text.textContent = 'საიტის ზოგი ნაწილი ვერ იმუშავებს. ' + (how || 'განაახლე და ყველაფერი გამოჩნდება.');
+            box.appendChild(title);
+            box.appendChild(text);
+            if (link) {
+              var a = document.createElement('a');
+              a.href = link;
+              a.target = '_blank';
+              a.rel = 'noopener';
+              a.textContent = label;
+              a.style.cssText = 'display:inline-block;margin-top:10px;padding:0 18px;line-height:44px;border-radius:22px;' +
+                'background:#7a2028;color:#fff;font-weight:700;text-decoration:none;';
+              box.appendChild(a);
+            }
+            var x = document.createElement('button');
+            x.type = 'button';
+            x.setAttribute('aria-label', 'დახურვა');
+            x.textContent = '✕';
+            x.style.cssText = 'position:absolute;top:6px;right:6px;width:36px;height:36px;border:0;border-radius:18px;' +
+              'background:transparent;color:#8a7a6a;font-size:18px;cursor:pointer;';
+            x.onclick = function () {
+              try { localStorage.setItem(KEY, String(Date.now())); } catch (e) { /* storage off */ }
+              if (box.parentNode) box.parentNode.removeChild(box);
+            };
+            box.appendChild(x);
+            document.body.appendChild(box);
+          };
+          if (document.body) show(); else document.addEventListener('DOMContentLoaded', show);
+        } catch (e) { /* never in the way */ }
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

@@ -3,6 +3,7 @@
 // synthesizer that plays its voices (three; four in the 4-voice litany of vol. III).
 
 import { notesBase } from './notesBase';
+import { holdUpdates } from './appUpdate';
 
 export interface BookScore {
   nums: number[];
@@ -280,6 +281,13 @@ export const stopLessonNotes = () => {
 const LOOKAHEAD = 0.25; // seconds of audio scheduled ahead
 const TICK_MS = 40;
 
+// the players sounding now: a new version waits while any does, also with the screen off (utils/appUpdate.ts)
+const sounding = new Set<ChantSynth>();
+const markSounding = (s: ChantSynth, on: boolean) => {
+  if (on) sounding.add(s); else sounding.delete(s);
+  holdUpdates('synth', sounding.size > 0);
+};
+
 export class ChantSynth {
   readonly duration: number; // score seconds at speed 1
   readonly toSec: (beat: number) => number;
@@ -349,6 +357,7 @@ export class ChantSynth {
     }
     this.startAt(from >= this.duration - 0.05 ? (this.loopA ?? 0) : Math.max(0, from));
     this.playing = true;
+    markSounding(this, true);
     this.tick();
     this.timer = window.setInterval(() => this.tick(), TICK_MS);
   }
@@ -357,6 +366,7 @@ export class ChantSynth {
     if (!this.playing) return;
     this.pausedAt = this.position();
     this.playing = false;
+    markSounding(this, false);
     if (this.timer !== null) window.clearInterval(this.timer);
     this.timer = null;
     this.silence();
