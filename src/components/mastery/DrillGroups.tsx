@@ -14,7 +14,7 @@ import { triggerHaptic } from '../../utils/haptics';
 const ICONS: Record<string, React.ComponentType<{ className?: string }>> = { ear: Ear, poly: Users, folk: Music2, rhythm: Drum };
 
 /** An exercise a teacher assigned and the member hasn't done since. */
-const useOpenDrillWork = () => {
+export const useOpenDrillWork = () => {
   const { user } = useAuth();
   const classes = useMyClasses(user?.uid);
   const work = useMyAssignments(classes.map(c => c.id), user?.uid);

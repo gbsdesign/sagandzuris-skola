@@ -6,11 +6,14 @@ import { readDrillScores } from '../../utils/drillScores';
 import { ManeraScore } from '../views/ManeraPanel';
 import { georgiaToday } from '../../utils/psalter';
 import { shortDate } from '../../hooks/useTeaching';
+import { pathSummary, recordFromDoc } from '../../utils/masteryPath';
+import { MASTERY_LEVELS } from '../../data/masteryPath';
+import { Bar } from '../ui/kit';
 
-// The member's exercises in their window (teachers, admins): how many they did in the last 7 days, the app's best score
-// of each (microphone or AI teacher), and the recordings they sent („მასწავლებელს გაგზავნა“) to hear. Shown only once
-// there is something.
-export const DrillReview: React.FC<{ uid: string; drillDone?: unknown; drillScore?: unknown }> = ({ uid, drillDone, drillScore }) => {
+// The member's exercises in their window (teachers, admins): where they stand on „ოსტატობის გზა“ (the level, its exercises
+// passed — from the record alone, `data`), how many they did in the last 7 days, the app's best score of each (microphone
+// or AI teacher), and the recordings they sent („მასწავლებელს გაგზავნა“) to hear. Shown only once there is something.
+export const DrillReview: React.FC<{ uid: string; drillDone?: unknown; drillScore?: unknown; data?: Record<string, unknown> }> = ({ uid, drillDone, drillScore, data }) => {
   const takes = useDrillTakes(uid);
   const [playing, setPlaying] = useState<string | null>(null);
   const audio = useRef<{ a: HTMLAudioElement; url: string } | null>(null);
@@ -24,7 +27,9 @@ export const DrillReview: React.FC<{ uid: string; drillDone?: unknown; drillScor
   const weekStart = georgiaToday(new Date(Date.now() - 6 * 86400000));
   const week = Object.values(done).filter(d => d >= weekStart).length;
   const scores = Object.entries(readDrillScores(drillScore)).sort((a, b) => a[1] - b[1]);
-  if (!takes.length && !Object.keys(done).length && !scores.length) return null;
+  const path = data ? pathSummary(recordFromDoc(data)) : null;
+  const tested = !!data?.mastery;
+  if (!takes.length && !Object.keys(done).length && !scores.length && !tested) return null;
 
   const play = (id: string) => {
     if (playing === id) { stop(); return; }
@@ -41,6 +46,15 @@ export const DrillReview: React.FC<{ uid: string; drillDone?: unknown; drillScor
 
   return (
     <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] p-3.5">
+      {path && (
+        <div className="mb-3">
+          <p className="flex items-baseline gap-2 text-[14px] font-bold text-[#4a3426]">
+            <span className="flex-1">ოსტატობის გზა · დონე {path.level} · {MASTERY_LEVELS[path.level].name}</span>
+            <span className="tabular-nums text-[#7a2028]">{path.passed}/{path.total}</span>
+          </p>
+          <div className="mt-1.5"><Bar value={path.passed} max={path.total} /></div>
+        </div>
+      )}
       <p className="flex items-center gap-1.5 text-[13px] font-bold text-[#75685a]">
         <Dumbbell className="w-4 h-4" /> სავარჯიშოები · ბოლო 7 დღეში {week}
       </p>

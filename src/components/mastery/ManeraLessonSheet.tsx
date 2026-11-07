@@ -4,6 +4,8 @@ import { useAuth } from '../../context';
 import { Btn, IconBtn, Sheet, Tabs } from '../ui/kit';
 import { MANERA_BASE, type ManeraExercise, type ManeraStep } from '../../data/maneraLessons';
 import { findDrill, type Drill } from '../../data/vocalDrills';
+import { TrainerView } from './trainers/Trainer';
+import { DoneButton } from './trainers/Open';
 import { playLessonNotes, stopLessonNotes } from '../../utils/chantSynth';
 import { markDrillDone, useManeraPractice } from '../../utils/maneraPractice';
 import { MAX_TAKE_SECONDS, saveDrillTake } from '../../utils/drillTakes';
@@ -42,7 +44,12 @@ export const DrillSheet: React.FC<{ drillId: string | null; label?: string; star
   const drill = findDrill(drillId);
   return (
     <Sheet open={!!drill} onClose={onClose} wide title={drill ? <>{label && <span className="text-[#c4b49c] tabular-nums mr-1.5">{label}</span>}{drill.title}</> : ''}>
-      {drill && (
+      {drill && (drill.read ? (
+        // a lesson only (data/masteryDrills.ts `read`): its tick in place of the exercise
+        <div ref={top} className="space-y-4 text-[#2a2017] scroll-mt-4">
+          <LessonView drill={drill} onExercise={() => undefined} />
+        </div>
+      ) : (
         <div ref={top} className="space-y-4 text-[#2a2017] scroll-mt-4">
           <Tabs<Tab> cols={2} value={tab} onChange={setTab} items={[
             { id: 'lesson', label: 'გაკვეთილი', Icon: BookOpen },
@@ -50,9 +57,11 @@ export const DrillSheet: React.FC<{ drillId: string | null; label?: string; star
           ]} />
           {tab === 'lesson'
             ? <LessonView drill={drill} onExercise={() => setTab('exercise')} />
-            : <ExerciseView key={drill.id} drill={drill} />}
+            : drill.trainer || drill.open
+              ? <TrainerView key={drill.id} drill={drill} onClose={onClose} />
+              : <ExerciseView key={drill.id} drill={drill} />}
         </div>
-      )}
+      ))}
     </Sheet>
   );
 };
@@ -104,7 +113,9 @@ const LessonView: React.FC<{ drill: Drill; onExercise: () => void }> = ({ drill,
         </div>
       )}
 
-      <Btn full size="lg" icon={<Dumbbell />} onClick={onExercise}>სავარჯიშო · {exercise.minutes} წთ</Btn>
+      {drill.read
+        ? <DoneButton drillId={drill.id} label="წავიკითხე" />
+        : <Btn full size="lg" icon={<Dumbbell />} onClick={onExercise}>სავარჯიშო · {exercise.minutes} წთ</Btn>}
     </div>
   );
 };

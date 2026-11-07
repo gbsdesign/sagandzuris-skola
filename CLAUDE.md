@@ -418,6 +418,27 @@
   the click silent after it; the note to sing sounds only 1.2 s so the phone hears the student), the tips by the AI teacher
   (`askAiScore`, JSON score, its own 3 a day — scope `manera`). Best % in `students.drillScore.{id}` + device
   (`utils/drillScores.ts`); the ring = `useMastery` (ManeraPanel): all 27 exercises, a teacher's mark wins, unscored = 0.
+  **„ოსტატობის გზა“ since 2026-11-07** (the user: „0 დონიდან … პროფესიონალ მგალობლამდე“, plan doc
+  https://claude.ai/artifact/BNanxAMNuUZMjHNuhx7oo5; „მიყევი გეგმას და გააკეთე ყველაფერი“): the panel (`mastery/MasteryContent.tsx`)
+  = the level card (`MasteryPath.tsx` `LevelCard`: level N, its bar, the four lines' dots ხმა · სმენა · რიტმი · გალობა, „საწყისი
+  ტესტი · 5 წთ“ until taken), „დღეს“ (`DayPlan`: 3–4 exercises — a teacher's first, a warm-up, the weakest line's next, the chant
+  line's next or `m-review` from level 2; kept for the day in `sg-mastery-day`), the class lessons, the six levels as a list
+  (`PathLevels`, line chips, the levels above the current one locked), „გაკვეთილები“ (`LessonLibrary`: the 11 tips + 7 talks, the
+  teachers' marks) and „სხვა სავარჯიშოები“ (the old drills off the path). Levels: `data/masteryPath.ts` (`MASTERY_LEVELS`, 66 items
+  `{no, id, line, check}`, 12·12·12·14·10·6 — 0 საფუძველი … 5 ოსტატი); the new drills `data/masteryDrills.ts` (`m-…`, joined into
+  `ALL_DRILLS`; `trainer` = the phone asks and listens, `open` = it opens the learning mode / a game / the notes / the reviews,
+  `read` = a lesson ticked „წავიკითხე“). Rules `utils/masteryPath.ts` + test: a scored item (app / quiz) passes at 80, any other once
+  done; a level is closed at 80% of its items (`levelNeed`) or below the entry test's start; `recordFromDoc` reads `drillScore`
+  (the device's best too), `maneraReview` (tip-<num>, a teacher's mark wins), `drillDone`, `mastery.start`. Trainers
+  `components/mastery/trainers/` (`TrainerView` routes the kinds; questions and scoring `utils/earTrainer.ts` + test — ten rounds,
+  octave-free, the melodies from `MELODY_POOL`, chords from `CHORD_POOL`, the eight tones from vol. VIII's heirmoi; a held note in a
+  ±0.3 semitone band, `m-pure` 20 cents; along / drone forgive 0–0.5 s of the phone's lag; earphones advised): `Quiz`, `Dict`,
+  `Sing`, `Measure`, `Taps`, `Listen` (tones, schools), `Open`; the voice's range `sg-manera-voice`; each run's score through
+  `useFinish` (none on a teacher's look). The entry test (`EntryTest.tsx`: range, a held note, higher/lower, echoes, three
+  intervals → `placement` 0/1/2) writes `students.mastery {start, at, range}` + device `sg-mastery-start`. The path's orb shows
+  „დონე N“ and the level's share (`useMasteryPath`), the widget's ring the same; the class roll and `DrillReview` show the
+  member's level; the assignment picker lists the drills by level (`LEVEL_DRILL_GROUPS`). Lessons written by Claude, unchecked
+  by a teacher.
 - **მედავითნეობა** (page `medavitneoba`, built 2026-10-27): the reader's course on the vine's „მედავითნეობა“ label
   (section `medavitneobaTopic`, „მალე“ until the admin opens it). 8 lessons in `data/medavitneLessons.ts`, shown step by
   step (learn / order / read aloud / quiz / task) in `pages/MedavitneobaPage.tsx` + `pages/medavitneoba/parts.tsx`; the

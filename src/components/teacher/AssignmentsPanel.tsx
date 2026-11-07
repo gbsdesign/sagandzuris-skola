@@ -10,10 +10,18 @@ import { filterValidVariants } from '../../utils/variantValidation';
 import { writePath } from '../admin/MemberPathEditor';
 import { CatalogPicker } from '../admin/CatalogPicker';
 import { askConfirm, Btn, Card, CardTitle, Empty, FIELD, Flash, IconBtn, Label, Pill, Sheet, Tabs, useFlash } from '../ui/kit';
-import { DRILL_GROUPS, MANERA_DRILL_GROUP, findDrill, drillGroupTitle } from '../../data/vocalDrills';
+import { DRILL_GROUPS, LEVEL_DRILL_GROUPS, MANERA_DRILL_GROUP, findDrill, drillGroupTitle, type DrillGroup } from '../../data/vocalDrills';
 import { allLearned, assignedProgress } from '../../utils/learn';
 import { PartsBar } from '../learn/PartsBar';
 import { DrillSheet } from '../mastery/ManeraLessonSheet';
+
+// the exercises a teacher may give: „ოსტატობის გზა“'s levels in order, then the tips and the old groups' drills the path
+// does not hold (each exercise once)
+const onPath = new Set(LEVEL_DRILL_GROUPS.flatMap(g => g.drills.map(d => d.id)));
+const PICKER_GROUPS: DrillGroup[] = [
+  ...LEVEL_DRILL_GROUPS,
+  ...[MANERA_DRILL_GROUP, ...DRILL_GROUPS].map(g => ({ ...g, drills: g.drills.filter(d => !onPath.has(d.id)) })).filter(g => g.drills.length),
+];
 import { usePathItemOpener } from '../../hooks/usePathItemOpener';
 import { assignmentLines } from '../../utils/assignmentLines';
 
@@ -369,7 +377,7 @@ export const NewAssignment: React.FC<{
             <Label hint="„ოსტატობიდან“">სავარჯიშო</Label>
             <select className={FIELD} value={drillId} onChange={e => setDrillId(e.target.value)} aria-label="სავარჯიშო">
               <option value="">აირჩიე…</option>
-              {[MANERA_DRILL_GROUP, ...DRILL_GROUPS].map(g => (
+              {PICKER_GROUPS.map(g => (
                 <optgroup key={g.id} label={g.title}>
                   {g.drills.map(d => <option key={d.id} value={d.id}>{d.title} · {d.exercise.minutes} წთ</option>)}
                 </optgroup>
