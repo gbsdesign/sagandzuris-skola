@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, Headphones, Mic, Minus, Play, Plus, Repeat, RotateCcw, Send, Snail, Sparkles, Square, Users } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Headphones, Mic, Minus, Play, Plus, Repeat, RotateCcw, Send, Snail, Sparkles, Square, Users, X } from 'lucide-react';
 import { BookScore, ChantSynth, countIn, makeTimeMap } from '../../utils/chantSynth';
 import { LEARNED_SHARE, LearnPart, LearnRecord, PartState, chunksOfPart, learnTakeId, melodyGroups, melodyIn, partState, timelineIn } from '../../utils/learn';
 import { noteName } from '../../utils/pearls';
@@ -24,6 +25,8 @@ import { Choice, LOOPS_PER_STEP, SPEEDS, SettingsFold, useSinging } from './Lear
 
 /** A piece is sung right enough with this share of its notes (the whole phrase needs LEARNED_SHARE). */
 const PIECE_PASS = 70;
+/** A phone held upright — where the big notes halve their lines. */
+const UPRIGHT = '(orientation: portrait) and (max-width: 639px)';
 /** The others' level while „ჩემი ხმა წინ“. */
 const LEAD_OTHERS = 0.35;
 /** Seconds of silence between the rounds of „ერთად“ — a breath. */
@@ -105,6 +108,28 @@ export const LearnEasy: React.FC<{
   const [selfCheck, setSelfCheck] = useState(false);
   const [mirror, setMirror] = useState(false);
   const [ai, setAi] = useState<{ busy: boolean; text: string; problem: string }>({ busy: false, text: '', problem: '' });
+  // the notes big (BigNotes): a history step of its own, so the phone's back closes only it
+  const [big, setBig] = useState(false);
+  const openBig = () => {
+    triggerHaptic(8);
+    try { window.history.pushState({ ...(window.history.state || {}), sgLearnBig: 1 }, ''); } catch { /* still opens */ }
+    setBig(true);
+  };
+  const closeBig = () => { if (window.history.state?.sgLearnBig) window.history.back(); else setBig(false); };
+  // a phone held upright: the big notes halve each line, so they come out twice as large
+  const [upright, setUpright] = useState(() => window.matchMedia(UPRIGHT).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(UPRIGHT);
+    const change = () => setUpright(mq.matches);
+    mq.addEventListener('change', change);
+    return () => mq.removeEventListener('change', change);
+  }, []);
+  useEffect(() => {
+    if (!big) return;
+    const onPop = (e: PopStateEvent) => { if (!e.state?.sgLearnBig) setBig(false); };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [big]);
   const synth = useMemo(() => new ChantSynth(score), [score]);
   const time = useMemo(() => makeTimeMap(score.tempos), [score]);
   const raf = useRef(0);
@@ -449,7 +474,8 @@ export const LearnEasy: React.FC<{
           <p role="status" className="rounded-xl bg-[#fbf3df] ring-1 ring-[#e9cf8f] px-3 py-2 text-[13.5px] font-bold text-[#8a6a1e] text-center">{toast}</p>
         )}
 
-        <PartPicture score={score} sys={part.sys} beat={beat} span={typeof stage === 'number' ? [range.b0, range.b1] : null} marks={marks} voice={vi} />
+        <PartPicture score={score} sys={part.sys} beat={beat} span={typeof stage === 'number' ? [range.b0, range.b1] : null} marks={marks} voice={vi}
+          focus={many} onOpen={openBig} />
 
         <div className="flex items-start gap-2">
           <p className="flex-1 min-h-[2.75rem] text-[15px] leading-snug font-semibold text-[#2a2017]" aria-live="polite">{say}</p>
@@ -585,9 +611,54 @@ export const LearnEasy: React.FC<{
           {many && <p className="text-[12.5px] leading-snug text-[#8c7c6b]">„რა ისმის“-ს ყოველი ნაბიჯი თავად ირჩევს — აქ მაშინ შეცვალე, თუ სხვანაირად გინდა.</p>}
         </SettingsFold>
       </section>
+
+      {big && (
+        <BigNotes title={joined ? `ფრაზები 1–${Math.max(1, run)} ერთად` : `ფრაზა ${at + 1} / ${parts.length}`} step={stepLabel} onClose={closeBig}
+          say={say} main={main} pulse={phase === 'singing' || counting}>
+          <PartPicture score={score} sys={part.sys} beat={beat} span={typeof stage === 'number' ? [range.b0, range.b1] : null} marks={marks} voice={vi} focus={many}
+            split={upright} />
+        </BigNotes>
+      )}
     </>
   );
 };
+
+/** The notes big, over the whole screen (2026-11-07, stage 2 of the plan): the phrase's lines as wide as the screen — on an
+ *  upright phone each line in two halves, on its side the words and the button stand beside them —, the mark still follows the sound, and the same one
+ *  big button, so the phrase can be learned from here. The phone's back closes it (its own history step, inside the frame's). */
+const BigNotes: React.FC<{
+  title: string; step: string; onClose: () => void; say: React.ReactNode;
+  main: { label: string; icon: React.ReactNode; run: () => void; disabled?: boolean }; pulse: boolean; children: React.ReactNode;
+}> = ({ title, step, onClose, say, main, pulse, children }) => createPortal(
+  <div className="fixed inset-0 z-[95] flex flex-col bg-[#faf6ef]" role="dialog" aria-modal="true" aria-label={`ნოტები დიდად · ${title}`}>
+    <div className="safe-top safe-x shrink-0 border-b border-[#e4d8c4]">
+      <div className="h-14 [@media(max-height:500px)]:h-12 px-3 flex items-center gap-2">
+        <div className="min-w-0 flex-1">
+          <p className="truncate text-[15px] font-bold text-[#2a2017] leading-tight">{title}</p>
+          <p className="truncate text-[12px] font-semibold text-[#8c7c6b] leading-tight">{step}</p>
+        </div>
+        <button type="button" onClick={onClose} aria-label="დახურვა" title="დახურვა"
+          className="w-11 h-11 shrink-0 rounded-full grid place-items-center text-[#574739] hover:bg-[#f1e9dc] active:scale-95 transition cursor-pointer">
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+    <div className="flex-1 min-h-0 flex flex-col [@media(max-height:500px)]:flex-row safe-x">
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2 flex flex-col gap-2">
+        {children}
+      </div>
+      <div className="shrink-0 safe-bottom border-t border-[#e4d8c4] [@media(max-height:500px)]:border-t-0 [@media(max-height:500px)]:border-l [@media(max-height:500px)]:w-60 px-3 pt-2.5 pb-3 flex flex-col justify-center gap-2.5 bg-white/60">
+        <p className="text-[14.5px] leading-snug font-semibold text-[#2a2017]" aria-live="polite">{say}</p>
+        <button type="button" onClick={main.run} disabled={main.disabled}
+          className="relative w-full min-h-14 rounded-2xl bg-[#7a2028] text-[#fbf6ec] inline-flex items-center justify-center gap-2.5 text-[16px] font-bold cursor-pointer active:scale-[0.985] transition shadow-[0_10px_20px_-12px_rgba(122,32,40,0.9)] disabled:opacity-60 disabled:cursor-default [&_svg]:w-5 [&_svg]:h-5">
+          {pulse && <span className="absolute inset-0 rounded-2xl bg-[#7a2028]/40 animate-pulse motion-reduce:hidden" aria-hidden />}
+          <span className="relative inline-flex items-center gap-2.5">{main.icon}{main.label}</span>
+        </button>
+      </div>
+    </div>
+  </div>,
+  document.body,
+);
 
 const SmallBtn: React.FC<{ onClick: () => void; icon?: React.ReactNode; disabled?: boolean; wide?: boolean; children: React.ReactNode }> = ({ onClick, icon, disabled, wide, children }) => (
   <button type="button" onClick={onClick} disabled={disabled}

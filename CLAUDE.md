@@ -238,6 +238,11 @@
   **Clearer screen (2026-11-07, stage 1 of the plan https://claude.ai/artifact/QPKSZiwP5MWiy8JpGBZGut):** the step row says „ნაბიჯი N / M“
   with › between the pills and the open piece named („ნაწყვეტი 2“); a legend under the phrase dots names only the states the chant
   has (`DOT_LEGEND`); `ReviewReminder` is one folded row (the hour or „გამორთულია“, the switch and hours inside).
+  **Notes (stage 2, the same night; the user's pick „ოდნავ მკრთალად“):** `PartPicture focus` veils the other voices' staves (`otherBands`
+  over `score.ny`: a voice's band = a little above its staff to a little above the next one's, so its words go with it; lines not
+  read stay plain). A tap on the picture or its ⤢ opens `BigNotes` (LearnEasy): the lines across the screen, the same `say` and main
+  button, its own history step `sgLearnBig` inside the frame's `sgLearn`; an upright phone (`UPRIGHT`) halves each line
+  (`PartPicture split`, `cutOf` = between the two notes nearest the middle, from `score.nx`), on its side the words and button stand beside.
 - **კლასის სტუდია** (2026-10-29, `components/studio/ClassStudio.tsx`): a program chant with book notes gets „სტუდია“ in its
   window (`ItemSheet` in `classes/ClassProgram.tsx`). One window `Studio` since 2026-11-05: a member records; a teacher gets two
   tabs „კლასის ჩანაწერები“ (none yet → three steps, „კლასს ვთხოვ“ = a line in the class chat) and „ჩემი ხმა“. A member sings their voice over the synth (their own voice muted) and the
