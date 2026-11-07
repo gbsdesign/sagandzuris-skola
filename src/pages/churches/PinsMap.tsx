@@ -4,6 +4,7 @@ import 'leaflet/dist/leaflet.css';
 import { LocateFixed } from 'lucide-react';
 import type { Church } from '../../data/churches';
 import { triggerHaptic } from '../../utils/haptics';
+import { locateMe, myPlace } from '../../hooks/useMyPlace';
 
 // „რუკა“ on „ეკლესია-მონასტრები“: every church with a known place as a dot on a real map (Leaflet over OpenStreetMap's
 // tiles, drawn on one canvas so 3 400 dots stay light on a phone). The dot's colour is its kind, a green ring = I have been
@@ -60,17 +61,20 @@ const PinsMap: React.FC<{ list: Church[]; visited: (id: string) => boolean; onOp
     }
   }, [list, visited]);
 
-  const locate = () => {
-    if (!('geolocation' in navigator) || !map.current) return;
+  // my place: the same one „ახლოს მდებარე“ found (hooks/useMyPlace.ts) — a known one is shown at once, a tap asks the phone
+  const showMe = (at: L.LatLngExpression, fly: boolean) => {
+    if (!map.current) return;
+    me.current?.remove();
+    me.current = L.circleMarker(at, { radius: 8, color: '#fff', weight: 3, fillColor: '#2563eb', fillOpacity: 1 }).addTo(map.current);
+    if (fly) map.current.setView(at, 12);
+  };
+  useEffect(() => { const f = myPlace(); if (f) showMe([f.lat, f.lng], false); }, []);
+  const locate = async () => {
     triggerHaptic(10);
     setLocating(true);
-    navigator.geolocation.getCurrentPosition(p => {
-      setLocating(false);
-      const at: L.LatLngExpression = [p.coords.latitude, p.coords.longitude];
-      me.current?.remove();
-      me.current = L.circleMarker(at, { radius: 8, color: '#fff', weight: 3, fillColor: '#2563eb', fillOpacity: 1 }).addTo(map.current!);
-      map.current!.setView(at, 12);
-    }, () => setLocating(false), { enableHighAccuracy: true, timeout: 15000, maximumAge: 120000 });
+    const f = await locateMe();
+    setLocating(false);
+    if (f) showMe([f.lat, f.lng], true);
   };
 
   return (

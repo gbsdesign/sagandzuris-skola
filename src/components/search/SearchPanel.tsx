@@ -2,6 +2,7 @@ import { usePlacements } from '../../data/placements';
 import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CalendarDays, Check, ChevronRight, Plus, Lock, Music, Music2, ScrollText, Search, Sparkles, Users, X, BookOpen, UserRound,
+  Church,
 } from 'lucide-react';
 import { useAuth } from '../../context';
 import { useMyHabits } from '../../hooks/useMyHabits';
@@ -10,7 +11,8 @@ import { roleAllows, sectionOfShortcut } from '../../utils/shortcuts';
 import { CatalogTree } from './CatalogTree';
 import { useAccess } from '../../hooks/useAccess';
 import { useMyClasses } from '../../hooks/useClasses';
-import { SEARCH_GROUPS, SearchGroupId, SearchHit, SearchItem, buildSearchIndex, personItem, runSearch, shortcutOfSearch } from '../../data/searchIndex';
+import { SEARCH_GROUPS, SearchGroupId, SearchHit, SearchItem, buildSearchIndex, churchItem, personItem, runSearch, shortcutOfSearch } from '../../data/searchIndex';
+import { loadChurches, whereOf } from '../../data/churches';
 import { shownName, useDirectory } from '../../utils/directory';
 import { triggerHaptic } from '../../utils/haptics';
 import { shortcutIcon } from '../home/ShortcutShelf';
@@ -36,9 +38,25 @@ const saveRecent = (key: string) => {
   try { localStorage.setItem(RECENT_KEY, JSON.stringify([key, ...readRecent().filter(k => k !== key)].slice(0, MAX_RECENT))); } catch { /* storage off */ }
 };
 
+// the churches' rows for the index: made once the list is loaded, kept for the session
+let churchRows: SearchItem[] | null = null;
+const useChurchItems = (wanted: boolean) => {
+  const [rows, setRows] = useState<SearchItem[]>(churchRows ?? []);
+  useEffect(() => {
+    if (!wanted || churchRows) return;
+    let alive = true;
+    loadChurches().then(d => {
+      churchRows = d.list.map(c => churchItem(c.id, c.name, whereOf(c)));
+      if (alive) setRows(churchRows);
+    }, () => {});
+    return () => { alive = false; };
+  }, [wanted]);
+  return rows;
+};
+
 const GROUP_ICON: Record<SearchGroupId, React.ReactNode> = {
   fn: <Sparkles />, chant: <Music2 />, prayer: <ScrollText />, psalter: <BookOpen />, song: <Music />, ancestor: <Users />, feast: <CalendarDays />,
-  person: <UserRound />,
+  church: <Church />, person: <UserRound />,
 };
 const GROUP_TILE: Record<SearchGroupId, string> = {
   fn: 'bg-[#7a2028]/[0.08] text-[#7a2028]',
@@ -48,6 +66,7 @@ const GROUP_TILE: Record<SearchGroupId, string> = {
   song: 'bg-[#e6f1e6] text-[#3d6b3d]',
   ancestor: 'bg-[#f3e6dc] text-[#7a4a2a]',
   feast: 'bg-[#fbe9e4] text-[#9a3324]',
+  church: 'bg-[#f4e1dc] text-[#7a2028]',
   person: 'bg-[#4a3426]/[0.08] text-[#4a3426]',
 };
 const groupTitle = (id: SearchGroupId) => SEARCH_GROUPS.find(g => g.id === id)?.title || '';
@@ -152,13 +171,16 @@ export const SearchPanel: React.FC<{
   // admins find people too (name and photo from the directory); a row opens the person's window in the admin panel.
   // Never while picking a button
   const directory = useDirectory(isAdmin && !picking);
+  // the churches (3 400, a lazy chunk) join the index once something is typed — never while picking a button
+  const churches = useChurchItems(!picking && deferred.trim().length >= 2);
   const index = useMemo(
     () => [
       ...buildSearchIndex({ signedIn: !!user, owner: isOwner, teacher: isTeacher, hasClass: classes.length > 0 || isTeacher }),
+      ...churches,
       ...directory.people.map(p => personItem(p.uid, shownName(p), [p.name, p.churchName].filter(Boolean).join(' '))),
     ],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [user, isOwner, isTeacher, classes.length, placed, directory.people]
+    [user, isOwner, isTeacher, classes.length, placed, directory.people, churches]
   );
   // hidden sections (the admin's switches, the kids' mode) and unbuilt ones are not offered at all
   const shown = (it: SearchItem) => !it.section || (access.section(it.section) !== 'hidden' && access.section(it.section) !== 'soon');

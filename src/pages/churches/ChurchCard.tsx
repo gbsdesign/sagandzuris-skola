@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Clock3, ExternalLink, Footprints, Lock, MapPin, Navigation, Pencil, Phone, Play, Sparkles, User } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Clock3, ExternalLink, Footprints, Lock, MapPin, Navigation, Pencil, Phone, Play, Share2, Sparkles, User } from 'lucide-react';
 import { useNavigation, useRealAuth } from '../../context';
 import { Btn, FIELD, Sheet, offerUndo } from '../../components/ui/kit';
 import { triggerHaptic } from '../../utils/haptics';
-import { type Church, KIND_LABEL, photoPage, photoUrl, placeUrl, routeUrl, whereOf, wikiUrl } from '../../data/churches';
+import { type Church, KIND_LABEL, distanceM, distanceText, photoPage, photoUrl, placeUrl, routeUrl, whereOf, wikiUrl } from '../../data/churches';
+import { useMyPlace } from '../../hooks/useMyPlace';
+import { shareChurch } from '../../utils/churchShare';
 import { dayText, feastOf, nextFeastDay, tbilisiToday } from '../../data/churchFeasts';
 import { filmsOfChurch } from '../../data/churchFilms';
 import { clock, thumbOf } from '../../data/etnofori';
@@ -16,6 +18,8 @@ import {
 // One church in a window: its photos (Wikimedia's, then Google Maps' when the admin has given the key), where it is,
 // whether it is open, its feast day, „ვიყავი“ for the pilgrim's book, the TV reports on it, the hours an admin wrote, the
 // contact (admins and the people they allowed), and the way there with Google Maps.
+// Tidied 2026-11-07: „ვიყავი“ and „გაზიარება“ in one row, „N კმ შენგან“ once the phone's place is known, empty hours /
+// contact as one quiet line (a box only when something is written or being written).
 
 const AREA = FIELD.replace('h-11', 'min-h-[4.5rem] py-2.5 leading-snug resize-y');
 const LINK_BTN = 'inline-flex items-center justify-center gap-2 rounded-full font-bold cursor-pointer select-none transition active:scale-[0.97] h-12 px-5 text-[15px] [&>svg]:w-[18px] [&>svg]:h-[18px] [&>svg]:shrink-0';
@@ -57,7 +61,8 @@ const Card: React.FC<{ c: Church; onClose: () => void }> = ({ c, onClose }) => {
 
         <div className="flex flex-col gap-2">
           <p className="flex items-start gap-1.5 text-[15px] font-semibold text-[#4a3426] leading-snug">
-            <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-[#8a4b12]" aria-hidden /> {whereOf(c)}
+            <MapPin className="w-4 h-4 mt-0.5 shrink-0 text-[#8a4b12]" aria-hidden />
+            <span>{whereOf(c)}<Distance c={c} /></span>
           </p>
           <div className="flex flex-wrap gap-1.5">
             <Status c={c} />
@@ -70,7 +75,10 @@ const Card: React.FC<{ c: Church; onClose: () => void }> = ({ c, onClose }) => {
               <span>ტაძრობა: <b>{feastOn === today ? 'დღეს' : dayText(feastOn)}</b> · {feast.label}</span>
             </p>
           )}
-          <VisitButton id={c.id} today={today} />
+          <div className="flex flex-wrap gap-2">
+            <VisitButton id={c.id} today={today} />
+            <ShareButton c={c} />
+          </div>
           {(c.desc || c.note) && (
             <p className="text-[14px] text-[#574739] leading-relaxed">
               {[c.desc && c.desc[0].toUpperCase() + c.desc.slice(1), c.note].filter(Boolean).join('. ')}
@@ -110,32 +118,30 @@ const Card: React.FC<{ c: Church; onClose: () => void }> = ({ c, onClose }) => {
           </Box>
         )}
 
-        <Box icon={<Clock3 />} title="საათები და მსახურება">
-          {info === undefined ? <Muted>იტვირთება…</Muted>
-            : info ? (
-              <div className="flex flex-col gap-1">
-                {info.hours && <p className="text-[14.5px] font-semibold text-[#2a2017] whitespace-pre-line leading-snug">{info.hours}</p>}
-                {info.note && <p className="text-[14px] text-[#574739] whitespace-pre-line leading-relaxed">{info.note}</p>}
-              </div>
-            ) : <Muted>{c.kind === 'x' ? 'ეს ტაძარი ამჟამად არ მოქმედებს.' : 'საათები ჯერ არ არის ჩაწერილი.'}</Muted>}
-        </Box>
-
-        {canSee && (
-          <Box icon={<Lock />} title="კონტაქტი" hint="ხედავენ მხოლოდ ადმინები და ის, ვისაც ადმინი ჩაურთავს">
-            {contact === undefined ? <Muted>იტვირთება…</Muted>
-              : contact ? (
-                <div className="flex flex-col gap-1.5">
-                  {contact.person && <p className="flex items-center gap-1.5 text-[14.5px] font-semibold text-[#2a2017]"><User className="w-4 h-4 text-[#8a4b12]" aria-hidden />{contact.person}</p>}
-                  {contact.phone && (
-                    <a href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`} className="self-start inline-flex items-center gap-1.5 text-[15px] font-bold text-[#7a2028] hover:underline">
-                      <Phone className="w-4 h-4" aria-hidden />{contact.phone}
-                    </a>
-                  )}
-                  {contact.other && <p className="text-[14px] text-[#574739] whitespace-pre-line leading-relaxed">{contact.other}</p>}
-                </div>
-              ) : <Muted>კონტაქტი ჯერ არ არის ჩაწერილი.</Muted>}
+        {info && (info.hours || info.note) ? (
+          <Box icon={<Clock3 />} title="საათები და მსახურება">
+            <div className="flex flex-col gap-1">
+              {info.hours && <p className="text-[14.5px] font-semibold text-[#2a2017] whitespace-pre-line leading-snug">{info.hours}</p>}
+              {info.note && <p className="text-[14px] text-[#574739] whitespace-pre-line leading-relaxed">{info.note}</p>}
+            </div>
           </Box>
+        ) : info !== undefined && (
+          <Quiet icon={<Clock3 />}>{c.kind === 'x' ? 'ამჟამად არ მოქმედებს' : 'საათები ჯერ არ არის ჩაწერილი'}</Quiet>
         )}
+
+        {canSee && (contact && (contact.person || contact.phone || contact.other) ? (
+          <Box icon={<Lock />} title="კონტაქტი" hint="ხედავენ მხოლოდ ადმინები და ის, ვისაც ადმინი ჩაურთავს">
+            <div className="flex flex-col gap-1.5">
+              {contact.person && <p className="flex items-center gap-1.5 text-[14.5px] font-semibold text-[#2a2017]"><User className="w-4 h-4 text-[#8a4b12]" aria-hidden />{contact.person}</p>}
+              {contact.phone && (
+                <a href={`tel:${contact.phone.replace(/[^\d+]/g, '')}`} className="self-start inline-flex items-center gap-1.5 text-[15px] font-bold text-[#7a2028] hover:underline">
+                  <Phone className="w-4 h-4" aria-hidden />{contact.phone}
+                </a>
+              )}
+              {contact.other && <p className="text-[14px] text-[#574739] whitespace-pre-line leading-relaxed">{contact.other}</p>}
+            </div>
+          </Box>
+        ) : contact !== undefined && <Quiet icon={<Lock />}>კონტაქტი ჯერ არ არის ჩაწერილი · ხედავენ მხოლოდ ნებადართულები</Quiet>)}
 
         {isAdmin && user && (editing
           ? <Editor id={c.id} uid={user.uid} info={info ?? null} contact={contact ?? null} onDone={() => setEditing(false)} />
@@ -161,6 +167,40 @@ const VisitButton: React.FC<{ id: string; today: string }> = ({ id, today }) => 
     </button>
   );
 };
+
+/** „გაზიარება“: the phone's share sheet, or the text copied on a computer (utils/churchShare.ts) */
+const ShareButton: React.FC<{ c: Church }> = ({ c }) => {
+  const [said, setSaid] = useState<'copied' | 'failed' | null>(null);
+  useEffect(() => {
+    if (!said) return;
+    const t = setTimeout(() => setSaid(null), 2200);
+    return () => clearTimeout(t);
+  }, [said]);
+  const share = async () => {
+    triggerHaptic(10);
+    const r = await shareChurch(c);
+    if (r !== 'shared') setSaid(r);
+  };
+  return (
+    <button type="button" onClick={share} aria-label="გაზიარება"
+      className={`min-h-11 px-4 rounded-full text-[14px] font-bold inline-flex items-center gap-2 cursor-pointer transition active:scale-[0.97] ${
+        said === 'copied' ? 'bg-[#2f6b3a]/10 text-[#2f6b3a]' : said === 'failed' ? 'bg-red-50 text-red-700' : 'bg-white ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#4a3426]'}`}>
+      {said === 'copied' ? <><Check className="w-[18px] h-[18px]" /> დაკოპირდა</> : said === 'failed' ? 'ვერ გაზიარდა' : <><Share2 className="w-[18px] h-[18px] text-[#7a2028]" /> გაზიარება</>}
+    </button>
+  );
+};
+
+/** „· N კმ შენგან“ after the place, once the phone's place is known (nothing is asked here) */
+const Distance: React.FC<{ c: Church }> = ({ c }) => {
+  const { fix } = useMyPlace();
+  if (!fix || !c.located) return null;
+  return <span className="text-[#8a4b12]"> · {distanceText(distanceM(fix.lat, fix.lng, c.lat, c.lng))} შენგან</span>;
+};
+
+/** one quiet line instead of an empty box */
+const Quiet: React.FC<{ icon: React.ReactNode; children: React.ReactNode }> = ({ icon, children }) => (
+  <p className="px-1 flex items-center gap-1.5 text-[13px] font-semibold text-[#8a7a6a] [&>svg]:w-4 [&>svg]:h-4 [&>svg]:shrink-0">{icon}<span>{children}</span></p>
+);
 
 /** Wikimedia's photo first, then Google Maps' (each loads only when shown — Google counts every one), ‹ › between them */
 const Gallery: React.FC<{ c: Church }> = ({ c }) => {
@@ -242,8 +282,6 @@ const Box: React.FC<{ icon: React.ReactNode; title: string; hint?: string; child
     {children}
   </section>
 );
-
-const Muted: React.FC<{ children: React.ReactNode }> = ({ children }) => <p className="text-[13.5px] font-semibold text-[#8a7a6a]">{children}</p>;
 
 /** an admin's form: hours and services for everyone, the contact for the allowed */
 const Editor: React.FC<{ id: string; uid: string; info: ChurchInfo | null; contact: ChurchContact | null; onDone: () => void }> = ({ id, uid, info, contact, onDone }) => {

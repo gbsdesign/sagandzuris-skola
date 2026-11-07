@@ -14,6 +14,7 @@ import { ChangeLog } from './ChangeLog';
 import { Announce } from './Announce';
 import { GrowthFold } from './GrowthFold';
 import { RolesFold } from './RolesFold';
+import { GooglePhotosFold } from './GooglePhotosFold';
 import type { SchoolClass } from '../../hooks/useClasses';
 import type { UserRecord } from './UsersTab';
 
@@ -109,6 +110,7 @@ export const SchoolSheet: React.FC<{ users: UserRecord[]; classes: SchoolClass[]
         <SectionsTab onMessage={onMessage} />
         <ExtraRightsFold users={users} onMessage={onMessage} />
         <AlbumsFold onMessage={onMessage} />
+        <GooglePhotosFold onMessage={onMessage} />
         <RolesFold />
         <GroupTitle>ციფრები</GroupTitle>
         <GrowthFold users={users} />
