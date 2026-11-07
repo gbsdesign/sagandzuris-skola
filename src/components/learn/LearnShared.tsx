@@ -553,19 +553,26 @@ export const ReviewReminder: React.FC = () => {
     setAt(next);
     setRemindTime(next);
   };
+  // one folded row on the learning screen (2026-11-07, the user's pick): the hour or „გამორთულია“; a tap opens the switch and the hours
+  const [open, setOpen] = useState(false);
   return (
-    <section className="rounded-2xl bg-white/70 ring-1 ring-[#e8dcc8] p-3.5 flex flex-col gap-2.5">
-      <div className="flex items-center gap-2.5">
+    <section className="rounded-2xl bg-white/70 ring-1 ring-[#e8dcc8] flex flex-col">
+      <button type="button" onClick={() => { triggerHaptic(8); setOpen(o => !o); }} aria-expanded={open}
+        className="min-h-12 px-3.5 flex items-center gap-2.5 text-left cursor-pointer">
         <Bell className="w-4 h-4 text-[#b4620e] shrink-0" />
-        <span className="flex-1 min-w-0">
-          <span className="block text-[14px] font-bold text-[#4a3426]">გამეორების შეხსენება</span>
-          <span className="block text-[12px] text-[#8c7c6b]">{at ? `იმ დღეს, როცა გასამეორებელი გაქვს, ${at}-ზე` : 'ტელეფონი შეგახსენებს, როცა ნასწავლი გასამეორებელია'}</span>
-        </span>
-        <button type="button" role="switch" aria-checked={Boolean(at)} aria-label="გამეორების შეხსენება" onClick={() => turn(at ? '' : '19:00')}
-          className={`relative w-12 h-7 shrink-0 rounded-full transition-colors cursor-pointer ${at ? 'bg-[#7a2028]' : 'bg-[#d9cdb9]'}`}>
-          <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-[left] ${at ? 'left-[22px]' : 'left-0.5'}`} />
-        </button>
-      </div>
+        <span className="flex-1 min-w-0 text-[14px] font-bold text-[#4a3426]">გამეორების შეხსენება</span>
+        <span className={`shrink-0 text-[13px] font-bold tabular-nums ${at ? 'text-[#7a2028]' : 'text-[#8c7c6b]'}`}>{at || 'გამორთულია'}</span>
+        <ChevronDown className={`w-4 h-4 shrink-0 text-[#8c7c6b] transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {open && (
+        <div className="px-3.5 pb-3.5 flex flex-col gap-2.5">
+          <div className="flex items-center gap-2.5">
+            <span className="flex-1 min-w-0 text-[12.5px] leading-snug text-[#8c7c6b]">{at ? `იმ დღეს, როცა გასამეორებელი გაქვს, ${at}-ზე` : 'ტელეფონი შეგახსენებს, როცა ნასწავლი გასამეორებელია'}</span>
+            <button type="button" role="switch" aria-checked={Boolean(at)} aria-label="გამეორების შეხსენება" onClick={() => turn(at ? '' : '19:00')}
+              className={`relative w-12 h-7 shrink-0 rounded-full transition-colors cursor-pointer ${at ? 'bg-[#7a2028]' : 'bg-[#d9cdb9]'}`}>
+              <span className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow transition-[left] ${at ? 'left-[22px]' : 'left-0.5'}`} />
+            </button>
+          </div>
       {at && (
         <div role="radiogroup" aria-label="საათი" className="flex flex-wrap gap-1.5">
           {REMIND_TIMES.map(t => (
@@ -575,7 +582,9 @@ export const ReviewReminder: React.FC = () => {
           ))}
         </div>
       )}
-      {note && <p className="text-[13px] text-amber-900">{note}</p>}
+          {note && <p className="text-[13px] text-amber-900">{note}</p>}
+        </div>
+      )}
     </section>
   );
 };
