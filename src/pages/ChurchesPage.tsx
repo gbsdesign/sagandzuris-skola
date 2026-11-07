@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
-import { BookOpen, Check, Church as ChurchIcon, ChevronRight, ExternalLink, ImageIcon, Loader2, LocateFixed, Map as MapIcon, MapPin, RefreshCw, Search, Sparkles } from 'lucide-react';
+import { BookOpen, Check, Church as ChurchIcon, ChevronRight, ImageIcon, Loader2, LocateFixed, Map as MapIcon, MapPin, RefreshCw, Search, Sparkles } from 'lucide-react';
 import { useNavigation, useRealAuth } from '../context';
 import { RegionLocator, RegionPuzzleMap } from '../components/maps/RegionPuzzleMap';
 import { Btn, FIELD, IconBtn, Tabs } from '../components/ui/kit';
@@ -21,7 +21,6 @@ const PinsMap = lazy(() => import('./churches/PinsMap'));
 // and „მომლოცველის წიგნაკი“ (hooks/useChurchVisits.ts). The open list is `mapItem` — a region's id, „near“, „feast“, „book“
 // or „all“ (the first screen) —, an open church adds „/<its id>“, so the bar's „უკან“ first closes the church, then the list.
 
-const SOURCE_URL = 'https://toc.ge/map/ka';
 /** Tbilisi stands for the songs map's „ქალაქური“ */
 const churchRegionName = (r: FolkRegion) => (r.id === 'kalakuri' ? 'თბილისი' : r.nameGe);
 const churchRegion = (id: string): FolkRegion | null => FOLK_REGIONS.find(r => r.id === id) ?? null;
@@ -129,7 +128,6 @@ const Overview: React.FC<{ data: ChurchData; visits: Visits; onGo: (item: string
           )}
         </>
       )}
-      <Source />
       <GoogleKeyBox />
     </div>
   );
@@ -493,12 +491,5 @@ const Thumb: React.FC<{ c: Church }> = ({ c }) => {
   const tone = c.kind === 'x' ? 'bg-[#efe8de] text-[#a3968a]' : c.kind === 'm' ? 'bg-[#f4e6c8] text-[#9a6a14]' : 'bg-[#f4e1dc] text-[#7a2028]';
   return <span className={`w-14 h-14 shrink-0 rounded-xl flex items-center justify-center ${tone}`}><ChurchIcon className="w-6 h-6" aria-hidden /></span>;
 };
-
-const Source: React.FC = () => (
-  <p className="px-1 text-[12px] font-semibold text-[#8a7a6a] leading-relaxed">
-    სია: <a href={SOURCE_URL} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-0.5 font-bold text-[#8a4b12] hover:underline">„ეკლესიის ტერიტორიულობა“ (Indigo, 2021) <ExternalLink className="w-3 h-3" /></a>
-    {' '}· ფოტოები და აღწერები: ვიკიპედია და ვიკიმედია. საათებს და დამატებით ცნობებს ადმინისტრაცია წერს.
-  </p>
-);
 
 export default ChurchesPage;
