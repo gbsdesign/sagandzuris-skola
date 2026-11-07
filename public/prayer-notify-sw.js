@@ -11,6 +11,33 @@ const askForUpdate = () => {
   return self.registration.update().catch(() => {});
 };
 self.addEventListener('push', (event) => { event.waitUntil(askForUpdate()); });
+
+// Opening the app shows the newest version at once (the user's wish, 2026-11-07): a page is asked from the site first;
+// only when the site does not answer within 3 s — no internet, a weak connection in church — does the copy kept on the
+// phone open (the precache's start page). Loaded before Workbox's routes, so it stops them for pages; the app's data,
+// recordings and the share target keep their own ways (NOT_PAGES, as the old navigateFallback denylist).
+const NOT_PAGES = /^\/(notes|hymn|audio|lives|mtkmeli|prayers|bible|offline|wignebi|centre|share|\.well-known)\/|^\/privacy|^\/share-target/;
+self.addEventListener('fetch', (event) => {
+  const req = event.request;
+  if (req.mode !== 'navigate' || req.method !== 'GET') return;
+  const url = new URL(req.url);
+  if (url.origin !== self.location.origin || NOT_PAGES.test(url.pathname)) return;
+  event.stopImmediatePropagation();
+  event.respondWith((async () => {
+    if (self.navigator.onLine !== false) {
+      try {
+        const res = await Promise.race([fetch(req), new Promise((resolve) => setTimeout(() => resolve(null), 3000))]);
+        if (res && (res.ok || res.type === 'opaqueredirect')) return res;
+      } catch (e) { /* no internet */ }
+    }
+    const kept = await caches.match('/index.html', { ignoreSearch: true });
+    return kept || fetch(req);
+  })());
+});
+// the page asks whether pages come from the site here (src/utils/appUpdate.ts)
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'sg-fresh?' && event.ports && event.ports[0]) event.ports[0].postMessage(true);
+});
 self.addEventListener('periodicsync', (event) => {
   if (event.tag === 'sg-update') event.waitUntil(askForUpdate());
 });

@@ -102,15 +102,20 @@
 - React + TypeScript + Vite + Tailwind v4, Firebase (Auth + Firestore), PWA (Workbox in `vite.config.ts`).
   **Updates (2026-11-06):** `skipWaiting` + `clientsClaim` are written out in `vite.config.ts` — the plugin sets them only for
   `injectRegister: 'auto'`; with the old `'inline'` a new version waited forever in the Android app (TWA) and the user had to
-  clear the app's storage to see news. **Since 2026-11-07** (the user: „ყველა სიახლე მაქსიმალურად მალე ყველასთვის“) it all lives
-  in `src/utils/appUpdate.ts` (`startAppUpdates` from `main.tsx`): `/sw.js` registered with `updateViaCache: 'none'`
-  (sagandzureli.ge gives `.js` a 4-hour browser cache, so `/sw.js` is also fetched with `no-cache` before each check), a check on
-  opening, on coming back and every 2 min on screen (the owner's account every minute — `setUpdateCheckEvery` in AuthContext), and with
-  the app closed on every push and on Chrome's periodic background sync `sg-update` (`public/prayer-notify-sw.js` `askForUpdate`); the restart: ≤30 s after opening, on hiding (notes too — they reopen at
-  their place), on coming back after a minute, and on screen at the next page change (`atPageChange` in NavigationContext);
-  a lazy part the site no longer has (`vite:preloadError`) restarts too. Never while `holdUpdates` holds it — church mode
-  (NotesContext), a call (callSession `set`), the synth sounding (ChantSynth play/pause) — a recording sounds or typed words
-  would be lost; on screen not while notes/program are open or a field is in use. Keep these when touching them.
+  clear the app's storage to see news. **Since 2026-11-07** (the user: „ყველა სიახლე მაქსიმალურად მალე ყველასთვის“, then
+  „სწრაფად განახლდეს ყველასთან … გახსნილი დაიხუროს და გაიხსნას“) it all lives in `src/utils/appUpdate.ts` (`startAppUpdates`
+  from `main.tsx`) + `public/prayer-notify-sw.js`: **pages come from the site first** (the worker's own fetch listener, loaded
+  before Workbox's routes, `stopImmediatePropagation`; 3 s, then the precache's `/index.html`; `NOT_PAGES` = the old denylist), so
+  every opening shows the newest version. `/sw.js` registered with `updateViaCache: 'none'` and fetched `no-cache` (the domain gives
+  `.js` a 4-hour browser cache); a check on opening, on coming back and every 2 min on screen (the owner every minute —
+  `setUpdateCheckEvery` in AuthContext), and with the app closed on every push and Chrome's periodic sync `sg-update`
+  (`askForUpdate`). A newer version = the live `/sw.js` no longer lists this page's `assets/index-*.js` (`liveHasMe`): the page
+  restarts at once, on screen and on notes too (if the worker in charge gives pages from the site — it answers `sg-fresh?`; once a
+  version per tab, `sg-left-version`), or when the new worker takes over (`controllerchange`). It waits only while `busy`:
+  `holdUpdates` — church mode (NotesContext), a call (callSession `set`), the synth (ChantSynth play/pause), the microphone
+  (`voiceRecorder`, `singCapture`, + `holdUpdatesFor` a minute after for the take) —, a recording sounding, typed words, or a touch in
+  the last 3 s; then it restarts the moment that ends (a 2 s poll). A lazy part the site no longer has (`vite:preloadError`) restarts
+  too. Keep these when touching them.
   An old browser (no oklch / color-mix / `CSS.registerProperty` — Tailwind v4's floor) gets a plain note with an update button
   from an old-style inline script in `index.html` (✕ = a week, `sg-old-browser`).
 - `npm run dev` (Vite, port 5173), `npm run typecheck`, `npm run build` (`tsc && vite build`).

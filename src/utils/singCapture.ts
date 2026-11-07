@@ -3,6 +3,7 @@
 import { detectPitch, freqToMidi } from './pitch';
 import { pickMime, toMp3 } from './voiceRecorder';
 import { singingOnOthersPage } from './othersPage';
+import { holdUpdates, holdUpdatesFor } from './appUpdate';
 
 /** one look at the microphone: ms since the start, the sung note (null: no voice) and the loudness (RMS) */
 export interface SingFrame { t: number; midi: number | null; rms: number }
@@ -59,7 +60,11 @@ export const startSinging = async (onPitch: (midi: number | null, t: number) => 
       rec.start(1000);
     } catch { rec = null; }
   }
+  // no restart for a new version while singing, nor in the minute after: the take waits to be heard and sent
+  holdUpdates('sing', true);
   const release = () => {
+    holdUpdatesFor('sing', 60_000);
+    holdUpdates('sing', false);
     window.clearInterval(timer);
     stream.getTracks().forEach(t => t.stop());
     ctx.close().catch(() => undefined);
