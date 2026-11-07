@@ -1,7 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { BookOpen, Check, CheckCircle2, Clock, Dumbbell, Gauge, Headphones, Lightbulb, Mic, Pause, Play, RotateCcw, Send, SkipForward, Sparkles, Square, Trash2, Vibrate, VibrateOff, Volume2, VolumeX, Wind, X } from 'lucide-react';
 import { useAuth } from '../../context';
-import { Btn, IconBtn, Sheet, Tabs } from '../ui/kit';
+import { BackBtn, Btn, IconBtn, Tabs, useScrolledAway } from '../ui/kit';
 import { MANERA_BASE, type ManeraExercise, type ManeraStep } from '../../data/maneraLessons';
 import { findDrill, type Drill } from '../../data/vocalDrills';
 import { TrainerView } from './trainers/Trainer';
@@ -35,34 +36,98 @@ const save = (key: string, v: string) => { try { localStorage.setItem(key, v); }
 // and „სავარჯიშო“ to do with a timer — the synth holds the step's notes (or the other two voices), a click keeps the
 // beat, and the microphone shows how close the student is to the note and records the take for the teachers.
 // Nothing sounds and the microphone stays off until the student presses.
+// Since 2026-11-07 (the user: „არ მომწონს ამომხტარი ფანჯარა“) a drill opens on a screen of its own, not in a window
+// over the page: a bar with the round „←“ (the name shows there once the big one scrolls away), the phone's back closes it.
 export const DrillSheet: React.FC<{ drillId: string | null; label?: string; startTab?: Tab; onClose: () => void }> = ({ drillId, label, startTab = 'lesson', onClose }) => {
-  const [tab, setTabState] = useState<Tab>(startTab);
-  const top = useRef<HTMLDivElement>(null);
-  useEffect(() => { if (drillId) setTabState(startTab); }, [drillId, startTab]);
-  // a new tab starts at its top, not where the other one was scrolled to
-  const setTab = (t: Tab) => { setTabState(t); top.current?.scrollIntoView({ block: 'start' }); };
   const drill = findDrill(drillId);
-  return (
-    <Sheet open={!!drill} onClose={onClose} wide title={drill ? <>{label && <span className="text-[#c4b49c] tabular-nums mr-1.5">{label}</span>}{drill.title}</> : ''}>
-      {drill && (drill.read ? (
-        // a lesson only (data/masteryDrills.ts `read`): its tick in place of the exercise
-        <div ref={top} className="space-y-4 text-[#2a2017] scroll-mt-4">
+  if (!drill) return null;
+  return <DrillScreen key={drill.id} drill={drill} label={label} startTab={startTab} onClose={onClose} />;
+};
+
+const HISTORY_KEY = 'sgDrill';
+
+const DrillScreen: React.FC<{ drill: Drill; label?: string; startTab: Tab; onClose: () => void }> = ({ drill, label, startTab, onClose }) => {
+  const [tab, setTabState] = useState<Tab>(startTab);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const titleRef = useRef<HTMLHeadingElement>(null);
+  const titleAway = useScrolledAway(titleRef, scrollRef, drill.id);
+  const closeRef = useRef(onClose);
+  closeRef.current = onClose;
+  // what to do once the screen has gone (a trainer that opens the learning mode, a game or the notes): it waits for the
+  // history step to be taken back first, so the next page's step is not the one taken back
+  const after = useRef<(() => void) | null>(null);
+
+  useEffect(() => {
+    try { if (!window.history.state?.[HISTORY_KEY]) window.history.pushState({ ...(window.history.state || {}), [HISTORY_KEY]: 1 }, ''); } catch { /* still opens */ }
+    const onPop = (e: PopStateEvent) => {
+      if (e.state?.[HISTORY_KEY]) return;
+      const then = after.current;
+      after.current = null;
+      closeRef.current();
+      if (then) window.setTimeout(then, 0);
+    };
+    // Escape closes the screen unless a window opened over it has it
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape' && document.querySelectorAll('[role="dialog"]').length < 2) back(); };
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('popstate', onPop);
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.removeEventListener('popstate', onPop);
+      window.removeEventListener('keydown', onKey);
+      document.body.style.overflow = prev;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  function back(then?: () => void) {
+    if (window.history.state?.[HISTORY_KEY]) {
+      after.current = then ?? null;
+      window.history.back();
+    } else {
+      closeRef.current();
+      then?.();
+    }
+  }
+
+  // a new tab starts at its top, not where the other one was scrolled to
+  const setTab = (t: Tab) => { setTabState(t); scrollRef.current?.scrollTo({ top: 0 }); };
+
+  return createPortal(
+    <div ref={scrollRef} className="fixed inset-0 z-[80] overflow-y-auto overscroll-contain bg-[#faf6ef] sg-in" role="dialog" aria-modal="true" aria-label={drill.title}>
+      <div className="sticky top-0 z-10 safe-top bg-[#faf6ef]/95 backdrop-blur border-b border-[#e4d8c4]">
+        <div className="safe-x"><div className="max-w-2xl mx-auto h-14 px-3 flex items-center gap-2">
+          <BackBtn onClick={() => { triggerHaptic(8); back(); }} />
+          <span aria-hidden className={`min-w-0 flex-1 truncate text-[15px] font-bold text-[#2a2017] transition-opacity duration-200 ${titleAway ? 'opacity-100' : 'opacity-0'}`}>
+            {drill.title}
+          </span>
+        </div></div>
+      </div>
+
+      <div className="safe-x safe-bottom"><div className="max-w-2xl mx-auto px-4 pt-4 pb-12 space-y-4 text-[#2a2017]">
+        <header>
+          {label && <p className="text-[12.5px] font-bold tabular-nums text-[#a0703c]">{label}</p>}
+          <h1 ref={titleRef} className="font-serif-ge text-[24px] sm:text-[28px] font-bold leading-tight text-[#2a2017] break-words">{drill.title}</h1>
+        </header>
+        {drill.read ? (
+          // a lesson only (data/masteryDrills.ts `read`): its tick in place of the exercise
           <LessonView drill={drill} onExercise={() => undefined} />
-        </div>
-      ) : (
-        <div ref={top} className="space-y-4 text-[#2a2017] scroll-mt-4">
-          <Tabs<Tab> cols={2} value={tab} onChange={setTab} items={[
-            { id: 'lesson', label: 'გაკვეთილი', Icon: BookOpen },
-            { id: 'exercise', label: 'სავარჯიშო', Icon: Dumbbell },
-          ]} />
-          {tab === 'lesson'
-            ? <LessonView drill={drill} onExercise={() => setTab('exercise')} />
-            : drill.trainer || drill.open
-              ? <TrainerView key={drill.id} drill={drill} onClose={onClose} />
-              : <ExerciseView key={drill.id} drill={drill} />}
-        </div>
-      ))}
-    </Sheet>
+        ) : (
+          <>
+            <Tabs<Tab> cols={2} value={tab} onChange={setTab} items={[
+              { id: 'lesson', label: 'გაკვეთილი', Icon: BookOpen },
+              { id: 'exercise', label: 'სავარჯიშო', Icon: Dumbbell },
+            ]} />
+            {tab === 'lesson'
+              ? <LessonView drill={drill} onExercise={() => setTab('exercise')} />
+              : drill.trainer || drill.open
+                ? <TrainerView drill={drill} onClose={back} />
+                : <ExerciseView drill={drill} />}
+          </>
+        )}
+      </div></div>
+    </div>,
+    document.body,
   );
 };
 
