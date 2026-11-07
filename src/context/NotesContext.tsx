@@ -6,6 +6,7 @@ import { useNavigation } from './NavigationContext';
 import { findVersion, isServiceTab } from '../data/chantLookup';
 import { useLiturgy, LiturgyApi, LiturgyProgram, liveNow, type LiveTurn } from '../hooks/useLiturgy';
 import { isAndroidApp, openInApp } from '../utils/androidApp';
+import { holdUpdates } from '../utils/appUpdate';
 
 const NotesPage = lazy(() => import('../pages/notes/NotesPage').then(m => ({ default: m.NotesPage })));
 const ProgramPage = lazy(() => import('../pages/notes/ProgramPage').then(m => ({ default: m.ProgramPage })));
@@ -70,6 +71,8 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     silenced.current = church;
     openInApp(`silence?on=${church ? 1 : 0}`);
   }, [church]);
+  // church mode is not kept over a restart, so a new version waits until it is left (utils/appUpdate.ts)
+  useEffect(() => { holdUpdates('church', church); }, [church]);
 
   // „გუნდი მომყვება“: the leading teacher's chant goes to the class; a member's open program or program notes follow it
   const [leading, setLeadingState] = useState(() => { try { return sessionStorage.getItem('sg-lead') === '1'; } catch { return false; } });

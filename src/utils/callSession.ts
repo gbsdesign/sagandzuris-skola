@@ -1,6 +1,7 @@
 import { useEffect, useState, useSyncExternalStore } from 'react';
 import { collection, deleteDoc, doc, onSnapshot, serverTimestamp, setDoc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '../firebase';
+import { holdUpdates } from './appUpdate';
 
 // The school's own calls: a private chat's (dms/{id}) and a class's (classes/{id}), audio or video, through
 // Cloudflare Realtime (an SFU: each phone sends its microphone and camera once and receives the others').
@@ -110,7 +111,12 @@ const showHint = (hint: string) => {
 
 let state: CallState = IDLE;
 const listeners = new Set<() => void>();
-const set = (patch: Partial<CallState>) => { state = { ...state, ...patch }; listeners.forEach(l => l()); };
+const set = (patch: Partial<CallState>) => {
+  state = { ...state, ...patch };
+  // a restart for a new version would end the call (utils/appUpdate.ts)
+  holdUpdates('call', state.status === 'connecting' || state.status === 'waiting' || state.status === 'live');
+  listeners.forEach(l => l());
+};
 const subscribe = (l: () => void) => { listeners.add(l); return () => { listeners.delete(l); }; };
 
 export const useCall = () => useSyncExternalStore(subscribe, () => state);

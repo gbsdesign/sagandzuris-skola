@@ -102,9 +102,16 @@
 - React + TypeScript + Vite + Tailwind v4, Firebase (Auth + Firestore), PWA (Workbox in `vite.config.ts`).
   **Updates (2026-11-06):** `skipWaiting` + `clientsClaim` are written out in `vite.config.ts` — the plugin sets them only for
   `injectRegister: 'auto'`; with the old `'inline'` a new version waited forever in the Android app (TWA) and the user had to
-  clear the app's storage to see news. `src/main.tsx` registers `/sw.js` itself with `updateViaCache: 'none'` (sagandzureli.ge
-  gives `.js` a 4-hour browser cache) and restarts on the new version: ≤30 s after opening, on hiding, or on coming back after
-  a minute — not while notes/program are open, a recording sounds or a text field is focused. Keep both when touching them.
+  clear the app's storage to see news. **Since 2026-11-07** (the user: „ყველა სიახლე მაქსიმალურად მალე ყველასთვის“) it all lives
+  in `src/utils/appUpdate.ts` (`startAppUpdates` from `main.tsx`): `/sw.js` registered with `updateViaCache: 'none'`
+  (sagandzureli.ge gives `.js` a 4-hour browser cache, so `/sw.js` is also fetched with `no-cache` before each check), a check on
+  opening, on coming back and every 5 min on screen; the restart: ≤30 s after opening, on hiding (notes too — they reopen at
+  their place), on coming back after a minute, and on screen at the next page change (`atPageChange` in NavigationContext);
+  a lazy part the site no longer has (`vite:preloadError`) restarts too. Never while `holdUpdates` holds it — church mode
+  (NotesContext), a call (callSession `set`), the synth sounding (ChantSynth play/pause) — a recording sounds or typed words
+  would be lost; on screen not while notes/program are open or a field is in use. Keep these when touching them.
+  An old browser (no oklch / color-mix / `CSS.registerProperty` — Tailwind v4's floor) gets a plain note with an update button
+  from an old-style inline script in `index.html` (✕ = a week, `sg-old-browser`).
 - `npm run dev` (Vite, port 5173), `npm run typecheck`, `npm run build` (`tsc && vite build`).
 - GitHub `gbsdesign/sagandzuris-skola`, branch `main` → https://sagandzuris-skola.pages.dev (auto-deploy on push).
 - Firebase project `psalms-reading-group-ge-dev`. Security rules live in `firestore.rules`.

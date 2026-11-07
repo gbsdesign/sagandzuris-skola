@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { triggerHaptic } from '../utils/haptics';
 import { wignebiParent } from '../utils/wignebiPath';
+import { atPageChange } from '../utils/appUpdate';
 
 export type PageType = 'home' | 'profile' | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'gz' | 'tsinaprebi' | 'bookmark' | 'admin' | 'teacher' | 'class' | 'prayer' | 'commemoration' | 'biblioteka' | 'psalter' | 'messages' | 'dm' | 'abituri' | 'offline' | 'birthdays' | 'medavitneoba' | 'games' | 'student' | 'videos' | 'churches';
 export type ServiceType = 'წირვა' | 'მწუხრი' | 'ცისკარი' | 'სადღესასწაულო' | 'მარხვანი' | 'ზატიკი' | 'პანაშვიდი' | 'ჯვრისწერა' | 'ხელდასხმა' | 'პარაკლისი' | 'მომიხსენენი' | 'ძლისპირები' | 'კატაბასიები' | 'დასადებლები' | null;
@@ -132,6 +133,8 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     }
     window.history.replaceState({ ...s, sgNav: prev ?? HOME, sgDepth: s.sgDepth ?? 0, sgScroll: y, sgExp: prevList.current.exp, sgSearch: prevList.current.search }, '');
     window.history.pushState({ sgNav: snap, sgDepth: (s.sgDepth ?? 0) + 1 }, '', window.location.pathname);
+    // a new version waiting starts here, on the page just opened (a reload stays on it)
+    if (prev?.page !== snap.page) atPageChange();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [snap.page, snap.service, snap.classId, snap.prayerId, snap.mapItem, snap.dmId]);
   // after the effect above, so it still sees the previous values
