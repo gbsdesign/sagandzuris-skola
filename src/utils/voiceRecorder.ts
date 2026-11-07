@@ -2,6 +2,7 @@
 // so a message recorded on Android plays on an iPhone and the other way round.
 import { encodeMp3 } from './chantSynth';
 import { speechSpan } from './readingPace';
+import { holdUpdates, holdUpdatesFor } from './appUpdate';
 
 export const VOICE_MAX_SECONDS = 300;
 const RATE = 24000;
@@ -80,7 +81,13 @@ export const startVoiceRecording = async (): Promise<VoiceRecording> => {
   const chunks: Blob[] = [];
   rec.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
   rec.start(1000);
-  const release = () => stream.getTracks().forEach(t => t.stop());
+  // no restart for a new version while recording, nor in the minute after: the take waits to be heard and sent
+  holdUpdates('voice', true);
+  const release = () => {
+    stream.getTracks().forEach(t => t.stop());
+    holdUpdatesFor('voice', 60_000);
+    holdUpdates('voice', false);
+  };
 
   return {
     stop: () =>

@@ -1,37 +1,119 @@
-// The app moves to a newly published version by itself, as soon as that does not get in the way (the user's goal,
-// 2026-11-07: „ყველა სიახლე მაქსიმალურად მალე ყველასთვის … ყველას ტელეფონზე“).
+// A newly published version reaches every phone as fast as possible (the user, 2026-11-07: „ჩემთვის მთავარია სწრაფად
+// განახლდეს ყველასთან … ან გახსნილი დაიხუროს და გაიხსნას“).
 //
-// The service worker (vite.config.ts: skipWaiting + clientsClaim) takes over once it has downloaded a new version, but
-// this tab still runs the old one. It restarts on the new one:
-//  • at once, when the app was opened or brought back in the last 30 s;
-//  • when it goes out of sight (screen off, another app) — notes too: they come back at the same place and zoom;
-//  • when it is brought back after a minute away;
-//  • while it stays on screen, at the next move to another page (`atPageChange`, NavigationContext).
-// Never while held — church mode, a call, the synthesizer sounding (`holdUpdates`) —, while a recording sounds
-// (utils/mediaControls.ts) or while words typed in a field would be lost; on screen also not while notes or the Liturgy
-// program are open or a field is in use.
-// The site is asked for a newer version on opening, on coming back and every 2 minutes while on screen — every minute
-// on the owner's account (`setUpdateCheckEvery`, AuthContext; the user's wish, 2026-11-07, to see a change at once).
-// With the app closed, the worker asks too (public/prayer-notify-sw.js): on every push that wakes it and on Chrome's
-// periodic background sync (`sg-update`, registered below where the phone allows it — Android's installed app; the phone
-// decides how often), so the next opening already shows the new version. sagandzureli.ge
-// tells phones to keep .js files for 4 hours, so the worker is registered with updateViaCache 'none' and /sw.js is asked
-// again past the cache before each check, for browsers that ignore that setting.
+// • Opening the app always shows the newest version: the service worker asks the site for the page first and opens the
+//   copy kept on the phone only without internet (public/prayer-notify-sw.js).
+// • While open, the site is asked every 2 minutes (the owner's account every minute — `setUpdateCheckEvery`, AuthContext),
+//   on opening and on coming back; with the app closed, the worker asks on every push and on the phone's periodic
+//   background sync (`sg-update`, registered below where the phone allows it).
+// • Once the site has a newer version than this page, the page restarts at once — on screen too, notes too (they reopen at
+//   their place). It waits only while a restart would break something: church mode, a call, a recording or the
+//   synthesizer sounding, the microphone recording (`holdUpdates`), words typed in a field, or a finger just on the screen
+//   (3 s) — and restarts the moment that ends.
+// sagandzureli.ge tells phones to keep .js files for 4 hours, so the worker is registered with updateViaCache 'none' and
+// /sw.js is asked past the cache.
 
 import { recordingSounds } from './mediaControls';
 
 const CHECK_EVERY = 2 * 60_000;
-const FRESH = 30_000;
-const AWAY = 60_000;
+const IDLE = 3_000;
+const LEFT_KEY = 'sg-left-version';
 
 const holds = new Set<string>();
-/** Keep the old version running while `on` (e.g. church mode): a restart now would get in the way. */
-export const holdUpdates = (why: string, on: boolean) => { if (on) holds.add(why); else holds.delete(why); };
-
+const holdsUntil = new Map<string, number>();
 let pending = false;
 let checkEvery = CHECK_EVERY;
+let lastCheck = 0;
+let lastTouch = 0;
+let poll = 0;
+
 /** How often the site is asked while the app is on screen (the owner: every minute); none = the usual 2 minutes. */
 export const setUpdateCheckEvery = (ms?: number) => { checkEvery = ms ?? CHECK_EVERY; };
+
+/** Keep the old version running while `on` (church mode, a call, a sound, the microphone): a restart would break it. */
+export const holdUpdates = (why: string, on: boolean) => {
+  if (on) holds.add(why); else holds.delete(why);
+  if (!on && pending) tryRestart();
+};
+
+/** Keep the old version a while longer (a take just recorded waits to be heard and sent). */
+export const holdUpdatesFor = (why: string, ms: number) => { holdsUntil.set(why, Date.now() + ms); };
+const heldAWhile = () => [...holdsUntil.values()].some(t => t > Date.now());
+
+/** This page's own start files (assets/index-<hash>.js and .css): the newest version's worker lists them, an older one
+ *  does not. */
+const myEntry = (): string | null => {
+  if (typeof document === 'undefined') return null;
+  const files = [
+    document.querySelector<HTMLScriptElement>('script[type="module"][src*="/assets/index-"]')?.src,
+    document.querySelector<HTMLLinkElement>('link[rel="stylesheet"][href*="/assets/index-"]')?.href,
+  ].filter((u): u is string => !!u).map(u => new URL(u).pathname.replace(/^\//, ''));
+  return files.length ? files.join(' ') : null;
+};
+
+const TEXT_INPUTS = new Set(['text', 'search', 'email', 'tel', 'url', 'number', 'password']);
+const typedText = () => {
+  const el = document.activeElement as HTMLElement | null;
+  if (!el) return false;
+  if (el.isContentEditable) return !!el.textContent?.trim();
+  if (el instanceof HTMLTextAreaElement) return !!el.value.trim();
+  return el instanceof HTMLInputElement && TEXT_INPUTS.has(el.type) && !!el.value.trim();
+};
+const busy = () => holds.size > 0 || heldAWhile() || recordingSounds() || typedText() || Date.now() - lastTouch < IDLE;
+
+const restart = () => {
+  try { const me = myEntry(); if (me) sessionStorage.setItem(LEFT_KEY, me); } catch { /* storage off */ }
+  window.location.reload();
+};
+
+function tryRestart() {
+  if (!pending) return;
+  if (!busy()) { restart(); return; }
+  if (!poll) poll = window.setInterval(() => { if (!busy()) { window.clearInterval(poll); poll = 0; restart(); } }, 2_000);
+}
+
+/** The live version's worker — does it list this page's start script? null = could not tell. */
+const liveHasMe = async (): Promise<boolean | null> => {
+  const me = myEntry();
+  if (!me || !import.meta.env.PROD) return null;
+  try {
+    const res = await fetch('/sw.js', { cache: 'no-cache' });
+    if (!res.ok) return null;
+    const text = await res.text();
+    return me.split(' ').every(f => text.includes(f));
+  } catch { return null; }
+};
+
+/** Does the worker now in charge give pages from the site (public/prayer-notify-sw.js answers „sg-fresh?“)? An older
+ *  one gives the copy kept on the phone, so a restart there would show the old version again. */
+const workerOpensFresh = () => new Promise<boolean>(resolve => {
+  const c = navigator.serviceWorker.controller;
+  if (!c) { resolve(true); return; } // no worker: the page comes from the site anyway
+  const ch = new MessageChannel();
+  const t = window.setTimeout(() => resolve(false), 1_500);
+  ch.port1.onmessage = e => { window.clearTimeout(t); resolve(e.data === true); };
+  try { c.postMessage({ type: 'sg-fresh?' }, [ch.port2]); } catch { window.clearTimeout(t); resolve(false); }
+});
+
+const check = async () => {
+  lastCheck = Date.now();
+  const sw = navigator.serviceWorker;
+  const has = await liveHasMe();
+  // the site already has a newer version: restart now, the page will come from the site — once for this version per tab
+  // (no internet then = the kept copy again); with an older worker the worker's own change restarts it.
+  if (has === false) {
+    let tried = false;
+    try { tried = sessionStorage.getItem(LEFT_KEY) === myEntry(); } catch { /* storage off */ }
+    if (!tried && await workerOpensFresh()) { pending = true; tryRestart(); }
+  }
+  try {
+    const r = await sw.getRegistration();
+    if (!r) return;
+    r.waiting?.postMessage({ type: 'SKIP_WAITING' }); // a newer worker left waiting takes over
+    await r.update();
+    r.waiting?.postMessage({ type: 'SKIP_WAITING' });
+  } catch { /* offline */ }
+};
 
 type PeriodicSync = { register: (tag: string, o: { minInterval: number }) => Promise<void> };
 /** Let the phone wake the worker now and then to fetch a new version while the app is closed (where it allows it). */
@@ -45,42 +127,8 @@ const askPeriodicSync = async () => {
   } catch { /* not on this phone */ }
 };
 
-const notesOpen = () => { const q = new URLSearchParams(window.location.search); return q.has('v') || q.has('p'); };
-const TEXT_INPUTS = new Set(['text', 'search', 'email', 'tel', 'url', 'number', 'password']);
-/** The text field in use now (a checkbox, slider or button is none). */
-const field = (): { value: string } | null => {
-  const el = document.activeElement as HTMLElement | null;
-  if (!el) return null;
-  if (el.isContentEditable) return { value: el.textContent ?? '' };
-  if (el instanceof HTMLTextAreaElement) return el;
-  if (el instanceof HTMLInputElement && TEXT_INPUTS.has(el.type)) return el;
-  return null;
-};
-/** out of sight: nothing sounding, talking or half typed may be lost */
-const busyAway = () => holds.size > 0 || recordingSounds() || !!field()?.value.trim();
-/** on screen: not while notes are read or a field is in use either */
-const busyHere = () => busyAway() || notesOpen() || !!field();
-
-const restart = () => { window.location.reload(); };
-
-let lastCheck = 0;
-const check = () => {
-  lastCheck = Date.now();
-  const sw = navigator.serviceWorker;
-  const ask = () => sw.getRegistration().then(r => {
-    if (!r) return;
-    // a newer worker left waiting (an old one without skipWaiting) is told to take over
-    r.waiting?.postMessage({ type: 'SKIP_WAITING' });
-    return r.update().then(() => { r.waiting?.postMessage({ type: 'SKIP_WAITING' }); });
-  }).catch(() => {});
-  if (import.meta.env.PROD) fetch('/sw.js', { cache: 'no-cache' }).catch(() => {}).finally(ask);
-  else void ask();
-};
-
-/** A move to another page of the app: while the app stays on screen, the moment for the new version. */
-export const atPageChange = () => {
-  if (pending && document.visibilityState === 'visible' && !busyHere()) restart();
-};
+/** A move to another page of the app (NavigationContext): a good moment for a waiting new version. */
+export const atPageChange = () => { if (pending) tryRestart(); };
 
 export const startAppUpdates = () => {
   if (typeof window === 'undefined' || !('serviceWorker' in navigator)) return;
@@ -94,31 +142,28 @@ export const startAppUpdates = () => {
     else window.addEventListener('load', register, { once: true });
   }
 
+  // a finger on the screen: no restart under it (and a write it started has time to finish)
+  for (const ev of ['pointerdown', 'keydown', 'touchstart'] as const) {
+    window.addEventListener(ev, () => { lastTouch = Date.now(); }, { capture: true, passive: true });
+  }
+
   let controlled = !!sw.controller; // the very first install on a device needs no restart
-  let freshSince = Date.now();
-  let hiddenAt = 0;
   sw.addEventListener('controllerchange', () => {
     if (!controlled) { controlled = true; return; }
-    pending = true;
-    if (document.visibilityState === 'hidden' ? !busyAway() : Date.now() - freshSince < FRESH && !busyHere()) restart();
+    // a page opened from the site may already be the new version: restart only an older one
+    void liveHasMe().then(has => { if (has !== true) { pending = true; tryRestart(); } });
   });
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') {
-      hiddenAt = Date.now();
-      if (pending && !busyAway()) restart();
-      return;
-    }
-    if (pending && hiddenAt && Date.now() - hiddenAt > AWAY && !busyAway()) { restart(); return; }
-    freshSince = Date.now();
-    check();
+    if (pending) { tryRestart(); return; }
+    if (document.visibilityState === 'visible') void check();
   });
   window.setInterval(() => {
-    if (document.visibilityState === 'visible' && Date.now() - lastCheck >= checkEvery - 5_000) check();
+    if (document.visibilityState === 'visible' && Date.now() - lastCheck >= checkEvery - 5_000) void check();
   }, 15_000);
 
   // a part of the old version that the site no longer has (it was published anew): the new version has it
   window.addEventListener('vite:preloadError', (e) => {
-    if (!navigator.onLine || busyAway()) return;
+    if (!navigator.onLine || holds.size > 0) return;
     try {
       if (Date.now() - Number(sessionStorage.getItem('sg-reload-at') || 0) < 20_000) return; // never round and round
       sessionStorage.setItem('sg-reload-at', String(Date.now()));
@@ -127,5 +172,5 @@ export const startAppUpdates = () => {
     restart();
   });
 
-  check();
+  void check();
 };
