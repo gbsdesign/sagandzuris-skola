@@ -315,8 +315,8 @@
   **TV reports** in the window (`data/churchFilms.ts` `FILM_CHURCH`: the videos page's monastery → a church id, picked by hand; the
   test checks both sides): a tap opens „ვიდეოები“ at `m:<region>/<film>`. **Google Maps' photos** (`hooks/useGooglePhotos.ts`):
   Google's terms forbid keeping them, so the window asks each visit — Text Search IDs-only (free) in a ~400 m box with
-  `includedType place_of_worship`, then the place's `photos` (Place Details Pro, 5 000/month free), each photo loaded only when
-  shown (Place Details Photos, 1 000/month free) with its author + „Google Maps“; the gallery shows Wikimedia's first, ‹ ›. The key
+  `includedType place_of_worship`, then the place's `photos` (Place Details Essentials IDs Only — free too; the place id is shared,
+  `placeIdOf`), each photo loaded only when shown (Place Details Photos, 1 000/month free) with its author + „Google Maps“; the gallery shows Wikimedia's first, ‹ ›. The key
   lives in `settings/googlePlaces { key }`, pasted by an admin in `GoogleKeyBox` at the page's bottom (the user makes it in the
   Firebase project's Cloud console, held to the site's addresses and Places API (New)). Gogoladze's map waits for its link (the user
   sends it from his app's ⋮ → share); its photos and list are to show only to admins until he gives permission (tedo881@gmail.com).
@@ -329,7 +329,12 @@
   `shareChurch`: the phone's share sheet with name, place, feast and the Google Maps link; a computer copies it — „დაკოპირდა“),
   empty hours / contact as one quiet line (`Quiet`), a box only when written. A region's municipality is picked in a kit `Sheet`
   (`MuniPicker`, rows with counts) — no native select. The Google key moved to ⚙ „სკოლა“ → „Google-ის ფოტოები“
-  (`admin/GooglePhotosFold.tsx`; the page has no admin box). Churches are in the one search (group „ტაძრები“, `churchItem` in
+  (`admin/GooglePhotosFold.tsx`; the page has no admin box). **„საათები Google Maps-იდან“** (2026-11-07, the user's picks: hours, website, phone; on a button): `useGoogleInfo` asks
+  Place Details Enterprise (1 000/month free, then $20 a 1 000) only on the tap, once a church per visit — the weekly hours as
+  lines by `utils/googleHours.ts` + test (24 h, Monday first, equal days joined, today tinted), „ახლა ღიაა / დაკეტილია“, closed
+  for now / for good, the website, and the phone only for those who see the contacts; „საათები ჯერ არ არის ჩაწერილი“ steps
+  aside when Google has hours. The user's key (made 2026-11-07, project „Psalms Reading Group Dev“) is held to Places API (New)
+  only, no site restriction. Churches are in the one search (group „ტაძრები“, `churchItem` in
   `searchIndex.ts`; `SearchPanel` loads the list once two letters are typed — `useChurchItems`; `requestOpen('churches', id)` →
   the page's `useOpenRequest` opens `all/<id>`).
 - **Prayers** (`data/prayers.ts`, `public/prayers/`, `public/bible/`), psalter kathismas, 73 akathists,

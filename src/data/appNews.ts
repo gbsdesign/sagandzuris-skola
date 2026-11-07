@@ -12,6 +12,12 @@ export interface AppNews {
 
 export const APP_NEWS: AppNews[] = [
   {
+    id: 'church-google-2026-11-07',
+    date: '2026-11-07',
+    title: 'ტაძრის საათები Google Maps-იდან',
+    text: 'ტაძრის ფანჯარაში ღილაკი „საათები Google Maps-იდან“ აჩვენებს, რომელ დღეს რა საათამდეა ტაძარი ღია, ახლა ღიაა თუ არა, და მის ვებგვერდს. იქვე Google Maps-ის ფოტოებიც ჩანს.',
+  },
+  {
     id: 'learn-notes-2026-11-07',
     date: '2026-11-07',
     title: 'სასწავლო რეჟიმი — ნოტები დიდად',

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Clock3, ExternalLink, Footprints, Lock, MapPin, Navigation, Pencil, Phone, Play, Share2, Sparkles, User } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Clock3, ExternalLink, Footprints, Globe, Lock, MapPin, Navigation, Pencil, Phone, Play, Share2, Sparkles, User } from 'lucide-react';
 import { useNavigation, useRealAuth } from '../../context';
 import { Btn, FIELD, Sheet, offerUndo } from '../../components/ui/kit';
 import { triggerHaptic } from '../../utils/haptics';
@@ -10,7 +10,8 @@ import { dayText, feastOf, nextFeastDay, tbilisiToday } from '../../data/churchF
 import { filmsOfChurch } from '../../data/churchFilms';
 import { clock, thumbOf } from '../../data/etnofori';
 import { useChurchVisits } from '../../hooks/useChurchVisits';
-import { type GooglePhoto, googlePhotoUrl, useGooglePhotos, useGooglePlacesKey } from '../../hooks/useGooglePhotos';
+import { type GooglePhoto, googlePhotoUrl, useGoogleInfo, useGooglePhotos, useGooglePlacesKey } from '../../hooks/useGooglePhotos';
+import { hoursLines, siteName, tbilisiWeekday } from '../../utils/googleHours';
 import {
   type ChurchContact, type ChurchInfo, saveChurchContact, saveChurchInfo, useCanSeeChurchContacts, useChurchContact, useChurchInfo,
 } from '../../hooks/useChurchExtras';
@@ -20,6 +21,8 @@ import {
 // contact (admins and the people they allowed), and the way there with Google Maps.
 // Tidied 2026-11-07: „ვიყავი“ and „გაზიარება“ in one row, „N კმ შენგან“ once the phone's place is known, empty hours /
 // contact as one quiet line (a box only when something is written or being written).
+// „საათები Google Maps-იდან“ (2026-11-07, the user's picks: hours, website, phone; on a button, since each costs): Google's
+// weekly hours, open now or not, the website, and the phone only for those who see the contacts.
 
 const AREA = FIELD.replace('h-11', 'min-h-[4.5rem] py-2.5 leading-snug resize-y');
 const LINK_BTN = 'inline-flex items-center justify-center gap-2 rounded-full font-bold cursor-pointer select-none transition active:scale-[0.97] h-12 px-5 text-[15px] [&>svg]:w-[18px] [&>svg]:h-[18px] [&>svg]:shrink-0';
@@ -40,6 +43,8 @@ const Card: React.FC<{ c: Church; onClose: () => void }> = ({ c, onClose }) => {
   const feastOn = feast ? nextFeastDay(feast, today) : '';
   const films = filmsOfChurch(c.id);
   const { navigateTo, openMapItem } = useNavigation();
+  const google = useGoogleInfo(c, useGooglePlacesKey());
+  const ownHours = !!(info && (info.hours || info.note));
 
   return (
     <Sheet
@@ -125,9 +130,11 @@ const Card: React.FC<{ c: Church; onClose: () => void }> = ({ c, onClose }) => {
               {info.note && <p className="text-[14px] text-[#574739] whitespace-pre-line leading-relaxed">{info.note}</p>}
             </div>
           </Box>
-        ) : info !== undefined && (
+        ) : info !== undefined && !(google.state === 'done' && c.kind !== 'x') && (
           <Quiet icon={<Clock3 />}>{c.kind === 'x' ? 'ამჟამად არ მოქმედებს' : 'საათები ჯერ არ არის ჩაწერილი'}</Quiet>
         )}
+
+        <GooglePart g={google} canSee={canSee} ownHours={ownHours || c.kind === 'x'} />
 
         {canSee && (contact && (contact.person || contact.phone || contact.other) ? (
           <Box icon={<Lock />} title="კონტაქტი" hint="ხედავენ მხოლოდ ადმინები და ის, ვისაც ადმინი ჩაურთავს">
@@ -195,6 +202,71 @@ const Distance: React.FC<{ c: Church }> = ({ c }) => {
   const { fix } = useMyPlace();
   if (!fix || !c.located) return null;
   return <span className="text-[#8a4b12]"> · {distanceText(distanceM(fix.lat, fix.lng, c.lat, c.lng))} შენგან</span>;
+};
+
+/** Google Maps' hours, website and phone: a button first (each look is counted by Google), then a box or a quiet line.
+ *  Once Google has answered, the window's own „საათები ჯერ არ არის ჩაწერილი“ steps aside and this part says it (`ownHours` false). */
+const GooglePart: React.FC<{ g: ReturnType<typeof useGoogleInfo>; canSee: boolean; ownHours: boolean }> = ({ g, canSee, ownHours }) => {
+  if (!g.can) return null;
+  if (g.state === 'idle' || g.state === 'loading') {
+    return (
+      <Btn kind="soft" icon={<Clock3 />} onClick={g.load} disabled={g.state === 'loading'} className="self-start">
+        {g.state === 'loading' ? 'იტვირთება…' : 'საათები Google Maps-იდან'}
+      </Btn>
+    );
+  }
+  if (g.state === 'failed') {
+    return (
+      <div className="flex flex-wrap items-center gap-2">
+        <Quiet icon={<Clock3 />}>Google-იდან ვერ ჩაიტვირთა</Quiet>
+        <Btn kind="ghost" size="sm" onClick={g.load}>ხელახლა</Btn>
+      </div>
+    );
+  }
+  const info = g.info;
+  const nothing = ownHours ? 'Google Maps-ზე საათები არ არის' : 'საათები უცნობია — Google Maps-ზეც არ არის';
+  if (!info) return <Quiet icon={<Clock3 />}>{ownHours ? 'Google Maps-ზე ეს ტაძარი ვერ მოიძებნა' : nothing}</Quiet>;
+  const lines = hoursLines(info.periods, tbilisiWeekday());
+  const closed = info.status === 'CLOSED_TEMPORARILY' ? 'დროებით დახურულია' : info.status === 'CLOSED_PERMANENTLY' ? 'სამუდამოდ დახურულია' : '';
+  const phone = canSee && info.phone;
+  if (!lines.length && !info.website && !phone && !closed) return <Quiet icon={<Clock3 />}>{nothing}</Quiet>;
+  return (
+    <Box icon={<Clock3 />} title="Google Maps-ის მიხედვით">
+      {(closed || (lines.length > 0 && info.openNow !== null)) && (
+        <div className="flex">
+          {closed ? <Tag tone="amber">{closed}</Tag> : info.openNow ? <Tag tone="green">ახლა ღიაა</Tag> : <Tag tone="muted">ახლა დაკეტილია</Tag>}
+        </div>
+      )}
+      {!lines.length && <p className="px-1 text-[13.5px] font-semibold text-[#8a7a6a]">საათები არ არის მითითებული</p>}
+      {lines.length > 0 && (
+        <ul className="flex flex-col">
+          {lines.map(l => (
+            <li key={l.days} className={`flex items-baseline justify-between gap-3 px-2 py-1.5 rounded-lg text-[14.5px] leading-snug ${l.today ? 'bg-[#7a2028]/[0.07] text-[#7a2028]' : 'text-[#2a2017]'}`}>
+              <span className={`min-w-0 ${l.today ? 'font-black' : 'font-semibold text-[#574739]'}`}>{l.days}</span>
+              <span className="shrink-0 font-bold text-right tabular-nums flex flex-col items-end">
+                {l.hours.split(', ').map(h => <span key={h} className="whitespace-nowrap">{h}</span>)}
+              </span>
+            </li>
+          ))}
+        </ul>
+      )}
+      {(info.website || phone) && (
+        <div className="flex flex-col gap-1.5 pt-0.5">
+          {info.website && (
+            <a href={info.website} target="_blank" rel="noopener noreferrer" className="self-start inline-flex items-center gap-1.5 text-[14.5px] font-bold text-[#8a4b12] hover:underline">
+              <Globe className="w-4 h-4" aria-hidden />ვებგვერდი · {siteName(info.website)}<ExternalLink className="w-3.5 h-3.5" aria-hidden />
+            </a>
+          )}
+          {phone && (
+            <a href={`tel:${(info.phoneIntl || info.phone).replace(/[^\d+]/g, '')}`} className="self-start inline-flex items-center gap-1.5 text-[15px] font-bold text-[#7a2028] hover:underline">
+              <Phone className="w-4 h-4" aria-hidden />{info.phone}
+              <Lock className="w-3.5 h-3.5 text-[#8a7a6a]" aria-label="ხედავენ მხოლოდ ადმინები და ნებადართულები" />
+            </a>
+          )}
+        </div>
+      )}
+    </Box>
+  );
 };
 
 /** one quiet line instead of an empty box */

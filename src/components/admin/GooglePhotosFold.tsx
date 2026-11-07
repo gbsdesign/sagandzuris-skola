@@ -18,14 +18,14 @@ export const GooglePhotosFold: React.FC<{ onMessage: (text: string, type: 'succe
     try {
       await saveGooglePlacesKey(value.trim());
       setEditing(false); setValue('');
-      onMessage('Google-ის გასაღები შეინახა — ტაძრების ფანჯრებში Google Maps-ის ფოტოებიც ჩანს.', 'success');
+      onMessage('Google-ის გასაღები შეინახა — ტაძრების ფანჯრებში Google Maps-ის ფოტოები და საათებიც ჩანს.', 'success');
     } catch {
       onMessage('გასაღები ვერ შეინახა — სცადე ხელახლა.', 'error');
     } finally { setSaving(false); }
   };
   return (
-    <Fold icon={<ImageIcon />} title="Google-ის ფოტოები" summary={key === undefined ? '…' : has ? 'ჩართულია — ტაძრებში Google Maps-ის ფოტოები ჩანს' : 'გამორთულია — ჩასვი Google-ის გასაღები'}
-      info="გასაღები Google Cloud-ში მზადდება (Places API (New), მხოლოდ ამ საიტის მისამართებისთვის). ფოტოები არ ინახება — ყოველ გახსნაზე Google-იდან მოდის ავტორის სახელით. თვეში 1 000 ფოტოს ჩვენება უფასოა.">
+    <Fold icon={<ImageIcon />} title="Google-ის ფოტოები" summary={key === undefined ? '…' : has ? 'ჩართულია — ტაძრებში Google Maps-ის ფოტოები და საათები ჩანს' : 'გამორთულია — ჩასვი Google-ის გასაღები'}
+      info="გასაღები Google Cloud-ში მზადდება (Places API (New)). ფოტოები არ ინახება — ყოველ გახსნაზე Google-იდან მოდის ავტორის სახელით. თვეში 1 000 ფოტოს ჩვენება უფასოა. საათები, საიტი და ტელეფონი ტაძრის ფანჯრის ღილაკით იტვირთება — თვეში 1 000 დაჭერა უფასოა, მერე თითო ≈ 5 თეთრი.">
       {has && !editing ? (
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-[14px] font-semibold text-[#2f6b3a]">გასაღები ჩასმულია (…{key.slice(-4)}).</span>
