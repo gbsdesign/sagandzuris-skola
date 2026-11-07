@@ -1,5 +1,20 @@
 // Loaded into the PWA service worker (vite.config.ts → workbox.importScripts).
 
+// A newer version of the site is fetched while the app is closed too (the user's wish, 2026-11-07: „რომც არ გახსნან,
+// უეჭველი განახლდეს“): every push that wakes this worker and the phone's periodic background sync (`sg-update`,
+// registered by src/utils/appUpdate.ts where allowed) ask the site; a new version installs and takes over by itself
+// (skipWaiting + clientsClaim), so the next opening already shows it. At most once a minute.
+let lastUpdateAsk = 0;
+const askForUpdate = () => {
+  if (Date.now() - lastUpdateAsk < 60000) return Promise.resolve();
+  lastUpdateAsk = Date.now();
+  return self.registration.update().catch(() => {});
+};
+self.addEventListener('push', (event) => { event.waitUntil(askForUpdate()); });
+self.addEventListener('periodicsync', (event) => {
+  if (event.tag === 'sg-update') event.waitUntil(askForUpdate());
+});
+
 // Seven-times prayer hours (same as src/data/prayers.ts).
 const PRAYER_HOURS = [
   { id: 'hour-6', hour: 6, label: 'დილის 6 საათის' },
