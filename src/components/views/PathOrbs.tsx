@@ -10,12 +10,12 @@ import { triggerHaptic } from '../../utils/haptics';
 import { useSamosiSrc } from '../../utils/samosiDye';
 import { SAMOSI_COLORS, SAMOSI_DEFAULT_COLOR, SAMOSI_PARTS, SAMOSI_TOTAL, samosiDone, samosiThumb } from '../../data/samosiData';
 import { IconBtn } from '../ui/kit';
-import { OrbBadge, OrbHue, OrbPercent, PathOrb } from './PathOrb';
+import { OrbBadge, OrbPercent, PathOrb } from './PathOrb';
 import { ChemiSamosi } from './ChemiSamosi';
 import { FirstStep, usePathStats } from './PathSummary';
 import { MyClassWork, useNewWork } from '../teacher/MyClassWork';
 import { triggerFireworks } from './StudentBookmarkView';
-import { ManeraAverageBadge, ManeraContent, useMastery } from './ManeraPanel';
+import { useMasteryPath } from '../mastery/useMasteryPath';
 import { MasteryContent } from '../mastery/MasteryContent';
 import { WorkMonthLine, WorkPanel, useIndependentWork, usePanelWish } from './IndependentWorkCard';
 import { PEARL_WORDS, PearlIcon } from '../pearls/PearlIcon';
@@ -67,8 +67,6 @@ const SamosiOrb: React.FC<{ count: number; color: string; open: boolean; onClick
   );
 };
 
-// the manera ring follows the colour rule of its percentages (<50 red, 50–79 amber, 80+ green)
-const maneraHue = (v: number): OrbHue => (v >= 80 ? 'done' : v >= 50 ? 'amber' : 'rose');
 
 // The top of "საგანძურის გზა": four round buttons in a row — სამოსი, ნასწავლი, ოსტატობა, სამუშაო — each a ring of its
 // progress with only its name under it. A tap opens its card under the row (one at a time); a second tap or ✕ folds
@@ -81,7 +79,7 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
   // "ნასწავლი": ✎ in the card's head swaps the marks for ✕ (LearnPanel); folding the card ends it
   const [editing, setEditing] = useState(false);
   const stats = usePathStats();
-  const manera = useMastery();
+  const mastery = useMasteryPath().summary;
   const work = useIndependentWork();
   const samosi = useSamosiSummary();
   const newWork = useNewWork();
@@ -119,10 +117,13 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
           </PathOrb>
         );
       case 'manera':
-        // the average of all exercises (teachers' marks and the app's scores); a dash until there is any
+        // „ოსტატობის გზა“ (2026-11-07): the level in the middle, its exercises passed as the ring
         return (
-          <PathOrb key={id} label="ოსტატობა" title="ოსტატობა" percent={manera.average ?? 0} hue={maneraHue(manera.average ?? 0)} open={open === id} onClick={() => toggle(id)} index={index}>
-            {manera.average === null ? <span className="text-[22px] font-black text-[#cbbca6]">—</span> : <OrbPercent value={manera.average} />}
+          <PathOrb key={id} label="ოსტატობა" title={`ოსტატობა · დონე ${mastery.level} · ${mastery.pct}%`} percent={mastery.pct} hue="wine" open={open === id} onClick={() => toggle(id)} index={index}>
+            <span className="flex flex-col items-center leading-none">
+              <span className="text-[10px] sm:text-[11px] font-bold text-[#8a7a6a]">დონე</span>
+              <span className="text-[22px] sm:text-[26px] font-black tabular-nums text-[#7a2028]">{mastery.level}</span>
+            </span>
           </PathOrb>
         );
       case 'work':
@@ -154,7 +155,7 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
       ) : undefined,
       body: <LearnPanel s={stats} editing={editing} />,
     },
-    manera: { title: 'ოსტატობა', sub: 'გაკვეთილები და რჩევები', aside: <ManeraAverageBadge />, body: <MasteryContent /> },
+    manera: { title: 'ოსტატობა', sub: 'გზა დონეებით — 0-დან ოსტატამდე', body: <MasteryContent /> },
     work: { title: 'დამოუკიდებელი სამუშაო', sub: <WorkMonthLine work={work} />, body: <WorkPanel /> },
   };
   const card = open ? cards[open] : null;

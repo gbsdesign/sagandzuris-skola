@@ -6,7 +6,7 @@ import { useAllLearning } from '../../hooks/useLearning';
 import { HABIT_TONES, COUNTER_TAP_STEP } from '../../data/habitLooks';
 import { dueDailyOf } from '../habits/useHabits';
 import { usePathStats } from '../views/PathSummary';
-import { useMastery } from '../views/ManeraPanel';
+import { useMasteryPath } from '../mastery/useMasteryPath';
 import { useIndependentWork } from '../views/IndependentWorkCard';
 import { useSamosiSummary } from '../views/PathOrbs';
 import { usePathPearls } from '../pearls/LearnChests';
@@ -26,7 +26,8 @@ const round = (n: number | null | undefined) => Math.max(0, Math.min(100, Math.r
 const Sync: React.FC<{ uid: string }> = ({ uid }) => {
   const mine = useMyHabits(uid);
   const path = usePathStats();
-  const manera = useMastery();
+  // „ოსტატობა“'s ring: the current level's exercises passed (the path page's ring)
+  const manera = useMasteryPath().summary;
   const work = useIndependentWork();
   // the widget's „მარგალიტები“ ring: the share of „ნასწავლი“'s pearls that shine (a teacher confirmed them)
   const pearls = usePathPearls();
@@ -65,7 +66,7 @@ const Sync: React.FC<{ uid: string }> = ({ uid }) => {
       habits: habits.slice(0, 30),
       path: {
         learn: round(path.percent),
-        manera: round(manera.average),
+        manera: round(manera.pct),
         work: round(work.planned?.percent),
         pearls: round(pearlPct),
         samosi: round((100 * samosi.count) / SAMOSI_TOTAL),
@@ -74,7 +75,7 @@ const Sync: React.FC<{ uid: string }> = ({ uid }) => {
       kanon,
       buttons: (shortcuts ?? []).slice(0, 12).map(id => ({ id, t: shortcutLabel(id)?.label || '' })).filter(b => b.t),
     };
-  }, [mine, path.percent, manera.average, work.planned?.percent, pearlPct, samosi.count, learning, groups, shortcuts, uid, today]);
+  }, [mine, path.percent, manera.pct, work.planned?.percent, pearlPct, samosi.count, learning, groups, shortcuts, uid, today]);
 
   const text = JSON.stringify(summary);
   useEffect(() => {

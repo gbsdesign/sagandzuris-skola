@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
-import { Users, Clock, Sparkles, ClipboardCheck, Baby, Lock, UserMinus, UserPlus, Loader2, MessageCircle, ChevronDown } from 'lucide-react';
+import { Users, Clock, Sparkles, ClipboardCheck, Baby, Lock, UserMinus, UserPlus, Loader2, MessageCircle, ChevronDown, Dumbbell } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth, useNavigation } from '../../context';
 import type { ClassMember, SchoolClass } from '../../hooks/useClasses';
@@ -19,6 +19,7 @@ import { abilitiesText, interestsText } from '../../utils/profileFields';
 import { syncKidsFlag } from '../../hooks/useDirectChat';
 import { Avatar as Face } from '../classes/ChatPanel';
 import { DrillReview } from '../mastery/DrillReview';
+import { pathSummary, recordFromDoc } from '../../utils/masteryPath';
 import { LearnReview } from '../learn/LearnReview';
 import { MedavitneReview } from '../learn/MedavitneReview';
 
@@ -33,7 +34,9 @@ const summarize = (data: Record<string, any> | undefined) => {
   const habitTicks = week.reduce((a, x) => a + x.n, 0);
   const path = Object.keys(data?.selectedChantVariants || {}).length;
   const kids: KidsMode | undefined = data?.kidsMode;
-  return { profile, work, week, habitTicks, path, kids, abituri: abituriText(data?.abituri), lastActive: data?.lastActiveAt || data?.updatedAt };
+  // „ოსტატობის გზა“'s level and its exercises passed (utils/masteryPath.ts, from the record alone)
+  const mastery = pathSummary(recordFromDoc(data));
+  return { profile, work, week, habitTicks, path, kids, mastery, abituri: abituriText(data?.abituri), lastActive: data?.lastActiveAt || data?.updatedAt };
 };
 
 // the admission theory (hooks/useAbituriProgress): lessons done, the last mock test, practice
@@ -123,11 +126,12 @@ export const StudentsOverview: React.FC<{ cls: SchoolClass; records: Record<stri
                         {(s.profile.voices || []).length > 0 && ` · ${(s.profile.voices as string[]).map(v => VOICE[v] || v).join(', ')}`}
                       </span>
                       {rec?.data && (
-                        <span className="mt-1 flex items-center gap-3 text-xs font-semibold tabular-nums text-[#75685a]">
+                        <span className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs font-semibold tabular-nums text-[#75685a]">
                           <Meta icon={<Clock />} title="დამოუკიდებელი მუშაობა ამ თვეში" warn={s.work.planned > 0 && s.work.percent < 40}>
                             {s.work.planned ? `${s.work.worked}/${s.work.planned} სთ` : '—'}
                           </Meta>
                           <Meta icon={<Sparkles />} title="ჩვევის მონიშვნა 7 დღეში">{s.habitTicks}</Meta>
+                          <Meta icon={<Dumbbell />} title={`ოსტატობის გზა: დონე ${s.mastery.level}, ${s.mastery.passed}/${s.mastery.total} სავარჯიშო`}>დ{s.mastery.level} · {s.mastery.passed}/{s.mastery.total}</Meta>
                           <Meta icon={<ClipboardCheck />} title="დასწრება ბოლო გაკვეთილებზე" warn={attendance.length > 0 && came / attendance.length < 0.5}>
                             {attendance.length ? `${came}/${attendance.length}` : '—'}
                           </Meta>
@@ -329,7 +333,7 @@ const StudentSheet: React.FC<{
 
           <AttendanceStrip uid={uid} last={attendance} />
 
-          <DrillReview uid={uid} drillDone={record.data.drillDone} drillScore={record.data.drillScore} />
+          <DrillReview uid={uid} drillDone={record.data.drillDone} drillScore={record.data.drillScore} data={record.data} />
           <LearnReview uid={uid} learning={record.data.learning} parts={record.data.learnParts} shine={record.data.pearlShine} />
           <MedavitneReview uid={uid} shine={record.data.pearlShine} />
 

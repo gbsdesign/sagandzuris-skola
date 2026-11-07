@@ -29,7 +29,8 @@ export const markDrillDone = (id: string, uid?: string | null) => {
   window.dispatchEvent(new Event(EVENT));
 };
 
-/** Which drills are done today, and on how many of the last 7 days anything was practised. */
+/** Which drills are done today, which ever (the last 60 days on this device), and on how many of the last 7 days anything
+ *  was practised. */
 export const useManeraPractice = () => {
   const [done, setDone] = useState<Done>(read);
   useEffect(() => {
@@ -42,5 +43,6 @@ export const useManeraPractice = () => {
   const weekStart = daysAgo(6);
   const doneToday = useCallback((id: string) => !!done[id]?.includes(today), [done, today]);
   const weekDays = new Set(Object.values(done).flat().filter(d => d >= weekStart)).size;
-  return { doneToday, weekDays };
+  const everDone = Object.fromEntries(Object.entries(done).filter(([, days]) => Array.isArray(days) && days.length).map(([id]) => [id, true]));
+  return { doneToday, weekDays, everDone };
 };

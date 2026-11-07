@@ -4,6 +4,8 @@
 // a tip is the drill `tip-<num>`.
 import { MANERA_ITEMS } from './habitsAndManera';
 import { MANERA_LESSONS, type ManeraExercise, type ManeraLesson } from './maneraLessons';
+import { MASTERY_DRILLS, type OpenSpec, type TrainerSpec } from './masteryDrills';
+import { levelOfDrill, MASTERY_LEVELS } from './masteryPath';
 
 export interface Drill {
   id: string;
@@ -12,6 +14,11 @@ export interface Drill {
   exercise: ManeraExercise;
   /** the tip's short advice, for the tips only */
   advice?: string;
+  /** „ოსტატობის გზა“ (data/masteryDrills.ts): the exercise is one of the app's trainers, happens elsewhere in the app, or
+   *  the drill is a lesson only — then `exercise.steps` is empty */
+  trainer?: TrainerSpec;
+  open?: OpenSpec;
+  read?: boolean;
 }
 
 export interface DrillGroup {
@@ -446,10 +453,22 @@ const TIP_DRILLS: Drill[] = MANERA_ITEMS.filter(t => MANERA_LESSONS[t.num]).map(
 /** the tips as a group, for pickers (a teacher's assignment) */
 export const MANERA_DRILL_GROUP: DrillGroup = { id: 'tips', title: 'რჩევები', sub: '', drills: TIP_DRILLS };
 
-export const ALL_DRILLS: Drill[] = [...TIP_DRILLS, ...DRILL_GROUPS.flatMap(g => g.drills)];
+export const ALL_DRILLS: Drill[] = [...TIP_DRILLS, ...DRILL_GROUPS.flatMap(g => g.drills), ...MASTERY_DRILLS];
 
 export const findDrill = (id: string | null | undefined) => (id ? ALL_DRILLS.find(d => d.id === id) : undefined);
 
-/** the group a drill belongs to, for a label: „სმენა და ინტონაცია“; tips belong to „რჩევები“ */
-export const drillGroupTitle = (id: string) =>
-  id.startsWith('tip-') ? 'რჩევები' : DRILL_GROUPS.find(g => g.drills.some(d => d.id === id))?.title ?? '';
+/** the group a drill belongs to, for a label: the path's level first („დონე 1 · ხმა და სმენა“), then „რჩევები“ or the
+ *  old group („სმენა და ინტონაცია“) */
+export const drillGroupTitle = (id: string) => {
+  const lvl = levelOfDrill(id);
+  if (lvl !== null) return `დონე ${lvl} · ${MASTERY_LEVELS[lvl].name}`;
+  return id.startsWith('tip-') ? 'რჩევები' : DRILL_GROUPS.find(g => g.drills.some(d => d.id === id))?.title ?? '';
+};
+
+/** the path's levels as groups, for a teacher's picker: each level's exercises in its order */
+export const LEVEL_DRILL_GROUPS: DrillGroup[] = MASTERY_LEVELS.map(l => ({
+  id: `lvl-${l.n}`,
+  title: `დონე ${l.n} · ${l.name}`,
+  sub: '',
+  drills: l.items.map(it => findDrill(it.id)).filter((d): d is Drill => !!d),
+}));
