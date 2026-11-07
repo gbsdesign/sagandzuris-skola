@@ -445,6 +445,13 @@
   „დონე N“ and the level's share (`useMasteryPath`), the widget's ring the same; the class roll and `DrillReview` show the
   member's level; the assignment picker lists the drills by level (`LEVEL_DRILL_GROUPS`). Lessons written by Claude, unchecked
   by a teacher.
+  **No window since the evening of 2026-11-07** (the user: „არ მომწონს ამომხტარი ფანჯარა“, answers „მთელ ეკრანზე · ყველგან · 1–4“):
+  `DrillSheet` (every caller — the path, ManeraPanel, the groups, a chat card, assignments) is a screen of its own (`DrillScreen`: a
+  sticky bar with `BackBtn`, the big title, its own history step `sgDrill`); a trainer that opens something else calls
+  `onClose(then)` — the step is taken back first, then `then` runs (`LearnDue onOpen` for the reviews). The path's list: the
+  exercise's number inside its round (`0.7` → 7), the line chips one row (`flex-auto px-2`, wrap only under ~350 px), an open level
+  takes the whole width (no path line through it); `LevelCard` = name, one line „კიდევ N“, count, bar (the line dots went);
+  `DayPlan` keeps the minutes only in its head and a reason only for the teacher's, the warm-up and the weakest line.
 - **მედავითნეობა** (page `medavitneoba`, built 2026-10-27): the reader's course on the vine's „მედავითნეობა“ label
   (section `medavitneobaTopic`, „მალე“ until the admin opens it). 8 lessons in `data/medavitneLessons.ts`, shown step by
   step (learn / order / read aloud / quiz / task) in `pages/MedavitneobaPage.tsx` + `pages/medavitneoba/parts.tsx`; the

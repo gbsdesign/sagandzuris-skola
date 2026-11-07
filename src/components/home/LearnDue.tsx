@@ -28,9 +28,11 @@ const PartsChip: React.FC<{ n: number }> = ({ n }) => (
 
 const rowLook = 'group w-full min-h-12 flex items-center gap-2.5 py-1.5 pl-2 pr-2.5 text-left cursor-pointer hover:bg-[#fbf6ec] active:bg-[#f5ecdc] transition-colors';
 
-export const LearnDue: React.FC = () => {
+// `onOpen`: a host that must step aside first (the drill's own screen) gets the opening to run once it has gone
+export const LearnDue: React.FC<{ onOpen?: (go: () => void) => void }> = ({ onOpen }) => {
   const { user } = useAuth();
-  const open = useOpenLearning();
+  const openNow = useOpenLearning();
+  const open = (piece: string) => (onOpen ? onOpen(() => openNow(piece)) : openNow(piece));
   const all = useAllLearning(user?.uid);
   const [unfolded, setUnfolded] = useState(false);
   const due = reviewsDue(all?.learning, georgiaToday());

@@ -63,7 +63,7 @@ const useLearnable = () => {
   }, [classes]);
 };
 
-export const OpenRun: React.FC<{ drillId: string; spec: OpenSpec; onClose: () => void }> = ({ drillId, spec, onClose }) => {
+export const OpenRun: React.FC<{ drillId: string; spec: OpenSpec; onClose: (then?: () => void) => void }> = ({ drillId, spec, onClose }) => {
   const learnable = useLearnable();
   const openLearning = useOpenLearning();
   const { navigateTo, openMapItem } = useNavigation();
@@ -79,32 +79,29 @@ export const OpenRun: React.FC<{ drillId: string; spec: OpenSpec; onClose: () =>
         <>
           <p className="text-[14px] leading-relaxed text-[#4a3426]">აირჩიე საგალობელი — „სწავლა“ გაიხსნება შენს ხმაზე: <b>{VOICE_LINE[spec.voice]}</b>. ისწავლე ფრაზა-ფრაზა, მერე დაბრუნდი და მონიშნე.</p>
           <div className="space-y-2">
-            {learnable.map(c => <Row key={c.piece} title={c.title} sub={c.sub} onClick={() => { onClose(); openLearning(c.piece, spec.voice); }} />)}
+            {learnable.map(c => <Row key={c.piece} title={c.title} sub={c.sub} onClick={() => onClose(() => openLearning(c.piece, spec.voice))} />)}
           </div>
         </>
       )}
       {spec.kind === 'game' && (
         <>
           <p className="text-[14px] leading-relaxed text-[#4a3426]">ეს სავარჯიშო თამაშ „{spec.name}“-შია: ტელეფონი ორ ხმას გალობს, შენ — მესამეს. იმღერე სამივე ხმა რიგრიგობით.</p>
-          <Btn full kind="soft" icon={<Gamepad2 />} onClick={() => { onClose(); navigateTo('games'); openMapItem(spec.item); }}>„{spec.name}“ — გახსნა</Btn>
+          <Btn full kind="soft" icon={<Gamepad2 />} onClick={() => onClose(() => { navigateTo('games'); openMapItem(spec.item); })}>„{spec.name}“ — გახსნა</Btn>
         </>
       )}
       {spec.kind === 'sight' && (
         <>
           <p className="text-[14px] leading-relaxed text-[#4a3426]">დღის სამი უცნობი საგალობელი. გახსენი ნოტები, ჯერ თვალით წაიკითხე, მერე იმღერე შენი ხმა და ბოლოს სინთეზატორით შეამოწმე.</p>
           <div className="space-y-2">
-            {sight.map(c => <Row key={c.vid} title={c.title} sub={`${c.service} · გ.ს. №${c.num}`} icon={<ExternalLink className="w-4 h-4" />} onClick={() => { onClose(); openNotes(c.vid, 'list'); }} />)}
+            {sight.map(c => <Row key={c.vid} title={c.title} sub={`${c.service} · გ.ს. №${c.num}`} icon={<ExternalLink className="w-4 h-4" />} onClick={() => onClose(() => openNotes(c.vid, 'list'))} />)}
           </div>
         </>
       )}
       {spec.kind === 'review' && (
         <>
           <p className="text-[14px] leading-relaxed text-[#4a3426]">ნასწავლი საგალობლები, რომელთა გამეორების დღეც დადგა:</p>
-          <div
-            className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] overflow-hidden"
-            onClickCapture={e => { const b = (e.target as HTMLElement).closest('button'); if (b && !b.hasAttribute('aria-expanded')) onClose(); }}
-          >
-            <LearnDue />
+          <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] overflow-hidden">
+            <LearnDue onOpen={go => onClose(go)} />
           </div>
           <p className="text-[12.5px] text-[#8a7a6a]">სია ცარიელია? დღეს გასამეორებელი არაფერია — ესეც შესრულებაა.</p>
         </>

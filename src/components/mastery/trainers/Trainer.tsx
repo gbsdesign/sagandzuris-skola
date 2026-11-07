@@ -17,7 +17,7 @@ const rhythmQ = (): QuizQ => {
   return { play: rhythmPlay(r.pattern).play, options: ['ა', 'ბ', 'გ'], right: r.right, patterns: r.options };
 };
 
-export const TrainerView: React.FC<{ drill: Drill; onClose: () => void }> = ({ drill, onClose }) => {
+export const TrainerView: React.FC<{ drill: Drill; onClose: (then?: () => void) => void }> = ({ drill, onClose }) => {
   const id = drill.id;
   if (drill.open) return <OpenRun drillId={id} spec={drill.open} onClose={onClose} />;
   const t = drill.trainer;
