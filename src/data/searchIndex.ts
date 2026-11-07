@@ -14,7 +14,7 @@ import { SECTIONS, SectionId } from './sections';
 import { SPECIALS, labelled, sectionOfShortcut } from '../utils/shortcuts';
 import { kathismaOfPsalm, matchScore, psalmNumber, searchNormalize, splitTrailingNumber } from '../utils/searchMatch';
 
-export type SearchGroupId = 'fn' | 'chant' | 'prayer' | 'psalter' | 'song' | 'ancestor' | 'feast' | 'person';
+export type SearchGroupId = 'fn' | 'chant' | 'prayer' | 'psalter' | 'song' | 'ancestor' | 'feast' | 'church' | 'person';
 
 export const SEARCH_GROUPS: { id: SearchGroupId; title: string }[] = [
   { id: 'fn', title: 'ფუნქციები' },
@@ -24,6 +24,7 @@ export const SEARCH_GROUPS: { id: SearchGroupId; title: string }[] = [
   { id: 'song', title: 'სიმღერები' },
   { id: 'ancestor', title: 'წინაპრები' },
   { id: 'feast', title: 'დღესასწაულები' },
+  { id: 'church', title: 'ტაძრები' },
   { id: 'person', title: 'ადამიანები' },
 ];
 
@@ -36,6 +37,7 @@ export type SearchOpen =
   | { kind: 'song'; id: string }
   | { kind: 'ancestor'; id: number }
   | { kind: 'feast'; iso: string }
+  | { kind: 'church'; id: string } // a church's window on „ეკლესია-მონასტრები“
   | { kind: 'library'; tab: LibraryTab }
   | { kind: 'person'; uid: string }; // admins: the person's window in the admin panel
 
@@ -250,6 +252,11 @@ export const runSearch = (index: SearchItem[], query: string): { group: SearchGr
     .sort((a, b) => a.hits[0].score - b.hits[0].score || order.indexOf(a.group) - order.indexOf(b.group));
 };
 
+/** The churches (data/churches.ts, loaded by the panel once something is typed): the name, found also by village and
+ *  municipality; a row opens the church's window. */
+export const churchItem = (id: string, name: string, where: string): SearchItem =>
+  item(`church:${id}`, 'church', name, { kind: 'church', id }, { sub: where, keys: where, icon: 'section:eklesiebi', section: 'eklesiebi' });
+
 /** Admins find people too (the search adds them from the directory): a row opens the person's window. */
 export const personItem = (uid: string, name: string, keys = ''): SearchItem =>
   item(`person:${uid}`, 'person', name, { kind: 'person', uid }, { sub: 'ადმინის პანელი · ადამიანის ფანჯარა', keys });
@@ -265,6 +272,8 @@ export const shortcutOfSearch = (it: SearchItem): string => {
     case 'library': return `library:${o.tab}`;
     // "feast:<group>:<n>" is the row's key; its line (the next date) would go stale
     case 'feast': return labelled(it.key, it.title);
+    // a church is never picked for a button (the churches join the index only while typing)
+    case 'church': return '';
     case 'person': return '';
   }
 };

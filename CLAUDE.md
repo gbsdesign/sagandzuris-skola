@@ -312,6 +312,18 @@
   lives in `settings/googlePlaces { key }`, pasted by an admin in `GoogleKeyBox` at the page's bottom (the user makes it in the
   Firebase project's Cloud console, held to the site's addresses and Places API (New)). Gogoladze's map waits for its link (the user
   sends it from his app's ⋮ → share); its photos and list are to show only to admins until he gives permission (tedo881@gmail.com).
+  **Tidied the same night (the user: „დახვეწილი, მარტივად აღსაქმელი … დაიწყე“, answer „ყველა 1–7“)**: the first screen = the search
+  on top, one line of numbers, three tiles in one row (`WaysRow`: ახლოს · ტაძრობა · წიგნაკი — no big button or cards), „ბოლოს
+  ნანახი“ (`RecentRow`, the device's `sg-church-recent`, ≤ 6, written on `open` — `rememberChurch` in `utils/churchShare.ts`), then the
+  კუთხეებით · რუკა tabs; the dots map has the kinds' chips + „რუკაზე N ტაძარი“ (`Dots`). The phone's place is one for every part:
+  `hooks/useMyPlace.ts` (`useMyPlace(want)`, `locateMe`, `myPlace`; ten minutes fresh) — `Nearby`, the map's „ჩემი ადგილი“ and the
+  window's „· N კმ შენგან“ (`Distance`, never asks itself). The window: „ვიყავი“ + „გაზიარება“ in one row (`ShareButton` →
+  `shareChurch`: the phone's share sheet with name, place, feast and the Google Maps link; a computer copies it — „დაკოპირდა“),
+  empty hours / contact as one quiet line (`Quiet`), a box only when written. A region's municipality is picked in a kit `Sheet`
+  (`MuniPicker`, rows with counts) — no native select. The Google key moved to ⚙ „სკოლა“ → „Google-ის ფოტოები“
+  (`admin/GooglePhotosFold.tsx`; the page has no admin box). Churches are in the one search (group „ტაძრები“, `churchItem` in
+  `searchIndex.ts`; `SearchPanel` loads the list once two letters are typed — `useChurchItems`; `requestOpen('churches', id)` →
+  the page's `useOpenRequest` opens `all/<id>`).
 - **Prayers** (`data/prayers.ts`, `public/prayers/`, `public/bible/`), psalter kathismas, 73 akathists,
   commemoration name lists (`utils/commemoration.ts`), prayer reminders via Web Push Worker
   `sagandzuri-reminders` (`worker/reminders/`; push works only on the deployed site).
