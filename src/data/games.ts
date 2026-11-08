@@ -142,11 +142,6 @@ export const GAMES: GameDef[] = [
     modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'khazi', section: 'tamashebi', print: kit('drois-khazi', 9),
   },
   {
-    id: 'chemi-vazi', title: 'ჩემი ვაზი', like: 'Tamagotchi', text: 'შენი ვაზი შენი საქმეებით იზრდება — ჩვევა, დღის თამაში, სწავლა, მარგალიტი: ფოთოლი, ყლორტი, მტევანი',
-    about: '„Tamagotchi“ ჯიბის ცხოველია, რომელსაც ყოველდღე უნდა მოუარო. ჩვენთან ყველას თავისი ვაზი აქვს: მონიშნული ჩვევა, დასრულებული დღის თამაში, სწავლის რეჟიმი, ოსტატობის სავარჯიშო ვაზს ფოთოლს უმატებს, თვეში კი მტევანი მწიფდება. უქმად დარჩენილი ვაზი ყვითლდება, მაგრამ არ კვდება. რთველზე მასწავლებელი კლასის ყველა ვაზს ერთ ეკრანზე აჩვენებს და მტევნებს ერთად ითვლიან; ქაღალდზე — თვის ვაზი გასაფერადებლად, ფოთლისა და მტევნის სტიკერები, კლასის რთველის ცხრილი, ქვევრი და სიგელები.',
-    modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'vazi', section: 'tamashebi', print: kit('chemi-vazi', 6),
-  },
-  {
     id: 'chaitsvi-qartulad', title: 'ჩაიცვი ქართულად', like: 'Dress-up', text: 'ჩოხა ნაწილ-ნაწილ, სწორი რიგით და დროზე: ახალუხი, ჩოხა, მასრები, ქამარი, ხანჯალი, ქუდი — რა რას მოსდევს?',
     about: 'ჩაცმის თამაშებში (Dress-up) თოჯინას ტანსაცმელს არჩევ. ჩვენთან ჩოხა ზუსტად ისე უნდა ჩაიცვა, როგორც იცმევა: ჯერ ახალუხი, მერე ჩოხა, მასრები და ქამარი, ხანჯალი ქამარზე, ქუდი ბოლოს — ადრე აღებული ნაწილი უკან ბრუნდება და გეტყვის, რატომ. ბოლოს ყოველი ნაწილის ამბავს გაიგებ; კლასში გუნდები ერთ ტელეფონზე ეჯიბრებიან, ვინ უფრო სწრაფად ჩაიცვამს — ან ქაღალდის თოჯინებს აცმევენ (ჩოხა და ქართული კაბა ამოსაჭრელად).',
     modes: ['online', 'hybrid', 'noPhone'], page: 'games', item: 'chaitsvi', section: 'tamashebi', print: kit('chaitsvi-qartulad', 6),
@@ -293,7 +288,7 @@ export const GAME_GROUPS: GameGroup[] = [
   {
     id: 'georgia', title: 'ქართული', hint: 'სიტყვები, ძველი დამწერლობა, ისტორია, კუთხეები და ტრადიციები',
     games: ['dghis-sitqva', 'otkheuli', 'asoebis-bade', 'khutsuri-tsartsera', 'sami-damtserloba', 'drois-khazi', 'otkhidan-erti', 'ra-sad-rodis',
-      'rukis-viktorina', 'chamotvale', 'tsikhis-gasaghebi', 'tsinapris-gza', 'sagandzuris-dzebna', 'chaitsvi-qartulad', 'chemi-vazi'],
+      'rukis-viktorina', 'chamotvale', 'tsikhis-gasaghebi', 'tsinapris-gza', 'sagandzuris-dzebna', 'chaitsvi-qartulad'],
   },
   {
     id: 'live', title: 'ცოცხალი', hint: 'ერთად, ხმამაღლა: ახსენი, დახატე, გაითამაშე, გამოიცანი',

@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import {
-  AudioLines, Bird, Brain, Brush, Castle, Check, ChevronDown, Clapperboard, Compass, Crown, Dice5, Drama, Feather, Flag, Flame, Footprints, Gamepad2, Gem, Grape, Grid2x2Check, Grid3x3, HatGlasses, Headphones, Hourglass, KeyRound, Layers3, Info, Landmark, LayoutGrid, Lightbulb, ListChecks, ListMusic, ListOrdered, Loader2, Map as MapIcon, MapPinned, MessageCircle, MessageSquareOff,
+  AudioLines, Bird, Brain, Brush, Castle, Check, ChevronDown, Clapperboard, Compass, Crown, Dice5, Drama, Feather, Flag, Flame, Footprints, Gamepad2, Gem, Grid2x2Check, Grid3x3, HatGlasses, Headphones, Hourglass, KeyRound, Layers3, Info, Landmark, LayoutGrid, Lightbulb, ListChecks, ListMusic, ListOrdered, Loader2, Map as MapIcon, MapPinned, MessageCircle, MessageSquareOff,
   MicVocal, Music2, Piano, Puzzle, Repeat, Route, Search, Shapes, ScrollText, Shirt, Smile, SpellCheck, TextSearch, TicketCheck, UserRoundSearch, VenetianMask, Waves, X,
 } from 'lucide-react';
 import { useNavigation } from '../context';
@@ -54,7 +54,6 @@ import ChamotvaleGame from './games/ChamotvaleGame';
 import BadeGame from './games/BadeGame';
 import TsartseraGame from './games/TsartseraGame';
 import KhaziGame from './games/KhaziGame';
-import VaziGame from './games/VaziGame';
 import ChaitsviGame from './games/ChaitsviGame';
 import AnbaniGame from './games/AnbaniGame';
 import TsikheGame from './games/TsikheGame';
@@ -80,7 +79,6 @@ const Qaravani: React.FC = () => (
     <QaravaniGame />
   </Suspense>
 );
-import { useVine } from './games/vazi/useVine';
 import type { FilmKind } from '../data/georgianFilms';
 import { Tabs } from '../components/ui/kit';
 // „ქართული ფილმები“ (moved here from „მთქმელი“'s videos, 2026-11-09): the list loads only when opened
@@ -105,7 +103,7 @@ type Access = ReturnType<ReturnType<typeof useAccess>['section']>;
 const ICON: Record<string, React.ReactNode> = {
   'dghis-hangi': <Headphones />, 'dghis-sitqva': <SpellCheck />, otkheuli: <Shapes />,
   amikhseni: <MessageCircle />, gatvla: <Dice5 />, 'tskheli-churchkhela': <Flame />, 'ra-sad-rodis': <Brain />,
-  'okros-khana': <MapIcon />, 'samshvildis-ghame': <Castle />, 'saidanaa-simghera': <MapPinned />, 'otkhidan-erti': <ListChecks />, 'khma-khmad': <AudioLines />, 'sam-notshi': <Music2 />, 'khmebis-turniri': <MicVocal />, 'kartuli-akordi': <Piano />, 'rva-khma': <Waves />, 'rukis-viktorina': <Compass />, gagrdzele: <ListMusic />, hangebi: <Puzzle />, eqo: <Repeat />, 'mprinavi-notebi': <Bird />, 'khmis-tsqvilebi': <Grid2x2Check />, 'mesame-khma': <Layers3 />, 'chemi-gundi': <Drama />, chamotvale: <ListOrdered />, 'asoebis-bade': <TextSearch />, 'khutsuri-tsartsera': <ScrollText />, 'drois-khazi': <Hourglass />, 'chemi-vazi': <Grape />, 'chaitsvi-qartulad': <Shirt />, 'sami-damtserloba': <Feather />, 'tsikhis-gasaghebi': <KeyRound />, 'tsinapris-gza': <Footprints />, 'nu-itqvi': <MessageSquareOff />, 'erti-minishneba': <Lightbulb />, pantomima: <VenetianMask />, 'vin-var-me': <UserRoundSearch />, 'saidumlo-sakhelebi': <Grid3x3 />, 'utskho-sopelshi': <HatGlasses />, nakhatobana: <Brush />, 'sagalobo-loto': <TicketCheck />, 'sagandzuris-dzebna': <Gem />, 'ezos-msaji': <Flag />, qaravani: <Route />, 'ori-takhti': <Crown />, 'lurji-supra': <LayoutGrid />, 'mepis-kari': <Landmark />,
+  'okros-khana': <MapIcon />, 'samshvildis-ghame': <Castle />, 'saidanaa-simghera': <MapPinned />, 'otkhidan-erti': <ListChecks />, 'khma-khmad': <AudioLines />, 'sam-notshi': <Music2 />, 'khmebis-turniri': <MicVocal />, 'kartuli-akordi': <Piano />, 'rva-khma': <Waves />, 'rukis-viktorina': <Compass />, gagrdzele: <ListMusic />, hangebi: <Puzzle />, eqo: <Repeat />, 'mprinavi-notebi': <Bird />, 'khmis-tsqvilebi': <Grid2x2Check />, 'mesame-khma': <Layers3 />, 'chemi-gundi': <Drama />, chamotvale: <ListOrdered />, 'asoebis-bade': <TextSearch />, 'khutsuri-tsartsera': <ScrollText />, 'drois-khazi': <Hourglass />, 'chaitsvi-qartulad': <Shirt />, 'sami-damtserloba': <Feather />, 'tsikhis-gasaghebi': <KeyRound />, 'tsinapris-gza': <Footprints />, 'nu-itqvi': <MessageSquareOff />, 'erti-minishneba': <Lightbulb />, pantomima: <VenetianMask />, 'vin-var-me': <UserRoundSearch />, 'saidumlo-sakhelebi': <Grid3x3 />, 'utskho-sopelshi': <HatGlasses />, nakhatobana: <Brush />, 'sagalobo-loto': <TicketCheck />, 'sagandzuris-dzebna': <Gem />, 'ezos-msaji': <Flag />, qaravani: <Route />, 'ori-takhti': <Crown />, 'lurji-supra': <LayoutGrid />, 'mepis-kari': <Landmark />,
 };
 
 // the games that open inside this page, by their `mapItem`
@@ -113,7 +111,7 @@ const INNER: Record<string, React.FC> = {
   hangi: HangiGame, amikhseni: AmikhseniGame, sitqva: SitqvaGame, otkheuli: OtkheuliGame, gatvla: GatvlaGame, churchkhela: ChurchkhelaGame, rsr: RaSadRodisGame,
   samshvilde: SamshvildeGame, kutkhe: KutkheGame, otkhi: OtkhiGame, khmebi: KhmebiGame, notebi: NotebiGame, turniri: TurniriGame,
   akordi: AkordiGame, rvakhma: RvakhmaGame, ruka: RukaGame, gagrdzele: GagrdzeleGame, hangebi: HangebiGame,
-  eqo: EqoGame, mprinavi: MprinaviGame, tsqvilebi: TsqvilebiGame, mesame: MesameGame, gundi: GundiGame, chamotvale: ChamotvaleGame, bade: BadeGame, tsartsera: TsartseraGame, khazi: KhaziGame, vazi: VaziGame, chaitsvi: ChaitsviGame, anbani: AnbaniGame, tsikhe: TsikheGame, tsinapari: TsinapariGame, tabu: TabuGame, minishneba: MinishnebaGame, pantomima: PantomimaGame, vin: VinGame, saidumlo: SaidumloGame, utskho: UtskhoGame, nakhati: NakhatiGame, loto: LotoGame, dzebna: DzebnaGame, ezo: EzoGame, kari: KariGame, lurji: LurjiGame, takhti: TakhtiGame, qaravani: Qaravani, okros: OkrosGame,
+  eqo: EqoGame, mprinavi: MprinaviGame, tsqvilebi: TsqvilebiGame, mesame: MesameGame, gundi: GundiGame, chamotvale: ChamotvaleGame, bade: BadeGame, tsartsera: TsartseraGame, khazi: KhaziGame, chaitsvi: ChaitsviGame, anbani: AnbaniGame, tsikhe: TsikheGame, tsinapari: TsinapariGame, tabu: TabuGame, minishneba: MinishnebaGame, pantomima: PantomimaGame, vin: VinGame, saidumlo: SaidumloGame, utskho: UtskhoGame, nakhati: NakhatiGame, loto: LotoGame, dzebna: DzebnaGame, ezo: EzoGame, kari: KariGame, lurji: LurjiGame, takhti: TakhtiGame, qaravani: Qaravani, okros: OkrosGame,
 };
 
 /** a game's card: a tap opens the game (its tabs ონლაინ · ჰიბრიდული are inside; the printed kit is the bar's „სამაგიდო“ there —
@@ -197,7 +195,6 @@ export const GamesPage: React.FC = () => {
   const saidumlo = useDailyRecord('saidumlo');
   const utskho = useDailyRecord('utskho');
   const dzebna = useDailyRecord('dzebna');
-  const vazi = useVine();
   const [soon, setSoon] = useState<string | null>(null);
   const [query, setQuery] = useState('');
   const [openGroups, setOpenGroups] = useState<string[]>(readOpen);
@@ -247,7 +244,6 @@ export const GamesPage: React.FC = () => {
       : g.id === 'saidumlo-sakhelebi' && saidumlo.loaded ? saidumloMeta(saidumlo.days, today)
       : g.id === 'utskho-sopelshi' && utskho.loaded ? utskhoMeta(utskho.days, today)
       : g.id === 'sagandzuris-dzebna' && dzebna.loaded ? dzebnaMeta(dzebna.days, today)
-      : g.id === 'chemi-vazi' && vazi.loaded && vazi.vine.leaves ? `${vazi.vine.recent} ფოთოლი · ${vazi.vine.seasonBunches} მტევანი`
       : undefined;
 
   // a daily game played today (its record: the member's, the device's for guests)
@@ -263,7 +259,7 @@ export const GamesPage: React.FC = () => {
     if (state !== 'open') { setSoon(`„${g.title}“ ჯერ მზადდება — მალე დაემატება`); return; }
     // a game played in a class's room („სამშვილდის ღამე“, the quick games), „ჩემი გუნდი“ and the word games with teams open
     // on the variant tapped
-    if (isRoomGame(g.item) || g.item === 'gundi' || g.item === 'sitqva' || g.item === 'otkheuli' || g.item === 'bade' || g.item === 'tsartsera' || g.item === 'khazi' || g.item === 'vazi' || g.item === 'chaitsvi' || g.item === 'anbani' || g.item === 'tsikhe' || g.item === 'tsinapari' || g.item === 'tabu' || g.item === 'minishneba' || g.item === 'vin' || g.item === 'saidumlo' || g.item === 'utskho' || g.item === 'dzebna' || g.item === 'ezo') requestOpen(g.item, mode === 'online' ? 'online' : 'table');
+    if (isRoomGame(g.item) || g.item === 'gundi' || g.item === 'sitqva' || g.item === 'otkheuli' || g.item === 'bade' || g.item === 'tsartsera' || g.item === 'khazi' || g.item === 'chaitsvi' || g.item === 'anbani' || g.item === 'tsikhe' || g.item === 'tsinapari' || g.item === 'tabu' || g.item === 'minishneba' || g.item === 'vin' || g.item === 'saidumlo' || g.item === 'utskho' || g.item === 'dzebna' || g.item === 'ezo') requestOpen(g.item, mode === 'online' ? 'online' : 'table');
     if (g.item) { openMapItem(g.item); return; }
     if (g.page) { if (g.panel) openPathPanel(g.panel); navigateTo(g.page); }
   };
