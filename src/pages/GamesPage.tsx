@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import {
-  AudioLines, Bird, Brain, Brush, Castle, Check, Clapperboard, Compass, Crown, Dice5, Drama, Feather, Flag, Flame, Footprints, Gamepad2, Gem, Grape, Grid2x2Check, Grid3x3, HatGlasses, Headphones, Hourglass, KeyRound, Layers3, Info, Landmark, LayoutGrid, Lightbulb, ListChecks, ListMusic, ListOrdered, Loader2, Map as MapIcon, MapPinned, MessageCircle, MessageSquareOff,
+  AudioLines, Bird, Brain, Brush, Castle, Check, ChevronDown, Clapperboard, Compass, Crown, Dice5, Drama, Feather, Flag, Flame, Footprints, Gamepad2, Gem, Grape, Grid2x2Check, Grid3x3, HatGlasses, Headphones, Hourglass, KeyRound, Layers3, Info, Landmark, LayoutGrid, Lightbulb, ListChecks, ListMusic, ListOrdered, Loader2, Map as MapIcon, MapPinned, MessageCircle, MessageSquareOff,
   MicVocal, Music2, Piano, Puzzle, Repeat, Route, Search, Shapes, ScrollText, Shirt, Smile, SpellCheck, TextSearch, TicketCheck, UserRoundSearch, VenetianMask, Waves, X,
 } from 'lucide-react';
 import { useNavigation } from '../context';
@@ -95,7 +95,7 @@ const readTab = (): HubTab => {
 // „თამაშები“: the hub of the games (2026-10-27; one list since 2026-10-30, the user's „ყველა თამაში 1 სიად“; made clearer
 // 2026-11-04, the user's „დახვეწე, გაათანამედროვე და არ იყოს დამაბნეველი“). On top what the three variants are and a search
 // field; then „დღის თამაშები“ — the daily games with today's mark, a tap opens the day's game; then every game under its kind
-// (`GAME_GROUPS`, the user's own მუსიკალური · ქართული · ცოცხალი and the board games), the kinds' chips jumping to them. A card per
+// (`GAME_GROUPS`, the user's own მუსიკალური · ქართული · ცოცხალი and the board games), each heading folds (no chips since 2026-11-09). A card per
 // game: its name (the known game it answers to in brackets; ⓘ unfolds what that game is), one line, the day's result, and a
 // button per variant it has — ონლაინ / ჰიბრიდული open it (the games that live inside this page are `mapItem`, so the top bar's „←“
 // returns here; some open on the variant tapped), სამაგიდო makes its PDF on the phone. The catalogue is data/games.ts.
@@ -176,10 +176,10 @@ const scoreOf = (g: GameDef, q: string) => {
   return total;
 };
 
-/** the kinds' chips: a tap scrolls to that heading */
-const jumpTo = (id: string) => {
-  triggerHaptic(5);
-  document.getElementById(id)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+/** which kinds' headings are unfolded — kept for the visit (2026-11-09, the user: the chips went, the headings fold) */
+const OPEN_KEY = 'sg-games-open';
+const readOpen = (): string[] => {
+  try { const v = JSON.parse(sessionStorage.getItem(OPEN_KEY) || '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
 };
 
 export const GamesPage: React.FC = () => {
@@ -200,6 +200,15 @@ export const GamesPage: React.FC = () => {
   const vazi = useVine();
   const [soon, setSoon] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  const [openGroups, setOpenGroups] = useState<string[]>(readOpen);
+  const toggleGroup = (id: string) => {
+    triggerHaptic(5);
+    setOpenGroups(prev => {
+      const next = prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id];
+      try { sessionStorage.setItem(OPEN_KEY, JSON.stringify(next)); } catch { /* private mode */ }
+      return next;
+    });
+  };
   // the search folds under the bar's round 🔍 (2026-11-09); closing it clears the words
   const searchOpen = useGameSearchOpen();
   const [tab, setTab] = useState<HubTab>(readTab);
@@ -360,27 +369,36 @@ export const GamesPage: React.FC = () => {
               </ul>
             </section>
           )}
-          <div className="space-y-2.5">
-            <h2 className="px-1 flex items-baseline gap-2 font-serif-ge text-[17px] font-bold text-[#4a3426]">ყველა თამაში<span className="text-[13px] font-bold tabular-nums text-[#a8998a]">{cards.length}</span></h2>
-            <nav aria-label="თამაშების სახეები" className="flex flex-wrap gap-2">
-              {groups.map(gr => (
-                <button key={gr.id} type="button" onClick={() => jumpTo(`games-${gr.id}`)} className="inline-flex h-10 items-center gap-1.5 rounded-full bg-white/80 px-3.5 text-[13.5px] font-bold text-[#4a3426] ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/35 cursor-pointer">
-                  {gr.title}<span className="font-normal tabular-nums text-[#a8998a]">{gr.list.length}</span>
-                </button>
-              ))}
-            </nav>
+          <h2 className="px-1 flex items-baseline gap-2 font-serif-ge text-[17px] font-bold text-[#4a3426]">ყველა თამაში<span className="text-[13px] font-bold tabular-nums text-[#a8998a]">{cards.length}</span></h2>
+          <div className="space-y-2.5 !mt-2.5">
+            {groups.map(gr => {
+              const open = openGroups.includes(gr.id);
+              return (
+                <section key={gr.id} id={`games-${gr.id}`} className="space-y-2.5">
+                  <h3>
+                    <button
+                      type="button"
+                      onClick={() => toggleGroup(gr.id)}
+                      aria-expanded={open}
+                      aria-controls={`games-${gr.id}-list`}
+                      className={`flex w-full min-h-14 items-center gap-3 rounded-2xl px-4 py-2.5 text-left ring-1 cursor-pointer transition-colors ${open ? 'bg-white ring-[#7a2028]/25' : 'bg-white/85 ring-[#e8dcc8] hover:ring-[#7a2028]/35'}`}
+                    >
+                      <span className="min-w-0 flex-1">
+                        <span className="flex items-baseline gap-2 font-serif-ge text-[18px] font-bold leading-snug text-[#4a3426]">
+                          {gr.title}<span className="text-[13px] font-bold tabular-nums text-[#a8998a]">{gr.list.length}</span>
+                        </span>
+                        <span className="mt-0.5 block text-[12.5px] leading-snug text-[#8a7a6a]">{gr.hint}</span>
+                      </span>
+                      <span className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center bg-[#7a2028]/[0.07] text-[#7a2028] transition-transform ${open ? 'rotate-180' : ''}`}>
+                        <ChevronDown className="w-5 h-5" />
+                      </span>
+                    </button>
+                  </h3>
+                  {open && <ul id={`games-${gr.id}-list`} className="grid gap-2 md:grid-cols-2">{gr.list.map(card)}</ul>}
+                </section>
+              );
+            })}
           </div>
-          {groups.map(gr => (
-            <section key={gr.id} id={`games-${gr.id}`} aria-labelledby={`games-${gr.id}-h`} className="scroll-mt-4 space-y-2.5">
-              <div className="px-1">
-                <h2 id={`games-${gr.id}-h`} className="flex items-baseline gap-2 font-serif-ge text-[19px] font-bold leading-snug text-[#4a3426]">
-                  {gr.title}<span className="text-[13px] font-bold tabular-nums text-[#a8998a]">{gr.list.length}</span>
-                </h2>
-                <p className="mt-0.5 text-[12.5px] leading-snug text-[#8a7a6a]">{gr.hint}</p>
-              </div>
-              <ul className="grid gap-2 md:grid-cols-2">{gr.list.map(card)}</ul>
-            </section>
-          ))}
         </>
       )}
 
