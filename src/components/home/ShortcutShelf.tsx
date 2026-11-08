@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useMemo, useRef, useState } from 'react';
+import React, { Suspense, lazy, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { BookMarked, BookOpen, CalendarDays, Check, Clock, Compass, Feather, GraduationCap, Library, Moon, Music, Music2, Music4, Pencil, Plus, ScrollText, Sparkles, Star, Sun, Users, X, Pin, PinOff, Guitar, Church, NotebookPen, HandHeart, Flame, Heart, MessageCircle, ListMusic, School, ClipboardList, ClipboardCheck, CalendarClock, Settings2, Cake, ChevronDown, ChevronUp, MonitorPlay } from 'lucide-react';
 import { useAuth, useChants, useNavigation } from '../../context';
 import { useNotes } from '../../context/NotesContext';
@@ -165,6 +165,11 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
   const [adding, setAdding] = useState(false);
   // on the profile the card opens folded (2026-11-06, the user's pick): the first six, then „ყველა N“; editing shows all
   const [showAll, setShowAll] = useState(false);
+  // on the home the shelf folds to two rows (2026-11-09, the user: „ჩამოსაშლელი … 2 მწკრივად“); open/shut kept on the device
+  const [homeOpen, setHomeOpen] = useState(() => { try { return localStorage.getItem('sg-shelf-open') === '1'; } catch { return false; } });
+  const toggleHome = () => setHomeOpen(v => { try { localStorage.setItem('sg-shelf-open', v ? '0' : '1'); } catch { /* */ } return !v; });
+  const listRef = useRef<HTMLUListElement>(null);
+  const [overTwo, setOverTwo] = useState(false);
   const [drag, setDrag] = useState<{ from: number; to: number } | null>(null);
   const press = useRef<{ t: number; x: number; y: number; long: boolean; idx: number } | null>(null);
 
@@ -212,6 +217,18 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
   const FOLD_AT = 6;
   const folded = variant === 'profile' && !editing && !showAll && ids.length > FOLD_AT;
   const shown = folded ? order.slice(0, FOLD_AT) : order;
+  // more tiles than two rows hold? (2 a row under 380 px, else 3; the psalter's kanon tiles count too)
+  useLayoutEffect(() => {
+    if (variant !== 'home') return;
+    const check = () => {
+      const n = listRef.current?.childElementCount ?? 0;
+      setOverTwo(n > (window.innerWidth >= 380 ? 6 : 4));
+    };
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  });
+  const homeFolded = variant === 'home' && !editing && !homeOpen && overTwo;
 
   const onDown = (i: number) => (e: React.PointerEvent) => {
     press.current = { t: window.setTimeout(() => {
@@ -274,7 +291,8 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
         )}
       </div>
       {/* on the profile two a row (2026-11-06): three left the names cut short — „დაუჯდ.“, „სამოციქ.“ */}
-      <ul className={`${variant === 'profile' ? 'grid grid-cols-2 gap-2' : SHELF_GRID} select-none ${editing ? 'touch-none' : ''}`}>
+      <ul ref={listRef} className={`${variant === 'profile' ? 'grid grid-cols-2 gap-2' : SHELF_GRID} select-none ${editing ? 'touch-none' : ''} ${
+        homeFolded ? 'max-[380px]:[&>li:nth-child(n+5)]:hidden [&>li:nth-child(n+7)]:hidden' : ''}`}>
         {readingIn.map(g => <KathismaTiles key={g.id} group={g} uid={user.uid} />)}
         {shown.map((id, i) => {
           const l = shortcutLabel(id)!;
@@ -332,6 +350,12 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
           </li>
         )}
       </ul>
+      {variant === 'home' && !editing && overTwo && (
+        <button type="button" onClick={toggleHome} aria-expanded={!homeFolded}
+          className="mt-2 w-full h-11 rounded-[13px] bg-[#7a2028]/[0.06] text-[#7a2028] hover:bg-[#7a2028]/10 flex items-center justify-center gap-1.5 text-[13px] font-bold cursor-pointer transition active:scale-[0.99]">
+          {homeFolded ? <>ყველა ღილაკი <ChevronDown className="w-4 h-4" /></> : <>ნაკლები <ChevronUp className="w-4 h-4" /></>}
+        </button>
+      )}
 
       <ShortcutPicker open={adding} onClose={() => setAdding(false)} current={ids} onChange={save} />
       <Sheet open={!!menu} onClose={() => setMenu(null)} title={menu?.title || ''}>
