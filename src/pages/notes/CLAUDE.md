@@ -69,7 +69,8 @@ moving to the next chant in service order.
   step) and „ბურთულა“ (icons hidden under 380 px so the words fit). „მეტი“: the switches first (ეკრანი არ ჩაქრეს, მთავარ
   გვერდზე ღილაკად — a switch now), then „ინტერნეტის გარეშე · ჩამოწერა“ and „ფაილები“ (was „ჩამოტვირთვა“, too like
   „ჩამოწერა“): PDF, then „სინთეზატორი · MP3“ / „ჩანაწერი · MP3“ with a button per voice (`.np-mfiles`) instead of a row each.
-  The program is named by its date (`liturgyTitle`): დღევანდელი / მომავალი / ბოლო წირვა (card and program page).
+  The program has one name, „მიმდინარე მსახურება“ (`LITURGY_TITLE`, card and program page; the user, 2026-11-08 — it was
+  დღევანდელი / მომავალი / ბოლო წირვა by its date). The card on the chants page is low since then (36 px icon, two lines).
 - Book notes only — no Drive `ნოტები` fallback anywhere.
 - Share: WhatsApp / Facebook / Messenger / Instagram inside "მეტი" (Instagram copies the link; on phones use
   `navigator.share`).
