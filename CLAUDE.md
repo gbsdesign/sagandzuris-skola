@@ -125,6 +125,11 @@
   Notes pages use `NotesContext` (`?c=&v=`, `?p=`), saint lives use their own `sgLife` history entry.
   The region open on the songs/მთქმელი map (or an open instrument) is `sgNav.mapItem` (`openMapItem`), so the
   one top-bar „უკან“ first returns to the map.
+- **`overscroll-contain` only on a box that really scrolls** (has a height). Since Chrome 144 a box with `overflow-y-auto` +
+  `overscroll-contain` that has nothing to scroll still swallows the finger, so the page under it stops scrolling — the messages
+  page's list „got stuck“ on phones this way (2026-11-08; now `lg:overflow-y-auto lg:overscroll-contain`, on a phone the page
+  scrolls). That page's title is „წერილები“ like the header's 💬 (the 🔔 is „შეტყობინებები“); chats nobody wrote in yet sort
+  under the ones with messages; the superadmin's „ყველა ჩათი“ is only the 👁 under 380 px.
 - Fixed/full-screen UI must respect `env(safe-area-inset-*)` (`viewport-fit=cover` is on); helpers
   `.safe-x`, `.safe-top`, `.safe-bottom`, `.safe-bleed` in `index.css`.
 - **Kit rules (redesign stage 1, 2026-10-25)** — `components/ui/kit.tsx`: every inner page has the one `PageBar`
