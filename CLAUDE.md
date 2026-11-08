@@ -314,7 +314,8 @@
   „ხალხური“, the vine's label too. **2026-11-09** (the user: „ფოლკლორის ცენტრის ჩანაწერები მოხსენი … სიმღერების ჩანართში … რაოდენობები მოხსენი … ალბომები
   ბიბლიოთეკაში ჩამოსაშლელად“): the big map has the region's tabs too (`MapByTab`: სიმღერა · საკრავი · მთქმელი · ეთნოფორი,
   `sg-khalkhuri-tab`; the counts and the extra cards follow the tab — „ეთნოფორი“ adds ლაზეთი + „უცხოეთი“ —, an empty region's card is
-  pale, a tap opens the region on that tab; the region keeps its own tabs); `CentreBanner` over the map only on „სიმღერა“; the map's cards show
+  pale, a tap opens the region on that tab; the region keeps its own tabs; „საკრავი“ shows no map — `SakravebiView listOnly`, each
+  instrument's regions named under it — and MoreRows drops „ყველა საკრავი“ there); `CentreBanner` over the map only on „სიმღერა“; the map's cards show
   names only (`RegionPuzzleMap noCounts`); the Centre's song albums left the map — the library's shelf folds them under „ჩანაწერები“
   (`library/FolkAlbums.tsx`, `CentreAlbums bare onOpen`), an album = the library's `falbum:<id>` (`SongAlbumPage` + `SongPage`); an old
   „album:<id>“ step still opens on the songs page. `GeorgiaMap` = one songs map (no top tabs); a region (`KhalkhuriRegion`) has horizontal tabs
