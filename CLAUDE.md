@@ -422,6 +422,9 @@
   is a round 🔍 (`ChurchSearchButton`, `maps/songSearch.tsx` `makeFold`); the search fields (first screen, a region, the feasts) show
   only while it is open (`useFoldedQuery`, closing clears them); „უცხოეთის მონასტრები“ unfolds its films in place
   (`sg-churches-abroad`, a film = `va/<id>`; the old `v:abroad` still opens).
+  The same night (the user: „რუკის ნიშანი მრგვალად ძებნის ღილაკთან … კუთხეები პირდაპირ დატოვე … კომპაქტური“): no „კუთხეებით · რუკა“ tabs —
+  the regions map shows at once, the bar's round 🗺 before the 🔍 (`ChurchMapButton`) swaps in the dots map; the three ways' tiles are
+  compact (small icon beside the name, ~60 px tall), „ბოლოს ნანახი“ chips one line.
 - **Prayers** (`data/prayers.ts`, `public/prayers/`, `public/bible/`), psalter kathismas, 73 akathists,
   commemoration name lists (`utils/commemoration.ts`), prayer reminders via Web Push Worker
   `sagandzuri-reminders` (`worker/reminders/`; push works only on the deployed site).
