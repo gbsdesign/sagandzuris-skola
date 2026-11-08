@@ -6,7 +6,6 @@ import { ClassLogo } from '../classes/ClassLogo';
 import { useAccess } from '../../hooks/useAccess';
 import { askSignIn, openSignIn } from '../access/SignInPrompt';
 import { SearchButton } from '../search/GlobalSearch';
-import { OfflineButton } from '../offline/OfflineButton';
 import { useInbox, isUnread } from '../../hooks/useDirectChat';
 import { useClassLasts, useChatSeen, isClassUnread } from '../../hooks/useClassChat';
 import { User as UserIcon, LogIn, Compass, Library, Baby, MessageCircle, ChevronDown, ChevronRight, Users } from 'lucide-react';
@@ -234,8 +233,6 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
               phone (under sm), where the three chips need the whole row (2026-10-31) */}
           {libraryButton(showNav ? 'sm:hidden' : '')}
           {access.can('search') && <SearchButton className={showNav ? 'sm:hidden' : ''} />}
-          {/* offline mode: the cloud shows whether the app works without internet */}
-          <OfflineButton />
 
           {user ? (
             <div className="flex items-center gap-1.5">
