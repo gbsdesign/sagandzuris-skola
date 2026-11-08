@@ -1,14 +1,15 @@
 import React from 'react';
 import { BookOpenCheck, CalendarCheck, Dumbbell, Gamepad2, Grape } from 'lucide-react';
-import { useNavigation } from '../../../context';
-import { Btn, Card, Stat } from '../../../components/ui/kit';
+import { Card, Stat } from '../../ui/kit';
 import { MONTHS_GE } from '../../../utils/dateNames';
 import { BUNCH_AT, DEED_KINDS, DEED_LABEL, LEAF_CAP, RECENT_DAYS, monthShort, vineMood, yellowShare, type DeedKind, type Vine } from '../../../utils/vazi';
 import { BUNCH_SLOTS } from '../../../utils/vineShape';
 import { VineArt, type BunchLook } from './VineArt';
 import { useVine } from './useVine';
 
-// „ჩემი ვაზი“ alone (the hub's „ონლაინ“): my vine, what grew it today, this month's bunch on its way, the last two weeks.
+// „ჩემი ვაზი“ at the head of „ჩვევები“ (2026-11-09, the user: „თამაში აქედან ამოიღე … ჩვევებს თავში … ჩვევების მოტივაციად“,
+// answer „სრული, ყველაფერი ღია“; it was a game of the hub with a hybrid harvest and a print kit, both gone): my vine, what grew
+// it today, this month's bunch on its way, the last two weeks, how it grows. The rules are unchanged (utils/vazi.ts).
 
 const KIND_ICON: Record<DeedKind, React.FC<{ className?: string }>> = {
   habits: CalendarCheck, games: Gamepad2, learn: BookOpenCheck, drills: Dumbbell,
@@ -21,9 +22,8 @@ export const bunchLooks = (v: Vine): BunchLook[] => [
   ...Array<BunchLook>(v.month.bunches).fill('green'),
 ];
 
-export const VineMine: React.FC = () => {
+export const HabitVine: React.FC = () => {
   const { vine, loaded, member, name } = useVine();
-  const { navigateTo } = useNavigation();
   const looks = bunchLooks(vine);
   const { month } = vine;
   const goal = month.next ?? BUNCH_AT[BUNCH_AT.length - 1];
@@ -74,9 +74,7 @@ export const VineMine: React.FC = () => {
             );
           })}
         </ul>
-        {member ? (
-          <Btn kind="ghost" full icon={<CalendarCheck />} onClick={() => navigateTo('gz')}>ჩვევების მონიშვნა</Btn>
-        ) : (
+        {!member && (
           <p className="text-[13px] leading-snug text-[#75685a]">
             შედი სკოლაში — ჩვევები, სწავლა და სავარჯიშოებიც გაზრდის ვაზს. ახლა მხოლოდ ამ ტელეფონზე ნათამაშები დღის თამაშები ითვლება.
           </p>

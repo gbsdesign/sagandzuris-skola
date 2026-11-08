@@ -21,6 +21,7 @@ import { HabitsModel, dailyOf, rareOf, useHabitToggle, useHabitsModel } from '..
 import { dayState } from '../../utils/habitStats';
 import { dayKey, keptStreak } from '../../utils/habitsWeek';
 import { MONTHS_GE } from '../../utils/dateNames';
+import { HabitVine } from '../habits/vine/HabitVine';
 
 // the home page buttons open the same menus; the prayer page ticks through the same toggle
 export { HabitPrayerMenu, useHabitToggle };
@@ -275,6 +276,9 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
 
   return (
     <div className="space-y-4 text-[#2a2017]">
+      {/* „ჩემი ვაზი“ heads the habits — every ticked habit is a leaf (2026-11-09, the user: „ჩვევებს თავში … მოტივაციად“) */}
+      <HabitVine />
+
       {/* the title on the path page too, with the chosen day's count and the run of kept days under it, and the view
           menu at its right; only the window has ✕ */}
       <div className="flex items-center gap-3">
