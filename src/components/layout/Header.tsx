@@ -10,7 +10,6 @@ import { OfflineButton } from '../offline/OfflineButton';
 import { useInbox, isUnread } from '../../hooks/useDirectChat';
 import { useClassLasts, useChatSeen, isClassUnread } from '../../hooks/useClassChat';
 import { User as UserIcon, LogIn, Compass, Library, Baby, MessageCircle, ChevronDown, ChevronRight, Users } from 'lucide-react';
-import { WorkButton, WorkPanel, useClassWork } from '../classes/ClassWork';
 import { BellButton, BellPanel } from './Bell';
 import { useBellState, useNotices } from '../../hooks/useNotices';
 import { useOpenRequest } from '../../utils/searchOpen';
@@ -104,10 +103,10 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
   const showNav = tools.length > 0 || classes.length > 0;
   const onPrayers = currentPage === 'biblioteka' && (mapItem ?? '').startsWith('prayers');
 
-  // 📋, 🔔 and (with several classes) „კლასი ▾“: one list open at a time, under the header
-  type Drop = 'work' | 'bell' | 'classes';
+  // 🔔 and (with several classes) „კლასი ▾“: one list open at a time, under the header (the assignments' 📋 went into
+  // „საგანძურის გზა“ → „ნასწავლი“ on 2026-11-08, the user: „დავალების ღილაკი მოიხსნას“)
+  type Drop = 'bell' | 'classes';
   const [drop, setDrop] = useState<Drop | null>(null);
-  const work = useClassWork(classes);
   const bell = useBellState(user?.uid);
   const allNotices = useNotices({ uid: user?.uid, chats: showChats, classes: access.can('classes') ? classes : [], threads });
   // what I swiped aside stays away (on every device of mine)
@@ -118,8 +117,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
   const bellCount = notices.filter(n => n.at > bell.seen && n.at > monthAgo).length;
   const toggle = (which: Drop) => {
     if (drop === which) { setDrop(null); return; }
-    if (which === 'work') work.markSeen();
-    else if (which === 'bell') {
+    if (which === 'bell') {
       setSeenBefore(bell.seen);
       bell.markSeen(Math.max(Date.now(), ...notices.map(n => n.at)));
     }
@@ -226,7 +224,6 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
             />
             <span className="hidden md:inline font-serif-ge text-base font-bold text-[#4a3426]">საგანძურის სკოლა</span>
           </button>
-          {classes.length > 0 && <WorkButton state={work} open={drop === 'work'} onToggle={() => toggle('work')} />}
           <BellButton count={bellCount} open={drop === 'bell'} onToggle={() => toggle('bell')} />
         </div>
 
@@ -341,9 +338,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
         <div className="absolute inset-x-0 top-full">
           <div className="max-w-7xl mx-auto px-2 sm:px-4 pt-2">
             <div className={`sg-in w-full ${drop === 'classes' ? 'lg:w-[380px] lg:mx-auto' : 'lg:w-[460px]'} max-h-[calc(100dvh-9rem)] overflow-y-auto overscroll-contain rounded-3xl bg-[#fffdf8] ring-1 ring-[#e8dcc8] shadow-[0_22px_48px_-20px_rgba(74,52,38,0.55)] px-4 min-[400px]:px-5 pb-4`}>
-              {drop === 'work' ? (
-                <WorkPanel state={work} />
-              ) : drop === 'classes' ? (
+              {drop === 'classes' ? (
                 <ClassesPanel
                   classes={classes}
                   current={currentPage === 'class' ? selectedClassId : null}

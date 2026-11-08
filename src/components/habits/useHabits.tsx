@@ -7,7 +7,7 @@ import { useMyHabits } from '../../hooks/useMyHabits';
 import { MyHabit, MyHabitGroup } from '../../utils/myHabits';
 import { DayIds, HabitCounts, HabitLog, dayKey, idsOn } from '../../utils/habitsWeek';
 import { isDue } from '../../utils/habitSchedule';
-import { historyStart } from '../../utils/habitStats';
+import { addDays, daysShare, historyStart } from '../../utils/habitStats';
 import { triggerHaptic } from '../../utils/haptics';
 
 // Everything the habits' views share (components/habits): the member's list, its colours and counters, the log,
@@ -126,4 +126,18 @@ export const useHabitsModel = (openHabit: (id: string) => void): { model: Habits
     openHabit,
   };
   return { model, blessing };
+};
+
+/** The habits' average for the path's round button „ჩვევები“ (2026-11-08, the user: „სამუშაო რომ წერია მანდ დაწერე ჩვევები
+ *  და ჩვევების საშუალო პროცენტს აჩვენებდეს“): the share of the daily habits ticked over the last 30 days (from the history's
+ *  start), null before anything is ticked. */
+export const useHabitsAverage = (): number | null => {
+  const { habitLog } = useChants();
+  const { user } = useAuth();
+  const mine = useMyHabits(user?.uid);
+  return useMemo(() => {
+    const now = new Date();
+    const days = Array.from({ length: 30 }, (_, i) => addDays(now, -i));
+    return daysShare(habitLog, dueDailyOf(mine.groups), days, historyStart(habitLog), now)?.percent ?? null;
+  }, [habitLog, mine.groups]);
 };

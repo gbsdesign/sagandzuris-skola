@@ -330,8 +330,18 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
 /* a pearl just polished drops into its chest's row */
 .sg-bead-in { animation: sg-bead-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.5) both; }
 @keyframes sg-bead-in { 0% { opacity: 0; transform: translateY(-12px) scale(0.3); } 65% { opacity: 1; transform: translateY(1px) scale(1.35); } 100% { transform: none; } }
+/* a chest opened before the eyes (pearls/LearnChests ChestOpening, 2026-11-08): the backdrop fades in, a gold light breathes
+   behind it, and its tokens rise over it one after another; a short tap only shakes a chest */
+.sg-open-in { animation: sg-open-in 0.3s ease-out both; }
+@keyframes sg-open-in { from { opacity: 0; } to { opacity: 1; } }
+.sg-open-glow { animation: sg-open-glow 2.6s ease-in-out 0.6s infinite alternate both; }
+@keyframes sg-open-glow { from { opacity: 0.55; transform: scale(0.9); } to { opacity: 1; transform: scale(1.06); } }
+.sg-rise { animation: sg-rise 0.8s cubic-bezier(0.2, 0.9, 0.25, 1.25) both; }
+@keyframes sg-rise { 0% { opacity: 0; transform: translateY(70px) scale(0.35); } 55% { opacity: 1; } 100% { opacity: 1; transform: none; } }
+.sg-chest-shake { display: inline-block; transform-origin: 50% 90%; animation: sg-chest-shake 0.45s ease-in-out; }
+@keyframes sg-chest-shake { 0%, 100% { transform: none; } 20% { transform: rotate(-6deg); } 40% { transform: rotate(5deg); } 60% { transform: rotate(-3deg); } 80% { transform: rotate(2deg); } }
 @media (prefers-reduced-motion: reduce) {
-  .sg-pearl, .sg-pearl *, .sg-chest, .sg-chest *, .sg-chest-card-new, .sg-bead-in { animation: none !important; }
+  .sg-pearl, .sg-pearl *, .sg-chest, .sg-chest *, .sg-chest-card-new, .sg-bead-in, .sg-open-in, .sg-open-glow, .sg-rise, .sg-chest-shake { animation: none !important; }
   .sg-chest-lidshut.sg-chest-lidshut { display: none; }
   .sg-chest:not(.open) .sg-chest-lidshut { display: inline; }
   .sg-chest-spark { display: none; }

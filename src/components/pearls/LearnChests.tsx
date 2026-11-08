@@ -1,23 +1,29 @@
 import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
-import { Check, Lock } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { ChevronDown } from 'lucide-react';
 import { useAuth, useChants, useViewing } from '../../context';
 import { useConfirmations } from '../../hooks/useConfirmations';
+import { useWatchedVideos } from '../../hooks/useWatchedVideos';
+import { useLongPress } from '../../hooks/useLongPress';
 import { filterValidVariants } from '../../utils/variantValidation';
-import { CHEST_COUNT, CHEST_SIZE, chestsOf, pearlCounts } from '../../utils/pathPearls';
+import { categoryOf } from '../../utils/pathItems';
+import { pearlCounts, pearlOf } from '../../utils/pathPearls';
+import { Chest, ChestItem, SCHOOL_ROWS, pathChests, topChests } from '../../utils/pathChests';
+import { SERVICE_LISTS, findVersion } from '../../data/chantLookup';
 import { triggerHaptic } from '../../utils/haptics';
 import { fireworks } from '../../utils/samosiFireworks';
+import { Sheet } from '../ui/kit';
 import { PearlIcon } from './PearlIcon';
+import { TokenIcon } from './Tokens';
 
-// The top of „ნასწავლი“ (2026-11-05, the user: „მაღლა სკივრები იყოს, 10 საგალობელზე იხსნებოდეს 1 სკივრი, სულ 3“; the same
-// evening: „3 სკივრის გახსნაზე თითო ჩოხის ნაწილს იძლეოდეს … ჩოხის ზოლი სკივრებს ზემოთ … ქართული … კომპაქტური, მარა არა
-// ძალიან“, answers „მხოლოდ სკივრები · ჩუქურთმა + ბორჯღალი“). One card: three chests — Georgian კიდობნები with carved
-// rosettes, a braid on the lid and a gold borjgali lock — that fill with the member's polished pearls
-// (utils/pathPearls.ts), ten each, and open. Since 2026-11-08 they give „ჩემი სამოსი“ nothing (the user: „სკივრთა კავშირი
-// გააუქმე, ჩოხის ეს სხვა თემაა“ — a part stays only by its photo, utils/samosiProof.ts). A chest opened since this device
-// last saw it shakes, throws its lid up and lets out light and pearls, once; a pearl just polished drops into its chest.
-// Under them what the two kinds of pearl mean, with their counts.
-
-const ROMAN = ['I', 'II', 'III'];
+// The top of „ნასწავლი“ (2026-11-08, the user: „სკივრებს საფეხურების მაგივრად ეწეროს … წირვა … დიდხანს დაჭერით იხსნებოდეს
+// ანიმაციურად სკივრი ლამაზი ნათებით … ამოდიოდეს სკივრის თავზე 3 რიგად გელათი კახური გურული … მარგალიტი … შიგნით … ციფრი“;
+// „ტოპ 3 სკივრი … დანარჩენები პატარა ისარზე … ფანჯარა“; the chests no longer give the outfit's parts — answer „1ბ“). A chest
+// a service of the books (წირვა, მწუხრი…) and one each for the songs, the poems and the films watched (utils/pathChests.ts).
+// The three fullest stand on top, every chest in the window the small arrow opens. A long press opens one before the eyes:
+// its lid flies up in a gold light and its tokens rise over it — a chant chest's three schools, each one big pearl with its
+// count, or one bunch of grapes, scroll or medallion with the whole count (ChestOpening). A plain tap only nudges it and says
+// how. Georgian კიდობნები with carved rosettes, a braid on the lid and a gold borjgali lock (TreasureChest).
 
 /** The pearls of the signed-in member's path (also a student's, inside their page): polished, shining, all. */
 export const usePathPearls = () => {
@@ -25,6 +31,25 @@ export const usePathPearls = () => {
   const { selectedChantVariants = {} } = useChants();
   const confirmed = useConfirmations(user?.uid);
   return useMemo(() => pearlCounts(filterValidVariants(selectedChantVariants), confirmed), [selectedChantVariants, confirmed]);
+};
+
+/** Every chest of the member's path (also a student's, inside their page), its learned things counted. */
+export const usePathChests = () => {
+  const { user } = useAuth();
+  const { selectedChantVariants = {} } = useChants();
+  const confirmed = useConfirmations(user?.uid);
+  const watched = useWatchedVideos();
+  return useMemo(() => {
+    const items: ChestItem[] = [];
+    for (const [id, it] of Object.entries(filterValidVariants(selectedChantVariants))) {
+      if (pearlOf(it as Parameters<typeof pearlOf>[0], confirmed[id]) === 'new') continue;
+      const kind = categoryOf(id);
+      if (kind !== 'galoba') { items.push({ kind }); continue; }
+      const v = findVersion(id);
+      items.push({ kind, service: v && v.service !== 'სიმღერა' ? v.service : null, school: v?.variant.code ?? (it as { code?: string }).code ?? null });
+    }
+    return pathChests(items, SERVICE_LISTS.map(([s]) => s), watched.count);
+  }, [selectedChantVariants, confirmed, watched.count]);
 };
 
 const fmt = (n: number) => Math.round(n * 100) / 100;
@@ -71,10 +96,19 @@ const Borjgali: React.FC<{ cx: number; cy: number; r: number }> = ({ cx, cy, r }
 /** A Georgian chest (კიდობანი): walnut with a carved braid on the lid, two carved rosettes and a gold borjgali lock; open,
  *  its lid thrown back, light and pearls heaped at the rim. `fresh` plays the opening once; `spin` turns the borjgali (the
  *  chest being filled), `near` gives it a little shake now and then, `nudge` makes it hop as a pearl drops in. */
+// what lies heaped in an open chest: pearls, white grapes, or gold for the scrolls and medallions
+const HEAP: Record<Chest['token'], [string, string, string]> = {
+  pearl: ['#ffffff', '#f3ece6', '#c9b8ae'],
+  grape: ['#fbfadf', '#dfe39a', '#9aa63d'],
+  scroll: ['#fff2c2', '#ecc45c', '#a87818'],
+  medallion: ['#fff2c2', '#ecc45c', '#a87818'],
+};
+
 export const TreasureChest: React.FC<{
-  open: boolean; fresh?: boolean; dim?: boolean; spin?: boolean; near?: boolean; nudge?: boolean; size?: number;
-}> = ({ open, fresh, dim, spin, near, nudge, size = 56 }) => {
+  open: boolean; fresh?: boolean; dim?: boolean; spin?: boolean; near?: boolean; nudge?: boolean; size?: number; heap?: Chest['token'];
+}> = ({ open, fresh, dim, spin, near, nudge, size = 56, heap = 'pearl' }) => {
   const id = useId().replace(/[^a-zA-Z0-9]/g, '');
+  const [h0, h1, h2] = HEAP[heap];
   const gold = `url(#gb${id})`;
   const bead = (x: number, y: number, r: number, k: number) => (
     <g key={k} className="sg-chest-bead" style={{ animationDelay: `${0.72 + k * 0.06}s` }}>
@@ -134,9 +168,9 @@ export const TreasureChest: React.FC<{
           <stop offset="1" stopColor="#a87818" />
         </radialGradient>
         <radialGradient id={`pb${id}`} cx="38%" cy="32%" r="72%">
-          <stop offset="0" stopColor="#ffffff" />
-          <stop offset="0.55" stopColor="#f3ece6" />
-          <stop offset="1" stopColor="#c9b8ae" />
+          <stop offset="0" stopColor={h0} />
+          <stop offset="0.55" stopColor={h1} />
+          <stop offset="1" stopColor={h2} />
         </radialGradient>
         <radialGradient id={`gl${id}`} cx="50%" cy="50%" r="50%">
           <stop offset="0.25" stopColor="#ffe9a3" stopOpacity="0.95" />
@@ -195,129 +229,157 @@ export const TreasureChest: React.FC<{
   );
 };
 
-/** Ten little pearls in two rows of five: the chest's polished ones lustrous (warm once it is open), the rest empty rings;
- *  the ones from `dropFrom` on have just come and drop in. */
-const ChestBeads: React.FC<{ have: number; open?: boolean; dropFrom?: number }> = ({ have, open, dropFrom = CHEST_SIZE }) => (
-  <span className="grid grid-cols-5 gap-[3px]" aria-hidden>
-    {Array.from({ length: CHEST_SIZE }, (_, i) => (
-      <span
-        key={i}
-        className={`w-2 h-2 rounded-full ${i < have && i >= dropFrom ? 'sg-bead-in' : ''} ${i < have
-          ? open
-            ? 'bg-[radial-gradient(circle_at_35%_30%,#fffef7_0%,#fbe9c2_45%,#cf9f4c_100%)] shadow-[0_1px_1.5px_rgba(120,80,20,0.4)]'
-            : 'bg-[radial-gradient(circle_at_35%_30%,#ffffff_0%,#f4ede8_45%,#bcaaa3_100%)] shadow-[0_1px_1.5px_rgba(74,52,38,0.35)]'
-          : 'ring-1 ring-inset ring-[#dccdb6] bg-[#fbf7f0]'}`}
-        style={i < have && i >= dropFrom ? { animationDelay: `${(i - dropFrom) * 0.08}s` } : undefined}
-      />
-    ))}
-  </span>
-);
+const TOKEN_WORD: Record<Chest['token'], string> = { pearl: 'მარგალიტი', grape: 'მტევანი', scroll: 'გრაგნილი', medallion: 'მედალიონი' };
 
-const seenKey = (uid: string) => `sg-chests-seen:${uid}`;
-
-export const LearnChests: React.FC<{ polished: number; shining: number }> = ({ polished, shining }) => {
-  const { user } = useAuth();
-  const uid = user?.uid;
-  const viewing = useViewing();
-  const chests = chestsOf(polished);
-  const opened = chests.filter(c => c.open).length;
-
-  // the chests that opened since this device last showed them: they open before the eyes once (not on a teacher's look)
-  const [fresh, setFresh] = useState<number[]>([]);
-  useEffect(() => {
-    if (!uid || viewing) return;
-    let seen = 0;
-    try { seen = Number(localStorage.getItem(seenKey(uid))) || 0; } catch { /* storage off */ }
-    if (opened <= seen) return;
-    try { localStorage.setItem(seenKey(uid), String(opened)); } catch { /* storage off */ }
-    setFresh(Array.from({ length: opened - seen }, (_, i) => seen + i));
-    triggerHaptic(40);
-    // the fireworks go off as the lid flies up
-    window.setTimeout(() => fireworks(opened === CHEST_COUNT), 650);
-  }, [opened, uid, viewing]);
-  useEffect(() => {
-    if (!fresh.length) return;
-    const t = window.setTimeout(() => setFresh([]), 3400);
-    return () => window.clearTimeout(t);
-  }, [fresh]);
-
-  // a pearl just polished drops into its chest, which hops
-  const last = useRef(polished);
-  const [drop, setDrop] = useState<number | null>(null);
-  useEffect(() => {
-    const before = last.current;
-    last.current = polished;
-    // (a jump of more than a few is the path loading, not a tap)
-    if (viewing || polished <= before || polished - before > 3) return;
-    setDrop(before);
-    const t = window.setTimeout(() => setDrop(null), 900);
-    return () => window.clearTimeout(t);
-  }, [polished, viewing]);
-
-  return <ChestsView polished={polished} shining={shining} fresh={fresh} drop={drop} />;
+/** One chest in the row (or the window): its picture, its name under it and how many it holds. A long press opens it
+ *  (onOpen), a short tap shakes it and says to hold it. */
+export const ChestCard: React.FC<{ chest: Chest; nudge?: boolean; onOpen: (c: Chest) => void; onHint: () => void }> = ({ chest, nudge, onOpen, onHint }) => {
+  const [shake, setShake] = useState(0);
+  const press = useLongPress(() => onOpen(chest), () => { triggerHaptic(8); setShake(n => n + 1); onHint(); });
+  const empty = chest.count === 0;
+  return (
+    <li>
+      <button
+        type="button"
+        {...press}
+        aria-label={`${chest.label}: ${chest.count} — დიდხანს დააჭირე გასახსნელად`}
+        className={`w-full h-full flex flex-col items-center gap-1 rounded-xl px-1 pt-1.5 pb-2 text-center select-none [-webkit-touch-callout:none] cursor-pointer transition active:scale-[0.97] ${
+          empty ? 'bg-white/55 ring-1 ring-[#eadcc4]' : 'bg-gradient-to-b from-[#fffaf0] to-[#fbedd0] ring-1 ring-[#e7c56f] shadow-[0_8px_18px_-12px_rgba(176,128,36,0.9)]'
+        }`}
+      >
+        <span key={shake} className={shake ? 'sg-chest-shake' : ''}>
+          <TreasureChest open={false} dim={empty} nudge={nudge} spin={!empty} size={58} />
+        </span>
+        <span className={`w-full min-h-[2.1em] flex items-center justify-center ${chest.label.length > 11 ? 'text-[11.5px]' : 'text-[12.5px]'} font-black leading-tight break-words ${empty ? 'text-[#a99a86]' : 'text-[#4a3426]'}`}>
+          {chest.label}
+        </span>
+        <span className={`inline-flex items-center gap-1 text-[12.5px] font-bold tabular-nums leading-none ${empty ? 'text-[#b5a690]' : 'text-[#8a5a14]'}`}>
+          <TokenIcon kind={chest.token} state={empty ? 'new' : 'polished'} size={18} />
+          {chest.count}
+        </span>
+      </button>
+    </li>
+  );
 };
 
-/** What LearnChests shows, from plain numbers: `fresh` = the chests opening now, `drop` = the polished count before the
- *  pearls that are dropping in now. */
-export const ChestsView: React.FC<{ polished: number; shining: number; fresh: number[]; drop: number | null }> = ({
-  polished, shining, fresh, drop,
-}) => {
-  const chests = chestsOf(polished);
-  const current = chests.find(c => !c.open)?.index ?? -1;
+/** A chest opened before the eyes, over the whole screen: a dim backdrop, the chest big in the middle throwing its lid up in
+ *  a gold light, and over it its tokens rising — a chant chest's three schools, each with one big shining pearl and its
+ *  count inside, or one big token with the whole count. A tap anywhere (or Esc) closes it. */
+export const ChestOpening: React.FC<{ chest: Chest | null; onClose: () => void }> = ({ chest, onClose }) => {
+  useEffect(() => {
+    if (!chest) return;
+    const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    window.addEventListener('keydown', esc);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    triggerHaptic(40);
+    // the fireworks go off as the lid flies up
+    const t = chest.count ? window.setTimeout(() => fireworks(false), 700) : undefined;
+    return () => { window.removeEventListener('keydown', esc); document.body.style.overflow = prev; window.clearTimeout(t); };
+  }, [chest, onClose]);
+  if (!chest) return null;
+  const pearls = chest.token === 'pearl' && chest.schools;
+  const others = pearls ? chest.count - SCHOOL_ROWS.reduce((n, r) => n + chest.schools![r.id], 0) : 0;
+  return createPortal(
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={`${chest.label} — ${chest.count}`}
+      onClick={onClose}
+      className="sg-open-in fixed inset-0 z-[95] flex items-center justify-center px-3 bg-[#1c120b]/75 backdrop-blur-[3px] cursor-pointer select-none"
+    >
+      <div className="relative flex flex-col items-center">
+        <span aria-hidden className="sg-open-glow absolute left-1/2 top-[38%] -translate-x-1/2 -translate-y-1/2 w-[420px] h-[420px] max-w-[110vw] rounded-full bg-[radial-gradient(circle,rgba(255,226,140,0.55)_0%,rgba(246,201,78,0.18)_45%,rgba(246,201,78,0)_70%)] pointer-events-none" />
+        {/* what is in it, rising over it */}
+        <div className="relative z-10 flex items-end justify-center gap-3 min-[400px]:gap-5 sm:gap-8 -mb-3">
+          {pearls ? (
+            SCHOOL_ROWS.map((r, i) => (
+              <div key={r.id} className="sg-rise flex flex-col items-center gap-2" style={{ animationDelay: `${0.55 + i * 0.14}s` }}>
+                <span className="px-2.5 h-7 rounded-full inline-flex items-center bg-[#fff6dc] ring-1 ring-[#e7c56f] text-[13px] min-[400px]:text-[14px] font-black text-[#6b4a1a] shadow-[0_4px_14px_-6px_rgba(246,201,78,0.9)]">
+                  {r.label}
+                </span>
+                <TokenIcon kind="pearl" state={chest.schools![r.id] ? 'shining' : 'polished'} size={78} number={chest.schools![r.id]} label={`${r.label}: ${chest.schools![r.id]}`} />
+              </div>
+            ))
+          ) : (
+            <div className="sg-rise flex flex-col items-center" style={{ animationDelay: '0.6s' }}>
+              <TokenIcon kind={chest.token} state={chest.count ? 'shining' : 'polished'} size={104} number={chest.count} label={`${TOKEN_WORD[chest.token]}: ${chest.count}`} />
+            </div>
+          )}
+        </div>
+        <TreasureChest open fresh size={176} heap={chest.token} />
+        <p className="relative mt-2 font-serif-ge text-[22px] font-bold text-[#fff6dc] drop-shadow-[0_2px_6px_rgba(0,0,0,0.5)]">{chest.label}</p>
+        <p className="relative mt-0.5 text-[14px] font-semibold text-[#f3e3bf]/90 tabular-nums">
+          {chest.count ? `სულ ${chest.count}` : 'ჯერ ცარიელია'}
+          {others > 0 && ` · ${others} სხვა სკოლის`}
+        </p>
+        <p className="relative mt-4 text-[12.5px] font-medium text-[#f3e3bf]/60">შეეხე, რომ დაიხუროს</p>
+      </div>
+    </div>,
+    document.body
+  );
+};
+
+/** The chests on top of „ნასწავლი“, with what the pearls' two looks mean (and how many there are). */
+export const LearnChests: React.FC<{ polished: number; shining: number }> = ({ polished, shining }) => {
+  const chests = usePathChests();
+  const viewing = useViewing();
+  const top = topChests(chests);
+  const [opening, setOpening] = useState<Chest | null>(null);
+  const [all, setAll] = useState(false);
+  const [hint, setHint] = useState(false);
+
+  // a chest that just got something hops (not while the path loads, nor on a teacher's look)
+  const last = useRef<Record<string, number> | null>(null);
+  const [nudged, setNudged] = useState<string | null>(null);
+  useEffect(() => {
+    const now = Object.fromEntries(chests.map(c => [c.id, c.count]));
+    const before = last.current;
+    last.current = now;
+    if (!before || viewing) return;
+    const grew = chests.find(c => c.count > (before[c.id] ?? 0) && c.count - (before[c.id] ?? 0) <= 3);
+    if (!grew) return;
+    setNudged(grew.id);
+    const t = window.setTimeout(() => setNudged(null), 900);
+    return () => window.clearTimeout(t);
+  }, [chests, viewing]);
+  useEffect(() => {
+    if (!hint) return;
+    const t = window.setTimeout(() => setHint(false), 2600);
+    return () => window.clearTimeout(t);
+  }, [hint]);
+
+  const open = (c: Chest) => { setOpening(c); };
+  const card = (c: Chest) => <ChestCard key={c.id} chest={c} nudge={nudged === c.id} onOpen={open} onHint={() => setHint(true)} />;
 
   return (
     <section aria-label="სკივრები" className="rounded-2xl bg-gradient-to-b from-[#fdf8ef] to-[#f6ead6] ring-1 ring-[#eadcc4] p-2 space-y-2">
-      <ol className="grid grid-cols-3 gap-1.5">
-        {chests.map(c => {
-          const isNew = fresh.includes(c.index);
-          const isCurrent = c.index === current;
-          const locked = !c.open && !isCurrent;
-          const need = (c.index + 1) * CHEST_SIZE;
-          // the beads that have just dropped into this chest
-          const dropFrom = drop != null && drop < need && polished > c.index * CHEST_SIZE ? Math.max(0, drop - c.index * CHEST_SIZE) : CHEST_SIZE;
-          return (
-            <li
-              key={c.index}
-              aria-label={`${ROMAN[c.index]} სკივარი: ${c.open ? 'გახსნილია' : `${c.have} / ${CHEST_SIZE}`}`}
-              className={`relative flex flex-col items-center gap-1 rounded-xl px-1 pt-1.5 pb-1.5 text-center transition ${
-                c.open ? `bg-gradient-to-b from-[#fff8e4] to-[#fbe7b8] ring-1 ring-[#e7c56f] shadow-[0_8px_18px_-12px_rgba(176,128,36,0.9)] ${isNew ? 'sg-chest-card-new' : ''}`
-                  : isCurrent ? 'bg-white ring-2 ring-[#7a2028] shadow-[0_6px_16px_-10px_rgba(122,32,40,0.6)]'
-                  : 'bg-white/55 ring-1 ring-[#eadcc4]'}`}
-            >
-              <TreasureChest
-                open={c.open}
-                fresh={isNew}
-                dim={locked}
-                spin={isCurrent}
-                near={isCurrent && CHEST_SIZE - c.have <= 2}
-                nudge={dropFrom < CHEST_SIZE && !c.open}
-                size={58}
-              />
-              <span className={`text-[12px] font-black leading-none ${locked ? 'text-[#a99a86]' : 'text-[#4a3426]'}`}>{ROMAN[c.index]} სკივარი</span>
-              <ChestBeads have={c.have} open={c.open} dropFrom={dropFrom} />
-              <span className={`max-w-full min-h-4 inline-flex items-center gap-1 text-[12px] font-bold leading-none tabular-nums ${
-                c.open ? 'text-[#9a6a1c]' : isCurrent ? 'text-[#7a2028]' : 'text-[#a99a86]'}`}>
-                {c.open ? (
-                  <><Check className="w-3.5 h-3.5 shrink-0 stroke-[3]" /><span className="truncate">{isNew ? 'გაიხსნა!' : 'გახსნილია'}</span></>
-                ) : isCurrent ? (
-                  `კიდევ ${CHEST_SIZE - c.have}`
-                ) : (
-                  <><Lock className="w-3 h-3" /> {need}-ზე</>
-                )}
-              </span>
-            </li>
-          );
-        })}
-      </ol>
+      <ol className="grid grid-cols-3 gap-1.5">{top.map(card)}</ol>
 
-      {/* what the two kinds of pearl mean, with how many there are */}
+      <div className="flex items-center gap-2 pl-1">
+        <p className={`flex-1 min-w-0 text-[12px] font-semibold leading-snug transition-colors ${hint ? 'text-[#7a2028]' : 'text-[#9a8a76]'}`}>
+          დიდხანს დააჭირე სკივარს — გაიხსნება
+        </p>
+        <button
+          type="button"
+          onClick={() => { triggerHaptic(8); setAll(true); }}
+          aria-label={`ყველა სკივარი · ${chests.length}`}
+          title="ყველა სკივარი"
+          className="shrink-0 h-9 pl-3 pr-2 rounded-full inline-flex items-center gap-1 bg-white ring-1 ring-[#e3d3b8] text-[12.5px] font-bold text-[#7a2028] shadow-[0_2px_8px_-5px_rgba(74,52,38,0.35)] cursor-pointer transition active:scale-95 hover:bg-[#fffdf9]"
+        >
+          ყველა <span className="tabular-nums text-[#a4927c]">{chests.length}</span>
+          <ChevronDown className="w-4 h-4" />
+        </button>
+      </div>
+
+      {/* what the two looks mean, with how many there are */}
       <ul className="px-1 space-y-0.5">
         {(['polished', 'shining'] as const).map(s => (
           <li key={s} className="flex items-center gap-2 text-[12px] leading-snug text-[#5c4a3a]">
             <PearlIcon state={s} size={20} className="shrink-0" />
             <span className="flex-1 min-w-0">
               {s === 'polished'
-                ? <><b className="font-bold text-[#4a3426]">მონიშნე ხმა</b> — მარგალიტი გაპრიალდება</>
+                ? <><b className="font-bold text-[#4a3426]">მონიშნე</b> — გაპრიალდება</>
                 : <><b className="font-bold text-[#4a3426]">მასწავლებელი ჩათვლის</b> — იბრწყინებს</>}
             </span>
             <span className="shrink-0 min-w-6 h-5 px-1.5 rounded-full bg-white/80 ring-1 ring-[#eadcc4] text-[12px] font-bold tabular-nums text-[#7a5a26] flex items-center justify-center">
@@ -326,6 +388,12 @@ export const ChestsView: React.FC<{ polished: number; shining: number; fresh: nu
           </li>
         ))}
       </ul>
+
+      <Sheet open={all} onClose={() => setAll(false)} title="ყველა სკივარი">
+        <p className="mb-2.5 text-[12.5px] font-semibold text-[#8a7a6a]">დიდხანს დააჭირე სკივარს — გაიხსნება</p>
+        <ol className="grid grid-cols-3 gap-1.5 pb-1">{chests.map(card)}</ol>
+      </Sheet>
+      <ChestOpening chest={opening} onClose={() => setOpening(null)} />
     </section>
   );
 };

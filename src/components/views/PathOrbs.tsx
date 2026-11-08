@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { Bookmark, Check, ChevronDown, ChevronRight, GraduationCap, Lock, Pencil, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, GraduationCap, Lock, Pencil, Sparkles, X } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth, useChants } from '../../context';
 import { PathItem, usesVoices, voicesOf } from '../../utils/pathItems';
@@ -17,9 +17,11 @@ import { MyClassWork, useNewWork } from '../teacher/MyClassWork';
 import { triggerFireworks } from './StudentBookmarkView';
 import { useMasteryPath } from '../mastery/useMasteryPath';
 import { MasteryContent } from '../mastery/MasteryContent';
-import { WorkMonthLine, WorkPanel, useIndependentWork, usePanelWish } from './IndependentWorkCard';
+import { useIndependentWork, usePanelWish } from './IndependentWorkCard';
+import { useHabitsAverage } from '../habits/useHabits';
 import { PEARL_WORDS, PearlIcon } from '../pearls/PearlIcon';
 import { LearnChests } from '../pearls/LearnChests';
+import { TokenIcon } from '../pearls/Tokens';
 import { pearlCounts, pearlOf } from '../../utils/pathPearls';
 import { clearTried, useTried } from '../../utils/samosiTry';
 
@@ -30,7 +32,8 @@ export const PATH_ORBS: { id: OrbId; label: string }[] = [
   { id: 'samosi', label: 'სამოსი' },
   { id: 'learn', label: 'ნასწავლი' },
   { id: 'manera', label: 'ოსტატობა' },
-  { id: 'work', label: 'სამუშაო' },
+  // the id stays „work“ (the member's saved order, the admin's switch); since 2026-11-08 it is „ჩვევები“
+  { id: 'work', label: 'ჩვევები' },
 ];
 
 const SAMOSI_IDS = new Set(SAMOSI_PARTS.map(p => p.id));
@@ -97,8 +100,19 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, newWork.count]);
 
-  usePanelWish(['learn', 'manera', 'work'], id => setOpen(id as OrbId));
-  const toggle = (id: OrbId) => { triggerHaptic(10); setEditing(false); setOpen(o => (o === id ? null : id)); };
+  const habits = useHabitsAverage();
+  // „ჩვევები“ opens no card: the habits stand under the buttons, so a tap takes the page down to them (as an old
+  // openPathPanel('work') does — the independent work is one of the habits now)
+  const toHabits = () => {
+    triggerHaptic(10);
+    setOpen(null);
+    window.setTimeout(() => document.getElementById('path-habits')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
+  };
+  usePanelWish(['learn', 'manera', 'work'], id => (id === 'work' ? toHabits() : setOpen(id as OrbId)));
+  const toggle = (id: OrbId) => {
+    if (id === 'work') { toHabits(); return; }
+    triggerHaptic(10); setEditing(false); setOpen(o => (o === id ? null : id));
+  };
   const close = () => { setEditing(false); setOpen(null); };
 
   // today's planned hours on the "სამუშაო" button: how many are left, a green ✓ once all are done
@@ -134,19 +148,20 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
           </PathOrb>
         );
       case 'work':
+        // „ჩვევები“: the daily habits' share over the last 30 days; the badge = today's planned hours of the independent work
         return (
           <PathOrb
-            key={id} label="სამუშაო" title="დამოუკიდებელი სამუშაო" percent={work.planned?.percent ?? 0} hue="blue"
-            open={open === id} onClick={() => toggle(id)} index={index} badge={workBadge}
+            key={id} label="ჩვევები" title={habits != null ? `ჩვევები · საშუალოდ ${habits}%` : 'ჩვევები'} percent={habits ?? 0} hue="blue"
+            open={false} onClick={() => toggle(id)} index={index} badge={workBadge}
           >
-            {work.planned ? <OrbPercent value={work.planned.percent} /> : <Bookmark className="w-6 h-6 sm:w-7 sm:h-7 text-[#1e2f5a] fill-[#1e2f5a]/10" strokeWidth={1.8} />}
+            {habits != null ? <OrbPercent value={habits} /> : <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 text-[#1e2f5a]" strokeWidth={1.8} />}
           </PathOrb>
         );
     }
   };
   const orbs = ids.map(orb);
 
-  const cards: Record<OrbId, { title: string; sub: React.ReactNode; aside?: React.ReactNode; action?: React.ReactNode; body: React.ReactNode }> = {
+  const cards: Record<Exclude<OrbId, 'work'>, { title: string; sub: React.ReactNode; aside?: React.ReactNode; action?: React.ReactNode; body: React.ReactNode }> = {
     samosi: {
       title: 'ჩემი სამოსი',
       sub: samosi.real === SAMOSI_TOTAL
@@ -165,9 +180,8 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
       body: <LearnPanel s={stats} editing={editing} />,
     },
     manera: { title: 'ოსტატობა', sub: 'გზა დონეებით — 0-დან ოსტატამდე', body: <MasteryContent /> },
-    work: { title: 'დამოუკიდებელი სამუშაო', sub: <WorkMonthLine work={work} />, body: <WorkPanel /> },
   };
-  const card = open ? cards[open] : null;
+  const card = open && open !== 'work' ? cards[open] : null;
 
   return (
     <div className="w-full space-y-3">
@@ -268,8 +282,11 @@ const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats>; editing: boolea
     const pearl = pearlOf(it, ok);
     return (
       <li key={id} className="flex items-center gap-1.5 py-0.5">
-        {/* its pearl: matte, polished once marked, shining once a teacher confirmed it */}
-        <PearlIcon state={pearl} size={34} seed={id} label={PEARL_WORDS[pearl]} className="shrink-0" />
+        {/* its token — a chant's pearl, a song's or instrument's bunch of white grapes, a poem's scroll (2026-11-08): faded
+            while new, plain once marked, shining once a teacher confirmed it */}
+        {kind === 'galoba'
+          ? <PearlIcon state={pearl} size={34} seed={id} label={PEARL_WORDS[pearl]} className="shrink-0" />
+          : <TokenIcon kind={kind === 'mtkmeli' ? 'scroll' : 'grape'} state={pearl} size={34} label={PEARL_WORDS[pearl]} className="shrink-0" />}
         {go ? (
           <button type="button" onClick={go} className={`${nameCls} rounded-lg cursor-pointer transition-colors hover:bg-[#fbf6ec]`}>{name}</button>
         ) : (

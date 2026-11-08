@@ -484,6 +484,8 @@ service cloud.firestore {
       match /assignments/{assignmentId} {
         allow read: if inClass();
         allow write: if isAdmin() || teachesClass();
+        // a member's long press → „წაშლა“ (2026-11-08): an assignment given to them alone may be deleted by them
+        allow delete: if isSignedIn() && resource.data.get('studentIds', []) == [uid()];
       }
       // „ოსტატობა“: step-by-step lessons the class's teachers build; the class reads them
       match /lessons/{lessonId} {
