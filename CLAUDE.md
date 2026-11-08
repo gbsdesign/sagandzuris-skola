@@ -124,7 +124,10 @@
 - No URL router: pages are switched by `NavigationContext` (history.state `sgNav`, `sgDepth`, …).
   Notes pages use `NotesContext` (`?c=&v=`, `?p=`), saint lives use their own `sgLife` history entry.
   The region open on the songs/მთქმელი map (or an open instrument) is `sgNav.mapItem` (`openMapItem`), so the
-  one top-bar „უკან“ first returns to the map.
+  one top-bar „უკან“ first returns to the map. **Every map's small locator** in a region's head takes a tap since 2026-11-08
+  (the user: „კი, პატარაზეც“): `RegionLocator onPick` (another region opens in place — `openMapItem(id, true)`, so „უკან“ still
+  goes straight to the map; Tbilisi gets a pale dot of its own) — songs, მთქმელი, videos, instruments, churches. The big
+  `RegionPuzzleMap` lifts a piece only for a mouse (a finger's lift moved the piece under it and a tap near its edge missed).
 - **`overscroll-contain` only on a box that really scrolls** (has a height). Since Chrome 144 a box with `overflow-y-auto` +
   `overscroll-contain` that has nothing to scroll still swallows the finger, so the page under it stops scrolling — the messages
   page's list „got stuck“ on phones this way (2026-11-08; now `lg:overflow-y-auto lg:overscroll-contain`, on a phone the page
@@ -286,11 +289,25 @@
   საკრავები … საკრავების ღილაკი წაშალე მთავარიდან“, answer „ორი ჩანართი ზემოთ“): tabs „სიმღერები · საკრავები“ under the banner
   (`SongsTab`, kept for the visit in `sg-songs-tab`; shown while `section('sakravebi')` is open, or locked — a guest gets the sign-in
   prompt), the instruments' tab = `SakravebiView`; the old page `sakravebi` (home buttons, search, the path, old history steps) renders
-  the same page on that tab (`startTab`). The vine has no „საკრავები“ label: „სიმღერები\nდა საკრავები“ (`wide`, two set lines; only
-  „სიმღერები“ when the instruments are hidden from the person), and on phones ეკლესია-მონასტრები, მთქმელი and ვიდეოები stepped
+  the same page on that tab (`startTab`). **The instruments' tab is a map too since 2026-11-08** (the user: „საკრავებშიც … რუკის
+  პრინციპი“, answer „რუკა + სია ქვემოთ“): `SakravebiView` = `RegionPuzzleMap` (a region = `mapItem` „i:<region>“, its instruments with
+  their local name where it differs — `here`) then „ყველა საკრავი“ (a card a row on phones, `where` under the name). Each instrument's
+  `regions` in `data/instrumentsData.ts` (`instrumentsIn`) were checked in polyphony.ge (by instrument and by province) + ka.wikipedia /
+  geofolk.ge; Tusheti counts as კახეთი, Khevsureti/Pshavi/Khevi/Mtiuleti as მცხეთა-მთიანეთი, „rarely“ places left out. The vine has no „საკრავები“ label: „სიმღერები\nდა საკრავები“ (`wide`, two set lines; only
+  „სიმღერები“ when the instruments are hidden from the person), and on phones ეკლესია-მონასტრები and მთქმელი stepped
   down / aside to make room. And the **მთქმელი authors map**
   (`data/mtkmeliData.ts`, `MtkmeliMap.tsx`, shared `RegionPuzzleMap.tsx`). Full texts only for authors who
   died before 1956; others get title + description + wiki link.
+- **ვიდეოები live on „მთქმელი“'s page since 2026-11-08** (the user: „ვიდეოების ინტეგრაცია მოახდინე მთქმელში როგორც საკრავების მოხდა
+  სიმღერებში … მთქმელი ეწერება მარტო მთავარზე და ვიდეოების ღილაკი მოიხსნება … ვიდეოები რუკის მიხედვით დალაგდეს“, answer „ერთი რუკა“):
+  `components/maps/MtkmeliPage.tsx` = tabs „მთქმელი · ვიდეოები“ over the two first screens (`sg-mtkmeli-tab`; each part by its own
+  switch — one closed, no tabs), `VideosPage` lazy inside; the old page `videos` (home button `section:videoebi`, the churches' TV reports,
+  old history) renders it on the videos' tab (`startTab`) titled „მთქმელი“. The vine's „ვიდეოები“ label is gone — its „მთქმელი“ spot opens
+  the videos only when the poets are hidden / „მალე“ for the person. **One map**: the videos' first screen = a line, `RegionPuzzleMap` with
+  songs + monasteries counted together (`regionCount`; cards ლაზეთი, უცხოეთი), then „სხვა ვიდეოები“ rows → `mapItem` „ep“ / „k“ / „p“
+  (each list with its own heading, `ListHead`). A region opens on its songs (`<region>`; one with no song on its monasteries,
+  `regionItem`) with tabs „სიმღერები · მონასტრები“ when it has both (`m:<region>` = monasteries, swapped in place). The tabs below
+  („სიმღერები · მონასტრები · გადაცემები · ფილმები · პაისი“) are gone; the rest of this entry still holds for the data.
 - **ვიდეოები** (2026-11-07, page `videos`, section `videoebi`, `pages/VideosPage.tsx`; the user: „საქართველოს კუთხეების მიხედვით …
   ვაზზე დაამატე ვიდეოების ღილაკი … საქ. რუკა როგორც მთქმელში … ეთნოფორის ვიდეოები მიამაგრე“, answers „ა ა ა“): the vine's label
   „ვიდეოები“ (right of the trunk) opens the Adjara TV programme „ეთნოფორი“ (YouTube @etnofori, მიხეილ გაბაიძე) — tabs „კუთხეებით“

@@ -29,8 +29,11 @@ export const GrapeNav: React.FC = () => {
   // ღილაკი წაშალე მთავარიდან“): one label for both — only „სიმღერები“ for whoever may not see the instruments
   const instruments = access.section('sakravebi');
   const withInstruments = instruments === 'open' || instruments === 'locked';
-  // on a phone the two-line label needs room: it hangs a little lower, and ეკლესია-მონასტრები, მთქმელი and ვიდეოები step
-  // down / aside (they keep these spots with the short label too)
+  const poets = access.section('mtkmeli');
+  const poetsShut = poets === 'hidden' || poets === 'soon';
+  const videosShown = access.section('videoebi') === 'open';
+  // on a phone the two-line label needs room: it hangs a little lower, and ეკლესია-მონასტრები and მთქმელი step down / aside
+  // (they keep these spots with the short label too)
   const spots: Spot[] = [
     // under the grape clusters
     withInstruments
@@ -38,16 +41,18 @@ export const GrapeNav: React.FC = () => {
       : { id: 'simghera', label: 'სიმღერები', x: 13, y: 36, nx: 18, ny: 43, go: () => navigateTo('simghera'), big: true },
     // chant, the main path, stands biggest at the heart of the vine
     { id: 'galoba', label: 'გალობა', x: 57, y: 31, nx: 56, ny: 33, go: () => navigateTo('galoba'), hero: true },
-    { id: 'mtkmeli', label: 'მთქმელი', x: 50, y: 58, nx: 51, ny: 62, go: () => navigateTo('mtkmeli'), big: true },
+    // „ვიდეოები“ is a tab of „მთქმელი“ since 2026-11-08 (the user: „მთქმელი ეწერება მარტო მთავარზე და ვიდეოების ღილაკი
+    // მოიხსნება“); only when the poets are closed to the person does this spot open the videos
+    poetsShut && videosShown
+      ? { id: 'videoebi', label: 'ვიდეოები', x: 50, y: 58, nx: 51, ny: 62, go: () => navigateTo('videos'), big: true }
+      : { id: 'mtkmeli', label: 'მთქმელი', x: 50, y: 58, nx: 51, ny: 62, go: () => navigateTo('mtkmeli'), big: true },
     // on the leaves
     // მედავითნეობა — the reader's course (not the psalter group)
     { id: 'medavitneobaTopic', label: 'მედავით­ნეობა', x: 35, y: 13, nx: 29, ny: 14, go: () => navigateTo('medavitneoba') },
     // signed in: habits fold open on the path page; guests get the sign-in prompt
     { id: 'chvevebi', label: 'ჩვევები', x: 62, y: 8, nx: 66, ny: 8, go: () => (user ? (openPathPanel('habits'), navigateTo('gz')) : openModal('chvevebi')) },
     { id: 'tamashebi', label: 'თამაშები', x: 86, y: 28, nx: 83, ny: 20, go: () => navigateTo('games') },
-    // „ეთნოფორი“'s films, right of the trunk above the ground
-    { id: 'videoebi', label: 'ვიდეოები', x: 80, y: 62, nx: 84, ny: 63, go: () => navigateTo('videos') },
-    // Georgia's churches on the map, left of the trunk above the ground (the videos' mirror)
+    // Georgia's churches on the map, left of the trunk above the ground
     { id: 'eklesiebi', label: 'ეკლესია-მონასტრები', x: 19, y: 52, nx: 17, ny: 58, go: () => navigateTo('churches') },
     // in the qvevri
     { id: 'tsinaprebi', label: 'გაიცანი წინაპრები', x: 51, y: 82, go: () => navigateTo('tsinaprebi') },

@@ -69,7 +69,7 @@ export const ChurchesPage: React.FC = () => {
   if (list === 'near') return <><Nearby data={data} visits={visits} onOpen={openChurch} />{card}</>;
   if (list === 'feast') return <><FeastList data={data} visits={visits} onOpen={openChurch} />{card}</>;
   if (list === 'book') return <><BookList data={data} visits={visits} onOpen={openChurch} />{card}</>;
-  if (region) return <><RegionList region={region} all={data.list.filter(c => c.region === region.id)} visits={visits} onOpen={openChurch} />{card}</>;
+  if (region) return <><RegionList key={region.id} region={region} onRegion={id => openMapItem(id, true)} all={data.list.filter(c => c.region === region.id)} visits={visits} onOpen={openChurch} />{card}</>;
   return <><Overview data={data} visits={visits} onGo={go} onOpen={openChurch} />{card}</>;
 };
 
@@ -286,7 +286,7 @@ const BookList: React.FC<{ data: ChurchData; visits: Visits; onOpen: (id: string
 };
 
 /** a region's churches: where it is, the kinds, a municipality, a search line, the list */
-const RegionList: React.FC<{ region: FolkRegion; all: Church[]; visits: Visits; onOpen: (id: string) => void }> = ({ region, all, visits, onOpen }) => {
+const RegionList: React.FC<{ region: FolkRegion; all: Church[]; visits: Visits; onOpen: (id: string) => void; onRegion: (id: string) => void }> = ({ region, all, visits, onOpen, onRegion }) => {
   const [kind, setKind] = useState<Filter>('all');
   const [muni, setMuni] = useState('');
   const [q, setQ] = useState('');
@@ -306,7 +306,7 @@ const RegionList: React.FC<{ region: FolkRegion; all: Church[]; visits: Visits; 
   return (
     <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
       <div className="flex items-center gap-3 px-1 pb-3 border-b border-[#e4d8c4]">
-        <RegionLocator region={region} className="w-28 sm:w-32 h-auto shrink-0" />
+        <RegionLocator region={region} onPick={onRegion} className="w-32 sm:w-36 h-auto shrink-0" />
         <div className="min-w-0 flex flex-col gap-0.5">
           <h3 className="text-lg sm:text-xl font-black text-[#2a2017] leading-tight">{churchRegionName(region)}</h3>
           <span className="text-xs font-bold text-[#8a4b12]">{all.length ? `${all.length} ტაძარი · ${monasteries} მონასტერი` : 'ოკუპირებული ტერიტორია'}</span>
