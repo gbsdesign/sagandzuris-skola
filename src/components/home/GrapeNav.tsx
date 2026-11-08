@@ -41,7 +41,7 @@ export const GrapeNav: React.FC = () => {
     // regions, its films in „სახალისო“, St Paisios on the library's „ვიდეოთეკა“
     // „ლოცვანი“ (2026-11-09, the user: „ლოცვანი ზემოდან მოხსენი მთქმელის ადგილას ჩასვი მოზრდილად თითქმის გალობის ხელა“):
     // the header's chip left; the prayer book (the library's, under its switch) opens in one step in „მთქმელი“'s old spot
-    { id: 'biblioteka', label: 'ლოცვანი', x: 19, y: 44, nx: 20, ny: 51, go: () => { navigateTo('biblioteka'); openMapItem('prayers'); }, prayer: true },
+    { id: 'biblioteka', label: 'ლოცვანი', x: 19, y: 44, nx: 19, ny: 47, go: () => { navigateTo('biblioteka'); openMapItem('prayers'); }, prayer: true },
     // on the leaves
     // signed in: habits fold open on the path page; guests get the sign-in prompt
     { id: 'chvevebi', label: 'ჩვევები', x: 62, y: 8, nx: 66, ny: 8, go: () => (user ? (openPathPanel('habits'), navigateTo('gz')) : openModal('chvevebi')) },
@@ -104,7 +104,7 @@ export const GrapeNav: React.FC = () => {
                   className={`font-serif-ge font-bold leading-tight hyphens-manual ${s.wide ? 'whitespace-pre-line' : s.hero ? 'whitespace-nowrap' : 'max-w-[6.5em]'} ${
                     // the smallest phones (~320px wide) have no room left: there only, a touch smaller
                     // the two-line label: on the smallest phones a touch smaller still, or it would leave the screen or touch „აბიტურიენტს“
-                    s.hero ? 'text-[clamp(18px,5.4cqw,28px)] @max-[300px]:text-[16px] tracking-wide' : s.prayer ? 'text-[clamp(16px,4.7cqw,23.5px)] @max-[300px]:text-[14px] tracking-wide' : s.mid ? 'text-[clamp(15px,4.3cqw,20px)] @max-[300px]:text-[13px]' : s.wide ? 'text-[clamp(14px,3.8cqw,18px)] @max-[300px]:text-[12px]' : s.big ? 'text-[clamp(14px,3.8cqw,18px)] @max-[300px]:text-[13px]' : 'text-[clamp(12px,3.2cqw,15px)] @max-[300px]:text-[11px]'
+                    s.hero ? 'text-[clamp(16px,4.86cqw,25px)] @max-[300px]:text-[14.5px] tracking-wide' : s.prayer ? 'text-[clamp(16px,4.7cqw,23.5px)] @max-[300px]:text-[14px] tracking-wide' : s.mid ? 'text-[clamp(15px,4.3cqw,20px)] @max-[300px]:text-[13px]' : s.wide ? 'text-[clamp(14px,3.8cqw,18px)] @max-[300px]:text-[12px]' : s.big ? 'text-[clamp(14px,3.8cqw,18px)] @max-[300px]:text-[13px]' : 'text-[clamp(12px,3.2cqw,15px)] @max-[300px]:text-[11px]'
                   }`}
                 >
                   {s.label}
@@ -127,7 +127,7 @@ export const GrapeNav: React.FC = () => {
               >
                 <span className="inline-flex items-center gap-1.5 min-h-9 pt-2 px-3 rounded-b-2xl rounded-t-md bg-[#fbf6ec] text-[#7a2028] border-[1.5px] border-t-0 border-[#7a2028]/60 shadow-[0_4px_10px_-4px_rgba(74,52,38,0.35)] whitespace-nowrap transition-[transform,background-color] duration-200 group-hover/abituri:bg-white group-active/abituri:scale-95 group-focus-visible/abituri:ring-4 group-focus-visible/abituri:ring-amber-300">
                   <GraduationCap className="w-4 h-4 shrink-0" />
-                  <span className="font-serif-ge font-bold leading-tight text-[clamp(12px,3.2cqw,14px)] @max-[300px]:text-[11px]">აბიტურიენტს</span>
+                  <span className="font-serif-ge font-bold leading-tight text-[clamp(12px,3.2cqw,14px)] @max-[300px]:text-[11px]">აბიტური</span>
                 </span>
               </button>
             </div>
