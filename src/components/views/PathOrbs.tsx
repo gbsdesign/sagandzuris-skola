@@ -40,7 +40,7 @@ type OrbId = 'samosi' | 'learn' | 'work' | 'library' | 'klasi';
 /** The round buttons as the "რიგი" list names them; the member's order of these ids comes in `order`. */
 export const PATH_ORBS: { id: OrbId; label: string }[] = [
   { id: 'samosi', label: 'სამოსი' },
-  { id: 'learn', label: 'ნასწავლი' },
+  { id: 'learn', label: 'საგანძური' },
   // „ოსტატობა“ has no button of its own since 2026-11-09 (the user: „ოსტატობა ცალკე ნუ იქნება … პროგრამის დაბლა“): it folds
   // open at the bottom of „ნასწავლი“ (MasteryFold), its level before its name
   // the id stays „work“ (the member's saved order, the admin's switch); since 2026-11-08 it is „ჩვევები“
@@ -192,8 +192,8 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
       case 'learn':
         return (
           <PathOrb
-            key={id} label="ნასწავლი"
-            title={`ნასწავლი · ${learnCount.learned} / ${learnCount.total}${newWork.count ? `, ${newWork.count} ახალი დავალება` : ''}`}
+            key={id} label="საგანძური"
+            title={`საგანძური · ${learnCount.learned} / ${learnCount.total}${newWork.count ? `, ${newWork.count} ახალი დავალება` : ''}`}
             percent={learnCount.total ? (100 * learnCount.learned) / learnCount.total : 0} hue="wine"
             open={open === id} onClick={() => toggle(id)} index={index} badge={newWork.count ? <OrbBadge>{newWork.count}</OrbBadge> : undefined}
           >
@@ -255,7 +255,7 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
       body: <ChemiSamosi bare />,
     },
     learn: {
-      title: 'ნასწავლი',
+      title: 'საგანძური',
       sub: stats.total ? <LearnLine s={stats} /> : 'გზა ჯერ ცარიელია',
       action: stats.total ? (
         <IconBtn label={editing ? 'მზადაა' : 'სიის შეცვლა'} tone={editing ? 'wine' : 'plain'} aria-pressed={editing} onClick={() => setEditing(v => !v)}>
