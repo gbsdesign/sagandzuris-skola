@@ -195,8 +195,11 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
                 // the sorting shelf „დასაზუსტებელი“ is for those who move recordings (members find its songs by search)
                 songExtras={FOLK_EXTRA_REGIONS.filter(r => r.id !== 'unsure' || isOwner || isSuperAdmin)}
                 onOpen={(id, tab) => openMapItem(itemOf(id, tab))}
+                selectedChantVariants={selectedChantVariants}
+                more={tab => (
+                  <MoreRows instruments={instrumentsOpen && tab !== 'instruments'} videos={videosOpen} onOpen={id => { triggerHaptic(10); openMapItem(id); }} />
+                )}
               />
-              <MoreRows instruments={instrumentsOpen} videos={videosOpen} onOpen={id => { triggerHaptic(10); openMapItem(id); }} />
             </>
           )}
         </div>
@@ -216,7 +219,15 @@ const savedMapTab = (): RegionTab => {
   try { const t = sessionStorage.getItem(MAP_TAB_KEY); return t === 'instruments' || t === 'poets' || t === 'etno' ? t : 'songs'; } catch { return 'songs'; }
 };
 
-const MapByTab: React.FC<{ songCount: (id: string) => number; songExtras: FolkRegion[]; onOpen: (id: string, tab: RegionTab) => void }> = ({ songCount, songExtras, onOpen }) => {
+// „საკრავი“ shows no map (the user, 2026-11-09: „პირდაპირ საკრავების სია … კუთხეები დაბლა ეწეროს … რუკა აღარ უნდა“): every
+// instrument as a card with where it is from under its name (`SakravebiView listOnly`).
+const MapByTab: React.FC<{
+  songCount: (id: string) => number;
+  songExtras: FolkRegion[];
+  onOpen: (id: string, tab: RegionTab) => void;
+  selectedChantVariants: Record<string, any>;
+  more: (tab: RegionTab) => React.ReactNode;
+}> = ({ songCount, songExtras, onOpen, selectedChantVariants, more }) => {
   const access = useAccess();
   const instruments = access.section('sakravebi');
   const poets = access.section('mtkmeli');
@@ -262,6 +273,9 @@ const MapByTab: React.FC<{ songCount: (id: string) => number; songExtras: FolkRe
         <Tabs<RegionTab> cols={items.length as 2 | 3 | 4} stack value={shown} onChange={choose} items={items} />
       )}
       {shown === 'songs' && <CentreBanner />}
+      {shown === 'instruments' ? (
+        <SakravebiView listOnly selectedChantVariants={selectedChantVariants} />
+      ) : (
       <RegionPuzzleMap
         key={shown}
         onSelect={r => onOpen(r.id, shown)}
@@ -272,6 +286,8 @@ const MapByTab: React.FC<{ songCount: (id: string) => number; songExtras: FolkRe
         title="ხალხური"
         extraRegions={extras}
       />
+      )}
+      {more(shown)}
     </>
   );
 };
