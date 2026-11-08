@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import {
   Users, MessageCircle, Loader2, Pencil, Music4, Search, X, CalendarClock, Plus, ChevronRight, ListChecks,
-  UserPlus, Palette, GraduationCap, Archive, TriangleAlert,
+  UserPlus, Palette, GraduationCap, Archive, TriangleAlert, ChevronDown,
 } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
 import { useNotes } from '../context/NotesContext';
@@ -10,6 +10,7 @@ import { ClassHeader } from '../components/teacher/ClassHeader';
 import { ClassRoll } from '../components/teacher/StudentsOverview';
 import { LessonChips, ScheduleSheet } from '../components/teacher/Schedule';
 import { ClassLogo } from '../components/classes/ClassLogo';
+import { ClassPickerSheet, useAllMyClasses } from '../components/classes/ClassPicker';
 import { ClassChat } from '../components/classes/ClassChat';
 import { ClassProgram } from '../components/classes/ClassProgram';
 import { AddMemberSheet } from '../components/classes/MembersWindow';
@@ -83,8 +84,13 @@ export const ClassPage: React.FC<{ classId?: string; focus?: 'psalter' }> = ({ c
 // `inUse`: every class in use (admins; for the teachers' and the archive's access bookkeeping)
 const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolClass[] }> = ({ cls, focus, inUse }) => {
   const { user, isAdmin } = useAuth();
-  const { handleGoBack, openDm } = useNavigation();
+  const { handleGoBack, openDm, openClass } = useNavigation();
   const { openProgram } = useNotes();
+  // my other classes: a tap on the name opens their window and switches (2026-11-09, the user: „კლასის შიგნით სახელზე
+  // დაჭერისას ამოუხტეს ფანჯარა სადაც კლასების სიაა და გადართავს“)
+  const myClasses = useAllMyClasses();
+  const [picking, setPicking] = useState(false);
+  const canSwitch = myClasses.length > 1;
   const wide = useWide();
   // a private chat being opened (the other person's uid), and why it could not be
   const [opening, setOpening] = useState<string | null>(null);
@@ -166,9 +172,17 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolCl
 
   return (
     <div className="w-full max-w-2xl lg:max-w-5xl mx-auto px-1 py-4 sm:py-6 space-y-4 text-[#2a2017]">
+      <ClassPickerSheet open={picking} onClose={() => setPicking(false)} classes={myClasses} current={cls.id}
+        onPick={id => { setPicking(false); if (id !== cls.id) openClass(id); }} />
       <PageBar
         // one line, however long the name (2026-11-06, the user: „ლამაზად და ერთ ხაზზე ეწეროს“): it grows smaller instead
-        title={<OneLine>{cls.name}</OneLine>}
+        title={canSwitch ? (
+          <button type="button" onClick={() => { triggerHaptic(10); setPicking(true); }} aria-haspopup="dialog" title="სხვა კლასზე გადასვლა"
+            className="max-w-full flex items-center gap-1 text-left cursor-pointer rounded-lg hover:text-[#7a2028] transition-colors">
+            <span className="min-w-0"><OneLine>{cls.name}</OneLine></span>
+            <ChevronDown className="w-5 h-5 shrink-0 text-[#7a2028]" />
+          </button>
+        ) : <OneLine>{cls.name}</OneLine>}
         // on a phone the members' line under the timetable says who is in the class
         subtitle={<span className="hidden lg:inline">{`${cls.members.length} წევრი${teacherNames ? ` · ${teacherNames}` : ''}`}</span>}
         onBack={handleGoBack}

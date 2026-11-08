@@ -21,6 +21,7 @@ import { Avatar as Face } from '../classes/ChatPanel';
 import { DrillReview } from '../mastery/DrillReview';
 import { pathSummary, recordFromDoc } from '../../utils/masteryPath';
 import { LearnReview } from '../learn/LearnReview';
+import { useSyncAttendanceShares } from '../../hooks/useAttendanceShare';
 import { MedavitneReview } from '../learn/MedavitneReview';
 
 const VOICE = { '1': 'მთქმელი', '2': 'მოძახილი', '3': 'ბანი' } as Record<string, string>;
@@ -178,6 +179,8 @@ export const ClassRoll: React.FC<{
 }> = ({ cls, shown, me, onWrite, writing, top, search }) => {
   const records = useClassStudents(cls);
   const att = useClassAttendance(cls);
+  // each member's own share of the last lessons, for their path's „კლასი“ button
+  useSyncAttendanceShares(cls, records, att.last, att.ready);
   // a name opens the member's own page — their path and profile, the teacher's part under them (pages/StudentPage.tsx)
   const { openStudent, navigateTo } = useNavigation();
   const f = classFigures(cls.members.map(m => summarize(records[m.uid]?.data)), att.last);
