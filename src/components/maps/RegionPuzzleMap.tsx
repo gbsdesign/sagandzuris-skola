@@ -22,7 +22,7 @@ interface RegionPuzzleMapProps {
 
 const { width, height } = GEORGIA_MAP_SIZE;
 /** how long the tapped region shows itself before it opens */
-const GO_MS = 1700;
+const GO_MS = 1500;
 const LABEL_NUDGE: Partial<Record<FolkRegionId, number>> = { guria: -12, achara: 10 };
 
 export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, count, countLabel, regionName = r => r.nameGe, title, extraRegions = [], rich }) => {
@@ -49,6 +49,7 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
     <svg
       viewBox={`-12 -12 ${width + 24} ${height + 24}`}
       className="w-full h-auto select-none"
+      overflow="visible"
       role="group"
       aria-label="საქართველოს რუკა — აირჩიეთ კუთხე"
     >
@@ -56,11 +57,19 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
         <filter id="puzzle-piece-shadow" x="-10%" y="-10%" width="120%" height="120%">
           <feDropShadow dx="0" dy="3" stdDeviation="2.5" floodColor="#6b4423" floodOpacity="0.35" />
         </filter>
-        <filter id="puzzle-piece-lift" x="-10%" y="-10%" width="120%" height="130%">
-          <feDropShadow dx="0" dy="7" stdDeviation="5" floodColor="#4a2a14" floodOpacity="0.45" />
+        <filter id="puzzle-piece-lift" x="-20%" y="-20%" width="140%" height="150%">
+          <feDropShadow dx="0" dy="14" stdDeviation="9" floodColor="#4a2a14" floodOpacity="0.5" />
+        </filter>
+        <filter id="puzzle-glow" x="-30%" y="-30%" width="160%" height="160%">
+          <feGaussianBlur stdDeviation="16" />
         </filter>
         {/* Follows the northern border, from Abkhazia down towards Mtianeti */}
         <path id="puzzle-title-path" d="M150,22 Q380,40 600,165" fill="none" />
+        <linearGradient id="puzzle-sheen" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0" stopColor="#fff" stopOpacity="0.45" />
+          <stop offset="0.5" stopColor="#fff" stopOpacity="0.05" />
+          <stop offset="1" stopColor="#000" stopOpacity="0.08" />
+        </linearGradient>
       </defs>
       {title && (
         <text className="font-black" fontSize={30} letterSpacing={2} fill="#85502c" pointerEvents="none">
@@ -95,7 +104,7 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
               transform: isLit ? 'translateY(-5px)' : undefined,
               filter: isLit ? 'url(#puzzle-piece-lift) brightness(1.08)' : undefined,
               // the lit piece stands out: the others step back a little (more while one is opening)
-              opacity: litId && !isLit ? (going ? 0.4 : 0.55) : 1,
+              opacity: litId && !isLit ? (going ? 0.28 : 0.55) : 1,
               // the opening piece is drawn again on top, bigger — the one underneath hides
               visibility: going === r.id ? 'hidden' : undefined,
             }}
@@ -154,11 +163,15 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
         const isTbilisi = r.id === 'kalakuri';
         return (
           <g key="go" className="sg-map-go" pointerEvents="none">
+            {/* a warm glow breathes behind the piece */}
+            <path d={shape.d} fill="#ffd27a" filter="url(#puzzle-glow)" className="sg-map-glow" />
             <path d={shape.d} fill={r.color} stroke="#fffaf0" strokeWidth={3} strokeLinejoin="round" filter="url(#puzzle-piece-lift)" />
+            {/* a soft sheen over the piece */}
+            <path d={shape.d} fill="url(#puzzle-sheen)" />
             {isTbilisi && <circle cx={x} cy={y} r={14} fill={r.color} stroke="#fffaf0" strokeWidth={3} />}
             {/* the light: a short bright dash travels the whole border twice */}
-            <path d={shape.d} fill="none" stroke="#ffe9a8" strokeWidth={9} strokeLinejoin="round" strokeLinecap="round" opacity={0.55} pathLength={100} className="sg-map-run" />
-            <path d={shape.d} fill="none" stroke="#fff6d6" strokeWidth={4} strokeLinejoin="round" strokeLinecap="round" pathLength={100} className="sg-map-run" />
+            <path d={shape.d} fill="none" stroke="#ffd27a" strokeWidth={14} strokeLinejoin="round" strokeLinecap="round" opacity={0.5} pathLength={100} className="sg-map-run" />
+            <path d={shape.d} fill="none" stroke="#fffbea" strokeWidth={5} strokeLinejoin="round" strokeLinecap="round" pathLength={100} className="sg-map-run" />
             <g transform={`translate(${isTbilisi ? x + 70 : x} ${isTbilisi ? y : y - 6})`}>
               <text x={0} y={-16} textAnchor="middle" dominantBaseline="middle" fontSize={30} fontWeight={900} fill="#2a2017" style={{ paintOrder: 'stroke', stroke: '#fffaf0', strokeWidth: 8, strokeLinejoin: 'round' }}>{name}</text>
               {n > 0 && (
