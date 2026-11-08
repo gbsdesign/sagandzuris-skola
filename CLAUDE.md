@@ -459,7 +459,13 @@
   „კანონი N+1 ›“ card; the host (`FullScreen` in ReadingTools) opens the page's neighbour, waits for its new text, copies it
   again and the prompter counts 3-2-1 and goes on by itself (`autoStart`).
 - **საგანძურის გზა** (page `gz`) = „ჩემი დღე“ since 2026-10-28: the round buttons (`PathOrbs`; four since 2026-11-05 — the pearls
-  game's fifth was removed), then the habits card. The
+  game's fifth was removed), then the habits card.
+  **„ბიბლიოთეკა“ orb (2026-11-09**, the user: „ბიბლიოთეკის ღილაკი აქ ჩამოიტანე … 5 / 112 წიგნიდან წაკითხული … ღილაკი წავიკითხე“,
+  answers „წიგნები + ცხოვრებები · ზემოდან მოიხსნას · ზედა ზოლში“): the header's 📚 is gone; a fifth orb (teal ring, `PATH_ORBS`
+  id `library`, shown by the library's own switch) shows „N / M“ and opens the library. M = the library's books
+  (`data/libraryBooks.ts` `LIBRARY_BOOK_IDS` — the „სასულიერო“ `BOOKS` moved there) + every listed life (not `x`). „წავიკითხე“
+  (`pages/library/ReadButton.tsx`) on a book's head (BookTab, `book:<place>`) and a life's bar (`life:<id>`); kept by
+  `hooks/useBooksRead.ts` in `students.booksRead {id: day}` (FieldPath — lives' ids hold „/“), guests `sg-books-read`. The
   „დღეს“ card on top (`PathToday`: next lesson, nearest assignment, reviews due) was taken off at the user's wish (2026-11-05) —
   don't bring it back unasked. A piece's name without its book № = `pieceName` (LearnReview), used by the home's line.
 - **„ნასწავლი“'s pearls and chests (2026-11-05, the user: „მარგალიტები ცალკე გავაუქმოთ … თითოეული მარგალიტი იყოს თითო საგალობლის

@@ -3,6 +3,8 @@ import { ArrowLeft, ArrowRight, ChevronRight, Loader2 } from 'lucide-react';
 import { GrapeBunch } from '../../components/home/PlateOrnaments';
 import { AutoScrollButton } from '../../components/views/ReadingTools';
 import { BookHead, BookNav, SectionTitle, ToContents } from './BookHead';
+import { ReadButton } from './ReadButton';
+import { bookReadId } from '../../hooks/useBooksRead';
 import { MiniCover } from './Shelf';
 import { lastChapter, saveChapter } from './readingPlace';
 
@@ -142,6 +144,7 @@ export const BookTab: React.FC<BookProps> = ({ nav, load = loadDzveli, cover, pl
         cover={cover ?? <MiniCover id="book" className="w-11 h-[60px]" />}
         title={book.book}
         sub={sub ? sub(book) : <>{book.author} · {book.part} · {total} თავი</>}
+        action={<ReadButton id={bookReadId(place)} />}
       />
 
       {lastCh && (

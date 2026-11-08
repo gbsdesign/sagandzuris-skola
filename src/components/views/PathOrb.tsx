@@ -10,6 +10,7 @@ export const ORB_HUES = {
   rose: ['#fb7185', '#be123c'],
   amber: ['#fbbf24', '#c2410c'],
   pearl: ['#c9b6e4', '#6a5394'],
+  teal: ['#6cc0b3', '#1f5c55'],
 } as const satisfies Record<string, readonly [string, string]>;
 export type OrbHue = keyof typeof ORB_HUES;
 

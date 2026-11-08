@@ -2,6 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { BookOpen, ChevronRight, Loader2, RotateCw } from 'lucide-react';
 import { BackBtn } from '../ui/kit';
 import { AutoScrollButton, SizePill } from '../views/ReadingTools';
+import { ReadButton } from '../../pages/library/ReadButton';
+import { lifeReadId } from '../../hooks/useBooksRead';
 
 import { triggerHaptic } from '../../utils/haptics';
 import { GrapeBunch } from '../home/PlateOrnaments';
@@ -266,6 +268,7 @@ export const SaintLifeOverlay: React.FC = () => {
           </p>
           {life && <AutoScrollButton source={() => textEl} scroller={() => scrollRef.current} zoom={size / 100} />}
           <SizePill onStep={stepSize} atMin={size === SIZE_STEPS[0]} atMax={size === SIZE_STEPS[SIZE_STEPS.length - 1]} />
+          {shown && <ReadButton id={lifeReadId(shown)} />}
         </div>
       </div>
 
