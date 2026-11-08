@@ -1,46 +1,51 @@
-import React from 'react';
-import { Cloud, CloudCheck, CloudDownload, CloudOff } from 'lucide-react';
-import { useNavigation } from '../../context';
+import React, { lazy, Suspense, useState } from 'react';
+import { Cloud, CloudDownload, CloudOff } from 'lucide-react';
 import { offlineStatus, runPercent, useOffline } from '../../utils/offlineFiles';
+import { useAccess } from '../../hooks/useAccess';
 import { triggerHaptic } from '../../utils/haptics';
+import type { OfflineKind } from './OfflineSheet';
 
-// The header's cloud: does the app work without internet? A thin bar fills while something downloads, ✓ when all
-// that was chosen is on the device, an amber dot when some of it is not yet, crossed out without internet.
-// Opens „ოფლაინ რეჟიმი“ (pages/OfflinePage.tsx).
-export const OFFLINE_LABEL: Record<ReturnType<typeof offlineStatus>, string> = {
-  run: 'ოფლაინ რეჟიმი — ჩამოწერა მიმდინარეობს',
-  offline: 'ინტერნეტი არ არის — აპი მუშაობს ჩამოწერილით',
-  pending: 'ოფლაინ რეჟიმი — ნაწილი ჯერ არ ჩამოწერილა',
-  ready: 'ოფლაინ რეჟიმი — ყველაფერი ჩამოწერილია',
-  starting: 'ოფლაინ რეჟიმი',
+// A list's round ☁ (2026-11-08; the header's cloud is gone — the user: „ჩამოტვირთვის ლოგო დავშალოთ“): beside the
+// chant page's „1 2“, on the songs', the admission program's and the library's bar. A tap opens that list's part of
+// „ოფლაინ რეჟიმი“ in a window (OfflineSheet.tsx, loaded on the first tap). A thin bar fills while something the
+// person turned on downloads; crossed out without internet.
+
+const OfflineSheet = lazy(() => import('./OfflineSheet'));
+
+const LABEL: Record<OfflineKind, string> = {
+  galoba: 'ოფლაინ: ნოტები და გალობა',
+  simghera: 'ოფლაინ: სიმღერები',
+  abituri: 'ოფლაინ: აბიტურიენტს',
+  library: 'ოფლაინ: ბიბლიოთეკა',
 };
 
-export const OfflineButton: React.FC = () => {
+export const OfflineButton: React.FC<{ kind: OfflineKind }> = ({ kind }) => {
   const s = useOffline();
-  const { navigateTo, currentPage } = useNavigation();
-  if (!s.supported) return null;
+  const { can } = useAccess();
+  const [open, setOpen] = useState(false);
+  // the songs and the admission program offer only recordings
+  if (!s.supported || ((kind === 'simghera' || kind === 'abituri') && !can('recordings'))) return null;
   const status = offlineStatus(s);
   const pct = runPercent(s);
-  const Icon = status === 'run' ? CloudDownload : status === 'offline' ? CloudOff : status === 'ready' ? CloudCheck : Cloud;
-  const here = currentPage === 'offline';
-  const label = status === 'run' ? `${OFFLINE_LABEL.run} · ${pct}%` : OFFLINE_LABEL[status];
+  const mine = status === 'run' && !!s.run && !s.run.what.startsWith('auto-');
+  const Icon = mine ? CloudDownload : status === 'offline' ? CloudOff : Cloud;
   return (
-    <button
-      type="button"
-      onClick={() => { triggerHaptic(10); navigateTo('offline'); }}
-      className={`relative w-9 h-9 rounded-full ring-1 flex items-center justify-center transition-all cursor-pointer active:scale-95 shrink-0 ${
-        here ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]' : 'bg-white/80 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028]'
-      }`}
-      title={label}
-      aria-label={label}
-    >
-      <Icon className={`w-[18px] h-[18px] ${status === 'offline' && !here ? 'text-[#8a7a6a]' : ''}`} />
-      {status === 'run' && (
-        <span aria-hidden className="absolute left-2 right-2 bottom-1.5 h-[3px] rounded-full bg-current/15 overflow-hidden">
-          <span className="block h-full rounded-full bg-current transition-[width] duration-500" style={{ width: `${Math.max(6, pct)}%` }} />
-        </span>
-      )}
-      {status === 'pending' && <span aria-hidden className="absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500 ring-2 ring-[#fbf6ec]" />}
-    </button>
+    <>
+      <button
+        type="button"
+        onClick={() => { triggerHaptic(10); setOpen(true); }}
+        className="relative w-9 h-9 shrink-0 rounded-full bg-white/85 ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028] flex items-center justify-center cursor-pointer transition active:scale-95"
+        title={LABEL[kind]}
+        aria-label={LABEL[kind]}
+      >
+        <Icon className={`w-[18px] h-[18px] ${status === 'offline' ? 'text-[#8a7a6a]' : ''}`} />
+        {mine && (
+          <span aria-hidden className="absolute left-2 right-2 bottom-1.5 h-[3px] rounded-full bg-current/15 overflow-hidden">
+            <span className="block h-full rounded-full bg-current transition-[width] duration-500" style={{ width: `${Math.max(6, pct)}%` }} />
+          </span>
+        )}
+      </button>
+      {open && <Suspense fallback={null}><OfflineSheet kind={kind} onClose={() => setOpen(false)} /></Suspense>}
+    </>
   );
 };

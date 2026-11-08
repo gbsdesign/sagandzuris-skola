@@ -145,7 +145,7 @@
   the header the 🔍 sits in the top row on every phone (under sm).
   **Header since 2026-11-06** (`layout/Header.tsx`; the user: „ბიბლიოთეკა აიტანე მაღლა სერჩის წინ … მრგვალად, ბიბლიოთეკის ადგილზე
   იხსნებოდეს ლოცვანი, დავალების ღილაკიც მაღლა … ლოგოს მარჯვნივ და აქვე შეტყობინებების ღილაკი … ჩამოსაშლელი“): [logo] [🔔] … (the 📋 left on 2026-11-08 — see „Tasks, chests and habits“)
-  [📚] [🔍] [☁] [💬 „წერილები“] [👤]; the chips row = საგანძურის გზა · კლასი · ლოცვანი (opens `biblioteka` on `prayers` in one
+  [📚] [🔍] [💬 „წერილები“] [👤] (the ☁ went 2026-11-08 — see „Offline“ below); the chips row = საგანძურის გზა · კლასი · ლოცვანი (opens `biblioteka` on `prayers` in one
   step; with several classes one „კლასი ▾“ drops `ClassesPanel` — a chip a class overflowed phones and pushed the page sideways,
   2026-11-07; the three chips need ~362 px at 380 px wide, so keep any new chip as narrow); 📚 and 🔍 move beside the chips from sm up. 📋 and 🔔 drop their list under the header (one at a time, a dim backdrop
   closes it, going anywhere closes it). **🔔** (`layout/Bell.tsx`, `hooks/useNotices.ts`): app news (`data/appNews.ts` — **add a
@@ -182,6 +182,16 @@
   (`hooks/useMyPhoto.ts` `saveMyPhoto`; sign-in in `AuthContext` no longer covers the directory photo while `students.photo`
   exists); shown on the profile head and the header (`useShownPhoto`). Class member lists, chats and psalter groups keep the
   account's photo (copied at joining; a member may not rewrite the class) — no rules change.
+
+## Offline (2026-11-08)
+
+- The header's ☁ and the page „ოფლაინ რეჟიმი“ are gone (the user: „ჩამოტვირთვის ლოგო დავშალოთ … ავტომატურ ნაწილს თავად წერდეს
+  ფონში ისე რომ არსად არ ჩანდეს“). Each list has a round 36px ☁ (`components/offline/OfflineButton.tsx` `kind`) that opens its part
+  in a kit `Sheet` (`OfflineSheet.tsx`, lazy): `galoba` (on the chant page's bar in place of 📌 — the 📌 is gone there only) = the
+  books' pages (+ each book's recordings) and the chants' recordings by service; `simghera`; `abituri`; `library` (the library's
+  front room) = the saints' lives + the chant albums. A recordings group unfolds in place (no second window). The automatic packs
+  download by themselves (`startOffline` in main.tsx) and are shown nowhere. `pages/OfflinePage.tsx` only sends an old history
+  step home.
 
 ## Audio and sheet music (details in `src/data/CLAUDE.md`)
 

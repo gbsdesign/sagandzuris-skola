@@ -3,6 +3,7 @@ import { useNavigation, useChants, useAuth, PageType } from '../context';
 import { WifiOff, RefreshCw, Loader2 } from 'lucide-react';
 import { PageBar } from '../components/ui/kit';
 import { PinButton } from '../components/home/ShortcutShelf';
+import { OfflineButton } from '../components/offline/OfflineButton';
 import { ProgramButton } from '../pages/galoba/LiturgyBits';
 import { FavButton } from '../components/prayers/FavPrayers';
 import { ProfileActions } from '../components/views/ProfileActions';
@@ -280,6 +281,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
       : currentPage === 'birthdays' ? 'special:birthdays'
       : section ? `section:${section}` : null;
     const book = currentPage === 'biblioteka' ? LIBRARY_BOOKS[(mapItem ?? '').split(':')[0]] : undefined;
+    // the lists with their own ☁ (the library's front room only, not inside a book)
+    const cloud = currentPage === 'simghera' ? 'simghera' as const : currentPage === 'abituri' ? 'abituri' as const
+      : currentPage === 'biblioteka' && !book ? 'library' as const : null;
     // a game open inside the games page shows its own name („დღის ჰანგი“, „ამიხსენი“)
     const game = currentPage === 'games' ? gameTitleOfItem(mapItem) : undefined;
     // the songs' page holds the instruments too (2026-11-08): its name says so while the person may see them
@@ -291,7 +295,14 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           title={title}
           onBack={handleGoBack}
           // a prayer also gets ☆ — „რჩეული“ at the top of the prayer book (components/prayers/FavPrayers.tsx)
-          right={pin ? <>{currentPage === 'galoba' && <ProgramButton />}{currentPage === 'prayer' && selectedPrayerId && <FavButton id={selectedPrayerId} />}<PinButton id={pin} /></> : undefined}
+          // a list's ☁ opens its part of the offline mode (components/offline/OfflineButton.tsx); the chant page has it in
+          // place of 📌 (the user, 2026-11-08: „ეგ რაც მოხაზულია მოაცილე“)
+          right={currentPage === 'galoba' ? <><ProgramButton /><OfflineButton kind="galoba" /></>
+            : cloud || pin ? <>
+              {currentPage === 'prayer' && selectedPrayerId && <FavButton id={selectedPrayerId} />}
+              {cloud && <OfflineButton kind={cloud} />}
+              {pin && <PinButton id={pin} />}
+            </> : undefined}
           className="w-full mb-4"
         />
 
