@@ -1,7 +1,7 @@
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import {
-  AudioLines, Bird, Brain, Brush, Castle, Check, ChevronRight, Clapperboard, Compass, Crown, Dice5, Drama, Feather, Flag, Flame, Footprints, Gamepad2, Gem, Grape, Grid2x2Check, Grid3x3, HatGlasses, Headphones, Hourglass, KeyRound, Layers3, Info, Landmark, LayoutGrid, Lightbulb, ListChecks, ListMusic, ListOrdered, Loader2, Map as MapIcon, MapPinned, MessageCircle, MessageSquareOff,
-  MicVocal, Music2, Piano, Printer, Puzzle, Repeat, Route, Search, Shapes, ScrollText, Shirt, SpellCheck, TextSearch, TicketCheck, UserRoundSearch, Users, VenetianMask, Waves, Wifi, X,
+  AudioLines, Bird, Brain, Brush, Castle, Check, Clapperboard, Compass, Crown, Dice5, Drama, Feather, Flag, Flame, Footprints, Gamepad2, Gem, Grape, Grid2x2Check, Grid3x3, HatGlasses, Headphones, Hourglass, KeyRound, Layers3, Info, Landmark, LayoutGrid, Lightbulb, ListChecks, ListMusic, ListOrdered, Loader2, Map as MapIcon, MapPinned, MessageCircle, MessageSquareOff,
+  MicVocal, Music2, Piano, Printer, Puzzle, Repeat, Route, Search, Shapes, ScrollText, Shirt, Smile, SpellCheck, TextSearch, TicketCheck, UserRoundSearch, Users, VenetianMask, Waves, Wifi, X,
 } from 'lucide-react';
 import { useNavigation } from '../context';
 import { useAccess } from '../hooks/useAccess';
@@ -82,9 +82,16 @@ const Qaravani: React.FC = () => (
   </Suspense>
 );
 import { useVine } from './games/vazi/useVine';
-import { KINO } from '../data/georgianFilms';
+import type { FilmKind } from '../data/georgianFilms';
+import { Tabs } from '../components/ui/kit';
 // „ქართული ფილმები“ (moved here from „მთქმელი“'s videos, 2026-11-09): the list loads only when opened
-const VideoList = lazy(() => import('./VideosPage'));
+const KinoKind = lazy(() => import('./VideosPage').then(m => ({ default: m.KinoKind })));
+// the page's tabs on top (2026-11-09, as „ხალხური“'s): the games and the three kinds of films; kept for the visit
+type HubTab = 'games' | FilmKind;
+const TAB_KEY = 'sg-games-tab';
+const readTab = (): HubTab => {
+  try { const t = sessionStorage.getItem(TAB_KEY); return t === 'film' || t === 'theatre' || t === 'cartoon' ? t : 'games'; } catch { return 'games'; }
+};
 
 // „თამაშები“: the hub of the games (2026-10-27; one list since 2026-10-30, the user's „ყველა თამაში 1 სიად“; made clearer
 // 2026-11-04, the user's „დახვეწე, გაათანამედროვე და არ იყოს დამაბნეველი“). On top what the three variants are and a search
@@ -234,29 +241,19 @@ export const GamesPage: React.FC = () => {
   const [query, setQuery] = useState('');
   // the search folds under the bar's round 🔍 (2026-11-09); closing it clears the words
   const searchOpen = useGameSearchOpen();
+  const [tab, setTab] = useState<HubTab>(readTab);
+  const chooseTab = (t: HubTab) => { setTab(t); try { sessionStorage.setItem(TAB_KEY, t); } catch { /* private mode */ } if (t !== 'games') setGameSearchOpen(false); };
   useEffect(() => { if (!searchOpen) setQuery(''); }, [searchOpen]);
   useEffect(() => () => setGameSearchOpen(false), []);
+  // the bar's 🔍 searches the games: on a films' tab it brings the games' tab back
+  useEffect(() => { if (searchOpen && tab !== 'games') { setTab('games'); try { sessionStorage.setItem(TAB_KEY, 'games'); } catch { /* private mode */ } } }, [searchOpen, tab]);
   const today = useMemo(() => tbilisiToday(), []);
 
   const Inner = mapItem ? INNER[mapItem] : undefined;
   if (Inner) return <Inner />;
-  // „ქართული ფილმები“: `kino`, an open film `kino/<YouTube id>` (the bar's „უკან“ closes the film first)
+  // a film open from a tab: `kino/<YouTube id>` (the bar's „უკან“ closes it); an old `kino` opens the films' tab
   const [kinoList, kinoFilm] = (mapItem ?? '').split('/');
-  if (kinoList === 'kino') {
-    return (
-      <div className="w-full max-w-2xl">
-        <Suspense fallback={<div className="py-20 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-[#7a2028]" /></div>}>
-          <VideoList
-            id="k"
-            open={kinoFilm}
-            onPlay={id => { triggerHaptic(10); openMapItem(`kino/${id}`, false, true); }}
-            onMove={id => openMapItem(`kino/${id}`, true, true)}
-            onClose={handleGoBack}
-          />
-        </Suspense>
-      </div>
-    );
-  }
+  const inKino = kinoList === 'kino';
 
   // a game's app variants follow its section's switch and the member's features; a printed kit is always there
   const cards = GAMES.flatMap(g => {
@@ -313,8 +310,43 @@ export const GamesPage: React.FC = () => {
     return c && c.g.modes.includes('online') && c.state !== 'hidden' ? [{ ...c, done: !!dayDone(id) }] : [];
   });
 
+  const shownTab: HubTab = films ? tab : 'games';
+  const tabs = films && (
+    <Tabs<HubTab>
+      cols={4}
+      stack
+      value={shownTab}
+      onChange={chooseTab}
+      items={[
+        { id: 'games', label: 'თამაში', Icon: Gamepad2 },
+        { id: 'film', label: 'ფილმი', Icon: Clapperboard },
+        { id: 'theatre', label: 'სპექტაკლი', Icon: Drama },
+        { id: 'cartoon', label: 'მულტფილმი', Icon: Smile },
+      ]}
+    />
+  );
+  if (shownTab !== 'games' || inKino) {
+    const kind: FilmKind = shownTab === 'games' ? 'film' : shownTab;
+    return (
+      <div className="w-full max-w-2xl md:max-w-5xl space-y-4">
+        {tabs}
+        <Suspense fallback={<div className="py-20 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-[#7a2028]" /></div>}>
+          <KinoKind
+            key={kind}
+            only={kind}
+            open={kinoFilm}
+            onPlay={id => { triggerHaptic(10); openMapItem(`kino/${id}`, false, true); }}
+            onMove={id => openMapItem(`kino/${id}`, true, true)}
+            onClose={handleGoBack}
+          />
+        </Suspense>
+      </div>
+    );
+  }
+
   return (
     <div className="w-full max-w-2xl md:max-w-5xl space-y-5">
+      {tabs}
       {searchOpen && (
       <div>
         <label className="relative block">
@@ -366,24 +398,6 @@ export const GamesPage: React.FC = () => {
                 ))}
               </ul>
             </section>
-          )}
-          {/* „ქართული ფილმები“ (2026-11-09, the user: „კინოები თეატრები მულტფილები გადაიტანე სახალისოში“) */}
-          {films && (
-            <button
-              type="button"
-              onClick={() => { triggerHaptic(10); openMapItem('kino'); }}
-              className="group w-full min-h-16 flex items-center gap-3 rounded-2xl bg-white/85 ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/35 px-3 py-2.5 text-left cursor-pointer active:scale-[0.99] transition-all"
-            >
-              <span className="w-11 h-11 shrink-0 rounded-2xl grid place-items-center bg-[#7a2028]/[0.08] text-[#7a2028]">
-                <Clapperboard className="w-5 h-5" />
-              </span>
-              <span className="flex-1 min-w-0">
-                <span className="block font-serif-ge text-[16px] font-bold leading-snug text-[#4a3426]">ქართული ფილმები</span>
-                <span className="mt-0.5 block text-[12.5px] leading-snug text-[#8a7a6a]">კინო, სპექტაკლები, მულტფილმები</span>
-              </span>
-              <span className="shrink-0 text-[13px] font-bold tabular-nums text-[#a8998a]">{KINO.length}</span>
-              <ChevronRight className="w-5 h-5 shrink-0 text-[#b3a594] group-hover:text-[#7a2028] transition-colors" aria-hidden />
-            </button>
           )}
           <div className="space-y-2.5">
             <h2 className="px-1 flex items-baseline gap-2 font-serif-ge text-[17px] font-bold text-[#4a3426]">ყველა თამაში<span className="text-[13px] font-bold tabular-nums text-[#a8998a]">{cards.length}</span></h2>
