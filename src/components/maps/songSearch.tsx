@@ -50,6 +50,12 @@ export const setPrayerSearchOpen = prayers.set;
 export const usePrayerSearchOpen = prayers.use;
 export const PrayerSearchButton = prayers.Button;
 
+// the games' hub (2026-11-09, the user: „საძიებელი ლუპა გადაიტანე მარჯვნივ სამაგრის ადგილას“)
+const games = makeFold('თამაშის ძებნა');
+export const setGameSearchOpen = games.set;
+export const useGameSearchOpen = games.use;
+export const GameSearchButton = games.Button;
+
 // the churches' dots map (2026-11-09, the user: „მაღლა აიტანე რუკის ნიშანი მრგვალად ძებნის ღილაკთან … კუთხეები პირდაპირ დატოვე“):
 // filled while the dots map shows in place of the regions
 const churchMap = makeFold('რუკა წერტილებით', MapIcon, 'კუთხეებზე დაბრუნება', false);
