@@ -313,10 +313,15 @@
   მონასტრები ეკლესია-მონასტრებში, ეთნოფორის ჩანართი“): page `simghera` (and the old `sakravebi` → „ყველა საკრავი“) is titled
   „ხალხური“, the vine's label too. **2026-11-09** (the user: „ფოლკლორის ცენტრის ჩანაწერები მოხსენი … სიმღერების ჩანართში … რაოდენობები მოხსენი … ალბომები
   ბიბლიოთეკაში ჩამოსაშლელად“): the big map has the region's tabs too (`MapByTab`: სიმღერა · საკრავი · მთქმელი · ეთნოფორი,
-  `sg-khalkhuri-tab`; the counts and the extra cards follow the tab — „ეთნოფორი“ adds ლაზეთი + „უცხოეთი“ —, an empty region's card is
-  pale, a tap opens the region on that tab; the region keeps its own tabs; „საკრავი“ shows no map — `SakravebiView listOnly`, each
+  `sg-khalkhuri-tab`; the counts and the extra cards follow the tab — „ეთნოფორი“ adds ლაზეთი, its „უცხოეთში ჩაწერილი“ is one folded row under
+  the map (`AbroadFold`, films open as `abroad~e/<id>`); „დასაზუსტებელი“ has no card any more —, an empty region's card is
+  pale, a tap opens the region on that tab; **the map is `RegionPuzzleMap rich`** (the user, 2026-11-09 night: „ციფრები რუკაზე … თითის
+  დაჭერისას სახელი … გაადიდე, ჩარჩო მოხსენი … კუთხეები ჩამოსაშლელი“): no frame, a count pill on every region, a finger's first tap
+  lights a region and names it in a pill under the map (a tap on it or a second tap on the piece opens), a mouse opens on click; the
+  cards fold behind one round ▾; the rows „ყველა საკრავი“ and „სრული გადაცემები“ are gone (`MoreRows` removed; the old items
+  `all-i` / `ep` still open); the region keeps its own tabs; „საკრავი“ shows no map — `SakravebiView listOnly`, each
   instrument's regions named under it — and MoreRows drops „ყველა საკრავი“ there); `CentreBanner` over the map only on „სიმღერა“; the map's cards show
-  names only (`RegionPuzzleMap noCounts`); the Centre's song albums left the map — the library's shelf folds them under „ჩანაწერები“
+  the name and the count compactly; the Centre's song albums left the map — the library's shelf folds them under „ჩანაწერები“
   (`library/FolkAlbums.tsx`, `CentreAlbums bare onOpen`), an album = the library's `falbum:<id>` (`SongAlbumPage` + `SongPage`); an old
   „album:<id>“ step still opens on the songs page. `GeorgiaMap` = one songs map (no top tabs); a region (`KhalkhuriRegion`) has horizontal tabs
   სიმღერა · საკრავი · მთქმელი · ეთნოფორი (`Tabs stack cols={n}`; a closed or empty one hidden, a locked one asks to sign in) —

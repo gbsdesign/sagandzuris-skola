@@ -28,12 +28,12 @@ import { matchScore, searchNormalize } from '../../utils/searchMatch';
 import { toggleAudioPreview } from '../../utils/listPreview';
 import { PreviewButton } from '../PreviewButton';
 import { Tabs } from '../ui/kit';
-import { SakravebiView, INSTRUMENTS_LIST } from '../views/SakravebiView';
+import { SakravebiView } from '../views/SakravebiView';
 import { instrumentsIn } from '../../data/instrumentsData';
 import { MtkmeliRegion, useMtkmeliCount } from './MtkmeliMap';
 import { authorsInRegion } from '../../data/mtkmeliData';
 import { isFolkGroup, useReciters } from './Reciters';
-import { ABROAD, ETNO_EXTRA, loadEtnofori } from '../../data/etnofori';
+import { ABROAD, loadEtnofori } from '../../data/etnofori';
 import { TakeTools } from './TakeTools';
 import { setSongSearchOpen, useSongSearchOpen } from './songSearch';
 
@@ -90,7 +90,7 @@ const useSongSearch = (songs: FolkSong[], query: string, withPerformers: boolean
 };
 
 export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = {}, onToggleSong, onTogglePoem, startTab }) => {
-  const { isOwner, isSuperAdmin } = useAuth();
+  const { isOwner } = useAuth();
   const showOwnerOnly = isOwner;
   const placed = usePlacements(); // a recording moved from the app: the lists follow
   const access = useAccess();
@@ -192,13 +192,9 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
             <>
               <MapByTab
                 songCount={id => songsInRegion(id as FolkRegion['id'], showOwnerOnly).length}
-                // the sorting shelf „დასაზუსტებელი“ is for those who move recordings (members find its songs by search)
-                songExtras={FOLK_EXTRA_REGIONS.filter(r => r.id !== 'unsure' || isOwner || isSuperAdmin)}
                 onOpen={(id, tab) => openMapItem(itemOf(id, tab))}
                 selectedChantVariants={selectedChantVariants}
-                more={tab => (
-                  <MoreRows instruments={instrumentsOpen && tab !== 'instruments'} videos={videosOpen} onOpen={id => { triggerHaptic(10); openMapItem(id); }} />
-                )}
+                films={films('abroad~e')}
               />
             </>
           )}
@@ -223,11 +219,10 @@ const savedMapTab = (): RegionTab => {
 // instrument as a card with where it is from under its name (`SakravebiView listOnly`).
 const MapByTab: React.FC<{
   songCount: (id: string) => number;
-  songExtras: FolkRegion[];
   onOpen: (id: string, tab: RegionTab) => void;
   selectedChantVariants: Record<string, any>;
-  more: (tab: RegionTab) => React.ReactNode;
-}> = ({ songCount, songExtras, onOpen, selectedChantVariants, more }) => {
+  films: { open?: string; onPlay: (id: string) => void; onMove: (id: string) => void; onClose: () => void };
+}> = ({ songCount, onOpen, selectedChantVariants, films }) => {
   const access = useAccess();
   const instruments = access.section('sakravebi');
   const poets = access.section('mtkmeli');
@@ -265,7 +260,9 @@ const MapByTab: React.FC<{
     : shown === 'etno' ? (etno ? etno(id) : 0)
     : songCount(id);
   const label = (n: number) => `${n} ${shown === 'instruments' ? 'საკრავი' : shown === 'poets' ? 'მთქმელი' : shown === 'etno' ? 'ვიდეო' : 'სიმღერა'}`;
-  const extras = shown === 'songs' ? songExtras : shown === 'etno' ? ETNO_EXTRA : [];
+  // the lands outside the map as cards: ლაზეთი and ოსეთი with the songs, ლაზეთი with „ეთნოფორი“ (its „უცხოეთი“ folds under the
+  // map instead; the sorting shelf „დასაზუსტებელი“ is found by search only — 2026-11-09, the user: „არ გვინდა“)
+  const extras = shown === 'songs' ? FOLK_EXTRA_REGIONS.filter(r => r.id !== 'unsure') : shown === 'etno' ? FOLK_EXTRA_REGIONS.filter(r => r.id === 'lazeti') : [];
 
   return (
     <>
@@ -281,43 +278,44 @@ const MapByTab: React.FC<{
         onSelect={r => onOpen(r.id, shown)}
         count={count}
         countLabel={label}
-        noCounts
+        rich
         regionName={shown === 'etno' ? r => (r.id === 'kalakuri' ? 'თბილისი' : r.nameGe) : undefined}
         title="ხალხური"
         extraRegions={extras}
       />
       )}
-      {more(shown)}
+      {shown === 'etno' && <AbroadFold films={films} />}
     </>
   );
 };
 
-/** under the map: every instrument, „ეთნოფორი“'s full episodes and its songs recorded abroad — a roomy row each */
-const MoreRows: React.FC<{ instruments: boolean; videos: boolean; onOpen: (item: string) => void }> = ({ instruments, videos, onOpen }) => {
-  const rows = [
-    instruments && { id: 'all-i', title: 'ყველა საკრავი', sub: 'რომელი საიდანაა', Icon: Guitar, n: INSTRUMENTS_LIST.length },
-    videos && { id: 'ep', title: '„ეთნოფორი“ — სრული გადაცემები', sub: 'აჭარის ტელევიზიის გადაცემა', Icon: Tv },
-    videos && { id: 'abroad~e', title: 'უცხოეთში ჩაწერილი', sub: '„ეთნოფორის“ ვიდეოები საქართველოს გარეთ', Icon: Globe },
-  ].filter(Boolean) as { id: string; title: string; sub: string; Icon: React.ComponentType<{ className?: string }>; n?: number }[];
-  if (!rows.length) return null;
+/** „უცხოეთში ჩაწერილი“ under the „ეთნოფორი“ map: one folded row, the films unfold in place (2026-11-09, the user: „რუკის დაბლა
+ *  იყოს … დააჭერს და ჩამოიშლება“); a film opens as „abroad~e/<id>“, so „უკან“ comes back here */
+const AbroadFold: React.FC<{ films: { open?: string; onPlay: (id: string) => void; onMove: (id: string) => void; onClose: () => void } }> = ({ films }) => {
+  const [open, setOpen] = useState(false);
   return (
-    <ul className="rounded-3xl bg-white/80 ring-1 ring-[#e8dcc8] divide-y divide-[#efe5d4] overflow-hidden">
-      {rows.map(({ id, title, sub, Icon, n }) => (
-        <li key={id}>
-          <button type="button" onClick={() => onOpen(id)} className="group w-full min-h-16 flex items-center gap-3 px-3 py-2.5 text-left cursor-pointer hover:bg-[#fcf6ea] active:bg-[#f7eddc] transition-colors">
-            <span className="w-11 h-11 shrink-0 rounded-full grid place-items-center bg-[#7a2028]/[0.08] text-[#7a2028]">
-              <Icon className="w-5 h-5" />
-            </span>
-            <span className="flex-1 min-w-0 flex flex-col gap-0.5">
-              <span className="text-[15px] font-bold text-[#2a2017] leading-snug group-hover:text-[#7a2028] transition-colors">{title}</span>
-              <span className="text-[12.5px] font-semibold text-[#8a7a6a] leading-snug">{sub}</span>
-            </span>
-            {n !== undefined && <span className="shrink-0 text-[13px] font-bold tabular-nums text-[#8a7a6a]">{n}</span>}
-            <ChevronRight className="w-5 h-5 shrink-0 text-[#b3a594]" aria-hidden />
-          </button>
-        </li>
-      ))}
-    </ul>
+    <section className="w-full mt-1">
+      <button
+        type="button"
+        onClick={() => { triggerHaptic(10); setOpen(o => !o); }}
+        aria-expanded={open}
+        className="group w-full min-h-16 flex items-center gap-3 px-3 py-2.5 rounded-3xl bg-white/80 ring-1 ring-[#e8dcc8] text-left cursor-pointer hover:bg-[#fcf6ea] active:scale-[0.99] transition-all"
+      >
+        <span className="w-11 h-11 shrink-0 rounded-full grid place-items-center bg-[#7a2028]/[0.08] text-[#7a2028]">
+          <Globe className="w-5 h-5" />
+        </span>
+        <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+          <span className="text-[15px] font-bold text-[#2a2017] leading-snug">უცხოეთში ჩაწერილი</span>
+          <span className="text-[12.5px] font-semibold text-[#8a7a6a] leading-snug">„ეთნოფორის“ ვიდეოები საქართველოს გარეთ</span>
+        </span>
+        <ChevronDown className={`w-5 h-5 shrink-0 text-[#b3a594] transition-transform duration-200 ${open ? 'rotate-180' : ''}`} aria-hidden />
+      </button>
+      {open && (
+        <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+          <Suspense fallback={waiting}><EtnoRegionFilms regionId="abroad" {...films} /></Suspense>
+        </div>
+      )}
+    </section>
   );
 };
 
