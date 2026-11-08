@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
-import { Check, ChevronDown, ChevronRight, GraduationCap, Lock, Pencil, Sparkles, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronRight, GraduationCap, Lock, Pencil, Sparkles, Users, X } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth, useChants, useNavigation } from '../../context';
 import { PathItem, usesVoices, voicesOf } from '../../utils/pathItems';
@@ -27,8 +27,11 @@ import { clearTried, useTried } from '../../utils/samosiTry';
 import { useLibraryProgress } from '../../hooks/useBooksRead';
 import { useAccess } from '../../hooks/useAccess';
 import { askSignIn } from '../access/SignInPrompt';
+import { ClassPickerSheet, useAllMyClasses } from '../classes/ClassPicker';
+import { ClassLogo } from '../classes/ClassLogo';
+import { useMyAttendance, useTeachingAttendance } from '../../hooks/useAttendanceShare';
 
-type OrbId = 'samosi' | 'learn' | 'manera' | 'work' | 'library';
+type OrbId = 'samosi' | 'learn' | 'manera' | 'work' | 'library' | 'klasi';
 
 /** The round buttons as the "რიგი" list names them; the member's order of these ids comes in `order`. */
 export const PATH_ORBS: { id: OrbId; label: string }[] = [
@@ -39,6 +42,8 @@ export const PATH_ORBS: { id: OrbId; label: string }[] = [
   { id: 'work', label: 'ჩვევები' },
   // since 2026-11-09 (the header's 📚 moved here): opens the library; the ring = its books and lives read
   { id: 'library', label: 'ბიბლიოთეკა' },
+  // since 2026-11-09 (the header's „კლასი“ moved here): opens my class (several: their window); the ring = attendance
+  { id: 'klasi', label: 'კლასი' },
 ];
 
 const SAMOSI_IDS = new Set(SAMOSI_PARTS.map(p => p.id));
@@ -100,7 +105,15 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
   const newWork = useNewWork();
   const library = useLibraryProgress();
   const libraryAccess = useAccess().section('biblioteka');
-  const { navigateTo } = useNavigation();
+  const { navigateTo, openClass } = useNavigation();
+  // „კლასი“: a member sees their own attendance, a teacher their classes' average
+  const { user } = useAuth();
+  const myClasses = useAllMyClasses();
+  const teaching = myClasses.filter(c => !!user && c.teacherIds.includes(user.uid));
+  const ownShare = useMyAttendance(user?.uid, myClasses.filter(c => !teaching.includes(c)).map(c => c.id));
+  const classShare = useTeachingAttendance(teaching);
+  const attendance = teaching.length ? classShare : ownShare;
+  const [picking, setPicking] = useState(false);
   // the parts only tried on come off once the path page is left
   useEffect(() => () => clearTried(), []);
 
@@ -127,6 +140,12 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
       else navigateTo('biblioteka');
       return;
     }
+    if (id === 'klasi') {
+      triggerHaptic(10);
+      if (myClasses.length === 1) openClass(myClasses[0].id);
+      else setPicking(true);
+      return;
+    }
     if (id === 'work' && (!habitsCard || open !== 'work')) { toHabits(); return; }
     triggerHaptic(10); setEditing(false); setOpen(o => (o === id ? null : id));
   };
@@ -139,7 +158,7 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
   ) : undefined;
 
   // in the member's order
-  const ids = order.filter((id): id is OrbId => PATH_ORBS.some(o => o.id === id));
+  const ids = order.filter((id): id is OrbId => PATH_ORBS.some(o => o.id === id) && (id !== 'klasi' || myClasses.length > 0));
   const orb = (id: OrbId, index: number) => {
     switch (id) {
       case 'samosi':
@@ -189,11 +208,26 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
           </PathOrb>
         );
       }
+      case 'klasi':
+        // the attendance at the latest lessons in per cent; the class's logo (or the people) before any lesson is marked
+        return (
+          <PathOrb
+            key={id} label="კლასი"
+            title={attendance != null ? `კლასი · დასწრება ${attendance}%${teaching.length ? ', საშუალოდ' : ''}` : 'კლასი'}
+            percent={attendance ?? 0} hue="amber" open={picking} onClick={() => toggle(id)} index={index}
+          >
+            {attendance != null
+              ? <OrbPercent value={attendance} />
+              : myClasses.length === 1
+                ? <ClassLogo name={myClasses[0].name} logo={myClasses[0].logo} className="w-10 h-10 sm:w-11 sm:h-11 text-sm" />
+                : <Users className="w-6 h-6 sm:w-7 sm:h-7 text-[#c2410c]" strokeWidth={1.8} />}
+          </PathOrb>
+        );
     }
   };
   const orbs = ids.map(orb);
 
-  const cards: Record<Exclude<OrbId, 'work' | 'library'>, { title: string; sub: React.ReactNode; aside?: React.ReactNode; action?: React.ReactNode; body: React.ReactNode }> = {
+  const cards: Record<Exclude<OrbId, 'work' | 'library' | 'klasi'>, { title: string; sub: React.ReactNode; aside?: React.ReactNode; action?: React.ReactNode; body: React.ReactNode }> = {
     samosi: {
       title: 'ჩემი სამოსი',
       sub: samosi.real === SAMOSI_TOTAL
@@ -213,11 +247,20 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
     },
     manera: { title: 'ოსტატობა', sub: 'გზა დონეებით — 0-დან ოსტატამდე', body: <MasteryContent /> },
   };
-  const card = open && open !== 'work' && open !== 'library' ? cards[open] : null;
+  const card = open && open !== 'work' && open !== 'library' && open !== 'klasi' ? cards[open] : null;
 
   return (
     <div className="w-full space-y-3">
-      {orbs.length > 4 ? (
+      <ClassPickerSheet
+        open={picking} onClose={() => setPicking(false)} classes={myClasses}
+        onPick={cid => { setPicking(false); openClass(cid); }}
+      />
+      {orbs.length === 6 ? (
+        // six: three over three on a phone, one row from `sm`
+        <div className="mx-auto max-w-xl grid grid-cols-3 gap-x-1 gap-y-3 pt-1 sm:grid-cols-6 sm:gap-y-1">
+          {orbs}
+        </div>
+      ) : orbs.length > 4 ? (
         // five don't fit one phone row (the names would be cut): three over two there, one row from `sm`
         <div className="mx-auto max-w-lg grid grid-cols-6 gap-x-1 gap-y-3 pt-1 [&>*]:col-span-2 [&>*:nth-child(4)]:col-start-2 sm:grid-cols-5 sm:gap-y-1 sm:[&>*]:col-span-1 sm:[&>*:nth-child(4)]:col-start-auto">
           {orbs}

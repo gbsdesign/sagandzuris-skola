@@ -134,19 +134,23 @@ export interface AttendanceDay {
   present: string[];
 }
 
-/** The class's latest lessons' attendance, newest first (live). */
-export const useAttendance = (classId?: string | null, count = 30) => {
-  const [days, setDays] = useState<AttendanceDay[]>([]);
+/** The class's latest lessons' attendance, newest first (live); `ready` once the first answer came. */
+export const useAttendanceState = (classId?: string | null, count = 30) => {
+  const [state, setState] = useState<{ days: AttendanceDay[]; ready: boolean }>({ days: [], ready: false });
   useEffect(() => {
-    if (!classId) { setDays([]); return; }
+    setState({ days: [], ready: false });
+    if (!classId) return;
     return onSnapshot(
       query(collection(db, 'classes', classId, 'attendance'), orderBy('date', 'desc'), limit(count)),
-      s => setDays(s.docs.map(d => ({ date: d.data().date || d.id, present: Array.isArray(d.data().present) ? d.data().present : [] }))),
-      () => setDays([])
+      s => setState({ days: s.docs.map(d => ({ date: d.data().date || d.id, present: Array.isArray(d.data().present) ? d.data().present : [] })), ready: true }),
+      () => setState({ days: [], ready: false })
     );
   }, [classId, count]);
-  return days;
+  return state;
 };
+
+/** The class's latest lessons' attendance, newest first (live). */
+export const useAttendance = (classId?: string | null, count = 30) => useAttendanceState(classId, count).days;
 
 export const saveAttendance = (classId: string, date: string, present: string[], by: string) =>
   setDoc(doc(db, 'classes', classId, 'attendance', date), { date, present, by, at: new Date().toISOString() });

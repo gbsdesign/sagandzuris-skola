@@ -2,7 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { CalendarCheck, CalendarDays, Check, CheckCheck, X } from 'lucide-react';
 import { useAuth } from '../../context';
 import { SchoolClass } from '../../hooks/useClasses';
-import { AttendanceDay, localIso, saveAttendance, shortDate, useAttendance, weekdayOf } from '../../hooks/useTeaching';
+import { AttendanceDay, localIso, saveAttendance, shortDate, useAttendanceState, weekdayOf } from '../../hooks/useTeaching';
 import { Flash, useFlash } from '../ui/kit';
 import { triggerHaptic } from '../../utils/haptics';
 import { WEEKDAYS_GE, WEEKDAYS_SHORT_GE } from '../../utils/dateNames';
@@ -24,7 +24,7 @@ const recentLessonDays = (cls: SchoolClass, count = 4) => {
 export const useClassAttendance = (cls: SchoolClass) => {
   const { user } = useAuth();
   const msg = useFlash();
-  const history = useAttendance(cls.id);
+  const { days: history, ready } = useAttendanceState(cls.id);
   const choices = useMemo(() => recentLessonDays(cls), [cls]);
   const [date, setDate] = useState(choices[0] || localIso());
   const saved = history.find(h => h.date === date);
@@ -40,7 +40,7 @@ export const useClassAttendance = (cls: SchoolClass) => {
   };
 
   return {
-    last: history.slice(0, 8),
+    last: history.slice(0, 8), ready,
     choices, date, setDate, marked: !!saved, present, msg,
     toggle: (uid: string) => write(present.includes(uid) ? present.filter(x => x !== uid) : [...present, uid]),
     allCame: () => write(cls.members.map(m => m.uid)),

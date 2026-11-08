@@ -3,14 +3,17 @@ import { useAccess } from '../../hooks/useAccess';
 import { ChvevebiContent } from './ChvevebiPanel';
 import { PATH_ORBS, PathOrbs } from './PathOrbs';
 import { PathTabs } from './PathTabs';
+import { useAllMyClasses } from '../classes/ClassPicker';
 
 /** The body of „საგანძურის გზა“ (page `gz`) — also a student's own page opened by their teacher (pages/StudentPage.tsx,
  *  inside ViewAsStudent, so every part reads that student's record). Every round button has its own switch (data/sections
  *  EXTRA_SWITCHES); the pearls and their chests live in „ნასწავლი“ since 2026-11-05. */
 export const PathPageBody: React.FC = () => {
   const access = useAccess();
-  // the library's button follows the library's own switch; the others their own (data/sections EXTRA_SWITCHES)
-  const pathOrbs = PATH_ORBS.filter(o => (o.id === 'library' ? access.section('biblioteka') !== 'hidden' : access.on(o.id)));
+  const hasClass = useAllMyClasses().length > 0;
+  // the library's button follows the library's own switch, the class's the member's „კლასი“; the others their own
+  // (data/sections EXTRA_SWITCHES); „კლასი“ shows only with a class (PathOrbs)
+  const pathOrbs = PATH_ORBS.filter(o => (o.id === 'library' ? access.section('biblioteka') !== 'hidden' : o.id === 'klasi' ? access.can('classes') && hasClass : access.on(o.id)));
   const habitsOpen = access.section('chvevebi') === 'open';
   // with the „ჩვევები“ round button the habits open only from it; without it they stand under the buttons as before
   const habitsOnOrb = habitsOpen && pathOrbs.some(o => o.id === 'work');
