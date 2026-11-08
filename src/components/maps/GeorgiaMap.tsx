@@ -1,6 +1,6 @@
 import { usePlacements } from '../../data/placements';
-import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, Headphones, Sparkles, FileText, Music, Lock, MapPin, Search, X, TextAlignStart, Guitar } from 'lucide-react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
+import { ChevronDown, ChevronRight, Headphones, Sparkles, FileText, Music, Lock, MapPin, Search, X, TextAlignStart, Guitar, Feather, Tv, Globe, Loader2 } from 'lucide-react';
 import {
   FOLK_SONGS,
   FOLK_REGIONS,
@@ -29,24 +29,36 @@ import { matchScore, searchNormalize } from '../../utils/searchMatch';
 import { toggleAudioPreview } from '../../utils/listPreview';
 import { PreviewButton } from '../PreviewButton';
 import { Tabs } from '../ui/kit';
-import { SakravebiView } from '../views/SakravebiView';
+import { SakravebiView, INSTRUMENTS_LIST } from '../views/SakravebiView';
+import { instrumentsIn } from '../../data/instrumentsData';
+import { MtkmeliRegion, useMtkmeliCount } from './MtkmeliMap';
+import { ABROAD, loadEtnofori } from '../../data/etnofori';
+import { TakeTools } from './TakeTools';
 import { setSongSearchOpen, useSongSearchOpen } from './songSearch';
 
 interface GeorgiaMapProps {
   selectedChantVariants?: Record<string, any>;
   onToggleSong?: (songId: string, songTitle: string, regionCode: string, regionName: string) => void;
-  /** the old page „საკრავები“ (a home button, the search, the path) opens this page on the instruments' tab */
-  startTab?: SongsTab;
+  onTogglePoem?: (poemId: string, poemTitle: string, author: string, regionCode: string, regionName: string) => void;
+  /** the old page „საკრავები“ (a home button, the search, the path) opens „ყველა საკრავი“ */
+  startTab?: 'songs' | 'instruments';
 }
 
-// „საკრავები“ live on this page since 2026-11-08 (the user: „საკრავებში არსებული ყველაფერი გადაიტანე სიმღერების შიგნით“,
-// answer „ორი ჩანართი ზემოთ“): two tabs under the banner; the chosen one is kept for the visit, as on „ვიდეოები“
-export type SongsTab = 'songs' | 'instruments';
-const TAB_KEY = 'sg-songs-tab';
-const readTab = (): SongsTab => {
-  try { return sessionStorage.getItem(TAB_KEY) === 'instruments' ? 'instruments' : 'songs'; } catch { return 'songs'; }
-};
-const keepTab = (t: SongsTab) => { try { sessionStorage.setItem(TAB_KEY, t); } catch { /* private mode */ } };
+// „ხალხური“ (2026-11-09, the user: „სიმღერა საკრავებს გადაარქვი და დააწერე ხალხური … მთქმელის ინტეგრაცია … ვიდეოები … როგორც
+// სიმღერები კუთხეებში … ხალხურის გვერდზე რომ შეხვალ იქნება რუკა და რომელ კუთხესაც აირჩევ შიგნით იქნება ჩანართები სიმღერა
+// საკრავი მთქმელი … ეთნოფორი“): one map of the songs; a region opens with horizontal tabs სიმღერა · საკრავი · მთქმელი ·
+// ეთნოფორი (each by its own switch, an empty one hidden). Under the map: the Centre's albums, „ყველა საკრავი“ and „ეთნოფორი“'s
+// full episodes and films recorded abroad. `mapItem`: „<region>“ = its songs, „<region>~i“ / „~m“ / „~e“ the other tabs, a film
+// adds „/<YouTube id>“; „all-i“ = every instrument, „ep“ = the episodes, „album:<id>“ an album; an old „i:<region>“ still opens.
+export type RegionTab = 'songs' | 'instruments' | 'poets' | 'etno';
+const TAB_CODE: Record<RegionTab, string> = { songs: '', instruments: 'i', poets: 'm', etno: 'e' };
+const CODE_TAB: Record<string, RegionTab> = { i: 'instruments', m: 'poets', e: 'etno' };
+const itemOf = (regionId: string, tab: RegionTab) => (TAB_CODE[tab] ? `${regionId}~${TAB_CODE[tab]}` : regionId);
+const ALL_REGIONS: FolkRegion[] = [...FOLK_REGIONS, ...FOLK_EXTRA_REGIONS, ABROAD];
+
+const EtnoRegionFilms = lazy(() => import('../../pages/VideosPage').then(m => ({ default: m.EtnoRegionFilms })));
+const EtnoEpisodes = lazy(() => import('../../pages/VideosPage').then(m => ({ default: m.EtnoEpisodes })));
+const waiting = <div className="w-full py-16 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-[#7a2028]" /></div>;
 
 // songs with a recording come first in a region's list
 const hasRecording = (s: FolkSong) => songRecordingCount(s) > 0 || Boolean(s.soundcloud);
@@ -76,33 +88,28 @@ const useSongSearch = (songs: FolkSong[], query: string, withPerformers: boolean
   }, [songs, texts, query]);
 };
 
-export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = {}, onToggleSong, startTab }) => {
+export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = {}, onToggleSong, onTogglePoem, startTab }) => {
   const { isOwner, isSuperAdmin } = useAuth();
   const showOwnerOnly = isOwner;
   const placed = usePlacements(); // a recording moved from the app: the lists follow
   const access = useAccess();
   const { member } = access;
-  // the instruments' tab shows while the person may see them (the admin's switch, the kids' mode, a member's rights);
-  // a guest sees it too and gets the sign-in prompt, as the vine's old label gave
-  const instruments = access.section('sakravebi');
-  const hasInstruments = instruments === 'open' || instruments === 'locked';
-  const [tab, setTab] = useState<SongsTab>(() => {
-    if (startTab) keepTab(startTab);
-    return startTab ?? readTab();
-  });
-  const chooseTab = (t: SongsTab) => {
-    if (t === 'instruments' && instruments === 'locked') { askSignIn('საკრავები'); return; }
-    setTab(t);
-    keepTab(t);
-  };
-  const shownTab: SongsTab = instruments === 'open' ? tab : 'songs';
-  // the open region is a history step: the top bar's "back" (and the phone's) returns to the map
-  const { mapItem, openMapItem } = useNavigation();
-  const region = [...FOLK_REGIONS, ...FOLK_EXTRA_REGIONS].find(r => r.id === mapItem) ?? null;
+  const instrumentsOpen = access.section('sakravebi') === 'open';
+  const videosOpen = access.section('videoebi') === 'open';
+  const { mapItem, openMapItem, handleGoBack } = useNavigation();
+  // the old page „საკრავები“ shows every instrument (one step, so „უკან“ leaves the page)
+  useEffect(() => {
+    if (startTab === 'instruments' && !mapItem && instrumentsOpen) openMapItem('all-i', true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  // „<region>[~tab][/<film>]“ (an old „i:<region>“ = its instruments)
+  const item = mapItem ?? '';
+  const [head, film] = item.startsWith('album:') ? [item, undefined] : item.split('/');
+  const [regionId, code] = head.startsWith('i:') ? [head.slice(2), 'i'] : head.split('~');
+  const region = ALL_REGIONS.find(r => r.id === regionId) ?? null;
+  const regionTab: RegionTab = CODE_TAB[code ?? ''] ?? 'songs';
   // an album of the Folklore Centre („album:<Drive folder id>“), opened from the list under the map
-  const albumId = mapItem?.startsWith('album:') ? mapItem.slice(6) : null;
-  // a region of the instruments' map („i:<region>“, SakravebiView)
-  const instrumentsRegion = instruments === 'open' && mapItem?.startsWith('i:') ? FOLK_REGIONS.find(r => r.id === mapItem.slice(2)) ?? null : null;
+  const albumId = head.startsWith('album:') ? head.slice(6) : null;
   const albums = useShownAlbums().length > 0;
   // a song picked in the search: its region's list, with the song open
   const [found, setFound] = useState<string | null>(null);
@@ -111,7 +118,6 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
     if (id.startsWith('r:')) { openMapItem(id.slice(2)); return; }
     const song = FOLK_SONGS.find(s => s.id === id);
     if (!song) return;
-    chooseTab('songs'); // „back“ from the song's region returns to the songs, not to the instruments
     openMapItem(getFolkRegion(song.region).id);
     setFound(id);
   });
@@ -123,87 +129,189 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
   const allSongs = useMemo(() => FOLK_SONGS.filter(s => showOwnerOnly || !s.ownerOnly), [showOwnerOnly, placed]);
   const [query, setQuery] = useState('');
   const results = useSongSearch(allSongs, query, member);
-  // the field unfolds from the bar's 🔍 (songSearch.tsx); opened over an instrument or a region, it brings the songs' map
+  // the field unfolds from the bar's 🔍 (songSearch.tsx); opened over a region, it brings the map
   const searchOpen = useSongSearchOpen();
   useEffect(() => () => setSongSearchOpen(false), []);
   useEffect(() => {
     if (!searchOpen) { setQuery(''); return; }
-    if (tab !== 'songs') chooseTab('songs');
     if (mapItem) window.history.back();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchOpen]);
+
+  // a film opens over its list without moving it; ‹ › turn it in place
+  const films = (base: string) => ({
+    open: film,
+    onPlay: (id: string) => { triggerHaptic(10); openMapItem(`${base}/${id}`, false, true); },
+    onMove: (id: string) => openMapItem(`${base}/${id}`, true, true),
+    onClose: handleGoBack,
+  });
 
   return (
     <>
       {albumId ? (
         <SongAlbumPage albumId={albumId} />
-      ) : instrumentsRegion ? (
-        <SakravebiView key={instrumentsRegion.id} region={instrumentsRegion} selectedChantVariants={selectedChantVariants} />
+      ) : head === 'all-i' && instrumentsOpen ? (
+        <SakravebiView listOnly selectedChantVariants={selectedChantVariants} />
+      ) : head === 'ep' && videosOpen ? (
+        <Suspense fallback={waiting}><EtnoEpisodes {...films('ep')} /></Suspense>
       ) : region ? (
-        <RegionPlaylist
+        <KhalkhuriRegion
           key={`${region.id}:${found || ''}`}
           region={region}
+          tab={regionTab}
+          onTab={t => openMapItem(itemOf(region.id, t), true, true)}
+          onRegion={id => openMapItem(itemOf(id, regionTab), true)}
+          films={films(head)}
           initialOpenId={found}
           songs={[...songsInRegion(region.id, showOwnerOnly)].sort(byRecordings)}
           selectedChantVariants={selectedChantVariants}
           onToggleSong={onToggleSong}
+          onTogglePoem={onTogglePoem}
         />
       ) : (
         <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
-          {/* the switch on top, the Centre's line only over the songs (the user, 2026-11-08) */}
-          {hasInstruments && (
-            <Tabs<SongsTab>
-              cols={2}
-              value={shownTab}
-              onChange={chooseTab}
-              items={[
-                { id: 'songs', label: 'სიმღერები', Icon: Music },
-                { id: 'instruments', label: 'საკრავები', Icon: Guitar },
-              ]}
+          <CentreBanner />
+          {searchOpen && (
+            <SongSearchField
+              value={query}
+              onChange={setQuery}
+              placeholder={albums ? 'სიმღერა, შემსრულებელი ან ალბომი' : member ? 'სიმღერა ან შემსრულებელი' : 'სიმღერის ძებნა'}
             />
           )}
-          {shownTab === 'instruments' ? (
-            <SakravebiView selectedChantVariants={selectedChantVariants} />
+          {results ? (
+            <>
+              <SongList
+                songs={results.slice(0, 80)}
+                total={results.length}
+                showRegion
+                selectedChantVariants={selectedChantVariants}
+                onToggleSong={onToggleSong}
+                empty="ასეთი სიმღერა ვერ მოიძებნა"
+              />
+              {albums && <CentreAlbums query={query} />}
+            </>
           ) : (
             <>
-              <CentreBanner />
-              {searchOpen && (
-                <SongSearchField
-                  value={query}
-                  onChange={setQuery}
-                  placeholder={albums ? 'სიმღერა, შემსრულებელი ან ალბომი' : member ? 'სიმღერა ან შემსრულებელი' : 'სიმღერის ძებნა'}
-                />
-              )}
-              {results ? (
-                <>
-                  <SongList
-                    songs={results.slice(0, 80)}
-                    total={results.length}
-                    showRegion
-                    selectedChantVariants={selectedChantVariants}
-                    onToggleSong={onToggleSong}
-                    empty="ასეთი სიმღერა ვერ მოიძებნა"
-                  />
-                  {albums && <CentreAlbums query={query} />}
-                </>
-              ) : (
-                <>
-                  <RegionPuzzleMap
-                    onSelect={r => openMapItem(r.id)}
-                    count={id => songsInRegion(id, showOwnerOnly).length}
-                    countLabel={n => `${n} სიმღერა`}
-                    // the sorting shelf „დასაზუსტებელი“ is for those who move recordings (members find its songs by search)
-                    extraRegions={FOLK_EXTRA_REGIONS.filter(r => r.id !== 'unsure' || isOwner || isSuperAdmin)}
-                  />
-                  {albums && <CentreAlbums />}
-                </>
-              )}
+              <RegionPuzzleMap
+                onSelect={r => openMapItem(r.id)}
+                count={id => songsInRegion(id, showOwnerOnly).length}
+                countLabel={n => `${n} სიმღერა`}
+                title="ხალხური"
+                // the sorting shelf „დასაზუსტებელი“ is for those who move recordings (members find its songs by search)
+                extraRegions={FOLK_EXTRA_REGIONS.filter(r => r.id !== 'unsure' || isOwner || isSuperAdmin)}
+              />
+              <MoreRows instruments={instrumentsOpen} videos={videosOpen} onOpen={id => { triggerHaptic(10); openMapItem(id); }} />
+              {albums && <CentreAlbums />}
             </>
           )}
         </div>
       )}
       <SongPage />
     </>
+  );
+};
+
+/** under the map: every instrument, „ეთნოფორი“'s full episodes and its songs recorded abroad — a roomy row each */
+const MoreRows: React.FC<{ instruments: boolean; videos: boolean; onOpen: (item: string) => void }> = ({ instruments, videos, onOpen }) => {
+  const rows = [
+    instruments && { id: 'all-i', title: 'ყველა საკრავი', sub: 'რომელი საიდანაა', Icon: Guitar, n: INSTRUMENTS_LIST.length },
+    videos && { id: 'ep', title: '„ეთნოფორი“ — სრული გადაცემები', sub: 'აჭარის ტელევიზიის გადაცემა', Icon: Tv },
+    videos && { id: 'abroad~e', title: 'უცხოეთში ჩაწერილი', sub: '„ეთნოფორის“ ვიდეოები საქართველოს გარეთ', Icon: Globe },
+  ].filter(Boolean) as { id: string; title: string; sub: string; Icon: React.ComponentType<{ className?: string }>; n?: number }[];
+  if (!rows.length) return null;
+  return (
+    <ul className="rounded-3xl bg-white/80 ring-1 ring-[#e8dcc8] divide-y divide-[#efe5d4] overflow-hidden">
+      {rows.map(({ id, title, sub, Icon, n }) => (
+        <li key={id}>
+          <button type="button" onClick={() => onOpen(id)} className="group w-full min-h-16 flex items-center gap-3 px-3 py-2.5 text-left cursor-pointer hover:bg-[#fcf6ea] active:bg-[#f7eddc] transition-colors">
+            <span className="w-11 h-11 shrink-0 rounded-full grid place-items-center bg-[#7a2028]/[0.08] text-[#7a2028]">
+              <Icon className="w-5 h-5" />
+            </span>
+            <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+              <span className="text-[15px] font-bold text-[#2a2017] leading-snug group-hover:text-[#7a2028] transition-colors">{title}</span>
+              <span className="text-[12.5px] font-semibold text-[#8a7a6a] leading-snug">{sub}</span>
+            </span>
+            {n !== undefined && <span className="shrink-0 text-[13px] font-bold tabular-nums text-[#8a7a6a]">{n}</span>}
+            <ChevronRight className="w-5 h-5 shrink-0 text-[#b3a594]" aria-hidden />
+          </button>
+        </li>
+      ))}
+    </ul>
+  );
+};
+
+/** „ეთნოფორი“'s songs a region has (null while its file loads) */
+const useEtnoCount = (regionId: string, on: boolean) => {
+  const [n, setN] = useState<number | null>(null);
+  useEffect(() => {
+    if (!on) return;
+    let alive = true;
+    Promise.all([loadEtnofori(), import('../../pages/VideosPage')])
+      .then(([data, m]) => alive && setN(m.etnoCount(data, regionId)), () => alive && setN(0));
+    return () => { alive = false; };
+  }, [regionId, on]);
+  return on ? n : 0;
+};
+
+interface KhalkhuriRegionProps extends Omit<RegionPlaylistProps, 'bare'> {
+  tab: RegionTab;
+  onTab: (t: RegionTab) => void;
+  onRegion: (id: string) => void;
+  films: { open?: string; onPlay: (id: string) => void; onMove: (id: string) => void; onClose: () => void };
+  onTogglePoem?: GeorgiaMapProps['onTogglePoem'];
+}
+
+/** a region of „ხალხური“: where it is, then horizontal tabs სიმღერა · საკრავი · მთქმელი · ეთნოფორი (a closed or empty one
+ *  stands aside; a locked one asks to sign in), then the chosen tab's list */
+const KhalkhuriRegion: React.FC<KhalkhuriRegionProps> = ({ region, tab, onTab, onRegion, films, onTogglePoem, ...songsProps }) => {
+  const access = useAccess();
+  const onMap = FOLK_REGIONS.some(r => r.id === region.id);
+  const instruments = access.section('sakravebi');
+  const poets = access.section('mtkmeli');
+  const nInstruments = onMap ? instrumentsIn(region.id).length : 0;
+  const nPoets = useMtkmeliCount(region.id);
+  const nEtno = useEtnoCount(region.id, access.section('videoebi') === 'open');
+  const shownOrLocked = (s: string) => s === 'open' || s === 'locked';
+  const items = ([
+    (region.id as string) !== 'abroad' && { id: 'songs', label: 'სიმღერა', Icon: Music, count: songsProps.songs.length },
+    shownOrLocked(instruments) && nInstruments > 0 && { id: 'instruments', label: 'საკრავი', Icon: Guitar, count: nInstruments },
+    shownOrLocked(poets) && onMap && nPoets > 0 && { id: 'poets', label: 'მთქმელი', Icon: Feather, count: nPoets },
+    nEtno !== 0 && { id: 'etno', label: 'ეთნოფორი', Icon: Tv, count: nEtno ?? undefined },
+  ].filter(Boolean)) as { id: RegionTab; label: string; Icon: React.ComponentType<{ className?: string }>; count?: number }[];
+  // a tab the person may not see (or that is empty here) falls back to the first one
+  const shown: RegionTab = items.some(i => i.id === tab) ? tab : nEtno === null && tab === 'etno' ? 'etno' : items[0]?.id ?? 'songs';
+  const choose = (t: RegionTab) => {
+    if (t === 'instruments' && instruments === 'locked') { askSignIn('საკრავები'); return; }
+    if (t === 'poets' && poets === 'locked') { askSignIn('მთქმელი'); return; }
+    onTab(t);
+  };
+  const line = items.map(i => i.count !== undefined && `${i.count} ${i.id === 'songs' ? 'სიმღერა' : i.id === 'instruments' ? 'საკრავი' : i.id === 'poets' ? 'მთქმელი' : 'ვიდეო'}`).filter(Boolean).join(' · ');
+
+  return (
+    <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
+      {/* where the region is: a small map with it lit — another region opens on the same tab */}
+      <div className="flex items-center gap-3 px-1 pb-3 border-b border-[#e4d8c4]">
+        <RegionLocator region={region} onPick={onRegion} className="w-32 sm:w-36 h-auto shrink-0" />
+        <div className="min-w-0 flex flex-col gap-0.5">
+          <h3 className="text-lg sm:text-xl font-black text-[#2a2017] leading-tight">{region.nameGe}</h3>
+          {items.length < 2 && line && <span className="text-xs font-bold text-[#b4620e]">{line}</span>}
+        </div>
+      </div>
+
+      {items.length > 1 && (
+        <Tabs<RegionTab> cols={items.length as 2 | 3 | 4} stack value={shown} onChange={choose} items={items} />
+      )}
+
+      {shown === 'instruments' ? (
+        <SakravebiView bare region={region} selectedChantVariants={songsProps.selectedChantVariants} />
+      ) : shown === 'poets' ? (
+        <MtkmeliRegion bare region={region} selectedChantVariants={songsProps.selectedChantVariants} onTogglePoem={onTogglePoem} />
+      ) : shown === 'etno' ? (
+        <Suspense fallback={waiting}><EtnoRegionFilms regionId={region.id} {...films} /></Suspense>
+      ) : (
+        <RegionPlaylist bare region={region} {...songsProps} />
+      )}
+    </div>
   );
 };
 
@@ -293,13 +401,15 @@ const SongList: React.FC<SongListProps> = ({ songs, total = songs.length, initia
 
 interface RegionPlaylistProps {
   region: FolkRegion;
+  /** inside „ხალხური“'s region (its tab „სიმღერა“): without the head */
+  bare?: boolean;
   initialOpenId?: string | null;
   songs: FolkSong[];
   selectedChantVariants: Record<string, any>;
   onToggleSong?: GeorgiaMapProps['onToggleSong'];
 }
 
-const RegionPlaylist: React.FC<RegionPlaylistProps> = ({ region, initialOpenId, songs, selectedChantVariants, onToggleSong }) => {
+const RegionPlaylist: React.FC<RegionPlaylistProps> = ({ region, bare, initialOpenId, songs, selectedChantVariants, onToggleSong }) => {
   const member = useAccess().member;
   const { openMapItem } = useNavigation();
   // sub-areas of the region (ხევი, ხევსურეთი…) narrow the list
@@ -313,13 +423,15 @@ const RegionPlaylist: React.FC<RegionPlaylistProps> = ({ region, initialOpenId, 
   return (
     <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
       {/* where the region is: a small map with it lit */}
-      <div className="flex items-center gap-3 px-1 pb-3 border-b border-[#e4d8c4]">
-        <RegionLocator region={region} onPick={id => openMapItem(id, true)} className="w-32 sm:w-36 h-auto shrink-0" />
-        <div className="min-w-0 flex flex-col gap-0.5">
-          <h3 className="text-lg sm:text-xl font-black text-[#2a2017] leading-tight">{region.nameGe}</h3>
-          <span className="text-xs font-bold text-[#b4620e]">{songs.length} სიმღერა</span>
+      {!bare && (
+        <div className="flex items-center gap-3 px-1 pb-3 border-b border-[#e4d8c4]">
+          <RegionLocator region={region} onPick={id => openMapItem(id, true)} className="w-32 sm:w-36 h-auto shrink-0" />
+          <div className="min-w-0 flex flex-col gap-0.5">
+            <h3 className="text-lg sm:text-xl font-black text-[#2a2017] leading-tight">{region.nameGe}</h3>
+            <span className="text-xs font-bold text-[#b4620e]">{songs.length} სიმღერა</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {songs.length > 8 && (
         <SongSearchField value={query} onChange={setQuery} placeholder={`ძებნა: ${region.nameGe}`} />
@@ -496,6 +608,7 @@ const SongItem: React.FC<SongItemProps> = ({ id, song, showRegion, isOpen: open,
                       </span>
                       <ChevronRight className="w-4 h-4 shrink-0 text-[#b8aa97] transition-colors group-hover:text-[#b4620e]" />
                     </button>
+                    <TakeTools take={t} title={song.title} />
                   </div>
                 );
               })}

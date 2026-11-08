@@ -1,5 +1,5 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
-import { BookOpen, Check, ChevronDown, Church as ChurchIcon, ChevronRight, History, Loader2, LocateFixed, Map as MapIcon, MapPin, RefreshCw, Search, Sparkles } from 'lucide-react';
+import { BookOpen, Check, ChevronDown, Church as ChurchIcon, ChevronRight, Globe, History, Loader2, LocateFixed, Map as MapIcon, MapPin, Play, RefreshCw, Search, Sparkles } from 'lucide-react';
 import { useNavigation } from '../context';
 import { RegionLocator, RegionPuzzleMap } from '../components/maps/RegionPuzzleMap';
 import { Btn, FIELD, IconBtn, Sheet, Tabs } from '../components/ui/kit';
@@ -15,8 +15,16 @@ import { type Visits, useChurchVisits } from '../hooks/useChurchVisits';
 import { useMyPlace } from '../hooks/useMyPlace';
 import { useOpenRequest } from '../utils/searchOpen';
 import { readRecentChurches, rememberChurch } from '../utils/churchShare';
+import { MONASTERY_FILMS } from '../data/monasteryVideos';
+
+const FILM_COUNTS: Record<string, number> = {};
+for (const f of MONASTERY_FILMS) FILM_COUNTS[f[3]] = (FILM_COUNTS[f[3]] ?? 0) + 1;
+const filmsIn = (region: string) => FILM_COUNTS[region] ?? 0;
+const waitFilms = <div className="w-full py-16 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-[#7a2028]" /></div>;
 
 const PinsMap = lazy(() => import('./churches/PinsMap'));
+// the TV reports on the monasteries (2026-11-09, moved here from „ვიდეოები“ — the user: „მონასტრები ეკლესია-მონასტრებში“)
+const MonasteryFilms = lazy(() => import('./VideosPage').then(m => ({ default: m.MonasteryFilms })));
 
 // „ეკლესია-მონასტრები“ (the vine's label): Georgia's churches on the map by region (as on „ვიდეოები“) or as dots on a real
 // map, a search over all of them, „ახლოს მდებარე ტაძრები“ by the phone's location, „დღეს ტაძრობაა“ (data/churchFeasts.ts)
@@ -25,6 +33,8 @@ const PinsMap = lazy(() => import('./churches/PinsMap'));
 // Tidied 2026-11-07 (the user: „დახვეწილი, მარტივად აღსაქმელი“): the search on top, the three ways as one row of tiles,
 // „ბოლოს ნანახი“ (the device's last six, utils/churchShare.ts), the phone's place shared by every part (hooks/useMyPlace.ts),
 // the dots map with the kinds' chips, a municipality picked in a window, and the one search's „ტაძრები“ open here.
+// Since 2026-11-09 a region with TV reports on its monasteries has two tabs „ტაძრები · ვიდეოები“ (`mapItem` „v:<region>“, a film
+// adds „/<YouTube id>“), and „უცხოეთის მონასტრები“ (Athos, Jerusalem…) is a row under the regions' map („v:abroad“).
 
 /** Tbilisi stands for the songs map's „ქალაქური“ */
 const churchRegionName = (r: FolkRegion) => (r.id === 'kalakuri' ? 'თბილისი' : r.nameGe);
@@ -63,13 +73,54 @@ export const ChurchesPage: React.FC = () => {
 
   const church = open ? data.byId.get(open) ?? null : null;
   const card = <ChurchCard church={church} onClose={handleGoBack} />;
-  const region = list ? churchRegion(list) : null;
+  const videos = list.startsWith('v:');
+  const regionId = videos ? list.slice(2) : list;
+  const region = regionId ? churchRegion(regionId) : null;
   const go = (item: string) => { triggerHaptic(10); openMapItem(item); };
+  // a monastery's film opens over its list without moving it; ‹ › turn it in place
+  const films = {
+    open: videos ? open : undefined,
+    onPlay: (id: string) => { triggerHaptic(10); openMapItem(`${list}/${id}`, false, true); },
+    onMove: (id: string) => openMapItem(`${list}/${id}`, true, true),
+    onClose: handleGoBack,
+  };
+
+  if (list === 'v:abroad') {
+    return (
+      <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
+        <div className="flex items-center gap-3 px-1 pb-3 border-b border-[#e4d8c4]">
+          <span className="w-12 h-12 shrink-0 rounded-full grid place-items-center bg-[#7a2028]/[0.08] text-[#7a2028]"><Globe className="w-6 h-6" /></span>
+          <div className="min-w-0 flex flex-col gap-0.5">
+            <h3 className="text-lg sm:text-xl font-black text-[#2a2017] leading-tight">უცხოეთის მონასტრები</h3>
+            <span className="text-xs font-bold text-[#8a4b12]">{filmsIn('abroad')} ვიდეო</span>
+          </div>
+        </div>
+        <Suspense fallback={waitFilms}><MonasteryFilms regionId="abroad" {...films} /></Suspense>
+      </div>
+    );
+  }
 
   if (list === 'near') return <><Nearby data={data} visits={visits} onOpen={openChurch} />{card}</>;
   if (list === 'feast') return <><FeastList data={data} visits={visits} onOpen={openChurch} />{card}</>;
   if (list === 'book') return <><BookList data={data} visits={visits} onOpen={openChurch} />{card}</>;
-  if (region) return <><RegionList key={region.id} region={region} onRegion={id => openMapItem(id, true)} all={data.list.filter(c => c.region === region.id)} visits={visits} onOpen={openChurch} />{card}</>;
+  if (region) {
+    return (
+      <>
+        <RegionList
+          key={region.id}
+          region={region}
+          tab={videos ? 'videos' : 'churches'}
+          onTab={t => openMapItem(t === 'videos' ? `v:${region.id}` : region.id, true, true)}
+          films={films}
+          onRegion={id => openMapItem(videos && filmsIn(id) ? `v:${id}` : id, true)}
+          all={data.list.filter(c => c.region === region.id)}
+          visits={visits}
+          onOpen={openChurch}
+        />
+        {card}
+      </>
+    );
+  }
   return <><Overview data={data} visits={visits} onGo={go} onOpen={openChurch} />{card}</>;
 };
 
@@ -118,6 +169,21 @@ const Overview: React.FC<{ data: ChurchData; visits: Visits; onGo: (item: string
               regionName={churchRegionName}
               title="ეკლესია-მონასტრები"
             />
+          )}
+          {tab === 'regions' && filmsIn('abroad') > 0 && (
+            <button
+              type="button"
+              onClick={() => onGo('v:abroad')}
+              className="group w-full min-h-16 flex items-center gap-3 px-3 py-2.5 rounded-3xl bg-white/80 ring-1 ring-[#e8dcc8] text-left cursor-pointer hover:bg-[#fcf6ea] active:bg-[#f7eddc] transition-colors"
+            >
+              <span className="w-11 h-11 shrink-0 rounded-full grid place-items-center bg-[#7a2028]/[0.08] text-[#7a2028]"><Globe className="w-5 h-5" /></span>
+              <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+                <span className="text-[15px] font-bold text-[#2a2017] leading-snug group-hover:text-[#7a2028] transition-colors">უცხოეთის მონასტრები</span>
+                <span className="text-[12.5px] font-semibold text-[#8a7a6a] leading-snug">ვიდეოები: ათონი, იერუსალიმი, პეტრიწონი…</span>
+              </span>
+              <span className="shrink-0 text-[13px] font-bold tabular-nums text-[#8a7a6a]">{filmsIn('abroad')}</span>
+              <ChevronRight className="w-5 h-5 shrink-0 text-[#b3a594]" aria-hidden />
+            </button>
           )}
         </>
       )}
@@ -286,7 +352,12 @@ const BookList: React.FC<{ data: ChurchData; visits: Visits; onOpen: (id: string
 };
 
 /** a region's churches: where it is, the kinds, a municipality, a search line, the list */
-const RegionList: React.FC<{ region: FolkRegion; all: Church[]; visits: Visits; onOpen: (id: string) => void; onRegion: (id: string) => void }> = ({ region, all, visits, onOpen, onRegion }) => {
+type FilmHandlers = { open?: string; onPlay: (id: string) => void; onMove: (id: string) => void; onClose: () => void };
+const RegionList: React.FC<{
+  region: FolkRegion; all: Church[]; visits: Visits; onOpen: (id: string) => void; onRegion: (id: string) => void;
+  tab: 'churches' | 'videos'; onTab: (t: 'churches' | 'videos') => void; films: FilmHandlers;
+}> = ({ region, all, visits, onOpen, onRegion, tab, onTab, films }) => {
+  const filmCount = filmsIn(region.id);
   const [kind, setKind] = useState<Filter>('all');
   const [muni, setMuni] = useState('');
   const [q, setQ] = useState('');
@@ -312,6 +383,20 @@ const RegionList: React.FC<{ region: FolkRegion; all: Church[]; visits: Visits; 
           <span className="text-xs font-bold text-[#8a4b12]">{all.length ? `${all.length} ტაძარი · ${monasteries} მონასტერი` : 'ოკუპირებული ტერიტორია'}</span>
         </div>
       </div>
+      {filmCount > 0 && (
+        <Tabs<'churches' | 'videos'>
+          cols={2}
+          value={tab}
+          onChange={onTab}
+          items={[
+            { id: 'churches', label: 'ტაძრები', Icon: ChurchIcon, count: all.length },
+            { id: 'videos', label: 'ვიდეოები', Icon: Play, count: filmCount },
+          ]}
+        />
+      )}
+      {tab === 'videos' && filmCount > 0 ? (
+        <Suspense fallback={waitFilms}><MonasteryFilms regionId={region.id} {...films} /></Suspense>
+      ) : <>
       {!all.length && (
         <p className="px-1 py-6 text-center text-[14px] font-semibold text-[#8a7a6a] leading-relaxed">
           აქაური ტაძრები სიაში ჯერ არ არის — წყარო ოკუპირებულ ტერიტორიებს არ მოიცავს.
@@ -321,6 +406,7 @@ const RegionList: React.FC<{ region: FolkRegion; all: Church[]; visits: Visits; 
       {munis.length > 1 && <MuniPicker munis={munis} total={all.length} value={muni} onChange={setMuni} />}
       {all.length > 0 && <SearchField value={q} onChange={setQ} placeholder="ტაძრის ან სოფლის ძებნა" />}
       {all.length > 0 && <Paged items={shown} empty="ასეთი ტაძარი ვერ მოიძებნა" render={c => <Row key={c.id} c={c} been={visits[c.id]} onOpen={onOpen} />} />}
+      </>}
     </div>
   );
 };
