@@ -319,10 +319,10 @@
   დაჭერისას სახელი … გაადიდე, ჩარჩო მოხსენი … კუთხეები ჩამოსაშლელი“): no frame, every region's name on the map — the short `regionCode` on phones, the full name (two lines at a space or hyphen)
   from sm — with a count pill under it (`LABEL_NUDGE` steps Guria's and Adjara's apart; Tbilisi keeps only its pill), a tap (the user's
   later pick, 2026-11-09 01:18: „დააჭერ — იხსნიდეს … მანამდე 2 წამი დიდდებოდეს … შუქმა შემოურბინოს“) draws the region again on top,
-  grown (`.sg-map-go`: 1 → 1.42 → 1.34× with an overshoot, a deep drop shadow `#puzzle-piece-lift`, a breathing gold glow
-  `#puzzle-glow` / `.sg-map-glow` behind it and a white sheen `#puzzle-sheen` over it; the svg is `overflow="visible"` so a border region
-  is not cut) with its full name and count, a bright dash running twice round its border (`.sg-map-run`, `pathLength` 100), the
-  rest dimmed to 0.28, and opens it after `GO_MS` 1.5 s (the user, 2026-11-09 01:28: „1.5 წმ-ით“; reduced motion: at once); no name pill under the map; the
+  grown (`.sg-map-go`: 1 → 1.7 → 1.6× with an overshoot, a deep drop shadow `#puzzle-piece-lift`, a breathing gold glow
+  `#puzzle-glow` / `.sg-map-glow` behind it and a white sheen `#puzzle-sheen` over it; the svg is `overflow="visible"` and the grown piece slides a little toward the map's
+  centre — `--sg-go-dx/dy` = 30 % / 20 % of its distance from it — so a border region stays on the screen) with its full name and count, a bright dash running once round its border (`.sg-map-run`, `pathLength` 100, 0.9 s), the
+  rest dimmed to 0.28, and opens it after `GO_MS` 1.3 s (the user, 2026-11-09 01:36: „უფრო დიდად … ელვის ზოლის კრუგი 1 … ჯამში 1.3 წამი“; reduced motion: at once); no name pill under the map; the
   cards fold behind one round ▾; the rows „ყველა საკრავი“ and „სრული გადაცემები“ are gone (`MoreRows` removed; the old items
   `all-i` / `ep` still open); the region keeps its own tabs; „საკრავი“ has the same map since the same night (the user: „საკრავებზეც ესე ქენი“) with „ყველა საკრავი“
   folded under it (`InstrumentsFold` → `SakravebiView listOnly bare`, each instrument's regions named under it)); `CentreBanner` over the map only on „სიმღერა“; the map's cards show
