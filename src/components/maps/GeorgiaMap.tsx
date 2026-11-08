@@ -30,6 +30,7 @@ import { toggleAudioPreview } from '../../utils/listPreview';
 import { PreviewButton } from '../PreviewButton';
 import { Tabs } from '../ui/kit';
 import { SakravebiView } from '../views/SakravebiView';
+import { setSongSearchOpen, useSongSearchOpen } from './songSearch';
 
 interface GeorgiaMapProps {
   selectedChantVariants?: Record<string, any>;
@@ -120,6 +121,15 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
   const allSongs = useMemo(() => FOLK_SONGS.filter(s => showOwnerOnly || !s.ownerOnly), [showOwnerOnly, placed]);
   const [query, setQuery] = useState('');
   const results = useSongSearch(allSongs, query, member);
+  // the field unfolds from the bar's 🔍 (songSearch.tsx); opened over an instrument or a region, it brings the songs' map
+  const searchOpen = useSongSearchOpen();
+  useEffect(() => () => setSongSearchOpen(false), []);
+  useEffect(() => {
+    if (!searchOpen) { setQuery(''); return; }
+    if (tab !== 'songs') chooseTab('songs');
+    if (mapItem) window.history.back();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchOpen]);
 
   return (
     <>
@@ -136,7 +146,7 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
         />
       ) : (
         <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
-          <CentreBanner />
+          {/* the switch on top, the Centre's line only over the songs (the user, 2026-11-08) */}
           {hasInstruments && (
             <Tabs<SongsTab>
               cols={2}
@@ -152,11 +162,14 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
             <SakravebiView selectedChantVariants={selectedChantVariants} />
           ) : (
             <>
-              <SongSearchField
-                value={query}
-                onChange={setQuery}
-                placeholder={albums ? 'სიმღერა, შემსრულებელი ან ალბომი' : member ? 'სიმღერა ან შემსრულებელი' : 'სიმღერის ძებნა'}
-              />
+              <CentreBanner />
+              {searchOpen && (
+                <SongSearchField
+                  value={query}
+                  onChange={setQuery}
+                  placeholder={albums ? 'სიმღერა, შემსრულებელი ან ალბომი' : member ? 'სიმღერა ან შემსრულებელი' : 'სიმღერის ძებნა'}
+                />
+              )}
               {results ? (
                 <>
                   <SongList
@@ -192,10 +205,11 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
 
 // The Folklore Centre's mark over the songs map: the recordings here are theirs (the user's request, 2026-11-05).
 // Only on the map, not inside a region.
+// Compact since 2026-11-08 (the user: „კომპაქტურად და მარტო სიმღერის ღილაკზე ჩანდეს“): one quiet line.
 const CentreBanner: React.FC = () => (
-  <div className="flex items-center gap-3.5 px-3.5 py-3 rounded-2xl bg-white border border-[#e4d8c4] shadow-[0_1px_2px_rgba(42,32,23,0.05)]">
-    <img src={folkCentreLogo} alt="ფოლკლორის ცენტრის ლოგო" className="shrink-0 w-16 h-16 object-contain" draggable={false} />
-    <h2 className="min-w-0 text-[21px] sm:text-2xl font-black leading-tight text-[#2a2017] text-balance">ფოლკლორის ცენტრის ჩანაწერები</h2>
+  <div className="flex items-center gap-2.5 px-1">
+    <img src={folkCentreLogo} alt="ფოლკლორის ცენტრის ლოგო" className="shrink-0 w-8 h-8 object-contain" draggable={false} />
+    <h2 className="min-w-0 text-[15px] font-bold leading-snug text-[#574739]">ფოლკლორის ცენტრის ჩანაწერები</h2>
   </div>
 );
 
@@ -204,6 +218,7 @@ const SongSearchField: React.FC<{ value: string; onChange: (v: string) => void; 
     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#a0907c] pointer-events-none" />
     <input
       type="search"
+      autoFocus
       value={value}
       onChange={e => onChange(e.target.value)}
       placeholder={placeholder}

@@ -283,7 +283,8 @@
 - **Folk songs map** (`data/songsData.ts`, `components/maps/GeorgiaMap.tsx`; on top of the map, for everyone, the Folklore
   Centre's banner `CentreBanner` — its logo + „ფოლკლორის ცენტრის ჩანაწერები“, 2026-11-05; logo `assets/images/folk-centre-logo.png`
   cut from the user's screenshot). **Instruments live on this page since 2026-11-08** (the user: „სიმღერებს დააწერე სიმღერები და
-  საკრავები … საკრავების ღილაკი წაშალე მთავარიდან“, answer „ორი ჩანართი ზემოთ“): tabs „სიმღერები · საკრავები“ under the banner
+  საკრავები … საკრავების ღილაკი წაშალე მთავარიდან“, answer „ორი ჩანართი ზემოთ“): tabs „სიმღერები · საკრავები“ on top (since the evening of 2026-11-08: the Centre's banner is one small line shown only on
+  the songs' tab, the 📌 on this page's bar is a round 🔍 that unfolds the songs' search — `maps/songSearch.tsx`)
   (`SongsTab`, kept for the visit in `sg-songs-tab`; shown while `section('sakravebi')` is open, or locked — a guest gets the sign-in
   prompt), the instruments' tab = `SakravebiView`; the old page `sakravebi` (home buttons, search, the path, old history steps) renders
   the same page on that tab (`startTab`). The vine has no „საკრავები“ label: „სიმღერები\nდა საკრავები“ (`wide`, two set lines; only
