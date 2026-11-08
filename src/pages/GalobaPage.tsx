@@ -6,7 +6,6 @@ import { getChantMedia } from '../data/chantMediaRegistry';
 import { chantRecordings } from '../data/chantRecordings';
 import { useRecordingBindings } from '../data/runtimeRecordings';
 import { ServiceTabs, ChantSearchBar, ChantAccordionItem } from './galoba';
-import { ChantAlbumPage } from './galoba/ChantAlbumPage';
 import { useAccess } from '../hooks/useAccess';
 import { ProgramCard, ServiceDownload } from './galoba/LiturgyBits';
 import { SERVICE_CHANTS, chantMatches, ChantHit } from './galoba/chantSearch';
@@ -45,8 +44,6 @@ export const GalobaPage: React.FC = () => {
     setExpandedChantId,
     chantSearch,
     setChantSearch,
-    mapItem,
-    openMapItem,
   } = useNavigation();
   const { can } = useAccess();
 
@@ -128,9 +125,6 @@ export const GalobaPage: React.FC = () => {
     window.scrollTo({ top: 0 });
   }, [setSelectedService, setExpandedChantId]);
 
-  // an album of recordings without notes (a choir, a school, „დასაზუსტებელი“), opened from under the services
-  if (!selectedService && mapItem?.startsWith('album:')) return <ChantAlbumPage albumId={mapItem.slice(6)} />;
-
   // 1. The services (without the header's search: under a search in all of them)
   if (!selectedService) {
     const allQuery = ownSearch ? query : null;
@@ -148,10 +142,7 @@ export const GalobaPage: React.FC = () => {
           )}
         </div>
         {!allQuery && (
-          <ServiceTabs
-            onSelectService={handleSelectService}
-            onOpenAlbum={can('recordings') ? id => openMapItem(`album:${id}`) : undefined}
-          />
+          <ServiceTabs onSelectService={handleSelectService} />
         )}
       </div>
     );

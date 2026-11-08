@@ -7,6 +7,7 @@ import { useAuth } from '../../context/AuthContext';
 import { SectionTitle } from './BookHead';
 import { lastReading } from './readingPlace';
 import { exportBusy, useExportState } from './SynthDownload';
+import { ChantRecordings } from './ChantRecordings';
 
 // The library's front room: the books standing on a wooden shelf (a cover opens the book), the place
 // the reader stopped, and the chant recordings on a shelf of their own.
@@ -242,6 +243,8 @@ export const Shelf: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) =>
             </span>
             <ChevronRight className="w-5 h-5 shrink-0 text-[#cdbba3] group-hover:text-[#7a2028] group-hover:translate-x-0.5 transition-all" />
           </button>
+          {/* the choirs' and schools' recordings, folded (an album opens as `album:<id>`, LibraryPage) */}
+          <ChantRecordings onOpen={id => onOpen(`album:${id}`)} />
         </section>
       )}
     </div>

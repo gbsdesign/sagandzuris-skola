@@ -1,8 +1,8 @@
 // Chant recordings without notes in the app, from the user's Drive folders „ალაზანი“ and „ანჩისხატი“, placed by the
 // user on the 2026-10-08 review page: one album per choir (რუსთავი, სამების გუნდი, ფაზისი), one per school for the
 // recordings whose book version is not in the app or not clear, and „დასაზუსტებელი“ for the ones still unknown.
-// The ones that match a single book version are bound in chantRecordings.ts instead. Shown on the chant page under
-// „ჩანაწერები“ (pages/galoba/ChantAlbumPage.tsx); guests see no recordings.
+// The ones that match a single book version are bound in chantRecordings.ts instead. Shown in the library under
+// the folded „ჩანაწერები“ (pages/library/ChantRecordings.tsx → pages/galoba/ChantAlbumPage.tsx); guests see no recordings.
 
 /** One recording: Drive file id, chant, performer, the user's remark ("ზატიკი", "გამშვენებული") */
 export type AlbumRec = [id: string, title: string, who: string, note?: string];
