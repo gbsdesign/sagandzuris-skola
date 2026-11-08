@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { Bell, BellOff, Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
 import { KATHISMAS, PRAYER_HOURS, PrayerHour, bibleChapterId, hourClock, parseBibleId, prayerTitle, todaysWeekPrayerId } from '../data/prayers';
-import { HABIT_ITEMS } from '../data/habitsAndManera';
 import { COUNTED_BY_READING } from '../data/habitLooks';
 import { FoldedPrayer, PROSE, PrayerText } from '../components/views/PrayerText';
 import { HourPsalms } from '../components/views/HourPsalms';
@@ -12,7 +11,7 @@ import { Btn } from '../components/ui/kit';
 import { useAccess } from '../hooks/useAccess';
 import { markRead, useMyPsalterGroups, useTakenByMe } from '../hooks/usePsalter';
 import { cycleOf, georgiaToday, kathismasOf, ownersIn } from '../utils/psalter';
-import { habitOfPrayer, rememberRead } from '../utils/prayerHabits';
+import { myHabitOfPrayer, rememberRead } from '../utils/prayerHabits';
 import {
   REMINDER_OFFSETS,
   askNotificationPermission,
@@ -201,8 +200,8 @@ export const PrayerPage: React.FC = () => {
   );
 };
 
-// At the end of a prayer: "წავიკითხე" ticks today's habit it belongs to (the morning prayers count for
-// "დილის და საღამოს ლოცვები"…; a chapter adds one თავი to "სახარება" or "სამოციქულო") and moves "გააგრძელე" past a finished chapter.
+// At the end of a prayer: "წავიკითხე" ticks today's habit it belongs to in the member's own list (myHabitOfPrayer:
+// a habit linking this prayer, else one whose book button holds it — the evening prayers tick „საღამოს ლოცვები“…; a chapter adds one თავი to "სახარება" or "სამოციქულო") and moves "გააგრძელე" past a finished chapter.
 // A kathisma ticks "ფსალმუნები" the same way, and when it is my kanon in a psalter group this cycle — or one I took over
 // to help — the group's kanon is marked read too (the one button for both).
 const ReadMark: React.FC<{ prayerId: string }> = ({ prayerId }) => {
@@ -220,7 +219,9 @@ const ReadMark: React.FC<{ prayerId: string }> = ({ prayerId }) => {
     const mine = kathismasOf(ownersIn(g.assignment, g.baseHalf, c.half), user.uid).includes(Number(k)) || (taken[g.id] || []).includes(Number(k));
     return g.memberIds.includes(user.uid) && mine ? [{ g, c }] : [];
   });
-  const found = HABIT_ITEMS.find(h => h.id === habitOfPrayer(prayerId));
+  // the member's own habit list decides (their names, their book buttons, their linked prayers)
+  const habitId = myHabitOfPrayer(prayerId, model.all.map(x => x.habit));
+  const found = habitId ? model.all.find(x => x.habit.id === habitId)?.habit : undefined;
   const habit = found && access.section('chvevebi') === 'open' ? found : undefined;
   if (!user || (!habit && !kanonIn.length)) return null;
   const today = new Date();

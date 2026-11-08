@@ -1,12 +1,14 @@
 // Run: npm test  (node:test through tsx)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { habitOfPrayer, nextInReading, readingLabel, readingListOf } from '../src/utils/prayerHabits';
+import { habitOfPrayer, myHabitOfPrayer, nextInReading, readingLabel, readingListOf } from '../src/utils/prayerHabits';
 
 test('each prayer ticks its own habit', () => {
   assert.equal(habitOfPrayer('dila'), 'habit_1');
-  assert.equal(habitOfPrayer('dzili'), 'habit_1');
-  assert.equal(habitOfPrayer('week-4-dzili'), 'habit_1');
+  assert.equal(habitOfPrayer('dzili'), 'habit_15');
+  assert.equal(habitOfPrayer('week-4-dzili'), 'habit_15');
+  assert.equal(habitOfPrayer('week-4-dila'), 'habit_1');
+  assert.equal(habitOfPrayer('paraklisi-samadlobeli'), 'habit_8');
   assert.equal(habitOfPrayer('hour-15'), 'habit_13');
   assert.equal(habitOfPrayer('kathisma-8'), 'habit_6');
   assert.equal(habitOfPrayer('akathist-1'), 'habit_7');
@@ -14,6 +16,17 @@ test('each prayer ticks its own habit', () => {
   assert.equal(habitOfPrayer('bible-romaelta-1'), 'habit_3');
   assert.equal(habitOfPrayer('psalter-rule'), null);
   assert.equal(habitOfPrayer('bible-mate-99'), null);
+});
+
+test('the member\'s own list: a linked prayer, a book button, else the school\'s habit if kept', () => {
+  const linked = { id: 'my_x', links: [{ kind: 'find', open: { kind: 'shortcut', id: 'prayer:akathist-2' } }] };
+  const both = { id: 'my_me', menu: 'morning-evening' as const };
+  assert.equal(myHabitOfPrayer('akathist-2', [{ id: 'habit_7', menu: 'akathists' }, linked]), 'my_x');
+  assert.equal(myHabitOfPrayer('dzili', [both, { id: 'habit_15', menu: 'evening' }]), 'my_me');
+  assert.equal(myHabitOfPrayer('dzili', [{ id: 'habit_1', menu: 'morning' }, { id: 'habit_15', menu: 'evening' }]), 'habit_15');
+  assert.equal(myHabitOfPrayer('paraklisi-samadlobeli', [{ id: 'habit_8' }]), 'habit_8');
+  assert.equal(myHabitOfPrayer('paraklisi-samadlobeli', [{ id: 'habit_1' }]), null);
+  assert.equal(myHabitOfPrayer('bible-romaelta-1', [{ id: 'habit_2', menu: 'gospel' }, { id: 'habit_3', menu: 'apostle' }]), 'habit_3');
 });
 
 test('reading lists: the Gospel, the Apostle, the akathists', () => {
