@@ -7,7 +7,7 @@ import { chantRecordings } from '../data/chantRecordings';
 import { useRecordingBindings } from '../data/runtimeRecordings';
 import { ServiceTabs, ChantSearchBar, ChantAccordionItem } from './galoba';
 import { useAccess } from '../hooks/useAccess';
-import { ProgramCard, ServiceDownload } from './galoba/LiturgyBits';
+import { ServiceDownload } from './galoba/LiturgyBits';
 import { SERVICE_CHANTS, chantMatches, ChantHit } from './galoba/chantSearch';
 import { SearchField, SearchResults } from './galoba/SearchResults';
 import { triggerHaptic } from '../utils/haptics';
@@ -137,9 +137,7 @@ export const GalobaPage: React.FC = () => {
             <div className="min-h-[60vh]">
               <SearchResults query={allQuery} keepChant={keepChant} onOpenChant={openHit} />
             </div>
-          ) : (
-            <ProgramCard />
-          )}
+          ) : null}
         </div>
         {!allQuery && (
           <ServiceTabs onSelectService={handleSelectService} />
@@ -176,8 +174,6 @@ export const GalobaPage: React.FC = () => {
           <p className="mt-0.5 text-[12px] font-semibold text-[#8c7c6b]">{serviceChants.length} საგალობელი</p>
         </div>
       </div>
-
-      <ProgramCard />
 
       {modeClass && (
         <div className={`flex flex-wrap items-center gap-x-3 gap-y-2.5 p-3 rounded-2xl ring-1 ${classOnly ? 'bg-[#7a2028]/[0.05] ring-[#7a2028]/20' : 'bg-white/80 ring-[#e8dcc8]'}`}>
