@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { ChevronDown, ChevronRight } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { FOLK_REGIONS, FolkRegion, FolkRegionId, MapRegionId } from '../../data/songsData';
 import { GEORGIA_MAP_SHAPES, GEORGIA_MAP_SIZE } from '../../data/georgiaMapShapes';
 import { triggerHaptic } from '../../utils/haptics';
@@ -21,23 +21,28 @@ interface RegionPuzzleMapProps {
 }
 
 const { width, height } = GEORGIA_MAP_SIZE;
+/** how long the tapped region shows itself before it opens */
+const GO_MS = 1700;
 const LABEL_NUDGE: Partial<Record<FolkRegionId, number>> = { guria: -12, achara: 10 };
 
 export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, count, countLabel, regionName = r => r.nameGe, title, extraRegions = [], rich }) => {
   const [hovered, setHovered] = useState<FolkRegionId | null>(null);
-  // a finger's first tap (rich): the region named, the second tap opens it
-  const [picked, setPicked] = useState<FolkRegionId | null>(null);
+  // a tap (rich; 2026-11-09, the user: „დააჭერ — იხსნიდეს … მანამდე 2 წამი დიდდებოდეს კუთხე, სრულად ჩანდეს სახელი და ციფრი,
+  // საზღვარს შუქმა შემოურბინოს“): the region grows with its full name and count, a light runs round its border, then it opens
+  const [going, setGoing] = useState<FolkRegionId | null>(null);
+  const timer = useRef<number | null>(null);
+  useEffect(() => () => { if (timer.current) window.clearTimeout(timer.current); }, []);
   const [cardsOpen, setCardsOpen] = useState(false);
-  const litId = picked ?? hovered;
-  const lit = FOLK_REGIONS.find(r => r.id === litId);
+  const litId = going ?? hovered;
   const tbilisi = GEORGIA_MAP_SHAPES.kalakuri.label;
-  const touch = useRef(false);
 
   const tap = (r: FolkRegion) => {
-    if (rich && touch.current) {
-      if (picked !== r.id) { triggerHaptic(8); setPicked(r.id); return; }
-    }
-    onSelect(r);
+    if (!rich || timer.current) { if (!timer.current) onSelect(r); return; }
+    const still = typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (still) { onSelect(r); return; }
+    triggerHaptic(10);
+    setGoing(r.id);
+    timer.current = window.setTimeout(() => { timer.current = null; setGoing(null); onSelect(r); }, GO_MS);
   };
 
   const svg = (
@@ -46,7 +51,6 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
       className="w-full h-auto select-none"
       role="group"
       aria-label="საქართველოს რუკა — აირჩიეთ კუთხე"
-      onPointerDown={e => { touch.current = e.pointerType === 'touch'; }}
     >
       <defs>
         <filter id="puzzle-piece-shadow" x="-10%" y="-10%" width="120%" height="120%">
@@ -79,7 +83,6 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
             role="button"
             tabIndex={0}
             aria-label={regionName(r)}
-            aria-pressed={rich ? picked === r.id : undefined}
             onClick={() => tap(r)}
             onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(r); } }}
             // a finger lifts nothing by itself: the lifted piece moved under it and the tap could miss the region it touched
@@ -91,8 +94,10 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
             style={{
               transform: isLit ? 'translateY(-5px)' : undefined,
               filter: isLit ? 'url(#puzzle-piece-lift) brightness(1.08)' : undefined,
-              // the lit piece stands out: the others step back a little
-              opacity: litId && !isLit ? 0.55 : 1,
+              // the lit piece stands out: the others step back a little (more while one is opening)
+              opacity: litId && !isLit ? (going ? 0.4 : 0.55) : 1,
+              // the opening piece is drawn again on top, bigger — the one underneath hides
+              visibility: going === r.id ? 'hidden' : undefined,
             }}
           />
         );
@@ -137,6 +142,35 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
           </g>
         );
       })}
+      {/* the opening region (rich): drawn on top of everything, grown, its full name and count, a light running round the border */}
+      {rich && going && (() => {
+        const r = FOLK_REGIONS.find(x => x.id === going)!;
+        const shape = GEORGIA_MAP_SHAPES[r.id];
+        const [x, y] = shape.label;
+        const n = count(r.id);
+        const text = String(n);
+        const w = text.length * 16 + 20;
+        const name = regionName(r);
+        const isTbilisi = r.id === 'kalakuri';
+        return (
+          <g key="go" className="sg-map-go" pointerEvents="none">
+            <path d={shape.d} fill={r.color} stroke="#fffaf0" strokeWidth={3} strokeLinejoin="round" filter="url(#puzzle-piece-lift)" />
+            {isTbilisi && <circle cx={x} cy={y} r={14} fill={r.color} stroke="#fffaf0" strokeWidth={3} />}
+            {/* the light: a short bright dash travels the whole border twice */}
+            <path d={shape.d} fill="none" stroke="#ffe9a8" strokeWidth={9} strokeLinejoin="round" strokeLinecap="round" opacity={0.55} pathLength={100} className="sg-map-run" />
+            <path d={shape.d} fill="none" stroke="#fff6d6" strokeWidth={4} strokeLinejoin="round" strokeLinecap="round" pathLength={100} className="sg-map-run" />
+            <g transform={`translate(${isTbilisi ? x + 70 : x} ${isTbilisi ? y : y - 6})`}>
+              <text x={0} y={-16} textAnchor="middle" dominantBaseline="middle" fontSize={30} fontWeight={900} fill="#2a2017" style={{ paintOrder: 'stroke', stroke: '#fffaf0', strokeWidth: 8, strokeLinejoin: 'round' }}>{name}</text>
+              {n > 0 && (
+                <>
+                  <rect x={-w / 2} y={6} width={w} height={32} rx={16} fill="#fffaf0" stroke="#6b4423" strokeOpacity={0.3} strokeWidth={1.5} />
+                  <text x={0} y={23} textAnchor="middle" dominantBaseline="middle" fontSize={27} fontWeight={800} fill="#4a3426">{text}</text>
+                </>
+              )}
+            </g>
+          </g>
+        );
+      })()}
     </svg>
   );
 
@@ -181,23 +215,6 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
       <div className="w-full flex flex-col items-center gap-2 animate-in fade-in duration-200">
         {/* no frame: the map stands on the paper, a little wider than the page's column */}
         <div className="-mx-1 sm:mx-0 w-[calc(100%+0.5rem)] sm:w-full">{svg}</div>
-        {/* the lit region: its name and count, a tap opens it (the second tap of a finger) */}
-        <div className="h-12 w-full flex items-center justify-center" aria-live="polite">
-          {lit ? (
-            <button
-              type="button"
-              onClick={() => onSelect(lit)}
-              className="min-h-11 pl-3 pr-4 rounded-full bg-white ring-1 ring-[#e2d3bb] shadow-[0_1px_3px_rgba(74,52,38,0.08)] flex items-center gap-2.5 cursor-pointer hover:ring-[#d9a55a] active:scale-[0.98] transition-all animate-in fade-in zoom-in-95 duration-150"
-            >
-              <span className="w-4 h-4 rounded-md border border-black/10" style={{ background: lit.color }} />
-              <span className="text-[15px] font-black text-[#2a2017]">{regionName(lit)}</span>
-              {count(lit.id) > 0 && <span className="text-[13px] font-bold text-amber-700">· {countLabel(count(lit.id))}</span>}
-              <ChevronRight className="w-4 h-4 text-[#b4620e]" aria-hidden />
-            </button>
-          ) : (
-            <span className="text-[12.5px] font-semibold text-[#a39482]">აირჩიე კუთხე რუკაზე</span>
-          )}
-        </div>
         {/* the regions as cards, folded behind one round button */}
         <button
           type="button"
@@ -220,13 +237,13 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
         {/* the lit region's name: a fixed-height line, so nothing jumps */}
         <p className="h-6 mt-1 flex items-center justify-center gap-2 text-[13px] font-bold text-[#6b4423]" aria-live="polite">
           {/* empty until a region is lit: the map and the cards speak for themselves */}
-          {lit && (
-            <>
+          {litId && FOLK_REGIONS.filter(r => r.id === litId).map(lit => (
+            <React.Fragment key={lit.id}>
               <span className="w-3 h-3 rounded-[4px] border border-black/10" style={{ background: lit.color }} />
               <span>{regionName(lit)}</span>
               {count(lit.id) > 0 && <span className="font-semibold text-amber-700">· {countLabel(count(lit.id))}</span>}
-            </>
-          )}
+            </React.Fragment>
+          ))}
         </p>
       </div>
 
