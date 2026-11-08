@@ -22,7 +22,8 @@ const CLASS_PREFIX = 'class:';
 // in „ყველა“, each class shows this many people; the rest are a tap away (the class's own filter)
 const FEW = 6;
 
-// the page fills the screen below the header: the list and the chat scroll inside it, the page itself does not
+// on a computer the page fills the screen below the header: the list and the chat scroll inside it, the page itself does not.
+// On a phone the list is part of the page and the page scrolls (an open chat still fills the screen).
 const useFitHeight = (ref: React.RefObject<HTMLElement | null>, dep: unknown) => {
   const [h, setH] = useState(560);
   useLayoutEffect(() => {
@@ -166,7 +167,8 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const threadInChip = (t: DirectThread) =>
     chip === 'all' || (t.kind === 'admin' ? personIn(known.find(c => c.id === chip), t.members[0]) : t.classId === chip);
 
-  type Item = { key: string; at: number; node: React.ReactNode };
+  // `empty`: nobody wrote there yet — such chats go under the ones with messages
+  type Item = { key: string; at: number; empty: boolean; node: React.ReactNode };
   const items: Item[] = [];
 
   if (!overview) {
@@ -178,6 +180,7 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       items.push({
         key: id,
         at: last?.at?.getTime() ?? 0,
+        empty: !last,
         node: (
           <Row
             key={id}
@@ -202,6 +205,7 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       items.push({
         key: t.id,
         at: (t.lastAt || t.createdAt)?.getTime() ?? 0,
+        empty: !t.lastText,
         node: (
           <Row
             key={t.id}
@@ -216,7 +220,7 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         ),
       });
     }
-    items.sort((a, b) => b.at - a.at);
+    items.sort((a, b) => Number(a.empty) - Number(b.empty) || b.at - a.at);
   }
 
   // ---- the superadmin's look through every chat --------------------------------------------------------------
@@ -295,7 +299,7 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       {/* the school's one page bar; on a phone with a chat open the chat's own head takes its place */}
       <div className={`${open ? 'hidden lg:block' : ''} mb-3`}>
         <PageBar
-          title="შეტყობინებები"
+          title="წერილები"
           onBack={handleGoBack}
           right={isSuperAdmin && (
             <button
@@ -303,11 +307,12 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
               onClick={() => setOverview(v => !v)}
               aria-pressed={overview}
               title="სკოლის ყველა პირადი ჩათი — მხოლოდ სანახავად"
-              className={`h-9 px-3.5 shrink-0 rounded-full text-sm font-bold inline-flex items-center gap-1.5 cursor-pointer active:scale-95 transition ${
+              aria-label="ყველა ჩათი"
+              className={`h-9 min-w-9 px-0 min-[380px]:px-3.5 shrink-0 rounded-full text-sm font-bold inline-flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition ${
                 overview ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white/80 ring-1 ring-[#e8dcc8] text-[#7a2028] hover:bg-white'
               }`}
             >
-              <Eye className="w-4 h-4" /> ყველა ჩათი
+              <Eye className="w-4 h-4" /> <span className="hidden min-[380px]:inline">ყველა ჩათი</span>
             </button>
           )}
         />
@@ -355,7 +360,9 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             )}
           </div>
 
-          <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-1.5 pb-3">
+          {/* scrolls inside only on a computer: on a phone a box that does not scroll but holds the page's scroll
+              (overscroll-contain) stops the finger — newer Chrome (144+) does that, and the list „got stuck“ */}
+          <div className="flex-1 min-h-0 lg:overflow-y-auto lg:overscroll-contain px-1.5 pb-3">
             {err && <p className="px-2.5 pt-3 text-sm text-[#a02c2c]">{err}</p>}
             {busyList && items.length === 0 && overviewRows.length === 0 ? (
               <div className="py-10 flex justify-center text-[#b3a594]"><Loader2 className="w-6 h-6 animate-spin" /></div>
