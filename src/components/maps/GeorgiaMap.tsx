@@ -18,7 +18,6 @@ import { RegionPuzzleMap, RegionLocator } from './RegionPuzzleMap';
 import folkCentreLogo from '../../assets/images/folk-centre-logo.png';
 import { SongPage, TakePlayer, openSongPage, songTakes } from './SongPage';
 import { SongAlbumPage } from './SongAlbumPage';
-import { CentreAlbums, useShownAlbums } from './CentreAlbums';
 import { AddToListButton } from '../ui/AddToListButton';
 import { useAuth, useNavigation } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
@@ -47,7 +46,7 @@ interface GeorgiaMapProps {
 // „ხალხური“ (2026-11-09, the user: „სიმღერა საკრავებს გადაარქვი და დააწერე ხალხური … მთქმელის ინტეგრაცია … ვიდეოები … როგორც
 // სიმღერები კუთხეებში … ხალხურის გვერდზე რომ შეხვალ იქნება რუკა და რომელ კუთხესაც აირჩევ შიგნით იქნება ჩანართები სიმღერა
 // საკრავი მთქმელი … ეთნოფორი“): one map of the songs; a region opens with horizontal tabs სიმღერა · საკრავი · მთქმელი ·
-// ეთნოფორი (each by its own switch, an empty one hidden). Under the map: the Centre's albums, „ყველა საკრავი“ and „ეთნოფორი“'s
+// ეთნოფორი (each by its own switch, an empty one hidden). Under the map: „ყველა საკრავი“ and „ეთნოფორი“'s
 // full episodes and films recorded abroad. `mapItem`: „<region>“ = its songs, „<region>~i“ / „~m“ / „~e“ the other tabs, a film
 // adds „/<YouTube id>“; „all-i“ = every instrument, „ep“ = the episodes, „album:<id>“ an album; an old „i:<region>“ still opens.
 export type RegionTab = 'songs' | 'instruments' | 'poets' | 'etno';
@@ -110,7 +109,6 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
   const regionTab: RegionTab = CODE_TAB[code ?? ''] ?? 'songs';
   // an album of the Folklore Centre („album:<Drive folder id>“), opened from the list under the map
   const albumId = head.startsWith('album:') ? head.slice(6) : null;
-  const albums = useShownAlbums().length > 0;
   // a song picked in the search: its region's list, with the song open
   const [found, setFound] = useState<string | null>(null);
   useOpenRequest('simghera', id => {
@@ -170,12 +168,11 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
         />
       ) : (
         <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
-          <CentreBanner />
           {searchOpen && (
             <SongSearchField
               value={query}
               onChange={setQuery}
-              placeholder={albums ? 'სიმღერა, შემსრულებელი ან ალბომი' : member ? 'სიმღერა ან შემსრულებელი' : 'სიმღერის ძებნა'}
+              placeholder={member ? 'სიმღერა ან შემსრულებელი' : 'სიმღერის ძებნა'}
             />
           )}
           {results ? (
@@ -188,7 +185,6 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
                 onToggleSong={onToggleSong}
                 empty="ასეთი სიმღერა ვერ მოიძებნა"
               />
-              {albums && <CentreAlbums query={query} />}
             </>
           ) : (
             <>
@@ -196,12 +192,12 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
                 onSelect={r => openMapItem(r.id)}
                 count={id => songsInRegion(id, showOwnerOnly).length}
                 countLabel={n => `${n} სიმღერა`}
+                noCounts
                 title="ხალხური"
                 // the sorting shelf „დასაზუსტებელი“ is for those who move recordings (members find its songs by search)
                 extraRegions={FOLK_EXTRA_REGIONS.filter(r => r.id !== 'unsure' || isOwner || isSuperAdmin)}
               />
               <MoreRows instruments={instrumentsOpen} videos={videosOpen} onOpen={id => { triggerHaptic(10); openMapItem(id); }} />
-              {albums && <CentreAlbums />}
             </>
           )}
         </div>
@@ -309,14 +305,18 @@ const KhalkhuriRegion: React.FC<KhalkhuriRegionProps> = ({ region, tab, onTab, o
       ) : shown === 'etno' ? (
         <Suspense fallback={waiting}><EtnoRegionFilms regionId={region.id} {...films} /></Suspense>
       ) : (
-        <RegionPlaylist bare region={region} {...songsProps} />
+        <>
+          <CentreBanner />
+          <RegionPlaylist bare region={region} {...songsProps} />
+        </>
       )}
     </div>
   );
 };
 
 // The Folklore Centre's mark over the songs map: the recordings here are theirs (the user's request, 2026-11-05).
-// Only on the map, not inside a region.
+// Since 2026-11-09 (the user: „აქედან მოხსენი და სიმღერების ჩანართში დაამატე შიგნით კუთხეებს“) it heads a region's
+// „სიმღერა“ tab, not the map.
 // Compact since 2026-11-08 (the user: „კომპაქტურად და მარტო სიმღერის ღილაკზე ჩანდეს“): one quiet line.
 const CentreBanner: React.FC = () => (
   <div className="flex items-center gap-2.5 px-1">

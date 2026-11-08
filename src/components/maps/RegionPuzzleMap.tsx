@@ -9,6 +9,8 @@ interface RegionPuzzleMapProps {
   onSelect: (region: FolkRegion) => void;
   count: (id: FolkRegionId) => number;
   countLabel: (n: number) => string; // "3 ავტორი"
+  /** the cards show only the names (the songs map, 2026-11-09: „სიმღერის რაოდენობები … მოხსენი“) */
+  noCounts?: boolean;
   regionName?: (region: FolkRegion) => string; // e.g. Tbilisi instead of "ქალაქური"
   title?: string; // written along the northern border
   extraRegions?: FolkRegion[]; // lands outside the map (ლაზეთი): cards after the map's regions
@@ -16,7 +18,7 @@ interface RegionPuzzleMapProps {
 
 const { width, height } = GEORGIA_MAP_SIZE;
 
-export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, count, countLabel, regionName = r => r.nameGe, title, extraRegions = [] }) => {
+export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, count, countLabel, noCounts, regionName = r => r.nameGe, title, extraRegions = [] }) => {
   const [hovered, setHovered] = useState<FolkRegionId | null>(null);
   const lit = FOLK_REGIONS.find(r => r.id === hovered);
   const tbilisi = GEORGIA_MAP_SHAPES.kalakuri.label;
@@ -109,9 +111,11 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
               <span className="w-4 h-4 shrink-0 rounded-md border border-black/10" style={{ background: r.color }} />
               <span className="flex-1 min-w-0 flex flex-col">
                 <span className="text-[13px] sm:text-sm font-bold text-[#2a2017] leading-tight break-words">{regionName(r)}</span>
-                <span className={`text-[11px] font-semibold ${n ? 'text-amber-700' : 'text-[#a39482]'}`}>
-                  {n ? countLabel(n) : 'ჯერ არ არის'}
-                </span>
+                {!noCounts && (
+                  <span className={`text-[11px] font-semibold ${n ? 'text-amber-700' : 'text-[#a39482]'}`}>
+                    {n ? countLabel(n) : 'ჯერ არ არის'}
+                  </span>
+                )}
               </span>
             </button>
           );

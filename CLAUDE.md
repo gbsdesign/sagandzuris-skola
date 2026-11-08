@@ -311,7 +311,11 @@
 - **„ხალხური“ (2026-11-09**, the user: „სიმღერა საკრავებს გადაარქვი და დააწერე ხალხური … მთქმელის ინტეგრაცია … ვიდეოები …
   კუთხეებში … mp3 ჩამოტვირთვა და ოფლაინ პატარა ღილაკი“, answers „მთქმელი მთავარზე ჯერ დარჩეს · ჩანართში მთქმელი · ჩვენი ჩანაწერიდან ·
   მონასტრები ეკლესია-მონასტრებში, ეთნოფორის ჩანართი“): page `simghera` (and the old `sakravebi` → „ყველა საკრავი“) is titled
-  „ხალხური“, the vine's label too. `GeorgiaMap` = one songs map (no top tabs); a region (`KhalkhuriRegion`) has horizontal tabs
+  „ხალხური“, the vine's label too. **2026-11-09** (the user: „ფოლკლორის ცენტრის ჩანაწერები მოხსენი … სიმღერების ჩანართში … რაოდენობები მოხსენი … ალბომები
+  ბიბლიოთეკაში ჩამოსაშლელად“): the Centre's line `CentreBanner` heads a region's „სიმღერა“ tab (not the map); the map's cards show
+  names only (`RegionPuzzleMap noCounts`); the Centre's song albums left the map — the library's shelf folds them under „ჩანაწერები“
+  (`library/FolkAlbums.tsx`, `CentreAlbums bare onOpen`), an album = the library's `falbum:<id>` (`SongAlbumPage` + `SongPage`); an old
+  „album:<id>“ step still opens on the songs page. `GeorgiaMap` = one songs map (no top tabs); a region (`KhalkhuriRegion`) has horizontal tabs
   სიმღერა · საკრავი · მთქმელი · ეთნოფორი (`Tabs stack cols={n}`; a closed or empty one hidden, a locked one asks to sign in) —
   `mapItem` „<region>“, „<region>~i|~m|~e“, a film „/<yt id>“, an old „i:<region>“ still opens. Under the map rows (`MoreRows`):
   „ყველა საკრავი“ (`all-i`), „ეთნოფორი“'s full episodes (`ep`), „უცხოეთში ჩაწერილი“ (`abroad~e`), then the Centre's albums. Parts
