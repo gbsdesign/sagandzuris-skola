@@ -417,6 +417,10 @@
   only, no site restriction. Churches are in the one search (group „ტაძრები“, `churchItem` in
   `searchIndex.ts`; `SearchPanel` loads the list once two letters are typed — `useChurchItems`; `requestOpen('churches', id)` →
   the page's `useOpenRequest` opens `all/<id>`).
+  **2026-11-09** (the user: „სამაგრის ადგილას ლუპა ჩასვი … ასარჩევი პანელი გააუქმე … უცხოეთის მონასტრები ჩამოსაშლელი“): the bar's 📌
+  is a round 🔍 (`ChurchSearchButton`, `maps/songSearch.tsx` `makeFold`); the search fields (first screen, a region, the feasts) show
+  only while it is open (`useFoldedQuery`, closing clears them); „უცხოეთის მონასტრები“ unfolds its films in place
+  (`sg-churches-abroad`, a film = `va/<id>`; the old `v:abroad` still opens).
 - **Prayers** (`data/prayers.ts`, `public/prayers/`, `public/bible/`), psalter kathismas, 73 akathists,
   commemoration name lists (`utils/commemoration.ts`), prayer reminders via Web Push Worker
   `sagandzuri-reminders` (`worker/reminders/`; push works only on the deployed site).
