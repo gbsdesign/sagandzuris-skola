@@ -97,6 +97,13 @@ const readKey = (t: DirectThread, uid: string) => (isStaffSide(t, uid) ? 'staff'
 export const seenByOther = (t: DirectThread, uid: string): Date | null =>
   t.kind === 'admin' ? (isStaffSide(t, uid) ? t.read[t.members[0]] : t.read.staff) ?? null : t.read[otherOf(t, uid).uid] ?? null;
 
+/** when uid's side last opened the chat (null: never) */
+export const readSince = (t: DirectThread, uid: string): Date | null => t.read[readKey(t, uid)] ?? null;
+
+/** the newest message is uid's side's own (in an administration chat, any admin's for the staff) */
+export const lastIsMine = (t: DirectThread, uid: string) =>
+  !!t.lastAt && !!t.lastBy && (isStaffSide(t, uid) ? t.lastBy !== t.members[0] : t.lastBy === uid);
+
 /** the other side wrote after uid's side last opened the chat */
 export const isUnread = (t: DirectThread, uid: string) => {
   if (!t.lastAt) return false;

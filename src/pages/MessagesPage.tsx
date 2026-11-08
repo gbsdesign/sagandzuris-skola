@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { ChevronRight, Eye, Loader2, MessageCircle, Search, ShieldCheck, X } from 'lucide-react';
+import { CheckCheck, ChevronDown, ChevronRight, Eye, EyeOff, Loader2, MessageCircle, Pin, Search, ShieldCheck, X } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
 import { useMyClasses, useTeachingClasses, useAllClasses } from '../hooks/useClasses';
 import type { SchoolClass } from '../hooks/useClasses';
@@ -7,11 +7,17 @@ import { useKidsMode } from '../hooks/useAccess';
 import {
   useInbox, useAllThreads, useTeacherCards, useKidsFlags, syncKidsFlag, contactGroups, bestContacts, threadIdFor,
   openThread, openPeerThread, openAdminThread, otherOf, isUnread, isStaffSide, adminId, ADMIN_NAME,
+  readSince, lastIsMine, seenByOther, markRead, dmBase,
   Contact, DirectThread, Person,
 } from '../hooks/useDirectChat';
-import { useClassLasts, useChatSeen, isClassUnread } from '../hooks/useClassChat';
+import { useClassLasts, useChatSeen, isClassUnread, markChatSeen, classChatBase } from '../hooks/useClassChat';
+import { useChatListPrefs, isHidden, PIN_MAX } from '../hooks/useChatListPrefs';
+import { useUnreadCounts, CountAsk } from '../hooks/useUnreadCounts';
+import { useLongPress } from '../hooks/useLongPress';
+import { SwipeRow, SwipeSide } from '../components/ui/SwipeRow';
+import { ClassPicker, ChatMenu, ListTip, Tick, NewCount } from './messages/ListParts';
 import { Avatar, hhmm, dayLabel } from '../components/classes/ChatPanel';
-import { PageBar } from '../components/ui/kit';
+import { PageBar, offerUndo } from '../components/ui/kit';
 import { ClassLogo } from '../components/classes/ClassLogo';
 import { ClassChat } from '../components/classes/ClassChat';
 import { DirectChat, AdminAvatar, PaneTitle } from './DirectChatPage';
@@ -45,14 +51,25 @@ const useFitHeight = (ref: React.RefObject<HTMLElement | null>, dep: unknown) =>
 const Row: React.FC<{
   face: React.ReactNode; name: React.ReactNode; sub: React.ReactNode; time?: string;
   unread?: boolean; active?: boolean; busy?: boolean; onClick: () => void;
-}> = ({ face, name, sub, time, unread, active, busy, onClick }) => (
-  <li>
+  /** how many new messages wait (a dot while not counted) */
+  count?: number;
+  /** my last message: ✓ sent, ✓✓ seen */
+  tick?: React.ReactNode;
+  pinned?: boolean;
+  /** a long press or a right click: the chat's menu */
+  onMenu?: () => void;
+  /** what a swipe aside does */
+  left?: SwipeSide; right?: SwipeSide;
+}> = ({ face, name, sub, time, unread, active, busy, onClick, count, tick, pinned, onMenu, left, right }) => {
+  const press = useLongPress(() => onMenu?.());
+  const button = (
     <button
       type="button"
+      {...(onMenu ? press : {})}
       onClick={onClick}
       disabled={busy}
       aria-current={active || undefined}
-      className={`w-full min-h-[60px] flex items-center gap-3 px-2.5 py-2 rounded-2xl text-left cursor-pointer transition active:scale-[0.99] disabled:opacity-60 ${
+      className={`w-full min-h-[60px] flex items-center gap-3 px-2.5 py-2 rounded-2xl text-left cursor-pointer transition active:scale-[0.99] disabled:opacity-60 select-none [-webkit-touch-callout:none] ${
         active ? 'bg-[#7a2028]/[0.08]' : 'hover:bg-[#7a2028]/[0.04]'
       }`}
     >
@@ -60,17 +77,23 @@ const Row: React.FC<{
       <span className="flex-1 min-w-0">
         <span className="flex items-baseline justify-between gap-2">
           <span className={`min-w-0 truncate text-[15px] text-[#2a2017] ${unread ? 'font-bold' : 'font-semibold'}`}>{name}</span>
-          {time && <span className={`shrink-0 text-xs tabular-nums ${unread ? 'font-bold text-[#7a2028]' : 'text-[#a89886]'}`}>{time}</span>}
+          <span className="shrink-0 inline-flex items-center gap-1">
+            {pinned && <Pin className="w-3.5 h-3.5 rotate-45 text-[#a89886]" aria-label="მიმაგრებული" />}
+            {time && <span className={`text-xs tabular-nums ${unread ? 'font-bold text-[#7a2028]' : 'text-[#a89886]'}`}>{time}</span>}
+          </span>
         </span>
         <span className="flex items-center justify-between gap-2 mt-0.5">
-          <span className={`truncate text-[13px] ${unread ? 'text-[#4a3426] font-semibold' : 'text-[#8a7a6a]'}`}>{sub}</span>
-          {busy ? <Loader2 className="w-4 h-4 shrink-0 animate-spin text-[#a89886]" />
-            : unread && <span className="w-2.5 h-2.5 shrink-0 rounded-full bg-[#c62828]" aria-label="წაუკითხავი" />}
+          <span className="min-w-0 inline-flex items-center gap-1">
+            {tick}
+            <span className={`truncate text-[13px] ${unread ? 'text-[#4a3426] font-semibold' : 'text-[#8a7a6a]'}`}>{sub}</span>
+          </span>
+          {busy ? <Loader2 className="w-4 h-4 shrink-0 animate-spin text-[#a89886]" /> : unread && <NewCount n={count} />}
         </span>
       </span>
     </button>
-  </li>
-);
+  );
+  return <li>{left || right ? <SwipeRow left={left} right={right} faceBg="bg-[#fffdf9]">{button}</SwipeRow> : button}</li>;
+};
 
 const Heading: React.FC<{ children: React.ReactNode; action?: React.ReactNode }> = ({ children, action }) => (
   <div className="flex items-center justify-between gap-2 px-2.5 pt-4 pb-1">
@@ -123,6 +146,23 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const shell = useRef<HTMLDivElement>(null);
   const fit = useFitHeight(shell, open);
 
+  // the list's own order, the same on every device of mine: pinned on top, some taken off (back on a new message)
+  const { prefs, pin, unpin, hide, unhide } = useChatListPrefs(uid);
+  const [menuKey, setMenuKey] = useState<string | null>(null);
+  const [showHidden, setShowHidden] = useState(false);
+  // how many new messages wait in each unread chat
+  const classUnread = (c: SchoolClass) => isClassUnread(lasts[c.id], seen[c.id], uid) && open !== CLASS_PREFIX + c.id;
+  const dmUnread = (t: DirectThread) => isUnread(t, uid) && open !== t.id;
+  const asks: CountAsk[] = overview ? [] : [
+    ...classRows.flatMap(c => {
+      const at = lasts[c.id]?.at;
+      return classUnread(c) && at ? [{ id: CLASS_PREFIX + c.id, base: classChatBase(c.id), since: seen[c.id] ?? 0, upTo: at.getTime() }] : [];
+    }),
+    ...threads.flatMap(t => (dmUnread(t) && t.lastAt
+      ? [{ id: t.id, base: dmBase(t.id), since: readSince(t, uid)?.getTime() ?? 0, upTo: t.lastAt.getTime() }] : [])),
+  ];
+  const counts = useUnreadCounts(asks);
+
   if (!user) return null;
 
   const norm = (s: string) => s.toLocaleLowerCase('ka');
@@ -167,20 +207,61 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const threadInChip = (t: DirectThread) =>
     chip === 'all' || (t.kind === 'admin' ? personIn(known.find(c => c.id === chip), t.members[0]) : t.classId === chip);
 
-  // `empty`: nobody wrote there yet — such chats go under the ones with messages
-  type Item = { key: string; at: number; empty: boolean; node: React.ReactNode };
+  // ---- what the menu and the swipes do ---------------------------------------------------------------------
+  const readIt = (key: string) => {
+    if (key.startsWith(CLASS_PREFIX)) {
+      const cid = key.slice(CLASS_PREFIX.length);
+      const at = lasts[cid]?.at?.getTime();
+      if (at) markChatSeen(uid, cid, at);
+    } else {
+      const t = threads.find(x => x.id === key);
+      if (t) markRead(t, uid).catch(e => console.warn('dm read: ', e?.code || e));
+    }
+  };
+  const hideIt = (key: string, lastMs: number) => {
+    hide(key, lastMs);
+    offerUndo('ჩათი დაიმალა', () => unhide(key));
+  };
+  const pinIt = (key: string, pinned: boolean) => {
+    setErr('');
+    if (pinned) unpin(key);
+    else if (!pin(key)) setErr(`${PIN_MAX}-ზე მეტს ვერ მიამაგრებ — ჯერ ერთი მოხსენი.`);
+  };
+  const hideSide = (key: string, lastMs: number): SwipeSide => ({
+    label: 'დამალვა', icon: <EyeOff className="w-5 h-5" />, tone: 'bg-[#6b5a4a] text-white', leave: true, run: () => hideIt(key, lastMs),
+  });
+  const readSide = (key: string): SwipeSide => ({
+    label: 'წაკითხულად', icon: <CheckCheck className="w-5 h-5" />, tone: 'bg-[#2e7d5b] text-white', run: () => readIt(key),
+  });
+
+  // one chat of the list. `empty`: nobody wrote there yet — such chats go under the ones with messages
+  type Item = {
+    key: string; name: string; at: number; lastMs: number; empty: boolean;
+    pinned: boolean; hidden: boolean; unread: boolean; node: React.ReactNode;
+  };
   const items: Item[] = [];
+  const rowProps = (key: string, lastMs: number, pinned: boolean, hidden: boolean, unread: boolean) => ({
+    pinned,
+    unread,
+    count: counts[key],
+    active: open === key,
+    onClick: () => { if (hidden) unhide(key); go(key); },
+    onMenu: () => setMenuKey(key),
+    left: hidden ? undefined : hideSide(key, lastMs),
+    right: unread ? readSide(key) : undefined,
+  });
 
   if (!overview) {
     for (const c of classRows) {
       if (!inChip(c.id) || !matches(c.name)) continue;
       const last = lasts[c.id];
       const id = CLASS_PREFIX + c.id;
-      const unread = isClassUnread(last, seen[c.id], uid) && open !== id;
+      const unread = classUnread(c);
+      const lastMs = last?.at?.getTime() ?? 0;
+      const pinned = prefs.pins.includes(id);
+      const hidden = isHidden(prefs, id, lastMs);
       items.push({
-        key: id,
-        at: last?.at?.getTime() ?? 0,
-        empty: !last,
+        key: id, name: c.name, at: lastMs, lastMs, empty: !last, pinned, hidden, unread,
         node: (
           <Row
             key={id}
@@ -188,9 +269,7 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             name={c.name}
             sub={last ? `${last.uid === uid ? 'შენ: ' : ''}${last.text}` : `კლასის ჩათი · ${c.members.length} წევრი`}
             time={when(last?.at ?? null)}
-            unread={unread}
-            active={open === id}
-            onClick={() => go(id)}
+            {...rowProps(id, lastMs, pinned, hidden, unread)}
           />
         ),
       });
@@ -202,10 +281,13 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       const name = o.name || 'უსახელო';
       if (!matches(name, classOf(t)?.name || '')) continue;
       const who = t.lastBy === uid ? 'შენ: ' : staff && t.lastBy && t.lastBy !== t.members[0] ? 'ადმინი: ' : '';
+      const lastMs = t.lastAt?.getTime() ?? 0;
+      const unread = dmUnread(t);
+      const pinned = prefs.pins.includes(t.id);
+      const hidden = isHidden(prefs, t.id, lastMs);
+      const seenAt = seenByOther(t, uid);
       items.push({
-        key: t.id,
-        at: (t.lastAt || t.createdAt)?.getTime() ?? 0,
-        empty: !t.lastText,
+        key: t.id, name, at: (t.lastAt || t.createdAt)?.getTime() ?? 0, lastMs, empty: !t.lastText, pinned, hidden, unread,
         node: (
           <Row
             key={t.id}
@@ -213,15 +295,25 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             name={staff ? <span className="inline-flex items-center gap-1.5 max-w-full"><ShieldCheck className="w-3.5 h-3.5 shrink-0 text-[#7a2028]" aria-label="ადმინისტრაცია" /><span className="truncate">{name}</span></span> : name}
             sub={t.lastText ? `${who}${t.lastText}` : 'ჯერ შეტყობინება არ არის'}
             time={when(t.lastAt)}
-            unread={isUnread(t, uid)}
-            active={open === t.id}
-            onClick={() => go(t.id)}
+            tick={t.lastText && lastIsMine(t, uid) ? <Tick seen={!!seenAt && !!t.lastAt && seenAt >= t.lastAt} /> : null}
+            {...rowProps(t.id, lastMs, pinned, hidden, unread)}
           />
         ),
       });
     }
-    items.sort((a, b) => Number(a.empty) - Number(b.empty) || b.at - a.at);
+    // pinned first (the newest pin on top), then the chats with messages, newest first, then the empty ones
+    const pinRank = (i: Item) => (i.pinned ? prefs.pins.indexOf(i.key) : PIN_MAX);
+    items.sort((a, b) => pinRank(a) - pinRank(b) || Number(a.empty) - Number(b.empty) || b.at - a.at);
   }
+  // a hidden chat stays out of the list (a search still finds it); they wait in a fold at the bottom
+  const shownItems = items.filter(i => !i.hidden || needle);
+  const hiddenItems = needle ? [] : items.filter(i => i.hidden);
+  const menuItem = menuKey ? items.find(i => i.key === menuKey) ?? null : null;
+  // unread chats a class, for the class picker
+  const unreadIn = (cid: string) => {
+    const c = known.find(x => x.id === cid);
+    return (c && classRows.includes(c) && classUnread(c) ? 1 : 0) + threads.filter(t => t.classId === cid && dmUnread(t)).length;
+  };
 
   // ---- the superadmin's look through every chat --------------------------------------------------------------
   const overviewRows = overview
@@ -341,23 +433,7 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
                 </button>
               )}
             </label>
-            {chips.length > 0 && (
-              <div className="flex flex-wrap gap-1.5" role="group" aria-label="კლასი">
-                {[{ id: 'all', name: 'ყველა' }, ...chips].map(c => (
-                  <button
-                    key={c.id}
-                    type="button"
-                    onClick={() => setChip(c.id)}
-                    aria-pressed={chip === c.id}
-                    className={`h-9 max-w-full px-3.5 rounded-full text-sm font-semibold truncate cursor-pointer active:scale-95 transition ${
-                      chip === c.id ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/35'
-                    }`}
-                  >
-                    {c.name}
-                  </button>
-                ))}
-              </div>
-            )}
+            {chips.length > 0 && <ClassPicker classes={chips} chip={chip} onPick={setChip} unreadIn={unreadIn} />}
           </div>
 
           {/* scrolls inside only on a computer: on a phone a box that does not scroll but holds the page's scroll
@@ -373,14 +449,15 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
               </>
             ) : (
               <>
-                {items.length > 0 && (
+                {shownItems.length > 0 && (
                   <>
                     <Heading>ჩათები</Heading>
-                    <ul className="space-y-0.5">{items.map(i => i.node)}</ul>
+                    <ListTip />
+                    <ul className="space-y-0.5 mt-1">{shownItems.map(i => i.node)}</ul>
                   </>
                 )}
                 {(showAdminRow || contactRows.length > 0) && (
-                  <Heading>{items.length > 0 ? 'ახალი საუბარი' : 'ვის მისწეროთ?'}</Heading>
+                  <Heading>{shownItems.length > 0 ? 'ახალი საუბარი' : 'ვის მისწეროთ?'}</Heading>
                 )}
                 {showAdminRow && (
                   <ul>
@@ -439,6 +516,20 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
                     )}
                   </section>
                 ))}
+                {hiddenItems.length > 0 && (
+                  <div className="pt-4">
+                    <button
+                      type="button"
+                      onClick={() => setShowHidden(v => !v)}
+                      aria-expanded={showHidden}
+                      className="ml-1 h-9 px-3 rounded-full text-sm font-semibold text-[#8a7a6a] hover:bg-[#7a2028]/[0.05] inline-flex items-center gap-1.5 cursor-pointer active:scale-95"
+                    >
+                      <EyeOff className="w-4 h-4" /> დამალული ჩათები · {hiddenItems.length}
+                      <ChevronDown className={`w-4 h-4 transition-transform ${showHidden ? 'rotate-180' : ''}`} />
+                    </button>
+                    {showHidden && <ul className="space-y-0.5 mt-1">{hiddenItems.map(i => i.node)}</ul>}
+                  </div>
+                )}
                 {nothing && (
                   <p className="px-4 py-10 text-center text-sm text-[#8a7a6a]">
                     {needle ? 'ვერავინ მოიძებნა.' : 'ჯერ არცერთ კლასში არ ხართ. როცა მასწავლებელი კლასში დაგამატებთ, აქ გამოჩნდებიან.'}
@@ -453,6 +544,17 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
           {pane}
         </main>
       </div>
+
+      <ChatMenu
+        chat={menuItem && { id: menuItem.key, name: menuItem.name, pinned: menuItem.pinned, unread: menuItem.unread, hidden: menuItem.hidden }}
+        onClose={() => setMenuKey(null)}
+        onPin={() => { if (menuItem) pinIt(menuItem.key, menuItem.pinned); setMenuKey(null); }}
+        onRead={() => { if (menuItem) readIt(menuItem.key); setMenuKey(null); }}
+        onHide={() => {
+          if (menuItem) { if (menuItem.hidden) unhide(menuItem.key); else hideIt(menuItem.key, menuItem.lastMs); }
+          setMenuKey(null);
+        }}
+      />
     </div>
   );
 };
