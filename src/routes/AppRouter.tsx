@@ -7,6 +7,7 @@ import { ChurchMapButton, ChurchSearchButton, PrayerSearchButton, SongSearchButt
 import { OfflineButton } from '../components/offline/OfflineButton';
 import { ProgramButton } from '../pages/galoba/LiturgyBits';
 import { FavButton } from '../components/prayers/FavPrayers';
+import { CommemorationButton } from '../components/prayers/CommemorationButton';
 import { ProfileActions } from '../components/views/ProfileActions';
 import { KhutsuriSwitch } from '../components/views/KhutsuriSwitch';
 import { WidgetLinkCard } from '../components/app/WidgetLinkCard';
@@ -302,7 +303,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
               {/* the songs' page: 🔍 in place of 📌 (the user, 2026-11-08) — it unfolds the songs' search */}
               {currentPage === 'simghera' || currentPage === 'sakravebi' ? <SongSearchButton />
                 : currentPage === 'churches' ? <><ChurchMapButton /><ChurchSearchButton /></>
-                : currentPage === 'biblioteka' && (mapItem ?? '').split(':')[0] === 'prayers' ? <PrayerSearchButton />
+                : currentPage === 'biblioteka' && (mapItem ?? '').split(':')[0] === 'prayers' ? <><PrayerSearchButton /><CommemorationButton /></>
                 : pin && <PinButton id={pin} />}
             </> : undefined}
           className="w-full mb-4"
