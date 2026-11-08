@@ -31,22 +31,23 @@ export const GrapeNav: React.FC = () => {
     // under the grape clusters
     // „ხალხური“ (2026-11-09, the user: „სიმღერა საკრავებს გადაარქვი და დააწერე ხალხური“): songs, instruments, poets and
     // „ეთნოფორი“ by region; it keeps the spot of the old two-line label
-    { id: 'simghera', label: 'ხალხური', x: 18, y: 37, nx: 18, ny: 45, go: () => navigateTo('simghera'), mid: true },
+    // 2026-11-09 (the user: „მედავითნეობა მთავარიდან ჩახსენი, მის ადგილას აიტანე ხალხური, ხალხურის ადგილას აიტანე ლოცვანი“):
+    // „ხალხური“ hangs on მედავითნეობა's old leaf, ლოცვანი on ხალხური's old spot (a tenth smaller than before), the qvevri's
+    // top stays empty; მედავითნეობა lives inside „ღვთისმსახურება“ (the chant page's „გალობა · მედავითნე“ switch)
+    { id: 'simghera', label: 'ხალხური', x: 35, y: 13, nx: 29, ny: 14, go: () => navigateTo('simghera'), mid: true },
     // chant, the main path, stands biggest at the heart of the vine
-    { id: 'galoba', label: 'გალობა', x: 57, y: 31, nx: 56, ny: 33, go: () => navigateTo('galoba'), hero: true },
+    { id: 'galoba', label: 'ღვთისმსახურება', x: 57, y: 31, nx: 56, ny: 33, go: () => navigateTo('galoba'), hero: true },
     // „მთქმელი“ left the vine on 2026-11-09 (the user: „მთავარიდან მთქმელის ღილაკ წაშალე“): its poets live in „ხალხური“'s
     // regions, its films in „სახალისო“, St Paisios on the library's „ვიდეოთეკა“
     // „ლოცვანი“ (2026-11-09, the user: „ლოცვანი ზემოდან მოხსენი მთქმელის ადგილას ჩასვი მოზრდილად თითქმის გალობის ხელა“):
     // the header's chip left; the prayer book (the library's, under its switch) opens in one step in „მთქმელი“'s old spot
-    { id: 'biblioteka', label: 'ლოცვანი', x: 50, y: 58, nx: 51, ny: 62, go: () => { navigateTo('biblioteka'); openMapItem('prayers'); }, prayer: true },
+    { id: 'biblioteka', label: 'ლოცვანი', x: 19, y: 44, nx: 20, ny: 51, go: () => { navigateTo('biblioteka'); openMapItem('prayers'); }, prayer: true },
     // on the leaves
-    // მედავითნეობა — the reader's course (not the psalter group)
-    { id: 'medavitneobaTopic', label: 'მედავით­ნეობა', x: 35, y: 13, nx: 29, ny: 14, go: () => navigateTo('medavitneoba') },
     // signed in: habits fold open on the path page; guests get the sign-in prompt
     { id: 'chvevebi', label: 'ჩვევები', x: 62, y: 8, nx: 66, ny: 8, go: () => (user ? (openPathPanel('habits'), navigateTo('gz')) : openModal('chvevebi')) },
     // 2026-11-09 (the user: „თამაშების ადგილას გადაიტანე ეკლესია მონასტრები … დააწერე ტაძრები … ცარიელ ადგილას ჩამოიტანე
     // თამაშები და დააწერე სახალისო“): the churches took the games' leaf, the games hang right of the trunk under „გალობა“
-    { id: 'eklesiebi', label: 'ტაძრები', x: 86, y: 28, nx: 83, ny: 20, go: () => navigateTo('churches') },
+    { id: 'eklesiebi', label: 'ტაძრები', x: 84, y: 19, nx: 83, ny: 20, go: () => navigateTo('churches') },
     { id: 'tamashebi', label: 'სახალისო', x: 82, y: 47, nx: 82, ny: 51, go: () => navigateTo('games'), mid: true },
     // „გაიცანი წინაპრები“ is a book of the library since 2026-11-09 (the user: „წიგნად დაამატე ბიბლიოთეკაში და მთავარიდან მოხსენი“)
   ];
@@ -100,10 +101,10 @@ export const GrapeNav: React.FC = () => {
                 }`}
               >
                 <span
-                  className={`font-serif-ge font-bold leading-tight hyphens-manual ${s.wide ? 'whitespace-pre-line' : 'max-w-[6.5em]'} ${
+                  className={`font-serif-ge font-bold leading-tight hyphens-manual ${s.wide ? 'whitespace-pre-line' : s.hero ? 'whitespace-nowrap' : 'max-w-[6.5em]'} ${
                     // the smallest phones (~320px wide) have no room left: there only, a touch smaller
                     // the two-line label: on the smallest phones a touch smaller still, or it would leave the screen or touch „აბიტურიენტს“
-                    s.hero ? 'text-[clamp(20px,6cqw,30px)] @max-[300px]:text-[18px] tracking-wide' : s.prayer ? 'text-[clamp(18px,5.2cqw,26px)] @max-[300px]:text-[16px] tracking-wide' : s.mid ? 'text-[clamp(15px,4.3cqw,20px)] @max-[300px]:text-[13px]' : s.wide ? 'text-[clamp(14px,3.8cqw,18px)] @max-[300px]:text-[12px]' : s.big ? 'text-[clamp(14px,3.8cqw,18px)] @max-[300px]:text-[13px]' : 'text-[clamp(12px,3.2cqw,15px)] @max-[300px]:text-[11px]'
+                    s.hero ? 'text-[clamp(18px,5.4cqw,28px)] @max-[300px]:text-[16px] tracking-wide' : s.prayer ? 'text-[clamp(16px,4.7cqw,23.5px)] @max-[300px]:text-[14px] tracking-wide' : s.mid ? 'text-[clamp(15px,4.3cqw,20px)] @max-[300px]:text-[13px]' : s.wide ? 'text-[clamp(14px,3.8cqw,18px)] @max-[300px]:text-[12px]' : s.big ? 'text-[clamp(14px,3.8cqw,18px)] @max-[300px]:text-[13px]' : 'text-[clamp(12px,3.2cqw,15px)] @max-[300px]:text-[11px]'
                   }`}
                 >
                   {s.label}

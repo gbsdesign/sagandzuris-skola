@@ -1,7 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Check, ChevronRight, ChevronLeft, Clock, BookOpen, TriangleAlert, ExternalLink, PartyPopper, GraduationCap, Library } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
-import { Bar, Empty, Tabs } from '../components/ui/kit';
+import { Bar, Empty } from '../components/ui/kit';
+import { WorshipSwitch } from './galoba/WorshipSwitch';
 import { WignebiView } from './medavitneoba/Wignebi';
 import { LESSONS, LESSON_SOURCES, lessonById, type Lesson } from '../data/medavitneLessons';
 import { useMedavitneProgress } from '../hooks/useMedavitneProgress';
@@ -12,8 +13,8 @@ import { DayCard } from './medavitneoba/DayCard';
 
 // „მედავითნეობა“: a step-by-step course for the church reader (lessons in data/medavitneLessons.ts).
 // The open lesson is `mapItem` (its id), so the top bar's „←“ and the phone's back first return to the list.
-// Two tabs on top: „გაკვეთილები“ (the course) and „წიგნები“ (the liturgical books, `mapItem` „w…“ — see
-// medavitneoba/Wignebi.tsx). The books show only to admins until the monastery's permission is in hand.
+// Since 2026-11-09 the page is „ღვთისმსახურება“'s „მედავითნე“ side: the books first (`mapItem` none or „w…“ — see
+// medavitneoba/Wignebi.tsx; only admins until the monastery's permission is in hand), the course at „learn“.
 
 const CARD = 'rounded-3xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)]';
 
@@ -193,18 +194,23 @@ const LessonView: React.FC<{ lesson: Lesson; learned: boolean; setLearned: (on: 
   );
 };
 
-type Tab = 'lessons' | 'books';
-const TABS: { id: Tab; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
-  { id: 'lessons', label: 'გაკვეთილები', Icon: GraduationCap },
-  { id: 'books', label: 'წიგნები', Icon: Library },
-];
-
-const TopTabs: React.FC<{ value: Tab }> = ({ value }) => {
+// The reader's side of „ღვთისმსახურება“ (2026-11-09): the switch „გალობა · მედავითნე“ on top, then the course's card
+// „მედავითნეთათვის სასწავლო“ (opens the lessons, `mapItem` „learn“), then the books' shelves at once.
+const LearnCard: React.FC<{ done: string[] }> = ({ done }) => {
   const { openMapItem } = useNavigation();
-  // switching tabs replaces the place, so the phone's back leaves the page from either tab
+  const count = LESSONS.filter(l => done.includes(l.id)).length;
   return (
-    <div className="w-full max-w-2xl mx-auto mb-5 px-1">
-      <Tabs cols={2} items={TABS} value={value} onChange={id => id !== value && openMapItem(id === 'books' ? 'w' : '', true)} />
+    <div className="w-full max-w-2xl mx-auto px-1">
+      <button type="button" onClick={() => openMapItem('learn')}
+        className={`${CARD} w-full p-4 flex items-center gap-3.5 text-left cursor-pointer transition hover:-translate-y-0.5 active:scale-[0.99] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a2028]`}>
+        <span className="w-12 h-12 rounded-2xl bg-[#7a2028] text-[#fbf6ec] flex items-center justify-center shrink-0"><GraduationCap className="w-6 h-6" /></span>
+        <span className="flex-1 min-w-0">
+          <span className="block text-[17px] font-bold leading-snug text-[#2a2017]">მედავითნეთათვის სასწავლო</span>
+          <span className="block mt-1.5"><Bar value={count} max={LESSONS.length} tone={count === LESSONS.length ? 'green' : 'wine'} /></span>
+          <span className="block mt-1 text-[13px] font-semibold tabular-nums text-[#8a7a6a]">{count} / {LESSONS.length} გაკვეთილი</span>
+        </span>
+        <ChevronRight className="w-5 h-5 shrink-0 text-[#7a2028]" />
+      </button>
     </div>
   );
 };
@@ -214,31 +220,25 @@ export const MedavitneobaPage: React.FC = () => {
   const { isAdmin } = useAuth();
   const { done, setLearned, onAccount } = useMedavitneProgress();
 
-  // the books: the shelves carry the tabs, a book's inside doesn't
-  if (mapItem === 'w' || mapItem?.startsWith('w:')) {
-    if (!isAdmin) return (
-      <>
-        <TopTabs value="books" />
+  // the reader's front: the switch, the course's card and the books' shelves (only admins see the books for now)
+  if (!mapItem || mapItem === 'w') return (
+    <div className="flex flex-col gap-4">
+      <WorshipSwitch value="medavitne" />
+      <LearnCard done={done} />
+      {isAdmin ? <WignebiView item="w" /> : (
         <div className="w-full max-w-2xl mx-auto mb-6 px-1">
           <Empty icon={<Library />} title="წიგნები მალე დაემატება" text="ბიბლია, ჟამნი, პარაკლიტონი, დავითნი და სხვა საღვთისმსახურო წიგნები აქ იქნება." />
         </div>
-      </>
-    );
-    return (
-      <>
-        {mapItem === 'w' && <TopTabs value="books" />}
-        <WignebiView item={mapItem} />
-      </>
-    );
-  }
+      )}
+    </div>
+  );
+  // a book's inside
+  if (mapItem.startsWith('w:')) return isAdmin ? <WignebiView item={mapItem} /> : null;
+
+  if (mapItem === 'learn') return <Overview done={done} open={id => openMapItem(id)} onAccount={onAccount} />;
 
   const lesson = mapItem ? lessonById(mapItem) : undefined;
-  if (!lesson) return (
-    <>
-      <TopTabs value="lessons" />
-      <Overview done={done} open={id => openMapItem(id)} onAccount={onAccount} />
-    </>
-  );
+  if (!lesson) return <Overview done={done} open={id => openMapItem(id)} onAccount={onAccount} />;
   const i = LESSONS.indexOf(lesson);
   const next = LESSONS[i + 1];
   return (
