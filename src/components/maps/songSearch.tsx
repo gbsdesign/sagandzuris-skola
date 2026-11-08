@@ -44,6 +44,12 @@ export const setChurchSearchOpen = churches.set;
 export const useChurchSearchOpen = churches.use;
 export const ChurchSearchButton = churches.Button;
 
+// the prayer book's (2026-11-09, the user: „საძიებელის ლუპა გადაიტანე სანიშნის ადგილას და ჩაანაცვლე“)
+const prayers = makeFold('ძებნა ლოცვანში');
+export const setPrayerSearchOpen = prayers.set;
+export const usePrayerSearchOpen = prayers.use;
+export const PrayerSearchButton = prayers.Button;
+
 // the churches' dots map (2026-11-09, the user: „მაღლა აიტანე რუკის ნიშანი მრგვალად ძებნის ღილაკთან … კუთხეები პირდაპირ დატოვე“):
 // filled while the dots map shows in place of the regions
 const churchMap = makeFold('რუკა წერტილებით', MapIcon, 'კუთხეებზე დაბრუნება', false);
