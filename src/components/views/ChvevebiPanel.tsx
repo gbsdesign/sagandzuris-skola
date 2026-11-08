@@ -80,8 +80,8 @@ const HabitsInfo: React.FC = () => (
   </div>
 );
 
-// „დამოუკიდებელი სამუშაო“ as one of the habits (2026-11-08, the user: „სამუშაოს … კალენდარი ჩვევად დაამატე“): a row under the
-// day's habits — the month's hours and today's planned ones left; a tap opens its calendar (WorkPanel) in a window.
+// „დამოუკიდებელი სამუშაო“ as one of the habits (2026-11-08, the user: „სამუშაოს … კალენდარი ჩვევად დაამატე“): a row at the
+// head of the day's habits (DayView `top`) — the month's hours and today's planned ones left; a tap opens its calendar (WorkPanel) in a window.
 const WorkHabitRow: React.FC<{ onOpen: () => void }> = ({ onOpen }) => {
   const work = useIndependentWork();
   const left = work.today.filter(s => !s.done).length;
@@ -120,9 +120,11 @@ interface ViewProps {
   onLink: (l: HabitLink) => void;
   /** a member's own list (not for a guest) */
   edit?: ListEdit;
+  /** the row at the head of the day's habits */
+  top?: React.ReactNode;
 }
 const VIEWS: { id: ViewId; label: string; render: (p: ViewProps) => React.ReactNode }[] = [
-  { id: 'day', label: 'დღე', render: p => <DayView model={p.model} date={p.date} onDate={p.onDate} onOpenPrayer={p.onOpenPrayer} onLink={p.onLink} edit={p.edit} /> },
+  { id: 'day', label: 'დღე', render: p => <DayView model={p.model} date={p.date} onDate={p.onDate} onOpenPrayer={p.onOpenPrayer} onLink={p.onLink} edit={p.edit} top={p.top} /> },
   { id: 'week', label: 'კვირა', render: p => <WeekView model={p.model} onPickDay={p.onPickDay} /> },
   { id: 'month', label: 'თვე', render: p => <MonthView model={p.model} onPickDay={p.onPickDay} /> },
   { id: 'year', label: 'წელი', render: p => <YearView model={p.model} /> },
@@ -267,6 +269,8 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
     onOpenPrayer: id => leaveFor(() => openPrayer(id)),
     onLink: openLink,
     edit,
+    // „დამოუკიდებელი სამუშაო“ heads the day's habits (2026-11-08, the user: „ჩვევების თავში უნდა იყოს“)
+    top: user && access.on('work') ? <WorkHabitRow onOpen={() => open('work')} /> : null,
   };
 
   return (
@@ -303,8 +307,6 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
       <div key={view} className="animate-in fade-in duration-200">
         {VIEWS.find(v => v.id === view)!.render(props)}
       </div>
-
-      {user && view === 'day' && access.on('work') && <WorkHabitRow onOpen={() => open('work')} />}
 
       <Sheet open={sheet === 'work'} onClose={close} wide title="დამოუკიდებელი სამუშაო">
         <WorkPanel />

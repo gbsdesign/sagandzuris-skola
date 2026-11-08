@@ -292,7 +292,9 @@ export const DayView: React.FC<{
   onOpenPrayer: (prayerId: string) => void;
   onLink: (l: HabitLink) => void;
   edit?: ListEdit;
-}> = ({ model, date, onDate, onOpenPrayer, onLink, edit }) => {
+  /** a row at the head of the habits, under the days (the user's „დამოუკიდებელი სამუშაო“, 2026-11-08) */
+  top?: React.ReactNode;
+}> = ({ model, date, onDate, onOpenPrayer, onLink, edit, top }) => {
   const [sorting, setSorting] = useState<0 | 1 | null>(null);
   // „შეცვლა“: one ✏️ over the lists; the rows' ✏️, the order and „+“ show only then (2026-10-27)
   const [changing, setChanging] = useState(false);
@@ -320,6 +322,8 @@ export const DayView: React.FC<{
         <DayStrip model={model} selected={date} onSelect={onDate} />
         <p className="px-1 pb-0.5 text-center text-[13px] font-bold leading-snug text-[#4a3426]">{status}</p>
       </div>
+
+      {top}
 
       {/* the daily habits beside the weekly and monthly ones; one column on a phone */}
       <div className="@container">
