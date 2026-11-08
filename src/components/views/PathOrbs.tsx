@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { Check, ChevronDown, ChevronRight, GraduationCap, Lock, Pencil, Sparkles, Users, X } from 'lucide-react';
 import { db } from '../../firebase';
@@ -10,7 +10,7 @@ import { triggerHaptic } from '../../utils/haptics';
 import { useSamosiSrc } from '../../utils/samosiDye';
 import { SAMOSI_COLORS, SAMOSI_DEFAULT_COLOR, SAMOSI_PARTS, SAMOSI_TOTAL, samosiDone, samosiThumb } from '../../data/samosiData';
 import { IconBtn } from '../ui/kit';
-import { OrbBadge, OrbPercent, PathOrb } from './PathOrb';
+import { OrbBadge, OrbCount, PathOrb } from './PathOrb';
 import { ChemiSamosi } from './ChemiSamosi';
 import { FirstStep, usePathStats } from './PathSummary';
 import { MyClassWork, useNewWork } from '../teacher/MyClassWork';
@@ -18,7 +18,7 @@ import { triggerFireworks } from './StudentBookmarkView';
 import { useMasteryPath } from '../mastery/useMasteryPath';
 import { MasteryContent } from '../mastery/MasteryContent';
 import { useIndependentWork, usePanelWish } from './IndependentWorkCard';
-import { useHabitsAverage } from '../habits/useHabits';
+import { useHabitsToday } from '../habits/useHabits';
 import { PEARL_WORDS, PearlIcon } from '../pearls/PearlIcon';
 import { LearnChests } from '../pearls/LearnChests';
 import { TokenIcon } from '../pearls/Tokens';
@@ -30,6 +30,8 @@ import { askSignIn } from '../access/SignInPrompt';
 import { ClassPickerSheet, useAllMyClasses } from '../classes/ClassPicker';
 import { ClassLogo } from '../classes/ClassLogo';
 import { useMyAttendance, useTeachingAttendance } from '../../hooks/useAttendanceShare';
+import { useConfirmations } from '../../hooks/useConfirmations';
+import { ownVoices } from '../../hooks/useClassMarks';
 
 type OrbId = 'samosi' | 'learn' | 'manera' | 'work' | 'library' | 'klasi';
 
@@ -114,6 +116,20 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
   const classShare = useTeachingAttendance(teaching);
   const attendance = teaching.length ? classShare : ownShare;
   const [picking, setPicking] = useState(false);
+  // „ნასწავლი“'s count (2026-11-09, the user: „ნასწავლი/სასწავლი … და პროგრამაში შემავალი რაც იქნება ჯამში“): the path's items
+  // and the programs of the classes I learn in, each once; learned = a voice of it known (mine or a teacher's „ჩათვლა“)
+  const { selectedChantVariants = {} } = useChants();
+  const confirmed = useConfirmations(user?.uid);
+  const learnCount = useMemo(() => {
+    const ids = new Set(stats.categories.flatMap(c => [...c.done, ...c.todo].map(it => it.variantId)));
+    const extra = new Set<string>();
+    for (const c of myClasses) {
+      if (teaching.includes(c)) continue;
+      for (const p of c.program) if (p.id && !ids.has(p.id)) extra.add(p.id);
+    }
+    const extraLearned = [...extra].filter(id => ownVoices(selectedChantVariants, confirmed, id).known.length > 0).length;
+    return { learned: stats.learned + extraLearned, total: stats.total + extra.size };
+  }, [stats, myClasses, teaching, selectedChantVariants, confirmed]);
   // the parts only tried on come off once the path page is left
   useEffect(() => () => clearTried(), []);
 
@@ -123,7 +139,7 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, newWork.count]);
 
-  const habits = useHabitsAverage();
+  const habits = useHabitsToday();
   // „ჩვევები“ opens no card: the habits stand under the buttons, so a tap takes the page down to them (as an old
   // openPathPanel('work') does — the independent work is one of the habits now)
   const toHabits = () => {
@@ -166,11 +182,13 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
       case 'learn':
         return (
           <PathOrb
-            key={id} label="ნასწავლი" title={newWork.count ? `ნასწავლი, ${newWork.count} ახალი დავალება` : 'ნასწავლი'} percent={stats.percent} hue="wine"
+            key={id} label="ნასწავლი"
+            title={`ნასწავლი · ${learnCount.learned} / ${learnCount.total}${newWork.count ? `, ${newWork.count} ახალი დავალება` : ''}`}
+            percent={learnCount.total ? (100 * learnCount.learned) / learnCount.total : 0} hue="wine"
             open={open === id} onClick={() => toggle(id)} index={index} badge={newWork.count ? <OrbBadge>{newWork.count}</OrbBadge> : undefined}
           >
-            {/* a cap while the path is empty, instead of 0% */}
-            {stats.total ? <OrbPercent value={stats.percent} /> : <GraduationCap className="w-6 h-6 sm:w-7 sm:h-7 text-[#7a2028]" strokeWidth={1.8} />}
+            {/* a cap while there is nothing to learn yet, instead of 0 / 0 */}
+            {learnCount.total ? <OrbCount value={learnCount.learned} of={learnCount.total} color="#7a2028" /> : <GraduationCap className="w-6 h-6 sm:w-7 sm:h-7 text-[#7a2028]" strokeWidth={1.8} />}
           </PathOrb>
         );
       case 'manera':
@@ -184,40 +202,41 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
           </PathOrb>
         );
       case 'work':
-        // „ჩვევები“: the daily habits' share over the last 30 days; the badge = today's planned hours of the independent work
+        // „ჩვევები“: today's daily habits — done / still left; the badge = today's planned hours of the independent work
         return (
           <PathOrb
-            key={id} label="ჩვევები" title={habits != null ? `ჩვევები · საშუალოდ ${habits}%` : 'ჩვევები'} percent={habits ?? 0} hue="blue"
+            key={id} label="ჩვევები" title={`ჩვევები · დღეს შესრულებული ${habits.done}, დარჩენილი ${habits.left}`}
+            percent={habits.done + habits.left ? (100 * habits.done) / (habits.done + habits.left) : 0} hue="blue"
             open={!!habitsCard && open === id} onClick={() => toggle(id)} index={index} badge={workBadge}
           >
-            {habits != null ? <OrbPercent value={habits} /> : <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 text-[#1e2f5a]" strokeWidth={1.8} />}
+            {habits.done + habits.left ? <OrbCount value={habits.done} of={habits.left} color="#1e2f5a" /> : <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 text-[#1e2f5a]" strokeWidth={1.8} />}
           </PathOrb>
         );
       case 'library': {
-        // „5 / 1559“: the books and saints' lives marked „წავიკითხე“, in a teal ring of its own
+        // the books and saints' lives marked „წავიკითხე“ — only that number (2026-11-09), the ring = its share of all
         const pct = library.total ? (100 * library.done) / library.total : 0;
         return (
           <PathOrb
             key={id} label="ბიბლიოთეკა" title={`ბიბლიოთეკა · ${library.done}${library.total ? ` / ${library.total}` : ''} წიგნიდან წაკითხული`}
             percent={pct} hue="teal" open={false} onClick={() => toggle(id)} index={index}
           >
-            <span className="flex flex-col items-center leading-none">
-              <span className="text-[20px] min-[400px]:text-[22px] sm:text-[24px] font-black tabular-nums text-[#1f5c55]">{library.done}</span>
-              <span className="mt-0.5 text-[10px] sm:text-[11px] font-bold tabular-nums text-[#8a7a6a]">/ {library.total ?? '…'}</span>
-            </span>
+            <OrbCount value={library.done} color="#1f5c55" />
           </PathOrb>
         );
       }
       case 'klasi':
-        // the attendance at the latest lessons in per cent; the class's logo (or the people) before any lesson is marked
+        // the attendance: a member's lessons came to of the latest ones, a teacher's members at the last lesson (2026-11-09:
+        // numbers, not per cent); the class's logo (or the people) before any lesson is marked
         return (
           <PathOrb
             key={id} label="კლასი"
-            title={attendance != null ? `კლასი · დასწრება ${attendance}%${teaching.length ? ', საშუალოდ' : ''}` : 'კლასი'}
-            percent={attendance ?? 0} hue="amber" open={picking} onClick={() => toggle(id)} index={index}
+            title={attendance
+              ? (teaching.length ? `კლასი · ბოლო გაკვეთილზე მოვიდა ${attendance.came} / ${attendance.of}` : `კლასი · დაესწარი ${attendance.came} / ${attendance.of} გაკვეთილს`)
+              : 'კლასი'}
+            percent={attendance ? (100 * attendance.came) / attendance.of : 0} hue="amber" open={picking} onClick={() => toggle(id)} index={index}
           >
-            {attendance != null
-              ? <OrbPercent value={attendance} />
+            {attendance
+              ? <OrbCount value={attendance.came} of={attendance.of} color="#c2410c" />
               : myClasses.length === 1
                 ? <ClassLogo name={myClasses[0].name} logo={myClasses[0].logo} className="w-10 h-10 sm:w-11 sm:h-11 text-sm" />
                 : <Users className="w-6 h-6 sm:w-7 sm:h-7 text-[#c2410c]" strokeWidth={1.8} />}

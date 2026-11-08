@@ -44,10 +44,11 @@ export const useSyncAttendanceShares = (
   }, [cls.id, cls.memberIds, records, days, ready]);
 };
 
-const pct = (came: number, of: number) => (of > 0 ? Math.round((100 * came) / of) : null);
+const share = (came: number, of: number): AttendanceShare | null => (of > 0 ? { came, of } : null);
 
-/** A member's own attendance over their classes, in per cent (null before any lesson is marked). */
-export const useMyAttendance = (uid: string | undefined, classIds: string[]): number | null => {
+/** A member's own attendance over their classes' latest lessons: came to N of M (null before any lesson is marked).
+ *  Shown as „6 / 8“ since 2026-11-09 (the user: „სადაც პროცენტებია უბრალოდ ციფრები იყოს“). */
+export const useMyAttendance = (uid: string | undefined, classIds: string[]): AttendanceShare | null => {
   const [shares, setShares] = useState<Record<string, AttendanceShare>>({});
   useEffect(() => {
     if (!uid) { setShares({}); return; }
@@ -61,11 +62,11 @@ export const useMyAttendance = (uid: string | undefined, classIds: string[]): nu
     const s = shares[id];
     if (s && typeof s.came === 'number' && typeof s.of === 'number') { came += s.came; of += s.of; }
   }
-  return pct(came, of);
+  return share(came, of);
 };
 
-/** A teacher's classes' attendance at their latest lessons, on average (null before any lesson is marked). */
-export const useTeachingAttendance = (classes: SchoolClass[]): number | null => {
+/** A teacher's classes at their last lesson: how many of the members came (null before any lesson is marked). */
+export const useTeachingAttendance = (classes: SchoolClass[]): AttendanceShare | null => {
   const [days, setDays] = useState<Record<string, AttendanceDay[]>>({});
   const ids = classes.map(c => c.id).join(',');
   useEffect(() => {
@@ -79,10 +80,10 @@ export const useTeachingAttendance = (classes: SchoolClass[]): number | null => 
   }, [ids]);
   let came = 0, of = 0;
   for (const c of classes) {
-    const list = days[c.id] || [];
-    if (!c.memberIds.length) continue;
-    came += list.reduce((n, d) => n + d.present.filter(u => c.memberIds.includes(u)).length, 0);
-    of += list.length * c.memberIds.length;
+    const last = (days[c.id] || [])[0];
+    if (!last || !c.memberIds.length) continue;
+    came += last.present.filter(u => c.memberIds.includes(u)).length;
+    of += c.memberIds.length;
   }
-  return pct(came, of);
+  return share(came, of);
 };
