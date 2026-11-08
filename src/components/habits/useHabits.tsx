@@ -128,6 +128,21 @@ export const useHabitsModel = (openHabit: (id: string) => void): { model: Habits
   return { model, blessing };
 };
 
+/** Today's daily habits for the path's round button „ჩვევები“ (2026-11-09, the user: „ჩვევებში დღის ჩვევების რაოდენობა
+ *  შესრულებული/დარჩენილი“, answer „2 / 5“): how many are ticked today and how many are still left. */
+export const useHabitsToday = (): { done: number; left: number } => {
+  const { habitLog } = useChants();
+  const { user } = useAuth();
+  const mine = useMyHabits(user?.uid);
+  return useMemo(() => {
+    const now = new Date();
+    const due = idsOn(dueDailyOf(mine.groups), now);
+    const on = habitLog[dayKey(now)] || [];
+    const done = due.filter(id => on.includes(id)).length;
+    return { done, left: due.length - done };
+  }, [habitLog, mine.groups]);
+};
+
 /** The habits' average for the path's round button „ჩვევები“ (2026-11-08, the user: „სამუშაო რომ წერია მანდ დაწერე ჩვევები
  *  და ჩვევების საშუალო პროცენტს აჩვენებდეს“): the share of the daily habits ticked over the last 30 days (from the history's
  *  start), null before anything is ticked. */

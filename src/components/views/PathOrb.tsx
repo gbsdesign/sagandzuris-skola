@@ -25,6 +25,15 @@ export const OrbPercent: React.FC<{ value: number }> = ({ value }) => {
   );
 };
 
+/** A count in the middle of a round button (2026-11-09, the user: „სადაც პროცენტებია უბრალოდ ციფრები იყოს“): the number
+ *  big, and „/ M“ small under it when there is a whole to count against. */
+export const OrbCount: React.FC<{ value: number; of?: number | null; color?: string }> = ({ value, of, color = '#2a2017' }) => (
+  <span className="flex flex-col items-center leading-none">
+    <span className="text-[20px] min-[400px]:text-[22px] sm:text-[24px] font-black tabular-nums" style={{ color }}>{value}</span>
+    {of != null && <span className="mt-0.5 text-[10px] sm:text-[11px] font-bold tabular-nums text-[#8a7a6a]">/ {of}</span>}
+  </span>
+);
+
 /** The small round mark on a button's top-right edge (PathOrb's `badge`): a number in wine, or green once done. */
 export const OrbBadge: React.FC<{ done?: boolean; children: React.ReactNode }> = ({ done, children }) => (
   <span
