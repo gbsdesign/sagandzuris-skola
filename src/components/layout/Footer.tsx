@@ -1,5 +1,4 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { CalendarDays } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
 import { CALENDAR_EVENT, todayIso } from '../../data/churchCalendar';
 import { ChurchCalendarPanel } from '../calendar/ChurchCalendarPanel';
@@ -20,7 +19,8 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
   const [visible, setVisible] = useState(false);
   const [calIso, setCalIso] = useState(todayIso);
   const sheetRef = useRef<HTMLDivElement>(null);
-  // the calendar is for members a superadmin gave it to (utils/memberAccess); for others it does not show
+  // the calendar's button lives in the library now (pages/library/Shelf.tsx); the sheet stays here and opens by CALENDAR_EVENT.
+  // It is for members a superadmin gave it to (utils/memberAccess); for others it does not show
   const canCal = useMembership().can('calendar');
   const canRef = useRef(canCal);
   canRef.current = canCal;
@@ -73,7 +73,7 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
           <ChurchCalendarPanel iso={calIso} onChange={setCalIso} onClose={close} />
         </div>
       )}
-      {/* one row: [კალენდარი] [Facebook] [WhatsApp] (icon-only on a phone), the © line under it;
+      {/* one row: [Facebook] [WhatsApp] (icon-only on a phone), the © line under it;
           the logo and the name only from the sm breakpoint up — a phone has them in the header already */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 flex flex-col items-center gap-3 text-xs text-[#8a7a6a]">
         <div className="w-full flex items-center justify-center sm:justify-between gap-3">
@@ -88,17 +88,6 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
           </div>
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* church calendar: opens as a sheet over the page */}
-            {canCal && <button
-              type="button"
-              onClick={() => { triggerHaptic(10); open(todayIso()); }}
-              className="inline-flex items-center justify-center gap-2 h-10 px-4 rounded-full ring-1 transition-all duration-200 text-sm font-bold cursor-pointer active:scale-95 select-none bg-white/70 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#4a3426]"
-              title="საეკლესიო კალენდარი"
-            >
-              <CalendarDays className="w-[18px] h-[18px] text-[#7a2028]" />
-              კალენდარი
-            </button>}
-
             <a
               href={FB_PAGE}
               target="_blank"
