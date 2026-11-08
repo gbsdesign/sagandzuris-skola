@@ -2,7 +2,7 @@
 // Every item of the member's path — a chant, a song, a poem, an instrument — is a pearl in front of its name: matte while
 // nothing of it is learned, polished once the member marks a voice (or the whole poem or instrument) as known, and shining
 // once a teacher has confirmed one („ჩათვლა“, confirmations/{uid}). Every CHEST_SIZE polished pearls open a chest, CHEST_COUNT
-// chests in all (the rest are not needed); every chest that opens gives „ჩემი სამოსი“ its next part (utils/pearlGifts.ts).
+// chests in all (the rest are not needed). Since 2026-11-08 the chests give „ჩემი სამოსი“ nothing (a part stays only by its photo, utils/samosiProof.ts).
 // It replaced the old pearls game (sung phrases in three chests). Pure, tested in tests/pathPearls.test.ts.
 
 export type PearlState = 'new' | 'polished' | 'shining';

@@ -325,22 +325,13 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
 @keyframes sg-bead-pop { 0% { opacity: 0; transform: translateY(7px) scale(0); } 70% { opacity: 1; transform: translateY(-3px) scale(1.25); } 100% { opacity: 1; transform: none; } }
 .sg-chest-spark { opacity: 0; animation: sg-spark 0.9s ease-out both; }
 @keyframes sg-spark { 0% { opacity: 0; transform: translate(0, 0) scale(0.4); } 25% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.1); } }
-/* the part a chest gave stands up out of it in a gold light; as it opens, it rises from inside */
-.sg-chest-gift { filter: drop-shadow(0 0 4px rgba(246, 201, 78, 0.95)) drop-shadow(0 2px 2px rgba(90, 61, 20, 0.35)); }
-.sg-chest-gift.is-new { animation: sg-gift-rise 1.3s cubic-bezier(0.2, 0.9, 0.3, 1.2) 0.8s both; }
-@keyframes sg-gift-rise {
-  0% { opacity: 0; transform: translateY(20px) scale(0.3); }
-  55% { opacity: 1; transform: translateY(-12px) scale(1.3); }
-  75% { transform: translateY(-2px) scale(0.96); }
-  100% { opacity: 1; transform: none; }
-}
 .sg-chest-card-new { animation: sg-chest-card 1.6s ease-out 0.6s both; }
 @keyframes sg-chest-card { 0% { box-shadow: 0 0 0 0 rgba(231, 197, 111, 0.9); } 60% { box-shadow: 0 0 0 9px rgba(231, 197, 111, 0); } 100% { box-shadow: 0 8px 18px -12px rgba(176, 128, 36, 0.9); } }
 /* a pearl just polished drops into its chest's row */
 .sg-bead-in { animation: sg-bead-in 0.6s cubic-bezier(0.2, 0.9, 0.3, 1.5) both; }
 @keyframes sg-bead-in { 0% { opacity: 0; transform: translateY(-12px) scale(0.3); } 65% { opacity: 1; transform: translateY(1px) scale(1.35); } 100% { transform: none; } }
 @media (prefers-reduced-motion: reduce) {
-  .sg-pearl, .sg-pearl *, .sg-chest, .sg-chest *, .sg-chest-gift, .sg-chest-card-new, .sg-bead-in { animation: none !important; }
+  .sg-pearl, .sg-pearl *, .sg-chest, .sg-chest *, .sg-chest-card-new, .sg-bead-in { animation: none !important; }
   .sg-chest-lidshut.sg-chest-lidshut { display: none; }
   .sg-chest:not(.open) .sg-chest-lidshut { display: inline; }
   .sg-chest-spark { display: none; }

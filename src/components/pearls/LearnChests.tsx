@@ -2,23 +2,20 @@ import React, { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Check, Lock } from 'lucide-react';
 import { useAuth, useChants, useViewing } from '../../context';
 import { useConfirmations } from '../../hooks/useConfirmations';
-import { usePearlGifts } from '../../hooks/usePearlGifts';
 import { filterValidVariants } from '../../utils/variantValidation';
 import { CHEST_COUNT, CHEST_SIZE, chestsOf, pearlCounts } from '../../utils/pathPearls';
-import { giftPartLabel, nextChest, partInChest } from '../../utils/pearlGifts';
 import { triggerHaptic } from '../../utils/haptics';
 import { fireworks } from '../../utils/samosiFireworks';
 import { PearlIcon } from './PearlIcon';
-import { GiftPartPic, NextGiftLine } from './PearlGift';
 
 // The top of „ნასწავლი“ (2026-11-05, the user: „მაღლა სკივრები იყოს, 10 საგალობელზე იხსნებოდეს 1 სკივრი, სულ 3“; the same
 // evening: „3 სკივრის გახსნაზე თითო ჩოხის ნაწილს იძლეოდეს … ჩოხის ზოლი სკივრებს ზემოთ … ქართული … კომპაქტური, მარა არა
-// ძალიან“, answers „მხოლოდ სკივრები · ჩუქურთმა + ბორჯღალი“). One card: on top the outfit's next part and the chest it waits
-// in (NextGiftLine), then three chests — Georgian კიდობნები with carved rosettes, a braid on the lid and a gold borjgali
-// lock — that fill with the member's polished pearls (utils/pathPearls.ts), ten each, and open; every chest that opens gives
-// „ჩემი სამოსი“ a part (utils/pearlGifts.ts), which then stands in it. A chest opened since this device last saw it shakes,
-// throws its lid up, lets out light and pearls and lifts its part, once; a pearl just polished drops into its chest. Under
-// them what the two kinds of pearl mean, with their counts.
+// ძალიან“, answers „მხოლოდ სკივრები · ჩუქურთმა + ბორჯღალი“). One card: three chests — Georgian კიდობნები with carved
+// rosettes, a braid on the lid and a gold borjgali lock — that fill with the member's polished pearls
+// (utils/pathPearls.ts), ten each, and open. Since 2026-11-08 they give „ჩემი სამოსი“ nothing (the user: „სკივრთა კავშირი
+// გააუქმე, ჩოხის ეს სხვა თემაა“ — a part stays only by its photo, utils/samosiProof.ts). A chest opened since this device
+// last saw it shakes, throws its lid up and lets out light and pearls, once; a pearl just polished drops into its chest.
+// Under them what the two kinds of pearl mean, with their counts.
 
 const ROMAN = ['I', 'II', 'III'];
 
@@ -222,7 +219,6 @@ export const LearnChests: React.FC<{ polished: number; shining: number }> = ({ p
   const { user } = useAuth();
   const uid = user?.uid;
   const viewing = useViewing();
-  const g = usePearlGifts();
   const chests = chestsOf(polished);
   const opened = chests.filter(c => c.open).length;
 
@@ -258,70 +254,51 @@ export const LearnChests: React.FC<{ polished: number; shining: number }> = ({ p
     return () => window.clearTimeout(t);
   }, [polished, viewing]);
 
-  return <ChestsView polished={polished} shining={shining} fresh={fresh} drop={drop} gifts={g} />;
+  return <ChestsView polished={polished} shining={shining} fresh={fresh} drop={drop} />;
 };
-
-type Gifts = Pick<ReturnType<typeof usePearlGifts>, 'ready' | 'chestParts' | 'left' | 'outfit' | 'look'>;
 
 /** What LearnChests shows, from plain numbers: `fresh` = the chests opening now, `drop` = the polished count before the
  *  pearls that are dropping in now. */
-export const ChestsView: React.FC<{ polished: number; shining: number; fresh: number[]; drop: number | null; gifts: Gifts }> = ({
-  polished, shining, fresh, drop, gifts: g,
+export const ChestsView: React.FC<{ polished: number; shining: number; fresh: number[]; drop: number | null }> = ({
+  polished, shining, fresh, drop,
 }) => {
   const chests = chestsOf(polished);
-  const opened = chests.filter(c => c.open).length;
   const current = chests.find(c => !c.open)?.index ?? -1;
-  // the way to the next part: the chest it waits in and how many more pearls open it
-  const nc = g.ready ? nextChest(opened, g.chestParts.length) : null;
-  const nextPart = nc != null ? partInChest(nc, g.chestParts, g.left) : null;
 
   return (
     <section aria-label="სკივრები" className="rounded-2xl bg-gradient-to-b from-[#fdf8ef] to-[#f6ead6] ring-1 ring-[#eadcc4] p-2 space-y-2">
-      {nc != null && nextPart && (
-        <NextGiftLine part={nextPart} chest={nc} left={Math.max(1, (nc + 1) * CHEST_SIZE - polished)} outfit={g.outfit} look={g.look} />
-      )}
-
       <ol className="grid grid-cols-3 gap-1.5">
         {chests.map(c => {
           const isNew = fresh.includes(c.index);
           const isCurrent = c.index === current;
           const locked = !c.open && !isCurrent;
           const need = (c.index + 1) * CHEST_SIZE;
-          const part = c.open && g.ready ? partInChest(c.index, g.chestParts, g.left) : null;
           // the beads that have just dropped into this chest
           const dropFrom = drop != null && drop < need && polished > c.index * CHEST_SIZE ? Math.max(0, drop - c.index * CHEST_SIZE) : CHEST_SIZE;
           return (
             <li
               key={c.index}
-              aria-label={`${ROMAN[c.index]} სკივარი: ${c.open ? `გახსნილია${part ? ` — ${giftPartLabel(part)}` : ''}` : `${c.have} / ${CHEST_SIZE}`}`}
+              aria-label={`${ROMAN[c.index]} სკივარი: ${c.open ? 'გახსნილია' : `${c.have} / ${CHEST_SIZE}`}`}
               className={`relative flex flex-col items-center gap-1 rounded-xl px-1 pt-1.5 pb-1.5 text-center transition ${
                 c.open ? `bg-gradient-to-b from-[#fff8e4] to-[#fbe7b8] ring-1 ring-[#e7c56f] shadow-[0_8px_18px_-12px_rgba(176,128,36,0.9)] ${isNew ? 'sg-chest-card-new' : ''}`
                   : isCurrent ? 'bg-white ring-2 ring-[#7a2028] shadow-[0_6px_16px_-10px_rgba(122,32,40,0.6)]'
                   : 'bg-white/55 ring-1 ring-[#eadcc4]'}`}
             >
-              <span className="relative">
-                <TreasureChest
-                  open={c.open}
-                  fresh={isNew}
-                  dim={locked}
-                  spin={isCurrent}
-                  near={isCurrent && CHEST_SIZE - c.have <= 2}
-                  nudge={dropFrom < CHEST_SIZE && !c.open}
-                  size={58}
-                />
-                {/* the part this chest gave, standing up out of it */}
-                {part && (
-                  <span className={`sg-chest-gift ${isNew ? 'is-new' : ''} absolute left-1/2 -top-1 -ml-[17px] w-[34px] h-[34px] flex items-center justify-center`}>
-                    <GiftPartPic id={part} look={g.look} className="w-[34px] h-[34px]" />
-                  </span>
-                )}
-              </span>
+              <TreasureChest
+                open={c.open}
+                fresh={isNew}
+                dim={locked}
+                spin={isCurrent}
+                near={isCurrent && CHEST_SIZE - c.have <= 2}
+                nudge={dropFrom < CHEST_SIZE && !c.open}
+                size={58}
+              />
               <span className={`text-[12px] font-black leading-none ${locked ? 'text-[#a99a86]' : 'text-[#4a3426]'}`}>{ROMAN[c.index]} სკივარი</span>
               <ChestBeads have={c.have} open={c.open} dropFrom={dropFrom} />
               <span className={`max-w-full min-h-4 inline-flex items-center gap-1 text-[12px] font-bold leading-none tabular-nums ${
                 c.open ? 'text-[#9a6a1c]' : isCurrent ? 'text-[#7a2028]' : 'text-[#a99a86]'}`}>
                 {c.open ? (
-                  <><Check className="w-3.5 h-3.5 shrink-0 stroke-[3]" /><span className="truncate">{isNew ? 'გაიხსნა!' : part ? giftPartLabel(part) : 'გახსნილია'}</span></>
+                  <><Check className="w-3.5 h-3.5 shrink-0 stroke-[3]" /><span className="truncate">{isNew ? 'გაიხსნა!' : 'გახსნილია'}</span></>
                 ) : isCurrent ? (
                   `კიდევ ${CHEST_SIZE - c.have}`
                 ) : (

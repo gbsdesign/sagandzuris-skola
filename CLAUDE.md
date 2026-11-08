@@ -392,17 +392,15 @@
   once a teacher confirmed one (`confirmations/{uid}`, „ჩათვლა“ in `MemberPathEditor`). The pearl is `pearls/PearlIcon.tsx`
   (nacre lustre, a glint, a gold halo with sparks and a sheen for a shining one; a pearl that moves up pops — `.sg-pearl…` in
   index.css, still under „reduce motion“). On top one card (`pearls/LearnChests.tsx`; hooks in `LearnChests`, the picture in
-  `ChestsView`): `NextGiftLine` first (the next part, the chest it waits in, „კიდევ N მარგალიტი“), then three chests — one opens on
-  every 10 polished pearls (`chestsOf`, `CHEST_SIZE` 10, `CHEST_COUNT` 3, no more), ten little beads each —, then the two pearls'
-  meaning with their counts. **Every chest that opens gives „ჩემი სამოსი“ its next part** (the user, 2026-11-05 evening: „3 სკივრის
-  გახსნაზე თითო ჩოხის ნაწილს“, „მხოლოდ სკივრები“ — the old „every 5 shining pearls“ rule is gone): `utils/pearlGifts.ts`
-  `giftDue(opened, …)`, record `students.pearlGifts.chestParts` (the part each chest gave, '' = none; a chest closed again is not
-  rewarded twice; the old `steps` is no longer read), `partInChest`, `nextChest`; `PearlGiftBanner` („ჯილდო სკივრიდან!“) on the
-  path page adds it. The chests are Georgian კიდობნები (the user's pick „ჩუქურთმა + ბორჯღალი“): a gold braid on the lid, two carved
+  `ChestsView`): three chests — one opens on every 10 polished pearls (`chestsOf`, `CHEST_SIZE` 10, `CHEST_COUNT` 3, no more), ten
+  little beads each —, then the two pearls' meaning with their counts. **The chests give „ჩემი სამოსი“ nothing since 2026-11-08**
+  (the user: „სკივრთა კავშირი გააუქმე, ჩოხის ეს სხვა თემაა“ — `pearlGifts.ts`, `usePearlGifts`, `PearlGift.tsx`, `NextGiftLine` and
+  the chest's part are gone; `students.pearlGifts` is no longer read). The chests are Georgian კიდობნები (the user's pick „ჩუქურთმა +
+  ბორჯღალი“): a gold braid on the lid, two carved
   rosettes, a gold borjgali lock that turns on the chest being filled (which shakes now and then when ≤ 2 are left and hops as a
-  pearl drops in — `sg-bead-in`); an open chest holds its part standing in a gold light (`sg-chest-gift`). A chest opened since
+  pearl drops in — `sg-bead-in`). A chest opened since
   this device last saw it plays the opening once (`sg-chest-open`: shake, the shut lid swings away and the open one rises, light,
-  sparks and pearls, the part rises; fireworks; `sg-chests-seen:<uid>`, never on a teacher's look — `useViewing`). The admin's activity counts
+  sparks and pearls; fireworks; `sg-chests-seen:<uid>`, never on a teacher's look — `useViewing`). The admin's activity counts
   the polished ones (`personActivity`); the Android widget's „მარგალიტები“ ring = the share that shines (`WidgetSync`, no app
   change). `data/pearls.ts` (`CHESTS`, 60 chants) stays only as the chant games' pool; `utils/pearls.ts` keeps `phraseOf`,
   `chantName`, `VOICE_NAMES`, `noteName`, `PearlShine`; `hooks/usePearls.ts` = the takes' store + approvals the learning mode,
@@ -1658,6 +1656,19 @@ listens (Gemini through Firebase AI Logic). 8 calls on Android (wake lock, push,
   the member picks from the church-calendar days that name their (baptismal) name (`components/birthdays/MyNameDay.tsx`,
   matching in `utils/nameDayMatch.ts` + test, records `nameDays/{uid}` in `utils/nameDays.ts`). Home gold line and phone
   notices 5/3/1 days before for staff: `components/home/BirthdaysSoon.tsx`.
+- **„ჩემი სამოსი“: real parts only by photo (2026-11-08**, the user: „მუდმივად … დარჩენა … თუ … კამერის ფუნქციით გადაუღებს საკუთარ
+  ნამდვილ ნაწილს … AI შეუმოწმებს … აწყობილი ჩოხა და სამოსის მწვანე პროგრეს ზოლი დაიშალოს როგორც კი გამოვა მაგ გვერდიდან“, answers
+  „მხოლოდ კამერით · პატარა ფოტო · კაბაც“): a tapped part of the chokha or the kaba is only **tried on** — `utils/samosiTry.ts`, in
+  memory, never saved; `clearTried()` runs when PathOrbs or the profile's (non-`bare`) ChemiSamosi unmounts, so the figure and the
+  path's ring (`useSamosiSummary`: `count` with the tried, `real` without — the widget sends `real`) go back on leaving the page. A
+  part's card under the figure (`views/SamosiProof.tsx` `PartCard`) has „გადაიღე შენი X“ (`capture="environment"`, not on a teacher's
+  look): `utils/samosiProof.ts` `checkRealPart` asks Gemini (`AI_TEACHER_MODEL`, JSON `{ok, why}`; 10 a day on the device, the owner
+  none) whether it is a real one of that kind (`PART_WORDS`; a screen or a printed picture is refused), then `saveProof` keeps a
+  360 px JPEG in `samosiProof/{uid}/parts/{partId}` (rules: the member writes `image` < 200 KB + `at`; the member, their teachers
+  and admins read; they and admins delete; the account's deletion takes them — `OWN_SUBS`) and adds the id to
+  `students.samosiReal` / `.kabaReal`. A real part's card shows its photo and „წაშლა“ (back to tried). Tiles: green ✓ real, wine ✓
+  tried (`PartMark`, `tileTone`, `ProofLegend`); the bar = real green + tried wine, the count real only; the cheer and fireworks only
+  for a proven part. The old `students.samosi` / `.kaba` lists are no longer read.
 - „ქართული კაბა“ beside the chokha (redesign stage 5, built 2026-10-25): „ჩემი სამოსი“ gets a ჩოხა / ქართული კაბა switch
   (`ChemiSamosi.tsx`; a girl's name by `nameGender` opens the kaba first; choice in `students.samosiOutfit`, parts in
   `students.kaba`). Parts in `data/kabaData.ts` (კაბა, გულისპირი, სარტყელი, ქათიბი, ლეჩაქი). The pictures are made by the
