@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronLeft, ChevronRight, Church, Clapperboard, ExternalLink, ListVideo, Loader2, MapPin, Play, Search, Tv, Users, X } from 'lucide-react';
+import { Check, ChevronLeft, ChevronRight, Church, Clapperboard, ExternalLink, ListVideo, Loader2, MapPin, Play, Search, Tv, Users, X } from 'lucide-react';
 import { useNavigation } from '../context';
 import { RegionLocator, RegionPuzzleMap } from '../components/maps/RegionPuzzleMap';
 import { Btn, FIELD, Sheet, Tabs } from '../components/ui/kit';
 import { triggerHaptic } from '../utils/haptics';
+import { useWatchedVideos } from '../hooks/useWatchedVideos';
 import type { FolkRegion } from '../data/songsData';
 import {
   ABROAD, ETNOFORI_CHANNEL, ETNO_EXTRA, EtnoData, clock, dayText, embedOf, etnoRegion, etnoRegionName, loadEtnofori, thumbOf, watchOf,
@@ -327,41 +328,82 @@ const Chip: React.FC<{ on: boolean; onClick: () => void; label: string; n?: numb
   </button>
 );
 
+/** „ნანახია“ (2026-11-08): a small round mark at a film's right — a tap marks it watched (green ✓) or takes it back; the
+ *  films watched fill „ნასწავლი“'s films chest with medallions. `big` = the player's pill with its word. */
+const SeenMark: React.FC<{ on: boolean; onToggle: () => void; title: string; big?: boolean }> = ({ on, onToggle, title, big }) =>
+  big ? (
+    <button
+      type="button"
+      onClick={() => { triggerHaptic(on ? 8 : 15); onToggle(); }}
+      aria-pressed={on}
+      className={`h-10 pl-3 pr-4 rounded-full inline-flex items-center gap-1.5 text-[13.5px] font-bold cursor-pointer transition active:scale-95 ${
+        on ? 'bg-emerald-600 text-white shadow-[0_4px_12px_-6px_rgba(5,120,80,0.8)]' : 'bg-white text-[#4a3426] ring-1 ring-[#e8dcc8] hover:ring-emerald-500/50 hover:text-emerald-700'
+      }`}
+    >
+      <span className={`w-6 h-6 rounded-full flex items-center justify-center ${on ? 'bg-white/25' : 'ring-1 ring-[#d9ccb8]'}`}>
+        <Check className={`w-3.5 h-3.5 stroke-[3] ${on ? '' : 'opacity-40'}`} />
+      </span>
+      ნანახია
+    </button>
+  ) : (
+    <button
+      type="button"
+      onClick={() => { triggerHaptic(on ? 8 : 15); onToggle(); }}
+      aria-pressed={on}
+      aria-label={`${title} — ${on ? 'ნანახია' : 'ნანახად მონიშვნა'}`}
+      title={on ? 'ნანახია — შეეხე მოსახსნელად' : 'ნანახია?'}
+      className="w-11 self-stretch shrink-0 flex items-center justify-center cursor-pointer"
+    >
+      <span className={`w-8 h-8 rounded-full flex items-center justify-center transition-colors ${
+        on ? 'bg-emerald-600 text-white shadow-[0_3px_8px_-4px_rgba(5,120,80,0.8)]' : 'bg-[#f7f1e6] text-[#b8a68e] ring-1 ring-[#e8dcc8] hover:text-emerald-700 hover:ring-emerald-500/40'
+      }`}>
+        <Check className="w-4 h-4 stroke-[3]" />
+      </span>
+    </button>
+  );
+
 const FilmList: React.FC<{ films: Film[]; onPlay: (id: string) => void; empty: string }> = ({ films, onPlay, empty }) => {
+  const watched = useWatchedVideos();
   if (!films.length) return <p className="py-10 text-center text-sm font-bold text-[#8a7a6a]">{empty}</p>;
   return (
     <ul className="rounded-3xl bg-white/80 ring-1 ring-[#e8dcc8] divide-y divide-[#efe5d4] overflow-hidden">
-      {films.map(f => (
-        <li key={f.id}>
-          <button type="button" onClick={() => onPlay(f.id)} className="group w-full flex items-center gap-3 p-2.5 text-left cursor-pointer hover:bg-[#fcf6ea] active:bg-[#f7eddc] transition-colors">
-            <span className="relative w-28 sm:w-36 aspect-video shrink-0 rounded-xl overflow-hidden bg-[#3a2c22]">
-              <img src={thumbOf(f.id)} alt="" loading="lazy" decoding="async" className="w-full h-full object-cover opacity-95 group-hover:opacity-100 transition-opacity" />
-              <span className="absolute inset-0 flex items-center justify-center">
-                <span className="w-9 h-9 rounded-full bg-black/45 group-hover:bg-[#7a2028]/85 flex items-center justify-center transition-colors">
-                  <Play className="w-4 h-4 text-white fill-white ml-0.5" />
+      {films.map(f => {
+        const seen = watched.isSeen(f.id);
+        return (
+          <li key={f.id} className="flex items-stretch">
+            <button type="button" onClick={() => onPlay(f.id)} className="group flex-1 min-w-0 flex items-center gap-3 p-2.5 pr-1 text-left cursor-pointer hover:bg-[#fcf6ea] active:bg-[#f7eddc] transition-colors">
+              <span className="relative w-28 sm:w-36 aspect-video shrink-0 rounded-xl overflow-hidden bg-[#3a2c22]">
+                <img src={thumbOf(f.id)} alt="" loading="lazy" decoding="async" className={`w-full h-full object-cover group-hover:opacity-100 transition-opacity ${seen ? 'opacity-70' : 'opacity-95'}`} />
+                <span className="absolute inset-0 flex items-center justify-center">
+                  <span className="w-9 h-9 rounded-full bg-black/45 group-hover:bg-[#7a2028]/85 flex items-center justify-center transition-colors">
+                    <Play className="w-4 h-4 text-white fill-white ml-0.5" />
+                  </span>
                 </span>
+                {seen && <span className="absolute left-1 top-1 px-1.5 rounded-md bg-emerald-600 text-white text-[11px] font-bold leading-[18px]">ნანახია</span>}
+                <span className="absolute right-1 bottom-1 px-1.5 rounded-md bg-black/70 text-white text-[11px] font-bold tabular-nums leading-[18px]">{clock(f.secs)}</span>
               </span>
-              <span className="absolute right-1 bottom-1 px-1.5 rounded-md bg-black/70 text-white text-[11px] font-bold tabular-nums leading-[18px]">{clock(f.secs)}</span>
-            </span>
-            <span className="flex-1 min-w-0 flex flex-col gap-0.5">
-              <span className="text-[15px] font-bold text-[#2a2017] leading-snug line-clamp-2 break-words group-hover:text-[#7a2028] transition-colors">{f.title}</span>
-              <span className="text-[12.5px] font-semibold text-[#8a7a6a] leading-snug line-clamp-2 break-words">{f.sub}</span>
-              {(f.meta || f.tag) && (
-                <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-                  {f.tag && <span className="px-2 rounded-full bg-[#fdeee0] text-[#9a3b12] ring-1 ring-[#f3cfae] text-[11.5px] font-bold leading-[20px]">{f.tag}</span>}
-                  {f.meta && <span className="text-[12px] font-bold text-[#a0703c] leading-snug">{f.meta}</span>}
-                </span>
-              )}
-            </span>
-          </button>
-        </li>
-      ))}
+              <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+                <span className="text-[15px] font-bold text-[#2a2017] leading-snug line-clamp-2 break-words group-hover:text-[#7a2028] transition-colors">{f.title}</span>
+                <span className="text-[12.5px] font-semibold text-[#8a7a6a] leading-snug line-clamp-2 break-words">{f.sub}</span>
+                {(f.meta || f.tag) && (
+                  <span className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+                    {f.tag && <span className="px-2 rounded-full bg-[#fdeee0] text-[#9a3b12] ring-1 ring-[#f3cfae] text-[11.5px] font-bold leading-[20px]">{f.tag}</span>}
+                    {f.meta && <span className="text-[12px] font-bold text-[#a0703c] leading-snug">{f.meta}</span>}
+                  </span>
+                )}
+              </span>
+            </button>
+            <SeenMark on={seen} onToggle={() => watched.toggle(f.id)} title={f.title} />
+          </li>
+        );
+      })}
     </ul>
   );
 };
 
 /** the open film in a window: YouTube's own player, a film's parts as chips, then ‹ › through the same list */
 const Player: React.FC<{ films: Film[]; open?: string; onMove: (id: string) => void; onClose: () => void }> = ({ films, open, onMove, onClose }) => {
+  const watched = useWatchedVideos();
   if (!open) return null;
   const i = films.findIndex(f => f.id === open || !!f.parts?.some(p => p.id === open));
   // a film no longer in the list (a chip changed meanwhile) still plays alone
@@ -399,9 +441,12 @@ const Player: React.FC<{ films: Film[]; open?: string; onMove: (id: string) => v
           </div>
         )}
         {film && <p className="text-[14px] font-semibold text-[#574739] leading-snug">{film.sub}</p>}
-        <a href={watchOf(open)} target="_blank" rel="noopener noreferrer" className="self-start inline-flex items-center gap-1 text-[13px] font-bold text-[#8a4b12] hover:underline">
-          YouTube-ზე გახსნა <ExternalLink className="w-3.5 h-3.5" />
-        </a>
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <SeenMark big on={watched.isSeen(open)} onToggle={() => watched.toggle(open)} title={film?.title ?? 'ვიდეო'} />
+          <a href={watchOf(open)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 text-[13px] font-bold text-[#8a4b12] hover:underline">
+            YouTube-ზე გახსნა <ExternalLink className="w-3.5 h-3.5" />
+          </a>
+        </div>
       </div>
     </Sheet>
   );

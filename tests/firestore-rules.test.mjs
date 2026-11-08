@@ -92,6 +92,10 @@ await t('member cannot read attendance', assertFails(getDoc(doc(stu, 'classes', 
 await t('member cannot write attendance', assertFails(setDoc(doc(stu, 'classes', 'c1', 'attendance', '2026-10-07'), { present: ['stu'] })));
 await t('teacher writes assignment', assertSucceeds(setDoc(doc(tch, 'classes', 'c1', 'assignments', 'a1'), { title: 'x' })));
 await t('member reads assignments', assertSucceeds(getDocs(collection(stu, 'classes', 'c1', 'assignments'))));
+await t('teacher gives one member an assignment', assertSucceeds(setDoc(doc(tch, 'classes', 'c1', 'assignments', 'a2'), { title: 'y', studentIds: ['stu'] })));
+await t('member cannot delete a class assignment', assertFails(deleteDoc(doc(stu, 'classes', 'c1', 'assignments', 'a1'))));
+await t('other member cannot delete it', assertFails(deleteDoc(doc(stu2, 'classes', 'c1', 'assignments', 'a2'))));
+await t('member deletes their own assignment', assertSucceeds(deleteDoc(doc(stu, 'classes', 'c1', 'assignments', 'a2'))));
 
 // ---- students
 await t('teacher reads own student', assertSucceeds(getDoc(doc(tch, 'students', 'stu'))));

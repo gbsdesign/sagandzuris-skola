@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { collection, doc, onSnapshot, orderBy, query, setDoc } from 'firebase/firestore';
-import { ClipboardList } from 'lucide-react';
 import { db } from '../../firebase';
 import { useAuth } from '../../context';
 import type { SchoolClass } from '../../hooks/useClasses';
@@ -8,18 +7,11 @@ import { Assignment, daysUntil, toAssignment } from '../../hooks/useTeaching';
 import { useConfirmations } from '../../hooks/useConfirmations';
 import { useAllLearning } from '../../hooks/useLearning';
 import { useDrillDone } from '../../utils/drillTakes';
-import { triggerHaptic } from '../../utils/haptics';
-import { WorkItems, currentWork, workDone } from '../teacher/MyClassWork';
-import { AssignmentsFold } from '../teacher/AssignmentsPanel';
-import { ClassLogo } from './ClassLogo';
+import { currentWork, workDone } from '../teacher/MyClassWork';
 
-// Every class's assignments in one place (2026-11-06, the user: „დავალების ღილაკიც მაღლა აიტანე საგანძურის ლოგოს მარჯვნივ“,
-// answer „ყველა კლასის დავალება ერთად“): one round 📋 in the header right of the logo (WorkButton) and the list it drops
-// down under the header (WorkPanel) — the chants', songs' and „ოსტატობა“'s exercises of all my classes; before that it sat
-// left of the class page's tabs (2026-11-05). A member's button lights up red while an assignment came that they have not
-// opened yet (students/{uid}.workSeenAt, one mark for all classes, the same as the path's „ნასწავლი“); opening the list puts
-// it out, and the number still to do stays on it. A teacher manages each class's in its part of the list (AssignmentsFold:
-// „ახალი დავალება“ asks chant or exercise, „ისწავლა N/M“, the older ones under „ძველი“).
+// Every class's assignments in one place: the chants', songs' and „ოსტატობა“'s exercises of all my classes, a group a
+// class. It fed the header's round 📋 (2026-11-06) until that went into „საგანძურის გზა“ → „ნასწავლი“ on 2026-11-08
+// (MyClassWork). A member's „new“ ones are those created after students/{uid}.workSeenAt, one mark for all classes.
 
 export interface WorkGroup {
   cls: SchoolClass;
@@ -109,78 +101,4 @@ export const useClassWork = (classes: SchoolClass[]): ClassWorkState => {
   };
   const count = groups.reduce((n, g) => n + (g.canEdit ? g.all.length : g.toDo), 0);
   return { groups, count, fresh: fresh.length, markSeen };
-};
-
-/** The header's round 📋, as big as its neighbours. Its badge: red and pulsing while a new assignment waits unseen, wine
- *  with the number still to do after that (a teacher's: how many are current); open = solid wine. */
-export const WorkButton: React.FC<{ state: ClassWorkState; open: boolean; onToggle: () => void }> = ({ state, open, onToggle }) => {
-  const n = state.count;
-  const lit = state.fresh > 0;
-  const label = lit ? `დავალებები — ახალი: ${state.fresh}` : n ? `დავალებები · ${n}` : 'დავალებები';
-  return (
-    <button
-      type="button"
-      onClick={() => { triggerHaptic(10); onToggle(); }}
-      aria-expanded={open}
-      aria-label={label}
-      title={label}
-      className={`relative shrink-0 w-9 h-9 rounded-full ring-1 flex items-center justify-center cursor-pointer transition-all active:scale-95 ${
-        open
-          ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]'
-          : 'bg-white/80 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028]'
-      }`}
-    >
-      <ClipboardList className="w-[18px] h-[18px]" />
-      {n > 0 && (
-        <span className="absolute -top-1.5 -right-1.5 flex">
-          {lit && <span aria-hidden className="absolute inset-0 rounded-full bg-red-500/70 motion-safe:animate-ping" />}
-          <span className={`relative min-w-5 h-5 px-1 rounded-full ring-2 ring-[#fbf6ec] text-[11px] font-black leading-5 tabular-nums text-center ${
-            lit ? 'bg-[#c62828] text-white' : open ? 'bg-[#fbf6ec] text-[#7a2028]' : 'bg-[#7a2028] text-white'
-          }`}>{n}</span>
-        </span>
-      )}
-    </button>
-  );
-};
-
-/** A class's name over its part of the list. */
-const ClassHead: React.FC<{ cls: SchoolClass }> = ({ cls }) => (
-  <p className="flex items-center gap-2.5 min-w-0">
-    <ClassLogo name={cls.name} logo={cls.logo} className="w-8 h-8 shrink-0 text-xs" />
-    <span className="min-w-0 line-clamp-2 text-[15px] font-bold leading-snug text-[#4a3426]">{cls.name}</span>
-  </p>
-);
-
-/** The list the button drops down: a part a class, a thin line between them. A class's name heads its part when there
- *  are several, and always for its teachers — their small „+ ახალი“ stands beside it (2026-11-07, the user's „მოვაწესრიგო“). */
-export const WorkPanel: React.FC<{ state: ClassWorkState }> = ({ state }) => {
-  const several = state.groups.length > 1;
-  const total = state.groups.reduce((n, g) => n + g.all.length, 0);
-  return (
-    <section aria-label="დავალებები">
-      <h2 className="min-h-12 flex items-center gap-2">
-        <ClipboardList className="w-5 h-5 shrink-0 text-[#7a2028]" />
-        <span className="font-serif-ge text-lg font-bold text-[#4a3426] truncate">დავალებები</span>
-        {total > 0 && <span className="text-sm font-bold text-[#a4927c] tabular-nums">{total}</span>}
-      </h2>
-      <div className="divide-y divide-[#efe5d4]">
-        {state.groups.map(g => (
-          <div key={g.cls.id} className="py-3.5 first:pt-0 last:pb-0">
-            {g.canEdit ? (
-              <AssignmentsFold cls={g.cls} list={g.all} past={g.past} head={<ClassHead cls={g.cls} />} />
-            ) : (
-              <>
-                {several && <div className="mb-2.5"><ClassHead cls={g.cls} /></div>}
-                {g.all.length ? (
-                  <WorkItems list={g.all} />
-                ) : (
-                  <p className="text-[14px] text-[#8a7a6a]">ახლა დავალება არ გაქვს. ახალი რომ მოვა, ეს ღილაკი აინთება.</p>
-                )}
-              </>
-            )}
-          </div>
-        ))}
-      </div>
-    </section>
-  );
 };

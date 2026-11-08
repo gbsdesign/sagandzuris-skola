@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, Check, ChevronDown, Flame, Info, Pencil, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, BookOpenCheck, Check, ChevronDown, ChevronRight, Flame, Info, Pencil, Sparkles, X } from 'lucide-react';
 import { useAuth, useModal, useNavigation, useViewing } from '../../context';
 import { useMyHabits } from '../../hooks/useMyHabits';
 import { useAccess } from '../../hooks/useAccess';
@@ -11,7 +11,7 @@ import { Btn, IconBtn, Sheet } from '../ui/kit';
 import { HabitPrayerMenu } from './HabitPrayerMenu';
 import { setHabitReminders } from '../../utils/prayerReminders';
 import { AddHabitPanel, HabitCardEditor, HabitsReorder } from './HabitsEditor';
-import { PATH_ICON } from './IndependentWorkCard';
+import { PATH_ICON, WorkMonthLine, WorkPanel, useIndependentWork } from './IndependentWorkCard';
 import { DayView, ListEdit } from '../habits/DayView';
 import { WeekView } from '../habits/WeekView';
 import { MonthView } from '../habits/MonthView';
@@ -79,6 +79,33 @@ const HabitsInfo: React.FC = () => (
     </p>
   </div>
 );
+
+// „დამოუკიდებელი სამუშაო“ as one of the habits (2026-11-08, the user: „სამუშაოს … კალენდარი ჩვევად დაამატე“): a row under the
+// day's habits — the month's hours and today's planned ones left; a tap opens its calendar (WorkPanel) in a window.
+const WorkHabitRow: React.FC<{ onOpen: () => void }> = ({ onOpen }) => {
+  const work = useIndependentWork();
+  const left = work.today.filter(s => !s.done).length;
+  const doneToday = work.today.length > 0 && !left;
+  return (
+    <button
+      type="button"
+      onClick={() => { triggerHaptic(8); onOpen(); }}
+      className="w-full min-h-[56px] flex items-center gap-3 pl-2 pr-1.5 py-2 rounded-2xl text-left bg-[#f3f6fb] ring-1 ring-[#dbe3f0] hover:bg-[#eaf0f8] cursor-pointer transition-colors active:scale-[0.99]"
+    >
+      <span className={`w-8 h-8 ml-0.5 shrink-0 rounded-full flex items-center justify-center ${doneToday ? 'bg-[#1e2f5a] text-white' : 'bg-[#1e2f5a]/10 text-[#1e2f5a]'}`}>
+        {doneToday ? <Check className="w-[18px] h-[18px] stroke-[3]" /> : <BookOpenCheck className="w-4 h-4" />}
+      </span>
+      <span className="flex-1 min-w-0">
+        <span className="block text-[15px] font-medium leading-snug text-[#2a2017]">დამოუკიდებელი სამუშაო</span>
+        <span className="block text-[12.5px] font-semibold text-[#6a7690]"><WorkMonthLine work={work} /></span>
+      </span>
+      {left > 0 && (
+        <span className="shrink-0 h-6 px-2 rounded-full bg-[#1e2f5a] text-white text-[11.5px] font-bold tabular-nums inline-flex items-center">დღეს {left}</span>
+      )}
+      <ChevronRight className="w-[18px] h-[18px] shrink-0 text-[#9aa6bd]" />
+    </button>
+  );
+};
 
 // The habits' views. A new view is one entry here: it gets the shared model (components/habits/useHabits) and the
 // few page actions below.
@@ -276,6 +303,12 @@ export const ChvevebiContent: React.FC<{ onClose?: () => void }> = ({ onClose })
       <div key={view} className="animate-in fade-in duration-200">
         {VIEWS.find(v => v.id === view)!.render(props)}
       </div>
+
+      {user && view === 'day' && access.on('work') && <WorkHabitRow onOpen={() => open('work')} />}
+
+      <Sheet open={sheet === 'work'} onClose={close} wide title="დამოუკიდებელი სამუშაო">
+        <WorkPanel />
+      </Sheet>
 
       <Sheet open={sheet === 'info'} onClose={close} title="განმარტება">
         <HabitsInfo />

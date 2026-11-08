@@ -139,7 +139,7 @@
   under „გალობა“'s left side (one swaying group in `GrapeNav`, 2026-11-06; საკრავები/მთქმელი moved down a little on phones); in
   the header the 🔍 sits in the top row on every phone (under sm).
   **Header since 2026-11-06** (`layout/Header.tsx`; the user: „ბიბლიოთეკა აიტანე მაღლა სერჩის წინ … მრგვალად, ბიბლიოთეკის ადგილზე
-  იხსნებოდეს ლოცვანი, დავალების ღილაკიც მაღლა … ლოგოს მარჯვნივ და აქვე შეტყობინებების ღილაკი … ჩამოსაშლელი“): [logo] [📋] [🔔] …
+  იხსნებოდეს ლოცვანი, დავალების ღილაკიც მაღლა … ლოგოს მარჯვნივ და აქვე შეტყობინებების ღილაკი … ჩამოსაშლელი“): [logo] [🔔] … (the 📋 left on 2026-11-08 — see „Tasks, chests and habits“)
   [📚] [🔍] [☁] [💬 „წერილები“] [👤]; the chips row = საგანძურის გზა · კლასი · ლოცვანი (opens `biblioteka` on `prayers` in one
   step; with several classes one „კლასი ▾“ drops `ClassesPanel` — a chip a class overflowed phones and pushed the page sideways,
   2026-11-07; the three chips need ~362 px at 380 px wide, so keep any new chip as narrow); 📚 and 🔍 move beside the chips from sm up. 📋 and 🔔 drop their list under the header (one at a time, a dim backdrop
@@ -405,6 +405,23 @@
   change). `data/pearls.ts` (`CHESTS`, 60 chants) stays only as the chant games' pool; `utils/pearls.ts` keeps `phraseOf`,
   `chantName`, `VOICE_NAMES`, `noteName`, `PearlShine`; `hooks/usePearls.ts` = the takes' store + approvals the learning mode,
   studio and readings use (`pearlTakes`, `students.pearlShine`; `students.pearls` is no longer read or written).
+- **Tasks, chests and habits (2026-11-08, the user: „დავალების ღილაკი მოიხსნას … გვერდზე გადაწევით … დიდხანს დაჭერით …
+  შესრულდა, წაშლა … სკივრებს … ეწეროს წირვა … გელათი კახური გურული … მტევანი, გრაგნილი, მედალიონი … სამუშაო → ჩვევები“, answers
+  „1ბ 2ა 3ბ“)**: the header's 📋 is gone; every assignment lives in „ნასწავლი“ (`MyClassWork` in `teacher/MyClassWork.tsx`, over
+  `useClassWork` of `classes/ClassWork.tsx`): a member's still to do = a swipe carousel (`WorkCarousel`, scroll snap, dots), a long
+  press (`hooks/useLongPress.ts`) opens `TaskMenu` — „შესრულდა“ marks the assigned voices on the path (`usePathMarks().markAll`, undo
+  by `restore`; an exercise → `markDrillDone`), „წაშლა“ deletes an assignment given to me alone (rule: a member may delete one whose
+  `studentIds == [uid]`) or hides a class one for me (`students.workHidden`); done ones leave the carousel. Teachers get each class's
+  `AssignmentsFold` under it. The chests (`pearls/LearnChests.tsx`, rules `utils/pathChests.ts` + test): a chest a service of
+  `SERVICE_LISTS` (+ „სხვა გალობა“ when needed), „სიმღერები“ (songs + instruments, white grape bunches), „მთქმელი“ (scrolls),
+  „ვიდეოები“ (enamel medallions = films marked „ნანახია“ — `hooks/useWatchedVideos.ts`, `students.videosSeen {ytId: day}`, guests
+  `sg-videos-seen`; the mark on every row and in the player of `VideosPage`). Top 3 = the fullest, „ყველა ▾“ opens all in a Sheet; a
+  long press opens `ChestOpening` (portal, z-95): the chest big, a chant chest's three schools rise (`SCHOOL_ROWS`: გ.ს. გელათური,
+  ქ.კ. კახური, შ.ს. გურული) each with one big pearl and its count, else one token with the total. Tokens `pearls/Tokens.tsx`
+  (`TokenIcon`, `GrapeIcon`, `ScrollIcon`, `MedallionIcon`); the list's rows show a chant's pearl, a song's or instrument's grape, a
+  poem's scroll. **Chests give „ჩემი სამოსი“ nothing** (a part stays only by its photo — see the outfit's notes). The path's fourth orb keeps id `work` but is „ჩვევები“: the daily habits' share over 30 days (`useHabitsAverage`), a tap
+  scrolls to the habits card; „დამოუკიდებელი სამუშაო“ is a row under the day's habits (`WorkHabitRow` in `ChvevebiPanel`) opening
+  its calendar in a Sheet.
 - **Habits** ticked per day (`students/{uid}.habitLog`, kept whole since 2026-10-16; each tick writes only its day),
   goals in `habitsAndManera.ts`. Views „დღე · კვირა · თვე · წელი“ + a habit's own page in `components/habits/`
   (one shared model `useHabits.tsx`; a new view = one entry in `VIEWS` in `ChvevebiPanel.tsx`), stats in

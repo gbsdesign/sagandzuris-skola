@@ -56,5 +56,35 @@ export const usePathMarks = (onLearned?: () => void) => {
     }
   };
 
-  return { locked, lock, confirmed, toggle };
+  /** Every voice of `voices` marked at once (a task's „შესრულდა“, 2026-11-08); the item joins the path when it is not on it.
+   *  Returns the mark it replaced (for „გაუქმება“), or false while a teacher has locked marking. */
+  const markAll = (id: string, voices: Voice[]): { before: unknown } | false => {
+    const cur = selectedChantVariants[id] ?? findCatalogEntry(id)?.make();
+    if (!cur || locked) return false;
+    const have = voicesOf(cur, id);
+    const want: Voice[] = usesVoices(id) ? ([...new Set([...have, ...(voices.length ? voices : ['1' as Voice])])].sort() as Voice[]) : ['1'];
+    const before = selectedChantVariants[id] ?? null;
+    save({ ...selectedChantVariants, [id]: { ...cur, voices: want, isLearned: true } });
+    onLearned?.();
+    return { before };
+  };
+
+  /** Puts an item's mark back as it was (`before` from markAll; null = it was not on the path). */
+  const restore = (id: string, before: unknown) => {
+    const next = { ...selectedChantVariants };
+    if (before) next[id] = before as typeof next[string];
+    else delete next[id];
+    save(next);
+  };
+
+  const save = (next: typeof selectedChantVariants) => {
+    setSelectedChantVariants(next);
+    if (user) {
+      setDoc(doc(db, 'students', user.uid), { selectedChantVariants: next }, { mergeFields: ['selectedChantVariants'] }).catch(err =>
+        console.warn('Firestore path mark note:', err)
+      );
+    }
+  };
+
+  return { locked, lock, confirmed, toggle, markAll, restore };
 };
