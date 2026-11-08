@@ -14,6 +14,7 @@ import { type FeastRule, dayText, feastsOnDay, nextFeastDayWithChurches, tbilisi
 import { type Visits, useChurchVisits } from '../hooks/useChurchVisits';
 import { useMyPlace } from '../hooks/useMyPlace';
 import { useOpenRequest } from '../utils/searchOpen';
+import { setChurchSearchOpen, useChurchSearchOpen } from '../components/maps/songSearch';
 import { readRecentChurches, rememberChurch } from '../utils/churchShare';
 import { MONASTERY_FILMS } from '../data/monasteryVideos';
 
@@ -61,6 +62,7 @@ export const ChurchesPage: React.FC = () => {
   const openChurch = (id: string) => { triggerHaptic(10); openMapItem(`${list || 'all'}/${id}`, false, true); };
   // the one search's „ტაძრები“ (components/search) opens the church over the first screen
   useOpenRequest('churches', id => openMapItem(`all/${id}`));
+  useEffect(() => () => setChurchSearchOpen(false), []);
   useEffect(() => { if (open) rememberChurch(open); }, [open]);
 
   if (!data) {
@@ -121,12 +123,34 @@ export const ChurchesPage: React.FC = () => {
       </>
     );
   }
-  return <><Overview data={data} visits={visits} onGo={go} onOpen={openChurch} />{card}</>;
+  // „უცხოეთის მონასტრები“ unfolds on the first screen; its film opens over it as „va/<film>“
+  const abroad = {
+    open: list === 'va' ? open : undefined,
+    onPlay: (id: string) => { triggerHaptic(10); openMapItem(`va/${id}`, false, true); },
+    onMove: (id: string) => openMapItem(`va/${id}`, true, true),
+    onClose: handleGoBack,
+  };
+  return <><Overview data={data} visits={visits} onGo={go} onOpen={openChurch} abroad={abroad} />{list !== 'va' && card}</>;
+};
+
+/** the page's search field, shown only while the bar's 🔍 is open (the user, 2026-11-09); closing it clears the words */
+const useFoldedQuery = () => {
+  const shown = useChurchSearchOpen();
+  const [q, setQ] = useState('');
+  useEffect(() => { if (!shown) setQ(''); }, [shown]);
+  return { shown, q, setQ };
 };
 
 /** the first screen: the search on top, the three ways in one row (ახლოს · ტაძრობა · წიგნაკი), the last churches opened, the map (regions or dots) */
-const Overview: React.FC<{ data: ChurchData; visits: Visits; onGo: (item: string) => void; onOpen: (id: string) => void }> = ({ data, visits, onGo, onOpen }) => {
-  const [q, setQ] = useState('');
+type AbroadFilms = { open?: string; onPlay: (id: string) => void; onMove: (id: string) => void; onClose: () => void };
+const ABROAD_KEY = 'sg-churches-abroad';
+const Overview: React.FC<{ data: ChurchData; visits: Visits; onGo: (item: string) => void; onOpen: (id: string) => void; abroad: AbroadFilms }> = ({ data, visits, onGo, onOpen, abroad }) => {
+  const { shown, q, setQ } = useFoldedQuery();
+  const [abroadOpen, setAbroadOpen] = useState(() => { try { return sessionStorage.getItem(ABROAD_KEY) === '1'; } catch { return false; } });
+  const foldAbroad = () => {
+    triggerHaptic(10);
+    setAbroadOpen(v => { try { sessionStorage.setItem(ABROAD_KEY, v ? '0' : '1'); } catch { /* private mode */ } return !v; });
+  };
   const [tab, setTab] = useState<Tab>(readTab);
   const query = q.trim();
   const found = useMemo(() => (query.length >= 2 ? byName(data.list.filter(c => matchChurch(c, query)), query) : []), [data, query]);
@@ -140,7 +164,7 @@ const Overview: React.FC<{ data: ChurchData; visits: Visits; onGo: (item: string
 
   return (
     <div className="w-full flex flex-col gap-4 animate-in fade-in duration-200">
-      <SearchField value={q} onChange={setQ} placeholder="ტაძრის ან სოფლის ძებნა" />
+      {shown && <SearchField value={q} onChange={setQ} placeholder="ტაძრის ან სოფლის ძებნა" autoFocus />}
       {query.length >= 2 ? (
         <Paged items={found} empty="ასეთი ტაძარი ვერ მოიძებნა" render={c => <Row key={c.id} c={c} been={visits[c.id]} onOpen={onOpen} />} />
       ) : (
@@ -171,9 +195,11 @@ const Overview: React.FC<{ data: ChurchData; visits: Visits; onGo: (item: string
             />
           )}
           {tab === 'regions' && filmsIn('abroad') > 0 && (
+            <div className="flex flex-col gap-3">
             <button
               type="button"
-              onClick={() => onGo('v:abroad')}
+              onClick={foldAbroad}
+              aria-expanded={abroadOpen}
               className="group w-full min-h-16 flex items-center gap-3 px-3 py-2.5 rounded-3xl bg-white/80 ring-1 ring-[#e8dcc8] text-left cursor-pointer hover:bg-[#fcf6ea] active:bg-[#f7eddc] transition-colors"
             >
               <span className="w-11 h-11 shrink-0 rounded-full grid place-items-center bg-[#7a2028]/[0.08] text-[#7a2028]"><Globe className="w-5 h-5" /></span>
@@ -182,8 +208,10 @@ const Overview: React.FC<{ data: ChurchData; visits: Visits; onGo: (item: string
                 <span className="text-[12.5px] font-semibold text-[#8a7a6a] leading-snug">ვიდეოები: ათონი, იერუსალიმი, პეტრიწონი…</span>
               </span>
               <span className="shrink-0 text-[13px] font-bold tabular-nums text-[#8a7a6a]">{filmsIn('abroad')}</span>
-              <ChevronRight className="w-5 h-5 shrink-0 text-[#b3a594]" aria-hidden />
+              <ChevronDown className={`w-5 h-5 shrink-0 text-[#b3a594] transition-transform ${abroadOpen ? 'rotate-180' : ''}`} aria-hidden />
             </button>
+            {abroadOpen && <Suspense fallback={waitFilms}><MonasteryFilms regionId="abroad" {...abroad} /></Suspense>}
+            </div>
           )}
         </>
       )}
@@ -277,7 +305,7 @@ const FeastList: React.FC<{ data: ChurchData; visits: Visits; onOpen: (id: strin
   const today = tbilisiToday();
   const next = useMemo(() => nextFeastDayWithChurches(data.list, today), [data, today]);
   const [feast, setFeast] = useState<FeastRule | null>(null);
-  const [q, setQ] = useState('');
+  const { shown: searchShown, q, setQ } = useFoldedQuery();
   const query = q.trim();
   const all = useMemo(() => (next?.feasts ?? []).flatMap(f => f.churches), [next]);
   const shown = useMemo(() => {
@@ -302,7 +330,7 @@ const FeastList: React.FC<{ data: ChurchData; visits: Visits; onOpen: (id: strin
         </div>
       )}
       {next.feasts.length === 1 && <p className="px-1 text-[15px] font-black text-[#8a5a0e]">{next.feasts[0].feast.label}</p>}
-      <SearchField value={q} onChange={setQ} placeholder="ტაძრის ან სოფლის ძებნა" />
+      {searchShown && <SearchField value={q} onChange={setQ} placeholder="ტაძრის ან სოფლის ძებნა" autoFocus />}
       <Paged items={shown} empty="ასეთი ტაძარი ვერ მოიძებნა" render={c => <Row key={c.id} c={c} been={visits[c.id]} onOpen={onOpen} />} />
       <p className="px-1 text-[12px] font-semibold text-[#8a7a6a] leading-relaxed">
         ტაძრობის დღე ტაძრის სახელიდან არის ამოცნობილი (მაგ. „წმინდა გიორგის“ → გიორგობა). სადაც სახელი მხოლოდ „ღვთისმშობლისაა“, დღე არ ჩანს.
@@ -360,7 +388,7 @@ const RegionList: React.FC<{
   const filmCount = filmsIn(region.id);
   const [kind, setKind] = useState<Filter>('all');
   const [muni, setMuni] = useState('');
-  const [q, setQ] = useState('');
+  const { shown: searchShown, q, setQ } = useFoldedQuery();
   const munis = useMemo(() => {
     const c = new Map<string, number>();
     for (const x of all) c.set(x.muni, (c.get(x.muni) ?? 0) + 1);
@@ -404,7 +432,7 @@ const RegionList: React.FC<{
       )}
       {all.length > 0 && <KindChips value={kind} onChange={setKind} list={inMuni} visits={visits} />}
       {munis.length > 1 && <MuniPicker munis={munis} total={all.length} value={muni} onChange={setMuni} />}
-      {all.length > 0 && <SearchField value={q} onChange={setQ} placeholder="ტაძრის ან სოფლის ძებნა" />}
+      {all.length > 0 && searchShown && <SearchField value={q} onChange={setQ} placeholder="ტაძრის ან სოფლის ძებნა" autoFocus />}
       {all.length > 0 && <Paged items={shown} empty="ასეთი ტაძარი ვერ მოიძებნა" render={c => <Row key={c.id} c={c} been={visits[c.id]} onOpen={onOpen} />} />}
       </>}
     </div>
@@ -506,10 +534,10 @@ const Chip: React.FC<{ on: boolean; label: string; n?: number; onClick: () => vo
   </button>
 );
 
-const SearchField: React.FC<{ value: string; onChange: (v: string) => void; placeholder: string }> = ({ value, onChange, placeholder }) => (
+const SearchField: React.FC<{ value: string; onChange: (v: string) => void; placeholder: string; autoFocus?: boolean }> = ({ value, onChange, placeholder, autoFocus }) => (
   <label className="relative block">
     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[#b3a594]" aria-hidden />
-    <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className={`${FIELD} pl-10`} type="search" />
+    <input value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className={`${FIELD} pl-10`} type="search" autoFocus={autoFocus} />
   </label>
 );
 
