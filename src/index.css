@@ -348,8 +348,22 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
 @keyframes sg-rise { 0% { opacity: 0; transform: translateY(70px) scale(0.35); } 55% { opacity: 1; } 100% { opacity: 1; transform: none; } }
 .sg-chest-shake { display: inline-block; transform-origin: 50% 90%; animation: sg-chest-shake 0.45s ease-in-out; }
 @keyframes sg-chest-shake { 0%, 100% { transform: none; } 20% { transform: rotate(-6deg); } 40% { transform: rotate(5deg); } 60% { transform: rotate(-3deg); } 80% { transform: rotate(2deg); } }
+/* a pearl marked flies up, shines, drops into its chest and the chest shuts (pearls/PearlFlight, 2026-11-09) */
+.sg-chest.opening .sg-chest-lidopen { animation: sg-lid-pop 0.5s cubic-bezier(0.2, 0.9, 0.3, 1.4) both; }
+@keyframes sg-lid-pop { 0% { transform: scaleY(0); opacity: 0; } 30% { opacity: 1; } 70% { transform: scaleY(1.15); } 100% { transform: scaleY(1); opacity: 1; } }
+.sg-chest.opening .sg-chest-glow, .sg-chest.opening .sg-chest-ray { animation: sg-rays-in 0.8s ease-out both; }
+.sg-chest.closing { animation: sg-chest-slam 0.55s ease-out both; }
+.sg-chest.closing .sg-chest-lidshut { animation: sg-lid-close 0.4s cubic-bezier(0.5, 0, 0.6, 1.5) both; }
+@keyframes sg-lid-close { 0% { transform: scaleY(-1); opacity: 0.5; } 45% { opacity: 1; } 100% { transform: scaleY(1); opacity: 1; } }
+@keyframes sg-chest-slam { 0%, 55% { transform: none; } 70% { transform: translateY(2px) scale(1.07, 0.9); } 85% { transform: translateY(-3px) scale(0.98, 1.03); } 100% { transform: none; } }
+.sg-fly-glow { animation: sg-fly-glow 1.1s ease-in-out infinite alternate; }
+@keyframes sg-fly-glow { from { opacity: 0.65; transform: scale(0.85); } to { opacity: 1; transform: scale(1.12); } }
+.sg-fly-rays { animation: sg-fly-rays 6s linear infinite; }
+@keyframes sg-fly-rays { to { transform: rotate(360deg); } }
+.sg-fly-spark { opacity: 0; animation: sg-fly-spark 1.2s ease-out infinite; }
+@keyframes sg-fly-spark { 0% { opacity: 0; transform: translate(0, 0) scale(0.3); } 30% { opacity: 1; } 100% { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1); } }
 @media (prefers-reduced-motion: reduce) {
-  .sg-pearl, .sg-pearl *, .sg-chest, .sg-chest *, .sg-chest-card-new, .sg-bead-in, .sg-open-in, .sg-open-glow, .sg-rise, .sg-chest-shake { animation: none !important; }
+  .sg-pearl, .sg-pearl *, .sg-chest, .sg-chest *, .sg-fly-glow, .sg-fly-rays, .sg-fly-spark, .sg-chest-card-new, .sg-bead-in, .sg-open-in, .sg-open-glow, .sg-rise, .sg-chest-shake { animation: none !important; }
   .sg-chest-lidshut.sg-chest-lidshut { display: none; }
   .sg-chest:not(.open) .sg-chest-lidshut { display: inline; }
   .sg-chest-spark { display: none; }

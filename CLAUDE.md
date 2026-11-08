@@ -486,7 +486,11 @@
   pearl drops in — `sg-bead-in`). A chest opened since
   this device last saw it plays the opening once (`sg-chest-open`: shake, the shut lid swings away and the open one rises, light,
   sparks and pearls; fireworks; `sg-chests-seen:<uid>`, never on a teacher's look — `useViewing`). The admin's activity counts
-  the polished ones (`personActivity`); the Android widget's „მარგალიტები“ ring = the share that shines (`WidgetSync`, no app
+  the polished ones (`personActivity`); **A voice marked flies (2026-11-09**, the user: „ბრილიანტი ბრწყინავდეს … სკივრში ჩადიოდეს … სკივრი იკეტებოდეს და ბრუნდებოდეს
+  უკან თავის ადგილას“): `pearls/PearlFlight.tsx` — the row's token (`data-token={id}`, hidden by a style while it flies) lights up,
+  rises to the upper middle and shines (glow, rays, sparks), its chest (`chestIdOf`, the card's `data-chest-art`; from below when off
+  screen) flies out under it and opens (`TreasureChest motion 'opening'`), the token drops in, the lid slams (`'closing'`), the chest
+  flies back and the token hops back into its row (`sg-bead-in`); 3.6 s, no blocking, none for „reduce motion“. the Android widget's „მარგალიტები“ ring = the share that shines (`WidgetSync`, no app
   change). `data/pearls.ts` (`CHESTS`, 60 chants) stays only as the chant games' pool; `utils/pearls.ts` keeps `phraseOf`,
   `chantName`, `VOICE_NAMES`, `noteName`, `PearlShine`; `hooks/usePearls.ts` = the takes' store + approvals the learning mode,
   studio and readings use (`pearlTakes`, `students.pearlShine`; `students.pearls` is no longer read or written).
