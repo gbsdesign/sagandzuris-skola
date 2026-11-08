@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AudioLines, ChevronRight, Loader2 } from 'lucide-react';
+import { AudioLines, CalendarDays, ChevronRight, Loader2 } from 'lucide-react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { GrapeBunch, Rosette, VineLeaf } from '../../components/home/PlateOrnaments';
@@ -8,6 +8,9 @@ import { SectionTitle } from './BookHead';
 import { lastReading } from './readingPlace';
 import { exportBusy, useExportState } from './SynthDownload';
 import { ChantRecordings } from './ChantRecordings';
+import { openChurchCalendar, todayIso } from '../../data/churchCalendar';
+import { useMembership } from '../../utils/memberAccess';
+import { triggerHaptic } from '../../utils/haptics';
 
 // The library's front room: the books standing on a wooden shelf (a cover opens the book), the place
 // the reader stopped, and the chant recordings on a shelf of their own.
@@ -163,6 +166,8 @@ const BookCover: React.FC<{ cover: Cover; onOpen: () => void; opening?: boolean;
 export const Shelf: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) => {
   const { user } = useAuth();
   const job = useExportState();
+  // the church calendar is for members a superadmin gave it to (utils/memberAccess); for others it does not show
+  const canCal = useMembership().can('calendar');
   const last = lastReading();
   // a member's own order of the books, if they set one before (the arranging was removed with the plates, 2026-10-25)
   const { order } = useShelfOrder(user?.uid);
@@ -218,6 +223,26 @@ export const Shelf: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) =>
           </div>
         ))}
       </section>
+
+      {/* the church calendar (moved here from the page's footer, 2026-11-08): opens as a sheet over the page */}
+      {canCal && (
+        <section aria-label="საეკლესიო კალენდარი">
+          <button
+            type="button"
+            onClick={() => { triggerHaptic(10); openChurchCalendar(todayIso()); }}
+            className="group w-full flex items-center gap-3.5 min-h-16 rounded-2xl bg-[#fffdf8] ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/30 shadow-[0_1px_2px_rgba(42,32,23,0.04),0_10px_24px_-20px_rgba(42,32,23,0.45)] px-3.5 py-2.5 text-left cursor-pointer active:scale-[0.99] transition-all"
+          >
+            <span className="w-11 h-11 shrink-0 rounded-xl bg-[#f6ecda] ring-1 ring-[#ead9bd] flex items-center justify-center text-[#7a2028]">
+              <CalendarDays className="w-5 h-5" />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block font-serif-ge text-[15px] font-bold leading-snug text-[#2a2017]">საეკლესიო კალენდარი</span>
+              <span className="mt-0.5 block text-[12px] leading-snug text-[#8a7a6a]">დღის წმიდანები და დღესასწაულები</span>
+            </span>
+            <ChevronRight className="w-5 h-5 shrink-0 text-[#cdbba3] group-hover:text-[#7a2028] group-hover:translate-x-0.5 transition-all" />
+          </button>
+        </section>
+      )}
 
       {/* the chant recordings — for members, as before */}
       {user && (
