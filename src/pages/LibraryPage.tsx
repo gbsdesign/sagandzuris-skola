@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { Suspense, lazy } from 'react';
 import { useNavigation } from '../context';
 import { BookTab } from './library/BookTab';
 import { BookNav } from './library/BookHead';
@@ -12,6 +12,8 @@ import { useOpenRequest } from '../utils/searchOpen';
 import { ChantAlbumPage } from './galoba/ChantAlbumPage';
 import { SongAlbumPage } from '../components/maps/SongAlbumPage';
 import { SongPage } from '../components/maps/SongPage';
+
+const VideoList = lazy(() => import('./VideosPage'));
 
 // "ბიბლიოთეკა": a shelf of books — Svimon Mchedlidze's Sacred History, the lives of the saints and the
 // church feasts (from orthodoxy.ge) — and the chant recordings. A book ("lives") and a part of it
@@ -44,7 +46,12 @@ export const LibraryPage: React.FC = () => {
         <Shelf onOpen={openMapItem} />
       ) : (
         <div key={open} className="animate-[galoba-unfold_0.25s_ease_both]">
-          {open === 'book' ? <BookTab nav={nav} /> : open === 'feasts' ? <FeastsTab group={nav.part} /> : open === 'lives' ? <LivesTab nav={nav} /> : open === 'prayers' ? <PrayersTab key={nav.part} at={nav.part} /> : open === 'sasuliero' ? <SpiritualBooksTab nav={nav} /> : <SynthDownload />}
+          {open === 'paisi' ? (
+            // „ვიდეოთეკა“'s St Paisios; a film opens over the list (`stay`), ‹ › turn it in place
+            <Suspense fallback={null}>
+              <VideoList id="p" open={nav.part ?? undefined} onPlay={id => openMapItem(`paisi:${id}`, false, true)} onMove={id => openMapItem(`paisi:${id}`, true, true)} onClose={handleGoBack} />
+            </Suspense>
+          ) : open === 'book' ? <BookTab nav={nav} /> : open === 'feasts' ? <FeastsTab group={nav.part} /> : open === 'lives' ? <LivesTab nav={nav} /> : open === 'prayers' ? <PrayersTab key={nav.part} at={nav.part} /> : open === 'sasuliero' ? <SpiritualBooksTab nav={nav} /> : <SynthDownload />}
         </div>
       )}
     </div>

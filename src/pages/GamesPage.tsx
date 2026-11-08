@@ -1,6 +1,6 @@
 import React, { Suspense, lazy, useMemo, useState } from 'react';
 import {
-  AudioLines, Bird, Brain, Brush, Castle, Check, Compass, Crown, Dice5, Drama, Feather, Flag, Flame, Footprints, Gamepad2, Gem, Grape, Grid2x2Check, Grid3x3, HatGlasses, Headphones, Hourglass, KeyRound, Layers3, Info, Landmark, LayoutGrid, Lightbulb, ListChecks, ListMusic, ListOrdered, Loader2, Map as MapIcon, MapPinned, MessageCircle, MessageSquareOff,
+  AudioLines, Bird, Brain, Brush, Castle, Check, ChevronRight, Clapperboard, Compass, Crown, Dice5, Drama, Feather, Flag, Flame, Footprints, Gamepad2, Gem, Grape, Grid2x2Check, Grid3x3, HatGlasses, Headphones, Hourglass, KeyRound, Layers3, Info, Landmark, LayoutGrid, Lightbulb, ListChecks, ListMusic, ListOrdered, Loader2, Map as MapIcon, MapPinned, MessageCircle, MessageSquareOff,
   MicVocal, Music2, Piano, Printer, Puzzle, Repeat, Route, Search, Shapes, ScrollText, Shirt, SpellCheck, TextSearch, TicketCheck, UserRoundSearch, Users, VenetianMask, Waves, Wifi, X,
 } from 'lucide-react';
 import { useNavigation } from '../context';
@@ -81,6 +81,9 @@ const Qaravani: React.FC = () => (
   </Suspense>
 );
 import { useVine } from './games/vazi/useVine';
+import { KINO } from '../data/georgianFilms';
+// „ქართული ფილმები“ (moved here from „მთქმელი“'s videos, 2026-11-09): the list loads only when opened
+const VideoList = lazy(() => import('./VideosPage'));
 
 // „თამაშები“: the hub of the games (2026-10-27; one list since 2026-10-30, the user's „ყველა თამაში 1 სიად“; made clearer
 // 2026-11-04, the user's „დახვეწე, გაათანამედროვე და არ იყოს დამაბნეველი“). On top what the three variants are and a search
@@ -211,7 +214,7 @@ const jumpTo = (id: string) => {
 };
 
 export const GamesPage: React.FC = () => {
-  const { navigateTo, mapItem, openMapItem } = useNavigation();
+  const { navigateTo, mapItem, openMapItem, handleGoBack } = useNavigation();
   const access = useAccess();
   const hangi = useHangi();
   const sitqva = useDailyRecord('sitqva');
@@ -232,6 +235,23 @@ export const GamesPage: React.FC = () => {
 
   const Inner = mapItem ? INNER[mapItem] : undefined;
   if (Inner) return <Inner />;
+  // „ქართული ფილმები“: `kino`, an open film `kino/<YouTube id>` (the bar's „უკან“ closes the film first)
+  const [kinoList, kinoFilm] = (mapItem ?? '').split('/');
+  if (kinoList === 'kino') {
+    return (
+      <div className="w-full max-w-2xl">
+        <Suspense fallback={<div className="py-20 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-[#7a2028]" /></div>}>
+          <VideoList
+            id="k"
+            open={kinoFilm}
+            onPlay={id => { triggerHaptic(10); openMapItem(`kino/${id}`, false, true); }}
+            onMove={id => openMapItem(`kino/${id}`, true, true)}
+            onClose={handleGoBack}
+          />
+        </Suspense>
+      </div>
+    );
+  }
 
   // a game's app variants follow its section's switch and the member's features; a printed kit is always there
   const cards = GAMES.flatMap(g => {
@@ -240,6 +260,7 @@ export const GamesPage: React.FC = () => {
     return modes.length ? [{ g: { ...g, modes }, state }] : [];
   });
   const building = cards.filter(c => c.state === 'soon').length;
+  const films = access.section('videoebi') === 'open';
 
   // a daily game's card shows today's result or the streak
   const meta = (g: GameDef) =>
@@ -364,6 +385,24 @@ export const GamesPage: React.FC = () => {
                 ))}
               </ul>
             </section>
+          )}
+          {/* „ქართული ფილმები“ (2026-11-09, the user: „კინოები თეატრები მულტფილები გადაიტანე სახალისოში“) */}
+          {films && (
+            <button
+              type="button"
+              onClick={() => { triggerHaptic(10); openMapItem('kino'); }}
+              className="group w-full min-h-16 flex items-center gap-3 rounded-2xl bg-white/85 ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/35 px-3 py-2.5 text-left cursor-pointer active:scale-[0.99] transition-all"
+            >
+              <span className="w-11 h-11 shrink-0 rounded-2xl grid place-items-center bg-[#7a2028]/[0.08] text-[#7a2028]">
+                <Clapperboard className="w-5 h-5" />
+              </span>
+              <span className="flex-1 min-w-0">
+                <span className="block font-serif-ge text-[16px] font-bold leading-snug text-[#4a3426]">ქართული ფილმები</span>
+                <span className="mt-0.5 block text-[12.5px] leading-snug text-[#8a7a6a]">კინო, სპექტაკლები, მულტფილმები</span>
+              </span>
+              <span className="shrink-0 text-[13px] font-bold tabular-nums text-[#a8998a]">{KINO.length}</span>
+              <ChevronRight className="w-5 h-5 shrink-0 text-[#b3a594] group-hover:text-[#7a2028] transition-colors" aria-hidden />
+            </button>
           )}
           <div className="space-y-2.5">
             <h2 className="px-1 flex items-baseline gap-2 font-serif-ge text-[17px] font-bold text-[#4a3426]">ყველა თამაში<span className="text-[13px] font-bold tabular-nums text-[#a8998a]">{cards.length}</span></h2>

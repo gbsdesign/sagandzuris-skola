@@ -72,6 +72,17 @@ export const VideosPage: React.FC = () => {
   );
 };
 
+/** a list with its heading, shown elsewhere since 2026-11-09 (the user: „კინოები თეატრები მულტფილმები გადაიტანე სახალისოში … წმ
+ *  პაისი ბიბლიოთეკაში … ვიდეოთეკას ცალკე შეუქმენი თარო“): „ქართული ფილმები“ in the games page (`kino`), St Paisios on the library's
+ *  „ვიდეოთეკა“ shelf (`paisi`) */
+export const VideoList: React.FC<{ id: 'k' | 'p'; open?: string; onPlay: (id: string) => void; onMove: (id: string) => void; onClose: () => void }> = ({ id, ...rest }) => (
+  <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
+    <ListHead id={id} />
+    {id === 'k' ? <Kino {...rest} /> : <Paisi {...rest} />}
+  </div>
+);
+export default VideoList;
+
 /** the lists with no place: a roomy row each */
 const OTHER: { id: ListId; title: string; sub: string; Icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'ep', title: 'სრული გადაცემები', sub: '„ეთნოფორის“ ყველა გადაცემა', Icon: Tv },
@@ -131,7 +142,7 @@ const ChannelLink: React.FC = () => (
   </a>
 );
 
-const PAISI_COUNT = PAISI_PARTS.reduce((n, p) => n + p.eps.length, 0);
+export const PAISI_COUNT = PAISI_PARTS.reduce((n, p) => n + p.eps.length, 0);
 
 /** a film's row: the year and the note, its parts' count; its genres as a quiet line, the grown-ups' mark */
 const kinoFilm = (k: KinoItem): Film => {
