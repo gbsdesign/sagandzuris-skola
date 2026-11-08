@@ -9,7 +9,8 @@ import { PathTabs } from './PathTabs';
  *  EXTRA_SWITCHES); the pearls and their chests live in „ნასწავლი“ since 2026-11-05. */
 export const PathPageBody: React.FC = () => {
   const access = useAccess();
-  const pathOrbs = PATH_ORBS.filter(o => access.on(o.id));
+  // the library's button follows the library's own switch; the others their own (data/sections EXTRA_SWITCHES)
+  const pathOrbs = PATH_ORBS.filter(o => (o.id === 'library' ? access.section('biblioteka') !== 'hidden' : access.on(o.id)));
   const habitsOpen = access.section('chvevebi') === 'open';
   // with the „ჩვევები“ round button the habits open only from it; without it they stand under the buttons as before
   const habitsOnOrb = habitsOpen && pathOrbs.some(o => o.id === 'work');

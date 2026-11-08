@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { Check, ChevronDown, ChevronRight, GraduationCap, Lock, Pencil, Sparkles, X } from 'lucide-react';
 import { db } from '../../firebase';
-import { useAuth, useChants } from '../../context';
+import { useAuth, useChants, useNavigation } from '../../context';
 import { PathItem, usesVoices, voicesOf } from '../../utils/pathItems';
 import { usePathMarks } from '../../hooks/usePathMarks';
 import { usePathItemOpener } from '../../hooks/usePathItemOpener';
@@ -24,8 +24,11 @@ import { LearnChests } from '../pearls/LearnChests';
 import { TokenIcon } from '../pearls/Tokens';
 import { pearlCounts, pearlOf } from '../../utils/pathPearls';
 import { clearTried, useTried } from '../../utils/samosiTry';
+import { useLibraryProgress } from '../../hooks/useBooksRead';
+import { useAccess } from '../../hooks/useAccess';
+import { askSignIn } from '../access/SignInPrompt';
 
-type OrbId = 'samosi' | 'learn' | 'manera' | 'work';
+type OrbId = 'samosi' | 'learn' | 'manera' | 'work' | 'library';
 
 /** The round buttons as the "რიგი" list names them; the member's order of these ids comes in `order`. */
 export const PATH_ORBS: { id: OrbId; label: string }[] = [
@@ -34,6 +37,8 @@ export const PATH_ORBS: { id: OrbId; label: string }[] = [
   { id: 'manera', label: 'ოსტატობა' },
   // the id stays „work“ (the member's saved order, the admin's switch); since 2026-11-08 it is „ჩვევები“
   { id: 'work', label: 'ჩვევები' },
+  // since 2026-11-09 (the header's 📚 moved here): opens the library; the ring = its books and lives read
+  { id: 'library', label: 'ბიბლიოთეკა' },
 ];
 
 const SAMOSI_IDS = new Set(SAMOSI_PARTS.map(p => p.id));
@@ -93,6 +98,9 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
   const work = useIndependentWork();
   const samosi = useSamosiSummary();
   const newWork = useNewWork();
+  const library = useLibraryProgress();
+  const libraryAccess = useAccess().section('biblioteka');
+  const { navigateTo } = useNavigation();
   // the parts only tried on come off once the path page is left
   useEffect(() => () => clearTried(), []);
 
@@ -113,6 +121,12 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
   };
   usePanelWish(['learn', 'manera', 'work'], id => (id === 'work' ? toHabits() : setOpen(id as OrbId)));
   const toggle = (id: OrbId) => {
+    if (id === 'library') {
+      triggerHaptic(10);
+      if (libraryAccess === 'locked') askSignIn('ბიბლიოთეკა');
+      else navigateTo('biblioteka');
+      return;
+    }
     if (id === 'work' && (!habitsCard || open !== 'work')) { toHabits(); return; }
     triggerHaptic(10); setEditing(false); setOpen(o => (o === id ? null : id));
   };
@@ -160,11 +174,26 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
             {habits != null ? <OrbPercent value={habits} /> : <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 text-[#1e2f5a]" strokeWidth={1.8} />}
           </PathOrb>
         );
+      case 'library': {
+        // „5 / 1559“: the books and saints' lives marked „წავიკითხე“, in a teal ring of its own
+        const pct = library.total ? (100 * library.done) / library.total : 0;
+        return (
+          <PathOrb
+            key={id} label="ბიბლიოთეკა" title={`ბიბლიოთეკა · ${library.done}${library.total ? ` / ${library.total}` : ''} წიგნიდან წაკითხული`}
+            percent={pct} hue="teal" open={false} onClick={() => toggle(id)} index={index}
+          >
+            <span className="flex flex-col items-center leading-none">
+              <span className="text-[20px] min-[400px]:text-[22px] sm:text-[24px] font-black tabular-nums text-[#1f5c55]">{library.done}</span>
+              <span className="mt-0.5 text-[10px] sm:text-[11px] font-bold tabular-nums text-[#8a7a6a]">/ {library.total ?? '…'}</span>
+            </span>
+          </PathOrb>
+        );
+      }
     }
   };
   const orbs = ids.map(orb);
 
-  const cards: Record<Exclude<OrbId, 'work'>, { title: string; sub: React.ReactNode; aside?: React.ReactNode; action?: React.ReactNode; body: React.ReactNode }> = {
+  const cards: Record<Exclude<OrbId, 'work' | 'library'>, { title: string; sub: React.ReactNode; aside?: React.ReactNode; action?: React.ReactNode; body: React.ReactNode }> = {
     samosi: {
       title: 'ჩემი სამოსი',
       sub: samosi.real === SAMOSI_TOTAL
@@ -184,7 +213,7 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
     },
     manera: { title: 'ოსტატობა', sub: 'გზა დონეებით — 0-დან ოსტატამდე', body: <MasteryContent /> },
   };
-  const card = open && open !== 'work' ? cards[open] : null;
+  const card = open && open !== 'work' && open !== 'library' ? cards[open] : null;
 
   return (
     <div className="w-full space-y-3">

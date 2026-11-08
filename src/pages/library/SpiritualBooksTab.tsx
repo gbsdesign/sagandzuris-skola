@@ -1,7 +1,8 @@
 import React from 'react';
 import { ChevronRight } from 'lucide-react';
 import { BookHead, BookNav } from './BookHead';
-import { Book, BookTab } from './BookTab';
+import { BookTab } from './BookTab';
+import { BOOKS } from '../../data/libraryBooks';
 import { MiniCover } from './Shelf';
 import { lastChapter } from './readingPlace';
 
@@ -9,14 +10,7 @@ import { lastChapter } from './readingPlace';
 // opens in the same reader as the Sacred History, and its chapter ("sasuliero:ati:3") is a step of its own.
 // With a single book the list is skipped: the shelf's cover opens that book's contents.
 
-interface Entry { id: string; title: string; author: string; chapters: number; load: () => Promise<Book> }
-
-export const BOOKS: Entry[] = [
-  {
-    id: 'ati', title: 'ათი მცნების განმარტება', author: 'წმიდა ნიკოლოზ სერბი', chapters: 11,
-    load: () => import('../../data/library/atiMcneba.json').then(m => m.default as unknown as Book),
-  },
-];
+export { BOOKS };
 
 export const SpiritualBooksTab: React.FC<{ nav: BookNav }> = ({ nav }) => {
   const [id, ...rest] = (nav.part ?? '').split(':');

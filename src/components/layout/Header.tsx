@@ -8,7 +8,7 @@ import { askSignIn, openSignIn } from '../access/SignInPrompt';
 import { SearchButton } from '../search/GlobalSearch';
 import { useInbox, isUnread } from '../../hooks/useDirectChat';
 import { useClassLasts, useChatSeen, isClassUnread } from '../../hooks/useClassChat';
-import { User as UserIcon, LogIn, Compass, Library, Baby, MessageCircle, ChevronDown, ChevronRight, Users } from 'lucide-react';
+import { User as UserIcon, LogIn, Compass, Baby, MessageCircle, ChevronDown, ChevronRight, Users } from 'lucide-react';
 import { BellButton, BellPanel } from './Bell';
 import { useBellState, useNotices } from '../../hooks/useNotices';
 import { useOpenRequest } from '../../utils/searchOpen';
@@ -144,27 +144,8 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
       openMapItem('prayers');
     }
   };
-  // the library: a round button before the search (2026-11-06, the user: „ბიბლიოთეკა აიტანე მაღლა სერჩის წინ ლამაზი ღილაკით
-  // მრგვალად“); the search's place moves with the screen, and so does this
-  const libraryButton = (className: string) => library !== 'hidden' && (
-    <button
-      type="button"
-      onClick={() => {
-        triggerHaptic(10);
-        if (library === 'locked') askSignIn('ბიბლიოთეკა');
-        else navigateTo('biblioteka');
-      }}
-      className={`w-9 h-9 shrink-0 rounded-full ring-1 flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
-        currentPage === 'biblioteka' && !onPrayers
-          ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]'
-          : 'bg-white/80 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028]'
-      } ${className}`}
-      title="ბიბლიოთეკა"
-      aria-label="ბიბლიოთეკა"
-    >
-      <Library className="w-[18px] h-[18px]" />
-    </button>
-  );
+  // the library's round 📚 left the header on 2026-11-09 (the user: „ბიბლიოთეკის ღილაკი აქ ჩამოიტანე“): it is a round
+  // button of „საგანძურის გზა“ now (PathOrbs, „ბიბლიოთეკა“), with how many of its books are read
 
   // one class: its chip (with its logo) opens it; several: one „კლასი ▾“ drops the list of them (ClassesPanel)
   const classChip = `flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 h-10 pl-1.5 pr-2 min-[400px]:pr-3 rounded-full text-[13px] font-bold ${currentPage === 'class' ? 'bg-[#7a2028]/10 text-[#7a2028]' : 'text-[#4a3426]'} hover:bg-[#7a2028]/5 hover:text-[#7a2028] transition-colors cursor-pointer select-none whitespace-nowrap active:scale-95`;
@@ -229,9 +210,8 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
         {/* profile and the rest (the admin panel opens from the profile; installing the app lives in the profile and on
             the offline page) */}
         <div className="order-2 lg:order-3 ml-auto flex items-center gap-1.5 min-w-0">
-          {/* 📚 and 🔍 sit beside the learning tools from sm up; with none of them shown, up here — and up here on every
+          {/* 🔍 sits beside the learning tools from sm up; with none of them shown, up here — and up here on every
               phone (under sm), where the three chips need the whole row (2026-10-31) */}
-          {libraryButton(showNav ? 'sm:hidden' : '')}
           {access.can('search') && <SearchButton className={showNav ? 'sm:hidden' : ''} />}
 
           {user ? (
@@ -298,7 +278,7 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
           )}
         </div>
 
-        {/* learning tools: one group, full width on phones, centred on desktop; 📚 and 🔍 beside it */}
+        {/* learning tools: one group, full width on phones, centred on desktop; 🔍 beside it */}
         {showNav && (
         <nav className="order-3 lg:order-2 w-full lg:w-auto lg:mx-auto flex justify-center gap-1.5 sm:gap-2" aria-label="სასწავლო მასალა">
           <div className="flex-1 sm:flex-none flex items-stretch rounded-full bg-white/80 ring-1 ring-[#e8dcc8] p-0.5">
@@ -324,7 +304,6 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
             })}
             {!tools.some(t => t.id === 'lotsvani') && classButtons}
           </div>
-          {libraryButton('max-sm:hidden self-center')}
           {access.can('search') && <SearchButton className="max-sm:hidden self-center" />}
         </nav>
         )}
