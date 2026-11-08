@@ -274,6 +274,12 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
   88% { opacity: 0.55; transform: scale(0.6) rotate(90deg); }
 }
 .sg-pearl.is-pop { animation: sg-pearl-pop 0.7s cubic-bezier(0.2, 0.9, 0.3, 1.35); }
+/* „ხალხური“'s map: the tapped region grows and a light runs round its border before it opens (RegionPuzzleMap rich) */
+.sg-map-go { transform-box: fill-box; transform-origin: center; animation: sg-map-go 0.45s cubic-bezier(0.2, 0.9, 0.3, 1.2) both; }
+@keyframes sg-map-go { from { transform: scale(1); } to { transform: scale(1.14); } }
+.sg-map-run { stroke-dasharray: 18 82; animation: sg-map-run 0.75s linear 2 both; }
+@keyframes sg-map-run { from { stroke-dashoffset: 100; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .sg-map-go, .sg-map-run { animation: none; } }
 @keyframes sg-pearl-pop { 0% { transform: scale(0.6); } 55% { transform: scale(1.22); } 100% { transform: scale(1); } }
 
 /* „ნასწავლი“'s chests (components/pearls/LearnChests.tsx), Georgian კიდობნები. The one being filled turns its borjgali and,
