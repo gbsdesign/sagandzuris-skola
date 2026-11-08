@@ -5,7 +5,7 @@ import { FOLK_SONGS, getFolkRegion } from '../../data/songsData';
 import { MTKMELI_AUTHORS } from '../../data/mtkmeliData';
 import { INSTRUMENTS_LIST } from '../../data/instrumentsData';
 import { CatalogNode, buildCatalog } from '../../data/catalog';
-import { SERVICES, shortcutLabel } from '../../utils/shortcuts';
+import { SERVICES, serviceName, shortcutLabel } from '../../utils/shortcuts';
 import { CATEGORY_LABEL, CatalogEntry, findCatalogEntry, searchCatalog } from '../../utils/pathItems';
 import { triggerHaptic } from '../../utils/haptics';
 import { ProgramItem, SchoolClass } from '../../hooks/useClasses';
@@ -194,7 +194,7 @@ const roots = (): Node[] => [
     children: () => SERVICE_LISTS.filter(([s]) => (SERVICES as readonly string[]).includes(s)).map(([service, list]) => {
       const chants = list.filter(c => c.variants?.length);
       return {
-        key: `g:${service}`, title: service, sub: `${chants.length} საგალობელი`,
+        key: `g:${service}`, title: serviceName(service), sub: `${chants.length} საგალობელი`,
         children: () => chants.flatMap(c => {
           const title = c.title.replace(/[;\s]+$/, '');
           const versions = c.variants!.flatMap(v => pathLeaf(v.id, v.code || v.label, v.label && v.code ? v.label : undefined));

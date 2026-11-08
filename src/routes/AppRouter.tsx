@@ -3,6 +3,7 @@ import { useNavigation, useChants, useAuth, PageType } from '../context';
 import { WifiOff, RefreshCw, Loader2 } from 'lucide-react';
 import { PageBar } from '../components/ui/kit';
 import { PinButton } from '../components/home/ShortcutShelf';
+import { ProgramButton } from '../pages/galoba/LiturgyBits';
 import { FavButton } from '../components/prayers/FavPrayers';
 import { ProfileActions } from '../components/views/ProfileActions';
 import { KhutsuriSwitch } from '../components/views/KhutsuriSwitch';
@@ -287,7 +288,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           title={title}
           onBack={handleGoBack}
           // a prayer also gets ☆ — „რჩეული“ at the top of the prayer book (components/prayers/FavPrayers.tsx)
-          right={pin ? <>{currentPage === 'prayer' && selectedPrayerId && <FavButton id={selectedPrayerId} />}<PinButton id={pin} /></> : undefined}
+          right={pin ? <>{currentPage === 'galoba' && <ProgramButton />}{currentPage === 'prayer' && selectedPrayerId && <FavButton id={selectedPrayerId} />}<PinButton id={pin} /></> : undefined}
           className="w-full mb-4"
         />
 

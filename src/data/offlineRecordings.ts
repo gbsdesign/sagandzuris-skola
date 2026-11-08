@@ -3,6 +3,7 @@
 // and the admission program — plus, for each chant book, the recordings of its chants (section 'books': shown beside the
 // book's pages, so „the whole book“ goes on the phone in one tap). An item lists the track URLs the players look up in IndexedDB (utils/audioIdb.ts).
 import { BOOK_NAMES, SERVICE_LISTS, findVersion, hasBookNotes } from './chantLookup';
+import { serviceName } from '../utils/shortcuts';
 import { AUDIO_PROXY, getChantMedia } from './chantMediaRegistry';
 import { chantRecordings, chantRecordingMedia } from './chantRecordings';
 import { ALBUM_RECS, CHANT_ALBUMS } from './chantAlbums';
@@ -39,7 +40,7 @@ export const recordingGroups = (): RecGroup[] => {
         if (tracks.length) items.push({ id: `v:${v.id}`, title: chant.title, sub: v.version !== undefined ? variantName(v) : v.label, tracks });
       }
     }
-    groups.push({ id: `g:${service}`, section: 'galoba', title: service, items });
+    groups.push({ id: `g:${service}`, section: 'galoba', title: serviceName(service), items });
   }
   const byBook = new Map<string, Map<string, RecItem>>();
   for (const g of groups) {
