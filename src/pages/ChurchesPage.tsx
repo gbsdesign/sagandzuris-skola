@@ -14,7 +14,7 @@ import { type FeastRule, dayText, feastsOnDay, nextFeastDayWithChurches, tbilisi
 import { type Visits, useChurchVisits } from '../hooks/useChurchVisits';
 import { useMyPlace } from '../hooks/useMyPlace';
 import { useOpenRequest } from '../utils/searchOpen';
-import { setChurchSearchOpen, useChurchSearchOpen } from '../components/maps/songSearch';
+import { setChurchMapOpen, setChurchSearchOpen, useChurchMapOpen, useChurchSearchOpen } from '../components/maps/songSearch';
 import { readRecentChurches, rememberChurch } from '../utils/churchShare';
 import { MONASTERY_FILMS } from '../data/monasteryVideos';
 
@@ -43,9 +43,6 @@ const churchRegion = (id: string): FolkRegion | null => FOLK_REGIONS.find(r => r
 const PAGE = 60;
 type Filter = KindFilter | 'mine';
 const passes = (c: Church, f: Filter, visits: Visits) => (f === 'mine' ? c.id in visits : passesKind(c, f));
-const TAB_KEY = 'sg-churches-tab';
-type Tab = 'regions' | 'pins';
-const readTab = (): Tab => { try { return sessionStorage.getItem(TAB_KEY) === 'pins' ? 'pins' : 'regions'; } catch { return 'regions'; } };
 
 export const ChurchesPage: React.FC = () => {
   const { mapItem, openMapItem, handleGoBack } = useNavigation();
@@ -62,7 +59,7 @@ export const ChurchesPage: React.FC = () => {
   const openChurch = (id: string) => { triggerHaptic(10); openMapItem(`${list || 'all'}/${id}`, false, true); };
   // the one search's „ტაძრები“ (components/search) opens the church over the first screen
   useOpenRequest('churches', id => openMapItem(`all/${id}`));
-  useEffect(() => () => setChurchSearchOpen(false), []);
+  useEffect(() => () => { setChurchSearchOpen(false); setChurchMapOpen(false); }, []);
   useEffect(() => { if (open) rememberChurch(open); }, [open]);
 
   if (!data) {
@@ -151,7 +148,7 @@ const Overview: React.FC<{ data: ChurchData; visits: Visits; onGo: (item: string
     triggerHaptic(10);
     setAbroadOpen(v => { try { sessionStorage.setItem(ABROAD_KEY, v ? '0' : '1'); } catch { /* private mode */ } return !v; });
   };
-  const [tab, setTab] = useState<Tab>(readTab);
+  const dots = useChurchMapOpen();
   const query = q.trim();
   const found = useMemo(() => (query.length >= 2 ? byName(data.list.filter(c => matchChurch(c, query)), query) : []), [data, query]);
   const counts = useMemo(() => {
@@ -160,30 +157,20 @@ const Overview: React.FC<{ data: ChurchData; visits: Visits; onGo: (item: string
     return c;
   }, [data]);
   const active = data.list.filter(c => c.kind !== 'x').length;
-  const chooseTab = (t: Tab) => { setTab(t); try { sessionStorage.setItem(TAB_KEY, t); } catch { /* private mode */ } };
 
   return (
-    <div className="w-full flex flex-col gap-4 animate-in fade-in duration-200">
+    <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
       {shown && <SearchField value={q} onChange={setQ} placeholder="ტაძრის ან სოფლის ძებნა" autoFocus />}
       {query.length >= 2 ? (
         <Paged items={found} empty="ასეთი ტაძარი ვერ მოიძებნა" render={c => <Row key={c.id} c={c} been={visits[c.id]} onOpen={onOpen} />} />
       ) : (
         <>
-          <p className="px-1 text-[13px] leading-snug text-[#8a7a6a] font-semibold">
+          <p className="px-1 -mb-1 text-[12.5px] leading-snug text-[#8a7a6a] font-semibold">
             საქართველოს {data.list.length.toLocaleString('en-US')} ტაძარი · {active.toLocaleString('en-US')} მოქმედი
           </p>
           <WaysRow data={data} visits={visits} onGo={onGo} />
           <RecentRow data={data} visits={visits} onOpen={onOpen} />
-          <Tabs<Tab>
-            cols={2}
-            value={tab}
-            onChange={chooseTab}
-            items={[
-              { id: 'regions', label: 'კუთხეებით', Icon: MapPin },
-              { id: 'pins', label: 'რუკა', Icon: MapIcon },
-            ]}
-          />
-          {tab === 'pins' ? (
+          {dots ? (
             <Dots data={data} visits={visits} onOpen={onOpen} />
           ) : (
             <RegionPuzzleMap
@@ -194,7 +181,7 @@ const Overview: React.FC<{ data: ChurchData; visits: Visits; onGo: (item: string
               title="ეკლესია-მონასტრები"
             />
           )}
-          {tab === 'regions' && filmsIn('abroad') > 0 && (
+          {!dots && filmsIn('abroad') > 0 && (
             <div className="flex flex-col gap-3">
             <button
               type="button"
@@ -235,19 +222,21 @@ const WaysRow: React.FC<{ data: ChurchData; visits: Visits; onGo: (item: string)
 };
 
 const WAY_TONE = {
-  wine: 'bg-[#7a2028] text-[#fbf6ec] shadow-[0_6px_16px_-8px_rgba(122,32,40,0.75)] hover:bg-[#5e1820]',
+  wine: 'bg-[#7a2028] text-[#fbf6ec] shadow-[0_4px_12px_-8px_rgba(122,32,40,0.7)] hover:bg-[#5e1820]',
   gold: 'bg-gradient-to-br from-[#fbf0d8] to-[#f4e1bd] ring-1 ring-[#e2c9a0] text-[#2a2017] hover:ring-[#b07a1e]/50',
   green: 'bg-white/85 ring-1 ring-[#e8dcc8] text-[#2a2017] hover:ring-[#2f6b3a]/40',
 } as const;
 const WAY_ICON = { wine: 'bg-white/15 text-[#fbf6ec]', gold: 'bg-[#b07a1e]/15 text-[#8a5a0e]', green: 'bg-[#2f6b3a]/10 text-[#2f6b3a]' } as const;
 const WAY_LINE = { wine: 'text-[#fbf6ec]/80', gold: 'text-[#8a5a0e]', green: 'text-[#2f6b3a]' } as const;
 
-/** one tile of the row: a round icon, the way's name, one short line under it */
+/** one tile of the row (compact since 2026-11-09, the user: „დახვეწე … კომპაქტური“): the icon beside the way's name, one short line under */
 const Way: React.FC<{ icon: React.ReactNode; title: string; line: string; tone: keyof typeof WAY_TONE; onClick: () => void }> = ({ icon, title, line, tone, onClick }) => (
   <button type="button" onClick={onClick}
-    className={`min-h-[6.25rem] px-2 py-3 rounded-2xl flex flex-col items-center justify-center gap-1.5 text-center cursor-pointer transition active:scale-[0.98] ${WAY_TONE[tone]}`}>
-    <span className={`w-10 h-10 rounded-full flex items-center justify-center [&>svg]:w-5 [&>svg]:h-5 ${WAY_ICON[tone]}`}>{icon}</span>
-    <span className="text-[14px] font-black leading-tight">{title}</span>
+    className={`min-h-[3.75rem] px-2 py-2 rounded-2xl flex flex-col items-center justify-center gap-0.5 text-center cursor-pointer transition active:scale-[0.98] ${WAY_TONE[tone]}`}>
+    <span className="flex items-center gap-1.5 min-w-0">
+      <span className={`shrink-0 w-6 h-6 rounded-full flex items-center justify-center [&>svg]:w-3.5 [&>svg]:h-3.5 ${WAY_ICON[tone]}`}>{icon}</span>
+      <span className="text-[14px] font-black leading-tight truncate">{title}</span>
+    </span>
     <span className={`text-[12px] font-bold leading-tight line-clamp-1 ${WAY_LINE[tone]}`}>{line}</span>
   </button>
 );
@@ -258,16 +247,16 @@ const RecentRow: React.FC<{ data: ChurchData; visits: Visits; onOpen: (id: strin
   const recent = ids.map(id => data.byId.get(id)).filter((c): c is Church => !!c);
   if (!recent.length) return null;
   return (
-    <div className="flex flex-col gap-1.5">
+    <div className="flex flex-col gap-1">
       <h4 className="px-1 flex items-center gap-1.5 text-[12.5px] font-bold text-[#a08a76]"><History className="w-3.5 h-3.5" aria-hidden />ბოლოს ნანახი</h4>
       <div className="flex gap-2 overflow-x-auto pb-1 -mx-1 px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {recent.map(c => (
           <button key={c.id} type="button" onClick={() => onOpen(c.id)}
-            className="shrink-0 w-[12.5rem] min-h-12 pl-1.5 pr-3 py-1.5 rounded-2xl bg-white/85 ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 flex items-center gap-2 text-left cursor-pointer transition active:scale-[0.98]">
+            className="shrink-0 w-[11rem] min-h-11 pl-1.5 pr-2.5 py-1 rounded-2xl bg-white/85 ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 flex items-center gap-2 text-left cursor-pointer transition active:scale-[0.98]">
             <Thumb c={c} size={8} />
             <span className="min-w-0 flex flex-col">
-              <span className="text-[13px] font-bold text-[#2a2017] leading-tight line-clamp-2 break-words">{c.name}</span>
-              <span className="text-[11.5px] font-semibold text-[#8a7a6a] leading-tight truncate">{visits[c.id] ? '✓ ვიყავი · ' : ''}{c.muni}</span>
+              <span className="text-[13px] font-bold text-[#2a2017] leading-tight truncate">{c.name}</span>
+              <span className="text-[11.5px] font-semibold text-[#8a7a6a] leading-snug truncate">{visits[c.id] ? '✓ ვიყავი · ' : ''}{c.muni}</span>
             </span>
           </button>
         ))}
