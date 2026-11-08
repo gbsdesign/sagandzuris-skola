@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { ChevronRight, Search, X } from 'lucide-react';
 import {
   AKATHISTS, ANDREW_CANON, APOSTLE, CONFESSION_PRAYERS, GOSPELS, KATHISMAS, MORNING_EVENING, PARAKLISES, PRAYER_HOURS, PSALTER_RULE,
@@ -6,6 +6,7 @@ import {
 } from '../../data/prayers';
 import { kathismaOfPsalm, matchScore, psalmNumber, searchNormalize, splitTrailingNumber } from '../../utils/searchMatch';
 import { triggerHaptic } from '../../utils/haptics';
+import { setPrayerSearchOpen, usePrayerSearchOpen } from '../maps/songSearch';
 
 // „ძებნა ლოცვანში“ (2026-11-06, the user's pick): one field over the book that looks through every prayer, akathist, kanon
 // and chapter at once — a word of a title („ღვთისმშობ“), a psalm („ფს 50“ → its kanon), a chapter („მათე 5“), an hour
@@ -67,14 +68,20 @@ export const PrayerSearch: React.FC<{ onOpen: (id: string) => void; onQuery: (ac
   const hits = useMemo(() => searchPrayers(q), [q]);
   const active = searchNormalize(q).length >= 2;
   const set = (v: string) => { setQ(v); onQuery(searchNormalize(v).length >= 2); };
+  // the field shows only while the bar's round 🔍 is open (2026-11-09); closing it clears the words, leaving the page closes it
+  const shown = usePrayerSearchOpen();
+  useEffect(() => { if (!shown) { setQ(''); onQuery(false); } }, [shown, onQuery]);
+  useEffect(() => () => setPrayerSearchOpen(false), []);
+  if (!shown) return null;
   return (
-    <div className="space-y-2.5">
+    <div className="space-y-2.5 sg-in">
       <div className="relative">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#b5a48c]" />
         <input
           type="search"
           value={q}
           onChange={e => set(e.target.value)}
+          autoFocus
           placeholder="ძებნა ლოცვანში — ლოცვა, ფსალმუნი, თავი…"
           aria-label="ძებნა ლოცვანში"
           className="w-full h-12 pl-11 pr-11 rounded-2xl bg-white ring-1 ring-[#e8dcc8] focus:ring-2 focus:ring-[#7a2028]/35 outline-none text-[16px] text-[#2a2017] placeholder:text-[14px] placeholder:text-[#b5a48c] [&::-webkit-search-cancel-button]:hidden"

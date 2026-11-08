@@ -12,6 +12,12 @@ export interface AppNews {
 
 export const APP_NEWS: AppNews[] = [
   {
+    id: 'prayers-search-button-2026-11-09',
+    date: '2026-11-09',
+    title: 'ლოცვანში ძებნა — ლუპით',
+    text: 'ლოცვანში ძებნის ველი აღარ ჩანს მუდმივად: ზემოთ, მარჯვნივ, მრგვალ ლუპას დააჭირე და გაიხსნება.',
+  },
+  {
     id: 'vine-tadzrebi-sakhaliso-2026-11-09',
     date: '2026-11-09',
     title: 'ვაზზე — „ტაძრები“ და „სახალისო“',
