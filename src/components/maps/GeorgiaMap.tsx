@@ -31,7 +31,9 @@ import { Tabs } from '../ui/kit';
 import { SakravebiView, INSTRUMENTS_LIST } from '../views/SakravebiView';
 import { instrumentsIn } from '../../data/instrumentsData';
 import { MtkmeliRegion, useMtkmeliCount } from './MtkmeliMap';
-import { ABROAD, loadEtnofori } from '../../data/etnofori';
+import { authorsInRegion } from '../../data/mtkmeliData';
+import { isFolkGroup, useReciters } from './Reciters';
+import { ABROAD, ETNO_EXTRA, loadEtnofori } from '../../data/etnofori';
 import { TakeTools } from './TakeTools';
 import { setSongSearchOpen, useSongSearchOpen } from './songSearch';
 
@@ -188,14 +190,11 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
             </>
           ) : (
             <>
-              <RegionPuzzleMap
-                onSelect={r => openMapItem(r.id)}
-                count={id => songsInRegion(id, showOwnerOnly).length}
-                countLabel={n => `${n} სიმღერა`}
-                noCounts
-                title="ხალხური"
+              <MapByTab
+                songCount={id => songsInRegion(id as FolkRegion['id'], showOwnerOnly).length}
                 // the sorting shelf „დასაზუსტებელი“ is for those who move recordings (members find its songs by search)
-                extraRegions={FOLK_EXTRA_REGIONS.filter(r => r.id !== 'unsure' || isOwner || isSuperAdmin)}
+                songExtras={FOLK_EXTRA_REGIONS.filter(r => r.id !== 'unsure' || isOwner || isSuperAdmin)}
+                onOpen={(id, tab) => openMapItem(itemOf(id, tab))}
               />
               <MoreRows instruments={instrumentsOpen} videos={videosOpen} onOpen={id => { triggerHaptic(10); openMapItem(id); }} />
             </>
@@ -203,6 +202,76 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
         </div>
       )}
       <SongPage />
+    </>
+  );
+};
+
+// The big map's own tabs (2026-11-09, the user: „გადართვისას ირთვებოდეს ან მთქმელები კუთხეების მიხედვით ან ეთნოფორი … ეთნოფორის
+// შემთხვევაში უცხოეთის კატეგორია ქონდეს დაბლა“, answer „ორივეგან დარჩეს“): სიმღერა · საკრავი · მთქმელი · ეთნოფორი over the map
+// (the same as a region's; a closed one hidden, a locked one asks to sign in), kept for the visit in `sg-khalkhuri-tab`. A region
+// tapped opens on the chosen tab; a region's card with nothing on that tab is pale. The
+// Centre's line stands over the map only on „სიმღერა“; „ეთნოფორი“ adds ლაზეთი and „უცხოეთი“ under the regions.
+const MAP_TAB_KEY = 'sg-khalkhuri-tab';
+const savedMapTab = (): RegionTab => {
+  try { const t = sessionStorage.getItem(MAP_TAB_KEY); return t === 'instruments' || t === 'poets' || t === 'etno' ? t : 'songs'; } catch { return 'songs'; }
+};
+
+const MapByTab: React.FC<{ songCount: (id: string) => number; songExtras: FolkRegion[]; onOpen: (id: string, tab: RegionTab) => void }> = ({ songCount, songExtras, onOpen }) => {
+  const access = useAccess();
+  const instruments = access.section('sakravebi');
+  const poets = access.section('mtkmeli');
+  const etnoOpen = access.section('videoebi') === 'open';
+  const shownOrLocked = (s: string) => s === 'open' || s === 'locked';
+  const reciters = useReciters();
+  const [etno, setEtno] = useState<((id: string) => number) | null>(null);
+  useEffect(() => {
+    if (!etnoOpen) return;
+    let alive = true;
+    Promise.all([loadEtnofori(), import('../../pages/VideosPage')])
+      .then(([data, m]) => alive && setEtno(() => (id: string) => m.etnoCount(data, id)), () => {});
+    return () => { alive = false; };
+  }, [etnoOpen]);
+  const [tab, setTab] = useState<RegionTab>(savedMapTab);
+
+  const items = ([
+    { id: 'songs', label: 'სიმღერა', Icon: Music },
+    shownOrLocked(instruments) && { id: 'instruments', label: 'საკრავი', Icon: Guitar },
+    shownOrLocked(poets) && { id: 'poets', label: 'მთქმელი', Icon: Feather },
+    etnoOpen && { id: 'etno', label: 'ეთნოფორი', Icon: Tv },
+  ].filter(Boolean)) as { id: RegionTab; label: string; Icon: React.ComponentType<{ className?: string }> }[];
+  const shown: RegionTab = items.some(i => i.id === tab) ? tab : 'songs';
+  const choose = (t: RegionTab) => {
+    if (t === 'instruments' && instruments === 'locked') { askSignIn('საკრავები'); return; }
+    if (t === 'poets' && poets === 'locked') { askSignIn('მთქმელი'); return; }
+    triggerHaptic(8);
+    setTab(t);
+    try { sessionStorage.setItem(MAP_TAB_KEY, t); } catch { /* this visit only */ }
+  };
+
+  const count = (id: string) =>
+    shown === 'instruments' ? instrumentsIn(id as FolkRegion['id']).length
+    : shown === 'poets' ? authorsInRegion(id as FolkRegion['id']).length + reciters.filter(r => r[2] === id && !isFolkGroup(r)).length
+    : shown === 'etno' ? (etno ? etno(id) : 0)
+    : songCount(id);
+  const label = (n: number) => `${n} ${shown === 'instruments' ? 'საკრავი' : shown === 'poets' ? 'მთქმელი' : shown === 'etno' ? 'ვიდეო' : 'სიმღერა'}`;
+  const extras = shown === 'songs' ? songExtras : shown === 'etno' ? ETNO_EXTRA : [];
+
+  return (
+    <>
+      {items.length > 1 && (
+        <Tabs<RegionTab> cols={items.length as 2 | 3 | 4} stack value={shown} onChange={choose} items={items} />
+      )}
+      {shown === 'songs' && <CentreBanner />}
+      <RegionPuzzleMap
+        key={shown}
+        onSelect={r => onOpen(r.id, shown)}
+        count={count}
+        countLabel={label}
+        noCounts
+        regionName={shown === 'etno' ? r => (r.id === 'kalakuri' ? 'თბილისი' : r.nameGe) : undefined}
+        title="ხალხური"
+        extraRegions={extras}
+      />
     </>
   );
 };
@@ -305,18 +374,14 @@ const KhalkhuriRegion: React.FC<KhalkhuriRegionProps> = ({ region, tab, onTab, o
       ) : shown === 'etno' ? (
         <Suspense fallback={waiting}><EtnoRegionFilms regionId={region.id} {...films} /></Suspense>
       ) : (
-        <>
-          <CentreBanner />
-          <RegionPlaylist bare region={region} {...songsProps} />
-        </>
+        <RegionPlaylist bare region={region} {...songsProps} />
       )}
     </div>
   );
 };
 
 // The Folklore Centre's mark over the songs map: the recordings here are theirs (the user's request, 2026-11-05).
-// Since 2026-11-09 (the user: „აქედან მოხსენი და სიმღერების ჩანართში დაამატე შიგნით კუთხეებს“) it heads a region's
-// „სიმღერა“ tab, not the map.
+// 2026-11-09: in a region's „სიმღერა“ tab first, then (the user's pick) back over the big map — only while its „სიმღერა“ tab is on.
 // Compact since 2026-11-08 (the user: „კომპაქტურად და მარტო სიმღერის ღილაკზე ჩანდეს“): one quiet line.
 const CentreBanner: React.FC = () => (
   <div className="flex items-center gap-2.5 px-1">
