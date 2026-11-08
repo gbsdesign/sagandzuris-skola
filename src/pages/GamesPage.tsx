@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import {
   AudioLines, Bird, Brain, Brush, Castle, Check, ChevronRight, Clapperboard, Compass, Crown, Dice5, Drama, Feather, Flag, Flame, Footprints, Gamepad2, Gem, Grape, Grid2x2Check, Grid3x3, HatGlasses, Headphones, Hourglass, KeyRound, Layers3, Info, Landmark, LayoutGrid, Lightbulb, ListChecks, ListMusic, ListOrdered, Loader2, Map as MapIcon, MapPinned, MessageCircle, MessageSquareOff,
   MicVocal, Music2, Piano, Printer, Puzzle, Repeat, Route, Search, Shapes, ScrollText, Shirt, SpellCheck, TextSearch, TicketCheck, UserRoundSearch, Users, VenetianMask, Waves, Wifi, X,
@@ -20,8 +20,9 @@ import { utskhoMeta } from '../utils/utskho';
 import { dzebnaMeta } from '../utils/dzebna';
 import { requestOpen } from '../utils/searchOpen';
 import { isRoomGame } from '../utils/gameRoom';
-import { DAILY_GAMES, GAMES, GAME_GROUPS, GameDef, GameMode, MODE_HINT, MODE_LABEL } from '../data/games';
-import { Card, Pill } from '../components/ui/kit';
+import { DAILY_GAMES, GAMES, GAME_GROUPS, GameDef, GameMode, MODE_LABEL } from '../data/games';
+import { Pill } from '../components/ui/kit';
+import { setGameSearchOpen, useGameSearchOpen } from '../components/maps/songSearch';
 import { Toast } from '../components/ui/Toast';
 import { askSignIn } from '../components/access/SignInPrompt';
 import { openPathPanel } from '../components/views/IndependentWorkCard';
@@ -231,6 +232,10 @@ export const GamesPage: React.FC = () => {
   const vazi = useVine();
   const [soon, setSoon] = useState<string | null>(null);
   const [query, setQuery] = useState('');
+  // the search folds under the bar's round 🔍 (2026-11-09); closing it clears the words
+  const searchOpen = useGameSearchOpen();
+  useEffect(() => { if (!searchOpen) setQuery(''); }, [searchOpen]);
+  useEffect(() => () => setGameSearchOpen(false), []);
   const today = useMemo(() => tbilisiToday(), []);
 
   const Inner = mapItem ? INNER[mapItem] : undefined;
@@ -259,7 +264,6 @@ export const GamesPage: React.FC = () => {
     const modes = g.modes.filter(m => (m === 'noPhone' ? !!g.print : state !== 'hidden'));
     return modes.length ? [{ g: { ...g, modes }, state }] : [];
   });
-  const building = cards.filter(c => c.state === 'soon').length;
   const films = access.section('videoebi') === 'open';
 
   // a daily game's card shows today's result or the streak
@@ -308,36 +312,17 @@ export const GamesPage: React.FC = () => {
     const c = byId.get(id);
     return c && c.g.modes.includes('online') && c.state !== 'hidden' ? [{ ...c, done: !!dayDone(id) }] : [];
   });
-  const doneToday = daily.filter(d => d.done).length;
 
   return (
     <div className="w-full max-w-2xl md:max-w-5xl space-y-5">
-      <Card tone="wine" className="!p-4 sm:!p-5">
-        <p className="font-serif-ge text-[18px] font-bold leading-snug">ითამაშე და ისწავლე</p>
-        <p className="mt-0.5 text-[13px] leading-snug tabular-nums text-[#fbf6ec]/85">
-          {cards.length - building} თამაში{building > 0 && ` · მზადდება ${building}`} — თითოეულს სამამდე ვარიანტი აქვს:
-        </p>
-        <ul className="mt-3 grid gap-2 sm:grid-cols-3">
-          {(Object.keys(MODE_LABEL) as GameMode[]).map(m => {
-            const Ic = MODE_ICON[m];
-            return (
-              <li key={m} className="flex items-center gap-2.5 rounded-xl bg-white/[0.07] px-2.5 py-2 ring-1 ring-white/10 sm:flex-col sm:items-start sm:gap-1.5">
-                <span className="w-8 h-8 shrink-0 rounded-full bg-[#e2c27a]/15 flex items-center justify-center"><Ic className="w-4 h-4 text-[#e2c27a]" /></span>
-                <span className="min-w-0 text-[12.5px] leading-snug text-[#fbf6ec]/80">
-                  <span className="block text-[13.5px] font-bold text-[#fbf6ec]">{MODE_LABEL[m]}</span>{MODE_HINT[m]}
-                </span>
-              </li>
-            );
-          })}
-        </ul>
-      </Card>
-
+      {searchOpen && (
       <div>
         <label className="relative block">
           <span className="sr-only">თამაშის ძებნა</span>
           <Search className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-[#a8998a]" />
           <input
             type="text"
+            autoFocus
             inputMode="search"
             enterKeyHint="search"
             value={query}
@@ -352,6 +337,7 @@ export const GamesPage: React.FC = () => {
           )}
         </label>
       </div>
+      )}
 
       {found ? (
         <section aria-label="ნაპოვნი თამაშები" className="space-y-2.5">
@@ -361,13 +347,8 @@ export const GamesPage: React.FC = () => {
       ) : (
         <>
           {daily.length > 0 && (
-            <section aria-labelledby="games-daily-h" className="rounded-2xl bg-white/85 ring-1 ring-[#e8dcc8] p-3 sm:p-4">
-              <div className="flex items-baseline justify-between gap-3 px-1">
-                <h2 id="games-daily-h" className="font-serif-ge text-[17px] font-bold text-[#4a3426]">დღის თამაშები</h2>
-                <span className="shrink-0 text-[13px] font-bold tabular-nums text-[#7a2028]">დღეს {doneToday}/{daily.length}</span>
-              </div>
-              <p className="px-1 text-[12.5px] leading-snug text-[#8a7a6a]">ყოველ დღე ახალი, მთელ სკოლას ერთი და იგივე</p>
-              <ul className="mt-2.5 grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
+            <section aria-label="დღის თამაშები" className="rounded-2xl bg-white/85 ring-1 ring-[#e8dcc8] p-3 sm:p-4">
+              <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4">
                 {daily.map(({ g, state, done }) => (
                   <li key={g.id} className="min-w-0">
                     <button
