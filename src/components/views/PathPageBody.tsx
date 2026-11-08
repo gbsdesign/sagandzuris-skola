@@ -20,7 +20,7 @@ export const PathPageBody: React.FC = () => {
   return (
     <div className="w-full max-w-2xl mx-auto mb-2 px-1 space-y-5">
       {/* „ჩემი დღე“: the page title sits in the top bar; the four round buttons (სამოსი, ნასწავლი — with the pearls, the
-          chests and the teacher's assignments —, ოსტატობა, სამუშაო) in the member's order, the habits under them. The „დღეს“
+          chests, the teacher's assignments and, folded at its bottom, ოსტატობა —, სამუშაო) in the member's order, the habits under them. The „დღეს“
           card on top was taken off at the user's wish (2026-11-05). */}
       <PathTabs
         orbs={pathOrbs.length ? { labels: pathOrbs, render: order => <PathOrbs order={order} habits={habitsOnOrb ? <ChvevebiContent /> : undefined} /> } : undefined}

@@ -35,13 +35,14 @@ import { useMyAttendance, useTeachingAttendance } from '../../hooks/useAttendanc
 import { useConfirmations } from '../../hooks/useConfirmations';
 import { ownVoices } from '../../hooks/useClassMarks';
 
-type OrbId = 'samosi' | 'learn' | 'manera' | 'work' | 'library' | 'klasi';
+type OrbId = 'samosi' | 'learn' | 'work' | 'library' | 'klasi';
 
 /** The round buttons as the "რიგი" list names them; the member's order of these ids comes in `order`. */
 export const PATH_ORBS: { id: OrbId; label: string }[] = [
   { id: 'samosi', label: 'სამოსი' },
   { id: 'learn', label: 'ნასწავლი' },
-  { id: 'manera', label: 'ოსტატობა' },
+  // „ოსტატობა“ has no button of its own since 2026-11-09 (the user: „ოსტატობა ცალკე ნუ იქნება … პროგრამის დაბლა“): it folds
+  // open at the bottom of „ნასწავლი“ (MasteryFold), its level before its name
   // the id stays „work“ (the member's saved order, the admin's switch); since 2026-11-08 it is „ჩვევები“
   { id: 'work', label: 'ჩვევები' },
   // since 2026-11-09 (the header's 📚 moved here): opens the library; the ring = its books and lives read
@@ -108,7 +109,10 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
   const samosi = useSamosiSummary();
   const newWork = useNewWork();
   const library = useLibraryProgress();
-  const libraryAccess = useAccess().section('biblioteka');
+  const access = useAccess();
+  const libraryAccess = access.section('biblioteka');
+  const maneraOn = access.on('manera');
+  const [masteryOpen, setMasteryOpen] = useState(false);
   const { navigateTo, openClass } = useNavigation();
   // „კლასი“: a member sees their own attendance, a teacher their classes' average
   const { user } = useAuth();
@@ -150,7 +154,11 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
     setOpen(habitsCard ? 'work' : null);
     window.setTimeout(() => document.getElementById('path-habits')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
   };
-  usePanelWish(['learn', 'manera', 'work'], id => (id === 'work' ? toHabits() : setOpen(id as OrbId)));
+  const openMastery = () => {
+    setEditing(false); setOpen('learn'); setMasteryOpen(true);
+    window.setTimeout(() => document.getElementById('path-mastery')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  };
+  usePanelWish(['learn', 'manera', 'work'], id => (id === 'work' ? toHabits() : id === 'manera' ? openMastery() : setOpen(id as OrbId)));
   const toggle = (id: OrbId) => {
     if (id === 'library') {
       triggerHaptic(10);
@@ -191,16 +199,6 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
           >
             {/* a cap while there is nothing to learn yet, instead of 0 / 0 */}
             {learnCount.total ? <OrbCount value={learnCount.learned} of={learnCount.total} color="#7a2028" /> : <GraduationCap className="w-6 h-6 sm:w-7 sm:h-7 text-[#7a2028]" strokeWidth={1.8} />}
-          </PathOrb>
-        );
-      case 'manera':
-        // „ოსტატობის გზა“ (2026-11-07): the level in the middle, its exercises passed as the ring
-        return (
-          <PathOrb key={id} label="ოსტატობა" title={`ოსტატობა · დონე ${mastery.level} · ${mastery.pct}%`} percent={mastery.pct} hue="wine" open={open === id} onClick={() => toggle(id)} index={index}>
-            <span className="flex flex-col items-center leading-none">
-              <span className="text-[10px] sm:text-[11px] font-bold text-[#8a7a6a]">დონე</span>
-              <span className="text-[22px] sm:text-[26px] font-black tabular-nums text-[#7a2028]">{mastery.level}</span>
-            </span>
           </PathOrb>
         );
       case 'work':
@@ -264,9 +262,13 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
           {editing ? <Check className="stroke-[3]" /> : <Pencil />}
         </IconBtn>
       ) : undefined,
-      body: <LearnPanel s={stats} editing={editing} />,
+      body: (
+        <>
+          <LearnPanel s={stats} editing={editing} />
+          {maneraOn && <MasteryFold level={mastery.level} pct={mastery.pct} open={masteryOpen} onToggle={() => setMasteryOpen(o => !o)} />}
+        </>
+      ),
     },
-    manera: { title: 'ოსტატობა', sub: 'გზა დონეებით — 0-დან ოსტატამდე', body: <MasteryContent /> },
   };
   const card = open && open !== 'work' && open !== 'library' && open !== 'klasi' ? cards[open] : null;
 
@@ -324,6 +326,24 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
 };
 
 const SHOWN = 8;
+
+/** „ოსტატობა“ at the bottom of „ნასწავლი“: one line — the level, the name, the share passed — that unfolds the path of levels. */
+const MasteryFold: React.FC<{ level: number; pct: number; open: boolean; onToggle: () => void }> = ({ level, pct, open, onToggle }) => (
+  <section id="path-mastery" className="mt-4 pt-1 border-t border-[#efe5d4] scroll-mt-4" aria-label="ოსტატობა">
+    <button
+      type="button" onClick={() => { triggerHaptic(8); onToggle(); }} aria-expanded={open}
+      className="w-full min-h-14 flex items-center gap-3 px-1 text-left cursor-pointer"
+    >
+      <span className="shrink-0 h-8 px-3 rounded-full bg-[#7a2028] text-white inline-flex items-center gap-1 text-[13px] font-bold tabular-nums">
+        დონე {level}
+      </span>
+      <span className="flex-1 min-w-0 font-serif-ge text-lg font-bold text-[#4a3426] truncate">ოსტატობა</span>
+      <span className="shrink-0 text-[12.5px] font-bold tabular-nums text-[#8a7a6a]">{Math.round(pct)}%</span>
+      <ChevronDown className={`w-5 h-5 shrink-0 text-[#a4927c] transition-transform ${open ? 'rotate-180' : ''}`} />
+    </button>
+    {open && <div className="sg-up mt-2"><MasteryContent /></div>}
+  </section>
+);
 
 /** The path's progress under the "ნასწავლი" title: a bar, then learned / total and the voices (as on the class page). */
 // the round button's ring already shows the share: the card's head says it in numbers only
