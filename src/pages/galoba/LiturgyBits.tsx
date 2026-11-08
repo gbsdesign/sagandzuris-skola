@@ -33,6 +33,23 @@ export const ProgramCard: React.FC = () => {
   );
 };
 
+/** Round 36px button in „გალობა“'s page bar (left of 📌): opens „მიმდინარე მსახურება“ — shown when the card below is. */
+export const ProgramButton: React.FC = () => {
+  const { liturgy, program, openProgram } = useNotes();
+  if (liturgy.role === 'guest' || (liturgy.role === 'member' && !program)) return null;
+  return (
+    <button
+      type="button"
+      onClick={() => { triggerHaptic(10); openProgram(); }}
+      title={LITURGY_TITLE}
+      aria-label={LITURGY_TITLE}
+      className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition active:scale-95 bg-white/85 ring-1 ring-[#e8dcc8] text-[#7a2028] hover:ring-[#7a2028]/40 [&>svg]:w-[17px] [&>svg]:h-[17px]"
+    >
+      <ListOrdered />
+    </button>
+  );
+};
+
 /** Keeps every version of a service (or of one chant) on the phone, for singing without internet. */
 export const ServiceDownload: React.FC<{ chants: ChantItem[]; label: string }> = ({ chants, label }) => {
   const ids = useMemo(() => chants.flatMap(c => (c.variants ?? []).filter(v => canOpenNotes(c, v)).map(v => v.id)), [chants]);

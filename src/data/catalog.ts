@@ -8,7 +8,7 @@ import { ANCESTORS } from './ancestorsBios';
 import { FEAST_GROUPS } from './library/feasts';
 import { loadLivesIndex } from './saintLives';
 import { MONTHS_GE } from '../utils/dateNames';
-import { ADMIN_TABS, LIBRARY_SHORT, SERVICES, labelled, shortcutLabel } from '../utils/shortcuts';
+import { ADMIN_TABS, LIBRARY_SHORT, SERVICES, labelled, serviceName, shortcutLabel } from '../utils/shortcuts';
 
 // Everything a button can be made of, as a tree to unfold: the prayer book, the chants by service, the library's
 // books down to their chapters, the habits, songs by region, the great chanters and the app's own pages. The
@@ -106,12 +106,12 @@ const prayerBook = (p: string, who: CatalogWho): CatalogNode[] => [
 
 const chants = (): CatalogNode[] =>
   SERVICE_LISTS.filter(([service]) => (SERVICES as readonly string[]).includes(service)).map(([service, list]) =>
-    branch(`ch:${service}`, service, list.filter(c => c.variants?.length).map(c => {
+    branch(`ch:${service}`, serviceName(service), list.filter(c => c.variants?.length).map(c => {
       const title = c.title.replace(/[;\s]+$/, '');
       // the versions with sheet music open their notes page straight away
       const noted = c.variants!.filter(v => v.bookNums?.length);
       return {
-        ...btn(`ch:${service}:${c.id}`, labelled(`chantof:${service}/${c.id}`, title, service), title, `${c.variants!.length} ვერსია`),
+        ...btn(`ch:${service}:${c.id}`, labelled(`chantof:${service}/${c.id}`, title, serviceName(service)), title, `${c.variants!.length} ვერსია`),
         icon: 'section:galoba',
         ...(noted.length ? { children: noted.map(v => btn(`ch:${service}:${c.id}:${v.id}`, `chant:${v.id}`, v.code || v.label, '')) } : {}),
       };

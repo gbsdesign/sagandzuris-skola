@@ -17,7 +17,7 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
 | `karb` | Karbelaant mode, vol. VII (№1–187) | 16 | `karbelaantBookChants.ts` (`withKarbelaantFeasts/Lent/Pascha`) |
 | `pat` | Patarava 2003 (11 of 29 chants) | 18 | `pataravaBookChants.ts` |
 | `v9` | Gelati vol. IX, 2023 (scan, №1–101) | 11 | `TSIRVA_V9`; 4th list in `gelatiBookChants.ts`; index `liturgyVol9Index.ts` |
-| `v8` | Vol. VIII „რვახმა საცისკრო ძლისპირები" (no school named; code "რ.ძ."; no printed numbers — files 1–166) | −1 / −2 from PDF p. 108 / −3 from p. 307 | `irmosBookChants.ts` — tabs ძლისპირები (`dz-N`, 8 tones) and კატაბასიები (`kt-N`, 12 canons + Resurrection kontakia); feast names identified from the first irmos, two canons left unnamed |
+| `v8` | Vol. VIII „რვახმა საცისკრო ძლისპირები" (no school named; code "რ.ძ."; no printed numbers — files 1–166) | −1 / −2 from PDF p. 108 / −3 from p. 307 | `irmosBookChants.ts` — tabs ძლისპირები (`dz-N`, 8 tones) and კატავასიები (`kt-N`, 12 canons + Resurrection kontakia); feast names identified from the first irmos, two canons left unnamed |
 | `dasd1` / `dasd2` | „ჰიმნოგრაფიული კრებული" II (tones I–II, files 1–250) / III (tones III–IV, 1–277): stichera on "Lord, I have cried" + the psalm verses (plain and „ჭრელი"); code "ჰ.კ." | 0 | `sticheraBookChants.ts` — tab დასადებლები, 129 groups `ds-N` (tone · day — kind). A title with no music whose footnote says "იხილე — გვ. N, # M" is a cross-reference: its button opens the chant printed on p. N (no file of its own) |
 | `momix` | „ჰიმნოგრაფიული კრებული" I, troparia on the Beatitudes (Kereselidze mss., code "ე.კ."; no printed numbers — files 1–268 in book order) | 0 | `beatitudesBookChants.ts` — tab მომიხსენენი, 59 groups `mm-N` (tone + day) |
 

@@ -11,7 +11,7 @@ import { FEAST_GROUPS, feastDates } from './library/feasts';
 import { daysBetween, fromIso, todayIso, weekdayGe } from './churchCalendar';
 import { MONTHS_GE } from '../utils/dateNames';
 import { SECTIONS, SectionId } from './sections';
-import { SPECIALS, labelled, sectionOfShortcut } from '../utils/shortcuts';
+import { SPECIALS, labelled, sectionOfShortcut, serviceName } from '../utils/shortcuts';
 import { kathismaOfPsalm, matchScore, psalmNumber, searchNormalize, splitTrailingNumber } from '../utils/searchMatch';
 
 export type SearchGroupId = 'fn' | 'chant' | 'prayer' | 'psalter' | 'song' | 'ancestor' | 'feast' | 'church' | 'person';
@@ -139,7 +139,7 @@ export const buildSearchIndex = (who: SearchWho): SearchItem[] => {
       const names = [...new Set(chant.variants.map(v => v.chantName).filter(n => n && n !== chant.title))].join(' ');
       const n = chant.variants.length;
       out.push(item(`chant:${service}:${chant.id}`, 'chant', title, { kind: 'chant', service, chantId: chant.id, title },
-        { sub: `${service} · ${n} ვერსია`, keys: names, section: 'galoba' }));
+        { sub: `${serviceName(service)} · ${n} ვერსია`, keys: names, section: 'galoba' }));
     }
   }
 

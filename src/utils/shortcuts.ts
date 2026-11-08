@@ -53,6 +53,8 @@ export const SPECIALS: Record<string, string> = {
   teacher: 'ჩემი კლასი',
 };
 
+/** The name shown for a chant list. The list „კატავასიები“ keeps its old spelling as a stored key (home buttons, class programs) — show the right one. */
+export const serviceName = (service: string): string => (service === 'კატაბასიები' ? 'კატავასიები' : service);
 export const SERVICES = ['წირვა', 'მწუხრი', 'ცისკარი', 'სადღესასწაულო', 'მარხვანი', 'ზატიკი', 'პანაშვიდი', 'ჯვრისწერა', 'ხელდასხმა', 'პარაკლისი', 'მომიხსენენი', 'ძლისპირები', 'კატაბასიები', 'დასადებლები'] as const;
 export const LIBRARY_SHORT: Record<string, string> = {
   book: 'საღმრთო ისტორია', feasts: 'დღესასწაულები', lives: 'წმიდანთა ცხოვრება', prayers: 'ლოცვანი', sasuliero: 'სასულიერო წიგნები',
@@ -111,7 +113,7 @@ export const shortcutLabel = (id: string): { label: string; sub?: string } | nul
       const h = HABIT_ITEMS.find(x => x.id === ref);
       return h ? { label: h.label, sub: 'ჩვევა' } : carried(id);
     }
-    case 'service': return (SERVICES as readonly string[]).includes(ref) ? { label: ref, sub: 'საგალობლები' } : null;
+    case 'service': return (SERVICES as readonly string[]).includes(ref) ? { label: serviceName(ref), sub: 'საგალობლები' } : null;
     case 'library':
       if (ref.includes(':')) return LIBRARY_SHORT[ref.split(':')[0]] ? carried(id) : null;
       return LIBRARY_SHORT[ref] ? { label: LIBRARY_SHORT[ref], sub: 'ბიბლიოთეკა' } : null;
