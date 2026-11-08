@@ -22,7 +22,7 @@ interface RegionPuzzleMapProps {
 
 const { width, height } = GEORGIA_MAP_SIZE;
 /** how long the tapped region shows itself before it opens */
-const GO_MS = 1500;
+const GO_MS = 1300;
 const LABEL_NUDGE: Partial<Record<FolkRegionId, number>> = { guria: -12, achara: 10 };
 
 export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, count, countLabel, regionName = r => r.nameGe, title, extraRegions = [], rich }) => {
@@ -162,7 +162,7 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
         const name = regionName(r);
         const isTbilisi = r.id === 'kalakuri';
         return (
-          <g key="go" className="sg-map-go" pointerEvents="none">
+          <g key="go" className="sg-map-go" pointerEvents="none" style={{ '--sg-go-dx': `${Math.round((width / 2 - x) * 0.3)}px`, '--sg-go-dy': `${Math.round((height / 2 - y) * 0.2)}px` } as React.CSSProperties}>
             {/* a warm glow breathes behind the piece */}
             <path d={shape.d} fill="#ffd27a" filter="url(#puzzle-glow)" className="sg-map-glow" />
             <path d={shape.d} fill={r.color} stroke="#fffaf0" strokeWidth={3} strokeLinejoin="round" filter="url(#puzzle-piece-lift)" />
