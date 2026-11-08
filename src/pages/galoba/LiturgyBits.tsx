@@ -3,8 +3,7 @@ import { ChevronRight, CircleCheck, CloudDownload, ListOrdered, Loader2 } from '
 import { useNotes } from '../../context/NotesContext';
 import { ChantItem } from '../../data';
 import { canOpenNotes } from '../../data/chantLookup';
-import { formatLiturgyDate, liturgyTitle } from '../../hooks/useLiturgy';
-import { georgiaToday } from '../../utils/psalter';
+import { LITURGY_TITLE, formatLiturgyDate } from '../../hooks/useLiturgy';
 import { estimateMb, offlineCount, offlineSupported, onOfflineChange, saveOffline } from '../../utils/offlineNotes';
 import { GrapeBunch } from '../../components/home/PlateOrnaments';
 import { triggerHaptic } from '../../utils/haptics';
@@ -16,18 +15,19 @@ export const ProgramCard: React.FC = () => {
   // one line: the date and how many (when the teacher sent it is said on the program page itself)
   const n = program?.items.length ?? 0;
   const meta = program ? `${formatLiturgyDate(program.date)} · ${n ? `${n} საგალობელი` : 'ჯერ ცარიელია'}` : '';
+  // since 2026-11-08 lower (the user: „უფრო კომპაქტური“): a smaller icon and less room round it, still two lines
   return (
     <button
       type="button"
       onClick={() => { triggerHaptic(10); openProgram(); }}
-      className="relative overflow-hidden w-full flex items-center gap-3 p-3.5 rounded-[18px] text-left text-white cursor-pointer active:scale-[0.985] transition-transform bg-gradient-to-br from-[#8a2630] to-[#5e1820] shadow-[0_16px_30px_-20px_rgba(94,24,32,0.9)]"
+      className="relative overflow-hidden w-full flex items-center gap-2.5 px-3 py-2 rounded-2xl text-left text-white cursor-pointer active:scale-[0.985] transition-transform bg-gradient-to-br from-[#8a2630] to-[#5e1820] shadow-[0_12px_24px_-18px_rgba(94,24,32,0.9)]"
     >
-      <span className="shrink-0 w-11 h-11 rounded-[14px] grid place-items-center bg-white/15"><ListOrdered className="w-6 h-6" /></span>
-      <span className="relative z-[1] flex-1 min-w-0 flex flex-col gap-0.5">
-        <b className="font-serif-ge text-[17px] font-bold">{liturgyTitle(program?.date, georgiaToday())}</b>
-        <small className="text-xs font-semibold opacity-90">{meta || 'ჯერ ცარიელია'}</small>
+      <span className="shrink-0 w-9 h-9 rounded-xl grid place-items-center bg-white/15"><ListOrdered className="w-5 h-5" /></span>
+      <span className="relative z-[1] flex-1 min-w-0 flex flex-col">
+        <b className="font-serif-ge text-[16px] font-bold leading-tight truncate">{LITURGY_TITLE}</b>
+        <small className="text-xs font-semibold leading-snug opacity-90 truncate">{meta || 'ჯერ ცარიელია'}</small>
       </span>
-      <GrapeBunch color="#fbe9d7" curls className="absolute right-11 -top-2 w-[70px] opacity-20 pointer-events-none" />
+      <GrapeBunch color="#fbe9d7" curls className="absolute right-10 -top-3 w-[56px] opacity-20 pointer-events-none" />
       <ChevronRight className="relative z-[1] shrink-0 w-5 h-5 opacity-85" />
     </button>
   );

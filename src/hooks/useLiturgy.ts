@@ -38,10 +38,9 @@ export const nextSunday = () => {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 };
 
-/** The program's name by its date (Tbilisi day): today's, the coming one's or the last one's — a past Sunday's program
- *  was called „დღევანდელი“ all week. */
-export const liturgyTitle = (iso: string | undefined, today: string) =>
-  !iso || iso === today ? 'დღევანდელი წირვა' : iso > today ? 'მომავალი წირვა' : 'ბოლო წირვა';
+/** The program's one name on its card and its page, whatever its date (the user, 2026-11-08: „ბოლო წირვას დააწერე მიმდინარე
+ *  მსახურება“ — it was „დღევანდელი / მომავალი / ბოლო წირვა“ by the date). */
+export const LITURGY_TITLE = 'მიმდინარე მსახურება';
 
 export const formatLiturgyDate = (iso: string) => {
   const [y, m, d] = iso.split('-').map(Number);
