@@ -69,13 +69,14 @@ const Sync: React.FC<{ uid: string }> = ({ uid }) => {
         manera: round(manera.pct),
         work: round(work.planned?.percent),
         pearls: round(pearlPct),
-        samosi: round((100 * samosi.count) / SAMOSI_TOTAL),
+        // the widget's ring: only the photographed parts — the tried ones go when the page is left
+        samosi: round((100 * samosi.real) / SAMOSI_TOTAL),
       },
       due: reviewsDue(learning?.learning, today).length,
       kanon,
       buttons: (shortcuts ?? []).slice(0, 12).map(id => ({ id, t: shortcutLabel(id)?.label || '' })).filter(b => b.t),
     };
-  }, [mine, path.percent, manera.pct, work.planned?.percent, pearlPct, samosi.count, learning, groups, shortcuts, uid, today]);
+  }, [mine, path.percent, manera.pct, work.planned?.percent, pearlPct, samosi.real, learning, groups, shortcuts, uid, today]);
 
   const text = JSON.stringify(summary);
   useEffect(() => {

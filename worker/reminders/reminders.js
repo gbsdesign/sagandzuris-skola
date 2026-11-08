@@ -1249,7 +1249,7 @@ async function calendarFeed(request, env) {
 // the person's own documents, keyed by their uid (and the takes and settings under some of them)
 const OWN_DOCS = ['students', 'directory', 'memberAccess', 'accessDecisions', 'birthdays', 'birthYears', 'nameDays', 'confirmations',
   'albumAccess', 'adminNotes', 'adminPush', 'samosiTryOn', 'chatFlags', 'teachers', 'pearlTakes', 'drillTakes', 'users'];
-const OWN_SUBS = [['pearlTakes', 'takes'], ['drillTakes', 'takes'], ['users', 'settings']];
+const OWN_SUBS = [['pearlTakes', 'takes'], ['drillTakes', 'takes'], ['users', 'settings'], ['samosiProof', 'parts']];
 
 const docName = (env, path) => `projects/${env.FIREBASE_PROJECT_ID}/databases/${env.FIRESTORE_DB}/documents/${path}`;
 

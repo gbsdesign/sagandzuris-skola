@@ -314,6 +314,20 @@ await t('a kaba picture must be bytes', assertFails(setDoc(doc(owner, 'samosiArt
 await t('a guest sees the kaba pictures', assertSucceeds(getDoc(doc(guest, 'samosiArt', 'kaba-full'))));
 await t('a member ticks kaba parts', assertSucceeds(setDoc(doc(stu, 'students', 'stu'), { kaba: ['kaba'], samosiOutfit: 'kaba' }, { merge: true })));
 
+// ---- „ჩემი სამოსი“'s real parts: the photo of the member's own one
+const proof = () => ({ image: Bytes.fromUint8Array(new Uint8Array(3000)), at: 'x' });
+await t('member keeps the photo of a real part', assertSucceeds(setDoc(doc(stu, 'samosiProof', 'stu', 'parts', 'khanjali'), proof())));
+await t('member marks the part real', assertSucceeds(setDoc(doc(stu, 'students', 'stu'), { samosiReal: ['khanjali'], kabaReal: [] }, { merge: true })));
+await t("member cannot keep another one's photo", assertFails(setDoc(doc(stu2, 'samosiProof', 'stu', 'parts', 'khanjali'), proof())));
+await t('a proof photo must be bytes', assertFails(setDoc(doc(stu, 'samosiProof', 'stu', 'parts', 'kamari'), { ...proof(), image: 'x' })));
+await t('a proof photo stays small', assertFails(setDoc(doc(stu, 'samosiProof', 'stu', 'parts', 'kamari'), { ...proof(), image: Bytes.fromUint8Array(new Uint8Array(250000)) })));
+await t('a proof has only its fields', assertFails(setDoc(doc(stu, 'samosiProof', 'stu', 'parts', 'kamari'), { ...proof(), ok: true })));
+await t("the member's teacher sees the photo", assertSucceeds(getDoc(doc(tch, 'samosiProof', 'stu', 'parts', 'khanjali'))));
+await t('another teacher does not', assertFails(getDoc(doc(tch2, 'samosiProof', 'stu', 'parts', 'khanjali'))));
+await t('another member does not', assertFails(getDoc(doc(stu2, 'samosiProof', 'stu', 'parts', 'khanjali'))));
+await t('a teacher cannot put a photo for the member', assertFails(setDoc(doc(tch, 'samosiProof', 'stu', 'parts', 'kamari'), proof())));
+await t("the member's teacher takes a wrong photo away", assertSucceeds(deleteDoc(doc(tch, 'samosiProof', 'stu', 'parts', 'khanjali'))));
+
 // ---- „ანგელოზის დღე“
 const nd = (uid, extra = {}) => ({ uid, name: 'S', photoURL: '', month: 1, day: 27, saint: 'წმიდა ნინო', updatedAt: 'x', ...extra });
 await t('member chooses own name day', assertSucceeds(setDoc(doc(stu, 'nameDays', 'stu'), nd('stu'))));

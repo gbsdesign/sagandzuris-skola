@@ -262,6 +262,22 @@ service cloud.firestore {
       allow delete: if isAdmin();
     }
 
+    // ---- "ჩემი სამოსი"'s real parts (src/utils/samosiProof.ts, 2026-11-08) -----------------------------------------
+    // The small photo of a part the member owns for real, kept once the AI saw it. The member keeps it; they, their
+    // teachers and admins see it; a teacher or an admin may take a wrong one away.
+    match /samosiProof/{userId}/parts/{partId} {
+      function teachesStudent() {
+        return isTeacher()
+          && uid() in get(/databases/$(database)/documents/students/$(userId)).data.get('teacherIds', []);
+      }
+      function isSelf() { return isSignedIn() && uid() == userId; }
+      allow read: if isSelf() || isAdmin() || teachesStudent();
+      allow create, update: if isSelf()
+        && request.resource.data.keys().hasOnly(['image', 'at'])
+        && request.resource.data.image is bytes && request.resource.data.image.size() < 200000;
+      allow delete: if isSelf() || isAdmin() || teachesStudent();
+    }
+
     // A person's own settings (e.g. the "დღევანდელი წირვა" draft and templates)
     match /users/{userId} {
       allow read, write: if (isSignedIn() && uid() == userId) || isAdmin();

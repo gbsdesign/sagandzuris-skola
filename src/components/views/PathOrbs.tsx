@@ -19,9 +19,9 @@ import { useMasteryPath } from '../mastery/useMasteryPath';
 import { MasteryContent } from '../mastery/MasteryContent';
 import { WorkMonthLine, WorkPanel, useIndependentWork, usePanelWish } from './IndependentWorkCard';
 import { PEARL_WORDS, PearlIcon } from '../pearls/PearlIcon';
-import { PearlGiftBanner } from '../pearls/PearlGift';
 import { LearnChests } from '../pearls/LearnChests';
 import { pearlCounts, pearlOf } from '../../utils/pathPearls';
+import { clearTried, useTried } from '../../utils/samosiTry';
 
 type OrbId = 'samosi' | 'learn' | 'manera' | 'work';
 
@@ -35,22 +35,27 @@ export const PATH_ORBS: { id: OrbId; label: string }[] = [
 
 const SAMOSI_IDS = new Set(SAMOSI_PARTS.map(p => p.id));
 
-// the chokha for its round button: how many parts are collected, and its colour (students/{uid}.samosi, .samosiColor)
+// the chokha for its round button: its colour and how many parts it has — `real` = the photographed ones, which stay
+// (students/{uid}.samosiReal), `count` = with the parts tried on now too, so the ring fills while the chokha is put
+// together and goes back once the page is left (utils/samosiTry.ts)
 export const useSamosiSummary = () => {
   const { user } = useAuth();
-  const [state, setState] = useState({ count: 0, color: SAMOSI_DEFAULT_COLOR });
+  const [state, setState] = useState<{ real: string[]; color: string }>({ real: [], color: SAMOSI_DEFAULT_COLOR });
+  const tried = useTried(user?.uid, 'chokha');
   useEffect(() => {
     if (!user) return;
     return onSnapshot(doc(db, 'students', user.uid), snap => {
       const d = snap.data();
       setState({
-        // the extra hats count once, whichever of them (samosiDone)
-        count: Array.isArray(d?.samosi) ? samosiDone(d.samosi.filter((id: unknown): id is string => typeof id === 'string' && SAMOSI_IDS.has(id))) : 0,
+        real: Array.isArray(d?.samosiReal) ? d.samosiReal.filter((id: unknown): id is string => typeof id === 'string' && SAMOSI_IDS.has(id)) : [],
         color: typeof d?.samosiColor === 'string' ? d.samosiColor : SAMOSI_DEFAULT_COLOR,
       });
     });
   }, [user]);
-  return state;
+  // the extra hats count once, whichever of them (samosiDone)
+  const real = samosiDone(state.real);
+  const count = samosiDone([...state.real, ...tried.filter(id => !state.real.includes(id))]);
+  return { real, count, tried: count - real, color: state.color };
 };
 
 // "სამოსი": the chokha, dyed in its chosen colour, inside a ring that fills as its parts are collected
@@ -83,6 +88,8 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
   const work = useIndependentWork();
   const samosi = useSamosiSummary();
   const newWork = useNewWork();
+  // the parts only tried on come off once the path page is left
+  useEffect(() => () => clearTried(), []);
 
   // the number on "ნასწავლი" goes once its window shows the new assignments (also ones coming while it is open)
   useEffect(() => {
@@ -142,7 +149,9 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
   const cards: Record<OrbId, { title: string; sub: React.ReactNode; aside?: React.ReactNode; action?: React.ReactNode; body: React.ReactNode }> = {
     samosi: {
       title: 'ჩემი სამოსი',
-      sub: samosi.count === SAMOSI_TOTAL ? 'ჩოხა სრულადაა აწყობილი' : `${samosi.count} / ${SAMOSI_TOTAL} შეგროვებულია`,
+      sub: samosi.real === SAMOSI_TOTAL
+        ? 'ჩოხა სრულადაა — ყველა ნაწილი ნამდვილია'
+        : `ნამდვილი ${samosi.real} / ${SAMOSI_TOTAL}${samosi.tried ? ` · მოსინჯული ${samosi.tried}` : ''}`,
       body: <ChemiSamosi bare />,
     },
     learn: {
@@ -172,8 +181,6 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
           {orbs}
         </div>
       )}
-      {/* the parts of the outfit the shining pearls of „ნასწავლი“ have given (it also adds them) */}
-      {ids.includes('learn') && <PearlGiftBanner onShow={() => { setEditing(false); setOpen('samosi'); }} />}
       {card && (
         // same card look as the other tiles of "საგანძურის გზა" (PATH_TILE), without the hover lift
         <section
