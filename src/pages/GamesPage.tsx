@@ -1,7 +1,7 @@
 import React, { Suspense, lazy, useEffect, useMemo, useState } from 'react';
 import {
   AudioLines, Bird, Brain, Brush, Castle, Check, Clapperboard, Compass, Crown, Dice5, Drama, Feather, Flag, Flame, Footprints, Gamepad2, Gem, Grape, Grid2x2Check, Grid3x3, HatGlasses, Headphones, Hourglass, KeyRound, Layers3, Info, Landmark, LayoutGrid, Lightbulb, ListChecks, ListMusic, ListOrdered, Loader2, Map as MapIcon, MapPinned, MessageCircle, MessageSquareOff,
-  MicVocal, Music2, Piano, Printer, Puzzle, Repeat, Route, Search, Shapes, ScrollText, Shirt, Smile, SpellCheck, TextSearch, TicketCheck, UserRoundSearch, Users, VenetianMask, Waves, Wifi, X,
+  MicVocal, Music2, Piano, Puzzle, Repeat, Route, Search, Shapes, ScrollText, Shirt, Smile, SpellCheck, TextSearch, TicketCheck, UserRoundSearch, VenetianMask, Waves, X,
 } from 'lucide-react';
 import { useNavigation } from '../context';
 import { useAccess } from '../hooks/useAccess';
@@ -20,14 +20,13 @@ import { utskhoMeta } from '../utils/utskho';
 import { dzebnaMeta } from '../utils/dzebna';
 import { requestOpen } from '../utils/searchOpen';
 import { isRoomGame } from '../utils/gameRoom';
-import { DAILY_GAMES, GAMES, GAME_GROUPS, GameDef, GameMode, MODE_LABEL } from '../data/games';
+import { DAILY_GAMES, GAMES, GAME_GROUPS, GameDef, GameMode } from '../data/games';
 import { Pill } from '../components/ui/kit';
 import { setGameSearchOpen, useGameSearchOpen } from '../components/maps/songSearch';
 import { Toast } from '../components/ui/Toast';
 import { askSignIn } from '../components/access/SignInPrompt';
 import { openPathPanel } from '../components/views/IndependentWorkCard';
 import { triggerHaptic } from '../utils/haptics';
-import { useKitMaker, type KitMake } from '../components/games/KitButton';
 import HangiGame from './games/HangiGame';
 import AmikhseniGame from './games/AmikhseniGame';
 import SitqvaGame from './games/SitqvaGame';
@@ -109,8 +108,6 @@ const ICON: Record<string, React.ReactNode> = {
   'okros-khana': <MapIcon />, 'samshvildis-ghame': <Castle />, 'saidanaa-simghera': <MapPinned />, 'otkhidan-erti': <ListChecks />, 'khma-khmad': <AudioLines />, 'sam-notshi': <Music2 />, 'khmebis-turniri': <MicVocal />, 'kartuli-akordi': <Piano />, 'rva-khma': <Waves />, 'rukis-viktorina': <Compass />, gagrdzele: <ListMusic />, hangebi: <Puzzle />, eqo: <Repeat />, 'mprinavi-notebi': <Bird />, 'khmis-tsqvilebi': <Grid2x2Check />, 'mesame-khma': <Layers3 />, 'chemi-gundi': <Drama />, chamotvale: <ListOrdered />, 'asoebis-bade': <TextSearch />, 'khutsuri-tsartsera': <ScrollText />, 'drois-khazi': <Hourglass />, 'chemi-vazi': <Grape />, 'chaitsvi-qartulad': <Shirt />, 'sami-damtserloba': <Feather />, 'tsikhis-gasaghebi': <KeyRound />, 'tsinapris-gza': <Footprints />, 'nu-itqvi': <MessageSquareOff />, 'erti-minishneba': <Lightbulb />, pantomima: <VenetianMask />, 'vin-var-me': <UserRoundSearch />, 'saidumlo-sakhelebi': <Grid3x3 />, 'utskho-sopelshi': <HatGlasses />, nakhatobana: <Brush />, 'sagalobo-loto': <TicketCheck />, 'sagandzuris-dzebna': <Gem />, 'ezos-msaji': <Flag />, qaravani: <Route />, 'ori-takhti': <Crown />, 'lurji-supra': <LayoutGrid />, 'mepis-kari': <Landmark />,
 };
 
-const MODE_ICON: Record<GameMode, React.ComponentType<{ className?: string }>> = { online: Wifi, hybrid: Users, noPhone: Printer };
-
 // the games that open inside this page, by their `mapItem`
 const INNER: Record<string, React.FC> = {
   hangi: HangiGame, amikhseni: AmikhseniGame, sitqva: SitqvaGame, otkheuli: OtkheuliGame, gatvla: GatvlaGame, churchkhela: ChurchkhelaGame, rsr: RaSadRodisGame,
@@ -119,85 +116,49 @@ const INNER: Record<string, React.FC> = {
   eqo: EqoGame, mprinavi: MprinaviGame, tsqvilebi: TsqvilebiGame, mesame: MesameGame, gundi: GundiGame, chamotvale: ChamotvaleGame, bade: BadeGame, tsartsera: TsartseraGame, khazi: KhaziGame, vazi: VaziGame, chaitsvi: ChaitsviGame, anbani: AnbaniGame, tsikhe: TsikheGame, tsinapari: TsinapariGame, tabu: TabuGame, minishneba: MinishnebaGame, pantomima: PantomimaGame, vin: VinGame, saidumlo: SaidumloGame, utskho: UtskhoGame, nakhati: NakhatiGame, loto: LotoGame, dzebna: DzebnaGame, ezo: EzoGame, kari: KariGame, lurji: LurjiGame, takhti: TakhtiGame, qaravani: Qaravani, okros: OkrosGame,
 };
 
-const BTN = 'inline-flex w-full min-w-0 items-center justify-center gap-1.5 h-11 px-2 rounded-xl text-[13.5px] font-bold transition-[background-color,transform] active:scale-[0.97] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-1 focus-visible:ring-[#7a2028]/50 cursor-pointer';
-const LOOK: Record<GameMode, string> = {
-  online: 'bg-[#7a2028] text-[#fbf6ec] shadow-[0_1px_2px_rgba(74,52,38,0.15)] hover:bg-[#6a1b22]',
-  hybrid: 'bg-[#7a2028]/[0.08] text-[#7a2028] ring-1 ring-[#7a2028]/20 hover:bg-[#7a2028]/[0.14]',
-  noPhone: 'bg-[#f4ecdf] text-[#5a4a3c] ring-1 ring-[#e3d5bf] hover:bg-[#ede1cd]',
-};
-
-/** the printed variant's button: the kit is made on the phone and saved */
-const KitModeBtn: React.FC<{ g: GameDef; make: KitMake; iconCls: string }> = ({ g, make, iconCls }) => {
-  const { busy, failed, share, run } = useKitMaker(make, g.title);
-  const Ic = MODE_ICON.noPhone;
-  return (
-    <button
-      type="button"
-      onClick={() => { void run(); }}
-      aria-busy={busy}
-      aria-label={`${g.title} — სამაგიდო: PDF, ${g.print?.sheets ?? 0} ფურცელი`}
-      title={`PDF · ${g.print?.sheets ?? 0} ფურცელი`}
-      className={`${BTN} ${LOOK.noPhone}`}
-    >
-      {busy ? <Loader2 className="w-4 h-4 shrink-0 animate-spin" /> : <Ic className={iconCls} />}
-      <span className="truncate tabular-nums" aria-live="polite">{busy ? (share > 0 ? `${share}%` : 'მზადდება…') : failed ? 'ვერ შეიქმნა' : MODE_LABEL.noPhone}</span>
-    </button>
-  );
-};
-
-/** a variant's button: the app's variants open the game, the printed kit is made on the phone and saved */
-const ModeBtn: React.FC<{ g: GameDef; mode: GameMode; soon: boolean; onPlay: (mode: GameMode) => void }> = ({ g, mode, soon, onPlay }) => {
-  // three buttons in a row leave a phone (and two columns of cards on a tablet) no room for the icons: the words stay
-  const iconCls = `w-4 h-4 shrink-0 ${g.modes.length > 2 ? 'hidden lg:block' : ''}`;
-  if (mode === 'noPhone' && g.print) return <KitModeBtn g={g} make={g.print.make} iconCls={iconCls} />;
-  const Ic = MODE_ICON[mode];
-  return (
-    <button type="button" onClick={() => onPlay(mode)} className={`${BTN} ${soon ? 'bg-[#f1e8d9] text-[#9a8b7b]' : LOOK[mode]}`}>
-      <Ic className={iconCls} /><span className="truncate">{MODE_LABEL[mode]}</span>
-    </button>
-  );
-};
-
-const GameCard: React.FC<{ g: GameDef; state: Access; meta?: string; onPlay: (mode: GameMode) => void }> = ({ g, state, meta, onPlay }) => {
+/** a game's card: a tap opens the game (its tabs ონლაინ · ჰიბრიდული are inside; the printed kit is the bar's „სამაგიდო“ there —
+ *  2026-11-09, the user: „თამაშზე დაჭერისას იხსნებოდეს პირდაპირ … გარედან ჩანართები … მოხსენი … სია ლამაზად და კომპაქტურად“) */
+const GameCard: React.FC<{ g: GameDef; state: Access; meta?: string; onOpen: () => void }> = ({ g, state, meta, onOpen }) => {
   const [info, setInfo] = useState(false);
   const soon = state === 'soon';
   const infoId = `game-about-${g.id}`;
   return (
-    <li className="flex flex-col rounded-2xl bg-white/90 ring-1 ring-[#e8dcc8] shadow-[0_1px_2px_rgba(74,52,38,0.05)] p-3">
-      <div className="flex items-start gap-3">
-        <span className={`w-11 h-11 shrink-0 rounded-2xl flex items-center justify-center [&>svg]:w-5 [&>svg]:h-5 ${soon ? 'bg-[#f1e8d9] text-[#9a8b7b]' : 'bg-[#7a2028]/[0.08] text-[#7a2028]'}`}>
+    <li className="relative rounded-2xl bg-white/90 ring-1 ring-[#e8dcc8] shadow-[0_1px_2px_rgba(74,52,38,0.05)] hover:ring-[#7a2028]/35 transition-shadow">
+      <button
+        type="button"
+        onClick={onOpen}
+        className="group w-full flex items-center gap-3 py-2.5 pl-2.5 pr-11 text-left cursor-pointer rounded-2xl active:bg-[#7a2028]/[0.03]"
+      >
+        <span className={`w-10 h-10 shrink-0 rounded-xl flex items-center justify-center [&>svg]:w-5 [&>svg]:h-5 ${soon ? 'bg-[#f1e8d9] text-[#9a8b7b]' : 'bg-[#7a2028]/[0.08] text-[#7a2028]'}`}>
           {ICON[g.id] ?? <Gamepad2 />}
         </span>
-        <div className="min-w-0 flex-1">
-          <div className="flex items-start gap-1">
-            <h3 className="min-w-0 flex-1 pt-[3px] font-serif-ge text-[15.5px] font-bold leading-snug text-[#4a3426] [overflow-wrap:anywhere]">
-              {g.title}{g.like && <span className="font-normal text-[#8a7a6a]"> ({g.like})</span>}
-            </h3>
-            {soon && <Pill tone="amber" className="!h-6 shrink-0 mt-0.5">მალე</Pill>}
-            {g.about && (
-              <button
-                type="button"
-                onClick={() => { triggerHaptic(5); setInfo(o => !o); }}
-                aria-expanded={info}
-                aria-controls={infoId}
-                aria-label={`რა არის „${g.title}“`}
-                title="რა არის"
-                className={`w-9 h-9 -my-1 -mr-1 shrink-0 rounded-full flex items-center justify-center cursor-pointer transition-colors ${info ? 'bg-[#7a2028]/[0.1] text-[#7a2028]' : 'text-[#a8998a] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.07]'}`}
-              >
-                <Info className="w-[18px] h-[18px]" />
-              </button>
-            )}
-          </div>
-          <p className="mt-0.5 text-[13px] leading-snug text-[#75685a]">{g.text}</p>
-          {meta && <p className="mt-1.5 inline-flex rounded-full bg-[#7a2028]/[0.07] px-2.5 py-0.5 text-[12px] font-bold tabular-nums text-[#7a2028]">{meta}</p>}
-        </div>
-      </div>
-      {info && g.about && (
-        <p id={infoId} className="mt-2.5 rounded-xl bg-[#fbf6ec] ring-1 ring-[#efe3cf] px-3.5 py-2.5 text-[13px] leading-relaxed text-[#5a4a3c]">{g.about}</p>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-1.5">
+            <span className="min-w-0 truncate font-serif-ge text-[15px] font-bold leading-snug text-[#4a3426] group-hover:text-[#7a2028] transition-colors">{g.title}</span>
+            {soon && <Pill tone="amber" className="!h-5 shrink-0">მალე</Pill>}
+          </span>
+          <span className="mt-0.5 block text-[12.5px] leading-snug text-[#8a7a6a] line-clamp-2">{g.text}</span>
+          {meta && <span className="mt-1 inline-flex rounded-full bg-[#7a2028]/[0.07] px-2 py-px text-[11.5px] font-bold tabular-nums text-[#7a2028]">{meta}</span>}
+        </span>
+      </button>
+      {(g.about || g.like) && (
+        <button
+          type="button"
+          onClick={() => { triggerHaptic(5); setInfo(o => !o); }}
+          aria-expanded={info}
+          aria-controls={infoId}
+          aria-label={`რა არის „${g.title}“`}
+          title="რა არის"
+          className={`absolute top-1.5 right-1.5 w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition-colors ${info ? 'bg-[#7a2028]/[0.1] text-[#7a2028]' : 'text-[#b3a594] hover:text-[#7a2028] hover:bg-[#7a2028]/[0.07]'}`}
+        >
+          <Info className="w-[17px] h-[17px]" />
+        </button>
       )}
-      <div className="mt-auto pt-3 grid gap-2" style={{ gridTemplateColumns: `repeat(${g.modes.length}, minmax(0, 1fr))` }}>
-        {g.modes.map(m => <ModeBtn key={m} g={g} mode={m} soon={soon} onPlay={onPlay} />)}
-      </div>
+      {info && (g.about || g.like) && (
+        <p id={infoId} className="mx-2.5 mb-2.5 rounded-xl bg-[#fbf6ec] ring-1 ring-[#efe3cf] px-3 py-2 text-[12.5px] leading-relaxed text-[#5a4a3c]">
+          {g.like && <b className="text-[#4a3426]">{g.like}. </b>}{g.about}
+        </p>
+      )}
     </li>
   );
 };
@@ -299,7 +260,7 @@ export const GamesPage: React.FC = () => {
   };
 
   const byId = new Map(cards.map(c => [c.g.id, c]));
-  const card = ({ g, state }: { g: GameDef; state: Access }) => <GameCard key={g.id} g={g} state={state} meta={meta(g)} onPlay={m => play(g, state, m)} />;
+  const card = ({ g, state }: { g: GameDef; state: Access }) => <GameCard key={g.id} g={g} state={state} meta={meta(g)} onOpen={() => play(g, state, 'online')} />;
   const found = query.trim()
     ? cards.map(c => ({ c, score: scoreOf(c.g, query) })).filter(x => x.score > 0).sort((a, b) => b.score - a.score).map(x => x.c)
     : null;
@@ -374,7 +335,7 @@ export const GamesPage: React.FC = () => {
       {found ? (
         <section aria-label="ნაპოვნი თამაშები" className="space-y-2.5">
           <p className="px-1 text-[13px] font-bold tabular-nums text-[#8a7a6a]" role="status">{found.length ? `ნაპოვნია ${found.length}` : 'ასეთი თამაში ვერ ვიპოვე'}</p>
-          {found.length > 0 && <ul className="grid gap-2.5 md:grid-cols-2">{found.map(card)}</ul>}
+          {found.length > 0 && <ul className="grid gap-2 md:grid-cols-2">{found.map(card)}</ul>}
         </section>
       ) : (
         <>
@@ -417,7 +378,7 @@ export const GamesPage: React.FC = () => {
                 </h2>
                 <p className="mt-0.5 text-[12.5px] leading-snug text-[#8a7a6a]">{gr.hint}</p>
               </div>
-              <ul className="grid gap-2.5 md:grid-cols-2">{gr.list.map(card)}</ul>
+              <ul className="grid gap-2 md:grid-cols-2">{gr.list.map(card)}</ul>
             </section>
           ))}
         </>
