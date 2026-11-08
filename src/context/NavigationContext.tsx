@@ -58,6 +58,7 @@ const makeSnap = (page: PageType, service: ServiceType, classId: string | null, 
 const sameSnap = (a?: NavSnap | null, b?: NavSnap | null) =>
   Boolean(a && b) && a!.page === b!.page && a!.service === b!.service && a!.classId === b!.classId && a!.prayerId === b!.prayerId &&
   (a!.mapItem ?? null) === (b!.mapItem ?? null) && (a!.dmId ?? null) === (b!.dmId ?? null);
+const NAV_KEYS = ['sgNav', 'sgDepth', 'sgScroll', 'sgExp', 'sgSearch'];
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const historyState = (): Record<string, any> => (typeof window !== 'undefined' && window.history.state) || {};
 
@@ -73,7 +74,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [mapItem, setMapItem] = useState<string | null>(boot?.mapItem ?? null);
   const [selectedDmId, setSelectedDmId] = useState<string | null>(boot?.dmId ?? null);
   // pages a prayer or the name lists were opened from, so "back" retraces them
-  const [returnStack, setReturnStack] = useState<{ page: PageType; scroll: number; prayerId: string | null }[]>([]);
+  const [returnStack, setReturnStack] = useState<{ page: PageType; scroll: number; prayerId: string | null; item?: string | null }[]>([]);
 
   const snap = makeSnap(currentPage, selectedService, selectedClassId, selectedPrayerId, mapItem, selectedDmId);
   const snapRef = useRef(snap);
@@ -81,6 +82,8 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   // the scroll of the page being left, read before the new page changes it; and "replace instead of push"
   const leaving = useRef<{ y: number; t: number } | null>(null);
   const replaceNext = useRef(0);
+  // set by every back / forward: „უკან“ checks a moment later that its step really happened
+  const popped = useRef(false);
   const markLeave = () => { if (!leaving.current) leaving.current = { y: window.scrollY, t: performance.now() }; };
   // the open chant and the search of the page being left (values of the previous render)
   const prevList = useRef({ exp: expandedChantId, search: chantSearch });
@@ -90,6 +93,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     const s = historyState();
     if (!s.sgNav) window.history.replaceState({ ...s, sgNav: snapRef.current, sgDepth: 0 }, '');
     const onPop = (e: PopStateEvent) => {
+      popped.current = true;
       const st = e.state || {};
       if (st.sgNotes || st.sgProg) return; // the notes / program pages handle their own entries
       let target: NavSnap | undefined = st.sgNav;
@@ -185,7 +189,7 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (!stay) window.setTimeout(() => window.scrollTo({ top: 0 }), 0);
   };
 
-  const pushReturn = () => setReturnStack(stack => [...stack, { page: currentPage, scroll: window.scrollY, prayerId: selectedPrayerId }]);
+  const pushReturn = () => setReturnStack(stack => [...stack, { page: currentPage, scroll: window.scrollY, prayerId: selectedPrayerId, item: mapItem }]);
 
   const openPrayer = (prayerId: string) => {
     setSelectedPrayerId(prayerId);
@@ -207,16 +211,30 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // a step inside the app lies behind this page: return to it, exactly like the phone's back gesture
     const hs = historyState();
     if (!hs.sgNotes && !hs.sgProg && (hs.sgDepth ?? 0) > 0) {
+      popped.current = false;
+      const was = snapRef.current;
+      // a window over the page (a song, a habit's sheet…) has its own key: the step back only closes it
+      const overlay = Object.keys(hs).some(k => !NAV_KEYS.includes(k));
       window.history.back();
+      // nothing came back, or the step behind was this same page (a prayer could stay stuck, 2026-11-09, the user:
+      // „ლოცვას ვხსნი … უკან გამოსვლა არ მუშაობს“): go up in place
+      window.setTimeout(() => { if (!popped.current || (!overlay && sameSnap(snapRef.current, was))) goUp(); }, 450);
       return;
     }
-    // opened straight here (a link, a reload): go up one level in place
+    goUp();
+  };
+
+  // up one level in place (opened straight here — a link, a reload —, or history gave nothing back)
+  const goUp = () => {
     replaceNext.current = performance.now();
     if (currentPage === 'prayer' || currentPage === 'commemoration') {
-      const back = returnStack[returnStack.length - 1] || { page: 'home' as PageType, scroll: 0, prayerId: null };
+      // nothing remembered: a prayer goes up to ლოცვანი, the name lists home
+      const back = returnStack[returnStack.length - 1]
+        || (currentPage === 'prayer' ? { page: 'biblioteka' as PageType, scroll: 0, prayerId: null, item: 'prayers' } : { page: 'home' as PageType, scroll: 0, prayerId: null });
       setReturnStack(stack => stack.slice(0, -1));
       if (back.page === 'prayer') setSelectedPrayerId(back.prayerId);
       setCurrentPage(back.page);
+      setMapItem(back.item ?? null);
       // back to the place the prayer was picked
       window.setTimeout(() => window.scrollTo({ top: back.scroll }), 0);
       return;

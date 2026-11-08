@@ -173,7 +173,11 @@
   once — meta `announce:<id>`; every device with `subs.chat`), kind `notice`, a tap opens `/?open=bell` → `requestOpen('bell')`.
   **„რჩეული“ prayers** (2026-11-06, `components/prayers/FavPrayers.tsx`): ☆ beside 📌 on a prayer page's bar (`FavButton`), the
   chosen ones at the top of ლოცვანი (`FavPrayers` in `PrayersTab`, ★ takes one off with „გაუქმება“); `students.favPrayers` (≤ 40),
-  the device's `sg-fav-prayers` for guests. Since the evening of 2026-11-06 (the user: „დახვეწე, თვალისთვის მარტივი გახადე“) the
+  the device's `sg-fav-prayers` for guests. **My psalter kanon on top** (2026-11-09): `useMyKanons` in FavPrayers — a member of a class's psalter group sees
+  this cycle's kanon as its own row („ჩემი კანონი · group“, no ★, not again among the starred). „წავიკითხე“ ticks the habit of the
+  member's own list (`myHabitOfPrayer`: a linked prayer, else a book button holding it, else the school's; evening → habit_15).
+  The bar's „უკან“ checks 450 ms later that history stepped back; if not (or onto the same page, no overlay key) it goes up in
+  place (`goUp`; a prayer with nothing remembered → ლოცვანი; the return stack keeps `item` = the mapItem). Since the evening of 2026-11-06 (the user: „დახვეწე, თვალისთვის მარტივი გახადე“) the
   ★ sits inside the pill (no chevron), and the book (`PrayerBook` in `views/HabitPrayerMenu.tsx`) is three groups with small
   headings — `BOOK_GROUPS`: ყოველდღიური · წმინდა წერილი · განსაკუთრებული დღეებისთვის —, each pill's icon in a soft round.
   **Profile the same evening**: small headings „ჩემი“ · „პარამეტრები“ · „ჩემი მონაცემები“ (`ProfileCaption` in `AppRouter`),
