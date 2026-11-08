@@ -3,6 +3,7 @@ import { useNavigation, useChants, useAuth, PageType } from '../context';
 import { WifiOff, RefreshCw, Loader2 } from 'lucide-react';
 import { PageBar } from '../components/ui/kit';
 import { PinButton } from '../components/home/ShortcutShelf';
+import { SongSearchButton } from '../components/maps/songSearch';
 import { OfflineButton } from '../components/offline/OfflineButton';
 import { ProgramButton } from '../pages/galoba/LiturgyBits';
 import { FavButton } from '../components/prayers/FavPrayers';
@@ -302,7 +303,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
             : cloud || pin ? <>
               {currentPage === 'prayer' && selectedPrayerId && <FavButton id={selectedPrayerId} />}
               {cloud && <OfflineButton kind={cloud} />}
-              {pin && <PinButton id={pin} />}
+              {/* the songs' page: 🔍 in place of 📌 (the user, 2026-11-08) — it unfolds the songs' search */}
+              {currentPage === 'simghera' || currentPage === 'sakravebi' ? <SongSearchButton />
+                : pin && <PinButton id={pin} />}
             </> : undefined}
           className="w-full mb-4"
         />
