@@ -33,6 +33,16 @@ export const usePathPearls = () => {
   return useMemo(() => pearlCounts(filterValidVariants(selectedChantVariants), confirmed), [selectedChantVariants, confirmed]);
 };
 
+/** Which chest a path item's token goes into (its `id` in pathChests). */
+export const chestIdOf = (id: string): string => {
+  const kind = categoryOf(id);
+  if (kind === 'mtkmeli') return 'poems';
+  if (kind !== 'galoba') return 'songs';
+  const v = findVersion(id);
+  const service = v && v.service !== 'სიმღერა' ? v.service : null;
+  return service && SERVICE_LISTS.some(([s]) => s === service) ? `s:${service}` : 'other';
+};
+
 /** Every chest of the member's path (also a student's, inside their page), its learned things counted. */
 export const usePathChests = () => {
   const { user } = useAuth();
@@ -106,7 +116,9 @@ const HEAP: Record<Chest['token'], [string, string, string]> = {
 
 export const TreasureChest: React.FC<{
   open: boolean; fresh?: boolean; dim?: boolean; spin?: boolean; near?: boolean; nudge?: boolean; size?: number; heap?: Chest['token'];
-}> = ({ open, fresh, dim, spin, near, nudge, size = 56, heap = 'pearl' }) => {
+  /** a quick lid (the flying pearl, PearlFlight): 'opening' throws it up at once, 'closing' slams it shut */
+  motion?: 'opening' | 'closing';
+}> = ({ open, fresh, dim, spin, near, nudge, size = 56, heap = 'pearl', motion }) => {
   const id = useId().replace(/[^a-zA-Z0-9]/g, '');
   const [h0, h1, h2] = HEAP[heap];
   const gold = `url(#gb${id})`;
@@ -142,7 +154,7 @@ export const TreasureChest: React.FC<{
       width={size}
       height={(size * 64) / 72}
       aria-hidden
-      className={`sg-chest ${open ? 'open' : ''} ${fresh ? 'is-new' : ''} ${spin ? 'spin' : ''} ${near ? 'near' : ''} ${nudge ? 'nudge' : ''} ${dim ? 'grayscale-[0.75] opacity-50' : ''}`}
+      className={`sg-chest ${open ? 'open' : ''} ${fresh ? 'is-new' : ''} ${spin ? 'spin' : ''} ${near ? 'near' : ''} ${nudge ? 'nudge' : ''} ${motion ?? ''} ${dim ? 'grayscale-[0.75] opacity-50' : ''}`}
     >
       <defs>
         <linearGradient id={`wb${id}`} x1="0" y1="0" x2="0" y2="1">
@@ -247,7 +259,7 @@ export const ChestCard: React.FC<{ chest: Chest; nudge?: boolean; onOpen: (c: Ch
           empty ? 'bg-white/55 ring-1 ring-[#eadcc4]' : 'bg-gradient-to-b from-[#fffaf0] to-[#fbedd0] ring-1 ring-[#e7c56f] shadow-[0_8px_18px_-12px_rgba(176,128,36,0.9)]'
         }`}
       >
-        <span key={shake} className={shake ? 'sg-chest-shake' : ''}>
+        <span key={shake} data-chest-art={chest.id} className={shake ? 'sg-chest-shake' : ''}>
           <TreasureChest open={false} dim={empty} nudge={nudge} spin={!empty} size={58} />
         </span>
         <span className={`w-full min-h-[2.1em] flex items-center justify-center ${chest.label.length > 11 ? 'text-[11.5px]' : 'text-[12.5px]'} font-black leading-tight break-words ${empty ? 'text-[#a99a86]' : 'text-[#4a3426]'}`}>

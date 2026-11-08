@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { Check, ChevronDown, ChevronRight, GraduationCap, Lock, Pencil, Sparkles, Users, X } from 'lucide-react';
 import { db } from '../../firebase';
@@ -20,6 +20,8 @@ import { MasteryContent } from '../mastery/MasteryContent';
 import { useIndependentWork, usePanelWish } from './IndependentWorkCard';
 import { useHabitsToday } from '../habits/useHabits';
 import { PEARL_WORDS, PearlIcon } from '../pearls/PearlIcon';
+import { PearlFlight, type Flight } from '../pearls/PearlFlight';
+import { chestIdOf } from '../pearls/LearnChests';
 import { LearnChests } from '../pearls/LearnChests';
 import { TokenIcon } from '../pearls/Tokens';
 import { pearlCounts, pearlOf } from '../../utils/pathPearls';
@@ -346,6 +348,9 @@ const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats>; editing: boolea
   const { locked, confirmed, toggle } = usePathMarks(triggerFireworks);
   const [all, setAll] = useState<Record<string, boolean>>({});
   const [showTodo, setShowTodo] = useState(false);
+  // a voice just marked: its token flies up, shines and drops into its chest (PearlFlight)
+  const [flight, setFlight] = useState<Flight | null>(null);
+  const endFlight = useCallback(() => setFlight(null), []);
   const several = s.categories.length > 1;
   const todo = s.categories.filter(c => c.todo.length);
   const todoCount = todo.reduce((a, c) => a + c.todo.length, 0);
@@ -383,9 +388,11 @@ const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats>; editing: boolea
       <li key={id} className="flex items-center gap-1.5 py-0.5">
         {/* its token — a chant's pearl, a song's or instrument's bunch of white grapes, a poem's scroll (2026-11-08): faded
             while new, plain once marked, shining once a teacher confirmed it */}
-        {kind === 'galoba'
-          ? <PearlIcon state={pearl} size={34} seed={id} label={PEARL_WORDS[pearl]} className="shrink-0" />
-          : <TokenIcon kind={kind === 'mtkmeli' ? 'scroll' : 'grape'} state={pearl} size={34} label={PEARL_WORDS[pearl]} className="shrink-0" />}
+        <span data-token={id} className="shrink-0 inline-flex">
+          {kind === 'galoba'
+            ? <PearlIcon state={pearl} size={34} seed={id} label={PEARL_WORDS[pearl]} />
+            : <TokenIcon kind={kind === 'mtkmeli' ? 'scroll' : 'grape'} state={pearl} size={34} label={PEARL_WORDS[pearl]} />}
+        </span>
         {go ? (
           <button type="button" onClick={go} className={`${nameCls} rounded-lg cursor-pointer transition-colors hover:bg-[#fbf6ec]`}>{name}</button>
         ) : (
@@ -411,7 +418,12 @@ const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats>; editing: boolea
                   key={v}
                   type="button"
                   disabled={locked || confirmedOne}
-                  onClick={() => { triggerHaptic(on ? 8 : 15); toggle(id, v); }}
+                  onClick={e => {
+                    triggerHaptic(on ? 8 : 15);
+                    toggle(id, v);
+                    const el = !on && e.currentTarget.closest('li')?.querySelector<HTMLElement>('[data-token]');
+                    if (el) setFlight({ n: Date.now(), id, from: el.getBoundingClientRect(), chestId: chestIdOf(id), token: kind === 'galoba' ? 'pearl' : kind === 'mtkmeli' ? 'scroll' : 'grape', state: pearl === 'shining' ? 'shining' : 'polished' });
+                  }}
                   aria-pressed={on}
                   aria-label={voiced ? `${it.chantName} — ${v} ხმა` : `${it.chantName} — ნასწავლი`}
                   title={confirmedOne ? 'მასწავლებელმა ჩათვალა' : locked ? 'მონიშვნას მასწავლებელი აკეთებს' : on ? 'ნასწავლია — შეეხე მოსახსნელად' : 'შეეხე, როცა ისწავლი'}
@@ -443,6 +455,7 @@ const LearnPanel: React.FC<{ s: ReturnType<typeof usePathStats>; editing: boolea
   return (
     <div className="space-y-3">
       <LearnChests polished={counts.polished} shining={counts.shining} />
+      <PearlFlight flight={flight} onDone={endFlight} />
 
       <MyClassWork bare />
 
