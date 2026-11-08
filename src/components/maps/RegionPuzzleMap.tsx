@@ -21,6 +21,7 @@ interface RegionPuzzleMapProps {
 }
 
 const { width, height } = GEORGIA_MAP_SIZE;
+const LABEL_NUDGE: Partial<Record<FolkRegionId, number>> = { guria: -12, achara: 10 };
 
 export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, count, countLabel, regionName = r => r.nameGe, title, extraRegions = [], rich }) => {
   const [hovered, setHovered] = useState<FolkRegionId | null>(null);
@@ -98,23 +99,41 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
       })}
       {/* Tbilisi is a small piece: a dot marks it (it never blocks taps) */}
       <circle cx={tbilisi[0]} cy={tbilisi[1]} r={9} fill="#fffaf0" stroke="#85502c" strokeWidth={3} pointerEvents="none" />
-      {/* the counts on the map (rich): a small pill on every region that has something */}
+      {/* the names and counts on the map (rich; 2026-11-09, the user: „ზედვე ეწეროს კუთხეების სახელები … და ციფრებიც“): a phone
+          gets the short name (the full ones don't fit the small regions), a wider screen the full one, two lines at a space or
+          hyphen; the count in a small pill under it. Tbilisi keeps only its pill beside the dot. */}
       {rich && FOLK_REGIONS.map(r => {
         const n = count(r.id);
-        if (!n) return null;
-        const [x, y0] = GEORGIA_MAP_SHAPES[r.id].label;
-        // Tbilisi's pill sits right of its dot, the others over their region's label point
+        const [x, y00] = GEORGIA_MAP_SHAPES[r.id].label;
+        // Guria's and Adjara's label points stand close: the labels step apart a little
+        const y0 = y00 + (LABEL_NUDGE[r.id] ?? 0);
         const isTbilisi = r.id === 'kalakuri';
-        const cx = isTbilisi ? x + 46 : x;
-        const y = isTbilisi ? y0 : y0 + (litId === r.id ? -5 : 0);
-        const text = String(n);
-        const w = text.length * 17 + 22;
+        const lift = litId === r.id ? -5 : 0;
+        const halo = { paintOrder: 'stroke' as const, stroke: '#fffaf0', strokeWidth: 6, strokeLinejoin: 'round' as const };
+        const pill = (cx: number, cy: number) => {
+          if (!n) return null;
+          const text = String(n);
+          const w = text.length * 16 + 20;
+          return (
+            <>
+              <rect x={cx - w / 2} y={cy - 15} width={w} height={30} rx={15} fill="#fffaf0" fillOpacity={0.94} stroke="#6b4423" strokeOpacity={0.25} strokeWidth={1.5} />
+              <text x={cx} y={cy + 1} textAnchor="middle" dominantBaseline="middle" fontSize={27} fontWeight={800} fill="#4a3426" style={{ fontVariantNumeric: 'tabular-nums' }}>{text}</text>
+            </>
+          );
+        };
+        if (isTbilisi) return <g key={`l-${r.id}`} pointerEvents="none">{pill(x + 44, y0)}</g>;
+        const full = regionName(r);
+        const lines = full.includes('-') ? full.split(/(?<=-)/) : full.split(' ');
+        const short = r.regionCode.replace(/\.$/, '');
         return (
-          <g key={`n-${r.id}`} pointerEvents="none" className="transition-transform duration-150">
-            <rect x={cx - w / 2} y={y - 17} width={w} height={34} rx={17} fill="#fffaf0" fillOpacity={0.92} stroke="#6b4423" strokeOpacity={0.25} strokeWidth={1.5} />
-            <text x={cx} y={y + 1} textAnchor="middle" dominantBaseline="middle" fontSize={30} fontWeight={800} fill="#4a3426" style={{ fontVariantNumeric: 'tabular-nums' }}>
-              {text}
+          <g key={`l-${r.id}`} pointerEvents="none" transform={`translate(0 ${lift})`}>
+            {/* phones: the short name */}
+            <text className="sm:hidden" x={x} y={y0 - 14} textAnchor="middle" dominantBaseline="middle" fontSize={29} fontWeight={800} fill="#3b2a1e" style={halo}>{short}</text>
+            {/* wider screens: the full name, one or two lines */}
+            <text className="hidden sm:block" x={x} y={y0 - 14 - (lines.length - 1) * 12} textAnchor="middle" dominantBaseline="middle" fontSize={22} fontWeight={800} fill="#3b2a1e" style={halo}>
+              {lines.map((ln, i) => <tspan key={i} x={x} dy={i ? 24 : 0}>{ln}</tspan>)}
             </text>
+            {pill(x, y0 + 20)}
           </g>
         );
       })}
@@ -140,7 +159,7 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
             {rich ? (
               // compact: the name, the count at the right
               <>
-                <span className="flex-1 min-w-0 text-[13px] sm:text-sm font-bold text-[#2a2017] leading-tight break-words">{regionName(r)}</span>
+                <span className="flex-1 min-w-0 text-[12.5px] sm:text-sm font-bold text-[#2a2017] leading-tight">{regionName(r)}</span>
                 {n > 0 && <span className="shrink-0 text-[12px] font-bold tabular-nums text-amber-700">{n}</span>}
               </>
             ) : (
