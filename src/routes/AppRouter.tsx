@@ -31,7 +31,8 @@ import { SECTIONS, sectionOfPage } from '../data/sections';
 import { useMyPsalterGroups } from '../hooks/usePsalter';
 import { useAllClasses, useMyClasses, useTeachingClasses } from '../hooks/useClasses';
 import { useSelectedGroupId } from '../components/psalter/selectedGroup';
-import { gameTitleOfItem } from '../data/games';
+import { GAMES, gameTitleOfItem } from '../data/games';
+import { GameKitPill } from '../components/games/KitButton';
 
 /** A small heading between the profile's groups of rows (the same as the prayer book's group titles). */
 const ProfileCaption: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -286,6 +287,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
       : currentPage === 'biblioteka' && !book ? 'library' as const : null;
     // a game open inside the games page shows its own name („დღის ჰანგი“, „ამიხსენი“)
     const game = currentPage === 'games' ? gameTitleOfItem(mapItem) : undefined;
+    const kitGame = currentPage === 'games' && mapItem ? GAMES.find(g => g.item === mapItem) : undefined;
     const title = currentPage === 'prayer' && selectedPrayerId ? prayerTitle(selectedPrayerId) : book ?? game ?? PAGE_TITLES[currentPage] ?? '';
     return (
       <div className="flex flex-col items-center px-1 py-3 sm:px-4 md:px-6">
@@ -298,6 +300,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           right={currentPage === 'galoba' ? <><ProgramButton /><OfflineButton kind="galoba" /></>
             : cloud || pin ? <>
               {currentPage === 'prayer' && selectedPrayerId && <FavButton id={selectedPrayerId} />}
+              {/* inside a game: its printed kit before 📌 (2026-11-09) */}
+              {kitGame?.print && <GameKitPill make={kitGame.print.make} name={kitGame.title} sheets={kitGame.print.sheets} />}
               {cloud && <OfflineButton kind={cloud} />}
               {/* the songs' page: 🔍 in place of 📌 (the user, 2026-11-08) — it unfolds the songs' search */}
               {currentPage === 'simghera' || currentPage === 'sakravebi' ? <SongSearchButton />
