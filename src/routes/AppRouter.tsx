@@ -155,9 +155,9 @@ interface AppRouterProps {
 // the title the one PageBar shows on each inner page (the prayer page's comes from the prayer itself)
 const PAGE_TITLES: Partial<Record<PageType, string>> = {
   galoba: 'გალობა',
-  simghera: 'სიმღერები',
+  simghera: 'ხალხური',
   mtkmeli: 'მთქმელი',
-  sakravebi: 'სიმღერები და საკრავები',
+  sakravebi: 'ხალხური',
   gz: 'საგანძურის გზა',
   tsinaprebi: 'გაიცანი წინაპრები',
   biblioteka: 'ბიბლიოთეკა',
@@ -201,8 +201,6 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
 
   // a section a guest may not open, or one hidden by the admin or by the kids' mode (e.g. after a reload)
   const pageAccess = access.page(currentPage);
-  const instrumentsAccess = access.section('sakravebi');
-  const withInstruments = instrumentsAccess === 'open' || instrumentsAccess === 'locked';
   if (pageAccess === 'locked') {
     return <LockedPage what={SECTIONS.find(x => x.id === sectionOfPage(currentPage))?.label || 'ეს გვერდი'} />;
   }
@@ -286,11 +284,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
       : currentPage === 'biblioteka' && !book ? 'library' as const : null;
     // a game open inside the games page shows its own name („დღის ჰანგი“, „ამიხსენი“)
     const game = currentPage === 'games' ? gameTitleOfItem(mapItem) : undefined;
-    // the songs' page holds the instruments too (2026-11-08): its name says so while the person may see them
-    const songsTitle = currentPage === 'simghera' && withInstruments ? PAGE_TITLES.sakravebi : undefined;
     // the videos live on „მთქმელი“'s page (2026-11-08): the old page keeps that name while the poets are open
     const videosTitle = currentPage === 'videos' && access.section('mtkmeli') === 'open' ? PAGE_TITLES.mtkmeli : undefined;
-    const title = currentPage === 'prayer' && selectedPrayerId ? prayerTitle(selectedPrayerId) : book ?? game ?? songsTitle ?? videosTitle ?? PAGE_TITLES[currentPage] ?? '';
+    const title = currentPage === 'prayer' && selectedPrayerId ? prayerTitle(selectedPrayerId) : book ?? game ?? videosTitle ?? PAGE_TITLES[currentPage] ?? '';
     return (
       <div className="flex flex-col items-center px-1 py-3 sm:px-4 md:px-6">
         <PageBar
@@ -332,8 +328,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           {currentPage === 'games' && <GamesPage />}
           {currentPage === 'medavitneoba' && <MedavitneobaPage />}
 
-          {/* „საკრავები“ is a tab of the songs' page since 2026-11-08; the old page (a home button, the search, the path, an
-              old history step) opens it on that tab */}
+          {/* „ხალხური“ (2026-11-09): the songs' map, a region = სიმღერა · საკრავი · მთქმელი · ეთნოფორი; the old page „საკრავები“
+              (a home button, the search, the path, an old history step) opens „ყველა საკრავი“ */}
           {(currentPage === 'simghera' || currentPage === 'sakravebi') && (
             <div className="w-full my-2 px-1">
               <GeorgiaMap
@@ -341,6 +337,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
                 startTab={currentPage === 'sakravebi' ? 'instruments' : undefined}
                 selectedChantVariants={selectedChantVariants}
                 onToggleSong={handleToggleSong}
+                onTogglePoem={handleTogglePoem}
               />
             </div>
           )}

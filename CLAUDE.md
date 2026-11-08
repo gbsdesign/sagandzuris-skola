@@ -308,6 +308,19 @@
   down / aside to make room. And the **მთქმელი authors map**
   (`data/mtkmeliData.ts`, `MtkmeliMap.tsx`, shared `RegionPuzzleMap.tsx`). Full texts only for authors who
   died before 1956; others get title + description + wiki link.
+- **„ხალხური“ (2026-11-09**, the user: „სიმღერა საკრავებს გადაარქვი და დააწერე ხალხური … მთქმელის ინტეგრაცია … ვიდეოები …
+  კუთხეებში … mp3 ჩამოტვირთვა და ოფლაინ პატარა ღილაკი“, answers „მთქმელი მთავარზე ჯერ დარჩეს · ჩანართში მთქმელი · ჩვენი ჩანაწერიდან ·
+  მონასტრები ეკლესია-მონასტრებში, ეთნოფორის ჩანართი“): page `simghera` (and the old `sakravebi` → „ყველა საკრავი“) is titled
+  „ხალხური“, the vine's label too. `GeorgiaMap` = one songs map (no top tabs); a region (`KhalkhuriRegion`) has horizontal tabs
+  სიმღერა · საკრავი · მთქმელი · ეთნოფორი (`Tabs stack cols={n}`; a closed or empty one hidden, a locked one asks to sign in) —
+  `mapItem` „<region>“, „<region>~i|~m|~e“, a film „/<yt id>“, an old „i:<region>“ still opens. Under the map rows (`MoreRows`):
+  „ყველა საკრავი“ (`all-i`), „ეთნოფორი“'s full episodes (`ep`), „უცხოეთში ჩაწერილი“ (`abroad~e`), then the Centre's albums. Parts
+  reused bare: `RegionPlaylist bare`, `SakravebiView bare|listOnly`, `MtkmeliRegion bare` + `useMtkmeliCount` (MtkmeliMap),
+  `EtnoRegionFilms` / `EtnoEpisodes` (VideosPage, lazy). A song's recording row has ⬇ MP3 + ☁ offline (`maps/TakeTools.tsx`: the
+  player's IDB store, ⬇ only where the player allows). The monasteries' TV reports moved to „ეკლესია-მონასტრები“: a region's tabs
+  „ტაძრები · ვიდეოები“ (`v:<region>[/<yt>]`, `MonasteryFilms` lazy), „უცხოეთის მონასტრები“ under the map (`v:abroad`); a church
+  window's film opens there. „მთქმელი“'s videos tab now holds only films and St Paisios (the map there is gone). The მთქმელი page
+  and vine label stay until the user removes them.
 - **ვიდეოები live on „მთქმელი“'s page since 2026-11-08** (the user: „ვიდეოების ინტეგრაცია მოახდინე მთქმელში როგორც საკრავების მოხდა
   სიმღერებში … მთქმელი ეწერება მარტო მთავარზე და ვიდეოების ღილაკი მოიხსნება … ვიდეოები რუკის მიხედვით დალაგდეს“, answer „ერთი რუკა“):
   `components/maps/MtkmeliPage.tsx` = tabs „მთქმელი · ვიდეოები“ over the two first screens (`sg-mtkmeli-tab`; each part by its own

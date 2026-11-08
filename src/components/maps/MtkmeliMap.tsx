@@ -54,19 +54,27 @@ export const MtkmeliMap: React.FC<MtkmeliMapProps> = ({ selectedChantVariants = 
     );
   }
 
+  return <MtkmeliRegion region={region} selectedChantVariants={selectedChantVariants} onTogglePoem={onTogglePoem} />;
+};
+
+/** a region's poets and reciters; `bare` = without its head (the tab „მთქმელი“ of a region of „ხალხური“, 2026-11-09) */
+export const MtkmeliRegion: React.FC<MtkmeliMapProps & { region: FolkRegion; bare?: boolean }> = ({ region, bare, selectedChantVariants = {}, onTogglePoem }) => {
+  const { openMapItem } = useNavigation();
+  const voices = useReciters().filter(r => r[2] === region.id);
   const authors = authorsInRegion(region.id);
-  const voices = recitersIn(region.id);
   const named = voices.filter(r => !isFolkGroup(r)).length;
   return (
     <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
       {/* where the region is: a small map with it lit */}
-      <div className="flex items-center gap-3 px-1 pb-3 border-b border-[#e4d8c4]">
-        <RegionLocator region={region} onPick={id => openMapItem(id, true)} className="w-32 sm:w-36 h-auto shrink-0" />
-        <div className="min-w-0 flex flex-col gap-0.5">
-          <h3 className="text-lg sm:text-xl font-black text-[#2a2017] leading-tight">{regionName(region)}</h3>
-          <span className="text-xs font-bold text-[#8a4b12]">{authors.length} ავტორი{named > 0 && ` · ${named} მელექსე`}</span>
+      {!bare && (
+        <div className="flex items-center gap-3 px-1 pb-3 border-b border-[#e4d8c4]">
+          <RegionLocator region={region} onPick={id => openMapItem(id, true)} className="w-32 sm:w-36 h-auto shrink-0" />
+          <div className="min-w-0 flex flex-col gap-0.5">
+            <h3 className="text-lg sm:text-xl font-black text-[#2a2017] leading-tight">{regionName(region)}</h3>
+            <span className="text-xs font-bold text-[#8a4b12]">{authors.length} ავტორი{named > 0 && ` · ${named} მელექსე`}</span>
+          </div>
         </div>
-      </div>
+      )}
 
       {authors.length === 0 && voices.length === 0 ? (
         <div className="flex flex-col items-center text-center gap-1.5 py-8 px-3 rounded-2xl bg-[#faf6ef] border border-dashed border-[#d6c8b1]">
@@ -89,6 +97,12 @@ export const MtkmeliMap: React.FC<MtkmeliMapProps> = ({ selectedChantVariants = 
       <Reciters list={voices} />
     </div>
   );
+};
+
+/** how many authors and named reciters a region has (the tab's number) */
+export const useMtkmeliCount = (regionId: string) => {
+  const voices = useReciters().filter(r => r[2] === regionId && !isFolkGroup(r)).length;
+  return authorsInRegion(regionId as FolkRegion['id']).length + voices;
 };
 
 interface AuthorItemProps {

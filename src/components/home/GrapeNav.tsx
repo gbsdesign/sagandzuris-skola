@@ -25,10 +25,6 @@ export const GrapeNav: React.FC = () => {
   const access = useAccess();
   const [soon, setSoon] = useState<string | null>(null);
 
-  // „საკრავები“ became a tab of the songs' page (2026-11-08, the user: „სიმღერებს დააწერე სიმღერები და საკრავები … საკრავების
-  // ღილაკი წაშალე მთავარიდან“): one label for both — only „სიმღერები“ for whoever may not see the instruments
-  const instruments = access.section('sakravebi');
-  const withInstruments = instruments === 'open' || instruments === 'locked';
   const poets = access.section('mtkmeli');
   const poetsShut = poets === 'hidden' || poets === 'soon';
   const videosShown = access.section('videoebi') === 'open';
@@ -36,9 +32,9 @@ export const GrapeNav: React.FC = () => {
   // (they keep these spots with the short label too)
   const spots: Spot[] = [
     // under the grape clusters
-    withInstruments
-      ? { id: 'simghera', label: 'სიმღერები\nდა საკრავები', x: 18, y: 37, nx: 18, ny: 46, go: () => navigateTo('simghera'), big: true, wide: true }
-      : { id: 'simghera', label: 'სიმღერები', x: 13, y: 36, nx: 18, ny: 43, go: () => navigateTo('simghera'), big: true },
+    // „ხალხური“ (2026-11-09, the user: „სიმღერა საკრავებს გადაარქვი და დააწერე ხალხური“): songs, instruments, poets and
+    // „ეთნოფორი“ by region; it keeps the spot of the old two-line label
+    { id: 'simghera', label: 'ხალხური', x: 18, y: 37, nx: 18, ny: 45, go: () => navigateTo('simghera'), big: true },
     // chant, the main path, stands biggest at the heart of the vine
     { id: 'galoba', label: 'გალობა', x: 57, y: 31, nx: 56, ny: 33, go: () => navigateTo('galoba'), hero: true },
     // „ვიდეოები“ is a tab of „მთქმელი“ since 2026-11-08 (the user: „მთქმელი ეწერება მარტო მთავარზე და ვიდეოების ღილაკი

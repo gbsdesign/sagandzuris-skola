@@ -247,12 +247,12 @@ export function Tabs<T extends string>({ items, value, onChange, cols = 3, stack
   cols?: 2 | 3 | 4 | 5 | 'wide';
   stack?: boolean;
 }) {
-  // (whole class names only: Tailwind finds them in the source; `stack` is for two or three tabs; five tabs = three over
+  // (whole class names only: Tailwind finds them in the source; `stack` is for two to four tabs in one row; five tabs = three over
   // two on a phone, one row from md — with `stack` the icon still stands over the label under 460 px)
   const layout = cols === 5
     ? 'grid grid-cols-6 md:grid-cols-5'
     : stack
-    ? (cols === 2 ? 'flex min-[460px]:grid min-[460px]:grid-cols-2' : 'flex min-[460px]:grid min-[460px]:grid-cols-3')
+    ? (cols === 2 ? 'flex min-[460px]:grid min-[460px]:grid-cols-2' : cols === 4 ? 'flex min-[460px]:grid min-[460px]:grid-cols-4' : 'flex min-[460px]:grid min-[460px]:grid-cols-3')
     : cols === 2 ? 'grid grid-cols-2' : cols === 4 ? 'grid grid-cols-2 min-[480px]:grid-cols-4' : cols === 'wide' ? 'grid grid-cols-2 min-[600px]:grid-cols-3' : 'grid grid-cols-3';
   return (
     <div className={cx('gap-1 p-1 rounded-2xl bg-white/75 ring-1 ring-[#e8dcc8]', layout)}>

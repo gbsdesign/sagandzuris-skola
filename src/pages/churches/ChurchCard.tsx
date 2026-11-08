@@ -42,7 +42,7 @@ const Card: React.FC<{ c: Church; onClose: () => void }> = ({ c, onClose }) => {
   const feast = feastOf(c);
   const feastOn = feast ? nextFeastDay(feast, today) : '';
   const films = filmsOfChurch(c.id);
-  const { navigateTo, openMapItem } = useNavigation();
+  const { openMapItem } = useNavigation();
   const google = useGoogleInfo(c, useGooglePlacesKey());
   const ownHours = !!(info && (info.hours || info.note));
 
@@ -106,7 +106,7 @@ const Card: React.FC<{ c: Church; onClose: () => void }> = ({ c, onClose }) => {
             <ul className="flex flex-col gap-2">
               {films.map(f => (
                 <li key={f.id}>
-                  <button type="button" onClick={() => { triggerHaptic(10); navigateTo('videos'); openMapItem(`m:${f.region}/${f.id}`); }}
+                  <button type="button" onClick={() => { triggerHaptic(10); openMapItem(`v:${f.region}/${f.id}`); }}
                     className="group w-full flex items-center gap-3 text-left cursor-pointer">
                     <span className="relative w-24 aspect-video shrink-0 rounded-lg overflow-hidden bg-[#3a2c22]">
                       <img src={thumbOf(f.id)} alt="" loading="lazy" className="w-full h-full object-cover" />

@@ -19,6 +19,10 @@ export interface SakravebiViewProps {
   selectedChantVariants?: Record<string, any>;
   /** a region open on the instruments' map: its instruments (else the map and every instrument) */
   region?: FolkRegion | null;
+  /** inside a region of „ხალხური“ (its tab „საკრავი“, 2026-11-09): without the region's head */
+  bare?: boolean;
+  /** „ყველა საკრავი“ alone, without the map (a row under „ხალხური“'s map) */
+  listOnly?: boolean;
 }
 
 type Take = (typeof CENTRE_INSTRUMENT_TAKES)[string][number];
@@ -46,7 +50,7 @@ const InstrumentSheet: React.FC<{ instrument: InstrumentItem | null; onClose: ()
 // path, "საგანძურის გზა", for now; a teacher may still put one in a class program).
 // Since 2026-11-08 (the user: „საკრავებშიც … გამოიყენე რუკის პრინციპი“, answer „რუკა + სია ქვემოთ“) the map of Georgia comes
 // first — a region (`mapItem` „i:<region>“) lists the instruments played there —, then every instrument with where it is from.
-export const SakravebiView: React.FC<SakravebiViewProps> = ({ selectedChantVariants = {}, region = null }) => {
+export const SakravebiView: React.FC<SakravebiViewProps> = ({ selectedChantVariants = {}, region = null, bare = false, listOnly = false }) => {
   const [soon, setSoon] = useState<string | null>(null);
   const [open, setOpen] = useState<InstrumentItem | null>(null);
   const { openMapItem } = useNavigation();
@@ -63,13 +67,13 @@ export const SakravebiView: React.FC<SakravebiViewProps> = ({ selectedChantVaria
       {region ? (
         <>
           {/* where the region is: a small map with it lit — another region takes a tap */}
-          <div className="flex items-center gap-3 px-1 pb-3 border-b border-[#e4d8c4]">
+          {!bare && <div className="flex items-center gap-3 px-1 pb-3 border-b border-[#e4d8c4]">
             <RegionLocator region={region} onPick={id => openMapItem(`i:${id}`, true)} className="w-32 sm:w-36 h-auto shrink-0" />
             <div className="min-w-0 flex flex-col gap-0.5">
               <h3 className="text-lg sm:text-xl font-black text-[#2a2017] leading-tight">{region.nameGe}</h3>
               <span className="text-xs font-bold text-[#b4620e]">{here.length} საკრავი</span>
             </div>
-          </div>
+          </div>}
           {here.length ? (
             <InstrumentGrid list={here} line={i => i.here?.[region.id] ?? i.where} selected={selectedChantVariants} onPress={press} />
           ) : (
@@ -78,14 +82,16 @@ export const SakravebiView: React.FC<SakravebiViewProps> = ({ selectedChantVaria
         </>
       ) : (
         <>
-          <RegionPuzzleMap
-            onSelect={r => { triggerHaptic(10); openMapItem(`i:${r.id}`); }}
-            count={id => instrumentsIn(id).length}
-            countLabel={n => `${n} საკრავი`}
-            title="საკრავები"
-          />
+          {!listOnly && (
+            <RegionPuzzleMap
+              onSelect={r => { triggerHaptic(10); openMapItem(`i:${r.id}`); }}
+              count={id => instrumentsIn(id).length}
+              countLabel={n => `${n} საკრავი`}
+              title="საკრავები"
+            />
+          )}
           <section className="flex flex-col gap-2">
-            <h3 className="px-1 text-[15px] font-black text-[#2a2017]">ყველა საკრავი</h3>
+            <h3 className={listOnly ? 'px-1 pb-2 text-lg sm:text-xl font-black text-[#2a2017] border-b border-[#e4d8c4]' : 'px-1 text-[15px] font-black text-[#2a2017]'}>ყველა საკრავი</h3>
             <InstrumentGrid list={INSTRUMENTS_LIST} line={i => i.where} selected={selectedChantVariants} onPress={press} />
           </section>
         </>
