@@ -70,7 +70,7 @@ moving to the next chant in service order.
   გვერდზე ღილაკად — a switch now), then „ინტერნეტის გარეშე · ჩამოწერა“ and „ფაილები“ (was „ჩამოტვირთვა“, too like
   „ჩამოწერა“): PDF, then „სინთეზატორი · MP3“ / „ჩანაწერი · MP3“ with a button per voice (`.np-mfiles`) instead of a row each.
   The program has one name, „მიმდინარე მსახურება“ (`LITURGY_TITLE`, card and program page; the user, 2026-11-08 — it was
-  დღევანდელი / მომავალი / ბოლო წირვა by its date). The card on the chants page is low since then (36 px icon, two lines).
+  დღევანდელი / მომავალი / ბოლო წირვა by its date). The red card on the chants page went on 2026-11-08 (the user: „მოხსენი“); the way in is the round wine button `ProgramButton` (`galoba/LiturgyBits.tsx`, 47 px) left of 📌 in „გალობა“'s bar — don't bring the card back unasked.
 - Book notes only — no Drive `ნოტები` fallback anywhere.
 - Share: WhatsApp / Facebook / Messenger / Instagram inside "მეტი" (Instagram copies the link; on phones use
   `navigator.share`).

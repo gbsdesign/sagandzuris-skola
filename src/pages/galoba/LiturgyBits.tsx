@@ -8,7 +8,8 @@ import { estimateMb, offlineCount, offlineSupported, onOfflineChange, saveOfflin
 import { GrapeBunch } from '../../components/home/PlateOrnaments';
 import { triggerHaptic } from '../../utils/haptics';
 
-/** "დღევანდელი წირვა" card at the head of the chant lists: the teacher's program, or the one sent to my class. */
+/** NOT SHOWN since 2026-11-08 (the user took the red card off the chants page; `ProgramButton` below replaced it). Kept for a possible return — don't bring it back unasked.
+ *  "დღევანდელი წირვა" card at the head of the chant lists: the teacher's program, or the one sent to my class. */
 export const ProgramCard: React.FC = () => {
   const { liturgy, program, openProgram } = useNotes();
   if (liturgy.role === 'guest' || (liturgy.role === 'member' && !program)) return null;
@@ -33,7 +34,8 @@ export const ProgramCard: React.FC = () => {
   );
 };
 
-/** Round 36px button in „გალობა“'s page bar (left of 📌): opens „მიმდინარე მსახურება“ — shown when the card below is. */
+/** Round button in „გალობა“'s page bar (left of 📌): opens „მიმდინარე მსახურება“. Since 2026-11-08 (the user: the red card went, the button „უფრო შესამჩნევი“ and 1.3× bigger)
+ *  it is the only way in from this page: wine-filled, 47 px (36 × 1.3), icon 22 px. Shown to teachers, and to members once a program was sent. */
 export const ProgramButton: React.FC = () => {
   const { liturgy, program, openProgram } = useNotes();
   if (liturgy.role === 'guest' || (liturgy.role === 'member' && !program)) return null;
@@ -43,7 +45,7 @@ export const ProgramButton: React.FC = () => {
       onClick={() => { triggerHaptic(10); openProgram(); }}
       title={LITURGY_TITLE}
       aria-label={LITURGY_TITLE}
-      className="w-9 h-9 rounded-full flex items-center justify-center cursor-pointer transition active:scale-95 bg-white/85 ring-1 ring-[#e8dcc8] text-[#7a2028] hover:ring-[#7a2028]/40 [&>svg]:w-[17px] [&>svg]:h-[17px]"
+      className="w-[47px] h-[47px] rounded-full flex items-center justify-center cursor-pointer transition active:scale-95 text-white bg-gradient-to-br from-[#8a2630] to-[#5e1820] shadow-[0_6px_14px_-6px_rgba(94,24,32,0.85)] [&>svg]:w-[22px] [&>svg]:h-[22px]"
     >
       <ListOrdered />
     </button>
