@@ -44,8 +44,8 @@ export const ServiceTabs: React.FC<ServiceTabsProps> = ({ onSelectService, onOpe
   return (
     <div className="w-full my-2 px-1 flex flex-col items-center">
       {/* as wide as the "დღევანდელი წირვა" card above (max-w-2xl) */}
-      <div className="w-full max-w-2xl flex flex-col gap-2.5">
-        {SECTIONS.map(({ title, note, service }) => service && (
+      <div className="w-full max-w-2xl flex flex-col gap-2">
+        {SECTIONS.map(({ title, service }) => service && (
           <button
             key={title}
             type="button"
@@ -53,12 +53,9 @@ export const ServiceTabs: React.FC<ServiceTabsProps> = ({ onSelectService, onOpe
               triggerHaptic(15);
               onSelectService(service);
             }}
-            className="w-full group flex items-center gap-3 py-3 pl-5 pr-3.5 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] shadow-[0_1px_3px_rgba(74,52,38,0.08)] hover:bg-white hover:ring-[#7a2028]/30 hover:shadow-[0_6px_18px_-8px_rgba(122,32,40,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 cursor-pointer text-left select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a2028]"
+            className="w-full group flex items-center gap-3 py-2 pl-5 pr-3 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] shadow-[0_1px_3px_rgba(74,52,38,0.08)] hover:bg-white hover:ring-[#7a2028]/30 hover:shadow-[0_6px_18px_-8px_rgba(122,32,40,0.35)] hover:-translate-y-0.5 active:translate-y-0 active:scale-[0.98] transition-all duration-200 cursor-pointer text-left select-none focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#7a2028]"
           >
-            <span className="flex-1 min-w-0">
-              <span className="block font-serif-ge font-bold text-lg sm:text-xl leading-tight text-[#7a2028]">{title}</span>
-              <span className="block mt-0.5 text-[13px] text-[#8a7a6a] leading-snug">{note}</span>
-            </span>
+            <span className="flex-1 min-w-0 font-serif-ge font-bold text-lg sm:text-xl leading-tight text-[#7a2028]">{title}</span>
             <span className="shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-[#7a2028] bg-[#7a2028]/5 group-hover:bg-[#7a2028] group-hover:text-[#fbf6ec] transition-colors" aria-hidden>
               <ChevronRight className="w-4 h-4 transition-transform group-hover:translate-x-0.5" />
             </span>
