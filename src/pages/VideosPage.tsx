@@ -83,6 +83,12 @@ export const VideoList: React.FC<{ id: 'k' | 'p'; open?: string; onPlay: (id: st
 );
 export default VideoList;
 
+/** one kind of Georgian films without a heading: a tab of the games page (2026-11-09, the user: „თამაშები ფილმები სპექტაკლები
+ *  მულტფილმები … ზემოთ გადამრთველი ზოლით“) */
+export const KinoKind: React.FC<{ only: FilmKind; open?: string; onPlay: (id: string) => void; onMove: (id: string) => void; onClose: () => void }> = props => (
+  <div className="w-full animate-in fade-in duration-200"><Kino {...props} /></div>
+);
+
 /** the lists with no place: a roomy row each */
 const OTHER: { id: ListId; title: string; sub: string; Icon: React.ComponentType<{ className?: string }> }[] = [
   { id: 'ep', title: 'სრული გადაცემები', sub: '„ეთნოფორის“ ყველა გადაცემა', Icon: Tv },
@@ -161,8 +167,10 @@ const kinoFilm = (k: KinoItem): Film => {
 const KINDS: FilmKind[] = ['film', 'theatre', 'cartoon'];
 
 /** Georgian films, plays and cartoons: their kind, a genre, „ბავშვებთან ერთად“ (no grown-ups' mark), a search line */
-const Kino: React.FC<{ open?: string; onPlay: (id: string) => void; onMove: (id: string) => void; onClose: () => void }> = ({ open, onPlay, onMove, onClose }) => {
-  const [kind, setKind] = useState<FilmKind | null>(null);
+const Kino: React.FC<{ open?: string; onPlay: (id: string) => void; onMove: (id: string) => void; onClose: () => void; only?: FilmKind }> = ({ open, onPlay, onMove, onClose, only }) => {
+  const [picked, setKind] = useState<FilmKind | null>(null);
+  // `only`: one kind, chosen by the games page's tab (no kind chips then)
+  const kind = only ?? picked;
   const [genre, setGenre] = useState<FilmGenre | null>(null);
   const [family, setFamily] = useState(false);
   const [q, setQ] = useState('');
@@ -180,10 +188,10 @@ const Kino: React.FC<{ open?: string; onPlay: (id: string) => void; onMove: (id:
 
   return (
     <div className="w-full flex flex-col gap-3">
-      <div className="flex flex-wrap gap-1.5" role="group" aria-label="რა სახის">
+      {!only && <div className="flex flex-wrap gap-1.5" role="group" aria-label="რა სახის">
         <Chip on={!kind} onClick={() => setKind(null)} label="ყველა" n={KINO.filter(k => !family || !k.adult).length} />
         {KINDS.map(x => <Chip key={x} on={kind === x} onClick={() => setKind(kind === x ? null : x)} label={KIND_NAMES[x]} n={kindCount(x)} />)}
-      </div>
+      </div>}
       {/* a genre is a toggle — none chosen = every genre; the chosen one shows ✕ */}
       <div className="flex flex-wrap gap-1.5" role="group" aria-label="ჟანრები">
         {genres.map(([x]) => <Chip key={x} on={g === x} soft x={g === x} onClick={() => setGenre(g === x ? null : x)} label={GENRE_NAMES[x]} />)}
