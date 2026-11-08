@@ -29,11 +29,12 @@ export const PATH_ICON = 'w-11 h-11 shrink-0 rounded-xl bg-[#7a2028]/[0.07] text
 const PANEL_KEY = (id: string) => `pathPanel:${id}`;
 const PANEL_EVENT = 'open-path-panel';
 
-// "habits" is the page's own card, always shown, so it needs no wish
-const ALWAYS_SHOWN = new Set(['habits']);
+// "habits" (the vine's and the home shelf's „ჩვევები“) = the „ჩვევები“ round button's card, id `work` since 2026-11-08 —
+// it used to be dropped as always shown, so the path opened with the habits folded (the user, 2026-11-09)
+const ALIASES: Record<string, string> = { habits: 'work' };
 
-export const openPathPanel = (id: string) => {
-  if (ALWAYS_SHOWN.has(id)) return;
+export const openPathPanel = (wish: string) => {
+  const id = ALIASES[wish] ?? wish;
   try {
     localStorage.setItem(PANEL_KEY(id), '1');
   } catch { /* storage off: the event still opens it */ }
