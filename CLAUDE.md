@@ -1136,8 +1136,9 @@
 - **„ჩემი ვაზი“** (2026-11-01 as a game; **since 2026-11-09 no game** — the user: „თამაში აქედან ამოიღე … სამაგიდო და ჰიბრიდული
   მოსპე … ჩვევებს თავში … ჩვევების მოტივაციად … კონცეფცია არ შეცვალო“, answer „სრული, ყველაფერი ღია“): it heads „ჩვევები“
   (`components/habits/vine/HabitVine.tsx` first in `ChvevebiContent`, so the path page, the orb's habits and a teacher's look at a
-  student all show it) — the picture with the mood and three numbers, „დღეს“, the month's bunch bar, the last 14 days, „როგორ
-  იზრდება ვაზი“, all open; the old „ჩვევების მონიშვნა“ button is gone. Off the hub: its `GAMES` entry, the class's „რთველი“
+  student all show it) — the picture with the mood and three numbers, the month's bunch bar, the last 14 days; „როგორ იზრდება ვაზი“
+  opens from a round ⓘ at the picture's top right in a kit `Sheet` (a guest's line there too), and the „დღეს“ card is gone (the user,
+  2026-11-09: „ჩახსენი … ინსტრუქცია პატარა ნიშით … მარჯვნივ მაღლა“); the old „ჩვევების მონიშვნა“ button is gone. Off the hub: its `GAMES` entry, the class's „რთველი“
   (`Harvest.tsx`), `VaziGame`, the `vazi` open target and the kit `chemi-vazi.js` were removed. Rules `utils/vazi.ts` + test
   unchanged, picture `utils/vineShape.ts` + `habits/vine/VineArt.tsx`, data `habits/vine/useVine.ts`: every member's vine grows from
   what they did — nothing new is stored, it is

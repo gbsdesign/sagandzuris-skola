@@ -1,19 +1,17 @@
-import React from 'react';
-import { BookOpenCheck, CalendarCheck, Dumbbell, Gamepad2, Grape } from 'lucide-react';
-import { Card, Stat } from '../../ui/kit';
+import React, { useState } from 'react';
+import { Grape, Info } from 'lucide-react';
+import { Card, Sheet, Stat } from '../../ui/kit';
 import { MONTHS_GE } from '../../../utils/dateNames';
-import { BUNCH_AT, DEED_KINDS, DEED_LABEL, LEAF_CAP, RECENT_DAYS, monthShort, vineMood, yellowShare, type DeedKind, type Vine } from '../../../utils/vazi';
+import { BUNCH_AT, LEAF_CAP, RECENT_DAYS, monthShort, vineMood, yellowShare, type Vine } from '../../../utils/vazi';
 import { BUNCH_SLOTS } from '../../../utils/vineShape';
 import { VineArt, type BunchLook } from './VineArt';
 import { useVine } from './useVine';
 
 // „ჩემი ვაზი“ at the head of „ჩვევები“ (2026-11-09, the user: „თამაში აქედან ამოიღე … ჩვევებს თავში … ჩვევების მოტივაციად“,
 // answer „სრული, ყველაფერი ღია“; it was a game of the hub with a hybrid harvest and a print kit, both gone): my vine, what grew
-// it today, this month's bunch on its way, the last two weeks, how it grows. The rules are unchanged (utils/vazi.ts).
+// this month's bunch on its way, the last two weeks; how it grows opens from the ⓘ on the picture (the user, 2026-11-09:
+// „დღეს“ off, „ინსტრუქცია პატარა ნიშით … მარჯვნივ მაღლა“). The rules are unchanged (utils/vazi.ts).
 
-const KIND_ICON: Record<DeedKind, React.FC<{ className?: string }>> = {
-  habits: CalendarCheck, games: Gamepad2, learn: BookOpenCheck, drills: Dumbbell,
-};
 
 /** the season's bunches as the picture shows them: each finished month's ripe ones (purple and golden in turn), then this
  *  month's, still green */
@@ -24,13 +22,23 @@ export const bunchLooks = (v: Vine): BunchLook[] => [
 
 export const HabitVine: React.FC = () => {
   const { vine, loaded, member, name } = useVine();
+  const [info, setInfo] = useState(false);
   const looks = bunchLooks(vine);
   const { month } = vine;
   const goal = month.next ?? BUNCH_AT[BUNCH_AT.length - 1];
   const monthName = MONTHS_GE[+month.key.slice(5, 7) - 1] ?? '';
   return (
     <div className="space-y-4">
-      <Card className="!p-0 overflow-hidden">
+      <Card className="!p-0 overflow-hidden relative">
+        <button
+          type="button"
+          onClick={() => setInfo(true)}
+          aria-label="როგორ იზრდება ვაზი"
+          title="როგორ იზრდება ვაზი"
+          className="absolute top-2.5 right-2.5 z-10 w-9 h-9 rounded-full bg-white/90 ring-1 ring-[#e8dcc8] shadow-sm inline-flex items-center justify-center text-[#7a2028] active:scale-95 transition"
+        >
+          <Info className="w-[18px] h-[18px]" />
+        </button>
         <VineArt
           leaves={loaded ? vine.recent : 0}
           wood={loaded ? vine.leaves : 0}
@@ -52,33 +60,6 @@ export const HabitVine: React.FC = () => {
             <p className="text-[12.5px] text-[#75685a]">ვაზზე {looks.length} მტევანია — ნახატზე {BUNCH_SLOTS.length} ჩანს.</p>
           )}
         </div>
-      </Card>
-
-      <Card className="!p-4 space-y-2">
-        <div className="flex items-baseline justify-between gap-3">
-          <p className="font-serif-ge text-[16px] font-bold text-[#4a3426]">დღეს</p>
-          <p className="text-[13px] text-[#75685a] tabular-nums">{vine.today} ფოთოლი · დღეში {LEAF_CAP}-მდე</p>
-        </div>
-        <ul className="divide-y divide-[#efe5d3]">
-          {DEED_KINDS.map(k => {
-            const I = KIND_ICON[k];
-            const n = vine.todayDeeds[k] ?? 0;
-            return (
-              <li key={k} className="flex items-center gap-3 py-2">
-                <span className={`w-9 h-9 shrink-0 rounded-full inline-flex items-center justify-center ${n ? 'bg-[#e6f0dc] text-[#4f7f34]' : 'bg-[#f4ede0] text-[#a8998a]'}`}>
-                  <I className="w-[18px] h-[18px]" />
-                </span>
-                <span className="min-w-0 flex-1 text-[14.5px] text-[#2f2018]">{DEED_LABEL[k]}</span>
-                <span className={`text-[15px] font-bold tabular-nums ${n ? 'text-[#4f7f34]' : 'text-[#b3a594]'}`}>{n ? `+${n}` : '—'}</span>
-              </li>
-            );
-          })}
-        </ul>
-        {!member && (
-          <p className="text-[13px] leading-snug text-[#75685a]">
-            შედი სკოლაში — ჩვევები, სწავლა და სავარჯიშოებიც გაზრდის ვაზს. ახლა მხოლოდ ამ ტელეფონზე ნათამაშები დღის თამაშები ითვლება.
-          </p>
-        )}
       </Card>
 
       <Card className="!p-4 space-y-3">
@@ -127,14 +108,16 @@ export const HabitVine: React.FC = () => {
         </div>
       </Card>
 
-      <Card tone="paper" className="!p-4 space-y-1.5 text-[13.5px] leading-snug text-[#4a3426]">
-        <p className="font-serif-ge text-[15px] font-bold text-[#7a2028]">როგორ იზრდება ვაზი</p>
-        <p>ყოველი საქმე ფოთოლია: მონიშნული ჩვევა, დასრულებული დღის თამაში, სწავლის რეჟიმში ნავარჯიშები ნაწილი, ოსტატობის სავარჯიშო. დღეში {LEAF_CAP} ფოთოლამდე.</p>
-        <p>თვეში {BUNCH_AT[0]} ფოთოლი — მტევანი, {BUNCH_AT[1]} — მეორე, {BUNCH_AT[2]} — მესამე. მტევანი მწვანეა, თვე რომ დამთავრდება — მწიფდება.</p>
-        <p>წელიწადი ნოემბრიდან ოქტომბრამდეა: შემოდგომის რთველზე კლასი მტევნებს ერთად ითვლის, 1 ნოემბერს კი ისინი ქვევრში მიდის.</p>
-        <p>ფოთოლი ვაზზე {RECENT_DAYS} დღე რჩება, მერე ცვივა — ვაზი კი ყოველი ფოთლით იზრდება და ძირი უმსხვილდება{vine.leaves ? ` (სულ ${vine.leaves} ფოთოლი გამოიტანა)` : ''}.</p>
-        <p>სამი დღე უსაქმოდ — ვაზი ყვითლდება, მაგრამ არასოდეს კვდება: ერთი საქმეც და ისევ გამწვანდება.</p>
-      </Card>
+      <Sheet open={info} onClose={() => setInfo(false)} title="როგორ იზრდება ვაზი">
+        <div className="space-y-2 text-[14px] leading-snug text-[#4a3426]">
+          <p>ყოველი საქმე ფოთოლია: მონიშნული ჩვევა, დასრულებული დღის თამაში, სწავლის რეჟიმში ნავარჯიშები ნაწილი, ოსტატობის სავარჯიშო. დღეში {LEAF_CAP} ფოთოლამდე.</p>
+          <p>თვეში {BUNCH_AT[0]} ფოთოლი — მტევანი, {BUNCH_AT[1]} — მეორე, {BUNCH_AT[2]} — მესამე. მტევანი მწვანეა, თვე რომ დამთავრდება — მწიფდება.</p>
+          <p>წელიწადი ნოემბრიდან ოქტომბრამდეა: შემოდგომის რთველზე კლასი მტევნებს ერთად ითვლის, 1 ნოემბერს კი ისინი ქვევრში მიდის.</p>
+          <p>ფოთოლი ვაზზე {RECENT_DAYS} დღე რჩება, მერე ცვივა — ვაზი კი ყოველი ფოთლით იზრდება და ძირი უმსხვილდება{vine.leaves ? ` (სულ ${vine.leaves} ფოთოლი გამოიტანა)` : ''}.</p>
+          <p>სამი დღე უსაქმოდ — ვაზი ყვითლდება, მაგრამ არასოდეს კვდება: ერთი საქმეც და ისევ გამწვანდება.</p>
+          {!member && <p>შედი სკოლაში — ჩვევები, სწავლა და სავარჯიშოებიც გაზრდის ვაზს. ახლა მხოლოდ ამ ტელეფონზე ნათამაშები დღის თამაშები ითვლება.</p>}
+        </div>
+      </Sheet>
     </div>
   );
 };
