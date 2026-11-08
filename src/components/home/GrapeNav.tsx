@@ -47,9 +47,10 @@ export const GrapeNav: React.FC = () => {
     { id: 'medavitneobaTopic', label: 'მედავით­ნეობა', x: 35, y: 13, nx: 29, ny: 14, go: () => navigateTo('medavitneoba') },
     // signed in: habits fold open on the path page; guests get the sign-in prompt
     { id: 'chvevebi', label: 'ჩვევები', x: 62, y: 8, nx: 66, ny: 8, go: () => (user ? (openPathPanel('habits'), navigateTo('gz')) : openModal('chvevebi')) },
-    { id: 'tamashebi', label: 'თამაშები', x: 86, y: 28, nx: 83, ny: 20, go: () => navigateTo('games') },
-    // Georgia's churches on the map, left of the trunk above the ground
-    { id: 'eklesiebi', label: 'ეკლესია-მონასტრები', x: 19, y: 52, nx: 17, ny: 58, go: () => navigateTo('churches') },
+    // 2026-11-09 (the user: „თამაშების ადგილას გადაიტანე ეკლესია მონასტრები … დააწერე ტაძრები … ცარიელ ადგილას ჩამოიტანე
+    // თამაშები და დააწერე სახალისო“): the churches took the games' leaf, the games hang right of the trunk under „გალობა“
+    { id: 'eklesiebi', label: 'ტაძრები', x: 86, y: 28, nx: 83, ny: 20, go: () => navigateTo('churches') },
+    { id: 'tamashebi', label: 'სახალისო', x: 82, y: 47, nx: 82, ny: 51, go: () => navigateTo('games') },
     // in the qvevri
     { id: 'tsinaprebi', label: 'გაიცანი წინაპრები', x: 51, y: 82, go: () => navigateTo('tsinaprebi') },
   ];

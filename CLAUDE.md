@@ -372,8 +372,8 @@
 - **ეკლესია-მონასტრები** (2026-11-07, page `churches`, section `eklesiebi`, `pages/ChurchesPage.tsx` + `pages/churches/ChurchCard.tsx`;
   the user: „ვაზზე ახალი ღილაკი … როგორც ვიდეობის შემთხვევაშია … საქ რუკა … ინფო, ფოტო … საკონტაქტო მარტო ადმინებს და ვისაც ჩაურთავს
   … გუგლ მაპი იხსნებოდეს … ახლოს მდებარე ტაძრები … რომელი მოქმედია და რომელ საათებში“; he showed Tevdore Gogoladze's app „გზა
-  ტაძრისაკენ“ (a Google My Maps map) and asked to build our own the same way — nothing taken from that map): the vine's label left of
-  the trunk (x 19 y 52, phone 18/55) opens the regions' map (`RegionPuzzleMap`, Tbilisi for „ქალაქური“; Abkhazia has none — the
+  ტაძრისაკენ“ (a Google My Maps map) and asked to build our own the same way — nothing taken from that map): the vine's label „ტაძრები“ (since 2026-11-09 on the games' old leaf, x 86 y 28, phone 83/20; the games' label is
+  „სახალისო“, right of the trunk under „გალობა“, x 82 y 47, phone 82/51) opens the regions' map (`RegionPuzzleMap`, Tbilisi for „ქალაქური“; Abkhazia has none — the
   source leaves out the occupied lands), a search over all (name hits first, `byName`) and „ახლოს მდებარე ტაძრები“ (the phone's place,
   the nearest 40 with their distance, kept for the visit in `lastFix`, asked again after 10 min). A region = kind chips (ყველა ·
   მოქმედი · მონასტრები · არ მოქმედებს), a municipality list, a search line, rows in steps of 60. `mapItem` = region id, „near“ or
