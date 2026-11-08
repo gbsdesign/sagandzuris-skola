@@ -3,11 +3,11 @@ import { useAuth, useNavigation, useModal } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
 import { useAccess } from '../../hooks/useAccess';
-import { openSignIn } from '../access/SignInPrompt';
+import { askSignIn, openSignIn } from '../access/SignInPrompt';
 import { SearchButton } from '../search/GlobalSearch';
 import { useInbox, isUnread } from '../../hooks/useDirectChat';
 import { useClassLasts, useChatSeen, isClassUnread } from '../../hooks/useClassChat';
-import { User as UserIcon, LogIn, Compass, Baby, MessageCircle } from 'lucide-react';
+import { User as UserIcon, LogIn, Compass, Library, Baby, MessageCircle } from 'lucide-react';
 import { BellButton, BellPanel } from './Bell';
 import { useBellState, useNotices } from '../../hooks/useNotices';
 import { useOpenRequest } from '../../utils/searchOpen';
@@ -18,7 +18,7 @@ interface HeaderProps {
 }
 
 // One row (2026-11-09, the user: „საგანძურის გზა გადაიტანე მაღლა … კლასი მრგვალად … საგანძურის გზაში“, answers „კომპასი და
-// წარწერა გზა · ზედა რიგი მოიხსნას“): [logo] [🔔] [🧭 გზა] … [🔍] [💬] [👤]. The classes are a round button of the path now
+// წარწერა გზა · ზედა რიგი მოიხსნას“): [logo] [🔔] [🧭 გზა] … [🔍] [📚] [💬] [👤]. The classes are a round button of the path now
 // (PathOrbs „კლასი“), the prayer book a label on the home vine. 🔔 drops its list down under the header.
 export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
   const { user, signingIn, isAdmin, isTeacher } = useAuth();
@@ -47,6 +47,10 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
   // the path's own switch (data/sections)
   const showPath = access.section('gza') !== 'hidden';
   const onPath = currentPage === 'gz';
+  // the library's round 📚, back in the header right of the 🔍 (2026-11-09, the user: „ბიბლიოთეკის ნიშანი დააბრუნე უკან
+  // ისევ ლუპის მარჯვნივ“); the path's „ბიბლიოთეკა“ button stays too
+  const library = access.section('biblioteka');
+  const onLibrary = currentPage === 'biblioteka' && !(mapItem ?? '').startsWith('prayers');
 
   // 🔔's list, under the header (the assignments' 📋 went into „საგანძურის გზა“ → „ნასწავლი“ on 2026-11-08, the classes'
   // „კლასი ▾“ into the path's „კლასი“ button on 2026-11-09)
@@ -129,6 +133,25 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
             the offline page) */}
         <div className="order-2 ml-auto flex items-center gap-1.5 min-w-0">
           {access.can('search') && <SearchButton />}
+          {library !== 'hidden' && (
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic(10);
+                if (library === 'locked') askSignIn('ბიბლიოთეკა');
+                else navigateTo('biblioteka');
+              }}
+              className={`w-9 h-9 shrink-0 rounded-full ring-1 flex items-center justify-center transition-all cursor-pointer active:scale-95 ${
+                onLibrary
+                  ? 'bg-[#7a2028] ring-[#7a2028] text-[#fbf6ec]'
+                  : 'bg-white/80 hover:bg-white ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028]'
+              }`}
+              title="ბიბლიოთეკა"
+              aria-label="ბიბლიოთეკა"
+            >
+              <Library className="w-[18px] h-[18px]" />
+            </button>
+          )}
 
           {user ? (
             <div className="flex items-center gap-1.5">

@@ -461,7 +461,7 @@
 - **საგანძურის გზა** (page `gz`) = „ჩემი დღე“ since 2026-10-28: the round buttons (`PathOrbs`; four since 2026-11-05 — the pearls
   game's fifth was removed), then the habits card.
   **„ბიბლიოთეკა“ orb (2026-11-09**, the user: „ბიბლიოთეკის ღილაკი აქ ჩამოიტანე … 5 / 112 წიგნიდან წაკითხული … ღილაკი წავიკითხე“,
-  answers „წიგნები + ცხოვრებები · ზემოდან მოიხსნას · ზედა ზოლში“): the header's 📚 is gone; a fifth orb (teal ring, `PATH_ORBS`
+  answers „წიგნები + ცხოვრებები · ზემოდან მოიხსნას · ზედა ზოლში“): the header's 📚 went, and came back the same night right of the 🔍 (the user: „ბიბლიოთეკის ნიშანი დააბრუნე … ლუპის მარჯვნივ“; the orb stays too); a fifth orb (teal ring, `PATH_ORBS`
   id `library`, shown by the library's own switch) shows „N / M“ and opens the library. M = the library's books
   (`data/libraryBooks.ts` `LIBRARY_BOOK_IDS` — the „სასულიერო“ `BOOKS` moved there) + every listed life (not `x`). „წავიკითხე“
   (`pages/library/ReadButton.tsx`) on a book's head (BookTab, `book:<place>`) and a life's bar (`life:<id>`); kept by
