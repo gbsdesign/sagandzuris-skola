@@ -789,8 +789,8 @@
   variants follow its section, a printed kit always shows. Since 2026-11-04 (the user's „დახვეწე, გაათანამედროვე და არ იყოს დამაბნეველი“): the three variants' legend, a search field
   (name · known game · line · ⓘ — the name counts most), „დღის თამაშები“ (`DAILY_GAMES`: a tile each, ✓ when played today, a tap
   opens the day's game), then the list under four headings (`GAME_GROUPS`: the user's own მუსიკალური · ქართული · ცოცხალი of 10-27 +
-  დაფის თამაშები — still one list, no tabs; `tests/gameGroups.test.ts` keeps every game under exactly one) with chips that jump
-  to them; a card's buttons stand in one row (ონლაინ filled, ჰიბრიდული tinted, სამაგიდო beige; icons only from `lg`). The vine label „თამაშები“ opens it. The pearls game was removed 2026-11-05 (its pearls live in „ნასწავლი“). The plan with 42 games and the six Georgianized board games:
+  დაფის თამაშები — still one list, no tabs; `tests/gameGroups.test.ts` keeps every game under exactly one); since 2026-11-09 no chips —
+  each heading is a fold, all shut at first (`sg-games-open`, the visit; the user: „ჩახსენი … ჩამოსაშლელად“); a card's buttons stand in one row (ონლაინ filled, ჰიბრიდული tinted, სამაგიდო beige; icons only from `lg`). The vine label „თამაშები“ opens it. The pearls game was removed 2026-11-05 (its pearls live in „ნასწავლი“). The plan with 42 games and the six Georgianized board games:
   https://claude.ai/artifact/Dw24amtHhQvSGUd1pPE4fg
 - **First two games (2026-10-28)**: „დღის ჰანგი“ (`pages/games/HangiGame.tsx`; logic `utils/hangi.ts` + test; pool
   `data/hangiPool.ts` = every recording the member may hear — `VARIANT_MEDIA` via `codeBoundMedia()`, `CHANT_RECORDINGS`, folk
