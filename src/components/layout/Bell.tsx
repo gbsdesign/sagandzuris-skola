@@ -1,7 +1,8 @@
-import React, { useRef, useState } from 'react';
+import React, { useState } from 'react';
 import { ArrowLeftRight, Bell, BellOff, ChevronRight, Loader2, Megaphone, MessageCircle, Pin, Send, Sparkles, Trash2 } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
 import { askConfirm, offerUndo } from '../ui/kit';
+import { SwipeRow, SwipeSide } from '../ui/SwipeRow';
 import { ClassLogo } from '../classes/ClassLogo';
 import { Notice, deleteAnnouncement, sendAnnouncement } from '../../hooks/useNotices';
 import { notifyAnnouncement } from '../../utils/groupPush';
@@ -76,89 +77,6 @@ const Mark: React.FC<{ n: Notice }> = ({ n }) => {
   );
 };
 
-/** A row that goes when swiped aside (a finger or a mouse): past a third of its width, or flicked, it slides out, folds up
- *  and `onGone` runs; less, and it springs back. A swipe never counts as a tap. Up and down stay the list's scroll. */
-const SwipeRow: React.FC<{ onGone: () => void; children: React.ReactNode }> = ({ onGone, children }) => {
-  const box = useRef<HTMLDivElement>(null);
-  const face = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ x0: number; y0: number; t0: number; dx: number; on: boolean } | null>(null);
-  const swiped = useRef(false);
-  const [side, setSide] = useState(0);
-  const place = (dx: number, animate: boolean) => {
-    const el = face.current;
-    if (!el) return;
-    el.style.transition = animate ? 'transform 0.22s ease, opacity 0.22s ease' : 'none';
-    el.style.transform = dx ? `translateX(${dx}px)` : '';
-    el.style.opacity = dx ? String(Math.max(0.35, 1 - Math.abs(dx) / ((box.current?.offsetWidth || 300) * 1.2))) : '';
-  };
-  const end = () => {
-    const d = drag.current;
-    drag.current = null;
-    if (!d?.on) return;
-    const w = box.current?.offsetWidth || 300;
-    const fast = Math.abs(d.dx) / Math.max(1, performance.now() - d.t0) > 0.6 && Math.abs(d.dx) > 40;
-    if (Math.abs(d.dx) < w * 0.33 && !fast) {
-      place(0, true);
-      window.setTimeout(() => setSide(0), 220);
-      return;
-    }
-    triggerHaptic(12);
-    place(Math.sign(d.dx) * w * 1.1, true);
-    window.setTimeout(() => {
-      const el = box.current;
-      if (el) {
-        el.style.height = `${el.offsetHeight}px`;
-        el.style.transition = 'height 0.2s ease, margin 0.2s ease';
-        void el.offsetHeight;
-        el.style.height = '0px';
-        el.style.marginTop = '0px';
-      }
-      window.setTimeout(onGone, 200);
-    }, 200);
-  };
-  return (
-    <div
-      ref={box}
-      className="relative overflow-hidden rounded-2xl touch-pan-y select-none"
-      onPointerDown={e => {
-        if (e.pointerType === 'mouse' && e.button !== 0) return;
-        drag.current = { x0: e.clientX, y0: e.clientY, t0: performance.now(), dx: 0, on: false };
-        swiped.current = false;
-      }}
-      onPointerMove={e => {
-        const d = drag.current;
-        if (!d) return;
-        const dx = e.clientX - d.x0, dy = e.clientY - d.y0;
-        if (!d.on) {
-          if (Math.abs(dy) > 10 && Math.abs(dy) > Math.abs(dx)) { drag.current = null; return; }
-          if (Math.abs(dx) < 10) return;
-          d.on = true;
-          swiped.current = true;
-          box.current?.setPointerCapture(e.pointerId);
-        }
-        d.dx = dx;
-        setSide(Math.sign(dx));
-        place(dx, false);
-      }}
-      onPointerUp={end}
-      onPointerCancel={end}
-      onClickCapture={e => {
-        if (!swiped.current) return;
-        swiped.current = false;
-        e.preventDefault();
-        e.stopPropagation();
-      }}
-    >
-      {side !== 0 && (
-        <div aria-hidden className={`absolute inset-0 rounded-2xl bg-[#b3261e] text-white flex items-center px-5 gap-2 text-[13px] font-bold ${side > 0 ? 'justify-start' : 'justify-end'}`}>
-          <Trash2 className="w-5 h-5" /> წაშლა
-        </div>
-      )}
-      <div ref={face} className="relative">{children}</div>
-    </div>
-  );
-};
-
 export const BellPanel: React.FC<{
   notices: Notice[];
   /** the last look before this one: what is newer shows as new */
@@ -203,12 +121,17 @@ export const BellPanel: React.FC<{
   const fresh = notices.filter(n => n.at > seenBefore);
   const older = notices.filter(n => n.at <= seenBefore);
 
+  // swiped aside, either way: hidden for me
+  const gone = (n: Notice): SwipeSide => ({
+    label: 'წაშლა', icon: <Trash2 className="w-5 h-5" />, tone: 'bg-[#b3261e] text-white', leave: true, run: () => hide(n),
+  });
+
   const row = (n: Notice, isNew: boolean) => {
     const opens = !!n.chat;
     const open = unfolded === n.id;
     return (
       <li key={n.id}>
-        <SwipeRow onGone={() => hide(n)}>
+        <SwipeRow left={gone(n)} right={gone(n)}>
           <button
             type="button"
             onClick={() => {

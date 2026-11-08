@@ -133,6 +133,15 @@
   page's list „got stuck“ on phones this way (2026-11-08; now `lg:overflow-y-auto lg:overscroll-contain`, on a phone the page
   scrolls). That page's title is „წერილები“ like the header's 💬 (the 🔔 is „შეტყობინებები“); chats nobody wrote in yet sort
   under the ones with messages; the superadmin's „ყველა ჩათი“ is only the 👁 under 380 px.
+  **The list's five ideas (the same night, the user: „ყველა იდეა გააკეთე“)**: the class chips became one pill „ყველა კლასი ▾“
+  (`ClassPicker` in `pages/messages/ListParts.tsx`: a kit `Sheet` of the classes with their unread chats, ✕ back to all); an unread
+  chat shows how many wait (`NewCount`; `hooks/useUnreadCounts.ts` — one `getCountFromServer` of `messages` after my read time per
+  unread chat and newest message, kept for the visit; a dot until counted or offline); my last message in a private chat shows ✓ /
+  green ✓✓ (`Tick`, `seenByOther`; `lastIsMine`, `readSince` in useDirectChat); a long press or a right click opens `ChatMenu`
+  (თავში მიმაგრება · წაკითხულად · სიიდან დამალვა), a swipe left hides (with „გაუქმება“), right marks read (unread only) — the
+  shared `components/ui/SwipeRow.tsx` (two sides; the 🔔 list uses it too); `hooks/useChatListPrefs.ts`: `students.chatPins`
+  (≤ 5, newest pin on top) and `students.chatHidden` {id: newest message ms} — a newer message brings it back, a search finds it,
+  the fold „დამალული ჩათები · N“ at the list's end; opening a hidden chat unhides it; a one-time tip `ListTip` (`sg-chats-tip`).
 - Fixed/full-screen UI must respect `env(safe-area-inset-*)` (`viewport-fit=cover` is on); helpers
   `.safe-x`, `.safe-top`, `.safe-bottom`, `.safe-bleed` in `index.css`.
 - **Kit rules (redesign stage 1, 2026-10-25)** — `components/ui/kit.tsx`: every inner page has the one `PageBar`
