@@ -270,9 +270,6 @@ const MapByTab: React.FC<{
         <Tabs<RegionTab> cols={items.length as 2 | 3 | 4} stack value={shown} onChange={choose} items={items} />
       )}
       {shown === 'songs' && <CentreBanner />}
-      {shown === 'instruments' ? (
-        <SakravebiView listOnly selectedChantVariants={selectedChantVariants} />
-      ) : (
       <RegionPuzzleMap
         key={shown}
         onSelect={r => onOpen(r.id, shown)}
@@ -283,9 +280,39 @@ const MapByTab: React.FC<{
         title="ხალხური"
         extraRegions={extras}
       />
-      )}
+      {shown === 'instruments' && <InstrumentsFold selectedChantVariants={selectedChantVariants} />}
       {shown === 'etno' && <AbroadFold films={films} />}
     </>
+  );
+};
+
+/** „ყველა საკრავი“ under the „საკრავი“ map (2026-11-09, the user: „საკრავებზეც ესე ქენი“ — the map came back with the names and
+ *  counts; the list of every instrument, each with its regions, folds under it) */
+const InstrumentsFold: React.FC<{ selectedChantVariants: Record<string, any> }> = ({ selectedChantVariants }) => {
+  const [open, setOpen] = useState(false);
+  return (
+    <section className="w-full mt-1">
+      <button
+        type="button"
+        onClick={() => { triggerHaptic(10); setOpen(o => !o); }}
+        aria-expanded={open}
+        className="group w-full min-h-16 flex items-center gap-3 px-3 py-2.5 rounded-3xl bg-white/80 ring-1 ring-[#e8dcc8] text-left cursor-pointer hover:bg-[#fcf6ea] active:scale-[0.99] transition-all"
+      >
+        <span className="w-11 h-11 shrink-0 rounded-full grid place-items-center bg-[#7a2028]/[0.08] text-[#7a2028]">
+          <Guitar className="w-5 h-5" />
+        </span>
+        <span className="flex-1 min-w-0 flex flex-col gap-0.5">
+          <span className="text-[15px] font-bold text-[#2a2017] leading-snug">ყველა საკრავი</span>
+          <span className="text-[12.5px] font-semibold text-[#8a7a6a] leading-snug">რომელი საიდანაა</span>
+        </span>
+        <ChevronDown className={`w-5 h-5 shrink-0 text-[#b3a594] transition-transform duration-200 ${open ? 'rotate-180' : ''}`} aria-hidden />
+      </button>
+      {open && (
+        <div className="mt-2 animate-in fade-in slide-in-from-top-1 duration-200">
+          <SakravebiView listOnly bare selectedChantVariants={selectedChantVariants} />
+        </div>
+      )}
+    </section>
   );
 };
 

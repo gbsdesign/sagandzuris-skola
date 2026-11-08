@@ -91,7 +91,10 @@ export const SakravebiView: React.FC<SakravebiViewProps> = ({ selectedChantVaria
             />
           )}
           <section className="flex flex-col gap-2">
-            <h3 className={listOnly ? 'px-1 pb-2 text-lg sm:text-xl font-black text-[#2a2017] border-b border-[#e4d8c4]' : 'px-1 text-[15px] font-black text-[#2a2017]'}>ყველა საკრავი</h3>
+            {/* inside a fold (`bare` + `listOnly`) the fold's row is the heading */}
+            {!(listOnly && bare) && (
+              <h3 className={listOnly ? 'px-1 pb-2 text-lg sm:text-xl font-black text-[#2a2017] border-b border-[#e4d8c4]' : 'px-1 text-[15px] font-black text-[#2a2017]'}>ყველა საკრავი</h3>
+            )}
             {/* on „ხალხური“'s „საკრავი“ tab the regions it is played in, named (2026-11-09: „კუთხეები დაბლა ეწეროს“) */}
             <InstrumentGrid
               list={INSTRUMENTS_LIST}
