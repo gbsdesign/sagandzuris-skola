@@ -96,7 +96,8 @@ export const Header: React.FC<HeaderProps> = ({ logoUrl }) => {
   const kids = Boolean(access.kids);
   // the library's switch (the admin's, the kids' mode) holds for the library's button and the prayer book alike
   const library = access.section('biblioteka');
-  const tools = TOOLS.filter(t => access.section(t.id === 'gza' ? 'gza' : 'biblioteka') !== 'hidden');
+  // the prayer book's chip left the header on 2026-11-09 — it is a big label on the home vine now (GrapeNav)
+  const tools = TOOLS.filter(t => t.id !== 'lotsvani' && access.section(t.id === 'gza' ? 'gza' : 'biblioteka') !== 'hidden');
   // the student's (or teacher's) class(es) sit between the path and the prayer book
   const classes = access.can('classes') ? myClasses : [];
   const showNav = tools.length > 0 || classes.length > 0;

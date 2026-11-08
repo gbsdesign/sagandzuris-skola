@@ -14,12 +14,12 @@ import { GraduationCap } from 'lucide-react';
 // nx/ny: the same spot on a phone, where the labels keep a readable size on a smaller picture and would touch;
 // they stay on the same leaf / cluster, only spread apart (from a 448px-wide picture up, x/y apply).
 // `wide`: a label of two set lines („სიმღერები“ / „და საკრავები“), each kept whole
-type Spot = { id: SectionId; label: string; x: number; y: number; nx?: number; ny?: number; go?: () => void; big?: boolean; hero?: boolean; wide?: boolean };
+type Spot = { id: SectionId; label: string; x: number; y: number; nx?: number; ny?: number; go?: () => void; big?: boolean; mid?: boolean; prayer?: boolean; hero?: boolean; wide?: boolean };
 
 const VINE = '/home/vine.png';
 
 export const GrapeNav: React.FC = () => {
-  const { navigateTo } = useNavigation();
+  const { navigateTo, openMapItem } = useNavigation();
   const { openModal } = useModal();
   const { user } = useAuth();
   const access = useAccess();
@@ -31,11 +31,14 @@ export const GrapeNav: React.FC = () => {
     // under the grape clusters
     // „ხალხური“ (2026-11-09, the user: „სიმღერა საკრავებს გადაარქვი და დააწერე ხალხური“): songs, instruments, poets and
     // „ეთნოფორი“ by region; it keeps the spot of the old two-line label
-    { id: 'simghera', label: 'ხალხური', x: 18, y: 37, nx: 18, ny: 45, go: () => navigateTo('simghera'), big: true },
+    { id: 'simghera', label: 'ხალხური', x: 18, y: 37, nx: 18, ny: 45, go: () => navigateTo('simghera'), mid: true },
     // chant, the main path, stands biggest at the heart of the vine
     { id: 'galoba', label: 'გალობა', x: 57, y: 31, nx: 56, ny: 33, go: () => navigateTo('galoba'), hero: true },
     // „მთქმელი“ left the vine on 2026-11-09 (the user: „მთავარიდან მთქმელის ღილაკ წაშალე“): its poets live in „ხალხური“'s
     // regions, its films in „სახალისო“, St Paisios on the library's „ვიდეოთეკა“
+    // „ლოცვანი“ (2026-11-09, the user: „ლოცვანი ზემოდან მოხსენი მთქმელის ადგილას ჩასვი მოზრდილად თითქმის გალობის ხელა“):
+    // the header's chip left; the prayer book (the library's, under its switch) opens in one step in „მთქმელი“'s old spot
+    { id: 'biblioteka', label: 'ლოცვანი', x: 50, y: 58, nx: 51, ny: 62, go: () => { navigateTo('biblioteka'); openMapItem('prayers'); }, prayer: true },
     // on the leaves
     // მედავითნეობა — the reader's course (not the psalter group)
     { id: 'medavitneobaTopic', label: 'მედავით­ნეობა', x: 35, y: 13, nx: 29, ny: 14, go: () => navigateTo('medavitneoba') },
@@ -44,7 +47,7 @@ export const GrapeNav: React.FC = () => {
     // 2026-11-09 (the user: „თამაშების ადგილას გადაიტანე ეკლესია მონასტრები … დააწერე ტაძრები … ცარიელ ადგილას ჩამოიტანე
     // თამაშები და დააწერე სახალისო“): the churches took the games' leaf, the games hang right of the trunk under „გალობა“
     { id: 'eklesiebi', label: 'ტაძრები', x: 86, y: 28, nx: 83, ny: 20, go: () => navigateTo('churches') },
-    { id: 'tamashebi', label: 'სახალისო', x: 82, y: 47, nx: 82, ny: 51, go: () => navigateTo('games') },
+    { id: 'tamashebi', label: 'სახალისო', x: 82, y: 47, nx: 82, ny: 51, go: () => navigateTo('games'), mid: true },
     // „გაიცანი წინაპრები“ is a book of the library since 2026-11-09 (the user: „წიგნად დაამატე ბიბლიოთეკაში და მთავარიდან მოხსენი“)
   ];
 
@@ -89,7 +92,7 @@ export const GrapeNav: React.FC = () => {
             >
               <span
                 className={`flex flex-col items-center justify-center rounded-full text-center transition-[transform,background-color] duration-200 group-hover:scale-105 group-active:scale-95 group-focus-visible:ring-4 group-focus-visible:ring-amber-300 ${
-                  s.hero ? 'px-[1.1em] py-[0.45em] min-h-12' : s.wide ? 'px-[0.9em] @max-[300px]:px-[0.5em] py-[0.35em] min-h-9' : 'px-[0.9em] py-[0.35em] min-h-9'
+                  s.hero ? 'px-[1.1em] py-[0.45em] min-h-12' : s.prayer ? 'px-[1em] py-[0.4em] min-h-11' : s.mid ? 'px-[0.95em] py-[0.38em] min-h-10' : s.wide ? 'px-[0.9em] @max-[300px]:px-[0.5em] py-[0.35em] min-h-9' : 'px-[0.9em] py-[0.35em] min-h-9'
                 } ${
                   s.go
                     ? 'bg-[#7a2028] text-[#fbf6ec] border-2 border-[#fbf6ec] shadow-[0_3px_10px_rgba(74,52,38,0.35)] group-hover:bg-[#5e1820]'
@@ -100,7 +103,7 @@ export const GrapeNav: React.FC = () => {
                   className={`font-serif-ge font-bold leading-tight hyphens-manual ${s.wide ? 'whitespace-pre-line' : 'max-w-[6.5em]'} ${
                     // the smallest phones (~320px wide) have no room left: there only, a touch smaller
                     // the two-line label: on the smallest phones a touch smaller still, or it would leave the screen or touch „აბიტურიენტს“
-                    s.hero ? 'text-[clamp(20px,6cqw,30px)] @max-[300px]:text-[18px] tracking-wide' : s.wide ? 'text-[clamp(14px,3.8cqw,18px)] @max-[300px]:text-[12px]' : s.big ? 'text-[clamp(14px,3.8cqw,18px)] @max-[300px]:text-[13px]' : 'text-[clamp(12px,3.2cqw,15px)] @max-[300px]:text-[11px]'
+                    s.hero ? 'text-[clamp(20px,6cqw,30px)] @max-[300px]:text-[18px] tracking-wide' : s.prayer ? 'text-[clamp(18px,5.2cqw,26px)] @max-[300px]:text-[16px] tracking-wide' : s.mid ? 'text-[clamp(15px,4.3cqw,20px)] @max-[300px]:text-[13px]' : s.wide ? 'text-[clamp(14px,3.8cqw,18px)] @max-[300px]:text-[12px]' : s.big ? 'text-[clamp(14px,3.8cqw,18px)] @max-[300px]:text-[13px]' : 'text-[clamp(12px,3.2cqw,15px)] @max-[300px]:text-[11px]'
                   }`}
                 >
                   {s.label}
