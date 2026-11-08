@@ -198,6 +198,19 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
   const keptKathisma = readingIn.length > 0 && all.includes('special:kathisma');
   const ids = keptKathisma ? all.filter(id => id !== 'special:kathisma') : all;
 
+  // more tiles than two rows hold? (2 a row under 380 px, else 3; the psalter's kanon tiles count too)
+  // must stay above the early returns below — a hook after them broke the home page (React #310, 2026-11-09)
+  useLayoutEffect(() => {
+    if (variant !== 'home') return;
+    const check = () => {
+      const n = listRef.current?.childElementCount ?? 0;
+      setOverTwo(n > (window.innerWidth >= 380 ? 6 : 4));
+    };
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  });
+
   if (!user || !loaded) return null;
   if (variant === 'home' && ids.length === 0 && readingIn.length === 0) return null;
 
@@ -217,17 +230,6 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
   const FOLD_AT = 6;
   const folded = variant === 'profile' && !editing && !showAll && ids.length > FOLD_AT;
   const shown = folded ? order.slice(0, FOLD_AT) : order;
-  // more tiles than two rows hold? (2 a row under 380 px, else 3; the psalter's kanon tiles count too)
-  useLayoutEffect(() => {
-    if (variant !== 'home') return;
-    const check = () => {
-      const n = listRef.current?.childElementCount ?? 0;
-      setOverTwo(n > (window.innerWidth >= 380 ? 6 : 4));
-    };
-    check();
-    window.addEventListener('resize', check);
-    return () => window.removeEventListener('resize', check);
-  });
   const homeFolded = variant === 'home' && !editing && !homeOpen && overTwo;
 
   const onDown = (i: number) => (e: React.PointerEvent) => {
