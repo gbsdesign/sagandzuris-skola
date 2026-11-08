@@ -82,7 +82,9 @@ const SamosiOrb: React.FC<{ count: number; color: string; open: boolean; onClick
 // (the pearls game's own fifth button was removed 2026-11-05). Other places open "მანერა" or "სამუშაო" with
 // openPathPanel().
 // The member sets their order under "რიგი" (PathTabs), which hands it over as `order`.
-export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map(o => o.id) }) => {
+// `habits` (the habits' card) opens only by its own „ჩვევები“ button, like the others' cards (the user, 2026-11-08: „ჩვევების
+// ჩანართი მარტო ჩვევებზე დაჭერისას იხსნებოდეს“); without it the button only takes the page down to the habits.
+export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> = ({ order = PATH_ORBS.map(o => o.id), habits: habitsCard }) => {
   const [open, setOpen] = useState<OrbId | null>(null);
   // "ნასწავლი": ✎ in the card's head swaps the marks for ✕ (LearnPanel); folding the card ends it
   const [editing, setEditing] = useState(false);
@@ -105,12 +107,13 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
   // openPathPanel('work') does — the independent work is one of the habits now)
   const toHabits = () => {
     triggerHaptic(10);
-    setOpen(null);
+    setEditing(false);
+    setOpen(habitsCard ? 'work' : null);
     window.setTimeout(() => document.getElementById('path-habits')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
   };
   usePanelWish(['learn', 'manera', 'work'], id => (id === 'work' ? toHabits() : setOpen(id as OrbId)));
   const toggle = (id: OrbId) => {
-    if (id === 'work') { toHabits(); return; }
+    if (id === 'work' && (!habitsCard || open !== 'work')) { toHabits(); return; }
     triggerHaptic(10); setEditing(false); setOpen(o => (o === id ? null : id));
   };
   const close = () => { setEditing(false); setOpen(null); };
@@ -152,7 +155,7 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
         return (
           <PathOrb
             key={id} label="ჩვევები" title={habits != null ? `ჩვევები · საშუალოდ ${habits}%` : 'ჩვევები'} percent={habits ?? 0} hue="blue"
-            open={false} onClick={() => toggle(id)} index={index} badge={workBadge}
+            open={!!habitsCard && open === id} onClick={() => toggle(id)} index={index} badge={workBadge}
           >
             {habits != null ? <OrbPercent value={habits} /> : <Sparkles className="w-6 h-6 sm:w-7 sm:h-7 text-[#1e2f5a]" strokeWidth={1.8} />}
           </PathOrb>
@@ -194,6 +197,11 @@ export const PathOrbs: React.FC<{ order?: string[] }> = ({ order = PATH_ORBS.map
         <div className="mx-auto max-w-lg grid gap-1 pt-1" style={{ gridTemplateColumns: `repeat(${orbs.length}, minmax(0, 1fr))` }}>
           {orbs}
         </div>
+      )}
+      {open === 'work' && habitsCard && (
+        <section key="work" id="path-habits" className="sg-up w-full scroll-mt-4 rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] px-3 py-3.5 sm:p-4">
+          {habitsCard}
+        </section>
       )}
       {card && (
         // same card look as the other tiles of "საგანძურის გზა" (PATH_TILE), without the hover lift
