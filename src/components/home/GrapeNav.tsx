@@ -13,7 +13,8 @@ import { GraduationCap } from 'lucide-react';
 // x/y are the label's centre in % of the picture (public/home/vine.png, 1033×1390).
 // nx/ny: the same spot on a phone, where the labels keep a readable size on a smaller picture and would touch;
 // they stay on the same leaf / cluster, only spread apart (from a 448px-wide picture up, x/y apply).
-type Spot = { id: SectionId; label: string; x: number; y: number; nx?: number; ny?: number; go?: () => void; big?: boolean; hero?: boolean };
+// `wide`: a label of two set lines („სიმღერები“ / „და საკრავები“), each kept whole
+type Spot = { id: SectionId; label: string; x: number; y: number; nx?: number; ny?: number; go?: () => void; big?: boolean; hero?: boolean; wide?: boolean };
 
 const VINE = '/home/vine.png';
 
@@ -24,13 +25,20 @@ export const GrapeNav: React.FC = () => {
   const access = useAccess();
   const [soon, setSoon] = useState<string | null>(null);
 
+  // „საკრავები“ became a tab of the songs' page (2026-11-08, the user: „სიმღერებს დააწერე სიმღერები და საკრავები … საკრავების
+  // ღილაკი წაშალე მთავარიდან“): one label for both — only „სიმღერები“ for whoever may not see the instruments
+  const instruments = access.section('sakravebi');
+  const withInstruments = instruments === 'open' || instruments === 'locked';
+  // on a phone the two-line label needs room: it hangs a little lower, and ეკლესია-მონასტრები, მთქმელი and ვიდეოები step
+  // down / aside (they keep these spots with the short label too)
   const spots: Spot[] = [
     // under the grape clusters
-    { id: 'simghera', label: 'სიმღერა', x: 13, y: 36, nx: 18, ny: 43, go: () => navigateTo('simghera'), big: true },
+    withInstruments
+      ? { id: 'simghera', label: 'სიმღერები\nდა საკრავები', x: 18, y: 37, nx: 18, ny: 46, go: () => navigateTo('simghera'), big: true, wide: true }
+      : { id: 'simghera', label: 'სიმღერები', x: 13, y: 36, nx: 18, ny: 43, go: () => navigateTo('simghera'), big: true },
     // chant, the main path, stands biggest at the heart of the vine
     { id: 'galoba', label: 'გალობა', x: 57, y: 31, nx: 56, ny: 33, go: () => navigateTo('galoba'), hero: true },
-    { id: 'mtkmeli', label: 'მთქმელი', x: 50, y: 58, nx: 47, ny: 61, go: () => navigateTo('mtkmeli'), big: true },
-    { id: 'sakravebi', label: 'საკრავები', x: 70, y: 48, nx: 73, ny: 51, go: () => navigateTo('sakravebi') },
+    { id: 'mtkmeli', label: 'მთქმელი', x: 50, y: 58, nx: 51, ny: 62, go: () => navigateTo('mtkmeli'), big: true },
     // on the leaves
     // მედავითნეობა — the reader's course (not the psalter group)
     { id: 'medavitneobaTopic', label: 'მედავით­ნეობა', x: 35, y: 13, nx: 29, ny: 14, go: () => navigateTo('medavitneoba') },
@@ -38,9 +46,9 @@ export const GrapeNav: React.FC = () => {
     { id: 'chvevebi', label: 'ჩვევები', x: 62, y: 8, nx: 66, ny: 8, go: () => (user ? (openPathPanel('habits'), navigateTo('gz')) : openModal('chvevebi')) },
     { id: 'tamashebi', label: 'თამაშები', x: 86, y: 28, nx: 83, ny: 20, go: () => navigateTo('games') },
     // „ეთნოფორი“'s films, right of the trunk above the ground
-    { id: 'videoebi', label: 'ვიდეოები', x: 80, y: 62, nx: 81, ny: 63, go: () => navigateTo('videos') },
+    { id: 'videoebi', label: 'ვიდეოები', x: 80, y: 62, nx: 84, ny: 63, go: () => navigateTo('videos') },
     // Georgia's churches on the map, left of the trunk above the ground (the videos' mirror)
-    { id: 'eklesiebi', label: 'ეკლესია-მონასტრები', x: 19, y: 52, nx: 18, ny: 55, go: () => navigateTo('churches') },
+    { id: 'eklesiebi', label: 'ეკლესია-მონასტრები', x: 19, y: 52, nx: 17, ny: 58, go: () => navigateTo('churches') },
     // in the qvevri
     { id: 'tsinaprebi', label: 'გაიცანი წინაპრები', x: 51, y: 82, go: () => navigateTo('tsinaprebi') },
   ];
@@ -55,9 +63,10 @@ export const GrapeNav: React.FC = () => {
 
   const press = (s: (typeof shown)[number]) => {
     triggerHaptic(10);
-    if (s.access === 'locked') askSignIn(s.label.replace('\u00ad', ''));
+    const name = s.label.replace('\u00ad', '').replace('\n', ' ');
+    if (s.access === 'locked') askSignIn(name);
     else if (s.go) s.go();
-    else setSoon(`„${s.label.replace('\u00ad', '')}“ ჯერ მზადდება — მალე დაემატება`);
+    else setSoon(`„${name}“ ჯერ მზადდება — მალე დაემატება`);
   };
 
   return (
@@ -85,7 +94,7 @@ export const GrapeNav: React.FC = () => {
             >
               <span
                 className={`flex flex-col items-center justify-center rounded-full text-center transition-[transform,background-color] duration-200 group-hover:scale-105 group-active:scale-95 group-focus-visible:ring-4 group-focus-visible:ring-amber-300 ${
-                  s.hero ? 'px-[1.1em] py-[0.45em] min-h-12' : 'px-[0.9em] py-[0.35em] min-h-9'
+                  s.hero ? 'px-[1.1em] py-[0.45em] min-h-12' : s.wide ? 'px-[0.9em] @max-[300px]:px-[0.5em] py-[0.35em] min-h-9' : 'px-[0.9em] py-[0.35em] min-h-9'
                 } ${
                   s.go
                     ? 'bg-[#7a2028] text-[#fbf6ec] border-2 border-[#fbf6ec] shadow-[0_3px_10px_rgba(74,52,38,0.35)] group-hover:bg-[#5e1820]'
@@ -93,9 +102,10 @@ export const GrapeNav: React.FC = () => {
                 }`}
               >
                 <span
-                  className={`font-serif-ge font-bold leading-tight hyphens-manual max-w-[6.5em] ${
+                  className={`font-serif-ge font-bold leading-tight hyphens-manual ${s.wide ? 'whitespace-pre-line' : 'max-w-[6.5em]'} ${
                     // the smallest phones (~320px wide) have no room left: there only, a touch smaller
-                    s.hero ? 'text-[clamp(20px,6cqw,30px)] @max-[300px]:text-[18px] tracking-wide' : s.big ? 'text-[clamp(14px,3.8cqw,18px)] @max-[300px]:text-[13px]' : 'text-[clamp(12px,3.2cqw,15px)] @max-[300px]:text-[11px]'
+                    // the two-line label: on the smallest phones a touch smaller still, or it would leave the screen or touch „აბიტურიენტს“
+                    s.hero ? 'text-[clamp(20px,6cqw,30px)] @max-[300px]:text-[18px] tracking-wide' : s.wide ? 'text-[clamp(14px,3.8cqw,18px)] @max-[300px]:text-[12px]' : s.big ? 'text-[clamp(14px,3.8cqw,18px)] @max-[300px]:text-[13px]' : 'text-[clamp(12px,3.2cqw,15px)] @max-[300px]:text-[11px]'
                   }`}
                 >
                   {s.label}
