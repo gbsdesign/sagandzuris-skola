@@ -5,7 +5,7 @@ import { ChantItem, ChantVariant } from '../data';
 import { getChantMedia } from '../data/chantMediaRegistry';
 import { chantRecordings } from '../data/chantRecordings';
 import { useRecordingBindings } from '../data/runtimeRecordings';
-import { ServiceTabs, ChantSearchBar, ChantAccordionItem } from './galoba';
+import { ServiceTabs, ChantSearchBar, ChantAccordionItem, WorshipSwitch } from './galoba';
 import { useAccess } from '../hooks/useAccess';
 import { ServiceDownload } from './galoba/LiturgyBits';
 import { SERVICE_CHANTS, chantMatches, ChantHit } from './galoba/chantSearch';
@@ -131,6 +131,7 @@ export const GalobaPage: React.FC = () => {
     return (
       <div className="galoba-font w-full px-1 flex flex-col gap-4">
         <div className="w-full max-w-2xl mx-auto flex flex-col gap-3">
+          <WorshipSwitch value="galoba" />
           {ownSearch && <SearchField value={chantSearch || ''} onChange={setChantSearch} placeholder="ძიება ყველა მსახურებაში" />}
           {allQuery ? (
             // a tall box, so the centred page doesn't jump up and down while typing

@@ -242,7 +242,9 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     if (mapItem) {
       // a part of a library book goes up to the book's contents; a მედავითნეობა book one level up
       setMapItem(currentPage === 'biblioteka' && mapItem.includes(':') ? mapItem.split(':')[0]
-        : currentPage === 'medavitneoba' && mapItem.startsWith('w:') ? wignebiParent(mapItem) : null);
+        : currentPage === 'medavitneoba' && mapItem.startsWith('w:') ? wignebiParent(mapItem)
+        // a lesson goes up to the course, the course to the reader's books
+        : currentPage === 'medavitneoba' && mapItem !== 'w' && mapItem !== 'learn' ? 'learn' : null);
       return;
     }
     if (selectedService) {

@@ -566,6 +566,14 @@
   exercise's number inside its round (`0.7` → 7), the line chips one row (`flex-auto px-2`, wrap only under ~350 px), an open level
   takes the whole width (no path line through it); `LevelCard` = name, one line „კიდევ N“, count, bar (the line dots went);
   `DayPlan` keeps the minutes only in its head and a reason only for the teacher's, the warm-up and the weakest line.
+- **„ღვთისმსახურება“ (2026-11-09**, the user: „გალობას დააწერე ღვთისმსახურება … მედავითნეობა მთავარიდან ჩახსენი … ხალხური მის ადგილას,
+  ხალხურის ადგილას ლოცვანი“, answers „გადამრთველი გალობა · მედავითნე, მედავითნეზე პირდაპირ წიგნები, თავში სასწავლო ბარათი · ძველი
+  ადგილი ცარიელი · ლოცვანი 10%-ით პატარა“): the vine's hero label and both pages' bar say „ღვთისმსახურება“; no „მედავითნეობა“ label on
+  the vine (ხალხური on its old leaf 35/13 · phone 29/14; ლოცვანი 19/44 · phone 20/51, its font ×0.9; ტაძრები 84/19 so the long hero
+  fits; the qvevri's top is empty). `pages/galoba/WorshipSwitch.tsx` = the „გალობა · მედავითნე“ tabs on the services' screen and the
+  reader's front, shown while section `medavitneobaTopic` is open; a switch replaces the history step. Page `medavitneoba`: no mapItem /
+  „w“ = the switch, `LearnCard` („მედავითნეთათვის სასწავლო“ → `learn`) and the books' shelves (admins; others „მალე“); „learn“ = the
+  course's overview, a lesson's id under it (the old „გაკვეთილები · წიგნები“ tabs are gone; „up“ goes lesson → learn → books).
 - **მედავითნეობა** (page `medavitneoba`, built 2026-10-27): the reader's course on the vine's „მედავითნეობა“ label
   (section `medavitneobaTopic`, „მალე“ until the admin opens it). 8 lessons in `data/medavitneLessons.ts`, shown step by
   step (learn / order / read aloud / quiz / task) in `pages/MedavitneobaPage.tsx` + `pages/medavitneoba/parts.tsx`; the

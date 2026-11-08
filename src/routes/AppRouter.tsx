@@ -157,7 +157,7 @@ interface AppRouterProps {
 
 // the title the one PageBar shows on each inner page (the prayer page's comes from the prayer itself)
 const PAGE_TITLES: Partial<Record<PageType, string>> = {
-  galoba: 'გალობა',
+  galoba: 'ღვთისმსახურება',
   simghera: 'ხალხური',
   mtkmeli: 'მთქმელი',
   sakravebi: 'ხალხური',
@@ -169,7 +169,7 @@ const PAGE_TITLES: Partial<Record<PageType, string>> = {
   commemoration: 'მოსახსენებელი',
   birthdays: 'დაბადების დღეები',
   games: 'თამაშები',
-  medavitneoba: 'მედავითნეობა',
+  medavitneoba: 'ღვთისმსახურება',
   videos: 'ვიდეოები',
   churches: 'ეკლესია-მონასტრები',
 };
