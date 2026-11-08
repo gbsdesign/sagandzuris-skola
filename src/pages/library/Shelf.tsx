@@ -8,6 +8,7 @@ import { SectionTitle } from './BookHead';
 import { lastReading } from './readingPlace';
 import { exportBusy, useExportState } from './SynthDownload';
 import { ChantRecordings } from './ChantRecordings';
+import { FolkAlbums } from './FolkAlbums';
 import { openChurchCalendar, todayIso } from '../../data/churchCalendar';
 import { useMembership } from '../../utils/memberAccess';
 import { triggerHaptic } from '../../utils/haptics';
@@ -270,6 +271,8 @@ export const Shelf: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) =>
           </button>
           {/* the choirs' and schools' recordings, folded (an album opens as `album:<id>`, LibraryPage) */}
           <ChantRecordings onOpen={id => onOpen(`album:${id}`)} />
+          {/* the Folklore Centre's song albums, folded too (`falbum:<id>`) */}
+          <FolkAlbums onOpen={id => onOpen(`falbum:${id}`)} />
         </section>
       )}
     </div>

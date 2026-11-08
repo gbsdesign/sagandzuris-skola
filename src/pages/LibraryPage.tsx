@@ -10,6 +10,8 @@ import { SynthDownload } from './library/SynthDownload';
 import { SHELF_IDS, Shelf, ShelfId } from './library/Shelf';
 import { useOpenRequest } from '../utils/searchOpen';
 import { ChantAlbumPage } from './galoba/ChantAlbumPage';
+import { SongAlbumPage } from '../components/maps/SongAlbumPage';
+import { SongPage } from '../components/maps/SongPage';
 
 // "ბიბლიოთეკა": a shelf of books — Svimon Mchedlidze's Sacred History, the lives of the saints and the
 // church feasts (from orthodoxy.ge) — and the chant recordings. A book ("lives") and a part of it
@@ -32,6 +34,8 @@ export const LibraryPage: React.FC = () => {
 
   // an album of chant recordings (a choir, a school), opened from the folded „ჩანაწერები“ on the shelf
   if (mapItem?.startsWith('album:')) return <ChantAlbumPage albumId={mapItem.slice(6)} />;
+  // a Folklore Centre album of songs (moved here from the songs map, 2026-11-09); a song in it opens its page over it
+  if (mapItem?.startsWith('falbum:')) return <><SongAlbumPage albumId={mapItem.slice(7)} /><SongPage /></>;
 
   return (
     // the front room widens on a computer, so the whole bookcase stands on one board

@@ -23,13 +23,13 @@ export const useShownAlbums = (list: Album[] = CENTRE_SONG_ALBUMS) => {
   return useMemo(() => list.filter(a => albumShown(a[0])), [v, list]);
 };
 
-const AlbumRow: React.FC<{ album: Album }> = ({ album: [id, name, count] }) => {
+const AlbumRow: React.FC<{ album: Album; onOpen?: (id: string) => void }> = ({ album: [id, name, count], onOpen }) => {
   const { openMapItem } = useNavigation();
   return (
     <li>
       <button
         type="button"
-        onClick={() => { triggerHaptic(10); openMapItem(`album:${id}`); }}
+        onClick={() => { triggerHaptic(10); onOpen ? onOpen(id) : openMapItem(`album:${id}`); }}
         className="w-full min-h-[52px] px-3 py-2 flex items-center gap-3 text-left cursor-pointer hover:bg-[#fbf6ec] active:bg-[#f6eedf] transition-colors focus-visible:outline-none focus-visible:bg-[#fbf6ec]"
       >
         <span className="w-9 h-9 shrink-0 rounded-xl bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center">
@@ -43,7 +43,8 @@ const AlbumRow: React.FC<{ album: Album }> = ({ album: [id, name, count] }) => {
   );
 };
 
-export const CentreAlbums: React.FC<{ query?: string; list?: Album[] }> = ({ query = '', list }) => {
+/** `onOpen`: where an album opens (the library's own step); `bare`: without the heading (inside the library's fold) */
+export const CentreAlbums: React.FC<{ query?: string; list?: Album[]; onOpen?: (id: string) => void; bare?: boolean }> = ({ query = '', list, onOpen, bare }) => {
   const [all, setAll] = useState(false);
   const albums = useShownAlbums(list);
   const total = useMemo(() => albums.reduce((n, a) => n + a[2], 0), [albums]);
@@ -61,8 +62,8 @@ export const CentreAlbums: React.FC<{ query?: string; list?: Album[] }> = ({ que
   const shown = found ? found.slice(0, 30) : all ? albums : albums.slice(0, FIRST);
 
   return (
-    <section className="w-full mt-2 flex flex-col gap-2" aria-labelledby="centre-albums-title">
-      <div className="px-1 flex items-end justify-between gap-3">
+    <section className={`w-full flex flex-col gap-2 ${bare ? '' : 'mt-2'}`} aria-labelledby={bare ? undefined : 'centre-albums-title'}>
+      {!bare && <div className="px-1 flex items-end justify-between gap-3">
         <div className="min-w-0">
           <h3 id="centre-albums-title" className="text-[17px] font-black leading-tight text-[#2a2017]">
             ალბომები
@@ -74,9 +75,9 @@ export const CentreAlbums: React.FC<{ query?: string; list?: Album[] }> = ({ que
           )}
         </div>
         {found && <span className="shrink-0 text-[12px] font-semibold text-[#a0907c] tabular-nums">{found.length}</span>}
-      </div>
+      </div>}
       <ul className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] shadow-[0_1px_3px_rgba(74,52,38,0.06)] overflow-hidden divide-y divide-[#efe5d4]">
-        {shown.map(a => <AlbumRow key={a[0]} album={a} />)}
+        {shown.map(a => <AlbumRow key={a[0]} album={a} onOpen={onOpen} />)}
       </ul>
       {!found && albums.length > FIRST && (
         <button
