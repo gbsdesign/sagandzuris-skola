@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { AudioLines, CalendarDays, ChevronRight, Loader2 } from 'lucide-react';
+import { AudioLines, CalendarDays, ChevronRight, ListVideo, Loader2 } from 'lucide-react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { GrapeBunch, Rosette, VineLeaf } from '../../components/home/PlateOrnaments';
@@ -12,16 +12,22 @@ import { FolkAlbums } from './FolkAlbums';
 import { openChurchCalendar, todayIso } from '../../data/churchCalendar';
 import { useMembership } from '../../utils/memberAccess';
 import { triggerHaptic } from '../../utils/haptics';
+import { useNavigation } from '../../context';
+import { useAccess } from '../../hooks/useAccess';
+import { askSignIn } from '../../components/access/SignInPrompt';
+import { PAISI_PARTS } from '../../data/paisiVideos';
 
 // The library's front room: the books standing on a wooden shelf (a cover opens the book), the place
 // the reader stopped, and the chant recordings on a shelf of their own.
 
-export type ShelfId = 'book' | 'lives' | 'feasts' | 'prayers' | 'sasuliero' | 'audio';
-export const SHELF_IDS: ShelfId[] = ['book', 'lives', 'feasts', 'prayers', 'sasuliero', 'audio'];
+// `paisi` = the „ვიდეოთეკა“ shelf's St Paisios (2026-11-09), a film in it `paisi:<YouTube id>`
+export type ShelfId = 'book' | 'lives' | 'feasts' | 'prayers' | 'sasuliero' | 'audio' | 'paisi';
+export const SHELF_IDS: ShelfId[] = ['book', 'lives', 'feasts', 'prayers', 'sasuliero', 'audio', 'paisi'];
 
 type Orn = React.FC<{ color: string; className?: string }>;
 /** shape = the binding's proportions: the books are not all of one height, as on a real shelf */
-interface Cover { id: Exclude<ShelfId, 'audio'>; title: string; note: string; cloth: string; deep: string; Orn: Orn; shape: string }
+// `tsinaprebi` = „გაიცანი წინაპრები“, a book since 2026-11-09 that opens its own page
+interface Cover { id: Exclude<ShelfId, 'audio' | 'paisi'> | 'tsinaprebi'; title: string; note: string; cloth: string; deep: string; Orn: Orn; shape: string }
 
 // a Bolnisi cross: four arms widening to notched ends
 const BolnisiCross: Orn = ({ color, className }) => (
@@ -42,6 +48,16 @@ const OpenBook: Orn = ({ color, className }) => (
   </svg>
 );
 
+// a portrait medallion: an oval frame with a bust in it, a small cross above
+const Portrait: Orn = ({ color, className }) => (
+  <svg viewBox="0 0 100 100" className={className} aria-hidden>
+    <path d="M47 2 h6 v6 h6 v5 h-6 v8 h-6 v-8 h-6 v-5 h6 Z" fill={color} />
+    <ellipse cx="50" cy="60" rx="30" ry="36" fill="none" stroke={color} strokeWidth="6" />
+    <circle cx="50" cy="50" r="11" fill={color} />
+    <path d="M28 86 Q30 66 50 66 Q70 66 72 86 Q61 94 50 94 Q39 94 28 86 Z" fill={color} />
+  </svg>
+);
+
 // cloth bindings: burgundy, forest green, night blue, deep violet, leather brown — dark and quiet, with gilt lines
 export const COVERS: Cover[] = [
   { id: 'book', title: 'საღმრთო ისტორია', note: 'ძველი აღთქმა', cloth: '#7a2430', deep: '#4e141b', Orn: GrapeBunch, shape: 'aspect-[5/7]' },
@@ -50,6 +66,7 @@ export const COVERS: Cover[] = [
   { id: 'feasts', title: 'დღესას­წაულები', note: 'ამ წლის თარიღები', cloth: '#2c4268', deep: '#18273f', Orn: Rosette, shape: 'aspect-[5/6.8]' },
   { id: 'prayers', title: 'ლოცვანი', note: 'დილა და საღამო', cloth: '#5a3a5e', deep: '#33203a', Orn: BolnisiCross, shape: 'aspect-[5/6.45]' },
   { id: 'sasuliero', title: 'სასულიერო წიგნები', note: 'წმიდა მამები', cloth: '#6b4a2e', deep: '#3a2716', Orn: OpenBook, shape: 'aspect-[5/7.1]' },
+  { id: 'tsinaprebi', title: 'გაიცანი წინაპრები', note: 'მგალობლები', cloth: '#2c5a5c', deep: '#173638', Orn: Portrait, shape: 'aspect-[5/6.9]' },
 ];
 const COVER_IDS: string[] = COVERS.map(c => c.id);
 
@@ -75,11 +92,11 @@ const useShelfOrder = (uid?: string | null) => {
   return { order, save };
 };
 
-// books to a board: two on a phone (the titles keep their size), three from sm, all five on one board
+// books to a board: two on a phone (the titles keep their size), three from sm, all six on one board
 // from lg, where the front room widens (LibraryPage)
 const SM = '(min-width: 640px)';
 const LG = '(min-width: 1024px)';
-const perRowNow = () => (window.matchMedia(LG).matches ? 5 : window.matchMedia(SM).matches ? 3 : 2);
+const perRowNow = () => (window.matchMedia(LG).matches ? 6 : window.matchMedia(SM).matches ? 3 : 2);
 const usePerRow = () => {
   const [n, setN] = useState(perRowNow);
   useEffect(() => {
@@ -93,7 +110,7 @@ const usePerRow = () => {
 const COLS: Record<number, string> = {
   2: 'grid-cols-2 gap-6 min-[400px]:gap-7 px-6 min-[400px]:px-8',
   3: 'grid-cols-3 gap-6 px-8',
-  5: 'grid-cols-5 gap-5 px-8',
+  6: 'grid-cols-6 gap-5 px-8',
 };
 const GILT = '#e2bf7c';
 
@@ -111,6 +128,8 @@ export const MiniCover: React.FC<{ id: Cover['id']; className?: string }> = ({ i
     </span>
   );
 };
+
+const PAISI_EPISODES = PAISI_PARTS.reduce((n, p) => n + p.eps.length, 0);
 
 const reducedMotion = () => !!window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
@@ -176,14 +195,23 @@ export const Shelf: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) =>
   // the cover swings open, then the book's page comes
   const [opening, setOpening] = useState<string | null>(null);
   const busy = useRef(false);
+  const { navigateTo } = useNavigation();
+  const access = useAccess();
+  // „გაიცანი წინაპრები“ opens its own page, by its section's switch (a guest is asked to sign in)
+  const ancestors = access.section('tsinaprebi');
+  const videos = access.section('videoebi') === 'open';
+  const go = (id: string) => (id === 'tsinaprebi' ? navigateTo('tsinaprebi') : onOpen(id));
   const openBook = (id: string) => {
     if (busy.current) return;
-    if (reducedMotion()) return onOpen(id);
+    if (id === 'tsinaprebi' && ancestors !== 'open') { if (ancestors === 'locked') askSignIn('გაიცანი წინაპრები'); return; }
+    if (reducedMotion()) return go(id);
     busy.current = true;
     setOpening(id);
-    window.setTimeout(() => { onOpen(id); busy.current = false; setOpening(null); }, 340);
+    window.setTimeout(() => { go(id); busy.current = false; setOpening(null); }, 340);
   };
-  const covers = order.map(id => COVERS.find(c => c.id === id)).filter((c): c is Cover => Boolean(c));
+  const covers = order
+    .map(id => COVERS.find(c => c.id === id))
+    .filter((c): c is Cover => Boolean(c) && (c!.id !== 'tsinaprebi' || ancestors === 'open' || ancestors === 'locked'));
   const rows = Array.from({ length: Math.ceil(covers.length / perRow) }, (_, i) => covers.slice(i * perRow, (i + 1) * perRow));
 
   return (
@@ -214,7 +242,7 @@ export const Shelf: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) =>
           <div key={i}>
             <div className="relative z-[1] flex items-end justify-center gap-7 min-[400px]:gap-9 sm:gap-8 px-3">
               {row.map(c => (
-                <div key={c.id} className="w-[40%] max-w-[148px] sm:w-[26%] lg:w-[16%]">
+                <div key={c.id} className="w-[40%] max-w-[148px] sm:w-[26%] lg:w-[14%]">
                   <BookCover cover={c} onOpen={() => openBook(c.id)} opening={opening === c.id} marked={!!last && c.id === last.shelf} />
                 </div>
               ))}
@@ -239,6 +267,27 @@ export const Shelf: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) =>
             <span className="flex-1 min-w-0">
               <span className="block font-serif-ge text-[15px] font-bold leading-snug text-[#2a2017]">საეკლესიო კალენდარი</span>
               <span className="mt-0.5 block text-[12px] leading-snug text-[#8a7a6a]">დღის წმიდანები და დღესასწაულები</span>
+            </span>
+            <ChevronRight className="w-5 h-5 shrink-0 text-[#cdbba3] group-hover:text-[#7a2028] group-hover:translate-x-0.5 transition-all" />
+          </button>
+        </section>
+      )}
+
+      {/* „ვიდეოთეკა“ (2026-11-09, the user: „წმ პაისი ბიბლიოთეკაში გადაიტანე ვიდეოთეკას ცალკე შეუქმენი თარო“) */}
+      {videos && (
+        <section aria-label="ვიდეოთეკა">
+          <SectionTitle>ვიდეოთეკა</SectionTitle>
+          <button
+            type="button"
+            onClick={() => { triggerHaptic(10); onOpen('paisi'); }}
+            className="group mt-3 w-full flex items-center gap-3.5 min-h-16 rounded-2xl bg-[#fffdf8] ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/30 shadow-[0_1px_2px_rgba(42,32,23,0.04),0_10px_24px_-20px_rgba(42,32,23,0.45)] px-3.5 py-2.5 text-left cursor-pointer active:scale-[0.99] transition-all"
+          >
+            <span className="w-11 h-11 shrink-0 rounded-xl bg-[#f6ecda] ring-1 ring-[#ead9bd] flex items-center justify-center text-[#7a2028]">
+              <ListVideo className="w-5 h-5" />
+            </span>
+            <span className="flex-1 min-w-0">
+              <span className="block font-serif-ge text-[15px] font-bold leading-snug text-[#2a2017]">წმინდა პაისი</span>
+              <span className="mt-0.5 block text-[12px] leading-snug text-[#8a7a6a]">სერიალი წმინდანის ცხოვრებაზე · {PAISI_EPISODES} სერია</span>
             </span>
             <ChevronRight className="w-5 h-5 shrink-0 text-[#cdbba3] group-hover:text-[#7a2028] group-hover:translate-x-0.5 transition-all" />
           </button>

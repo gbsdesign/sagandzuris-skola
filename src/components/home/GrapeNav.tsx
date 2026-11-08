@@ -25,9 +25,6 @@ export const GrapeNav: React.FC = () => {
   const access = useAccess();
   const [soon, setSoon] = useState<string | null>(null);
 
-  const poets = access.section('mtkmeli');
-  const poetsShut = poets === 'hidden' || poets === 'soon';
-  const videosShown = access.section('videoebi') === 'open';
   // on a phone the two-line label needs room: it hangs a little lower, and ეკლესია-მონასტრები and მთქმელი step down / aside
   // (they keep these spots with the short label too)
   const spots: Spot[] = [
@@ -37,11 +34,8 @@ export const GrapeNav: React.FC = () => {
     { id: 'simghera', label: 'ხალხური', x: 18, y: 37, nx: 18, ny: 45, go: () => navigateTo('simghera'), big: true },
     // chant, the main path, stands biggest at the heart of the vine
     { id: 'galoba', label: 'გალობა', x: 57, y: 31, nx: 56, ny: 33, go: () => navigateTo('galoba'), hero: true },
-    // „ვიდეოები“ is a tab of „მთქმელი“ since 2026-11-08 (the user: „მთქმელი ეწერება მარტო მთავარზე და ვიდეოების ღილაკი
-    // მოიხსნება“); only when the poets are closed to the person does this spot open the videos
-    poetsShut && videosShown
-      ? { id: 'videoebi', label: 'ვიდეოები', x: 50, y: 58, nx: 51, ny: 62, go: () => navigateTo('videos'), big: true }
-      : { id: 'mtkmeli', label: 'მთქმელი', x: 50, y: 58, nx: 51, ny: 62, go: () => navigateTo('mtkmeli'), big: true },
+    // „მთქმელი“ left the vine on 2026-11-09 (the user: „მთავარიდან მთქმელის ღილაკ წაშალე“): its poets live in „ხალხური“'s
+    // regions, its films in „სახალისო“, St Paisios on the library's „ვიდეოთეკა“
     // on the leaves
     // მედავითნეობა — the reader's course (not the psalter group)
     { id: 'medavitneobaTopic', label: 'მედავით­ნეობა', x: 35, y: 13, nx: 29, ny: 14, go: () => navigateTo('medavitneoba') },
@@ -51,8 +45,7 @@ export const GrapeNav: React.FC = () => {
     // თამაშები და დააწერე სახალისო“): the churches took the games' leaf, the games hang right of the trunk under „გალობა“
     { id: 'eklesiebi', label: 'ტაძრები', x: 86, y: 28, nx: 83, ny: 20, go: () => navigateTo('churches') },
     { id: 'tamashebi', label: 'სახალისო', x: 82, y: 47, nx: 82, ny: 51, go: () => navigateTo('games') },
-    // in the qvevri
-    { id: 'tsinaprebi', label: 'გაიცანი წინაპრები', x: 51, y: 82, go: () => navigateTo('tsinaprebi') },
+    // „გაიცანი წინაპრები“ is a book of the library since 2026-11-09 (the user: „წიგნად დაამატე ბიბლიოთეკაში და მთავარიდან მოხსენი“)
   ];
 
   // the admin's switches, the kids' mode and the guest's limits decide what each label does

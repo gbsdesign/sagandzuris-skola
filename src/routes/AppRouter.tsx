@@ -113,6 +113,7 @@ const page = <T extends string>(load: () => Promise<Record<T, React.ComponentTyp
   ));
 const GeorgiaMap = page(() => import('../components/maps/GeorgiaMap'), 'GeorgiaMap');
 const MtkmeliPage = page(() => import('../components/maps/MtkmeliPage'), 'MtkmeliPage');
+const VideosPageLazy = page(() => import('../pages/VideosPage'), 'VideosPage');
 const AdminPanelPage = page(() => import('../pages/AdminPanelPage'), 'AdminPanelPage');
 const ClassPage = page(() => import('../pages/ClassPage'), 'ClassPage');
 const AncestorsPage = page(() => import('../pages/AncestorsPage'), 'AncestorsPage');
@@ -174,7 +175,7 @@ const PAGE_TITLES: Partial<Record<PageType, string>> = {
 // an open library book shows its own name in the bar (the shelf's covers; LibraryPage's `mapItem` „book:12“)
 const LIBRARY_BOOKS: Record<string, string> = {
   book: 'საღმრთო ისტორია', lives: 'წმიდანთა ცხოვრება', feasts: 'დღესასწაულები', prayers: 'ლოცვანი',
-  sasuliero: 'სასულიერო წიგნები', audio: 'საგალობლების mp3',
+  sasuliero: 'სასულიერო წიგნები', audio: 'საგალობლების mp3', paisi: 'ვიდეოთეკა',
 };
 
 export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
@@ -285,9 +286,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
       : currentPage === 'biblioteka' && !book ? 'library' as const : null;
     // a game open inside the games page shows its own name („დღის ჰანგი“, „ამიხსენი“)
     const game = currentPage === 'games' ? gameTitleOfItem(mapItem) : undefined;
-    // the videos live on „მთქმელი“'s page (2026-11-08): the old page keeps that name while the poets are open
-    const videosTitle = currentPage === 'videos' && access.section('mtkmeli') === 'open' ? PAGE_TITLES.mtkmeli : undefined;
-    const title = currentPage === 'prayer' && selectedPrayerId ? prayerTitle(selectedPrayerId) : book ?? game ?? videosTitle ?? PAGE_TITLES[currentPage] ?? '';
+    const title = currentPage === 'prayer' && selectedPrayerId ? prayerTitle(selectedPrayerId) : book ?? game ?? PAGE_TITLES[currentPage] ?? '';
     return (
       <div className="flex flex-col items-center px-1 py-3 sm:px-4 md:px-6">
         <PageBar
@@ -345,16 +344,16 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
             </div>
           )}
 
-          {/* „ვიდეოები“ is a tab of „მთქმელი“ since 2026-11-08; the old page (a home button, the churches' TV reports, an old
-              history step) opens it on that tab */}
-          {(currentPage === 'mtkmeli' || currentPage === 'videos') && (
+          {currentPage === 'mtkmeli' && (
             <div className="w-full my-2 px-1">
-              <MtkmeliPage
-                key={currentPage}
-                startTab={currentPage === 'videos' ? 'videos' : undefined}
-                selectedChantVariants={selectedChantVariants}
-                onTogglePoem={handleTogglePoem}
-              />
+              <MtkmeliPage selectedChantVariants={selectedChantVariants} onTogglePoem={handleTogglePoem} />
+            </div>
+          )}
+          {/* the old page „ვიდეოები“ (a home button, an old history step): since 2026-11-09 its films live in „სახალისო“ and St
+              Paisios in the library's „ვიდეოთეკა“; the page itself still shows both lists */}
+          {currentPage === 'videos' && (
+            <div className="w-full my-2 px-1">
+              <VideosPageLazy />
             </div>
           )}
 
