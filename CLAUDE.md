@@ -267,7 +267,13 @@
   recordings opens a window (`views/SakravebiView.tsx`); details in `src/data/CLAUDE.md`.
 - **Folk songs map** (`data/songsData.ts`, `components/maps/GeorgiaMap.tsx`; on top of the map, for everyone, the Folklore
   Centre's banner `CentreBanner` — its logo + „ფოლკლორის ცენტრის ჩანაწერები“, 2026-11-05; logo `assets/images/folk-centre-logo.png`
-  cut from the user's screenshot) and **მთქმელი authors map**
+  cut from the user's screenshot). **Instruments live on this page since 2026-11-08** (the user: „სიმღერებს დააწერე სიმღერები და
+  საკრავები … საკრავების ღილაკი წაშალე მთავარიდან“, answer „ორი ჩანართი ზემოთ“): tabs „სიმღერები · საკრავები“ under the banner
+  (`SongsTab`, kept for the visit in `sg-songs-tab`; shown while `section('sakravebi')` is open, or locked — a guest gets the sign-in
+  prompt), the instruments' tab = `SakravebiView`; the old page `sakravebi` (home buttons, search, the path, old history steps) renders
+  the same page on that tab (`startTab`). The vine has no „საკრავები“ label: „სიმღერები\nდა საკრავები“ (`wide`, two set lines; only
+  „სიმღერები“ when the instruments are hidden from the person), and on phones ეკლესია-მონასტრები, მთქმელი and ვიდეოები stepped
+  down / aside to make room. And the **მთქმელი authors map**
   (`data/mtkmeliData.ts`, `MtkmeliMap.tsx`, shared `RegionPuzzleMap.tsx`). Full texts only for authors who
   died before 1956; others get title + description + wiki link.
 - **ვიდეოები** (2026-11-07, page `videos`, section `videoebi`, `pages/VideosPage.tsx`; the user: „საქართველოს კუთხეების მიხედვით …

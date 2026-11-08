@@ -1,6 +1,6 @@
 import { usePlacements } from '../../data/placements';
 import React, { useEffect, useMemo, useState } from 'react';
-import { ChevronDown, ChevronRight, Headphones, Sparkles, FileText, Music, Lock, MapPin, Search, X, TextAlignStart } from 'lucide-react';
+import { ChevronDown, ChevronRight, Headphones, Sparkles, FileText, Music, Lock, MapPin, Search, X, TextAlignStart, Guitar } from 'lucide-react';
 import {
   FOLK_SONGS,
   FOLK_REGIONS,
@@ -28,11 +28,24 @@ import { useOpenRequest } from '../../utils/searchOpen';
 import { matchScore, searchNormalize } from '../../utils/searchMatch';
 import { toggleAudioPreview } from '../../utils/listPreview';
 import { PreviewButton } from '../PreviewButton';
+import { Tabs } from '../ui/kit';
+import { SakravebiView } from '../views/SakravebiView';
 
 interface GeorgiaMapProps {
   selectedChantVariants?: Record<string, any>;
   onToggleSong?: (songId: string, songTitle: string, regionCode: string, regionName: string) => void;
+  /** the old page „საკრავები“ (a home button, the search, the path) opens this page on the instruments' tab */
+  startTab?: SongsTab;
 }
+
+// „საკრავები“ live on this page since 2026-11-08 (the user: „საკრავებში არსებული ყველაფერი გადაიტანე სიმღერების შიგნით“,
+// answer „ორი ჩანართი ზემოთ“): two tabs under the banner; the chosen one is kept for the visit, as on „ვიდეოები“
+export type SongsTab = 'songs' | 'instruments';
+const TAB_KEY = 'sg-songs-tab';
+const readTab = (): SongsTab => {
+  try { return sessionStorage.getItem(TAB_KEY) === 'instruments' ? 'instruments' : 'songs'; } catch { return 'songs'; }
+};
+const keepTab = (t: SongsTab) => { try { sessionStorage.setItem(TAB_KEY, t); } catch { /* private mode */ } };
 
 // songs with a recording come first in a region's list
 const hasRecording = (s: FolkSong) => songRecordingCount(s) > 0 || Boolean(s.soundcloud);
@@ -62,11 +75,26 @@ const useSongSearch = (songs: FolkSong[], query: string, withPerformers: boolean
   }, [songs, texts, query]);
 };
 
-export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = {}, onToggleSong }) => {
+export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = {}, onToggleSong, startTab }) => {
   const { isOwner, isSuperAdmin } = useAuth();
   const showOwnerOnly = isOwner;
   const placed = usePlacements(); // a recording moved from the app: the lists follow
-  const { member } = useAccess();
+  const access = useAccess();
+  const { member } = access;
+  // the instruments' tab shows while the person may see them (the admin's switch, the kids' mode, a member's rights);
+  // a guest sees it too and gets the sign-in prompt, as the vine's old label gave
+  const instruments = access.section('sakravebi');
+  const hasInstruments = instruments === 'open' || instruments === 'locked';
+  const [tab, setTab] = useState<SongsTab>(() => {
+    if (startTab) keepTab(startTab);
+    return startTab ?? readTab();
+  });
+  const chooseTab = (t: SongsTab) => {
+    if (t === 'instruments' && instruments === 'locked') { askSignIn('საკრავები'); return; }
+    setTab(t);
+    keepTab(t);
+  };
+  const shownTab: SongsTab = instruments === 'open' ? tab : 'songs';
   // the open region is a history step: the top bar's "back" (and the phone's) returns to the map
   const { mapItem, openMapItem } = useNavigation();
   const region = [...FOLK_REGIONS, ...FOLK_EXTRA_REGIONS].find(r => r.id === mapItem) ?? null;
@@ -80,6 +108,7 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
     if (id.startsWith('r:')) { openMapItem(id.slice(2)); return; }
     const song = FOLK_SONGS.find(s => s.id === id);
     if (!song) return;
+    chooseTab('songs'); // „back“ from the song's region returns to the songs, not to the instruments
     openMapItem(getFolkRegion(song.region).id);
     setFound(id);
   });
@@ -108,33 +137,50 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
       ) : (
         <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
           <CentreBanner />
-          <SongSearchField
-            value={query}
-            onChange={setQuery}
-            placeholder={albums ? 'სიმღერა, შემსრულებელი ან ალბომი' : member ? 'სიმღერა ან შემსრულებელი' : 'სიმღერის ძებნა'}
-          />
-          {results ? (
-            <>
-              <SongList
-                songs={results.slice(0, 80)}
-                total={results.length}
-                showRegion
-                selectedChantVariants={selectedChantVariants}
-                onToggleSong={onToggleSong}
-                empty="ასეთი სიმღერა ვერ მოიძებნა"
-              />
-              {albums && <CentreAlbums query={query} />}
-            </>
+          {hasInstruments && (
+            <Tabs<SongsTab>
+              cols={2}
+              value={shownTab}
+              onChange={chooseTab}
+              items={[
+                { id: 'songs', label: 'სიმღერები', Icon: Music },
+                { id: 'instruments', label: 'საკრავები', Icon: Guitar },
+              ]}
+            />
+          )}
+          {shownTab === 'instruments' ? (
+            <SakravebiView selectedChantVariants={selectedChantVariants} />
           ) : (
             <>
-              <RegionPuzzleMap
-                onSelect={r => openMapItem(r.id)}
-                count={id => songsInRegion(id, showOwnerOnly).length}
-                countLabel={n => `${n} სიმღერა`}
-                // the sorting shelf „დასაზუსტებელი“ is for those who move recordings (members find its songs by search)
-                extraRegions={FOLK_EXTRA_REGIONS.filter(r => r.id !== 'unsure' || isOwner || isSuperAdmin)}
+              <SongSearchField
+                value={query}
+                onChange={setQuery}
+                placeholder={albums ? 'სიმღერა, შემსრულებელი ან ალბომი' : member ? 'სიმღერა ან შემსრულებელი' : 'სიმღერის ძებნა'}
               />
-              {albums && <CentreAlbums />}
+              {results ? (
+                <>
+                  <SongList
+                    songs={results.slice(0, 80)}
+                    total={results.length}
+                    showRegion
+                    selectedChantVariants={selectedChantVariants}
+                    onToggleSong={onToggleSong}
+                    empty="ასეთი სიმღერა ვერ მოიძებნა"
+                  />
+                  {albums && <CentreAlbums query={query} />}
+                </>
+              ) : (
+                <>
+                  <RegionPuzzleMap
+                    onSelect={r => openMapItem(r.id)}
+                    count={id => songsInRegion(id, showOwnerOnly).length}
+                    countLabel={n => `${n} სიმღერა`}
+                    // the sorting shelf „დასაზუსტებელი“ is for those who move recordings (members find its songs by search)
+                    extraRegions={FOLK_EXTRA_REGIONS.filter(r => r.id !== 'unsure' || isOwner || isSuperAdmin)}
+                  />
+                  {albums && <CentreAlbums />}
+                </>
+              )}
             </>
           )}
         </div>
