@@ -100,6 +100,8 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
   const region = [...FOLK_REGIONS, ...FOLK_EXTRA_REGIONS].find(r => r.id === mapItem) ?? null;
   // an album of the Folklore Centre („album:<Drive folder id>“), opened from the list under the map
   const albumId = mapItem?.startsWith('album:') ? mapItem.slice(6) : null;
+  // a region of the instruments' map („i:<region>“, SakravebiView)
+  const instrumentsRegion = instruments === 'open' && mapItem?.startsWith('i:') ? FOLK_REGIONS.find(r => r.id === mapItem.slice(2)) ?? null : null;
   const albums = useShownAlbums().length > 0;
   // a song picked in the search: its region's list, with the song open
   const [found, setFound] = useState<string | null>(null);
@@ -125,6 +127,8 @@ export const GeorgiaMap: React.FC<GeorgiaMapProps> = ({ selectedChantVariants = 
     <>
       {albumId ? (
         <SongAlbumPage albumId={albumId} />
+      ) : instrumentsRegion ? (
+        <SakravebiView key={instrumentsRegion.id} region={instrumentsRegion} selectedChantVariants={selectedChantVariants} />
       ) : region ? (
         <RegionPlaylist
           key={`${region.id}:${found || ''}`}
@@ -282,6 +286,7 @@ interface RegionPlaylistProps {
 
 const RegionPlaylist: React.FC<RegionPlaylistProps> = ({ region, initialOpenId, songs, selectedChantVariants, onToggleSong }) => {
   const member = useAccess().member;
+  const { openMapItem } = useNavigation();
   // sub-areas of the region (ხევი, ხევსურეთი…) narrow the list
   const areas = useMemo(() => FOLK_SUB_AREAS.filter(a => songs.some(s => s.area === a)), [songs]);
   const [area, setArea] = useState<string | null>(null);
@@ -294,7 +299,7 @@ const RegionPlaylist: React.FC<RegionPlaylistProps> = ({ region, initialOpenId, 
     <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
       {/* where the region is: a small map with it lit */}
       <div className="flex items-center gap-3 px-1 pb-3 border-b border-[#e4d8c4]">
-        <RegionLocator region={region} className="w-28 sm:w-32 h-auto shrink-0" />
+        <RegionLocator region={region} onPick={id => openMapItem(id, true)} className="w-32 sm:w-36 h-auto shrink-0" />
         <div className="min-w-0 flex flex-col gap-0.5">
           <h3 className="text-lg sm:text-xl font-black text-[#2a2017] leading-tight">{region.nameGe}</h3>
           <span className="text-xs font-bold text-[#b4620e]">{songs.length} სიმღერა</span>

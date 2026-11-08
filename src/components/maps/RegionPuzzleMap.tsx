@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { FOLK_REGIONS, FolkRegion, FolkRegionId, MapRegionId } from '../../data/songsData';
 import { GEORGIA_MAP_SHAPES, GEORGIA_MAP_SIZE } from '../../data/georgiaMapShapes';
+import { triggerHaptic } from '../../utils/haptics';
 
 // Georgia as a wooden puzzle, shared by the songs and მთქმელი maps. The map itself carries only colour and touch
 // (names are too small to read on a phone); every region also has a roomy card with its name and count below.
@@ -59,7 +60,8 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
                 aria-label={regionName(r)}
                 onClick={() => onSelect(r)}
                 onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); onSelect(r); } }}
-                onPointerEnter={() => setHovered(r.id)}
+                // a finger lifts nothing: the lifted piece moved under it and the tap could miss the region it touched
+                onPointerEnter={e => { if (e.pointerType !== 'touch') setHovered(r.id); }}
                 onPointerLeave={() => setHovered(null)}
                 onFocus={() => setHovered(r.id)}
                 onBlur={() => setHovered(null)}
@@ -119,8 +121,9 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
   );
 };
 
-// A small map at the top of a region's list: the region lit, the rest of Georgia pale
-export const RegionLocator: React.FC<{ region: FolkRegion; className?: string }> = ({ region, className }) => {
+// A small map at the top of a region's list: the region lit, the rest of Georgia pale. With `onPick` (2026-11-08, the user's
+// „კი, პატარაზეც“) another region takes a tap and opens in place of this one; Tbilisi gets a dot of its own to tap.
+export const RegionLocator: React.FC<{ region: FolkRegion; className?: string; onPick?: (id: MapRegionId) => void }> = ({ region, className, onPick }) => {
   const shape = region.id in GEORGIA_MAP_SHAPES ? GEORGIA_MAP_SHAPES[region.id as MapRegionId] : undefined;
   // a land outside today's map (ლაზეთი): its colour as a tile instead
   if (!shape) {
@@ -130,16 +133,50 @@ export const RegionLocator: React.FC<{ region: FolkRegion; className?: string }>
       </span>
     );
   }
+  const pick = (id: MapRegionId) => () => { triggerHaptic(8); onPick?.(id); };
+  const tbilisi = GEORGIA_MAP_SHAPES.kalakuri.label;
   return (
-    <svg viewBox={`-8 -8 ${width + 16} ${height + 16}`} className={className} aria-hidden="true">
+    <svg
+      viewBox={`-8 -8 ${width + 16} ${height + 16}`}
+      className={className}
+      {...(onPick ? { role: 'group', 'aria-label': 'სხვა კუთხე' } : { 'aria-hidden': true })}
+    >
       {FOLK_REGIONS.filter(r => r.id !== region.id).map(r => (
         // a mid-tone, so even the palest region (Imereti) stands out from the rest
-        <path key={r.id} d={GEORGIA_MAP_SHAPES[r.id].d} fill="#d9cfbf" stroke="#fffaf0" strokeWidth={6} strokeLinejoin="round" />
+        <path
+          key={r.id}
+          d={GEORGIA_MAP_SHAPES[r.id].d}
+          fill="#d9cfbf"
+          stroke="#fffaf0"
+          strokeWidth={6}
+          strokeLinejoin="round"
+          {...(onPick && {
+            role: 'button',
+            'aria-label': r.id === 'kalakuri' ? 'თბილისი' : r.nameGe,
+            onClick: pick(r.id),
+            className: 'cursor-pointer transition-[fill] duration-150 hover:fill-[#c4b49c] active:fill-[#b8a68c]',
+          })}
+        />
       ))}
       <path d={shape.d} fill={region.color} stroke="#6b4423" strokeWidth={8} strokeLinejoin="round" />
       {/* Tbilisi is too small to see at this size: a dot in its colour */}
       {region.id === 'kalakuri' && (
         <circle cx={shape.label[0]} cy={shape.label[1]} r={34} fill={region.color} stroke="#6b4423" strokeWidth={7} />
+      )}
+      {/* …and too small to tap: a pale dot of its own when another region is lit */}
+      {onPick && region.id !== 'kalakuri' && (
+        <circle
+          cx={tbilisi[0]}
+          cy={tbilisi[1]}
+          r={30}
+          fill="#fffaf0"
+          stroke="#85502c"
+          strokeWidth={7}
+          role="button"
+          aria-label="თბილისი"
+          onClick={pick('kalakuri')}
+          className="cursor-pointer"
+        />
       )}
     </svg>
   );

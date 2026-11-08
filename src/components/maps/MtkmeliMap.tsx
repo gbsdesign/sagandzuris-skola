@@ -61,7 +61,7 @@ export const MtkmeliMap: React.FC<MtkmeliMapProps> = ({ selectedChantVariants = 
     <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
       {/* where the region is: a small map with it lit */}
       <div className="flex items-center gap-3 px-1 pb-3 border-b border-[#e4d8c4]">
-        <RegionLocator region={region} className="w-28 sm:w-32 h-auto shrink-0" />
+        <RegionLocator region={region} onPick={id => openMapItem(id, true)} className="w-32 sm:w-36 h-auto shrink-0" />
         <div className="min-w-0 flex flex-col gap-0.5">
           <h3 className="text-lg sm:text-xl font-black text-[#2a2017] leading-tight">{regionName(region)}</h3>
           <span className="text-xs font-bold text-[#8a4b12]">{authors.length} ავტორი{named > 0 && ` · ${named} მელექსე`}</span>

@@ -110,7 +110,7 @@ const page = <T extends string>(load: () => Promise<Record<T, React.ComponentTyp
     () => (tryFreshOnce() ? new Promise<never>(() => {}) : { default: NotLoaded }),
   ));
 const GeorgiaMap = page(() => import('../components/maps/GeorgiaMap'), 'GeorgiaMap');
-const MtkmeliMap = page(() => import('../components/maps/MtkmeliMap'), 'MtkmeliMap');
+const MtkmeliPage = page(() => import('../components/maps/MtkmeliPage'), 'MtkmeliPage');
 const AdminPanelPage = page(() => import('../pages/AdminPanelPage'), 'AdminPanelPage');
 const ClassPage = page(() => import('../pages/ClassPage'), 'ClassPage');
 const AncestorsPage = page(() => import('../pages/AncestorsPage'), 'AncestorsPage');
@@ -124,7 +124,6 @@ const OfflinePage = page(() => import('../pages/OfflinePage'), 'OfflinePage');
 const BirthdaysPage = page(() => import('../pages/BirthdaysPage'), 'BirthdaysPage');
 const GamesPage = page(() => import('../pages/GamesPage'), 'GamesPage');
 const MedavitneobaPage = page(() => import('../pages/MedavitneobaPage'), 'MedavitneobaPage');
-const VideosPage = page(() => import('../pages/VideosPage'), 'VideosPage');
 const ChurchesPage = page(() => import('../pages/ChurchesPage'), 'ChurchesPage');
 
 /** „ფსალმუნთა ჯგუფი“ (the vine, the home tile, a reminder): the class page of the group's class, opened at its psalter
@@ -288,7 +287,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
     const game = currentPage === 'games' ? gameTitleOfItem(mapItem) : undefined;
     // the songs' page holds the instruments too (2026-11-08): its name says so while the person may see them
     const songsTitle = currentPage === 'simghera' && withInstruments ? PAGE_TITLES.sakravebi : undefined;
-    const title = currentPage === 'prayer' && selectedPrayerId ? prayerTitle(selectedPrayerId) : book ?? game ?? songsTitle ?? PAGE_TITLES[currentPage] ?? '';
+    // the videos live on „მთქმელი“'s page (2026-11-08): the old page keeps that name while the poets are open
+    const videosTitle = currentPage === 'videos' && access.section('mtkmeli') === 'open' ? PAGE_TITLES.mtkmeli : undefined;
+    const title = currentPage === 'prayer' && selectedPrayerId ? prayerTitle(selectedPrayerId) : book ?? game ?? songsTitle ?? videosTitle ?? PAGE_TITLES[currentPage] ?? '';
     return (
       <div className="flex flex-col items-center px-1 py-3 sm:px-4 md:px-6">
         <PageBar
@@ -341,18 +342,16 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
             </div>
           )}
 
-          {currentPage === 'mtkmeli' && (
+          {/* „ვიდეოები“ is a tab of „მთქმელი“ since 2026-11-08; the old page (a home button, the churches' TV reports, an old
+              history step) opens it on that tab */}
+          {(currentPage === 'mtkmeli' || currentPage === 'videos') && (
             <div className="w-full my-2 px-1">
-              <MtkmeliMap
+              <MtkmeliPage
+                key={currentPage}
+                startTab={currentPage === 'videos' ? 'videos' : undefined}
                 selectedChantVariants={selectedChantVariants}
                 onTogglePoem={handleTogglePoem}
               />
-            </div>
-          )}
-
-          {currentPage === 'videos' && (
-            <div className="w-full my-2 px-1">
-              <VideosPage />
             </div>
           )}
 
