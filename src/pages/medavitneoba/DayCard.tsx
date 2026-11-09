@@ -21,7 +21,7 @@ const LABELS: Record<string, string> = {
 };
 const labelOf = (l: string) => LABELS[l] ?? l;
 
-const ApostleText: React.FC<{ r: Reading; iso: string }> = ({ r, iso }) => {
+export const ApostleText: React.FC<{ r: Reading; iso: string }> = ({ r, iso }) => {
   const [html, setHtml] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   useEffect(() => {

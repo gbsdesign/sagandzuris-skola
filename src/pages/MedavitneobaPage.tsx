@@ -10,6 +10,7 @@ import { StepView } from './medavitneoba/parts';
 import { triggerHaptic } from '../utils/haptics';
 import { lessonTakeId } from '../utils/dayReadings';
 import { DayCard } from './medavitneoba/DayCard';
+import { DayService, DayServiceButton } from './medavitneoba/DayService';
 
 // „მედავითნეობა“: a step-by-step course for the church reader (lessons in data/medavitneLessons.ts).
 // The open lesson is `mapItem` (its id), so the top bar's „←“ and the phone's back first return to the list.
@@ -224,6 +225,7 @@ export const MedavitneobaPage: React.FC = () => {
   if (!mapItem || mapItem === 'w') return (
     <div className="flex flex-col gap-4">
       <WorshipSwitch value="medavitne" />
+      <DayServiceButton />
       <LearnCard done={done} />
       {isAdmin ? <WignebiView item="w" /> : (
         <div className="w-full max-w-2xl mx-auto mb-6 px-1">
@@ -235,6 +237,8 @@ export const MedavitneobaPage: React.FC = () => {
   // a book's inside
   if (mapItem.startsWith('w:')) return isAdmin ? <WignebiView item={mapItem} /> : null;
 
+  // „დღის მსახურება“ (2026-11-09): the church day, vespers to the liturgy — medavitneoba/DayService.tsx
+  if (mapItem === 'day') return <DayService />;
   if (mapItem === 'learn') return <Overview done={done} open={id => openMapItem(id)} onAccount={onAccount} />;
 
   const lesson = mapItem ? lessonById(mapItem) : undefined;
