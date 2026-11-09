@@ -325,3 +325,13 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   2 073 → 947, lines whose voices end apart 205 → 95. What is left is filled: a note lasts until its voice's next note or
   rest, a voice's last note until the line ends, so the voices stay together (the pitch of a dropped note is still
   missing there). 534 files changed (228 only longer notes; +909 notes found again).
+
+## „დღის მსახურება“ (2026-11-09, stage 1 of the plan doc „დღის მსახურების გეგმა“ https://claude.ai/artifact/1aMLay5C9hF151FFEJe9cZ)
+
+- `utils/dayService.ts` (pure, tested in `tests/dayService.test.ts`): rank guess (great feast → patron's day / Georgian vigil
+  days / Sunday → readings at vespers or a matins Gospel → a red saint), kathismas (Typikon ch. 17, winter/summer), the
+  troparia order at the entrance (ch. 52, by the temple: Lord's/Theotokos' temple first on weekdays), the four services' steps.
+- Page `pages/medavitneoba/DayService.tsx` (`mapItem` „day“, button `DayServiceButton` on the reader's front). Temple:
+  `hooks/useTemplePatron.ts` → `students.templePatron` (presets = `FEAST_RULES`, or a saint searched in the calendar).
+  Rank override per date `sg-day-rank`, „აქ ვარ“ `sg-day-at`. Book texts (ჟამნი months' troparia by old-style date, jamni 28
+  weekday hymns) only for admins, like the books. Triodion/Pentecostarion = a warning only until stage 4.
