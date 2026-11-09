@@ -18,7 +18,6 @@ import { ClassTeachersSheet } from '../components/classes/ClassTeachersSheet';
 import { archiveClass } from '../components/admin/ClassesAdmin';
 import { changed } from '../components/admin/changed';
 import { ClassPsalter } from '../components/psalter/ClassPsalter';
-import { ClassLessons } from '../components/mastery/ClassLessons';
 import { Avatar } from '../components/classes/ChatPanel';
 import { Btn, Flash, IconBtn, OneLine, PageBar, Sheet, Tabs, useFlash, useWide } from '../components/ui/kit';
 import { openThread, Person } from '../hooks/useDirectChat';
@@ -230,13 +229,6 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolCl
         </button>
       )}
 
-      {/* the timetable: chips, the next lesson filled in (the teachers change it from ✎) */}
-      {cls.schedule.length > 0 ? (
-        <LessonChips slots={cls.schedule} lead={<CalendarClock className="w-[18px] h-[18px] shrink-0 text-[#7a2028] mr-0.5" aria-label="გაკვეთილები" />} />
-      ) : canEdit ? (
-        <Btn kind="soft" size="sm" icon={<Plus />} onClick={() => setPanel('schedule')}>გაკვეთილების ცხრილი</Btn>
-      ) : null}
-
       {dmErr && <p className="text-sm text-[#a02c2c]">{dmErr}</p>}
       {msg.flash && <Flash flash={msg.flash} onClose={msg.clear} />}
 
@@ -259,10 +251,15 @@ const ClassView: React.FC<{ cls: SchoolClass; focus?: 'psalter'; inUse: SchoolCl
               ...(wide ? [] : [{ id: 'people' as const, label: 'წევრები', Icon: Users }]),
             ]}
           />
+          {/* the timetable: chips, the next lesson filled in (the teachers change it from ✎) */}
+          {cls.schedule.length > 0 ? (
+            <LessonChips slots={cls.schedule} lead={<CalendarClock className="w-[18px] h-[18px] shrink-0 text-[#7a2028] mr-0.5" aria-label="გაკვეთილები" />} />
+          ) : canEdit ? (
+            <Btn kind="soft" size="sm" icon={<Plus />} onClick={() => setPanel('schedule')}>გაკვეთილების ცხრილი</Btn>
+          ) : null}
           {tab === 'program' && (
             <>
               <ClassProgram cls={cls} canEdit={canEdit} editing={editingProgram} onEditing={setEditingProgram} />
-              <ClassLessons cls={cls} canEdit={canEdit} fold />
               <ClassPsalter cls={cls} canLead={canEdit} focus={focus === 'psalter'} />
             </>
           )}
