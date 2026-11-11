@@ -1,3 +1,4 @@
+import { useRecordingTools } from '../../hooks/useRecordingTools';
 import React, { useEffect, useMemo, useState } from 'react';
 import { Check, ChevronDown, CloudDownload, CloudOff, HardDrive, Search } from 'lucide-react';
 import { askConfirm, Bar, Btn, Sheet, Switch } from '../ui/kit';
@@ -243,7 +244,8 @@ export const OfflineSheet: React.FC<{ kind: OfflineKind; onClose: () => void }> 
   const est = useMemo(() => trackEstimate(s.sizes), [s.sizes]);
   // each opening takes a fresh look at the server's list and the chosen recordings
   useEffect(() => { syncNow(); }, []);
-  const hears = access.can('recordings');
+  const tools = useRecordingTools(); // an admin may hide the recordings' offline from members
+  const hears = access.can('recordings') && tools.offline;
   const groups = useMemo(() => (hears ? recordingGroups() : []), [hears]);
 
   const body = (() => {
