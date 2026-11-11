@@ -13,6 +13,7 @@ import { Stepper } from './Stepper';
 import { saveBlob } from '../utils/chantSynth';
 import { NpStepper } from '../pages/notes/NpStepper';
 import { keepAlive } from '../utils/mediaControls';
+import { useRecordingTools } from '../hooks/useRecordingTools';
 
 // The recording player: a chant version's recording (chantId + variantId) or a folk song's (media).
 // Used by the notes page (layout 'panel') and the folk-songs map (layout 'card').
@@ -125,6 +126,7 @@ interface ChantPlayerProps {
 }
 
 export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, media, title, subtitle, hideNotesButton = false, showDetails = true, pauseToken, disabled = false, onPlayingChange, layout = 'card', onToggleDetails, noDownload = false }) => {
+  const tools = useRecordingTools(); // an admin may hide ⬇ MP3 / ☁ offline from members
   const chant = chantId ? ALL_CHANTS.find(c => c.id === chantId) : undefined;
   const variant = chant?.variants?.find(v => v.id === variantId);
 
@@ -966,7 +968,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
         </button>
 
         {/* one download menu: MP3 files of the recording + saving it for offline listening */}
-        {!noDownload && <div ref={mp3MenuRef}>
+        {!noDownload && ((tools.mp3 && mp3Tracks.length > 0) || tools.offline) && <div ref={mp3MenuRef}>
           <button
             type="button"
             onClick={() => { triggerHaptic(10); setMp3MenuOpen(o => !o); }}
@@ -979,7 +981,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
           </button>
           {mp3MenuOpen && (
             <div className="absolute left-1/2 -translate-x-1/2 top-full mt-1 z-30 w-60 max-w-full rounded-xl border border-[#efd6a6] bg-white shadow-lg py-1 overflow-hidden">
-              {mp3Tracks.map(i => (
+              {tools.mp3 && mp3Tracks.map(i => (
                 <button
                   key={i}
                   type="button"
@@ -989,10 +991,11 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
                   <Music2 className={`w-4 h-4 ${i === 3 ? 'text-[#b4620e]' : 'text-[#b8aa97]'}`} /> MP3 · {TRACK_LABELS[i]}
                 </button>
               ))}
-              {mp3Tracks.length > 0 && (
+              {tools.mp3 && mp3Tracks.length > 0 && (
                 <p className="px-3 pt-0.5 pb-1.5 text-[11px] text-[#8c7c6b] leading-snug">ორიგინალი ჩანაწერი — სიჩქარე და ტონი არ იცვლება</p>
               )}
-              <div className="my-1 border-t border-[#f1e8d9]" />
+              {tools.offline && <>
+              {tools.mp3 && mp3Tracks.length > 0 && <div className="my-1 border-t border-[#f1e8d9]" />}
               <button
                 type="button"
                 onClick={() => { setMp3MenuOpen(false); handleDownloadStems(); }}
@@ -1002,6 +1005,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
                 {allCached ? <Check className="w-4 h-4 text-emerald-600 stroke-[3]" /> : <CloudDownload className="w-4 h-4 text-[#b4620e]" />}
                 {allCached ? 'შენახულია ოფლაინ' : 'ოფლაინ შენახვა (ინტერნეტის გარეშე)'}
               </button>
+              </>}
             </div>
           )}
         </div>}

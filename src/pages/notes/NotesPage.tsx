@@ -1,6 +1,7 @@
 // The notes page of one chant version: the sheets fill the screen, a slim tool bar on top drops out
 // the synthesizer, the recording and the text. Two fingers zoom; a turned phone keeps the line being read;
 // the next chant is one tap away. Church mode silences everything except the starting notes.
+import { useRecordingTools } from '../../hooks/useRecordingTools';
 import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
   ArrowLeft, ArrowRight, BookmarkCheck, BookmarkPlus, Check, ChevronDown, ChevronLeft, ChevronUp, Church, CloudDownload, Download, Ellipsis,
@@ -83,6 +84,7 @@ const HymnImg: React.FC<{ o: HymnOrnament; place: 'top' | 'bottom' }> = ({ o, pl
 };
 
 export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, from }) => {
+  const recTools = useRecordingTools();
   const { goNotes, closeNotes, church, setChurch, liturgy, program } = useNotes();
   const { selectedChantVariants, toggleVariantSelection } = useChants();
   // a quick listen started from a list stops when the notes open
@@ -810,7 +812,8 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
       saveBlob(blob, `${docName} — ${label}.mp3`);
     });
   };
-  const recTracks = recMedia ? [3, 0, 1, 2].filter(i => recMedia.tracks[i] && (i === 3 ? recMedia.availableVoices.all : [recMedia.availableVoices.voice1, recMedia.availableVoices.voice2, recMedia.availableVoices.voice3][i])) : [];
+  // the recording's MP3 rows follow the admin's switch (hooks/useRecordingTools.ts); the notes' own offline save stays
+  const recTracks = recMedia && recTools.mp3 ? [3, 0, 1, 2].filter(i => recMedia.tracks[i] && (i === 3 ? recMedia.availableVoices.all : [recMedia.availableVoices.voice1, recMedia.availableVoices.voice2, recMedia.availableVoices.voice3][i])) : [];
   const saveRecMp3 = (i: number) => {
     const label = ['I ხმა', 'II ხმა', 'III ხმა', 'სამივე ხმა'][i];
     return runExport(`ჩანაწერი · ${label}`, async () => {
