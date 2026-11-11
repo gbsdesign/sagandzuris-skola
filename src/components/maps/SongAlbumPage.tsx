@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { ArrowRightLeft, Check, ChevronRight, Disc3, Download, Headphones, LoaderCircle, MapPin, Pause, Play, RotateCw } from 'lucide-react';
-import { CENTRE_SONG_ALBUMS } from '../../data/centreSongs';
+import { CENTRE_NEW_SONGS, CENTRE_SONG_ALBUMS, CENTRE_TAKES_OF } from '../../data/centreSongs';
 import { CENTRE_MTKMELI_ALBUMS } from '../../data/centreOther';
 import { FOLK_SONGS, FolkSong, centreRecId, getFolkRegion } from '../../data/songsData';
 import { usePlacements } from '../../data/placements';
@@ -8,11 +8,11 @@ import { albumRight, useAlbumAccess } from '../../data/albumAccess';
 import { AUDIO_PROXY } from '../../data/chantMediaRegistry';
 import { useAuth } from '../../context';
 import { MoveSheet, MoveTarget } from '../archive/MoveSheet';
-import { openSongPage, songTakes } from './SongPage';
+import { SongTake, TakePlayer, openSongPage, songTakes } from './SongPage';
 import { clock, useAlbumPlayer } from '../../utils/useAlbumPlayer';
 import { triggerHaptic } from '../../utils/haptics';
 import { useAudiomack, useOnline } from '../../data/audiomack';
-import { AudiomackPlayer } from './AudiomackPlayer';
+import { AudiomackPlayer, VOICE_LABELS, VoiceChips, voiceOrder } from './AudiomackPlayer';
 
 // One song album, as the school's Drive keeps it (data/centreSongs.ts): every recording in the folder's order, one
 // sounding at a time. ▶ and ⬇ follow the album's rights (data/albumAccess.ts: staff all; a member what an admin turned
@@ -61,6 +61,53 @@ const useWhereIs = () => {
   }, [placed]);
 };
 
+/** A learning album's takes split by voices (centreSongs.ts): album index → [full, I, II, III] Drive ids (0 = none) */
+let VOICE_GROUPS: Map<number, (string | 0)[][]> | null = null;
+const voiceGroupsOf = (album: number) => {
+  if (!VOICE_GROUPS) {
+    VOICE_GROUPS = new Map();
+    const add = (takes: typeof CENTRE_NEW_SONGS[number][4]) => {
+      for (const [file, a] of takes) {
+        if (typeof file === 'string') continue;
+        const list = VOICE_GROUPS!.get(a) ?? [];
+        list.push(file);
+        VOICE_GROUPS!.set(a, list);
+      }
+    };
+    for (const takes of Object.values(CENTRE_TAKES_OF)) add(takes);
+    for (const s of CENTRE_NEW_SONGS) add(s[4]);
+  }
+  return VOICE_GROUPS.get(album) ?? [];
+};
+
+/** The album's list as rows: a learning take's voices make one row, at its first file's place */
+type Row = { kind: 'one'; i: number } | { kind: 'voices'; i: number; ids: (string | undefined)[] };
+const rowsOf = (tracks: Track[], album: number): Row[] => {
+  const groupOf = new Map<string, (string | undefined)[]>();
+  for (const g of voiceGroupsOf(album)) {
+    const ids = g.map(x => x || undefined);
+    if (ids.filter(Boolean).length < 2) continue;
+    for (const id of ids) if (id) groupOf.set(id, ids);
+  }
+  const done = new Set<(string | undefined)[]>();
+  const rows: Row[] = [];
+  tracks.forEach((t, i) => {
+    const g = groupOf.get(t[0]);
+    if (!g) { rows.push({ kind: 'one', i }); return; }
+    if (done.has(g)) return;
+    done.add(g);
+    rows.push({ kind: 'voices', i, ids: g });
+  });
+  return rows;
+};
+
+const VOICE_CHIPS: [slot: number, label: string][] = [[0, 'სამივე ხმა'], [1, 'I ხმა'], [2, 'II ხმა'], [3, 'III ხმა']];
+const plainTitle = (t: string) => t.replace(/ · I{1,3} ხმა$/, '');
+
+/** Other performers' whole takes of the same song (not split by voices) — heard beside a learning take */
+const compareTakes = (takes: SongTake[], albumId: string) =>
+  takes.filter(t => t.album !== albumId && !t.media.tracks.slice(0, 3).some(Boolean) && !!t.media.tracks[3]).slice(0, 3);
+
 /** Saves one recording as an mp3 (the Worker answers a page's fetch, which carries the site's Origin) */
 const saveTrack = async (id: string, title: string) => {
   const res = await fetch(`${AUDIO_PROXY}/${id}`);
@@ -100,12 +147,176 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
   const online = useOnline();
   const am = useAudiomack(tracks ? tracks.map(t => t[0]) : []);
   const [amOpen, setAmOpen] = useState<string | null>(null);
+  const albumIndex = songAlbum ? CENTRE_SONG_ALBUMS.indexOf(songAlbum) : -1;
+  const rows = useMemo(() => (tracks ? rowsOf(tracks, albumIndex) : []), [tracks, albumIndex]);
+  const slugOf = (id?: string) => (id && online && am && tracks ? am[tracks.findIndex(t => t[0] === id)] : undefined);
+  // a learning row: which voice the school's own player plays (offline), and whose take is open for comparison
+  const [voiceOf, setVoiceOf] = useState<Record<string, number>>({});
+  const [cmpOpen, setCmpOpen] = useState<string | null>(null);
 
   // an album one may neither hear nor save is not there for them at all
   if (!album || (!right.listen && !right.download)) return null;
   const [, name, count] = album;
   const placeOf = (t: Track) => whereIs.get(t[0]) ?? (t[3] ? whereIs.get(t[3]) : undefined);
   const placedCount = tracks ? tracks.filter(t => placeOf(t)).length : 0;
+
+  const seekBar = (
+    <div className="flex items-center gap-2.5 pl-[58px] max-[359px]:pl-0">
+      <span className="w-9 text-right text-[11.5px] font-semibold tabular-nums text-[#8c7c6b]">{clock(player.time)}</span>
+      <input
+        type="range"
+        min={0}
+        max={player.dur || 0}
+        step={0.5}
+        value={Math.min(player.time, player.dur || 0)}
+        onChange={e => player.seek(Number(e.target.value))}
+        disabled={!player.dur}
+        className="flex-1 min-w-0 h-8 accent-[#dc8a22] cursor-pointer disabled:opacity-40"
+        aria-label="გადახვევა"
+      />
+      <span className="w-9 text-[11.5px] font-semibold tabular-nums text-[#8c7c6b]">{player.dur ? clock(player.dur) : '–:––'}</span>
+    </div>
+  );
+
+  // a learning take: one row, its voices on chips — Audiomack while online, the school's player otherwise; another
+  // performer's whole take of the same song opens beside it for comparison
+  const renderVoices = (ids: (string | undefined)[], first: Track, n: number) => {
+    const [all, v1, v2, v3] = ids;
+    const files = [v1, v2, v3, all]; // the player's order
+    const key = all || v1 || v2 || v3 || first[0];
+    const title = plainTitle(first[1]);
+    const slugs = files.map(slugOf);
+    const useAm = slugs.some(Boolean);
+    const have = useAm ? slugs : files;
+    const order = voiceOrder(have);
+    const cur = voiceOf[key] !== undefined && have[voiceOf[key]] ? voiceOf[key] : order[0];
+    const file = files[cur];
+    const open = useAm ? amOpen === key : !!file && player.cur === file;
+    const shown = open || (!useAm && files.some(f => f && f === player.cur));
+    const phase = useAm ? 'paused' : shown ? player.phase : 'paused';
+    const pickVoice = (slot: number) => {
+      setVoiceOf(v => ({ ...v, [key]: slot }));
+      if (!useAm && files[slot]) player.toggle(files[slot]!, { title: `${title} · ${VOICE_LABELS[slot]}`, artist: name });
+    };
+    const where = files.map(f => (f ? whereIs.get(f) : undefined)).find(Boolean);
+    const others = where ? compareTakes(songTakes(where.song), albumId) : [];
+    const cmpKey = cmpOpen?.startsWith(`${key}|`) ? Number(cmpOpen.slice(key.length + 1)) : -1;
+    const fileName = `${title} · ${VOICE_LABELS[cur]}`;
+    return (
+      <li key={key} className={`px-3.5 py-3 flex flex-col gap-2.5 transition-colors ${shown || cmpKey >= 0 ? 'bg-[#fcf6ea]' : ''}`}>
+        <div className="flex items-center gap-3 min-w-0">
+          {right.listen && (
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic(10);
+                if (useAm) { player.stop(); setAmOpen(amOpen === key ? null : key); return; }
+                setAmOpen(null);
+                if (file) player.toggle(file, { title: fileName, artist: name });
+              }}
+              className={`shrink-0 w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#b4620e] ${
+                shown ? 'bg-[#dc8a22] text-white shadow-[0_6px_14px_-6px_rgba(180,98,14,0.75)]' : 'bg-[#dc8a22]/[0.1] text-[#b4620e] hover:bg-[#dc8a22]/[0.16]'
+              }`}
+              aria-label={useAm ? (open ? `დახურვა: ${title}` : `მოსმენა: ${title}`) : phase === 'playing' ? `პაუზა: ${title}` : `მოსმენა: ${title}`}
+              aria-expanded={useAm ? open : undefined}
+            >
+              {useAm && open ? (
+                <Headphones className="w-[18px] h-[18px]" />
+              ) : phase === 'loading' ? (
+                <LoaderCircle className="w-5 h-5 animate-spin" />
+              ) : phase === 'playing' ? (
+                <Pause className="w-[18px] h-[18px] fill-current" />
+              ) : (
+                <Play className="w-[18px] h-[18px] fill-current translate-x-[1px]" />
+              )}
+            </button>
+          )}
+          <div className="min-w-0 flex-1 flex flex-col gap-0.5">
+            <span className="text-[15.5px] font-bold leading-snug text-[#2a2017] break-words">
+              <span className="mr-1.5 text-[12px] font-semibold tabular-nums text-[#b3a48f]">{n + 1}.</span>
+              {title}
+            </span>
+            <span className="text-[12.5px] leading-snug text-[#8c7c6b]">სასწავლო · ხმებად{first[2] ? ` · ${first[2]}` : ''}</span>
+            {where && (
+              <button
+                type="button"
+                onClick={() => { triggerHaptic(10); player.stop(); openSongPage(where.song.id, Math.max(0, where.take)); }}
+                className="self-start mt-0.5 min-h-8 max-w-full pl-2 pr-1.5 rounded-full bg-[#eef3e6] text-[#4d6b2f] text-[12.5px] font-bold inline-flex items-center gap-1 cursor-pointer hover:bg-[#e3ecd6] active:scale-[0.98]"
+              >
+                <MapPin className="w-3.5 h-3.5 shrink-0" />
+                <span className="min-w-0 truncate">{getFolkRegion(where.song.region).nameGe} · {where.song.title}</span>
+                <ChevronRight className="w-3.5 h-3.5 shrink-0" />
+              </button>
+            )}
+          </div>
+          {right.download && file && (
+            <button
+              type="button"
+              onClick={() => save(file, fileName)}
+              className={`shrink-0 w-10 h-10 rounded-full flex items-center justify-center cursor-pointer transition-colors ${
+                saving[file] === 'failed' ? 'text-[#9a3412] bg-[#fdeee8]' : saving[file] === 'done' ? 'text-[#4d6b2f] bg-[#eef3e6]' : 'text-[#b4620e] hover:bg-[#fcf1df]'
+              }`}
+              title={saving[file] === 'failed' ? 'ვერ ჩამოიწერა — სცადე თავიდან' : `ჩამოწერა (MP3): ${VOICE_LABELS[cur]}`}
+              aria-label={`ჩამოწერა: ${fileName}`}
+            >
+              {saving[file] === 'busy' ? <LoaderCircle className="w-[18px] h-[18px] animate-spin" /> : saving[file] === 'done' ? <Check className="w-[18px] h-[18px]" /> : <Download className="w-[18px] h-[18px]" />}
+            </button>
+          )}
+          {isSuperAdmin && songAlbum && (
+            <button
+              type="button"
+              onClick={() => {
+                triggerHaptic(10);
+                setMoving({
+                  id: key,
+                  from: where ? { kind: 'song', region: where.song.region, title: where.song.title } : undefined,
+                  title,
+                  who: name,
+                  centre: { who: name, note: first[2], album: albumId },
+                });
+              }}
+              className="shrink-0 w-9 h-9 rounded-full flex items-center justify-center text-[#b4620e] hover:bg-[#fcf1df] cursor-pointer"
+              title="გადატანა"
+              aria-label={`გადატანა: ${title}`}
+            >
+              <ArrowRightLeft className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        {useAm && open && <AudiomackPlayer slugs={slugs} title={title} voice={cur} onVoice={slot => setVoiceOf(v => ({ ...v, [key]: slot }))} />}
+        {!useAm && shown && (
+          <>
+            <VoiceChips have={files} cur={cur} onPick={pickVoice} />
+            {seekBar}
+          </>
+        )}
+        {(open || shown) && others.length > 0 && (
+          <div className="flex flex-col gap-2 pt-1">
+            <span className="px-1 text-[12px] font-bold text-[#8c7c6b]">შესადარებლად — სამივე ხმა სხვა შესრულებით:</span>
+            <div className="flex flex-wrap gap-1.5 px-1">
+              {others.map((t, k) => (
+                <button
+                  key={k}
+                  type="button"
+                  aria-pressed={cmpKey === k}
+                  onClick={() => { triggerHaptic(8); player.stop(); setCmpOpen(cmpKey === k ? null : `${key}|${k}`); }}
+                  className={`min-h-10 max-w-full px-3.5 rounded-full text-[13px] font-bold inline-flex items-center gap-1.5 cursor-pointer transition-colors ${
+                    cmpKey === k ? 'bg-[#4d6b2f] text-white' : 'bg-[#eef3e6] text-[#4d6b2f] hover:bg-[#e3ecd6]'
+                  }`}
+                >
+                  <Headphones className="w-3.5 h-3.5 shrink-0" />
+                  <span className="min-w-0 truncate">{t.label}</span>
+                </button>
+              ))}
+            </div>
+            {cmpKey >= 0 && others[cmpKey] && where && (
+              <TakePlayer take={others[cmpKey]} title={where.song.title} subtitle={others[cmpKey].label} hideNotesButton />
+            )}
+          </div>
+        )}
+      </li>
+    );
+  };
 
   return (
     <div className="galoba-font w-full flex flex-col items-center animate-in fade-in duration-200">
@@ -142,7 +353,10 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
         ) : (
           <section className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] shadow-[0_1px_3px_rgba(74,52,38,0.06)] overflow-hidden">
             <ul className="divide-y divide-[#efe5d4]">
-              {tracks.map((track, i) => {
+              {rows.map((row, n) => {
+                if (row.kind === 'voices') return renderVoices(row.ids, tracks[row.i], n);
+                const i = row.i;
+                const track = tracks[i];
                 const [id, title, note, same] = track;
                 const slug = online && am ? am[i] : undefined;
                 const on = slug ? amOpen === id : player.cur === id;
@@ -179,7 +393,7 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
                       )}
                                             <div className="min-w-0 flex-1 flex flex-col gap-0.5">
                         <span className="text-[15.5px] font-bold leading-snug text-[#2a2017] break-words">
-                          <span className="mr-1.5 text-[12px] font-semibold tabular-nums text-[#b3a48f]">{i + 1}.</span>
+                          <span className="mr-1.5 text-[12px] font-semibold tabular-nums text-[#b3a48f]">{n + 1}.</span>
                           {title}
                         </span>
                         {note && <span className="text-[12.5px] leading-snug text-[#8c7c6b] break-words">{note}</span>}
@@ -231,23 +445,7 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
                       )}
                     </div>
                     {on && slug && <AudiomackPlayer slugs={[undefined, undefined, undefined, slug]} title={title} />}
-                    {on && !slug && (
-                      <div className="flex items-center gap-2.5 pl-[58px] max-[359px]:pl-0">
-                        <span className="w-9 text-right text-[11.5px] font-semibold tabular-nums text-[#8c7c6b]">{clock(player.time)}</span>
-                        <input
-                          type="range"
-                          min={0}
-                          max={player.dur || 0}
-                          step={0.5}
-                          value={Math.min(player.time, player.dur || 0)}
-                          onChange={e => player.seek(Number(e.target.value))}
-                          disabled={!player.dur}
-                          className="flex-1 min-w-0 h-8 accent-[#dc8a22] cursor-pointer disabled:opacity-40"
-                          aria-label="გადახვევა"
-                        />
-                        <span className="w-9 text-[11.5px] font-semibold tabular-nums text-[#8c7c6b]">{player.dur ? clock(player.dur) : '–:––'}</span>
-                      </div>
-                    )}
+                    {on && !slug && seekBar}
                   </li>
                 );
               })}

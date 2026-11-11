@@ -167,7 +167,7 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   Centre and archive takes while online; `SongAlbumPage`'s ▶ opens it under the row. Offline, the learning mode, ⬇ and ☁
   (TakeTools) stay on the Drive copy. Games keep the Drive (they need the audio itself). Stage 2 (chants, the same day): the user
   kept the notes page on the school's own player (it mixes voices); only the library's chant albums (`ChantAlbumPage`, 28 of
-  `chantAlbums.ts`' 98) got Audiomack (`scripts/audiomack/5-chants.py`). Next: the library's albums by voices, admin switches for ⬇ / ☁.
+  `chantAlbums.ts`' 98) got Audiomack (`scripts/audiomack/5-chants.py`). Stage 3 (the same day): a learning album's voices make one row in `SongAlbumPage` (`rowsOf` over centreSongs' voices takes; `VoiceChips` / `AudiomackPlayer voice onVoice`; ⬇ saves the chosen voice), and another performer's whole take of the same song opens under it for comparison (`compareTakes` → `TakePlayer`). Next: admin switches for ⬇ / ☁.
 
 ## Calendar (`calendar/<year>.json`, `churchCalendar.ts`)
 
