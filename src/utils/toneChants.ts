@@ -39,7 +39,7 @@ const chantById = (id: string) =>
 
 // a version's school, said short as choirs say it (the Gelati school book, vol. I, is the default); the anthology's
 // volumes („ანთ. III“) by the school of their row
-const bookOf = (v: ChantVariant) => {
+export const bookOf = (v: ChantVariant) => {
   const anth = /^a(\d+)$/.exec(v.book ?? '');
   if (anth) return `${v.code.startsWith('ქ.კ.') ? 'ქართლ-კახური' : 'გელათური'}, ანთ. ${ANTH_ROMAN[Number(anth[1])] ?? anth[1]}`;
   return v.book === 'kk' ? 'ქართლ-კახური' : v.book === 'v9' ? 'გელათური, IX ტ.' : v.book === 'v5' ? 'გელათური, V ტ.' : 'გელათური';

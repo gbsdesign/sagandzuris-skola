@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Check, ChevronRight, ChevronLeft, Clock, BookOpen, TriangleAlert, ExternalLink, PartyPopper, GraduationCap, Library } from 'lucide-react';
-import { useAuth, useNavigation } from '../context';
-import { Bar, Empty } from '../components/ui/kit';
+import { Check, ChevronRight, ChevronLeft, Clock, BookOpen, TriangleAlert, ExternalLink, PartyPopper, GraduationCap } from 'lucide-react';
+import { useNavigation } from '../context';
+import { Bar } from '../components/ui/kit';
 import { WorshipSwitch } from './galoba/WorshipSwitch';
 import { WignebiView } from './medavitneoba/Wignebi';
 import { LESSONS, LESSON_SOURCES, lessonById, type Lesson } from '../data/medavitneLessons';
@@ -218,24 +218,20 @@ const LearnCard: React.FC<{ done: string[] }> = ({ done }) => {
 
 export const MedavitneobaPage: React.FC = () => {
   const { mapItem, openMapItem, handleGoBack } = useNavigation();
-  const { isAdmin } = useAuth();
   const { done, setLearned, onAccount } = useMedavitneProgress();
 
-  // the reader's front: the switch, the course's card and the books' shelves (only admins see the books for now)
+  // the reader's front: the switch, the day's services, the course's card and the books' shelves (open to everyone since
+  // 2026-11-09 — the monastery gave its permission)
   if (!mapItem || mapItem === 'w') return (
     <div className="flex flex-col gap-4">
       <WorshipSwitch value="medavitne" />
       <DayServiceButton />
       <LearnCard done={done} />
-      {isAdmin ? <WignebiView item="w" /> : (
-        <div className="w-full max-w-2xl mx-auto mb-6 px-1">
-          <Empty icon={<Library />} title="წიგნები მალე დაემატება" text="ბიბლია, ჟამნი, პარაკლიტონი, დავითნი და სხვა საღვთისმსახურო წიგნები აქ იქნება." />
-        </div>
-      )}
+      <WignebiView item="w" />
     </div>
   );
   // a book's inside
-  if (mapItem.startsWith('w:')) return isAdmin ? <WignebiView item={mapItem} /> : null;
+  if (mapItem.startsWith('w:')) return <WignebiView item={mapItem} />;
 
   // „დღის მსახურება“ (2026-11-09): the church day, vespers to the liturgy — medavitneoba/DayService.tsx
   if (mapItem === 'day') return <DayService />;

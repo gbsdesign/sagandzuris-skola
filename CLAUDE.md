@@ -572,7 +572,8 @@
   the vine (ხალხური on its old leaf 35/13 · phone 29/14; ლოცვანი 19/44 · phone 20/51, its font ×0.9; ტაძრები 84/19 so the long hero
   fits; the qvevri's top is empty). `pages/galoba/WorshipSwitch.tsx` = the „გალობა · მედავითნე“ tabs on the services' screen and the
   reader's front, shown while section `medavitneobaTopic` is open; a switch replaces the history step. Page `medavitneoba`: no mapItem /
-  „w“ = the switch, `LearnCard` („მედავითნეთათვის სასწავლო“ → `learn`) and the books' shelves (admins; others „მალე“); „learn“ = the
+  „w“ = the switch, „დღის მსახურება“ (`DayServiceButton` → mapItem `day`, see `src/data/CLAUDE.md`), `LearnCard` („მედავითნეთათვის
+  სასწავლო“ → `learn`) and the books' shelves (everyone since 2026-11-09); „learn“ = the
   course's overview, a lesson's id under it (the old „გაკვეთილები · წიგნები“ tabs are gone; „up“ goes lesson → learn → books).
 - **მედავითნეობა** (page `medavitneoba`, built 2026-10-27): the reader's course on the vine's „მედავითნეობა“ label
   (section `medavitneobaTopic`, „მალე“ until the admin opens it). 8 lessons in `data/medavitneLessons.ts`, shown step by
@@ -592,7 +593,7 @@
   „საღვთისმსახურო წიგნები“ app (ღვთისმშობლის მიძინების მონასტერი) in that app's menu order: Bible (NT, OT, ტრაპეზის სახარება,
   სამოციქულო), calendar 2024–2027, კონდაკი, კურთხევანი, პარაკლიტონი, საზიარო თვენი, ჟამნი, ზატიკი, დავითნი, მგალობელთათვის,
   წარდგომები, ლოცვანი, პარაკლისები, ანდრია კრიტელი. Place = `mapItem` „w…“ (`utils/wignebiPath.ts` for „←“ after a reload).
-  **Admins only** until the user has the monastery's permission (others see „მალე“). The texts were extracted from that
+  **Open to everyone since 2026-11-09** (the monastery gave its permission). The texts were extracted from that
   app's bundle; its old nuskhuri-font texts were converted with the app's own table (archaic letters kept).
   **Generated — never edit `public/wignebi` or `data/wignebi.ts` by hand**: `scripts/wignebi/` (plain Python, no packages:
   `hermes.py` reads the app's Hermes bundle — v98 up to app 1.1.3, v99 since 1.1.4, opcode tables `ops98.txt`/`ops99.txt`
