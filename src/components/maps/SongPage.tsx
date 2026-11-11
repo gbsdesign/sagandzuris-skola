@@ -4,6 +4,8 @@ import {
   FOLK_SONGS, FolkSong, centreRecId, centreRecMedia, getFolkRegion, songDocUrl, songRecMedia, songVersionMedia, soundcloudEmbedUrl,
 } from '../../data/songsData';
 import { audiomackEmbedUrl } from '../../data/folkCentre';
+import { driveIdOf, useAudiomack, useOnline } from '../../data/audiomack';
+import { AudiomackPlayer, PlayerShade } from './AudiomackPlayer';
 import { useCanDownloadCentre } from '../../hooks/useCentreDownload';
 import { albumRight, useAlbumAccess } from '../../data/albumAccess';
 import type { ChantMediaItem } from '../../data/chantMediaRegistry';
@@ -51,8 +53,16 @@ export const TakePlayer: React.FC<{ take: SongTake; title: string; subtitle: str
   const canSaveCentre = useCanDownloadCentre();
   useAlbumAccess(); // an admin's switch applies at once
   const canSave = take.album ? albumRight(take.album).download : canSaveCentre;
+  // an archive or Centre recording with an Audiomack twin is heard there while online; the Drive copy stays for offline
+  const online = useOnline();
+  const ids = take.centre || take.recId ? take.media.tracks.map(driveIdOf) : [];
+  const am = useAudiomack(ids);
   if (take.embed) {
     return <iframe title={`${title} · ${take.label}`} src={take.embed} className="block w-full h-[280px] border-0 rounded-xl" allow="autoplay" loading="lazy" />;
+  }
+  if (online && ids.some(Boolean)) {
+    if (!am) return <PlayerShade />;
+    if (am.some(Boolean)) return <AudiomackPlayer slugs={am} title={title} />;
   }
   return <ChantPlayer media={take.media} title={title} subtitle={subtitle} hideNotesButton={hideNotesButton} noDownload={take.centre && !canSave} pauseToken={pauseToken} />;
 };
