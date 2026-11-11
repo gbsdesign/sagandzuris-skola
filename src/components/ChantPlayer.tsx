@@ -13,6 +13,7 @@ import { Stepper } from './Stepper';
 import { saveBlob } from '../utils/chantSynth';
 import { NpStepper } from '../pages/notes/NpStepper';
 import { keepAlive } from '../utils/mediaControls';
+import { useRecordingTools } from '../hooks/useRecordingTools';
 
 // The recording player: a chant version's recording (chantId + variantId) or a folk song's (media).
 // Used by the notes page (layout 'panel') and the folk-songs map (layout 'card').
@@ -738,7 +739,9 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
     return () => document.removeEventListener('pointerdown', close);
   }, [mp3MenuOpen]);
   const TRACK_LABELS = ['I ხმა', 'II ხმა', 'III ხმა', 'სამივე ხმა'];
-  const mp3Tracks = [3, 0, 1, 2].filter(i => activeTracks[i] && (i === 3 ? mediaItem.availableVoices.all : voiceAvailable[i]));
+  // an admin may hide ⬇ MP3 and ☁ offline for members (hooks/useRecordingTools)
+  const tools = useRecordingTools();
+  const mp3Tracks = !tools.download ? [] : [3, 0, 1, 2].filter(i => activeTracks[i] && (i === 3 ? mediaItem.availableVoices.all : voiceAvailable[i]));
   const handleSaveMp3 = async (i: number) => {
     const url = activeTracks[i];
     if (!url) return;
@@ -966,13 +969,13 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
         </button>
 
         {/* one download menu: MP3 files of the recording + saving it for offline listening */}
-        {!noDownload && <div ref={mp3MenuRef}>
+        {!noDownload && (mp3Tracks.length > 0 || tools.offline) && <div ref={mp3MenuRef}>
           <button
             type="button"
             onClick={() => { triggerHaptic(10); setMp3MenuOpen(o => !o); }}
             disabled={!validTracks.length || savingTrack !== null}
             className={`${roundBtn} w-9 ${allCached ? '!text-emerald-700 !border-emerald-200' : ''}`}
-            title="ჩამოტვირთვა (MP3 / ოფლაინ)"
+            title={tools.offline && mp3Tracks.length ? 'ჩამოტვირთვა (MP3 / ოფლაინ)' : tools.offline ? 'ოფლაინ შენახვა' : 'ჩამოტვირთვა (MP3)'}
             aria-label="ჩამოტვირთვა"
           >
             {savingTrack !== null || isDownloading ? <RefreshCw className="w-4 h-4 animate-spin text-[#b4620e]" /> : <Download className="w-4 h-4" />}
@@ -992,8 +995,8 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
               {mp3Tracks.length > 0 && (
                 <p className="px-3 pt-0.5 pb-1.5 text-[11px] text-[#8c7c6b] leading-snug">ორიგინალი ჩანაწერი — სიჩქარე და ტონი არ იცვლება</p>
               )}
-              <div className="my-1 border-t border-[#f1e8d9]" />
-              <button
+              {tools.offline && mp3Tracks.length > 0 && <div className="my-1 border-t border-[#f1e8d9]" />}
+              {tools.offline && <button
                 type="button"
                 onClick={() => { setMp3MenuOpen(false); handleDownloadStems(); }}
                 disabled={isDownloading || allCached}
@@ -1001,7 +1004,7 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
               >
                 {allCached ? <Check className="w-4 h-4 text-emerald-600 stroke-[3]" /> : <CloudDownload className="w-4 h-4 text-[#b4620e]" />}
                 {allCached ? 'შენახულია ოფლაინ' : 'ოფლაინ შენახვა (ინტერნეტის გარეშე)'}
-              </button>
+              </button>}
             </div>
           )}
         </div>}

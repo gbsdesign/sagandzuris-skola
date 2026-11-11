@@ -9,6 +9,7 @@ import {
   isAutoPack, isKept, offlineStatus, runPercent, setGroup, setItem, setPacks, syncNow, trackEstimate, useOffline,
   type OfflineState, type PackInfo,
 } from '../../utils/offlineFiles';
+import { useRecordingTools } from '../../hooks/useRecordingTools';
 
 // „ოფლაინ რეჟიმი“ split by list (2026-11-08, the user: „ჩამოტვირთვის ლოგო დავშალოთ … სიების თავში ღრუბლის ლოგოზე
 // დაჭერისას ამომხტარ ფანჯარაში კომპაქტურად“): a list's round ☁ (OfflineButton.tsx) opens this window with only that
@@ -243,7 +244,9 @@ export const OfflineSheet: React.FC<{ kind: OfflineKind; onClose: () => void }> 
   const est = useMemo(() => trackEstimate(s.sizes), [s.sizes]);
   // each opening takes a fresh look at the server's list and the chosen recordings
   useEffect(() => { syncNow(); }, []);
-  const hears = access.can('recordings');
+  // an admin may hide the recordings' offline for members (⚙ „სკოლა“ → „ჩანაწერების ოფლაინი“): the books' pages stay
+  const tools = useRecordingTools();
+  const hears = access.can('recordings') && tools.offline;
   const groups = useMemo(() => (hears ? recordingGroups() : []), [hears]);
 
   const body = (() => {

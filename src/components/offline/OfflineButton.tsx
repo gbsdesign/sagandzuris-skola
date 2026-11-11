@@ -4,6 +4,7 @@ import { offlineStatus, runPercent, useOffline } from '../../utils/offlineFiles'
 import { useAccess } from '../../hooks/useAccess';
 import { triggerHaptic } from '../../utils/haptics';
 import type { OfflineKind } from './OfflineSheet';
+import { useRecordingTools } from '../../hooks/useRecordingTools';
 
 // A list's round ☁ (2026-11-08; the header's cloud is gone — the user: „ჩამოტვირთვის ლოგო დავშალოთ“): beside the
 // chant page's „1 2“, on the songs', the admission program's and the library's bar. A tap opens that list's part of
@@ -22,9 +23,10 @@ const LABEL: Record<OfflineKind, string> = {
 export const OfflineButton: React.FC<{ kind: OfflineKind }> = ({ kind }) => {
   const s = useOffline();
   const { can } = useAccess();
+  const tools = useRecordingTools();
   const [open, setOpen] = useState(false);
   // the songs and the admission program offer only recordings
-  if (!s.supported || ((kind === 'simghera' || kind === 'abituri') && !can('recordings'))) return null;
+  if (!s.supported || ((kind === 'simghera' || kind === 'abituri') && (!can('recordings') || !tools.offline))) return null;
   const status = offlineStatus(s);
   const pct = runPercent(s);
   const mine = status === 'run' && !!s.run && !s.run.what.startsWith('auto-');
