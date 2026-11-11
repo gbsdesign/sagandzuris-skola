@@ -14,3 +14,4 @@ learning mode, offline and MP3. Work folder: `/tmp/am`.
    title), voice for voice; untitled ones („ტრეკი“) only when no other track is near that length; a learning album's
    song (all voices, I, II, III) goes by its order. Weak albums are left out.
 4. `python3 4-emit.py` → `public/centre/am/<n>.json` (read by `data/audiomack.ts`).
+5. `python3 5-chants.py` → the library's chant albums (data/chantAlbums.ts) added to the same files — run after step 4. The notes page keeps the school's own player (the user's choice: voices mixed together).
