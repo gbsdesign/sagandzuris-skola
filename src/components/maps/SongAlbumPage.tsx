@@ -200,6 +200,13 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
     };
     const where = files.map(f => (f ? whereIs.get(f) : undefined)).find(Boolean);
     const others = where ? compareTakes(songTakes(where.song), albumId) : [];
+    // the same performer twice (two discs' takes) reads by its note, else by its number
+    const cmpLabels = others.map((t, k) => {
+      const twice = others.some((o, j) => j !== k && o.label === t.label);
+      if (!twice) return t.label;
+      const subs = others.filter(o => o.label === t.label).map(o => o.sub);
+      return t.sub && subs.filter(x => x === t.sub).length === 1 ? `${t.label} · ${t.sub}` : `${t.label} · ${others.slice(0, k + 1).filter(o => o.label === t.label).length}`;
+    });
     const cmpKey = cmpOpen?.startsWith(`${key}|`) ? Number(cmpOpen.slice(key.length + 1)) : -1;
     const fileName = `${title} · ${VOICE_LABELS[cur]}`;
     return (
@@ -305,7 +312,7 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
                   }`}
                 >
                   <Headphones className="w-3.5 h-3.5 shrink-0" />
-                  <span className="min-w-0 truncate">{t.label}</span>
+                  <span className="min-w-0 truncate">{cmpLabels[k]}</span>
                 </button>
               ))}
             </div>
