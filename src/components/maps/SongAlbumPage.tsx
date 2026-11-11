@@ -12,6 +12,7 @@ import { SongTake, TakePlayer, openSongPage, songTakes } from './SongPage';
 import { clock, useAlbumPlayer } from '../../utils/useAlbumPlayer';
 import { triggerHaptic } from '../../utils/haptics';
 import { useAudiomack, useOnline } from '../../data/audiomack';
+import { useRecordingTools } from '../../hooks/useRecordingTools';
 import { AudiomackPlayer, VOICE_LABELS, VoiceChips, voiceOrder } from './AudiomackPlayer';
 
 // One song album, as the school's Drive keeps it (data/centreSongs.ts): every recording in the folder's order, one
@@ -127,6 +128,8 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
   const album = songAlbum ?? CENTRE_MTKMELI_ALBUMS.find(a => a[0] === albumId);
   useAlbumAccess(); // an admin's switch applies at once
   const right = albumRight(albumId);
+  const tools = useRecordingTools();
+  const canSave = right.download && tools.download; // ⬇ also follows the admin's switch
   const { isSuperAdmin } = useAuth();
   // ⬇ per recording: saving / saved / failed
   const [saving, setSaving] = useState<Record<string, 'busy' | 'done' | 'failed'>>({});
@@ -256,7 +259,7 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
               </button>
             )}
           </div>
-          {right.download && file && (
+          {canSave && file && (
             <button
               type="button"
               onClick={() => save(file, fileName)}
@@ -416,7 +419,7 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
                           </button>
                         )}
                       </div>
-                      {right.download && (
+                      {canSave && (
                         <button
                           type="button"
                           onClick={() => save(id, title)}

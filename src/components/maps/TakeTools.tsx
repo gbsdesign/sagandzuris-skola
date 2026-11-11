@@ -6,6 +6,7 @@ import { saveBlob } from '../../utils/chantSynth';
 import { triggerHaptic } from '../../utils/haptics';
 import { albumRight, useAlbumAccess } from '../../data/albumAccess';
 import { useCanDownloadCentre } from '../../hooks/useCentreDownload';
+import { useRecordingTools } from '../../hooks/useRecordingTools';
 import type { SongTake } from './SongPage';
 
 // Two small round buttons beside a song's recording in the list (2026-11-09, the user: „სიმღერას უნდა ჰქონდეს mp3
@@ -18,7 +19,8 @@ const ROUND = 'w-9 h-9 shrink-0 rounded-full grid place-items-center transition-
 export const TakeTools: React.FC<{ take: SongTake; title: string }> = ({ take, title }) => {
   useAlbumAccess(); // an admin's switch applies at once
   const canSaveCentre = useCanDownloadCentre();
-  const canSave = !take.centre || (take.album ? albumRight(take.album).download : canSaveCentre);
+  const tools = useRecordingTools();
+  const canSave = tools.download && (!take.centre || (take.album ? albumRight(take.album).download : canSaveCentre));
   const tracks = take.media.tracks.filter(Boolean) as string[];
   const main = take.media.tracks[3] || tracks[0];
   const [kept, setKept] = useState(false);
@@ -32,7 +34,7 @@ export const TakeTools: React.FC<{ take: SongTake; title: string }> = ({ take, t
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tracks.join('|')]);
 
-  if (!main || take.embed) return null;
+  if (!main || take.embed || (!canSave && !tools.offline)) return null;
 
   const mp3 = async () => {
     triggerHaptic(10);
@@ -85,7 +87,7 @@ export const TakeTools: React.FC<{ take: SongTake; title: string }> = ({ take, t
           {busy === 'mp3' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
         </button>
       )}
-      <button
+      {tools.offline && <button
         type="button"
         onClick={cloud}
         disabled={busy !== null}
@@ -95,7 +97,7 @@ export const TakeTools: React.FC<{ take: SongTake; title: string }> = ({ take, t
         title={kept ? 'ოფლაინ შენახულია — შეეხე მოსახსნელად' : 'ოფლაინ შენახვა'}
       >
         {busy === 'cloud' ? <Loader2 className="w-4 h-4 animate-spin" /> : kept ? <Check className="w-4 h-4 stroke-[3]" /> : <CloudDownload className="w-4 h-4" />}
-      </button>
+      </button>}
     </span>
   );
 };

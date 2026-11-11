@@ -48,7 +48,7 @@ export type SectionState = 'open' | 'soon' | 'hidden';
  *  member's features (utils/memberAccess) are the same, so `useMembership().can` follows these switches too. */
 export type ExtraId =
   | 'samosi' | 'learn' | 'manera' | 'work' | 'prayers' | 'classes' | 'messages' | 'search' | 'calendar' | 'recordings'
-  | 'abituri' | 'birthdays';
+  | 'abituri' | 'birthdays' | 'recDownload' | 'recOffline';
 export type SwitchId = SectionId | ExtraId;
 
 export const EXTRA_SWITCHES: { id: ExtraId; label: string; hint: string }[] = [
@@ -64,6 +64,8 @@ export const EXTRA_SWITCHES: { id: ExtraId; label: string; hint: string }[] = [
   { id: 'recordings', label: 'ჩანაწერები', hint: 'აუდიოჩანაწერები — თამაშებიც მათ იყენებს' },
   { id: 'abituri', label: 'აბიტურიენტს', hint: 'გალობის უნივერსიტეტში მისაღები პროგრამა' },
   { id: 'birthdays', label: 'დაბადების დღეები', hint: 'გვერდი და მთავარის ოქროსფერი ხაზი' },
+  { id: 'recDownload', label: 'ჩანაწერების ჩამოწერა', hint: '⬇ MP3 სიმღერებთან, გალობასთან და ალბომებში — მასწავლებლებს და ადმინებს ყოველთვის ჩანს' },
+  { id: 'recOffline', label: 'ჩანაწერების ოფლაინი', hint: '☁ ჩანაწერის ინტერნეტის გარეშე შენახვა — მასწავლებლებს და ადმინებს ყოველთვის ჩანს' },
 ];
 export const isExtra = (id: string): id is ExtraId => EXTRA_SWITCHES.some(x => x.id === id);
 
@@ -73,6 +75,7 @@ export const DEFAULT_SECTION_STATE: Record<SwitchId, SectionState> = {
   chvevebi: 'open', tamashebi: 'open', tsinaprebi: 'open', gza: 'open', biblioteka: 'open', videoebi: 'open', eklesiebi: 'open',
   samosi: 'open', learn: 'open', manera: 'open', work: 'open', prayers: 'open', classes: 'open', messages: 'open',
   search: 'open', calendar: 'open', recordings: 'open', abituri: 'open', birthdays: 'open',
+  recDownload: 'open', recOffline: 'open',
 };
 
 /** A „მალე“ section the admin gave a day (settings/sections.openOn, YYYY-MM-DD) opens by itself on that day in Georgia;
