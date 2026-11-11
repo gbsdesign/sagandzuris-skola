@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { BookOpen, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Church, Music, ScrollText, Search, TriangleAlert, X } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { BookOpen, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Church, Music, ScrollText, Search, Settings2, TriangleAlert, X } from 'lucide-react';
 import { useNavigation } from '../../context';
 import { Sheet, Tabs } from '../../components/ui/kit';
 import { PROSE } from '../../components/views/PrayerText';
@@ -10,8 +10,8 @@ import { useMembership } from '../../utils/memberAccess';
 import { triggerHaptic } from '../../utils/haptics';
 import { toneName } from '../../utils/dayReadings';
 import {
-  RANKS, PATRON_PRESETS, WHO_LABEL, buildServices, greatFeastOf, guessRank, hymnsOf, oldMD, patronDay, periodOf, rankLabel,
-  weekTone, type DayInput, type Extra, type Hymn, type Patron, type Rank, type ServiceId, type Step,
+  DEFAULT_ORDER, RANKS, PATRON_PRESETS, WHO_LABEL, buildServices, isOrder, greatFeastOf, guessRank, hymnsOf, oldMD, patronDay, periodOf, rankLabel,
+  weekTone, type DayInput, type Extra, type Hymn, type Patron, type Rank, type Read, type ServiceId, type Step, type TempleOrder,
 } from '../../utils/dayService';
 import { useTemplePatron } from '../../hooks/useTemplePatron';
 import { FEAST_RULES } from '../../data/churchFeasts';
@@ -21,6 +21,7 @@ import { SERVICE_LISTS, hasBookNotes } from '../../data/chantLookup';
 import { bookOf, versionTone } from '../../utils/toneChants';
 import { useNotes } from '../../context/NotesContext';
 import { ToneSheet } from './ToneSheet';
+import { useKhutsuri } from '../../components/views/ReadingTools';
 
 // „დღის მსახურება“ (the user, 2026-11-09; plan doc „დღის მსახურების გეგმა“, stage 1): the church day from the eve's
 // vespers to the liturgy's dismissal, step by step (utils/dayService.ts). The day moves with ‹ ›, the rank is guessed and
@@ -41,6 +42,15 @@ const writeMap = (key: string, map: Record<string, string>, keep = 40) => {
 };
 const RANK_KEY = 'sg-day-rank';
 const AT_KEY = 'sg-day-at';
+// the temple's own order (Saturday evening, a weekday's evening), the priest's texts and the old script — kept on the device
+const ORDER_KEY = 'sg-day-order';
+const PRIEST_KEY = 'sg-day-priest';
+const OLD_KEY = 'sg-day-khutsuri';
+const readOrder = (): TempleOrder => {
+  try { const v = JSON.parse(localStorage.getItem(ORDER_KEY) || 'null'); return isOrder(v) ? v : DEFAULT_ORDER; } catch { return DEFAULT_ORDER; }
+};
+const readFlag = (key: string) => { try { return localStorage.getItem(key) === '1'; } catch { return false; } };
+const writeFlag = (key: string, on: boolean) => { try { localStorage.setItem(key, on ? '1' : '0'); } catch { /* private window */ } };
 
 // ---------- the books' texts (troparia) ----------
 type Section = [string, string[]];
@@ -127,8 +137,8 @@ const TextBlock: React.FC<{ t: Text }> = ({ t }) => (
   </div>
 );
 
-const HymnRow: React.FC<{ h: Hymn; texts?: Text[] }> = ({ h, texts }) => {
-  const [open, setOpen] = useState(false);
+const HymnRow: React.FC<{ h: Hymn; texts?: Text[]; shown?: boolean }> = ({ h, texts, shown }) => {
+  const [open, setOpen] = useState(!!shown);
   const has = !!texts?.length;
   return (
     <li className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8]">
@@ -140,12 +150,14 @@ const HymnRow: React.FC<{ h: Hymn; texts?: Text[] }> = ({ h, texts }) => {
         </span>
         {has && <ChevronDown className={`w-5 h-5 shrink-0 text-[#8a7a6a] transition-transform ${open ? 'rotate-180' : ''}`} />}
       </button>
-      {open && texts && <div className="px-4 pb-3.5 sg-in">{texts.map((t, i) => <TextBlock key={i} t={t} />)}</div>}
+      {open && texts && <div className="px-4 pb-3.5 sg-in font-serif-ge">{texts.map((t, i) => <TextBlock key={i} t={t} />)}</div>}
     </li>
   );
 };
 
-const Troparia: React.FC<{ inp: DayInput; at: 'vespers' | 'matins' | 'hours' | 'liturgy' }> = ({ inp, at }) => {
+const Troparia: React.FC<{ inp: DayInput; at: 'vespers' | 'matins' | 'hours' | 'liturgy'; only?: 'tr' | 'ko'; prev?: boolean; shown?: boolean }> = ({ inp: today, at, only, prev, shown }) => {
+  // the ninth hour still belongs to the day before: its saint's troparion and kontakion
+  const inp = useMemo(() => (prev ? { ...today, iso: addDays(today.iso, -1), day: null } : today), [today, prev]);
   const { troparia, kontakia } = useMemo(() => hymnsOf(inp, at), [inp, at]);
   const [saint, setSaint] = useState<{ tr: Text[]; ko: Text[] } | null>(null);
   const [temple, setTemple] = useState<{ tr: Text[]; ko: Text[] } | null>(null);
@@ -168,14 +180,14 @@ const Troparia: React.FC<{ inp: DayInput; at: 'vespers' | 'matins' | 'hours' | '
     h.role === 'saint' ? saint?.[k] : h.role === 'temple' ? temple?.[k] : h.role === 'day' ? week?.[k] : h.role === 'feast' ? saint?.[k] : h.role === 'resurrection' && k === 'tr' ? res ?? undefined : undefined;
   return (
     <div className="mt-2.5 space-y-3 sg-in">
-      <div>
-        <p className="text-[12px] font-black uppercase tracking-wide text-[#a0703c]">ტროპარნი</p>
-        <ul className="mt-1 space-y-1.5">{troparia.map((h, i) => <HymnRow key={i} h={h} texts={textOf(h, 'tr')} />)}</ul>
-      </div>
-      {kontakia.length > 0 && (
+      {only !== 'ko' && <div>
+        <p className="text-[12px] font-black uppercase tracking-wide text-[#a0703c]">{troparia.length > 1 ? 'ტროპარნი' : 'ტროპარი'}</p>
+        <ul className="mt-1 space-y-1.5">{troparia.map((h, i) => <HymnRow key={`${i}-${!!textOf(h, 'tr')?.length}`} h={h} texts={textOf(h, 'tr')} shown={shown} />)}</ul>
+      </div>}
+      {only !== 'tr' && kontakia.length > 0 && (
         <div>
-          <p className="text-[12px] font-black uppercase tracking-wide text-[#a0703c]">კონდაკნი</p>
-          <ul className="mt-1 space-y-1.5">{kontakia.map((h, i) => <HymnRow key={i} h={h} texts={textOf(h, 'ko')} />)}</ul>
+          <p className="text-[12px] font-black uppercase tracking-wide text-[#a0703c]">{kontakia.length > 1 ? 'კონდაკნი' : 'კონდაკი'}</p>
+          <ul className="mt-1 space-y-1.5">{kontakia.map((h, i) => <HymnRow key={`${i}-${!!textOf(h, 'ko')?.length}`} h={h} texts={textOf(h, 'ko')} shown={shown} />)}</ul>
         </div>
       )}
     </div>
@@ -252,6 +264,110 @@ const SliceText: React.FC<{ src: TextSrc }> = ({ src }) => {
       {texts ? (texts.length ? texts.map((t, i) => <TextBlock key={i} t={t} />) : <p className="mt-1 text-[14px] text-[#8a7a6a]">ამ დღისთვის წიგნში ტექსტი ვერ ვიპოვე.</p>)
         : <p className="mt-1 text-[14px] text-[#8a7a6a]">{failed ? 'ჩატვირთვა ვერ მოხერხდა — შეამოწმე ინტერნეტი.' : 'იტვირთება…'}</p>}
     </div>
+  );
+};
+
+/** a run of book sections as plain reading text: a heading is the book's own rubric or opening words */
+const Sections: React.FC<{ src: TextSrc; speakers?: boolean }> = ({ src, speakers }) => {
+  const [texts, setTexts] = useState<Text[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    loadSlice(src).then(v => alive && setTexts(v), () => alive && setFailed(true));
+    return () => { alive = false; };
+  }, [src]);
+  if (!texts) return <p className="text-[14px] text-[#8a7a6a] font-sans">{failed ? 'ჩატვირთვა ვერ მოხერხდა — შეამოწმე ინტერნეტი.' : 'იტვირთება…'}</p>;
+  if (!texts.length) return <p className="text-[14px] text-[#8a7a6a] font-sans">ეს ტექსტი წიგნში ვერ ვიპოვე — გახსენი წიგნი ქვემოთ.</p>;
+  return (
+    <>
+      {texts.map((t, i) => (
+        <div key={i} className={i ? 'mt-2.5' : ''}>
+          {t.head && <p className={speakers ? 'text-[12px] font-black tracking-wide text-[#a0703c] font-sans' : 'text-[14px] font-bold leading-snug text-[#a3272f]'}>{t.head}</p>}
+          {t.paras.length > 0 && <div className={`${PROSE} ${t.head ? 'mt-0.5' : ''}`}>{t.paras.map((p, j) => <p key={j}>{p}</p>)}</div>}
+        </div>
+      ))}
+    </>
+  );
+};
+
+/** a kathisma of the psalter, whole (დავითნი) */
+const kathismaSrc = (n: number): TextSrc => ({ coll: 'davitni', n, part: 0, label: `დავითნი · კანონი ${n}` });
+
+/** the reader's text of a step, in order — the page's main line („საკითხავი რიგი“) */
+const ReadFlow: React.FC<{ read: Read[]; inp: DayInput; past: boolean }> = ({ read, inp, past }) => {
+  // what is already read folds away, so the place „აქ ვარ“ stays near the top
+  const [open, setOpen] = useState(!past);
+  useEffect(() => setOpen(!past), [past]);
+  if (!open) return (
+    <button type="button" onClick={() => { triggerHaptic(8); setOpen(true); }}
+      className="mt-2 inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full bg-[#7a2028]/[0.07] hover:bg-[#7a2028]/[0.13] text-[#7a2028] text-[13px] font-bold cursor-pointer">
+      <BookOpen className="w-4 h-4" />ტექსტის ჩვენება<ChevronDown className="w-4 h-4" />
+    </button>
+  );
+  return (
+    <div className="mt-2.5 -ml-6 rounded-2xl bg-[#fffdf8] ring-1 ring-[#e8dcc8] border-l-4 border-l-[#7a2028] px-3.5 py-3.5 space-y-3 font-serif-ge">
+      {read.map((r, i) => (
+        'say' in r ? <div key={i} className={PROSE}><p>{r.say}</p></div>
+          : 'src' in r ? <div key={i}><Sections src={r.src} /></div>
+          : 'kathisma' in r ? <div key={i}><Sections src={kathismaSrc(r.kathisma)} /></div>
+          : <div key={i} className="font-sans"><Troparia inp={inp} at={r.hymns} only={r.only} prev={r.prev} shown /></div>
+      ))}
+    </div>
+  );
+};
+
+/** the priest's and the deacon's words with the choir's answers (კონდაკი) */
+const PriestText: React.FC<{ list: TextSrc[] }> = ({ list }) => (
+  <div className="mt-2.5 -ml-6 rounded-2xl bg-[#f4efe7] ring-1 ring-[#ddd2c0] px-3.5 py-3.5 space-y-3 font-serif-ge">
+    {list.map((src, i) => (
+      <div key={i}>
+        <p className="mb-1 text-[12px] font-bold text-[#8a7a6a] font-sans">{src.label}</p>
+        <Sections src={src} speakers />
+      </div>
+    ))}
+  </div>
+);
+
+const SAT_OPTIONS: { id: TempleOrder['sat']; label: string; hint: string }[] = [
+  { id: 'apart', label: 'მხოლოდ მწუხრი', hint: 'ცისკარი — კვირა დილით, წირვის წინ' },
+  { id: 'vigil', label: 'მწუხრი და ცისკარი ერთად', hint: 'ლიტიისა და პურის კურთხევის გარეშე' },
+  { id: 'litya', label: 'ღამისთევა ლიტიით', hint: 'მწუხრი, ლიტია, პურის კურთხევა და ცისკარი' },
+];
+const WEEKDAY_OPTIONS: { id: TempleOrder['weekday']; label: string; hint: string }[] = [
+  { id: 'apart', label: 'მხოლოდ მწუხრი', hint: 'ცისკარი — დილით, წირვის წინ' },
+  { id: 'joined', label: 'მწუხრი და ცისკარი ერთად', hint: 'ორივე საღამოს' },
+];
+const OrderSheet: React.FC<{ open: boolean; value: TempleOrder; onPick: (o: TempleOrder) => void; onClose: () => void }> = ({ open, value, onPick, onClose }) => {
+  const Group = <K extends 'sat' | 'weekday'>({ k, title, items }: { k: K; title: string; items: { id: TempleOrder[K]; label: string; hint: string }[] }) => (
+    <section className="mt-4 first:mt-0">
+      <p className="text-[12px] font-black uppercase tracking-wide text-[#a0703c]">{title}</p>
+      <ul className="mt-1.5 space-y-2">
+        {items.map(o => {
+          const on = value[k] === o.id;
+          return (
+            <li key={o.id}>
+              <button type="button" aria-pressed={on} onClick={() => { triggerHaptic(10); onPick({ ...value, [k]: o.id }); }}
+                className={`w-full min-h-14 px-4 py-2.5 rounded-2xl flex items-center gap-3 text-left cursor-pointer transition active:scale-[0.99] ${on ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-white ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/30 text-[#2a2017]'}`}>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-[15px] font-bold leading-snug">{o.label}</span>
+                  <span className={`block text-[13px] leading-snug ${on ? 'text-[#fbf6ec]/80' : 'text-[#8a7a6a]'}`}>{o.hint}</span>
+                </span>
+                {on && <Check className="w-5 h-5 shrink-0" />}
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+    </section>
+  );
+  return (
+    <Sheet open={open} onClose={onClose} title="ჩემი ტაძრის წესი">
+      <p className="text-[14px] leading-relaxed text-[#6b5c4d] text-pretty">ყველა ტაძარში ერთნაირად არ მსახურობენ. აირჩიე, როგორ არის შენთან — რიგი ამის მიხედვით აეწყობა.</p>
+      <div className="mt-3">
+        {Group({ k: 'sat', title: 'შაბათ საღამოს და დიდი დღესასწაულის წინ', items: SAT_OPTIONS })}
+        {Group({ k: 'weekday', title: 'სადაგი დღის საღამოს', items: WEEKDAY_OPTIONS })}
+      </div>
+    </Sheet>
   );
 };
 
@@ -397,14 +513,19 @@ export const DayService: React.FC = () => {
   const [ranks, setRanks] = useState(() => readMap(RANK_KEY));
   const [ats, setAts] = useState(() => readMap(AT_KEY));
   const [tab, setTab] = useState<ServiceId>('vespers');
-  const [sheet, setSheet] = useState<'rank' | 'patron' | null>(null);
+  const [sheet, setSheet] = useState<'rank' | 'patron' | 'order' | null>(null);
+  const [order, setOrder] = useState(readOrder);
+  const [priestOn, setPriestOn] = useState(() => readFlag(PRIEST_KEY));
+  const [oldOn, setOldOn] = useState(() => readFlag(OLD_KEY));
+  const [flowEl, setFlowEl] = useState<HTMLElement | null>(null);
+  useKhutsuri(flowEl, oldOn);
   const [toneOpen, setToneOpen] = useState<number | null>(null);
   const [notesOf, setNotesOf] = useState<Step | null>(null);
 
   const guessed = guessRank(iso, day ?? null, patron);
   const rank = (RANKS.some(r => r.id === ranks[iso]) ? ranks[iso] : guessed) as Rank;
   const tone = weekTone(day ?? null, lastSunday === iso ? null : sundayDay ?? null);
-  const inp: DayInput = useMemo(() => ({ iso, day: day ?? null, tone, rank, patron }), [iso, day, tone, rank, patron]);
+  const inp: DayInput = useMemo(() => ({ iso, day: day ?? null, tone, rank, patron, order }), [iso, day, tone, rank, patron, order]);
   const services = useMemo(() => buildServices(inp), [inp]);
   const service = services.find(s => s.id === tab)!;
   const great = greatFeastOf(iso);
@@ -421,6 +542,8 @@ export const DayService: React.FC = () => {
     if (r) next[iso] = r; else delete next[iso];
     setRanks(next); writeMap(RANK_KEY, next);
   };
+  const saveOrder = (o: TempleOrder) => { setOrder(o); try { localStorage.setItem(ORDER_KEY, JSON.stringify(o)); } catch { /* private window */ } };
+  const shown = service.steps.map((s, i) => ({ s, i })).filter(x => priestOn || !x.s.priest);
   const mark = (i: number) => {
     triggerHaptic(10);
     const next = { ...ats };
@@ -486,6 +609,16 @@ export const DayService: React.FC = () => {
           </span>
           <ChevronRight className="w-5 h-5 shrink-0 text-[#c4b39c]" />
         </button>
+        <button type="button" onClick={() => { triggerHaptic(8); setSheet('order'); }}
+          className="mt-2 w-full min-h-13 px-3.5 py-2.5 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/30 flex items-center gap-3 text-left cursor-pointer transition active:scale-[0.99]">
+          <Settings2 className="w-5 h-5 shrink-0 text-[#a0703c]" />
+          <span className="flex-1 min-w-0">
+            <span className="block text-[12px] font-bold text-[#a0703c]">ჩემი ტაძრის წესი</span>
+            <span className="block text-[14px] font-bold leading-snug text-[#2a2017]">შაბათ საღამოს — {SAT_OPTIONS.find(o => o.id === order.sat)!.label.toLowerCase()}</span>
+            <span className="block text-[14px] font-bold leading-snug text-[#2a2017]">სადაგ დღეს — {WEEKDAY_OPTIONS.find(o => o.id === order.weekday)!.label.toLowerCase()}</span>
+          </span>
+          <ChevronRight className="w-5 h-5 shrink-0 text-[#c4b39c]" />
+        </button>
 
         {templeDay && (
           <p className="mt-3 rounded-2xl bg-emerald-50 ring-1 ring-emerald-200 px-3.5 py-2.5 text-[14px] font-semibold leading-snug text-emerald-900">დღეს შენი ტაძრის დღესასწაულია — ღამისთევა.</p>
@@ -508,20 +641,31 @@ export const DayService: React.FC = () => {
           <h3 className="font-serif-ge text-[20px] font-bold text-[#2a2017]">{service.title}</h3>
           <p className="text-[13px] font-bold text-[#a0703c]">{service.when}</p>
         </div>
-        <p className="mt-1 text-[13px] leading-snug text-[#8a7a6a]">ნომერს დააჭირე — მოინიშნება, სად ხარ.</p>
-        <ol className="mt-3.5">
-          {service.steps.map((s, i) => {
+        <div className="mt-3 grid grid-cols-2 gap-2">
+          {([['მღვდლის ტექსტები', priestOn, () => { const v = !priestOn; setPriestOn(v); writeFlag(PRIEST_KEY, v); }], ['ხუცური', oldOn, () => { const v = !oldOn; setOldOn(v); writeFlag(OLD_KEY, v); }]] as const).map(([label, on, flip]) => (
+            <button key={label} type="button" role="switch" aria-checked={on} onClick={() => { triggerHaptic(8); flip(); }}
+              className={`min-h-12 px-3 rounded-2xl flex items-center justify-between gap-2 text-left text-[14px] font-bold leading-tight cursor-pointer transition active:scale-[0.98] ${on ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[#4a3426]'}`}>
+              <span>{label}</span>
+              <span className={`relative w-10 h-6 shrink-0 rounded-full transition ${on ? 'bg-[#fbf6ec]/30' : 'bg-[#d9ccb8]'}`} aria-hidden>
+                <span className={`absolute top-0.5 w-5 h-5 rounded-full bg-white shadow transition-all ${on ? 'left-[18px]' : 'left-0.5'}`} />
+              </span>
+            </button>
+          ))}
+        </div>
+        <p className="mt-2 text-[13px] leading-snug text-[#8a7a6a] text-pretty">{priestOn ? 'ჩანს მღვდლისა და დიაკვნის სიტყვებიც.' : 'ჩანს მხოლოდ ის, რაც მედავითნეს და გუნდს ეხება.'} ნომერს დააჭირე — მოინიშნება, სად ხარ.</p>
+        <ol key={`${oldOn}`} ref={setFlowEl} className="mt-3.5 font-sans">
+          {shown.map(({ s, i }, n) => {
             const here = at === i;
             const past = at > i;
             return (
               <li key={`${tab}-${i}`} className="relative pl-12 pb-4 last:pb-0">
-                {i < service.steps.length - 1 && <span className={`absolute left-[19px] top-11 bottom-0 w-0.5 ${past || here ? 'bg-[#7a2028]/40' : 'bg-[#efe5d4]'}`} aria-hidden />}
-                <button type="button" onClick={() => mark(i)} aria-pressed={here} aria-label={`${i + 1} — აქ ვარ`}
+                {n < shown.length - 1 && <span className={`absolute left-[19px] top-11 bottom-0 w-0.5 ${past || here ? 'bg-[#7a2028]/40' : 'bg-[#efe5d4]'}`} aria-hidden />}
+                <button type="button" onClick={() => mark(i)} aria-pressed={here} aria-label={`${n + 1} — აქ ვარ`}
                   className={`absolute left-0 top-0 w-10 h-10 rounded-full flex items-center justify-center text-[14px] font-black cursor-pointer transition active:scale-[0.94] ${
                     here ? 'bg-[#7a2028] text-[#fbf6ec] shadow-[0_0_0_5px_rgba(122,32,40,0.14)]'
                       : past ? 'bg-[#7a2028]/15 text-[#7a2028]' : 'bg-white ring-1 ring-[#e8dcc8] text-[#8a7a6a]'
                   }`}>
-                  {past ? <Check className="w-4 h-4" /> : i + 1}
+                  {past ? <Check className="w-4 h-4" /> : n + 1}
                 </button>
                 <div className={`min-h-10 pt-1.5 ${here ? '' : ''}`}>
                   <p className={`text-[16px] font-bold leading-snug ${here ? 'text-[#7a2028]' : 'text-[#2a2017]'}`}>{s.title}</p>
@@ -536,6 +680,8 @@ export const DayService: React.FC = () => {
                   </div>
                   {s.note && <p className="mt-1.5 text-[14px] font-semibold leading-snug text-[#7a2028] text-pretty">{s.note}</p>}
                   {s.hint && <p className="mt-1 text-[13px] leading-snug text-[#8a7a6a] text-pretty">{s.hint}</p>}
+                  {s.read && <ReadFlow read={s.read} inp={inp} past={past} />}
+                  {priestOn && s.pt && <PriestText list={s.pt} />}
                   <StepExtras step={s} inp={inp} onTone={() => setToneOpen(tone)} />
                 </div>
               </li>
@@ -555,6 +701,7 @@ export const DayService: React.FC = () => {
       </p>
 
       <RankSheet open={sheet === 'rank'} value={rank} guessed={guessed} onPick={setRank} onClose={() => setSheet(null)} />
+      <OrderSheet open={sheet === 'order'} value={order} onPick={saveOrder} onClose={() => setSheet(null)} />
       <PatronSheet open={sheet === 'patron'} value={patron} onPick={savePatron} onClose={() => setSheet(null)} />
       <ToneSheet tone={toneOpen} onClose={() => setToneOpen(null)} />
       <NotesSheet step={notesOf} tone={tone} onClose={() => setNotesOf(null)} />

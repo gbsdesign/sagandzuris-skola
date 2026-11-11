@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
 import {
   sliceOf, octoechos, menaion, sundayExapost, weekdayExapost, sundayProkeimenon, saintProkeimenon, pentecostarion,
-  saintKindOf, gospelNumberOf, type TextSrc, type OctoSeg, type MenaionSeg,
+  saintKindOf, gospelNumberOf, FIX, PRIEST, type TextSrc, type OctoSeg, type MenaionSeg,
 } from '../src/utils/serviceTexts';
 
 const load = (coll: string, n: number) =>
@@ -49,4 +49,26 @@ test("a saint's kind and the Gospel number from the calendar", () => {
   assert.equal(saintKindOf('წმიდისა იოანე ოქროპირისა, კონსტანტინოპოლელი მთავარეპისკოპოსისა'), 4);
   assert.equal(saintKindOf('მოციქულთა 70-თაგანთა: ერასტისა'), 3);
   assert.equal(gospelNumberOf('ცისკ.: სახ. მე-10, ინ. 21: 1-14'), 10);
+});
+
+test('the fixed texts of ჟამნი and the priest\'s of კონდაკი are all found (2026-11-11)', () => {
+  const first = (src: TextSrc) => { const s = got(src); assert.ok(s.length > 0, src.label); return s; };
+  for (const [name, v] of Object.entries(FIX)) {
+    if (typeof v !== 'function') { first(v); continue; }
+    for (const n of name === 'eveProkeimenon' ? [0, 1, 2, 3, 4, 5, 6] : [5, 6, 7, 9]) first((v as (n: number) => TextSrc)(n));
+  }
+  for (const group of Object.values(PRIEST)) for (const v of Object.values(group)) first(v as TextSrc);
+  assert.match(first(FIX.trisagion)[0][1][0], /^წმიდაო ღმერთო/);
+  assert.match(first(FIX.trisagion).at(-1)![1][0], /^მამაო ჩვენო/);
+  assert.match(first(FIX.opening)[0][1][0], /^ამინ/);
+  assert.equal(first(FIX.eveProkeimenon(6)).length, 4); // „უფალი სუფევს“ with its three verses
+  assert.match(first(FIX.sixPsalms)[1][1][0], /^დიდება მაღალთა შინა/);
+  // a litany runs from its first petition to the „ამინ“ after the exclamation
+  for (const lit of [PRIEST.vespers.great, PRIEST.matins.great, PRIEST.liturgy.great]) {
+    const s = first(lit);
+    assert.match(s[0][1][0], /^მშ(?:ჳ|ვი)დობით უფლისა მიმართ/);
+    assert.match(s.at(-1)![1][0], /^ამინ/);
+    assert.ok(s.length > 20 && s.length < 40, `${lit.label}: ${s.length}`);
+  }
+  for (const n of [5, 6, 7, 9]) assert.match(first(FIX.hourEnd(n))[0][1][0], /^რომელი ყოველსა/);
 });

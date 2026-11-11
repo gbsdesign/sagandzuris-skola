@@ -35,16 +35,52 @@ test('kathismas (Typikon ch. 17)', () => {
   assert.equal(vespersKathisma('2026-11-21', 'polyeleos'), 'first');
 });
 
-test('liturgy troparia by the temple', () => {
-  const base = { iso: '2026-11-10', day: cal['2026-11-10'], tone: 6, rank: 'simple' as const };
-  const s = hymnsOf({ ...base, patron: george }, 'liturgy');
-  assert.deepEqual(s.troparia.map(h => h.role), ['day', 'temple', 'saint']);
-  assert.deepEqual(s.kontakia.map(h => [h.role, h.glory]), [['day', undefined], ['temple', undefined], ['saint', 'glory'], ['protection', 'now']]);
-  const t = hymnsOf({ ...base, patron: dormition }, 'liturgy');
-  assert.deepEqual(t.troparia.map(h => h.role), ['temple', 'day', 'saint']);
-  assert.deepEqual(t.kontakia.map(h => [h.role, h.glory]), [['day', undefined], ['saint', 'glory'], ['temple', 'now']]);
-  const sun = hymnsOf({ ...base, iso: '2026-11-15', day: cal['2026-11-15'], rank: 'vigil', patron: dormition }, 'liturgy');
-  assert.equal(sun.troparia[0].role, 'resurrection');
+test('liturgy troparia by the temple — the order of the weekly tibikon (№682)', () => {
+  const roles = (x: { troparia: { role: string; glory?: string }[]; kontakia: { role: string; glory?: string }[] }) =>
+    [x.troparia.map(h => h.role).join(' '), x.kontakia.map(h => h.role + (h.glory ? ':' + h.glory : '')).join(' ')];
+  const base = { iso: '2026-11-09', day: cal['2026-11-09'], tone: 6, rank: 'simple' as const }; // Monday, a plain saint
+  assert.deepEqual(roles(hymnsOf({ ...base, patron: george }, 'liturgy')), ['day temple saint', 'day temple saint departed:glory protection:now']);
+  assert.deepEqual(roles(hymnsOf({ ...base, patron: dormition }, 'liturgy')), ['temple day saint', 'temple day saint departed:glory protection:now']);
+  const dox = { ...base, iso: '2026-11-10', day: cal['2026-11-10'], rank: 'doxology' as const };
+  assert.deepEqual(roles(hymnsOf({ ...dox, patron: dormition }, 'liturgy')), ['temple saint', 'saint:glory temple:now']);
+  assert.deepEqual(roles(hymnsOf({ ...dox, patron: george }, 'liturgy')), ['temple saint', 'temple saint:glory protection:now']);
+  assert.deepEqual(roles(hymnsOf({ ...dox, rank: 'vigil', patron: george }, 'liturgy')), ['saint', 'saint:glory protection:now']);
+  const sat = { ...base, iso: '2026-11-14', day: cal['2026-11-14'] };
+  assert.deepEqual(roles(hymnsOf({ ...sat, patron: dormition }, 'liturgy')), ['temple day saint', 'saint departed:glory day:now']);
+  assert.deepEqual(roles(hymnsOf({ ...sat, patron: george }, 'liturgy')), ['day saint', 'saint departed:glory day:now']);
+  const sun = { ...base, iso: '2026-11-15', day: cal['2026-11-15'], rank: 'vigil' as const };
+  assert.deepEqual(roles(hymnsOf({ ...sun, patron: dormition }, 'liturgy')), ['resurrection temple saint', 'resurrection saint:glory temple:now']);
+  assert.deepEqual(roles(hymnsOf({ ...sun, patron: george }, 'liturgy')), ['resurrection temple saint', 'resurrection temple saint:glory protection:now']);
+  // the hours: the saint's; on Sunday the resurrection's, „დიდება“ the saint's, only the resurrection's kontakion
+  assert.deepEqual(roles(hymnsOf({ ...base, patron: george }, 'hours')), ['saint', 'saint']);
+  assert.deepEqual(roles(hymnsOf({ ...sun, patron: george }, 'hours')), ['resurrection saint', 'resurrection']);
+});
+
+test('the temple\'s own order: vespers alone or with matins; the priest\'s parts are marked', () => {
+  const titles = (iso: string, rank: 'simple' | 'vigil', order?: { sat: 'apart' | 'vigil' | 'litya'; weekday: 'apart' | 'joined' }) => {
+    const sv = buildServices({ iso, day: cal[iso], tone: 6, rank, patron: george, order });
+    return { v: sv[0].steps.map(s => s.title), m: sv[1].steps.map(s => s.title), sv };
+  };
+  // the user's temple: Saturday evening — the great vespers alone with its dismissal, matins in the morning from psalms 19 and 20
+  const own = titles('2026-11-15', 'vigil');
+  assert.equal(own.v.at(-1), 'განტევება');
+  assert.ok(!own.v.some(t => /ლიტია|პურის/.test(t)));
+  assert.ok(own.m.includes('ფსალმუნები 19 და 20'));
+  const vigil = titles('2026-11-15', 'vigil', { sat: 'litya', weekday: 'apart' });
+  assert.ok(vigil.v.includes('ლიტია') && vigil.v.some(t => t.includes('პურის')) && vigil.v.at(-1) === 'ცისკარი იწყება');
+  assert.ok(!vigil.m.includes('ფსალმუნები 19 და 20') && !vigil.v.includes('მეცხრე ჟამი'));
+  const plain = titles('2026-11-09', 'simple');
+  assert.ok(plain.v.includes('მეცხრე ჟამი') && plain.m.includes('ფსალმუნები 19 და 20'));
+  assert.ok(!titles('2026-11-09', 'simple', { sat: 'apart', weekday: 'joined' }).m.includes('ფსალმუნები 19 და 20'));
+  // a plain day reads the praises and the doxology; no small litany after its kathismas
+  assert.ok(plain.m.some(t => t.startsWith('ქებანი')) && plain.m.includes('„ღირს არს ჭეშმარიტად“'));
+  const i = plain.m.indexOf('დავითნის კანონი 4');
+  assert.ok(i > 0 && plain.m[i + 1] !== 'მცირე კვერექსი');
+  // every litany is the priest's part (hidden with „მღვდლის ტექსტები“ off), no reader's text is
+  for (const s of own.sv.flatMap(x => x.steps)) {
+    if (/კვერექს/.test(s.title) && !/ანტიფონ/.test(s.title)) assert.ok(s.priest, s.title);
+    if (s.read) assert.ok(!s.priest && s.who.includes('reader'), s.title);
+  }
 });
 
 test('services are built for any day', () => {
