@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { BookOpen, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Church, Music, Search, TriangleAlert, X } from 'lucide-react';
-import { useAuth, useNavigation } from '../../context';
+import { BookOpen, CalendarDays, Check, ChevronDown, ChevronLeft, ChevronRight, Church, Music, ScrollText, Search, TriangleAlert, X } from 'lucide-react';
+import { useNavigation } from '../../context';
 import { Sheet, Tabs } from '../../components/ui/kit';
 import { PROSE } from '../../components/views/PrayerText';
 import {
@@ -16,6 +16,10 @@ import {
 import { useTemplePatron } from '../../hooks/useTemplePatron';
 import { FEAST_RULES } from '../../data/churchFeasts';
 import { ApostleText } from './DayCard';
+import { octoechos, sliceOf, type TextSrc } from '../../utils/serviceTexts';
+import { SERVICE_LISTS, hasBookNotes } from '../../data/chantLookup';
+import { bookOf, versionTone } from '../../utils/toneChants';
+import { useNotes } from '../../context/NotesContext';
 import { ToneSheet } from './ToneSheet';
 
 // „დღის მსახურება“ (the user, 2026-11-09; plan doc „დღის მსახურების გეგმა“, stage 1): the church day from the eve's
@@ -88,6 +92,12 @@ const weekdayTexts = async (dow: number): Promise<{ tr: Text[]; ko: Text[] }> =>
   return out;
 };
 
+/** a source's sections as texts (utils/serviceTexts) */
+const loadSlice = async (src: TextSrc): Promise<Text[]> => {
+  const f = await loadBook(src.coll, src.n);
+  return sliceOf(f.c[src.part]?.s ?? [], src).map(([head, paras]) => ({ head, paras }));
+};
+
 /** the temple's own hymns among a day's: by its feast's words (data/churchFeasts) or its name's longest word; none found — all */
 const GENERIC = /^(?:წმიდ|წმინდ|მოწამ|ღირს|მღვდელ|დიდ|მოციქულ|მართალ|ნეტარ|ქალწულ|აღმსარებ|მთავარ|ეპისკოპოს|ხსენებ|დღესასწაულ)/;
 const onlyTemple = (p: Patron, all: { tr: Text[]; ko: Text[] }) => {
@@ -135,15 +145,17 @@ const HymnRow: React.FC<{ h: Hymn; texts?: Text[] }> = ({ h, texts }) => {
   );
 };
 
-const Troparia: React.FC<{ inp: DayInput; at: 'vespers' | 'matins' | 'hours' | 'liturgy'; canText: boolean }> = ({ inp, at, canText }) => {
+const Troparia: React.FC<{ inp: DayInput; at: 'vespers' | 'matins' | 'hours' | 'liturgy' }> = ({ inp, at }) => {
   const { troparia, kontakia } = useMemo(() => hymnsOf(inp, at), [inp, at]);
   const [saint, setSaint] = useState<{ tr: Text[]; ko: Text[] } | null>(null);
   const [temple, setTemple] = useState<{ tr: Text[]; ko: Text[] } | null>(null);
   const [week, setWeek] = useState<{ tr: Text[]; ko: Text[] } | null>(null);
+  const [res, setRes] = useState<Text[] | null>(null);
   const dow = fromIso(inp.iso).getDay();
   useEffect(() => {
-    if (!canText) return;
     let alive = true;
+    const r = octoechos(inp.tone, 6, 'troparion');
+    if (r) loadSlice(r).then(v => alive && setRes(v), () => {});
     const o = oldMD(inp.iso);
     saintTexts(o.month, o.day).then(v => alive && setSaint(v), () => {});
     weekdayTexts(dow).then(v => alive && setWeek(v), () => {});
@@ -151,9 +163,9 @@ const Troparia: React.FC<{ inp: DayInput; at: 'vespers' | 'matins' | 'hours' | '
     if (p?.md) { const t = oldMD(patronDay(p, inp.iso)); saintTexts(t.month, t.day).then(v => alive && setTemple(onlyTemple(p, v)), () => {}); }
     else setTemple(null);
     return () => { alive = false; };
-  }, [canText, inp.iso, inp.patron, dow]);
+  }, [inp.iso, inp.patron, inp.tone, dow]);
   const textOf = (h: Hymn, k: 'tr' | 'ko') =>
-    h.role === 'saint' ? saint?.[k] : h.role === 'temple' ? temple?.[k] : h.role === 'day' ? week?.[k] : h.role === 'feast' ? saint?.[k] : undefined;
+    h.role === 'saint' ? saint?.[k] : h.role === 'temple' ? temple?.[k] : h.role === 'day' ? week?.[k] : h.role === 'feast' ? saint?.[k] : h.role === 'resurrection' && k === 'tr' ? res ?? undefined : undefined;
   return (
     <div className="mt-2.5 space-y-3 sg-in">
       <div>
@@ -166,12 +178,11 @@ const Troparia: React.FC<{ inp: DayInput; at: 'vespers' | 'matins' | 'hours' | '
           <ul className="mt-1 space-y-1.5">{kontakia.map((h, i) => <HymnRow key={i} h={h} texts={textOf(h, 'ko')} />)}</ul>
         </div>
       )}
-      {!canText && <p className="text-[13px] leading-snug text-[#8a7a6a]">ტექსტები წიგნებთან ერთად გაიხსნება.</p>}
     </div>
   );
 };
 
-const StepExtras: React.FC<{ step: Step; inp: DayInput; isAdmin: boolean; onTone: () => void }> = ({ step, inp, isAdmin, onTone }) => {
+const StepExtras: React.FC<{ step: Step; inp: DayInput; onTone: () => void }> = ({ step, inp, onTone }) => {
   const { openPrayer, openMapItem } = useNavigation();
   const [open, setOpen] = useState<number | null>(null);
   const [showHymns, setShowHymns] = useState(false);
@@ -184,7 +195,7 @@ const StepExtras: React.FC<{ step: Step; inp: DayInput; isAdmin: boolean; onTone
     else if (x.kind === 'prayer') buttons.push(
       <button key={i} type="button" onClick={() => { triggerHaptic(8); openPrayer(x.id); }}
         className={`${CHIP} bg-[#7a2028]/[0.07] hover:bg-[#7a2028]/[0.13] text-[#7a2028]`}><BookOpen className="w-4 h-4" />{x.label}</button>);
-    else if (x.kind === 'book' && isAdmin) buttons.push(
+    else if (x.kind === 'book') buttons.push(
       <button key={i} type="button" onClick={() => { triggerHaptic(8); openMapItem(`w:c:${x.coll}:${x.n}${x.part !== undefined ? `:${x.part}` : ''}`); }}
         className={`${CHIP} bg-white ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/30 text-[#4a3426]`}><BookOpen className="w-4 h-4 text-[#a0703c]" />{x.label}</button>);
     else if (x.kind === 'tone' && inp.tone) buttons.push(
@@ -196,7 +207,15 @@ const StepExtras: React.FC<{ step: Step; inp: DayInput; isAdmin: boolean; onTone
           className={`${CHIP} ${showHymns ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#7a2028]/[0.07] hover:bg-[#7a2028]/[0.13] text-[#7a2028]'}`}>
           რიგი და ტექსტები<ChevronDown className={`w-4 h-4 transition-transform ${showHymns ? 'rotate-180' : ''}`} />
         </button>);
-      if (showHymns) blocks.push(<Troparia key={`t${i}`} inp={inp} at={x.at} canText={isAdmin} />);
+      if (showHymns) blocks.push(<Troparia key={`t${i}`} inp={inp} at={x.at} />);
+    } else if (x.kind === 'text') {
+      const id = 1000 + i;
+      buttons.push(
+        <button key={i} type="button" aria-expanded={open === id} onClick={() => { triggerHaptic(8); setOpen(o => (o === id ? null : id)); }}
+          className={`${CHIP} ${open === id ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#7a2028]/[0.07] hover:bg-[#7a2028]/[0.13] text-[#7a2028]'}`}>
+          <ScrollText className="w-4 h-4" />{x.label}<ChevronDown className={`w-4 h-4 transition-transform ${open === id ? 'rotate-180' : ''}`} />
+        </button>);
+      if (open === id) blocks.push(<SliceText key={`x${i}`} src={x.src} />);
     } else if (x.kind === 'readings') {
       x.items.forEach((r, j) => {
         if (!r.apostle) return;
@@ -216,6 +235,54 @@ const StepExtras: React.FC<{ step: Step; inp: DayInput; isAdmin: boolean; onTone
       <div className="mt-2.5 flex flex-wrap gap-2">{buttons}</div>
       {blocks}
     </>
+  );
+};
+
+const SliceText: React.FC<{ src: TextSrc }> = ({ src }) => {
+  const [texts, setTexts] = useState<Text[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    loadSlice(src).then(v => alive && setTexts(v), () => alive && setFailed(true));
+    return () => { alive = false; };
+  }, [src]);
+  return (
+    <div className="mt-2.5 rounded-2xl bg-[#fffdf8] ring-1 ring-[#e8dcc8] px-4 py-3.5 sg-in">
+      <p className="text-[12px] font-bold text-[#8a7a6a]">{src.label}</p>
+      {texts ? (texts.length ? texts.map((t, i) => <TextBlock key={i} t={t} />) : <p className="mt-1 text-[14px] text-[#8a7a6a]">ამ დღისთვის წიგნში ტექსტი ვერ ვიპოვე.</p>)
+        : <p className="mt-1 text-[14px] text-[#8a7a6a]">{failed ? 'ჩატვირთვა ვერ მოხერხდა — შეამოწმე ინტერნეტი.' : 'იტვირთება…'}</p>}
+    </div>
+  );
+};
+
+const CHANTS = new Map(SERVICE_LISTS.flatMap(([, list]) => list.map(c => [c.id, c] as const)));
+/** a step's chants with their versions that have notes; a step sung in the week's tone shows that tone's first */
+const NotesSheet: React.FC<{ step: Step | null; tone: number | null; onClose: () => void }> = ({ step, tone, onClose }) => {
+  const { openNotes } = useNotes();
+  const rows = (step?.chants ?? []).map(id => CHANTS.get(id)).filter(Boolean).map(c => {
+    const all = c!.variants.filter(hasBookNotes);
+    const inTone = step?.toned && tone ? all.filter(v => versionTone(v.version) === tone) : [];
+    return { id: c!.id, title: c!.title.replace(/;\s*$/, ''), versions: (inTone.length ? inTone : all).slice(0, 12), more: (inTone.length ? inTone : all).length - 12, inTone: inTone.length > 0 };
+  }).filter(r => r.versions.length);
+  const open = (vid: string) => { triggerHaptic(10); onClose(); openNotes(vid, 'bookmark'); };
+  return (
+    <Sheet open={!!step} onClose={onClose} title={step ? `ნოტები · ${step.title.replace(/[„“]/g, '')}` : ''}>
+      {rows.length ? rows.map(r => (
+        <section key={r.id} className="mb-3 rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-3.5 py-3">
+          <p className="text-[15px] font-bold leading-snug text-[#2a2017]">{r.title}</p>
+          {r.inTone && tone && <p className="text-[12px] font-bold text-[#a0703c]">{toneName(tone)}</p>}
+          <div className="mt-2 flex flex-wrap gap-2">
+            {r.versions.map(v => (
+              <button key={v.id} type="button" onClick={() => open(v.id)}
+                className="inline-flex items-center gap-1.5 min-h-10 py-2 px-3.5 rounded-full bg-[#7a2028]/[0.07] hover:bg-[#7a2028]/[0.13] text-[#7a2028] text-[13px] font-bold text-left leading-snug cursor-pointer transition active:scale-[0.97]">
+                <Music className="w-4 h-4 shrink-0" />{bookOf(v)}{v.bookNums?.[0] ? ` №${v.bookNums[0]}` : ''}
+              </button>
+            ))}
+          </div>
+          {r.more > 0 && <p className="mt-2 text-[13px] text-[#8a7a6a]">და კიდევ {r.more} — „გალობის“ ჩანართში</p>}
+        </section>
+      )) : <p className="text-[14px] text-[#8a7a6a]">ამ ნაწილის ნოტები ჯერ არ არის.</p>}
+    </Sheet>
   );
 };
 
@@ -321,7 +388,6 @@ const SERVICE_TABS: { id: ServiceId; label: string }[] = [
 
 export const DayService: React.FC = () => {
   const canCal = useMembership().can('calendar');
-  const { isAdmin } = useAuth();
   const today = useMemo(todayIso, []);
   const [iso, setIso] = useState(today);
   const day = useCalendarDay(canCal ? iso : null);
@@ -333,6 +399,7 @@ export const DayService: React.FC = () => {
   const [tab, setTab] = useState<ServiceId>('vespers');
   const [sheet, setSheet] = useState<'rank' | 'patron' | null>(null);
   const [toneOpen, setToneOpen] = useState<number | null>(null);
+  const [notesOf, setNotesOf] = useState<Step | null>(null);
 
   const guessed = guessRank(iso, day ?? null, patron);
   const rank = (RANKS.some(r => r.id === ranks[iso]) ? ranks[iso] : guessed) as Rank;
@@ -427,7 +494,7 @@ export const DayService: React.FC = () => {
           <div role="note" className="mt-3 flex items-start gap-2.5 rounded-2xl bg-[#fdf4e3] ring-1 ring-[#e9c98f] px-3.5 py-2.5">
             <TriangleAlert className="w-5 h-5 shrink-0 mt-0.5 text-[#b7791f]" />
             <p className="text-[14px] leading-snug text-[#4a3826] text-pretty">
-              {period === 'triodion' ? 'ტრიოდის პერიოდია (მარხვა და მისი მოსამზადებელი კვირები).' : 'აღდგომის პერიოდია (ზატიკი).'} ზოგი ნაწილი ამ დღეებში იცვლება — გადაამოწმე რეგენტთან.
+              {period === 'triodion' ? 'ტრიოდის პერიოდია — მარხვის წესი გათვალისწინებულია.' : 'ზატიკის პერიოდია — აღდგომის წესი გათვალისწინებულია.'} ტრიოდის ტექსტები წიგნებში ნაკლებადაა — გადაამოწმე რეგენტთან.
             </p>
           </div>
         )}
@@ -458,10 +525,18 @@ export const DayService: React.FC = () => {
                 </button>
                 <div className={`min-h-10 pt-1.5 ${here ? '' : ''}`}>
                   <p className={`text-[16px] font-bold leading-snug ${here ? 'text-[#7a2028]' : 'text-[#2a2017]'}`}>{s.title}</p>
-                  <div className="mt-1"><WhoPills who={s.who} /></div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1">
+                    <WhoPills who={s.who} />
+                    {s.chants?.length ? (
+                      <button type="button" onClick={() => { triggerHaptic(8); setNotesOf(s); }} aria-label={`${s.title} — ნოტები`}
+                        className="inline-flex items-center gap-1 h-8 px-2.5 rounded-full ring-1 ring-[#a0703c]/40 text-[#7a4f20] text-[12px] font-bold cursor-pointer hover:bg-[#a0703c]/10 transition active:scale-[0.96]">
+                        <Music className="w-3.5 h-3.5" />ნოტები
+                      </button>
+                    ) : null}
+                  </div>
                   {s.note && <p className="mt-1.5 text-[14px] font-semibold leading-snug text-[#7a2028] text-pretty">{s.note}</p>}
                   {s.hint && <p className="mt-1 text-[13px] leading-snug text-[#8a7a6a] text-pretty">{s.hint}</p>}
-                  <StepExtras step={s} inp={inp} isAdmin={isAdmin} onTone={() => setToneOpen(tone)} />
+                  <StepExtras step={s} inp={inp} onTone={() => setToneOpen(tone)} />
                 </div>
               </li>
             );
@@ -482,6 +557,7 @@ export const DayService: React.FC = () => {
       <RankSheet open={sheet === 'rank'} value={rank} guessed={guessed} onPick={setRank} onClose={() => setSheet(null)} />
       <PatronSheet open={sheet === 'patron'} value={patron} onPick={savePatron} onClose={() => setSheet(null)} />
       <ToneSheet tone={toneOpen} onClose={() => setToneOpen(null)} />
+      <NotesSheet step={notesOf} tone={tone} onClose={() => setNotesOf(null)} />
     </div>
   );
 };

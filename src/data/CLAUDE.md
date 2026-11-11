@@ -333,5 +333,12 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   troparia order at the entrance (ch. 52, by the temple: Lord's/Theotokos' temple first on weekdays), the four services' steps.
 - Page `pages/medavitneoba/DayService.tsx` (`mapItem` „day“, button `DayServiceButton` on the reader's front). Temple:
   `hooks/useTemplePatron.ts` → `students.templePatron` (presets = `FEAST_RULES`, or a saint searched in the calendar).
-  Rank override per date `sg-day-rank`, „აქ ვარ“ `sg-day-at`. Book texts (ჟამნი months' troparia by old-style date, jamni 28
-  weekday hymns) only for admins, like the books. Triodion/Pentecostarion = a warning only until stage 4.
+  Rank override per date `sg-day-rank`, „აქ ვარ“ `sg-day-at`. Books and texts open to everyone (the monastery's permission, 2026-11-09).
+- Stages 2–4 (2026-11-11): `utils/serviceTexts.ts` + `tests/serviceTexts.test.ts` = where each changing hymn stands in the books
+  (Octoechos by tone and the evening's weekday, part 6 = the Sunday; the common services `tveni` by the saint's kind from the calendar
+  words — `saintKindOf`; exapostilaria, prokeimena, ზატიკი by the week after Easter); a step's `extras` `{kind:'text', src}` unfold the
+  slice. A step's `chants` = SERVICE_LISTS ids → „ნოტები“ beside the who-pills opens `NotesSheet` (`toned` = the week's tone first;
+  the test checks every id exists). Weekdays: daily antiphons (the user's answer), Sunday / polyeleos+: typika + beatitudes. `seasonOf`:
+  Lent weekdays (no liturgy Mon/Tue/Thu, the Presanctified Wed/Fri, „ალილუია“, Ephrem's prayer), Basil's liturgy days, Holy Friday,
+  Bright Week (own services, Paschal hours), the Paschal forty days („ქრისტე აღდგა“, „ანგელოზი ღაღადებდა“), Ps 136, kneeling vespers.
+  No Triodion book in `wignebi` — Lent links ჟამნი 25.
