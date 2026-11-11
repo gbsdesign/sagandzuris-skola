@@ -1,5 +1,5 @@
-// The Play Store app = the site in a Trusted Web Activity (Chrome without its address bar).
-// The site's own updates reach the app at once; only this wrapper needs a new versionCode.
+// The Play Store app = the live site in the app's own window (MainActivity, a WebView — since 2026-11-11; it was a Trusted
+// Web Activity in Chrome). The site's own updates reach the app at once; only this wrapper needs a new versionCode.
 // Its own parts (src/main/java): home-screen widgets, the icon's menu, church silence, the prayer bell, and since 1.1.2
 // the calls' ring (the phone's ringtone, a locked screen) and the chat messages' own channels.
 plugins {
@@ -23,6 +23,8 @@ android {
         resValue 'string', 'app_name', 'საგანძურის სკოლა'
         resValue 'string', 'launcher_name', 'საგანძური'
         resValue 'string', 'provider_authority', 'ge.sagandzureli.app.fileprovider'
+        // the Firebase project's web client: Google's sign-in gives its ID token for it (SignIn.java)
+        resValue 'string', 'google_web_client_id', '781443193404-4avvmqgm9683ioct31gahgd2gdn9eq03.apps.googleusercontent.com'
         resValue 'string', 'asset_statements',
             "[{ \\\"relation\\\": [\\\"delegate_permission/common.handle_all_urls\\\"], \\\"target\\\": { \\\"namespace\\\": \\\"web\\\", \\\"site\\\": \\\"https://${host}\\\" } }]"
     }
@@ -33,6 +35,11 @@ android {
         }
     }
 
+    buildFeatures {
+        buildConfig true
+        resValues true
+    }
+
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_17
         targetCompatibility JavaVersion.VERSION_17
@@ -41,4 +48,10 @@ android {
 
 dependencies {
     implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
+    implementation 'androidx.activity:activity:1.9.3'
+    implementation 'androidx.core:core:1.13.1'
+    implementation 'androidx.webkit:webkit:1.12.1'
+    implementation 'androidx.credentials:credentials:1.3.0'
+    implementation 'androidx.credentials:credentials-play-services-auth:1.3.0'
+    implementation 'com.google.android.libraries.identity.googleid:googleid:1.1.1'
 }

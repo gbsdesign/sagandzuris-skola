@@ -14,7 +14,7 @@ import android.service.notification.StatusBarNotification;
 import android.view.WindowManager;
 import android.widget.TextView;
 
-import com.google.androidbrowserhelper.trusted.LauncherActivity;
+
 
 /**
  * The incoming call on a locked or dark screen (2026-11-05): who calls, „უარი“ and „პასუხი“, like the phone's own.
@@ -111,7 +111,7 @@ public class IncomingCallActivity extends Activity {
         String base = getIntent().getStringExtra(BASE);
         stopRing();
         Uri uri = Uri.parse(Net.SITE + "/?open=call&b=" + Uri.encode(base == null ? "" : base));
-        Intent open = new Intent(Intent.ACTION_VIEW, uri, this, LauncherActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        Intent open = new Intent(Intent.ACTION_VIEW, uri, this, MainActivity.class).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         KeyguardManager km = getSystemService(KeyguardManager.class);
         if (Build.VERSION.SDK_INT >= 26 && km != null && km.isKeyguardLocked()) {
             // a locked phone asks for its PIN first, then the app opens on the call

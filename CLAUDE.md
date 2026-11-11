@@ -641,6 +641,14 @@
   (`node scripts/build-widget-days.mjs`). The site knows it runs in the app by `utils/androidApp.ts` and talks to the app through
   `sagandzuri://` links (`openInApp`). Widget links open `/?open=sc&id=<home button id>`. Icons: `node scripts/android/icons.mjs`.
   Only GitHub Actions can build it (`.github/workflows/android.yml` → branch `android-build`, unsigned); sign in a session.
+  **Own window, stage 1 of 3 (2026-11-11**, the user: no Chrome — „როგორც iPhone-ის აპი“): the launcher is `MainActivity` (a WebView of
+  the live site; mic/camera, place, file + camera pick, full-screen video, downloads, back = history; other sites open outside,
+  `intent://` / `sagandzuri://` go to the app's screens) and `Bridge.java` puts `window.sgApp` (platform 'android', the same calls as
+  the iPhone's `sgIOS`: info, notifyState/Ask, google, external) into every page; `utils/iosApp.ts` serves both (`isIphoneApp` = Apple's
+  sign-in only), `isAndroidApp` reads it too. Google's sign-in = `SignIn.java` (Credential Manager, the web client id in build.gradle) —
+  needs the Firebase project's Android app with the Play signing key's SHA-1, else 'not-ready'. **Not uploaded to Play until stage 2**
+  (notifications and calls through FCM — the Chrome delegation `BellDelegationService` no longer gets anything); stage 3 = share
+  target (SEND filters removed for now), widgets check, the site's own made files (blob downloads).
 - **iPhone app** (App Store, `ios/`, 2026-11-05; published under the user's friend's Apple developer account — the user is an
   Admin of that team): the live site https://sagandzureli.ge in the app's own WKWebView (site updates need no app update), bundle
   `ge.sagandzureli.app`, iPhone only, iOS 16+. Swift in `ios/Sagandzuri/`; the Xcode project, Info.plist and entitlements are made
