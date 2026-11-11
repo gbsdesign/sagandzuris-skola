@@ -11,6 +11,8 @@ import { MoveSheet, MoveTarget } from '../archive/MoveSheet';
 import { openSongPage, songTakes } from './SongPage';
 import { clock, useAlbumPlayer } from '../../utils/useAlbumPlayer';
 import { triggerHaptic } from '../../utils/haptics';
+import { useAudiomack, useOnline } from '../../data/audiomack';
+import { AudiomackPlayer } from './AudiomackPlayer';
 
 // One song album, as the school's Drive keeps it (data/centreSongs.ts): every recording in the folder's order, one
 // sounding at a time. ▶ and ⬇ follow the album's rights (data/albumAccess.ts: staff all; a member what an admin turned
@@ -94,6 +96,10 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
   const player = useAlbumPlayer();
   const whereIs = useWhereIs();
   const [moving, setMoving] = useState<MoveTarget | null>(null);
+  // a recording with an Audiomack twin is heard there while online (data/audiomack.ts): ▶ opens its player under the row
+  const online = useOnline();
+  const am = useAudiomack(tracks ? tracks.map(t => t[0]) : []);
+  const [amOpen, setAmOpen] = useState<string | null>(null);
 
   // an album one may neither hear nor save is not there for them at all
   if (!album || (!right.listen && !right.download)) return null;
@@ -138,8 +144,9 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
             <ul className="divide-y divide-[#efe5d4]">
               {tracks.map((track, i) => {
                 const [id, title, note, same] = track;
-                const on = player.cur === id;
-                const phase = on ? player.phase : 'paused';
+                const slug = online && am ? am[i] : undefined;
+                const on = slug ? amOpen === id : player.cur === id;
+                const phase = slug ? (on ? 'playing' : 'paused') : on ? player.phase : 'paused';
                 const where = placeOf(track);
                 return (
                   <li key={id} className={`px-3.5 py-3 flex flex-col gap-2 transition-colors ${on ? 'bg-[#fcf6ea]' : ''}`}>
@@ -147,13 +154,21 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
                       {right.listen && (
                       <button
                         type="button"
-                        onClick={() => player.toggle(id, { title, artist: name })}
+                        onClick={() => {
+                          if (!slug) { setAmOpen(null); player.toggle(id, { title, artist: name }); return; }
+                          triggerHaptic(10);
+                          player.stop();
+                          setAmOpen(on ? null : id);
+                        }}
                         className={`shrink-0 w-[46px] h-[46px] rounded-full flex items-center justify-center transition-all cursor-pointer active:scale-95 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#b4620e] ${
                           on ? 'bg-[#dc8a22] text-white shadow-[0_6px_14px_-6px_rgba(180,98,14,0.75)]' : 'bg-[#dc8a22]/[0.1] text-[#b4620e] hover:bg-[#dc8a22]/[0.16]'
                         }`}
-                        aria-label={phase === 'playing' ? `პაუზა: ${title}` : `მოსმენა: ${title}`}
+                        aria-label={slug ? (on ? `დახურვა: ${title}` : `მოსმენა: ${title}`) : phase === 'playing' ? `პაუზა: ${title}` : `მოსმენა: ${title}`}
+                        aria-expanded={slug ? on : undefined}
                       >
-                        {phase === 'loading' ? (
+                        {slug && on ? (
+                          <Headphones className="w-[18px] h-[18px]" />
+                        ) : phase === 'loading' ? (
                           <LoaderCircle className="w-5 h-5 animate-spin" />
                         ) : phase === 'playing' ? (
                           <Pause className="w-[18px] h-[18px] fill-current" />
@@ -215,7 +230,8 @@ export const SongAlbumPage: React.FC<{ albumId: string }> = ({ albumId }) => {
                         </button>
                       )}
                     </div>
-                    {on && (
+                    {on && slug && <AudiomackPlayer slugs={[undefined, undefined, undefined, slug]} title={title} />}
+                    {on && !slug && (
                       <div className="flex items-center gap-2.5 pl-[58px] max-[359px]:pl-0">
                         <span className="w-9 text-right text-[11.5px] font-semibold tabular-nums text-[#8c7c6b]">{clock(player.time)}</span>
                         <input
