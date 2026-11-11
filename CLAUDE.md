@@ -572,7 +572,7 @@
   the vine (ხალხური on its old leaf 35/13 · phone 29/14; ლოცვანი 19/44 · phone 20/51, its font ×0.9; ტაძრები 84/19 so the long hero
   fits; the qvevri's top is empty). `pages/galoba/WorshipSwitch.tsx` = the „გალობა · მედავითნე“ tabs on the services' screen and the
   reader's front, shown while section `medavitneobaTopic` is open; a switch replaces the history step. Page `medavitneoba`: no mapItem /
-  „w“ = the switch, „დღის მსახურება“ (`DayServiceButton` → mapItem `day`, see `src/data/CLAUDE.md`), `LearnCard` („მედავითნეთათვის
+  „w“ = the switch, „დღის მსახურება“ (`DayServiceButton` → mapItem `day`, see `src/data/CLAUDE.md`; since 2026-11-11 the reader's text stands open in order, with switches „მღვდლის ტექსტები“ · „ხუცური“ and the sheet „ჩემი ტაძრის წესი“), `LearnCard` („მედავითნეთათვის
   სასწავლო“ → `learn`) and the books' shelves (everyone since 2026-11-09); „learn“ = the
   course's overview, a lesson's id under it (the old „გაკვეთილები · წიგნები“ tabs are gone; „up“ goes lesson → learn → books).
 - **მედავითნეობა** (page `medavitneoba`, built 2026-10-27): the reader's course on the vine's „მედავითნეობა“ label

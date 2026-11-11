@@ -9,24 +9,137 @@ export interface TextSrc {
   coll: string;
   n: number;
   part: number;
-  /** the search for `from` begins after the first heading matching this */
+  /** the search for `from` / `find` begins after the first heading matching this */
   after?: RegExp;
   from?: RegExp;
   to?: RegExp;
+  /** the start by a section's heading or its first paragraph (the fixed texts of ჟამნი and კონდაკი, 2026-11-11) */
+  find?: RegExp;
+  /** with `find`: how many sections (1 when nothing else ends it) */
+  count?: number;
+  /** with `find`: up to (not with) the first later section whose heading or first paragraph matches */
+  until?: RegExp;
+  /** with `find`: up to and with the n-th later „ამინ“ (a litany with its exclamation) */
+  amens?: number;
+  /** the first section's heading is a rubric — leave it out; and so many of its first paragraphs */
+  noHead?: boolean;
+  skipParas?: number;
   /** a short name for the chip: „პარაკლიტონი, ხმა 6“ */
   label: string;
 }
 
+const hit = (re: RegExp, [h, ps]: Section) => re.test(h) || (ps.length > 0 && re.test(ps[0]));
+
 /** the sections a source names; [] when its start is not found */
-export const sliceOf = (sections: Section[], src: Pick<TextSrc, 'after' | 'from' | 'to'>): Section[] => {
-  const base = src.after ? sections.findIndex(([h]) => src.after!.test(h)) : 0;
+export const sliceOf = (sections: Section[], src: Omit<TextSrc, 'coll' | 'n' | 'part' | 'label'>): Section[] => {
+  const base = src.after ? sections.findIndex(x => (src.find ? hit(src.after!, x) : src.after!.test(x[0]))) : 0;
   if (base < 0) return [];
+  if (src.find) {
+    const rel = sections.slice(base).findIndex(x => hit(src.find!, x));
+    if (rel < 0) return [];
+    const start = base + rel;
+    let end = start + (src.count ?? 1);
+    if (src.until) { end = sections.length; for (let i = start + 1; i < sections.length; i++) if (hit(src.until, sections[i])) { end = i; break; } }
+    if (src.amens) {
+      let left = src.amens; end = -1;
+      for (let i = start + 1; i < sections.length; i++) if (/^ამინ/.test(sections[i][1][0] ?? '') && --left === 0) { end = i + 1; break; }
+      if (end < 0) return [];
+    }
+    const out = sections.slice(start, end);
+    if (!out.length) return [];
+    if (src.noHead || src.skipParas) out[0] = [src.noHead ? '' : out[0][0], out[0][1].slice(src.skipParas ?? 0)];
+    return out;
+  }
   const rel = src.from ? sections.slice(base).findIndex(([h]) => src.from!.test(h)) : 0;
   if (rel < 0) return [];
   const start = base + rel;
   let end = sections.length;
   if (src.to) for (let i = start + 1; i < sections.length; i++) if (src.to.test(sections[i][0])) { end = i; break; }
   return sections.slice(start, end);
+};
+
+// ---------- the fixed texts (2026-11-11): what the reader reads from ჟამნი, what the priest and deacon say from კონდაკი ----------
+const J = (n: number, label: string, x: Omit<TextSrc, 'coll' | 'n' | 'part' | 'label'>): TextSrc => ({ coll: 'jamni', n, part: 0, label, ...x });
+const K = (n: number, label: string, x: Omit<TextSrc, 'coll' | 'n' | 'part' | 'label'>): TextSrc => ({ coll: 'kondaki', n, part: 0, label, ...x });
+const EVE_HEAD = [/^კვირიაკესა/, /^ორშაბათსა/, /^სამშაბათსა/, /^ოთხშაბათსა/, /^ხუთშაბათსა/, /^პარასკევსა/, /^შაბათსა/];
+
+export const FIX = {
+  /** „ამინ. დიდება შენდა… მეუფეო ზეცათაო… წმიდაო ღმერთო… მამაო ჩვენო“ — a service's own beginning */
+  opening: J(6, 'დასაწყისი ლოცვები', { find: /კურთხეულ-არსისა/, count: 4, noHead: true }),
+  /** „წმიდაო ღმერთო… ყოვლადწმიდაო სამებაო… მამაო ჩვენო“ */
+  trisagion: J(6, 'სამწმიდაო — „მამაო ჩვენო“', { find: /კურთხეულ-არსისა/, count: 4, noHead: true, skipParas: 3 }),
+  come: J(10, 'მოვედით, თაყვანის-ვსცეთ', { find: /მოვედით, თაყუანის-ვსცეთ მეუფესა/, count: 1, noHead: true }),
+  twelve: J(6, 'უფალო, შეგვიწყალენ (12) · მოვედით', { find: /შეგვიწყალენ \(12/, count: 2 }),
+  // vespers
+  ps103: J(10, 'ფსალმუნი 103', { find: /^ფსალმუნი 103/, count: 1 }),
+  lordICry: J(10, 'ფსალმუნები 140, 141, 129, 116', { find: /ღაღად-ვყავ/, until: /^დიდებაჲ, აწ და\.?$/ }),
+  gladLight: J(10, 'ნათელო მხიარულო', { find: /ნათელო მხიარულო/, count: 1, noHead: true }),
+  eveProkeimenon: (eve: number) => J(10, 'მწუხრის წარდგომა', { after: /ითქუმიან წარდგომანი/, find: EVE_HEAD[eve], until: eve === 6 ? /ღირს მყუენ/ : EVE_HEAD[eve + 1] }),
+  vouchsafe: J(10, 'ღირს მყვენ ჩვენ, უფალო', { find: /^და ღირს მყუენ/, count: 1, noHead: true }),
+  eveVerses: J(10, 'სტიქარონის მუხლები', { find: /^შენდამი აღვიხილენ/, count: 2 }),
+  nunc: J(10, 'აწ განუტევე', { find: /^აწ განუტევე/, count: 1, noHead: true }),
+  eveEnd: J(10, 'უპატიოსნესსა', { find: /^უპატიოსნესსა ქერუბიმთასა, და აღმატებით/, count: 1, noHead: true }),
+  // matins
+  royal: J(4, 'ფსალმუნები 19 და 20', { find: /^ფსალმუნი 19/, count: 2 }),
+  royalTroparia: J(4, 'ტროპარნი', { find: /^აცხოვნე, უფალო, ერი შენი/, count: 3, noHead: true }),
+  sixPsalms: J(4, 'ექვსფსალმუნება', { find: /ექუს-ფსალმუნი/, count: 5, noHead: true }),
+  ps50: J(6, 'ფსალმუნი 50', { find: /^ფსალმუნი 50/, count: 1 }),
+  magnificat: J(4, 'ადიდებს სული ჩემი უფალსა', { find: /^გალობა ღვთისმშობლისა/, count: 2 }),
+  praises: J(4, 'ქებანი (ფს. 148–150)', { find: /უკეთუ სხუა დღე იყოს/, until: /უკეთუ კვირიაკე იყოს, შემდგომად დასდებელთა/, noHead: true }),
+  dailyDoxology: J(4, 'შენდა დიდება შვენის · დიდება მაღალთა შინა', { find: /^შენდა დიდება შუენის/, count: 2, noHead: true }),
+  greatDoxology: J(4, 'დიდება მაღალთა შინა ღმერთსა', { find: /^დიდება შენდა, რომელმან მოგვფინე/, count: 4 }),
+  mornVerses: J(4, 'სტიქარონის მუხლები', { after: /აღუსრულოთ საცისკრო/, find: /^აღვივსენით/, count: 2 }),
+  goodToConfess: J(4, 'კეთილ არს აღსარებაი უფლისა', { find: /^კეთილ არს აღსარებაი/, count: 1, noHead: true }),
+  // the hours: n = the book's item (5 first, 6 third, 7 sixth, 9 ninth)
+  hourPsalms: (n: number) => J(n, 'ფსალმუნები', { find: /^ფსალმუნი \d/, count: 4 }),
+  hourTheotokion: (n: number) => J(n, 'ღვთისმშობლისა', { find: /ღმრთისმშობლისა\.?$/, count: 1 }),
+  hourEnd: (n: number) => J(n, 'უფალო, შეგვიწყალენ (40) და ჟამის ლოცვა', { find: /^უფალო,? შეგ(?:ჳ|ვი)წყალენ 40/, until: /^შედეგი|^განსრულებაჲ/ }),
+  typikaEnd: J(8, 'ფსალმუნი 33', { find: /ფსალმუნი 33/, count: 1 }),
+};
+
+/** the priest's and the deacon's words (კონდაკი: 1 მწუხრი, 2 ცისკარი, 4 ლიტურგია) — shown only with „მღვდლის ტექსტები“ on */
+export const PRIEST = {
+  vespers: {
+    begin: J(10, 'მღვდელი', { find: /^კურთხეულ არს ღმერთი ჩუენი/, count: 1 }),
+    lampPrayers: K(1, 'სანთლის ლოცვები (საიდუმლოდ)', { find: /^ლოცვა ა$/, count: 7 }),
+    great: K(1, 'დიდი კვერექსი', { find: /^მშ(?:ჳ|ვი)დობით უფლისა მიმართ/, amens: 1 }),
+    small: K(1, 'მცირე კვერექსი', { find: /^მერმე და მერმე/, amens: 1 }),
+    entrance: K(1, 'შესვლა', { find: /^სიბრძნით აღემართენით/, count: 1 }),
+    prokeimenon: K(1, 'წარდგომის წინ', { find: /^მოხედენ/, count: 4 }),
+    augmented: K(1, 'მრჩობლი კვერექსი', { find: /^ვსთქვათ ყოველთა/, amens: 1 }),
+    supplication: K(1, 'თხოვნითი კვერექსი და თავმოდრეკის ლოცვა', { find: /^აღუსრულოთ სამწუხრო/, amens: 2 }),
+    litya: K(1, 'ლიტიის ვედრებანი', { find: /^აცხოვნე, ღმერთო, ერი შენი/, until: /სასულიერონი|წმიდაო ღმერთოს შემდეგ/ }),
+    bread: K(1, 'პურის კურთხევა', { after: /ღვთისმშობელო ქალ/, find: /^უფლისა მიმართ ვილოცოთ/, count: 4 }),
+    blessing: K(1, 'კურთხევა', { find: /^კურთხევა უფლისა/, count: 1 }),
+    dismissal: J(10, 'განტევება', { find: /^რომელი იგი არს კურთხეულ/, count: 1 }),
+  },
+  matins: {
+    begin: K(2, 'დასაწყისი', { find: /^კურთხეულ არს ღმერთი ჩუენი/, count: 2 }),
+    short: K(2, 'მოკლე მრჩობლი კვერექსი', { find: /^შეგჳწყალენ ჩუენ ღმერთო/, amens: 1 }),
+    glory: K(2, 'დიდება წმიდასა', { find: /^დიდება წმიდასა/, count: 1 }),
+    prayers: K(2, 'ცისკრის ლოცვები (საიდუმლოდ)', { find: /^ლოცვა ა$/, count: 12 }),
+    great: K(2, 'დიდი კვერექსი', { find: /^მშ(?:ჳ|ვი)დობით უფლისა მიმართ/, amens: 1 }),
+    godIsLord: K(2, 'ღმერთი უფალი — მუხლები', { find: /^ღმერთი უფალი და გამოგ/, count: 5 }),
+    small: K(2, 'მცირე კვერექსი', { find: /^მერმე და მერმე/, amens: 1 }),
+    gospel: K(2, 'სახარების წინ', { after: /საცისკრო წარდგომები/, find: /^უფლისა მიმართ ვილოცოთ/, until: /კითხულობს სახარ/ }),
+    afterNine: K(2, 'მცირე კვერექსი მე-9 გალობის შემდეგ', { after: /პირველი დიაკონი კვერექსი/, find: /^მერმე და მერმე/, amens: 1 }),
+    augmented: K(2, 'მრჩობლი კვერექსი', { after: /II დიაკონი იტყვის კვერექს\./, find: /^შეგჳწყალენ ჩუენ ღმერთო/, amens: 1 }),
+    supplication: K(2, 'თხოვნითი კვერექსი და თავმოდრეკის ლოცვა', { find: /^აღუსრულოთ საცისკრო/, amens: 2 }),
+    dismissal: K(2, 'განტევება', { after: /^რამეთუ შენი არს მოწყალება/, find: /^სიბრძნით/, count: 6 }),
+  },
+  liturgy: {
+    begin: K(4, 'დასაწყისი', { find: /^კურთხეულ არს მეუფება/, count: 1 }),
+    great: K(4, 'დიდი კვერექსი', { find: /^მშ(?:ჳ|ვი)დობით უფლისა მიმართ/, amens: 1 }),
+    small: K(4, 'მცირე კვერექსი', { find: /^მერმე და მერმე/, amens: 1 }),
+    entrance: K(4, 'მცირე შესვლა', { find: /^სიბრძნით აღემართენით/, count: 1 }),
+    trisagion: K(4, 'სამწმიდაოს წინ', { after: /^სიბრძნით აღემართენით/, find: /^უფლისა მიმართ ვილოცოთ/, amens: 1 }),
+    apostle: K(4, 'სამოციქულოს წინ', { find: /^მოხედენ/, count: 4 }),
+    augmented: K(4, 'მრჩობლი კვერექსი', { find: /^ვსთქვათ ყოველთა/, amens: 1 }),
+    supplication: K(4, 'თხოვნითი კვერექსი', { find: /^აღუსრულოთ/, amens: 1 }),
+    beforeOurFather: K(4, 'კვერექსი „მამაო ჩვენოს“ წინ', { find: /^ყოველთა წმიდათა/, amens: 1 }),
+    communion: K(4, 'ზიარებაზე', { find: /^შიშითა ღ/, count: 2 }),
+    thanks: K(4, 'სამადლობელი კვერექსი', { after: /^აცხოვნე/, find: /^აღემართენით|^მართლ|^უფლისა მიმართ ვილოცოთ/, amens: 1 }),
+  },
 };
 
 const APOSTICHA = /სტიქარონ|სტიხარონ|სქიქარონ|სტქარონ/;

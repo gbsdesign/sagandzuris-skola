@@ -353,3 +353,35 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   Lent weekdays (no liturgy Mon/Tue/Thu, the Presanctified Wed/Fri, „ალილუია“, Ephrem's prayer), Basil's liturgy days, Holy Friday,
   Bright Week (own services, Paschal hours), the Paschal forty days („ქრისტე აღდგა“, „ანგელოზი ღაღადებდა“), Ps 136, kneeling vespers.
   No Triodion book in `wignebi` — Lent links ჟამნი 25.
+
+### „საკითხავი რიგი“, the priest's texts, the temple's order (2026-11-11, PR after #260)
+
+The user: „გამოუცდელმა დამწყებმა მედავითნემ ღვთისმსახურება შეძლოს თავიდან ბოლომდე, მხოლოდ წაკითხვა უწევდეს … ძველქართული …
+მღვდლის ტექსტების ღილაკი … საკითხავი ძირითად ღერძად, გალობის ღილაკები გვერდით“; answers: Saturday evening and a weekday's
+evening in his temple = vespers alone (matins in the morning), „სხვა მედავითნემ თავად განსაზღვროს“.
+
+- **Rules checked against the weekly „ტიბიკონი“ of the Facebook group „მედავითნეთათვის“** (№682, 27.10–02.11 old style; the user
+  drops the PDFs into the chat — they are only for checking, never copy their text into the app). What it fixed: the hours take
+  the saint's troparion and kontakion (Sunday: the resurrection's, „დიდება“ the saint's, only the resurrection's kontakion; the
+  ninth hour — the day before's); the liturgy's troparia and kontakia by the temple's kind (`hymnsOf`: a plain weekday ends
+  „დიდება — წმიდათა თანა განუსვენე, აწდა — სასოო და შესავედრებელო“; a saint with the great doxology leaves the weekday's out;
+  Saturday; Sunday in the Lord's, the Theotokos' and a saint's temple — `tests/dayService.test.ts` holds each); a plain day
+  reads the praises and the doxology, has „ღირს არს“ after the ninth ode, the katavasia only after odes 3, 6, 8, 9 and no small
+  litany after its kathismas (with the great doxology: after the first two; Saturday, Sunday, feasts: after each).
+- **`TempleOrder`** (`DayInput.order`, default `DEFAULT_ORDER` = the user's temple; the page keeps it on the device,
+  `sg-day-order`, sheet „ჩემი ტაძრის წესი“): `sat` apart · vigil · litya (Saturday evening and a vigil saint's eve), `weekday`
+  apart · joined. Joined = no ninth hour before a vigil, no dismissal after vespers, matins from the six psalms; apart = the
+  great vespers ends with its troparia and dismissal, matins begins with psalms 19 and 20. Litya and the bread only with `litya`.
+- **Steps**: `priest: true` = the priest's and deacon's own part (every litany with the choir's answers, the blessing, the
+  dismissal — made by `P(…)`) — shown only with the page's switch „მღვდლის ტექსტები“ (`sg-day-priest`); `pt` = their words from
+  კონდაკი shown under a step with the switch on; `read` = the reader's own text in order, open on the page (`Read`: a book
+  source, a kathisma of დავითნი, the day's troparia / kontakia, a line to say). A step's number on screen counts only the shown
+  ones; the „აქ ვარ“ mark keeps the step's place in the whole list. A reader's text already passed folds („ტექსტის ჩვენება“).
+- **The fixed texts** (`utils/serviceTexts.ts` `FIX` from ჟამნი, `PRIEST` from კონდაკი 1 · 2 · 4): a source may start by a
+  section's heading *or first paragraph* (`find`), run `count` sections, `until` another, or to the n-th „ამინ“ (`amens` — a
+  litany with its exclamation); `noHead` / `skipParas` drop a rubric. კონდაკი is the bishop's order (speakers in the headings:
+  დიაკონი · გუნდი · წინამძღვარი) — a priest's service says the same words. The test finds every one in the files.
+- **ხუცური** on the page (`sg-day-khutsuri`): the app's `useKhutsuri` over the steps' list; the list is `font-sans` and every
+  text box `font-serif-ge`, so only the texts turn; turning it off remounts the list.
+- Still open: the common services have no ikos; a second rank „ექვსიანი“ is not told apart from a plain day; with the great
+  doxology the tibikon sings the typika at the liturgy — the app keeps the daily antiphons on weekdays (the user's temple).
