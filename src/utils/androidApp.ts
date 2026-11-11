@@ -1,6 +1,7 @@
-// The Play Store app (android/): the site inside Chrome without its address bar (a Trusted Web Activity), plus the app's
-// own parts — home-screen widgets, church silence. The app's first page load carries it as the referrer; the mark stays
-// for the tab (sessionStorage), so the same phone's Chrome never thinks it is the app.
+// The Play Store app (android/): the site in the app's own window (a WebView, since 2026-11-11 — window.sgApp with platform
+// 'android' tells it) plus the app's own parts — home-screen widgets, church silence. The older Chrome-based app (a Trusted
+// Web Activity) carries it as the first page load's referrer; that mark stays for the tab (sessionStorage), so the same
+// phone's Chrome never thinks it is the app.
 
 export const APP_PACKAGE = 'ge.sagandzureli.app';
 const KEY = 'sg-android-app';
@@ -15,6 +16,7 @@ export const markAndroidApp = () => {
 };
 
 export const isAndroidApp = () => {
+  if (typeof window !== 'undefined' && (window as unknown as { sgApp?: { platform?: string } }).sgApp?.platform === 'android') return true;
   try {
     return sessionStorage.getItem(KEY) === '1';
   } catch {

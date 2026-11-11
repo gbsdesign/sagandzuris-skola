@@ -6,7 +6,7 @@ import android.content.Intent;
 import android.graphics.Color;
 import android.net.Uri;
 
-import com.google.androidbrowserhelper.trusted.LauncherActivity;
+
 
 import java.util.Calendar;
 import java.util.Locale;
@@ -75,7 +75,7 @@ final class Look {
     /** opens the site in the app at `query` ("open=sc&id=…"; empty = home) */
     static PendingIntent open(Context c, String query, int requestCode) {
         Uri uri = Uri.parse(Net.SITE + "/" + (query.isEmpty() ? "" : "?" + query));
-        Intent i = new Intent(Intent.ACTION_VIEW, uri, c, LauncherActivity.class);
+        Intent i = new Intent(Intent.ACTION_VIEW, uri, c, MainActivity.class);
         i.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         return PendingIntent.getActivity(c, requestCode, i, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
     }

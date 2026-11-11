@@ -3,7 +3,7 @@ import { ArrowLeft, LogIn, Mail, MailCheck, Send } from 'lucide-react';
 import { useAuth } from '../../context';
 import { Btn } from '../ui/kit';
 import { emailLinkError, looksLikeEmail, rememberedEmail, sendEmailLink } from '../../utils/emailLink';
-import { isIosApp } from '../../utils/iosApp';
+import { isIphoneApp } from '../../utils/iosApp';
 
 // The two ways in: the Google account, or a link sent to any e-mail address (no password). Large type and
 // plain words: many who use the e-mail road are older members of the psalter group. In the iPhone app Apple's own
@@ -25,7 +25,7 @@ export type SignInStep = 'choose' | 'email' | 'sent';
 /** `onStep` lets the sheet around it hide its own introduction once the e-mail road is taken. */
 export const SignInChoices: React.FC<{ onStep?: (step: SignInStep) => void }> = ({ onStep }) => {
   const { signInWithGoogle, signInWithApple, signingIn } = useAuth();
-  const inIosApp = isIosApp();
+  const inIosApp = isIphoneApp();
   const [step, setStep] = useState<SignInStep>('choose');
   const [email, setEmail] = useState(rememberedEmail);
   const [busy, setBusy] = useState(false);
