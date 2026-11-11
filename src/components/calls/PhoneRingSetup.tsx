@@ -50,8 +50,12 @@ export const PhoneRingSetup: React.FC = () => {
     setErr('');
     const e = await bindChatDevice(true);
     setBusy(false);
-    if (e) setErr(e);
-    else setDone(true);
+    if (e) {
+      setErr(e);
+      // a failed try counts as „მოგვიანებით“: the card does not come back on every opening (2026-11-12, the user:
+      // „წარამარა ამას მწერ“); coming back from the phone's settings with notifications on still binds (below)
+      try { localStorage.setItem(LATER, String(Date.now())); } catch { /* private window */ }
+    } else setDone(true);
   };
 
   // the permission window could not open (the Android app, 2026-11-06): the person gives it in the phone's settings
