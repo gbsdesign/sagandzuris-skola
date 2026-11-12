@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Clock3, ExternalLink, Footprints, Globe, Lock, MapPin, Navigation, Pencil, Phone, Play, Share2, Sparkles, User } from 'lucide-react';
+import { CalendarClock, Check, ChevronLeft, ChevronRight, Clock3, ExternalLink, Footprints, Globe, Lock, MapPin, Navigation, Pencil, Phone, Play, Share2, Sparkles, User } from 'lucide-react';
 import { useNavigation, useRealAuth } from '../../context';
 import { Btn, FIELD, Sheet, offerUndo } from '../../components/ui/kit';
 import { triggerHaptic } from '../../utils/haptics';
@@ -8,6 +8,7 @@ import { useMyPlace } from '../../hooks/useMyPlace';
 import { shareChurch } from '../../utils/churchShare';
 import { dayText, feastOf, nextFeastDay, tbilisiToday } from '../../data/churchFeasts';
 import { filmsOfChurch } from '../../data/churchFilms';
+import { SERVICES_SOURCE, serviceOf } from '../../data/churchServices';
 import { clock, thumbOf } from '../../data/etnofori';
 import { useChurchVisits } from '../../hooks/useChurchVisits';
 import { type GooglePhoto, googlePhotoUrl, useGoogleInfo, useGooglePhotos, useGooglePlacesKey } from '../../hooks/useGooglePhotos';
@@ -33,7 +34,8 @@ export const ChurchCard: React.FC<{ church: Church | null; onClose: () => void }
 };
 
 const Card: React.FC<{ c: Church; onClose: () => void }> = ({ c, onClose }) => {
-  const { user, isAdmin } = useRealAuth();
+  const { user, isAdmin, isTeacher } = useRealAuth();
+  const service = serviceOf(c.id);
   const canSee = useCanSeeChurchContacts();
   const info = useChurchInfo(c.id);
   const contact = useChurchContact(c.id, canSee);
@@ -132,6 +134,16 @@ const Card: React.FC<{ c: Church; onClose: () => void }> = ({ c, onClose }) => {
           </Box>
         ) : info !== undefined && !(google.state === 'done' && c.kind !== 'x') && (
           <Quiet icon={<Clock3 />}>{c.kind === 'x' ? 'ამჟამად არ მოქმედებს' : 'საათები ჯერ არ არის ჩაწერილი'}</Quiet>
+        )}
+
+        {isTeacher && service && (
+          <Box icon={<CalendarClock />} title="მსახურებები" hint="ხედავენ მხოლოდ ადმინები და მასწავლებლები">
+            <ul className="flex flex-col gap-1">
+              {service.lines.map(l => <li key={l} className="text-[14.5px] font-semibold text-[#2a2017] leading-snug">• {l}</li>)}
+            </ul>
+            {service.checked && <p className="text-[13px] text-[#9a5f08] font-semibold leading-relaxed">ყურადღება: {service.checked}</p>}
+            <p className="text-[12px] font-semibold text-[#8a7a6a] leading-snug">{SERVICES_SOURCE}</p>
+          </Box>
         )}
 
         <GooglePart g={google} canSee={canSee} ownHours={ownHours || c.kind === 'x'} />

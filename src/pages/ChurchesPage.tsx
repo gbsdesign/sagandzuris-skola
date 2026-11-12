@@ -1,6 +1,7 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
-import { BookOpen, Check, ChevronDown, Church as ChurchIcon, ChevronRight, Globe, History, Loader2, LocateFixed, Map as MapIcon, MapPin, Play, RefreshCw, Search, Sparkles } from 'lucide-react';
-import { useNavigation } from '../context';
+import { BookOpen, CalendarClock, Check, ChevronDown, Church as ChurchIcon, ChevronRight, Globe, History, Loader2, LocateFixed, Map as MapIcon, MapPin, Play, RefreshCw, Search, Sparkles } from 'lucide-react';
+import { useNavigation, useRealAuth } from '../context';
+import { CHURCH_SERVICES, SERVICES_SOURCE } from '../data/churchServices';
 import { RegionLocator, RegionPuzzleMap } from '../components/maps/RegionPuzzleMap';
 import { Btn, FIELD, IconBtn, Sheet, Tabs } from '../components/ui/kit';
 import { triggerHaptic } from '../utils/haptics';
@@ -55,6 +56,7 @@ export const ChurchesPage: React.FC = () => {
   }, []);
 
   const { visits } = useChurchVisits();
+  const { isTeacher } = useRealAuth();
   const [list, open] = (mapItem ?? '').split('/');
   const openChurch = (id: string) => { triggerHaptic(10); openMapItem(`${list || 'all'}/${id}`, false, true); };
   // the one search's „ტაძრები“ (components/search) opens the church over the first screen
@@ -102,6 +104,7 @@ export const ChurchesPage: React.FC = () => {
   if (list === 'near') return <><Nearby data={data} visits={visits} onOpen={openChurch} />{card}</>;
   if (list === 'feast') return <><FeastList data={data} visits={visits} onOpen={openChurch} />{card}</>;
   if (list === 'book') return <><BookList data={data} visits={visits} onOpen={openChurch} />{card}</>;
+  if (list === 'services' && isTeacher) return <><ServicesList data={data} visits={visits} onOpen={openChurch} />{card}</>;
   if (region) {
     return (
       <>
@@ -212,11 +215,16 @@ const WaysRow: React.FC<{ data: ChurchData; visits: Visits; onGo: (item: string)
   const next = useMemo(() => nextFeastDayWithChurches(data.list, today), [data, today]);
   const mine = Object.keys(visits).filter(id => data.byId.has(id)).length;
   const feastLine = next ? (next.day === today ? 'დღეს' : dayText(next.day)) : '—';
+  // „მსახურებები“ only for admins and teachers (2026-11-12); four tiles stand two by two
+  const { isTeacher } = useRealAuth();
+  const services = isTeacher ? CHURCH_SERVICES.filter(s => data.byId.has(s.id)).length : 0;
+  const count = 2 + (next ? 1 : 0) + (services ? 1 : 0);
   return (
-    <div className="grid grid-cols-3 gap-2" role="group" aria-label="ტაძრების ძებნის გზები">
+    <div className={`grid gap-2 ${count === 4 ? 'grid-cols-2 sm:grid-cols-4' : count === 3 ? 'grid-cols-3' : 'grid-cols-2'}`} role="group" aria-label="ტაძრების ძებნის გზები">
       <Way icon={<LocateFixed />} title="ახლოს" line="ჩემთან" tone="wine" onClick={() => onGo('near')} />
       {next && <Way icon={<Sparkles />} title="ტაძრობა" line={feastLine} tone="gold" onClick={() => onGo('feast')} />}
       <Way icon={<BookOpen />} title="წიგნაკი" line={mine ? `${mine} ტაძარი` : 'ვიყავი'} tone="green" onClick={() => onGo('book')} />
+      {services > 0 && <Way icon={<CalendarClock />} title="მსახურებები" line={`${services} ტაძარი`} tone="blue" onClick={() => onGo('services')} />}
     </div>
   );
 };
@@ -225,9 +233,42 @@ const WAY_TONE = {
   wine: 'bg-[#7a2028] text-[#fbf6ec] shadow-[0_4px_12px_-8px_rgba(122,32,40,0.7)] hover:bg-[#5e1820]',
   gold: 'bg-gradient-to-br from-[#fbf0d8] to-[#f4e1bd] ring-1 ring-[#e2c9a0] text-[#2a2017] hover:ring-[#b07a1e]/50',
   green: 'bg-white/85 ring-1 ring-[#e8dcc8] text-[#2a2017] hover:ring-[#2f6b3a]/40',
+  blue: 'bg-white/85 ring-1 ring-[#e8dcc8] text-[#2a2017] hover:ring-[#2c5a7a]/40',
 } as const;
-const WAY_ICON = { wine: 'bg-white/15 text-[#fbf6ec]', gold: 'bg-[#b07a1e]/15 text-[#8a5a0e]', green: 'bg-[#2f6b3a]/10 text-[#2f6b3a]' } as const;
-const WAY_LINE = { wine: 'text-[#fbf6ec]/80', gold: 'text-[#8a5a0e]', green: 'text-[#2f6b3a]' } as const;
+const WAY_ICON = { wine: 'bg-white/15 text-[#fbf6ec]', gold: 'bg-[#b07a1e]/15 text-[#8a5a0e]', green: 'bg-[#2f6b3a]/10 text-[#2f6b3a]', blue: 'bg-[#2c5a7a]/10 text-[#2c5a7a]' } as const;
+const WAY_LINE = { wine: 'text-[#fbf6ec]/80', gold: 'text-[#8a5a0e]', green: 'text-[#2f6b3a]', blue: 'text-[#2c5a7a]' } as const;
+
+/** „მსახურებები“ (admins and teachers only): the churches the parishioners said serve every day, with what they said */
+const ServicesList: React.FC<{ data: ChurchData; visits: Visits; onOpen: (id: string) => void }> = ({ data, visits, onOpen }) => {
+  const rows = CHURCH_SERVICES.map(s => ({ s, c: data.byId.get(s.id) })).filter((r): r is { s: typeof r.s; c: Church } => !!r.c);
+  return (
+    <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
+      <div className="flex items-center gap-3 px-1 pb-3 border-b border-[#e4d8c4]">
+        <span className="w-12 h-12 rounded-2xl bg-[#2c5a7a] text-white flex items-center justify-center shrink-0"><CalendarClock className="w-6 h-6" /></span>
+        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+          <h3 className="text-lg sm:text-xl font-black text-[#2a2017] leading-tight">მსახურებები</h3>
+          <span className="text-xs font-bold text-[#2c5a7a]">{rows.length} ტაძარი · ხედავენ მხოლოდ ადმინები და მასწავლებლები</span>
+        </div>
+      </div>
+      <ul className="flex flex-col divide-y divide-[#efe5d4] rounded-3xl bg-white/80 ring-1 ring-[#e8dcc8] overflow-hidden">
+        {rows.map(({ s, c }) => (
+          <li key={s.id}>
+            <button type="button" onClick={() => onOpen(c.id)} className="group w-full flex items-start gap-3 p-3 text-left cursor-pointer hover:bg-[#fcf6ea] active:bg-[#f7eddc] transition-colors">
+              <span className="flex-1 min-w-0 flex flex-col gap-1">
+                <span className="text-[15px] font-bold text-[#2a2017] leading-snug group-hover:text-[#7a2028] transition-colors">
+                  {visits[c.id] && <Check className="inline w-4 h-4 mr-1 text-[#2f6b3a] align-[-2px]" aria-label="ვიყავი" />}{s.name}
+                </span>
+                {s.lines.map(l => <span key={l} className="text-[13.5px] font-semibold text-[#574739] leading-snug">{l}</span>)}
+              </span>
+              <ChevronRight className="w-5 h-5 mt-0.5 shrink-0 text-[#c8b8a2] group-hover:text-[#7a2028]" />
+            </button>
+          </li>
+        ))}
+      </ul>
+      <p className="px-1 text-[12px] font-semibold text-[#8a7a6a] leading-relaxed">{SERVICES_SOURCE}. ტაძრის ფანჯარაში ჩანს დაწვრილებით.</p>
+    </div>
+  );
+};
 
 /** one tile of the row (compact since 2026-11-09, the user: „დახვეწე … კომპაქტური“): the icon beside the way's name, one short line under */
 const Way: React.FC<{ icon: React.ReactNode; title: string; line: string; tone: keyof typeof WAY_TONE; onClick: () => void }> = ({ icon, title, line, tone, onClick }) => (
