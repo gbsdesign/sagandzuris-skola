@@ -445,6 +445,10 @@
   = `1960dc5d`), shown only to `isTeacher` (admins included): a fourth tile in `WaysRow` (four tiles = 2×2 on phones) → list
   `services` (`ServicesList`), and a box in the church's window. The hours could not be confirmed online — the source line says
   „მრევლის ცნობით“; orthodoxy.ge's old directory differs for ჯვართამაღლება (`checked`). Test in `tests/churches.test.ts`.
+  Later the same night (the user: „დროის არჩევის რეჟიმი … დილის და ღამის … უფრო მაღლა, მარტივად, კომპაქტურად“, answers „დილით
+  ჩავთვალოთ · ტაძრობის ქვემოთ“): an entry's `slots` {when morning|night, what, days, time?} — a plain „every day“ counts as morning;
+  the list has chips ყველა · დილით · ღამით (`hasTime`, `sg-services-time` for the visit); rows by `pages/churches/ServiceSlots.tsx`
+  (`SlotRow`: ☀ / 🌙 round + what · days + the hour pill); the window shows `ServiceSlots` right under the feast line (no Box).
 - **Prayers** (`data/prayers.ts`, `public/prayers/`, `public/bible/`), psalter kathismas, 73 akathists,
   commemoration name lists (`utils/commemoration.ts`), prayer reminders via Web Push Worker
   `sagandzuri-reminders` (`worker/reminders/`; push works only on the deployed site).
