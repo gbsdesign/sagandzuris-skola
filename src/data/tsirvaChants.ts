@@ -4,6 +4,7 @@ import { V5_BOOK, v5Page, v5Source } from './liturgyVol5Index';
 import { V9_BOOK, v9Page, v9Source } from './liturgyVol9Index';
 import { withPataravaLiturgy } from './pataravaBookChants';
 import { anthVariantsFor, withAnthology } from './anthologyChants';
+import { withAddedChants } from './addedChants';
 
 export interface ChantVariant {
   id: string;
@@ -568,7 +569,7 @@ const liturgyChants: ChantItem[] = chantTitles.map((title, i) => ({
 
 // the Patarava book (Shemokmedi school, 2003) adds its litany and ისპოლა as the შ.ს. row
 // the anthology's chants with no place in the books' list are put in after the chant they follow
-export const TSIRVA_CHANTS: ChantItem[] = withAnthology(withPataravaLiturgy(liturgyChants).flatMap(item => [
+export const TSIRVA_CHANTS: ChantItem[] = withAddedChants(withAnthology(withPataravaLiturgy(liturgyChants).flatMap(item => [
   item,
   ...V5_ONLY.filter(o => o.after === item.index).map(o => ({
     id: `chant-v5-${o.num}`,
@@ -576,4 +577,4 @@ export const TSIRVA_CHANTS: ChantItem[] = withAnthology(withPataravaLiturgy(litu
     title: o.title,
     variants: [v5Variant(`v-v5-${o.num}`, `გ.ს. V №${o.num}`, o.title, '', o.num), ...anthVariantsFor(`chant-v5-${o.num}`, o.title)],
   })),
-]), true);
+]), true));
