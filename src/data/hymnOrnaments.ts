@@ -3,10 +3,13 @@
 // Long low bands go above a chant's first page, the larger drawings under its last page; never at the sides.
 import { SERVICE_LISTS } from './chantLookup';
 
-export interface HymnOrnament { src: string; w: number; h: number; bw?: boolean; dark?: boolean; fly?: string }
+export interface HymnOrnament { src: string; w: number; h: number; bw?: boolean; dark?: boolean; fly?: string; glow?: [x: number, y: number, size: number] }
 
 // drawings that move once they come into view: the dove flaps its wings three times and stops (the user, 2026-11-12)
 const FLYING = new Set(['bw02']);
+// drawings whose middle lights up three times once seen: [x, y] of the light's centre and its size, as shares of the width
+// (the flower's yellow middle — the user, 2026-11-12)
+const GLOWING: Record<string, [number, number, number]> = { c24: [0.516, 0.508, 0.62] };
 
 // coloured drawings whose dark lines vanish on the night paper: at night these are turned light, colours kept
 const DARK_LINES = new Set(['c36', 'c41', 'c50', 'c54']);
@@ -16,6 +19,7 @@ const make = (kind: 'top' | 'bottom', rows: Row[]): HymnOrnament[] =>
   rows.map(([key, w, h, bw]) => ({
     src: `/hymn/${kind}-${key}.webp`, w, h, bw, dark: DARK_LINES.has(key),
     fly: FLYING.has(key) ? `/hymn/${kind}-${key}-fly.webp` : undefined,
+    glow: GLOWING[key],
   }));
 
 export const HYMN_TOP = make('top', [
