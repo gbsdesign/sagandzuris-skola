@@ -67,9 +67,23 @@ const IconIg = () => (<svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeW
 
 const HymnImg: React.FC<{ o: HymnOrnament; place: 'top' | 'bottom' }> = ({ o, place }) => {
   const [shown, setShown] = useState(false);
+  // a moving drawing (the dove) starts its flight only when it is first seen, once; still for „reduce motion“
+  const [fly, setFly] = useState(false);
+  const ref = useRef<HTMLImageElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!o.fly || !el || typeof IntersectionObserver === 'undefined') return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    const io = new IntersectionObserver((es) => {
+      if (es.some((e) => e.isIntersecting)) { setFly(true); io.disconnect(); }
+    }, { threshold: 0.6 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [o.fly]);
   return (
     <img
-      src={o.src}
+      ref={ref}
+      src={fly && o.fly ? o.fly : o.src}
       width={o.w}
       height={o.h}
       alt=""
@@ -78,6 +92,7 @@ const HymnImg: React.FC<{ o: HymnOrnament; place: 'top' | 'bottom' }> = ({ o, pl
       className={`${place === 'top' ? 'np-o-head' : 'np-o-tail'} ${o.bw ? 'np-o-bw' : ''} ${o.dark ? 'np-o-dark' : ''} ${shown ? 'in' : ''}`}
       style={{ width: `${(hymnWidth(o, place) * 100).toFixed(1)}%` }}
       onLoad={() => requestAnimationFrame(() => setShown(true))}
+      onError={() => setFly(false)}
     />
   );
 };
