@@ -58,3 +58,10 @@ test('the TV reports point at churches that exist, under monasteries the videos 
   }
   assert.ok(filmsOfChurch('cb4219ef').length >= 1, 'Bodbe has its report');
 });
+
+test('every church of „მსახურებები“ is in the list', async () => {
+  const { CHURCH_SERVICES } = await import('../src/data/churchServices');
+  const { byId } = await loadChurches();
+  for (const s of CHURCH_SERVICES) assert.ok(byId.has(s.id), s.name);
+  assert.equal(new Set(CHURCH_SERVICES.map(s => s.id)).size, CHURCH_SERVICES.length);
+});

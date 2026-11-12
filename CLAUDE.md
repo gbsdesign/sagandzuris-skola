@@ -439,6 +439,12 @@
   The same night (the user: „რუკის ნიშანი მრგვალად ძებნის ღილაკთან … კუთხეები პირდაპირ დატოვე … კომპაქტური“): no „კუთხეებით · რუკა“ tabs —
   the regions map shows at once, the bar's round 🗺 before the 🔍 (`ChurchMapButton`) swaps in the dots map; the three ways' tiles are
   compact (small icon beside the name, ~60 px tall), „ბოლოს ნანახი“ chips one line.
+  **„მსახურებები“ (2026-11-12**, the user's screenshot of a Facebook post's comments: which churches serve daily; „მარტო ადმინები
+  და მასწავლებლებისთვის … ცალკე კატეგორია“, answers „სიაში · გადაამოწმე · მეოთხე ფილად“): `data/churchServices.ts` (12 churches by
+  hand, each matched to churches.json within 70 m — all were in the list already, other spellings: ქაშუეთი, ფერიცვალება; mamadaviti
+  = `1960dc5d`), shown only to `isTeacher` (admins included): a fourth tile in `WaysRow` (four tiles = 2×2 on phones) → list
+  `services` (`ServicesList`), and a box in the church's window. The hours could not be confirmed online — the source line says
+  „მრევლის ცნობით“; orthodoxy.ge's old directory differs for ჯვართამაღლება (`checked`). Test in `tests/churches.test.ts`.
 - **Prayers** (`data/prayers.ts`, `public/prayers/`, `public/bible/`), psalter kathismas, 73 akathists,
   commemoration name lists (`utils/commemoration.ts`), prayer reminders via Web Push Worker
   `sagandzuri-reminders` (`worker/reminders/`; push works only on the deployed site).
