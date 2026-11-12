@@ -342,6 +342,14 @@
 .np-o-head{margin-top:3.4%;margin-bottom:1.2%}
 .np-o-tail{margin-top:2.4%;margin-bottom:4%}
 :is(.np-o-head,.np-o-tail).in{opacity:var(--hymn-op)}
+.np-o-box{position:relative;margin-left:auto;margin-right:auto;pointer-events:none}
+.np-o-box.head{margin-top:3.4%;margin-bottom:1.2%}
+.np-o-box.tail{margin-top:2.4%;margin-bottom:4%}
+.np-o-box>img{width:100%;margin:0}
+.np-o-glow{position:absolute;aspect-ratio:1;transform:translate(-50%,-50%);border-radius:50%;opacity:0;background:radial-gradient(circle closest-side,rgba(255,250,215,.85) 0%,rgba(255,222,100,.62) 30%,rgba(255,205,80,.28) 58%,rgba(255,200,80,0) 100%)}
+.np-o-glow.go{animation:np-o-glow 1.4s ease-in-out 3}
+@keyframes np-o-glow{0%,100%{opacity:0}50%{opacity:1}}
+@media (prefers-reduced-motion:reduce){.np-o-glow.go{animation:none}}
 /* night: black-and-white drawings take the ink's warm grey; coloured ones with dark lines (hymnOrnaments DARK_LINES)
    turn their lightness over but keep their hues */
 .np-root[data-paper="night"] .np-o-bw{filter:invert(1) brightness(.66) sepia(.4)}
@@ -402,7 +410,7 @@
 .np-root:not(.land):not(.wide) .np-cb-title{display:none}
 .np-root:is(.land,.wide) .np-cbar .np-startgrp{flex:none;width:auto}
 .np-root:is(.land,.wide) .np-cbar .lb{display:inline}
-.np-root.church :is(.np-pg,.np-o-head,.np-o-tail,.np-band,.np-endnote){display:none}
+.np-root.church :is(.np-pg,.np-o-box,.np-o-head,.np-o-tail,.np-band,.np-endnote){display:none}
 .np-frame-scroll{scrollbar-width:thin}
 
 /* ---------- toast ---------- */

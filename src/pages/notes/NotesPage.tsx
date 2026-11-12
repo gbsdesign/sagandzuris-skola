@@ -67,33 +67,48 @@ const IconIg = () => (<svg viewBox="0 0 24 24" fill="none" stroke="#fff" strokeW
 
 const HymnImg: React.FC<{ o: HymnOrnament; place: 'top' | 'bottom' }> = ({ o, place }) => {
   const [shown, setShown] = useState(false);
-  // a moving drawing (the dove) starts its flight only when it is first seen, once; still for „reduce motion“
-  const [fly, setFly] = useState(false);
+  // a moving drawing (the dove's flight, the flower's light) starts only when it is first seen, once; still for „reduce motion“
+  const [seen, setSeen] = useState(false);
+  const [flyFailed, setFlyFailed] = useState(false);
+  const moving = !!(o.fly || o.glow);
   const ref = useRef<HTMLImageElement>(null);
   useEffect(() => {
     const el = ref.current;
-    if (!o.fly || !el || typeof IntersectionObserver === 'undefined') return;
+    if (!moving || !el || typeof IntersectionObserver === 'undefined') return;
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     const io = new IntersectionObserver((es) => {
-      if (es.some((e) => e.isIntersecting)) { setFly(true); io.disconnect(); }
+      if (es.some((e) => e.isIntersecting)) { setSeen(true); io.disconnect(); }
     }, { threshold: 0.6 });
     io.observe(el);
     return () => io.disconnect();
-  }, [o.fly]);
-  return (
+  }, [moving]);
+  const width = `${(hymnWidth(o, place) * 100).toFixed(1)}%`;
+  const img = (
     <img
       ref={ref}
-      src={fly && o.fly ? o.fly : o.src}
+      src={seen && o.fly && !flyFailed ? o.fly : o.src}
       width={o.w}
       height={o.h}
       alt=""
       aria-hidden
       draggable={false}
       className={`${place === 'top' ? 'np-o-head' : 'np-o-tail'} ${o.bw ? 'np-o-bw' : ''} ${o.dark ? 'np-o-dark' : ''} ${shown ? 'in' : ''}`}
-      style={{ width: `${(hymnWidth(o, place) * 100).toFixed(1)}%` }}
+      style={o.glow ? undefined : { width }}
       onLoad={() => requestAnimationFrame(() => setShown(true))}
-      onError={() => setFly(false)}
+      onError={() => setFlyFailed(true)}
     />
+  );
+  if (!o.glow) return img;
+  const [x, y, size] = o.glow;
+  return (
+    <div className={`np-o-box ${place === 'top' ? 'head' : 'tail'}`} style={{ width }}>
+      {img}
+      <span
+        className={`np-o-glow ${seen && shown ? 'go' : ''}`}
+        style={{ left: `${x * 100}%`, top: `${y * 100}%`, width: `${size * 100}%` }}
+        aria-hidden
+      />
+    </div>
   );
 };
 
