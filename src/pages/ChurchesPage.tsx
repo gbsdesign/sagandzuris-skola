@@ -1,7 +1,8 @@
 import React, { Suspense, lazy, useCallback, useEffect, useMemo, useState } from 'react';
 import { BookOpen, CalendarClock, Check, ChevronDown, Church as ChurchIcon, ChevronRight, Globe, History, Loader2, LocateFixed, Map as MapIcon, MapPin, Play, RefreshCw, Search, Sparkles } from 'lucide-react';
 import { useNavigation, useRealAuth } from '../context';
-import { CHURCH_SERVICES, SERVICES_SOURCE } from '../data/churchServices';
+import { CHURCH_SERVICES, SERVICES_SOURCE, hasTime, type ChurchService, type ServiceTime } from '../data/churchServices';
+import { SlotRow } from './churches/ServiceSlots';
 import { RegionLocator, RegionPuzzleMap } from '../components/maps/RegionPuzzleMap';
 import { Btn, FIELD, IconBtn, Sheet, Tabs } from '../components/ui/kit';
 import { triggerHaptic } from '../utils/haptics';
@@ -238,34 +239,48 @@ const WAY_TONE = {
 const WAY_ICON = { wine: 'bg-white/15 text-[#fbf6ec]', gold: 'bg-[#b07a1e]/15 text-[#8a5a0e]', green: 'bg-[#2f6b3a]/10 text-[#2f6b3a]', blue: 'bg-[#2c5a7a]/10 text-[#2c5a7a]' } as const;
 const WAY_LINE = { wine: 'text-[#fbf6ec]/80', gold: 'text-[#8a5a0e]', green: 'text-[#2f6b3a]', blue: 'text-[#2c5a7a]' } as const;
 
-/** „მსახურებები“ (admins and teachers only): the churches the parishioners said serve every day, with what they said */
+/** „მსახურებები“ (admins and teachers only): the churches the parishioners said serve every day; chips pick the time of day */
+const TIME_CHIPS = [['all', 'ყველა'], ['morning', 'დილით'], ['night', 'ღამით']] as const;
 const ServicesList: React.FC<{ data: ChurchData; visits: Visits; onOpen: (id: string) => void }> = ({ data, visits, onOpen }) => {
-  const rows = CHURCH_SERVICES.map(s => ({ s, c: data.byId.get(s.id) })).filter((r): r is { s: typeof r.s; c: Church } => !!r.c);
+  const [when, setWhen] = useState<ServiceTime | 'all'>(() => {
+    try { const v = sessionStorage.getItem('sg-services-time'); return v === 'morning' || v === 'night' ? v : 'all'; } catch { return 'all'; }
+  });
+  const pick = (w: ServiceTime | 'all') => { setWhen(w); try { sessionStorage.setItem('sg-services-time', w); } catch { /* */ } };
+  const all = CHURCH_SERVICES.map(s => ({ s, c: data.byId.get(s.id) })).filter((r): r is { s: ChurchService; c: Church } => !!r.c);
+  const rows = all.filter(r => hasTime(r.s, when));
   return (
     <div className="w-full flex flex-col gap-3 animate-in fade-in duration-200">
-      <div className="flex items-center gap-3 px-1 pb-3 border-b border-[#e4d8c4]">
-        <span className="w-12 h-12 rounded-2xl bg-[#2c5a7a] text-white flex items-center justify-center shrink-0"><CalendarClock className="w-6 h-6" /></span>
-        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-          <h3 className="text-lg sm:text-xl font-black text-[#2a2017] leading-tight">მსახურებები</h3>
-          <span className="text-xs font-bold text-[#2c5a7a]">{rows.length} ტაძარი · ხედავენ მხოლოდ ადმინები და მასწავლებლები</span>
+      <div className="flex items-center gap-3 px-1">
+        <span className="w-11 h-11 rounded-2xl bg-[#2c5a7a] text-white flex items-center justify-center shrink-0"><CalendarClock className="w-5 h-5" /></span>
+        <div className="flex-1 min-w-0 flex flex-col">
+          <h3 className="text-lg font-black text-[#2a2017] leading-tight">მსახურებები</h3>
+          <span className="text-[12px] font-bold text-[#8a7a6a]">ხედავენ მხოლოდ ადმინები და მასწავლებლები</span>
         </div>
       </div>
-      <ul className="flex flex-col divide-y divide-[#efe5d4] rounded-3xl bg-white/80 ring-1 ring-[#e8dcc8] overflow-hidden">
+      <div className="flex flex-wrap gap-1.5" role="group" aria-label="დრო">
+        {TIME_CHIPS.map(([id, label]) => (
+          <Chip key={id} on={when === id} label={label} n={all.filter(r => hasTime(r.s, id)).length} onClick={() => pick(id)} />
+        ))}
+      </div>
+      <ul className="flex flex-col gap-2">
         {rows.map(({ s, c }) => (
           <li key={s.id}>
-            <button type="button" onClick={() => onOpen(c.id)} className="group w-full flex items-start gap-3 p-3 text-left cursor-pointer hover:bg-[#fcf6ea] active:bg-[#f7eddc] transition-colors">
-              <span className="flex-1 min-w-0 flex flex-col gap-1">
-                <span className="text-[15px] font-bold text-[#2a2017] leading-snug group-hover:text-[#7a2028] transition-colors">
+            <button type="button" onClick={() => onOpen(c.id)}
+              className="group w-full flex flex-col gap-2 p-3 text-left rounded-2xl bg-white/85 ring-1 ring-[#e8dcc8] cursor-pointer hover:ring-[#7a2028]/30 active:bg-[#f7eddc] transition">
+              <span className="flex items-center gap-2">
+                <span className="flex-1 min-w-0 text-[15px] font-bold text-[#2a2017] leading-snug group-hover:text-[#7a2028] transition-colors">
                   {visits[c.id] && <Check className="inline w-4 h-4 mr-1 text-[#2f6b3a] align-[-2px]" aria-label="ვიყავი" />}{s.name}
                 </span>
-                {s.lines.map(l => <span key={l} className="text-[13.5px] font-semibold text-[#574739] leading-snug">{l}</span>)}
+                <ChevronRight className="w-5 h-5 shrink-0 text-[#c8b8a2] group-hover:text-[#7a2028]" />
               </span>
-              <ChevronRight className="w-5 h-5 mt-0.5 shrink-0 text-[#c8b8a2] group-hover:text-[#7a2028]" />
+              <span className="flex flex-col gap-1.5">
+                {s.slots.filter(x => when === 'all' || x.when === when).map(x => <SlotRow key={x.when + x.what} s={x} inButton />)}
+              </span>
             </button>
           </li>
         ))}
       </ul>
-      <p className="px-1 text-[12px] font-semibold text-[#8a7a6a] leading-relaxed">{SERVICES_SOURCE}. ტაძრის ფანჯარაში ჩანს დაწვრილებით.</p>
+      <p className="px-1 text-[11.5px] font-semibold text-[#8a7a6a] leading-relaxed">{SERVICES_SOURCE}</p>
     </div>
   );
 };
