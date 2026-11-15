@@ -6,7 +6,7 @@ import { useAuth } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 import { fireworks } from '../../utils/samosiFireworks';
 import { KABA_PARTS, KABA_TOTAL, KabaPart } from '../../data/kabaData';
-import { KabaHead, useKabaArt } from '../../utils/kabaArt';
+import { KabaHeads, kabaReady, useKabaArt } from '../../utils/kabaArt';
 import { KabaFigure } from './KabaFigure';
 import { KabaStudio } from './KabaStudio';
 import { setTried, useTried } from '../../utils/samosiTry';
@@ -18,7 +18,7 @@ const KNOWN = new Set(KABA_PARTS.map(p => p.id));
 // watches it come together. Since 2026-11-08 as the chokha: a tapped part is only tried on (utils/samosiTry.ts, gone
 // once the page is left), a photographed real one stays (utils/samosiProof.ts, students/{uid}.kabaReal). The owner also
 // sees the studio that makes the pictures.
-export const KabaSamosi: React.FC<{ published: boolean; head: KabaHead }> = ({ published, head }) => {
+export const KabaSamosi: React.FC<{ published: boolean; heads: KabaHeads }> = ({ published, heads }) => {
   const { user, isOwner } = useAuth();
   const pieces = useKabaArt(true);
   const [real, setReal] = useState<string[]>([]);
@@ -48,7 +48,7 @@ export const KabaSamosi: React.FC<{ published: boolean; head: KabaHead }> = ({ p
   const complete = done === KABA_TOTAL;
   const realDone = real.length;
   const realComplete = realDone === KABA_TOTAL;
-  const ready = !!pieces?.full && KABA_PARTS.every(p => pieces[p.id]);
+  const ready = kabaReady(pieces);
 
   // a tap tries a part on or takes it off again; a real part only shows its card (it stays)
   const toggle = (p: KabaPart) => {
@@ -90,7 +90,7 @@ export const KabaSamosi: React.FC<{ published: boolean; head: KabaHead }> = ({ p
       {ready && (published || isOwner) && (
         <>
           <div className="relative pt-3 pb-1 rounded-2xl bg-[radial-gradient(ellipse_at_50%_45%,#ffffff_42%,#f6efe3_100%)]">
-            <KabaFigure pieces={pieces} on={has} drops={drops} shine={complete ? shine : null} place={head} />
+            <KabaFigure pieces={pieces} on={has} drops={drops} shine={complete ? shine : null} places={heads} />
             {cheer && (
               <div className="absolute inset-x-0 bottom-3 flex justify-center pointer-events-none z-10" role="status" aria-live="polite">
                 <div key={cheer.n} className="samosi-cheer px-6 py-3.5 rounded-2xl bg-white/90 backdrop-blur-sm ring-1 ring-[#eadfcb] shadow-[0_14px_36px_-14px_rgba(74,52,38,0.5)] text-center">
@@ -162,7 +162,7 @@ export const KabaSamosi: React.FC<{ published: boolean; head: KabaHead }> = ({ p
         </>
       )}
 
-      {isOwner && <KabaStudio pieces={pieces} published={published} head={head} />}
+      {isOwner && <KabaStudio pieces={pieces} published={published} heads={heads} />}
     </div>
   );
 };

@@ -1814,6 +1814,19 @@ listens (Gemini through Firebase AI Logic). 8 calls on Android (wake lock, push,
   photo's style on green, each part is cut out of it, the green is keyed out in the browser (`utils/kabaArt.ts`), kept
   in `samosiArt/kaba-*` (Firestore bytes); members see the kaba only after „გამოქვეყნება“ (`samosiArt/kaba.published`).
   Until the owner makes and publishes the pictures on the live site, members see only the chokha.
+  **The user's own outfit (2026-11-15**; the user sent 14 photos of a woman in church in a black velvet katibi: „სამოსის
+  განყოფილებაში ასეთი სამოსი ამიწყე ნამდვილი ნახატით როგორც ჩოხაა“, answers „ა ა“ = the studio draws it · the kaba becomes this
+  outfit): the dress picture is a pale grey-blue dress under a floor-length black velvet katibi with long hanging slit sleeves
+  lined with slate-blue-and-gold brocade (`FIGURE_PROMPT` in `utils/kabaArt.ts`; the brocade is called a blue so the green key
+  leaves it), drawn in the chokha photo's style from three garment-only crops of those photos (`public/home/samosi/ref/kaba-*.jpg`,
+  nobody's face; kept out of the precache by `globIgnores`). A sixth part „ბაღდადი“ (`baghdadi`, `head` + `over`: the patterned
+  silk kerchief worn over the lechaki — the Georgian Encyclopedia's „ბაღდადი“, „ლეჩაქი“, „თავსაბურავი“; no second source found)
+  has a picture of its own (`HEAD_PROMPTS`) and lies over the dress's layers (`KabaFigure` lays the collar's room over the dress
+  again). Each headdress has its own place (`samosiArt/kaba.heads {id: {y, w}}`, the old `head` = the veil's; `kabaHeadPlace`).
+  A part made before the dress picture kept now is stale (`kabaStale`, by `at`): the studio marks it „ძველია“, „ყველა დარჩენილის
+  შექმნა“ makes it again, and the dress shows only when `kabaReady` — so it stays hidden from members until the owner draws the
+  new dress, makes all six parts and publishes. „ჩაიცვი ქართულად“ puts the kerchief on last (`KABA_STEPS`); its paper kit keeps
+  its five drawn pieces (it filters the steps). The hanging sleeves' old name („ყურთმაჯი“) was not verified — not in the app's words.
 5. **My voice**: the user wants AI to learn their voice. Plan discussed 2026-10-06: speech via ElevenLabs
    voice cloning (supports Georgian); singing via RVC voice conversion (Applio on Google Colab — the user's
    PC has only a 2 GB MX130 GPU). Generated audio is made in advance and served like other recordings.

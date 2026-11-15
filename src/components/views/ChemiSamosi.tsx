@@ -349,7 +349,7 @@ export const ChemiSamosi: React.FC<{ side?: React.ReactNode; bare?: boolean; row
               ))}
             </div>
           )}
-          {shown === 'kaba' ? <KabaSamosi published={kaba.published} head={kaba.head} /> : (<>
+          {shown === 'kaba' ? <KabaSamosi published={kaba.published} heads={kaba.heads} /> : (<>
           {/* the chokha coming together */}
           <div className="relative pt-3 pb-1 rounded-2xl bg-[radial-gradient(ellipse_at_50%_45%,#ffffff_42%,#f6efe3_100%)]">
             {/* the colour picker: a small round button, the eight colours fold out of it; one colour for it all */}

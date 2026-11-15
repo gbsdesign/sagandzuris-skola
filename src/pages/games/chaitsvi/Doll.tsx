@@ -2,7 +2,7 @@ import React from 'react';
 import { SAMOSI_ASPECT, SAMOSI_FIGURE, SAMOSI_PARTS, samosiLayer, samosiThumb, type SamosiPart, type SamosiPhoto } from '../../../data/samosiData';
 import { KABA_PARTS } from '../../../data/kabaData';
 import { KabaFigure } from '../../../components/views/KabaFigure';
-import { useKabaArt, useKabaSettings, type KabaHead, type KabaPiece } from '../../../utils/kabaArt';
+import { kabaReady, useKabaArt, useKabaSettings, type KabaHeads, type KabaPiece } from '../../../utils/kabaArt';
 import { useAuth } from '../../../context';
 import { HAT, HATS, stepsOf, type Outfit } from '../../../utils/chaitsvi';
 
@@ -43,14 +43,14 @@ export const partLook = (outfit: Outfit, id: string, hat: HatPick, kaba: KabaArt
 export const labelOf = (outfit: Outfit, id: string, hat: HatPick) => partLook(outfit, id, hat, null).label;
 
 /** the dress's pictures when members may see them (or the owner, who makes them); null = the chokha only */
-export interface KabaArt { pieces: Record<string, KabaPiece>; head: KabaHead }
+export interface KabaArt { pieces: Record<string, KabaPiece>; heads: KabaHeads }
 export const useKaba = (): KabaArt | null => {
   const { isOwner } = useAuth();
   const settings = useKabaSettings();
   const on = settings.published || isOwner;
   const pieces = useKabaArt(on);
-  if (!on || !pieces?.full || !stepsOf('kaba').every(s => pieces[s.id])) return null;
-  return { pieces, head: settings.head };
+  if (!on || !pieces || !kabaReady(pieces) || !stepsOf('kaba').every(s => pieces[s.id])) return null;
+  return { pieces, heads: settings.heads };
 };
 
 export const Doll: React.FC<{
@@ -64,7 +64,7 @@ export const Doll: React.FC<{
 }> = ({ outfit, on, hat, kaba, drops = {}, done = false }) => {
   const has = (id: string) => on.includes(id);
   if (outfit === 'kaba' && kaba) {
-    return <KabaFigure pieces={kaba.pieces} on={has} drops={drops} shine={done ? 1 : null} place={kaba.head} />;
+    return <KabaFigure pieces={kaba.pieces} on={has} drops={drops} shine={done ? 1 : null} places={kaba.heads} />;
   }
   const photo = hatPhotoOf(hat);
   return (

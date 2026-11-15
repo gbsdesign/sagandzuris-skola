@@ -1,17 +1,19 @@
 import React, { useEffect, useState } from 'react';
 import { Wand2, RotateCcw, Check, Eye, EyeOff, ArrowUp, ArrowDown, Minus, Plus } from 'lucide-react';
 import { useAuth } from '../../context';
-import { KABA_PARTS, KabaPart } from '../../data/kabaData';
+import { KABA_HEADS, KABA_PARTS, KabaPart } from '../../data/kabaData';
 import {
-  KabaError, KabaHead, KabaPiece, KABA_PROBLEM_TEXT, canvasUrl, makeKabaFigure, makeKabaPart, publishKaba, saveKabaHead, saveKabaPiece,
+  KabaError, KabaHeads, KabaPiece, KABA_PROBLEM_TEXT, canvasUrl, kabaHeadPlace, kabaReady, kabaStale, makeKabaFigure, makeKabaPart, publishKaba,
+  saveKabaHead, saveKabaPiece,
 } from '../../utils/kabaArt';
 import { Btn, IconBtn, askConfirm } from '../ui/kit';
 import { KabaFigure } from './KabaFigure';
 
 // The owner's studio for the kaba's pictures (redesign stage 5): 1) Gemini draws the whole dress in the chokha's
 // style — again until it is right, then „ეს მომწონს“ keeps it; 2) the parts are cut out of it one by one (each can be
-// made again); 3) „გამოქვეყნება“ shows the dress to the members. Nothing reaches the members before step 3.
-export const KabaStudio: React.FC<{ pieces: Record<string, KabaPiece>; published: boolean; head: KabaHead }> = ({ pieces, published, head }) => {
+// made again; a part cut out of an older dress picture is marked „ძველია“ and counts as missing); 3) „გამოქვეყნება“
+// shows the dress to the members. Nothing reaches the members before step 3.
+export const KabaStudio: React.FC<{ pieces: Record<string, KabaPiece>; published: boolean; heads: KabaHeads }> = ({ pieces, published, heads }) => {
   const { user } = useAuth();
   const [draft, setDraft] = useState<{ c: HTMLCanvasElement; url: string } | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
@@ -45,7 +47,7 @@ export const KabaStudio: React.FC<{ pieces: Record<string, KabaPiece>; published
   };
 
   const makeMissing = async () => {
-    for (const p of KABA_PARTS) if (!pieces[p.id]) await makePart(p);
+    for (const p of KABA_PARTS) if (!pieces[p.id] || kabaStale(pieces, p.id)) await makePart(p);
   };
 
   const publish = async (on: boolean) => {
@@ -54,7 +56,7 @@ export const KabaStudio: React.FC<{ pieces: Record<string, KabaPiece>; published
     setBusy(null);
   };
 
-  const ready = !!pieces.full && KABA_PARTS.every(p => pieces[p.id]);
+  const ready = kabaReady(pieces);
   const all = () => true;
 
   return (
@@ -89,20 +91,23 @@ export const KabaStudio: React.FC<{ pieces: Record<string, KabaPiece>; published
         <div className="space-y-2">
           <p className="text-[13px] font-bold text-[#4a3426]">2. ნაწილები</p>
           <div className="grid grid-cols-2 min-[480px]:grid-cols-3 gap-2">
-            {KABA_PARTS.map(p => (
-              <div key={p.id} className="flex items-center gap-2 rounded-xl bg-white ring-1 ring-[#e8dcc8] p-1.5">
-                <span className="w-11 h-11 shrink-0 rounded-lg bg-[#f6efe3] flex items-center justify-center overflow-hidden">
-                  {pieces[p.id]?.thumb && <img src={pieces[p.id].thumb} alt="" className="w-10 h-10 object-contain" />}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <p className="text-[13px] font-bold text-[#4a3426] truncate">{p.label}</p>
-                  <button type="button" onClick={() => makePart(p)} disabled={!!busy}
-                    className="text-[12px] font-bold text-[#7a2028] cursor-pointer disabled:opacity-40">
-                    {busy === p.id ? 'იჭრება…' : pieces[p.id] ? 'თავიდან' : 'შექმნა'}
-                  </button>
+            {KABA_PARTS.map(p => {
+              const old = kabaStale(pieces, p.id);
+              return (
+                <div key={p.id} className="flex items-center gap-2 rounded-xl bg-white ring-1 ring-[#e8dcc8] p-1.5">
+                  <span className="w-11 h-11 shrink-0 rounded-lg bg-[#f6efe3] flex items-center justify-center overflow-hidden">
+                    {pieces[p.id]?.thumb && <img src={pieces[p.id].thumb} alt="" className={`w-10 h-10 object-contain ${old ? 'grayscale opacity-50' : ''}`} />}
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-[13px] font-bold text-[#4a3426] truncate">{p.label}</p>
+                    <button type="button" onClick={() => makePart(p)} disabled={!!busy}
+                      className="text-[12px] font-bold text-[#7a2028] cursor-pointer disabled:opacity-40">
+                      {busy === p.id ? 'იჭრება…' : old ? 'ძველია — თავიდან' : pieces[p.id] ? 'თავიდან' : 'შექმნა'}
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
           {!ready && <Btn kind="soft" icon={<Wand2 />} onClick={makeMissing} disabled={!!busy}>ყველა დარჩენილის შექმნა</Btn>}
         </div>
@@ -113,16 +118,21 @@ export const KabaStudio: React.FC<{ pieces: Record<string, KabaPiece>; published
         <div className="space-y-3">
           <p className="text-[13px] font-bold text-[#4a3426]">3. ასე გამოჩნდება</p>
           <div className="rounded-2xl bg-[radial-gradient(ellipse_at_50%_45%,#ffffff_42%,#f6efe3_100%)] pt-2 pb-1">
-            <KabaFigure pieces={pieces} on={all} place={head} />
+            <KabaFigure pieces={pieces} on={all} places={heads} />
           </div>
-          {/* the headdress: up or down over the collar, smaller or bigger */}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[13px] text-[#75685a] mr-auto">ლეჩაქის ადგილი</span>
-            <IconBtn label="მაღლა" onClick={() => saveKabaHead({ ...head, y: head.y - 2 })}><ArrowUp /></IconBtn>
-            <IconBtn label="დაბლა" onClick={() => saveKabaHead({ ...head, y: head.y + 2 })}><ArrowDown /></IconBtn>
-            <IconBtn label="პატარა" onClick={() => saveKabaHead({ ...head, w: Math.max(20, head.w - 4) })}><Minus /></IconBtn>
-            <IconBtn label="დიდი" onClick={() => saveKabaHead({ ...head, w: Math.min(100, head.w + 4) })}><Plus /></IconBtn>
-          </div>
+          {/* each headdress: up or down over the collar, smaller or bigger */}
+          {KABA_HEADS.map(p => {
+            const head = kabaHeadPlace(heads, p.id);
+            return (
+              <div key={p.id} className="flex flex-wrap items-center gap-2">
+                <span className="text-[13px] text-[#75685a] mr-auto">{p.label}ს ადგილი</span>
+                <IconBtn label="მაღლა" onClick={() => saveKabaHead(p.id, { ...head, y: head.y - 2 })}><ArrowUp /></IconBtn>
+                <IconBtn label="დაბლა" onClick={() => saveKabaHead(p.id, { ...head, y: head.y + 2 })}><ArrowDown /></IconBtn>
+                <IconBtn label="პატარა" onClick={() => saveKabaHead(p.id, { ...head, w: Math.max(20, head.w - 4) })}><Minus /></IconBtn>
+                <IconBtn label="დიდი" onClick={() => saveKabaHead(p.id, { ...head, w: Math.min(100, head.w + 4) })}><Plus /></IconBtn>
+              </div>
+            );
+          })}
           <Btn kind={published ? 'ghost' : 'primary'} full icon={published ? <EyeOff /> : <Eye />} onClick={() => publish(!published)} disabled={!!busy}>
             {published ? 'წევრებისთვის დამალვა' : 'გამოქვეყნება წევრებისთვის'}
           </Btn>

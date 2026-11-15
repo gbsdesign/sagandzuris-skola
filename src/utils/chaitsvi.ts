@@ -28,13 +28,14 @@ export const CHOKHA_STEPS: DressStep[] = [
   { id: 'khanjali', needs: ['kamari'], why: 'ხანჯალი ქამარზე ეკიდება.' },
   { id: HAT, needs: ['akhalukhi', 'chokha', 'masrebi', 'kamari', 'khanjali'], why: 'ქუდი ბოლოს იხურება.' },
 ];
-/** the dress: the dress first, its chest panel and sash on it, the overcoat over them, the veil last */
+/** the dress: the dress first, its chest panel and sash on it, the overcoat over them, the veil, the kerchief over the veil last */
 export const KABA_STEPS: DressStep[] = [
   { id: 'kaba', needs: [], why: '' },
   { id: 'gulispiri', needs: ['kaba'], why: 'გულისპირი კაბის მკერდზე მაგრდება.' },
   { id: 'sartqeli', needs: ['kaba'], why: 'სარტყელი კაბას წელზე ერტყმება.' },
   { id: 'katibi', needs: ['kaba', 'gulispiri', 'sartqeli'], why: 'ქათიბი ყველაფერზე ზემოდან იცმევა.' },
-  { id: 'lechaki', needs: ['kaba', 'gulispiri', 'sartqeli', 'katibi'], why: 'ლეჩაქი ბოლოს იხურება.' },
+  { id: 'lechaki', needs: ['kaba', 'gulispiri', 'sartqeli', 'katibi'], why: 'ლეჩაქი ქათიბის შემდეგ იხურება.' },
+  { id: 'baghdadi', needs: ['kaba', 'gulispiri', 'sartqeli', 'katibi', 'lechaki'], why: 'ბაღდადი ბოლოს, ლეჩაქის ზემოდან იხვევა.' },
 ];
 export const stepsOf = (o: Outfit) => (o === 'kaba' ? KABA_STEPS : CHOKHA_STEPS);
 

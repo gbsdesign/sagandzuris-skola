@@ -29,12 +29,17 @@ test('the chokha goes on in its order: the undershirt, the chokha, cartridges an
   assert.deepEqual(tryPut('chokha', on, 'chokha'), { ok: true, on });
 });
 
-test('the dress: the dress first, chest panel and sash, the overcoat over them, the veil last', () => {
+test('the dress: the dress first, chest panel and sash, the overcoat over them, the veil, the kerchief last', () => {
   const r = tryPut('kaba', ['kaba', 'gulispiri'], 'katibi');
   assert.equal(r.ok, false);
   if (!r.ok) assert.deepEqual(r.missing, ['sartqeli']);
   assert.equal(tryPut('kaba', ['kaba', 'sartqeli', 'gulispiri'], 'katibi').ok, true);
-  assert.equal(isDressed('kaba', ['kaba', 'gulispiri', 'sartqeli', 'katibi', 'lechaki']), true);
+  // the kerchief goes over the veil
+  const early = tryPut('kaba', ['kaba', 'gulispiri', 'sartqeli', 'katibi'], 'baghdadi');
+  assert.equal(early.ok, false);
+  if (!early.ok) assert.deepEqual(early.missing, ['lechaki']);
+  assert.equal(isDressed('kaba', ['kaba', 'gulispiri', 'sartqeli', 'katibi', 'lechaki']), false);
+  assert.equal(isDressed('kaba', ['kaba', 'gulispiri', 'sartqeli', 'katibi', 'lechaki', 'baghdadi']), true);
 });
 
 test('every step is a part of „ჩემი სამოსი“, and each order can be finished', () => {
