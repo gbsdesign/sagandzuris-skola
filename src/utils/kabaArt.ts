@@ -4,12 +4,13 @@ import { Bytes, collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { startAppCheck, TRYON_MODEL } from './samosiTryOn';
 import { SAMOSI_FIGURE, SAMOSI_PARTS, samosiLayer } from '../data/samosiData';
-import { KABA_PARTS, type KabaPart } from '../data/kabaData';
+import { KABA_PARTS, KABA_TOTAL, type KabaPart } from '../data/kabaData';
 
 // The pictures of „ქართული კაბა“ (redesign stage 5). The owner makes them in the studio: Gemini draws the whole dress
 // in the chokha photo's style on flat green, then each part is cut out of that one picture (so the parts stack), and
 // each headdress gets a picture of its own; the green is keyed out here. Kept in Firestore (no Storage):
-//   samosiArt/kaba            {published, at, by, heads}  members see the dress only while published
+//   samosiArt/kaba            {published, parts, at, by, heads}  members see the dress only while published — and
+//                             published with as many parts as the dress has now (`parts`)
 //   samosiArt/kaba-full       {image, mime, w, h, at}
 //   samosiArt/kaba-<partId>   {image, thumb, mime, w, h, at}
 
@@ -256,8 +257,10 @@ export const saveKabaPiece = async (id: string, c: HTMLCanvasElement) => {
   });
 };
 
+/** shows the dress to the members or hides it; `parts` = how many parts it was published with — a dress published
+ *  before a part was added (2026-11-15: the baghdadi) is not shown until its owner publishes it again */
 export const publishKaba = (published: boolean, by: string) =>
-  setDoc(doc(db, 'samosiArt', 'kaba'), { published, at: new Date().toISOString(), by }, { merge: true });
+  setDoc(doc(db, 'samosiArt', 'kaba'), { published, parts: published ? KABA_TOTAL : 0, at: new Date().toISOString(), by }, { merge: true });
 
 /** where a headdress sits over the collar: `y` = how far it reaches down past the collar, `w` = its width (both % of
  *  the figure's width); the owner nudges them in the studio */
@@ -297,7 +300,7 @@ export const useKabaSettings = () => {
       const place = placeOf(h);
       if (place) heads[id] = place;
     }
-    setV({ published: d?.published === true, heads, loaded: true });
+    setV({ published: d?.published === true && d?.parts === KABA_TOTAL, heads, loaded: true });
   }, () => setV({ published: false, heads: {}, loaded: true })), []);
   return v;
 };

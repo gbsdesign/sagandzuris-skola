@@ -1824,8 +1824,10 @@ listens (Gemini through Firebase AI Logic). 8 calls on Android (wake lock, push,
   has a picture of its own (`HEAD_PROMPTS`) and lies over the dress's layers (`KabaFigure` lays the collar's room over the dress
   again). Each headdress has its own place (`samosiArt/kaba.heads {id: {y, w}}`, the old `head` = the veil's; `kabaHeadPlace`).
   A part made before the dress picture kept now is stale (`kabaStale`, by `at`): the studio marks it „ძველია“, „ყველა დარჩენილის
-  შექმნა“ makes it again, and the dress shows only when `kabaReady` — so it stays hidden from members until the owner draws the
-  new dress, makes all six parts and publishes. „ჩაიცვი ქართულად“ puts the kerchief on last (`KABA_STEPS`); its paper kit keeps
+  შექმნა“ makes it again, and the dress shows only when `kabaReady`. „გამოქვეყნება“ also keeps how many parts it published
+  (`samosiArt/kaba.parts`); `useKabaSettings().published` is true only while that equals `KABA_TOTAL`, and keeping a new dress
+  picture unpublishes — so members never get an empty dress tab: it stays hidden until the owner draws the new dress, makes
+  all six parts and publishes again. „ჩაიცვი ქართულად“ puts the kerchief on last (`KABA_STEPS`); its paper kit keeps
   its five drawn pieces (it filters the steps). The hanging sleeves' old name („ყურთმაჯი“) was not verified — not in the app's words.
 5. **My voice**: the user wants AI to learn their voice. Plan discussed 2026-10-06: speech via ElevenLabs
    voice cloning (supports Georgian); singing via RVC voice conversion (Applio on Google Colab — the user's

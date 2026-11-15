@@ -33,9 +33,15 @@ export const KabaStudio: React.FC<{ pieces: Record<string, KabaPiece>; published
 
   const keepDress = async () => {
     if (!draft) return;
-    if (pieces.full && !(await askConfirm({ title: 'ახალი კაბა შევინახო?', text: 'ძველი ნაწილები ახალს აღარ დაემთხვევა — ისინი თავიდან უნდა შეიქმნას.', ok: 'შენახვა' }))) return;
+    const text = `ძველი ნაწილები ახალს აღარ დაემთხვევა — ისინი თავიდან უნდა შეიქმნას.${published ? ' წევრებს კაბა დაემალება, სანამ თავიდან არ გამოაქვეყნებ.' : ''}`;
+    if (pieces.full && !(await askConfirm({ title: 'ახალი კაბა შევინახო?', text, ok: 'შენახვა' }))) return;
     setBusy('save'); setProblem('');
-    try { await saveKabaPiece('full', draft.c); setDraft(null); } catch (e) { setProblem('ვერ შეინახა: ' + ((e as { code?: string })?.code || '')); }
+    try {
+      // the old parts no longer belong to the dress: nothing half-made reaches the members
+      if (published) await publishKaba(false, user?.email || '');
+      await saveKabaPiece('full', draft.c);
+      setDraft(null);
+    } catch (e) { setProblem('ვერ შეინახა: ' + ((e as { code?: string })?.code || '')); }
     setBusy(null);
   };
 
