@@ -35,6 +35,8 @@ export default defineConfig(() => {
             '**/node_modules/**/*',
             'notes/**', 'hymn/**', 'lives/**', 'prayers/**', 'bible/**', 'mtkmeli/**', 'audio/**', 'offline/**', 'wignebi/**',
             'assets/print/**',
+            // the dress studio's sample photos (utils/kabaArt.ts): only the owner's studio asks for them
+            'home/samosi/ref/**',
           ],
           // opens the prayer when a reminder notification is tapped
           importScripts: ['prayer-notify-sw.js'],

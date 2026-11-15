@@ -4,12 +4,13 @@ import { Bytes, collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { startAppCheck, TRYON_MODEL } from './samosiTryOn';
 import { SAMOSI_FIGURE, SAMOSI_PARTS, samosiLayer } from '../data/samosiData';
-import type { KabaPart } from '../data/kabaData';
+import { KABA_PARTS, KABA_TOTAL, type KabaPart } from '../data/kabaData';
 
 // The pictures of „ქართული კაბა“ (redesign stage 5). The owner makes them in the studio: Gemini draws the whole dress
 // in the chokha photo's style on flat green, then each part is cut out of that one picture (so the parts stack), and
-// the headdress gets a picture of its own; the green is keyed out here. Kept in Firestore (no Storage):
-//   samosiArt/kaba            {published, at, by}  members see the dress only while published
+// each headdress gets a picture of its own; the green is keyed out here. Kept in Firestore (no Storage):
+//   samosiArt/kaba            {published, parts, at, by, heads}  members see the dress only while published — and
+//                             published with as many parts as the dress has now (`parts`)
 //   samosiArt/kaba-full       {image, mime, w, h, at}
 //   samosiArt/kaba-<partId>   {image, thumb, mime, w, h, at}
 
@@ -47,16 +48,42 @@ const chokhaReference = async () => {
   return blobToBase64(await canvasBlob(c, 'image/jpeg', 0.9));
 };
 
+// The dress's own look (2026-11-15): three snapshots of the real outfit the user photographed in a church — the
+// garment only, nobody's face — in public/home/samosi/ref (left out of the app's offline download in vite.config.ts).
+// The model takes the cut, the colours and the brocade from them, everything else from the chokha photo.
+type Inline = { inlineData: { mimeType: string; data: string } };
+const REF_DIR = '/home/samosi/ref';
+const REF = { front: `${REF_DIR}/kaba-front.jpg`, back: `${REF_DIR}/kaba-back.jpg`, lining: `${REF_DIR}/kaba-lining.jpg` };
+/** a snapshot as the model takes it; nothing when it cannot be fetched (the prompt's words still describe the dress) */
+const snapshot = async (src: string): Promise<Inline[]> => {
+  try {
+    const r = await fetch(src);
+    const b = r.ok ? await r.blob() : null;
+    // a missing file comes back as the app's own page
+    return b && b.type.startsWith('image/') ? [{ inlineData: { mimeType: b.type, data: await blobToBase64(b) } }] : [];
+  } catch {
+    return [];
+  }
+};
+const snapshots = async (...srcs: string[]) => (await Promise.all(srcs.map(snapshot))).flat();
+
 const GREEN = 'Background: perfectly flat, uniform pure chroma-key green (#00FF00) everywhere around the garment, no shadow, no floor, no gradient, no text, no watermark. Do not use any green colour in the garment itself.';
+// the brocade of the overcoat's lining, the cuffs and the kerchief — a blue, so the green key leaves it alone
+const BROCADE = 'slate-blue silk brocade (a muted blue, never green) with a golden floral pattern';
 
 const FIGURE_PROMPT = [
-  'Make a studio product photograph in exactly the same style, framing, scale, camera angle, lighting and proportions as the reference photo of a Georgian chokha:',
+  'The first image is the style reference, a studio product photograph of a Georgian chokha. Make a photograph in exactly the same style, framing, scale, camera angle, lighting and proportions:',
   'the garment is worn by an invisible mannequin, seen from the front, standing straight, the hands relaxed at the sides as in the reference,',
-  'cut off at the neck (no head, no face, no hair), the whole length down to the hem.',
-  "The garment: the traditional Georgian women's festive dress (kartuli kaba) — a long dress of deep wine-red cloth with a fitted bodice,",
-  'long sleeves and a very long full skirt to the floor; on the chest an embroidered panel (gulispiri) in gold thread with small pearls;',
-  'a long embroidered sash (sartqeli) round the waist, its two ends hanging down the front below the knees; over the dress a short dark',
-  'velvet overcoat (katibi), open at the front, edged with gold braid. Authentic, modest, festive; nothing modern.',
+  'cut off at the neck (no head, no face, no hair, no headscarf), the whole length down to the hem.',
+  "The garment: a traditional Georgian women's festive dress (kartuli kaba). The other images are snapshots of the real outfit, taken from above in a church:",
+  'take from them ONLY the cut, the colours, the cloth and the brocade pattern — never the camera angle, the people, the headscarf or the background.',
+  `A long, plain, pale grey-blue dress with a fitted bodice, long narrow sleeves ending in cuffs of ${BROCADE}, and a long full skirt to the floor;`,
+  'on the chest a narrow embroidered panel (gulispiri) in gold thread with small pearls;',
+  'a long embroidered sash (sartqeli) round the waist, its two ends hanging down the front below the knees;',
+  'over the dress a floor-length black velvet overcoat (katibi), open at the front so that the dress, the chest panel and the sash show between its edges,',
+  "with two very long hanging sleeves: each is slit open along its length, the arm in the dress's grey-blue sleeve comes out through the slit, and the empty sleeve hangs freely from the shoulder down to the knee, ending in a rounded tip;",
+  `the hanging sleeves are lined with the same ${BROCADE}, which shows where their edges turn back; a thin gold piping runs along every edge of the overcoat.`,
+  'Authentic, modest, festive; nothing modern.',
   GREEN,
 ].join(' ');
 
@@ -65,13 +92,30 @@ const layerPrompt = (p: KabaPart) => [
   'Replace everything else with perfectly flat pure chroma-key green (#00FF00). Keep the image size and framing.',
 ].join(' ');
 
-const HEAD_PROMPT = [
-  "A studio product photograph of the traditional Georgian women's headdress that belongs to this dress, in the same style and lighting:",
-  'a round velvet headband (tavsakravi) embroidered with gold thread and small pearls, worn on an invisible head, with a long sheer',
-  'white tulle veil (lechaki) falling from under it down the back to the shoulders. Seen from the front, centred, filling most of the frame;',
-  'no face, no hair, no person.',
-  GREEN,
-].join(' ');
+// a headdress's own picture; the first image the model gets is the dress it belongs to
+const HEAD_PROMPTS: Record<string, { text: string; refs: string[] }> = {
+  lechaki: {
+    text: [
+      "A studio product photograph of the traditional Georgian women's headdress that belongs to this dress, in the same style and lighting:",
+      'a round velvet headband (tavsakravi) embroidered with gold thread and small pearls, worn on an invisible head, with a long sheer',
+      'white tulle veil (lechaki) falling from under it down the back to the shoulders. Seen from the front, centred, filling most of the frame;',
+      'no face, no hair, no person.',
+      GREEN,
+    ].join(' '),
+    refs: [],
+  },
+  baghdadi: {
+    text: [
+      "A studio product photograph of the kerchief that belongs to this dress, in the same style and lighting: a baghdadi, the festive kerchief of Georgian women's dress —",
+      `a large square of the same ${BROCADE} as the lining of the overcoat's hanging sleeves, with a thin gold edging,`,
+      'folded into a triangle and worn over an invisible head: it covers the crown, frames the empty place where the face would be and falls in soft folds onto both shoulders, its two ends hanging down in front.',
+      'Seen from the front, centred, filling most of the frame; no face, no hair, no person, no other garment.',
+      'The last two images show the real kerchief from behind and its cloth close up: take only the cloth, its colours and its pattern from them.',
+      GREEN,
+    ].join(' '),
+    refs: [REF.back, REF.lining],
+  },
+};
 
 export type KabaProblem = 'setup' | 'no-credits' | 'no-picture' | 'offline' | 'failed';
 export class KabaError extends Error {
@@ -85,7 +129,7 @@ export const KABA_PROBLEM_TEXT: Record<KabaProblem, string> = {
   failed: 'ვერ შეიქმნა — კიდევ სცადე.',
 };
 
-const askPicture = async (parts: ({ text: string } | { inlineData: { mimeType: string; data: string } })[], aspectRatio: '9:16' | '1:1') => {
+const askPicture = async (parts: ({ text: string } | Inline)[], aspectRatio: '9:16' | '1:1') => {
   try {
     await startAppCheck();
     const { getAI, getGenerativeModel, GoogleAIBackend, ResponseModality } = await import('firebase/ai');
@@ -172,7 +216,11 @@ const encode = async (c: HTMLCanvasElement): Promise<Blob> => {
 const bytesOf = async (b: Blob) => Bytes.fromUint8Array(new Uint8Array(await b.arrayBuffer()));
 
 /** the whole dress, as Gemini drew it, keyed */
-export const makeKabaFigure = async () => keyGreen(await askPicture([{ text: FIGURE_PROMPT }, { inlineData: { mimeType: 'image/jpeg', data: await chokhaReference() } }], '9:16'));
+export const makeKabaFigure = async () => keyGreen(await askPicture([
+  { text: FIGURE_PROMPT },
+  { inlineData: { mimeType: 'image/jpeg', data: await chokhaReference() } },
+  ...(await snapshots(REF.front, REF.back, REF.lining)),
+], '9:16'));
 
 /** one part: a layer cut out of the whole dress (`full` = the dress picture as Gemini drew it), or the headdress */
 export const makeKabaPart = async (part: KabaPart, fullSrc: string) => {
@@ -186,8 +234,9 @@ export const makeKabaPart = async (part: KabaPart, fullSrc: string) => {
   g.fillRect(0, 0, c.width, c.height);
   g.drawImage(full, 0, 0);
   const data = await blobToBase64(await canvasBlob(c, 'image/png'));
-  const src = part.head
-    ? await askPicture([{ text: HEAD_PROMPT }, { inlineData: { mimeType: 'image/png', data } }], '1:1')
+  const head = part.head ? HEAD_PROMPTS[part.id] ?? HEAD_PROMPTS.lechaki : null;
+  const src = head
+    ? await askPicture([{ text: head.text }, { inlineData: { mimeType: 'image/png', data } }, ...(await snapshots(...head.refs))], '1:1')
     : await askPicture([{ text: layerPrompt(part) }, { inlineData: { mimeType: 'image/png', data } }], '9:16');
   // a layer must lie exactly over the dress: same size as the dress picture
   return keyGreen(src, part.head ? 360 : full.naturalWidth);
@@ -208,30 +257,51 @@ export const saveKabaPiece = async (id: string, c: HTMLCanvasElement) => {
   });
 };
 
+/** shows the dress to the members or hides it; `parts` = how many parts it was published with — a dress published
+ *  before a part was added (2026-11-15: the baghdadi) is not shown until its owner publishes it again */
 export const publishKaba = (published: boolean, by: string) =>
-  setDoc(doc(db, 'samosiArt', 'kaba'), { published, at: new Date().toISOString(), by }, { merge: true });
+  setDoc(doc(db, 'samosiArt', 'kaba'), { published, parts: published ? KABA_TOTAL : 0, at: new Date().toISOString(), by }, { merge: true });
 
-/** where the headdress sits over the collar: `y` = how far it reaches down past the collar, `w` = its width (both % of
+/** where a headdress sits over the collar: `y` = how far it reaches down past the collar, `w` = its width (both % of
  *  the figure's width); the owner nudges them in the studio */
 export interface KabaHead { y: number; w: number }
-export const KABA_HEAD_DEFAULT: KabaHead = { y: 4, w: 56 };
-export const saveKabaHead = (head: KabaHead) => setDoc(doc(db, 'samosiArt', 'kaba'), { head }, { merge: true });
+/** each headdress's place, by its part's id (samosiArt/kaba.heads; the old single `head` was the veil's) */
+export type KabaHeads = Record<string, KabaHead>;
+// the kerchief falls onto the shoulders, so it reaches further down and is wider than the veil
+const HEAD_DEFAULTS: KabaHeads = { lechaki: { y: 4, w: 56 }, baghdadi: { y: 22, w: 72 } };
+export const kabaHeadPlace = (heads: KabaHeads | undefined, id: string): KabaHead => heads?.[id] ?? HEAD_DEFAULTS[id] ?? HEAD_DEFAULTS.lechaki;
+export const saveKabaHead = (id: string, head: KabaHead) => setDoc(doc(db, 'samosiArt', 'kaba'), { heads: { [id]: head } }, { merge: true });
 
-export interface KabaPiece { url: string; thumb?: string; w: number; h: number }
+const placeOf = (v: unknown): KabaHead | null => {
+  const h = v as { y?: unknown; w?: unknown } | null | undefined;
+  return h && typeof h.y === 'number' && typeof h.w === 'number' ? { y: h.y, w: h.w } : null;
+};
 
-/** whether members see the dress, and where its headdress sits */
+/** `at` = when it was made (ISO) */
+export interface KabaPiece { url: string; thumb?: string; w: number; h: number; at: string }
+
+/** a part made before the dress picture kept now: it no longer lies over the dress and must be made again */
+export const kabaStale = (pieces: Record<string, KabaPiece>, id: string) =>
+  !!pieces.full && !!pieces[id] && pieces[id].at < pieces.full.at;
+/** the dress can be shown: its picture and every part's, each made from that picture */
+export const kabaReady = (pieces: Record<string, KabaPiece> | null | undefined) =>
+  !!pieces?.full && KABA_PARTS.every(p => pieces[p.id] && !kabaStale(pieces, p.id));
+
+/** whether members see the dress, and where its headdresses sit */
 export const useKabaSettings = () => {
   // `loaded`: the answer has come
-  const [v, setV] = useState<{ published: boolean; head: KabaHead; loaded: boolean }>({ published: false, head: KABA_HEAD_DEFAULT, loaded: false });
+  const [v, setV] = useState<{ published: boolean; heads: KabaHeads; loaded: boolean }>({ published: false, heads: {}, loaded: false });
   useEffect(() => onSnapshot(doc(db, 'samosiArt', 'kaba'), s => {
     const d = s.data();
-    const h = d?.head;
-    setV({
-      published: d?.published === true,
-      head: h && typeof h.y === 'number' && typeof h.w === 'number' ? { y: h.y, w: h.w } : KABA_HEAD_DEFAULT,
-      loaded: true,
-    });
-  }, () => setV({ published: false, head: KABA_HEAD_DEFAULT, loaded: true })), []);
+    const heads: KabaHeads = {};
+    const old = placeOf(d?.head);
+    if (old) heads.lechaki = old;
+    for (const [id, h] of Object.entries((d?.heads ?? {}) as Record<string, unknown>)) {
+      const place = placeOf(h);
+      if (place) heads[id] = place;
+    }
+    setV({ published: d?.published === true && d?.parts === KABA_TOTAL, heads, loaded: true });
+  }, () => setV({ published: false, heads: {}, loaded: true })), []);
   return v;
 };
 
@@ -256,7 +326,7 @@ export const useKabaArt = (enabled: boolean) => {
           thumb = URL.createObjectURL(new Blob([v.thumb.toUint8Array() as Uint8Array<ArrayBuffer>], { type: 'image/png' }));
           urls.push(thumb);
         }
-        out[d.id.slice(5)] = { url, thumb, w: v.w || 1, h: v.h || 1 };
+        out[d.id.slice(5)] = { url, thumb, w: v.w || 1, h: v.h || 1, at: typeof v.at === 'string' ? v.at : '' };
       }
       setPieces(out);
     }, () => setPieces({}));

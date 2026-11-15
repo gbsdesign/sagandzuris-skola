@@ -23,7 +23,8 @@ const r1 = n => Math.round(n * 10) / 10;
 // ---------- the app's rules, read for the paper ----------
 const OUT = {
   chokha: { set: CHOKHA_SET, steps: A.CHOKHA_STEPS, parts: A.SAMOSI_PARTS, doll: boyDoll, label: 'ჩოხა', who: 'ბიჭის თოჯინა' },
-  kaba: { set: KABA_SET, steps: A.KABA_STEPS, parts: A.KABA_PARTS, doll: girlDoll, label: 'ქართული კაბა', who: 'გოგოს თოჯინა' },
+  // the paper doll has the five pieces drawn in dolls.js: the app's baghdadi (2026-11-15) has no paper piece yet
+  kaba: { set: KABA_SET, steps: A.KABA_STEPS.filter(s => KABA_SET.some(p => p.id === s.id)), parts: A.KABA_PARTS, doll: girlDoll, label: 'ქართული კაბა', who: 'გოგოს თოჯინა' },
 };
 const partOf = p => p.part ?? p.id; // the two cartridge holders are one part
 const stepIdOf = (o, pid) => (o === 'chokha' && HATS.includes(pid) ? HAT : pid);

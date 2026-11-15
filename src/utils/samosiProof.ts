@@ -35,8 +35,9 @@ const PART_WORDS: Record<string, string> = {
   kaba: 'a kartuli kaba — the long traditional Georgian women\'s dress with a fitted bodice and a wide long skirt',
   gulispiri: 'a gulispiri — the embroidered decorative chest panel of a traditional Georgian women\'s dress',
   sartqeli: 'a sartqeli — the long embroidered sash of a traditional Georgian women\'s dress, its ends hanging down the front',
-  katibi: 'a katibi — the traditional Georgian women\'s velvet overcoat, often trimmed with fur or gold braid',
+  katibi: 'a katibi — the traditional Georgian women\'s velvet overcoat, often with long hanging sleeves, trimmed with fur or gold braid',
   lechaki: 'a lechaki — the thin white veil of Georgian traditional dress, worn falling from a headband (tavsakravi)',
+  baghdadi: 'a baghdadi — the festive square silk kerchief of Georgian women\'s traditional dress, plain or patterned, worn over the head (any large silk headscarf of that kind counts)',
 };
 
 const prompt = (id: string, label: string) => [
