@@ -58,7 +58,7 @@ export const workDone = (a: Assignment, confirmed: Confirmations, drillDone: Rec
 };
 
 /** What an assignment card needs from the member's records (WorkItems and the path's carousel share it). */
-const useWorkCtx = () => {
+export const useWorkCtx = () => {
   const { user } = useAuth();
   const { selectedChantVariants } = useChants();
   const confirmed = useConfirmations(user?.uid);
@@ -68,10 +68,10 @@ const useWorkCtx = () => {
   const openerOf = usePathItemOpener();
   return { selectedChantVariants, confirmed, drillDone, mine, openLearning, openerOf };
 };
-type WorkCtx = ReturnType<typeof useWorkCtx>;
+export type WorkCtx = ReturnType<typeof useWorkCtx>;
 
 /** The voices an assignment asks for, all marked by the member on their path (a task's „შესრულდა“ marks them). */
-const markedAll = (a: Assignment, ctx: WorkCtx) => {
+export const markedAll = (a: Assignment, ctx: WorkCtx) => {
   const item = a.variantId ? ctx.selectedChantVariants[a.variantId] : undefined;
   if (!item || !a.variantId) return false;
   const marked = voicesOf(item, a.variantId);
@@ -191,7 +191,7 @@ export const useNewWork = () => {
 
 /** The assignments a member put away with „წაშლა“ while they belong to the whole class (students/{uid}.workHidden:
  *  `classId/assignmentId`, the newest 100). */
-const useHiddenWork = (uid?: string) => {
+export const useHiddenWork = (uid?: string) => {
   const [hidden, setHidden] = useState<string[]>([]);
   useEffect(() => {
     if (!uid) { setHidden([]); return; }
@@ -209,7 +209,7 @@ const useHiddenWork = (uid?: string) => {
   return { hidden: new Set(hidden), hide };
 };
 
-const workKey = (a: Assignment) => `${a.classId}/${a.id}`;
+export const workKey = (a: Assignment) => `${a.classId}/${a.id}`;
 
 /** The member's assignments still to do, one card a time: a finger moves them aside (scroll snap), dots under them say
  *  where one is. A long press on a card asks „შესრულდა“ or „წაშლა“ (`onPress`). */
