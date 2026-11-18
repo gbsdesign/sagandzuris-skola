@@ -9,7 +9,8 @@ import { doc, onSnapshot, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 import { useManagedClasses, useMyClasses, SchoolClass } from './useClasses';
-import { findVersion, serviceOrder } from '../data/chantLookup';
+import { chantLookupLoaded, chantLookupNow, useChantLookupReady } from '../data/chantLookupLazy';
+import type { VersionInfo } from '../data/chantLookup';
 import { MONTHS_GE, WEEKDAYS_GE } from '../utils/dateNames';
 
 export interface LiturgyProgram {
@@ -29,7 +30,13 @@ export const liveNow = (l: LiveTurn | null | undefined, now = Date.now()): l is 
 export interface LiturgyTemplate { name: string; items: string[] }
 
 const CACHE_KEY = 'sagandzuri_liturgy_cache';
-const valid = (items: unknown): string[] => (Array.isArray(items) ? items.filter((id): id is string => typeof id === 'string' && Boolean(findVersion(id))) : []);
+// the chant books load a little after the first screen (data/chantLookupLazy, redesign stage 3): until then a program's ids
+// pass as they are — never dropped, so nothing is saved back emptier — and are checked again once the books are here
+const findVersion = (id: string | null | undefined): VersionInfo | undefined => (chantLookupLoaded() ? chantLookupNow()?.findVersion(id) : undefined);
+const serviceOrder = (info: VersionInfo) => info.serviceIndex * 10000 + info.chantIndex;
+const valid = (items: unknown): string[] => (Array.isArray(items)
+  ? items.filter((id): id is string => typeof id === 'string' && (!chantLookupLoaded() || Boolean(findVersion(id))))
+  : []);
 
 /** The coming Sunday (today, if it is Sunday). */
 export const nextSunday = () => {
@@ -72,6 +79,7 @@ export const useLiturgy = () => {
   const { user, isTeacher } = useAuth();
   const role: 'teacher' | 'member' | 'guest' = !user ? 'guest' : isTeacher ? 'teacher' : 'member';
   const uid = user?.uid;
+  const booksHere = useChantLookupReady(role !== 'guest');
 
   // ---- teacher: draft, chosen class, templates
   const [drafts, setDrafts] = useState<Record<string, LiturgyProgram>>({});
@@ -98,7 +106,7 @@ export const useLiturgy = () => {
       setTemplates(Array.isArray(list) ? list.filter(t => t && typeof t.name === 'string').map(t => ({ name: t.name, items: valid(t.items) })) : []);
     }, err => console.warn('liturgy templates:', err?.code || err));
     return () => { off1(); off2(); };
-  }, [role, uid]);
+  }, [role, uid, booksHere]);
 
   const teacherClass: SchoolClass | undefined = allClasses.find(c => c.id === classId) ?? allClasses[0];
   useEffect(() => {
@@ -111,7 +119,7 @@ export const useLiturgy = () => {
     if (own) return own;
     if (teacherSent && Array.isArray(teacherSent.items)) return { date: typeof teacherSent.date === 'string' && teacherSent.date ? teacherSent.date : nextSunday(), items: valid(teacherSent.items) };
     return { date: nextSunday(), items: [] };
-  }, [drafts, teacherClass, teacherSent]);
+  }, [drafts, teacherClass, teacherSent, booksHere]);
 
   const saveDraft = useCallback((next: LiturgyProgram) => {
     const id = teacherClass?.id;
@@ -175,7 +183,7 @@ export const useLiturgy = () => {
     const { c, l } = sent[0];
     const live = (c as SchoolClass & { live?: LiveTurn }).live;
     return { date: l.date || nextSunday(), items: valid(l.items), sentAt: l.sentAt, by: l.by, className: c.name, live: live ?? null };
-  }, [myClasses]);
+  }, [myClasses, booksHere]);
   const [cached, setCached] = useState<LiturgyProgram | null>(() => {
     try { return JSON.parse(localStorage.getItem(CACHE_KEY) || 'null'); } catch { return null; }
   });

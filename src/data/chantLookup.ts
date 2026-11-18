@@ -8,6 +8,7 @@ import { MOMIXSENENI_CHANTS } from './beatitudesBookChants';
 import { DZLISPIREBI_CHANTS, KATABASIEBI_CHANTS } from './irmosBookChants';
 import { DASADEBLEBI_CHANTS } from './sticheraBookChants';
 import { SONG_CHANTS } from './songBookChants';
+import { noteChantLookup } from './chantLookupLazy';
 import { KHELDASKHMA_CHANTS, JVRISWERA_CHANTS, PANASHVIDI_CHANTS, PARAKLISI_CHANTS } from './riteChants';
 
 export type ServiceName = 'წირვა' | 'მწუხრი' | 'ცისკარი' | 'სადღესასწაულო' | 'მარხვანი' | 'ზატიკი' | 'პანაშვიდი'
@@ -147,3 +148,6 @@ export const neighbourVersion = (variantId: string, dir: 1 | -1): string | null 
   }
   return null;
 };
+
+// the lazy wrapper (data/chantLookupLazy) learns the books are here as soon as any page brings them in
+noteChantLookup({ findVersion });

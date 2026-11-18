@@ -4,7 +4,7 @@ import { db } from '../firebase';
 import { AKATHISTS, KATHISMAS, MORNING_EVENING, PRAYER_HOURS, prayerTitle } from '../data/prayers';
 import { HABIT_ITEMS } from '../data/habitsAndManera';
 import { ExtraId, SECTIONS, SectionId } from '../data/sections';
-import { findVersion } from '../data/chantLookup';
+import { chantLookupNow } from '../data/chantLookupLazy';
 import { dayKey } from './habitsWeek';
 
 // "ჩემი ღილაკები": up to thirty buttons a member puts under the home vine (students/{uid}.shortcuts, the
@@ -105,7 +105,8 @@ export const shortcutLabel = (id: string): { label: string; sub?: string } | nul
       return { label: t };
     }
     case 'chant': {
-      const v = findVersion(ref);
+      // the chant books load a moment after the first screen (data/chantLookupLazy): until then the button waits unseen
+      const v = chantLookupNow()?.findVersion(ref);
       return v ? { label: v.chant.title.replace(/[;\s]+$/, ''), sub: v.variant.code } : null;
     }
     case 'habit': {

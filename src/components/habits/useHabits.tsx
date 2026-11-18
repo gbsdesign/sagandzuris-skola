@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import confetti from 'canvas-confetti';
 import { HabitGroupType } from '../../data/habitsAndManera';
 import { HabitCounter, HabitLook } from '../../data/habitLooks';
 import { useAuth, useChants } from '../../context';
@@ -22,14 +21,13 @@ export const dueDailyOf = (groups: MyHabitGroup[]) => {
   return (date: Date) => items.filter(h => !h.schedule || isDue(h.schedule, date)).map(h => h.id);
 };
 
+// the confetti's code comes only when a day is closed (redesign stage 3)
 const celebrate = () => {
-  try {
+  void import('canvas-confetti').then(({ default: confetti }) => {
     const colors = ['#7a2028', '#f3c969', '#10b981', '#fbf6ec'];
     confetti({ particleCount: 90, spread: 70, startVelocity: 45, origin: { y: 0.7 }, colors });
     confetti({ particleCount: 50, spread: 110, decay: 0.92, scalar: 0.9, origin: { y: 0.7 }, colors });
-  } catch {
-    /* confetti is decoration only */
-  }
+  }).catch(() => { /* confetti is decoration only */ });
 };
 
 const Blessing: React.FC = () => (

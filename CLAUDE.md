@@ -1667,6 +1667,22 @@
   `utils/pageAddress.ts` + test — in the new look every step writes `/p/<page>[/<what>]` (service slug, class id, prayer id, chat id
   or the mapItem), and any such address opens that page (NavigationContext's boot); the old look leaves a `/p/` address for „/“.
 
+- **Stage 3 „სიჩქარე“ (2026-11-18)**: the first load fell from 4.5 MB (1.27 MB gzip) to 1.5 MB (0.47 MB gzip). Keep it so:
+  App.tsx and the first screen must not import the chant books, songs, მთქმელი or the registry. The chant index is
+  `data/chantLookupLazy.ts` (`loadChantLookup`, `chantLookupNow`, `chantLookupLoaded`, `useChantLookupReady`; chantLookup.ts calls
+  `noteChantLookup` when any page brings it in): NotesContext waits for it before opening notes / a notes link, useLiturgy lets a
+  program's ids pass unchecked until it is here (never drops them), a chant's home button and the widget summary wait for it. The
+  path's check against every book (`utils/variantValidationLazy.ts`, `filterValidSoft`) arrives a moment after the start;
+  `data/placements` starts in idle time (and by itself in `usePlacements`); App loads AppLinks, SaintLifeOverlay, FirstMeeting,
+  KanonGate, CallLayer, PhoneRingSetup, GameInvites and `app/ClassMarksSync` lazily (`later`), the router GalobaPage, PathPageBody,
+  StudentPage and `pages/ProfilePage.tsx` (the profile moved there), AppModals its two windows; confetti loads when it fires;
+  `views/pathPanelOpen.ts` and `app/appLinkRequests.ts` are the small openers. Every game loads on its own (GamesPage `lazy`;
+  `utils/tabuDay.ts` keeps the list's „ნუ იტყვი!“ line light). The service worker no longer downloads in advance what `LATER` in
+  vite.config.ts names (every game, churches' and videos' data, ancestors' texts, sitqvaWords, admission and admin pages, jsQR —
+  built into `assets/later/`, kept on first opening by the /assets/ route, 250 entries): precache 15.4 → 12.0 MB. Never put a part
+  of the notes page, the program, the chant books, prayers or the calendar there. Measure with a build: the first load = the
+  files `dist/index.html` links.
+
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 
 - **Roles** (`context/AuthContext.tsx`, `firestore.rules`): owner (the founder's address) names ≤3 superadmins,

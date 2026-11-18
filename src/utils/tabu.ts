@@ -1,13 +1,17 @@
 import { TABU_CARDS, type TabuEntry } from '../data/tabuCards';
 import { mulberry32, shuffle } from './otkheuli';
 import { winnerOf } from './amikhseni';
-import { dayBefore, type HangiDay } from './hangi';
+import { type HangiDay } from './hangi';
+import { CLUES, DAY_CARDS, MAX_DAY_POINTS, pointsOf, runScore } from './tabuDay';
 
 // „ნუ იტყვი!“ (games hub, 2026-11-01, like Taboo): one explains a word to their team without five words the card forbids.
 // Alone on the phone the card is turned round: its five forbidden words come one by one as clues, the vaguest first, and the
 // player types the word — the fewer clues, the more points (5 … 1). Twenty cards a day, the same for the whole school; in a
 // class one phone shows the card to the explainer and to a watcher of the other team, who rings at a forbidden word. Pure
 // and tested in tests/tabu.test.ts; the cards are data/tabuCards.ts, the pages pages/games/tabu/.
+
+// the day record and the hub's line live in ./tabuDay (without the cards, for the games list) — the same names here
+export { CLUES, DAY_CARDS, MAX_DAY_POINTS, pointsOf, runScore, tabuMeta, tabuStats, type TabuStats } from './tabuDay';
 
 // ---------- words ----------
 /** Georgian letters and digits only: a typed word is compared by these */
@@ -43,10 +47,6 @@ export const seedOfText = (s: string) => {
 const dayNumber = (iso: string) => Math.floor(Date.parse(`${iso}T00:00:00Z`) / 86_400_000);
 
 // ---------- alone: the day's twenty cards ----------
-export const DAY_CARDS = 20;
-export const CLUES = 5;
-export const MAX_DAY_POINTS = DAY_CARDS * CLUES;
-
 /** The day's cards, the same for the whole school: the bank in a fixed shuffle cut into days, so no card comes twice before
  * every card has come (180 cards = nine days), then a new shuffle. */
 export const dayDeal = (iso: string, cards: readonly TabuEntry[] = TABU_CARDS): TabuEntry[] => {
@@ -74,7 +74,6 @@ export const newTabuRun = (iso: string): TabuRun => ({ iso, at: 0, shown: 1, wro
 /** the card on the screen is over (its word is shown) */
 export const cardOver = (r: TabuRun) => r.pts.length > r.at;
 export const runOver = (r: TabuRun, n = DAY_CARDS) => r.at >= n;
-export const runScore = (r: Pick<TabuRun, 'pts'>) => r.pts.reduce((a, b) => a + b, 0);
 
 /** a word typed: right = the points of the clues out; wrong = the next clue, and after the fifth the card is lost */
 export const tryWord = (r: TabuRun, typed: string, card: TabuEntry): TabuRun => {
@@ -104,38 +103,15 @@ export const parseTabuRun = (raw: unknown, iso: string, n = DAY_CARDS): TabuRun 
 // ---------- the day's record ----------
 // HangiDay.guesses = one mark `p:<a digit a card, 0 … 5>`; `won` = the twenty were played (a streak counts days played).
 
-export const pointsOf = (d: Pick<HangiDay, 'guesses'>) =>
-  [...(d.guesses.find(g => g.startsWith('p:'))?.slice(2) ?? '')].filter(c => /[0-5]/.test(c)).map(Number).slice(0, DAY_CARDS);
 export const finishedTabuDay = (iso: string, pts: readonly number[]): HangiDay => ({ id: iso, won: true, done: true, guesses: [`p:${pts.join('')}`] });
 /** a card's square: guessed from one or two clues, from three or four, from the last, lost */
 export const ptsSquare = (p: number) => (p >= 4 ? '🟩' : p >= 2 ? '🟨' : p === 1 ? '🟧' : '⬛');
 
-export interface TabuStats { played: number; streak: number; best: number; average: number | null }
-export const tabuStats = (days: Record<string, HangiDay>, today: string): TabuStats => {
-  const done = Object.values(days).filter(d => d.done);
-  let streak = 0;
-  let cursor = days[today]?.done ? today : dayBefore(today);
-  while (days[cursor]?.done) { streak++; cursor = dayBefore(cursor); }
-  const scores = done.map(d => runScore({ pts: pointsOf(d) }));
-  return {
-    played: done.length,
-    streak,
-    best: scores.length ? Math.max(...scores) : 0,
-    average: scores.length ? Math.round(scores.reduce((a, b) => a + b, 0) / scores.length) : null,
-  };
-};
 /** the result for the clipboard or the share sheet: the score and a square a card, ten a line — never the words */
 export const tabuShareText = (n: number, day: HangiDay, site = 'sagandzureli.ge') => {
   const pts = pointsOf(day);
   const sq = pts.map(ptsSquare);
   return [`ნუ იტყვი! №${n} · ${runScore({ pts })}/${MAX_DAY_POINTS}`, sq.slice(0, 10).join(''), sq.slice(10).join(''), `საგანძურის სკოლა · ${site}`].filter(Boolean).join('\n');
-};
-/** one line for the games hub's row */
-export const tabuMeta = (days: Record<string, HangiDay>, today: string): string | undefined => {
-  const d = days[today];
-  if (d?.done) return `დღეს: ${runScore({ pts: pointsOf(d) })}/${MAX_DAY_POINTS}`;
-  const { streak } = tabuStats(days, today);
-  return streak ? `სერია: ${streak} დღე` : undefined;
 };
 
 // ---------- the class: teams on one phone ----------

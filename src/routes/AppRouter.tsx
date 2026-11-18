@@ -1,32 +1,15 @@
-import React, { lazy, useEffect, useRef, useState } from 'react';
+import React, { Suspense, lazy, useEffect, useRef, useState } from 'react';
 import { useNavigation, useChants, useAuth, PageType } from '../context';
-import { WifiOff, RefreshCw, Loader2, SlidersHorizontal } from 'lucide-react';
-import { RoundButton } from '../components/ui2';
+import { WifiOff, RefreshCw, Loader2 } from 'lucide-react';
 import { PageBar } from '../components/ui/kit';
 import { PinButton } from '../components/home/ShortcutShelf';
 import { ChurchMapButton, ChurchSearchButton, GameSearchButton, PrayerSearchButton, SongSearchButton } from '../components/maps/songSearch';
 import { OfflineButton } from '../components/offline/OfflineButton';
-import { ProgramButton } from '../pages/galoba/LiturgyBits';
 import { FavButton } from '../components/prayers/FavPrayers';
 import { CommemorationButton } from '../components/prayers/CommemorationButton';
-import { ProfileActions } from '../components/views/ProfileActions';
-import { KhutsuriSwitch } from '../components/views/KhutsuriSwitch';
-import { WidgetLinkCard } from '../components/app/WidgetLinkCard';
-import { CalendarLinkCard } from '../components/app/CalendarLinkCard';
-import { AdminEntry } from '../components/views/AdminEntry';
-import { RemindersCard } from '../components/app/RemindersCard';
-import { MyClassCard } from '../components/app/MyClassCard';
-import { MyMonthStrip } from '../components/app/MyMonthStrip';
 import { prayerTitle } from '../data/prayers';
 import { HomePage } from '../pages/HomePage';
-import { GalobaPage } from '../pages/GalobaPage';
-import { StudentProfileCard } from '../components/views';
-import { PathPageBody } from '../components/views/PathPageBody';
-import { StudentPage } from '../pages/StudentPage';
-import { ChemiSamosi } from '../components/views/ChemiSamosi';
-import { ShortcutShelf } from '../components/home/ShortcutShelf';
 import { useAccess } from '../hooks/useAccess';
-import { useMembership } from '../utils/memberAccess';
 import { LockedPage } from '../components/access/SignInPrompt';
 import { SECTIONS, sectionOfPage } from '../data/sections';
 import { useMyPsalterGroups } from '../hooks/usePsalter';
@@ -38,10 +21,6 @@ import { useNewLook } from '../design/newLook';
 import { NotLoadedView } from '../components/shell/NotLoadedView';
 import { TOP_PAGES } from '../components/shell/tabs';
 
-/** A small heading between the profile's groups of rows (the same as the prayer book's group titles). */
-const ProfileCaption: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <h3 className="px-4 pt-2 -mb-1 text-[12.5px] font-bold text-[#a08a76]">{children}</h3>
-);
 
 // Fetches the newest version of the app (the service worker takes over at once — registerType 'autoUpdate') and
 // starts it again. A page's file that is missing while online means a newer version was published after this tab
@@ -135,6 +114,12 @@ const BirthdaysPage = page(() => import('../pages/BirthdaysPage'), 'BirthdaysPag
 const GamesPage = page(() => import('../pages/GamesPage'), 'GamesPage');
 const MedavitneobaPage = page(() => import('../pages/MedavitneobaPage'), 'MedavitneobaPage');
 const ChurchesPage = page(() => import('../pages/ChurchesPage'), 'ChurchesPage');
+// the pages a first screen does not need load when opened (redesign stage 3 „სიჩქარე“)
+const GalobaPage = page(() => import('../pages/GalobaPage'), 'GalobaPage');
+const ProgramButton = lazy(() => import('../pages/galoba/LiturgyBits').then(m => ({ default: m.ProgramButton })));
+const PathPageBody = page(() => import('../components/views/PathPageBody'), 'PathPageBody');
+const StudentPage = page(() => import('../pages/StudentPage'), 'StudentPage');
+const ProfilePage = page(() => import('../pages/ProfilePage'), 'ProfilePage');
 // the new look's own pages (redesign stage 2)
 const NoticesPage = page(() => import('../pages/shell/NoticesPage'), 'NoticesPage');
 const SettingsPage = page(() => import('../pages/shell/SettingsPage'), 'SettingsPage');
@@ -196,8 +181,6 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   const nl = useNewLook();
   const top = nl && TOP_PAGES.includes(currentPage);
   const access = useAccess();
-  // a member still waiting to be let in: the profile shows who they are, not the member's tools
-  const waiting = useMembership().status === 'pending';
   const {
     selectedChantVariants,
     handleToggleSong,
@@ -257,41 +240,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   // signed out (e.g. "back" after leaving): the profile has nothing to show
   if (currentPage === 'profile' && (access.kids || (!user && !loading))) return <HomePage logoUrl={logoUrl} />;
 
-  if (currentPage === 'profile') {
-    return (
-      <div className="w-full max-w-lg mx-auto px-1 py-3 sm:px-0">
-        <PageBar title="პროფილი" onBack={top ? undefined : handleGoBack} className="mb-4"
-          right={nl ? <RoundButton label="პარამეტრები" onClick={() => navigateTo('settings')}><SlidersHorizontal strokeWidth={1.75} /></RoundButton> : undefined} />
-        {/* the head card, the admin panel's row (admins), my outfit and home buttons, ხუცური, then the details folded */}
-        <StudentProfileCard waiting={waiting} slot={<>
-          <AdminEntry />
-          {/* two small headings (2026-11-06): what is mine, then the settings — the rows all looked alike */}
-          {/* this month in three numbers (2026-11-06) */}
-          {!waiting && <MyMonthStrip />}
-          {!waiting && <ProfileCaption>ჩემი</ProfileCaption>}
-          {/* my classes: a row each with the next lesson (2026-11-06) */}
-          {!waiting && access.on('classes') && <MyClassCard />}
-          {!waiting && access.on('samosi') && <ChemiSamosi row />}
-          {!waiting && <ShortcutShelf variant="profile" />}
-          {/* the new look: the reminders, ხუცური, the widget, the calendar, installing and leaving live on the settings page */}
-          {!nl && <>
-            <ProfileCaption>პარამეტრები</ProfileCaption>
-            {/* every phone reminder in one window (2026-11-06) */}
-            {!waiting && <RemindersCard />}
-            {/* ხუცური: the whole site in the old script, on this device */}
-            <KhutsuriSwitch />
-            {/* the Android app's home-screen widgets */}
-            {!waiting && <WidgetLinkCard />}
-            {/* the feasts, fasts and my lessons in the phone's calendar */}
-            {!waiting && access.on('calendar') && <CalendarLinkCard />}
-          </>}
-          <ProfileCaption>ჩემი მონაცემები</ProfileCaption>
-        </>} />
-        {/* install the app · leave the account (asks first) */}
-        {!nl && <div className="max-w-lg mx-auto mt-3"><ProfileActions /></div>}
-      </div>
-    );
-  }
+  if (currentPage === 'profile') return <ProfilePage />;
 
   // a student's own page, opened by their teacher or an admin (its path and profile as they see them)
   if (currentPage === 'student') return <StudentPage item={mapItem} />;
@@ -319,7 +268,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           // a prayer also gets ☆ — „რჩეული“ at the top of the prayer book (components/prayers/FavPrayers.tsx)
           // a list's ☁ opens its part of the offline mode (components/offline/OfflineButton.tsx); the chant page has it in
           // place of 📌 (the user, 2026-11-08: „ეგ რაც მოხაზულია მოაცილე“)
-          right={currentPage === 'galoba' ? <><ProgramButton /><OfflineButton kind="galoba" /></>
+          right={currentPage === 'galoba' ? <><Suspense fallback={null}><ProgramButton /></Suspense><OfflineButton kind="galoba" /></>
             : cloud || pin ? <>
               {currentPage === 'prayer' && selectedPrayerId && <FavButton id={selectedPrayerId} />}
               {/* inside a game: its printed kit before 📌 (2026-11-09) */}

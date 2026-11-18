@@ -1,8 +1,10 @@
-import React, { useEffect } from 'react';
+import React, { Suspense, useEffect } from 'react';
 import { useModal, useAuth } from '../context';
 import { useAccess } from '../hooks/useAccess';
 import { askSignIn } from './access/SignInPrompt';
-import { ProfileModal, ManeraModal } from './modals';
+// the two windows load when first opened (redesign stage 3 „სიჩქარე“)
+const ProfileModal = React.lazy(() => import('./modals/ProfileModal').then(m => ({ default: m.ProfileModal })));
+const ManeraModal = React.lazy(() => import('./modals/ManeraModal').then(m => ({ default: m.ManeraModal })));
 
 const FEATURE_NAMES: Record<string, string> = {
   bookmark: 'დამოუკიდებელი სამუშაო',
@@ -29,9 +31,9 @@ export const AppModals: React.FC = () => {
   if (!activeModal || notMine) return null;
 
   return (
-    <>
-      <ProfileModal isOpen={activeModal === 'profile'} onClose={closeModal} />
-      <ManeraModal isOpen={activeModal === 'manera'} onClose={closeModal} />
-    </>
+    <Suspense fallback={null}>
+      {activeModal === 'profile' && <ProfileModal isOpen onClose={closeModal} />}
+      {activeModal === 'manera' && <ManeraModal isOpen onClose={closeModal} />}
+    </Suspense>
   );
 };

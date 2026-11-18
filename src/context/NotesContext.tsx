@@ -3,7 +3,8 @@
 // and the address (?c=…&v=… or ?p=…) can be shared: it opens the same page directly.
 import React, { createContext, lazy, Suspense, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigation } from './NavigationContext';
-import { findVersion, isServiceTab } from '../data/chantLookup';
+import { chantLookupLoaded, chantLookupNow, loadChantLookup } from '../data/chantLookupLazy';
+import type { VersionInfo } from '../data/chantLookup';
 import { useLiturgy, LiturgyApi, LiturgyProgram, liveNow, type LiveTurn } from '../hooks/useLiturgy';
 import { isAndroidApp, openInApp } from '../utils/androidApp';
 import { holdUpdates } from '../utils/appUpdate';
@@ -39,6 +40,10 @@ interface NotesContextType {
 }
 
 const NotesContext = createContext<NotesContextType | undefined>(undefined);
+
+// the chant books load only when a notes page needs them (data/chantLookupLazy, redesign stage 3): before that nothing is found
+const findVersion = (vid: string | null | undefined): VersionInfo | undefined => chantLookupNow()?.findVersion(vid);
+const isServiceTab = (s: VersionInfo['service']) => s !== 'სიმღერა';
 
 const notesUrl = (vid: string) => {
   const info = findVersion(vid);
@@ -94,7 +99,10 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   const rawLive = liturgy.role === 'member' && !linkProgram ? liturgy.program?.live : null;
   const liveTurn = liveNow(rawLive) ? rawLive : null;
   const followedAt = useRef('');
+  // the teacher's turn needs the chant books: once they are here, the same turn is looked at again
+  const [booksHere, setBooksHere] = useState(chantLookupLoaded);
   useEffect(() => {
+    if (liveTurn && !booksHere) void loadChantLookup().then(() => setBooksHere(true));
     if (!liveTurn || !following || followedAt.current === liveTurn.at || !findVersion(liveTurn.vid)) return;
     const cur = notesRef.current;
     const inService = cur ? cur.from === 'program' : programOpen;
@@ -103,12 +111,14 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     if (cur?.vid === liveTurn.vid) return;
     if (cur) goNotesRef.current(liveTurn.vid);
     else openNotesRef.current(liveTurn.vid, 'program');
-  }, [liveTurn, following, programOpen]);
+  }, [liveTurn, following, programOpen, booksHere]);
 
-  // a shared address opens its page directly
+  // a shared address opens its page directly (once the chant books are here)
   useEffect(() => {
     const q = new URLSearchParams(window.location.search);
     const v = q.get('v'), p = q.get('p');
+    if (!v && !p) return;
+    void loadChantLookup().then(() => {
     if (p) {
       const prog = parseProgram(p);
       if (prog) {
@@ -120,12 +130,15 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       window.history.replaceState({ sgNotes: v, sgFrom: 'link', sgBase: 1 }, '', window.location.search);
       setNotes({ vid: v, from: 'link' });
     }
+    });
   }, []);
 
   // back/forward
   useEffect(() => {
     const onPop = (e: PopStateEvent) => {
       const s = e.state || {};
+      // a step back into a notes page before the books are here: they come first (from the phone's cache)
+      if (s.sgNotes && !chantLookupNow()) void loadChantLookup().then(() => { if (window.history.state?.sgNotes === s.sgNotes) setNotes({ vid: s.sgNotes, from: s.sgFrom || 'list' }); });
       setNotes(s.sgNotes && findVersion(s.sgNotes) ? { vid: s.sgNotes, from: s.sgFrom || 'list' } : null);
       setProgramOpen(Boolean(s.sgProg || s.sgUnder));
       if (!s.sgNotes) setChurch(false);
@@ -154,6 +167,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
   }, [nav]);
 
   const openNotes = useCallback((vid: string, from: NotesOrigin) => {
+    if (!chantLookupNow()) { void loadChantLookup().then(() => openNotesRef.current(vid, from)); return; }
     if (!findVersion(vid)) return;
     window.history.pushState({ sgNotes: vid, sgFrom: from, sgUnder: from === 'program' ? 1 : 0 }, '', notesUrl(vid));
     setNotes({ vid, from });
@@ -161,6 +175,7 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const goNotes = useCallback((vid: string) => {
     const cur = notesRef.current;
+    if (cur && !chantLookupNow()) { void loadChantLookup().then(() => goNotesRef.current(vid)); return; }
     if (!cur || !findVersion(vid)) return;
     const s = window.history.state || {};
     window.history.replaceState({ ...s, sgNotes: vid }, '', notesUrl(vid));

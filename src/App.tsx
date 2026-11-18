@@ -13,7 +13,7 @@ import {
   ModalProvider,
   ChantSelectionProvider,
 } from './context';
-import { AppLinks, requestShortcut } from './components/app/AppLinks';
+import { requestShortcut } from './components/app/appLinkRequests';
 import { requestWidgetLink } from './components/app/WidgetLinkAsk';
 import { NotesProvider } from './context/NotesContext';
 
@@ -29,21 +29,13 @@ import { wantAnswer } from './components/calls/callActions';
 import { stationRequest } from './utils/dzebna';
 import { isRoomGame } from './utils/gameRoom';
 import { ROOM_GAME_INFO } from './data/roomGames';
-import { SaintLifeOverlay } from './components/saints/SaintLifeOverlay';
 import { GlobalSearch } from './components/search/GlobalSearch';
 import { usePrayerReminderScheduler } from './utils/prayerReminders';
 import { isPrayerId } from './data/prayers';
 import { setRecordingsHidden, startRecordingBindings, useRecordingBindings } from './data/runtimeRecordings';
-import { startPlacements } from './data/placements';
 import { SignInPrompt } from './components/access/SignInPrompt';
 import { EmailLinkFinish } from './components/access/EmailLinkFinish';
-import { FirstMeeting } from './components/onboarding/FirstMeeting';
-import { KanonGate } from './components/psalter/KanonGate';
-import { CallLayer } from './components/calls/CallLayer';
-import { PhoneRingSetup } from './components/calls/PhoneRingSetup';
-import { GameInvites } from './components/games/GameInvites';
 import { useKidsMode } from './hooks/useAccess';
-import { useClassMarksSync } from './hooks/useClassMarks';
 import { MembershipGate, WaitingBanner } from './components/access/MembershipGate';
 import { useMembership } from './utils/memberAccess';
 import { useBirthdaySync } from './utils/birthdays';
@@ -58,12 +50,27 @@ import { PageSkeleton } from './components/shell/PageSkeleton';
 import { NO_NAV } from './components/shell/tabs';
 // the AI teacher's day lesson loads only when opened
 const AiLesson = React.lazy(() => import('./components/aiLesson/AiLesson').then(m => ({ default: m.AiLesson })));
+// the parts over the page that are not needed for the first screen load a moment after it (redesign stage 3 „სიჩქარე“)
+const later = <T extends string>(load: () => Promise<Record<T, React.ComponentType<any>>>, name: T) =>
+  React.lazy(() => load().then(m => ({ default: m[name] })));
+const AppLinks = later(() => import('./components/app/AppLinks'), 'AppLinks');
+const SaintLifeOverlay = later(() => import('./components/saints/SaintLifeOverlay'), 'SaintLifeOverlay');
+const FirstMeeting = later(() => import('./components/onboarding/FirstMeeting'), 'FirstMeeting');
+const KanonGate = later(() => import('./components/psalter/KanonGate'), 'KanonGate');
+const CallLayer = later(() => import('./components/calls/CallLayer'), 'CallLayer');
+const PhoneRingSetup = later(() => import('./components/calls/PhoneRingSetup'), 'PhoneRingSetup');
+const GameInvites = later(() => import('./components/games/GameInvites'), 'GameInvites');
+const ClassMarksSync = later(() => import('./components/app/ClassMarksSync'), 'ClassMarksSync');
 
 startRecordingBindings();
-startPlacements();
+// the songs' moved recordings (data/placements, with all the songs' data) start listening a moment after the first screen
+{
+  const w = window as Window & { requestIdleCallback?: (f: () => void, o?: { timeout: number }) => number };
+  const go = () => void import('./data/placements').then(m => m.startPlacements());
+  if (w.requestIdleCallback) w.requestIdleCallback(go, { timeout: 5000 }); else window.setTimeout(go, 3000);
+}
 
 // Backward compatibility exports
-export { filterValidVariants, getValidVariantIds } from './utils/variantValidation';
 export { MANERA_ITEMS, HABIT_ITEMS } from './data/habitsAndManera';
 
 export default function App() {
@@ -112,8 +119,6 @@ function AppContent() {
   const [dbLogo, setDbLogo] = useState<string | null>(null);
 
   usePrayerReminderScheduler(openPrayer);
-  // the member's marks on their classes' programs, for the class page's "who knows this voice"
-  useClassMarksSync();
   // my day and month for everyone's birthdays list (utils/birthdays)
   useBirthdaySync();
   // which song albums I may hear and save (data/albumAccess): the songs' lists follow
@@ -290,9 +295,12 @@ function AppContent() {
       {/* the app's own „are you sure?“ card (kit askConfirm) */}
       <ConfirmHost />
       <UndoHost />
+      {/* the member's marks on their classes' programs, for the class page's "who knows this voice" (loads after the
+          first screen: it needs every chant's data) */}
+      <ErrorBoundary><Suspense fallback={null}><ClassMarksSync /></Suspense></ErrorBoundary>
       {/* the Android app: widget and icon-menu buttons, the widgets' summary, things shared into the app */}
       <ErrorBoundary>
-        <AppLinks />
+        <Suspense fallback={null}><AppLinks /></Suspense>
       </ErrorBoundary>
 
       {/* sign-in (Google or a link by e-mail), "საჭიროა რეგისტრაცია" for guests, and the return from the e-mail link */}
@@ -305,17 +313,17 @@ function AppContent() {
       {/* „აირჩიე შენი კანონი“: a class member whose psalter group gives them no kanon picks one before going on (under the
           profile form, which covers it while it is open) */}
       <ErrorBoundary>
-        {membership.can('classes') && <KanonGate />}
+        <Suspense fallback={null}>{membership.can('classes') && <KanonGate />}</Suspense>
       </ErrorBoundary>
 
       {/* "პირველი გაცნობა": name, voice and goal, once */}
       <ErrorBoundary>
-        <FirstMeeting />
+        <Suspense fallback={null}><FirstMeeting /></Suspense>
       </ErrorBoundary>
 
       {/* a saint's life, opened from that card, the calendar or the library */}
       <ErrorBoundary>
-        <SaintLifeOverlay />
+        <Suspense fallback={null}><SaintLifeOverlay /></Suspense>
       </ErrorBoundary>
 
       {/* the one search over the whole app (header button, the home field, "/" or Ctrl+K) */}
@@ -325,14 +333,16 @@ function AppContent() {
 
       {/* „სამშვილდის ღამე“ online: an invitation into a class's game room, or the way back into one's own game */}
       <ErrorBoundary>
-        {membership.can('classes') && <GameInvites />}
+        <Suspense fallback={null}>{membership.can('classes') && <GameInvites />}</Suspense>
       </ErrorBoundary>
 
       {/* the school's calls: the call screen and the incoming call (private chats and classes); and this phone rings for
           calls and shows messages with the app closed (asked once, components/calls/PhoneRingSetup) */}
       <ErrorBoundary>
-        {membership.can('messages') && <CallLayer logoUrl={currentLogo} />}
-        {(membership.can('messages') || membership.can('classes')) && <PhoneRingSetup />}
+        <Suspense fallback={null}>
+          {membership.can('messages') && <CallLayer logoUrl={currentLogo} />}
+          {(membership.can('messages') || membership.can('classes')) && <PhoneRingSetup />}
+        </Suspense>
       </ErrorBoundary>
     </div>
   );
