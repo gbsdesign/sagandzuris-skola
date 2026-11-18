@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { reportError } from '../utils/errorLog';
+import { isChunkError, restartFresh } from '../utils/appUpdate';
 import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
 
 interface Props {
@@ -26,6 +27,8 @@ export class ErrorBoundary extends Component<Props, State> {
   public componentDidCatch(error: Error, errorInfo: ErrorInfo) {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
     reportError(error, 'react', errorInfo.componentStack ?? undefined);
+    // a part of an older version the site no longer has: the newest version has it — go there by itself (once a minute)
+    if (isChunkError(error)) restartFresh();
   }
 
   private handleReset = () => {
@@ -38,6 +41,22 @@ export class ErrorBoundary extends Component<Props, State> {
   };
 
   public render() {
+    if (this.state.hasError && isChunkError(this.state.error)) {
+      // one quiet line, not a red box on every part of the page
+      return (
+        <div role="status" className="w-full max-w-lg mx-auto my-3 px-4 py-3 rounded-2xl bg-white/90 border border-[#e6e1d9] flex items-center gap-3 text-left">
+          <RefreshCw className="w-5 h-5 shrink-0 text-[#7a2028]" aria-hidden="true" />
+          <p className="flex-1 min-w-0 text-[13px] leading-snug text-[#6b625a]">აპის ახალი ვერსია იტვირთება…</p>
+          <button
+            type="button"
+            onClick={() => restartFresh(true)}
+            className="shrink-0 h-10 px-4 rounded-full bg-[#7a2028] text-white text-[13px] font-bold cursor-pointer active:scale-95 transition"
+          >
+            განახლება
+          </button>
+        </div>
+      );
+    }
     if (this.state.hasError) {
       return (
         <div className="min-h-[300px] w-full max-w-lg mx-auto p-6 my-6 bg-white/95 rounded-3xl border border-red-200/80 shadow-lg text-center flex flex-col items-center justify-center gap-4">
