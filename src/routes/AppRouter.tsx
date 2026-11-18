@@ -8,7 +8,7 @@ import { OfflineButton } from '../components/offline/OfflineButton';
 import { FavButton } from '../components/prayers/FavPrayers';
 import { CommemorationButton } from '../components/prayers/CommemorationButton';
 import { prayerTitle } from '../data/prayers';
-import { HomePage } from '../pages/HomePage';
+import { HomeV2 } from '../pages/v2/home/HomeV2';
 import { useAccess } from '../hooks/useAccess';
 import { LockedPage } from '../components/access/SignInPrompt';
 import { SECTIONS, sectionOfPage } from '../data/sections';
@@ -124,6 +124,10 @@ const ProfilePage = page(() => import('../pages/ProfilePage'), 'ProfilePage');
 const NoticesPage = page(() => import('../pages/shell/NoticesPage'), 'NoticesPage');
 const SettingsPage = page(() => import('../pages/shell/SettingsPage'), 'SettingsPage');
 const SearchPage = page(() => import('../pages/shell/SearchPage'), 'SearchPage');
+// redesign stage 4: the everyday pages in the new look (src/pages/v2)
+const GzaPage = page(() => import('../pages/v2/gza/GzaPage'), 'GzaPage');
+// the old look's home loads only when the admin hides the new look
+const HomePage = page(() => import('../pages/HomePage'), 'HomePage');
 
 /** „ფსალმუნთა ჯგუფი“ (the vine, the home tile, a reminder): the class page of the group's class, opened at its psalter
  *  section; a group no class holds (made before 2026-10-20) keeps the old group page. Waits a moment for the classes. */
@@ -180,6 +184,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   // the new look (redesign stage 2): the bottom menu's own pages have no „უკან“; the settings, notices and search are pages
   const nl = useNewLook();
   const top = nl && TOP_PAGES.includes(currentPage);
+  // the home page in the new look is HomeV2 (redesign stage 4, board x-mtavari)
+  const homeEl = nl ? <HomeV2 /> : <HomePage logoUrl={logoUrl} />;
   const access = useAccess();
   const {
     selectedChantVariants,
@@ -203,15 +209,15 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   if (pageAccess === 'locked') {
     return <LockedPage what={SECTIONS.find(x => x.id === sectionOfPage(currentPage))?.label || 'ეს გვერდი'} />;
   }
-  if (pageAccess === 'hidden' || pageAccess === 'soon') return <HomePage logoUrl={logoUrl} />;
+  if (pageAccess === 'hidden' || pageAccess === 'soon') return homeEl;
 
   // the new look's pages: the notices, the settings (signed in) and the search; in the old look an old step goes home
-  if (currentPage === 'notices') return nl ? <NoticesPage /> : <HomePage logoUrl={logoUrl} />;
-  if (currentPage === 'settings') return nl && user ? <SettingsPage /> : <HomePage logoUrl={logoUrl} />;
-  if (currentPage === 'search') return nl ? <SearchPage /> : <HomePage logoUrl={logoUrl} />;
+  if (currentPage === 'notices') return nl ? <NoticesPage /> : homeEl;
+  if (currentPage === 'settings') return nl && user ? <SettingsPage /> : homeEl;
+  if (currentPage === 'search') return nl ? <SearchPage /> : homeEl;
 
   if (currentPage === 'admin') {
-    return isAdmin ? <AdminPanelPage /> : <HomePage logoUrl={logoUrl} />;
+    return isAdmin ? <AdminPanelPage /> : homeEl;
   }
 
   if (currentPage === 'class') {
@@ -226,21 +232,24 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   // private chats (signed in only)
   // the messages page: the list, and the open chat beside it ('dm'; on a phone the chat alone)
   if (currentPage === 'messages' || currentPage === 'dm') {
-    return user ? <MessagesPage logoUrl={logoUrl} /> : <HomePage logoUrl={logoUrl} />;
+    return user ? <MessagesPage logoUrl={logoUrl} /> : homeEl;
   }
 
   // the old teacher panel (a remembered page, an old link): its parts live on the class page
   if (currentPage === 'teacher') {
-    return isTeacher ? <ClassPage /> : <HomePage logoUrl={logoUrl} />;
+    return isTeacher ? <ClassPage /> : homeEl;
   }
 
   // the birthdays are for admitted members (and staff) only
-  if (currentPage === 'birthdays' && !(user && access.member)) return <HomePage logoUrl={logoUrl} />;
+  if (currentPage === 'birthdays' && !(user && access.member)) return homeEl;
 
   // signed out (e.g. "back" after leaving): the profile has nothing to show
-  if (currentPage === 'profile' && (access.kids || (!user && !loading))) return <HomePage logoUrl={logoUrl} />;
+  if (currentPage === 'profile' && (access.kids || (!user && !loading))) return homeEl;
 
   if (currentPage === 'profile') return <ProfilePage />;
+
+  // „საგანძურის გზა“ in the new look draws its own head and inner pages (stage 4, pages/v2/gza)
+  if (nl && currentPage === 'gz') return <GzaPage />;
 
   // a student's own page, opened by their teacher or an admin (its path and profile as they see them)
   if (currentPage === 'student') return <StudentPage item={mapItem} />;
@@ -344,5 +353,5 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
     );
   }
 
-  return <HomePage logoUrl={logoUrl} />;
+  return homeEl;
 };

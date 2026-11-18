@@ -1666,7 +1666,7 @@
   a review sung ≥ 95 % skips a step (`utils/learn.ts`; old records kept at level 4 stay kept — kept = learned with no `due`).
   The pace ladder (slow, then the real tempo after two good tries) was already step 1's.
 - **Stage 2 „ჩონჩხი“ (2026-11-18)** — behind the switch `newLook` „ახალი სახე“ (⚙ „სკოლა“ → განყოფილებები → საიტის სხვა ნაწილები;
-  hidden = admins only). `design/newLook.ts` holds it (App.tsx sets it from `useAccess().on('newLook')`; `html.sg-new`; `useNewLook`,
+  **open for everyone since PR #283** — the user: „ჩართე ყველასთვის ახლავე“; the admin can still hide it). `design/newLook.ts` holds it (App.tsx sets it from `useAccess().on('newLook')`; `html.sg-new`; `useNewLook`,
   `isNewLook`, and `hideNav()` / `useNavHidden` for a page that needs the bottom free — the class chat's `fill`). In the new look: no
   header and no footer (`Footer bare` keeps only the church calendar's window); the home page gets `shell/HomeBar` (logo, name, 🔔 →
   page `notices`); every page the bottom menu `shell/BottomNav` (მთავარი · გზა · წერილები · პროფილი + the round wine 🔍 → page
@@ -1697,6 +1697,16 @@
   built into `assets/later/`, kept on first opening by the /assets/ route, 250 entries): precache 15.4 → 12.0 MB. Never put a part
   of the notes page, the program, the chant books, prayers or the calendar there. Measure with a build: the first load = the
   files `dist/index.html` links.
+- **Stage 4a — home and „გზა“ (2026-11-18)**: the new look's pages are built in `src/pages/v2/<area>/` (LOCKED in the design rules
+  like ui2) and drawn by AppRouter when `nl`; the old pages stay for the old look. Home = `pages/v2/home/HomeV2.tsx` (board
+  x-mtavari; `HomeV2View` the vine with its labels in the boards' order — each still obeys `useAccess().section` like the old
+  GrapeNav; the saying of the moment `useSayingSlot`; the qvevri's „გააგრძელე“ = `nextStep.ts` + `useNextStep` (boards
+  x-ultra-gaagrdzele: a lesson within 3 h · a newcomer's first step · the AI lesson · a review due · the chant of the last 7
+  days · the book read last; pure, no heavy imports — keep the first load small), `LearnOpen` lazy). „გზა“ = `pages/v2/gza/`
+  (`GzaPage`: `gz` is in `MAP_PAGES`, so `mapItem` sagandzuri · samosi · chvevebi · ostatoba are history steps; the list
+  `GzaList` x-gza, `Sagandzuri` x-sagandzuri over `MyClassWork`'s exported `useWorkCtx` / `useHiddenWork`, `Samosi*` x-samosi
+  with the try-on and proof parts of the old outfit; chvevebi and ostatoba show the old panels in a ui2 Card until their own
+  stage). Still the old screens in 4a: habits (4b), class (4c), messages (4d).
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 
