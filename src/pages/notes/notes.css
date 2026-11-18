@@ -467,3 +467,20 @@
 .np-scan-row>*{flex:1;height:46px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;gap:7px;font-size:14.5px;font-weight:800;background:#f1e9dc;color:#2a2017;text-decoration:none}
 .np-scan-row>.main{background:#7a2028;color:#fff}
 .np-scan-row svg{width:17px;height:17px}
+
+/* ---------- the new look (redesign 5b, html.sg-new; NotesPage adds .nl): the top bar sits on the ground, a bar or a
+   player floats at the bottom and church mode is dark round the page. Only room for the new bars — the notes, their
+   frames, the ball and the papers stay as above. ---------- */
+html.sg-new .np-root.nl .np-chrome{background:color-mix(in srgb,var(--ground) 94%,transparent);border-bottom:0}
+/* the page's button reset above is unlayered, so it beats every Tailwind class: in the new bars a button takes its kit
+   look again (same weight as the reset, later — the np- classes of the recording's player still win) */
+:where(html.sg-new .np-root.nl) :where(.np-nlchrome,.np-nlhead,.np-dock) button{background:revert-layer;border:revert-layer;padding:revert-layer;margin:revert-layer;color:revert-layer;font:revert-layer;cursor:revert-layer}
+html.sg-new .np-root.nl .np-nlchrome{max-width:1000px;margin:0 auto}
+/* the notes scroll clear of the floating bar / the player: its height is --np-dock-h (set by NotesPage) */
+html.sg-new .np-root.nl .np-content{padding-bottom:var(--np-dock-h,0px)}
+html.sg-new .np-root.nl .np-toast{bottom:calc(var(--np-dock-h,0px) + 6px)}
+/* church: its line scrolls with the notes but keeps to the screen's left; the ground round the page goes dark */
+html.sg-new .np-root.nl .np-nlhead{position:sticky;left:0;width:var(--np-view-w,100%)}
+html.sg-new .np-root.nl.church{--ground:#14110e;--muted:#968672}
+/* the recording's own player (ChantPlayer) inside the new card keeps its amber colours */
+html.sg-new .np-recvars{--acc:var(--amber-btn);--acc-2:var(--amber);--acc-soft:var(--amber-soft);--acc-line:var(--amber-line)}

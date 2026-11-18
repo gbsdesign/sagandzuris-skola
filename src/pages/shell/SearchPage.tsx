@@ -1,4 +1,4 @@
-import React, { useDeferredValue, useMemo, useState } from 'react';
+import React, { Suspense, lazy, useDeferredValue, useMemo, useState } from 'react';
 import { useNavigation } from '../../context';
 import { SERVICE_LISTS, type ServiceName } from '../../data/chantLookup';
 import { MORNING_EVENING } from '../../data/prayers';
@@ -9,8 +9,12 @@ import { pendingSearchQuery, setPendingQuery } from '../../utils/searchOpen';
 import { readRecent, saveRecent, clearRecent, useSearchEngine } from '../../components/search/useSearchEngine';
 import { useOpenSearchTarget } from '../../components/search/openSearchTarget';
 import { askSignIn } from '../../components/access/SignInPrompt';
+import { useVoiceSearch, voiceSupported } from './voiceSearch';
+import { VoiceSheet } from './search/VoiceSheet';
 import { CHIP_ORDER, SearchView, type SearchFilter, type SearchRow } from './search/SearchView';
 import { countOpen, readOften } from './search/often';
+
+const SingSearch = lazy(() => import('../v2/search/SingSearch').then(m => ({ default: m.SingSearch })));
 
 export { SearchView, type SearchViewProps, type SearchRow, type SearchFilter } from './search/SearchView';
 
@@ -85,7 +89,16 @@ export const SearchPage: React.FC = () => {
   const visible = filter === 'all' ? results : results.filter(g => g.group === filter);
   const elsewhere = filter === 'all' ? 0 : results.filter(g => g.group !== filter).reduce((n, g) => n + g.hits.length, 0);
 
-  const onQuery = (q: string) => { setQuery(q); setPendingQuery(q); };
+  const onQuery = (q: string) => { setQuery(q); setPendingQuery(q); setHeardNote(false); };
+
+  // speech: the sheet listens, the final words fill the field and the search runs by itself
+  const [voiceOpen, setVoiceOpen] = useState(false);
+  const [heardNote, setHeardNote] = useState(false);
+  const voice = useVoiceSearch(text => { setQuery(text); setPendingQuery(text); setHeardNote(true); setVoiceOpen(false); });
+  const canVoice = useMemo(voiceSupported, []);
+  const canSing = useMemo(() => typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia, []);
+  const [singing, setSinging] = useState(false);
+  const closeVoice = () => { voice.stop(); setVoiceOpen(false); };
   const onFilter = (f: SearchFilter) => { setFilter(f); lastFilter = f; };
 
   const onOpen = (row: SearchRow) => {
@@ -102,6 +115,7 @@ export const SearchPage: React.FC = () => {
   };
 
   return (
+    <>
     <SearchView
       query={query}
       searched={searched}
@@ -117,6 +131,12 @@ export const SearchPage: React.FC = () => {
       often={often}
       onOpen={onOpen}
       autoFocus={focusFirst}
+      onVoice={canVoice ? () => { setVoiceOpen(true); voice.start(); } : undefined}
+      heardNote={heardNote}
+      onSing={canSing ? () => setSinging(true) : undefined}
     />
+    <VoiceSheet open={voiceOpen} state={voice.state} heard={voice.heard} error={voice.error} onClose={closeVoice} onRetry={voice.start} />
+    {singing && <Suspense fallback={null}><SingSearch onClose={() => setSinging(false)} /></Suspense>}
+    </>
   );
 };

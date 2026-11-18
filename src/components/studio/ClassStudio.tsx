@@ -15,6 +15,10 @@ import { Avatar } from '../classes/ChatPanel';
 import { Btn, Sheet, Tabs } from '../ui/kit';
 import { Steps } from '../games/HowTo';
 import { assignmentLines } from '../../utils/assignmentLines';
+import { useNewLook } from '../../design/newLook';
+import { StudioScreen } from '../../pages/v2/learn/StudioScreen';
+import { RecordView } from '../../pages/v2/learn/RecordView';
+import { MixView } from '../../pages/v2/learn/MixView';
 
 // „კლასის სტუდია“ (2026-10-29): every member records their own voice of a program chant at home, singing with the
 // synth's other voices in the earphones; the take starts where the synth starts, so the takes lie on one another.
@@ -46,12 +50,28 @@ const useScore = (vid: string) => {
 };
 
 // the chant's own name (a chant of a service's list has the service as its book title)
-const titleOf = (vid: string) => assignmentLines(vid, findVersion(vid)?.chant.title.replace(/[;\s]+$/, '') ?? 'გალობა').name;
+const linesOf = (vid: string) => assignmentLines(vid, findVersion(vid)?.chant.title.replace(/[;\s]+$/, '') ?? 'გალობა');
+const titleOf = (vid: string) => linesOf(vid).name;
+// the new look's bar: the chant and where it is printed („მხოლოდ-შობილი · I ტომი №158“)
+const subOf = (vid: string) => { const l = linesOf(vid); return [l.name, l.book].filter(Boolean).join(' · '); };
 
 /** The studio's window: the chant's name as its title; a teacher's two tabs (hidden while something is being made). */
 export const Studio: React.FC<{ cls: SchoolClass; vid: string; canEdit: boolean; onClose: () => void }> = ({ cls, vid, canEdit, onClose }) => {
   const [view, setView] = useState<'mix' | 'record'>(canEdit ? 'mix' : 'record');
   const [busy, setBusy] = useState(false);
+  const nl = useNewLook();
+  // the new look (board x-studia): a screen of its own; its name says what this tab does
+  if (nl) {
+    const mixing = view === 'mix' && canEdit;
+    return (
+      <StudioScreen title={mixing ? 'ჯგუფური ჩანაწერი' : 'ჩემი ხმის ჩაწერა'} sub={subOf(vid)} onClose={onClose} locked={busy}
+        tabs={canEdit && !busy ? { value: view, onChange: setView } : null}>
+        {mixing
+          ? <MixBody cls={cls} vid={vid} onBusy={setBusy} onRecord={() => setView('record')} />
+          : <RecordBody vid={vid} onBusy={setBusy} teacher={canEdit} />}
+      </StudioScreen>
+    );
+  }
   return (
     <Sheet open onClose={onClose} title={titleOf(vid)} locked={busy}>
       <div className="space-y-4">
@@ -72,6 +92,7 @@ export const Studio: React.FC<{ cls: SchoolClass; vid: string; canEdit: boolean;
 /** Recording my voice over the others, listening, sending (a teacher's take joins the class's takes too). */
 const RecordBody: React.FC<{ vid: string; onBusy: (b: boolean) => void; teacher: boolean }> = ({ vid, onBusy, teacher }) => {
   const { user } = useAuth();
+  const nl = useNewLook();
   const { score, failed } = useScore(vid);
   const sent = usePearlTakes(user?.uid)[studioTakeId(vid)];
   const [voice, setVoice] = useState<Voice>('1');
@@ -135,6 +156,16 @@ const RecordBody: React.FC<{ vid: string; onBusy: (b: boolean) => void; teacher:
       setPhase('error');
     }
   };
+
+  if (nl) {
+    return (
+      <RecordView phase={phase} ready={!!score} failed={failed} supported={voiceRecordingSupported()}
+        voices={voices} voice={voice} onVoice={v => { triggerHaptic(8); setVoice(v); }}
+        sentBefore={sent ? sent.voice : null} problem={problem} takeUrl={take?.url ?? null} teacher={teacher}
+        onStart={() => { void start(); }} onStop={() => { void stop(); }} onAgain={() => { setTake(null); setPhase('idle'); }}
+        onSend={() => { void send(); }} />
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -211,6 +242,7 @@ const waveOf = (samples: Float32Array) => {
 /** The teacher's side: the class's takes of one chant, picked, heard together and sent to the class chat. */
 const MixBody: React.FC<{ cls: SchoolClass; vid: string; onBusy: (b: boolean) => void; onRecord: () => void }> = ({ cls, vid, onBusy, onRecord }) => {
   const { user } = useAuth();
+  const nl = useNewLook();
   const [rows, setRows] = useState<Row[] | null>(null);
   const [chosen, setChosen] = useState<Set<string>>(new Set());
   const [state, setState] = useState<'idle' | 'playing' | 'sending' | 'sent' | 'error'>('idle');
@@ -247,6 +279,10 @@ const MixBody: React.FC<{ cls: SchoolClass; vid: string; onBusy: (b: boolean) =>
   useEffect(() => () => stopAll(), []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const picked = (rows ?? []).filter(r => chosen.has(r.uid));
+  const toggle = (uid: string) => {
+    triggerHaptic(8);
+    setChosen(s => { const n = new Set(s); if (n.has(uid)) n.delete(uid); else n.add(uid); return n; });
+  };
 
   const playOne = (r: Row) => {
     triggerHaptic(8);
@@ -334,6 +370,16 @@ const MixBody: React.FC<{ cls: SchoolClass; vid: string; onBusy: (b: boolean) =>
     }
   };
 
+  if (nl) {
+    return (
+      <MixView rows={rows && rows.map(r => ({ uid: r.uid, name: r.name, photo: r.photoURL, voice: r.take.voice }))}
+        chosen={chosen} onToggle={toggle}
+        playingOne={oneId} onPlayOne={uid => { const r = rows?.find(x => x.uid === uid); if (r) playOne(r); }}
+        state={state} picked={picked.length} onPlayTogether={() => { void playTogether(); }} onSend={() => { void send(); }}
+        asked={asked} onAsk={() => { void askClass(); }} onRecord={onRecord} />
+    );
+  }
+
   return (
     <div className="space-y-4">
         {!rows ? (
@@ -364,7 +410,7 @@ const MixBody: React.FC<{ cls: SchoolClass; vid: string; onBusy: (b: boolean) =>
                 const on = chosen.has(r.uid);
                 return (
                   <li key={r.uid} className="flex items-center gap-3 py-2">
-                    <button type="button" aria-pressed={on} onClick={() => { triggerHaptic(8); setChosen(s => { const n = new Set(s); if (n.has(r.uid)) n.delete(r.uid); else n.add(r.uid); return n; }); }}
+                    <button type="button" aria-pressed={on} onClick={() => toggle(r.uid)}
                       aria-label={`${r.name} — ${on ? 'შედის' : 'არ შედის'}`}
                       className={`w-9 h-9 shrink-0 rounded-full flex items-center justify-center cursor-pointer transition ${on ? 'bg-[#7a2028] text-white' : 'bg-white ring-1 ring-[#e3d6c1] text-transparent'}`}>
                       <Check className="w-4 h-4 stroke-[3]" />

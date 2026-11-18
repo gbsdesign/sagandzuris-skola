@@ -9,7 +9,9 @@ import { useLearning } from '../../hooks/useLearning';
 import { usePearls } from '../../hooks/usePearls';
 import type { Voice } from '../../utils/pathItems';
 import { LearnFrame, LearnTips, ReviewReminder, VoiceChoice } from './LearnShared';
-import { LearnEasy } from './LearnEasy';
+import { LearnEasy, type LearnShell } from './LearnEasy';
+import { useNewLook } from '../../design/newLook';
+import { LearnScreen } from '../../pages/v2/learn/LearnScreen';
 
 // „სასწავლო რეჟიმი“ of a chant: the book's notes cut into parts (a line of notes each), each learned in steps —
 // small pieces, „ერთად“, „მარტო“ (LearnEasy; one way for everybody since 2026-11-05, the „მარტივი · სრული“ switch is gone).
@@ -19,6 +21,7 @@ import { LearnEasy } from './LearnEasy';
 export const LearnMode: React.FC<{ vid: string; score: BookScore; voice?: Voice; onClose: () => void }> = ({ vid, score, voice: asked, onClose }) => {
   const info = findVersion(vid);
   const { user, isSuperAdmin } = useAuth();
+  const nl = useNewLook();
   const uid = user?.uid ?? null;
   const pearls = usePearls(uid);
   const { rec, loaded, savePart, noteParts } = useLearning(uid, vid);
@@ -51,19 +54,32 @@ export const LearnMode: React.FC<{ vid: string; score: BookScore; voice?: Voice;
   const onTry = (part: number, pct: number, ok: boolean) => savePart(part, afterTry(recRef.current[part], pct, ok, today));
   const title = info ? chantName(info.chant.title) : '';
   const num = info?.variant.bookNums?.[0];
+  const pickVoice = (v: Voice) => { setVoicePicked(true); setVoice(v); };
+  const easy = (shell?: LearnShell) => (
+    <LearnEasy
+      vid={vid} score={score} parts={parts} rec={rec} today={today} loaded={loaded}
+      current={current} onPick={p => setCurrent(p === 'all' ? 'all' : Math.max(0, Math.min(parts.length - 1, p)))}
+      voice={voice} voiceName={VOICE_NAMES[voice]} title={title} uid={uid} unlimited={isSuperAdmin}
+      approved={id => Boolean(pearls.shine[id])} onTry={onTry} shell={shell}
+    />
+  );
+
+  // the new look (board x-stsavla): one screen of its own — its bar, the voices, the phrase; the reminder and the tips in ⋯
+  if (nl) {
+    return (
+      <LearnScreen label={title} onClose={onClose}>
+        {back => easy({ onBack: back, voices: voiceCount, onVoice: pickVoice })}
+      </LearnScreen>
+    );
+  }
 
   return (
     <LearnFrame title={title} subtitle={`სასწავლო რეჟიმი${num ? ` · №${num}` : ''}`} onClose={onClose}>
       {voiceCount > 1 && (
-        <VoiceChoice count={voiceCount} value={voice} names={VOICE_NAMES} onChange={v => { setVoicePicked(true); setVoice(v); }} />
+        <VoiceChoice count={voiceCount} value={voice} names={VOICE_NAMES} onChange={pickVoice} />
       )}
 
-      <LearnEasy
-        vid={vid} score={score} parts={parts} rec={rec} today={today} loaded={loaded}
-        current={current} onPick={p => setCurrent(p === 'all' ? 'all' : Math.max(0, Math.min(parts.length - 1, p)))}
-        voice={voice} voiceName={VOICE_NAMES[voice]} title={title} uid={uid} unlimited={isSuperAdmin}
-        approved={id => Boolean(pearls.shine[id])} onTry={onTry}
-      />
+      {easy()}
 
       {uid && <ReviewReminder />}
       <LearnTips />

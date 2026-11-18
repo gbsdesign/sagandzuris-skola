@@ -27,20 +27,26 @@ const STATE_LOOK: Record<PartState, { bg: string; fg: string; ring: string; labe
   kept: { bg: '#8a6a1e', fg: '#ffffff', ring: '#8a6a1e', label: 'დამახსოვრებული' },
 };
 
-/** The learning mode's full-screen page over the notes page or the song page; the phone's back closes it. */
-export const LearnFrame: React.FC<{ title: string; subtitle: string; onClose: () => void; children: React.ReactNode }> = ({ title, subtitle, onClose, children }) => {
+/** The learning mode's own history step (`sgLearn`): the phone's back and Escape close it, and the page underneath (notes:
+ *  space plays, arrows turn) does not hear the keys while it is open. Returns „უკან“. Shared by both looks' frames. */
+export const useLearnHistory = (onClose: () => void) => {
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
+  const back = () => { if (window.history.state?.sgLearn) window.history.back(); else closeRef.current(); };
   useEffect(() => {
     try { if (!window.history.state?.sgLearn) window.history.pushState({ ...(window.history.state || {}), sgLearn: 1 }, ''); } catch { /* still opens */ }
     const onPop = (e: PopStateEvent) => { if (!e.state?.sgLearn) closeRef.current(); };
-    // the page underneath (notes: space plays, arrows turn) does not hear the keys while this is open
     const onKey = (e: KeyboardEvent) => { e.stopPropagation(); if (e.key === 'Escape') back(); };
     window.addEventListener('popstate', onPop);
     window.addEventListener('keydown', onKey, true);
     return () => { window.removeEventListener('popstate', onPop); window.removeEventListener('keydown', onKey, true); };
-  }, []);
-  const back = () => { if (window.history.state?.sgLearn) window.history.back(); else closeRef.current(); };
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  return back;
+};
+
+/** The learning mode's full-screen page over the notes page or the song page; the phone's back closes it. */
+export const LearnFrame: React.FC<{ title: string; subtitle: string; onClose: () => void; children: React.ReactNode }> = ({ title, subtitle, onClose, children }) => {
+  const back = useLearnHistory(onClose);
 
   // on <body>: the notes page's pinch and swipe gestures stay out of it
   return createPortal(
@@ -453,10 +459,8 @@ export const SingPanel: React.FC<{
   );
 };
 
-/** The ways the mode teaches, in a few words, folded. */
-export const LearnTips: React.FC<{ song?: boolean }> = ({ song }) => {
-  const [open, setOpen] = useState(false);
-  const tips = !song ? [
+/** The ways the mode teaches: a heading and a line each (a chant's, or a song recording's). */
+export const learnTips = (song?: boolean): [string, string][] => !song ? [
     ['პატარა ნაწყვეტებით', 'ფრაზა რამდენიმე ნოტად არის დაყოფილი: მოისმინე და გაიმეორე. ნოტებზე ის ნაწილი ოქროსფრად ჩანს.'],
     ['ერთად', 'მერე დანარჩენი ხმები ჟღერს და შენ შენს ხმას მღერი. სამი წრის მერე აპი თავად გადაგიყვანს „მარტოზე“.'],
     ['მარტო', 'მთლიანი ფრაზა თავად იმღერე. 80% — და ფრაზა ნასწავლია. მწვანე ნოტები გამოგივიდა, წითელი — ჯერ არა.'],
@@ -469,6 +473,11 @@ export const LearnTips: React.FC<{ song?: boolean }> = ({ song }) => {
     ['თავად იმღერე', 'მოსმენა საკმარისი არ არის: იმღერე და მოუსმინე საკუთარ თავს.'],
     ['გამეორება', 'ნასწავლ ნაწილს აპი 1, 3, 7, 14 და 30 დღის მერე გაგახსენებს — ასე მეხსიერებაში რჩება.'],
   ];
+
+/** The ways the mode teaches, in a few words, folded. */
+export const LearnTips: React.FC<{ song?: boolean }> = ({ song }) => {
+  const [open, setOpen] = useState(false);
+  const tips = learnTips(song);
   return (
     <section className="rounded-2xl bg-white/70 ring-1 ring-[#e8dcc8]">
       <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open}
@@ -539,8 +548,8 @@ export const PartWords: React.FC<{ lines: string[] }> = ({ lines }) => (
   ) : null
 );
 
-/** „გამეორების შეხსენება“: the hour the phone reminds of the day's reviews (members only). */
-export const ReviewReminder: React.FC = () => {
+/** „გამეორების შეხსენება“: the hour the phone reminds of the day's reviews (members only) — its state and switch. */
+export const useReviewReminder = () => {
   const [at, setAt] = useState(getRemindTime);
   const [note, setNote] = useState('');
   const turn = async (next: string) => {
@@ -553,6 +562,12 @@ export const ReviewReminder: React.FC = () => {
     setAt(next);
     setRemindTime(next);
   };
+  return { at, note, turn, times: REMIND_TIMES };
+};
+
+/** The reminder's row on the old look's learning screen. */
+export const ReviewReminder: React.FC = () => {
+  const { at, note, turn } = useReviewReminder();
   // one folded row on the learning screen (2026-11-07, the user's pick): the hour or „გამორთულია“; a tap opens the switch and the hours
   const [open, setOpen] = useState(false);
   return (

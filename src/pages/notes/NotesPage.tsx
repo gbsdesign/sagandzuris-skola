@@ -34,6 +34,20 @@ import { Rosette, Sprig, PlateBand } from '../../components/home/PlateOrnaments'
 import { isOffline, onOfflineChange, saveOffline, offlineSupported } from '../../utils/offlineNotes';
 import { triggerHaptic } from '../../utils/haptics';
 import { stopPreview } from '../../utils/listPreview';
+// the new look (redesign 5b): the same page drawn with the redesign's parts; every state and handler stays here
+import { useNewLook } from '../../design/newLook';
+import { NotesBar } from '../v2/notes/NotesBar';
+import { BottomBar, type PlayLook } from '../v2/notes/BottomBar';
+import { SynthPlayer } from '../v2/notes/SynthPlayer';
+import { RecPlayer } from '../v2/notes/RecPlayer';
+import { MoreSheet } from '../v2/notes/MoreSheet';
+import { ShareSheet } from '../v2/notes/ShareSheet';
+import { ChurchBar, ChurchNext, LyricsPanel } from '../v2/notes/ChurchParts';
+import { MinusControl, VoiceFit } from '../v2/notes/MyVoiceParts';
+import { MinusVoices } from '../v2/notes/MinusBar';
+import { usePedal } from '../v2/notes/usePedal';
+import { readPedal, savePedal, type PedalPrefs } from '../v2/notes/pedal';
+import { PedalSettingsSheet, PedalSetupSheet, PedalToast } from '../v2/notes/PedalSheets';
 
 const SPEEDS = [0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.25, 1.4, 1.6, 1.8, 2];
 // V–VI: a song for two choirs (admission program); up to X: the anthology's many-voiced litanies (vol. II №211–217)
@@ -53,6 +67,7 @@ const clamp = (v: number, a: number, b: number) => Math.min(b, Math.max(a, v));
 const fmt = (sec: number) => { const s = Math.max(0, Math.round(sec)); return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`; };
 const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0');
 const coarse = () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
+const PLAY_LABEL: Record<PlayLook, string> = { play: 'დაკვრა', pause: 'პაუზა', loading: 'ნოტები იტვირთება', off: 'დასაკრავი არაფერია' };
 const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 const Fork: React.FC = () => (
@@ -113,7 +128,8 @@ const HymnImg: React.FC<{ o: HymnOrnament; place: 'top' | 'bottom' }> = ({ o, pl
 };
 
 export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, from }) => {
-  const { goNotes, closeNotes, church, setChurch, liturgy, program } = useNotes();
+  const { goNotes, closeNotes, church, setChurch, liturgy, program, following, liveTurn, leading } = useNotes();
+  const nl = useNewLook();
   const { selectedChantVariants, toggleVariantSelection } = useChants();
   // a quick listen started from a list stops when the notes open
   useEffect(() => { stopPreview(); }, [vid]);
@@ -258,6 +274,19 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const pinching = useRef(false);
   const draggingTrack = useRef(false);
   const ballDrag = useRef<{ dx: number; dy: number; beat: number } | null>(null); // the ball held by a finger
+
+  // ---------- the new look only: the floating bar / player at the bottom, the pedal, „ჩემი ხმის გარეშე“, my voice's tone
+  const dockRef = useRef<HTMLDivElement>(null);
+  const [pedalSheet, setPedalSheet] = useState<'setup' | 'settings' | null>(null);
+  const [pedalPrefs, setPedalPrefs] = useState<PedalPrefs>(readPedal);
+  const [pedalToast, setPedalToast] = useState(false);
+  const pedalTimer = useRef(0);
+  const [picking, setPicking] = useState(false); // „რომელ ხმას მღერი?“ is open
+  const [minus, setMinus] = useState<{ mine: number; prev: boolean[] } | null>(null);
+  const minusRef = useRef(minus);
+  minusRef.current = minus;
+  const toneTouched = useRef(false);
+  const [scoreVid, setScoreVid] = useState(''); // which version the loaded score belongs to
 
   const land = orient === 'land', wide = orient === 'desk';
   const gutter = wide ? 28 : land ? 14 : 8;
@@ -792,6 +821,8 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return;
+      // the new look: a sheet over the page closes itself, the page stays
+      if (nl && (pedalSheet || picking)) return;
       if (moreOpen) setMoreOpen(false);
       else if (panel) setPanel(null);
       else close();
@@ -799,6 +830,77 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
+
+  // ---------- the new look's own wiring (nothing here runs in the old look)
+  // which version the score belongs to: „notes in my voice“ waits for this very version's score
+  useEffect(() => { if (nl && score) setScoreVid(vid); }, [score]); // eslint-disable-line react-hooks/exhaustive-deps
+  // a new version: its tone is untouched; „ჩემი ხმის გარეშე“ gives the voices back
+  useEffect(() => {
+    toneTouched.current = false;
+    if (minusRef.current) { setVoiceOn(minusRef.current.prev); setMinus(null); }
+  }, [vid]);
+  // the player opens with its times shown (paint runs by itself only while it plays)
+  useEffect(() => {
+    if (!nl || panel !== 'synth' || !synth) return;
+    const raf = requestAnimationFrame(() => paint(synth.position()));
+    return () => cancelAnimationFrame(raf);
+  }, [nl, panel, synth, paint]);
+  // the notes scroll clear of the floating bar / player: its height goes to --np-dock-h (notes.css)
+  useLayoutEffect(() => {
+    const root = rootRef.current, dock = dockRef.current;
+    if (!nl || !root || !dock) return;
+    const set = () => root.style.setProperty('--np-dock-h', `${dock.offsetHeight}px`);
+    const ro = new ResizeObserver(set);
+    ro.observe(dock);
+    set();
+    return () => { ro.disconnect(); root.style.removeProperty('--np-dock-h'); };
+  }, [nl]);
+  const flashPedal = useCallback(() => {
+    setPedalToast(true);
+    window.clearTimeout(pedalTimer.current);
+    pedalTimer.current = window.setTimeout(() => setPedalToast(false), 3000);
+  }, []);
+  useEffect(() => () => window.clearTimeout(pedalTimer.current), []);
+  const pedalReady = useCallback(() => {
+    const p = { ...readPedal(), known: true };
+    savePedal(p);
+    setPedalPrefs(p);
+    setPedalSheet(null);
+    flashPedal();
+  }, [flashPedal]);
+  // a page-turn pedal (a keyboard to the phone): one press, one screen down — church mode too; asleep while a sheet is open
+  usePedal({
+    scroller: scrollerRef,
+    enabled: nl && !moreOpen && !pedalSheet && !qr && !learning && !picking,
+    onNext: () => { if (nextId) goTo(nextId, 1); },
+    onFirst: flashPedal,
+  });
+  const openPedal = () => {
+    setMoreOpen(false);
+    const p = readPedal();
+    setPedalPrefs(p);
+    setPedalSheet(p.known ? 'settings' : 'setup');
+  };
+  const setTone = (v: number) => { toneTouched.current = true; setTranspose(clamp(v, -7, 7)); };
+  const minusStart = (mine: number) => { setMinus({ mine, prev: voiceOn }); setVoiceOn(VOICE_NAMES.map((_, k) => k !== mine)); };
+  const minusStop = () => { if (minus) setVoiceOn(minus.prev); setMinus(null); };
+
+  // ---------- small handlers both looks share
+  const enterChurch = () => { triggerHaptic(10); setChurch(true); };
+  const leaveChurch = () => { triggerHaptic(10); setChurch(false); showToast('ტაძრის რეჟიმი გამოირთო'); };
+  const toggleBall = () => { triggerHaptic(8); const next = !ballOn; setBallOn(next); store.set('sagandzuri_ball', next); showToast(next ? 'ბურთულა ნოტებზე ჩაირთო: აჩვენებს, სად ჟღერს' : 'ბურთულა ნოტებზე გამოირთო'); };
+  const pickPaper = (p: Paper) => { triggerHaptic(8); setPaper(p); store.set('sagandzuri_paper', p); };
+  const toggleWake = () => { if (church) return; setWakeOn(!wakeOn); store.set('sagandzuri_wake', !wakeOn); };
+  const wakeNote = (wakeOn || church) && (wakeFailed || !('wakeLock' in navigator)) ? 'ამ ბრაუზერში ვერ ჩაირთო' : '';
+  const pinned = user ? (shortcuts || []).includes(`chant:${vid}`) : null;
+  const togglePin = () => {
+    if (!user) return;
+    const list = shortcuts || [];
+    const id = `chant:${vid}`;
+    if (list.includes(id)) { saveShortcuts(user.uid, list.filter(x => x !== id)).catch(() => {}); showToast('მოიხსნა მთავარი გვერდიდან'); }
+    else if (list.length >= MAX_SHORTCUTS) showToast(`მთავარზე უკვე ${MAX_SHORTCUTS} ღილაკია`);
+    else { saveShortcuts(user.uid, [...list, id]).catch(() => {}); showToast('გავიდა მთავარ გვერდზე — „ჩემი ღილაკები“'); }
+  };
 
   // ---------- share
   const shareUrl = shareNotesUrl(vid);
@@ -876,6 +978,23 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const f = folded[orient];
   const loopZone = synth && loop.a !== null ? { left: `${(100 * loop.a) / synth.duration}%`, width: `${(100 * ((loop.b ?? synth.duration) - loop.a)) / synth.duration}%` } : null;
 
+  // the new look's big ▶: the synthesizer (it opens its player), else the recording's player; a sounding one pauses
+  const night = shownPaper === 'night';
+  const playLook: PlayLook = church ? 'off'
+    : playing || recPlaying ? 'pause'
+      : synth || recMedia ? 'play'
+        : !failed && !score && variant.bookNums?.length ? 'loading' : 'off';
+  const bottomPlay = () => {
+    if (church) return;
+    if (recPlaying) { triggerHaptic(10); setRecPause(n => n + 1); return; }
+    if (synth) {
+      if (!synth.playing && panel !== 'synth') togglePanel('synth');
+      void toggleSynth();
+      return;
+    }
+    if (recMedia && panel !== 'rec') togglePanel('rec');
+  };
+
   // starting notes and tone: under the title, and in church on its one line
   const startGroup = score && score.voices.length > 0 ? (
     <div className="np-startgrp" role="group" aria-label="საწყისი ბგერა და ტონი">
@@ -937,7 +1056,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   return (
     <div
       ref={rootRef}
-      className={`np-root ${land ? 'land' : ''} ${wide ? 'wide' : ''} ${church ? 'church' : ''} ${tapLines ? 'tap-lines' : ''}`}
+      className={`np-root ${land ? 'land' : ''} ${wide ? 'wide' : ''} ${church ? 'church' : ''} ${tapLines ? 'tap-lines' : ''}${nl ? ' nl' : ''}`}
       data-paper={shownPaper}
       role="dialog"
       aria-modal="true"
@@ -945,9 +1064,20 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     >
       <div ref={scrollerRef} className="np-scroller" onScroll={onScroll}>
         <div className="np-content">
-          {church ? (
+          {nl ? (church && (
+            <div className="np-nlhead">
+              <ChurchBar
+                onExit={leaveChurch}
+                title={land || wide ? title : undefined}
+                tone={score && score.voices.length > 0 ? { value: transpose, onChange: setTone } : undefined}
+                onStart={score && score.voices.length > 0 ? playStart : undefined}
+                dots={dots}
+                voices={VOICES.length}
+              />
+            </div>
+          )) : church ? (
             <header className="np-caption np-cbar">
-              <button type="button" className="np-cb-x" onClick={() => { triggerHaptic(10); setChurch(false); showToast('ტაძრის რეჟიმი გამოირთო'); }} aria-label="ტაძრის რეჟიმიდან გამოსვლა" title="გამოსვლა">
+              <button type="button" className="np-cb-x" onClick={leaveChurch} aria-label="ტაძრის რეჟიმიდან გამოსვლა" title="გამოსვლა">
                 <X />
               </button>
               <h2 className="np-cb-title">{title}</h2>
@@ -986,7 +1116,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                   <GraduationCap strokeWidth={1.9} /><span>სწავლა</span>
                 </button>
               )}
-              <button type="button" className="np-church" onClick={() => { triggerHaptic(10); setChurch(true); }}
+              <button type="button" className="np-church" onClick={enterChurch}
                 aria-label="ტაძრის რეჟიმი" title="ტაძრის რეჟიმი: ხმა ითიშება, ზოლი იმალება, ეკრანი არ ქრება">
                 <Church strokeWidth={1.9} />
               </button>
@@ -1056,6 +1186,22 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
       </div>
 
       <div ref={chromeRef} className={`np-chrome ${raised ? 'raised' : ''} ${tucked ? 'tucked' : ''}`}>
+        {nl ? (
+          <div className="np-nlchrome">
+            <NotesBar
+              title={title}
+              sub={[service, name].filter(Boolean).join(' · ')}
+              pos={seq && seqIdx >= 0 ? `${seqIdx + 1} / ${seq.length}` : `${info.chantIndex + 1} / ${serviceList.length}`}
+              onBack={close}
+              onNext={() => goTo(nextId, 1)}
+              atEnd={!nextId}
+              nextName={nextInfo?.chant.title.replace(/[;\s]+$/, '')}
+              dark={night}
+              status={exporting ? `მზადდება ${exporting.label}… ${Math.round(exporting.progress * 100)}%` : undefined}
+            />
+            {panel === 'text' && lyrics && <LyricsPanel text={lyrics} onClose={() => togglePanel('text')} dark={night} />}
+          </div>
+        ) : (<>
         <nav className="np-bar" aria-label="ხელსაწყოები">
           <button type="button" className="np-back" onClick={close} aria-label="უკან" title="უკან"><ChevronLeft strokeWidth={2.4} /></button>
           <div className="np-tools">
@@ -1162,7 +1308,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                     </button>
                     <button
                       type="button" className="np-tl np-ballbtn" aria-pressed={ballOn}
-                      onClick={() => { triggerHaptic(8); const next = !ballOn; setBallOn(next); store.set('sagandzuri_ball', next); showToast(next ? 'ბურთულა ნოტებზე ჩაირთო: აჩვენებს, სად ჟღერს' : 'ბურთულა ნოტებზე გამოირთო'); }}
+                      onClick={toggleBall}
                       title={ballOn ? 'ბურთულა ნოტებზე: ჩართულია' : 'ბურთულა ნოტებზე: გამორთულია'}
                     ><CircleDot /><span>ბურთულა</span></button>
                   </div>
@@ -1212,11 +1358,144 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
             <div className="np-lyrics">{lyrics.split('\n').map((line, i) => <p key={i}>{line}</p>)}</div>
           </div>
         )}
+        </>)}
 
         <div ref={miniRef} className={`np-mini ${playing || recPlaying ? 'on' : ''}`} style={recPlaying ? { width: '100%', ['--np-mini' as string]: '#dc8a22' } : undefined} />
       </div>
 
-      {moreOpen && (
+      {nl && (
+        <div
+          ref={dockRef}
+          className={`np-dock pointer-events-none absolute inset-x-0 bottom-0 z-[25] flex justify-center px-3 pb-[calc(14px+env(safe-area-inset-bottom,0px))] transition-transform duration-300 ${tucked && !church ? 'translate-y-[calc(100%+8px)]' : ''}`}
+        >
+          <div className={`pointer-events-auto flex w-full flex-col ${land || wide ? (panel === 'synth' || panel === 'rec' ? 'max-w-[820px]' : 'max-w-[440px]') : 'max-w-[560px]'}`}>
+            {recMounted && recMedia && (
+              <RecPlayer
+                hidden={church || panel !== 'rec'}
+                onPickSynth={synth ? () => togglePanel('synth') : undefined}
+                onFold={() => setPanel(null)}
+                performers={recSources.map(r => r.label)}
+                performer={recIdx}
+                onPerformer={i => { triggerHaptic(10); setRecPlaying(false); setRecIdx(i); }}
+                dark={night}
+              >
+                {recSource.embed ? (
+                  !church && <iframe key={`${vid}-${recIdx}`} title={`${title} · ${recSource.label}`} src={recSource.embed} className="block h-[280px] w-full rounded-tile border-0" allow="autoplay" loading="lazy" />
+                ) : <ChantPlayer
+                  key={`${vid}-${recIdx}`}
+                  chantId={chant.id}
+                  variantId={vid}
+                  media={recMedia}
+                  layout="panel"
+                  hideNotesButton
+                  showDetails={!f.rec}
+                  onToggleDetails={() => fold('rec')}
+                  pauseToken={recPause}
+                  disabled={church}
+                  onPlayingChange={p => { setRecPlaying(p); if (p) { stopSynth(); countPlay(vid, 'rec'); } }}
+                />}
+              </RecPlayer>
+            )}
+            {church ? (
+              <ChurchNext
+                next={nextInfo ? { title: nextInfo.chant.title.replace(/[;\s]+$/, ''), sub: nextLabel(nextInfo) } : null}
+                endNote={seq ? 'პროგრამა დასრულდა' : service}
+                onNext={() => goTo(nextId, 1)}
+              />
+            ) : panel === 'synth' && score && synth ? (
+              <SynthPlayer
+                playing={playing}
+                onToggle={toggleSynth}
+                onPickRec={recMedia ? () => togglePanel('rec') : undefined}
+                fillRef={fillRef}
+                knobRef={knobRef}
+                curRef={curRef}
+                durRef={durRef}
+                track={{
+                  onPointerDown: e => { draggingTrack.current = true; e.currentTarget.setPointerCapture(e.pointerId); paint(trackFrac(e, e.currentTarget) * synth.duration); },
+                  onPointerMove: e => { if (draggingTrack.current) paint(trackFrac(e, e.currentTarget) * synth.duration); },
+                  onPointerUp: e => { if (!draggingTrack.current) return; draggingTrack.current = false; const sec = trackFrac(e, e.currentTarget) * synth.duration; synth.seek(sec); paint(sec); },
+                  onPointerCancel: () => { draggingTrack.current = false; },
+                }}
+                loopZone={loopZone}
+                mixOpen={mixOpen}
+                onMix={() => setMixOpen(o => !o)}
+                ballOn={ballOn}
+                onBall={toggleBall}
+                onRestart={restart}
+                restartLabel={loop.a !== null ? 'A-დან' : 'თავიდან'}
+                onFold={() => setPanel(null)}
+                voices={VOICES}
+                allLabel={allVoices}
+                voiceOn={voiceOn}
+                onVoice={i => setVoiceOn(VOICE_NAMES.map((_, k) => i === 'all' || k === i))}
+                volume={volume}
+                onVolume={(i, v) => setVolume(p => p.map((x, k) => (k === i ? v : x)))}
+                tempo={{
+                  idx: speedIdx,
+                  max: SPEEDS.length - 1,
+                  format: i => String(Math.round((score.tempos[0]?.[1] ?? 60) * SPEEDS[i])),
+                  changed: speed !== 1,
+                  onChange: setSpeedIdx,
+                  onReset: () => setSpeedIdx(SPEEDS.indexOf(1)),
+                }}
+                loop={{ stage: loop.stage, title: loopTitle, onClick: handleLoop }}
+                minus={VOICES.length >= 2 ? (
+                  <MinusControl count={VOICES.length} on={Boolean(minus)} onStart={minusStart} onStop={minusStop} onPicking={setPicking} say={m => showToast(m)} dark={night} compact={land || wide} />
+                ) : undefined}
+                minusVoices={minus ? <MinusVoices count={VOICES.length} mine={minus.mine + 1} on={voiceOn} /> : undefined}
+                dark={night}
+                row={land || wide}
+              />
+            ) : panel !== 'rec' ? (
+              <BottomBar
+                onStart={score && score.voices.length > 0 ? playStart : undefined}
+                dots={dots}
+                voices={VOICES.length}
+                onLearn={score && score.voices.length > 0 ? openLearning : undefined}
+                play={playLook}
+                playLabel={PLAY_LABEL[playLook]}
+                onPlay={bottomPlay}
+                onChurch={enterChurch}
+                onMore={() => setMoreOpen(o => !o)}
+                moreOpen={moreOpen}
+                dark={night}
+              />
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {nl && (
+        <MoreSheet
+          open={moreOpen}
+          onClose={() => setMoreOpen(false)}
+          tone={score && score.voices.length > 0 ? { value: transpose, onChange: setTone } : undefined}
+          zoom={{ pct: Math.round(zoom * 100), canIn: zoom < 2.99, canOut: zoom > 0.51, onIn: () => zoomStep(1), onOut: () => zoomStep(-1), onFit: zoomFit }}
+          paper={paper}
+          onPaper={pickPaper}
+          text={lyrics ? { on: panel === 'text', onToggle: () => togglePanel('text') } : undefined}
+          wake={{ on: wakeOn || church, note: wakeNote, locked: church, onToggle: toggleWake }}
+          onPedal={openPedal}
+          saved={{ on: isSaved, onToggle: () => { triggerHaptic(12); toggleVariantSelection(chant, variant); } }}
+          program={liturgy.role === 'teacher' ? { num: progIdx >= 0 ? progIdx + 1 : null, onToggle: toggleProgram } : undefined}
+          onShare={() => { setMoreOpen(false); setQr('code'); }}
+          onScan={() => { setMoreOpen(false); setQr('scan'); }}
+          offline={{ done: offline, busy: offlineBusy, onSave: keepOffline }}
+          files={score || recTracks.length > 0 ? {
+            pdf: score ? exportPdf : undefined,
+            voices: VOICES,
+            allLabel: allVoices,
+            mp3: score ? exportMp3 : undefined,
+            recTracks,
+            recMp3: i => { setMoreOpen(false); saveRecMp3(i); },
+          } : null}
+          pinned={pinned}
+          onPin={togglePin}
+        />
+      )}
+
+      {!nl && moreOpen && (
         <MoreMenu
           onClose={() => setMoreOpen(false)}
           shareUrl={shareUrl}
@@ -1224,7 +1503,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
           onMessenger={() => copyLink(coarse() ? 'ბმული დაკოპირდა. თუ Messenger არ გაიხსნა, ჩასვი ხელით' : 'ბმული დაკოპირდა. Messenger-ში ჩასვი')}
           onInstagram={shareInstagram}
           paper={paper}
-          setPaper={p => { triggerHaptic(8); setPaper(p); store.set('sagandzuri_paper', p); }}
+          setPaper={pickPaper}
           hasText={Boolean(lyrics)}
           textOn={panel === 'text'}
           toggleText={() => togglePanel('text')}
@@ -1232,8 +1511,8 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
           offlineBusy={offlineBusy}
           keepOffline={keepOffline}
           wakeOn={wakeOn || church}
-          wakeNote={(wakeOn || church) && (wakeFailed || !('wakeLock' in navigator)) ? 'ამ ბრაუზერში ვერ ჩაირთო' : ''}
-          toggleWake={() => { if (church) return; setWakeOn(!wakeOn); store.set('sagandzuri_wake', !wakeOn); }}
+          wakeNote={wakeNote}
+          toggleWake={toggleWake}
           hasScore={Boolean(score)}
           recTracks={recTracks}
           saveRecMp3={saveRecMp3}
@@ -1241,15 +1520,8 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
           allVoices={allVoices}
           exportPdf={exportPdf}
           exportMp3={exportMp3}
-          pinned={user ? (shortcuts || []).includes(`chant:${vid}`) : null}
-          togglePin={() => {
-            if (!user) return;
-            const list = shortcuts || [];
-            const id = `chant:${vid}`;
-            if (list.includes(id)) { saveShortcuts(user.uid, list.filter(x => x !== id)).catch(() => {}); showToast('მოიხსნა მთავარი გვერდიდან'); }
-            else if (list.length >= MAX_SHORTCUTS) showToast(`მთავარზე უკვე ${MAX_SHORTCUTS} ღილაკია`);
-            else { saveShortcuts(user.uid, [...list, id]).catch(() => {}); showToast('გავიდა მთავარ გვერდზე — „ჩემი ღილაკები“'); }
-          }}
+          pinned={pinned}
+          togglePin={togglePin}
         />
       )}
 
@@ -1258,7 +1530,9 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
         <span>{toast.msg}</span>
         {toast.action && <button type="button" onClick={() => { toast.action!.run(); setToast(t => ({ ...t, on: false })); }}>{toast.action.label}</button>}
       </div>
-      {qr === 'code' && <QrSheet url={shareUrl} title={title} sub={name} say={msg => showToast(msg)} onClose={() => setQr(null)} />}
+      {qr === 'code' && (nl
+        ? <ShareSheet url={shareUrl} title={title} sub={name} say={msg => showToast(msg)} onClose={() => setQr(null)} />
+        : <QrSheet url={shareUrl} title={title} sub={name} say={msg => showToast(msg)} onClose={() => setQr(null)} />)}
       {qr === 'scan' && (
         <QrScanner onClose={found => {
           setQr(null);
@@ -1270,6 +1544,26 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
         }} />
       )}
       {learning && score && <LearnMode vid={vid} score={score} voice={learnVoice} onClose={() => { setLearning(false); setLearnVoice(undefined); }} />}
+      {nl && (
+        <>
+          <PedalSetupSheet open={pedalSheet === 'setup'} onClose={() => setPedalSheet(null)} onReady={pedalReady} />
+          <PedalSettingsSheet
+            open={pedalSheet === 'settings'}
+            onClose={() => setPedalSheet(null)}
+            prefs={pedalPrefs}
+            onChange={p => { setPedalPrefs(p); savePedal(p); }}
+          />
+          <PedalToast show={pedalToast} />
+          <VoiceFit
+            vid={vid}
+            score={scoreVid === vid ? score : null}
+            active={from !== 'program' && !church && !(following && liveTurn) && !leading}
+            untouched={() => transpose === 0 && !toneTouched.current}
+            onShift={d => setTranspose(d)}
+            onUndo={() => setTranspose(0)}
+          />
+        </>
+      )}
     </div>
   );
 };

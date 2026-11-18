@@ -2,13 +2,14 @@
 // that reads one — a chant of the app opens in place. The phone's back closes either.
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Copy, ExternalLink, LoaderCircle, RotateCcw, X } from 'lucide-react';
+import { Copy, ExternalLink, Flashlight, FlashlightOff, LoaderCircle, RotateCcw, X } from 'lucide-react';
 import { findVersion } from '../../data/chantLookup';
 import { qrTarget, type QrTarget } from '../../utils/qrLink';
 import { triggerHaptic } from '../../utils/haptics';
+import { useNewLook } from '../../design/newLook';
 
 /** One history entry while open: the phone's back and Escape close it; returns the ✕'s close. */
-function useBackClose(key: string, onClose: () => void) {
+export function useBackClose(key: string, onClose: () => void) {
   const closeRef = useRef(onClose);
   closeRef.current = onClose;
   const back = useCallback(() => {
@@ -108,6 +109,10 @@ export const QrScanner: React.FC<{ onClose: (vid?: string) => void }> = ({ onClo
   const [other, setOther] = useState<Extract<QrTarget, { kind: 'link' | 'text' }> | null>(null);
   const [copied, setCopied] = useState(false);
   const [attempt, setAttempt] = useState(0);
+  // the new look: the phone's torch, shown only when the camera has one (null = none)
+  const nl = useNewLook();
+  const trackRef = useRef<MediaStreamTrack | null>(null);
+  const [torch, setTorch] = useState<boolean | null>(null);
   const paused = useRef(false);
   paused.current = Boolean(other);
 
@@ -135,6 +140,12 @@ export const QrScanner: React.FC<{ onClose: (vid?: string) => void }> = ({ onClo
         return;
       }
       if (stopped) { stream.getTracks().forEach(t => t.stop()); return; }
+      const cam = stream.getVideoTracks()[0] ?? null;
+      trackRef.current = cam;
+      try {
+        const caps = cam?.getCapabilities?.() as (MediaTrackCapabilities & { torch?: boolean }) | undefined;
+        setTorch(caps?.torch ? false : null);
+      } catch { setTorch(null); }
       const v = videoRef.current;
       if (!v) return;
       v.srcObject = stream;
@@ -159,10 +170,97 @@ export const QrScanner: React.FC<{ onClose: (vid?: string) => void }> = ({ onClo
       stopped = true;
       window.clearTimeout(timer);
       stream?.getTracks().forEach(t => t.stop());
+      trackRef.current = null;
+      setTorch(null);
     };
   }, [attempt, back]);
 
   const again = () => { setOther(null); setCopied(false); };
+  const toggleTorch = () => {
+    const cam = trackRef.current;
+    if (!cam || torch === null) return;
+    triggerHaptic(10);
+    const on = !torch;
+    cam.applyConstraints({ advanced: [{ torch: on } as MediaTrackConstraintSet] }).then(() => setTorch(on), () => setTorch(null));
+  };
+
+  // the new look (board x-notebi-kamera): a dark screen, the square with gold corners, the words under it and the torch
+  if (nl) {
+    return createPortal(
+      <div className="np-scan" role="dialog" aria-modal="true" aria-label="QR კოდის წაკითხვა">
+        <video ref={videoRef} className="np-scan-video" playsInline muted autoPlay aria-hidden />
+        <div className="absolute inset-0 flex flex-col items-center justify-center gap-7 px-6 pt-16 pb-10 text-white">
+          {state === 'live' && (
+            <div aria-hidden className="relative size-[min(68vw,46vh,260px)] shrink-0 rounded-card bg-white/5 ring-[200vmax] ring-black/55">
+              <i className="absolute -top-0.5 -left-0.5 size-11 rounded-tl-card border-t-4 border-l-4 border-gold-tint" />
+              <i className="absolute -top-0.5 -right-0.5 size-11 rounded-tr-card border-t-4 border-r-4 border-gold-tint" />
+              <i className="absolute -bottom-0.5 -left-0.5 size-11 rounded-bl-card border-b-4 border-l-4 border-gold-tint" />
+              <i className="absolute -right-0.5 -bottom-0.5 size-11 rounded-br-card border-r-4 border-b-4 border-gold-tint" />
+              {!other && <span className="np-scan-beam" />}
+            </div>
+          )}
+          {state === 'live' && !other && (
+            <p className="relative max-w-[300px] text-center text-lead leading-normal text-white/85">მიუშვირე QR კოდს — ნოტები თავად გაიხსნება.</p>
+          )}
+          {state === 'live' && !other && torch !== null && (
+            <div className="relative flex flex-col items-center gap-2">
+              <button
+                type="button"
+                onClick={toggleTorch}
+                aria-pressed={torch}
+                aria-label="ფანარი"
+                title="ფანარი"
+                className={`flex size-15 cursor-pointer items-center justify-center rounded-full transition active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80 [&_svg]:size-6 ${torch ? 'bg-gold-tint text-ink' : 'bg-white/15 text-white'}`}
+              >
+                {torch ? <Flashlight /> : <FlashlightOff />}
+              </button>
+              <span className="text-meta text-white/70">ფანარი</span>
+            </div>
+          )}
+        </div>
+        <div className="absolute inset-x-0 top-0 flex items-center gap-3 px-4 pt-[calc(14px+env(safe-area-inset-top,0px))] pb-3.5">
+          <button
+            type="button"
+            onClick={back}
+            aria-label="დახურვა"
+            title="დახურვა"
+            className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white/15 text-white backdrop-blur-md transition active:scale-95 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white/80 [&_svg]:size-5"
+          >
+            <X />
+          </button>
+          <h2 className="min-w-0 truncate text-head font-bold text-white">QR კოდის წაკითხვა</h2>
+        </div>
+        {state === 'starting' && <div className="np-scan-wait"><LoaderCircle className="animate-spin" /></div>}
+        {(state === 'denied' || state === 'nocam') && (
+          <div className="np-scan-card">
+            <b>{state === 'denied' ? 'კამერაზე წვდომა არ არის' : 'კამერა ვერ ჩაირთო'}</b>
+            <p>{state === 'denied' ? 'ნება დართე კამერაზე ტელეფონის პარამეტრებში და სცადე თავიდან.' : 'ამ მოწყობილობაზე კამერა ვერ მოიძებნა.'}</p>
+            <div className="np-scan-row">
+              <button type="button" className="main" onClick={() => setAttempt(n => n + 1)}><RotateCcw /> თავიდან</button>
+              <button type="button" onClick={back}>დახურვა</button>
+            </div>
+          </div>
+        )}
+        {other && (
+          <div className="np-scan-card">
+            <b>{other.kind === 'link' ? 'ეს კოდი სხვა საიტისაა' : 'კოდში წერია'}</b>
+            <p className="np-scan-text">{other.kind === 'link' ? other.url : other.text}</p>
+            <div className="np-scan-row">
+              {other.kind === 'link'
+                ? <a className="main" href={other.url} target="_blank" rel="noopener noreferrer"><ExternalLink /> გახსნა</a>
+                : (
+                  <button type="button" className="main" onClick={() => copyText(other.text, () => setCopied(true))}>
+                    <Copy /> {copied ? 'დაკოპირდა' : 'კოპირება'}
+                  </button>
+                )}
+              <button type="button" onClick={again}><RotateCcw /> ხელახლა</button>
+            </div>
+          </div>
+        )}
+      </div>,
+      document.body,
+    );
+  }
 
   return createPortal(
     <div className="np-scan" role="dialog" aria-modal="true" aria-label="QR კოდის წაკითხვა">
