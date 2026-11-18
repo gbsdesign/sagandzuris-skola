@@ -27,7 +27,7 @@ import { MedavitneReview } from '../learn/MedavitneReview';
 const VOICE = { '1': 'მთქმელი', '2': 'მოძახილი', '3': 'ბანი' } as Record<string, string>;
 const MONTHS = ['იანვარში', 'თებერვალში', 'მარტში', 'აპრილში', 'მაისში', 'ივნისში', 'ივლისში', 'აგვისტოში', 'სექტემბერში', 'ოქტომბერში', 'ნოემბერში', 'დეკემბერში'];
 
-const summarize = (data: Record<string, any> | undefined) => {
+export const summarize = (data: Record<string, any> | undefined) => {
   const profile = data?.profile || {};
   const work = computeMonthlyStats(profile.workSchedule || {}, data?.completedSessions || {});
   const log: Record<string, string[]> = data?.habitLog || {};
@@ -41,7 +41,7 @@ const summarize = (data: Record<string, any> | undefined) => {
 };
 
 // the admission theory (hooks/useAbituriProgress): lessons done, the last mock test, practice
-const abituriText = (a: any): string => {
+export const abituriText = (a: any): string => {
   if (!a || typeof a !== 'object') return '';
   const parts: string[] = [];
   const pieces = Array.isArray(a.pieces) ? a.pieces.length : 0;
@@ -58,7 +58,7 @@ const abituriText = (a: any): string => {
 
 /** The class's three figures: independent work this month on average, members active in the last 7 days, and the
  *  attendance at the latest lessons on average (null before any lesson is marked). */
-const classFigures = (sums: ReturnType<typeof summarize>[], attendance: AttendanceDay[]) => {
+export const classFigures = (sums: ReturnType<typeof summarize>[], attendance: AttendanceDay[]) => {
   const n = sums.length;
   const came = attendance.reduce((a, d) => a + d.present.length, 0);
   return {
