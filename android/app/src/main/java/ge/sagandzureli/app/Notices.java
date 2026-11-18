@@ -27,6 +27,7 @@ final class Notices {
     static final String PRIVATE = "messages-private";
     static final String CLASSES = "messages-class";
     static final String OTHER = "notices";
+    static final String MISSED = "calls-missed";
     static final int ID = 7;
     private static final long[] RING_VIBRATE = {0, 700, 500, 700, 500, 700, 500, 700};
 
@@ -56,10 +57,7 @@ final class Notices {
             .setAutoCancel(true)
             .setContentIntent(open(c, n.url, code(tag)));
         if (channel.equals(PRIVATE) || channel.equals(CLASSES)) b.setCategory(Notification.CATEGORY_MESSAGE);
-        if (quiet) {
-            b.setOnlyAlertOnce(true);
-            if (android.os.Build.VERSION.SDK_INT >= 31) b.setSilent(true);
-        }
+        if (quiet) b.setChannelId(MISSED);
         nm.notify(tag, ID, b.build());
     }
 
@@ -143,6 +141,11 @@ final class Notices {
         plain(nm, PRIVATE, "პირადი შეტყობინებები", "პირად ჩათში მოწერილი შეტყობინებები");
         plain(nm, CLASSES, "კლასის ჩათები", "კლასის ჩათის შეტყობინებები");
         plain(nm, OTHER, "შეტყობინებები", "სკოლის სხვა შეტყობინებები და შეხსენებები");
+        if (nm.getNotificationChannel(MISSED) == null) {
+            NotificationChannel ch = new NotificationChannel(MISSED, "გამოტოვებული ზარები", NotificationManager.IMPORTANCE_LOW);
+            ch.setDescription("ზარი, რომელსაც არ უპასუხე — უხმოდ");
+            nm.createNotificationChannel(ch);
+        }
     }
 
     private static void plain(NotificationManager nm, String id, String name, String about) {
