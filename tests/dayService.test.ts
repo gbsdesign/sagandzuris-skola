@@ -1,7 +1,9 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { buildServices, guessRank, hymnsOf, matinsKathismas, vespersKathisma, greatFeastOf, periodOf, PATRON_PRESETS, type Patron } from '../src/utils/dayService';
+import { buildServices, guessRank, hymnsOf, lentPsalter, matinsKathismas, vespersKathisma, greatFeastOf, periodOf, PATRON_PRESETS, type Patron } from '../src/utils/dayService';
+import { orthodoxEaster } from '../src/data/churchFeasts';
+const easterOffsetOf = (iso: string) => Math.round((Date.parse(iso) - Date.parse(orthodoxEaster(Number(iso.slice(0, 4))))) / 864e5);
 
 const cal = JSON.parse(readFileSync(new URL('../src/data/calendar/2026.json', import.meta.url), 'utf8')).days;
 const george = PATRON_PRESETS.find(p => p.id === 'giorgoba') as Patron;
@@ -182,4 +184,36 @@ test('a fixed feast\'s leave-taking is the feast\'s alone', () => {
   const h = hymnsOf({ iso: '2027-01-13', day: cal['2027-01-13'], tone: 1, rank: 'simple', patron: null }, 'liturgy');
   assert.deepEqual(h.troparia.map(x => x.role), ['feast']);
   assert.deepEqual(h.kontakia.map(x => x.role), ['feast']);
+});
+
+test('Lent\'s psalter (Typikon ch. 17): matins, the hours, vespers', () => {
+  // Lent 2027: Monday 15 March … the 5th week from Monday 12 April; Holy Week from 26 April
+  assert.deepEqual(matinsKathismas('2027-03-16', 'simple'), [10, 11, 12]); // Tuesday, 1st week
+  assert.deepEqual(matinsKathismas('2027-03-17', 'doxology'), [19, 20, 1]); // Wednesday
+  assert.deepEqual(matinsKathismas('2027-04-15', 'simple'), [8]); // the Great Canon's Thursday
+  assert.deepEqual(matinsKathismas('2027-04-27', 'simple'), [9, 10, 11]); // Holy Tuesday
+  assert.deepEqual(matinsKathismas('2027-02-23', 'simple'), [7, 8, 9]); // before the Prodigal's Sunday (28 Feb): winter
+  assert.deepEqual(matinsKathismas('2027-03-02', 'simple'), [7, 8]); // after the Prodigal's Sunday: the summer order
+  assert.equal(vespersKathisma('2027-03-15', 'simple'), null); // Sunday evening (forgiveness)
+  assert.equal(vespersKathisma('2027-03-16', 'simple'), 18); // Monday evening
+  assert.equal(vespersKathisma('2027-04-13', 'simple'), 10); // the 5th week's Monday evening
+  assert.equal(vespersKathisma('2027-04-16', 'simple'), null); // the Great Canon's Thursday evening
+  assert.deepEqual(lentPsalter(easterOffsetOf('2027-03-16'))?.h, { 1: 13, 3: 14, 6: 15, 9: 16 });
+  const hours = buildServices({ iso: '2027-03-16', day: null, tone: 1, rank: 'simple', patron: null }).find(s => s.id === 'hours')!;
+  assert.ok(hours.steps[1].read!.some(r => 'kathisma' in r && r.kathisma === 14));
+});
+
+test('the eves of Christmas and Theophany, the Holy Spirit\'s Monday', () => {
+  const sv = (iso: string) => buildServices({ iso, day: cal[iso] ?? null, tone: 1, rank: guessRank(iso, cal[iso] ?? null, null), patron: null });
+  // Christmas Eve 2027 (Wednesday): the liturgy begins with vespers and its eight readings
+  const eve = sv('2027-01-06').find(s => s.id === 'liturgy')!.steps.map(s => s.title);
+  assert.equal(eve[0], '„კურთხეულ არს სუფევა“');
+  assert.ok(eve.some(t => t.startsWith('8 საწინასწარმეტყველო')));
+  // Christmas: the vigil is Great Compline with the litya, matins from the six psalms
+  const xmas = sv('2027-01-07');
+  assert.equal(xmas[0].title, 'დიდი სერობა — ღამისთევა');
+  assert.ok(!xmas.find(s => s.id === 'matins')!.steps.some(s => s.title === 'ფსალმუნები 19 და 20'));
+  // the Monday of the Holy Spirit is the feast's second day
+  assert.equal(guessRank('2027-06-21', cal['2027-06-21'], null), 'great');
+  assert.equal(hymnsOf({ iso: '2027-06-21', day: cal['2027-06-21'], tone: 1, rank: 'great', patron: null }, 'liturgy').troparia[0].e, 49);
 });
