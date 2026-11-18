@@ -55,8 +55,11 @@ final class Notices {
             .setStyle(new Notification.BigTextStyle().bigText(n.body))
             .setAutoCancel(true)
             .setContentIntent(open(c, n.url, code(tag)));
-        if (channel.equals(PRIVATE) || channel.equals(CLASSES)) b.setCategory(quiet ? Notification.CATEGORY_MISSED_CALL : Notification.CATEGORY_MESSAGE);
-        if (quiet) b.setOnlyAlertOnce(true).setSilent(true);
+        if (channel.equals(PRIVATE) || channel.equals(CLASSES)) b.setCategory(Notification.CATEGORY_MESSAGE);
+        if (quiet) {
+            b.setOnlyAlertOnce(true);
+            if (android.os.Build.VERSION.SDK_INT >= 31) b.setSilent(true);
+        }
         nm.notify(tag, ID, b.build());
     }
 
