@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { Compass, Home, MessageCircle, Search, User } from 'lucide-react';
 import { useAuth, useModal, useNavigation, type PageType } from '../../context';
 import { useAccess } from '../../hooks/useAccess';
@@ -28,6 +28,12 @@ export const BottomNav: React.FC = () => {
   const { openModal } = useModal();
   const access = useAccess();
   const unread = useUnreadChats();
+  // the app's icon shows how many chats wait (stage 4e; the Badging API — installed apps on Android, iPhone and computers)
+  useEffect(() => {
+    const nav = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
+    if (!nav.setAppBadge) return;
+    void (unread > 0 ? nav.setAppBadge(unread) : nav.clearAppBadge?.())?.catch(() => { /* not allowed here */ });
+  }, [unread]);
   const on = tabOf(currentPage, mapItem);
   const kids = Boolean(access.kids);
 

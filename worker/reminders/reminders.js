@@ -26,6 +26,10 @@
 //   still waiting for players, fresh) and told once.
 // • The phone's calendar (2026-10-29): GET /cal/<secret>.ics — great feasts, fasts and the member's lessons (ics.js);
 //   the secret is one of /widget/link's, asked for by the profile's „კალენდარი ტელეფონში“.
+// • Notices' settings (2026-11-18, boards x-ultra-shejameba): POST /notify-prefs { token, prefs } keeps the person's
+//   { summary, at, items, quiet, from, to, calls } (also in students/{uid}.notify). In their quiet hours a chat message is
+//   held (counted) and a call rings only with `calls`; at `at` (Tbilisi) one „დილის შეჯამება“: today's lesson, the held
+//   messages, the AI lesson or the reviews due, birthdays in their classes, the feast — nothing to say, nothing sent.
 // • Calls and messages (2026-11-05): /account with `chat: true` binds the browser to the person's calls and chat messages
 //   (the site does it by itself once notifications are allowed; devices already bound to a person got it on). POST /ring
 //   { token, base, end? } — a call just started in a private chat (dms/{id}) or a class (classes/{id}): the others' phones
@@ -177,6 +181,13 @@ async function ensureSchema(env) {
     await env.DB.batch([
       env.DB.prepare('UPDATE subs SET chat = 1 WHERE uid IS NOT NULL'),
       env.DB.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema', '4')"),
+    ]);
+  }
+  // the notices' settings and the messages held in the quiet hours (2026-11-18)
+  if (!v || Number(v.value) < 5) {
+    await env.DB.batch([
+      env.DB.prepare('CREATE TABLE IF NOT EXISTS notify (uid TEXT PRIMARY KEY, json TEXT NOT NULL, held INTEGER NOT NULL DEFAULT 0, sent TEXT, updated_at TEXT)'),
+      env.DB.prepare("INSERT OR REPLACE INTO meta (key, value) VALUES ('schema', '5')"),
     ]);
   }
   schemaReady = true;
@@ -494,8 +505,10 @@ const fromValue = (v) => {
 };
 const fromFields = (fields) => Object.fromEntries(Object.entries(fields || {}).map(([k, v]) => [k, fromValue(v)]));
 
-async function fsGet(env, path) {
-  const res = await fetch(`${fsBase(env)}/${path}`, { headers: { Authorization: `Bearer ${await accessToken(env)}` } });
+// `fields`: only these fields (a student's record is big)
+async function fsGet(env, path, fields = []) {
+  const mask = fields.map((f, i) => `${i ? '&' : '?'}mask.fieldPaths=${encodeURIComponent(f)}`).join('');
+  const res = await fetch(`${fsBase(env)}/${path}${mask}`, { headers: { Authorization: `Bearer ${await accessToken(env)}` } });
   if (res.status === 404) return null;
   if (!res.ok) throw new Error(`firestore ${res.status}`);
   return fromFields((await res.json()).fields);
@@ -827,7 +840,9 @@ async function ring(request, env) {
   const url = kind === 'classes' ? `/?open=chat&id=class:${id}` : `/?open=chat&id=${id}`;
   // the Android app reads the tag: call-d-… a private call, call-c-… a class's (android/ BellDelegationService)
   const tag = `call-${kind === 'dms' ? 'd' : 'c'}-${id}`;
-  const rows = await rowsFor(env, to, 'chat');
+  // in the quiet hours a call rings only for those who let calls through (x-ultra-shejameba)
+  const quiet = await quietPeople(env, to);
+  const rows = (await rowsFor(env, to, 'chat')).filter((r) => !quiet.has(r.uid) || quiet.get(r.uid).calls);
   if (end) {
     const message = { kind: 'call-end', title, body: kind === 'classes' ? `${caller} — გამოტოვებული ზარი` : 'გამოტოვებული ზარი', tag, url, ttl: 3600 };
     await deliver(env, rows.map((r) => [r, message]));
@@ -905,9 +920,155 @@ async function chatNotify(request, env) {
     renotify: !who.group,
     ttl: 86400,
   };
-  const rows = await rowsFor(env, who.to, 'chat');
+  // in someone's quiet hours the message waits for their morning summary (counted), the phone stays silent
+  const quiet = await quietPeople(env, who.to);
+  for (const q of quiet.keys()) await env.DB.prepare('UPDATE notify SET held = held + 1 WHERE uid = ?').bind(q).run();
+  const rows = (await rowsFor(env, who.to, 'chat')).filter((r) => !quiet.has(r.uid));
   await deliver(env, rows.map((r) => [r, message]));
   return [200, 'ok'];
+}
+
+// ---- the notices' settings: quiet hours and the morning summary (2026-11-18) ---------------------------------------
+
+const NOTIFY_DEFAULTS = {
+  summary: false, at: '09:00', items: { lesson: true, chat: true, day: true, birthdays: true, feast: false },
+  quiet: false, from: '22:00', to: '08:00', calls: true,
+};
+/** what is stored, made whole and safe — the same rules as src/utils/notifyRules.ts `prefsOf` */
+function notifyOf(raw) {
+  const r = raw && typeof raw === 'object' ? raw : {};
+  const it = r.items && typeof r.items === 'object' ? r.items : {};
+  const d = NOTIFY_DEFAULTS;
+  const b = (v, x) => (typeof v === 'boolean' ? v : x);
+  const t = (v, x) => (typeof v === 'string' && HHMM.test(v) ? v : x);
+  return {
+    summary: b(r.summary, d.summary), at: t(r.at, d.at),
+    items: { lesson: b(it.lesson, d.items.lesson), chat: b(it.chat, d.items.chat), day: b(it.day, d.items.day), birthdays: b(it.birthdays, d.items.birthdays), feast: b(it.feast, d.items.feast) },
+    quiet: b(r.quiet, d.quiet), from: t(r.from, d.from), to: t(r.to, d.to), calls: b(r.calls, d.calls),
+  };
+}
+const minuteOfDay = (hhmm) => Number(hhmm.slice(0, 2)) * 60 + Number(hhmm.slice(3, 5));
+/** whether a moment is in the person's quiet hours (Tbilisi time; they may pass midnight) */
+function quietAt(prefs, when) {
+  if (!prefs.quiet) return false;
+  const g = georgia(when);
+  const m = g.getUTCHours() * 60 + g.getUTCMinutes();
+  const a = minuteOfDay(prefs.from);
+  const b = minuteOfDay(prefs.to);
+  if (a === b) return false;
+  return a < b ? m >= a && m < b : m >= a || m < b;
+}
+
+async function notifyPrefs(request, env) {
+  const body = await readJson(request);
+  if (!body) return [400, 'bad json'];
+  let uid;
+  try {
+    uid = await verifyIdToken(env, body.token);
+  } catch {
+    return [401, 'bad token'];
+  }
+  const prefs = notifyOf(body.prefs);
+  await env.DB.prepare('INSERT INTO notify (uid, json, updated_at) VALUES (?, ?, ?) ON CONFLICT(uid) DO UPDATE SET json = excluded.json, updated_at = excluded.updated_at')
+    .bind(uid, JSON.stringify(prefs), new Date().toISOString()).run();
+  return [200, 'ok'];
+}
+
+/** the people of `uids` in their quiet hours now, with what they chose (those without settings are never quiet) */
+async function quietPeople(env, uids, when = new Date()) {
+  const out = new Map();
+  for (let i = 0; i < uids.length; i += 50) {
+    const part = uids.slice(i, i + 50);
+    const res = await env.DB.prepare(`SELECT uid, json FROM notify WHERE uid IN (${part.map(() => '?').join(',')})`).bind(...part).all();
+    for (const r of res.results) {
+      let prefs;
+      try { prefs = notifyOf(JSON.parse(r.json)); } catch { continue; }
+      if (quietAt(prefs, when)) out.set(r.uid, prefs);
+    }
+  }
+  return out;
+}
+
+const plural = (n, one) => `${n} ${one}`;
+/** the summary's lines in the order of the board; empty = nothing to send */
+function summaryLines({ items, lessons = [], held = 0, ai = null, reviews = 0, birthdays = [], feast = '' }) {
+  const lines = [];
+  if (items.lesson) for (const l of lessons.slice(0, 2)) lines.push(`გაკვეთილი დღეს ${l.start}${l.note ? ` · ${l.note}` : ''}`);
+  if (items.chat && held > 0) lines.push(plural(held, 'ახალი წერილი'));
+  if (items.day) {
+    if (ai) lines.push(`დღის გაკვეთილი: ${ai} წუთი AI მასწავლებელთან`);
+    else if (reviews > 0) lines.push(`გასამეორებელი: ${plural(reviews, 'საგალობელი')}`);
+  }
+  if (items.birthdays && birthdays.length) lines.push(`დღეს ${birthdays.slice(0, 2).join(', ')}${birthdays.length > 2 ? ` და კიდევ ${birthdays.length - 2}` : ''} — დაბადების დღე`);
+  if (items.feast && feast) lines.push(feast);
+  return lines;
+}
+
+let daysCache = { year: 0, days: null };
+async function feastOf(day) {
+  const year = Number(day.slice(0, 4));
+  if (daysCache.year !== year) {
+    try {
+      const res = await fetch(`${SUBJECT}/widget/days-${year}.json`);
+      daysCache = { year, days: res.ok ? (await res.json()).days || {} : {} };
+    } catch {
+      daysCache = { year, days: {} };
+    }
+  }
+  const s = daysCache.days?.[day]?.s || [];
+  const great = s.find((x) => x?.[1]);
+  const name = String((great || [])[0] || '').split('.')[0].trim();
+  return name.length > 90 ? `${name.slice(0, 88)}…` : name;
+}
+
+/** Each minute: the people whose summary hour (Tbilisi) is now get one notice of what today holds. */
+async function runSummaries(env, when) {
+  const g = georgia(when);
+  const hhmm = `${pad(g.getUTCHours())}:${pad(g.getUTCMinutes())}`;
+  const day = isoOf(g);
+  const res = await env.DB.prepare('SELECT uid, json, held, sent FROM notify').all();
+  const due = [];
+  for (const r of res.results) {
+    let prefs;
+    try { prefs = notifyOf(JSON.parse(r.json)); } catch { continue; }
+    if (prefs.summary && prefs.at === hhmm && r.sent !== day) due.push({ uid: r.uid, prefs, held: Number(r.held) || 0 });
+  }
+  if (!due.length) return;
+  const weekday = g.getUTCDay();
+  const [classes, sections, births] = await Promise.all([
+    fsList(env, 'classes', ['name', 'memberIds', 'teacherIds', 'schedule', 'archived']).catch(() => []),
+    fsGet(env, 'settings/sections').catch(() => null),
+    fsList(env, 'birthdays', ['uid', 'name', 'month', 'day']).catch(() => []),
+  ]);
+  const aiOpen = sections?.state?.aiTeacher === 'open';
+  const feast = due.some((d) => d.prefs.items.feast) ? await feastOf(day) : '';
+  const [mm, dd] = [g.getUTCMonth() + 1, g.getUTCDate()];
+  for (const d of due) {
+    try {
+      const mine = classes.filter((c) => !c.archived && ((c.memberIds || []).includes(d.uid) || (c.teacherIds || []).includes(d.uid)));
+      const lessons = mine.flatMap((c) => (c.schedule || []).filter((x) => Number(x.day) === weekday && x.start)).sort((a, b) => String(a.start).localeCompare(String(b.start)));
+      const people = new Set(mine.flatMap((c) => [...(c.memberIds || []), ...(c.teacherIds || [])]));
+      const birthdays = births.filter((b) => b.uid !== d.uid && people.has(b.uid) && Number(b.month) === mm && Number(b.day) === dd).map((b) => firstName(String(b.name || '').trim())).filter(Boolean);
+      let ai = null;
+      let reviews = 0;
+      if (d.prefs.items.day) {
+        const st = await fsGet(env, `students/${d.uid}`, ['aiLesson', 'aiNote', 'learning', 'kidsMode']).catch(() => null);
+        if (aiOpen && !st?.kidsMode && st?.aiLesson?.last !== day) ai = Number(st?.aiNote?.intro?.minutes) === 5 ? 5 : 10;
+        else {
+          const learning = st?.learning || {};
+          reviews = Object.values(learning).filter((parts) => Object.values(parts || {}).some((p) => p?.due && String(p.due) <= day)).length;
+        }
+      }
+      const lines = summaryLines({ items: d.prefs.items, lessons, held: d.held, ai, reviews, birthdays, feast });
+      await env.DB.prepare('UPDATE notify SET held = 0, sent = ? WHERE uid = ?').bind(day, d.uid).run();
+      if (!lines.length) continue;
+      const rows = await rowsFor(env, [d.uid], 'chat');
+      const message = { kind: 'notice', title: 'დილის შეჯამება', body: lines.map((l) => `• ${l}`).join('\n'), tag: 'summary', url: '/', ttl: 6 * 3600 };
+      await deliver(env, rows.map((r) => [r, message]));
+    } catch (e) {
+      console.warn('summary:', e?.message);
+    }
+  }
 }
 
 // ---- an admin's notice for everyone (the site's 🔔 „ყველას მიწერა“, 2026-11-06) -------------------------------------
@@ -1322,6 +1483,7 @@ async function deleteAccount(request, env) {
     env.DB.prepare('DELETE FROM subs WHERE uid = ?').bind(uid),
     env.DB.prepare('DELETE FROM widgets WHERE uid = ?').bind(uid),
     env.DB.prepare('DELETE FROM widget_summary WHERE uid = ?').bind(uid),
+    env.DB.prepare('DELETE FROM notify WHERE uid = ?').bind(uid),
   ]);
   // last, the sign-in itself
   const res = await fetch(`https://identitytoolkit.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/accounts:delete`, {
@@ -1342,7 +1504,7 @@ export default {
     const routes = {
       '/subscribe': subscribe, '/account': account, '/group-event': groupEvent, '/access-request': accessRequest, '/game-invite': gameInvite,
       '/ring': ring, '/chat-notify': chatNotify, '/announce': announce, '/decline': decline, '/delete-account': deleteAccount,
-      '/widget/link': widgetLink, '/widget/summary': widgetSummary,
+      '/widget/link': widgetLink, '/widget/summary': widgetSummary, '/notify-prefs': notifyPrefs,
     };
     // the app's widgets send no Origin: their secret is the proof
     const widgetRoutes = { 'GET /widget/data': widgetData, 'POST /widget/tick': widgetTick, 'POST /widget/count': widgetCount, 'POST /widget/unlink': widgetUnlink };
@@ -1376,9 +1538,10 @@ export default {
       if (minute === 0 && g.getUTCDay() === 1 && g.getUTCHours() === 10) await runAdminWeek(env, when).catch((e) => console.warn('admin week:', e?.message));
       else if (minute === 50 || minute === 55 || minute === 59) await runPrayerReminders(env, when);
       await runHabitReminders(env, when).catch((e) => console.warn('habits:', e?.message));
+      await runSummaries(env, when).catch((e) => console.warn('summaries:', e?.message));
     })());
   },
 };
 
 // for tests (tests/reminders-worker.test.mjs, tests/adminTools.test.ts)
-export { encryptPayload, cycleOf, ownersIn, weekText, chatTargets, chatBody, ringTicket, prayerMessage, apnsOf, androidOf };
+export { encryptPayload, cycleOf, ownersIn, weekText, chatTargets, chatBody, ringTicket, prayerMessage, apnsOf, androidOf, notifyOf, quietAt, summaryLines };

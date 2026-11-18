@@ -10,6 +10,7 @@ import { useWidgetLink } from '../../components/app/WidgetLinkCard';
 import { useAccountActions } from '../../components/views/ProfileActions';
 import { SettingsView } from './settings/SettingsView';
 import { InstallGuide } from './settings/InstallGuide';
+import { NotifyScreen, SummaryScreen } from '../v2/shetkobinebebi';
 
 export { SettingsView } from './settings/SettingsView';
 export type { SettingsViewProps, WidgetLook } from './settings/SettingsView';
@@ -27,7 +28,7 @@ export type { SettingsViewProps, WidgetLook } from './settings/SettingsView';
 type Win = null | 'reminders' | 'calendar' | 'ios';
 
 export const SettingsPage: React.FC = () => {
-  const { handleGoBack, navigateTo } = useNavigation();
+  const { handleGoBack, navigateTo, openMapItem, mapItem } = useNavigation();
   const { user } = useAuth();
   const access = useAccess();
   const waiting = useMembership().status === 'pending';
@@ -42,11 +43,15 @@ export const SettingsPage: React.FC = () => {
   const adult = !!user && !access.kids;
   const canInstall = !pwa.isInstalled && (pwa.isInstallable || pwa.isIOS);
 
+  if (member && mapItem === 'notify') return <NotifyScreen />;
+  if (member && mapItem === 'notify~summary') return <SummaryScreen />;
+
   return (
     <>
       <SettingsView
         onBack={handleGoBack}
         onReminders={member ? () => setWin('reminders') : undefined}
+        onNotify={member ? () => openMapItem('notify') : undefined}
         khutsuri={khutsuri}
         onKhutsuri={setKhutsuri}
         widget={member && widget.shown ? {

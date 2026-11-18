@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Check, GraduationCap, Lock, Music, Pencil, X } from 'lucide-react';
+import { Check, GraduationCap, Lock, Music, Pencil, Share, X } from 'lucide-react';
 import { useChants, useNavigation } from '../../../context';
 import {
   Bar, Button, Card, Chips, Dot, Helper, Pill, Press, Row, Rows, RoundButton, SectionLabel, Sheet, TopBar, cx, FOCUS,
@@ -20,6 +20,8 @@ import { sortPathItems, usesVoices, voicesOf, type PathItem, type Voice } from '
 import { SERVICE_LISTS } from '../../../data/chantLookup';
 import { useLearnCount } from './useGza';
 import { WorkSection } from './Work';
+import { ShareLayer } from '../barati';
+import { learnedItemOf } from '../barati/useLearned';
 
 // „საგანძური“ (board x-sagandzuri; the canvas's note: „ზემოთ ორი რიცხვი და ერთი დავალება მთავარი ღილაკით. ქვემოთ შენი
 // საგალობლები ხმებით. სკივრების სურათები ჩიპებმა შეცვალა“): the two numbers and their bar, the first assignment, then every
@@ -111,10 +113,12 @@ export const SagandzuriView: React.FC<{
   onPearl: (id: string) => void;
   pearl: PearlInfo | null;
   onClosePearl: () => void;
+  /** a shining pearl's „გაზიარება“ (the card of a learned chant) */
+  onSharePearl?: () => void;
   mastery?: { level: number; pct: number; onOpen: () => void };
 }> = ({
   onBack, learned, total, voices, voiceSlots, plus, work, chips, chip, onChip, items, onFirstStep, locked, editing, onEdit,
-  onVoice, onRemove, onPearl, pearl, onClosePearl, mastery,
+  onVoice, onRemove, onPearl, pearl, onClosePearl, onSharePearl, mastery,
 }) => {
   const [more, setMore] = useState(false);
   const shown = chip === 'all' ? items : items.filter(it => it.chip === chip);
@@ -232,6 +236,9 @@ export const SagandzuriView: React.FC<{
                   title={pearl.voiced ? `${['I', 'II', 'III'][i]} ხმა` : 'ნასწავლი'} sub={MARK_WORD[m]} />
               ))}
             </Rows>
+            {pearl.pearl === 'shining' && onSharePearl && (
+              <Button full icon={<Share strokeWidth={2} />} onClick={onSharePearl}>გაზიარე</Button>
+            )}
           </>
         )}
       </Sheet>
@@ -260,6 +267,7 @@ export const SagandzuriPage: React.FC<{ onBack: () => void; onMastery: () => voi
   const [plus, setPlus] = useState(false);
   const plusTimer = useRef<number | undefined>(undefined);
   const [pearlId, setPearlId] = useState<string | null>(null);
+  const [shareId, setShareId] = useState<string | null>(null);
 
   // the number on „საგანძური“ goes once this page shows the new assignments (also ones coming while it is open)
   useEffect(() => {
@@ -325,6 +333,9 @@ export const SagandzuriPage: React.FC<{ onBack: () => void; onMastery: () => voi
     saveVariantsToFirestoreAndStorage(next);
   };
 
+  const shareItem = shareId ? items.find(x => x.id === shareId) : undefined;
+  const shareOf = shareItem ? learnedItemOf(shareItem.id, { chantName: shareItem.name, label: shareItem.it.label }, (confirmed[shareItem.id] || []).filter(v => v) as Voice[]) : null;
+
   const shownPearl = pearlId ? items.find(x => x.id === pearlId) : undefined;
 
   return (
@@ -350,9 +361,11 @@ export const SagandzuriPage: React.FC<{ onBack: () => void; onMastery: () => voi
         onPearl={setPearlId}
         pearl={shownPearl ? { name: shownPearl.name, token: shownPearl.token, pearl: shownPearl.pearl, voiced: shownPearl.voiced, marks: shownPearl.marks } : null}
         onClosePearl={() => setPearlId(null)}
+        onSharePearl={() => { setShareId(pearlId); setPearlId(null); }}
         mastery={access.on('manera') ? { level: mastery.level, pct: mastery.pct, onOpen: onMastery } : undefined}
       />
       <PearlFlight flight={flight} onDone={endFlight} />
+      {shareOf && <ShareLayer item={shareOf} onClose={() => setShareId(null)} />}
     </>
   );
 };

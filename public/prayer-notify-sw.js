@@ -119,6 +119,8 @@ async function showTalk(m) {
     });
   }
   if (visible) return;
+  // a message with the app closed marks its icon (the open app sets the real count — BottomNav)
+  if (m.kind === 'chat' && self.navigator.setAppBadge) self.navigator.setAppBadge().catch(() => {});
   if (m.kind === 'call') {
     return self.registration.showNotification(m.title, {
       body: m.body || '', tag: m.tag, renotify: true, requireInteraction: true, vibrate: RING_VIBRATE,

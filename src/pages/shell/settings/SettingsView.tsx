@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Bell, Calendar, Download, IdCard, LayoutGrid, LogOut, MessageCircle, Shield, Trash2, Type } from 'lucide-react';
+import { Bell, BellRing, Calendar, Download, IdCard, LayoutGrid, LogOut, MessageCircle, Shield, Trash2, Type } from 'lucide-react';
 import { Dot, Row, Rows, SectionLabel, ToggleRow, TopBar } from '../../../components/ui2';
 import { ContactSheet, OutMark } from './ContactSheet';
 
@@ -14,6 +14,7 @@ export interface SettingsViewProps {
   onBack: () => void;
   // აპი
   onReminders?: () => void;
+  onNotify?: () => void;
   khutsuri: boolean;
   onKhutsuri: (on: boolean) => void;
   // ტელეფონი
@@ -50,7 +51,7 @@ const widgetSub = (w: WidgetLook): React.ReactNode =>
     : undefined;
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
-  onBack, onReminders, khutsuri, onKhutsuri, widget, onCalendar, onInstall, onPersonal, privacyHref = '/privacy.html',
+  onBack, onReminders, onNotify, khutsuri, onKhutsuri, widget, onCalendar, onInstall, onPersonal, privacyHref = '/privacy.html',
   onSignOut, remove,
 }) => {
   const [contact, setContact] = useState(false);
@@ -60,6 +61,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       <main className="flex flex-col gap-2 pt-0.5 pb-5">
         <Group label="აპი">
           {onReminders && <Row lead={lead(<Bell />)} title="შეხსენებები" onClick={onReminders} />}
+          {onNotify && <Row lead={lead(<BellRing />)} title="შეტყობინებები" onClick={onNotify} />}
           {/* the next stages put „ტექსტის ზომა“ and „მუქი ფონი“ here, between the reminders and ხუცური */}
           <ToggleRow lead={lead(<Type />)} title="ხუცური" sub="მთელი აპი ძველი ასოებით" on={khutsuri} onChange={onKhutsuri} />
         </Group>
