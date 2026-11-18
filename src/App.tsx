@@ -66,6 +66,7 @@ const CallLayer = later(() => import('./components/calls/CallLayer'), 'CallLayer
 const PhoneRingSetup = later(() => import('./components/calls/PhoneRingSetup'), 'PhoneRingSetup');
 const GameInvites = later(() => import('./components/games/GameInvites'), 'GameInvites');
 const ClassMarksSync = later(() => import('./components/app/ClassMarksSync'), 'ClassMarksSync');
+const ProgramAutoOffline = later(() => import('./components/classes/ProgramAutoOffline'), 'ProgramAutoOffline');
 
 startRecordingBindings();
 // the songs' moved recordings (data/placements, with all the songs' data) start listening a moment after the first screen
@@ -317,6 +318,8 @@ function AppContent() {
       {/* the member's marks on their classes' programs, for the class page's "who knows this voice" (loads after the
           first screen: it needs every chant's data) */}
       <ErrorBoundary><Suspense fallback={null}><ClassMarksSync /></Suspense></ErrorBoundary>
+      {/* the class program downloads by itself when it changes (signed-in members and teachers only) */}
+      {user && <ErrorBoundary><Suspense fallback={null}><ProgramAutoOffline /></Suspense></ErrorBoundary>}
       {/* the Android app: widget and icon-menu buttons, the widgets' summary, things shared into the app */}
       <ErrorBoundary>
         <Suspense fallback={null}><AppLinks /></Suspense>

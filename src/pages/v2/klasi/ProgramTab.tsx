@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { AudioLines, BookOpen, ChevronDown, ChevronUp, ClipboardList, CloudCheck, CloudDownload, GraduationCap, Loader2, Music, Plus, Sparkles, Users } from 'lucide-react';
+import { AudioLines, BookOpen, Check, ChevronDown, ChevronUp, ClipboardList, CloudCheck, CloudDownload, GraduationCap, Loader2, Music, Plus, Sparkles, Users } from 'lucide-react';
 import { useAuth, useChants, useNavigation } from '../../../context';
 import { Avatar, Bar, Button, Card, CheckButton, Dot, Duo, Note, Pill, RoundButton, Row, Rows, SectionLabel, Sheet, Small } from '../../../components/ui2';
 import type { ProgramItem, SchoolClass } from '../../../hooks/useClasses';
@@ -21,6 +21,7 @@ import { triggerFireworks } from '../../../components/views/StudentBookmarkView'
 import { CATEGORY_LABEL, CatalogEntry, PathCategory, Voice, categoryOf, findCatalogEntry, usesVoices } from '../../../utils/pathItems';
 import { KATHISMA_COUNT, formatRange, readCount } from '../../../utils/psalter';
 import { ProgramAddSheet } from './teacher/ProgramAdd';
+import { ProgramOfflineSheet } from './ProgramOfflineSheet';
 import { openAiLesson } from '../../../components/aiLesson/open';
 import { useMemberNotes } from '../aiklasi/useAiNotes';
 
@@ -51,6 +52,7 @@ export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean }> = ({ c
   const [adding, setAdding] = useState(false);
   const [assigning, setAssigning] = useState<CatalogEntry | null>(null);
   const [done, setDone] = useState('');
+  const [offlineOpen, setOfflineOpen] = useState(false);
   const iAmMember = !!user && cls.memberIds.includes(user.uid);
   const { openMapItem } = useNavigation();
   const aiOn = useAccess().on('aiTeacher');
@@ -105,6 +107,13 @@ export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean }> = ({ c
       const n = anyoneKnows(p.id);
       right = n ? <span className="flex shrink-0 items-center gap-1 text-meta font-semibold text-mut tabular-nums" title="კლასში იცის"><Users className="size-4" aria-hidden="true" />{n}</span> : null;
     }
+    // while a download runs (or just after) the right side says whether this one is on the phone
+    const st = offline.showStates ? offline.savedItem(p.id) : null;
+    if (st !== null) {
+      right = st
+        ? <span className="flex shrink-0 items-center gap-1 text-meta font-semibold text-wine"><Check className="size-4" aria-hidden="true" />ტელეფონშია</span>
+        : <span className="shrink-0 text-meta text-mut">იწერება…</span>;
+    }
     return (
       <Row key={p.key} title={lines.title} sub={[lines.sub, p.note].filter(Boolean).join(' · ') || undefined} right={right} onClick={() => setShown(p.key)} aria-haspopup="dialog" />
     );
@@ -117,8 +126,21 @@ export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean }> = ({ c
         <div className="flex flex-col gap-2 px-4 pt-4 pb-3">
           <div className="flex items-center justify-between gap-2">
             <h2 className="min-w-0 truncate text-head font-bold">სასწავლო პროგრამა</h2>
-            {!iAmMember && cls.program.length > 0 && <Small>{cls.program.length}</Small>}
+            <div className="flex shrink-0 items-center gap-2">
+              {!iAmMember && cls.program.length > 0 && <Small>{cls.program.length}</Small>}
+              {offline.shown && (
+                <RoundButton label={offline.label} size={36} tone="plain" onClick={() => setOfflineOpen(true)} aria-haspopup="dialog">
+                  {offline.busy ? <Loader2 className="animate-spin" /> : offline.saved ? <CloudCheck /> : <CloudDownload />}
+                </RoundButton>
+              )}
+            </div>
           </div>
+          {offline.busy && offline.count > 0 && (
+            <>
+              <div className="text-meta font-semibold text-wine tabular-nums">იწერება · {offline.savedCount} / {offline.count}</div>
+              <Bar value={offline.savedCount / offline.count} label="ჩამოწერა" />
+            </>
+          )}
           {iAmMember && total > 0 && (
             <>
               <div className="text-meta text-mut">
@@ -147,22 +169,15 @@ export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean }> = ({ c
             )}
           </div>
         )}
-        {(canEdit || offline.shown) && (
+        {canEdit && (
           <div className="flex items-center justify-between gap-2 border-t border-line px-2 py-1">
-            {canEdit ? (
-              <Button kind="quiet" size="md" icon={<Plus />} onClick={() => setAdding(true)}>დამატება</Button>
-            ) : <span />}
-            {offline.shown && (
-              <Button kind="quiet" size="md" onClick={offline.save} aria-label={offline.label} title={offline.label}
-                icon={offline.busy ? <Loader2 className="animate-spin" /> : offline.saved ? <CloudCheck /> : <CloudDownload />}>
-                {offline.saved ? 'ჩამოწერილია' : 'ჩამოწერა'}
-              </Button>
-            )}
+            <Button kind="quiet" size="md" icon={<Plus />} onClick={() => setAdding(true)}>დამატება</Button>
           </div>
         )}
       </Card>
-      {offline.shown && (offline.trouble || offline.line) && (
-        <Note className={offline.trouble ? 'text-danger' : undefined}>{offline.trouble || offline.line}</Note>
+      {offline.shown && !offline.saved && offline.trouble && <Note className="text-danger">{offline.trouble}</Note>}
+      {offline.shown && (
+        <ProgramOfflineSheet open={offlineOpen} onClose={() => setOfflineOpen(false)} o={offline} classId={cls.id} word={word} />
       )}
       {done && <Note>{done}</Note>}
 

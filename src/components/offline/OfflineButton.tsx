@@ -2,7 +2,7 @@ import React, { lazy, Suspense, useState } from 'react';
 import { Cloud, CloudDownload, CloudOff } from 'lucide-react';
 import { offlineStatus, runPercent, useOffline } from '../../utils/offlineFiles';
 import { useAccess } from '../../hooks/useAccess';
-import { triggerHaptic } from '../../utils/haptics';
+import { RoundButton } from '../ui2';
 import type { OfflineKind } from './OfflineSheet';
 import { useRecordingTools } from '../../hooks/useRecordingTools';
 
@@ -33,20 +33,14 @@ export const OfflineButton: React.FC<{ kind: OfflineKind }> = ({ kind }) => {
   const Icon = mine ? CloudDownload : status === 'offline' ? CloudOff : Cloud;
   return (
     <>
-      <button
-        type="button"
-        onClick={() => { triggerHaptic(10); setOpen(true); }}
-        className="relative w-9 h-9 shrink-0 rounded-full bg-white/85 ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/40 text-[#7a2028] flex items-center justify-center cursor-pointer transition active:scale-95"
-        title={LABEL[kind]}
-        aria-label={LABEL[kind]}
-      >
-        <Icon className={`w-[18px] h-[18px] ${status === 'offline' ? 'text-[#8a7a6a]' : ''}`} />
+      <RoundButton tone="surf" label={LABEL[kind]} onClick={() => setOpen(true)} className="text-wine">
+        <Icon className={status === 'offline' ? 'text-mut' : ''} />
         {mine && (
-          <span aria-hidden className="absolute left-2 right-2 bottom-1.5 h-[3px] rounded-full bg-current/15 overflow-hidden">
+          <span aria-hidden className="absolute right-2 bottom-1.5 left-2 h-[3px] overflow-hidden rounded-full bg-current/15">
             <span className="block h-full rounded-full bg-current transition-[width] duration-500" style={{ width: `${Math.max(6, pct)}%` }} />
           </span>
         )}
-      </button>
+      </RoundButton>
       {open && <Suspense fallback={null}><OfflineSheet kind={kind} onClose={() => setOpen(false)} /></Suspense>}
     </>
   );

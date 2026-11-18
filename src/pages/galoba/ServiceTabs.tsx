@@ -9,7 +9,7 @@ type Service = NonNullable<ServiceType>;
 // not in the app yet has no `service`: it is only named in the one quiet „მალე: …“ line under the list. When a book
 // fills one, give it its service (ServiceType + the chant list in chantLookup / chantSearch).
 // `other` = folded under „სხვა მსახურებები“ at the list's end (the user, 2026-11-08: „ეს 4 ჩამოსაშლელად“).
-const SECTIONS: Array<{ title: string; note: string; service?: Service; other?: true }> = [
+export const SECTIONS: Array<{ title: string; note: string; service?: Service; other?: true }> = [
   { title: 'წირვა', note: 'საღმრთო ლიტურგია', service: 'წირვა' },
   { title: 'მწუხრი', note: 'საღამოს ლოცვა', service: 'მწუხრი' },
   { title: 'ცისკარი', note: 'დილის ლოცვა', service: 'ცისკარი' },

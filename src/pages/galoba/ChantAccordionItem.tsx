@@ -12,7 +12,7 @@ import { chantRecordingMedia, chantRecordings, isRecordingVersion } from '../../
 import { ChantPlayer } from '../../components/ChantPlayer';
 
 // warm paper palette of the notes pages: cream ground, white cards with a sand line
-const SCHOOL_STYLES: Record<string, { name: string; short: string; text: string }> = {
+export const SCHOOL_STYLES: Record<string, { name: string; short: string; text: string }> = {
   'გ.ს.': { name: 'გელათის სკოლა', short: 'გელათური', text: 'text-[#78350f]' },
   'ქ.კ.': { name: 'ქართლ-კახური', short: 'ქართლ-კახური', text: 'text-[#0c4a6e]' },
   'შ.ს.': { name: 'შემოქმედის სკოლა', short: 'გურული', text: 'text-[#064e3b]' },
@@ -21,9 +21,9 @@ const SCHOOL_STYLES: Record<string, { name: string; short: string; text: string 
 // The start of a version's notes (all voices of its first phrase, with the words): a small picture cut from the book
 // page without the Latin words under the bass, public/notes/<book>/i/NNN.webp (cut by a script outside the repo);
 // a version without one just shows none.
-const incipitUrl = (v: ChantVariant) =>
+export const incipitUrl = (v: ChantVariant) =>
   v.bookNums?.length ? `${notesBase(v.book || 'book')}i/${String(v.bookNums[0]).padStart(3, '0')}.webp` : '';
-const missingIncipits = new Set<string>();
+export const missingIncipits = new Set<string>();
 
 // It fills the card from edge to edge at a fixed shape, as tall as a narrow card allows; what does not fit fades out
 // on the right, where the ▶ sits on a pale round island (a tap beside the ▶ does not open the notes).
@@ -66,10 +66,10 @@ const PlayLine: React.FC<{ id: string }> = ({ id }) => {
 };
 
 // "გ.ს. გამშვ" / "გ.ს. №162" -> "გ.ს."
-const schoolOf = (code: string) => code.trim().split(/\s+/)[0];
+export const schoolOf = (code: string) => code.trim().split(/\s+/)[0];
 
 // Rows of the school grid: book versions are listed one by one, the other schools keep their "სადა" / "გამშვენებული" pair
-const groupBySchool = (variants: ChantVariant[]) => {
+export const groupBySchool = (variants: ChantVariant[]) => {
   const rows: { school: string; plain?: ChantVariant; ornate?: ChantVariant; versions: ChantVariant[] }[] = [];
   for (const v of variants) {
     const school = schoolOf(v.code || '');

@@ -1762,6 +1762,16 @@
   + test): the class's liturgy program for that Sunday, else the tone's chants + the Liturgy's first ten; „მოვამზადე“ writes
   `students.aiLesson.focus {until, pieces}` which the day lesson prefers until that Sunday; the link shows Wed–Sun under the lesson's
   strip / hero and on its start screen.
+- **Stage 5a — chant lists (2026-11-18)**: page `galoba` in the new look = `pages/v2/galoba/GalobaV2` (AppRouter, `nl`):
+  `ServicesScreen` (x-msakhurebebi: `SECTIONS` of `galoba/ServiceTabs.tsx`, counts, „სხვა მსახურებები“ unfolded, the bar's ☰ program
+  + ☁) and `ChantListScreen` (x-sagaloblebi: numbered rows; a row unfolds `Versions` on a phone — x-versiebi: school chips with
+  counts, big cards with the notes' start, 4 then „კიდევ N ვერსია“; from `lg` the list + a sticky right panel — x-desk-sia;
+  offline: a note on top, rows with nothing saved faded „არ არის ჩამოწერილი“ — x-oplain-sia). The ☁ window (`offline/OfflineSheet`,
+  ui2 look for every kind) starts with „ეს მსახურება“ (the old „ჩამოწერა“ pill's job). The class program's ☁ opens
+  `v2/klasi/ProgramOfflineSheet` (x-ultra-oplain 1–4); `components/classes/ProgramAutoOffline` (App, signed in) downloads a changed
+  program by itself — device settings `sg-program-auto` {classId: {auto, wifi, askedDay, spaceDay}}, Wi-Fi only where
+  `navigator.connection.type` tells, else a big one asks once a day; short of room it offers the notes alone (`saveVersionNotes`,
+  kept in `sg-program-notes-only`). The ui2 `Sheet` title may take two lines.
 - **AI teacher, step 3b — the teacher and the AI (2026-11-18)**, all only while `aiTeacher` is on for the person: instructions to
   the AI (`pages/v2/aiklasi/InstructionScreen`, class mapItem `ai-note`; x-ai-mititeba): `classes.aiNotes[]` for the class,
   `students.aiTeacherNotes[]` for one member, each with a start / end day (`utils/aiTeacherNotes.ts` + test: `activeFor`,
