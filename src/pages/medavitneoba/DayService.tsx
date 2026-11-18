@@ -17,6 +17,9 @@ import { useTemplePatron } from '../../hooks/useTemplePatron';
 import { FEAST_RULES } from '../../data/churchFeasts';
 import { ApostleText } from './DayCard';
 import { octoechos, sliceOf, type TextSrc } from '../../utils/serviceTexts';
+import { splitHymns, triodionSrc } from '../../utils/triodion';
+import { foodOf, type FeastWeight } from '../../utils/fasting';
+import { dayText } from '../../utils/dayReadings';
 import { SERVICE_LISTS, hasBookNotes } from '../../data/chantLookup';
 import { bookOf, versionTone } from '../../utils/toneChants';
 import { useNotes } from '../../context/NotesContext';
@@ -57,7 +60,8 @@ type Section = [string, string[]];
 type BookFile = { t: string; c: { l: string; s: Section[] }[] };
 const files = new Map<string, Promise<BookFile>>();
 const loadBook = (coll: string, n: number) => {
-  const url = `/wignebi/${coll}/${String(n).padStart(2, '0')}.json`;
+  // „დამატებითი წიგნები“ (collection x) live in their own folder
+  const url = coll === 'x' ? `/wignebi-x/${String(n).padStart(2, '0')}.json` : `/wignebi/${coll}/${String(n).padStart(2, '0')}.json`;
   let p = files.get(url);
   if (!p) {
     p = fetch(url).then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json() as Promise<BookFile>; });
@@ -100,6 +104,21 @@ const weekdayTexts = async (dow: number): Promise<{ tr: Text[]; ko: Text[] }> =>
     (kont ? out.ko : out.tr).push({ head: i === start ? 'ტროპარი' + (head.match(/,?\s*ხმა\s*\d+/)?.[0] ?? '') : head, paras });
   }
   return out;
+};
+
+/** a movable day's troparia and kontakia (ჟამნი 25, utils/triodion) */
+const movableTexts = async (e: number): Promise<{ tr: Text[]; ko: Text[] }> => {
+  const src = triodionSrc(e);
+  if (!src) return { tr: [], ko: [] };
+  const f = await loadBook(src.coll, src.n);
+  const { tr, ko } = splitHymns(sliceOf(f.c[src.part]?.s ?? [], src));
+  const T = (xs: Section[]) => xs.map(([head, paras]) => ({ head, paras }));
+  return { tr: T(tr), ko: T(ko) };
+};
+/** a fixed feast's own troparion and kontakion (its old-style day in ჟამნი's month — the first of each) */
+const feastTexts = async (md: string): Promise<{ tr: Text[]; ko: Text[] }> => {
+  const all = await saintTexts(Number(md.slice(0, 2)), Number(md.slice(3, 5)));
+  return { tr: all.tr.slice(0, 1), ko: all.ko.slice(0, 1) };
 };
 
 /** a source's sections as texts (utils/serviceTexts) */
@@ -163,7 +182,19 @@ const Troparia: React.FC<{ inp: DayInput; at: 'vespers' | 'matins' | 'hours' | '
   const [temple, setTemple] = useState<{ tr: Text[]; ko: Text[] } | null>(null);
   const [week, setWeek] = useState<{ tr: Text[]; ko: Text[] } | null>(null);
   const [res, setRes] = useState<Text[] | null>(null);
+  const [own, setOwn] = useState<Record<string, { tr: Text[]; ko: Text[] }>>({});
   const dow = fromIso(inp.iso).getDay();
+  // the movable days' and the fixed feasts' own hymns (stage 4): load each source once
+  const keyOf = (h: Hymn) => (h.e !== undefined ? `e${h.e}` : h.md ? `m${h.md}` : '');
+  const ownKeys = [...troparia, ...kontakia].map(keyOf).filter(Boolean);
+  const ownSig = [...new Set(ownKeys)].join(',');
+  useEffect(() => {
+    let alive = true;
+    for (const k of ownSig ? ownSig.split(',') : []) {
+      (k[0] === 'e' ? movableTexts(Number(k.slice(1))) : feastTexts(k.slice(1))).then(v => alive && setOwn(o => ({ ...o, [k]: v })), () => {});
+    }
+    return () => { alive = false; };
+  }, [ownSig]);
   useEffect(() => {
     let alive = true;
     const r = octoechos(inp.tone, 6, 'troparion');
@@ -177,7 +208,7 @@ const Troparia: React.FC<{ inp: DayInput; at: 'vespers' | 'matins' | 'hours' | '
     return () => { alive = false; };
   }, [inp.iso, inp.patron, inp.tone, dow]);
   const textOf = (h: Hymn, k: 'tr' | 'ko') =>
-    h.role === 'saint' ? saint?.[k] : h.role === 'temple' ? temple?.[k] : h.role === 'day' ? week?.[k] : h.role === 'feast' ? saint?.[k] : h.role === 'resurrection' && k === 'tr' ? res ?? undefined : undefined;
+    keyOf(h) ? own[keyOf(h)]?.[k] : h.role === 'saint' ? saint?.[k] : h.role === 'temple' ? temple?.[k] : h.role === 'day' ? week?.[k] : h.role === 'feast' ? saint?.[k] : h.role === 'resurrection' && k === 'tr' ? res ?? undefined : undefined;
   return (
     <div className="mt-2.5 space-y-3 sg-in">
       {only !== 'ko' && <div>
@@ -499,8 +530,16 @@ const PatronSheet: React.FC<{ open: boolean; value: Patron | null; onPick: (p: P
 
 // ---------- the page ----------
 const SERVICE_TABS: { id: ServiceId; label: string }[] = [
-  { id: 'vespers', label: 'მწუხრი' }, { id: 'matins', label: 'ცისკარი' }, { id: 'hours', label: 'ჟამები' }, { id: 'liturgy', label: 'წირვა' },
+  { id: 'vespers', label: 'მწუხრი' }, { id: 'compline', label: 'სერობა' }, { id: 'matins', label: 'ცისკარი' }, { id: 'hours', label: 'ჟამები' }, { id: 'liturgy', label: 'წირვა' },
 ];
+/** the rank as the fast sees it */
+const weightOf = (rank: Rank, temple: boolean): FeastWeight =>
+  rank === 'great' ? 'great' : rank === 'vigil' || temple ? 'vigil' : rank === 'polyeleos' || rank === 'doxology' ? 'doxology' : 'none';
+const FOOD_TONE: Record<string, string> = {
+  free: 'bg-emerald-50 ring-emerald-200 text-emerald-900', meatless: 'bg-emerald-50 ring-emerald-200 text-emerald-900',
+  fish: 'bg-sky-50 ring-sky-200 text-sky-900', oil: 'bg-[#fdf4e3] ring-[#e9c98f] text-[#4a3826]',
+  dry: 'bg-[#f6ece6] ring-[#e3c8bb] text-[#5a2d22]', strict: 'bg-[#f6ece6] ring-[#e3c8bb] text-[#5a2d22]', none: 'bg-[#f6ece6] ring-[#e3c8bb] text-[#5a2d22]',
+};
 
 export const DayService: React.FC = () => {
   const canCal = useMembership().can('calendar');
@@ -527,10 +566,12 @@ export const DayService: React.FC = () => {
   const tone = weekTone(day ?? null, lastSunday === iso ? null : sundayDay ?? null);
   const inp: DayInput = useMemo(() => ({ iso, day: day ?? null, tone, rank, patron, order }), [iso, day, tone, rank, patron, order]);
   const services = useMemo(() => buildServices(inp), [inp]);
-  const service = services.find(s => s.id === tab)!;
+  const tabs = SERVICE_TABS.filter(t => services.some(s => s.id === t.id));
+  const service = services.find(s => s.id === tab) ?? services[0];
   const great = greatFeastOf(iso);
   const period = periodOf(iso);
   const templeDay = !!patron && patronDay(patron, iso) === iso;
+  const food = foodOf(iso, weightOf(rank, templeDay), day ? dayText(day) : '');
   const title = day?.t.replace(/\s*ხმა\s+[IVX]+\.?\s*$/, '').replace(/\.\s*$/, '');
   const saints = (day?.s ?? []).slice(0, 3);
   const atKey = `${iso}|${tab}`;
@@ -587,6 +628,13 @@ export const DayService: React.FC = () => {
         {day === undefined && <p className="mt-3 text-center text-[14px] text-[#8a7a6a]">იტვირთება…</p>}
         {day === null && <p className="mt-3 text-center text-[14px] text-[#8a7a6a]">ამ დღის კალენდარი ჯერ არ გამოქვეყნებულა — წესი ზოგადად ჩანს.</p>}
 
+        {/* the day's food (the Typikon's rule; the calendar's own words when it has them) */}
+        <div className={`mt-3 rounded-2xl ring-1 px-3.5 py-2.5 ${FOOD_TONE[food.food]}`}>
+          <p className="text-[12px] font-black uppercase tracking-wide opacity-75">დღის საზრდო{food.why ? ` · ${food.why}` : ''}</p>
+          <p className="mt-0.5 text-[15px] font-bold leading-snug text-pretty">{food.cal ? `${food.cal.replace(/\.$/, '')} — კალენდრით` : food.label}</p>
+          {(food.extra || food.cal) && <p className="mt-0.5 text-[13px] font-semibold leading-snug opacity-80 text-pretty">{food.cal ? `ტიბიკონით: ${food.label.toLowerCase()}` : food.extra}</p>}
+        </div>
+
         {/* tone · rank · temple */}
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button type="button" disabled={!tone} onClick={() => { triggerHaptic(8); setToneOpen(tone); }}
@@ -634,13 +682,14 @@ export const DayService: React.FC = () => {
       </section>
 
       {/* the services */}
-      <Tabs cols={4} stack items={SERVICE_TABS} value={tab} onChange={setTab} />
+      <Tabs cols={tabs.length as 4 | 5} stack items={tabs} value={service.id} onChange={setTab} />
 
       <section className={`${CARD} p-4 sm:p-5`}>
         <div className="flex items-baseline justify-between gap-3">
           <h3 className="font-serif-ge text-[20px] font-bold text-[#2a2017]">{service.title}</h3>
           <p className="text-[13px] font-bold text-[#a0703c]">{service.when}</p>
         </div>
+        {service.note && <p className="mt-1.5 text-[14px] font-semibold leading-snug text-[#7a2028] text-pretty">{service.note}</p>}
         <div className="mt-3 grid grid-cols-2 gap-2">
           {([['მღვდლის ტექსტები', priestOn, () => { const v = !priestOn; setPriestOn(v); writeFlag(PRIEST_KEY, v); }], ['ხუცური', oldOn, () => { const v = !oldOn; setOldOn(v); writeFlag(OLD_KEY, v); }]] as const).map(([label, on, flip]) => (
             <button key={label} type="button" role="switch" aria-checked={on} onClick={() => { triggerHaptic(8); flip(); }}

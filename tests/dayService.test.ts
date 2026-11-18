@@ -102,10 +102,54 @@ test('Lent, Holy Week and Bright Week (stage 4)', () => {
   assert.match(lit('2026-02-23')[0], /არ აღესრულება/); // Lent Monday
   assert.ok(lit('2026-02-25').some(t => t.includes('წარემართენ'))); // Wednesday: the Presanctified
   assert.ok(lit('2026-03-01').some(t => t.includes('შენდამი იხარებს'))); // a Lent Sunday: Basil's
-  assert.ok(at('2026-02-24')[1].steps.some(s => s.title.includes('ალილუია')));
-  assert.match(lit('2026-04-10')[0], /სამეუფო ჟამები/); // Holy Friday
+  assert.ok(at('2026-02-24').find(s => s.id === 'matins')!.steps.some(s => s.title.includes('ალილუია')));
+  assert.match(lit('2026-04-10')[0], /წირვა არ აღესრულება/); // Holy Friday
   assert.equal(at('2026-04-13')[2].steps[0].title, 'პასექის ჟამნი'); // Bright Monday
   assert.ok(lit('2026-05-03').some(t => t.includes('ანგელოზი ღაღადებდა'))); // the Paschal season
+});
+
+test('stage 4: the movable days, compline, Holy Week, afterfeasts, own services', () => {
+  const sv = (iso: string, patron: Patron | null = null) => buildServices({ iso, day: cal[iso] ?? null, tone: 1, rank: guessRank(iso, cal[iso] ?? null, patron), patron });
+  const ids = (iso: string) => sv(iso).map(s => s.id).join(' ');
+  const roles = (x: { troparia: { role: string; glory?: string; e?: number }[]; kontakia: { role: string; glory?: string; e?: number }[] }) =>
+    [x.troparia.map(h => h.role + (h.e !== undefined ? h.e : '')).join(' '), x.kontakia.map(h => h.role + (h.e !== undefined ? h.e : '') + (h.glory ? ':' + h.glory : '')).join(' ')];
+  const H = (iso: string, at: 'vespers' | 'matins' | 'hours' | 'liturgy', patron: Patron | null = null) =>
+    roles(hymnsOf({ iso, day: cal[iso] ?? null, tone: 1, rank: guessRank(iso, cal[iso] ?? null, patron), patron }, at));
+  // Great Compline on Lent's Monday–Thursday evenings; St Andrew in its first week (Lent 2026 began on 23 February)
+  assert.equal(ids('2026-02-24'), 'vespers compline matins hours liturgy');
+  assert.ok(sv('2026-02-24')[1].steps.some(s => s.title.includes('ანდრია კრიტელის')));
+  assert.ok(!sv('2026-03-03')[1].steps.some(s => s.title.includes('ანდრია კრიტელის')));
+  assert.equal(ids('2026-02-28'), 'vespers matins hours liturgy'); // Saturday: none
+  // Lent's Sundays: the resurrection's troparion with the Sunday's, its kontakion last; the Orthodoxy Sunday
+  assert.deepEqual(H('2026-03-01', 'liturgy'), ['resurrection triodion-42', 'resurrection triodion-42:now']);
+  assert.deepEqual(H('2026-03-01', 'hours'), ['resurrection triodion-42', 'triodion-42']);
+  // the Publican's Sunday has no troparion of its own: its kontakion at the hours, last at the liturgy
+  assert.deepEqual(H('2026-02-01', 'hours'), ['resurrection saint', 'triodion-70']);
+  // the Saturdays of the departed, Holy Week, Lazarus: the day's own hymns alone
+  assert.deepEqual(H('2026-03-14', 'liturgy'), ['triodion-57', 'triodion-57']);
+  assert.deepEqual(H('2026-04-06', 'liturgy'), ['triodion-6', 'triodion-6']);
+  // the movable feasts take their hymns from ჟამნი 25; the Pentecostarion's weekdays end with Pascha's kontakion
+  assert.deepEqual(H('2026-05-21', 'liturgy'), ['feast39', 'feast39']);
+  assert.ok(H('2026-04-28', 'liturgy')[1].endsWith('triodion0:now'));
+  // afterfeasts: Ascension's (movable), the Nativity of the Theotokos' (fixed, by the calendar's words)
+  assert.deepEqual(H('2026-05-26', 'liturgy'), ['triodion39 saint', 'saint:glory triodion39:now']);
+  const tide = hymnsOf({ iso: '2026-09-23', day: cal['2026-09-23'], tone: 1, rank: 'simple', patron: null }, 'liturgy');
+  assert.equal(tide.troparia[0].role, 'feast');
+  assert.equal(tide.troparia[0].md, '09-08');
+  // Holy Week: the Bridegroom's matins, the Presanctified with the Gospel, the twelve Gospels, the Royal Hours
+  assert.ok(sv('2026-04-06').find(s => s.id === 'matins')!.title.includes('სიძის'));
+  assert.ok(sv('2026-04-06').find(s => s.id === 'liturgy')!.steps.some(s => s.title === 'სახარება'));
+  const fri = sv('2026-04-10');
+  assert.ok(fri.find(s => s.id === 'matins')!.steps[0].note!.includes('ინ. 13:31'));
+  assert.equal(fri.find(s => s.id === 'hours')!.title, 'სამეუფო ჟამები');
+  assert.ok(sv('2026-04-11').find(s => s.id === 'liturgy')!.steps.some(s => s.title.includes('აღდეგ')));
+  // the Great Canon's Thursday and the Akathist Saturday
+  assert.ok(sv('2026-03-26').find(s => s.id === 'matins')!.steps.some(s => s.note?.includes('დიდი კანონი')));
+  assert.ok(sv('2026-03-28').find(s => s.id === 'matins')!.steps.some(s => s.extras?.some(x => x.kind === 'book' && x.coll === 'x' && x.n === 24)));
+  // a saint with an own service: Abo of Tbilisi (8 Jan old style)
+  const abo = sv('2027-01-21');
+  assert.ok(abo[0].note?.includes('აბო'));
+  assert.ok(abo[0].steps.some(s => s.extras?.some(x => x.kind === 'book' && x.coll === 'x' && x.n === 1)));
 });
 
 test('every chant a step names is in the books', async () => {
