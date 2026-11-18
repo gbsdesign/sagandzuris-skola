@@ -8,7 +8,7 @@ import { triggerHaptic } from '../../utils/haptics';
 import { pieceName } from '../learn/LearnReview';
 import { useOpenLearning } from '../learn/openLearning';
 
-// The home page's line of the learning mode: what waits for its review today (1, 3 and 7 days after a part was
+// The home page's line of the learning mode: what waits for its review today (1, 3, 7, 14 and 30 days after a part was
 // learned). One thin line of the home's day card (HomePage, under today's saints): one piece due — its title and
 // how many parts, a tap opens it straight in its learning mode; several — „დღეს გასამეორებელი“ unfolds a line per
 // piece. Members only; nothing due — no line. One line since 2026-10-31 (it was a card of its own).

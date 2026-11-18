@@ -101,9 +101,9 @@ export const WarmStep: React.FC<{ base: number; onDone: () => void }> = ({ base,
 };
 
 /** „გალობა“: the phrases already known, all voices sounding, nothing counted; then the summary. */
-export const SingStep: React.FC<{ phrase: Phrase; known: number[]; fresh: number | null; onDone: () => void }> = ({ phrase, known, fresh, onDone }) => {
+export const SingStep: React.FC<{ phrase: Phrase; known: number[]; fresh: number | null; shift?: number; onDone: () => void }> = ({ phrase, known, fresh, shift = 0, onDone }) => {
   const { score, vi, parts } = phrase;
-  const player = usePlayer(score, vi, 1);
+  const player = usePlayer(score, vi, 1, shift);
   const [sung, setSung] = useState(false);
   const list = [...new Set(known)].sort((a, b) => a - b);
   const a = parts[list[0]] ?? parts[phrase.part];

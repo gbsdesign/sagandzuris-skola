@@ -40,7 +40,7 @@ import { MembershipGate, WaitingBanner } from './components/access/MembershipGat
 import { useMembership } from './utils/memberAccess';
 import { useBirthdaySync } from './utils/birthdays';
 import { useAlbumAccessSync } from './data/albumAccess';
-import { useAiLessonOpen } from './components/aiLesson/open';
+import { useAiLessonOpen, useMyVoiceOpen } from './components/aiLesson/open';
 import { useAccess } from './hooks/useAccess';
 import { setNewLook, useNavHidden } from './design/newLook';
 import { BottomNav } from './components/shell/BottomNav';
@@ -50,6 +50,7 @@ import { PageSkeleton } from './components/shell/PageSkeleton';
 import { NO_NAV } from './components/shell/tabs';
 // the AI teacher's day lesson loads only when opened
 const AiLesson = React.lazy(() => import('./components/aiLesson/AiLesson').then(m => ({ default: m.AiLesson })));
+const MyVoiceHost = React.lazy(() => import('./components/aiLesson/MyVoiceHost').then(m => ({ default: m.MyVoiceHost })));
 // the parts over the page that are not needed for the first screen load a moment after it (redesign stage 3 „სიჩქარე“)
 const later = <T extends string>(load: () => Promise<Record<T, React.ComponentType<any>>>, name: T) =>
   React.lazy(() => load().then(m => ({ default: m[name] })));
@@ -235,6 +236,7 @@ function AppContent() {
 
   const currentLogo = dbLogo || defaultLogo;
   const aiLesson = useAiLessonOpen();
+  const myVoice = useMyVoiceOpen();
 
   if (loading) {
     return (
@@ -289,6 +291,12 @@ function AppContent() {
       {aiLesson.open && (
         <ErrorBoundary>
           <Suspense fallback={null}><AiLesson onClose={aiLesson.close} /></Suspense>
+        </ErrorBoundary>
+      )}
+      {/* „ჩემი ხმა“ — what the AI teacher remembers (over the lesson, when opened from it) */}
+      {myVoice.tab && (
+        <ErrorBoundary>
+          <Suspense fallback={null}><MyVoiceHost tab={myVoice.tab} onClose={myVoice.close} /></Suspense>
         </ErrorBoundary>
       )}
 

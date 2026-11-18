@@ -1,10 +1,12 @@
 import React from 'react';
-import { ChevronRight, Play } from 'lucide-react';
+import { BarChart3, ChevronRight, Play } from 'lucide-react';
 import { useAuth } from '../../context';
 import { useViewing } from '../../context/AuthContext';
 import { useAccess } from '../../hooks/useAccess';
-import { Hero, Press, cx } from '../ui2';
-import { openAiLesson } from './open';
+import { Hero, Press, Row, Rows, cx } from '../ui2';
+import { openAiLesson, openMyVoice } from './open';
+import { useAiNote } from './useAiNote';
+import { tenOf, weekBars } from '../../utils/aiPlan';
 
 // The ways into the AI teacher's day lesson: one wine line at the top of „საგანძურის გზა“ (the canvas's gza) and the
 // card on top of „ოსტატობა“ (ostatoba). Shown while the switch „AI მასწავლებელი“ allows (admins first), for a member's
@@ -43,5 +45,19 @@ export const TodayLessonHero: React.FC<{ className?: string }> = ({ className })
   return (
     <Hero className={className} kicker="დღის გაკვეთილი · 10 წუთი" title="AI მასწავლებელთან" sub="გახურება · გამეორება · ახალი ფრაზა · გალობა"
       action={{ label: 'დაიწყე', icon: <Play fill="currentColor" />, onClick: openAiLesson }} />
+  );
+};
+
+/** „ჩემი ხმა“ under the card of „ოსტატობა“: the AI teacher's diary, the voice's range and its notebook */
+export const MyVoiceLink: React.FC<{ className?: string }> = ({ className }) => {
+  const shown = useLessonShown();
+  const ai = useAiNote();
+  if (!shown) return null;
+  const week = weekBars(ai.note?.takes, ai.today, 1)[0];
+  const sub = week?.tries ? `ამ კვირას: 10 ნოტიდან ${tenOf(week.share)} ზუსტად` : 'დღიური · ხმის ზომა · AI-ს რვეული';
+  return (
+    <Rows className={className}>
+      <Row lead={<BarChart3 />} title="ჩემი ხმა" sub={sub} onClick={() => openMyVoice('diary')} />
+    </Rows>
   );
 };

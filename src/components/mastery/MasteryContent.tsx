@@ -5,7 +5,7 @@ import { ClassLessons } from './ClassLessons';
 import { DrillSheet } from './ManeraLessonSheet';
 import { DayPlan, ExtraDrills, LessonLibrary, LevelCard, PathLevels } from './MasteryPath';
 import { EntryTest } from './EntryTest';
-import { TodayLessonHero } from '../aiLesson/TodayLesson';
+import { TodayLessonHero, MyVoiceLink } from '../aiLesson/TodayLesson';
 import { useMasteryPath } from './useMasteryPath';
 
 // „ოსტატობა“ on the path page = „ოსტატობის გზა“ since 2026-11-07 (plan https://claude.ai/artifact/BNanxAMNuUZMjHNuhx7oo5):
@@ -23,6 +23,7 @@ export const MasteryContent: React.FC = () => {
     <div className="space-y-4">
       {/* the AI teacher's day lesson (while its switch allows) */}
       <TodayLessonHero />
+      <MyVoiceLink />
       <LevelCard record={path.record} state={path.levels[current]} tested={path.tested} onTest={() => setTest(true)} />
       <DayPlan plan={path.plan} doneToday={path.doneToday} onOpen={open} />
       {classes.map(c => <ClassLessons key={c.id} cls={c} canEdit={false} bare showClassName={classes.length > 1} />)}

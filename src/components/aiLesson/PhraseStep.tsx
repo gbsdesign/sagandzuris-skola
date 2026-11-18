@@ -11,6 +11,7 @@ import { Bottom, CenterNote, PhraseCard, TeacherSays, Way } from './parts';
 import { usePlayer } from './usePlayer';
 import { useTake } from './useTake';
 import type { Phrase } from './useLessonData';
+import { recordTry } from './useAiNote';
 
 // One phrase in the AI lesson. „ახალი ფრაზა“: small pieces of my voice (heard, sung back — 70% passes), then „ერთად“
 // (the other voices sound, three rounds), then „მარტო“ (the whole phrase, 80% learns it — students.learning, as the
@@ -51,7 +52,9 @@ export const PhraseStep: React.FC<{
   /** the lesson's top shows the singing's state too */
   slow: boolean;
   setSlow: (v: boolean) => void;
-}> = ({ phrase, mode, rec, uid, today, timeUp, onTry, onLearned, onDone, slow, setSlow }) => {
+  /** semitones the phrase is moved into the member's voice („ნოტები ჩემს ხმაზე“), 0 = as written */
+  shift?: number;
+}> = ({ phrase, mode, rec, uid, today, timeUp, onTry, onLearned, onDone, slow, setSlow, shift = 0 }) => {
   const { score, vi, parts } = phrase;
   const part = parts[phrase.part];
   const review = mode === 'review';
@@ -69,7 +72,7 @@ export const PhraseStep: React.FC<{
   useEffect(() => () => window.clearTimeout(autoTimer.current), []);
 
   const speed = review ? 1 : slow ? 0.75 : 1;
-  const player = usePlayer(score, vi, speed);
+  const player = usePlayer(score, vi, speed, shift);
 
   // the phrase's notes as bars, and the stretch asked now
   const phraseNotes = useMemo(() => rollNotes(timelineIn(score, vi, part.b0, part.b1)), [score, vi, part]);
@@ -83,7 +86,7 @@ export const PhraseStep: React.FC<{
     return k < 0 ? 0 : k;
   }, [phraseNotes, range.s0, part.s0]);
   const stageKey = `${phrase.piece}|${phrase.part}|${stage.kind}|${stage.kind === 'piece' ? stage.i : ''}|${range.b0}|${range.b1}`;
-  const take = useTake({ target, lengths, resetKey: stageKey, onBefore: player.stop });
+  const take = useTake({ target, lengths, transpose: shift, resetKey: stageKey, onBefore: player.stop });
   useEffect(() => { setShares([]); setSaid(null); setRounds(0); }, [stageKey]);
 
   const passMark = stage.kind === 'piece' ? PIECE_PASS : WHOLE_PASS;
@@ -110,6 +113,8 @@ export const PhraseStep: React.FC<{
     const passed = r.read.heard && said.share >= passMark;
     setShares(s => [...s, said.share]);
     onTry(said.share);
+    // the AI teacher's notebook: the leaps missed, and a whole phrase's try for the diary
+    if (r.read.heard) recordTry(uid, phrase.piece, phrase.part, target, r.read.notes, stage.kind === 'alone');
     if (stage.kind === 'alone' && r.read.heard) {
       // the whole phrase: saved as the learning mode saves it (a review on its day moves it on)
       const next = afterTry(rec?.[phrase.part], Math.round(said.share * 100), passed, today);
