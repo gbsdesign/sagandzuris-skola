@@ -13,8 +13,8 @@ import { BookHead } from './BookHead';
 
 const minutesGe = (m: number) => (m < 60 ? `${m} წთ` : `${Math.floor(m / 60)} სთ${m % 60 ? ` ${m % 60} წთ` : ''}`);
 
-// in the order of the volumes
-const BOOKS: [id: string, vol: string, name: string][] = [
+// in the order of the volumes (the new look's list too, pages/v2/library/Mp3V2)
+export const BOOKS: [id: string, vol: string, name: string][] = [
   ['book', 'I ტომი', 'გელათის სკოლა'],
   ['feast', 'II ტომი', 'დღესასწაულები'],
   ['kk', 'III ტომი', 'ქართლ-კახური'],

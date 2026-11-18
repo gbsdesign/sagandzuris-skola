@@ -210,7 +210,38 @@ export const nextLine = (share: number, fix: { kind: FixKind; focus: number }, c
 };
 
 const COUNT = ['ერთი', 'ორი', 'სამი', 'ოთხი', 'ხუთი', 'ექვსი', 'შვიდი', 'რვა', 'ცხრა', 'ათი'];
-const countWord = (k: number) => COUNT[k - 1] ?? String(k);
+/** „ორი“, „ხუთი“, then digits */
+export const countWord = (k: number) => COUNT[k - 1] ?? String(k);
+
+/** An ordinal before a noun with -ზე / -ს: „პირველ ნოტზე“, „მესამე ნოტზე“ (the others do not change). */
+export const ordinalAt = (k: number) => (k === 1 ? 'პირველ' : ordinal(k));
+
+/** Three tries that did not pass, the piece made smaller (board x-ai-samjer): „… ჯერ მხოლოდ ორი ნოტი, ნელა.“ */
+export const splitLine = (n: number, slow: boolean) => `ეს ადგილი ძნელია. დავყოთ: ჯერ მხოლოდ ${countWord(n)} ნოტი${slow ? ', ნელა' : ''}.`;
+
+/** How far off a sung note was, in words (semitones, either way): „ცოტა“, „ნახევარი ტონით“, „ტონით“, „ტონზე მეტით“. */
+export const stepWord = (dev: number) => {
+  const a = Math.abs(dev);
+  return a < 0.75 ? 'ცოტა' : a < 1.5 ? 'ნახევარი ტონით' : a < 2.5 ? 'ტონით' : 'ტონზე მეტით';
+};
+
+/**
+ * „შეადარე ყურით“ (board x-ai-shenase): one line on where my try and the phrase differ, and how. `at` = the note the
+ * teacher already named (else the take's worst); the note's place counts in the stretch sung, as the teacher's sentence.
+ */
+export const diffLine = (r: TakeRead, at = -1): string => {
+  const i = at >= 0 && at < r.n ? at : r.worst;
+  if (i < 0 || !r.notes[i]) return '';
+  const place = `განსხვავება ${ordinalAt(i + 1)} ნოტზეა`;
+  const dev = r.notes[i].dev;
+  if (dev == null) return `${place}: ის არ გაისმა.`;
+  if (Math.abs(dev) < 0.3) return `${place} — მოუსმინე ორივეს.`;
+  return `${place}: შენ ${stepWord(dev)} ${dev > 0 ? 'მაღლა' : 'დაბლა'} აიღე.`;
+};
+
+/** The lesson without the internet or the AI's money (board x-ai-ugareshe): it goes on with the ready corrections. */
+export const NO_NET_LINE = 'ინტერნეტი არ არის. გაკვეთილი გრძელდება მზა შესწორებებით.';
+export const NO_BUDGET_LINE = 'AI-ს ამ თვის ლიმიტი ამოიწურა. გაკვეთილი გრძელდება მზა შესწორებებით.';
 
 /** Praise only what is true: a rise over this lesson's tries. */
 export const cheerLine = (share: number, before: number[], pass: number): string => {
@@ -356,8 +387,16 @@ export const READY_SENTENCES: { title: string; lines: string[] }[] = [
   { title: 'გამხნევება — მხოლოდ როცა მართალია', lines: [
     'ეს ფრაზა უკვე იცი. გადავიდეთ შემდეგზე.', 'სამი ცდა — და უკვე ნახევარი გამოდის.', 'სამი ცდა — და უკვე გამოდის.',
   ] },
-  { title: 'როცა სამჯერ არ გამოვიდა', lines: ['ეს ადგილი ძნელია. დავყოთ ორ ნაწილად.', 'დღეს სხვა ფრაზა ვცადოთ. ამას ხვალ დავუბრუნდებით.'] },
+  { title: 'როცა სამჯერ არ გამოვიდა', lines: ['ეს ადგილი ძნელია. დავყოთ: ჯერ მხოლოდ ორი ნოტი, ნელა.', 'დღეს სხვა ფრაზა ვცადოთ. ამას ხვალ დავუბრუნდებით.'] },
+  { title: 'შეადარე ყურით', lines: [
+    'განსხვავება მესამე ნოტზეა: შენ ნახევარი ტონით დაბლა აიღე.', 'განსხვავება მეორე ნოტზეა: შენ ცოტა მაღლა აიღე.',
+    'განსხვავება პირველ ნოტზეა: ის არ გაისმა.',
+  ] },
   { title: 'როცა ვერ გიგონებს', lines: ['ხმა ვერ გავიგონე. ტელეფონი ახლოს მოიტანე.'] },
+  { title: 'ინტერნეტის და AI-ს გარეშე', lines: [NO_NET_LINE, NO_BUDGET_LINE] },
+  { title: 'გალობა', lines: [
+    'ბოლოს — სიამოვნებისთვის. შეცდომას აღარ ვითვლი.', 'კარგი იყო. ახლა მოისმენ, როგორ ჟღერს.', 'ასე ჟღერ გუნდში.', 'კარგი იყო. ახლა — შეჯამება.',
+  ] },
   { title: 'გაკვეთილის ბოლო', lines: [
     'დღეს ახალი ფრაზა ისწავლე. ხვალ — მეოთხე ფრაზა.', 'დღეს უკეთ გამოგივიდა, ვიდრე დასაწყისში. ხვალ — მოკლე გამეორება.',
     'დღეს ივარჯიშე — ეს მთავარია. ხვალ — მესამე ფრაზა.', 'დიდხანს ივარჯიშე. ხმასაც დასვენება უნდა. ხვალ აქედან გავაგრძელებთ.',

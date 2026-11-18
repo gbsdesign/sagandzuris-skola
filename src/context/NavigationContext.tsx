@@ -6,8 +6,8 @@ import { addressOf, snapOfAddress } from '../utils/pageAddress';
 import { isNewLook } from '../design/newLook';
 
 export type PageType = 'home' | 'profile' | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'gz' | 'tsinaprebi' | 'bookmark' | 'admin' | 'teacher' | 'class' | 'prayer' | 'commemoration' | 'biblioteka' | 'psalter' | 'messages' | 'dm' | 'abituri' | 'offline' | 'birthdays' | 'medavitneoba' | 'games' | 'student' | 'videos' | 'churches'
-  // the new look's own pages (redesign stage 2): the notices, the one search and the settings
-  | 'notices' | 'search' | 'settings';
+  // the new look's own pages (redesign stage 2): the notices, the one search and the settings; the church calendar (mapItem = its day)
+  | 'notices' | 'search' | 'settings' | 'calendar';
 export type ServiceType = 'წირვა' | 'მწუხრი' | 'ცისკარი' | 'სადღესასწაულო' | 'მარხვანი' | 'ზატიკი' | 'პანაშვიდი' | 'ჯვრისწერა' | 'ხელდასხმა' | 'პარაკლისი' | 'მომიხსენენი' | 'ძლისპირები' | 'კატაბასიები' | 'დასადებლები' | null;
 
 export interface NavigationContextType {
@@ -50,7 +50,7 @@ const NavigationContext = createContext<NavigationContextType | undefined>(undef
 interface NavSnap { page: PageType; service: ServiceType; classId: string | null; prayerId: string | null; mapItem?: string | null; dmId?: string | null }
 const HOME: NavSnap = { page: 'home', service: null, classId: null, prayerId: null, mapItem: null, dmId: null };
 // pages whose open item (a map region, an instrument, a chant album, a library book) is a step of its own in history
-const MAP_PAGES: PageType[] = ['simghera', 'mtkmeli', 'sakravebi', 'galoba', 'biblioteka', 'medavitneoba', 'games', 'videos', 'churches', 'gz', 'class', 'student', 'psalter', 'settings'];
+const MAP_PAGES: PageType[] = ['simghera', 'mtkmeli', 'sakravebi', 'galoba', 'biblioteka', 'medavitneoba', 'games', 'videos', 'churches', 'gz', 'class', 'student', 'psalter', 'settings', 'calendar'];
 const makeSnap = (page: PageType, service: ServiceType, classId: string | null, prayerId: string | null, mapItem: string | null, dmId: string | null = null): NavSnap => ({
   page,
   service: page === 'galoba' ? service : null,

@@ -86,7 +86,7 @@ const BOOK_GROUPS: { title: string; parts: BookPart[] }[] = [
   },
 ];
 // the open part survives a trip to a prayer and back
-const BOOK_PART_KEY = 'prayerBookPart';
+export const BOOK_PART_KEY = 'prayerBookPart';
 const savedPart = (): string | null => {
   try { return sessionStorage.getItem(BOOK_PART_KEY); } catch { return null; }
 };
@@ -239,7 +239,7 @@ const Hours: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) => {
 };
 
 // Short names of the Apostle's books for the chips
-const SHORT: Record<string, string> = {
+export const SHORT: Record<string, string> = {
   iakobi: 'იაკობი', '1petre': 'I პეტრე', '2petre': 'II პეტრე', '1iovane': 'I იოანე', '2iovane': 'II იოანე', '3iovane': 'III იოანე',
   iuda: 'იუდა', romaelta: 'რომაელთა', '1korintelta': 'I კორინთელთა', '2korintelta': 'II კორინთელთა', galatelta: 'გალატელთა',
   efeselta: 'ეფესელთა', pilipelta: 'ფილიპელთა', kolaselta: 'კოლასელთა', '1tesalonikelta': 'I თესალონიკელთა',
@@ -247,7 +247,7 @@ const SHORT: Record<string, string> = {
   ebraelta: 'ებრაელთა',
 };
 const PAUL = APOSTLE.findIndex(b => b.id === 'romaelta');
-const PARTS: Record<'gospel' | 'apostle', { title: string; books: BibleBook[] }[]> = {
+export const PARTS: Record<'gospel' | 'apostle', { title: string; books: BibleBook[] }[]> = {
   gospel: [{ title: '', books: GOSPELS }],
   apostle: [
     { title: 'საქმე და კათოლიკე ეპისტოლენი', books: APOSTLE.slice(0, PAUL) },

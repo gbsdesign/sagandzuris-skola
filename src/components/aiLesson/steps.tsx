@@ -10,9 +10,13 @@ import type { PrepQuestion } from '../../utils/lessonPrep';
 import { Bottom, CenterNote, TeacherSays, ToneCircle } from './parts';
 import { usePlayer } from './usePlayer';
 import type { Phrase } from './useLessonData';
+import { melodyIn } from '../../utils/learn';
+import { ChoirView } from './Choir';
+import type { ChoirParts } from './choirMix';
+import { useChoirTake } from './useChoirTake';
 
-// The AI lesson's other screens: the warm-up, „გალობა“ (what is already known, all voices, not counted), the summary
-// and the offer to rest.
+// The AI lesson's other screens: the warm-up, „გალობა“ (what is already known, all voices, not counted — my voice is
+// listened to while the others sound, then heard back in the choir: Choir.tsx), the summary and the offer to rest.
 
 /** „გახურება“: three notes from my voice's base, „მმმ“ on each, held three seconds; the next note sounds by itself. */
 export const WarmStep: React.FC<{ base: number; onDone: () => void }> = ({ base, onDone }) => {
@@ -101,18 +105,37 @@ export const WarmStep: React.FC<{ base: number; onDone: () => void }> = ({ base,
   );
 };
 
-/** „გალობა“: the phrases already known, all voices sounding, nothing counted; then the summary. */
+/** „გალობა“: the phrases already known, nothing counted. The microphone listens while the synthesizer sings the other
+ *  voices; then „ასე ჟღერ გუნდში“ (Choir.tsx) — or, with no microphone or nothing heard, straight to the summary. */
 export const SingStep: React.FC<{ phrase: Phrase; known: number[]; fresh: number | null; shift?: number; onDone: () => void }> = ({ phrase, known, fresh, shift = 0, onDone }) => {
   const { score, vi, parts } = phrase;
   const player = usePlayer(score, vi, 1, shift);
+  const choir = useChoirTake();
   const [sung, setSung] = useState(false);
+  const [making, setMaking] = useState(false);
+  const [mix, setMix] = useState<ChoirParts | null>(null);
   const list = [...new Set(known)].sort((a, b) => a - b);
   const a = parts[list[0]] ?? parts[phrase.part];
   const b = parts[list[list.length - 1]] ?? parts[phrase.part];
-  const go = () => {
-    if (player.playing || player.counting) { player.stop(); return; }
-    void player.along(a.s0, b.s1, 'all', null, { rounds: 1, onDone: () => { setSung(true); window.setTimeout(onDone, 1200); } });
+  const end = async (complete: boolean) => {
+    const startedAt = player.startedAt();
+    player.stop();
+    setSung(true);
+    if (!choir.listening()) { window.setTimeout(onDone, 1200); return; }
+    setMaking(true);
+    const got = await choir.finish({ score, vi, shift, from: a.s0, to: b.s1, startedAt, complete });
+    setMaking(false);
+    if (got) setMix(got); else window.setTimeout(onDone, 1200);
   };
+  const go = async () => {
+    // during the count-in: called off; while sounding: ended here
+    if (player.counting) { player.stop(); choir.cancel(); return; }
+    if (player.playing) { if (choir.listening()) void end(false); else player.stop(); return; }
+    const ears = await choir.listen();
+    void player.along(a.s0, b.s1, ears ? 'others' : 'all', ears ? melodyIn(score, vi, a.b0, b.b1)[0] ?? null : null,
+      { rounds: 1, onDone: () => void end(true) });
+  };
+  if (mix) return <ChoirView parts={mix} vi={vi} title={phrase.title} onNext={onDone} />;
   return (
     <>
       <div className="flex flex-col gap-3 px-4 pb-4">
@@ -130,13 +153,15 @@ export const SingStep: React.FC<{ phrase: Phrase; known: number[]; fresh: number
           </div>
         </Card>
         <TeacherSays text="ბოლოს — სიამოვნებისთვის. შეცდომას აღარ ვითვლი.">
-          {sung ? 'კარგი იყო. ახლა — შეჯამება.' : 'ბოლოს — სიამოვნებისთვის. შეცდომას აღარ ვითვლი.'}
+          {making ? 'კარგი იყო. ახლა მოისმენ, როგორ ჟღერს.' : sung ? 'კარგი იყო. ახლა — შეჯამება.' : 'ბოლოს — სიამოვნებისთვის. შეცდომას აღარ ვითვლი.'}
         </TeacherSays>
       </div>
       <Bottom>
-        {player.playing || player.counting
-          ? <Button full icon={<Square fill="currentColor" />} onClick={go}>დასრულება</Button>
-          : <Button full icon={<Mic />} onClick={go}>ვგალობ</Button>}
+        {making
+          ? <Button full disabled>ვამზადებ…</Button>
+          : player.playing || player.counting
+            ? <Button full icon={<Square fill="currentColor" />} onClick={go}>დასრულება</Button>
+            : <Button full icon={<Mic />} disabled={sung} onClick={go}>ვგალობ</Button>}
       </Bottom>
     </>
   );

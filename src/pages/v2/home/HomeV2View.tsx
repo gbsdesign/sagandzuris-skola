@@ -88,7 +88,8 @@ const useVineScale = () => {
   return { box, k };
 };
 
-const SWAY = 'vine-sway absolute -translate-x-1/2 -translate-y-1/2';
+// sg-keep-text: the labels hang on the picture, so a bigger text size (design/look.ts) leaves them as they are
+const SWAY = 'vine-sway sg-keep-text absolute -translate-x-1/2 -translate-y-1/2';
 
 const chipLook = cx(
   'flex h-[46px] items-center gap-2 rounded-full bg-surf pr-3.5 pl-2 whitespace-nowrap shadow-lift select-none',
@@ -114,7 +115,7 @@ export const HomeV2View: React.FC<HomeV2ViewProps> = ({ saying, labels, abituri,
       {/* the vine: 8px wider than the column on each side, as on the boards */}
       <div className="-mx-2 flex shrink-0 justify-center">
         <div ref={box} className="relative aspect-[1033/1390] w-full select-none">
-          <img src="/home/vine.png" alt="" aria-hidden="true" draggable={false} className="absolute inset-0 size-full opacity-80 saturate-85" />
+          <img src="/home/vine.png" alt="" aria-hidden="true" draggable={false} className="sg-vine-img absolute inset-0 size-full opacity-80 saturate-85" />
 
           {labels.map(({ id, soon }, i) => {
             const s = SPOTS[id];

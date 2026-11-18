@@ -3,6 +3,7 @@ import { triggerHaptic } from '../../utils/haptics';
 import { CALENDAR_EVENT, todayIso } from '../../data/churchCalendar';
 import { ChurchCalendarPanel } from '../calendar/ChurchCalendarPanel';
 import { useMembership } from '../../utils/memberAccess';
+import { useNavigation } from '../../context';
 
 const FB_PAGE = 'https://www.facebook.com/passangermgzavrebi';
 
@@ -26,6 +27,13 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl, bare }) => {
   const canCal = useMembership().can('calendar');
   const canRef = useRef(canCal);
   canRef.current = canCal;
+  // the new look: the calendar is a page of its own (pages/v2/kalendari, board x-kalendari), its day the page's mapItem
+  const nav = useNavigation();
+  const toPage = useRef<((iso: string) => void) | null>(null);
+  toPage.current = bare ? (iso: string) => {
+    nav.navigateTo('calendar');
+    nav.openMapItem(iso === todayIso() ? '' : iso);
+  } : null;
 
   const open = (iso?: string) => {
     if (iso) setCalIso(iso);
@@ -43,7 +51,12 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl, bare }) => {
   useEffect(() => {
     const onPop = () => setCalOpen(historyCal());
     // "სრულად" on today's-saints line, a feast in the library: the sheet opens on that day
-    const onOpen = (e: Event) => { if (canRef.current) open((e as CustomEvent<string>).detail || todayIso()); };
+    const onOpen = (e: Event) => {
+      if (!canRef.current) return;
+      const iso = (e as CustomEvent<string>).detail || todayIso();
+      if (toPage.current) toPage.current(iso);
+      else open(iso);
+    };
     window.addEventListener('popstate', onPop);
     window.addEventListener(CALENDAR_EVENT, onOpen);
     return () => {

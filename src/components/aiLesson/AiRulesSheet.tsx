@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
-import { Baby, ChevronRight, Hand, Quote, Sparkles } from 'lucide-react';
+import { Baby, BookOpen, ChevronRight, Hand, Quote, Sparkles } from 'lucide-react';
 import { useSections } from '../../hooks/useSections';
 import { doc, setDoc } from 'firebase/firestore';
 import { db } from '../../firebase';
 import { EST_USD_PER_CALL, saveAiRules, useAiRules, useAiUsage, type AiRules } from '../../utils/aiRules';
 import { READY_SENTENCES } from '../../utils/aiLesson';
+import { AI_THEORY } from '../../data/aiTheory';
+import type { TheoryId, TheoryText } from '../../utils/aiTheory';
+import { saveTheoryText, useTheoryTexts } from './Theory';
+import { TheoryAdminList } from './TheoryAdmin';
 import { errorText } from '../../utils/errorText';
+import { TeacherVoiceStudioRow } from './TeacherVoiceStudio'; // AI step 4: the owner's voice studio
 import { Bar, Card, Dot, Note, Row, Rows, SectionLabel, Sheet, Stepper, ToggleRow } from '../ui2';
 
 // „AI მასწავლებელი · სკოლის წესები“ (the canvas's ai-tsesebi; admins, from ⚙ „სკოლა“): this month's spending against
 // the budget, and the three rules — the day lesson for everyone or admins only (the switch `aiTeacher` of
 // settings/sections), a hint before the answer, and no AI in the kids' mode. „მზა ფრაზები“ lists the teacher's ready
-// sentences (utils/aiLesson.ts).
+// sentences (utils/aiLesson.ts); „პატარა თეორია“ the rules the lesson names, each rewordable (settings/aiTheory).
 
 const usd = (n: number) => `${n < 10 ? n.toFixed(2).replace(/\.00$/, '') : Math.round(n)} $`;
 
@@ -19,6 +24,10 @@ export const AiRulesSheet: React.FC<{ open: boolean; onClose: () => void; onMess
   const rules = useAiRules();
   const usage = useAiUsage(open);
   const sections = useSections();
+  const theory = useTheoryTexts();
+  const saveTheory = async (id: TheoryId, t: TheoryText | null) => {
+    try { await saveTheoryText(id, t); onMessage(t ? 'ტექსტი შეინახა.' : 'დაბრუნდა აპის ტექსტი.', 'success'); } catch (e) { onMessage(errorText(e), 'error'); }
+  };
   const save = async (r: Partial<AiRules>) => {
     try { await saveAiRules(r); } catch (e) { onMessage(errorText(e), 'error'); }
   };
@@ -28,20 +37,26 @@ export const AiRulesSheet: React.FC<{ open: boolean; onClose: () => void; onMess
       onMessage(on ? 'დღის გაკვეთილი ყველას გამოუჩნდა.' : 'დღის გაკვეთილი ახლა მხოლოდ ადმინებს უჩანს.', 'success');
     } catch (e) { onMessage(errorText(e), 'error'); }
   };
-  return <AiRulesView open={open} onClose={onClose} rules={rules} usage={usage} forAll={sections.state.aiTeacher === 'open'} onSave={save} onForAll={setForAll} />;
+  return <AiRulesView open={open} onClose={onClose} rules={rules} usage={usage} forAll={sections.state.aiTeacher === 'open'} onSave={save} onForAll={setForAll}
+    theory={theory} onTheory={saveTheory} studio={<TeacherVoiceStudioRow />} />;
 };
 
 /** The window itself, from what is given (so it can be looked at without the database). */
 export const AiRulesView: React.FC<{
   open: boolean; onClose: () => void; rules: AiRules; usage: { calls: number; people: number | null }; forAll: boolean;
   onSave: (r: Partial<AiRules>) => void; onForAll: (on: boolean) => void;
-}> = ({ open, onClose, rules, usage, forAll, onSave: save, onForAll: setForAll }) => {
+  /** „პატარა თეორია“: the school's rewording and its save */
+  theory?: Partial<Record<TheoryId, TheoryText>>; onTheory?: (id: TheoryId, t: TheoryText | null) => Promise<void> | void;
+  /** AI step 4: „მასწავლებლის ხმის სახელოსნო“ (the owner's only; TeacherVoiceStudio) */
+  studio?: React.ReactNode;
+}> = ({ open, onClose, rules, usage, forAll, onSave: save, onForAll: setForAll, theory = {}, onTheory, studio }) => {
   const [phrases, setPhrases] = useState(false);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const [budgetOpen, setBudgetOpen] = useState(false);
   const spent = usage.calls * EST_USD_PER_CALL;
   return (
     <>
-      <Sheet open={open && !phrases} title="AI მასწავლებელი" onClose={onClose}>
+      <Sheet open={open && !phrases && !rulesOpen} title="AI მასწავლებელი" onClose={onClose}>
         <div className="-mx-4 flex max-h-[70dvh] flex-col gap-3 overflow-y-auto px-4 pb-1">
           <Card pad="none" className="px-[18px] pt-4 pb-4">
             <button type="button" className="block w-full cursor-pointer text-left" onClick={() => setBudgetOpen(o => !o)} aria-expanded={budgetOpen}>
@@ -82,7 +97,13 @@ export const AiRulesView: React.FC<{
             <Row lead={<Dot icon={<Quote />} />} title="მზა ფრაზები" sub="მასწავლებლის სიტყვები"
               right={<span className="flex items-center gap-1 text-meta font-semibold text-mut">{READY_SENTENCES.reduce((n, g) => n + g.lines.length, 0)}<ChevronRight className="size-[18px]" /></span>}
               onClick={() => setPhrases(true)} />
+            {onTheory && (
+              <Row lead={<Dot icon={<BookOpen />} />} title="პატარა თეორია" sub="წესები — ერთი წინადადებით"
+                right={<span className="flex items-center gap-1 text-meta font-semibold text-mut">{AI_THEORY.length}<ChevronRight className="size-[18px]" /></span>}
+                onClick={() => setRulesOpen(true)} />
+            )}
           </Rows>
+          {studio}
           <Note>AI მასწავლებელი პროგრამაა. ნოტებს ტელეფონი ითვლის, AI მხოლოდ სიტყვებს წერს.</Note>
         </div>
       </Sheet>
@@ -99,6 +120,11 @@ export const AiRulesView: React.FC<{
           ))}
         </div>
       </Sheet>
+      {onTheory && (
+        <Sheet open={open && rulesOpen} title="პატარა თეორია" onClose={() => setRulesOpen(false)}>
+          <TheoryAdminList over={theory} onSave={onTheory} />
+        </Sheet>
+      )}
     </>
   );
 };

@@ -161,6 +161,29 @@ test('what today holds: reviews first by how long they waited, a new phrase from
   assert.equal(lastSeenWord('2026-11-11', '2026-11-18'), 'ბოლოს 7 დღის წინ');
 });
 
+test('„შეადარე ყურით“: the note that differs, and by how much', async () => {
+  const { diffLine, stepWord, splitLine, ordinalAt } = await import('../src/utils/aiLesson');
+  const low = [...T]; low[3] = 66; // a semitone low on the fourth note
+  assert.equal(diffLine(read(low)), 'განსხვავება მეოთხე ნოტზეა: შენ ნახევარი ტონით დაბლა აიღე.');
+  const high = [...T]; high[1] = 64.45;
+  assert.equal(diffLine(read(high)), 'განსხვავება მეორე ნოტზეა: შენ ცოტა მაღლა აიღე.');
+  // the worst note by itself; the note the teacher named when given
+  const two = [...T]; two[1] = 64.45; two[4] = 71;
+  assert.equal(diffLine(read(two)), 'განსხვავება მეხუთე ნოტზეა: შენ ტონით მაღლა აიღე.');
+  assert.equal(diffLine(read(two), 1), 'განსხვავება მეორე ნოტზეა: შენ ცოტა მაღლა აიღე.');
+  assert.equal(diffLine(read([62, 64, 65, 67, 69, 67, 65, null])), 'განსხვავება მერვე ნოტზეა: ის არ გაისმა.');
+  assert.equal(stepWord(0.5), 'ცოტა');
+  assert.equal(stepWord(-1.1), 'ნახევარი ტონით');
+  assert.equal(stepWord(2), 'ტონით');
+  assert.equal(stepWord(3.2), 'ტონზე მეტით');
+  assert.equal(diffLine(read(T)), '');
+  assert.equal(ordinalAt(1), 'პირველ');
+  assert.equal(ordinalAt(3), 'მესამე');
+  assert.equal(splitLine(2, true), 'ეს ადგილი ძნელია. დავყოთ: ჯერ მხოლოდ ორი ნოტი, ნელა.');
+  assert.equal(splitLine(3, false), 'ეს ადგილი ძნელია. დავყოთ: ჯერ მხოლოდ სამი ნოტი.');
+  for (const s of [diffLine(read(low)), diffLine(read(high)), splitLine(2, true)]) assert.ok(!/ცუდია|არასწორია|ისევ შეცდი/.test(s));
+});
+
 test('the Sunday wish: its chants come first in the new phrase and in the reviews', async () => {
   const { freshCandidates, pickReviews } = await import('../src/utils/aiLesson');
   const rec = (due: string) => ({ best: 90, level: 1, due, at: '2026-11-10' });

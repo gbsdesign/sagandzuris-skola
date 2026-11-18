@@ -417,3 +417,72 @@ html.sg-new { background: var(--color-page); }
 @media (pointer: coarse) {
   html.sg-new:has(:is(input:not([type=checkbox], [type=radio], [type=range], [type=button]), textarea, [contenteditable=true]):focus) .sg-nav { display: none; }
 }
+
+/* ——— Reading comfort (2026-11-18, design/look.ts): text size, bold letters, the dark look, word meanings ——— */
+/* The text size moves the root font size (the tokens' text sizes are rem); Tailwind's spacing is divided by the same factor,
+   so paddings, buttons and finger sizes keep their size while the words grow. */
+:root { --spacing: calc(0.25rem / var(--sg-scale, 1)); }
+/* above the usual size a long name wraps onto more lines instead of ending in „…“ (kit v2 marks such names .sg-fit) */
+html.sg-text-big .sg-fit { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+/* words that keep their size: the bottom menu's (four places must fit in its pill), the home vine's labels (they hang on
+   the picture) — .sg-keep-text */
+:is(.sg-nav, .sg-keep-text) .text-cap { font-size: calc(var(--text-cap) / var(--sg-scale, 1)); }
+.sg-keep-text .text-meta { font-size: calc(var(--text-meta) / var(--sg-scale, 1)); }
+.sg-keep-text .text-body { font-size: calc(var(--text-body) / var(--sg-scale, 1)); }
+.sg-keep-text .text-head { font-size: calc(var(--text-head) / var(--sg-scale, 1)); }
+/* „მსხვილი ასოები“: running text one step heavier */
+html.sg-bold body { font-weight: 600; }
+html.sg-bold :is(.font-normal, .font-medium) { font-weight: 600; }
+html.sg-bold .font-semibold { font-weight: 700; }
+
+/* The dark look (tokens.css html.sg-dark): an accent that is a word on the dark ground turns lighter; a white button keeps
+   its dark word; the ink-coloured grounds (a toast, a video's still, a window's dimming) stay dark. */
+html.sg-dark .text-wine:not(.bg-white) { color: var(--color-blush); }
+html.sg-dark .text-danger { color: #f2a29c; }
+html.sg-dark .text-sea { color: #8cc3df; }
+html.sg-dark :is(.bg-white, .bg-white\/90).text-ink { color: #1b1816; }
+html.sg-dark .bg-ink { background-color: #0b0a09; }
+html.sg-dark :is(.bg-ink\/40, .bg-ink\/50) { background-color: rgb(0 0 0 / 0.6); }
+html.sg-dark :is(.shadow-float, .shadow-lift) { box-shadow: 0 12px 30px -10px rgb(0 0 0 / 0.5), 0 0 0 1px rgb(255 255 255 / 0.08); }
+/* the home vine's picture is drawn for a light page: on the dark one it comes forward (board x-ultra-muqi) */
+html.sg-dark .sg-vine-img { opacity: 1; filter: brightness(1.45) saturate(1.1); }
+
+/* An old church word with a meaning (pages/v2/sitqva): a dotted line under it; the one open in its window is lit */
+.sg-word {
+  text-decoration-line: underline;
+  text-decoration-style: dotted;
+  text-decoration-color: color-mix(in oklab, currentColor 55%, transparent);
+  text-decoration-thickness: 1.5px;
+  text-underline-offset: 0.22em;
+  cursor: pointer;
+  border-radius: 6px;
+  -webkit-tap-highlight-color: transparent;
+}
+.sg-word[data-on] { background: var(--color-tint); color: var(--color-wine); font-weight: 700; text-decoration-line: none; box-shadow: 0 0 0 3px var(--color-tint); }
+html.sg-dark .sg-word[data-on] { color: var(--color-blush); }
+
+/* The library's front room in the new look (pages/v2/library/Front.tsx, board x-biblioteka): a cover's cloth — the design-rule
+   colour under a fine weave and a soft shade, so the six books still read as bound books. */
+html.sg-new .sg-cloth {
+  background-image:
+    linear-gradient(140deg, color-mix(in oklab, white 10%, transparent), color-mix(in oklab, black 26%, transparent)),
+    repeating-linear-gradient(45deg, color-mix(in oklab, white 4%, transparent) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(-45deg, color-mix(in oklab, black 5%, transparent) 0 1px, transparent 1px 3px);
+}
+/* the bright colours (gold, clay, plum) as a deeper cloth */
+html.sg-new .sg-cloth.sg-cloth-deep {
+  background-image:
+    linear-gradient(140deg, color-mix(in oklab, black 22%, transparent), color-mix(in oklab, black 48%, transparent)),
+    repeating-linear-gradient(45deg, color-mix(in oklab, white 4%, transparent) 0 1px, transparent 1px 3px),
+    repeating-linear-gradient(-45deg, color-mix(in oklab, black 5%, transparent) 0 1px, transparent 1px 3px);
+}
+/* a reader's ⏬ (ReadingTools' AutoScrollButton) as the new bar's white round (pages/v2/library/parts.tsx AutoRound) */
+html.sg-new .sg-lib-auto > span > button[aria-haspopup] {
+  width: 44px;
+  height: 44px;
+  background: var(--color-surf);
+  color: var(--color-ink);
+  --tw-ring-shadow: 0 0 #0000;
+}
+html.sg-new .sg-lib-auto > span > button[aria-haspopup][aria-expanded="true"] { background: var(--color-wine); color: white; }
+html.sg-new .sg-lib-auto > span > button[aria-haspopup] svg { width: 20px; height: 20px; }

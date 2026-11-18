@@ -1,23 +1,32 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ChevronRight, Headphones, Mic, Square, Users, Volume2 } from 'lucide-react';
+import { ChevronRight, Ear, Headphones, Mic, Square, Users, Volume2 } from 'lucide-react';
 import { makeTimeMap } from '../../utils/chantSynth';
 import { afterTry, chunksOfPart, melodyGroups, melodyIn, timelineIn, type LearnChunk, type LearnRecord } from '../../utils/learn';
-import { afterTake, lastSeenWord, ordinal, verdictLine, type NextMove } from '../../utils/aiLesson';
+import { afterTake, diffLine, lastSeenWord, ordinal, splitLine, verdictLine, type NextMove } from '../../utils/aiLesson';
 import { saveLearnPart } from '../../hooks/useLearning';
 import { VoiceLine } from './VoiceLine';
-import { Bar, Button, Card, Duo, cx } from '../ui2';
+import { Bar, Button, Card, Duo, Press, cx } from '../ui2';
 import { LiveRoll, rollNotes, type RollMark } from './LiveRoll';
 import { Bottom, CenterNote, PhraseCard, TeacherSays, Way } from './parts';
 import { usePlayer } from './usePlayer';
 import { useTake } from './useTake';
 import type { Phrase } from './useLessonData';
 import { recordTry } from './useAiNote';
+import { CompareView } from './Compare';
+import { TheoryNote } from './Theory';
+// AI step 4 (ask, voice commands, the teacher's voice)
+import { AskLink } from './AskExtras';
+import { VoiceHeardCard, VoiceListenLine, useVoiceCommands } from './VoiceCommands';
+import { hushTeacher } from './TeacherVoice';
+import type { VoiceCommandId } from '../../utils/voiceCommands';
 
 // One phrase in the AI lesson. „ახალი ფრაზა“: small pieces of my voice (heard, sung back — 70% passes), then „ერთად“
 // (the other voices sound, three rounds), then „მარტო“ (the whole phrase, 80% learns it — students.learning, as the
 // learning mode). „გამეორება“: the whole phrase once, two tries at most. After every try the teacher says up to three
 // sentences (utils/aiLesson): the result, one correction, what to do; three tries that do not pass change the way
 // (a smaller piece, then another day); a good try moves on by itself; the pace starts slow and rises after two good tries.
+// A try that did not pass offers „შეადარე ყურით“ (Compare.tsx: my take and the phrase side by side); a new phrase with a
+// rule the member has not met yet offers it once („პატარა თეორია“, Theory.tsx).
 
 const PIECE_PASS = 0.7;
 const WHOLE_PASS = 0.8;
@@ -26,14 +35,16 @@ const REVIEW_TRIES = 2;
 
 type Stage = { kind: 'piece'; i: number } | { kind: 'together' } | { kind: 'alone' };
 
-/** a stretch cut in two at its middle note */
-const halve = (p: Phrase, c: LearnChunk): LearnChunk[] => {
+/** three tries that did not pass (board x-ai-samjer): the stretch's first two notes alone, slowly — then the stretch
+ *  again; null when it has two notes or fewer (nothing smaller to try) */
+const firstTwo = (p: Phrase, c: LearnChunk): LearnChunk | null => {
   const groups = melodyGroups(p.score, p.vi, c.b0, c.b1);
-  if (groups.length < 4) return [c];
-  const cut = groups[Math.floor(groups.length / 2)][0];
+  if (groups.length < 3) return null;
+  const cut = groups[2][0];
   const { toSec } = makeTimeMap(p.score.tempos);
-  return [{ b0: c.b0, b1: cut, s0: c.s0, s1: toSec(cut) }, { b0: cut, b1: c.b1, s0: toSec(cut), s1: c.s1 }];
+  return { b0: c.b0, b1: cut, s0: c.s0, s1: toSec(cut) };
 };
+const LATER = 'დღეს სხვა ფრაზა ვცადოთ. ამას ხვალ დავუბრუნდებით.';
 
 export const PhraseStep: React.FC<{
   phrase: Phrase;
@@ -54,13 +65,21 @@ export const PhraseStep: React.FC<{
   setSlow: (v: boolean) => void;
   /** semitones the phrase is moved into the member's voice („ნოტები ჩემს ხმაზე“), 0 = as written */
   shift?: number;
-}> = ({ phrase, mode, rec, uid, today, timeUp, onTry, onLearned, onDone, slow, setSlow, shift = 0 }) => {
+  /** AI step 4: „ჰკითხე მასწავლებელს“ under the phrase (AskExtras), none when the AI teacher is off for the person */
+  onAsk?: () => void;
+  /** AI step 4: the voice commands listen between tries (VoiceCommands) */
+  voiceCommands?: boolean;
+}> = ({ phrase, mode, rec, uid, today, timeUp, onTry, onLearned, onDone, slow, setSlow, shift = 0, onAsk, voiceCommands = false }) => {
   const { score, vi, parts } = phrase;
   const part = parts[phrase.part];
   const review = mode === 'review';
   const many = score.voices.length > 1;
   const [pieces, setPieces] = useState<LearnChunk[]>(() => chunksOfPart(score, vi, part));
   const [split, setSplit] = useState(false);
+  /** the piece the way was changed at (its line says so), -1 none */
+  const [splitAt, setSplitAt] = useState(-1);
+  /** „შეადარე ყურით“ open in place of the phrase */
+  const [comparing, setComparing] = useState(false);
   const firstStage: Stage = review ? { kind: 'alone' } : pieces.length > 1 ? { kind: 'piece', i: 0 } : many ? { kind: 'together' } : { kind: 'alone' };
   const [stage, setStage] = useState<Stage>(firstStage);
   const [shares, setShares] = useState<number[]>([]);
@@ -71,7 +90,7 @@ export const PhraseStep: React.FC<{
   const autoTimer = useRef(0);
   useEffect(() => () => window.clearTimeout(autoTimer.current), []);
 
-  const speed = review ? 1 : slow ? 0.75 : 1;
+  const speed = review ? (split ? 0.75 : 1) : slow ? 0.75 : 1;
   const player = usePlayer(score, vi, speed, shift);
 
   // the phrase's notes as bars, and the stretch asked now
@@ -87,7 +106,7 @@ export const PhraseStep: React.FC<{
   }, [phraseNotes, range.s0, part.s0]);
   const stageKey = `${phrase.piece}|${phrase.part}|${stage.kind}|${stage.kind === 'piece' ? stage.i : ''}|${range.b0}|${range.b1}`;
   const take = useTake({ target, lengths, transpose: shift, resetKey: stageKey, onBefore: player.stop });
-  useEffect(() => { setShares([]); setSaid(null); setRounds(0); }, [stageKey]);
+  useEffect(() => { setShares([]); setSaid(null); setRounds(0); setComparing(false); }, [stageKey]);
 
   const passMark = stage.kind === 'piece' ? PIECE_PASS : WHOLE_PASS;
   const learnedCount = Object.entries(rec || {}).filter(([k, r]) => Number(k) < parts.length && r.level >= 1).length + (learnedNow && !(rec?.[phrase.part]?.level ?? 0) ? 1 : 0);
@@ -126,18 +145,25 @@ export const PhraseStep: React.FC<{
     if (passed && stage.kind === 'alone' && !review) text = `${verdictLine(r.read.hits, r.read.n)} ${ordinal(phrase.part + 1)} ფრაზა ნასწავლია.`;
     if (passed && review) text = `${verdictLine(r.read.hits, r.read.n)} გავიხსენეთ.`;
     if (!passed && review && shares.length + 1 >= REVIEW_TRIES && r.read.heard) text = `${said.say} ხვალ კიდევ გავიმეორებთ.`.trim();
-    setSaid({ say: text, move: said.move, focus: said.focus, passed });
-    // a three-tries change of way
-    if (said.move === 'split') {
-      if (stage.kind === 'piece') {
-        const halves = halve(phrase, pieces[stage.i]);
-        if (halves.length > 1) setPieces(p => [...p.slice(0, stage.i), ...halves, ...p.slice(stage.i + 1)]);
-      } else {
-        const halves = halve(phrase, { b0: part.b0, b1: part.b1, s0: part.s0, s1: part.s1 });
-        if (halves.length > 1) { setPieces(halves); autoTimer.current = window.setTimeout(() => goStage({ kind: 'piece', i: 0 }), AUTO_NEXT_MS); }
-      }
-      setSplit(true);
+    // a three-tries change of way: the first two notes alone and slower (the new piece's own line says so), then the
+    // stretch again; nothing smaller to try → another day
+    let move = said.move;
+    if (move === 'split') {
+      const two = firstTwo(phrase, stage.kind === 'piece' ? pieces[stage.i] : { b0: part.b0, b1: part.b1, s0: part.s0, s1: part.s1 });
+      if (two) {
+        setSplit(true);
+        if (!review) setSlow(true);
+        if (stage.kind === 'piece') {
+          setPieces(p => [...p.slice(0, stage.i), two, ...p.slice(stage.i)]);
+          setSplitAt(stage.i);
+        } else {
+          setPieces([two, ...chunksOfPart(score, vi, part)]);
+          setSplitAt(0);
+          goStage({ kind: 'piece', i: 0 });
+        }
+      } else { move = 'later'; text = LATER; }
     }
+    setSaid({ say: text, move, focus: said.focus, passed });
     // a good piece moves on by itself; time over moves the lesson on
     if (passed && stage.kind === 'piece') autoTimer.current = window.setTimeout(nextStage, AUTO_NEXT_MS);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -182,6 +208,35 @@ export const PhraseStep: React.FC<{
   const singing = phase === 'cue' || phase === 'singing' || phase === 'scoring';
   const heardNothing = phase === 'done' && take.result && !take.result.read.heard;
 
+  // ——— AI step 4: the teacher's voice never sounds into a take; „ხმით მართვა“ does what the buttons do ———
+  useEffect(() => { if (singing || player.counting) hushTeacher(); }, [singing, player.counting]);
+  const runCommand = (id: VoiceCommandId): string => {
+    hushTeacher();
+    window.clearTimeout(autoTimer.current);
+    if (id === 'stop') { player.stop(); return 'გავჩერდი. თქვი, რა გავაკეთო.'; }
+    if (id === 'slow') {
+      if (review) return 'გამეორებაში ნამდვილი ტემპით ვმღერით.';
+      setSlow(true);
+      return 'ტემპი — 75%';
+    }
+    if (id === 'listen') {
+      if (stage.kind === 'together') { void player.listen(part.s0, part.s1, 'all'); return 'ყველა ხმა ჟღერს'; }
+      void player.listen(range.s0, range.s1, 'mine');
+      return 'შენი ხმა ჟღერს';
+    }
+    if (id === 'again') {
+      if (stage.kind === 'together') { singAlong(); return 'ერთად — თავიდან'; }
+      setComparing(false);
+      void take.start();
+      return 'პირველი ნოტი ისმის — იმღერე';
+    }
+    if (stage.kind === 'piece') { nextStage(); return 'შემდეგი ნაწილი'; }
+    if (stage.kind === 'together') { goStage({ kind: 'alone' }); return 'ახლა — მარტო'; }
+    onDone(!review && said?.passed === true && !timeUp());
+    return 'შემდეგზე გადავდივართ';
+  };
+  const cmd = useVoiceCommands({ on: voiceCommands && !comparing, busy: singing || player.playing || player.counting, run: runCommand });
+
   if (heardNothing) {
     return (
       <>
@@ -194,12 +249,32 @@ export const PhraseStep: React.FC<{
     );
   }
 
+  // „შეადარე ყურით“: after a try that did not pass, my take and the stretch side by side
+  const read = phase === 'done' ? take.result?.read : undefined;
+  // only while another try is offered here
+  const canCompare = !!said && !said.passed && !!read?.heard && said.move !== 'split' && said.move !== 'later' && stage.kind !== 'together'
+    && !(review && shares.length >= REVIEW_TRIES) && !timeUp();
+  if (comparing && canCompare && read && take.result) {
+    const want: RollMark[] = phraseNotes.map((_, i) => (i < from + target.length && (stage.kind === 'piece' || i >= from) ? 'hit' : 'wait'));
+    // without a recording: the notes I sang, on the synthesizer, at the stretch's places
+    const sung = read.notes.flatMap((x, i): [number, number, number][] => {
+      const bar = phraseNotes[from + i];
+      return x.dev == null || !bar ? [] : [[(bar.t0 - pieceStart) / speed, bar.len / speed, target[i] + shift + x.dev]];
+    });
+    return (
+      <CompareView notes={phraseNotes} mine={{ marks, devs }} want={{ marks: want }} line={diffLine(read, said?.focus ?? -1)}
+        mp3={take.result.mp3} sung={sung} playhead={playhead} wantPlaying={player.playing} stopWant={player.stop}
+        onWant={() => (player.playing ? player.stop() : void player.listen(range.s0, range.s1, 'mine'))}
+        onAgain={() => { setComparing(false); void take.start(); }} />
+    );
+  }
+
   let teacher: React.ReactNode;
   if (said) teacher = said.say;
   else if (stage.kind === 'piece') {
     const n = target.length;
     teacher = stage.i === 0 ? `ჯერ პირველი ${n} ნოტი. მოუსმინე და გაიმეორე.` : `ახლა შემდეგი ${n} ნოტი. მოუსმინე და გაიმეორე.`;
-    if (split && stage.i === 0 && !shares.length) teacher = `ეს ადგილი ძნელია. ჯერ მხოლოდ ${n} ნოტი${slow ? ', ნელა' : ''}.`;
+    if (stage.i === splitAt && !shares.length) teacher = splitLine(n, speed < 1);
   } else if (stage.kind === 'together') teacher = score.voices.length > 2 ? 'ახლა ყველა ერთად. ორი ხმა შენ გელოდება.' : 'ახლა ერთად. მეორე ხმა შენ გელოდება.';
   else teacher = review ? 'ეს ფრაზა ადრე ისწავლე. ერთხელ იმღერე — გავიხსენოთ.' : 'ახლა მარტო — მთელი ფრაზა.';
   if (review && !said && rec?.[phrase.part]?.at) teacher = `ეს ფრაზა ${lastSeenWord(rec[phrase.part].at, today).replace('ბოლოს ', '')} ისწავლე. ერთხელ იმღერე — გავიხსენოთ.`;
@@ -261,10 +336,16 @@ export const PhraseStep: React.FC<{
             </div>
             <div className="mt-1 text-body text-mut">გისმენ… ოქროსფერი ხაზი შენი ხმაა</div>
           </div>
+        ) : cmd.heard ? (
+          <VoiceHeardCard heard={cmd.heard} />
         ) : (
-          <TeacherSays text={typeof teacher === 'string' ? teacher : undefined}>{teacher}</TeacherSays>
+          <TeacherSays text={typeof teacher === 'string' ? teacher : undefined}
+            sub={canCompare ? <CompareLink onClick={() => { player.stop(); setComparing(true); }} /> : undefined}>{teacher}</TeacherSays>
         )}
         {take.error && <p className="px-1.5 text-meta text-gold-ink">{take.error}</p>}
+        {/* AI step 4: the commands' quiet line and „ჰკითხე მასწავლებელს“ */}
+        {voiceCommands && !cmd.heard && !singing && <VoiceListenLine state={cmd.state} error={cmd.error} />}
+        {onAsk && !singing && <AskLink onClick={() => { player.stop(); onAsk(); }} />}
         {stage.kind === 'alone' && !review && said?.passed && (
           <Card pad="none" className="px-[18px] py-3.5">
             <div className="mb-2 flex items-baseline justify-between gap-3">
@@ -276,9 +357,21 @@ export const PhraseStep: React.FC<{
         )}
       </div>
       <Bottom>{bottom}</Bottom>
+      {!review && (
+        <TheoryNote phrase={phrase} hold={take.busy || player.playing || player.counting} playing={player.playing} stop={player.stop}
+          play={(a, b, who) => void player.listen(a, b, who)} />
+      )}
     </>
   );
 };
+
+/** The quiet link under the teacher's words after a try that did not pass. */
+const CompareLink: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+  <Press onClick={onClick}
+    className="-my-2.5 inline-flex h-tap cursor-pointer items-center gap-1.5 rounded-full font-bold text-wine underline decoration-wine/35 underline-offset-[3px] [&_svg]:size-4 [&_svg]:shrink-0 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine/60">
+    <Ear aria-hidden="true" />შეადარე ყურით
+  </Press>
+);
 
 /** A voice's lane in „ერთად“: whose it is and its marks; mine is tinted, with the microphone. */
 const Lane: React.FC<{ n: number; me: boolean; on: boolean }> = ({ n, me, on }) => (

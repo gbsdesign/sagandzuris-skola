@@ -41,12 +41,20 @@ export const saveFocus = (uid: string, focus: LessonFocus) =>
 export const isChantPiece = (piece: string) => !!findVersion(piece)?.variant.bookNums?.length;
 export const pieceTitle = (piece: string) => { const v = findVersion(piece); return v ? chantName(v.chant.title) : ''; };
 
+/** a weak connection must not keep the lesson waiting: a piece's notes not here by then are passed over (offline, the
+ *  service worker answers from its copy at once, or fails at once) */
+const NOTES_WAIT_MS = 8000;
+
 /** A piece's notes and phrases; null when it has none. */
 export const loadPiece = async (piece: string): Promise<{ score: BookScore; parts: LearnPart[] } | null> => {
   const v = findVersion(piece)?.variant;
   if (!v?.bookNums?.length) return null;
-  const score = await loadBookScore(v.bookNums[0], v.book || 'book');
-  return { score, parts: partsOfScore(score) };
+  let timer = 0;
+  const late = new Promise<never>((_, reject) => { timer = window.setTimeout(() => reject(new Error('notes: slow')), NOTES_WAIT_MS); });
+  try {
+    const score = await Promise.race([loadBookScore(v.bookNums[0], v.book || 'book'), late]);
+    return { score, parts: partsOfScore(score) };
+  } finally { window.clearTimeout(timer); }
 };
 
 // a beginner's first chants: „წმიდაო ღმერთო“ and „შენ გიგალობთ“ (short, tuneful phrases), then the Liturgy's others

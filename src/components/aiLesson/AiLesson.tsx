@@ -27,10 +27,15 @@ import { PlanView } from './Plan';
 import { FirstWeekView } from './FirstWeek';
 import { WeakSpot } from './WeakSpot';
 import { openMyVoice } from './open';
+import { NetLine } from './NetLine';
 import { quizFor } from '../../utils/lessonPrep';
 import { useApprovedPrep } from '../../pages/v2/aiklasi/prep/usePrep';
 import { SundayLink } from './TodayLesson';
 import { useMyActiveNotes } from '../../pages/v2/aiklasi/useAiNotes';
+// AI step 4: „ჰკითხე“, „ხმით მართვა“, „მასწავლებლის ხმა“
+import { LessonExtrasMenu, useLessonExtras } from './AskExtras';
+import { AskSheet } from './AskSheet';
+import { TeacherVoiceScreen } from './TeacherVoiceScreen';
 
 const DrillSheet = React.lazy(() => import('../mastery/ManeraLessonSheet').then(m => ({ default: m.DrillSheet })));
 const EntryTest = React.lazy(() => import('../mastery/EntryTest').then(m => ({ default: m.EntryTest })));
@@ -72,6 +77,7 @@ export const AiLesson: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const [fullTest, setFullTest] = useState(false);
   const [pearl, setPearl] = useState(false);
   const [menu, setMenu] = useState(false);
+  const extras = useLessonExtras(); // AI step 4: ask, voice commands, the teacher's voice (AskExtras)
   const [slow, setSlow] = useState(true);
   const [now, setNow] = useState(() => Date.now());
   const started = useRef(0);
@@ -360,6 +366,7 @@ export const AiLesson: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     body = (
       <PhraseStep key={`r${reviewAt}`} phrase={r} mode="review" rec={data.learning[r.piece]} uid={data.uid} today={data.today}
         timeUp={timeUp} slow={false} setSlow={() => undefined} shift={shiftOf(r)}
+        onAsk={extras.shown ? () => extras.setAsk(true) : undefined} voiceCommands={extras.listen}
         onTry={s => setTally(t => ({ ...t, shares: [...t.shares, s] }))}
         onLearned={() => undefined}
         onDone={() => {
@@ -371,6 +378,7 @@ export const AiLesson: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     body = (
       <PhraseStep key={`n${fresh.piece}${fresh.part}`} phrase={fresh} mode="new" rec={data.learning[fresh.piece]} uid={data.uid} today={data.today}
         timeUp={timeUp} slow={slow} setSlow={setSlow} shift={shiftOf(fresh)}
+        onAsk={extras.shown ? () => extras.setAsk(true) : undefined} voiceCommands={extras.listen}
         onTry={s => setTally(t => ({ ...t, shares: [...t.shares, s] }))}
         onLearned={() => setTally(t => (t.learnedParts.includes(fresh.part) ? t : { ...t, learned: t.learned + 1, learnedParts: [...t.learnedParts, fresh.part] }))}
         onDone={moveFresh} />
@@ -394,21 +402,30 @@ export const AiLesson: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     );
   }
 
+  // AI step 4: the phrase „ჰკითხე“ asks about — the one being sung now
+  const askPhrase = stage === 'new' ? fresh ?? null : stage === 'review' ? (weakNow ? weakPhrase : reviews?.[reviewAt] ?? null) : null;
+
   return (
     <Frame>
       <LessonTop at={partIndex} sub={sub} onClose={onClose} onMore={() => setMenu(true)} />
+      {/* no internet / the AI's month spent: one quiet line, the lesson goes on (board x-ai-ugareshe) */}
+      <NetLine uid={data.uid} />
       {body}
       <Sheet open={menu} title="გაკვეთილი" onClose={() => setMenu(false)}>
         {stage === 'new' && (
           <Seg label="ტემპი" items={[{ id: 'slow', label: 'ნელა' }, { id: 'real', label: 'ნამდვილი ტემპი' }]}
             value={slow ? 'slow' : 'real'} onChange={v => setSlow(v === 'slow')} />
         )}
+        <LessonExtrasMenu x={extras} canAsk={!!askPhrase} onPick={() => setMenu(false)} />
         <Rows>
           {stage !== 'sum' && <Row lead={<SkipForward />} title="ამ ნაწილის გამოტოვება" onClick={() => { setMenu(false); if (stage === 'rest') go('sum'); else next(); }} right={null} />}
           {stage !== 'sum' && <Row lead={<Square />} title="გაკვეთილის დასრულება" sub="ნასწავლი შენახულია" onClick={() => { setMenu(false); go('sum'); }} right={null} />}
           <Row lead={<ArrowLeft />} title="გასვლა" sub="მერე თავიდან დაიწყება" onClick={() => { setMenu(false); onClose(); }} right={null} />
         </Rows>
       </Sheet>
+      {/* AI step 4 */}
+      {extras.shown && <AskSheet open={extras.ask} onClose={() => extras.setAsk(false)} phrase={askPhrase} uid={data.uid} />}
+      {extras.voiceScreen && <TeacherVoiceScreen onBack={() => extras.setVoiceScreen(false)} />}
     </Frame>
   );
 };

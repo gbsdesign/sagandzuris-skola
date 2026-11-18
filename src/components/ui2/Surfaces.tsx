@@ -22,7 +22,7 @@ export const Card: React.FC<React.HTMLAttributes<HTMLElement> & {
 /** The small grey name over a group of cards — `label`. */
 export const SectionLabel: React.FC<{ label: React.ReactNode; right?: React.ReactNode; className?: string }> = ({ label, right, className }) => (
   <div className={cx('flex min-h-5 shrink-0 items-center justify-between gap-2 px-1.5 pt-0.5', className)}>
-    <h2 className="min-w-0 truncate text-meta font-semibold text-mut">{label}</h2>
+    <h2 className="sg-fit min-w-0 truncate text-meta font-semibold text-mut">{label}</h2>
     {right}
   </div>
 );
@@ -34,7 +34,7 @@ export const PageHead: React.FC<{ title: React.ReactNode; kicker?: React.ReactNo
 }) => (
   <header className={cx('flex shrink-0 gap-2.5 pt-[18px] pb-2 pl-1', kicker ? 'items-end' : 'items-center', className)}>
     <div className="flex min-w-0 flex-1 flex-col gap-px">
-      {kicker && <div className="truncate text-meta text-mut">{kicker}</div>}
+      {kicker && <div className="sg-fit truncate text-meta text-mut">{kicker}</div>}
       <h1 className="text-hero font-bold tracking-tight wrap-break-word">{title}</h1>
     </div>
     {right && <div className="flex shrink-0 items-center gap-2">{right}</div>}
@@ -57,8 +57,8 @@ export const TopBar: React.FC<{
     )}
     {children ?? (
       <div className="min-w-0 flex-1 pl-0.5">
-        <h1 className="truncate text-title leading-tight font-bold tracking-tight">{title}</h1>
-        {sub && <div className="truncate text-meta text-mut">{sub}</div>}
+        <h1 className="sg-fit truncate text-title leading-tight font-bold tracking-tight">{title}</h1>
+        {sub && <div className="sg-fit truncate text-meta text-mut">{sub}</div>}
       </div>
     )}
     {right && <div className="flex shrink-0 items-center gap-2">{right}</div>}

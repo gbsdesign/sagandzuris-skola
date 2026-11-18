@@ -89,20 +89,23 @@ const fullOrder = (v: unknown): string[] => {
   const saved = Array.isArray(v) ? v.filter((x): x is string => COVER_IDS.includes(x)) : [];
   return [...saved, ...COVER_IDS.filter(id => !saved.includes(id))];
 };
-const useShelfOrder = (uid?: string | null) => {
+/** `saved`: the member set an order once (the new look's front room keeps its own order otherwise) */
+export const useShelfOrder = (uid?: string | null) => {
+  const [saved, setSaved] = useState(() => { try { return !!localStorage.getItem(ORDER_KEY); } catch { return false; } });
   const [order, setOrder] = useState<string[]>(() => {
     try { return fullOrder(JSON.parse(localStorage.getItem(ORDER_KEY) || '[]')); } catch { return COVER_IDS; }
   });
   useEffect(() => {
     if (!uid) return;
-    return onSnapshot(doc(db, 'students', uid), snap => { const v = snap.data()?.shelfOrder; if (v) setOrder(fullOrder(v)); }, () => {});
+    return onSnapshot(doc(db, 'students', uid), snap => { const v = snap.data()?.shelfOrder; if (v) { setOrder(fullOrder(v)); setSaved(true); } }, () => {});
   }, [uid]);
   const save = (next: string[]) => {
     setOrder(next);
+    setSaved(true);
     try { localStorage.setItem(ORDER_KEY, JSON.stringify(next)); } catch { /* this visit keeps it */ }
     if (uid) setDoc(doc(db, 'students', uid), { shelfOrder: next }, { mergeFields: ['shelfOrder'] }).catch(() => {});
   };
-  return { order, save };
+  return { order, save, saved };
 };
 
 // books to a board: two on a phone (the titles keep their size), three from sm, all six on one board

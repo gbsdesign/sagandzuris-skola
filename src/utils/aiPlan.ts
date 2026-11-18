@@ -34,6 +34,8 @@ export interface AiNote {
   fit?: boolean;
   /** the voice check was put off („ახლა არა“): the lesson does not ask again; „ჩემი ხმა“ still offers it */
   skip?: boolean;
+  /** „პატარა თეორია“: the rules already shown (data/aiTheory.ts ids), each once */
+  seen?: string[];
 }
 
 export const TAKES_KEPT = 80;

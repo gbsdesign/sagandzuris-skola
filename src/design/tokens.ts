@@ -32,6 +32,27 @@ export const COLOR = {
 
 export type ColorName = keyof typeof COLOR;
 
+/** the dark look's grounds and words (tokens.css `html.sg-dark`); the colours not named here stay as in COLOR */
+export const DARK = {
+  page: '#141211',
+  surf: '#26221f',
+  line: '#3a3633',
+  soft: '#34302c',
+  dim: '#4a443f',
+  ink: '#f2ede7',
+  mut: '#a59c92',
+  faint: '#756d65',
+  tint: '#3f2f2f',
+  goldInk: '#e3c37a',
+  goldTint: '#3d3220',
+  leafInk: '#8fd0a5',
+  leafTint: '#23352a',
+  seaTint: '#1f3540',
+} as const satisfies Partial<Record<ColorName, string>>;
+
+/** words that are an accent's ground in the light look, drawn lighter on the dark ground (index.css, html.sg-dark) */
+export const DARK_WORDS = { wine: '#e9a0a7', danger: '#f2a29c', sea: '#8cc3df' } as const;
+
 /** the seven text sizes, in px at the usual 16px root */
 export const TEXT_PX = { cap: 12, meta: 13, body: 15, lead: 16, head: 18, title: 22, hero: 28 } as const;
 
