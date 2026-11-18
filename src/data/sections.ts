@@ -67,7 +67,7 @@ export const EXTRA_SWITCHES: { id: ExtraId; label: string; hint: string }[] = [
   { id: 'recDownload', label: 'ჩანაწერების ჩამოწერა', hint: '⬇ MP3 სიმღერებთან, გალობასთან და ალბომებში — მასწავლებლებს და ადმინებს ყოველთვის ჩანს' },
   { id: 'recOffline', label: 'ჩანაწერების ოფლაინი', hint: '☁ ჩანაწერის ინტერნეტის გარეშე შენახვა — მასწავლებლებს და ადმინებს ყოველთვის ჩანს' },
   { id: 'aiTeacher', label: 'AI მასწავლებელი', hint: 'დღის გაკვეთილი ოსტატობასა და გზაზე — ჯერ მხოლოდ ადმინები ხედავენ' },
-  { id: 'newLook', label: 'ახალი სახე', hint: 'ქვედა მენიუ, ერთი ზედა ზოლი, პარამეტრები, შეტყობინებები და ძებნა გვერდებად — ჯერ მხოლოდ ადმინები ხედავენ' },
+  { id: 'newLook', label: 'ახალი სახე', hint: 'ქვედა მენიუ, ერთი ზედა ზოლი, პარამეტრები, შეტყობინებები და ძებნა გვერდებად' },
 ];
 export const isExtra = (id: string): id is ExtraId => EXTRA_SWITCHES.some(x => x.id === id);
 
@@ -80,7 +80,8 @@ export const DEFAULT_SECTION_STATE: Record<SwitchId, SectionState> = {
   recDownload: 'open', recOffline: 'open',
   // the AI teacher's day lesson (2026-11-18): admins see it first; opened for everyone from this list when ready
   aiTeacher: 'hidden',
-  newLook: 'hidden',
+  // the new look: open for everyone since 2026-11-18 (the user: „ჩართე ყველასთვის ახლავე“); an admin can still hide it here
+  newLook: 'open',
 };
 
 /** A „მალე“ section the admin gave a day (settings/sections.openOn, YYYY-MM-DD) opens by itself on that day in Georgia;
