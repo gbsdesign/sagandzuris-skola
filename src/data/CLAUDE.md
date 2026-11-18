@@ -371,7 +371,7 @@ litanies are one unit (e.g. kk 004 = №4–13). Small (cue-size) heads are deli
   the test checks every id exists). Weekdays: daily antiphons (the user's answer), Sunday / polyeleos+: typika + beatitudes. `seasonOf`:
   Lent weekdays (no liturgy Mon/Tue/Thu, the Presanctified Wed/Fri, „ალილუია“, Ephrem's prayer), Basil's liturgy days, Holy Friday,
   Bright Week (own services, Paschal hours), the Paschal forty days („ქრისტე აღდგა“, „ანგელოზი ღაღადებდა“), Ps 136, kneeling vespers.
-  No Triodion book in `wignebi` — Lent links ჟამნი 25.
+  No Triodion book in `wignebi` — Lent links ჟამნი 25 (see stage 4 below).
 
 ### „საკითხავი რიგი“, the priest's texts, the temple's order (2026-11-11, PR after #260)
 
@@ -402,5 +402,20 @@ evening in his temple = vespers alone (matins in the morning), „სხვა �
   დიაკონი · გუნდი · წინამძღვარი) — a priest's service says the same words. The test finds every one in the files.
 - **ხუცური** on the page (`sg-day-khutsuri`): the app's `useKhutsuri` over the steps' list; the list is `font-sans` and every
   text box `font-serif-ge`, so only the texts turn; turning it off remounts the list.
+- **Stage 4 of the plan „მედავითნე: წიგნები, კალენდარი, დღის მსახურება“ (2026-11-18, the user: „სრულყოფილად ააწყე“; answers
+  „სერობა ცალკე ჩანართად · საზრდო ტიბიკონის წესით“):** `utils/triodion.ts` + test = the movable days by the distance from Pascha
+  (`TRIODION` −70…56: Lent's and the Pentecostarion's Sundays, Saturdays, Holy Week, Shio −52, Dodo 45, David 46, the departed −57/−36/−29/−22/48),
+  their troparia and kontakia in ჟამნი 25 (`triodionSrc`, `splitHymns` — the book calls Ascension's kontakion „ტროპარი“: two troparia
+  and no kontakion = the second is it), `movableOf` (own · after = Mid-Pentecost / Ascension / Pentecost afterfeast · paschal =
+  Pascha's kontakion last on the Pentecostarion's weekdays). `hymnsOf`: a `Hymn` may carry `e` (ჟამნი 25) or `md` (a fixed feast's
+  old-style day in ჟამნი's month); the fixed feasts' fore/after/leave days come from the calendar's own words (`feastTideOf`); a
+  Theotokos feast on Sunday keeps the resurrection's hymns. `ServiceId` `compline` = „დიდი სერობა“ (Lent Mon–Thu evenings, ჟამნი 11;
+  the first week split after „მრწამს“ for St Andrew's part, `kriteli` 1–4); `holyWeek` = each day's own order (the Bridegroom's
+  matins, the Presanctified with the Gospel, Thursday's and Saturday's Basil with vespers, Friday's 12 Gospels / Royal Hours /
+  the Shroud's vespers from „დამატებითი წიგნები“ 25); the Great Canon (−17), the Akathist (−15, book x 24), Lent's Saturdays (x 23),
+  Theodore's kolyva (−44, x 22), forgiveness (−48), the great prokeimenon on Lent's Sunday evenings, the departed's panikhida.
+  `data/ownServices.ts` = the 21 saints' / icons' own services (x 1–21) by their old-style days — linked beside the common
+  service. `utils/fasting.ts` + test = „დღის საზრდო“ on the page's head (the calendar's own words lead, the rule beneath).
+  Where the app has no text (the Triodion's stichera and canons) the step says it is in the printed Triodion.
 - Still open: the common services have no ikos; a second rank „ექვსიანი“ is not told apart from a plain day; with the great
   doxology the tibikon sings the typika at the liturgy — the app keeps the daily antiphons on weekdays (the user's temple).
