@@ -1658,8 +1658,8 @@
   by the pace, `planOf`) → a beginner (`before: 'never'`) gets `FirstWeek` (one level-0 exercise a day — `FIRST_WEEK`, a step
   counts once its drill's `drillDone` is today, a missed day only waits; day 6 learns „ალილუია“ `FIRST_PIECE` v-14-1 in the
   day lesson, day 7 puts it on the path with the member's voice — the first pearl). A leap missed three times this week
-  (`weakLeap`) turns the review part into `WeakSpot` (the leap alone, its phrase, the interval from two other notes; then its
-  count starts again). Each phrase is moved into the measured voice (`fitShift`, ≤ a fourth; `usePlayer`'s `transpose`) unless
+  (`weakLeap`) turns the review part into `WeakSpot` (board ai-susti: the leap alone, its phrase, then the interval's „ოსტატობა“
+  exercise — `leapDrill`; then its count starts again; skipping it = the lesson's ⋯). Each phrase is moved into the measured voice (`fitShift`, ≤ a fourth; `usePlayer`'s `transpose`) unless
   „ნოტები ჩემს ხმაზე“ is off. „ჩემი ხმა“ (`MyVoice` via `MyVoiceHost`, `openMyVoice` in open.ts, own history step `sgMyVoice`,
   z-75): tabs დღიური (weekly ten-of bars from the takes) · ხმის ზომა · AI-ს რვეული (the four lines of „ოსტატობის გზა“ + the
   remembered lines); opened from the lesson's start (📖) and under the card of „ოსტატობა“. Reviews now 1 · 3 · 7 · 14 · 30 days,

@@ -11,11 +11,21 @@ import { PhraseStep } from './PhraseStep';
 import { PlayMark } from './Plan';
 import { useTake } from './useTake';
 import type { Phrase } from './useLessonData';
+import { findDrill } from '../../data/vocalDrills';
+
+const DrillSheet = React.lazy(() => import('../mastery/ManeraLessonSheet').then(m => ({ default: m.DrillSheet })));
+
+/** the „ოსტატობა“ exercise for a leap's interval: the fourth, fifth and octave have their own, the rest the general one */
+export const leapDrill = (leap: string) => {
+  const p = parseMiss(leap);
+  const d = p ? Math.abs(p[1] - p[0]) % 12 : 0;
+  return d === 5 || d === 7 || d === 0 ? 'm-iv-basic-sing' : 'm-iv-all-sing';
+};
 
 // „სუსტი ადგილი“ (board ai-susti): in the day lesson, in place of the review, the leap missed most this week (utils/aiPlan's
 // weakLeap) is practised in three steps — the leap alone (its two notes sound, the member sings them back; two right tries
-// or four tries move on), the same leap in its phrase (PhraseStep as a review), and the same interval from two other
-// notes (one right try or three each). The lesson's own top (LessonTop) is drawn by AiLesson above this.
+// or four tries move on), the same leap in its phrase (PhraseStep as a review), and the interval „ყურით და ხმით“ — the
+// „ოსტატობა“ exercise for it (`leapDrill`, opened over the lesson). The lesson's own top (LessonTop) is drawn by AiLesson above this.
 
 /** „ხუთჯერ“ — how many times, in words */
 const TIMES = ['ერთხელ', 'ორჯერ', 'სამჯერ', 'ოთხჯერ', 'ხუთჯერ', 'ექვსჯერ', 'შვიდჯერ', 'რვაჯერ', 'ცხრაჯერ', 'ათჯერ'];
@@ -27,21 +37,18 @@ export interface WeakSpotRow { title: string; sub: string }
 export const weakSpotRows = (leap: string, n: number, phrase: Pick<Phrase, 'title' | 'part'> | null): WeakSpotRow[] => [
   { title: 'მხოლოდ ნახტომი', sub: `${leapLabel(leap)} · ${timesWord(n)}` },
   ...(phrase ? [{ title: 'იგივე — ფრაზაში', sub: `„${phrase.title}“, ფრაზა ${phrase.part + 1}` }] : []),
-  { title: `${leapName(leap)} ყურით და ხმით`, sub: 'სხვა ნოტებიდანაც' },
+  { title: `${leapName(leap)} ყურით და ხმით`, sub: '„ოსტატობის“ სავარჯიშო' },
 ];
 
-/** The weak spot's first screen: what the teacher saw, the three steps, „დავიწყოთ“ — and a quiet way past it. */
-export const WeakSpotView: React.FC<{ say: string; rows: WeakSpotRow[]; onStart: () => void; onSkip: () => void }> = ({ say, rows, onStart, onSkip }) => (
+/** The weak spot's first screen (board ai-susti): what the teacher saw, the three steps, „დავიწყოთ“. Skipping it is the
+ *  lesson's own ⋯ → „ამ ნაწილის გამოტოვება“. */
+export const WeakSpotView: React.FC<{ say: string; rows: WeakSpotRow[]; onStart: () => void }> = ({ say, rows, onStart }) => (
   <>
     <div className="flex flex-col gap-3 px-4 pt-0.5 pb-4">
       <TeacherSays text={say}>{say}</TeacherSays>
       <Rows aria-label="დღევანდელი ვარჯიში">
         {rows.map((r, i) => <Row key={r.title} lead={<Num n={i + 1} on={i === 0} />} title={r.title} sub={r.sub} right={null} />)}
       </Rows>
-      <Press onClick={onSkip}
-        className={cx('h-tap cursor-pointer self-center rounded-full px-5 text-body font-semibold text-mut transition-colors hover:text-ink active:bg-ink/5', FOCUS)}>
-        დღეს გამოვტოვოთ
-      </Press>
     </div>
     <Bottom>
       <Button full className="min-h-[52px]" icon={<PlayMark filled />} onClick={onStart}>დავიწყოთ</Button>
@@ -49,7 +56,7 @@ export const WeakSpotView: React.FC<{ say: string; rows: WeakSpotRow[]; onStart:
   </>
 );
 
-type Stage = 'intro' | 'leap' | 'phrase' | 'other1' | 'other2';
+type Stage = 'intro' | 'leap' | 'phrase' | 'drill';
 
 /** The weak-spot drill, all three steps. `leap` = „62>67“ (MIDI from>to); `phrase` = the phrase it was missed in, if known. */
 export const WeakSpot: React.FC<{
@@ -64,9 +71,7 @@ export const WeakSpot: React.FC<{
   /** each try's share (0–1), for the lesson's tally */
   onTry: (share: number) => void;
   onDone: () => void;
-  /** „დღეს გამოვტოვოთ“ on the first screen; without it the drill just ends */
-  onSkip?: () => void;
-}> = ({ leap, n, phrase, rec, uid, today, timeUp, onTry, onDone, onSkip }) => {
+}> = ({ leap, n, phrase, rec, uid, today, timeUp, onTry, onDone }) => {
   const pair = parseMiss(leap);
   const [stage, setStage] = useState<Stage>('intro');
   // a key that is not a leap: nothing to practise
@@ -74,18 +79,18 @@ export const WeakSpot: React.FC<{
   if (!pair) return null;
   const [from, to] = pair;
 
-  const names = ['ნახტომი', ...(phrase ? ['ფრაზაში'] : []), 'სხვა ნოტიდან'];
+  const names = ['ნახტომი', ...(phrase ? ['ფრაზაში'] : []), 'ოსტატობა'];
   const otherAt = phrase ? 2 : 1;
   const pills = (on: number) => <StepPills names={names} on={on} />;
 
   if (stage === 'intro') {
-    return <WeakSpotView say={weakLine(leap, n)} rows={weakSpotRows(leap, n, phrase)} onStart={() => setStage('leap')} onSkip={onSkip ?? onDone} />;
+    return <WeakSpotView say={weakLine(leap, n)} rows={weakSpotRows(leap, n, phrase)} onStart={() => setStage('leap')} />;
   }
   if (stage === 'leap') {
     return (
       <LeapStep key="leap" from={from} to={to} title="მხოლოდ ნახტომი" need={2} maxTries={4} top={pills(0)}
-        intro="მოუსმინე ორ ნოტს და გაიმეორე." nextWord={phrase ? 'ახლა — ფრაზაში.' : 'ახლა — სხვა ნოტიდან.'}
-        timeUp={timeUp} onTry={onTry} onEnd={late => (late ? onDone() : setStage(phrase ? 'phrase' : 'other1'))} />
+        intro="მოუსმინე ორ ნოტს და გაიმეორე." nextWord={phrase ? 'ახლა — ფრაზაში.' : 'ახლა — „ოსტატობის“ სავარჯიშო.'}
+        timeUp={timeUp} onTry={onTry} onEnd={late => (late ? onDone() : setStage(phrase ? 'phrase' : 'drill'))} />
     );
   }
   if (stage === 'phrase' && phrase) {
@@ -94,21 +99,37 @@ export const WeakSpot: React.FC<{
         <div className="shrink-0 px-4 pt-0.5 pb-3">{pills(1)}</div>
         <PhraseStep key="phrase" phrase={phrase} mode="review" rec={rec} uid={uid} today={today} timeUp={timeUp}
           slow={false} setSlow={() => undefined} onTry={onTry} onLearned={() => undefined}
-          onDone={() => (timeUp() ? onDone() : setStage('other1'))} />
+          onDone={() => (timeUp() ? onDone() : setStage('drill'))} />
       </>
     );
   }
-  if (stage === 'other1' || stage === 'phrase') {
-    return (
-      <LeapStep key="other1" from={from + 2} to={to + 2} title="სხვა ნოტიდან · 1 / 2" need={1} maxTries={3} top={pills(otherAt)}
-        intro="ახლა იგივე ნახტომი — სხვა ნოტიდან." nextWord="კიდევ ერთი ნოტიდან."
-        timeUp={timeUp} onTry={onTry} onEnd={late => (late ? onDone() : setStage('other2'))} />
-    );
-  }
+  return <DrillStep leap={leap} top={pills(otherAt)} onDone={onDone} />;
+};
+
+/** the third step: the „ოსტატობა“ exercise of the leap's interval, opened over the lesson; closing it ends the drill */
+const DrillStep: React.FC<{ leap: string; top: React.ReactNode; onDone: () => void }> = ({ leap, top, onDone }) => {
+  const id = leapDrill(leap);
+  const title = findDrill(id)?.title ?? '';
+  const [open, setOpen] = useState(false);
+  const say = `ახლა — „ოსტატობის“ სავარჯიშო: ${title}.`;
   return (
-    <LeapStep key="other2" from={from - 3} to={to - 3} title="სხვა ნოტიდან · 2 / 2" need={1} maxTries={3} top={pills(otherAt)}
-      intro="ახლა იგივე ნახტომი — სხვა ნოტიდან." nextWord="ნახტომი ვივარჯიშეთ."
-      timeUp={timeUp} onTry={onTry} onEnd={() => onDone()} />
+    <>
+      <div className="flex flex-col gap-3 px-4 pt-0.5 pb-4">
+        {top}
+        <TeacherSays text={say}>{say}</TeacherSays>
+      </div>
+      <Bottom>
+        <Duo>
+          <Button kind="ghost" onClick={onDone}>დღეს არა</Button>
+          <Button icon={<PlayMark filled />} onClick={() => setOpen(true)}>გავხსნათ</Button>
+        </Duo>
+      </Bottom>
+      {open && (
+        <React.Suspense fallback={null}>
+          <DrillSheet drillId={id} onClose={() => { setOpen(false); onDone(); }} />
+        </React.Suspense>
+      )}
+    </>
   );
 };
 

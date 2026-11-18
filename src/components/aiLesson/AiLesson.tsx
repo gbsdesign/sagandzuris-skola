@@ -345,8 +345,7 @@ export const AiLesson: React.FC<{ onClose: () => void }> = ({ onClose }) => {
           if (ai.uid && note?.misses) { const m = { ...note.misses }; delete m[weak.key]; void saveAiNote(ai.uid, { misses: m }); }
           setTally(t => ({ ...t, reviews: t.reviews + 1 }));
           next();
-        }}
-        onSkip={() => { setWeakDone(true); next(); }} />
+        }} />
     );
   } else if (stage === 'review' && reviews?.[reviewAt]) {
     const r = reviews[reviewAt];
