@@ -9,6 +9,9 @@ import { saveTake } from '../../hooks/usePearls';
 import { askAiTeacher, aiTriesLeft, AiTeacherError, AI_PROBLEM_TEXT } from '../../utils/aiTeacher';
 import { triggerHaptic } from '../../utils/haptics';
 import type { Voice } from '../../utils/pathItems';
+import { useViewing } from '../../context';
+import { useAccess } from '../../hooks/useAccess';
+import { openExam } from '../../pages/v2/gamocda/open';
 import { PartPicture } from './PartPicture';
 import { LearnMirror } from './LearnMirror';
 import { Choice, LOOPS_PER_STEP, SPEEDS, SettingsFold, useSinging } from './LearnShared';
@@ -76,9 +79,14 @@ export const LearnEasy: React.FC<{
   const vi = Number(voice) - 1;
   const many = score.voices.length > 1;
   const joined = current === 'all';
+  const viewing = useViewing();
   const at = joined ? 0 : Math.max(0, Math.min(parts.length - 1, current));
   // the phrases learned from the first on, joined („ნასწავლი ფრაზები ერთად“)
   const run = (() => { let k = 0; while (k < parts.length && (rec[k]?.level ?? 0) >= 1) k++; return k; })();
+  // every phrase of the voice learned: the AI teacher's exam is the way on (a teacher's look and guests have none)
+  // the exam belongs to the AI teacher: only while its switch is open for the person
+  const aiOn = useAccess().on('aiTeacher');
+  const examReady = !!uid && !viewing && aiOn && run >= parts.length;
   const part: LearnPart = useMemo(() => {
     if (!joined) return parts[at] ?? parts[0];
     const last = parts[Math.max(0, run - 1)];
@@ -341,14 +349,18 @@ export const LearnEasy: React.FC<{
       main = { label: last ? (many ? 'ახლა ერთად' : 'ახლა მთლიანი ფრაზა') : 'შემდეგი ნაწყვეტი', icon: <ChevronRight />, run: nextPiece };
     } else if (joined) {
       say = <><b className="text-[#2f6b43]">ყოჩაღ!</b> ნასწავლი ფრაზები ერთად გამოგივიდა.</>;
-      main = { label: 'კიდევ ერთხელ', icon: <RotateCcw />, run: () => goStage(many ? 'together' : 'whole') };
+      main = examReady
+        ? { label: 'გამოცდა', icon: <Mic />, run: () => openExam(vid, voice, true) }
+        : { label: 'კიდევ ერთხელ', icon: <RotateCcw />, run: () => goStage(many ? 'together' : 'whole') };
     } else {
       say = <><b className="text-[#2f6b43]">ყოჩაღ! ეს ფრაზა ნასწავლია.</b> გამეორებას აპი შეგახსენებს.</>;
       main = nextPart >= 0
         ? { label: nextPart > at ? 'შემდეგი ფრაზა' : `ფრაზა ${nextPart + 1}`, icon: <ChevronRight />, run: () => pick(nextPart) }
         : parts.length > 1
           ? { label: 'ყველა ფრაზა ერთად', icon: <ChevronRight />, run: () => pick('all') }
-          : { label: 'კიდევ ერთხელ', icon: <RotateCcw />, run: () => goStage(steps[0]) };
+          : examReady
+            ? { label: 'გამოცდა', icon: <Mic />, run: () => openExam(vid, voice, true) }
+            : { label: 'კიდევ ერთხელ', icon: <RotateCcw />, run: () => goStage(steps[0]) };
     }
   } else if (result) {
     say = <>{hit} ნოტი {result.hits.length}-დან. {whole ? (joined ? 'კიდევ სცადე!' : `ნასწავლად ჩაითვლება ${LEARNED_SHARE}%-ზე.`) : 'კიდევ მოისმინე და სცადე — გამოგივა!'}</>;

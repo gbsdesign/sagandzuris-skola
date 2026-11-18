@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Check, GraduationCap, Lock, Music, Pencil, Share, X } from 'lucide-react';
-import { useChants, useNavigation } from '../../../context';
+import { Check, GraduationCap, Lock, Mic, Music, Pencil, Share, X } from 'lucide-react';
+import { useAuth, useChants, useNavigation, useViewing } from '../../../context';
 import {
   Bar, Button, Card, Chips, Dot, Helper, Pill, Press, Row, Rows, RoundButton, SectionLabel, Sheet, TopBar, cx, FOCUS,
 } from '../../../components/ui2';
@@ -17,7 +17,10 @@ import { useAccess } from '../../../hooks/useAccess';
 import { pearlOf, type PearlState } from '../../../utils/pathPearls';
 import { OTHER_CHANTS } from '../../../utils/pathChests';
 import { sortPathItems, usesVoices, voicesOf, type PathItem, type Voice } from '../../../utils/pathItems';
-import { SERVICE_LISTS } from '../../../data/chantLookup';
+import { SERVICE_LISTS, findVersion } from '../../../data/chantLookup';
+import { aiVoices } from '../../../utils/aiPass';
+import { openExam } from '../gamocda/open';
+import { useExamRecord } from '../gamocda/useExamRecord';
 import { useLearnCount } from './useGza';
 import { WorkSection } from './Work';
 import { ShareLayer } from '../barati';
@@ -49,7 +52,12 @@ export interface TreasureItem {
 }
 
 export interface PearlInfo {
+  id?: string;
   name: string;
+  /** voices the AI teacher passed (shown as „ჩათვალა AI მასწავლებელმა“) */
+  aiVoices?: Voice[];
+  /** voices marked and not yet counted that the member can sit the AI teacher's exam in */
+  examVoices?: Voice[];
   token: TokenKind;
   pearl: PearlState;
   voiced: boolean;
@@ -115,10 +123,12 @@ export const SagandzuriView: React.FC<{
   onClosePearl: () => void;
   /** a shining pearl's „გაზიარება“ (the card of a learned chant) */
   onSharePearl?: () => void;
+  /** a row „გამოცდა · II ხმა ›“ in the pearl's sheet */
+  onExam?: (id: string, voice: Voice) => void;
   mastery?: { level: number; pct: number; onOpen: () => void };
 }> = ({
   onBack, learned, total, voices, voiceSlots, plus, work, chips, chip, onChip, items, onFirstStep, locked, editing, onEdit,
-  onVoice, onRemove, onPearl, pearl, onClosePearl, onSharePearl, mastery,
+  onVoice, onRemove, onPearl, pearl, onClosePearl, onSharePearl, onExam, mastery,
 }) => {
   const [more, setMore] = useState(false);
   const shown = chip === 'all' ? items : items.filter(it => it.chip === chip);
@@ -224,7 +234,11 @@ export const SagandzuriView: React.FC<{
             <Card className="flex items-center gap-3.5">
               <span className="flex size-14 shrink-0 items-center justify-center"><Token kind={pearl.token} state={pearl.pearl} size={52} /></span>
               <span className="flex min-w-0 flex-col">
-                <span className="text-lead font-bold">{pearl.marks.includes('ok') ? 'მასწავლებელმა ჩათვალა' : 'ჯერ არავის ჩაუთვლია'}</span>
+                <span className="text-lead font-bold">{(() => {
+                  const ok = pearl.marks.flatMap((m, i) => (m === 'ok' ? [String(i + 1) as Voice] : []));
+                  const byAi = ok.filter(v => pearl.aiVoices?.includes(v));
+                  return ok.length === 0 ? 'ჯერ არავის ჩაუთვლია' : byAi.length === ok.length ? 'AI მასწავლებელმა ჩათვალა' : 'მასწავლებელმა ჩათვალა';
+                })()}</span>
                 <span className="text-meta text-mut">
                   {pearl.pearl === 'shining' ? 'მარგალიტი ბრწყინავს' : pearl.pearl === 'polished' ? 'გაპრიალებულია — შენ მონიშნე' : 'ჯერ არ არის ნასწავლი'}
                 </span>
@@ -236,6 +250,14 @@ export const SagandzuriView: React.FC<{
                   title={pearl.voiced ? `${['I', 'II', 'III'][i]} ხმა` : 'ნასწავლი'} sub={MARK_WORD[m]} />
               ))}
             </Rows>
+            {pearl.id && onExam && !!pearl.examVoices?.length && (
+              <Rows>
+                {pearl.examVoices.map(v => (
+                  <Row key={v} lead={<Dot icon={<Mic />} />} title={`გამოცდა · ${['I', 'II', 'III'][Number(v) - 1]} ხმა`} sub="AI მასწავლებელი ჩათვლის"
+                    onClick={() => onExam(pearl.id as string, v)} />
+                ))}
+              </Rows>
+            )}
             {pearl.pearl === 'shining' && onSharePearl && (
               <Button full icon={<Share strokeWidth={2} />} onClick={onSharePearl}>გაზიარე</Button>
             )}
@@ -257,6 +279,9 @@ export const SagandzuriPage: React.FC<{ onBack: () => void; onMastery: () => voi
   const { selectedChantVariants, saveVariantsToFirestoreAndStorage } = useChants();
   const { navigateTo } = useNavigation();
   const { locked, confirmed, toggle } = usePathMarks(triggerFireworks);
+  const { user } = useAuth();
+  const viewing = useViewing();
+  const examRec = useExamRecord(user?.uid);
   const openerOf = usePathItemOpener();
   const newWork = useNewWork();
   const access = useAccess();
@@ -359,7 +384,15 @@ export const SagandzuriPage: React.FC<{ onBack: () => void; onMastery: () => voi
         onVoice={onVoice}
         onRemove={remove}
         onPearl={setPearlId}
-        pearl={shownPearl ? { name: shownPearl.name, token: shownPearl.token, pearl: shownPearl.pearl, voiced: shownPearl.voiced, marks: shownPearl.marks } : null}
+        pearl={shownPearl ? {
+          id: shownPearl.id, name: shownPearl.name, token: shownPearl.token, pearl: shownPearl.pearl, voiced: shownPearl.voiced, marks: shownPearl.marks,
+          aiVoices: aiVoices(examRec.pass, shownPearl.id),
+          // a chant with book notes, a voice marked and not counted yet; none on a teacher's look or for a guest
+          // the exam belongs to the AI teacher: shown while its switch is open for the person (useAccess)
+          examVoices: user && !viewing && access.on('aiTeacher') && shownPearl.voiced && shownPearl.it && findVersion(shownPearl.id)?.variant.bookNums?.length
+            ? shownPearl.marks.flatMap((m, i) => (m === 'on' ? [String(i + 1) as Voice] : [])) : [],
+        } : null}
+        onExam={(id, v) => { setPearlId(null); openExam(id, v); }}
         onClosePearl={() => setPearlId(null)}
         onSharePearl={() => { setShareId(pearlId); setPearlId(null); }}
         mastery={access.on('manera') ? { level: mastery.level, pct: mastery.pct, onOpen: onMastery } : undefined}

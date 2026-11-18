@@ -283,7 +283,7 @@ export const firstOpenPart = (rec: LearnRecord | undefined, parts: number): numb
   return -1;
 };
 
-export interface Candidate { piece: string; voice?: string; from: 'work' | 'learning' | 'program' | 'start' }
+export interface Candidate { piece: string; voice?: string; from: 'focus' | 'work' | 'learning' | 'program' | 'start' }
 
 /**
  * The pieces a new phrase may come from, in order: the teacher's assignments, a piece already being learned (the one
@@ -296,6 +296,8 @@ export const freshCandidates = (o: {
   program: string[];
   starter: string[];
   isChant: (piece: string) => boolean;
+  /** „კვირის წირვა“: the chants the member is preparing for the coming Sunday — they come first (utils/sundayReady.ts) */
+  focus?: string[];
 }): Candidate[] => {
   const out: Candidate[] = [];
   const seen = new Set<string>();
@@ -305,6 +307,7 @@ export const freshCandidates = (o: {
     if (firstOpenPart(o.learning[piece], o.parts[piece] || 0) < 0) return;
     out.push({ piece, from, voice });
   };
+  (o.focus ?? []).forEach(p => add(p, 'focus'));
   o.work.forEach(w => add(w.piece, 'work', w.voice));
   Object.entries(o.learning)
     .filter(([piece, rec]) => o.isChant(piece) && Object.keys(rec).length > 0)
@@ -319,13 +322,13 @@ export const freshCandidates = (o: {
 export interface ReviewPick { piece: string; part: number; at: string }
 
 /** The phrases to review today: due or overdue ones of the chants, the longest waiting first, at most `max`. */
-export const pickReviews = (learning: Record<string, LearnRecord>, today: string, max: number, isChant: (piece: string) => boolean): ReviewPick[] =>
+export const pickReviews = (learning: Record<string, LearnRecord>, today: string, max: number, isChant: (piece: string) => boolean, focus: readonly string[] = []): ReviewPick[] =>
   Object.entries(learning)
     .filter(([piece]) => isChant(piece))
     .flatMap(([piece, rec]) => Object.entries(rec)
       .filter(([, r]) => partState(r, today) === 'due')
       .map(([part, r]) => ({ piece, part: Number(part), at: r.at, due: r.due || today })))
-    .sort((a, b) => a.due.localeCompare(b.due) || a.piece.localeCompare(b.piece) || a.part - b.part)
+    .sort((a, b) => Number(focus.includes(b.piece)) - Number(focus.includes(a.piece)) || a.due.localeCompare(b.due) || a.piece.localeCompare(b.piece) || a.part - b.part)
     .slice(0, max)
     .map(({ piece, part, at }) => ({ piece, part, at }));
 
@@ -374,4 +377,6 @@ export const READY_SENTENCES: { title: string; lines: string[] }[] = [
     'კიდევ ერთხელ.', 'ახლა — ფრაზაში.', 'ახლა — „ოსტატობის“ სავარჯიშო.',
     'ახლა — „ოსტატობის“ სავარჯიშო: ოქტავა, კვინტა, კვარტა — იმღერე.',
   ] },
+  // AI step 3: the exam (pages/v2/gamocda, utils/aiExam.ts)
+  { title: 'გამოცდა', lines: ['მზად ხარ? სამი წესია.', 'ახლოს ხარ. ხვალ ისევ სცადე.', 'ჯერ მოუსმინე და ისევ სცადე. ხვალ — ახალი ცდა.'] },
 ];

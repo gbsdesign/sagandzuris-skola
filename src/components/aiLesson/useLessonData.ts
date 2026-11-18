@@ -13,6 +13,7 @@ import { melodyIn, partsOfScore, type LearnPart, type LearnRecord } from '../../
 import { chantName } from '../../utils/pearls';
 import { georgiaToday } from '../../utils/psalter';
 import { freshCandidates, pickReviews, type Candidate } from '../../utils/aiLesson';
+import { activeFocus } from '../../utils/sundayReady';
 
 // What the AI lesson works with: the member's learning record, their assignments and class programs, their voice, and
 // the lesson days kept in students/{uid}.aiLesson { last: day, days: { [day]: { min, learned, reviews } } } (the member
@@ -29,7 +30,13 @@ export interface Phrase {
 }
 
 export interface LessonDay { min: number; learned: number; reviews: number }
-export interface LessonRecord { last?: string; days?: Record<string, LessonDay> }
+/** „კვირის წირვა“'s wish: until that day the lesson prefers these chants (utils/sundayReady.ts) */
+export interface LessonFocus { until: string; pieces: string[] }
+export interface LessonRecord { last?: string; days?: Record<string, LessonDay>; focus?: LessonFocus }
+
+export const saveFocus = (uid: string, focus: LessonFocus) =>
+  setDoc(doc(db, 'students', uid), { aiLesson: { focus } }, { merge: true })
+    .catch(e => console.warn('ai lesson focus:', e?.code || e));
 
 export const isChantPiece = (piece: string) => !!findVersion(piece)?.variant.bookNums?.length;
 export const pieceTitle = (piece: string) => { const v = findVersion(piece); return v ? chantName(v.chant.title) : ''; };
@@ -83,12 +90,17 @@ export const useLessonData = () => {
       .filter(a => a.variantId && isChantPiece(a.variantId))
       .map(a => ({ piece: a.variantId!, voice: a.voices[0] }));
     const program = classes.flatMap(c => c.program.map(p => p.id || '')).filter(Boolean);
+    const focus = activeFocus(record?.focus, today);
     const candidates: Candidate[] = freshCandidates({
-      work: assigned, learning, parts: partsKnown, program, starter: STARTER, isChant: isChantPiece,
+      work: assigned, learning, parts: partsKnown, program, starter: STARTER, isChant: isChantPiece, focus,
     });
-    return { candidates, reviews10: pickReviews(learning, today, 2, isChantPiece), reviews5: pickReviews(learning, today, 1, isChantPiece) };
+    return {
+      candidates,
+      reviews10: pickReviews(learning, today, 2, isChantPiece, focus),
+      reviews5: pickReviews(learning, today, 1, isChantPiece, focus),
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [all, work.groups, classes.map(c => c.id).join(','), today]);
+  }, [all, record, work.groups, classes.map(c => c.id).join(','), today]);
 
   const ready = !!uid && all !== null && record !== null && pearls.loaded;
   return { uid, ready, learning, partsKnown, plan, voice: pearls.voice, record: record ?? {}, today };

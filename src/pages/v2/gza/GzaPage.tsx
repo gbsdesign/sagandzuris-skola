@@ -1,13 +1,16 @@
 import React, { useEffect } from 'react';
 import { useNavigation } from '../../../context';
-import { Card, TopBar } from '../../../components/ui2';
+import { Card, RoundButton, TopBar } from '../../../components/ui2';
 import { MasteryContent } from '../../../components/mastery/MasteryContent';
 import { usePanelWish } from '../../../components/views/IndependentWorkCard';
 import { clearTried } from '../../../utils/samosiTry';
 import { GzaList } from './GzaList';
 import { SagandzuriPage } from './Sagandzuri';
 import { SamosiPage } from './Samosi';
+import { TsirvaScreen } from '../tsirva/TsirvaScreen';
 import { screenOf } from '../chvevebi/nav';
+import { Certificate, LevelsScreen, LEVELS_ITEM, certOf } from '../doneebi';
+import { Route } from 'lucide-react';
 
 const ChvevebiPage = React.lazy(() => import('../chvevebi/ChvevebiPage'));
 const ClassesListScreen = React.lazy(() => import('../klasi/ClassesList').then(m => ({ default: m.ClassesListScreen })));
@@ -26,14 +29,21 @@ export const GzaPage: React.FC = () => {
 
   if (mapItem === 'sagandzuri') return <SagandzuriPage onBack={handleGoBack} onMastery={() => openMapItem('ostatoba')} />;
   if (mapItem === 'samosi') return <SamosiPage onBack={handleGoBack} />;
+  // the coming Sunday's Liturgy: what I know of it (AI step 3, board x-ai-tsirva)
+  if (mapItem === 'tsirva') return <TsirvaScreen />;
   // the habits' screens (stage 4b): the day, the views, a habit, the changes, the vine
   if (screenOf(mapItem)) return <ChvevebiPage />;
   // several classes: their list as a page (x-klasebi, stage 4c)
   if (mapItem === 'klasebi') return <ClassesListScreen />;
+  // „ოსტატობის გზა“'s levels and a level's certificate (stage doneebi)
+  if (mapItem === LEVELS_ITEM) return <LevelsScreen />;
+  if (certOf(mapItem) !== null) return <Certificate />;
   if (mapItem === 'ostatoba') {
     return (
       <div className="flex w-full flex-col gap-2 pb-4">
-        <TopBar title="ოსტატობა" onBack={handleGoBack} />
+        <TopBar title="ოსტატობა" onBack={handleGoBack} right={
+          <RoundButton label="ოსტატობის გზა" onClick={() => openMapItem(LEVELS_ITEM)}><Route strokeWidth={1.75} /></RoundButton>
+        } />
         <Card pad="sm"><MasteryContent /></Card>
       </div>
     );

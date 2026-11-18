@@ -160,3 +160,14 @@ test('what today holds: reviews first by how long they waited, a new phrase from
   assert.equal(c[0].voice, '2');
   assert.equal(lastSeenWord('2026-11-11', '2026-11-18'), 'ბოლოს 7 დღის წინ');
 });
+
+test('the Sunday wish: its chants come first in the new phrase and in the reviews', async () => {
+  const { freshCandidates, pickReviews } = await import('../src/utils/aiLesson');
+  const rec = (due: string) => ({ best: 90, level: 1, due, at: '2026-11-10' });
+  const learning = { a: { 0: rec('2026-11-10') }, b: { 0: rec('2026-11-16') } };
+  const isChant = () => true;
+  assert.deepEqual(pickReviews(learning, '2026-11-18', 1, isChant).map(r => r.piece), ['a']);
+  assert.deepEqual(pickReviews(learning, '2026-11-18', 1, isChant, ['b']).map(r => r.piece), ['b']);
+  const c = freshCandidates({ work: [{ piece: 'w' }], learning: {}, parts: {}, program: [], starter: ['s'], isChant, focus: ['f'] });
+  assert.deepEqual(c.map(x => `${x.piece}:${x.from}`), ['f:focus', 'w:work', 's:start']);
+});

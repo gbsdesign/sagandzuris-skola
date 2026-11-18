@@ -1,12 +1,14 @@
 import React from 'react';
 import { BarChart3, ChevronRight, Play } from 'lucide-react';
-import { useAuth } from '../../context';
+import { useAuth, useNavigation } from '../../context';
 import { useViewing } from '../../context/AuthContext';
 import { useAccess } from '../../hooks/useAccess';
 import { Hero, Press, Row, Rows, cx } from '../ui2';
 import { openAiLesson, openMyVoice } from './open';
 import { useAiNote } from './useAiNote';
 import { tenOf, weekBars } from '../../utils/aiPlan';
+import { georgiaToday } from '../../utils/psalter';
+import { showSundayEntry } from '../../utils/sundayReady';
 
 // The ways into the AI teacher's day lesson: one wine line at the top of „საგანძურის გზა“ (the canvas's gza) and the
 // card on top of „ოსტატობა“ (ostatoba). Shown while the switch „AI მასწავლებელი“ allows (admins first), for a member's
@@ -19,10 +21,36 @@ const useLessonShown = () => {
   return !!user && !viewing && access.on('aiTeacher');
 };
 
+/** „კვირის წირვა · მზად ხარ? ›“ — a quiet line under the lesson's card, from Wednesday to Sunday, for everyone the lesson is
+ *  shown to (the list falls back to the Liturgy's main chants, so a member without a class has one too). Opens gz → `tsirva`.
+ *  `before`: inside the lesson (it lies over the app) — it closes first, then the page opens. */
+export const SundayLink: React.FC<{ className?: string; before?: () => void }> = ({ className, before }) => {
+  const { navigateTo, openMapItem } = useNavigation();
+  if (!showSundayEntry(georgiaToday())) return null;
+  const go = () => { navigateTo('gz'); openMapItem('tsirva'); };
+  const open = () => {
+    if (!before) { go(); return; }
+    let done = false;
+    const once = () => { if (done) return; done = true; window.removeEventListener('popstate', once); go(); };
+    window.addEventListener('popstate', once);
+    window.setTimeout(once, 500);
+    before();
+  };
+  return (
+    <Press onClick={open} className={cx(
+      'flex h-tap w-full shrink-0 items-center justify-center gap-1 text-meta font-semibold text-wine cursor-pointer',
+      'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine/60', className,
+    )}>
+      კვირის წირვა · მზად ხარ? <ChevronRight aria-hidden="true" className="size-4 shrink-0" />
+    </Press>
+  );
+};
+
 /** „დღის გაკვეთილი · 10 წუთი — AI მასწავლებელთან“, one line */
 export const TodayLessonStrip: React.FC<{ className?: string }> = ({ className }) => {
   if (!useLessonShown()) return null;
   return (
+    <>
     <Press onClick={openAiLesson} className={cx(
       'flex h-[76px] w-full shrink-0 items-center gap-3.5 rounded-card bg-wine pr-3.5 pl-4 text-left text-white cursor-pointer transition active:scale-[0.99]',
       'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine/60', className,
@@ -36,6 +64,8 @@ export const TodayLessonStrip: React.FC<{ className?: string }> = ({ className }
       </span>
       <ChevronRight aria-hidden="true" className="size-[18px] shrink-0" />
     </Press>
+    <SundayLink />
+    </>
   );
 };
 
@@ -43,8 +73,11 @@ export const TodayLessonStrip: React.FC<{ className?: string }> = ({ className }
 export const TodayLessonHero: React.FC<{ className?: string }> = ({ className }) => {
   if (!useLessonShown()) return null;
   return (
+    <>
     <Hero className={className} kicker="დღის გაკვეთილი · 10 წუთი" title="AI მასწავლებელთან" sub="გახურება · გამეორება · ახალი ფრაზა · გალობა"
       action={{ label: 'დაიწყე', icon: <Play fill="currentColor" />, onClick: openAiLesson }} />
+    <SundayLink />
+    </>
   );
 };
 

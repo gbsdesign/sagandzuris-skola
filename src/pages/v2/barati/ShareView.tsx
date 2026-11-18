@@ -43,7 +43,7 @@ export const MomentView: React.FC<{ item: LearnedItem; onShare: () => void; onCl
   </>
 );
 
-const useLogoUrls = () => {
+export const useLogoUrls = () => {
   const [db_, setDb] = useState<string | undefined>();
   useEffect(() => {
     let live = true;
