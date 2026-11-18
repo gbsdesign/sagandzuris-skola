@@ -19,3 +19,5 @@ CREATE TABLE IF NOT EXISTS meta (key TEXT PRIMARY KEY, value TEXT);
 CREATE TABLE IF NOT EXISTS widgets (secret TEXT PRIMARY KEY, uid TEXT NOT NULL, created_at TEXT);
 CREATE INDEX IF NOT EXISTS widgets_uid ON widgets (uid);
 CREATE TABLE IF NOT EXISTS widget_summary (uid TEXT PRIMARY KEY, json TEXT NOT NULL, updated_at TEXT);
+-- the notices' settings (students/{uid}.notify's copy) and the chat messages held in the quiet hours (2026-11-18)
+CREATE TABLE IF NOT EXISTS notify (uid TEXT PRIMARY KEY, json TEXT NOT NULL, held INTEGER NOT NULL DEFAULT 0, sent TEXT, updated_at TEXT);

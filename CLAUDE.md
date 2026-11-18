@@ -1738,6 +1738,18 @@
   button — the session has no output control). `ShareHost` restyled (x-gaziareba-klasshi) and opens for a share saved < 10 min ago
   (the service worker stamps `X-At`) because the page address could drop `?open=share` first. `pages/v2/dabadebis/BirthdaysScreen`
   (x-dabadebis; „მიულოცე“ = a private chat through a shared class, else the admin's chat; staff see ages).
+- **Stage 4e — share card, morning summary, icon badge (2026-11-18)**: a learned item (every voice the member marked confirmed by a
+  teacher; a poem / instrument confirmed) shows once per device `LearnedMoment` (App, new look; `sg-learned-seen:<uid>`, the first run
+  marks the old ones seen; never on a teacher's look or during notes / program / church mode / a call) → the share card (`pages/v2/barati/`:
+  `drawCard.ts` = a 1080×1350 PNG, Web Share or download; choices in `sg-share-card`; rules `utils/learnedCard.ts` + test); a shining
+  pearl's sheet on „საგანძური“ has „გაზიარე“. Notices (x-ultra-shejameba, -3): settings → „შეტყობინებები“ (settings mapItem `notify`,
+  `notify~summary`; `pages/v2/shetkobinebebi/`) over `utils/notifyPrefs.ts` (`students.notify` + POST `/notify-prefs`; pure rules
+  `notifyRules.ts` + test). The reminders Worker (D1 table `notify`, schema 5; test `tests/notifySummary.test.mjs`): in the quiet
+  hours a chat message is held and counted, a call rings only with `calls`, announcements and prayer reminders always come; each
+  minute `runSummaries` sends „დილის შეჯამება“ at the person's hour (today's lessons from the classes' `schedule`, the held count,
+  the AI lesson if `aiTeacher` is open and not done today, else the reviews due, birthdays in their classes, the feast from
+  `widget/days-<year>.json`) — nothing to say, nothing sent. The app icon shows the unread chats (`BottomNav`, Badging API; the
+  service worker marks it on a chat push with the app closed).
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 
