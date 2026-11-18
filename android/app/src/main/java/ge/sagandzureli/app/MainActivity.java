@@ -55,6 +55,9 @@ public class MainActivity extends ComponentActivity {
     static final Set<String> HOSTS = new HashSet<>(Arrays.asList("sagandzureli.ge", "www.sagandzureli.ge", "sagandzuris-skola.pages.dev"));
     private static final int ASK_MEDIA = 11, ASK_PLACE = 12, ASK_CAMERA = 13, PICK_FILE = 21;
 
+    /** the app is on screen: rings and chat messages from the Worker are left to the open site (PushService) */
+    static volatile boolean onScreen;
+
     private WebView web;
     private FrameLayout root;
     private Bridge bridge;
@@ -146,6 +149,7 @@ public class MainActivity extends ComponentActivity {
     @Override
     protected void onResume() {
         super.onResume();
+        onScreen = true;
         web.onResume();
         bridge.resumed();
     }
@@ -153,6 +157,7 @@ public class MainActivity extends ComponentActivity {
     @Override
     protected void onPause() {
         // web.onPause() is not called: a recording keeps playing with the screen off, as it did in Chrome
+        onScreen = false;
         CookieManager.getInstance().flush();
         super.onPause();
     }

@@ -656,9 +656,18 @@
   `intent://` / `sagandzuri://` go to the app's screens) and `Bridge.java` puts `window.sgApp` (platform 'android', the same calls as
   the iPhone's `sgIOS`: info, notifyState/Ask, google, external) into every page; `utils/iosApp.ts` serves both (`isIphoneApp` = Apple's
   sign-in only), `isAndroidApp` reads it too. Google's sign-in = `SignIn.java` (Credential Manager, the web client id in build.gradle) —
-  needs the Firebase project's Android app with the Play signing key's SHA-1, else 'not-ready'. **Not uploaded to Play until stage 2**
-  (notifications and calls through FCM — the Chrome delegation `BellDelegationService` no longer gets anything); stage 3 = share
-  target (SEND filters removed for now), widgets check, the site's own made files (blob downloads).
+  needs the Firebase project's Android app with the Play signing key's SHA-1, else 'not-ready'. The Firebase Android app
+  „Sagandzuri Android“ (`ge.sagandzureli.app`, app id `1:781443193404:android:7d3bb396d4cb36ba738139`) holds the SHA-1 of the Play
+  signing key, the previous one and the upload key (2026-11-18); build.gradle carries its values as the resources google-services.json
+  would give (the „Android key (auto created by Firebase)“, no app restriction).
+  **Stage 2 (2026-11-18, version 1.2.0, code 6)**: notices through FCM. `Bridge.script()` also puts a `Notification` and a service
+  worker `pushManager` into every page (as `Shim.swift`), endpoint `https://android.sagandzureli.ge/fcm/<token>` keys `android`; the
+  Worker's `sendFcm` sends such rows data only (`androidOf`: kind, title, body, tag, url, answer, decline as JSON, HIGH, ttl; test in
+  `tests/iosPush.test.mjs`). `PushService` (FirebaseMessagingService) leaves rings and chats out while `MainActivity.onScreen`, else
+  `Notices.show` builds them (the channels of `BellDelegationService`: ზარები with the ringtone, INSISTENT, 45 s, full-screen
+  `IncomingCallActivity`, „უარი“ = `DeclineReceiver` → Worker `/decline` with the ticket; პირადი / კლასის ჩათები; ლოცვის ზარი; შეტყობინებები).
+  `BellDelegationService` stays declared but gets nothing any more. Stage 3 = share target (SEND filters removed for now), widgets
+  check, the site's own made files (blob downloads).
 - **iPhone app** (App Store, `ios/`, 2026-11-05; published under the user's friend's Apple developer account — the user is an
   Admin of that team): the live site https://sagandzureli.ge in the app's own WKWebView (site updates need no app update), bundle
   `ge.sagandzureli.app`, iPhone only, iOS 16+. Swift in `ios/Sagandzuri/`; the Xcode project, Info.plist and entitlements are made

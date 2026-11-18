@@ -162,6 +162,20 @@
                 android:resource="@xml/filepaths" />
         </provider>
 
+        <!-- the reminders Worker's notices through Firebase Cloud Messaging (2026-11-18, the app's own window) -->
+        <service
+            android:name=".PushService"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+
+        <!-- a ring's „უარი“ -->
+        <receiver
+            android:name=".DeclineReceiver"
+            android:exported="false" />
+
         <service
             android:name=".BellDelegationService"
             android:enabled="true"

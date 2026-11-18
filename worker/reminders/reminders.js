@@ -318,7 +318,7 @@ async function encryptPayload(p256dh, auth, text) {
 /** An empty push (prayer hours) or one with a message { title, body, tag, url }; a message's own `ttl` (seconds) and
  *  `urgency` go into the headers (a ring is worth nothing a minute later, and must wake a sleeping phone). */
 async function sendPush(env, row, message) {
-  if (isIosRow(row)) return sendFcm(env, row, message);
+  if (isAppRow(row)) return sendFcm(env, row, message);
   const jwt = await vapidJwt(env, new URL(row.endpoint).origin);
   const ttl = message ? String(message.ttl || 21600) : '120';
   const urgency = message ? (message.urgency || 'normal') : 'high';
@@ -331,7 +331,13 @@ async function sendPush(env, row, message) {
 // ---- the iPhone app: Firebase Cloud Messaging → APNs (2026-11-05) -------------------------------------------------
 
 const IOS_PREFIX = 'https://ios.sagandzureli.ge/fcm/';
-const isIosRow = (row) => typeof row.endpoint === 'string' && row.endpoint.startsWith(IOS_PREFIX);
+// The Play Store app (2026-11-18, android/…/Bridge.java + PushService.java) binds the same way with its own prefix; its
+// notices go as data only, so the app builds them itself (the ring's channel and window, the bell, „უარი“).
+const ANDROID_PREFIX = 'https://android.sagandzureli.ge/fcm/';
+const startsWith = (row, prefix) => typeof row.endpoint === 'string' && row.endpoint.startsWith(prefix);
+const isIosRow = (row) => startsWith(row, IOS_PREFIX);
+const isAndroidRow = (row) => startsWith(row, ANDROID_PREFIX);
+const isAppRow = (row) => isIosRow(row) || isAndroidRow(row);
 
 // the prayer hours as the site's service worker words them (public/prayer-notify-sw.js)
 const PRAYER_HOUR_WORDS = [
@@ -380,13 +386,22 @@ function apnsOf(m) {
   return { headers, payload };
 }
 
+/** The Android app's FCM message: data only (every value a string), high priority so a ring wakes a sleeping phone. */
+function androidOf(m) {
+  const data = { kind: m.kind || '', title: m.title || 'საგანძური', body: m.body || '', tag: String(m.tag || '').slice(0, 64), url: m.url || '/' };
+  if (m.answer) data.answer = String(m.answer);
+  if (m.decline) data.decline = JSON.stringify(m.decline);
+  return { data, android: { priority: 'HIGH', ttl: `${Number(m.ttl || 21600)}s` } };
+}
+
 async function sendFcm(env, row, message) {
-  const token = decodeURIComponent(row.endpoint.slice(IOS_PREFIX.length));
+  const android = isAndroidRow(row);
+  const token = decodeURIComponent(row.endpoint.slice((android ? ANDROID_PREFIX : IOS_PREFIX).length));
   const m = message || prayerMessage(row.tz);
   const res = await fetch(`https://fcm.googleapis.com/v1/projects/${env.FIREBASE_PROJECT_ID}/messages:send`, {
     method: 'POST',
     headers: { Authorization: `Bearer ${await accessToken(env, MESSAGING)}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ message: { token, apns: apnsOf(m) } }),
+    body: JSON.stringify({ message: android ? { token, ...androidOf(m) } : { token, apns: apnsOf(m) } }),
   });
   if (res.ok) return res;
   const text = await res.text();
@@ -1366,4 +1381,4 @@ export default {
 };
 
 // for tests (tests/reminders-worker.test.mjs, tests/adminTools.test.ts)
-export { encryptPayload, cycleOf, ownersIn, weekText, chatTargets, chatBody, ringTicket, prayerMessage, apnsOf };
+export { encryptPayload, cycleOf, ownersIn, weekText, chatTargets, chatBody, ringTicket, prayerMessage, apnsOf, androidOf };

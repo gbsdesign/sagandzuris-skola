@@ -39,3 +39,14 @@ test('a message keeps its text, its chat and the default sound', () => {
   assert.equal(m.payload.kind, 'chat');
   assert.equal(m.payload.url, '/?open=chat&id=class:k1');
 });
+
+test('the Android app gets data only, every value a string, the ring with its ticket', async () => {
+  const { androidOf } = await import('../worker/reminders/reminders.js');
+  const m = androidOf({ kind: 'call', title: 'ნინო', body: 'გირეკავს…', tag: 'call-d-abc', url: '/?open=chat&id=abc',
+    answer: '/?open=call&b=dms%2Fabc', decline: { base: 'dms/abc', uid: 'u', at: 1, t: 'x' }, ttl: 45 });
+  assert.equal(m.android.priority, 'HIGH');
+  assert.equal(m.android.ttl, '45s');
+  for (const v of Object.values(m.data)) assert.equal(typeof v, 'string');
+  assert.deepEqual(JSON.parse(m.data.decline), { base: 'dms/abc', uid: 'u', at: 1, t: 'x' });
+  assert.equal(m.data.tag, 'call-d-abc');
+});
