@@ -626,7 +626,9 @@
   and molebens, the bishop's services. `scan: true` books show „ტექსტი სკანერიდანაა, შეიძლება შეცდომა იყოს“ (`ScanNote`); one
   (ახალი წლის პარაკლისი, a 19th-century print) is page pictures (`pages`, `PagesView`). **Generated — never edit by hand**:
   `scripts/extra-books/` (README: the PDFs and scans live outside the repo). Left out: the 1711 Kondaki and „აწ დები“ (unreadable
-  scans), the 2018 „ქართველ წმიდათა ცხოვრებანი“ (waits for the publisher's permission). Test `tests/extraBooks.test.ts`.
+  scans). Group `c` = „ქართველ წმიდათა ცხოვრებანი“ (დეკ. ზაქარია მაჩიტაძე, 2018; the user asked for it the same day): a book a
+  month + „გარდამავალი ხსენებანი“ (books 33–45, 128 lives with their dates, the month's list first; `scripts/extra-books/lives.py`).
+  Over an extra book the small line names its group (`kickerOf`); a group may carry a `note`. Test `tests/extraBooks.test.ts`.
 - **ხუცური for the whole site** (2026-10-28, moved 2026-10-29): a switch in the profile („ხუცური“, `views/KhutsuriSwitch.tsx`,
   under the profile in `AppRouter`; no header button — guests have no profile, so they don't get it) sets `html.khutsuri`
   (`utils/khutsuri.ts`, device only, set before the first paint in `main.tsx`). index.css then swaps
