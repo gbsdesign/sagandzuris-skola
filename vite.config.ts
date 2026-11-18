@@ -47,7 +47,7 @@ export default defineConfig(() => {
           globPatterns: ['**/*.{js,css,html,ico,png,jpg,jpeg,webp,svg,woff,woff2}'],
           globIgnores: [
             '**/node_modules/**/*',
-            'notes/**', 'hymn/**', 'lives/**', 'prayers/**', 'bible/**', 'mtkmeli/**', 'audio/**', 'offline/**', 'wignebi/**',
+            'notes/**', 'hymn/**', 'lives/**', 'prayers/**', 'bible/**', 'mtkmeli/**', 'audio/**', 'offline/**', 'wignebi/**', 'wignebi-x/**',
             'assets/print/**',
             // opened rarely: downloaded on first opening, then kept (LATER above)
             'assets/later/**',
@@ -58,7 +58,7 @@ export default defineConfig(() => {
           importScripts: ['prayer-notify-sw.js'],
           // a shared notes link (/?c=…&v=…) opens the app even without internet
           navigateFallback: '/index.html',
-          navigateFallbackDenylist: [/^\/notes\//, /^\/hymn\//, /^\/audio\//, /^\/lives\//, /^\/mtkmeli\//, /^\/prayers\//, /^\/bible\//, /^\/offline\//, /^\/wignebi\//, /^\/centre\//, /^\/\.well-known\//, /^\/privacy/],
+          navigateFallbackDenylist: [/^\/notes\//, /^\/hymn\//, /^\/audio\//, /^\/lives\//, /^\/mtkmeli\//, /^\/prayers\//, /^\/bible\//, /^\/offline\//, /^\/wignebi(-x)?\//, /^\/centre\//, /^\/\.well-known\//, /^\/privacy/],
           runtimeCaching: [
             {
               // notes, hymnography drawings, prayers, the New Testament, მთქმელი texts, the saints' lives and the
@@ -68,12 +68,12 @@ export default defineConfig(() => {
               // (?sg=…) skip this route. Anything else is kept once opened (also by "ჩამოწერა",
               // src/utils/offlineNotes.ts) and refreshed in the background.
               urlPattern: ({ url }) => url.origin === self.location.origin && !url.searchParams.has('sg') &&
-                /^\/(notes|hymn|lives|prayers|bible|mtkmeli|wignebi|centre)\//.test(url.pathname),
+                /^\/(notes|hymn|lives|prayers|bible|mtkmeli|wignebi|wignebi-x|centre)\//.test(url.pathname),
               handler: async ({ request, url, event }) => {
                 const name = /^\/(notes|hymn)\//.test(url.pathname) ? 'sagandzuri-notes-v1'
                   : url.pathname.startsWith('/lives/') ? 'sagandzuri-lives-v1'
                   : url.pathname.startsWith('/mtkmeli/') ? 'sagandzuri-mtkmeli-v1'
-                  : url.pathname.startsWith('/wignebi/') ? 'sagandzuri-wignebi-v1'
+                  : url.pathname.startsWith('/wignebi') ? 'sagandzuri-wignebi-v1'
                   : url.pathname.startsWith('/centre/') ? 'sagandzuri-centre-v1'
                   : 'sagandzuri-prayers-v1';
                 const kept = await caches.match(request);

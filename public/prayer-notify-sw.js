@@ -16,7 +16,7 @@ self.addEventListener('push', (event) => { event.waitUntil(askForUpdate()); });
 // only when the site does not answer within 3 s — no internet, a weak connection in church — does the copy kept on the
 // phone open (the precache's start page). Loaded before Workbox's routes, so it stops them for pages; the app's data,
 // recordings and the share target keep their own ways (NOT_PAGES, as the old navigateFallback denylist).
-const NOT_PAGES = /^\/(notes|hymn|audio|lives|mtkmeli|prayers|bible|offline|wignebi|centre|share|\.well-known)\/|^\/privacy|^\/share-target/;
+const NOT_PAGES = /^\/(notes|hymn|audio|lives|mtkmeli|prayers|bible|offline|wignebi|wignebi-x|centre|share|\.well-known)\/|^\/privacy|^\/share-target/;
 self.addEventListener('fetch', (event) => {
   const req = event.request;
   if (req.mode !== 'navigate' || req.method !== 'GET') return;

@@ -1,10 +1,11 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import {
   BookOpen, CalendarDays, ScrollText, Droplets, Music2, Sparkles, Clock, Feather, Music, Megaphone, Heart, Flame, Sunrise,
-  Crown, ChevronRight, ChevronLeft, Minus, Plus, WifiOff, Loader2,
+  Crown, ChevronRight, ChevronLeft, Minus, Plus, WifiOff, Loader2, Library, ScanText,
 } from 'lucide-react';
 import { useNavigation } from '../../context';
 import { WIGNEBI_COLLECTIONS, WIGNEBI_SHELVES, type WignebiCollection } from '../../data/wignebi';
+import { EXTRA_BOOKS, EXTRA_GROUPS } from '../../data/extraBooks';
 import { triggerHaptic } from '../../utils/haptics';
 import { AutoScrollButton } from '../../components/views/ReadingTools';
 
@@ -12,14 +13,20 @@ import { AutoScrollButton } from '../../components/views/ReadingTools';
 // The place is `mapItem`: „w“ the shelves, „w:s:biblia“ the Bible's four books, „w:c:<collection>“ a book's list,
 // „w:c:<collection>:<n>“ an item (its parts, or straight its text), „w:c:<collection>:<n>:<part>“ the text.
 // Texts are fetched from public/wignebi/<collection>/<NN>.json only when opened (the service worker keeps them).
+// „დამატებითი წიგნები“ (data/extraBooks.ts, texts public/wignebi-x/<NN>.json) is the pseudo collection „x“: „w:c:x“ its
+// list, „w:c:x:<n>“ a book — kept apart from public/wignebi, which the monastery app's daily update rebuilds.
 
 type Section = [string, string[]];
-type BookFile = { t: string; num?: boolean; c: { l: string; s: Section[] }[] };
+type BookFile = { t: string; num?: boolean; scan?: boolean; pages?: string[]; c: { l: string; s: Section[] }[] };
 type CalDay = { d: number; w: string; o?: number | null; f?: boolean | null; r?: boolean; s: string; n: string[]; k: string[] };
 type CalFile = { y: number; m: CalDay[][] };
 
 const CARD = 'rounded-3xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)]';
 const ROW = `${CARD} w-full min-h-16 px-4 py-3 flex items-center gap-3 text-left cursor-pointer transition hover:ring-[#7a2028]/25 active:scale-[0.99]`;
+
+const EXTRA: WignebiCollection = {
+  id: 'x', title: 'დამატებითი წიგნები', kind: 'list', items: EXTRA_BOOKS.map(b => ({ n: b.n, t: b.t, c: b.c })),
+};
 
 const SHELF_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   biblia: BookOpen, kalendari: CalendarDays, kondaki: Crown, kurtxevani: Droplets, paraklitoni: Music2, tveni: Sparkles,
@@ -43,7 +50,8 @@ const tileLook = (i: number, n: number) => {
 
 // ---------- files ----------
 const cache = new Map<string, Promise<unknown>>();
-const fileUrl = (coll: string, n: number) => `/wignebi/${coll}/${String(n).padStart(2, '0')}.json`;
+const fileUrl = (coll: string, n: number) =>
+  coll === EXTRA.id ? `/wignebi-x/${String(n).padStart(2, '0')}.json` : `/wignebi/${coll}/${String(n).padStart(2, '0')}.json`;
 const loadFile = <T,>(coll: string, n: number): Promise<T> => {
   const url = fileUrl(coll, n);
   let p = cache.get(url);
@@ -164,6 +172,18 @@ const Home: React.FC<{ open: (id: string) => void }> = ({ open }) => {
       <p className="mt-5 px-2 text-center text-[13px] leading-relaxed text-[#8a7a6a] text-pretty">
         ტექსტები: „საღვთისმსახურო წიგნები“, ღვთისმშობლის მიძინების სახელობის მამათა მონასტერი.
       </p>
+
+      {/* books that are not in the monastery's app */}
+      <button type="button" onClick={() => open(`w:c:${EXTRA.id}`)} className={`${ROW} mt-5 group`}>
+        <span className="shrink-0 w-11 h-11 rounded-2xl bg-[#c9a35f]/15 ring-1 ring-[#c9a35f]/30 text-[#8a5a1c] flex items-center justify-center">
+          <Library className="w-5 h-5" />
+        </span>
+        <span className="flex-1 min-w-0">
+          <span className="block font-serif-ge text-[17px] font-bold leading-snug text-[#2a2017]">{EXTRA.title}</span>
+          <span className="block mt-0.5 text-[13px] leading-snug text-[#8a7a6a]">წმინდანთა განგებები, დიდი მარხვა, კურთხევები · {EXTRA_BOOKS.length} წიგნი</span>
+        </span>
+        <ChevronRight className="w-5 h-5 shrink-0 text-[#c4b39c]" />
+      </button>
     </div>
   );
 };
@@ -221,10 +241,70 @@ const CollectionView: React.FC<{ c: WignebiCollection; open: (id: string) => voi
   );
 };
 
+// „დამატებითი წიგნები“: the books in their groups
+const ExtraList: React.FC<{ open: (id: string) => void }> = ({ open }) => (
+  <div>
+    <Head kicker="საღვთისმსახურო წიგნები" title={EXTRA.title} sub="წიგნები, რომლებიც ზედა თაროებზე არ არის." />
+    {EXTRA_GROUPS.map(g => {
+      const books = EXTRA_BOOKS.filter(b => b.g === g.id);
+      if (!books.length) return null;
+      return (
+        <section key={g.id} className="mt-6 first-of-type:mt-0">
+          <h3 className="px-2 mb-2.5 text-[13px] font-black tracking-[0.06em] text-[#a0703c]">{g.title}</h3>
+          <ol className="space-y-2.5">
+            {books.map((b, i) => (
+              <li key={b.n}>
+                <button type="button" onClick={() => open(`w:c:${EXTRA.id}:${b.n}`)} className={ROW}>
+                  <Num n={i + 1} />
+                  <span className="flex-1 min-w-0">
+                    <span className="block text-[16px] font-bold leading-snug text-[#2a2017] break-words">{b.t}</span>
+                    <span className="block mt-0.5 text-[13px] leading-snug text-[#8a7a6a] break-words">{b.sub}</span>
+                    {b.scan && (
+                      <span className="mt-1.5 inline-flex items-center gap-1 h-6 px-2.5 rounded-full bg-[#fdf4e3] ring-1 ring-[#e9c98f] text-[12px] font-bold text-[#9a5b12]">
+                        <ScanText className="w-3.5 h-3.5" />სკანერიდან
+                      </span>
+                    )}
+                  </span>
+                  <ChevronRight className="w-5 h-5 shrink-0 text-[#c4b39c]" />
+                </button>
+              </li>
+            ))}
+          </ol>
+        </section>
+      );
+    })}
+  </div>
+);
+
+// a book read by a scanner: say so above its text
+const ScanNote: React.FC<{ pics?: boolean }> = ({ pics }) => (
+  <p className="mb-3 flex items-start gap-2.5 rounded-2xl bg-[#fdf4e3] ring-1 ring-[#e9c98f] px-4 py-3 text-[14px] leading-snug text-[#7a4a10] text-pretty">
+    <ScanText className="w-5 h-5 shrink-0 mt-px text-[#b0782a]" />
+    {pics ? 'ძველი ნაბეჭდია, სკანერი ვერ კითხულობს — ამიტომ გვერდები სურათებადაა.' : 'ტექსტი სკანერიდანაა, შეიძლება შეცდომა იყოს.'}
+  </p>
+);
+
+// a book kept as page pictures
+const PagesView: React.FC<{ c: WignebiCollection; book: BookFile }> = ({ c, book }) => (
+  <div>
+    <Head kicker={c.title} title={book.t} />
+    <ScanNote pics />
+    <div className="space-y-3">
+      {book.pages!.map((src, i) => (
+        <figure key={src} className={`${CARD} overflow-hidden`}>
+          <img src={src} alt={`${book.t}, გვერდი ${i + 1}`} loading="lazy" decoding="async" className="block w-full h-auto" />
+          <figcaption className="py-1.5 text-center text-[12px] font-bold text-[#8a7a6a] tabular-nums">{i + 1}</figcaption>
+        </figure>
+      ))}
+    </div>
+  </div>
+);
+
 // an item with several parts: chapter numbers for the Bible, rows for everything else
 const PartsView: React.FC<{ c: WignebiCollection; n: number; book: BookFile; open: (id: string) => void }> = ({ c, n, book, open }) => (
   <div>
     <Head kicker={c.title} title={book.t} />
+    {book.scan && <ScanNote />}
     {book.num ? (
       <div className={`${CARD} p-3 sm:p-4`}>
         <p className="px-1 pb-2.5 text-[13px] font-bold text-[#8a7a6a]">აირჩიე თავი</p>
@@ -285,6 +365,7 @@ const Reader: React.FC<{ c: WignebiCollection; n: number; book: BookFile; part: 
         </div>
       </header>
 
+      {book.scan && <ScanNote />}
       <article ref={textRef} className={`${CARD} px-5 py-6 sm:px-8 sm:py-8`} style={{ fontSize: size.px }}>
         {p.s.map(([h, paras], si) => (
           <section key={si} className={si ? 'mt-[1.4em]' : ''}>
@@ -322,6 +403,7 @@ const Reader: React.FC<{ c: WignebiCollection; n: number; book: BookFile; part: 
 const ItemView: React.FC<{ c: WignebiCollection; n: number; part?: number; open: (id: string, replace?: boolean) => void; back: () => void }> = ({ c, n, part, open, back }) => {
   const { data, error, retry } = useFile<BookFile>(c.id, n);
   if (!data) return <Waiting error={error} retry={retry} />;
+  if (data.pages?.length) return <PagesView c={c} book={data} />;
   if (part === undefined && data.c.length > 1) return <PartsView c={c} n={n} book={data} open={open} />;
   return <Reader c={c} n={n} book={data} part={part ?? 0} open={open} back={back} />;
 };
@@ -422,7 +504,11 @@ export const WignebiView: React.FC<{ item: string }> = ({ item }) => {
   const [, kind, id, n, part] = item.split(':');
   let body: React.ReactNode;
   if (kind === 's' && id) body = <ShelfView id={id} open={open} />;
-  else if (kind === 'c' && id && WIGNEBI_COLLECTIONS[id]) {
+  else if (kind === 'c' && id === EXTRA.id) {
+    if (n && EXTRA.items.some(it => it.n === Number(n)))
+      body = <ItemView key={`${id}:${n}`} c={EXTRA} n={Number(n)} part={part !== undefined ? Number(part) : undefined} open={open} back={handleGoBack} />;
+    else body = <ExtraList open={open} />;
+  } else if (kind === 'c' && id && WIGNEBI_COLLECTIONS[id]) {
     const c = WIGNEBI_COLLECTIONS[id];
     if (c.kind === 'calendar') body = <CalendarView c={c} />;
     else if (n && c.items.some(it => it.n === Number(n)))
