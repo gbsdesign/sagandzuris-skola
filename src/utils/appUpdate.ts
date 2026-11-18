@@ -66,6 +66,43 @@ const restart = () => {
   window.location.reload();
 };
 
+/** A failed load of a part of an older version (the site was published anew and no longer has it). */
+export const isChunkError = (e: unknown): boolean =>
+  /dynamically imported module|Importing a module script failed|error loading dynamically imported|Failed to load module script|Unable to preload CSS|ChunkLoadError|Loading chunk \S+ failed/i
+    .test(String((e as { message?: string } | null)?.message ?? e ?? ''));
+
+const FRESH_KEY = 'sg-fresh-at';
+/** The address mark of a fresh restart: the service worker then waits for the site's page (not 3 s) instead of opening
+ *  the copy kept on the phone, which is the older version that asked for the missing part. main.tsx drops it at start. */
+export const FRESH_PARAM = 'sgv';
+
+/** Restart into the site's newest version, asked for past the phone's copy. Without `force`: not while a restart would
+ *  break something (church mode, a call, a recording…) and at most once a minute — false when it did not restart. */
+export const restartFresh = (force = false): boolean => {
+  if (!force) {
+    if (busy() || (typeof navigator !== 'undefined' && navigator.onLine === false)) return false;
+    try {
+      if (Date.now() - Number(sessionStorage.getItem(FRESH_KEY) || 0) < 60_000) return false;
+      sessionStorage.setItem(FRESH_KEY, String(Date.now()));
+    } catch { return false; }
+  }
+  try { const me = myEntry(); if (me) sessionStorage.setItem(LEFT_KEY, me); } catch { /* storage off */ }
+  const url = new URL(window.location.href);
+  url.searchParams.set(FRESH_PARAM, String(Date.now()));
+  window.location.replace(url.toString());
+  return true;
+};
+
+/** At start: take the fresh restart's mark out of the address bar (it has done its work in the service worker). */
+export const dropFreshMark = () => {
+  try {
+    const url = new URL(window.location.href);
+    if (!url.searchParams.has(FRESH_PARAM)) return;
+    url.searchParams.delete(FRESH_PARAM);
+    window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+  } catch { /* leave it */ }
+};
+
 function tryRestart() {
   if (!pending) return;
   if (!busy()) { restart(); return; }
@@ -162,14 +199,10 @@ export const startAppUpdates = () => {
   }, 15_000);
 
   // a part of the old version that the site no longer has (it was published anew): the new version has it
+  // (asked past the phone's copy — on a slow connection that copy is the older version again; once a minute at most)
   window.addEventListener('vite:preloadError', (e) => {
     if (!navigator.onLine || holds.size > 0) return;
-    try {
-      if (Date.now() - Number(sessionStorage.getItem('sg-reload-at') || 0) < 20_000) return; // never round and round
-      sessionStorage.setItem('sg-reload-at', String(Date.now()));
-    } catch { return; }
-    e.preventDefault();
-    restart();
+    if (restartFresh()) e.preventDefault();
   });
 
   void check();

@@ -109,7 +109,18 @@ export default defineConfig(() => {
               urlPattern: ({ url }) => url.origin === self.location.origin && /^\/assets\/.+\.(js|css)$/.test(url.pathname),
               handler: 'CacheFirst',
               // (also every part kept for later — assets/later/ — once opened)
-              options: { cacheName: 'sagandzuri-assets-v1', expiration: { maxEntries: 250, maxAgeSeconds: 60 * 60 * 24 * 90 } },
+              options: {
+                cacheName: 'sagandzuri-assets-v1',
+                expiration: { maxEntries: 250, maxAgeSeconds: 60 * 60 * 24 * 90 },
+                // the site answers a missing file with its start page (200, text/html): never keep or use that as a part —
+                // refused (404), the page restarts into the newest version (src/utils/appUpdate.ts restartFresh)
+                plugins: [{
+                  fetchDidSucceed: async ({ response }) =>
+                    ((response.headers.get('content-type') || '').includes('text/html') ? new Response('', { status: 404 }) : response),
+                  cachedResponseWillBeUsed: async ({ cachedResponse }) =>
+                    (cachedResponse && (cachedResponse.headers.get('content-type') || '').includes('text/html') ? null : cachedResponse),
+                }],
+              },
             },
             {
               urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com',

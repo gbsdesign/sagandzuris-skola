@@ -19,6 +19,7 @@ import { GAMES, gameTitleOfItem } from '../data/games';
 import { GameKitPill } from '../components/games/KitButton';
 import { useNewLook } from '../design/newLook';
 import { NotLoadedView } from '../components/shell/NotLoadedView';
+import { restartFresh } from '../utils/appUpdate';
 import { TOP_PAGES } from '../components/shell/tabs';
 
 
@@ -39,7 +40,7 @@ const reloadFresh = async () => {
       }
     }
   } catch { /* reload anyway */ }
-  window.location.reload();
+  restartFresh(true); // asked past the phone's copy (utils/appUpdate.ts)
 };
 
 // The page loader tries the new version once by itself; if the page still fails after that, „გვერდი ვერ

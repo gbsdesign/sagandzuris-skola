@@ -26,12 +26,32 @@ self.addEventListener('fetch', (event) => {
   event.respondWith((async () => {
     if (self.navigator.onLine !== false) {
       try {
-        const res = await Promise.race([fetch(req), new Promise((resolve) => setTimeout(() => resolve(null), 3000))]);
+        // a fresh restart (?sgv=, src/utils/appUpdate.ts restartFresh) waits for the site: the kept copy is the older version
+        const wait = url.searchParams.has('sgv') ? 20000 : 3000;
+        const res = await Promise.race([fetch(req), new Promise((resolve) => setTimeout(() => resolve(null), wait))]);
         if (res && (res.ok || res.type === 'opaqueredirect')) return res;
       } catch (e) { /* no internet */ }
     }
     const kept = await caches.match('/index.html', { ignoreSearch: true });
     return kept || fetch(req);
+  })());
+});
+// A part of the app (/assets/…js|css) kept as a page: the site answers a missing file with its start page (200, text/html),
+// and a part kept that way stayed broken on the phone. On every start of a worker such entries are dropped, so the part is
+// fetched again (vite.config.ts also refuses to keep or use them from now on).
+self.addEventListener('activate', (event) => {
+  event.waitUntil((async () => {
+    try {
+      for (const name of await caches.keys()) {
+        if (!/precache|sagandzuri-assets/.test(name)) continue;
+        const cache = await caches.open(name);
+        for (const req of await cache.keys()) {
+          if (!/\/assets\/.+\.(js|css)(\?|$)/.test(new URL(req.url).pathname + new URL(req.url).search)) continue;
+          const res = await cache.match(req);
+          if (res && (res.headers.get('content-type') || '').includes('text/html')) await cache.delete(req);
+        }
+      }
+    } catch (e) { /* the next start tries again */ }
   })());
 });
 // the page asks whether pages come from the site here (src/utils/appUpdate.ts)

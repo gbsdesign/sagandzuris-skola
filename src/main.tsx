@@ -5,13 +5,14 @@ import './index.css';
 import { startOffline } from './utils/offlineFiles';
 import { applyKhutsuri, isKhutsuri } from './utils/khutsuri';
 import { markAndroidApp } from './utils/androidApp';
-import { startAppUpdates } from './utils/appUpdate';
+import { dropFreshMark, startAppUpdates } from './utils/appUpdate';
 import { startErrorLog } from './utils/errorLog';
 
 // what breaks on members' phones reaches the admins' error log, without names (utils/errorLog.ts)
 startErrorLog();
 
 // a newly published version takes over by itself, as soon as it does not get in the way (utils/appUpdate.ts)
+dropFreshMark();
 startAppUpdates();
 
 // offline mode: the light data downloads by itself in the background (utils/offlineFiles.ts)
