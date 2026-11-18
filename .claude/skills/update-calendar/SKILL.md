@@ -7,6 +7,9 @@ description: Download the next church-calendar year from orthodoxy.ge into the a
 
 Talk in Georgian, step by step.
 
+0. **Usually nothing to do:** `.github/workflows/calendar-update.yml` checks orthodoxy.ge every day and swaps a computed year
+   (2027 was made by `scripts/calendar-gen`, see `src/data/CLAUDE.md`) for the official one by itself. Run it by hand from the
+   Actions tab („Run workflow“), or `node scripts/calendar-official.mjs` here.
 1. **Which year.** orthodoxy.ge keeps one folder per OLD-style year: folder 2026 = 14 Jan 2026 – 13 Jan 2027.
    The next one is 2027. Check it exists first:
    `https://www.orthodoxy.ge/calendar/2027/v2/01/0101.htm` — a 404 means not published yet; tell the user and stop.

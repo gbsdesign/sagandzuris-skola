@@ -140,6 +140,11 @@ export const CalendarDayView: React.FC<{ iso: string; day: CalendarDay | null | 
               </p>
             );
           })}
+          {day.c && (
+            <p className="mt-4 rounded-lg bg-[#f6ecda]/70 px-2.5 py-1.5 font-sans text-[12px] leading-snug text-[#7a5a44]">
+              ეს დღე ეკლესიის წესებით არის შედგენილი. ოფიციალური კალენდრის გამოსვლისას თავისით შეიცვლება.
+            </p>
+          )}
         </div>
       )}
     </article>

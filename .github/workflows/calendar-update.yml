@@ -1,0 +1,51 @@
+# The church calendar: a year orthodoxy.ge has not published yet is put together here by the Church's rules
+# (scripts/calendar-gen, its days marked c: 1). Every day this asks orthodoxy.ge whether the year is out; once it is,
+# scripts/calendar-official.mjs fetches it, every official day replaces the computed one, the widget's day files are
+# rebuilt and the change goes straight to main — Cloudflare Pages then publishes the site as after any push.
+# „Run workflow“ in the Actions tab checks at once.
+name: Calendar update
+
+on:
+  schedule:
+    - cron: '43 4 * * *'        # 08:43 Tbilisi
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: calendar-update
+  cancel-in-progress: false
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      - name: Ask orthodoxy.ge and fetch a published year
+        id: fetch
+        run: node scripts/calendar-official.mjs
+
+      - name: Commit to main
+        if: steps.fetch.outputs.changed != ''
+        run: |
+          if [ -z "$(git status --porcelain -- src/data/calendar public/widget)" ]; then
+            echo "nothing to commit"; exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/data/calendar public/widget
+          git commit -m "საეკლესიო კალენდარი: orthodoxy.ge-ს ოფიციალური წელი (${{ steps.fetch.outputs.changed }})"
+          git push origin HEAD:main
