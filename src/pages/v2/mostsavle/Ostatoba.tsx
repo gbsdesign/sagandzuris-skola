@@ -1,9 +1,9 @@
 import React, { useMemo, useState } from 'react';
 import { deleteField, doc, updateDoc } from 'firebase/firestore';
-import { ChevronDown, ChevronRight, Trash2 } from 'lucide-react';
+import { ChevronDown, ChevronRight, Sparkles, Trash2 } from 'lucide-react';
 import { db } from '../../../firebase';
 import { useNavigation, useRealAuth } from '../../../context';
-import { Area, Bar, Button, Card, Duo, Note, Num, Press, Row, Rows, SectionLabel, Sheet, Small, TopBar, cx, FOCUS } from '../../../components/ui2';
+import { Area, Bar, Button, Card, Dot, Duo, Note, Num, Press, Row, Rows, SectionLabel, Sheet, Small, TopBar, cx, FOCUS } from '../../../components/ui2';
 import { MANERA_ITEMS } from '../../../data/habitsAndManera';
 import { MASTERY_LEVELS } from '../../../data/masteryPath';
 import { lineMarks, pathSummary, recordFromDoc } from '../../../utils/masteryPath';
@@ -11,6 +11,10 @@ import { markDate, readManeraReview } from '../../../components/views/ManeraPane
 import type { ManeraMark } from '../../../components/views/ManeraPanel';
 import { triggerHaptic } from '../../../utils/haptics';
 import type { StudentData } from './useStudent';
+import { useAccess } from '../../../hooks/useAccess';
+import { factsOf } from '../../../utils/aiPlan';
+import { georgiaToday } from '../../../utils/psalter';
+import { memberWeek, statusWord } from '../../../utils/weekReport';
 
 // „ოსტატობის შეფასება“ of a student (board x-mostsavle-ostatoba): the four lines of the mastery path with a bar and a word,
 // and the performance tips with the teacher's marks. A tap on a tip sets the mark as the old ManeraReviewEditor did:
@@ -25,6 +29,8 @@ export const StudentOstatoba: React.FC<{ s: StudentData }> = ({ s }) => {
   const { handleGoBack } = useNavigation();
   const [more, setMore] = useState(false);
   const [openNum, setOpenNum] = useState<string | null>(null);
+  const [aiOpen, setAiOpen] = useState(false);
+  const aiOn = useAccess().on('aiTeacher');
 
   const record = useMemo(() => recordFromDoc(s.data), [s.data]);
   const level = pathSummary(record).level;
@@ -91,6 +97,13 @@ export const StudentOstatoba: React.FC<{ s: StudentData }> = ({ s }) => {
           {more ? 'ნაკლები' : `კიდევ ${MANERA_ITEMS.length - SHOWN} გაკვეთილი`}
         </Press>
       )}
+
+      {aiOn && (
+        <Rows>
+          <Row lead={<Dot icon={<Sparkles />} size={40} />} title="რა შენიშნა AI-მ" sub="კვირის ანგარიში" onClick={() => setAiOpen(true)} />
+        </Rows>
+      )}
+      {aiOn && <AiSheet s={s} open={aiOpen} onClose={() => setAiOpen(false)} />}
 
       {tip && (
         <MarkSheet
@@ -161,6 +174,22 @@ const MarkSheet: React.FC<{ uid: string; num: string; title: string; mark?: Mane
         {mark && <Button kind="ghost" icon={<Trash2 />} disabled={busy} onClick={clear}>წაშლა</Button>}
         <Button disabled={busy || v === null} onClick={save}>{v === null ? 'აირჩიე' : 'შენახვა'}</Button>
       </Duo>
+    </Sheet>
+  );
+};
+
+/** „რა შენიშნა AI-მ“: the student's week with the AI teacher and what its notebook holds about them. */
+const AiSheet: React.FC<{ s: StudentData; open: boolean; onClose: () => void }> = ({ s, open, onClose }) => {
+  const today = georgiaToday();
+  const week = useMemo(() => memberWeek({ uid: s.uid, name: s.name, data: s.data }, today), [s.uid, s.name, s.data, today]);
+  const facts = useMemo(() => factsOf(s.data?.aiNote, today), [s.data, today]);
+  return (
+    <Sheet open={open} onClose={onClose} title="რა შენიშნა AI-მ">
+      <Rows>
+        <Row title="ბოლო 7 დღე" sub={week.line} right={<Small bold tone={week.status === 'good' ? 'leaf' : week.status === 'help' ? 'gold' : 'mut'}>{statusWord(week.status)}</Small>} />
+        {facts.map(f => <Row key={f.id} title={f.title} sub={f.sub} wrap />)}
+      </Rows>
+      {!facts.length && <Note>AI-ს ამ მოსწავლის შესახებ ჯერ არაფერი დაუმახსოვრებია.</Note>}
     </Sheet>
   );
 };

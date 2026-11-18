@@ -27,7 +27,10 @@ import { PlanView } from './Plan';
 import { FirstWeekView } from './FirstWeek';
 import { WeakSpot } from './WeakSpot';
 import { openMyVoice } from './open';
+import { quizFor } from '../../utils/lessonPrep';
+import { useApprovedPrep } from '../../pages/v2/aiklasi/prep/usePrep';
 import { SundayLink } from './TodayLesson';
+import { useMyActiveNotes } from '../../pages/v2/aiklasi/useAiNotes';
 
 const DrillSheet = React.lazy(() => import('../mastery/ManeraLessonSheet').then(m => ({ default: m.DrillSheet })));
 const EntryTest = React.lazy(() => import('../mastery/EntryTest').then(m => ({ default: m.EntryTest })));
@@ -214,6 +217,9 @@ export const AiLesson: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     const k = openPhrase(fresh.score, fresh.vi, fresh.parts, data.learning[fresh.piece], tally.learnedParts);
     return k >= 0 ? k + 1 : null;
   })() : null;
+  // the teacher-approved questions of this chant's words (class's „გაკვეთილის მომზადება“): up to two at the summary
+  const prep = useApprovedPrep(fresh?.piece ?? reviews?.[0]?.piece);
+  const quiz = prep ? quizFor(prep.questions, data.today) : [];
   const improved = tally.shares.length >= 2 && tally.shares[tally.shares.length - 1] > tally.shares[0];
   const savedDay = useRef(false);
   useEffect(() => {
@@ -230,6 +236,7 @@ export const AiLesson: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   }, [stage]);
 
   const back = dayGap(data.record.last, data.today) >= MISSED_DAYS;
+  const teacherNotes = useMyActiveNotes(data.uid).map(a => a.note.text);
   const intro = note?.intro;
   const startLevel = Math.max(note?.voice?.level ?? 0, currentLevel(mastery.record));
   const saveIntro = (a: { before: Before; minutes: Minutes; goal: Goal }) => {
@@ -322,7 +329,7 @@ export const AiLesson: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     return (
       <Frame>
         <StartScreen weekday={weekday} length={length} setLength={setLength} say={loading ? '' : say} rows={rowsOf}
-          canSing={canSing} onBack={inWeek ? () => setStage('week') : onClose} onStart={begin} onVoice={() => openMyVoice('diary')} onLeave={onClose} />
+          canSing={canSing} notes={teacherNotes} onBack={inWeek ? () => setStage('week') : onClose} onStart={begin} onVoice={() => openMyVoice('diary')} onLeave={onClose} />
       </Frame>
     );
   }
@@ -373,7 +380,7 @@ export const AiLesson: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   } else if (stage === 'sum') {
     const tomorrow = nextPhrase ? `ფრაზა ${nextPhrase} და მოკლე გამეორება` : fresh ? 'ახალი საგალობელი და მოკლე გამეორება' : 'მოკლე გამეორება';
     body = (
-      <SummaryStep learned={tally.learned} reviews={tally.reviews} known={freshKnown} total={fresh?.parts.length ?? 0} length={length}
+      <SummaryStep quiz={quiz} learned={tally.learned} reviews={tally.reviews} known={freshKnown} total={fresh?.parts.length ?? 0} length={length}
         say={pearl ? 'პირველი მარგალიტი შენია! „ალილუია“ „ნასწავლში“ ჩაიწერა — შენი ხმით.' : closingLine({ learned: tally.learned, improved, nextPhrase })} tomorrow={tomorrow}
         onFinish={onClose}
         onMore={() => { extra.current += 3; if (fresh) { partStart.current = Date.now(); setStage('new'); } else onClose(); }} />
@@ -410,9 +417,11 @@ export const AiLesson: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 export const StartScreen: React.FC<{
   weekday: string; length: LessonLength; setLength: (l: LessonLength) => void; say: string; rows: [string, string][];
   canSing: boolean; onBack: () => void; onStart: () => void; onVoice?: () => void;
+  /** the teacher's instructions that work now (at most two lines shown) */
+  notes?: string[];
   /** „კვირის წირვა“ line: closes the lesson, then opens its page */
   onLeave?: () => void;
-}> = ({ weekday, length, setLength, say, rows, canSing, onBack, onStart, onVoice, onLeave }) => (
+}> = ({ weekday, length, setLength, say, rows, canSing, onBack, onStart, onVoice, onLeave, notes }) => (
   <>
     <header className="flex shrink-0 items-center gap-2.5 px-4 pt-3.5 pb-2.5">
       <RoundButton label="უკან" onClick={onBack}><ArrowLeft /></RoundButton>
@@ -429,6 +438,9 @@ export const StartScreen: React.FC<{
       <Rows>
         {rows.map(([title, sub], i) => <Row key={title} lead={<Num n={i + 1} on={i === 0} />} title={title} sub={sub} right={null} />)}
       </Rows>
+      {notes?.slice(0, 2).map((t, i) => (
+        <p key={i} className="truncate px-1.5 text-meta text-mut">მასწავლებლის მითითება: {t}</p>
+      ))}
       {onLeave && <SundayLink before={onLeave} />}
       {!canSing && <Helper>ამ ბრაუზერში მიკროფონი არ მუშაობს. გაკვეთილისთვის გახსენი Chrome-ში ან აპში.</Helper>}
     </div>

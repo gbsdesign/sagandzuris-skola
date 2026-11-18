@@ -1762,6 +1762,14 @@
   + test): the class's liturgy program for that Sunday, else the tone's chants + the Liturgy's first ten; „მოვამზადე“ writes
   `students.aiLesson.focus {until, pieces}` which the day lesson prefers until that Sunday; the link shows Wed–Sun under the lesson's
   strip / hero and on its start screen.
+- **AI teacher, step 3b — the teacher and the AI (2026-11-18)**, all only while `aiTeacher` is on for the person: instructions to
+  the AI (`pages/v2/aiklasi/InstructionScreen`, class mapItem `ai-note`; x-ai-mititeba): `classes.aiNotes[]` for the class,
+  `students.aiTeacherNotes[]` for one member, each with a start / end day (`utils/aiTeacherNotes.ts` + test: `activeFor`,
+  `aiNotesFor(uid)` — `askAiTeacher` adds them to its prompt; the lesson's start shows two lines; a member sees theirs under the
+  program, the student's page „რა შენიშნა AI-მ“). The week's report (`ReportScreen`, mapItem `ai-report`, from the class's „⋯“;
+  `utils/weekReport.ts` + test, counted from the members' records, no AI call). „AI გაკვეთილი“ in a program chant's window →
+  `ai-prep/<variantId>` (`aiklasi/prep/`, `utils/lessonPrep.ts` + test): the phrases, the words' questions (`askWordQuestions`) the
+  teacher approves or edits, kept in `classes.aiLessons.{variantId}`; the day lesson's summary asks two approved ones (`quizFor`).
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 

@@ -1,11 +1,12 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { CalendarDays, Check, Leaf, Mic, Square } from 'lucide-react';
+import { CalendarDays, Check, HelpCircle, Leaf, Mic, Square } from 'lucide-react';
 import { playStartNotes } from '../../utils/chantSynth';
 import { startSinging, type SingSession } from '../../utils/singCapture';
 import { liveWord, offPitch, warmNotes, WARM_BAND, WARM_HOLD_MS, type LessonLength } from '../../utils/aiLesson';
 import { noteName } from '../../utils/pearls';
 import { triggerHaptic } from '../../utils/haptics';
 import { Bar, Button, Card, Dot, Rows, Row, Stats, cx } from '../ui2';
+import type { PrepQuestion } from '../../utils/lessonPrep';
 import { Bottom, CenterNote, TeacherSays, ToneCircle } from './parts';
 import { usePlayer } from './usePlayer';
 import type { Phrase } from './useLessonData';
@@ -141,11 +142,30 @@ export const SingStep: React.FC<{ phrase: Phrase; known: number[]; fresh: number
   );
 };
 
+/** Teacher-approved questions about the chant's words: a tap shows the answer. */
+const MiniQuiz: React.FC<{ items: PrepQuestion[] }> = ({ items }) => {
+  const [open, setOpen] = useState<number[]>([]);
+  return (
+    <Rows>
+      {items.map((it, i) => {
+        const on = open.includes(i);
+        return (
+          <Row key={i} wrap lead={<Dot icon={<HelpCircle />} />} title={it.q}
+            sub={on ? it.a : 'შეეხე — პასუხი გამოჩნდება'} right={null}
+            aria-expanded={on} onClick={() => setOpen(o => (o.includes(i) ? o.filter(k => k !== i) : [...o, i]))} />
+        );
+      })}
+    </Rows>
+  );
+};
+
 /** „შეჯამება“: three numbers, one sentence, tomorrow — and only if wished, three minutes more. */
 export const SummaryStep: React.FC<{
   learned: number; reviews: number; known: number; total: number; say: string; tomorrow: string; length: LessonLength;
+  /** up to two questions about the chant's words the teacher approved (utils/lessonPrep.ts) */
+  quiz?: PrepQuestion[];
   onFinish: () => void; onMore: () => void;
-}> = ({ learned, reviews, known, total, say, tomorrow, onFinish, onMore }) => (
+}> = ({ learned, reviews, known, total, say, tomorrow, quiz = [], onFinish, onMore }) => (
   <>
     <div className="flex flex-col gap-3 px-4 pb-4">
       <Stats items={[
@@ -157,6 +177,7 @@ export const SummaryStep: React.FC<{
       <Rows>
         <Row lead={<Dot icon={<CalendarDays />} />} title="ხვალ" sub={tomorrow} right={null} />
       </Rows>
+      {quiz.length > 0 && <MiniQuiz items={quiz} />}
     </div>
     <Bottom>
       <Button full icon={<Check />} onClick={onFinish}>დასრულება</Button>
