@@ -1,6 +1,6 @@
 import React, { useEffect, useId, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { X } from 'lucide-react';
+import { ArrowLeft, X } from 'lucide-react';
 import { cx } from './cx';
 import { Press, RoundButton } from './Buttons';
 import { Dot, Two } from './Rows';
@@ -37,6 +37,30 @@ export const PageHead: React.FC<{ title: React.ReactNode; kicker?: React.ReactNo
       {kicker && <div className="truncate text-meta text-mut">{kicker}</div>}
       <h1 className="text-hero font-bold tracking-tight wrap-break-word">{title}</h1>
     </div>
+    {right && <div className="flex shrink-0 items-center gap-2">{right}</div>}
+  </header>
+);
+
+/** An inner page's one bar — `back` + `head` of the prototypes: the round „უკან“, the name (one line, cut with „…“) with an
+ *  optional grey line under it, and at most one or two round buttons at the right. A top-level page (the bottom menu's
+ *  own) uses `PageHead` instead: a big name and no „უკან“. */
+export const TopBar: React.FC<{
+  title: React.ReactNode; sub?: React.ReactNode; onBack?: () => void; right?: React.ReactNode; className?: string;
+  /** in place of the name: a search field (the search page) */
+  children?: React.ReactNode;
+}> = ({ title, sub, onBack, right, className, children }) => (
+  <header className={cx('flex shrink-0 items-center gap-2.5 pt-3.5 pb-2.5', className)}>
+    {onBack && (
+      <RoundButton label="უკან" onClick={onBack}>
+        <ArrowLeft aria-hidden="true" strokeWidth={1.75} />
+      </RoundButton>
+    )}
+    {children ?? (
+      <div className="min-w-0 flex-1 pl-0.5">
+        <h1 className="truncate text-title leading-tight font-bold tracking-tight">{title}</h1>
+        {sub && <div className="truncate text-meta text-mut">{sub}</div>}
+      </div>
+    )}
     {right && <div className="flex shrink-0 items-center gap-2">{right}</div>}
   </header>
 );

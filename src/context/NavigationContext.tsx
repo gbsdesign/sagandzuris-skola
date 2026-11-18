@@ -2,8 +2,12 @@ import React, { createContext, useContext, useEffect, useRef, useState } from 'r
 import { triggerHaptic } from '../utils/haptics';
 import { wignebiParent } from '../utils/wignebiPath';
 import { atPageChange } from '../utils/appUpdate';
+import { addressOf, snapOfAddress } from '../utils/pageAddress';
+import { isNewLook } from '../design/newLook';
 
-export type PageType = 'home' | 'profile' | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'gz' | 'tsinaprebi' | 'bookmark' | 'admin' | 'teacher' | 'class' | 'prayer' | 'commemoration' | 'biblioteka' | 'psalter' | 'messages' | 'dm' | 'abituri' | 'offline' | 'birthdays' | 'medavitneoba' | 'games' | 'student' | 'videos' | 'churches';
+export type PageType = 'home' | 'profile' | 'galoba' | 'simghera' | 'mtkmeli' | 'sakravebi' | 'gz' | 'tsinaprebi' | 'bookmark' | 'admin' | 'teacher' | 'class' | 'prayer' | 'commemoration' | 'biblioteka' | 'psalter' | 'messages' | 'dm' | 'abituri' | 'offline' | 'birthdays' | 'medavitneoba' | 'games' | 'student' | 'videos' | 'churches'
+  // the new look's own pages (redesign stage 2): the notices, the one search and the settings
+  | 'notices' | 'search' | 'settings';
 export type ServiceType = 'წირვა' | 'მწუხრი' | 'ცისკარი' | 'სადღესასწაულო' | 'მარხვანი' | 'ზატიკი' | 'პანაშვიდი' | 'ჯვრისწერა' | 'ხელდასხმა' | 'პარაკლისი' | 'მომიხსენენი' | 'ძლისპირები' | 'კატაბასიები' | 'დასადებლები' | null;
 
 export interface NavigationContextType {
@@ -59,12 +63,20 @@ const sameSnap = (a?: NavSnap | null, b?: NavSnap | null) =>
   Boolean(a && b) && a!.page === b!.page && a!.service === b!.service && a!.classId === b!.classId && a!.prayerId === b!.prayerId &&
   (a!.mapItem ?? null) === (b!.mapItem ?? null) && (a!.dmId ?? null) === (b!.dmId ?? null);
 const NAV_KEYS = ['sgNav', 'sgDepth', 'sgScroll', 'sgExp', 'sgSearch'];
+// the address a step writes: the page's own in the new look (utils/pageAddress); otherwise the path as it was — a page
+// address one came in by is left for „/“ once the person moves on
+const urlOf = (snap: NavSnap) => {
+  if (isNewLook()) return addressOf(snap);
+  const path = window.location.pathname;
+  return path.startsWith('/p/') ? '/' : path;
+};
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const historyState = (): Record<string, any> => (typeof window !== 'undefined' && window.history.state) || {};
 
 export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // a reload stays on the page it was on
-  const [boot] = useState<NavSnap | null>(() => historyState().sgNav ?? null);
+  // … and a page's own address opens that page (utils/pageAddress: /p/<page>[/<what>], a shared link)
+  const [boot] = useState<NavSnap | null>(() => historyState().sgNav ?? (typeof window !== 'undefined' ? snapOfAddress(window.location.pathname) : null));
   const [currentPage, setCurrentPage] = useState<PageType>(boot?.page ?? 'home');
   const [selectedService, setSelectedService] = useState<ServiceType>(boot?.service ?? null);
   const [expandedChantId, setExpandedChantId] = useState<string | null>(null);
@@ -132,11 +144,11 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
     // going "up" with nothing behind, or turning a prayer's chapters: this entry is replaced
     if ((replaceNext.current && now - replaceNext.current < 1500) || (prev?.page === 'prayer' && snap.page === 'prayer')) {
       replaceNext.current = 0;
-      window.history.replaceState({ ...s, sgNav: snap, sgDepth: s.sgDepth ?? 0 }, '');
+      window.history.replaceState({ ...s, sgNav: snap, sgDepth: s.sgDepth ?? 0 }, '', urlOf(snap));
       return;
     }
     window.history.replaceState({ ...s, sgNav: prev ?? HOME, sgDepth: s.sgDepth ?? 0, sgScroll: y, sgExp: prevList.current.exp, sgSearch: prevList.current.search }, '');
-    window.history.pushState({ sgNav: snap, sgDepth: (s.sgDepth ?? 0) + 1 }, '', window.location.pathname);
+    window.history.pushState({ sgNav: snap, sgDepth: (s.sgDepth ?? 0) + 1 }, '', urlOf(snap));
     // a new version waiting starts here, on the page just opened (a reload stays on it)
     if (prev?.page !== snap.page) atPageChange();
     // eslint-disable-next-line react-hooks/exhaustive-deps

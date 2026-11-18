@@ -2,6 +2,7 @@ import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
+import { useNewLook } from '../../design/newLook';
 
 // Shared building blocks for the whole app: the same warm paper, burgundy accents and roomy controls everywhere.
 // Rules (2026-10-25): text is never smaller than 12px (text-xs); icon buttons are 36px, the back button 44px;
@@ -23,17 +24,23 @@ const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).jo
 
 /** The one round 44px „←“ of a page's bar. Full-screen windows with their own sticky bar (a song, a biography, the
  *  search) use it too, so every way back looks the same. */
-export const BackBtn: React.FC<{ onClick: () => void; label?: string; className?: string; icon?: React.ReactNode }> = ({ onClick, label = 'უკან', className, icon }) => (
-  <button
-    type="button"
-    onClick={onClick}
-    className={cx('w-11 h-11 shrink-0 rounded-full ring-1 ring-[#e8dcc8] bg-white/85 hover:bg-white hover:ring-[#7a2028]/35 text-[#4a3426] hover:text-[#7a2028] flex items-center justify-center cursor-pointer active:scale-95 transition', className)}
-    aria-label={label}
-    title={label}
-  >
-    {icon ?? <ArrowLeft className="w-5 h-5" />}
-  </button>
-);
+export const BackBtn: React.FC<{ onClick: () => void; label?: string; className?: string; icon?: React.ReactNode }> = ({ onClick, label = 'უკან', className, icon }) => {
+  // the new look (redesign stage 2): a plain white round, no ring, the arrow in ink (ui2 TopBar's)
+  const nl = useNewLook();
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cx(nl
+        ? 'size-tap shrink-0 rounded-full bg-surf text-ink flex items-center justify-center cursor-pointer active:scale-95 transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine/60'
+        : 'w-11 h-11 shrink-0 rounded-full ring-1 ring-[#e8dcc8] bg-white/85 hover:bg-white hover:ring-[#7a2028]/35 text-[#4a3426] hover:text-[#7a2028] flex items-center justify-center cursor-pointer active:scale-95 transition', className)}
+      aria-label={label}
+      title={label}
+    >
+      {icon ?? <ArrowLeft className="w-5 h-5" strokeWidth={nl ? 1.75 : 2} />}
+    </button>
+  );
+};
 
 /** true once `target` (a window's big title) has scrolled up under its sticky bar inside the scrolling `root`:
  *  the bar then shows the title itself, so the name is never written twice on one screen. */
@@ -89,18 +96,23 @@ export const PageBar: React.FC<{ title: React.ReactNode; subtitle?: React.ReactN
     return () => { window.removeEventListener('scroll', onScroll); cancelAnimationFrame(raf); };
   }, [floats]);
   const phoneShow = away && !down;
+  // the new look (redesign stage 2): the prototypes' one bar — the name in the plain bold letters, one line; a page of the
+  // bottom menu (no „უკან“) gets the big name
+  const nl = useNewLook();
 
   return (
     <>
-      <div ref={barRef} className={cx('flex items-center gap-3', className)}>
+      <div ref={barRef} className={cx(nl ? 'flex items-center gap-2.5' : 'flex items-center gap-3', className)}>
         {onBack && <BackBtn onClick={() => { triggerHaptic(8); onBack(); }} />}
         {/* `lead`: a small picture beside the title (a class's logo) */}
         {lead}
-        <div className="min-w-0 flex-1">
-          <h1 className="font-serif-ge text-[22px] sm:text-[26px] leading-tight font-bold text-[#4a3426] text-balance">{title}</h1>
-          {subtitle && <p className="mt-0.5 text-[13px] sm:text-sm text-[#8a7a6a] truncate">{subtitle}</p>}
+        <div className={cx('min-w-0 flex-1', nl && 'pl-0.5')}>
+          {nl
+            ? <h1 className={cx('font-sans font-bold leading-tight tracking-tight text-ink', onBack ? 'text-title truncate' : 'text-hero text-balance')}>{title}</h1>
+            : <h1 className="font-serif-ge text-[22px] sm:text-[26px] leading-tight font-bold text-[#4a3426] text-balance">{title}</h1>}
+          {subtitle && <p className={nl ? 'text-meta text-mut truncate' : 'mt-0.5 text-[13px] sm:text-sm text-[#8a7a6a] truncate'}>{subtitle}</p>}
         </div>
-        {right && <div className="flex items-center gap-1 shrink-0">{right}</div>}
+        {right && <div className={cx('flex items-center shrink-0', nl ? 'gap-2' : 'gap-1')}>{right}</div>}
       </div>
 
       {onBack && (
@@ -112,6 +124,7 @@ export const PageBar: React.FC<{ title: React.ReactNode; subtitle?: React.ReactN
           aria-label="უკან"
           title="უკან"
           className={cx(
+            nl && 'sg-float-top',
             'sg-float-back fixed z-40 left-[calc(env(safe-area-inset-left,0px)+16px)] bottom-[calc(env(safe-area-inset-bottom,0px)+18px)] lg:bottom-auto lg:top-4 lg:left-[max(12px,calc(50%-560px))] w-12 h-12 lg:w-10 lg:h-10 rounded-full grid place-items-center bg-[#fffdf8]/90 backdrop-blur-md ring-1 ring-[#e8dcc8] shadow-[0_10px_26px_-12px_rgba(74,52,38,0.55)] text-[#7a2028] hover:bg-white hover:ring-[#7a2028]/30 cursor-pointer transition-[opacity,transform,background-color] duration-300 ease-out active:scale-95',
             phoneShow ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-4 pointer-events-none',
             away ? 'lg:opacity-100 lg:translate-y-0 lg:pointer-events-auto' : 'lg:opacity-0 lg:-translate-y-3 lg:pointer-events-none'

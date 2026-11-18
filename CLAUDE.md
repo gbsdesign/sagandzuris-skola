@@ -1650,6 +1650,23 @@
   perStudent, hintsFirst, kidsNoAi}; ⚙ „სკოლა“ → „AI მასწავლებელი“, `AiRulesSheet`): every Gemini answer of `aiTeacher.ts` is counted in
   `aiUsage/{YYYY-MM}` (+ `/people/{uid}`; ≈ 0.01 $ an answer), stops at the month's budget, and none in the kids' mode.
 
+- **Stage 2 „ჩონჩხი“ (2026-11-18)** — behind the switch `newLook` „ახალი სახე“ (⚙ „სკოლა“ → განყოფილებები → საიტის სხვა ნაწილები;
+  hidden = admins only). `design/newLook.ts` holds it (App.tsx sets it from `useAccess().on('newLook')`; `html.sg-new`; `useNewLook`,
+  `isNewLook`, and `hideNav()` / `useNavHidden` for a page that needs the bottom free — the class chat's `fill`). In the new look: no
+  header and no footer (`Footer bare` keeps only the church calendar's window); the home page gets `shell/HomeBar` (logo, name, 🔔 →
+  page `notices`); every page the bottom menu `shell/BottomNav` (მთავარი · გზა · წერილები · პროფილი + the round wine 🔍 → page
+  `search`; which place a page belongs to and the pages without it: `shell/tabs.ts`); the menu's own pages (gz, messages, profile)
+  have no „უკან“ and a big name; the old kit's `PageBar` / `BackBtn` draw the new bar themselves (`useNewLook`); the floating „უკან“
+  comes in at the top (`.sg-float-top`); a page fades in (App, `animate`, none for reduce motion); `Suspense` shows
+  `shell/PageSkeleton`; a page that cannot load shows `shell/NotLoadedView`. New pages in `pages/shell/`: `NoticesPage` (the 🔔's
+  list as a page: chips, „ახალი“ / „ადრე“, swipe to hide, the admin's „ყველას მიწერა“), `SearchPage` (the one search as a page:
+  `pendingSearchQuery` / `setPendingQuery` in utils/searchOpen, recents, „ხშირად გახსნილი“ `sg-search-often`), `SettingsPage`
+  (reminders, ხუცური, widget, calendar, install, personal info → profile, contact sheet, privacy, sign out, delete — the profile
+  drops these in the new look; its ⚙ opens the page). `shell/ShellLinks` turns every `openSearch`, `/`, Ctrl+K and the 🔔's link
+  into these pages. Counts: `hooks/useShellCounts.ts` (`useUnreadChats`, `useMyNotices`, `useMyAllClasses`). **Page addresses**:
+  `utils/pageAddress.ts` + test — in the new look every step writes `/p/<page>[/<what>]` (service slug, class id, prayer id, chat id
+  or the mapItem), and any such address opens that page (NavigationContext's boot); the old look leaves a `/p/` address for „/“.
+
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 
 - **Roles** (`context/AuthContext.tsx`, `firestore.rules`): owner (the founder's address) names ≤3 superadmins,

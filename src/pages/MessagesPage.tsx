@@ -20,6 +20,7 @@ import { Avatar, hhmm, dayLabel } from '../components/classes/ChatPanel';
 import { PageBar, offerUndo } from '../components/ui/kit';
 import { ClassLogo } from '../components/classes/ClassLogo';
 import { ClassChat } from '../components/classes/ClassChat';
+import { useNewLook } from '../design/newLook';
 import { DirectChat, AdminAvatar, PaneTitle } from './DirectChatPage';
 
 // today: the time; earlier: the day
@@ -109,6 +110,7 @@ const Heading: React.FC<{ children: React.ReactNode; action?: React.ReactNode }>
 export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const { user, isAdmin, isSuperAdmin, isTeacher } = useAuth();
   const { currentPage, selectedDmId, openDm, handleGoBack } = useNavigation();
+  const nl = useNewLook();
   const uid = user?.uid || '';
   const open = currentPage === 'dm' ? selectedDmId : null;
 
@@ -392,7 +394,8 @@ export const MessagesPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       <div className={`${open ? 'hidden lg:block' : ''} mb-3`}>
         <PageBar
           title="წერილები"
-          onBack={handleGoBack}
+          // the new look: a page of the bottom menu, no „უკან“
+          onBack={nl ? undefined : handleGoBack}
           right={isSuperAdmin && (
             <button
               type="button"

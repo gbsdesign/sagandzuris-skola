@@ -1,4 +1,4 @@
-import React, { Suspense, useEffect, useState } from 'react';
+import React, { Suspense, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { Loader2 } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from './firebase';
@@ -49,6 +49,13 @@ import { useMembership } from './utils/memberAccess';
 import { useBirthdaySync } from './utils/birthdays';
 import { useAlbumAccessSync } from './data/albumAccess';
 import { useAiLessonOpen } from './components/aiLesson/open';
+import { useAccess } from './hooks/useAccess';
+import { setNewLook, useNavHidden } from './design/newLook';
+import { BottomNav } from './components/shell/BottomNav';
+import { HomeBar } from './components/shell/HomeBar';
+import { ShellLinks } from './components/shell/ShellLinks';
+import { PageSkeleton } from './components/shell/PageSkeleton';
+import { NO_NAV } from './components/shell/tabs';
 // the AI teacher's day lesson loads only when opened
 const AiLesson = React.lazy(() => import('./components/aiLesson/AiLesson').then(m => ({ default: m.AiLesson })));
 
@@ -78,6 +85,20 @@ export default function App() {
 function AppContent() {
   const { loading, user } = useAuth();
   const { currentPage, openPrayer, navigateTo, openMapItem, openDm } = useNavigation();
+  // „ახალი სახე“ (redesign stage 2): its switch `newLook` — admins first, then everyone (data/sections)
+  const access = useAccess();
+  const newLook = access.on('newLook');
+  useLayoutEffect(() => { setNewLook(newLook); }, [newLook]);
+  // a soft way in for a new page (the new look; none for „reduce motion“) — the page itself is not remounted
+  const pageRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = pageRef.current;
+    if (!newLook || !el || typeof el.animate !== 'function') return;
+    if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
+    el.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
+  }, [currentPage, newLook]);
+  const navHidden = useNavHidden();
+  const nav = newLook && !NO_NAV.includes(currentPage) && !navHidden;
   // live recordings are for members a superadmin let in with them (set before the tree below renders)
   const membership = useMembership();
   setRecordingsHidden(!user || !membership.can('recordings'));
@@ -222,26 +243,38 @@ function AppContent() {
   }
 
   return (
-    // one warm paper for every page (the notes page has its own)
-    <div className="sg-paper relative isolate min-h-screen safe-x text-[#2a2017] flex flex-col font-sans bg-gradient-to-b from-[#fdfaf4] via-[#faf4ea] to-[#f6eedf]">
-      {/* plate ornaments at the window edges, behind everything (the home page has its own) */}
-      {currentPage !== 'home' && <PageSprinkles seed={currentPage} />}
+    // one warm paper for every page (the notes page has its own); the new look's plain page colour
+    <div className={newLook
+      ? 'sg-paper relative isolate min-h-screen safe-x text-ink flex flex-col font-sans bg-page'
+      : 'sg-paper relative isolate min-h-screen safe-x text-[#2a2017] flex flex-col font-sans bg-gradient-to-b from-[#fdfaf4] via-[#faf4ea] to-[#f6eedf]'}>
+      {/* plate ornaments at the window edges, behind everything (the home page has its own); none in the new look */}
+      {!newLook && currentPage !== 'home' && <PageSprinkles seed={currentPage} />}
 
-      <Header logoUrl={currentLogo} />
+      {/* the new look: the phone's status bar keeps the page colour under it while the page scrolls */}
+      {newLook && <div aria-hidden className="fixed inset-x-0 top-0 z-30 h-[env(safe-area-inset-top,0px)] bg-page" />}
+      {/* the new look has no header: the home page's own bar, the bottom menu, every other page its one bar */}
+      {newLook ? currentPage === 'home' && <HomeBar logoUrl={currentLogo} /> : <Header logoUrl={currentLogo} />}
 
-      <main className="flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 md:p-8 flex flex-col">
-        <div className="w-full max-w-4xl mx-auto">
+      <main className={newLook
+        ? `flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 flex flex-col ${currentPage === 'home' ? 'pt-1' : 'pt-[calc(env(safe-area-inset-top,0px)+4px)]'} ${nav ? 'pb-[calc(env(safe-area-inset-bottom,0px)+104px)]' : 'pb-[calc(env(safe-area-inset-bottom,0px)+24px)]'}`
+        : 'flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 md:p-8 flex flex-col'}>
+        <div ref={pageRef} className="w-full max-w-4xl mx-auto">
           {/* „მიმდინარეობს დამატება“ while a superadmin has not decided on a new member */}
           <WaitingBanner />
           <ErrorBoundary>
-            <Suspense fallback={<div className="py-24 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-[#7a2028]" /></div>}>
+            <Suspense fallback={newLook
+              ? <PageSkeleton className="pt-16" />
+              : <div className="py-24 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-[#7a2028]" /></div>}>
               <AppRouter logoUrl={currentLogo} />
             </Suspense>
           </ErrorBoundary>
         </div>
       </main>
 
-      <Footer logoUrl={currentLogo} />
+      {/* the new look keeps only the footer's church calendar (its links moved to the settings page) */}
+      <Footer logoUrl={currentLogo} bare={newLook} />
+      {nav && <BottomNav />}
+      {newLook && <ShellLinks />}
 
       <ErrorBoundary>
         <AppModals />
@@ -287,7 +320,7 @@ function AppContent() {
 
       {/* the one search over the whole app (header button, the home field, "/" or Ctrl+K) */}
       <ErrorBoundary>
-        {membership.can('search') && <GlobalSearch />}
+        {membership.can('search') && !newLook && <GlobalSearch />}
       </ErrorBoundary>
 
       {/* „სამშვილდის ღამე“ online: an invitation into a class's game room, or the way back into one's own game */}

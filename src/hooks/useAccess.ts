@@ -88,6 +88,8 @@ export const useAccess = () => {
     if (p === 'prayer' || p === 'commemoration') return on('prayers') ? 'open' : 'hidden';
     if (p === 'abituri') return on('abituri') ? 'open' : 'hidden';
     if (p === 'birthdays') return on('birthdays') ? 'open' : 'hidden';
+    // the new look's search page (pages/shell/SearchPage): the same right as the search
+    if (p === 'search') return membership.can('search') ? 'open' : 'hidden';
     return 'open';
   };
   return { section, page, on, kids, member, can: membership.can, status: membership.status };
