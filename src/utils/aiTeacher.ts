@@ -3,6 +3,8 @@ import { startAppCheck } from './samosiTryOn';
 import { georgiaToday } from './psalter';
 import { parseScore } from './drillScore';
 import { aiGate, HINT_FIRST_LINE, noteAiCall, readHintsFirst } from './aiRules';
+import { aiNotesFor } from './aiTeacherNotes';
+import { parseQuestions, type PrepQuestion } from './lessonPrep';
 
 // „AI მასწავლებელი“ in the pearls game and the learning mode: Gemini (through Firebase AI Logic, the same App Check pass as the chokha
 // try-on) listens to a member's take of a pearl's phrase and answers in Georgian: what went well, the one thing to
@@ -76,13 +78,16 @@ export const askAiTeacher = async (uid: string, mp3: Blob, about: TakeAbout, unl
   const stop = await aiGate(uid);
   if (stop) throw new AiTeacherError(stop);
   const hint = await readHintsFirst();
+  // the teacher's instructions to the AI (AI step 3, x-ai-mititeba) — the class's and this member's own
+  const notes = await aiNotesFor(uid).catch(() => [] as string[]);
+  const told = notes.length ? ` მასწავლებლის მითითებები (გაითვალისწინე): ${notes.join(' · ')}.` : '';
   const audio = await blobToBase64(mp3);
   let answer = '';
   try {
     await startAppCheck();
     const { getAI, getGenerativeModel, GoogleAIBackend } = await import('firebase/ai');
     const model = getGenerativeModel(getAI(getApp(), { backend: new GoogleAIBackend() }), { model: AI_TEACHER_MODEL });
-    const res = await model.generateContent([{ text: hint ? `${prompt(about)} ${HINT_FIRST_LINE}` : prompt(about) }, { inlineData: { mimeType: 'audio/mp3', data: audio } }]);
+    const res = await model.generateContent([{ text: `${prompt(about)}${told}${hint ? ` ${HINT_FIRST_LINE}` : ''}` }, { inlineData: { mimeType: 'audio/mp3', data: audio } }]);
     answer = res.response.text().trim();
   } catch (err) {
     console.warn('AI teacher note:', err);
@@ -143,4 +148,42 @@ export const askAiScore = async (uid: string, mp3: Blob, about: DrillAbout, unli
   noteAiCall(uid);
   if (!unlimited) countTry(uid, 'manera');
   return parsed;
+};
+
+const wordsPrompt = (text: string, title: string) => [
+  'შენ ხარ ქართული ტრადიციული საეკლესიო გალობის მასწავლებელი.',
+  `მასწავლებელს გაკვეთილისთვის სჭირდება 3–5 მოკლე კითხვა საგალობლის „${title}“ სიტყვების მნიშვნელობაზე, პასუხებით.`,
+  'კითხვები დაწერე მხოლოდ ქვემოთ მოცემული ტექსტიდან, მარტივი ქართულით (ძველი სიტყვა — რას ნიშნავს, ვის ან რას მიმართავს ტექსტი); არაფერი გამოიგონო ტექსტს გარეთ.',
+  'უპასუხე მხოლოდ JSON-ით: [{"q": "კითხვა", "a": "მოკლე პასუხი"}].',
+  `ტექსტი: ${text}`,
+].join(' ');
+
+/** The teacher's „გაკვეთილის მომზადება“: 3–5 questions about a chant's words with answers, from its own text only.
+ *  Same guards as the other calls (kids' mode, the month's budget); no daily try count — a teacher asks once a chant. */
+export const askWordQuestions = async (uid: string, text: string, title: string): Promise<PrepQuestion[]> => {
+  if (!text.trim()) throw new AiTeacherError('failed');
+  if (offline()) throw new AiTeacherError('offline');
+  const stop = await aiGate(uid);
+  if (stop) throw new AiTeacherError(stop);
+  let raw = '';
+  try {
+    await startAppCheck();
+    const { getAI, getGenerativeModel, GoogleAIBackend } = await import('firebase/ai');
+    const model = getGenerativeModel(getAI(getApp(), { backend: new GoogleAIBackend() }), {
+      model: AI_TEACHER_MODEL,
+      generationConfig: { responseMimeType: 'application/json' },
+    });
+    const res = await model.generateContent([{ text: wordsPrompt(text, title) }]);
+    raw = res.response.text().trim();
+  } catch (err) {
+    console.warn('AI teacher words:', err);
+    const msg = String((err as Error)?.message || err);
+    if (/prepay|credits|depleted|quota|resource.?exhausted|429/i.test(msg)) throw new AiTeacherError('no-credits');
+    if (/api.?key|not.?enabled|permission|403|billing|ai.?logic|app.?check|not found|404|recaptcha/i.test(msg)) throw new AiTeacherError('setup');
+    throw new AiTeacherError(offline() ? 'offline' : 'failed');
+  }
+  const questions = parseQuestions(raw);
+  if (!questions) throw new AiTeacherError('failed');
+  noteAiCall(uid);
+  return questions;
 };

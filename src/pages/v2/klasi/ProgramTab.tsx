@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { AudioLines, BookOpen, ChevronDown, ChevronUp, ClipboardList, CloudCheck, CloudDownload, GraduationCap, Loader2, Music, Plus, Users } from 'lucide-react';
+import { AudioLines, BookOpen, ChevronDown, ChevronUp, ClipboardList, CloudCheck, CloudDownload, GraduationCap, Loader2, Music, Plus, Sparkles, Users } from 'lucide-react';
 import { useAuth, useChants, useNavigation } from '../../../context';
 import { Avatar, Bar, Button, Card, CheckButton, Dot, Duo, Note, Pill, RoundButton, Row, Rows, SectionLabel, Sheet, Small } from '../../../components/ui2';
 import type { ProgramItem, SchoolClass } from '../../../hooks/useClasses';
 import { usePathMarks } from '../../../hooks/usePathMarks';
 import { ownVoices, useClassMarks } from '../../../hooks/useClassMarks';
 import { useAccess } from '../../../hooks/useAccess';
+import { prepItem } from './nav';
 import { useClassGroup } from '../../../components/psalter/ClassPsalter';
 import { useGroupNow } from '../../../hooks/usePsalter';
 import { openPsalterGroup } from '../../../components/psalter/selectedGroup';
@@ -20,6 +21,8 @@ import { triggerFireworks } from '../../../components/views/StudentBookmarkView'
 import { CATEGORY_LABEL, CatalogEntry, PathCategory, Voice, categoryOf, findCatalogEntry, usesVoices } from '../../../utils/pathItems';
 import { KATHISMA_COUNT, formatRange, readCount } from '../../../utils/psalter';
 import { ProgramAddSheet } from './teacher/ProgramAdd';
+import { openAiLesson } from '../../../components/aiLesson/open';
+import { useMemberNotes } from '../aiklasi/useAiNotes';
 
 type Listed = ProgramItem & { id: string; key: string };
 type Knower = { m: SchoolClass['members'][number]; ok: boolean; me: boolean };
@@ -49,6 +52,8 @@ export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean }> = ({ c
   const [assigning, setAssigning] = useState<CatalogEntry | null>(null);
   const [done, setDone] = useState('');
   const iAmMember = !!user && cls.memberIds.includes(user.uid);
+  const { openMapItem } = useNavigation();
+  const aiOn = useAccess().on('aiTeacher');
 
   const listed: Listed[] = cls.program.flatMap((p, i) => (p.id ? [{ ...p, id: p.id, key: `${i}:${p.id}` }] : []));
   const free = cls.program.filter(p => !p.id);
@@ -162,6 +167,7 @@ export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean }> = ({ c
       {done && <Note>{done}</Note>}
 
       <PsalterRow cls={cls} canLead={canEdit} />
+      {iAmMember && !canEdit && <AiNoteRow cls={cls} uid={user?.uid} />}
 
       {canEdit && <ProgramAddSheet cls={cls} open={adding} onClose={() => setAdding(false)} />}
       {assigning && (
@@ -176,6 +182,8 @@ export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean }> = ({ c
           onLearn={piece => { setShown(null); openLearning(piece); }}
           onStudio={studioPiece(open.id) && (iAmMember || canEdit) ? () => { setShown(null); setStudio(open.id); } : null}
           onAssign={canEdit && findCatalogEntry(open.id) ? () => { setShown(null); setAssigning(findCatalogEntry(open.id) || null); } : null}
+          // the AI prepares a lesson from the chant's notes (AI step 3, x-ai-avto): the class's teachers, while the AI teacher is on
+          onPrep={canEdit && aiOn && usesVoices(open.id) ? () => { setShown(null); openMapItem(prepItem(open.id)); } : null}
           member={iAmMember}
           teacher={canEdit}
           own={mine(open.id)}
@@ -201,13 +209,14 @@ const ItemSheet: React.FC<{
   onLearn: (piece: string) => void;
   onStudio: (() => void) | null;
   onAssign: (() => void) | null;
+  onPrep?: (() => void) | null;
   member: boolean;
   teacher: boolean;
   own: { known: Voice[]; confirmed: Voice[] };
   locked: boolean;
   onMark: (v: Voice) => void;
   knowers: (v: Voice) => Knower[];
-}> = ({ p, onClose, go, piece, onLearn, onStudio, onAssign, member, teacher, own, locked, onMark, knowers }) => {
+}> = ({ p, onClose, go, piece, onLearn, onStudio, onAssign, onPrep, member, teacher, own, locked, onMark, knowers }) => {
   const lines = programLines(p);
   const voiced = usesVoices(p.id);
   const song = categoryOf(p.id) === 'simghera';
@@ -277,6 +286,7 @@ const ItemSheet: React.FC<{
           {onAssign && <Button kind="soft" size="md" icon={<ClipboardList />} onClick={onAssign}>დავალებად მიცემა</Button>}
         </Duo>
       )}
+      {onPrep && <Button kind="soft" size="md" icon={<Sparkles />} onClick={onPrep}>AI გაკვეთილი</Button>}
     </Sheet>
   );
 };
@@ -314,6 +324,23 @@ const GroupRow: React.FC<{ group: NonNullable<ReturnType<typeof useClassGroup>>;
         title={`ფსალმუნი · ${readCount(slots)} / ${KATHISMA_COUNT}`}
         sub={`${formatRange(cycle)}${isMember && mine.length ? ` · შენი კანონი: ${mine.join(', ')}` : ''}`}
         onClick={onOpen}
+      />
+    </Rows>
+  );
+};
+
+/** x-klasi — „✦ მითითება AI მასწავლებელს“: shown to a member while the class or they have a note; opens the day's lesson. */
+const AiNoteRow: React.FC<{ cls: SchoolClass; uid?: string }> = ({ cls, uid }) => {
+  const on = useAccess().on('aiTeacher');
+  const notes = useMemberNotes(cls.id, uid, on);
+  if (!on || !notes.length) return null;
+  return (
+    <Rows>
+      <Row
+        lead={<Dot icon={<Sparkles />} size={40} />}
+        title="მითითება AI მასწავლებელს"
+        sub={`ამ კვირას: „${notes[0].note.text}“`}
+        onClick={openAiLesson}
       />
     </Rows>
   );

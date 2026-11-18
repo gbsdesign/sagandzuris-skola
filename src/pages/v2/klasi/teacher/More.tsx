@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Archive, BookOpen, CalendarDays, Church, ListChecks, Pencil, UserPlus, Users } from 'lucide-react';
+import { Archive, BookOpen, CalendarDays, Church, ListChecks, Pencil, Sparkles, UserPlus, Users } from 'lucide-react';
 import { useAuth, useNavigation } from '../../../../context';
 import { useNotes } from '../../../../context/NotesContext';
 import { useAllClasses, type LessonSlot, type SchoolClass } from '../../../../hooks/useClasses';
@@ -12,7 +12,8 @@ import { changed } from '../../../../components/admin/changed';
 import { askConfirm } from '../../../../components/ui/kit';
 import { errorText } from '../../../../utils/errorText';
 import { Dot, Row, Rows, Sheet } from '../../../../components/ui2';
-import { CLASS_ORDER } from '../nav';
+import { AI_REPORT, CLASS_ORDER } from '../nav';
+import { useAccess } from '../../../../hooks/useAccess';
 import { NewGroupSheet } from '../../psalmuni/NewGroup';
 import { AddMemberSheetV2 } from './AddMember';
 import { NameLogoSheet } from './NameLogo';
@@ -46,6 +47,7 @@ const useGroupLine = (cls: SchoolClass) => {
 
 export const ClassMoreSheet: React.FC<{ cls: SchoolClass; open: boolean; onClose: () => void }> = ({ cls, open, onClose }) => {
   const { isAdmin } = useAuth();
+  const aiOn = useAccess().on('aiTeacher');
   const { openMapItem, navigateTo, handleGoBack } = useNavigation();
   const { openProgram } = useNotes();
   const { classes: inUse } = useAllClasses(isAdmin);
@@ -82,6 +84,9 @@ export const ClassMoreSheet: React.FC<{ cls: SchoolClass; open: boolean; onClose
           <Row lead={<Dot icon={<Pencil />} />} title="სახელი და ლოგო" onClick={() => setSub('name')} />
           <Row lead={<Dot icon={<CalendarDays />} />} title="გაკვეთილების ცხრილი" sub={timetableLine(cls.schedule)} onClick={() => setSub('time')} />
           <Row lead={<Dot icon={<ListChecks />} />} title="სასწავლო პროგრამა" sub={`${cls.program.length} საგალობელი`} onClick={() => { closeAll(); openMapItem(CLASS_ORDER); }} />
+          {aiOn && (
+            <Row lead={<Dot icon={<Sparkles />} />} title="AI მასწავლებელი" sub="კვირის ანგარიში · მითითება" onClick={() => { closeAll(); openMapItem(AI_REPORT); }} />
+          )}
           <Row lead={<Dot icon={<UserPlus />} />} title="წევრის დამატება" onClick={() => setSub('member')} />
           {isAdmin && (
             <Row lead={<Dot icon={<Users />} />} title="მასწავლებლები" sub={cls.teachers.length ? `${cls.teachers.length} მასწავლებელი` : 'ჯერ არ ჰყავს'} onClick={() => setSub('teachers')} />
