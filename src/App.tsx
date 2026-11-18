@@ -156,6 +156,9 @@ function AppContent() {
   useEffect(() => {
     const url = new URL(window.location.href);
     if (!url.searchParams.get('prayer') && !url.searchParams.get('open')) return;
+    // a share from another app (/?open=share) is ShareHost's: it mounts only after the sign-in is known, so the marker
+    // must still be there then — this effect runs while the loading screen shows and used to wipe it first
+    if (url.searchParams.get('open') === 'share') return;
     const href = url.href;
     url.searchParams.delete('prayer');
     url.searchParams.delete('open');

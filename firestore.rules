@@ -217,6 +217,31 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // The app's error log (src/utils/errorLog.ts, ⚙ „სკოლა“ → „შეცდომების ჟურნალი“): a signed-in person's app adds what
+    // broke — no name and no uid. One document a distinct error (its id is the error's fingerprint); the same error
+    // again only counts up and moves `last`. Admins read and clear it.
+    // { msg, where: the page, stack, kind, count, first, last: ISO times, ver: the build, dev: the kind of device }
+    match /errorLog/{id} {
+      function shape(d) {
+        return d.keys().hasOnly(['msg', 'where', 'stack', 'kind', 'count', 'first', 'last', 'ver', 'dev'])
+          && d.keys().hasAll(['msg', 'kind', 'count', 'first', 'last'])
+          && d.msg is string && d.msg.size() > 0 && d.msg.size() <= 300
+          && d.kind in ['error', 'promise', 'react', 'report']
+          && d.count is int
+          && d.first is string && d.first.size() <= 30
+          && d.last is string && d.last.size() <= 30
+          && d.get('where', '') is string && d.get('where', '').size() <= 60
+          && d.get('stack', '') is string && d.get('stack', '').size() <= 1200
+          && d.get('ver', '') is string && d.get('ver', '').size() <= 40
+          && d.get('dev', '') is string && d.get('dev', '').size() <= 40;
+      }
+      allow read, delete: if isAdmin();
+      allow create: if isSignedIn() && id.size() <= 40 && shape(incoming()) && incoming().count == 1;
+      allow update: if isSignedIn() && shape(incoming())
+        && incoming().count == existing().count + 1
+        && changed().hasOnly(['count', 'last', 'ver', 'dev', 'where']);
+    }
+
     // What an admin wants on their phone (src/utils/adminPush.ts; the reminders Worker reads it with its service account):
     // `waiting` — a newcomer asks to be let in (superadmins only, the ones who decide), `weekly` — Monday's overview.
     match /adminPush/{userId} {

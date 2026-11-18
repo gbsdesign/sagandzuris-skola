@@ -8,11 +8,21 @@ const look = (secs: number, at: (t: number) => number | null) =>
   Array.from({ length: Math.round(secs / 0.04) }, (_, i) => ({ t: i * 0.04, midi: at(i * 0.04) }));
 
 test('every drill has a kind and the pitch and rhythm ones have scored rounds', () => {
+  const free: string[] = [];
   for (const d of ALL_DRILLS) {
+    // the path's own exercises (a trainer that asks and listens, one that opens another part of the app, a lesson
+    // to read) keep their score themselves and have no timed steps — the runner never scores them
+    if (d.trainer || d.open || d.read) {
+      assert.equal(d.exercise.steps.length, 0, d.id);
+      continue;
+    }
     const kind = scoreKindOf(d);
-    if (kind === 'ai') continue;
+    if (kind === 'ai') { if (!d.id.startsWith('tip-')) free.push(d.id); continue; }
     assert.ok(d.exercise.steps.some(s => scoredStep(s, kind, 0)), d.id);
   }
+  // free singing has no notes to compare with, so the AI teacher hears it. A new exercise that lands here by a slip
+  // (its notes forgotten) fails this line.
+  assert.deepEqual(free, ['m-tone-text']);
   assert.equal(scoreKindOf(ALL_DRILLS.find(d => d.id === 'tip-1')!), 'ai');
   assert.equal(scoreKindOf(ALL_DRILLS.find(d => d.id === 'rhythm-five')!), 'rhythm');
 });

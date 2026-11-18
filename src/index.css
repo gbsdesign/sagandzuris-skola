@@ -1,4 +1,6 @@
 @import "tailwindcss";
+/* the redesign's design rules — colours, text sizes, corners (see the file) */
+@import "./design/tokens.css";
 
 /* Synthesizer accent: a muted dark lilac, kept apart from the amber recording player */
 @theme {

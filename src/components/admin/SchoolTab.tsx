@@ -11,6 +11,7 @@ import { AlbumsFold } from './AlbumRights';
 import { TopChants } from './StatsTab';
 import { PhoneNotices } from './PhoneNotices';
 import { ChangeLog } from './ChangeLog';
+import { ErrorLogFold } from './ErrorLogFold';
 import { Announce } from './Announce';
 import { GrowthFold } from './GrowthFold';
 import { RolesFold } from './RolesFold';
@@ -115,6 +116,7 @@ export const SchoolSheet: React.FC<{ users: UserRecord[]; classes: SchoolClass[]
         <GroupTitle>ციფრები</GroupTitle>
         <GrowthFold users={users} />
         <TopChants users={users} />
+        <ErrorLogFold onMessage={onMessage} />
         {isSuperAdmin && <ChangeLog />}
 
         <Card className="!py-3">
