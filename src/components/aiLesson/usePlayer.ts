@@ -17,6 +17,8 @@ export const usePlayer = (score: BookScore | null, vi: number, speed: number, tr
   const raf = useRef(0);
   const countTimer = useRef(0);
   const range = useRef({ s0: 0, s1: 0 });
+  // when the last stretch began to sound (performance.now(); the synth starts 50 ms after play()) — a take laid on it
+  const started = useRef(0);
   const rounds = useRef({ left: 0, last: 0, onRound: undefined as undefined | ((n: number) => void), onDone: undefined as undefined | (() => void), n: 0 });
 
   useEffect(() => () => {
@@ -66,6 +68,7 @@ export const usePlayer = (score: BookScore | null, vi: number, speed: number, tr
     synth.onEnd = () => { cancelAnimationFrame(raf.current); setPlaying(false); setAt(null); };
     rounds.current.last = s0;
     await synth.play(s0);
+    started.current = performance.now() + 50;
     setPlaying(true);
     raf.current = requestAnimationFrame(follow);
   };
@@ -90,5 +93,5 @@ export const usePlayer = (score: BookScore | null, vi: number, speed: number, tr
   /** one note alone, a little longer (the note the teacher named) */
   const note = (midi: number) => { stop(); void playStartNotes([midi], transpose, false, 0.5, 1.4).catch(() => undefined); };
 
-  return { ready: !!synth, playing, counting, at, listen, along, note, stop };
+  return { ready: !!synth, playing, counting, at, listen, along, note, stop, startedAt: () => started.current };
 };

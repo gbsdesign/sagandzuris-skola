@@ -90,6 +90,8 @@ export const useAccess = () => {
     if (p === 'birthdays') return on('birthdays') ? 'open' : 'hidden';
     // the new look's search page (pages/shell/SearchPage): the same right as the search
     if (p === 'search') return membership.can('search') ? 'open' : 'hidden';
+    // the church calendar's page (the new look): the same right as the calendar
+    if (p === 'calendar') return membership.can('calendar') ? 'open' : 'hidden';
     return 'open';
   };
   return { section, page, on, kids, member, can: membership.can, status: membership.status };

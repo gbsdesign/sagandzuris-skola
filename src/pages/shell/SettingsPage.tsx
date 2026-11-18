@@ -5,12 +5,15 @@ import { useMembership } from '../../utils/memberAccess';
 import { useKhutsuriSetting } from '../../utils/khutsuri';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
 import { RemindersSheet } from '../../components/app/RemindersCard';
-import { CalendarLinkSheet } from '../../components/app/CalendarLinkCard';
 import { useWidgetLink } from '../../components/app/WidgetLinkCard';
 import { useAccountActions } from '../../components/views/ProfileActions';
 import { SettingsView } from './settings/SettingsView';
 import { InstallGuide } from './settings/InstallGuide';
 import { NotifyScreen, SummaryScreen } from '../v2/shetkobinebebi';
+import { TextSizeScreen } from '../v2/parametrebi/TextSizeScreen';
+import { ThemeScreen } from '../v2/parametrebi/ThemeScreen';
+import { PhoneCalendarSheet } from '../v2/kalendari/PhoneCalendarSheet';
+import { TEXT_STEPS, THEME_NAMES, useTextLook, useTheme } from '../../design/look';
 
 export { SettingsView } from './settings/SettingsView';
 export type { SettingsViewProps, WidgetLook } from './settings/SettingsView';
@@ -22,7 +25,8 @@ export type { SettingsViewProps, WidgetLook } from './settings/SettingsView';
 // • „აპის დაყენება“ only where the browser offers it (or on an iPhone, with its two steps);
 // • the kids' mode has no profile, so no personal details, signing out or deleting the account here either;
 // • a guest gets ხუცური, installing, the contacts and the privacy page.
-// The windows are the old ones (RemindersSheet, CalendarLinkSheet); „პირადი ინფორმაცია“ opens the profile, where its
+// The windows: RemindersSheet (old), PhoneCalendarSheet (v2/kalendari); „ტექსტის ზომა“ and „იერი“ are screens of their own
+// (mapItem `text`, `theme`); „პირადი ინფორმაცია“ opens the profile, where its
 // editor lives inside the profile card with the card's own saving.
 
 type Win = null | 'reminders' | 'calendar' | 'ios';
@@ -36,6 +40,8 @@ export const SettingsPage: React.FC = () => {
   const widget = useWidgetLink();
   const pwa = usePWAInstall();
   const account = useAccountActions();
+  const textLook = useTextLook();
+  const theme = useTheme();
   const [win, setWin] = useState<Win>(null);
   const close = () => setWin(null);
 
@@ -45,6 +51,9 @@ export const SettingsPage: React.FC = () => {
 
   if (member && mapItem === 'notify') return <NotifyScreen />;
   if (member && mapItem === 'notify~summary') return <SummaryScreen />;
+  // reading comfort (2026-11-18): the text size and the dark look, for everyone signed in
+  if (mapItem === 'text') return <TextSizeScreen />;
+  if (mapItem === 'theme') return <ThemeScreen />;
 
   return (
     <>
@@ -52,6 +61,8 @@ export const SettingsPage: React.FC = () => {
         onBack={handleGoBack}
         onReminders={member ? () => setWin('reminders') : undefined}
         onNotify={member ? () => openMapItem('notify') : undefined}
+        textSize={{ label: TEXT_STEPS[textLook.step].name, onTap: () => openMapItem('text') }}
+        theme={{ label: theme.choice === 'auto' ? 'ტელეფონით' : THEME_NAMES[theme.choice], onTap: () => openMapItem('theme') }}
         khutsuri={khutsuri}
         onKhutsuri={setKhutsuri}
         widget={member && widget.shown ? {
@@ -66,7 +77,7 @@ export const SettingsPage: React.FC = () => {
         remove={adult && account.canDelete ? { onTap: () => void account.remove(), busy: account.busy, error: account.error } : undefined}
       />
       {win === 'reminders' && <RemindersSheet onClose={close} />}
-      <CalendarLinkSheet open={win === 'calendar'} onClose={close} />
+      <PhoneCalendarSheet open={win === 'calendar'} onClose={close} />
       <InstallGuide open={win === 'ios'} onClose={close} />
     </>
   );

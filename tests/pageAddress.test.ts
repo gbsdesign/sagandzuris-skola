@@ -15,6 +15,7 @@ test('a page and what is open on it make an address and come back from it', () =
     snap({ page: 'biblioteka', mapItem: 'lives:m9' }),
     snap({ page: 'churches', mapItem: 'imereti/1960dc5d' }),
     snap({ page: 'settings' }),
+    snap({ page: 'calendar', mapItem: '2026-11-16' }),
   ];
   for (const c of cases) {
     const a = addressOf(c);
@@ -22,6 +23,7 @@ test('a page and what is open on it make an address and come back from it', () =
     assert.deepEqual(snapOfAddress(a), c, a);
   }
   assert.equal(addressOf(snap({ page: 'galoba', service: 'წირვა' })), '/p/galoba/tsirva');
+  assert.equal(addressOf(snap({ page: 'calendar', mapItem: '2026-11-16' })), '/p/calendar/2026-11-16');
 });
 
 test('home, a student page and anything else are no page address', () => {

@@ -78,3 +78,25 @@
   --spacing-icon: 36px;        /* a small round button inside a row or a bar */
   --spacing-row: 64px;         /* a list row; the bottom menu */
 }
+
+/* The dark look (settings → „იერი“, design/look.ts; boards x-ultra-muqi 1–4): the same names, dark grounds and light words.
+   On only while a page rebuilt for the new look is open. The accent's grounds (wine, gold, leaf, sea, danger) keep their
+   colour under white words; where one of them is a word on the dark ground, index.css lightens it (text-wine → blush…).
+   tests/darkTokens.test.ts measures the words' contrast and keeps src/design/tokens.ts's DARK the same. */
+html.sg-dark {
+  --color-page: #141211;
+  --color-surf: #26221f;
+  --color-line: #3a3633;
+  --color-soft: #34302c;
+  --color-dim: #4a443f;
+  --color-track: rgb(255 255 255 / 0.1);
+  --color-ink: #f2ede7;
+  --color-mut: #a59c92;
+  --color-faint: #756d65;
+  --color-tint: #3f2f2f;
+  --color-gold-ink: #e3c37a;
+  --color-gold-tint: #3d3220;
+  --color-leaf-ink: #8fd0a5;
+  --color-leaf-tint: #23352a;
+  --color-sea-tint: #1f3540;
+}

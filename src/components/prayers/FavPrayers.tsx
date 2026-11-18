@@ -83,7 +83,7 @@ export const useFavPrayers = () => {
 /** My kanons this cycle in my classes' psalter groups (2026-11-09, the user: „კლასში არსებული ფსალმუნთა ჯგუფი რჩეულებში
  *  გამოუჩნდეთ ვინც ჯგუფის წევრია“, answer „ჩემი კანონი“): the group's members only, while the psalter section is open;
  *  each cycle the row follows the distribution by itself. */
-const useMyKanons = (): { id: string; group: string }[] => {
+export const useMyKanons = (): { id: string; group: string }[] => {
   const { user } = useAuth();
   const access = useAccess();
   const { groups } = useMyPsalterGroups(user?.uid);

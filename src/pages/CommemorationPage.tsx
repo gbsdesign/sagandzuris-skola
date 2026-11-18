@@ -25,7 +25,7 @@ import { useAuth } from '../context';
 import { GroupMember, GroupPrayerName, PsalterGroup, firstName, groupPrayerText, useGroupPrayerNames, useMyPsalterGroups } from '../hooks/usePsalter';
 import { Btn, Sheet, Toggle, offerUndo } from '../components/ui/kit';
 
-type Genders = Record<string, Gender>;
+export type Genders = Record<string, Gender>;
 
 // the student's mark for a name, kept only where it differs from what the app guesses
 const withGender = (genders: Genders, entry: string, picked: Gender | undefined): Genders => {
@@ -37,10 +37,11 @@ const withGender = (genders: Genders, entry: string, picked: Gender | undefined)
 };
 
 // what a list sends back to be saved
-type ListPatch = { names?: string[]; sections?: NameSection[]; custom?: string[]; genders?: Genders };
+export type ListPatch = { names?: string[]; sections?: NameSection[]; custom?: string[]; genders?: Genders };
 
 // "მოსახსენებელი": the names a student prays for. Their order here is the order they are read in prayers.
-export const CommemorationPage: React.FC = () => {
+/** The page's state and rules, shared by both looks (the new look: pages/v2/lotsva/CommemorationScreen.tsx). */
+export const useCommemorationPage = () => {
   const { lists, save } = useCommemoration();
   const { user, isAdmin, isTeacher } = useAuth();
   const fromGroups = useGroupPrayerNames(user?.uid);
@@ -72,6 +73,31 @@ export const CommemorationPage: React.FC = () => {
       ...(p.custom ? { customCategories: p.custom } : {}),
       ...(p.genders ? { genders: p.genders } : {}),
     });
+  // turning the order on leaves the names where they are (the group's people too); only new ones take their place
+  const setAutoSort = (on: boolean) => update(on ? { autoSort: true, groupOrder: inGroupOrder(fromGroups, lists).map(p => p.uid) } : { autoSort: false });
+  /** what a list needs besides its names: its categories, or (the group's) the people who fill in by themselves */
+  const listProps = (id: NameListId) => ({
+    title: NAME_LISTS.find(l => l.id === id)?.title ?? '',
+    count: nameCount(lists, id),
+    names: lists[id],
+    genders: lists.genders,
+    ordered: lists.autoSort,
+    onSave: saveList(id),
+    cats: isCategoryList(id) ? { sections: lists.sections[id], custom: lists.customCategories } : undefined,
+    ...(id === 'group'
+      ? {
+          auto: inGroupOrder(fromGroups, lists),
+          onAutoOrder: (groupOrder: string[]) => update({ groupOrder }),
+          // a leader renames a member; with the order on anyone marks a member a man or a woman
+          onAutoTap: (uid: string) => (lists.autoSort || behind.has(uid) ? () => setTapped(uid) : undefined),
+        }
+      : {}),
+  });
+  return { lists, update, saveList, setAutoSort, listProps, person, leaderOf: (uid: string) => behind.get(uid), closePerson: () => setTapped(null) };
+};
+
+export const CommemorationPage: React.FC = () => {
+  const { lists, update, setAutoSort, listProps, person, leaderOf, closePerson } = useCommemorationPage();
 
   return (
     <div className="w-full max-w-2xl mx-auto mb-6 px-1 space-y-4">
@@ -80,41 +106,18 @@ export const CommemorationPage: React.FC = () => {
         <Toggle
           on={lists.autoSort}
           label="თავისით დალაგება"
-          // turning it on leaves the names where they are (the group's people too); only new ones take their place
-          onChange={on => update(on ? { autoSort: true, groupOrder: inGroupOrder(fromGroups, lists).map(p => p.uid) } : { autoSort: false })}
+          onChange={setAutoSort}
         />
       </div>
-      {NAME_LISTS.map(list => {
-        const id = list.id;
-        return (
-          <NameList
-            key={id}
-            title={list.title}
-            count={nameCount(lists, id)}
-            names={lists[id]}
-            genders={lists.genders}
-            ordered={lists.autoSort}
-            onSave={saveList(id)}
-            cats={isCategoryList(id) ? { sections: lists.sections[id], custom: lists.customCategories } : undefined}
-            {...(id === 'group'
-              ? {
-                  auto: inGroupOrder(fromGroups, lists),
-                  onAutoOrder: (groupOrder: string[]) => update({ groupOrder }),
-                  // a leader renames a member; with the order on anyone marks a member a man or a woman
-                  onAutoTap: (uid: string) => (lists.autoSort || behind.has(uid) ? () => setTapped(uid) : undefined),
-                }
-              : {})}
-          />
-        );
-      })}
+      {NAME_LISTS.map(list => <NameList key={list.id} {...listProps(list.id)} />)}
       {person && (
         <GroupNameSheet
           person={person}
-          leader={behind.get(person.uid)}
+          leader={leaderOf(person.uid)}
           genders={lists.genders}
           ordered={lists.autoSort}
           onGenders={genders => update({ genders })}
-          onClose={() => setTapped(null)}
+          onClose={closePerson}
         />
       )}
     </div>
@@ -149,16 +152,15 @@ const GenderPick: React.FC<{ value: Gender | undefined; onPick: (g: Gender) => v
   </div>
 );
 
-/** A group member tapped: a group leader corrects how the member is named at „დიდებაი“ — in every group of theirs
- *  that member is in; with the order on, anyone marks the member a man or a woman. */
-const GroupNameSheet: React.FC<{
-  person: GroupPrayerName;
-  leader?: { member: GroupMember; groups: PsalterGroup[] };
-  genders: Genders;
-  ordered: boolean;
-  onGenders: (genders: Genders) => void;
-  onClose: () => void;
-}> = ({ person, leader, genders, ordered, onGenders, onClose }) => {
+/** Renaming a group member at „დიდებაი“ (a leader) and marking a man or a woman (with the order on). */
+export const useGroupNameEdit = (
+  person: GroupPrayerName,
+  leader: { member: GroupMember; groups: PsalterGroup[] } | undefined,
+  genders: Genders,
+  ordered: boolean,
+  onGenders: (genders: Genders) => void,
+  onClose: () => void,
+) => {
   const before = leader ? (leader.member.prayer || firstName(leader.member.name)).trim() : person.name;
   const [name, setName] = useState(before);
   const [picked, setPicked] = useState<Gender | undefined>(genders[genderKey(person.name)]);
@@ -187,6 +189,21 @@ const GroupNameSheet: React.FC<{
       setBusy(false);
     }
   };
+
+  return { name, setName, picked, setPicked, busy, error, save };
+};
+
+/** A group member tapped: a group leader corrects how the member is named at „დიდებაი“ — in every group of theirs
+ *  that member is in; with the order on, anyone marks the member a man or a woman. */
+const GroupNameSheet: React.FC<{
+  person: GroupPrayerName;
+  leader?: { member: GroupMember; groups: PsalterGroup[] };
+  genders: Genders;
+  ordered: boolean;
+  onGenders: (genders: Genders) => void;
+  onClose: () => void;
+}> = ({ person, leader, genders, ordered, onGenders, onClose }) => {
+  const { name, setName, picked, setPicked, busy, error, save } = useGroupNameEdit(person, leader, genders, ordered, onGenders, onClose);
 
   return (
     <Sheet
@@ -227,10 +244,10 @@ const GroupNameSheet: React.FC<{
   );
 };
 
-type Cats = { sections: NameSection[]; custom: string[] };
+export type Cats = { sections: NameSection[]; custom: string[] };
 
 // what the name sheet is doing: placing freshly written names, or one name tapped in the list
-type Pending = { kind: 'add'; names: string[] } | { kind: 'edit'; name: string; from: string | null; index: number };
+export type Pending = { kind: 'add'; names: string[] } | { kind: 'edit'; name: string; from: string | null; index: number };
 
 // names written after „მეზობლები:“ go under that category (tidy places them); the rest take their place here
 const insertNames = (list: string[], fresh: string[], cmp: (a: string, b: string) => number) => {
@@ -238,21 +255,16 @@ const insertNames = (list: string[], fresh: string[], cmp: (a: string, b: string
   return cut < 0 ? insertSorted(list, fresh, cmp) : [...insertSorted(list, fresh.slice(0, cut), cmp), ...fresh.slice(cut)];
 };
 
-const NameList: React.FC<{
-  title: string;
-  count: number;
+/** A list's rules: adding names (asking the category where the list has them), placing / correcting one, the names the
+ *  app can't tell a man from a woman. */
+export const useNameList = ({ names, genders, ordered, onSave, auto, cats }: {
   names: string[];
   genders: Genders;
-  // „დალაგება“ is on
   ordered: boolean;
   onSave: (patch: ListPatch) => void;
   auto?: GroupPrayerName[];
-  // the group's people dragged into a new order (their uids)
-  onAutoOrder?: (uids: string[]) => void;
-  // a group name the reader may tap gives back what tapping it does
-  onAutoTap?: (uid: string) => (() => void) | undefined;
   cats?: Cats;
-}> = ({ title, count, names, genders, ordered, onSave, auto, onAutoOrder, onAutoTap, cats }) => {
+}) => {
   const [draft, setDraft] = useState('');
   const [pending, setPending] = useState<Pending | null>(null);
 
@@ -301,6 +313,26 @@ const NameList: React.FC<{
   const unknown = ordered
     ? [...(auto || []).map(p => p.name), ...names, ...(cats?.sections.flatMap(s => s.names) || [])].filter(n => !genderOf(n, genders))
     : [];
+
+  return { draft, setDraft, pending, setPending, add, place, unknown };
+};
+
+const NameList: React.FC<{
+  title: string;
+  count: number;
+  names: string[];
+  genders: Genders;
+  // „დალაგება“ is on
+  ordered: boolean;
+  onSave: (patch: ListPatch) => void;
+  auto?: GroupPrayerName[];
+  // the group's people dragged into a new order (their uids)
+  onAutoOrder?: (uids: string[]) => void;
+  // a group name the reader may tap gives back what tapping it does
+  onAutoTap?: (uid: string) => (() => void) | undefined;
+  cats?: Cats;
+}> = ({ title, count, names, genders, ordered, onSave, auto, onAutoOrder, onAutoTap, cats }) => {
+  const { draft, setDraft, pending, setPending, add, place, unknown } = useNameList({ names, genders, ordered, onSave, auto, cats });
 
   return (
     <section className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] p-3 sm:p-4 space-y-3">
@@ -377,16 +409,14 @@ const NameList: React.FC<{
   );
 };
 
-/** The small window that asks which category new names go under — or lets one name be corrected: its spelling,
- *  (on the lists that have them) its category, and with the order on, man or woman and a clergy title. */
-const NameSheet: React.FC<{
-  pending: Pending;
-  cats?: Cats;
-  genders: Genders;
-  ordered: boolean;
-  onClose: () => void;
-  onPlace: (category: string | null, names: string[], custom: string[], genders: Genders) => void;
-}> = ({ pending, cats, genders, ordered, onClose, onPlace }) => {
+/** The name window's rules: the category for fresh names, or one name corrected (spelling, category, man / woman, title). */
+export const useNameSheet = (
+  pending: Pending,
+  cats: Cats | undefined,
+  genders: Genders,
+  ordered: boolean,
+  onPlace: (category: string | null, names: string[], custom: string[], genders: Genders) => void,
+) => {
   const editing = pending.kind === 'edit';
   const [name, setName] = useState(editing ? pending.name : '');
   const [chosen, setChosen] = useState<string | null>(editing ? pending.from : null);
@@ -417,6 +447,22 @@ const NameSheet: React.FC<{
     if (editing) setChosen(t);
     else done(t, next);
   };
+
+  return { editing, name, setName, chosen, picked, setPicked, fresh, setFresh, choices, names, title, bare, titles, done, pick, addCategory };
+};
+
+/** The small window that asks which category new names go under — or lets one name be corrected: its spelling,
+ *  (on the lists that have them) its category, and with the order on, man or woman and a clergy title. */
+const NameSheet: React.FC<{
+  pending: Pending;
+  cats?: Cats;
+  genders: Genders;
+  ordered: boolean;
+  onClose: () => void;
+  onPlace: (category: string | null, names: string[], custom: string[], genders: Genders) => void;
+}> = ({ pending, cats, genders, ordered, onClose, onPlace }) => {
+  const { editing, name, setName, chosen, picked, setPicked, fresh, setFresh, choices, names, title, bare, titles, done, pick, addCategory } =
+    useNameSheet(pending, cats, genders, ordered, onPlace);
 
   const chip = (label: string, value: string | null) => {
     const on = editing && chosen === value;
@@ -526,7 +572,7 @@ const NameSheet: React.FC<{
 };
 
 // the list as it looks while one name is dragged from one place to another
-const moved = <T,>(list: T[], from: number, to: number) => {
+export const moved = <T,>(list: T[], from: number, to: number) => {
   const next = [...list];
   next.splice(to, 0, ...next.splice(from, 1));
   return next;

@@ -6,7 +6,8 @@ import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
 import { join } from 'node:path';
 import { COLOR, RADIUS_PX, TAP_PX, TEXT_PX } from '../src/design/tokens';
 
-const css = readFileSync('src/design/tokens.css', 'utf8');
+// the light values: the @theme block only (the dark look's block after it is checked in tests/darkTokens.test.ts)
+const css = /@theme\s*\{([\s\S]*?)\n\}/.exec(readFileSync('src/design/tokens.css', 'utf8'))?.[1] ?? '';
 const vars: Record<string, string> = Object.fromEntries(
   [...css.matchAll(/^\s*--([a-z0-9-]+):\s*([^;]+);/gm)].map(m => [m[1], m[2].trim()]),
 );

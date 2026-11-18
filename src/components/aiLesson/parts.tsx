@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Check, MoreHorizontal, Sparkles, Volume2, X } from 'lucide-react';
 import { Card, Dot, RoundButton, cx } from '../ui2';
 import { LESSON_PARTS } from '../../utils/aiLesson';
+import { useTeacherVoiceAuto } from './TeacherVoice';
 
 // The AI lesson's own pieces, the same on every screen (the prototypes' ltop, tbub, way, phrase, cen, tone, bot).
 
@@ -43,7 +44,10 @@ const useGeorgianVoice = () => {
 /** What the AI teacher says: its mark, one to three short sentences, and — where the phone can read Georgian — a speaker. */
 export const TeacherSays: React.FC<{ children: React.ReactNode; sub?: React.ReactNode; text?: string; className?: string }> = ({ children, sub, text, className }) => {
   const voice = useGeorgianVoice();
+  // AI step 4: the teacher's recorded voice speaks a ready sentence by itself (TeacherVoice.ts); its speaker plays it
+  const recorded = useTeacherVoiceAuto(text);
   const say = () => {
+    if (recorded.has) { recorded.play(); return; }
     if (!voice || !text) return;
     window.speechSynthesis.cancel();
     const u = new SpeechSynthesisUtterance(text);
@@ -58,7 +62,7 @@ export const TeacherSays: React.FC<{ children: React.ReactNode; sub?: React.Reac
           <div className="text-lead leading-[1.45] wrap-break-word">{children}</div>
           {sub && <div className="mt-1 text-meta text-mut">{sub}</div>}
         </div>
-        {voice && text && <RoundButton label="ხმამაღლა" size={36} tone="plain" className="text-wine" onClick={say}><Volume2 /></RoundButton>}
+        {(voice || recorded.has) && text && <RoundButton data-teacher-voice label="ხმამაღლა" size={36} tone="plain" className="text-wine" onClick={say}><Volume2 /></RoundButton>}
       </div>
     </Card>
   );

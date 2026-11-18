@@ -15,6 +15,8 @@ const EVENT = 'sg-books-read';
 
 export const bookReadId = (place: string) => `book:${place}`;
 export const lifeReadId = (id: string) => `life:${id}`;
+/** one chapter of a book marked read (the new look's „წავიკითხე“ under a chapter); the library ring does not count these */
+export const chapterReadId = (place: string, n: number) => `chapter:${place}:${n}`;
 
 const clean = (raw: unknown): Record<string, string> =>
   raw && typeof raw === 'object' && !Array.isArray(raw)

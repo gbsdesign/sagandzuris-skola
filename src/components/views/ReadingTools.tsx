@@ -2,6 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronsDown, Maximize2, Minus, Moon, Pause, Play, Plus, X } from 'lucide-react';
 import { Prompter, blockAtReading, prompterCopy, showBlock } from './Prompter';
+import { useNewLook } from '../../design/newLook';
+import { AutoMenuSheet } from '../../pages/v2/lotsva/AutoMenuSheet';
 
 // The tools over a prayer's text: ხუცური on the left; auto-scroll and the text's size on the right.
 // Nothing is remembered: every new visit starts in ordinary letters, standard size, standing still.
@@ -103,7 +105,8 @@ const MENU_ITEM =
 
 /** ⏬: a small menu at the button — the page moves up by itself (the bar at the bottom) or the full-screen prompter.
  * `source` = the text read, `scroller` = the box that scrolls when it is not the window (a full-screen reader), `zoom` =
- * the letters' size (1 = 100 %), `label` = a worded button in place of the round one (its menu opens to the left edge). */
+ * the letters' size (1 = 100 %), `label` = a worded button in place of the round one (its menu opens to the left edge).
+ * In the new look the menu is a sheet from the bottom (board x-avto-meniu); `face` = the button's own drawing there. */
 export const AutoScrollButton: React.FC<{
   source: Getter;
   scroller?: Getter;
@@ -112,21 +115,23 @@ export const AutoScrollButton: React.FC<{
   className?: string;
   psalter?: number;
   neighbours?: Neighbours;
-}> = ({ source, scroller, zoom = 1, label, className, psalter, neighbours }) => {
+  face?: React.ReactNode;
+}> = ({ source, scroller, zoom = 1, label, className, psalter, neighbours, face }) => {
+  const nl = useNewLook();
   const [menu, setMenu] = useState(false);
   const [open, setOpen] = useState<null | 'page' | 'full'>(null);
   const [speed, setSpeed] = useState(START_SPEED); // one pace for the page and the prompter
   const wrap = useRef<HTMLSpanElement>(null);
 
-  // a tap anywhere else (or Esc) closes the menu
+  // a tap anywhere else (or Esc) closes the menu (the new look's sheet closes itself)
   useEffect(() => {
-    if (!menu) return;
+    if (!menu || nl) return;
     const away = (e: PointerEvent) => { if (!wrap.current?.contains(e.target as Node)) setMenu(false); };
     const esc = (e: KeyboardEvent) => { if (e.key === 'Escape') setMenu(false); };
     document.addEventListener('pointerdown', away);
     document.addEventListener('keydown', esc);
     return () => { document.removeEventListener('pointerdown', away); document.removeEventListener('keydown', esc); };
-  }, [menu]);
+  }, [menu, nl]);
 
   const pick = (way: 'page' | 'full') => {
     setMenu(false);
@@ -143,12 +148,17 @@ export const AutoScrollButton: React.FC<{
         aria-expanded={menu}
         aria-label="ავტომატური კითხვა"
         title="ავტომატური კითხვა"
-        className={label ? className : `${ROUND} ${PILL} ${menu ? '!bg-[#7a2028] !text-[#fbf6ec] !ring-[#7a2028]' : ''} ${className ?? ''}`}
+        className={face || label ? className : `${ROUND} ${PILL} ${menu ? '!bg-[#7a2028] !text-[#fbf6ec] !ring-[#7a2028]' : ''} ${className ?? ''}`}
       >
-        <ChevronsDown className={label ? 'w-4 h-4 text-[#b4620e]' : 'w-[18px] h-[18px]'} />
-        {label}
+        {face ?? (
+          <>
+            <ChevronsDown className={label ? 'w-4 h-4 text-[#b4620e]' : 'w-[18px] h-[18px]'} />
+            {label}
+          </>
+        )}
       </button>
-      {menu && (
+      {nl && <AutoMenuSheet open={menu} onPick={pick} onClose={() => setMenu(false)} />}
+      {menu && !nl && (
         <span
           role="menu"
           className={`absolute top-full mt-2 ${label ? 'left-0 origin-top-left' : 'right-0 origin-top-right'} z-[60] w-max p-1.5 rounded-2xl bg-white ring-1 ring-[#e8dcc8] shadow-[0_14px_36px_-14px_rgba(42,32,23,0.45)] flex flex-col animate-in fade-in zoom-in-95 duration-150`}

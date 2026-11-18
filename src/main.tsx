@@ -4,6 +4,7 @@ import App from './App.tsx';
 import './index.css';
 import { startOffline } from './utils/offlineFiles';
 import { applyKhutsuri, isKhutsuri } from './utils/khutsuri';
+import { applyTextSize, applyTheme } from './design/look';
 import { markAndroidApp } from './utils/androidApp';
 import { dropFreshMark, startAppUpdates } from './utils/appUpdate';
 import { startErrorLog } from './utils/errorLog';
@@ -20,6 +21,9 @@ startOffline();
 
 // ხუცური (the header's „Ⴞ“): set before the first paint, so the page doesn't flash in mkhedruli
 applyKhutsuri(isKhutsuri());
+// the text size, bold letters and the dark look (settings): before the first paint too (design/look.ts)
+applyTextSize();
+applyTheme();
 markAndroidApp();
 
 createRoot(document.getElementById('root')!).render(

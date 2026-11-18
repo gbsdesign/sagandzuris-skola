@@ -256,6 +256,16 @@ service cloud.firestore {
         && changed().hasOnly(['count', 'last', 'ver', 'dev', 'where']);
     }
 
+    // A word the reading pages' dictionary lacks (pages/v2/sitqva/WordMeanings.tsx): only the word (the id) and a count, no name.
+    match /wordRequests/{word} {
+      allow read, delete: if isAdmin();
+      allow create: if isSignedIn() && word.matches('^[ა-ჿ]{2,30}$')
+        && incoming().keys().hasOnly(['n', 'last']) && incoming().n == 1
+        && incoming().last is string && incoming().last.size() <= 30;
+      allow update: if isSignedIn() && changed().hasOnly(['n', 'last'])
+        && incoming().n == existing().n + 1 && incoming().last is string && incoming().last.size() <= 30;
+    }
+
     // What an admin wants on their phone (src/utils/adminPush.ts; the reminders Worker reads it with its service account):
     // `waiting` — a newcomer asks to be let in (superadmins only, the ones who decide), `weekly` — Monday's overview.
     match /adminPush/{userId} {
@@ -349,6 +359,15 @@ service cloud.firestore {
       allow create, update: if isSuperAdmin()
         && (artId == 'kaba' || (request.resource.data.image is bytes && request.resource.data.image.size() < 1000000));
       allow delete: if isSuperAdmin();
+    }
+
+    // ---- „მასწავლებლის ხმა“ (components/aiLesson/TeacherVoice*): the owner records the AI teacher's ready sentences once,
+    // the signed-in hear them (a clip < 200 KB; `index` = the list of recorded ones) -----------------------------------
+    match /aiVoice/{clipId} {
+      allow read: if isSignedIn();
+      allow create, update: if isOwner()
+        && (clipId == 'index' || (request.resource.data.mp3 is bytes && request.resource.data.mp3.size() < 200000));
+      allow delete: if isOwner();
     }
 
     // ---- The pearls game (src/hooks/usePearls.ts) ----------------------------------------------------------------

@@ -18,7 +18,7 @@ const SERVICES: [Exclude<ServiceType, null>, string][] = [
 const LINKABLE: PageType[] = [
   'profile', 'galoba', 'simghera', 'mtkmeli', 'sakravebi', 'gz', 'tsinaprebi', 'admin', 'class', 'prayer', 'commemoration',
   'biblioteka', 'psalter', 'messages', 'dm', 'abituri', 'birthdays', 'medavitneoba', 'games', 'videos', 'churches', 'notices',
-  'search', 'settings',
+  'search', 'settings', 'calendar',
 ];
 
 const enc = (s: string) => encodeURIComponent(s);

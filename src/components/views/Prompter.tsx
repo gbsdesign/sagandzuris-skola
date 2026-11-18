@@ -3,6 +3,8 @@ import { createPortal } from 'react-dom';
 import { ArrowLeft, ArrowUp, ChevronLeft, ChevronRight, Focus, Loader2, Minus, Moon, Pause, Play, Plus, RotateCcw, Sun, X } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext';
 import { Flash, Ticker, firstWordOf, wordsOf, type FlowHandle, type Word } from './PrompterFlow';
+import { useNewLook } from '../../design/newLook';
+import { PrompterAaSheet, PrompterTop } from '../../pages/v2/lotsva/PrompterAa';
 
 // „წამყვანის ეკრანი“ (2026-11-06, the user: „ავტომატური კითხვის ჟურნალისტური ვერსია … წამყვანებს წინ რომ ეკრანი აქვთ“):
 // the text being read, big, over the whole screen, gliding up past a reading line as on a television prompter. Opened
@@ -211,6 +213,9 @@ export const Prompter: React.FC<{
 }> = ({ html, start, speeds, speed, onSpeed, onClose, kanon, autoStart = false, prev, next, onGo, loading }) => {
   // „გვერდზე“ and „სიტყვით“ are the admins' only (the user, 2026-11-06); everybody else reads going up
   const { isAdmin } = useAuth();
+  // the new look (board x-tsamqvani): only ✕ and „Aa“ on top; the rest in the „Aa“ sheet
+  const nl = useNewLook();
+  const [aa, setAa] = useState(false);
   const [theme, setTheme] = useState<Theme>(() => (read(THEME_KEY) === 'light' ? 'light' : 'dark'));
   const [size, setSize] = useState(() => {
     const kept = Number(read(SIZE_KEY));
@@ -390,12 +395,12 @@ export const Prompter: React.FC<{
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [running, mode]);
 
-  // the controls step aside while it moves
+  // the controls step aside while it moves (not while the „Aa“ sheet is open)
   useEffect(() => {
-    if (!running || !chrome) return;
+    if (!running || !chrome || aa) return;
     const id = window.setTimeout(() => setChrome(false), 2800);
     return () => window.clearTimeout(id);
-  }, [running, chrome, poke]);
+  }, [running, chrome, poke, aa]);
 
   // the time left, while the controls are shown
   useEffect(() => {
@@ -526,12 +531,16 @@ export const Prompter: React.FC<{
 
   const close = () => onClose(mode === 'up' ? blockAtLine() : words[flow.current?.word() ?? 0]?.block ?? start);
 
-  // a computer's keys: space pauses, ↑ ↓ the speed, + − the letters, Esc closes
-  const keys = useRef({ toggle, stepSpeed, stepSize, close });
-  keys.current = { toggle, stepSpeed, stepSize, close };
+  // a computer's keys: space pauses, ↑ ↓ the speed, + − the letters, Esc closes (the „Aa“ sheet first, when open)
+  const keys = useRef({ toggle, stepSpeed, stepSize, close, aa, closeAa: () => setAa(false) });
+  keys.current = { toggle, stepSpeed, stepSize, close, aa, closeAa: () => setAa(false) };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const k = keys.current;
+      if (k.aa) {
+        if (e.key === 'Escape') { e.preventDefault(); k.closeAa(); }
+        return;
+      }
       if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); k.toggle(); }
       else if (e.key === 'ArrowUp') { e.preventDefault(); k.stepSpeed(1); }
       else if (e.key === 'ArrowDown') { e.preventDefault(); k.stepSpeed(-1); }
@@ -689,7 +698,7 @@ export const Prompter: React.FC<{
       {kanon && place && (
         <div
           className="pointer-events-none absolute inset-x-0 flex justify-center px-4 transition-[top] duration-300"
-          style={{ top: `calc(env(safe-area-inset-top, 0px) + ${chrome ? (isAdmin ? 118 : 66) : 12}px)` }}
+          style={{ top: `calc(env(safe-area-inset-top, 0px) + ${chrome ? (nl ? 70 : isAdmin ? 118 : 66) : 12}px)` }}
           aria-live="polite"
         >
           {chrome ? (
@@ -777,6 +786,7 @@ export const Prompter: React.FC<{
         className={`absolute inset-x-0 top-0 flex flex-col items-center gap-2 transition-opacity duration-300 ${chrome ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 10px)', paddingLeft: 'calc(env(safe-area-inset-left, 0px) + 12px)', paddingRight: 'calc(env(safe-area-inset-right, 0px) + 12px)' }}
       >
+       {nl ? <PrompterTop theme={theme} onClose={close} onAa={() => { setAa(true); nudge(); }} /> : <>
        <div className="w-full flex items-center gap-2">
         <button type="button" onClick={close} aria-label="დახურვა" title="დახურვა" className={`${round} backdrop-blur`} style={{ ...panel, color: look.btn }}>
           <X className="w-5 h-5" />
@@ -838,6 +848,7 @@ export const Prompter: React.FC<{
             );
           })}
         </div>}
+       </>}
       </div>
 
       <div
@@ -892,6 +903,19 @@ export const Prompter: React.FC<{
           </button>
         </div>
       </div>
+
+      {nl && aa && (
+        <PrompterAaSheet
+          theme={theme}
+          onTheme={pickTheme}
+          canSmaller={size !== SIZES[0]}
+          canBigger={size !== SIZES[SIZES.length - 1]}
+          onSize={stepSize}
+          guide={mode === 'up' ? { on: guide, onToggle: switchGuide } : undefined}
+          modes={isAdmin ? { value: mode, onPick: pickMode } : undefined}
+          onClose={() => setAa(false)}
+        />
+      )}
     </div>,
     document.body,
   );

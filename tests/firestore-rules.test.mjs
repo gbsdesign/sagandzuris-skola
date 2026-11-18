@@ -316,6 +316,15 @@ await t('a member cannot change the kaba pictures', assertFails(setDoc(doc(stu, 
 await t('an admin cannot publish the kaba', assertFails(setDoc(doc(adm, 'samosiArt', 'kaba'), { published: false })));
 await t('a kaba picture must be bytes', assertFails(setDoc(doc(owner, 'samosiArt', 'kaba-x'), { ...pic(), image: 'x' })));
 await t('a guest sees the kaba pictures', assertSucceeds(getDoc(doc(guest, 'samosiArt', 'kaba-full'))));
+// ---- „მასწავლებლის ხმა“
+const clip = (n = 3000) => ({ mp3: Bytes.fromUint8Array(new Uint8Array(n)), text: 'ზუსტად!', voice: 'female', at: 1 });
+await t('owner keeps a teacher voice clip', assertSucceeds(setDoc(doc(owner, 'aiVoice', 'female_0abc123'), clip())));
+await t('owner updates the voice list', assertSucceeds(setDoc(doc(owner, 'aiVoice', 'index'), { female: { '0abc123': 1 } }, { merge: true })));
+await t('a voice clip stays small', assertFails(setDoc(doc(owner, 'aiVoice', 'female_big'), clip(250000))));
+await t('a voice clip must be sound bytes', assertFails(setDoc(doc(owner, 'aiVoice', 'female_x'), { ...clip(), mp3: 'x' })));
+await t('an admin cannot record the teacher', assertFails(setDoc(doc(adm, 'aiVoice', 'female_0abc123'), clip())));
+await t('a member hears the teacher', assertSucceeds(getDoc(doc(stu, 'aiVoice', 'female_0abc123'))));
+await t('a guest does not', assertFails(getDoc(doc(guest, 'aiVoice', 'index'))));
 await t('a member ticks kaba parts', assertSucceeds(setDoc(doc(stu, 'students', 'stu'), { kaba: ['kaba'], samosiOutfit: 'kaba' }, { merge: true })));
 
 // ---- „ჩემი სამოსი“'s real parts: the photo of the member's own one
@@ -425,6 +434,19 @@ await t('a teacher does not read the log', assertFails(getDocs(collection(tch, '
 await t('an admin reads the log', assertSucceeds(getDocs(collection(adm, 'errorLog'))));
 await t('a member cannot clear it', assertFails(deleteDoc(doc(stu, 'errorLog', 'e1'))));
 await t('an admin clears a line', assertSucceeds(deleteDoc(doc(adm, 'errorLog', 'e1'))));
+
+// ---- a word the reading pages' dictionary lacks (pages/v2/sitqva): only the word and how often it was asked, no name
+const askWord = (db) => setDoc(doc(db, 'wordRequests', 'უწინარეს'), { n: increment(1), last: '2026-11-18T08:00:00Z' }, { merge: true });
+await t('a member asks for a word', assertSucceeds(askWord(stu)));
+await t('another asks for it too: one more', assertSucceeds(askWord(stu2)));
+await t('a guest does not', assertFails(askWord(guest)));
+await t('a new word starts at one', assertFails(setDoc(doc(stu, 'wordRequests', 'რაჟამს'), { n: 5, last: 'x' })));
+await t('the count cannot jump', assertFails(updateDoc(doc(stu, 'wordRequests', 'უწინარეს'), { n: 40, last: 'y' })));
+await t('a word has only its count and time', assertFails(setDoc(doc(stu, 'wordRequests', 'მუნ'), { n: 1, last: 'x', uid: 'stu' })));
+await t('a word is a Georgian word', assertFails(setDoc(doc(stu, 'wordRequests', 'hello'), { n: 1, last: 'x' })));
+await t('a member does not read the list', assertFails(getDoc(doc(stu, 'wordRequests', 'უწინარეს'))));
+await t('an admin reads it', assertSucceeds(getDocs(collection(adm, 'wordRequests'))));
+await t('an admin clears a word', assertSucceeds(deleteDoc(doc(adm, 'wordRequests', 'უწინარეს'))));
 
 await t('superadmin asks for the newcomer notice', assertSucceeds(setDoc(doc(sup, 'adminPush', 'sup'), { waiting: true, weekly: true, at: 'x' })));
 await t('admin asks for the Monday overview', assertSucceeds(setDoc(doc(adm, 'adminPush', 'adm'), { waiting: false, weekly: true, at: 'x' })));

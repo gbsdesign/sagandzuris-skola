@@ -9,7 +9,7 @@ const RATE = 24000;
 const LEAD = 0.1;
 
 /** the section's own score: its notes moved to beat 0, its tempo from there on */
-const subScore = (score: BookScore, from: number, to: number): BookScore => {
+export const subScore = (score: BookScore, from: number, to: number): BookScore => {
   const map = makeTimeMap(score.tempos);
   const b0 = map.toBeat(from);
   const b1 = map.toBeat(to);

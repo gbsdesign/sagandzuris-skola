@@ -64,7 +64,8 @@ const withoutBarTitle = (html: string, id: string): string => {
 
 const NIGHT_KEY = 'sg-prayer-night';
 
-export const PrayerPage: React.FC = () => {
+/** The prayer page's state and its effects, shared by both looks (the old card and the new look's pages/v2/lotsva). */
+export const usePrayerReader = () => {
   const { selectedPrayerId, openPrayer } = useNavigation();
   const [html, setHtml] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -97,10 +98,70 @@ export const PrayerPage: React.FC = () => {
     };
   }, [selectedPrayerId]);
 
-  if (!selectedPrayerId) return null;
-  const hour = PRAYER_HOURS.find(h => h.id === selectedPrayerId);
-  const kathisma = KATHISMAS.find(k => k.id === selectedPrayerId);
-  const { prev, next } = neighbours(selectedPrayerId);
+  const id = selectedPrayerId;
+  const hour = id ? PRAYER_HOURS.find(h => h.id === id) : undefined;
+  const kathisma = id ? KATHISMAS.find(k => k.id === id) : undefined;
+  const { prev, next } = id ? neighbours(id) : {};
+  return {
+    id, html, failed, textSize, setTextSize, khutsuri, setKhutsuri, night, setNight, textEl, setTextEl, hour, kathisma, prev, next, openPrayer,
+    /** a psalter kanon's number, for the prompter's own way */
+    psalter: kathisma ? Number(kathisma.id.replace('kathisma-', '')) || undefined : undefined,
+  };
+};
+
+/** The text itself with what is woven around it (folded prayers, the hour's psalms) — the same in both looks. */
+export const PrayerBody: React.FC<{ id: string; html: string; khutsuri: boolean; size: number; onEl: (el: HTMLDivElement | null) => void }> = ({
+  id, html, khutsuri, size, onEl,
+}) => {
+  const hour = PRAYER_HOURS.find(h => h.id === id);
+  const kathisma = KATHISMAS.find(k => k.id === id);
+  return (
+    // big sizes: a long word breaks rather than leaving the card; ხუცური off = the text drawn afresh
+    <div key={khutsuri ? 'khutsuri' : 'mkhedruli'} ref={onEl} style={{ zoom: size / 100 }} className="break-words">
+      {parseBibleId(id) ? (
+        // the prayers before and after reading Holy Scripture, folded around the chapter; folded again on the next one
+        <div key={id} className={PROSE}>
+          <FoldedPrayer id="sakhareba-tsin" label="ლოცვა წაკითხვის წინ" className="mb-5" />
+          <div dangerouslySetInnerHTML={{ __html: html }} />
+          <FoldedPrayer id="sakhareba-shemdeg" label="ლოცვა წაკითხვის შემდეგ" className="mt-5" />
+        </div>
+      ) : (
+        <>
+          {/* a kathisma: the rule's opening prayers above it and the closing ones below, folded; folded again on the next one */}
+          {kathisma && (
+            <div className={PROSE}>
+              <FoldedPrayer key={`tsin-${kathisma.id}`} id="psalter-tsin" label="კითხვის წინ" className="mb-5" />
+            </div>
+          )}
+          <PrayerText
+            html={html}
+            glory={Boolean(kathisma)}
+            dayPrayer={id === 'dila' || id === 'dzili' ? todaysWeekPrayerId(id) : undefined}
+          />
+          {kathisma && (
+            <div className={PROSE}>
+              <FoldedPrayer key={`shemdeg-${kathisma.id}`} id="psalter-shemdeg" label="კითხვის შემდეგ" className="mt-5" woven />
+            </div>
+          )}
+        </>
+      )}
+      {/* each of the seven hours goes on with „მოწყალებისა კარი“ (said three times), folded, then one's own psalms for this hour */}
+      {hour && (
+        <div className={PROSE}>
+          <FoldedPrayer key={hour.id} id="motskhalebisa-kari" label="განაგრძე" className="mt-6" />
+          <HourPsalms key={`psalms-${hour.id}`} hour={hour} />
+        </div>
+      )}
+    </div>
+  );
+};
+
+export const PrayerPage: React.FC = () => {
+  const r = usePrayerReader();
+  const { html, failed, textSize, setTextSize, khutsuri, setKhutsuri, night, setNight, textEl, setTextEl, hour, prev, next, openPrayer } = r;
+
+  if (!r.id) return null;
+  const selectedPrayerId = r.id;
   const pager = (prev || next) && (
     <div className="flex items-center justify-between gap-2">
       {prev ? (
@@ -135,7 +196,7 @@ export const PrayerPage: React.FC = () => {
             night={night}
             onNight={setNight}
             source={html === null ? null : textEl}
-            psalter={kathisma ? Number(kathisma.id.replace('kathisma-', '')) || undefined : undefined}
+            psalter={r.psalter}
             neighbours={{
               prev: prev && { label: prev.label, go: () => openPrayer(prev.id) },
               next: next && { label: next.label, go: () => openPrayer(next.id) },
@@ -149,45 +210,7 @@ export const PrayerPage: React.FC = () => {
             <Loader2 className="w-6 h-6 animate-spin text-[#7a2028]" />
           </div>
         ) : (
-          <>
-            {/* big sizes: a long word breaks rather than leaving the card; ხუცური off = the text drawn afresh */}
-            <div key={khutsuri ? 'khutsuri' : 'mkhedruli'} ref={setTextEl} style={{ zoom: textSize / 100 }} className="break-words">
-              {parseBibleId(selectedPrayerId) ? (
-                // the prayers before and after reading Holy Scripture, folded around the chapter; folded again on the next one
-                <div key={selectedPrayerId} className={PROSE}>
-                  <FoldedPrayer id="sakhareba-tsin" label="ლოცვა წაკითხვის წინ" className="mb-5" />
-                  <div dangerouslySetInnerHTML={{ __html: html }} />
-                  <FoldedPrayer id="sakhareba-shemdeg" label="ლოცვა წაკითხვის შემდეგ" className="mt-5" />
-                </div>
-              ) : (
-                <>
-                  {/* a kathisma: the rule's opening prayers above it and the closing ones below, folded; folded again on the next one */}
-                  {kathisma && (
-                    <div className={PROSE}>
-                      <FoldedPrayer key={`tsin-${kathisma.id}`} id="psalter-tsin" label="კითხვის წინ" className="mb-5" />
-                    </div>
-                  )}
-                  <PrayerText
-                    html={html}
-                    glory={Boolean(kathisma)}
-                    dayPrayer={selectedPrayerId === 'dila' || selectedPrayerId === 'dzili' ? todaysWeekPrayerId(selectedPrayerId) : undefined}
-                  />
-                  {kathisma && (
-                    <div className={PROSE}>
-                      <FoldedPrayer key={`shemdeg-${kathisma.id}`} id="psalter-shemdeg" label="კითხვის შემდეგ" className="mt-5" woven />
-                    </div>
-                  )}
-                </>
-              )}
-              {/* each of the seven hours goes on with „მოწყალებისა კარი“ (said three times), folded, then one's own psalms for this hour */}
-              {hour && (
-                <div className={PROSE}>
-                  <FoldedPrayer key={hour.id} id="motskhalebisa-kari" label="განაგრძე" className="mt-6" />
-                  <HourPsalms key={`psalms-${hour.id}`} hour={hour} />
-                </div>
-              )}
-            </div>
-          </>
+          <PrayerBody id={selectedPrayerId} html={html} khutsuri={khutsuri} size={textSize} onEl={setTextEl} />
         )}
       </article>
 
@@ -204,7 +227,8 @@ export const PrayerPage: React.FC = () => {
 // a habit linking this prayer, else one whose book button holds it — the evening prayers tick „საღამოს ლოცვები“…; a chapter adds one თავი to "სახარება" or "სამოციქულო") and moves "გააგრძელე" past a finished chapter.
 // A kathisma ticks "ფსალმუნები" the same way, and when it is my kanon in a psalter group this cycle — or one I took over
 // to help — the group's kanon is marked read too (the one button for both).
-const ReadMark: React.FC<{ prayerId: string }> = ({ prayerId }) => {
+/** „წავიკითხე“'s rules (see above), shared by both looks; `show` is false when there is nothing to tick. */
+export const useReadMark = (prayerId: string) => {
   const { user } = useAuth();
   const access = useAccess();
   const { model, blessing } = useHabitsModel(() => {});
@@ -223,7 +247,7 @@ const ReadMark: React.FC<{ prayerId: string }> = ({ prayerId }) => {
   const habitId = myHabitOfPrayer(prayerId, model.all.map(x => x.habit));
   const found = habitId ? model.all.find(x => x.habit.id === habitId)?.habit : undefined;
   const habit = found && access.section('chvevebi') === 'open' ? found : undefined;
-  if (!user || (!habit && !kanonIn.length)) return null;
+  const show = !!user && (!!habit || kanonIn.length > 0);
   const today = new Date();
   const ticked = !!habit && model.isOn(habit.id, today);
   // a chapter of the Gospel or the Apostle adds one to the day's count (the day ticks at the goal); „გაუქმება“ takes it back
@@ -231,6 +255,7 @@ const ReadMark: React.FC<{ prayerId: string }> = ({ prayerId }) => {
   const count = habit && counter ? model.countOn(habit.id, today) : 0;
 
   const press = () => {
+    if (!user) return;
     setPressed(true);
     rememberRead(prayerId, true);
     // the mark waits on the phone when offline and is sent later
@@ -243,9 +268,16 @@ const ReadMark: React.FC<{ prayerId: string }> = ({ prayerId }) => {
     setPressed(false);
     if (habit) model.setCount(habit.id, count - 1, today);
   };
+  // „ · 2 / 5 თავი“ after the button's word
+  const of = counter ? ` · ${count} / ${counter.goal} ${counter.unit}` : '';
+  return { show, pressed, ticked, counter, count, of, press, undo, blessing };
+};
+
+const ReadMark: React.FC<{ prayerId: string }> = ({ prayerId }) => {
+  const { show, pressed, ticked, counter, count, of, press, undo, blessing } = useReadMark(prayerId);
+  if (!show) return null;
 
   // one button, no card: „წავიკითხე“, then a soft „წაკითხულია“ (a chapter: „2 / 5 თავი“, a second press takes it back)
-  const of = counter ? ` · ${count} / ${counter.goal} ${counter.unit}` : '';
   return (
     <div className="space-y-2.5">
       {pressed ? (
@@ -263,7 +295,8 @@ const ReadMark: React.FC<{ prayerId: string }> = ({ prayerId }) => {
 };
 
 // Reminder chips for one of the seven-times prayers: 10, 5 and 1 minute before the hour, in one row.
-const HourReminders: React.FC<{ hour: PrayerHour }> = ({ hour }) => {
+/** The reminder chips' rules for one hour, shared by both looks. */
+export const useHourReminders = (hour: PrayerHour) => {
   const settings = useReminders();
   const active = settings[hour.id] || [];
   const [notice, setNotice] = useState<string | null>(null);
@@ -289,6 +322,11 @@ const HourReminders: React.FC<{ hour: PrayerHour }> = ({ hour }) => {
   const where = !notificationsSupported()
     ? 'ეს ბრაუზერი შეტყობინებებს არ უჭერს მხარს. iPhone-ზე ჯერ დაამატე საიტი მთავარ ეკრანზე („Add to Home Screen“) და იქიდან გახსენი.'
     : null;
+  return { active, toggle, notice, where, offsets: REMINDER_OFFSETS };
+};
+
+const HourReminders: React.FC<{ hour: PrayerHour }> = ({ hour }) => {
+  const { active, toggle, notice, where } = useHourReminders(hour);
 
   return (
     <section className="rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] px-3.5 py-2.5 space-y-1.5">

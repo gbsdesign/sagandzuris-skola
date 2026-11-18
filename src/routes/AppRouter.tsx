@@ -21,6 +21,7 @@ import { useNewLook } from '../design/newLook';
 import { NotLoadedView } from '../components/shell/NotLoadedView';
 import { restartFresh } from '../utils/appUpdate';
 import { TOP_PAGES } from '../components/shell/tabs';
+import { darkReadyPage, useDarkPage } from '../design/look';
 
 
 // Fetches the newest version of the app (the service worker takes over at once — registerType 'autoUpdate') and
@@ -133,6 +134,14 @@ const PsalterScreen = page(() => import('../pages/v2/psalmuni/PsalterScreen'), '
 const LettersPage = page(() => import('../pages/v2/tserilebi/LettersPage'), 'LettersPage');
 const BirthdaysScreen = page(() => import('../pages/v2/dabadebis/BirthdaysScreen'), 'BirthdaysScreen');
 const GalobaV2 = page(() => import('../pages/v2/galoba/GalobaV2'), 'GalobaV2');
+const LibraryV2 = page(() => import('../pages/v2/library/LibraryV2'), 'LibraryV2');
+const AncestorsV2 = page(() => import('../pages/v2/library/AncestorsV2'), 'AncestorsV2');
+// ლოცვანი, a prayer and მოსახსენებელი in the new look (pages/v2/lotsva)
+const LotsvaniScreen = page(() => import('../pages/v2/lotsva/LotsvaniScreen'), 'LotsvaniScreen');
+const PrayerScreen = page(() => import('../pages/v2/lotsva/PrayerScreen'), 'PrayerScreen');
+const CommemorationScreen = page(() => import('../pages/v2/lotsva/CommemorationScreen'), 'CommemorationScreen');
+// the church calendar as a page of its own in the new look (board x-kalendari)
+const CalendarPage = page(() => import('../pages/v2/kalendari/CalendarPage'), 'CalendarPage');
 // the old look's home loads only when the admin hides the new look
 const HomePage = page(() => import('../pages/HomePage'), 'HomePage');
 
@@ -190,6 +199,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   const { user, loading, isAdmin, isTeacher } = useAuth();
   // the new look (redesign stage 2): the bottom menu's own pages have no „უკან“; the settings, notices and search are pages
   const nl = useNewLook();
+  // the dark look (settings → „იერი“) shows only on the pages rebuilt of the design tokens (design/look.ts)
+  useDarkPage(nl && darkReadyPage(currentPage, mapItem));
   const top = nl && TOP_PAGES.includes(currentPage);
   // the home page in the new look is HomeV2 (redesign stage 4, board x-mtavari)
   const homeEl = nl ? <HomeV2 /> : <HomePage logoUrl={logoUrl} />;
@@ -222,6 +233,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   if (currentPage === 'notices') return nl ? <NoticesPage /> : homeEl;
   if (currentPage === 'settings') return nl && user ? <SettingsPage /> : homeEl;
   if (currentPage === 'search') return nl ? <SearchPage /> : homeEl;
+  // the church calendar (the old look keeps its window, opened from the footer's sheet)
+  if (currentPage === 'calendar') return nl ? <CalendarPage /> : homeEl;
 
   if (currentPage === 'admin') {
     return isAdmin ? <AdminPanelPage /> : homeEl;
@@ -264,6 +277,13 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   if (nl && currentPage === 'birthdays') return <BirthdaysScreen />;
 
   if (nl && currentPage === 'galoba') return <GalobaV2 />;
+  // ლოცვანი (the library's „prayers“ shelf), a prayer's page and მოსახსენებელი in the new look (pages/v2/lotsva)
+  if (nl && currentPage === 'biblioteka' && (mapItem ?? '').split(':')[0] === 'prayers') return <LotsvaniScreen />;
+  if (nl && currentPage === 'prayer') return <PrayerScreen />;
+  if (nl && currentPage === 'commemoration') return <CommemorationScreen />;
+  // the library and „გაიცანი წინაპრები“ in the new look (stage 6b, pages/v2/library)
+  if (nl && currentPage === 'biblioteka') return <LibraryV2 />;
+  if (nl && currentPage === 'tsinaprebi') return <AncestorsV2 />;
 
   if (currentPage !== 'home') {
     // the one bar: „←“, the page's title, and 📌 for a page that can be a home button

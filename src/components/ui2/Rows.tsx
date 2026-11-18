@@ -26,9 +26,10 @@ export const Two: React.FC<{
       'font-bold',
       size === 'lead' ? 'text-lead' : 'text-body leading-tight',
       tone === 'danger' && 'text-danger',
-      wrap ? 'wrap-break-word' : 'truncate',
+      // a big text size (design/look.ts) lets a long name wrap instead of ending in „…“ (.sg-fit, index.css)
+      wrap ? 'wrap-break-word' : 'sg-fit truncate',
     )}>{title}</span>
-    {sub && <span className={cx('text-meta text-mut', wrap ? 'wrap-break-word' : 'truncate')}>{sub}</span>}
+    {sub && <span className={cx('text-meta text-mut', wrap ? 'wrap-break-word' : 'sg-fit truncate')}>{sub}</span>}
   </span>
 );
 
