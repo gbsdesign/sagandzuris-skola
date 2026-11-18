@@ -5,7 +5,7 @@ import { MONTHS_GE, MONTHS_SHORT_GE, WEEKDAYS_GE, WEEKDAYS_SHORT_GE } from '../.
 import { canTickDay, dayKey, periodStart } from '../../../utils/habitsWeek';
 import { dayState, daysShare, parseDay, periodDays, shiftPeriod } from '../../../utils/habitStats';
 import { setHabitsDate, useHabitsNav } from './nav';
-import { PeriodNav } from './Nav';
+import { PeriodNav } from './PeriodNav';
 
 // „კვირა“ (x-chvevebi-kvira): the daily habits down, the week's days across (Sunday first, as the habits' week).
 

@@ -6,7 +6,7 @@ import { MONTHS_GE, WEEKDAYS_GE, WEEKDAYS_SHORT_GE } from '../../../utils/dateNa
 import { canTickDay, dayKey } from '../../../utils/habitsWeek';
 import { dayState, monthWeeks, parseDay } from '../../../utils/habitStats';
 import { setHabitsDate, useHabitsNav } from './nav';
-import { PeriodNav } from './Nav';
+import { PeriodNav } from './PeriodNav';
 
 // „თვე“ (x-chvevebi-tve): the month as a calendar (Sunday first, as the habits' week), a day's circle shaded by the share of
 // the daily habits done; under it the picked day and „✓ მონიშვნა“.

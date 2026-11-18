@@ -6,7 +6,7 @@ import { MONTHS_SHORT_GE } from '../../../utils/dateNames';
 import { dayKey } from '../../../utils/habitsWeek';
 import { addDays, dayState, parseDay, ticksBetween, ticksOf, yearWeeks } from '../../../utils/habitStats';
 import { habitItem, useHabitsNav } from './nav';
-import { PeriodNav } from './Nav';
+import { PeriodNav } from './PeriodNav';
 
 // „წელი“ (x-chvevebi-tseli): the year's numbers, one map of the whole year and a short list of the habits' days.
 
