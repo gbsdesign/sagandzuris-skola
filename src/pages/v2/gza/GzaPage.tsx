@@ -10,6 +10,7 @@ import { SamosiPage } from './Samosi';
 import { screenOf } from '../chvevebi/nav';
 
 const ChvevebiPage = React.lazy(() => import('../chvevebi/ChvevebiPage'));
+const ClassesListScreen = React.lazy(() => import('../klasi/ClassesList').then(m => ({ default: m.ClassesListScreen })));
 
 // Page `gz` in the new look: the list (x-gza) and the path's own pages, each a step of its own in history by the
 // navigation's `mapItem` — `sagandzuri` (x-sagandzuri), `samosi` (x-samosi), `chvevebi…` (the habits, `../chvevebi`) and `ostatoba` (the old „ოსტატობა“, which the old „საგანძური“ card held at its bottom).
@@ -27,6 +28,8 @@ export const GzaPage: React.FC = () => {
   if (mapItem === 'samosi') return <SamosiPage onBack={handleGoBack} />;
   // the habits' screens (stage 4b): the day, the views, a habit, the changes, the vine
   if (screenOf(mapItem)) return <ChvevebiPage />;
+  // several classes: their list as a page (x-klasebi, stage 4c)
+  if (mapItem === 'klasebi') return <ClassesListScreen />;
   if (mapItem === 'ostatoba') {
     return (
       <div className="flex w-full flex-col gap-2 pb-4">

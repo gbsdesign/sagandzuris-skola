@@ -53,7 +53,6 @@ const NEW_ICON: Record<GzaRowId, React.ReactNode> = {
   klasi: <Users strokeWidth={2} />,
 };
 
-export interface PickItem { id: string; name: string; lead: React.ReactNode }
 
 /** The list as the board draws it — everything by props. */
 export const GzaListView: React.FC<{
@@ -69,8 +68,7 @@ export const GzaListView: React.FC<{
   /** the member's order of the rows: a long press on one opens it */
   order?: { labels: { id: string; label: string }[]; move: (id: string, dir: -1 | 1) => void };
   /** several classes: the window of them */
-  picker?: { open: boolean; items: PickItem[]; onPick: (id: string) => void; onClose: () => void };
-}> = ({ isNew, rows, pin, lesson, extra, onFirstStep, order, picker }) => {
+}> = ({ isNew, rows, pin, lesson, extra, onFirstStep, order }) => {
   const [ordering, setOrdering] = useState(false);
   return (
     <div className="flex w-full flex-col pb-4">
@@ -118,14 +116,6 @@ export const GzaListView: React.FC<{
           </Rows>
         </Sheet>
       )}
-
-      {picker && (
-        <Sheet open={picker.open} title={`ჩემი კლასები · ${picker.items.length}`} onClose={picker.onClose}>
-          <Rows>
-            {picker.items.map(c => <Row key={c.id} lead={c.lead} title={c.name} onClick={() => picker.onPick(c.id)} />)}
-          </Rows>
-        </Sheet>
-      )}
     </div>
   );
 };
@@ -141,7 +131,7 @@ const ChokhaThumb: React.FC<{ color: string }> = ({ color }) => {
 export const GzaList: React.FC<{ onOpen: (item: 'samosi' | 'sagandzuri' | 'chvevebi') => void }> = ({ onOpen }) => {
   const access = useAccess();
   const { user } = useAuth();
-  const { navigateTo, openClass } = useNavigation();
+  const { navigateTo, openClass, openMapItem } = useNavigation();
   const myClasses = useAllMyClasses();
   const { stats, count, confirmed } = useLearnCount();
   const isNew = useIsNewMember(stats, confirmed);
@@ -157,7 +147,6 @@ export const GzaList: React.FC<{ onOpen: (item: 'samosi' | 'sagandzuri' | 'chvev
   const classShare = useTeachingAttendance(teaching);
   const attendance = teaching.length ? classShare : ownShare;
   const { order, save } = usePathOrder(user?.uid);
-  const [picking, setPicking] = useState(false);
 
   // every row has its own switch (data/sections EXTRA_SWITCHES); the library's follows the library, the class's the member's
   // „კლასი“ — and a class (a new member sees „ჯერ კლასში არ ხარ“ instead)
@@ -171,7 +160,7 @@ export const GzaList: React.FC<{ onOpen: (item: 'samosi' | 'sagandzuri' | 'chvev
   const toLibrary = () => (access.section('biblioteka') === 'locked' ? askSignIn('ბიბლიოთეკა') : navigateTo('biblioteka'));
   const toHabits = () => (habitsAccess === 'locked' ? askSignIn('ჩვევები') : onOpen('chvevebi'));
   const toClass = myClasses.length === 0 ? undefined
-    : () => (myClasses.length === 1 ? openClass(myClasses[0].id) : setPicking(true));
+    : () => (myClasses.length === 1 ? openClass(myClasses[0].id) : openMapItem('klasebi'));
 
   const habitsTotal = habits.done + habits.left;
   const workLeft = work.today.filter(s => !s.done).length;
@@ -231,12 +220,6 @@ export const GzaList: React.FC<{ onOpen: (item: 'samosi' | 'sagandzuri' | 'chvev
       order={{
         labels: ids.map(id => ({ id, label: PATH_ORBS.find(o => o.id === id)?.label ?? id })),
         move: (id, dir) => save('orbs', moveItem(ids, id as GzaRowId, dir)),
-      }}
-      picker={{
-        open: picking,
-        items: myClasses.map(c => ({ id: c.id, name: c.name, lead: <ClassLogo name={c.name} logo={c.logo} className="size-10 shrink-0 text-meta" /> })),
-        onPick: cid => { setPicking(false); openClass(cid); },
-        onClose: () => setPicking(false),
       }}
     />
   );

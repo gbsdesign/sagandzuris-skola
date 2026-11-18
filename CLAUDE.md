@@ -1717,6 +1717,18 @@
   `Edit.tsx` (drag by the handle — the old `useDragSort` —, Alt+↑/↓), `NewHabit.tsx` (x-chveva-akhali), `Vazi.tsx` (x-vazi +
   x-vazi-rogor). Settings' single choices wrap (`OneOf`), never scroll sideways. The old `ChvevebiPanel` stays for the old look
   and a teacher's look at a student.
+- **Stage 4c — class, student, psalter (2026-11-18)**: pages `class`, `student`, `psalter` are in `MAP_PAGES` now (their open part
+  survives back/forward; `pages/v2/klasi/nav.ts`: class `order`, student `<uid>|<classId>[|gza|ostatoba]`, psalter `dist` / `history`).
+  `klasi/ClassRoute` → `ClassScreen` (x-klasi, x-tsevrebi, x-desk-klasi: next lesson card → `TimetableSheet`, tabs პროგრამა · ჩათი ·
+  წევრები — the chat is still the old `ClassChat` until 4d; `ProgramTab`, `MembersTab`; a member's „⋯“ = write to a teacher) or
+  `teacher/ProgramOrder` (x-klasi-programa-dalageba, saves each move). `teacher/` = `ClassMoreSheet` (x-klasi-meti: დღევანდელი წირვა,
+  name and logo `NameLogo`, timetable, program, add member, teachers for admins, psalter group / `NewGroupSheet`, archive), `ProgramAdd`
+  (x-klasi-programashi-damateba), `AddMember`. `ClassesList` (x-klasebi) = gz mapItem `klasebi` (several classes); `EmptyClass`
+  (x-carieli-klasi). Creating a class stays admins-only (the rules). `mostsavle/StudentScreen` (x-mostsavle + -gza with `marksLock`,
+  -ostatoba, -meti; „ნახე მისი თვალით“ = the old `ViewAsStudent` body in an overlay; the old reviews behind „გამოგზავნილი ჩანაწერები“;
+  a voice's marking day is not stored, so no date shows). `psalmuni/PsalterScreen` (x-psalmuni, `DistScreen`, `HistoryScreen`,
+  `ParamsSheet`, `NewGroup`) and `KanonGateV2` (App renders it in the new look). The AI-teacher rows of these boards wait for AI
+  step 3 (instructions to the AI, its weekly report, „ჩათვალა AI-მ“, „რა შენიშნა AI-მ“).
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 

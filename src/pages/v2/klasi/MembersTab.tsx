@@ -1,0 +1,191 @@
+import React, { useState } from 'react';
+import { Check, CheckCheck, ChevronLeft, ChevronRight, Search, UserPlus, X } from 'lucide-react';
+import { useAuth, useNavigation } from '../../../context';
+import { Avatar, Button, Card, Field, Press, RoundButton, Rows, Small, Two } from '../../../components/ui2';
+import { cx } from '../../../components/ui2/cx';
+import type { ClassMember, SchoolClass } from '../../../hooks/useClasses';
+import { localIso, useClassStudents } from '../../../hooks/useTeaching';
+import { useSyncAttendanceShares } from '../../../hooks/useAttendanceShare';
+import { openThread, type Person } from '../../../hooks/useDirectChat';
+import { useClassAttendance, type ClassAttendance } from '../../../components/teacher/AttendancePanel';
+import { classFigures, summarize } from '../../../components/teacher/StudentsOverview';
+import { MONTHS_GE, WEEKDAYS_GE } from '../../../utils/dateNames';
+import { triggerHaptic } from '../../../utils/haptics';
+import { AddMemberSheetV2 } from './teacher/AddMember';
+
+/** Writing privately inside the class: a member to one of its teachers, a teacher to a member (the old page's `writeTo`). */
+export const useWriteTo = (cls: SchoolClass) => {
+  const { user } = useAuth();
+  const { openDm } = useNavigation();
+  const [opening, setOpening] = useState<string | null>(null);
+  const [error, setError] = useState('');
+  const person = (p: ClassMember): Person => ({ uid: p.uid, name: p.name || '', photoURL: p.photoURL || '' });
+  const meHere = (): Person => {
+    const p = cls.members.find(m => m.uid === user?.uid) || cls.teachers.find(m => m.uid === user?.uid);
+    return { uid: user!.uid, name: p?.name || user!.displayName || '', photoURL: p?.photoURL || user!.photoURL || '' };
+  };
+  const writeTo = async (other: ClassMember, otherIsTeacher: boolean) => {
+    if (!user) return;
+    setError('');
+    setOpening(other.uid);
+    try {
+      const id = otherIsTeacher ? await openThread(person(other), meHere(), cls.id) : await openThread(meHere(), person(other), cls.id);
+      openDm(id);
+    } catch (e) {
+      console.warn('dm: ', e);
+      setError('პირადი ჩათი ვერ გაიხსნა. სცადეთ მოგვიანებით.');
+    } finally {
+      setOpening(null);
+    }
+  };
+  return { writeTo, opening, error };
+};
+
+// ‹ › over the class's lesson days: the next such day before / after the given one, never in the future
+const stepDay = (cls: SchoolClass, iso: string, dir: 1 | -1): string => {
+  const days = new Set(cls.schedule.map(s => s.day));
+  const [y, m, d] = iso.split('-').map(Number);
+  const at = new Date(y, m - 1, d);
+  const today = localIso();
+  for (let i = 0; i < 21; i++) {
+    at.setDate(at.getDate() + dir);
+    const next = localIso(at);
+    if (next > today) return iso;
+    if (!days.size || days.has(at.getDay())) return next;
+  }
+  return iso;
+};
+const dayWords = (iso: string) => {
+  const [y, m, d] = iso.split('-').map(Number);
+  const wd = new Date(y, m - 1, d).getDay();
+  return `${WEEKDAYS_GE[wd].slice(0, 3)}, ${d} ${MONTHS_GE[m - 1]}`;
+};
+
+/** x-tsevrebi — the attendance card (the class's teachers and admins). */
+const AttendanceCard: React.FC<{ cls: SchoolClass; a: ClassAttendance }> = ({ cls, a }) => {
+  const total = cls.members.length;
+  const all = total > 0 && a.present.length >= total;
+  const newest = a.date >= localIso();
+  return (
+    <Card className="flex flex-col gap-3">
+      <div className="flex items-center gap-2">
+        <RoundButton label="წინა გაკვეთილი" onClick={() => a.setDate(stepDay(cls, a.date, -1))}><ChevronLeft /></RoundButton>
+        <div className="flex min-w-0 flex-1 flex-col items-center text-center">
+          <span className="text-meta text-mut">დასწრება{a.marked ? ` · ${a.present.length} / ${total}` : ''}</span>
+          <span className="max-w-full truncate text-lead font-bold">{a.date === localIso() ? 'დღეს' : dayWords(a.date)}</span>
+        </div>
+        <RoundButton label="შემდეგი გაკვეთილი" disabled={newest} onClick={() => a.setDate(stepDay(cls, a.date, 1))}><ChevronRight /></RoundButton>
+      </div>
+      <Button full kind={all ? 'ghost' : 'primary'} icon={all ? <X /> : <CheckCheck />} onClick={() => (all ? a.clear() : a.allCame())}>
+        {all ? 'მონიშვნის მოხსნა' : 'ყველა მოვიდა'}
+      </Button>
+      <p className="text-center text-meta text-mut">ან მონიშნე სათითაოდ სახელის გასწვრივ</p>
+      {a.msg.flash && <p role="alert" className={cx('text-center text-meta', a.msg.flash.type === 'error' ? 'text-danger' : 'text-leaf-ink')}>{a.msg.flash.text}</p>}
+    </Card>
+  );
+};
+
+/** The round at a member's right for the chosen day: green once they came. */
+const CameButton: React.FC<{ on: boolean; name: string; onToggle: () => void }> = ({ on, name, onToggle }) => (
+  <Press aria-pressed={on} aria-label={`${name} — მოვიდა`} title={on ? 'მოვიდა' : 'მონიშნე: მოვიდა'} onClick={onToggle}
+    className="flex size-tap shrink-0 cursor-pointer items-center justify-center rounded-full transition active:scale-95 focus-visible:outline-2 focus-visible:outline-wine/60">
+    <span className={cx('flex size-[30px] items-center justify-center rounded-full', on ? 'bg-leaf text-white' : 'border-[1.5px] border-dim')}>
+      {on && <Check className="size-[58%]" strokeWidth={2.6} aria-hidden="true" />}
+    </span>
+  </Press>
+);
+
+type Roll = { att: ClassAttendance; line: string };
+
+/** The teachers who lead use the roll (attendance + figures); the hooks live here so members never read the records. */
+const WithRoll: React.FC<{ cls: SchoolClass; children: (r: Roll) => React.ReactNode }> = ({ cls, children }) => {
+  const records = useClassStudents(cls);
+  const att = useClassAttendance(cls);
+  // each member's own share of the last lessons, for their path's „კლასი“ button
+  useSyncAttendanceShares(cls, records, att.last, att.ready);
+  const f = classFigures(cls.members.map(m => summarize(records[m.uid]?.data)), att.last);
+  const loading = cls.members.some(m => !records[m.uid]);
+  const line = `აქტიური ${loading ? '—' : f.active} · დასწრება ${f.attendance === null ? '—' : `${f.attendance}%`} · სამუშაო ${loading ? '—' : `${f.work}%`}`;
+  return <>{children({ att, line })}</>;
+};
+
+/** x-tsevrebi — the „წევრები“ tab. */
+export const MembersTab: React.FC<{ cls: SchoolClass; canEdit: boolean }> = ({ cls, canEdit }) =>
+  canEdit
+    ? <WithRoll cls={cls}>{roll => <MembersView cls={cls} canEdit roll={roll} />}</WithRoll>
+    : <MembersView cls={cls} canEdit={false} />;
+
+const MembersView: React.FC<{ cls: SchoolClass; canEdit: boolean; roll?: Roll }> = ({ cls, canEdit, roll }) => {
+  const { user } = useAuth();
+  const { openStudent, navigateTo } = useNavigation();
+  const { writeTo, opening, error } = useWriteTo(cls);
+  const [finding, setFinding] = useState(false);
+  const [q, setQ] = useState('');
+  const [adding, setAdding] = useState(false);
+  const me = user?.uid;
+  const needle = q.trim().toLowerCase();
+  const found = finding && needle ? cls.members.filter(m => (m.name || '').toLowerCase().includes(needle)) : cls.members;
+  const iAmMember = !!me && cls.memberIds.includes(me);
+  const youTag = (uid: string) => (uid === me ? ' (შენ)' : '');
+
+  return (
+    <div className="flex flex-col gap-2.5">
+      {canEdit && roll && <AttendanceCard cls={cls} a={roll.att} />}
+
+      <div className="flex items-center gap-2 px-1.5 pt-1">
+        <h2 className="min-w-0 flex-1 truncate text-head font-bold">წევრები · {cls.members.length}</h2>
+        {cls.members.length > 1 && (
+          <RoundButton label={finding ? 'ძებნის დახურვა' : 'ძებნა'} size={36} onClick={() => { setFinding(f => !f); setQ(''); }}>
+            {finding ? <X /> : <Search />}
+          </RoundButton>
+        )}
+        {canEdit && <RoundButton label="წევრის დამატება" size={36} onClick={() => setAdding(true)}><UserPlus /></RoundButton>}
+      </div>
+      {roll && <p className="px-1.5 text-meta text-mut">{roll.line}</p>}
+      {finding && <Field label="ძებნა სახელით" value={q} onChange={setQ} type="search" autoFocus placeholder="სახელი…" />}
+      {error && <p role="alert" className="px-1.5 text-meta text-danger">{error}</p>}
+
+      <Rows>
+        {/* the class's teachers first; a member's tap on one opens their private chat */}
+        {!needle && cls.teachers.map(t => {
+          const write = iAmMember && t.uid !== me;
+          const body = (
+            <>
+              <Avatar name={t.name} photo={t.photoURL} />
+              <Two title={`${t.name}${youTag(t.uid)}`} sub="მასწავლებელი" />
+            </>
+          );
+          const look = 'flex min-h-row w-full items-center gap-2.5 py-2 pr-3 pl-4 text-ink';
+          return write ? (
+            <Press key={t.uid} onClick={() => writeTo(t, true)} disabled={opening === t.uid} aria-label={`მიწერა: ${t.name}`}
+              className={cx(look, 'cursor-pointer text-left transition-colors active:bg-soft disabled:opacity-50')}>
+              {body}
+              <ChevronRight aria-hidden="true" className="size-[18px] shrink-0 text-mut" strokeWidth={2} />
+            </Press>
+          ) : <div key={t.uid} className={look}>{body}</div>;
+        })}
+        {found.map(m => {
+          const body = (
+            <>
+              <Avatar name={m.name} photo={m.photoURL} />
+              <Two title={`${m.name}${youTag(m.uid)}`} />
+            </>
+          );
+          if (!canEdit) return <div key={m.uid} className="flex min-h-row w-full items-center gap-2.5 py-2 pr-3 pl-4 text-ink">{body}</div>;
+          return (
+            <div key={m.uid} className="flex min-h-row w-full items-center gap-1 text-ink">
+              <Press onClick={() => (m.uid === me ? navigateTo('gz') : openStudent(m.uid, cls.id))} title={`${m.name} — გზა და პროფილი`}
+                className="flex min-h-row min-w-0 flex-1 cursor-pointer items-center gap-2.5 py-2 pl-4 text-left transition-colors active:bg-soft">
+                {body}
+              </Press>
+              {roll && <CameButton on={roll.att.present.includes(m.uid)} name={m.name} onToggle={() => { triggerHaptic(10); roll.att.toggle(m.uid); }} />}
+            </div>
+          );
+        })}
+        {needle && found.length === 0 && <p className="px-4 py-3.5 text-body text-mut">ვერ მოიძებნა.</p>}
+      </Rows>
+      {cls.members.length === 0 && <Small tone="mut" className="px-1.5">კლასში ჯერ წევრი არ არის.</Small>}
+      {canEdit && <AddMemberSheetV2 cls={cls} open={adding} onClose={() => setAdding(false)} />}
+    </div>
+  );
+};

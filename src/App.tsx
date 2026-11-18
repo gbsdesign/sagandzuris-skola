@@ -58,6 +58,7 @@ const AppLinks = later(() => import('./components/app/AppLinks'), 'AppLinks');
 const SaintLifeOverlay = later(() => import('./components/saints/SaintLifeOverlay'), 'SaintLifeOverlay');
 const FirstMeeting = later(() => import('./components/onboarding/FirstMeeting'), 'FirstMeeting');
 const KanonGate = later(() => import('./components/psalter/KanonGate'), 'KanonGate');
+const KanonGateV2 = later(() => import('./pages/v2/psalmuni/KanonGate'), 'KanonGateV2');
 const CallLayer = later(() => import('./components/calls/CallLayer'), 'CallLayer');
 const PhoneRingSetup = later(() => import('./components/calls/PhoneRingSetup'), 'PhoneRingSetup');
 const GameInvites = later(() => import('./components/games/GameInvites'), 'GameInvites');
@@ -321,7 +322,7 @@ function AppContent() {
       {/* „აირჩიე შენი კანონი“: a class member whose psalter group gives them no kanon picks one before going on (under the
           profile form, which covers it while it is open) */}
       <ErrorBoundary>
-        <Suspense fallback={null}>{membership.can('classes') && <KanonGate />}</Suspense>
+        <Suspense fallback={null}>{membership.can('classes') && (newLook ? <KanonGateV2 /> : <KanonGate />)}</Suspense>
       </ErrorBoundary>
 
       {/* "პირველი გაცნობა": name, voice and goal, once */}

@@ -126,6 +126,9 @@ const SettingsPage = page(() => import('../pages/shell/SettingsPage'), 'Settings
 const SearchPage = page(() => import('../pages/shell/SearchPage'), 'SearchPage');
 // redesign stage 4: the everyday pages in the new look (src/pages/v2)
 const GzaPage = page(() => import('../pages/v2/gza/GzaPage'), 'GzaPage');
+const ClassRoute = page(() => import('../pages/v2/klasi/ClassRoute'), 'ClassRoute');
+const StudentScreen = page(() => import('../pages/v2/mostsavle/StudentScreen'), 'StudentScreen');
+const PsalterScreen = page(() => import('../pages/v2/psalmuni/PsalterScreen'), 'PsalterScreen');
 // the old look's home loads only when the admin hides the new look
 const HomePage = page(() => import('../pages/HomePage'), 'HomePage');
 
@@ -221,12 +224,12 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   }
 
   if (currentPage === 'class') {
-    return <ClassPage />;
+    return nl ? <ClassRoute /> : <ClassPage />;
   }
 
   // the psalter group lives on its class's page (redesign stage 2); a group with no class keeps its old page
   if (currentPage === 'psalter') {
-    return <PsalterOrClass />;
+    return nl ? <PsalterScreen /> : <PsalterOrClass />;
   }
 
   // private chats (signed in only)
@@ -252,7 +255,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   if (nl && currentPage === 'gz') return <GzaPage />;
 
   // a student's own page, opened by their teacher or an admin (its path and profile as they see them)
-  if (currentPage === 'student') return <StudentPage item={mapItem} />;
+  if (currentPage === 'student') return nl ? <StudentScreen /> : <StudentPage item={mapItem} />;
 
   if (currentPage !== 'home') {
     // the one bar: „←“, the page's title, and 📌 for a page that can be a home button

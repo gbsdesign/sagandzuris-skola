@@ -165,13 +165,13 @@ const RowIcon: React.FC<{ label: string; onClick: () => void; danger?: boolean; 
 );
 
 /** A row of the tree: `item` is what + adds, `open` the button id that shows it, `children` the next level. */
-interface Node { key: string; title: string; sub?: string; item?: ProgramItem; open?: string; children?: () => Node[] | Promise<Node[]> }
+export interface Node { key: string; title: string; sub?: string; item?: ProgramItem; open?: string; children?: () => Node[] | Promise<Node[]> }
 
 const pathLeaf = (id: string, title: string, sub?: string): Node[] => {
   const e = findCatalogEntry(id);
   return e ? [{ key: id, title, sub: sub ?? e.code, item: { id: e.id, title: e.title, code: e.code }, open: openIdOf(id) }] : [];
 };
-const entryNode = (e: CatalogEntry): Node => ({ key: e.id, title: e.title, sub: `${CATEGORY_LABEL[e.category]} · ${e.code}`, item: { id: e.id, title: e.title, code: e.code }, open: openIdOf(e.id) });
+export const entryNode = (e: CatalogEntry): Node => ({ key: e.id, title: e.title, sub: `${CATEGORY_LABEL[e.category]} · ${e.code}`, item: { id: e.id, title: e.title, code: e.code }, open: openIdOf(e.id) });
 
 /** a node of the buttons' catalogue (prayer book, library, chanters): its button is the program item */
 const fromCatalog = (n: CatalogNode): Node => {
@@ -188,7 +188,7 @@ const fromCatalog = (n: CatalogNode): Node => {
 const BUTTONS = () => buildCatalog({ signedIn: true, owner: false, hasClass: true, habits: [], allowed: () => true });
 const fromButtons = (key: string) => BUTTONS().filter(n => n.key === key).map(fromCatalog);
 
-const roots = (): Node[] => [
+export const roots = (): Node[] => [
   {
     key: 'g', title: 'გალობა', sub: 'მსახურებები → საგალობელი → ყველა ვერსია',
     children: () => SERVICE_LISTS.filter(([s]) => (SERVICES as readonly string[]).includes(s)).map(([service, list]) => {
@@ -223,7 +223,7 @@ const roots = (): Node[] => [
 
 /** every button of the prayer book, library and chanters (books loaded later aren't searched) */
 let buttonIndex: Node[] | null = null;
-const searchButtons = (words: string[]) => {
+export const searchButtons = (words: string[]) => {
   if (!buttonIndex) {
     const out: Node[] = [];
     const walk = (n: CatalogNode) => { if (n.id) out.push(fromCatalog({ ...n, children: undefined, load: undefined })); n.children?.forEach(walk); };
