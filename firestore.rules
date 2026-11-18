@@ -217,6 +217,20 @@ service cloud.firestore {
       allow update, delete: if false;
     }
 
+    // The AI teacher's answers counted a month (src/utils/aiRules.ts): the school's total and each person's, for the
+    // budget in settings/aiTeacher. The signed-in count up by one; the total is read by the signed-in (only a number),
+    // a person's count by that person and admins.
+    match /aiUsage/{month} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && month.matches('^[0-9]{4}-[0-9]{2}$') && incoming().keys().hasOnly(['calls']) && incoming().calls == 1;
+      allow update: if isSignedIn() && changed().hasOnly(['calls']) && incoming().calls == existing().calls + 1;
+      match /people/{person} {
+        allow read: if (isSignedIn() && uid() == person) || isAdmin();
+        allow create: if isSignedIn() && uid() == person && incoming().keys().hasOnly(['calls']) && incoming().calls == 1;
+        allow update: if isSignedIn() && uid() == person && changed().hasOnly(['calls']) && incoming().calls == existing().calls + 1;
+      }
+    }
+
     // The app's error log (src/utils/errorLog.ts, ⚙ „სკოლა“ → „შეცდომების ჟურნალი“): a signed-in person's app adds what
     // broke — no name and no uid. One document a distinct error (its id is the error's fingerprint); the same error
     // again only counts up and moves `last`. Admins read and clear it.

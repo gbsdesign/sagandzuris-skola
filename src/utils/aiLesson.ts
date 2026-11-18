@@ -192,12 +192,8 @@ export interface TryContext {
 export const nextLine = (share: number, fix: { kind: FixKind; focus: number }, ctx: TryContext): { move: NextMove; text: string } => {
   const fails = [...ctx.before, share].slice(-3).filter(s => s < ctx.pass).length;
   if (share >= ctx.pass) {
-    // slow: two good tries in a row, then the real pace by itself
-    if (ctx.slow) {
-      return ctx.slowGood >= 1
-        ? { move: 'tempo', text: 'ახლა ნამდვილი ტემპით.' }
-        : { move: 'again', text: 'კიდევ ერთხელ ამ ტემპით — და ნამდვილზე გადავალთ.' };
-    }
+    // slow: after two good tries in a row the real pace comes by itself (a good try always moves on)
+    if (ctx.slow && ctx.slowGood >= 1) return { move: 'tempo', text: 'ახლა ნამდვილი ტემპით.' };
     return { move: 'done', text: '' };
   }
   if (fix.kind === 'quiet') return { move: 'again', text: '' };
@@ -338,3 +334,29 @@ export const lastSeenWord = (at: string, today: string) => {
   const d = dayGap(at, today);
   return d <= 0 ? 'ბოლოს დღეს' : d === 1 ? 'ბოლოს გუშინ' : `ბოლოს ${d} დღის წინ`;
 };
+
+/** Every ready sentence the teacher says, by kind (the school's rules show them: ⚙ „სკოლა“ → AI მასწავლებელი →
+ *  „მზა ფრაზები“). A note's place and a count change by the take; the examples show one. */
+export const READY_SENTENCES: { title: string; lines: string[] }[] = [
+  { title: 'გაკვეთილის დასაწყისი', lines: [
+    'დღეს ახალი ფრაზაა და ცოტა გამეორება. დავიწყოთ.', 'დღეს ახალი ფრაზაა. დავიწყოთ გახურებით.',
+    'დღეს გავიმეორებთ ნასწავლს. დავიწყოთ გახურებით.', 'კარგია, რომ დაბრუნდი. გეგმა გადავაწყვე. დავიწყოთ გამეორებით.',
+    'ხმა გავათბოთ. მოუსმინე ნოტს და გააგრძელე.', 'ჯერ პირველი 4 ნოტი. მოუსმინე და გაიმეორე.',
+  ] },
+  { title: 'შედეგი', lines: ['ზუსტად!', 'თითქმის ზუსტად!', 'ნახევარი გამოვიდა.', 'ჯერ მოუსმინე და ისევ სცადე.'] },
+  { title: 'ერთი შესწორება', lines: [
+    'მესამე ნოტი ცოტა დაბლა იყო.', 'მესამე ნოტი ცოტა მაღლა იყო.', 'მესამე ნოტი არ გაისმა.', 'ბოლო ნოტი ადრე გაუშვი — ბოლომდე გააჩერე.',
+    'ნახტომზე ვერ ახვედი. ჯერ მხოლოდ ნახტომი ვცადოთ.', 'ფრაზის ბოლოს ხმა დაგიდაბლდა. შუაში ჩაისუნთქე.',
+  ] },
+  { title: 'რა ქნა', lines: ['მოუსმინე მხოლოდ იმ ნოტს და კიდევ სცადე.', 'კიდევ ერთხელ, ნელა.', 'ახლა ნამდვილი ტემპით.', 'კიდევ სცადე.'] },
+  { title: 'სიმღერისას', lines: ['ზუსტად', 'ოდნავ მაღლა', 'ოდნავ დაბლა'] },
+  { title: 'გამხნევება — მხოლოდ როცა მართალია', lines: [
+    'ეს ფრაზა უკვე იცი. გადავიდეთ შემდეგზე.', 'სამი ცდა — და უკვე ნახევარი გამოდის.', 'სამი ცდა — და უკვე გამოდის.',
+  ] },
+  { title: 'როცა სამჯერ არ გამოვიდა', lines: ['ეს ადგილი ძნელია. დავყოთ ორ ნაწილად.', 'დღეს სხვა ფრაზა ვცადოთ. ამას ხვალ დავუბრუნდებით.'] },
+  { title: 'როცა ვერ გიგონებს', lines: ['ხმა ვერ გავიგონე. ტელეფონი ახლოს მოიტანე.'] },
+  { title: 'გაკვეთილის ბოლო', lines: [
+    'დღეს ახალი ფრაზა ისწავლე. ხვალ — მეოთხე ფრაზა.', 'დღეს უკეთ გამოგივიდა, ვიდრე დასაწყისში. ხვალ — მოკლე გამეორება.',
+    'დღეს ივარჯიშე — ეს მთავარია. ხვალ — მესამე ფრაზა.', 'დიდხანს ივარჯიშე. ხმასაც დასვენება უნდა. ხვალ აქედან გავაგრძელებთ.',
+  ] },
+];

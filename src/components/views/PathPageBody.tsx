@@ -4,6 +4,7 @@ import { ChvevebiContent } from './ChvevebiPanel';
 import { PATH_ORBS, PathOrbs } from './PathOrbs';
 import { PathTabs } from './PathTabs';
 import { useAllMyClasses } from '../classes/ClassPicker';
+import { TodayLessonStrip } from '../aiLesson/TodayLesson';
 
 /** The body of „საგანძურის გზა“ (page `gz`) — also a student's own page opened by their teacher (pages/StudentPage.tsx,
  *  inside ViewAsStudent, so every part reads that student's record). Every round button has its own switch (data/sections
@@ -19,6 +20,8 @@ export const PathPageBody: React.FC = () => {
   const habitsOnOrb = habitsOpen && pathOrbs.some(o => o.id === 'work');
   return (
     <div className="w-full max-w-2xl mx-auto mb-2 px-1 space-y-5">
+      {/* the AI teacher's day lesson (while its switch allows) */}
+      <TodayLessonStrip />
       {/* „ჩემი დღე“: the page title sits in the top bar; the four round buttons (სამოსი, ნასწავლი — with the pearls, the
           chests, the teacher's assignments and, folded at its bottom, ოსტატობა —, სამუშაო) in the member's order, the habits under them. The „დღეს“
           card on top was taken off at the user's wish (2026-11-05). */}

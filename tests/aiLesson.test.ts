@@ -93,7 +93,7 @@ test('three tries that do not pass change the way: smaller first, another day af
 
 test('the pace rises by itself after two good slow tries', () => {
   const none = { kind: 'none' as const, focus: -1 };
-  assert.equal(nextLine(0.9, none, ctx({ slow: true, slowGood: 0 })).move, 'again');
+  assert.equal(nextLine(0.9, none, ctx({ slow: true, slowGood: 0 })).move, 'done');
   assert.equal(nextLine(0.9, none, ctx({ slow: true, slowGood: 1 })).move, 'tempo');
   assert.equal(nextLine(0.9, none, ctx()).move, 'done');
 });

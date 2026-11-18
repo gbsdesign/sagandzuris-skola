@@ -1632,6 +1632,24 @@
   series emblem is `grapeEmblem` in `src/print/lib.js`, the caravan map's shrines an old gate); a monument card that will get a picture is a secular one. Faith and chant stay as content —
   questions, words, feasts and saints, chant audio, place names — beside the wider Georgian topics.
 
+## Redesign 2026-11-18 (plan doc canvas; the user: „ყველაფერი ისეთი უნდა იყოს როგორც პროტოტიპებშია“)
+
+- **Stage 1 „საძირკველი“ (PR #278)**: design tokens `src/design/tokens.css` (+ `tokens.ts`; colours page/surf/line/ink/mut/wine/gold/leaf/sea…,
+  text cap 12 … hero 28, radii card 28 / tile 20 / field 14 / chip 8, tap 44 / tap-lg 48 / icon 36); `tests/designRules.test.ts` keeps hex
+  colours, stock sizes, radii and shadows out of the LOCKED folders (`src/components/ui2`, `src/components/aiLesson`) — new-look parts go
+  there and use only the tokens. The error log: `utils/errorLog.ts` (+ `errorLogCore.ts`, test) keeps a scrubbed line per fault in
+  `errorLog/{fingerprint}`, admins read it in ⚙ „სკოლა“ → „შეცდომების ჟურნალი“.
+- **New kit `components/ui2`** (Button, RoundButton, Card, Rows/Row, Sheet, Seg, Toggle/ToggleRow, Stepper, Bar, Hero, Dot…): the
+  prototypes' look; the old `ui/kit.tsx` stays for the old pages until each stage moves them.
+- **AI teacher, step 1 — „დღის გაკვეთილი“** (`components/aiLesson/`, words `utils/aiLesson.ts` + test): 10 or 5 minutes — გახურება ·
+  გამეორება · ახალი ფრაზა · გალობა · შეჯამება —, a full screen of its own (`AiLesson.tsx`, history step `sgAiLesson`, `openAiLesson()`).
+  Notes are measured on the phone (`useTake`, `readTake`), the teacher's words are ready sentences (`READY_SENTENCES` lists them all), no
+  AI call in the lesson. Progress = the learning mode's `students.learning` (`saveLearnPart`) + `students.aiLesson {last, days}`. Shown
+  as a strip on the path page and a hero in ოსტატობა (`TodayLesson.tsx`) while the switch `aiTeacher` (⚙ „სკოლა“ → განყოფილებები →
+  საიტის სხვა ნაწილები, default hidden = admins only) is open. School rules (`utils/aiRules.ts`, `settings/aiTeacher` {budget,
+  perStudent, hintsFirst, kidsNoAi}; ⚙ „სკოლა“ → „AI მასწავლებელი“, `AiRulesSheet`): every Gemini answer of `aiTeacher.ts` is counted in
+  `aiUsage/{YYYY-MM}` (+ `/people/{uid}`; ≈ 0.01 $ an answer), stops at the month's budget, and none in the kids' mode.
+
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 
 - **Roles** (`context/AuthContext.tsx`, `firestore.rules`): owner (the founder's address) names ≤3 superadmins,
