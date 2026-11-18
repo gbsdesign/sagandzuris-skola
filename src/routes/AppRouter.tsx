@@ -1,6 +1,7 @@
 import React, { lazy, useEffect, useRef, useState } from 'react';
 import { useNavigation, useChants, useAuth, PageType } from '../context';
-import { WifiOff, RefreshCw, Loader2 } from 'lucide-react';
+import { WifiOff, RefreshCw, Loader2, SlidersHorizontal } from 'lucide-react';
+import { RoundButton } from '../components/ui2';
 import { PageBar } from '../components/ui/kit';
 import { PinButton } from '../components/home/ShortcutShelf';
 import { ChurchMapButton, ChurchSearchButton, GameSearchButton, PrayerSearchButton, SongSearchButton } from '../components/maps/songSearch';
@@ -33,6 +34,9 @@ import { useAllClasses, useMyClasses, useTeachingClasses } from '../hooks/useCla
 import { useSelectedGroupId } from '../components/psalter/selectedGroup';
 import { GAMES, gameTitleOfItem } from '../data/games';
 import { GameKitPill } from '../components/games/KitButton';
+import { useNewLook } from '../design/newLook';
+import { NotLoadedView } from '../components/shell/NotLoadedView';
+import { TOP_PAGES } from '../components/shell/tabs';
 
 /** A small heading between the profile's groups of rows (the same as the prayer book's group titles). */
 const ProfileCaption: React.FC<{ children: React.ReactNode }> = ({ children }) => (
@@ -80,6 +84,8 @@ const tryFreshOnce = (): boolean => {
 // Says so instead of the error box; „ხელახლა ცდა“ fetches the newest version and starts again.
 const NotLoaded: React.FC = () => {
   const { navigateTo } = useNavigation();
+  const nl = useNewLook();
+  if (nl) return <NotLoadedView onRetry={() => void reloadFresh()} onHome={() => navigateTo('home')} />;
   return (
     <div className="w-full max-w-sm mx-auto py-16 px-4 text-center space-y-4">
       <div className="mx-auto w-16 h-16 rounded-3xl bg-[#7a2028]/[0.08] text-[#7a2028] flex items-center justify-center"><WifiOff className="w-8 h-8" /></div>
@@ -129,6 +135,10 @@ const BirthdaysPage = page(() => import('../pages/BirthdaysPage'), 'BirthdaysPag
 const GamesPage = page(() => import('../pages/GamesPage'), 'GamesPage');
 const MedavitneobaPage = page(() => import('../pages/MedavitneobaPage'), 'MedavitneobaPage');
 const ChurchesPage = page(() => import('../pages/ChurchesPage'), 'ChurchesPage');
+// the new look's own pages (redesign stage 2)
+const NoticesPage = page(() => import('../pages/shell/NoticesPage'), 'NoticesPage');
+const SettingsPage = page(() => import('../pages/shell/SettingsPage'), 'SettingsPage');
+const SearchPage = page(() => import('../pages/shell/SearchPage'), 'SearchPage');
 
 /** „ფსალმუნთა ჯგუფი“ (the vine, the home tile, a reminder): the class page of the group's class, opened at its psalter
  *  section; a group no class holds (made before 2026-10-20) keeps the old group page. Waits a moment for the classes. */
@@ -182,6 +192,9 @@ const LIBRARY_BOOKS: Record<string, string> = {
 export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   const { currentPage, selectedPrayerId, mapItem, handleGoBack, navigateTo } = useNavigation();
   const { user, loading, isAdmin, isTeacher } = useAuth();
+  // the new look (redesign stage 2): the bottom menu's own pages have no „უკან“; the settings, notices and search are pages
+  const nl = useNewLook();
+  const top = nl && TOP_PAGES.includes(currentPage);
   const access = useAccess();
   // a member still waiting to be let in: the profile shows who they are, not the member's tools
   const waiting = useMembership().status === 'pending';
@@ -208,6 +221,11 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
     return <LockedPage what={SECTIONS.find(x => x.id === sectionOfPage(currentPage))?.label || 'ეს გვერდი'} />;
   }
   if (pageAccess === 'hidden' || pageAccess === 'soon') return <HomePage logoUrl={logoUrl} />;
+
+  // the new look's pages: the notices, the settings (signed in) and the search; in the old look an old step goes home
+  if (currentPage === 'notices') return nl ? <NoticesPage /> : <HomePage logoUrl={logoUrl} />;
+  if (currentPage === 'settings') return nl && user ? <SettingsPage /> : <HomePage logoUrl={logoUrl} />;
+  if (currentPage === 'search') return nl ? <SearchPage /> : <HomePage logoUrl={logoUrl} />;
 
   if (currentPage === 'admin') {
     return isAdmin ? <AdminPanelPage /> : <HomePage logoUrl={logoUrl} />;
@@ -242,7 +260,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   if (currentPage === 'profile') {
     return (
       <div className="w-full max-w-lg mx-auto px-1 py-3 sm:px-0">
-        <PageBar title="პროფილი" onBack={handleGoBack} className="mb-4" />
+        <PageBar title="პროფილი" onBack={top ? undefined : handleGoBack} className="mb-4"
+          right={nl ? <RoundButton label="პარამეტრები" onClick={() => navigateTo('settings')}><SlidersHorizontal strokeWidth={1.75} /></RoundButton> : undefined} />
         {/* the head card, the admin panel's row (admins), my outfit and home buttons, ხუცური, then the details folded */}
         <StudentProfileCard waiting={waiting} slot={<>
           <AdminEntry />
@@ -254,19 +273,22 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
           {!waiting && access.on('classes') && <MyClassCard />}
           {!waiting && access.on('samosi') && <ChemiSamosi row />}
           {!waiting && <ShortcutShelf variant="profile" />}
-          <ProfileCaption>პარამეტრები</ProfileCaption>
-          {/* every phone reminder in one window (2026-11-06) */}
-          {!waiting && <RemindersCard />}
-          {/* ხუცური: the whole site in the old script, on this device */}
-          <KhutsuriSwitch />
-          {/* the Android app's home-screen widgets */}
-          {!waiting && <WidgetLinkCard />}
-          {/* the feasts, fasts and my lessons in the phone's calendar */}
-          {!waiting && access.on('calendar') && <CalendarLinkCard />}
+          {/* the new look: the reminders, ხუცური, the widget, the calendar, installing and leaving live on the settings page */}
+          {!nl && <>
+            <ProfileCaption>პარამეტრები</ProfileCaption>
+            {/* every phone reminder in one window (2026-11-06) */}
+            {!waiting && <RemindersCard />}
+            {/* ხუცური: the whole site in the old script, on this device */}
+            <KhutsuriSwitch />
+            {/* the Android app's home-screen widgets */}
+            {!waiting && <WidgetLinkCard />}
+            {/* the feasts, fasts and my lessons in the phone's calendar */}
+            {!waiting && access.on('calendar') && <CalendarLinkCard />}
+          </>}
           <ProfileCaption>ჩემი მონაცემები</ProfileCaption>
         </>} />
         {/* install the app · leave the account (asks first) */}
-        <div className="max-w-lg mx-auto mt-3"><ProfileActions /></div>
+        {!nl && <div className="max-w-lg mx-auto mt-3"><ProfileActions /></div>}
       </div>
     );
   }
@@ -293,7 +315,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
       <div className="flex flex-col items-center px-1 py-3 sm:px-4 md:px-6">
         <PageBar
           title={title}
-          onBack={handleGoBack}
+          onBack={top ? undefined : handleGoBack}
           // a prayer also gets ☆ — „რჩეული“ at the top of the prayer book (components/prayers/FavPrayers.tsx)
           // a list's ☁ opens its part of the offline mode (components/offline/OfflineButton.tsx); the chant page has it in
           // place of 📌 (the user, 2026-11-08: „ეგ რაც მოხაზულია მოაცილე“)

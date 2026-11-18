@@ -1,4 +1,3 @@
-import { usePlacements } from '../../data/placements';
 import React, { useDeferredValue, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CalendarDays, Check, ChevronRight, Plus, Lock, Music, Music2, ScrollText, Search, Sparkles, Users, X, BookOpen, UserRound,
@@ -9,11 +8,8 @@ import { useMyHabits } from '../../hooks/useMyHabits';
 import { buildCatalog, pruneLoaded } from '../../data/catalog';
 import { roleAllows, sectionOfShortcut } from '../../utils/shortcuts';
 import { CatalogTree } from './CatalogTree';
-import { useAccess } from '../../hooks/useAccess';
-import { useMyClasses } from '../../hooks/useClasses';
-import { SEARCH_GROUPS, SearchGroupId, SearchHit, SearchItem, buildSearchIndex, churchItem, personItem, runSearch, shortcutOfSearch } from '../../data/searchIndex';
-import { loadChurches, whereOf } from '../../data/churches';
-import { shownName, useDirectory } from '../../utils/directory';
+import { SEARCH_GROUPS, SearchGroupId, SearchHit, SearchItem, shortcutOfSearch } from '../../data/searchIndex';
+import { clearRecent, readRecent, saveRecent, useSearchEngine } from './useSearchEngine';
 import { triggerHaptic } from '../../utils/haptics';
 import { shortcutIcon } from '../home/ShortcutShelf';
 import { useOpenSearchTarget } from './openSearchTarget';
@@ -23,36 +19,8 @@ import { BackBtn } from '../ui/kit';
 // The one search over the whole app: chants, prayers, the psalter, songs, the great chanters, feasts and
 // the app's own functions — and, for admins, people. Full screen on a phone, a centred window from sm up. GlobalSearch opens it.
 
-const RECENT_KEY = 'sgSearchRecent';
-const MAX_RECENT = 6;
 const FIRST_ROWS = 5; // rows a group shows before "ყველა"
 const MAX_ROWS = 80; // a long group stops here and asks for a closer query
-
-const readRecent = (): string[] => {
-  try {
-    const v = JSON.parse(localStorage.getItem(RECENT_KEY) || '[]');
-    return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string') : [];
-  } catch { return []; }
-};
-const saveRecent = (key: string) => {
-  try { localStorage.setItem(RECENT_KEY, JSON.stringify([key, ...readRecent().filter(k => k !== key)].slice(0, MAX_RECENT))); } catch { /* storage off */ }
-};
-
-// the churches' rows for the index: made once the list is loaded, kept for the session
-let churchRows: SearchItem[] | null = null;
-const useChurchItems = (wanted: boolean) => {
-  const [rows, setRows] = useState<SearchItem[]>(churchRows ?? []);
-  useEffect(() => {
-    if (!wanted || churchRows) return;
-    let alive = true;
-    loadChurches().then(d => {
-      churchRows = d.list.map(c => churchItem(c.id, c.name, whereOf(c)));
-      if (alive) setRows(churchRows);
-    }, () => {});
-    return () => { alive = false; };
-  }, [wanted]);
-  return rows;
-};
 
 const GROUP_ICON: Record<SearchGroupId, React.ReactNode> = {
   fn: <Sparkles />, chant: <Music2 />, prayer: <ScrollText />, psalter: <BookOpen />, song: <Music />, ancestor: <Users />, feast: <CalendarDays />,
@@ -157,8 +125,6 @@ export const SearchPanel: React.FC<{
 }> = ({ onClose, onChoose = go => go(), pick: picking, initialQuery }) => {
   const { user, isOwner, isTeacher, isAdmin, isSuperAdmin } = useAuth();
   const myHabits = useMyHabits(user?.uid).groups;
-  const access = useAccess();
-  const classes = useMyClasses(user?.uid);
   const openTarget = useOpenSearchTarget();
   const [query, setQuery] = useState(initialQuery ?? '');
   const deferred = useDeferredValue(query);
@@ -167,30 +133,8 @@ export const SearchPanel: React.FC<{
   const [recent, setRecent] = useState(readRecent);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const placed = usePlacements(); // a moved recording changes the song list
-  // admins find people too (name and photo from the directory); a row opens the person's window in the admin panel.
-  // Never while picking a button
-  const directory = useDirectory(isAdmin && !picking);
-  // the churches (3 400, a lazy chunk) join the index once something is typed — never while picking a button
-  const churches = useChurchItems(!picking && deferred.trim().length >= 2);
-  const index = useMemo(
-    () => [
-      ...buildSearchIndex({ signedIn: !!user, owner: isOwner, teacher: isTeacher, hasClass: classes.length > 0 || isTeacher }),
-      ...churches,
-      ...directory.people.map(p => personItem(p.uid, shownName(p), [p.name, p.churchName].filter(Boolean).join(' '))),
-    ],
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [user, isOwner, isTeacher, classes.length, placed, directory.people, churches]
-  );
-  // hidden sections (the admin's switches, the kids' mode) and unbuilt ones are not offered at all
-  const shown = (it: SearchItem) => !it.section || (access.section(it.section) !== 'hidden' && access.section(it.section) !== 'soon');
-  const isLocked = (it: SearchItem) => Boolean(it.section && access.section(it.section) === 'locked');
-
-  const results = useMemo(
-    () => runSearch(index, deferred).map(g => ({ ...g, hits: g.hits.filter(h => shown(h.item)) })).filter(g => g.hits.length),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [index, deferred, access]
-  );
+  // the index, what may be shown, the results (shared with the new look's search page)
+  const { index, results, shown, isLocked, access, classes } = useSearchEngine(deferred, { picking: !!picking });
   const total = results.reduce((n, g) => n + g.hits.length, 0);
 
   // picking: everything there is, as a tree to unfold
@@ -382,7 +326,7 @@ export const SearchPanel: React.FC<{
                       right={
                         <button
                           type="button"
-                          onClick={() => { try { localStorage.removeItem(RECENT_KEY); } catch { /* storage off */ } setRecent([]); }}
+                          onClick={() => { clearRecent(); setRecent([]); }}
                           className="h-8 px-2.5 rounded-full text-[12px] font-bold text-[#8a7a6a] hover:text-[#7a2028] hover:bg-[#7a2028]/5 cursor-pointer"
                         >
                           გასუფთავება

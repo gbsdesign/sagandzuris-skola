@@ -37,8 +37,8 @@ const SwitchRow: React.FC<{ on: boolean; onChange: (on: boolean) => void; title:
   </button>
 );
 
-/** Everything in one window. */
-const RemindersSheet: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+/** Everything in one window (also opened by the settings page's „შეხსენებები“ row). */
+export const RemindersSheet: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const { user } = useAuth();
   const hours = useReminders();
   const mine = useMyHabits(user?.uid);

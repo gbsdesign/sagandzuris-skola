@@ -14,6 +14,7 @@ import { useOpenGameRoom } from '../../utils/gameRoomOpen';
 import { ChatPanel } from './ChatPanel';
 import { PinCard } from './PinCard';
 import { PinSheet } from './PinSheet';
+import { hideNav } from '../../design/newLook';
 import { parseChatRoomRef } from '../../data/roomGames';
 
 // The class's chat: text and voice messages between members and teachers, and the class's call (the school's own,
@@ -81,6 +82,9 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
       console.warn('pin reply: ', e);
     }
   };
+
+  // the new look's bottom menu steps aside while the chat fills a phone's screen (its field is at the bottom)
+  useEffect(() => (fill ? hideNav() : undefined), [fill]);
 
   return (
     <div ref={box} className={fill ? 'h-full' : ''}>

@@ -4,17 +4,14 @@ import { triggerHaptic } from '../../utils/haptics';
 import { isAndroidApp } from '../../utils/androidApp';
 import { handToApp, onWidgetsChanged, widgetSecret, widgetsLinked } from '../../utils/widgetLink';
 
-/** The profile's „ვიჯეტები“ row, only inside the Android app: links the home-screen widgets to this member (once per
- *  phone). Tapping it again links anew — after a reinstall, or when the widgets show someone else. Two taps: the first
- *  fetches the secret, the second hands it to the app (Chrome opens the app only straight from a tap). */
-export const WidgetLinkCard: React.FC = () => {
+/** Linking the widgets, two taps: the first fetches the secret, the second hands it to the app (Chrome opens the app
+ *  only straight from a tap). `shown`: only inside the Android app. Used by the card below and the settings page's row. */
+export const useWidgetLink = () => {
   const [linked, setLinked] = useState(widgetsLinked);
   const [state, setState] = useState<'idle' | 'busy' | 'error'>('idle');
   const [secret, setSecret] = useState<string | null>(null);
   useEffect(() => onWidgetsChanged(() => setLinked(widgetsLinked())), []);
-  if (!isAndroidApp()) return null;
   const go = async () => {
-    triggerHaptic(10);
     if (secret) {
       handToApp(secret);
       setSecret(null);
@@ -28,10 +25,18 @@ export const WidgetLinkCard: React.FC = () => {
       setState('error');
     }
   };
+  return { shown: isAndroidApp(), linked, state, secret, go };
+};
+
+/** The profile's „ვიჯეტები“ row, only inside the Android app: links the home-screen widgets to this member (once per
+ *  phone). Tapping it again links anew — after a reinstall, or when the widgets show someone else. */
+export const WidgetLinkCard: React.FC = () => {
+  const { shown, linked, state, secret, go } = useWidgetLink();
+  if (!shown) return null;
   return (
     <button
       type="button"
-      onClick={go}
+      onClick={() => { triggerHaptic(10); void go(); }}
       disabled={state === 'busy'}
       className="w-full rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] px-4 py-3 flex items-center gap-3.5 text-left cursor-pointer transition hover:ring-[#7a2028]/25 active:scale-[0.99] disabled:opacity-60"
     >

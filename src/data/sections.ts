@@ -48,7 +48,7 @@ export type SectionState = 'open' | 'soon' | 'hidden';
  *  member's features (utils/memberAccess) are the same, so `useMembership().can` follows these switches too. */
 export type ExtraId =
   | 'samosi' | 'learn' | 'manera' | 'work' | 'prayers' | 'classes' | 'messages' | 'search' | 'calendar' | 'recordings'
-  | 'abituri' | 'birthdays' | 'recDownload' | 'recOffline' | 'aiTeacher';
+  | 'abituri' | 'birthdays' | 'recDownload' | 'recOffline' | 'aiTeacher' | 'newLook';
 export type SwitchId = SectionId | ExtraId;
 
 export const EXTRA_SWITCHES: { id: ExtraId; label: string; hint: string }[] = [
@@ -67,6 +67,7 @@ export const EXTRA_SWITCHES: { id: ExtraId; label: string; hint: string }[] = [
   { id: 'recDownload', label: 'ჩანაწერების ჩამოწერა', hint: '⬇ MP3 სიმღერებთან, გალობასთან და ალბომებში — მასწავლებლებს და ადმინებს ყოველთვის ჩანს' },
   { id: 'recOffline', label: 'ჩანაწერების ოფლაინი', hint: '☁ ჩანაწერის ინტერნეტის გარეშე შენახვა — მასწავლებლებს და ადმინებს ყოველთვის ჩანს' },
   { id: 'aiTeacher', label: 'AI მასწავლებელი', hint: 'დღის გაკვეთილი ოსტატობასა და გზაზე — ჯერ მხოლოდ ადმინები ხედავენ' },
+  { id: 'newLook', label: 'ახალი სახე', hint: 'ქვედა მენიუ, ერთი ზედა ზოლი, პარამეტრები, შეტყობინებები და ძებნა გვერდებად — ჯერ მხოლოდ ადმინები ხედავენ' },
 ];
 export const isExtra = (id: string): id is ExtraId => EXTRA_SWITCHES.some(x => x.id === id);
 
@@ -79,6 +80,7 @@ export const DEFAULT_SECTION_STATE: Record<SwitchId, SectionState> = {
   recDownload: 'open', recOffline: 'open',
   // the AI teacher's day lesson (2026-11-18): admins see it first; opened for everyone from this list when ready
   aiTeacher: 'hidden',
+  newLook: 'hidden',
 };
 
 /** A „მალე“ section the admin gave a day (settings/sections.openOn, YYYY-MM-DD) opens by itself on that day in Georgia;

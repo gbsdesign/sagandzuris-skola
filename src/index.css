@@ -399,3 +399,21 @@ html.sg-night-page :is(header, main) [class*="text-[#7a2028]"] { color: #e3c37a;
 html.sg-night-page :is(header, main) :is([class*="ring-[#e8dcc8]"], [class*="ring-[#eadfcd]"], [class*="border-[#e8dcc8]"]) { --tw-ring-color: #4a3f36; border-color: #3a312a; }
 html.sg-night-page main :is(h1, h2, h3) { color: #e3c37a; }
 html.sg-night-page :is(header, main) [class*="bg-[#7a2028]"]:not([class*="/"]) { background: #8a2630; color: #fbf6ec; }
+
+/* The new look (redesign stage 2, html.sg-new — design/newLook.ts): the bottom menu is at the bottom, so a page's floating
+   „უკან“ (kit PageBar, shown once its bar scrolls away) comes in at the top left, white, like the bars' own round. */
+html.sg-new .sg-float-top {
+  top: calc(env(safe-area-inset-top, 0px) + 12px);
+  bottom: auto;
+  width: 44px;
+  height: 44px;
+  background: var(--color-surf);
+  color: var(--color-ink);
+  --tw-ring-shadow: 0 0 #0000;
+  box-shadow: var(--shadow-lift);
+}
+html.sg-new { background: var(--color-page); }
+/* the menu steps aside while the phone's keyboard is up (it would ride on top of the keys) */
+@media (pointer: coarse) {
+  html.sg-new:has(:is(input:not([type=checkbox], [type=radio], [type=range], [type=button]), textarea, [contenteditable=true]):focus) .sg-nav { display: none; }
+}

@@ -8,6 +8,13 @@ export const SEARCH_EVENT = 'sg-search-open';
 /** Opens the search over the current page, with `query` already typed when given (a game's „ნახე აპში“). */
 export const openSearch = (query?: string) => window.dispatchEvent(new CustomEvent(SEARCH_EVENT, { detail: query ?? '' }));
 
+// The new look's search is a page (pages/shell/SearchPage): the words typed before it opened wait here for it, and what
+// was typed stays here while a picked result is open, so „უკან“ brings the same results back.
+let pendingQuery = '';
+export const setPendingQuery = (q: string) => { pendingQuery = q; };
+/** the words the search page starts with (kept until it changes them) */
+export const pendingSearchQuery = () => pendingQuery;
+
 // "Open this song / ancestor / tab / person (the admin panel)": the page takes the request when it mounts, or at once if it is
 // already on screen. One request at a time; a page that never opens simply leaves it unused.
 /** a page that takes a picked item; a game played in a class's room takes a room (`classId/roomId`) or a variant, as do

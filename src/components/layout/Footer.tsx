@@ -8,12 +8,14 @@ const FB_PAGE = 'https://www.facebook.com/passangermgzavrebi';
 
 interface FooterProps {
   logoUrl: string;
+  /** the new look: only the church calendar's window (the links live on the settings page) */
+  bare?: boolean;
 }
 
 // the open calendar is a history entry of its own (sgCal), so the phone's „back“ closes it
 const historyCal = () => { try { return !!(window.history.state || {}).sgCal; } catch { return false; } };
 
-export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
+export const Footer: React.FC<FooterProps> = ({ logoUrl, bare }) => {
   // the church calendar opens as a sheet over the page (the page underneath stays where it was)
   const [calOpen, setCalOpen] = useState(historyCal);
   const [visible, setVisible] = useState(false);
@@ -58,9 +60,7 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
     return () => cancelAnimationFrame(r);
   }, [shown]);
 
-  return (
-    <footer className="safe-bleed safe-bottom border-t border-[#e8dcc8] bg-[#fbf6ec]">
-      {shown && (
+  const calendar = shown && (
         <div
           ref={sheetRef}
           role="dialog"
@@ -72,7 +72,12 @@ export const Footer: React.FC<FooterProps> = ({ logoUrl }) => {
         >
           <ChurchCalendarPanel iso={calIso} onChange={setCalIso} onClose={close} />
         </div>
-      )}
+  );
+  if (bare) return <>{calendar}</>;
+
+  return (
+    <footer className="safe-bleed safe-bottom border-t border-[#e8dcc8] bg-[#fbf6ec]">
+      {calendar}
       {/* one row: [Facebook] [WhatsApp] (icon-only on a phone), the © line under it;
           the logo and the name only from the sm breakpoint up — a phone has them in the header already */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-5 flex flex-col items-center gap-3 text-xs text-[#8a7a6a]">
