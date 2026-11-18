@@ -131,6 +131,7 @@ const StudentScreen = page(() => import('../pages/v2/mostsavle/StudentScreen'), 
 const PsalterScreen = page(() => import('../pages/v2/psalmuni/PsalterScreen'), 'PsalterScreen');
 const LettersPage = page(() => import('../pages/v2/tserilebi/LettersPage'), 'LettersPage');
 const BirthdaysScreen = page(() => import('../pages/v2/dabadebis/BirthdaysScreen'), 'BirthdaysScreen');
+const GalobaV2 = page(() => import('../pages/v2/galoba/GalobaV2'), 'GalobaV2');
 // the old look's home loads only when the admin hides the new look
 const HomePage = page(() => import('../pages/HomePage'), 'HomePage');
 
@@ -260,6 +261,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   if (currentPage === 'student') return nl ? <StudentScreen /> : <StudentPage item={mapItem} />;
   // the birthdays in the new look (x-dabadebis) draw their own bar
   if (nl && currentPage === 'birthdays') return <BirthdaysScreen />;
+
+  if (nl && currentPage === 'galoba') return <GalobaV2 />;
 
   if (currentPage !== 'home') {
     // the one bar: „←“, the page's title, and 📌 for a page that can be a home button

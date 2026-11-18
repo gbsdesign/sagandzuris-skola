@@ -1,14 +1,20 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Check, ChevronDown, CloudDownload, CloudOff, HardDrive, Search } from 'lucide-react';
-import { askConfirm, Bar, Btn, Sheet, Switch } from '../ui/kit';
-import { BOOK_NAMES } from '../../data/chantLookup';
+import { askConfirm } from '../ui/kit';
+import { Bar, Button, Rows, SectionLabel, Sheet, Toggle, ToggleRow } from '../ui2';
+import { cx } from '../ui2/cx';
+import { BOOK_NAMES, canOpenNotes } from '../../data/chantLookup';
 import { recordingGroups, type RecGroup, type RecItem, type RecSection } from '../../data/offlineRecordings';
 import { useAccess } from '../../hooks/useAccess';
-import { useAuth } from '../../context';
+import { useAuth, useNavigation } from '../../context';
 import {
   isAutoPack, isKept, offlineStatus, runPercent, setGroup, setItem, setPacks, syncNow, trackEstimate, useOffline,
   type OfflineState, type PackInfo,
 } from '../../utils/offlineFiles';
+import { estimateMb, offlineCount, onOfflineChange, saveOffline } from '../../utils/offlineNotes';
+import { triggerHaptic } from '../../utils/haptics';
+import { SECTIONS } from '../../pages/galoba/ServiceTabs';
+import { SERVICE_CHANTS } from '../../pages/galoba/chantSearch';
 import { useRecordingTools } from '../../hooks/useRecordingTools';
 
 // „ოფლაინ რეჟიმი“ split by list (2026-11-08, the user: „ჩამოტვირთვის ლოგო დავშალოთ … სიების თავში ღრუბლის ლოგოზე
@@ -29,7 +35,6 @@ export const KIND_TITLE: Record<OfflineKind, string> = {
 const MB = 1024 * 1024;
 // a no-break space keeps the unit beside its number (and „≈“ beside the size)
 const size = (b: number) => (b >= 1024 * MB ? `${(b / (1024 * MB)).toFixed(1)} გბ` : `${Math.max(1, Math.round(b / MB))} მბ`);
-const cx = (...c: (string | false | null | undefined)[]) => c.filter(Boolean).join(' ');
 
 const BOOK_ORDER = Object.keys(BOOK_NAMES);
 const bookOf = (p: PackInfo) => p.id.slice('notes-'.length);
@@ -40,24 +45,24 @@ const sureToRemove = async (what: string, bytes: number, about = false): Promise
 
 /** The state under a name: green with ✓ once on the device. */
 const StateLine: React.FC<{ done?: boolean; children: React.ReactNode }> = ({ done, children }) => (
-  <span className={cx('flex items-center gap-1 text-[12.5px] leading-snug mt-0.5', done ? 'text-emerald-700' : 'text-[#8a7a6a]')}>
-    {done && <Check className="w-3.5 h-3.5 shrink-0" strokeWidth={3} />}
+  <span className={cx('flex items-center gap-1 text-meta leading-snug', done ? 'text-leaf-ink' : 'text-mut')}>
+    {done && <Check className="size-3.5 shrink-0" strokeWidth={3} />}
     <span className="min-w-0">{children}</span>
   </span>
 );
 
 const RowText: React.FC<{ title: React.ReactNode; line: React.ReactNode; done?: boolean }> = ({ title, line, done }) => (
   <span className="min-w-0 flex-1">
-    <span className="block text-[14.5px] font-semibold text-[#2a2017] leading-snug">{title}</span>
+    <span className="block text-lead font-bold wrap-break-word">{title}</span>
     <StateLine done={done}>{line}</StateLine>
   </span>
 );
 
-/** A part's small heading inside the window. */
+/** A part: its small grey heading over a card of rows. */
 const Part: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
-  <section className="mt-4 first:mt-0">
-    <h4 className="px-0.5 mb-1 text-[12.5px] font-bold text-[#8a7a6a]">{title}</h4>
-    <div className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-3.5 divide-y divide-[#efe5d4]">{children}</div>
+  <section className="flex flex-col gap-1.5">
+    <SectionLabel label={title} />
+    <Rows>{children}</Rows>
   </section>
 );
 
@@ -107,12 +112,12 @@ const PackRow: React.FC<{ s: OfflineState; p: PackInfo; title: string; count?: s
     if (recs && (v || rs?.chosen)) void setGroup(recs, v);
   };
   return (
-    <div className="py-2">
-      <div className="flex items-center gap-3">
+    <div className="py-2 pr-3 pl-4">
+      <div className="flex min-h-12 items-center gap-2.5">
         <RowText title={title} line={line} done={done} />
-        <Switch on={on} onChange={turn} label={`${title} — ოფლაინ`} />
+        <Toggle on={on} onChange={turn} label={`${title} — ოფლაინ`} />
       </div>
-      {on && !done && (active || pct > 0) && <div className="mt-1.5"><Bar value={pct} max={100} /></div>}
+      {on && !done && (active || pct > 0) && <Bar value={pct / 100} className="mt-1 mb-1" />}
     </div>
   );
 };
@@ -131,32 +136,32 @@ const GroupRow: React.FC<{ s: OfflineState; g: RecGroup; est: (url: string) => n
   const turn = async (v: boolean) => { if (v || await sureToRemove(`„${g.title}“`, st.chosenKept, true)) void setGroup(g, v); };
   return (
     <div>
-      <div className="flex items-center gap-1">
-        <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} className="min-w-0 flex-1 flex items-center gap-2 py-2 text-left cursor-pointer group">
-          <RowText title={<span className="group-hover:text-[#7a2028] transition-colors">{g.title}</span>} line={line} done={ok} />
+      <div className="flex items-center gap-1 pr-3">
+        <button type="button" onClick={() => setOpen(o => !o)} aria-expanded={open} className="flex min-h-14 min-w-0 flex-1 cursor-pointer items-center gap-2 py-2 pl-4 text-left active:bg-soft">
+          <RowText title={g.title} line={line} done={ok} />
           {st.chosen > 0 && !st.whole && (
-            <span className="h-6 px-2 shrink-0 rounded-full bg-[#7a2028]/[0.08] text-[#7a2028] text-[11.5px] font-bold tabular-nums flex items-center" title="არჩეული ჩანაწერები">
+            <span className="flex h-6 shrink-0 items-center rounded-full bg-tint px-2 text-cap font-bold text-wine tabular-nums" title="არჩეული ჩანაწერები">
               {st.chosen}/{n}
             </span>
           )}
-          <ChevronDown className={cx('w-4 h-4 shrink-0 text-[#b3a594] transition-transform', open && 'rotate-180')} />
+          <ChevronDown className={cx('size-[18px] shrink-0 text-mut transition-transform', open && 'rotate-180')} />
         </button>
-        <Switch on={st.whole} onChange={turn} label={`${g.title} — ყველა ჩანაწერი ოფლაინ`} />
+        <Toggle on={st.whole} onChange={turn} label={`${g.title} — ყველა ჩანაწერი ოფლაინ`} />
       </div>
       {open && (
-        <ul className="ml-1 mb-2 pl-3 border-l-2 border-[#efe5d4] sg-in">
+        <ul className="sg-in mr-3 mb-2 ml-5 border-l-2 border-line pl-3">
           {g.items.map(it => {
             const on = st.whole || s.choice.items.includes(it.id);
             const done = itemDone(s, it);
             const bytes = it.tracks.reduce((a, t) => a + est(t), 0);
             return (
-              <li key={it.id} className="flex items-center gap-3 py-1.5">
+              <li key={it.id} className="flex items-center gap-2 py-1">
                 <RowText
                   title={it.title}
                   line={[it.sub, done ? size(bytes) : `≈ ${size(bytes)}`, on && !done ? recState(s) : ''].filter(Boolean).join(' · ')}
                   done={done}
                 />
-                <Switch on={on} onChange={v => void setItem(g, it.id, v)} label={`${it.title} — ოფლაინ`} />
+                <Toggle on={on} onChange={v => void setItem(g, it.id, v)} label={`${it.title} — ოფლაინ`} />
               </li>
             );
           })}
@@ -174,19 +179,19 @@ const Groups: React.FC<{ s: OfflineState; groups: RecGroup[]; est: (url: string)
   return (
     <>
       {groups.length > 12 && (
-        <label className="flex items-center gap-2 py-2">
-          <Search className="w-4 h-4 shrink-0 text-[#b3a594]" aria-hidden />
+        <label className="flex min-h-12 items-center gap-2 px-4">
+          <Search className="size-[18px] shrink-0 text-mut" aria-hidden />
           <input
             value={q}
             onChange={e => setQ(e.target.value)}
             placeholder="ძებნა"
             aria-label="ძებნა"
-            className="min-w-0 flex-1 h-9 bg-transparent text-[14px] text-[#2a2017] placeholder:text-[#b3a594] outline-none"
+            className="h-11 min-w-0 flex-1 bg-transparent text-lead text-ink outline-none placeholder:text-faint"
           />
         </label>
       )}
       {shown.map(g => <GroupRow key={g.id} s={s} g={g} est={est} />)}
-      {query && shown.length === 0 && <p className="py-3 text-[13px] text-[#8a7a6a]">ვერაფერი მოიძებნა</p>}
+      {query && shown.length === 0 && <p className="px-4 py-3 text-meta text-mut">ვერაფერი მოიძებნა</p>}
     </>
   );
 };
@@ -199,24 +204,24 @@ const StateNote: React.FC<{ s: OfflineState }> = ({ s }) => {
   const mine = s.run && !isAutoPack(s.run.what);
   if (status === 'run' && mine) {
     return (
-      <div className="mb-3 rounded-2xl bg-[#7a2028]/[0.06] px-3.5 py-2.5">
-        <p className="flex items-center gap-2 text-[13px] font-bold text-[#7a2028]"><CloudDownload className="w-4 h-4 shrink-0" />ჩამოიწერება · {pct}%</p>
-        <div className="mt-2"><Bar value={pct} max={100} /></div>
+      <div className="shrink-0 rounded-tile bg-tint px-4 py-3">
+        <p className="flex items-center gap-2 text-body font-bold text-wine"><CloudDownload className="size-[18px] shrink-0" />ჩამოიწერება · {pct}%</p>
+        <Bar value={pct / 100} className="mt-2" />
       </div>
     );
   }
   if (status === 'offline') {
     return (
-      <p className="mb-3 flex items-center gap-2 rounded-2xl bg-[#f1e8d9] px-3.5 py-2.5 text-[13px] text-[#75685a] leading-snug">
-        <CloudOff className="w-4 h-4 shrink-0" />ინტერნეტი არ არის — ჩართული ჩამოიწერება, როცა დაბრუნდება.
+      <p className="flex shrink-0 items-center gap-2 rounded-tile bg-surf px-4 py-3 text-meta leading-snug text-mut">
+        <CloudOff className="size-[18px] shrink-0" />ინტერნეტი არ არის — ჩართული ჩამოიწერება, როცა დაბრუნდება.
       </p>
     );
   }
   if (s.failed && !s.run) {
     return (
-      <div className="mb-3 flex items-center gap-3 rounded-2xl bg-amber-50 px-3.5 py-2.5">
-        <p className="flex-1 text-[13px] text-amber-800 leading-snug">ნაწილი ვერ ჩამოიწერა.</p>
-        <Btn size="sm" onClick={() => syncNow(true)}>თავიდან ცდა</Btn>
+      <div className="flex shrink-0 items-center gap-3 rounded-tile bg-gold-tint px-4 py-2">
+        <p className="flex-1 text-meta leading-snug text-gold-ink">ნაწილი ვერ ჩამოიწერა.</p>
+        <Button kind="soft" size="md" onClick={() => syncNow(true)}>თავიდან ცდა</Button>
       </div>
     );
   }
@@ -228,10 +233,50 @@ const SpaceLine: React.FC<{ s: OfflineState }> = ({ s }) => {
   if (s.usage === null) return null;
   const free = s.quota !== null && s.quota > s.usage ? s.quota - s.usage : null;
   return (
-    <p className="mt-4 flex items-center justify-center gap-1.5 text-[12px] text-[#8a7a6a]">
-      <HardDrive className="w-3.5 h-3.5 shrink-0" />
-      <span>ტელეფონზე უკავია <b className="text-[#4a3426] tabular-nums">{size(s.usage)}</b>{free !== null && <> · კიდევ დაეტევა ≈&nbsp;<span className="tabular-nums">{size(free)}</span></>}</span>
+    <p className="mt-1 flex items-center justify-center gap-1.5 text-cap text-mut">
+      <HardDrive className="size-3.5 shrink-0" />
+      <span>ტელეფონზე უკავია <b className="text-ink tabular-nums">{size(s.usage)}</b>{free !== null && <> · კიდევ დაეტევა ≈&nbsp;<span className="tabular-nums">{size(free)}</span></>}</span>
     </p>
+  );
+};
+
+/** „ეს მსახურება“: keeps every version of the open service on the phone (the logic of the old ServiceDownload). */
+const ServiceRow: React.FC = () => {
+  const { selectedService } = useNavigation();
+  const chants = selectedService ? SERVICE_CHANTS[selectedService] : undefined;
+  const ids = useMemo(
+    () => (chants ?? []).flatMap(c => (c.variants ?? []).filter(v => canOpenNotes(c, v)).map(v => v.id)),
+    [chants],
+  );
+  const [, bump] = useState(0);
+  const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  useEffect(() => onOfflineChange(() => bump(x => x + 1)), []);
+  if (!selectedService || !ids.length) return null;
+  const name = SECTIONS.find(x => x.service === selectedService)?.title ?? String(selectedService);
+  const saved = offlineCount(ids);
+  const all = saved === ids.length;
+  const run = async () => {
+    triggerHaptic(10);
+    setProgress({ done: 0, total: ids.length - saved });
+    await saveOffline(ids, (done, total) => setProgress({ done, total }));
+    setProgress(null);
+  };
+  const sub = progress
+    ? `ჩამოიწერება · ${progress.done}/${progress.total}`
+    : all
+      ? <span className="flex items-center gap-1 text-leaf-ink"><Check className="size-3.5 shrink-0" strokeWidth={3} />ჩამოწერილია · ინტერნეტის გარეშეც გაიხსნება</span>
+      : `${chants?.filter(c => (c.variants ?? []).some(v => canOpenNotes(c, v))).length ?? 0} საგალობელი · ≈ ${estimateMb(ids)} მბ`;
+  return (
+    <Rows>
+      <ToggleRow
+        title={`ეს მსახურება: ${name}`}
+        sub={sub}
+        on={all || !!progress}
+        disabled={all || !!progress}
+        onChange={on => { if (on) void run(); }}
+      />
+      {progress && <div className="px-4 pb-3"><Bar value={progress.total ? progress.done / progress.total : 0} /></div>}
+    </Rows>
   );
 };
 
@@ -250,7 +295,7 @@ export const OfflineSheet: React.FC<{ kind: OfflineKind; onClose: () => void }> 
   const groups = useMemo(() => (hears ? recordingGroups() : []), [hears]);
 
   const body = (() => {
-    if (!s.supported) return <p className="text-[14px] text-[#75685a] leading-relaxed">ამ ბრაუზერში ოფლაინ რეჟიმი ვერ იმუშავებს. სცადეთ Chrome-ის ან Safari-ის ახალი ვერსია.</p>;
+    if (!s.supported) return <p className="text-body leading-relaxed text-mut">ამ ბრაუზერში ოფლაინ რეჟიმი ვერ იმუშავებს. სცადეთ Chrome-ის ან Safari-ის ახალი ვერსია.</p>;
     if (kind === 'library') {
       const lives = s.packs.find(p => p.id === 'lives');
       // „დასაზუსტებელი“ is the admins' sorting box, not a list for members (as on the library's shelf)
@@ -282,9 +327,9 @@ export const OfflineSheet: React.FC<{ kind: OfflineKind; onClose: () => void }> 
         <>
           {books.length > 0 && (
             <Part title="ნოტების წიგნები">
-              <div className="flex items-center gap-3 py-2">
+              <div className="flex min-h-14 items-center gap-2.5 py-2 pr-3 pl-4">
                 <RowText title="ყველა წიგნი" line={`${books.length} წიგნი · ${size(total)}`} done={allOn && books.every(p => s.stored[p.id]?.complete)} />
-                <Switch on={allOn} onChange={toggleAll} label="ყველა წიგნი — ოფლაინ" />
+                <Toggle on={allOn} onChange={toggleAll} label="ყველა წიგნი — ოფლაინ" />
               </div>
               {books.map(p => (
                 <PackRow key={p.id} s={s} p={p} title={BOOK_NAMES[bookOf(p)] ?? bookOf(p)} count={p.c ? `${p.c} გალობა` : undefined}
@@ -293,19 +338,20 @@ export const OfflineSheet: React.FC<{ kind: OfflineKind; onClose: () => void }> 
             </Part>
           )}
           {recs.length > 0 && <Part title="ჩანაწერები · წესის მიხედვით"><Groups s={s} groups={recs} est={est} /></Part>}
-          {!books.length && !recs.length && <p className="text-[14px] text-[#75685a]">სია იტვირთება…</p>}
+          {!books.length && !recs.length && <p className="text-body text-mut">სია იტვირთება…</p>}
         </>
       );
     }
     return recs.length > 0
       ? <Part title="ჩანაწერები"><Groups s={s} groups={recs} est={est} /></Part>
-      : <p className="text-[14px] text-[#75685a]">აქ ჩამოსაწერი ჩანაწერები ჯერ არ არის.</p>;
+      : <p className="text-body text-mut">აქ ჩამოსაწერი ჩანაწერები ჯერ არ არის.</p>;
   })();
 
   return (
     <Sheet open onClose={onClose} title={KIND_TITLE[kind]}>
-      <p className="-mt-1 mb-3 text-[13px] text-[#8a7a6a] leading-snug">ჩართე, რაც ინტერნეტის გარეშეც გინდა.</p>
+      <p className="-mt-1 shrink-0 px-1 text-meta leading-snug text-mut">ჩართე, რაც ინტერნეტის გარეშეც გინდა.</p>
       {s.supported && <StateNote s={s} />}
+      {s.supported && kind === 'galoba' && <ServiceRow />}
       {body}
       {s.supported && <SpaceLine s={s} />}
     </Sheet>

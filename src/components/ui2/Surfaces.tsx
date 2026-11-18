@@ -212,7 +212,7 @@ export const Sheet: React.FC<{
       >
         <span aria-hidden="true" className="h-1 w-10 shrink-0 self-center rounded-full bg-dim sm:hidden" />
         <div className="flex shrink-0 items-center gap-2.5">
-          <h2 id={titleId} className="min-w-0 flex-1 truncate pl-1 text-title font-bold">{title}</h2>
+          <h2 id={titleId} className="min-w-0 flex-1 line-clamp-2 pl-1 text-title leading-tight font-bold wrap-break-word">{title}</h2>
           <RoundButton label="დახურვა" onClick={() => close.current()}><X /></RoundButton>
         </div>
         <div className="-mx-4 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-4 pb-0.5">{children}</div>

@@ -36,10 +36,11 @@ const cacheUrls = async (cache: Cache, urls: string[]) => {
   }
 };
 
-/** Everything one version needs: the book notes (JSON + page images), the two drawings, the recording's tracks. */
-const saveVersion = async (cache: Cache, variantId: string) => {
+/** One version's book notes (JSON + page images) and its two drawings — no recording (also „მხოლოდ ნოტები“ of the class
+ *  program, utils/programOffline.ts). */
+export const saveVersionNotes = async (cache: Cache, variantId: string) => {
   const info = findVersion(variantId);
-  if (!info) return;
+  if (!info) return null;
   const { chant, variant } = info;
   const pair = hymnPair(chant.id);
   const urls = [pair.top.src, pair.bottom.src];
@@ -51,7 +52,14 @@ const saveVersion = async (cache: Cache, variantId: string) => {
     for (const im of json.img ?? []) urls.push(base + im.src);
   }
   await cacheUrls(cache, urls);
-  const media = getChantMedia(chant.id, variant.code);
+  return info;
+};
+
+/** Everything one version needs: the book notes (JSON + page images), the two drawings, the recording's tracks. */
+const saveVersion = async (cache: Cache, variantId: string) => {
+  const info = await saveVersionNotes(cache, variantId);
+  if (!info) return;
+  const media = getChantMedia(info.chant.id, info.variant.code);
   if (media) for (const t of media.tracks.filter(Boolean)) await cacheAudio(t);
 };
 

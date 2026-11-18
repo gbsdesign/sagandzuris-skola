@@ -1,8 +1,8 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CloudCheck, CloudDownload } from 'lucide-react';
-import { chooseItems, runPercent, useOffline } from '../../utils/offlineFiles';
-import { isOffline, offlineSupported, onOfflineChange, saveOffline } from '../../utils/offlineNotes';
-import { planMb, planSaved, programPlan } from '../../utils/programOffline';
+import { runPercent, useOffline } from '../../utils/offlineFiles';
+import { isOffline, offlineSupported, onOfflineChange } from '../../utils/offlineNotes';
+import { notesOnlyHas, notesOnlyMb, planMb, planSaved, programPlan, runProgramSave, useProgramRun } from '../../utils/programOffline';
 import { triggerHaptic } from '../../utils/haptics';
 
 // The class's „სასწავლო პროგრამა“ on the phone in one tap — the chants' book pages and the school's recordings, the
@@ -16,9 +16,8 @@ export const useProgramOffline = (ids: string[]) => {
   const off = useOffline();
   const [, bump] = useState(0);
   useEffect(() => onOfflineChange(() => bump(n => n + 1)), []);
-  const [notes, setNotes] = useState<{ done: number; total: number } | null>(null);
-  const [asked, setAsked] = useState(false);
-  const [trouble, setTrouble] = useState('');
+  // the run is shared with the automatic watcher (utils/programOffline.ts)
+  const { notes, asked, trouble } = useProgramRun();
   // „ჩამოწერილია“ shown for a moment: when it finishes, or on a tap once it is saved
   const [told, setTold] = useState(false);
   const toldTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
@@ -32,6 +31,8 @@ export const useProgramOffline = (ids: string[]) => {
   const has = (t: string) => off.tracks.has(t);
   const shown = offlineSupported() && ids.length > 0 && (plan.versions.length > 0 || plan.tracks.length > 0);
   const saved = shown && planSaved(plan, has);
+  // only the notes are on the phone (no recordings), after „მხოლოდ ნოტები“
+  const notesSaved = shown && plan.versions.length > 0 && plan.versions.every(id => isOffline(id) || notesOnlyHas(id));
   // the recordings this program still waits for, while the queue runs after „ჩამოწერა“
   const recsLeft = plan.tracks.filter(t => !has(t)).length;
   const recsRunning = asked && !notes && recsLeft > 0 && !!off.run;
@@ -39,28 +40,33 @@ export const useProgramOffline = (ids: string[]) => {
   const busy = !!notes || recsRunning;
   const share = notes ? notes.done / Math.max(1, notes.total) : recsRunning ? runPercent(off) / 100 : 0;
 
+  // per program item: saved, or null when it has nothing to download (poems, instruments)
+  const savedItem = (id: string): boolean | null => {
+    const p = programPlan([id]);
+    if (p.versions.length) return isOffline(id) || notesOnlyHas(id);
+    if (p.songs.length) return p.tracks.every(has);
+    return null;
+  };
+  const items = ids.map(savedItem).filter((x): x is boolean => x !== null);
+  const count = items.length;
+  const savedCount = items.filter(Boolean).length;
+  const needMb = planMb(plan, has);
+  const notesMb = notesOnlyMb(plan);
+
   // finished while this page watched → say so once
   const wasSaved = useRef(saved);
   useEffect(() => {
-    if (saved && !wasSaved.current && asked) { setTrouble(''); tell(); }
+    if (saved && !wasSaved.current && asked) tell();
     wasSaved.current = saved;
   }, [saved, asked]);
 
-  const save = async () => {
+  const save = async (arg?: unknown) => {
     if (notes) return;
     triggerHaptic(12);
     if (saved) { tell(); return; }
-    setTrouble('');
-    setAsked(true);
-    if (!off.online) setTrouble('ინტერნეტი არ არის — ჩაირთვება, როცა დაბრუნდება.');
-    if (plan.versions.length) {
-      setNotes({ done: 0, total: plan.versions.length });
-      await saveOffline(plan.versions, (done, total) => setNotes({ done, total }));
-      setNotes(null);
-    }
-    if (plan.songs.length) await chooseItems(plan.songs);
-    if (plan.versions.some(id => !isOffline(id))) setTrouble('ნაწილი ვერ ჩამოიწერა. შეამოწმე ინტერნეტი და სცადე თავიდან.');
+    await runProgramSave(plan, off.online, !!(arg && (arg as { notesOnly?: boolean }).notesOnly));
   };
+  const saveNotesOnly = () => save({ notesOnly: true });
 
   // the one line under the title, only while there is something to say
   const line = trouble ? '' // the trouble has its own red line
@@ -70,9 +76,11 @@ export const useProgramOffline = (ids: string[]) => {
     : told && saved ? 'ჩამოწერილია — ინტერნეტის გარეშეც გაიხსნება'
     : '';
   const label = saved ? 'პროგრამა ჩამოწერილია — ოფლაინშიც იხსნება'
-    : `პროგრამის ჩამოწერა ოფლაინისთვის (~${planMb(plan, has)} MB)`;
+    : `პროგრამის ჩამოწერა ოფლაინისთვის (~${needMb} MB)`;
+  // item states show only while a download runs or just after
+  const showStates = busy || queued || told;
 
-  return { shown, saved, busy, share, line, trouble, label, save };
+  return { shown, saved, notesSaved, busy, queued, share, line, trouble, label, save, saveNotesOnly, count, savedCount, needMb, notesMb, savedItem, showStates, plan };
 };
 
 export type ProgramOfflineState = ReturnType<typeof useProgramOffline>;
