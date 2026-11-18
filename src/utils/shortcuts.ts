@@ -57,7 +57,7 @@ export const SPECIALS: Record<string, string> = {
 export const serviceName = (service: string): string => (service === 'კატაბასიები' ? 'კატავასიები' : service);
 export const SERVICES = ['წირვა', 'მწუხრი', 'ცისკარი', 'სადღესასწაულო', 'მარხვანი', 'ზატიკი', 'პანაშვიდი', 'ჯვრისწერა', 'ხელდასხმა', 'პარაკლისი', 'მომიხსენენი', 'ძლისპირები', 'კატაბასიები', 'დასადებლები'] as const;
 export const LIBRARY_SHORT: Record<string, string> = {
-  book: 'საღმრთო ისტორია', feasts: 'დღესასწაულები', lives: 'წმიდანთა ცხოვრება', prayers: 'ლოცვანი', sasuliero: 'სასულიერო წიგნები',
+  book: 'საღმრთო ისტორია', feasts: 'დღესასწაულები', lives: 'წმიდანთა ცხოვრება', prayers: 'ლოცვანი', sasuliero: 'სასულიერო წიგნები', patriarq: 'საპატრიარქოს ბიბლიოთეკა',
 };
 export const PAGES: Record<string, string> = { abituri: 'აბიტურიენტს', messages: 'მიმოწერა', admin: 'ადმინის პანელი' };
 export const TEACHER_TABS: Record<string, string> = {

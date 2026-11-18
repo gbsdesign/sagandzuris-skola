@@ -159,6 +159,7 @@ const library = (who: CatalogWho): CatalogNode[] => [
   { ...btn('lib:prayers', 'library:prayers', undefined, ''), children: prayerBook('lib:pr', who) },
   {
     ...btn('lib:sas', 'library:sasuliero', undefined, 'წმიდა მამები'),
+    ...btn('lib:patriarq', 'library:patriarq', undefined, 'საპატრიარქოს ბიბლიოთეკის წიგნები'),
     load: async () => {
       const { BOOKS } = await import('../pages/library/SpiritualBooksTab');
       return BOOKS.map(b => ({
