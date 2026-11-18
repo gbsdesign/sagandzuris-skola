@@ -2,7 +2,7 @@
 // "node tests/firestore-rules.test.mjs firestore.rules" (with firebase-tools and @firebase/rules-unit-testing installed
 // next to it; firebase.json sets the emulator port 8085). Every case below must pass before publishing the rules.
 import { initializeTestEnvironment, assertSucceeds, assertFails } from '@firebase/rules-unit-testing';
-import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, arrayUnion, arrayRemove, serverTimestamp, Bytes } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, deleteDoc, collection, query, where, getDocs, arrayUnion, arrayRemove, increment, serverTimestamp, Bytes } from 'firebase/firestore';
 import { readFileSync } from 'node:fs';
 
 const rules = readFileSync(process.argv[2], 'utf8');
@@ -394,6 +394,23 @@ await t('superadmin reads the log', assertSucceeds(getDocs(collection(sup, 'admi
 await t('admin does not read the log', assertFails(getDocs(collection(adm, 'adminLog'))));
 await t('nobody changes a line', assertFails(updateDoc(doc(sup, 'adminLog', 'l1'), { text: 'x' })));
 await t('nobody deletes a line', assertFails(deleteDoc(doc(sup, 'adminLog', 'l1'))));
+// ---- the app's error log: anyone signed in adds what broke (no name), the same error again only counts up
+const oops = (extra = {}) => ({ msg: 'x is not a function', where: 'gz', stack: 'at a (index.js)', kind: 'error', count: 1, first: '2026-11-18T05:00:00Z', last: '2026-11-18T05:00:00Z', ver: '2026-11-18 05:00', dev: 'android-app', ...extra });
+await t('a member adds a new error', assertSucceeds(setDoc(doc(stu, 'errorLog', 'e1'), oops())));
+await t('a guest adds none', assertFails(setDoc(doc(guest, 'errorLog', 'e2'), oops())));
+await t('a new error starts at one', assertFails(setDoc(doc(stu, 'errorLog', 'e3'), oops({ count: 5 }))));
+await t('an error has only its fields', assertFails(setDoc(doc(stu, 'errorLog', 'e4'), oops({ uid: 'stu' }))));
+await t('its kind is one of the four', assertFails(setDoc(doc(stu, 'errorLog', 'e5'), oops({ kind: 'spam' }))));
+await t('its words are short', assertFails(setDoc(doc(stu, 'errorLog', 'e6'), oops({ msg: 'x'.repeat(301) }))));
+await t('the same error again counts up by one', assertSucceeds(updateDoc(doc(stu2, 'errorLog', 'e1'), { count: increment(1), last: '2026-11-18T06:00:00Z', ver: 'v2', dev: 'ios', where: 'class' })));
+await t('it cannot jump', assertFails(updateDoc(doc(stu2, 'errorLog', 'e1'), { count: 50, last: '2026-11-18T07:00:00Z' })));
+await t('its words cannot be rewritten', assertFails(updateDoc(doc(stu2, 'errorLog', 'e1'), { count: increment(1), msg: 'other' })));
+await t('a member does not read the log', assertFails(getDoc(doc(stu, 'errorLog', 'e1'))));
+await t('a teacher does not read the log', assertFails(getDocs(collection(tch, 'errorLog'))));
+await t('an admin reads the log', assertSucceeds(getDocs(collection(adm, 'errorLog'))));
+await t('a member cannot clear it', assertFails(deleteDoc(doc(stu, 'errorLog', 'e1'))));
+await t('an admin clears a line', assertSucceeds(deleteDoc(doc(adm, 'errorLog', 'e1'))));
+
 await t('superadmin asks for the newcomer notice', assertSucceeds(setDoc(doc(sup, 'adminPush', 'sup'), { waiting: true, weekly: true, at: 'x' })));
 await t('admin asks for the Monday overview', assertSucceeds(setDoc(doc(adm, 'adminPush', 'adm'), { waiting: false, weekly: true, at: 'x' })));
 await t('admin cannot ask for the newcomer notice', assertFails(setDoc(doc(adm, 'adminPush', 'adm'), { waiting: true, weekly: true, at: 'x' })));

@@ -10,8 +10,12 @@ import { offlinePacks } from './scripts/lib/offline-manifest.mjs';
 const inPrint = (id: string) => id.includes('/src/print/');
 const PRINT_ASSET = /^abcjs-basic-min\./;
 
+// the build's time in Tbilisi, „2026-11-18 10:30“: the error log (utils/errorLog.ts) notes which version broke
+const BUILD_STAMP = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Tbilisi', dateStyle: 'short', timeStyle: 'short' }).format(new Date());
+
 export default defineConfig(() => {
   return {
+    define: { __SG_BUILD__: JSON.stringify(BUILD_STAMP) },
     plugins: [
       react(),
       tailwindcss(),
