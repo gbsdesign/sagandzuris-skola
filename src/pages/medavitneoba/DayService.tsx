@@ -118,6 +118,8 @@ const movableTexts = async (e: number): Promise<{ tr: Text[]; ko: Text[] }> => {
 /** a fixed feast's own troparion and kontakion (its old-style day in ჟამნი's month — the first of each) */
 const feastTexts = async (md: string): Promise<{ tr: Text[]; ko: Text[] }> => {
   const all = await saintTexts(Number(md.slice(0, 2)), Number(md.slice(3, 5)));
+  // the book names the Transfiguration's troparion „კონდაკი“ too: no troparion and two kontakia — the first is the troparion
+  if (!all.tr.length && all.ko.length >= 2) return { tr: [{ ...all.ko[0], head: 'ტროპარი' }], ko: all.ko.slice(1, 2) };
   return { tr: all.tr.slice(0, 1), ko: all.ko.slice(0, 1) };
 };
 
@@ -169,6 +171,11 @@ const HymnRow: React.FC<{ h: Hymn; texts?: Text[]; shown?: boolean }> = ({ h, te
         </span>
         {has && <ChevronDown className={`w-5 h-5 shrink-0 text-[#8a7a6a] transition-transform ${open ? 'rotate-180' : ''}`} />}
       </button>
+      {texts && !has && (
+        <p className="px-3.5 pb-2.5 -mt-1 text-[13px] leading-snug text-[#8a7a6a] text-pretty">
+          {h.role === 'saint' ? 'საკუთარი ტექსტი ჟამნში არ აქვს — იკითხება საზიარო, წმიდანის დასის მიხედვით (თვენი)' : 'ტექსტი აპში ჯერ არ არის'}
+        </p>
+      )}
       {open && texts && <div className="px-4 pb-3.5 sg-in font-serif-ge">{texts.map((t, i) => <TextBlock key={i} t={t} />)}</div>}
     </li>
   );

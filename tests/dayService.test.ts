@@ -159,3 +159,27 @@ test('every chant a step names is in the books', async () => {
     for (const sv of buildServices({ iso, day: cal[iso] ?? null, tone: 3, rank: guessRank(iso, cal[iso] ?? null, null), patron: george }))
       for (const st of sv.steps) for (const id of st.chants ?? []) assert.ok(ids.has(id), `${iso} ${st.title}: ${id}`);
 });
+
+test('stage 4b: the eves, the blessings, the Annunciation on a movable day', () => {
+  const sv = (iso: string) => buildServices({ iso, day: cal[iso] ?? null, tone: 1, rank: guessRank(iso, cal[iso] ?? null, null), patron: null });
+  const svc = (iso: string, id: string) => sv(iso).find(s => s.id === id)!;
+  // Christmas Eve 2027 is a Wednesday: the Royal Hours, St Basil's liturgy with vespers
+  assert.match(svc('2027-01-06', 'hours').steps[0].title, /სამეუფო ჟამები/);
+  assert.equal(svc('2027-01-06', 'liturgy').when, 'ბასილი დიდისა, მწუხრთან ერთად');
+  // Theophany Eve 2026 was a Sunday: the Royal Hours on Friday the 16th, Basil's liturgy on the feast (Monday the 19th)
+  assert.match(svc('2026-01-16', 'hours').steps[0].title, /სამეუფო ჟამები/);
+  assert.equal(svc('2026-01-19', 'liturgy').when, 'ბასილი დიდისა');
+  assert.ok(svc('2026-01-19', 'liturgy').steps.some(s => s.title.startsWith('დიდი აიაზმა')));
+  assert.ok(svc('2026-09-27', 'matins').steps.some(s => s.title === 'ჯვრის ამაღლება'));
+  assert.ok(svc('2026-02-15', 'liturgy').steps.some(s => s.title === 'სანთლის კურთხევა'));
+  assert.ok(svc('2026-04-05', 'matins').steps.some(s => s.title === 'ბზის კურთხევა')); // Palm Sunday 2026
+  // the Annunciation on Holy Saturday (2029: Pascha 8 April): the day's hymns first, then the feast's
+  const h = hymnsOf({ iso: '2029-04-07', day: null, tone: 1, rank: 'great', patron: null }, 'liturgy');
+  assert.deepEqual(h.troparia.map(x => x.role + (x.e ?? '')), ['triodion-1', 'feast']);
+});
+
+test('a fixed feast\'s leave-taking is the feast\'s alone', () => {
+  const h = hymnsOf({ iso: '2027-01-13', day: cal['2027-01-13'], tone: 1, rank: 'simple', patron: null }, 'liturgy');
+  assert.deepEqual(h.troparia.map(x => x.role), ['feast']);
+  assert.deepEqual(h.kontakia.map(x => x.role), ['feast']);
+});

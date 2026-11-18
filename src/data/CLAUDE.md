@@ -417,5 +417,12 @@ evening in his temple = vespers alone (matins in the morning), „სხვა �
   `data/ownServices.ts` = the 21 saints' / icons' own services (x 1–21) by their old-style days — linked beside the common
   service. `utils/fasting.ts` + test = „დღის საზრდო“ on the page's head (the calendar's own words lead, the rule beneath).
   Where the app has no text (the Triodion's stichera and canons) the step says it is in the printed Triodion.
+- **Stage 4b + stage 5 (the same night):** the eves of Christmas and Theophany (`paramony`: the Royal Hours, Basil's liturgy with
+  vespers on a weekday; on Saturday or Sunday the hours move to the Friday before — `royalFriday` — and Basil's liturgy to the feast;
+  checked with orthodoxwiki, the UOCC typikon and the Metropolitan Cantor Institute), the Great Blessing of the Waters (18 and 19 Jan,
+  კურთხევანი 25), the Exaltation's rite (კონდაკი 8), the Meeting's candles (x 26), Palm Sunday's palms, the Transfiguration's grapes;
+  the Annunciation on a movable day keeps both days' hymns; a fixed feast's leave-taking drops the saint. A hymn whose text ჟამნი
+  lacks says so on the page (a saint with only a kontakion → the common one by the saint's kind). `tests/dayServiceYear.test.ts`
+  serves every day of 2027 and Lent–Pentecost 2028: four services, every text and book a step opens found, every movable hymn's text.
 - Still open: the common services have no ikos; a second rank „ექვსიანი“ is not told apart from a plain day; with the great
   doxology the tibikon sings the typika at the liturgy — the app keeps the daily antiphons on weekdays (the user's temple).
