@@ -394,6 +394,21 @@ await t('superadmin reads the log', assertSucceeds(getDocs(collection(sup, 'admi
 await t('admin does not read the log', assertFails(getDocs(collection(adm, 'adminLog'))));
 await t('nobody changes a line', assertFails(updateDoc(doc(sup, 'adminLog', 'l1'), { text: 'x' })));
 await t('nobody deletes a line', assertFails(deleteDoc(doc(sup, 'adminLog', 'l1'))));
+// ---- the AI teacher's answers counted a month (aiUsage)
+await t('a member starts the month count', assertSucceeds(setDoc(doc(stu, 'aiUsage', '2026-11'), { calls: 1 })));
+await t('another counts up by one', assertSucceeds(updateDoc(doc(stu2, 'aiUsage', '2026-11'), { calls: increment(1) })));
+await t('the count cannot jump', assertFails(updateDoc(doc(stu, 'aiUsage', '2026-11'), { calls: 99 })));
+await t('a month is a month', assertFails(setDoc(doc(stu, 'aiUsage', 'x'), { calls: 1 })));
+await t('a guest counts nothing', assertFails(updateDoc(doc(guest, 'aiUsage', '2026-11'), { calls: increment(1) })));
+await t('a member reads the total', assertSucceeds(getDoc(doc(stu, 'aiUsage', '2026-11'))));
+await t('a member starts their own count', assertSucceeds(setDoc(doc(stu, 'aiUsage', '2026-11', 'people', 'stu'), { calls: 1 })));
+await t("a member does not count for another", assertFails(setDoc(doc(stu, 'aiUsage', '2026-11', 'people', 'stu2'), { calls: 1 })));
+await t('their own count goes up by one', assertSucceeds(updateDoc(doc(stu, 'aiUsage', '2026-11', 'people', 'stu'), { calls: increment(1) })));
+await t("a member does not read another's count", assertFails(getDoc(doc(stu2, 'aiUsage', '2026-11', 'people', 'stu'))));
+await t("an admin reads everyone's", assertSucceeds(getDocs(collection(adm, 'aiUsage', '2026-11', 'people'))));
+await t('an admin sets the AI rules', assertSucceeds(setDoc(doc(adm, 'settings', 'aiTeacher'), { budget: 100, perStudent: 3, hintsFirst: true, kidsNoAi: true })));
+await t('a member does not', assertFails(setDoc(doc(stu, 'settings', 'aiTeacher'), { budget: 1000 })));
+
 // ---- the app's error log: anyone signed in adds what broke (no name), the same error again only counts up
 const oops = (extra = {}) => ({ msg: 'x is not a function', where: 'gz', stack: 'at a (index.js)', kind: 'error', count: 1, first: '2026-11-18T05:00:00Z', last: '2026-11-18T05:00:00Z', ver: '2026-11-18 05:00', dev: 'android-app', ...extra });
 await t('a member adds a new error', assertSucceeds(setDoc(doc(stu, 'errorLog', 'e1'), oops())));

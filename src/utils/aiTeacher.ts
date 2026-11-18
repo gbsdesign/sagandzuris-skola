@@ -2,6 +2,7 @@ import { getApp } from 'firebase/app';
 import { startAppCheck } from './samosiTryOn';
 import { georgiaToday } from './psalter';
 import { parseScore } from './drillScore';
+import { aiGate, HINT_FIRST_LINE, noteAiCall, readHintsFirst } from './aiRules';
 
 // „AI მასწავლებელი“ in the pearls game and the learning mode: Gemini (through Firebase AI Logic, the same App Check pass as the chokha
 // try-on) listens to a member's take of a pearl's phrase and answers in Georgian: what went well, the one thing to
@@ -19,7 +20,7 @@ const countTry = (uid: string, scope: AiScope) => { try { localStorage.setItem(d
 export const aiTriesLeft = (uid: string, unlimited: boolean, scope: AiScope = 'sing') =>
   (unlimited ? Infinity : Math.max(0, AI_TEACHER_DAILY - usedToday(uid, scope)));
 
-export type AiTeacherProblem = 'setup' | 'no-credits' | 'offline' | 'failed' | 'no-tries';
+export type AiTeacherProblem = 'setup' | 'no-credits' | 'offline' | 'failed' | 'no-tries' | 'kids' | 'budget';
 export class AiTeacherError extends Error {
   constructor(public kind: AiTeacherProblem) { super(kind); }
 }
@@ -30,6 +31,9 @@ export const AI_PROBLEM_TEXT: Record<AiTeacherProblem, string> = {
   offline: 'ინტერნეტი არ არის — AI მასწავლებელს ინტერნეტი სჭირდება.',
   failed: 'პასუხი ვერ მოვიდა — ცოტა ხანში კიდევ სცადე.',
   'no-tries': `დღეს AI მასწავლებელს ${AI_TEACHER_DAILY}-ჯერ უკვე ჰკითხე — ხვალ ისევ შეგეძლება.`,
+  // the school's rules (utils/aiRules.ts)
+  kids: 'საბავშვო რეჟიმში AI არ ერთვება. შესწორებები მზა ფრაზებით მოდის.',
+  budget: 'ამ თვის AI-ს ლიმიტი ამოიწურა. მომავალ თვეს ისევ ჩაირთვება.',
 };
 
 export interface TakeAbout {
@@ -69,13 +73,16 @@ const blobToBase64 = (b: Blob) => new Promise<string>((resolve, reject) => {
 export const askAiTeacher = async (uid: string, mp3: Blob, about: TakeAbout, unlimited = false): Promise<string> => {
   if (aiTriesLeft(uid, unlimited) <= 0) throw new AiTeacherError('no-tries');
   if (offline()) throw new AiTeacherError('offline');
+  const stop = await aiGate(uid);
+  if (stop) throw new AiTeacherError(stop);
+  const hint = await readHintsFirst();
   const audio = await blobToBase64(mp3);
   let answer = '';
   try {
     await startAppCheck();
     const { getAI, getGenerativeModel, GoogleAIBackend } = await import('firebase/ai');
     const model = getGenerativeModel(getAI(getApp(), { backend: new GoogleAIBackend() }), { model: AI_TEACHER_MODEL });
-    const res = await model.generateContent([{ text: prompt(about) }, { inlineData: { mimeType: 'audio/mp3', data: audio } }]);
+    const res = await model.generateContent([{ text: hint ? `${prompt(about)} ${HINT_FIRST_LINE}` : prompt(about) }, { inlineData: { mimeType: 'audio/mp3', data: audio } }]);
     answer = res.response.text().trim();
   } catch (err) {
     console.warn('AI teacher note:', err);
@@ -85,6 +92,7 @@ export const askAiTeacher = async (uid: string, mp3: Blob, about: TakeAbout, unl
     throw new AiTeacherError(offline() ? 'offline' : 'failed');
   }
   if (!answer) throw new AiTeacherError('failed');
+  noteAiCall(uid);
   if (!unlimited) countTry(uid, 'sing');
   return answer.replace(/\*+/g, '');
 };
@@ -110,6 +118,8 @@ const scorePrompt = (a: DrillAbout) => [
 export const askAiScore = async (uid: string, mp3: Blob, about: DrillAbout, unlimited = false): Promise<{ score: number; text: string }> => {
   if (aiTriesLeft(uid, unlimited, 'manera') <= 0) throw new AiTeacherError('no-tries');
   if (offline()) throw new AiTeacherError('offline');
+  const stop = await aiGate(uid);
+  if (stop) throw new AiTeacherError(stop);
   const audio = await blobToBase64(mp3);
   let raw = '';
   try {
@@ -130,6 +140,7 @@ export const askAiScore = async (uid: string, mp3: Blob, about: DrillAbout, unli
   }
   const parsed = parseScore(raw);
   if (!parsed) throw new AiTeacherError('failed');
+  noteAiCall(uid);
   if (!unlimited) countTry(uid, 'manera');
   return parsed;
 };

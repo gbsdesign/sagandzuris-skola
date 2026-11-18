@@ -15,6 +15,22 @@ const readLocal = (piece: string): LearnRecord => {
   try { return JSON.parse(localStorage.getItem(localKey(piece)) || '{}') || {}; } catch { return {}; }
 };
 
+/** One part's record saved (the AI lesson saves through this too); a guest's stays on the device. */
+export const saveLearnPart = (uid: string | null | undefined, piece: string, part: number, r: PartRecord) => {
+  if (!uid) {
+    try { localStorage.setItem(localKey(piece), JSON.stringify({ ...readLocal(piece), [part]: r })); } catch { /* storage off */ }
+    return;
+  }
+  const clean = Object.fromEntries(Object.entries(r).filter(([, v]) => v !== undefined));
+  setDoc(doc(db, 'students', uid), { learning: { [piece]: { [part]: clean } } }, { merge: true })
+    .catch(e => console.warn('learning save:', e?.code || e));
+};
+
+/** How many parts a piece has, kept for the teacher's bars. */
+export const saveLearnParts = (uid: string, piece: string, n: number) =>
+  setDoc(doc(db, 'students', uid), { learnParts: { [piece]: n } }, { merge: true })
+    .catch(e => console.warn('learning parts:', e?.code || e));
+
 export const useLearning = (uid: string | null | undefined, piece: string) => {
   // a student's page opened by a teacher (context/AuthContext ViewAsStudent): this phone's reminder stays the viewer's
   const viewing = !!useViewing();
@@ -41,20 +57,13 @@ export const useLearning = (uid: string | null | undefined, piece: string) => {
 
   const savePart = (part: number, r: PartRecord) => {
     setRec(x => ({ ...x, [part]: r }));
-    if (!uid) {
-      try { localStorage.setItem(localKey(piece), JSON.stringify({ ...readLocal(piece), [part]: r })); } catch { /* storage off */ }
-      return;
-    }
-    const clean = Object.fromEntries(Object.entries(r).filter(([, v]) => v !== undefined));
-    setDoc(doc(db, 'students', uid), { learning: { [piece]: { [part]: clean } } }, { merge: true })
-      .catch(e => console.warn('learning save:', e?.code || e));
+    saveLearnPart(uid, piece, part, r);
   };
   /** How many parts the piece has, kept for the teacher (written only when it changed). */
   const noteParts = (n: number) => {
     if (!uid || !loaded || !(n > 0) || noted === n) return;
     setNoted(n);
-    setDoc(doc(db, 'students', uid), { learnParts: { [piece]: n } }, { merge: true })
-      .catch(e => console.warn('learning parts:', e?.code || e));
+    saveLearnParts(uid, piece, n);
   };
   return { rec, all, loaded, savePart, noteParts };
 };

@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Bytes, Timestamp, collection, getDocs } from 'firebase/firestore';
-import { DatabaseBackup, Download, Loader2 } from 'lucide-react';
+import { ChevronRight, DatabaseBackup, Download, Loader2, Sparkles } from 'lucide-react';
 import { db } from '../../firebase';
 import { Btn, Card, Flash, Sheet, useFlash } from '../ui/kit';
 import { useAuth } from '../../context';
@@ -17,6 +17,7 @@ import { GrowthFold } from './GrowthFold';
 import { RolesFold } from './RolesFold';
 import { GooglePhotosFold } from './GooglePhotosFold';
 import type { SchoolClass } from '../../hooks/useClasses';
+import { AiRulesSheet } from '../aiLesson/AiRulesSheet';
 import type { UserRecord } from './UsersTab';
 
 // a small square icon, the same as a folding card's
@@ -52,6 +53,7 @@ const readAll = async (path: string[]) => {
 export const SchoolSheet: React.FC<{ users: UserRecord[]; classes: SchoolClass[]; onClose: () => void }> = ({ users, classes, onClose }) => {
   const { isSuperAdmin } = useAuth();
   const [exporting, setExporting] = useState<string | null>(null);
+  const [aiRules, setAiRules] = useState(false);
   const msg = useFlash();
   const onMessage = msg.say;
 
@@ -112,6 +114,18 @@ export const SchoolSheet: React.FC<{ users: UserRecord[]; classes: SchoolClass[]
         <ExtraRightsFold users={users} onMessage={onMessage} />
         <AlbumsFold onMessage={onMessage} />
         <GooglePhotosFold onMessage={onMessage} />
+        {/* the AI teacher's school rules and budget (components/aiLesson/AiRulesSheet) */}
+        <Card className="!py-3">
+          <button type="button" onClick={() => setAiRules(true)} className="w-full flex items-center gap-3 min-h-[44px] text-left cursor-pointer">
+            <RowIcon><Sparkles /></RowIcon>
+            <span className="flex-1 min-w-0">
+              <span className="block font-serif-ge text-[16px] font-bold text-[#4a3426] leading-snug">AI მასწავლებელი</span>
+              <span className="block text-[12.5px] text-[#8a7a6a] leading-snug mt-0.5">სკოლის წესები და ბიუჯეტი</span>
+            </span>
+            <ChevronRight className="w-[18px] h-[18px] text-[#8a7a6a] shrink-0" />
+          </button>
+        </Card>
+        <AiRulesSheet open={aiRules} onClose={() => setAiRules(false)} onMessage={onMessage} />
         <RolesFold />
         <GroupTitle>ციფრები</GroupTitle>
         <GrowthFold users={users} />

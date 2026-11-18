@@ -48,6 +48,9 @@ import { MembershipGate, WaitingBanner } from './components/access/MembershipGat
 import { useMembership } from './utils/memberAccess';
 import { useBirthdaySync } from './utils/birthdays';
 import { useAlbumAccessSync } from './data/albumAccess';
+import { useAiLessonOpen } from './components/aiLesson/open';
+// the AI teacher's day lesson loads only when opened
+const AiLesson = React.lazy(() => import('./components/aiLesson/AiLesson').then(m => ({ default: m.AiLesson })));
 
 startRecordingBindings();
 startPlacements();
@@ -205,6 +208,7 @@ function AppContent() {
   }, []);
 
   const currentLogo = dbLogo || defaultLogo;
+  const aiLesson = useAiLessonOpen();
 
   if (loading) {
     return (
@@ -242,6 +246,13 @@ function AppContent() {
       <ErrorBoundary>
         <AppModals />
       </ErrorBoundary>
+
+      {/* the AI teacher's day lesson, over everything (components/aiLesson) */}
+      {aiLesson.open && (
+        <ErrorBoundary>
+          <Suspense fallback={null}><AiLesson onClose={aiLesson.close} /></Suspense>
+        </ErrorBoundary>
+      )}
 
       {/* the app's own „are you sure?“ card (kit askConfirm) */}
       <ConfirmHost />

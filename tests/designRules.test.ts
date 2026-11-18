@@ -60,7 +60,7 @@ test('words are readable on their grounds (4.5 : 1), marks are visible on theirs
 // ——— the lock ———
 
 /** folders whose screens are rebuilt for the new look: only the design rules' names may style them */
-const LOCKED = ['src/components/ui2'];
+const LOCKED = ['src/components/ui2', 'src/components/aiLesson'];
 
 /** a line a rule may be broken on, with the reason (keep it short and rare) */
 const ALLOWED: { file: string; has: string; why: string }[] = [];
