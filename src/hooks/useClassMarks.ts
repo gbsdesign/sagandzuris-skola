@@ -48,7 +48,7 @@ const sentKey = (classId: string, uid: string) => `sgClassMarks:${classId}:${uid
 export const useClassMarksSync = () => {
   const { user } = useAuth();
   const { selectedChantVariants } = useChants();
-  const confirmed = useConfirmations(user?.uid);
+  const confirmed = useConfirmations(user?.uid, { withAi: true });
   const classes = useMyClasses(user?.uid);
 
   useEffect(() => {

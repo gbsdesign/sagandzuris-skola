@@ -69,7 +69,7 @@ export const useClassWork = (classes: SchoolClass[]): ClassWorkState => {
   const byClass = useAssignmentsOf(classes.map(c => c.id));
   // (the header holds this on every page: with no class nothing is listened to)
   const uid = classes.length ? user?.uid : undefined;
-  const confirmed = useConfirmations(uid);
+  const confirmed = useConfirmations(uid, { withAi: true });
   const drillDone = useDrillDone(uid);
   const mine = useAllLearning(uid);
   const learnsSomewhere = classes.some(c => !(isAdmin || (!!user && c.teacherIds.includes(user.uid))));

@@ -34,7 +34,7 @@ export const saveMarksLock = (uid: string, on: boolean, by: string) =>
 export const usePathMarks = (onLearned?: () => void) => {
   const { user } = useAuth();
   const { selectedChantVariants, setSelectedChantVariants } = useChants();
-  const confirmed = useConfirmations(user?.uid);
+  const confirmed = useConfirmations(user?.uid, { withAi: true });
   const lock = useMarksLock(user?.uid);
   const locked = !!lock?.on;
 

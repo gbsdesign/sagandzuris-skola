@@ -61,7 +61,7 @@ export const workDone = (a: Assignment, confirmed: Confirmations, drillDone: Rec
 export const useWorkCtx = () => {
   const { user } = useAuth();
   const { selectedChantVariants } = useChants();
-  const confirmed = useConfirmations(user?.uid);
+  const confirmed = useConfirmations(user?.uid, { withAi: true });
   const drillDone = useDrillDone(user?.uid);
   const mine = useAllLearning(user?.uid);
   const openLearning = useOpenLearning();

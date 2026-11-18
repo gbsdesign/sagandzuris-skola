@@ -41,6 +41,7 @@ import { useMembership } from './utils/memberAccess';
 import { useBirthdaySync } from './utils/birthdays';
 import { useAlbumAccessSync } from './data/albumAccess';
 import { useAiLessonOpen, useMyVoiceOpen } from './components/aiLesson/open';
+import { useExamOpen } from './pages/v2/gamocda/open';
 import { useAccess } from './hooks/useAccess';
 import { setNewLook, useNavHidden } from './design/newLook';
 import { BottomNav } from './components/shell/BottomNav';
@@ -51,6 +52,7 @@ import { NO_NAV } from './components/shell/tabs';
 // the AI teacher's day lesson loads only when opened
 const AiLesson = React.lazy(() => import('./components/aiLesson/AiLesson').then(m => ({ default: m.AiLesson })));
 const MyVoiceHost = React.lazy(() => import('./components/aiLesson/MyVoiceHost').then(m => ({ default: m.MyVoiceHost })));
+const ExamHost = React.lazy(() => import('./pages/v2/gamocda/ExamHost').then(m => ({ default: m.ExamHost })));
 // the parts over the page that are not needed for the first screen load a moment after it (redesign stage 3 „სიჩქარე“)
 const later = <T extends string>(load: () => Promise<Record<T, React.ComponentType<any>>>, name: T) =>
   React.lazy(() => load().then(m => ({ default: m[name] })));
@@ -238,6 +240,7 @@ function AppContent() {
 
   const currentLogo = dbLogo || defaultLogo;
   const aiLesson = useAiLessonOpen();
+  const examOpen = useExamOpen();
   const myVoice = useMyVoiceOpen();
 
   if (loading) {
@@ -293,6 +296,12 @@ function AppContent() {
       {aiLesson.open && (
         <ErrorBoundary>
           <Suspense fallback={null}><AiLesson onClose={aiLesson.close} /></Suspense>
+        </ErrorBoundary>
+      )}
+      {/* the AI teacher's exam (AI step 3, boards x-ai-gamocda-tsin / x-ai-gamocda) */}
+      {examOpen.exam && (
+        <ErrorBoundary>
+          <Suspense fallback={null}><ExamHost exam={examOpen.exam} onClose={examOpen.close} /></Suspense>
         </ErrorBoundary>
       )}
       {/* „ჩემი ხმა“ — what the AI teacher remembers (over the lesson, when opened from it) */}

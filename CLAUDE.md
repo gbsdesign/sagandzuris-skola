@@ -1750,6 +1750,18 @@
   the AI lesson if `aiTeacher` is open and not done today, else the reviews due, birthdays in their classes, the feast from
   `widget/days-<year>.json`) — nothing to say, nothing sent. The app icon shows the unread chats (`BottomNav`, Badging API; the
   service worker marks it on a chat push with the app closed).
+- **AI teacher, step 3a — exam, levels, Sunday (2026-11-18)**: the exam (`pages/v2/gamocda/`: `openExam(variantId, voice)`, host in
+  App, history step `sgExam`; x-ai-gamocda-tsin / x-ai-gamocda): the whole voice at its real tempo, the others sounding, scored by
+  `utils/trio.ts` strict; passed at 90 % (`utils/aiPass.ts` + test) → `students.aiPass[variantId][voice] {at, hit, total}`, a try a
+  day (`examTries`), the take into `pearlTakes` as `exam~<vid>~<voice>`; entries in `LearnEasy` (all phrases learned) and the pearl's
+  sheet on „საგანძური“, both only while the `aiTeacher` switch is open for the person. A pass shines the pearl like a teacher's
+  confirmation: `useConfirmations(uid, { withAi: true })` for every display/count (editors stay without); the teacher sees
+  „ჩათვალა AI-მ“ on the student's `…|gza`, hears the take and may „მოხსნა“ it. Levels (`pages/v2/doneebi/`, gz `ostatoba~levels`,
+  `ostatoba~cert/<n>`; x-ai-sapekhurebi, x-ai-motsmoba; `utils/levelsView.ts` + test; a certificate PNG; a newly closed level shows
+  its certificate once — `sg-cert-seen:<uid>`). „კვირის წირვა“ (`pages/v2/tsirva/`, gz `tsirva`; x-ai-tsirva; `utils/sundayReady.ts`
+  + test): the class's liturgy program for that Sunday, else the tone's chants + the Liturgy's first ten; „მოვამზადე“ writes
+  `students.aiLesson.focus {until, pieces}` which the day lesson prefers until that Sunday; the link shows Wed–Sun under the lesson's
+  strip / hero and on its start screen.
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 

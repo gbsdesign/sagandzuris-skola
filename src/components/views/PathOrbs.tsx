@@ -125,7 +125,7 @@ export const PathOrbs: React.FC<{ order?: string[]; habits?: React.ReactNode }> 
   // „ნასწავლი“'s count (2026-11-09, the user: „ნასწავლი/სასწავლი … და პროგრამაში შემავალი რაც იქნება ჯამში“): the path's items
   // and the programs of the classes I learn in, each once; learned = a voice of it known (mine or a teacher's „ჩათვლა“)
   const { selectedChantVariants = {} } = useChants();
-  const confirmed = useConfirmations(user?.uid);
+  const confirmed = useConfirmations(user?.uid, { withAi: true });
   const learnCount = useMemo(() => {
     const ids = new Set(stats.categories.flatMap(c => [...c.done, ...c.todo].map(it => it.variantId)));
     const extra = new Set<string>();

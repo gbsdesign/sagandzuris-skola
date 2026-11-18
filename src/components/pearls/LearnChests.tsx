@@ -29,7 +29,7 @@ import { TokenIcon } from './Tokens';
 export const usePathPearls = () => {
   const { user } = useAuth();
   const { selectedChantVariants = {} } = useChants();
-  const confirmed = useConfirmations(user?.uid);
+  const confirmed = useConfirmations(user?.uid, { withAi: true });
   return useMemo(() => pearlCounts(filterValidVariants(selectedChantVariants), confirmed), [selectedChantVariants, confirmed]);
 };
 
@@ -47,7 +47,7 @@ export const chestIdOf = (id: string): string => {
 export const usePathChests = () => {
   const { user } = useAuth();
   const { selectedChantVariants = {} } = useChants();
-  const confirmed = useConfirmations(user?.uid);
+  const confirmed = useConfirmations(user?.uid, { withAi: true });
   const watched = useWatchedVideos();
   return useMemo(() => {
     const items: ChestItem[] = [];

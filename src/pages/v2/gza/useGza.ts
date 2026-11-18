@@ -16,7 +16,7 @@ export const useLearnCount = () => {
   const stats = usePathStats();
   const myClasses = useAllMyClasses();
   const { selectedChantVariants = {} } = useChants();
-  const confirmed = useConfirmations(user?.uid);
+  const confirmed = useConfirmations(user?.uid, { withAi: true });
   const count = useMemo(() => {
     const teaching = myClasses.filter(c => !!user && c.teacherIds.includes(user.uid));
     const ids = new Set(stats.categories.flatMap(c => [...c.done, ...c.todo].map(it => it.variantId)));

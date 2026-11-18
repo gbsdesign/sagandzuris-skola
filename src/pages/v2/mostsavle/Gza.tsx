@@ -1,7 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCircle2, Pause, Pencil, Play } from 'lucide-react';
+import { CheckCircle2, Info, Pause, Pencil, Play } from 'lucide-react';
+import { FieldPath, deleteField, doc, updateDoc } from 'firebase/firestore';
+import { db } from '../../../firebase';
 import { useNavigation, useRealAuth } from '../../../context';
-import { Button, Card, Dot, Duo, Note, Row, Rows, SectionLabel, Sheet, ToggleRow, TopBar } from '../../../components/ui2';
+import { Button, Card, Dot, Duo, Helper, Note, Row, Rows, RoundButton, SectionLabel, Sheet, ToggleRow, TopBar } from '../../../components/ui2';
+import { askConfirm } from '../../../components/ui/kit';
 import { MemberPathEditor } from '../../../components/admin/MemberPathEditor';
 import { learnPieceOf } from '../../../components/learn/openLearning';
 import { usePathItemOpener } from '../../../hooks/usePathItemOpener';
@@ -10,6 +13,9 @@ import { saveMarksLock, useMarksLock } from '../../../hooks/usePathMarks';
 import { takeUrl, usePearlTakes } from '../../../hooks/usePearls';
 import type { PearlTake } from '../../../hooks/usePearls';
 import { parseLearnTakeId } from '../../../utils/learn';
+import { aiVoices, examKey, type AiPass } from '../../../utils/aiPass';
+import { examTakeId } from '../../../utils/aiExam';
+import { shortDate } from '../../../utils/dateNames';
 import { errorText } from '../../../utils/errorText';
 import { categoryOf, sortPathItems, usesVoices, voicesOf } from '../../../utils/pathItems';
 import type { PathItem, Voice } from '../../../utils/pathItems';
@@ -71,8 +77,26 @@ export const StudentGza: React.FC<{ s: StudentData }> = ({ s }) => {
   const setLocked = (on: boolean) =>
     saveMarksLock(s.uid, on, user?.displayName || '').catch(e => setError('ვერ შეინახა: ' + errorText(e)));
 
-  const waiting = items.flatMap(it => voicesOf(it, it.variantId).filter(v => !(conf[it.variantId] || []).includes(v)).map(v => ({ it, v })));
+  // the AI teacher's passed exams (students/{uid}.aiPass): they count as counted, the teacher may hear the take and take one off
+  const pass = (s.data?.aiPass as AiPass | undefined) ?? {};
+  const aiOf = (id: string) => aiVoices(pass, id);
+  const waiting = items.flatMap(it => voicesOf(it, it.variantId).filter(v => !(conf[it.variantId] || []).includes(v) && !aiOf(it.variantId).includes(v)).map(v => ({ it, v })));
+  /** the voices only the AI counted (a teacher's own „ჩათვლა“ wins) */
+  const aiRows = items.flatMap(it => aiOf(it.variantId).filter(v => !(conf[it.variantId] || []).includes(v) && usesVoices(it.variantId)).map(v => ({ it, v })));
+  const takeOfExam = (id: string, v: Voice): PearlTake | null => takes[examTakeId(id, v)] ?? null;
+  const takeAiOff = async (it: PathItem, v: Voice) => {
+    const ok = await askConfirm({
+      title: `მოვხსნა AI-ს ჩათვლა — ${it.chantName} · ${ROMAN[v]} ხმა?`,
+      text: 'მარგალიტი ისევ „გაპრიალებული“ იქნება. მოსწავლე გამოცდას ხელახლა ჩააბარებს.',
+      ok: 'მოხსნა',
+    });
+    if (!ok) return;
+    // the day of the last try goes too, so the student may sit the exam again at once
+    updateDoc(doc(db, 'students', s.uid), new FieldPath('aiPass', it.variantId, v), deleteField(), new FieldPath('examTries', examKey(it.variantId, v)), deleteField())
+      .catch(e => setError('ვერ მოიხსნა: ' + errorText(e)));
+  };
   const done = items.filter(it => (conf[it.variantId] || []).length > 0);
+  const hasDone = done.length > 0 || aiRows.length > 0;
   const marked = markedCount(items);
 
   return (
@@ -121,7 +145,7 @@ export const StudentGza: React.FC<{ s: StudentData }> = ({ s }) => {
         </>
       )}
 
-      {done.length > 0 && (
+      {hasDone && (
         <>
           <SectionLabel label="ჩათვლილია" />
           <Rows>
@@ -140,7 +164,30 @@ export const StudentGza: React.FC<{ s: StudentData }> = ({ s }) => {
                 />
               );
             })}
+            {aiRows.map(({ it, v }) => {
+              const take = takeOfExam(it.variantId, v);
+              const at = shortDate(pass[it.variantId]?.[v]?.at);
+              return (
+                <Row
+                  key={`ai-${it.variantId}-${v}`}
+                  title={`${it.chantName} · ${ROMAN[v]} ხმა`}
+                  sub={`ჩათვალა AI-მ${at ? ` · ${at}` : ''}`}
+                  wrap
+                  right={(
+                    <span className="flex shrink-0 items-center gap-1">
+                      {take && (
+                        <RoundButton label={playing === take.id ? 'გაჩერება' : 'მოუსმინე'} size={36} tone="plain" className="text-wine" onClick={() => play(take)}>
+                          {playing === take.id ? <Pause /> : <Play />}
+                        </RoundButton>
+                      )}
+                      <Button kind="quiet" size="md" className="px-3" onClick={() => { void takeAiOff(it, v); }}>მოხსნა</Button>
+                    </span>
+                  )}
+                />
+              );
+            })}
           </Rows>
+          {aiRows.length > 0 && <Helper icon={<Info />}>AI-ს ჩათვლილს მოუსმინე და, თუ არ ეთანხმები, მოხსენი. მოსწავლეც ეცნობა.</Helper>}
         </>
       )}
 
