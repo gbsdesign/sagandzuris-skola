@@ -18,7 +18,7 @@ const NAMES = [
   'music-2', 'music-4', 'guitar', 'sparkles', 'compass', 'book-marked', 'calendar-days', 'graduation-cap', 'gem', 'flame', 'sun',
   'check', 'plus', 'refresh-cw', 'layout-grid',
   // the incoming call's window (IncomingCallActivity) and the ring's small icon
-  'phone', 'phone-off', 'video', 'phone-incoming',
+  'phone', 'phone-off', 'video', 'phone-incoming', 'message-circle',
 ];
 
 const node = (name) => {

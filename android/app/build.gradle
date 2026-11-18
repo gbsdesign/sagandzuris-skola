@@ -16,14 +16,19 @@ android {
         applicationId 'ge.sagandzureli.app'
         minSdk 26
         targetSdk 36
-        versionCode 5
-        versionName '1.1.3'
+        versionCode 6
+        versionName '1.2.0'
 
         manifestPlaceholders = [host: host, launchUrl: "https://${host}/"]
         resValue 'string', 'app_name', 'საგანძურის სკოლა'
         resValue 'string', 'launcher_name', 'საგანძური'
         resValue 'string', 'provider_authority', 'ge.sagandzureli.app.fileprovider'
         // the Firebase project's web client: Google's sign-in gives its ID token for it (SignIn.java)
+        // the Firebase project's Android app (2026-11-18): Firebase starts by itself from these (what google-services.json gives)
+        resValue 'string', 'google_app_id', '1:781443193404:android:7d3bb396d4cb36ba738139'
+        resValue 'string', 'google_api_key', 'AIzaSyDmsUc6f0DhKA-dit4PedSWgJb5v6K-yco'
+        resValue 'string', 'gcm_defaultSenderId', '781443193404'
+        resValue 'string', 'project_id', 'psalms-reading-group-ge-dev'
         resValue 'string', 'google_web_client_id', '781443193404-4avvmqgm9683ioct31gahgd2gdn9eq03.apps.googleusercontent.com'
         resValue 'string', 'asset_statements',
             "[{ \\\"relation\\\": [\\\"delegate_permission/common.handle_all_urls\\\"], \\\"target\\\": { \\\"namespace\\\": \\\"web\\\", \\\"site\\\": \\\"https://${host}\\\" } }]"
@@ -49,6 +54,8 @@ android {
 dependencies {
     implementation 'com.google.androidbrowserhelper:androidbrowserhelper:2.5.0'
     implementation 'androidx.activity:activity:1.9.3'
+    implementation platform('com.google.firebase:firebase-bom:33.7.0')
+    implementation 'com.google.firebase:firebase-messaging'
     implementation 'androidx.core:core:1.13.1'
     implementation 'androidx.webkit:webkit:1.12.1'
     implementation 'androidx.credentials:credentials:1.3.0'
