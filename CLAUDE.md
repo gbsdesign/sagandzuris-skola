@@ -1729,6 +1729,13 @@
   a voice's marking day is not stored, so no date shows). `psalmuni/PsalterScreen` (x-psalmuni, `DistScreen`, `HistoryScreen`,
   `ParamsSheet`, `NewGroup`) and `KanonGateV2` (App renders it in the new look). The AI-teacher rows of these boards wait for AI
   step 3 (instructions to the AI, its weekly report, „ჩათვალა AI-მ“, „რა შენიშნა AI-მ“).
+- **Stage 4d — letters, chat, calls, birthdays (2026-11-18)**: `pages/v2/tserilebi/LettersPage` = pages `messages` + `dm` in the new
+  look (`DmChat` copies the old `DirectChat`'s logic with its own head; ✎ = sheet „ახალი წერილი“; dates „10 ნოე“). The chat itself
+  (`ChatPanel`, `ClassChat` — new `bare` + `ClassCallButton` —, `DirectChatPage`'s `CallButtons` = one round 📞 → sheet ხმოვანი ·
+  ვიდეო) and the calls (`calls/CallLayer` + `CallParts`) were restyled IN PLACE with the tokens (both looks get them; no speaker
+  button — the session has no output control). `ShareHost` restyled (x-gaziareba-klasshi) and opens for a share saved < 10 min ago
+  (the service worker stamps `X-At`) because the page address could drop `?open=share` first. `pages/v2/dabadebis/BirthdaysScreen`
+  (x-dabadebis; „მიულოცე“ = a private chat through a shared class, else the admin's chat; staff see ages).
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 

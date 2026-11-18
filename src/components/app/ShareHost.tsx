@@ -1,18 +1,21 @@
 import React, { useEffect, useState } from 'react';
-import { Check, Loader2, MessageCircle, Mic, Users } from 'lucide-react';
+import { Check, Loader2, MessageCircle, Mic } from 'lucide-react';
 import { useAuth } from '../../context';
 import { useMyClasses } from '../../hooks/useClasses';
 import { ChatAuthor, classChatBase, sendTextMessage, sendVoiceMessage } from '../../hooks/useClassChat';
 import { VOICE_MAX_SECONDS, toSmallMp3 } from '../../utils/voiceRecorder';
 import { triggerHaptic } from '../../utils/haptics';
-import { Btn, Sheet } from '../ui/kit';
+import { Avatar, Dot, Row, Rows, Sheet } from '../ui2';
 
 // „გაზიარება → საგანძური“: a recording or a text shared from another app on the phone waits in the service worker's
 // cache 'sg-share' (public/prayer-notify-sw.js) and the page opens at /?open=share. This window asks which class chat it
 // goes to and sends it as the member's own message — a recording as a voice message (its first five minutes, made small
 // like the app's own voice messages). Nothing is sent without that choice; ✕ throws the share away.
 
-interface Shared { audio: Blob | null; name: string; text: string }
+interface Shared { audio: Blob | null; name: string; text: string; at: number }
+
+// a share the service worker kept less than this long ago still counts when the address lost its `?open=share` mark
+const FRESH_MS = 10 * 60_000;
 
 const readShare = async (): Promise<Shared | null> => {
   if (!('caches' in window)) return null;
@@ -22,7 +25,8 @@ const readShare = async (): Promise<Shared | null> => {
   const audio = a ? await a.blob() : null;
   const name = a ? decodeURIComponent(a.headers.get('X-Name') || '') : '';
   const text = t ? (await t.text()).slice(0, 2000) : '';
-  return { audio, name, text };
+  const at = Number((a || t)!.headers.get('X-At')) || 0;
+  return { audio, name, text, at };
 };
 const clearShare = () => caches.open('sg-share').then(c => Promise.all([c.delete('/share/audio'), c.delete('/share/text')])).catch(() => undefined);
 
@@ -33,11 +37,15 @@ export const ShareHost: React.FC = () => {
   const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
 
   useEffect(() => {
-    if (new URL(window.location.href).searchParams.get('open') !== 'share') return;
+    // the address's mark can be gone before this lazy part is ready (a page step in the new look rewrites the address),
+    // so a share the worker kept in the last minutes opens it too
     const url = new URL(window.location.href);
-    url.searchParams.delete('open');
-    window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
-    readShare().then(s => s && setShared(s)).catch(() => undefined);
+    const marked = url.searchParams.get('open') === 'share';
+    if (marked) {
+      url.searchParams.delete('open');
+      window.history.replaceState(window.history.state, '', url.pathname + url.search + url.hash);
+    }
+    readShare().then(s => { if (s && (marked || Date.now() - s.at < FRESH_MS)) setShared(s); }).catch(() => undefined);
   }, []);
 
   if (!shared) return null;
@@ -65,37 +73,36 @@ export const ShareHost: React.FC = () => {
   };
 
   return (
-    <Sheet open onClose={close} title="გაზიარება კლასში" locked={state === 'sending'}>
-      <div className="space-y-4">
-        <div className="rounded-2xl bg-[#7a2028]/[0.05] ring-1 ring-[#7a2028]/10 px-4 py-3 flex items-start gap-3">
-          <span aria-hidden className="w-10 h-10 shrink-0 rounded-xl bg-white ring-1 ring-[#7a2028]/10 flex items-center justify-center text-[#7a2028]">
-            {shared.audio ? <Mic className="w-5 h-5" /> : <MessageCircle className="w-5 h-5" />}
-          </span>
-          <div className="min-w-0 text-[14px] text-[#4a3426] leading-snug">
-            {shared.audio && <p className="font-bold truncate">{shared.name || 'ჩანაწერი'}</p>}
-            {shared.audio && <p className="text-[13px] text-[#8a7a6a]">გაიგზავნება ხმოვან შეტყობინებად, პირველი 5 წუთი</p>}
-            {shared.text && <p className="whitespace-pre-wrap break-words line-clamp-4 mt-0.5">{shared.text}</p>}
-          </div>
+    <Sheet open onClose={close} title="გაზიარება კლასში">
+      <div className="flex items-start gap-3 rounded-card bg-tint px-4 py-3.5">
+        <Dot icon={shared.audio ? <Mic /> : <MessageCircle />} size={40} className="bg-surf" />
+        <div className="min-w-0 pt-0.5 text-body text-ink">
+          {shared.audio && <p className="truncate font-bold">{shared.name || 'ჩანაწერი'}</p>}
+          {shared.audio && <p className="text-meta text-mut">გაიგზავნება ხმოვან შეტყობინებად, პირველი 5 წუთი</p>}
+          {shared.text && <p className="mt-0.5 line-clamp-4 break-words whitespace-pre-wrap">{shared.text}</p>}
         </div>
-        {!user ? (
-          <p className="text-[14px] text-[#8a7a6a]">გასაზიარებლად შედი შენს ანგარიშზე.</p>
-        ) : !classes.length ? (
-          <p className="text-[14px] text-[#8a7a6a]">კლასში ჯერ არ ხარ — გასაზიარებელი არსად არის.</p>
-        ) : state === 'sent' ? (
-          <p className="flex items-center gap-2 text-[15px] font-bold text-[#2f7d4f]"><Check className="w-5 h-5" /> გაიგზავნა</p>
-        ) : (
-          <div className="space-y-2">
-            <p className="text-[13px] font-bold text-[#8a7a6a]">რომელი კლასის ჩატში?</p>
-            {classes.map(c => (
-              <Btn key={c.id} kind="soft" full disabled={state === 'sending'} onClick={() => send(c.id)}
-                icon={state === 'sending' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Users className="w-4 h-4" />}>
-                {c.name}
-              </Btn>
-            ))}
-            {state === 'error' && <p className="text-[13px] text-[#b3261e]">ვერ გაიგზავნა — სცადე ხელახლა.</p>}
-          </div>
-        )}
       </div>
+      {!user ? (
+        <p className="text-body text-mut">გასაზიარებლად შედი შენს ანგარიშზე.</p>
+      ) : !classes.length ? (
+        <p className="text-body text-mut">კლასში ჯერ არ ხარ — გასაზიარებელი არსად არის.</p>
+      ) : state === 'sent' ? (
+        <p className="flex items-center gap-2 text-lead font-bold text-leaf-ink"><Check className="size-5" /> გაიგზავნა</p>
+      ) : (
+        <>
+          <p className="px-1 text-meta font-bold text-mut">რომელი კლასის ჩატში?</p>
+          <Rows>
+            {classes.map(c => (
+              <Row key={c.id} lead={<Avatar name={c.name} photo={c.logo} />} title={c.name} sub={`${c.members.length} წევრი`}
+                disabled={state === 'sending'}
+                right={state === 'sending' ? <Loader2 className="size-5 shrink-0 animate-spin text-mut" /> : 'chev'}
+                onClick={() => send(c.id)} />
+            ))}
+          </Rows>
+          {state === 'error' ? <p className="px-1 text-meta text-danger">ვერ გაიგზავნა — სცადე ხელახლა.</p>
+            : <p className="px-1 text-meta text-mut">შეხებისთანავე იგზავნება.</p>}
+        </>
+      )}
     </Sheet>
   );
 };

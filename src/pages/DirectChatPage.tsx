@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Video, Loader2, ShieldCheck, Phone } from 'lucide-react';
+import { Button, Dot, RoundButton, Row, Rows, Sheet } from '../components/ui2';
 import { BackBtn } from '../components/ui/kit';
 import { useAuth, useNavigation } from '../context';
 import { useChat, ChatAuthor } from '../hooks/useClassChat';
@@ -14,42 +15,37 @@ import { PinCard } from '../components/classes/PinCard';
 import { PinSheet } from '../components/classes/PinSheet';
 import { pinPreview, sendDmPin } from '../hooks/useChatPins';
 
-/** The call buttons over a chat: start (📞 📹), join a call that is on, or back to one's own call. */
+/** The call button over a chat: one round button — a tap asks „ხმოვანი ზარი“ or „ვიდეოზარი“ —, or join a call that is on,
+ *  or back to one's own call. */
 export const CallButtons: React.FC<{
   base: string; canStart: boolean; canVideo: boolean; onStart: (kind: 'audio' | 'video') => void; onJoin: () => void;
 }> = ({ base, canStart, canVideo, onStart, onJoin }) => {
   const call = useCall();
   const live = useLivePeers(base).length > 0;
+  const [asking, setAsking] = useState(false);
   const mine = call.info?.base === base && call.status !== 'idle' && call.status !== 'ended';
-  const icon = 'w-11 h-11 shrink-0 rounded-full bg-[#7a2028]/[0.07] ring-1 ring-[#7a2028]/20 text-[#7a2028] inline-flex items-center justify-center cursor-pointer hover:bg-[#7a2028]/[0.11] active:scale-95 transition';
   if (mine) {
     return (
-      <button type="button" onClick={() => setCallSmall(false)}
-        className="h-11 px-4 shrink-0 rounded-full bg-emerald-600 text-white text-sm font-bold inline-flex items-center gap-2 cursor-pointer active:scale-95">
-        <span className="w-2 h-2 rounded-full bg-white animate-pulse" /> ზარში
-      </button>
+      <Button size="md" onClick={() => setCallSmall(false)}>
+        <span className="size-2 rounded-full bg-white animate-pulse" /> ზარში
+      </Button>
     );
   }
   if (live) {
-    return (
-      <button type="button" onClick={onJoin}
-        className="h-11 px-4 shrink-0 rounded-full bg-emerald-500 text-white text-sm font-bold inline-flex items-center gap-2 cursor-pointer hover:bg-emerald-600 active:scale-95">
-        <Phone className="w-[18px] h-[18px]" /> შესვლა
-      </button>
-    );
+    return <Button size="md" icon={<Phone />} onClick={onJoin}>შესვლა</Button>;
   }
   if (!canStart) return null;
+  const start = (kind: 'audio' | 'video') => { setAsking(false); onStart(kind); };
   return (
-    <div className="flex items-center gap-1.5 shrink-0">
-      <button type="button" onClick={() => onStart('audio')} aria-label="ზარი" title="ზარი" className={icon}>
-        <Phone className="w-[18px] h-[18px]" />
-      </button>
-      {canVideo && (
-        <button type="button" onClick={() => onStart('video')} aria-label="ვიდეოზარი" title="ვიდეოზარი" className={icon}>
-          <Video className="w-[18px] h-[18px]" />
-        </button>
-      )}
-    </div>
+    <>
+      <RoundButton label="ზარი" onClick={() => (canVideo ? setAsking(true) : onStart('audio'))}><Phone /></RoundButton>
+      <Sheet open={asking} onClose={() => setAsking(false)} title="ზარი">
+        <Rows>
+          <Row lead={<Dot icon={<Phone />} size={40} />} title="ხმოვანი ზარი" onClick={() => start('audio')} />
+          <Row lead={<Dot icon={<Video />} size={40} />} title="ვიდეოზარი" onClick={() => start('video')} />
+        </Rows>
+      </Sheet>
+    </>
   );
 };
 

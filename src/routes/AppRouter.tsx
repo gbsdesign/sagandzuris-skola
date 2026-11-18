@@ -129,6 +129,8 @@ const GzaPage = page(() => import('../pages/v2/gza/GzaPage'), 'GzaPage');
 const ClassRoute = page(() => import('../pages/v2/klasi/ClassRoute'), 'ClassRoute');
 const StudentScreen = page(() => import('../pages/v2/mostsavle/StudentScreen'), 'StudentScreen');
 const PsalterScreen = page(() => import('../pages/v2/psalmuni/PsalterScreen'), 'PsalterScreen');
+const LettersPage = page(() => import('../pages/v2/tserilebi/LettersPage'), 'LettersPage');
+const BirthdaysScreen = page(() => import('../pages/v2/dabadebis/BirthdaysScreen'), 'BirthdaysScreen');
 // the old look's home loads only when the admin hides the new look
 const HomePage = page(() => import('../pages/HomePage'), 'HomePage');
 
@@ -235,7 +237,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   // private chats (signed in only)
   // the messages page: the list, and the open chat beside it ('dm'; on a phone the chat alone)
   if (currentPage === 'messages' || currentPage === 'dm') {
-    return user ? <MessagesPage logoUrl={logoUrl} /> : homeEl;
+    return user ? (nl ? <LettersPage logoUrl={logoUrl} /> : <MessagesPage logoUrl={logoUrl} />) : homeEl;
   }
 
   // the old teacher panel (a remembered page, an old link): its parts live on the class page
@@ -256,6 +258,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
 
   // a student's own page, opened by their teacher or an admin (its path and profile as they see them)
   if (currentPage === 'student') return nl ? <StudentScreen /> : <StudentPage item={mapItem} />;
+  // the birthdays in the new look (x-dabadebis) draw their own bar
+  if (nl && currentPage === 'birthdays') return <BirthdaysScreen />;
 
   if (currentPage !== 'home') {
     // the one bar: „←“, the page's title, and 📌 for a page that can be a home button

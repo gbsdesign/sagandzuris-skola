@@ -4,7 +4,7 @@ import { useAuth, useNavigation } from '../../../context';
 import { Avatar, Button, Dot, Press, RoundButton, Row, Rows, Seg, Sheet, TopBar } from '../../../components/ui2';
 import { useAllClasses, useMyClasses, useTeachingClasses, type SchoolClass } from '../../../hooks/useClasses';
 import { useAllMyClasses } from '../../../components/classes/ClassPicker';
-import { ClassChat } from '../../../components/classes/ClassChat';
+import { ClassChat, ClassCallButton } from '../../../components/classes/ClassChat';
 import { useWide } from '../../../components/ui/kit';
 import { classChatBase, isClassUnread, useChatSeen, useClassLasts } from '../../../hooks/useClassChat';
 import { useUnreadCounts } from '../../../hooks/useUnreadCounts';
@@ -130,7 +130,7 @@ const ClassView: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
   ) : (
     // a phone: the chat fills the screen under the tabs — its messages scroll inside, the field always in view
     <div ref={chatBox} className="h-[calc(100dvh-5.5rem)] min-h-[26rem] scroll-mb-3">
-      <ClassChat cls={cls} timetable={false} fill chain />
+      <ClassChat cls={cls} timetable={false} fill chain bare />
     </div>
   );
 
@@ -147,7 +147,9 @@ const ClassView: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
             {wide && (
               <Button kind={tab === 'people' ? 'primary' : 'ghost'} size="md" icon={<Users />} onClick={() => setTab(tab === 'people' ? 'program' : 'people')}>წევრები</Button>
             )}
-            {(canEdit || myTeachers.length > 0) && (
+            {tab === 'chat' && !wide ? (
+              <ClassCallButton cls={cls} />
+            ) : (canEdit || myTeachers.length > 0) && (
               <RoundButton label="მეტი" onClick={() => setMore(true)}><Ellipsis /></RoundButton>
             )}
           </>

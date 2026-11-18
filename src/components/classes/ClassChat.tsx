@@ -28,7 +28,7 @@ import { parseChatRoomRef } from '../../data/roomGames';
 // The chat counts as read (for the 💬 count) while it is on screen.
 const COMPACT = 3;
 
-export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fill?: boolean; chain?: boolean; timetable?: boolean; compact?: boolean }> = ({ cls, title, fill, chain, timetable = true, compact = false }) => {
+export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fill?: boolean; chain?: boolean; timetable?: boolean; compact?: boolean; bare?: boolean }> = ({ cls, title, fill, chain, timetable = true, compact = false, bare = false }) => {
   const { user, isAdmin: isSchoolAdmin } = useAuth();
   const { openDm, openStudent } = useNavigation();
   // this class's teachers (and the school's admins) speak as teachers here
@@ -109,28 +109,22 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
       listTop={compact && messages.length > COMPACT ? (
         <div className="flex justify-center pb-1">
           <button type="button" onClick={() => { triggerHaptic(8); openDm(`class:${cls.id}`); }}
-            className="h-9 px-3.5 rounded-full bg-white/90 ring-1 ring-[#e8dcc8] text-[13px] font-bold text-[#7a2028] inline-flex items-center gap-1.5 cursor-pointer active:scale-95 hover:ring-[#7a2028]/35 transition">
+            className="h-9 px-3.5 rounded-full bg-surf text-meta font-bold text-wine inline-flex items-center gap-1.5 cursor-pointer active:scale-95 transition">
             <History className="w-4 h-4" /> ადრინდელი შეტყობინებები
           </button>
         </div>
       ) : undefined}
-      header={
+      header={bare ? undefined : (
         <div className={title ? 'px-3 sm:px-4 py-3' : 'px-4 min-[400px]:px-5 sm:px-6 pt-4 pb-3'}>
-          {/* on a phone too narrow for the title and the round buttons, the buttons drop under the title */}
+          {/* on a phone too narrow for the title and the call button, the button drops under the title */}
           <div className={`flex items-center justify-between ${title ? 'gap-3' : 'flex-wrap gap-2'}`}>
             {title || (
-              <h2 className="flex items-center gap-2 whitespace-nowrap font-serif-ge text-lg font-bold text-[#4a3426]">
-                <MessageCircle className="w-5 h-5 text-[#7a2028]" /> კლასის ჩათი
+              <h2 className="flex items-center gap-2 whitespace-nowrap text-head font-bold text-ink">
+                <MessageCircle className="w-5 h-5 text-wine" /> კლასის ჩათი
               </h2>
             )}
             <div className="ml-auto flex items-center gap-1.5 shrink-0">
-              <CallButtons
-                base={base}
-                canStart={isAdmin}
-                canVideo
-                onStart={kind => startClassCall(cls, user, kind)}
-                onJoin={() => joinClassCall(cls, user, 'audio')}
-              />
+              <ClassCallButton cls={cls} />
             </div>
           </div>
           {/* the lesson timetable as one line under the title (as on the class page); ✎ for the class's teachers */}
@@ -138,20 +132,37 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
             <div className="mt-2.5 flex items-center gap-2">
               <div className="flex-1 min-w-0">
                 {cls.schedule.length > 0
-                  ? <LessonChips slots={cls.schedule} lead={<CalendarClock className="w-[18px] h-[18px] shrink-0 text-[#7a2028] mr-0.5" aria-label="გაკვეთილები" />} />
+                  ? <LessonChips slots={cls.schedule} lead={<CalendarClock className="w-[18px] h-[18px] shrink-0 text-wine mr-0.5" aria-label="გაკვეთილები" />} />
                   : <Btn kind="soft" size="sm" icon={<Plus />} onClick={() => setLessons(true)}>გაკვეთილების ცხრილი</Btn>}
               </div>
               {isAdmin && cls.schedule.length > 0 && <IconBtn label="ცხრილის შეცვლა" onClick={() => setLessons(true)}><Pencil /></IconBtn>}
             </div>
           )}
-          <ScheduleSheet cls={cls} open={lessons} onClose={() => setLessons(false)} />
-          {isAdmin && (
-            <PinSheet open={pinning} onClose={() => setPinning(false)} people={cls.members} classes={[cls]} inClass
-              onSend={async p => { await sendClassPin(cls.id, author, p); }} />
-          )}
         </div>
-      }
+      )}
     />
+    <ScheduleSheet cls={cls} open={lessons} onClose={() => setLessons(false)} />
+    {isAdmin && (
+      <PinSheet open={pinning} onClose={() => setPinning(false)} people={cls.members} classes={[cls]} inClass
+        onSend={async p => { await sendClassPin(cls.id, author, p); }} />
+    )}
     </div>
+  );
+};
+
+/** The class chat's one call button (a tap asks voice or video): a teacher or an admin starts the class's call, everyone in
+ *  the class joins one that is on. The class page puts it in its bar while the chat tab is open. */
+export const ClassCallButton: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
+  const { user, isAdmin: isSchoolAdmin } = useAuth();
+  if (!user) return null;
+  const canStart = isSchoolAdmin || cls.teacherIds.includes(user.uid);
+  return (
+    <CallButtons
+      base={classChatBase(cls.id)}
+      canStart={canStart}
+      canVideo
+      onStart={kind => startClassCall(cls, user, kind)}
+      onJoin={() => joinClassCall(cls, user, 'audio')}
+    />
   );
 };
