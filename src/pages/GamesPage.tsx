@@ -13,7 +13,7 @@ import { badeMeta } from '../utils/bade';
 import { tsMeta } from '../utils/tsartsera';
 import { khaziMeta } from '../utils/khazi';
 import { anbaniMeta } from '../utils/anbani';
-import { tabuMeta } from '../utils/tabu';
+import { tabuMeta } from '../utils/tabuDay';
 import { vinMeta } from '../utils/vin';
 import { saidumloMeta } from '../utils/saidumlo';
 import { utskhoMeta } from '../utils/utskho';
@@ -25,60 +25,64 @@ import { Pill } from '../components/ui/kit';
 import { setGameSearchOpen, useGameSearchOpen } from '../components/maps/songSearch';
 import { Toast } from '../components/ui/Toast';
 import { askSignIn } from '../components/access/SignInPrompt';
-import { openPathPanel } from '../components/views/IndependentWorkCard';
+import { openPathPanel } from '../components/views/pathPanelOpen';
 import { triggerHaptic } from '../utils/haptics';
-import HangiGame from './games/HangiGame';
-import AmikhseniGame from './games/AmikhseniGame';
-import SitqvaGame from './games/SitqvaGame';
-import OtkheuliGame from './games/OtkheuliGame';
-import GatvlaGame from './games/GatvlaGame';
-import ChurchkhelaGame from './games/ChurchkhelaGame';
-import RaSadRodisGame from './games/RaSadRodisGame';
-import SamshvildeGame from './games/SamshvildeGame';
-import KutkheGame from './games/KutkheGame';
-import OtkhiGame from './games/OtkhiGame';
-import KhmebiGame from './games/KhmebiGame';
-import NotebiGame from './games/NotebiGame';
-import TurniriGame from './games/TurniriGame';
-import AkordiGame from './games/AkordiGame';
-import RvakhmaGame from './games/RvakhmaGame';
-import RukaGame from './games/RukaGame';
-import GagrdzeleGame from './games/GagrdzeleGame';
-import HangebiGame from './games/HangebiGame';
-import EqoGame from './games/EqoGame';
-import MprinaviGame from './games/MprinaviGame';
-import TsqvilebiGame from './games/TsqvilebiGame';
-import MesameGame from './games/MesameGame';
-import GundiGame from './games/GundiGame';
-import ChamotvaleGame from './games/ChamotvaleGame';
-import BadeGame from './games/BadeGame';
-import TsartseraGame from './games/TsartseraGame';
-import KhaziGame from './games/KhaziGame';
-import ChaitsviGame from './games/ChaitsviGame';
-import AnbaniGame from './games/AnbaniGame';
-import TsikheGame from './games/TsikheGame';
-import TsinapariGame from './games/TsinapariGame';
-import TabuGame from './games/TabuGame';
-import MinishnebaGame from './games/MinishnebaGame';
-import PantomimaGame from './games/PantomimaGame';
-import VinGame from './games/VinGame';
-import SaidumloGame from './games/SaidumloGame';
-import UtskhoGame from './games/UtskhoGame';
-import NakhatiGame from './games/NakhatiGame';
-import LotoGame from './games/LotoGame';
-import DzebnaGame from './games/DzebnaGame';
-import EzoGame from './games/EzoGame';
-import KariGame from './games/KariGame';
-import LurjiGame from './games/LurjiGame';
-import TakhtiGame from './games/TakhtiGame';
-import OkrosGame from './games/OkrosGame';
-// „ქარავანი“ carries its map (~100 KB): it loads only when opened
+import { useNewLook } from '../design/newLook';
+import { PageSkeleton } from '../components/shell/PageSkeleton';
+// every game loads only when it is opened (redesign stage 3 „სიჩქარე“: the list itself needs only data/games.ts and the
+// metas; „ქარავანი“'s map alone is ~100 KB)
+const HangiGame = lazy(() => import('./games/HangiGame'));
+const AmikhseniGame = lazy(() => import('./games/AmikhseniGame'));
+const SitqvaGame = lazy(() => import('./games/SitqvaGame'));
+const OtkheuliGame = lazy(() => import('./games/OtkheuliGame'));
+const GatvlaGame = lazy(() => import('./games/GatvlaGame'));
+const ChurchkhelaGame = lazy(() => import('./games/ChurchkhelaGame'));
+const RaSadRodisGame = lazy(() => import('./games/RaSadRodisGame'));
+const SamshvildeGame = lazy(() => import('./games/SamshvildeGame'));
+const KutkheGame = lazy(() => import('./games/KutkheGame'));
+const OtkhiGame = lazy(() => import('./games/OtkhiGame'));
+const KhmebiGame = lazy(() => import('./games/KhmebiGame'));
+const NotebiGame = lazy(() => import('./games/NotebiGame'));
+const TurniriGame = lazy(() => import('./games/TurniriGame'));
+const AkordiGame = lazy(() => import('./games/AkordiGame'));
+const RvakhmaGame = lazy(() => import('./games/RvakhmaGame'));
+const RukaGame = lazy(() => import('./games/RukaGame'));
+const GagrdzeleGame = lazy(() => import('./games/GagrdzeleGame'));
+const HangebiGame = lazy(() => import('./games/HangebiGame'));
+const EqoGame = lazy(() => import('./games/EqoGame'));
+const MprinaviGame = lazy(() => import('./games/MprinaviGame'));
+const TsqvilebiGame = lazy(() => import('./games/TsqvilebiGame'));
+const MesameGame = lazy(() => import('./games/MesameGame'));
+const GundiGame = lazy(() => import('./games/GundiGame'));
+const ChamotvaleGame = lazy(() => import('./games/ChamotvaleGame'));
+const BadeGame = lazy(() => import('./games/BadeGame'));
+const TsartseraGame = lazy(() => import('./games/TsartseraGame'));
+const KhaziGame = lazy(() => import('./games/KhaziGame'));
+const ChaitsviGame = lazy(() => import('./games/ChaitsviGame'));
+const AnbaniGame = lazy(() => import('./games/AnbaniGame'));
+const TsikheGame = lazy(() => import('./games/TsikheGame'));
+const TsinapariGame = lazy(() => import('./games/TsinapariGame'));
+const TabuGame = lazy(() => import('./games/TabuGame'));
+const MinishnebaGame = lazy(() => import('./games/MinishnebaGame'));
+const PantomimaGame = lazy(() => import('./games/PantomimaGame'));
+const VinGame = lazy(() => import('./games/VinGame'));
+const SaidumloGame = lazy(() => import('./games/SaidumloGame'));
+const UtskhoGame = lazy(() => import('./games/UtskhoGame'));
+const NakhatiGame = lazy(() => import('./games/NakhatiGame'));
+const LotoGame = lazy(() => import('./games/LotoGame'));
+const DzebnaGame = lazy(() => import('./games/DzebnaGame'));
+const EzoGame = lazy(() => import('./games/EzoGame'));
+const KariGame = lazy(() => import('./games/KariGame'));
+const LurjiGame = lazy(() => import('./games/LurjiGame'));
+const TakhtiGame = lazy(() => import('./games/TakhtiGame'));
+const OkrosGame = lazy(() => import('./games/OkrosGame'));
 const QaravaniGame = lazy(() => import('./games/QaravaniGame'));
-const Qaravani: React.FC = () => (
-  <Suspense fallback={<div className="py-20 flex justify-center" role="status" aria-label="იტვირთება"><span className="w-9 h-9 rounded-full border-[3px] border-[#7a2028]/20 border-t-[#7a2028] animate-spin" /></div>}>
-    <QaravaniGame />
-  </Suspense>
-);
+/** while an opened game's part is still on its way: the new look's page shape, else the old spinner */
+const GameWaiting: React.FC = () =>
+  useNewLook() ? <PageSkeleton /> : (
+    <div className="py-20 flex justify-center" role="status" aria-label="იტვირთება"><span className="w-9 h-9 rounded-full border-[3px] border-[#7a2028]/20 border-t-[#7a2028] animate-spin" /></div>
+  );
+
 import type { FilmKind } from '../data/georgianFilms';
 import { Tabs } from '../components/ui/kit';
 // „ქართული ფილმები“ (moved here from „მთქმელი“'s videos, 2026-11-09): the list loads only when opened
@@ -107,11 +111,11 @@ const ICON: Record<string, React.ReactNode> = {
 };
 
 // the games that open inside this page, by their `mapItem`
-const INNER: Record<string, React.FC> = {
+const INNER: Record<string, React.ComponentType> = {
   hangi: HangiGame, amikhseni: AmikhseniGame, sitqva: SitqvaGame, otkheuli: OtkheuliGame, gatvla: GatvlaGame, churchkhela: ChurchkhelaGame, rsr: RaSadRodisGame,
   samshvilde: SamshvildeGame, kutkhe: KutkheGame, otkhi: OtkhiGame, khmebi: KhmebiGame, notebi: NotebiGame, turniri: TurniriGame,
   akordi: AkordiGame, rvakhma: RvakhmaGame, ruka: RukaGame, gagrdzele: GagrdzeleGame, hangebi: HangebiGame,
-  eqo: EqoGame, mprinavi: MprinaviGame, tsqvilebi: TsqvilebiGame, mesame: MesameGame, gundi: GundiGame, chamotvale: ChamotvaleGame, bade: BadeGame, tsartsera: TsartseraGame, khazi: KhaziGame, chaitsvi: ChaitsviGame, anbani: AnbaniGame, tsikhe: TsikheGame, tsinapari: TsinapariGame, tabu: TabuGame, minishneba: MinishnebaGame, pantomima: PantomimaGame, vin: VinGame, saidumlo: SaidumloGame, utskho: UtskhoGame, nakhati: NakhatiGame, loto: LotoGame, dzebna: DzebnaGame, ezo: EzoGame, kari: KariGame, lurji: LurjiGame, takhti: TakhtiGame, qaravani: Qaravani, okros: OkrosGame,
+  eqo: EqoGame, mprinavi: MprinaviGame, tsqvilebi: TsqvilebiGame, mesame: MesameGame, gundi: GundiGame, chamotvale: ChamotvaleGame, bade: BadeGame, tsartsera: TsartseraGame, khazi: KhaziGame, chaitsvi: ChaitsviGame, anbani: AnbaniGame, tsikhe: TsikheGame, tsinapari: TsinapariGame, tabu: TabuGame, minishneba: MinishnebaGame, pantomima: PantomimaGame, vin: VinGame, saidumlo: SaidumloGame, utskho: UtskhoGame, nakhati: NakhatiGame, loto: LotoGame, dzebna: DzebnaGame, ezo: EzoGame, kari: KariGame, lurji: LurjiGame, takhti: TakhtiGame, qaravani: QaravaniGame, okros: OkrosGame,
 };
 
 /** a game's card: a tap opens the game (its tabs ონლაინ · ჰიბრიდული are inside; the printed kit is the bar's „სამაგიდო“ there —
@@ -217,7 +221,7 @@ export const GamesPage: React.FC = () => {
   const today = useMemo(() => tbilisiToday(), []);
 
   const Inner = mapItem ? INNER[mapItem] : undefined;
-  if (Inner) return <Inner />;
+  if (Inner) return <Suspense fallback={<GameWaiting />}><Inner /></Suspense>;
   // a film open from a tab: `kino/<YouTube id>` (the bar's „უკან“ closes it); an old `kino` opens the films' tab
   const [kinoList, kinoFilm] = (mapItem ?? '').split('/');
   const inKino = kinoList === 'kino';

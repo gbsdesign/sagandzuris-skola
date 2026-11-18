@@ -7,8 +7,7 @@ import { openChurchCalendar, todayIso } from '../../data/churchCalendar';
 import { openSaintLife } from '../../data/saintLives';
 import { MORNING_EVENING } from '../../data/prayers';
 import { HabitMenu } from '../../data/habitsAndManera';
-import { HabitPrayerMenu } from '../views/ChvevebiPanel';
-import { singlePrayerOf } from '../views/HabitPrayerMenu';
+import { HabitPrayerMenu, singlePrayerOf } from '../views/HabitPrayerMenu';
 import { useMyHabits } from '../../hooks/useMyHabits';
 import { requestOpen } from '../../utils/searchOpen';
 import { ServiceType } from '../../context/NavigationContext';
@@ -22,7 +21,8 @@ import {
   shortcutLabel, useMyShortcuts,
 } from '../../utils/shortcuts';
 import { triggerHaptic } from '../../utils/haptics';
-import { openPathPanel } from '../views/IndependentWorkCard';
+import { openPathPanel } from '../views/pathPanelOpen';
+import { useChantLookupReady } from '../../data/chantLookupLazy';
 import { askSignIn } from '../access/SignInPrompt';
 import { IconBtn, Sheet } from '../ui/kit';
 import { KathismaTiles } from '../psalter/KathismaTile';
@@ -181,6 +181,8 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
   const readingIn = variant === 'home' && user && access.section('medavitneoba') === 'open' ? groups.filter(g => g.memberIds.includes(user.uid)) : [];
   const classDefaults = classes.find(c => c.defaultShortcuts?.length)?.defaultShortcuts || [];
   const own = list !== null;
+  // a chant's button waits for the chant books (they load a moment after the first screen — data/chantLookupLazy)
+  const booksHere = useChantLookupReady((own ? list! : classDefaults).some(id => kindOf(id) === 'chant'));
   const all = useMemo(
     () => (own ? list! : classDefaults).filter(id => {
       if (!shortcutLabel(id) || !roleAllows(id, { isTeacher, isAdmin, isSuperAdmin })) return false;
@@ -192,7 +194,7 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
       return !sec || access.section(sec) !== 'hidden';
     }),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [list, classDefaults.join(','), access, isTeacher, isAdmin, isSuperAdmin, myHabits.map(h => h.id).join(',')]
+    [list, classDefaults.join(','), access, isTeacher, isAdmin, isSuperAdmin, myHabits.map(h => h.id).join(','), booksHere]
   );
   // the plain "ჩემი კანონი" button would repeat the tile, so it hides behind it (and stays saved)
   const keptKathisma = readingIn.length > 0 && all.includes('special:kathisma');

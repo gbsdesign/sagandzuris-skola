@@ -3,11 +3,11 @@ import { FieldPath, deleteField, doc, onSnapshot, setDoc, updateDoc } from 'fire
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { useAuth } from './AuthContext';
 import { useModal } from './ModalContext';
-import { filterValidVariants } from '../utils/variantValidation';
+import { filterValidSoft, useValidationReady } from '../utils/variantValidationLazy';
 import { triggerHaptic } from '../utils/haptics';
 import { HabitCounts, HabitLog, canTickDay, dayKey, getHabitsWeekKey, habitsThisWeek } from '../utils/habitsWeek';
 import { HABIT_ITEMS } from '../data/habitsAndManera';
-import { ChantItem, ChantVariant, versionTitle } from '../data/tsirvaChants';
+import type { ChantItem, ChantVariant } from '../data/tsirvaChants';
 
 export interface SelectedChantVariant {
   variantId: string;
@@ -47,6 +47,11 @@ export const ChantSelectionProvider: React.FC<{ children: React.ReactNode }> = (
   const { user } = useAuth();
   const { openModal } = useModal();
   const [selectedChantVariants, setSelectedChantVariants] = useState<Record<string, SelectedChantVariant>>({});
+  // the check against every book and song arrives a little after the first screen; then the list is looked at again
+  const validationReady = useValidationReady(!!user);
+  useEffect(() => {
+    if (validationReady) setSelectedChantVariants(v => filterValidSoft(v));
+  }, [validationReady]);
   const [maneraStats, setManeraStats] = useState<Record<string, string>>({});
   const [habitLog, setHabitLog] = useState<HabitLog>({});
   const [habitCounts, setHabitCounts] = useState<HabitCounts>({});
@@ -143,7 +148,7 @@ export const ChantSelectionProvider: React.FC<{ children: React.ReactNode }> = (
       return;
     }
 
-    const cleaned = filterValidVariants(nextVariants);
+    const cleaned = filterValidSoft(nextVariants);
     setSelectedChantVariants(cleaned);
 
     const userDocRef = doc(db, 'students', user.uid);
@@ -162,7 +167,11 @@ export const ChantSelectionProvider: React.FC<{ children: React.ReactNode }> = (
     const next = { ...selectedChantVariants };
     if (next[v.id]) {
       delete next[v.id];
-    } else {
+      saveVariantsToFirestoreAndStorage(next);
+      return;
+    }
+    // the chant lists that show this button have the chant data here already: its import answers at once
+    void import('../data/tsirvaChants').then(({ versionTitle }) => {
       next[v.id] = {
         variantId: v.id,
         chantId: chant.id,
@@ -173,8 +182,8 @@ export const ChantSelectionProvider: React.FC<{ children: React.ReactNode }> = (
         isLearned: false,
         voices: [],
       };
-    }
-    saveVariantsToFirestoreAndStorage(next);
+      saveVariantsToFirestoreAndStorage(next);
+    });
   };
 
   const handleToggleSong = (songId: string, songTitle: string, regionCode: string, regionName: string) => {
@@ -269,7 +278,7 @@ export const ChantSelectionProvider: React.FC<{ children: React.ReactNode }> = (
         if (docSnap.exists()) {
           const data = docSnap.data();
           if (data?.selectedChantVariants) {
-            setSelectedChantVariants(filterValidVariants(data.selectedChantVariants));
+            setSelectedChantVariants(filterValidSoft(data.selectedChantVariants));
           } else {
             setSelectedChantVariants({});
           }

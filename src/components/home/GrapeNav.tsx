@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigation, useModal, useAuth } from '../../context';
-import { openPathPanel } from '../views/IndependentWorkCard';
+import { openPathPanel } from '../views/pathPanelOpen';
 import { triggerHaptic } from '../../utils/haptics';
 import { Toast } from '../ui/Toast';
 import { useAccess } from '../../hooks/useAccess';

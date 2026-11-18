@@ -104,6 +104,8 @@ export const startPlacements = () => {
 export const usePlacements = () => {
   const [v, setV] = useState(version);
   useEffect(() => {
+    // a page that shows songs starts the listening itself (App starts it a moment after the first screen)
+    startPlacements();
     const l = () => setV(version);
     listeners.add(l);
     return () => { listeners.delete(l); };

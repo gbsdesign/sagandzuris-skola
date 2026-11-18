@@ -6,6 +6,8 @@ import { filterValidVariants } from '../../utils/variantValidation';
 import { useUpcomingSessions } from '../../hooks/useUpcomingSessions';
 import { useMonthlyStudyStats } from '../../hooks/useMonthlyStudyStats';
 import { StudentBookmarkView } from './StudentBookmarkView';
+import { PANEL_EVENT, PANEL_KEY, openPathPanel } from './pathPanelOpen';
+export { openPathPanel };
 import { MONTHS_GE, MONTHS_SHORT_GE } from '../../utils/dateNames';
 
 
@@ -23,23 +25,6 @@ export const PATH_TILE =
   'group w-full rounded-2xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)] hover:ring-[#7a2028]/25 hover:shadow-[0_1px_2px_rgba(42,32,23,0.05),0_16px_32px_-18px_rgba(122,32,40,0.45)] hover:-translate-y-px transition-all duration-200';
 export const PATH_ICON = 'w-11 h-11 shrink-0 rounded-xl bg-[#7a2028]/[0.07] text-[#7a2028] flex items-center justify-center';
 
-// Panels on the path page fold open in place (no popups) and always start folded. Other places (the header,
-// home buttons) can open one: openPathPanel('work') leaves a one-time wish and tells a mounted panel to
-// unfold and scroll into view; the panel uses the wish up, so the next visit finds it folded again.
-const PANEL_KEY = (id: string) => `pathPanel:${id}`;
-const PANEL_EVENT = 'open-path-panel';
-
-// "habits" (the vine's and the home shelf's „ჩვევები“) = the „ჩვევები“ round button's card, id `work` since 2026-11-08 —
-// it used to be dropped as always shown, so the path opened with the habits folded (the user, 2026-11-09)
-const ALIASES: Record<string, string> = { habits: 'work' };
-
-export const openPathPanel = (wish: string) => {
-  const id = ALIASES[wish] ?? wish;
-  try {
-    localStorage.setItem(PANEL_KEY(id), '1');
-  } catch { /* storage off: the event still opens it */ }
-  window.dispatchEvent(new CustomEvent(PANEL_EVENT, { detail: id }));
-};
 
 export const PathPanel: React.FC<{
   id: string;

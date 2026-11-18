@@ -9,6 +9,16 @@ import { offlinePacks } from './scripts/lib/offline-manifest.mjs';
 // assets/print/, outside the precache: fetched the first time a kit is made, then kept by the assets' runtime cache below
 const inPrint = (id: string) => id.includes('/src/print/');
 const PRINT_ASSET = /^abcjs-basic-min\./;
+// Parts the phone does not download in advance (redesign stage 3 „სიჩქარე“: „ფონზე ნაკლები იწერება“): every game, the churches'
+// and the videos' data, the ancestors' texts, the word game's dictionary, the admission and admin pages, the QR reader. They
+// come on first opening and are kept from then on (the /assets/ route below). Never a part of the notes page, the program, the
+// chant books, the prayers or the calendar — the choir opens those in church without internet.
+const LATER = [
+  /\/src\/pages\/games\/[A-Za-z]+Game\.tsx$/, /\/src\/data\/(lyricsPool|kartuliQuiz|sitqvaWords|ancestorsBioTexts)\.ts$/,
+  /\/src\/data\/(churches|etnoforiVideos)\.json$/, /\/src\/pages\/(ChurchesPage|AdminPanelPage|AbituriPage)\.tsx$/,
+  /\/src\/pages\/churches\/PinsMap\.tsx$/, /\/src\/data\/abituriLessons\.ts$/, /\/node_modules\/jsqr\//,
+];
+const later = (id: string) => LATER.some(r => r.test(id));
 
 // the build's time in Tbilisi, „2026-11-18 10:30“: the error log (utils/errorLog.ts) notes which version broke
 const BUILD_STAMP = new Intl.DateTimeFormat('sv-SE', { timeZone: 'Asia/Tbilisi', dateStyle: 'short', timeStyle: 'short' }).format(new Date());
@@ -39,6 +49,8 @@ export default defineConfig(() => {
             '**/node_modules/**/*',
             'notes/**', 'hymn/**', 'lives/**', 'prayers/**', 'bible/**', 'mtkmeli/**', 'audio/**', 'offline/**', 'wignebi/**',
             'assets/print/**',
+            // opened rarely: downloaded on first opening, then kept (LATER above)
+            'assets/later/**',
             // the dress studio's sample photos (utils/kabaArt.ts): only the owner's studio asks for them
             'home/samosi/ref/**',
           ],
@@ -92,10 +104,12 @@ export default defineConfig(() => {
               },
             },
             {
-              // a chunk of an older version, asked for by a page still open from before an update: kept once opened
+              // a chunk of an older version, asked for by a page still open from before an update, or a part not downloaded in
+          // advance (assets/later/): kept once opened
               urlPattern: ({ url }) => url.origin === self.location.origin && /^\/assets\/.+\.(js|css)$/.test(url.pathname),
               handler: 'CacheFirst',
-              options: { cacheName: 'sagandzuri-assets-v1', expiration: { maxEntries: 60, maxAgeSeconds: 60 * 60 * 24 * 90 } },
+              // (also every part kept for later — assets/later/ — once opened)
+              options: { cacheName: 'sagandzuri-assets-v1', expiration: { maxEntries: 250, maxAgeSeconds: 60 * 60 * 24 * 90 } },
             },
             {
               urlPattern: ({ url }) => url.origin === 'https://fonts.googleapis.com' || url.origin === 'https://fonts.gstatic.com',
@@ -153,7 +167,8 @@ export default defineConfig(() => {
       rollupOptions: {
         output: {
           chunkFileNames: chunk => ((chunk.facadeModuleId ? inPrint(chunk.facadeModuleId) : chunk.moduleIds.length > 0 && chunk.moduleIds.every(inPrint))
-            ? 'assets/print/[name]-[hash].js' : 'assets/[name]-[hash].js'),
+            ? 'assets/print/[name]-[hash].js'
+            : chunk.facadeModuleId && later(chunk.facadeModuleId) ? 'assets/later/[name]-[hash].js' : 'assets/[name]-[hash].js'),
           assetFileNames: asset => (asset.names.some(n => PRINT_ASSET.test(n)) ? 'assets/print/[name]-[hash][extname]' : 'assets/[name]-[hash][extname]'),
           manualChunks(id) {
             if (id.includes('node_modules/firebase')) {

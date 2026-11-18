@@ -14,6 +14,7 @@ import { SAMOSI_TOTAL } from '../../data/samosiData';
 import { reviewsDue } from '../../utils/learn';
 import { cycleOf, georgiaToday, kathismasOf, ownersIn } from '../../utils/psalter';
 import { shortcutLabel, useMyShortcuts } from '../../utils/shortcuts';
+import { useChantLookupReady } from '../../data/chantLookupLazy';
 import { onWidgetsChanged, sendWidgetSummary, widgetsLinked } from '../../utils/widgetLink';
 
 // While the site is open (in the app or in Chrome on the same phone), it leaves for the app's home-screen widgets what
@@ -38,6 +39,7 @@ const Sync: React.FC<{ uid: string }> = ({ uid }) => {
   const { list: shortcuts } = useMyShortcuts(uid);
   const today = georgiaToday();
 
+  const booksHere = useChantLookupReady(true);
   const summary = useMemo(() => {
     const due = new Set(dueDailyOf(mine.groups)(new Date()));
     const habits = mine.groups.flatMap(g => g.items.map(h => ({ h, daily: g.goal.per === 'day' })))
@@ -76,14 +78,16 @@ const Sync: React.FC<{ uid: string }> = ({ uid }) => {
       kanon,
       buttons: (shortcuts ?? []).slice(0, 12).map(id => ({ id, t: shortcutLabel(id)?.label || '' })).filter(b => b.t),
     };
-  }, [mine, path.percent, manera.pct, work.planned?.percent, pearlPct, samosi.real, learning, groups, shortcuts, uid, today]);
+  }, [mine, path.percent, manera.pct, work.planned?.percent, pearlPct, samosi.real, learning, groups, shortcuts, uid, today, booksHere]);
 
   const text = JSON.stringify(summary);
   useEffect(() => {
+    // a chant's button needs the chant books for its name: the summary waits for them (never sends a shorter list)
+    if (!booksHere) return;
     const t = window.setTimeout(() => { sendWidgetSummary(summary).catch(() => { /* next change tries again */ }); }, 4000);
     return () => window.clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [text]);
+  }, [text, booksHere]);
   return null;
 };
 
