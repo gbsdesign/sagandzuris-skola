@@ -27,3 +27,31 @@ export const useAiLessonOpen = () => {
   const close = () => { if (window.history.state?.sgAiLesson) window.history.back(); else setOpen(false); };
   return { open, close };
 };
+
+// „ჩემი ხმა“ (the AI teacher's diary, range and notebook) opens the same way, one layer higher, from the lesson's start
+// screen, from ოსტატობა and from the path.
+const VOICE_EVENT = 'sg-my-voice';
+export type MyVoiceTab = 'diary' | 'range' | 'notebook';
+let voiceWanted: MyVoiceTab | null = null;
+
+export const openMyVoice = (tab: MyVoiceTab = 'diary') => { voiceWanted = tab; window.dispatchEvent(new Event(VOICE_EVENT)); };
+
+export const useMyVoiceOpen = () => {
+  const [tab, setTab] = useState<MyVoiceTab | null>(null);
+  useEffect(() => {
+    const show = () => {
+      if (!voiceWanted) return;
+      const t = voiceWanted;
+      voiceWanted = null;
+      try { window.history.pushState({ ...(window.history.state || {}), sgMyVoice: 1 }, ''); } catch { /* opens anyway */ }
+      setTab(t);
+    };
+    const onPop = (e: PopStateEvent) => { if (!e.state?.sgMyVoice) setTab(null); };
+    show();
+    window.addEventListener(VOICE_EVENT, show);
+    window.addEventListener('popstate', onPop);
+    return () => { window.removeEventListener(VOICE_EVENT, show); window.removeEventListener('popstate', onPop); };
+  }, []);
+  const close = () => { if (window.history.state?.sgMyVoice) window.history.back(); else setTab(null); };
+  return { tab, close };
+};

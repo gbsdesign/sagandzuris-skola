@@ -4,11 +4,12 @@ import { ChantSynth, countIn, playStartNotes, type BookScore } from '../../utils
 // The lesson's sound: one synthesizer a phrase. `listen` plays a stretch once (my voice alone, the others, or all);
 // `along` leads in with my first note and two taps, then goes round `rounds` times with a breath between, calling
 // `onRound` after each and `onDone` after the last. The place (seconds from the stretch's start) follows for the roll.
+// `transpose` moves everything that sounds (semitones) — „ნოტები ჩემს ხმაზე“; the singing is checked in any key anyway.
 
 export type Who = 'mine' | 'others' | 'all';
 const BREATH = 1.5;
 
-export const usePlayer = (score: BookScore | null, vi: number, speed: number) => {
+export const usePlayer = (score: BookScore | null, vi: number, speed: number, transpose = 0) => {
   const synth = useMemo(() => (score ? new ChantSynth(score) : null), [score]);
   const [playing, setPlaying] = useState(false);
   const [counting, setCounting] = useState(false);
@@ -24,6 +25,7 @@ export const usePlayer = (score: BookScore | null, vi: number, speed: number) =>
     if (synth) { synth.onEnd = undefined; synth.dispose(); }
   }, [synth]);
   useEffect(() => { synth?.setSpeed(speed); }, [synth, speed]);
+  useEffect(() => { synth?.setTranspose(transpose); }, [synth, transpose]);
 
   const mix = (who: Who) => {
     if (!synth || !score) return;
@@ -77,7 +79,7 @@ export const usePlayer = (score: BookScore | null, vi: number, speed: number) =>
     stop();
     setCounting(true);
     const beat = (synth.toSec(synth.toBeat(s0) + 1) - s0) / speed;
-    const wait = await countIn(first, beat).catch(() => 0);
+    const wait = await countIn(first, beat, transpose).catch(() => 0);
     countTimer.current = window.setTimeout(async () => {
       setCounting(false);
       await begin(s0, s1, who, false);
@@ -86,7 +88,7 @@ export const usePlayer = (score: BookScore | null, vi: number, speed: number) =>
   };
 
   /** one note alone, a little longer (the note the teacher named) */
-  const note = (midi: number) => { stop(); void playStartNotes([midi], 0, false, 0.5, 1.4).catch(() => undefined); };
+  const note = (midi: number) => { stop(); void playStartNotes([midi], transpose, false, 0.5, 1.4).catch(() => undefined); };
 
   return { ready: !!synth, playing, counting, at, listen, along, note, stop };
 };

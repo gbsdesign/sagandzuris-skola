@@ -270,7 +270,11 @@ export interface PartRecord { best: number; level: number; due?: string; at: str
 export type LearnRecord = Record<string, PartRecord>; // part number (from 0) -> record
 export type PartState = 'new' | 'learning' | 'learned' | 'due' | 'kept';
 
-const REVIEW_DAYS = [1, 3, 7];
+/** the review steps (days) after a part is learned; then it is kept. A review sung ≥ REVIEW_SKIP skips a step. */
+const REVIEW_DAYS = [1, 3, 7, 14, 30];
+const REVIEW_SKIP = 95;
+/** kept = learned and no review waits (old records kept after 7 days have level 4 and no `due`) */
+const isKept = (rec: PartRecord) => rec.level >= 1 && !rec.due;
 export const LEARNED_SHARE = POLISH_SHARE * 100;
 
 const addDays = (iso: string, days: number) => {
@@ -280,24 +284,24 @@ const addDays = (iso: string, days: number) => {
 };
 
 export const partState = (rec: PartRecord | undefined, today: string): PartState =>
-  !rec ? 'new' : rec.level <= 0 ? 'learning' : rec.level >= 4 ? 'kept' : rec.due && rec.due <= today ? 'due' : 'learned';
+  !rec ? 'new' : rec.level <= 0 ? 'learning' : isKept(rec) ? 'kept' : rec.due && rec.due <= today ? 'due' : 'learned';
 
 /**
  * After a try: `ok` = sung right enough (or, for a recording, the member says „ვიცი“). The first success learns the
- * part (review tomorrow); a success on a review day moves it on (3 days, 7 days, kept); a failed review brings it back
- * to tomorrow. A try on a day with no review due changes nothing but the best score.
+ * part (review tomorrow); a success on a review day moves it on (3, 7, 14, 30 days, kept — one step more when sung ≥ 95 %);
+ * a failed review brings it back to tomorrow. A try on a day with no review due changes nothing but the best score.
  */
 export const afterTry = (rec: PartRecord | undefined, pct: number, ok: boolean, today: string): PartRecord => {
   const best = Math.max(rec?.best ?? -1, pct);
   const level = rec?.level ?? 0;
   const at = today;
   if (level <= 0) return ok ? { best, level: 1, due: addDays(today, REVIEW_DAYS[0]), at } : { best, level: 0, at };
-  if (level >= 4) return { ...rec!, best, at };
+  if (isKept(rec!)) return { ...rec!, best, at };
   const due = rec!.due && rec!.due <= today;
   if (!due) return { ...rec!, best, at };
   if (!ok) return { best, level: 1, due: addDays(today, REVIEW_DAYS[0]), at };
-  const next = level + 1;
-  return next >= 4 ? { best, level: 4, at } : { best, level: next, due: addDays(today, REVIEW_DAYS[next - 1]), at };
+  const next = level + (pct >= REVIEW_SKIP ? 2 : 1);
+  return next > REVIEW_DAYS.length ? { best, level: REVIEW_DAYS.length + 1, at } : { best, level: next, due: addDays(today, REVIEW_DAYS[next - 1]), at };
 };
 
 /** The share of a piece learned (parts with level ≥ 1), 0–1. */
@@ -343,7 +347,7 @@ export const nextReviewDay = (learning: Record<string, LearnRecord> | undefined,
   let count = 0;
   for (const rec of Object.values(learning || {})) {
     for (const r of Object.values(rec)) {
-      if (!r.due || r.level < 1 || r.level >= 4) continue;
+      if (!r.due || r.level < 1) continue;
       const d = r.due < today ? today : r.due;
       if (!day || d < day) { day = d; count = 1; } else if (d === day) count++;
     }

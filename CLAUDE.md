@@ -1650,6 +1650,21 @@
   perStudent, hintsFirst, kidsNoAi}; ⚙ „სკოლა“ → „AI მასწავლებელი“, `AiRulesSheet`): every Gemini answer of `aiTeacher.ts` is counted in
   `aiUsage/{YYYY-MM}` (+ `/people/{uid}`; ≈ 0.01 $ an answer), stops at the month's budget, and none in the kids' mode.
 
+- **AI teacher, step 2 — „მეხსიერება და გეგმა“** (rules `utils/aiPlan.ts` + test, store `aiLesson/useAiNote.ts`): what the teacher
+  remembers is `students.aiNote` {intro {before, minutes, goal, days, at}, voice {low, high, part, hold, echo1, echo3, level, at},
+  week1 {step: day}, misses {"from>to" MIDI: {n, last, p: "piece~part"}}, takes [{d, p, h, n, t}] ≤ 80, fit, skip} — each part
+  written whole (`mergeFields`), shown and deletable line by line in „ჩემი ხმა“. The lesson's first visit: `Intro` (three
+  questions) → `VoiceCheck` (two minutes: range, a held note, echoes; „სრული ტესტი“ = the old EntryTest) → `Plan` (levels' weeks
+  by the pace, `planOf`) → a beginner (`before: 'never'`) gets `FirstWeek` (one level-0 exercise a day — `FIRST_WEEK`, a step
+  counts once its drill's `drillDone` is today, a missed day only waits; day 6 learns „ალილუია“ `FIRST_PIECE` v-14-1 in the
+  day lesson, day 7 puts it on the path with the member's voice — the first pearl). A leap missed three times this week
+  (`weakLeap`) turns the review part into `WeakSpot` (the leap alone, its phrase, the interval from two other notes; then its
+  count starts again). Each phrase is moved into the measured voice (`fitShift`, ≤ a fourth; `usePlayer`'s `transpose`) unless
+  „ნოტები ჩემს ხმაზე“ is off. „ჩემი ხმა“ (`MyVoice` via `MyVoiceHost`, `openMyVoice` in open.ts, own history step `sgMyVoice`,
+  z-75): tabs დღიური (weekly ten-of bars from the takes) · ხმის ზომა · AI-ს რვეული (the four lines of „ოსტატობის გზა“ + the
+  remembered lines); opened from the lesson's start (📖) and under the card of „ოსტატობა“. Reviews now 1 · 3 · 7 · 14 · 30 days,
+  a review sung ≥ 95 % skips a step (`utils/learn.ts`; old records kept at level 4 stay kept — kept = learned with no `due`).
+  The pace ladder (slow, then the real tempo after two good tries) was already step 1's.
 - **Stage 2 „ჩონჩხი“ (2026-11-18)** — behind the switch `newLook` „ახალი სახე“ (⚙ „სკოლა“ → განყოფილებები → საიტის სხვა ნაწილები;
   hidden = admins only). `design/newLook.ts` holds it (App.tsx sets it from `useAccess().on('newLook')`; `html.sg-new`; `useNewLook`,
   `isNewLook`, and `hideNav()` / `useNavHidden` for a page that needs the bottom free — the class chat's `fill`). In the new look: no

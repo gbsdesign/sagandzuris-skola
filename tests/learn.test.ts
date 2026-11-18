@@ -29,7 +29,7 @@ test('the melody of a part: repeated pitches once, the upper of a split note for
   assert.deepEqual(melodyIn(s, 1, 0, 5), [60, 62, 65]);
 });
 
-test('reviews after 1, 3 and 7 days; a failed review goes back to tomorrow', () => {
+test('reviews after 1, 3, 7, 14 and 30 days; a failed review goes back to tomorrow', () => {
   let r = afterTry(undefined, 50, false, '2026-10-27');
   assert.equal(partState(r, '2026-10-27'), 'learning');
   r = afterTry(r, 90, true, '2026-10-27');
@@ -42,8 +42,19 @@ test('reviews after 1, 3 and 7 days; a failed review goes back to tomorrow', () 
   const failed = afterTry(r, 40, false, '2026-10-31');
   assert.deepEqual([failed.level, failed.due], [1, '2026-11-01']);
   r = afterTry(r, 85, true, '2026-10-31');
+  assert.deepEqual([r.level, r.due], [3, '2026-11-07']);
   r = afterTry(r, 85, true, '2026-11-07');
-  assert.equal(partState(r, '2026-12-01'), 'kept');
+  assert.deepEqual([r.level, r.due], [4, '2026-11-21']);
+  assert.equal(partState(r, '2026-11-20'), 'learned');
+  r = afterTry(r, 85, true, '2026-11-21');
+  assert.deepEqual([r.level, r.due], [5, '2026-12-21']);
+  r = afterTry(r, 85, true, '2026-12-21');
+  assert.equal(partState(r, '2027-03-01'), 'kept');
+  // a review sung very well skips a step: 3 days → 14 days
+  const sure = afterTry({ best: 90, level: 2, due: '2026-11-18', at: '' }, 97, true, '2026-11-18');
+  assert.deepEqual([sure.level, sure.due], [4, '2026-12-02']);
+  // an old record kept after 7 days (level 4, no review) stays kept
+  assert.equal(partState({ best: 90, level: 4, at: '' }, '2026-11-18'), 'kept');
   assert.equal(learnedShare({ 0: r, 1: failed, 2: { best: 10, level: 0, at: '' } }, 4), 0.5);
 });
 
