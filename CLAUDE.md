@@ -36,7 +36,8 @@
 
   | File | Size | What |
   |---|---|---|
-  | `src/data/calendar/2026.json` | 889 KB | church calendar, one line per day |
+  | `src/data/calendar/2026.json`, `2027.json` | ~900 KB each | church calendar, one line per day (2027 computed — see `src/data/CLAUDE.md`) |
+  | `scripts/calendar-gen/az.json` | 596 KB | azbyka's readings 2026–2028 for the calendar generator |
   | `src/data/ancestorsBioTexts.ts` | 370 KB | ancestors' biographies |
   | `src/data/mtkmeliData.ts` | 93 KB | authors and works (full texts: `public/mtkmeli/<id>.json`) |
   | `src/data/library/saintLives.json` | 292 KB | saint lives index |
@@ -690,8 +691,9 @@
   `/delete-account`: own docs, classes/psalter groups arrays, admins role, D1 rows, then the Auth user; chat messages stay).
 - **Library** page (`biblioteka`): საღმრთო ისტორია, დღესასწაულები, წმიდანთა ცხოვრება.
   Footer church calendar (`data/churchCalendar.ts`, `data/calendar/<year>.json`, made by
-  `node scripts/fetch-church-calendar.mjs <year>`). **The 2026 file ends 13 Jan 2027 — re-run for 2027 once
-  orthodoxy.ge publishes it.** Don't add "წყარო: orthodoxy.ge" lines (the user removed them).
+  `node scripts/fetch-church-calendar.mjs <year>`). **2027 is computed by the Church's rules (`scripts/calendar-gen`, 2026-11-18)
+  until orthodoxy.ge publishes it; `.github/workflows/calendar-update.yml` swaps in the official days by itself.** Don't add
+  "წყარო: orthodoxy.ge" lines (the user removed them).
 - **Saint lives** (`components/saints/SaintLifeOverlay.tsx`, `public/lives/`, linking in
   `scripts/lib/saint-lives-match.mjs`).
 - **One search** (`components/search/`, index `data/searchIndex.ts`, matching `utils/searchMatch.ts` + test):

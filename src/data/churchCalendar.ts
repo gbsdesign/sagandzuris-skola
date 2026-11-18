@@ -17,8 +17,10 @@ export interface CalSaint {
   l?: string; at?: [number, number, number];
   ls?: [number, number, string, number?, number?, number?][];
 }
-export interface CalendarDay { t: string; p: CalPara[]; s: CalSaint[] }
-interface CalendarYear { year: number; source: string; days: Record<string, CalendarDay> }
+/** c = 1: the day was put together here by the Church's rules (scripts/calendar-gen) because orthodoxy.ge has not
+ *  published that year yet; .github/workflows/calendar-update.yml swaps in the official days once it does */
+export interface CalendarDay { t: string; p: CalPara[]; s: CalSaint[]; c?: 1 }
+interface CalendarYear { year: number; source: string; computed?: boolean; days: Record<string, CalendarDay> }
 
 export const RUN_BOLD = 1;
 export const RUN_RED = 2;
