@@ -1,5 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { MessageCircle, Mic, Paperclip, Send, Square, X, Trash2, Play, Pause, Loader2, Clock, Video, CheckCheck } from 'lucide-react';
+import { MessageCircle, Mic, Paperclip, Send, Square, X, Trash2, Play, Pause, Loader2, Clock, Phone, CheckCheck } from 'lucide-react';
 import {
   sendTextMessage, sendVoiceMessage, deleteMessage, loadVoiceUrl, ChatMessage, ChatAuthor,
 } from '../../hooks/useClassChat';
@@ -12,6 +12,7 @@ import { MONTHS_GE } from '../../utils/dateNames';
 import { ROOM_GAME_INFO, parseChatRoomRef } from '../../data/roomGames';
 import { ROOM_GAME_ICON } from '../games/roomGameIcons';
 import { DrawRiddle } from './DrawRiddle';
+import { Button, RoundButton } from '../ui2';
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 export const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -103,8 +104,8 @@ const VoicePlayer: React.FC<{ seconds: number; wave: string; getUrl: () => Promi
         type="button"
         onClick={toggle}
         aria-label={state === 'playing' ? 'პაუზა' : 'მოსმენა'}
-        className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition ${
-          onDark ? 'bg-[#fbf6ec] text-[#7a2028]' : 'bg-[#7a2028] text-[#fbf6ec]'
+        className={`size-tap shrink-0 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition ${
+          onDark ? 'bg-surf text-wine' : 'bg-wine text-white'
         }`}
       >
         {state === 'loading' ? <Loader2 className="w-5 h-5 animate-spin" />
@@ -118,14 +119,14 @@ const VoicePlayer: React.FC<{ seconds: number; wave: string; getUrl: () => Promi
               key={i}
               className={`flex-1 rounded-full ${
                 (i + 0.5) / levels.length <= done
-                  ? (onDark ? 'bg-[#fbf6ec]' : 'bg-[#7a2028]')
-                  : (onDark ? 'bg-[#fbf6ec]/40' : 'bg-[#7a2028]/25')
+                  ? (onDark ? 'bg-white' : 'bg-wine')
+                  : (onDark ? 'bg-white/40' : 'bg-wine/25')
               }`}
               style={{ height: `${18 + v * 9}%` }}
             />
           ))}
         </div>
-        <p className={`flex justify-between items-center gap-2 text-[11px] tabular-nums leading-none mt-0.5 ${onDark ? 'text-[#fbf6ec]/75' : 'text-[#8a7a6a]'}`}>
+        <p className={`flex justify-between items-center gap-2 text-cap tabular-nums leading-none mt-0.5 ${onDark ? 'text-white/80' : 'text-mut'}`}>
           <span>{state === 'error' ? 'ვერ ჩაიტვირთა' : active ? `${clock(pos)} / ${clock(seconds)}` : clock(seconds)}</span>
           {meta}
         </p>
@@ -140,8 +141,8 @@ const GameCardTitle: React.FC<{ room?: string; mine: boolean }> = ({ room, mine 
   const game = parseChatRoomRef(room ?? '')?.game ?? 'samshvilde';
   const Ic = ROOM_GAME_ICON[game];
   return (
-    <p className="flex items-center gap-2 font-semibold text-[15px] leading-snug">
-      <Ic className={`w-5 h-5 shrink-0 ${mine ? 'text-[#e2c27a]' : 'text-[#7a2028]'}`} /> „{ROOM_GAME_INFO[game].title}“ — ონლაინ თამაში
+    <p className="flex items-center gap-2 font-semibold text-body">
+      <Ic className={`w-5 h-5 shrink-0 ${mine ? 'text-white' : 'text-wine'}`} /> „{ROOM_GAME_INFO[game].title}“ — ონლაინ თამაში
     </p>
   );
 };
@@ -157,7 +158,7 @@ export const Avatar: React.FC<{ name: string; photoURL?: string; className?: str
   photoURL ? (
     <img src={photoURL} alt="" className={`${className} shrink-0 rounded-full object-cover`} referrerPolicy="no-referrer" />
   ) : (
-    <span className={`${className} shrink-0 rounded-full bg-[#efe5d4] text-[#4a3426] font-bold flex items-center justify-center`}>
+    <span className={`${className} shrink-0 rounded-full bg-soft text-ink font-bold flex items-center justify-center`}>
       {name.charAt(0) || '?'}
     </span>
   );
@@ -217,13 +218,16 @@ export interface ChatPanelProps {
 /** A computer's quiet 🗑 beside a message one may delete; it shows when the pointer is over the message. */
 const HoverDelete: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   <button type="button" onClick={onClick} aria-label="შეტყობინების წაშლა" title="წაშლა"
-    className="self-center w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-[#a89886] hover:text-[#a02c2c] hover:bg-red-50 opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition cursor-pointer [@media(hover:none)]:hidden">
+    className="self-center w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-faint hover:text-danger hover:bg-soft opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition cursor-pointer [@media(hover:none)]:hidden">
     <Trash2 className="w-4 h-4" />
   </button>
 );
 
 /** the default of `isCall`: one function for every render, so the drawn messages are kept (see listBody) */
 const NEVER = () => false;
+
+/** the first name of a sender, as the line above a run of messages shows it */
+const firstName = (name: string) => name.trim().split(/\s+/)[0] || name;
 
 // A chat: text and voice messages (a class's chat, or a teacher's private chat with a student).
 export const ChatPanel: React.FC<ChatPanelProps> = ({
@@ -396,18 +400,17 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const lastMine = [...messages].reverse().find(m => m.uid === author.uid);
   const seenId = seenAt && lastMine?.at && !lastMine.pending && seenAt >= lastMine.at ? lastMine.id : null;
 
-  const round = 'w-12 h-12 shrink-0 rounded-full flex items-center justify-center cursor-pointer active:scale-95 transition disabled:opacity-40 disabled:cursor-default';
-
+  
   // The messages are drawn apart from the field: typing, the recording clock or a voice message playing elsewhere
   // no longer redraw every message (with 150 of them a phone stuttered at each letter — 2026-11-05).
   const listBody = useMemo(() => (loading ? (
-      <div className="h-full flex items-center justify-center text-[#b3a594]"><Loader2 className="w-6 h-6 animate-spin" /></div>
+      <div className="h-full flex items-center justify-center text-faint"><Loader2 className="w-6 h-6 animate-spin" /></div>
     ) : error ? (
-      <p className="h-full flex items-center justify-center text-center text-sm text-[#8a7a6a] px-6">ჩათი ახლა ვერ ჩაიტვირთა.</p>
+      <p className="h-full flex items-center justify-center text-center text-body text-mut px-6">ჩათი ახლა ვერ ჩაიტვირთა.</p>
     ) : messages.length === 0 ? (
-      <div className="h-full flex flex-col items-center justify-center text-center gap-2 px-6 text-[#8a7a6a]">
-        <MessageCircle className="w-9 h-9 text-[#d9c9b0]" />
-        <p className="text-sm">ჯერ შეტყობინება არ არის.</p>
+      <div className="h-full flex flex-col items-center justify-center text-center gap-2 px-6 text-mut">
+        <MessageCircle className="w-9 h-9 text-dim" />
+        <p className="text-body">ჯერ შეტყობინება არ არის.</p>
       </div>
     ) : (
       <>
@@ -416,30 +419,64 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         const prev = messages[i - 1];
         const mine = m.uid === author.uid;
         const newDay = !!m.at && (!prev?.at || prev.at.toDateString() !== m.at.toDateString());
-        const first = newDay || prev?.uid !== m.uid;
+        const first = newDay || prev?.uid !== m.uid || (!!prev && isCall(prev) !== isCall(m));
         const canDel = !readOnly && canDelete(m);
         const named = typeof showNames === 'function' ? showNames(m) : showNames;
         const card = renderCard?.(m, mine) ?? null;
         const openPerson = named && !mine && first ? personOpener?.(m) ?? null : null;
+        const dayLine = newDay && (
+          <p className="my-3 text-center text-cap font-bold text-mut">{dayLabel(m.at!)}</p>
+        );
+        const removeBtn = active === m.id && (
+          <button
+            type="button"
+            onClick={() => remove(m)}
+            className="mt-1.5 h-icon px-3.5 rounded-full bg-surf shadow-lift text-meta font-semibold text-danger inline-flex items-center gap-1.5 cursor-pointer active:scale-95"
+          >
+            <Trash2 className="w-4 h-4" /> წაშლა
+          </button>
+        );
+        // a call in a private chat: a quiet line in the middle; the newest live one leads into the call
+        if (isCall(m)) {
+          const live = callLive && m.id === lastCallId;
+          return (
+            <React.Fragment key={m.id}>
+              {dayLine}
+              <div className="mt-2 flex flex-col items-center">
+                <div
+                  {...(canDel ? holdToPick(m.id) : {})}
+                  className={`${live ? 'w-full max-w-[360px] rounded-card bg-tint px-4 py-3 flex items-center gap-3' : 'inline-flex max-w-full items-center gap-2 rounded-full bg-soft px-3.5 py-2 text-meta text-mut'} ${canDel ? '[-webkit-touch-callout:none]' : ''}`}
+                >
+                  <Phone className={`size-[18px] shrink-0 ${live ? 'text-wine' : ''}`} aria-hidden="true" />
+                  {live ? (
+                    <>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-lead font-bold text-ink">{callTitle}</span>
+                        <span className="block text-meta text-mut">{sentAt(m)}</span>
+                      </span>
+                      <Button size="md" onClick={() => onJoinCall?.()}>შესვლა ზარში</Button>
+                    </>
+                  ) : (
+                    <span className="min-w-0 truncate">{callTitle} · {sentAt(m)}</span>
+                  )}
+                </div>
+                {removeBtn}
+              </div>
+            </React.Fragment>
+          );
+        }
+        const stamp = `text-cap leading-none ${mine ? 'text-white/80' : 'text-mut'}`;
         return (
           <React.Fragment key={m.id}>
-            {newDay && (
-              <div className="flex justify-center my-3">
-                <span className="px-3 py-1 rounded-full bg-white/90 ring-1 ring-[#e8dcc8] text-xs font-semibold text-[#8a7a6a]">{dayLabel(m.at!)}</span>
-              </div>
-            )}
-            <div className={`group flex items-end gap-2 ${mine ? 'justify-end' : 'justify-start'} ${first ? 'mt-3' : 'mt-1'}`}>
-              {named && !mine && (first
-                ? openPerson
-                  ? <button type="button" onClick={openPerson} aria-label={`${m.name} — გზა და პროფილი`} className="shrink-0 rounded-full cursor-pointer active:scale-95 transition"><Avatar name={m.name} photoURL={m.photoURL} /></button>
-                  : <Avatar name={m.name} photoURL={m.photoURL} />
-                : <span className="w-8 shrink-0" />)}
+            {dayLine}
+            <div className={`group flex items-end gap-1 ${mine ? 'justify-end' : 'justify-start'} ${first ? 'mt-3' : 'mt-1'}`}>
               {mine && canDel && <HoverDelete onClick={() => askRemove(m)} />}
               <div className={`${card ? 'w-[88%] max-w-[360px]' : 'max-w-[82%]'} flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
                 {named && first && !mine && (
-                  <p className="text-xs font-semibold text-[#7a2028] mb-1 px-1 flex items-center gap-1.5">
-                    {openPerson ? <button type="button" onClick={openPerson} className="cursor-pointer hover:underline underline-offset-2">{m.name}</button> : m.name}
-                    {m.teacher && <span className="px-1.5 py-px rounded-full bg-[#7a2028]/10 text-[11px] font-bold">{staffLabel}</span>}
+                  <p className="text-cap font-bold text-mut mb-1 px-1 flex items-center gap-1.5">
+                    {openPerson
+                      ? <button type="button" onClick={openPerson} aria-label={`${m.name} — გზა და პროფილი`} className="cursor-pointer hover:underline underline-offset-2">{m.teacher ? staffLabel : firstName(m.name)}</button>
+                      : (m.teacher ? staffLabel : firstName(m.name))}
                   </p>
                 )}
                 {card ? (
@@ -449,33 +486,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   // a long press on the message (as in any messenger; a right click on a computer) shows „წაშლა“ under
                   // it; a plain tap does nothing, so playing a voice message or opening a link never shows it
                   {...(canDel ? holdToPick(m.id) : {})}
-                  className={`rounded-[20px] px-3.5 py-2 shadow-[0_1px_1px_rgba(74,52,38,0.06)] ${canDel ? '[-webkit-touch-callout:none]' : ''} ${
+                  className={`rounded-tile px-3.5 py-2 ${canDel ? '[-webkit-touch-callout:none]' : ''} ${
                     mine
-                      ? `bg-[#7a2028] text-[#fbf6ec] ${first ? 'rounded-tr-md' : ''}`
-                      : `bg-white ring-1 ring-[#e8dcc8] text-[#2a2017] ${first ? 'rounded-tl-md' : ''}`
+                      ? `bg-wine text-white ${first ? 'rounded-tr-chip' : ''}`
+                      : `bg-surf text-ink ${first ? 'rounded-tl-chip' : ''}`
                   }`}
                 >
-                  {isCall(m) ? (
-                    <div className="py-1 flex flex-col gap-2.5">
-                      <p className="flex items-center gap-2 font-semibold text-[15px]">
-                        <Video className="w-5 h-5 shrink-0" /> {callTitle}
-                      </p>
-                      <div className="flex items-center justify-between gap-4">
-                        {callLive && m.id === lastCallId ? (
-                          <button
-                            type="button"
-                            onClick={e => { e.stopPropagation(); onJoinCall?.(); }}
-                            className={`h-10 px-4 rounded-full text-sm font-bold cursor-pointer active:scale-95 transition ${
-                              mine ? 'bg-[#fbf6ec] text-[#7a2028]' : 'bg-[#7a2028] text-[#fbf6ec]'
-                            }`}
-                          >
-                            შესვლა ზარში
-                          </button>
-                        ) : <span />}
-                        <span className={`text-[11px] leading-none ${mine ? 'text-[#fbf6ec]/70' : 'text-[#a89886]'}`}>{sentAt(m)}</span>
-                      </div>
-                    </div>
-                  ) : m.kind === 'game' ? (
+                  {m.kind === 'game' ? (
                     <div className="py-1 flex flex-col gap-2.5">
                       <GameCardTitle room={m.room} mine={mine} />
                       <div className="flex items-center justify-between gap-4">
@@ -483,21 +500,21 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                           <button
                             type="button"
                             onClick={e => { e.stopPropagation(); triggerHaptic(10); onOpenGame(m); }}
-                            className={`h-10 px-4 rounded-full text-sm font-bold cursor-pointer active:scale-95 transition ${
-                              mine ? 'bg-[#fbf6ec] text-[#7a2028]' : 'bg-[#7a2028] text-[#fbf6ec]'
+                            className={`h-icon px-4 rounded-full text-meta font-bold cursor-pointer active:scale-95 transition ${
+                              mine ? 'bg-surf text-wine' : 'bg-wine text-white'
                             }`}
                           >
                             {mine ? 'ოთახში დაბრუნება' : 'შესვლა'}
                           </button>
-                        ) : <span className={`text-[12px] ${mine ? 'text-[#fbf6ec]/75' : 'text-[#8a7a6a]'}`}>თამაში დასრულდა</span>}
-                        <span className={`text-[11px] leading-none ${mine ? 'text-[#fbf6ec]/70' : 'text-[#a89886]'}`}>{sentAt(m)}</span>
+                        ) : <span className={`text-cap ${mine ? 'text-white/80' : 'text-mut'}`}>თამაში დასრულდა</span>}
+                        <span className={stamp}>{sentAt(m)}</span>
                       </div>
                     </div>
                   ) : m.kind === 'draw' ? (
                     <DrawRiddle
                       m={m}
                       mine={mine}
-                      meta={<p className={`flex justify-end text-[11px] leading-none ${mine ? 'text-[#fbf6ec]/70' : 'text-[#a89886]'}`}>{sentAt(m)}</p>}
+                      meta={<p className={`flex justify-end ${stamp}`}>{sentAt(m)}</p>}
                     />
                   ) : m.kind === 'voice' ? (
                     <div className="py-1">
@@ -505,26 +522,18 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                     </div>
                   ) : (
                     <>
-                      <p className="whitespace-pre-wrap break-words text-[15px] leading-snug"><Linkified text={m.text} /></p>
-                      <p className={`flex justify-end text-[11px] leading-none mt-1 ${mine ? 'text-[#fbf6ec]/70' : 'text-[#a89886]'}`}>{sentAt(m)}</p>
+                      <p className="whitespace-pre-wrap break-words text-body"><Linkified text={m.text} /></p>
+                      <p className={`flex justify-end mt-1 ${stamp}`}>{sentAt(m)}</p>
                     </>
                   )}
                 </div>
                 )}
                 {seenId === m.id && (
-                  <p className="mt-1 px-1 flex items-center gap-1 text-[11px] font-semibold text-[#8a7a6a]">
-                    <CheckCheck className="w-3.5 h-3.5 text-[#7a2028]" /> ნანახია
+                  <p className="mt-1 px-1 flex items-center gap-1 text-cap font-semibold text-mut">
+                    <CheckCheck className="w-3.5 h-3.5 text-wine" /> ნანახია
                   </p>
                 )}
-                {active === m.id && (
-                  <button
-                    type="button"
-                    onClick={() => remove(m)}
-                    className="mt-1.5 h-9 px-3.5 rounded-full bg-white ring-1 ring-[#e8dcc8] text-sm font-semibold text-[#a02c2c] inline-flex items-center gap-1.5 cursor-pointer active:scale-95"
-                  >
-                    <Trash2 className="w-4 h-4" /> წაშლა
-                  </button>
-                )}
+                {removeBtn}
               </div>
               {!mine && canDel && <HoverDelete onClick={() => askRemove(m)} />}
             </div>
@@ -535,8 +544,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   )), [messages, loading, error, listTop, active, seenId, lastCallId, callLive, callTitle, readOnly, showNames, staffLabel,
     author.uid, base, isCall, canDelete, renderCard, personOpener, onOpenGame, onJoinCall, onDelete]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const pill = 'min-h-tap-lg rounded-full bg-surf flex items-center';
+
   return (
-    <section className={`bg-white/70 rounded-3xl ring-1 ring-[#e8dcc8] overflow-hidden ${fill ? 'h-full flex flex-col' : ''}`}>
+    <section className={`bg-page text-ink ${fill ? 'h-full flex flex-col' : 'rounded-card overflow-hidden'}`}>
       {header}
 
       <div
@@ -545,24 +556,23 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           const el = e.currentTarget;
           stick.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
         }}
-        className={`${fill ? 'flex-1 min-h-0' : listClassName} overflow-y-auto ${chain ? '' : 'overscroll-contain'} px-3 sm:px-5 py-3 bg-[#fbf6ec]/70 border-y border-[#efe5d4]`}
+        className={`${fill ? 'flex-1 min-h-0' : listClassName} overflow-y-auto ${chain ? '' : 'overscroll-contain'} px-3 sm:px-5 py-3 bg-page`}
       >
         {listBody}
       </div>
 
-      {err && <p className="px-5 pt-3 text-sm text-[#a02c2c]">{err}</p>}
+      {err && <p className="px-5 pt-3 text-meta text-danger">{err}</p>}
 
       {readOnly ? (
-        <p className="px-5 py-4 text-center text-sm text-[#8a7a6a]">მხოლოდ სანახავად</p>
+        <p className="px-5 py-4 text-center text-meta text-mut">მხოლოდ სანახავად</p>
       ) : (
       <div className="p-3 sm:px-4 flex items-end gap-2">
         {mode.k === 'idle' && (
           <>
             {onAttach && (
-              <button type="button" onClick={() => { triggerHaptic(8); onAttach(); }} aria-label="მოსწავლისთვის კომენტარი ან დავალება"
-                title="მოსწავლისთვის კომენტარი ან დავალება" className={`${round} bg-white ring-1 ring-[#e8dcc8] text-[#7a2028] hover:ring-[#7a2028]/35`}>
-                <Paperclip className="w-5 h-5" />
-              </button>
+              <RoundButton size={48} label="მოსწავლისთვის კომენტარი ან დავალება" onClick={onAttach}>
+                <Paperclip />
+              </RoundButton>
             )}
             <textarea
               ref={field}
@@ -571,54 +581,43 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               onChange={e => { setText(e.target.value); grow(e.target); }}
               onKeyDown={onKeyDown}
               maxLength={2000}
-              placeholder="შეტყობინება…"
-              className="flex-1 min-w-0 resize-none rounded-[24px] ring-1 ring-[#e8dcc8] bg-[#fbf6ec] px-4 py-3 text-[15px] leading-snug text-[#2a2017] placeholder:text-[#b3a594] focus:outline-none focus:ring-2 focus:ring-[#7a2028]/35"
+              placeholder="შეტყობინება"
+              aria-label="შეტყობინება"
+              className="flex-1 min-w-0 resize-none rounded-full bg-surf px-4 py-3 min-h-tap-lg text-lead text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-wine/35"
             />
             {text.trim() || !canRecord ? (
-              <button type="button" onClick={sendText} disabled={!text.trim()} aria-label="გაგზავნა" className={`${round} bg-[#7a2028] text-[#fbf6ec]`}>
-                <Send className="w-5 h-5 -translate-x-px translate-y-px" />
-              </button>
+              <RoundButton size={48} tone="wine" label="გაგზავნა" onClick={sendText} disabled={!text.trim()}><Send /></RoundButton>
             ) : (
-              <button type="button" onClick={startRecording} aria-label="ხმოვანი შეტყობინების ჩაწერა" className={`${round} bg-[#7a2028] text-[#fbf6ec]`}>
-                <Mic className="w-5 h-5" />
-              </button>
+              <RoundButton size={48} tone="wine" label="ხმოვანი შეტყობინების ჩაწერა" onClick={startRecording}><Mic /></RoundButton>
             )}
           </>
         )}
 
         {mode.k === 'recording' && (
           <>
-            <button type="button" onClick={cancelRecording} aria-label="გაუქმება" className={`${round} bg-white ring-1 ring-[#e8dcc8] text-[#4a3426]`}>
-              <X className="w-5 h-5" />
-            </button>
-            <div className="flex-1 min-w-0 h-12 rounded-full bg-[#7a2028]/[0.06] ring-1 ring-[#7a2028]/20 flex items-center gap-2.5 px-4">
-              <span className="w-2.5 h-2.5 shrink-0 rounded-full bg-[#c62828] animate-pulse" />
-              <span className="font-semibold tabular-nums text-[#7a2028] whitespace-nowrap">{clock(elapsed)} <span className="font-medium text-[#8a7a6a]">/ {clock(VOICE_MAX_SECONDS)}</span></span>
-              <span className="text-sm text-[#8a7a6a] truncate">იწერება…</span>
+            <RoundButton size={48} label="გაუქმება" onClick={cancelRecording}><X /></RoundButton>
+            <div className={`${pill} flex-1 min-w-0 gap-2.5 px-4`}>
+              <span className="size-2.5 shrink-0 rounded-full bg-danger animate-pulse" />
+              <span className="font-semibold tabular-nums text-wine whitespace-nowrap">{clock(elapsed)} <span className="font-medium text-mut">/ {clock(VOICE_MAX_SECONDS)}</span></span>
+              <span className="text-meta text-mut truncate">იწერება…</span>
             </div>
-            <button type="button" onClick={finishRecording} aria-label="დასრულება" className={`${round} bg-[#7a2028] text-[#fbf6ec]`}>
-              <Square className="w-4 h-4" fill="currentColor" />
-            </button>
+            <RoundButton size={48} tone="wine" label="დასრულება" onClick={finishRecording}><Square fill="currentColor" /></RoundButton>
           </>
         )}
 
         {(mode.k === 'encoding' || mode.k === 'sending') && (
-          <div className="flex-1 h-12 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] flex items-center justify-center gap-2 text-sm text-[#8a7a6a]">
+          <div className={`${pill} flex-1 justify-center gap-2 text-meta text-mut`}>
             <Loader2 className="w-4 h-4 animate-spin" /> {mode.k === 'encoding' ? 'მზადდება…' : 'იგზავნება…'}
           </div>
         )}
 
         {mode.k === 'preview' && (
           <>
-            <button type="button" onClick={discardTake} aria-label="წაშლა" className={`${round} bg-white ring-1 ring-[#e8dcc8] text-[#a02c2c]`}>
-              <Trash2 className="w-5 h-5" />
-            </button>
-            <div className="flex-1 min-w-0 h-12 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] flex items-center px-1">
+            <RoundButton size={48} label="წაშლა" onClick={discardTake} className="text-danger"><Trash2 /></RoundButton>
+            <div className={`${pill} flex-1 min-w-0 px-1`}>
               <VoicePlayer seconds={mode.take.seconds} wave={mode.take.wave} getUrl={() => Promise.resolve(mode.url)} />
             </div>
-            <button type="button" onClick={sendTake} aria-label="გაგზავნა" className={`${round} bg-[#7a2028] text-[#fbf6ec]`}>
-              <Send className="w-5 h-5 -translate-x-px translate-y-px" />
-            </button>
+            <RoundButton size={48} tone="wine" label="გაგზავნა" onClick={sendTake}><Send /></RoundButton>
           </>
         )}
       </div>

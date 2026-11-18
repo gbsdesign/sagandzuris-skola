@@ -187,9 +187,9 @@ self.addEventListener('fetch', (event) => {
     const file = form.get('audio');
     const text = [form.get('title'), form.get('text'), form.get('url')].filter((x) => typeof x === 'string' && x.trim()).join('\n');
     if (file && typeof file !== 'string' && file.size) {
-      await cache.put('/share/audio', new Response(file, { headers: { 'Content-Type': file.type || 'audio/mpeg', 'X-Name': encodeURIComponent(file.name || '') } }));
+      await cache.put('/share/audio', new Response(file, { headers: { 'Content-Type': file.type || 'audio/mpeg', 'X-Name': encodeURIComponent(file.name || ''), 'X-At': String(Date.now()) } }));
     }
-    if (text) await cache.put('/share/text', new Response(text, { headers: { 'Content-Type': 'text/plain; charset=utf-8' } }));
+    if (text) await cache.put('/share/text', new Response(text, { headers: { 'Content-Type': 'text/plain; charset=utf-8', 'X-At': String(Date.now()) } }));
     return Response.redirect('/?open=share', 303);
   })());
 });
