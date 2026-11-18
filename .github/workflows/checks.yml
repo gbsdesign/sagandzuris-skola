@@ -1,0 +1,46 @@
+# The app's own checks, by themselves on every change (2026-11-18): the tests of the calculations and the design rules,
+# the types, and that the site still builds. A pull request shows them as one green or red mark — merge only on green.
+# A push to main runs them again: the site itself is published by Cloudflare Pages on its own, so a red mark here
+# means "look before the next change", it does not stop the publishing.
+# The database rules, the Workers and the phone apps have their own workflows beside this one.
+name: Checks
+
+on:
+  pull_request:
+    paths-ignore: ['android/**', 'ios/**', 'docs/**', 'worker/notes/**', 'scripts/omr/**', 'scripts/wignebi/**']
+  push:
+    branches: [main]
+    paths-ignore: ['android/**', 'ios/**', 'docs/**', 'worker/notes/**', 'scripts/omr/**', 'scripts/wignebi/**']
+  workflow_dispatch:
+
+concurrency:
+  group: checks-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install
+        run: npm ci --no-audit --no-fund
+
+      # the calculations (games, learning, the psalter, the calendar…) and the design rules of the rebuilt parts
+      - name: Tests
+        run: npm test
+
+      # the parts of the reminders Worker that need no extra package (who hears a chat, the phones' notices, the calendar file)
+      - name: Worker tests
+        run: node --test tests/calendarIcs.test.mjs tests/chatPush.test.mjs tests/iosPush.test.mjs
+
+      # `npm run build` checks the types first (tsc), then builds the site as Cloudflare does
+      - name: Types and build
+        run: npm run build

@@ -1,0 +1,80 @@
+/* The redesign's design rules (2026-11-18) — the ONE place for its colours, text sizes, corners, shadows and finger
+   sizes. Everything rebuilt for the new look (components/ui2 and the pages made of it) uses only these names:
+   `text-ink`, `bg-surf`, `text-meta`, `rounded-card`, `shadow-float`, `min-h-tap` … — never a hex colour, a pixel text
+   size or a one-off corner in a class. tests/designRules.test.ts keeps that true for the folders listed there, and
+   checks that src/design/tokens.ts (the same values for canvas drawings and inline SVG) agrees with this file.
+
+   The values are the approved prototypes' own (the canvas of 2026-11-17): their 24 text sizes are drawn onto seven
+   steps, their greys onto five. The old pages keep their own colours until they are rebuilt. */
+@theme {
+  /* — grounds — */
+  --color-page: #f1eee9;       /* the screen behind everything */
+  --color-surf: #ffffff;       /* cards, sheets, the bottom menu */
+  --color-line: #e6e1d9;       /* hairlines between rows */
+  --color-soft: #e7e1d8;       /* a quiet fill: a pressed row, an empty picture, a secondary button */
+  --color-dim: #cfc8be;        /* a switched-off knob, a shape that is not available */
+  --color-track: rgb(27 24 22 / 0.07); /* the empty part of a progress bar or a ring */
+
+  /* — words — */
+  --color-ink: #1b1816;        /* text */
+  --color-mut: #6b625a;        /* second-line text (5.9 : 1 on white, 5.1 : 1 on the page) */
+  --color-faint: #a59c92;      /* a placeholder, a disabled word — never something that must be read */
+
+  /* — the accent — */
+  --color-wine: #7a2028;       /* main buttons, the chosen tab, links */
+  --color-wine-deep: #5e1820;  /* a main button while pressed */
+  --color-tint: #f3e6e6;       /* the accent's pale ground */
+
+  /* — meanings (never colour alone: always with a word or an icon) — */
+  --color-danger: #b3261e;     /* hang up, delete, a counter's badge — not for a mistake in learning */
+  --color-gold: #a8781f;       /* a miss, a warning, „soon“ — as a ground or an icon */
+  --color-gold-ink: #7a5510;   /* the same as small text */
+  --color-gold-tint: #f3e3be;
+  --color-leaf: #3e7d55;       /* done, right — as a ground or an icon */
+  --color-leaf-ink: #2f6b43;   /* the same as small text */
+  --color-leaf-tint: #dcebdd;
+  --color-sea: #2f6e8e;        /* information, a link that leaves the app */
+  --color-sea-tint: #e7eef5;
+  --color-plum: #7a5aa6;       /* a fifth and sixth colour for round category marks */
+  --color-clay: #b4552d;
+
+  /* — dark grounds: church mode, the night page — */
+  --color-night-surf: #26221f; /* a card on the ink ground */
+  --color-night-ink: #f2ede7;  /* text there */
+  --color-blush: #e9a0a7;      /* the accent there */
+
+  /* — seven text sizes (rem, so one setting can make the whole app's text larger) — */
+  --text-cap: 0.75rem;         /* 12 — a label, a counter, the bottom menu's words */
+  --text-cap--line-height: 1.35;
+  --text-meta: 0.8125rem;      /* 13 — a row's second line, a time, a hint */
+  --text-meta--line-height: 1.35;
+  --text-body: 0.9375rem;      /* 15 — running text, a button's word */
+  --text-body--line-height: 1.45;
+  --text-lead: 1rem;           /* 16 — a row's name, a field's text */
+  --text-lead--line-height: 1.3;
+  --text-head: 1.125rem;       /* 18 — a card's heading */
+  --text-head--line-height: 1.25;
+  --text-title: 1.375rem;      /* 22 — a page's name */
+  --text-title--line-height: 1.2;
+  --text-hero: 1.75rem;        /* 28 — one big number or greeting a screen */
+  --text-hero--line-height: 1.15;
+
+  /* — four corners (plus `rounded-full` for buttons, pills and round marks) — */
+  --radius-card: 1.75rem;      /* 28 — cards, a sheet's top */
+  --radius-tile: 1.25rem;      /* 20 — a tile or a picture inside a card */
+  --radius-field: 0.875rem;    /* 14 — a field, a small box */
+  --radius-chip: 0.5rem;       /* 8 — a tag, a tiny mark */
+
+  /* — shadows — */
+  --shadow-float: 0 12px 30px -10px rgb(27 24 22 / 0.35), 0 0 0 1px rgb(27 24 22 / 0.05); /* the bottom menu, a floating card */
+  --shadow-lift: 0 6px 16px -6px rgb(27 24 22 / 0.35), 0 0 0 1px rgb(27 24 22 / 0.05);    /* a small thing over the page */
+  --shadow-wine: 0 12px 30px -10px rgb(122 32 40 / 0.7);  /* the round wine button */
+  --shadow-knob: 0 1px 3px rgb(27 24 22 / 0.14);          /* a switch's knob, a chosen segment */
+  --shadow-sheet: 0 -10px 40px rgb(27 24 22 / 0.25);      /* a sheet rising from the bottom */
+
+  /* — finger sizes (px on purpose: they must not shrink with the text) — */
+  --spacing-tap: 44px;         /* the least anything tappable may be; round buttons */
+  --spacing-tap-lg: 48px;      /* main buttons */
+  --spacing-icon: 36px;        /* a small round button inside a row or a bar */
+  --spacing-row: 64px;         /* a list row; the bottom menu */
+}

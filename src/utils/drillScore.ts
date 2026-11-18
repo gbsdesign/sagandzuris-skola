@@ -10,8 +10,13 @@ import type { SingFrame } from './singCapture';
 
 export type ScoreKind = 'pitch' | 'rhythm' | 'ai';
 
-export const scoreKindOf = (d: Drill): ScoreKind =>
-  d.id.startsWith('tip-') ? 'ai' : d.id.startsWith('rhythm-') ? 'rhythm' : 'pitch';
+/** How a run of this exercise is judged. An exercise with no notes or beats to compare with (free singing, like a new
+ *  text on a known tone) is heard by the AI teacher, as the tips are — by notes it could only ever score 0. */
+export const scoreKindOf = (d: Drill): ScoreKind => {
+  if (d.id.startsWith('tip-')) return 'ai';
+  const kind: ScoreKind = d.id.startsWith('rhythm-') ? 'rhythm' : 'pitch';
+  return d.exercise.steps.some(s => scoredStep(s, kind, 0)) ? kind : 'ai';
+};
 
 /** the voice this step's synth leaves to the student (null: all sound, or the step has no voices) */
 export const myPart = (s: ManeraStep, chosen: number) => (!s.parts || s.listen ? null : s.voice ?? Math.min(chosen, s.parts.length - 1));
