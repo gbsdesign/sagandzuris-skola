@@ -26,7 +26,7 @@ export const linkIcon = (l: HabitLink): React.ReactNode =>
 const linkSub = (l: HabitLink) => (l.kind === 'url' ? siteName(l.url) : l.sub || SEARCH_GROUPS.find(g => g.id === l.group)?.title || '');
 
 /** what a picked button keeps: the button id (utils/shortcuts) opens it */
-const fromButton = (id: string, title: string, sub?: string): HabitLink => ({
+export const fromButton = (id: string, title: string, sub?: string): HabitLink => ({
   kind: 'find',
   title,
   group: 'fn',
@@ -37,9 +37,9 @@ const fromButton = (id: string, title: string, sub?: string): HabitLink => ({
   ...(sub ? { sub } : {}),
 });
 
-const buttonOf = (l: HabitLink) => (l.kind === 'find' && l.open.kind === 'shortcut' ? coreOf(l.open.id) : null);
+export const buttonOf = (l: HabitLink) => (l.kind === 'find' && l.open.kind === 'shortcut' ? coreOf(l.open.id) : null);
 
-const sameLink = (a: HabitLink, b: HabitLink) =>
+export const sameLink = (a: HabitLink, b: HabitLink) =>
   a.kind === 'url' ? b.kind === 'url' && a.url === b.url : b.kind === 'find' && JSON.stringify(a.open) === JSON.stringify(b.open);
 
 const CHIP =

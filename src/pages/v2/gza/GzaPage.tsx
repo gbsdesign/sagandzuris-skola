@@ -1,17 +1,18 @@
 import React, { useEffect } from 'react';
 import { useNavigation } from '../../../context';
 import { Card, TopBar } from '../../../components/ui2';
-import { ChvevebiContent } from '../../../components/views/ChvevebiPanel';
 import { MasteryContent } from '../../../components/mastery/MasteryContent';
 import { usePanelWish } from '../../../components/views/IndependentWorkCard';
 import { clearTried } from '../../../utils/samosiTry';
 import { GzaList } from './GzaList';
 import { SagandzuriPage } from './Sagandzuri';
 import { SamosiPage } from './Samosi';
+import { screenOf } from '../chvevebi/nav';
+
+const ChvevebiPage = React.lazy(() => import('../chvevebi/ChvevebiPage'));
 
 // Page `gz` in the new look: the list (x-gza) and the path's own pages, each a step of its own in history by the
-// navigation's `mapItem` — `sagandzuri` (x-sagandzuri), `samosi` (x-samosi), `chvevebi` (the old habits until their own
-// stage) and `ostatoba` (the old „ოსტატობა“, which the old „საგანძური“ card held at its bottom).
+// navigation's `mapItem` — `sagandzuri` (x-sagandzuri), `samosi` (x-samosi), `chvevebi…` (the habits, `../chvevebi`) and `ostatoba` (the old „ოსტატობა“, which the old „საგანძური“ card held at its bottom).
 
 export type GzaItem = 'sagandzuri' | 'samosi' | 'chvevebi' | 'ostatoba';
 
@@ -24,14 +25,8 @@ export const GzaPage: React.FC = () => {
 
   if (mapItem === 'sagandzuri') return <SagandzuriPage onBack={handleGoBack} onMastery={() => openMapItem('ostatoba')} />;
   if (mapItem === 'samosi') return <SamosiPage onBack={handleGoBack} />;
-  if (mapItem === 'chvevebi') {
-    return (
-      <div className="flex w-full flex-col gap-2 pb-4">
-        <TopBar title="ჩვევები" onBack={handleGoBack} />
-        <Card pad="sm"><ChvevebiContent /></Card>
-      </div>
-    );
-  }
+  // the habits' screens (stage 4b): the day, the views, a habit, the changes, the vine
+  if (screenOf(mapItem)) return <ChvevebiPage />;
   if (mapItem === 'ostatoba') {
     return (
       <div className="flex w-full flex-col gap-2 pb-4">

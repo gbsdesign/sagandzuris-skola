@@ -1707,6 +1707,16 @@
   `GzaList` x-gza, `Sagandzuri` x-sagandzuri over `MyClassWork`'s exported `useWorkCtx` / `useHiddenWork`, `Samosi*` x-samosi
   with the try-on and proof parts of the old outfit; chvevebi and ostatoba show the old panels in a ui2 Card until their own
   stage). Still the old screens in 4a: habits (4b), class (4c), messages (4d).
+- **Stage 4b — habits (2026-11-18)**: `pages/v2/chvevebi/` — every screen a `gz` mapItem (`nav.ts`: `chvevebi` = the day,
+  `~week|month|year`, `~h/<id>` a habit, `~s/<id>` its settings ✎, `~edit` / `~edit~rare` the list to change, `~vazi`; the picked day
+  is shared outside React — `useHabitsDate`). `ChvevebiPage` (lazy from GzaPage) holds the one model, the blessing and the phone
+  reminders' sync. `Day.tsx` + `DayParts.tsx` (x-chvevebi, x-carieli-chvevebi; „დამოუკიდებელი სამუშაო“ first in the list → sheet
+  x-damoukidebeli → the old WorkPanel), `More.tsx` (the bar's „⋯“: views, „ჩვევების შეცვლა“, „განმარტება“; `ViewSwitch` — „დღე“ =
+  back), `Periods.tsx` + `Week` / `Month` / `Year` (boards' weeks start on Sunday like the model's; the day strip is Monday-first as
+  its board), `Habit.tsx` (x-chveva), `Settings.tsx` (x-chveva-linki + every old HabitCardEditor setting; a link = `{kind:'url'}`),
+  `Edit.tsx` (drag by the handle — the old `useDragSort` —, Alt+↑/↓), `NewHabit.tsx` (x-chveva-akhali), `Vazi.tsx` (x-vazi +
+  x-vazi-rogor). Settings' single choices wrap (`OneOf`), never scroll sideways. The old `ChvevebiPanel` stays for the old look
+  and a teacher's look at a student.
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 
