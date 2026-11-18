@@ -21,8 +21,8 @@ import { PAISI_PARTS } from '../../data/paisiVideos';
 // the reader stopped, and the chant recordings on a shelf of their own.
 
 // `paisi` = the „ვიდეოთეკა“ shelf's St Paisios (2026-11-09), a film in it `paisi:<YouTube id>`
-export type ShelfId = 'book' | 'lives' | 'feasts' | 'prayers' | 'sasuliero' | 'audio' | 'paisi';
-export const SHELF_IDS: ShelfId[] = ['book', 'lives', 'feasts', 'prayers', 'sasuliero', 'audio', 'paisi'];
+export type ShelfId = 'book' | 'lives' | 'feasts' | 'prayers' | 'sasuliero' | 'patriarq' | 'audio' | 'paisi';
+export const SHELF_IDS: ShelfId[] = ['book', 'lives', 'feasts', 'prayers', 'sasuliero', 'patriarq', 'audio', 'paisi'];
 
 type Orn = React.FC<{ color: string; className?: string }>;
 /** shape = the binding's proportions: the books are not all of one height, as on a real shelf */
@@ -58,6 +58,18 @@ const Portrait: Orn = ({ color, className }) => (
   </svg>
 );
 
+// a stack of three books standing on a shelf, a cross over them — the Patriarchate's library
+const BookStack: Orn = ({ color, className }) => (
+  <svg viewBox="0 0 100 100" className={className} aria-hidden>
+    <path d="M47 2 h6 v7 h7 v5 h-7 v10 h-6 v-10 h-7 v-5 h7 Z" fill={color} />
+    <rect x="14" y="34" width="20" height="54" rx="2" fill={color} />
+    <rect x="38" y="30" width="22" height="58" rx="2" fill={color} />
+    <rect x="62" y="38" width="22" height="50" rx="2" fill={color} transform="rotate(8 73 88)" />
+    <path d="M18 44 h12 M18 78 h12 M42 40 h14 M42 78 h14" stroke="#000" strokeOpacity="0.28" strokeWidth="2.6" strokeLinecap="round" />
+    <rect x="8" y="90" width="84" height="5" rx="2" fill={color} />
+  </svg>
+);
+
 // cloth bindings: burgundy, forest green, night blue, deep violet, leather brown — dark and quiet, with gilt lines
 export const COVERS: Cover[] = [
   { id: 'book', title: 'საღმრთო ისტორია', note: 'ძველი აღთქმა', cloth: '#7a2430', deep: '#4e141b', Orn: GrapeBunch, shape: 'aspect-[5/7]' },
@@ -66,6 +78,7 @@ export const COVERS: Cover[] = [
   { id: 'feasts', title: 'დღესას­წაულები', note: 'ამ წლის თარიღები', cloth: '#2c4268', deep: '#18273f', Orn: Rosette, shape: 'aspect-[5/6.8]' },
   { id: 'prayers', title: 'ლოცვანი', note: 'დილა და საღამო', cloth: '#5a3a5e', deep: '#33203a', Orn: BolnisiCross, shape: 'aspect-[5/6.45]' },
   { id: 'sasuliero', title: 'სასულიერო წიგნები', note: 'წმიდა მამები', cloth: '#6b4a2e', deep: '#3a2716', Orn: OpenBook, shape: 'aspect-[5/7.1]' },
+  { id: 'patriarq', title: 'საპატრიარქოს ბიბლიოთეკა', note: '1,500-ზე მეტი წიგნი', cloth: '#4a3a6b', deep: '#2a2040', Orn: BookStack, shape: 'aspect-[5/7.2]' },
   { id: 'tsinaprebi', title: 'გაიცანი წინაპრები', note: 'მგალობლები', cloth: '#2c5a5c', deep: '#173638', Orn: Portrait, shape: 'aspect-[5/6.9]' },
 ];
 const COVER_IDS: string[] = COVERS.map(c => c.id);

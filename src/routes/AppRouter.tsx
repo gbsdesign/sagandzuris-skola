@@ -181,7 +181,7 @@ const PAGE_TITLES: Partial<Record<PageType, string>> = {
 // an open library book shows its own name in the bar (the shelf's covers; LibraryPage's `mapItem` „book:12“)
 const LIBRARY_BOOKS: Record<string, string> = {
   book: 'საღმრთო ისტორია', lives: 'წმიდანთა ცხოვრება', feasts: 'დღესასწაულები', prayers: 'ლოცვანი',
-  sasuliero: 'სასულიერო წიგნები', audio: 'საგალობლების mp3', paisi: 'ვიდეოთეკა',
+  sasuliero: 'სასულიერო წიგნები', patriarq: 'საპატრიარქოს ბიბლიოთეკა', audio: 'საგალობლების mp3', paisi: 'ვიდეოთეკა',
 };
 
 export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {

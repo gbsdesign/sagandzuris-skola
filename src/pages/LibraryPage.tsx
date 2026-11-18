@@ -6,6 +6,7 @@ import { FeastsTab } from './library/FeastsTab';
 import { LivesTab } from './library/LivesTab';
 import { PrayersTab } from './library/PrayersTab';
 import { SpiritualBooksTab } from './library/SpiritualBooksTab';
+import { PatriarchLibrary } from './library/PatriarchLibrary';
 import { SynthDownload } from './library/SynthDownload';
 import { SHELF_IDS, Shelf, ShelfId } from './library/Shelf';
 import { useOpenRequest } from '../utils/searchOpen';
@@ -51,7 +52,7 @@ export const LibraryPage: React.FC = () => {
             <Suspense fallback={null}>
               <VideoList id="p" open={nav.part ?? undefined} onPlay={id => openMapItem(`paisi:${id}`, false, true)} onMove={id => openMapItem(`paisi:${id}`, true, true)} onClose={handleGoBack} />
             </Suspense>
-          ) : open === 'book' ? <BookTab nav={nav} /> : open === 'feasts' ? <FeastsTab group={nav.part} /> : open === 'lives' ? <LivesTab nav={nav} /> : open === 'prayers' ? <PrayersTab key={nav.part} at={nav.part} /> : open === 'sasuliero' ? <SpiritualBooksTab nav={nav} /> : <SynthDownload />}
+          ) : open === 'book' ? <BookTab nav={nav} /> : open === 'feasts' ? <FeastsTab group={nav.part} /> : open === 'lives' ? <LivesTab nav={nav} /> : open === 'prayers' ? <PrayersTab key={nav.part} at={nav.part} /> : open === 'sasuliero' ? <SpiritualBooksTab nav={nav} /> : open === 'patriarq' ? <PatriarchLibrary nav={nav} /> : <SynthDownload />}
         </div>
       )}
     </div>
