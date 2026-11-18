@@ -1,8 +1,8 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react';
 import {
-  BookOpen, CalendarDays, CheckCheck, ChevronDown, Church, Clock, Guitar, Lock, Music, ScrollText, Search, Sparkles, UserRound, Users, X,
+  BookOpen, CalendarDays, CheckCheck, ChevronDown, Church, Clock, Guitar, Lock, Mic, Music, Music2, ScrollText, Search, Sparkles, UserRound, Users, X,
 } from 'lucide-react';
-import { Chips, Dot, FOCUS, Note, Press, RoundButton, Row, Rows, SectionLabel, TopBar, cx } from '../../../components/ui2';
+import { Chips, Dot, FOCUS, Helper, Note, Press, RoundButton, Row, Rows, SectionLabel, TopBar, cx } from '../../../components/ui2';
 import { SEARCH_GROUPS, type SearchGroupId } from '../../../data/searchIndex';
 import { shortcutIcon } from '../../../components/home/ShortcutShelf';
 
@@ -44,6 +44,12 @@ export interface SearchViewProps {
   often: SearchRow[];
   onOpen: (row: SearchRow) => void;
   autoFocus?: boolean;
+  /** a round 🎤 in the empty field (only where the browser can listen) */
+  onVoice?: () => void;
+  /** words came from speech and the field was not touched since: a small line under it */
+  heardNote?: boolean;
+  /** „ძებნა სიმღერით“ under the field (only where the microphone can be used) */
+  onSing?: () => void;
 }
 
 const FIRST_ROWS = 5; // rows a group shows before „კიდევ N“
@@ -79,7 +85,8 @@ const LockMark: React.FC = () => <Lock aria-label="საჭიროა შე�
 /** the field inside the bar: wine ring while focused or filled, ✕ while filled */
 const Field: React.FC<{
   value: string; onChange: (q: string) => void; onEnter: () => void; inputRef: React.RefObject<HTMLInputElement | null>;
-}> = ({ value, onChange, onEnter, inputRef }) => (
+  onVoice?: () => void;
+}> = ({ value, onChange, onEnter, inputRef, onVoice }) => (
   <label className={cx(
     'flex h-tap-lg min-w-0 flex-1 items-center gap-2.5 rounded-full bg-surf pl-4 text-mut transition-shadow focus-within:ring-2 focus-within:ring-wine',
     value ? 'pr-2 ring-2 ring-wine' : 'pr-4',
@@ -104,6 +111,11 @@ const Field: React.FC<{
     {value && (
       <RoundButton label="გასუფთავება" size={36} tone="page" onClick={() => { onChange(''); inputRef.current?.focus(); }}>
         <X aria-hidden="true" strokeWidth={1.75} />
+      </RoundButton>
+    )}
+    {!value && onVoice && (
+      <RoundButton label="თქვი ხმით" size={36} tone="page" onClick={onVoice}>
+        <Mic aria-hidden="true" strokeWidth={1.75} />
       </RoundButton>
     )}
   </label>
@@ -145,7 +157,7 @@ const RecentChips: React.FC<{ rows: SearchRow[]; onOpen: (r: SearchRow) => void 
 );
 
 export const SearchView: React.FC<SearchViewProps> = ({
-  query, searched, onQuery, onBack, filter, onFilter, chips, groups, elsewhere = 0, recent, onClearRecent, often, onOpen, autoFocus,
+  query, searched, onQuery, onBack, filter, onFilter, chips, groups, elsewhere = 0, recent, onClearRecent, often, onOpen, autoFocus, onVoice, heardNote, onSing,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const typed = searched.trim() !== '';
@@ -174,8 +186,21 @@ export const SearchView: React.FC<SearchViewProps> = ({
   return (
     <div className="flex flex-col pb-5">
       <TopBar title="ძებნა" onBack={onBack} className="sticky top-[env(safe-area-inset-top,0px)] z-10 -mx-4 bg-page px-4">
-        <Field value={query} onChange={onQuery} onEnter={() => first && onOpen(first)} inputRef={inputRef} />
+        <Field value={query} onChange={onQuery} onEnter={() => first && onOpen(first)} inputRef={inputRef} onVoice={onVoice} />
       </TopBar>
+
+      {heardNote && typed && (
+        <Helper icon={<Mic />} className="pb-2">ასე გავიგე. თუ სხვა თქვი — შეეხე ველს და შეასწორე.</Helper>
+      )}
+      {onSing && !typed && (
+        <Press
+          onClick={onSing}
+          className={cx('mb-1 flex h-tap shrink-0 cursor-pointer items-center gap-2 self-start rounded-full px-1.5 text-body font-semibold text-wine', FOCUS)}
+        >
+          <Music2 aria-hidden="true" className="size-[18px]" strokeWidth={1.75} />
+          ძებნა სიმღერით
+        </Press>
+      )}
 
       <div className="flex flex-col gap-3 pt-0.5">
         {chips.length > 0 && (

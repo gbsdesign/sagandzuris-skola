@@ -94,7 +94,7 @@ export const ExamScreen: React.FC<{ variantId: string; voice: Voice; fromLearnin
 
   return createPortal(
     <div role="dialog" aria-modal="true" aria-label="გამოცდა"
-      className="fixed inset-0 z-[76] flex flex-col overflow-y-auto overscroll-contain bg-page pt-[env(safe-area-inset-top)] text-ink safe-x">
+      className="fixed inset-0 z-[88] flex flex-col overflow-y-auto overscroll-contain bg-page pt-[env(safe-area-inset-top)] text-ink safe-x">
       <ExamView
         state={take.state} title={title} voiceName={voiceName} tried={tried} why={why} loading={!failed && !!info && !loaded} problem={take.problem}
         count={take.count} now={take.now} section={section} frames={frames} place={place}

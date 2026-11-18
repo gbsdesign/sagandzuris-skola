@@ -21,6 +21,8 @@ import { loadBookScore, saveBlob, BookScore } from '../../utils/chantSynth';
 import { GrapeBunch } from '../../components/home/PlateOrnaments';
 import { triggerHaptic } from '../../utils/haptics';
 import { ChantPicker } from '../../components/teacher/ClassProgramPanel';
+import { useNewLook } from '../../design/newLook';
+import { ProgramV2 } from '../v2/program/ProgramV2';
 
 const labelOf = (id: string) => {
   const info = findVersion(id);
@@ -30,7 +32,13 @@ const labelOf = (id: string) => {
   return { title: info.chant.title.replace(/[;\s]+$/, ''), sub, rec: Boolean(getChantMedia(info.chant.id, v.code)) };
 };
 
+// the new look draws it from the kit (pages/v2/program); the old look keeps the drawing below
 export const ProgramPage: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
+  const newLook = useNewLook();
+  return newLook ? <ProgramV2 hidden={hidden} /> : <ClassicProgram hidden={hidden} />;
+};
+
+const ClassicProgram: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
   const { closeProgram, openNotes, setChurch, liturgy, program, fromLink, leading, setLeading, following, setFollowing, liveTurn } = useNotes();
   const regent = liturgy.role === 'teacher' && !fromLink;
   const items = program?.items ?? [];

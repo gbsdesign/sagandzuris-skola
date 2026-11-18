@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, Headphones, Mic, Minus, Play, Plus, Repeat, RotateCcw, Send, Snail, Sparkles, Square, Users, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Headphones, ListOrdered, Maximize2, Mic, Minus, Play, Plus, Repeat, RotateCcw, Send, SkipForward, Snail, Sparkles, Square, Users, X } from 'lucide-react';
 import { BookScore, ChantSynth, countIn, makeTimeMap } from '../../utils/chantSynth';
 import { LEARNED_SHARE, LearnPart, LearnRecord, PartState, chunksOfPart, learnTakeId, melodyGroups, melodyIn, partState, timelineIn } from '../../utils/learn';
 import { noteName } from '../../utils/pearls';
@@ -15,6 +15,9 @@ import { openExam } from '../../pages/v2/gamocda/open';
 import { PartPicture } from './PartPicture';
 import { LearnMirror } from './LearnMirror';
 import { Choice, LOOPS_PER_STEP, SPEEDS, SettingsFold, useSinging } from './LearnShared';
+import { LearnView } from '../../pages/v2/learn/LearnView';
+import { BigNotesView } from '../../pages/v2/learn/BigNotesView';
+import { textOf, type LearnAction } from '../../pages/v2/learn/parts';
 
 // The learning mode of a chant: one way for everybody (2026-11-05, the user: „მეორე გვერდის ფუნქციები აქ გადმოიტანე და ერთი
 // კარგი სასწავლო თემა შექმენი“). A phrase (a part) is learned in steps, one big button always saying what to do:
@@ -57,6 +60,17 @@ type Stage = number | 'together' | 'whole';
 type Mix = 'mine' | 'lead' | 'all' | 'others';
 const MIX_LABEL: Record<Mix, string> = { mine: 'ჩემი ხმა', lead: 'ჩემი ხმა წინ', all: 'ყველა', others: 'ჩემ გარეშე' };
 const ordinal = (n: number) => (n === 1 ? 'პირველი' : `მე-${n}`);
+// the words' marks in the sentence: the old look's colours, or the design rules' (the same wine and green)
+const SAY_OLD = { wine: 'text-[#7a2028]', leaf: 'text-[#2f6b43]', grey: 'text-[#8c7c6b]' };
+const SAY_NEW = { wine: 'text-wine', leaf: 'text-leaf-ink', grey: 'text-mut' };
+
+/** The new look (board x-stsavla): the learning mode draws its own bar and voices (LearnMode gives „უკან“ and the voice). */
+export interface LearnShell {
+  onBack: () => void;
+  /** how many voices to pick from (1: no choice) */
+  voices: number;
+  onVoice: (v: Voice) => void;
+}
 const signed = (n: number) => (n > 0 ? `+${n}` : String(n));
 
 export const LearnEasy: React.FC<{
@@ -75,7 +89,9 @@ export const LearnEasy: React.FC<{
   unlimited: boolean;
   approved: (sendId: string) => boolean;
   onTry: (part: number, pct: number, ok: boolean) => void;
-}> = ({ vid, score, parts, rec, today, loaded, current, onPick, voice, voiceName, title, uid, unlimited, approved, onTry }) => {
+  shell?: LearnShell;
+}> = ({ vid, score, parts, rec, today, loaded, current, onPick, voice, voiceName, title, uid, unlimited, approved, onTry, shell }) => {
+  const C = shell ? SAY_NEW : SAY_OLD;
   const vi = Number(voice) - 1;
   const many = score.voices.length > 1;
   const joined = current === 'all';
@@ -124,6 +140,29 @@ export const LearnEasy: React.FC<{
     setBig(true);
   };
   const closeBig = () => { if (window.history.state?.sgLearnBig) window.history.back(); else setBig(false); };
+  // the new look's ⋯ window: a history step of its own too, so the phone's back (and Escape) closes only it
+  const [more, setMore] = useState(false);
+  const openMore = () => {
+    try { window.history.pushState({ ...(window.history.state || {}), sgLearnMore: 1 }, ''); } catch { /* still opens */ }
+    setMore(true);
+  };
+  const closeMore = () => { if (window.history.state?.sgLearnMore) window.history.back(); else setMore(false); };
+  useEffect(() => {
+    if (!more) return;
+    const onPop = (e: PopStateEvent) => { if (!e.state?.sgLearnMore) setMore(false); };
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, [more]);
+  // from the ⋯ window straight to the big notes: its step becomes the big notes' step
+  const bigFromMore = () => {
+    triggerHaptic(8);
+    try {
+      const { sgLearnMore: _drop, ...rest } = window.history.state || {};
+      window.history.replaceState({ ...rest, sgLearnBig: 1 }, '');
+    } catch { /* still opens */ }
+    setMore(false);
+    setBig(true);
+  };
   // a phone held upright: the big notes halve each line, so they come out twice as large
   const [upright, setUpright] = useState(() => window.matchMedia(UPRIGHT).matches);
   useEffect(() => {
@@ -234,17 +273,23 @@ export const LearnEasy: React.FC<{
     setPlaying(false);
     setBeat(null);
   }
-  const listen = async () => {
-    triggerHaptic(10);
-    if (synth.playing || counting) { stop(); return; }
+  const startListen = async () => {
     await synth.play(range.s0);
     setPlaying(true);
     startFollow();
+  };
+  const listen = async () => {
+    triggerHaptic(10);
+    if (synth.playing || counting) { stop(); return; }
+    await startListen();
   };
   // „ერთად“: my first note and two taps at the phrase's pace, then the phrase goes round
   const singAlong = async () => {
     triggerHaptic(10);
     if (synth.playing || counting) { stop(); return; }
+    await startAlong();
+  };
+  const startAlong = async () => {
     setCounting(true);
     const beatSec = (time.toSec(range.b0 + 1) - time.toSec(range.b0)) / speed;
     const wait = await countIn(target[0] ?? null, beatSec, tone).catch(() => 0);
@@ -255,6 +300,12 @@ export const LearnEasy: React.FC<{
       setPlaying(true);
       startFollow();
     }, Math.max(0, wait - 50));
+  };
+  // „კიდევ ერთხელ“ (the new look): the bit heard again from its start — or „ერთად“ led in again
+  const again = () => {
+    triggerHaptic(10);
+    stop();
+    void (together ? startAlong() : startListen());
   };
   function endTogether() {
     setTogetherDone(true);
@@ -336,7 +387,7 @@ export const LearnEasy: React.FC<{
     say = 'ისმის პირველი ნოტი…';
     main = { label: 'გაუქმება', icon: <Square fill="currentColor" />, run: singing.sing };
   } else if (phase === 'singing') {
-    say = <>გისმენ{live != null ? <> · <b className="text-[#7a2028]">{noteName(live)}</b></> : '…'} <span className="text-[#8c7c6b]">გაჩუმდები — თვითონ გაჩერდება.</span></>;
+    say = <>გისმენ{live != null ? <> · <b className={C.wine}>{noteName(live)}</b></> : '…'} <span className={C.grey}>გაჩუმდები — თვითონ გაჩერდება.</span></>;
     main = { label: 'დავამთავრე', icon: <Square fill="currentColor" />, run: singing.sing };
   } else if (phase === 'scoring') {
     say = 'ვამოწმებ…';
@@ -344,16 +395,16 @@ export const LearnEasy: React.FC<{
   } else if (selfCheck || (result && ok)) {
     // done with this bit (sung right, or said so without a microphone)
     if (!whole) {
-      say = result && ok ? <><b className="text-[#2f6b43]">კარგია!</b> {hit} ნოტი {result.hits.length}-დან.</> : 'კარგია! გადავიდეთ შემდეგზე.';
+      say = result && ok ? <><b className={C.leaf}>კარგია!</b> {hit} ნოტი {result.hits.length}-დან.</> : 'კარგია! გადავიდეთ შემდეგზე.';
       const last = (stage as number) + 1 >= pieces.length;
       main = { label: last ? (many ? 'ახლა ერთად' : 'ახლა მთლიანი ფრაზა') : 'შემდეგი ნაწყვეტი', icon: <ChevronRight />, run: nextPiece };
     } else if (joined) {
-      say = <><b className="text-[#2f6b43]">ყოჩაღ!</b> ნასწავლი ფრაზები ერთად გამოგივიდა.</>;
+      say = <><b className={C.leaf}>ყოჩაღ!</b> ნასწავლი ფრაზები ერთად გამოგივიდა.</>;
       main = examReady
         ? { label: 'გამოცდა', icon: <Mic />, run: () => openExam(vid, voice, true) }
         : { label: 'კიდევ ერთხელ', icon: <RotateCcw />, run: () => goStage(many ? 'together' : 'whole') };
     } else {
-      say = <><b className="text-[#2f6b43]">ყოჩაღ! ეს ფრაზა ნასწავლია.</b> გამეორებას აპი შეგახსენებს.</>;
+      say = <><b className={C.leaf}>ყოჩაღ! ეს ფრაზა ნასწავლია.</b> გამეორებას აპი შეგახსენებს.</>;
       main = nextPart >= 0
         ? { label: nextPart > at ? 'შემდეგი ფრაზა' : `ფრაზა ${nextPart + 1}`, icon: <ChevronRight />, run: () => pick(nextPart) }
         : parts.length > 1
@@ -406,6 +457,90 @@ export const LearnEasy: React.FC<{
   const doneOf = (s: Stage) => (s === 'whole' ? (joined ? false : learnedHere) : s === 'together' ? togetherDone : passed[s as number]);
   const timeline = useMemo(() => (whole ? timelineIn(score, vi, range.b0, range.b1) : []), [whole, score, vi, range.b0, range.b1]);
   const summary = `${Math.round(speed * 100)}%${many ? ` · ${MIX_LABEL[mix]}` : ''}${tone ? ` · ტონი ${signed(tone)}` : ''}${many && phones ? ' · ყურსასმენი' : ''}`;
+
+  // the new look (board x-stsavla): the same state and the same jobs, drawn by pages/v2/learn
+  if (shell) {
+    const taken = whole && !!result?.mp3 && !busy;
+    const quiet: LearnAction[] = [];
+    if (taken) {
+      quiet.push({ label: 'მომისმინე', icon: <Headphones />, run: singing.playTake });
+      if (uid) quiet.push({
+        label: `${ai.busy ? 'უსმენს…' : 'AI მასწავლებელი'}${Number.isFinite(aiLeft) && !ai.busy ? ` · ${aiLeft}` : ''}`,
+        icon: <Sparkles />, run: askAi, disabled: ai.busy || aiLeft <= 0,
+      });
+      if (uid && sent !== 'yes') quiet.push({ label: sent === 'busy' ? 'იგზავნება…' : 'გაუგზავნე მასწავლებელს', icon: <Send />, run: send, disabled: sent === 'busy' });
+    }
+    if (whole && result && !busy && timeline.length > 0) {
+      quiet.push({
+        label: 'დეტალურად', icon: <ChevronDown className={mirror ? 'rotate-180' : undefined} />,
+        run: () => { triggerHaptic(8); setMirror(o => !o); },
+      });
+    }
+    if (together && !counting) quiet.push({ label: 'მზად ვარ — მარტო', icon: <ChevronRight />, run: () => { triggerHaptic(8); endTogether(); } });
+    if (whole && pieces.length > 1 && !busy && !playing) quiet.push({ label: 'ნაწყვეტებით', icon: <ListOrdered />, run: () => { triggerHaptic(8); goStage(0); } });
+    if (!whole && !together && result && !ok && !busy) quiet.push({ label: 'გამოტოვება', icon: <SkipForward />, run: () => { triggerHaptic(8); nextPiece(); } });
+
+    const lines: React.ComponentProps<typeof LearnView>['lines'] = [];
+    if (taken && uid && sent === 'yes') lines.push({ tone: 'leaf', icon: <Check />, text: 'გაეგზავნა მასწავლებელს' });
+    if (taken && sent === 'failed') lines.push({ tone: 'danger', text: 'ვერ გაიგზავნა — ინტერნეტი შეამოწმე და კიდევ სცადე.' });
+    if (taken && !uid) lines.push({ tone: 'mut', text: 'მასწავლებლისთვის გასაგზავნად შედი შენი ანგარიშით.' });
+
+    const warnings: React.ReactNode[] = [];
+    if (error) warnings.push(`${error} ან უბრალოდ იმღერე ხმამაღლა.`);
+    if (!singingSupported()) warnings.push('ამ ბრაუზერში მიკროფონი ვერ ჩაირთვება, ამიტომ აპი ვერ შეგიმოწმებს — იმღერე ხმამაღლა და თავად მონიშნე.');
+
+    const ways: LearnAction[] = [{ label: 'ნოტები დიდად', icon: <Maximize2 />, run: bigFromMore }];
+    if (run >= 2 && !joined) ways.push({ label: `ნასწავლი ფრაზები ერთად (1–${run})`, icon: <Users />, run: () => { closeMore(); pick('all'); } });
+
+    const heading = joined ? `ფრაზები 1–${Math.max(1, run)} ერთად` : `ფრაზა ${at + 1} / ${parts.length}`;
+    const status = joined ? 'ვარჯიში — ფრაზებს თავისი ჩანაწერი რჩება'
+      : learnedHere ? (partState(rec[at], today) === 'due' ? 'ეს ფრაზა დღეს გასამეორებელია' : 'ეს ფრაზა ნასწავლია')
+        : due > 0 ? `დღეს გასამეორებელი: ${due}` : '';
+    const picture = (split?: boolean) => (
+      <PartPicture score={score} sys={part.sys} beat={beat} span={typeof stage === 'number' ? [range.b0, range.b1] : null} marks={marks} voice={vi}
+        focus={many} onOpen={split == null ? openBig : undefined} split={split} />
+    );
+    return (
+      <>
+        <LearnView
+          onBack={shell.onBack} title={title}
+          voices={{ count: shell.voices, value: voice, onChange: shell.onVoice }}
+          heading={heading} learned={learned} progress={(joined ? Math.max(1, run) : at + 1) / Math.max(1, parts.length)}
+          status={status} toast={toast} picture={picture()}
+          dots={result && !busy && result.hits.length > 0 && !marks ? result.hits : null} marked={!!marks}
+          approved={whole && !joined && approved(sendId)}
+          say={say} sayText={textOf(say)}
+          saySub={together ? `წრე ${Math.min(loops, LOOPS_PER_STEP)} / ${LOOPS_PER_STEP} — სამის მერე „მარტო“` : undefined}
+          main={main} pulse={phase === 'singing' || counting}
+          slow={speed === 0.5} onSlow={() => { triggerHaptic(8); setSpeed(speed === 0.5 ? 0.75 : 0.5); }}
+          again={{ label: 'კიდევ ერთხელ', run: again, disabled: busy }}
+          prev={{ label: 'წინა ფრაზა', run: () => pick(joined ? 0 : at - 1), disabled: !joined && at <= 0 }}
+          next={{ label: 'შემდეგი ფრაზა', run: () => pick(joined ? parts.length - 1 : at + 1), disabled: joined || at >= parts.length - 1 }}
+          quiet={quiet} lines={lines}
+          ai={taken ? ai : null}
+          mirror={mirror && whole && result && !busy && timeline.length > 0 ? (
+            <LearnMirror notes={timeline} seconds={range.s1 - range.s0} frames={singing.frames.current} offset={singing.offset.current}
+              hits={result.pct >= 0 ? result.hits : null} live={false} />
+          ) : null}
+          warnings={warnings}
+          onMore={() => { triggerHaptic(8); openMore(); }}
+          more={{
+            open: more, onClose: closeMore, ways,
+            speed, speeds: SPEEDS, onSpeed: setSpeed,
+            mix: many ? { value: mix, options: (['mine', 'lead', 'all', 'others'] as Mix[]).map(m => ({ id: m, label: MIX_LABEL[m] })), onChange: m => setMix(m as Mix) } : null,
+            tone, onTone: setTone,
+            phones: many ? { on: phones, onChange: setPhones } : null,
+            reminder: !!uid,
+          }}
+        />
+        {big && (
+          <BigNotesView title={heading} sub={title} onClose={closeBig} say={say} main={main} pulse={phase === 'singing' || counting}>
+            {picture(upright)}
+          </BigNotesView>
+        )}
+      </>
+    );
+  }
 
   return (
     <>
