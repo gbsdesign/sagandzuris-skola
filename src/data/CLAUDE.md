@@ -424,5 +424,13 @@ evening in his temple = vespers alone (matins in the morning), „სხვა �
   the Annunciation on a movable day keeps both days' hymns; a fixed feast's leave-taking drops the saint. A hymn whose text ჟამნი
   lacks says so on the page (a saint with only a kontakion → the common one by the saint's kind). `tests/dayServiceYear.test.ts`
   serves every day of 2027 and Lent–Pentecost 2028: four services, every text and book a step opens found, every movable hymn's text.
+- **Review (2026-11-18, the user: „გადახედე მთლიან საქმეს … შეცდომები“):** Lent's kathismas by the Typikon's tables (`lentPsalter`:
+  weeks 1–4 and 6, the 5th week, Holy Mon–Wed; the hours' kathismas; the winter order ends at the Prodigal Son's Sunday — checked
+  with OCA, liturgy.royaldoors.net and a third table; the 5th Thursday's hours differ between them — left unnamed), a Lent evening's
+  vespers by `lentEve` (the evening's own day), the Holy Spirit's Monday (`GREAT_MOVABLE[50]`, Pentecost's hymns), Christmas' and
+  Theophany's vigil always joined. Rank `doxology` is „დიდებამაღალიანი“ as the books call it („სადიდებელი“ is the magnification).
+  The course (`medavitneLessons.ts`) speaks the books' words: „დიდი კვერექსი“, „დიდებამაღალიანი“, „ექვსიანი“, „დასაბამი“, the epistle's
+  „მოხედენ“ · „მშვიდობა ყოველთა“ · „სიბრძნით“ · „და სულისაცა შენისა თანა“ (კონდაკი 4). The 2027 calendar's Sunday tones and matins
+  Gospels, Lent's weekday readings and the movable days' names were checked by script — no fault.
 - Still open: the common services have no ikos; a second rank „ექვსიანი“ is not told apart from a plain day; with the great
   doxology the tibikon sings the typika at the liturgy — the app keeps the daily antiphons on weekdays (the user's temple).

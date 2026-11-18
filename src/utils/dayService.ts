@@ -18,7 +18,7 @@ import { EXTRA_BOOKS } from '../data/extraBooks';
 export type Rank = 'simple' | 'doxology' | 'polyeleos' | 'vigil' | 'great';
 export const RANKS: { id: Rank; label: string; hint: string }[] = [
   { id: 'simple', label: 'უბრალო', hint: 'ყოველდღიური მწუხრი და ცისკარი' },
-  { id: 'doxology', label: 'სადიდებელი', hint: 'ცისკარზე დიდი დოქსოლოგია' },
+  { id: 'doxology', label: 'დიდებამაღალიანი', hint: 'ცისკარზე დიდებამაღალიანი იგალობება' },
   { id: 'polyeleos', label: 'პოლიელეოსი', hint: 'დიდი მწუხრი, ცისკარზე სახარება' },
   { id: 'vigil', label: 'ღამისთევა', hint: 'მწუხრი და ცისკარი ერთად, ლიტიით' },
   { id: 'great', label: 'დიდი დღესასწაული', hint: 'დღესასწაულის განგება' },
@@ -67,7 +67,7 @@ export const oldMD = (iso: string) => {
   return { month: Number(o.slice(5, 7)), day: Number(o.slice(8, 10)) };
 };
 
-export interface Great { id: string; name: string; kind: 'lord' | 'theotokos'; trisagion?: 'baptized' | 'cross' }
+export interface Great { id: string; name: string; kind: 'lord' | 'theotokos'; trisagion?: 'baptized' | 'cross'; /** its hymns are another movable day's (ჟამნი 25) */ hymnsOf?: number }
 const GREAT_FIXED: Record<string, Great> = {
   '09-21': { id: 'mariam-shoba', name: 'ღვთისმშობლის შობა', kind: 'theotokos' },
   '09-27': { id: 'jvari', name: 'ჯვართამაღლება', kind: 'lord', trisagion: 'cross' },
@@ -85,6 +85,8 @@ const GREAT_MOVABLE: Record<number, Great> = {
   0: { id: 'agdgoma', name: 'აღდგომა', kind: 'lord', trisagion: 'baptized' },
   39: { id: 'amagleba', name: 'ამაღლება', kind: 'lord' },
   49: { id: 'sameba', name: 'სულთმოფენობა (სამება)', kind: 'lord', trisagion: 'baptized' },
+  // the Monday of the Holy Spirit: Pentecost's second day, kept as the feast itself
+  50: { id: 'suliwmida', name: 'სულიწმიდის დღე', kind: 'lord', trisagion: 'baptized', hymnsOf: 49 },
 };
 /** the Georgian Church's great saints' days kept with a vigil (new style) */
 const VIGIL_FIXED = new Set(['01-27', '10-14', '11-23', '07-07', '07-12', '09-11', '12-19']);
@@ -132,13 +134,49 @@ const winter = (iso: string) => {
   const { month, day } = oldMD(iso);
   const md = month * 100 + day;
   if (md >= 922 && md <= 1219) return true;
-  return md >= 115 && month < 9 && easterOffset(iso) < -48;
+  // until the eve of the Prodigal Son's Sunday (15 days before Lent); from that Sunday to Lent — the summer order
+  return md >= 115 && month < 9 && easterOffset(iso) < -63;
+};
+
+/** Lent's psalter (Typikon ch. 17 — checked with OCA's and liturgy.royaldoors.net's tables, 2026-11-18): the day's matins and
+ *  hours, and the vespers of its own evening. Weeks 1–4 and 6 share one order, the 5th has its own, Holy Week Mon–Wed another. */
+type LentDay = { m: number[]; h: Partial<Record<1 | 3 | 6 | 9, number>>; v: number | null };
+const LENT_WEEK: LentDay[] = [
+  { m: [2, 3, 17], h: {}, v: null },
+  { m: [4, 5, 6], h: { 3: 7, 6: 8, 9: 9 }, v: 18 },
+  { m: [10, 11, 12], h: { 1: 13, 3: 14, 6: 15, 9: 16 }, v: 18 },
+  { m: [19, 20, 1], h: { 1: 2, 3: 3, 6: 4, 9: 5 }, v: 18 },
+  { m: [6, 7, 8], h: { 1: 9, 3: 10, 6: 11, 9: 12 }, v: 18 },
+  { m: [13, 14, 15], h: { 3: 19, 6: 20 }, v: 18 },
+  { m: [16, 17], h: {}, v: 1 },
+];
+const LENT_FIFTH: Partial<Record<number, LentDay>> = {
+  1: { m: [4, 5, 6], h: { 3: 7, 6: 8, 9: 9 }, v: 10 },
+  2: { m: [11, 12, 13], h: { 1: 14, 3: 15, 6: 16, 9: 18 }, v: 19 },
+  3: { m: [20, 1, 2], h: { 1: 3, 3: 4, 6: 5, 9: 6 }, v: 7 },
+  // the Great Canon's Thursday: one kathisma at matins; its hours differ between the tables — left unnamed
+  4: { m: [8], h: {}, v: null },
+};
+const HOLY_PSALTER: Record<number, LentDay> = {
+  [-6]: { m: [4, 5, 6], h: { 3: 7, 6: 8 }, v: 18 },
+  [-5]: { m: [9, 10, 11], h: { 3: 12, 6: 13 }, v: 18 },
+  [-4]: { m: [14, 15, 16], h: { 3: 19, 6: 20 }, v: 18 },
+};
+export const lentPsalter = (e: number): LentDay | null => {
+  if (HOLY_PSALTER[e]) return HOLY_PSALTER[e];
+  if (e < -48 || e > -8) return null;
+  const dow = (((e + 48) % 7) + 8) % 7; // -48 is a Monday
+  if (e >= -20 && e <= -15) return LENT_FIFTH[dow] ?? LENT_WEEK[dow];
+  return LENT_WEEK[dow];
 };
 const SUMMER_MATINS: number[][] = [[2, 3], [4, 5], [7, 8], [10, 11], [13, 14], [19, 20], [16, 17]];
 const WINTER_MATINS: number[][] = [[2, 3, 17], [4, 5, 6], [7, 8, 9], [10, 11, 12], [13, 14, 15], [19, 20], [16, 17]];
 const SUMMER_VESPERS: (number | null)[] = [null, 6, 9, 12, 15, 18, 1]; // by the eve's weekday (the evening's)
 export const matinsKathismas = (iso: string, rank: Rank) => {
-  const list = (winter(iso) ? WINTER_MATINS : SUMMER_MATINS)[dowOf(iso)];
+  const lent = lentPsalter(easterOffset(iso));
+  const list = lent?.m ?? (winter(iso) ? WINTER_MATINS : SUMMER_MATINS)[dowOf(iso)];
+  // a Lent weekday keeps its three kathismas even with a polyeleos saint; a great feast and a Sunday take two
+  if (lent && dowOf(iso) !== 0 && rank !== 'great') return list;
   return atLeast(rank, 'polyeleos') ? list.slice(0, 2) : list;
 };
 /** the vespers' kathisma for the day `iso` (sung the evening before): a number, „first“ (only „ნეტარ არს კაცი“) or none */
@@ -146,6 +184,10 @@ export const vespersKathisma = (iso: string, rank: Rank): number | 'first' | nul
   const eve = (dowOf(iso) + 6) % 7;
   if (eve === 6) return 1; // Saturday evening, for the Sunday
   if (eve === 0) return null; // Sunday evening
+  if (rank === 'great') return 'first';
+  // Lent: the evening's own kathisma (none on the Great Canon's Thursday)
+  const lent = lentPsalter(easterOffset(iso) - 1);
+  if (lent) return lent.v;
   if (atLeast(rank, 'polyeleos')) return 'first';
   return winter(iso) ? 18 : SUMMER_VESPERS[eve];
 };
@@ -263,7 +305,7 @@ export const hymnsOf = (inp: DayInput, at: 'vespers' | 'matins' | 'hours' | 'lit
   const great = greatFeastOf(inp.iso);
   const e = easterOffset(inp.iso);
   if (great) {
-    const own = GREAT_MOVABLE[e] && TRIODION[e] ? e : undefined; // a movable feast's hymns stand in ჟამნი 25
+    const own = GREAT_MOVABLE[e] ? (TRIODION[e] ? e : GREAT_MOVABLE[e].hymnsOf) : undefined; // a movable feast's hymns stand in ჟამნი 25
     const md = own === undefined ? Object.keys(GREAT_FIXED).find(k => GREAT_FIXED[k].id === great.id) : undefined;
     const fT: Hymn = { role: 'feast', label: `${great.name} — დღესასწაულის ტროპარი`, e: own, md: md && oldOf(md) };
     const fK: Hymn = { role: 'feast', label: `${great.name} — დღესასწაულის კონდაკი`, e: own, md: md && oldOf(md) };
@@ -417,9 +459,11 @@ const P = (title: string, pt?: TextSrc[], more?: Partial<Step>): Step => ({ titl
 const AMEN = 'ამინ.';
 
 /** an hour as the reader reads it: psalms, troparion, the Theotokos', the Trisagion, kontakion, the hour's prayer */
-const hourRead = (n: number, first: boolean, prev = false): Read[] => [
+const hourRead = (n: number, first: boolean, prev = false, kathisma?: number): Read[] => [
   ...(first ? [R(FIX.opening), R(FIX.twelve)] : [R(FIX.come)]),
   R(FIX.hourPsalms(n)),
+  // Lent: the hour's kathisma after its psalms
+  ...(kathisma ? [{ kathisma } as Read] : []),
   { hymns: 'hours', only: 'tr', prev },
   R(FIX.hourTheotokion(n)),
   R(FIX.trisagion),
@@ -479,6 +523,8 @@ export const buildServices = (inp: DayInput): Service[] => {
   const sunday = dow === 0;
   const great = greatFeastOf(iso);
   const season = seasonOf(iso);
+  /** a Lent weekday kept as such — the Annunciation takes its day whole */
+  const lentDay = season.lentWeekday && !great;
   if (season.bright) return brightWeek(inp, season.e);
   if (season.holyWeek) return holyWeek(inp, season.e);
   const vigilDay = atLeast(rank, 'vigil'); // Sunday, a vigil saint, a great feast
@@ -486,7 +532,8 @@ export const buildServices = (inp: DayInput): Service[] => {
   const dox = atLeast(rank, 'doxology');
   const festal = big || sunday; // the great vespers, with the entrance
   /** vespers and matins served together in the evening */
-  const joined = vigilDay ? order.sat !== 'apart' : order.weekday === 'joined';
+  // Christmas' and Theophany's vigil is Great Compline with matins whatever the temple's custom
+  const joined = iso.slice(5) === '01-07' || iso.slice(5) === '01-19' || (vigilDay ? order.sat !== 'apart' : order.weekday === 'joined');
   const litya = vigilDay && order.sat === 'litya';
   const readings = day ? readingsOf(day) : [];
   const vespersText = day ? vespersReadingsText(day) : '';
@@ -508,30 +555,33 @@ export const buildServices = (inp: DayInput): Service[] => {
   const V = PRIEST.vespers, M = PRIEST.matins, L = PRIEST.liturgy;
 
   // ----- vespers -----
-  const k = season.lentWeekday ? 18 : vespersKathisma(iso, rank);
+  /** the evening is a Lent weekday's (or a Lent Sunday's): its vespers are the Triodion's and end in Lent's way */
+  const lentEve = !great && ((season.e - 1 >= -48 && season.e - 1 <= -9 && eveDow >= 1 && eveDow <= 5) || season.lentSundayEve);
+  const k = vespersKathisma(iso, rank);
+  const psDay = lentPsalter(season.e), psEve = lentPsalter(season.e - 1);
   const v: Step[] = [];
   v.push(P('„კურთხეულ არს ღმერთი ჩვენი“', [V.begin], { who: ['priest'], hint: vigilDay && joined ? 'ღამისთევაზე: „აღსდეგით!“ და „დიდება წმიდასა“ — „მოვედით, თაყვანის-ვსცეთ“' : undefined }));
   if (christIsRisen) v.push({ title: '„ქრისტე აღდგა“ — სამგზის', who: ['priest', 'choir'], note: 'აღდგომის წარგზავნამდე მსახურება ასე იწყება' });
-  if (!(vigilDay && joined)) v.push({ title: 'მეცხრე ჟამი', who: ['reader'], note: 'ტროპარი და კონდაკი — წინა დღის წმიდანისა', hint: 'მღვდლის „კურთხეულ არს“-ის შემდეგ იწყებ', read: hourRead(9, true, true), extras: [book(BOOK.hour9)] });
+  if (!(vigilDay && joined)) v.push({ title: 'მეცხრე ჟამი', who: ['reader'], note: 'ტროპარი და კონდაკი — წინა დღის წმიდანისა', hint: 'მღვდლის „კურთხეულ არს“-ის შემდეგ იწყებ', read: hourRead(9, true, true, psEve?.h[9]), extras: [book(BOOK.hour9)] });
   v.push(festal
     ? { title: '„მოვედით, თაყვანის-ვსცეთ“ და ფსალმუნი 103', who: ['choir'], note: 'დიდ მწუხრზე იგალობება', extras: some(text(FIX.ps103), book(sunday ? BOOK.sunVespers : BOOK.dayVespers)), chants: ['mw-2', 'mw-3'] }
     : { title: '„მოვედით, თაყვანის-ვსცეთ“ და ფსალმუნი 103', who: ['reader'], note: 'იკითხება', read: [R(FIX.come), R(FIX.ps103), { say: 'დიდება მამასა და ძესა და წმიდასა სულსა, აწ და მარადის და უკუნითი უკუნისამდე, ამინ. ალილუია, ალილუია, ალილუია, დიდება შენდა, ღმერთო (სამგზის).' }], chants: ['mw-2', 'mw-3'] });
   v.push(P('დიდი კვერექსი', [V.great], { hint: 'ამ დროს მღვდელი საიდუმლოდ კითხულობს სანთლის ლოცვებს', chants: ['mw-4'] }));
   if (k === 'first') v.push({ title: '„ნეტარ არს კაცი“ — კანონი 1-ის პირველი დიდება', who: ['choir'], note: 'დღესასწაულის წინა საღამოს — იგალობება', extras: [{ kind: 'kathisma', n: 1 }], chants: ['mw-5'] });
   else if (k === 1) v.push({ title: 'დავითნის კანონი 1 — „ნეტარ არს კაცი“', who: ['choir', 'reader'], note: 'შაბათ საღამოს — მთელი კანონი', read: [{ kathisma: 1 }], chants: ['mw-5'] });
-  else if (k) v.push({ title: `დავითნის კანონი ${k}`, who: ['reader'], note: season.lentWeekday ? 'მარხვის განრიგით' : undefined, hint: 'თუ წინა დღეს ღამისთევა იყო, კანონი არ იკითხება', read: [{ kathisma: k }] });
+  else if (k) v.push({ title: `დავითნის კანონი ${k}`, who: ['reader'], note: lentEve ? 'მარხვის განრიგით' : undefined, hint: 'თუ წინა დღეს ღამისთევა იყო, კანონი არ იკითხება', read: [{ kathisma: k }] });
   if (k) v.push(P('მცირე კვერექსი', [V.small], { chants: ['mw-6'] }));
   if (season.kneeling) v.push({ title: 'მუხლმოდრეკის ლოცვები', who: ['priest'], note: 'სულთმოფენობის საღამოს — სამი ლოცვა მუხლმოდრეკით' });
   v.push({
     title: '„უფალო, ღაღად-ვყავ“ და დასდებელნი', who: ['choir'],
-    note: great ? 'დღესასწაულის დასდებელნი' : zatiki ? 'ზატიკის დასდებელნი' : season.lentWeekday ? 'მარხვანისა (ბეჭდურ ტრიოდიონშია — აპში ჯერ არ არის) და წმიდანისა' : sunday ? `${toneTxt} · 10 მუხლად: აღდგომისანი და წმიდანისა` : dox ? '6 მუხლად — წმიდანისა' : `${toneTxt} · 6 მუხლად: 3 პარაკლიტონისა, 3 წმიდანისა`,
+    note: great ? 'დღესასწაულის დასდებელნი' : zatiki ? 'ზატიკის დასდებელნი' : lentEve ? 'მარხვანისა (ბეჭდურ ტრიოდიონშია — აპში ჯერ არ არის) და წმიდანისა' : sunday ? `${toneTxt} · 10 მუხლად: აღდგომისანი და წმიდანისა` : dox ? '6 მუხლად — წმიდანისა' : `${toneTxt} · 6 მუხლად: 3 პარაკლიტონისა, 3 წმიდანისა`,
     hint: sunday ? '„დიდება“ — წმიდანისა · „აწდა“ — კვირის ხმის დოგმატიკონი' : dox ? '„დიდება“ — წმიდანისა · „აწდა“ — დოგმატიკონი „დიდების“ ხმაზე' : '„დიდება“ — წმიდანისა · „აწდა“ — ღვთისმშობლისა, შვიდეულის დღისა („დიდების“ ხმაზე)',
     extras: some(
       text(FIX.lordICry, 'ფსალმუნები და მუხლები — ჟამნი'),
       ...ownBooks, lentSat,
       !great && text(zatiki, `ტექსტი — ${zatiki?.label}`),
-      !great && !zatiki && !season.lentWeekday && (sunday || !dox) && text(octoechos(tone, eveDow, 'stichera'), `დასდებელნი — პარაკლიტონი`),
-      !great && season.lentWeekday && lentText,
+      !great && !zatiki && !lentEve && (sunday || !dox) && text(octoechos(tone, eveDow, 'stichera'), `დასდებელნი — პარაკლიტონი`),
+      !great && lentEve && lentText,
       !great && !zatiki && text(menaion(kind, 'stichera'), 'დასდებელნი — წმიდანისა (საზიარო)'),
     ),
     chants: ['mw-7', 'mw-8', ...(sunday ? ['mw-10'] : ['mw-9'])], toned: true,
@@ -541,6 +591,7 @@ export const buildServices = (inp: DayInput): Service[] => {
     ? { title: '„ნათელო მხიარულო“', who: ['choir'], extras: some(text(FIX.gladLight)), chants: ['mw-12'] }
     : { title: '„ნათელო მხიარულო“', who: ['reader'], note: 'იკითხება', read: [R(FIX.gladLight)], chants: ['mw-12'] });
   if (season.lentSundayEve) v.push({ title: 'დიდი წარდგომა', who: ['deacon', 'choir'], note: 'მარხვის კვირა საღამოს — დიდი წარდგომა, ხმა 8', hint: 'მუხლებით; ამ დღიდან მწუხრი მარხვის წესით მთავრდება — „ღირს მყვენ“ იკითხება, მერე ეფრემ ასურის ლოცვა', pt: [V.prokeimenon], extras: some(text({ coll: 'jamni', n: 25, part: 0, after: season.forgiveness ? /^კვირიაკესა ყველიერისასა/ : /^პირველსა კვირიაკესა წმიდათა მარხვათასა/, find: /წარდგომა დიდი/, until: /^(ხოლო წარდგომანი|უწყებულ|პირველსა შაბათსა|კვირიაკესა მეორესა)/, label: 'დიდი წარდგომა — ჟამნი' })), chants: ['mw-13'] });
+  else if (lentEve) v.push({ title: 'წარდგომა, დაბადება, წარდგომა, იგავნი', who: ['deacon', 'choir', 'reader'], note: 'მარხვის მწუხრი — ორი წარდგომა ტრიოდიონიდან, შუაში დაბადების, ბოლოს იგავთა საკითხავი', hint: 'საკითხავები — წინა დღის კალენდარში (მწუხრ.)', pt: [V.prokeimenon] });
   else v.push({ title: 'წარდგომა', who: ['deacon', 'choir'], note: season.kneeling ? 'დიდი წარდგომა — „ვინ არს ღმერთი დიდ“' : `${WEEKDAY_GEN[eveDow]} საღამოსი — ${VESPERS_PROKEIMENON[eveDow]}`, pt: [V.prokeimenon], extras: some(!season.kneeling && text(FIX.eveProkeimenon(eveDow), 'წარდგომა და მუხლები')), chants: ['mw-13'] });
   if (vespersText) v.push({ title: 'საწინასწარმეტყველო საკითხავები', who: ['reader'], note: vespersText, extras: some(big && text(menaion(kind, 'readings'), 'ტექსტი — საზიარო საკითხავები')) });
   if (festal) v.push(P('მრჩობლი კვერექსი', [V.augmented], { chants: ['mw-15'] }));
@@ -549,7 +600,7 @@ export const buildServices = (inp: DayInput): Service[] => {
   if (litya) v.push({ title: 'ლიტია', who: ['choir', 'priest', 'deacon'], note: 'ტაძრის წმიდანისა და დღისა დასდებელნი', pt: [V.litya], extras: some(!sunday && text(menaion(kind, 'litya'), 'ტექსტი — ლიტიისა (საზიარო)')) });
   v.push({
     title: 'სტიქარონსა ზედა დასდებელნი', who: ['choir'],
-    note: sunday ? `${toneTxt} · აღდგომისანი` : dox ? 'წმიდანისანი — თავისი ჩასართავებით' : season.lentWeekday ? 'მარხვანისა' : `${toneTxt} · პარაკლიტონისანი`,
+    note: great ? 'დღესასწაულისანი' : sunday ? `${toneTxt} · აღდგომისანი` : dox ? 'წმიდანისანი — თავისი ჩასართავებით' : lentEve ? 'მარხვანისა' : `${toneTxt} · პარაკლიტონისანი`,
     hint: sunday ? '„დიდება“ — წმიდანისა · „აწდა“ — ღვთისმშობლისა' : dox ? undefined : 'ჩასართავი მუხლები — ჟამნიდან: „შენდამი აღვიხილენ“, „მიწყალენ ჩვენ, უფალო“',
     extras: great || zatiki ? undefined : some(
       !sunday && !dox && text(FIX.eveVerses, 'ჩასართავი მუხლები — ჟამნი'),
@@ -560,8 +611,8 @@ export const buildServices = (inp: DayInput): Service[] => {
   v.push({ title: '„აწ განუტევე“ და სამწმიდაო', who: ['reader'], hint: '„მამაო ჩვენოს“ შემდეგ მღვდელი: „რამეთუ შენი არს სუფევა“ — შენ: „ამინ“', read: [R(FIX.nunc), R(FIX.trisagion)], chants: ['mw-19'] });
   if (vigilDay && joined) v.push({ title: sunday ? '„ღვთისმშობელო ქალწულო, გიხაროდენ“ — სამგზის' : 'ტროპარი', who: ['choir'], note: sunday ? undefined : great ? 'დღესასწაულის ტროპარი სამგზის' : 'წმიდანის ტროპარი ორგზის, „ღვთისმშობელო ქალწულო“ ერთგზის', extras: sunday ? undefined : [{ kind: 'troparia', at: 'vespers' }], chants: ['mw-20'] });
   else if (festal) v.push({ title: 'ტროპარნი', who: ['choir'], note: sunday ? `აღდგომის ტროპარი (${toneTxt}) · „დიდება“ — წმიდანისა · „აწდა“ — ღვთისმშობლისა` : undefined, extras: [{ kind: 'troparia', at: 'vespers' }], toned: sunday });
-  else v.push({ title: 'ტროპარნი', who: ['reader'], note: season.lentWeekday ? '„ღვთისმშობელო ქალწულო“ და სხვანი — მარხვის წესით' : 'წმიდანის ტროპარი · „დიდება… აწდა“ — ღვთისმშობლისა', read: [{ hymns: 'vespers' }] });
-  if (season.lentWeekday) v.push({ title: 'ეფრემ ასურის ლოცვა', who: ['priest'], note: '„უფალო და მეუფეო ცხოვრებისა ჩემისაო“ — მეტანიებით', extras: [{ kind: 'prayer', id: 'efrem-asuri', label: 'ეფრემ ასურის ლოცვა' }] });
+  else v.push({ title: 'ტროპარნი', who: ['reader'], note: lentEve ? '„ღვთისმშობელო ქალწულო“ და სხვანი — მარხვის წესით' : 'წმიდანის ტროპარი · „დიდება… აწდა“ — ღვთისმშობლისა', read: [{ hymns: 'vespers' }] });
+  if (lentEve) v.push({ title: 'ეფრემ ასურის ლოცვა', who: ['priest'], note: '„უფალო და მეუფეო ცხოვრებისა ჩემისაო“ — მეტანიებით', extras: [{ kind: 'prayer', id: 'efrem-asuri', label: 'ეფრემ ასურის ლოცვა' }] });
   if (!festal) v.push(P('მრჩობლი კვერექსი', [M.augmented], { chants: ['mw-15'] }));
   if (litya) v.push(P('ხუთი პურის კურთხევა', [V.bread, V.blessing], { who: ['priest', 'choir'], hint: '„იყავნ სახელი უფლისა“ (სამგზის) და ფსალმუნი 33 — „ვაკურთხო უფალი“', extras: some(text(FIX.typikaEnd)) }));
   if (joined) v.push({ title: 'ცისკარი იწყება', who: ['reader'], note: 'განტევება არ ითქმის — მწუხრს ცისკარი მოსდევს, ექვსფსალმუნებიდან', hint: 'გადადი ჩანართზე „ცისკარი“' });
@@ -579,7 +630,7 @@ export const buildServices = (inp: DayInput): Service[] => {
   if (christIsRisen && !joined) m.push({ title: '„ქრისტე აღდგა“ — სამგზის', who: ['priest', 'choir'] });
   m.push({ title: 'ექვსფსალმუნება', who: ['reader'], note: 'ფს. 3, 37, 62, 87, 102, 142', hint: 'კრძალვით, აუჩქარებლად — ტაძარში ჩუმად ისმენენ; მღვდელი ამ დროს ცისკრის ლოცვებს კითხულობს', read: [{ say: AMEN }, R(FIX.sixPsalms)] });
   m.push(P('დიდი კვერექსი', [M.great], { chants: ['ck-2'] }));
-  if (season.lentWeekday) m.push({ title: '„ალილუია“ და სამების საგალობლები', who: ['choir', 'reader'], note: '„ღმერთი უფალის“ ნაცვლად — მარხვის დღეებში', extras: some(lentText) });
+  if (lentDay) m.push({ title: '„ალილუია“ და სამების საგალობლები', who: ['choir', 'reader'], note: '„ღმერთი უფალის“ ნაცვლად — მარხვის დღეებში', extras: some(lentText) });
   else m.push({
     title: '„ღმერთი უფალი“ და ტროპარნი', who: ['choir'],
     note: great ? 'დღესასწაულის ტროპარი — სამგზის' : sunday ? `აღდგომის ტროპარი (${toneTxt}) ორგზის · „დიდება“ — წმიდანისა · „აწდა“ — ღვთისმშობლისა` : 'წმიდანის ტროპარი ორგზის · „დიდება… აწდა“ — ღვთისმშობლისა',
@@ -588,14 +639,14 @@ export const buildServices = (inp: DayInput): Service[] => {
   const mk = matinsKathismas(iso, rank);
   // the small litany after a kathisma: none on a plain day; with the great doxology — after the first two; on Saturday, Sunday and feasts — after each
   const litanyAfter = (i: number) => (big || sunday || dow === 6 ? true : dox ? i < 2 && i < mk.length - 1 : false);
-  const sedalens = great || zatiki ? null : sunday ? text(octoechos(tone, 6, 'sedalens'), 'წარდგომანი — პარაკლიტონი') : text(octoechos(tone, eveDow, 'sedalens'), 'წარდგომანი — პარაკლიტონი');
+  const sedalens = great || zatiki || lentDay ? null : sunday ? text(octoechos(tone, 6, 'sedalens'), 'წარდგომანი — პარაკლიტონი') : text(octoechos(tone, eveDow, 'sedalens'), 'წარდგომანი — პარაკლიტონი');
   const saintSedalens = !great && !zatiki && dox && !sunday ? text(menaion(kind, 'sedalens'), 'წარდგომანი — წმიდანისა (საზიარო)') : null;
   mk.forEach((n, i) => {
     m.push({ title: `დავითნის კანონი ${n}`, who: ['reader'], read: [{ kathisma: n }] });
     if (litanyAfter(i)) m.push(P('მცირე კვერექსი', [M.small]));
     m.push({
       title: `წარდგომა ${i + 1} სტიქოლოგიის შემდეგ`, who: ['choir', 'reader'],
-      note: great ? 'დღესასწაულისა' : sunday ? `${toneTxt} · პარაკლიტონიდან` : dox && (big || i < 2) ? 'წმიდანისა' : `${toneTxt} · პარაკლიტონიდან`,
+      note: great ? 'დღესასწაულისა' : lentDay ? 'ტრიოდიონისა (ბეჭდურ ტრიოდიონშია — აპში ჯერ არ არის)' : sunday ? `${toneTxt} · პარაკლიტონიდან` : dox && (big || i < 2) ? 'წმიდანისა' : `${toneTxt} · პარაკლიტონიდან`,
       extras: i === 0 ? some(saintSedalens, sedalens) : undefined,
     });
   });
@@ -626,31 +677,31 @@ export const buildServices = (inp: DayInput): Service[] => {
   if (big) m.push(P('„აცხოვნე, ღმერთო, ერი შენი“', undefined, { who: ['deacon', 'choir'], hint: 'გუნდი: „უფალო, შეგვიწყალენ“ — 12-გზის' }));
   m.push({
     title: 'კანონი (9 გალობა)', who: ['choir', 'reader'],
-    note: great ? 'დღესასწაულის კანონი' : zatiki ? 'ზატიკის კანონი' : season.greatCanon ? 'ანდრია კრიტელის დიდი კანონი — სრულად, მარიამ მეგვიპტელის ცხოვრების კითხვით' : season.akathist ? 'ღვთისმშობლის დაუჯდომელი — ოთხ ნაწილად, კანონთან ერთად' : season.lentWeekday ? 'ტრიოდისა (ბეჭდურ ტრიოდიონშია — აპში ჯერ არ არის) და წმიდანისა' : sunday ? `${toneTxt}: აღდგომისა (4), ჯვარაღდგომისა (3), ღვთისმშობლისა (3) და წმიდანისა (4)` : big ? 'ღვთისმშობლისა (6) და წმიდანისა (8)' : dox ? `პარაკლიტონის ორი კანონი (4 + 4) და წმიდანისა (6)` : `პარაკლიტონის ორი კანონი (6 + 4) და წმიდანისა (4)`,
+    note: great ? 'დღესასწაულის კანონი' : zatiki ? 'ზატიკის კანონი' : season.greatCanon ? 'ანდრია კრიტელის დიდი კანონი — სრულად, მარიამ მეგვიპტელის ცხოვრების კითხვით' : season.akathist ? 'ღვთისმშობლის დაუჯდომელი — ოთხ ნაწილად, კანონთან ერთად' : lentDay ? 'ტრიოდისა (ბეჭდურ ტრიოდიონშია — აპში ჯერ არ არის) და წმიდანისა' : sunday ? `${toneTxt}: აღდგომისა (4), ჯვარაღდგომისა (3), ღვთისმშობლისა (3) და წმიდანისა (4)` : big ? 'ღვთისმშობლისა (6) და წმიდანისა (8)' : dox ? `პარაკლიტონის ორი კანონი (4 + 4) და წმიდანისა (6)` : `პარაკლიტონის ორი კანონი (6 + 4) და წმიდანისა (4)`,
     hint: `${dox || sunday ? 'კატავასია — „აღაღე პირი ჩემი“, ყოველი გალობის შემდეგ' : 'კატავასია — მხოლოდ მე-3, მე-6, მე-8 და მე-9 გალობის შემდეგ (ბოლო კანონის ძლისპირი)'} · მე-3-ის შემდეგ — მცირე კვერექსი და წარდგომა · მე-6-ის შემდეგ — მცირე კვერექსი, კონდაკი და იკოსი`,
     extras: great ? undefined : some(
       ...ownBooks, lentSat,
       ...(season.greatCanon ? [1, 2, 3, 4].map(n => text({ coll: 'kriteli', n, part: 0, label: 'ანდრია კრიტელი' }, `დიდი კანონი — ${['', 'ორშაბათისა', 'სამშაბათისა', 'ოთხშაბათისა', 'ხუთშაბათისა'][n]} ნაწილი`)) : []),
       text(zatiki, `ტექსტი — ${zatiki?.label}`),
-      !zatiki && !season.lentWeekday && !(big && !sunday) && text(octoechos(tone, sunday ? 6 : eveDow, 'canon'), 'კანონი — პარაკლიტონი'),
-      season.lentWeekday && lentText,
+      !zatiki && !lentDay && !(big && !sunday) && text(octoechos(tone, sunday ? 6 : eveDow, 'canon'), 'კანონი — პარაკლიტონი'),
+      lentDay && lentText,
       !zatiki && text(menaion(kind, 'canon'), 'კანონი — წმიდანისა (საზიარო)'),
     ),
   });
   m.push({ title: '„ადიდებს სული ჩემი უფალსა“ — „უპატიოსნესსა“', who: ['choir'], note: great ? 'დიდ დღესასწაულზე — დღესასწაულის ჩასართავები' : season.paschal ? 'ზატიკში — „ანგელოზი ღაღადებდა“' : 'მე-8 გალობის შემდეგ', extras: great || season.paschal ? undefined : some(text(FIX.magnificat)), chants: great || season.paschal ? undefined : ['ck-20', 'ck-21'] });
-  if (!dox && !sunday && !season.lentWeekday) m.push({ title: '„ღირს არს ჭეშმარიტად“', who: ['choir', 'reader'], note: 'მე-9 გალობის შემდეგ — მხოლოდ სადაგ დღეს' });
+  if (!dox && !sunday && !lentDay) m.push({ title: '„ღირს არს ჭეშმარიტად“', who: ['choir', 'reader'], note: 'მე-9 გალობის შემდეგ — მხოლოდ სადაგ დღეს' });
   m.push(P('მცირე კვერექსი', [M.afterNine]));
   if (sunday) m.push({ title: '„წმიდა არს უფალი ღმერთი ჩვენი“', who: ['deacon', 'choir'], chants: ['ck-22'] });
   m.push({
     title: 'განმანათლებელი', who: ['choir', 'reader'],
-    note: sunday ? `აღდგომისა — სახარების რიგით${gospelNo ? ` (${gospelNo})` : ''} · „დიდება“ — წმიდანისა · „აწდა“ — ღვთისმშობლისა` : dox ? 'წმიდანისა' : 'შვიდეულის დღისა · „დიდება“ — წმიდანისა · „აწდა“ — ღვთისმშობლისა',
+    note: great ? 'დღესასწაულისა' : lentDay ? 'მარხვისა — ხმისა, ტრიოდიონიდან · „დიდება… აწდა“ — ღვთისმშობლისა' : sunday ? `აღდგომისა — სახარების რიგით${gospelNo ? ` (${gospelNo})` : ''} · „დიდება“ — წმიდანისა · „აწდა“ — ღვთისმშობლისა` : dox ? 'წმიდანისა' : 'შვიდეულის დღისა · „დიდება“ — წმიდანისა · „აწდა“ — ღვთისმშობლისა',
     extras: great || zatiki ? undefined : some(sunday ? text(sundayExapost(gospelNo ?? 0)) : dox ? text(menaion(kind, 'exapostilarion'), 'ტექსტი — წმიდანისა (საზიარო)') : text(weekdayExapost(dow))),
     chants: ['ck-a16-131'],
   });
   const praises = dox || sunday;
   if (praises) {
     m.push({
-      title: '„ყოველი სული აქებდით უფალსა“ — ქებანი დასდებლებით', who: ['choir'], note: sunday ? `${toneTxt} · აღდგომისანი — 8 მუხლად` : 'წმიდანისა — 4 მუხლად',
+      title: '„ყოველი სული აქებდით უფალსა“ — ქებანი დასდებლებით', who: ['choir'], note: great ? 'დღესასწაულისა' : sunday ? `${toneTxt} · აღდგომისანი — 8 მუხლად` : 'წმიდანისა — 4 მუხლად',
       hint: sunday ? '„დიდება“ — სახარების გერი · „აწდა“ — „უმეტესად კურთხეულ ხარ“' : undefined,
       extras: great || zatiki ? undefined : some(sunday ? text(octoechos(tone, 6, 'lauds'), 'დასდებელნი — პარაკლიტონი') : text(menaion(kind, 'lauds'), 'დასდებელნი — წმიდანისა (საზიარო)')),
       chants: sunday ? ['ck-15', 'ck-a17-3'] : ['ck-15'], toned: sunday,
@@ -666,14 +717,15 @@ export const buildServices = (inp: DayInput): Service[] => {
     m.push({ title: 'ქებანი — „აქებდით უფალსა ცათაგან“', who: ['reader'], note: 'იკითხება, დასდებლების გარეშე', read: [R(FIX.praises)] });
     m.push({ title: '„შენდა დიდება შვენის“ და დიდებამაღალიანი', who: ['reader'], note: 'ყოველდღიური — იკითხება', read: [{ say: 'დიდება მამასა და ძესა და წმიდასა სულსა, აწ და მარადის და უკუნითი უკუნისამდე, ამინ.' }, R(FIX.dailyDoxology)] });
     m.push(P('თხოვნითი კვერექსი', [M.supplication], { chants: ['ck-27'] }));
-    if (!season.lentWeekday) m.push({ title: '„აღვივსენით“-სა ზედა დასდებელნი', who: ['choir', 'reader'], note: `${toneTxt} · პარაკლიტონისანი`, hint: 'ჩასართავი მუხლები — ჟამნიდან · „დიდება… აწდა“ — ღვთისმშობლისა', extras: some(text(FIX.mornVerses, 'ჩასართავი მუხლები — ჟამნი'), !zatiki && text(octoechos(tone, eveDow, 'lauds'), 'დასდებელნი — პარაკლიტონი')) });
+    if (lentDay) m.push({ title: '„აღვივსენით“-სა ზედა დასდებელნი', who: ['choir', 'reader'], note: 'მარხვანისა — ტრიოდიონიდან (აპში ჯერ არ არის)', hint: 'ჩასართავი მუხლები — ჟამნიდან · „დიდება… აწდა“ — ღვთისმშობლისა', extras: some(text(FIX.mornVerses, 'ჩასართავი მუხლები — ჟამნი')) });
+    else m.push({ title: '„აღვივსენით“-სა ზედა დასდებელნი', who: ['choir', 'reader'], note: `${toneTxt} · პარაკლიტონისანი`, hint: 'ჩასართავი მუხლები — ჟამნიდან · „დიდება… აწდა“ — ღვთისმშობლისა', extras: some(text(FIX.mornVerses, 'ჩასართავი მუხლები — ჟამნი'), !zatiki && text(octoechos(tone, eveDow, 'lauds'), 'დასდებელნი — პარაკლიტონი')) });
     m.push({ title: '„კეთილ არს აღსარებად უფლისა“ და სამწმიდაო', who: ['reader'], note: 'ერთგზის', hint: '„მამაო ჩვენოს“ შემდეგ მღვდელი: „რამეთუ შენი არს სუფევა“ — შენ: „ამინ“', read: [R(FIX.goodToConfess), R(FIX.trisagion)] });
     m.push({ title: 'ტროპარნი', who: ['reader'], note: 'წმიდანის ტროპარი · „დიდება… აწდა“ — ღვთისმშობლისა', read: [{ hymns: 'matins' }] });
     m.push(P('მრჩობლი კვერექსი', [M.augmented], { chants: ['ck-16'] }));
   }
-  if (season.lentWeekday) m.push({ title: 'ეფრემ ასურის ლოცვა', who: ['priest'], note: 'მეტანიებით', extras: [{ kind: 'prayer', id: 'efrem-asuri', label: 'ეფრემ ასურის ლოცვა' }] });
+  if (lentDay) m.push({ title: 'ეფრემ ასურის ლოცვა', who: ['priest'], note: 'მეტანიებით', extras: [{ kind: 'prayer', id: 'efrem-asuri', label: 'ეფრემ ასურის ლოცვა' }] });
   m.push(P('განტევება', [M.dismissal], { who: ['priest', 'choir'], hint: 'სადაგ დღეს განტევების ნაცვლად: „სიბრძნით“ — „გვაკურთხენ“ — „რომელი იგი არს კურთხეულ“ — „ამინ. დაამტკიცე, ღმერთო“ და მაშინვე პირველი ჟამი' }));
-  m.push({ title: 'პირველი ჟამი', who: ['reader'], note: sunday ? 'ტროპარი — აღდგომისა, „დიდება“ — წმიდანისა · კონდაკი — აღდგომისა' : 'ტროპარი და კონდაკი — წმიდანისა', hint: 'ბოლოს მღვდელი: „ქრისტე, ნათელო ჭეშმარიტო“ · გუნდი: „ზეშთა მბრძოლისა“', read: hourRead(5, false), extras: [book(BOOK.hour1)], chants: ['ck-a17-112', 'ck-29'] });
+  m.push({ title: 'პირველი ჟამი', who: ['reader'], note: great ? 'ტროპარი და კონდაკი — დღესასწაულისა' : sunday ? 'ტროპარი — აღდგომისა, „დიდება“ — წმიდანისა · კონდაკი — აღდგომისა' : 'ტროპარი და კონდაკი — წმიდანისა', hint: 'ბოლოს მღვდელი: „ქრისტე, ნათელო ჭეშმარიტო“ · გუნდი: „ზეშთა მბრძოლისა“', read: hourRead(5, false, false, psDay?.h[1]), extras: [book(BOOK.hour1)], chants: ['ck-a17-112', 'ck-29'] });
 
   if (great?.id === 'bzoba') {
     const at = m.findIndex(st => st.title === 'ფსალმუნი 50');
@@ -684,29 +736,42 @@ export const buildServices = (inp: DayInput): Service[] => {
   const hourNote = sunday ? 'ტროპარი — აღდგომისა, „დიდება“ — წმიდანისა · კონდაკი — აღდგომისა' : great ? 'ტროპარი და კონდაკი — დღესასწაულისა' : 'ტროპარი და კონდაკი — წმიდანისა';
   const h: Step[] = [
     P('„კურთხეულ არს ღმერთი ჩვენი“', [V.begin], { who: ['priest'] }),
-    { title: 'მესამე ჟამი', who: ['reader'], note: season.lentWeekday ? 'მარხვაში — დავითნის კანონით და ჟამის ტროპარით' : hourNote, hint: 'ფს. 16, 24, 50 · „მამაო ჩვენოს“ შემდეგ მღვდელი: „რამეთუ შენი არს სუფევა“ — შენ: „ამინ“', read: hourRead(6, true), extras: [book(BOOK.hour3)] },
-    { title: 'მეექვსე ჟამი', who: ['reader'], note: season.lentWeekday ? 'მარხვაში — წინასწარმეტყველების საკითხავით' : hourNote, hint: 'ფს. 53, 54, 90 · ბოლოს მღვდელი განტევებას ამბობს', read: hourRead(7, false), extras: [book(BOOK.hour6)] },
+    { title: 'მესამე ჟამი', who: ['reader'], note: lentDay ? 'მარხვაში — დავითნის კანონით და ჟამის ტროპარით' : hourNote, hint: 'ფს. 16, 24, 50 · „მამაო ჩვენოს“ შემდეგ მღვდელი: „რამეთუ შენი არს სუფევა“ — შენ: „ამინ“', read: hourRead(6, true, false, psDay?.h[3]), extras: [book(BOOK.hour3)] },
+    { title: 'მეექვსე ჟამი', who: ['reader'], note: lentDay ? 'მარხვაში — წინასწარმეტყველების საკითხავით' : hourNote, hint: 'ფს. 53, 54, 90 · ბოლოს მღვდელი განტევებას ამბობს', read: hourRead(7, false, false, psDay?.h[6]), extras: [book(BOOK.hour6)] },
   ];
-  if (season.lentWeekday) h.push({ title: 'ეფრემ ასურის ლოცვა', who: ['reader'], note: 'ყოველი ჟამის ბოლოს — მეტანიებით', extras: [{ kind: 'prayer', id: 'efrem-asuri', label: 'ეფრემ ასურის ლოცვა' }] });
+  if (lentDay) h.push({ title: 'ეფრემ ასურის ლოცვა', who: ['reader'], note: 'ყოველი ჟამის ბოლოს — მეტანიებით', extras: [{ kind: 'prayer', id: 'efrem-asuri', label: 'ეფრემ ასურის ლოცვა' }] });
   // the Royal Hours of Christmas' and Theophany's eves (on Saturday or Sunday they are read on the Friday before)
   const royal = (season.paramony && dow >= 1 && dow <= 5) || season.royalFriday;
   if (royal) h.unshift({ title: 'სამეუფო ჟამები — პირველი, მესამე, მეექვსე და მეცხრე', who: ['reader', 'priest', 'deacon'], note: `${iso.slice(5) <= '01-06' ? 'ქრისტეშობის' : 'ნათლისღების'} წინადღისა — ყოველ ჟამზე წინასწარმეტყველება, სამოციქულო და სახარება`, hint: 'ფსალმუნები და საკითხავები — ბეჭდურ თვენში (იანვარი); აპში ჯერ არ არის', extras: [book(BOOK.hour1)] });
 
   // ----- liturgy -----
   const eveName = `${WEEKDAY_NOM[eveDow]} საღამოს`;
+  const md5 = iso.slice(5);
   const notes = [
     own.length ? `${own.map(o => o.t).join(', ')} — საკუთარი განგება „დამატებით წიგნებშია“` : '',
     season.departed ? 'მიცვალებულთა შაბათი — პარასკევ საღამოს პარასტასი' : '',
     season.akathist ? 'პარასკევ საღამოს ცისკარზე — ღვთისმშობლის დაუჯდომელი' : '',
     season.greatCanon ? 'ოთხშაბათ საღამოს ცისკარზე — ანდრია კრიტელის დიდი კანონი' : '',
   ].filter(Boolean).join(' · ') || undefined;
+  // Christmas and Theophany: their eve's vespers is served with the morning's liturgy (weekday) or in the afternoon (Saturday,
+  // Sunday); the evening's vigil begins with Great Compline and the litya
+  const festEve = (md5 === '01-07' || md5 === '01-19');
+  const eveWeekday = eveDow >= 1 && eveDow <= 5;
   const services: Service[] = [
-    { id: 'vespers', title: 'მწუხრი', when: `${eveName}${vigilDay && joined ? ' · ღამისთევა' : ''}`, steps: v, note: notes },
+    festEve
+      ? { id: 'vespers', title: 'დიდი სერობა — ღამისთევა', when: eveName, note: eveWeekday ? 'წინადღის მწუხრი დილით, ბასილის წირვასთან აღესრულა — იხ. წინა დღის „წირვა“' : 'წინადღის დიდი მწუხრი საკითხავებით — შუადღის შემდეგ, ცალკე', steps: [
+        P('„კურთხეულ არს ღმერთი ჩვენი“', [V.begin], { who: ['priest'] }),
+        { title: 'დიდი სერობა', who: ['reader', 'choir'], note: '„ჩვენ თანა არს ღმერთი“ — იგალობება დღესასწაულის მსგავსად · შემდეგ დღესასწაულის ტროპარი და კონდაკი', read: [{ src: { coll: 'jamni', n: 11, part: 0, label: 'ჟამნი · დიდი სერობა' } }] },
+        { title: 'ლიტია', who: ['choir', 'priest', 'deacon'], note: 'დღესასწაულის დასდებელნი', pt: [V.litya] },
+        P('ხუთი პურის კურთხევა', [V.bread, V.blessing], { who: ['priest', 'choir'] }),
+        { title: 'ცისკარი იწყება', who: ['reader'], note: 'ექვსფსალმუნებიდან', hint: 'გადადი ჩანართზე „ცისკარი“' },
+      ] }
+      : { id: 'vespers', title: 'მწუხრი', when: `${eveName}${vigilDay && joined ? ' · ღამისთევა' : ''}`, steps: v, note: notes },
     ...(season.compline ? [complineService(season.e, eveDow)] : []),
     { id: 'matins', title: 'ცისკარი', when: joined ? `${eveName} — მწუხრს მოსდევს` : 'დილით', steps: m, note: notes },
     { id: 'hours', title: 'ჟამები', when: 'წირვის წინ', steps: h },
   ];
-  if (season.lentWeekday && !season.presanctified && !great) {
+  if (lentDay && !season.presanctified && !great) {
     services.push({ id: 'liturgy', title: 'წირვა', when: 'მარხვის დღე', steps: [
       { title: 'წირვა არ აღესრულება', who: ['reader'], note: 'მარხვის ორშაბათს, სამშაბათს და ხუთშაბათს — სადილის ჟამი (ტიპიკა)', extras: [book(BOOK.typika)] },
       { title: 'მეცხრე ჟამი და მწუხრი', who: ['reader', 'choir'], note: 'მწუხრი შუადღის შემდეგ — მარხვის წესით' },
@@ -765,9 +830,49 @@ export const buildServices = (inp: DayInput): Service[] => {
   if (md === '01-18' || md === '01-19') l.push({ title: 'დიდი აიაზმა — წყლის კურთხევა', who: ['priest', 'choir', 'reader'], note: md === '01-18' ? 'ნათლისღების წინადღეს, წირვის შემდეგ' : 'ნათლისღებას, წირვის შემდეგ', hint: 'მედავითნე კითხულობს წინასწარმეტყველებას, სამოციქულოს; გუნდი — „ხმა უფლისა წყალთა ზედა“', extras: [book({ coll: 'kurtxevani', n: 25, label: 'კურთხევანი · დიდი აიაზმა' })] });
   if (md === '02-15') l.push({ title: 'სანთლის კურთხევა', who: ['priest', 'choir'], note: 'მიგებებას — სანთლები იკურთხება', extras: [xbook(26, 'სანთლის კურთხევა')] });
   if (md === '08-19') l.push({ title: 'ყურძნისა და ხილის კურთხევა', who: ['priest', 'choir'], note: 'ფერისცვალებას, ამბიონის ლოცვის შემდეგ' });
+  // the eve of Christmas or Theophany on a weekday: St Basil's liturgy begins with vespers and its readings
+  if (season.paramony && dow >= 1 && dow <= 5) l.splice(0, l.length, ...vesperalBasil(iso, vespersText, apostle, gospel), ...l.filter(st => /აიაზმა/.test(st.title)));
   if (season.paramony && (dow === 0 || dow === 6)) l.unshift({ title: 'წინადღე შაბათს ან კვირას', who: ['reader'], note: 'სამეუფო ჟამები პარასკევს იკითხება, ბასილი დიდის წირვა — დღესასწაულის დღეს; დღეს — ოქროპირისა' });
   services.push({ id: 'liturgy', title: 'წირვა', when: season.basil ? (season.paramony ? 'ბასილი დიდისა, მწუხრთან ერთად' : 'ბასილი დიდისა') : 'დილით', steps: l });
-  return services;
+  return season.e === 7 ? thomasSunday(services) : services;
+};
+
+/** Thomas' Sunday (Antipascha) is served wholly from ზატიკი: no Octoechos — its notes name the Sunday's own hymns */
+const THOMAS = 'თომას კვირისა — ზატიკიდან';
+const thomasSunday = (services: Service[]): Service[] => {
+  const fix = (x?: string) => x
+    ?.replace(/(?:ხმა \d|კვირის ხმა) · (?:აღდგომისანი|პარაკლიტონ[ა-ჰ]*)(?: — \d+ მუხლად)?(?: 6 და წმიდანის[^·]*)?/g, THOMAS)
+    .replace(/აღდგომის ტროპარი \((?:ხმა \d|კვირის ხმა)\)/g, 'თომას კვირის ტროპარი')
+    .replace(/(ტროპარი|კონდაკი) — აღდგომისა/g, '$1 — თომას კვირისა')
+    .replace(/აღდგომისა — სახარების რიგით(?: \(\d+\))?/g, THOMAS)
+    .replace(/(?:ხმა \d|კვირის ხმა) — აღდგომისა/g, 'თომას კვირისა')
+    .replace(/^(?:ხმა \d|კვირის ხმა)$/, THOMAS)
+    .replace('ბოლოს — აღდგომის კონდაკი', 'თომას კვირის კონდაკი');
+  return services.map(sv => ({ ...sv, steps: sv.steps.map(st => ({
+    ...st, note: fix(st.note), hint: fix(st.hint), toned: false,
+    extras: st.extras?.filter(x => !(x.kind === 'text' && x.src.coll === 'paraklitoni')),
+  })) }));
+};
+
+/** St Basil's liturgy with vespers on the eves of Christmas and Theophany (on a weekday) */
+const vesperalBasil = (iso: string, vespersText: string, apostle: Reading[], gospel: Reading[]): Step[] => {
+  const christmas = iso.slice(5) === '01-06';
+  const L = PRIEST.liturgy;
+  const reads = (rs: Reading[]): Extra[] => (rs.length ? [{ kind: 'readings', items: rs }] : []);
+  return [
+    P('„კურთხეულ არს სუფევა“', [L.begin], { who: ['priest'] }),
+    { title: 'ფსალმუნი 103 და დიდი კვერექსი', who: ['reader', 'deacon'], read: [R(FIX.come), R(FIX.ps103)] },
+    { title: '„უფალო, ღაღად-ვყავ“', who: ['choir'], note: 'დღესასწაულის დასდებელნი', extras: some(text(FIX.lordICry, 'ფსალმუნები და მუხლები — ჟამნი')) },
+    { title: 'შესვლა და „ნათელო მხიარულო“', who: ['priest', 'choir'], extras: some(text(FIX.gladLight)) },
+    { title: `${christmas ? '8' : '13'} საწინასწარმეტყველო საკითხავი`, who: ['reader', 'choir'], note: vespersText || 'საკითხავები — კალენდრის მიხედვით', hint: christmas ? 'მე-3 და მე-6 საკითხავის შემდეგ გუნდი ტროპარს გალობს მუხლებით' : 'მე-3, მე-6 და მე-8 საკითხავის შემდეგ გუნდი გალობს' },
+    { title: 'სამწმიდაო', who: ['choir'] },
+    { title: 'სამოციქულო', who: ['reader'], note: apostle.map(r => `${r.name} ${r.ref}`).join(' · ') || undefined, extras: reads(apostle) },
+    { title: 'სახარება', who: ['deacon', 'priest'], note: gospel.map(r => `${r.name} ${r.ref}`).join(' · ') || undefined, extras: reads(gospel) },
+    { title: 'ქერუბიმთა გალობა — „რომელნი ქერუბიმთა“', who: ['choir'] },
+    { title: '„შენდამი იხარებს“', who: ['choir'], note: 'ბასილი დიდის ლიტურგიაში — „ღირს არსის“ ნაცვლად' },
+    { title: 'ზიარება და განტევება', who: ['choir', 'priest'], extras: [{ kind: 'prayer', id: 'ziarebis-tsin', label: 'ზიარების წინა ლოცვები' }] },
+    ...(christmas ? [{ title: 'სანთელი შუა ტაძარში — დღესასწაულის ტროპარი და კონდაკი', who: ['choir', 'priest'] as Who[], note: 'წირვის შემდეგ' }] : []),
+  ];
 };
 
 /** the Liturgy of the Presanctified Gifts, joined to vespers (Lent's Wednesdays and Fridays, Holy Week's first three days) */
@@ -842,6 +947,7 @@ const holyWeek = (inp: DayInput, e: number): Service[] => {
   const services: Service[] = [];
 
   if (e <= -4) {
+    const ps = HOLY_PSALTER[e];
     // Monday–Wednesday: the Bridegroom's matins the evening before, the hours with the Gospel, the Presanctified
     services.push(
       { id: 'vespers', title: 'მწუხრი', when: 'წირვასთან ერთად — დღის მეორე ნახევარში', note: 'ვნების შვიდეული · წინასწარ კურთხეულთა ლიტურგიის ნაწილია — იხ. ჩანართი „წირვა“', steps: [
@@ -852,7 +958,7 @@ const holyWeek = (inp: DayInput, e: number): Service[] => {
         { title: 'ექვსფსალმუნება', who: ['reader'], read: [{ say: AMEN }, R(FIX.sixPsalms)] },
         P('დიდი კვერექსი', [M.great], { chants: ['ck-2'] }),
         { title: '„ალილუია“ და „აჰა, სიძე მოვალს შუაღამესა“', who: ['choir'], note: 'ტროპარი სამგზის, ნელა', extras: some(tri), read: [hymns('matins')] },
-        { title: 'დავითნის კანონები', who: ['reader'], note: 'სამი კანონი — მარხვის განრიგით' },
+        { title: `დავითნის კანონები ${ps.m.join(', ')}`, who: ['reader'], hint: 'ყოველი კანონის შემდეგ — მცირე კვერექსი', read: ps.m.map(kathisma => ({ kathisma })) },
         { title: 'სახარება', who: ['priest'], note: matinsGospel.map(r => `${r.name} ${r.ref}`).join(' · ') || undefined, extras: readsOf(matinsGospel) },
         { title: 'ფსალმუნი 50', who: ['reader'], read: [R(FIX.ps50)] },
         { title: 'კანონი — სამგალობელი', who: ['choir', 'reader'], note: 'ტრიოდიონის სამგალობელი (ბეჭდურ ტრიოდიონშია — აპში ჯერ არ არის)', hint: 'მე-9 გალობის შემდეგ — „ღირს არს“ არ იგალობება, მის ნაცვლად ძლისპირი' },
@@ -864,7 +970,7 @@ const holyWeek = (inp: DayInput, e: number): Service[] => {
         P('განტევება', [M.dismissal], { who: ['priest', 'choir'] }),
       ] },
       { id: 'hours', title: 'ჟამები', when: 'დილით', note: 'დიდ ორშაბათს, სამშაბათს და ოთხშაბათს ჟამებზე ოთხთავი იკითხება', steps: [
-        { title: 'პირველი, მესამე, მეექვსე და მეცხრე ჟამი', who: ['reader'], note: 'მარხვის წესით — დავითნის კანონებითა და სახარების კითხვით', read: [...hourRead(5, true), ...hourRead(6, false), ...hourRead(7, false), ...hourRead(9, false)], extras: [book(BOOK.hour1)] },
+        { title: 'პირველი, მესამე, მეექვსე და მეცხრე ჟამი', who: ['reader'], note: 'მარხვის წესით — დავითნის კანონებითა და სახარების კითხვით', read: [...hourRead(5, true, false, ps.h[1]), ...hourRead(6, false, false, ps.h[3]), ...hourRead(7, false, false, ps.h[6]), ...hourRead(9, false, false, ps.h[9])], extras: [book(BOOK.hour1)] },
         ephrem,
       ] },
       { id: 'liturgy', title: 'წირვა', when: 'წინასწარ კურთხეულთა', note: 'მწუხრთან ერთად', steps: presanctifiedSteps({ vespersText, apostle, gospel, lentText: tri, holy: true }) },
@@ -962,18 +1068,23 @@ const brightWeek = (inp: DayInput, e: number): Service[] => {
   const gospel = readings.filter(r => !r.apostle && r.label !== 'ცისკ');
   const hours = [{ kind: 'prayer', id: 'paseqis-zhamni', label: 'პასექის ჟამნი' } as Extra];
   return [
-    { id: 'vespers', title: 'მწუხრი', when: e === 0 ? 'აღდგომის საღამოს' : 'წინა საღამოს', note: `ბრწყინვალე შვიდეული${greatFeastOf(inp.iso)?.id === 'khareba' ? ' · დღეს ხარებაც არის — მისი საგალობლები აღდგომისას ერთვის' : ''}${ownServicesOf(inp.iso).length ? ` · ${ownServicesOf(inp.iso).map(o => o.t).join(', ')} — საკუთარი განგება „დამატებით წიგნებშია“` : ''}`, steps: [
+    { id: 'vespers', title: e === 0 ? 'სიყვარულის მწუხრი' : 'მწუხრი', when: e === 0 ? 'აღდგომის დღეს, შუადღის შემდეგ' : 'წინა საღამოს', note: `${e === 0 ? 'სახარება (ინ. 20:19–25) სხვადასხვა ენაზე იკითხება · ' : ''}ბრწყინვალე შვიდეული${greatFeastOf(inp.iso)?.id === 'khareba' ? ' · დღეს ხარებაც არის — მისი საგალობლები აღდგომისას ერთვის' : ''}${ownServicesOf(inp.iso).length ? ` · ${ownServicesOf(inp.iso).map(o => o.t).join(', ')} — საკუთარი განგება „დამატებით წიგნებშია“` : ''}`, steps: [
       { title: '„ქრისტე აღდგა“ — მუხლებით', who: ['priest', 'choir'], note: 'დავითნი არ იკითხება' },
       { title: '„უფალო ღაღად-ვყავ“ — აღდგომის დასდებელნი', who: ['choir'], extras: zt },
       { title: 'დიდი წარდგომა — „ვინ არს ღმერთი დიდ“', who: ['deacon', 'choir'] },
       { title: 'სტიხარონსა ზედა — „აღდგეს ღმერთი“', who: ['choir'] },
       { title: '„ქრისტე აღდგა“ და განტევება', who: ['choir', 'priest'] },
     ] },
-    { id: 'matins', title: 'ცისკარი', when: 'დილით', steps: [
+    { id: 'matins', title: 'ცისკარი', when: e === 0 ? 'აღდგომის ღამეს' : 'დილით', steps: [
+      ...(e === 0 ? [
+        { title: 'შუაღამის ლოცვა — დიდი შაბათის კანონით', who: ['reader', 'choir', 'priest'] as Who[], note: 'შუაღამემდე; ბოლოს გარდამოხსნას საკურთხეველში შეასვენებენ' },
+        { title: 'ლიტანიობა ტაძრის გარშემო', who: ['priest', 'choir'] as Who[], note: '„აღდგომასა შენსა, ქრისტე მაცხოვარ“ — ანთებული სანთლებით', hint: 'დაკეტილ კართან მღვდელი იწყებს: „დიდება წმიდასა…“ — „ქრისტე აღდგა“' },
+      ] : []),
       { title: '„ქრისტე აღდგა“ — მუხლებით', who: ['priest', 'choir'], note: 'ექვსი ფსალმუნი არ იკითხება' },
       { title: 'აღდგომის კანონი — „აღდგომისა დღე არს“', who: ['choir'], extras: some(text({ coll: 'zatiki', n: 1, part: 0, from: /კანონი/, label: 'კანონი — ზატიკი' })) },
       { title: 'განმანათლებელი — „ხორციელად დაიძინე“', who: ['choir'] },
       { title: 'ქებანი და აღდგომის დასდებელნი', who: ['choir'], extras: zt },
+      ...(e === 0 ? [{ title: 'იოანე ოქროპირის საკატეხიზმო სიტყვა', who: ['priest'] as Who[], note: 'მღვდელი კითხულობს; შემდეგ — ოქროპირის ტროპარი' }] : []),
       { title: '„ქრისტე აღდგა“ და განტევება', who: ['choir', 'priest'] },
     ] },
     { id: 'hours', title: 'ჟამები', when: 'წირვის წინ', steps: [
