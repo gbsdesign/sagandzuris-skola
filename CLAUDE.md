@@ -619,6 +619,14 @@
   own labels (weeks: part 1 = კვირა … 7 = შაბათი, each day's service begins the evening before), its abbreviation codes from
   the app's own converter in `zatiki_table.json` (our output = the app's display for 99.93% of its strings, archaic letters kept).
   The shelves' last tile fills its row when left alone (`tileLook` in Wignebi.tsx).
+  **„დამატებითი წიგნები“ (2026-11-18**, the user: „ჩასვი და ყველას უჩანდეს“, answers „ცალკე თაროდ · შენიშვნით ვაჩვენო“): a row under the
+  shelves → the pseudo collection `x` (`w:c:x`, `w:c:x:<n>[:<part>]`; menu `data/extraBooks.ts` in four groups, texts
+  `public/wignebi-x/<NN>.json` — never in `public/wignebi`, whose daily update refuses an unknown folder). 32 books from the school's
+  PDFs: 21 saints' / icons' services, Lent (თეოდორე ტირონი, the II–IV Saturdays, the Akathist Saturday, Great Friday), blessings
+  and molebens, the bishop's services. `scan: true` books show „ტექსტი სკანერიდანაა, შეიძლება შეცდომა იყოს“ (`ScanNote`); one
+  (ახალი წლის პარაკლისი, a 19th-century print) is page pictures (`pages`, `PagesView`). **Generated — never edit by hand**:
+  `scripts/extra-books/` (README: the PDFs and scans live outside the repo). Left out: the 1711 Kondaki and „აწ დები“ (unreadable
+  scans), the 2018 „ქართველ წმიდათა ცხოვრებანი“ (waits for the publisher's permission). Test `tests/extraBooks.test.ts`.
 - **ხუცური for the whole site** (2026-10-28, moved 2026-10-29): a switch in the profile („ხუცური“, `views/KhutsuriSwitch.tsx`,
   under the profile in `AppRouter`; no header button — guests have no profile, so they don't get it) sets `html.khutsuri`
   (`utils/khutsuri.ts`, device only, set before the first paint in `main.tsx`). index.css then swaps
