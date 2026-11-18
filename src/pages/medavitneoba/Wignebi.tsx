@@ -241,6 +241,12 @@ const CollectionView: React.FC<{ c: WignebiCollection; open: (id: string) => voi
   );
 };
 
+const ScanChip: React.FC<{ className?: string }> = ({ className = '' }) => (
+  <span className={`inline-flex items-center gap-1 h-6 px-2.5 rounded-full bg-[#fdf4e3] ring-1 ring-[#e9c98f] text-[12px] font-bold text-[#9a5b12] ${className}`}>
+    <ScanText className="w-3.5 h-3.5" />სკანერიდან
+  </span>
+);
+
 // „დამატებითი წიგნები“: the books in their groups
 const ExtraList: React.FC<{ open: (id: string) => void }> = ({ open }) => (
   <div>
@@ -248,9 +254,13 @@ const ExtraList: React.FC<{ open: (id: string) => void }> = ({ open }) => (
     {EXTRA_GROUPS.map(g => {
       const books = EXTRA_BOOKS.filter(b => b.g === g.id);
       if (!books.length) return null;
+      // a whole group read by a scanner says so once, not on every row
+      const allScan = books.length > 3 && books.every(b => b.scan);
       return (
         <section key={g.id} className="mt-6 first-of-type:mt-0">
           <h3 className="px-2 mb-2.5 text-[13px] font-black tracking-[0.06em] text-[#a0703c]">{g.title}</h3>
+          {g.note && <p className="px-2 -mt-1.5 mb-2.5 text-[13px] leading-snug text-[#8a7a6a] text-pretty">{g.note}</p>}
+          {allScan && <p className="px-2 -mt-1 mb-2.5"><ScanChip /></p>}
           <ol className="space-y-2.5">
             {books.map((b, i) => (
               <li key={b.n}>
@@ -259,11 +269,7 @@ const ExtraList: React.FC<{ open: (id: string) => void }> = ({ open }) => (
                   <span className="flex-1 min-w-0">
                     <span className="block text-[16px] font-bold leading-snug text-[#2a2017] break-words">{b.t}</span>
                     <span className="block mt-0.5 text-[13px] leading-snug text-[#8a7a6a] break-words">{b.sub}</span>
-                    {b.scan && (
-                      <span className="mt-1.5 inline-flex items-center gap-1 h-6 px-2.5 rounded-full bg-[#fdf4e3] ring-1 ring-[#e9c98f] text-[12px] font-bold text-[#9a5b12]">
-                        <ScanText className="w-3.5 h-3.5" />სკანერიდან
-                      </span>
-                    )}
+                    {b.scan && !allScan && <ScanChip className="mt-1.5" />}
                   </span>
                   <ChevronRight className="w-5 h-5 shrink-0 text-[#c4b39c]" />
                 </button>
@@ -276,6 +282,10 @@ const ExtraList: React.FC<{ open: (id: string) => void }> = ({ open }) => (
   </div>
 );
 
+// the small line over a book's name: its shelf, or for an extra book its group
+const kickerOf = (c: WignebiCollection, n: number) =>
+  c.id === EXTRA.id ? EXTRA_GROUPS.find(g => g.id === EXTRA_BOOKS.find(b => b.n === n)?.g)?.title ?? c.title : c.title;
+
 // a book read by a scanner: say so above its text
 const ScanNote: React.FC<{ pics?: boolean }> = ({ pics }) => (
   <p className="mb-3 flex items-start gap-2.5 rounded-2xl bg-[#fdf4e3] ring-1 ring-[#e9c98f] px-4 py-3 text-[14px] leading-snug text-[#7a4a10] text-pretty">
@@ -285,9 +295,9 @@ const ScanNote: React.FC<{ pics?: boolean }> = ({ pics }) => (
 );
 
 // a book kept as page pictures
-const PagesView: React.FC<{ c: WignebiCollection; book: BookFile }> = ({ c, book }) => (
+const PagesView: React.FC<{ c: WignebiCollection; n: number; book: BookFile }> = ({ c, n, book }) => (
   <div>
-    <Head kicker={c.title} title={book.t} />
+    <Head kicker={kickerOf(c, n)} title={book.t} />
     <ScanNote pics />
     <div className="space-y-3">
       {book.pages!.map((src, i) => (
@@ -303,7 +313,7 @@ const PagesView: React.FC<{ c: WignebiCollection; book: BookFile }> = ({ c, book
 // an item with several parts: chapter numbers for the Bible, rows for everything else
 const PartsView: React.FC<{ c: WignebiCollection; n: number; book: BookFile; open: (id: string) => void }> = ({ c, n, book, open }) => (
   <div>
-    <Head kicker={c.title} title={book.t} />
+    <Head kicker={kickerOf(c, n)} title={book.t} />
     {book.scan && <ScanNote />}
     {book.num ? (
       <div className={`${CARD} p-3 sm:p-4`}>
@@ -348,7 +358,7 @@ const Reader: React.FC<{ c: WignebiCollection; n: number; book: BookFile; part: 
     <div>
       <header className="px-1 mb-4 flex items-start gap-3">
         <div className="flex-1 min-w-0">
-          <p className="text-[12px] font-black uppercase tracking-[0.12em] text-[#a0703c]">{c.title}</p>
+          <p className="text-[12px] font-black uppercase tracking-[0.12em] text-[#a0703c]">{kickerOf(c, n)}</p>
           <h2 className="mt-1 font-serif-ge text-[21px] font-bold leading-tight text-[#2a2017] text-balance">{book.t}</h2>
           {partTitle && !(!book.num && p.s[0]?.[0] === p.l) && (
             <p className="mt-1 text-[15px] font-bold text-[#7a2028] line-clamp-2">{partTitle}</p>
@@ -403,7 +413,7 @@ const Reader: React.FC<{ c: WignebiCollection; n: number; book: BookFile; part: 
 const ItemView: React.FC<{ c: WignebiCollection; n: number; part?: number; open: (id: string, replace?: boolean) => void; back: () => void }> = ({ c, n, part, open, back }) => {
   const { data, error, retry } = useFile<BookFile>(c.id, n);
   if (!data) return <Waiting error={error} retry={retry} />;
-  if (data.pages?.length) return <PagesView c={c} book={data} />;
+  if (data.pages?.length) return <PagesView c={c} n={n} book={data} />;
   if (part === undefined && data.c.length > 1) return <PartsView c={c} n={n} book={data} open={open} />;
   return <Reader c={c} n={n} book={data} part={part ?? 0} open={open} back={back} />;
 };
