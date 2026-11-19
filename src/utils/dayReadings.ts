@@ -53,14 +53,42 @@ const BOOKS: [abbr: string, file: string, name: string, apostle: boolean][] = [
   ['ინ.', 'iovane', 'იოანე', false],
 ];
 
+const paraText = (para: CalendarDay['p'][number]) => para.map(r => r[0]).join('');
 /** the day's whole text, paragraphs on their own lines */
-export const dayText = (day: CalendarDay) => day.p.map(para => para.map(r => r[0]).join('')).join('\n');
+export const dayText = (day: CalendarDay) => day.p.map(paraText).join('\n');
+// From the first footnote („* …“) on, the calendar only comments: a service kept „თუ უპირატესი ინებებს“, another Church's
+// feast, Holy Week's table of the Gospels read at the hours. A „შენიშვნა“ stands among the day's own lines (Pascha's readings
+// come after one), so it is left out by itself.
+const FOOTNOTES = /^\s*(?:\*|სახარების საკითხავები დიდი|ვნების შვიდეულის ორშაბათს)/;
+const NOTE = /^\s*შენიშვნ/;
+/** the day's own lines — what is served and read — without the commentary */
+export const mainText = (day: CalendarDay) => {
+  const out: string[] = [];
+  for (const para of day.p) {
+    const t = paraText(para);
+    if (FOOTNOTES.test(t)) break;
+    if (!NOTE.test(t)) out.push(t);
+  }
+  return out.join('\n');
+};
+/** the commentary alone */
+export const notesText = (day: CalendarDay) => {
+  const out: string[] = [];
+  let foot = false;
+  for (const para of day.p) {
+    const t = paraText(para);
+    foot ||= FOOTNOTES.test(t);
+    if (foot || NOTE.test(t)) out.push(t);
+  }
+  return out.join('\n');
+};
 
 // typos the calendar has: „I1“ for 11, „ებრ:“ for „ებრ.“, „2. პეტ.“, „დსა.“ for „დას.“
 const tidy = (s: string) => s
   .replace(/I(?=\d)|(?<=\d)I/g, '1')
-  .replace(/([ა-ჰ])\s*:\s*(?=\d)/g, '$1. ')
-  .replace(/(\d)\.\s+(?=[ა-ჰ])/g, '$1 ')
+  // never across a line's end: each line is one service's readings („მწუხრზე:“, „ცისკ.:“, „ლიტ.:“)
+  .replace(/([ა-ჰ])[^\S\n]*:[^\S\n]*(?=\d)/g, '$1. ')
+  .replace(/(\d)\.[^\S\n]+(?=[ა-ჰ])/g, '$1 ')
   .replace(/დსა\./g, 'დას.')
   .replace(/([ა-ჰ]\.)(?=\d)/g, '$1 ');
 
@@ -100,11 +128,25 @@ export const parseRanges = (ref: string): VerseRange[] => {
   return out.filter(r => r.ch > 0 && r.from > 0 && r.to >= r.from);
 };
 
-/** every New Testament reading the day names, in the calendar's order */
-export const readingsOf = (day: CalendarDay): Reading[] => {
+/** every New Testament reading the day itself names, in the calendar's order (its notes' readings: `optionalReadingsOf`) */
+export const readingsOf = (day: CalendarDay): Reading[] => parseReadings(mainText(day));
+/** the readings the calendar's notes name for a service kept only „თუ უპირატესი ინებებს“ */
+export const optionalReadingsOf = (day: CalendarDay): Reading[] => parseReadings(notesText(day));
+const parseReadings = (text: string): Reading[] => {
   const out: Reading[] = [];
-  for (const line of tidy(dayText(day)).split('\n')) {
-    let label = '';
+  /** the service the line before belongs to, while that line is an open list (it ends with a bare reference, no „(დას. N)“) */
+  let carried = '';
+  for (const raw of text.split('\n')) {
+    const line = tidy(raw);
+    // „მოციქულისა: 1) 1 ინ. …“ under „მწუხრ.: ამაღლებისა: 1) … 3) ზაქ. 14: 1, 4, 8-11.“, „შედგენილი სამოციქულო: 1 კორ. …“ under
+    // „ცისკ.: ეზეკ. 37: 1-14.“: a second list of the same service — it keeps that service's label unless it has its own
+    const goesOn = !!carried && /^\s*[ა-ჰ][ა-ჰ. ]{1,24}:\s*\d/.test(raw);
+    let label = goesOn ? carried : '';
+    if (!goesOn) {
+      const head = /^\s*([ა-ჰ][ა-ჰ. ]{0,20}?)\s*[:(]/.exec(raw);
+      carried = head ? head[1].trim().replace(/\.$/, '') : '';
+    }
+    if (!/\d\.\s*$/.test(raw)) carried = '';
     BOOK_RE.lastIndex = 0;
     let m: RegExpExecArray | null;
     while ((m = BOOK_RE.exec(line))) {

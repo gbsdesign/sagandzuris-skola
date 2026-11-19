@@ -36,7 +36,7 @@ export const DayScreen: React.FC = () => {
   );
 
   const notToday = d.iso !== d.today;
-  const line = [d.great?.name, d.tone ? toneName(d.tone) : null, rankLabel(d.rank)].filter(Boolean).join(' · ');
+  const line = [d.great?.name, d.tone ? toneName(d.tone) : null, d.ownOrder ? null : rankLabel(d.rank)].filter(Boolean).join(' · ');
   const when = [d.service.when, d.service.note].filter(Boolean).join(' · ');
 
   return (

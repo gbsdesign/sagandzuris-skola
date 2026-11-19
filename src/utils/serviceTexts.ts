@@ -63,6 +63,10 @@ const J = (n: number, label: string, x: Omit<TextSrc, 'coll' | 'n' | 'part' | 'l
 const K = (n: number, label: string, x: Omit<TextSrc, 'coll' | 'n' | 'part' | 'label'>): TextSrc => ({ coll: 'kondaki', n, part: 0, label, ...x });
 const EVE_HEAD = [/^კვირიაკესა/, /^ორშაბათსა/, /^სამშაბათსა/, /^ოთხშაბათსა/, /^ხუთშაბათსა/, /^პარასკევსა/, /^შაბათსა/];
 
+// the tones as ჟამნი's matins numbers them: the hymns to the Trinity (ა ბ გ 4 5 6 7 8) and Lent's photagogika (ა … ჱ)
+const TRIADIC_TONE = ['ა', 'ბ', 'გ', '4', '5', '6', '7', '8'];
+const PHOTA_TONE = ['ა', 'ბ', 'გ', 'დ', 'ე', 'ვ', 'ზ', 'ჱ'];
+
 export const FIX = {
   /** „ამინ. დიდება შენდა… მეუფეო ზეცათაო… წმიდაო ღმერთო… მამაო ჩვენო“ — a service's own beginning */
   opening: J(6, 'დასაწყისი ლოცვები', { find: /კურთხეულ-არსისა/, count: 4, noHead: true }),
@@ -91,10 +95,30 @@ export const FIX = {
   mornVerses: J(4, 'სტიქარონის მუხლები', { after: /აღუსრულოთ საცისკრო/, find: /^აღვივსენით/, count: 2 }),
   goodToConfess: J(4, 'კეთილ არს აღსარებაი უფლისა', { find: /^კეთილ არს აღსარებაი/, count: 1, noHead: true }),
   // the hours: n = the book's item (5 first, 6 third, 7 sixth, 9 ninth)
-  hourPsalms: (n: number) => J(n, 'ფსალმუნები', { find: /^ფსალმუნი \d/, count: 4 }),
+  // (the sixth's and the ninth's fourth section already holds Lent's troparion — their doxology is said apart)
+  hourPsalms: (n: number) => J(n, 'ფსალმუნები', { find: /^ფსალმუნი \d/, count: n === 7 || n === 9 ? 3 : 4 }),
   hourTheotokion: (n: number) => J(n, 'ღვთისმშობლისა', { find: /ღმრთისმშობლისა\.?$/, count: 1 }),
   hourEnd: (n: number) => J(n, 'უფალო, შეგვიწყალენ (40) და ჟამის ლოცვა', { find: /^უფალო,? შეგ(?:ჳ|ვი)წყალენ 40/, until: /^შედეგი|^განსრულებაჲ/ }),
   typikaEnd: J(8, 'ფსალმუნი 33', { find: /ფსალმუნი 33/, count: 1 }),
+  // ----- Lent's weekdays, as ჟამნი sets them (2026-11-19) -----
+  /** the hour's own troparion with its verses — sung with prostrations in place of the day's troparion */
+  hourLentTroparion: (n: number) => J(n, 'ჟამის ტროპარი — მუხლებით', { find: /უკუეთუ ღმერთი-უფალი იყოს/, until: /ღმრთისმშობლისა\.?$/, noHead: true }),
+  /** … and the verses said in place of the kontakion */
+  hourLentVerses: (n: number) => (n === 5
+    ? J(n, 'მარხვის მუხლები', { find: /^ხოლო უკუეთუ მარხვაჲ იყოს/, count: 3 })
+    : J(n, 'მარხვის მუხლები', { find: /^წმიდაო ღმერთო\. ყოვლად-წმიდაო\. მამაო ჩუენო/, until: /^უფალო,? შეგ(?:ჳ|ვი)წყალენ 40/, noHead: true })),
+  /** matins: the alleluia's four verses, the tone's hymns to the Trinity and their endings by the weekday */
+  alleluiaVerses: J(4, '„ალილუია“ — მუხლები', { find: /^ალილუია 3-ზის\. მუხლი ა/, count: 4 }),
+  triadic: (tone: number) => J(4, `სამების საგალობლები — ხმა ${tone}`, { find: new RegExp(`^გალობა წმიდისა არსისა, ხმა ${TRIADIC_TONE[tone - 1]}\\.`), count: 3 }),
+  triadicEnds: J(4, 'ბოლო სიტყვები — დღეების მიხედვით', { find: /^უწყებულ იყავნ, რამეთუ წმიდა-არსისა გალობითა/, count: 6 }),
+  lentPhotagogikon: (tone: number) => J(4, `განმანათლებელი — ხმა ${tone}`, { find: new RegExp(`^განმანათლებელი, ხმა ${PHOTA_TONE[tone - 1]}\\.`), count: 1 }),
+  /** matins' end: „ტაძარსა ამას…“, forty „უფალო, შეგვიწყალენ“, the priest's words, „ზეცათა მეუფეო“ */
+  lentMatinsEnd: J(4, 'ტაძარსა ამას დიდებისა შენისასა მდგომარენი', { find: /^ხოლო შემდგომად ასამაღლებელისა მღდელი იტყვის: სიბრძნით/, count: 4, noHead: true }),
+  /** vespers' end: the troparia with their prostrations … „ზეცათა მეუფეო“ */
+  lentEveTroparia: J(10, 'მარხვის ტროპარნი', { find: /^წმიდაო ღმერთო\. ყოვლად-წმიდაო სამებაო\. მამაო ჩუენო\. ტროპარი, რომელიცა/, until: /^და მუხლთმოდრეკა 3 დიდი/, noHead: true }),
+  /** St Ephrem's prayer with its prostrations */
+  ephrem: J(10, 'ეფრემ ასურის ლოცვა — მეტანიებით', { find: /^და მუხლთმოდრეკა 3 დიდი/, until: /^ესრეთ წმიდაო ღმერთო/ }),
+  lentEveClose: J(10, '„წმიდაო სამებაო“ · „იყავნ სახელი უფლისა“', { find: /^ესრეთ წმიდაო ღმერთო, დიდება, აწ და/, count: 2 }),
 };
 
 /** the priest's and the deacon's words (კონდაკი: 1 მწუხრი, 2 ცისკარი, 4 ლიტურგია) — shown only with „მღვდლის ტექსტები“ on */

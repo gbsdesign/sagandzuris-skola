@@ -699,6 +699,15 @@
   without Google sign-in and notifications. A tapped notice / universal link goes through `window.sgOpenUrl` (App.tsx). Files the site
   saves come to the share sheet (WKDownload). „ანგარიშის წაშლა“ (profile bottom, everyone; `utils/deleteAccount.ts` → Worker
   `/delete-account`: own docs, classes/psalter groups arrays, admins role, D1 rows, then the Auth user; chat messages stay).
+- **„საპატრიარქოს ბიბლიოთეკა“ as text (2026-11-19**, the user: „სადაც საშუალება მოგეცემა პდფ კითხვასთან ერთად პირდაპირ კითხვა
+  … როგორც ლოცვანია“, answer „ჯერ ტექსტიანები“): a book whose PDF / Word / EPUB has a text layer opens on „ტექსტი · PDF“ tabs
+  (`library/PatriarchText.tsx`; the choice in `sg-patriarq-view`, size `sg-patriarq-font`, the page reached `sg-patriarq-page:<id>`,
+  „გვერდი N / M“ pill → jump). 721 of 1 546 books; scans (~35 %) stay PDF only. The texts live in the owner's Drive folder „00
+  ტექსტები (აპისთვის — არ წაშალო)“ (inside the shared „საპატრიარქოს ბიბლიოთეკა“): 55 bundles ≤ 3 MB of gzip pieces (one or more a
+  book, a piece = `{l, p: pages[paragraphs[]]}`), read by one Range request each with the Drive key; `data/patriarchTexts.json` =
+  bundle ids + `{fileId: [pages, [bundle, offset, length]…]}` — **generated** by the scripts outside the repo (download → PyMuPDF
+  text, legacy AcadNusx / Kolkheti fonts turned to Unicode, lines joined back into paragraphs by the column's right edge → pack →
+  upload); not in the repo, re-made in a session when asked.
 - **Library** page (`biblioteka`): საღმრთო ისტორია, დღესასწაულები, წმიდანთა ცხოვრება.
   Footer church calendar (`data/churchCalendar.ts`, `data/calendar/<year>.json`, made by
   `node scripts/fetch-church-calendar.mjs <year>`). **2027 is computed by the Church's rules (`scripts/calendar-gen`, 2026-11-18)

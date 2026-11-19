@@ -10,7 +10,7 @@ import { useMembership } from '../../utils/memberAccess';
 import { triggerHaptic } from '../../utils/haptics';
 import { toneName } from '../../utils/dayReadings';
 import {
-  DEFAULT_ORDER, RANKS, PATRON_PRESETS, WHO_LABEL, buildServices, isOrder, greatFeastOf, guessRank, hymnsOf, oldMD, patronDay, periodOf, rankLabel,
+  DEFAULT_ORDER, RANKS, PATRON_PRESETS, WHO_LABEL, buildServices, isOrder, greatFeastOf, guessRank, hymnsOf, oldMD, patronDay, periodOf, rankLabel, seasonOf,
   weekTone, type DayInput, type Extra, type Hymn, type Patron, type Rank, type Read, type ServiceId, type Step, type TempleOrder,
 } from '../../utils/dayService';
 import { useTemplePatron } from '../../hooks/useTemplePatron';
@@ -556,9 +556,9 @@ const PatronSheet: React.FC<{ open: boolean; value: Patron | null; onPick: (p: P
 const SERVICE_TABS: { id: ServiceId; label: string }[] = [
   { id: 'vespers', label: 'მწუხრი' }, { id: 'compline', label: 'სერობა' }, { id: 'matins', label: 'ცისკარი' }, { id: 'hours', label: 'ჟამები' }, { id: 'liturgy', label: 'წირვა' },
 ];
-/** the rank as the fast sees it */
-const weightOf = (rank: Rank, temple: boolean): FeastWeight =>
-  rank === 'great' ? 'great' : rank === 'vigil' || temple ? 'vigil' : rank === 'polyeleos' || rank === 'doxology' ? 'doxology' : 'none';
+/** the day as the fast sees it: a great feast, the temple's own day — a saint's day relaxes a fast only by ჟამნი's mark
+ *  (utils/fasting), not by the rank picked here */
+const weightOf = (rank: Rank, temple: boolean): FeastWeight => (rank === 'great' ? 'great' : temple ? 'vigil' : 'none');
 const FOOD_TONE: Record<string, string> = {
   free: 'bg-emerald-50 ring-emerald-200 text-emerald-900', meatless: 'bg-emerald-50 ring-emerald-200 text-emerald-900',
   fish: 'bg-sky-50 ring-sky-200 text-sky-900', oil: 'bg-[#fdf4e3] ring-[#e9c98f] text-[#4a3826]',
@@ -573,6 +573,8 @@ export const useDayService = () => {
   const day = useCalendarDay(canCal ? iso : null);
   const lastSunday = addDays(iso, -fromIso(iso).getDay());
   const sundayDay = useCalendarDay(canCal && lastSunday !== iso ? lastSunday : null);
+  // the day before: in Lent its calendar names the readings of the evening's vespers and whether a liturgy was joined to them
+  const prevDay = useCalendarDay(canCal ? addDays(iso, -1) : null);
   const { patron, save: savePatron } = useTemplePatron();
   const [ranks, setRanks] = useState(() => readMap(RANK_KEY));
   const [ats, setAts] = useState(() => readMap(AT_KEY));
@@ -589,12 +591,14 @@ export const useDayService = () => {
   const guessed = guessRank(iso, day ?? null, patron);
   const rank = (RANKS.some(r => r.id === ranks[iso]) ? ranks[iso] : guessed) as Rank;
   const tone = weekTone(day ?? null, lastSunday === iso ? null : sundayDay ?? null);
-  const inp: DayInput = useMemo(() => ({ iso, day: day ?? null, tone, rank, patron, order }), [iso, day, tone, rank, patron, order]);
+  const inp: DayInput = useMemo(() => ({ iso, day: day ?? null, prev: prevDay ?? null, tone, rank, patron, order }), [iso, day, prevDay, tone, rank, patron, order]);
   const services = useMemo(() => buildServices(inp), [inp]);
   const tabs = SERVICE_TABS.filter(t => services.some(s => s.id === t.id));
   const service = services.find(s => s.id === tab) ?? services[0];
   const great = greatFeastOf(iso);
   const period = periodOf(iso);
+  // Holy Week and Bright Week have each day's own order: a rank changes nothing there
+  const ownOrder = seasonOf(iso).holyWeek || seasonOf(iso).bright;
   const templeDay = !!patron && patronDay(patron, iso) === iso;
   const food = foodOf(iso, weightOf(rank, templeDay), day ? dayText(day) : '');
   const title = day?.t.replace(/\s*ხმა\s+[IVX]+\.?\s*$/, '').replace(/\.\s*$/, '');
@@ -620,7 +624,7 @@ export const useDayService = () => {
   const flipOld = () => { const v = !oldOn; setOldOn(v); writeFlag(OLD_KEY, v); };
 
   return {
-    canCal, today, iso, setIso, day, tone, rank, guessed, inp, services, tabs, service, setTab, great, period, templeDay, food, title,
+    canCal, today, iso, setIso, day, tone, rank, guessed, ownOrder, inp, services, tabs, service, setTab, great, period, templeDay, food, title,
     saints, at, mark, move, setRank, order, saveOrder, patron, savePatron, priestOn, flipPriest, oldOn, flipOld, setFlowEl, sheet, setSheet,
     toneOpen, setToneOpen, notesOf, setNotesOf, shown, tab,
   };
@@ -629,7 +633,7 @@ export type DayServiceState = ReturnType<typeof useDayService>;
 
 export const DayService: React.FC = () => {
   const {
-    canCal, today, iso, setIso, day, tone, rank, guessed, inp, tabs, service, setTab, great, period, templeDay, food, title,
+    canCal, today, iso, setIso, day, tone, rank, guessed, ownOrder, inp, tabs, service, setTab, great, period, templeDay, food, title,
     saints, at, mark, move, setRank, order, saveOrder, patron, savePatron, priestOn, flipPriest, oldOn, flipOld, setFlowEl, sheet, setSheet,
     toneOpen, setToneOpen, notesOf, setNotesOf, shown, tab,
   } = useDayService();
@@ -684,10 +688,10 @@ export const DayService: React.FC = () => {
             <span className="block text-[12px] font-bold text-[#fbf6ec]/75">კვირის ხმა</span>
             <span className="flex items-center gap-1.5 text-[16px] font-bold">{tone ? toneName(tone) : '—'}{tone && <Music className="w-4 h-4" />}</span>
           </button>
-          <button type="button" onClick={() => { triggerHaptic(8); setSheet('rank'); }}
-            className="min-h-14 px-3 py-2 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/30 text-left cursor-pointer transition active:scale-[0.98]">
-            <span className="block text-[12px] font-bold text-[#a0703c]">რანგი{rank !== guessed && ' · შენი'}</span>
-            <span className="flex items-center gap-1 text-[16px] font-bold text-[#2a2017]">{rankLabel(rank)}<ChevronDown className="w-4 h-4 text-[#8a7a6a]" /></span>
+          <button type="button" disabled={ownOrder} onClick={() => { triggerHaptic(8); setSheet('rank'); }}
+            className="min-h-14 px-3 py-2 rounded-2xl bg-[#fbf6ec] ring-1 ring-[#e8dcc8] hover:ring-[#7a2028]/30 text-left cursor-pointer disabled:cursor-default transition active:scale-[0.98]">
+            <span className="block text-[12px] font-bold text-[#a0703c]">რანგი{!ownOrder && rank !== guessed && ' · შენი'}</span>
+            <span className="flex items-center gap-1 text-[16px] font-bold text-[#2a2017]">{ownOrder ? 'საკუთარი წესი' : rankLabel(rank)}{!ownOrder && <ChevronDown className="w-4 h-4 text-[#8a7a6a]" />}</span>
           </button>
         </div>
         <button type="button" onClick={() => { triggerHaptic(8); setSheet('patron'); }}
@@ -815,14 +819,15 @@ export const useDayBrief = () => {
   const rank = (RANKS.some(r => r.id === ranks[today]) ? ranks[today] : guessed) as Rank;
   const tone = weekTone(day ?? null, lastSunday === today ? null : sundayDay ?? null);
   const great = greatFeastOf(today);
-  return { today, rank, tone, great };
+  // Holy Week and Bright Week have each day's own order — no rank to name
+  return { today, rank, tone, great, ownOrder: seasonOf(today).holyWeek || seasonOf(today).bright };
 };
 
 export const DayServiceButton: React.FC = () => {
   const { openMapItem } = useNavigation();
   const brief = useDayBrief();
   if (!brief) return null;
-  const { today, rank, tone, great } = brief;
+  const { today, rank, tone, great, ownOrder } = brief;
   return (
     <div className="w-full max-w-2xl mx-auto px-1">
       <button type="button" onClick={() => { triggerHaptic(10); openMapItem('day'); }}
@@ -831,7 +836,7 @@ export const DayServiceButton: React.FC = () => {
         <span className="flex-1 min-w-0">
           <span className="block text-[17px] font-bold leading-snug">დღის მსახურება</span>
           <span className="block mt-0.5 text-[13px] font-semibold leading-snug text-[#fbf6ec]/80 text-pretty">
-            {dayMonthGe(today)}{great ? ` · ${great.name}` : ''}{tone ? ` · ${toneName(tone)}` : ''} · {rankLabel(rank)}
+            {dayMonthGe(today)}{great ? ` · ${great.name}` : ''}{tone ? ` · ${toneName(tone)}` : ''}{ownOrder ? '' : ` · ${rankLabel(rank)}`}
           </span>
         </span>
         <ChevronRight className="w-5 h-5 shrink-0" />

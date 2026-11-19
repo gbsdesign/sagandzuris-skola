@@ -469,6 +469,10 @@ def renumber(day):
 def to_json(day):
     title, comm, lines, notes = renumber(day)
     p = []; saints = []
+    for text in day.get('lead', []):
+        # a feast's tide set by hand (fix_2027): its own bold paragraph, and a name the day service reads
+        p.append([[text, BOLD], ['.']])
+        saints.append({'n': text, 'b': 1, 'at': [len(p) - 1, 0, len(text)]})
     for tag, src_iso, pi, us in comm:
         runs = join_units(us)
         para_text = ''.join(r[0] for r in runs)
@@ -636,12 +640,122 @@ TEXT_FIX = [  # (day or None, old, new) on the finished text
     (None, '(იხ. 26 მაისი, პეტრე-პავლობის', '(იხ. 15 ივნისი, პეტრე-პავლობის'),
     ('2028-01-07', '2027 წლის 5 (18) იანვრამდე', '2028 წლის 5 (18) იანვრამდე'),
 ]
+# ---------- 2027: what 2026's coincidences left on the wrong day ----------
+# In 2026 (Pascha 12 April) several fixed feasts met the Triodion or the Pentecostarion, and the lines and notes
+# written for that meeting were carried to the same distance from Pascha — a wrong day in 2027 (Pascha 2 May).
+# Each move below was checked against the 2026 calendar's same old-style date and the 2021 calendar with the
+# small typikon (the same Pascha as 2027), 2026-11-19. A pattern that finds nothing stops the build.
+CAT_ORDER = {'vesp': 0, 'mat': 1, 'hours': 2, 'lit': 3}
+def _take(day, pat, n=1):
+    got = [l for l in day['lines'] if re.search(pat, l['text'])]
+    assert len(got) == n, f"{day['iso']}: {pat!r} found {len(got)} lines, not {n}"
+    day['lines'] = [l for l in day['lines'] if not re.search(pat, l['text'])]
+    return [dict(l, src='g') for l in got]
+def _put(day, line):
+    """a reading line into its place: vespers, matins, hours, liturgy"""
+    rank = CAT_ORDER.get(line['cat'], 4)
+    at = 0
+    for j, l in enumerate(day['lines']):
+        if l['kind'] == 'reading' and CAT_ORDER.get(l['cat'], 4) <= rank: at = j + 1
+    day['lines'].insert(at, line)
+def _note_take(day, pat, n=1):
+    got = [nt for nt in day['notes'] if re.search(pat, nt.get('text') or flat(nt['p']))]
+    assert len(got) == n, f"{day['iso']}: note {pat!r} found {len(got)}, not {n}"
+    day['notes'] = [nt for nt in day['notes'] if nt not in got]
+    return [dict(nt, src='g') for nt in got]
+def _tide_take(day, pat):
+    """a feast's tide — the paragraph that is this one unit — out of the day"""
+    for i, (tag, src_iso, pi, us) in enumerate(day['comm']):
+        if len(us) == 1 and re.search(pat, text_of(us[0]['c'])): return day['comm'].pop(i)
+    raise AssertionError(f"{day['iso']}: no tide {pat!r}")
+def fix_2027(days):
+    d = lambda md: days['2027-' + md]
+    def move(a, b, pat, n=1):
+        for l in _take(d(a), pat, n):
+            if b: _put(d(b), l)
+    def move_note(a, b, pat, n=1):
+        for nt in _note_take(d(a), pat, n):
+            if b: d(b)['notes'].append(nt)
+    # --- matins Gospels and readings of saints whose day does not move ---
+    move('02-22', '02-02', r'^ცისკ\.: მთ\. 11')                       # Euthymius the Great
+    move('02-27', None, r'^ცისკ\.: ინ\. 10: 1-9')                     # Gregory the Theologian: a Sunday in 2027
+    move('03-01', '02-09', r'^ცისკ\.: ინ\. 10: 1-9')                  # the relics of John Chrysostom
+    move('03-04', '02-12', r'^ცისკ\.: ინ\. 10: 9-16')                 # the Three Hierarchs
+    move('02-19', '03-11', r'^მწუხრ\.: შიოსი')                         # Shio of Mgvime: Thursday of Cheesefare
+    move('02-19', '03-11', r'^ცისკ\.: მთ\. 11')
+    # the Finding of the Forerunner's Head: a Lent Monday in 2026, Tuesday of Cheesefare in 2027
+    _take(d('03-29'), r'^ლიტურგია პირველშეწირულისა'); _take(d('03-29'), r'^ცისკ\.: ლკ\. 7')
+    for l in _take(d('03-29'), r'^მწუხრზე: წინამორბ'):
+        _put(d('03-09'), L('მწუხრ.: |' + re.sub(r'^მწუხრზე: წინამორბ\.:\s*', '', l['text']), cat='vesp'))
+    _put(d('03-09'), L('ცისკ.: |ლკ. 7: 17-30 (დას. 31).', cat='mat'))
+    retext(d('03-29'), r'^ლიტ\. მწუხრზე რიგ\.:\s*', 'მწუხრზე: ')
+    # the Forty Martyrs: a Sunday in 2026, Monday of Lent's second week in 2027 (the Presanctified, as for the
+    # Head on a Lent Monday in 2026)
+    _take(d('04-11'), r'^მწუხრ\.:\s*40 მოწ')
+    own = _take(d('03-22'), r'^მწუხრზე:')[0]
+    hours = [l for l in d('03-22')['lines'] if l['cat'] == 'hours']
+    d('03-22')['lines'] = [L([('ლიტურგია პირველშეწირულისა.', 5)], kind='liturgy'),
+                           L('მწუხრზე: |40 მოწ.: 1) ეს. 43: 9-14. 2) სიბრძ. 3: 1-9. 3) სიბრძ. 5: 15 - 6: 3.', cat='vesp'),
+                           L('ცისკ.: |ლკ. 21: 12-19 (დას. 106).', cat='mat')] + hours + [
+                           L('ლიტ. მწუხრზე რიგ.: |' + re.sub(r'^მწუხრზე:\s*', '', own['text']), cat='lit')] + [
+                           l for l in d('03-22')['lines'] if l['cat'] != 'hours']
+    # St George: Mid-Pentecost in 2026, Bright Thursday in 2027
+    _take(d('05-06'), r'^დიდმოწამისა:')
+    _put(d('05-06'), L('მწუხრ.: |დიდმოწამისა: 1) ეს. 43: 9-14. 2) სიბრძ. 3: 1-9. 3) სიბრძ. 5: 15 - 6: 3.', cat='vesp'))
+    move('05-26', '05-06', r'^ცისკ\.: ლკ\. 12')
+    move_note('05-26', None, r'დაემთხვა ერგასის განზოგების')
+    move('06-02', '05-13', r'^ცისკ\.:\s*ინ\. 21')                     # James, the son of Zebedee
+    # John the Theologian: the Ascension in 2026, a plain Friday in 2027
+    _take(d('05-21'), r'^მოციქულისა:')
+    _put(d('05-21'), L('მწუხრ.: |მოციქულისა: 1) 1 ინ. 3: 21 - 4: 6. 2) 1 ინ. 4: 11-16. 3) 1 ინ. 4: 20 - 5: 5.', cat='vesp'))
+    _put(d('05-21'), L('ცისკ.: |ინ. 21: 15-25 (დას. 67).', cat='mat'))
+    move_note('05-21', None, r'ამაღლების განგებასთან ერთად')
+    move('06-11', '05-22', r'^ცისკ\.: მთ\. 4')                         # Shio's repose
+    move_note('06-11', '05-22', r'სადაც შესრულდება წმიდა ნიკოლოზის')
+    move('06-12', None, r'^ცისკ\.: ინ\. 21')                          # Simon the Zealot: a Sunday in 2027
+    move('05-24', '06-13', r'^მწუხრ\.: წმიდათა მამათა')               # the Fathers of the First Council: the 7th Sunday
+    for l in _take(d('06-13'), r'^მოც\. სწორთა: 4\)'): _put(d('06-13'), dict(l, cat='vesp'))   # … and Mirian and Nana's after them
+    move('06-15', '05-26', r'^ცისკ\.:\s*ლკ\. 6')                       # Euthymius of Athos
+    move('06-15', '05-26', r'^ღირ\. 1 კორ\. 12')
+    move('06-21', '06-01', r'^ცისკ\.: მთ\. 10')                        # St Nino's coming to Georgia
+    move('06-23', '06-03', r'^ცისკ\.:\s*ინ\. 10')                      # Constantine and Helen
+    move('06-23', '06-03', r'^მოციქულთა სწორთა - საქმ')
+    move('06-25', None, r'^ცისკ\.: ლკ\. 7')                           # the Third Finding is set by hand on 7 June
+    move_note('06-25', None, r'^შენიშვნა 1: ტიპიკონის მითითებით წმ\. იოანე ნათლის')
+    # --- the Meeting of the Lord (a Monday, before the Triodion): forefeast on the 14th, leave-taking on the 22nd ---
+    d('02-14')['comm'].insert(0, _tide_take(d('02-13'), r'მიგებების წინადღესასწაული'))
+    leave = _tide_take(d('02-19'), r'მიგებების დღესასწაულის წარგზავნა')
+    after = next(c for c in d('02-18')['comm'] if len(c[3]) == 1 and 'მიგებების შემდგომი დღესასწაული' in text_of(c[3][0]['c']))
+    for md in ('02-19', '02-20', '02-21'):
+        d(md)['comm'].insert(0, (after[0], after[1], after[2], [dict(after[3][0])]))
+    d('02-22')['comm'].insert(0, leave)
+    move_note('03-05', None, r'მიგებების წინადღესასწაულის განგება')
+    move_note('03-06', None, r'მიგებების წინადღესასწაულის განგება')
+    # --- the Annunciation (Wednesday of Lent's fourth week): forefeast on the 6th, leave-taking on the 8th ---
+    d('04-06')['lead'] = ['წინადღესასწაული ყოვლადწმიდა ღმრთისმშობლის ხარებისა']
+    d('04-08')['lead'] = ['ხარების დღესასწაულის წარგზავნა', 'კრება მთავარანგელოზისა გაბრიელისა']
+    move_note('04-22', None, r'წინადღესასწაული ყოვლადწმიდა ღმრთისმშობლის ხარებისა')
+    move_note('04-22', None, r'ხარების წინადღესასწაულის განგება გადმოიტანება')
+    # --- notes about a saint of a fixed day ---
+    move_note('02-23', '02-03', r'წმიდა კალისტრატეს')
+    move_note('02-26', '02-06', r'წმიდა მელქისედეკის')
+    move_note('03-03', '02-11', r'წმიდა აშოტის')
+    move_note('03-19', '02-27', r'ღირსი ილარიონის განგებაზე')
+    move_note('06-26', '06-06', r'წმიდა გიორგი მთაწმინდელის')
+    move_note('06-09', None, r'^შენიშვნა 1: ღირსთა დღესასწაული ჩატარდება')
+    move_note('04-12', None, r'^ლიტურგია წმ\. იოანე ოქროპირისა')    # Pascha 2026's own line, on a Lent Monday here
+    # the official 2026 text names the sixth week's Tuesday … Saturday „მე-5 შვიდეული“ (a slip): the week is Lent's sixth
+    for md in ('04-20', '04-21', '04-22', '04-23', '04-24'):
+        assert 'მე-5 შვიდეული' in d(md)['title'], md
+        d(md)['title'] = d(md)['title'].replace('მე-5 შვიდეული', 'მე-6 შვიდეული')
+
 def build_all():
     out = {}
     x = START
     while x <= END:
         out[x.isoformat()] = override(build_day(x))
         x += TD(days=1)
+    if Y == 2027: fix_2027(out)
     return out
 
 if __name__ == '__main__':
