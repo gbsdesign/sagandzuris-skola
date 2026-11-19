@@ -12,6 +12,12 @@
 - **Write every message in Georgian**, including short progress notes deep inside long technical tasks.
   The user is a beginner: before acting, say in Georgian what you are about to do; after each step, say what
   was done ("✅ …"). Say which stage you are at on long tasks. No long silent tool chains.
+- **The word is „კანონი“ — never „კათიზმა“ (the user's rule, 2026-11-19: „სადაც ნახავ სიტყვა კათიზმას სინამდვილეში ესაა სიტყვა
+  კანონი“).** A part of the Psalter is „კანონი“ („დავითნის კანონი 18“, „20 კანონი“) in every text a person reads: the app, the
+  news, the course, the games' questions — and your own messages to the user. Where it could be taken for the matins canon, write
+  „დავითნის კანონი“. Only the search's hidden words keep the other word (`searchIndex.ts` keys, `mkitkhe.ts` keys: someone who
+  types it must still find the kanon); the saints' lives' „კათისმის მონასტერი“ is a place's name. The books (`public/wignebi`)
+  say „კანონი“ themselves.
 - **Don't widen scope.** Change only what was asked (one chant means one chant). Ask before deleting or moving files.
 - **Ask before starting.** Before any task — and before each stage of a long one — ask the open questions first
   (one short round, recommended option first), even when the user says „აბა შენ იცი“.
