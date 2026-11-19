@@ -10,18 +10,18 @@ import { Fold } from './Fold';
 import { changed } from './changed';
 
 type Msg = (text: string, type: 'success' | 'error') => void;
-type Kind = 'l' | 'd';
+export type Kind = 'l' | 'd';
 
 // Who hears (🎧) and who saves (⬇) each song album (data/albumAccess.ts). ⚙ „სკოლა“ → „ალბომები“ turns an album on for
 // every member; a member's window → „ალბომები“ for that member alone (what everyone has shows there, locked). Staff
 // have every album. A switch applies at once, with the undo bar and a line in the change log.
 
 // the songs' albums, then the მთქმელი section's (data/centreOther.ts), marked so
-const ALL = [...CENTRE_SONG_ALBUMS, ...CENTRE_MTKMELI_ALBUMS];
-const MTKMELI = new Set(CENTRE_MTKMELI_ALBUMS.map(a => a[0]));
-const NAMES = new Map(ALL.map(a => [a[0], searchNormalize(a[1])]));
+export const ALL_ALBUMS = [...CENTRE_SONG_ALBUMS, ...CENTRE_MTKMELI_ALBUMS];
+export const MTKMELI_ALBUMS = new Set(CENTRE_MTKMELI_ALBUMS.map(a => a[0]));
+export const ALBUM_NAMES = new Map(ALL_ALBUMS.map(a => [a[0], searchNormalize(a[1])]));
 const PAGE = 25;
-const isOn = (r?: AlbumRight) => Boolean(r?.l || r?.d);
+export const isAlbumOn = (r?: AlbumRight) => Boolean(r?.l || r?.d);
 const KIND_WORD: Record<Kind, string> = { l: 'მოსმენა', d: 'ჩამოწერა' };
 
 const RightBtn: React.FC<{ kind: Kind; on: boolean; locked: boolean; name: string; onClick: () => void }> = ({ kind, on, locked, name, onClick }) => {
@@ -54,12 +54,12 @@ const AlbumRightsList: React.FC<{
   const [query, setQuery] = useState('');
   const [onlyOn, setOnlyOn] = useState(false);
   const [limit, setLimit] = useState(PAGE);
-  const onCount = ALL.filter(a => isOn(rights[a[0]])).length;
+  const onCount = ALL_ALBUMS.filter(a => isAlbumOn(rights[a[0]])).length;
   const list = useMemo(() => {
     const q = searchNormalize(query);
-    let l = ALL.filter(a => !onlyOn || isOn(rights[a[0]]) || isOn(inherited[a[0]]));
+    let l = ALL_ALBUMS.filter(a => !onlyOn || isAlbumOn(rights[a[0]]) || isAlbumOn(inherited[a[0]]));
     if (q) {
-      l = l.map(a => ({ a, s: matchScore(NAMES.get(a[0]) ?? '', q) }))
+      l = l.map(a => ({ a, s: matchScore(ALBUM_NAMES.get(a[0]) ?? '', q) }))
         .filter((x): x is { a: (typeof l)[number]; s: number } => x.s !== null)
         .sort((x, y) => x.s - y.s)
         .map(x => x.a);
@@ -111,7 +111,7 @@ const AlbumRightsList: React.FC<{
               <li key={id} className="pl-3 pr-2 py-2 flex items-center gap-2">
                 <span className="min-w-0 flex-1 py-1">
                   <span className="block text-[14px] font-semibold leading-snug text-[#2a2017] break-words">{name}</span>
-                  <span className="block text-[12px] text-[#a0907c] tabular-nums">{count} ჩანაწერი{MTKMELI.has(id) && <span className="font-bold text-[#8a4b12]"> · მთქმელი</span>}</span>
+                  <span className="block text-[12px] text-[#a0907c] tabular-nums">{count} ჩანაწერი{MTKMELI_ALBUMS.has(id) && <span className="font-bold text-[#8a4b12]"> · მთქმელი</span>}</span>
                 </span>
                 {(['l', 'd'] as Kind[]).map(k => (
                   <RightBtn key={k} kind={k} name={name} on={Boolean(r[k])} locked={Boolean(inh[k])}
@@ -133,12 +133,12 @@ const AlbumRightsList: React.FC<{
   );
 };
 
-const turned = (kind: Kind, on: boolean) => `${KIND_WORD[kind]} ${on ? 'ჩაირთო' : 'გამოირთო'}`;
+export const turned = (kind: Kind, on: boolean) => `${KIND_WORD[kind]} ${on ? 'ჩაირთო' : 'გამოირთო'}`;
 
 /** ⚙ „სკოლა“ → „ალბომები“: an album for every member */
 export const AlbumsFold: React.FC<{ onMessage: Msg }> = ({ onMessage }) => {
   const { rights } = useEveryoneAlbums();
-  const n = ALL.filter(a => isOn(rights[a[0]])).length;
+  const n = ALL_ALBUMS.filter(a => isAlbumOn(rights[a[0]])).length;
   return (
     <Fold
       icon={<Disc3 />}
@@ -163,8 +163,8 @@ export const MemberAlbums: React.FC<{ uid: string; name: string; onMessage: Msg 
   const { rights } = useMemberAlbums(uid);
   const everyone = useEveryoneAlbums().rights;
   const [open, setOpen] = useState(false);
-  const own = ALL.filter(a => isOn(rights[a[0]])).length;
-  const shared = ALL.filter(a => isOn(everyone[a[0]])).length;
+  const own = ALL_ALBUMS.filter(a => isAlbumOn(rights[a[0]])).length;
+  const shared = ALL_ALBUMS.filter(a => isAlbumOn(everyone[a[0]])).length;
   return (
     <div className="flex flex-col gap-2.5">
       <button

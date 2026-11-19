@@ -105,7 +105,8 @@ export const bibleRangesHtml = async (book: string, ranges: { ch: number; from: 
   }).join('');
 };
 
-const ReadText: React.FC<{ step: Extract<LessonStep, { kind: 'read' }>; onSyllables: (n: number | undefined) => void }> = ({ step, onSyllables }) => {
+/** a read step's text: one psalm or the Apostle's verses loaded as HTML, and the syllables for the pace */
+export const useReadText = (step: Extract<LessonStep, { kind: 'read' }>, onSyllables: (n: number | undefined) => void) => {
   const one = step.psalms?.length === 1 ? step.psalms[0] : null;
   const [html, setHtml] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
@@ -124,7 +125,11 @@ const ReadText: React.FC<{ step: Extract<LessonStep, { kind: 'read' }>; onSyllab
   const syllables = (step.psalms?.length ?? 0) > 1 || (needsHtml && !html) ? undefined
     : (step.lines ?? []).reduce((n, l) => n + lineSyllables(l), 0) + (html ? syllableCount(readableText(html)) : 0);
   useEffect(() => { onSyllables(syllables); }, [syllables, onSyllables]);
+  return { one, html, failed };
+};
 
+const ReadText: React.FC<{ step: Extract<LessonStep, { kind: 'read' }>; onSyllables: (n: number | undefined) => void }> = ({ step, onSyllables }) => {
+  const { one, html, failed } = useReadText(step, onSyllables);
   return (
     <div className={`${PROSE} rounded-2xl bg-[#fffdf8] ring-1 ring-[#e8dcc8] px-4 py-4 sm:px-6 sm:py-5`}>
       {step.lines?.map((l, i) => <p key={i}>{l}</p>)}
@@ -147,7 +152,8 @@ const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60))
  * (`sendId`: the pearls' store, utils/dayReadings.ts READ_PREFIX); the teacher hears it in the member's window and approves it.
  * With the text's `syllables` known, the take's pace is shown (PaceMeter) and goes with it as its score (×10).
  */
-export const ReadAloud: React.FC<{ sendId?: string; syllables?: number }> = ({ sendId, syllables }) => {
+/** the recorder's whole state: record, hear back, the pace, send to the teacher (the old card and the new look's draw it) */
+export const useReadAloud = (sendId?: string, syllables?: number) => {
   const { user } = useAuth();
   const uid = sendId ? user?.uid ?? null : null;
   const { shine, voice } = usePearls(uid);
@@ -210,7 +216,13 @@ export const ReadAloud: React.FC<{ sendId?: string; syllables?: number }> = ({ s
     }, 250);
   };
   const cancel = () => { clear(); rec.current?.cancel(); rec.current = null; setState('idle'); };
+  return { uid, shine, state, secs, url, sent, take, pace, send, stop, start, cancel };
+};
+export const readClock = (s: number) => clock(s);
+export const READ_MAX_SECONDS = MAX_SECONDS;
 
+export const ReadAloud: React.FC<{ sendId?: string; syllables?: number }> = ({ sendId, syllables }) => {
+  const { uid, shine, state, secs, url, sent, take, pace, send, stop, start, cancel } = useReadAloud(sendId, syllables);
   if (!voiceRecordingSupported()) return null;
   return (
     <div className="mt-4 rounded-2xl bg-[#7a2028]/[0.035] ring-1 ring-[#7a2028]/15 px-4 py-3.5">

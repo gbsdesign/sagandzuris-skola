@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, Bell, BellOff, Check, ChevronLeft, ChevronRight, ChevronsDown, Loader2, Moon, Star } from 'lucide-react';
+import { ArrowLeft, Bell, BellOff, Check, ChevronLeft, ChevronRight, ChevronsDown, Moon, Star } from 'lucide-react';
+import { Waiting } from '../../../components/shell/PageSkeleton';
 import { useNavigation } from '../../../context';
 import { PrayerHour, hourClock, isPrayerId, prayerTitle } from '../../../data/prayers';
 import { PrayerBody, useHourReminders, usePrayerReader, useReadMark } from '../../PrayerPage';
@@ -10,6 +11,7 @@ import { cx, FOCUS } from '../../../components/ui2/cx';
 import { ButtonNote, PinRound } from '../gza/parts';
 import { triggerHaptic } from '../../../utils/haptics';
 import { WordMeanings } from '../sitqva/WordMeanings';
+import { HelpButton } from '../mkitkhe/HelpButton';
 
 /** x-lotsva — one prayer (or a Bible chapter, a kanon) in the new look: the bar with the title and ★, one row of tools
  *  (ზომა · ღამე · ხუცური · ავტო), then the text alone and one „წავიკითხე“. The logic is the old page's (PrayerPage.tsx:
@@ -33,10 +35,11 @@ export const PrayerScreen: React.FC = () => {
   return (
     <div className={cx('mx-auto flex w-full max-w-2xl flex-col gap-2.5 pb-4', night && 'text-night-ink')}>
       {/* the kit's bar, with its „უკან“ drawn here so the night paper can dim it too */}
-      <TopBar title={prayerTitle(id)} right={<><PinRound id={`prayer:${id}`} /><FavRound id={id} night={night} /></>}>
+      <TopBar title={prayerTitle(id)} right={<><PinRound id={`prayer:${id}`} /><FavRound id={id} night={night} /><HelpButton page="prayer" /></>}>
         <RoundButton label="უკან" tone={night ? 'glass' : 'surf'} onClick={handleGoBack}><ArrowLeft aria-hidden="true" strokeWidth={1.75} /></RoundButton>
         <div className="min-w-0 flex-1 pl-0.5">
-          <h1 className="truncate text-title leading-tight font-bold tracking-tight">{prayerTitle(id)}</h1>
+          {/* two lines at most: the bar holds 📌 ★ and „?“ */}
+          <h1 className="line-clamp-2 text-title leading-tight font-bold tracking-tight wrap-break-word">{prayerTitle(id)}</h1>
           <div className={cx('truncate text-meta', night ? 'text-night-ink/70' : 'text-mut')}>ლოცვანი</div>
         </div>
       </TopBar>
@@ -53,10 +56,10 @@ export const PrayerScreen: React.FC = () => {
             night ? 'bg-ink' : 'bg-page',
           )}
         >
-          <Tool night={night} onClick={() => setSizeOpen(true)} icon={<span className="text-meta font-bold">Aa</span>}>
+          <Tool help="19" night={night} onClick={() => setSizeOpen(true)} icon={<span className="text-meta font-bold">Aa</span>}>
             ზომა
           </Tool>
-          <Tool night={night} on={night} onClick={() => r.setNight(!night)} icon={<Moon />} label={night ? 'ღია ფურცელი' : 'ღამის ფურცელი'}>
+          <Tool help="20" night={night} on={night} onClick={() => r.setNight(!night)} icon={<Moon />} label={night ? 'ღია ფურცელი' : 'ღამის ფურცელი'}>
             ღამე
           </Tool>
           <Tool
@@ -84,7 +87,7 @@ export const PrayerScreen: React.FC = () => {
       {r.failed ? (
         <Note className="py-6 text-center">ტექსტის ჩატვირთვა ვერ მოხერხდა. სცადე ხელახლა.</Note>
       ) : r.html === null ? (
-        <div className="flex justify-center py-12"><Loader2 aria-label="იტვირთება" className="size-6 animate-spin text-wine" /></div>
+        <Waiting kind="text" field={false} />
       ) : (
         // the text big and alone; the night paper is index.css's .sg-night (the whole screen: html.sg-night-page)
         <article className={cx('px-2 pt-1.5', night && 'sg-night')}>
@@ -144,11 +147,12 @@ const toolLook = (night: boolean, on: boolean) => cx(
   FOCUS,
 );
 
-/** One pill of the tools' row: an icon and a short word; `on` = pressed in (night, ხუცური). */
-const Tool: React.FC<{ icon: React.ReactNode; on?: boolean; night: boolean; label?: string; onClick: () => void; children: React.ReactNode }> = ({
-  icon, on, night, label, onClick, children,
+/** One pill of the tools' row: an icon and a short word; `on` = pressed in (night, ხუცური). `help`: the ready answers of
+ *  „მკითხე“ that speak of it (pages/v2/mkitkhe/light.ts lights it). */
+const Tool: React.FC<{ icon: React.ReactNode; on?: boolean; night: boolean; label?: string; help?: string; onClick: () => void; children: React.ReactNode }> = ({
+  icon, on, night, label, help, onClick, children,
 }) => (
-  <Press onClick={onClick} aria-pressed={on === undefined ? undefined : on} title={label} className={toolLook(night, !!on)}>
+  <Press onClick={onClick} aria-pressed={on === undefined ? undefined : on} title={label} data-help={help} className={toolLook(night, !!on)}>
     <span aria-hidden="true" className={cx('flex items-center', on ? 'text-white' : night ? 'text-blush' : 'text-wine')}>{icon}</span>
     {children}
   </Press>

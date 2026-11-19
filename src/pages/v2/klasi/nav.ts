@@ -23,5 +23,18 @@ export const parseStudentItem = (item: string | null | undefined): { uid: string
   return { uid, classId, sub: sub === 'gza' || sub === 'ostatoba' ? sub : null };
 };
 
+/** the class page's tab kept for the visit (ClassScreen reads it; „მკითხე“ opens the class on a tab with it) */
+export type ClassTab = 'program' | 'chat' | 'people';
+export const CLASS_TAB_KEY = 'sg-class-tab:';
+export const keepClassTab = (classId: string, tab: ClassTab) => {
+  try { sessionStorage.setItem(CLASS_TAB_KEY + classId, tab); } catch { /* private window: the page opens on its first tab */ }
+};
+/** the same, and a class page open now turns to that tab at once (ClassScreen listens) */
+export const CLASS_TAB_EVENT = 'sg-class-tab';
+export const askClassTab = (classId: string, tab: ClassTab) => {
+  keepClassTab(classId, tab);
+  window.dispatchEvent(new CustomEvent<{ classId: string; tab: ClassTab }>(CLASS_TAB_EVENT, { detail: { classId, tab } }));
+};
+
 export const PSALTER_DIST = 'dist';
 export const PSALTER_HISTORY = 'history';

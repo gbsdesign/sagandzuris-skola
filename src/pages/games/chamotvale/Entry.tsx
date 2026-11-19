@@ -5,6 +5,7 @@ import { LATIN_TO_GEORGIAN, LETTERS } from '../../../utils/sitqva';
 import { continuesForm, type ChamoItem, type Try } from '../../../utils/chamotvale';
 import { triggerHaptic } from '../../../utils/haptics';
 import { screenKeys } from './store';
+import { gameKeysPaused } from '../../../components/games/gameVariant';
 
 // „ჩამოთვალე!“'s typing: a name fills its box the moment it is whole (no button), „Enter“ forgives a slip and says what is
 // wrong — already named, not in the list, or the list's own line on a word near it. Latin letters turn Georgian as on the
@@ -81,7 +82,7 @@ export const Entry: React.FC<{
   useEffect(() => {
     if (!keys || disabled) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || gameKeysPaused()) return;
       const t = e.target as HTMLElement | null;
       if (t && t !== input.current && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable)) return;
       if (e.key === 'Enter') { e.preventDefault(); enter(); return; }

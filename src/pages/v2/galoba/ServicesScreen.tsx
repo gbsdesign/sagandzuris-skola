@@ -76,7 +76,7 @@ export const ServicesScreen: React.FC = () => {
 
   return (
     <div className="mx-auto flex w-full max-w-2xl flex-col gap-2.5 pb-4">
-      <TopBar title="ღვთისმსახურება" onBack={handleGoBack} right={<><ProgramRound /><OfflineButton kind="galoba" /></>} />
+      <TopBar title="ღვთისმსახურება" onBack={handleGoBack} right={<><ProgramRound /><span data-help="5" className="flex rounded-full"><OfflineButton kind="galoba" /></span></>} />
       <WorshipSwitch value="galoba" />
       {ownSearch && <SearchField value={chantSearch || ''} onChange={setChantSearch} placeholder="ძიება ყველა მსახურებაში" />}
       {allQuery ? (
@@ -85,7 +85,7 @@ export const ServicesScreen: React.FC = () => {
         </div>
       ) : (
         <>
-          <Rows>{main.map(row)}</Rows>
+          <Rows data-help="1">{main.map(row)}</Rows>
           {other.length > 0 && (
             <>
               <SectionLabel label="სხვა მსახურებები" />

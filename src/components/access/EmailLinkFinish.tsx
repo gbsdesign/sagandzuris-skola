@@ -4,6 +4,8 @@ import { auth } from '../../firebase';
 import { Btn, Sheet } from '../ui/kit';
 import { EMAIL_FIELD } from './SignInChoices';
 import { openSignIn } from './SignInPrompt';
+import { useNewLook } from '../../design/newLook';
+import { EmailLinkFinishV2 } from '../../pages/v2/gatsnoba/SignInV2';
 import {
   dropLinkFromAddress, emailLinkError, finishEmailLink, looksLikeEmail, openedFromEmailLink, rememberedEmail,
 } from '../../utils/emailLink';
@@ -13,7 +15,8 @@ import {
 
 type State = 'off' | 'working' | 'ask' | 'error';
 
-export const EmailLinkFinish: React.FC = () => {
+/** The finishing's state, shared with the new look's window (pages/v2/gatsnoba/SignInV2 `EmailLinkFinishV2`). */
+export const useEmailLinkFinish = () => {
   const [state, setState] = useState<State>(() => (openedFromEmailLink() ? 'working' : 'off'));
   const [email, setEmail] = useState(rememberedEmail);
   const [error, setError] = useState('');
@@ -50,13 +53,27 @@ export const EmailLinkFinish: React.FC = () => {
     else setState('ask');
   }, []);
 
-  if (state === 'off') return null;
-
   const close = () => {
     if (state === 'working') return;
     dropLinkFromAddress();
     setState('off');
   };
+  const submit = () => {
+    if (looksLikeEmail(email)) void finish(email);
+    else setError('ელფოსტა არასწორადაა ჩაწერილი.');
+  };
+  /** an old link: ask for a new one */
+  const again = () => { setState('off'); openSignIn(); };
+
+  return { state, email, setEmail, error, setError, close, submit, again };
+};
+
+export const EmailLinkFinish: React.FC = () => {
+  const f = useEmailLinkFinish();
+  const nl = useNewLook();
+  const { state, email, setEmail, error, setError, close, submit, again } = f;
+  if (state === 'off') return null;
+  if (nl) return <EmailLinkFinishV2 f={f} />;
 
   return (
     <Sheet open onClose={close} title="შესვლა ელფოსტით">
@@ -73,8 +90,7 @@ export const EmailLinkFinish: React.FC = () => {
           noValidate
           onSubmit={e => {
             e.preventDefault();
-            if (looksLikeEmail(email)) void finish(email);
-            else setError('ელფოსტა არასწორადაა ჩაწერილი.');
+            submit();
           }}
         >
           <p className="text-[15px] text-[#4a3426] leading-relaxed">
@@ -106,7 +122,7 @@ export const EmailLinkFinish: React.FC = () => {
             <MailWarning className="w-7 h-7" />
           </div>
           <p className="text-[15px] text-[#4a3426] leading-relaxed">{error}</p>
-          <Btn size="lg" full onClick={() => { setState('off'); openSignIn(); }}>ახალი ბმულის მოთხოვნა</Btn>
+          <Btn size="lg" full onClick={again}>ახალი ბმულის მოთხოვნა</Btn>
           <Btn kind="ghost" full onClick={close}>დახურვა</Btn>
         </div>
       )}

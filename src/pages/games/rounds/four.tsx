@@ -4,6 +4,17 @@ import { OTKHI_LETTERS } from '../../../utils/otkhi';
 import type { PublicQ } from '../../../utils/roundGames';
 import { triggerHaptic } from '../../../utils/haptics';
 import type { RoundFace } from './face';
+import { useNewLook } from '../../../design/newLook';
+import { Press, Rows } from '../../../components/ui2';
+
+// the new look (board x-tamashi-kitkhva): the four answers as rows of one white card, each letter on its own colour
+const DOT2 = ['bg-wine', 'bg-sea', 'bg-gold', 'bg-plum'] as const;
+const INK2 = ['text-wine', 'text-sea', 'text-gold-ink', 'text-plum'] as const;
+const Letter2: React.FC<{ i: number; plain?: boolean }> = ({ i, plain }) => (
+  <span aria-hidden="true" className={`flex size-icon shrink-0 items-center justify-center rounded-full text-body font-bold ${plain ? 'bg-white text-leaf' : `${DOT2[i]} text-white`}`}>
+    {OTKHI_LETTERS[i]}
+  </span>
+);
 
 // Four answers to pick from (the quick games where a round is named out of four: „ოთხიდან ერთი“, „ხმა-ხმად“, „სამ ნოტში!“):
 // each in its own colour and letter, the same on every screen — a team writes the letter down; at the reveal the right one
@@ -31,7 +42,20 @@ export const Letter: React.FC<{ i: number; size?: 'md' | 'sm'; plain?: boolean }
 /** the four answers to read out (the host's and the teams' screen) */
 export const OptionList: React.FC<{ q: PublicQ; className?: string }> = ({ q, className = '' }) => {
   const o = four(q);
+  const nl = useNewLook();
   if (!o.options) return null;
+  if (nl) {
+    return (
+      <Rows role="list" className={className}>
+        {o.options.map((text, i) => (
+          <div key={i} role="listitem" className="flex min-h-14 items-center gap-3 py-2 pr-4 pl-4">
+            <Letter2 i={i} />
+            <span className="min-w-0 flex-1 text-body leading-snug font-semibold wrap-break-word">{text}</span>
+          </div>
+        ))}
+      </Rows>
+    );
+  }
   return (
     <ul className={`space-y-2 ${className}`}>
       {o.options.map((text, i) => (
@@ -44,7 +68,30 @@ export const OptionList: React.FC<{ q: PublicQ; className?: string }> = ({ q, cl
   );
 };
 
-export const FourPick: RoundFace['Pick'] = ({ q, pick, onPick }) => (
+export const FourPick: RoundFace['Pick'] = props => (useNewLook() ? <FourPick2 {...props} /> : <FourPick1 {...props} />);
+
+const FourPick2: RoundFace['Pick'] = ({ q, pick, onPick }) => (
+  <Rows role="radiogroup" aria-label="პასუხები">
+    {(four(q).options ?? []).map((text, i) => {
+      const on = pick === i;
+      return (
+        <Press
+          key={i}
+          role="radio"
+          aria-checked={on}
+          onClick={() => onPick(i)}
+          className={`flex min-h-row w-full cursor-pointer items-center gap-3 py-2 pr-4 pl-4 text-left transition-colors active:bg-soft ${on ? 'bg-tint' : ''}`}
+        >
+          <Letter2 i={i} />
+          <span className="min-w-0 flex-1 text-body leading-snug font-semibold wrap-break-word">{text}</span>
+          {on && <Check className={`size-5 shrink-0 ${INK2[i]}`} aria-hidden="true" />}
+        </Press>
+      );
+    })}
+  </Rows>
+);
+
+const FourPick1: RoundFace['Pick'] = ({ q, pick, onPick }) => (
   <ul className="grid gap-2 sm:grid-cols-2" role="radiogroup" aria-label="პასუხები">
     {(four(q).options ?? []).map((text, i) => {
       const on = pick === i;
@@ -70,9 +117,38 @@ export const FourPick: RoundFace['Pick'] = ({ q, pick, onPick }) => (
 /** the reveal: the right answer in green, how many picked each, my own pick */
 export const FourReveal: RoundFace['Reveal'] = ({ q, picks, mine }) => {
   const o = four(q);
+  const nl = useNewLook();
   if (o.right === undefined || !o.options) return null;
   const counts = picks ? o.options.map((_, i) => picks.filter(p => p === i).length) : null;
   const answered = counts ? counts.reduce((a, b) => a + b, 0) : 0;
+  if (nl) {
+    return (
+      <Rows role="list" aria-label="პასუხები">
+        {o.options.map((text, i) => {
+          const right = i === o.right;
+          const isMine = mine === i;
+          return (
+            <div key={i} role="listitem" className={`flex flex-col gap-2 py-3 pr-4 pl-4 ${right ? 'bg-leaf text-white' : ''}`}>
+              <div className="flex items-center gap-3">
+                <Letter2 i={i} plain={right} />
+                <span className="min-w-0 flex-1 text-body leading-snug font-semibold wrap-break-word">
+                  {text}
+                  {isMine && <span className={`ml-1.5 text-meta font-bold ${right ? 'text-white/85' : 'text-gold-ink'}`}>· შენ</span>}
+                </span>
+                {counts && <span className="min-w-6 shrink-0 text-right text-body font-bold tabular-nums">{counts[i]}</span>}
+                {right && <Check className="size-5 shrink-0" aria-label="სწორი პასუხი" />}
+              </div>
+              {counts && answered > 0 && (
+                <div className={`h-1.5 overflow-hidden rounded-full ${right ? 'bg-white/25' : 'bg-track'}`}>
+                  <div className={`h-full rounded-full ${right ? 'bg-white' : DOT2[i]}`} style={{ width: `${Math.round((counts[i] / answered) * 100)}%` }} />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </Rows>
+    );
+  }
   return (
     <ul className="space-y-2" aria-label="პასუხები">
       {o.options.map((text, i) => {

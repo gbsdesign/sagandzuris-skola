@@ -8,9 +8,12 @@ import { Btn } from '../../../components/ui/kit';
 import { triggerHaptic } from '../../../utils/haptics';
 import { CallBtn, type GameCall } from '../samshvilde/online/GameCall';
 import { useNow } from '../rounds/parts';
-import { Court, Story, type Board } from './Court';
+import { Court, Story, storyOf, type Board } from './Court';
 import { ActionPad, StepClock, useHideCards } from './Pads';
-import { Chronicle, CoinCount, ROLE_LOOK, RoleCard } from './look';
+import { Chronicle, CoinCount, ROLE_LOOK, RoleCard, lineText } from './look';
+import { useNewLook } from '../../../design/newLook';
+import { TurnFrame } from '../../v2/tamashebi/TurnFrame';
+import { Matiane, type MatianePlace } from '../../v2/tamashebi/Matiane';
 
 // A phone in „მეფის კარი“'s room (pages/games/kari/): the story of the step, the court, my own two cards (kept face down on
 // screen if I like) and what I may do now — my turn's action and its target, „არ მჯერა!“ or „ვენდობი“, a block, the card I
@@ -52,6 +55,7 @@ export const KariPlay: React.FC<{
   const [picked, setPicked] = useState<number[]>([]);
   const [all, setAll] = useState(false);
   const cards = useHideCards();
+  const nl = useNewLook();
   useEffect(() => { setAct(-1); setTarget(-1); setPicked([]); }, [v.key]);
 
   // the step's clock: the host's own; a player's from when the step reached this phone (the host's clock trusted for 4 s)
@@ -196,6 +200,72 @@ export const KariPlay: React.FC<{
       </ul>
     </section>
   );
+
+  // the new look: the end is the chronicle's screen (board x-otakhi-matiane), a step the turn frame (x-otakhi-svla)
+  if (nl && ph.k === 'end') {
+    const nm = (i: number) => (i === me ? 'შენ' : v.names[i]);
+    // the places: the winner, then who left the court last (the chronicle keeps its last lines; older leavers share the last place)
+    const outs = v.log.flatMap(l => (l.t === 'out' ? [{ who: l.who, n: l.n }] : []));
+    const later = outs.slice().reverse().filter(o => o.who !== ph.winner);
+    const known = new Set([ph.winner, ...later.map(o => o.who)]);
+    const rest = v.names.map((_, i) => i).filter(i => !known.has(i));
+    const places: MatianePlace[] = [
+      { name: v.names[ph.winner], place: 1, score: 'კარზე დარჩა', me: ph.winner === me },
+      ...later.map((o, k) => ({ name: v.names[o.who], place: k + 2, score: `გავიდა · სვლა ${o.n}`, me: o.who === me })),
+      ...rest.map(i => ({ name: v.names[i], place: later.length + 2, score: 'გავიდა', me: i === me })),
+    ];
+    return (
+      <Matiane
+        game="მეფის კარი"
+        onClose={onHide}
+        right={<CallBtn gc={gc} />}
+        win={{ winners: [nm(ph.winner)], top: 1 }}
+        why={storyOf(b, me).sub}
+        places={places}
+        extra={finale || undefined}
+        chronicle={[{ lines: v.log.map(l => lineText(l, v.names)) }]}
+        again={host?.again}
+        close={host ? { label: 'ოთახის დახურვა', onClick: host.close } : { label: 'დახურვა', onClick: onLeave }}
+      />
+    );
+  }
+  if (nl) {
+    const nm = (i: number) => (i === me ? 'შენ' : v.names[i]);
+    const now = (myTurn || answering || losing || swapping) && !sent;
+    const who = ph.k === 'turn' || ph.k === 'swap' ? [v.turn] : ph.k === 'lose' || ph.k === 'proof' ? [ph.k === 'lose' ? ph.who : ph.by] : v.waiting;
+    const text = now ? 'შენი სვლაა' : ph.k === 'turn' ? `სვლაა: ${nm(v.turn)}` : who.length ? `ელოდება: ${who.map(nm).join(', ')}` : storyOf(b, me).head;
+    return (
+      <TurnFrame
+        title="მეფის კარი"
+        sub={`სვლა ${v.n}`}
+        right={<CallBtn gc={gc} />}
+        onClose={onHide}
+        seats={v.names.map((n, i) => ({ name: n, me: i === me, on: i === v.turn, out: !v.cards[i] }))}
+        turn={{ text, mine: now }}
+        footer={footer}
+      >
+        <div className="py-2 space-y-3.5">
+          {story}
+          {watch}
+          {myTurn && !sent && (
+            <>
+              <ActionPad coins={v.coins[me]} held={hand} chosen={act} onChoose={choose} />
+              {needTarget && <Targets v={v} me={me} chosen={target} onChoose={setTarget} />}
+            </>
+          )}
+          {(swapping || losing) && mineCards}
+          <Court b={b} me={me} />
+          {!(swapping || losing) && mineCards}
+          <Chronicle log={v.log} names={v.names} n={v.n} all={all} onAll={() => setAll(a => !a)} />
+          {host && (
+            <div className="flex justify-center">
+              <button type="button" onClick={host.close} className="h-11 px-4 rounded-full text-[13px] font-bold text-[#7a2028] hover:bg-[#7a2028]/[0.07] cursor-pointer">ოთახის დახურვა</button>
+            </div>
+          )}
+        </div>
+      </TurnFrame>
+    );
+  }
 
   return (
     <TableScreen title="მეფის კარი" right={<CallBtn gc={gc} />} onClose={onHide} footer={footer}>

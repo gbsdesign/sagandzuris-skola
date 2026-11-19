@@ -48,7 +48,9 @@ export const HomeV2: React.FC = () => {
   const onLabel = (id: SpotId) => {
     const state = states.find(s => s.id === id)?.state;
     const name = SPOTS[id].label;
-    if (state === 'locked') askSignIn(name);
+    // a closed part opens its own page, which says what a member gets there (board x-dakhuruli, gatsnoba/LockedV2);
+    // the habits live on the path page, so they still ask straight away
+    if (state === 'locked') { if (id === 'chvevebi') askSignIn(name); else go[id](); }
     else if (state === 'soon') setSoon(`„${name}“ ჯერ მზადდება — მალე დაემატება`);
     else go[id]();
   };

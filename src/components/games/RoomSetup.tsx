@@ -9,6 +9,8 @@ import { notifyGameInvite } from '../../utils/groupPush';
 import { ROOM_GAME_INFO } from '../../data/roomGames';
 import { Btn, Card, askConfirm } from '../ui/kit';
 import { Chip } from './Chip';
+import { useNewLook } from '../../design/newLook';
+import { RoomSetupV2 } from '../../pages/v2/tamashebi/RoomSetupV2';
 
 // The online part of a room game's page (2026-10-30 with „სამშვილდის ღამე“, every room game since 2026-10-31): my room (back
 // into it), this game's rooms open in my classes, and a new room — its opener hosts it and does not play; the class gets the
@@ -37,19 +39,37 @@ export const RoomSetup: React.FC<{
   hostLine: string;
   /** the variant without a room, named when one is not in a class */
   other: string;
-  onEnter: (classId: string, roomId: string) => void; onResume: () => void;
-}> = ({ game, Icon, user, isAdmin, classes, session, closeMine, hostLine, other, onEnter, onResume }) => {
+  /** the board games, whose opener may play too: the new look's window asks „ვთამაშობ · მხოლოდ ვუძღვები“ and says this line
+   *  (the quick games and „სამშვილდის ღამე“ leave it out — their host only leads, as `hostLine` says) */
+  playLine?: string;
+  /** `play`: the opener's choice in that window (undefined: not asked — the game's own default) */
+  onEnter: (classId: string, roomId: string, play?: boolean) => void; onResume: () => void;
+}> = ({ game, Icon, user, isAdmin, classes, session, closeMine, hostLine, other, playLine, onEnter, onResume }) => {
   const uid = user?.uid || '';
   const info = ROOM_GAME_INFO[game];
   const list = useClassRooms(classes.map(c => c.id)).filter(r => r.game === game);
   const [pick, setPick] = useState(pickedClass);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
+  const [play, setPlay] = useState(true);
   const cls = classes.find(c => c.id === pick) ?? classes[0];
   const choose = (id: string) => { setPick(id); try { localStorage.setItem(PICKED, id); } catch { /* a private window */ } };
   const nameOf = (classId: string) => classes.find(c => c.id === classId)?.name || '';
   const over = game === 'samshvilde' ? 'დასრულდა — მატიანე' : 'დასრულდა — შედეგები';
   const statusOf = (r: ClassRoom) => (r.status === 'lobby' ? 'ელოდება მოთამაშეებს' : r.status === 'live' ? `თამაში მიდის · ${r.uids.length} მოთამაშე` : over);
+  const nl = useNewLook();
+
+  // the new look: the same parts, drawn by pages/v2/tamashebi/RoomSetupV2 (the new room in its own window)
+  if (nl && (!user || !classes.length)) {
+    return (
+      <RoomSetupV2
+        Icon={Icon}
+        blocked={!user ? 'ონლაინ სათამაშოდ შედი საიტზე: ოთახს კლასის წევრი ხსნის და თავის კლასს იწვევს.'
+          : `ონლაინ თამაში კლასის წევრებისთვისაა: ${info.host} ოთახს ხსნის და კლასს იწვევს. როცა კლასში დაგამატებენ, აქ გამოჩნდება. მანამდე ითამაშე ${other}.`}
+        rooms={[]} classes={[]} onPick={() => {}} hostLine={hostLine} busy={false} err="" onCreate={async () => false} onEnter={onEnter} onResume={onResume}
+      />
+    );
+  }
 
   if (!user) {
     return <Card className="!p-4"><p className="text-[13.5px] leading-snug text-[#4a3426]">ონლაინ სათამაშოდ შედი საიტზე: ოთახს კლასის წევრი ხსნის და თავის კლასს იწვევს.</p></Card>;
@@ -66,26 +86,61 @@ export const RoomSetup: React.FC<{
   const mineHere = session?.room;
   const others = list.filter(r => r.id !== here && (r.status !== 'over' || r.host === uid || r.uids.includes(uid)));
 
-  const create = async () => {
-    if (!cls || busy) return;
+  const create = async (): Promise<boolean> => {
+    if (!cls || busy) return false;
     if (session?.room && session.room.host === uid && session.room.status !== 'over') {
-      if (!(await askConfirm({ title: 'შენი ოთახი დაიხუროს?', text: 'ერთ ჯერზე ერთ ოთახს უძღვები: ძველი დაიხურება და ახალი გაიხსნება.', ok: 'ახალი ოთახი' }))) return;
+      if (!(await askConfirm({ title: 'შენი ოთახი დაიხუროს?', text: 'ერთ ჯერზე ერთ ოთახს უძღვები: ძველი დაიხურება და ახალი გაიხსნება.', ok: 'ახალი ოთახი' }))) return false;
       await closeMine();
     }
     setBusy(true);
     setErr('');
+    let ok = false;
     try {
       const me = meOf(user, cls);
       const roomId = await createRoom(roomsBackend, cls.id, me, game);
-      onEnter(cls.id, roomId);
+      onEnter(cls.id, roomId, nl && playLine ? play : undefined);
       sendGameMessage(cls.id, { ...me, teacher: isAdmin }, roomId, game).catch(e => console.warn('game invite chat: ', e?.code || e));
       void notifyGameInvite(cls.id, roomId);
+      ok = true;
     } catch (e) {
       console.warn('game room: ', (e as { code?: string })?.code || e);
       setErr('ოთახი ვერ გაიხსნა — შეამოწმე ინტერნეტი და სცადე თავიდან.');
     }
     setBusy(false);
+    return ok;
   };
+
+  if (nl) {
+    return (
+      <RoomSetupV2
+        Icon={Icon}
+        mine={session && mineHere ? {
+          title: `${mineHere.host === uid ? 'შენი ოთახი' : 'შენ ამ ოთახში ხარ'}${nameOf(session.classId) ? ` · ${nameOf(session.classId)}` : ''}`,
+          sub: mineHere.status === 'lobby' ? 'ელოდება მოთამაშეებს' : mineHere.status === 'live' ? 'თამაში მიდის' : over,
+        } : null}
+        rooms={others.map(r => {
+          const mine = r.host === uid || r.uids.includes(uid);
+          return {
+            id: r.id, classId: r.classId,
+            title: r.host === uid ? 'შენი ოთახი' : `${info.host}: ${firstName(r.hostName) || r.hostName}`,
+            sub: `${nameOf(r.classId)} · ${statusOf(r)}`,
+            action: mine ? 'დაბრუნება' : r.status === 'lobby' ? 'შესვლა' : 'ყურება',
+            primary: r.status === 'lobby' && !mine,
+          };
+        })}
+        classes={classes.map(c => ({ id: c.id, name: c.name, count: c.members.length }))}
+        picked={cls?.id}
+        onPick={choose}
+        hostLine={hostLine}
+        play={playLine ? { value: play, set: setPlay, line: playLine } : undefined}
+        busy={busy}
+        err={err}
+        onCreate={create}
+        onEnter={onEnter}
+        onResume={onResume}
+      />
+    );
+  }
 
   return (
     <div className="space-y-4">

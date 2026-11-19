@@ -1,7 +1,7 @@
 import { getApp } from 'firebase/app';
 import { startAppCheck } from './samosiTryOn';
 import { georgiaToday } from './psalter';
-import { parseScore } from './drillScore';
+import { parseGrades, parseScore, type AiGrades } from './drillScore';
 import { aiGate, HINT_FIRST_LINE, noteAiCall, readHintsFirst } from './aiRules';
 import { aiNotesFor } from './aiTeacherNotes';
 import { parseQuestions, type PrepQuestion } from './lessonPrep';
@@ -13,7 +13,8 @@ import { parseQuestions, type PrepQuestion } from './lessonPrep';
 export const AI_TEACHER_MODEL = 'gemini-3.8-flash';
 export const AI_TEACHER_DAILY = 3;
 
-/** whose tries: the pearls and the learning mode share one count, „ოსტატობა“ has its own (the user's choice) */
+/** whose tries: the pearls and the learning mode share one count, „ოსტატობა“ had its own (the user's choice) — since stage 7
+ *  (2026-11-17, boards x-ultra-ai) „ოსტატობა“ has no daily count: the school's month budget (utils/aiRules) is its limit */
 export type AiScope = 'sing' | 'manera';
 const dayKey = (uid: string, scope: AiScope = 'sing') => `sg-ai-teacher-${scope === 'sing' ? '' : `${scope}-`}${uid}-${georgiaToday()}`;
 const usedToday = (uid: string, scope: AiScope = 'sing') => { try { return Number(localStorage.getItem(dayKey(uid, scope))) || 0; } catch { return 0; } };
@@ -115,13 +116,18 @@ const scorePrompt = (a: DrillAbout) => [
   `სავარჯიშოს ნაბიჯები: ${a.steps.map((t, i) => `${i + 1}) ${t}`).join(' ')}`,
   `სწორად შესრულების ნიშანი: ${a.check}`,
   'მოუსმინე და შეაფასე, რამდენად კარგად შეასრულა ეს კონკრეტული უნარი — 0-დან 100-მდე (80+ კარგია, 50–79 საშუალო, 50-ზე ნაკლები სუსტი).',
-  'თუ ჩანაწერში თითქმის არაფერი ისმის, ქულა იყოს 0.',
-  'უპასუხე მხოლოდ JSON-ით: {"score": რიცხვი, "text": "2–4 მოკლე წინადადება ქართულად, „შენ“-ით: რა გამოუვიდა და ერთი, რაც უნდა გამოასწოროს"}.',
+  'ცალ-ცალკე შეაფასე სამი რამ — სუნთქვა, ბგერის სიზუსტე და რიტმი — თითოეული მხოლოდ ერთი სიტყვით: „კარგია“, „თითქმის“ ან „სავარჯიშოა“.',
+  'თუ ჩანაწერში თითქმის არაფერი ისმის, ქულა იყოს 0 და სამივე „სავარჯიშოა“.',
+  'უპასუხე მხოლოდ JSON-ით: {"score": რიცხვი, "breath": "სიტყვა", "pitch": "სიტყვა", "rhythm": "სიტყვა",',
+  '"tip": "ერთი რჩევა ერთი მოკლე წინადადებით ქართულად, „შენ“-ით — ყველაზე მნიშვნელოვანი, რაც უნდა გამოასწოროს",',
+  '"text": "2–4 მოკლე წინადადება ქართულად, „შენ“-ით: რა გამოუვიდა და ერთი, რაც უნდა გამოასწოროს"}.',
 ].join(' ');
 
-/** The AI teacher's score of a tip's exercise run (MP3): 0–100 and a few words; counts the try only on an answer. */
-export const askAiScore = async (uid: string, mp3: Blob, about: DrillAbout, unlimited = false): Promise<{ score: number; text: string }> => {
-  if (aiTriesLeft(uid, unlimited, 'manera') <= 0) throw new AiTeacherError('no-tries');
+export interface AiScore { score: number; text: string; grades: AiGrades; tip: string }
+
+/** The AI teacher's score of a tip's exercise run (MP3): 0–100, three lines of one word (breath, pitch, rhythm), one tip and
+ *  a few words. No daily count any more (stage 7) — only the school's month budget and the kids' mode (aiGate). */
+export const askAiScore = async (uid: string, mp3: Blob, about: DrillAbout, _unlimited = false): Promise<AiScore> => {
   if (offline()) throw new AiTeacherError('offline');
   const stop = await aiGate(uid);
   if (stop) throw new AiTeacherError(stop);
@@ -146,8 +152,7 @@ export const askAiScore = async (uid: string, mp3: Blob, about: DrillAbout, unli
   const parsed = parseScore(raw);
   if (!parsed) throw new AiTeacherError('failed');
   noteAiCall(uid);
-  if (!unlimited) countTry(uid, 'manera');
-  return parsed;
+  return { ...parsed, ...parseGrades(raw, parsed.score, parsed.text) };
 };
 
 const wordsPrompt = (text: string, title: string) => [

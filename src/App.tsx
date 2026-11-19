@@ -42,17 +42,21 @@ import { useBirthdaySync } from './utils/birthdays';
 import { useAlbumAccessSync } from './data/albumAccess';
 import { useAiLessonOpen, useMyVoiceOpen } from './components/aiLesson/open';
 import { useExamOpen } from './pages/v2/gamocda/open';
+import { useAssistantOpen } from './pages/v2/damkhmare/open';
+import { useMkitkheOpen } from './pages/v2/mkitkhe/open';
 import { useAccess } from './hooks/useAccess';
 import { setNewLook, useNavHidden } from './design/newLook';
 import { BottomNav } from './components/shell/BottomNav';
 import { HomeBar } from './components/shell/HomeBar';
 import { ShellLinks } from './components/shell/ShellLinks';
-import { PageSkeleton } from './components/shell/PageSkeleton';
+import { Waiting } from './components/shell/PageSkeleton';
 import { NO_NAV } from './components/shell/tabs';
 // the AI teacher's day lesson loads only when opened
 const AiLesson = React.lazy(() => import('./components/aiLesson/AiLesson').then(m => ({ default: m.AiLesson })));
 const MyVoiceHost = React.lazy(() => import('./components/aiLesson/MyVoiceHost').then(m => ({ default: m.MyVoiceHost })));
 const ExamHost = React.lazy(() => import('./pages/v2/gamocda/ExamHost').then(m => ({ default: m.ExamHost })));
+const AssistantHost = React.lazy(() => import('./pages/v2/damkhmare/AssistantHost').then(m => ({ default: m.AssistantHost })));
+const MkitkheHost = React.lazy(() => import('./pages/v2/mkitkhe/MkitkheHost').then(m => ({ default: m.MkitkheHost })));
 // the parts over the page that are not needed for the first screen load a moment after it (redesign stage 3 „სიჩქარე“)
 const later = <T extends string>(load: () => Promise<Record<T, React.ComponentType<any>>>, name: T) =>
   React.lazy(() => load().then(m => ({ default: m[name] })));
@@ -242,6 +246,8 @@ function AppContent() {
   const currentLogo = dbLogo || defaultLogo;
   const aiLesson = useAiLessonOpen();
   const examOpen = useExamOpen();
+  const assistantOpen = useAssistantOpen();
+  const mkitkheOpen = useMkitkheOpen();
   const myVoice = useMyVoiceOpen();
 
   if (loading) {
@@ -276,7 +282,7 @@ function AppContent() {
           <WaitingBanner />
           <ErrorBoundary>
             <Suspense fallback={newLook
-              ? <PageSkeleton className="pt-16" />
+              ? <Waiting className="pt-16" />
               : <div className="py-24 flex justify-center"><Loader2 className="w-7 h-7 animate-spin text-[#7a2028]" /></div>}>
               <AppRouter logoUrl={currentLogo} />
             </Suspense>
@@ -305,6 +311,18 @@ function AppContent() {
           <Suspense fallback={null}><ExamHost exam={examOpen.exam} onClose={examOpen.close} /></Suspense>
         </ErrorBoundary>
       )}
+      {/* „სკოლის AI დამხმარე“ for teachers and admins (boards x-ai-damkhmare, -gegma, -klasi) */}
+      {assistantOpen.assistant && (
+        <ErrorBoundary>
+          <Suspense fallback={null}><AssistantHost req={assistantOpen.assistant} onClose={assistantOpen.close} /></Suspense>
+        </ErrorBoundary>
+      )}
+      {/* „მკითხე“ — the app's helper, for everyone (boards x-ultra-mkitkhe-1…5) */}
+      {mkitkheOpen.mkitkhe && (
+        <ErrorBoundary>
+          <Suspense fallback={null}><MkitkheHost req={mkitkheOpen.mkitkhe} onClose={mkitkheOpen.close} /></Suspense>
+        </ErrorBoundary>
+      )}
       {/* „ჩემი ხმა“ — what the AI teacher remembers (over the lesson, when opened from it) */}
       {myVoice.tab && (
         <ErrorBoundary>
@@ -326,7 +344,7 @@ function AppContent() {
       </ErrorBoundary>
 
       {/* sign-in (Google or a link by e-mail), "საჭიროა რეგისტრაცია" for guests, and the return from the e-mail link */}
-      <SignInPrompt />
+      <SignInPrompt logoUrl={currentLogo} />
       <EmailLinkFinish />
 
       {/* a new member's admission: „დამატება შეფერხებულია“ (and signing out) or the welcome */}

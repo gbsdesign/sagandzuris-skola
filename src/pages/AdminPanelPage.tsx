@@ -1,23 +1,13 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { collection, doc, onSnapshot, updateDoc } from 'firebase/firestore';
+import React, { useEffect, useState } from 'react';
 import { Users, GraduationCap, School, Activity, Hourglass, ChevronRight, CircleCheck, WifiOff, Settings, UserX, TriangleAlert } from 'lucide-react';
-import { db } from '../firebase';
-import { useAuth, useNavigation, SUPER_ADMIN_EMAIL } from '../context';
-import { useAllClasses } from '../hooks/useClasses';
-import { useAllPsalterGroups } from '../hooks/usePsalter';
+import { useAuth, useNavigation } from '../context';
 import { Flash, PageBar, useFlash } from '../components/ui/kit';
 import { AdminHero, HeroTile } from '../components/admin/AdminHero';
 import { ClassesAdmin } from '../components/admin/ClassesAdmin';
-import { useLeftMembers } from '../utils/leftMembers';
-import { UsersTab, UserRecord, StaffRecord, Filter, filterTests, toUser } from '../components/admin/UsersTab';
+import { UsersTab, Filter } from '../components/admin/UsersTab';
 import { SchoolSheet } from '../components/admin/SchoolTab';
-import { AccessRecord, DecisionRecord, toAccess } from '../components/admin/AccessRequests';
-import { useDirectory, writeDirectory } from '../utils/directory';
-import { teachersDiffer, teachersOf } from '../utils/classTeachers';
 import { useOpenRequest } from '../utils/searchOpen';
-import { activeIn7 } from '../utils/growth';
-import { recordWeek, useGrowthWeeks } from '../hooks/useGrowth';
-import { roleOf } from '../components/admin/PersonSheet';
+import { useAdminData } from '../components/admin/useAdminData';
 
 // the list the panel shows: the members or the classes (chosen by the big numbers); remembered on the device.
 // A home button made for a former tab („სკოლა“, „ჩანაწერები“, „განყოფილებები“, „წევრების მიღება“…) writes its name here
@@ -33,7 +23,7 @@ const readStored = () => {
 // role, ⚙ „სკოლა“ on the right), the school's main numbers — each opens its list — and under them the members (one list;
 // each person in one window) or the classes (each class's page; its ✎ window). The school's settings are one window (⚙).
 export const AdminPanelPage: React.FC = () => {
-  const { isAdmin, isOwner, isSuperAdmin } = useAuth();
+  const { isOwner, isSuperAdmin } = useAuth();
   const { handleGoBack } = useNavigation();
   const msg = useFlash();
   const [view, setView] = useState<View>(() => (readStored() === 'classes' ? 'classes' : 'users'));
@@ -44,117 +34,10 @@ export const AdminPanelPage: React.FC = () => {
   const [openId, setOpenId] = useState<string | null>(null);
   useOpenRequest('admin', uid => { setView('users'); setOpenId(uid); });
 
-  const [users, setUsers] = useState<UserRecord[]>([]);
-  const [staff, setStaff] = useState<StaffRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [staffLoaded, setStaffLoaded] = useState(false);
-  // which lists did not come (no internet, no right): then the panel says so instead of „all is well“
-  const [failed, setFailed] = useState({ users: false, staff: false, access: false });
-  const fail = (k: keyof typeof failed, v: boolean) => setFailed(f => (f[k] === v ? f : { ...f, [k]: v }));
-  const { classes, archived, loading: loadingClasses, failed: classesFailed, fresh: classesFresh } = useAllClasses(isAdmin);
-  const { groups } = useAllPsalterGroups(isAdmin);
-
-  useEffect(() => {
-    if (!isAdmin) return;
-    const off1 = onSnapshot(collection(db, 'students'),
-      s => { setUsers(s.docs.map(d => toUser(d.id, d.data()))); fail('users', false); setLoading(false); },
-      () => { fail('users', true); setLoading(false); });
-    const off2 = onSnapshot(collection(db, 'admins'),
-      s => {
-        setStaff(s.docs.map(d => {
-          const x = d.data();
-          const r = x.role === 'superadmin' || x.role === 'teacher' ? x.role : 'admin';
-          return { email: (x.email || d.id).toLowerCase(), role: d.id === SUPER_ADMIN_EMAIL ? 'superadmin' : r, userId: x.userId, name: x.name, addedBy: x.addedBy, addedAt: x.addedAt } as StaffRecord;
-        }));
-        fail('staff', false);
-        setStaffLoaded(true);
-      },
-      () => { fail('staff', true); setStaffLoaded(true); });
-    return () => { off1(); off2(); };
-  }, [isAdmin]);
-
-  // every member's teacherIds = the teachers of the classes they are in (only those may read the record,
-  // firestore.rules teachesMe): puts right what older versions left behind (a teacher taken off a class kept the access)
-  // and what a teacher's own page could not see. Only with the server's full class list, never a cached part of it;
-  // each fix once per visit
-  const fixed = useRef(new Set<string>());
-  useEffect(() => {
-    if (!isAdmin || loading || failed.users || !classesFresh || classesFailed) return;
-    for (const u of users) {
-      const should = teachersOf(u.userId, classes);
-      const key = `${u.userId}:${should.join(',')}`;
-      if (!teachersDiffer(u.teacherIds, should) || fixed.current.has(key)) continue;
-      fixed.current.add(key);
-      void updateDoc(doc(db, 'students', u.userId), { teacherIds: should }).catch(() => {});
-    }
-  }, [isAdmin, loading, failed.users, classesFresh, classesFailed, users, classes]);
-
-  // members who have not opened the app since the directory began are missing from it, so teachers could not
-  // add them to a class or group: write their name and photo there from their record (once per visit)
-  const directory = useDirectory(isAdmin);
-  const filled = useRef(new Set<string>());
-  useEffect(() => {
-    if (!isAdmin || loading || directory.loading) return;
-    const known = new Set(directory.people.map(p => p.uid));
-    for (const u of users) {
-      if (known.has(u.userId) || filled.current.has(u.userId)) continue;
-      filled.current.add(u.userId);
-      void writeDirectory(u.userId, {
-        name: u.displayName || u.name,
-        ...(u.firstName ? { firstName: u.firstName } : {}),
-        ...(u.lastName ? { lastName: u.lastName } : {}),
-        ...(u.photoURL ? { photoURL: u.photoURL } : {}),
-      });
-    }
-  }, [isAdmin, loading, directory.loading, directory.people, users]);
-
-  // new members' requests and who decided them: superadmins only
-  const [access, setAccess] = useState<Record<string, AccessRecord>>({});
-  const [decisions, setDecisions] = useState<Record<string, DecisionRecord>>({});
-  const [accessLoaded, setAccessLoaded] = useState(false);
-  useEffect(() => {
-    if (!isSuperAdmin) return;
-    const off1 = onSnapshot(collection(db, 'memberAccess'),
-      s => { setAccess(Object.fromEntries(s.docs.map(d => [d.id, toAccess(d.data())]))); fail('access', false); setAccessLoaded(true); },
-      () => { setAccess({}); fail('access', true); setAccessLoaded(true); });
-    const off2 = onSnapshot(collection(db, 'accessDecisions'),
-      s => setDecisions(Object.fromEntries(s.docs.map(d => [d.id, d.data() as DecisionRecord]))),
-      () => setDecisions({}));
-    return () => { off1(); off2(); };
-  }, [isSuperAdmin]);
-  const left = useLeftMembers();
-  const { test } = filterTests(staff, access, isSuperAdmin, classes, left.uids);
-  const waiting = users.filter(test.pending).length;
-
-  // people who may lead a class or group: teachers and admins
-  const leaders = useMemo(() => {
-    const byEmail = new Map(users.map(u => [u.email.toLowerCase(), u]));
-    return staff
-      .map(s => {
-        const u = byEmail.get(s.email) || users.find(x => x.userId === s.userId);
-        return u ? { userId: u.userId, name: u.name, photoURL: u.photoURL, email: u.email } : null;
-      })
-      .filter((x): x is { userId: string; name: string; photoURL: string; email: string } => !!x)
-      .sort((a, b) => a.name.localeCompare(b.name, 'ka'));
-  }, [staff, users]);
-
-  const classesWithoutTeacher = classes.filter(c => !c.teacherIds.length).length;
-  const membersWithoutClass = users.filter(test.noClass).length;
-  const teachersWithoutClass = leaders.filter(l => staff.find(s => s.userId === l.userId || s.email === l.email.toLowerCase())?.role === 'teacher' && !classes.some(c => c.teacherIds.includes(l.userId)) && !groups.some(g => g.teacherIds.includes(l.userId))).length;
-
-  // the attention lines wait for every list, so they never flash a wrong number; a list that did not come says so
-  const ready = !loading && !loadingClasses && staffLoaded && (!isSuperAdmin || accessLoaded);
-  const broken = failed.users || failed.staff || failed.access || classesFailed;
-
-  // „სკოლის ზრდა“: this week's active members are kept once per visit (the week's largest count stays; utils/growth)
-  const growth = useGrowthWeeks();
-  const counted = useRef(false);
-  useEffect(() => {
-    if (!ready || broken || !growth.loaded || !left.loaded || counted.current) return;
-    counted.current = true;
-    const n = users.filter(u => roleOf(u, staff) === 'member' && !left.uids.has(u.userId) && activeIn7(u.lastActiveAt)).length;
-    void recordWeek(growth.weeks, n).catch(() => {});
-  }, [ready, broken, growth.loaded, growth.weeks, left, users, staff]);
+  const {
+    users, staff, loading, staffLoaded, failed, classes, archived, loadingClasses, classesFailed, groups, access, decisions,
+    accessLoaded, left, test, waiting, classesWithoutTeacher, membersWithoutClass, teachersWithoutClass, ready, broken,
+  } = useAdminData();
 
   // the big numbers: three people filters (superadmins see who waits; other admins see the teachers) and the classes.
   // Each shows „—“ until its lists have come; „ელოდება“ turns amber while someone waits (and the row says it once more)

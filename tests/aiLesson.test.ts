@@ -3,7 +3,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { scoreSinging, type SungNote } from '../src/utils/pitch';
 import {
-  afterTake, closingLine, countLine, dayGap, fixLine, leftWord, liveWord, nextLine, offPitch, openingLine, ordinal, readTake,
+  afterTake, closingLine, countLine, hitsLine, dayGap, fixLine, leftWord, liveWord, nextLine, offPitch, openingLine, ordinal, readTake,
   verdictLine, warmNotes,
 } from '../src/utils/aiLesson';
 
@@ -193,4 +193,16 @@ test('the Sunday wish: its chants come first in the new phrase and in the review
   assert.deepEqual(pickReviews(learning, '2026-11-18', 1, isChant, ['b']).map(r => r.piece), ['b']);
   const c = freshCandidates({ work: [{ piece: 'w' }], learning: {}, parts: {}, program: [], starter: ['s'], isChant, focus: ['f'] });
   assert.deepEqual(c.map(x => `${x.piece}:${x.from}`), ['f:focus', 'w:work', 's:start']);
+});
+
+test('the learning mode\'s result: the verdict by eighths and the count in words', () => {
+  assert.equal(verdictLine(8, 8), 'ზუსტად!');
+  assert.equal(verdictLine(6, 8), 'თითქმის ზუსტად!');
+  assert.equal(verdictLine(4, 8), 'ნახევარი გამოვიდა.');
+  assert.equal(verdictLine(3, 8), 'ჯერ მოუსმინე და ისევ სცადე.');
+  assert.equal(hitsLine(7, 8), 'რვა ნოტიდან შვიდს მოხვდი.');
+  assert.equal(hitsLine(8, 8), 'რვა ნოტიდან ყველას მოხვდი.');
+  assert.equal(hitsLine(0, 5), 'ვერცერთ ნოტს ვერ მოხვდი.');
+  assert.equal(hitsLine(9, 12), '12 ნოტიდან ცხრას მოხვდი.');
+  assert.equal(hitsLine(11, 12), '12 ნოტიდან 11-ს მოხვდი.');
 });

@@ -1,9 +1,9 @@
 import React from 'react';
-import { CalendarDays, CircleCheck, CloudDownload, FileText, LayoutTemplate, QrCode, Radio, Users } from 'lucide-react';
-import { Dot, Row, Rows, Sheet, ToggleRow, Val } from '../../../components/ui2';
+import { CalendarDays, CircleCheck, CloudDownload, FileText, LayoutTemplate, QrCode, Users } from 'lucide-react';
+import { Dot, Row, Rows, Sheet, Val } from '../../../components/ui2';
 
 // The bar's ⋯ of the program: what the old page held that the board leaves out — the date, the class, the templates, keeping
-// the program offline, „გუნდი მომყვება“, the QR code and the PDF.
+// the program offline, the QR code and the PDF. („გუნდი მომყვება“ stands on the page itself since stage 7 — board x-ultra-gundi-1.)
 
 export interface MoreSheetProps {
   open: boolean;
@@ -22,10 +22,6 @@ export interface MoreSheetProps {
   hasItems: boolean;
   offline: { done: boolean; busy: boolean; label: string };
   onOffline: () => void;
-  /** „გუნდი მომყვება“ needs a sent program */
-  leading: boolean;
-  canLead: boolean;
-  onLead: (on: boolean) => void;
   onQr: () => void;
   onPdf: () => void;
   pdfBusy: boolean;
@@ -65,17 +61,6 @@ export const MoreSheet: React.FC<MoreSheetProps> = p => (
         disabled={!p.hasItems || p.offline.busy}
         onClick={p.onOffline}
       />
-      {p.regent && (
-        <ToggleRow
-          lead={<Dot icon={<Radio />} />}
-          title="გუნდი მომყვება"
-          sub={p.canLead ? 'ფურცლები ყველასთან გადაიშლება' : 'ჯერ გაუგზავნე კლასს'}
-          wrap
-          on={p.leading}
-          disabled={!p.canLead}
-          onChange={p.onLead}
-        />
-      )}
       <Row lead={<Dot icon={<QrCode />} />} title="QR კოდი" disabled={!p.hasItems} onClick={p.onQr} />
       <Row lead={<Dot icon={<FileText />} />} title="PDF" sub={p.pdfBusy ? 'მზადდება…' : undefined} disabled={!p.hasItems || p.pdfBusy} onClick={p.onPdf} />
     </Rows>

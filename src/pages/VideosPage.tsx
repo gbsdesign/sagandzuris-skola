@@ -10,6 +10,8 @@ import {
 import { MONASTERY_FILMS } from '../data/monasteryVideos';
 import { FilmGenre, FilmKind, GENRE_NAMES, GENRE_ORDER, KIND_NAMES, KINO, KinoItem } from '../data/georgianFilms';
 import { PAISI_PARTS } from '../data/paisiVideos';
+import { useNewLook } from '../design/newLook';
+import { FilmsBody as FilmsV2 } from './v2/khalkhuri/Films';
 
 // „ვიდეოები“ — a tab of „მთქმელი“. Since 2026-11-09 (the user: „ვიდეოები … გადაანაწილე როგორც სიმღერები კუთხეებში … მონასტრები
 // ეკლესია-მონასტრებში … სრული გადაცემები … ეთნოფორის ჩანართი“) the films with a place live elsewhere: „ეთნოფორი“'s songs in a
@@ -85,9 +87,15 @@ export default VideoList;
 
 /** one kind of Georgian films without a heading: a tab of the games page (2026-11-09, the user: „თამაშები ფილმები სპექტაკლები
  *  მულტფილმები … ზემოთ გადამრთველი ზოლით“) */
-export const KinoKind: React.FC<{ only: FilmKind; open?: string; onPlay: (id: string) => void; onMove: (id: string) => void; onClose: () => void }> = props => (
-  <div className="w-full animate-in fade-in duration-200"><Kino {...props} /></div>
-);
+export const KinoKind: React.FC<{ only: FilmKind; open?: string; onPlay: (id: string) => void; onMove: (id: string) => void; onClose: () => void }> = props => {
+  // the new look draws the films of the boards (x-pilmebi, pages/v2/khalkhuri/Films.tsx); the old look as before
+  const nl = useNewLook();
+  if (nl) {
+    const { only, ...nav } = props;
+    return <div className="flex w-full flex-col gap-3"><FilmsV2 key={only} kind={only} searchable {...nav} /></div>;
+  }
+  return <div className="w-full animate-in fade-in duration-200"><Kino {...props} /></div>;
+};
 
 /** the lists with no place: a roomy row each */
 const OTHER: { id: ListId; title: string; sub: string; Icon: React.ComponentType<{ className?: string }> }[] = [

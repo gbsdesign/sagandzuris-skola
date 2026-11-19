@@ -3,6 +3,9 @@ import { Hourglass, Lock, LogIn } from 'lucide-react';
 import { useAuth } from '../../context';
 import { Btn, Sheet } from '../ui/kit';
 import { SignInChoices, SignInStep } from './SignInChoices';
+import { useNewLook } from '../../design/newLook';
+import { SignInScreenV2, dropSignInStep } from '../../pages/v2/gatsnoba/SignInScreenV2';
+import { LockedV2 } from '../../pages/v2/gatsnoba/LockedV2';
 
 // The sign-in sheet, mounted once in App: Google or a link by e-mail (SignInChoices).
 // askSignIn('ბიბლიოთეკა') — "საჭიროა რეგისტრაცია": guests see these sections' buttons, but opening one asks them to sign in.
@@ -13,7 +16,8 @@ const EVENT = 'sg-ask-sign-in';
 export const askSignIn = (what: string) => window.dispatchEvent(new CustomEvent(EVENT, { detail: what || 'ეს განყოფილება' }));
 export const openSignIn = () => window.dispatchEvent(new CustomEvent(EVENT, { detail: '' }));
 
-export const SignInPrompt: React.FC = () => {
+/** `logoUrl`: the school's logo on the new look's sign-in screen. */
+export const SignInPrompt: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const { user } = useAuth();
   // null = closed; '' = plain sign-in; otherwise the locked section's name
   const [what, setWhat] = useState<string | null>(null);
@@ -23,7 +27,12 @@ export const SignInPrompt: React.FC = () => {
     window.addEventListener(EVENT, on);
     return () => window.removeEventListener(EVENT, on);
   }, []);
-  useEffect(() => { if (user) setWhat(null); }, [user]);
+  const nl = useNewLook();
+  useEffect(() => {
+    if (!user) return;
+    if (nl) dropSignInStep();
+    setWhat(null);
+  }, [user]); // eslint-disable-line react-hooks/exhaustive-deps
   if (what === null) return null;
   if (user) {
     return (
@@ -32,6 +41,8 @@ export const SignInPrompt: React.FC = () => {
       </Sheet>
     );
   }
+  // the new look: a calm screen of its own (board x-shesvla)
+  if (nl) return <SignInScreenV2 what={what} logoUrl={logoUrl} onClose={() => setWhat(null)} />;
   const locked = what !== '';
   return (
     <Sheet open onClose={() => setWhat(null)} title={locked ? 'საჭიროა რეგისტრაცია' : 'შესვლა'}>
@@ -63,8 +74,11 @@ export const WaitingText: React.FC = () => (
   </div>
 );
 
-/** In place of a page a guest may not open (e.g. after a reload). */
-export const LockedPage: React.FC<{ what: string }> = ({ what }) => useAuth().user ? (
+/** In place of a page a guest may not open (e.g. after a reload). The new look opens the part's own page and says what a
+ *  member gets there (board x-dakhuruli). */
+export const LockedPage: React.FC<{ what: string }> = ({ what }) => (useNewLook() ? <LockedV2 what={what} /> : <LockedPageOld what={what} />);
+
+const LockedPageOld: React.FC<{ what: string }> = ({ what }) => useAuth().user ? (
   <div className="w-full max-w-sm mx-auto py-16 px-4"><WaitingText /></div>
 ) : (
   <div className="w-full max-w-sm mx-auto py-16 px-4 text-center space-y-4">

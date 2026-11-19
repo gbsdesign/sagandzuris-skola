@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Landmark, Users, Wifi } from 'lucide-react';
 import { useAuth } from '../../context';
 import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
-import { Card, Tabs, askConfirm } from '../../components/ui/kit';
+import { Card, askConfirm } from '../../components/ui/kit';
+import { GameIntro, GameTabs } from '../../components/games/gameVariant';
 import { RoomSetup, meOf } from '../../components/games/RoomSetup';
 import { useOpenRequest } from '../../utils/searchOpen';
 import { kariRooms, useKariRoom } from '../../utils/gameRoomFirestore';
@@ -90,7 +91,8 @@ const KariGame: React.FC = () => {
   useEffect(() => () => kariRooms.setVisible(false), []);
 
   /** into a room (an invitation, a row of the list, a new room): one room at a time on this phone */
-  const enter = async (classId: string, roomId: string) => {
+  /** `play` false: a new room's opener only leads (the new look's window „ახალი ოთახი“), so they do not join it */
+  const enter = async (classId: string, roomId: string, play?: boolean) => {
     if (!user) return;
     const cur = kariRooms.get();
     if (cur && (cur.classId !== classId || cur.roomId !== roomId) && cur.room?.host === uid && cur.room.status !== 'over') {
@@ -99,6 +101,7 @@ const KariGame: React.FC = () => {
     }
     kariRooms.open(classId, roomId, meOf(user, mine.find(c => c.id === classId)));
     joinWish.current = { key: `${classId}/${roomId}`, at: Date.now() };
+    if (play === false) opened.current = roomId;
     setRoomOpen(true);
     if (tab !== 'online') setTab('online');
   };
@@ -139,15 +142,17 @@ const KariGame: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl space-y-4">
-      <Card tone="wine" className="!p-4 sm:!p-5">
-        <p className="font-serif-ge text-[17px] font-bold leading-snug">მეფის კარი</p>
-        <p className="mt-1.5 text-[12.5px] leading-snug text-[#fbf6ec]/85">
-          თამარ მეფის კარი: ხაზინადარი, მანდატური, სპასალარი, მსახურთუხუცესი და რუსუდან დედოფალი. ორი ფარული ბარათი გაქვს —
-          მათ ძალას იყენებ ან იტყუები, სხვები კი ან გენდობიან, ან იტყვიან: „არ მჯერა!“ ბოლო, ვინც კარზე დარჩება, იმარჯვებს.
-        </p>
-      </Card>
+      <GameIntro text={'თამარ მეფის კარი: ხაზინადარი, მანდატური, სპასალარი, მსახურთუხუცესი და რუსუდან დედოფალი. ორი ფარული ბარათი გაქვს — მათ ძალას იყენებ ან იტყუები, სხვები კი ან გენდობიან, ან იტყვიან: „არ მჯერა!“ ბოლო, ვინც კარზე დარჩება, იმარჯვებს.'}>
+        <Card tone="wine" className="!p-4 sm:!p-5">
+          <p className="font-serif-ge text-[17px] font-bold leading-snug">მეფის კარი</p>
+          <p className="mt-1.5 text-[12.5px] leading-snug text-[#fbf6ec]/85">
+            თამარ მეფის კარი: ხაზინადარი, მანდატური, სპასალარი, მსახურთუხუცესი და რუსუდან დედოფალი. ორი ფარული ბარათი გაქვს —
+            მათ ძალას იყენებ ან იტყუები, სხვები კი ან გენდობიან, ან იტყვიან: „არ მჯერა!“ ბოლო, ვინც კარზე დარჩება, იმარჯვებს.
+          </p>
+        </Card>
+      </GameIntro>
 
-      <Tabs cols={2} value={tab} onChange={setTab} items={[{ id: 'online', label: 'ონლაინ', Icon: Wifi }, { id: 'table', label: 'ჰიბრიდული', Icon: Users }]} />
+      <GameTabs cols={2} value={tab} onChange={setTab} items={[{ id: 'online', label: 'ონლაინ', Icon: Wifi }, { id: 'table', label: 'ჰიბრიდული', Icon: Users }]} />
       <HowTo key={tab} id={`kari-${tab}`} steps={HOW[tab]} />
 
       {tab === 'online' ? (
@@ -161,7 +166,8 @@ const KariGame: React.FC = () => {
           closeMine={kariRooms.host.close}
           hostLine="ოთახს შენ ხსნი და შენც თამაშობ (ან მხოლოდ უძღვები). კლასის წევრებს მოწვევა მიუვათ ჩატში და ტელეფონზე; თამაშობს 2–8."
           other="ჰიბრიდული — დაბეჭდილი ბარათებით და ერთი ტელეფონით"
-          onEnter={(c, r) => { void enter(c, r); }}
+          playLine="კლასის წევრებს მოწვევა მიუვათ ჩატში და ტელეფონზე; თამაშობს 2–8. მოსაცდელ ოთახშიც შეცვლი."
+          onEnter={(c, r, play) => { void enter(c, r, play); }}
           onResume={() => setRoomOpen(true)}
         />
       ) : <KariTable />}

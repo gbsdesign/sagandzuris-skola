@@ -1,0 +1,47 @@
+import { getApp } from 'firebase/app';
+import { startAppCheck } from '../../../utils/samosiTryOn';
+import { aiGate, noteAiCall } from '../../../utils/aiRules';
+import { AI_TEACHER_MODEL, AiTeacherError, type AiTeacherProblem } from '../../../utils/aiTeacher';
+import { assistantPrompt, parseAnswer, type Answer, type AssistantScope, type Turn } from '../../../utils/aiAssistant';
+
+// The assistant's one call to Gemini (Firebase AI Logic, the same App Check pass as the AI teacher), JSON out. The school's
+// rules hold here too: the kids' mode and the month's budget (aiGate) stop it; every answer is counted in aiUsage.
+
+export const ASSISTANT_PROBLEM_TEXT: Record<AiTeacherProblem, string> = {
+  setup: 'AI დამხმარე ჯერ არ არის ჩართული — მალე ჩაირთვება.',
+  'no-credits': 'AI დამხმარე ახლა დაიღალა — ცოტა ხანში სცადე.',
+  offline: 'ინტერნეტი არ არის — AI დამხმარეს ინტერნეტი სჭირდება.',
+  failed: 'პასუხი ვერ მოვიდა — ცოტა ხანში კიდევ სცადე.',
+  'no-tries': 'დღეს მეტი კითხვა აღარ შეიძლება — ხვალ ისევ შეგეძლება.',
+  kids: 'საბავშვო რეჟიმში AI არ ერთვება.',
+  budget: 'ამ თვის AI-ს ლიმიტი ამოიწურა — დამხმარე მომავალ თვემდე ჩუმადაა.',
+};
+
+const offline = () => navigator.onLine === false;
+
+export const askAssistant = async (uid: string, scope: AssistantScope, history: Turn[], ask: string): Promise<Answer> => {
+  if (offline()) throw new AiTeacherError('offline');
+  const stop = await aiGate(uid);
+  if (stop) throw new AiTeacherError(stop);
+  let raw = '';
+  try {
+    await startAppCheck();
+    const { getAI, getGenerativeModel, GoogleAIBackend } = await import('firebase/ai');
+    const model = getGenerativeModel(getAI(getApp(), { backend: new GoogleAIBackend() }), {
+      model: AI_TEACHER_MODEL,
+      generationConfig: { responseMimeType: 'application/json' },
+    });
+    const res = await model.generateContent([{ text: assistantPrompt(scope, history, ask) }]);
+    raw = res.response.text().trim();
+  } catch (err) {
+    console.warn('AI assistant:', err);
+    const msg = String((err as Error)?.message || err);
+    if (/prepay|credits|depleted|quota|resource.?exhausted|429/i.test(msg)) throw new AiTeacherError('no-credits');
+    if (/api.?key|not.?enabled|permission|403|billing|ai.?logic|app.?check|not found|404|recaptcha/i.test(msg)) throw new AiTeacherError('setup');
+    throw new AiTeacherError(offline() ? 'offline' : 'failed');
+  }
+  const answer = parseAnswer(raw);
+  if (!answer) throw new AiTeacherError('failed');
+  noteAiCall(uid);
+  return answer;
+};

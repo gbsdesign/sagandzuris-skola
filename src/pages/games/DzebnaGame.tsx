@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Users, Wifi } from 'lucide-react';
 import { useOpenRequest } from '../../utils/searchOpen';
 import { parseStationRequest } from '../../utils/dzebna';
-import { Tabs } from '../../components/ui/kit';
+import { GameTabs } from '../../components/games/gameVariant';
 import { DzebnaSolo } from './dzebna/Solo';
 import { DzebnaTable } from './dzebna/Table';
 import { HuntStation } from './dzebna/Station';
@@ -31,7 +31,7 @@ const DzebnaGame: React.FC = () => {
         <HuntStation key={`${station.code}-${station.s}`} code={station.code} s={station.s} next={station.next} onClose={() => setStation(null)} />
       ) : (
         <>
-          <Tabs cols={2} value={tab} onChange={setTab} items={[{ id: 'online', label: 'ონლაინ', Icon: Wifi }, { id: 'table', label: 'ჰიბრიდული', Icon: Users }]} />
+          <GameTabs cols={2} value={tab} onChange={setTab} items={[{ id: 'online', label: 'ონლაინ', Icon: Wifi }, { id: 'table', label: 'ჰიბრიდული', Icon: Users }]} />
           {tab === 'online' ? <DzebnaSolo /> : <DzebnaTable onStation={(code, s) => { setStation({ code, s, next: '' }); window.scrollTo({ top: 0 }); }} />}
         </>
       )}

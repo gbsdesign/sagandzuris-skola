@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Sparkles, Users } from 'lucide-react';
-import { Card, Tabs } from '../../components/ui/kit';
+import { Card } from '../../components/ui/kit';
+import { GameIntro, GameTabs } from '../../components/games/gameVariant';
 import { useOpenRequest } from '../../utils/searchOpen';
 import { GundiStudio } from './gundi/Studio';
 import { GundiClass } from './gundi/ClassStage';
@@ -19,14 +20,16 @@ const GundiGame: React.FC = () => {
   useOpenRequest('gundi', id => setTab(id === 'table' ? 'class' : 'stage'));
   return (
     <div className="w-full max-w-2xl space-y-4">
-      <Card tone="wine" className="!p-4 sm:!p-5">
-        <p className="font-serif-ge text-[17px] font-bold leading-snug">ჩემი გუნდი</p>
-        <p className="mt-1.5 text-[12.5px] leading-snug text-[#fbf6ec]/85">
-          შენი ანსამბლი სცენაზე: მთქმელი, მოძახილი და ბანი მღერიან, ტაში, დოლი და ფანდური აჰყვებიან. ხალხური სიმღერის ფრაზა წრეზე
-          ბრუნავს — ჩართე, გამორთე, შეცვალე რიტმი და მოისმინე, როგორ შენდება ქართული მრავალხმიანობა.
-        </p>
-      </Card>
-      <Tabs cols={2} value={tab} onChange={setTab} items={[{ id: 'stage', label: 'სცენა', Icon: Sparkles }, { id: 'class', label: 'ჰიბრიდული', Icon: Users }]} />
+      <GameIntro text={'შენი ანსამბლი სცენაზე: მთქმელი, მოძახილი და ბანი მღერიან, ტაში, დოლი და ფანდური აჰყვებიან. ხალხური სიმღერის ფრაზა წრეზე ბრუნავს — ჩართე, გამორთე, შეცვალე რიტმი და მოისმინე, როგორ შენდება ქართული მრავალხმიანობა.'}>
+        <Card tone="wine" className="!p-4 sm:!p-5">
+          <p className="font-serif-ge text-[17px] font-bold leading-snug">ჩემი გუნდი</p>
+          <p className="mt-1.5 text-[12.5px] leading-snug text-[#fbf6ec]/85">
+            შენი ანსამბლი სცენაზე: მთქმელი, მოძახილი და ბანი მღერიან, ტაში, დოლი და ფანდური აჰყვებიან. ხალხური სიმღერის ფრაზა წრეზე
+            ბრუნავს — ჩართე, გამორთე, შეცვალე რიტმი და მოისმინე, როგორ შენდება ქართული მრავალხმიანობა.
+          </p>
+        </Card>
+      </GameIntro>
+      <GameTabs cols={2} value={tab} onChange={setTab} items={[{ id: 'stage', label: 'სცენა', Icon: Sparkles }, { id: 'class', label: 'ჰიბრიდული', Icon: Users }]} />
       {tab === 'stage' ? <GundiStudio /> : <GundiClass />}
     </div>
   );

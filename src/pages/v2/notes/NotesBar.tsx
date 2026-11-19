@@ -1,8 +1,9 @@
 // The notes page's top bar in the new look (board x-notebi): round ←, the chant's name (two lines at most) with its
-// service and book under it, and the place in the service as a pill that goes to the next chant.
+// service and book under it, the place in the service as a pill that goes to the next chant, and the page's „?“.
 import React from 'react';
 import { ArrowLeft, ChevronRight } from 'lucide-react';
 import { cx, FOCUS, Press } from '../../../components/ui2';
+import { HelpButton } from '../mkitkhe/HelpButton';
 
 /** night paper: the bar's pills turn dark so nothing glares */
 const pill = (dark: boolean) => (dark ? 'bg-night-surf text-night-ink' : 'bg-surf text-ink');
@@ -50,6 +51,8 @@ export const NotesBar: React.FC<{
         {pos}
         <ChevronRight aria-hidden="true" strokeWidth={2} />
       </Press>
+      {/* „?“ — three ready answers about this page (x-idea-adgilze), always last at the right */}
+      <HelpButton page="notes" />
     </header>
     {status && (
       <p role="status" className={cx('mx-auto mb-2 rounded-full px-3 py-1 text-meta font-semibold', pill(dark))}>{status}</p>

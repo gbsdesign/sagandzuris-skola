@@ -134,9 +134,24 @@ const DARK_PAGES = new Set([
   'home', 'notices', 'settings', 'search', 'calendar', 'gz', 'class', 'psalter', 'messages', 'dm', 'student', 'birthdays', 'galoba',
   // stage 6 (pages/v2/lotsva, pages/v2/library)
   'prayer', 'commemoration', 'biblioteka', 'tsinaprebi',
+  // stage 7: the admin panel (pages/v2/admini)
+  'admin',
+  // stage 7 (pages/v2/propili)
+  'profile',
+  // stage 7: the churches and the films' old page (pages/v2/tadzrebi, pages/v2/khalkhuri/Films); „ხალხური“ stays light — its
+  // song page still holds the old player and words
+  'churches', 'videos',
+  // stage 7: the reader's side and the admission pages (pages/v2/medavitne, pages/v2/abituri)
+  'medavitneoba', 'abituri',
 ]);
+// stage 7: the games' hub and a kind's list are rebuilt (pages/v2/tamashebi); an open game (its mapItem) still draws its own,
+// and so does the films' tab (`sg-games-tab`, the hub's own choice — it tells setDarkPage when it changes)
+const onGamesTab = () => { try { const t = sessionStorage.getItem('sg-games-tab'); return !t || t === 'games'; } catch { return true; } };
+const gamesHub = (page: string, mapItem: string | null) => page === 'games' && (!mapItem || mapItem.startsWith('g:')) && onGamesTab();
+// the admission's theory lesson, trainer, mock test and the I exam's practice still draw the old parts (pages/abituri)
+const oldAbituri = (page: string, mapItem: string | null) => page === 'abituri' && /^(theory\/.|program\/practice)/.test(mapItem ?? '');
 export const darkReadyPage = (page: string, mapItem: string | null) =>
-  DARK_PAGES.has(page) && !(page === 'gz' && mapItem === 'ostatoba');
+  (DARK_PAGES.has(page) && !(page === 'gz' && mapItem === 'ostatoba') && !oldAbituri(page, mapItem)) || gamesHub(page, mapItem);
 
 /** the router's one line: the page on screen may (or may not) wear the dark look */
 export const useDarkPage = (ok: boolean) => useLayoutEffect(() => setDarkPage(ok), [ok]);

@@ -1,6 +1,6 @@
 import React from 'react';
-import { Check, ChevronLeft, ChevronRight, Clock, MoreHorizontal, RefreshCw, Sparkles } from 'lucide-react';
-import { Bar, Card, RoundButton, Seg, TopBar } from '../../../components/ui2';
+import { Check, ChevronLeft, ChevronRight, Clock, Mic, MicOff, MoreHorizontal, RefreshCw, Sparkles } from 'lucide-react';
+import { Bar, Button, Card, RoundButton, Seg, TopBar } from '../../../components/ui2';
 import { TeacherSays } from '../../../components/aiLesson/parts';
 import { VOICE_NAMES } from '../../../utils/pearls';
 import type { Voice } from '../../../utils/pathItems';
@@ -51,9 +51,47 @@ export interface LearnViewProps {
   warnings: React.ReactNode[];
   onMore: () => void;
   more: LearnMoreProps;
+  /** after singing (board x-ultra-khmis-shepaseba): „7 / 8“, the verdict, and one sentence — the count and the one note to fix */
+  result?: { hits: number; n: number; verdict: string; line: string; done?: string } | null;
+  /** a screen of its own in place of the phrase (board x-ultra-khma-4): nothing was heard, or the microphone is off */
+  stop?: { off: boolean; title: string; text: string; main: LearnAction; second?: LearnAction } | null;
 }
 
-export const LearnView: React.FC<LearnViewProps> = p => (
+/** „7 / 8“ big, the verdict beside it and the one sentence under it; a miss is never red. */
+const ResultCard: React.FC<{ r: NonNullable<LearnViewProps['result']> }> = ({ r }) => (
+  <Card role="status" aria-live="polite" className="flex items-center gap-4 px-5">
+    <span className="shrink-0 text-hero font-bold whitespace-nowrap text-wine tabular-nums">{r.hits} / {r.n}</span>
+    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+      <span className="text-head font-bold wrap-break-word">{r.verdict}</span>
+      {r.line && <span className="text-meta leading-snug text-mut wrap-break-word">{r.line}</span>}
+      {r.done && <span className="text-meta leading-snug font-bold text-leaf-ink wrap-break-word">{r.done}</span>}
+    </span>
+  </Card>
+);
+
+/** Nothing heard, or the microphone off: the bar, then one calm screen with its button(s) at the bottom. */
+const StopScreen: React.FC<{ stop: NonNullable<LearnViewProps['stop']> }> = ({ stop }) => (
+  <div className="flex min-h-[70dvh] flex-1 flex-col">
+    <div role="alert" className="flex flex-1 flex-col items-center justify-center gap-2.5 px-6 py-10 text-center">
+      <span aria-hidden="true" className="mb-1.5 flex size-[84px] items-center justify-center rounded-full bg-tint text-wine [&_svg]:size-9">
+        {stop.off ? <MicOff strokeWidth={1.75} /> : <Mic strokeWidth={1.75} />}
+      </span>
+      <h2 className="text-title font-bold">{stop.title}</h2>
+      <p className="max-w-[300px] text-body leading-normal text-mut">{stop.text}</p>
+    </div>
+    <div className="flex flex-col gap-2 pb-2">
+      <Button full icon={stop.main.icon} onClick={stop.main.run} disabled={stop.main.disabled}>{stop.main.label}</Button>
+      {stop.second && <Button full kind="ghost" icon={stop.second.icon} onClick={stop.second.run}>{stop.second.label}</Button>}
+    </div>
+  </div>
+);
+
+export const LearnView: React.FC<LearnViewProps> = p => (p.stop ? (
+  <>
+    <TopBar title="სწავლა" sub={p.title} onBack={p.onBack} />
+    <StopScreen stop={p.stop} />
+  </>
+) : (
   <>
     <TopBar title="სწავლა" sub={p.title} onBack={p.onBack}
       right={<RoundButton label="მეტი" onClick={p.onMore}><MoreHorizontal strokeWidth={1.75} /></RoundButton>} />
@@ -62,6 +100,8 @@ export const LearnView: React.FC<LearnViewProps> = p => (
       <Seg<Voice> label="ჩემი ხმა" value={p.voices.value} onChange={p.voices.onChange}
         items={(['1', '2', '3'] as Voice[]).slice(0, p.voices.count).map(v => ({ id: v, label: VOICE_NAMES[v] }))} />
     )}
+
+    {p.result && <ResultCard r={p.result} />}
 
     <Card>
       <div className="flex items-baseline justify-between gap-3">
@@ -76,13 +116,13 @@ export const LearnView: React.FC<LearnViewProps> = p => (
       <div className="mt-3">{p.picture}</div>
       {p.dots && (
         <div className="mt-2.5 flex flex-wrap gap-1" aria-hidden="true">
-          {p.dots.map((h, i) => <span key={i} className={h ? 'size-3.5 rounded-full bg-gold' : 'size-3.5 rounded-full bg-soft'} />)}
+          {p.dots.map((h, i) => <span key={i} className={h ? 'size-3.5 rounded-full bg-leaf' : 'size-3.5 rounded-full bg-gold-tint ring-[1.5px] ring-gold'} />)}
         </div>
       )}
-      {p.marked && (
+      {(p.marked || p.dots) && (
         <p className="mt-2.5 flex flex-wrap gap-x-4 gap-y-1 text-meta font-semibold text-mut" aria-hidden="true">
-          <span className="inline-flex items-center gap-1.5"><span className="size-3 rounded-full bg-leaf/25 ring-[1.5px] ring-leaf/70" />გამოგივიდა</span>
-          <span className="inline-flex items-center gap-1.5"><span className="size-3 rounded-full bg-danger/20 ring-[1.5px] ring-danger/70" />ჯერ არა</span>
+          <span className="inline-flex items-center gap-1.5"><span className="size-3 rounded-full bg-leaf/25 ring-[1.5px] ring-leaf/70" />მოხვდი</span>
+          <span className="inline-flex items-center gap-1.5"><span className="size-3 rounded-full bg-gold/30 ring-[1.5px] ring-gold" />აცდი</span>
         </p>
       )}
       {p.approved && (
@@ -90,7 +130,7 @@ export const LearnView: React.FC<LearnViewProps> = p => (
       )}
     </Card>
 
-    <TeacherSays text={p.sayText} sub={p.saySub}>{p.say}</TeacherSays>
+    {!p.result && <TeacherSays text={p.sayText} sub={p.saySub}>{p.say}</TeacherSays>}
 
     <MainButton action={p.main} pulse={p.pulse} />
 
@@ -120,4 +160,4 @@ export const LearnView: React.FC<LearnViewProps> = p => (
 
     <LearnMore {...p.more} />
   </>
-);
+));

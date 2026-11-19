@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Map as MapIcon, Users, Wifi } from 'lucide-react';
 import { useAuth } from '../../context';
 import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
-import { Card, Tabs, askConfirm } from '../../components/ui/kit';
+import { Card, askConfirm } from '../../components/ui/kit';
+import { GameIntro, GameTabs } from '../../components/games/gameVariant';
 import { RoomSetup, meOf } from '../../components/games/RoomSetup';
 import { useOpenRequest } from '../../utils/searchOpen';
 import { okrosRooms, useOkrosRoom } from '../../utils/gameRoomFirestore';
@@ -103,7 +104,8 @@ const OkrosGame: React.FC = () => {
   useEffect(() => () => okrosRooms.setVisible(false), []);
 
   /** into a room (an invitation, a row of the list, a new room): one room at a time on this phone */
-  const enter = async (classId: string, roomId: string) => {
+  /** `play` false: a new room's opener only leads (the new look's window „ახალი ოთახი“), so they do not join it */
+  const enter = async (classId: string, roomId: string, play?: boolean) => {
     if (!user) return;
     const cur = okrosRooms.get();
     if (cur && (cur.classId !== classId || cur.roomId !== roomId) && cur.room?.host === uid && cur.room.status !== 'over') {
@@ -112,6 +114,7 @@ const OkrosGame: React.FC = () => {
     }
     okrosRooms.open(classId, roomId, meOf(user, mine.find(c => c.id === classId)));
     joinWish.current = { key: `${classId}/${roomId}`, at: Date.now() };
+    if (play === false) opened.current = roomId;
     setRoomOpen(true);
     if (tab !== 'online') setTab('online');
   };
@@ -152,17 +155,19 @@ const OkrosGame: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl space-y-4">
-      <section className="rounded-3xl p-4 sm:p-5 bg-gradient-to-br from-[#3b2a1c] to-[#2b1e14] text-[#fbf6ec] shadow-[0_8px_24px_-12px_rgba(43,30,20,0.6)]">
-        <p className="font-serif-ge text-[17px] font-bold leading-snug">ოქროს ხანა</p>
-        <p className="mt-1.5 text-[12.5px] leading-snug text-[#fbf6ec]/85">
-          XII საუკუნეა, საქართველოს ოქროს ხანა. შენი დიდებული სახლის მხედარი კუთხიდან კუთხეში დადის: აგროვებს ხეს, ქვას, პურს,
-          ღვინოს და ოქროს, აშენებს მამულებს, შლის სუფრებს და მეფის დიდ საქმეებს ეხმარება — ციხეებს, ხიდს, სასახლეს, აკადემიას. მეფე
-          ყოველ წელს სხვა კუთხეშია და იქ ყველაფერი მეტს იძლევა.
-        </p>
-        <p className="mt-2 text-[12px] leading-snug text-[#fbf6ec]/70">საქმეების ისტორიული ცნობები Claude-მა დაწერა — მასწავლებელს ჯერ არ შეუმოწმებია.</p>
-      </section>
+      <GameIntro text={'XII საუკუნეა, საქართველოს ოქროს ხანა. შენი დიდებული სახლის მხედარი კუთხიდან კუთხეში დადის: აგროვებს ხეს, ქვას, პურს, ღვინოს და ოქროს, აშენებს მამულებს, შლის სუფრებს და მეფის დიდ საქმეებს ეხმარება — ციხეებს, ხიდს, სასახლეს, აკადემიას. მეფე ყოველ წელს სხვა კუთხეშია და იქ ყველაფერი მეტს იძლევა. საქმეების ისტორიული ცნობები Claude-მა დაწერა — მასწავლებელს ჯერ არ შეუმოწმებია.'}>
+        <section className="rounded-3xl p-4 sm:p-5 bg-gradient-to-br from-[#3b2a1c] to-[#2b1e14] text-[#fbf6ec] shadow-[0_8px_24px_-12px_rgba(43,30,20,0.6)]">
+          <p className="font-serif-ge text-[17px] font-bold leading-snug">ოქროს ხანა</p>
+          <p className="mt-1.5 text-[12.5px] leading-snug text-[#fbf6ec]/85">
+            XII საუკუნეა, საქართველოს ოქროს ხანა. შენი დიდებული სახლის მხედარი კუთხიდან კუთხეში დადის: აგროვებს ხეს, ქვას, პურს,
+            ღვინოს და ოქროს, აშენებს მამულებს, შლის სუფრებს და მეფის დიდ საქმეებს ეხმარება — ციხეებს, ხიდს, სასახლეს, აკადემიას. მეფე
+            ყოველ წელს სხვა კუთხეშია და იქ ყველაფერი მეტს იძლევა.
+          </p>
+          <p className="mt-2 text-[12px] leading-snug text-[#fbf6ec]/70">საქმეების ისტორიული ცნობები Claude-მა დაწერა — მასწავლებელს ჯერ არ შეუმოწმებია.</p>
+        </section>
+      </GameIntro>
 
-      <Tabs cols={2} value={tab} onChange={setTab} items={[{ id: 'online', label: 'ონლაინ', Icon: Wifi }, { id: 'table', label: 'ჰიბრიდული', Icon: Users }]} />
+      <GameTabs cols={2} value={tab} onChange={setTab} items={[{ id: 'online', label: 'ონლაინ', Icon: Wifi }, { id: 'table', label: 'ჰიბრიდული', Icon: Users }]} />
       <HowTo key={tab} id={`okros-${tab}`} steps={HOW[tab]} />
 
       {tab === 'online' ? (
@@ -176,7 +181,8 @@ const OkrosGame: React.FC = () => {
           closeMine={okrosRooms.host.close}
           hostLine="ოთახს შენ ხსნი და შენც თამაშობ (ან მხოლოდ უძღვები). კლასის წევრებს მოწვევა მიუვათ ჩატში და ტელეფონზე; თამაშობს 2–4, დანარჩენები უყურებენ."
           other="ჰიბრიდული — ერთი ტელეფონით, მაგიდის შუაში"
-          onEnter={(c, r) => { void enter(c, r); }}
+          playLine="კლასის წევრებს მოწვევა მიუვათ ჩატში და ტელეფონზე; თამაშობს 2–4, დანარჩენები უყურებენ. მოსაცდელ ოთახშიც შეცვლი."
+          onEnter={(c, r, play) => { void enter(c, r, play); }}
           onResume={() => setRoomOpen(true)}
         />
       ) : <OkrosTable />}

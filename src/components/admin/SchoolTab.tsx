@@ -44,6 +44,43 @@ const readAll = async (path: string[]) => {
   return snap.docs.map(d => ({ id: d.id, ...(plain(d.data()) as object) }));
 };
 
+/** „სარეზერვო ასლი“: every record in one JSON file, downloaded; `step` names the part being read. Returns its size. */
+export const exportBackup = async (isSuperAdmin: boolean, step: (name: string) => void) => {
+  const out: Record<string, unknown> = { exportedAt: new Date().toISOString(), project: 'sagandzuris-skola' };
+  // who was let in and who decided: superadmins only (others may not read them)
+  const top = ['students', 'directory', 'admins', 'confirmations', 'settings', 'songTexts', 'birthdays', 'birthYears', 'nameDays', 'adminNotes',
+    ...(isSuperAdmin ? ['memberAccess', 'accessDecisions', 'adminLog'] : [])];
+  for (const name of top) {
+    step(name);
+    out[name] = await readAll([name]);
+  }
+  step('classes');
+  const classes = await readAll(['classes']);
+  for (const c of classes as { id: string }[]) {
+    Object.assign(c, {
+      assignments: await readAll(['classes', c.id, 'assignments']),
+      attendance: await readAll(['classes', c.id, 'attendance']),
+      messages: await readAll(['classes', c.id, 'messages']),
+      lessons: await readAll(['classes', c.id, 'lessons']),
+      lessonProgress: await readAll(['classes', c.id, 'lessonProgress']),
+      marks: await readAll(['classes', c.id, 'marks']),
+    });
+  }
+  out.classes = classes;
+  step('psalterGroups');
+  const groups = await readAll(['psalterGroups']);
+  for (const g of groups as { id: string }[]) Object.assign(g, { cycles: await readAll(['psalterGroups', g.id, 'cycles']) });
+  out.psalterGroups = groups;
+
+  const blob = new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `sagandzuri-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+  return blob.size;
+};
+
 // ⚙ „სკოლა“ (2026-10-28: a window from the panel's bar instead of a third tab — the panel's numbers already switch
 // between the members and the classes): the whole school's settings, one folding card under another — sections, the most
 // listened chants, the school's growth, the extra rights, the admin's own phone notices, who may do what, the change log
@@ -60,39 +97,8 @@ export const SchoolSheet: React.FC<{ users: UserRecord[]; classes: SchoolClass[]
   const exportAll = async () => {
     setExporting('იწყება…');
     try {
-      const out: Record<string, unknown> = { exportedAt: new Date().toISOString(), project: 'sagandzuris-skola' };
-      // who was let in and who decided: superadmins only (others may not read them)
-      const top = ['students', 'directory', 'admins', 'confirmations', 'settings', 'songTexts', 'birthdays', 'birthYears', 'nameDays', 'adminNotes',
-        ...(isSuperAdmin ? ['memberAccess', 'accessDecisions', 'adminLog'] : [])];
-      for (const name of top) {
-        setExporting(name);
-        out[name] = await readAll([name]);
-      }
-      setExporting('classes');
-      const classes = await readAll(['classes']);
-      for (const c of classes as { id: string }[]) {
-        Object.assign(c, {
-          assignments: await readAll(['classes', c.id, 'assignments']),
-          attendance: await readAll(['classes', c.id, 'attendance']),
-          messages: await readAll(['classes', c.id, 'messages']),
-          lessons: await readAll(['classes', c.id, 'lessons']),
-          lessonProgress: await readAll(['classes', c.id, 'lessonProgress']),
-          marks: await readAll(['classes', c.id, 'marks']),
-        });
-      }
-      out.classes = classes;
-      setExporting('psalterGroups');
-      const groups = await readAll(['psalterGroups']);
-      for (const g of groups as { id: string }[]) Object.assign(g, { cycles: await readAll(['psalterGroups', g.id, 'cycles']) });
-      out.psalterGroups = groups;
-
-      const blob = new Blob([JSON.stringify(out, null, 1)], { type: 'application/json' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `sagandzuri-backup-${new Date().toISOString().slice(0, 10)}.json`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 4000);
-      onMessage(`ასლი ჩამოიტვირთა (${Math.round(blob.size / 1024)} კბ). შეინახე უსაფრთხო ადგილას — მაგ. Google Drive-ში.`, 'success');
+      const size = await exportBackup(isSuperAdmin, setExporting);
+      onMessage(`ასლი ჩამოიტვირთა (${Math.round(size / 1024)} კბ). შეინახე უსაფრთხო ადგილას — მაგ. Google Drive-ში.`, 'success');
     } catch (e) {
       onMessage('ასლი ვერ მომზადდა: ' + errorText(e), 'error');
     } finally {

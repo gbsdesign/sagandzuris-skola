@@ -3,6 +3,8 @@ import { BookOpen, Music2 } from 'lucide-react';
 import { useNavigation } from '../../context';
 import { useAccess } from '../../hooks/useAccess';
 import { Tabs } from '../../components/ui/kit';
+import { Seg } from '../../components/ui2';
+import { useNewLook } from '../../design/newLook';
 
 // „ღვთისმსახურება“ (2026-11-09, the user: „გალობას დააწერე ღვთისმსახურება და შიგნით მოათავსე მედავითნეობის ღილაკი … გადამრთველი
 // დაუყენე გალობა მედავითნე და მედავითნეზე დაჭერისას პირდაპირ წიგნები იხსნებოდეს, ხოლო თავში მედავითნეთათვის სასწავლო ბარათი“):
@@ -18,12 +20,15 @@ export const useReaderOpen = () => useAccess().section('medavitneobaTopic') === 
 
 export const WorshipSwitch: React.FC<{ value: Side }> = ({ value }) => {
   const { navigateTo, openMapItem } = useNavigation();
+  const nl = useNewLook();
   if (!useReaderOpen()) return null;
   const go = (id: Side) => {
     if (id === value) return;
     navigateTo(id === 'galoba' ? 'galoba' : 'medavitneoba');
     openMapItem('', true);
   };
+  // the new look: the kit v2 switch on its grey track (boards x-medavitne, x-msakhurebebi)
+  if (nl) return <Seg label="ღვთისმსახურება" items={SIDES.map(s => ({ id: s.id, label: s.label }))} value={value} onChange={go} />;
   return (
     <div className="w-full max-w-2xl mx-auto px-1">
       <Tabs cols={2} items={SIDES} value={value} onChange={go} />

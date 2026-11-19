@@ -25,8 +25,18 @@ let pending: { target: OpenTarget; id: string } | null = null;
 
 export const requestOpen = (target: OpenTarget, id: string) => {
   pending = { target, id };
+  last = { target, id };
   window.dispatchEvent(new Event(REQUEST_EVENT));
 };
+
+// the new look's game frame (pages/v2/tamashebi/GameFrame) looks at a request without taking it: a room or a station shows
+// the game at once, a variant only picks its tab
+let last: { target: OpenTarget; id: string } | null = null;
+/** the request waiting for `target` (not taken) */
+export const peekOpen = (target: OpenTarget): string | null => (pending?.target === target ? pending.id : null);
+/** the newest request, also once taken (read inside REQUEST_EVENT's turn) */
+export const lastOpenRequest = () => last;
+export const OPEN_REQUEST_EVENT = REQUEST_EVENT;
 
 const take = (target: OpenTarget): string | null => {
   if (pending?.target !== target) return null;

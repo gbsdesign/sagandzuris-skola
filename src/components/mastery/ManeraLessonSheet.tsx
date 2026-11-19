@@ -13,7 +13,10 @@ import { MAX_TAKE_SECONDS, saveDrillTake } from '../../utils/drillTakes';
 import { singingSupported, startSinging, type SingSession } from '../../utils/singCapture';
 import { countInBeats, myPart, onsetsOf, roundFrames, runPercent, scoreKindOf, scorePitchRound, scoreRhythmRound, scoredStep, targetAt, type ScoreKind } from '../../utils/drillScore';
 import { saveDrillScore, useDrillScores } from '../../utils/drillScores';
-import { AI_PROBLEM_TEXT, AI_TEACHER_DAILY, AiTeacherError, aiTriesLeft, askAiScore } from '../../utils/aiTeacher';
+import { AI_PROBLEM_TEXT, AiTeacherError, askAiScore } from '../../utils/aiTeacher';
+import { AI_ANSWER_EVENT, isAiScoreWaiting, lastAiAnswer, markAiAnswerSeen, queueAiScore, startAiScoreQueue } from '../../utils/aiScoreQueue';
+import { useNewLook } from '../../design/newLook';
+import { AiScoreScreen, leaveAiScore, type AiScoreState } from '../../pages/v2/ostatoba/AiScore';
 import { noteName } from '../../utils/pearls';
 import { triggerHaptic } from '../../utils/haptics';
 
@@ -204,6 +207,35 @@ const ExerciseView: React.FC<{ drill: Drill }> = ({ drill }) => {
   const { user, isSuperAdmin } = useAuth();
   const best = useDrillScores(user?.uid)[drillId];
   const kind = scoreKindOf(drill);
+  // the new look's AI score (boards x-ultra-ai 1–4): its own screen over the exercise; a take made offline waits on the phone
+  const nl = useNewLook();
+  const [aiScreen, setAiScreen] = useState<AiScoreState | null>(null);
+  const [aiLast, setAiLast] = useState<AiScoreState | null>(null);
+  const showAi = (st: AiScoreState) => { setAiScreen(st); if (st.kind !== 'intro' && st.kind !== 'listening') setAiLast(st); };
+  const [aiArrived, setAiArrived] = useState(false);
+  const [aiWaiting, setAiWaiting] = useState(false);
+  useEffect(() => {
+    startAiScoreQueue();
+    const uid = user?.uid;
+    if (!uid) return;
+    const look = () => {
+      const a = lastAiAnswer(uid, drillId);
+      setAiArrived(!!a && !a.seen);
+      void isAiScoreWaiting(uid, drillId).then(setAiWaiting);
+    };
+    look();
+    const onAnswer = (e: Event) => { if ((e as CustomEvent<{ drillId: string }>).detail?.drillId === drillId) look(); };
+    window.addEventListener(AI_ANSWER_EVENT, onAnswer);
+    return () => window.removeEventListener(AI_ANSWER_EVENT, onAnswer);
+  }, [user?.uid, drillId]);
+  const openArrived = () => {
+    const uid = user?.uid;
+    const a = uid ? lastAiAnswer(uid, drillId) : null;
+    if (!uid || !a) return;
+    markAiAnswerSeen(uid, drillId);
+    setAiArrived(false);
+    showAi({ kind: 'answer', grades: a.grades, tip: a.tip });
+  };
   const scoring = useRef<Scoring | null>(null);
   const [scoringOn, setScoringOn] = useState(false);
   const [liveMidi, setLiveMidi] = useState<number | null>(null);
@@ -304,6 +336,8 @@ const ExerciseView: React.FC<{ drill: Drill }> = ({ drill }) => {
       setResult({ kind: 'ai', mp3: null, busy: true });
       const take = await sc.session.stop();
       setResult({ kind: 'ai', mp3: take.mp3 });
+      // the new look: the AI teacher listens at once, on its own screen
+      if (take.mp3) askNewRef.current?.(take.mp3);
       return;
     }
     sc.session.cancel();
@@ -426,6 +460,38 @@ const ExerciseView: React.FC<{ drill: Drill }> = ({ drill }) => {
       setResult({ kind: 'ai', mp3: result.mp3, problem: AI_PROBLEM_TEXT[e instanceof AiTeacherError ? e.kind : 'failed'] });
     }
   };
+  // the new look: one call, its answer (or the month's limit, or no internet — then the take waits) on the AI screen
+  const askNew = async (mp3: Blob) => {
+    if (!nl || !user) return;
+    const about = { title: drill.title, check: drill.lesson.check, steps: exercise.steps.map(s => s.text) };
+    showAi({ kind: 'listening' });
+    try {
+      const r = await askAiScore(user.uid, mp3, about, isSuperAdmin);
+      const record = await saveDrillScore(drillId, r.score, user.uid, best ?? 0);
+      markDrillDone(drillId, user.uid);
+      setResult({ kind: 'ai', mp3, score: r.score, text: r.text, record });
+      showAi({ kind: 'answer', grades: r.grades, tip: r.tip });
+    } catch (e) {
+      const why = e instanceof AiTeacherError ? e.kind : 'failed';
+      setResult({ kind: 'ai', mp3, problem: AI_PROBLEM_TEXT[why] });
+      if (why === 'budget') showAi({ kind: 'limit' });
+      else if (why === 'offline') {
+        const kept = await queueAiScore({ uid: user.uid, drillId, about, mp3, best: best ?? 0 });
+        setAiWaiting(kept);
+        showAi({ kind: 'offline', kept });
+      } else showAi({ kind: 'problem', text: AI_PROBLEM_TEXT[why] });
+    }
+  };
+  const askNewRef = useRef(askNew);
+  askNewRef.current = askNew;
+  // „ჩაწერა“ / „კიდევ ერთხელ“ on the AI screen: the screen goes, the scored run starts in the same tap
+  const recordForAi = () => { leaveAiScore(); setAiScreen(null); restart(); void beginScored(); };
+  const toTuner = () => {
+    leaveAiScore();
+    setAiScreen(null);
+    window.setTimeout(() => document.getElementById('drill-tuner')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 80);
+  };
+
   const finish = () => { triggerHaptic(20); markDrillDone(drillId, user?.uid); };
 
   const total = Math.round(exercise.steps.reduce((a, s) => a + stepTime(s), 0) / 60) || exercise.minutes;
@@ -478,7 +544,15 @@ const ExerciseView: React.FC<{ drill: Drill }> = ({ drill }) => {
 
       {phase === 'end' ? (
         <div className="rounded-3xl bg-white ring-1 ring-[#e8dcc8] px-5 py-6 text-center space-y-3">
-          {result ? <RunResultView result={result} best={best} triesLeft={user ? aiTriesLeft(user.uid, isSuperAdmin, 'manera') : 0} signedIn={!!user} onAsk={askAi} /> : (
+          {nl && result?.kind === 'ai' && user ? (
+            <>
+              <Sparkles className="w-9 h-9 mx-auto text-[#7a2028]" />
+              <p className="font-serif-ge text-[17px] font-bold text-[#4a3426]">სავარჯიშო ჩაიწერა</p>
+              {aiLast
+                ? <Btn size="lg" icon={<Sparkles />} onClick={() => setAiScreen(aiLast)}>AI-ს შეფასება</Btn>
+                : result.mp3 && !result.busy && <Btn size="lg" icon={<Sparkles />} onClick={() => void askNew(result.mp3!)}>AI-ს შეფასება</Btn>}
+            </>
+          ) : result ? <RunResultView result={result} best={best} triesLeft={user ? Infinity : 0} signedIn={!!user} onAsk={askAi} /> : (
             <>
               <CheckCircle2 className="w-10 h-10 mx-auto text-emerald-600" />
               <p className="font-serif-ge text-[17px] font-bold text-[#4a3426]">სავარჯიშო დასრულდა</p>
@@ -535,14 +609,34 @@ const ExerciseView: React.FC<{ drill: Drill }> = ({ drill }) => {
                 ? 'გაიარე სავარჯიშო მიკროფონით — აპი მოგისმენს, რამდენად ზუსტად აიღე ნოტები, და ბოლოს % გამოჩნდება.'
                 : kind === 'rhythm'
                   ? 'მეტრონომი ერთ ტაქტს ჩაგითვლის და ჩუმდება — შენ ინარჩუნებ ტემპს. აპი ტაშს მოისმენს და ბოლოს % გამოჩნდება.'
-                  : `გაიარე სავარჯიშო მიკროფონით — ბოლოს AI მასწავლებელი მოუსმენს და შეგაფასებს (დღეში ${AI_TEACHER_DAILY}-ჯერ).`)}
+                  : 'გაიარე სავარჯიშო მიკროფონით — ბოლოს AI მასწავლებელი მოუსმენს და შეგაფასებს.')}
             </p>
           </div>
-          <Btn icon={<Gauge />} onClick={() => { restart(); void beginScored(); }}>შეფასებით</Btn>
+          <Btn icon={<Gauge />} onClick={() => (nl && kind === 'ai' && user ? showAi({ kind: 'intro' }) : (restart(), void beginScored()))}>შეფასებით</Btn>
         </div>
       )}
 
-      {!scoringOn && <MicPanel drillId={drillId} target={target === null ? null : base + target} pitched={pitched} />}
+      {nl && (aiArrived || aiWaiting) && (
+        aiArrived ? (
+          <button type="button" onClick={openArrived}
+            className="w-full rounded-2xl bg-[#7a2028]/[0.06] ring-1 ring-[#7a2028]/20 px-4 py-3 flex items-center gap-3 text-left cursor-pointer">
+            <Sparkles className="w-5 h-5 shrink-0 text-[#7a2028]" />
+            <span className="flex-1 min-w-0 text-[14px] font-bold text-[#4a3426]">AI-ს პასუხი მოვიდა</span>
+            <span className="shrink-0 text-[13px] font-bold text-[#7a2028]">ნახვა</span>
+          </button>
+        ) : (
+          <p className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-4 py-3 text-[13px] leading-snug text-[#8a7a6a]">
+            ჩანაწერი ინტერნეტს ელოდება — როცა დაბრუნდება, AI-ს შეფასებას გამოგიგზავნი.
+          </p>
+        )
+      )}
+      {aiScreen && (
+        <AiScoreScreen open onClose={() => setAiScreen(null)} title={drill.title} state={aiScreen}
+          onRecord={recordForAi} onTuner={toTuner}
+          onRetry={result?.kind === 'ai' && result.mp3 ? () => void askNew(result.mp3!) : undefined} />
+      )}
+
+      {!scoringOn && <div id="drill-tuner"><MicPanel drillId={drillId} target={target === null ? null : base + target} pitched={pitched} /></div>}
 
       <ol className="space-y-1">
         {exercise.steps.map((s, i) => {
@@ -830,7 +924,6 @@ const RunResultView: React.FC<{ result: RunResult; best: number | undefined; tri
         ) : r.mp3 ? (
           <>
             <Btn size="lg" icon={<Sparkles />} disabled={triesLeft <= 0} onClick={onAsk}>AI-ს შეფასება</Btn>
-            <p className="text-[12px] text-[#8a7a6a]">{Number.isFinite(triesLeft) ? `დღეს დარჩა ${triesLeft} ცდა` : ''}</p>
           </>
         ) : (
           <p className="text-[13px] text-[#8a7a6a]">ამ ბრაუზერში ჩანაწერი ვერ შეინახა.</p>

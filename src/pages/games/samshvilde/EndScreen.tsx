@@ -4,6 +4,8 @@ import { ROLES, chronicle, isSpy, type SamGame, type Side } from '../../../utils
 import { Btn } from '../../../components/ui/kit';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { Hint, Words, iconOf } from './parts';
+import { useNewLook } from '../../../design/newLook';
+import { Matiane } from '../../v2/tamashebi/Matiane';
 
 // The end: who won, every card open, and the chronicle the host reads out — then the applause for „ქალაქის დარბაისელი“.
 // The same list of players (without the chronicle) is the host's own table during the game. Online every player's phone
@@ -44,9 +46,28 @@ const WIN: Record<Side, { say: string; tone: string; who: string }> = {
 export const EndScreen: React.FC<{
   g: SamGame; onClose: () => void; onAgain?: () => void; closeLabel?: string; onHide?: () => void; me?: number; right?: React.ReactNode; note?: React.ReactNode;
 }> = ({ g, onClose, onAgain, closeLabel = 'მორჩა', onHide, me, right, note }) => {
+  const nl = useNewLook();
   if (g.phase.kind !== 'end') return null;
   const w = WIN[g.phase.winner];
   const ch = chronicle(g);
+  const last = <Words label="ბოლოს">„ტყვეები თავისუფლდებიან — ყველა ერთ წრეში ბრუნდება. ახლა ტაშით ავირჩიოთ ქალაქის დარბაისელი: ვინც ყველაზე მშვიდად და ჭკვიანურად ლაპარაკობდა, თუნდაც წაგებული მხრიდან.“</Words>;
+  // the new look: the shared end of the room games (board x-otakhi-matiane) — a side's win in its words, who was who, what happened
+  if (nl) {
+    return (
+      <Matiane
+        game="სამშვილდის ღამე"
+        onClose={onHide ?? onClose}
+        right={right}
+        side={{ label: w.who, title: `„${w.say}“` }}
+        extra={<div className="space-y-3">{note}<PlayerList g={g} me={me} /></div>}
+        extraLabel="ვინ ვინ იყო"
+        chronicle={ch.map(c => ({ head: c.head, lines: c.lines }))}
+        after={<div className="space-y-3">{last}{me === undefined && <Hint>გაკვეთილის ბოლოს მემატიანე 2–3 წინადადებით იწერს მატიანეს კლასის რვეულში — ასე გროვდება სკოლის „ქართლის ცხოვრება“.</Hint>}</div>}
+        again={onAgain}
+        close={{ label: closeLabel, onClick: onClose }}
+      />
+    );
+  }
   return (
     <TableScreen
       title="მატიანე"

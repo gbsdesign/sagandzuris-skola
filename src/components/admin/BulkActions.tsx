@@ -15,22 +15,17 @@ import type { StaffRecord, UserRecord } from './UsersTab';
 
 type Msg = (text: string, type: 'success' | 'error') => void;
 
-// „მონიშვნა“ in the members list (admin review, idea 8, 2026-10-28): several people ticked, then one tap — into a class
-// (with „გაუქმება“ for a few seconds), let in (superadmins; those still waiting, after one question) or the folklore
-// centre's recordings switched on (members; staff always may). The bar stands at the screen's bottom while people are
-// ticked; every action is logged like the same change made in a person's window.
-export const BulkBar: React.FC<{
+/** What „მონიშვნა“ does with the ticked (shared by the old bar and the new look's page, pages/v2/admini). */
+export const useBulkActions = ({ picked, staff, access, onDone, onMessage }: {
   picked: UserRecord[];
   staff: StaffRecord[];
-  classes: SchoolClass[];
   access: Record<string, AccessRecord>;
   onDone: () => void;
   onMessage: Msg;
-}> = ({ picked, staff, classes, access, onDone, onMessage }) => {
+}) => {
   const { user, isSuperAdmin } = useAuth();
   const centre = useCentreDownloadSettings();
   const [busy, setBusy] = useState(false);
-  const [choosing, setChoosing] = useState(false);
 
   const waiting = isSuperAdmin ? picked.filter(u => roleOf(u, staff) === 'member' && access[u.userId]?.status === 'pending') : [];
   const noRight = centre.everyone ? [] : picked.filter(u => roleOf(u, staff) === 'member' && !centre.uids.includes(u.userId));
@@ -41,10 +36,9 @@ export const BulkBar: React.FC<{
     try {
       const people = picked.map(u => ({ uid: u.userId, name: u.name, photoURL: u.photoURL }));
       const { added, failed, lost, after } = await addClassMembers(c, people);
-      setChoosing(false);
       if (!added.length) {
         onMessage(lost ? `კლასში „${c.name}“ ვერავინ ჩაიწერა — შეამოწმე ინტერნეტი.` : `ყველა მონიშნული უკვე კლასშია „${c.name}“.`, lost ? 'error' : 'success');
-        return;
+        return true;
       }
       if (lost || failed) {
         onMessage(`${added.length} ჩაიწერა${lost ? `, ${lost} ვერა` : ''}${failed ? ` · ${failed} ადამიანის გზაზე პროგრამა ვერ დაემატა — კლასის გვერდიდან სცადე თავიდან` : ''}.`, 'error');
@@ -53,8 +47,10 @@ export const BulkBar: React.FC<{
       changed('member', `${added.length} ადამიანი ჩაიწერა კლასში „${c.name}“: ${names.join(', ')}`.slice(0, 300), c.id,
         () => removeClassMembers(after, added), `${added.length} ადამიანი ჩაიწერა კლასში „${c.name}“`);
       onDone();
+      return true;
     } catch (e) {
       onMessage(`კლასში ვერ ჩაიწერა: ${errorText(e)}`, 'error');
+      return false;
     } finally {
       setBusy(false);
     }
@@ -98,6 +94,24 @@ export const BulkBar: React.FC<{
     }
   };
 
+  return { busy, waiting, noRight, n, toClass, letIn, giveRight };
+};
+
+// „მონიშვნა“ in the members list (admin review, idea 8, 2026-10-28): several people ticked, then one tap — into a class
+// (with „გაუქმება“ for a few seconds), let in (superadmins; those still waiting, after one question) or the folklore
+// centre's recordings switched on (members; staff always may). The bar stands at the screen's bottom while people are
+// ticked; every action is logged like the same change made in a person's window.
+export const BulkBar: React.FC<{
+  picked: UserRecord[];
+  staff: StaffRecord[];
+  classes: SchoolClass[];
+  access: Record<string, AccessRecord>;
+  onDone: () => void;
+  onMessage: Msg;
+}> = ({ picked, staff, classes, access, onDone, onMessage }) => {
+  const [choosing, setChoosing] = useState(false);
+  const { busy, waiting, noRight, n, toClass: join, letIn, giveRight } = useBulkActions({ picked, staff, access, onDone, onMessage });
+  const toClass = (c: SchoolClass) => { void join(c).then(ok => { if (ok) setChoosing(false); }); };
   return (
     <>
       {/* above the bottom edge (and the phone's bar); wraps into two rows on a narrow phone */}

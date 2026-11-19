@@ -10,6 +10,9 @@ import { triggerHaptic } from '../../../utils/haptics';
 import { useTwoCols } from '../../../components/games/useTwoCols';
 import { CardChip, CardTile, ThroneMark } from './look';
 import { IN_CAPITAL, KIND_INFO, SIDE_COLOR, lineText } from './words';
+import { useNewLook } from '../../../design/newLook';
+import { TurnFrame } from '../../v2/tamashebi/TurnFrame';
+import { Matiane, placesFrom } from '../../v2/tamashebi/Matiane';
 
 // „ორი ტახტი“ being played, online and on one phone alike: the story of the meeting (who divides, who chooses), the five gifts
 // (the divider taps a card to move it into the other share; the chooser taps a share; an envoy's king taps the card to take),
@@ -166,6 +169,7 @@ export const TakhtiPlay: React.FC<{
 }> = ({ g, me, one, sent, clock, acts, right, note, onHide }) => {
   const ph = g.phase;
   const wide = useTwoCols();
+  const nl = useNewLook();
   const key = keyOf(g);
   const [mask, setMask] = useState(0);
   const [share, setShare] = useState<number | null>(null);
@@ -380,16 +384,62 @@ export const TakhtiPlay: React.FC<{
     ) : acts.leave ? <Btn kind="ghost" size="lg" full onClick={acts.leave} icon={<LogOut />} className="!h-14">დახურვა</Btn> : null;
   }
 
+  // the new look: the end is the chronicle's screen (board x-otakhi-matiane), a step the turn frame (x-otakhi-svla)
+  if (nl && ph.k === 'end' && result) {
+    const won = (i: number) => (ph.winners.includes(i) ? 1 : 0);
+    const order = [0, 1].sort((a, b) => won(b) - won(a) || result[b].total - result[a].total);
+    const places = placesFrom(order, () => ph.winners.length > 1);
+    return (
+      <Matiane
+        game="ორი ტახტი"
+        onClose={onHide}
+        right={right}
+        win={{ winners: ph.winners.map(nm), top: Math.max(result[0].total, result[1].total) }}
+        why={sub}
+        places={order.map((i, k) => ({ name: g.names[i], place: places[k], score: `${result[i].total} ქულა`, me: i === me }))}
+        extra={<div className="space-y-3.5">{note}{results}{courts}</div>}
+        chronicle={g.log.length ? [{
+          lines: g.log.map((l, i) => (
+            <span key={i} className="flex items-start gap-1.5">
+              <span className="mt-[5px] h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: SIDE_COLOR[l.who] }} />
+              <span className="min-w-0">{lineText(l, g.names, me)}</span>
+            </span>
+          )),
+        }] : undefined}
+        again={acts.again}
+        close={acts.again ? (acts.close ? { label: one ? 'დახურვა' : 'ოთახის დახურვა', onClick: acts.close } : undefined) : acts.leave ? { label: 'დახურვა', onClick: acts.leave } : undefined}
+      />
+    );
+  }
+  const body = (
+    <div className={`py-2 w-full mx-auto ${wide ? 'max-w-[1200px] grid grid-cols-2 gap-4 items-start' : 'max-w-[672px] space-y-3.5'}`}>
+      {wide ? (
+        <>
+          <div className="min-w-0 space-y-3.5">{story}{note}{results}{meeting}</div>
+          <div className="min-w-0 space-y-3.5">{courts}{chronicle}</div>
+        </>
+      ) : <>{story}{note}{results}{meeting}{courts}{chronicle}</>}
+    </div>
+  );
+  if (nl) {
+    const text = mine ? (one ? `სვლაა: ${g.names[actor]}` : 'შენი სვლაა') : sent ? 'გაგზავნილია — ელოდება…' : `სვლაა: ${nm(actor)}`;
+    return (
+      <TurnFrame
+        title="ორი ტახტი"
+        sub={ph.k === 'end' ? 'რვა შეხვედრა დასრულდა' : `შეხვედრა ${g.round + 1} / ${ROUNDS}`}
+        right={right}
+        onClose={onHide}
+        seats={g.names.map((n, i) => ({ name: n, me: i === me, on: ph.k !== 'end' && i === actor }))}
+        turn={ph.k === 'end' ? null : { text, mine }}
+        footer={sent && ph.k !== 'end' ? undefined : footer}
+      >
+        {body}
+      </TurnFrame>
+    );
+  }
   return (
     <TableScreen title="ორი ტახტი" right={right} onClose={onHide} footer={footer}>
-      <div className={`py-2 w-full mx-auto ${wide ? 'max-w-[1200px] grid grid-cols-2 gap-4 items-start' : 'max-w-[672px] space-y-3.5'}`}>
-        {wide ? (
-          <>
-            <div className="min-w-0 space-y-3.5">{story}{note}{results}{meeting}</div>
-            <div className="min-w-0 space-y-3.5">{courts}{chronicle}</div>
-          </>
-        ) : <>{story}{note}{results}{meeting}{courts}{chronicle}</>}
-      </div>
+      {body}
     </TableScreen>
   );
 };
