@@ -743,6 +743,7 @@ def fix_2027(days):
     move_note('03-19', '02-27', r'ღირსი ილარიონის განგებაზე')
     move_note('06-26', '06-06', r'წმიდა გიორგი მთაწმინდელის')
     move_note('06-09', None, r'^შენიშვნა 1: ღირსთა დღესასწაული ჩატარდება')
+    move_note('04-12', None, r'^ლიტურგია წმ\. იოანე ოქროპირისა')    # Pascha 2026's own line, on a Lent Monday here
 
 def build_all():
     out = {}

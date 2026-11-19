@@ -107,7 +107,7 @@ test('Lent, Holy Week and Bright Week (stage 4)', () => {
   assert.ok(at('2026-02-24').find(s => s.id === 'matins')!.steps.some(s => s.title.includes('ალილუია')));
   assert.match(lit('2026-04-10')[0], /წირვა არ აღესრულება/); // Holy Friday
   assert.equal(at('2026-04-13')[2].steps[0].title, 'პასექის ჟამნი'); // Bright Monday
-  assert.ok(lit('2026-05-03').some(t => t.includes('ანგელოზი ღაღადებდა'))); // the Paschal season
+  assert.ok(lit('2026-05-03').some(t => t.includes('ანგელოზი ღაღადებს'))); // the Paschal season
 });
 
 test('stage 4: the movable days, compline, Holy Week, afterfeasts, own services', () => {
@@ -207,7 +207,7 @@ test('the eves of Christmas and Theophany, the Holy Spirit\'s Monday', () => {
   const sv = (iso: string) => buildServices({ iso, day: cal[iso] ?? null, tone: 1, rank: guessRank(iso, cal[iso] ?? null, null), patron: null });
   // Christmas Eve 2027 (Wednesday): the liturgy begins with vespers and its eight readings
   const eve = sv('2027-01-06').find(s => s.id === 'liturgy')!.steps.map(s => s.title);
-  assert.equal(eve[0], '„კურთხეულ არს სუფევა“');
+  assert.equal(eve[0], '„კურთხეულ არს მეუფება“');
   assert.ok(eve.some(t => t.startsWith('8 საწინასწარმეტყველო')));
   // Christmas: the vigil is Great Compline with the litya, matins from the six psalms
   const xmas = sv('2027-01-07');
