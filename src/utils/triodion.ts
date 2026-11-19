@@ -124,7 +124,8 @@ export const movableOf = (e: number): Movable | null => {
 export const departedSaturday = (e: number) => TRIODION[e]?.kind === 'departed';
 
 /** Great Compline is read on Lent's Monday–Thursday evenings (weeks 1–6) — the evening before `e` */
-export const complineEve = (e: number, dow: number) => e >= -47 && e <= -9 && dow >= 2 && dow <= 5;
+// not before the Great Canon's Thursday: that evening matins itself is served (the Typikon: compline is read in the cells)
+export const complineEve = (e: number, dow: number) => e >= -47 && e <= -9 && dow >= 2 && dow <= 5 && e !== -17;
 
 /** St Andrew's canon at Great Compline in Lent's first week: 1 = Monday evening … 4 = Thursday evening */
 export const andrewPart = (e: number): number | null => (e >= -47 && e <= -44 ? e + 48 : null);

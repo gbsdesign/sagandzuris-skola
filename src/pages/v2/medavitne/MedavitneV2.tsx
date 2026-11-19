@@ -43,7 +43,7 @@ const Front: React.FC<{ done: string[] }> = ({ done }) => {
       <Rows>
         {brief && (
           <Row lead={<Dot icon={<CalendarDays />} />} title="დღის მსახურება" wrap
-            sub={[dayMonthGe(brief.today), brief.great?.name, brief.tone ? toneName(brief.tone) : null, rankLabel(brief.rank)].filter(Boolean).join(' · ')}
+            sub={[dayMonthGe(brief.today), brief.great?.name, brief.tone ? toneName(brief.tone) : null, brief.ownOrder ? null : rankLabel(brief.rank)].filter(Boolean).join(' · ')}
             onClick={() => openMapItem('day')} />
         )}
         <Row lead={<Dot icon={<GraduationCap />} />} title="მედავითნის კურსი" sub={`${LESSONS.length} გაკვეთილი · ნასწავლი ${count}`}

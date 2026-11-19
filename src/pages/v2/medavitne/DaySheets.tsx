@@ -223,7 +223,10 @@ export const MoreSheet: React.FC<{ open: boolean; d: DayServiceState; onClose: (
     <Sheet open={open} onClose={onClose} title="დღის მსახურება">
       <Rows>
         {tile(<Music />, 'კვირის ხმა', d.tone ? toneName(d.tone) : '—', d.tone ? () => go(() => d.setToneOpen(d.tone)) : undefined)}
-        {tile(<ListChecks />, d.rank !== d.guessed ? 'რანგი · შენი' : 'რანგი', rankLabel(d.rank), () => go(() => d.setSheet('rank')))}
+        {/* Holy Week and Bright Week have each day's own order: a rank changes nothing there */}
+        {d.ownOrder
+          ? tile(<ListChecks />, 'რანგი', 'საკუთარი წესი')
+          : tile(<ListChecks />, d.rank !== d.guessed ? 'რანგი · შენი' : 'რანგი', rankLabel(d.rank), () => go(() => d.setSheet('rank')))}
         {tile(<Church />, 'ჩემი ტაძარი', d.patron ? d.patron.name : 'აირჩიე სახელობა', () => go(() => d.setSheet('patron')))}
         <Row lead={<Dot icon={<Settings2 />} />} title="ჩემი ტაძრის წესი" sub={`შაბათ საღამოს — ${sat} · სადაგ დღეს — ${weekday}`} wrap
           onClick={() => go(() => d.setSheet('order'))} />

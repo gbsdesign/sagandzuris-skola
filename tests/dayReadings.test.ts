@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { dayTakeId, parseRanges, parseReadTakeId, readingsOf, toneOf, lessonTakeId, rangesText } from '../src/utils/dayReadings';
+import { dayTakeId, mainText, optionalReadingsOf, parseRanges, parseReadTakeId, readingsOf, toneOf, lessonTakeId, rangesText } from '../src/utils/dayReadings';
 import type { CalendarDay } from '../src/data/churchCalendar';
 
 const year = JSON.parse(readFileSync(new URL('../src/data/calendar/2026.json', import.meta.url), 'utf8')) as { days: Record<string, CalendarDay> };
@@ -52,4 +52,23 @@ test('take ids round trip', () => {
   assert.deepEqual(parseReadTakeId(id), { kind: 'day', file: 'galatelta', ranges: gal.ranges, iso: '2026-10-25' });
   assert.deepEqual(parseReadTakeId(lessonTakeId('psalter', 3)), { kind: 'lesson', lesson: 'psalter', step: 3 });
   assert.equal(parseReadTakeId('learn~x~1'), null);
+});
+
+test("a note's readings are not the day's own; a second list keeps its service (2026-11-19)", () => {
+  const r = (iso: string) => readingsOf(year.days[iso]).map(x => `${x.label}:${x.abbr} ${x.ref}`);
+  // Great Monday: the notes' table of the Gospels read at the hours stays out
+  assert.deepEqual(r('2026-04-06'), ['ცისკ:მთ. 21: 18-43', ':მთ. 24: 3-35']);
+  // „თუ უპირატესი ინებებს…“ — St Spyridon's matins Gospel is the superior's choice
+  assert.ok(!r('2026-12-25').some(x => x.startsWith('ცისკ')));
+  assert.ok(optionalReadingsOf(year.days['2026-12-25']).some(x => /ცისკ/.test(x.label) && x.abbr === 'ინ.'));
+  // Pascha's own readings stand after a „შენიშვნა“ — and stay
+  assert.deepEqual(r('2026-04-12').slice(-2), ['ლიტ:საქმ. 1: 1-8', 'ლიტ:ინ. 1: 1-17']);
+  assert.ok(!mainText(year.days['2026-04-12']).includes('შენიშვნა'));
+  // a second list of the same service: the Theologian's three at the Ascension's vespers, Great Saturday's matins
+  assert.equal(r('2026-05-21').filter(x => x.startsWith('მწუხრ:')).length, 3);
+  assert.deepEqual(r('2026-04-11').slice(0, 3).map(x => x.split(':')[0]), ['ცისკ', 'ცისკ', 'ცისკ']);
+  // … but a saint's own line after „ცისკ.: … (დას. N).“ is the liturgy's (St Nino)
+  assert.deepEqual(r('2026-01-27').map(x => x.split(':')[0]), ['ცისკ', '', '']);
+  // the Forerunner's Gospel keeps his label beside the day's vespers readings (the finding of the Head in Lent)
+  assert.ok(r('2026-03-09').includes('ნათლისმც:მთ. 11: 2-15'));
 });

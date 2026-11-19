@@ -55,7 +55,9 @@ test('the fixed texts of ჟამნი and the priest\'s of კონდაკ
   const first = (src: TextSrc) => { const s = got(src); assert.ok(s.length > 0, src.label); return s; };
   for (const [name, v] of Object.entries(FIX)) {
     if (typeof v !== 'function') { first(v); continue; }
-    for (const n of name === 'eveProkeimenon' ? [0, 1, 2, 3, 4, 5, 6] : [5, 6, 7, 9]) first((v as (n: number) => TextSrc)(n));
+    // by the evening's weekday · by the tone (Lent's triadic hymns and photagogika) · by the hour's file
+    const args = name === 'eveProkeimenon' ? [0, 1, 2, 3, 4, 5, 6] : name === 'triadic' || name === 'lentPhotagogikon' ? [1, 2, 3, 4, 5, 6, 7, 8] : [5, 6, 7, 9];
+    for (const n of args) first((v as (n: number) => TextSrc)(n));
   }
   for (const group of Object.values(PRIEST)) for (const v of Object.values(group)) first(v as TextSrc);
   assert.match(first(FIX.trisagion)[0][1][0], /^წმიდაო ღმერთო/);
