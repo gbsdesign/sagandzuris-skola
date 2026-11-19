@@ -10,6 +10,8 @@ import { ROOM_GAME_ICON } from './roomGameIcons';
 import { useOpenGameRoom } from '../../utils/gameRoomOpen';
 import { useCall } from '../../utils/callSession';
 import { triggerHaptic } from '../../utils/haptics';
+import { useNewLook } from '../../design/newLook';
+import { Avatar, Button, Duo } from '../ui2';
 
 // The invitation strip (2026-10-30, „სამშვილდის ღამე“ online; every room game since 2026-10-31): a game room opened in one
 // of my classes — „ნინო გიწვევს · შესვლა“; a game I play in or host that goes on while I look at another page —
@@ -44,6 +46,7 @@ export const GameInvites: React.FC = () => {
   const openRoom = useOpenGameRoom();
   const gone = useGone();
   const call = useCall();
+  const nl = useNewLook();
   // the game's call shrunk to its bar holds the top: the strip goes under it
   const bar = call.small && call.info && call.status !== 'idle' && call.status !== 'ended';
 
@@ -65,6 +68,31 @@ export const GameInvites: React.FC = () => {
     : `${firstName(r.hostName) || info.host} გიწვევს: ${info.title}`;
   const dismiss = () => { triggerHaptic(8); dismissRoom(r.id); };
   const go = () => { triggerHaptic(12); openRoom(r.classId, r.id, r.game); };
+
+  // the new look (board x-otakhi-motsveva): one card with who invites, the game and how many came in, and two buttons
+  if (nl) {
+    const n = r.uids.length;
+    return (
+      <div
+        className={`fixed z-[85] left-1/2 -translate-x-1/2 ${bar ? 'top-[calc(env(safe-area-inset-top)+74px)]' : 'top-[calc(env(safe-area-inset-top)+12px)]'} flex w-[min(440px,calc(100%-24px))] flex-col gap-3 rounded-card bg-tint p-4 text-ink shadow-float`}
+        role="status"
+      >
+        <div className="flex items-center gap-3">
+          {own
+            ? <span aria-hidden="true" className="flex size-10 shrink-0 items-center justify-center rounded-full bg-wine text-white [&_svg]:size-[18px]"><Ic /></span>
+            : <Avatar name={r.hostName || info.host} />}
+          <span className="flex min-w-0 flex-1 flex-col">
+            <span className="text-lead leading-snug font-bold wrap-break-word">{own ? title : `${firstName(r.hostName) || info.host} გეპატიჟება`}</span>
+            <span className="truncate text-meta text-mut">„{info.title}“{n ? ` · ოთახში ${n} ადამიანია` : className(r) ? ` · ${className(r)}` : ''}</span>
+          </span>
+        </div>
+        <Duo>
+          <Button kind="ghost" size="md" onClick={dismiss}>ახლა არა</Button>
+          <Button size="md" onClick={go}>{own ? 'დაბრუნება' : 'შესვლა'}</Button>
+        </Duo>
+      </div>
+    );
+  }
 
   return (
     <div

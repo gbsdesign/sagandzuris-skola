@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { BookOpen, CalendarDays, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { BookOpen, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Waiting } from '../../../components/shell/PageSkeleton';
 import { useNavigation } from '../../../context';
 import { Card, cx, Dot, FOCUS, Hero, Press, RoundButton, Row, Rows, SectionLabel, TopBar } from '../../../components/ui2';
 import {
@@ -65,7 +66,7 @@ export const CalendarPage: React.FC = () => {
       </Card>
 
       {day === undefined && (
-        <div className="flex justify-center py-10"><Loader2 aria-label="იტვირთება" className="size-7 animate-spin text-wine" /></div>
+        <Waiting kind="text" field={false} />
       )}
       {day === null && (
         <Card><p className="text-body text-mut">ამ დღის კალენდარი ჯერ არ დამატებულა.</p></Card>

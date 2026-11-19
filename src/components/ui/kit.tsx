@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ArrowLeft, CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
 import { useNewLook } from '../../design/newLook';
+import { Button, Duo, RoundButton } from '../ui2';
 
 // Shared building blocks for the whole app: the same warm paper, burgundy accents and roomy controls everywhere.
 // Rules (2026-10-25): text is never smaller than 12px (text-xs); icon buttons are 36px, the back button 44px;
@@ -520,6 +521,8 @@ export type ConfirmOpts = {
   ok?: string;
   cancel?: string;
   danger?: boolean;
+  /** the new look's mark on the confirming button (e.g. the door of „გამოსვლა“) */
+  icon?: React.ReactNode;
 };
 type PendingConfirm = ConfirmOpts & { resolve: (yes: boolean) => void };
 let confirmHost: ((p: PendingConfirm) => void) | null = null;
@@ -536,6 +539,7 @@ export const askConfirm = (opts: ConfirmOpts | string): Promise<boolean> => {
 
 /** Mounted once in App: the small paper card that askConfirm opens. Above every sheet (z-90). */
 export const ConfirmHost: React.FC = () => {
+  const nl = useNewLook();
   const [q, setQ] = useState<PendingConfirm | null>(null);
   useEffect(() => {
     confirmHost = p => setQ(prev => { prev?.resolve(false); return p; });
@@ -556,6 +560,28 @@ export const ConfirmHost: React.FC = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [q]);
   if (!q) return null;
+  // the new look (board x-dadastureba): a sheet from the bottom — the question as its title, one sentence of what follows,
+  // „გაუქმება“ on the left and the act on the right (red when something is deleted)
+  if (nl) return createPortal(
+    <div className="fixed inset-0 z-[90] flex items-end justify-center sm:items-center sm:p-4">
+      <div aria-hidden="true" className="sg-in absolute inset-0 bg-ink/40" onClick={() => answer(false)} />
+      <section role="alertdialog" aria-modal="true" aria-labelledby="sg-confirm-title" aria-describedby={q.text ? 'sg-confirm-text' : undefined}
+        className="sg-up relative flex w-full max-w-[560px] flex-col gap-3 rounded-t-card bg-page px-4 pt-2.5 pb-[max(20px,env(safe-area-inset-bottom))] text-ink shadow-sheet sm:rounded-card sm:pt-4">
+        <span aria-hidden="true" className="h-1 w-10 shrink-0 self-center rounded-full bg-dim sm:hidden" />
+        <div className="flex items-center gap-2.5">
+          <h2 id="sg-confirm-title" className="min-w-0 flex-1 pl-1 text-title leading-tight font-bold wrap-break-word">{q.title}</h2>
+          <RoundButton label="დახურვა" onClick={() => answer(false)}><X /></RoundButton>
+        </div>
+        {q.text && <p id="sg-confirm-text" className="px-1 text-body leading-normal text-mut wrap-break-word">{q.text}</p>}
+        <Duo className="pt-1">
+          {/* the harmless button takes the focus, so Enter never deletes by accident */}
+          <Button kind="ghost" onClick={() => answer(false)} autoFocus>{q.cancel || 'გაუქმება'}</Button>
+          <Button kind={q.danger ? 'danger' : 'primary'} icon={q.icon} onClick={() => answer(true)}>{q.ok || 'კი'}</Button>
+        </Duo>
+      </section>
+    </div>,
+    document.body
+  );
   return createPortal(
     <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center p-3 sm:p-6 bg-[#2a2017]/45 backdrop-blur-[2px] sg-in" onClick={() => answer(false)}>
       <div

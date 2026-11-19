@@ -190,7 +190,8 @@ export const SagandzuriView: React.FC<{
       ) : undefined} />
 
       <div className="flex flex-col gap-2 pt-0.5">
-        <Card pad="none" className="flex flex-col gap-2.5 px-[18px] py-4">
+        {/* data-help: the ready answers of „მკითხე“ that speak of each part (pages/v2/mkitkhe/light.ts lights it) */}
+        <Card pad="none" data-help="28" className="flex flex-col gap-2.5 px-[18px] py-4">
           <div className="flex items-start gap-7">
             <Stat value={`${learned} / ${total}`} label="საგალობელი" />
             {voiceSlots > 0 && <Stat value={`${voices} / ${voiceSlots}`} label="ხმა" />}
@@ -200,14 +201,15 @@ export const SagandzuriView: React.FC<{
           <p className="text-meta leading-snug text-mut">მონიშნე ხმა, როცა ისწავლი. როცა AI ან მასწავლებელი ჩათვლის, მარგალიტი იბრწყინებს.</p>
         </Card>
 
-        {work}
+        {/* the assignments keep the list's spacing inside their mark; nothing to do = no box at all */}
+        {work && <div data-help="16" className="flex flex-col gap-2 rounded-card empty:hidden">{work}</div>}
 
         <SectionLabel label="ჩემი საგალობლები" />
         {items.length > 0 ? (
           <>
             {chips.length > 2 && <Chips items={chips} value={chip} onChange={id => { setMore(false); onChip(id); }} label="ჩემი საგალობლები" />}
             {locked && !editing && <Helper icon={<Lock />}>მონიშვნას ახლა მასწავლებელი აკეთებს</Helper>}
-            <Rows>{list.map(row)}</Rows>
+            <Rows data-help="27">{list.map(row)}</Rows>
             {shown.length > SHOWN && (
               <Button kind="quiet" size="md" className="self-start" onClick={() => setMore(m => !m)}>
                 {more ? 'ნაკლები' : `კიდევ ${shown.length - SHOWN}`}

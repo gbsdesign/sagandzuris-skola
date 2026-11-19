@@ -5,9 +5,11 @@ import { useNotes } from '../../context/NotesContext';
 import { useMembership } from '../../utils/memberAccess';
 import { Btn, Sheet } from '../ui/kit';
 import { WaitingText } from './SignInPrompt';
+import { useNewLook } from '../../design/newLook';
 
 // What a member reads about their own admission (utils/memberAccess), mounted once in App:
-// • waiting — a thin „მიმდინარეობს დამატება“ strip at the top of every page; a tap opens the full text (WaitingBanner);
+// • waiting — a thin „მიმდინარეობს დამატება“ strip at the top of every page; a tap opens the full text (WaitingBanner); the
+//   new look shows one calm screen in place of the home page instead (pages/v2/gatsnoba/WaitingHome);
 // • refused — „დამატება შეფერხებულია“, and they are signed out; it repeats on every later sign-in;
 // • let in while the app is open — a short welcome, and what was given opens at once.
 // Nothing here says who decided or what was left out.
@@ -71,7 +73,9 @@ export const WaitingBanner: React.FC = () => {
   const { status } = useMembership();
   const { notes } = useNotes();
   const [open, setOpen] = useState(false);
-  if (status !== 'pending' || notes) return null;
+  // the new look says it once, in place of the home page (pages/v2/gatsnoba/WaitingHome)
+  const nl = useNewLook();
+  if (status !== 'pending' || notes || nl) return null;
   return (
     <>
       <button

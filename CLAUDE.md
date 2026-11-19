@@ -1823,6 +1823,36 @@
   with their own colours stay light — add a page there once it is rebuilt). Old church words: `pages/v2/sitqva/WordMeanings.tsx` dots
   them on the prayer page (not in ხუცური), a tap tells the meaning (`data/churchWords.ts`, 300 words written by Claude, unchecked;
   `utils/churchWords.ts` + test), a long press on an unknown word counts it in `wordRequests/{word}` {n, last} (admins read).
+- **Stage 7 — the rest (2026-11-19)**, each behind `useNewLook()` (old look unchanged unless said), routed in AppRouter with `nl`:
+  folk `pages/v2/khalkhuri/` (`KhalkhuriV2`: map, regions' tabs, songs, instruments, poets, ethnophore, films — the song page's player
+  is still the old `ChantPlayer`), churches `pages/v2/tadzrebi/` (`TadzrebiV2`; new steps `map`, `map:<region>`, `map:near`; the church
+  window in two parts „მსახურების განრიგი“ · „ტაძრის ამბავი“; feast „ჩემი კუთხე“ `sg-churches-my-region`), the games
+  `pages/v2/tamashebi/` (every game's page is ONE `GameFrame` fed by `components/games/gameVariant.tsx` — tabs, steps, intro, the room
+  window `RoomSetupV2` with „ვთამაშობ / მხოლოდ ვუძღვები“ for the five board games, `LobbyV2`, `TurnFrame` for a turn, `Matiane` for the
+  end; `CircleNames` drags), the profile `pages/v2/propili/` (`ProfileV2`, personal info, singing, schedule, buttons, photo crop,
+  `Reminders` = settings mapItem `reminders`, `MoveSheetV2`, widget link) and the first meeting / sign-in `pages/v2/gatsnoba/`
+  (`FirstMeetingV2`, `SignInV2`, `SignInScreenV2`, `LockedV2`, `WaitingHome`); **the first meeting's last three steps (abilities,
+  interests, voices) may be skipped** (the user's answer of 2026-11-16, boards x-gatsnoba-5…7): `firstMeeting.skipped`,
+  `meetingDone` in `utils/profileFields.ts` lets the app go on while `profileComplete` (the admin's „პროფილი არასრული“) still
+  lists them. The admin panel `pages/v2/admini/` (`AdminV2`, Home, People, Person, Classes, Teachers, School, Sections, Numbers,
+  Albums; `admin` is in MAP_PAGES; the data hook `components/admin/useAdminData.ts`; the confirm window in the new look inside
+  `ConfirmHost`); a class over 12 members folds its roll by voice for teachers (`klasi/MembersTab`). Medavitne `pages/v2/medavitne/`
+  and abituri `pages/v2/abituri/` (its old tabs are mapItem screens: `program`, `program/practice`, `theory[/<lesson>]`,
+  `theory/trainer`, `theory/mock`, `colloquium[/quiz]`, `admission`; the lesson, trainer, mock and practice still draw the old parts
+  inside). The school's AI assistant `pages/v2/damkhmare/` (`openAssistant`, history step `sgAssistant`; ✦ on the class bar and a row
+  on the admin home; rules `utils/aiAssistant.ts` + test: plans `message` · `classMessage` · `createClass` done only after „კი“, only
+  reachable people, a class only for admins, ≤ 30 people, ≤ 1000 letters; the AI gets first names and class names only). The
+  regent's following bar `pages/v2/notes/ChoirBar.tsx` (four states; the regent's switch „გუნდი მომყვება“ on the program page sends
+  the program first). Waiting screens: `components/shell/PageSkeleton.tsx` (`Waiting` → a skeleton, after 10 s `LoadFailed`;
+  `LinesSkeleton`, `NotesSkeleton`) — no spinners where a page or list loads. The learning mode's result lines `hitsLine` /
+  `verdictLine` (`utils/aiLesson.ts`), a miss is gold, `learn/MicHelp.tsx` when the microphone is off. „ოსტატობა“'s AI score
+  (`pages/v2/ostatoba/AiScore.tsx`): the daily limit is gone in both looks — the school's month budget only; three lines of one word
+  + one tip; offline takes wait in `utils/aiScoreQueue.ts` and go when the connection is back. The phones' ring card in the new look
+  `pages/v2/shetkobinebebi/RingAsk.tsx`. Dark mode lists more pages in `DARK_PAGES`. „მკითხე“ (`pages/v2/mkitkhe/`, from the search page): the 40 ready
+  answers `data/mkitkhe.ts` (matching `utils/mkitkhe.ts` + test; a faith question gets the priest line), AI only when none fits (10 a
+  day, the school's budget, only while `aiTeacher` is on); the pages' „?“ (`HelpButton` on the notes, chant list, class + chat,
+  prayer, habits, gza and profile bars) shows that page's three answers, „მაჩვენე ეკრანზე“ lights the place (`data-help` /
+  `data-help-way`, `.sg-help-lit`).
 - **AI teacher, step 3b — the teacher and the AI (2026-11-18)**, all only while `aiTeacher` is on for the person: instructions to
   the AI (`pages/v2/aiklasi/InstructionScreen`, class mapItem `ai-note`; x-ai-mititeba): `classes.aiNotes[]` for the class,
   `students.aiTeacherNotes[]` for one member, each with a start / end day (`utils/aiTeacherNotes.ts` + test: `activeFor`,

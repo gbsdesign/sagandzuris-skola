@@ -19,18 +19,18 @@ const PAGE_NAME: Record<string, string> = {
   student: 'მოსწავლის გვერდი', birthdays: 'დაბადების დღეები', commemoration: 'მოსახსენებელი', tsinaprebi: 'წინაპრები',
   teacher: 'კლასი', pending: 'მოლოდინი', offline: 'მთავარი',
 };
-const pageName = (id: string) => (id ? PAGE_NAME[id] || id : 'უცნობი გვერდი');
+export const pageName = (id: string) => (id ? PAGE_NAME[id] || id : 'უცნობი გვერდი');
 
 const DEVICE: Record<string, string> = {
   'android-app': 'Android-ის აპი', 'ios-app': 'iPhone-ის აპი', android: 'Android-ის ბრაუზერი', ios: 'iPhone-ის ბრაუზერი', desktop: 'კომპიუტერი',
 };
-const deviceName = (dev: string) => DEVICE[dev.split(' ')[0]] || dev || 'უცნობი';
+export const deviceName = (dev: string) => DEVICE[dev.split(' ')[0]] || dev || 'უცნობი';
 
-const KIND: Record<ErrorKind, string> = {
+export const ERROR_KIND: Record<ErrorKind, string> = {
   error: 'შეცდომა', promise: 'დაუსრულებელი მოქმედება', react: 'ეკრანი ვერ დაიხატა', report: 'შენახვა ან ჩატვირთვა ვერ მოხერხდა',
 };
 
-const when = (iso: string) => {
+export const errorWhen = (iso: string) => {
   const d = new Date(iso);
   return isNaN(d.getTime()) ? '' : `${shortDate(iso)}, ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
 };
@@ -50,14 +50,14 @@ const Line: React.FC<{ l: ErrorEntry; onMessage: (text: string, type: 'success' 
         <span className="min-w-0 flex-1">
           <span className="block text-[14px] font-semibold text-[#2a2017] leading-snug break-words line-clamp-2">{l.msg}</span>
           <span className="block text-[12px] text-[#8a7a6a] leading-snug mt-0.5">
-            {pageName(l.where)} · {l.count}-ჯერ · ბოლოს {when(l.last)} · {deviceName(l.dev)}
+            {pageName(l.where)} · {l.count}-ჯერ · ბოლოს {errorWhen(l.last)} · {deviceName(l.dev)}
           </span>
         </span>
         <ChevronDown className={`mt-2 w-4 h-4 shrink-0 text-[#8a7a6a] transition-transform ${open ? 'rotate-180' : ''}`} />
       </button>
       {open && (
         <div className="pb-3 pl-11 space-y-1.5 text-[12.5px] text-[#5a4a3a]">
-          <p>{KIND[l.kind] || l.kind} · პირველად: {when(l.first)}{l.ver ? ` · ვერსია: ${l.ver}` : ''}</p>
+          <p>{ERROR_KIND[l.kind] || l.kind} · პირველად: {errorWhen(l.first)}{l.ver ? ` · ვერსია: ${l.ver}` : ''}</p>
           {l.stack && (
             <pre className="text-[12px] leading-snug bg-[#faf6ef] border border-[#efe5d6] rounded-lg p-2 overflow-x-auto whitespace-pre font-mono text-[#4a3a2a]">{l.stack}</pre>
           )}
@@ -88,7 +88,7 @@ export const ErrorLogFold: React.FC<{ onMessage: (text: string, type: 'success' 
   };
   return (
     <Fold icon={<Bug />} title="შეცდომების ჟურნალი"
-      summary={loading ? '…' : last ? `ბოლო: ${when(last.last)} · ${lines.length} სახის შეცდომა` : 'ჯერ ცარიელია'}
+      summary={loading ? '…' : last ? `ბოლო: ${errorWhen(last.last)} · ${lines.length} სახის შეცდომა` : 'ჯერ ცარიელია'}
       info="აქ ჩანს, რა გაფუჭდა წევრებთან: რა, რომელ გვერდზე და რამდენჯერ. სახელები არ იწერება.">
       {lines.length === 0 ? (
         <p className="py-1 text-[13px] text-[#8a7a6a]">{loading ? 'იტვირთება…' : 'ჯერ არაფერი გაფუჭებულა. თუ ვინმესთან აპი შეფერხდება, აქ გამოჩნდება.'}</p>

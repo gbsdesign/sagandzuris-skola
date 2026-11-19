@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Check } from 'lucide-react';
 import { ACTS, COUP, MUST_COUP, ROLES, type Role } from '../../../utils/mepisKari';
 import { ACT_DOES, ACT_ICON, ROLE_LOOK } from './look';
+import { useTurnClock } from '../../v2/tamashebi/TurnFrame';
 
 // The pieces of a turn, shared by the online room and the one phone: the seven actions (a courtier's ones marked — held, or
 // a bluff), the clock of a step on the story's card, and the device's choice to keep my cards face down on screen.
@@ -52,8 +53,10 @@ export const ActionPad: React.FC<{ coins: number; held?: readonly number[]; chos
   );
 };
 
-/** the clock of a step, on the story's wine card */
+/** the clock of a step, on the story's wine card (in the new look's turn frame it goes down to the frame's bottom card) */
 export const StepClock: React.FC<{ left: number; total: number }> = ({ left, total }) => {
+  const inFrame = useTurnClock(left, total);
+  if (inFrame) return null;
   const r = 42, c = 2 * Math.PI * r;
   const urgent = left <= 5;
   return (

@@ -1,6 +1,6 @@
 import React, { useRef } from 'react';
 import { Church, Ellipsis, GripVertical, Plus, Radio, Send, Sparkles, Trash2 } from 'lucide-react';
-import { Button, Card, Dot, Note, Num, Press, Row, Rows, RoundButton, TopBar, Two, cx } from '../../../components/ui2';
+import { Button, Card, Dot, Note, Num, Press, Row, Rows, RoundButton, ToggleRow, TopBar, Two, cx } from '../../../components/ui2';
 import { SwipeRow } from '../../../components/ui/SwipeRow';
 import { triggerHaptic } from '../../../utils/haptics';
 
@@ -29,6 +29,8 @@ export interface ProgramViewProps {
   sentNote?: string;
   /** a member: the regent's chant right now */
   live?: { title: string; following: boolean; onToggle: () => void } | null;
+  /** the regent's „გუნდი მომყვება“: one switch on the page (board x-ultra-gundi-1) */
+  lead?: { on: boolean; busy?: boolean; sub: string; onChange: (on: boolean) => void };
   onBack: () => void;
   onMore: () => void;
   onOpen: (id: string) => void;
@@ -79,7 +81,7 @@ const ListRow: React.FC<{
 };
 
 export const ProgramView: React.FC<ProgramViewProps> = ({
-  day, className, rows, regent, empty, ai, send, sentNote, live, onBack, onMore, onOpen, onRemove, onMove, onAdd, onAi, onSend, onChurch,
+  day, className, rows, regent, empty, ai, send, sentNote, live, lead, onBack, onMore, onOpen, onRemove, onMove, onAdd, onAi, onSend, onChurch,
 }) => {
   const list = useRef<HTMLDivElement>(null);
 
@@ -189,6 +191,12 @@ export const ProgramView: React.FC<ProgramViewProps> = ({
       )}
 
       <div className={cx('mt-auto flex flex-col gap-2.5 pt-3')}>
+        {regent && empty === undefined && lead && (
+          <Rows>
+            <ToggleRow lead={<Dot icon={<Radio />} />} title="გუნდი მომყვება" sub={lead.sub} wrap
+              on={lead.on} disabled={lead.busy || !count} onChange={lead.onChange} />
+          </Rows>
+        )}
         {regent && empty === undefined && send && (
           <>
             {send.note && <Note className="text-center">{send.note}</Note>}

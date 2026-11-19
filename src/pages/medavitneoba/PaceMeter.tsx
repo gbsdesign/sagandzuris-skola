@@ -4,15 +4,17 @@ import { PACE, PACE_NAMES, paceNumber, type Pace } from '../../utils/readingPace
 
 // The pace of a recorded reading (utils/readingPace.ts): a bar of three zones, where this reading fell, and what to do.
 
-const LOW = 1.5;
-const HIGH = 7;
+export const PACE_LOW = 1.5;
+const LOW = PACE_LOW;
+export const PACE_HIGH = 7;
+const HIGH = PACE_HIGH;
 const ZONES = [
   { zone: 'slow', from: LOW, to: PACE.slow, bar: 'bg-amber-200' },
   { zone: 'even', from: PACE.slow, to: PACE.fast, bar: 'bg-emerald-300' },
   { zone: 'fast', from: PACE.fast, to: HIGH, bar: 'bg-amber-200' },
 ] as const;
 
-const ADVICE: Record<Pace['zone'], string> = {
+export const PACE_ADVICE: Record<Pace['zone'], string> = {
   slow: 'ნელა კითხულობ. ცოტა მოუმატე — ოღონდ სიტყვები ისევ ბოლომდე და მკაფიოდ გამოთქვი.',
   even: 'კარგი ტემპია — აუჩქარებლად და გასაგებად. ასე განაგრძე.',
   fast: 'აჩქარდი. შეანელე: სიტყვები ბოლომდე გამოთქვი და ყოველ მუხლზე ოდნავ შეისვენე.',
@@ -47,7 +49,7 @@ export const PaceMeter: React.FC<{ pace: Pace }> = ({ pace }) => {
           </span>
         ))}
       </div>
-      <p className="mt-2 text-[13px] leading-snug text-[#4a3826] text-pretty">{ADVICE[pace.zone]}</p>
+      <p className="mt-2 text-[13px] leading-snug text-[#4a3826] text-pretty">{PACE_ADVICE[pace.zone]}</p>
     </div>
   );
 };

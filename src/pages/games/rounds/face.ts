@@ -95,3 +95,13 @@ export interface RoundFace {
 
 /** a round's full content once it is open (the reveal shows what was secret) */
 export const openQ = <Q extends RoundQ>(q: PublicQ) => q as Partial<Q> & Pick<Q, 'kind'>;
+
+/** a mode's words as numbered steps (2026-11-04, the games' review): its sentences — a „;“ ends one too — without the
+ *  „ონლაინ:“ / „ჰიბრიდული:“ the tab already says */
+export const stepsOf = (text: string) => text
+  .replace(/^(ონლაინ|ჰიბრიდული)[^:]{0,40}:\s*/, '')
+  .replace(/([.!?;])\s+(?=\S)/g, '$1\n')
+  .replace(/, მერე /g, '.\nმერე ')
+  .split('\n')
+  .map(x => x.trim().replace(/;$/, '.'))
+  .filter(Boolean);

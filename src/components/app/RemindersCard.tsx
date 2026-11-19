@@ -37,8 +37,9 @@ const SwitchRow: React.FC<{ on: boolean; onChange: (on: boolean) => void; title:
   </button>
 );
 
-/** Everything in one window (also opened by the settings page's „შეხსენებები“ row). */
-export const RemindersSheet: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+/** The reminders' state and switches, shared by the old window below and the new look's screen
+ *  (pages/v2/propili/Reminders, board x-shekhsenebebi). Turning anything on asks the phone for notifications once. */
+export const useRemindersState = () => {
   const { user } = useAuth();
   const hours = useReminders();
   const mine = useMyHabits(user?.uid);
@@ -46,7 +47,6 @@ export const RemindersSheet: React.FC<{ onClose: () => void }> = ({ onClose }) =
   const [perm, setPerm] = useState<NotificationPermission | 'unsupported'>(() => (notificationsSupported() ? Notification.permission : 'unsupported'));
   const [note, setNote] = useState('');
 
-  // turning anything on asks the phone for notifications once
   const allow = async () => {
     const p = await askNotificationPermission();
     setPerm(p);
@@ -60,6 +60,25 @@ export const RemindersSheet: React.FC<{ onClose: () => void }> = ({ onClose }) =
   const habits = mine.groups.flatMap(g => g.items);
   const timed = habits.filter(h => h.time?.from);
   const untimed = habits.length - timed.length;
+  const prayerHours = [...PRAYER_HOURS].sort((a, b) => a.hour - b.hour);
+
+  const toggleHour = async (id: string, on: boolean) => { if (await turning(on)) setHourReminders(id, on ? [REMINDER_OFFSETS[1]] : []); };
+  const toggleHabit = async (id: string, on: boolean) => { if (await turning(on)) void mine.save(setHabitAlerts(mine.setup, id, on ? [0] : [])); };
+  const toggleLearn = async (on: boolean) => {
+    if (await turning(on)) { const v = on ? REMIND_TIMES[0] : ''; setRemindTime(v); setLearnAt(v); }
+  };
+  /** the review's hour; picking one while it is off turns it on (asking first) */
+  const pickLearn = async (t: string) => {
+    if (!learnAt && !(await allow())) return;
+    triggerHaptic(8); setRemindTime(t); setLearnAt(t);
+  };
+
+  return { hours, prayerHours, timed, untimed, learnAt, perm, note, allow, toggleHour, toggleHabit, toggleLearn, pickLearn };
+};
+
+/** Everything in one window (also opened by the settings page's „შეხსენებები“ row). */
+export const RemindersSheet: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+  const { hours, prayerHours, timed, untimed, learnAt, perm, note, allow, toggleHour, toggleHabit, toggleLearn, pickLearn } = useRemindersState();
 
   return (
     <Sheet open onClose={onClose} title="შეხსენებები">
@@ -77,12 +96,12 @@ export const RemindersSheet: React.FC<{ onClose: () => void }> = ({ onClose }) =
         )}
 
         <Group title="შვიდგზის ლოცვა" hint="შეხსენება 5 წუთით ადრე მოდის; წუთების შეცვლა ლოცვის გვერდზე შეიძლება.">
-          {[...PRAYER_HOURS].sort((a, b) => a.hour - b.hour).map(h => {
+          {prayerHours.map(h => {
             const active = hours[h.id] || [];
             return (
               <SwitchRow key={h.id} title={`${hourClock(h)} · ${h.label}`} on={active.length > 0}
                 sub={active.length ? `${[...active].sort((a, b) => b - a).join(', ')} წუთით ადრე` : undefined}
-                onChange={async on => { if (await turning(on)) setHourReminders(h.id, on ? [REMINDER_OFFSETS[1]] : []); }} />
+                onChange={on => void toggleHour(h.id, on)} />
             );
           })}
         </Group>
@@ -95,18 +114,18 @@ export const RemindersSheet: React.FC<{ onClose: () => void }> = ({ onClose }) =
             return (
               <SwitchRow key={h.id} title={h.label} on={on}
                 sub={`${h.time!.from}${on ? ` · ${h.alerts!.map(a => (a === 0 ? 'ზუსტად დროზე' : `${a} წთ ადრე`)).join(', ')}` : ''}`}
-                onChange={async next => { if (await turning(next)) void mine.save(setHabitAlerts(mine.setup, h.id, next ? [0] : [])); }} />
+                onChange={next => void toggleHabit(h.id, next)} />
             );
           })}
         </Group>
 
         <Group title="გალობის გამეორება" hint="იმ დღეს, როცა ნასწავლი ფრაზა გასამეორებელია, ამ საათზე შეგახსენებს.">
           <SwitchRow title="გამეორების შეხსენება" on={!!learnAt} sub={learnAt ? `${learnAt}-ზე` : undefined}
-            onChange={async on => { if (await turning(on)) { const v = on ? REMIND_TIMES[0] : ''; setRemindTime(v); setLearnAt(v); } }} />
+            onChange={on => void toggleLearn(on)} />
           {learnAt && (
             <div className="px-3.5 py-2.5 flex flex-wrap gap-1.5" role="radiogroup" aria-label="საათი">
               {REMIND_TIMES.map(t => (
-                <button key={t} type="button" role="radio" aria-checked={learnAt === t} onClick={() => { triggerHaptic(8); setRemindTime(t); setLearnAt(t); }}
+                <button key={t} type="button" role="radio" aria-checked={learnAt === t} onClick={() => void pickLearn(t)}
                   className={`h-10 px-3.5 rounded-full text-[13px] font-bold tabular-nums cursor-pointer transition ${learnAt === t ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[#4a3426] hover:ring-[#7a2028]/40'}`}>
                   {t}
                 </button>

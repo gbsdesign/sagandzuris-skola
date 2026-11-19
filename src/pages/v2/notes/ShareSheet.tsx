@@ -1,7 +1,7 @@
 // „გაზიარება“ of the notes page in the new look (board x-notebi-qr): the chant's name, its QR code for a phone nearby,
 // one „გაზიარება“ (the phone offers its own apps) and „კოპირება“. Takes a history entry (sgQr), so the phone's back closes it.
 import React, { useEffect, useState } from 'react';
-import { Copy, LoaderCircle, Share } from 'lucide-react';
+import { Copy, Share } from 'lucide-react';
 import { Button, Duo, Sheet } from '../../../components/ui2';
 import { useBackClose } from '../../notes/QrTools';
 
@@ -52,7 +52,7 @@ export const ShareSheet: React.FC<{
       <div className="flex size-[204px] shrink-0 items-center justify-center self-center rounded-tile bg-surf p-4 text-mut">
         {svg
           ? <div role="img" aria-label="ამ ნოტების QR კოდი" className="size-full [&_svg]:block [&_svg]:size-full" dangerouslySetInnerHTML={{ __html: svg }} />
-          : <LoaderCircle aria-hidden="true" className="size-6 animate-spin" />}
+          : <span role="status" aria-label="იტვირთება" className="size-full rounded-field bg-track motion-safe:animate-pulse" />}
       </div>
       <p className="shrink-0 px-4 text-center text-body text-mut">მეორე ტელეფონი კამერას მიუშვერს — ეს ნოტები გაიხსნება.</p>
       <Duo>

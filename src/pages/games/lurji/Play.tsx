@@ -5,6 +5,9 @@ import { TableScreen } from '../../../components/games/TableScreen';
 import { Btn } from '../../../components/ui/kit';
 import { triggerHaptic } from '../../../utils/haptics';
 import { LILA, LILA_DEEP, Loom, Meidan, Stamp, Token, Trays, eveningText, takeText, useCell, type Sel } from './look';
+import { useNewLook } from '../../../design/newLook';
+import { TurnFrame } from '../../v2/tamashebi/TurnFrame';
+import { Matiane, placesFrom } from '../../v2/tamashebi/Matiane';
 
 // „ლურჯი სუფრა“ being played, online and on one phone alike: the day's story, the trays and the meidan, the board on turn
 // (mine online) big and the others small. A take = a tap on a stamp (all of its ornament there), a tap on a line or on the
@@ -54,6 +57,7 @@ export const LurjiPlay: React.FC<{
 }> = ({ g, me, one, sent, clock, acts, right, note, onHide }) => {
   const ph = g.phase;
   const cell = useCell();
+  const nl = useNewLook();
   const [sel, setSel] = useState<Sel | null>(null);
   const [line, setLine] = useState<number | null>(null);
   useEffect(() => { setSel(null); setLine(null); }, [g.step]);
@@ -167,68 +171,113 @@ export const LurjiPlay: React.FC<{
 
   const others = g.names.map((_, i) => i).filter(i => i !== focus);
   const pick = mine && sel ? { o: sel.o, count, token, line, onLine: pickLine } : undefined;
-  return (
-    <TableScreen title="ლურჯი სუფრა" right={right} onClose={onHide} footer={footer}>
-      <div className="py-2 space-y-3.5 w-full max-w-[880px] mx-auto">
-        <div className={`grid gap-3.5 items-start ${b ? 'lg:grid-cols-2 [@media(max-height:500px)]:grid-cols-2' : ''}`}>
-        <div className="min-w-0 space-y-3.5">
-          {story}
-          {note}
-          {ph.k === 'take' && (
-            <section className="space-y-2.5">
-              <Trays g={g} cell={cell} sel={mine ? sel : null} onPick={mine ? pickStamp : undefined} />
-              <Meidan g={g} size={Math.round(cell * 0.9)} sel={mine ? sel : null} onPick={mine ? pickStamp : undefined} />
-            </section>
-          )}
-        </div>
-        {b && (
-          <section className={`rounded-2xl bg-white px-3 py-3 ${mine ? 'ring-2 ring-[#e2c27a]' : 'ring-1 ring-[#e8dcc8]'}`}>
-            <div className="mb-2.5 flex items-baseline justify-between gap-2">
-              <p className="min-w-0 text-[14px] font-bold text-[#4a3426] [overflow-wrap:anywhere]">{focus === me ? 'შენი სუფრა' : g.names[focus]}</p>
-              <p className="shrink-0 text-[13px] font-bold text-[#1f3a5f]">ქება <span className="text-[17px] tabular-nums">{b.score}</span></p>
-            </div>
-            <Loom b={b} cell={cell} pick={pick} fresh={ph.k !== 'take' ? ph.report[focus].placed : undefined} />
-            {mine && sel && line !== null && (() => {
-              const l = landing(b, line, count, token);
-              return (l.onFloor || l.toLid || token) ? (
-                <p className="mt-2 text-[12.5px] font-bold leading-snug text-[#8e2431]">
-                  {token && <span className="inline-flex items-center gap-1 align-middle mr-1"><Token size={16} />ნიშანი საღებავზე</span>}
-                  {l.onFloor > 0 && <>{token ? ' · ' : ''}{l.onFloor} ბეჭედი დაიღვრება</>}
-                  {l.toLid > 0 && <> · {l.toLid} გოდორში</>}
-                </p>
-              ) : null;
-            })()}
-          </section>
-        )}
-        </div>
-        {focus < 0 && (
-          <ul className="space-y-2.5">
-            {g.names.map((n, i) => (
-              <li key={i} className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-3 py-3">
-                <div className="mb-2.5 flex items-baseline justify-between gap-2">
-                  <p className="min-w-0 text-[14px] font-bold text-[#4a3426] [overflow-wrap:anywhere]">{n}</p>
-                  <p className="shrink-0 text-[13px] font-bold text-[#1f3a5f]">ქება <span className="text-[17px] tabular-nums">{g.boards[i].score}</span></p>
-                </div>
-                <Loom b={g.boards[i]} cell={cell} fresh={ph.k !== 'take' ? ph.report[i].placed : undefined} />
-              </li>
-            ))}
-          </ul>
-        )}
-        {finale}
-        {focus >= 0 && others.length > 0 && (
-          <ul className={`grid gap-2 ${others.length > 1 ? 'grid-cols-2' : 'grid-cols-1 max-w-[220px]'} sm:grid-cols-3`}>
-            {others.map(i => <MiniBoard key={i} g={g} i={i} me={me} />)}
-          </ul>
-        )}
-        {ph.k === 'take' && g.log.length > 1 && (
-          <section className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-3.5 py-3">
-            <p className="text-[12.5px] font-bold text-[#75685a]">დღეს</p>
-            <ul className="mt-1 space-y-0.5">
-              {g.log.slice(-4).reverse().map(l => <li key={l.n} className="flex items-center gap-1.5 text-[12.5px] leading-snug text-[#4a3426]"><Stamp o={l.o} size={14} />{takeText(l, g.names)}</li>)}
-            </ul>
+  const mainBoard = b && (
+    <section className={`rounded-2xl bg-white px-3 py-3 ${mine ? 'ring-2 ring-[#e2c27a]' : 'ring-1 ring-[#e8dcc8]'}`}>
+      <div className="mb-2.5 flex items-baseline justify-between gap-2">
+        <p className="min-w-0 text-[14px] font-bold text-[#4a3426] [overflow-wrap:anywhere]">{focus === me ? 'შენი სუფრა' : g.names[focus]}</p>
+        <p className="shrink-0 text-[13px] font-bold text-[#1f3a5f]">ქება <span className="text-[17px] tabular-nums">{b.score}</span></p>
+      </div>
+      <Loom b={b} cell={cell} pick={pick} fresh={ph.k !== 'take' ? ph.report[focus].placed : undefined} />
+      {mine && sel && line !== null && (() => {
+        const l = landing(b, line, count, token);
+        return (l.onFloor || l.toLid || token) ? (
+          <p className="mt-2 text-[12.5px] font-bold leading-snug text-[#8e2431]">
+            {token && <span className="inline-flex items-center gap-1 align-middle mr-1"><Token size={16} />ნიშანი საღებავზე</span>}
+            {l.onFloor > 0 && <>{token ? ' · ' : ''}{l.onFloor} ბეჭედი დაიღვრება</>}
+            {l.toLid > 0 && <> · {l.toLid} გოდორში</>}
+          </p>
+        ) : null;
+      })()}
+    </section>
+  );
+  const allBoards = focus < 0 && (
+    <ul className="space-y-2.5">
+      {g.names.map((n, i) => (
+        <li key={i} className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-3 py-3">
+          <div className="mb-2.5 flex items-baseline justify-between gap-2">
+            <p className="min-w-0 text-[14px] font-bold text-[#4a3426] [overflow-wrap:anywhere]">{n}</p>
+            <p className="shrink-0 text-[13px] font-bold text-[#1f3a5f]">ქება <span className="text-[17px] tabular-nums">{g.boards[i].score}</span></p>
+          </div>
+          <Loom b={g.boards[i]} cell={cell} fresh={ph.k !== 'take' ? ph.report[i].placed : undefined} />
+        </li>
+      ))}
+    </ul>
+  );
+  const minis = focus >= 0 && others.length > 0 && (
+    <ul className={`grid gap-2 ${others.length > 1 ? 'grid-cols-2' : 'grid-cols-1 max-w-[220px]'} sm:grid-cols-3`}>
+      {others.map(i => <MiniBoard key={i} g={g} i={i} me={me} />)}
+    </ul>
+  );
+
+  // the new look: the end is the chronicle's screen (board x-otakhi-matiane), a day's step the turn frame (x-otakhi-svla)
+  if (nl && ph.k === 'end') {
+    const order = g.names.map((_, i) => i).sort((x, y) => g.boards[y].score - g.boards[x].score || fullRows(g.boards[y]) - fullRows(g.boards[x]));
+    const places = placesFrom(order, (x, y) => g.boards[x].score === g.boards[y].score && fullRows(g.boards[x]) === fullRows(g.boards[y]));
+    return (
+      <Matiane
+        game="ლურჯი სუფრა"
+        onClose={onHide}
+        right={right}
+        win={{ winners: ph.winners.map(nm), top: g.boards[order[0]]?.score ?? 0 }}
+        why={sub}
+        places={order.map((i, k) => ({ name: g.names[i], place: places[k], score: `${g.boards[i].score} ქება`, me: i === me }))}
+        extra={<div className="space-y-3.5">{finale}{mainBoard}{allBoards}{minis}</div>}
+        extraLabel="დათვლა"
+        chronicle={g.log.length ? [{ head: `დღე ${g.day}`, lines: g.log.map(l => <span key={l.n} className="inline-flex items-center gap-1.5"><Stamp o={l.o} size={14} />{takeText(l, g.names)}</span>) }] : undefined}
+        again={acts.again}
+        close={acts.again ? (acts.close ? { label: one ? 'დახურვა' : 'ოთახის დახურვა', onClick: acts.close } : undefined) : acts.leave ? { label: 'დახურვა', onClick: acts.leave } : undefined}
+      />
+    );
+  }
+  const body = (
+    <div className="py-2 space-y-3.5 w-full max-w-[880px] mx-auto">
+      <div className={`grid gap-3.5 items-start ${b ? 'lg:grid-cols-2 [@media(max-height:500px)]:grid-cols-2' : ''}`}>
+      <div className="min-w-0 space-y-3.5">
+        {story}
+        {note}
+        {ph.k === 'take' && (
+          <section className="space-y-2.5">
+            <Trays g={g} cell={cell} sel={mine ? sel : null} onPick={mine ? pickStamp : undefined} />
+            <Meidan g={g} size={Math.round(cell * 0.9)} sel={mine ? sel : null} onPick={mine ? pickStamp : undefined} />
           </section>
         )}
       </div>
+      {mainBoard}
+      </div>
+      {allBoards}
+      {finale}
+      {minis}
+      {ph.k === 'take' && g.log.length > 1 && (
+        <section className="rounded-2xl bg-white ring-1 ring-[#e8dcc8] px-3.5 py-3">
+          <p className="text-[12.5px] font-bold text-[#75685a]">დღეს</p>
+          <ul className="mt-1 space-y-0.5">
+            {g.log.slice(-4).reverse().map(l => <li key={l.n} className="flex items-center gap-1.5 text-[12.5px] leading-snug text-[#4a3426]"><Stamp o={l.o} size={14} />{takeText(l, g.names)}</li>)}
+          </ul>
+        </section>
+      )}
+    </div>
+  );
+  if (nl) {
+    const turnText = ph.k === 'take'
+      ? (mine ? (one ? `სვლაა: ${g.names[g.turn]}` : 'შენი სვლაა') : sent ? 'გაგზავნილია — ელოდება…' : `სვლაა: ${nm(g.turn)}`)
+      : 'საღამო: ბეჭდვა';
+    return (
+      <TurnFrame
+        title="ლურჯი სუფრა"
+        sub={`დღე ${g.day}`}
+        right={right}
+        onClose={onHide}
+        seats={g.names.map((n, i) => ({ name: n, me: i === me, on: ph.k === 'take' && g.turn === i }))}
+        turn={{ text: turnText, mine }}
+        footer={ph.k === 'take' && sent ? undefined : footer}
+      >
+        {body}
+      </TurnFrame>
+    );
+  }
+  return (
+    <TableScreen title="ლურჯი სუფრა" right={right} onClose={onHide} footer={footer}>
+      {body}
     </TableScreen>
   );
 };

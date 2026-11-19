@@ -32,7 +32,7 @@ import { errorText } from '../../utils/errorText';
 export const ROLE_ICON: Record<Role, React.ReactNode> = {
   superadmin: <Crown />, admin: <ShieldCheck />, teacher: <GraduationCap />, member: <UserIcon />, guest: <UserIcon />,
 };
-const VOICE: Record<string, string> = { '1': 'I ხმა', '2': 'II ხმა', '3': 'III ხმა' };
+export const VOICE: Record<string, string> = { '1': 'I ხმა', '2': 'II ხმა', '3': 'III ხმა' };
 
 const isOwnerEmail = (u: UserRecord) => u.email.toLowerCase() === SUPER_ADMIN_EMAIL;
 export const roleOf = (u: UserRecord, staff: StaffRecord[]): Role => {
@@ -50,33 +50,24 @@ const sameFeatures = (a: 'all' | FeatureId[], b: 'all' | FeatureId[]) =>
 // mode, what they may open (superadmins), letting them in — with a class in the same step — or refusing, writing to them,
 // and editing their profile, which opens inside this same window. Their learning in detail is followed on the class page.
 // An account that may be their second one is named on top (a tap opens it); „ჩანიშვნა“ = the admins' private note.
-export const PersonSheet: React.FC<{
+/** What the person's window does, apart from its drawing (shared by the old window and the new look's page,
+ *  pages/v2/admini): who they are to the school, letting in or refusing (with a class), the role, the classes, writing to
+ *  them, the kids' mode, „გასული“ and the twins. `fail` shows a message where the drawing keeps them. */
+export const usePersonActions = ({ person: u, users, staff, classes, access, decision, onClose, onMessage, fail }: {
   person: UserRecord;
-  /** everyone, to name who gave a role or let someone in (the records keep an e-mail) */
   users: UserRecord[];
   staff: StaffRecord[];
   classes: SchoolClass[];
-  access?: AccessRecord;      // superadmins only; none: a member from before approvals
+  access?: AccessRecord;
   decision?: DecisionRecord;
   onClose: () => void;
   onMessage: (text: string, type: 'success' | 'error') => void;
-  /** a computer: the panel's second column instead of a window */
-  docked?: boolean;
-  /** marked „გასული“ — since when (ISO, or „—“ when unknown) */
-  leftSince?: string;
-  /** accounts that may be the same person's (utils/duplicates) */
-  twins?: { uid: string; why: 'phone' | 'name'; person: UserRecord }[];
-  onOpenPerson?: (uid: string) => void;
-}> = ({ person: u, users, staff, classes, access, decision, onClose, onMessage, docked, leftSince, twins = [], onOpenPerson }) => {
+  fail: (text: string) => void;
+}) => {
   const { user, isOwner, isSuperAdmin } = useAuth();
   const { openClass, openDm } = useNavigation();
-  const note = useFlash();
-  const [editing, setEditing] = useState(false);
+  const note = { fail };
   const [busy, setBusy] = useState(false);
-  // the role buttons open from the role's ✎ (a rare change)
-  const [roleOpen, setRoleOpen] = useState(false);
-  // „კლასში დამატება“ unfolds the classes they are not in
-  const [adding, setAdding] = useState(false);
   // a newcomer's class, chosen before „დაშვება“ (one or none)
   const [joinId, setJoinId] = useState<string | null>(null);
 
@@ -138,10 +129,10 @@ export const PersonSheet: React.FC<{
     : [];
   const setRole = async (next: Role) => {
     const email = u.email.toLowerCase();
-    if (!email) { note.fail('ამ მომხმარებელს ელფოსტა არ აქვს — როლს ვერ მივანიჭებ.'); return; }
+    if (!email) { note.fail('ამ მომხმარებელს ელფოსტა არ აქვს — როლს ვერ მივანიჭებ.'); return false; }
     if (next === 'superadmin' && extraSupers >= MAX_EXTRA_SUPERADMINS) {
       note.fail(`სუპერადმინი შენს გარდა მაქსიმუმ ${MAX_EXTRA_SUPERADMINS} შეიძლება იყოს.`);
-      return;
+      return false;
     }
     // no „დარწმუნებული ხარ?“: the change is made at once and „გაუქმება“ puts the old record back for a few seconds
     const before = given ? Object.fromEntries(Object.entries(given).filter(([, v]) => v !== undefined)) : null;
@@ -152,11 +143,12 @@ export const PersonSheet: React.FC<{
       else await setDoc(ref, {
         email, role: next, userId: u.userId, name: u.name, addedBy: user?.email || '', addedAt: new Date().toISOString(),
       });
-      setRoleOpen(false);
       changed('role', `${u.name} — ${next === 'member' ? `როლი მოიხსნა (იყო ${ROLE_LABEL[role]})` : `როლი: ${ROLE_LABEL[next]}`}`, u.userId,
         () => (before ? setDoc(ref, before) : deleteDoc(ref)));
+      return true;
     } catch (e) {
       note.fail('როლი ვერ შეიცვალა: ' + errorText(e));
+      return false;
     } finally {
       setBusy(false);
     }
@@ -179,11 +171,12 @@ export const PersonSheet: React.FC<{
       const me = { uid: u.userId, name: u.name, photoURL: u.photoURL || '' };
       const failed = await addClassMember(c, me);
       if (failed) note.fail(`ჩაიწერა კლასში „${c.name}“, მაგრამ პროგრამა გზაზე ვერ დაემატა — კლასის გვერდიდან სცადე თავიდან.`);
-      setAdding(false);
       changed('member', `${u.name} ჩაიწერა კლასში „${c.name}“`, c.id,
         () => removeClassMember({ ...c, memberIds: [...c.memberIds, me.uid], members: [...c.members, me] }, me.uid));
+      return true;
     } catch (e) {
       note.fail(`კლასში ვერ ჩაიწერა: ${errorText(e)}`);
+      return false;
     } finally {
       setBusy(false);
     }
@@ -271,6 +264,46 @@ export const PersonSheet: React.FC<{
   ];
   const shown = facts.filter(([, v]) => v);
   const tries = Math.max(0, (access?.attempts || 0) - 1);
+
+  return {
+    user, isOwner, isSuperAdmin, busy, joinId, setJoinId, role, isStaff, manageAccess, waiting, refused, admitted,
+    all, setAll, picked, setPicked, chosen, none, dirty, resetAccess, decide, refuse, choices, setRole, nameOf, given,
+    roleSub, letIn, memberOf, teaches, notIn, goClass, addTo, write, kidsOn, kidsSections, setKids, markTwo, markTwinLeft,
+    markLeft, facts: shown, tries,
+  };
+};
+
+export const PersonSheet: React.FC<{
+  person: UserRecord;
+  /** everyone, to name who gave a role or let someone in (the records keep an e-mail) */
+  users: UserRecord[];
+  staff: StaffRecord[];
+  classes: SchoolClass[];
+  access?: AccessRecord;      // superadmins only; none: a member from before approvals
+  decision?: DecisionRecord;
+  onClose: () => void;
+  onMessage: (text: string, type: 'success' | 'error') => void;
+  /** a computer: the panel's second column instead of a window */
+  docked?: boolean;
+  /** marked „გასული“ — since when (ISO, or „—“ when unknown) */
+  leftSince?: string;
+  /** accounts that may be the same person's (utils/duplicates) */
+  twins?: { uid: string; why: 'phone' | 'name'; person: UserRecord }[];
+  onOpenPerson?: (uid: string) => void;
+}> = ({ person: u, users, staff, classes, access, decision, onClose, onMessage, docked, leftSince, twins = [], onOpenPerson }) => {
+  const note = useFlash();
+  const [editing, setEditing] = useState(false);
+  // the role buttons open from the role's ✎ (a rare change)
+  const [roleOpen, setRoleOpen] = useState(false);
+  // „კლასში დამატება“ unfolds the classes they are not in
+  const [adding, setAdding] = useState(false);
+  const {
+    user, busy, joinId, setJoinId, role, isStaff, manageAccess, waiting, refused, admitted, all, setAll, picked, setPicked,
+    none, dirty, resetAccess, decide, refuse, choices, setRole: saveRole, nameOf, roleSub, letIn, memberOf, teaches, notIn,
+    goClass, addTo: joinClass, write, kidsOn, kidsSections, setKids, markTwo, markTwinLeft, markLeft, facts: shown, tries,
+  } = usePersonActions({ person: u, users, staff, classes, access, decision, onClose, onMessage, fail: note.fail });
+  const setRole = (r: Role) => { void saveRole(r).then(ok => { if (ok) setRoleOpen(false); }); };
+  const addTo = (c: SchoolClass) => { void joinClass(c).then(ok => { if (ok) setAdding(false); }); };
 
   const approveLabel = none ? 'აირჩიეთ ერთი მაინც' : 'დაშვება';
   const footer = editing ? undefined
@@ -614,7 +647,7 @@ const ClassChips: React.FC<{ label?: string; list: SchoolClass[]; onPick: (c: Sc
 );
 
 /** Attendance in the person's classes: the last 8 lessons of each, how many they came to. */
-const useAttendanceOf = (uid: string, classIds: string[]) => {
+export const useAttendanceOf = (uid: string, classIds: string[]) => {
   const [byClass, setByClass] = useState<Record<string, string[][]>>({});
   const key = classIds.join(',');
   useEffect(() => {

@@ -152,3 +152,46 @@ export const parseScore = (raw: string): { score: number; text: string } | null 
   if (!j || !Number.isFinite(score)) return null;
   return { score: Math.max(0, Math.min(100, Math.round(score))), text: String(j.text ?? '').replace(/\*+/g, '').trim() };
 };
+
+// ——— the AI teacher's answer in three lines (stage 7, boards x-ultra-ai 1–4): breath, pitch, rhythm — one word each — and one
+// tip in one sentence. The model is asked for them by name (utils/aiTeacher.ts scorePrompt); an answer without them gets the
+// three words from its score, and its tip from the first sentence of its words.
+
+export type AiGrade = 'good' | 'almost' | 'practice';
+export type AiLineId = 'breath' | 'pitch' | 'rhythm';
+export type AiGrades = Record<AiLineId, AiGrade>;
+export const AI_LINES: { id: AiLineId; label: string }[] = [
+  { id: 'breath', label: 'სუნთქვა' },
+  { id: 'pitch', label: 'ბგერის სიზუსტე' },
+  { id: 'rhythm', label: 'რიტმი' },
+];
+export const AI_GRADE_WORD: Record<AiGrade, string> = { good: 'კარგია', almost: 'თითქმის', practice: 'სავარჯიშოა' };
+/** how many of the three marks a grade fills */
+export const AI_GRADE_DOTS: Record<AiGrade, number> = { good: 3, almost: 2, practice: 1 };
+
+const gradeOfWord = (v: unknown): AiGrade | null => {
+  const w = String(v ?? '').trim().toLowerCase();
+  if (!w) return null;
+  if (/^(კარგ|good)/.test(w)) return 'good';
+  if (/^(თითქმის|almost)/.test(w)) return 'almost';
+  if (/^(სავარჯიშ|practi)/.test(w)) return 'practice';
+  return null;
+};
+export const gradeOfScore = (score: number): AiGrade => (score >= 80 ? 'good' : score >= 50 ? 'almost' : 'practice');
+
+/** the first sentence of a text (a tip is one sentence) */
+export const firstSentence = (text: string) => {
+  const t = text.replace(/\*+/g, '').replace(/\s+/g, ' ').trim();
+  const m = t.match(/^.*?[.!?](?=\s|$)/);
+  return (m ? m[0] : t).trim();
+};
+
+/** {"score", "breath", "pitch", "rhythm", "tip", "text"} → the three words and the tip (with the score's words where missing) */
+export const parseGrades = (raw: string, score: number, text: string): { grades: AiGrades; tip: string } => {
+  const tryParse = (s: string) => { try { return JSON.parse(s) as Record<string, unknown>; } catch { return null; } };
+  const j = tryParse(raw) ?? tryParse(raw.match(/\{[\s\S]*\}/)?.[0] ?? '') ?? {};
+  const fallback = gradeOfScore(score);
+  const grades = Object.fromEntries(AI_LINES.map(l => [l.id, gradeOfWord(j[l.id]) ?? fallback])) as AiGrades;
+  const tip = firstSentence(String(j.tip ?? '')) || firstSentence(text);
+  return { grades, tip };
+};

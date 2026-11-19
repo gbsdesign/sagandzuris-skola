@@ -9,6 +9,7 @@ import { GeoKeyboard } from '../../../components/games/GeoKeyboard';
 import { Chip } from '../../../components/games/Chip';
 import { triggerHaptic } from '../../../utils/haptics';
 import { screenKeys } from '../chamotvale/store';
+import { gameKeysPaused } from '../../../components/games/gameVariant';
 
 // The pieces of „ნუ იტყვი!“ and „ერთი მინიშნება“ (2026-11-01): a theme's chip, the word's letter boxes, the five clues as
 // chips (the next hidden one is the button that opens it), the typing of a word — the screen's 33 keys or the phone's own,
@@ -101,7 +102,7 @@ export const useLetterKeys = (on: boolean, h: { letter: (ch: string) => void; ba
   useEffect(() => {
     if (!on) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || gameKeysPaused()) return;
       const el = e.target as HTMLElement | null;
       if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
       if (window.history.state?.sgFind) return;

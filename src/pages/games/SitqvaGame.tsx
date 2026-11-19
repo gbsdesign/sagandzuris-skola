@@ -19,6 +19,7 @@ import { MONTHS_GE } from '../../utils/dateNames';
 import { VariantPage } from './rounds/variants';
 import { SitqvaTeams } from './sitqva/Teams';
 import { dayPick } from './sitqva/dayPick';
+import { gameKeysPaused } from '../../components/games/gameVariant';
 
 // „დღის სიტყვა“ (games hub, 2026-10-28): one hidden word a day for the whole school, six tries, Wordle's colours. The word
 // comes from the church calendar's day (its feast, on every third day a saint's name) or from the broad bank of places,
@@ -86,7 +87,7 @@ const SitqvaDaily: React.FC = () => {
   useEffect(() => {
     if (!pick || day.done) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || gameKeysPaused()) return;
       const el = e.target as HTMLElement | null;
       if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(el.tagName))) return;
       if (window.history.state?.sgFind) return;

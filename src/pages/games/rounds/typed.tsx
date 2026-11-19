@@ -3,13 +3,40 @@ import { Check, Send, X } from 'lucide-react';
 import { TEXT_MAX } from '../../../utils/roundGames';
 import { Btn, FIELD } from '../../../components/ui/kit';
 import { triggerHaptic } from '../../../utils/haptics';
+import { useNewLook } from '../../../design/newLook';
+import { Button } from '../../../components/ui2';
 
 // A quick game answered in words (2026-11-04, „რა? სად? როდის?“; face.ts `typed`): the field a player writes in, the host's
 // list at the reveal (each one's words, right or not — a tap judges again) and the same list, read only, on the players'
 // phones.
 
 /** the player's field and its send button, one row at the screen's bottom (in view on a phone on its side too); Enter sends */
-export const TypedField: React.FC<{ value: string; onChange: (v: string) => void; onSend: () => void; placeholder: string }> = ({ value, onChange, onSend, placeholder }) => (
+export const TypedField: React.FC<{ value: string; onChange: (v: string) => void; onSend: () => void; placeholder: string }> = ({ value, onChange, onSend, placeholder }) => {
+  // the new look (board x-tamashi-asoebi): one round white field with the wine edge, the send pill beside it
+  if (useNewLook()) {
+    return (
+      <form onSubmit={e => { e.preventDefault(); if (value.trim()) onSend(); }} className="flex items-center gap-2">
+        <input
+          id="typed-answer"
+          value={value}
+          onChange={e => onChange(e.target.value.slice(0, TEXT_MAX))}
+          maxLength={TEXT_MAX}
+          placeholder={placeholder}
+          aria-label="შენი პასუხი"
+          autoComplete="off"
+          autoCorrect="off"
+          spellCheck={false}
+          enterKeyHint="send"
+          className="h-14 min-w-0 flex-1 rounded-full bg-surf px-5 text-head font-semibold text-ink ring-2 ring-wine outline-none placeholder:font-normal placeholder:text-faint"
+        />
+        <Button type="submit" disabled={!value.trim()} icon={<Send />} className="shrink-0">გაგზავნა</Button>
+      </form>
+    );
+  }
+  return <TypedField1 value={value} onChange={onChange} onSend={onSend} placeholder={placeholder} />;
+};
+
+const TypedField1: React.FC<{ value: string; onChange: (v: string) => void; onSend: () => void; placeholder: string }> = ({ value, onChange, onSend, placeholder }) => (
   <form onSubmit={e => { e.preventDefault(); if (value.trim()) onSend(); }} className="flex items-center gap-2">
     <input
       id="typed-answer"

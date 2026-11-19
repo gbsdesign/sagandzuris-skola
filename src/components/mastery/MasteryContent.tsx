@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useAuth } from '../../context';
 import { useMyClasses } from '../../hooks/useClasses';
 import { ClassLessons } from './ClassLessons';
@@ -7,6 +7,7 @@ import { DayPlan, ExtraDrills, LessonLibrary, LevelCard, PathLevels } from './Ma
 import { EntryTest } from './EntryTest';
 import { TodayLessonHero, MyVoiceLink } from '../aiLesson/TodayLesson';
 import { useMasteryPath } from './useMasteryPath';
+import { startAiScoreQueue } from '../../utils/aiScoreQueue';
 
 // „ოსტატობა“ on the path page = „ოსტატობის გზა“ since 2026-11-07 (plan https://claude.ai/artifact/BNanxAMNuUZMjHNuhx7oo5):
 // my level, today's plan, the lessons of my classes step by step, the six levels with their exercises, the lessons to read
@@ -19,6 +20,8 @@ export const MasteryContent: React.FC = () => {
   const [test, setTest] = useState(false);
   const open = (id: string, tab: 'lesson' | 'exercise' = 'lesson') => setSheet({ id, tab });
   const current = path.summary.level;
+  // an AI score asked without the internet goes once it is back (utils/aiScoreQueue)
+  useEffect(() => { if (user) startAiScoreQueue(); }, [user]);
   return (
     <div className="space-y-4">
       {/* the AI teacher's day lesson (while its switch allows) */}

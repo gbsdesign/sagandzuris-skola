@@ -2,7 +2,7 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import type { ManeraStep } from '../src/data/maneraLessons';
 import { ALL_DRILLS } from '../src/data/vocalDrills';
-import { foldedDiff, onsetsOf, parseScore, runPercent, scoreKindOf, scorePitchRound, scoreRhythmRound, scoredStep, targetAt } from '../src/utils/drillScore';
+import { firstSentence, foldedDiff, gradeOfScore, onsetsOf, parseGrades, parseScore, runPercent, scoreKindOf, scorePitchRound, scoreRhythmRound, scoredStep, targetAt } from '../src/utils/drillScore';
 
 const look = (secs: number, at: (t: number) => number | null) =>
   Array.from({ length: Math.round(secs / 0.04) }, (_, i) => ({ t: i * 0.04, midi: at(i * 0.04) }));
@@ -100,4 +100,18 @@ test('the AI teacher\'s answer is read even when wrapped in words', () => {
   assert.deepEqual(parseScore('{"score": 72.4, "text": "კარგია"}'), { score: 72, text: 'კარგია' });
   assert.deepEqual(parseScore('აი: {"score": 140, "text": "**ძალიან** კარგი"}'), { score: 100, text: 'ძალიან კარგი' });
   assert.equal(parseScore('ვერ მოვისმინე'), null);
+});
+
+test('the AI teacher\'s answer: three words and one tip', () => {
+  const raw = '{"score": 74, "breath": "კარგია", "pitch": "თითქმის", "rhythm": "სავარჯიშოა", "tip": "ბოლო ორ ნოტზე ხმა გიდაბლდება. სცადე."}';
+  assert.deepEqual(parseGrades(raw, 74, ''), {
+    grades: { breath: 'good', pitch: 'almost', rhythm: 'practice' }, tip: 'ბოლო ორ ნოტზე ხმა გიდაბლდება.',
+  });
+  // no words: all three from the score, the tip from the text's first sentence
+  assert.deepEqual(parseGrades('{"score": 55, "text": "კარგი სუნთქვა. ბოლოს დაიდაბლე."}', 55, 'კარგი სუნთქვა. ბოლოს დაიდაბლე.'), {
+    grades: { breath: 'almost', pitch: 'almost', rhythm: 'almost' }, tip: 'კარგი სუნთქვა.',
+  });
+  assert.equal(gradeOfScore(80), 'good');
+  assert.equal(gradeOfScore(49), 'practice');
+  assert.equal(firstSentence('ერთი წინადადება'), 'ერთი წინადადება');
 });

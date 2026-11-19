@@ -8,13 +8,15 @@ import { isDue } from '../../../utils/habitSchedule';
 import { HabitsMore } from './More';
 import { VAZI_ITEM, habitItem, useHabitsDate, useHabitsNav } from './nav';
 import { DayCard, HabitLine, WorkLine, barSub } from './DayParts';
+import { HelpButton } from '../mkitkhe/HelpButton';
 
 // „ჩვევები“ — the day (boards x-chvevebi and x-carieli-chvevebi): the top card with the ring and the week, then one line a
 // habit. The round mark ticks the picked day, the rest of the line opens the habit's page; the other views, the change of
 // the list and the note are in the bar's „⋯“.
 
-const List: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <Card pad="none" className="flex flex-col divide-y divide-line">{children}</Card>
+// `help`: the ready answers of „მკითხე“ that speak of it (pages/v2/mkitkhe/light.ts lights it)
+const List: React.FC<{ children: React.ReactNode; help?: string }> = ({ children, help }) => (
+  <Card pad="none" data-help={help} className="flex flex-col divide-y divide-line">{children}</Card>
 );
 
 export const DayScreen: React.FC<{ model: HabitsModel }> = ({ model }) => {
@@ -29,13 +31,19 @@ export const DayScreen: React.FC<{ model: HabitsModel }> = ({ model }) => {
 
   return (
     <div className="flex flex-col gap-4 pb-6">
-      <TopBar title="ჩვევები" sub={barSub(date)} onBack={back} right={<HabitsMore views />} />
+      <TopBar title="ჩვევები" sub={barSub(date)} onBack={back} right={(
+        <>
+          <span data-help="26" className="flex rounded-full"><HabitsMore views /></span>
+          {/* „?“ — three ready answers about this page (x-idea-adgilze), always last */}
+          <HelpButton page="habits" />
+        </>
+      )} />
       <DayCard model={model} date={date} onPick={setDate} onVazi={() => go(VAZI_ITEM)} />
 
       {(daily.length > 0 || work) && (
         <section className="flex flex-col gap-2">
           <SectionLabel label="ყოველდღე" />
-          <List>
+          <List help="25">
             {work && <WorkLine onOpen={() => setSheet('work')} />}
             {daily.map(({ h, g }) => (
               <HabitLine key={h.id} model={model} habit={h} group={g} date={date} onOpen={() => go(habitItem(h.id))} />

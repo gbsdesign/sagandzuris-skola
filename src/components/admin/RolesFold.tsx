@@ -7,7 +7,7 @@ import { Fold } from './Fold';
 // „ვის რა შეუძლია“ (admin review, idea 14, 2026-10-28): what each role may do, in ⚙ „სკოლა“, so a new admin needs no
 // explaining. Each role holds everything of the one under it; the lines follow firestore.rules and the panel (who names
 // whom: the `admins` rule's canGrant; letting members in: memberAccess; a teacher: their own classes only).
-const ROLES: { id: string; Icon: React.ComponentType<{ className?: string }>; name: string; who: string; can: string[] }[] = [
+export const ROLES: { id: string; Icon: React.ComponentType<{ className?: string }>; name: string; who: string; can: string[] }[] = [
   {
     id: 'owner', Icon: Crown, name: 'მფლობელი', who: 'სკოლის დამფუძნებელი, ერთადერთი',
     can: ['ყველაფერი, რაც სუპერადმინს', 'ნიშნავს და ხსნის სუპერადმინებს (მის გარდა მაქსიმუმ 3)', 'მისი როლის შეცვლა არავის შეუძლია'],

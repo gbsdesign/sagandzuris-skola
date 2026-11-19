@@ -154,6 +154,17 @@ export const verdictLine = (hits: number, n: number): string => {
 /** „8 ნოტიდან 6 ზუსტად“ — the count shown under the sentence */
 export const countLine = (hits: number, n: number) => `${n} ნოტიდან ${hits} ზუსტად`;
 
+const COUNT_BEFORE = ['ერთ', 'ორ', 'სამ', 'ოთხ', 'ხუთ', 'ექვს', 'შვიდ', 'რვა', 'ცხრა', 'ათ'];
+/** The count in words (the learning mode's result, board x-ultra-khmis-shepaseba): „რვა ნოტიდან შვიდს მოხვდი.“ —
+ *  numbers past ten as digits („12 ნოტიდან 9-ს მოხვდი.“), none — „ვერცერთ ნოტს ვერ მოხვდი.“ */
+export const hitsLine = (hits: number, n: number) => {
+  if (n <= 0) return '';
+  if (hits <= 0) return 'ვერცერთ ნოტს ვერ მოხვდი.';
+  const of = n <= 10 ? `${COUNT_BEFORE[n - 1]} ნოტიდან` : `${n} ნოტიდან`;
+  if (hits >= n) return `${of} ყველას მოხვდი.`;
+  return `${of} ${hits <= 10 ? `${COUNT_BEFORE[hits - 1]}ს` : `${hits}-ს`} მოხვდი.`;
+};
+
 export type FixKind = 'none' | 'quiet' | 'jump' | 'sag' | 'end' | 'high' | 'low' | 'missing';
 /** The second sentence: one correction, never two. `focus` = the note to hear alone (index), or -1. */
 export const fixLine = (r: TakeRead): { kind: FixKind; text: string; focus: number } => {

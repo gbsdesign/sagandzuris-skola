@@ -16,13 +16,14 @@ import type { SongTake } from './SongPage';
 
 const ROUND = 'w-9 h-9 shrink-0 rounded-full grid place-items-center transition-colors cursor-pointer disabled:cursor-default';
 
-export const TakeTools: React.FC<{ take: SongTake; title: string }> = ({ take, title }) => {
+/** the two tools' state and acts (the list's round buttons here, the song page's ⋯ in the new look — pages/v2/khalkhuri) */
+export const useTakeTools = (take: SongTake | undefined, title: string) => {
   useAlbumAccess(); // an admin's switch applies at once
   const canSaveCentre = useCanDownloadCentre();
   const tools = useRecordingTools();
-  const canSave = tools.download && (!take.centre || (take.album ? albumRight(take.album).download : canSaveCentre));
-  const tracks = take.media.tracks.filter(Boolean) as string[];
-  const main = take.media.tracks[3] || tracks[0];
+  const canSave = !!take && tools.download && (!take.centre || (take.album ? albumRight(take.album).download : canSaveCentre));
+  const tracks = (take?.media.tracks.filter(Boolean) ?? []) as string[];
+  const main = take?.media.tracks[3] || tracks[0];
   const [kept, setKept] = useState(false);
   const [busy, setBusy] = useState<'mp3' | 'cloud' | null>(null);
   const [failed, setFailed] = useState(false);
@@ -34,9 +35,11 @@ export const TakeTools: React.FC<{ take: SongTake; title: string }> = ({ take, t
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tracks.join('|')]);
 
-  if (!main || take.embed || (!canSave && !tools.offline)) return null;
+  // nothing to keep: no recording, an embedded player, or neither right
+  const usable = !!take && !!main && !take.embed && (canSave || tools.offline);
 
   const mp3 = async () => {
+    if (!take || !main) return;
     triggerHaptic(10);
     setBusy('mp3');
     setFailed(false);
@@ -56,6 +59,7 @@ export const TakeTools: React.FC<{ take: SongTake; title: string }> = ({ take, t
   };
 
   const cloud = async () => {
+    if (!tracks.length) return;
     triggerHaptic(kept ? 8 : 15);
     setBusy('cloud');
     setFailed(false);
@@ -73,6 +77,12 @@ export const TakeTools: React.FC<{ take: SongTake; title: string }> = ({ take, t
     }
   };
 
+  return { usable, canSave, offline: tools.offline, kept, busy, failed, mp3, cloud };
+};
+
+export const TakeTools: React.FC<{ take: SongTake; title: string }> = ({ take, title }) => {
+  const { usable, canSave, offline, kept, busy, failed, mp3, cloud } = useTakeTools(take, title);
+  if (!usable) return null;
   return (
     <span className="shrink-0 flex items-center gap-1">
       {canSave && (
@@ -87,7 +97,7 @@ export const TakeTools: React.FC<{ take: SongTake; title: string }> = ({ take, t
           {busy === 'mp3' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
         </button>
       )}
-      {tools.offline && <button
+      {offline && <button
         type="button"
         onClick={cloud}
         disabled={busy !== null}

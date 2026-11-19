@@ -14,11 +14,15 @@ import { ProgramTab } from './ProgramTab';
 import { MembersTab, useWriteTo } from './MembersTab';
 import { EmptyClassScreen } from './EmptyClass';
 import { ClassMoreSheet } from './teacher/More';
+import { AssistantButton } from '../damkhmare/AssistantButton';
 import { TimetableSheet } from './teacher/Timetable';
+import { CLASS_TAB_EVENT, CLASS_TAB_KEY, type ClassTab } from './nav';
+import { HelpButton } from '../mkitkhe/HelpButton';
+import { Waiting } from '../../../components/shell/PageSkeleton';
 
 // the page's tabs; the one open is kept for the tab's visit (a chant opened from it comes back to it)
-type Tab = 'program' | 'chat' | 'people';
-const TAB_KEY = 'sg-class-tab:';
+type Tab = ClassTab;
+const TAB_KEY = CLASS_TAB_KEY;
 const savedTab = (id: string): Tab | null => {
   try {
     const t = sessionStorage.getItem(TAB_KEY + id);
@@ -44,7 +48,7 @@ export const ClassScreen: React.FC = () => {
 
   if (!cls) {
     if (!settled || teaching.loading || all.loading) {
-      return <div className="flex w-full justify-center pt-24 text-mut" role="status" aria-label="იტვირთება"><Loader2 className="size-6 animate-spin" /></div>;
+      return <Waiting field={false} className="pt-4" />;
     }
     return <EmptyClassScreen />;
   }
@@ -83,6 +87,16 @@ const ClassView: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
     setTabState(t);
     try { sessionStorage.setItem(TAB_KEY + cls.id, t); } catch { /* private window: this visit only */ }
   };
+  // „მკითხე“ asks for a tab of this class (pages/v2/mkitkhe/goTo: „როგორ დავრეკო კლასში?“ → the chat)
+  useEffect(() => {
+    const onAsk = (e: Event) => {
+      const d = (e as CustomEvent<{ classId: string; tab: Tab }>).detail;
+      if (d?.classId === cls.id) setTab(d.tab);
+    };
+    window.addEventListener(CLASS_TAB_EVENT, onAsk);
+    return () => window.removeEventListener(CLASS_TAB_EVENT, onAsk);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cls.id, wide]);
   useEffect(() => {
     if (tab !== 'chat' || !showChat.current) return;
     showChat.current = false;
@@ -103,7 +117,7 @@ const ClassView: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
   ) : cls.name;
 
   const lesson = next || canEdit ? (
-    <Press onClick={() => setTimetable(true)} aria-haspopup="dialog"
+    <Press onClick={() => setTimetable(true)} aria-haspopup="dialog" data-help="12"
       className="flex min-h-row w-full cursor-pointer items-center gap-3 rounded-card bg-surf py-2 pr-4 pl-3.5 text-left text-ink transition active:bg-soft">
       <Dot icon={<CalendarDays />} size={40} />
       <span className="flex min-w-0 flex-1 flex-col">
@@ -147,11 +161,15 @@ const ClassView: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
             {wide && (
               <Button kind={tab === 'people' ? 'primary' : 'ghost'} size="md" icon={<Users />} onClick={() => setTab(tab === 'people' ? 'program' : 'people')}>წევრები</Button>
             )}
+            {/* „AI დამხმარე“ for the class's teachers and admins (x-ai-damkhmare) */}
+            {canEdit && <AssistantButton classId={cls.id} />}
             {tab === 'chat' && !wide ? (
-              <ClassCallButton cls={cls} />
+              <span data-help="14" className="flex rounded-full"><ClassCallButton cls={cls} /></span>
             ) : (canEdit || myTeachers.length > 0) && (
               <RoundButton label="მეტი" onClick={() => setMore(true)}><Ellipsis /></RoundButton>
             )}
+            {/* „?“ — the class's or its chat's three ready answers (x-idea-adgilze), always last */}
+            <HelpButton page={tab === 'chat' && !wide ? 'chat' : 'class'} />
           </>
         }
       />
@@ -161,21 +179,23 @@ const ClassView: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
 
       {wide ? (
         <div className="grid grid-cols-[minmax(0,520px)_minmax(0,1fr)] items-start gap-6">
-          <div className="flex min-w-0 flex-col gap-2.5">{left}</div>
+          <div data-help={tab === 'program' ? '11' : undefined} className="flex min-w-0 flex-col gap-2.5">{left}</div>
           <div className="min-w-0 overflow-hidden rounded-card bg-surf">{chat}</div>
         </div>
       ) : (
         <>
-          <Seg<Tab>
-            label="კლასის ნაწილები"
-            value={tab}
-            onChange={setTab}
-            items={[
-              { id: 'program', label: 'პროგრამა' },
-              { id: 'chat', label: 'ჩათი', badge: unreadN },
-              { id: 'people', label: 'წევრები' },
-            ]}
-          />
+          <div data-help="11" className="shrink-0 rounded-full">
+            <Seg<Tab>
+              label="კლასის ნაწილები"
+              value={tab}
+              onChange={setTab}
+              items={[
+                { id: 'program', label: 'პროგრამა' },
+                { id: 'chat', label: 'ჩათი', badge: unreadN },
+                { id: 'people', label: 'წევრები' },
+              ]}
+            />
+          </div>
           {tab === 'chat' ? chat : left}
         </>
       )}

@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { Check, Crown, Loader2, Play, RotateCcw, Square, Volume2 } from 'lucide-react';
+import { Check, Crown, Loader2, Play, RotateCcw, Square, Trophy, Volume2 } from 'lucide-react';
+import { Bar, Card, Num, Press, Rows } from '../../../components/ui2';
+import { NOBODY_WON } from './winLine';
 import { placesOf } from '../../../utils/roundGames';
 import { clock } from '../../../utils/amikhseni';
 import { triggerHaptic } from '../../../utils/haptics';
 import type { SnipState } from './useSnippet';
+import { useTableHead } from '../../../components/games/TableScreen';
+import { useNewLook } from '../../../design/newLook';
 
 // The quick games' small pieces (pages/games/rounds/): the clock, the piece of a recording, the round's head, who has
 // answered, the table of points and the podium.
@@ -24,6 +28,25 @@ export const TimerRing: React.FC<{ left: number; total: number; size?: 'md' | 's
   const r = 44;
   const c = 2 * Math.PI * r;
   const urgent = left <= 5;
+  // the new look: the same ring in the design's colours
+  if (useNewLook()) {
+    return (
+      <div className={`relative shrink-0 ${size === 'sm' ? 'size-16' : 'size-24'}`} role="timer" aria-label={`დარჩა ${Math.ceil(left)} წამი`}>
+        <svg viewBox="0 0 100 100" className="size-full -rotate-90" aria-hidden="true">
+          <circle cx="50" cy="50" r={r} fill="none" stroke="currentColor" strokeWidth="8" className="text-track" />
+          {left > 0 && (
+            <circle
+              cx="50" cy="50" r={r} fill="none" stroke="currentColor" strokeWidth="8" strokeLinecap="round" className={urgent ? 'text-danger' : 'text-wine'}
+              strokeDasharray={c} strokeDashoffset={c * (1 - left / total)} style={{ transition: 'stroke-dashoffset 0.25s linear' }}
+            />
+          )}
+        </svg>
+        <div className={`absolute inset-0 flex items-center justify-center font-bold tabular-nums ${size === 'sm' ? 'text-lead' : 'text-title'} ${urgent ? 'text-danger' : 'text-ink'}`}>
+          {clock(Math.ceil(left))}
+        </div>
+      </div>
+    );
+  }
   return (
     <div className={`relative shrink-0 ${size === 'sm' ? 'w-16 h-16' : 'w-24 h-24'}`} role="timer" aria-label={`დარჩა ${Math.ceil(left)} წამი`}>
       <svg viewBox="0 0 100 100" className="w-full h-full -rotate-90" aria-hidden="true">
@@ -55,6 +78,25 @@ const SNIP_TEXT: Record<SnipState, string> = {
 export const SnippetBox: React.FC<{ state: SnipState; prog: number; onTap: () => void; note?: string }> = ({ state, prog, onTap, note }) => {
   const busy = state === 'play' || state === 'load';
   const ask = state === 'blocked' || state === 'error';
+  // the new look (board x-tamashi-mosmena): one card — the wine round, what is heard, how far
+  if (useNewLook()) {
+    return (
+      <Card pad="none" className={`flex items-center gap-3.5 px-4 py-3.5 ${ask ? 'ring-1 ring-gold' : ''}`}>
+        <Press
+          onClick={onTap}
+          aria-label={busy ? 'გაჩერება' : 'ნაწყვეტის მოსმენა'}
+          className={`flex size-tap-lg shrink-0 cursor-pointer items-center justify-center rounded-full bg-wine text-white transition active:scale-95 [&_svg]:size-5 ${ask ? 'animate-pulse' : ''}`}
+        >
+          {state === 'load' ? <Loader2 className="animate-spin" /> : busy ? <Square className="fill-current" /> : state === 'done' ? <RotateCcw /> : <Play className="ml-0.5 fill-current" />}
+        </Press>
+        <div className="min-w-0 flex-1">
+          <p className={`text-body leading-snug font-bold ${ask ? 'text-gold-ink' : 'text-ink'}`}>{SNIP_TEXT[state]}</p>
+          <Bar value={prog} className={`mt-1.5 ${state === 'load' ? 'animate-pulse' : ''}`} />
+          {note && <p className="mt-1 text-meta leading-snug text-mut">{note}</p>}
+        </div>
+      </Card>
+    );
+  }
   return (
     <div className={`flex items-center gap-3 rounded-2xl px-3 py-3 ${ask ? 'bg-amber-50 ring-1 ring-amber-200' : 'bg-white ring-1 ring-[#e8dcc8]'}`}>
       <button
@@ -83,12 +125,17 @@ export const HostSoundLine: React.FC = () => (
   </p>
 );
 
-export const RoundHead: React.FC<{ at: number; total: number; children?: React.ReactNode }> = ({ at, total, children }) => (
-  <div className="flex items-center justify-between gap-3">
-    <p className="text-[13px] font-bold tabular-nums text-[#a0703c]">რაუნდი {at + 1} / {total}</p>
-    {children}
-  </div>
-);
+/** the round's number — in the new look it goes up into the screen's head (TableScreen: „1 / 10“ and its line), the clock stays */
+export const RoundHead: React.FC<{ at: number; total: number; children?: React.ReactNode }> = ({ at, total, children }) => {
+  const inHead = useTableHead(at, total);
+  if (inHead) return children ? <div className="flex items-center justify-end gap-3">{children}</div> : null;
+  return (
+    <div className="flex items-center justify-between gap-3">
+      <p className="text-[13px] font-bold tabular-nums text-[#a0703c]">რაუნდი {at + 1} / {total}</p>
+      {children}
+    </div>
+  );
+};
 
 /** who has answered this round (not what) */
 export const AnsweredList: React.FC<{ names: string[]; answered: boolean[] }> = ({ names, answered }) => {
@@ -109,9 +156,27 @@ export const AnsweredList: React.FC<{ names: string[]; answered: boolean[] }> = 
 
 /** the points so far: a row a player, the best first; `gained` — this round's, `me` — my row */
 export const Standings: React.FC<{ names: string[]; scores: number[]; gained?: number[] | null; me?: number; limit?: number }> = ({ names, scores, gained, me = -1, limit }) => {
+  const nl = useNewLook();
   const places = placesOf(scores);
   const order = names.map((_, i) => i).sort((a, b) => scores[b] - scores[a] || a - b);
   const shown = limit && order.length > limit ? [...order.slice(0, limit), ...(me >= 0 && order.indexOf(me) >= limit ? [me] : [])] : order;
+  // the new look (board x-otakhi-matiane): one card of rows — the place in a round, the name, the points
+  if (nl) {
+    return (
+      <Rows role="list">
+        {shown.map(i => (
+          <div key={i} role="listitem" className={`flex min-h-14 items-center gap-3 py-2 pr-4 pl-4 ${i === me ? 'bg-tint' : ''}`}>
+            <Num n={places[i]} on={places[i] === 1 && scores[i] > 0} />
+            <span className="min-w-0 flex-1 text-lead leading-tight font-bold wrap-break-word">
+              {names[i]}{i === me && <span className="ml-1 text-meta font-semibold text-wine">· შენ</span>}
+            </span>
+            {gained && gained[i] > 0 && <span className="shrink-0 text-meta font-bold tabular-nums text-leaf-ink">+{gained[i]}</span>}
+            <span className="shrink-0 text-meta font-bold whitespace-nowrap tabular-nums">{scores[i]} ქულა</span>
+          </div>
+        ))}
+      </Rows>
+    );
+  }
   return (
     <ol className="space-y-1.5">
       {shown.map(i => (
@@ -128,6 +193,7 @@ export const Standings: React.FC<{ names: string[]; scores: number[]; gained?: n
 
 /** the end: the first three on their steps */
 export const Podium: React.FC<{ names: string[]; scores: number[]; me?: number }> = ({ names, scores, me = -1 }) => {
+  const nl = useNewLook();
   const order = names.map((_, i) => i).sort((a, b) => scores[b] - scores[a] || a - b);
   const places = placesOf(scores);
   const top = order.slice(0, 3);
@@ -135,6 +201,20 @@ export const Podium: React.FC<{ names: string[]; scores: number[]; me?: number }
   const steps = top.length === 3 ? [top[1], top[0], top[2]] : top.length === 2 ? [top[1], top[0]] : top;
   // nobody scored: no crown and no wine step (2026-11-04 — a 0 : 0 game crowned everybody)
   const height = (i: number) => (places[i] === 1 ? 'h-24' : places[i] === 2 ? 'h-16' : 'h-12');
+  // the new look (board x-otakhi-matiane): one card — a trophy and who won (the rows under it are Standings)
+  if (nl) {
+    const top = scores.length ? Math.max(...scores) : 0;
+    const winners = order.filter(i => scores[i] === top).map(i => (i === me ? 'შენ' : names[i]));
+    return (
+      <Card className="flex items-center gap-3.5" aria-label="გამარჯვებული">
+        <span aria-hidden="true" className="flex size-14 shrink-0 items-center justify-center rounded-full bg-tint text-wine [&_svg]:size-6"><Trophy strokeWidth={1.75} /></span>
+        <span className="flex min-w-0 flex-col">
+          {top > 0 && <span className="text-meta text-mut">{winners.length > 1 ? 'ფრეა' : 'გაიმარჯვა'}</span>}
+          <span className="text-title leading-tight font-bold wrap-break-word">{top > 0 ? winners.join(', ') : NOBODY_WON}</span>
+        </span>
+      </Card>
+    );
+  }
   return (
     <div className="flex items-end justify-center gap-2 pt-2" aria-label="გამარჯვებულები">
       {steps.map(i => (

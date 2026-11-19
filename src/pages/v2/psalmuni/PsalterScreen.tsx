@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { BookOpen, Bell, CalendarDays, Check, LifeBuoy, LogOut, MoreHorizontal, PenLine, Users } from 'lucide-react';
+import { Waiting } from '../../../components/shell/PageSkeleton';
 import { useNavigation } from '../../../context';
 import { Button, Card, Chips, Dot, FOCUS, Helper, Hero, Note, Press, RoundButton, Row, Rows, TopBar, ToggleRow, cx } from '../../../components/ui2';
 import { Field, Sheet } from '../../../components/ui2';
 import { askConfirm } from '../../../components/ui/kit';
-import { Loader2 } from 'lucide-react';
 import { useKathismaActions } from '../../../components/psalter/useKathismaActions';
 import { openPsalterGroup } from '../../../components/psalter/selectedGroup';
 import { ALL_KATHISMAS, PsalterGroup, ergative, firstName, memberName, pickKanon, useGroupNow } from '../../../hooks/usePsalter';
@@ -41,7 +41,7 @@ export const PsalterScreen: React.FC = () => {
     return (
       <div className="flex w-full flex-col gap-3 pb-4">
         <TopBar title="ფსალმუნთა ჯგუფი" onBack={handleGoBack} />
-        <div className="flex justify-center py-16 text-wine"><Loader2 className="size-7 animate-spin" aria-label="იტვირთება" /></div>
+        <Waiting field={false} />
       </div>
     );
   }

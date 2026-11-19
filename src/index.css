@@ -486,3 +486,19 @@ html.sg-new .sg-lib-auto > span > button[aria-haspopup] {
 }
 html.sg-new .sg-lib-auto > span > button[aria-haspopup][aria-expanded="true"] { background: var(--color-wine); color: white; }
 html.sg-new .sg-lib-auto > span > button[aria-haspopup] svg { width: 20px; height: 20px; }
+
+/* „მაჩვენე ეკრანზე“ (pages/v2/mkitkhe/light.ts, board x-idea-adgilze-2): the button an answer speaks of gets a short gold ring
+   that breathes twice; reduced motion keeps the ring still for the same moment. */
+@keyframes sg-help-ring {
+  0% { box-shadow: 0 0 0 0 color-mix(in oklab, var(--color-gold) 70%, transparent); }
+  45% { box-shadow: 0 0 0 7px color-mix(in oklab, var(--color-gold) 45%, transparent); }
+  100% { box-shadow: 0 0 0 3px color-mix(in oklab, var(--color-gold) 0%, transparent); }
+}
+.sg-help-lit {
+  outline: 3px solid var(--color-gold) !important;
+  outline-offset: 3px !important;
+  animation: sg-help-ring 0.7s ease-out 2;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sg-help-lit { animation: none; }
+}

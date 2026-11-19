@@ -8,13 +8,15 @@ import { useNotes } from '../../context/NotesContext';
 import { hasGeorgianName, isGeorgian, saveProfileName } from '../../utils/memberName';
 import {
   ABILITY_OPTIONS, AbilityId, GEORGIAN_REGIONS, INTEREST_OPTIONS, InterestId, isPlaceholderBirth,
-  abilitiesOf, normalizePhone, profileComplete, showPhone, validBirth,
+  abilitiesOf, meetingDone, normalizePhone, showPhone, validBirth, SKIPPABLE, type SkippableStep,
 } from '../../utils/profileFields';
 import { INSTRUMENTS_LIST } from '../../data/instrumentsData';
 import { Btn, Sheet } from '../ui/kit';
 import { EMAIL_FIELD } from '../access/SignInChoices';
 import { BirthPick } from '../ui/BirthPick';
 import { useMembership } from '../../utils/memberAccess';
+import { useNewLook } from '../../design/newLook';
+import { FirstMeetingV2 } from '../../pages/v2/gatsnoba/FirstMeetingV2';
 
 // "პირველი გაცნობა": until a member's profile holds everything below, this form covers the app and cannot be
 // closed (only "გამოსვლა"). Seven short cards, one question each, with what is already known filled in: name and
@@ -24,9 +26,9 @@ import { useMembership } from '../../utils/memberAccess';
 // students/{uid}.firstMeeting marks it done. It waits while the notes page, the liturgy program or church mode is
 // open, so nothing covers the notes during a service.
 
-type Voice = '1' | '2' | '3';
+export type Voice = '1' | '2' | '3';
 
-const VOICES: { id: Voice | 'x'; title: string; sub: string }[] = [
+export const VOICES: { id: Voice | 'x'; title: string; sub: string }[] = [
   { id: '1', title: 'I ხმა', sub: 'მთქმელი' },
   { id: '2', title: 'II ხმა', sub: 'მოძახილი' },
   { id: '3', title: 'III ხმა', sub: 'ბანი' },
@@ -34,7 +36,7 @@ const VOICES: { id: Voice | 'x'; title: string; sub: string }[] = [
 ];
 
 const STEPS = 7;
-const PHONE_EXAMPLE = '599\u00a012\u00a034\u00a056'; // kept on one line
+export const PHONE_EXAMPLE = '599\u00a012\u00a034\u00a056'; // kept on one line
 const NOT_GEORGIAN = /[^ა-ჿᲐ-Ჿ\s-]/g;
 
 interface Answers {
@@ -141,7 +143,9 @@ const Heading: React.FC<{ title: string; text?: string }> = ({ title, text }) =>
   </div>
 );
 
-export const FirstMeeting: React.FC = () => {
+/** The form's state and steps, shared by the old window below and the new look's full screen
+ *  (pages/v2/gatsnoba/FirstMeetingV2). `show`: the form is due now. */
+export const useFirstMeeting = () => {
   const { user, signOutUser } = useAuth();
   const membership = useMembership().status;
   const { notes, programOpen, church } = useNotes();
@@ -206,11 +210,11 @@ export const FirstMeeting: React.FC = () => {
     setStep(gap ?? 0);
   }, [data, prefilled, user, profile]);
 
-  if (!uid || !user || data === undefined || closed || !prefilled) return null;
-  if (notes || programOpen || church) return null;
-  // one a superadmin refused is signed out at once (MembershipGate): nothing to fill in
-  if (membership === 'rejected') return null;
-  if (profileComplete(data)) return null;
+  const show = !!uid && !!user && data !== undefined && !closed && prefilled
+    && !(notes || programOpen || church)
+    // one a superadmin refused is signed out at once (MembershipGate): nothing to fill in
+    && membership !== 'rejected'
+    && !meetingDone(data);
 
   const isNew = !hasGeorgianName(profile) && !data?.firstMeeting;
   const set = (patch: Partial<Answers>) => { setA(prev => ({ ...prev, ...patch })); setError(''); };
@@ -234,17 +238,38 @@ export const FirstMeeting: React.FC = () => {
     else set({ voices: toggle(a.voices.filter(v => v !== 'x'), id) });
   };
 
+  // the last three steps may be skipped (boards x-gatsnoba-5…7); a skipped step is not checked and not kept
+  const [skipped, setSkipped] = useState<SkippableStep[]>([]);
+  const skippable = step >= STEPS - SKIPPABLE.length;
+  const skip = async (): Promise<boolean> => {
+    const which = SKIPPABLE[step - (STEPS - SKIPPABLE.length)];
+    if (!which) return false;
+    const now = skipped.includes(which) ? skipped : [...skipped, which];
+    setSkipped(now);
+    setError('');
+    if (step < STEPS - 1) { setStep(s => s + 1); return false; }
+    return finish(now);
+  };
+
   const next = () => {
     const p = problem(a, step);
     if (p) { setError(p); return; }
+    if (skippable) setSkipped(list => list.filter(x => x !== SKIPPABLE[step - (STEPS - SKIPPABLE.length)]));
     if (step === 0) set({ first: a.first.trim(), last: a.last.trim() });
     if (step === 3) set({ phone: showPhone(normalizePhone(a.phone)!) });
     setStep(s => s + 1);
   };
 
-  const finish = async () => {
-    const p = problem(a, STEPS - 1);
-    if (p) { setError(p); return; }
+  const back = () => { setError(''); setStep(s => s - 1); };
+  const signOut = () => void signOutUser();
+
+  /** true once everything is kept */
+  const finish = async (skip: SkippableStep[] = skipped): Promise<boolean> => {
+    // every step not skipped must hold (an earlier step can be left by „უკან“ half-done)
+    const off = (s: number) => skip.includes(SKIPPABLE[s - (STEPS - SKIPPABLE.length)]);
+    const bad = Array.from({ length: STEPS }, (_, s) => s).find(s => !off(s) && problem(a, s));
+    if (bad !== undefined) { setStep(bad); setError(problem(a, bad) || ''); return false; }
+    if (!uid || !user) return false;
     setSaving(true);
     setError('');
     try {
@@ -264,30 +289,47 @@ export const FirstMeeting: React.FC = () => {
           interestOther: a.interests.includes('skhva') ? a.interestOther.trim() : '',
           voices: a.voices.filter((v): v is Voice => v !== 'x').sort(),
         },
-        firstMeeting: { voiceUnknown: a.voices.includes('x'), at: new Date().toISOString() },
+        firstMeeting: { voiceUnknown: !skip.includes('voices') && a.voices.includes('x'), at: new Date().toISOString(), skipped: skip },
       }, { merge: true });
       // members who came by e-mail have no name in their account: give them this one
       if (!user.displayName) await updateProfile(user, { displayName: `${name.firstName} ${name.lastName}` }).catch(() => {});
       setClosed(true);
+      return true;
     } catch {
       setError('ვერ შეინახა. შეამოწმეთ ინტერნეტი და სცადეთ თავიდან.');
+      return false;
     } finally {
       setSaving(false);
     }
   };
 
+  return {
+    show, step, steps: STEPS, a, latin, error, saving, isNew, skippable,
+    set, georgianOnly, toggle, toggleAbility, toggleVoice, next, back, finish, skip, signOut,
+  };
+};
+
+export type FirstMeetingState = ReturnType<typeof useFirstMeeting>;
+
+export const FirstMeeting: React.FC = () => {
+  const fm = useFirstMeeting();
+  const nl = useNewLook();
+  if (!fm.show) return null;
+  if (nl) return <FirstMeetingV2 fm={fm} />;
+  const { step, a, latin, error, saving, isNew, set, georgianOnly, toggle, toggleAbility, toggleVoice, next, back, finish, signOut } = fm;
+
   const footer = (
     <div className="flex items-center gap-2">
       {step === 0 ? (
-        <Btn kind="ghost" size="lg" icon={<LogOut />} onClick={() => void signOutUser()} disabled={saving}>გამოსვლა</Btn>
+        <Btn kind="ghost" size="lg" icon={<LogOut />} onClick={signOut} disabled={saving}>გამოსვლა</Btn>
       ) : (
-        <button type="button" onClick={() => void signOutUser()} disabled={saving} aria-label="გამოსვლა" title="გამოსვლა"
+        <button type="button" onClick={signOut} disabled={saving} aria-label="გამოსვლა" title="გამოსვლა"
           className="w-12 h-12 shrink-0 rounded-full bg-white ring-1 ring-[#e8dcc8] text-[#8a7a6a] hover:text-[#7a2028] flex items-center justify-center cursor-pointer active:scale-95 transition disabled:opacity-50">
           <LogOut className="w-[18px] h-[18px]" />
         </button>
       )}
       {step > 0 && (
-        <Btn kind="ghost" size="lg" icon={<ArrowLeft />} onClick={() => { setError(''); setStep(s => s - 1); }} disabled={saving}>
+        <Btn kind="ghost" size="lg" icon={<ArrowLeft />} onClick={back} disabled={saving}>
           უკან
         </Btn>
       )}

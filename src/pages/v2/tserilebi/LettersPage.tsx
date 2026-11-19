@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ArrowLeft, ChevronDown, Eye, EyeOff, Loader2, MessageCircle, PenLine, Search, X } from 'lucide-react';
+import { Waiting } from '../../../components/shell/PageSkeleton';
 import { useAuth, useNavigation } from '../../../context';
 import { useMyClasses, useTeachingClasses, useAllClasses } from '../../../hooks/useClasses';
 import type { SchoolClass } from '../../../hooks/useClasses';
@@ -373,7 +374,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         }
       />
     ) : (
-      <div className="flex h-full items-center justify-center rounded-card bg-surf"><Loader2 aria-label="იტვირთება" className="size-6 animate-spin text-faint" /></div>
+      <Waiting field={false} rows={5} quiet />
     )
   ) : (
     <DmChat key={open} id={open} classes={known} wide={wide} onBack={handleGoBack} />
@@ -406,7 +407,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       {err && <p role="alert" className="px-1.5 text-body text-danger">{err}</p>}
 
       {busyList && items.length === 0 && overviewRows.length === 0 ? (
-        <div className="flex justify-center py-10 text-faint"><Loader2 aria-label="იტვირთება" className="size-6 animate-spin" /></div>
+        <Waiting field={false} />
       ) : overview ? (
         <>
           <SectionLabel label="სკოლის ყველა პირადი ჩათი · მხოლოდ სანახავად" />

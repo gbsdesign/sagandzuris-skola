@@ -11,6 +11,9 @@ import { useTwoCols } from '../../../components/games/useTwoCols';
 import { QaravaniMap, type MapRing } from './Map';
 import { CitySheet, RoadSheet, diceText, gainText, gainWith } from './Sheets';
 import { ALL_GOODS, Animal, CartMark, Coin, Die, GoodBadge, InnMark, RoadCells, abazi, cargoOf, cityName, lineText, roadName, worthOf } from './look';
+import { useNewLook } from '../../../design/newLook';
+import { TurnFrame } from '../../v2/tamashebi/TurnFrame';
+import { Matiane, placesFrom } from '../../v2/tamashebi/Matiane';
 
 // „ქარავანი“ being played, online and on one phone alike: the story of the turn (the journey, whose turn), the dice (an abazi
 // moves one — a gold mark on the button says how many new roads it would open), the map (a tap opens a road or a city), the roads
@@ -70,6 +73,7 @@ export const QaravaniPlay: React.FC<{
 }> = ({ g, me, one, sent, clock, acts, right, note, onHide }) => {
   const ph = g.phase.k, n = g.players.length;
   const two = useTwoCols();
+  const nl = useNewLook();
   const [road, setRoad] = useState<number | null>(null);
   const [city, setCity] = useState<number | null>(null);
   const [pickX, setPickX] = useState<number | null>(null);
@@ -384,20 +388,67 @@ export const QaravaniPlay: React.FC<{
       <CitySheet x={city} g={g} p={actFor} act={mine} me={me} onInn={x => { setCity(null); send(innPick(x)); }} onRoad={t => { setCity(null); setRoad(t); }} onClose={() => setCity(null)} />
     </>
   );
+  // the new look: the end is the chronicle's screen (board x-otakhi-matiane), a step the turn frame (x-otakhi-svla)
+  if (nl && ph === 'end' && result) {
+    const R = result.rows;
+    const same = (a: number, b: number) => R[a].total === R[b].total && R[a].cities.length === R[b].cities.length && g.players[a].coins === g.players[b].coins;
+    const places = placesFrom(result.order, same);
+    return (
+      <Matiane
+        game="ქარავანი"
+        onClose={onHide}
+        right={right}
+        win={{ winners: result.winners.map(nm), top: R[result.order[0]]?.total ?? 0 }}
+        why={sub}
+        places={result.order.map((i, k) => ({ name: g.players[i].name, place: places[k], score: `${R[i].total} ქულა`, me: i === me }))}
+        extra={<div className="space-y-3.5">{note}{results}{map}{sheets}</div>}
+        chronicle={g.log.length ? [{
+          lines: g.log.map((l, i) => (
+            <span key={i} className="flex items-start gap-1.5">
+              {'p' in l ? <span className="mt-[2px] shrink-0"><Animal p={l.p} size={15} /></span> : <span className="mt-[5px] h-2 w-2 shrink-0 rounded-full bg-[#c9a24b]" />}
+              <span className="min-w-0">{lineText(l, g.players.map(p => p.name), me)}</span>
+            </span>
+          )),
+        }] : undefined}
+        again={acts.again}
+        close={acts.again ? (acts.close ? { label: one ? 'დახურვა' : 'ოთახის დახურვა', onClick: acts.close } : undefined) : acts.leave ? { label: 'დახურვა', onClick: acts.leave } : undefined}
+      />
+    );
+  }
+  const body = (
+    <div className={`py-2 w-full mx-auto ${two ? 'max-w-[1200px] grid grid-cols-2 lg:grid-cols-[3fr_2fr] gap-4 items-start' : 'max-w-[672px] space-y-3.5'}`}>
+      {two ? (
+        <>
+          <div className="min-w-0 sticky top-0 space-y-3">{map}</div>
+          <div className="min-w-0 space-y-3.5">{story}{note}{results}{startBox}{diceBox}{takeBox}{innBox}{houseBox}{players}{chronicle}</div>
+        </>
+      ) : ph === 'end' ? (
+        <>{story}{note}{results}{map}{chronicle}</>
+      ) : (
+        <>{story}{note}{diceBox}{map}{startBox}{takeBox}{innBox}{houseBox}{players}{chronicle}</>
+      )}
+    </div>
+  );
+  if (nl) {
+    const text = mine ? (one ? `სვლაა: ${g.players[g.turn].name}` : 'შენი სვლაა') : sent ? 'გაგზავნილია — ელოდება…' : `სვლაა: ${nm(g.turn)}`;
+    return (
+      <TurnFrame
+        title="ქარავანი"
+        sub={top}
+        right={right}
+        onClose={onHide}
+        seats={g.players.map((p, i) => ({ name: p.name, me: i === me, on: ph !== 'end' && g.turn === i }))}
+        turn={ph === 'end' ? null : { text, mine }}
+        footer={sent && ph !== 'end' ? undefined : footer}
+      >
+        {body}
+        {sheets}
+      </TurnFrame>
+    );
+  }
   return (
     <TableScreen title="ქარავანი" right={right} onClose={onHide} footer={footer}>
-      <div className={`py-2 w-full mx-auto ${two ? 'max-w-[1200px] grid grid-cols-2 lg:grid-cols-[3fr_2fr] gap-4 items-start' : 'max-w-[672px] space-y-3.5'}`}>
-        {two ? (
-          <>
-            <div className="min-w-0 sticky top-0 space-y-3">{map}</div>
-            <div className="min-w-0 space-y-3.5">{story}{note}{results}{startBox}{diceBox}{takeBox}{innBox}{houseBox}{players}{chronicle}</div>
-          </>
-        ) : ph === 'end' ? (
-          <>{story}{note}{results}{map}{chronicle}</>
-        ) : (
-          <>{story}{note}{diceBox}{map}{startBox}{takeBox}{innBox}{houseBox}{players}{chronicle}</>
-        )}
-      </div>
+      {body}
       {sheets}
     </TableScreen>
   );

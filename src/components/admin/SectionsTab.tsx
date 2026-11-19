@@ -11,19 +11,14 @@ import { changed } from './changed';
 import { Btn, askConfirm } from '../ui/kit';
 
 // each state with its own colour, so the list reads at a glance
-const STATES: { id: SectionState; label: string; dot: string; on: string }[] = [
+export const STATES: { id: SectionState; label: string; dot: string; on: string }[] = [
   { id: 'open', label: 'ღია', dot: 'bg-emerald-500', on: 'text-emerald-800' },
   { id: 'soon', label: 'მალე', dot: 'bg-amber-500', on: 'text-amber-800' },
   { id: 'hidden', label: 'დამალული', dot: 'bg-[#a3968a]', on: 'text-[#4a3426]' },
 ];
 
-// "განყოფილებები" (in ⚙ „სკოლა“): which sections show on the home vine and in the header — open,
-// marked "მალე" or hidden — and, in the same row („ბავშვებს“; stage IV, 2026-10-28 — no second list), which sections a
-// new kids' mode starts with. One folding card; every tap is
-// saved at once (everyone sees it straight away), a failed save goes back and says so. Every button is 40px tall:
-// a tap changes the site for everyone, so it must be hard to miss. A „მალე“ section can be given a day
-// (`openOn`, idea 9): it opens by itself that day in Georgia (useSections); any other state set by hand clears the day.
-export const SectionsTab: React.FC<{ onMessage: (t: string, type: 'success' | 'error') => void }> = ({ onMessage }) => {
+/** What „განყოფილებები“ changes, apart from its drawing (shared by the old fold and the new look's page, pages/v2/admini). */
+export const useSectionsEditor = (onMessage: (t: string, type: 'success' | 'error') => void) => {
   const saved = useSections();
   const [state, setState] = useState(saved.state);
   const [kids, setKids] = useState<SectionId[]>(saved.kidsDefault);
@@ -72,13 +67,8 @@ export const SectionsTab: React.FC<{ onMessage: (t: string, type: 'success' | 'e
     }
   };
   // the day a „მალე“ section opens by itself ('' = no day)
-  const today = tbilisiToday();
-  const [dayFor, setDayFor] = useState<SectionId | null>(null);
-  const [draft, setDraft] = useState('');
-  const pickDay = (id: SectionId) => { setDraft(saved.openOn[id] || ''); setDayFor(id); };
   const setDay = async (id: SectionId, day: string) => {
     const was = saved.openOn[id];
-    setDayFor(null);
     if ((was || '') === day) return;
     if (await write({ openOn: { [id]: dayOr(day) } })) {
       changed('section', day ? `„${nameOf(id)}“ გაიხსნება ${shortDate(`${day}T12:00:00`)}` : `„${nameOf(id)}“ — გახსნის დღე მოიხსნა`, id,
@@ -94,6 +84,23 @@ export const SectionsTab: React.FC<{ onMessage: (t: string, type: 'success' | 'e
       changed('section', `„${nameOf(id)}“ ${on ? 'დაემატა' : 'მოიხსნა'} საბავშვო რეჟიმის საწყის სიაში`, id, () => put({ kidsDefault: was }));
     }
   };
+
+  return { saved, state, kids, setSection, hideAll, setDay, toggleKids, ALL };
+};
+
+// "განყოფილებები" (in ⚙ „სკოლა“): which sections show on the home vine and in the header — open,
+// marked "მალე" or hidden — and, in the same row („ბავშვებს“; stage IV, 2026-10-28 — no second list), which sections a
+// new kids' mode starts with. One folding card; every tap is
+// saved at once (everyone sees it straight away), a failed save goes back and says so. Every button is 40px tall:
+// a tap changes the site for everyone, so it must be hard to miss. A „მალე“ section can be given a day
+// (`openOn`, idea 9): it opens by itself that day in Georgia (useSections); any other state set by hand clears the day.
+export const SectionsTab: React.FC<{ onMessage: (t: string, type: 'success' | 'error') => void }> = ({ onMessage }) => {
+  const { saved, state, kids, setSection, hideAll, setDay: saveDay, toggleKids, ALL } = useSectionsEditor(onMessage);
+  const today = tbilisiToday();
+  const [dayFor, setDayFor] = useState<SectionId | null>(null);
+  const [draft, setDraft] = useState('');
+  const pickDay = (id: SectionId) => { setDraft(saved.openOn[id] || ''); setDayFor(id); };
+  const setDay = (id: SectionId, day: string) => { setDayFor(null); void saveDay(id, day); };
 
   // the folded card's line: how many sections stand in each state
   const summary = STATES.map(st => ({ st, n: ALL.filter(id => state[id] === st.id).length }))

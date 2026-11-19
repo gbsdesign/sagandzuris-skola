@@ -9,8 +9,10 @@ import { Hint } from '../samshvilde/parts';
 import { CallBtn, CallCard, type GameCall } from '../samshvilde/online/GameCall';
 import { People } from '../samshvilde/online/Lobby';
 import { firstName } from '../samshvilde/online/bits';
-import type { RoundFace } from './face';
+import { stepsOf, type RoundFace } from './face';
 import { ROOM_GAME_INFO } from '../../../data/roomGames';
+import { useNewLook } from '../../../design/newLook';
+import { LobbyFoot, LobbyV2, type LobbyPerson } from '../../v2/tamashebi/LobbyV2';
 
 // A quick game's room before the game (pages/games/rounds/): who came in, and the host's choices — how many rounds, where the
 // sound plays (on every phone, everybody at home; or only on the host's, everybody in one room). The host starts, a player
@@ -27,6 +29,7 @@ export const RoundsLobby: React.FC<{
   host?: { opts: RoundsOpts; setOpts: (o: RoundsOpts) => void; start: () => void; kick: (uid: string) => void; close: () => void; empty: boolean };
   player?: { join: () => Promise<boolean>; leave: () => void };
 }> = ({ face, room, joins, me, className, gc, onHide, host, player }) => {
+  const nl = useNewLook();
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const n = joins.length;
@@ -50,6 +53,48 @@ export const RoundsLobby: React.FC<{
       : <Btn size="lg" full disabled={busy} onClick={join} icon={<LogIn />} className="!h-14 !text-[16px]">შესვლა</Btn>;
 
   const opts = host?.opts;
+  // the new look (board x-otakhi-molodini): who leads and who came in, a row each; the rules in a window; one main button
+  if (nl) {
+    const people: LobbyPerson[] = [
+      { uid: room.host, name: room.hostName, sub: 'უძღვება', status: 'მზადაა', ready: true, me: room.host === me },
+      ...joins.filter(j => j.uid !== room.host).map(j => ({ uid: j.uid, name: j.name, photo: j.photoURL || undefined, status: j.uid === me ? 'მზადაა' : 'შემოვიდა', ready: j.uid === me, me: j.uid === me })),
+    ];
+    return (
+      <TableScreen
+        title={face.title}
+        right={<CallBtn gc={gc} />}
+        onClose={onHide}
+        footer={<LobbyFoot kind={host ? 'start' : joined ? 'leave' : 'join'} disabled={host ? !fits || host.empty : busy} onClick={host ? host.start : joined ? () => player?.leave() : () => { void join(); }} />}
+      >
+        <LobbyV2
+          lead={host
+            ? { title: `შენ ხარ ${lead}${className ? ` · ${className}` : ''}`, text: 'კლასს მოწვევა გაეგზავნა — ჩატში და ტელეფონზე. შენ არ თამაშობ: რაუნდებს უძღვები. როცა ყველა შემოვა, დაიწყე.' }
+            : joined
+              ? { title: 'ოთახში ხარ', text: `დაელოდე — ${lead} თამაშს მალე დაიწყებს. პასუხს შენს ტელეფონზე ${answerVerb}.` }
+              : { title: `${firstName(room.hostName)} გიწვევს თამაშში`, text: `${lead} · ${room.hostName}${className ? ` · ${className}` : ''}. შემოდი და პასუხს შენს ტელეფონზე ${answerVerb}.` }}
+          warn={[
+            ...(failed && !joined ? ['ვერ შევედი. შეიძლება თამაში უკვე დაიწყო — სცადე თავიდან.'] : []),
+            ...(host?.empty ? [face.empty] : []),
+          ]}
+          people={people}
+          countLine={countLine(n)}
+          fits={fits}
+          onKick={host?.kick}
+          rounds={host && opts ? (face.fixedRounds ? { fixed: face.fixedRounds } : { value: opts.count, options: [...ROUND_COUNTS], set: c => host.setOpts({ ...opts, count: c }) }) : undefined}
+          sound={host && opts && face.clip && !face.everyPhone ? {
+            value: opts.sound,
+            set: v => host.setOpts({ ...opts, sound: v }),
+            hint: opts.sound === 'all' ? 'სახლიდან თამაშისთვის: ყველა თავის ტელეფონზე ისმენს.' : 'ერთ ოთახში ხართ: ნაწყვეტი შენს ტელეფონზე ჟღერს, ყველა უსმენს და პასუხს თავისაზე ნიშნავს.',
+          } : undefined}
+          extra={host && face.Options ? <face.Options /> : undefined}
+          call={<CallCard gc={gc} hint={face.callHint} />}
+          steps={stepsOf(face.online)}
+          onCloseRoom={host?.close}
+          helper={host ? 'თამაში იწყება, როცა „თამაშის დაწყებას“ დააჭერ.' : 'თამაში იწყება, როცა წამყვანი „დაწყებას“ დააჭერს. მანამდე ოთახიდან გასვლა შეგიძლია.'}
+        />
+      </TableScreen>
+    );
+  }
   return (
     <TableScreen title={className ? `ოთახი · ${className}` : 'ოთახი'} right={<CallBtn gc={gc} />} onClose={onHide} footer={footer}>
       <div className="py-2 space-y-4">

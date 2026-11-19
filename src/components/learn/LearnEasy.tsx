@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Check, ChevronDown, ChevronLeft, ChevronRight, Headphones, ListOrdered, Maximize2, Mic, Minus, Play, Plus, Repeat, RotateCcw, Send, SkipForward, Snail, Sparkles, Square, Users, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Headphones, ListOrdered, Maximize2, Mic, Minus, Play, Plus, RefreshCw, Repeat, RotateCcw, Send, Settings, SkipForward, Snail, Sparkles, Square, Users, X } from 'lucide-react';
 import { BookScore, ChantSynth, countIn, makeTimeMap } from '../../utils/chantSynth';
 import { LEARNED_SHARE, LearnPart, LearnRecord, PartState, chunksOfPart, learnTakeId, melodyGroups, melodyIn, partState, timelineIn } from '../../utils/learn';
 import { noteName } from '../../utils/pearls';
@@ -18,6 +18,8 @@ import { Choice, LOOPS_PER_STEP, SPEEDS, SettingsFold, useSinging } from './Lear
 import { LearnView } from '../../pages/v2/learn/LearnView';
 import { BigNotesView } from '../../pages/v2/learn/BigNotesView';
 import { textOf, type LearnAction } from '../../pages/v2/learn/parts';
+import { MicHelpSheet } from '../../pages/v2/learn/MicHelp';
+import { fixLine, hitsLine, verdictLine } from '../../utils/aiLesson';
 
 // The learning mode of a chant: one way for everybody (2026-11-05, the user: „მეორე გვერდის ფუნქციები აქ გადმოიტანე და ერთი
 // კარგი სასწავლო თემა შექმენი“). A phrase (a part) is learned in steps, one big button always saying what to do:
@@ -132,6 +134,10 @@ export const LearnEasy: React.FC<{
   const [selfCheck, setSelfCheck] = useState(false);
   const [mirror, setMirror] = useState(false);
   const [ai, setAi] = useState<{ busy: boolean; text: string; problem: string }>({ busy: false, text: '', problem: '' });
+  // the new look: the microphone's help sheet, going on without it, and a „not heard“ take passed by
+  const [micHelp, setMicHelp] = useState(false);
+  const [micSkip, setMicSkip] = useState(false);
+  const [skipped, setSkipped] = useState<unknown>(null);
   // the notes big (BigNotes): a history step of its own, so the phone's back closes only it
   const [big, setBig] = useState(false);
   const openBig = () => {
@@ -325,9 +331,18 @@ export const LearnEasy: React.FC<{
     setLoops(0);
   }
 
+  // each target note's length (a repeated pitch is one note, as in melodyIn) — for „the last note let go early“
+  const lengths = useMemo(() => {
+    const out: { midi: number; t0: number; len: number }[] = [];
+    for (const [t0, len, midi] of timelineIn(score, vi, range.b0, range.b1)) {
+      const last = out[out.length - 1];
+      if (last && last.midi === midi) last.len = t0 + len - last.t0; else out.push({ t0, len, midi });
+    }
+    return out.map(n => n.len);
+  }, [score, vi, range.b0, range.b1]);
   const singing = useSinging({
     target, cue: target[0] ?? null, seconds: range.s1 - range.s0, resetKey: `${current}|${voice}|${stage}`, onBeforeSing: stop,
-    transpose: tone,
+    transpose: tone, lengths, silentStop: !!shell,
     onScored: pct => {
       if (whole) {
         if (!joined) onTry(at, pct, pct >= LEARNED_SHARE);
@@ -460,6 +475,35 @@ export const LearnEasy: React.FC<{
 
   // the new look (board x-stsavla): the same state and the same jobs, drawn by pages/v2/learn
   if (shell) {
+    // the singing's four screens (boards x-ultra-khma 1–4): sing · listening · the result in two sentences · not heard
+    const read = result && !busy && result.pct >= 0 ? result.read : undefined;
+    const notHeard = !!read && read.n > 0 && !read.heard && result !== skipped;
+    const fix = read && read.heard ? fixLine(read) : null;
+    const scoreCard = read && read.heard && read.n > 0 ? {
+      hits: read.hits, n: read.n, verdict: verdictLine(read.hits, read.n),
+      line: [hitsLine(read.hits, read.n), fix?.text].filter(Boolean).join(' '),
+      done: ok && whole ? (joined ? 'ნასწავლი ფრაზები ერთად გამოგივიდა.' : 'ეს ფრაზა ნასწავლია — გამეორებას აპი შეგახსენებს.') : '',
+    } : null;
+    // „ქულის გარეშე გავაგრძელებ“: on to what comes next, without a score
+    const goOn = () => {
+      triggerHaptic(8);
+      if (!whole && !together) { nextPiece(); return; }
+      if (nextPart >= 0) { pick(nextPart); return; }
+      if (parts.length > 1 && !joined) { pick('all'); return; }
+      setSkipped(result);
+      goStage(steps[0]);
+    };
+    const stopScreen: React.ComponentProps<typeof LearnView>['stop'] = singing.denied && !micSkip ? {
+      off: true, title: 'მიკროფონი გამორთულია', text: 'ჩართე ტელეფონის პარამეტრებში.',
+      main: { label: 'პარამეტრები', icon: <Settings />, run: () => { triggerHaptic(8); setMicHelp(true); } },
+    } : notHeard ? {
+      off: false, title: 'ხმა ვერ გავიგონე', text: 'გადადი წყნარ ადგილას ან ტელეფონი ახლოს მოიტანე.',
+      main: { label: 'კიდევ ვცდი', icon: <RefreshCw />, run: singing.sing },
+      second: { label: 'ქულის გარეშე გავაგრძელებ', run: goOn },
+    } : null;
+    const listening = phase === 'singing';
+    const shellSay = listening ? <b>გისმენ…</b> : say;
+    const shellMain = listening ? { ...main, label: 'დასრულება' } : main;
     const taken = whole && !!result?.mp3 && !busy;
     const quiet: LearnAction[] = [];
     if (taken) {
@@ -486,7 +530,7 @@ export const LearnEasy: React.FC<{
     if (taken && !uid) lines.push({ tone: 'mut', text: 'მასწავლებლისთვის გასაგზავნად შედი შენი ანგარიშით.' });
 
     const warnings: React.ReactNode[] = [];
-    if (error) warnings.push(`${error} ან უბრალოდ იმღერე ხმამაღლა.`);
+    if (error && !(singing.denied && !micSkip)) warnings.push(`${error} ან უბრალოდ იმღერე ხმამაღლა.`);
     if (!singingSupported()) warnings.push('ამ ბრაუზერში მიკროფონი ვერ ჩაირთვება, ამიტომ აპი ვერ შეგიმოწმებს — იმღერე ხმამაღლა და თავად მონიშნე.');
 
     const ways: LearnAction[] = [{ label: 'ნოტები დიდად', icon: <Maximize2 />, run: bigFromMore }];
@@ -498,7 +542,7 @@ export const LearnEasy: React.FC<{
         : due > 0 ? `დღეს გასამეორებელი: ${due}` : '';
     const picture = (split?: boolean) => (
       <PartPicture score={score} sys={part.sys} beat={beat} span={typeof stage === 'number' ? [range.b0, range.b1] : null} marks={marks} voice={vi}
-        focus={many} onOpen={split == null ? openBig : undefined} split={split} />
+        focus={many} onOpen={split == null ? openBig : undefined} split={split} missTone="gold" />
     );
     return (
       <>
@@ -509,9 +553,11 @@ export const LearnEasy: React.FC<{
           status={status} toast={toast} picture={picture()}
           dots={result && !busy && result.hits.length > 0 && !marks ? result.hits : null} marked={!!marks}
           approved={whole && !joined && approved(sendId)}
-          say={say} sayText={textOf(say)}
-          saySub={together ? `წრე ${Math.min(loops, LOOPS_PER_STEP)} / ${LOOPS_PER_STEP} — სამის მერე „მარტო“` : undefined}
-          main={main} pulse={phase === 'singing' || counting}
+          say={shellSay} sayText={textOf(shellSay)}
+          saySub={listening ? 'იმღერე მშვიდად, ტელეფონი ახლოს გეჭიროს. გაჩუმდები — თვითონ გაჩერდება.'
+            : together ? `წრე ${Math.min(loops, LOOPS_PER_STEP)} / ${LOOPS_PER_STEP} — სამის მერე „მარტო“` : undefined}
+          result={scoreCard} stop={stopScreen}
+          main={shellMain} pulse={phase === 'singing' || counting}
           slow={speed === 0.5} onSlow={() => { triggerHaptic(8); setSpeed(speed === 0.5 ? 0.75 : 0.5); }}
           again={{ label: 'კიდევ ერთხელ', run: again, disabled: busy }}
           prev={{ label: 'წინა ფრაზა', run: () => pick(joined ? 0 : at - 1), disabled: !joined && at <= 0 }}
@@ -534,10 +580,13 @@ export const LearnEasy: React.FC<{
           }}
         />
         {big && (
-          <BigNotesView title={heading} sub={title} onClose={closeBig} say={say} main={main} pulse={phase === 'singing' || counting}>
+          <BigNotesView title={heading} sub={title} onClose={closeBig} say={shellSay} main={shellMain} pulse={phase === 'singing' || counting}>
             {picture(upright)}
           </BigNotesView>
         )}
+        <MicHelpSheet open={micHelp} onClose={() => setMicHelp(false)}
+          onRetry={() => { setMicHelp(false); void singing.sing(); }}
+          onSkip={() => { setMicHelp(false); setMicSkip(true); }} />
       </>
     );
   }

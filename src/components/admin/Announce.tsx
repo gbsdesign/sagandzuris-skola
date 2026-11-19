@@ -11,6 +11,35 @@ import { Fold } from './Fold';
 type Msg = (text: string, type: 'success' | 'error') => void;
 const MAX = 2000;
 
+/** Asks once, then puts the text into every given class's chat as the admin's own message; true when all went. */
+export const sendAnnouncement = async (
+  text: string, to: SchoolClass[], user: { uid: string; displayName: string | null; photoURL: string | null } | null,
+  onMessage: Msg, onStart?: () => void,
+) => {
+  const t = text.trim();
+  if (!t || !user || !to.length) return false;
+  if (!(await askConfirm({
+    title: `გავუგზავნო ${to.length} კლასს?`,
+    text: 'ტექსტი შენი სახელით ჩაჯდება თითო კლასის ჩათში — ყველა წევრი და მასწავლებელი ნახავს.',
+    ok: 'გაგზავნა',
+  }))) return false;
+  onStart?.();
+  let failed = 0;
+  for (const c of to) {
+    const me = c.teachers.find(m => m.uid === user.uid) || c.members.find(m => m.uid === user.uid);
+    try {
+      await sendTextMessage(classChatBase(c.id), { uid: user.uid, name: me?.name || user.displayName || 'ადმინისტრაცია', photoURL: me?.photoURL || user.photoURL || '', teacher: true }, t);
+    } catch {
+      failed++;
+    }
+  }
+  const sent = to.length - failed;
+  if (sent) logChange('class', `განცხადება ${sent} კლასს: „${t.slice(0, 120)}${t.length > 120 ? '…' : ''}“`);
+  if (failed) onMessage(`გაიგზავნა ${sent} კლასში, ${failed} კლასში ვერ — შეამოწმე ინტერნეტი.`, 'error');
+  else onMessage(`განცხადება გაიგზავნა ${sent} კლასის ჩათში.`, 'success');
+  return !failed;
+};
+
 // ⚙ „სკოლა“ → „განცხადება კლასებს“ (stage IV, 2026-10-28): one text written once, sent into the chat of every class in
 // use (or of the ones ticked), as the admin's own message — the same as writing it in each chat by hand.
 export const Announce: React.FC<{ classes: SchoolClass[]; onMessage: Msg }> = ({ classes, onMessage }) => {
@@ -22,28 +51,9 @@ export const Announce: React.FC<{ classes: SchoolClass[]; onMessage: Msg }> = ({
   const toggle = (id: string) => setOff(s => { const n = new Set(s); n.has(id) ? n.delete(id) : n.add(id); return n; });
 
   const send = async () => {
-    const t = text.trim();
-    if (!t || !user || !to.length) return;
-    if (!(await askConfirm({
-      title: `გავუგზავნო ${to.length} კლასს?`,
-      text: 'ტექსტი შენი სახელით ჩაჯდება თითო კლასის ჩათში — ყველა წევრი და მასწავლებელი ნახავს.',
-      ok: 'გაგზავნა',
-    }))) return;
-    setSending(true);
-    let failed = 0;
-    for (const c of to) {
-      const me = c.teachers.find(m => m.uid === user.uid) || c.members.find(m => m.uid === user.uid);
-      try {
-        await sendTextMessage(classChatBase(c.id), { uid: user.uid, name: me?.name || user.displayName || 'ადმინისტრაცია', photoURL: me?.photoURL || user.photoURL || '', teacher: true }, t);
-      } catch {
-        failed++;
-      }
-    }
+    const sent = await sendAnnouncement(text, to, user, onMessage, () => setSending(true));
     setSending(false);
-    const sent = to.length - failed;
-    if (sent) logChange('class', `განცხადება ${sent} კლასს: „${t.slice(0, 120)}${t.length > 120 ? '…' : ''}“`);
-    if (failed) onMessage(`გაიგზავნა ${sent} კლასში, ${failed} კლასში ვერ — შეამოწმე ინტერნეტი.`, 'error');
-    else { onMessage(`განცხადება გაიგზავნა ${sent} კლასის ჩათში.`, 'success'); setText(''); }
+    if (sent) setText('');
   };
 
   return (

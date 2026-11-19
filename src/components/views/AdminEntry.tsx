@@ -6,9 +6,8 @@ import { useAuth, useNavigation } from '../../context';
 import { triggerHaptic } from '../../utils/haptics';
 import { WINE_BAND } from '../admin/AdminHero';
 
-/** The profile's way into the admin panel (the header's shield is gone since 2026-10-27): one wine row, admins only.
- *  Superadmins see how many new members wait; a tap with someone waiting opens the panel on them. */
-export const AdminEntry: React.FC = () => {
+/** Whether the row shows, how many new members wait, and the tap (shared with the new look's profile row). */
+export const useAdminEntry = () => {
   const { isAdmin, isSuperAdmin } = useAuth();
   const { navigateTo } = useNavigation();
   const [pending, setPending] = useState<string[]>([]);
@@ -24,8 +23,6 @@ export const AdminEntry: React.FC = () => {
     return () => { off1(); off2(); };
   }, [isSuperAdmin]);
   const waiting = pending.filter(uid => !staffIds.includes(uid)).length;
-
-  if (!isAdmin) return null;
   const open = () => {
     triggerHaptic(10);
     if (waiting > 0) {
@@ -33,6 +30,14 @@ export const AdminEntry: React.FC = () => {
     }
     navigateTo('admin');
   };
+  return { shown: isAdmin, waiting, open };
+};
+
+/** The profile's way into the admin panel (the header's shield is gone since 2026-10-27): one wine row, admins only.
+ *  Superadmins see how many new members wait; a tap with someone waiting opens the panel on them. */
+export const AdminEntry: React.FC = () => {
+  const { shown, waiting, open } = useAdminEntry();
+  if (!shown) return null;
 
   return (
     <button type="button" onClick={open}

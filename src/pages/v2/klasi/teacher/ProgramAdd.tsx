@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ArrowLeft, BookOpen, Check as CheckIcon, Feather, KeyRound, Library, Loader2, Music, Piano, Users } from 'lucide-react';
+import { ArrowLeft, BookOpen, Check as CheckIcon, Feather, KeyRound, Library, Music, Piano, Users } from 'lucide-react';
+import { Waiting } from '../../../../components/shell/PageSkeleton';
 import type { ProgramItem, SchoolClass } from '../../../../hooks/useClasses';
 import { searchCatalog } from '../../../../utils/pathItems';
 import { triggerHaptic } from '../../../../utils/haptics';
@@ -99,7 +100,7 @@ export const ProgramAddSheet: React.FC<{ cls: SchoolClass; open: boolean; onClos
         </Press>
       )}
       {rows === null ? (
-        <p className="flex justify-center py-8 text-mut"><Loader2 aria-hidden="true" className="size-5 animate-spin" /></p>
+        <Waiting field={false} rows={5} quiet />
       ) : rows.length === 0 ? (
         <Note>ვერ მოიძებნა.</Note>
       ) : (

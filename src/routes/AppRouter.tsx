@@ -9,6 +9,7 @@ import { FavButton } from '../components/prayers/FavPrayers';
 import { CommemorationButton } from '../components/prayers/CommemorationButton';
 import { prayerTitle } from '../data/prayers';
 import { HomeV2 } from '../pages/v2/home/HomeV2';
+import { WaitingHome } from '../pages/v2/gatsnoba/WaitingHome';
 import { useAccess } from '../hooks/useAccess';
 import { LockedPage } from '../components/access/SignInPrompt';
 import { SECTIONS, sectionOfPage } from '../data/sections';
@@ -103,6 +104,7 @@ const GeorgiaMap = page(() => import('../components/maps/GeorgiaMap'), 'GeorgiaM
 const MtkmeliPage = page(() => import('../components/maps/MtkmeliPage'), 'MtkmeliPage');
 const VideosPageLazy = page(() => import('../pages/VideosPage'), 'VideosPage');
 const AdminPanelPage = page(() => import('../pages/AdminPanelPage'), 'AdminPanelPage');
+const AdminV2 = page(() => import('../pages/v2/admini/AdminV2'), 'AdminV2');
 const ClassPage = page(() => import('../pages/ClassPage'), 'ClassPage');
 const AncestorsPage = page(() => import('../pages/AncestorsPage'), 'AncestorsPage');
 const PrayerPage = page(() => import('../pages/PrayerPage'), 'PrayerPage');
@@ -122,6 +124,8 @@ const ProgramButton = lazy(() => import('../pages/galoba/LiturgyBits').then(m =>
 const PathPageBody = page(() => import('../components/views/PathPageBody'), 'PathPageBody');
 const StudentPage = page(() => import('../pages/StudentPage'), 'StudentPage');
 const ProfilePage = page(() => import('../pages/ProfilePage'), 'ProfilePage');
+// the profile, its details and home buttons in the new look (stage 7, pages/v2/propili)
+const ProfileV2 = page(() => import('../pages/v2/propili/ProfileV2'), 'ProfileV2');
 // the new look's own pages (redesign stage 2)
 const NoticesPage = page(() => import('../pages/shell/NoticesPage'), 'NoticesPage');
 const SettingsPage = page(() => import('../pages/shell/SettingsPage'), 'SettingsPage');
@@ -142,6 +146,15 @@ const PrayerScreen = page(() => import('../pages/v2/lotsva/PrayerScreen'), 'Pray
 const CommemorationScreen = page(() => import('../pages/v2/lotsva/CommemorationScreen'), 'CommemorationScreen');
 // the church calendar as a page of its own in the new look (board x-kalendari)
 const CalendarPage = page(() => import('../pages/v2/kalendari/CalendarPage'), 'CalendarPage');
+// „სახალისო“ (the games) in the new look (stage 7, pages/v2/tamashebi)
+const GamesV2 = page(() => import('../pages/v2/tamashebi/GamesV2'), 'GamesV2');
+// „ღვთისმსახურება“'s „მედავითნე“ side and „აბიტურიენტს“ in the new look (stage 7, pages/v2/medavitne, pages/v2/abituri)
+const MedavitneV2 = page(() => import('../pages/v2/medavitne/MedavitneV2'), 'MedavitneV2');
+const AbituriV2 = page(() => import('../pages/v2/abituri/AbituriV2'), 'AbituriV2');
+// „ხალხური“, „ეკლესია-მონასტრები“ and the old page „ვიდეოები“ in the new look (stage 7, pages/v2/khalkhuri, pages/v2/tadzrebi)
+const KhalkhuriV2 = page(() => import('../pages/v2/khalkhuri/KhalkhuriV2'), 'KhalkhuriV2');
+const TadzrebiV2 = page(() => import('../pages/v2/tadzrebi/TadzrebiV2'), 'TadzrebiV2');
+const VideosV2 = page(() => import('../pages/v2/khalkhuri/Films'), 'VideosV2');
 // the old look's home loads only when the admin hides the new look
 const HomePage = page(() => import('../pages/HomePage'), 'HomePage');
 
@@ -203,7 +216,8 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   useDarkPage(nl && darkReadyPage(currentPage, mapItem));
   const top = nl && TOP_PAGES.includes(currentPage);
   // the home page in the new look is HomeV2 (redesign stage 4, board x-mtavari)
-  const homeEl = nl ? <HomeV2 /> : <HomePage logoUrl={logoUrl} />;
+  // a member not let in yet sees one calm screen first (board x-elodeba, pages/v2/gatsnoba/WaitingHome)
+  const homeEl = nl ? <WaitingHome home={<HomeV2 />} /> : <HomePage logoUrl={logoUrl} />;
   const access = useAccess();
   const {
     selectedChantVariants,
@@ -237,7 +251,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   if (currentPage === 'calendar') return nl ? <CalendarPage /> : homeEl;
 
   if (currentPage === 'admin') {
-    return isAdmin ? <AdminPanelPage /> : homeEl;
+    return isAdmin ? (nl ? <AdminV2 /> : <AdminPanelPage />) : homeEl;
   }
 
   if (currentPage === 'class') {
@@ -266,7 +280,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   // signed out (e.g. "back" after leaving): the profile has nothing to show
   if (currentPage === 'profile' && (access.kids || (!user && !loading))) return homeEl;
 
-  if (currentPage === 'profile') return <ProfilePage />;
+  if (currentPage === 'profile') return nl ? <ProfileV2 /> : <ProfilePage />;
 
   // „საგანძურის გზა“ in the new look draws its own head and inner pages (stage 4, pages/v2/gza)
   if (nl && currentPage === 'gz') return <GzaPage />;
@@ -284,6 +298,17 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   // the library and „გაიცანი წინაპრები“ in the new look (stage 6b, pages/v2/library)
   if (nl && currentPage === 'biblioteka') return <LibraryV2 />;
   if (nl && currentPage === 'tsinaprebi') return <AncestorsV2 />;
+  // the games' hub, a kind's list and an open game in its frame (stage 7, pages/v2/tamashebi)
+  if (nl && currentPage === 'games') return <GamesV2 />;
+  // the reader's course and books, and the admission pages, draw their own bars (stage 7)
+  if (nl && currentPage === 'medavitneoba') return <MedavitneV2 />;
+  if (nl && currentPage === 'abituri') return <AbituriV2 />;
+  // „ხალხური“ (the old page „საკრავები“ opens it on its instruments), the churches, and the films' old page (stage 7)
+  if (nl && (currentPage === 'simghera' || currentPage === 'sakravebi')) {
+    return <KhalkhuriV2 key={currentPage} startTab={currentPage === 'sakravebi' ? 'instruments' : undefined} />;
+  }
+  if (nl && currentPage === 'churches') return <TadzrebiV2 />;
+  if (nl && currentPage === 'videos') return <VideosV2 />;
 
   if (currentPage !== 'home') {
     // the one bar: „←“, the page's title, and 📌 for a page that can be a home button

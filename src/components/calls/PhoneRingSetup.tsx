@@ -5,6 +5,10 @@ import { useNotes } from '../../context/NotesContext';
 import { useCall } from '../../utils/callSession';
 import { bindChatDevice, chatBoundToday, pushSupported } from '../../utils/groupPush';
 import { Btn } from '../ui/kit';
+import { useNavHidden, useNewLook } from '../../design/newLook';
+import { useNavigation } from '../../context/NavigationContext';
+import { NO_NAV } from '../shell/tabs';
+import { RingAsk } from '../../pages/v2/shetkobinebebi/RingAsk';
 
 // Calls and messages on this phone even with the app closed (worker/reminders /ring and /chat-notify, 2026-11-05).
 // Where notifications are already allowed the phone is bound quietly (again once a day, so a renewed subscription stays
@@ -21,6 +25,10 @@ export const PhoneRingSetup: React.FC = () => {
   const { user } = useAuth();
   const { notes, programOpen, church } = useNotes();
   const call = useCall();
+  // the new look draws the card of board x-zarebi-baneri over the bottom menu
+  const nl = useNewLook();
+  const navHidden = useNavHidden();
+  const { currentPage } = useNavigation();
   const uid = user?.uid || '';
   const [ask, setAsk] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -76,6 +84,9 @@ export const PhoneRingSetup: React.FC = () => {
     setAsk(false);
   };
 
+  if (nl) {
+    return <RingAsk done={done} busy={busy} err={err} overNav={!navHidden && !NO_NAV.includes(currentPage)} onLater={later} onTurnOn={() => void turnOn()} />;
+  }
   return (
     <div
       className="fixed z-[80] left-1/2 -translate-x-1/2 bottom-[calc(env(safe-area-inset-bottom)+12px)] w-[min(440px,calc(100%-24px))] rounded-[28px] bg-white ring-1 ring-[#e8dcc8] shadow-[0_14px_40px_-8px_rgba(74,52,38,0.45)] p-4"

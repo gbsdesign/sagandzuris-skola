@@ -90,7 +90,7 @@ export const toUser = (id: string, d: any): UserRecord => {
 };
 
 export type Filter = 'all' | 'pending' | 'week' | 'month' | 'habits' | 'teacher' | 'admin' | 'refused' | 'noClass' | 'incomplete' | 'away' | 'twins' | 'left';
-const within = (iso: string, days: number) => !!iso && Date.now() - new Date(iso).getTime() < days * 86400_000;
+export const within = (iso: string, days: number) => !!iso && Date.now() - new Date(iso).getTime() < days * 86400_000;
 
 /** Who each filter holds; the panel's big numbers and the list's chips count with the same tests. A member marked
  *  „გასული“ (`left`) is in no list but „გასულები“; `twins` = who may have a second account (utils/duplicates). */
@@ -127,10 +127,45 @@ export const filterTests = (staff: StaffRecord[], access: Record<string, AccessR
   return { statusOf, member: (u: UserRecord) => !gone(u) && member(u), test };
 };
 
+/** „შესაძლო ორმაგი“: the same phone or the same full name (a name only when the person wrote one); the members marked
+ *  „გასული“ and the pairs an admin found to be two people („სხვა ადამიანია“) are left out */
+export const useTwins = (users: UserRecord[], leftUids: ReadonlySet<string>) => {
+  const notTwins = useNotTwins();
+  const twins = useMemo(() => duplicatesOf(users.filter(u => !leftUids.has(u.userId)).map(u => ({
+    userId: u.userId, name: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.displayName, phone: u.phone,
+  })), notTwins), [users, leftUids, notTwins]);
+  const twinIds = useMemo(() => new Set(twins.keys()), [twins]);
+  return { twins, twinIds };
+};
+
+/** The list on screen as a table (superadmins): phones in the local form (a leading „+“ reads as a formula in Excel). */
+export const exportPeople = (
+  shown: UserRecord[], staff: StaffRecord[], classes: SchoolClass[], statusOf: (u: UserRecord) => string | undefined,
+  leftUids: ReadonlySet<string>, onMessage: (text: string, type: 'success' | 'error') => void,
+) => {
+  const VOICE: Record<string, string> = { '1': 'I', '2': 'II', '3': 'III' };
+  const day = (iso: string) => (iso ? iso.slice(0, 10) : '');
+  const classNames = (uid: string) => classes.filter(c => c.memberIds.includes(uid)).map(c => c.name).join(', ');
+  const rows = shown.map(u => {
+    const role = roleOf(u, staff);
+    const status = statusOf(u);
+    return [
+      u.firstName || u.name, u.lastName, u.email, showPhone(u.phone).replace(/^\+995 /, ''), u.region, u.city, u.birth,
+      u.voices.map(v => VOICE[v] || v).join(' '), classNames(u.userId), roleName(u, role),
+      status === 'pending' ? 'ელოდება' : status === 'rejected' ? 'შეფერხებული' : leftUids.has(u.userId) ? 'გასული' : '', day(u.lastActiveAt), day(u.createdAt),
+    ];
+  });
+  downloadCsv(`sagandzuri-wevrebi-${new Date().toISOString().slice(0, 10)}.csv`, [
+    ['სახელი', 'გვარი', 'ელფოსტა', 'ტელეფონი', 'რეგიონი', 'ქალაქი / სოფელი', 'დაბადება', 'ხმა', 'კლასი', 'როლი', 'სტატუსი', 'ბოლოს შემოვიდა', 'პირველად შემოვიდა'],
+    ...rows,
+  ]);
+  onMessage(`ცხრილი ჩამოიტვირთა: ${rows.length} ადამიანი. მასში ტელეფონებია — არ გაუზიარო სხვას.`, 'success');
+};
+
 // „ელოდება“ has no chip: its place is the panel's big number (superadmins; others never see who waits)
 // Two rows since 2026-11-06 (the user: nine alike chips in a cloud were hard to read): „ვინ“ = who they are, „ყურადღება“ =
 // what wants a look (amber).
-const CHIPS: { id: Filter; label: string; Icon: React.ComponentType<{ className?: string }>; group: 'who' | 'care' }[] = [
+export const CHIPS: { id: Filter; label: string; Icon: React.ComponentType<{ className?: string }>; group: 'who' | 'care' }[] = [
   { id: 'teacher', label: 'მასწავლებლები', Icon: GraduationCap, group: 'who' },
   { id: 'admin', label: 'ადმინები', Icon: Shield, group: 'who' },
   { id: 'month', label: 'აქტიური თვეში', Icon: CalendarDays, group: 'who' },
@@ -176,11 +211,7 @@ export const UsersTab: React.FC<{
 
   // „შესაძლო ორმაგი“: the same phone or the same full name (a name only when the person wrote one); the members marked
   // „გასული“ and the pairs an admin found to be two people („სხვა ადამიანია“) are left out
-  const notTwins = useNotTwins();
-  const twins = useMemo(() => duplicatesOf(users.filter(u => !left.uids.has(u.userId)).map(u => ({
-    userId: u.userId, name: [u.firstName, u.lastName].filter(Boolean).join(' ') || u.displayName, phone: u.phone,
-  })), notTwins), [users, left.uids, notTwins]);
-  const twinIds = useMemo(() => new Set(twins.keys()), [twins]);
+  const { twins, twinIds } = useTwins(users, left.uids);
   const { statusOf, test } = filterTests(staff, access, isSuperAdmin, classes, left.uids, twinIds);
   const classNames = (uid: string) => classes.filter(c => c.memberIds.includes(uid)).map(c => c.name).join(', ');
   const count = (f: Filter) => users.filter(test[f]).length;
@@ -220,24 +251,7 @@ export const UsersTab: React.FC<{
   const open = openId ? users.find(u => u.userId === openId) : undefined;
 
   // the list on screen as a table: phones in the local form (a leading „+“ reads as a formula in Excel)
-  const exportTable = () => {
-    const VOICE: Record<string, string> = { '1': 'I', '2': 'II', '3': 'III' };
-    const day = (iso: string) => (iso ? iso.slice(0, 10) : '');
-    const rows = shown.map(u => {
-      const role = roleOf(u, staff);
-      const status = statusOf(u);
-      return [
-        u.firstName || u.name, u.lastName, u.email, showPhone(u.phone).replace(/^\+995 /, ''), u.region, u.city, u.birth,
-        u.voices.map(v => VOICE[v] || v).join(' '), classNames(u.userId), roleName(u, role),
-        status === 'pending' ? 'ელოდება' : status === 'rejected' ? 'შეფერხებული' : left.uids.has(u.userId) ? 'გასული' : '', day(u.lastActiveAt), day(u.createdAt),
-      ];
-    });
-    downloadCsv(`sagandzuri-wevrebi-${new Date().toISOString().slice(0, 10)}.csv`, [
-      ['სახელი', 'გვარი', 'ელფოსტა', 'ტელეფონი', 'რეგიონი', 'ქალაქი / სოფელი', 'დაბადება', 'ხმა', 'კლასი', 'როლი', 'სტატუსი', 'ბოლოს შემოვიდა', 'პირველად შემოვიდა'],
-      ...rows,
-    ]);
-    onMessage(`ცხრილი ჩამოიტვირთა: ${rows.length} ადამიანი. მასში ტელეფონებია — არ გაუზიარო სხვას.`, 'success');
-  };
+  const exportTable = () => exportPeople(shown, staff, classes, statusOf, left.uids, onMessage);
 
   const person = open && (
     <PersonSheet

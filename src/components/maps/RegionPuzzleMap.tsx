@@ -18,6 +18,8 @@ interface RegionPuzzleMapProps {
   title?: string; // written along the northern border
   extraRegions?: FolkRegion[]; // lands outside the map (ლაზეთი): cards after the map's regions
   rich?: boolean;
+  /** with `rich`: the map alone — the new look draws the regions' cards itself (pages/v2/khalkhuri, pages/v2/tadzrebi) */
+  mapOnly?: boolean;
 }
 
 const { width, height } = GEORGIA_MAP_SIZE;
@@ -25,7 +27,7 @@ const { width, height } = GEORGIA_MAP_SIZE;
 const GO_MS = 1300;
 const LABEL_NUDGE: Partial<Record<FolkRegionId, number>> = { guria: -12, achara: 10 };
 
-export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, count, countLabel, regionName = r => r.nameGe, title, extraRegions = [], rich }) => {
+export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, count, countLabel, regionName = r => r.nameGe, title, extraRegions = [], rich, mapOnly }) => {
   const [hovered, setHovered] = useState<FolkRegionId | null>(null);
   // a tap (rich; 2026-11-09, the user: „დააჭერ — იხსნიდეს … მანამდე 2 წამი დიდდებოდეს კუთხე, სრულად ჩანდეს სახელი და ციფრი,
   // საზღვარს შუქმა შემოურბინოს“): the region grows with its full name and count, a light runs round its border, then it opens
@@ -223,6 +225,7 @@ export const RegionPuzzleMap: React.FC<RegionPuzzleMapProps> = ({ onSelect, coun
     </div>
   );
 
+  if (rich && mapOnly) return svg;
   if (rich) {
     return (
       <div className="w-full flex flex-col items-center gap-2 animate-in fade-in duration-200">

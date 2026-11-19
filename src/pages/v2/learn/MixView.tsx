@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check, Loader2, Megaphone, Mic, Pause, Play, Send, Users } from 'lucide-react';
-import { Avatar, Button, CheckButton, H2, Helper, Note, Row, Rows, RoundButton, Steps } from '../../../components/ui2';
+import { PageSkeleton } from '../../../components/shell/PageSkeleton';
+import { Avatar, Button, CheckButton, H2, Note, Row, Rows, RoundButton, Steps } from '../../../components/ui2';
 import type { Voice } from '../../../utils/pathItems';
 import { Line } from './parts';
 
@@ -25,7 +26,7 @@ export const MixView: React.FC<{
   onAsk: () => void;
   onRecord: () => void;
 }> = ({ rows, chosen, onToggle, playingOne, onPlayOne, state, picked, onPlayTogether, onSend, asked, onAsk, onRecord }) => {
-  if (!rows) return <Helper icon={<Loader2 className="animate-spin" />}>ვეძებ ჩანაწერებს…</Helper>;
+  if (!rows) return <PageSkeleton field={false} rows={3} />;
   if (!rows.length) {
     return (
       <>

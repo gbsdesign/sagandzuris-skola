@@ -31,11 +31,13 @@ export const cutOf = (xs: number[] | null | undefined): number | null => {
  *  `marks`: after singing, each of my voice's notes (`voice`, from 0) tinted on its staff — green sung right, red not;
  *  only on lines whose staves were read (`score.ny`).
  *  `focus`: my voice stays clear and the other voices' staves are softly veiled (2026-11-07, the user's pick „ოდნავ მკრთალად“).
- *  `onOpen`: a tap on the picture (or its ⤢) opens it big. */
+ *  `onOpen`: a tap on the picture (or its ⤢) opens it big.
+ *  `missTone`: the new look marks a miss gold, never red (board x-ultra-khmis-shepaseba), in the design rules' colours. */
 export const PartPicture: React.FC<{
   score: BookScore; sys: number[]; beat: number | null; span?: [number, number] | null;
   marks?: { beat: number; ok: boolean }[] | null; voice?: number; focus?: boolean; onOpen?: () => void; split?: boolean;
-}> = ({ score, sys, beat, span, marks, voice = 0, focus, onOpen, split }) => {
+  missTone?: 'red' | 'gold';
+}> = ({ score, sys, beat, span, marks, voice = 0, focus, onOpen, split, missTone = 'red' }) => {
   if (!sys.length) return null;
   return (
     <div className={`relative flex flex-col gap-1.5 rounded-xl bg-[#fffdf8] ring-1 ring-[#e8dcc8] p-1.5 ${onOpen ? 'cursor-zoom-in' : ''}`}
@@ -94,7 +96,9 @@ export const PartPicture: React.FC<{
                 const pad = (bot - top) * 0.25;
                 return (
                   <span key={m.beat} aria-hidden className={`absolute w-2.5 -ml-[5px] rounded-full pointer-events-none ${
-                    m.ok ? 'bg-[#2f8a4f]/25 ring-1 ring-[#2f8a4f]/75' : 'bg-[#c0392b]/25 ring-1 ring-[#c0392b]/80'}`}
+                    missTone === 'gold'
+                      ? (m.ok ? 'bg-leaf/25 ring-1 ring-leaf/75' : 'bg-gold/30 ring-[1.5px] ring-gold')
+                      : (m.ok ? 'bg-[#2f8a4f]/25 ring-1 ring-[#2f8a4f]/75' : 'bg-[#c0392b]/25 ring-1 ring-[#c0392b]/80')}`}
                     style={{ left: `${left * 100}%`, top: `${(top - pad) * 100}%`, height: `${(bot - top + 2 * pad) * 100}%` }} />
                 );
               })}

@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Check, CheckCheck, ChevronLeft, ChevronRight, Search, UserPlus, X } from 'lucide-react';
+import { Check, CheckCheck, ChevronDown, ChevronLeft, ChevronRight, Search, UserPlus, X } from 'lucide-react';
 import { useAuth, useNavigation } from '../../../context';
-import { Avatar, Button, Card, Field, Press, RoundButton, Rows, Small, Two } from '../../../components/ui2';
+import { Avatar, Button, Card, Field, Press, RoundButton, Row, Rows, SectionLabel, Small, Two } from '../../../components/ui2';
 import { cx } from '../../../components/ui2/cx';
 import type { ClassMember, SchoolClass } from '../../../hooks/useClasses';
 import { localIso, useClassStudents } from '../../../hooks/useTeaching';
@@ -95,7 +95,7 @@ const CameButton: React.FC<{ on: boolean; name: string; onToggle: () => void }> 
   </Press>
 );
 
-type Roll = { att: ClassAttendance; line: string };
+type Roll = { att: ClassAttendance; line: string; voiceOf: (uid: string) => string };
 
 /** The teachers who lead use the roll (attendance + figures); the hooks live here so members never read the records. */
 const WithRoll: React.FC<{ cls: SchoolClass; children: (r: Roll) => React.ReactNode }> = ({ cls, children }) => {
@@ -106,7 +106,12 @@ const WithRoll: React.FC<{ cls: SchoolClass; children: (r: Roll) => React.ReactN
   const f = classFigures(cls.members.map(m => summarize(records[m.uid]?.data)), att.last);
   const loading = cls.members.some(m => !records[m.uid]);
   const line = `აქტიური ${loading ? '—' : f.active} · დასწრება ${f.attendance === null ? '—' : `${f.attendance}%`} · სამუშაო ${loading ? '—' : `${f.work}%`}`;
-  return <>{children({ att, line })}</>;
+  // a member's (first) voice from their profile, for a big class's roll folded by voices (x-savse-klasi)
+  const voiceOf = (uid: string) => {
+    const v = (records[uid]?.data as { profile?: { voices?: unknown } } | undefined)?.profile?.voices;
+    return Array.isArray(v) && v.length ? String(v[0]) : '';
+  };
+  return <>{children({ att, line, voiceOf })}</>;
 };
 
 /** x-tsevrebi — the „წევრები“ tab. */
@@ -127,6 +132,26 @@ const MembersView: React.FC<{ cls: SchoolClass; canEdit: boolean; roll?: Roll }>
   const found = finding && needle ? cls.members.filter(m => (m.name || '').toLowerCase().includes(needle)) : cls.members;
   const iAmMember = !!me && cls.memberIds.includes(me);
   const youTag = (uid: string) => (uid === me ? ' (შენ)' : '');
+  // a big class's roll (the class's leaders): folded by voices, so marking who came stays short (x-savse-klasi)
+  const big = canEdit && !!roll && !needle && cls.members.length > BIG_CLASS;
+  const memberRow = (m: ClassMember) => {
+    const body = (
+      <>
+        <Avatar name={m.name} photo={m.photoURL} />
+        <Two title={`${m.name}${youTag(m.uid)}`} />
+      </>
+    );
+    if (!canEdit) return <div key={m.uid} className="flex min-h-row w-full items-center gap-2.5 py-2 pr-3 pl-4 text-ink">{body}</div>;
+    return (
+      <div key={m.uid} className="flex min-h-row w-full items-center gap-1 text-ink">
+        <Press onClick={() => (m.uid === me ? navigateTo('gz') : openStudent(m.uid, cls.id))} title={`${m.name} — გზა და პროფილი`}
+          className="flex min-h-row min-w-0 flex-1 cursor-pointer items-center gap-2.5 py-2 pl-4 text-left transition-colors active:bg-soft">
+          {body}
+        </Press>
+        {roll && <CameButton on={roll.att.present.includes(m.uid)} name={m.name} onToggle={() => { triggerHaptic(10); roll.att.toggle(m.uid); }} />}
+      </div>
+    );
+  };
 
   return (
     <div className="flex flex-col gap-2.5">
@@ -164,28 +189,53 @@ const MembersView: React.FC<{ cls: SchoolClass; canEdit: boolean; roll?: Roll }>
             </Press>
           ) : <div key={t.uid} className={look}>{body}</div>;
         })}
-        {found.map(m => {
-          const body = (
-            <>
-              <Avatar name={m.name} photo={m.photoURL} />
-              <Two title={`${m.name}${youTag(m.uid)}`} />
-            </>
-          );
-          if (!canEdit) return <div key={m.uid} className="flex min-h-row w-full items-center gap-2.5 py-2 pr-3 pl-4 text-ink">{body}</div>;
-          return (
-            <div key={m.uid} className="flex min-h-row w-full items-center gap-1 text-ink">
-              <Press onClick={() => (m.uid === me ? navigateTo('gz') : openStudent(m.uid, cls.id))} title={`${m.name} — გზა და პროფილი`}
-                className="flex min-h-row min-w-0 flex-1 cursor-pointer items-center gap-2.5 py-2 pl-4 text-left transition-colors active:bg-soft">
-                {body}
-              </Press>
-              {roll && <CameButton on={roll.att.present.includes(m.uid)} name={m.name} onToggle={() => { triggerHaptic(10); roll.att.toggle(m.uid); }} />}
-            </div>
-          );
-        })}
+        {!big && found.map(memberRow)}
         {needle && found.length === 0 && <p className="px-4 py-3.5 text-body text-mut">ვერ მოიძებნა.</p>}
       </Rows>
+      {big && roll && <ByVoice cls={cls} roll={roll} row={memberRow} />}
       {cls.members.length === 0 && <Small tone="mut" className="px-1.5">კლასში ჯერ წევრი არ არის.</Small>}
       {canEdit && <AddMemberSheetV2 cls={cls} open={adding} onClose={() => setAdding(false)} />}
     </div>
+  );
+};
+
+// more members than this: the roll folds by voices
+const BIG_CLASS = 12;
+// a voice group shows this many names before „კიდევ N“
+const FIRST_NAMES = 3;
+const VOICE_GROUPS: { id: string; label: string }[] = [
+  { id: '1', label: 'I ხმა' }, { id: '2', label: 'II ხმა' }, { id: '3', label: 'III ხმა' }, { id: '', label: 'ხმა არ წერია' },
+];
+
+/** x-savse-klasi — a big class's members by voice: the open group shows three names and „კიდევ N“, every other group is one
+ *  line („II ხმა · 17 · 16 მოვიდა“) that opens it. „ყველა მოვიდა“ on the card above, then only who did not come is tapped. */
+const ByVoice: React.FC<{ cls: SchoolClass; roll: Roll; row: (m: ClassMember) => React.ReactNode }> = ({ cls, roll, row }) => {
+  const groups = VOICE_GROUPS
+    .map(g => ({ ...g, list: cls.members.filter(m => roll.voiceOf(m.uid) === g.id || (!g.id && !['1', '2', '3'].includes(roll.voiceOf(m.uid)))) }))
+    .filter(g => g.list.length > 0);
+  // none chosen yet: the first voice (the records come in one by one, so it is not fixed at the start)
+  const [open, setOpen] = useState<string | null>(null);
+  const [whole, setWhole] = useState(false);
+  const came = (list: ClassMember[]) => list.filter(m => roll.att.present.includes(m.uid)).length;
+  const shown = groups.find(g => g.id === open) ?? groups[0];
+  if (!shown) return null;
+  const order = shown.list;
+  const rest = groups.filter(g => g !== shown);
+  return (
+    <>
+      <SectionLabel label={`${shown.label} · ${shown.list.length}${roll.att.marked ? ` · ${came(shown.list)} მოვიდა` : ''}`} />
+      <Rows>{(whole ? order : order.slice(0, FIRST_NAMES)).map(row)}</Rows>
+      {!whole && order.length > FIRST_NAMES && (
+        <Button kind="ghost" full icon={<ChevronDown />} onClick={() => setWhole(true)}>კიდევ {order.length - FIRST_NAMES}</Button>
+      )}
+      {rest.length > 0 && (
+        <Rows>
+          {rest.map(g => (
+            <Row key={g.id || 'none'} title={`${g.label} · ${g.list.length}`} sub={roll.att.marked ? `${came(g.list)} მოვიდა` : 'შეხებით გაიშლება'}
+              onClick={() => { setOpen(g.id); setWhole(false); }} />
+          ))}
+        </Rows>
+      )}
+    </>
   );
 };
