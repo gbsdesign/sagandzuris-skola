@@ -7,7 +7,10 @@ import { triggerHaptic } from '../../../utils/haptics';
 import { Btn, Card } from '../../../components/ui/kit';
 import { Chip } from '../../../components/games/Chip';
 import { Hint } from '../samshvilde/parts';
-import { Letter } from '../rounds/four';
+import { Letter, Letter2 } from '../rounds/four';
+import { TableCount, TableScreen } from '../../../components/games/TableScreen';
+import { useNewLook } from '../../../design/newLook';
+import { Button, Card as Card2, Press, Rows } from '../../../components/ui2';
 import { Field } from './Field';
 import { QUIZ_BEST_KEY, readJson, writeJson } from './store';
 
@@ -114,6 +117,9 @@ const Quiz: React.FC<{ deal: EzoQuizCard[]; onClose: () => void; onAgain: () => 
     setPick(null);
   };
 
+  const nl = useNewLook();
+  if (nl) return <Quiz2 deal={deal} at={at} q={q} pick={pick} right={right} best={best} done={done} onChoose={choose} onNext={next} onClose={onClose} onAgain={onAgain} />;
+
   if (done) {
     const stars = quizStars(right, deal.length);
     return (
@@ -177,6 +183,87 @@ const Quiz: React.FC<{ deal: EzoQuizCard[]; onClose: () => void; onAgain: () => 
         </div>
       )}
     </Card>
+  );
+};
+
+/** the new look (board x-tamashi-kitkhva): the quiz on the games' own screen — „✕ · ეზოს მსაჯი · 1 / 10“ and the line, the
+ *  question in a white card, the four answers as rows in their letters' colours; „შემდეგი“ at the foot */
+const Quiz2: React.FC<{
+  deal: EzoQuizCard[]; at: number; q: EzoQuizCard; pick: number | null; right: number; best: number | null; done: boolean;
+  onChoose: (i: number) => void; onNext: () => void; onClose: () => void; onAgain: () => void;
+}> = ({ deal, at, q, pick, right, best, done, onChoose, onNext, onClose, onAgain }) => {
+  if (done) {
+    const stars = quizStars(right, deal.length);
+    return (
+      <TableScreen
+        title="ეზოს მსაჯი"
+        onClose={onClose}
+        footer={(
+          <div className="flex gap-2.5 [&>*]:min-w-0 [&>*]:flex-1">
+            <Button kind="ghost" onClick={onClose}>წესები</Button>
+            <Button icon={<RotateCcw />} onClick={onAgain}>თავიდან</Button>
+          </div>
+        )}
+      >
+        <Card2 className="flex flex-col items-center gap-3 text-center">
+          <div className="flex justify-center gap-1.5" aria-label={`${stars} ვარსკვლავი`}>
+            {[0, 1, 2].map(i => <Star key={i} aria-hidden="true" className={`size-9 ${i < stars ? 'fill-gold text-gold' : 'text-dim'}`} />)}
+          </div>
+          <p className="text-hero font-bold tabular-nums">{right} / {deal.length}</p>
+          <p className="text-body leading-snug text-mut">
+            {right === deal.length ? 'ყველა სწორია — შენ თვითონ შეგიძლია ეზოში მსაჯობა!' : right >= deal.length - 2 ? 'კარგია! ერთი-ორი წესი კიდევ გადახედე.' : 'წესები კიდევ ერთხელ წაიკითხე და სცადე თავიდან.'}
+          </p>
+          {best !== null && <p className="text-meta text-mut">საუკეთესო: {best} / {QUIZ_SIZE}</p>}
+        </Card2>
+      </TableScreen>
+    );
+  }
+  const game = q.game ? ezoGame(q.game) : undefined;
+  const answered = pick !== null;
+  return (
+    <TableScreen
+      title="ეზოს მსაჯი"
+      onClose={onClose}
+      footer={answered ? <Button full icon={<ChevronRight />} onClick={onNext}>{at + 1 >= deal.length ? 'შედეგი' : 'შემდეგი'}</Button> : undefined}
+    >
+      <TableCount at={at} total={deal.length} />
+      <div className="flex flex-col gap-3">
+        <Card2 className="flex flex-col gap-1">
+          <p className="text-meta text-mut">{game ? game.name : 'ეზოს თამაშები'}</p>
+          <h2 className="text-title leading-tight font-bold wrap-break-word">{q.q}</h2>
+        </Card2>
+        <Rows role="radiogroup" aria-label="პასუხები">
+          {q.options.map((o, i) => {
+            const isRight = answered && i === q.right;
+            const isWrong = pick === i && i !== q.right;
+            return (
+              <Press
+                key={i}
+                role="radio"
+                aria-checked={pick === i}
+                disabled={answered}
+                onClick={() => onChoose(i)}
+                className={`flex min-h-row w-full cursor-pointer items-center gap-3 py-2 pr-4 pl-4 text-left transition-colors active:bg-soft disabled:cursor-default ${
+                  isRight ? 'bg-leaf-tint' : isWrong ? 'bg-tint' : answered ? 'opacity-55' : ''}`}
+              >
+                <Letter2 i={i} />
+                <span className="min-w-0 flex-1 text-body leading-snug font-semibold wrap-break-word">{o}</span>
+                {isRight && <Check aria-hidden="true" className="size-5 shrink-0 text-leaf-ink" />}
+                {isWrong && <X aria-hidden="true" className="size-5 shrink-0 text-danger" />}
+              </Press>
+            );
+          })}
+        </Rows>
+        {answered && (
+          <div className="flex flex-col gap-1.5 px-1">
+            <p role="status" className={`text-body font-bold ${pick === q.right ? 'text-leaf-ink' : 'text-danger'}`}>
+              {pick === q.right ? 'სწორია!' : `არა — სწორია: ${q.options[q.right]}`}
+            </p>
+            {q.note && <p className="text-meta leading-normal text-mut">{q.note}</p>}
+          </div>
+        )}
+      </div>
+    </TableScreen>
   );
 };
 

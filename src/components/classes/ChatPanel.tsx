@@ -12,7 +12,7 @@ import { MONTHS_GE } from '../../utils/dateNames';
 import { ROOM_GAME_INFO, parseChatRoomRef } from '../../data/roomGames';
 import { ROOM_GAME_ICON } from '../games/roomGameIcons';
 import { DrawRiddle } from './DrawRiddle';
-import { Button, RoundButton } from '../ui2';
+import { Button, Press, RoundButton } from '../ui2';
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 export const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -150,6 +150,26 @@ const GameCardTitle: React.FC<{ room?: string; mine: boolean }> = ({ room, mine 
 /** an invitation into a game room leads in this long */
 const GAME_INVITE_MS = 3 * 3600_000;
 
+/** a call's length in words: „12 წუთი“, „40 წამი“, „1 საათი 5 წუთი“ */
+export const callLength = (seconds: number) => {
+  const s = Math.max(1, Math.round(seconds));
+  if (s < 60) return `${s} წამი`;
+  const min = Math.round(s / 60);
+  return min < 60 ? `${min} წუთი` : `${Math.floor(min / 60)} საათი${min % 60 ? ` ${min % 60} წუთი` : ''}`;
+};
+
+/** the calls whose end is told: each call message without `end` closed by the first end message after it */
+const closedCalls = (messages: ChatMessage[], isCall: (m: ChatMessage) => boolean) => {
+  const out = new Set<string>();
+  let open: string | null = null;
+  for (const m of messages) {
+    if (!isCall(m)) continue;
+    if (!m.end) open = m.id;
+    else if (open) { out.add(open); open = null; }
+  }
+  return out;
+};
+
 export const sentAt = (m: ChatMessage) => (
   <span className="inline-flex items-center tabular-nums">{m.pending ? <Clock className="w-3 h-3" /> : m.at && hhmm(m.at)}</span>
 );
@@ -185,6 +205,8 @@ export interface ChatPanelProps {
   onJoinCall?: () => void;
   /** the call is still on (otherwise its card is only a note, without the button) */
   callLive?: boolean;
+  /** „დაურეკე“ on a call the other side rang and nobody answered (board x-zari-chatshi) */
+  onCallBack?: () => void;
   /** a class's chat: an invitation into a game room leads into it (for a few hours) */
   onOpenGame?: (m: ChatMessage) => void;
   canDelete: (m: ChatMessage) => boolean;
@@ -231,7 +253,7 @@ const firstName = (name: string) => name.trim().split(/\s+/)[0] || name;
 
 // A chat: text and voice messages (a class's chat, or a teacher's private chat with a student).
 export const ChatPanel: React.FC<ChatPanelProps> = ({
-  base, author, messages, loading, error, header, isCall = NEVER, callTitle, onJoinCall, callLive = true, onOpenGame, canDelete,
+  base, author, messages, loading, error, header, isCall = NEVER, callTitle, onJoinCall, callLive = true, onCallBack, onOpenGame, canDelete,
   showNames = false, seenAt = null, onSent, listClassName = 'h-[56vh] min-h-[300px] max-h-[560px]', readOnly = false,
   staffLabel = 'მასწავლებელი', fill = false, chain = false, listTop, renderCard, onAttach, onDelete, personOpener,
 }) => {
@@ -415,7 +437,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     ) : (
       <>
       {listTop}
-      {messages.map((m, i) => {
+      {(() => {
+      const closed = closedCalls(messages, isCall);
+      return messages.map((m, i) => {
         const prev = messages[i - 1];
         const mine = m.uid === author.uid;
         const newDay = !!m.at && (!prev?.at || prev.at.toDateString() !== m.at.toDateString());
@@ -436,6 +460,34 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             <Trash2 className="w-4 h-4" /> წაშლა
           </button>
         );
+        // how a call ended (board x-zari-chatshi): „ზარი დასრულდა · 12 წუთი“, or „გამოტოვებული ზარი“ with „დაურეკე“ (the one
+        // who rang reads „ზარს არ უპასუხეს“); the call's own first message then steps aside
+        if (isCall(m) && m.end) {
+          const rang = m.uid === author.uid;
+          const words = m.missed ? (rang ? 'ზარს არ უპასუხეს' : 'გამოტოვებული ზარი') : `ზარი დასრულდა · ${callLength(m.seconds)}`;
+          const back = m.missed && !rang && !readOnly && onCallBack;
+          return (
+            <React.Fragment key={m.id}>
+              {dayLine}
+              <div className="mt-2 flex flex-col items-center">
+                <div
+                  {...(canDel ? holdToPick(m.id) : {})}
+                  className={`inline-flex max-w-full items-center gap-2 rounded-full bg-soft text-meta text-mut ${back ? 'py-0.5 pr-1 pl-3.5' : 'px-3.5 py-2'} ${canDel ? '[-webkit-touch-callout:none]' : ''}`}
+                >
+                  <Phone className="size-[18px] shrink-0" aria-hidden="true" />
+                  <span className="min-w-0 truncate">{words} · {sentAt(m)}</span>
+                  {back && (
+                    <Press onClick={() => back()} className="group flex h-tap shrink-0 cursor-pointer items-center rounded-full focus-visible:outline-none">
+                      <span className="flex h-9 items-center rounded-full bg-surf px-3.5 font-bold text-wine transition group-active:scale-[0.97] group-focus-visible:outline-2 group-focus-visible:outline-wine/60">დაურეკე</span>
+                    </Press>
+                  )}
+                </div>
+                {removeBtn}
+              </div>
+            </React.Fragment>
+          );
+        }
+        if (isCall(m) && closed.has(m.id)) return <React.Fragment key={m.id}>{dayLine}</React.Fragment>;
         // a call in a private chat: a quiet line in the middle; the newest live one leads into the call
         if (isCall(m)) {
           const live = callLive && m.id === lastCallId;
@@ -539,9 +591,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             </div>
           </React.Fragment>
         );
-      })}
+      });
+      })()}
       </>
-  )), [messages, loading, error, listTop, active, seenId, lastCallId, callLive, callTitle, readOnly, showNames, staffLabel,
+  )), [messages, loading, error, listTop, active, seenId, lastCallId, callLive, callTitle, readOnly, showNames, staffLabel, onCallBack,
     author.uid, base, isCall, canDelete, renderCard, personOpener, onOpenGame, onJoinCall, onDelete]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pill = 'min-h-tap-lg rounded-full bg-surf flex items-center';

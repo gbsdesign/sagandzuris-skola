@@ -45,6 +45,9 @@ export const useTableHead = (at: number, total: number): boolean => {
   return on;
 };
 
+/** the same as a part to put inside the screen (a game that keeps its count in its own state) */
+export const TableCount: React.FC<{ at: number; total: number }> = ({ at, total }) => { useTableHead(at, total); return null; };
+
 export const TableScreen: React.FC<{
   title: React.ReactNode;
   /** the new look's grey line under the name („რაუნდი 2 / 6“ — pages/v2/tamashebi/TurnFrame) */

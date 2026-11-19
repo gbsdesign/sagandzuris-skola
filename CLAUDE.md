@@ -1876,6 +1876,24 @@
   `utils/weekReport.ts` + test, counted from the members' records, no AI call). „AI გაკვეთილი“ in a program chant's window →
   `ai-prep/<variantId>` (`aiklasi/prep/`, `utils/lessonPrep.ts` + test): the phrases, the words' questions (`askWordQuestions`) the
   teacher approves or edits, kept in `classes.aiLessons.{variantId}`; the day lesson's summary asks two approved ones (`quizFor`).
+- **The final review's fixes (2026-11-19**, the user: „მთლიანად გადაამოწმე ყველაფერი დეტალურად“; review log in `/tmp/review` of that
+  session): „ოსტატობა“ in the new look = `pages/v2/ostatoba/` (`OstatobaScreen` four rows გზა · გაკვეთილები · სავარჯიშოები · საწყისი
+  ტესტი; gz mapItems `ostatoba`, `ostatoba~lessons`, `ostatoba~extra`, `ostatoba~levels` = `doneebi/LevelsScreen` with line chips
+  and the open level unfolded); `DrillSheet` opens `DrillScreenV2` (`LessonV2`, `ExerciseV2`; logic in `mastery/useExercise`,
+  `useMicTake`, `useDrillHistory`); old parts still inside ask for the light look (`useLightLook`). The teacher's 📎 card =
+  `pages/v2/klasi/PinSheetV2.tsx` (switch კომენტარი · დავალება; `useNewAssignment` in AssignmentsPanel); the program item's
+  sheet one „სწავლა“ + three voice tiles; „წაიკითხე ლოცვა სახელებით“ (`utils/prayerJump.ts` → the prayer scrolled to its place);
+  the song card's player = `ChantPlayer layout="v2"` (same engine, the rest behind „ხმები, სიჩქარე, ტონი“). A call leaves a
+  `kind:'call'` message in a private chat (`end`, `missed`, `seconds`: „ზარი დასრულდა · N წუთი“ / „გამოტოვებული ზარი · დაურეკე“) and a
+  class chat shows a banner while its call runs (new look only). The school rewords the AI teacher's sentences
+  (`settings/aiPhrases.texts`; the recorded voice plays only an unchanged one); a rest is offered also when accuracy falls
+  (`accuracyFell`, `restReason`). „მატიანე კლასის ჩატში“ at a game's end. A computer (`lg`) has one top bar `DeskBar` (four places,
+  „რას ეძებ?“, 🔔) instead of the bottom pill. The notes' „ავტო“ follows the app's „იერი“. The week report is every class
+  teacher's (AI lines only while `aiTeacher`): ivarjisha N / M · attendance % · work, groups „ყურადღება“ / „კარგად მიდის“, a
+  ready letter (`aiklasi/LetterSheet.tsx`, sent only by „გაგზავნა“), „AI შეცდა“ = `students.aiErred {week, by, at}` (teachers and
+  admins only — rules); Monday from 09:00 the reminders Worker sends each teacher „კვირის შეჯამება მზადაა · <class>“
+  (`teacherWeekNotices`, the same counting as `weekReport.ts` — tests/weekReport.test.ts runs both; once a Monday, meta `tweek:<day>`,
+  quiet hours hold it — `tweek-wait`; it runs last in its minute). Sign-out asks with what happens next (x-dadastureba).
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 

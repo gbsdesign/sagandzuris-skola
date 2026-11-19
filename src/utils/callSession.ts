@@ -195,6 +195,10 @@ class Call {
   offEnd: (() => void) | null = null;
   timers: number[] = [];
   everJoined = false;
+  /** when another phone first came into the call (the talk's length is counted from here) */
+  joinedAt = 0;
+  /** told once as this phone leaves the call (callActions: the caller notes in the chat how it ended) */
+  onLeft: ((o: { answered: boolean; seconds: number }) => void) | null = null;
   closed = false;
   audioCtx: AudioContext | null = null;
   meters = new Map<string, AnalyserNode>();
@@ -334,7 +338,7 @@ class Call {
   sync() {
     if (this.closed) return;
     const live = this.others.filter(p => this.alive(p) && p.session);
-    if (live.length) this.everJoined = true;
+    if (live.length && !this.everJoined) { this.everJoined = true; this.joinedAt = Date.now(); }
     const seeVideo = this.videoFrom(live);
     const wanted = new Set<string>();
     for (const p of live) {
@@ -555,8 +559,31 @@ export const joinCall = async (info: CallInfo, kind: CallKind): Promise<boolean>
 export const leaveCall = async (note = '') => {
   const call = current;
   current = null;
+  const left = call?.onLeft;
+  if (call) call.onLeft = null;
+  if (call && left) left({ answered: call.everJoined, seconds: call.everJoined ? (Date.now() - call.joinedAt) / 1000 : 0 });
   if (call) await call.close();
   set({ ...IDLE, status: note ? 'ended' : 'idle', note, info: note ? state.info : null });
+};
+
+/** Told once when this phone leaves the call of `base` (if it is in it now): whether anybody came, and how long they talked. */
+export const whenCallLeft = (base: string, f: (o: { answered: boolean; seconds: number }) => void) => {
+  if (current && current.info.base === base) current.onLeft = f;
+};
+
+/** A class's call now and lately (classes/{id}/call/state): when it began, when it ended (0 = still on), who began it. */
+export interface ClassCallState { at: number; end: number; by: string; name: string }
+export const useClassCallState = (classId: string | null | undefined) => {
+  const [st, setSt] = useState<ClassCallState | null>(null);
+  useEffect(() => {
+    if (!classId) { setSt(null); return; }
+    return onSnapshot(doc(db, 'classes', classId, 'call', 'state'), s => {
+      const d = s.data({ serverTimestamps: 'estimate' });
+      const at = d?.at?.toMillis?.() ?? 0;
+      setSt(d && at ? { at, end: d.end?.toMillis?.() ?? 0, by: d.by || '', name: d.name || '' } : null);
+    }, () => setSt(null));
+  }, [classId]);
+  return st;
 };
 
 /** Hides the "ended" note. */

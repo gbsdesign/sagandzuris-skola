@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { READY_SENTENCES, afterTake, closingLine, openingLine } from '../src/utils/aiLesson';
 import {
   VOICE_DEFAULT, VOICE_SENTENCES, clipId, isVoiceSentence, pcmToFloat, rateOf, readVoiceSettings, sentenceHash, splitSentences, trimQuiet,
+  VOICE_SENTENCE_LIST, PHRASE_KINDS, PHRASE_MAX, applyPhrases, cleanPhraseTexts,
 } from '../src/utils/teacherVoice';
 
 test('a shown text splits into the sentences that are recorded', () => {
@@ -54,4 +55,24 @@ test('the Live API\'s PCM: 16-bit little-endian, trimmed of its quiet', () => {
   assert.ok(t.length > 2000 && t.length < 2400, String(t.length));
   assert.equal(rateOf('audio/pcm;rate=24000'), 24000);
   assert.equal(rateOf(undefined), 24000);
+});
+
+test('the school changes a ready sentence: only that sentence is shown in its words (board x-ai-prazebi)', () => {
+  // every sentence once, each with a kind the list shows as a chip
+  assert.deepEqual(VOICE_SENTENCE_LIST.map(x => x.text), VOICE_SENTENCES);
+  const kinds = new Set(PHRASE_KINDS.map(k => k.id));
+  assert.ok(VOICE_SENTENCE_LIST.every(x => kinds.has(x.kind) && x.group));
+  assert.ok(PHRASE_KINDS.every(k => VOICE_SENTENCE_LIST.some(x => x.kind === k.id)));
+  assert.equal(VOICE_SENTENCE_LIST.find(x => x.text === 'მესამე ნოტი ცოტა დაბლა იყო.')?.kind, 'fix');
+  assert.equal(VOICE_SENTENCE_LIST.find(x => x.text === 'მეექვსე ნოტი ცოტა დაბლა იყო.')?.kind, 'fix');
+  const low = 'მესამე ნოტი ცოტა დაბლა იყო.';
+  const texts = { [sentenceHash(low)]: 'მესამე ნოტი ოდნავ მაღლა აიღე.' };
+  assert.equal(applyPhrases('თითქმის ზუსტად! მესამე ნოტი ცოტა დაბლა იყო.', texts), 'თითქმის ზუსტად! მესამე ნოტი ოდნავ მაღლა აიღე.');
+  // nothing changed: the text as it was, spaces and all
+  assert.equal(applyPhrases('ზუსტად!  კიდევ სცადე.', texts), 'ზუსტად!  კიდევ სცადე.');
+  assert.equal(applyPhrases('ზუსტად!', {}), 'ზუსტად!');
+  // the stored map is kept clean
+  assert.deepEqual(cleanPhraseTexts({ [sentenceHash(low)]: '  ახალი   სიტყვა. ', 'bad key!': 'x', abc: '', n: 5, long: 'ა'.repeat(PHRASE_MAX + 1) }),
+    { [sentenceHash(low)]: 'ახალი სიტყვა.' });
+  assert.deepEqual(cleanPhraseTexts(null), {});
 });

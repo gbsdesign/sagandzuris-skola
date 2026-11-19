@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { db } from '../firebase';
-import { sendCallMessage, ChatAuthor } from './useClassChat';
+import { sendCallMessage, sendTextMessage, ChatAuthor } from './useClassChat';
 import type { SchoolClass } from './useClasses';
 
 // Private chats (dms/{id}, firestore.rules), three kinds:
@@ -328,6 +328,17 @@ export const noteSent = (t: DirectThread, uid: string, preview: string) =>
   updateDoc(doc(db, 'dms', t.id), {
     lastAt: serverTimestamp(), lastBy: uid, lastText: preview.slice(0, 140), [`read.${readKey(t, uid)}`]: serverTimestamp(),
   });
+
+/** A text into a private chat by its id, as the chat's own field sends it (ChatPanel + DmChat's `noteSent`): the message (and
+ *  its phone notice), then the lists' line. The week's report sends its ready letter through it. */
+export const sendThreadText = async (id: string, author: ChatAuthor, text: string) => {
+  const snap = await getDoc(doc(db, 'dms', id));
+  if (!snap.exists()) throw new Error('chat missing');
+  const t = toThread(snap.id, snap.data({ serverTimestamps: 'estimate' }));
+  const clean = text.trim();
+  await sendTextMessage(dmBase(id), author, clean);
+  await noteSent(t, author.uid, clean).catch(e => console.warn('dm: ', e?.code || e));
+};
 
 /** The chat was opened (or a message came in while it is open). */
 export const markRead = (t: DirectThread, uid: string) =>

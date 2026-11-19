@@ -46,6 +46,10 @@ export interface ChatMessage {
   note?: string;
   /** a class chat's card from classes/{id}/pins (deleted there, not among the messages) */
   pinned?: boolean;
+  /** a 'call' that tells how a private call ended (written by the caller as they leave it; `seconds` = how long it was
+   *  talked, `missed` = nobody answered) — the call's own first message then steps aside (ChatPanel) */
+  end?: boolean;
+  missed?: boolean;
 }
 
 const str = (v: unknown) => (typeof v === 'string' ? v : '');
@@ -80,6 +84,8 @@ export const toChatMessage = (d: QueryDocumentSnapshot, pinned = false): ChatMes
     due: str(m.due),
     note: str(m.note),
     pinned,
+    end: m.end === true,
+    missed: m.missed === true,
   };
 };
 
@@ -267,6 +273,13 @@ export const sendDrawMessage = async (classId: string, author: ChatAuthor, d: { 
 
 export const sendCallMessage = async (base: string, author: ChatAuthor) => {
   await addDoc(messagesOf(base), { ...stamp(author), kind: 'call', text: '' });
+};
+
+/** how a private call ended (board x-zari-chatshi): talked `seconds`, or nobody answered — the caller writes it as they leave */
+export const sendCallEndMessage = async (base: string, author: ChatAuthor, o: { missed: boolean; seconds: number }) => {
+  await addDoc(messagesOf(base), {
+    ...stamp(author), kind: 'call', text: '', end: true, missed: o.missed, seconds: o.missed ? 0 : Math.max(0, Math.min(86_400, Math.round(o.seconds))),
+  });
 };
 
 export const sendVoiceMessage = async (base: string, author: ChatAuthor, { mp3, seconds, wave }: VoiceTake) => {

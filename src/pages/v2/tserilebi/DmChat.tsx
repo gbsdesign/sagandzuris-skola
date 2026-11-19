@@ -133,6 +133,7 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
       callTitle={thread.callKind === 'video' ? 'ვიდეოზარი' : 'ზარი'}
       onJoinCall={joinCall}
       callLive={livePeers.length > 0}
+      onCallBack={canStart ? () => { void startChatCall(thread, user, thread.callKind); } : undefined}
       canDelete={m => m.uid === uid}
       renderCard={m => (m.kind === 'note' || m.kind === 'work' ? <PinCard m={m} forMe={m.to === uid} /> : null)}
       onAttach={canPin ? () => setPinning(true) : undefined}

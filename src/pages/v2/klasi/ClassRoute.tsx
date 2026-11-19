@@ -10,8 +10,9 @@ import { ClassScreen } from './ClassScreen';
 import { ProgramOrderScreen } from './teacher/ProgramOrder';
 
 // Page `class` in the new look (stage 4c): the class page, or — the class's teachers and admins only, anyone else gets the
-// class page — its program's order (`order`), the AI's weekly report (`ai-report`), the instruction to the AI (`ai-note`) and a
-// lesson the AI prepared from a chant (`ai-prep/<variantId>`; the last three only while the AI teacher is on).
+// class page — its program's order (`order`), the week's summary (`ai-report`, x-idea-kvira — the AI teacher's lines in it only
+// while it is on), the instruction to the AI (`ai-note`) and a lesson the AI prepared from a chant (`ai-prep/<variantId>`; these
+// two only while the AI teacher is on).
 export const ClassRoute: React.FC = () => {
   const { mapItem, selectedClassId } = useNavigation();
   const { user, isAdmin, isTeacher } = useAuth();
@@ -23,7 +24,8 @@ export const ClassRoute: React.FC = () => {
     const cls = [...teaching, ...all].find(c => c.id === selectedClassId);
     if (cls && (isAdmin || cls.teacherIds?.includes(user?.uid ?? ''))) return <ProgramOrderScreen cls={cls} />;
   }
-  if ((mapItem === AI_REPORT || mapItem === AI_NOTE) && aiOn) {
+  // the week's summary is every teacher's, with or without the AI teacher (its AI lines show only while it is on)
+  if (mapItem === AI_REPORT || (mapItem === AI_NOTE && aiOn)) {
     const cls = [...teaching, ...all].find(c => c.id === selectedClassId);
     if (cls && (isAdmin || cls.teacherIds?.includes(user?.uid ?? ''))) return mapItem === AI_REPORT ? <ReportScreen cls={cls} /> : <InstructionScreen cls={cls} />;
   }

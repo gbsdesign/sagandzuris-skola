@@ -18,6 +18,9 @@ import { Stars } from '../tsikhe/parts';
 import { KutkheMap, RegionChips } from '../kutkhe/KutkheMap';
 import { ChestArt, KindPill, LetterPad, LetterTile, TaskNote, TaskView, TimePill, Trail } from './parts';
 import { NOW_KEY, readJson, writeJson } from './store';
+import { TableCount, TableScreen } from '../../../components/games/TableScreen';
+import { useNewLook } from '../../../design/newLook';
+import { Button } from '../../../components/ui2';
 
 // „საგანძურის ძებნა“ alone (the hub's „ონლაინ“, 2026-11-04): the day's hunt across Georgia's map, the same for the whole school.
 // Six stations: a region found by its places (a wrong region +10 s and the next clue), then its task (a wrong answer +15 s);
@@ -95,8 +98,14 @@ const Clues: React.FC<{ h: SoloHunt; r: SoloRun }> = ({ h, r }) => {
   );
 };
 
+/** a part of the hunt being played: the old look's card, or the new look's white one on the games' screen (`bare`) */
+const PlayBox: React.FC<{ bare?: boolean; paper?: boolean; children: React.ReactNode }> = ({ bare, paper, children }) =>
+  bare
+    ? <section className="space-y-3 rounded-card bg-surf p-4">{children}</section>
+    : <Card tone={paper ? 'paper' : 'white'} className="!p-4 space-y-3">{children}</Card>;
+
 /** a hunt being played: the trail and the clock, then the station's map, its task, the letter, and the chest */
-const Play: React.FC<{ h: SoloHunt; r: SoloRun; setRun: (r: SoloRun) => void; title: string; sub?: string; onDone: (r: SoloRun) => void }> = ({ h, r, setRun, title, sub, onDone }) => {
+const Play: React.FC<{ h: SoloHunt; r: SoloRun; setRun: (r: SoloRun) => void; title: string; sub?: string; onDone: (r: SoloRun) => void; bare?: boolean }> = ({ h, r, setRun, title, sub, onDone, bare }) => {
   const now = useNow(r.phase !== 'done');
   const secs = runSeconds(r, now);
   const sounds = useTsikheSounds();
@@ -137,33 +146,40 @@ const Play: React.FC<{ h: SoloHunt; r: SoloRun; setRun: (r: SoloRun) => void; ti
 
   return (
     <div ref={top} className="space-y-3 scroll-mt-24">
-      <Card className="!p-4 space-y-3">
+      <PlayBox bare={bare}>
         <div className="flex items-center gap-2">
           {/* the day's date on its own line: „დღის ძებნა №9 · 5 ნოემბერი“ did not fit beside the clock (2026-11-04) */}
-          <div className="min-w-0 flex-1">
-            <p className="truncate font-serif-ge text-[16px] font-bold leading-snug text-[#4a3426]">{title}</p>
-            {sub && <p className="text-[12.5px] font-bold leading-snug text-[#9a8b7b]">{sub}</p>}
-          </div>
+          {bare ? <div className="min-w-0 flex-1" /> : (
+            <div className="min-w-0 flex-1">
+              <p className="truncate font-serif-ge text-[16px] font-bold leading-snug text-[#4a3426]">{title}</p>
+              {sub && <p className="text-[12.5px] font-bold leading-snug text-[#9a8b7b]">{sub}</p>}
+            </div>
+          )}
           {bump && <span key={bump.n} className="samosi-pop shrink-0 whitespace-nowrap rounded-full bg-amber-100 px-2 py-0.5 text-[12.5px] font-bold text-amber-900" role="status">{bump.text}</span>}
           <TimePill secs={secs} />
         </div>
         <Trail n={h.stations.length} at={r.at} letters={letters} />
-      </Card>
+      </PlayBox>
 
       {r.phase === 'map' && st && (
-        <Card tone="paper" className="!p-4 space-y-3">
-          <div>
-            <p className="text-[13px] font-bold text-[#9a8b7b]">სადგური {r.at + 1} / {h.stations.length}</p>
-            <p className="font-serif-ge text-[18px] font-bold leading-snug text-[#4a3426]">რომელ კუთხეშია შემდეგი სადგური?</p>
-          </div>
+        <PlayBox bare={bare} paper>
+          {bare ? (
+            // the station's number is the screen's head („1 / 6“)
+            <h2 className="text-head leading-snug font-bold text-ink">რომელ კუთხეშია შემდეგი სადგური?</h2>
+          ) : (
+            <div>
+              <p className="text-[13px] font-bold text-[#9a8b7b]">სადგური {r.at + 1} / {h.stations.length}</p>
+              <p className="font-serif-ge text-[18px] font-bold leading-snug text-[#4a3426]">რომელ კუთხეშია შემდეგი სადგური?</p>
+            </div>
+          )}
           <Clues h={h} r={r} />
           <KutkheMap mode="pick" pick={null} onPick={pickRegion} out={r.out} nameOf={i => names[i]} />
           <RegionChips pick={null} onPick={pickRegion} out={r.out} nameOf={i => names[i]} />
-        </Card>
+        </PlayBox>
       )}
 
       {(r.phase === 'task' || r.phase === 'got') && st && (
-        <Card tone="paper" className="!p-4 space-y-3">
+        <PlayBox bare={bare} paper>
           <div className="flex flex-wrap items-center gap-2">
             <span className="inline-flex items-center gap-1.5 h-7 px-2.5 rounded-full bg-[#2f7d4f]/[0.1] text-[#1e4d31] text-[12.5px] font-bold">
               <Check className="w-3.5 h-3.5" />{names[st.region]}
@@ -189,16 +205,20 @@ const Play: React.FC<{ h: SoloHunt; r: SoloRun; setRun: (r: SoloRun) => void; ti
                   <p key={c.id} className="text-[13px] leading-snug text-[#5a4a3c]"><span className="font-bold">{c.name}</span>{c.note ? ` — ${c.note}` : ''}</p>
                 ))}
               </div>
-              <Btn size="lg" full onClick={() => setRun(soloNext(h, r))}>
-                {r.at + 1 < h.stations.length ? 'შემდეგი სადგური' : 'სკივრთან!'}
-              </Btn>
+              {bare ? (
+                <Button full onClick={() => setRun(soloNext(h, r))}>{r.at + 1 < h.stations.length ? 'შემდეგი სადგური' : 'სკივრთან!'}</Button>
+              ) : (
+                <Btn size="lg" full onClick={() => setRun(soloNext(h, r))}>
+                  {r.at + 1 < h.stations.length ? 'შემდეგი სადგური' : 'სკივრთან!'}
+                </Btn>
+              )}
             </div>
           )}
-        </Card>
+        </PlayBox>
       )}
 
       {r.phase === 'chest' && (
-        <Card tone="paper" className="!p-4 space-y-3">
+        <PlayBox bare={bare} paper>
           <div className="flex items-center gap-3">
             <ChestArt className="w-16 h-16 shrink-0" />
             <div className="min-w-0">
@@ -210,7 +230,7 @@ const Play: React.FC<{ h: SoloHunt; r: SoloRun; setRun: (r: SoloRun) => void; ti
             </div>
           </div>
           <LetterPad letters={letters} onFull={tryWord} wrongText={`სკივრი არ გაიღო — სხვა რიგი სცადე (+${PENALTY.chest} წამი)`} />
-        </Card>
+        </PlayBox>
       )}
     </div>
   );
@@ -224,6 +244,11 @@ const loadRun = (): SoloRun | null => {
 
 export const DzebnaSolo: React.FC = () => {
   const { days, loaded, save } = useDailyRecord('dzebna');
+  const nl = useNewLook();
+  // the new look plays on the games' own screen; its ✕ stops the clock and steps out, „გაგრძელება“ goes back in
+  const [away, setAway] = useState(false);
+  const awayRef = useRef(away);
+  awayRef.current = away;
   const [today, setToday] = useState(tbilisiToday);
   useEffect(() => { const t = setInterval(() => setToday(tbilisiToday()), 60_000); return () => clearInterval(t); }, []);
   const [toast, setToast] = useState<string | null>(null);
@@ -242,7 +267,7 @@ export const DzebnaSolo: React.FC = () => {
     const keep = () => { const r = latest.current; if (r?.t0) writeJson(NOW_KEY, pauseRun(r, Date.now())); };
     const onVis = () => {
       const r = latest.current;
-      if (!r || r.phase === 'done') return;
+      if (!r || r.phase === 'done' || awayRef.current) return;
       const next = document.visibilityState === 'hidden' ? pauseRun(r, Date.now()) : resumeRun(r, Date.now());
       setRunState(next);
       writeJson(NOW_KEY, next);
@@ -262,6 +287,7 @@ export const DzebnaSolo: React.FC = () => {
   const startDay = () => {
     if (!dayHunt) return;
     triggerHaptic(12);
+    setAway(false);
     setRun(newSoloRun(dayHunt, Date.now(), today));
   };
   const startFree = () => {
@@ -269,6 +295,7 @@ export const DzebnaSolo: React.FC = () => {
     const h = soloHunt(dzebnaPools(), huntBank(), seed);
     if (!h) return;
     triggerHaptic(12);
+    setAway(false);
     setRun(newSoloRun(h, Date.now()));
     window.scrollTo({ top: 0 });
   };
@@ -297,7 +324,19 @@ export const DzebnaSolo: React.FC = () => {
     </p>
   );
 
-  if (run && hunt && run.phase !== 'done') {
+  const playing = !!run && !!hunt && run.phase !== 'done';
+  const stepOut = () => { if (run && run.t0) setRun(pauseRun(run, Date.now())); setAway(true); };
+  const stepIn = () => { if (run) setRun(resumeRun(run, Date.now())); setAway(false); triggerHaptic(12); };
+  if (nl && playing && run && hunt && !away) {
+    const title = run.iso ? `დღის ძებნა №${dayNumber(today)}` : 'თავისუფალი ძებნა';
+    return (
+      <TableScreen title={title} sub={run.iso ? dateLabel(today) : undefined} onClose={stepOut}>
+        <TableCount at={Math.min(run.at, hunt.stations.length - 1)} total={hunt.stations.length} />
+        <Play h={hunt} r={run} setRun={setRun} title={title} onDone={finish} bare />
+      </TableScreen>
+    );
+  }
+  if (!nl && run && hunt && run.phase !== 'done') {
     const title = run.iso ? `დღის ძებნა №${dayNumber(today)}` : 'თავისუფალი ძებნა';
     return <div className="space-y-4"><Play h={hunt} r={run} setRun={setRun} title={title} sub={run.iso ? dateLabel(today) : undefined} onDone={finish} />{unchecked}</div>;
   }
@@ -356,7 +395,9 @@ export const DzebnaSolo: React.FC = () => {
               </li>
             ))}
           </ul>
-          <Btn size="lg" full onClick={startDay} disabled={!dayHunt}>ძებნის დაწყება</Btn>
+          {nl && playing && run?.iso === today
+            ? <Btn size="lg" full onClick={stepIn}>გაგრძელება</Btn>
+            : <Btn size="lg" full onClick={startDay} disabled={!dayHunt}>ძებნის დაწყება</Btn>}
         </Card>
       )}
 
@@ -367,7 +408,9 @@ export const DzebnaSolo: React.FC = () => {
               <p className="font-serif-ge text-[15px] font-bold text-[#4a3426]">თავისუფალი ძებნა</p>
               <p className="mt-0.5 text-[12.5px] leading-snug text-[#75685a]">ახალი კუთხეები, ახალი სიტყვა — რამდენჯერაც გინდა. ხვალ ახალი დღის ძებნაა.</p>
             </div>
-            <Btn icon={<Shuffle />} onClick={startFree} full>დაწყება</Btn>
+            {nl && playing && run && !run.iso
+              ? <Btn icon={<Shuffle />} onClick={stepIn} full>გაგრძელება</Btn>
+              : <Btn icon={<Shuffle />} onClick={startFree} full>დაწყება</Btn>}
           </Card>
           <Card className="!p-4">
             <p className="font-serif-ge text-[15px] font-bold text-[#4a3426]">შენი სტატისტიკა</p>

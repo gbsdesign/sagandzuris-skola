@@ -7,6 +7,9 @@ import { triggerHaptic } from '../../../utils/haptics';
 import { ThemeChip, WordField } from '../tabu/parts';
 import { JoDots, Notes, RESULT_TEXT, Verdict, type Note } from './parts';
 import { Steps } from '../../../components/games/HowTo';
+import { TableCount, TableScreen } from '../../../components/games/TableScreen';
+import { useNewLook } from '../../../design/newLook';
+import { Button } from '../../../components/ui2';
 
 // „ერთი მინიშნება“ alone (the hub's „ონლაინ“, 2026-11-01): thirteen words; for each, five players' clues — the „ნუ იტყვი!“
 // card's forbidden words — with the most telling one or two struck as the same, as at a real table. One try a word: right
@@ -26,6 +29,7 @@ export const MinishnebaSolo: React.FC = () => {
   const [run, setRunState] = useState<JoRun | null>(() => parseJoRun(readJson(RUN_KEY)));
   const setRun = (r: JoRun | null) => { setRunState(r); writeJson(RUN_KEY, r); };
   const [best, setBest] = useState(readBest);
+  const nl = useNewLook();
 
   const start = () => {
     triggerHaptic(10);
@@ -106,6 +110,40 @@ export const MinishnebaSolo: React.FC = () => {
     setRun(after);
     window.scrollTo({ top: 0 });
   };
+  const nextLabel = joOver(joNext(run)) ? 'შედეგი' : 'შემდეგი ბარათი';
+  const play = (
+    <>
+      <div className="flex items-center justify-between gap-2">
+        {card && <ThemeChip theme={card.theme} />}
+        {!res && (nl
+          ? <Button kind="ghost" size="md" icon={<Flag />} onClick={() => setRun(joPass(run))}>არ ვიცი</Button>
+          : <Btn kind="ghost" size="sm" icon={<Flag />} onClick={() => setRun(joPass(run))}>არ ვიცი</Btn>)}
+      </div>
+      {/* the count and the line are the head's; each card's mark comes on the result */}
+      {nl && <p className="-mb-1 px-1.5 text-meta font-semibold text-mut">მინიშნებები</p>}
+      <Notes notes={notes} open={!!res} />
+
+      {res ? (
+        <div className={`sticky bottom-0 z-10 -mx-4 px-4 pt-2 pb-3 backdrop-blur-sm space-y-2 ${nl ? 'bg-page/95 border-t border-line' : 'bg-[#fbf6ec]/95 border-t border-[#e8dcc8]/70'}`}>
+          <Verdict res={res} word={word} guess={run.guess} last={run.at + 1 >= run.rounds.length} />
+          {nl
+            ? <Button full icon={<Play />} onClick={next}>{nextLabel}</Button>
+            : <Btn size="lg" full icon={<Play />} onClick={next} className="!h-12">{nextLabel}</Btn>}
+        </div>
+      ) : (
+        <WordField key={run.at} placeholder="რა სიტყვაა? ერთი ცდა" enterLabel="გამოცნობა" onSubmit={w => { triggerHaptic(15); setRun(joGuess(run, w)); }} />
+      )}
+    </>
+  );
+  // the new look (board x-tamashi-asoebi): the game's own screen with the shared head „✕ · ერთი მინიშნება · 1 / 13“
+  if (nl) {
+    return (
+      <TableScreen title="ერთი მინიშნება" sub={`ქულა ${score}${best !== null ? ` · რეკორდი ${best}` : ''}`} onClose={() => { void quit(); }}>
+        <TableCount at={run.at} total={run.rounds.length} />
+        <div className="flex flex-col gap-3">{play}</div>
+      </TableScreen>
+    );
+  }
   return (
     <div className="space-y-3">
       <Card className="!p-4 space-y-2.5">
@@ -119,21 +157,7 @@ export const MinishnebaSolo: React.FC = () => {
         </div>
         <JoDots res={run.res} n={run.rounds.length} at={run.at} />
       </Card>
-
-      <div className="flex items-center justify-between gap-2">
-        {card && <ThemeChip theme={card.theme} />}
-        {!res && <Btn kind="ghost" size="sm" icon={<Flag />} onClick={() => setRun(joPass(run))}>არ ვიცი</Btn>}
-      </div>
-      <Notes notes={notes} open={!!res} />
-
-      {res ? (
-        <div className="sticky bottom-0 z-10 -mx-4 px-4 pt-2 pb-3 bg-[#fbf6ec]/95 backdrop-blur-sm border-t border-[#e8dcc8]/70 space-y-2">
-          <Verdict res={res} word={word} guess={run.guess} last={run.at + 1 >= run.rounds.length} />
-          <Btn size="lg" full icon={<Play />} onClick={next} className="!h-12">{joOver(joNext(run)) ? 'შედეგი' : 'შემდეგი ბარათი'}</Btn>
-        </div>
-      ) : (
-        <WordField key={run.at} placeholder="რა სიტყვაა? ერთი ცდა" enterLabel="გამოცნობა" onSubmit={w => { triggerHaptic(15); setRun(joGuess(run, w)); }} />
-      )}
+      {play}
     </div>
   );
 };

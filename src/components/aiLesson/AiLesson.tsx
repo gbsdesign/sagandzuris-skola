@@ -4,7 +4,8 @@ import { MANERA_BASE } from '../../data/maneraLessons';
 import { WEEKDAYS_GE } from '../../utils/dateNames';
 import { singingSupported } from '../../utils/singCapture';
 import {
-  PART_MINUTES, closingLine, dayGap, leftWord, minutesWord, openingLine, MISSED_DAYS, type Candidate, type LessonLength, type LessonPartId,
+  PART_MINUTES, REST_LINE, closingLine, dayGap, leftWord, minutesWord, openingLine, restReason, MISSED_DAYS, type Candidate, type LessonLength,
+  type LessonPartId,
 } from '../../utils/aiLesson';
 import { Button, Helper, Num, RoundButton, Row, Rows, Seg, Sheet } from '../ui2';
 import { LessonTop, TeacherSays, Bottom } from './parts';
@@ -36,6 +37,7 @@ import { useMyActiveNotes } from '../../pages/v2/aiklasi/useAiNotes';
 import { LessonExtrasMenu, useLessonExtras } from './AskExtras';
 import { AskSheet } from './AskSheet';
 import { TeacherVoiceScreen } from './TeacherVoiceScreen';
+import { hushTeacher } from './TeacherVoice';
 
 const DrillSheet = React.lazy(() => import('../mastery/ManeraLessonSheet').then(m => ({ default: m.DrillSheet })));
 const EntryTest = React.lazy(() => import('../mastery/EntryTest').then(m => ({ default: m.EntryTest })));
@@ -58,8 +60,6 @@ const firstStage = (note: AiNote): Stage =>
   !note.intro ? 'intro' : !note.voice && !note.skip ? 'check' : inFirstWeek(note) ? 'week' : 'start';
 const ORDER: LessonPartId[] = ['warm', 'review', 'new', 'sing', 'sum'];
 const LENGTH_KEY = 'sg-ai-lesson-length';
-/** practising longer than this offers a rest */
-const REST_AFTER_MS = 15 * 60_000;
 
 const readLength = (): LessonLength => { try { return localStorage.getItem(LENGTH_KEY) === '5' ? 5 : 10; } catch { return 10; } };
 const readBase = () => { try { return localStorage.getItem('sg-manera-voice') === 'high' ? MANERA_BASE.high : MANERA_BASE.low; } catch { return MANERA_BASE.low; } };
@@ -83,7 +83,10 @@ export const AiLesson: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const started = useRef(0);
   const partStart = useRef(0);
   const extra = useRef(0); // minutes added by „კიდევ 3 წუთი“
+  // a rest is offered once a lesson (utils/aiLesson.ts restReason): after 15 minutes between parts, or — board x-ai-daisvene —
+  // right after a try once accuracy fell; then it lies over the phrase, which keeps its place for „კიდევ ერთი ცდა“
   const restOffered = useRef(false);
+  const [tired, setTired] = useState(false);
 
   useEffect(() => {
     if (decided.current || !note) return;
@@ -175,8 +178,9 @@ export const AiLesson: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   };
 
   const go = (s: Stage) => {
+    setTired(false);
     // a long practice: a rest is offered once, between parts
-    if (s !== 'sum' && s !== 'rest' && started.current && !restOffered.current && Date.now() - started.current > REST_AFTER_MS) {
+    if (s !== 'sum' && s !== 'rest' && started.current && !restOffered.current && restReason({ ms: Date.now() - started.current, shares: [] }) === 'long') {
       restOffered.current = true;
       setStage('rest');
       return;
@@ -198,6 +202,22 @@ export const AiLesson: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     started.current = Date.now();
     go('warm');
   };
+
+  // the tries got worse after a while: the rest is offered at once, over the phrase
+  useEffect(() => {
+    if (restOffered.current || !started.current || (stage !== 'review' && stage !== 'new')) return;
+    if (restReason({ ms: Date.now() - started.current, shares: tally.shares }) !== 'tired') return;
+    restOffered.current = true;
+    setTired(true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [tally.shares.length]);
+  // the phrase's own line (hidden under the rest) would speak 300 ms after it showed
+  useEffect(() => {
+    if (!tired) return;
+    hushTeacher();
+    const t = window.setTimeout(hushTeacher, 450);
+    return () => window.clearTimeout(t);
+  }, [tired]);
 
   // the new phrase moves on to the piece's next phrase while time is left
   const moveFresh = (again: boolean) => {
@@ -341,11 +361,11 @@ export const AiLesson: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   }
 
   const sub = stage === 'sum' ? `${Math.max(1, Math.round((now - started.current) / 60_000))} წუთი გავიდა`
-    : stage === 'rest' ? `${Math.round((now - started.current) / 60_000)} წუთია ვარჯიშობ` : leftWord(left);
+    : stage === 'rest' || tired ? `${Math.max(1, Math.round((now - started.current) / 60_000))} წუთია ვარჯიშობ` : leftWord(left);
 
   let body: React.ReactNode;
   if (stage === 'rest') {
-    body = <RestStep why="დიდხანს ივარჯიშე. ხმასაც დასვენება უნდა. ხვალ აქედან გავაგრძელებთ." onStop={() => go('sum')} onMore={() => { partStart.current = Date.now(); setStage('new'); }} />;
+    body = <RestStep why={REST_LINE.long} onStop={() => go('sum')} onMore={() => { partStart.current = Date.now(); setStage('new'); }} />;
   } else if (stage === 'warm') {
     body = <WarmStep base={readBase()} onDone={next} />;
   } else if (stage === 'review' && weakNow && weak) {
@@ -366,7 +386,7 @@ export const AiLesson: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     body = (
       <PhraseStep key={`r${reviewAt}`} phrase={r} mode="review" rec={data.learning[r.piece]} uid={data.uid} today={data.today}
         timeUp={timeUp} slow={false} setSlow={() => undefined} shift={shiftOf(r)}
-        onAsk={extras.shown ? () => extras.setAsk(true) : undefined} voiceCommands={extras.listen}
+        onAsk={extras.shown ? () => extras.setAsk(true) : undefined} voiceCommands={extras.listen && !tired}
         onTry={s => setTally(t => ({ ...t, shares: [...t.shares, s] }))}
         onLearned={() => undefined}
         onDone={() => {
@@ -378,7 +398,7 @@ export const AiLesson: React.FC<{ onClose: () => void }> = ({ onClose }) => {
     body = (
       <PhraseStep key={`n${fresh.piece}${fresh.part}`} phrase={fresh} mode="new" rec={data.learning[fresh.piece]} uid={data.uid} today={data.today}
         timeUp={timeUp} slow={slow} setSlow={setSlow} shift={shiftOf(fresh)}
-        onAsk={extras.shown ? () => extras.setAsk(true) : undefined} voiceCommands={extras.listen}
+        onAsk={extras.shown ? () => extras.setAsk(true) : undefined} voiceCommands={extras.listen && !tired}
         onTry={s => setTally(t => ({ ...t, shares: [...t.shares, s] }))}
         onLearned={() => setTally(t => (t.learnedParts.includes(fresh.part) ? t : { ...t, learned: t.learned + 1, learnedParts: [...t.learnedParts, fresh.part] }))}
         onDone={moveFresh} />
@@ -410,7 +430,8 @@ export const AiLesson: React.FC<{ onClose: () => void }> = ({ onClose }) => {
       <LessonTop at={partIndex} sub={sub} onClose={onClose} onMore={() => setMenu(true)} />
       {/* no internet / the AI's month spent: one quiet line, the lesson goes on (board x-ai-ugareshe) */}
       <NetLine uid={data.uid} />
-      {body}
+      {tired && <RestStep why={REST_LINE.tired} onStop={() => go('sum')} onMore={() => setTired(false)} />}
+      <div className={tired ? 'hidden' : 'contents'}>{body}</div>
       <Sheet open={menu} title="გაკვეთილი" onClose={() => setMenu(false)}>
         {stage === 'new' && (
           <Seg label="ტემპი" items={[{ id: 'slow', label: 'ნელა' }, { id: 'real', label: 'ნამდვილი ტემპი' }]}

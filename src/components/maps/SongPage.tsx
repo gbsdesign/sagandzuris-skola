@@ -1,5 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ArrowRightLeft, FileText, GraduationCap, Headphones, Music } from 'lucide-react';
+import { ArrowRightLeft, ChevronLeft, ChevronRight, FileText, GraduationCap, Headphones, Music } from 'lucide-react';
+import { RoundButton } from '../ui2';
 import {
   FOLK_SONGS, FolkSong, centreRecId, centreRecMedia, getFolkRegion, songDocUrl, songRecMedia, songVersionMedia, soundcloudEmbedUrl,
 } from '../../data/songsData';
@@ -51,7 +52,12 @@ export const songTakes = (s: FolkSong): SongTake[] => [
 ];
 
 /** One take's player: the school's player, or Audiomack's for a Centre recording the Drive does not have yet. */
-export const TakePlayer: React.FC<{ take: SongTake; title: string; subtitle: string; hideNotesButton?: boolean; pauseToken?: number }> = ({ take, title, subtitle, hideNotesButton, pauseToken }) => {
+export const TakePlayer: React.FC<{
+  take: SongTake; title: string; subtitle: string; hideNotesButton?: boolean; pauseToken?: number;
+  /** the new look's card (pages/v2/khalkhuri/Song.tsx): the school's player as ‹ ▶ ›, these its ‹ › */
+  steps?: { prev?: () => void; next?: () => void };
+  v2?: boolean;
+}> = ({ take, title, subtitle, hideNotesButton, pauseToken, steps, v2 }) => {
   const canSaveCentre = useCanDownloadCentre();
   useAlbumAccess(); // an admin's switch applies at once
   const canSave = take.album ? albumRight(take.album).download : canSaveCentre;
@@ -59,15 +65,25 @@ export const TakePlayer: React.FC<{ take: SongTake; title: string; subtitle: str
   const online = useOnline();
   const ids = take.centre || take.recId ? take.media.tracks.map(driveIdOf) : [];
   const am = useAudiomack(ids);
+  // Audiomack's own players keep their own controls; the new look's ‹ › stand under them
+  const around = (player: React.ReactNode) => (v2 && steps ? <div className="flex flex-col gap-2">{player}<TakeSteps {...steps} /></div> : player);
   if (take.embed) {
-    return <iframe title={`${title} · ${take.label}`} src={take.embed} className="block w-full h-[280px] border-0 rounded-xl" allow="autoplay" loading="lazy" />;
+    return around(<iframe title={`${title} · ${take.label}`} src={take.embed} className="block w-full h-[280px] border-0 rounded-xl" allow="autoplay" loading="lazy" />);
   }
   if (online && ids.some(Boolean)) {
     if (!am) return <PlayerShade />;
-    if (am.some(Boolean)) return <AudiomackPlayer slugs={am} title={title} />;
+    if (am.some(Boolean)) return around(<AudiomackPlayer slugs={am} title={title} />);
   }
-  return <ChantPlayer media={take.media} title={title} subtitle={subtitle} hideNotesButton={hideNotesButton} noDownload={take.centre && !canSave} pauseToken={pauseToken} />;
+  return <ChantPlayer media={take.media} title={title} subtitle={subtitle} hideNotesButton={hideNotesButton} noDownload={take.centre && !canSave} pauseToken={pauseToken} layout={v2 ? 'v2' : 'card'} steps={steps} />;
 };
+
+/** the new look's ‹ › under a player that has its own controls */
+const TakeSteps: React.FC<{ prev?: () => void; next?: () => void }> = ({ prev, next }) => (
+  <div className="flex items-center justify-center gap-[22px]">
+    <RoundButton label="წინა ჩანაწერი" tone="page" disabled={!prev} onClick={prev}><ChevronLeft aria-hidden="true" strokeWidth={1.75} /></RoundButton>
+    <RoundButton label="შემდეგი ჩანაწერი" tone="page" disabled={!next} onClick={next}><ChevronRight aria-hidden="true" strokeWidth={1.75} /></RoundButton>
+  </div>
+);
 
 // A song's page over the whole screen: one recording (player with MP3 download) and the words.
 // It is a history entry (sgSong = "songId~take"), so the phone's back gesture closes it.

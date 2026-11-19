@@ -1,8 +1,9 @@
 import { useSyncExternalStore } from 'react';
 import type { User } from 'firebase/auth';
 import type { SchoolClass } from '../../hooks/useClasses';
-import { ADMIN_NAME, DirectThread, isStaffSide, notePrivateCall, otherOf } from '../../hooks/useDirectChat';
-import { CallInfo, CallKind, endChatCall, endClassCall, giveUpAfter, joinCall, ringClass, watchEnd } from '../../utils/callSession';
+import { ADMIN_NAME, DirectThread, dmBase, isStaffSide, notePrivateCall, otherOf } from '../../hooks/useDirectChat';
+import { sendCallEndMessage } from '../../hooks/useClassChat';
+import { CallInfo, CallKind, endChatCall, endClassCall, giveUpAfter, joinCall, ringClass, watchEnd, whenCallLeft } from '../../utils/callSession';
 import { notifyRing } from '../../utils/groupPush';
 
 // Starting, answering and leaving the school's calls (utils/callSession.ts), the same from every button.
@@ -53,11 +54,19 @@ export const startChatCall = async (t: DirectThread, user: User, kind: CallKind)
   const info = chatCallInfo(t, user);
   // the call card speaks as the teacher (the staff) only when this side is one
   const teacher = (t.kind === 'teach' && t.teacherUid === user.uid) || info.me.staff;
-  const rang = await notePrivateCall(t, { uid: user.uid, name: info.me.name, photoURL: info.me.photoURL, teacher }, kind)
+  const author = { uid: user.uid, name: info.me.name, photoURL: info.me.photoURL, teacher };
+  const rang = await notePrivateCall(t, author, kind)
     .then(() => true, e => { console.warn('call ring: ', e?.code || e); return false; });
   // the other side's phone rings even with the app closed (worker/reminders /ring)
   if (rang) void notifyRing(info.base);
   if (!(await joinCall(info, kind))) { endChatCall(t.id).catch(() => {}); if (rang) void notifyRing(info.base, true); return; }
+  // what the call leaves in the chat (board x-zari-chatshi): the caller, as they leave, notes how long it was talked — or
+  // that nobody answered (the other side then sees „გამოტოვებული ზარი · დაურეკე“)
+  if (rang) {
+    whenCallLeft(info.base, o => {
+      sendCallEndMessage(dmBase(t.id), author, { missed: !o.answered, seconds: o.seconds }).catch(e => console.warn('call end: ', e?.code || e));
+    });
+  }
   watchEnd(info.base, chatEnded, info.base);
   giveUpAfter(45_000, () => { endChatCall(t.id).catch(() => {}); void notifyRing(info.base, true); });
 };

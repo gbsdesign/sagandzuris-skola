@@ -30,6 +30,9 @@
 //   { summary, at, items, quiet, from, to, calls } (also in students/{uid}.notify). In their quiet hours a chat message is
 //   held (counted) and a call rings only with `calls`; at `at` (Tbilisi) one „დილის შეჯამება“: today's lesson, the held
 //   messages, the AI lesson or the reviews due, birthdays in their classes, the feast — nothing to say, nothing sent.
+// • Teachers (2026-11-19, board x-idea-kvira-0): Monday 09:00 each teacher of a class in use hears „კვირის შეჯამება მზადაა ·
+//   <class>“ (how many practised, how many need attention), a tap opens /?open=class&id=<class>&item=ai-report; quiet hours hold
+//   it until they end.
 // • Calls and messages (2026-11-05): /account with `chat: true` binds the browser to the person's calls and chat messages
 //   (the site does it by itself once notifications are allowed; devices already bound to a person got it on). POST /ring
 //   { token, base, end? } — a call just started in a private chat (dms/{id}) or a class (classes/{id}): the others' phones
@@ -1183,6 +1186,231 @@ async function runAdminWeek(env, when) {
   await deliver(env, rows.map((r) => [r, message]));
 }
 
+// ---- teachers: Monday's „კვირის შეჯამება მზადაა“ (2026-11-19, board x-idea-kvira-0) -----------------------------------------
+// Monday from 09:00 (Tbilisi) each teacher of a class in use hears once that the week's summary is ready: how many practised
+// and how many need attention — counted as the site's src/utils/weekReport.ts `classWeek` counts them (tests/weekReport.test.ts
+// runs both on the same records); a tap opens the class on its summary. Once a Monday (meta `tweek:<day>`; tried each minute
+// from 09:00, so a missed minute still sends); someone in their quiet hours hears it once those hours end (meta `tweek-wait`,
+// that Monday only). Devices: the person's call and chat rows. The AI teacher's „stuck“ counts only where the site shows it:
+// for staff always, for the others while settings/sections opens `aiTeacher`.
+
+const TEACHER_WEEK_HOUR = 9;
+const shiftKey = (key, n) => new Date(utcDay(key).getTime() + n * DAY_MS).toISOString().slice(0, 10);
+/** the seven whole days before `day` — the site's `weekRange` */
+const weekBefore = (day) => ({ from: shiftKey(day, -7), to: shiftKey(day, -1) });
+/** a day as the records keep it: a plain day stays, a moment (ISO time) becomes its Tbilisi day */
+const dayOfMoment = (v) => {
+  if (typeof v !== 'string') return null;
+  if (DAY_KEY.test(v)) return v;
+  if (!/^\d{4}-\d{2}-\d{2}T/.test(v)) return null;
+  const t = Date.parse(v);
+  return Number.isFinite(t) ? isoOf(georgia(new Date(t))) : null;
+};
+const mapOf = (v) => (v && typeof v === 'object' && !Array.isArray(v) ? v : {});
+/** the days a member practised singing (the site's `practiceDays`): AI lessons, the learning mode, exercises, independent work */
+function practiceDaysOf(st) {
+  const out = new Set();
+  const add = (v) => { const d = dayOfMoment(v); if (d) out.add(d); };
+  const d = mapOf(st);
+  for (const [day, v] of Object.entries(mapOf(mapOf(d.aiLesson).days))) if (v) add(day);
+  for (const piece of Object.values(mapOf(d.learning))) for (const part of Object.values(mapOf(piece))) add(mapOf(part).at);
+  for (const day of Object.values(mapOf(d.drillDone))) add(day);
+  for (const [key, on] of Object.entries(mapOf(d.completedSessions))) if (on) add(key.slice(0, 10));
+  return out;
+}
+
+/** the voices marked on the path for an item ('1' for a poem or an instrument marked learned) — the site's `markedVoices` */
+const markedOf = (item) => {
+  const it = mapOf(item);
+  const v = it.voices;
+  const arr = Array.isArray(v) ? v.map(String) : typeof v === 'string' ? v.split(',').map((s) => s.trim()) : [];
+  const voices = arr.filter((x) => x === '1' || x === '2' || x === '3');
+  return voices.length ? voices : it.isLearned ? ['1'] : [];
+};
+
+/** an assignment done (the site's `assignmentDone`): an exercise pressed since given; a chant or song with every part learned
+ *  in the learning mode (learnParts — a song by any of its recordings) or its voices marked on the path */
+function workDoneOf(a, st) {
+  const d = mapOf(st);
+  if (a.exercise) return String(mapOf(d.drillDone)[a.exercise] || '') >= String(a.createdAt || '').slice(0, 10);
+  if (!a.variantId) return false;
+  for (const [piece, total] of Object.entries(mapOf(d.learnParts))) {
+    if (!(total > 0) || (piece !== a.variantId && /^song-(.+)-t(\d+)$/.exec(piece)?.[1] !== a.variantId)) continue;
+    const rec = mapOf(mapOf(d.learning)[piece]);
+    let learned = 0;
+    for (let i = 0; i < total; i++) if (rec[i] && rec[i].level >= 1) learned++;
+    if (learned >= total) return true;
+  }
+  const item = mapOf(d.selectedChantVariants)[a.variantId];
+  if (!item) return false;
+  const marked = markedOf(item);
+  return a.voices.length ? a.voices.every((v) => marked.includes(v)) : marked.length > 0;
+}
+
+/** the AI teacher's „stuck“ (the site's `aiStuck`): a leap missed three times this week, else most of the week's tries under half */
+function aiStuckOf(note, { from, to }) {
+  const n = mapOf(note);
+  for (const m of Object.values(mapOf(n.misses))) {
+    const x = mapOf(m);
+    const ago = Math.round((Date.parse(`${to}T12:00:00Z`) - Date.parse(`${x.last}T12:00:00Z`)) / DAY_MS);
+    if (!(x.n < 3 || ago > 7)) return true;
+  }
+  const takes = (Array.isArray(n.takes) ? n.takes : []).filter((t) => t && t.d >= from && t.d <= to && t.n > 0);
+  return takes.length >= 3 && takes.filter((t) => t.h / t.n < 0.5).length * 2 > takes.length;
+}
+
+/** an assignment as the site reads it (hooks/useTeaching `toAssignment`) */
+const workOf = (d) => ({
+  variantId: typeof d.variantId === 'string' ? d.variantId : '',
+  exercise: typeof d.exercise === 'string' ? d.exercise : '',
+  voices: Array.isArray(d.voices) ? d.voices.map(String) : [],
+  due: typeof d.due === 'string' ? d.due : '',
+  studentIds: Array.isArray(d.studentIds) ? d.studentIds.map(String) : [],
+  createdAt: typeof d.createdAt === 'string' ? d.createdAt : '',
+});
+
+/**
+ * One class's week as the site's `classWeek` counts it: its members, how many practised, the attendance % (null: no lesson
+ * marked) and how many need attention — practised once or not at all, missed most lessons, an assignment's deadline passed
+ * undone, and with `ai`: stuck (unless the teacher marked „AI შეცდა“ for that week — students.aiErred).
+ * `students`: uid → record; `lessons`: [{ date, present }]; `work`: the class's assignments.
+ */
+function weekCountOf({ members, students, lessons, work, day, ai }) {
+  const range = weekBefore(day);
+  const inWeek = (d) => typeof d === 'string' && d >= range.from && d <= range.to;
+  const days = lessons.filter((x) => inWeek(x.date)).map((x) => (Array.isArray(x.present) ? x.present : []));
+  const weekWork = work.map(workOf).filter((a) => a.due >= range.from && (!a.createdAt || a.createdAt.slice(0, 10) <= range.to));
+  let practised = 0;
+  let attention = 0;
+  for (const uid of members) {
+    const st = students.get(uid);
+    const week = [...practiceDaysOf(st)].filter(inWeek).length;
+    const came = days.filter((p) => p.includes(uid)).length;
+    const late = weekWork.some((a) => (!a.studentIds.length || a.studentIds.includes(uid)) && a.due <= range.to && !workDoneOf(a, st));
+    const stuck = ai && mapOf(mapOf(st).aiErred).week !== range.to && aiStuckOf(mapOf(st).aiNote, range);
+    if (week > 0) practised++;
+    if (week <= 1 || (days.length > 0 && came * 2 < days.length) || late || stuck) attention++;
+  }
+  const came = days.reduce((n, p) => n + p.filter((u) => members.includes(u)).length, 0);
+  return {
+    members: members.length,
+    practised,
+    attention,
+    attendance: days.length && members.length ? Math.round((came / (days.length * members.length)) * 100) : null,
+  };
+}
+
+const DATIVE = ['', 'ერთ', 'ორ', 'სამ', 'ოთხ', 'ხუთ', 'ექვს', 'შვიდ', 'რვა', 'ცხრა', 'ათ'];
+/** the notice's words (the board): „8-დან 6-მა ივარჯიშა. ორ მოსწავლეს ყურადღება სჭირდება.“ */
+function teacherWeekText({ members, practised, attention }) {
+  const done = practised === 0 ? 'ამ კვირაში არავის უვარჯიშია'
+    : practised === members ? 'ყველამ ივარჯიშა'
+    : `${members}-დან ${practised}-მა ივარჯიშა`;
+  const care = attention ? `${DATIVE[attention] || attention} მოსწავლეს ყურადღება სჭირდება` : 'ყველა კარგად მიდის';
+  return `${done}. ${care}.`;
+}
+
+/**
+ * What Monday sends: one notice to each teacher of each class in use (not archived, with members and teachers).
+ * `students`: uid → record; `attendance`, `assignments`: classId → list; `aiFor(uid)`: whether that teacher sees the AI's lines.
+ */
+function teacherWeekNotices({ classes, students, attendance, assignments, day, aiFor = () => false }) {
+  const out = [];
+  for (const c of classes) {
+    const members = [...new Set((c.memberIds || []).filter(Boolean))];
+    const teachers = [...new Set((c.teacherIds || []).filter(Boolean))];
+    if (c.archived || !members.length || !teachers.length) continue;
+    const base = { members, students, lessons: attendance.get(c.id) || [], work: assignments.get(c.id) || [], day };
+    const counts = new Map();
+    const countFor = (ai) => {
+      if (!counts.has(ai)) counts.set(ai, weekCountOf({ ...base, ai }));
+      return counts.get(ai);
+    };
+    const name = String(c.name || 'კლასი').slice(0, 60);
+    for (const uid of teachers) {
+      out.push({
+        uid,
+        message: {
+          kind: 'notice',
+          title: `კვირის შეჯამება მზადაა · ${name}`,
+          body: teacherWeekText(countFor(!!aiFor(uid))),
+          tag: `tweek-${c.id}`,
+          url: `/?open=class&id=${c.id}&item=ai-report`,
+          ttl: 24 * 3600,
+        },
+      });
+    }
+  }
+  return out;
+}
+
+/** Monday from 09:00 in Tbilisi: the week's notices are due (sent once — meta `tweek:<day>`) */
+const isTeacherWeekTime = (when) => {
+  const g = georgia(when);
+  return g.getUTCDay() === 1 && g.getUTCHours() >= TEACHER_WEEK_HOUR;
+};
+
+/** sends what is not in its person's quiet hours now; returns the rest */
+async function sendUnlessQuiet(env, items, when) {
+  if (!items.length) return [];
+  const quiet = await quietPeople(env, [...new Set(items.map((x) => x.uid))], when);
+  const now = items.filter((x) => !quiet.has(x.uid));
+  const rows = await rowsFor(env, [...new Set(now.map((x) => x.uid))], 'chat');
+  await deliver(env, now.flatMap((x) => rows.filter((r) => r.uid === x.uid).map((r) => [r, x.message])));
+  return items.filter((x) => quiet.has(x.uid));
+}
+
+/** true when this minute counted and sent the week (the held ones wait for the next minute) */
+async function runTeacherWeek(env, when) {
+  const day = isoOf(georgia(when));
+  if (await metaGet(env, `tweek:${day}`)) return false;
+  await metaSet(env, `tweek:${day}`, when.toISOString());
+  const classes = (await fsList(env, 'classes', ['name', 'memberIds', 'teacherIds', 'archived']))
+    .filter((c) => !c.archived && (c.memberIds || []).length && (c.teacherIds || []).length);
+  if (!classes.length) return true;
+  const [sections, staff] = await Promise.all([
+    fsGet(env, 'settings/sections').catch(() => null),
+    staffUids(env).catch(() => []),
+  ]);
+  const aiOpen = sections?.state?.aiTeacher === 'open';
+  const admins = new Set(staff);
+  const wanted = new Set(classes.flatMap((c) => c.memberIds || []));
+  const students = new Map();
+  const fields = ['aiLesson.days', 'learning', 'learnParts', 'drillDone', 'completedSessions', 'selectedChantVariants', 'aiNote.misses', 'aiNote.takes', 'aiErred'];
+  for (const s of await fsList(env, 'students', fields)) if (wanted.has(s.id)) students.set(s.id, s);
+  const { from } = weekBefore(day);
+  const attendance = new Map();
+  const assignments = new Map();
+  for (const c of classes) {
+    const [days, work] = await Promise.all([
+      fsList(env, `classes/${c.id}/attendance`, ['date', 'present']).catch(() => []),
+      fsList(env, `classes/${c.id}/assignments`, ['variantId', 'exercise', 'voices', 'due', 'studentIds', 'createdAt']).catch(() => []),
+    ]);
+    attendance.set(c.id, days.filter((d) => typeof d.date === 'string' && d.date >= from));
+    assignments.set(c.id, work.filter((a) => typeof a.due === 'string' && a.due >= from));
+  }
+  const notices = teacherWeekNotices({ classes, students, attendance, assignments, day, aiFor: (uid) => aiOpen || admins.has(uid) });
+  const left = await sendUnlessQuiet(env, notices, when);
+  if (left.length) await metaSet(env, 'tweek-wait', JSON.stringify({ day, items: left }));
+  return true;
+}
+
+/** the notices held for quiet hours go out once those hours end (dropped when that Monday is over) */
+async function runTeacherWeekWait(env, when) {
+  const raw = await metaGet(env, 'tweek-wait');
+  if (!raw) return;
+  let held;
+  try { held = JSON.parse(raw); } catch { held = null; }
+  const day = isoOf(georgia(when));
+  if (!held || held.day !== day || !Array.isArray(held.items)) {
+    await env.DB.prepare("DELETE FROM meta WHERE key = 'tweek-wait'").run();
+    return;
+  }
+  const left = await sendUnlessQuiet(env, held.items, when);
+  if (left.length) await metaSet(env, 'tweek-wait', JSON.stringify({ day, items: left }));
+  else await env.DB.prepare("DELETE FROM meta WHERE key = 'tweek-wait'").run();
+}
+
 // ---- the prayer hours (empty pushes, as before) --------------------------------------------------------
 
 const localMinutes = (when, tz) => {
@@ -1539,9 +1767,17 @@ export default {
       else if (minute === 50 || minute === 55 || minute === 59) await runPrayerReminders(env, when);
       await runHabitReminders(env, when).catch((e) => console.warn('habits:', e?.message));
       await runSummaries(env, when).catch((e) => console.warn('summaries:', e?.message));
+      // last, so its many reads never starve the habits' and summaries' minute — Monday from 09:00 the teachers' week (once); the ones held for quiet hours, each later minute that Monday
+      if (isTeacherWeekTime(when)) {
+        const sent = await runTeacherWeek(env, when).catch((e) => { console.warn('teacher week:', e?.message); return true; });
+        if (!sent) await runTeacherWeekWait(env, when).catch((e) => console.warn('teacher week wait:', e?.message));
+      }
     })());
   },
 };
 
 // for tests (tests/reminders-worker.test.mjs, tests/adminTools.test.ts)
-export { encryptPayload, cycleOf, ownersIn, weekText, chatTargets, chatBody, ringTicket, prayerMessage, apnsOf, androidOf, notifyOf, quietAt, summaryLines };
+export {
+  encryptPayload, cycleOf, ownersIn, weekText, chatTargets, chatBody, ringTicket, prayerMessage, apnsOf, androidOf, notifyOf, quietAt, summaryLines,
+  practiceDaysOf, workDoneOf, aiStuckOf, weekCountOf, teacherWeekText, teacherWeekNotices, isTeacherWeekTime, weekBefore,
+};

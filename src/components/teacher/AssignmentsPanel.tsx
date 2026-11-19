@@ -18,7 +18,7 @@ import { DrillSheet } from '../mastery/ManeraLessonSheet';
 // the exercises a teacher may give: „ოსტატობის გზა“'s levels in order, then the tips and the old groups' drills the path
 // does not hold (each exercise once)
 const onPath = new Set(LEVEL_DRILL_GROUPS.flatMap(g => g.drills.map(d => d.id)));
-const PICKER_GROUPS: DrillGroup[] = [
+export const PICKER_GROUPS: DrillGroup[] = [
   ...LEVEL_DRILL_GROUPS,
   ...[MANERA_DRILL_GROUP, ...DRILL_GROUPS].map(g => ({ ...g, drills: g.drills.filter(d => !onPath.has(d.id)) })).filter(g => g.drills.length),
 ];
@@ -281,15 +281,15 @@ export const AssignmentsFold: React.FC<{ cls: SchoolClass; list: Assignment[]; p
 /** What a new assignment was, for the chat's card (components/classes/PinSheet.tsx). */
 export interface MadeAssignment { id: string; title: string; variantId?: string; exercise?: string; due: string; note: string }
 
-/** The „ახალი დავალება“ window. From a chat (2026-11-04) it is for one member already (`forWhom`, no „ვისთვის“ choice)
- *  and `onMade` gets the assignment, so the chat can put its card in. On the class page (2026-11-04) `only` keeps it to
- *  one kind (the chants' card gives chants, „ოსტატობა“ exercises) and `preset` starts with a chant picked (a program
- *  item's „დავალებად მიცემა“) — mount it only while open there, so each opening starts afresh. */
-export const NewAssignment: React.FC<{
-  open: boolean; onClose: () => void; cls: SchoolClass; onDone: (text: string) => void;
+export interface NewAssignmentArgs {
+  cls: SchoolClass; onDone: (text: string) => void; onClose: () => void;
   forWhom?: { uid: string; name: string }; onMade?: (a: MadeAssignment) => void | Promise<void>;
   only?: 'chant' | 'drill'; preset?: CatalogEntry | null;
-}> = ({ open, onClose, cls, onDone, forWhom, onMade, only, preset }) => {
+}
+
+/** The new assignment's state and its saving, shared by the old window and the new look's „მოსწავლისთვის“
+ *  (pages/v2/klasi/PinSheetV2.tsx). */
+export const useNewAssignment = ({ cls, onDone, onClose, forWhom, onMade, only, preset }: NewAssignmentArgs) => {
   const { user } = useAuth();
   const [kind, setKind] = useState<'chant' | 'drill'>(only || 'chant');
   const [drillId, setDrillId] = useState('');
@@ -361,6 +361,26 @@ export const NewAssignment: React.FC<{
       setBusy(false);
     }
   };
+
+  return {
+    kind, setKind, drillId, setDrillId, drill, entry, setEntry, voices, setVoices, due, setDue, note, setNote, whom, setWhom,
+    busy, error, setError, withVoices, save, ready: kind === 'drill' ? !!drill : !!entry,
+  };
+};
+
+/** The „ახალი დავალება“ window. From a chat (2026-11-04) it is for one member already (`forWhom`, no „ვისთვის“ choice)
+ *  and `onMade` gets the assignment, so the chat can put its card in. On the class page (2026-11-04) `only` keeps it to
+ *  one kind (the chants' card gives chants, „ოსტატობა“ exercises) and `preset` starts with a chant picked (a program
+ *  item's „დავალებად მიცემა“) — mount it only while open there, so each opening starts afresh. */
+export const NewAssignment: React.FC<{
+  open: boolean; onClose: () => void; cls: SchoolClass; onDone: (text: string) => void;
+  forWhom?: { uid: string; name: string }; onMade?: (a: MadeAssignment) => void | Promise<void>;
+  only?: 'chant' | 'drill'; preset?: CatalogEntry | null;
+}> = ({ open, onClose, cls, onDone, forWhom, onMade, only, preset }) => {
+  const {
+    kind, setKind, drillId, setDrillId, drill, entry, setEntry, voices, setVoices, due, setDue, note, setNote, whom, setWhom,
+    busy, error, setError, withVoices, save,
+  } = useNewAssignment({ cls, onDone, onClose, forWhom, onMade, only, preset });
 
   return (
     <Sheet open={open} onClose={onClose} title={only === 'drill' ? 'სავარჯიშოს მიცემა' : 'ახალი დავალება'}

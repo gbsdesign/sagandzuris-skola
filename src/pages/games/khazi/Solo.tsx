@@ -12,6 +12,9 @@ import { Toast } from '../../../components/ui/Toast';
 import { triggerHaptic } from '../../../utils/haptics';
 import { MONTHS_GE } from '../../../utils/dateNames';
 import { HandCard, PickChips, TimeLine, type Reveal } from './parts';
+import { TableCount, TableScreen } from '../../../components/games/TableScreen';
+import { useNewLook } from '../../../design/newLook';
+import { Button } from '../../../components/ui2';
 
 // „დროის ხაზი“ alone (the hub's „ონლაინ“, 2026-11-01): the day's line — ten cards for the whole school, nine to place, its
 // right and wrong ones the day's record (utils/khazi.ts) — and the endless game of one deck with three lives, its best kept on
@@ -45,6 +48,7 @@ const Board: React.FC<{
   onNext: () => void;
   nextLabel: string;
 }> = ({ placed, hand, reveal, onGap, onNext, nextLabel }) => {
+  const nl = useNewLook();
   const line = sortLine(placed, khaziCard);
   const shown = reveal ? khaziCard(reveal.id) : null;
   const placing = !!hand && !reveal;
@@ -52,19 +56,23 @@ const Board: React.FC<{
     <div className="space-y-3">
       <TimeLine line={line} card={khaziCard} onGap={placing ? onGap : undefined} reveal={reveal} />
       {(placing || shown) && (
-        <div className="sticky bottom-0 z-10 -mx-4 px-4 pt-2 pb-3 bg-[#fbf6ec]/95 backdrop-blur-sm border-t border-[#e8dcc8]/70">
+        <div className={`sticky bottom-0 z-10 -mx-4 px-4 pt-2 pb-3 backdrop-blur-sm ${nl ? 'bg-page/95 border-t border-line' : 'bg-[#fbf6ec]/95 border-t border-[#e8dcc8]/70'}`}>
           {placing && hand ? (
             <HandCard card={hand} hint={hand.deck === 'tsirva' ? 'სად ჩაჯდება? შეეხე „აქ ჩასვი“-ს — ზემოთ წირვის დასაწყისია, ქვემოთ დასასრული.' : 'სად ჩაჯდება? შეეხე „აქ ჩასვი“-ს ხაზზე — ზემოთ ადრეა, ქვემოთ გვიან.'} />
           ) : shown && reveal ? (
             <div className="space-y-2">
               <p
-                className={`flex items-center gap-2 rounded-2xl px-4 py-2.5 text-[16px] font-bold ${reveal.ok ? 'bg-[#e6f2e9] text-[#2f7d4f]' : 'bg-[#fde8e8] text-[#b23a48]'}`}
+                className={nl
+                  ? `flex items-center gap-2 rounded-tile px-4 py-2.5 text-body font-bold ${reveal.ok ? 'bg-leaf-tint text-leaf-ink' : 'bg-tint text-danger'}`
+                  : `flex items-center gap-2 rounded-2xl px-4 py-2.5 text-[16px] font-bold ${reveal.ok ? 'bg-[#e6f2e9] text-[#2f7d4f]' : 'bg-[#fde8e8] text-[#b23a48]'}`}
                 role="status"
               >
                 {reveal.ok ? <Check className="w-5 h-5 shrink-0" /> : <X className="w-5 h-5 shrink-0" />}
                 {reveal.ok ? `სწორია! ${shown.label}` : `არა — ${shown.label}. ბარათი თავის ადგილზე დადგა.`}
               </p>
-              <Btn size="lg" full icon={<Play />} onClick={onNext} className="!h-12">{nextLabel}</Btn>
+              {nl
+                ? <Button full icon={<Play />} onClick={onNext}>{nextLabel}</Button>
+                : <Btn size="lg" full icon={<Play />} onClick={onNext} className="!h-12">{nextLabel}</Btn>}
             </div>
           ) : null}
         </div>
@@ -77,6 +85,9 @@ interface Free { pick: KhaziPick; order: string[]; at: number; placed: Placed[];
 
 export const KhaziSolo: React.FC = () => {
   const { days, loaded, save } = useDailyRecord('khazi');
+  const nl = useNewLook();
+  // the new look plays the day's line on the games' own screen (board x-tamashi-kitkhva: „✕ · სახელი · N / M“)
+  const [playDay, setPlayDay] = useState(false);
   const [today, setToday] = useState(tbilisiToday);
   useEffect(() => { const t = setInterval(() => setToday(tbilisiToday()), 60_000); return () => clearInterval(t); }, []);
   const [toast, setToast] = useState<string | null>(null);
@@ -89,6 +100,7 @@ export const KhaziSolo: React.FC = () => {
   const dayRes = record?.done ? resultsOf(record) : res;
   const dayDone = !!record?.done || dayRes.length >= DAY_CARDS - 1;
   const [dayReveal, setDayReveal] = useState<Reveal>(null);
+  useEffect(() => { if (dayDone && !dayReveal) setPlayDay(false); }, [dayDone, dayReveal]);
 
   const placeDay = (gap: number) => {
     const hand = deal[dayRes.length + 1];
@@ -149,8 +161,51 @@ export const KhaziSolo: React.FC = () => {
   };
   const stats = useMemo(() => khaziStats(days, today), [days, today]);
 
+  const hearts = (n: number) => (
+    <span className="flex items-center gap-0.5" aria-label={`სიცოცხლე: ${n}`}>
+      {Array.from({ length: LIVES }, (_, i) => (
+        <Heart key={i} className={`w-5 h-5 ${i < n ? (nl ? 'fill-danger text-danger' : 'fill-[#c8504a] text-[#c8504a]') : nl ? 'text-dim' : 'text-[#d9c9ad]'}`} aria-hidden="true" />
+      ))}
+    </span>
+  );
+
   if (free) {
     const hand = !freeOver ? khaziCard(free.order[free.at]) ?? null : null;
+    if (nl) {
+      const record = best[free.pick];
+      return (
+        <TableScreen
+          title={`დროის ხაზი · ${PICK_LABEL[free.pick]}`}
+          sub={`სწორად ${freeScore}${record ? ` · რეკორდი ${record}` : ''}`}
+          right={hearts(free.lives)}
+          onClose={() => setFree(null)}
+        >
+          <TableCount at={Math.min(free.at, free.order.length) - 1} total={free.order.length - 1} />
+          <div className="flex flex-col gap-3">
+            {freeOver && !freeReveal && (
+              <div className="flex flex-col gap-3 rounded-card bg-surf p-4">
+                <p className="flex items-center gap-2 text-head font-bold text-wine">
+                  <Trophy className="size-5" aria-hidden="true" /> {free.at >= free.order.length && free.lives > 0 ? 'ყველა ბარათი ჩასვი!' : 'სიცოცხლე ამოიწურა'}
+                </p>
+                <p className="text-body">სწორად ჩასმული: <b>{freeScore}</b>{freeScore >= (record ?? 0) && freeScore > 0 ? ' — ახალი რეკორდი!' : ` · რეკორდი ${record ?? 0}`}</p>
+                <div className="flex flex-wrap gap-2 [&>*]:min-w-[150px] [&>*]:flex-1">
+                  <Button size="md" icon={<Play />} onClick={() => startFree(free.pick)}>თავიდან</Button>
+                  <Button size="md" kind="ghost" icon={<CalendarDays />} onClick={() => setFree(null)} className="!bg-page">დღის ხაზი</Button>
+                </div>
+              </div>
+            )}
+            <Board
+              placed={free.placed}
+              hand={hand}
+              reveal={freeReveal}
+              onGap={placeFree}
+              onNext={() => setFreeReveal(null)}
+              nextLabel={freeOver ? 'შედეგი' : 'შემდეგი ბარათი'}
+            />
+          </div>
+        </TableScreen>
+      );
+    }
     return (
       <div className="space-y-3">
         <Card className="!p-4">
@@ -159,11 +214,7 @@ export const KhaziSolo: React.FC = () => {
               <p className="font-serif-ge text-[16px] font-bold text-[#4a3426]">თავისუფალი თამაში · {PICK_LABEL[free.pick]}</p>
               <p className="mt-0.5 text-[13px] text-[#75685a]">ხაზზე სწორად: <b className="text-[#2f7d4f]">{freeScore}</b>{best[free.pick] ? ` · რეკორდი ${best[free.pick]}` : ''}</p>
             </div>
-            <span className="flex items-center gap-0.5" aria-label={`სიცოცხლე: ${free.lives}`}>
-              {Array.from({ length: LIVES }, (_, i) => (
-                <Heart key={i} className={`w-5 h-5 ${i < free.lives ? 'fill-[#c8504a] text-[#c8504a]' : 'text-[#d9c9ad]'}`} aria-hidden="true" />
-              ))}
-            </span>
+            {hearts(free.lives)}
             <button type="button" onClick={() => setFree(null)} className="w-9 h-9 rounded-full inline-flex items-center justify-center text-[#7a2028] hover:bg-[#7a2028]/[0.07] cursor-pointer" aria-label="თამაშის დასრულება">
               <X className="w-5 h-5" />
             </button>
@@ -195,6 +246,8 @@ export const KhaziSolo: React.FC = () => {
 
   const dayHand = !dayDone ? deal[dayRes.length + 1] ?? null : null;
   const right = rightOf(dayRes);
+  // the last card's „შედეგი“ closes the play screen onto the day's result
+  const dayPlaying = nl && loaded && playDay && !(dayDone && !dayReveal);
   return (
     <div className="space-y-4">
       <Card className="!p-4">
@@ -209,7 +262,11 @@ export const KhaziSolo: React.FC = () => {
         </div>
       </Card>
 
-      {loaded && (
+      {loaded && (nl && !dayDone ? (
+        <Btn size="lg" full icon={<Play />} onClick={() => { triggerHaptic(10); setPlayDay(true); }} className="!h-12">
+          {dayRes.length ? 'გაგრძელება' : 'დაწყება'}
+        </Btn>
+      ) : !nl || !dayPlaying ? (
         <Board
           placed={cardsOf(deal, dayRes)}
           hand={dayHand}
@@ -218,6 +275,19 @@ export const KhaziSolo: React.FC = () => {
           onNext={() => setDayReveal(null)}
           nextLabel={dayDone ? 'შედეგი' : 'შემდეგი ბარათი'}
         />
+      ) : null)}
+      {dayPlaying && (
+        <TableScreen title={`დღის ხაზი №${dayNumber(today)}`} sub={dateLabel(today)} onClose={() => setPlayDay(false)}>
+          <TableCount at={Math.min(dayRes.length - (dayReveal ? 1 : 0), DAY_CARDS - 2)} total={DAY_CARDS - 1} />
+          <Board
+            placed={cardsOf(deal, dayRes)}
+            hand={dayHand}
+            reveal={dayReveal}
+            onGap={placeDay}
+            onNext={() => setDayReveal(null)}
+            nextLabel={dayDone ? 'შედეგი' : 'შემდეგი ბარათი'}
+          />
+        </TableScreen>
       )}
 
       {dayDone && !dayReveal && (

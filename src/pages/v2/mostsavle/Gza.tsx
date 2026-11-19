@@ -1,19 +1,17 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { CheckCircle2, Info, Pause, Pencil, Play } from 'lucide-react';
-import { FieldPath, deleteField, doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../../firebase';
 import { useNavigation, useRealAuth } from '../../../context';
 import { Button, Card, Dot, Duo, Helper, Note, Row, Rows, RoundButton, SectionLabel, Sheet, ToggleRow, TopBar } from '../../../components/ui2';
 import { askConfirm } from '../../../components/ui/kit';
 import { MemberPathEditor } from '../../../components/admin/MemberPathEditor';
 import { learnPieceOf } from '../../../components/learn/openLearning';
 import { usePathItemOpener } from '../../../hooks/usePathItemOpener';
-import { saveConfirmation, useConfirmations } from '../../../hooks/useConfirmations';
+import { removeAiPass, saveConfirmation, useConfirmations } from '../../../hooks/useConfirmations';
 import { saveMarksLock, useMarksLock } from '../../../hooks/usePathMarks';
 import { takeUrl, usePearlTakes } from '../../../hooks/usePearls';
 import type { PearlTake } from '../../../hooks/usePearls';
 import { parseLearnTakeId } from '../../../utils/learn';
-import { aiVoices, examKey, type AiPass } from '../../../utils/aiPass';
+import { aiVoices, type AiPass } from '../../../utils/aiPass';
 import { examTakeId } from '../../../utils/aiExam';
 import { shortDate } from '../../../utils/dateNames';
 import { errorText } from '../../../utils/errorText';
@@ -91,9 +89,7 @@ export const StudentGza: React.FC<{ s: StudentData }> = ({ s }) => {
       ok: 'მოხსნა',
     });
     if (!ok) return;
-    // the day of the last try goes too, so the student may sit the exam again at once
-    updateDoc(doc(db, 'students', s.uid), new FieldPath('aiPass', it.variantId, v), deleteField(), new FieldPath('examTries', examKey(it.variantId, v)), deleteField())
-      .catch(e => setError('ვერ მოიხსნა: ' + errorText(e)));
+    removeAiPass(s.uid, it.variantId, v).catch(e => setError('ვერ მოიხსნა: ' + errorText(e)));
   };
   const done = items.filter(it => (conf[it.variantId] || []).length > 0);
   const hasDone = done.length > 0 || aiRows.length > 0;

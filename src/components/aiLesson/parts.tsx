@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Check, MoreHorizontal, Sparkles, Volume2, X } from 'lucide-react';
 import { Card, Dot, RoundButton, cx } from '../ui2';
 import { LESSON_PARTS } from '../../utils/aiLesson';
-import { useTeacherVoiceAuto } from './TeacherVoice';
+import { usePhraseTexts, useTeacherVoiceAuto } from './TeacherVoice';
+import { applyPhrases } from '../../utils/teacherVoice';
 
 // The AI lesson's own pieces, the same on every screen (the prototypes' ltop, tbub, way, phrase, cen, tone, bot).
 
@@ -42,9 +43,15 @@ const useGeorgianVoice = () => {
 };
 
 /** What the AI teacher says: its mark, one to three short sentences, and — where the phone can read Georgian — a speaker. */
-export const TeacherSays: React.FC<{ children: React.ReactNode; sub?: React.ReactNode; text?: string; className?: string }> = ({ children, sub, text, className }) => {
+export const TeacherSays: React.FC<{ children: React.ReactNode; sub?: React.ReactNode; text?: string; className?: string }> = ({ children: said, sub, text: plain, className }) => {
   const voice = useGeorgianVoice();
-  // AI step 4: the teacher's recorded voice speaks a ready sentence by itself (TeacherVoice.ts); its speaker plays it
+  // the school's own words in place of the sentences it changed (settings/aiPhrases; board x-ai-prazebi)
+  const texts = usePhraseTexts();
+  const text = plain ? applyPhrases(plain, texts) : plain;
+  const words = Array.isArray(said) && said.every(x => typeof x === 'string' || typeof x === 'number') ? said.join('') : said;
+  const children = typeof words === 'string' ? applyPhrases(words, texts) : words;
+  // AI step 4: the teacher's recorded voice speaks a ready sentence by itself (TeacherVoice.ts); its speaker plays it — a
+  // sentence the school changed has no recording, so only the unchanged ones speak
   const recorded = useTeacherVoiceAuto(text);
   const say = () => {
     if (recorded.has) { recorded.play(); return; }

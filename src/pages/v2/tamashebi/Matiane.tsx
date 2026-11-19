@@ -1,12 +1,18 @@
 import React, { useState } from 'react';
-import { LogOut, RotateCcw, Trophy } from 'lucide-react';
+import { Check, LogOut, RotateCcw, Send, Trophy } from 'lucide-react';
 import { TableScreen } from '../../../components/games/TableScreen';
 import { Button, Card, Num, SectionLabel, cx } from '../../../components/ui2';
 import { winLine } from '../../games/rounds/winLine';
+import { useAuth } from '../../../context';
+import { useMine } from '../../../components/games/useMine';
+import { useVisibleRoomClass } from '../../../utils/gameRoomFirestore';
+import { classChatBase, sendTextMessage, type ChatAuthor } from '../../../hooks/useClassChat';
 
 // „თამაში დასრულდა · მატიანე“ — one end for the room games (board x-otakhi-matiane): who won (by points through rounds/winLine:
 // nobody above 0 → „ამჯერად ქულა არავის აქვს“ and no trophy; a side's win in its own words), the places, the game's own count of
-// the end, the game's chronicle in its own lines, then „კიდევ ერთხელ“ and „დახურვა“ at the bottom.
+// the end, the game's chronicle in its own lines, then „კიდევ ერთხელ“ and „დახურვა“ at the bottom. A room of a class the
+// person is in also gets „მატიანე კლასის ჩატში“: the end in short words (the winner, the places, the chronicle's last lines) as
+// an ordinary text message from the person; „დახურვა“ then steps down to a quiet text button.
 
 export interface MatianePlace { name: string; place: number; score?: React.ReactNode; me?: boolean }
 export interface MatianeGroup { head?: React.ReactNode; lines: React.ReactNode[] }
@@ -19,6 +25,63 @@ export const placesFrom = <T,>(order: readonly T[], same: (a: T, b: T) => boolea
 };
 
 const FOLD = 8;
+
+/** a node's words (a chronicle line, a score) as plain text */
+const textOf = (n: React.ReactNode): string => {
+  if (n == null || typeof n === 'boolean') return '';
+  if (typeof n === 'string' || typeof n === 'number') return String(n);
+  if (Array.isArray(n)) return n.map(textOf).join('');
+  if (React.isValidElement(n)) return textOf((n.props as { children?: React.ReactNode }).children);
+  return '';
+};
+const oneLine = (t: string) => t.replace(/\s+/g, ' ').trim();
+// a line said to the phone's own player („შენ…“) reads wrong in the class's chat, so it is left out there
+const SAID_TO_ME = /(^|[\s„(])შენ/;
+
+/** the end in short words for the class's chat */
+export const matianeText = (o: {
+  game: string; label: string | null; title: React.ReactNode; places?: MatianePlace[]; chronicle?: MatianeGroup[];
+}): string => {
+  const out = [`📜 „${o.game}“ — მატიანე`];
+  let head = oneLine(textOf(o.title));
+  let label = o.label;
+  // „შენ მოიგე“ is this phone's word: the chat names the first places instead
+  if (SAID_TO_ME.test(head)) {
+    const first = (o.places ?? []).filter(p => p.place === 1).map(p => oneLine(p.name));
+    head = first.join(', ');
+    label = first.length > 1 ? 'გაიმარჯვეს' : 'გაიმარჯვა';
+  }
+  if (head) out.push(label ? `${label}: ${head}` : head);
+  (o.places ?? []).slice(0, 8).forEach(p => {
+    const score = oneLine(textOf(p.score));
+    out.push(`${p.place}. ${oneLine(p.name)}${score ? ` · ${score}` : ''}`);
+  });
+  const lines = (o.chronicle ?? []).flatMap(g => g.lines.map(l => oneLine(textOf(l)))).filter(l => l && !SAID_TO_ME.test(l));
+  if (lines.length) out.push('', ...lines.slice(-4));
+  // a chat message holds at most 2000 letters (firestore.rules)
+  return out.join('\n').slice(0, 2000);
+};
+
+/** „მატიანე კლასის ჩატში“: shown only on a room of a class the person is in */
+const useChronicleSend = (text: () => string) => {
+  const { user, isAdmin } = useAuth();
+  const classId = useVisibleRoomClass();
+  const { classes } = useMine();
+  const cls = classId ? classes.find(c => c.id === classId) : undefined;
+  const [state, setState] = useState<'idle' | 'sending' | 'sent' | 'error'>('idle');
+  if (!user || !cls) return null;
+  const send = async () => {
+    const uid = user.uid;
+    const p = cls.members.find(m => m.uid === uid) || cls.teachers.find(m => m.uid === uid);
+    const author: ChatAuthor = {
+      uid, name: p?.name || user.displayName || 'მგალობელი', photoURL: p?.photoURL || user.photoURL || '',
+      teacher: isAdmin || cls.teachers.some(t => t.uid === uid),
+    };
+    setState('sending');
+    try { await sendTextMessage(classChatBase(cls.id), author, text()); setState('sent'); } catch { setState('error'); }
+  };
+  return { state, send, name: cls.name };
+};
 
 export const Matiane: React.FC<{
   /** the game's name, under the screen's title */
@@ -54,10 +117,19 @@ export const Matiane: React.FC<{
     return { head: g.head, lines: g.lines.slice(g.lines.length - take) };
   }).reverse().filter(g => g.lines.length > 0);
 
-  const footer = (again || close) && (
+  const chat = useChronicleSend(() => matianeText({ game, label, title, places, chronicle }));
+
+  const footer = (again || close || chat) && (
     <div className="flex flex-col gap-2">
       {again && <Button full icon={<RotateCcw strokeWidth={2} />} onClick={again}>კიდევ ერთხელ</Button>}
-      {close && <Button full kind="ghost" icon={<LogOut strokeWidth={1.75} />} onClick={close.onClick}>{close.label}</Button>}
+      {chat && (
+        <Button full kind="ghost" disabled={chat.state === 'sending' || chat.state === 'sent'}
+          icon={chat.state === 'sent' ? <Check strokeWidth={2} /> : <Send strokeWidth={1.75} />} onClick={() => void chat.send()}>
+          {chat.state === 'sent' ? `გაიგზავნა „${chat.name}“-ის ჩატში` : chat.state === 'sending' ? 'იგზავნება…' : 'მატიანე კლასის ჩატში'}
+        </Button>
+      )}
+      {chat?.state === 'error' && <p role="alert" className="px-1.5 text-center text-meta font-semibold text-danger">ვერ გაიგზავნა — სცადე ხელახლა.</p>}
+      {close && <Button full kind={chat ? 'quiet' : 'ghost'} icon={<LogOut strokeWidth={1.75} />} onClick={close.onClick}>{close.label}</Button>}
     </div>
   );
 

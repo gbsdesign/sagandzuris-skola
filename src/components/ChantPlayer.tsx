@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
-import { Play, Pause, RefreshCw, Check, Download, CloudDownload, Headphones, Music, Video, RotateCcw, RotateCw, Repeat, Gauge, Music2, ChevronRight, ChevronUp, SlidersHorizontal } from 'lucide-react';
+import { Play, Pause, RefreshCw, Check, Download, CloudDownload, Headphones, Music, Video, RotateCcw, RotateCw, Repeat, Gauge, Music2, ChevronLeft, ChevronRight, ChevronUp, LoaderCircle, SlidersHorizontal } from 'lucide-react';
 import * as Tone from 'tone';
 import soundTouchProcessorUrl from '@soundtouchjs/audio-worklet/processor?url';
 import { ALL_CHANTS } from '../data/gelatiBookChants';
@@ -14,6 +14,8 @@ import { saveBlob } from '../utils/chantSynth';
 import { NpStepper } from '../pages/notes/NpStepper';
 import { keepAlive } from '../utils/mediaControls';
 import { useRecordingTools } from '../hooks/useRecordingTools';
+import { Button, Dot, Note, Press, RoundButton, Row, Rows, SectionLabel, Sheet, Stepper as Stepper2, WrapChips, cx } from './ui2';
+import { FOCUS } from './ui2/cx';
 
 // The recording player: a chant version's recording (chantId + variantId) or a folk song's (media).
 // Used by the notes page (layout 'panel') and the folk-songs map (layout 'card').
@@ -104,6 +106,70 @@ const readStoredNumber =(key: string, fallback: number, min: number, max: number
   }
 };
 
+/** The 'v2' layout's seek line (board x-simghera): a thin wine line on a 44px finger area; a drag or a tap moves the
+ *  recording, ← → move it by 5 s. The A–B repeat shows as a pale gold stretch. */
+const SeekLine: React.FC<{
+  time: number; total: number; a: number | null; b: number | null; onSeek: (t: number) => void; disabled?: boolean;
+  label: string; format: (s: number) => string;
+}> = ({ time, total, a, b, onSeek, disabled, label, format }) => {
+  const box = useRef<HTMLDivElement>(null);
+  const [drag, setDrag] = useState<number | null>(null);
+  const share = (x: number) => {
+    const r = box.current?.getBoundingClientRect();
+    return r && r.width ? Math.min(1, Math.max(0, (x - r.left) / r.width)) : 0;
+  };
+  const at = drag ?? (total ? Math.min(1, time / total) : 0);
+  const pct = (s: number) => `${Math.min(100, Math.max(0, (s / (total || 1)) * 100))}%`;
+  return (
+    <div
+      ref={box}
+      role="slider"
+      tabIndex={disabled ? -1 : 0}
+      aria-label={label}
+      aria-valuemin={0}
+      aria-valuemax={Math.round(total)}
+      aria-valuenow={Math.round(drag !== null ? drag * total : time)}
+      aria-valuetext={`${format(drag !== null ? drag * total : time)} / ${format(total)}`}
+      aria-disabled={disabled || undefined}
+      onPointerDown={e => {
+        if (disabled || e.button > 0) return;
+        e.currentTarget.setPointerCapture(e.pointerId);
+        setDrag(share(e.clientX));
+      }}
+      onPointerMove={e => { if (drag !== null) setDrag(share(e.clientX)); }}
+      onPointerUp={e => {
+        if (drag === null) return;
+        const s = share(e.clientX);
+        setDrag(null);
+        onSeek(s * total);
+      }}
+      onPointerCancel={() => setDrag(null)}
+      onKeyDown={e => {
+        if (disabled) return;
+        const step = e.key === 'ArrowRight' || e.key === 'ArrowUp' ? SEEK_STEP : e.key === 'ArrowLeft' || e.key === 'ArrowDown' ? -SEEK_STEP : 0;
+        if (step) { e.preventDefault(); onSeek(time + step); }
+        else if (e.key === 'Home') { e.preventDefault(); onSeek(0); }
+        else if (e.key === 'End') { e.preventDefault(); onSeek(Math.max(0, total - 1)); }
+      }}
+      className={cx(
+        'relative -my-[19px] flex h-tap touch-pan-y items-center rounded-full outline-none select-none',
+        'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine/60',
+        disabled ? 'cursor-default' : 'cursor-pointer',
+      )}
+    >
+      <div className="relative h-1.5 w-full overflow-hidden rounded-full bg-track">
+        {a !== null && (
+          <div className="absolute inset-y-0 bg-gold/40" style={{ left: pct(a), width: b !== null ? `calc(${pct(b)} - ${pct(a)})` : '2px' }} />
+        )}
+        <div className="absolute inset-y-0 left-0 rounded-full bg-wine" style={{ width: `${at * 100}%` }} />
+      </div>
+      {drag !== null && (
+        <span aria-hidden="true" className="pointer-events-none absolute top-1/2 size-4 -translate-x-1/2 -translate-y-1/2 rounded-full bg-wine shadow-knob" style={{ left: `${at * 100}%` }} />
+      )}
+    </div>
+  );
+};
+
 interface ChantPlayerProps {
   chantId?: string;
   variantId?: string;
@@ -119,13 +185,16 @@ interface ChantPlayerProps {
   disabled?: boolean;
   onPlayingChange?: (playing: boolean) => void;
   // 'panel': the notes page's compact recording panel (same look as its synthesizer; styles in notes.css)
-  layout?: 'card' | 'panel';
+  // 'v2': the new look's song card (board x-simghera) — a thin seek line with its times, ‹ ▶ ›, the rest in a sheet
+  layout?: 'card' | 'panel' | 'v2';
+  /** 'v2': the ‹ › around ▶ (another recording of the same song); a missing side is greyed */
+  steps?: { prev?: () => void; next?: () => void };
   onToggleDetails?: () => void;
   // no MP3 / offline menu: the folklore centre's recordings, for members an admin has not allowed
   noDownload?: boolean;
 }
 
-export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, media, title, subtitle, hideNotesButton = false, showDetails = true, pauseToken, disabled = false, onPlayingChange, layout = 'card', onToggleDetails, noDownload = false }) => {
+export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, media, title, subtitle, hideNotesButton = false, showDetails = true, pauseToken, disabled = false, onPlayingChange, layout = 'card', steps, onToggleDetails, noDownload = false }) => {
   const chant = chantId ? ALL_CHANTS.find(c => c.id === chantId) : undefined;
   const variant = chant?.variants?.find(v => v.id === variantId);
 
@@ -766,6 +835,154 @@ export const ChantPlayer: React.FC<ChantPlayerProps> = ({ chantId, variantId, me
   };
 
   const [mixOpen, setMixOpen] = useState(false);
+  const [moreOpen, setMoreOpen] = useState(false);
+  if (layout === 'v2') {
+    const total = duration || 153;
+    // 153 s is only a stand-in until a track tells its length
+    const lengthKnown = !!mediaItem.duration || trackDurationsRef.current.some(Boolean);
+    const oneTrack = !voiceAvailable.some(Boolean);
+    const pitchLabel = pitchShiftVal > 0 ? `+${pitchShiftVal}` : pitchShiftVal < 0 ? `−${-pitchShiftVal}` : '0';
+    // the speed's stepper walks SPEED_STEPS by index (an odd stored speed starts from its nearest step)
+    const nearIdx = speedIdx >= 0 ? speedIdx : SPEED_STEPS.reduce((b, s, i) => (Math.abs(s - playbackSpeed) < Math.abs(SPEED_STEPS[b] - playbackSpeed) ? i : b), 0);
+    const changed = playbackSpeed !== 1 || pitchShiftVal !== 0 || loopStage > 0;
+    const voiceItems: { id: string; label: string }[] = [
+      ...(mediaItem.availableVoices.all ? [{ id: 'all', label: 'სამივე' }] : []),
+      ...[0, 1, 2].filter(i => voiceAvailable[i]).map(i => ({ id: String(i), label: `${['I', 'II', 'III'][i]} ხმა` })),
+    ];
+    const voiceValue = isAllVoicesActive ? ['all'] : [0, 1, 2].filter(i => voiceActive[i]).map(String);
+    const pickVoices = (next: string[]) => {
+      triggerHaptic(8);
+      if (next.includes('all') && !isAllVoicesActive) {
+        setIsAllVoicesActive(true); setVoice1Active(false); setVoice2Active(false); setVoice3Active(false);
+        return;
+      }
+      setIsAllVoicesActive(false);
+      voiceSetters.forEach((set, i) => set(next.includes(String(i))));
+    };
+    const voiceMp3 = noDownload ? [] : mp3Tracks.filter(i => i !== 3);
+    const loopSub = loopStage === 0 ? 'შეეხე დასაწყისზე (A), მერე დასასრულზე (B)'
+      : loopStage === 1 ? `A ${formatTime(loopStart ?? 0)} — ახლა შეეხე დასასრულზე (B)`
+      : `${formatTime(loopStart ?? 0)} – ${formatTime(loopEnd ?? 0)} · შეეხე გამოსართავად`;
+    return (
+      <div className="flex flex-col">
+        <SeekLine time={currentTime} total={total} a={loopStart} b={loopEnd} onSeek={handleSeek} disabled={isLoading} label="ჩანაწერის ადგილი" format={formatTime} />
+        <div className="mt-1.5 flex justify-between text-cap text-mut tabular-nums" aria-hidden="true">
+          <span>{formatTime(currentTime)}</span>
+          <span>{lengthKnown ? formatTime(total) : '–:––'}</span>
+        </div>
+        <div className="mt-1.5 flex items-center justify-center gap-[22px]">
+          {steps && (
+            <RoundButton label="წინა ჩანაწერი" tone="page" disabled={!steps.prev} onClick={steps.prev}>
+              <ChevronLeft aria-hidden="true" strokeWidth={1.75} />
+            </RoundButton>
+          )}
+          <Press
+            onClick={handlePlayToggle}
+            disabled={isLoading || (disabled && !isPlaying)}
+            aria-label={isLoading ? 'იტვირთება' : isPlaying ? 'პაუზა' : 'დაკვრა'}
+            className={cx(
+              'flex size-[68px] shrink-0 cursor-pointer items-center justify-center rounded-full bg-wine text-white transition active:scale-95 active:bg-wine-deep',
+              'disabled:cursor-default disabled:active:scale-100 [&_svg]:size-[26px]',
+              !isLoading && 'disabled:opacity-50',
+              FOCUS,
+            )}
+          >
+            {isLoading ? <LoaderCircle aria-hidden="true" className="animate-spin" /> : isPlaying
+              ? <Pause aria-hidden="true" fill="currentColor" strokeWidth={1.5} />
+              : <Play aria-hidden="true" fill="currentColor" strokeWidth={1.5} className="translate-x-0.5" />}
+          </Press>
+          {steps && (
+            <RoundButton label="შემდეგი ჩანაწერი" tone="page" disabled={!steps.next} onClick={steps.next}>
+              <ChevronRight aria-hidden="true" strokeWidth={1.75} />
+            </RoundButton>
+          )}
+        </div>
+        {/* what the board leaves out of the card (speed, tone, voices, the A–B repeat, ±5 s, video, a voice's MP3) */}
+        <Press
+          onClick={() => { triggerHaptic(8); setMoreOpen(true); }}
+          aria-haspopup="dialog"
+          className={cx('mt-1 inline-flex h-tap items-center gap-1.5 self-center rounded-full px-3 text-meta font-semibold text-wine cursor-pointer active:bg-tint [&_svg]:size-4', FOCUS)}
+        >
+          <SlidersHorizontal aria-hidden="true" />
+          {oneTrack ? 'სიჩქარე და ტონი' : 'ხმები, სიჩქარე, ტონი'}
+          {changed && <span aria-label="შეცვლილია" className="size-1.5 rounded-full bg-wine" />}
+        </Press>
+
+        <Sheet open={moreOpen} title="დაკვრა" onClose={() => setMoreOpen(false)}>
+          <div className="flex items-center justify-center gap-3">
+            <RoundButton label={`${SEEK_STEP} წამით უკან`} tone="surf" disabled={isLoading} onClick={() => handleSkip(-SEEK_STEP)}><RotateCcw aria-hidden="true" /></RoundButton>
+            <span className="min-w-[96px] text-center text-body font-bold tabular-nums">{formatTime(currentTime)} / {lengthKnown ? formatTime(total) : '–:––'}</span>
+            <RoundButton label={`${SEEK_STEP} წამით წინ`} tone="surf" disabled={isLoading} onClick={() => handleSkip(SEEK_STEP)}><RotateCw aria-hidden="true" /></RoundButton>
+          </div>
+          {!oneTrack && voiceItems.length > 1 && (
+            <>
+              <SectionLabel label="რომელი ხმა ისმის" />
+              <WrapChips label="ხმები" items={voiceItems} value={voiceValue} onChange={pickVoices} />
+              {!isAllVoicesActive && (
+                <Rows>
+                  {[0, 1, 2].filter(i => voiceAvailable[i]).map(i => (
+                    <label key={i} className={cx('flex min-h-14 items-center gap-3 px-4', !voiceActive[i] && 'opacity-50')}>
+                      <span className="w-14 shrink-0 text-body font-bold">{['I', 'II', 'III'][i]} ხმა</span>
+                      <input
+                        type="range"
+                        min={0}
+                        max={100}
+                        step={5}
+                        value={Math.round(voiceVolumes[i] * 100)}
+                        onChange={e => {
+                          const val = parseInt(e.target.value, 10) / 100;
+                          setVoiceVolumes(prev => prev.map((v, idx) => (idx === i ? val : v)));
+                        }}
+                        aria-label={`${['I', 'II', 'III'][i]} ხმის სიძლიერე`}
+                        className="h-tap min-w-0 flex-1 cursor-pointer accent-wine"
+                      />
+                      <span className="w-11 shrink-0 text-right text-meta font-semibold text-mut tabular-nums">{Math.round(voiceVolumes[i] * 100)}%</span>
+                    </label>
+                  ))}
+                </Rows>
+              )}
+            </>
+          )}
+          <Rows>
+            <Row
+              lead={<Dot icon={<Gauge />} />}
+              title="სიჩქარე"
+              right={<Stepper2 label="სიჩქარე" value={nearIdx} min={0} max={SPEED_STEPS.length - 1}
+                format={i => `${Number(SPEED_STEPS[i].toFixed(2))}×`}
+                onChange={i => { triggerHaptic(8); setPlaybackSpeed(SPEED_STEPS[i]); }} />}
+            />
+            <Row
+              lead={<Dot icon={<Headphones />} />}
+              title="ტონი"
+              sub="ნახევარტონებით"
+              right={<Stepper2 label="ჩანაწერის ტონი" value={pitchShiftVal} min={-7} max={7} format={() => pitchLabel}
+                onChange={v => { triggerHaptic(8); setPitchShiftVal(v); }} />}
+            />
+            <Row lead={<Dot icon={<Repeat />} color={loopStage === 2 ? 'wine' : 'tint'} />} title={loopStage === 2 ? 'გამეორება ჩართულია' : 'გამეორება A–B'}
+              sub={loopSub} wrap disabled={isLoading} onClick={handleLoopButton} right={null} />
+            {mediaItem.videoUrl && <Row lead={<Dot icon={<Video />} />} title="ვიდეო" href={mediaItem.videoUrl} target="_blank" />}
+          </Rows>
+          {voiceMp3.length > 0 && (
+            <>
+              <SectionLabel label="ხმის MP3" />
+              <Rows>
+                {voiceMp3.map(i => (
+                  <Row key={i} lead={<Dot icon={savingTrack === i ? <LoaderCircle className="animate-spin" /> : <Download />} />}
+                    title={`MP3 · ${TRACK_LABELS[i]}`} disabled={savingTrack !== null} onClick={() => handleSaveMp3(i)} right={null} />
+                ))}
+              </Rows>
+              {saveFailed && <Note className="text-danger">ჩამოტვირთვა ვერ მოხერხდა, სცადეთ თავიდან.</Note>}
+            </>
+          )}
+          {changed && (
+            <Button kind="ghost" full onClick={() => { triggerHaptic(8); setPlaybackSpeed(1); setPitchShiftVal(0); setLoopStart(null); setLoopEnd(null); setIsLoopEnabled(false); }}>
+              საწყისზე დაბრუნება
+            </Button>
+          )}
+        </Sheet>
+      </div>
+    );
+  }
   if (layout === 'panel') {
     const voiceOn = (i: number) => !isAllVoicesActive && voiceActive[i];
     const pitchLabel = pitchShiftVal > 0 ? `+${pitchShiftVal}` : pitchShiftVal < 0 ? `−${-pitchShiftVal}` : '0';

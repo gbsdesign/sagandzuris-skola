@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { CalendarClock, History, MessageCircle, Pencil, Plus } from 'lucide-react';
+import { CalendarClock, History, MessageCircle, Pencil, Phone, Plus } from 'lucide-react';
 import { useAuth, useNavigation } from '../../context';
 import type { SchoolClass } from '../../hooks/useClasses';
 import { useChat, classChatBase, ChatAuthor, ChatMessage, deleteMessage, markChatSeen } from '../../hooks/useClassChat';
@@ -11,11 +11,13 @@ import { LessonChips, ScheduleSheet } from '../teacher/Schedule';
 import { Btn, IconBtn } from '../ui/kit';
 import { triggerHaptic } from '../../utils/haptics';
 import { useOpenGameRoom } from '../../utils/gameRoomOpen';
-import { ChatPanel } from './ChatPanel';
+import { ChatPanel, hhmm } from './ChatPanel';
 import { PinCard } from './PinCard';
 import { PinSheet } from './PinSheet';
-import { hideNav } from '../../design/newLook';
+import { hideNav, useNewLook } from '../../design/newLook';
 import { parseChatRoomRef } from '../../data/roomGames';
+import { useCall, useClassCallState, useLivePeers, type ClassCallState } from '../../utils/callSession';
+import { Button, Duo } from '../ui2';
 
 // The class's chat: text and voice messages between members and teachers, and the class's call (the school's own,
 // components/calls): a teacher or an admin starts it, everyone in the class may join (with the camera off at first).
@@ -27,6 +29,43 @@ import { parseChatRoomRef } from '../../data/roomGames';
 // ends a swipe moves the page on.
 // The chat counts as read (for the 💬 count) while it is on screen.
 const COMPACT = 3;
+
+// what a class's call leaves in its chat (board x-zari-chatshi), from the call's own record (classes/{id}/call/state): while it is
+// on, a banner over the messages „კლასის ზარი მიდის · N ადამიანი“ with „დამალვა“ · „შესვლა“; once ended, one quiet line
+// „ზარი დასრულდა · N წუთი“ at its time (the last call only — the record keeps one)
+const IS_CALL = (m: ChatMessage) => m.kind === 'call';
+const CALL_END = 'call-end-';
+const hm = (ms: number) => hhmm(new Date(ms));
+
+/** the class's last call, ended, as a line among the messages (only when the messages shown reach back to it) */
+export const withCallEnd = (messages: ChatMessage[], st: ClassCallState | null, on: boolean): ChatMessage[] => {
+  if (!st || on || !st.end || st.end <= st.at) return messages;
+  const at = new Date(st.end);
+  if (messages.length && messages[0].at && messages[0].at > at) return messages;
+  const line: ChatMessage = {
+    id: `${CALL_END}${st.at}`, uid: st.by, name: st.name, photoURL: '', teacher: true, kind: 'call', text: '', room: '', ink: '', ans: '',
+    theme: '', seconds: (st.end - st.at) / 1000, wave: '', parts: 0, at, pending: false, end: true, missed: false,
+  };
+  const k = messages.findIndex(m => !!m.at && m.at > at);
+  return k < 0 ? [...messages, line] : [...messages.slice(0, k), line, ...messages.slice(k)];
+};
+
+/** „კლასის ზარი მიდის“ over the chat while the class's call is on and I am not in it */
+export const CallBanner: React.FC<{ people: number; since: number; onHide: () => void; onJoin: () => void }> = ({ people, since, onHide, onJoin }) => (
+  <div className="mx-3 mt-2 mb-1 rounded-card bg-tint px-4 pt-3.5 pb-3 sm:mx-4" role="status">
+    <div className="flex items-start gap-3">
+      <Phone className="mt-0.5 size-5 shrink-0 text-wine" aria-hidden="true" />
+      <div className="min-w-0 flex-1">
+        <p className="text-lead font-bold leading-tight text-ink">კლასის ზარი მიდის</p>
+        <p className="mt-0.5 text-meta text-mut">{people} ადამიანი{since ? ` · ${hm(since)}-დან` : ''}</p>
+      </div>
+    </div>
+    <Duo className="mt-3">
+      <Button kind="ghost" size="md" onClick={onHide}>დამალვა</Button>
+      <Button size="md" onClick={onJoin}>შესვლა</Button>
+    </Duo>
+  </div>
+);
 
 export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fill?: boolean; chain?: boolean; timetable?: boolean; compact?: boolean; bare?: boolean }> = ({ cls, title, fill, chain, timetable = true, compact = false, bare = false }) => {
   const { user, isAdmin: isSchoolAdmin } = useAuth();
@@ -41,6 +80,15 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
   const [lessons, setLessons] = useState(false);
   const [pinning, setPinning] = useState(false);
   const openRoom = useOpenGameRoom();
+  // the banner and the ended line belong to the new look (the old one keeps today's chat — and no listeners for them)
+  const nl = useNewLook();
+  // the class's call: who is in it now, when it began / ended, and whether this phone is in it
+  const callState = useClassCallState(user && nl ? cls.id : null);
+  const callPeers = useLivePeers(user && nl ? base : null);
+  const call = useCall();
+  const [hiddenCall, setHiddenCall] = useState(0);
+  const callOn = callPeers.length > 0;
+  const inThisCall = call.info?.base === base && call.status !== 'idle' && call.status !== 'ended';
 
   // read: the newest message, once the chat is (at least partly) in view
   const box = useRef<HTMLDivElement>(null);
@@ -67,7 +115,12 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
     uid: user.uid, name: me?.name || user.displayName || 'მასწავლებელი', photoURL: me?.photoURL || user.photoURL || '', teacher: isAdmin,
   };
 
-  const shown = compact ? messages.slice(-COMPACT) : messages;
+  const all = nl ? withCallEnd(messages, callState, callOn) : messages;
+  const shown = compact ? all.slice(-COMPACT) : all;
+  const since = callState && (!callState.end || callState.end < callState.at) ? callState.at : 0;
+  const banner = nl && callOn && !inThisCall && hiddenCall !== (since || -1) && (
+    <CallBanner people={callPeers.length} since={since} onHide={() => setHiddenCall(since || -1)} onJoin={() => { void joinClassCall(cls, user, 'audio'); }} />
+  );
 
   // „პასუხი“ on a card for me: my private chat with the one who wrote it (an admin who doesn't teach here: the administration's)
   const reply = async (m: ChatMessage) => {
@@ -95,7 +148,9 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
       loading={loading}
       error={error}
       showNames
-      canDelete={m => m.uid === user.uid || isAdmin}
+      canDelete={m => !m.id.startsWith(CALL_END) && (m.uid === user.uid || isAdmin)}
+      isCall={IS_CALL}
+      callLive={false}
       onDelete={m => (m.pinned ? deleteClassPin(cls.id, m.id) : deleteMessage(base, m))}
       renderCard={m => (m.kind === 'note' || m.kind === 'work'
         ? <PinCard m={m} forMe={m.to === user.uid} inClass onReply={m.to === user.uid ? () => reply(m) : undefined} />
@@ -106,7 +161,7 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
       fill={fill}
       chain={chain}
       listClassName={compact ? '' : undefined}
-      listTop={compact && messages.length > COMPACT ? (
+      listTop={compact && all.length > COMPACT ? (
         <div className="flex justify-center pb-1">
           <button type="button" onClick={() => { triggerHaptic(8); openDm(`class:${cls.id}`); }}
             className="h-9 px-3.5 rounded-full bg-surf text-meta font-bold text-wine inline-flex items-center gap-1.5 cursor-pointer active:scale-95 transition">
@@ -114,7 +169,7 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
           </button>
         </div>
       ) : undefined}
-      header={bare ? undefined : (
+      header={bare ? (banner || undefined) : (<>
         <div className={title ? 'px-3 sm:px-4 py-3' : 'px-4 min-[400px]:px-5 sm:px-6 pt-4 pb-3'}>
           {/* on a phone too narrow for the title and the call button, the button drops under the title */}
           <div className={`flex items-center justify-between ${title ? 'gap-3' : 'flex-wrap gap-2'}`}>
@@ -139,7 +194,8 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
             </div>
           )}
         </div>
-      )}
+        {banner}
+      </>)}
     />
     <ScheduleSheet cls={cls} open={lessons} onClose={() => setLessons(false)} />
     {isAdmin && (
