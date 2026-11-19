@@ -5,9 +5,10 @@ import { useMyClasses, useTeachingClasses, type SchoolClass } from '../../../hoo
 import { newHybrid, parseHybrid, ROUND_COUNTS, type HybridState, type Sound } from '../../../utils/roundGames';
 import { roundRooms, useRoundRoom } from '../../../utils/gameRoomFirestore';
 import { useOpenRequest } from '../../../utils/searchOpen';
-import { Card, Tabs, askConfirm } from '../../../components/ui/kit';
+import { Card, askConfirm } from '../../../components/ui/kit';
+import { GameIntro, GameTabs } from '../../../components/games/gameVariant';
 import { RoomSetup, meOf } from '../../../components/games/RoomSetup';
-import type { RoundFace } from './face';
+import { stepsOf, type RoundFace } from './face';
 import { RoundsRoom, type RoundSnap } from './RoundsRoom';
 import type { RoundsOpts } from './RoundsLobby';
 import { HybridGame, HybridSetup, readHybridConf, type HybridConf } from './RoundsHybrid';
@@ -37,16 +38,6 @@ const readConf = (key: string): Conf => {
     hybrid: readHybridConf(o.hybrid),
   };
 };
-
-/** a mode's words as numbered steps (2026-11-04, the games' review): its sentences — a „;“ ends one too — without the
- *  „ონლაინ:“ / „ჰიბრიდული:“ the tab already says */
-const stepsOf = (text: string) => text
-  .replace(/^(ონლაინ|ჰიბრიდული)[^:]{0,40}:\s*/, '')
-  .replace(/([.!?;])\s+(?=\S)/g, '$1\n')
-  .replace(/, მერე /g, '.\nმერე ')
-  .split('\n')
-  .map(x => x.trim().replace(/;$/, '.'))
-  .filter(Boolean);
 
 /** the chants of classes' programs (the chant games ask them too): their version ids, once each */
 const programOf = (list: SchoolClass[]) => [...new Set(list.flatMap(c => c.program.map(p => p.id ?? '').filter(Boolean)))];
@@ -158,7 +149,7 @@ export const RoundsPage: React.FC<{ face: RoundFace; solo?: SoloTab; table?: Rea
     { id: 'online', label: 'ონლაინ', Icon: Wifi },
     { id: 'table', label: 'ჰიბრიდული', Icon: Users },
   ];
-  const tabBar = <Tabs cols={solo ? 3 : 2} value={mode} onChange={m => setC({ mode: m })} items={tabs} />;
+  const tabBar = <GameTabs cols={solo ? 3 : 2} value={mode} onChange={m => setC({ mode: m })} items={tabs} />;
 
   if (solo && mode === 'solo') {
     return (
@@ -172,10 +163,12 @@ export const RoundsPage: React.FC<{ face: RoundFace; solo?: SoloTab; table?: Rea
   return (
     <div className="w-full max-w-2xl space-y-4">
       {solo && tabBar}
-      <Card tone="wine" className="!p-4 sm:!p-5">
-        <p className="font-serif-ge text-[17px] font-bold leading-snug">{face.title}</p>
-        <p className="mt-1.5 text-[13px] leading-snug text-[#fbf6ec]/90">{face.intro}</p>
-      </Card>
+      <GameIntro text={face.intro}>
+        <Card tone="wine" className="!p-4 sm:!p-5">
+          <p className="font-serif-ge text-[17px] font-bold leading-snug">{face.title}</p>
+          <p className="mt-1.5 text-[13px] leading-snug text-[#fbf6ec]/90">{face.intro}</p>
+        </Card>
+      </GameIntro>
 
       {!solo && tabBar}
       <HowTo key={mode} id={`rounds-${face.game}-${mode}`} steps={stepsOf(mode === 'online' ? face.online : face.hybrid)} />

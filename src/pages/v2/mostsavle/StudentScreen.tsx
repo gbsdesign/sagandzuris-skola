@@ -1,5 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { CheckCheck, Gem, Loader2, MessageCircle, MoreHorizontal, Phone, Shirt, Star } from 'lucide-react';
+import { CheckCheck, Gem, MessageCircle, MoreHorizontal, Phone, Shirt, Star } from 'lucide-react';
+import { Waiting } from '../../../components/shell/PageSkeleton';
 import { ChantSelectionProvider, ViewAsStudent, useNavigation, useRealAuth } from '../../../context';
 import { Avatar, Button, Card, Dot, Duo, Row, Rows, RoundButton, Stats, TopBar } from '../../../components/ui2';
 import { askConfirm } from '../../../components/ui/kit';
@@ -45,7 +46,7 @@ const Loaded: React.FC<{ uid: string; classId: string; sub: 'gza' | 'ostatoba' |
     return <Frame><TopBar title="მოსწავლე" onBack={handleGoBack} /><p className="py-8 text-center text-body text-mut">ამ მოსწავლის მონაცემები ჯერ არ ჩანს.</p></Frame>;
   }
   if (!s.data) {
-    return <Frame><TopBar title="მოსწავლე" onBack={handleGoBack} /><div className="flex justify-center py-10 text-mut"><Loader2 className="size-6 animate-spin" /></div></Frame>;
+    return <Frame><TopBar title="მოსწავლე" onBack={handleGoBack} /><Waiting field={false} /></Frame>;
   }
   if (sub === 'gza') return <StudentGza s={s} />;
   if (sub === 'ostatoba') return <StudentOstatoba s={s} />;

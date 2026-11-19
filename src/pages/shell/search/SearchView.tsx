@@ -1,6 +1,6 @@
 import React, { Fragment, useEffect, useRef, useState } from 'react';
 import {
-  BookOpen, CalendarDays, CheckCheck, ChevronDown, Church, Clock, Guitar, Lock, Mic, Music, Music2, ScrollText, Search, Sparkles, UserRound, Users, X,
+  Bot, BookOpen, CalendarDays, CheckCheck, ChevronDown, Church, Clock, Guitar, Lock, Mic, Music, Music2, ScrollText, Search, Sparkles, UserRound, Users, X,
 } from 'lucide-react';
 import { Chips, Dot, FOCUS, Helper, Note, Press, RoundButton, Row, Rows, SectionLabel, TopBar, cx } from '../../../components/ui2';
 import { SEARCH_GROUPS, type SearchGroupId } from '../../../data/searchIndex';
@@ -50,6 +50,11 @@ export interface SearchViewProps {
   heardNote?: boolean;
   /** „ძებნა სიმღერით“ under the field (only where the microphone can be used) */
   onSing?: () => void;
+  /** „AI დამხმარე“ — the school's assistant — under „ვერაფერი მოიძებნა“ (only where it is open for the person: teachers) */
+  onAsk?: () => void;
+  /** „მკითხე“, the app's helper (everyone): a quiet button under the field, and „ჰკითხე დამხმარეს“ under „ვერაფერი
+   *  მოიძებნა“ with the words that found nothing */
+  onHelper?: (words?: string) => void;
 }
 
 const FIRST_ROWS = 5; // rows a group shows before „კიდევ N“
@@ -157,7 +162,8 @@ const RecentChips: React.FC<{ rows: SearchRow[]; onOpen: (r: SearchRow) => void 
 );
 
 export const SearchView: React.FC<SearchViewProps> = ({
-  query, searched, onQuery, onBack, filter, onFilter, chips, groups, elsewhere = 0, recent, onClearRecent, often, onOpen, autoFocus, onVoice, heardNote, onSing,
+  query, searched, onQuery, onBack, filter, onFilter, chips, groups, elsewhere = 0, recent, onClearRecent, often, onOpen, autoFocus, onVoice, heardNote, onSing, onAsk,
+  onHelper,
 }) => {
   const inputRef = useRef<HTMLInputElement>(null);
   const typed = searched.trim() !== '';
@@ -192,14 +198,28 @@ export const SearchView: React.FC<SearchViewProps> = ({
       {heardNote && typed && (
         <Helper icon={<Mic />} className="pb-2">ასე გავიგე. თუ სხვა თქვი — შეეხე ველს და შეასწორე.</Helper>
       )}
-      {onSing && !typed && (
-        <Press
-          onClick={onSing}
-          className={cx('mb-1 flex h-tap shrink-0 cursor-pointer items-center gap-2 self-start rounded-full px-1.5 text-body font-semibold text-wine', FOCUS)}
-        >
-          <Music2 aria-hidden="true" className="size-[18px]" strokeWidth={1.75} />
-          ძებნა სიმღერით
-        </Press>
+      {(onSing || onHelper) && !typed && (
+        // quiet ways besides the words: sing it, or ask the app's helper (they wrap under each other on a narrow phone)
+        <div className="mb-1 flex shrink-0 flex-wrap gap-x-3">
+          {onSing && (
+            <Press
+              onClick={onSing}
+              className={cx('flex h-tap shrink-0 cursor-pointer items-center gap-2 self-start rounded-full px-1.5 text-body font-semibold text-wine', FOCUS)}
+            >
+              <Music2 aria-hidden="true" className="size-[18px]" strokeWidth={1.75} />
+              ძებნა სიმღერით
+            </Press>
+          )}
+          {onHelper && (
+            <Press
+              onClick={() => onHelper()}
+              className={cx('flex h-tap shrink-0 cursor-pointer items-center gap-2 self-start rounded-full px-1.5 text-body font-semibold text-wine', FOCUS)}
+            >
+              <Bot aria-hidden="true" className="size-[18px]" strokeWidth={1.75} />
+              ჰკითხე დამხმარეს
+            </Press>
+          )}
+        </div>
       )}
 
       <div className="flex flex-col gap-3 pt-0.5">
@@ -293,6 +313,15 @@ export const SearchView: React.FC<SearchViewProps> = ({
                   : <>სცადე სიტყვის ნაწილი, მაგალითად „შობილი“ ან „კანონი 5“.</>}
               </div>
             </div>
+            {/* a way out of the dead end (x-dzebna-carieli): „მკითხე“ with these words; teachers also the school's assistant */}
+            {(onHelper || onAsk) && (
+              <Rows>
+                {onHelper && (
+                  <Row lead={<Dot icon={<Bot />} />} title="ჰკითხე დამხმარეს" sub="„მკითხე“ გეტყვის, სად რა არის" onClick={() => onHelper(searched)} />
+                )}
+                {onAsk && <Row lead={<Dot icon={<Sparkles />} />} title="AI დამხმარე" sub="სკოლის საქმეები" onClick={onAsk} />}
+              </Rows>
+            )}
             {recent.length > 0 && (
               <>
                 <SectionLabel label="ბოლოს ეძებდი" />

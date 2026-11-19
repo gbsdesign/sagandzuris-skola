@@ -21,6 +21,8 @@ import { songPiece } from '../../utils/learn';
 import { takeLearn } from '../../utils/learnOpen';
 import type { Voice } from '../../utils/pathItems';
 import { BackBtn, Tabs, useScrolledAway } from '../ui/kit';
+import { useNewLook } from '../../design/newLook';
+import { SongScreenV2 } from '../../pages/v2/khalkhuri/Song';
 
 // One recording of a song: the school's own versions (voices) first, then the archive's performers
 export interface SongTake {
@@ -102,6 +104,7 @@ export const SongPage: React.FC = () => {
   const { isSuperAdmin } = useAuth();
   const [moving, setMoving] = useState(false);
   const [learning, setLearning] = useState(false);
+  const nl = useNewLook();
   usePlacements();
   // a quick listen started from a list stops when the page opens: its own player takes over
   useEffect(() => { if (state) stopPreview(); }, [state]);
@@ -169,6 +172,67 @@ export const SongPage: React.FC = () => {
     triggerHaptic(8);
     if (historySong()) window.history.back();
     else setState(null);
+  }
+
+  // the learning mode and the move are the same for both looks
+  const overlays = (
+    <>
+      {learning && take && !take.embed && (
+        <LearnAudio
+          piece={songPiece(song.id, takeIdx)}
+          media={take.media}
+          title={song.title}
+          subtitle={take.label}
+          words={words?.text}
+          voice={learnVoice}
+          onClose={() => { setLearning(false); setLearnVoice(undefined); }}
+        />
+      )}
+      {moving && take?.recId && (
+        <MoveSheet
+          target={{
+            id: take.recId,
+            from: { kind: 'song', region: song.region, title: song.title },
+            who: take.label,
+            songRecIds: [...(song.recs ?? []).map(r => r.id), ...(song.centre ?? []).flatMap(r => (r.page ? [] : [centreRecId(r) ?? []].flat()))],
+          }}
+          onClose={() => {
+            setMoving(false);
+            // the song's last recording went elsewhere: the page has nothing left to show
+            if (!FOLK_SONGS.some(s => s.id === song.id)) close();
+          }}
+        />
+      )}
+    </>
+  );
+
+  // the new look (board x-simghera, pages/v2/khalkhuri/Song.tsx): the same page, drawn of the design rules
+  if (nl) {
+    return (
+      <div
+        ref={scrollRef}
+        className={`fixed inset-0 z-[60] overflow-y-auto overscroll-contain bg-page text-ink transition-opacity duration-200 ${visible ? 'opacity-100' : 'opacity-0'}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={song.title}
+      >
+        <div className="safe-x safe-top safe-bottom">
+          <SongScreenV2
+            song={song}
+            region={region}
+            takes={takes}
+            takeIdx={takeIdx}
+            words={words}
+            scroller={() => scrollRef.current}
+            learning={learning}
+            onLearn={() => setLearning(true)}
+            onMove={isSuperAdmin && take?.recId ? () => setMoving(true) : undefined}
+            onClose={close}
+          />
+        </div>
+        {overlays}
+      </div>
+    );
   }
 
   return (
@@ -289,32 +353,7 @@ export const SongPage: React.FC = () => {
           </section>
         )}
       </div></div>
-      {learning && take && !take.embed && (
-        <LearnAudio
-          piece={songPiece(song.id, takeIdx)}
-          media={take.media}
-          title={song.title}
-          subtitle={take.label}
-          words={words?.text}
-          voice={learnVoice}
-          onClose={() => { setLearning(false); setLearnVoice(undefined); }}
-        />
-      )}
-      {moving && take?.recId && (
-        <MoveSheet
-          target={{
-            id: take.recId,
-            from: { kind: 'song', region: song.region, title: song.title },
-            who: take.label,
-            songRecIds: [...(song.recs ?? []).map(r => r.id), ...(song.centre ?? []).flatMap(r => (r.page ? [] : [centreRecId(r) ?? []].flat()))],
-          }}
-          onClose={() => {
-            setMoving(false);
-            // the song's last recording went elsewhere: the page has nothing left to show
-            if (!FOLK_SONGS.some(s => s.id === song.id)) close();
-          }}
-        />
-      )}
+      {overlays}
     </div>
   );
 };

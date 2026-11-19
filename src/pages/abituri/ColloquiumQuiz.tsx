@@ -9,8 +9,8 @@ import { CARD, SectionHead, useCanListen } from './shared';
 // „გამოიცანი სმენით“ — the colloquium as practice: a random half minute from the university's listening video,
 // four names to choose from. The player has no controls, so the video's chapter names can't give the answer away.
 
-type Pool = 'chant' | 'song' | 'all';
-interface Entry { item: ColloquiumItem; group: string; video: string; kind: 'chant' | 'song' }
+export type Pool = 'chant' | 'song' | 'all';
+export interface Entry { item: ColloquiumItem; group: string; video: string; kind: 'chant' | 'song' }
 
 const entries = (groups: ColloquiumGroup[], video: string, kind: Entry['kind']): Entry[] =>
   groups.flatMap(g => g.items.map(item => ({ item, group: g.name, video, kind })));
@@ -26,9 +26,9 @@ const shuffle = <T,>(xs: T[]) => {
   return a;
 };
 
-interface Round { e: Entry; options: Entry[]; start: number; end: number; n: number }
+export interface Round { e: Entry; options: Entry[]; start: number; end: number; n: number }
 let seq = 0;
-const makeRound = (pool: Pool, last?: Entry): Round => {
+export const makeRound = (pool: Pool, last?: Entry): Round => {
   const from = ALL.filter(x => pool === 'all' || x.kind === pool);
   let e = from[Math.floor(Math.random() * from.length)];
   if (e === last) e = from[(from.indexOf(e) + 1) % from.length];
@@ -40,10 +40,10 @@ const makeRound = (pool: Pool, last?: Entry): Round => {
   return { e, options: shuffle([e, ...others.slice(0, 3)]), start, end: Math.min(start + EXCERPT, b ?? start + EXCERPT), n: ++seq };
 };
 
-const embed = (r: Round) =>
+export const embed = (r: Round) =>
   `https://www.youtube-nocookie.com/embed/${r.e.video}?start=${r.start}&end=${r.end}&autoplay=1&controls=0&disablekb=1&fs=0&iv_load_policy=3&rel=0&playsinline=1&modestbranding=1`;
 
-const about = (e: Entry) => [e.group, e.item.sub, e.item.genre].filter(Boolean).join(' · ');
+export const about = (e: Entry) => [e.group, e.item.sub, e.item.genre].filter(Boolean).join(' · ');
 
 export const ColloquiumQuiz: React.FC = () => {
   const { countDrill } = useAbituriProgress();

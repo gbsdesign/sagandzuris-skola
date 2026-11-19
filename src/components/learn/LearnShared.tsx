@@ -4,6 +4,7 @@ import { ArrowLeft, Bell, Check, ChevronDown, Headphones, Lightbulb, Mic, Repeat
 import { Btn } from '../ui/kit';
 import { playStartNotes } from '../../utils/chantSynth';
 import { notesFromFrames, scoreSinging } from '../../utils/pitch';
+import { readTake, type TakeRead } from '../../utils/aiLesson';
 import { startSinging, singingSupported, SingSession } from '../../utils/singCapture';
 import { askAiTeacher, aiTriesLeft, AiTeacherError, AI_PROBLEM_TEXT, TakeAbout } from '../../utils/aiTeacher';
 import { saveTake } from '../../hooks/usePearls';
@@ -194,22 +195,36 @@ export const SettingsFold: React.FC<{ summary: string; children: React.ReactNode
 };
 
 export type SingPhase = 'idle' | 'cue' | 'singing' | 'scoring' | 'done';
-export interface SingResult { pct: number; hits: boolean[]; mp3: Blob | null }
+/** `read`: the take note by note (utils/aiLesson readTake) — the new look's two sentences: how many, and the one note to fix */
+export interface SingResult { pct: number; hits: boolean[]; mp3: Blob | null; read?: TakeRead }
+
+/** the new look's take: nothing heard this long after the listening began ends it as „not heard“ (board x-ultra-khma-4) */
+const SILENT_MS = 6000;
 
 /**
  * Singing a bit back: its first note sounds as a cue, then the phone listens, and stops by itself after a pause once
  * something was sung (or at a time limit). With notes (`target`) the take is scored in any key. A new `resetKey`
  * (another part, piece or voice) drops the old take. Shared by the singing panel and the beginners' way.
  */
-export const useSinging = ({ target, cue, seconds, resetKey, onBeforeSing, onScored, transpose = 0 }: {
+export const useSinging = ({ target, cue, seconds, resetKey, onBeforeSing, onScored, transpose = 0, lengths, silentStop }: {
   target: number[] | null; cue: number | null; seconds: number; resetKey: string;
   onBeforeSing: () => void; onScored?: (pct: number, hits: boolean[]) => void;
   transpose?: number; // the first note in the key the music is heard in („ტონი“)
+  /** each target note's length in seconds (for „the last note let go early“); none = not judged */
+  lengths?: number[];
+  /** stop after SILENT_MS of nothing heard (the new look's „ხმა ვერ გავიგონე“) */
+  silentStop?: boolean;
 }) => {
   const [phase, setPhase] = useState<SingPhase>('idle');
   const [result, setResult] = useState<SingResult | null>(null);
   const [live, setLive] = useState<number | null>(null);
   const [error, setError] = useState('');
+  // the member refused the microphone (or the phone's settings did): the new look says where to turn it on
+  const [denied, setDenied] = useState(false);
+  const lengthsRef = useRef(lengths);
+  lengthsRef.current = lengths;
+  const silentStopRef = useRef(silentStop);
+  silentStopRef.current = silentStop;
   const session = useRef<SingSession | null>(null);
   const cueTimer = useRef(0);
   const takeAudio = useRef<HTMLAudioElement | null>(null);
@@ -231,7 +246,7 @@ export const useSinging = ({ target, cue, seconds, resetKey, onBeforeSing, onSco
   // another part or voice: the old take does not belong to it
   useEffect(() => {
     reset();
-    setPhase('idle'); setResult(null); setLive(null); setError('');
+    setPhase('idle'); setResult(null); setLive(null); setError(''); setDenied(false);
     frames.current = []; offset.current = null;
   }, [resetKey]);
 
@@ -243,13 +258,18 @@ export const useSinging = ({ target, cue, seconds, resetKey, onBeforeSing, onSco
     const take = await s.stop();
     const goal = targetRef.current;
     let pct = -1, hits: boolean[] = [];
+    let read: TakeRead | undefined;
     if (goal?.length) {
-      const r = scoreSinging(goal, notesFromFrames(take.frames));
+      const sung = notesFromFrames(take.frames);
+      const r = scoreSinging(goal, sung);
       pct = Math.round(r.share * 100);
       hits = r.hits;
-      scored.current?.(pct, hits);
+      const l = lengthsRef.current;
+      read = readTake(goal, l && l.length === goal.length ? l : [], sung, r);
+      // nothing heard is no try: it is not counted (the new look asks to sing again)
+      if (read.heard || !silentStopRef.current) scored.current?.(pct, hits);
     }
-    setResult({ pct, hits, mp3: take.mp3 });
+    setResult({ pct, hits, mp3: take.mp3, read });
     setPhase('done');
   };
 
@@ -258,7 +278,7 @@ export const useSinging = ({ target, cue, seconds, resetKey, onBeforeSing, onSco
     if (phase === 'cue') { reset(); setPhase('idle'); return; }
     onBeforeSing();
     reset();
-    setError(''); setResult(null);
+    setError(''); setResult(null); setDenied(false);
     frames.current = []; offset.current = null;
     triggerHaptic(12);
     setPhase('cue');
@@ -282,12 +302,14 @@ export const useSinging = ({ target, cue, seconds, resetKey, onBeforeSing, onSco
             if (last.every(m => m != null && Math.abs(m - midi) < 0.5)) offset.current = midi - goal[0];
           }
           setLive(midi);
-          // stops by itself at the time limit, or after a pause once something was sung
-          if (t > limit || (voiced > 1200 && t - lastVoiced > 2500)) finish();
+          // stops by itself at the time limit, or after a pause once something was sung (the new look: or when nothing came)
+          if (t > limit || (voiced > 1200 && t - lastVoiced > 2500) || (silentStopRef.current && lastVoiced === 0 && t > SILENT_MS)) finish();
         });
         setPhase('singing');
       } catch (e) {
         console.warn('mic:', e);
+        const name = (e as { name?: string } | null)?.name;
+        setDenied(name === 'NotAllowedError' || name === 'SecurityError' || name === 'PermissionDeniedError');
         setError('მიკროფონი ვერ ჩაირთო — ბრაუზერს მიკროფონის ნება მიეცი და კიდევ სცადე.');
         setPhase('idle');
       }
@@ -306,7 +328,7 @@ export const useSinging = ({ target, cue, seconds, resetKey, onBeforeSing, onSco
   };
 
   const busy = phase === 'cue' || phase === 'singing' || phase === 'scoring';
-  return { phase, result, live, error, busy, sing, playTake, frames, offset };
+  return { phase, result, live, error, denied, busy, sing, playTake, frames, offset };
 };
 
 /**

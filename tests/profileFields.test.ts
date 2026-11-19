@@ -1,7 +1,7 @@
 // Run: npm test  (node:test through tsx)
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { normalizePhone, showPhone, validBirth, profileComplete } from '../src/utils/profileFields';
+import { normalizePhone, showPhone, validBirth, profileComplete, meetingDone } from '../src/utils/profileFields';
 
 test('Georgian phone numbers in the ways people type them', () => {
   for (const typed of ['599 12 34 56', '599123456', '+995 599 12 34 56', '995599123456', '00995 599 123 456', '0 599 12 34 56', '(599) 12-34-56']) {
@@ -70,4 +70,14 @@ test('abilities and interests, each with its follow-up question', () => {
   // one who answered the old „სტატუსი“ is not asked again; once abilities exist, the old answer no longer counts
   assert.ok(profileComplete({ profile: { ...full.profile } }));
   assert.ok(!profileComplete({ profile: { ...full.profile, abilities: [] } }));
+});
+
+test('the first meeting may end with its last three steps skipped', () => {
+  const basics = { profile: { firstName: 'ნინო', lastName: 'ბერიძე', birthDate: { year: 1990, month: 5, day: 3 }, region: 'კახეთი', city: 'თელავი', phone: '599123456' } };
+  assert.ok(!meetingDone(basics), 'nothing skipped yet');
+  const skipped = { ...basics, firstMeeting: { at: 'x', skipped: ['abilities', 'interests', 'voices'] } };
+  assert.ok(meetingDone(skipped));
+  assert.ok(!profileComplete(skipped), 'the profile still counts as incomplete for the teachers');
+  assert.ok(!meetingDone({ ...skipped, profile: { ...basics.profile, phone: '' } }), 'the first four are never skipped');
+  assert.ok(!meetingDone({ ...basics, firstMeeting: { at: 'x', skipped: ['abilities', 'interests'] } }), 'voices neither filled nor skipped');
 });

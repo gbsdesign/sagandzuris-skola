@@ -72,7 +72,7 @@ const loadBook = (coll: string, n: number) => {
 };
 /** the month files of ჟამნი: September = 13 … August = 24 */
 const monthFile = (month: number) => ((month - 9 + 12) % 12) + 13;
-type Text = { head: string; paras: string[] };
+export type Text = { head: string; paras: string[] };
 /** the troparia and kontakia of one old-style day in ჟამნი's month */
 const saintTexts = async (month: number, day: number): Promise<{ tr: Text[]; ko: Text[] }> => {
   const f = await loadBook('jamni', monthFile(month));
@@ -124,7 +124,7 @@ const feastTexts = async (md: string): Promise<{ tr: Text[]; ko: Text[] }> => {
 };
 
 /** a source's sections as texts (utils/serviceTexts) */
-const loadSlice = async (src: TextSrc): Promise<Text[]> => {
+export const loadSlice = async (src: TextSrc): Promise<Text[]> => {
   const f = await loadBook(src.coll, src.n);
   return sliceOf(f.c[src.part]?.s ?? [], src).map(([head, paras]) => ({ head, paras }));
 };
@@ -181,7 +181,8 @@ const HymnRow: React.FC<{ h: Hymn; texts?: Text[]; shown?: boolean }> = ({ h, te
   );
 };
 
-const Troparia: React.FC<{ inp: DayInput; at: 'vespers' | 'matins' | 'hours' | 'liturgy'; only?: 'tr' | 'ko'; prev?: boolean; shown?: boolean }> = ({ inp: today, at, only, prev, shown }) => {
+/** a service's troparia and kontakia with their texts as they load (the old page's Troparia and the new look's) */
+export const useTroparia = (today: DayInput, at: 'vespers' | 'matins' | 'hours' | 'liturgy', prev?: boolean) => {
   // the ninth hour still belongs to the day before: its saint's troparion and kontakion
   const inp = useMemo(() => (prev ? { ...today, iso: addDays(today.iso, -1), day: null } : today), [today, prev]);
   const { troparia, kontakia } = useMemo(() => hymnsOf(inp, at), [inp, at]);
@@ -216,6 +217,11 @@ const Troparia: React.FC<{ inp: DayInput; at: 'vespers' | 'matins' | 'hours' | '
   }, [inp.iso, inp.patron, inp.tone, dow]);
   const textOf = (h: Hymn, k: 'tr' | 'ko') =>
     keyOf(h) ? own[keyOf(h)]?.[k] : h.role === 'saint' ? saint?.[k] : h.role === 'temple' ? temple?.[k] : h.role === 'day' ? week?.[k] : h.role === 'feast' ? saint?.[k] : h.role === 'resurrection' && k === 'tr' ? res ?? undefined : undefined;
+  return { troparia, kontakia, textOf };
+};
+
+const Troparia: React.FC<{ inp: DayInput; at: 'vespers' | 'matins' | 'hours' | 'liturgy'; only?: 'tr' | 'ko'; prev?: boolean; shown?: boolean }> = ({ inp, at, only, prev, shown }) => {
+  const { troparia, kontakia, textOf } = useTroparia(inp, at, prev);
   return (
     <div className="mt-2.5 space-y-3 sg-in">
       {only !== 'ko' && <div>
@@ -329,7 +335,7 @@ const Sections: React.FC<{ src: TextSrc; speakers?: boolean }> = ({ src, speaker
 };
 
 /** a kathisma of the psalter, whole (დავითნი) */
-const kathismaSrc = (n: number): TextSrc => ({ coll: 'davitni', n, part: 0, label: `დავითნი · კანონი ${n}` });
+export const kathismaSrc = (n: number): TextSrc => ({ coll: 'davitni', n, part: 0, label: `დავითნი · კანონი ${n}` });
 
 /** the reader's text of a step, in order — the page's main line („საკითხავი რიგი“) */
 const ReadFlow: React.FC<{ read: Read[]; inp: DayInput; past: boolean }> = ({ read, inp, past }) => {
@@ -366,12 +372,12 @@ const PriestText: React.FC<{ list: TextSrc[] }> = ({ list }) => (
   </div>
 );
 
-const SAT_OPTIONS: { id: TempleOrder['sat']; label: string; hint: string }[] = [
+export const SAT_OPTIONS: { id: TempleOrder['sat']; label: string; hint: string }[] = [
   { id: 'apart', label: 'მხოლოდ მწუხრი', hint: 'ცისკარი — კვირა დილით, წირვის წინ' },
   { id: 'vigil', label: 'მწუხრი და ცისკარი ერთად', hint: 'ლიტიისა და პურის კურთხევის გარეშე' },
   { id: 'litya', label: 'ღამისთევა ლიტიით', hint: 'მწუხრი, ლიტია, პურის კურთხევა და ცისკარი' },
 ];
-const WEEKDAY_OPTIONS: { id: TempleOrder['weekday']; label: string; hint: string }[] = [
+export const WEEKDAY_OPTIONS: { id: TempleOrder['weekday']; label: string; hint: string }[] = [
   { id: 'apart', label: 'მხოლოდ მწუხრი', hint: 'ცისკარი — დილით, წირვის წინ' },
   { id: 'joined', label: 'მწუხრი და ცისკარი ერთად', hint: 'ორივე საღამოს' },
 ];
@@ -411,13 +417,15 @@ const OrderSheet: React.FC<{ open: boolean; value: TempleOrder; onPick: (o: Temp
 
 const CHANTS = new Map(SERVICE_LISTS.flatMap(([, list]) => list.map(c => [c.id, c] as const)));
 /** a step's chants with their versions that have notes; a step sung in the week's tone shows that tone's first */
-const NotesSheet: React.FC<{ step: Step | null; tone: number | null; onClose: () => void }> = ({ step, tone, onClose }) => {
-  const { openNotes } = useNotes();
-  const rows = (step?.chants ?? []).map(id => CHANTS.get(id)).filter(Boolean).map(c => {
+export const notesRowsOf = (step: Step | null, tone: number | null) =>
+  (step?.chants ?? []).map(id => CHANTS.get(id)).filter(Boolean).map(c => {
     const all = c!.variants.filter(hasBookNotes);
     const inTone = step?.toned && tone ? all.filter(v => versionTone(v.version) === tone) : [];
     return { id: c!.id, title: c!.title.replace(/;\s*$/, ''), versions: (inTone.length ? inTone : all).slice(0, 12), more: (inTone.length ? inTone : all).length - 12, inTone: inTone.length > 0 };
   }).filter(r => r.versions.length);
+const NotesSheet: React.FC<{ step: Step | null; tone: number | null; onClose: () => void }> = ({ step, tone, onClose }) => {
+  const { openNotes } = useNotes();
+  const rows = notesRowsOf(step, tone);
   const open = (vid: string) => { triggerHaptic(10); onClose(); openNotes(vid, 'bookmark'); };
   return (
     <Sheet open={!!step} onClose={onClose} title={step ? `ნოტები · ${step.title.replace(/[„“]/g, '')}` : ''}>
@@ -463,9 +471,10 @@ const RankSheet: React.FC<{ open: boolean; value: Rank; guessed: Rank; onPick: (
   </Sheet>
 );
 
-type Found = { name: string; iso: string };
-const KIND_HEAD: Record<Patron['kind'], string> = { lord: 'უფლის დღესასწაულები', theotokos: 'ღვთისმშობლის დღესასწაულები', saint: 'წმიდანები' };
-const PatronSheet: React.FC<{ open: boolean; value: Patron | null; onPick: (p: Patron | null) => void; onClose: () => void }> = ({ open, value, onPick, onClose }) => {
+export type Found = { name: string; iso: string };
+export const KIND_HEAD: Record<Patron['kind'], string> = { lord: 'უფლის დღესასწაულები', theotokos: 'ღვთისმშობლის დღესასწაულები', saint: 'წმიდანები' };
+/** the temple picker's search: the presets by name, then the calendar's saints once three letters are typed */
+export const usePatronSearch = (open: boolean) => {
   const [q, setQ] = useState('');
   const [all, setAll] = useState<Found[] | null>(null);
   useEffect(() => {
@@ -479,6 +488,14 @@ const PatronSheet: React.FC<{ open: boolean; value: Patron | null; onPick: (p: P
   const needle = q.trim().toLowerCase();
   const presets = PATRON_PRESETS.filter(p => !needle || p.name.toLowerCase().includes(needle));
   const found = needle.length >= 3 && all ? all.filter(f => f.name.toLowerCase().includes(needle)).slice(0, 12) : [];
+  return { q, setQ, all, needle, presets, found };
+};
+/** a calendar find as a temple */
+export const foundPatron = (f: Found): Patron => ({ name: f.name.replace(/\s*\([^)]*\)\s*[*;.]*\s*$/, '').replace(/[;*]+$/, ''), kind: 'saint', md: f.iso.slice(5) });
+/** when the temple's day comes, in words */
+export const patronWhen = (p: Patron) => (p.md ? dayMonthGe(`2026-${p.md}`) : p.easter === 0 ? 'გარდამავალი დღესასწაული' : `აღდგომიდან ${p.easter}-ე დღე`);
+const PatronSheet: React.FC<{ open: boolean; value: Patron | null; onPick: (p: Patron | null) => void; onClose: () => void }> = ({ open, value, onPick, onClose }) => {
+  const { q, setQ, all, needle, presets, found } = usePatronSearch(open);
   const pick = (p: Patron | null) => { triggerHaptic(10); onPick(p); setQ(''); onClose(); };
   const Row: React.FC<{ p: Patron; sub: string }> = ({ p, sub }) => {
     const on = value?.name === p.name;
@@ -497,7 +514,7 @@ const PatronSheet: React.FC<{ open: boolean; value: Patron | null; onPick: (p: P
       </li>
     );
   };
-  const when = (p: Patron) => (p.md ? dayMonthGe(`2026-${p.md}`) : p.easter === 0 ? 'გარდამავალი დღესასწაული' : `აღდგომიდან ${p.easter}-ე დღე`);
+  const when = patronWhen;
   return (
     <Sheet open={open} onClose={onClose} title="ჩემი ტაძრის სახელობა">
       <label className="relative block">
@@ -520,7 +537,7 @@ const PatronSheet: React.FC<{ open: boolean; value: Patron | null; onPick: (p: P
         <section className="mt-4">
           <p className="text-[12px] font-black uppercase tracking-wide text-[#a0703c]">კალენდრიდან</p>
           <ul className="mt-1.5 space-y-2">
-            {found.map(f => <Row key={f.iso + f.name} p={{ name: f.name.replace(/\s*\([^)]*\)\s*[*;.]*\s*$/, '').replace(/[;*]+$/, ''), kind: 'saint', md: f.iso.slice(5) }} sub={dayMonthGe(f.iso)} />)}
+            {found.map(f => <Row key={f.iso + f.name} p={foundPatron(f)} sub={dayMonthGe(f.iso)} />)}
           </ul>
         </section>
       )}
@@ -548,7 +565,8 @@ const FOOD_TONE: Record<string, string> = {
   dry: 'bg-[#f6ece6] ring-[#e3c8bb] text-[#5a2d22]', strict: 'bg-[#f6ece6] ring-[#e3c8bb] text-[#5a2d22]', none: 'bg-[#f6ece6] ring-[#e3c8bb] text-[#5a2d22]',
 };
 
-export const DayService: React.FC = () => {
+/** The day service's whole state and rules — the old page below and the new look's screen (pages/v2/medavitne) draw it. */
+export const useDayService = () => {
   const canCal = useMembership().can('calendar');
   const today = useMemo(todayIso, []);
   const [iso, setIso] = useState(today);
@@ -598,6 +616,23 @@ export const DayService: React.FC = () => {
     if (at === i) delete next[atKey]; else next[atKey] = String(i);
     setAts(next); writeMap(AT_KEY, next, 30);
   };
+  const flipPriest = () => { const v = !priestOn; setPriestOn(v); writeFlag(PRIEST_KEY, v); };
+  const flipOld = () => { const v = !oldOn; setOldOn(v); writeFlag(OLD_KEY, v); };
+
+  return {
+    canCal, today, iso, setIso, day, tone, rank, guessed, inp, services, tabs, service, setTab, great, period, templeDay, food, title,
+    saints, at, mark, move, setRank, order, saveOrder, patron, savePatron, priestOn, flipPriest, oldOn, flipOld, setFlowEl, sheet, setSheet,
+    toneOpen, setToneOpen, notesOf, setNotesOf, shown, tab,
+  };
+};
+export type DayServiceState = ReturnType<typeof useDayService>;
+
+export const DayService: React.FC = () => {
+  const {
+    canCal, today, iso, setIso, day, tone, rank, guessed, inp, tabs, service, setTab, great, period, templeDay, food, title,
+    saints, at, mark, move, setRank, order, saveOrder, patron, savePatron, priestOn, flipPriest, oldOn, flipOld, setFlowEl, sheet, setSheet,
+    toneOpen, setToneOpen, notesOf, setNotesOf, shown, tab,
+  } = useDayService();
 
   if (!canCal) return (
     <div className="w-full max-w-2xl mx-auto px-1">
@@ -698,7 +733,7 @@ export const DayService: React.FC = () => {
         </div>
         {service.note && <p className="mt-1.5 text-[14px] font-semibold leading-snug text-[#7a2028] text-pretty">{service.note}</p>}
         <div className="mt-3 grid grid-cols-2 gap-2">
-          {([['მღვდლის ტექსტები', priestOn, () => { const v = !priestOn; setPriestOn(v); writeFlag(PRIEST_KEY, v); }], ['ხუცური', oldOn, () => { const v = !oldOn; setOldOn(v); writeFlag(OLD_KEY, v); }]] as const).map(([label, on, flip]) => (
+          {([['მღვდლის ტექსტები', priestOn, flipPriest], ['ხუცური', oldOn, flipOld]] as const).map(([label, on, flip]) => (
             <button key={label} type="button" role="switch" aria-checked={on} onClick={() => { triggerHaptic(8); flip(); }}
               className={`min-h-12 px-3 rounded-2xl flex items-center justify-between gap-2 text-left text-[14px] font-bold leading-tight cursor-pointer transition active:scale-[0.98] ${on ? 'bg-[#7a2028] text-[#fbf6ec]' : 'bg-[#fbf6ec] ring-1 ring-[#e8dcc8] text-[#4a3426]'}`}>
               <span>{label}</span>
@@ -766,9 +801,9 @@ export const DayService: React.FC = () => {
 };
 
 /** the way in, on top of the reader's side: today's name, tone and rank in one row */
-export const DayServiceButton: React.FC = () => {
+/** today's name, tone and rank for the way in (null without the calendar feature) */
+export const useDayBrief = () => {
   const canCal = useMembership().can('calendar');
-  const { openMapItem } = useNavigation();
   const [today] = useState(todayIso);
   const day = useCalendarDay(canCal ? today : null);
   const lastSunday = addDays(today, -fromIso(today).getDay());
@@ -780,6 +815,14 @@ export const DayServiceButton: React.FC = () => {
   const rank = (RANKS.some(r => r.id === ranks[today]) ? ranks[today] : guessed) as Rank;
   const tone = weekTone(day ?? null, lastSunday === today ? null : sundayDay ?? null);
   const great = greatFeastOf(today);
+  return { today, rank, tone, great };
+};
+
+export const DayServiceButton: React.FC = () => {
+  const { openMapItem } = useNavigation();
+  const brief = useDayBrief();
+  if (!brief) return null;
+  const { today, rank, tone, great } = brief;
   return (
     <div className="w-full max-w-2xl mx-auto px-1">
       <button type="button" onClick={() => { triggerHaptic(10); openMapItem('day'); }}

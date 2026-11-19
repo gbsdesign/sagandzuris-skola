@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, MessageCircle, Star } from 'lucide-react';
+import { MessageCircle, Star } from 'lucide-react';
+import { Waiting } from '../../../components/shell/PageSkeleton';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { useAuth, useNavigation } from '../../../context';
@@ -105,7 +106,7 @@ export const BirthdaysScreen: React.FC = () => {
     return (
       <div className="flex w-full flex-col gap-2.5 pb-4">
         <TopBar title="დაბადების დღეები" onBack={handleGoBack} />
-        <div className="flex justify-center py-16"><Loader2 aria-label="იტვირთება" className="size-7 animate-spin text-wine" /></div>
+        <Waiting field={false} />
       </div>
     );
   }

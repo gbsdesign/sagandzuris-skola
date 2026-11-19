@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
+import { TextSkeleton } from '../../../components/shell/PageSkeleton';
 import { Card, Note, Sheet } from '../../../components/ui2';
 import type { Reading, VerseRange } from '../../../utils/dayReadings';
 import { readingShort } from './calendarBits';
@@ -50,7 +50,7 @@ const ReadingText: React.FC<{ r: Reading }> = ({ r }) => {
   }, [r]);
   if (!r.file) return <Note className="px-0">ძველი აღთქმის საკითხავი — ტექსტი აპში ჯერ არ არის.</Note>;
   if (failed) return <p className="text-meta text-danger">ტექსტი ვერ ჩაიტვირთა — შეამოწმე ინტერნეტი.</p>;
-  if (!parts) return <Loader2 aria-label="იტვირთება" className="size-5 animate-spin text-mut" />;
+  if (!parts) return <TextSkeleton tools={false} lines={4} />;
   const many = new Set(parts.map(p => p.ch)).size > 1;
   return (
     <div className="flex flex-col gap-1 font-serif-ge text-body leading-relaxed">

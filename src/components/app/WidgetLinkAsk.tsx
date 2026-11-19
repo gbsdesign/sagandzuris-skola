@@ -4,6 +4,8 @@ import { useAuth } from '../../context';
 import { Btn, Sheet } from '../ui/kit';
 import { isAndroidApp } from '../../utils/androidApp';
 import { handToApp, widgetSecret } from '../../utils/widgetLink';
+import { useNewLook } from '../../design/newLook';
+import { WidgetLinkV2 } from '../../pages/v2/propili/WidgetLinkV2';
 
 // A widget that is not linked yet opens the app at /?open=widgets (android/ BaseWidget.notLinked): this window asks for
 // the member's secret at once and links with one tap — Chrome hands a link to the app only straight from a tap.
@@ -16,7 +18,8 @@ export const requestWidgetLink = () => {
   window.dispatchEvent(new Event(EVENT));
 };
 
-export const WidgetLinkAsk: React.FC = () => {
+/** The window's state (shared with the new look's drawing, pages/v2/propili/WidgetLinkV2). */
+export const useWidgetAsk = () => {
   const { user, loading } = useAuth();
   const [open, setOpen] = useState(false);
   const [secret, setSecret] = useState<string | null>(null);
@@ -40,29 +43,39 @@ export const WidgetLinkAsk: React.FC = () => {
     widgetSecret().then(setSecret, () => setFailed(true));
   }, [open, user, secret, tries]);
 
-  if (!open) return null;
   const close = () => { setOpen(false); setSecret(null); };
+  const link = () => { if (secret) { handToApp(secret); close(); } };
+  const retry = () => setTries(t => t + 1);
+  return { open, signedOut: !user && !loading, user: !!user, secret, failed, close, link, retry };
+};
+
+export const WidgetLinkAsk: React.FC = () => {
+  const w = useWidgetAsk();
+  const nl = useNewLook();
+  if (!w.open) return null;
+  if (nl) return <WidgetLinkV2 w={w} />;
+  const { secret, failed, close } = w;
   return (
     <Sheet open onClose={close} title="ვიჯეტის დაკავშირება">
       <div className="space-y-4">
         <p className="text-[14px] leading-snug text-[#75685a]">
-          {!user && !loading
+          {w.signedOut
             ? 'ჯერ შედი შენს ანგარიშზე — ვიჯეტები შენს ჩვევებს, გზასა და კანონს აჩვენებს.'
             : 'ჩვევები, საგანძურის გზა და ჩემი კანონი ტელეფონის მთავარ ეკრანზე.'}
         </p>
-        {user && (
+        {w.user && (
           <Btn
             size="lg"
             full
             icon={<LayoutGrid />}
             disabled={!secret}
-            onClick={() => { if (secret) { handToApp(secret); close(); } }}
+            onClick={w.link}
           >
             {secret ? 'დაკავშირება' : failed ? 'ვერ მოვამზადე' : 'ვამზადებ…'}
           </Btn>
         )}
         {failed && (
-          <button type="button" onClick={() => setTries(t => t + 1)} className="w-full text-[13px] text-[#7a2028] underline cursor-pointer">
+          <button type="button" onClick={w.retry} className="w-full text-[13px] text-[#7a2028] underline cursor-pointer">
             ხელახლა ცდა
           </button>
         )}

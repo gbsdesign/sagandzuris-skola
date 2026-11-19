@@ -1,25 +1,26 @@
 import React from 'react';
-import { Share } from 'lucide-react';
-import { Button, Num, Sheet } from '../../../components/ui2';
+import { Button, Num, Sheet, Two } from '../../../components/ui2';
 
-// „აპის დაყენება“ on an iPhone or iPad: Safari offers no install button, so two steps say how (the same words as the old
-// look's guide in components/PWAInstallButton.tsx).
+// „აპის დაყენება“ on an iPhone or iPad (board x-dakeneba-iphone): Safari offers no install button, so three steps say how —
+// the third („Add“) was missing and a newcomer stopped there. „Add to Home Screen“ stays in English: the iPhone's menu is
+// not in Georgian. Android never shows this window (its browser has one button).
+
+const STEPS: [string, string][] = [
+  ['ქვემოთ დააჭირე „გაზიარებას“', 'კვადრატი ზემოთ მიმართული ისრით'],
+  ['აირჩიე „Add to Home Screen“', 'სიაში ცოტა ქვემოთაა'],
+  ['დააჭირე „Add“', 'ხატულა მთავარ ეკრანზე გაჩნდება'],
+];
 
 export const InstallGuide: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => (
-  <Sheet open={open} onClose={onClose} title="დაყენება iPhone / iPad-ზე">
+  <Sheet open={open} onClose={onClose} title="დაყენება iPhone-ზე">
     <ol className="flex shrink-0 flex-col divide-y divide-line overflow-hidden rounded-card bg-surf">
-      <li className="flex min-h-row items-center gap-3 px-4 py-3">
-        <Num n="1" on />
-        <p className="min-w-0 flex-1 text-body leading-snug text-ink">
-          დააჭირე Safari-ს <b>გაზიარების</b> <span className="whitespace-nowrap">ღილაკს
-            <Share aria-label="გაზიარება" className="ml-1 inline size-4 -translate-y-0.5 text-wine" strokeWidth={2} /></span>
-        </p>
-      </li>
-      <li className="flex min-h-row items-center gap-3 px-4 py-3">
-        <Num n="2" on />
-        <p className="min-w-0 flex-1 text-body leading-snug text-ink">სიაში აირჩიე <b>Add to Home Screen</b></p>
-      </li>
+      {STEPS.map(([title, sub], i) => (
+        <li key={title} className="flex min-h-row items-center gap-3 py-2 pr-3 pl-4">
+          <Num n={i + 1} />
+          <Two title={title} sub={sub} wrap />
+        </li>
+      ))}
     </ol>
-    <Button full onClick={onClose}>გასაგებია</Button>
+    <Button full onClick={onClose} className="mt-6">გასაგებია</Button>
   </Sheet>
 );

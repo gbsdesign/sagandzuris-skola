@@ -30,6 +30,17 @@ export const useLastLessons = (classIds: string[], on: boolean) => {
 
 const daysSince = (day: string, now = Date.now()) => Math.floor((now - new Date(`${day}T12:00:00`).getTime()) / 86_400_000);
 
+/** What one who teaches leads, in words: null for one who leads nothing and needs no class (an admin);
+ *  `stale` = no class for a teacher, or no lesson for two weeks; `day` = the last lesson's day ('' none yet / unknown). */
+export const teachSummary = (uid: string, classes: SchoolClass[], last: Record<string, string>, teacher: boolean) => {
+  const mine = classes.filter(c => c.teacherIds.includes(uid));
+  if (!mine.length) return teacher ? { mine, members: 0, known: true, day: '', stale: true } : null;
+  const members = new Set(mine.flatMap(c => c.memberIds)).size;
+  const known = mine.every(c => c.id in last);
+  const day = mine.map(c => last[c.id] || '').sort().pop() || '';
+  return { mine, members, known, day, stale: known && (!day || daysSince(day) > STALE_DAYS) };
+};
+
 /** The row's second line for one who teaches; `teacher` = their role is „მასწავლებელი“ (an admin needs no class). */
 export const TeachLine: React.FC<{ uid: string; classes: SchoolClass[]; last: Record<string, string>; teacher: boolean }> = ({ uid, classes, last, teacher }) => {
   const mine = classes.filter(c => c.teacherIds.includes(uid));

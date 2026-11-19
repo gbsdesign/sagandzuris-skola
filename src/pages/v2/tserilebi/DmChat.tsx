@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, Phone, Video } from 'lucide-react';
+import { Phone, Video } from 'lucide-react';
+import { Waiting } from '../../../components/shell/PageSkeleton';
 import { useAuth, useNavigation } from '../../../context';
 import { useChat, type ChatAuthor } from '../../../hooks/useClassChat';
 import type { SchoolClass } from '../../../hooks/useClasses';
@@ -87,7 +88,7 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
       <section className="flex h-full min-h-[320px] flex-col rounded-card bg-surf">
         <ChatHead title="" sub="" onBack={onBack} wide={wide} />
         <div className="flex flex-1 items-center justify-center text-body text-mut">
-          {threadLoading ? <Loader2 aria-label="იტვირთება" className="size-6 animate-spin text-faint" /> : 'ჩათი ვერ მოიძებნა.'}
+          {threadLoading ? <Waiting field={false} rows={4} quiet className="px-3" /> : 'ჩათი ვერ მოიძებნა.'}
         </div>
       </section>
     );

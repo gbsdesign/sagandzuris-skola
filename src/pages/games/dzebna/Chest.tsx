@@ -12,6 +12,7 @@ import { useTsikheSounds } from '../tsikhe/Door';
 import { Shape } from '../hangebi/Bank';
 import { ChestArt } from './parts';
 import { CHEST_KEY, writeJson, type ChestState } from './store';
+import { gameKeysPaused } from '../../../components/games/gameVariant';
 
 // The chest (the teacher's phone in the yard, 2026-11-04): the clock since the start, every team's start and when it came, and
 // the word a team brings typed in — the screen's letters or a keyboard. The team's own word opens the chest and its time is
@@ -66,7 +67,7 @@ export const HuntChest: React.FC<{ chest: ChestState; onChange: (c: ChestState) 
   useEffect(() => {
     if (chest.ended) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || gameKeysPaused()) return;
       const el = e.target as HTMLElement | null;
       if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
       if (e.key === 'Enter') { e.preventDefault(); keys.current.check(); return; }

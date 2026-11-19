@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { BookOpen, ChevronDown } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
+import { useHowToSlot } from './gameVariant';
 
 // How a game is played, in a few numbered steps (2026-11-04, the games' review — the user: „მარტივად აღქმადი გახადე“): one
 // block over a game's settings, in place of the long grey paragraph under its start button. Open the first time on this
@@ -14,7 +15,11 @@ const markSeen = (id: string) => {
   try { const s = seenIds(); if (!s.includes(id)) localStorage.setItem(KEY, JSON.stringify([...s, id].slice(-200))); } catch { /* private mode */ }
 };
 
-export const HowTo: React.FC<{ id: string; steps: React.ReactNode[]; title?: string; className?: string }> = ({ id, steps, title = 'როგორ ვითამაშოთ', className = '' }) => {
+// the new look's game frame shows the steps in its own row „როგორ ვითამაშოთ · N ნაბიჯი“ (components/games/gameVariant)
+export const HowTo: React.FC<{ id: string; steps: React.ReactNode[]; title?: string; className?: string }> = props =>
+  (useHowToSlot(props.id, props.steps) ? null : <HowToBlock {...props} />);
+
+const HowToBlock: React.FC<{ id: string; steps: React.ReactNode[]; title?: string; className?: string }> = ({ id, steps, title = 'როგორ ვითამაშოთ', className = '' }) => {
   const [open, setOpen] = useState(() => !seenIds().includes(id));
   useEffect(() => markSeen(id), [id]);
   const listId = `howto-${id}`;

@@ -17,6 +17,7 @@ import { Letter } from '../rounds/four';
 import { Shape } from '../hangebi/Bank';
 import { Keys, Taps, useLit } from '../eqo/Keys';
 import { CarvedPlate, NumeralScroll } from './parts';
+import { gameKeysPaused } from '../../../components/games/gameVariant';
 
 // A door of „ციხის გასაღები“ and its lock — the same on the phone alone and on the class's screen: a word typed on the screen's
 // keyboard (an inscription in old letters to read, with the alphabet's key), digits on a padlock's wheels, one of four names, a
@@ -46,7 +47,7 @@ const useTyping = (on: boolean, f: { letter?: (ch: string) => void; digit?: (d: 
   useEffect(() => {
     if (!on) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || gameKeysPaused()) return;
       const el = e.target as HTMLElement | null;
       if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
       const h = ref.current;

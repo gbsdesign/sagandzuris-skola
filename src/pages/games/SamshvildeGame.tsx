@@ -8,7 +8,8 @@ import {
   type Deal, type SamGame,
 } from '../../utils/samshvilde';
 import { MAX_NAMES, MAX_NAME_LEN, cleanName } from '../../utils/gatvla';
-import { Btn, Card, FIELD, Tabs, Toggle, askConfirm } from '../../components/ui/kit';
+import { Btn, Card, FIELD, Toggle, askConfirm } from '../../components/ui/kit';
+import { GameIntro, GameTabs } from '../../components/games/gameVariant';
 import { Chip } from '../../components/games/Chip';
 import { KitButton } from '../../components/games/KitButton';
 import { closeAudio } from '../../utils/gameSounds';
@@ -251,16 +252,18 @@ const SamshvildeGame: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl space-y-4">
-      <Card tone="wine" className="!p-4 sm:!p-5">
-        <p className="font-serif-ge text-[17px] font-bold leading-snug">სამშვილდის ღამე</p>
-        <p className="mt-1.5 text-[12.5px] leading-snug text-[#fbf6ec]/85">
-          1121 წელი, დიდგორის ბრძოლის წინ. სამშვილდის მკვიდრთა შორის მტრის ჯაშუშები იმალებიან: ღამით ერთ ქალაქელს ტყვედ იტაცებენ,
-          დილით ქალაქი ბჭობს და ხმით წყვეტს, ვინ ჩასვას ციხეში. ქალაქი იმარჯვებს, როცა ყველა ჯაშუში ციხეშია; ჯაშუშები — როცა
-          მათი რიცხვი დანარჩენებს გაუტოლდება.
-        </p>
-      </Card>
+      <GameIntro text={'1121 წელი, დიდგორის ბრძოლის წინ. სამშვილდის მკვიდრთა შორის მტრის ჯაშუშები იმალებიან: ღამით ერთ ქალაქელს ტყვედ იტაცებენ, დილით ქალაქი ბჭობს და ხმით წყვეტს, ვინ ჩასვას ციხეში. ქალაქი იმარჯვებს, როცა ყველა ჯაშუში ციხეშია; ჯაშუშები — როცა მათი რიცხვი დანარჩენებს გაუტოლდება.'}>
+        <Card tone="wine" className="!p-4 sm:!p-5">
+          <p className="font-serif-ge text-[17px] font-bold leading-snug">სამშვილდის ღამე</p>
+          <p className="mt-1.5 text-[12.5px] leading-snug text-[#fbf6ec]/85">
+            1121 წელი, დიდგორის ბრძოლის წინ. სამშვილდის მკვიდრთა შორის მტრის ჯაშუშები იმალებიან: ღამით ერთ ქალაქელს ტყვედ იტაცებენ,
+            დილით ქალაქი ბჭობს და ხმით წყვეტს, ვინ ჩასვას ციხეში. ქალაქი იმარჯვებს, როცა ყველა ჯაშუში ციხეშია; ჯაშუშები — როცა
+            მათი რიცხვი დანარჩენებს გაუტოლდება.
+          </p>
+        </Card>
+      </GameIntro>
 
-      <Tabs
+      <GameTabs
         cols={2}
         value={mode}
         onChange={m => setC({ mode: m })}

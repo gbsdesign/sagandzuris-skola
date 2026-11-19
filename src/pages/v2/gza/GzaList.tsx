@@ -21,6 +21,7 @@ import { SAMOSI_COLORS, SAMOSI_DEFAULT_COLOR, SAMOSI_TOTAL, samosiThumb } from '
 import { sectionOfPage } from '../../../data/sections';
 import { PathRow, PinRound, Ring, RingText } from './parts';
 import { useIsNewMember, useLearnCount } from './useGza';
+import { HelpButton } from '../mkitkhe/HelpButton';
 
 // „საგანძურის გზა“ in the new look (board x-gza; a new member x-carieli-gza). The five round buttons became five rows — a
 // ring with its number, the name and a grey line, „›“ (the canvas's note: „ხუთი წრე ხუთ ხაზად იქცა“); the AI teacher's day
@@ -44,6 +45,15 @@ export interface GzaRow {
   /** none = a row that only says something (a new member without a class) */
   onClick?: () => void;
 }
+
+/** the ready answers of „მკითხე“ whose page a row leads to: the page's „?“ lights the row (pages/v2/mkitkhe/light.ts) */
+const WAY: Record<GzaRowId, string> = {
+  samosi: '29',
+  learn: '16 27 28',
+  work: '25 26',
+  library: '',
+  klasi: '11 12 17',
+};
 
 const NEW_ICON: Record<GzaRowId, React.ReactNode> = {
   samosi: <Shirt strokeWidth={2} />,
@@ -72,8 +82,9 @@ export const GzaListView: React.FC<{
   const [ordering, setOrdering] = useState(false);
   return (
     <div className="flex w-full flex-col pb-4">
-      <PageHead title="საგანძურის გზა" right={pin} />
-      <div className="flex flex-col gap-2.5 pt-0.5">
+      {/* „?“ — three ready answers about this page (x-idea-adgilze), always last at the right */}
+      <PageHead title="საგანძურის გზა" right={<>{pin}<HelpButton page="gza" /></>} />
+      <div data-help="24" className="flex flex-col gap-2.5 rounded-card pt-0.5">
         {isNew ? (
           <div className="flex flex-col gap-3">
             <Hero kicker="პირველი ნაბიჯი" title="ისწავლე ერთი ფრაზა" sub="აირჩიე საგალობელი — და გზა დაიწყება"
@@ -81,7 +92,7 @@ export const GzaListView: React.FC<{
             <Rows>
               {rows.map(r => (
                 <Row key={r.id} lead={<Dot icon={NEW_ICON[r.id]} />} title={r.title} sub={r.sub} onClick={r.onClick}
-                  right={r.count ? <Small>{r.count}</Small> : null} />
+                  right={r.count ? <Small>{r.count}</Small> : null} data-help-way={WAY[r.id] || undefined} />
               ))}
             </Rows>
           </div>
@@ -89,9 +100,11 @@ export const GzaListView: React.FC<{
           <>
             {lesson}
             {rows.map(r => (
-              <PathRow key={r.id} title={r.title} sub={r.sub} badge={r.badge} onClick={r.onClick}
-                onLong={order && order.labels.length > 1 ? () => setOrdering(true) : undefined}
-                ring={<Ring share={r.share}>{r.center}</Ring>} />
+              <div key={r.id} data-help-way={WAY[r.id] || undefined} className="rounded-card">
+                <PathRow title={r.title} sub={r.sub} badge={r.badge} onClick={r.onClick}
+                  onLong={order && order.labels.length > 1 ? () => setOrdering(true) : undefined}
+                  ring={<Ring share={r.share}>{r.center}</Ring>} />
+              </div>
             ))}
           </>
         )}

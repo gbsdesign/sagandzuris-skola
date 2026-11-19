@@ -13,7 +13,12 @@ import { locateMe, myPlace } from '../../hooks/useMyPlace';
 const COLOR = { c: '#7a2028', m: '#b07a1e', x: '#9a8c7e' } as const;
 const GEORGIA: L.LatLngBoundsExpression = [[41.05, 40.0], [43.6, 46.75]];
 
-const PinsMap: React.FC<{ list: Church[]; visited: (id: string) => boolean; onOpen: (id: string) => void }> = ({ list, visited, onOpen }) => {
+/** `fill` (the new look's whole-screen map, pages/v2/tadzrebi): the map fills its parent, the zoom and the credit at the top, a
+ *  round „ჩემი ადგილი“ at the bottom right over `below` (the screen's own card with the key); `fit`: the view fits the list's
+ *  dots (one region's churches, the nearest) instead of the whole country */
+const PinsMap: React.FC<{
+  list: Church[]; visited: (id: string) => boolean; onOpen: (id: string) => void; fill?: boolean; fit?: boolean; below?: React.ReactNode;
+}> = ({ list, visited, onOpen, fill, fit, below }) => {
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const dots = useRef<L.LayerGroup | null>(null);
@@ -25,10 +30,19 @@ const PinsMap: React.FC<{ list: Church[]; visited: (id: string) => boolean; onOp
   useEffect(() => {
     if (!box.current) return;
     // a quarter step of zoom, so a phone's narrow box still fits the whole country without half of Russia above it
-    const m = L.map(box.current, { preferCanvas: true, zoomSnap: 0.25, zoomDelta: 0.5, maxBounds: [[39.8, 38.5], [44.8, 48.5]], minZoom: 5.5 });
-    m.fitBounds(GEORGIA, { padding: [6, 6] });
-    // on a phone the whole width leaves the dots small: half a step closer, the far east and west just past the edges
-    if (box.current.clientWidth < 520) m.setView([42.05, 43.75], m.getZoom() + 0.75);
+    const m = L.map(box.current, { preferCanvas: true, zoomSnap: 0.25, zoomDelta: 0.5, maxBounds: [[39.8, 38.5], [44.8, 48.5]], minZoom: 5.5, zoomControl: !fill });
+    if (fill) {
+      L.control.zoom({ position: 'topleft' }).addTo(m);
+      m.attributionControl.setPosition('topright');
+    }
+    const own = fit ? list.filter(c => c.located) : [];
+    if (own.length) {
+      m.fitBounds(L.latLngBounds(own.map(c => [c.lat, c.lng] as [number, number])), { padding: [28, 28], maxZoom: 13 });
+    } else {
+      m.fitBounds(GEORGIA, { padding: [6, 6] });
+      // on a phone the whole width leaves the dots small: half a step closer, the far east and west just past the edges
+      if (box.current.clientWidth < 520) m.setView([42.05, 43.75], m.getZoom() + 0.75);
+    }
     L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
       attribution: '© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a>',
@@ -36,6 +50,7 @@ const PinsMap: React.FC<{ list: Church[]; visited: (id: string) => boolean; onOp
     map.current = m;
     dots.current = L.layerGroup().addTo(m);
     return () => { m.remove(); map.current = null; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // the dots, drawn anew when the list or my visits change
@@ -77,6 +92,21 @@ const PinsMap: React.FC<{ list: Church[]; visited: (id: string) => boolean; onOp
     if (f) showMe([f.lat, f.lng], true);
   };
 
+  if (fill) {
+    return (
+      <div className="absolute inset-0 bg-[#f3e3c6]">
+        <div ref={box} className="absolute inset-0 z-0" aria-label="საქართველოს რუკა ტაძრებით" />
+        <div className="absolute inset-x-0 bottom-0 z-[500] flex flex-col items-end gap-3 pointer-events-none">
+          <button type="button" onClick={locate} disabled={locating} aria-label="ჩემი ადგილი" title="ჩემი ადგილი"
+            className="pointer-events-auto mr-4 w-12 h-12 rounded-full bg-white shadow-md ring-1 ring-black/10 text-[#1b1816] flex items-center justify-center cursor-pointer disabled:opacity-60 active:scale-95 transition">
+            <LocateFixed className={`w-[22px] h-[22px] ${locating ? 'animate-pulse' : ''}`} />
+          </button>
+          {below && <div className="w-full">{below}</div>}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col gap-2">
       <div className="relative w-full h-[52vh] min-h-[320px] max-h-[560px] rounded-3xl overflow-hidden ring-1 ring-[#e2c9a0] shadow-inner bg-[#f3e3c6]">
@@ -101,5 +131,8 @@ const Key: React.FC<{ color: string; label: string; big?: boolean }> = ({ color,
     <span className={`${big ? 'w-3.5 h-3.5' : 'w-3 h-3'} rounded-full`} style={{ background: color }} />{label}
   </span>
 );
+
+/** the dots' colours, for a key drawn elsewhere (the new look's map card) */
+export const PIN_COLOR = COLOR;
 
 export default PinsMap;

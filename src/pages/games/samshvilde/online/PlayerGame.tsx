@@ -15,6 +15,8 @@ import { wordsOf } from '../NightScreen';
 import { Order, Speaker } from '../DayScreens';
 import { EndScreen } from '../EndScreen';
 import { CallBtn, useHush, type GameCall } from './GameCall';
+import { useNewLook } from '../../../../design/newLook';
+import { TurnFrame } from '../../../v2/tamashebi/TurnFrame';
 import { CardBack, ObserverLine, RoleBtn, SeenList, WaitHost } from './bits';
 
 // A player's own phone in the online game: the room's public view (names, who is out, the phase — never anybody's role)
@@ -43,11 +45,33 @@ interface Ctx {
 const BIG = '!h-14 !text-[16px]';
 const asPlayers = (names: string[]) => names.map(name => ({ name }));
 
-const Screen: React.FC<{ ctx: Ctx; title: React.ReactNode; night?: boolean; footer?: React.ReactNode; children: React.ReactNode }> = ({ ctx, title, night, footer, children }) => (
-  <TableScreen tone={night ? 'night' : 'day'} title={title} right={ctx.right(night)} onClose={ctx.onHide} footer={footer}>
-    <div className="py-2 space-y-4">{children}</div>
-  </TableScreen>
-);
+const Screen: React.FC<{ ctx: Ctx; title: React.ReactNode; night?: boolean; footer?: React.ReactNode; children: React.ReactNode }> = ({ ctx, title, night, footer, children }) => {
+  const nl = useNewLook();
+  // the new look: the room games' turn frame (board x-otakhi-svla) — the step under the game's name, who sits in the circle,
+  // the one who speaks now ringed (the speaker's card and clock below say the rest, so no turn card at the bottom)
+  if (nl) {
+    const ph = ctx.view.phase;
+    const speaker = ph.kind === 'intro' ? ph.at : ph.kind === 'day' ? ph.order[ph.at] : ph.kind === 'tie' ? ph.tied[ph.at] : -1;
+    return (
+      <TurnFrame
+        title="სამშვილდის ღამე"
+        sub={title}
+        tone={night ? 'night' : 'day'}
+        right={ctx.right(night)}
+        onClose={ctx.onHide}
+        seats={ctx.names.map((n, i) => ({ name: n, me: i === ctx.me, on: i === speaker, out: !!ctx.view.out[i] }))}
+        footer={footer}
+      >
+        <div className="py-2 space-y-4">{children}</div>
+      </TurnFrame>
+    );
+  }
+  return (
+    <TableScreen tone={night ? 'night' : 'day'} title={title} right={ctx.right(night)} onClose={ctx.onHide} footer={footer}>
+      <div className="py-2 space-y-4">{children}</div>
+    </TableScreen>
+  );
+};
 
 const MoonTitle: React.FC<{ n: number }> = ({ n }) => (
   <span className="inline-flex items-center gap-2"><Moon className="w-4 h-4 text-[#e2c27a]" />{n === 1 ? 'პირველი ღამე' : `ღამე ${n}`}</span>

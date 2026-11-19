@@ -50,7 +50,7 @@ const NavigationContext = createContext<NavigationContextType | undefined>(undef
 interface NavSnap { page: PageType; service: ServiceType; classId: string | null; prayerId: string | null; mapItem?: string | null; dmId?: string | null }
 const HOME: NavSnap = { page: 'home', service: null, classId: null, prayerId: null, mapItem: null, dmId: null };
 // pages whose open item (a map region, an instrument, a chant album, a library book) is a step of its own in history
-const MAP_PAGES: PageType[] = ['simghera', 'mtkmeli', 'sakravebi', 'galoba', 'biblioteka', 'medavitneoba', 'games', 'videos', 'churches', 'gz', 'class', 'student', 'psalter', 'settings', 'calendar'];
+const MAP_PAGES: PageType[] = ['simghera', 'mtkmeli', 'sakravebi', 'galoba', 'biblioteka', 'medavitneoba', 'games', 'videos', 'churches', 'gz', 'class', 'student', 'psalter', 'settings', 'calendar', 'profile', 'admin', 'abituri'];
 const makeSnap = (page: PageType, service: ServiceType, classId: string | null, prayerId: string | null, mapItem: string | null, dmId: string | null = null): NavSnap => ({
   page,
   service: page === 'galoba' ? service : null,
@@ -255,8 +255,10 @@ export const NavigationProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       // a part of a library book goes up to the book's contents; a მედავითნეობა book one level up
       setMapItem(currentPage === 'biblioteka' && mapItem.includes(':') ? mapItem.split(':')[0]
         : currentPage === 'medavitneoba' && mapItem.startsWith('w:') ? wignebiParent(mapItem)
-        // a lesson goes up to the course, the course to the reader's books
-        : currentPage === 'medavitneoba' && mapItem !== 'w' && mapItem !== 'learn' ? 'learn' : null);
+        // a lesson goes up to the course, the course and the day's service to the reader's front
+        : currentPage === 'medavitneoba' && mapItem !== 'w' && mapItem !== 'learn' && mapItem !== 'day' ? 'learn'
+        // an admission screen's inner part (a lesson, the trainer, the quiz…) goes up to its exam (pages/v2/abituri)
+        : currentPage === 'abituri' && mapItem.includes('/') ? mapItem.split('/')[0] : null);
       return;
     }
     if (selectedService) {

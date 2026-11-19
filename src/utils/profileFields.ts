@@ -123,6 +123,29 @@ export const validBirth = (b: Partial<BirthDate> | undefined) => {
 /** The profile card's old starting value, saved by many without choosing it. */
 export const isPlaceholderBirth = (b: Partial<BirthDate> | undefined) => b?.year === 2000 && b.month === 1 && b.day === 1;
 
+/** The first meeting's last three steps (abilities, interests, voices) may be skipped (the user's answer, 2026-11-16, boards
+ *  x-gatsnoba-5…7); what was skipped is kept in `firstMeeting.skipped`. */
+export type SkippableStep = 'abilities' | 'interests' | 'voices';
+export const SKIPPABLE: SkippableStep[] = ['abilities', 'interests', 'voices'];
+
+/** May the app go on — the first four steps filled in, the last three filled in or skipped? (`profileComplete` stays the
+ *  whole profile: the admin's „პროფილი არასრული“ still lists one who skipped.) */
+export const meetingDone = (data: Record<string, any> | null | undefined) => {
+  if (profileComplete(data)) return true;
+  const p = data?.profile || {};
+  const met = data?.firstMeeting;
+  const skipped: string[] = Array.isArray(met?.skipped) ? met.skipped : [];
+  const voices = Array.isArray(p.voices) && p.voices.length > 0;
+  return hasGeorgianName(p)
+    && validBirth(p.birthDate) && (!!met || !isPlaceholderBirth(p.birthDate))
+    && GEORGIAN_REGIONS.includes(p.region)
+    && (p.city || '').trim().length >= 2
+    && !!normalizePhone(p.phone)
+    && (skipped.includes('abilities') || abilitiesDone(p) || (!Array.isArray(p.abilities) && statusList(p.experienceLevel).length > 0))
+    && (skipped.includes('interests') || interestsDone(p) || (!Array.isArray(p.abilities) && statusList(p.experienceLevel).length > 0))
+    && (skipped.includes('voices') || voices || met?.voiceUnknown === true);
+};
+
 /** Has the member filled in everything "პირველი გაცნობა" asks for? (`data` = students/{uid}) */
 export const profileComplete = (data: Record<string, any> | null | undefined) => {
   const p = data?.profile || {};

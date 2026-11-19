@@ -17,18 +17,18 @@ import { AutoScrollButton } from '../../components/views/ReadingTools';
 // list, „w:c:x:<n>“ a book — kept apart from public/wignebi, which the monastery app's daily update rebuilds.
 
 type Section = [string, string[]];
-type BookFile = { t: string; num?: boolean; scan?: boolean; pages?: string[]; c: { l: string; s: Section[] }[] };
-type CalDay = { d: number; w: string; o?: number | null; f?: boolean | null; r?: boolean; s: string; n: string[]; k: string[] };
-type CalFile = { y: number; m: CalDay[][] };
+export type BookFile = { t: string; num?: boolean; scan?: boolean; pages?: string[]; c: { l: string; s: Section[] }[] };
+export type CalDay = { d: number; w: string; o?: number | null; f?: boolean | null; r?: boolean; s: string; n: string[]; k: string[] };
+export type CalFile = { y: number; m: CalDay[][] };
 
 const CARD = 'rounded-3xl bg-white ring-1 ring-[#2a2017]/[0.07] shadow-[0_1px_2px_rgba(42,32,23,0.05),0_10px_28px_-18px_rgba(42,32,23,0.35)]';
 const ROW = `${CARD} w-full min-h-16 px-4 py-3 flex items-center gap-3 text-left cursor-pointer transition hover:ring-[#7a2028]/25 active:scale-[0.99]`;
 
-const EXTRA: WignebiCollection = {
+export const EXTRA: WignebiCollection = {
   id: 'x', title: 'დამატებითი წიგნები', kind: 'list', items: EXTRA_BOOKS.map(b => ({ n: b.n, t: b.t, c: b.c })),
 };
 
-const SHELF_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
+export const SHELF_ICONS: Record<string, React.ComponentType<{ className?: string }>> = {
   biblia: BookOpen, kalendari: CalendarDays, kondaki: Crown, kurtxevani: Droplets, paraklitoni: Music2, tveni: Sparkles,
   jamni: Clock, zatiki: Sunrise, davitni: Feather, mgalobeltatvis: Music, wardgoma: Megaphone, locvani: Heart,
   paraklisebi: Flame, kriteli: ScrollText,
@@ -62,7 +62,7 @@ const loadFile = <T,>(coll: string, n: number): Promise<T> => {
   }
   return p as Promise<T>;
 };
-function useFile<T>(coll: string, n: number) {
+export function useFile<T>(coll: string, n: number) {
   const [state, set] = useState<{ data?: T; error?: boolean }>({});
   const [tick, setTick] = useState(0);
   useEffect(() => {
@@ -188,7 +188,7 @@ const Home: React.FC<{ open: (id: string) => void }> = ({ open }) => {
   );
 };
 
-const countWord = (c: WignebiCollection, n: number) =>
+export const countWord = (c: WignebiCollection, n: number) =>
   c.kind === 'grid' ? `${n} თავი` : c.id === 'trapezi' || c.id === 'samociqulo' ? `${n} საკითხავი` : n > 1 ? `${n} ნაწილი` : '';
 
 // the Bible: four books
@@ -283,7 +283,7 @@ const ExtraList: React.FC<{ open: (id: string) => void }> = ({ open }) => (
 );
 
 // the small line over a book's name: its shelf, or for an extra book its group
-const kickerOf = (c: WignebiCollection, n: number) =>
+export const kickerOf = (c: WignebiCollection, n: number) =>
   c.id === EXTRA.id ? EXTRA_GROUPS.find(g => g.id === EXTRA_BOOKS.find(b => b.n === n)?.g)?.title ?? c.title : c.title;
 
 // a book read by a scanner: say so above its text
@@ -419,8 +419,8 @@ const ItemView: React.FC<{ c: WignebiCollection; n: number; part?: number; open:
 };
 
 // ---------- the church calendar ----------
-const MONTHS = ['იანვარი', 'თებერვალი', 'მარტი', 'აპრილი', 'მაისი', 'ივნისი', 'ივლისი', 'აგვისტო', 'სექტემბერი', 'ოქტომბერი', 'ნოემბერი', 'დეკემბერი'];
-const tbilisiToday = () => { const d = new Date(Date.now() + 4 * 3600e3); return { y: d.getUTCFullYear(), m: d.getUTCMonth(), d: d.getUTCDate() }; };
+export const MONTHS = ['იანვარი', 'თებერვალი', 'მარტი', 'აპრილი', 'მაისი', 'ივნისი', 'ივლისი', 'აგვისტო', 'სექტემბერი', 'ოქტომბერი', 'ნოემბერი', 'დეკემბერი'];
+export const tbilisiToday = () => { const d = new Date(Date.now() + 4 * 3600e3); return { y: d.getUTCFullYear(), m: d.getUTCMonth(), d: d.getUTCDate() }; };
 
 const CalendarView: React.FC<{ c: WignebiCollection }> = ({ c }) => {
   const today = tbilisiToday();

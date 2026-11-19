@@ -17,6 +17,7 @@ import { isOffline, onOfflineChange } from '../../../utils/offlineNotes';
 import { triggerHaptic } from '../../../utils/haptics';
 import { prepareSearch } from '../../../utils/searchUtils';
 import { Versions } from './Versions';
+import { HelpButton } from '../mkitkhe/HelpButton';
 
 const useWide = () => {
   const mq = '(min-width: 1024px)';
@@ -99,7 +100,8 @@ export const ChantListScreen: React.FC = () => {
   };
 
   const list = (
-    <Rows>
+    // „მკითხე“'s „სად ვნახო ნოტები?“ / „როგორ ვისწავლო?“ light the list: a chant is picked here first
+    <Rows data-help="1 3">
       {filtered.map(chant => {
         const idx = serviceChants.findIndex(c => c.id === chant.id) + 1;
         const open = wide ? current?.id === chant.id : expandedChantId === chant.id;
@@ -144,7 +146,12 @@ export const ChantListScreen: React.FC = () => {
   return (
     <div className="mx-auto w-full pb-4 lg:grid lg:max-w-6xl lg:grid-cols-[420px_minmax(0,1fr)] lg:items-start lg:gap-7">
       <div className="flex min-w-0 flex-col gap-2.5">
-        <TopBar title={title} sub={`${serviceChants.length} საგალობელი`} onBack={handleGoBack} right={<OfflineButton kind="galoba" />} />
+        <TopBar title={title} sub={`${serviceChants.length} საგალობელი`} onBack={handleGoBack} right={(
+          <>
+            <span data-help="5" className="flex rounded-full"><OfflineButton kind="galoba" /></span>
+            <HelpButton page="list" />
+          </>
+        )} />
 
         {modeClass && (
           <Card pad="sm" className={cx('flex flex-wrap items-center gap-x-3 gap-y-2', classOnly && 'bg-tint')}>

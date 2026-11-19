@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Crown, Users, Wifi } from 'lucide-react';
 import { useAuth } from '../../context';
 import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
-import { Card, Tabs, askConfirm } from '../../components/ui/kit';
+import { Card, askConfirm } from '../../components/ui/kit';
+import { GameIntro, GameTabs } from '../../components/games/gameVariant';
 import { RoomSetup, meOf } from '../../components/games/RoomSetup';
 import { ARMY_PTS, ARMY_TIE, WINE_PTS } from '../../utils/oriTakhti';
 import { useOpenRequest } from '../../utils/searchOpen';
@@ -80,7 +81,8 @@ const TakhtiGame: React.FC = () => {
   useEffect(() => () => takhtiRooms.setVisible(false), []);
 
   /** into a room (an invitation, a row of the list, a new room): one room at a time on this phone */
-  const enter = async (classId: string, roomId: string) => {
+  /** `play` false: a new room's opener only leads (the new look's window „ახალი ოთახი“), so they do not join it */
+  const enter = async (classId: string, roomId: string, play?: boolean) => {
     if (!user) return;
     const cur = takhtiRooms.get();
     if (cur && (cur.classId !== classId || cur.roomId !== roomId) && cur.room?.host === uid && cur.room.status !== 'over') {
@@ -89,6 +91,7 @@ const TakhtiGame: React.FC = () => {
     }
     takhtiRooms.open(classId, roomId, meOf(user, mine.find(c => c.id === classId)));
     joinWish.current = { key: `${classId}/${roomId}`, at: Date.now() };
+    if (play === false) opened.current = roomId;
     setRoomOpen(true);
     if (tab !== 'online') setTab('online');
   };
@@ -129,16 +132,18 @@ const TakhtiGame: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl space-y-4">
-      <section className="rounded-3xl p-4 sm:p-5 bg-gradient-to-br from-[#3b2a1c] to-[#2b1e14] text-[#fbf6ec] shadow-[0_8px_24px_-12px_rgba(43,30,20,0.6)]">
-        <p className="font-serif-ge text-[17px] font-bold leading-snug">ორი ტახტი</p>
-        <p className="mt-1.5 text-[12.5px] leading-snug text-[#fbf6ec]/85">
-          ორი მეფე — დასავლეთისა ქუთაისში და აღმოსავლეთისა თბილისში — ლიხის ქედზე რვაჯერ ხვდება და ქვეყნის ძღვენს ინაწილებს:
-          ერთი ყოფს, მეორე ირჩევს. ციხეები, ლაშქარი, ვაზი და ქვევრი, წიგნები და ელჩები — ვისი კარიც უფრო დიდებული გამოვა, იმის
-          ქალაქში დადგება ერთიანი საქართველოს ტახტი. ბარათების განმარტებები ჯერ მასწავლებელს არ შეუმოწმებია.
-        </p>
-      </section>
+      <GameIntro text={'ორი მეფე — დასავლეთისა ქუთაისში და აღმოსავლეთისა თბილისში — ლიხის ქედზე რვაჯერ ხვდება და ქვეყნის ძღვენს ინაწილებს: ერთი ყოფს, მეორე ირჩევს. ციხეები, ლაშქარი, ვაზი და ქვევრი, წიგნები და ელჩები — ვისი კარიც უფრო დიდებული გამოვა, იმის ქალაქში დადგება ერთიანი საქართველოს ტახტი. ბარათების განმარტებები ჯერ მასწავლებელს არ შეუმოწმებია.'}>
+        <section className="rounded-3xl p-4 sm:p-5 bg-gradient-to-br from-[#3b2a1c] to-[#2b1e14] text-[#fbf6ec] shadow-[0_8px_24px_-12px_rgba(43,30,20,0.6)]">
+          <p className="font-serif-ge text-[17px] font-bold leading-snug">ორი ტახტი</p>
+          <p className="mt-1.5 text-[12.5px] leading-snug text-[#fbf6ec]/85">
+            ორი მეფე — დასავლეთისა ქუთაისში და აღმოსავლეთისა თბილისში — ლიხის ქედზე რვაჯერ ხვდება და ქვეყნის ძღვენს ინაწილებს:
+            ერთი ყოფს, მეორე ირჩევს. ციხეები, ლაშქარი, ვაზი და ქვევრი, წიგნები და ელჩები — ვისი კარიც უფრო დიდებული გამოვა, იმის
+            ქალაქში დადგება ერთიანი საქართველოს ტახტი. ბარათების განმარტებები ჯერ მასწავლებელს არ შეუმოწმებია.
+          </p>
+        </section>
+      </GameIntro>
 
-      <Tabs cols={2} value={tab} onChange={setTab} items={[{ id: 'online', label: 'ონლაინ', Icon: Wifi }, { id: 'table', label: 'ჰიბრიდული', Icon: Users }]} />
+      <GameTabs cols={2} value={tab} onChange={setTab} items={[{ id: 'online', label: 'ონლაინ', Icon: Wifi }, { id: 'table', label: 'ჰიბრიდული', Icon: Users }]} />
       <HowTo key={tab} id={`takhti-${tab}`} steps={HOW[tab]} />
 
       {tab === 'online' ? (
@@ -152,7 +157,8 @@ const TakhtiGame: React.FC = () => {
           closeMine={takhtiRooms.host.close}
           hostLine="ოთახს შენ ხსნი და შენც თამაშობ (ან მხოლოდ უძღვები). კლასის წევრებს მოწვევა მიუვათ ჩატში და ტელეფონზე; თამაშობს ორი, დანარჩენები უყურებენ."
           other="ჰიბრიდული — ერთი ტელეფონით, ორ ტახტს შორის"
-          onEnter={(c, r) => { void enter(c, r); }}
+          playLine="კლასის წევრებს მოწვევა მიუვათ ჩატში და ტელეფონზე; თამაშობს ორი, დანარჩენები უყურებენ. მოსაცდელ ოთახშიც შეცვლი."
+          onEnter={(c, r, play) => { void enter(c, r, play); }}
           onResume={() => setRoomOpen(true)}
         />
       ) : <TakhtiTable />}

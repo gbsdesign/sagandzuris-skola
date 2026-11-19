@@ -4,7 +4,6 @@ import { useAccess } from '../../hooks/useAccess';
 import { useMembership } from '../../utils/memberAccess';
 import { useKhutsuriSetting } from '../../utils/khutsuri';
 import { usePWAInstall } from '../../hooks/usePWAInstall';
-import { RemindersSheet } from '../../components/app/RemindersCard';
 import { useWidgetLink } from '../../components/app/WidgetLinkCard';
 import { useAccountActions } from '../../components/views/ProfileActions';
 import { SettingsView } from './settings/SettingsView';
@@ -13,6 +12,7 @@ import { NotifyScreen, SummaryScreen } from '../v2/shetkobinebebi';
 import { TextSizeScreen } from '../v2/parametrebi/TextSizeScreen';
 import { ThemeScreen } from '../v2/parametrebi/ThemeScreen';
 import { PhoneCalendarSheet } from '../v2/kalendari/PhoneCalendarSheet';
+import { RemindersScreen } from '../v2/propili/Reminders';
 import { TEXT_STEPS, THEME_NAMES, useTextLook, useTheme } from '../../design/look';
 
 export { SettingsView } from './settings/SettingsView';
@@ -25,11 +25,12 @@ export type { SettingsViewProps, WidgetLook } from './settings/SettingsView';
 // • „აპის დაყენება“ only where the browser offers it (or on an iPhone, with its two steps);
 // • the kids' mode has no profile, so no personal details, signing out or deleting the account here either;
 // • a guest gets ხუცური, installing, the contacts and the privacy page.
-// The windows: RemindersSheet (old), PhoneCalendarSheet (v2/kalendari); „ტექსტის ზომა“ and „იერი“ are screens of their own
-// (mapItem `text`, `theme`); „პირადი ინფორმაცია“ opens the profile, where its
-// editor lives inside the profile card with the card's own saving.
+// The windows: PhoneCalendarSheet (v2/kalendari); „შეხსენებები“ (mapItem `reminders`, board x-shekhsenebebi — v2/propili/
+// Reminders), „ტექსტის ზომა“ and „იერი“ are screens of their own
+// (mapItem `text`, `theme`); „პირადი ინფორმაცია“ opens the profile's own screen of it (profile mapItem `info`,
+// pages/v2/propili/PersonalInfo, board x-piradi-inpormatsia).
 
-type Win = null | 'reminders' | 'calendar' | 'ios';
+type Win = null | 'calendar' | 'ios';
 
 export const SettingsPage: React.FC = () => {
   const { handleGoBack, navigateTo, openMapItem, mapItem } = useNavigation();
@@ -49,6 +50,7 @@ export const SettingsPage: React.FC = () => {
   const adult = !!user && !access.kids;
   const canInstall = !pwa.isInstalled && (pwa.isInstallable || pwa.isIOS);
 
+  if (member && mapItem === 'reminders') return <RemindersScreen />;
   if (member && mapItem === 'notify') return <NotifyScreen />;
   if (member && mapItem === 'notify~summary') return <SummaryScreen />;
   // reading comfort (2026-11-18): the text size and the dark look, for everyone signed in
@@ -59,7 +61,7 @@ export const SettingsPage: React.FC = () => {
     <>
       <SettingsView
         onBack={handleGoBack}
-        onReminders={member ? () => setWin('reminders') : undefined}
+        onReminders={member ? () => openMapItem('reminders') : undefined}
         onNotify={member ? () => openMapItem('notify') : undefined}
         textSize={{ label: TEXT_STEPS[textLook.step].name, onTap: () => openMapItem('text') }}
         theme={{ label: theme.choice === 'auto' ? 'ტელეფონით' : THEME_NAMES[theme.choice], onTap: () => openMapItem('theme') }}
@@ -72,11 +74,10 @@ export const SettingsPage: React.FC = () => {
         } : undefined}
         onCalendar={member && access.on('calendar') ? () => setWin('calendar') : undefined}
         onInstall={canInstall ? () => { if (pwa.isInstallable) void pwa.install(); else setWin('ios'); } : undefined}
-        onPersonal={adult ? () => navigateTo('profile') : undefined}
+        onPersonal={adult ? () => { navigateTo('profile'); openMapItem('info'); } : undefined}
         onSignOut={adult ? () => void account.leave() : undefined}
         remove={adult && account.canDelete ? { onTap: () => void account.remove(), busy: account.busy, error: account.error } : undefined}
       />
-      {win === 'reminders' && <RemindersSheet onClose={close} />}
       <PhoneCalendarSheet open={win === 'calendar'} onClose={close} />
       <InstallGuide open={win === 'ios'} onClose={close} />
     </>

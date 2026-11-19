@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
-import { ALargeSmall, LoaderCircle, Search, X } from 'lucide-react';
+import { ALargeSmall, Search, X } from 'lucide-react';
+import { Waiting } from '../../../components/shell/PageSkeleton';
 import { Note, RoundButton, Rows, Row, Sheet, Stepper, cx } from '../../../components/ui2';
 import { AutoScrollButton } from '../../../components/views/ReadingTools';
 import { MONTHS_SHORT_GE } from '../../../utils/dateNames';
@@ -52,9 +53,7 @@ export const Loading: React.FC<{ failed?: boolean; what?: string }> = ({ failed,
   failed
     ? <Note className="py-12 text-center">{what} ვერ ჩაიტვირთა. სცადეთ თავიდან.</Note>
     : (
-      <div role="status" className="flex items-center justify-center gap-2 py-16 text-meta text-mut">
-        <LoaderCircle aria-hidden="true" className="size-4 animate-spin" /> იტვირთება…
-      </div>
+      <Waiting kind="text" field={false} />
     )
 );
 

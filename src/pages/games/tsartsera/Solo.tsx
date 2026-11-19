@@ -19,6 +19,7 @@ import { useNow } from '../rounds/parts';
 import { AlphabetKey, ScriptChips } from '../bade/parts';
 import { TsBoard, type Tone } from './Board';
 import { KnownAlphabet, ModeChips } from './parts';
+import { gameKeysPaused } from '../../../components/games/gameVariant';
 
 // „ხუცური წარწერა“ alone (the hub's „ონლაინ“, 2026-11-01): one line a day for the whole school — its time and hints are the
 // day's record (utils/tsartsera.ts) — and more lines at random, not saved. The board on the way stays on this device
@@ -224,7 +225,7 @@ export const TsartseraDaily: React.FC = () => {
   useEffect(() => {
     if (!line || done) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || gameKeysPaused()) return;
       const el = e.target as HTMLElement | null;
       if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT)$/.test(el.tagName))) return;
       if (window.history.state?.sgFind) return;

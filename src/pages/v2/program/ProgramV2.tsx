@@ -80,6 +80,23 @@ export const ProgramV2: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
     } finally { setBusy(null); }
   };
 
+  // „გუნდი მომყვება“: one switch; a program the class has not got yet is sent first (it used to wait for a separate send)
+  const lead = async (on: boolean) => {
+    triggerHaptic(10);
+    if (on && !liturgy.sentInSync) {
+      try {
+        setBusy('lead');
+        await liturgy.send();
+      } catch (err) {
+        console.warn(err);
+        say(liturgy.classes.length ? 'კლასს ვერ გაეგზავნა. შეამოწმე ინტერნეტი' : 'ჯერ ადმინის პანელში შექმენი კლასი', 4200);
+        return;
+      } finally { setBusy(null); }
+    }
+    setLeading(on);
+    say(on ? 'გუნდი მოგყვება: რასაც გადაშლი, მათთანაც გადაიშლება' : 'გუნდი აღარ მოგყვება', 3600);
+  };
+
   const makePdf = async () => {
     if (!items.length) return;
     triggerHaptic(10);
@@ -172,6 +189,13 @@ export const ProgramV2: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
           }}
           sentNote={sentNote}
           live={!regent && liveTurn ? { title: labelOf(liveTurn.vid).title, following, onToggle: () => { triggerHaptic(8); setFollowing(!following); } } : null}
+          lead={{
+            on: leading,
+            busy: busy === 'lead',
+            sub: busy === 'lead' ? 'კლასს ეგზავნება…' : leading ? 'რასაც გადაშლი, კლასთანაც გადაიშლება'
+              : liturgy.sentInSync ? 'ფურცლები ყველასთან გადაიშლება' : 'ჩართვისას პროგრამა კლასს გაეგზავნება',
+            onChange: on => void lead(on),
+          }}
           onBack={() => { triggerHaptic(8); closeProgram(); }}
           onMore={() => setSheet('more')}
           onOpen={id => { triggerHaptic(10); openNotes(id, 'program'); }}
@@ -204,9 +228,6 @@ export const ProgramV2: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
             label: dl ? `ჩამოიწერება… ${dl.done}/${dl.total}` : allOffline ? 'ჩამოწერილია — ინტერნეტის გარეშეც გაიხსნება' : `~${estimateMb(items)} MB`,
           }}
           onOffline={() => void keepAll()}
-          leading={leading}
-          canLead={Boolean(program.sentAt)}
-          onLead={on => { triggerHaptic(10); setLeading(on); say(on ? 'გუნდი მოგყვება: რასაც გადაშლი, მათთანაც გადაიშლება' : 'გუნდი აღარ მოგყვება', 3600); }}
           onQr={() => setSheet('qr')}
           onPdf={() => void makePdf()}
           pdfBusy={busy === 'pdf'}

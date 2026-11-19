@@ -5,6 +5,8 @@ import { FOLK_EXTRA_REGIONS, FOLK_REGIONS, FOLK_SONGS, FolkRegionId, getFolkRegi
 import { ALBUM_RECS, CHANT_ALBUMS, ChantAlbumId, getChantAlbum } from '../../data/chantAlbums';
 import { Placement, moveRecordings, originalPlace, placementOf, resetRecordings } from '../../data/placements';
 import { triggerHaptic } from '../../utils/haptics';
+import { useNewLook } from '../../design/newLook';
+import { MoveSheetV2 } from '../../pages/v2/propili/MoveSheetV2';
 
 // „გადატანა“ of one recording (or of all a song's recordings): to a region and song title among the songs, or to an
 // album and chant title among the chant recordings. Only the owner and the superadmins see it. A track of the Folklore
@@ -12,7 +14,7 @@ import { triggerHaptic } from '../../utils/haptics';
 
 const REGIONS = [...FOLK_REGIONS, ...FOLK_EXTRA_REGIONS];
 
-const placeName = (p?: Placement) =>
+export const placeName = (p?: Placement) =>
   !p ? '' : p.kind === 'song' ? `სიმღერა · ${getFolkRegion(p.region)?.nameGe ?? p.region} · ${p.title}` : `გალობა · ${getChantAlbum(p.album)?.title ?? p.album} · ${p.title}`;
 
 export interface MoveTarget {
@@ -30,7 +32,8 @@ export interface MoveTarget {
   songRecIds?: string[];
 }
 
-export const MoveSheet: React.FC<{ target: MoveTarget; onClose: () => void }> = ({ target, onClose }) => {
+/** The move's state (shared with the new look's window, pages/v2/propili/MoveSheetV2). */
+export const useMoveSheet = (target: MoveTarget, onClose: () => void) => {
   const { from } = target;
   const [kind, setKind] = useState<'song' | 'chant'>(from?.kind ?? 'song');
   const [region, setRegion] = useState<FolkRegionId>(from?.kind === 'song' ? from.region : 'unsure');
@@ -76,6 +79,19 @@ export const MoveSheet: React.FC<{ target: MoveTarget; onClose: () => void }> = 
     const to: Placement = kind === 'song' ? { kind, region, title: t, ...extra } : { kind, album, title: t, ...extra };
     void run(() => moveRecordings(ids, to));
   };
+
+  const reset = () => void run(() => resetRecordings(ids));
+  return {
+    from, kind, setKind, region, setRegion, album, setAlbum, title, setTitle, titles, whole, all, setAll, busy, error,
+    moved, home, save, reset, regions: REGIONS,
+  };
+};
+
+export const MoveSheet: React.FC<{ target: MoveTarget; onClose: () => void }> = ({ target, onClose }) => {
+  const m = useMoveSheet(target, onClose);
+  const nl = useNewLook();
+  const { from, kind, setKind, region, setRegion, album, setAlbum, title, setTitle, titles, whole, all, setAll, busy, error, moved, home, save, reset } = m;
+  if (nl) return <MoveSheetV2 target={target} m={m} onClose={onClose} />;
 
   const field = 'w-full min-h-12 rounded-xl border border-[#e2d3bb] bg-white px-3 text-[16px] text-[#2a2017] focus:outline-none focus:border-[#d9a55a] focus:ring-[3px] focus:ring-[#b4620e]/15';
 
@@ -171,7 +187,7 @@ export const MoveSheet: React.FC<{ target: MoveTarget; onClose: () => void }> = 
             <button
               type="button"
               disabled={busy}
-              onClick={() => void run(() => resetRecordings(ids))}
+              onClick={reset}
               className="flex-1 min-w-[10rem] min-h-12 px-4 rounded-full bg-white border border-[#e2d3bb] text-[14px] font-bold text-[#574739] flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] disabled:opacity-60"
               title={home ? placeName(home) : undefined}
             >

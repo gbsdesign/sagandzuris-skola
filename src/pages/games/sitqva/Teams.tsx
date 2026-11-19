@@ -18,6 +18,7 @@ import { Podium, Standings, TimerRing } from '../rounds/parts';
 import { TEAM_TINT, TeamChips, TeamsEditor, readTeams, teamNames, useTurnClock, type TeamsConf } from '../rounds/teams';
 import { dayPick } from './dayPick';
 import { HowTo } from '../../../components/games/HowTo';
+import { gameKeysPaused } from '../../../components/games/gameVariant';
 
 // „დღის სიტყვა“ on one phone (the plan's hybrid, 2026-11-01): the board on the screen, 2–6 teams in turn say a word, the
 // teacher types it; the colours help every team. The words come from the bank (never the day's word, so the daily game
@@ -122,7 +123,7 @@ const TeamsGame: React.FC<{ g: SqTeams; setG: (g: SqTeams) => void; avoid: strin
   useEffect(() => {
     if (!playing) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.ctrlKey || e.metaKey || e.altKey || gameKeysPaused()) return;
       const el = e.target as HTMLElement | null;
       if (el && (el.isContentEditable || /^(INPUT|TEXTAREA|SELECT|BUTTON)$/.test(el.tagName))) return;
       if (e.key === 'Enter') { e.preventDefault(); submit(); return; }

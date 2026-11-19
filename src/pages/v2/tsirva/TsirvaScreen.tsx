@@ -1,5 +1,6 @@
 import React from 'react';
-import { Check, GraduationCap, Loader2, Play, RefreshCw } from 'lucide-react';
+import { Check, GraduationCap, Play, RefreshCw } from 'lucide-react';
+import { Waiting } from '../../../components/shell/PageSkeleton';
 import { useNavigation } from '../../../context';
 import { Bar, Button, Card, Row, Rows, TopBar, cx } from '../../../components/ui2';
 import { openAiLesson } from '../../../components/aiLesson/open';
@@ -33,7 +34,7 @@ export const TsirvaView: React.FC<{
     <div className="flex w-full flex-col gap-2.5 pb-4">
       <TopBar title="კვირის წირვა" sub={`${dayName(sunday)} · მზად ხარ?`} onBack={onBack} />
       {!result ? (
-        <div className="flex justify-center py-16"><Loader2 aria-label="იტვირთება" className="size-7 animate-spin text-wine" /></div>
+        <Waiting field={false} />
       ) : result.total === 0 ? (
         <Card><p className="text-body text-mut">ამ კვირის წირვის საგალობლები ჯერ არ ჩანს.</p></Card>
       ) : (

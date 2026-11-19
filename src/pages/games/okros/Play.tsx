@@ -10,6 +10,9 @@ import { Btn } from '../../../components/ui/kit';
 import { triggerHaptic } from '../../../utils/haptics';
 import { useTwoCols } from '../../../components/games/useTwoCols';
 import { NOBODY_WON } from '../rounds/winLine';
+import { useNewLook } from '../../../design/newLook';
+import { TurnFrame } from '../../v2/tamashebi/TurnFrame';
+import { Matiane, placesFrom } from '../../v2/tamashebi/Matiane';
 import { OkrosBoard } from './Board';
 import { GOLD, GOOD_LOOK, GoodDot, GoodsLine, HOUSES, HouseMark, MarketMark, RiderMark, WORK_ICON, WorkCard, goodsText, lineText } from './look';
 
@@ -65,6 +68,7 @@ export const OkrosPlay: React.FC<{
 }> = ({ g, me, one, sent, clock, acts, right, note, onHide }) => {
   const ph = g.phase;
   const two = useTwoCols();
+  const nl = useNewLook();
   const [dest, setDest] = useState<number | null>(null);
   const [market, setMarket] = useState<Good[]>([]);
   const max = ph.k === 'act' ? giveMax(g) : [0, 0, 0, 0, 0];
@@ -312,22 +316,61 @@ export const OkrosPlay: React.FC<{
   }
 
   const map = <OkrosBoard g={g} reach={mine && ph.k === 'move' ? can : undefined} sel={dest} onPick={pickDest} />;
+  // the new look: the end is the chronicle's screen (board x-otakhi-matiane), a step the turn frame (x-otakhi-svla)
+  if (nl && ph.k === 'end') {
+    const built = (i: number) => ESTATES - g.players[i].left;
+    const same = (a: number, b: number) => g.players[a].pts === g.players[b].pts && g.players[a].works.length === g.players[b].works.length && built(a) === built(b);
+    const places = placesFrom(ph.order, same);
+    return (
+      <Matiane
+        game="ოქროს ხანა"
+        onClose={onHide}
+        right={right}
+        win={{ winners: ph.winners.map(nm), top: g.players[ph.order[0]]?.pts ?? 0 }}
+        why={sub}
+        places={ph.order.map((i, k) => ({ name: g.players[i].name, place: places[k], score: `${g.players[i].pts} ქულა`, me: i === me }))}
+        extra={<div className="space-y-3.5">{note}{players}{map}{houseBox}</div>}
+        chronicle={g.log.length ? [{ lines: g.log.map(l => lineText(l, g.players.map(p => p.name), me)) }] : undefined}
+        again={acts.again}
+        close={acts.again ? (acts.close ? { label: one ? 'დახურვა' : 'ოთახის დახურვა', onClick: acts.close } : undefined) : acts.leave ? { label: 'დახურვა', onClick: acts.leave } : undefined}
+      />
+    );
+  }
+  const body = (
+    <div className={`py-2 w-full mx-auto ${two ? 'max-w-[1200px] grid grid-cols-2 lg:grid-cols-[3fr_2fr] gap-4 items-start' : 'max-w-[672px] space-y-3.5'}`}>
+      {two ? (
+        <>
+          <div className="min-w-0 sticky top-0 space-y-3">{map}</div>
+          <div className="min-w-0 space-y-3.5">{story}{note}{rideBox}{deeds}{ph.k === 'end' ? <>{players}{houseBox}</> : <>{houseBox}{players}</>}{worksBox}{chronicle}</div>
+        </>
+      ) : ph.k === 'end' ? (
+        <>{story}{note}{players}{map}{houseBox}{chronicle}</>
+      ) : ph.k === 'act' ? (
+        <>{story}{note}{deeds}{map}{houseBox}{players}{worksBox}{chronicle}</>
+      ) : (
+        <>{story}{note}{map}{rideBox}{houseBox}{players}{worksBox}{chronicle}</>
+      )}
+    </div>
+  );
+  if (nl) {
+    const text = mine ? (one ? `სვლაა: ${g.players[g.turn].name}` : 'შენი სვლაა') : sent ? 'გაგზავნილია — ელოდება…' : `სვლაა: ${nm(g.turn)}`;
+    return (
+      <TurnFrame
+        title="ოქროს ხანა"
+        sub={`წელი ${Math.min(g.year, g.years)} / ${g.years}`}
+        right={right}
+        onClose={onHide}
+        seats={g.players.map((p, i) => ({ name: p.name, me: i === me, on: g.turn === i }))}
+        turn={{ text, mine }}
+        footer={sent ? undefined : footer}
+      >
+        {body}
+      </TurnFrame>
+    );
+  }
   return (
     <TableScreen title="ოქროს ხანა" right={right} onClose={onHide} footer={footer}>
-      <div className={`py-2 w-full mx-auto ${two ? 'max-w-[1200px] grid grid-cols-2 lg:grid-cols-[3fr_2fr] gap-4 items-start' : 'max-w-[672px] space-y-3.5'}`}>
-        {two ? (
-          <>
-            <div className="min-w-0 sticky top-0 space-y-3">{map}</div>
-            <div className="min-w-0 space-y-3.5">{story}{note}{rideBox}{deeds}{ph.k === 'end' ? <>{players}{houseBox}</> : <>{houseBox}{players}</>}{worksBox}{chronicle}</div>
-          </>
-        ) : ph.k === 'end' ? (
-          <>{story}{note}{players}{map}{houseBox}{chronicle}</>
-        ) : ph.k === 'act' ? (
-          <>{story}{note}{deeds}{map}{houseBox}{players}{worksBox}{chronicle}</>
-        ) : (
-          <>{story}{note}{map}{rideBox}{houseBox}{players}{worksBox}{chronicle}</>
-        )}
-      </div>
+      {body}
     </TableScreen>
   );
 };

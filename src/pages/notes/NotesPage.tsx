@@ -48,6 +48,9 @@ import { MinusVoices } from '../v2/notes/MinusBar';
 import { usePedal } from '../v2/notes/usePedal';
 import { readPedal, savePedal, type PedalPrefs } from '../v2/notes/pedal';
 import { PedalSettingsSheet, PedalSetupSheet, PedalToast } from '../v2/notes/PedalSheets';
+import { ChoirBar, shortName, type ChoirState } from '../v2/notes/ChoirBar';
+import { LoadFailed, NotesSkeleton, WAIT_MS } from '../../components/shell/PageSkeleton';
+import { offerUndo } from '../../components/ui/kit';
 
 const SPEEDS = [0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.25, 1.4, 1.6, 1.8, 2];
 // V–VI: a song for two choirs (admission program); up to X: the anthology's many-voiced litanies (vol. II №211–217)
@@ -128,8 +131,17 @@ const HymnImg: React.FC<{ o: HymnOrnament; place: 'top' | 'bottom' }> = ({ o, pl
 };
 
 export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, from }) => {
-  const { goNotes, closeNotes, church, setChurch, liturgy, program, following, liveTurn, leading } = useNotes();
+  const { goNotes, closeNotes, church, setChurch, liturgy, program, following, setFollowing, liveTurn, leading, setLeading } = useNotes();
   const nl = useNewLook();
+  // „გუნდი მომყვება“ (the new look's bar): a lost connection leaves the page in the singer's hand until it is back
+  const [online, setOnline] = useState(() => typeof navigator === 'undefined' || navigator.onLine !== false);
+  useEffect(() => {
+    const on = () => setOnline(true);
+    const off = () => setOnline(false);
+    window.addEventListener('online', on);
+    window.addEventListener('offline', off);
+    return () => { window.removeEventListener('online', on); window.removeEventListener('offline', off); };
+  }, []);
   const { selectedChantVariants, toggleVariantSelection } = useChants();
   // a quick listen started from a list stops when the notes open
   useEffect(() => { stopPreview(); }, [vid]);
@@ -200,6 +212,14 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     () => (score && (cutsReady || !needsReflow(score)) ? score.img.map(im => ({ src: bookImageUrl(score, im.src), w: im.w, h: im.h, page: im.page })) : []),
     [score, cutsReady]
   );
+  // the new look waits ten seconds for the notes, then says calmly that they did not come (PageSkeleton's one rule)
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    setSlow(false);
+    if (sheets.length) return;
+    const t = window.setTimeout(() => setSlow(true), WAIT_MS);
+    return () => window.clearTimeout(t);
+  }, [sheets.length, vid]);
   // a scanned score (some program songs) has pictures only: no synthesizer
   const synth = useMemo(() => (score && score.voices.length ? new ChantSynth(score) : null), [score]);
   useEffect(() => () => synth?.dispose(), [synth]);
@@ -1053,6 +1073,30 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     );
   };
 
+  // „გუნდი მომყვება“ in the new look (boards x-ultra-gundi): over the program's notes, one bar saying who turns the pages
+  const choir: ChoirState | null = !nl || from !== 'program' ? null : (() => {
+    const cls = program?.className;
+    if (leading) {
+      return online
+        ? {
+          kind: 'lead', sub: cls ? `„${cls}“ შენთან ერთად ფურცლავს` : 'კლასი შენთან ერთად ფურცლავს',
+          onStop: () => { setLeading(false); offerUndo('გუნდი აღარ მოგყვება', () => setLeading(true)); },
+        }
+        : { kind: 'lost', sub: 'გუნდი შენს ფურცელს ახლა ვერ ხედავს. დაბრუნებას ვცდილობ' };
+    }
+    if (!liveTurn) return null;
+    if (!online) return { kind: 'lost', sub: 'ფურცელი შენია. დაბრუნებას ვცდილობ' };
+    if (following) {
+      return { kind: 'follow', sub: [shortName(liveTurn.by), cls].filter(Boolean).join(' · ') || 'რეგენტი ფურცლავს', onOwn: () => setFollowing(false) };
+    }
+    const at = seq ? seq.indexOf(liveTurn.vid) : -1;
+    const now = findVersion(liveTurn.vid)?.chant.title.replace(/[;\s]+$/, '') ?? '';
+    return {
+      kind: 'own', sub: `რეგენტი ახლა: ${at >= 0 && seq ? `${at + 1} / ${seq.length} · ` : ''}${now}`,
+      onFollow: () => { setFollowing(true); if (liveTurn.vid !== vid) goTo(liveTurn.vid, 1); },
+    };
+  })();
+
   return (
     <div
       ref={rootRef}
@@ -1064,16 +1108,19 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     >
       <div ref={scrollerRef} className="np-scroller" onScroll={onScroll}>
         <div className="np-content">
-          {nl ? (church && (
+          {nl ? ((church || choir) && (
             <div className="np-nlhead">
-              <ChurchBar
-                onExit={leaveChurch}
-                title={land || wide ? title : undefined}
-                tone={score && score.voices.length > 0 ? { value: transpose, onChange: setTone } : undefined}
-                onStart={score && score.voices.length > 0 ? playStart : undefined}
-                dots={dots}
-                voices={VOICES.length}
-              />
+              {church && (
+                <ChurchBar
+                  onExit={leaveChurch}
+                  title={land || wide ? title : undefined}
+                  tone={score && score.voices.length > 0 ? { value: transpose, onChange: setTone } : undefined}
+                  onStart={score && score.voices.length > 0 ? playStart : undefined}
+                  dots={dots}
+                  voices={VOICES.length}
+                />
+              )}
+              {choir && <ChoirBar state={choir} className={`mx-2 mb-2${church ? '' : ' mt-2'}`} />}
             </div>
           )) : church ? (
             <header className="np-caption np-cbar">
@@ -1126,11 +1173,15 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
 
           <div className="np-sheetswrap">
             <div ref={sheetsRef} className="np-sheets" style={{ width: Math.round(fitW * zoom) }}>
-              {!sheets.length && (
+              {!sheets.length && (nl ? (
+                failed || slow
+                  ? <LoadFailed text="ნოტები ვერ მოვიდა. შეამოწმე ინტერნეტი და სცადე თავიდან — ან გახსენი წინასწარ ჩამოწერილი." onSaved={close} />
+                  : <NotesSkeleton className="mt-2" />
+              ) : (
                 <div className="np-loading">
                   {failed ? 'ნოტების ჩატვირთვა ვერ მოხერხდა. შეამოწმე ინტერნეტი ან ჩამოწერე საგალობელი წინასწარ.' : <LoaderCircle className="animate-spin" />}
                 </div>
-              )}
+              ))}
               {sheets.map((im, ii) => (
                 <React.Fragment key={im.src}>
                   <div className="np-pg">

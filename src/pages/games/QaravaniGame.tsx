@@ -2,7 +2,8 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { ChevronDown, Route, Users, Wifi } from 'lucide-react';
 import { useAuth } from '../../context';
 import { useMyClasses, useTeachingClasses } from '../../hooks/useClasses';
-import { Card, Tabs, askConfirm } from '../../components/ui/kit';
+import { Card, askConfirm } from '../../components/ui/kit';
+import { GameIntro, GameTabs } from '../../components/games/gameVariant';
 import { RoomSetup, meOf } from '../../components/games/RoomSetup';
 import { useOpenRequest } from '../../utils/searchOpen';
 import { qaravaniRooms, useQaravaniRoom } from '../../utils/gameRoomFirestore';
@@ -87,7 +88,8 @@ const QaravaniGame: React.FC = () => {
   useEffect(() => () => qaravaniRooms.setVisible(false), []);
 
   /** into a room (an invitation, a row of the list, a new room): one room at a time on this phone */
-  const enter = async (classId: string, roomId: string) => {
+  /** `play` false: a new room's opener only leads (the new look's window „ახალი ოთახი“), so they do not join it */
+  const enter = async (classId: string, roomId: string, play?: boolean) => {
     if (!user) return;
     const cur = qaravaniRooms.get();
     if (cur && (cur.classId !== classId || cur.roomId !== roomId) && cur.room?.host === uid && cur.room.status !== 'over') {
@@ -96,6 +98,7 @@ const QaravaniGame: React.FC = () => {
     }
     qaravaniRooms.open(classId, roomId, meOf(user, mine.find(c => c.id === classId)));
     joinWish.current = { key: `${classId}/${roomId}`, at: Date.now() };
+    if (play === false) opened.current = roomId;
     setRoomOpen(true);
     if (tab !== 'online') setTab('online');
   };
@@ -136,16 +139,18 @@ const QaravaniGame: React.FC = () => {
 
   return (
     <div className="w-full max-w-2xl space-y-4">
-      <section className="rounded-3xl p-4 sm:p-5 bg-gradient-to-br from-[#3b2a1c] to-[#2b1e14] text-[#fbf6ec] shadow-[0_8px_24px_-12px_rgba(43,30,20,0.6)]">
-        <p className="font-serif-ge text-[17px] font-bold leading-snug">ქარავანი</p>
-        <p className="mt-1.5 text-[12.5px] leading-snug text-[#fbf6ec]/85">
-          XIX საუკუნის ბოლოა: ქარავნები საქართველოს გზებზე ღვინოს, თაფლს, ჩაის, ნაბადს, სულგუნს, სპილენძს და აბრეშუმს ეზიდებიან.
-          კამათლები გზას გიხსნის: გაიყვანე ქარავანი ქალაქიდან ქალაქში, ააშენე ქარვასლები, მოიპოვე ქალაქები და შეაგროვე რაც შეიძლება
-          მეტი ტვირთის სახეობა.
-        </p>
-      </section>
+      <GameIntro text={'XIX საუკუნის ბოლოა: ქარავნები საქართველოს გზებზე ღვინოს, თაფლს, ჩაის, ნაბადს, სულგუნს, სპილენძს და აბრეშუმს ეზიდებიან. კამათლები გზას გიხსნის: გაიყვანე ქარავანი ქალაქიდან ქალაქში, ააშენე ქარვასლები, მოიპოვე ქალაქები და შეაგროვე რაც შეიძლება მეტი ტვირთის სახეობა.'}>
+        <section className="rounded-3xl p-4 sm:p-5 bg-gradient-to-br from-[#3b2a1c] to-[#2b1e14] text-[#fbf6ec] shadow-[0_8px_24px_-12px_rgba(43,30,20,0.6)]">
+          <p className="font-serif-ge text-[17px] font-bold leading-snug">ქარავანი</p>
+          <p className="mt-1.5 text-[12.5px] leading-snug text-[#fbf6ec]/85">
+            XIX საუკუნის ბოლოა: ქარავნები საქართველოს გზებზე ღვინოს, თაფლს, ჩაის, ნაბადს, სულგუნს, სპილენძს და აბრეშუმს ეზიდებიან.
+            კამათლები გზას გიხსნის: გაიყვანე ქარავანი ქალაქიდან ქალაქში, ააშენე ქარვასლები, მოიპოვე ქალაქები და შეაგროვე რაც შეიძლება
+            მეტი ტვირთის სახეობა.
+          </p>
+        </section>
+      </GameIntro>
 
-      <Tabs cols={2} value={tab} onChange={setTab} items={[{ id: 'online', label: 'ონლაინ', Icon: Wifi }, { id: 'table', label: 'ჰიბრიდული', Icon: Users }]} />
+      <GameTabs cols={2} value={tab} onChange={setTab} items={[{ id: 'online', label: 'ონლაინ', Icon: Wifi }, { id: 'table', label: 'ჰიბრიდული', Icon: Users }]} />
       <HowTo key={tab} id={`qaravani-${tab}`} steps={HOW[tab]} />
 
       {tab === 'online' ? (
@@ -159,7 +164,8 @@ const QaravaniGame: React.FC = () => {
           closeMine={qaravaniRooms.host.close}
           hostLine="ოთახს შენ ხსნი და შენც თამაშობ (ან მხოლოდ უძღვები). კლასის წევრებს მოწვევა მიუვათ ჩატში და ტელეფონზე; თამაშობს 2–5, დანარჩენები უყურებენ."
           other="ჰიბრიდული — ერთი ტელეფონით, ხელიდან ხელში"
-          onEnter={(c, r) => { void enter(c, r); }}
+          playLine="კლასის წევრებს მოწვევა მიუვათ ჩატში და ტელეფონზე; თამაშობს 2–5, დანარჩენები უყურებენ. მოსაცდელ ოთახშიც შეცვლი."
+          onEnter={(c, r, play) => { void enter(c, r, play); }}
           onResume={() => setRoomOpen(true)}
         />
       ) : <QaravaniTable />}

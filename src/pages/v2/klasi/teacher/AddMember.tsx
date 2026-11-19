@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { Loader2, Plus } from 'lucide-react';
+import { Waiting } from '../../../../components/shell/PageSkeleton';
 import { useAuth } from '../../../../context';
 import type { SchoolClass } from '../../../../hooks/useClasses';
 import { shownName, useDirectory } from '../../../../utils/directory';
@@ -46,7 +47,7 @@ export const AddMemberSheetV2: React.FC<{ cls: SchoolClass; open: boolean; onClo
       <SearchBox value={q} onChange={setQ} placeholder="მოძებნე სახელით" autoFocus />
       {note && <p className="px-1.5 text-meta text-danger">{note}</p>}
       {loading ? (
-        <p className="flex justify-center py-8 text-mut"><Loader2 aria-hidden="true" className="size-5 animate-spin" /></p>
+        <Waiting field={false} rows={4} quiet />
       ) : shown.length === 0 ? (
         <Note>ვერ მოიძებნა.</Note>
       ) : (

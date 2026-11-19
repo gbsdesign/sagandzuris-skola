@@ -21,8 +21,9 @@ const readImage = (file: File) => new Promise<HTMLImageElement>((resolve, reject
   img.src = url;
 });
 
-/** The window over a picked picture. `onDone(dataUrl)`; `onRemove` only when a photo of mine is already kept. */
-export const PhotoCrop: React.FC<{ file: File; onDone: (dataUrl: string) => void; onClose: () => void }> = ({ file, onDone, onClose }) => {
+/** The crop's state and gestures, shared by the old window below and the new look's (pages/v2/propili/PhotoCropV2):
+ *  the picture, its zoom and shift, the finger handlers, and `cut()` = the small square JPEG as a data URL. */
+export const usePhotoCrop = (file: File) => {
   const [img, setImg] = useState<HTMLImageElement | null>(null);
   const [failed, setFailed] = useState(false);
   // the picture's scale over „fit the circle“ and its centre's shift from the window's centre, in window px
@@ -82,8 +83,8 @@ export const PhotoCrop: React.FC<{ file: File; onDone: (dataUrl: string) => void
     if (drag.current?.id === e.pointerId) drag.current = null;
   };
 
-  const done = () => {
-    if (!img) return;
+  const cut = (): string | null => {
+    if (!img) return null;
     const c = document.createElement('canvas');
     c.width = PHOTO_OUT; c.height = PHOTO_OUT;
     const ctx = c.getContext('2d')!;
@@ -93,8 +94,20 @@ export const PhotoCrop: React.FC<{ file: File; onDone: (dataUrl: string) => void
     ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img, left * k, top * k, w * k, h * k);
     triggerHaptic(12);
-    onDone(c.toDataURL('image/jpeg', 0.84));
+    return c.toDataURL('image/jpeg', 0.84);
   };
+
+  return {
+    img, failed, zoom, w, h, shift, setZoomKeeping, cut,
+    view: VIEW, maxZoom: MAX_ZOOM,
+    pointer: { onPointerDown: onDown, onPointerMove: onMove, onPointerUp: onUp, onPointerCancel: onUp },
+  };
+};
+
+/** The window over a picked picture. `onDone(dataUrl)`; `onRemove` only when a photo of mine is already kept. */
+export const PhotoCrop: React.FC<{ file: File; onDone: (dataUrl: string) => void; onClose: () => void }> = ({ file, onDone, onClose }) => {
+  const { img, failed, zoom, w, h, shift, setZoomKeeping, cut, pointer } = usePhotoCrop(file);
+  const done = () => { const url = cut(); if (url) onDone(url); };
 
   return (
     <Sheet open onClose={onClose} title="ფოტოს მორგება" footer={
@@ -109,7 +122,7 @@ export const PhotoCrop: React.FC<{ file: File; onDone: (dataUrl: string) => void
         <div className="space-y-4">
           <p className="text-[13px] leading-snug text-[#8a7a6a] text-center">თითით გადაადგილე, რომ სახე შუაში მოხვდეს; გაადიდე ზოლით ან ორი თითით.</p>
           <div className="relative mx-auto select-none touch-none" style={{ width: VIEW, height: VIEW }}
-            onPointerDown={onDown} onPointerMove={onMove} onPointerUp={onUp} onPointerCancel={onUp}>
+            {...pointer}>
             <div className="absolute inset-0 rounded-full overflow-hidden bg-[#efe5d4] ring-4 ring-white shadow-[0_10px_30px_-14px_rgba(74,52,38,0.5)]">
               {img && (
                 <img src={img.src} alt="" draggable={false}

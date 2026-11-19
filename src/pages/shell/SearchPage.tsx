@@ -13,6 +13,8 @@ import { useVoiceSearch, voiceSupported } from './voiceSearch';
 import { VoiceSheet } from './search/VoiceSheet';
 import { CHIP_ORDER, SearchView, type SearchFilter, type SearchRow } from './search/SearchView';
 import { countOpen, readOften } from './search/often';
+import { openAssistant, useAssistantAllowed } from '../v2/damkhmare/open';
+import { openMkitkhe } from '../v2/mkitkhe/open';
 
 const SingSearch = lazy(() => import('../v2/search/SingSearch').then(m => ({ default: m.SingSearch })));
 
@@ -98,6 +100,8 @@ export const SearchPage: React.FC = () => {
   const canVoice = useMemo(voiceSupported, []);
   const canSing = useMemo(() => typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia, []);
   const [singing, setSinging] = useState(false);
+  // „AI დამხმარე“ when nothing was found — only for those who have the school's AI helper („მკითხე“ is everyone's)
+  const canAsk = useAssistantAllowed();
   const closeVoice = () => { voice.stop(); setVoiceOpen(false); };
   const onFilter = (f: SearchFilter) => { setFilter(f); lastFilter = f; };
 
@@ -134,6 +138,8 @@ export const SearchPage: React.FC = () => {
       onVoice={canVoice ? () => { setVoiceOpen(true); voice.start(); } : undefined}
       heardNote={heardNote}
       onSing={canSing ? () => setSinging(true) : undefined}
+      onAsk={canAsk ? () => openAssistant() : undefined}
+      onHelper={words => openMkitkhe({ query: words })}
     />
     <VoiceSheet open={voiceOpen} state={voice.state} heard={voice.heard} error={voice.error} onClose={closeVoice} onRetry={voice.start} />
     {singing && <Suspense fallback={null}><SingSearch onClose={() => setSinging(false)} /></Suspense>}
