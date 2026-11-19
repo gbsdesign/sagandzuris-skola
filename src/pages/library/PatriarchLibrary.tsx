@@ -4,6 +4,7 @@ import { BookHead, BookNav } from './BookHead';
 import { MiniCover } from './Shelf';
 import { DRIVE_KEY, P_CATEGORIES, PCategory, isHidden } from '../../data/patriarchLibrary';
 import { FIELD } from '../../components/ui/kit';
+import { PatriarchText, TextIndex, useTextIndex } from './PatriarchText';
 
 // „საპატრიარქოს ბიბლიოთეკა“ (2026-11-18): the shelf's cover opens the categories (one Drive folder each), a category
 // („patriarq:saints“) its books, a book („patriarq:saints:<fileId>“) the book itself in Drive's viewer. The lists come
@@ -16,6 +17,8 @@ interface PBook { key: string; title: string; files: { id: string; ext: string; 
 const TTL = 6 * 60 * 60 * 1000;
 const cacheKey = (folder: string) => `sg-patriarq:${folder}`;
 const READABLE = ['pdf', 'doc', 'docx'];
+/** the book's file that has its text taken out, if any */
+const textOf = (b: PBook, ix: TextIndex | null) => (ix ? b.files.find(f => ix.i[f.id]) : undefined);
 
 const extOf = (name: string) => (/\.([a-z0-9]{2,5})$/i.exec(name)?.[1] ?? '').toLowerCase();
 /** the title a reader sees: no extension, no „ (1)“ copy mark, „_“ as a dash, one space */
@@ -106,7 +109,7 @@ const SearchBox: React.FC<{ value: string; onChange: (v: string) => void; placeh
   </label>
 );
 
-const BookRow: React.FC<{ b: PBook; cat?: string; onOpen: () => void }> = ({ b, cat, onOpen }) => {
+const BookRow: React.FC<{ b: PBook; cat?: string; text?: boolean; onOpen: () => void }> = ({ b, cat, text, onOpen }) => {
   const p = primary(b);
   const exts = b.files.map(f => f.ext).filter(Boolean);
   return (
@@ -115,7 +118,7 @@ const BookRow: React.FC<{ b: PBook; cat?: string; onOpen: () => void }> = ({ b, 
         <span className="flex-1 min-w-0">
           <span className="block font-serif-ge text-[15px] font-bold leading-snug text-[#2a2017] group-hover:text-[#7a2028] transition-colors">{b.title}</span>
           <span className="mt-0.5 block text-[12px] leading-snug text-[#8a7a6a]">
-            {cat && <>{cat} · </>}{exts.join(' · ').toUpperCase()}{p.size ? ` · ${mb(p.size)}` : ''}
+            {cat && <>{cat} · </>}{text && <span className="font-semibold text-[#4f5a2e]">ტექსტი · </span>}{exts.join(' · ').toUpperCase()}{p.size ? ` · ${mb(p.size)}` : ''}
           </span>
         </span>
         <ChevronRight className="w-5 h-5 shrink-0 text-[#cdbba3] group-hover:text-[#7a2028] group-hover:translate-x-0.5 transition-all" />
@@ -124,13 +127,24 @@ const BookRow: React.FC<{ b: PBook; cat?: string; onOpen: () => void }> = ({ b, 
   );
 };
 
-/** a book open: Drive's own viewer for pdf and Word, a download for the formats it cannot show */
-const BookView: React.FC<{ b: PBook }> = ({ b }) => {
+/** a book open: its text read in the app when it was taken out, else (or by choice) Drive's own viewer for pdf and Word,
+ *  a download for the formats it cannot show */
+const VIEW_KEY = 'sg-patriarq-view';
+const BookView: React.FC<{ b: PBook; ix: TextIndex | null }> = ({ b, ix }) => {
   const p = primary(b);
   const viewable = READABLE.includes(p.ext);
+  const t = textOf(b, ix);
+  const [view, setView] = useState<'text' | 'pdf'>(() => { try { return localStorage.getItem(VIEW_KEY) === 'pdf' ? 'pdf' : 'text'; } catch { return 'text'; } });
+  const pick = (v: 'text' | 'pdf') => { setView(v); try { localStorage.setItem(VIEW_KEY, v); } catch { /* not kept */ } };
+  const showText = !!t && view === 'text';
+  const tab = (v: 'text' | 'pdf', label: string) => (
+    <button type="button" aria-pressed={view === v} onClick={() => pick(v)}
+      className={`flex-1 h-10 rounded-full text-[14px] font-bold transition cursor-pointer ${view === v ? 'bg-[#7a2028] text-white' : 'text-[#4a3426]'}`}>{label}</button>
+  );
   return (
     <div>
       <BookHead sub={<span className="font-serif-ge font-bold text-[#2a2017] text-[14px]">{b.title}</span>} />
+      {t && <div className="mt-3 flex gap-1 p-1 rounded-full bg-white ring-1 ring-[#e8dcc8]">{tab('text', 'ტექსტი')}{tab('pdf', p.ext === 'pdf' ? 'PDF' : 'ფაილი')}</div>}
       <div className="mt-3 flex flex-wrap gap-2">
         {b.files.map(f => (
           <a key={f.id} href={`https://drive.google.com/uc?export=download&id=${f.id}`} target="_blank" rel="noopener noreferrer"
@@ -138,12 +152,16 @@ const BookView: React.FC<{ b: PBook }> = ({ b }) => {
             <Download className="w-4 h-4" /> {f.ext.toUpperCase() || 'ფაილი'}{f.size ? ` · ${mb(f.size)}` : ''}
           </a>
         ))}
-        <a href={`https://drive.google.com/file/d/${p.id}/view`} target="_blank" rel="noopener noreferrer"
-          className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full bg-white ring-1 ring-[#e8dcc8] text-[13px] font-semibold text-[#4a3426] hover:ring-[#7a2028]/40">
-          <ExternalLink className="w-4 h-4" /> ცალკე გახსნა
-        </a>
+        {!showText && (
+          <a href={`https://drive.google.com/file/d/${p.id}/view`} target="_blank" rel="noopener noreferrer"
+            className="inline-flex items-center gap-1.5 h-10 px-3.5 rounded-full bg-white ring-1 ring-[#e8dcc8] text-[13px] font-semibold text-[#4a3426] hover:ring-[#7a2028]/40">
+            <ExternalLink className="w-4 h-4" /> ცალკე გახსნა
+          </a>
+        )}
       </div>
-      {viewable ? (
+      {showText ? (
+        <div className="mt-4"><PatriarchText key={t.id} ix={ix!} id={t.id} title={b.title} /></div>
+      ) : viewable ? (
         <div className={`${CARD} mt-3 overflow-hidden`}>
           <iframe title={b.title} src={`https://drive.google.com/file/d/${p.id}/preview`} className="w-full h-[78vh] min-h-[420px] border-0 bg-[#f6f1e7]" allow="autoplay" />
         </div>
@@ -160,6 +178,7 @@ export const PatriarchLibrary: React.FC<{ nav: BookNav }> = ({ nav }) => {
   const [catId, fileId] = (nav.part ?? '').split(':');
   const cat = P_CATEGORIES.find(c => c.id === catId);
   const lists = useFolders(P_CATEGORIES);
+  const ix = useTextIndex();
   const books = useMemo(() => {
     const m: Record<string, PBook[]> = {};
     for (const c of P_CATEGORIES) { const l = lists[c.id]; if (Array.isArray(l)) m[c.id] = toBooks(l); }
@@ -172,7 +191,7 @@ export const PatriarchLibrary: React.FC<{ nav: BookNav }> = ({ nav }) => {
   // a book
   if (cat && fileId) {
     const b = books[cat.id]?.find(x => x.files.some(f => f.id === fileId));
-    if (b) return <BookView b={b} />;
+    if (b) return <BookView b={b} ix={ix} />;
     return <p className="py-10 text-center text-[14px] text-[#8a7a6a]">{lists[cat.id] === 'error' ? 'წიგნების სია ვერ ჩაიტვირთა — შეამოწმე ინტერნეტი.' : 'იტვირთება…'}</p>;
   }
 
@@ -190,7 +209,7 @@ export const PatriarchLibrary: React.FC<{ nav: BookNav }> = ({ nav }) => {
           <p className="py-10 text-center text-[14px] text-[#8a7a6a]">ასეთი წიგნი ვერ ვიპოვე.</p>
         ) : (
           <ul className={`${CARD} mt-4 p-1.5 sm:p-2 divide-y divide-[#f1e8da]`}>
-            {shown!.map(b => <BookRow key={b.key} b={b} onOpen={() => nav.go(`${cat.id}:${primary(b).id}`)} />)}
+            {shown!.map(b => <BookRow key={b.key} b={b} text={!!textOf(b, ix)} onOpen={() => nav.go(`${cat.id}:${primary(b).id}`)} />)}
           </ul>
         )}
       </div>
@@ -211,7 +230,7 @@ export const PatriarchLibrary: React.FC<{ nav: BookNav }> = ({ nav }) => {
           <p className="py-10 text-center text-[14px] text-[#8a7a6a]">ასეთი წიგნი ვერ ვიპოვე.</p>
         ) : (
           <ul className={`${CARD} mt-4 p-1.5 sm:p-2 divide-y divide-[#f1e8da]`}>
-            {found.map(({ c, b }) => <BookRow key={`${c.id}:${b.key}`} b={b} cat={c.title} onOpen={() => nav.go(`${c.id}:${primary(b).id}`)} />)}
+            {found.map(({ c, b }) => <BookRow key={`${c.id}:${b.key}`} b={b} cat={c.title} text={!!textOf(b, ix)} onOpen={() => nav.go(`${c.id}:${primary(b).id}`)} />)}
           </ul>
         )
       ) : (
