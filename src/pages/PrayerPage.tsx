@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Bell, BellOff, Check, ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { useAuth, useNavigation } from '../context';
 import { KATHISMAS, PRAYER_HOURS, PrayerHour, bibleChapterId, hourClock, parseBibleId, prayerTitle, todaysWeekPrayerId } from '../data/prayers';
@@ -12,6 +12,7 @@ import { useAccess } from '../hooks/useAccess';
 import { markRead, useMyPsalterGroups, useTakenByMe } from '../hooks/usePsalter';
 import { cycleOf, georgiaToday, kathismasOf, ownersIn } from '../utils/psalter';
 import { myHabitOfPrayer, rememberRead } from '../utils/prayerHabits';
+import { hasPrayerAt, takePrayerAt } from '../utils/prayerJump';
 import {
   REMINDER_OFFSETS,
   askNotificationPermission,
@@ -77,6 +78,8 @@ export const usePrayerReader = () => {
   const setNight = (on: boolean) => { setNightState(on); try { localStorage.setItem(NIGHT_KEY, on ? '1' : '0'); } catch { /* device only */ } };
   const [textEl, setTextEl] = useState<HTMLDivElement | null>(null);
   useKhutsuri(textEl, khutsuri);
+  // which prayer `html` holds (it lags a render behind a new id)
+  const loadedFor = useRef<string | null>(null);
   // the whole screen goes dark with the card (the user, 2026-11-06: „მთლიანად ვრცელდებოდეს“) — html.sg-night-page, index.css
   useEffect(() => {
     document.documentElement.classList.toggle('sg-night-page', night);
@@ -91,12 +94,26 @@ export const usePrayerReader = () => {
     setHtml(null);
     setFailed(false);
     loadText(selectedPrayerId)
-      .then(text => alive && setHtml(withoutBarTitle(text, selectedPrayerId)))
+      .then(text => { if (!alive) return; loadedFor.current = selectedPrayerId; setHtml(withoutBarTitle(text, selectedPrayerId)); })
       .catch(() => alive && setFailed(true));
     return () => {
       alive = false;
     };
   }, [selectedPrayerId]);
+
+  // opened at a heading (utils/prayerJump.ts): once the text is drawn, scroll there, under the sticky bars
+  useEffect(() => {
+    if (!html || !textEl || !selectedPrayerId || loadedFor.current !== selectedPrayerId) return;
+    // a heading asked for another prayer is stale by now
+    if (!hasPrayerAt(selectedPrayerId)) { takePrayerAt(selectedPrayerId); return; }
+    const frame = requestAnimationFrame(() => {
+      const heading = takePrayerAt(selectedPrayerId);
+      if (!heading) return;
+      const el = Array.from(textEl.querySelectorAll('h2, h3')).find(h => (h.textContent || '').includes(heading));
+      if (el) window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - 76 });
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [html, textEl, selectedPrayerId]);
 
   const id = selectedPrayerId;
   const hour = id ? PRAYER_HOURS.find(h => h.id === id) : undefined;

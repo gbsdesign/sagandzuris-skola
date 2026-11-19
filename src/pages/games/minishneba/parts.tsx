@@ -1,6 +1,7 @@
 import React from 'react';
 import { Ban, Check, X } from 'lucide-react';
 import { type ClueFate, type JoResult } from '../../../utils/minishneba';
+import { useNewLook } from '../../../design/newLook';
 
 // The pieces of „ერთი მინიშნება“ (2026-11-01): the clues as notes on the table (a struck one crossed, its word shown only at
 // the end), the thirteen cards' marks and the verdict of a guess.
@@ -11,7 +12,41 @@ const STRUCK: Record<ClueFate, string> = { ok: '', same: 'ერთნაირ�
 
 /** the clues: a note each; a struck one crossed — its word shows only once the card is open; `onTap` lets the givers strike
  * one by hand (and take it back) */
-export const Notes: React.FC<{ notes: Note[]; open?: boolean; big?: boolean; onTap?: (i: number) => void }> = ({ notes, open, big, onTap }) => (
+export const Notes: React.FC<{ notes: Note[]; open?: boolean; big?: boolean; onTap?: (i: number) => void }> = props =>
+  (useNewLook() ? <Notes2 {...props} /> : <OldNotes {...props} />);
+
+/** the new look (board x-tamashi-asoebi): the clues as pale gold pills that wrap; a struck one grey */
+const Notes2: React.FC<{ notes: Note[]; open?: boolean; big?: boolean; onTap?: (i: number) => void }> = ({ notes, open, big, onTap }) => (
+  <ul className="flex flex-wrap gap-2" aria-label="მინიშნებები">
+    {notes.map((n, i) => {
+      const ok = n.fate === 'ok';
+      const Box = onTap && n.fate !== 'empty' ? 'button' : 'div';
+      return (
+        <li key={i} className="max-w-full">
+          <Box
+            {...(Box === 'button' ? { type: 'button' as const, onClick: () => onTap?.(i), 'aria-pressed': !ok } : {})}
+            className={`flex min-h-11 max-w-full flex-col items-center justify-center rounded-tile px-4 py-1.5 text-center ${ok ? 'bg-gold-tint text-ink' : 'bg-track text-mut'} ${
+              Box === 'button' ? 'cursor-pointer transition active:scale-[0.97] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine/60' : ''}`}
+          >
+            {ok ? (
+              <span className={`font-bold leading-tight [overflow-wrap:anywhere] ${big ? 'text-title' : 'text-lead'}`}>{n.text}</span>
+            ) : (
+              <span className="inline-flex items-center gap-1.5">
+                {open && n.fate !== 'empty'
+                  ? <span className="text-lead font-bold leading-tight line-through [overflow-wrap:anywhere]">{n.text}</span>
+                  : <Ban className="size-4 shrink-0" aria-hidden="true" />}
+                <span className="text-cap font-bold">{STRUCK[n.fate]}</span>
+              </span>
+            )}
+            {n.who && <span className="text-cap leading-tight text-mut [overflow-wrap:anywhere]">{n.who}</span>}
+          </Box>
+        </li>
+      );
+    })}
+  </ul>
+);
+
+const OldNotes: React.FC<{ notes: Note[]; open?: boolean; big?: boolean; onTap?: (i: number) => void }> = ({ notes, open, big, onTap }) => (
   <ul className={`grid gap-2 ${notes.length > 4 ? 'grid-cols-2 sm:grid-cols-3' : 'grid-cols-2'}`} aria-label="მინიშნებები">
     {notes.map((n, i) => {
       const ok = n.fate === 'ok';
@@ -71,6 +106,7 @@ export const JoDots: React.FC<{ res: readonly (JoResult | undefined)[]; n: numbe
 
 /** a guess's verdict */
 export const Verdict: React.FC<{ res: JoResult | undefined; word: string; guess: string; last: boolean }> = ({ res, word, guess, last }) => {
+  const nl = useNewLook();
   if (!res) return null;
   const right = res === 'right';
   const text = right
@@ -80,7 +116,9 @@ export const Verdict: React.FC<{ res: JoResult | undefined; word: string; guess:
       : `„${word}“ იყო — ბარათი გადაიდო.`;
   return (
     <p
-      className={`flex items-start gap-2 rounded-2xl px-4 py-2.5 text-[15.5px] font-bold leading-snug ${right ? 'bg-[#e6f2e9] text-[#2f7d4f]' : res === 'wrong' ? 'bg-[#fde8e8] text-[#b23a48]' : 'bg-[#f1e8d9] text-[#75685a]'}`}
+      className={nl
+        ? `flex items-start gap-2 rounded-tile px-4 py-2.5 text-body font-bold leading-snug ${right ? 'bg-leaf-tint text-leaf-ink' : res === 'wrong' ? 'bg-tint text-danger' : 'bg-track text-mut'}`
+        : `flex items-start gap-2 rounded-2xl px-4 py-2.5 text-[15.5px] font-bold leading-snug ${right ? 'bg-[#e6f2e9] text-[#2f7d4f]' : res === 'wrong' ? 'bg-[#fde8e8] text-[#b23a48]' : 'bg-[#f1e8d9] text-[#75685a]'}`}
       role="status"
     >
       {right ? <Check className="w-5 h-5 shrink-0 mt-0.5" /> : <X className="w-5 h-5 shrink-0 mt-0.5" />}

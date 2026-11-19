@@ -13,7 +13,12 @@ export const useAccountActions = () => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const leave = async () => {
-    const yes = await askConfirm({ title: 'გამოხვიდე ანგარიშიდან?', text: user?.email || undefined, ok: 'გამოსვლა' });
+    // board x-dadastureba: what happens next, not only who is signed in
+    const yes = await askConfirm({
+      title: 'გამოხვიდე ანგარიშიდან?',
+      text: `ხელახლა შესასვლელად Google ან ელფოსტა დაგჭირდება. რაც ისწავლე, ანგარიშში რჩება.${user?.email ? ` (${user.email})` : ''}`,
+      ok: 'გამოსვლა',
+    });
     if (yes) await signOutUser();
   };
   const remove = async () => {

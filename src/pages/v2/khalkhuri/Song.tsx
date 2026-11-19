@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import {
-  ArrowRightLeft, Bookmark, Check, ChevronLeft, ChevronRight, CloudDownload, Download, FileText, GraduationCap, LoaderCircle,
+  ArrowRightLeft, Bookmark, Check, CloudDownload, Download, FileText, GraduationCap, LoaderCircle,
   MoreHorizontal, Music, Share2, TextAlignStart,
 } from 'lucide-react';
 import { useChants } from '../../../context';
@@ -15,7 +15,8 @@ import { addressOf } from '../../../utils/pageAddress';
 import { triggerHaptic } from '../../../utils/haptics';
 
 // A folk song's page in the new look (board x-simghera): the bar (the song, where it is from, ⋯), the recording playing on
-// its own card (‹ › move between the recordings), the recordings numbered, then the words and „ისწავლე ხმა-ხმად“ (the
+// its own card (a seek line with its times, ‹ ▶ ›; ‹ › move between the recordings), the recordings numbered, then the
+// words and „ისწავლე ხმა-ხმად“ (the
 // learning mode). ⬇ MP3, ☁ offline, sharing, „ჩემს სიაში“ and an admin's „გადატანა“ live in ⋯. The page itself — its history
 // step, the learning mode, the move — is components/maps/SongPage.tsx's.
 
@@ -50,19 +51,12 @@ export const SongScreenV2: React.FC<{
 
       {/* the recording playing */}
       {take ? (
-        <Card className="flex flex-col gap-2 px-3 pt-3.5 pb-3">
-          <div className="flex items-center gap-2 pl-1">
-            <div className="min-w-0 flex-1">
-              <div className="text-meta text-mut">ახლა უკრავს</div>
-              <div className="text-head leading-tight font-bold wrap-break-word">{take.label}{take.sub ? <span className="font-semibold text-mut"> · {take.sub}</span> : null}</div>
-            </div>
-            {takes.length > 1 && (
-              <>
-                <RoundButton label="წინა ჩანაწერი" tone="page" size={44} disabled={takeIdx === 0} onClick={() => go(takeIdx - 1)}><ChevronLeft aria-hidden="true" /></RoundButton>
-                <RoundButton label="შემდეგი ჩანაწერი" tone="page" size={44} disabled={takeIdx >= takes.length - 1} onClick={() => go(takeIdx + 1)}><ChevronRight aria-hidden="true" /></RoundButton>
-              </>
-            )}
+        <Card className="flex flex-col gap-3.5 p-[18px]">
+          <div className="min-w-0">
+            <div className="text-meta text-mut">ახლა უკრავს</div>
+            <div className="mt-0.5 text-head leading-tight font-bold wrap-break-word">{take.label}{take.sub ? <span className="font-semibold text-mut"> · {take.sub}</span> : null}</div>
           </div>
+          {/* the school's player drawn as ‹ ▶ › with its times (components/ChantPlayer.tsx layout 'v2'); ‹ › = the recordings */}
           <TakePlayer
             key={`${song.id}-${takeIdx}`}
             take={take}
@@ -70,6 +64,11 @@ export const SongScreenV2: React.FC<{
             subtitle={`${region.nameGe} · ${take.label}`}
             hideNotesButton
             pauseToken={learning ? 1 : 0}
+            v2
+            steps={takes.length > 1 ? {
+              prev: takeIdx > 0 ? () => go(takeIdx - 1) : undefined,
+              next: takeIdx < takes.length - 1 ? () => go(takeIdx + 1) : undefined,
+            } : undefined}
           />
         </Card>
       ) : song.soundcloud ? (

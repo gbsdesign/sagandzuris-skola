@@ -1,5 +1,5 @@
-import React, { useRef, useState } from 'react';
-import { Check, ChevronRight, GripVertical, MoreHorizontal, Plus, X } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { BookOpen, Check, ChevronRight, GripVertical, MoreHorizontal, Plus, X } from 'lucide-react';
 import { useAuth, useNavigation } from '../../../context';
 import { NAME_LISTS, NameListId, guessGender, nameCount, nameParts } from '../../../utils/commemoration';
 import { Gender } from '../../../data/georgianNames';
@@ -12,6 +12,8 @@ import { triggerHaptic } from '../../../utils/haptics';
 import { Button, Card, Field, Note, Pill, Press, RoundButton, Row, Rows, Seg, Sheet, Small, ToggleRow, TopBar } from '../../../components/ui2';
 import { cx, FOCUS, FOCUS_IN } from '../../../components/ui2/cx';
 import { PinRound } from '../gza/parts';
+import { hideNav } from '../../../design/newLook';
+import { prayerAt } from '../../../utils/prayerJump';
 
 /** x-mosakhsenebeli — „მოსახსენებელი“ in the new look: the five cards became two tabs (ცოცხალნი · მიცვალებულნი), one field and
  *  one round + to add; the other lists (უძლურნი, განსაცდელში მყოფნი, the psalter group's people), „თავისით დალაგება“, moving
@@ -25,11 +27,15 @@ const EXTRA: { id: NameListId; title: string }[] = [
   { id: 'group', title: 'ჯგუფის წევრები' },
 ];
 const fullTitle = (id: NameListId) => NAME_LISTS.find(l => l.id === id)?.title ?? '';
+// „წაიკითხე ლოცვა სახელებით“: the morning prayer's own commemoration, where these lists' names are read
+const PRAYER_OF: Record<Tab, string> = { living: 'ლოცვა ცოცხალთათვის', deceased: 'ლოცვა გარდაცვალებულთათვის' };
 
 export const CommemorationScreen: React.FC = () => {
-  const { handleGoBack } = useNavigation();
+  const { handleGoBack, openPrayer } = useNavigation();
   const { user } = useAuth();
   const page = useCommemorationPage();
+  // the main button stands at the bottom; the menu steps aside meanwhile
+  useEffect(() => hideNav(), []);
   const { lists } = page;
   const [tab, setTabState] = useState<Tab>(() => { try { return sessionStorage.getItem(TAB_KEY) === 'deceased' ? 'deceased' : 'living'; } catch { return 'living'; } });
   const setTab = (t: Tab) => { setTabState(t); try { sessionStorage.setItem(TAB_KEY, t); } catch { /* the visit only */ } };
@@ -39,7 +45,7 @@ export const CommemorationScreen: React.FC = () => {
   const [reorder, setReorder] = useState(false);
 
   return (
-    <div className="mx-auto flex w-full max-w-2xl flex-col gap-3 pb-4">
+    <div className="mx-auto flex min-h-[100dvh] w-full max-w-2xl flex-col gap-3">
       <TopBar
         title="მოსახსენებელი"
         onBack={handleGoBack}
@@ -55,6 +61,11 @@ export const CommemorationScreen: React.FC = () => {
         onChange={setTab}
       />
       <ListEditor key={tab} {...page.listProps(tab)} reorder={reorder} />
+      <div className="sticky bottom-0 mt-auto bg-page pt-2 pb-[max(16px,env(safe-area-inset-bottom))]">
+        <Button full icon={<BookOpen />} onClick={() => { prayerAt('dila', PRAYER_OF[tab]); openPrayer('dila'); }}>
+          წაიკითხე ლოცვა სახელებით
+        </Button>
+      </div>
 
       <Sheet open={more} title="მოსახსენებელი" onClose={() => setMore(false)}>
         <Rows>

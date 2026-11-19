@@ -1,9 +1,9 @@
 import { useEffect, useSyncExternalStore } from 'react';
-import { doc, getDoc, type Bytes } from 'firebase/firestore';
+import { deleteField, doc, getDoc, onSnapshot, setDoc, type Bytes } from 'firebase/firestore';
 import { db } from '../../firebase';
 import {
-  SPEED_RATE, VOICE_KEY, readVoiceSettings, sentenceHash, setTeacherTalking, splitSentences,
-  type VoiceKind, type VoiceSettings,
+  SPEED_RATE, VOICE_KEY, cleanPhraseTexts, readVoiceSettings, sentenceHash, setTeacherTalking, splitSentences,
+  type PhraseTexts, type VoiceKind, type VoiceSettings,
 } from '../../utils/teacherVoice';
 
 // „მასწავლებლის ხმა“ on the phone (board x-ai-khma): the device's settings (sg-ai-voice), the list of what is recorded
@@ -205,3 +205,32 @@ export const useTeacherVoiceAuto = (text: string | undefined) => {
   }, [text, has]);
   return { has, play: () => { if (text) void speakTeacher(text, true); } };
 };
+
+// ---- the school's own words (board x-ai-prazebi) -------------------------------------------------------------------
+// settings/aiPhrases { texts: { [hash]: text } }: one live listener for the whole app while any teacher's line is on
+// screen, the last copy kept on the device (the lesson works offline).
+
+const PHRASES_KEY = 'sg-ai-phrases';
+let phrases: PhraseTexts = cleanPhraseTexts((() => { try { return JSON.parse(read(PHRASES_KEY) || '{}'); } catch { return {}; } })());
+const phraseListeners = new Set<() => void>();
+let phraseStop: (() => void) | null = null;
+const phrasesRef = () => doc(db, 'settings', 'aiPhrases');
+const subPhrases = (l: () => void) => {
+  phraseListeners.add(l);
+  if (!phraseStop) {
+    phraseStop = onSnapshot(phrasesRef(), snap => {
+      phrases = cleanPhraseTexts(snap.data()?.texts);
+      try { localStorage.setItem(PHRASES_KEY, JSON.stringify(phrases)); } catch { /* read again next time */ }
+      phraseListeners.forEach(f => f());
+    }, e => console.warn('ai phrases:', e?.code || e));
+  }
+  return () => {
+    phraseListeners.delete(l);
+    if (!phraseListeners.size && phraseStop) { phraseStop(); phraseStop = null; }
+  };
+};
+/** the school's changed sentences, live */
+export const usePhraseTexts = () => useSyncExternalStore(subPhrases, () => phrases);
+/** the school changes one sentence (null = back to the app's own) */
+export const savePhraseText = (sentence: string, text: string | null) =>
+  setDoc(phrasesRef(), { texts: { [sentenceHash(sentence)]: text ?? deleteField() }, at: new Date().toISOString() }, { merge: true });

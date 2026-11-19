@@ -129,7 +129,8 @@ export const ClassLessons: React.FC<{
 };
 
 /** One lesson, one step at a time: its kind, title and words, a chant's notes or a link to open, and „შესრულდა“. */
-const LessonView: React.FC<{ cls: SchoolClass; lesson: Lesson; done: Done; member: boolean; onClose: () => void }> = ({ cls, lesson, done, member, onClose }) => {
+// also opened from „ოსტატობა“'s lessons in the new look (pages/v2/ostatoba/LessonsScreen)
+export const LessonView: React.FC<{ cls: SchoolClass; lesson: Lesson; done: Done; member: boolean; onClose: () => void }> = ({ cls, lesson, done, member, onClose }) => {
   const { user } = useAuth();
   const openerOf = usePathItemOpener();
   const mine = new Set(done[lesson.id] || []);

@@ -1,13 +1,14 @@
 // Steps of the class area in the new look (redesign stage 4c). The pages `class`, `student` and `psalter` keep their open
 // part in the navigation's `mapItem` (NavigationContext MAP_PAGES), so the phone's back walks them in order.
-//   class:    (none) the class page · `order` its program's order (x-klasi-programa-dalageba) · `ai-report` the AI's week
-//             (x-ai-angarishi) · `ai-note` the instruction to the AI (x-ai-mititeba)
+//   class:    (none) the class page · `order` its program's order (x-klasi-programa-dalageba) · `ai-report` the week's summary
+//             (x-idea-kvira, with the AI's x-ai-angarishi under it) · `ai-note` the instruction to the AI (x-ai-mititeba)
 //   student:  `<uid>|<classId>` the student's page (x-mostsavle) · `…|gza` the chants learned (x-mostsavle-gza)
 //             · `…|ostatoba` the mastery's marks (x-mostsavle-ostatoba)
 //   psalter:  (none) the group (x-psalmuni) · `dist` who reads which kanon (x-psalmuni-ganatsileba) · `history` (x-psalmuni-istoria)
 
 export const CLASS_ORDER = 'order';
-/** the AI teacher's tools: the week's report and the teacher's instruction (src/pages/v2/aiklasi) */
+/** the week's summary (every teacher's; also the Monday notice's /?open=class&item=ai-report) and the AI teacher's instruction
+ *  (src/pages/v2/aiklasi) */
 export const AI_REPORT = 'ai-report';
 export const AI_NOTE = 'ai-note';
 /** the AI's lesson prepared from a program chant's notes (x-ai-avto): `ai-prep/<variantId>` */

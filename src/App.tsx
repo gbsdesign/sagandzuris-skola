@@ -44,9 +44,10 @@ import { useAiLessonOpen, useMyVoiceOpen } from './components/aiLesson/open';
 import { useExamOpen } from './pages/v2/gamocda/open';
 import { useAssistantOpen } from './pages/v2/damkhmare/open';
 import { useMkitkheOpen } from './pages/v2/mkitkhe/open';
+import { AI_REPORT } from './pages/v2/klasi/nav';
 import { useAccess } from './hooks/useAccess';
 import { setNewLook, useNavHidden } from './design/newLook';
-import { BottomNav } from './components/shell/BottomNav';
+import { BottomNav, DeskBar } from './components/shell/BottomNav';
 import { HomeBar } from './components/shell/HomeBar';
 import { ShellLinks } from './components/shell/ShellLinks';
 import { Waiting } from './components/shell/PageSkeleton';
@@ -101,7 +102,7 @@ export default function App() {
 
 function AppContent() {
   const { loading, user } = useAuth();
-  const { currentPage, openPrayer, navigateTo, openMapItem, openDm } = useNavigation();
+  const { currentPage, openPrayer, navigateTo, openMapItem, openDm, openClass } = useNavigation();
   // „ახალი სახე“ (redesign stage 2): its switch `newLook` — admins first, then everyone (data/sections)
   const access = useAccess();
   const newLook = access.on('newLook');
@@ -135,7 +136,7 @@ function AppContent() {
   useAlbumAccessSync();
 
   // a tapped reminder may open the site as /?prayer=<id> or /?open=psalter|gz|teacher (the teacher panel is gone:
-  // „teacher“ opens the class page) or /?open=admin&person=<uid>
+  // „teacher“ opens the class page) or /?open=admin&person=<uid> or /?open=class&id=<classId>&item=ai-report
   const openFromUrl = (href: string) => {
     const url = new URL(href, window.location.origin);
     const prayerId = url.searchParams.get('prayer');
@@ -185,6 +186,14 @@ function AppContent() {
         openDm(m[1] === 'dms' ? m[2] : `class:${m[2]}`);
       }
     }
+    // a teacher's Monday notice (worker/reminders „კვირის შეჯამება მზადაა“): the class, on the week's summary
+    else if (page === 'class') {
+      const id = url.searchParams.get('id');
+      if (id && /^[A-Za-z0-9_-]{1,128}$/.test(id)) {
+        openClass(id);
+        if (url.searchParams.get('item') === AI_REPORT) openMapItem(AI_REPORT);
+      }
+    }
     // an admin's notice: the panel, with the newcomer's window open
     else if (page === 'admin') {
       const person = url.searchParams.get('person');
@@ -209,6 +218,7 @@ function AppContent() {
     url.searchParams.delete('s');
     url.searchParams.delete('n');
     url.searchParams.delete('b');
+    url.searchParams.delete('item');
     window.history.replaceState(null, '', url.pathname + url.search + url.hash);
     openFromUrl(href);
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -272,10 +282,12 @@ function AppContent() {
       {/* the new look: the phone's status bar keeps the page colour under it while the page scrolls */}
       {newLook && <div aria-hidden className="fixed inset-x-0 top-0 z-30 h-[env(safe-area-inset-top,0px)] bg-page" />}
       {/* the new look has no header: the home page's own bar, the bottom menu, every other page its one bar */}
+      {/* a computer (lg and up): one bar across the top with the four places and the search field (boards x-desk-sia · x-desk-klasi) */}
+      {newLook && <DeskBar logoUrl={currentLogo} />}
       {newLook ? currentPage === 'home' && <HomeBar logoUrl={currentLogo} /> : <Header logoUrl={currentLogo} />}
 
       <main className={newLook
-        ? `flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 flex flex-col ${currentPage === 'home' ? 'pt-1' : 'pt-[calc(env(safe-area-inset-top,0px)+4px)]'} ${nav ? 'pb-[calc(env(safe-area-inset-bottom,0px)+104px)]' : 'pb-[calc(env(safe-area-inset-bottom,0px)+24px)]'}`
+        ? `flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 flex flex-col ${currentPage === 'home' ? 'pt-1' : 'pt-[calc(env(safe-area-inset-top,0px)+4px)]'} ${nav ? 'pb-[calc(env(safe-area-inset-bottom,0px)+104px)] lg:pb-[calc(env(safe-area-inset-bottom,0px)+24px)]' : 'pb-[calc(env(safe-area-inset-bottom,0px)+24px)]'} ${currentPage === 'home' ? 'lg:pt-4' : ''}`
         : 'flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 md:p-8 flex flex-col'}>
         <div ref={pageRef} className="w-full max-w-4xl mx-auto">
           {/* „მიმდინარეობს დამატება“ while a superadmin has not decided on a new member */}

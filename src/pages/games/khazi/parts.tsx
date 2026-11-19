@@ -5,6 +5,7 @@ import {
 } from 'lucide-react';
 import { DECK_LABEL, KHAZI_PICKS, PICK_LABEL, type KhaziCard, type KhaziIcon, type KhaziPick, type Placed } from '../../../utils/khazi';
 import { Chip } from '../../../components/games/Chip';
+import { useNewLook } from '../../../design/newLook';
 
 // The pieces of „დროის ხაზი“ shared by the day's line, the endless game and the teams' screen: a card's icon, the decks'
 // chips, the card in hand and the line itself — the cards in time order with a gap to tap between each two while a card waits.
@@ -30,15 +31,21 @@ export const PickChips: React.FC<{ value: KhaziPick; onChange: (p: KhaziPick) =>
 );
 
 /** the card waiting for its place: its deck, icon and event — no year */
-export const HandCard: React.FC<{ card: KhaziCard; hint?: React.ReactNode; big?: boolean }> = ({ card, hint, big }) => (
-  <div className="rounded-2xl bg-white px-4 py-3" style={{ boxShadow: `inset 0 0 0 2px ${DECK_TINT[card.deck]}, 0 6px 18px -10px rgba(61,42,30,.45)` }}>
-    <p className="flex items-center gap-1.5 text-[12.5px] font-bold" style={{ color: DECK_TINT[card.deck] }}>
-      <CardIcon icon={card.icon} className="w-4 h-4" /> {DECK_LABEL[card.deck]}
-    </p>
-    <p className={`mt-1 font-serif-ge font-bold leading-snug text-[#2f2018] ${big ? 'text-[22px] lg:text-[26px]' : 'text-[17px]'}`}>{card.text}</p>
-    {hint && <p className="mt-1.5 text-[13px] leading-snug text-[#75685a]">{hint}</p>}
-  </div>
-);
+export const HandCard: React.FC<{ card: KhaziCard; hint?: React.ReactNode; big?: boolean }> = ({ card, hint, big }) => {
+  const nl = useNewLook();
+  return (
+    <div className={nl ? 'rounded-card bg-surf px-4 py-3' : 'rounded-2xl bg-white px-4 py-3'}
+      style={{ boxShadow: nl ? `inset 0 0 0 2px ${DECK_TINT[card.deck]}` : `inset 0 0 0 2px ${DECK_TINT[card.deck]}, 0 6px 18px -10px rgba(61,42,30,.45)` }}>
+      <p className={`flex items-center gap-1.5 font-bold ${nl ? 'text-meta' : 'text-[12.5px]'}`} style={{ color: DECK_TINT[card.deck] }}>
+        <CardIcon icon={card.icon} className="w-4 h-4" /> {DECK_LABEL[card.deck]}
+      </p>
+      <p className={nl
+        ? `mt-1 font-bold leading-snug text-ink ${big ? 'text-title' : 'text-head'}`
+        : `mt-1 font-serif-ge font-bold leading-snug text-[#2f2018] ${big ? 'text-[22px] lg:text-[26px]' : 'text-[17px]'}`}>{card.text}</p>
+      {hint && <p className={nl ? 'mt-1.5 text-meta leading-snug text-mut' : 'mt-1.5 text-[13px] leading-snug text-[#75685a]'}>{hint}</p>}
+    </div>
+  );
+};
 
 export type Reveal = { id: string; ok: boolean } | null;
 
@@ -60,12 +67,15 @@ export const TimeLine: React.FC<{
   tint?: (team: number) => string;
   big?: boolean;
 }> = ({ line, card, onGap, reveal = null, tint, big }) => {
+  const nl = useNewLook();
   const gap = (i: number) => onGap && (
     <li key={`g${i}`}>
       <button
         type="button"
         onClick={() => onGap(i)}
-        className={`w-full h-10 ${big ? 'lg:h-12 lg:text-[16px]' : ''} rounded-xl border-2 border-dashed border-[#d9c9ad] bg-[#fffdf8] text-[13.5px] font-bold text-[#8a6416] inline-flex items-center justify-center gap-1.5 cursor-pointer hover:bg-[#fbf2dc] hover:border-[#c9a24a] active:scale-[0.99] transition`}
+        className={nl
+          ? `w-full h-tap ${big ? 'lg:h-12' : ''} rounded-tile border-2 border-dashed border-dim bg-surf/60 text-meta font-bold text-gold-ink inline-flex items-center justify-center gap-1.5 cursor-pointer hover:bg-gold-tint hover:border-gold active:scale-[0.99] transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine/60`
+          : `w-full h-10 ${big ? 'lg:h-12 lg:text-[16px]' : ''} rounded-xl border-2 border-dashed border-[#d9c9ad] bg-[#fffdf8] text-[13.5px] font-bold text-[#8a6416] inline-flex items-center justify-center gap-1.5 cursor-pointer hover:bg-[#fbf2dc] hover:border-[#c9a24a] active:scale-[0.99] transition`}
         aria-label={i === 0 ? 'პირველზე ადრე' : i === line.length ? 'ბოლოს, ყველაზე გვიან' : `${i}-ე და ${i + 1}-ე ბარათს შორის`}
       >
         <ArrowDownToLine className="w-4 h-4" aria-hidden="true" /> აქ ჩასვი
@@ -79,28 +89,30 @@ export const TimeLine: React.FC<{
         const c = card(p.id);
         if (!c) return null;
         const shown = reveal?.id === p.id;
-        const ring = shown ? (reveal!.ok ? 'ring-2 ring-[#2f7d4f] bg-[#eef7f0]' : 'ring-2 ring-[#c8504a] bg-[#fdf0ef]') : p.ok === false ? 'ring-1 ring-[#e9c3c0] bg-[#fdf7f6]' : 'ring-1 ring-[#e8dcc8] bg-white';
+        const ring = nl
+          ? (shown ? (reveal!.ok ? 'ring-2 ring-leaf bg-leaf-tint' : 'ring-2 ring-danger bg-tint') : p.ok === false ? 'bg-tint' : 'bg-surf')
+          : shown ? (reveal!.ok ? 'ring-2 ring-[#2f7d4f] bg-[#eef7f0]' : 'ring-2 ring-[#c8504a] bg-[#fdf0ef]') : p.ok === false ? 'ring-1 ring-[#e9c3c0] bg-[#fdf7f6]' : 'ring-1 ring-[#e8dcc8] bg-white';
         const team = typeof p.team === 'number' && tint ? tint(p.team) : null;
         return (
           <React.Fragment key={p.id}>
             <li
-              className={`relative flex items-center gap-3 rounded-2xl pl-2.5 pr-3 py-2 ${ring} ${shown ? 'animate-[pulse_1s_ease-in-out_1]' : ''}`}
+              className={`relative flex items-center gap-3 ${nl ? 'rounded-tile min-h-14' : 'rounded-2xl'} pl-2.5 pr-3 py-2 ${ring} ${shown ? 'animate-[pulse_1s_ease-in-out_1]' : ''}`}
               style={team ? { boxShadow: `inset 4px 0 0 ${team}` } : undefined}
             >
               <span
-                className={`shrink-0 text-center font-bold tabular-nums leading-none ${labelSize(c.label, big)} ${p.ok === false ? 'text-[#b23a48]' : 'text-[#7a2028]'}`}
+                className={`shrink-0 text-center font-bold tabular-nums leading-none ${labelSize(c.label, big)} ${p.ok === false ? (nl ? 'text-danger' : 'text-[#b23a48]') : nl ? 'text-wine' : 'text-[#7a2028]'}`}
               >
                 {c.label}
               </span>
               <span className="min-w-0 flex-1">
-                <span className={`flex items-start gap-1.5 leading-snug text-[#2f2018] ${big ? 'text-[16px] lg:text-[20px]' : 'text-[14.5px]'}`}>
+                <span className={`flex items-start gap-1.5 leading-snug ${nl ? 'text-ink' : 'text-[#2f2018]'} ${big ? 'text-[16px] lg:text-[20px]' : nl ? 'text-body' : 'text-[14.5px]'}`}>
                   <CardIcon icon={c.icon} className={`mt-[3px] w-4 h-4 shrink-0 ${big ? 'lg:mt-[5px] lg:w-5 lg:h-5' : ''}`} style={{ color: DECK_TINT[c.deck] }} />
                   <span>{c.text}</span>
                 </span>
-                {shown && c.note && <span className={`mt-1 block text-[13px] leading-snug text-[#5c4a3d] ${big ? 'lg:text-[15.5px]' : ''}`}>{c.note}</span>}
+                {shown && c.note && <span className={`mt-1 block text-[13px] leading-snug ${nl ? 'text-mut' : 'text-[#5c4a3d]'} ${big ? 'lg:text-[15.5px]' : ''}`}>{c.note}</span>}
               </span>
-              {p.ok === true && <Check className="w-5 h-5 shrink-0 text-[#2f7d4f]" aria-label="სწორად ჩასმული" />}
-              {p.ok === false && <X className="w-5 h-5 shrink-0 text-[#c8504a]" aria-label="შეცდომით ჩასმული" />}
+              {p.ok === true && <Check className={`w-5 h-5 shrink-0 ${nl ? 'text-leaf-ink' : 'text-[#2f7d4f]'}`} aria-label="სწორად ჩასმული" />}
+              {p.ok === false && <X className={`w-5 h-5 shrink-0 ${nl ? 'text-danger' : 'text-[#c8504a]'}`} aria-label="შეცდომით ჩასმული" />}
             </li>
             {gap(i + 1)}
           </React.Fragment>

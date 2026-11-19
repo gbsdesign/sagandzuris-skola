@@ -299,6 +299,8 @@ await t('member cannot lift own marking lock', assertFails(setDoc(doc(stu, 'stud
 await t('member cannot delete own record', assertFails(deleteDoc(doc(stu, 'students', 'stu'))));
 await t('member cannot approve own pearl', assertFails(setDoc(doc(stu, 'students', 'stu'), { pearlShine: { 'v-5-x58': { voice: '1', by: 'stu', at: 'x' } } }, { merge: true })));
 await t('teacher approves a pearl', assertSucceeds(setDoc(doc(tch, 'students', 'stu'), { pearlShine: { 'v-5-x58': { voice: '1', by: 'tch', at: 'x' } }, updatedAt: 'x' }, { merge: true })));
+await t('member cannot mark the AI wrong for themself', assertFails(setDoc(doc(stu, 'students', 'stu'), { aiErred: { week: '2026-11-16', by: 'stu', at: 1 } }, { merge: true })));
+await t('teacher marks the AI wrong', assertSucceeds(setDoc(doc(tch, 'students', 'stu'), { aiErred: { week: '2026-11-16', by: 'tch', at: 1 }, updatedAt: 'x' }, { merge: true })));
 await t("teacher cannot change the member's pearls", assertFails(setDoc(doc(tch, 'students', 'stu'), { pearls: { 'v-5-x58': { best: 100, voice: '1', at: 'x' } } }, { merge: true })));
 await t('member keeps a take', assertSucceeds(setDoc(doc(stu, 'pearlTakes', 'stu', 'takes', 'v-5-x58'), take())));
 await t('member cannot keep a take for another', assertFails(setDoc(doc(stu, 'pearlTakes', 'stu2', 'takes', 'v-5-x58'), take())));

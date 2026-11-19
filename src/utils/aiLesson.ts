@@ -306,6 +306,40 @@ export const closingLine = (o: { learned: number; improved: boolean; nextPhrase:
   return first + then;
 };
 
+// ---- a rest (board x-ai-daisvene) -------------------------------------------------------------------------------------
+
+/** practising longer than this offers a rest (between parts) */
+export const REST_AFTER_MS = 15 * 60_000;
+/** a fall in accuracy is looked for only after this much practice (a fresh voice just warming up is not tired) */
+export const REST_TIRED_FROM_MS = 6 * 60_000;
+/** how far under the earlier tries the last three must fall: each one under their mean, together this much */
+export const FALL_EACH = 0.05;
+export const FALL_MEAN = 0.15;
+
+/**
+ * Accuracy fell: the last three tries (shares 0–1, oldest first) are each under the mean of the up to six tries before
+ * them, and their own mean is at least FALL_MEAN under it. Fewer than six tries say nothing.
+ */
+export const accuracyFell = (shares: readonly number[]): boolean => {
+  if (shares.length < 6) return false;
+  const last = shares.slice(-3);
+  const before = shares.slice(-9, -3);
+  const mean = (xs: readonly number[]) => xs.reduce((a, b) => a + b, 0) / xs.length;
+  const was = mean(before);
+  return last.every(x => x < was - FALL_EACH) && mean(last) <= was - FALL_MEAN;
+};
+
+export type RestWhy = 'long' | 'tired';
+/** Why a rest is offered now, if at all: a long practice, or the tries getting worse after a while. */
+export const restReason = (o: { ms: number; shares: readonly number[] }): RestWhy | null =>
+  o.ms >= REST_AFTER_MS ? 'long' : o.ms >= REST_TIRED_FROM_MS && accuracyFell(o.shares) ? 'tired' : null;
+
+/** the rest's words, by why */
+export const REST_LINE: Record<RestWhy, string> = {
+  long: 'დიდხანს ივარჯიშე. ხმასაც დასვენება უნდა. ხვალ აქედან გავაგრძელებთ.',
+  tired: 'ბოლო ცდებში სიზუსტე დაეცა. ხმასაც დასვენება უნდა. ხვალ აქედან გავაგრძელებთ.',
+};
+
 /** A day with no lesson for this long before: the plan was re-made and the lesson starts with a review. */
 export const MISSED_DAYS = 3;
 export const dayGap = (lastDay: string | undefined, today: string) => {
@@ -411,6 +445,7 @@ export const READY_SENTENCES: { title: string; lines: string[] }[] = [
   { title: 'გაკვეთილის ბოლო', lines: [
     'დღეს ახალი ფრაზა ისწავლე. ხვალ — მეოთხე ფრაზა.', 'დღეს უკეთ გამოგივიდა, ვიდრე დასაწყისში. ხვალ — მოკლე გამეორება.',
     'დღეს ივარჯიშე — ეს მთავარია. ხვალ — მესამე ფრაზა.', 'დიდხანს ივარჯიშე. ხმასაც დასვენება უნდა. ხვალ აქედან გავაგრძელებთ.',
+    'ბოლო ცდებში სიზუსტე დაეცა. ხმასაც დასვენება უნდა. ხვალ აქედან გავაგრძელებთ.',
     'პირველი მარგალიტი შენია! „ალილუია“ „ნასწავლში“ ჩაიწერა — შენი ხმით.',
   ] },
   // AI step 2 (utils/aiPlan.ts, components/aiLesson): the first meeting, the voice check, the first week, the weak spot

@@ -1,7 +1,5 @@
 import React, { useEffect } from 'react';
 import { useNavigation } from '../../../context';
-import { Card, RoundButton, TopBar } from '../../../components/ui2';
-import { MasteryContent } from '../../../components/mastery/MasteryContent';
 import { usePanelWish } from '../../../components/views/IndependentWorkCard';
 import { clearTried } from '../../../utils/samosiTry';
 import { GzaList } from './GzaList';
@@ -10,13 +8,18 @@ import { SamosiPage } from './Samosi';
 import { TsirvaScreen } from '../tsirva/TsirvaScreen';
 import { screenOf } from '../chvevebi/nav';
 import { Certificate, LevelsScreen, LEVELS_ITEM, certOf } from '../doneebi';
-import { Route } from 'lucide-react';
+import { EXTRA_ITEM, LESSONS_ITEM, OSTATOBA_ITEM } from '../ostatoba/nav';
 
 const ChvevebiPage = React.lazy(() => import('../chvevebi/ChvevebiPage'));
 const ClassesListScreen = React.lazy(() => import('../klasi/ClassesList').then(m => ({ default: m.ClassesListScreen })));
+// „ოსტატობა“'s screens (x-ostatoba and its lists, ../ostatoba)
+const OstatobaScreen = React.lazy(() => import('../ostatoba/OstatobaScreen').then(m => ({ default: m.OstatobaScreen })));
+const LessonsScreen = React.lazy(() => import('../ostatoba/LessonsScreen').then(m => ({ default: m.LessonsScreen })));
+const ExtraScreen = React.lazy(() => import('../ostatoba/LessonsScreen').then(m => ({ default: m.ExtraScreen })));
 
 // Page `gz` in the new look: the list (x-gza) and the path's own pages, each a step of its own in history by the
-// navigation's `mapItem` — `sagandzuri` (x-sagandzuri), `samosi` (x-samosi), `chvevebi…` (the habits, `../chvevebi`) and `ostatoba` (the old „ოსტატობა“, which the old „საგანძური“ card held at its bottom).
+// navigation's `mapItem` — `sagandzuri` (x-sagandzuri), `samosi` (x-samosi), `chvevebi…` (the habits, `../chvevebi`) and
+// `ostatoba…` („ოსტატობა“, x-ostatoba: its first screen, the lessons, the extra exercises — ../ostatoba/nav — and the levels).
 
 export type GzaItem = 'sagandzuri' | 'samosi' | 'chvevebi' | 'ostatoba';
 
@@ -38,15 +41,8 @@ export const GzaPage: React.FC = () => {
   // „ოსტატობის გზა“'s levels and a level's certificate (stage doneebi)
   if (mapItem === LEVELS_ITEM) return <LevelsScreen />;
   if (certOf(mapItem) !== null) return <Certificate />;
-  if (mapItem === 'ostatoba') {
-    return (
-      <div className="flex w-full flex-col gap-2 pb-4">
-        <TopBar title="ოსტატობა" onBack={handleGoBack} right={
-          <RoundButton label="ოსტატობის გზა" onClick={() => openMapItem(LEVELS_ITEM)}><Route strokeWidth={1.75} /></RoundButton>
-        } />
-        <Card pad="sm"><MasteryContent /></Card>
-      </div>
-    );
-  }
+  if (mapItem === OSTATOBA_ITEM) return <OstatobaScreen />;
+  if (mapItem === LESSONS_ITEM) return <LessonsScreen />;
+  if (mapItem === EXTRA_ITEM) return <ExtraScreen />;
   return <GzaList onOpen={item => openMapItem(item)} />;
 };

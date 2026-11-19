@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { AudioLines, BookOpen, Check, ChevronDown, ChevronUp, ClipboardList, CloudCheck, CloudDownload, GraduationCap, Loader2, Music, Plus, Sparkles, Users } from 'lucide-react';
+import { AudioLines, BookOpen, Check, ChevronDown, ChevronUp, ClipboardList, CloudCheck, CloudDownload, FileText, GraduationCap, Loader2, Mic, Music, Plus, Sparkles, Users } from 'lucide-react';
 import { useAuth, useChants, useNavigation } from '../../../context';
-import { Avatar, Bar, Button, Card, CheckButton, Dot, Duo, Note, Pill, RoundButton, Row, Rows, SectionLabel, Sheet, Small } from '../../../components/ui2';
+import { Avatar, Bar, Button, Card, Dot, Note, Pill, Press, RoundButton, Row, Rows, Sheet, Small, cx } from '../../../components/ui2';
+import { FOCUS } from '../../../components/ui2/cx';
 import type { ProgramItem, SchoolClass } from '../../../hooks/useClasses';
 import { usePathMarks } from '../../../hooks/usePathMarks';
 import { ownVoices, useClassMarks } from '../../../hooks/useClassMarks';
@@ -29,6 +30,7 @@ type Listed = ProgramItem & { id: string; key: string };
 type Knower = { m: SchoolClass['members'][number]; ok: boolean; me: boolean };
 
 const VOICE_NAME: Record<Voice, string> = { '1': 'პირველი ხმა', '2': 'მეორე ხმა', '3': 'მესამე ხმა' };
+const ROMAN_V: Record<Voice, string> = { '1': 'I', '2': 'II', '3': 'III' };
 
 /** The round 1 2 3 at a program line's end: wine once known, green once a teacher counted it. */
 const Mark: React.FC<{ n: string; on: boolean; ok: boolean }> = ({ n, on, ok }) => (
@@ -214,8 +216,9 @@ export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean }> = ({ c
 
 const voicedList = (voiced: boolean): Voice[] => (voiced ? ['1', '2', '3'] : ['1']);
 
-/** One program item's window (the old `ItemSheet`'s content): open it and „სწავლა“ on top, the voices once — my mark and who
- *  in the class knows each —, then the studio and a teacher's „დავალებად მიცემა“. */
+/** x-programis-punkti — one program item's window: one main „სწავლა“ (the notes / the song when nothing can be learned),
+ *  the voices as three tiles (a member's tap = „ვიცი“; green = a teacher counted it), who in the class knows each folded
+ *  under them, then rows: the notes, the studio, a teacher's „დავალებად მიცემა“ and „AI გაკვეთილი“. */
 const ItemSheet: React.FC<{
   p: Listed;
   onClose: () => void;
@@ -235,8 +238,12 @@ const ItemSheet: React.FC<{
   const lines = programLines(p);
   const voiced = usesVoices(p.id);
   const song = categoryOf(p.id) === 'simghera';
-  const [names, setNames] = useState<Voice | null>(null);
-  const hint = locked ? 'მონიშვნას ახლა მასწავლებელი აკეთებს.' : voiced ? 'წრეს შეეხე, როცა ხმას ისწავლი.' : 'წრეს შეეხე, როცა ისწავლი.';
+  const [names, setNames] = useState(false);
+  const list = voicedList(voiced);
+  const who = list.map(v => ({ v, people: knowers(v) }));
+  const everyone = new Map(who.flatMap(w => w.people.map(k => [k.m.uid, k.m] as const)));
+  const goLabel = song ? 'სიმღერა' : 'ნოტები';
+  const openGo = go ? () => { onClose(); go(); } : null;
   return (
     <Sheet open onClose={onClose} title={lines.title}>
       {(lines.sub || p.note) && (
@@ -245,63 +252,94 @@ const ItemSheet: React.FC<{
           {p.note && <p className="whitespace-pre-line">{p.note}</p>}
         </div>
       )}
-      {(go || piece) && (
-        <Duo>
-          {go && <Button kind="ghost" icon={<Music />} onClick={() => { onClose(); go(); }}>{song ? 'სიმღერა' : 'ნოტები'}</Button>}
-          {piece && <Button icon={<GraduationCap />} onClick={() => onLearn(piece)}>სწავლა</Button>}
-        </Duo>
-      )}
-      <SectionLabel label={voiced ? 'ხმები' : 'ვინ იცის'} />
-      <Rows>
-        {voicedList(voiced).map(v => {
-          const people = knowers(v);
-          const okOne = own.confirmed.includes(v);
-          const on = okOne || own.known.includes(v);
-          const unfolded = names === v && people.length > 0;
-          const title = voiced ? VOICE_NAME[v] : 'ნასწავლი';
-          return (
-            <div key={v}>
-              <Row
-                lead={member ? (
-                  <CheckButton
-                    on={on}
-                    onChange={() => onMark(v)}
-                    disabled={locked || okOne}
-                    label={`${title} — ${okOne ? 'ჩათვლილია' : on ? 'ნასწავლია' : 'ჯერ არა'}`}
-                    className="-ml-2"
-                  />
-                ) : undefined}
-                title={title}
-                sub={`${people.length ? `კლასში იცის ${people.length}` : 'კლასში ჯერ არავინ'}${okOne ? ' · ჩათვლილია' : ''}`}
-                right={people.length > 0 ? (
-                  <span className="flex shrink-0 items-center gap-1.5">
-                    <span aria-hidden="true" className="flex -space-x-2">
-                      {people.slice(0, 3).map(({ m }) => <Avatar key={m.uid} name={m.name} photo={m.photoURL} size={32} className="ring-2 ring-surf" />)}
-                    </span>
-                    <RoundButton label={unfolded ? 'სახელების დამალვა' : 'სახელების ჩვენება'} size={36} tone="plain" aria-expanded={unfolded}
-                      onClick={() => setNames(n => (n === v ? null : v))}>
-                      {unfolded ? <ChevronUp /> : <ChevronDown />}
-                    </RoundButton>
-                  </span>
-                ) : null}
-              />
-              {unfolded && (
-                <ul className="sg-in flex flex-wrap gap-1.5 px-4 pb-3">
+      {piece ? (
+        <Button full icon={<GraduationCap />} onClick={() => onLearn(piece)}>სწავლა</Button>
+      ) : openGo ? (
+        <Button full icon={<Music />} onClick={openGo}>{goLabel}</Button>
+      ) : null}
+
+      <Card pad="sm" className="flex flex-col gap-2.5">
+        <div className="px-1 text-meta font-semibold text-mut">
+          {member ? (voiced ? 'რომელი ხმა იცი?' : 'ისწავლე?') : voiced ? 'ვინ რომელი ხმა იცის' : 'ვინ იცის'}
+        </div>
+        <div className={voiced ? 'grid grid-cols-3 gap-2' : 'grid grid-cols-1'}>
+          {who.map(({ v, people }) => {
+            const title = voiced ? `${ROMAN_V[v]} ხმა` : 'ნასწავლი';
+            if (!member) {
+              return (
+                <div key={v} className="flex min-h-16 min-w-0 flex-col items-center justify-center rounded-tile bg-page px-1.5 py-2 text-center">
+                  <span className="text-body font-bold">{title}</span>
+                  <span className="text-meta text-mut">{people.length ? `იცის ${people.length}` : 'ჯერ არავინ'}</span>
+                </div>
+              );
+            }
+            const ok = own.confirmed.includes(v);
+            const on = ok || own.known.includes(v);
+            const state = ok ? 'ჩათვლილია' : on ? 'ვიცი' : 'ჯერ არა';
+            return (
+              <Press
+                key={v}
+                aria-pressed={on}
+                aria-label={`${title} — ${state}`}
+                disabled={locked || ok}
+                onClick={() => onMark(v)}
+                className={cx(
+                  'flex min-h-16 min-w-0 cursor-pointer flex-col items-center justify-center rounded-tile px-1.5 py-2 text-center transition active:scale-[0.97]',
+                  'disabled:cursor-default disabled:active:scale-100',
+                  ok ? 'bg-leaf text-white' : on ? 'bg-wine text-white' : 'bg-page text-ink',
+                  locked && !ok && 'disabled:opacity-60',
+                  FOCUS,
+                )}
+              >
+                <span className="text-body font-bold">{title}</span>
+                <span className={cx('text-meta', on ? 'text-white/85' : 'text-mut')}>{state}</span>
+              </Press>
+            );
+          })}
+        </div>
+        {everyone.size > 0 && (
+          <Press
+            aria-expanded={names}
+            onClick={() => setNames(n => !n)}
+            className={cx('flex min-h-tap cursor-pointer items-center gap-2 rounded-full px-1 text-left', FOCUS)}
+          >
+            <span aria-hidden="true" className="flex -space-x-2">
+              {[...everyone.values()].slice(0, 3).map(m => <Avatar key={m.uid} name={m.name} photo={m.photoURL} size={32} className="ring-2 ring-surf" />)}
+            </span>
+            <span className="min-w-0 flex-1 truncate text-meta font-semibold text-mut">კლასში იცის {everyone.size}</span>
+            {names ? <ChevronUp aria-hidden="true" className="size-[18px] shrink-0 text-mut" /> : <ChevronDown aria-hidden="true" className="size-[18px] shrink-0 text-mut" />}
+          </Press>
+        )}
+        {names && (
+          <div className="sg-in flex flex-col gap-2 px-1 pb-1">
+            {who.filter(w => w.people.length).map(({ v, people }) => (
+              <div key={v} className="flex flex-col gap-1">
+                {voiced && <span className="text-cap font-semibold text-mut">{VOICE_NAME[v]}</span>}
+                <ul className="flex flex-wrap gap-1.5">
                   {people.map(({ m, ok, me }) => <li key={m.uid} className="max-w-full"><Pill on={ok}>{m.name}{me ? ' (შენ)' : ''}</Pill></li>)}
                 </ul>
-              )}
-            </div>
-          );
-        })}
-      </Rows>
-      {member && <Note>{hint} მწვანე — მასწავლებელმა ჩათვალა.</Note>}
-      {(onStudio || onAssign) && (
-        <Duo className={onStudio && onAssign ? 'max-[439px]:flex-col' : undefined}>
-          {onStudio && <Button kind="soft" size="md" icon={<AudioLines />} onClick={onStudio}>{teacher ? 'ჯგუფური ჩანაწერი' : 'ჩემი ხმის ჩაწერა'}</Button>}
-          {onAssign && <Button kind="soft" size="md" icon={<ClipboardList />} onClick={onAssign}>დავალებად მიცემა</Button>}
-        </Duo>
+              </div>
+            ))}
+          </div>
+        )}
+      </Card>
+      {member && locked && <Note>მონიშვნას ახლა მასწავლებელი აკეთებს.</Note>}
+
+      {((piece && openGo) || onStudio || onAssign || onPrep) && (
+        <Rows>
+          {piece && openGo && <Row lead={<Dot icon={song ? <Music /> : <FileText />} />} title={goLabel} onClick={openGo} />}
+          {onStudio && (
+            <Row
+              lead={<Dot icon={teacher ? <AudioLines /> : <Mic />} />}
+              title={teacher ? 'ჯგუფური ჩანაწერი' : 'ჩემი ხმის ჩაწერა'}
+              sub={teacher ? 'კლასის ჩანაწერები ერთად' : 'მასწავლებელს ეგზავნება'}
+              onClick={onStudio}
+            />
+          )}
+          {onAssign && <Row lead={<Dot icon={<ClipboardList />} />} title="დავალებად მიცემა" sub="ვადით — კლასს ან ზოგიერთს" onClick={onAssign} />}
+          {onPrep && <Row lead={<Dot icon={<Sparkles />} />} title="AI გაკვეთილი" sub="ფრაზები და კითხვები ნოტებიდან" onClick={onPrep} />}
+        </Rows>
       )}
-      {onPrep && <Button kind="soft" size="md" icon={<Sparkles />} onClick={onPrep}>AI გაკვეთილი</Button>}
     </Sheet>
   );
 };

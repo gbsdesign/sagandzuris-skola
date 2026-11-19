@@ -10,7 +10,7 @@ import { Press, Rows } from '../../../components/ui2';
 // the new look (board x-tamashi-kitkhva): the four answers as rows of one white card, each letter on its own colour
 const DOT2 = ['bg-wine', 'bg-sea', 'bg-gold', 'bg-plum'] as const;
 const INK2 = ['text-wine', 'text-sea', 'text-gold-ink', 'text-plum'] as const;
-const Letter2: React.FC<{ i: number; plain?: boolean }> = ({ i, plain }) => (
+export const Letter2: React.FC<{ i: number; plain?: boolean }> = ({ i, plain }) => (
   <span aria-hidden="true" className={`flex size-icon shrink-0 items-center justify-center rounded-full text-body font-bold ${plain ? 'bg-white text-leaf' : `${DOT2[i]} text-white`}`}>
     {OTKHI_LETTERS[i]}
   </span>

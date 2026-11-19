@@ -7,6 +7,10 @@ import { echoTask, higherQuiz, intervalQuiz, judgeSinging, steadyScore, type Fra
 import { placement, type EntryResult } from '../../utils/masteryPath';
 import { LiveNote, MicNote, RangeSwitch, playAndWait, stopSound, useMic, useVoiceRange, saveRange, type Range } from './trainers/shared';
 import { saveStart } from './useMasteryPath';
+import { useNewLook } from '../../design/newLook';
+import { Sheet as Sheet2 } from '../ui2';
+import { EntryIntro, EntryResultView } from '../../pages/v2/ostatoba/EntryParts';
+import { useLightLook } from '../../pages/v2/ostatoba/useLightLook';
 
 // „საწყისი ტესტი“ (5 minutes): where the student starts on the path. The voice's range (lowest and highest comfortable
 // note → the low or high voice of every exercise), a note held five seconds, four „higher or lower“, one and three notes
@@ -18,21 +22,33 @@ const ORDER: Step[] = ['range', 'hold', 'higher', 'echo1', 'echo3', 'intervals']
 
 const median = (xs: number[]) => { const s = [...xs].sort((a, b) => a - b); return s[Math.floor(s.length / 2)]; };
 
-export const EntryTest: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => (
-  <Sheet open={open} onClose={onClose} title="საწყისი ტესტი">
-    {open && <TestBody onClose={onClose} />}
-  </Sheet>
-);
+export const EntryTest: React.FC<{ open: boolean; onClose: () => void }> = ({ open, onClose }) => {
+  const nl = useNewLook();
+  // the new look (board x-ostatoba-testi): the kit's window, its start and end drawn anew
+  if (nl) return <Sheet2 open={open} onClose={onClose} title="საწყისი ტესტი">{open && <TestBody onClose={onClose} nl />}</Sheet2>;
+  return (
+    <Sheet open={open} onClose={onClose} title="საწყისი ტესტი">
+      {open && <TestBody onClose={onClose} />}
+    </Sheet>
+  );
+};
 
-const TestBody: React.FC<{ onClose: () => void }> = ({ onClose }) => {
+const TestBody: React.FC<{ onClose: () => void; nl?: boolean }> = ({ onClose, nl }) => {
   const { user } = useAuth();
   const { range, base, setRange } = useVoiceRange();
   const [step, setStep] = useState<Step>('intro');
   const [score, setScore] = useState<Partial<EntryResult>>({});
   useEffect(() => () => stopSound(), []);
+  // the steps between the start and the end are the old ones, drawn for the light paper
+  useLightLook(!!nl && step !== 'intro' && step !== 'result');
   const done = (key: keyof EntryResult, share: number, next: Step) => { setScore(s => ({ ...s, [key]: share })); setStep(next); };
   const at = ORDER.indexOf(step);
 
+  if (nl && step === 'intro') return <EntryIntro onStart={() => setStep('range')} />;
+  if (nl && step === 'result') {
+    const s: EntryResult = { hold: 0, higher: 0, echo1: 0, echo3: 0, intervals: 0, ...score };
+    return <EntryResultView score={s} level={placement(s)} onStart={lvl => { saveStart(lvl, range, user?.uid); onClose(); }} />;
+  }
   if (step === 'intro') {
     return (
       <div className="space-y-4 text-center sg-in">

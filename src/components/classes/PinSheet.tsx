@@ -5,6 +5,8 @@ import type { PinInput } from '../../hooks/useChatPins';
 import { Btn, FIELD, Label, Sheet } from '../ui/kit';
 import { NewAssignment } from '../teacher/AssignmentsPanel';
 import { Avatar } from './ChatPanel';
+import { useNewLook } from '../../design/newLook';
+import { PinSheetV2 } from '../../pages/v2/klasi/PinSheetV2';
 
 // The chat's 📎 for a teacher or an admin (2026-11-04): who it is for (a class's chat; a private chat has its one
 // student), then a comment or an assignment — a real one, made in „ახალი დავალება“ for that member alone, whose card then
@@ -12,7 +14,7 @@ import { Avatar } from './ChatPanel';
 
 export interface PinPerson { uid: string; name: string; photoURL?: string }
 
-export const PinSheet: React.FC<{
+type PinSheetProps = {
   open: boolean;
   onClose: () => void;
   /** who it may be for: a class's members, or the student of a private chat */
@@ -22,7 +24,12 @@ export const PinSheet: React.FC<{
   /** a class's chat (the 🔒 line names who will see it) */
   inClass: boolean;
   onSend: (p: PinInput) => Promise<void>;
-}> = ({ open, onClose, people, classes, inClass, onSend }) => {
+};
+
+/** The new look draws it as one window (pages/v2/klasi/PinSheetV2.tsx, boards x-komentari · x-davaleba). */
+export const PinSheet: React.FC<PinSheetProps> = props => (useNewLook() ? <PinSheetV2 {...props} /> : <OldPinSheet {...props} />);
+
+const OldPinSheet: React.FC<PinSheetProps> = ({ open, onClose, people, classes, inClass, onSend }) => {
   const only = people.length === 1 ? people[0] : null;
   const [who, setWho] = useState<PinPerson | null>(only);
   const [what, setWhat] = useState<'note' | 'work' | null>(null);

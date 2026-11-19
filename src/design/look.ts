@@ -129,7 +129,8 @@ export const setDarkPage = (ok: boolean) => {
   emit();
 };
 
-/** the pages built of the design tokens in the new look; a part of `gz` still shows an old panel (ოსტატობა) */
+/** the pages built of the design tokens in the new look (`gz`'s „ოსტატობა“ too since the final review — its old parts that
+ *  still show, a drill's trainers and the entry test's steps, ask for the light look themselves: pages/v2/ostatoba/useLightLook) */
 const DARK_PAGES = new Set([
   'home', 'notices', 'settings', 'search', 'calendar', 'gz', 'class', 'psalter', 'messages', 'dm', 'student', 'birthdays', 'galoba',
   // stage 6 (pages/v2/lotsva, pages/v2/library)
@@ -151,7 +152,7 @@ const gamesHub = (page: string, mapItem: string | null) => page === 'games' && (
 // the admission's theory lesson, trainer, mock test and the I exam's practice still draw the old parts (pages/abituri)
 const oldAbituri = (page: string, mapItem: string | null) => page === 'abituri' && /^(theory\/.|program\/practice)/.test(mapItem ?? '');
 export const darkReadyPage = (page: string, mapItem: string | null) =>
-  (DARK_PAGES.has(page) && !(page === 'gz' && mapItem === 'ostatoba') && !oldAbituri(page, mapItem)) || gamesHub(page, mapItem);
+  (DARK_PAGES.has(page) && !oldAbituri(page, mapItem)) || gamesHub(page, mapItem);
 
 /** the router's one line: the page on screen may (or may not) wear the dark look */
 export const useDarkPage = (ok: boolean) => useLayoutEffect(() => setDarkPage(ok), [ok]);

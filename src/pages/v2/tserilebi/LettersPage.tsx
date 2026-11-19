@@ -456,7 +456,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   );
 
   return (
-    <div className={cx('w-full lg:grid lg:grid-cols-[24rem_minmax(0,1fr)] lg:gap-4 lg:h-[calc(100dvh-2rem)]')}>
+    <div className={cx('w-full lg:grid lg:grid-cols-[24rem_minmax(0,1fr)] lg:gap-4 lg:h-[calc(100dvh-7rem)]')}>
       <div className={cx(open ? 'hidden lg:block' : 'block', 'lg:min-h-0 lg:flex lg:flex-col')}>{list}</div>
       <div className={cx(open ? 'block' : 'hidden lg:block', 'min-w-0 h-[calc(100dvh-1rem)] lg:h-full')}>{pane}</div>
 

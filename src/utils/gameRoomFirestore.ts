@@ -76,6 +76,12 @@ const anyVisible = () => STORES.some(st => st.isVisible());
 const subscribeAll = (f: () => void) => { const offs = STORES.map(st => st.subscribe(f)); return () => offs.forEach(off => off()); };
 /** a room's own screen is on (the invitation strip hides meanwhile) */
 export const useRoomVisible = () => useSyncExternalStore(subscribeAll, anyVisible);
+/** the class of the room whose own screen is on (a game's end sends its chronicle to that class's chat), or null */
+const visibleClass = () => {
+  for (const st of STORES) { const s = st.get(); if (s && st.isVisible()) return s.classId; }
+  return null;
+};
+export const useVisibleRoomClass = () => useSyncExternalStore(subscribeAll, visibleClass);
 /** the rooms this phone is in, of every game */
 let lastSnaps: AnySnap[] = STORES.map(() => null);
 const allSnaps = () => {

@@ -45,34 +45,86 @@ export const clipId = (voice: VoiceKind, sentence: string) => `${voice}_${senten
 const COUNT = ['', '', 'ორი', 'სამი', 'ოთხი', 'ხუთი', 'ექვსი'];
 const range = (a: number, b: number) => Array.from({ length: b - a + 1 }, (_, i) => a + i);
 
+/** The kinds the school's „მზა ფრაზები“ list shows as chips (board x-ai-prazebi). */
+export type PhraseKind = 'start' | 'fix' | 'praise' | 'stuck' | 'phrase' | 'end';
+export const PHRASE_KINDS: { id: PhraseKind; label: string }[] = [
+  { id: 'fix', label: 'შესწორება' }, { id: 'praise', label: 'ქება' }, { id: 'start', label: 'დასაწყისი' },
+  { id: 'stuck', label: 'როცა არ გამოდის' }, { id: 'phrase', label: 'ფრაზის სწავლა' }, { id: 'end', label: 'დასასრული' },
+];
+// a ready group's kind (by its title in READY_SENTENCES); a group not named here is „დასასრული“
+const KIND_OF_GROUP: Record<string, PhraseKind> = {
+  'გაკვეთილის დასაწყისი': 'start', 'გაცნობა': 'start', 'ხმის შემოწმება': 'start', 'პირველი კვირა': 'start',
+  'შედეგი': 'fix', 'ერთი შესწორება': 'fix', 'რა ქნა': 'fix', 'შეადარე ყურით': 'fix',
+  'გამხნევება — მხოლოდ როცა მართალია': 'praise',
+  'როცა სამჯერ არ გამოვიდა': 'stuck', 'როცა ვერ გიგონებს': 'stuck', 'ინტერნეტის და AI-ს გარეშე': 'stuck', 'სუსტი ადგილი': 'stuck',
+  'ფრაზა ნაწილებად': 'phrase', 'ფრაზის სწავლა': 'phrase',
+};
+
+export interface VoiceSentence { text: string; group: string; kind: PhraseKind }
+
 /**
  * Every sentence worth a recording: the ready sentences' own, and the forms the lesson makes of them (a note's place
  * 1–12, a piece of 2–7 notes, a phrase's number, days since a phrase was learned). The live words said while singing
- * („ზუსტად“, „ოდნავ მაღლა“) are left out — nothing speaks then.
+ * („ზუსტად“, „ოდნავ მაღლა“) are left out — nothing speaks then. Each keeps the group it came from (the school's list).
  */
-export const VOICE_SENTENCES: string[] = (() => {
-  const out: string[] = [];
-  const add = (...lines: string[]) => lines.flatMap(splitSentences).forEach(s => out.push(s));
-  READY_SENTENCES.filter(g => g.title !== 'სიმღერისას').forEach(g => add(...g.lines));
+export const VOICE_SENTENCE_LIST: VoiceSentence[] = (() => {
+  const out: VoiceSentence[] = [];
+  const seen = new Set<string>();
+  const add = (group: string, ...lines: string[]) => lines.flatMap(splitSentences).forEach(text => {
+    if (seen.has(text)) return;
+    seen.add(text);
+    out.push({ text, group, kind: KIND_OF_GROUP[group] ?? 'end' });
+  });
+  READY_SENTENCES.filter(g => g.title !== 'სიმღერისას').forEach(g => add(g.title, ...g.lines));
   // one correction: any of the first twelve notes
-  range(1, 12).forEach(k => add(`${ordinal(k)} ნოტი ცოტა დაბლა იყო.`, `${ordinal(k)} ნოტი ცოტა მაღლა იყო.`, `${ordinal(k)} ნოტი არ გაისმა.`));
+  range(1, 12).forEach(k => add('ერთი შესწორება', `${ordinal(k)} ნოტი ცოტა დაბლა იყო.`, `${ordinal(k)} ნოტი ცოტა მაღლა იყო.`, `${ordinal(k)} ნოტი არ გაისმა.`));
   // a phrase in pieces (components/aiLesson/PhraseStep)
-  range(2, 7).forEach(n => add(`ჯერ პირველი ${n} ნოტი.`, `ახლა შემდეგი ${n} ნოტი.`, `ჯერ მხოლოდ ${n} ნოტი.`, `ჯერ მხოლოდ ${n} ნოტი, ნელა.`));
-  add('მოუსმინე და გაიმეორე.', 'ეს ადგილი ძნელია.', 'ახლა ყველა ერთად. ორი ხმა შენ გელოდება.', 'ახლა ერთად. მეორე ხმა შენ გელოდება.',
+  range(2, 7).forEach(n => add('ფრაზა ნაწილებად', `ჯერ პირველი ${n} ნოტი.`, `ახლა შემდეგი ${n} ნოტი.`, `ჯერ მხოლოდ ${n} ნოტი.`, `ჯერ მხოლოდ ${n} ნოტი, ნელა.`));
+  add('ფრაზის სწავლა', 'მოუსმინე და გაიმეორე.', 'ეს ადგილი ძნელია.', 'ახლა ყველა ერთად. ორი ხმა შენ გელოდება.', 'ახლა ერთად. მეორე ხმა შენ გელოდება.',
     'ეს ფრაზა ადრე ისწავლე. ერთხელ იმღერე — გავიხსენოთ.', 'ახლა მარტო — მთელი ფრაზა.', 'სამი წრე მორჩა. ახლა — მარტო.',
     'გავიხსენეთ.', 'ხვალ კიდევ გავიმეორებთ.', 'ეს ფრაზა დღეს ისწავლე.', 'ეს ფრაზა გუშინ ისწავლე.');
-  range(2, 14).forEach(d => add(`ეს ფრაზა ${d} დღის წინ ისწავლე.`));
-  range(1, 12).forEach(k => add(`${ordinal(k)} ფრაზა ნასწავლია.`));
+  range(2, 14).forEach(d => add('ფრაზის სწავლა', `ეს ფრაზა ${d} დღის წინ ისწავლე.`));
+  range(1, 12).forEach(k => add('ფრაზის სწავლა', `${ordinal(k)} ფრაზა ნასწავლია.`));
   // the lesson's other parts (components/aiLesson/steps, AiLesson)
-  add('კარგია. ახლა — გამეორება.', 'ბოლოს — სიამოვნებისთვის. შეცდომას აღარ ვითვლი.', 'კარგი იყო. ახლა — შეჯამება.',
+  add('გაკვეთილის ნაწილები', 'კარგია. ახლა — გამეორება.', 'ბოლოს — სიამოვნებისთვის. შეცდომას აღარ ვითვლი.', 'კარგი იყო. ახლა — შეჯამება.',
     'ეს ნაწილი დღეს გამოვტოვოთ.', 'დღეს ხმას ვავარჯიშებთ. დავიწყოთ გახურებით.', 'გამარჯობა!');
   // the summary
-  range(2, 6).forEach(n => add(`დღეს ${n} ფრაზა ისწავლე.`));
-  range(2, 12).forEach(k => add(`ხვალ — ${ordinal(k)} ფრაზა.`));
+  range(2, 6).forEach(n => add('გაკვეთილის ბოლო', `დღეს ${n} ფრაზა ისწავლე.`));
+  range(2, 12).forEach(k => add('გაკვეთილის ბოლო', `ხვალ — ${ordinal(k)} ფრაზა.`));
   // praise only when true
-  range(3, 6).forEach(n => add(`${COUNT[n]} ცდა — და უკვე გამოდის.`, `${COUNT[n]} ცდა — და უკვე ნახევარი გამოდის.`));
-  return [...new Set(out)];
+  range(3, 6).forEach(n => add('გამხნევება — მხოლოდ როცა მართალია', `${COUNT[n]} ცდა — და უკვე გამოდის.`, `${COUNT[n]} ცდა — და უკვე ნახევარი გამოდის.`));
+  return out;
 })();
+export const VOICE_SENTENCES: string[] = VOICE_SENTENCE_LIST.map(x => x.text);
+
+// ---- the school's own words (board x-ai-prazebi) -------------------------------------------------------------------
+// settings/aiPhrases { texts: { [sentenceHash of the app's sentence]: the school's sentence } } — admins write settings/*.
+// Where the lesson shows a sentence (TeacherSays), each sentence the school changed is shown in its words; a changed one
+// has no recording, so the teacher's recorded voice speaks only the sentences left as they were.
+
+export type PhraseTexts = Record<string, string>;
+/** a changed sentence's longest length */
+export const PHRASE_MAX = 200;
+
+/** the stored map, kept to sentence hashes with a non-empty text of at most PHRASE_MAX */
+export const cleanPhraseTexts = (d: unknown): PhraseTexts => {
+  const o = (d && typeof d === 'object' ? d : {}) as Record<string, unknown>;
+  const out: PhraseTexts = {};
+  for (const [k, v] of Object.entries(o)) {
+    if (!/^[0-9a-z]{1,13}$/.test(k) || typeof v !== 'string') continue;
+    const t = v.replace(/\s+/g, ' ').trim();
+    if (t && t.length <= PHRASE_MAX) out[k] = t;
+  }
+  return out;
+};
+
+/** a shown text with the school's words in place of the sentences it changed (the rest as it was) */
+export const applyPhrases = (text: string, texts: PhraseTexts): string => {
+  if (!text || !Object.keys(texts).length) return text;
+  const parts = splitSentences(text);
+  if (!parts.some(x => texts[sentenceHash(x)])) return text;
+  return parts.map(x => texts[sentenceHash(x)] ?? x).join(' ');
+};
 
 const KNOWN = new Set(VOICE_SENTENCES);
 /** a sentence the studio records (anything else the teacher shows stays text) */

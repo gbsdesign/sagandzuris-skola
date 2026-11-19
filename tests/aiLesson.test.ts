@@ -4,7 +4,7 @@ import assert from 'node:assert/strict';
 import { scoreSinging, type SungNote } from '../src/utils/pitch';
 import {
   afterTake, closingLine, countLine, hitsLine, dayGap, fixLine, leftWord, liveWord, nextLine, offPitch, openingLine, ordinal, readTake,
-  verdictLine, warmNotes,
+  verdictLine, warmNotes, accuracyFell, restReason, REST_AFTER_MS, REST_TIRED_FROM_MS, REST_LINE, READY_SENTENCES,
 } from '../src/utils/aiLesson';
 
 const T = [62, 64, 65, 67, 69, 67, 65, 64];
@@ -205,4 +205,28 @@ test('the learning mode\'s result: the verdict by eighths and the count in words
   assert.equal(hitsLine(0, 5), 'ვერცერთ ნოტს ვერ მოხვდი.');
   assert.equal(hitsLine(9, 12), '12 ნოტიდან ცხრას მოხვდი.');
   assert.equal(hitsLine(11, 12), '12 ნოტიდან 11-ს მოხვდი.');
+});
+
+test('a rest: after 15 minutes, or when the last three tries fell under the earlier ones (board x-ai-daisvene)', () => {
+  // too few tries say nothing
+  assert.equal(accuracyFell([0.9, 0.9, 0.3, 0.3, 0.3]), false);
+  // three in a row well under the earlier ones
+  assert.equal(accuracyFell([0.8, 0.85, 0.9, 0.5, 0.55, 0.5]), true);
+  // only the last six before the three count
+  assert.equal(accuracyFell([0.1, 0.1, 0.1, 0.8, 0.85, 0.9, 0.8, 0.85, 0.9, 0.5, 0.55, 0.5]), true);
+  // one of the three as good as before: no fall
+  assert.equal(accuracyFell([0.8, 0.85, 0.9, 0.5, 0.86, 0.5]), false);
+  // a little lower is no fall
+  assert.equal(accuracyFell([0.8, 0.8, 0.8, 0.72, 0.72, 0.72]), false);
+  // getting better is no fall
+  assert.equal(accuracyFell([0.3, 0.4, 0.5, 0.6, 0.7, 0.8]), false);
+  const fell = [0.8, 0.85, 0.9, 0.5, 0.55, 0.5];
+  assert.equal(restReason({ ms: REST_AFTER_MS, shares: [] }), 'long');
+  assert.equal(restReason({ ms: REST_TIRED_FROM_MS, shares: fell }), 'tired');
+  // early in the lesson a fall is no tiredness
+  assert.equal(restReason({ ms: REST_TIRED_FROM_MS - 1, shares: fell }), null);
+  assert.equal(restReason({ ms: REST_TIRED_FROM_MS, shares: [0.8, 0.8, 0.8, 0.8, 0.8, 0.8] }), null);
+  // both lines are ready sentences (the school's list shows them, the studio records them)
+  const all = READY_SENTENCES.flatMap(g => g.lines);
+  assert.ok(all.includes(REST_LINE.long) && all.includes(REST_LINE.tired));
 });

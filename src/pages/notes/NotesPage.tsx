@@ -36,6 +36,7 @@ import { triggerHaptic } from '../../utils/haptics';
 import { stopPreview } from '../../utils/listPreview';
 // the new look (redesign 5b): the same page drawn with the redesign's parts; every state and handler stays here
 import { useNewLook } from '../../design/newLook';
+import { useTheme } from '../../design/look';
 import { NotesBar } from '../v2/notes/NotesBar';
 import { BottomBar, type PlayLook } from '../v2/notes/BottomBar';
 import { SynthPlayer } from '../v2/notes/SynthPlayer';
@@ -259,7 +260,11 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   // beside the title: this chant's QR code / the camera that reads one
   const [qr, setQr] = useState<'code' | 'scan' | null>(null);
   const [paper, setPaper] = useState<Paper>(() => store.get<Paper>('sagandzuri_paper', 'day'));
-  const [darkOS, setDarkOS] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
+  // „ავტო“ paper: in the new look the app's own „იერი“ choice (dark, or the phone's when „ტელეფონის მიხედვით“); the old look
+  // has no such choice, so it keeps following the phone
+  const themeDark = useTheme().wanted;
+  const [phoneDark, setPhoneDark] = useState(() => window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const darkOS = nl ? themeDark : phoneDark;
   const [wakeOn, setWakeOn] = useState(() => store.get('sagandzuri_wake', true));
   // the small ball that glides over the notes while the synthesizer plays (on by default, remembered on the device)
   const [ballOn, setBallOn] = useState(() => store.get('sagandzuri_ball', true));
@@ -331,11 +336,12 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   useEffect(() => onOfflineChange(() => setOffline(isOffline(vid))), [vid]);
   useEffect(() => { setOffline(isOffline(vid)); }, [vid]);
   useEffect(() => {
+    if (nl) return;
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
-    const on = () => setDarkOS(mq.matches);
+    const on = () => setPhoneDark(mq.matches);
     mq.addEventListener?.('change', on);
     return () => mq.removeEventListener?.('change', on);
-  }, []);
+  }, [nl]);
 
   // ---------- reading position (the sheet at the top edge and the place on it)
   const chromeVisible = useCallback(() => (tucked || church || !chromeRef.current ? 0 : chromeRef.current.offsetHeight), [tucked, church]);
