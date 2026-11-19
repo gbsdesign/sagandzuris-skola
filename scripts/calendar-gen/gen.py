@@ -744,6 +744,10 @@ def fix_2027(days):
     move_note('06-26', '06-06', r'წმიდა გიორგი მთაწმინდელის')
     move_note('06-09', None, r'^შენიშვნა 1: ღირსთა დღესასწაული ჩატარდება')
     move_note('04-12', None, r'^ლიტურგია წმ\. იოანე ოქროპირისა')    # Pascha 2026's own line, on a Lent Monday here
+    # the official 2026 text names the sixth week's Tuesday … Saturday „მე-5 შვიდეული“ (a slip): the week is Lent's sixth
+    for md in ('04-20', '04-21', '04-22', '04-23', '04-24'):
+        assert 'მე-5 შვიდეული' in d(md)['title'], md
+        d(md)['title'] = d(md)['title'].replace('მე-5 შვიდეული', 'მე-6 შვიდეული')
 
 def build_all():
     out = {}

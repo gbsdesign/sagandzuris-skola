@@ -73,3 +73,22 @@ test('the day pages work on every day: readings parse, tones, the services', () 
     assert.equal(sv.length, 4, iso);
   }
 });
+
+test("2027's own coincidences, set right after the copy of 2026's (the audit of 2026-11-19)", () => {
+  if (!year.computed) return;
+  // the Forty Martyrs on Lent's second Monday: the Presanctified, their matins Gospel and vespers readings
+  assert.match(text('2027-03-22'), /ლიტურგია პირველშეწირულისა/);
+  assert.match(text('2027-03-22'), /ცისკ\.: ლკ\. 21: 12-19/);
+  assert.match(text('2027-03-22'), /მწუხრზე: 40 მოწ\.: 1\) ეს\. 43: 9-14/);
+  // the Annunciation on the fourth Wednesday: its forefeast and leave-taking beside it, St John Chrysostom's liturgy
+  assert.match(text('2027-04-06'), /წინადღესასწაული ყოვლადწმიდა ღმრთისმშობლის ხარებისა/);
+  assert.match(text('2027-04-07'), /ლიტურგია წმ\. იოანე ოქროპირისა/);
+  assert.match(text('2027-04-08'), /ხარების დღესასწაულის წარგზავნა/);
+  assert.doesNotMatch(text('2027-04-12'), /ლიტურგია წმ\. იოანე ოქროპირისა/); // Pascha 2026's line, a Lent Monday here
+  // St George on Bright Thursday with his matins Gospel; the Meeting's tide around a Monday
+  assert.match(text('2027-05-06'), /ცისკ\.: ლკ\. 12: 2-12/);
+  assert.match(text('2027-02-14'), /მიგებების წინადღესასწაული/);
+  assert.match(text('2027-02-22'), /წარგზავნა/);
+  // Lent's sixth week is named the sixth
+  for (const iso of ['2027-04-20', '2027-04-24']) assert.match(day(iso).t, /მე-6 შვიდეული/, iso);
+});

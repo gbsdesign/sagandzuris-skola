@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
-import { buildServices, guessRank, hymnsOf, lentPsalter, matinsKathismas, vespersKathisma, greatFeastOf, periodOf, PATRON_PRESETS, type Patron } from '../src/utils/dayService';
+import { buildServices, feastTideOf, guessRank, hymnsOf, lentPsalter, matinsKathismas, vespersKathisma, greatFeastOf, periodOf, PATRON_PRESETS, type Patron } from '../src/utils/dayService';
 import { orthodoxEaster } from '../src/data/churchFeasts';
 const easterOffsetOf = (iso: string) => Math.round((Date.parse(iso) - Date.parse(orthodoxEaster(Number(iso.slice(0, 4))))) / 864e5);
 
@@ -216,4 +216,97 @@ test('the eves of Christmas and Theophany, the Holy Spirit\'s Monday', () => {
   // the Monday of the Holy Spirit is the feast's second day
   assert.equal(guessRank('2027-06-21', cal['2027-06-21'], null), 'great');
   assert.equal(hymnsOf({ iso: '2027-06-21', day: cal['2027-06-21'], tone: 1, rank: 'great', patron: null }, 'liturgy').troparia[0].e, 49);
+});
+
+// ----- the audit of 2026-11-19: Lent as ჟამნი sets it, the Annunciation in Lent, Holy Week and Bright Week -----
+const cal27 = JSON.parse(readFileSync(new URL('../src/data/calendar/2027.json', import.meta.url), 'utf8')).days;
+const both: Record<string, typeof cal[string]> = { ...cal, ...cal27 };
+const dayOf = (iso: string) => both[iso] ?? null;
+const prevOf = (iso: string) => both[new Date(Date.parse(`${iso}T12:00:00Z`) - 864e5).toISOString().slice(0, 10)] ?? null;
+const full = (iso: string) => buildServices({ iso, day: dayOf(iso), prev: prevOf(iso), tone: 3, rank: guessRank(iso, dayOf(iso), null), patron: null });
+const titles = (iso: string, id: string) => full(iso).find(s => s.id === id)!.steps.map(s => s.title);
+const stepOf = (iso: string, id: string, title: string) => full(iso).find(s => s.id === id)!.steps.find(s => s.title === title)!;
+
+test('a Lent weekday as ჟამნი sets it', () => {
+  assert.equal(guessRank('2027-03-23', dayOf('2027-03-23'), null), 'simple'); // a red saint is still a weekday in Lent
+  const m = titles('2027-03-16', 'matins');
+  assert.ok(m.includes('„ალილუია“ და სამების საგალობლები'));
+  assert.ok(m.includes('„ტაძარსა ამას დიდებისა შენისასა მდგომარენი“'));
+  assert.ok(!m.includes('განტევება') && !m.some(t => t.startsWith('დიდი დიდებამაღალიანი')));
+  assert.equal(m.at(-1), 'პირველი ჟამი');
+  assert.deepEqual(titles('2027-03-16', 'hours').slice(1, 5), ['მესამე ჟამი', 'მეექვსე ჟამი', 'მეცხრე ჟამი', 'სადილის ჟამი']);
+  assert.match(stepOf('2027-03-16', 'hours', 'მეექვსე ჟამი').note!, /^წინასწარმეტყველება: ეს\. 1: 19/);
+  assert.match(titles('2027-03-16', 'liturgy')[0], /არ აღესრულება/);
+  // its vespers followed the hours of the day before: that day's two readings, Lent's ending
+  const v = full('2027-03-16').find(s => s.id === 'vespers')!.steps;
+  assert.equal(v[0].title, 'მწუხრი ჟამებს მოსდევს');
+  assert.match(v.find(s => s.title === 'წარდგომა და საკითხავები')!.note!, /^დაბ\. 1: 1-13/);
+  assert.ok(v.some(s => s.title.startsWith('მარხვის ტროპარნი')));
+  // after a Presanctified liturgy vespers is not served apart
+  assert.equal(titles('2027-03-18', 'vespers').length, 1);
+  // Sunday evenings: the two great prokeimena take turns
+  const prok = (iso: string) => { const x = stepOf(iso, 'vespers', 'დიდი წარდგომა').extras![0]; return x.kind === 'text' ? String(x.src.after) : ''; };
+  assert.notEqual(prok('2027-03-15'), prok('2027-03-22'));
+  assert.equal(prok('2027-03-15'), prok('2027-03-29'));
+});
+
+test('the Presanctified, the feasts kept in Lent, Cheesefare', () => {
+  for (const iso of ['2027-03-17', '2027-03-19', '2027-04-15', '2027-03-22']) assert.ok(titles(iso, 'liturgy').includes('„აწ ძალნი ცათანი“'), iso);
+  // the Forty Martyrs on a Lent Monday: the polyeleos, the Presanctified with their Epistle and Gospel, the doxology read
+  assert.equal(guessRank('2027-03-22', dayOf('2027-03-22'), null), 'polyeleos');
+  assert.ok(titles('2027-03-22', 'liturgy').includes('სახარება'));
+  const m = titles('2027-03-22', 'matins');
+  assert.ok(m.some(t => t.startsWith('პოლიელეოსი')) && m.includes('„შენდა დიდება შვენის“ და დიდებამაღალიანი') && !m.includes('განტევება'));
+  // from Mid-Lent's Wednesday the litany of those preparing for illumination
+  const lit = (iso: string) => stepOf(iso, 'liturgy', 'კვერექსები').note!;
+  assert.ok(!lit('2027-03-17').includes('განმზადებულთა') && lit('2027-04-09').includes('განმზადებულთა'));
+  // no Great Compline on the evening of the Great Canon's matins
+  assert.ok(!full('2027-04-15').some(s => s.id === 'compline') && full('2027-04-14').some(s => s.id === 'compline'));
+  // Cheesefare's Wednesday and Friday: no liturgy, the day in Lent's way; Thursday — an ordinary liturgy
+  for (const iso of ['2027-03-10', '2027-03-12']) {
+    assert.match(titles(iso, 'liturgy')[0], /არ აღესრულება/, iso);
+    assert.ok(titles(iso, 'matins').includes('„ალილუია“ და სამების საგალობლები'), iso);
+  }
+  assert.ok(titles('2027-03-11', 'liturgy').length > 20);
+  // the Cross in mid-Lent
+  assert.ok(titles('2027-04-04', 'matins').includes('ჯვრის გამოსვენება და თაყვანისცემა'));
+  assert.ok(titles('2027-04-04', 'liturgy').includes('„ჯუარსა შენსა თაყუანის-ვსცემთ“'));
+  assert.equal(titles('2027-04-05', 'matins').at(-1), 'ჯვრის თაყვანისცემა');
+});
+
+test('the Annunciation on a Lent weekday (2027: Wednesday of the fourth week)', () => {
+  const sv = full('2027-04-07');
+  assert.deepEqual(sv.map(s => s.id), ['vespers', 'compline', 'matins', 'hours', 'liturgy']);
+  // the eve: Lent's vespers with the entrance, the day's two readings and the feast's three
+  assert.match(sv[0].steps.find(s => s.title === 'წარდგომა და საკითხავები')!.note!, /ხარებისა: 1\) დაბ\. 28/);
+  assert.ok(sv[0].steps.some(s => s.title.startsWith('შესვლა')));
+  assert.equal(sv[1].title, 'დიდი სერობა');
+  assert.equal(sv[2].steps[0].title, 'ექვსფსალმუნება'); // matins follow Great Compline
+  assert.match(sv[4].when, /ოქროპირისა, მწუხრთან ერთად/);
+  const lt = sv[4].steps.map(s => s.title);
+  assert.ok(lt.includes('„ნათელო მხიარულო“') && lt.includes('ქერუბიმთა გალობა — „რომელნი ქერუბიმთა“') && !lt.includes('ანტიფონები'));
+  assert.match(sv[4].steps.find(s => s.title === 'წარდგომანი და საკითხავები')!.note!, /ხარებისა: 1\) გამ\. 3/);
+  assert.equal(titles('2027-04-08', 'vespers').length, 1); // the next day's vespers was that liturgy's beginning
+  // 2026: the Annunciation on Great Tuesday — St John Chrysostom's liturgy with vespers
+  const tue = buildServices({ iso: '2026-04-07', day: dayOf('2026-04-07'), prev: prevOf('2026-04-07'), tone: 1, rank: 'great', patron: null });
+  assert.match(tue.find(s => s.id === 'liturgy')!.when, /ოქროპირისა/);
+});
+
+test('Holy Week, Bright Week, tides', () => {
+  // Great Monday's Gospel is its own alone: the notes' table of the hours' Gospels is no reading of the day
+  assert.equal(stepOf('2027-04-26', 'liturgy', 'სახარება').note, 'მათე 24: 3-35');
+  assert.ok(titles('2027-04-28', 'liturgy').includes('ეფრემ ასურის ლოცვა — უკანასკნელად'));
+  // Bright Week: each evening its own great prokeimenon; St George's matins Gospel on Bright Thursday 2027
+  assert.ok(titles('2027-05-03', 'vespers').some(t => t.includes('ვინ არს ღმერთი დიდ')));
+  assert.ok(titles('2027-05-06', 'vespers').some(t => t.includes('ყურად-იღე')));
+  assert.ok(titles('2027-05-06', 'matins').includes('წარდგომა და სახარება — წმიდანისა'));
+  assert.equal(guessRank('2028-05-06', null, null), 'vigil'); // გიორგობა in spring too
+  // a tide the computed year keeps in its text alone; Theophany's by the date
+  for (const [iso, kind] of [['2027-08-27', 'fore'], ['2027-09-26', 'fore'], ['2027-10-04', 'leave'], ['2027-01-17', 'fore'], ['2027-01-25', 'after']] as const) {
+    assert.equal(feastTideOf(dayOf(iso), iso)?.kind, kind, iso);
+  }
+  // an optional service („თუ უპირატესი ინებებს“) does not raise the day; picked by the reader, its matins Gospel is shown
+  assert.equal(guessRank('2026-12-25', dayOf('2026-12-25'), null), 'doxology');
+  const sp = buildServices({ iso: '2026-12-25', day: dayOf('2026-12-25'), prev: null, tone: 1, rank: 'polyeleos', patron: null });
+  assert.equal(sp.find(s => s.id === 'matins')!.steps.find(s => s.title === 'საცისკრო წარდგომა და სახარება')!.note, 'იოანე 10: 9-16');
 });
