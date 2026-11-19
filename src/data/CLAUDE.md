@@ -432,5 +432,41 @@ evening in his temple = vespers alone (matins in the morning), „სხვა �
   The course (`medavitneLessons.ts`) speaks the books' words: „დიდი კვერექსი“, „დიდებამაღალიანი“, „ექვსიანი“, „დასაბამი“, the epistle's
   „მოხედენ“ · „მშვიდობა ყოველთა“ · „სიბრძნით“ · „და სულისაცა შენისა თანა“ (კონდაკი 4). The 2027 calendar's Sunday tones and matins
   Gospels, Lent's weekday readings and the movable days' names were checked by script — no fault.
+- **Audit (2026-11-19, the user: „ყველაფერი გადაამოწმო დეტალურად … მარხვა და ზატიკი“; answers „სრულად, ერთიანად · სიტყვები და
+  რიგი“):** the calendar's own word goes before the rules — `liturgyNoteOf` („ლიტურგია პირველშეწირულისა / არ აღესრულება / ბასილი
+  დიდისა / იოანე ოქროპირისა“), `vespersLinesOf(iso, day)` = `{eve, same}` (a feast's readings of the evening before · the day's own,
+  read after its hours: Lent's weekdays, Cheesefare's Wed and Fri, Holy Week), `sixthHourReading`. `DayInput.prev` = the day before
+  (the page loads it): in Lent its calendar names the evening's readings and whether a liturgy was joined to vespers. **A Lent
+  weekday as ჟამნი sets it** (`lentPlain`): rank `doxology` does not act there (`guessRank` gives simple; only the Head 24 Feb and
+  the Forty Martyrs 9 Mar old style, the temple's day, or a matins Gospel in the calendar make `polyeleos` — `lentPolyeleos`);
+  matins = `lentMatins()` („ალილუია“ + the tone's triadic hymns, the Triodion's three odes by weekday `TRIODES`, „ღირს არს“ after
+  the 9th ode, the tone's Lenten photagogikon, the doxology read, „ტაძარსა ამას…“ — no litany and no dismissal before the first
+  hour); hours = III, VI (with the calendar's prophecy), IX and the typika (`lentHours()`; ჟამნი: 16 prostrations at III, VI and
+  after the typika, three at IX); vespers = `lentVespers()` after the hours, ჟამნი's ending; the day after a liturgy joined to
+  vespers the vespers tab is one pointer step (`eveLiturgy`). Liturgy of such a day (`lentLiturgy`): the Presanctified on Wed, Fri,
+  the Great Canon's Thursday and a polyeleos feast (then with its Epistle and Gospel), none else; Cheesefare's Wed and Fri are
+  served in Lent's way without liturgy (`cheese`); the Annunciation on a Lent weekday (`annunLent`) = Lent's vespers with entrance on
+  the eve, Great Compline as the vigil's start (`festalCompline`), Chrysostom's liturgy joined to vespers (`vesperalHead` + the
+  ordinary liturgy from the trisagion), in Holy Week's first days too. No Great Compline on the Great Canon's evening. The Lenten
+  texts are slices of ჟამნი 04–10 (`FIX.hourLentTroparion`, `hourLentVerses`, `alleluiaVerses`, `triadic(tone)`,
+  `lentPhotagogikon(tone)`, `lentMatinsEnd`, `lentEveTroparia`, `ephrem`, `lentEveClose`). The two great prokeimena of Lent's Sunday
+  evenings take turns (ჟამნი 25); Bright Week's evenings have each its own (`BRIGHT_PROKEIMENA`, ზატიკი 02), Pascha's evening its
+  Gospel, a saint's matins Gospel after the 6th ode; the Cross in mid-Lent (−28 matins and „ჯუარსა შენსა“, −27/−25 first hour,
+  −23 after the typika), Thomas Tuesday's commemoration, the lesser blessing of waters (14 Aug), the artos. ~20 hymn openings were
+  set by the app's own books and chant lists (`/home/claude/audit/incipits.py` is gone with the session — check a new quotation
+  against `public/wignebi` or the anthology lists before writing it). **Readings**: `readingsOf` reads only the day's own lines
+  (`mainText`: everything from the first „* …“ footnote on is commentary; a „შენიშვნა“ is skipped by itself — Pascha's readings
+  stand after one); `optionalReadingsOf` = the notes' („თუ უპირატესი ინებებს“) — their matins Gospel is shown only when the reader
+  picks the polyeleos; a line that only goes on with a service's list („მოციქულისა: 1) …“ after „მწუხრ.: … 3) ზაქ. 14…“) keeps that
+  service's label. `feastTideOf(day, iso)` reads the tide from the names, then from the text, Theophany's by the date. **Fasting**
+  (`utils/fasting.ts`): a Wednesday, Friday or fast weekday is relaxed by ჟამნი's own marks (`FISH_OLD`, `OIL_OLD`, old-style days —
+  as the calendars printed in Georgia do), not by the saint's rank; the page's `weightOf` passes only a great feast or the temple's
+  day; Lazarus Saturday fish, the Annunciation in Holy Week oil. **2027 calendar**: `fix_2027` in `gen.py` moves the lines 2026's
+  coincidences put on the wrong day (the zone Feb–June: matins Gospels, the Meeting's and the Annunciation's tide, the Forty
+  Martyrs, St George, the fathers' Sundays) and names Lent's sixth week the sixth — rerun `gen.py` after any change there.
+- Still open (shown to the user as questions, not changed): Theophany on a Monday — Basil's liturgy by the Typikon, the official
+  2026 text says Chrysostom's; fish on 1–2 January „პატრიარქის კურთხევით“; Wed/Fri food in the Pentecostarion; Great Compline on
+  Lent's Sunday evenings; the 5th Thursday's kathismas at the hours and the Presanctified; vigil-rank Georgian saints (St Nino,
+  გიორგობა) on a Wednesday or Friday follow ჟამნი (no mark → „მარხვა“).
 - Still open: the common services have no ikos; a second rank „ექვსიანი“ is not told apart from a plain day; with the great
   doxology the tibikon sings the typika at the liturgy — the app keeps the daily antiphons on weekdays (the user's temple).

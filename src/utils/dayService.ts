@@ -716,7 +716,7 @@ export const buildServices = (inp: DayInput): Service[] => {
       hint: 'ორი წარდგომა მარხვანიდან: პირველის შემდეგ — პირველი საკითხავი, მეორის შემდეგ — მეორე', pt: [V.prokeimenon],
     });
     else s.push({ title: 'წარდგომა', who: ['deacon', 'choir'], note: season.kneeling ? 'დიდი წარდგომა — „ვინ არს ღმერთი დიდ“' : `${WEEKDAY_GEN[eveDow]} საღამოსი — ${VESPERS_PROKEIMENON[eveDow]}`, pt: [V.prokeimenon], extras: some(!season.kneeling && text(FIX.eveProkeimenon(eveDow), 'წარდგომა და მუხლები')), chants: ['mw-13'] });
-    if (vespersText) s.push({ title: 'წმიდანის საკითხავები', who: ['reader'], note: vespersText, hint: 'დღის საკითხავების შემდეგ', extras: some(text(menaion(kind, 'readings'), 'ტექსტი — საზიარო საკითხავები')) });
+    if (vespersText) s.push({ title: annunLent ? 'ხარების საკითხავები' : 'წმიდანის საკითხავები', who: ['reader'], note: vespersText, hint: season.lentSundayEve ? undefined : 'დღის საკითხავების შემდეგ', extras: some(text(menaion(kind, 'readings'), 'ტექსტი — საზიარო საკითხავები')) });
     s.push({ title: '„ღირს მყვენ ჩვენ, უფალო“', who: ['reader'], note: 'იკითხება', read: [R(FIX.vouchsafe)] });
     s.push(P('თხოვნითი კვერექსი', [V.supplication], { chants: ['mw-16'] }));
     s.push({
