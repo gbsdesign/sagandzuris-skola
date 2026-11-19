@@ -25,6 +25,8 @@ import { bookOf, versionTone } from '../../utils/toneChants';
 import { useNotes } from '../../context/NotesContext';
 import { ToneSheet } from './ToneSheet';
 import { useKhutsuri } from '../../components/views/ReadingTools';
+import { bookUrl, dayFiles, daySignature, monthFile } from '../../utils/dayOffline';
+import { canKeepAwake, useScreenAwake } from '../../hooks/useScreenAwake';
 
 // „დღის მსახურება“ (the user, 2026-11-09; plan doc „დღის მსახურების გეგმა“, stage 1): the church day from the eve's
 // vespers to the liturgy's dismissal, step by step (utils/dayService.ts). The day moves with ‹ ›, the rank is guessed and
@@ -49,10 +51,14 @@ const AT_KEY = 'sg-day-at';
 const ORDER_KEY = 'sg-day-order';
 const PRIEST_KEY = 'sg-day-priest';
 const OLD_KEY = 'sg-day-khutsuri';
+const AWAKE_KEY = 'sg-day-awake';
+const SAVED_KEY = 'sg-day-saved';
 const readOrder = (): TempleOrder => {
   try { const v = JSON.parse(localStorage.getItem(ORDER_KEY) || 'null'); return isOrder(v) ? v : DEFAULT_ORDER; } catch { return DEFAULT_ORDER; }
 };
 const readFlag = (key: string) => { try { return localStorage.getItem(key) === '1'; } catch { return false; } };
+/** a switch that is on until turned off */
+const readOn = (key: string) => { try { return localStorage.getItem(key) !== '0'; } catch { return true; } };
 const writeFlag = (key: string, on: boolean) => { try { localStorage.setItem(key, on ? '1' : '0'); } catch { /* private window */ } };
 
 // ---------- the books' texts (troparia) ----------
@@ -60,8 +66,7 @@ type Section = [string, string[]];
 type BookFile = { t: string; c: { l: string; s: Section[] }[] };
 const files = new Map<string, Promise<BookFile>>();
 const loadBook = (coll: string, n: number) => {
-  // „დამატებითი წიგნები“ (collection x) live in their own folder
-  const url = coll === 'x' ? `/wignebi-x/${String(n).padStart(2, '0')}.json` : `/wignebi/${coll}/${String(n).padStart(2, '0')}.json`;
+  const url = bookUrl(coll, n);
   let p = files.get(url);
   if (!p) {
     p = fetch(url).then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json() as Promise<BookFile>; });
@@ -70,8 +75,6 @@ const loadBook = (coll: string, n: number) => {
   }
   return p;
 };
-/** the month files of ჟამნი: September = 13 … August = 24 */
-const monthFile = (month: number) => ((month - 9 + 12) % 12) + 13;
 export type Text = { head: string; paras: string[] };
 /** the troparia and kontakia of one old-style day in ჟამნი's month */
 const saintTexts = async (month: number, day: number): Promise<{ tr: Text[]; ko: Text[] }> => {
@@ -565,16 +568,63 @@ const FOOD_TONE: Record<string, string> = {
   dry: 'bg-[#f6ece6] ring-[#e3c8bb] text-[#5a2d22]', strict: 'bg-[#f6ece6] ring-[#e3c8bb] text-[#5a2d22]', none: 'bg-[#f6ece6] ring-[#e3c8bb] text-[#5a2d22]',
 };
 
+/** A day as the services need it: its calendar (the Sunday's too, for the tone, and the day before's), the rank — picked or
+ *  guessed —, the temple and its order. */
+const useDayInput = (iso: string, on: boolean, ranks: Record<string, string>, patron: Patron | null, order: TempleOrder) => {
+  const day = useCalendarDay(on ? iso : null);
+  const lastSunday = addDays(iso, -fromIso(iso).getDay());
+  const sundayDay = useCalendarDay(on && lastSunday !== iso ? lastSunday : null);
+  // the day before: in Lent its calendar names the readings of the evening's vespers and whether a liturgy was joined to them
+  const prevDay = useCalendarDay(on ? addDays(iso, -1) : null);
+  const guessed = guessRank(iso, day ?? null, patron);
+  const rank = (RANKS.some(r => r.id === ranks[iso]) ? ranks[iso] : guessed) as Rank;
+  const tone = weekTone(day ?? null, lastSunday === iso ? null : sundayDay ?? null);
+  const inp: DayInput = useMemo(() => ({ iso, day: day ?? null, prev: prevDay ?? null, tone, rank, patron, order }), [iso, day, prevDay, tone, rank, patron, order]);
+  // everything it reads has arrived (a day the calendar does not hold counts too — null)
+  const ready = on && day !== undefined && prevDay !== undefined && (lastSunday === iso || sundayDay !== undefined);
+  return { day, guessed, rank, tone, inp, ready };
+};
+
+// ---------- without internet ----------
+const savedNow = new Set<string>();
+/** Asks once for every file a day's services read (utils/dayOffline): the service worker keeps what was fetched, so the day
+ *  opens in a church with no internet. Once a day and a setting on this device; a file that failed is asked again next time. */
+const saveDayTexts = async (inp: DayInput) => {
+  let files: string[];
+  const sig = daySignature(inp);
+  if (savedNow.has(sig) || readMap(SAVED_KEY)[inp.iso] === sig) return;
+  try { files = dayFiles(inp); } catch { return; }
+  savedNow.add(sig);
+  // a file the phone already keeps is not asked for again (most of a day's files are yesterday's too)
+  const kept = async (url: string) => { try { return !!(await caches.match(url)); } catch { return false; } };
+  const got = await Promise.allSettled(files.map(async url => {
+    if (await kept(url)) return;
+    const r = await fetch(url);
+    if (!r.ok) throw new Error(String(r.status));
+    // the worker has kept the whole answer by now — the page itself does not need it
+    await r.body?.cancel().catch(() => {});
+  }));
+  if (got.every(g => g.status === 'fulfilled')) writeMap(SAVED_KEY, { ...readMap(SAVED_KEY), [inp.iso]: sig }, 6);
+  else savedNow.delete(sig);
+};
+/** today's and tomorrow's texts are saved by themselves a moment after the reader's page opens (not on a data-saving phone) */
+const useDaySaver = (on: boolean, today: string, ranks: Record<string, string>, patron: Patron | null, order: TempleOrder) => {
+  const a = useDayInput(today, on, ranks, patron, order);
+  const b = useDayInput(addDays(today, 1), on, ranks, patron, order);
+  useEffect(() => {
+    if (!a.ready || !b.ready) return;
+    const nav = navigator as Navigator & { connection?: { saveData?: boolean } };
+    if (nav.onLine === false || nav.connection?.saveData) return;
+    const t = setTimeout(() => { void saveDayTexts(a.inp).then(() => saveDayTexts(b.inp)); }, 2500);
+    return () => clearTimeout(t);
+  }, [a.ready, b.ready, a.inp, b.inp]);
+};
+
 /** The day service's whole state and rules — the old page below and the new look's screen (pages/v2/medavitne) draw it. */
 export const useDayService = () => {
   const canCal = useMembership().can('calendar');
   const today = useMemo(todayIso, []);
   const [iso, setIso] = useState(today);
-  const day = useCalendarDay(canCal ? iso : null);
-  const lastSunday = addDays(iso, -fromIso(iso).getDay());
-  const sundayDay = useCalendarDay(canCal && lastSunday !== iso ? lastSunday : null);
-  // the day before: in Lent its calendar names the readings of the evening's vespers and whether a liturgy was joined to them
-  const prevDay = useCalendarDay(canCal ? addDays(iso, -1) : null);
   const { patron, save: savePatron } = useTemplePatron();
   const [ranks, setRanks] = useState(() => readMap(RANK_KEY));
   const [ats, setAts] = useState(() => readMap(AT_KEY));
@@ -583,15 +633,16 @@ export const useDayService = () => {
   const [order, setOrder] = useState(readOrder);
   const [priestOn, setPriestOn] = useState(() => readFlag(PRIEST_KEY));
   const [oldOn, setOldOn] = useState(() => readFlag(OLD_KEY));
+  const [awakeOn, setAwakeOn] = useState(() => readOn(AWAKE_KEY));
   const [flowEl, setFlowEl] = useState<HTMLElement | null>(null);
   useKhutsuri(flowEl, oldOn);
+  // the phone lies on the lectern between the reader's parts: the screen stays on while this page is open
+  useScreenAwake(canCal && awakeOn);
+  const { day, guessed, rank, tone, inp } = useDayInput(iso, canCal, ranks, patron, order);
+  useDaySaver(canCal, today, ranks, patron, order);
   const [toneOpen, setToneOpen] = useState<number | null>(null);
   const [notesOf, setNotesOf] = useState<Step | null>(null);
 
-  const guessed = guessRank(iso, day ?? null, patron);
-  const rank = (RANKS.some(r => r.id === ranks[iso]) ? ranks[iso] : guessed) as Rank;
-  const tone = weekTone(day ?? null, lastSunday === iso ? null : sundayDay ?? null);
-  const inp: DayInput = useMemo(() => ({ iso, day: day ?? null, prev: prevDay ?? null, tone, rank, patron, order }), [iso, day, prevDay, tone, rank, patron, order]);
   const services = useMemo(() => buildServices(inp), [inp]);
   const tabs = SERVICE_TABS.filter(t => services.some(s => s.id === t.id));
   const service = services.find(s => s.id === tab) ?? services[0];
@@ -622,11 +673,12 @@ export const useDayService = () => {
   };
   const flipPriest = () => { const v = !priestOn; setPriestOn(v); writeFlag(PRIEST_KEY, v); };
   const flipOld = () => { const v = !oldOn; setOldOn(v); writeFlag(OLD_KEY, v); };
+  const flipAwake = () => { const v = !awakeOn; setAwakeOn(v); writeFlag(AWAKE_KEY, v); };
 
   return {
     canCal, today, iso, setIso, day, tone, rank, guessed, ownOrder, inp, services, tabs, service, setTab, great, period, templeDay, food, title,
     saints, at, mark, move, setRank, order, saveOrder, patron, savePatron, priestOn, flipPriest, oldOn, flipOld, setFlowEl, sheet, setSheet,
-    toneOpen, setToneOpen, notesOf, setNotesOf, shown, tab,
+    toneOpen, setToneOpen, notesOf, setNotesOf, shown, tab, awakeOn, flipAwake, canAwake: canKeepAwake(),
   };
 };
 export type DayServiceState = ReturnType<typeof useDayService>;
@@ -814,6 +866,8 @@ export const useDayBrief = () => {
   const sundayDay = useCalendarDay(canCal && lastSunday !== today ? lastSunday : null);
   const { patron } = useTemplePatron();
   const ranks = readMap(RANK_KEY);
+  const [order] = useState(readOrder);
+  useDaySaver(canCal, today, ranks, patron, order);
   if (!canCal) return null;
   const guessed = guessRank(today, day ?? null, patron);
   const rank = (RANKS.some(r => r.id === ranks[today]) ? ranks[today] : guessed) as Rank;
