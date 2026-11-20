@@ -87,7 +87,7 @@ export const PlanCard: React.FC<{
 
   return (
     <>
-      <section className="flex shrink-0 flex-col gap-1 rounded-card bg-tint px-3.5 pt-3.5 pb-1.5" aria-label="AI-ს გეგმა">
+      <section className="flex shrink-0 flex-col gap-1 rounded-card bg-tint px-3.5 pt-3.5 pb-1.5" aria-label="პროგრამის გეგმა">
         <div className="flex items-center gap-2.5 pb-1">
           <Dot icon={<Sparkles />} />
           <h2 className="min-w-0 flex-1 text-head font-bold">{state === 'done' ? 'გავაკეთე' : 'ასე გავაკეთებ'}</h2>

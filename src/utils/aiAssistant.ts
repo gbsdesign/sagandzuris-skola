@@ -18,17 +18,9 @@ export const MAX_CONTEXT_PEOPLE = 300;
 /** earlier turns sent with a new request */
 export const HISTORY_TURNS = 6;
 
-// ——— the three ready requests ———
+// ——— a ready request (the lists themselves: utils/programOffers.ts) ———
 
 export interface ReadyAsk { label: string; text: string; /** sent at once; else put in the field to finish */ send: boolean }
-
-export const readyAsks = (admin: boolean): ReadyAsk[] => [
-  { label: 'შემიჯამე მოსწავლეები', text: 'შემიჯამე ამ კვირის მოსწავლეები', send: true },
-  { label: 'მიწერე დამწყებებს', text: 'დამწყებებს მიწერე: ', send: false },
-  admin
-    ? { label: 'შექმენი კლასი', text: 'შექმენი კლასი ', send: false }
-    : { label: 'მიწერე კლასს', text: 'კლასის ჩატში მიწერე: ', send: false },
-];
 
 // ——— what the AI may see ———
 
@@ -79,7 +71,11 @@ export interface ScopePerson {
 
 export interface ScopeClass { ref: string; id: string; name: string; size: number; teachers: string; slots: LessonSlot[] }
 
-export interface AssistantScope { me: string; admin: boolean; people: ScopePerson[]; classes: ScopeClass[]; focus?: string; today: string }
+export interface AssistantScope {
+  me: string; admin: boolean; people: ScopePerson[]; classes: ScopeClass[]; focus?: string; today: string;
+  /** the open page in words (utils/programOffers `pageName`): the program is told where the person is */
+  page?: string;
+}
 
 export const firstName = (name: string) => name.trim().split(/\s+/)[0] || 'უსახელო';
 
@@ -206,6 +202,7 @@ export interface Turn { who: 'me' | 'ai'; text: string }
 export const assistantPrompt = (scope: AssistantScope, history: Turn[], ask: string) => [
   'შენ ხარ „საგანძურის სკოლის“ (ქართული გალობისა და ხალხური სიმღერის სკოლა) AI დამხმარე მასწავლებლებისა და ადმინებისთვის.',
   `დღეს არის ${scope.today}.`,
+  ...(scope.page ? [`ადამიანს ახლა აპში ეს გვერდი აქვს გახსნილი: ${scope.page}. თუ ამბობს „აქ“ ან „ეს“, ამ გვერდს გულისხმობს.`] : []),
   'ქვემოთ მხოლოდ ისაა, რისი ნახვაც ამ ადამიანს შეუძლია. სხვა არაფერი იცი — არაფერი გამოიგონო; რაც არ ჩანს, თქვი, რომ არ ჩანს.',
   contextText(scope),
   ...(history.length ? ['წინა საუბარი:', ...history.slice(-HISTORY_TURNS).map(t => `${t.who === 'me' ? 'ადამიანი' : 'შენ'}: ${t.text}`)] : []),

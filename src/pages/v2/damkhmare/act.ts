@@ -49,7 +49,7 @@ export const makeClass = async (me: Me, plan: Extract<CheckedPlan, { kind: 'crea
     schedule: plan.slots, classMode: false, defaultShortcuts: [], createdAt: now, createdBy: me.email || '', updatedAt: now,
   };
   await setDoc(ref, data);
-  logChange('class', `კლასი „${plan.name}“ შეიქმნა (AI დამხმარე)`, ref.id);
+  logChange('class', `კლასი „${plan.name}“ შეიქმნა (ავტომატური პროგრამა)`, ref.id);
   let lost = 0;
   if (plan.members.length) {
     const r = await addClassMembers(toClass(ref.id, data), plan.members.map(m => ({ uid: m.uid, name: m.name, photoURL: m.photo || '' })));

@@ -138,7 +138,7 @@ export const SearchPage: React.FC = () => {
       onVoice={canVoice ? () => { setVoiceOpen(true); voice.start(); } : undefined}
       heardNote={heardNote}
       onSing={canSing ? () => setSinging(true) : undefined}
-      onAsk={canAsk ? () => openAssistant() : undefined}
+      onAsk={canAsk ? () => openAssistant({ page: 'search' }) : undefined}
       onHelper={words => openMkitkhe({ query: words })}
     />
     <VoiceSheet open={voiceOpen} state={voice.state} heard={voice.heard} error={voice.error} onClose={closeVoice} onRetry={voice.start} />

@@ -8,13 +8,13 @@ import { assistantPrompt, parseAnswer, type Answer, type AssistantScope, type Tu
 // rules hold here too: the kids' mode and the month's budget (aiGate) stop it; every answer is counted in aiUsage.
 
 export const ASSISTANT_PROBLEM_TEXT: Record<AiTeacherProblem, string> = {
-  setup: 'AI დამხმარე ჯერ არ არის ჩართული — მალე ჩაირთვება.',
-  'no-credits': 'AI დამხმარე ახლა დაიღალა — ცოტა ხანში სცადე.',
-  offline: 'ინტერნეტი არ არის — AI დამხმარეს ინტერნეტი სჭირდება.',
+  setup: 'ავტომატური პროგრამა ჯერ არ არის ჩართული — მალე ჩაირთვება.',
+  'no-credits': 'ავტომატური პროგრამა ახლა დაიღალა — ცოტა ხანში სცადე.',
+  offline: 'ინტერნეტი არ არის — ავტომატურ პროგრამას ინტერნეტი სჭირდება.',
   failed: 'პასუხი ვერ მოვიდა — ცოტა ხანში კიდევ სცადე.',
   'no-tries': 'დღეს მეტი კითხვა აღარ შეიძლება — ხვალ ისევ შეგეძლება.',
-  kids: 'საბავშვო რეჟიმში AI არ ერთვება.',
-  budget: 'ამ თვის AI-ს ლიმიტი ამოიწურა — დამხმარე მომავალ თვემდე ჩუმადაა.',
+  kids: 'საბავშვო რეჟიმში ავტომატური პროგრამა არ ერთვება.',
+  budget: 'ამ თვის ლიმიტი ამოიწურა — ავტომატური პროგრამა მომავალ თვემდე ჩუმადაა.',
 };
 
 const offline = () => navigator.onLine === false;
