@@ -226,12 +226,13 @@ export const Body: React.FC<{ group: PsalterGroup; uid: string; canLead: boolean
                   onClick={() => setTile(k)}
                   aria-label={`კანონი ${k}${done ? ', წაკითხულია' : help ? ', დახმარებას ითხოვს' : ''}`}
                   className={cx(
-                    'h-6 w-full cursor-pointer rounded-chip transition active:scale-95',
-                    done ? 'bg-wine' : state === 'taken' || help ? 'bg-gold-tint' : 'bg-track',
+                    // a tap target of 36px with the kanon's number, so the tile says which kanon it is
+                    'flex h-9 w-full cursor-pointer items-center justify-center rounded-chip text-meta font-semibold tabular-nums transition active:scale-95',
+                    done ? 'bg-wine text-white' : state === 'taken' || help ? 'bg-gold-tint text-gold-ink' : 'bg-track text-mut',
                     mineK && !done && 'ring-2 ring-wine',
                     FOCUS,
                   )}
-                />
+                >{k}</button>
               </li>
             );
           })}

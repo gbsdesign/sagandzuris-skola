@@ -50,7 +50,7 @@ export const PathRow: React.FC<{
       onClick={onClick}
       aria-label={label}
       className={cx(
-        'flex h-[84px] w-full shrink-0 cursor-pointer items-center gap-3.5 rounded-card bg-surf pr-3 pl-4 text-left text-ink select-none',
+        'flex min-h-[84px] w-full shrink-0 py-3 cursor-pointer items-center gap-3.5 rounded-card bg-surf pr-3 pl-4 text-left text-ink select-none',
         'transition active:scale-[0.99] active:bg-soft [-webkit-touch-callout:none]',
         FOCUS_IN,
       )}
@@ -58,7 +58,7 @@ export const PathRow: React.FC<{
       {ring}
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="text-head leading-tight font-bold">{title}</span>
-        <span className="truncate text-meta text-mut">{sub}</span>
+        <span className="text-meta leading-snug text-mut wrap-break-word">{sub}</span>
       </span>
       {!!badge && <Badge n={badge} />}
       <ChevronRight aria-hidden="true" className="size-[18px] shrink-0 text-mut" strokeWidth={1.75} />

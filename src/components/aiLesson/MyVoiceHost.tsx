@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { useOpenLearning } from '../learn/openLearning';
+import { useBackToClose } from '../../utils/backToClose';
 import { saveAiNote, useAiNote } from './useAiNote';
 import { MyVoice } from './MyVoice';
 import { VoiceCheck } from './VoiceCheck';
@@ -16,6 +17,8 @@ export const MyVoiceHost: React.FC<{ tab: MyVoiceTab; onClose: () => void }> = (
   const [check, setCheck] = useState(false);
   const [full, setFull] = useState(false);
   const [shown, setShown] = useState<MyVoiceTab>(tab);
+  // the phone's back leaves the check again for „ჩემი ხმა“, not the whole page
+  useBackToClose(check, () => setCheck(false));
 
   const practice = (piece: string) => {
     // back out of this page and the lesson under it, then open the piece once the history has settled

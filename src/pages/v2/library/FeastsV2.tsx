@@ -118,6 +118,7 @@ export const FeastsV2: React.FC<{ group?: string | null; onAll: () => void; onBa
               className={cx(past && 'opacity-70')}
               lead={<DateTile iso={it.iso} tone={it.iso === today ? 'wine' : past ? 'soft' : 'tint'} />}
               title={it.feast.short ?? it.feast.name}
+              wrap
               aria-label={`${it.feast.name}, ${dayMonthGe(it.iso)}`}
               onClick={() => { triggerHaptic(8); setPicked({ ...it }); }}
             />

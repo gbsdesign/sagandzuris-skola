@@ -1,7 +1,7 @@
 // The floating bar at the notes page's bottom in the new look (board x-notebi): ბგერა · სწავლა · the big ▶ · ტაძარი ·
 // მეტი. On screen stay only the notes and play, voices and „სწავლა“ — tone, size, my list and the rest are in „მეტი“.
 import React from 'react';
-import { Church, Ellipsis, GraduationCap, LoaderCircle, Pause, Play } from 'lucide-react';
+import { ChevronUp, Church, Ellipsis, GraduationCap, LoaderCircle, Pause, Play } from 'lucide-react';
 import { cx, FOCUS, Press } from '../../../components/ui2';
 
 /** the tuning fork of „საწყისი ბგერა“ */
@@ -57,14 +57,32 @@ export const BottomBar: React.FC<{
   onMore: () => void;
   moreOpen: boolean;
   dark: boolean;
-}> = ({ onStart, dots, voices, onLearn, play, playLabel, onPlay, onChurch, onMore, moreOpen, dark }) => (
+  /** lifts the folded player (voices, tempo, repeat): the same small pill the open player folds by, turned up */
+  onDock?: () => void;
+}> = ({ onStart, dots, voices, onLearn, play, playLabel, onPlay, onChurch, onMore, moreOpen, dark, onDock }) => (
   <nav
     aria-label="ნოტების ხელსაწყოები"
     className={cx(
-      'flex items-center gap-0.5 rounded-full px-2.5 py-2 shadow-float backdrop-blur-md',
+      'relative flex items-center gap-0.5 rounded-full px-2.5 py-2 shadow-float backdrop-blur-md',
       dark ? 'bg-night-surf/95' : 'bg-surf/95',
     )}
   >
+    {onDock && (
+      <Press
+        onClick={onDock}
+        aria-label="ხმები, ტემპი და გამეორება"
+        title="ხმები, ტემპი და გამეორება"
+        className="group absolute -top-6.5 left-1/2 flex h-9 w-18 -translate-x-1/2 cursor-pointer items-center justify-center focus-visible:outline-none"
+      >
+        <span className={cx(
+          'flex h-6 w-14 items-center justify-center rounded-full shadow-float transition group-active:scale-95 [&_svg]:size-4',
+          'group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-wine/60',
+          dark ? 'bg-night-surf text-night-ink' : 'bg-surf text-mut',
+        )}>
+          <ChevronUp aria-hidden="true" strokeWidth={2.4} />
+        </span>
+      </Press>
+    )}
     {onStart && (
       <Item
         label="ბგერა" title="საწყისი ბგერა: ხმების პირველი ბგერა რიგრიგობით" icon={<Fork />} onClick={onStart} dark={dark}

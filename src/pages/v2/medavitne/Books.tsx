@@ -34,11 +34,11 @@ export const ShelfRows: React.FC<{ open: Open }> = ({ open }) => {
       <Rows aria-label="წიგნები მედავითნისთვის">
         {WIGNEBI_SHELVES.map(s => {
           const Icon = SHELF_ICONS[s.id] ?? BookOpen;
-          return <Row key={s.id} lead={<Dot icon={<Icon />} />} title={s.title.replace('­', '')} sub={s.sub} onClick={() => go(s.id, s.collections)} />;
+          return <Row key={s.id} lead={<Dot icon={<Icon />} />} title={s.title.replace('­', '')} sub={s.sub} wrap onClick={() => go(s.id, s.collections)} />;
         })}
       </Rows>
       <Rows>
-        <Row lead={<Dot icon={<Library />} color="gold" />} title={EXTRA.title}
+        <Row lead={<Dot icon={<Library />} color="gold" />} title={EXTRA.title} wrap
           sub={`წმინდანთა განგებები, დიდი მარხვა, კურთხევები · ${EXTRA_BOOKS.length} წიგნი`} onClick={() => open(`w:c:${EXTRA.id}`)} />
       </Rows>
       <Note>ტექსტები: „საღვთისმსახურო წიგნები“, ღვთისმშობლის მიძინების სახელობის მამათა მონასტერი.</Note>
@@ -243,7 +243,7 @@ const Reader: React.FC<{ c: WignebiCollection; n: number; book: BookFile; part: 
               const numbered = book.num && !/^\d+[.\s]/.test(t);
               return (
                 <p key={pi} className="mb-[0.55em] font-serif-ge leading-[1.75] text-ink wrap-break-word last:mb-0">
-                  {numbered && <sup className="mr-1 font-sans font-bold text-gold-ink tabular-nums" style={{ fontSize: '0.62em' }}>{pi + 1}</sup>}
+                  {numbered && <sup className="mr-1 font-sans font-bold text-gold-ink tabular-nums" style={{ fontSize: 'max(0.62em, 12px)' }}>{pi + 1}</sup>}
                   {t}
                 </p>
               );

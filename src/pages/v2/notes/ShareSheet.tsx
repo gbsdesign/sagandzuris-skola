@@ -44,7 +44,7 @@ export const ShareSheet: React.FC<{
   };
 
   return (
-    <Sheet open title="გაზიარება" onClose={back}>
+    <Sheet open title="გაზიარება" onClose={back} back={false}>
       <div className="shrink-0 px-2 text-center">
         <div className="text-head font-bold wrap-break-word">{title}</div>
         {sub && <div className="text-meta text-mut wrap-break-word">{sub}</div>}

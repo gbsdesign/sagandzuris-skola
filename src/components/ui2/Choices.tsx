@@ -114,7 +114,8 @@ export const Seg = <T extends string>({ items, value, onChange, iconsOnlyWhenIdl
             )}
           >
             {it.icon}
-            {!compact && <span className="min-w-0 truncate">{it.label}</span>}
+            {/* a name of two words that does not fit takes two lines (never „AI-ს რვეუ…“); one long word still ends in „…“ */}
+            {!compact && <span className="line-clamp-2 min-w-0 text-center leading-tight text-ellipsis whitespace-normal">{it.label}</span>}
             {!!it.badge && (compact
               ? <Counter n={it.badge} className="absolute top-0.5 right-0.5" />
               : <Counter n={it.badge} className="shrink-0" />)}

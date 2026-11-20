@@ -17,6 +17,7 @@ import { LearnMirror } from './LearnMirror';
 import { Choice, LOOPS_PER_STEP, SPEEDS, SettingsFold, useSinging } from './LearnShared';
 import { LearnView } from '../../pages/v2/learn/LearnView';
 import { BigNotesView } from '../../pages/v2/learn/BigNotesView';
+import { leaveOverlaySteps } from '../../utils/backToClose';
 import { textOf, type LearnAction } from '../../pages/v2/learn/parts';
 import { MicHelpSheet } from '../../pages/v2/learn/MicHelp';
 import { fixLine, hitsLine, verdictLine } from '../../utils/aiLesson';
@@ -146,28 +147,15 @@ export const LearnEasy: React.FC<{
     setBig(true);
   };
   const closeBig = () => { if (window.history.state?.sgLearnBig) window.history.back(); else setBig(false); };
-  // the new look's ⋯ window: a history step of its own too, so the phone's back (and Escape) closes only it
+  // the new look's ⋯ window: the kit's Sheet keeps its own history step (useBackToClose), so the phone's back closes only it
   const [more, setMore] = useState(false);
-  const openMore = () => {
-    try { window.history.pushState({ ...(window.history.state || {}), sgLearnMore: 1 }, ''); } catch { /* still opens */ }
-    setMore(true);
-  };
-  const closeMore = () => { if (window.history.state?.sgLearnMore) window.history.back(); else setMore(false); };
-  useEffect(() => {
-    if (!more) return;
-    const onPop = (e: PopStateEvent) => { if (!e.state?.sgLearnMore) setMore(false); };
-    window.addEventListener('popstate', onPop);
-    return () => window.removeEventListener('popstate', onPop);
-  }, [more]);
-  // from the ⋯ window straight to the big notes: its step becomes the big notes' step
+  const openMore = () => setMore(true);
+  const closeMore = () => setMore(false);
+  // from the ⋯ window straight to the big notes: the window's step is left first, then the big notes take a step of their own
+  // (else a dead step stayed behind them)
   const bigFromMore = () => {
-    triggerHaptic(8);
-    try {
-      const { sgLearnMore: _drop, ...rest } = window.history.state || {};
-      window.history.replaceState({ ...rest, sgLearnBig: 1 }, '');
-    } catch { /* still opens */ }
     setMore(false);
-    setBig(true);
+    leaveOverlaySteps(openBig);
   };
   // a phone held upright: the big notes halve each line, so they come out twice as large
   const [upright, setUpright] = useState(() => window.matchMedia(UPRIGHT).matches);

@@ -72,7 +72,7 @@ export const PinSheetV2: React.FC<{
           <SectionLabel label="ვისთვის?" />
           <Rows>
             {people.map(p => (
-              <Row key={p.uid} lead={<Avatar name={p.name || '?'} photo={p.photoURL} />} title={p.name || 'უსახელო'} onClick={() => setWho(p)} />
+              <Row key={p.uid} lead={<Avatar name={p.name || '?'} photo={p.photoURL} />} title={p.name || 'უსახელო'} wrap onClick={() => setWho(p)} />
             ))}
           </Rows>
         </>

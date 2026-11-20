@@ -424,6 +424,14 @@ html.sg-new { background: var(--color-page); }
 :root { --spacing: calc(0.25rem / var(--sg-scale, 1)); }
 /* above the usual size a long name wraps onto more lines instead of ending in „…“ (kit v2 marks such names .sg-fit) */
 html.sg-text-big .sg-fit { white-space: normal; overflow: visible; text-overflow: clip; overflow-wrap: anywhere; }
+/* a page bar's name and small line (kit v2 TopBar): two lines at the usual size, four when the text is big */
+html.sg-text-big .sg-fit2 { -webkit-line-clamp: 4; line-clamp: 4; }
+/* the three figures of a card (kit v2 Stats): with a big text size they stand under each other, the name left and the
+   number right, so a name never breaks in the middle of a word */
+html.sg-text-big .sg-stats { flex-direction: column; }
+html.sg-text-big .sg-stats > div { flex-direction: row; align-items: baseline; justify-content: space-between; gap: 12px; padding: 10px 16px; text-align: left; }
+html.sg-text-big .sg-stats > div > dt { margin-top: 0; }
+html.sg-text-big .sg-stats > :not(:last-child) { border-inline-end-width: 0; border-bottom-width: 1px; }
 /* words that keep their size: the bottom menu's (four places must fit in its pill), the home vine's labels (they hang on
    the picture) — .sg-keep-text */
 :is(.sg-nav, .sg-keep-text) .text-cap { font-size: calc(var(--text-cap) / var(--sg-scale, 1)); }

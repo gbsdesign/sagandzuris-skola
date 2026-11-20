@@ -8,7 +8,7 @@ import { teachSummary, useLastLessons } from '../../../components/admin/TeacherO
 import { ALL_FEATURES } from '../../../utils/memberAccess';
 import { whyLabel } from '../../../utils/duplicates';
 import { SearchBox } from '../klasi/teacher/SearchBox';
-import { useAdmin } from './ctx';
+import { useAdmin, useKeptText } from './ctx';
 import { peopleItem, personItem } from './nav';
 import { PersonRow, Screen, agoWords, dayWords } from './parts';
 import { FILTER_NAMES } from './Home';
@@ -44,7 +44,8 @@ const letterOf = (u: UserRecord) => (Array.from(u.name.trim())[0] || '#').toUppe
 export const PeopleScreen: React.FC<{ filter: Filter; openUid: string | null }> = ({ filter, openUid }) => {
   const { isSuperAdmin } = useAuth();
   const { d, test, statusOf, go, back, wide, say } = useAdmin();
-  const [q, setQ] = useState('');
+  // the search stays while a person is open and after „უკან“ (the list unmounts on a phone)
+  const [q, setQ] = useKeptText('people');
   const line = usePersonLine();
 
   const count = (f: Filter) => d.users.filter(test[f]).length;

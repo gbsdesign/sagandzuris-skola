@@ -2,6 +2,7 @@ import React from 'react';
 import { ArrowLeft, ArrowUp, Focus, Minus, Moon, Plus, Sun, X } from 'lucide-react';
 import { Press } from '../../../components/ui2';
 import { cx, FOCUS } from '../../../components/ui2/cx';
+import { useBackToClose } from '../../../utils/backToClose';
 
 /** x-tsamqvani — the prompter's top in the new look: only ✕ and „Aa“; the background, the letters' size, the reading line
  *  (and an admin's way of moving) live in the „Aa“ sheet, drawn in the prompter's own dark or light (Prompter.tsx keeps all
@@ -47,6 +48,8 @@ export const PrompterAaSheet: React.FC<{
   modes?: { value: Mode; onPick: (m: Mode) => void };
   onClose: () => void;
 }> = ({ theme, onTheme, canSmaller, canBigger, onSize, guide, modes, onClose }) => {
+  // the phone's back closes this sheet first, then the prompter
+  useBackToClose(true, onClose);
   const dark = theme === 'dark';
   const card = dark ? 'bg-ink' : 'bg-surf';
   const mut = dark ? 'text-night-ink/70' : 'text-mut';

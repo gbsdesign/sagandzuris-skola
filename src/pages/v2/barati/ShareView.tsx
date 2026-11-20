@@ -11,6 +11,7 @@ import {
 import {
   cardText, momentLine, momentTitle, readChoices, shortName, writeChoices, type CardChoices, type CardInput,
 } from '../../../utils/learnedCard';
+import { useBackToClose } from '../../../utils/backToClose';
 import { drawCard, loadLogo, saveCard, shareCard } from './drawCard';
 import type { LearnedItem } from './useLearned';
 
@@ -142,6 +143,7 @@ export const ShareView: React.FC<{
 /** From „საგანძური“: the share page over the app. */
 export const ShareLayer: React.FC<{ item: LearnedItem; onClose: () => void }> = ({ item, onClose }) => {
   const { user } = useAuth();
+  useBackToClose(true, onClose);
   useEffect(() => {
     const k = (e: KeyboardEvent) => { if (e.key === 'Escape' && !document.querySelector('[aria-labelledby]')) onClose(); };
     window.addEventListener('keydown', k);

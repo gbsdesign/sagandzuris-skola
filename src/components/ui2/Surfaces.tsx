@@ -4,6 +4,7 @@ import { ArrowLeft, X } from 'lucide-react';
 import { cx } from './cx';
 import { Press, RoundButton } from './Buttons';
 import { Dot, Two } from './Rows';
+import { useBackToClose } from '../../utils/backToClose';
 
 /** A white card — `card`. */
 export const Card: React.FC<React.HTMLAttributes<HTMLElement> & {
@@ -57,8 +58,9 @@ export const TopBar: React.FC<{
     )}
     {children ?? (
       <div className="min-w-0 flex-1 pl-0.5">
-        <h1 className="sg-fit truncate text-title leading-tight font-bold tracking-tight">{title}</h1>
-        {sub && <div className="sg-fit truncate text-meta text-mut">{sub}</div>}
+        {/* a long name or small line takes a second line instead of ending in „…“ (four with a big text size — .sg-fit2) */}
+        <h1 className="sg-fit2 line-clamp-2 text-title leading-tight font-bold tracking-tight wrap-break-word">{title}</h1>
+        {sub && <div className="sg-fit2 line-clamp-2 text-meta leading-snug text-mut wrap-break-word">{sub}</div>}
       </div>
     )}
     {right && <div className="flex shrink-0 items-center gap-2">{right}</div>}
@@ -147,19 +149,48 @@ const openSheets: symbol[] = [];
 
 const FOCUSABLE = 'a[href],button:not([disabled]),input:not([disabled]),textarea:not([disabled]),select:not([disabled]),[tabindex]:not([tabindex="-1"])';
 
-/** A window rising from the bottom over the dimmed page — `sheet`. Closes on a tap outside, ✕ and Escape. */
+/**
+ * A window rising from the bottom over the dimmed page — `sheet`. Closes on a tap outside, ✕, Escape, the phone's back
+ * (utils/backToClose) and a pull down on its head. `back={false}`: the caller keeps a history step of its own.
+ */
 export const Sheet: React.FC<{
   open: boolean;
   title: string;
   onClose: () => void;
   children: React.ReactNode;
   className?: string;
-}> = ({ open, title, onClose, children, className }) => {
+  back?: boolean;
+}> = ({ open, title, onClose, children, className, back = true }) => {
   const box = useRef<HTMLElement>(null);
   const titleId = useId();
   // the latest onClose without restarting the effect when the caller makes a new one each render
   const close = useRef(onClose);
   close.current = onClose;
+  useBackToClose(open && back, () => close.current());
+
+  // a pull down on the head (the little bar and the title) closes it, as the bar promises; a button there stays a button
+  const pull = useRef<{ y: number; t: number } | null>(null);
+  const pullStart = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === 'mouse' || (e.target as HTMLElement).closest('button,a,input')) return;
+    pull.current = { y: e.clientY, t: e.timeStamp };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  };
+  const pullMove = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (!pull.current || !box.current) return;
+    const dy = Math.max(0, e.clientY - pull.current.y);
+    box.current.style.transition = 'none';
+    box.current.style.translate = dy ? `0 ${dy}px` : '';
+  };
+  const pullEnd = (e: React.PointerEvent<HTMLDivElement>) => {
+    const p = pull.current;
+    pull.current = null;
+    if (!p || !box.current) return;
+    const dy = e.clientY - p.y;
+    const fast = dy > 24 && dy / Math.max(1, e.timeStamp - p.t) > 0.6;
+    box.current.style.transition = '';
+    if (e.type !== 'pointercancel' && (dy > 96 || fast)) { close.current(); return; }
+    box.current.style.translate = '';
+  };
 
   useEffect(() => {
     if (!open) return;
@@ -205,15 +236,23 @@ export const Sheet: React.FC<{
         tabIndex={-1}
         onKeyDown={trapTab}
         className={cx(
-          'sg-up relative flex max-h-[92dvh] w-full max-w-[560px] flex-col gap-3 rounded-t-card bg-page px-4 pt-2.5 text-ink shadow-sheet outline-none',
+          'sg-up relative flex max-h-[92dvh] w-full max-w-[560px] flex-col gap-3 rounded-t-card bg-page px-4 pt-2.5 text-ink shadow-sheet outline-none transition-[translate] duration-200',
           'pb-[max(20px,env(safe-area-inset-bottom))] sm:rounded-card sm:pt-4',
           className,
         )}
       >
-        <span aria-hidden="true" className="h-1 w-10 shrink-0 self-center rounded-full bg-dim sm:hidden" />
-        <div className="flex shrink-0 items-center gap-2.5">
-          <h2 id={titleId} className="min-w-0 flex-1 line-clamp-2 pl-1 text-title leading-tight font-bold wrap-break-word">{title}</h2>
-          <RoundButton label="დახურვა" onClick={() => close.current()}><X /></RoundButton>
+        <div
+          className="-mx-4 -mt-2.5 flex shrink-0 touch-none flex-col gap-3 px-4 pt-2.5 sm:-mt-4 sm:pt-4"
+          onPointerDown={pullStart}
+          onPointerMove={pullMove}
+          onPointerUp={pullEnd}
+          onPointerCancel={pullEnd}
+        >
+          <span aria-hidden="true" className="h-1 w-10 shrink-0 self-center rounded-full bg-dim sm:hidden" />
+          <div className="flex shrink-0 items-center gap-2.5">
+            <h2 id={titleId} className="sg-fit2 min-w-0 flex-1 line-clamp-3 pl-1 text-title leading-tight font-bold wrap-break-word">{title}</h2>
+            <RoundButton label="დახურვა" onClick={() => close.current()}><X /></RoundButton>
+          </div>
         </div>
         <div className="-mx-4 flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-4 pb-0.5">{children}</div>
       </section>

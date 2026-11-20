@@ -148,6 +148,7 @@ export const Front: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) =>
               <Row
                 lead={<Dot icon={<Headphones />} />}
                 title="საგალობლების mp3"
+                wrap
                 sub={busy
                   ? <span className="inline-flex items-center gap-1.5 font-bold text-wine tabular-nums"><LoaderCircle aria-hidden="true" className="size-3.5 animate-spin" />მზადდება · {job!.done} / {job!.total}</span>
                   : 'წიგნ-წიგნ, სინთეზატორით დაკრული'}
@@ -197,6 +198,7 @@ export const Front: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) =>
           <Row
             lead={<Dot icon={<CalendarDays />} />}
             title="საეკლესიო კალენდარი"
+            wrap
             sub="დღის წმიდანები და დღესასწაულები"
             onClick={() => { triggerHaptic(10); openChurchCalendar(todayIso()); }}
           />

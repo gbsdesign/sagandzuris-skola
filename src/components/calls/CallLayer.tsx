@@ -14,6 +14,7 @@ import {
 } from '../../utils/callSession';
 import { afterLeave, answerChatCall, declineChatCall, joinClassCall, takeAnswer, useAnswerWanted } from './callActions';
 import { clock, useSeconds, Face, MediaVideo, MediaAudio, ScreenTile, Tile, RoundBtn } from './CallParts';
+import { useBackToClose } from '../../utils/backToClose';
 
 // The call on top of the app (new look): the full call screen (or a small bar while one reads the chat), and the incoming
 // call — a private one rings, a class's shows „ზარი მიმდინარეობს“. Nothing sounds while the notes, the liturgy
@@ -32,6 +33,10 @@ const CallScreen: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
     const t = setTimeout(dismissCall, 2600);
     return () => clearTimeout(t);
   }, [call.status]);
+
+  // the phone's back makes the full call screen small (the call goes on), or closes the „ended“ note
+  const big = !!call.info && call.status !== 'idle' && !(call.small && call.status !== 'ended');
+  useBackToClose(big, () => { if (call.status === 'ended') dismissCall(); else setCallSmall(true); });
 
   const info = call.info;
   if (!info || call.status === 'idle') return null;

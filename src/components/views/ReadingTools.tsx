@@ -2,7 +2,8 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ChevronsDown, Maximize2, Minus, Moon, Pause, Play, Plus, X } from 'lucide-react';
 import { Prompter, blockAtReading, prompterCopy, showBlock } from './Prompter';
-import { useNewLook } from '../../design/newLook';
+import { hideNav, useNewLook } from '../../design/newLook';
+import { leaveOverlaySteps, useBackToClose } from '../../utils/backToClose';
 import { AutoMenuSheet } from '../../pages/v2/lotsva/AutoMenuSheet';
 
 // The tools over a prayer's text: ხუცური on the left; auto-scroll and the text's size on the right.
@@ -206,6 +207,7 @@ const FullScreen: React.FC<{
   const [full, setFull] = useState<{ html: string; start: number; n: number; auto: boolean } | null>(null);
   const [loading, setLoading] = useState<string | null>(null);
   const timer = useRef(0);
+  const nl = useNewLook();
 
   useEffect(() => {
     const text = source();
@@ -220,7 +222,9 @@ const FullScreen: React.FC<{
     if (!step || loading) return;
     const before = (latest.current.source()?.textContent || '').slice(0, 400);
     setLoading(step.label);
-    step.go();
+    // the new look: the prompter's own history entry is left first, so the page's step replaces the page's entry
+    // (else the phone's back would close the prompter onto the kanon before)
+    if (nl) leaveOverlaySteps(step.go); else step.go();
     const t0 = Date.now();
     window.clearInterval(timer.current);
     timer.current = window.setInterval(() => {
@@ -286,6 +290,11 @@ const AutoScroll: React.FC<{ zoom: number; onClose: () => void; source: Getter; 
   pxPerSecond.current = SPEEDS[speed].px * zoom;
   const where = useRef({ source, scroller });
   where.current = { source, scroller };
+
+  // the new look: the bottom menu steps aside (the bar sat on it), and the phone's back stops the scrolling first
+  const nl = useNewLook();
+  useEffect(() => (nl ? hideNav() : undefined), [nl]);
+  useBackToClose(nl, onClose);
 
   // the floating „უკან“ steps aside while the bar is here (index.css)
   useEffect(() => {
@@ -373,7 +382,7 @@ const AutoScroll: React.FC<{ zoom: number; onClose: () => void; source: Getter; 
           <Minus className="w-[18px] h-[18px]" />
         </button>
         <span className="w-16 text-center leading-none select-none">
-          <span className="block text-[11.5px] font-bold text-[#8a7a6a]">სიჩქარე</span>
+          <span className={`block ${nl ? 'text-[12px]' : 'text-[11.5px]'} font-bold text-[#8a7a6a]`}>სიჩქარე</span>
           <span className="block mt-1 text-[16px] font-black tabular-nums text-[#7a2028]">{SPEEDS[speed].label}</span>
         </span>
         <button type="button" aria-label="სწრაფად" disabled={speed >= SPEEDS.length - 1} onClick={() => setSpeed(s => s + 1)} className={ROUND}>

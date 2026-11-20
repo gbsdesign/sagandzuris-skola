@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { ArrowLeft, CheckCircle2, AlertCircle, Info, X } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
 import { useNewLook } from '../../design/newLook';
+import { useBackToClose } from '../../utils/backToClose';
 import { Button, Duo, RoundButton } from '../ui2';
 
 // Shared building blocks for the whole app: the same warm paper, burgundy accents and roomy controls everywhere.
@@ -435,6 +436,8 @@ export const Sheet: React.FC<{
   /** a computer's second column instead of a window over the page: the same head, body and footer, staying in view */
   docked?: boolean;
 }> = ({ open, onClose, title, children, footer, wide, locked, docked }) => {
+  // the phone's back closes it instead of leaving the page (not a locked form, not a computer's side column)
+  useBackToClose(open && !locked && !docked, onClose);
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && !locked && onClose();

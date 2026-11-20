@@ -84,7 +84,7 @@ export const ClassMoreSheet: React.FC<{ cls: SchoolClass; open: boolean; onClose
           <Row lead={<Dot icon={<Pencil />} />} title="სახელი და ლოგო" onClick={() => setSub('name')} />
           <Row lead={<Dot icon={<CalendarDays />} />} title="გაკვეთილების ცხრილი" sub={timetableLine(cls.schedule)} onClick={() => setSub('time')} />
           <Row lead={<Dot icon={<ListChecks />} />} title="სასწავლო პროგრამა" sub={`${cls.program.length} საგალობელი`} onClick={() => { closeAll(); openMapItem(CLASS_ORDER); }} />
-          <Row lead={<Dot icon={<ClipboardCheck />} />} title="კვირის შეჯამება" sub="ვინ ივარჯიშა · დასწრება · მზა წერილი" onClick={() => { closeAll(); openMapItem(AI_REPORT); }} />
+          <Row lead={<Dot icon={<ClipboardCheck />} />} title="კვირის შეჯამება" sub="ვინ ივარჯიშა · დასწრება · მზა წერილი" wrap onClick={() => { closeAll(); openMapItem(AI_REPORT); }} />
           {aiOn && (
             <Row lead={<Dot icon={<Sparkles />} />} title="AI მასწავლებელი" sub="მითითება AI-ს" onClick={() => { closeAll(); openMapItem(AI_NOTE); }} />
           )}

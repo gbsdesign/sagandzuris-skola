@@ -6,6 +6,7 @@ import { useNavigation } from './NavigationContext';
 import { chantLookupLoaded, chantLookupNow, loadChantLookup } from '../data/chantLookupLazy';
 import type { VersionInfo } from '../data/chantLookup';
 import { useLiturgy, LiturgyApi, LiturgyProgram, liveNow, type LiveTurn } from '../hooks/useLiturgy';
+import { leaveOverlaySteps } from '../utils/backToClose';
 import { isAndroidApp, openInApp } from '../utils/androidApp';
 import { holdUpdates } from '../utils/appUpdate';
 
@@ -195,8 +196,11 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
       if (info && isServiceTab(info.service)) { nav.setSelectedService(info.service); nav.setExpandedChantId(info.chant.id); }
     }
     if (window.history.state?.sgBase) {
-      setNotes(null);
-      landOnList(cur?.vid ?? null);
+      // a player or a sheet still open has its own step on top (utils/backToClose): it is left first
+      leaveOverlaySteps(() => {
+        setNotes(null);
+        landOnList(cur?.vid ?? null);
+      });
     } else {
       window.history.back();
     }
@@ -209,10 +213,12 @@ export const NotesProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   const closeProgram = useCallback(() => {
     if (window.history.state?.sgBase) {
-      setProgramOpen(false);
-      setLinkProgram(null);
-      window.history.replaceState(null, '', window.location.pathname);
-      nav.navigateTo('galoba');
+      leaveOverlaySteps(() => {
+        setProgramOpen(false);
+        setLinkProgram(null);
+        window.history.replaceState(null, '', window.location.pathname);
+        nav.navigateTo('galoba');
+      });
     } else {
       window.history.back();
     }

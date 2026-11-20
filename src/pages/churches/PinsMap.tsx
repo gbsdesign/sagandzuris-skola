@@ -32,7 +32,11 @@ const PinsMap: React.FC<{
     // a quarter step of zoom, so a phone's narrow box still fits the whole country without half of Russia above it
     const m = L.map(box.current, { preferCanvas: true, zoomSnap: 0.25, zoomDelta: 0.5, maxBounds: [[39.8, 38.5], [44.8, 48.5]], minZoom: 5.5, zoomControl: !fill });
     if (fill) {
-      L.control.zoom({ position: 'topleft' }).addTo(m);
+      // Georgian names and a finger-sized button (Leaflet's own are English and 30 px)
+      const zoom = L.control.zoom({ position: 'topleft', zoomInTitle: 'გადიდება', zoomOutTitle: 'დაპატარავება' }).addTo(m);
+      zoom.getContainer()?.querySelectorAll('a').forEach(a => {
+        a.style.width = '40px'; a.style.height = '40px'; a.style.lineHeight = '40px'; a.style.fontSize = '22px';
+      });
       m.attributionControl.setPosition('topright');
     }
     const own = fit ? list.filter(c => c.located) : [];

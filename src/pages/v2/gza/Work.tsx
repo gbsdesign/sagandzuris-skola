@@ -61,7 +61,7 @@ const FirstCard: React.FC<{ w: WorkLine }> = ({ w }) => {
         <KindDot kind={w.kind} />
         <span className="flex min-w-0 flex-1 flex-col">
           <span className="text-lead leading-tight font-bold wrap-break-word">{w.name}</span>
-          <span className="truncate text-meta text-mut">{w.sub}</span>
+          <span className="text-meta text-mut wrap-break-word">{w.sub}</span>
         </span>
       </div>
       {w.note && (
@@ -81,7 +81,7 @@ const FirstCard: React.FC<{ w: WorkLine }> = ({ w }) => {
 const WorkRow: React.FC<{ w: WorkLine }> = ({ w }) => {
   const press = useLongPress(() => w.onLong?.());
   return (
-    <Row {...(w.onLong ? press : {})} lead={<KindDot kind={w.kind} size={36} />} title={w.name} sub={w.sub} onClick={w.onGo}
+    <Row {...(w.onLong ? press : {})} lead={<KindDot kind={w.kind} size={36} />} title={w.name} sub={w.sub} wrap onClick={w.onGo}
       className="select-none [-webkit-touch-callout:none]" />
   );
 };

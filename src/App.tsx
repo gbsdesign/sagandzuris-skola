@@ -116,7 +116,13 @@ function AppContent() {
     el.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
   }, [currentPage, newLook]);
   const navHidden = useNavHidden();
-  const nav = newLook && !NO_NAV.includes(currentPage) && !navHidden;
+  // a page this person may not open is drawn as the home page in its place (AppRouter) — then the frame is the home's
+  // too: a guest who reloaded /p/search or /p/settings got the home page with no bar on top and no menu below
+  const pageAccess = access.page(currentPage);
+  const homeInPlace = currentPage !== 'home'
+    && (pageAccess === 'hidden' || pageAccess === 'soon' || (currentPage === 'settings' && !user));
+  const framePage = homeInPlace ? 'home' : currentPage;
+  const nav = newLook && !NO_NAV.includes(framePage) && !navHidden;
   // live recordings are for members a superadmin let in with them (set before the tree below renders)
   const membership = useMembership();
   setRecordingsHidden(!user || !membership.can('recordings'));
@@ -284,10 +290,10 @@ function AppContent() {
       {/* the new look has no header: the home page's own bar, the bottom menu, every other page its one bar */}
       {/* a computer (lg and up): one bar across the top with the four places and the search field (boards x-desk-sia · x-desk-klasi) */}
       {newLook && <DeskBar logoUrl={currentLogo} />}
-      {newLook ? currentPage === 'home' && <HomeBar logoUrl={currentLogo} /> : <Header logoUrl={currentLogo} />}
+      {newLook ? framePage === 'home' && <HomeBar logoUrl={currentLogo} /> : <Header logoUrl={currentLogo} />}
 
       <main className={newLook
-        ? `flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 flex flex-col ${currentPage === 'home' ? 'pt-1' : 'pt-[calc(env(safe-area-inset-top,0px)+4px)]'} ${nav ? 'pb-[calc(env(safe-area-inset-bottom,0px)+104px)] lg:pb-[calc(env(safe-area-inset-bottom,0px)+24px)]' : 'pb-[calc(env(safe-area-inset-bottom,0px)+24px)]'} ${currentPage === 'home' ? 'lg:pt-4' : ''}`
+        ? `flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 flex flex-col ${framePage === 'home' ? 'pt-1' : 'pt-[calc(env(safe-area-inset-top,0px)+4px)]'} ${nav ? 'pb-[calc(env(safe-area-inset-bottom,0px)+104px)] lg:pb-[calc(env(safe-area-inset-bottom,0px)+24px)]' : 'pb-[calc(env(safe-area-inset-bottom,0px)+24px)]'} ${framePage === 'home' ? 'lg:pt-4' : ''}`
         : 'flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 md:p-8 flex flex-col'}>
         <div ref={pageRef} className="w-full max-w-4xl mx-auto">
           {/* „მიმდინარეობს დამატება“ while a superadmin has not decided on a new member */}

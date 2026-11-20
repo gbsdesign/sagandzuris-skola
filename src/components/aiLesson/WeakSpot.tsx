@@ -47,7 +47,7 @@ export const WeakSpotView: React.FC<{ say: string; rows: WeakSpotRow[]; onStart:
     <div className="flex flex-col gap-3 px-4 pt-0.5 pb-4">
       <TeacherSays text={say}>{say}</TeacherSays>
       <Rows aria-label="დღევანდელი ვარჯიში">
-        {rows.map((r, i) => <Row key={r.title} lead={<Num n={i + 1} on={i === 0} />} title={r.title} sub={r.sub} right={null} />)}
+        {rows.map((r, i) => <Row key={r.title} lead={<Num n={i + 1} on={i === 0} />} title={r.title} sub={r.sub} wrap right={null} />)}
       </Rows>
     </div>
     <Bottom>

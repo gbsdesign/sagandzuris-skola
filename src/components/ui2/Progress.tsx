@@ -62,7 +62,7 @@ export const Dashes: React.FC<{ total: number; done: number; label?: string; cla
 
 /** Two to four big numbers side by side in one card — `stats`. */
 export const Stats: React.FC<{ items: { value: React.ReactNode; label: React.ReactNode }[]; className?: string }> = ({ items, className }) => (
-  <dl className={cx('flex shrink-0 divide-x divide-line rounded-tile bg-surf', className)}>
+  <dl className={cx('sg-stats flex shrink-0 divide-x divide-line rounded-tile bg-surf', className)}>
     {items.map((it, i) => (
       <div key={i} className="flex min-w-0 flex-1 flex-col-reverse px-1.5 py-3.5 text-center">
         <dt className="mt-[3px] text-meta leading-snug text-mut wrap-break-word">{it.label}</dt>

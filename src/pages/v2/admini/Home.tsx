@@ -7,7 +7,7 @@ import {
 import { openAssistant, useAssistantAllowed } from '../damkhmare/open';
 import { CHIPS, type Filter, type UserRecord } from '../../../components/admin/UsersTab';
 import { SearchBox } from '../klasi/teacher/SearchBox';
-import { useAdmin } from './ctx';
+import { useAdmin, useKeptText } from './ctx';
 import { peopleItem, personItem, schoolItem } from './nav';
 import { PersonRow, Screen } from './parts';
 import { usePersonLine } from './People';
@@ -22,7 +22,7 @@ export const FILTER_NAMES: Partial<Record<Filter, string>> = {
 export const AdminHome: React.FC = () => {
   const { isOwner, isSuperAdmin } = useAuth();
   const { d, test, go, back } = useAdmin();
-  const [q, setQ] = useState('');
+  const [q, setQ] = useKeptText('home');
   const [filters, setFilters] = useState(false);
   const line = usePersonLine();
   // „სკოლის AI დამხმარე“ (pages/v2/damkhmare): only while the school's „AI მასწავლებელი“ switch is open
@@ -87,7 +87,7 @@ export const AdminHome: React.FC = () => {
           <SectionLabel label="ყურადღება" />
           <Rows>
             {care.map(x => (
-              <Row key={x.id} title={x.label} onClick={x.open}
+              <Row key={x.id} title={x.label} wrap onClick={x.open}
                 right={<span className="flex shrink-0 items-center gap-2"><Pill className="h-7 px-2.5">{x.n}</Pill><ChevIcon /></span>} />
             ))}
           </Rows>
@@ -98,7 +98,7 @@ export const AdminHome: React.FC = () => {
 
       {assistant && (
         <Rows>
-          <Row lead={<Dot icon={<Sparkles />} />} title="AI დამხმარე" sub="სთხოვე სიტყვებით — კლასი, წერილები, გეგმა" onClick={() => openAssistant()} />
+          <Row lead={<Dot icon={<Sparkles />} />} title="AI დამხმარე" sub="სთხოვე სიტყვებით — კლასი, წერილები, გეგმა" wrap onClick={() => openAssistant()} />
         </Rows>
       )}
 

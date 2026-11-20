@@ -101,7 +101,7 @@ export const ButtonsScreen: React.FC = () => {
   const nodeRow = (n: CatalogNode) => {
     const more = !!(n.load || n.children?.length);
     if (more) {
-      return <Row key={n.key} lead={<Dot icon={shortcutIcon(n.icon || n.id || '')} />} title={n.title} sub={n.sub} onClick={() => enter(n)} />;
+      return <Row key={n.key} lead={<Dot icon={shortcutIcon(n.icon || n.id || '')} />} title={n.title} sub={n.sub} wrap onClick={() => enter(n)} />;
     }
     if (!n.id) return null;
     const on = has(n.id);
@@ -117,7 +117,7 @@ export const ButtonsScreen: React.FC = () => {
         <span className="sr-only">მოძებნე</span>
         <Search aria-hidden="true" className="pointer-events-none absolute top-1/2 left-4 size-[18px] -translate-y-1/2 text-mut" />
         <input type="search" enterKeyHint="search" value={query} onChange={e => setQuery(e.target.value)}
-          placeholder="მოძებნე საგალობელი, ლოცვა, გვერდი"
+          placeholder="საგალობელი, ლოცვა, გვერდი"
           className="h-[52px] w-full min-w-0 rounded-full bg-surf pr-11 pl-11 text-lead text-ink outline-none placeholder:text-faint focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine/60 [&::-webkit-search-cancel-button]:hidden" />
         {query && (
           <RoundButton label="გასუფთავება" size={36} tone="plain" onClick={() => setQuery('')} className="absolute top-1/2 right-1.5 -translate-y-1/2"><X /></RoundButton>
