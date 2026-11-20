@@ -1,7 +1,11 @@
-import React, { useMemo, useState } from 'react';
-import { BookOpen, CalendarDays, Check as CheckIcon, Church, ListChecks, Music, Settings2 } from 'lucide-react';
-import { Button, Card, Choice, Dot, Note, Row, Rows, SectionLabel, Sheet, Small, ToggleRow, Val, cx } from '../../../components/ui2';
+import React, { useEffect, useMemo, useState } from 'react';
+import { BookOpen, CalendarDays, Check as CheckIcon, ChevronDown, ChevronRight, Church, ListChecks, Music, Settings2 } from 'lucide-react';
+import { Button, Card, Choice, Dot, Note, Num, Row, Rows, SectionLabel, Sheet, Small, ToggleRow, Val, cx } from '../../../components/ui2';
 import { useNotes } from '../../../context/NotesContext';
+import { getChantMedia } from '../../../data/chantMediaRegistry';
+import { chantRecordings } from '../../../data/chantRecordings';
+import { useRecordingBindings } from '../../../data/runtimeRecordings';
+import { Versions } from '../galoba/Versions';
 import { dayMonthGe, oldDayMonthGe, openChurchCalendar } from '../../../data/churchCalendar';
 import { triggerHaptic } from '../../../utils/haptics';
 import { readingsOf, toneName, type Reading } from '../../../utils/dayReadings';
@@ -71,28 +75,51 @@ export const ToneSheet: React.FC<{ tone: number | null; onClose: () => void }> =
 };
 
 /** a step's chants with their versions that have notes */
+/** a step's chants as on the chant page (the user, 2026-11-20): a numbered row a chant, a tap unfolds its versions — the
+ *  schools' tabs and the cards with the notes' beginning and ▶ (v2/galoba/Versions) —, a card opens that chant's notes */
 export const NotesSheet: React.FC<{ step: Step | null; tone: number | null; onClose: () => void }> = ({ step, tone, onClose }) => {
-  const { openNotes } = useNotes();
-  const rows = notesRowsOf(step, tone);
-  const open = (vid: string) => { triggerHaptic(10); onClose(); openNotes(vid, 'bookmark'); };
+  const { notes } = useNotes();
+  const rows = useMemo(() => notesRowsOf(step, tone), [step, tone]);
+  const bindings = useRecordingBindings();
+  const recorded = useMemo(() => {
+    const keys = new Set<string>();
+    for (const r of rows) for (const v of r.chant.variants || []) if (getChantMedia(r.chant.id, v.code) || chantRecordings(v.id).length) keys.add(`${r.chant.id}|${v.code}`);
+    return keys;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows, bindings]);
+  const [open, setOpen] = useState<string | null>(null);
+  useEffect(() => { setOpen(rows.length === 1 ? rows[0].id : null); }, [rows]);
+  // a card opened its notes: the window steps aside
+  const vid = notes?.vid;
+  useEffect(() => { if (vid && step) onClose(); /* eslint-disable-next-line react-hooks/exhaustive-deps */ }, [vid]);
   return (
     <Sheet open={!!step} onClose={onClose} title={step ? `ნოტები · ${step.title.replace(/[„“]/g, '')}` : ''}>
       {rows.length ? (
-        <ChantRows
-          onOpen={open}
-          rows={rows.map(r => ({
-            title: r.title,
-            sub: r.inTone && tone ? toneName(tone) : booksOf(r.versions.map(v => bookOf(v))),
-            more: r.more,
-            versions: r.versions.map(v => ({ vid: v.id, label: bookLabel(v) })),
-          }))}
-        />
+        <Rows>
+          {rows.map((r, i) => {
+            const on = open === r.id;
+            const n = r.chant.variants.length;
+            return (
+              <div key={r.id}>
+                <button type="button" aria-expanded={on} onClick={() => { triggerHaptic(8); setOpen(on ? null : r.id); }}
+                  className="flex min-h-row w-full cursor-pointer items-center gap-2.5 py-2 pr-3 pl-4 text-left transition-colors active:bg-soft">
+                  <Num n={i + 1} on={on} />
+                  <span className="flex min-w-0 flex-1 flex-col">
+                    <span className={cx('text-lead font-bold wrap-break-word', on && 'text-wine')}>{r.title}</span>
+                    <span className="text-meta text-mut">{r.inTone && tone ? `${toneName(tone)} · ` : ''}{n} ვერსია</span>
+                  </span>
+                  {on ? <ChevronDown aria-hidden="true" className="size-[18px] shrink-0 text-mut" strokeWidth={2} />
+                    : <ChevronRight aria-hidden="true" className="size-[18px] shrink-0 text-mut" strokeWidth={2} />}
+                </button>
+                {on && <div className="px-3 pb-3"><Versions chant={r.chant} recorded={recorded} /></div>}
+              </div>
+            );
+          })}
+        </Rows>
       ) : <Note>ამ ნაწილის ნოტები ჯერ არ არის.</Note>}
     </Sheet>
   );
 };
-// a version's book and number („I ტომი №58“)
-const bookLabel = (v: Parameters<typeof bookOf>[0]) => `${bookOf(v)}${v.bookNums?.[0] ? ` №${v.bookNums[0]}` : ''}`;
 
 export const RankSheet: React.FC<{ open: boolean; value: Rank; guessed: Rank; onPick: (r: Rank | null) => void; onClose: () => void }> = ({
   open, value, guessed, onPick, onClose,

@@ -515,5 +515,15 @@ evening in his temple = vespers alone (matins in the morning), „სხვა �
   apostles' days, icons of the Theotokos, St Barbara, St Spyridon) that orthodoxy.ge does not give — not taken: the app follows
   the official calendar. **Still a guess:** a day whose only sign is a red saint's name (about a hundred a year, mostly
   Georgian saints) stays `doxology` — no source at hand tells „ექვსიანი“ from it; the reader sets the rank in „⋯“.
+- **Everything unfolds under its step (2026-11-20 evening, the user: „ტექსტები პირდაპირ ჩამოსაშლელი იყოს ყველაფერი და არა
+  კანონზე გადასვლა … რაც იმ დღეს იკითხება ან იგალობება“):** in the new look a step's kanon, prayer and book pills no longer
+  leave the page — `Extras` in `v2/medavitne/DayParts.tsx` folds them open in place (`PrayerInline`, `BookInline` over
+  `loadBookParts`; a step without `read` shows its first kanon / prayer at once). `Extra` kathisma may carry `glory: 1` =
+  only up to the first „დიდებაი“ (`kathismaSrc(n, glory)`) — „ნეტარ არს კაცი“ on a feast's eve. The „აწდა“ theotokion after
+  the troparia („აღდგომის განსატევებელი, ტროპარის ხმაზე“) now has its text: `useTroparia` reads the tone from the troparion
+  before it and takes პარაკლიტონი's Saturday-evening section after the troparion (tone 8: the section's second paragraph).
+  A step's „ნოტები“ window (`NotesSheet` in `DaySheets.tsx`) = numbered chant rows that unfold the chant page's own
+  `v2/galoba/Versions` (school tabs, cards with the notes' beginning and ▶); it closes once a card opens its notes. The old
+  look keeps its links.
 - Still open: the common services have no ikos; a second rank „ექვსიანი“ is not told apart from a plain day; with the great
   doxology the tibikon sings the typika at the liturgy — the app keeps the daily antiphons on weekdays (the user's temple).

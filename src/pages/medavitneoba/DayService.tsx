@@ -219,8 +219,30 @@ export const useTroparia = (today: DayInput, at: 'vespers' | 'matins' | 'hours' 
     else setTemple(null);
     return () => { alive = false; };
   }, [inp.iso, inp.patron, inp.tone, dow]);
-  const textOf = (h: Hymn, k: 'tr' | 'ko') =>
+  // „აწდა“ after the last troparion: the resurrection's dismissal hymn to the Theotokos in that troparion's tone
+  // (პარაკლიტონი, Saturday evening: the section after the troparion; tone 8 prints it as the section's second paragraph)
+  const baseText = (h: Hymn, k: 'tr' | 'ko') =>
     keyOf(h) ? own[keyOf(h)]?.[k] : h.role === 'saint' ? saint?.[k] : h.role === 'temple' ? temple?.[k] : h.role === 'day' ? week?.[k] : h.role === 'feast' ? saint?.[k] : h.role === 'resurrection' && k === 'tr' ? res ?? undefined : undefined;
+  const theoAt = troparia.findIndex(h => h.role === 'theotokion' && /აღდგომის განსატევებელი/.test(h.label));
+  const before = theoAt > 0 ? troparia[theoAt - 1] : null;
+  const beforeHead = before ? baseText(before, 'tr')?.slice(-1)[0]?.head ?? '' : '';
+  const theoTone = !before ? null : before.role === 'resurrection' ? inp.tone : Number(beforeHead.match(/ხმა\s*(\d)/)?.[1] ?? 0) || null;
+  const [theo, setTheo] = useState<Text[] | undefined>(undefined);
+  useEffect(() => {
+    setTheo(undefined);
+    const r = octoechos(theoTone, 6, 'troparion');
+    if (!r) return;
+    let alive = true;
+    loadSlice(r).then(v => {
+      if (!alive) return;
+      const rest = v.slice(1);
+      const second = v[0]?.paras.slice(1) ?? [];
+      const found = rest.length ? rest : second.length ? [{ head: '', paras: second }] : [];
+      setTheo(found.map(t => ({ head: `ღვთისმშობლისა, ხმა ${theoTone}`, paras: t.paras })));
+    }, () => {});
+    return () => { alive = false; };
+  }, [theoTone]);
+  const textOf = (h: Hymn, k: 'tr' | 'ko') => (h.role === 'theotokion' ? (k === 'tr' ? theo : undefined) : baseText(h, k));
   return { troparia, kontakia, textOf };
 };
 
@@ -339,7 +361,16 @@ const Sections: React.FC<{ src: TextSrc; speakers?: boolean }> = ({ src, speaker
 };
 
 /** a kathisma of the psalter, whole (დავითნი) */
-export const kathismaSrc = (n: number): TextSrc => ({ coll: 'davitni', n, part: 0, label: `დავითნი · კანონი ${n}` });
+/** a kanon of დავითნი; `glory` 1 — only up to its first „დიდებაი“ (what a feast's eve sings) */
+export const kathismaSrc = (n: number, glory?: number): TextSrc => glory === 1
+  ? { coll: 'davitni', n, part: 0, from: /^\d/, to: /^დიდებაი/, label: `დავითნი · კანონი ${n}, პირველი დიდება` }
+  : { coll: 'davitni', n, part: 0, label: `დავითნი · კანონი ${n}` };
+/** a whole book (or one part of it) as texts, part by part — what a step's book pill unfolds; [] for a book of page pictures */
+export const loadBookParts = async (coll: string, n: number, part?: number): Promise<{ label: string; texts: Text[] }[]> => {
+  const f = await loadBook(coll, n);
+  const parts = (f.c ?? []).filter((_, i) => part === undefined || i === part);
+  return parts.map(p => ({ label: p.l, texts: p.s.map(([head, paras]) => ({ head, paras })) }));
+};
 
 /** the reader's text of a step, in order — the page's main line („საკითხავი რიგი“) */
 const ReadFlow: React.FC<{ read: Read[]; inp: DayInput; past: boolean }> = ({ read, inp, past }) => {
@@ -425,7 +456,9 @@ export const notesRowsOf = (step: Step | null, tone: number | null) =>
   (step?.chants ?? []).map(id => CHANTS.get(id)).filter(Boolean).map(c => {
     const all = c!.variants.filter(hasBookNotes);
     const inTone = step?.toned && tone ? all.filter(v => versionTone(v.version) === tone) : [];
-    return { id: c!.id, title: c!.title.replace(/;\s*$/, ''), versions: (inTone.length ? inTone : all).slice(0, 12), more: (inTone.length ? inTone : all).length - 12, inTone: inTone.length > 0 };
+    return { id: c!.id, title: c!.title.replace(/;\s*$/, ''), versions: (inTone.length ? inTone : all).slice(0, 12), more: (inTone.length ? inTone : all).length - 12, inTone: inTone.length > 0,
+      /** the chant as the chant page shows it (a step sung in the week's tone: that tone's versions only) */
+      chant: inTone.length ? { ...c!, variants: inTone } : c! };
   }).filter(r => r.versions.length);
 const NotesSheet: React.FC<{ step: Step | null; tone: number | null; onClose: () => void }> = ({ step, tone, onClose }) => {
   const { openNotes } = useNotes();
