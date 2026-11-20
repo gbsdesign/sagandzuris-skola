@@ -57,6 +57,7 @@ const AiLesson = React.lazy(() => import('./components/aiLesson/AiLesson').then(
 const MyVoiceHost = React.lazy(() => import('./components/aiLesson/MyVoiceHost').then(m => ({ default: m.MyVoiceHost })));
 const ExamHost = React.lazy(() => import('./pages/v2/gamocda/ExamHost').then(m => ({ default: m.ExamHost })));
 const AssistantHost = React.lazy(() => import('./pages/v2/damkhmare/AssistantHost').then(m => ({ default: m.AssistantHost })));
+const ProgramFab = React.lazy(() => import('./pages/v2/damkhmare/ProgramFab').then(m => ({ default: m.ProgramFab })));
 const MkitkheHost = React.lazy(() => import('./pages/v2/mkitkhe/MkitkheHost').then(m => ({ default: m.MkitkheHost })));
 // the parts over the page that are not needed for the first screen load a moment after it (redesign stage 3 „სიჩქარე“)
 const later = <T extends string>(load: () => Promise<Record<T, React.ComponentType<any>>>, name: T) =>
@@ -101,7 +102,7 @@ export default function App() {
 }
 
 function AppContent() {
-  const { loading, user } = useAuth();
+  const { loading, user, isSuperAdmin } = useAuth();
   const { currentPage, openPrayer, navigateTo, openMapItem, openDm, openClass } = useNavigation();
   // „ახალი სახე“ (redesign stage 2): its switch `newLook` — admins first, then everyone (data/sections)
   const access = useAccess();
@@ -329,7 +330,13 @@ function AppContent() {
           <Suspense fallback={null}><ExamHost exam={examOpen.exam} onClose={examOpen.close} /></Suspense>
         </ErrorBoundary>
       )}
-      {/* „სკოლის AI დამხმარე“ for teachers and admins (boards x-ai-damkhmare, -gegma, -klasi) */}
+      {/* the superadmins' floating cog: opens „ავტომატური პროგრამა“ over the page it is on (plan 2.0, prototype 15) */}
+      {isSuperAdmin && !assistantOpen.assistant && (
+        <ErrorBoundary>
+          <Suspense fallback={null}><ProgramFab /></Suspense>
+        </ErrorBoundary>
+      )}
+      {/* „ავტომატური პროგრამა“ — the school's assistant for teachers and admins (boards x-ai-damkhmare, -gegma, -klasi) */}
       {assistantOpen.assistant && (
         <ErrorBoundary>
           <Suspense fallback={null}><AssistantHost req={assistantOpen.assistant} onClose={assistantOpen.close} /></Suspense>

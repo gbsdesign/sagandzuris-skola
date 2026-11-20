@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  MAX_PEOPLE, MAX_TEXT, assistantPrompt, buildScope, checkPlan, contextText, draftOf, parseAnswer, planFromAi, readyAsks,
+  MAX_PEOPLE, MAX_TEXT, assistantPrompt, buildScope, checkPlan, contextText, draftOf, parseAnswer, planFromAi,
   type ScopeInput,
 } from '../src/utils/aiAssistant';
 
@@ -123,10 +123,10 @@ test('a new class: admins only; its name, days and times are checked', () => {
   assert.equal(checkPlan(planFromAi({ kind: 'createClass', name: 'X', teachMe: false }, admin)!, admin).ok, true);
 });
 
-test('unknown kinds are not plans; the ready requests suit the role', () => {
+test('unknown kinds are not plans; the prompt names the open page', () => {
   const s = buildScope(input());
   assert.equal(planFromAi({ kind: 'deleteClass' }, s), null);
   assert.equal(planFromAi('x', s), null);
-  assert.deepEqual(readyAsks(true).map(a => a.label), ['შემიჯამე მოსწავლეები', 'მიწერე დამწყებებს', 'შექმენი კლასი']);
-  assert.ok(!readyAsks(false).some(a => a.label === 'შექმენი კლასი'));
+  assert.ok(!assistantPrompt(s, [], 'გამარჯობა').includes('გვერდი აქვს გახსნილი'));
+  assert.ok(assistantPrompt({ ...s, page: 'კლასი „ახალგაზრდები“' }, [], 'გამარჯობა').includes('გვერდი აქვს გახსნილი: კლასი „ახალგაზრდები“'));
 });

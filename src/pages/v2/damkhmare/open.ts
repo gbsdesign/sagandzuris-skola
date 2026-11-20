@@ -2,13 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import { useAuth } from '../../../context';
 import { useAccess } from '../../../hooks/useAccess';
 
-// Opening „სკოლის AI დამხმარე“ from anywhere (the class page's ✦, the admin panel): it lies over the whole app with a history
+// Opening „ავტომატური პროგრამა“ (the school's assistant, „AI დამხმარე“ until plan 2.0) from anywhere (the class page's ✦, the admin panel): it lies over the whole app with a history
 // step of its own (`sgAssistant`), so the phone's „back“ closes it — as the AI exam does (gamocda/open.ts). Kept tiny: the
 // panel itself loads only when opened.
 
 export interface AssistantRequest {
   /** the class page it was opened from: the AI is told which class is open */
   classId?: string;
+  /** the page it was opened on (a PageType): the program is told where the person is — the floating cog gives it */
+  page?: string;
+  /** a small window over the page (the superadmins' floating cog) instead of the whole screen */
+  mini?: boolean;
 }
 
 const EVENT = 'sg-assistant';

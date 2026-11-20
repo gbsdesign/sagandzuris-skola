@@ -1,5 +1,6 @@
 import React, { useMemo, useState } from 'react';
-import { ChevronRight, CircleCheck, ListFilter, SlidersHorizontal, Sparkles, WifiOff } from 'lucide-react';
+import { ChevronRight, CircleCheck, ListFilter, SlidersHorizontal, WifiOff } from 'lucide-react';
+import { GearSpark } from '../damkhmare/GearSpark';
 import { useAuth } from '../../../context';
 import {
   Button, Dot, Helper, Pill, Press, Row, Rows, SectionLabel, Sheet, Small, TopBar, cx, FOCUS_IN,
@@ -98,7 +99,7 @@ export const AdminHome: React.FC = () => {
 
       {assistant && (
         <Rows>
-          <Row lead={<Dot icon={<Sparkles />} />} title="AI დამხმარე" sub="სთხოვე სიტყვებით — კლასი, წერილები, გეგმა" wrap onClick={() => openAssistant()} />
+          <Row lead={<Dot icon={<GearSpark />} />} title="ავტომატური პროგრამა" sub="სთხოვე სიტყვებით — კლასი, წერილები, გეგმა" wrap onClick={() => openAssistant({ page: 'admin' })} />
         </Rows>
       )}
 

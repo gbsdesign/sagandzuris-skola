@@ -1919,6 +1919,23 @@
   drawn as the home page in its place (a guest on /p/search) gets the home's frame (`framePage` in App.tsx). index.html:
   `interactive-widget=resizes-content` (Android's browser shrinks the page above the keyboard, as the Android app's window does).
 
+## „ავტომატური პროგრამა“ (plan 2.0; the user: „AI დაარქვი ყველგან … ავტომატური პროგრამა … კბილანას ლოგო“)
+
+- Plan with 15 prototypes: https://claude.ai/artifact/5eAVduJ7UvyYVbb9AbM9Pn — what the user unticks there is not built. Each stage
+  needs his go-ahead and a cost estimate first.
+- **Stage 1 (2026-11-20, on today's engine — Gemini through Firebase AI Logic):** the school's assistant (`pages/v2/damkhmare/`,
+  was „AI დამხმარე“) is named „ავტომატური პროგრამა“ everywhere it shows, with its own sign `GearSpark` (a cog with a spark — not
+  the settings' ⚙). `ProgramFab` (App.tsx, lazy, **superadmins only** — the user's rule) = a small round wine cog on every page:
+  dragged by a finger, kept where left (`sg-program-fab`), hidden in church mode, in a call and while the window is open; a tap opens
+  the assistant as a small window over the page (`openAssistant({ page, mini })`, `AssistantHost`) and tells it the open page
+  (`scope.page` → one line in `assistantPrompt`; „ამ გვერდზე ხარ: …“). Ready offers `utils/programOffers.ts` + test: `pageName`,
+  `offersFor` („ამ გვერდზე“ first, then the rest behind „ყველა ▾“ — only what the assistant can really do), `noticedIn` („შევნიშნე“:
+  counted from the scope, no AI call; „კი, მოამზადე“ only prepares a plan that still waits for „კი“), `nextSteps` under an answer.
+- Not built yet: the other „AI“ words in the app (~70 files; „AI მასწავლებელი“ → „ავტომატური მასწავლებელი“), the engine switch
+  „გუგლის პროგრამა · ლადოს პროგრამა“ (Lado = Claude; needs the user's API credit linked and a server-side key — never a key in the
+  app), memory, photos and files, the students' program, layout by words. Don't raise Google's under-18 rule again (the user: „მე
+  ვიდარდებ“).
+
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 
 - **Roles** (`context/AuthContext.tsx`, `firestore.rules`): owner (the founder's address) names ≤3 superadmins,
