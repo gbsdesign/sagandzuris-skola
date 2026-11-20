@@ -250,7 +250,9 @@ const HoverDelete: React.FC<{ onClick: () => void }> = ({ onClick }) => (
 const NEVER = () => false;
 
 /** the first name of a sender, as the line above a run of messages shows it */
-const firstName = (name: string) => name.trim().split(/\s+/)[0] || name;
+export const firstName = (name: string) => name.trim().split(/\s+/)[0] || name;
+/** a teacher's or an admin's line over their message: „გიორგი (ადმინი)“ (2026-11-21, the user: „სახელი ჩანდეს“) */
+const staffName = (name: string | undefined, label: string) => (name?.trim() ? `${firstName(name)} (${label})` : label);
 
 // A chat: text and voice messages (a class's chat, or a teacher's private chat with a student).
 export const ChatPanel: React.FC<ChatPanelProps> = ({
@@ -532,8 +534,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 {named && first && !mine && (
                   <p className="text-cap font-bold text-mut mb-1 px-1 flex items-center gap-1.5">
                     {openPerson
-                      ? <button type="button" onClick={openPerson} aria-label={`${m.name} — გზა და პროფილი`} className="cursor-pointer hover:underline underline-offset-2">{m.teacher ? staffLabel : firstName(m.name)}</button>
-                      : (m.teacher ? staffLabel : firstName(m.name))}
+                      ? <button type="button" onClick={openPerson} aria-label={`${m.name} — გზა და პროფილი`} className="cursor-pointer hover:underline underline-offset-2">{m.teacher ? staffName(m.name, staffLabel) : firstName(m.name)}</button>
+                      : (m.teacher ? staffName(m.name, staffLabel) : firstName(m.name))}
                   </p>
                 )}
                 {card ? (

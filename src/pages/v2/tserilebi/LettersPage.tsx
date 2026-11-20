@@ -177,9 +177,15 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
     else if (!pin(key)) setErr(`${PIN_MAX}-ზე მეტს ვერ მიამაგრებ — ჯერ ერთი მოხსენი.`);
   };
 
+  const have = new Set([...threads.map(t => t.id)]);
+  const groups = contactGroups(known, uid, { isAdmin, kidsMe: kidsOn && !isTeacher, kids });
+  const best = bestContacts(groups);
+  // a student's teachers stand first (2026-11-21, the user: „მოსწავლეს უჩანდეს მასწავლებელი“) — a teacher not written to yet too
+  const plainMember = !isTeacher && !isAdmin;
+
   type Item = {
     key: string; name: string; at: number; lastMs: number; empty: boolean;
-    pinned: boolean; hidden: boolean; unread: boolean; node: React.ReactNode;
+    pinned: boolean; hidden: boolean; unread: boolean; teacher: boolean; node: React.ReactNode;
   };
   const items: Item[] = [];
   const rowProps = (key: string, lastMs: number, pinned: boolean, hidden: boolean, unread: boolean) => ({
@@ -203,7 +209,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       const pinned = prefs.pins.includes(id);
       const hidden = isHidden(prefs, id, lastMs);
       items.push({
-        key: id, name: c.name, at: lastMs, lastMs, empty: !last, pinned, hidden, unread,
+        key: id, name: c.name, at: lastMs, lastMs, empty: !last, pinned, hidden, unread, teacher: false,
         node: (
           <ChatRow
             key={id}
@@ -231,6 +237,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       const mark = t.kind === 'admin' ? 'admin' : t.kind === 'teach' && t.teacherUid !== uid ? 'teacher' : undefined;
       items.push({
         key: t.id, name, at: (t.lastAt || t.createdAt)?.getTime() ?? 0, lastMs, empty: !t.lastText, pinned, hidden, unread,
+        teacher: plainMember && mark === 'teacher',
         node: (
           <ChatRow
             key={t.id}
@@ -246,9 +253,34 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         ),
       });
     }
-    // pinned first (the newest pin on top), then the chats with messages, newest first, then the empty ones
+    if (plainMember) {
+      const seenTeacher = new Set<string>();
+      for (const g of groups) {
+        for (const c of g.contacts) {
+          if (c.rel !== 'teacher' || seenTeacher.has(c.uid) || have.has(threadIdFor(c, uid))) continue;
+          seenTeacher.add(c.uid);
+          const p = fresh(c);
+          const name = p.name || 'უსახელო';
+          if (!inChip(c.classId) || !matches(name, c.className)) continue;
+          items.push({
+            key: `t:${c.uid}`, name, at: 0, lastMs: 0, empty: true, pinned: false, hidden: false, unread: false, teacher: true,
+            node: (
+              <ChatRow
+                key={`t:${c.uid}`}
+                face={<Avatar name={name} photo={p.photoURL} size={48} />}
+                name={<NameMark name={name} mark="teacher" />}
+                last="მიწერე მასწავლებელს"
+                busy={opening === c.uid}
+                onClick={() => { void startWith(c); }}
+              />
+            ),
+          });
+        }
+      }
+    }
+    // pinned first (the newest pin on top), then a student's teachers, then the chats with messages, newest first, then the empty ones
     const pinRank = (i: Item) => (i.pinned ? prefs.pins.indexOf(i.key) : PIN_MAX);
-    items.sort((a, b) => pinRank(a) - pinRank(b) || Number(a.empty) - Number(b.empty) || b.at - a.at);
+    items.sort((a, b) => pinRank(a) - pinRank(b) || Number(b.teacher) - Number(a.teacher) || Number(a.empty) - Number(b.empty) || b.at - a.at);
   }
   const shownItems = items.filter(i => !i.hidden || needle);
   const hiddenItems = needle ? [] : items.filter(i => i.hidden);
@@ -280,9 +312,6 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
     : [];
 
   // ---- whom one may start writing to ---------------------------------------------------------------------------
-  const have = new Set([...threads.map(t => t.id)]);
-  const groups = contactGroups(known, uid, { isAdmin, kidsMe: kidsOn && !isTeacher, kids });
-  const best = bestContacts(groups);
   const contactRows = overview ? [] : groups.map(g => {
     const list = g.contacts.filter(c => {
       if (have.has(threadIdFor(c, uid))) return false;

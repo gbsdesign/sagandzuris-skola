@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Bell, Compass, Home, MessageCircle, Search, User } from 'lucide-react';
 import { useAuth, useModal, useNavigation, type PageType } from '../../context';
 import { useAccess } from '../../hooks/useAccess';
-import { useMyNotices, useUnreadChats } from '../../hooks/useShellCounts';
+import { useMyNotices, useUnreadParts } from '../../hooks/useShellCounts';
+import { useMyTeacherChat } from '../../hooks/useMyTeacherChat';
 import { openSignIn } from '../access/SignInPrompt';
 import { triggerHaptic } from '../../utils/haptics';
 import { setPendingQuery } from '../../utils/searchOpen';
@@ -27,10 +28,12 @@ export { ITEMS as NAV_ITEMS };
 /** the menu's places and what a tap does, one for the bottom pill and the computer's top bar */
 const useNavPlaces = () => {
   const { user } = useAuth();
-  const { currentPage, mapItem, navigateTo } = useNavigation();
+  const { currentPage, mapItem, navigateTo, openDm } = useNavigation();
   const { openModal } = useModal();
   const access = useAccess();
-  const unread = useUnreadChats();
+  const parts = useUnreadParts();
+  const unread = parts.total;
+  const teacherChat = useMyTeacherChat();
   const on = tabOf(currentPage, mapItem);
   const kids = Boolean(access.kids);
 
@@ -48,6 +51,15 @@ const useNavPlaces = () => {
     if (!user && it.id === 'gz') { openModal('gza'); return; }
     if (!user && it.id !== 'home') { openSignIn(); return; }
     if (it.page === currentPage && !mapItem) { window.scrollTo({ top: 0, behavior: 'smooth' }); return; }
+    // a student with one teacher: „წერილები“ opens the teacher's chat (the list is one „უკან“ away); not while another chat
+    // waits unread, and not from inside the letters already (a second tap there keeps the list)
+    const waiting = teacherChat ? parts.total - (parts.threads.includes(teacherChat.id) ? 1 : 0) : 0;
+    if (it.id === 'messages' && teacherChat && waiting === 0 && on !== 'messages') {
+      navigateTo('messages');
+      window.scrollTo({ top: 0 });
+      teacherChat.open().then(id => openDm(id)).catch(e => console.warn('teacher chat: ', e?.code || e));
+      return;
+    }
     navigateTo(it.page);
     window.scrollTo({ top: 0 });
   };

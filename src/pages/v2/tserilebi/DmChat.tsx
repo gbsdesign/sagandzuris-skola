@@ -9,7 +9,9 @@ import {
 } from '../../../hooks/useDirectChat';
 import { useCall, useLivePeers, setCallSmall } from '../../../utils/callSession';
 import { startChatCall, answerChatCall, mayStartChatCall } from '../../../components/calls/callActions';
-import { ChatPanel } from '../../../components/classes/ChatPanel';
+import { ChatPanel, firstName } from '../../../components/classes/ChatPanel';
+import type { CatalogEntry } from '../../../utils/pathItems';
+import { ChatPath } from './ChatPath';
 import { PinCard } from '../../../components/classes/PinCard';
 import { PinSheet } from '../../../components/classes/PinSheet';
 import { pinPreview, sendDmPin } from '../../../hooks/useChatPins';
@@ -78,6 +80,8 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
   const canWrite = member || staff;
   const livePeers = useLivePeers(thread && canWrite ? dmBase(thread.id) : null);
   const [pinning, setPinning] = useState(false);
+  // „დავალებად მიცემა“ from the path's fold: the 📎 window already on that chant
+  const [preset, setPreset] = useState<CatalogEntry | null>(null);
 
   useEffect(() => {
     if (thread && canWrite && isUnread(thread, uid)) markRead(thread, uid).catch(e => console.warn('dm: ', e?.code || e));
@@ -103,7 +107,11 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
   const author: ChatAuthor = { uid, name: myName, photoURL: thread.photos[uid] || user.photoURL || '', teacher: iTeach || staff };
 
   const pair = thread.members.map(m => thread.names[m] || '').filter(Boolean).join(' — ');
-  const title = canWrite ? other.name || 'უსახელო' : thread.kind === 'admin' ? `${ADMIN_NAME} — ${pair}` : pair;
+  // the member's side of the administration's chat names who answers („ადმინისტრაცია · გიორგი“, 2026-11-21)
+  const lastStaff = thread.kind === 'admin' && !staff ? [...messages].reverse().find(m => m.teacher && m.uid !== uid && m.name) : undefined;
+  const title = canWrite
+    ? (lastStaff ? `${ADMIN_NAME} · ${firstName(lastStaff.name)}` : other.name || 'უსახელო')
+    : thread.kind === 'admin' ? `${ADMIN_NAME} — ${pair}` : pair;
   // the board's grey line is the class; without one, how the person is linked to me
   const sub = !canWrite ? 'მხოლოდ სანახავად'
     : staff ? 'ადმინისტრაციის ჩათი'
@@ -118,6 +126,9 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
   const student = thread.kind === 'teach' ? thread.studentUid : thread.kind === 'admin' ? thread.members[0] : '';
   const canPin = canWrite && (iTeach || staff) && !!student;
   const pinClasses = iTeach ? classes.filter(c => c.teacherIds.includes(uid)) : classes;
+  // „რა ისწავლა · რას სწავლობს“ over the messages: the teacher's (the administration's) side changes it, the student sees their own
+  const self = !!student && student === uid && (thread.kind === 'teach' || thread.kind === 'admin');
+  const pathFold = canWrite && (canPin || self);
 
   return (
     <ChatPanel
@@ -128,7 +139,7 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
       error={error}
       fill
       readOnly={!canWrite}
-      showNames={!canWrite || (staff && (m => m.teacher))}
+      showNames={!canWrite || (thread.kind === 'admin' && (m => !!m.teacher))}
       staffLabel={thread.kind === 'admin' ? 'ადმინი' : 'მასწავლებელი'}
       seenAt={canWrite ? seenByOther(thread, uid) : null}
       isCall={m => m.kind === 'call'}
@@ -158,8 +169,17 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
               />
             ) : undefined}
           />
+          {pathFold && (
+            <ChatPath
+              key={student}
+              student={student}
+              studentName={thread.names[student] || (canPin ? other.name : '') || 'მოსწავლე'}
+              editor={canPin}
+              onAssign={canPin ? e => { setPreset(e); setPinning(true); } : undefined}
+            />
+          )}
           {canPin && (
-            <PinSheet open={pinning} onClose={() => setPinning(false)} inClass={false} classes={pinClasses}
+            <PinSheet open={pinning} onClose={() => { setPinning(false); setPreset(null); }} inClass={false} classes={pinClasses} preset={preset}
               people={[{ uid: student, name: thread.names[student] || other.name || 'მოსწავლე', photoURL: thread.photos[student] || '' }]}
               onSend={async p => {
                 await sendDmPin(dmBase(thread.id), author, p);

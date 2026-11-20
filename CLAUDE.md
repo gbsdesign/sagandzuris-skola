@@ -1774,6 +1774,18 @@
   button — the session has no output control). `ShareHost` restyled (x-gaziareba-klasshi) and opens for a share saved < 10 min ago
   (the service worker stamps `X-At`) because the page address could drop `?open=share` first. `pages/v2/dabadebis/BirthdaysScreen`
   (x-dabadebis; „მიულოცე“ = a private chat through a shared class, else the admin's chat; staff see ages).
+- **The path in a private chat, names, the teacher's chat first (2026-11-21**, the user: „მაღლა ჩამოსაშლელი სია … რა ისწავლა რას
+  სწავლობს … აქედანვე სიის ცვლილება, დამატება, წაშლა, ჩათვლა“; then „მასწის ჩათი იხსნებოდეს პირდაპირ … გიორგი (ადმინი)“): a teacher's
+  chat and the administration's chat have `v2/tserilebi/ChatPath` under the head — one folded line „ისწავლა N · სწავლობს M“ (learned
+  = a shining pearl), unfolded = the student's path with voices 1 · 2 · 3 (chips ყველა · სწავლობს · ისწავლა). The teacher's / staff's
+  side: a voice's tap = „ჩათვლა“ (marks it too), a counted one = taken off (undo; an AI pass by `removeAiPass`), „დამატება“ = a
+  catalogue search, a name → sheet: notes · „დავალებად მიცემა“ (the 📎 window opened on that chant — `PinSheet preset`) · „სიიდან
+  ამოშლა“. The student's side = their own path through `usePathMarks` (the lock holds) + „საგანძურში გახსნა“. A teacher's / admin's
+  message line in any chat = „გიორგი (ადმინი)“ / „გიორგი (მასწავლებელი)“ (`staffName` in ChatPanel); the member's administration chat
+  shows staff names and its title „ადმინისტრაცია · გიორგი“ (the last staff writer). `hooks/useMyTeacherChat.ts`: a plain member
+  whose classes have one teacher — the bottom menu's „წერილები“ opens that chat (the list one „უკან“ away; not while another chat
+  waits — `useUnreadParts`, not from inside the letters); with several teachers the list puts them first, a teacher not written to
+  yet as a row „მიწერე მასწავლებელს“.
 - **Stage 4e — share card, morning summary, icon badge (2026-11-18)**: a learned item (every voice the member marked confirmed by a
   teacher; a poem / instrument confirmed) shows once per device `LearnedMoment` (App, new look; `sg-learned-seen:<uid>`, the first run
   marks the old ones seen; never on a teacher's look or during notes / program / church mode / a call) → the share card (`pages/v2/barati/`:

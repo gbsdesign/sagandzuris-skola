@@ -18,7 +18,11 @@ export const useMyAllClasses = () => {
 };
 
 /** The unread chats: private ones (the administration's too, for admins) and class chats with a message after I last read. */
-export const useUnreadChats = () => {
+export const useUnreadChats = () => useUnreadParts().total;
+
+/** the same count, with the private chats that wait named (the student's „წერილები“ goes straight to the teacher's chat only
+ *  when nothing else waits — BottomNav) */
+export const useUnreadParts = () => {
   const { user, isAdmin } = useAuth();
   const access = useAccess();
   const classes = useMyAllClasses();
@@ -26,8 +30,9 @@ export const useUnreadChats = () => {
   const showChats = !!user && access.can('messages');
   const lasts = useClassLasts(showChats && access.can('classes') ? classes.map(c => c.id) : []);
   const seen = useChatSeen(showChats ? user?.uid : null);
-  if (!user || !showChats) return 0;
-  return threads.filter(t => isUnread(t, user.uid)).length + classes.filter(c => isClassUnread(lasts[c.id], seen[c.id], user.uid)).length;
+  if (!user || !showChats) return { total: 0, threads: [] as string[] };
+  const dms = threads.filter(t => isUnread(t, user.uid)).map(t => t.id);
+  return { total: dms.length + classes.filter(c => isClassUnread(lasts[c.id], seen[c.id], user.uid)).length, threads: dms };
 };
 
 const MONTH = 30 * 86_400_000;

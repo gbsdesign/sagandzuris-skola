@@ -27,7 +27,8 @@ export const PinSheetV2: React.FC<{
   classes: SchoolClass[];
   inClass: boolean;
   onSend: (p: PinInput) => Promise<void>;
-}> = ({ open, onClose, people, classes, inClass, onSend }) => {
+  preset?: CatalogEntry | null;
+}> = ({ open, onClose, people, classes, inClass, onSend, preset }) => {
   const only = people.length === 1 ? people[0] : null;
   const [who, setWho] = useState<PinPerson | null>(only);
   const [what, setWhat] = useState<What>('note');
@@ -40,7 +41,7 @@ export const PinSheetV2: React.FC<{
 
   useEffect(() => {
     if (!open) return;
-    setWho(only); setWhat('note'); setWorkCls(null); setText(''); setErr(''); setRound(r => r + 1);
+    setWho(only); setWhat(preset ? 'work' : 'note'); setWorkCls(null); setText(''); setErr(''); setRound(r => r + 1);
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const mine = who ? classes.filter(c => c.memberIds.includes(who.uid)) : [];
@@ -125,6 +126,7 @@ export const PinSheetV2: React.FC<{
               seenBy={seenBy}
               onClose={onClose}
               onSend={onSend}
+              preset={preset}
             />
           ) : (
             <>
@@ -163,9 +165,11 @@ const WorkForm: React.FC<{
   seenBy: string;
   onClose: () => void;
   onSend: (p: PinInput) => Promise<void>;
-}> = ({ cls, classes, onClass, who, seenBy, onClose, onSend }) => {
+  preset?: CatalogEntry | null;
+}> = ({ cls, classes, onClass, who, seenBy, onClose, onSend, preset }) => {
   const a = useNewAssignment({
     cls,
+    preset,
     onClose,
     onDone: () => {},
     forWhom: { uid: who.uid, name: who.name },
