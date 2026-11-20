@@ -7,7 +7,7 @@ import { dayTakeId, toneName, type Reading } from '../../../utils/dayReadings';
 import { readableText, syllableCount } from '../../../utils/readingPace';
 import { WHO_LABEL, type DayInput, type Extra, type Hymn, type Read, type Step } from '../../../utils/dayService';
 import type { TextSrc } from '../../../utils/serviceTexts';
-import { kathismaSrc, loadSlice, useTroparia, type Text } from '../../medavitneoba/DayService';
+import { kathismaSrc, loadBookParts, loadSlice, useTroparia, type Text } from '../../medavitneoba/DayService';
 import { bibleRangesHtml } from '../../medavitneoba/parts';
 import { PROSE_V2, Waiting } from './parts';
 import { Recorder } from './Recorder';
@@ -142,17 +142,77 @@ export const ApostleText: React.FC<{ r: Reading; iso: string }> = ({ r, iso }) =
   );
 };
 
+/** a prayer of ლოცვანი opened under its step (the page no longer leaves for the prayer's own page) */
+const PrayerInline: React.FC<{ id: string }> = ({ id }) => {
+  const [html, setHtml] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    fetch(`/prayers/${id}.json`).then(r => { if (!r.ok) throw new Error(String(r.status)); return r.json(); })
+      .then((d: { html: string }) => alive && setHtml(d.html), () => alive && setFailed(true));
+    return () => { alive = false; };
+  }, [id]);
+  return (
+    <Card pad="sm" className={cx(PROSE_V2, 'sg-in bg-gold-tint/40 px-4')}>
+      {html ? <div dangerouslySetInnerHTML={{ __html: html }} /> : <Waiting failed={failed} className="font-sans" />}
+    </Card>
+  );
+};
+
+/** a book (or one part of it) opened under its step; a book of page pictures keeps the way to the book itself */
+const BookInline: React.FC<{ coll: string; n: number; part?: number; onBook: () => void }> = ({ coll, n, part, onBook }) => {
+  const [parts, setParts] = useState<{ label: string; texts: Text[] }[] | null>(null);
+  const [failed, setFailed] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    loadBookParts(coll, n, part).then(v => alive && setParts(v), () => alive && setFailed(true));
+    return () => { alive = false; };
+  }, [coll, n, part]);
+  if (!parts) return <Waiting failed={failed} className="py-3" />;
+  if (!parts.some(p => p.texts.length)) return (
+    <Press onClick={onBook} className="flex min-h-tap cursor-pointer items-center gap-1.5 self-start rounded-full px-2 text-meta font-bold text-wine [&_svg]:size-4">
+      <BookOpen aria-hidden="true" />წიგნი სურათებადაა — გახსნა
+    </Press>
+  );
+  return (
+    <Card pad="sm" className="sg-in flex flex-col gap-4 bg-gold-tint/40 px-3.5 font-serif-ge">
+      {parts.map((p, i) => (
+        <div key={i} className="flex flex-col gap-2.5">
+          {parts.length > 1 && <p className="font-sans text-meta font-bold text-gold-ink">{p.label}</p>}
+          {p.texts.map((t, j) => (
+            <div key={j}>
+              {t.head && <p className="text-body leading-snug font-bold text-wine">{t.head}</p>}
+              {t.paras.length > 0 && <div className={cx(PROSE_V2, t.head && 'mt-0.5')}>{t.paras.map((x, k) => <p key={k}>{x}</p>)}</div>}
+            </div>
+          ))}
+        </div>
+      ))}
+    </Card>
+  );
+};
+
 const Extras: React.FC<{ step: Step; inp: DayInput; onTone: () => void }> = ({ step, inp, onTone }) => {
-  const { openPrayer, openMapItem } = useNavigation();
-  const [open, setOpen] = useState<number | null>(null);
+  const { openMapItem } = useNavigation();
+  // a step with no reading of its own shows its first text at once — the kanon, the prayer or the book it names
+  const [open, setOpen] = useState<number | null>(() => {
+    if (step.read) return null;
+    const i = (step.extras ?? []).findIndex(x => x.kind === 'kathisma' || x.kind === 'prayer');
+    return i < 0 ? null : (step.extras![i].kind === 'kathisma' ? 2000 : 3000) + i;
+  });
   const [showHymns, setShowHymns] = useState(false);
   const chips: React.ReactNode[] = [];
   const blocks: React.ReactNode[] = [];
   (step.extras ?? []).forEach((x: Extra, i) => {
-    if (x.kind === 'kathisma') chips.push(<ActChip key={i} icon={<BookOpen />} onClick={() => openPrayer(`kathisma-${x.n}`)}>კანონი {x.n}</ActChip>);
-    else if (x.kind === 'prayer') chips.push(<ActChip key={i} icon={<BookOpen />} onClick={() => openPrayer(x.id)}>{x.label}</ActChip>);
-    else if (x.kind === 'book') chips.push(
-      <ActChip key={i} icon={<BookOpen />} onClick={() => openMapItem(`w:c:${x.coll}:${x.n}${x.part !== undefined ? `:${x.part}` : ''}`)}>{x.label}</ActChip>);
+    // every text unfolds here, under its step — nothing leaves for another page (the user, 2026-11-20)
+    const fold = (id: number, label: React.ReactNode, body: React.ReactNode) => {
+      chips.push(<ActChip key={i} icon={<BookOpen />} expand on={open === id} onClick={() => setOpen(o => (o === id ? null : id))}>{label}</ActChip>);
+      if (open === id) blocks.push(<React.Fragment key={`f${id}`}>{body}</React.Fragment>);
+    };
+    if (x.kind === 'kathisma') fold(2000 + i, x.glory === 1 ? `კანონი ${x.n} · პირველი დიდება` : `კანონი ${x.n}`,
+      <Card pad="sm" className="sg-in bg-gold-tint/40 px-3.5 font-serif-ge"><Sections src={kathismaSrc(x.n, x.glory)} /></Card>);
+    else if (x.kind === 'prayer') fold(3000 + i, x.label, <PrayerInline id={x.id} />);
+    else if (x.kind === 'book') fold(4000 + i, x.label,
+      <BookInline coll={x.coll} n={x.n} part={x.part} onBook={() => openMapItem(`w:c:${x.coll}:${x.n}${x.part !== undefined ? `:${x.part}` : ''}`)} />);
     else if (x.kind === 'tone' && inp.tone) chips.push(<ActChip key={i} icon={<Music />} onClick={onTone}>{toneName(inp.tone)} — ნოტები</ActChip>);
     else if (x.kind === 'troparia') {
       chips.push(<ActChip key={i} expand on={showHymns} onClick={() => setShowHymns(s => !s)}>რიგი და ტექსტები</ActChip>);

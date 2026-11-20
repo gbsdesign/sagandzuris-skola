@@ -274,7 +274,7 @@ export const isOrder = (v: unknown): v is TempleOrder => {
 
 /** what a step can unfold or open */
 export type Extra =
-  | { kind: 'kathisma'; n: number }
+  | { kind: 'kathisma'; n: number; glory?: number }
   | { kind: 'prayer'; id: string; label: string }
   | { kind: 'book'; coll: string; n: number; part?: number; label: string }
   | { kind: 'troparia'; at: 'vespers' | 'matins' | 'hours' | 'liturgy' }
@@ -713,7 +713,7 @@ export const buildServices = (inp: DayInput): Service[] => {
       s.push(P('მცირე კვერექსი', [V.small], { chants: ['mw-6'] }));
     } else if (k === 'first' && eveCheese) {
       // Cheesefare's week still has the ordinary Psalter: a saint with the polyeleos takes „ნეტარ არს კაცი“
-      s.push({ title: '„ნეტარ არს კაცი“ — კანონი 1-ის პირველი დიდება', who: ['choir'], extras: [{ kind: 'kathisma', n: 1 }], chants: ['mw-5'] });
+      s.push({ title: '„ნეტარ არს კაცი“ — კანონი 1-ის პირველი დიდება', who: ['choir'], extras: [{ kind: 'kathisma', n: 1, glory: 1 }], chants: ['mw-5'] });
       s.push(P('მცირე კვერექსი', [V.small], { chants: ['mw-6'] }));
     }
     s.push({
@@ -777,7 +777,7 @@ export const buildServices = (inp: DayInput): Service[] => {
       ? { title: '„მოვედით, თაყვანის-ვსცეთ“ და ფსალმუნი 103', who: ['choir'], note: 'დიდ მწუხრზე იგალობება', extras: some(text(FIX.ps103), book(sunday ? BOOK.sunVespers : BOOK.dayVespers)), chants: ['mw-2', 'mw-3'] }
       : { title: '„მოვედით, თაყვანის-ვსცეთ“ და ფსალმუნი 103', who: ['reader'], note: 'იკითხება', read: [R(FIX.come), R(FIX.ps103), { say: 'დიდება მამასა და ძესა და წმიდასა სულსა, აწ და მარადის და უკუნითი უკუნისამდე, ამინ. ალილუია, ალილუია, ალილუია, დიდება შენდა, ღმერთო (სამგზის).' }], chants: ['mw-2', 'mw-3'] });
     v.push(P('დიდი კვერექსი', [V.great], { hint: 'ამ დროს მღვდელი საიდუმლოდ კითხულობს სანთლის ლოცვებს', chants: ['mw-4'] }));
-    if (k === 'first') v.push({ title: '„ნეტარ არს კაცი“ — კანონი 1-ის პირველი დიდება', who: ['choir'], note: 'დღესასწაულის წინა საღამოს — იგალობება', extras: [{ kind: 'kathisma', n: 1 }], chants: ['mw-5'] });
+    if (k === 'first') v.push({ title: '„ნეტარ არს კაცი“ — კანონი 1-ის პირველი დიდება', who: ['choir'], note: 'დღესასწაულის წინა საღამოს — იგალობება', extras: [{ kind: 'kathisma', n: 1, glory: 1 }], chants: ['mw-5'] });
     else if (k === 1) v.push({ title: 'დავითნის კანონი 1 — „ნეტარ არს კაცი“', who: ['choir', 'reader'], note: 'შაბათ საღამოს — მთელი კანონი', read: [{ kathisma: 1 }], chants: ['mw-5'] });
     else if (k) v.push({ title: `დავითნის კანონი ${k}`, who: ['reader'], hint: 'თუ წინა დღეს ღამისთევა იყო, კანონი არ იკითხება', read: [{ kathisma: k }] });
     if (k) v.push(P('მცირე კვერექსი', [V.small], { chants: ['mw-6'] }));
