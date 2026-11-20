@@ -75,6 +75,7 @@ export const ReportView: React.FC<{
           lead={<Avatar name={r.name} photo={memberOf(r.uid).photoURL} />}
           title={r.short}
           sub={r.line}
+          wrap
           onClick={() => setOpen(r.uid)}
         />
       ))}
@@ -165,11 +166,15 @@ const AiPart: React.FC<{
     <Button kind="quiet" size="md" className="px-3" onClick={onClick}>{label}</Button>
   );
 
+  const active = ai.rows.filter(r => r.status !== 'skip');
+  const skipped = ai.rows.filter(r => r.status === 'skip');
+
   return (
     <>
       <SectionLabel label="რა შენიშნა AI-მ" right={<Small>{ai.totals.lessons} გაკვეთილი · {ai.totals.practice}</Small>} />
-      <Rows>
-        {ai.rows.map(r => (
+      {/* those who had no lesson with it are one line, not a row each (a quiet week was the whole class twice on this page) */}
+      {active.length > 0 && <Rows>
+        {active.map(r => (
           <Row
             key={r.uid}
             lead={<Avatar name={r.name} photo={photo(r.uid)} />}
@@ -179,8 +184,13 @@ const AiPart: React.FC<{
             onClick={() => onOpen(r.uid)}
           />
         ))}
-      </Rows>
-      <Helper icon={<Info />}>შეეხე სახელს: მოუსმენ საუკეთესო ჩანაწერს და ნახავ, რა უთხრა AI-მ.</Helper>
+      </Rows>}
+      {skipped.length > 0 && (
+        <Note>{active.length
+          ? `AI მასწავლებელთან ამ კვირაში არ უვარჯიშია: ${skipped.map(r => r.name.split(' ')[0]).join(', ')}.`
+          : 'AI მასწავლებელთან ამ კვირაში არავის უვარჯიშია.'}</Note>
+      )}
+      {active.length > 0 && <Helper icon={<Info />}>შეეხე სახელს: მოუსმენ საუკეთესო ჩანაწერს და ნახავ, რა უთხრა AI-მ.</Helper>}
       {(stuck.length > 0 || erred.length > 0 || passes.length > 0) && (
         <>
           <SectionLabel label="AI-ს შეფასება" />

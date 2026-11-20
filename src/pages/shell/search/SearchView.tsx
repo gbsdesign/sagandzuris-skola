@@ -2,6 +2,7 @@ import React, { Fragment, useEffect, useRef, useState } from 'react';
 import {
   Bot, BookOpen, CalendarDays, CheckCheck, ChevronDown, Church, Clock, Guitar, Lock, Mic, Music, Music2, ScrollText, Search, Sparkles, UserRound, Users, X,
 } from 'lucide-react';
+import { GearSpark } from '../../v2/damkhmare/GearSpark';
 import { Chips, Dot, FOCUS, Helper, Note, Press, RoundButton, Row, Rows, SectionLabel, TopBar, cx } from '../../../components/ui2';
 import { SEARCH_GROUPS, type SearchGroupId } from '../../../data/searchIndex';
 import { shortcutIcon } from '../../../components/home/ShortcutShelf';
@@ -319,7 +320,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
                 {onHelper && (
                   <Row lead={<Dot icon={<Bot />} />} title="მკითხე" sub="გეტყვის, სად რა არის აპში" onClick={() => onHelper(searched)} />
                 )}
-                {onAsk && <Row lead={<Dot icon={<Sparkles />} />} title="AI დამხმარე" sub="სკოლის საქმეები" onClick={onAsk} />}
+                {onAsk && <Row lead={<Dot icon={<GearSpark />} />} title="ავტომატური პროგრამა" sub="სკოლის საქმეები" onClick={onAsk} />}
               </Rows>
             )}
             {recent.length > 0 && (

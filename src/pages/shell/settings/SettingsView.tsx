@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { ALargeSmall, Bell, Calendar, Download, IdCard, LayoutGrid, LogOut, MessageCircle, Shield, SunMoon, Trash2, Type } from 'lucide-react';
 import { Dot, Row, Rows, SectionLabel, ToggleRow, TopBar, Val } from '../../../components/ui2';
 import { ContactSheet, OutMark } from './ContactSheet';
+import { GearSpark } from '../../v2/damkhmare/GearSpark';
 
 // „პარამეტრები“ (redesign stage 2, prototype x-parametrebi): every setting on one page in three groups — „აპი“, „ტელეფონი“,
 // „ანგარიში“. Until now they sat at the profile's bottom and in the footer. Pure: everything comes in by props, a row whose
@@ -20,6 +21,8 @@ export interface SettingsViewProps {
   theme?: { label: string; onTap: () => void };
   khutsuri: boolean;
   onKhutsuri: (on: boolean) => void;
+  /** the superadmin's floating cog of „ავტომატური პროგრამა“: on this device or not (only they get the row) */
+  cog?: { on: boolean; onChange: (on: boolean) => void };
   // ტელეფონი
   widget?: WidgetLook;
   onCalendar?: () => void;
@@ -54,7 +57,7 @@ const widgetSub = (w: WidgetLook): React.ReactNode =>
     : undefined;
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
-  onBack, onNotify, textSize, theme, khutsuri, onKhutsuri, widget, onCalendar, onInstall, onPersonal, privacyHref = '/privacy.html',
+  onBack, onNotify, textSize, theme, khutsuri, onKhutsuri, cog, widget, onCalendar, onInstall, onPersonal, privacyHref = '/privacy.html',
   onSignOut, remove,
 }) => {
   const [contact, setContact] = useState(false);
@@ -67,6 +70,10 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           {textSize && <Row lead={lead(<ALargeSmall />)} title="ტექსტის ზომა" right={<Val>{textSize.label}</Val>} onClick={textSize.onTap} />}
           {theme && <Row lead={lead(<SunMoon />)} title="იერი" right={<Val>{theme.label}</Val>} onClick={theme.onTap} />}
           <ToggleRow lead={lead(<Type />)} title="ხუცური" sub="მთელი აპი ძველი ასოებით" on={khutsuri} onChange={onKhutsuri} />
+          {cog && (
+            <ToggleRow lead={lead(<GearSpark />)} title="მცურავი კბილანა" sub="პროგრამის ღილაკი ყველა გვერდზე"
+              on={cog.on} onChange={cog.onChange} />
+          )}
         </Group>
 
         <Group label="ტელეფონი">

@@ -15,9 +15,10 @@ export const dateWords = (d: Date) => `${d.getDate()} ${MONTHS_GE[d.getMonth()]}
 /** „დღეს · 16 ნოემბერი“, or „ორშაბათი · 10 ნოემბერი“ on another day */
 export const barSub = (d: Date) => `${isToday(d) ? 'დღეს' : WEEKDAYS_GE[d.getDay()]} · ${dateWords(d)}`;
 
-/** the week of a day, Monday first */
+/** the week of a day, Sunday first — as the habits' own week and the „კვირა“ / „თვე“ screens count it (the strip began on Monday
+ *  while they began on Sunday; one week everywhere since 2026-11-20) */
 const weekOf = (d: Date): Date[] => {
-  const mon = new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7));
+  const mon = new Date(d.getFullYear(), d.getMonth(), d.getDate() - d.getDay());
   return Array.from({ length: 7 }, (_, i) => new Date(mon.getFullYear(), mon.getMonth(), mon.getDate() + i));
 };
 

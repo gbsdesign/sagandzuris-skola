@@ -29,6 +29,11 @@ const InstrumentSheet: React.FC<{ instrument: InstrumentItem | null; onClose: ()
   const takes = instrument ? takesOf(instrument.id) : [];
   return (
     <Sheet open={!!instrument} title={instrument?.nameGe ?? ''} onClose={() => { player.stop(); onClose(); }}>
+      {instrument && (
+        <Rows>
+          <Row title="სად უკრავენ" sub={whereOf(instrument)} wrap />
+        </Rows>
+      )}
       {takes.length > 0 && (
         <Rows>
           {takes.map(([file, title, , album, note]) => (

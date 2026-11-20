@@ -1,19 +1,25 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronRight, Eye, Loader2, Mic, Pencil, Sparkles } from 'lucide-react';
+import { Check, ChevronRight, Eye, EyeOff, LayoutGrid, Loader2, Mic, Pencil } from 'lucide-react';
 import { useNavigation } from '../../../context';
-import { Button, Dot, Duo, Helper, Note, Press, TopBar, cx } from '../../../components/ui2';
+import { Button, Dot, Duo, Helper, Note, Press, RoundButton, TopBar, cx } from '../../../components/ui2';
 import { triggerHaptic } from '../../../utils/haptics';
 import { aiGate } from '../../../utils/aiRules';
 import { AiTeacherError } from '../../../utils/aiTeacher';
-import { checkPlan, draftOf, planFromAi, readyAsks, type Answer, type AssistantScope, type CheckedPlan, type PlanPerson, type Turn } from '../../../utils/aiAssistant';
+import { checkPlan, draftOf, planFromAi, type Answer, type AssistantScope, type CheckedPlan, type PlanPerson, type Turn } from '../../../utils/aiAssistant';
 import { useVoiceSearch, voiceSupported } from '../../shell/voiceSearch';
 import { ASSISTANT_PROBLEM_TEXT, askAssistant } from './ask';
 import { makeClass, sendLetters, sendToClass, type Me } from './act';
 import { PlanCard, type PlanState } from './PlanCard';
 import { useAssistantScope } from './useScope';
+import { GearSpark } from './GearSpark';
+import { setFabShown } from './fabPref';
+import { offerUndo } from '../../../components/ui/kit';
+import { nextSteps, noticedIn, offersFor, pageName } from '../../../utils/programOffers';
 
-// x-ai-damkhmare — „AI დამხმარე“: a teacher or an admin writes in plain words; three ready requests as chips; the AI answers
-// in a pale card, or shows a plan (PlanCard) that is done only on „კი“. Nothing of the talk is kept: closing forgets it.
+// x-ai-damkhmare — „ავტომატური პროგრამა“ („AI დამხმარე“ until plan 2.0): a teacher or an admin writes in plain words; the
+// program answers in a pale card, or shows a plan (PlanCard) that is done only on „კი“. Since plan 2.0 (prototypes 13 · 15) it
+// is told the open page, offers that page's ready requests first, says what it noticed by itself and offers next steps
+// under an answer (utils/programOffers.ts). Nothing of the talk is kept: closing forgets it.
 
 type Item =
   | { id: number; kind: 'me'; text: string }
@@ -33,7 +39,7 @@ const MeBubble: React.FC<{ text: string }> = ({ text }) => (
 
 const AiBubble: React.FC<{ children: React.ReactNode; busy?: boolean }> = ({ children, busy }) => (
   <section className="flex shrink-0 items-start gap-2.5 rounded-card bg-tint p-3.5" aria-live={busy ? 'polite' : undefined}>
-    <Dot icon={busy ? <Loader2 className="animate-spin" /> : <Sparkles />} />
+    <Dot icon={busy ? <Loader2 className="animate-spin" /> : <GearSpark />} />
     <div className="min-w-0 flex-1 pt-1.5 text-body whitespace-pre-wrap wrap-break-word">{children}</div>
   </section>
 );
@@ -49,13 +55,20 @@ export interface AssistantDeps {
 }
 
 /** Page-less wiring: the person's scope from Firestore, the AI and the writes. */
-export const AssistantScreen: React.FC<{ classId?: string; onClose: (then?: () => void) => void }> = ({ classId, onClose }) => {
+export const AssistantScreen: React.FC<{
+  classId?: string; page?: string; mini?: boolean; onClose: (then?: () => void) => void;
+}> = ({ classId, page, mini, onClose }) => {
   const { openClass } = useNavigation();
-  const { scope, me, ready } = useAssistantScope(classId);
+  const { scope: seen, me, ready } = useAssistantScope(classId);
+  // the open page in words: the program is told it, and the ready requests follow it
+  const scope = useMemo(() => {
+    const cls = seen.classes.find(c => c.id === seen.focus)?.name;
+    return page ? { ...seen, page: pageName(page, cls) } : seen;
+  }, [seen, page]);
   const deps = useMemo<AssistantDeps>(() => ({
     gate: aiGate, ask: askAssistant, letters: sendLetters, toClass: sendToClass, makeClass, openClass,
   }), [openClass]);
-  return <AssistantPanel scope={scope} me={me} ready={ready} deps={deps} onClose={onClose} />;
+  return <AssistantPanel scope={scope} me={me} ready={ready} deps={deps} pageId={page} mini={mini} onClose={onClose} />;
 };
 
 export const AssistantPanel: React.FC<{
@@ -63,13 +76,19 @@ export const AssistantPanel: React.FC<{
   me: Me;
   ready: boolean;
   deps: AssistantDeps;
+  /** the open page (a PageType) the ready requests follow */
+  pageId?: string;
+  /** the floating cog's small window: a shorter head */
+  mini?: boolean;
   onClose: (then?: () => void) => void;
-}> = ({ scope, me, ready, deps, onClose }) => {
+}> = ({ scope, me, ready, deps, pageId, mini, onClose }) => {
   const [items, setItems] = useState<Item[]>([]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
   const [gate, setGate] = useState<Gate>(null);
   const [editing, setEditing] = useState(false);
+  const [allOffers, setAllOffers] = useState(false);
+  const [noticeOff, setNoticeOff] = useState(false);
   const nextId = useRef(1);
   const scroller = useRef<HTMLDivElement>(null);
   const field = useRef<HTMLTextAreaElement>(null);
@@ -84,7 +103,8 @@ export const AssistantPanel: React.FC<{
   // a new turn: down to it
   useEffect(() => {
     const el = scroller.current;
-    if (el) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
+    // the first screen (greeting, what it noticed, the ready requests) is read from its top
+    if (el && (items.length || busy)) el.scrollTo({ top: el.scrollHeight, behavior: 'smooth' });
   }, [items.length, busy]);
 
   const open = items.find((it): it is Extract<Item, { kind: 'plan' }> => it.kind === 'plan' && (it.state === 'open' || it.state === 'doing'));
@@ -159,7 +179,28 @@ export const AssistantPanel: React.FC<{
 
   const voice = useVoiceSearch(heard => setText(t => (t.trim() ? `${t.trim()} ${heard}` : heard)));
   const listening = voice.state === 'listening';
-  const chips = readyAsks(scope.admin);
+  const focusName = scope.classes.find(c => c.id === scope.focus)?.name;
+  const offers = useMemo(
+    () => offersFor({ admin: scope.admin, page: pageId, className: focusName, classes: scope.classes.length }),
+    [scope.admin, pageId, focusName, scope.classes.length],
+  );
+  const here = offers.filter(o => o.group === 'here');
+  const more = offers.filter(o => o.group === 'more');
+  const noticed = useMemo(() => (ready ? noticedIn(scope) : null), [ready, scope]);
+  const last = items[items.length - 1];
+  const pick = (c: { text: string; send: boolean }) => {
+    if (c.send) void ask(c.text);
+    else { setText(c.text); window.setTimeout(() => field.current?.focus(), 0); }
+  };
+  const chip = (c: { label: string; text: string; send: boolean }) => (
+    <Press key={c.label} disabled={busy || !ready} onClick={() => pick(c)}
+      className="group flex h-tap shrink-0 cursor-pointer items-center rounded-full focus-visible:outline-none disabled:cursor-default disabled:opacity-50">
+      <span className="flex h-10 items-center rounded-full bg-surf px-4 text-body font-semibold whitespace-nowrap text-ink transition group-active:scale-[0.97] group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-wine/60">
+        {c.label}
+      </span>
+    </Press>
+  );
+  const caption = (t: string) => <p className="shrink-0 px-1.5 pt-1 text-meta font-bold text-mut">{t}</p>;
   const doing = open?.state === 'doing';
 
   const thread = items.map(it => {
@@ -207,39 +248,75 @@ export const AssistantPanel: React.FC<{
   return (
     <div className="mx-auto flex min-h-0 w-full max-w-[640px] flex-1 flex-col">
       <div className="shrink-0 px-4">
-        <TopBar title="AI დამხმარე" sub="სკოლის მართვა · შეიძლება შეცდეს" onBack={() => onClose()} />
+        {mini && <div aria-hidden="true" className="mx-auto mt-2 h-1 w-10 rounded-full bg-line" />}
+        <TopBar title="ავტომატური პროგრამა" sub="პროგრამაა, არა ადამიანი · შეიძლება შეცდეს" onBack={() => onClose()}
+          className={mini ? 'pt-1.5' : undefined}
+          right={mini ? (
+            // the floating cog is in the way: off it goes (back on in „პარამეტრები“, or by „დაბრუნება“ at once)
+            <RoundButton label="კბილანას დამალვა" onClick={() => onClose(() => {
+              setFabShown(false);
+              offerUndo('კბილანა დაიმალა. ჩართვა: პარამეტრები', () => setFabShown(true));
+            })}>
+              <EyeOff aria-hidden="true" strokeWidth={1.75} />
+            </RoundButton>
+          ) : undefined} />
       </div>
 
       <div ref={scroller} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-4 pt-0.5 pb-4">
-        {!open && !gate && (
-          <div role="group" aria-label="მზა თხოვნები" className="flex shrink-0 flex-wrap gap-x-2 gap-y-1">
-            {chips.map(c => (
-              <Press
-                key={c.label}
-                disabled={busy || !ready}
-                onClick={() => {
-                  if (c.send) void ask(c.text);
-                  else { setText(c.text); window.setTimeout(() => field.current?.focus(), 0); }
-                }}
-                className="group flex h-tap shrink-0 cursor-pointer items-center rounded-full focus-visible:outline-none disabled:cursor-default disabled:opacity-50"
-              >
-                <span className="flex h-10 items-center rounded-full bg-surf px-4 text-body font-semibold whitespace-nowrap text-ink transition group-active:scale-[0.97] group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-wine/60">
-                  {c.label}
-                </span>
-              </Press>
-            ))}
-          </div>
+        {scope.page && !gate && (
+          <Helper icon={<LayoutGrid />}>ამ გვერდზე ხარ: <b className="font-semibold text-ink">{scope.page}</b></Helper>
         )}
 
         {!items.length && !gate && (
           <AiBubble>
-            {scope.admin
-              ? 'რით დაგეხმარო? შემიძლია შეგიჯამო მოსწავლეები, მივწერო ვინმეს ან შევქმნა კლასი — ყველაფერი მხოლოდ შენი „კი“-ს მერე.'
-              : 'რით დაგეხმარო? შემიძლია შეგიჯამო შენი მოსწავლეები ან მივწერო ვინმეს — ყველაფერი მხოლოდ შენი „კი“-ს მერე.'}
+            რით დაგეხმარო? აირჩიე მზა თხოვნა ან მომწერე. ყველაფერს მხოლოდ შენი „კი“-ს მერე ვაკეთებ.
           </AiBubble>
         )}
 
+        {/* what the program noticed by itself (no AI call): one line and two buttons; „კი“ only prepares a plan */}
+        {!items.length && !gate && noticed && !noticeOff && (
+          <section aria-label="შევნიშნე" className="flex shrink-0 flex-col gap-2.5 rounded-card bg-surf p-3.5">
+            <p className="text-meta font-bold text-wine">შევნიშნე</p>
+            <p className="text-body leading-normal wrap-break-word text-ink">{noticed.text}</p>
+            <div className="flex flex-wrap gap-2">
+              <Press disabled={busy} onClick={() => { setNoticeOff(true); void ask(noticed.ask); }}
+                className="flex h-tap cursor-pointer items-center rounded-full bg-wine px-5 text-body font-semibold text-white transition active:scale-[0.97] disabled:opacity-50">
+                კი, მოამზადე
+              </Press>
+              <Press onClick={() => setNoticeOff(true)}
+                className="flex h-tap cursor-pointer items-center rounded-full bg-page px-5 text-body font-semibold text-ink transition active:scale-[0.97]">
+                არა
+              </Press>
+            </div>
+          </section>
+        )}
+
+        {/* the ready requests: the page's own first, then the rest (a few, „ყველა“ unfolds them) */}
+        {!items.length && !gate && (
+          <div role="group" aria-label="მზა თხოვნები" className="flex shrink-0 flex-col gap-1">
+            {here.length > 0 && caption('ამ გვერდზე')}
+            {here.length > 0 && <div className="flex flex-wrap gap-x-2 gap-y-1">{(allOffers ? here : here.slice(0, 4)).map(chip)}</div>}
+            {caption(here.length ? 'კიდევ შემიძლია' : 'მზა თხოვნები')}
+            <div className="flex flex-wrap gap-x-2 gap-y-1">
+              {(allOffers ? more : more.slice(0, here.length ? 2 : 4)).map(chip)}
+              {!allOffers && (
+                <Press onClick={() => setAllOffers(true)}
+                  className="flex h-tap shrink-0 cursor-pointer items-center rounded-full px-3 text-body font-semibold text-wine focus-visible:outline-2 focus-visible:outline-wine/60">
+                  ყველა ▾
+                </Press>
+              )}
+            </div>
+          </div>
+        )}
+
         {thread}
+
+        {/* the next steps under an answer (a plan has its own „კი“) */}
+        {!busy && !open && !gate && last?.kind === 'ai' && (
+          <div role="group" aria-label="შემდეგი ნაბიჯი" className="flex shrink-0 flex-wrap gap-x-2 gap-y-1">
+            {nextSteps().map(chip)}
+          </div>
+        )}
 
         {busy && <AiBubble busy>ვფიქრობ…</AiBubble>}
         {!ready && !busy && !gate && <Note>ვკითხულობ შენს კლასებს…</Note>}
@@ -277,8 +354,8 @@ export const AssistantPanel: React.FC<{
                   value={listening && voice.heard ? voice.heard : text}
                   onChange={e => setText(e.target.value.slice(0, 1000))}
                   onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); void ask(text); } }}
-                  placeholder={listening ? 'გისმენ…' : 'მიწერე AI-ს…'}
-                  aria-label="მიწერე AI-ს"
+                  placeholder={listening ? 'გისმენ…' : 'მომწერე, რა გავაკეთო…'}
+                  aria-label="მიწერე ავტომატურ პროგრამას"
                   className="field-sizing-content max-h-32 min-w-0 flex-1 resize-none bg-transparent py-1.5 text-body leading-normal text-ink outline-none placeholder:text-mut"
                 />
                 {voiceSupported() && (

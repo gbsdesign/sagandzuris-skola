@@ -18,6 +18,9 @@
   „დავითნის კანონი“. Only the search's hidden words keep the other word (`searchIndex.ts` keys, `mkitkhe.ts` keys: someone who
   types it must still find the kanon); the saints' lives' „კათისმის მონასტერი“ is a place's name. The books (`public/wignebi`)
   say „კანონი“ themselves.
+- **The games are frozen (the user's rule, 2026-11-20: „თამაშებს არ შეეხო … თამაშებს არ ვავითარებთ სანამ არ გეტყვი მე“).** Don't
+  develop, restyle or fix anything in the games — the hub, any game's page, rooms, print kits, their data — until the user says
+  so himself. A flaw seen there is only written down for him. (A change elsewhere that would break a game must still keep it working.)
 - **Don't widen scope.** Change only what was asked (one chant means one chant). Ask before deleting or moving files.
 - **Ask before starting.** Before any task — and before each stage of a long one — ask the open questions first
   (one short round, recommended option first), even when the user says „აბა შენ იცი“.
@@ -1933,6 +1936,25 @@
   `record: false`), each ear's share heard, slips and breaks; opened from „ჩემი ხმა“ → „ხმის ზომა“ or `/?open=ear`
   (`openEarTest`). On made voices: a deep bass 100 % against the first ear's ~70–78 %, a quiet voice 100 % against 54 %, half
   the time a look. Not yet tried on real voices — the user's own numbers decide whether the switch opens.
+
+## „ავტომატური პროგრამა“ (plan 2.0; the user: „AI დაარქვი ყველგან … ავტომატური პროგრამა … კბილანას ლოგო“)
+
+- Plan with 15 prototypes: https://claude.ai/artifact/5eAVduJ7UvyYVbb9AbM9Pn — what the user unticks there is not built. Each stage
+  needs his go-ahead and a cost estimate first.
+- **Stage 1 (2026-11-20, on today's engine — Gemini through Firebase AI Logic):** the school's assistant (`pages/v2/damkhmare/`,
+  was „AI დამხმარე“) is named „ავტომატური პროგრამა“ everywhere it shows, with its own sign `GearSpark` (a cog with a spark — not
+  the settings' ⚙). `ProgramFab` (App.tsx, lazy, **superadmins only** — the user's rule) = a small round wine cog on every page:
+  dragged by a finger, kept where left (`sg-program-fab`), hidden in church mode, in a call and while the window is open; a tap opens
+  the assistant as a small window over the page (`openAssistant({ page, mini })`, `AssistantHost`) and tells it the open page
+  (`scope.page` → one line in `assistantPrompt`; „ამ გვერდზე ხარ: …“). Ready offers `utils/programOffers.ts` + test: `pageName`,
+  `offersFor` („ამ გვერდზე“ first, then the rest behind „ყველა ▾“ — only what the assistant can really do), `noticedIn` („შევნიშნე“:
+  counted from the scope, no AI call; „კი, მოამზადე“ only prepares a plan that still waits for „კი“), `nextSteps` under an answer.
+  The cog can be switched off on a device (`damkhmare/fabPref.ts`, `sg-program-fab-off`; the user: „გათიშვა და ჩართვა შემეძლოს … რომ
+  ეკრანებზე არ მიედოს“): „პარამეტრები“ → „მცურავი კბილანა“ (superadmins only), and the small window's round „დამალვა“ (with „გაუქმება“).
+- Not built yet: the other „AI“ words in the app (~70 files; „AI მასწავლებელი“ → „ავტომატური მასწავლებელი“), the engine switch
+  „გუგლის პროგრამა · ლადოს პროგრამა“ (Lado = Claude; needs the user's API credit linked and a server-side key — never a key in the
+  app), memory, photos and files, the students' program, layout by words. Don't raise Google's under-18 rule again (the user: „მე
+  ვიდარდებ“).
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 
