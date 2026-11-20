@@ -57,7 +57,7 @@ export const ShelfRows: React.FC<{ open: Open }> = ({ open }) => {
   const rest = useMemo(otherBooks, []);
   const row = (b: BookEntry) => {
     const Icon = SHELF_ICONS[b.id] ?? (WIGNEBI_SHELVES.some(s => s.id === b.id) ? BookOpen : ScrollText);
-    return <Row key={b.id} lead={<Dot icon={<Icon />} />} title={b.title} sub={b.sub} onClick={() => open(b.to)} />;
+    return <Row key={b.id} lead={<Dot icon={<Icon />} />} title={b.title} sub={b.sub} wrap onClick={() => open(b.to)} />;
   };
   const recentBook = recent ? kickerOf(recent.c === EXTRA.id ? EXTRA : WIGNEBI_COLLECTIONS[recent.c], Number(recent.p.split(':')[0])) : '';
   return (
@@ -78,7 +78,7 @@ export const ShelfRows: React.FC<{ open: Open }> = ({ open }) => {
         {more && rest.map(row)}
       </Rows>
       <Rows>
-        <Row lead={<Dot icon={<Library />} color="gold" />} title={EXTRA.title}
+        <Row lead={<Dot icon={<Library />} color="gold" />} title={EXTRA.title} wrap
           sub={`წმინდანთა განგებები, დიდი მარხვა, კურთხევები · ${EXTRA_BOOKS.length} წიგნი`} onClick={() => open(`w:c:${EXTRA.id}`)} />
       </Rows>
       <Note>ტექსტები: „საღვთისმსახურო წიგნები“, ღვთისმშობლის მიძინების სახელობის მამათა მონასტერი.</Note>
@@ -288,7 +288,7 @@ const Reader: React.FC<{ c: WignebiCollection; n: number; book: BookFile; part: 
               const numbered = book.num && !/^\d+[.\s]/.test(t);
               return (
                 <p key={pi} className="mb-[0.55em] font-serif-ge leading-[1.75] text-ink wrap-break-word last:mb-0">
-                  {numbered && <sup className="mr-1 font-sans font-bold text-gold-ink tabular-nums" style={{ fontSize: '0.62em' }}>{pi + 1}</sup>}
+                  {numbered && <sup className="mr-1 font-sans font-bold text-gold-ink tabular-nums" style={{ fontSize: 'max(0.62em, 12px)' }}>{pi + 1}</sup>}
                   {t}
                 </p>
               );

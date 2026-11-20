@@ -1,11 +1,12 @@
 // The synthesizer's player docked at the notes page's bottom in the new look, like a music app (board
 // x-notebi-sintezatori): the big ▶, „სინთეზატორი ▾“ (switch to the recording), the track with its two times, a ⋯ menu
-// (სიძლიერე · ბურთულა · თავიდან · ჩაკეცვა), the voices, the tempo and „გამეორება“ (A–B). Drawn only — the notes page
+// (სიძლიერე · ბურთულა · თავიდან), the fold's own pill on top (DockHandle), the voices, the tempo and „გამეორება“ (A–B). Drawn only — the notes page
 // keeps the synthesizer, its refs and its handlers.
 import React from 'react';
 import { ChevronDown, CircleDot, Ellipsis, Headphones, Pause, Piano, Play, Repeat, RotateCcw, SlidersHorizontal } from 'lucide-react';
 import { cx, FOCUS, Press, Seg, Stepper } from '../../../components/ui2';
 import { MiniMenu } from './MiniMenu';
+import { DockHandle } from './DockHandle';
 
 type Track = Pick<React.HTMLAttributes<HTMLDivElement>, 'onPointerDown' | 'onPointerMove' | 'onPointerUp' | 'onPointerCancel'>;
 
@@ -186,6 +187,7 @@ export const SynthPlayer: React.FC<{
 
   return (
     <section aria-label="სინთეზატორი" className={cx('flex flex-col gap-2.5 rounded-card p-3 shadow-float', dark ? 'bg-night-surf text-night-ink' : 'bg-surf text-ink')}>
+      <DockHandle onFold={p.onFold} dark={dark} />
       {!p.row && p.minus}
       <div className="flex items-center gap-3">
         <Press
@@ -222,12 +224,11 @@ export const SynthPlayer: React.FC<{
             { id: 'mix', label: 'სიძლიერე', icon: <SlidersHorizontal />, on: p.mixOpen, onPick: p.onMix },
             { id: 'ball', label: 'ბურთულა', icon: <CircleDot />, on: p.ballOn, onPick: p.onBall },
             { id: 'restart', label: p.restartLabel, icon: <RotateCcw />, onPick: p.onRestart },
-            { id: 'fold', label: 'ჩაკეცვა', icon: <ChevronDown />, onPick: p.onFold },
           ]}
           trigger={(open, toggle, id) => (
             <Press
               onClick={toggle}
-              aria-label="სხვა: სიძლიერე, ბურთულა, თავიდან, ჩაკეცვა"
+              aria-label="სხვა: სიძლიერე, ბურთულა, თავიდან"
               title="სხვა"
               aria-haspopup="menu"
               aria-expanded={open}

@@ -29,7 +29,7 @@ export const PlanView: React.FC<{
       <Rows aria-label="დონეები">
         {rows.map((r, i) => (
           <Row key={r.level} lead={<Num n={i + 1} on={i === 0} />} title={r.name}
-            sub={r.last ? r.what : `${r.weeks} კვირა · ${r.what}`} right={null} />
+            sub={r.last ? r.what : `${r.weeks} კვირა · ${r.what}`} wrap right={null} />
         ))}
       </Rows>
       <Helper icon={<Info strokeWidth={1.75} />}>დღეს თუ გამოტოვებ, გეგმა თავისით გადაეწყობა. არაფერი იკარგება.</Helper>

@@ -15,6 +15,7 @@ import { LearnMirror, MirrorFrame } from './LearnMirror';
 import { askNotificationPermission } from '../../utils/prayerReminders';
 import { REMIND_TIMES, getRemindTime, setRemindTime } from '../../utils/learnReminder';
 import type { Voice } from '../../utils/pathItems';
+import { closeTopOverlay } from '../../utils/backToClose';
 
 // Pieces shared by the learning mode of a chant (LearnMode) and of a song's recording (LearnAudio): the page frame,
 // the progress bar with the parts, the singing panel (sing, hear myself, AI teacher, send to the teacher) and tips.
@@ -37,7 +38,8 @@ export const useLearnHistory = (onClose: () => void) => {
   useEffect(() => {
     try { if (!window.history.state?.sgLearn) window.history.pushState({ ...(window.history.state || {}), sgLearn: 1 }, ''); } catch { /* still opens */ }
     const onPop = (e: PopStateEvent) => { if (!e.state?.sgLearn) closeRef.current(); };
-    const onKey = (e: KeyboardEvent) => { e.stopPropagation(); if (e.key === 'Escape') back(); };
+    // Escape closes a window open inside the learning mode first (its ⋯), and the mode only when nothing is open
+    const onKey = (e: KeyboardEvent) => { e.stopPropagation(); if (e.key === 'Escape' && !closeTopOverlay()) back(); };
     window.addEventListener('popstate', onPop);
     window.addEventListener('keydown', onKey, true);
     return () => { window.removeEventListener('popstate', onPop); window.removeEventListener('keydown', onKey, true); };

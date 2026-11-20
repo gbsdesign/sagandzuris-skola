@@ -108,13 +108,15 @@ const ClassView: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
   const next = nextLessonWords(cls.schedule, wide);
   const teacherNames = cls.teachers.map(t => t.name).filter(Boolean).join(', ');
 
+  // a long class name takes a second line instead of ending in „…“ after a few letters
+  const nameLook = 'line-clamp-2 min-w-0 whitespace-normal wrap-break-word';
   const title = canSwitch ? (
     <button type="button" onClick={() => { triggerHaptic(10); setPicking(true); }} aria-haspopup="dialog" title="სხვა კლასზე გადასვლა"
       className="flex max-w-full cursor-pointer items-center gap-1 text-left">
-      <span className="min-w-0 truncate">{cls.name}</span>
+      <span className={nameLook}>{cls.name}</span>
       <ChevronDown aria-hidden="true" className="size-5 shrink-0 text-wine" />
     </button>
-  ) : cls.name;
+  ) : <span className={nameLook}>{cls.name}</span>;
 
   const lesson = next || canEdit ? (
     <Press onClick={() => setTimetable(true)} aria-haspopup="dialog" data-help="12"
@@ -122,7 +124,7 @@ const ClassView: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
       <Dot icon={<CalendarDays />} size={40} />
       <span className="flex min-w-0 flex-1 flex-col">
         <span className="truncate text-meta text-mut">{next ? 'შემდეგი გაკვეთილი' : 'გაკვეთილები'}</span>
-        <span className="truncate text-lead font-bold">{next ?? 'ცხრილი ჯერ არ არის'}</span>
+        <span className="sg-fit truncate text-lead font-bold">{next ?? 'ცხრილი ჯერ არ არის'}</span>
       </span>
       <span className="flex shrink-0 items-center gap-0.5 text-meta font-bold text-wine">
         {next ? 'ცხრილი' : 'დამატება'}<ChevronRight aria-hidden="true" className="size-[18px]" strokeWidth={2} />

@@ -20,6 +20,7 @@ import { StudentProfileCard } from '../../../components/views/StudentProfileCard
 import { ChemiSamosi } from '../../../components/views/ChemiSamosi';
 import { ShortcutShelf } from '../../../components/home/ShortcutShelf';
 import type { StudentData } from './useStudent';
+import { useBackToClose } from '../../../utils/backToClose';
 
 // „მეტი“ of the student's page (board x-mostsavle-meti): the facts the old StudentTools / profile showed (habits, the
 // working hours, abilities, interests), the kids' mode, „ნახე მისი თვალით“ (the old body of the page: their path and their
@@ -28,7 +29,7 @@ import type { StudentData } from './useStudent';
 
 const Fact: React.FC<{ label: string; children: React.ReactNode }> = ({ label, children }) => (
   <div className="flex gap-3 px-4 py-3">
-    <dt className="w-[88px] shrink-0 text-meta text-mut">{label}</dt>
+    <dt className="w-28 shrink-0 text-meta wrap-break-word text-mut">{label}</dt>
     <dd className="min-w-0 flex-1 text-body font-semibold wrap-break-word">{children}</dd>
   </div>
 );
@@ -127,8 +128,10 @@ export const MoreSheet: React.FC<{
  *  and writes the student's record (it stands inside ViewAsStudent on the page). Under the kit's sheets (z-80). */
 const HisEyes: React.FC<{ name: string; uid: string; photoURL: string; onClose: () => void }> = ({ name, uid, photoURL, onClose }) => {
   const access = useAccess();
+  // a full-screen layer, not a Sheet: the phone's back closes it (and only it)
+  useBackToClose(true, onClose);
   return createPortal(
-    <div className="fixed inset-0 z-[70] overflow-y-auto overscroll-contain bg-page px-4 pb-10">
+    <div className="fixed inset-0 z-[70] overflow-y-auto overscroll-contain bg-page px-4 pt-[env(safe-area-inset-top)] pb-10">
       <div className="mx-auto flex w-full max-w-2xl flex-col gap-4">
         <TopBar title={name} sub="ხედავ ისე, როგორც მას უჩანს" onBack={onClose} />
         <PathPageBody />

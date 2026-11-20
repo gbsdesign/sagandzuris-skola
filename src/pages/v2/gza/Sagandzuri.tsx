@@ -138,8 +138,8 @@ export const SagandzuriView: React.FC<{
   const row = (it: TreasureItem) => {
     const name = (
       <span className="flex min-w-0 flex-col">
-        <span className="line-clamp-2 text-body leading-tight font-semibold wrap-break-word">{it.name}</span>
-        {it.sub && <span className="truncate text-meta text-mut">{it.sub}</span>}
+        <span className="text-body leading-tight font-semibold wrap-break-word">{it.name}</span>
+        {it.sub && <span className="text-meta text-mut wrap-break-word">{it.sub}</span>}
       </span>
     );
     return (

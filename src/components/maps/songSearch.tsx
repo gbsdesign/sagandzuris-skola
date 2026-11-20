@@ -1,6 +1,7 @@
 import React, { useSyncExternalStore } from 'react';
 import { Map as MapIcon, Search, X, type LucideIcon } from 'lucide-react';
 import { triggerHaptic } from '../../utils/haptics';
+import { openOverlay } from '../../utils/backToClose';
 
 // A page's search field folded under the bar's round 🔍 (in place of 📌). The songs' since 2026-11-08 (the user: „სანიშნის
 // ადგილას სერჩის ნიშანი ჩასვი“), the churches' since 2026-11-09 („სამაგრის ადგილას ლუპა ჩასვი … ასარჩევი პანელი გააუქმე“).
@@ -8,7 +9,16 @@ const makeFold = (label: string, Icon: LucideIcon = Search, closeLabel = 'ძე
   let open = false;
   const listeners = new Set<() => void>();
   const emit = () => listeners.forEach(l => l());
-  const set = (v: boolean) => { if (open !== v) { open = v; emit(); } };
+  // while it is open the phone's back closes it (the field folds, the dots map goes back to the regions) instead of
+  // leaving the page with the typed word lost
+  let leave: (() => void) | null = null;
+  const set = (v: boolean) => {
+    if (open === v) return;
+    open = v;
+    if (v) leave = openOverlay(() => set(false));
+    else { leave?.(); leave = null; }
+    emit();
+  };
   const use = () => useSyncExternalStore(
     l => { listeners.add(l); return () => { listeners.delete(l); }; },
     () => open,

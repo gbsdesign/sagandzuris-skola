@@ -63,15 +63,19 @@ const Para: React.FC<{ para: CalPara; links: LifeLink[] }> = ({ para, links }) =
         const body = g.pieces.map((p, j) => <Run key={j} text={p.text} f={p.f} />);
         if (!g.life) return <React.Fragment key={i}>{body}</React.Fragment>;
         const life = g.life;
+        // a span, not a <button>: a button is always an inline block, so a long name took whole lines and left its „;“ alone
+        const go = () => { triggerHaptic(8); openSaintLife(life); };
         return (
-          <button
+          <span
             key={i}
-            type="button"
-            onClick={() => { triggerHaptic(8); openSaintLife(life); }}
-            className="inline cursor-pointer rounded-chip text-left underline decoration-wine/40 decoration-1 underline-offset-4 active:bg-tint"
+            role="button"
+            tabIndex={0}
+            onClick={go}
+            onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); go(); } }}
+            className="cursor-pointer rounded-chip underline decoration-wine/40 decoration-1 underline-offset-4 active:bg-tint"
           >
             {body}
-          </button>
+          </span>
         );
       })}
     </>

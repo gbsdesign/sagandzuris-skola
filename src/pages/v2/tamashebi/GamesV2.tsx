@@ -156,6 +156,7 @@ const Hub: React.FC = () => {
                       key={gr.id}
                       lead={<Dot icon={GROUP_ICON[gr.id] ?? <Dices />} />}
                       title={groupTitle(gr.id)}
+                      wrap
                       right={<span className="flex shrink-0 items-center gap-1.5"><Small>{gr.list.length}</Small><ChevronRight aria-hidden="true" className="size-[18px] text-mut" strokeWidth={2} /></span>}
                       onClick={() => openMapItem(`g:${gr.id}`)}
                     />

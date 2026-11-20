@@ -1,6 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Info, Mic, Music, RefreshCw, Star, Target, Trash2, Users, X } from 'lucide-react';
 import { LINES, MASTERY_LEVELS } from '../../data/masteryPath';
+import { useBackToClose } from '../../utils/backToClose';
 import { MONTHS_SHORT_GE } from '../../utils/dateNames';
 import { lineMarks } from '../../utils/masteryPath';
 import {
@@ -115,9 +116,9 @@ const Diary: React.FC<MyVoiceViewProps> = ({ bars, best, worst, onOpenPhrase }) 
       </Card>
       {best && (
         <Rows>
-          <Row lead={<Dot icon={<Star />} />} title="ყველაზე კარგად" sub={best.title} right={null} />
+          <Row lead={<Dot icon={<Star />} />} title="ყველაზე კარგად" sub={best.title} wrap right={null} />
           {worst && (
-            <Row lead={<Dot icon={<RefreshCw />} />} title="სავარჯიშოა" sub={phraseLine(worst)} onClick={() => onOpenPhrase(worst)} />
+            <Row lead={<Dot icon={<RefreshCw />} />} title="სავარჯიშოა" sub={phraseLine(worst)} wrap onClick={() => onOpenPhrase(worst)} />
           )}
         </Rows>
       )}
@@ -339,8 +340,9 @@ export const MyVoice: React.FC<{
     if (yes) void forgetAiNote(uid, 'all');
   };
 
-  // the phrase's page: an inner screen with its own „უკან“ (the phone's back still closes the whole layer)
+  // the phrase's page: an inner screen with its own „უკან“; the phone's back closes only it
   const [phrase, setPhrase] = useState<DiaryPhrase | null>(null);
+  useBackToClose(!!phrase, () => setPhrase(null));
   const tries = useMemo(() => (phrase ? phraseTries(note?.takes, `${phrase.piece}~${phrase.part}`) : []), [phrase, note?.takes]);
   const layer = useRef<HTMLDivElement>(null);
   useEffect(() => { layer.current?.scrollTo({ top: 0 }); }, [phrase]);

@@ -144,7 +144,10 @@ export const useBellState = (uid: string | undefined) => {
       setHiddenKept(Array.isArray(d?.bellHidden) ? d.bellHidden.filter((x: unknown): x is string => typeof x === 'string') : []);
     }, () => { setKept(0); setHiddenKept([]); });
   }, [uid]);
-  const seen = Math.max(local, kept);
+  // never opened here (a guest, a new phone): only the last week counts as new — not every line of news there ever was
+  // (the bell said „40“ to a first-time visitor)
+  const [firstLook] = useState(() => Date.now() - 7 * DAY_MS);
+  const seen = Math.max(local, kept) || firstLook;
   const markSeen = (at: number) => {
     if (at <= seen) return;
     setLocal(at);

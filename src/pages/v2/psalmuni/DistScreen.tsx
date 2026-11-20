@@ -100,7 +100,7 @@ export const DistScreen: React.FC<{ group: PsalterGroup; cls?: SchoolClass; owne
           {people.map(p => {
             const ks = kanonsOf(p.uid);
             return (
-              <Row key={p.uid} lead={<Avatar name={p.name} photo={p.photoURL} />} title={p.name}
+              <Row key={p.uid} lead={<Avatar name={p.name} photo={p.photoURL} />} title={p.name} wrap
                 onClick={canLead ? () => setWho(p.uid) : undefined}
                 right={<Small tone={ks.length ? 'ink' : 'gold'}>{ks.length ? (ks.length === 1 ? `კანონი ${ks[0]}` : `კანონი ${ks.join(', ')}`) : 'ჯერ არ აქვს'}</Small>} />
             );

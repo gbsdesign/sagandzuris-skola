@@ -35,7 +35,7 @@ export const PickScreen: React.FC = () => {
   const toClass = (c: SchoolClass) => { void bulk.toClass(c).then(ok => { if (ok) setChoosing(false); }); };
 
   return (
-    <Screen className="pb-28">
+    <Screen className="pb-40">
       <TopBar title="მონიშვნა" onBack={back} right={<Button kind="quiet" size="md" onClick={back}>გაუქმება</Button>} />
       <Chips label="ფილტრი" value={filter} onChange={setFilter}
         items={chips.map(c => ({ id: c.f, label: `${c.f === 'all' ? 'ყველა' : FILTER_NAMES[c.f] || c.f} ${c.n}` }))} />

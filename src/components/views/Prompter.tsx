@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowUp, ChevronLeft, ChevronRight, Focus, Loader2, Minus, M
 import { useAuth } from '../../context/AuthContext';
 import { Flash, Ticker, firstWordOf, wordsOf, type FlowHandle, type Word } from './PrompterFlow';
 import { useNewLook } from '../../design/newLook';
+import { useBackToClose } from '../../utils/backToClose';
 import { PrompterAaSheet, PrompterTop } from '../../pages/v2/lotsva/PrompterAa';
 
 // „წამყვანის ეკრანი“ (2026-11-06, the user: „ავტომატური კითხვის ჟურნალისტური ვერსია … წამყვანებს წინ რომ ეკრანი აქვთ“):
@@ -530,6 +531,8 @@ export const Prompter: React.FC<{
   };
 
   const close = () => onClose(mode === 'up' ? blockAtLine() : words[flow.current?.word() ?? 0]?.block ?? start);
+  // the new look: the phone's back closes the prompter (a full-screen layer of its own), not the page under it
+  useBackToClose(nl, close);
 
   // a computer's keys: space pauses, ↑ ↓ the speed, + − the letters, Esc closes (the „Aa“ sheet first, when open)
   const keys = useRef({ toggle, stepSpeed, stepSize, close, aa, closeAa: () => setAa(false) });
@@ -891,7 +894,7 @@ export const Prompter: React.FC<{
             <Minus className="w-[18px] h-[18px]" />
           </button>
           <span className="w-16 text-center leading-none font-sans">
-            <span className="block text-[11.5px] font-bold" style={{ color: look.muted }}>სიჩქარე</span>
+            <span className={`block ${nl ? 'text-[12px]' : 'text-[11.5px]'} font-bold`} style={{ color: look.muted }}>სიჩქარე</span>
             <span className="block mt-1 text-[17px] font-black tabular-nums" style={{ color: look.btn }}>{speeds[speed].label}</span>
           </span>
           <button type="button" aria-label="სწრაფად" disabled={speed >= speeds.length - 1} onClick={() => stepSpeed(1)} className={round} style={{ color: look.btn }}>

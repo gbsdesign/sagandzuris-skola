@@ -203,6 +203,9 @@ const VersionCard: React.FC<{
 };
 
 /** x-versiebi / x-desk-sia — one chant's versions: school chips, big cards, „კიდევ N ვერსია“. */
+
+// the computer's right panel: as many cards a row as its own width allows (four in ~450 px squeezed every line to a word)
+const WIDE_COLS = 'grid-cols-2 @lg:grid-cols-3 @3xl:grid-cols-4';
 export const Versions: React.FC<{
   chant: ChantItem;
   /** "chantId|code" of every version with a recording, made once for the whole list */
@@ -262,8 +265,8 @@ export const Versions: React.FC<{
     const shown = showAll ? list : list.slice(0, FIRST);
     const rest = list.length - shown.length;
     return (
-      <div className="flex flex-col gap-2.5">
-        <div className={cx('grid gap-2.5', wide ? 'grid-cols-3 xl:grid-cols-4' : 'grid-cols-2')}>{shown.map(v => bookCard(v, bookOf?.(v)))}</div>
+      <div className="@container flex flex-col gap-2.5">
+        <div className={cx('grid gap-2.5', wide ? WIDE_COLS : 'grid-cols-2')}>{shown.map(v => bookCard(v, bookOf?.(v)))}</div>
         {rest > 0 && (
           <Button kind="ghost" size="md" full icon={<ChevronDown />} onClick={() => setMore(prev => new Set(prev).add(key))} className={wide ? 'bg-surf' : 'bg-page'}>
             {`კიდევ ${rest} ვერსია`}
@@ -331,8 +334,10 @@ export const Versions: React.FC<{
                       // in a row with recordings the book's name moves onto its own buttons
                       v => (v.book === 'pat' && versions.some(x => x.book !== 'pat') ? 'დ. პატარავა' : undefined))
                   : (
-                    <div className={cx('grid gap-2.5', wide ? 'grid-cols-3 xl:grid-cols-4' : 'grid-cols-2')}>
-                      {[plain, ornate].map((v, i) => (v ? card(v, i === 0 ? 'სადა' : 'გამშვენებული') : null))}
+                    <div className="@container">
+                      <div className={cx('grid gap-2.5', wide ? WIDE_COLS : 'grid-cols-2')}>
+                        {[plain, ornate].map((v, i) => (v ? card(v, i === 0 ? 'სადა' : 'გამშვენებული') : null))}
+                      </div>
                     </div>
                   )}
               </div>

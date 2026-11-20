@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useAuth, useViewing } from '../../../context';
 import { useNotes } from '../../../context/NotesContext';
 import { useCall } from '../../../utils/callSession';
+import { useBackToClose } from '../../../utils/backToClose';
 import { Layer, MomentView, ShareView } from './ShareView';
 import { useLearned, type LearnedItem } from './useLearned';
 
@@ -31,8 +32,11 @@ export const LearnedMoment: React.FC = () => {
     return () => window.removeEventListener('keydown', k);
   }, [shown]);
 
-  if (!uid || !shown) return null;
   const close = () => { setShown(null); setCard(false); };
+  // the phone's back: the card goes back to the moment, then the moment closes
+  useBackToClose(!!uid && !!shown, close);
+  useBackToClose(!!uid && !!shown && card, () => setCard(false));
+  if (!uid || !shown) return null;
   return (
     <Layer>
       {card
