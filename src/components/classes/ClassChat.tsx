@@ -219,6 +219,7 @@ export const ClassCallButton: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
       canVideo
       onStart={kind => startClassCall(cls, user, kind)}
       onJoin={() => joinClassCall(cls, user, 'audio')}
+      joinLabel={canStart ? 'შესვლა' : 'შეერთება'}
     />
   );
 };
