@@ -235,6 +235,10 @@ export const MoreSheet: React.FC<{ open: boolean; d: DayServiceState; onClose: (
         <ToggleRow title="მღვდლის ტექსტები" sub={d.priestOn ? 'ჩანს მღვდლისა და დიაკვნის სიტყვებიც' : 'ჩანს მხოლოდ მედავითნისა და გუნდისა'}
           on={d.priestOn} onChange={() => { triggerHaptic(8); d.flipPriest(); }} wrap />
         <ToggleRow title="ხუცური" sub="ტექსტი ძველი ასოებით" on={d.oldOn} onChange={() => { triggerHaptic(8); d.flipOld(); }} />
+        {d.canAwake && (
+          <ToggleRow title="ეკრანი არ ჩაქრეს" sub="სანამ ეს გვერდი ღიაა — ბოლო შეხებიდან 30 წუთი" on={d.awakeOn}
+            onChange={() => { triggerHaptic(8); d.flipAwake(); }} wrap />
+        )}
       </Rows>
 
       <SectionLabel label={`${dayMonthGe(d.iso)} · ძვ. სტ. ${oldDayMonthGe(d.iso)}`} />
@@ -254,6 +258,7 @@ export const MoreSheet: React.FC<{ open: boolean; d: DayServiceState; onClose: (
         <Row lead={<Dot icon={<BookOpen />} />} title="დღის საკითხავები" sub="სამოციქულო — წაიკითხე და ჩაიწერე" onClick={() => go(onReadings)} />
         <Row lead={<Dot icon={<CalendarDays />} />} title="სრული განგება კალენდარში" onClick={() => go(() => openChurchCalendar(d.iso))} />
       </Rows>
+      <Note>დღევანდელი და ხვალინდელი მსახურების ტექსტებს აპი თვითონ ინახავს — ტაძარში ინტერნეტის გარეშეც გაიხსნება.</Note>
       <Note>ეს ზოგადი წესია ტიპიკონის მიხედვით. ტაძრებში ცოტათი განსხვავდება — გადაამოწმე მოძღვართან ან რეგენტთან.</Note>
     </Sheet>
   );

@@ -25,7 +25,7 @@ const Overview: React.FC<{ done: string[]; open: (id: string) => void; onAccount
   return (
     <div className="w-full max-w-2xl mx-auto mb-6 px-1">
       <header className="text-center px-2 mb-5">
-        <p className="text-[12px] font-black uppercase tracking-[0.14em] text-[#a0703c]">სასწავლო კურსი · 8 გაკვეთილი</p>
+        <p className="text-[12px] font-black uppercase tracking-[0.14em] text-[#a0703c]">სასწავლო კურსი · {LESSONS.length} გაკვეთილი</p>
         <h2 className="mt-1.5 font-serif-ge text-[22px] sm:text-[26px] font-bold leading-tight text-[#2a2017] text-balance">
           მედავითნეობა ნაბიჯ-ნაბიჯ
         </h2>

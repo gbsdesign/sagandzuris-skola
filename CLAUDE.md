@@ -593,7 +593,8 @@
   სასწავლო“ → `learn`) and the books' shelves (everyone since 2026-11-09); „learn“ = the
   course's overview, a lesson's id under it (the old „გაკვეთილები · წიგნები“ tabs are gone; „up“ goes lesson → learn → books).
 - **მედავითნეობა** (page `medavitneoba`, built 2026-10-27): the reader's course on the vine's „მედავითნეობა“ label
-  (section `medavitneobaTopic`, „მალე“ until the admin opens it). 8 lessons in `data/medavitneLessons.ts`, shown step by
+  (section `medavitneobaTopic`, „მალე“ until the admin opens it). 10 lessons in `data/medavitneLessons.ts` (the 9th „დიდი მარხვა“
+  and the 10th „აღდგომა და ზატიკი“ added 2026-11-19 from the day service's own rules; `tests/medavitneLessons.test.ts`), shown step by
   step (learn / order / read aloud / quiz / task) in `pages/MedavitneobaPage.tsx` + `pages/medavitneoba/parts.tsx`; the
   open lesson is `mapItem`. Prayer texts copied from the app's ლოცვანი, psalms cut from the kathismas (`loadPsalmHtml`),
   the Apostle from `public/bible/`. A reading's take stays in the browser unless „მასწავლებელს გაგზავნა“ (≤3 min, 16 kHz/24 kbps

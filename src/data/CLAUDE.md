@@ -468,5 +468,21 @@ evening in his temple = vespers alone (matins in the morning), „სხვა �
   2026 text says Chrysostom's; fish on 1–2 January „პატრიარქის კურთხევით“; Wed/Fri food in the Pentecostarion; Great Compline on
   Lent's Sunday evenings; the 5th Thursday's kathismas at the hours and the Presanctified; vigil-rank Georgian saints (St Nino,
   გიორგობა) on a Wednesday or Friday follow ჟამნი (no mark → „მარხვა“).
+- **Without internet and with the screen on (2026-11-19 evening, the user's „გააკეთე ყველაფერი“ — items 6, 7, 9 of nine):**
+  `utils/dayOffline.ts` + test = `dayFiles(inp)`, every file a day's four services read (ჟამნი, დავითნი's kanons, the tone's
+  პარაკლიტონი, the saint's month, კონდაკი, the Apostle's book — about 20 files, 1.6 MB before compression) and `daySignature`.
+  The page asks for today's and tomorrow's once (`saveDayTexts`, `useDaySaver` in `DayService.tsx` — from the day's page and from
+  the reader's front through `useDayBrief`; 2.5 s after opening, not offline or on a data-saving phone; the service worker keeps
+  what was fetched; `sg-day-saved` {iso: signature}, so a day is asked again only when its rank, tone, temple or order changes).
+  `useDayInput(iso, …)` builds a day's `DayInput` (the old body of `useDayService`). `hooks/useScreenAwake.ts`: the screen stays
+  on while the day's page is open, lets go 30 minutes after the last touch; switch „ეკრანი არ ჩაქრეს“ in the new look's „მეტი“
+  (`sg-day-awake`, on unless turned off; shown only where the browser can — Android's own-window WebView cannot: stage 3 of that
+  work must give it a bridge call, church mode needs it too). The new-look sheet says the texts are kept by themselves.
+- **The rank of ordinary days is a guess (found 2026-11-19, not fixed yet):** `guessRank` calls a day „დიდებამაღალიანი“ when the
+  calendar prints a saint's name bold — 128 days of 2026, 126 of 2027 — and bold there marks Georgian saints and the saints with
+  any service of their own, so „ექვსიანი“ days are among them. The user approved a table of real ranks („1“ of his nine); the
+  source he has is „2022 წლის მართლმადიდებლური კალენდარი მცირე ტიპიკონით“ in his Drive (Drive id 1FdU6bbL6AYbMbLbQ0hy2GSXpaJcopBEz;
+  a text PDF in a legacy Latin-coded font; not shared by link, so the workspace cannot fetch it — it needs his computer on,
+  or his leave to open that one file by link). Wait for his word on the cost before starting.
 - Still open: the common services have no ikos; a second rank „ექვსიანი“ is not told apart from a plain day; with the great
   doxology the tibikon sings the typika at the liturgy — the app keeps the daily antiphons on weekdays (the user's temple).
