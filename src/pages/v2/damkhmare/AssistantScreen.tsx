@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronRight, Eye, LayoutGrid, Loader2, Mic, Pencil } from 'lucide-react';
+import { Check, ChevronRight, Eye, EyeOff, LayoutGrid, Loader2, Mic, Pencil } from 'lucide-react';
 import { useNavigation } from '../../../context';
-import { Button, Dot, Duo, Helper, Note, Press, TopBar, cx } from '../../../components/ui2';
+import { Button, Dot, Duo, Helper, Note, Press, RoundButton, TopBar, cx } from '../../../components/ui2';
 import { triggerHaptic } from '../../../utils/haptics';
 import { aiGate } from '../../../utils/aiRules';
 import { AiTeacherError } from '../../../utils/aiTeacher';
@@ -12,6 +12,8 @@ import { makeClass, sendLetters, sendToClass, type Me } from './act';
 import { PlanCard, type PlanState } from './PlanCard';
 import { useAssistantScope } from './useScope';
 import { GearSpark } from './GearSpark';
+import { setFabShown } from './fabPref';
+import { offerUndo } from '../../../components/ui/kit';
 import { nextSteps, noticedIn, offersFor, pageName } from '../../../utils/programOffers';
 
 // x-ai-damkhmare — „ავტომატური პროგრამა“ („AI დამხმარე“ until plan 2.0): a teacher or an admin writes in plain words; the
@@ -248,7 +250,16 @@ export const AssistantPanel: React.FC<{
       <div className="shrink-0 px-4">
         {mini && <div aria-hidden="true" className="mx-auto mt-2 h-1 w-10 rounded-full bg-line" />}
         <TopBar title="ავტომატური პროგრამა" sub="პროგრამაა, არა ადამიანი · შეიძლება შეცდეს" onBack={() => onClose()}
-          className={mini ? 'pt-1.5' : undefined} />
+          className={mini ? 'pt-1.5' : undefined}
+          right={mini ? (
+            // the floating cog is in the way: off it goes (back on in „პარამეტრები“, or by „დაბრუნება“ at once)
+            <RoundButton label="კბილანას დამალვა" onClick={() => onClose(() => {
+              setFabShown(false);
+              offerUndo('კბილანა დაიმალა. ჩართვა: პარამეტრები', () => setFabShown(true));
+            })}>
+              <EyeOff aria-hidden="true" strokeWidth={1.75} />
+            </RoundButton>
+          ) : undefined} />
       </div>
 
       <div ref={scroller} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-4 pt-0.5 pb-4">

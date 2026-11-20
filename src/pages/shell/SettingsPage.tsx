@@ -13,6 +13,8 @@ import { TextSizeScreen } from '../v2/parametrebi/TextSizeScreen';
 import { ThemeScreen } from '../v2/parametrebi/ThemeScreen';
 import { PhoneCalendarSheet } from '../v2/kalendari/PhoneCalendarSheet';
 import { TEXT_STEPS, THEME_NAMES, useTextLook, useTheme } from '../../design/look';
+import { useAssistantAllowed } from '../v2/damkhmare/open';
+import { setFabShown, useFabShown } from '../v2/damkhmare/fabPref';
 
 export { SettingsView } from './settings/SettingsView';
 export type { SettingsViewProps, WidgetLook } from './settings/SettingsView';
@@ -33,8 +35,10 @@ type Win = null | 'calendar' | 'ios';
 
 export const SettingsPage: React.FC = () => {
   const { handleGoBack, navigateTo, openMapItem, mapItem } = useNavigation();
-  const { user } = useAuth();
+  const { user, isSuperAdmin } = useAuth();
   const access = useAccess();
+  const program = useAssistantAllowed();
+  const cogShown = useFabShown();
   const waiting = useMembership().status === 'pending';
   const [khutsuri, setKhutsuri] = useKhutsuriSetting();
   const widget = useWidgetLink();
@@ -65,6 +69,7 @@ export const SettingsPage: React.FC = () => {
         theme={{ label: theme.choice === 'auto' ? 'ტელეფონით' : THEME_NAMES[theme.choice], onTap: () => openMapItem('theme') }}
         khutsuri={khutsuri}
         onKhutsuri={setKhutsuri}
+        cog={isSuperAdmin && program ? { on: cogShown, onChange: setFabShown } : undefined}
         widget={member && widget.shown ? {
           linked: widget.linked,
           state: widget.state === 'idle' && widget.secret ? 'ready' : widget.state,
