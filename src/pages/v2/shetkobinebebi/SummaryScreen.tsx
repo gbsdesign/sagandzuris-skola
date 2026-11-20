@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Calendar, Clock, Gift, MessageCircle, RefreshCw } from 'lucide-react';
 import { useNavigation } from '../../../context';
-import { Button, Dot, Note, Row, Rows, SectionLabel, Sheet, TopBar, Val, WrapChips } from '../../../components/ui2';
+import { Dot, Note, Row, Rows, SectionLabel, Sheet, TopBar, Val, WrapChips } from '../../../components/ui2';
 import { NotifyItems, NotifyPrefs, useNotifyPrefs } from '../../../utils/notifyPrefs';
 import { SwitchLine } from './parts';
 
@@ -63,7 +63,6 @@ export const SummaryView: React.FC<{ prefs: NotifyPrefs; loaded: boolean; onSave
             if (t) { save({ ...prefs, at: t }); setPick(false); }
           }}
         />
-        <Button kind="ghost" onClick={() => setPick(false)}>დახურვა</Button>
       </Sheet>
     </div>
   );

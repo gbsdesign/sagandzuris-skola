@@ -1,6 +1,7 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { Seg, TopBar } from '../../../components/ui2';
+import { openOverlay } from '../../../utils/backToClose';
 
 export type StudioTab = 'mix' | 'record';
 
@@ -20,6 +21,13 @@ export const StudioScreen: React.FC<{
   close.current = onClose;
   const lockedRef = useRef(locked);
   lockedRef.current = locked;
+  // the phone's back closes the studio (a history step of its own); while a take is being recorded / made / sent it stays
+  // open and takes a new step, so the next back is not lost either
+  const [step, setStep] = useState(0);
+  useEffect(() => openOverlay(() => {
+    if (lockedRef.current) setStep(n => n + 1);
+    else close.current();
+  }), [step]);
   useEffect(() => {
     const prev = document.body.style.overflow;
     document.body.style.overflow = 'hidden';

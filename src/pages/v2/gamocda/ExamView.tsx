@@ -139,7 +139,7 @@ export const ExamView: React.FC<ExamViewProps> = ({
   return (
     <>
       <div className="flex flex-1 flex-col gap-1 px-4">
-        <TopBar title="გამოცდა" sub={`„${title}“ · ${voiceName}`} onBack={busy ? undefined : onClose} />
+        <TopBar title="გამოცდა" sub={`${voiceName} · „${title}“`} onBack={busy ? undefined : onClose} />
         {body}
       </div>
       {bottom && <Bottom>{bottom}</Bottom>}

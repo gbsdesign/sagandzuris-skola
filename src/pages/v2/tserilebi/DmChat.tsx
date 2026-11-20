@@ -53,9 +53,10 @@ export const ChatHead: React.FC<{
 }> = ({ title, sub, onBack, wide, right, onOpen }) => (
   <div className="px-3.5">
     <TopBar
+      // a long name takes a second line instead of ending in „…“
       title={onOpen
-        ? <Press onClick={onOpen} className={cx('max-w-full cursor-pointer truncate text-left font-bold')}>{title}</Press>
-        : title}
+        ? <Press onClick={onOpen} className={cx('line-clamp-2 max-w-full cursor-pointer text-left font-bold whitespace-normal wrap-break-word')}>{title}</Press>
+        : <span className="line-clamp-2 whitespace-normal wrap-break-word">{title}</span>}
       sub={sub}
       onBack={wide ? undefined : onBack}
       right={right}

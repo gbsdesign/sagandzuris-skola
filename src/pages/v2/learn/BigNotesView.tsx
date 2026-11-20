@@ -11,10 +11,11 @@ export const BigNotesView: React.FC<{
 }> = ({ title, sub, onClose, say, main, pulse, children }) => createPortal(
   <div className="fixed inset-0 z-[95] flex flex-col bg-page text-ink" role="dialog" aria-modal="true" aria-label={`ნოტები დიდად · ${title}`}>
     <div className="safe-top safe-x shrink-0 border-b border-line">
-      <div className="flex h-14 items-center gap-2.5 px-3 [@media(max-height:500px)]:h-12">
+      <div className="flex min-h-14 items-center gap-2.5 px-3 py-1.5 [@media(max-height:500px)]:min-h-12">
         <div className="min-w-0 flex-1 pl-1">
           <p className="truncate text-lead leading-tight font-bold">{title}</p>
-          <p className="truncate text-meta leading-tight text-mut">{sub}</p>
+          {/* the chant's name: two lines rather than cut off */}
+          <p className="line-clamp-2 text-meta leading-tight wrap-break-word text-mut [@media(max-height:500px)]:line-clamp-1">{sub}</p>
         </div>
         <RoundButton label="დახურვა" onClick={onClose}><X /></RoundButton>
       </div>

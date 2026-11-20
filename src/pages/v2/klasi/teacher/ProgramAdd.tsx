@@ -113,6 +113,7 @@ export const ProgramAddSheet: React.FC<{ cls: SchoolClass; open: boolean; onClos
                   lead={atTop ? <Dot icon={ICONS[n.key] ?? <Music />} /> : undefined}
                   title={n.title}
                   sub={n.sub}
+                  wrap
                   onClick={() => { setQ(''); setPath(p => [...p, n]); }}
                 />
               );
@@ -127,6 +128,7 @@ export const ProgramAddSheet: React.FC<{ cls: SchoolClass; open: boolean; onClos
                 lead={<Check on={added} size={26} />}
                 title={n.title}
                 sub={n.sub}
+                wrap
                 right={null}
                 onClick={item ? () => toggle(item) : undefined}
               />

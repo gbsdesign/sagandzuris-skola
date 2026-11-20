@@ -5,6 +5,7 @@ import { useCall } from '../../utils/callSession';
 import { useNewLook } from '../../design/newLook';
 import { Bar, RoundButton } from '../ui2';
 import { useTableOpened } from './gameVariant';
+import { useBackToClose } from '../../utils/backToClose';
 
 // „მაგიდის ეკრანი“: the full-screen face of a live game (games hub, 2026-10-28) — the one phone on the table shows big
 // text and big buttons, nothing else; the screen stays awake while it is open. Born with „ამიხსენი“, for every live game
@@ -72,6 +73,9 @@ export const TableScreen: React.FC<{
   const [head, setHead] = useState<TableHead | null>(null);
   // the new look's game frame shows the game when a play screen opens under its first page (an invitation, a resumed game)
   useTableOpened(nl);
+  // the new look: the phone's back does what the ✕ does (pauses / leaves this screen) instead of hiding the game under its
+  // first page with the play screen still open behind it
+  useBackToClose(nl, onClose);
   if (nl) {
     return (
       <HeadCtx.Provider value={setHead}>

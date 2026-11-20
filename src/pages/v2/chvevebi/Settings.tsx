@@ -178,7 +178,7 @@ const Body: React.FC<{ mine: Mine; id: string }> = ({ mine, id }) => {
       <Card pad="none">
         <Rows>
           {links.map((l, i) => (
-            <Row key={i} lead={<Dot icon={linkIcon(l)} />} title={l.title} sub={l.kind === 'url' ? 'ბმული' : 'აპის გვერდი'} onClick={() => setShown(i)} />
+            <Row key={i} lead={<Dot icon={linkIcon(l)} />} title={l.title} wrap sub={l.kind === 'url' ? 'ბმული' : 'აპის გვერდი'} onClick={() => setShown(i)} />
           ))}
           {!full && <Row lead={<Dot icon={<Plus />} />} title="დამატება" onClick={() => setAdding(true)} />}
           {!full && <Row lead={<Dot icon={<Search />} />} title="აპის გვერდის დამატება" sub="ძებნით" onClick={() => setFinding(true)} />}

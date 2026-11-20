@@ -1895,6 +1895,26 @@
   admins only — rules); Monday from 09:00 the reminders Worker sends each teacher „კვირის შეჯამება მზადაა · <class>“
   (`teacherWeekNotices`, the same counting as `weekReport.ts` — tests/weekReport.test.ts runs both; once a Monday, meta `tweek:<day>`,
   quiet hours hold it — `tweek-wait`; it runs last in its minute). Sign-out asks with what happens next (x-dadastureba).
+- **„უკან“ closes what is open (2026-11-20**, the user: „ჩასაკეცი არ არის სანამ უკან არ გამოვალ და უკან გამოსვლისას კიდე
+  მაგდებს … ნახე ესეთი რამეებიც ყველგან“): `utils/backToClose.ts` (+ test) keeps ONE history entry per open layer (mark
+  `sgOv {d, r, id}` on a copy of the page's state, so the hosts' own popstate handlers still see their keys); the phone's back
+  closes the top one. `useBackToClose(open, onClose)` / `openOverlay(close)` — `close(left)`: `left` = the app's own „უკან“
+  stepped past it (the page was left, the thing was not closed by hand). The manager wraps `history.back()` / `history.go(-n)`,
+  so every page's `if (history.state?.key) history.back()` leaves our entries with its own; `leaveOverlaySteps(then)` first when a
+  layer navigates by `replaceState` (the prompter's next kanon, the ⋯ → big notes, a link-opened notes page's close);
+  `closeTopOverlay()` for Escape inside a window that catches the keys (`useLearnHistory`). Both kits' `Sheet`s use it (ui2 Sheet
+  `back={false}` only for one with a step of its own — the notes' ShareSheet `sgQr`), and the ui2 Sheet closes by a pull down on
+  its head. Other layers on it: the games' `TableScreen` (back = its ✕), the prompter and its „Aa“, the auto-scroll bar (the
+  bottom menu hides under it), the call screen (back = the small bar), a chat's picked message and voice take, the AI lesson's
+  inner screens, „ჩემი ხმა“'s phrase, the studio (stays while recording), the learned moment / share card, „ნახე მისი თვალით“.
+  **A new full-screen layer or window must use it** — never leave the phone's back to the page underneath.
+  Notes page: the players have a fold pill on top (`v2/notes/DockHandle.tsx`, a tap or a pull down), the phone's back folds the
+  open player before it leaves the page; `sg-notes-dock` remembers a fold by hand — then ▶ only plays — until the bar's ⌃ pill
+  (`BottomBar onDock`) lifts the player again. Its bar's small line drops the part that repeats the title (`barSub`, old
+  spelling ვ = უ) and takes up to three lines. Kit: `TopBar` title and small line two lines (`.sg-fit2`: four with a big
+  text size), `Sheet` title three, a `Seg` name of two words wraps, `Stats` stand under each other with a big text size. A page
+  drawn as the home page in its place (a guest on /p/search) gets the home's frame (`framePage` in App.tsx). index.html:
+  `interactive-widget=resizes-content` (Android's browser shrinks the page above the keyboard, as the Android app's window does).
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)
 

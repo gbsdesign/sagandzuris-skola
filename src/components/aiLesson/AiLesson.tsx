@@ -37,6 +37,7 @@ import { useMyActiveNotes } from '../../pages/v2/aiklasi/useAiNotes';
 import { LessonExtrasMenu, useLessonExtras } from './AskExtras';
 import { AskSheet } from './AskSheet';
 import { TeacherVoiceScreen } from './TeacherVoiceScreen';
+import { useBackToClose } from '../../utils/backToClose';
 import { hushTeacher } from './TeacherVoice';
 
 const DrillSheet = React.lazy(() => import('../mastery/ManeraLessonSheet').then(m => ({ default: m.DrillSheet })));
@@ -275,6 +276,11 @@ export const AiLesson: React.FC<{ onClose: () => void }> = ({ onClose }) => {
   const afterPlan = () => setStage(note && inFirstWeek(note) ? 'week' : 'start');
   const canSing = singingSupported();
   const weekday = WEEKDAYS_GE[new Date(`${data.today}T12:00:00Z`).getUTCDay()];
+  // the phone's back goes one screen up as the screens' own ← do (the answers' edit → the plan, the start → the week),
+  // and lifts the rest offer that lies over the phrase — never the whole lesson at once from those
+  useBackToClose(stage === 'intro' && !!intro, () => setStage('plan'));
+  useBackToClose(stage === 'start' && inWeek, () => setStage('week'));
+  useBackToClose(tired, () => setTired(false));
 
   // ——— the first meeting: three questions, the voice, the plan ———
   if (stage === 'intro') {
@@ -474,10 +480,10 @@ export const StartScreen: React.FC<{
         value={String(length) as '5' | '10'} onChange={v => setLength(v === '5' ? 5 : 10)} />
       <TeacherSays text={say || undefined} sub="AI მასწავლებელი პროგრამაა, არა ადამიანი">{say || 'გაკვეთილს ვამზადებ…'}</TeacherSays>
       <Rows>
-        {rows.map(([title, sub], i) => <Row key={title} lead={<Num n={i + 1} on={i === 0} />} title={title} sub={sub} right={null} />)}
+        {rows.map(([title, sub], i) => <Row key={title} lead={<Num n={i + 1} on={i === 0} />} title={title} sub={sub} wrap right={null} />)}
       </Rows>
       {notes?.slice(0, 2).map((t, i) => (
-        <p key={i} className="truncate px-1.5 text-meta text-mut">მასწავლებლის მითითება: {t}</p>
+        <p key={i} className="px-1.5 text-meta text-mut wrap-break-word">მასწავლებლის მითითება: {t}</p>
       ))}
       {onLeave && <SundayLink before={onLeave} />}
       {!canSing && <Helper>ამ ბრაუზერში მიკროფონი არ მუშაობს. გაკვეთილისთვის გახსენი Chrome-ში ან აპში.</Helper>}

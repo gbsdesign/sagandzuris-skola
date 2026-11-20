@@ -50,7 +50,7 @@ export const WeekView: React.FC<{ model: HabitsModel }> = ({ model }) => {
       />
 
       <Card pad="none">
-        <div className={cx(COLS, 'px-4 pt-3 pb-1.5')}>
+        <div className={cx(COLS, 'px-4 pt-1')}>
           <span />
           {days.map(d => {
             const key = dayKey(d);
@@ -62,7 +62,7 @@ export const WeekView: React.FC<{ model: HabitsModel }> = ({ model }) => {
                 onClick={() => pick(d)}
                 aria-label={`${WEEKDAYS_GE[d.getDay()]}, ${d.getDate()} ${MONTHS_GE[d.getMonth()]}`}
                 className={cx(
-                  'text-center text-cap font-semibold enabled:cursor-pointer',
+                  'min-h-10 text-center text-cap font-semibold enabled:cursor-pointer',
                   key === today ? 'text-wine' : 'text-mut',
                 )}
               >

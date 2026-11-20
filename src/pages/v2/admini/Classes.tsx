@@ -14,7 +14,7 @@ import { errorText } from '../../../utils/errorText';
 import { shortDate } from '../../../utils/dateNames';
 import { triggerHaptic } from '../../../utils/haptics';
 import { SearchBox } from '../klasi/teacher/SearchBox';
-import { useAdmin } from './ctx';
+import { useAdmin, useKeptText } from './ctx';
 import { peopleItem } from './nav';
 import { Screen } from './parts';
 
@@ -31,7 +31,7 @@ export const ClassesScreen: React.FC<{ archive: boolean }> = ({ archive }) => {
   const { user } = useAuth();
   const { openClass } = useNavigation();
   const { d, go, back, say } = useAdmin();
-  const [q, setQ] = useState('');
+  const [q, setQ] = useKeptText('classes');
   const [more, setMore] = useState(false);
   const [naming, setNaming] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -120,7 +120,7 @@ export const ClassesScreen: React.FC<{ archive: boolean }> = ({ archive }) => {
         right={<RoundButton label="ახალი კლასი" onClick={() => { setErr(''); setNaming(''); }}><Plus /></RoundButton>} />
       {care.map(x => (
         <Rows key={x.id} className="bg-tint">
-          <Row lead={<Dot icon={x.icon} color="tint" className="bg-transparent" />} title={x.text} onClick={x.open} />
+          <Row lead={<Dot icon={x.icon} color="tint" className="bg-transparent" />} title={x.text} wrap onClick={x.open} />
         </Rows>
       ))}
       {d.loadingClasses ? <Helper>იტვირთება…</Helper> : d.classesFailed ? (

@@ -106,6 +106,7 @@ export const TimetableSheet: React.FC<{ cls: SchoolClass; open: boolean; onClose
               lead={<Dot icon={<CalendarDays />} />}
               title={WEEKDAYS_GE[s.day]}
               sub={slotLine(s)}
+              wrap
               onClick={edit ? () => setAt(i) : undefined}
               right={edit ? 'chev' : null}
             />

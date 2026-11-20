@@ -119,8 +119,8 @@ export const PersonalInfo: React.FC = () => {
       <Helper icon={<Lock />}>ნომერს ხედავენ მხოლოდ შენი მასწავლებლები და სკოლის ადმინები.</Helper>
 
       <Rows className="mt-2">
-        <Row lead={<Dot icon={<Music2 />} />} title="გალობა და ინტერესები" sub={singing} onClick={() => openMapItem('galoba')} />
-        {!waiting && <Row lead={<Dot icon={<CalendarClock />} />} title="მუშაობის განრიგი" sub={schedule} onClick={() => openMapItem('ganrigi')} />}
+        <Row lead={<Dot icon={<Music2 />} />} title="გალობა და ინტერესები" sub={singing} wrap onClick={() => openMapItem('galoba')} />
+        {!waiting && <Row lead={<Dot icon={<CalendarClock />} />} title="მუშაობის განრიგი" sub={schedule} wrap onClick={() => openMapItem('ganrigi')} />}
       </Rows>
 
       <EditSheet title="სახელი" open={edit === 'first'} onClose={close} busy={busy} error={error} onSave={save}>

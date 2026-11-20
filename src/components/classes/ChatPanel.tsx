@@ -1,4 +1,5 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { useBackToClose } from '../../utils/backToClose';
 import { MessageCircle, Mic, Paperclip, Send, Square, X, Trash2, Play, Pause, Loader2, Clock, Phone, CheckCheck } from 'lucide-react';
 import {
   sendTextMessage, sendVoiceMessage, deleteMessage, loadVoiceUrl, ChatMessage, ChatAuthor,
@@ -262,6 +263,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const [elapsed, setElapsed] = useState(0);
   const [err, setErr] = useState('');
   const [active, setActive] = useState<string | null>(null);
+  // a picked message (its „წაშლა“ showing): the phone's back lets it go instead of leaving the chat
+  useBackToClose(!!active, () => setActive(null));
   // a long press (half a second, the finger kept still) or a right click picks a message; a tap on the picked one lets
   // it go; a press on its play button or a link does not count
   const hold = useRef<number | null>(null);
@@ -367,6 +370,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     if (mode.k === 'preview') URL.revokeObjectURL(mode.url);
     setMode({ k: 'idle' });
   };
+  // the phone's back while recording or listening to a take throws the take away (as its ✕) instead of leaving the chat
+  useBackToClose(mode.k === 'recording' || mode.k === 'preview', () => (mode.k === 'recording' ? cancelRecording() : discardTake()));
 
   const sendTake = async () => {
     if (mode.k !== 'preview') return;

@@ -131,14 +131,13 @@ const MembersView: React.FC<{ cls: SchoolClass; canEdit: boolean; roll?: Roll }>
   const needle = q.trim().toLowerCase();
   const found = finding && needle ? cls.members.filter(m => (m.name || '').toLowerCase().includes(needle)) : cls.members;
   const iAmMember = !!me && cls.memberIds.includes(me);
-  const youTag = (uid: string) => (uid === me ? ' (შენ)' : '');
   // a big class's roll (the class's leaders): folded by voices, so marking who came stays short (x-savse-klasi)
   const big = canEdit && !!roll && !needle && cls.members.length > BIG_CLASS;
   const memberRow = (m: ClassMember) => {
     const body = (
       <>
         <Avatar name={m.name} photo={m.photoURL} />
-        <Two title={`${m.name}${youTag(m.uid)}`} />
+        <Two title={m.name} sub={m.uid === me ? 'შენ' : undefined} wrap />
       </>
     );
     if (!canEdit) return <div key={m.uid} className="flex min-h-row w-full items-center gap-2.5 py-2 pr-3 pl-4 text-ink">{body}</div>;
@@ -177,7 +176,7 @@ const MembersView: React.FC<{ cls: SchoolClass; canEdit: boolean; roll?: Roll }>
           const body = (
             <>
               <Avatar name={t.name} photo={t.photoURL} />
-              <Two title={`${t.name}${youTag(t.uid)}`} sub="მასწავლებელი" />
+              <Two title={t.name} sub={t.uid === me ? 'მასწავლებელი · შენ' : 'მასწავლებელი'} wrap />
             </>
           );
           const look = 'flex min-h-row w-full items-center gap-2.5 py-2 pr-3 pl-4 text-ink';

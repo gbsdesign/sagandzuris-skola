@@ -26,7 +26,7 @@ export const FirstWeekView: React.FC<{
       {say && <TeacherSays text={say}>{say}</TeacherSays>}
       <Rows aria-label="შვიდი დღე">
         {steps.map((s, i) => (
-          <Row key={i} title={s.title} sub={s.sub} aria-current={s.state === 'today' ? 'step' : undefined}
+          <Row key={i} title={s.title} sub={s.sub} wrap aria-current={s.state === 'today' ? 'step' : undefined}
             lead={s.state === 'done' ? <Tick on size={26} /> : <Num n={i + 1} on={s.state === 'today'} />}
             right={s.state === 'today' ? <span className="shrink-0 text-meta font-bold whitespace-nowrap text-wine">დღეს</span> : null} />
         ))}

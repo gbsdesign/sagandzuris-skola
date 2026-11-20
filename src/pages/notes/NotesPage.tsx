@@ -52,6 +52,7 @@ import { PedalSettingsSheet, PedalSetupSheet, PedalToast } from '../v2/notes/Ped
 import { ChoirBar, shortName, type ChoirState } from '../v2/notes/ChoirBar';
 import { LoadFailed, NotesSkeleton, WAIT_MS } from '../../components/shell/PageSkeleton';
 import { offerUndo } from '../../components/ui/kit';
+import { useBackToClose } from '../../utils/backToClose';
 
 const SPEEDS = [0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.1, 1.25, 1.4, 1.6, 1.8, 2];
 // V–VI: a song for two choirs (admission program); up to X: the anthology's many-voiced litanies (vol. II №211–217)
@@ -73,6 +74,28 @@ const signed = (n: number) => (n > 0 ? `+${n}` : n < 0 ? `−${-n}` : '0');
 const coarse = () => typeof window !== 'undefined' && window.matchMedia('(pointer: coarse)').matches;
 const PLAY_LABEL: Record<PlayLook, string> = { play: 'დაკვრა', pause: 'პაუზა', loading: 'ნოტები იტვირთება', off: 'დასაკრავი არაფერია' };
 const reducedMotion = () => typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+// The new look's player remembers how it was left (the user, 2026-11-19: „ჩასაკეცი არ არის … უკან გამოსვლისას კიდე
+// მაგდებს“): folded by hand — by its pill, a pull down or the phone's back — it stays folded and ▶ only plays; lifted
+// by the bar's pill, ▶ lifts it again. Kept on the device.
+const DOCK_KEY = 'sg-notes-dock';
+const dockLeftFolded = () => { try { return localStorage.getItem(DOCK_KEY) === 'folded'; } catch { return false; } };
+const rememberDock = (folded: boolean) => {
+  try { if (folded) localStorage.setItem(DOCK_KEY, 'folded'); else localStorage.removeItem(DOCK_KEY); } catch { /* private mode */ }
+};
+
+/** the new bar's small line: the service and the book's place — without a part that only repeats the big title */
+const barSub = (title: string, service: string | undefined, name: string) => {
+  // the books' older spelling is the same name: „კვერექსი“ = „კუერექსი“
+  const same = (t: string) => t.replace(/[;\s]+/g, ' ').trim().toLowerCase().replace(/უ/g, 'ვ').replace(/ჲ/g, '');
+  const seen = new Set([same(title)]);
+  return [service ?? '', ...name.split(' · ')].filter(part => {
+    const k = same(part);
+    if (!k || seen.has(k)) return false;
+    seen.add(k);
+    return true;
+  }).join(' · ');
+};
 
 const Fork: React.FC = () => (
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -856,6 +879,11 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   });
+  // the phone's back folds an open player (or the words) first; the page's own ← still leaves at once
+  // the new look's player folded by hand (its pill, a pull down, the phone's back) stays folded for ▶
+  // (`left`: the page itself was left with the player open — that is not a fold by hand)
+  const foldDock = (left = false) => { if (panel === 'synth' && !left) rememberDock(true); setPanel(null); };
+  useBackToClose(nl && panel !== null && !church, foldDock);
 
   // ---------- the new look's own wiring (nothing here runs in the old look)
   // which version the score belongs to: „notes in my voice“ waits for this very version's score
@@ -1014,7 +1042,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
     if (church) return;
     if (recPlaying) { triggerHaptic(10); setRecPause(n => n + 1); return; }
     if (synth) {
-      if (!synth.playing && panel !== 'synth') togglePanel('synth');
+      if (!synth.playing && panel !== 'synth' && !(nl && dockLeftFolded())) togglePanel('synth');
       void toggleSynth();
       return;
     }
@@ -1247,7 +1275,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
           <div className="np-nlchrome">
             <NotesBar
               title={title}
-              sub={[service, name].filter(Boolean).join(' · ')}
+              sub={barSub(title, service, name)}
               pos={seq && seqIdx >= 0 ? `${seqIdx + 1} / ${seq.length}` : `${info.chantIndex + 1} / ${serviceList.length}`}
               onBack={close}
               onNext={() => goTo(nextId, 1)}
@@ -1481,7 +1509,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                 onBall={toggleBall}
                 onRestart={restart}
                 restartLabel={loop.a !== null ? 'A-დან' : 'თავიდან'}
-                onFold={() => setPanel(null)}
+                onFold={() => foldDock()}
                 voices={VOICES}
                 allLabel={allVoices}
                 voiceOn={voiceOn}
@@ -1517,6 +1545,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
                 onMore={() => setMoreOpen(o => !o)}
                 moreOpen={moreOpen}
                 dark={night}
+                onDock={synth && score ? () => { rememberDock(false); togglePanel('synth'); } : undefined}
               />
             ) : null}
           </div>

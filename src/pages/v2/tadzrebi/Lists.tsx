@@ -110,7 +110,7 @@ export const Nearby: React.FC<{ data: ChurchData; visits: Visits; onOpen: (id: s
       {!fix && !asking && <PlaceAsk state={state} locate={locate} />}
       {fix && (
         <>
-          <KindPills value={kind} onChange={setKind} list={data.list} visits={visits} />
+          <KindPills value={kind} onChange={setKind} list={data.list} visits={visits} counted={false} />
           <ChurchList items={near} empty="ახლოს ტაძარი ვერ მოიძებნა"
             render={n => <ChurchRow key={n.church.id} c={n.church} been={visits[n.church.id]} onOpen={onOpen} badge={distanceText(n.m)} />} />
           <Helper icon={<MapPin />}>მანძილი შენი ადგილიდან. ყველაზე ახლო ზემოთაა.</Helper>

@@ -11,6 +11,7 @@ import { MsgLine, useMsg } from './parts';
 import { AdminHome } from './Home';
 import { PeopleScreen } from './People';
 import { PersonRoute } from './Person';
+import { Waiting } from '../../../components/shell/PageSkeleton';
 
 const ClassesScreen = lazy(() => import('./Classes').then(m => ({ default: m.ClassesScreen })));
 const TeachersScreen = lazy(() => import('./Teachers').then(m => ({ default: m.TeachersScreen })));
@@ -57,7 +58,7 @@ export const AdminV2: React.FC = () => {
   }, []);
 
   const msg = <MsgLine msg={m.msg} onClose={m.clear} className="sticky top-2 z-10" />;
-  const lazyPart = (el: React.ReactNode) => <Suspense fallback={null}>{el}</Suspense>;
+  const lazyPart = (el: React.ReactNode) => <Suspense fallback={<Waiting field={false} />}>{el}</Suspense>;
 
   let body: React.ReactNode;
   if (wide && (step.at === 'people' || step.at === 'person')) {

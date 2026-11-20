@@ -72,15 +72,19 @@ export function ChurchList<T>({ items, empty, render }: { items: T[]; empty: str
 }
 
 /** the kinds as pills (the count on the chosen one), „ვიყავი“ once I have marked one of the list; `extra` = more pills after them */
-export const KindPills: React.FC<{ value: Filter; onChange: (f: Filter) => void; list: Church[]; visits: Visits; extra?: Pill[] }> = ({
-  value, onChange, list, visits, extra = [],
+export const KindPills: React.FC<{
+  value: Filter; onChange: (f: Filter) => void; list: Church[]; visits: Visits; extra?: Pill[];
+  /** false: no count on the chosen pill (the nearest list shows 40, not the country's number) */
+  counted?: boolean;
+}> = ({
+  value, onChange, list, visits, extra = [], counted = true,
 }) => {
   const mine = list.filter(c => c.id in visits).length;
   const count = (f: Filter) => list.filter(c => passes(c, f, visits)).length;
   const items: Pill[] = [
     ...KIND_FILTERS.map(k => ({
       id: k.id,
-      label: k.id === value ? `${k.label} · ${big(count(k.id))}` : k.label,
+      label: k.id === value && counted ? `${k.label} · ${big(count(k.id))}` : k.label,
       on: k.id === value,
       onClick: () => onChange(k.id),
     })),

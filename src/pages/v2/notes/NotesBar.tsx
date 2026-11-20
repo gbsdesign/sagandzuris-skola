@@ -34,7 +34,8 @@ export const NotesBar: React.FC<{
       </Press>
       <div className="min-w-0 flex-1 pl-1">
         <h1 className={cx('line-clamp-2 text-lead leading-tight font-bold tracking-tight wrap-break-word', dark ? 'text-night-ink' : 'text-ink')}>{title}</h1>
-        <div className={cx('truncate text-meta', dark ? 'text-night-ink/70' : 'text-mut')}>{sub}</div>
+        {/* as many lines as it needs (three at most): the service and the book's place are never cut off */}
+        <div className={cx('line-clamp-3 text-meta leading-snug text-pretty wrap-break-word', dark ? 'text-night-ink/70' : 'text-mut')}>{sub}</div>
       </div>
       <Press
         onClick={onNext}

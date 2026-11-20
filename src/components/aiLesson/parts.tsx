@@ -14,7 +14,7 @@ export const LessonTop: React.FC<{ at: number; sub: string; onClose: () => void;
       <RoundButton label="გაკვეთილის შეჩერება" onClick={onClose}><X /></RoundButton>
       <div className="min-w-0 flex-1 text-center">
         <h1 className="truncate text-head font-bold leading-tight">{LESSON_PARTS[at]?.name}</h1>
-        <div className="truncate text-meta text-mut">{sub}</div>
+        <div className="text-meta leading-snug text-mut wrap-break-word">{sub}</div>
       </div>
       <RoundButton label="მეტი" onClick={onMore}><MoreHorizontal /></RoundButton>
     </div>

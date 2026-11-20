@@ -47,7 +47,7 @@ export const TsirvaView: React.FC<{
             <Bar value={result.known / result.total} h={8} label={`იცი ${result.known} ${result.total}-დან`} />
           </Card>
           <Rows>
-            {result.rows.map(r => <Row key={r.key} lead={<Mark row={r} />} title={r.title} sub={subOf(r)} right={null} />)}
+            {result.rows.map(r => <Row key={r.key} lead={<Mark row={r} />} title={r.title} sub={subOf(r)} wrap right={null} />)}
           </Rows>
         </>
       )}

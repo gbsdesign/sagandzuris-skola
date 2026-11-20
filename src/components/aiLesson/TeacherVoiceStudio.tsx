@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, AudioLines, Mic, Play, RotateCcw, Square } from 'lucide-react';
 import { useAuth } from '../../context';
+import { useBackToClose } from '../../utils/backToClose';
 import { MONTHS_SHORT_GE } from '../../utils/dateNames';
 import { Bar, Button, Dot, Note, RoundButton, Row, Rows, Seg } from '../ui2';
 import { VOICE_SENTENCES, VOICE_WORD, sentenceHash, type VoiceKind } from '../../utils/teacherVoice';
@@ -18,6 +19,7 @@ const dayOf = (at: number) => { const d = new Date(at); return `${d.getDate()} $
 export const TeacherVoiceStudioRow: React.FC = () => {
   const { isOwner } = useAuth();
   const [open, setOpen] = useState(false);
+  useBackToClose(open, () => setOpen(false));
   if (!isOwner) return null;
   return (
     <>
