@@ -499,11 +499,21 @@ evening in his temple = vespers alone (matins in the morning), „სხვა �
   opening on „now“ (its link back says „ახლა“). Looked at 320–390 px through a temporary preview page (a mock admin by a
   Vite alias of `AuthContext`, Playwright with a fixed clock — deleted after; one line there looked garbled only because the
   container's fallback font hints oddly at some heights).
-- **The rank of ordinary days is a guess (found 2026-11-19, not fixed yet):** `guessRank` calls a day „დიდებამაღალიანი“ when the
-  calendar prints a saint's name bold — 128 days of 2026, 126 of 2027 — and bold there marks Georgian saints and the saints with
-  any service of their own, so „ექვსიანი“ days are among them. The user approved a table of real ranks („1“ of his nine); the
-  source he has is „2022 წლის მართლმადიდებლური კალენდარი მცირე ტიპიკონით“ in his Drive (Drive id 1FdU6bbL6AYbMbLbQ0hy2GSXpaJcopBEz;
-  a text PDF in a legacy Latin-coded font; not shared by link, so the workspace cannot fetch it — it needs his computer on,
-  or his leave to open that one file by link). Wait for his word on the cost before starting.
+- **The rank below the polyeleos (2026-11-20, item 1 of the nine):** `guessRank` called a day „დიდებამაღალიანი“ whenever the
+  calendar printed a name bold — and the calendar prints a feast's tide so too. Now (`tests/dayRank.test.ts`): a red name that
+  only says the feast goes on — „…წინადღესასწაული“, „…შემდგომი დღესასწაული“, a Saturday or Sunday before / after it — is no
+  red saint (`redSaint`; a name of two sentences counts by its other one: „…ქრისტესშობისა. კრება ყოვლადწმიდისა
+  ღმრთისმშობელისა“); a leave-taking is `doxology` (`feastTideOf` kind `leave`); a saint ჟამნი relaxes the fast for
+  (`jamniMark` in `utils/fasting.ts` — its „ხსნილი ღვინითა და ზეთითა“ follows the Typikon's ch. 33, a saint with the great
+  doxology) is `doxology` even when the calendar prints the name plain. Over 2026–2027: 43 tide days fell to simple, 12 rose
+  (St Barbara, Sts Cosmas and Damian twice a year, St Mary Magdalene, St Athanasius, the prophet Daniel; the Exaltation's
+  leave-taking). **What the user's book gave:** the 2021 and 2022 „კალენდარი მცირე ტიპიკონით“ are among the library's texts
+  (`data/patriarchTexts.json`, Drive ids 1osRvgS7…/1FdU6bbL…; read with the app's own Drive key, no need of his computer).
+  They name no rank in words and print readings only for some days; their signs are ჟამნი's — „უქმი“ (20 days: 15 are
+  polyeleos or higher in the app, 5 doxology), the fast's relaxations, and „სადიდებელი“ on the great days — all agree with
+  the guess from the polyeleos up. They add matins Gospels from Russian and Greek books („თუ უპირატესი ინებებს“: the
+  apostles' days, icons of the Theotokos, St Barbara, St Spyridon) that orthodoxy.ge does not give — not taken: the app follows
+  the official calendar. **Still a guess:** a day whose only sign is a red saint's name (about a hundred a year, mostly
+  Georgian saints) stays `doxology` — no source at hand tells „ექვსიანი“ from it; the reader sets the rank in „⋯“.
 - Still open: the common services have no ikos; a second rank „ექვსიანი“ is not told apart from a plain day; with the great
   doxology the tibikon sings the typika at the liturgy — the app keeps the daily antiphons on weekdays (the user's temple).
