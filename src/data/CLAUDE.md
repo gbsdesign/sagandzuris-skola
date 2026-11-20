@@ -478,6 +478,27 @@ evening in his temple = vespers alone (matins in the morning), „სხვა �
   on while the day's page is open, lets go 30 minutes after the last touch; switch „ეკრანი არ ჩაქრეს“ in the new look's „მეტი“
   (`sg-day-awake`, on unless turned off; shown only where the browser can — Android's own-window WebView cannot: stage 3 of that
   work must give it a bridge call, church mode needs it too). The new-look sheet says the texts are kept by themselves.
+- **„ახლა“, „შემდეგი“, the front, the books' order, „შეცდომა ვნახე“ (2026-11-20, items 2–5 and 8 of the nine; built without a
+  prototype — the user said „გააკეთე ყველაფერი“ twice):** every `Service` has a `slot` — when it is served against its church
+  day: prev (the day before in daytime: a Lent evening's vespers joined to that morning's service) · eve · night (Pascha's
+  matins) · day · late (Great Friday's and Pascha's own vespers) · with (a tab that only points into the day's liturgy).
+  `nowPart(today, hour)` = the church day served now (before 14:00 the day's own morning; from 14:00 the next day's evening;
+  the two „late“ days stay until 17:00), `serviceNow(services, part, hour, marked)` = the service the page opens on (the first
+  of that part of the day — or the last of them with an „აქ ვარ“ mark), `serviceAfter` = the next one as served, `nowWord`
+  („დღეს საღამოს“ …). Test `tests/dayNow.test.ts`. `useDayService`: `picked` (the reader's own tab; none = now), `isNow`,
+  `nowIso`, `goNow`, `goStep(i)`, `startService(id)`; another day keeps the tab. New look `Day.tsx`: the pill „ახლა“ before the
+  when-line; an opened step ends with `NextButton` („შემდეგი“: the place moves on, the next step opens under this one and
+  comes to the top — the passed one stays open, so nothing above shifts; after the last step „შემდეგი მსახურება“) and
+  `ReportLink` → `Report.tsx` (`utils/dayReport.ts` + test: the reader's words go as a letter into their own chat with the
+  administration — `openAdminThread` + `sendThreadText` — with the day, service, step and what the page was set to; no store
+  of its own, no rules change). Away from „now“ the day card's middle says „ახლაზე დაბრუნება“. Front (`MedavitneV2.tsx`): the
+  hero = the service served now (`useDayBrief().now`; „ხვალ — …“ when its church day is tomorrow's), the course one row with
+  its next lesson. `utils/readerBooks.ts` + test: ჟამნი, დავითნი, სამოციქულო (a book of the Bible's shelf), წარდგომები,
+  პარაკლიტონი, საზიარო თვენი, ზატიკი first; every other shelf under the fold „სხვა წიგნები“ (`sg-medavitne-more-books`, the
+  visit); „ბოლოს გახსნილი“ = `sg-wignebi-recent` {c, p, t, s}, written by the new look's reader. The old look gets only the
+  opening on „now“ (its link back says „ახლა“). Looked at 320–390 px through a temporary preview page (a mock admin by a
+  Vite alias of `AuthContext`, Playwright with a fixed clock — deleted after; one line there looked garbled only because the
+  container's fallback font hints oddly at some heights).
 - **The rank of ordinary days is a guess (found 2026-11-19, not fixed yet):** `guessRank` calls a day „დიდებამაღალიანი“ when the
   calendar prints a saint's name bold — 128 days of 2026, 126 of 2027 — and bold there marks Georgian saints and the saints with
   any service of their own, so „ექვსიანი“ days are among them. The user approved a table of real ranks („1“ of his nine); the

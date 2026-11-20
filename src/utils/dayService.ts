@@ -297,7 +297,12 @@ export interface Step {
   pt?: TextSrc[];
 }
 export type ServiceId = 'vespers' | 'compline' | 'matins' | 'hours' | 'liturgy';
-export interface Service { id: ServiceId; title: string; when: string; steps: Step[]; note?: string }
+/** when a service is served against its church day: 'prev' — the day before in daytime (a Lent evening's vespers joined to
+ *  that morning's hours or liturgy), 'eve' — the evening before, 'night' — at midnight (Pascha's matins), 'day' — the day's
+ *  morning, 'late' — the day's afternoon (Great Friday's and Pascha's own vespers), 'with' — inside the day's liturgy (its
+ *  tab only points there) */
+export type ServiceSlot = 'prev' | 'eve' | 'night' | 'day' | 'late' | 'with';
+export interface Service { id: ServiceId; slot: ServiceSlot; title: string; when: string; steps: Step[]; note?: string }
 
 export interface DayInput {
   iso: string;
@@ -1048,21 +1053,21 @@ export const buildServices = (inp: DayInput): Service[] => {
   const eveWeekday = eveDow >= 1 && eveDow <= 5;
   const services: Service[] = [
     festEve
-      ? { id: 'vespers', title: 'დიდი სერობა — ღამისთევა', when: eveName, note: eveWeekday ? 'წინადღის მწუხრი დილით, ბასილის წირვასთან აღესრულა — იხ. წინა დღის „წირვა“' : 'წინადღის დიდი მწუხრი საკითხავებით — შუადღის შემდეგ, ცალკე', steps: [
+      ? { id: 'vespers', slot: 'eve', title: 'დიდი სერობა — ღამისთევა', when: eveName, note: eveWeekday ? 'წინადღის მწუხრი დილით, ბასილის წირვასთან აღესრულა — იხ. წინა დღის „წირვა“' : 'წინადღის დიდი მწუხრი საკითხავებით — შუადღის შემდეგ, ცალკე', steps: [
         P('„კურთხეულ არს ღმერთი ჩვენი“', [V.begin], { who: ['priest'] }),
         { title: 'დიდი სერობა', who: ['reader', 'choir'], note: '„ჩვენ თანა არს ღმერთი“ — იგალობება დღესასწაულის მსგავსად · შემდეგ დღესასწაულის ტროპარი და კონდაკი', read: [{ src: { coll: 'jamni', n: 11, part: 0, label: 'ჟამნი · დიდი სერობა' } }] },
         { title: 'ლიტია', who: ['choir', 'priest', 'deacon'], note: 'დღესასწაულის დასდებელნი', pt: [V.litya] },
         P('ხუთი პურის კურთხევა', [V.bread, V.blessing], { who: ['priest', 'choir'] }),
         { title: 'ცისკარი იწყება', who: ['reader'], note: 'ექვსფსალმუნებიდან', hint: 'გადადი ჩანართზე „ცისკარი“' },
       ] }
-      : eveLiturgy ? { id: 'vespers', title: 'მწუხრი', when: `${WEEKDAY_NOM[eveDow]} — წირვასთან ერთად`, steps: v, note: notes }
-        : { id: 'vespers', title: 'მწუხრი', when: lentEve && afterHours ? `${WEEKDAY_NOM[eveDow]} — ჟამების შემდეგ` : `${eveName}${vigilDay && joined ? ' · ღამისთევა' : ''}`, steps: v, note: notes },
+      : eveLiturgy ? { id: 'vespers', slot: 'prev', title: 'მწუხრი', when: `${WEEKDAY_NOM[eveDow]} — წირვასთან ერთად`, steps: v, note: notes }
+        : { id: 'vespers', slot: lentEve && afterHours ? 'prev' : 'eve', title: 'მწუხრი', when: lentEve && afterHours ? `${WEEKDAY_NOM[eveDow]} — ჟამების შემდეგ` : `${eveName}${vigilDay && joined ? ' · ღამისთევა' : ''}`, steps: v, note: notes },
     ...(annunLent ? [festalCompline(eveName)] : season.compline ? [complineService(season.e, eveDow)] : []),
-    { id: 'matins', title: 'ცისკარი', when: annunLent ? `${eveName} — დიდ სერობას მოსდევს` : joined ? `${eveName} — მწუხრს მოსდევს` : season.greatCanon || season.akathist ? `${eveName} (სამრევლოში შეიძლება დილითაც)` : 'დილით', steps: m, note: notes },
-    { id: 'hours', title: 'ჟამები', when: lentDay || annunLent ? 'დილით — სადილის ჟამითურთ' : 'წირვის წინ', steps: h },
+    { id: 'matins', slot: annunLent || joined || season.greatCanon || season.akathist ? 'eve' : 'day', title: 'ცისკარი', when: annunLent ? `${eveName} — დიდ სერობას მოსდევს` : joined ? `${eveName} — მწუხრს მოსდევს` : season.greatCanon || season.akathist ? `${eveName} (სამრევლოში შეიძლება დილითაც)` : 'დილით', steps: m, note: notes },
+    { id: 'hours', slot: 'day', title: 'ჟამები', when: lentDay || annunLent ? 'დილით — სადილის ჟამითურთ' : 'წირვის წინ', steps: h },
   ];
   if (lentLiturgy === 'none') {
-    services.push({ id: 'liturgy', title: 'წირვა', when: cheese ? 'ყველიერის დღე' : 'მარხვის დღე', steps: [
+    services.push({ id: 'liturgy', slot: 'day', title: 'წირვა', when: cheese ? 'ყველიერის დღე' : 'მარხვის დღე', steps: [
       { title: 'წირვა არ აღესრულება', who: ['reader'], note: cheese ? 'ყველიერის ოთხშაბათსა და პარასკევს წირვა არ არის — მსახურება მარხვის წესით მიდის' : 'მარხვის ორშაბათს, სამშაბათსა და ხუთშაბათს წირვა არ არის' },
       { title: 'ჟამებს მწუხრი მოსდევს', who: ['reader', 'choir'], note: noonText ? `მწუხრის საკითხავები: ${noonText}` : 'სადილის ჟამის შემდეგ — მარხვის წესით', hint: 'მწუხრის რიგი — ხვალინდელი დღის ჩანართში „მწუხრი“' },
     ] });
@@ -1073,7 +1078,7 @@ export const buildServices = (inp: DayInput): Service[] => {
     const steps = presanctifiedSteps({ vespersText: noonText, apostle: big ? apostle : [], gospel: big ? gospel : [], lentText, kathisma: psDay ? psDay.v : 18, illumination: season.e >= -25 });
     // the first Friday: St Theodore's canon and the blessing of the kolyva after the liturgy
     if (season.e === -44) steps.push({ title: 'თეოდორე ტირონის კანონი — კოლიოს კურთხევა', who: ['priest', 'choir'], note: 'წირვის შემდეგ', extras: [xbook(22, 'თეოდორე ტირონის პარაკლისი')] });
-    services.push({ id: 'liturgy', title: 'წირვა', when: 'წინასწარ კურთხეულთა', note: 'მწუხრთან ერთად — ჟამების შემდეგ', steps });
+    services.push({ id: 'liturgy', slot: 'day', title: 'წირვა', when: 'წინასწარ კურთხეულთა', note: 'მწუხრთან ერთად — ჟამების შემდეგ', steps });
     return services;
   }
   const typika = sunday || big;
@@ -1131,10 +1136,10 @@ export const buildServices = (inp: DayInput): Service[] => {
     // the Annunciation on a Lent weekday: vespers with the readings takes the place of the antiphons; from the trisagion on —
     // St John Chrysostom's liturgy as ever
     const from = l.findIndex(st => st.title === 'ტროპარნი და კონდაკნი') + 1;
-    services.push({ id: 'liturgy', title: 'წირვა', when: 'იოანე ოქროპირისა, მწუხრთან ერთად', note: 'ჟამების შემდეგ', steps: [...vesperalHead(noonText, lentText), ...l.slice(from)] });
+    services.push({ id: 'liturgy', slot: 'day', title: 'წირვა', when: 'იოანე ოქროპირისა, მწუხრთან ერთად', note: 'ჟამების შემდეგ', steps: [...vesperalHead(noonText, lentText), ...l.slice(from)] });
     return services;
   }
-  services.push({ id: 'liturgy', title: 'წირვა', when: season.basil ? (season.paramony ? 'ბასილი დიდისა, მწუხრთან ერთად' : 'ბასილი დიდისა') : 'დილით', steps: l });
+  services.push({ id: 'liturgy', slot: 'day', title: 'წირვა', when: season.basil ? (season.paramony ? 'ბასილი დიდისა, მწუხრთან ერთად' : 'ბასილი დიდისა') : 'დილით', steps: l });
   return season.e === 7 ? thomasSunday(services) : services;
 };
 
@@ -1247,7 +1252,7 @@ const presanctifiedSteps = (x: {
 /** the vigil that begins with Great Compline: the Annunciation on a Lent weekday (Christmas and Theophany have theirs
  *  in the vespers' tab) */
 const festalCompline = (when: string): Service => ({
-  id: 'compline', title: 'დიდი სერობა', when, note: 'ხარების ღამისთევა დიდი სერობით იწყება — მას ცისკარი მოსდევს',
+  id: 'compline', slot: 'eve', title: 'დიდი სერობა', when, note: 'ხარების ღამისთევა დიდი სერობით იწყება — მას ცისკარი მოსდევს',
   steps: [
     P('„კურთხეულ არს ღმერთი ჩვენი“', [PRIEST.vespers.begin], { who: ['priest'] }),
     {
@@ -1284,7 +1289,7 @@ const complineService = (e: number, eveDow: number): Service => {
       { title: 'დიდი სერობა — გაგრძელება და მიტევება', who: ['reader', 'choir', 'priest'], read: [{ src: { ...COMPLINE, from: COMPLINE_SPLIT } }] },
     ]
     : [{ title: 'დიდი სერობა', who: ['reader', 'choir', 'priest'], note: 'სამ ნაწილად: ფსალმუნები და „ჩვენ თანა არს ღმერთი“ · ფს. 50, 101 და მანასეს ლოცვა · ფს. 69, 142 და „აქებდით ღმერთსა“', hint: 'დასაწყისს მღვდელი იტყვის: „კურთხეულ არს ღმერთი ჩვენი“', read: [{ src: COMPLINE }], extras: [book({ coll: 'jamni', n: 11, label: COMPLINE.label })] }];
-  return { id: 'compline', title: 'დიდი სერობა', when: `${WEEKDAY_NOM[eveDow]} საღამოს`, note: part ? 'მწუხრის შემდეგ — ანდრია კრიტელის კანონით' : 'მწუხრის შემდეგ', steps };
+  return { id: 'compline', slot: 'eve', title: 'დიდი სერობა', when: `${WEEKDAY_NOM[eveDow]} საღამოს`, note: part ? 'მწუხრის შემდეგ — ანდრია კრიტელის კანონით' : 'მწუხრის შემდეგ', steps };
 };
 
 /** Holy Week (stage 4): each day's own order — the Bridegroom's matins, the Presanctified, Thursday's and Saturday's
@@ -1313,10 +1318,10 @@ const holyWeek = (inp: DayInput, e: number): Service[] => {
     const ps = HOLY_PSALTER[e];
     // Monday–Wednesday: the Bridegroom's matins the evening before, the hours with the Gospel, the Presanctified
     services.push(
-      { id: 'vespers', title: 'მწუხრი', when: 'წირვასთან ერთად — დღის მეორე ნახევარში', note: 'ვნების შვიდეული · წინასწარ კურთხეულთა ლიტურგიის ნაწილია — იხ. ჩანართი „წირვა“', steps: [
+      { id: 'vespers', slot: 'with', title: 'მწუხრი', when: 'წირვასთან ერთად — დღის მეორე ნახევარში', note: 'ვნების შვიდეული · წინასწარ კურთხეულთა ლიტურგიის ნაწილია — იხ. ჩანართი „წირვა“', steps: [
         { title: 'მწუხრი წინასწარ კურთხეულთა ლიტურგიასთან', who: ['reader', 'choir'], note: 'სრული რიგი — ჩანართში „წირვა“', extras: some(tri) },
       ] },
-      { id: 'matins', title: 'სიძის ცისკარი', when: 'წინა საღამოს', note: khareba, steps: [
+      { id: 'matins', slot: 'eve', title: 'სიძის ცისკარი', when: 'წინა საღამოს', note: khareba, steps: [
         P('„კურთხეულ არს ღმერთი ჩვენი“', [M.begin], { who: ['priest'] }),
         { title: 'ექვსფსალმუნება', who: ['reader'], read: [{ say: AMEN }, R(FIX.sixPsalms)] },
         P('დიდი კვერექსი', [M.great], { chants: ['ck-2'] }),
@@ -1332,13 +1337,13 @@ const holyWeek = (inp: DayInput, e: number): Service[] => {
         ephrem,
         P('განტევება', [M.dismissal], { who: ['priest', 'choir'] }),
       ] },
-      { id: 'hours', title: 'ჟამები', when: 'დილით', note: 'დიდ ორშაბათს, სამშაბათს და ოთხშაბათს ჟამებზე ოთხთავი იკითხება', steps: [
+      { id: 'hours', slot: 'day', title: 'ჟამები', when: 'დილით', note: 'დიდ ორშაბათს, სამშაბათს და ოთხშაბათს ჟამებზე ოთხთავი იკითხება', steps: [
         { title: 'პირველი, მესამე, მეექვსე და მეცხრე ჟამი', who: ['reader'], note: 'მარხვის წესით — დავითნის კანონებითა და სახარების კითხვით', read: [...hourRead(5, true, false, ps.h[1]), ...hourRead(6, false, false, ps.h[3]), ...hourRead(7, false, false, ps.h[6]), ...hourRead(9, false, false, ps.h[9])], extras: [book(BOOK.hour1)] },
         ephrem,
       ] },
       // the Annunciation on these days: St John Chrysostom's liturgy, begun with vespers (the official calendar, 2026)
       annun
-        ? { id: 'liturgy', title: 'წირვა', when: 'იოანე ოქროპირისა, მწუხრთან ერთად', note: 'ხარება — ჟამების შემდეგ', steps: [
+        ? { id: 'liturgy', slot: 'day', title: 'წირვა', when: 'იოანე ოქროპირისა, მწუხრთან ერთად', note: 'ხარება — ჟამების შემდეგ', steps: [
           ...vesperalHead(vespersText, tri),
           { title: 'სამწმიდაო', who: ['choir'] },
           { title: 'წარდგომა და სამოციქულო', who: ['reader', 'choir'], note: names(apostle), extras: readsOf(apostle) },
@@ -1346,7 +1351,7 @@ const holyWeek = (inp: DayInput, e: number): Service[] => {
           { title: 'შემდეგ — იოანე ოქროპირის წირვა ჩვეული რიგით', who: ['choir', 'priest'], note: 'ქერუბიმთა გალობიდან · „ღირს არსის“ ნაცვლად — ხარების ძლისპირი', extras: [{ kind: 'prayer', id: 'ghirs-arsis-nacvlad', label: 'ღირს-არსის ნაცვლად საკითხავნი' }] },
           { title: '„იყავნ სახელი უფლისა“, ფსალმუნი 33 და განტევება', who: ['choir', 'reader', 'priest'], read: [R(FIX.typikaEnd)] },
         ] }
-        : { id: 'liturgy', title: 'წირვა', when: 'წინასწარ კურთხეულთა', note: 'მწუხრთან ერთად', steps: [
+        : { id: 'liturgy', slot: 'day', title: 'წირვა', when: 'წინასწარ კურთხეულთა', note: 'მწუხრთან ერთად', steps: [
           ...presanctifiedSteps({ vespersText, apostle, gospel, lentText: tri, holy: true, illumination: true }),
           // Great Wednesday: the last prostrations until Pentecost's evening (the official calendar)
           ...(e === -4 ? [{ title: 'ეფრემ ასურის ლოცვა — უკანასკნელად', who: ['priest'] as Who[], note: '„იყავნ სახელი უფლისა“-ს შემდეგ — სამი დიდი მეტანიით', hint: 'ამის შემდეგ ტაძარში მეტანიები წყდება' }] : []),
@@ -1357,8 +1362,8 @@ const holyWeek = (inp: DayInput, e: number): Service[] => {
   if (e === -3) {
     // Holy Thursday: matins the evening before, St Basil's liturgy with vespers
     services.push(
-      { id: 'vespers', title: 'მწუხრი', when: 'წირვასთან ერთად', note: 'ბასილი დიდის ლიტურგიის ნაწილია — იხ. ჩანართი „წირვა“', steps: [{ title: 'მწუხრი ბასილი დიდის ლიტურგიასთან', who: ['reader', 'choir'], note: 'სრული რიგი — ჩანართში „წირვა“', extras: some(tri) }] },
-      { id: 'matins', title: 'ცისკარი', when: 'წინა საღამოს', note: khareba, steps: [
+      { id: 'vespers', slot: 'with', title: 'მწუხრი', when: 'წირვასთან ერთად', note: 'ბასილი დიდის ლიტურგიის ნაწილია — იხ. ჩანართი „წირვა“', steps: [{ title: 'მწუხრი ბასილი დიდის ლიტურგიასთან', who: ['reader', 'choir'], note: 'სრული რიგი — ჩანართში „წირვა“', extras: some(tri) }] },
+      { id: 'matins', slot: 'eve', title: 'ცისკარი', when: 'წინა საღამოს', note: khareba, steps: [
         P('„კურთხეულ არს ღმერთი ჩვენი“', [M.begin], { who: ['priest'] }),
         { title: 'ექვსფსალმუნება', who: ['reader'], read: [{ say: AMEN }, R(FIX.sixPsalms)] },
         { title: '„ალილუია“ და „რაჟამს დიდებულნი მოწაფენი“', who: ['choir'], note: 'ტროპარი სამგზის', read: [hymns('matins')] },
@@ -1368,8 +1373,8 @@ const holyWeek = (inp: DayInput, e: number): Service[] => {
         { title: 'ქებანი, დიდებამაღალიანი', who: ['reader', 'choir'], read: [R(FIX.praises), R(FIX.dailyDoxology)] },
         { title: 'ტროპარი და განტევება', who: ['choir', 'priest'], read: [hymns('matins')] },
       ] },
-      { id: 'hours', title: 'ჟამები', when: 'წირვის წინ', steps: [{ title: 'მესამე, მეექვსე და მეცხრე ჟამი', who: ['reader'], read: [...hourRead(6, true), ...hourRead(7, false), ...hourRead(9, false)] }] },
-      { id: 'liturgy', title: 'წირვა', when: 'ბასილი დიდისა, მწუხრთან ერთად', note: khareba, steps: [
+      { id: 'hours', slot: 'day', title: 'ჟამები', when: 'წირვის წინ', steps: [{ title: 'მესამე, მეექვსე და მეცხრე ჟამი', who: ['reader'], read: [...hourRead(6, true), ...hourRead(7, false), ...hourRead(9, false)] }] },
+      { id: 'liturgy', slot: 'day', title: 'წირვა', when: 'ბასილი დიდისა, მწუხრთან ერთად', note: khareba, steps: [
         P('„კურთხეულ არს მეუფება“', [L.begin], { who: ['priest'] }),
         { title: 'ფსალმუნი 103 და დიდი კვერექსი', who: ['reader', 'deacon'], read: [R(FIX.come), R(FIX.ps103)] },
         { title: '„უფალო, ღაღად-ვყავ“', who: ['choir'], extras: some(text(FIX.lordICry, 'ფსალმუნები და მუხლები — ჟამნი')) },
@@ -1388,18 +1393,18 @@ const holyWeek = (inp: DayInput, e: number): Service[] => {
   if (e === -2) {
     // Holy Friday: the twelve Gospels on Thursday evening, the Royal Hours, no liturgy, the vespers of the Shroud
     services.push(
-      { id: 'vespers', title: 'მწუხრი — გარდამოხსნის გამოსვენება', when: 'დიდ პარასკევს, შუადღის შემდეგ', note: khareba, steps: [
+      { id: 'vespers', slot: 'late', title: 'მწუხრი — გარდამოხსნის გამოსვენება', when: 'დიდ პარასკევს, შუადღის შემდეგ', note: khareba, steps: [
         { title: 'დიდი პარასკევის მწუხრი', who: ['priest', 'choir', 'reader'], note: 'მწუხრის ბოლოს — გარდამოხსნის გამოსვენება შუა ტაძარში', read: [{ src: { coll: 'x', n: 25, part: 4, from: /^დიდი პარასკევის მწუხრი/, label: 'დიდი პარასკევი · მწუხრი' } }] },
         { title: 'მცირე სერობა — ღვთისმშობლის გოდების კანონი', who: ['reader', 'choir'], note: 'საღამოს', extras: [x25(1, 'მცირე სერობის ჟამნი')] },
       ] },
-      { id: 'matins', title: 'ცისკარი — 12 ვნების სახარება', when: 'დიდ ხუთშაბათს საღამოს', steps: [
+      { id: 'matins', slot: 'eve', title: 'ცისკარი — 12 ვნების სახარება', when: 'დიდ ხუთშაბათს საღამოს', steps: [
         { title: 'ვნების თორმეტი სახარება', who: ['priest', 'choir', 'reader'], note: PASSION_GOSPELS.map((g, i) => `${i + 1}. ${g}`).join(' · '), hint: 'ყოველი სახარების წინ: „დიდება ვნებათა შენთა, უფალო“ — ყველას ანთებული სანთელი უჭირავს', read: [{ src: { coll: 'x', n: 25, part: 3, to: ROYAL, label: 'დიდი პარასკევი · ცისკარი' } }] },
       ] },
-      { id: 'hours', title: 'სამეუფო ჟამები', when: 'დიდ პარასკევს, დილით', steps: [
+      { id: 'hours', slot: 'day', title: 'სამეუფო ჟამები', when: 'დიდ პარასკევს, დილით', steps: [
         { title: 'პირველი, მესამე, მეექვსე და მეცხრე სამეუფო ჟამი', who: ['reader', 'priest'], note: 'ყოველ ჟამზე — წინასწარმეტყველება, სამოციქულო და სახარება', read: [{ src: { coll: 'x', n: 25, part: 3, from: ROYAL, label: 'სამეუფო ჟამები' } }] },
         { title: 'სადილის ჟამი', who: ['reader'], read: [{ src: { coll: 'x', n: 25, part: 4, to: /^დიდი პარასკევის მწუხრი/, label: 'სადილის ჟამი' } }] },
       ] },
-      { id: 'liturgy', title: 'წირვა', when: 'დიდი პარასკევი', steps: [
+      { id: 'liturgy', slot: 'day', title: 'წირვა', when: 'დიდი პარასკევი', steps: [
         annun
           ? { title: 'ხარება დიდ პარასკევს', who: ['priest', 'choir'], note: 'ჩვეულებრივ ამ დღეს წირვა არ არის — ხარების გამო კი იოანე ოქროპირის წირვა აღესრულება', hint: 'წესი მღვდელს ჰკითხე' }
           : { title: 'დიდ პარასკევს წირვა არ აღესრულება', who: ['reader'], note: 'დღის მსახურებანი — სამეუფო ჟამები და მწუხრი გარდამოხსნის გამოსვენებით' },
@@ -1409,8 +1414,8 @@ const holyWeek = (inp: DayInput, e: number): Service[] => {
   }
   // Holy Saturday: matins with the lamentations on Friday evening, St Basil's liturgy with vespers, the midnight office
   services.push(
-    { id: 'vespers', title: 'მწუხრი', when: 'წირვასთან ერთად', note: 'ბასილი დიდის ლიტურგიის ნაწილია — იხ. ჩანართი „წირვა“', steps: [{ title: 'მწუხრი ბასილი დიდის ლიტურგიასთან', who: ['reader', 'choir'], note: '15 საწინასწარმეტყველო საკითხავით — სრული რიგი ჩანართში „წირვა“', extras: some(tri) }] },
-    { id: 'matins', title: 'ცისკარი — გოდება საფლავთან', when: 'დიდ პარასკევს საღამოს', steps: [
+    { id: 'vespers', slot: 'with', title: 'მწუხრი', when: 'წირვასთან ერთად', note: 'ბასილი დიდის ლიტურგიის ნაწილია — იხ. ჩანართი „წირვა“', steps: [{ title: 'მწუხრი ბასილი დიდის ლიტურგიასთან', who: ['reader', 'choir'], note: '15 საწინასწარმეტყველო საკითხავით — სრული რიგი ჩანართში „წირვა“', extras: some(tri) }] },
+    { id: 'matins', slot: 'eve', title: 'ცისკარი — გოდება საფლავთან', when: 'დიდ პარასკევს საღამოს', steps: [
       P('„კურთხეულ არს ღმერთი ჩვენი“', [M.begin], { who: ['priest'] }),
       { title: 'ექვსფსალმუნება', who: ['reader'], read: [{ say: AMEN }, R(FIX.sixPsalms)] },
       { title: '„ღმერთი უფალი“ და ტროპარნი', who: ['choir'], note: '„შვენიერმან იოსებ“ · „რაჟამს შთახედ საფლავად“ · „მენელსაცხებლეთა დედათა“', read: [hymns('matins')], extras: some(tri) },
@@ -1420,8 +1425,8 @@ const holyWeek = (inp: DayInput, e: number): Service[] => {
       { title: 'წინასწარმეტყველება, სამოციქულო და სახარება', who: ['reader', 'priest'], note: matinsGospel.map(r => `${r.name} ${r.ref}`).join(' · ') || 'ეზეკიელი 37:1–14 · 1 კორ. 5:6–8; გალ. 3:13–14 · მთ. 27:62–66', extras: readsOf(matinsGospel) },
       P('კვერექსები და განტევება', [M.dismissal], { who: ['priest', 'choir'] }),
     ] },
-    { id: 'hours', title: 'ჟამები', when: 'წირვის წინ', steps: [{ title: 'მესამე, მეექვსე და მეცხრე ჟამი', who: ['reader'], read: [...hourRead(6, true), ...hourRead(7, false), ...hourRead(9, false)] }] },
-    { id: 'liturgy', title: 'წირვა', when: 'ბასილი დიდისა, მწუხრთან ერთად', note: khareba, steps: [
+    { id: 'hours', slot: 'day', title: 'ჟამები', when: 'წირვის წინ', steps: [{ title: 'მესამე, მეექვსე და მეცხრე ჟამი', who: ['reader'], read: [...hourRead(6, true), ...hourRead(7, false), ...hourRead(9, false)] }] },
+    { id: 'liturgy', slot: 'day', title: 'წირვა', when: 'ბასილი დიდისა, მწუხრთან ერთად', note: khareba, steps: [
       P('„კურთხეულ არს მეუფება“', [L.begin], { who: ['priest'] }),
       { title: 'ფსალმუნი 103 და დიდი კვერექსი', who: ['reader', 'deacon'], read: [R(FIX.come), R(FIX.ps103)] },
       { title: '„უფალო, ღაღად-ვყავ“', who: ['choir'], extras: some(text(FIX.lordICry, 'ფსალმუნები და მუხლები — ჟამნი')) },
@@ -1457,7 +1462,7 @@ const brightWeek = (inp: DayInput, e: number): Service[] => {
   // the great prokeimenon of each evening (ზატიკი): Pascha's own evening, then Monday's … Friday's
   const prok = BRIGHT_PROKEIMENA[Math.max(0, e - 1)];
   return [
-    { id: 'vespers', title: e === 0 ? 'სიყვარულის მწუხრი' : 'მწუხრი', when: e === 0 ? 'აღდგომის დღეს, შუადღის შემდეგ' : 'წინა საღამოს', note: `${e === 0 ? 'სახარება (ინ. 20:19–25) სხვადასხვა ენაზე იკითხება · ' : ''}ბრწყინვალე შვიდეული${greatFeastOf(inp.iso)?.id === 'khareba' ? ' · დღეს ხარებაც არის — მისი საგალობლები აღდგომისას ერთვის' : ''}${ownServicesOf(inp.iso).length ? ` · ${ownServicesOf(inp.iso).map(o => o.t).join(', ')} — საკუთარი განგება „დამატებით წიგნებშია“` : ''}`, steps: [
+    { id: 'vespers', slot: e === 0 ? 'late' : 'eve', title: e === 0 ? 'სიყვარულის მწუხრი' : 'მწუხრი', when: e === 0 ? 'აღდგომის დღეს, შუადღის შემდეგ' : 'წინა საღამოს', note: `${e === 0 ? 'სახარება (ინ. 20:19–25) სხვადასხვა ენაზე იკითხება · ' : ''}ბრწყინვალე შვიდეული${greatFeastOf(inp.iso)?.id === 'khareba' ? ' · დღეს ხარებაც არის — მისი საგალობლები აღდგომისას ერთვის' : ''}${ownServicesOf(inp.iso).length ? ` · ${ownServicesOf(inp.iso).map(o => o.t).join(', ')} — საკუთარი განგება „დამატებით წიგნებშია“` : ''}`, steps: [
       { title: '„ქრისტე აღდგა“ — მუხლებით', who: ['priest', 'choir'], note: 'დავითნი არ იკითხება' },
       { title: '„უფალო ღაღად-ვყავ“ — აღდგომის დასდებელნი', who: ['choir'], extras: zt },
       { title: e <= 1 ? 'შესვლა სახარებით და „ნათელო მხიარულო“' : 'შესვლა საცეცხლურით და „ნათელო მხიარულო“', who: ['priest', 'deacon', 'choir'] },
@@ -1466,7 +1471,7 @@ const brightWeek = (inp: DayInput, e: number): Service[] => {
       { title: 'სტიქარონსა ზედა — „აღდეგინ ღმერთი“', who: ['choir'] },
       { title: '„ქრისტე აღდგა“ და განტევება', who: ['choir', 'priest'] },
     ] },
-    { id: 'matins', title: 'ცისკარი', when: e === 0 ? 'აღდგომის ღამეს' : 'დილით', steps: [
+    { id: 'matins', slot: e === 0 ? 'night' : 'day', title: 'ცისკარი', when: e === 0 ? 'აღდგომის ღამეს' : 'დილით', steps: [
       ...(e === 0 ? [
         { title: 'შუაღამის ლოცვა — დიდი შაბათის კანონით', who: ['reader', 'choir', 'priest'] as Who[], note: 'შუაღამემდე; ბოლოს გარდამოხსნას საკურთხეველში შეასვენებენ' },
         { title: 'ლიტანიობა ტაძრის გარშემო', who: ['priest', 'choir'] as Who[], note: '„აღდგომასა შენსა, ქრისტე მაცხოვარ“ — ანთებული სანთლებით', hint: 'დაკეტილ კართან მღვდელი იწყებს: „დიდება წმიდასა…“ — „ქრისტე აღდგა“' },
@@ -1482,10 +1487,10 @@ const brightWeek = (inp: DayInput, e: number): Service[] => {
       ...(e === 0 ? [{ title: 'იოანე ოქროპირის საკატეხიზმო სიტყვა', who: ['priest'] as Who[], note: 'მღვდელი კითხულობს; შემდეგ — ოქროპირის ტროპარი' }] : []),
       { title: '„ქრისტე აღდგა“ და განტევება', who: ['choir', 'priest'] },
     ] },
-    { id: 'hours', title: 'ჟამები', when: 'წირვის წინ', steps: [
+    { id: 'hours', slot: 'day', title: 'ჟამები', when: 'წირვის წინ', steps: [
       { title: 'პასექის ჟამნი', who: ['reader', 'choir'], note: 'ბრწყინვალე შვიდეულში ჩვეულებრივი ჟამების ნაცვლად', extras: hours },
     ] },
-    { id: 'liturgy', title: 'წირვა', when: 'დილით', steps: [
+    { id: 'liturgy', slot: 'day', title: 'წირვა', when: 'დილით', steps: [
       { title: '„ქრისტე აღდგა“ და აღდგომის ანტიფონები', who: ['priest', 'choir'] },
       { title: 'შესვლა — „ეკლესიათა შინა აკურთხევდით ღმერთსა“', who: ['deacon', 'choir'] },
       { title: 'ტროპარნი — „ქრისტე აღდგა“, იპაკოი, აღდგომის კონდაკი', who: ['choir'] },
@@ -1500,3 +1505,53 @@ const brightWeek = (inp: DayInput, e: number): Service[] => {
     ] },
   ];
 };
+
+// ---------- „ახლა“: what is served at this hour (the page opens on it) ----------
+/** from two in the afternoon the evening's service is the next one: the church day begins at vespers */
+export const EVENING_HOUR = 14;
+/** Great Friday's and Pascha's own vespers are served in their afternoon: until five the page stays on them */
+const LATE_UNTIL = 17;
+/** Pascha's matins begins at midnight: it is „now“ until three */
+const NIGHT_UNTIL = 3;
+export type NowPart = 'eve' | 'day' | 'late';
+/** the church day served at this hour of a calendar day, and the part of it: before two — the day's own morning; from two —
+ *  the next day's evening */
+export const nowPart = (today: string, hour: number): { iso: string; part: NowPart } => {
+  if (hour < EVENING_HOUR) return { iso: today, part: 'day' };
+  const e = easterOffset(today);
+  if ((e === -2 || e === 0) && hour < LATE_UNTIL) return { iso: today, part: 'late' };
+  return { iso: addDays(today, 1), part: 'eve' };
+};
+const SLOT_TIME: Record<ServiceSlot, number> = { prev: 0, eve: 1, night: 2, day: 3, late: 4, with: 5 };
+const TAB_ORDER: ServiceId[] = ['vespers', 'compline', 'matins', 'hours', 'liturgy'];
+/** a day's services in the order they are served (one that is only a part of the liturgy is left out) */
+export const inTime = (services: Service[]): Service[] =>
+  services.filter(s => s.slot !== 'with')
+    .sort((a, b) => SLOT_TIME[a.slot] - SLOT_TIME[b.slot] || TAB_ORDER.indexOf(a.id) - TAB_ORDER.indexOf(b.id));
+/** the service served after this one */
+export const serviceAfter = (services: Service[], id: ServiceId): Service | null => {
+  const list = inTime(services);
+  const i = list.findIndex(s => s.id === id);
+  return i >= 0 && i < list.length - 1 ? list[i + 1] : null;
+};
+/** the service the page opens on: the first one of this part of the day — or the last of them the reader has marked a place
+ *  in (`marked`), so a page opened again goes on where the reader was */
+export const serviceNow = (services: Service[], part: NowPart, hour: number, marked: (id: ServiceId) => boolean = () => false): ServiceId => {
+  const list = inTime(services);
+  const fits = (s: Service) =>
+    part === 'eve' ? s.slot === 'eve' || s.slot === 'night'
+      : part === 'late' ? s.slot === 'late'
+        : s.slot === 'day' || (s.slot === 'night' && hour < NIGHT_UNTIL);
+  const now = list.filter(fits);
+  // an evening with nothing of its own (the vespers was joined to the morning's service): the next morning's first service
+  const pool = now.length ? now : list.filter(s => s.slot === 'day');
+  const kept = [...pool].reverse().find(s => marked(s.id));
+  return (kept ?? pool[0] ?? list[0] ?? services[0]).id;
+};
+/** „დღეს საღამოს“ — when the service of „now“ is served, in words (an evening with no service of its own shows the next
+ *  morning's) */
+export const nowWord = (part: NowPart, slot: ServiceSlot): string =>
+  slot === 'night' ? 'ამ ღამით'
+    : part === 'late' ? 'დღეს, შუადღის შემდეგ'
+      : part === 'day' ? 'დღეს დილით'
+        : slot === 'eve' ? 'დღეს საღამოს' : 'ხვალ დილით';
