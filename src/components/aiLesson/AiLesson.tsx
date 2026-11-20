@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { askConfirm } from '../ui/kit';
 import { ArrowLeft, BookOpen, ChevronRight, Play, SkipForward, Square } from 'lucide-react';
 import { MANERA_BASE } from '../../data/maneraLessons';
 import { WEEKDAYS_GE } from '../../utils/dateNames';
@@ -433,7 +434,9 @@ export const AiLesson: React.FC<{ onClose: () => void }> = ({ onClose }) => {
 
   return (
     <Frame>
-      <LessonTop at={partIndex} sub={sub} onClose={onClose} onMore={() => setMenu(true)} />
+      {/* the ✕ asks first: a slip of the finger used to end the lesson, which then starts over */}
+      <LessonTop at={partIndex} sub={sub} onMore={() => setMenu(true)}
+        onClose={() => { void askConfirm({ title: 'გავიდე გაკვეთილიდან?', text: 'გაკვეთილი მერე თავიდან დაიწყება.', ok: 'გასვლა' }).then(ok => { if (ok) onClose(); }); }} />
       {/* no internet / the AI's month spent: one quiet line, the lesson goes on (board x-ai-ugareshe) */}
       <NetLine uid={data.uid} />
       {tired && <RestStep why={REST_LINE.tired} onStop={() => go('sum')} onMore={() => setTired(false)} />}

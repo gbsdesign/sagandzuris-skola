@@ -17,14 +17,14 @@ export interface SectionDef {
 
 export const SECTIONS: SectionDef[] = [
   { id: 'galoba', label: 'გალობა', page: 'galoba' },
-  { id: 'simghera', label: 'სიმღერა', page: 'simghera' },
-  { id: 'mtkmeli', label: 'მთქმელი', page: 'mtkmeli' },
-  { id: 'sakravebi', label: 'საკრავები', page: 'sakravebi' },
+  { id: 'simghera', label: 'სიმღერა', page: 'simghera', hint: 'გვერდი „ხალხური“ — სიმღერების ჩანართი' },
+  { id: 'mtkmeli', label: 'მთქმელი', page: 'mtkmeli', hint: 'გვერდი „ხალხური“ — მთქმელების ჩანართი' },
+  { id: 'sakravebi', label: 'საკრავები', page: 'sakravebi', hint: 'გვერდი „ხალხური“ — საკრავების ჩანართი' },
   { id: 'medavitneoba', label: 'ფსალმუნთა ჯგუფი', page: 'psalter', hint: 'ერთად ვკითხულობთ ფსალმუნს' },
   // „მედავითნეობა“ on the vine: the reader's course (the psalter group keeps the old id)
   { id: 'medavitneobaTopic', label: 'მედავითნეობა', page: 'medavitneoba', hint: 'მედავითნის სასწავლო კურსი' },
   { id: 'chvevebi', label: 'ჩვევები', page: 'gz', hint: 'ლოცვები ჩვევებიდან იხსნება' },
-  { id: 'tamashebi', label: 'თამაშები', page: 'games', hint: 'მუსიკალური · ქართული · ცოცხალი' },
+  { id: 'tamashebi', label: 'თამაშები', page: 'games', hint: 'გვერდი „სახალისო“ — მუსიკალური, ქართული, ცოცხალი' },
   { id: 'tsinaprebi', label: 'გაიცანი წინაპრები', page: 'tsinaprebi' },
   { id: 'gza', label: 'საგანძურის გზა', page: 'gz' },
   { id: 'biblioteka', label: 'ბიბლიოთეკა', page: 'biblioteka' },
