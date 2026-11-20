@@ -71,10 +71,18 @@ export const setLearnReminder = (r: HabitReminder | null) => {
   else { try { localStorage.removeItem(LEARN_KEY); } catch { /* storage off */ } }
   void syncPush();
 };
-const allHabitReminders = () => {
-  const learn = getLearnReminder();
-  return learn ? [...getHabitReminders(), learn] : getHabitReminders();
+// „საღამოს კითხვა“ (utils/eveningCheck.ts): one more „habit“ each evening — „რა შეასრულე დღეს?“ — kept apart as well
+const EVENING_KEY = 'eveningReminder';
+export const EVENING_ID = 'evening-check';
+const getEveningReminder = (): HabitReminder | null => read<HabitReminder | null>(EVENING_KEY, null);
+export const setEveningReminder = (r: HabitReminder | null) => {
+  if (JSON.stringify(r) === JSON.stringify(getEveningReminder())) return;
+  if (r) write(EVENING_KEY, r);
+  else { try { localStorage.removeItem(EVENING_KEY); } catch { /* storage off */ } }
+  void syncPush();
 };
+const allHabitReminders = () =>
+  [...getHabitReminders(), getLearnReminder(), getEveningReminder()].filter((r): r is HabitReminder => !!r);
 
 // everything this browser asks the push server for
 const pushReminders = () => {
@@ -206,19 +214,25 @@ const show = async (hour: PrayerHour, minutes: number, onOpen: (prayerId: string
 
 const habitWord = (m: number) => (m === 0 ? 'დროა' : m === 60 ? '1 საათში' : `${m} წუთში`);
 
+/** a tap on the evening notice opens its window (components/habits/EveningCheck listens) */
+export const EVENING_OPEN = 'sg-evening-open';
+
 const showHabit = async (h: HabitReminder, minutes: number) => {
   if (!notificationsSupported() || Notification.permission !== 'granted') return;
+  const evening = h.id === EVENING_ID;
   const options: NotificationOptions = {
-    body: `${habitWord(minutes)} — ${h.at}`,
+    body: evening ? 'რა შეასრულე დღეს? მონიშნე ჩვევები' : `${habitWord(minutes)} — ${h.at}`,
     icon: '/pwa-192x192.png',
     badge: '/pwa-192x192.png',
     tag: `habit-${h.id}-${minutes}`,
-    data: { url: h.id === LEARN_ID ? '/' : '/?open=gz' }, // the learning review opens home, with its line
+    // the learning review opens home, with its line; the evening question its window
+    data: { url: h.id === LEARN_ID ? '/' : evening ? '/?open=sagamo' : '/?open=gz' },
   };
   try {
     const n = new Notification(h.title, options);
     n.onclick = () => {
       window.focus();
+      if (evening) window.dispatchEvent(new Event(EVENING_OPEN));
       n.close();
     };
     return;
