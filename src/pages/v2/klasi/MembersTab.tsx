@@ -105,7 +105,9 @@ const WithRoll: React.FC<{ cls: SchoolClass; children: (r: Roll) => React.ReactN
   useSyncAttendanceShares(cls, records, att.last, att.ready);
   const f = classFigures(cls.members.map(m => summarize(records[m.uid]?.data)), att.last);
   const loading = cls.members.some(m => !records[m.uid]);
-  const line = `აქტიური ${loading ? '—' : f.active} · დასწრება ${f.attendance === null ? '—' : `${f.attendance}%`} · სამუშაო ${loading ? '—' : `${f.work}%`}`;
+  // said in whole words (the bare „აქტიური 6 · დასწრება 75% · სამუშაო 0%“ was a riddle): who opened the app this week, who came
+  // to the last lessons, the month's own practice against each one's plan
+  const line = `ამ კვირაში აპში შემოვიდა ${loading ? '—' : `${f.active} / ${cls.members.length}`} · გაკვეთილებზე დადის ${f.attendance === null ? '—' : `${f.attendance}%`} · დამოუკიდებელი სამუშაო ${loading ? '—' : `${f.work}%`}`;
   // a member's (first) voice from their profile, for a big class's roll folded by voices (x-savse-klasi)
   const voiceOf = (uid: string) => {
     const v = (records[uid]?.data as { profile?: { voices?: unknown } } | undefined)?.profile?.voices;
