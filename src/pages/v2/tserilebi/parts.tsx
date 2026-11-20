@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
-import { Check, CheckCheck, Eye, EyeOff, GraduationCap, Mic, Pin, PinOff, ShieldCheck, Users, ChevronDown, X } from 'lucide-react';
-import { Badge, Button, cx, Dot, Press, Row, Rows, Sheet, Small } from '../../../components/ui2';
+import React from 'react';
+import { Check, CheckCheck, Eye, EyeOff, GraduationCap, Mic, Pin, PinOff, ShieldCheck, Users } from 'lucide-react';
+import { Badge, Button, cx, Dot, Press, Sheet, Small } from '../../../components/ui2';
 import { useLongPress } from '../../../hooks/useLongPress';
 import { SwipeRow, type SwipeSide } from '../../../components/ui/SwipeRow';
 import { ClassLogo } from '../../../components/classes/ClassLogo';
@@ -88,56 +88,34 @@ export const readSide = (run: () => void): SwipeSide => ({
   label: 'წაკითხულად', icon: <CheckCheck className="size-5" />, tone: 'bg-leaf text-white', run,
 });
 
-// ---- the class filter: one pill, a sheet of classes ---------------------------------------------------------------
+// ---- the class filter: a row of class pills, „ყველა“ first ---------------------------------------------------------
 
 export const ClassPick: React.FC<{
   classes: SchoolClass[]; chip: string; onPick: (id: string) => void; unreadIn?: (classId: string) => number;
 }> = ({ classes, chip, onPick, unreadIn }) => {
-  const [open, setOpen] = useState(false);
-  const picked = classes.find(c => c.id === chip);
-  const pick = (id: string) => { triggerHaptic(8); onPick(id); setOpen(false); };
-  const lead = (c?: SchoolClass) => c
-    ? <ClassLogo name={c.name} logo={c.logo} className="size-8 text-meta" />
-    : <Dot icon={<Users />} color="sea" size={30} />;
-  const row = (id: string, c: SchoolClass | undefined, name: string, n = 0) => (
-    <Row
-      key={id}
-      lead={lead(c)}
-      title={name}
-      onClick={() => pick(id)}
-      aria-pressed={chip === id}
-      right={<span className="flex items-center gap-2">{n > 0 && <Badge n={n} />}{chip === id && <Check aria-label="არჩეულია" className="size-5 text-wine" strokeWidth={3} />}</span>}
-    />
-  );
+  const pick = (id: string) => { triggerHaptic(8); onPick(id); };
+  const pill = (id: string, lead: React.ReactNode, name: string, n = 0) => {
+    const on = chip === id;
+    return (
+      <Press key={id} aria-pressed={on} onClick={() => pick(id)}
+        className="group flex h-tap max-w-full min-w-0 shrink-0 cursor-pointer items-center rounded-full focus-visible:outline-none">
+        <span className={cx(
+          'flex h-10 max-w-full min-w-0 items-center gap-2 rounded-full py-1 pr-3.5 pl-1 text-body transition group-active:scale-[0.97]',
+          'group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-wine/60',
+          on ? 'bg-wine font-bold text-white' : 'bg-surf font-semibold text-ink',
+        )}>
+          {lead}
+          <span className="min-w-0 truncate">{name}</span>
+          {n > 0 && !on && <Badge n={n} />}
+        </span>
+      </Press>
+    );
+  };
   return (
-    <>
-      <div className="flex items-center gap-1.5">
-        <Press
-          onClick={() => setOpen(true)}
-          aria-haspopup="dialog"
-          className={cx(
-            'flex h-tap max-w-full min-w-0 cursor-pointer items-center gap-2 rounded-full py-1 pr-3 pl-1.5 text-body font-bold transition active:scale-95',
-            picked ? 'bg-wine text-white' : 'bg-surf text-ink',
-          )}
-        >
-          {picked ? <ClassLogo name={picked.name} logo={picked.logo} className="size-8 text-meta shrink-0" /> : <Dot icon={<Users />} color="sea" size={30} />}
-          <span className="min-w-0 truncate">{picked ? picked.name : 'ყველა კლასი'}</span>
-          <ChevronDown aria-hidden="true" className="size-[18px] shrink-0 opacity-70" />
-        </Press>
-        {picked && (
-          <Press onClick={() => pick('all')} aria-label="ყველა კლასი" title="ყველა კლასი"
-            className="flex size-icon shrink-0 cursor-pointer items-center justify-center rounded-full text-mut active:bg-soft">
-            <X aria-hidden="true" className="size-4" />
-          </Press>
-        )}
-      </div>
-      <Sheet open={open} onClose={() => setOpen(false)} title="რომელი კლასის ჩათები?">
-        <Rows className="overflow-y-auto">
-          {row('all', undefined, 'ყველა კლასი')}
-          {classes.map(c => row(c.id, c, c.name, unreadIn?.(c.id)))}
-        </Rows>
-      </Sheet>
-    </>
+    <div role="group" aria-label="რომელი კლასის ჩათები" className="flex flex-wrap gap-x-2 gap-y-1">
+      {pill('all', <Dot icon={<Users />} color="sea" size={30} />, 'ყველა')}
+      {classes.map(c => pill(c.id, <ClassLogo name={c.name} logo={c.logo} className="size-8 shrink-0 text-meta" />, c.name, unreadIn?.(c.id)))}
+    </div>
   );
 };
 
