@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { ClipboardList, Lock, Pin, Send } from 'lucide-react';
 import type { SchoolClass } from '../../hooks/useClasses';
 import type { PinInput } from '../../hooks/useChatPins';
+import type { CatalogEntry } from '../../utils/pathItems';
 import { Btn, FIELD, Label, Sheet } from '../ui/kit';
 import { NewAssignment } from '../teacher/AssignmentsPanel';
 import { Avatar } from './ChatPanel';
@@ -24,6 +25,8 @@ type PinSheetProps = {
   /** a class's chat (the 🔒 line names who will see it) */
   inClass: boolean;
   onSend: (p: PinInput) => Promise<void>;
+  /** the new look: opens straight on „დავალება“ with this chant picked (the private chat's path fold) */
+  preset?: CatalogEntry | null;
 };
 
 /** The new look draws it as one window (pages/v2/klasi/PinSheetV2.tsx, boards x-komentari · x-davaleba). */
