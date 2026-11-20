@@ -1931,6 +1931,8 @@
   (`scope.page` → one line in `assistantPrompt`; „ამ გვერდზე ხარ: …“). Ready offers `utils/programOffers.ts` + test: `pageName`,
   `offersFor` („ამ გვერდზე“ first, then the rest behind „ყველა ▾“ — only what the assistant can really do), `noticedIn` („შევნიშნე“:
   counted from the scope, no AI call; „კი, მოამზადე“ only prepares a plan that still waits for „კი“), `nextSteps` under an answer.
+  The cog can be switched off on a device (`damkhmare/fabPref.ts`, `sg-program-fab-off`; the user: „გათიშვა და ჩართვა შემეძლოს … რომ
+  ეკრანებზე არ მიედოს“): „პარამეტრები“ → „მცურავი კბილანა“ (superadmins only), and the small window's round „დამალვა“ (with „გაუქმება“).
 - Not built yet: the other „AI“ words in the app (~70 files; „AI მასწავლებელი“ → „ავტომატური მასწავლებელი“), the engine switch
   „გუგლის პროგრამა · ლადოს პროგრამა“ (Lado = Claude; needs the user's API credit linked and a server-side key — never a key in the
   app), memory, photos and files, the students' program, layout by words. Don't raise Google's under-18 rule again (the user: „მე

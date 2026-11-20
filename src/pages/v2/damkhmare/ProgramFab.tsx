@@ -6,11 +6,13 @@ import { triggerHaptic } from '../../../utils/haptics';
 import { cx } from '../../../components/ui2';
 import { GearSpark } from './GearSpark';
 import { openAssistant, useAssistantAllowed } from './open';
+import { useFabShown } from './fabPref';
 
 // „მცურავი კბილანა“ (plan 2.0, prototype 15): a small round cog that follows a superadmin onto every page and opens
 // „ავტომატური პროგრამა“ as a small window over that page, told which page it is. Only superadmins (the user's rule:
 // „ეგ მხოლოდ სუპერ ადმინებს ქონდეთ“). A finger drags it; where it is left, it stays (the device's `sg-program-fab`).
-// It hides in church mode and during a call, and while the program's own window is open.
+// It hides in church mode and during a call, and while the program's own window is open — and wholly when switched off
+// (fabPref.ts: „პარამეტრები“ → „მცურავი კბილანა“, or the small window's „დამალვა“).
 
 const KEY = 'sg-program-fab';
 const SIZE = 52;
@@ -39,6 +41,7 @@ export const ProgramFab: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
   const { currentPage, selectedClassId } = useNavigation();
   const { church } = useNotes();
   const call = useCall();
+  const shown = useFabShown();
   const [spot, setSpot] = useState<Spot>(() => clamp(read()));
   const [held, setHeld] = useState(false);
   const drag = useRef<{ x: number; y: number; from: Spot; moved: boolean } | null>(null);
@@ -53,7 +56,7 @@ export const ProgramFab: React.FC<{ hidden?: boolean }> = ({ hidden }) => {
   }, []);
 
   const inCall = call.status === 'connecting' || call.status === 'waiting' || call.status === 'live';
-  if (!isSuperAdmin || !allowed || hidden || church || inCall) return null;
+  if (!isSuperAdmin || !allowed || !shown || hidden || church || inCall) return null;
 
   const down = (e: React.PointerEvent<HTMLButtonElement>) => {
     dragged.current = false;
