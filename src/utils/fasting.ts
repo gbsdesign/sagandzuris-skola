@@ -45,6 +45,7 @@ const OIL_OLD = new Set([
   '06-08', '06-11', '07-01', '07-02', '07-08', '07-17', '07-20', '07-22', '07-25', '07-27', '08-31',
 ]);
 /** the day's mark in ჟამნი, if it has one */
+export const jamniMark = (iso: string): Food | null => markOf(iso);
 const markOf = (iso: string): Food | null => {
   const old = addDays(iso, -13).slice(5);
   return FISH_OLD.has(old) ? 'fish' : OIL_OLD.has(old) ? 'oil' : null;

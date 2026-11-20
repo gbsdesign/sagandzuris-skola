@@ -6,6 +6,7 @@ import {
 } from './serviceTexts';
 import { PASSION_GOSPELS, TRIODION, andrewPart, complineEve, lentSundayEvening, movableOf, triodionSrc, type Movable } from './triodion';
 import { OWN_SERVICES } from '../data/ownServices';
+import { jamniMark } from './fasting';
 import { EXTRA_BOOKS } from '../data/extraBooks';
 
 // „დღის მსახურება“ (pages/medavitneoba/DayService.tsx, the user, 2026-11-09: „მიმდინარე დღის ღილაკი მედავითნეობის თავში
@@ -148,7 +149,18 @@ export const sixthHourReading = (day: CalendarDay | null | undefined) => (day ? 
  *  (the 2021 and 2026 calendars; „ჰიმნების ჩართვის წესი“ names the same two beside the temple's own day) */
 export const lentPolyeleos = (iso: string) => ['02-24', '03-09'].includes(addDays(iso, -13).slice(5));
 
-/** the rank the app guesses: a great feast, the temple's day, a Sunday, readings at vespers or a matins Gospel, a red saint */
+/** A red name that only says a feast goes on — its forefeast or afterfeast, the Saturday or Sunday before or after it. Such a
+ *  day is served by its own saint's rank: the feast's hymns are added to it, the great doxology is not (only the leave-taking
+ *  is sung with it — Typikon ch. 48; ჟამნი: „ითქმის ყოველივე დღესასწაულისა“). */
+const TIDE_WORDS = /წინადღესასწაულ|შემდგომი დღესასწაულ|(?:წინა|შემდგომი) (?:შაბათი|კვირა|კვირიაკე)/;
+/** a red name that is a saint's or a feast's own (a name may hold two sentences: „შემდგომი დღესასწაული ქრისტესშობისა. კრება
+ *  ყოვლადწმიდისა ღმრთისმშობელისა“ — the second one counts) */
+export const redSaint = (name: string) => name.split('.').map(p => p.trim()).filter(Boolean).some(p => !TIDE_WORDS.test(p));
+
+/** The rank the app guesses: a great feast, the temple's day, a Sunday, readings at vespers or a matins Gospel (the
+ *  polyeleos); then the great doxology — a feast's leave-taking, a saint ჟამნი relaxes the fast for (its marks follow the
+ *  Typikon's ch. 33: wine and oil for a saint with the great doxology), a red saint of the calendar. A red name alone is the
+ *  weakest sign: the calendar prints Georgian saints so, whatever their service — the reader can set the rank by hand. */
 export const guessRank = (iso: string, day: CalendarDay | null, patron: Patron | null): Rank => {
   if (greatFeastOf(iso)) return 'great';
   if (patron && patronDay(patron, iso) === iso) return 'vigil';
@@ -163,7 +175,8 @@ export const guessRank = (iso: string, day: CalendarDay | null, patron: Patron |
   // gives a matins Gospel — are served with the polyeleos
   if (e >= -48 && e <= -9 && dowOf(iso) >= 1 && dowOf(iso) <= 5) return lentPolyeleos(iso) || festal ? 'polyeleos' : 'simple';
   if (festal) return 'polyeleos';
-  if (day.s.some(s => s.b)) return 'doxology';
+  if (feastTideOf(day, iso)?.kind === 'leave' || jamniMark(iso)) return 'doxology';
+  if (day.s.some(s => s.b && redSaint(s.n))) return 'doxology';
   return 'simple';
 };
 
