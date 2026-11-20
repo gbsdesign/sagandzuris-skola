@@ -37,7 +37,7 @@ export const MomentView: React.FC<{ item: LearnedItem; onShare: () => void; onCl
       <h2 className="text-title leading-tight font-bold tracking-tight wrap-break-word">{momentTitle(item.name)}</h2>
       <p className="max-w-xs text-body text-mut">{momentLine(item.voices, item.voiced)}</p>
     </div>
-    <div className="flex flex-col gap-2 pb-4 safe-bottom">
+    <div className="flex flex-col gap-2 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
       <Button full icon={<Share strokeWidth={2} />} onClick={onShare}>გაზიარე</Button>
       <Button full kind="ghost" onClick={onClose}>მერე</Button>
     </div>
@@ -118,7 +118,7 @@ export const ShareView: React.FC<{
         <Helper icon={<Info />}>ბარათზე მხოლოდ საგალობლის სახელია. შენი სახელი არ ჩანს, თუ თვითონ არ დაამატებ.</Helper>
         {note && <p role="status" className="text-center text-meta text-mut">{note}</p>}
       </div>
-      <div className="flex flex-col gap-2 pb-4 safe-bottom">
+      <div className="flex flex-col gap-2 pb-[calc(1rem+env(safe-area-inset-bottom,0px))]">
         <Button full icon={<Share strokeWidth={2} />} disabled={!blob} onClick={share}>გაზიარება</Button>
         <Button full kind="ghost" icon={<Download strokeWidth={2} />} disabled={!blob} onClick={save}>სურათად შენახვა</Button>
       </div>

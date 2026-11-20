@@ -56,6 +56,10 @@ export const HelpButton: React.FC<{ page: HelpPage; className?: string }> = ({ p
     // a moment after the page has settled
     const t = window.setTimeout(() => {
       if (!me.current || hinting) return;
+      // a window or another screen opened over the page meanwhile: the bubble would hang over it — next time then
+      const r = me.current.getBoundingClientRect();
+      const top = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2);
+      if (!top || !me.current.contains(top)) return;
       hinting = true;
       try { localStorage.setItem(SEEN, '1'); } catch { /* storage off */ }
       setHint(true);

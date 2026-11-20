@@ -592,7 +592,7 @@ export const ConfirmHost: React.FC = () => {
         aria-modal="true"
         aria-labelledby="sg-confirm-title"
         onClick={e => e.stopPropagation()}
-        className="w-full sm:max-w-sm rounded-[24px] bg-[#fbf6ec] ring-1 ring-[#e8dcc8] shadow-2xl p-5 safe-bottom sg-up"
+        className="w-full sm:max-w-sm rounded-[24px] bg-[#fbf6ec] ring-1 ring-[#e8dcc8] shadow-2xl p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] sg-up"
       >
         <h3 id="sg-confirm-title" className="font-serif-ge text-[18px] leading-snug font-bold text-[#4a3426] text-balance">{q.title}</h3>
         {q.text && <p className="mt-2 text-sm leading-relaxed text-[#75685a]">{q.text}</p>}

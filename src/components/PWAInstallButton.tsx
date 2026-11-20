@@ -56,7 +56,7 @@ export const PWAInstallButton: React.FC<{ compact?: boolean }> = ({ compact = fa
               role="dialog"
               aria-modal="true"
               onClick={e => e.stopPropagation()}
-              className="w-full sm:max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-[24px] bg-[#fbf6ec] ring-1 ring-[#e8dcc8] p-5 shadow-2xl space-y-4 safe-bottom sg-up"
+              className="w-full sm:max-w-sm max-h-[calc(100dvh-2rem)] overflow-y-auto overscroll-contain rounded-[24px] bg-[#fbf6ec] ring-1 ring-[#e8dcc8] p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom,0px))] shadow-2xl space-y-4 sg-up"
             >
               <div className="flex items-center justify-between gap-2">
                 <h3 className="font-serif-ge text-[18px] font-bold text-[#4a3426]">დაყენება iPhone / iPad-ზე</h3>

@@ -332,7 +332,7 @@ const Incoming: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
     // like a phone: the whole screen (only a small silent bar over the notes during a service)
     if (!(notes || programOpen || church)) {
       return (
-        <div className="fixed inset-0 z-[95] bg-ink text-night-ink flex flex-col items-center justify-between safe-top safe-bottom safe-x px-6 pt-[12vh] pb-8"
+        <div className="fixed inset-0 z-[95] bg-ink text-night-ink flex flex-col items-center justify-between pl-[calc(1.5rem+env(safe-area-inset-left,0px))] pr-[calc(1.5rem+env(safe-area-inset-right,0px))] pt-[calc(12vh+env(safe-area-inset-top,0px))] pb-[calc(2rem+env(safe-area-inset-bottom,0px))]"
           role="alertdialog" aria-label={`${name} გირეკავთ`}>
           <div className="flex flex-col items-center gap-3 text-center max-w-full">
             <span className="relative">
