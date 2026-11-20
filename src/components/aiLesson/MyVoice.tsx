@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Info, Mic, Music, RefreshCw, Star, Target, Trash2, Users, X } from 'lucide-react';
+import { Ear, Info, Mic, Music, RefreshCw, Star, Target, Trash2, Users, X } from 'lucide-react';
 import { LINES, MASTERY_LEVELS } from '../../data/masteryPath';
 import { useBackToClose } from '../../utils/backToClose';
 import { MONTHS_SHORT_GE } from '../../utils/dateNames';
@@ -47,6 +47,8 @@ export interface MyVoiceViewProps {
   onForgetAll: () => void;
   onClose: () => void;
   onRemeasure: () => void;
+  /** „ყურის შემოწმება“ (EarTest): how well the app hears this voice */
+  onEarTest?: () => void;
   onPractice: (piece: string, part: number) => void;
   /** the „სავარჯიშოა“ row: the phrase's own page */
   onOpenPhrase: (ph: DiaryPhrase) => void;
@@ -133,12 +135,20 @@ const SCALE_LOW = 40;
 const SCALE_HIGH = 79;
 const pct = (m: number) => Math.max(0, Math.min(100, ((m - SCALE_LOW) / (SCALE_HIGH - SCALE_LOW)) * 100));
 
-const Range: React.FC<MyVoiceViewProps> = ({ voice, fit, onFit }) => {
+const Range: React.FC<MyVoiceViewProps> = ({ voice, fit, onFit, onEarTest }) => {
+  const earRow = onEarTest && (
+    <Rows>
+      <Row lead={<Dot icon={<Ear />} />} title="ყურის შემოწმება" sub="ნახე, რამდენად ზუსტად გისმენს აპი" onClick={onEarTest} />
+    </Rows>
+  );
   if (!voice) {
     return (
-      <Card className="p-[18px]">
-        <p className="text-body leading-normal text-mut">ხმა ჯერ არ გაგვიზომავს. ორ წუთში გავიგებთ, რომელი ნოტები გიდის თავისუფლად და რომელი ხმა შეგეფერება.</p>
-      </Card>
+      <>
+        <Card className="p-[18px]">
+          <p className="text-body leading-normal text-mut">ხმა ჯერ არ გაგვიზომავს. ორ წუთში გავიგებთ, რომელი ნოტები გიდის თავისუფლად და რომელი ხმა შეგეფერება.</p>
+        </Card>
+        {earRow}
+      </>
     );
   }
   const left = pct(voice.low);
@@ -162,6 +172,7 @@ const Range: React.FC<MyVoiceViewProps> = ({ voice, fit, onFit }) => {
         <Row lead={<Dot icon={<Users />} />} title={`შეგეფერება: ${part}`} sub={`${partWho} · მასწავლებელი წყვეტს`} right={null} />
       </Rows>
       <Note>იზომება ერთხელ, ორ წუთში. ხმაურში შეიძლება შეცდეს — ამიტომ ყოველთვის შეცვლი.</Note>
+      {earRow}
     </>
   );
 };
@@ -308,8 +319,9 @@ export const MyVoice: React.FC<{
   startTab?: MyVoiceTab;
   onClose: () => void;
   onRemeasure: () => void;
+  onEarTest?: () => void;
   onPractice: (piece: string, part: number) => void;
-}> = ({ startTab = 'diary', onClose, onRemeasure, onPractice }) => {
+}> = ({ startTab = 'diary', onClose, onRemeasure, onEarTest, onPractice }) => {
   const [tab, setTab] = useState<MyVoiceTab>(startTab);
   const { uid, note, today } = useAiNote();
   const { record, summary } = useMasteryPath();
@@ -359,7 +371,7 @@ export const MyVoice: React.FC<{
             voice={note?.voice ?? null} fit={note?.fit !== false} onFit={on => { if (uid) void saveAiNote(uid, { fit: on }); }}
             lines={lines} facts={facts}
             onForget={id => { if (uid) void forgetAiNote(uid, id); }} onForgetAll={() => void forgetAll()}
-            onClose={onClose} onRemeasure={onRemeasure} onPractice={onPractice} onOpenPhrase={setPhrase}
+            onClose={onClose} onRemeasure={onRemeasure} onEarTest={onEarTest} onPractice={onPractice} onOpenPhrase={setPhrase}
           />
         )}
       </div>

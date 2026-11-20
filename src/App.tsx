@@ -40,13 +40,14 @@ import { MembershipGate, WaitingBanner } from './components/access/MembershipGat
 import { useMembership } from './utils/memberAccess';
 import { useBirthdaySync } from './utils/birthdays';
 import { useAlbumAccessSync } from './data/albumAccess';
-import { useAiLessonOpen, useMyVoiceOpen } from './components/aiLesson/open';
+import { openEarTest, useAiLessonOpen, useMyVoiceOpen } from './components/aiLesson/open';
 import { useExamOpen } from './pages/v2/gamocda/open';
 import { useAssistantOpen } from './pages/v2/damkhmare/open';
 import { useMkitkheOpen } from './pages/v2/mkitkhe/open';
 import { AI_REPORT } from './pages/v2/klasi/nav';
 import { useAccess } from './hooks/useAccess';
 import { setNewLook, useNavHidden } from './design/newLook';
+import { setNewEar } from './utils/earChoice';
 import { BottomNav, DeskBar } from './components/shell/BottomNav';
 import { HomeBar } from './components/shell/HomeBar';
 import { ShellLinks } from './components/shell/ShellLinks';
@@ -108,6 +109,9 @@ function AppContent() {
   const access = useAccess();
   const newLook = access.on('newLook');
   useLayoutEffect(() => { setNewLook(newLook); }, [newLook]);
+  // the new ear (AI teacher 2.0): admins first, everyone once its switch is open
+  const newEar = access.on('newEar');
+  useLayoutEffect(() => { setNewEar(newEar); }, [newEar]);
   // a soft way in for a new page (the new look; none for „reduce motion“) — the page itself is not remounted
   const pageRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -153,6 +157,8 @@ function AppContent() {
     else if (page === 'teacher') navigateTo('class');
     // an admin's notice for everyone on the phone (worker/reminders /announce): the header's 🔔 list
     else if (page === 'bell') requestOpen('bell', '1');
+    // „ყურის შემოწმება“ — how well the app hears my voice (AI teacher 2.0, stage 1)
+    else if (page === 'ear') openEarTest();
     // a widget not linked yet (android/ BaseWidget): the linking window
     else if (page === 'widgets') requestWidgetLink();
     // the Android app's widgets and icon menu: a home-shelf button by its id

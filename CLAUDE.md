@@ -1919,6 +1919,24 @@
   drawn as the home page in its place (a guest on /p/search) gets the home's frame (`framePage` in App.tsx). index.html:
   `interactive-widget=resizes-content` (Android's browser shrinks the page above the keyboard, as the Android app's window does).
 
+## AI teacher 2.0 (plan + prototypes: https://claude.ai/artifact/PV3924yX7gnrPEb7zyGw5o; the user, 2026-11-20: „გაყევი გეგმას“)
+
+- Seven stages, one PR each, in the plan's order: 1 ახალი ყური · 2 ოქტავა და მორგება · 3 ეკრანი „ვმღერი“ და შედეგი · 4 გადასვლები და
+  დღის გაკვეთილი · 5 რიტმი · 6 გახურება · 7 ადამიანის ხმა და ქართული წყობა. Before each stage say its price and wait for „კი“.
+- **Stage 1 „ახალი ყური“ (2026-11-21)**: `utils/ear.ts` + test (`hearPitch`: the YIN difference at half the rate, the pick = the
+  shortest period whose dip is within 0.1 of the best one, then its half when that dip is ≤ 0.16 — a rough voice —, silence under
+  0.004 RMS, unclear over 0.42; `earFollower`: a look an octave off is put back until it lasts four looks; `cleanFrames`: a take
+  tidied in hindsight — gaps of 1–2 looks, short octave slips, stray looks; `earReport`). Made voices for the tests:
+  `tests/lib/madeVoice.ts`. `utils/singCapture.ts` is the one place the app listens: it takes the new ear while
+  `utils/earChoice.ts` says so — the switch `newEar` „ახალი ყური“ (⚙ „სკოლა“ → განყოფილებები → საიტის სხვა ნაწილები; **hidden =
+  admins only** until the user says to open it for everyone; App.tsx sets it) — else the first ear, kept only for that and the
+  comparison in `utils/earOld.ts`. `stop()` returns the tidied take; parts that read `session.frames` without stopping use
+  `tidyFrames` (the mastery trainers' `useMic`). The trial page „ყურის შემოწმება“ (`components/aiLesson/EarTest.tsx`, numbers
+  `utils/earTrial.ts` + test): three held notes of four seconds, both ears on the same sound (`startSinging`'s `tap`, `newEar`,
+  `record: false`), each ear's share heard, slips and breaks; opened from „ჩემი ხმა“ → „ხმის ზომა“ or `/?open=ear`
+  (`openEarTest`). On made voices: a deep bass 100 % against the first ear's ~70–78 %, a quiet voice 100 % against 54 %, half
+  the time a look. Not yet tried on real voices — the user's own numbers decide whether the switch opens.
+
 ## „ავტომატური პროგრამა“ (plan 2.0; the user: „AI დაარქვი ყველგან … ავტომატური პროგრამა … კბილანას ლოგო“)
 
 - Plan with 15 prototypes: https://claude.ai/artifact/5eAVduJ7UvyYVbb9AbM9Pn — what the user unticks there is not built. Each stage
