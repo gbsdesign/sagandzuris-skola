@@ -19,7 +19,11 @@ import { EtnoNote, PlacedVideos, etnoSongs, useEtno, type FilmNav } from './vide
 // region on the same pill. `mapItem` „<region>[~e|~i|~m]“ as before.
 
 export type RegionTab = 'songs' | 'instruments' | 'poets' | 'etno';
+// what is counted under the region's name („12 ვიდეო“) …
 const WORD: Record<RegionTab, string> = { songs: 'სიმღერა', etno: 'ვიდეო', instruments: 'საკრავი', poets: 'მთქმელი' };
+// … and the pills' names — the same four words as the big map's switch (KhalkhuriV2 `SEG`): the films' pill is „ეთნოფორი“
+// here too (the user's pick of 2026-11-20; it said „ვიდეო“ while the map said „ეთნოფორი“)
+const PILL: Record<RegionTab, string> = { ...WORD, etno: 'ეთნოფორი' };
 
 export const RegionScreen: React.FC<{
   region: FolkRegion;
@@ -86,7 +90,7 @@ export const RegionScreen: React.FC<{
       {tabs.length > 1 && (
         <PillRow
           label="რა ვნახო"
-          items={tabs.map(t => ({ id: t, label: counts[t] ? `${WORD[t]} · ${counts[t]}` : WORD[t], on: t === shown, onClick: () => choose(t) }))}
+          items={tabs.map(t => ({ id: t, label: counts[t] ? `${PILL[t]} · ${counts[t]}` : PILL[t], on: t === shown, onClick: () => choose(t) }))}
         />
       )}
       {searching && canSearch && (

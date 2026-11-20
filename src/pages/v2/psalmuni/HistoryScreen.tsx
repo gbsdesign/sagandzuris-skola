@@ -32,7 +32,7 @@ export const HistoryScreen: React.FC<{ group: PsalterGroup; current: Cycle; onBa
     () => (row ? ownersThen({ assignment: group.assignment, baseHalf: group.baseHalf, shiftDays: group.shiftDays }, group.assignmentLog, row.cycle.start, row.cycle.half) : {}),
     [row, group.assignment, group.baseHalf, group.shiftDays, group.assignmentLog],
   );
-  // „ციკლი N“: the cycle's number counted from the group's start
+  // „წრე N“: the cycle's number counted from the group's start
   const numberOf = (c: Cycle) => {
     if (!since) return null;
     let n = 1;
@@ -45,16 +45,16 @@ export const HistoryScreen: React.FC<{ group: PsalterGroup; current: Cycle; onBa
     <div className="flex w-full flex-col gap-3 pb-4">
       <TopBar title="ისტორია" sub="ფსალმუნთა ჯგუფი" onBack={onBack} />
       {!row ? (
-        <Card><p className="text-body text-mut">ჯგუფი ახლახან დაიწყო — ისტორია პირველი ციკლის შემდეგ გამოჩნდება.</p></Card>
+        <Card><p className="text-body text-mut">ჯგუფი ახლახან დაიწყო — ისტორია პირველი წრის შემდეგ გამოჩნდება.</p></Card>
       ) : (
         <>
           <div className="flex items-center gap-2.5">
-            <RoundButton label="წინა ციკლი" disabled={at >= rows.length - 1} onClick={() => { setAt(i => Math.min(i + 1, rows.length - 1)); setAll(false); }}><ChevronLeft /></RoundButton>
+            <RoundButton label="წინა წრე" disabled={at >= rows.length - 1} onClick={() => { setAt(i => Math.min(i + 1, rows.length - 1)); setAll(false); }}><ChevronLeft /></RoundButton>
             <div className="min-w-0 flex-1 text-center">
-              <div className="truncate text-lead font-bold">ციკლი {numberOf(row.cycle) ?? ''}</div>
+              <div className="truncate text-lead font-bold">წრე {numberOf(row.cycle) ?? ''}</div>
               <div className="truncate text-meta text-mut">{formatRange(row.cycle)}</div>
             </div>
-            <RoundButton label="შემდეგი ციკლი" disabled={at === 0} onClick={() => { setAt(i => Math.max(i - 1, 0)); setAll(false); }}><ChevronRight /></RoundButton>
+            <RoundButton label="შემდეგი წრე" disabled={at === 0} onClick={() => { setAt(i => Math.max(i - 1, 0)); setAll(false); }}><ChevronRight /></RoundButton>
           </div>
           <Stats items={[{ value: row.read, label: 'წაიკითხა' }, { value: KATHISMA_COUNT - row.read, label: 'გამოტოვდა' }]} />
           <Rows>
@@ -71,7 +71,7 @@ export const HistoryScreen: React.FC<{ group: PsalterGroup; current: Cycle; onBa
           {!all && KATHISMA_COUNT > SHOWN && (
             <Button kind="ghost" full icon={<ChevronDown />} onClick={() => setAll(true)}>კიდევ {KATHISMA_COUNT - SHOWN} კანონი</Button>
           )}
-          {rows.length >= COUNT && <Note>ბოლო {COUNT} ციკლი ჩანს.</Note>}
+          {rows.length >= COUNT && <Note>ბოლო {COUNT} წრე ჩანს.</Note>}
         </>
       )}
     </div>

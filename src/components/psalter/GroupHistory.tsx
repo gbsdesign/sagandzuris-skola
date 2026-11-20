@@ -36,18 +36,18 @@ export const GroupHistory: React.FC<{ group: PsalterGroup; current: Cycle; count
   const Frame: React.ElementType = bare ? 'div' : Card;
   return (
     <Frame>
-      {!bare && <CardTitle icon={<History />} title="ისტორია" hint="აირჩიე ციკლი: ვინ რომელი კანონი წაიკითხა, რომელი გამოტოვდა" />}
+      {!bare && <CardTitle icon={<History />} title="ისტორია" hint="აირჩიე წრე: ვინ რომელი კანონი წაიკითხა, რომელი გამოტოვდა" />}
       {!row ? (
-        <p className="text-sm text-[#8a7a6a]">ჯგუფი ახლახან დაიწყო — ისტორია პირველი ციკლის შემდეგ გამოჩნდება.</p>
+        <p className="text-sm text-[#8a7a6a]">ჯგუფი ახლახან დაიწყო — ისტორია პირველი წრის შემდეგ გამოჩნდება.</p>
       ) : (
         <div>
           <div className="flex items-center gap-2">
-            <IconBtn label="წინა ციკლი" disabled={at >= rows.length - 1} onClick={() => setAt(i => Math.min(i + 1, rows.length - 1))}><ChevronLeft /></IconBtn>
+            <IconBtn label="წინა წრე" disabled={at >= rows.length - 1} onClick={() => setAt(i => Math.min(i + 1, rows.length - 1))}><ChevronLeft /></IconBtn>
             <label className="relative flex-1 min-w-0 h-10 rounded-full bg-[#fbf6ec] ring-1 ring-[#e8dcc8] flex items-center justify-center gap-1.5 text-sm font-semibold text-[#2a2017] cursor-pointer">
               <span className="truncate">{formatRange(row.cycle)}</span>
               <ChevronDown className="w-4 h-4 text-[#8a7a6a] shrink-0" />
               <select
-                aria-label="ციკლის არჩევა"
+                aria-label="წრის არჩევა"
                 value={Math.min(at, rows.length - 1)}
                 onChange={e => setAt(Number(e.target.value))}
                 className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
@@ -55,7 +55,7 @@ export const GroupHistory: React.FC<{ group: PsalterGroup; current: Cycle; count
                 {rows.map((r, i) => <option key={r.cycle.id} value={i}>{formatRange(r.cycle)} · {r.read}/{KATHISMA_COUNT}</option>)}
               </select>
             </label>
-            <IconBtn label="შემდეგი ციკლი" disabled={at === 0} onClick={() => setAt(i => Math.max(i - 1, 0))}><ChevronRight /></IconBtn>
+            <IconBtn label="შემდეგი წრე" disabled={at === 0} onClick={() => setAt(i => Math.max(i - 1, 0))}><ChevronRight /></IconBtn>
           </div>
 
           <div className="mt-3 flex items-center gap-3">

@@ -40,7 +40,7 @@ export const MyKathismaCard: React.FC<{ group: PsalterGroup; uid: string; compac
             <p className="text-sm text-[#fbf6ec]/80">შენ ამ ჯგუფს ხელმძღვანელობ. თუ თავადაც კითხულობ, დაამატე თავი წევრებში.</p>
           ) : mine.length === 0 ? (
             <div>
-              <p className="font-serif-ge text-lg font-bold">ამ ციკლში კანონი არ გაქვს</p>
+              <p className="font-serif-ge text-lg font-bold">ამ წრეში კანონი არ გაქვს</p>
               <p className="mt-0.5 text-[13px] text-[#fbf6ec]/70">მარაგში ხარ — როცა ვინმე დახმარებას ითხოვს, შეგიძლია აიღო მისი კანონი.</p>
             </div>
           ) : (
@@ -91,7 +91,7 @@ export const MyKathismaCard: React.FC<{ group: PsalterGroup; uid: string; compac
 
           {takenFromMe.map(k => (
             <p key={k} className="mt-3 px-3 py-2 rounded-xl bg-white/10 text-[13px] leading-snug">
-              შენი კანონი {k} {ergative(firstName(memberName(group, slots[k]?.takenBy)))} აიღო — ამ ციკლში მისი წასაკითხია.
+              შენი კანონი {k} {ergative(firstName(memberName(group, slots[k]?.takenBy)))} აიღო — ამ წრეში მისი წასაკითხია.
             </p>
           ))}
         </div>
@@ -131,7 +131,7 @@ const GroupPulse: React.FC<{ read: number; members: number; onManage?: () => voi
   return (
     <div>
       <div className="flex items-center gap-2 min-h-9">
-        <p className="text-[12px] font-bold text-[#f3d9b5]">ჯგუფი ამ ციკლში</p>
+        <p className="text-[12px] font-bold text-[#f3d9b5]">ჯგუფი ამ წრეში</p>
         {onManage && (
           <button type="button" onClick={onManage}
             className="ml-auto -mr-1 h-9 px-3 rounded-full text-[12px] font-bold text-[#fbf6ec] bg-white/10 ring-1 ring-white/20 hover:bg-white/20 inline-flex items-center gap-1.5 cursor-pointer shrink-0">

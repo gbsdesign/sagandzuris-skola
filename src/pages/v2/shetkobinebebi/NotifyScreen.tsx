@@ -1,20 +1,20 @@
 import React, { useState } from 'react';
-import { BellOff, Moon, PhoneCall, Sun } from 'lucide-react';
-import { useAuth, useNavigation } from '../../../context';
-import { Button, Helper, Note, Rows, SectionLabel, Sheet, TopBar } from '../../../components/ui2';
+import { Moon, PhoneCall, Sun } from 'lucide-react';
+import { useNavigation } from '../../../context';
+import { Button, Note, Rows, SectionLabel, Sheet, TopBar } from '../../../components/ui2';
 import { NotifyPrefs, useNotifyPrefs } from '../../../utils/notifyPrefs';
-import { SampleCard, SwitchLine, TimeInput } from './parts';
+import { RemindersPart } from '../propili/Reminders';
+import { SwitchLine, TimeInput } from './parts';
 
-// „შეტყობინებები“ (board x-ultra-shejameba): a sample of the morning summary, then how the notices come — the summary,
-// the quiet hours and whether a call rings in them. Every change is saved at once.
-
-const bound = (): boolean => typeof Notification !== 'undefined' && Notification.permission === 'granted';
+// „შეტყობინებები“ — the ONE page of everything the phone tells (settings mapItem `notify`; the old `reminders` opens it
+// too; the user's pick of 2026-11-20: the rows „შეხსენებები“ and „შეტყობინებები“ were two pages with two switches
+// repeated on both). First what reminds (prayer hours, habits, the review — pages/v2/propili/Reminders), then how the
+// notices come (board x-ultra-shejameba): the morning summary, the quiet hours and whether a call rings in them. Every
+// change is saved at once. The summary's sample stands on the summary's own screen.
 
 export const NotifyScreen: React.FC = () => {
   const { handleGoBack, openMapItem } = useNavigation();
-  const { user } = useAuth();
   const { prefs, loaded, save } = useNotifyPrefs();
-  // the phone has no leave to show notices (or none was asked yet): the settings would change nothing there
   return (
     <NotifyView
       prefs={prefs}
@@ -22,20 +22,22 @@ export const NotifyScreen: React.FC = () => {
       onChange={p => void save({ ...prefs, ...p })}
       onBack={handleGoBack}
       onSummary={() => openMapItem('notify~summary')}
-      silent={!!user && !bound()}
+      reminders={<RemindersPart />}
     />
   );
 };
 
 export const NotifyView: React.FC<{
-  prefs: NotifyPrefs; loaded: boolean; onChange: (p: Partial<NotifyPrefs>) => void; onBack: () => void; onSummary: () => void; silent: boolean;
-}> = ({ prefs, loaded, onChange: change, onBack, onSummary, silent }) => {
+  prefs: NotifyPrefs; loaded: boolean; onChange: (p: Partial<NotifyPrefs>) => void; onBack: () => void; onSummary: () => void;
+  /** the reminders' part on top (its own card while the phone may not show notices, then its rows) */
+  reminders?: React.ReactNode;
+}> = ({ prefs, loaded, onChange: change, onBack, onSummary, reminders }) => {
   const [hours, setHours] = useState(false);
   return (
     <div className="flex flex-col">
       <TopBar title="შეტყობინებები" onBack={onBack} />
       <main className="flex flex-col gap-2 pt-0.5 pb-5">
-        <SampleCard />
+        {reminders}
         <SectionLabel label="როგორ მოვიდეს" className="mt-2" />
         <Rows aria-busy={!loaded}>
           <SwitchLine
@@ -68,9 +70,6 @@ export const NotifyView: React.FC<{
           )}
         </Rows>
         <Note>სასწრაფო რამ — ზარი და მასწავლებლის განცხადება — მაშინვე მოვა.</Note>
-        {silent && (
-          <Helper icon={<BellOff />}>ამ ტელეფონზე შეტყობინებები ჯერ არ არის ჩართული — ჩართე ტელეფონის პარამეტრებში.</Helper>
-        )}
       </main>
       <Sheet open={hours} title="ჩუმი საათები" onClose={() => setHours(false)}>
         <Rows>

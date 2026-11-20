@@ -22,7 +22,7 @@ export const saveSettings = async (group: PsalterGroup, patch: SettingsPatch): P
   const sameDays = shiftDays.join() === group.shiftDays.join();
   const cycle = cycleOf(today, group.cycleDays, group.shiftDays);
   if (cycleOf(today, cycleDays, shiftDays).id !== cycle.id
-    && !(await askConfirm({ title: 'შევინახო?', text: 'მიმდინარე ციკლი ახლიდან დაიწყება და ამ ციკლის „წავიკითხე“ მონიშვნები აღარ გამოჩნდება. ვინ რომელ კანონს კითხულობს დღეს, არ შეიცვლება.', ok: 'შენახვა' }))) {
+    && !(await askConfirm({ title: 'შევინახო?', text: 'მიმდინარე წრე ახლიდან დაიწყება და ამ წრის „წავიკითხე“ მონიშვნები აღარ გამოჩნდება. ვინ რომელ კანონს კითხულობს დღეს, არ შეიცვლება.', ok: 'შენახვა' }))) {
     return { done: false };
   }
   try {

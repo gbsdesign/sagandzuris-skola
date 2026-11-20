@@ -41,12 +41,12 @@ export const GroupSettingsSheet: React.FC<{
 
   const saveSettings = async () => {
     if (!settings.name.trim()) { msg.fail('ჯგუფს სახელი სჭირდება.'); return; }
-    if (!cycleOk) { msg.fail(`ციკლი 1-დან ${MAX_CYCLE_DAYS} დღემდე შეიძლება.`); return; }
+    if (!cycleOk) { msg.fail(`წრე 1-დან ${MAX_CYCLE_DAYS} დღემდე შეიძლება.`); return; }
     if (!shiftOk) { msg.fail('გადასვლის რიცხვები 1-დან 28-მდე ჩაწერე, მძიმით: მაგ. 1, 15.'); return; }
     const today = georgiaToday();
     // a new rule may start the current cycle afresh: its „წავიკითხე“ marks then stay with the old one
     if (cycleOf(today, cycleDays, shiftDays).id !== cycleOf(today, group.cycleDays, group.shiftDays).id
-      && !(await askConfirm({ title: 'შევინახო?', text: 'მიმდინარე ციკლი ახლიდან დაიწყება და ამ ციკლის „წავიკითხე“ მონიშვნები აღარ გამოჩნდება. ვინ რომელ კანონს კითხულობს დღეს, არ შეიცვლება.', ok: 'შენახვა' }))) return;
+      && !(await askConfirm({ title: 'შევინახო?', text: 'მიმდინარე წრე ახლიდან დაიწყება და ამ წრის „წავიკითხე“ მონიშვნები აღარ გამოჩნდება. ვინ რომელ კანონს კითხულობს დღეს, არ შეიცვლება.', ok: 'შენახვა' }))) return;
     try {
       await updateDoc(ref, {
         name: settings.name.trim(),
@@ -116,7 +116,7 @@ export const GroupSettingsSheet: React.FC<{
         </div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>ციკლი (დღე)</Label>
+            <Label>წრე (დღე)</Label>
             <input
               className={`${FIELD} ${cycleOk ? '' : '!ring-2 !ring-[#9a3324]/50'}`}
               type="number" inputMode="numeric" min={1} max={MAX_CYCLE_DAYS}
@@ -140,7 +140,7 @@ export const GroupSettingsSheet: React.FC<{
             </select>
           </div>
           <div>
-            <Label>ციკლის ბოლოს</Label>
+            <Label>წრის ბოლოს</Label>
             <select className={FIELD} value={settings.remindFinal} onChange={e => setSettings(s => ({ ...s, remindFinal: e.target.value }))}>
               {TIMES.map(t => <option key={t} value={t}>{t || 'გამორთული'}</option>)}
             </select>

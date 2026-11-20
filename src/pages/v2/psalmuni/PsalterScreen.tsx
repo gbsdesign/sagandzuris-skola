@@ -194,7 +194,7 @@ export const Body: React.FC<{ group: PsalterGroup; uid: string; canLead: boolean
       )}
 
       {takenFromMe.map(k => (
-        <Helper key={k} icon={<LifeBuoy />}>შენი კანონი {k} {ergative(firstName(memberName(group, slots[k]?.takenBy)))} აიღო — ამ ციკლში მისი წასაკითხია.</Helper>
+        <Helper key={k} icon={<LifeBuoy />}>შენი კანონი {k} {ergative(firstName(memberName(group, slots[k]?.takenBy)))} აიღო — ამ წრეში მისი წასაკითხია.</Helper>
       ))}
 
       {isMember && othersHelp.length > 0 && (
@@ -211,7 +211,7 @@ export const Body: React.FC<{ group: PsalterGroup; uid: string; canLead: boolean
           <h2 className="text-head font-bold">დღეს წაიკითხა</h2>
           <span className="text-body font-bold text-wine tabular-nums">{read} / {KATHISMA_COUNT}</span>
         </div>
-        <ul className="grid grid-cols-10 gap-1" aria-label="ციკლის 20 კანონი">
+        <ul className="grid grid-cols-10 gap-1" aria-label="წრის 20 კანონი">
           {ALL_KATHISMAS.map(k => {
             const s = slots[k];
             const done = !!s?.readBy;

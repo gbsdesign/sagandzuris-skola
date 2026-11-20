@@ -3,9 +3,9 @@ import { Calendar, Clock, Gift, MessageCircle, RefreshCw } from 'lucide-react';
 import { useNavigation } from '../../../context';
 import { Dot, Note, Row, Rows, SectionLabel, Sheet, TopBar, Val, WrapChips } from '../../../components/ui2';
 import { NotifyItems, NotifyPrefs, useNotifyPrefs } from '../../../utils/notifyPrefs';
-import { SwitchLine } from './parts';
+import { SampleCard, SwitchLine } from './parts';
 
-// „დილის შეჯამება“ (board x-ultra-shejameba-3): the hour, and what goes into the summary. Saved at once.
+// „დილის შეჯამება“ (board x-ultra-shejameba-3): a sample of the summary, the hour, and what goes into it. Saved at once.
 
 const HOURS = Array.from({ length: 13 }, (_, i) => {
   const m = 6 * 60 + i * 30;
@@ -35,7 +35,9 @@ export const SummaryView: React.FC<{ prefs: NotifyPrefs; loaded: boolean; onSave
     <div className="flex flex-col">
       <TopBar title="დილის შეჯამება" onBack={onBack} />
       <main className="flex flex-col gap-2 pt-0.5 pb-5">
-        <Rows aria-busy={!loaded}>
+        {/* what comes, as the phone shows it (made-up words) — it stood on „შეტყობინებები“ until that page took the reminders in */}
+        <SampleCard />
+        <Rows aria-busy={!loaded} className="mt-2">
           <Row lead={<Dot icon={<Clock />} />} title="რომელ საათზე" right={<Val tone="mut">{prefs.at}</Val>} onClick={() => setPick(true)} />
         </Rows>
         <SectionLabel label="რა შევიდეს" className="mt-2" />

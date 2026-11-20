@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { Bell, BookOpen, Plus, RotateCcw, X } from 'lucide-react';
+import { Bell, BookOpen, Grape, Plus, RotateCcw, X } from 'lucide-react';
 import { HABIT_GROUPS, HabitMenu } from '../../../data/habitsAndManera';
-import { Button, Choice, Dot, Field, Row, Rows, SectionLabel, Seg, Sheet, Val, WrapChips, RoundButton } from '../../../components/ui2';
+import { Button, Choice, Dot, Field, Row, Rows, SectionLabel, Seg, Sheet, ToggleRow, Val, WrapChips, RoundButton } from '../../../components/ui2';
 import { askConfirm } from '../../../components/ui/kit';
 import { useMyHabits } from '../../../hooks/useMyHabits';
 import { ALERT_CHOICES, MAX_ALERTS, MENUS, MENU_LABELS, addHabit, removedHabits, restoreHabit, setHabitAlerts, setHabitTime } from '../../../utils/myHabits';
@@ -10,11 +10,16 @@ import { alertWord } from '../../../components/views/HabitPlanEditor';
 
 // The sheet „ახალი ჩვევა“ (board x-chveva-akhali): a name, how often, what a tap opens and a reminder. A removed habit
 // comes back from the foot of the same sheet, and „საწყის სიაზე დაბრუნება“ puts the school's list back (as the old panel did).
+// „საიდუმლო“ is no answer to „how often“ (the user's pick of 2026-11-20): the switch holds the three frequencies, and a
+// row of its own puts the habit beside confession and communion — then the frequency is that group's, said in its place.
 
 export type Mine = ReturnType<typeof useMyHabits>;
 export type MenuChoice = HabitMenu | 'none';
 
 const groupTitle = (g: { id: string; title: string }) => (g.id === 'daily' ? 'ყოველდღე' : g.title);
+const SACRAMENTS = 'sacraments';
+/** the three answers to „how often“ */
+const FREQUENCIES = HABIT_GROUPS.filter(g => g.id !== SACRAMENTS);
 /** the board's short words for the four groups */
 const SHORT: Record<string, string> = { daily: 'ყოველდღე', weekly: 'კვირაში', monthly: 'თვეში', sacraments: 'საიდუმლო' };
 export const groupWord = (id: string) => SHORT[id] ?? groupTitle(HABIT_GROUPS.find(g => g.id === id) ?? { id, title: id });
@@ -90,6 +95,7 @@ export const NewHabitSheet: React.FC<{ open: boolean; onClose: () => void; mine:
   const { setup, save } = mine;
   const [label, setLabel] = useState('');
   const [group, setGroup] = useState(first);
+  const [sacrament, setSacrament] = useState(false);
   const [menu, setMenu] = useState<MenuChoice>('none');
   const [time, setTime] = useState('');
   const [alerts, setAlerts] = useState<number[]>([0]);
@@ -97,7 +103,7 @@ export const NewHabitSheet: React.FC<{ open: boolean; onClose: () => void; mine:
   // every opening starts empty
   useEffect(() => {
     if (!open) return;
-    setLabel(''); setGroup(first); setMenu('none'); setTime(''); setAlerts([0]); setPick(null);
+    setLabel(''); setGroup(first); setSacrament(false); setMenu('none'); setTime(''); setAlerts([0]); setPick(null);
   }, [open, first]);
   const ok = label.trim().length > 0;
   const removed = removedHabits(setup);
@@ -106,7 +112,7 @@ export const NewHabitSheet: React.FC<{ open: boolean; onClose: () => void; mine:
     if (!ok) return;
     const id = `my_${Date.now().toString(36)}`;
     // one save: the habit, then its time and its reminders
-    let next = addHabit(setup, label, group, menu, id);
+    let next = addHabit(setup, label, sacrament ? SACRAMENTS : group, menu, id);
     if (time) {
       next = setHabitTime(next, id, { from: time });
       if (alerts.length) next = setHabitAlerts(next, id, alerts);
@@ -126,15 +132,21 @@ export const NewHabitSheet: React.FC<{ open: boolean; onClose: () => void; mine:
         <form className="flex flex-col gap-3" onSubmit={e => { e.preventDefault(); add(); }}>
           <Field label="სახელი" value={label} onChange={setLabel} placeholder="მაგ. საღმრთო წერილის კითხვა" maxLength={60} autoFocus />
           <SectionLabel label="რამდენად ხშირად" />
-          <Seg
-            label="რამდენად ხშირად"
-            items={HABIT_GROUPS.map(g => ({ id: g.id, label: groupWord(g.id) }))}
-            value={group}
-            onChange={setGroup}
-          />
+          {sacrament ? (
+            // the sacraments' own frequency, in the switch's place and height (nothing jumps under the finger)
+            <div className="flex h-[52px] shrink-0 items-center justify-center rounded-full bg-track px-4 text-body font-semibold text-mut">თვეში ერთხელ მაინც</div>
+          ) : (
+            <Seg
+              label="რამდენად ხშირად"
+              items={FREQUENCIES.map(g => ({ id: g.id, label: groupWord(g.id) }))}
+              value={group}
+              onChange={setGroup}
+            />
+          )}
           <Rows>
             <Row wrap lead={<Dot icon={<BookOpen />} />} title="რა გაიხსნას შეხებისას" right={<Val>{menu === 'none' ? 'არაფერი' : MENU_LABELS[menu]}</Val>} onClick={() => setPick('menu')} />
             <Row lead={<Dot icon={<Bell />} />} title="შეხსენება" right={<Val>{time || 'არ არის'}</Val>} onClick={() => setPick('remind')} />
+            <ToggleRow wrap lead={<Dot icon={<Grape />} />} title="საიდუმლოა" sub="აღსარებისა და ზიარების გვერდით ჩანს" on={sacrament} onChange={setSacrament} />
           </Rows>
           <Button type="submit" full icon={<Plus />} disabled={!ok}>დამატება</Button>
         </form>

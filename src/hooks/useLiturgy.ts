@@ -47,7 +47,7 @@ export const nextSunday = () => {
 
 /** The program's one name on its card and its page, whatever its date (the user, 2026-11-08: „ბოლო წირვას დააწერე მიმდინარე
  *  მსახურება“ — it was „დღევანდელი / მომავალი / ბოლო წირვა“ by the date). */
-export const LITURGY_TITLE = 'მიმდინარე მსახურება';
+export const LITURGY_TITLE = 'დღევანდელი წირვა';
 
 export const formatLiturgyDate = (iso: string) => {
   const [y, m, d] = iso.split('-').map(Number);

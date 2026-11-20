@@ -216,7 +216,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
               className={cx('flex h-tap shrink-0 cursor-pointer items-center gap-2 self-start rounded-full px-1.5 text-body font-semibold text-wine', FOCUS)}
             >
               <Bot aria-hidden="true" className="size-[18px]" strokeWidth={1.75} />
-              ჰკითხე დამხმარეს
+              მკითხე
             </Press>
           )}
         </div>
@@ -317,7 +317,7 @@ export const SearchView: React.FC<SearchViewProps> = ({
             {(onHelper || onAsk) && (
               <Rows>
                 {onHelper && (
-                  <Row lead={<Dot icon={<Bot />} />} title="ჰკითხე დამხმარეს" sub="„მკითხე“ გეტყვის, სად რა არის" onClick={() => onHelper(searched)} />
+                  <Row lead={<Dot icon={<Bot />} />} title="მკითხე" sub="გეტყვის, სად რა არის აპში" onClick={() => onHelper(searched)} />
                 )}
                 {onAsk && <Row lead={<Dot icon={<Sparkles />} />} title="AI დამხმარე" sub="სკოლის საქმეები" onClick={onAsk} />}
               </Rows>
