@@ -19,7 +19,9 @@ import { pinPreview, sendDmPin } from '../hooks/useChatPins';
  *  or back to one's own call. */
 export const CallButtons: React.FC<{
   base: string; canStart: boolean; canVideo: boolean; onStart: (kind: 'audio' | 'video') => void; onJoin: () => void;
-}> = ({ base, canStart, canVideo, onStart, onJoin }) => {
+  /** the word on the button that joins a call already on (the class chat: „შეერთება“) */
+  joinLabel?: string;
+}> = ({ base, canStart, canVideo, onStart, onJoin, joinLabel = 'შესვლა' }) => {
   const call = useCall();
   const live = useLivePeers(base).length > 0;
   const [asking, setAsking] = useState(false);
@@ -32,7 +34,7 @@ export const CallButtons: React.FC<{
     );
   }
   if (live) {
-    return <Button size="md" icon={<Phone />} onClick={onJoin}>შესვლა</Button>;
+    return <Button size="md" icon={<Phone />} onClick={onJoin}>{joinLabel}</Button>;
   }
   if (!canStart) return null;
   const start = (kind: 'audio' | 'video') => { setAsking(false); onStart(kind); };

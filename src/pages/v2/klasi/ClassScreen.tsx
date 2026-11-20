@@ -63,16 +63,18 @@ const ClassView: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
   const [picking, setPicking] = useState(false);
   const [more, setMore] = useState(false);
   const [timetable, setTimetable] = useState(false);
-  const [tabState, setTabState] = useState<Tab>(() => savedTab(cls.id) ?? 'program');
-  // a computer shows the chat in its own column: its left part is the program or the members
-  const tab: Tab = wide && tabState === 'chat' ? 'program' : tabState;
-  const chatBox = useRef<HTMLDivElement>(null);
-  const showChat = useRef(false);
-  const { writeTo, opening, error } = useWriteTo(cls);
-
   const iTeach = !!user && cls.teacherIds.includes(user.uid);
   const iAmMember = !!user && cls.memberIds.includes(user.uid);
   const canEdit = iTeach || isAdmin;
+
+  // the chat opens first (the user's rule, 2026-11-21: „პირველი ჩათი … მერე პროგრამა მერე წევრები“)
+  const [tabState, setTabState] = useState<Tab>(() => savedTab(cls.id) ?? 'chat');
+  // a computer shows the chat in its own column: its left part is the program or the members.
+  // The members list is the teachers' and admins' only — a student never lands on it („წევრების სიას ვერ უნდა ხედავდნენ მოსწავლეები“)
+  const tab: Tab = wide && tabState === 'chat' ? 'program' : !canEdit && tabState === 'people' ? 'program' : tabState;
+  const chatBox = useRef<HTMLDivElement>(null);
+  const showChat = useRef(false);
+  const { writeTo, opening, error } = useWriteTo(cls);
   const canSwitch = myClasses.length > 1;
 
   // the chat's unread dot as the old tabs showed it, with the count when it is known
@@ -160,7 +162,7 @@ const ClassView: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
         onBack={handleGoBack}
         right={
           <>
-            {wide && (
+            {wide && canEdit && (
               <Button kind={tab === 'people' ? 'primary' : 'ghost'} size="md" icon={<Users />} onClick={() => setTab(tab === 'people' ? 'program' : 'people')}>წევრები</Button>
             )}
             {/* „AI დამხმარე“ for the class's teachers and admins (x-ai-damkhmare) */}
@@ -192,9 +194,9 @@ const ClassView: React.FC<{ cls: SchoolClass }> = ({ cls }) => {
               value={tab}
               onChange={setTab}
               items={[
-                { id: 'program', label: 'პროგრამა' },
                 { id: 'chat', label: 'ჩათი', badge: unreadN },
-                { id: 'people', label: 'წევრები' },
+                { id: 'program', label: 'პროგრამა' },
+                ...(canEdit ? [{ id: 'people' as const, label: 'წევრები' }] : []),
               ]}
             />
           </div>
