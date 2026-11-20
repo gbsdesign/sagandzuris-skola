@@ -187,6 +187,7 @@ await t('student checks a chat not made yet', assertSucceeds(getDoc(doc(stu3, 'd
 await t('student cannot open chat with a teacher not theirs', assertFails(setDoc(doc(stu3, 'dms', 'tch_stu3'), dm({ members: ['tch', 'stu3'], teacherUid: 'tch' }))));
 await t('chat id must match its two people', assertFails(setDoc(doc(stu3, 'dms', 'zz_stu3'), dm())));
 await t('two students cannot chat', assertFails(setDoc(doc(stu3, 'dms', 'stu2_stu3'), dm({ members: ['stu2', 'stu3'], teacherUid: 'stu2' }))));
+await t('classmates cannot open a private chat', assertFails(setDoc(doc(stu3, 'dms', 'p_stu2_stu3'), { kind: 'peer', members: ['stu2', 'stu3'], classId: 'c9', names: {}, photos: {}, createdAt: serverTimestamp(), lastAt: null, lastBy: '', lastText: '', read: {} })));
 await t('student opens chat with own teacher', assertSucceeds(setDoc(doc(stu3, 'dms', 'tch2_stu3'), dm())));
 await t('student writes to own teacher', assertSucceeds(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm1'), msg('stu3', false))));
 await t('student cannot pose as teacher', assertFails(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm2'), msg('stu3', true))));

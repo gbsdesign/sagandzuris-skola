@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, CircleCheck, Gem, Library, Music, Shirt, Users } from 'lucide-react';
 import { useAuth, useNavigation } from '../../../context';
-import { Card, Dot, Hero, PageHead, Row, Rows, RoundButton, Sheet, Small } from '../../../components/ui2';
+import { Dot, Hero, PageHead, Row, Rows, RoundButton, Sheet, Small } from '../../../components/ui2';
 import { TodayLessonStrip } from '../../../components/aiLesson/TodayLesson';
 import { PATH_ORBS, useSamosiSummary } from '../../../components/views/PathOrbs';
-import { ChvevebiContent } from '../../../components/views/ChvevebiPanel';
 import { useIndependentWork } from '../../../components/views/IndependentWorkCard';
 import { useNewWork } from '../../../components/teacher/MyClassWork';
 import { useAllMyClasses } from '../../../components/classes/ClassPicker';
@@ -15,9 +14,9 @@ import { useAccess } from '../../../hooks/useAccess';
 import { useLibraryProgress } from '../../../hooks/useBooksRead';
 import { useMyAttendance, useTeachingAttendance } from '../../../hooks/useAttendanceShare';
 import { moveItem, ordered, usePathOrder } from '../../../utils/pathOrder';
-import { useSamosiSrc } from '../../../utils/samosiDye';
 import { useKabaSettings } from '../../../utils/kabaArt';
-import { SAMOSI_COLORS, SAMOSI_DEFAULT_COLOR, SAMOSI_TOTAL, samosiThumb } from '../../../data/samosiData';
+import { SAMOSI_TOTAL } from '../../../data/samosiData';
+import { ChokhaThumb } from './ChokhaThumb';
 import { sectionOfPage } from '../../../data/sections';
 import { PathRow, PinRound, Ring, RingText } from './parts';
 import { useIsNewMember, useLearnCount } from './useGza';
@@ -133,12 +132,6 @@ export const GzaListView: React.FC<{
   );
 };
 
-/** The chokha in its chosen colour, inside the ring. */
-const ChokhaThumb: React.FC<{ color: string }> = ({ color }) => {
-  const dye = color !== SAMOSI_DEFAULT_COLOR ? SAMOSI_COLORS.find(c => c.id === color)?.hex ?? null : null;
-  const src = useSamosiSrc(samosiThumb('chokha'), dye);
-  return src ? <img src={src} alt="" draggable={false} className="size-[34px] object-contain" /> : null;
-};
 
 /** The list with the member's own numbers. `onOpen` opens one of the path's own pages (its mapItem). */
 export const GzaList: React.FC<{ onOpen: (item: 'samosi' | 'sagandzuri' | 'chvevebi') => void }> = ({ onOpen }) => {
@@ -163,12 +156,13 @@ export const GzaList: React.FC<{ onOpen: (item: 'samosi' | 'sagandzuri' | 'chvev
 
   // every row has its own switch (data/sections EXTRA_SWITCHES); the library's follows the library, the class's the member's
   // „კლასი“ — and a class (a new member sees „ჯერ კლასში არ ხარ“ instead)
-  const shown = PATH_ORBS.filter(o => (o.id === 'library' ? access.section('biblioteka') !== 'hidden'
+  // „სამოსი“, „ჩვევები“ and „ბიბლიოთეკა“ left the path (2026-11-21, the user: „გზიდან ჩახსენი ბიბლიოთეკა ჩვევები და სამოსი“):
+  // the outfit lives under the profile's name, the habits in the home's window, the library in the home's menu
+  const shown = PATH_ORBS.filter(o => o.id !== 'samosi' && o.id !== 'work' && o.id !== 'library').filter(o => (o.id === 'library' ? access.section('biblioteka') !== 'hidden'
     : o.id === 'klasi' ? access.can('classes') && (myClasses.length > 0 || isNew)
     : access.on(o.id)));
   const ids = ordered(shown.map(o => o.id), order.orbs);
   const habitsAccess = access.section('chvevebi');
-  const habitsOnRow = habitsAccess === 'open' && ids.includes('work');
 
   const toLibrary = () => (access.section('biblioteka') === 'locked' ? askSignIn('ბიბლიოთეკა') : navigateTo('biblioteka'));
   const toHabits = () => (habitsAccess === 'locked' ? askSignIn('ჩვევები') : onOpen('chvevebi'));
@@ -228,7 +222,6 @@ export const GzaList: React.FC<{ onOpen: (item: 'samosi' | 'sagandzuri' | 'chvev
       rows={ids.map(rowOf)}
       pin={<PinRound id={`section:${sectionOfPage('gz')}`} />}
       lesson={<TodayLessonStrip />}
-      extra={habitsAccess === 'open' && !habitsOnRow ? <Card pad="sm"><ChvevebiContent /></Card> : undefined}
       onFirstStep={() => navigateTo('galoba')}
       order={{
         labels: ids.map(id => ({ id, label: PATH_ORBS.find(o => o.id === id)?.label ?? id })),

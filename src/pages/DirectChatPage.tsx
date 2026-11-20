@@ -91,7 +91,8 @@ export const DirectChat: React.FC<{ id: string; classes: SchoolClass[]; logoUrl?
   const { messages, loading, error } = useChat(thread ? dmBase(thread.id) : null);
   const uid = user?.uid || '';
   const staff = !!thread && isAdmin && isStaffSide(thread, uid);
-  const member = !!thread && thread.members.includes(uid);
+  // an old classmates' chat only shows (closed 2026-11-21)
+  const member = !!thread && thread.kind !== 'peer' && thread.members.includes(uid);
   const canWrite = member || staff;
   const livePeers = useLivePeers(thread && canWrite ? dmBase(thread.id) : null);
   const [pinning, setPinning] = useState(false);

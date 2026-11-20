@@ -25,7 +25,7 @@ export const nextLessonWords = (slots: LessonSlot[], withPlace = false): string 
   return `${lessonWhen(inDays)}, ${slot.start}${slot.end ? `–${slot.end}` : ''}${place}`;
 };
 /** Only the start: „ხვალ 18:00“ (the list's grey line). */
-const nextLessonShort = (slots: LessonSlot[]): string | null => {
+export const nextLessonShort = (slots: LessonSlot[]): string | null => {
   const next = nextLesson(slots);
   return next ? `${lessonWhen(next.inDays)} ${next.slot.start}` : null;
 };

@@ -12,7 +12,7 @@ import { NameDay, clearNameDay, saveNameDay, useNameDays } from '../../../utils/
 import { useMembership } from '../../../utils/memberAccess';
 import { MONTHS_GE, MONTHS_SHORT_GE } from '../../../utils/dateNames';
 import { fullName } from '../../../utils/memberName';
-import { openAdminThread, openPeerThread, openThread, type Person } from '../../../hooks/useDirectChat';
+import { openAdminThread, openThread, type Person } from '../../../hooks/useDirectChat';
 import { NameDaySheetV2 } from './NameDaySheet';
 
 /** x-dabadebis — „დაბადების დღეები“: the nearest day on top, then month by month, my own „ანგელოზის დღე“ last.
@@ -30,7 +30,7 @@ const events = (births: Birthday[], names: NameDay[]): Ev[] => [
 const saintShort = (s: string) => s.length > 40 ? s.slice(0, 38).trimEnd() + '…' : s;
 
 /** „მიულოცე“: the private chat with the person, as the school's chats allow it — through a class we share (a teacher's
- *  or classmates' chat), else an admin's chat with them. null when there is no way (then no button shows). */
+ *  chat), else an admin's chat with them. null when there is no way (then no button shows). */
 const useCongratulate = () => {
   const { user, isAdmin } = useAuth();
   const { openDm } = useNavigation();
@@ -41,8 +41,9 @@ const useCongratulate = () => {
   const route = (uid: string) => {
     for (const c of classes) {
       const theyTeach = c.teacherIds.includes(uid);
-      const theyIn = theyTeach || c.memberIds.includes(uid);
-      if (theyIn) return { classId: c.id, cls: c, theyTeach };
+      // a teacher's chat only: classmates' private chats are closed since 2026-11-21
+      const iTeach = !!user && c.teacherIds.includes(user.uid);
+      if (theyTeach || (iTeach && c.memberIds.includes(uid))) return { classId: c.id, cls: c, theyTeach };
     }
     return null;
   };
@@ -62,7 +63,7 @@ const useCongratulate = () => {
       else {
         const me = find(r.cls);
         const iTeach = r.cls.teacherIds.includes(user.uid);
-        id = iTeach ? await openThread(me, p, r.classId) : r.theyTeach ? await openThread(p, me, r.classId) : await openPeerThread(me, p, r.classId);
+        id = iTeach ? await openThread(me, p, r.classId) : await openThread(p, me, r.classId);
       }
       openDm(id);
     } catch (e) {

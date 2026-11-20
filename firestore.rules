@@ -664,7 +664,8 @@ service cloud.firestore {
 
     // Three kinds of private chat (kind; an old chat without one is 'teach'):
     //   teach  dms/{teacherUid}_{studentUid} — a teacher and a member of their class (classId links them)
-    //   peer   dms/p_{uidA}_{uidB}          — two members of one class, neither in the kids' mode
+    //   peer   dms/p_{uidA}_{uidB}          — two members of one class: closed since 2026-11-21 (the user: students write
+    //          and call only their teachers and the administration) — no new one, no message, no call; old ones stay readable
     //   admin  dms/a_{uid}                  — a member and the school's administration: any admin reads and
     //          answers (read.staff is the administration's reading); members is the member alone
     // Only the people in it read and write; the superadmin may read every chat.
@@ -680,10 +681,6 @@ service cloud.firestore {
         let c = get(/databases/$(database)/documents/classes/$(classId)).data;
         return a in c.get('memberIds', []) && b in c.get('memberIds', []) && !c.get('archived', false);
       }
-      function kidsOn(u) {
-        let p = /databases/$(database)/documents/students/$(u);
-        return exists(p) && get(p).data.get('kidsMode', {}).get('on', false) == true;
-      }
       // a member a superadmin has let in (or an old member, who has no request)
       function approved(u) {
         let p = /databases/$(database)/documents/memberAccess/$(u);
@@ -698,8 +695,7 @@ service cloud.firestore {
       }
       function stillLinked() {
         let t = thread();
-        return linkOk(t, t.get('classId', ''))
-          && (kindOf(t) != 'peer' || (!kidsOn(t.members[0]) && !kidsOn(t.members[1])));
+        return linkOk(t, t.get('classId', '')) && kindOf(t) != 'peer';
       }
       // an admin answering in an administration chat
       function staffOf(d) { return kindOf(d) == 'admin' && isAdmin() && !(uid() in d.members); }
@@ -718,18 +714,6 @@ service cloud.firestore {
           && d.keys().hasOnly(['kind', 'members', 'teacherUid', 'studentUid', 'classId', 'room', 'names', 'photos',
                'createdAt', 'lastAt', 'lastBy', 'lastText', 'read', 'callAt', 'callBy']);
       }
-      function createPeer() {
-        let d = incoming();
-        return d.get('kind', '') == 'peer'
-          && d.members.size() == 2
-          && d.members[0] != d.members[1]
-          && dmId == 'p_' + d.members[0] + '_' + d.members[1]
-          && uid() in d.members
-          && d.classId is string
-          && classmates(d.members[0], d.members[1], d.classId)
-          && !kidsOn(d.members[0]) && !kidsOn(d.members[1])
-          && d.keys().hasOnly(['kind', 'members', 'classId', 'names', 'photos', 'createdAt', 'lastAt', 'lastBy', 'lastText', 'read']);
-      }
       function createAdmin() {
         let d = incoming();
         return d.get('kind', '') == 'admin'
@@ -744,7 +728,7 @@ service cloud.firestore {
         || (isAdmin() && resource.data.get('kind', 'teach') == 'admin');
       allow list: if isSuperAdmin() || (isSignedIn() && uid() in resource.data.members)
         || (isAdmin() && resource.data.kind == 'admin');
-      allow create: if isSignedIn() && (createTeach() || createPeer() || createAdmin());
+      allow create: if isSignedIn() && (createTeach() || createAdmin());
       // each marks only their own reading (the administration its shared one); classId may move to another class
       // the two share. A call (by voice or video): either side of a teacher's or classmates' chat starts it; in an
       // administration chat only an admin answering it (the member only answers); either side ends it
@@ -756,7 +740,7 @@ service cloud.firestore {
              .hasOnly([staffOf(existing()) ? 'staff' : uid()])
         && (!changed().hasAny(['lastBy']) || incoming().lastBy == uid())
         && (!changed().hasAny(['callAt', 'callBy', 'callKind'])
-            || ((kindOf(existing()) == 'admin' ? staffOf(existing()) : uid() in existing().members)
+            || ((kindOf(existing()) == 'admin' ? staffOf(existing()) : kindOf(existing()) == 'teach' && uid() in existing().members)
                 && incoming().callBy == uid() && changed().hasAll(['callAt'])
                 && incoming().get('callKind', 'video') in ['audio', 'video']));
       allow delete: if isSuperAdmin();
@@ -779,7 +763,7 @@ service cloud.firestore {
       // Who is in the chat's call now (utils/callSession.ts): each writes only their own card
       match /peers/{peerId} {
         allow read: if inThread();
-        allow create, update: if inThread() && peerId == uid() && incoming().uid == uid()
+        allow create, update: if inThread() && kindOf(thread()) != 'peer' && peerId == uid() && incoming().uid == uid()
           && incoming().keys().hasOnly(['uid', 'name', 'photoURL', 'session', 'audio', 'video', 'screen', 'mic', 'cam', 'staff', 'at']);
         allow delete: if isSignedIn() && (peerId == uid() || inThread());
       }
