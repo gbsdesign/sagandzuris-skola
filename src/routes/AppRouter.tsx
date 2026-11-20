@@ -266,7 +266,9 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   // private chats (signed in only)
   // the messages page: the list, and the open chat beside it ('dm'; on a phone the chat alone)
   if (currentPage === 'messages' || currentPage === 'dm') {
-    return user ? (nl ? <LettersPage logoUrl={logoUrl} /> : <MessagesPage logoUrl={logoUrl} />) : homeEl;
+    if (user) return nl ? <LettersPage logoUrl={logoUrl} /> : <MessagesPage logoUrl={logoUrl} />;
+    // a guest who came by an address: the sign-in card, not the home page under the „წერილები“ place
+    return nl && !loading ? <LockedPage what="წერილები" /> : homeEl;
   }
 
   // the old teacher panel (a remembered page, an old link): its parts live on the class page
@@ -278,7 +280,7 @@ export const AppRouter: React.FC<AppRouterProps> = ({ logoUrl }) => {
   if (currentPage === 'birthdays' && !(user && access.member)) return homeEl;
 
   // signed out (e.g. "back" after leaving): the profile has nothing to show
-  if (currentPage === 'profile' && (access.kids || (!user && !loading))) return homeEl;
+  if (currentPage === 'profile' && (access.kids || (!user && !loading))) return nl && !user ? <LockedPage what="პროფილი" /> : homeEl;
 
   if (currentPage === 'profile') return nl ? <ProfileV2 /> : <ProfilePage />;
 

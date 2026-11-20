@@ -831,7 +831,7 @@ const BigNotes: React.FC<{
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain p-2 flex flex-col gap-2">
         {children}
       </div>
-      <div className="shrink-0 safe-bottom border-t border-[#e4d8c4] [@media(max-height:500px)]:border-t-0 [@media(max-height:500px)]:border-l [@media(max-height:500px)]:w-60 px-3 pt-2.5 pb-3 flex flex-col justify-center gap-2.5 bg-white/60">
+      <div className="shrink-0 border-t border-[#e4d8c4] [@media(max-height:500px)]:border-t-0 [@media(max-height:500px)]:border-l [@media(max-height:500px)]:w-60 px-3 pt-2.5 pb-[calc(0.75rem+env(safe-area-inset-bottom,0px))] flex flex-col justify-center gap-2.5 bg-white/60">
         <p className="text-[14.5px] leading-snug font-semibold text-[#2a2017]" aria-live="polite">{say}</p>
         <button type="button" onClick={main.run} disabled={main.disabled}
           className="relative w-full min-h-14 rounded-2xl bg-[#7a2028] text-[#fbf6ec] inline-flex items-center justify-center gap-2.5 text-[16px] font-bold cursor-pointer active:scale-[0.985] transition shadow-[0_10px_20px_-12px_rgba(122,32,40,0.9)] disabled:opacity-60 disabled:cursor-default [&_svg]:w-5 [&_svg]:h-5">
