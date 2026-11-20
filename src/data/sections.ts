@@ -68,7 +68,7 @@ export const EXTRA_SWITCHES: { id: ExtraId; label: string; hint: string }[] = [
   { id: 'recOffline', label: 'ჩანაწერების ოფლაინი', hint: '☁ ჩანაწერის ინტერნეტის გარეშე შენახვა — მასწავლებლებს და ადმინებს ყოველთვის ჩანს' },
   { id: 'aiTeacher', label: 'AI მასწავლებელი', hint: 'დღის გაკვეთილი ოსტატობასა და გზაზე — ჯერ მხოლოდ ადმინები ხედავენ' },
   { id: 'newLook', label: 'ახალი სახე', hint: 'ქვედა მენიუ, ერთი ზედა ზოლი, პარამეტრები, შეტყობინებები და ძებნა გვერდებად' },
-  { id: 'newEar', label: 'ახალი ყური', hint: 'აპი სიმღერას ახალი ყურით ისმენს — ჯერ მხოლოდ ადმინებთან. შემოწმება: ჩემი ხმა → ხმის ზომა → ყურის შემოწმება' },
+  { id: 'newEar', label: 'ახალი მოსმენა', hint: 'აპი სიმღერას ახლებურად ისმენს: დაბალ და ჩუმ ხმას იგებს, ოქტავას არ ურევს. დამალული = მხოლოდ ადმინებთან. შემოწმება: ჩემი ხმა → ხმის ზომა' },
 ];
 export const isExtra = (id: string): id is ExtraId => EXTRA_SWITCHES.some(x => x.id === id);
 
@@ -83,8 +83,9 @@ export const DEFAULT_SECTION_STATE: Record<SwitchId, SectionState> = {
   aiTeacher: 'hidden',
   // the new look: open for everyone since 2026-11-18 (the user: „ჩართე ყველასთვის ახლავე“); an admin can still hide it here
   newLook: 'open',
-  // the app's new ear (AI teacher 2.0, stage 1, 2026-11-21): admins sing through it first; the trial page shows both ears
-  newEar: 'hidden',
+  // the app's new ear, „ახალი მოსმენა“ (AI teacher 2.0, stage 1): open for everyone since 2026-11-21 (the user: „თავად ჩართე“);
+  // an admin can still hide it here — then only admins sing through it
+  newEar: 'open',
 };
 
 /** A „მალე“ section the admin gave a day (settings/sections.openOn, YYYY-MM-DD) opens by itself on that day in Georgia;

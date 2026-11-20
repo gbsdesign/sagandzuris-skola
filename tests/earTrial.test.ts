@@ -44,8 +44,8 @@ test('all the takes together, and the last word', () => {
   const total = trialTotal([good, poor])!;
   assert.equal(total.now.heard, 1);
   assert.ok(total.was.heard > 0.7 && total.was.heard < 0.8);
-  assert.deepEqual(trialVerdict(total), { good: true, text: 'ახალ ყურს შენი ხმა კარგად ესმის — ძველზე უკეთ.' });
-  assert.equal(trialVerdict({ now: total.now, was: total.now }).text, 'ახალ ყურს შენი ხმა კარგად ესმის.');
+  assert.deepEqual(trialVerdict(total), { good: true, text: 'აპს შენი ხმა ახლა კარგად ესმის — ძველზე უკეთ.' });
+  assert.equal(trialVerdict({ now: total.now, was: total.now }).text, 'აპს შენი ხმა კარგად ესმის.');
   assert.equal(trialVerdict({ now: total.was, was: { heard: 0.5, breaks: 9, slips: 2 } }).good, false);
   assert.match(trialVerdict({ now: total.was, was: total.was }).text, /მოგვწერე/);
 });
