@@ -1,6 +1,11 @@
-// The microphone while a member sings a pearl's phrase: the pitch every 40 ms for the live mirror and the score,
-// and the take itself (MP3) for the teacher and the AI teacher. One stream feeds both.
-import { detectPitch, freqToMidi } from './pitch';
+// The microphone while a member sings: the pitch every 40 ms for the live mirror and the score, and the take itself
+// (MP3) for the teacher and the AI teacher. One stream feeds both. Every singing part of the app listens through here.
+// With the new ear (utils/ear.ts; its switch `newEar` — utils/earChoice.ts) each look is kept in the voice's octave as
+// it comes and the whole take is tidied on `stop`; without it the first ear listens as before.
+import { cleanFrames, earFollower, hearPitch } from './ear';
+import { oldDetectPitch } from './earOld';
+import { newEarOn } from './earChoice';
+import { freqToMidi } from './pitch';
 import { pickMime, toMp3 } from './voiceRecorder';
 import { singingOnOthersPage } from './othersPage';
 import { holdUpdates, holdUpdatesFor } from './appUpdate';
@@ -13,6 +18,10 @@ export interface SingSession { stop: () => Promise<SingTake>; cancel: () => void
 
 export { singingOnOthersPage } from './othersPage';
 
+/** A copy of a session's looks so far, tidied as `stop` tidies them — for the parts that read `frames` without stopping. */
+export const tidyFrames = <F extends { t: number; midi: number | null }>(frames: F[]): F[] =>
+  (newEarOn() ? cleanFrames(frames) : [...frames]);
+
 export const singingSupported = () =>
   !singingOnOthersPage()
   && typeof navigator !== 'undefined' && !!navigator.mediaDevices?.getUserMedia && typeof window.AudioContext !== 'undefined';
@@ -24,8 +33,18 @@ const setAudioSession = (type: 'play-and-record' | 'auto') => {
   if (s) try { s.type = type; } catch { /* not supported */ }
 };
 
+/** `tap` gets each look's raw sound (the same buffer every time — read it at once); `newEar` asks for the new ear
+ *  whatever the switch says; `record: false` keeps no MP3, so `stop` answers at once — all three are the trial page's. */
+export interface SingOptions {
+  tap?: (buf: Float32Array, sampleRate: number, t: number) => void;
+  newEar?: boolean;
+  record?: boolean;
+}
+
 /** Asks for the microphone and starts listening; throws if the member refuses access. */
-export const startSinging = async (onPitch: (midi: number | null, t: number) => void, everyMs = 40): Promise<SingSession> => {
+export const startSinging = async (
+  onPitch: (midi: number | null, t: number) => void, everyMs = 40, o: SingOptions = {},
+): Promise<SingSession> => {
   setAudioSession('play-and-record');
   // no echo/noise processing: it chops sustained sung notes
   const stream = await navigator.mediaDevices.getUserMedia({
@@ -39,20 +58,25 @@ export const startSinging = async (onPitch: (midi: number | null, t: number) => 
   const buf = new Float32Array(analyser.fftSize);
   const frames: SingFrame[] = [];
   const t0 = performance.now();
+  // the ear is chosen once a take
+  const fresh = o.newEar ?? newEarOn();
+  const follow = earFollower();
   const timer = window.setInterval(() => {
     analyser.getFloatTimeDomainData(buf);
-    const f = detectPitch(buf, ctx.sampleRate);
-    const midi = f ? freqToMidi(f) : null;
+    const t = performance.now() - t0;
+    let midi: number | null;
+    if (fresh) midi = follow(hearPitch(buf, ctx.sampleRate), t);
+    else { const f = oldDetectPitch(buf, ctx.sampleRate); midi = f ? freqToMidi(f) : null; }
     let sum = 0;
     for (let i = 0; i < buf.length; i++) sum += buf[i] * buf[i];
-    const t = performance.now() - t0;
     frames.push({ t, midi, rms: Math.sqrt(sum / buf.length) });
+    o.tap?.(buf, ctx.sampleRate, t);
     onPitch(midi, t);
   }, everyMs);
 
   let rec: MediaRecorder | null = null;
   const chunks: Blob[] = [];
-  if (typeof MediaRecorder !== 'undefined') {
+  if (o.record !== false && typeof MediaRecorder !== 'undefined') {
     try {
       const mime = pickMime();
       rec = new MediaRecorder(stream, mime ? { mimeType: mime } : undefined);
@@ -76,7 +100,8 @@ export const startSinging = async (onPitch: (midi: number | null, t: number) => 
     t0,
     stop: () => new Promise<SingTake>(resolve => {
       const seconds = (performance.now() - t0) / 1000;
-      const done = (mp3: Blob | null) => resolve({ frames, mp3, seconds });
+      // in hindsight: a short octave slip, a stray look and a tiny gap are mended before anything is scored
+      const done = (mp3: Blob | null) => resolve({ frames: fresh ? cleanFrames(frames) : frames, mp3, seconds });
       window.clearInterval(timer);
       if (!rec || rec.state === 'inactive') { release(); done(null); return; }
       rec.onstop = () => {

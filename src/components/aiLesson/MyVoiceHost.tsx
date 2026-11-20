@@ -1,10 +1,11 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useOpenLearning } from '../learn/openLearning';
 import { useBackToClose } from '../../utils/backToClose';
 import { saveAiNote, useAiNote } from './useAiNote';
 import { MyVoice } from './MyVoice';
 import { VoiceCheck } from './VoiceCheck';
-import type { MyVoiceTab } from './open';
+import { EarTest } from './EarTest';
+import { earTestTaken, earTestWanted, type MyVoiceTab } from './open';
 
 // „ჩემი ხმა“ as App opens it (open.ts `openMyVoice`): the page itself, the two-minute check again („თავიდან გავზომო“), and
 // „ივარჯიშე ეს ფრაზა“ — which closes this page (and the lesson under it, if any) and opens the piece in its learning mode.
@@ -19,6 +20,10 @@ export const MyVoiceHost: React.FC<{ tab: MyVoiceTab; onClose: () => void }> = (
   const [shown, setShown] = useState<MyVoiceTab>(tab);
   // the phone's back leaves the check again for „ჩემი ხმა“, not the whole page
   useBackToClose(check, () => setCheck(false));
+  // „ყურის შემოწმება“ (AI teacher 2.0, stage 1): the same way — an inner screen the phone's back closes
+  const [ear, setEar] = useState(earTestWanted);
+  useEffect(earTestTaken, []);
+  useBackToClose(ear, () => { setEar(false); setShown('range'); });
 
   const practice = (piece: string) => {
     // back out of this page and the lesson under it, then open the piece once the history has settled
@@ -27,6 +32,15 @@ export const MyVoiceHost: React.FC<{ tab: MyVoiceTab; onClose: () => void }> = (
     window.setTimeout(() => openLearning(piece), 180);
   };
 
+  if (ear) {
+    return (
+      <div className="fixed inset-0 z-[75] flex flex-col overflow-y-auto overscroll-contain bg-page pt-[env(safe-area-inset-top)] text-ink safe-x">
+        <div className="mx-auto flex min-h-full w-full max-w-[560px] flex-col">
+          <EarTest onBack={() => { setEar(false); setShown('range'); }} />
+        </div>
+      </div>
+    );
+  }
   if (check) {
     const done = (v?: Parameters<React.ComponentProps<typeof VoiceCheck>['onDone']>[0]) => {
       if (v && ai.uid) void saveAiNote(ai.uid, { voice: { ...v, at: ai.today }, skip: undefined });
@@ -48,5 +62,5 @@ export const MyVoiceHost: React.FC<{ tab: MyVoiceTab; onClose: () => void }> = (
       </div>
     );
   }
-  return <MyVoice key={shown} startTab={shown} onClose={onClose} onRemeasure={() => setCheck(true)} onPractice={piece => practice(piece)} />;
+  return <MyVoice key={shown} startTab={shown} onClose={onClose} onRemeasure={() => setCheck(true)} onEarTest={() => setEar(true)} onPractice={piece => practice(piece)} />;
 };

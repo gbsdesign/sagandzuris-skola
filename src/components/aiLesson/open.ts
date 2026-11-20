@@ -36,6 +36,12 @@ let voiceWanted: MyVoiceTab | null = null;
 
 export const openMyVoice = (tab: MyVoiceTab = 'diary') => { voiceWanted = tab; window.dispatchEvent(new Event(VOICE_EVENT)); };
 
+// „ყურის შემოწმება“ (EarTest) straight away — the link /?open=ear: „ჩემი ხმა“ opens with it on top
+let earWanted = false;
+export const openEarTest = () => { earWanted = true; openMyVoice('range'); };
+export const earTestWanted = () => earWanted;
+export const earTestTaken = () => { earWanted = false; };
+
 export const useMyVoiceOpen = () => {
   const [tab, setTab] = useState<MyVoiceTab | null>(null);
   useEffect(() => {

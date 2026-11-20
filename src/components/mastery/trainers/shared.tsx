@@ -8,7 +8,7 @@ import type { Timed } from '../../../utils/chantClips';
 import { saveDrillScore, useDrillScores } from '../../../utils/drillScores';
 import { markDrillDone } from '../../../utils/maneraPractice';
 import { noteName } from '../../../utils/pearls';
-import { singingSupported, startSinging, type SingSession } from '../../../utils/singCapture';
+import { singingSupported, startSinging, tidyFrames, type SingSession } from '../../../utils/singCapture';
 import type { Frame } from '../../../utils/earTrainer';
 import { PASS } from '../../../utils/masteryPath';
 import { triggerHaptic } from '../../../utils/haptics';
@@ -92,7 +92,7 @@ export const useMic = () => {
         if (session.current !== own || performance.now() >= until || (o.stopWhen && o.stopWhen(frames))) { window.clearInterval(tick); resolve(); }
       }, 80);
     });
-    const out = { frames: [...frames], t0: own.t0 };
+    const out = { frames: tidyFrames(frames), t0: own.t0 };
     if (session.current === own) stop();
     return out;
   }, [stop]);
