@@ -94,7 +94,7 @@ const GroupView: React.FC<{ group: PsalterGroup; canLead: boolean }> = ({ group,
       <Card>
         <CardTitle
           icon={<LayoutGrid />}
-          title="ციკლის კითხვა"
+          title="წრის კითხვა"
           hint={read === KATHISMA_COUNT ? 'მთელი ფსალმუნი წაკითხულია — დიდება ღმერთს!' : undefined}
           className="!items-center"
         />
@@ -218,14 +218,14 @@ const HowItWorks: React.FC<{ shiftDays?: number[] }> = ({ shiftDays }) => {
 
 const HowList: React.FC<{ shiftDays?: number[] }> = ({ shiftDays }) => (
   <ul className="mt-1 mb-2 space-y-2 text-[14px] leading-relaxed text-[#4a3426] list-disc pl-5 marker:text-[#7a2028]">
-    <li>ჯგუფი ყოველ ციკლში (1–7 დღე) მთელ ფსალმუნს კითხულობს: 20 კანონს — თითო წევრი თითოს.</li>
+    <li>ჯგუფი ყოველ წრეში (1–7 დღე) მთელ ფსალმუნს კითხულობს: 20 კანონს — თითო წევრი თითოს.</li>
     <li>ყოველი თვის {shiftDaysText(shiftDays)} რიცხვში ყველა თავისით გადადის შემდეგ კანონზე (7 → 8, 20 → 1). ასე დროთა განმავლობაში ყველა ყველა კანონს გაივლის.</li>
-    <li>წაკითხვის შემდეგ აქ დააჭირე „წავიკითხე“. შემთხვევით მონიშვნა ციკლის ბოლომდე უქმდება.</li>
+    <li>წაკითხვის შემდეგ აქ დააჭირე „წავიკითხე“. შემთხვევით მონიშვნა წრის ბოლომდე უქმდება.</li>
     <li>ვერ კითხულობ? დააჭირე „დახმარება მჭირდება“ — ჯგუფი დაინახავს და ვინმე აიღებს.</li>
     <li>როცა ვინმე დახმარებას ითხოვს, სხვა წევრს შეუძლია მისი კანონი „აიღოს“. თუ ორი ერთად აიღებს, პირველს ერგება.</li>
     <li>ინტერნეტის გარეშე მონიშვნა ტელეფონში ინახება და კავშირის აღდგენისას იგზავნება. დრო საქართველოს დროით ითვლება.</li>
     <li>ყოველ „დიდებაზე“ კანონის ტექსტში ჯგუფის წევრების სახელები ჩანს მოსახსენებლად.</li>
-    <li>შეხსენებები (ამ მოწყობილობაზე, საიტი დახურულიც რომ იყოს): საღამოს — თუ დღეს არ წაგიკითხავს; ციკლის ბოლოს — თუ კანონი წაუკითხავია; გადასვლის დღეს — შენი ახალი კანონი; როცა შენს კანონს ვინმე აიღებს ან ჯგუფს დახმარება სჭირდება.</li>
+    <li>შეხსენებები (ამ მოწყობილობაზე, საიტი დახურულიც რომ იყოს): საღამოს — თუ დღეს არ წაგიკითხავს; წრის ბოლოს — თუ კანონი წაუკითხავია; გადასვლის დღეს — შენი ახალი კანონი; როცა შენს კანონს ვინმე აიღებს ან ჯგუფს დახმარება სჭირდება.</li>
   </ul>
 );
 
@@ -279,7 +279,7 @@ export const CreateGroupSheet: React.FC<{
   const create = async () => {
     if (!user) return;
     if (!name.trim()) { msg.fail('დაარქვი ჯგუფს სახელი.'); return; }
-    if (days === null) { msg.fail(`ციკლი 1-დან ${MAX_CYCLE_DAYS} დღემდე შეიძლება.`); return; }
+    if (days === null) { msg.fail(`წრე 1-დან ${MAX_CYCLE_DAYS} დღემდე შეიძლება.`); return; }
     if (shiftDays === null) { msg.fail('გადასვლის რიცხვები 1-დან 28-მდე ჩაწერე, მძიმით: მაგ. 1, 15.'); return; }
     setSaving(true);
     try {
@@ -320,7 +320,7 @@ export const CreateGroupSheet: React.FC<{
         <div><Label>სახელი</Label><input className={FIELD} value={name} onChange={e => setName(e.target.value)} placeholder="მაგ: წმ. ნინოს სახელობის ჯგუფი" autoFocus /></div>
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <Label>ციკლი (დღე)</Label>
+            <Label>წრე (დღე)</Label>
             <input className={`${FIELD} ${days === null ? '!ring-2 !ring-[#9a3324]/50' : ''}`} type="number" inputMode="numeric" min={1} max={MAX_CYCLE_DAYS}
               value={daysText} onChange={e => setDaysText(e.target.value)} />
           </div>
@@ -331,7 +331,7 @@ export const CreateGroupSheet: React.FC<{
           </div>
         </div>
         <p className="text-[13px] text-[#8a7a6a] leading-relaxed">
-          ციკლში 20-ვე კანონი იკითხება (1–{MAX_CYCLE_DAYS} დღე). {shiftDays ? `${shiftDaysText(shiftDays)} რიცხვში` : 'გადასვლის რიცხვებში (1–28)'} ყველა შემდეგ კანონზე გადადის.
+          წრეში 20-ვე კანონი იკითხება (1–{MAX_CYCLE_DAYS} დღე). {shiftDays ? `${shiftDaysText(shiftDays)} რიცხვში` : 'გადასვლის რიცხვებში (1–28)'} ყველა შემდეგ კანონზე გადადის.
           {preset ? `კლასის ${preset.members.length} წევრი ჯგუფში თავიდანვე იქნება; შექმნის შემდეგ „მართვაში“ გაუნაწილე კანონები.` : 'შექმნის შემდეგ „მართვაში“ დაამატე წევრები და გაუნაწილე კანონები.'}
         </p>
         <Flash flash={msg.flash} onClose={msg.clear} />

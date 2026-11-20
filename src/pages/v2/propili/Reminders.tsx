@@ -1,25 +1,22 @@
 import React, { useState } from 'react';
-import { Bell, CheckCheck, Clock, Moon, RefreshCw, Sun } from 'lucide-react';
-import { useNavigation } from '../../../context';
-import { Button, Card, Chips, Dot, Note, Row, Rows, SectionLabel, Sheet, ToggleRow, TopBar, Two } from '../../../components/ui2';
+import { Bell, CheckCheck, Clock, RefreshCw } from 'lucide-react';
+import { Button, Card, Chips, Dot, Note, Row, Rows, SectionLabel, Sheet, ToggleRow, Two } from '../../../components/ui2';
 import { useRemindersState } from '../../../components/app/RemindersCard';
 import { hourClock } from '../../../data/prayers';
 import { REMIND_TIMES } from '../../../utils/learnReminder';
-import { useNotifyPrefs } from '../../../utils/notifyPrefs';
 import { SwitchLine } from '../shetkobinebebi/parts';
 
-// x-shekhsenebebi — „შეხსენებები“ (settings mapItem `reminders`): every reminder the phone can give, on one screen. The
-// seven prayer hours fold into one row (a tap opens their switches), the habits with a time likewise; the review is one
-// switch whose words open its hour. Under „ახალი“ the morning summary and the quiet hours (the notices' settings,
-// pages/v2/shetkobinebebi — the words open them whole). A tinted line on top while the phone may not show notices.
+// x-shekhsenebebi — the reminders' part of the one page „შეტყობინებები“ (settings mapItem `notify`; the old `reminders`
+// opens the same page — pages/v2/shetkobinebebi/NotifyScreen): every reminder the phone can give. The seven prayer hours
+// fold into one row (a tap opens their switches), the habits with a time likewise; the review is one switch whose words
+// open its hour. A tinted line on top while the phone may not show notices. The morning summary and the quiet hours
+// stand under it on that page — once, not here too (the user's pick of 2026-11-20: one page, no switch twice).
 // The logic is the old window's (components/app/RemindersCard `useRemindersState`).
 
 type Win = null | 'hours' | 'habits' | 'learn';
 
-export const RemindersScreen: React.FC = () => {
-  const { handleGoBack, openMapItem } = useNavigation();
+export const RemindersPart: React.FC = () => {
   const r = useRemindersState();
-  const { prefs, loaded, save } = useNotifyPrefs();
   const [win, setWin] = useState<Win>(null);
   const close = () => setWin(null);
 
@@ -30,34 +27,24 @@ export const RemindersScreen: React.FC = () => {
     : `${r.timed.length} ჩვევას აქვს საათი · ${habitsOn ? `ჩართულია ${habitsOn}` : 'გამორთულია'}`;
 
   return (
-    <div className="flex flex-col">
-      <TopBar title="შეხსენებები" onBack={handleGoBack} />
-      <main className="flex flex-col gap-3 pt-0.5 pb-5">
-        {r.perm !== 'granted' && (
-          <Card pad="none" className="flex items-center gap-3 bg-tint py-3 pr-3 pl-3.5">
-            <Dot icon={<Bell />} />
-            <Two wrap title="შეტყობინებები გამორთულია" sub={r.note || (r.perm === 'denied'
-              ? 'ჩართე ტელეფონის პარამეტრებში — მანამდე შეხსენება მხოლოდ გახსნილ აპში ჩანს'
-              : 'შეხსენება მხოლოდ გახსნილ აპში ჩანს')} />
-            {r.perm === 'default' && <Button size="md" onClick={() => void r.allow()}>ჩართვა</Button>}
-          </Card>
-        )}
+    <>
+      {r.perm !== 'granted' && (
+        <Card pad="none" className="flex items-center gap-3 bg-tint py-3 pr-3 pl-3.5">
+          <Dot icon={<Bell />} />
+          <Two wrap title="შეტყობინებები გამორთულია" sub={r.note || (r.perm === 'denied'
+            ? 'ჩართე ტელეფონის პარამეტრებში — მანამდე შეხსენება მხოლოდ გახსნილ აპში ჩანს'
+            : 'შეხსენება მხოლოდ გახსნილ აპში ჩანს')} />
+          {r.perm === 'default' && <Button size="md" onClick={() => void r.allow()}>ჩართვა</Button>}
+        </Card>
+      )}
 
-        <Rows>
-          <Row lead={<Dot icon={<Clock />} />} title="შვიდგზის ლოცვა" sub={hoursSub} onClick={() => setWin('hours')} />
-          <Row lead={<Dot icon={<CheckCheck />} />} title="ჩვევები" sub={habitsSub} onClick={() => setWin('habits')} />
-          <SwitchLine icon={<RefreshCw />} title="გალობის გამეორება" sub={r.learnAt ? `${r.learnAt}-ზე` : undefined}
-            label="გალობის გამეორება" on={!!r.learnAt} onChange={on => void r.toggleLearn(on)} onOpen={() => setWin('learn')} />
-        </Rows>
-
-        <SectionLabel label="ახალი" className="mt-2" />
-        <Rows aria-busy={!loaded}>
-          <SwitchLine icon={<Sun />} title="დილის შეჯამება" sub={`ერთი შეტყობინება ${prefs.at}-ზე`} label="დილის შეჯამება"
-            on={prefs.summary} onChange={on => void save({ ...prefs, summary: on })} onOpen={() => openMapItem('notify~summary')} />
-          <SwitchLine icon={<Moon />} title="ჩუმი საათები" sub={`${prefs.from} – ${prefs.to}`} label="ჩუმი საათები"
-            on={prefs.quiet} onChange={on => void save({ ...prefs, quiet: on })} onOpen={() => openMapItem('notify')} />
-        </Rows>
-      </main>
+      <SectionLabel label="შეხსენებები" className="mt-2" />
+      <Rows>
+        <Row lead={<Dot icon={<Clock />} />} title="შვიდგზის ლოცვა" sub={hoursSub} onClick={() => setWin('hours')} />
+        <Row lead={<Dot icon={<CheckCheck />} />} title="ჩვევები" sub={habitsSub} onClick={() => setWin('habits')} />
+        <SwitchLine icon={<RefreshCw />} title="გალობის გამეორება" sub={r.learnAt ? `${r.learnAt}-ზე` : undefined}
+          label="გალობის გამეორება" on={!!r.learnAt} onChange={on => void r.toggleLearn(on)} onOpen={() => setWin('learn')} />
+      </Rows>
 
       <Sheet open={win === 'hours'} title="შვიდგზის ლოცვა" onClose={close}>
         <Rows>
@@ -102,6 +89,6 @@ export const RemindersScreen: React.FC = () => {
         {r.learnAt && <Button full kind="quiet" onClick={() => { void r.toggleLearn(false); close(); }}>გამორთვა</Button>}
         <Button full onClick={close} className="mt-2">მზადაა</Button>
       </Sheet>
-    </div>
+    </>
   );
 };

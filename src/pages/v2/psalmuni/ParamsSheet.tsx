@@ -11,7 +11,7 @@ import { REMIND_TIMES, removeGroup, saveSettings, setReading, type SettingsPatch
 type Edit = null | 'name' | 'cycle' | 'shift' | 'daily' | 'final';
 
 const TITLES: Record<Exclude<Edit, null>, string> = {
-  name: 'ჯგუფის სახელი', cycle: 'ციკლი', shift: 'გადასვლა', daily: 'შეხსენება', final: 'ციკლის ბოლოს',
+  name: 'ჯგუფის სახელი', cycle: 'წრე', shift: 'გადასვლა', daily: 'შეხსენება', final: 'წრის ბოლოს',
 };
 
 const timeText = (t: string) => t || 'გამორთული';
@@ -66,10 +66,10 @@ export const ParamsSheet: React.FC<{
           <Msg msg={msg.msg} onClose={msg.clear} />
           <Rows>
             <Row title="სახელი" right={<Val>{group.name}</Val>} onClick={() => setEdit('name')} />
-            <Row title="ციკლი" right={<Val>{group.cycleDays} დღე</Val>} onClick={() => setEdit('cycle')} />
+            <Row title="წრე" right={<Val>{group.cycleDays} დღე</Val>} onClick={() => setEdit('cycle')} />
             <Row title="გადასვლა" right={<Val>{shiftDaysText(group.shiftDays)} რიცხვში</Val>} onClick={() => setEdit('shift')} />
             <Row title="შეხსენება" right={<Val>{timeText(group.remindDaily)}</Val>} onClick={() => setEdit('daily')} />
-            <Row title="ციკლის ბოლოს" right={<Val>{timeText(group.remindFinal)}</Val>} onClick={() => setEdit('final')} />
+            <Row title="წრის ბოლოს" right={<Val>{timeText(group.remindFinal)}</Val>} onClick={() => setEdit('final')} />
             <ToggleRow title="მეც ვკითხულობ" on={reading} onChange={on => void toggleReading(on)} />
             <Row title="განაწილება" right={<Val>ვინ რომელ კანონს</Val>} onClick={onDistribute} />
           </Rows>
@@ -91,8 +91,8 @@ export const ParamsSheet: React.FC<{
           )}
           {edit === 'cycle' && (
             <>
-              <Rows><Row title="ციკლი" sub={`დღე · ${20} კანონი`} right={<Stepper label="ციკლის დღეები" value={cycleDays} min={1} max={MAX_CYCLE_DAYS} onChange={setCycleDays} />} /></Rows>
-              <Note>ციკლში 20-ვე კანონი იკითხება (1–{MAX_CYCLE_DAYS} დღე).</Note>
+              <Rows><Row title="წრე" sub={`დღე · ${20} კანონი`} right={<Stepper label="წრის დღეები" value={cycleDays} min={1} max={MAX_CYCLE_DAYS} onChange={setCycleDays} />} /></Rows>
+              <Note>წრეში 20-ვე კანონი იკითხება (1–{MAX_CYCLE_DAYS} დღე).</Note>
               <Button full disabled={busy} onClick={() => void save({ cycleDays })}>შენახვა</Button>
             </>
           )}

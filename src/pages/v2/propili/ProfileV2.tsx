@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { BarChart3, Camera, ChevronRight, LayoutGrid, Shield, Shirt, SlidersHorizontal, Trash2, Users } from 'lucide-react';
+import { BarChart3, Camera, ChevronRight, LayoutGrid, Settings, Shield, Shirt, Trash2, Users } from 'lucide-react';
 import { useAuth, useNavigation, useViewing } from '../../../context';
 import {
   Avatar, Badge, Card, Dot, PageHead, Press, Row, Rows, RoundButton, SectionLabel, Sheet, Stats,
@@ -98,7 +98,7 @@ const ProfileMain: React.FC = () => {
       <PageHead title="პროფილი" right={
         <>
           <RoundButton label="პარამეტრები" onClick={() => navigateTo('settings')} data-help-way="30 31 32 33 34 35 36 37 39 40">
-            <SlidersHorizontal strokeWidth={1.75} />
+            <Settings strokeWidth={1.75} />
           </RoundButton>
           <HelpButton page="profile" />
         </>
@@ -148,15 +148,15 @@ const ProfileMain: React.FC = () => {
         </>
       )}
 
-      <Rows>
-        <Row lead={<Dot icon={<SlidersHorizontal />} />} title="პარამეტრები" sub="შეხსენებები, ტექსტი, მუქი ფონი" onClick={() => navigateTo('settings')} />
-        {admin.shown && (
+      {/* the settings open only from the bar's ⚙ (the user's pick of 2026-11-20: the row „პარამეტრები“ here opened the same page) */}
+      {admin.shown && (
+        <Rows>
           <Row lead={<Dot icon={<Shield />} />} title="ადმინის პანელი"
             sub={admin.waiting > 0 ? 'ახალი წევრები ელოდება დამატებას' : 'წევრები, კლასები, სკოლა'}
             right={admin.waiting > 0 ? <span className="flex items-center gap-1"><Badge n={admin.waiting} /><ChevronRight aria-hidden="true" className="size-[18px] text-mut" /></span> : undefined}
             onClick={admin.open} />
-        )}
-      </Rows>
+        </Rows>
+      )}
 
       {cropFile && <PhotoCropV2 file={cropFile} onClose={() => setCropFile(null)} onDone={url => { setCropFile(null); keepPhoto(url); }} />}
     </div>

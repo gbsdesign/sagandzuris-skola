@@ -60,7 +60,7 @@ export const MoreSheetView: React.FC<MoreSheetProps> = ({ open, onClose, outfit,
         <SectionLabel label="ფიგურაზე" />
         <Seg
           label="ფიგურაზე"
-          items={[{ id: 'real', label: 'ნამდვილი' }, { id: 'tried', label: 'მოჩვენებითი' }]}
+          items={[{ id: 'real', label: 'ნამდვილი' }, { id: 'tried', label: 'მოსინჯული' }]}
           value={mode.value}
           onChange={mode.onChange}
         />

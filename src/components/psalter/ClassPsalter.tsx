@@ -136,7 +136,7 @@ const GroupSection: React.FC<{ sectionRef: React.Ref<HTMLElement>; cls: SchoolCl
             <div className="mt-3 space-y-2">
               {mine.length === 0 && takenFromMe.length === 0 && (
                 <p className={`px-1 text-[13px] ${canPick ? 'text-[#7a2028] font-semibold' : 'text-[#8a7a6a]'}`}>
-                  {canPick ? 'კანონი ჯერ არ გაქვს — შეეხე თავისუფალ კანონს და აირჩიე.' : 'ამ ციკლში კანონი არ გაქვს'}
+                  {canPick ? 'კანონი ჯერ არ გაქვს — შეეხე თავისუფალ კანონს და აირჩიე.' : 'ამ წრეში კანონი არ გაქვს'}
                 </p>
               )}
               {mine.map(k => <MyLine key={k} group={group} k={k} uid={uid!} slots={slots} owners={owners} left={msLeft(cycle, now)} actions={actions} />)}
@@ -164,7 +164,7 @@ const GroupSection: React.FC<{ sectionRef: React.Ref<HTMLElement>; cls: SchoolCl
           )}
 
           {/* the twenty kanons */}
-          <ul className="mt-3 grid grid-cols-5 sm:grid-cols-10 gap-1.5" aria-label="ციკლის 20 კანონი">
+          <ul className="mt-3 grid grid-cols-5 sm:grid-cols-10 gap-1.5" aria-label="წრის 20 კანონი">
             {ALL_KATHISMAS.map(k => (
               <Tile key={k} group={group} k={k} uid={uid} slots={slots} owners={owners} onOpen={() => { triggerHaptic(8); setTile(k); }} />
             ))}

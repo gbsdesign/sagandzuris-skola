@@ -12,7 +12,6 @@ import { NotifyScreen, SummaryScreen } from '../v2/shetkobinebebi';
 import { TextSizeScreen } from '../v2/parametrebi/TextSizeScreen';
 import { ThemeScreen } from '../v2/parametrebi/ThemeScreen';
 import { PhoneCalendarSheet } from '../v2/kalendari/PhoneCalendarSheet';
-import { RemindersScreen } from '../v2/propili/Reminders';
 import { TEXT_STEPS, THEME_NAMES, useTextLook, useTheme } from '../../design/look';
 
 export { SettingsView } from './settings/SettingsView';
@@ -25,8 +24,8 @@ export type { SettingsViewProps, WidgetLook } from './settings/SettingsView';
 // • „აპის დაყენება“ only where the browser offers it (or on an iPhone, with its two steps);
 // • the kids' mode has no profile, so no personal details, signing out or deleting the account here either;
 // • a guest gets ხუცური, installing, the contacts and the privacy page.
-// The windows: PhoneCalendarSheet (v2/kalendari); „შეხსენებები“ (mapItem `reminders`, board x-shekhsenebebi — v2/propili/
-// Reminders), „ტექსტის ზომა“ and „იერი“ are screens of their own
+// The windows: PhoneCalendarSheet (v2/kalendari); „შეტყობინებები“ (mapItem `notify`, the reminders inside it —
+// v2/shetkobinebebi/NotifyScreen + v2/propili/Reminders), „ტექსტის ზომა“ and „იერი“ are screens of their own
 // (mapItem `text`, `theme`); „პირადი ინფორმაცია“ opens the profile's own screen of it (profile mapItem `info`,
 // pages/v2/propili/PersonalInfo, board x-piradi-inpormatsia).
 
@@ -50,8 +49,8 @@ export const SettingsPage: React.FC = () => {
   const adult = !!user && !access.kids;
   const canInstall = !pwa.isInstalled && (pwa.isInstallable || pwa.isIOS);
 
-  if (member && mapItem === 'reminders') return <RemindersScreen />;
-  if (member && mapItem === 'notify') return <NotifyScreen />;
+  // one page for everything the phone tells; `reminders` is its old second address (a „მკითხე“ answer, an old step)
+  if (member && (mapItem === 'notify' || mapItem === 'reminders')) return <NotifyScreen />;
   if (member && mapItem === 'notify~summary') return <SummaryScreen />;
   // reading comfort (2026-11-18): the text size and the dark look, for everyone signed in
   if (mapItem === 'text') return <TextSizeScreen />;
@@ -61,7 +60,6 @@ export const SettingsPage: React.FC = () => {
     <>
       <SettingsView
         onBack={handleGoBack}
-        onReminders={member ? () => openMapItem('reminders') : undefined}
         onNotify={member ? () => openMapItem('notify') : undefined}
         textSize={{ label: TEXT_STEPS[textLook.step].name, onTap: () => openMapItem('text') }}
         theme={{ label: theme.choice === 'auto' ? 'ტელეფონით' : THEME_NAMES[theme.choice], onTap: () => openMapItem('theme') }}

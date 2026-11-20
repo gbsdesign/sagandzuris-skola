@@ -56,8 +56,8 @@ export const NewGroupSheet: React.FC<{ cls: SchoolClass; open: boolean; onClose:
         <>
           <Field label="სახელი" value={name} onChange={setName} placeholder="მაგ: წმ. ნინოს სახელობის ჯგუფი" />
           <Rows>
-            <Row lead={<Dot icon={<RefreshCw />} size={40} />} title="ციკლი" sub="დღე · 20 კანონი"
-              right={<Stepper label="ციკლის დღეები" value={days} min={1} max={MAX_CYCLE_DAYS} onChange={setDays} />} />
+            <Row lead={<Dot icon={<RefreshCw />} size={40} />} title="წრე" sub="დღე · 20 კანონი"
+              right={<Stepper label="წრის დღეები" value={days} min={1} max={MAX_CYCLE_DAYS} onChange={setDays} />} />
             <Row lead={<Dot icon={<CalendarDays />} size={40} />} title="გადასვლა" sub="კანონის შეცვლის რიცხვები"
               right={<Val>{shiftDays ? shiftDaysText(shiftDays) : '—'}</Val>} onClick={() => setEditShift(true)} />
           </Rows>

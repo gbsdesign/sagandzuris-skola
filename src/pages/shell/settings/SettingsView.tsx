@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ALargeSmall, Bell, BellRing, Calendar, Download, IdCard, LayoutGrid, LogOut, MessageCircle, Shield, SunMoon, Trash2, Type } from 'lucide-react';
+import { ALargeSmall, Bell, Calendar, Download, IdCard, LayoutGrid, LogOut, MessageCircle, Shield, SunMoon, Trash2, Type } from 'lucide-react';
 import { Dot, Row, Rows, SectionLabel, ToggleRow, TopBar, Val } from '../../../components/ui2';
 import { ContactSheet, OutMark } from './ContactSheet';
 
@@ -13,7 +13,7 @@ export type WidgetLook = { linked: boolean; state: 'idle' | 'busy' | 'ready' | '
 export interface SettingsViewProps {
   onBack: () => void;
   // აპი
-  onReminders?: () => void;
+  /** „შეტყობინებები“ — one page: the reminders and how the notices come */
   onNotify?: () => void;
   /** „ტექსტის ზომა“ and „იერი“ (design/look.ts): the row's value and its screen */
   textSize?: { label: string; onTap: () => void };
@@ -54,7 +54,7 @@ const widgetSub = (w: WidgetLook): React.ReactNode =>
     : undefined;
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
-  onBack, onReminders, onNotify, textSize, theme, khutsuri, onKhutsuri, widget, onCalendar, onInstall, onPersonal, privacyHref = '/privacy.html',
+  onBack, onNotify, textSize, theme, khutsuri, onKhutsuri, widget, onCalendar, onInstall, onPersonal, privacyHref = '/privacy.html',
   onSignOut, remove,
 }) => {
   const [contact, setContact] = useState(false);
@@ -63,8 +63,7 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
       <TopBar title="პარამეტრები" onBack={onBack} />
       <main className="flex flex-col gap-2 pt-0.5 pb-5">
         <Group label="აპი">
-          {onReminders && <Row lead={lead(<Bell />)} title="შეხსენებები" onClick={onReminders} />}
-          {onNotify && <Row lead={lead(<BellRing />)} title="შეტყობინებები" onClick={onNotify} />}
+          {onNotify && <Row lead={lead(<Bell />)} title="შეტყობინებები" sub="შეხსენებები და ჩუმი საათები" onClick={onNotify} />}
           {textSize && <Row lead={lead(<ALargeSmall />)} title="ტექსტის ზომა" right={<Val>{textSize.label}</Val>} onClick={textSize.onTap} />}
           {theme && <Row lead={lead(<SunMoon />)} title="იერი" right={<Val>{theme.label}</Val>} onClick={theme.onTap} />}
           <ToggleRow lead={lead(<Type />)} title="ხუცური" sub="მთელი აპი ძველი ასოებით" on={khutsuri} onChange={onKhutsuri} />

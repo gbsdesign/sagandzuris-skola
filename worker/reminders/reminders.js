@@ -635,7 +635,7 @@ async function runGroupHour(env, when) {
         sends.push([row, { title: 'ფსალმუნთა ჯგუფი', body: `${when} შენი კანონია ${list.join(', ')} — ${group.name}`, tag: `shift-${group.id}`, url: `/?prayer=kathisma-${list[0]}` }]);
       } else if (ks.length && (isDaily || isFinal)) {
         const body = isFinal
-          ? `ციკლი დღეს მთავრდება — კანონი ${ks.join(', ')} ჯერ წაკითხული არ გაქვს.`
+          ? `წრე დღეს მთავრდება — კანონი ${ks.join(', ')} ჯერ წაკითხული არ გაქვს.`
           : `დღეს კანონი ${ks.join(', ')} ჯერ არ წაგიკითხავს. ღმერთმა შეგეწიოს!`;
         sends.push([row, { title: group.name || 'ფსალმუნთა ჯგუფი', body, tag: `psalter-${group.id}`, url: `/?prayer=kathisma-${ks[0]}` }]);
       }
@@ -683,7 +683,7 @@ async function groupEvent(request, env) {
   let message = null;
   if (body.kind === 'taken' && slot.takenBy === uid && fresh(slot.takenAt)) {
     targets = owners.filter((o) => o !== uid);
-    message = { title: group.name || 'ფსალმუნთა ჯგუფი', body: `შენი კანონი ${k} ${ergative(name)} აიღო — ამ ციკლში ის წაიკითხავს.`, tag: `taken-${group.id}-${k}`, url: '/?open=psalter' };
+    message = { title: group.name || 'ფსალმუნთა ჯგუფი', body: `შენი კანონი ${k} ${ergative(name)} აიღო — ამ წრეში ის წაიკითხავს.`, tag: `taken-${group.id}-${k}`, url: '/?open=psalter' };
   } else if (body.kind === 'help' && slot.help?.by === uid && fresh(slot.help.at) && !slot.readBy && !slot.takenBy) {
     targets = (group.memberIds || []).filter((m) => m !== uid);
     message = { title: group.name || 'ფსალმუნთა ჯგუფი', body: `${name} დახმარებას ითხოვს — კანონი ${k}. თუ შეგიძლია, აიღე და წაიკითხე.`, tag: `help-${group.id}-${k}`, url: '/?open=psalter' };

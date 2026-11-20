@@ -1,6 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { Clapperboard, ListVideo, Search, Tv, X } from 'lucide-react';
 import { useNavigation } from '../../../context';
+import { useAccess } from '../../../hooks/useAccess';
 import { Dot, Row, Rows, RoundButton, Seg, Small, TopBar } from '../../../components/ui2';
 import { GENRE_NAMES, GENRE_ORDER, KINO, type FilmGenre, type FilmKind, type KinoItem } from '../../../data/georgianFilms';
 import { PAISI_PARTS } from '../../../data/paisiVideos';
@@ -67,15 +68,21 @@ export const FilmsBody: React.FC<FilmNav & { kind: FilmKind; query?: string; sea
 };
 
 const KIND_TAB_KEY = 'sg-films-kind';
+// the games page's tab (pages/v2/tamashebi/GamesV2 reads it as it opens): თამაში · ფილმი · სპექტაკლი · მულტფილმი
+const GAMES_TAB_KEY = 'sg-games-tab';
 const KIND_SEG: { id: FilmKind; label: string }[] = [
   { id: 'film', label: 'ფილმი' }, { id: 'theatre', label: 'სპექტაკლი' }, { id: 'cartoon', label: 'მულტფილმი' },
 ];
 const PAISI_COUNT = PAISI_PARTS.reduce((n, p) => n + p.eps.length, 0);
 
 /** the old page „ვიდეოები“ (a home button, an old history step) in the new look: its three lists — `mapItem` „k“ (the films),
- *  „p“ (St Paisios), „ep“ („ეთნოფორი“'s full episodes), a film adds „/<YouTube id>“ */
+ *  „p“ (St Paisios), „ep“ („ეთნოფორი“'s full episodes), a film adds „/<YouTube id>“.
+ *  The films are ONE list since 2026-11-20 (the user's pick: they stood here and in „სახალისო“): where the games are open
+ *  for the person the row here leads to „სახალისო“'s films, and an old step of a film (`k/<id>`) still plays it over this
+ *  page; someone the games are not open for (a guest) keeps the list here, so nobody loses the films. */
 export const VideosV2: React.FC = () => {
-  const { mapItem, openMapItem, handleGoBack } = useNavigation();
+  const { mapItem, openMapItem, navigateTo, handleGoBack } = useNavigation();
+  const inGames = useAccess().section('tamashebi') === 'open';
   const [list, open] = (mapItem ?? '').split('/');
   const nav: FilmNav = {
     open,
@@ -88,6 +95,7 @@ export const VideosV2: React.FC = () => {
   });
   const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState('');
+  const allFilms = useMemo(() => KINO.map(filmOf), []);
   const toggleSearch = () => { triggerHaptic(10); setSearching(v => !v); setQuery(''); };
   const searchButton = (
     <RoundButton label={searching ? 'ძებნის დახურვა' : 'ძებნა'} tone={searching ? 'wine' : 'surf'} onClick={toggleSearch}>
@@ -97,7 +105,7 @@ export const VideosV2: React.FC = () => {
 
   if (list === 'p') return <PaisiV2 open={open} onPlay={nav.onPlay} onMove={nav.onMove} onClose={nav.onClose} onBack={handleGoBack} />;
   if (list === 'ep') return <Episodes nav={nav} onBack={handleGoBack} />;
-  if (list === 'k') {
+  if (list === 'k' && !inGames) {
     return (
       <Page>
         <TopBar title="ქართული ფილმები" onBack={handleGoBack} right={searchButton} />
@@ -109,14 +117,20 @@ export const VideosV2: React.FC = () => {
     );
   }
   const go = (id: string) => { triggerHaptic(10); openMapItem(id); };
+  const toGames = () => {
+    triggerHaptic(10);
+    try { sessionStorage.setItem(GAMES_TAB_KEY, kind); } catch { /* the games page's own tab then */ }
+    navigateTo('games');
+  };
   return (
     <Page>
       <TopBar title="ვიდეოები" onBack={handleGoBack} />
       <Rows>
-        <Row lead={<Dot icon={<Clapperboard />} />} title="ქართული ფილმები" sub="კინო, სპექტაკლები, მულტფილმები" right={<><Small>{KINO.length}</Small><Chev /></>} onClick={() => go('k')} />
+        <Row lead={<Dot icon={<Clapperboard />} />} title="ქართული ფილმები" sub={inGames ? 'ნახე „სახალისოში“' : 'კინო, სპექტაკლები, მულტფილმები'} right={<><Small>{KINO.length}</Small><Chev /></>} onClick={() => (inGames ? toGames() : go('k'))} />
         <Row lead={<Dot icon={<ListVideo />} />} title="წმინდა პაისი" sub="სერიალი წმინდანის ცხოვრებაზე" right={<><Small>{PAISI_COUNT}</Small><Chev /></>} onClick={() => go('p')} />
         <Row lead={<Dot icon={<Tv />} />} title="სრული გადაცემები" sub="„ეთნოფორის“ ყველა გადაცემა" onClick={() => go('ep')} />
       </Rows>
+      {list === 'k' && open && <VideoPlayer films={allFilms} open={open} onMove={nav.onMove} onClose={nav.onClose} />}
     </Page>
   );
 };
