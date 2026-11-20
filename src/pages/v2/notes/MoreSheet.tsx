@@ -4,7 +4,7 @@
 import React, { useState } from 'react';
 import {
   Bookmark, ChevronDown, CloudDownload, Download, File, FileText, Footprints, Headphones, ListPlus, Music2, Pin, QrCode, Scan,
-  ScanLine, Sun, Type, ZoomIn,
+  ScanLine, Send, Sun, Type, ZoomIn,
 } from 'lucide-react';
 import { cx, FOCUS, FOCUS_IN, Press, RoundButton, Row, Rows, SectionLabel, Sheet, Small, Stepper, ToggleRow } from '../../../components/ui2';
 import { Fork } from './BottomBar';
@@ -58,6 +58,8 @@ export const MoreSheet: React.FC<{
   /** the teacher's service being composed: this chant's № in it, or null */
   program?: { num: number | null; onToggle: () => void };
   onShare: () => void;
+  /** „გაუგზავნე კლასს ან მოსწავლეს“: teachers and admins only */
+  onSend?: () => void;
   onScan: () => void;
   offline: { done: boolean; busy: boolean; onSave: () => void };
   /** PDF of the notes, MP3 of the synthesizer per voice, MP3 of the recording per voice */
@@ -160,6 +162,9 @@ export const MoreSheet: React.FC<{
             right={p.program.num ? <Small tone="wine">ამოღება</Small> : 'chev'}
             onClick={p.program.onToggle}
           />
+        )}
+        {p.onSend && (
+          <Row lead={<Ic><Send /></Ic>} title="გაუგზავნე კლასს ან მოსწავლეს" sub="ჩათში" onClick={p.onSend} wrap />
         )}
         <Row lead={<Ic><QrCode /></Ic>} title="გაზიარება და QR" onClick={p.onShare} />
         <Row lead={<Ic><ScanLine /></Ic>} title="QR კოდის წაკითხვა" sub="კამერით" onClick={p.onScan} />
