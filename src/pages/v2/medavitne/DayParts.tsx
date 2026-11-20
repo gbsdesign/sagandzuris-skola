@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { BookOpen, ChevronDown, Music, ScrollText } from 'lucide-react';
+import { ArrowDown, ArrowRight, BookOpen, ChevronDown, Flag, Music, ScrollText } from 'lucide-react';
 import { Card, Press, cx } from '../../../components/ui2';
 import { useNavigation } from '../../../context';
 import { triggerHaptic } from '../../../utils/haptics';
@@ -205,13 +205,43 @@ const PriestText: React.FC<{ list: TextSrc[] }> = ({ list }) => (
   </Card>
 );
 
-/** everything under an opened step */
-export const StepBody: React.FC<{ s: Step; inp: DayInput; priestOn: boolean; onTone: () => void }> = ({ s, inp, priestOn, onTone }) => (
+/** „შემდეგი“ at the end of an opened step: the next step's name — or the next service's (`across`). `strong`: the step the
+ *  reader is on, where it is the one thing to press. */
+export const NextButton: React.FC<{ kicker: string; title: string; strong?: boolean; across?: boolean; onClick: () => void }> = ({
+  kicker, title, strong, across, onClick,
+}) => (
+  <Press onClick={onClick}
+    className={cx(
+      'flex min-h-tap-lg w-full cursor-pointer items-center gap-3 rounded-tile px-4 py-2.5 text-left transition active:scale-[0.99]',
+      'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine/60 [&_svg]:size-5 [&_svg]:shrink-0',
+      strong ? 'bg-wine text-white' : 'bg-tint text-wine',
+    )}>
+    <span className="flex min-w-0 flex-1 flex-col">
+      <span className={cx('text-cap font-bold', strong ? 'text-white/85' : 'text-mut')}>{kicker}</span>
+      <span className="line-clamp-2 text-body leading-snug font-bold wrap-break-word">{title}</span>
+    </span>
+    {across ? <ArrowRight aria-hidden="true" strokeWidth={2} /> : <ArrowDown aria-hidden="true" strokeWidth={2} />}
+  </Press>
+);
+
+/** a quiet way to say that something here does not match the service (it goes to the administration as a letter) */
+export const ReportLink: React.FC<{ onClick: () => void }> = ({ onClick }) => (
+  <Press onClick={onClick}
+    className="-mb-2.5 flex min-h-tap cursor-pointer items-center gap-1.5 self-end rounded-full px-2 text-meta font-semibold text-mut focus-visible:outline-2 focus-visible:outline-wine/60 [&_svg]:size-4 [&_svg]:shrink-0">
+    <Flag aria-hidden="true" strokeWidth={1.75} />შეცდომა ვნახე
+  </Press>
+);
+
+/** everything under an opened step; `children` — what closes it („შემდეგი“, „შეცდომა ვნახე“) */
+export const StepBody: React.FC<{ s: Step; inp: DayInput; priestOn: boolean; onTone: () => void; children?: React.ReactNode }> = ({
+  s, inp, priestOn, onTone, children,
+}) => (
   <div className="sg-in flex flex-col gap-2.5 px-4 pt-0.5 pb-4">
     {s.note && <p className="text-body leading-snug font-semibold text-wine">{s.note}</p>}
     {s.hint && <p className="text-meta leading-snug text-mut">{s.hint}</p>}
     {s.read && <ReadFlow read={s.read} inp={inp} />}
     {priestOn && s.pt && <PriestText list={s.pt} />}
     <Extras step={s} inp={inp} onTone={onTone} />
+    {children}
   </div>
 );

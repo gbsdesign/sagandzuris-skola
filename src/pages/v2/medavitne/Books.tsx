@@ -1,17 +1,19 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { BookOpen, CalendarDays, ChevronLeft, ChevronRight, Library, List, ScanText } from 'lucide-react';
+import { BookOpen, CalendarDays, ChevronDown, ChevronLeft, ChevronRight, History, Library, List, ScanText, ScrollText } from 'lucide-react';
 import { Button, Card, Chips, Dot, Helper, Hero, Note, Num, Pill, Press, RoundButton, Row, Rows, SectionLabel, TopBar, cx } from '../../../components/ui2';
 import { useNavigation } from '../../../context';
 import { WIGNEBI_COLLECTIONS, WIGNEBI_SHELVES, type WignebiCollection } from '../../../data/wignebi';
 import { EXTRA_BOOKS, EXTRA_GROUPS } from '../../../data/extraBooks';
 import { triggerHaptic } from '../../../utils/haptics';
+import { otherBooks, readerBooks, type BookEntry } from '../../../utils/readerBooks';
 import {
   EXTRA, MONTHS, SHELF_ICONS, countWord, kickerOf, tbilisiToday, useFile, type BookFile, type CalFile,
 } from '../../medavitneoba/Wignebi';
 import { AutoRound, TextSizeButton, useReaderFont } from '../library/parts';
 import { BottomBar, Page, Waiting } from './parts';
 
-// „წიგნები მედავითნისთვის“ in the new look (boards x-medavitne, x-medavitne-tsigni): the shelves as one card of rows, a book's
+// „წიგნები მედავითნისთვის“ in the new look (boards x-medavitne, x-medavitne-tsigni): „ბოლოს გახსნილი“, then the reader's own
+// books as one card of rows with the rest folded under „სხვა წიგნები“ (utils/readerBooks), a book's
 // list with „გააგრძელე“ on top (where the reader stopped is kept on the device) and its numbered items as a grid, the text on
 // a screen of its own like a library chapter (‹ ›, the size, ⏬). The places are the old page's `mapItem` („w…“, Wignebi.tsx).
 
@@ -25,17 +27,55 @@ const readLast = (): Record<string, string> => {
 const saveLast = (coll: string, place: string) => {
   try { localStorage.setItem(LAST_KEY, JSON.stringify({ ...readLast(), [coll]: place })); } catch { /* private window */ }
 };
+// the text opened last, in any book: the front page's „ბოლოს გახსნილი“
+const RECENT_KEY = 'sg-wignebi-recent';
+type Recent = { c: string; p: string; t: string; s: string };
+const readRecent = (): Recent | null => {
+  try {
+    const v = JSON.parse(localStorage.getItem(RECENT_KEY) || 'null');
+    if (!v || typeof v.c !== 'string' || typeof v.p !== 'string' || typeof v.t !== 'string') return null;
+    const c = v.c === EXTRA.id ? EXTRA : WIGNEBI_COLLECTIONS[v.c];
+    // a book the app no longer holds is forgotten
+    if (!c || !c.items.some(it => it.n === Number(v.p.split(':')[0]))) return null;
+    return { c: v.c, p: v.p, t: v.t, s: typeof v.s === 'string' ? v.s : '' };
+  } catch { return null; }
+};
+const saveRecent = (r: Recent) => { try { localStorage.setItem(RECENT_KEY, JSON.stringify(r)); } catch { /* private window */ } };
+// „სხვა წიგნები“ stays unfolded for the visit, so coming back from a book finds it as it was left
+const MORE_KEY = 'sg-medavitne-more-books';
 
-/** the shelves' rows (the reader's front page shows them under the course) */
+/** the books' rows on the reader's front page: the text opened last, the reader's own books, the rest under a fold */
 export const ShelfRows: React.FC<{ open: Open }> = ({ open }) => {
-  const go = (id: string, colls: string[]) => open(colls.length === 1 ? `w:c:${colls[0]}` : `w:s:${id}`);
+  const [more, setMore] = useState(() => { try { return sessionStorage.getItem(MORE_KEY) === '1'; } catch { return false; } });
+  const flip = () => {
+    const v = !more;
+    setMore(v);
+    try { sessionStorage.setItem(MORE_KEY, v ? '1' : '0'); } catch { /* private window */ }
+  };
+  const recent = useMemo(readRecent, []);
+  const mine = useMemo(readerBooks, []);
+  const rest = useMemo(otherBooks, []);
+  const row = (b: BookEntry) => {
+    const Icon = SHELF_ICONS[b.id] ?? (WIGNEBI_SHELVES.some(s => s.id === b.id) ? BookOpen : ScrollText);
+    return <Row key={b.id} lead={<Dot icon={<Icon />} />} title={b.title} sub={b.sub} wrap onClick={() => open(b.to)} />;
+  };
+  const recentBook = recent ? kickerOf(recent.c === EXTRA.id ? EXTRA : WIGNEBI_COLLECTIONS[recent.c], Number(recent.p.split(':')[0])) : '';
   return (
     <>
+      {recent && (
+        <Rows>
+          <Row lead={<Dot icon={<History />} color="gold" />} title={recent.t} wrap
+            sub={['ბოლოს გახსნილი', recentBook !== recent.t ? recentBook : '', recent.s].filter(Boolean).join(' · ')}
+            onClick={() => open(`w:c:${recent.c}:${recent.p}`)} />
+        </Rows>
+      )}
       <Rows aria-label="წიგნები მედავითნისთვის">
-        {WIGNEBI_SHELVES.map(s => {
-          const Icon = SHELF_ICONS[s.id] ?? BookOpen;
-          return <Row key={s.id} lead={<Dot icon={<Icon />} />} title={s.title.replace('­', '')} sub={s.sub} wrap onClick={() => go(s.id, s.collections)} />;
-        })}
+        {mine.map(row)}
+        <Row lead={<Dot icon={<Library />} color="soft" />} title="სხვა წიგნები" wrap aria-expanded={more}
+          sub={`${rest.slice(0, 3).map(b => b.title).join(', ')}${rest.length > 3 ? ` და კიდევ ${rest.length - 3}` : ''}`}
+          right={<ChevronDown aria-hidden="true" className={cx('size-[18px] shrink-0 text-mut transition-transform', more && 'rotate-180')} strokeWidth={2} />}
+          onClick={flip} />
+        {more && rest.map(row)}
       </Rows>
       <Rows>
         <Row lead={<Dot icon={<Library />} color="gold" />} title={EXTRA.title} wrap
@@ -216,7 +256,12 @@ const Reader: React.FC<{ c: WignebiCollection; n: number; book: BookFile; part: 
   const textRef = useRef<HTMLElement>(null);
   const p = book.c[part];
   const many = book.c.length > 1;
-  useEffect(() => { if (p) saveLast(c.id, many ? `${n}:${part}` : String(n)); }, [c.id, n, part, many, p]);
+  useEffect(() => {
+    if (!p) return;
+    const place = many ? `${n}:${part}` : String(n);
+    saveLast(c.id, place);
+    saveRecent({ c: c.id, p: place, t: book.t, s: book.num ? `თავი ${p.l}` : many ? p.l : '' });
+  }, [c.id, n, part, many, p, book.t, book.num]);
   if (!p) return null;
   const go = (id: string) => { triggerHaptic(10); open(id, true); window.scrollTo({ top: 0 }); };
   // a one-part item of a list (a kanon, an hour) goes on to the list's next item

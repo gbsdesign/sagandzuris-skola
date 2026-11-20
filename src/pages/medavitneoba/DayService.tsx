@@ -10,8 +10,9 @@ import { useMembership } from '../../utils/memberAccess';
 import { triggerHaptic } from '../../utils/haptics';
 import { toneName } from '../../utils/dayReadings';
 import {
-  DEFAULT_ORDER, RANKS, PATRON_PRESETS, WHO_LABEL, buildServices, isOrder, greatFeastOf, guessRank, hymnsOf, oldMD, patronDay, periodOf, rankLabel, seasonOf,
-  weekTone, type DayInput, type Extra, type Hymn, type Patron, type Rank, type Read, type ServiceId, type Step, type TempleOrder,
+  DEFAULT_ORDER, RANKS, PATRON_PRESETS, WHO_LABEL, buildServices, isOrder, greatFeastOf, guessRank, hymnsOf, nowPart, nowWord, oldMD, patronDay, periodOf,
+  rankLabel, seasonOf, serviceAfter, serviceNow, weekTone, type DayInput, type Extra, type Hymn, type Patron, type Rank, type Read, type ServiceId, type Step,
+  type TempleOrder,
 } from '../../utils/dayService';
 import { useTemplePatron } from '../../hooks/useTemplePatron';
 import { FEAST_RULES } from '../../data/churchFeasts';
@@ -620,15 +621,21 @@ const useDaySaver = (on: boolean, today: string, ranks: Record<string, string>, 
   }, [a.ready, b.ready, a.inp, b.inp]);
 };
 
+/** „ახლა“: the church day and the part of it served at this hour of the phone's clock (utils/dayService nowPart) */
+const readNow = (today: string) => { const hour = new Date().getHours(); return { ...nowPart(today, hour), hour }; };
+
 /** The day service's whole state and rules — the old page below and the new look's screen (pages/v2/medavitne) draw it. */
 export const useDayService = () => {
   const canCal = useMembership().can('calendar');
   const today = useMemo(todayIso, []);
-  const [iso, setIso] = useState(today);
+  // the page opens by itself on what is served now: in the evening on the next day's vespers, in the morning on the day's own
+  const start = useMemo(() => readNow(today), [today]);
+  const [iso, setIso] = useState(start.iso);
   const { patron, save: savePatron } = useTemplePatron();
   const [ranks, setRanks] = useState(() => readMap(RANK_KEY));
   const [ats, setAts] = useState(() => readMap(AT_KEY));
-  const [tab, setTab] = useState<ServiceId>('vespers');
+  // the service the reader chose; none yet — the one served now
+  const [picked, setPicked] = useState<ServiceId | null>(null);
   const [sheet, setSheet] = useState<'rank' | 'patron' | 'order' | null>(null);
   const [order, setOrder] = useState(readOrder);
   const [priestOn, setPriestOn] = useState(() => readFlag(PRIEST_KEY));
@@ -645,7 +652,12 @@ export const useDayService = () => {
 
   const services = useMemo(() => buildServices(inp), [inp]);
   const tabs = SERVICE_TABS.filter(t => services.some(s => s.id === t.id));
-  const service = services.find(s => s.id === tab) ?? services[0];
+  const nowId = iso === start.iso ? serviceNow(services, start.part, start.hour, id => ats[`${iso}|${id}`] !== undefined) : null;
+  const service = services.find(s => s.id === (picked ?? nowId)) ?? services[0];
+  const tab = service.id;
+  /** this service of this day is the one served now */
+  const isNow = nowId !== null && service.id === nowId;
+  const after = serviceAfter(services, service.id);
   const great = greatFeastOf(iso);
   const period = periodOf(iso);
   // Holy Week and Bright Week have each day's own order: a rank changes nothing there
@@ -657,7 +669,9 @@ export const useDayService = () => {
   const atKey = `${iso}|${tab}`;
   const at = ats[atKey] !== undefined ? Number(ats[atKey]) : -1;
 
-  const move = (n: number) => { triggerHaptic(8); setIso(d => addDays(d, n)); };
+  // another day keeps the service the reader is on
+  const move = (n: number) => { triggerHaptic(8); setPicked(p => p ?? service.id); setIso(d => addDays(d, n)); };
+  const goNow = () => { triggerHaptic(8); setPicked(null); setIso(start.iso); };
   const setRank = (r: Rank | null) => {
     const next = { ...ranks };
     if (r) next[iso] = r; else delete next[iso];
@@ -671,23 +685,45 @@ export const useDayService = () => {
     if (at === i) delete next[atKey]; else next[atKey] = String(i);
     setAts(next); writeMap(AT_KEY, next, 30);
   };
+  // the place is put on a step (the newest mark goes last: the store keeps the latest thirty)
+  const place = (id: ServiceId, i: number) => {
+    const key = `${iso}|${id}`;
+    const next = { ...ats };
+    delete next[key];
+    next[key] = String(i);
+    setAts(next); writeMap(AT_KEY, next, 30);
+  };
+  /** „შემდეგი“: the place moves to this step */
+  const goStep = (i: number) => place(service.id, i);
+  /** „შემდეგი მსახურება“: its tab opens, the place on its first step (a place already kept there stays); gives that step */
+  const startService = (id: ServiceId): number => {
+    const sv = services.find(s => s.id === id);
+    if (!sv) return -1;
+    setPicked(id);
+    const kept = ats[`${iso}|${id}`];
+    if (kept !== undefined) return Number(kept);
+    const first = sv.steps.findIndex(s => priestOn || !s.priest);
+    if (first >= 0) place(id, first);
+    return first;
+  };
   const flipPriest = () => { const v = !priestOn; setPriestOn(v); writeFlag(PRIEST_KEY, v); };
   const flipOld = () => { const v = !oldOn; setOldOn(v); writeFlag(OLD_KEY, v); };
   const flipAwake = () => { const v = !awakeOn; setAwakeOn(v); writeFlag(AWAKE_KEY, v); };
 
   return {
-    canCal, today, iso, setIso, day, tone, rank, guessed, ownOrder, inp, services, tabs, service, setTab, great, period, templeDay, food, title,
+    canCal, today, iso, setIso, day, tone, rank, guessed, ownOrder, inp, services, tabs, service, setTab: setPicked, great, period, templeDay, food, title,
     saints, at, mark, move, setRank, order, saveOrder, patron, savePatron, priestOn, flipPriest, oldOn, flipOld, setFlowEl, sheet, setSheet,
     toneOpen, setToneOpen, notesOf, setNotesOf, shown, tab, awakeOn, flipAwake, canAwake: canKeepAwake(),
+    nowIso: start.iso, isNow, nowWord: isNow ? nowWord(start.part, service.slot) : null, goNow, goStep, after, startService,
   };
 };
 export type DayServiceState = ReturnType<typeof useDayService>;
 
 export const DayService: React.FC = () => {
   const {
-    canCal, today, iso, setIso, day, tone, rank, guessed, ownOrder, inp, tabs, service, setTab, great, period, templeDay, food, title,
+    canCal, iso, day, tone, rank, guessed, ownOrder, inp, tabs, service, setTab, great, period, templeDay, food, title,
     saints, at, mark, move, setRank, order, saveOrder, patron, savePatron, priestOn, flipPriest, oldOn, flipOld, setFlowEl, sheet, setSheet,
-    toneOpen, setToneOpen, notesOf, setNotesOf, shown, tab,
+    toneOpen, setToneOpen, notesOf, setNotesOf, shown, tab, nowIso, goNow,
   } = useDayService();
 
   if (!canCal) return (
@@ -705,7 +741,7 @@ export const DayService: React.FC = () => {
             className="w-11 h-11 shrink-0 rounded-full bg-[#f4ece0] hover:bg-[#ece0cc] text-[#4a3426] flex items-center justify-center cursor-pointer transition active:scale-[0.95]"><ChevronLeft className="w-5 h-5" /></button>
           <div className="flex-1 min-w-0 text-center">
             <p className="text-[16px] font-bold leading-tight text-[#2a2017]">{weekdayGe(iso)}, {dayMonthGe(iso)}</p>
-            <p className="text-[13px] font-semibold text-[#8a7a6a]">ძვ. სტ. {oldDayMonthGe(iso)}{iso !== today && <> · <button type="button" onClick={() => { triggerHaptic(8); setIso(today); }} className="font-bold text-[#7a2028] underline underline-offset-2 cursor-pointer">დღეს</button></>}</p>
+            <p className="text-[13px] font-semibold text-[#8a7a6a]">ძვ. სტ. {oldDayMonthGe(iso)}{iso !== nowIso && <> · <button type="button" onClick={goNow} className="font-bold text-[#7a2028] underline underline-offset-2 cursor-pointer">ახლა</button></>}</p>
           </div>
           <button type="button" aria-label="შემდეგი დღე" onClick={() => move(1)}
             className="w-11 h-11 shrink-0 rounded-full bg-[#f4ece0] hover:bg-[#ece0cc] text-[#4a3426] flex items-center justify-center cursor-pointer transition active:scale-[0.95]"><ChevronRight className="w-5 h-5" /></button>
@@ -856,32 +892,35 @@ export const DayService: React.FC = () => {
   );
 };
 
-/** the way in, on top of the reader's side: today's name, tone and rank in one row */
-/** today's name, tone and rank for the way in (null without the calendar feature) */
+/** The way in, on top of the reader's side: the service served now (utils/dayService serviceNow) with its church day's tone
+ *  and rank — in the evening that day is tomorrow's. Null without the calendar feature. */
 export const useDayBrief = () => {
   const canCal = useMembership().can('calendar');
   const [today] = useState(todayIso);
-  const day = useCalendarDay(canCal ? today : null);
-  const lastSunday = addDays(today, -fromIso(today).getDay());
-  const sundayDay = useCalendarDay(canCal && lastSunday !== today ? lastSunday : null);
+  const [start] = useState(() => readNow(today));
+  const iso = start.iso;
   const { patron } = useTemplePatron();
   const ranks = readMap(RANK_KEY);
   const [order] = useState(readOrder);
+  const { rank, tone, inp, ready } = useDayInput(iso, canCal, ranks, patron, order);
   useDaySaver(canCal, today, ranks, patron, order);
+  const now = useMemo(() => {
+    if (!ready) return null;
+    const services = buildServices(inp);
+    const ats = readMap(AT_KEY);
+    const s = services.find(x => x.id === serviceNow(services, start.part, start.hour, id => ats[`${iso}|${id}`] !== undefined));
+    return s ? { title: s.title, word: nowWord(start.part, s.slot) } : null;
+  }, [ready, inp, start, iso]);
   if (!canCal) return null;
-  const guessed = guessRank(today, day ?? null, patron);
-  const rank = (RANKS.some(r => r.id === ranks[today]) ? ranks[today] : guessed) as Rank;
-  const tone = weekTone(day ?? null, lastSunday === today ? null : sundayDay ?? null);
-  const great = greatFeastOf(today);
   // Holy Week and Bright Week have each day's own order — no rank to name
-  return { today, rank, tone, great, ownOrder: seasonOf(today).holyWeek || seasonOf(today).bright };
+  return { today, iso, rank, tone, great: greatFeastOf(iso), ownOrder: seasonOf(iso).holyWeek || seasonOf(iso).bright, now };
 };
 
 export const DayServiceButton: React.FC = () => {
   const { openMapItem } = useNavigation();
   const brief = useDayBrief();
   if (!brief) return null;
-  const { today, rank, tone, great, ownOrder } = brief;
+  const { iso, rank, tone, great, ownOrder } = brief;
   return (
     <div className="w-full max-w-2xl mx-auto px-1">
       <button type="button" onClick={() => { triggerHaptic(10); openMapItem('day'); }}
@@ -890,7 +929,7 @@ export const DayServiceButton: React.FC = () => {
         <span className="flex-1 min-w-0">
           <span className="block text-[17px] font-bold leading-snug">დღის მსახურება</span>
           <span className="block mt-0.5 text-[13px] font-semibold leading-snug text-[#fbf6ec]/80 text-pretty">
-            {dayMonthGe(today)}{great ? ` · ${great.name}` : ''}{tone ? ` · ${toneName(tone)}` : ''}{ownOrder ? '' : ` · ${rankLabel(rank)}`}
+            {dayMonthGe(iso)}{great ? ` · ${great.name}` : ''}{tone ? ` · ${toneName(tone)}` : ''}{ownOrder ? '' : ` · ${rankLabel(rank)}`}
           </span>
         </span>
         <ChevronRight className="w-5 h-5 shrink-0" />
