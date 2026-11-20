@@ -18,6 +18,9 @@
   „დავითნის კანონი“. Only the search's hidden words keep the other word (`searchIndex.ts` keys, `mkitkhe.ts` keys: someone who
   types it must still find the kanon); the saints' lives' „კათისმის მონასტერი“ is a place's name. The books (`public/wignebi`)
   say „კანონი“ themselves.
+- **The games are frozen (the user's rule, 2026-11-20: „თამაშებს არ შეეხო … თამაშებს არ ვავითარებთ სანამ არ გეტყვი მე“).** Don't
+  develop, restyle or fix anything in the games — the hub, any game's page, rooms, print kits, their data — until the user says
+  so himself. A flaw seen there is only written down for him. (A change elsewhere that would break a game must still keep it working.)
 - **Don't widen scope.** Change only what was asked (one chant means one chant). Ask before deleting or moving files.
 - **Ask before starting.** Before any task — and before each stage of a long one — ask the open questions first
   (one short round, recommended option first), even when the user says „აბა შენ იცი“.
