@@ -1,4 +1,4 @@
-// „ყურის შემოწმება“ (AI teacher 2.0, stage 1; the page is components/aiLesson/EarTest.tsx): a member holds a note three
+// „მოსმენის შემოწმება“ (AI teacher 2.0, stage 1; the page is components/aiLesson/EarTest.tsx): a member holds a note three
 // times — low, middle, high — and both ears listen to the same sound: the new one (utils/ear.ts) and the first one
 // (utils/earOld.ts). Here: what each made of a take, in numbers a singer can read. Pure (tests/earTrial.test.ts).
 import { earReport } from './ear';
@@ -87,9 +87,9 @@ export const trialVerdict = (total: { now: TrialSide; was: TrialSide }): { good:
   const { now, was } = total;
   if (now.heard >= 0.93) {
     return { good: true, text: now.heard - was.heard >= 0.03
-      ? 'ახალ ყურს შენი ხმა კარგად ესმის — ძველზე უკეთ.'
-      : 'ახალ ყურს შენი ხმა კარგად ესმის.' };
+      ? 'აპს შენი ხმა ახლა კარგად ესმის — ძველზე უკეთ.'
+      : 'აპს შენი ხმა კარგად ესმის.' };
   }
-  if (now.heard >= was.heard + 0.03) return { good: false, text: 'ახალი ყური ძველზე უკეთ ისმენს, მაგრამ ჯერ ყველაფერს ვერ იგებს. სცადე წყნარ ოთახში, ტელეფონი ახლოს.' };
+  if (now.heard >= was.heard + 0.03) return { good: false, text: 'ახალი მოსმენა ძველზე უკეთესია, მაგრამ ჯერ ყველაფერს ვერ იგებს. სცადე წყნარ ოთახში, ტელეფონი ახლოს.' };
   return { good: false, text: 'შენი ხმა ჯერ კარგად არ ესმის. სცადე წყნარ ოთახში, ტელეფონი ახლოს — და თუ არ შეიცვალა, მოგვწერე.' };
 };

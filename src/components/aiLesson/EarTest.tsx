@@ -10,7 +10,7 @@ import {
 import { Bar, Button, Card, Helper, Num, RoundButton, TopBar, cx } from '../ui2';
 import { CenterNote } from './parts';
 
-// „ყურის შემოწმება“ (AI teacher 2.0, stage 1): hold a note three times — low, middle, high, four seconds each — and
+// „მოსმენის შემოწმება“ (AI teacher 2.0, stage 1; the user's name for it — he refused „ყური“): hold a note three times — low, middle, high, four seconds each — and
 // see in numbers how much of the voice the app heard. Both ears listen to the same sound: the new one (utils/ear.ts)
 // and the first one (utils/earOld.ts), so the page says plainly whether the new one is better on this voice, this
 // phone, this room. Nothing is saved. The numbers are utils/earTrial.ts; opened from „ჩემი ხმა“ → „ხმის ზომა“.
@@ -46,9 +46,9 @@ export const EarTestView: React.FC<EarTestViewProps> = ({ results, active, live,
   const next = TRIAL_TAKES.find(t => !results[t.id] || results[t.id]!.quiet)?.id ?? null;
   return (
     <>
-      <TopBar title="ყურის შემოწმება" sub="1 წუთი · არაფერი ინახება" onBack={onBack} className="px-4" />
+      <TopBar title="მოსმენის შემოწმება" sub="1 წუთი · არაფერი ინახება" onBack={onBack} className="px-4" />
       <div className="flex flex-col gap-3 px-4 pt-0.5 pb-8">
-        <Helper>იმღერე „ააა“ სამჯერ: დაბლა, შუაში და მაღლა — თითო {TRIAL_SECONDS} წამი. აპის ორი ყური ერთად გისმენს. ნახავ, რომელმა რამდენი გაიგო.</Helper>
+        <Helper>იმღერე „ააა“ სამჯერ: დაბლა, შუაში და მაღლა — თითო {TRIAL_SECONDS} წამი. აპი ორნაირად გისმენს — ახლებურად და ძველებურად. ნახავ, რომელმა რამდენი გაიგო.</Helper>
         {denied && (
           <Helper icon={<MicOff />} className="text-gold-ink">მიკროფონი არ ჩაირთო. ნება დართე ტელეფონის პარამეტრებში და თავიდან სცადე.</Helper>
         )}
@@ -82,8 +82,8 @@ export const EarTestView: React.FC<EarTestViewProps> = ({ results, active, live,
 
               {!on && r && !r.quiet && (
                 <div className="mt-3.5 flex gap-2">
-                  <Side name="ახალი ყური" side={r.now} main />
-                  <Side name="ძველი ყური" side={r.was} />
+                  <Side name="ახალი მოსმენა" side={r.now} main />
+                  <Side name="ძველი მოსმენა" side={r.was} />
                 </div>
               )}
 
@@ -120,7 +120,7 @@ export const EarTestView: React.FC<EarTestViewProps> = ({ results, active, live,
   );
 };
 
-/** „ყურის შემოწმება“ with the microphone. */
+/** „მოსმენის შემოწმება“ with the microphone. */
 export const EarTest: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   const [results, setResults] = useState<Results>({});
   const [active, setActive] = useState<TrialId | null>(null);
@@ -162,7 +162,7 @@ export const EarTest: React.FC<{ onBack: () => void }> = ({ onBack }) => {
   if (!singingSupported()) {
     return (
       <>
-        <TopBar title="ყურის შემოწმება" onBack={onBack} className="px-4" />
+        <TopBar title="მოსმენის შემოწმება" onBack={onBack} className="px-4" />
         <CenterNote icon={<MicOff />} title="აქ მიკროფონი არ მუშაობს">სცადე ტელეფონის აპიდან ან სხვა ბრაუზერიდან.</CenterNote>
       </>
     );

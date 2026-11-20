@@ -47,7 +47,7 @@ export interface MyVoiceViewProps {
   onForgetAll: () => void;
   onClose: () => void;
   onRemeasure: () => void;
-  /** „ყურის შემოწმება“ (EarTest): how well the app hears this voice */
+  /** „მოსმენის შემოწმება“ (EarTest): how well the app hears this voice */
   onEarTest?: () => void;
   onPractice: (piece: string, part: number) => void;
   /** the „სავარჯიშოა“ row: the phrase's own page */
@@ -138,7 +138,7 @@ const pct = (m: number) => Math.max(0, Math.min(100, ((m - SCALE_LOW) / (SCALE_H
 const Range: React.FC<MyVoiceViewProps> = ({ voice, fit, onFit, onEarTest }) => {
   const earRow = onEarTest && (
     <Rows>
-      <Row lead={<Dot icon={<Ear />} />} title="ყურის შემოწმება" sub="ნახე, რამდენად ზუსტად გისმენს აპი" onClick={onEarTest} />
+      <Row lead={<Dot icon={<Ear />} />} title="მოსმენის შემოწმება" sub="ნახე, რამდენად ზუსტად გისმენს აპი" onClick={onEarTest} />
     </Rows>
   );
   if (!voice) {
