@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { collection, doc, getDoc, onSnapshot, query, serverTimestamp, setDoc, updateDoc, where } from 'firebase/firestore';
 import type { User } from 'firebase/auth';
 import { db } from '../firebase';
@@ -137,8 +137,13 @@ const useThreadQuery = (key: string | null, make: () => ReturnType<typeof query>
 };
 
 /** The signed-in person's own chats, newest first (live). Firestore shares one listener between callers. */
-export const useDirectThreads = (uid?: string | null) =>
-  useThreadQuery(uid ? `mine:${uid}` : null, () => query(collection(db, 'dms'), where('members', 'array-contains', uid)));
+export const useDirectThreads = (uid?: string | null) => {
+  const all = useThreadQuery(uid ? `mine:${uid}` : null, () => query(collection(db, 'dms'), where('members', 'array-contains', uid)));
+  // classmates' private chats are closed since 2026-11-21 (the user: students write only to teachers and the administration):
+  // the old ones leave the lists; the superadmin's „ყველა ჩათი“ still shows them
+  const threads = useMemo(() => all.threads.filter(t => t.kind !== 'peer'), [all.threads]);
+  return { threads, loading: all.loading };
+};
 
 /** Every administration chat: the admins' shared inbox (live). */
 export const useAdminInbox = (enabled: boolean) =>
@@ -203,10 +208,9 @@ export const contactGroups = (
       }
     };
     if (c.teacherIds.includes(uid)) c.members.forEach(p => add(p, 'student'));
-    else if (c.memberIds.includes(uid)) {
-      c.teachers.forEach(p => add(p, 'teacher'));
-      if (!opts.kidsMe) c.members.filter(p => !opts.kids.has(p.uid)).forEach(p => add(p, 'peer'));
-    } else if (opts.isAdmin) {
+    // a member writes only to the class's teachers (classmates' private chats closed 2026-11-21); opts.kidsMe / kids kept
+    // for the callers, which still pass them
+    else if (c.memberIds.includes(uid)) c.teachers.forEach(p => add(p, 'teacher')); else if (opts.isAdmin) {
       c.teachers.forEach(p => add(p, 'person'));
       c.members.forEach(p => add(p, 'person'));
     }

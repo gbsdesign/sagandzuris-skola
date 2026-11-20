@@ -26,6 +26,10 @@ import { useChantLookupReady } from '../../data/chantLookupLazy';
 import { askSignIn } from '../access/SignInPrompt';
 import { IconBtn, Sheet } from '../ui/kit';
 import { KathismaTiles } from '../psalter/KathismaTile';
+import { useHabitsToday } from '../habits/useHabits';
+import { Sheet as Sheet2 } from '../ui2';
+
+const HabitsSheet = lazy(() => import('../../pages/v2/home/HabitsSheet'));
 import { SHELF_GRID, TileCheck, TileIcon, TileName, tileClass } from './ShelfTile';
 
 const SECTION_ICON: Record<SectionId, React.ReactNode> = {
@@ -152,7 +156,10 @@ export const useOpenShortcut = () => {
 };
 
 // "ჩემი ღილაკები" under the vine (and, in `profile`, on the profile page). Hidden while there is nothing on it.
-export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ variant = 'home' }) => {
+// `habits` (the new look's home, 2026-11-21 — the user: „ჩემი ღილაკების დასახელება მოხსენი … ჩვევების ღილაკი რომელზე
+// დაჭერისასაც ამოხტება ფანჯარა“): no heading (its ✎ / „მზადაა“ show only while editing, a long press starts it), and a
+// „ჩვევები“ tile after the kanon that opens today's habits in a window (pages/v2/home/HabitsSheet).
+export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile'; habits?: boolean }> = ({ variant = 'home', habits: withHabits }) => {
   const { user, isTeacher, isAdmin, isSuperAdmin } = useAuth();
   const { openPrayer } = useNavigation();
   const [menu, setMenu] = useState<{ menu: HabitMenu; title: string } | null>(null);
@@ -173,6 +180,9 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
   const [drag, setDrag] = useState<{ from: number; to: number } | null>(null);
   const press = useRef<{ t: number; x: number; y: number; long: boolean; idx: number } | null>(null);
 
+  const [habitsOpen, setHabitsOpen] = useState(false);
+  const habitsToday = useHabitsToday();
+  const habitsTile = !!withHabits && variant === 'home' && !!user && access.section('chvevebi') === 'open';
   const { groups } = useMyPsalterGroups(user?.uid);
   // my own habits too: a habit button ticks or opens the habit as I set it up
   const myHabits = useMyHabits(user?.uid).groups.flatMap(g => g.items);
@@ -198,7 +208,8 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
   );
   // the plain "ჩემი კანონი" button would repeat the tile, so it hides behind it (and stays saved)
   const keptKathisma = readingIn.length > 0 && all.includes('special:kathisma');
-  const ids = keptKathisma ? all.filter(id => id !== 'special:kathisma') : all;
+  // the new home: the kanon only as its own tile, for a group member with a kanon now (the user, 2026-11-21)
+  const ids = keptKathisma || withHabits ? all.filter(id => id !== 'special:kathisma') : all;
 
   // more tiles than two rows hold? (2 a row under 380 px, else 3; the psalter's kanon tiles count too)
   // must stay above the early returns below — a hook after them broke the home page (React #310, 2026-11-09)
@@ -214,7 +225,7 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
   });
 
   if (!user || !loaded) return null;
-  if (variant === 'home' && ids.length === 0 && readingIn.length === 0) return null;
+  if (variant === 'home' && ids.length === 0 && readingIn.length === 0 && !habitsTile) return null;
 
   const save = (next: string[]) => saveShortcuts(user.uid, keptKathisma ? [...next, 'special:kathisma'] : next).catch(() => {});
   const remove = (id: string) => { triggerHaptic(12); save(ids.filter(x => x !== id)); };
@@ -277,7 +288,7 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
 
   return (
     <section className={variant === 'home' ? 'relative mt-6 w-[calc(100%+2.5rem)] sm:w-full max-w-md text-left' : 'rounded-3xl bg-white/80 ring-1 ring-[#e8dcc8] p-4 sm:p-5'}>
-      <div className="flex items-center gap-2 mb-2.5 px-0.5">
+      {(!withHabits || editing) && <div className="flex items-center gap-2 mb-2.5 px-0.5">
         <h2 className="flex-1 min-w-0">
           <span className="block font-serif-ge text-[15px] font-bold text-[#4a3426]">ჩემი ღილაკები</span>
           {/* on the profile a line says where these buttons live (2026-11-06) */}
@@ -293,11 +304,22 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
             <IconBtn label="ღილაკების შეცვლა" onClick={() => setEditing(true)}><Pencil /></IconBtn>
           )
         )}
-      </div>
+      </div>}
       {/* on the profile two a row (2026-11-06): three left the names cut short — „დაუჯდ.“, „სამოციქ.“ */}
       <ul ref={listRef} className={`${variant === 'profile' ? 'grid grid-cols-2 gap-2' : SHELF_GRID} select-none ${editing ? 'touch-none' : ''} ${
         homeFolded ? 'max-[380px]:[&>li:nth-child(n+5)]:hidden [&>li:nth-child(n+7)]:hidden' : ''}`}>
         {readingIn.map(g => <KathismaTiles key={g.id} group={g} uid={user.uid} />)}
+        {habitsTile && !editing && (
+          <li className="relative">
+            <button type="button" onClick={() => { triggerHaptic(10); setHabitsOpen(true); }}
+              aria-label={`ჩვევები — დღეს ${habitsToday.done} / ${habitsToday.done + habitsToday.left}`}
+              className={`${tileClass(habitsToday.left === 0 && habitsToday.done > 0 ? 'done' : 'paper', false)} hover:ring-[#7a2028]/35 active:scale-[0.97]`}>
+              <TileIcon><Sparkles /></TileIcon>
+              <TileName label="ჩვევები" room="tight" />
+              <span className="ml-auto shrink-0 text-xs font-bold tabular-nums text-[#8a7a6a]">{habitsToday.done}/{habitsToday.done + habitsToday.left}</span>
+            </button>
+          </li>
+        )}
         {shown.map((id, i) => {
           const l = shortcutLabel(id)!;
           const dragging = drag && order[drag.to] === id;
@@ -361,6 +383,11 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile' }> = ({ vari
         </button>
       )}
 
+      {habitsTile && (
+        <Sheet2 open={habitsOpen} title="ჩვევები · დღეს" onClose={() => setHabitsOpen(false)}>
+          {habitsOpen && <Suspense fallback={<div className="h-40" />}><HabitsSheet onClose={() => setHabitsOpen(false)} /></Suspense>}
+        </Sheet2>
+      )}
       <ShortcutPicker open={adding} onClose={() => setAdding(false)} current={ids} onChange={save} />
       <Sheet open={!!menu} onClose={() => setMenu(null)} title={menu?.title || ''}>
         {menu && <HabitPrayerMenu menu={menu.menu} onOpen={pid => { setMenu(null); openPrayer(pid); }} />}

@@ -16,7 +16,8 @@ const ms = (v: unknown) => {
 
 /** who may start a call in a private chat: either side of a teacher's or classmates' chat; in the administration's
  *  chat only an admin answering it (the member answers, never rings — the user's rule, 2026-11-06) */
-export const mayStartChatCall = (t: DirectThread, uid: string) => (t.kind === 'admin' ? isStaffSide(t, uid) : t.members.includes(uid));
+export const mayStartChatCall = (t: DirectThread, uid: string) =>
+  t.kind === 'admin' ? isStaffSide(t, uid) : t.kind === 'teach' && t.members.includes(uid);
 
 export const chatCallInfo = (t: DirectThread, user: User): CallInfo => {
   const staff = isStaffSide(t, user.uid);

@@ -99,7 +99,7 @@ const Stat: React.FC<{ value: string; label: string }> = ({ value, label }) => (
 
 /** The page as the board draws it — everything by props. */
 export const SagandzuriView: React.FC<{
-  onBack: () => void;
+  onBack?: () => void;
   learned: number;
   total: number;
   voices: number;
@@ -276,7 +276,7 @@ const chipLabel = (id: string) =>
   id.startsWith('s:') ? id.slice(2) : id === 'other' ? OTHER_CHANTS : id === 'songs' ? 'სიმღერები' : id === 'poems' ? 'მთქმელი' : id;
 
 /** „საგანძური“ with the member's own path (a guest's device path too). */
-export const SagandzuriPage: React.FC<{ onBack: () => void; onMastery: () => void }> = ({ onBack, onMastery }) => {
+export const SagandzuriPage: React.FC<{ onBack?: () => void; onMastery: () => void }> = ({ onBack, onMastery }) => {
   const { stats, count } = useLearnCount();
   const { selectedChantVariants, saveVariantsToFirestoreAndStorage } = useChants();
   const { navigateTo } = useNavigation();

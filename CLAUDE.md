@@ -1938,6 +1938,26 @@
   (`openEarTest`). On made voices: a deep bass 100 % against the first ear's ~70–78 %, a quiet voice 100 % against 54 %, half
   the time a look. Not yet tried on real voices: if the user's numbers on the trial page are poor, strengthen the ear before stage 2.
 
+## Home, path, profile, letters (2026-11-21)
+
+- **The home bar's menu** (the user: „მაღლა საგანძურის სკოლის მაგივრად … გალობა სიმღერა საკრავები მედავითნეობა ლოცვანი მთქმელი
+  ტაძრები ბიბლიოთეკა ვიდეოთეკა სახალისო აბიტური ამ თანმიმდევრობით … ჩამოიშალოს“): `components/shell/SectionsMenu.tsx` in
+  `HomeBar` in place of the name — „განყოფილებები ▾“ drops a list in that order (each row obeys its section's switch as the vine's
+  labels did; სიმღერა / მთქმელი open „ხალხური“ on that tab via `sg-khalkhuri-tab`, საკრავები = page `sakravebi`, ვიდეოთეკა =
+  `videos`). **The vine has no labels any more** (`HomeV2` passes none; `HomeV2View` keeps the props) — don't bring them back unasked.
+- Under the vine (`pages/v2/home/HomeClasses.tsx`): a member — their class(es) + „AI მასწავლებელი“ (`openAiLesson`; the qvevri then
+  skips its own AI step); teachers — the classes they lead, admins — every class (`useManagedClasses`). Then `ShortcutShelf habits`:
+  no „ჩემი ღილაკები“ heading (✎ only while editing — a long press), the kanon tile only for a psalter member with a kanon (the plain
+  `special:kathisma` button is dropped there), and a „ჩვევები“ tile → today's habits in a ui2 Sheet (`pages/v2/home/HabitsSheet.tsx`, lazy).
+- „გზა“ (`gz` with no mapItem) opens „საგანძური“ directly (`SagandzuriPage`, no ←); `GzaList` is no longer drawn (its rows' screens
+  still open by mapItem). „სამოსი“ = a pill under the profile's name (`ChokhaThumb`, `pages/v2/gza/ChokhaThumb.tsx`); its row in
+  „ჩემი“ is gone.
+- **Classmates' private chats are closed** (the user: „მოსწავლეებს ერთმანეთთან მიწერა აღარ შეეძლოთ არც დარეკვა მხოლოდ მასწავლებელს
+  და ადმინს ხედავდნენ“; answers „კლასის ჩათი დარჩეს · ძველი ჩათები დაიმალოს“): `contactGroups` gives a member only the class's
+  teachers; `useDirectThreads` drops kind `peer` (the superadmin's „ყველა ჩათი“ still shows them, read only); `mayStartChatCall` only
+  `teach` / admin; the rules refuse a new `peer` chat, its messages, voice, call and call cards; birthdays' „მიულოცე“ goes only
+  through a teacher's chat. The class chat stays.
+
 ## „ავტომატური პროგრამა“ (plan 2.0; the user: „AI დაარქვი ყველგან … ავტომატური პროგრამა … კბილანას ლოგო“)
 
 - Plan with 15 prototypes: https://claude.ai/artifact/5eAVduJ7UvyYVbb9AbM9Pn — what the user unticks there is not built. Each stage

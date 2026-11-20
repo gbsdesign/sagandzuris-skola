@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { BarChart3, Camera, ChevronRight, LayoutGrid, Settings, Shield, Shirt, Trash2, Users } from 'lucide-react';
+import { BarChart3, Camera, ChevronRight, LayoutGrid, Settings, Shield, Trash2, Users } from 'lucide-react';
 import { useAuth, useNavigation, useViewing } from '../../../context';
 import {
   Avatar, Badge, Card, Dot, PageHead, Press, Row, Rows, RoundButton, SectionLabel, Sheet, Stats,
@@ -23,6 +23,7 @@ import { SingingScreen } from './Singing';
 import { ScheduleScreen } from './Schedule';
 import { ButtonsScreen } from './Buttons';
 import { HelpButton } from '../mkitkhe/HelpButton';
+import { ChokhaThumb } from '../gza/ChokhaThumb';
 
 // x-propili — „პროფილი“ in the new look (the bottom menu's own page): me and this month's three numbers on top, then five
 // rows — my class, my voice (the AI teacher's), my outfit, my home buttons — and the settings and the admin panel. What
@@ -108,14 +109,27 @@ const ProfileMain: React.FC = () => {
       <Card pad="none" data-help="38" className="flex items-center gap-3.5 py-4 pr-3 pl-[18px]">
         <PhotoPick name={name} photo={shownPhoto} own={!viewing} hasOwn={!!me.photo}
           onFile={setCropFile} onRemove={() => keepPhoto(null)} />
-        <Press onClick={() => openMapItem('info')}
-          className={`flex min-h-tap min-w-0 flex-1 cursor-pointer items-center gap-2 rounded-field text-left ${FOCUS_IN}`}>
-          <span className="flex min-w-0 flex-1 flex-col">
-            <span className="text-title leading-tight font-bold wrap-break-word">{name}</span>
-            {sub && <span className="sg-fit truncate text-meta text-mut">{sub}</span>}
-          </span>
-          <ChevronRight aria-hidden="true" className="size-[18px] shrink-0 text-mut" />
-        </Press>
+        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <Press onClick={() => openMapItem('info')}
+            className={`flex min-h-tap min-w-0 cursor-pointer items-center gap-2 rounded-field text-left ${FOCUS_IN}`}>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <span className="text-title leading-tight font-bold wrap-break-word">{name}</span>
+              {sub && <span className="sg-fit truncate text-meta text-mut">{sub}</span>}
+            </span>
+            <ChevronRight aria-hidden="true" className="size-[18px] shrink-0 text-mut" />
+          </Press>
+          {/* „სამოსი“ under the name (2026-11-21, the user: „სამოსი გადავიდეს … სახელის … დაბლა“; it left the path) */}
+          {!waiting && access.on('samosi') && (
+            <Press onClick={() => openGz('samosi')} aria-label={`ჩემი სამოსი — ${samosi.count} / ${SAMOSI_TOTAL}`}
+              className={`flex h-tap w-fit max-w-full cursor-pointer items-center gap-2 rounded-full bg-tint pr-3 pl-1 text-left transition active:scale-[0.97] ${FOCUS_IN}`}>
+              <span aria-hidden="true" className="flex size-icon shrink-0 items-center justify-center overflow-hidden rounded-full bg-surf">
+                <ChokhaThumb color={samosi.color} />
+              </span>
+              <span className="truncate text-meta font-bold text-wine">ჩემი სამოსი</span>
+              <span className="shrink-0 text-meta font-semibold text-mut tabular-nums">{samosi.count} / {SAMOSI_TOTAL}</span>
+            </Press>
+          )}
+        </div>
       </Card>
       {photoError && <p role="alert" className="px-1.5 text-meta font-semibold text-danger">ფოტო ვერ შეინახა — სცადე თავიდან.</p>}
 
@@ -139,9 +153,6 @@ const ProfileMain: React.FC = () => {
             )}
             {access.on('aiTeacher') && (
               <Row lead={<Dot icon={<BarChart3 />} />} title="ჩემი ხმა" sub="დღიური · ხმის ზომა · მოწმობები" onClick={() => openMyVoice('diary')} />
-            )}
-            {access.on('samosi') && (
-              <Row lead={<Dot icon={<Shirt />} />} title="ჩემი სამოსი" sub={`${samosi.count} / ${SAMOSI_TOTAL}`} onClick={() => openGz('samosi')} />
             )}
             <Row lead={<Dot icon={<LayoutGrid />} />} title="ჩემი ღილაკები" sub={`${buttons} / ${MAX_SHORTCUTS}`} onClick={() => openMapItem('ghilakebi')} />
           </Rows>

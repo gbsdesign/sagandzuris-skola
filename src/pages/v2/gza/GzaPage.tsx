@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import { useNavigation } from '../../../context';
 import { usePanelWish } from '../../../components/views/IndependentWorkCard';
 import { clearTried } from '../../../utils/samosiTry';
-import { GzaList } from './GzaList';
 import { SagandzuriPage } from './Sagandzuri';
 import { SamosiPage } from './Samosi';
 import { TsirvaScreen } from '../tsirva/TsirvaScreen';
@@ -44,5 +43,7 @@ export const GzaPage: React.FC = () => {
   if (mapItem === OSTATOBA_ITEM) return <OstatobaScreen />;
   if (mapItem === LESSONS_ITEM) return <LessonsScreen />;
   if (mapItem === EXTRA_ITEM) return <ExtraScreen />;
-  return <GzaList onOpen={item => openMapItem(item)} />;
+  // since 2026-11-21 the path opens straight on „საგანძური“ (the user: „საგანძურის გზაზე კი პირდაპირ საგანძური იხსნებოდეს
+  // დანარჩენი ჩახსენი“): the outfit is under the profile's name, the habits and the classes on the home page
+  return <SagandzuriPage onMastery={() => openMapItem('ostatoba')} />;
 };
