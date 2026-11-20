@@ -43,6 +43,7 @@ import { SynthPlayer } from '../v2/notes/SynthPlayer';
 import { RecPlayer } from '../v2/notes/RecPlayer';
 import { MoreSheet } from '../v2/notes/MoreSheet';
 import { ShareSheet } from '../v2/notes/ShareSheet';
+import { SendSheet } from '../v2/notes/SendSheet';
 import { ChurchBar, ChurchNext, LyricsPanel } from '../v2/notes/ChurchParts';
 import { MinusControl, VoiceFit } from '../v2/notes/MyVoiceParts';
 import { MinusVoices } from '../v2/notes/MinusBar';
@@ -169,7 +170,8 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
   const { selectedChantVariants, toggleVariantSelection } = useChants();
   // a quick listen started from a list stops when the notes open
   useEffect(() => { stopPreview(); }, [vid]);
-  const { user } = useAuth();
+  const { user, isTeacher } = useAuth();
+  const [sendOpen, setSendOpen] = useState(false);
   const { list: shortcuts } = useMyShortcuts(user?.uid);
   const info = findVersion(vid)!;
   const { chant, variant, service } = info;
@@ -1566,6 +1568,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
           saved={{ on: isSaved, onToggle: () => { triggerHaptic(12); toggleVariantSelection(chant, variant); } }}
           program={liturgy.role === 'teacher' ? { num: progIdx >= 0 ? progIdx + 1 : null, onToggle: toggleProgram } : undefined}
           onShare={() => { setMoreOpen(false); setQr('code'); }}
+          onSend={user && isTeacher ? () => { setMoreOpen(false); setSendOpen(true); } : undefined}
           onScan={() => { setMoreOpen(false); setQr('scan'); }}
           offline={{ done: offline, busy: offlineBusy, onSave: keepOffline }}
           files={score || recTracks.length > 0 ? {
@@ -1619,6 +1622,7 @@ export const NotesPage: React.FC<{ vid: string; from: NotesOrigin }> = ({ vid, f
       {qr === 'code' && (nl
         ? <ShareSheet url={shareUrl} title={title} sub={name} say={msg => showToast(msg)} onClose={() => setQr(null)} />
         : <QrSheet url={shareUrl} title={title} sub={name} say={msg => showToast(msg)} onClose={() => setQr(null)} />)}
+      {sendOpen && <SendSheet title={title} sub={name} url={shareUrl} say={msg => showToast(msg)} onClose={() => setSendOpen(false)} />}
       {qr === 'scan' && (
         <QrScanner onClose={found => {
           setQr(null);

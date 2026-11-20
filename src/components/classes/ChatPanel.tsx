@@ -1,6 +1,7 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useBackToClose } from '../../utils/backToClose';
-import { MessageCircle, Mic, Paperclip, Send, Square, X, Trash2, Play, Pause, Loader2, Clock, Phone, CheckCheck } from 'lucide-react';
+import { useNotes } from '../../context/NotesContext';
+import { MessageCircle, Music2, Mic, Paperclip, Send, Square, X, Trash2, Play, Pause, Loader2, Clock, Phone, CheckCheck } from 'lucide-react';
 import {
   sendTextMessage, sendVoiceMessage, deleteMessage, loadVoiceUrl, ChatMessage, ChatAuthor,
 } from '../../hooks/useClassChat';
@@ -26,15 +27,40 @@ export const dayLabel = (d: Date) => {
   return `${d.getDate()} ${MONTHS_GE[d.getMonth()]}${d.getFullYear() !== now.getFullYear() ? ` ${d.getFullYear()}` : ''}`;
 };
 
-// links in a message (e.g. a lesson's call link) open in a new tab
+// links in a message (e.g. a lesson's call link) open in a new tab; a chant's notes link of this site (a teacher's „გაგზავნა“ from
+// the notes' „მეტი“, 2026-11-21) is a button that opens those notes here, in the app
 const URL_RE = /(https?:\/\/[^\s]+)/g;
-const Linkified: React.FC<{ text: string }> = ({ text }) => (
-  <>
-    {text.split(URL_RE).map((part, i) =>
-      i % 2 ? <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="underline break-all" onClick={e => e.stopPropagation()}>{part}</a> : part
-    )}
-  </>
-);
+const notesVid = (link: string): string | null => {
+  try {
+    const u = new URL(link);
+    const v = u.searchParams.get('v');
+    return v && u.searchParams.get('c') && (u.origin === window.location.origin || /sagandzur/.test(u.hostname)) ? v : null;
+  } catch { return null; }
+};
+const Linkified: React.FC<{ text: string; mine?: boolean }> = ({ text, mine }) => {
+  const { openNotes } = useNotes();
+  return (
+    <>
+      {text.split(URL_RE).map((part, i) => {
+        if (!(i % 2)) return part;
+        const vid = notesVid(part);
+        if (vid) {
+          return (
+            <button
+              key={i}
+              type="button"
+              onClick={e => { e.stopPropagation(); openNotes(vid, 'bookmark'); }}
+              className={`mt-1 inline-flex min-h-tap cursor-pointer items-center gap-1.5 rounded-full px-4 font-bold transition active:scale-95 ${mine ? 'bg-surf text-wine' : 'bg-wine text-white'}`}
+            >
+              <Music2 aria-hidden="true" className="size-[18px]" />ნოტების გახსნა
+            </button>
+          );
+        }
+        return <a key={i} href={part} target="_blank" rel="noopener noreferrer" className="underline break-all" onClick={e => e.stopPropagation()}>{part}</a>;
+      })}
+    </>
+  );
+};
 
 // iOS only lets an <audio> play from a tap; playing this silence first, inside the tap,
 // unlocks the element so the real message can start once it has downloaded
@@ -581,7 +607,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                     </div>
                   ) : (
                     <>
-                      <p className="whitespace-pre-wrap break-words text-body"><Linkified text={m.text} /></p>
+                      <p className="whitespace-pre-wrap break-words text-body"><Linkified text={m.text} mine={mine} /></p>
                       <p className={`flex justify-end mt-1 ${stamp}`}>{sentAt(m)}</p>
                     </>
                   )}
