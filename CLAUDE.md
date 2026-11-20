@@ -1748,6 +1748,13 @@
   `Edit.tsx` (drag by the handle — the old `useDragSort` —, Alt+↑/↓), `NewHabit.tsx` (x-chveva-akhali), `Vazi.tsx` (x-vazi +
   x-vazi-rogor). Settings' single choices wrap (`OneOf`), never scroll sideways. The old `ChvevebiPanel` stays for the old look
   and a teacher's look at a student.
+- **„საღამოს კითხვა“ (2026-11-21, the user: „ყოველ საღამოს აპი შეეკითხოს მოსწავლე რა ჩვევები შეასრულა და შესთავაზოს მონიშვნა
+  სურვილისამებრ“; picks: a notice + a window, 21:00, on for everyone, can be turned off)**: `utils/eveningCheck.ts` (hour per device
+  `sg-evening-check`, default 21:00, „off“; put-off moment `sg-evening-seen`) + `components/habits/EveningCheck.tsx` (mounted once in
+  App): from the hour to midnight the open app shows a sheet with today's due daily habits not ticked yet — pick and „მონიშვნა“,
+  „მოგვიანებით“ (an hour), „დღეს აღარა“; never during `busyNow()` (church mode, calls…), never on a teacher's look. The phone's notice
+  is one more habit reminder `evening-check` (`setEveningReminder` in `prayerReminders.ts`; plan starts tomorrow once all is ticked),
+  the Worker gives it its own text and `/?open=sagamo` (App → `requestEvening`). Settings: „საღამოს კითხვა“ in `propili/Reminders.tsx`.
 - **Stage 4c — class, student, psalter (2026-11-18)**: pages `class`, `student`, `psalter` are in `MAP_PAGES` now (their open part
   survives back/forward; `pages/v2/klasi/nav.ts`: class `order`, student `<uid>|<classId>[|gza|ostatoba]`, psalter `dist` / `history`).
   `klasi/ClassRoute` → `ClassScreen` (x-klasi, x-tsevrebi, x-desk-klasi: next lesson card → `TimetableSheet`, tabs პროგრამა · ჩათი ·

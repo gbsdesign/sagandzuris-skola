@@ -31,6 +31,8 @@ import { isRoomGame } from './utils/gameRoom';
 import { ROOM_GAME_INFO } from './data/roomGames';
 import { GlobalSearch } from './components/search/GlobalSearch';
 import { usePrayerReminderScheduler } from './utils/prayerReminders';
+import { requestEvening } from './utils/eveningCheck';
+import { EveningCheck } from './components/habits/EveningCheck';
 import { isPrayerId } from './data/prayers';
 import { setRecordingsHidden, startRecordingBindings, useRecordingBindings } from './data/runtimeRecordings';
 import { SignInPrompt } from './components/access/SignInPrompt';
@@ -157,6 +159,8 @@ function AppContent() {
     else if (page === 'teacher') navigateTo('class');
     // an admin's notice for everyone on the phone (worker/reminders /announce): the header's 🔔 list
     else if (page === 'bell') requestOpen('bell', '1');
+    // „საღამოს კითხვა“ — the evening notice: the window to tick the day's habits (components/habits/EveningCheck)
+    else if (page === 'sagamo') requestEvening();
     // „ყურის შემოწმება“ — how well the app hears my voice (AI teacher 2.0, stage 1)
     else if (page === 'ear') openEarTest();
     // a widget not linked yet (android/ BaseWidget): the linking window
@@ -322,6 +326,11 @@ function AppContent() {
 
       <ErrorBoundary>
         <AppModals />
+      </ErrorBoundary>
+
+      {/* „საღამოს კითხვა“ — each evening: which habits were done today */}
+      <ErrorBoundary>
+        <EveningCheck />
       </ErrorBoundary>
 
       {/* the AI teacher's day lesson, over everything (components/aiLesson) */}

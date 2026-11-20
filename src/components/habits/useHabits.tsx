@@ -22,7 +22,7 @@ export const dueDailyOf = (groups: MyHabitGroup[]) => {
 };
 
 // the confetti's code comes only when a day is closed (redesign stage 3)
-const celebrate = () => {
+export const celebrate = () => {
   void import('canvas-confetti').then(({ default: confetti }) => {
     const colors = ['#7a2028', '#f3c969', '#10b981', '#fbf6ec'];
     confetti({ particleCount: 90, spread: 70, startVelocity: 45, origin: { y: 0.7 }, colors });
@@ -30,7 +30,7 @@ const celebrate = () => {
   }).catch(() => { /* confetti is decoration only */ });
 };
 
-const Blessing: React.FC = () => (
+export const Blessing: React.FC = () => (
   <div className="fixed inset-x-0 bottom-8 z-[90] flex justify-center px-4 pointer-events-none safe-bottom">
     <div className="px-6 py-3.5 rounded-full bg-[#7a2028] text-[#fbf6ec] font-serif-ge text-lg font-bold shadow-[0_12px_32px_-10px_rgba(122,32,40,0.6)] animate-in fade-in slide-in-from-bottom-4 zoom-in-95 duration-300">
       ღმერთს ებარებოდე! 🙏

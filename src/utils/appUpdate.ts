@@ -36,6 +36,9 @@ export const holdUpdates = (why: string, on: boolean) => {
   if (!on && pending) tryRestart();
 };
 
+/** true while something must not be interrupted (church mode, a call, a recording…) — a window waits for its end */
+export const busyNow = () => holds.size > 0;
+
 /** Keep the old version a while longer (a take just recorded waits to be heard and sent). */
 export const holdUpdatesFor = (why: string, ms: number) => { holdsUntil.set(why, Date.now() + ms); };
 const heldAWhile = () => [...holdsUntil.values()].some(t => t > Date.now());
