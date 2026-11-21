@@ -1,10 +1,9 @@
 import React, { useState } from 'react';
-import { Bell, CheckCheck, Clock, Moon, RefreshCw } from 'lucide-react';
+import { Bell, CheckCheck, Clock, RefreshCw } from 'lucide-react';
 import { Button, Card, Chips, Dot, Note, Row, Rows, SectionLabel, Sheet, ToggleRow, Two } from '../../../components/ui2';
 import { useRemindersState } from '../../../components/app/RemindersCard';
 import { hourClock } from '../../../data/prayers';
 import { REMIND_TIMES } from '../../../utils/learnReminder';
-import { EVENING_DEFAULT, EVENING_TIMES, setEveningAt, useEveningAt } from '../../../utils/eveningCheck';
 import { SwitchLine } from '../shetkobinebebi/parts';
 
 // x-shekhsenebebi — the reminders' part of the one page „შეტყობინებები“ (settings mapItem `notify`; the old `reminders`
@@ -14,17 +13,12 @@ import { SwitchLine } from '../shetkobinebebi/parts';
 // stand under it on that page — once, not here too (the user's pick of 2026-11-20: one page, no switch twice).
 // The logic is the old window's (components/app/RemindersCard `useRemindersState`).
 
-type Win = null | 'hours' | 'habits' | 'learn' | 'evening';
+type Win = null | 'hours' | 'habits' | 'learn';
 
 export const RemindersPart: React.FC = () => {
   const r = useRemindersState();
   const [win, setWin] = useState<Win>(null);
   const close = () => setWin(null);
-  const eveningAt = useEveningAt();
-  const eveningOn = async (on: boolean) => {
-    if (on && r.perm === 'default') await r.allow();
-    setEveningAt(on ? EVENING_DEFAULT : '');
-  };
 
   const hoursOn = r.prayerHours.filter(h => (r.hours[h.id] || []).length > 0).length;
   const habitsOn = r.timed.filter(h => (h.alerts?.length ?? 0) > 0).length;
@@ -50,8 +44,6 @@ export const RemindersPart: React.FC = () => {
         <Row lead={<Dot icon={<CheckCheck />} />} title="ჩვევები" sub={habitsSub} onClick={() => setWin('habits')} />
         <SwitchLine icon={<RefreshCw />} title="გალობის გამეორება" sub={r.learnAt ? `${r.learnAt}-ზე` : undefined}
           label="გალობის გამეორება" on={!!r.learnAt} onChange={on => void r.toggleLearn(on)} onOpen={() => setWin('learn')} />
-        <SwitchLine icon={<Moon />} title="საღამოს კითხვა" sub={eveningAt ? `${eveningAt}-ზე · რა შეასრულე დღეს` : undefined}
-          label="საღამოს კითხვა" on={!!eveningAt} onChange={on => void eveningOn(on)} onOpen={() => setWin('evening')} />
       </Rows>
 
       <Sheet open={win === 'hours'} title="შვიდგზის ლოცვა" onClose={close}>
@@ -95,14 +87,6 @@ export const RemindersPart: React.FC = () => {
         <Chips label="საათი" items={REMIND_TIMES.map(t => ({ id: t, label: t }))} value={r.learnAt}
           onChange={t => void r.pickLearn(t)} />
         {r.learnAt && <Button full kind="quiet" onClick={() => { void r.toggleLearn(false); close(); }}>გამორთვა</Button>}
-        <Button full onClick={close} className="mt-2">მზადაა</Button>
-      </Sheet>
-
-      <Sheet open={win === 'evening'} title="საღამოს კითხვა" onClose={close}>
-        <Note>ყოველ საღამოს ამ საათზე აპი გკითხავს, რომელი ჩვევები შეასრულე, და მონიშვნას შემოგთავაზებს. თუ ყველაფერი მონიშნულია, არ გკითხავს.</Note>
-        <Chips label="საათი" items={EVENING_TIMES.map(t => ({ id: t, label: t }))} value={eveningAt}
-          onChange={t => setEveningAt(t)} />
-        {eveningAt && <Button full kind="quiet" onClick={() => { setEveningAt(''); close(); }}>გამორთვა</Button>}
         <Button full onClick={close} className="mt-2">მზადაა</Button>
       </Sheet>
     </>

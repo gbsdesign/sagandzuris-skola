@@ -1491,11 +1491,8 @@ const habitMessages = (habits, tz, when) => {
         day = nextKey(today);
       }
       if (at !== now || (h.plan && !planDue(h.plan, day))) continue;
-      // „საღამოს კითხვა“ (the site's utils/eveningCheck.ts): a question, its tap opens the window to tick the day's habits
-      if (h.id === 'evening-check') {
-        out.push({ title: h.title, body: 'რა შეასრულე დღეს? მონიშნე ჩვევები', tag: `habit-${h.id}-${m}`, url: '/?open=sagamo' });
-        continue;
-      }
+      // „საღამოს კითხვა“ was taken off for everyone (2026-11-21): devices that still hold its row get nothing
+      if (h.id === 'evening-check') continue;
       const soon = m === 0 ? 'დროა' : m === 60 ? '1 საათში' : `${m} წუთში`;
       out.push({ title: h.title, body: `${soon} — ${h.at}`, tag: `habit-${h.id}-${m}`, url: '/?open=gz' });
     }

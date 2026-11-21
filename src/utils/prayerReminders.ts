@@ -81,8 +81,10 @@ export const setEveningReminder = (r: HabitReminder | null) => {
   else { try { localStorage.removeItem(EVENING_KEY); } catch { /* storage off */ } }
   void syncPush();
 };
+// the evening question was taken off for everyone (2026-11-21): an old copy on this device is dropped and never sent again
+try { localStorage.removeItem(EVENING_KEY); } catch { /* storage off */ }
 const allHabitReminders = () =>
-  [...getHabitReminders(), getLearnReminder(), getEveningReminder()].filter((r): r is HabitReminder => !!r);
+  [...getHabitReminders(), getLearnReminder()].filter((r): r is HabitReminder => !!r);
 
 // everything this browser asks the push server for
 const pushReminders = () => {
