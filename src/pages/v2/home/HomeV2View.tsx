@@ -39,6 +39,11 @@ const BUNCH_SPOT: Record<BunchId, React.CSSProperties> = {
   lotsvani: { left: '64.6%', top: '13.2%' },
 };
 
+/** the bunches from left to right, and the seconds between their turns to light up: one bunch at a time (the right one,
+    „გაკვეთილი“, is the fourth) */
+const BUNCH_ORDER: BunchId[] = ['galoba', 'simghera', 'lotsvani'];
+const BUNCH_WAVE = 6;
+
 /** the boards' vine box: 374px wide (the 358px column + 8px each side) */
 const BOARD_W = 374;
 
@@ -179,9 +184,9 @@ export const HomeV2View: React.FC<HomeV2ViewProps> = ({ saying, labels, abituri,
 
           {/* words in the grapes, where the picture's own bunches hung: the first one („გაკვეთილი“) opens the letters, the others
               their sections; they sway out of step */}
-          {letters && <LettersBunch word="გაკვეთილი" label="წერილები" unread={letters.unread} onOpen={letters.onOpen} className="z-1 w-[23%]" style={{ left: '68.9%', top: '32.4%' }} />}
+          {letters && <LettersBunch word="გაკვეთილი" label="წერილები" unread={letters.unread} wave={BUNCH_WAVE * 3} onOpen={letters.onOpen} className="z-1 w-[23%]" style={{ left: '68.9%', top: '32.4%' }} />}
           {bunches?.map((b, i) => (
-            <LettersBunch key={b.id} word={b.word} onOpen={b.onOpen} className="z-1 w-[23%]" style={{ ...BUNCH_SPOT[b.id], animationDelay: `${-(i + 1) * 0.9}s` }} />
+            <LettersBunch key={b.id} word={b.word} wave={BUNCH_ORDER.indexOf(b.id) * BUNCH_WAVE} onOpen={b.onOpen} className="z-1 w-[23%]" style={{ ...BUNCH_SPOT[b.id], animationDelay: `${-(i + 1) * 0.9}s` }} />
           ))}
 
           {/* „გააგრძელე“ on the qvevri: one thing, where I stopped */}

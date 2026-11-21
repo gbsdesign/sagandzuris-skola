@@ -14,7 +14,13 @@ import { triggerHaptic } from '../../utils/haptics';
 const STAFF_DAYS = 5;
 const NOTIFY_AT = [5, 3, 1];
 
-export const BirthdaysSoon: React.FC<{ className?: string; compact?: boolean; row?: boolean }> = ({ className, compact, row }) => {
+export const BirthdaysSoon: React.FC<{
+  className?: string;
+  compact?: boolean;
+  row?: boolean;
+  /** draw nothing, only keep the staff's phone notices going — the home's classes fold while it is shut */
+  quiet?: boolean;
+}> = ({ className, compact, row, quiet }) => {
   const { user, isTeacher } = useAuth();
   const { isMember } = useMembership();
   const { navigateTo } = useNavigation();
@@ -51,7 +57,7 @@ export const BirthdaysSoon: React.FC<{ className?: string; compact?: boolean; ro
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTeacher, key]);
 
-  if (!isTeacher || !coming.length) return null;
+  if (!isTeacher || !coming.length || quiet) return null;
   // the classes card's first row (2026-11-22, the user: „დაბადების დღეები კლასებს თავში გამოჩნდეს“): a pale gold line
   // with the classes' look — a round cake, the name and when, „+N“ when more are coming
   if (row) {

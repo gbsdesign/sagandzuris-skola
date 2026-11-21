@@ -1,7 +1,7 @@
-import React from 'react';
-import { ChevronRight } from 'lucide-react';
+import React, { useState } from 'react';
+import { ChevronDown, ChevronRight, Users } from 'lucide-react';
 import { useAuth, useNavigation } from '../../../context';
-import { Avatar, Badge, FOCUS_IN, Press, Rows, SectionLabel, cx } from '../../../components/ui2';
+import { Avatar, Badge, FOCUS_IN, Press, Rows, cx } from '../../../components/ui2';
 import { useAllMyClasses } from '../../../components/classes/ClassPicker';
 import { useManagedClasses, type SchoolClass } from '../../../hooks/useClasses';
 import { classChatBase, isClassUnread, useChatSeen, useClassLasts } from '../../../hooks/useClassChat';
@@ -12,7 +12,10 @@ import { BirthdaysSoon } from '../../../components/home/BirthdaysSoon';
 
 // The home's classes (2026-11-21, the user: „მთავარ გვერდზე მოსწავლეს უჩანდეს თავისი კლასის ღილაკი და ავტომატური სასწავლო პროგრამა …
 // ადმინებს და მასწავლებლებს მთავარ გვერდზე გამოუჩინე ლამაზად გახსნილი კლასების სია“; the path's „კლასი“ row is gone):
-// a member — their class(es) and the AI teacher's day lesson; a teacher — the classes they lead; an admin — every class.
+// a member — their class(es); a teacher — the classes they lead; an admin — every class.
+// Since 2026-11-22 it stands under the quick buttons, and the staff's list is a fold, shut at first, with the coming birthdays
+// inside it (the user: „სწრაფი ღილაკები ზევით აიტანე, კლასების ზემოთ, ხოლო კლასები ქვემოთ და ჩამოსაშლელი გახადე, შიგნით მოექცეს
+// დაბადების დღეც“). A member's own class, and a teacher's only class, stay one tap away, not folded.
 
 /** a teacher or an admin: the list shows the classes they manage */
 export const useHomeIsStaff = () => {
@@ -58,18 +61,50 @@ const ClassRows: React.FC<{ classes: SchoolClass[] }> = ({ classes }) => {
   );
 };
 
+/** the staff's fold stays as left for the visit */
+const OPEN_KEY = 'sg-home-classes-open';
+const readOpen = () => { try { return sessionStorage.getItem(OPEN_KEY) === '1'; } catch { return false; } };
+
+/** The fold's head: „კლასები · N“ with a chevron — one white row, the card's only one while shut. */
+export const ClassesHead: React.FC<{ count: number; open: boolean; onToggle: () => void }> = ({ count, open, onToggle }) => (
+  <Press
+    onClick={onToggle}
+    aria-expanded={open}
+    className={cx('flex min-h-[54px] w-full cursor-pointer items-center gap-3 py-1.5 pr-3.5 pl-3 text-left text-ink transition-colors active:bg-soft', FOCUS_IN)}
+  >
+    <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-tint text-wine [&_svg]:size-4">
+      <Users strokeWidth={2} />
+    </span>
+    <span className="flex min-w-0 flex-1 items-baseline gap-1.5 text-body leading-tight">
+      <b className="font-bold">კლასები</b>
+      <span className="text-meta text-mut">· {count}</span>
+    </span>
+    <ChevronDown aria-hidden="true" className={cx('size-[18px] shrink-0 text-mut transition-transform', open && 'rotate-180')} strokeWidth={2} />
+  </Press>
+);
+
 const StaffClasses: React.FC = () => {
   const { classes } = useManagedClasses();
   const access = useAccess();
   const birthdays = access.on('birthdays');
+  const [open, setOpen] = useState(readOpen);
+  const flip = () => {
+    const next = !open;
+    setOpen(next);
+    try { sessionStorage.setItem(OPEN_KEY, next ? '1' : '0'); } catch { /* private mode */ }
+  };
   // no classes: the birthdays keep their small pill
   if (!classes.length) return birthdays ? <BirthdaysSoon compact /> : null;
+  // one class: nothing to fold — its row one tap away, the birthdays over it as before
+  if (classes.length === 1) return <Rows className="w-full">{birthdays && <BirthdaysSoon row />}<ClassRows classes={classes} /></Rows>;
   return (
-    <section className="flex w-full flex-col gap-2">
-      <SectionLabel label={`კლასები · ${classes.length}`} />
-      {/* birthdays: the card's first row (2026-11-22, the user: „დაბადების დღეები კლასებს თავში გამოჩნდეს“) */}
-      <Rows>{birthdays && <BirthdaysSoon row />}<ClassRows classes={classes} /></Rows>
-    </section>
+    <Rows className="w-full">
+      <ClassesHead count={classes.length} open={open} onToggle={flip} />
+      {/* birthdays: the first row inside; shut, it draws nothing but keeps the staff's phone notices going */}
+      {birthdays && <BirthdaysSoon row quiet={!open} />}
+      {/* the rows (and their chats' listeners) only while open */}
+      {open && <ClassRows classes={classes} />}
+    </Rows>
   );
 };
 

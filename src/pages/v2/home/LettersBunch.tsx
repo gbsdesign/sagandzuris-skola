@@ -10,8 +10,10 @@ import { COLOR } from '../../../design/tokens';
 // other tries, the user asked for this very bunch back, „ოდნავ სადა“: a touch less gloss and a gentler lighting-up — nothing else.
 
 // Since 2026-11-22 the vine's four bunches are all this bunch (the user: „ზემოთ 4 მტევანი იყო … ისინიც ასე ქენი … გალობა სიმღერა
-// ლოცვანი გაკვეთილი … პირველი მტევნიდან დაიწყე, მარცხნიდან“): any word, a grape a letter — 3 · 2 · 1 for six letters,
-// 3 · 2 · 2 for seven, 3 · 2 · 2 · 1 for eight, 3 · 3 · 2 · 1 for nine. The right one says „გაკვეთილი“ and still opens the letters.
+// ლოცვანი გაკვეთილი … პირველი მტევნიდან დაიწყე, მარცხნიდან“): any word, a grape a letter — 3 · 2 · 1 for six letters (and for
+// seven, whose last two share a grape), 3 · 2 · 2 · 1 for eight, 3 · 3 · 2 · 1 for nine. The right one says „გაკვეთილი“ and still
+// opens the letters. The grapes light up softly in turn, one bunch at a time: `wave` = the seconds before this bunch's turn in the
+// vine's round (the user: „ძალიან ბრჭყვიალებს, შეამცირე“ — index.css, sg-grape-glow).
 
 const ROWS: Record<number, number[]> = { 6: [3, 2, 1], 7: [3, 2, 2], 8: [3, 2, 2, 1], 9: [3, 3, 2, 1] };
 const XS: Record<number, number[]> = { 1: [50], 2: [34, 66], 3: [18, 50, 82] };
@@ -27,10 +29,12 @@ export const LettersBunch: React.FC<{
   /** what a screen reader says (the right bunch opens the letters, whatever is written on it) */
   label?: string;
   unread?: number;
+  /** when this bunch's grapes light up in the vine's round, in seconds from its start */
+  wave?: number;
   onOpen: () => void;
   className?: string;
   style?: React.CSSProperties;
-}> = ({ word, label = word, unread = 0, onOpen, className, style }) => {
+}> = ({ word, label = word, unread = 0, wave = 0, onOpen, className, style }) => {
   // seven letters: the last two share the last grape, so the bunch is 3 · 2 · 1 like „გალობა“ (the user, 2026-11-22: „ბოლო 2 ასო 1
   // მარცვალში ჩატიე, რომ ლამაზად აეწყოს“)
   const all = [...word];
@@ -56,7 +60,7 @@ export const LettersBunch: React.FC<{
         <path d="M50 -6 C50 4 49 10 50 16" fill="none" stroke={COLOR.mut} strokeWidth={5} strokeLinecap="round" />
         <path d="M51 4 C60 0 66 6 61 11 C58 14 54 11 57 8" fill="none" stroke={COLOR.mut} strokeWidth={1.6} strokeLinecap="round" />
         {grapes.map(([x, y], i) => (
-          <g key={i} className="sg-grape" style={{ animationDelay: `${i * 0.42}s` }}>
+          <g key={i} className="sg-grape" style={{ animationDelay: `${wave + i * 0.42}s` }}>
             <circle cx={x} cy={y} r={R} fill="url(#sg-grape)" fillOpacity={0.88} stroke={COLOR.wineDeep} strokeWidth={1.1} />
             <ellipse cx={x - 6} cy={y - 7} rx={3.6} ry={2.2} fill={COLOR.surf} opacity={0.17} />
             <text

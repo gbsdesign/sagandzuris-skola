@@ -1964,10 +1964,14 @@
   `HomeBar` in place of the name — „განყოფილებები ▾“ drops a list in that order (each row obeys its section's switch as the vine's
   labels did; სიმღერა / მთქმელი open „ხალხური“ on that tab via `sg-khalkhuri-tab`, საკრავები = page `sakravebi`, ვიდეოთეკა =
   `videos`). **The vine has no labels any more** (`HomeV2` passes none; `HomeV2View` keeps the props) — don't bring them back unasked.
-- Under the vine (`pages/v2/home/HomeClasses.tsx`): a member — their class(es) + „AI მასწავლებელი“ (`openAiLesson`; the qvevri then
-  skips its own AI step); teachers — the classes they lead, admins — every class (`useManagedClasses`). Then `ShortcutShelf habits`:
-  no „ჩემი ღილაკები“ heading (✎ only while editing — a long press), the kanon tile only for a psalter member with a kanon (the plain
-  `special:kathisma` button is dropped there), and a „ჩვევები“ tile → today's habits in a ui2 Sheet (`pages/v2/home/HabitsSheet.tsx`, lazy).
+- Under the vine, in this order since 2026-11-22 (the user: „სწრაფი ღილაკები ზევით აიტანე კლასების ზემოთ, ხოლო კლასები ქვემოთ და
+  ჩამოსაშლელი გახადე, შიგნით მოექცეს დაბადების დღეც“): first `ShortcutShelf habits` (no gap of its own on top there): no „ჩემი
+  ღილაკები“ heading (✎ only while editing — a long press), the kanon tile only for a psalter member with a kanon (the plain
+  `special:kathisma` button is dropped there), and a „ჩვევები“ tile → today's habits in a ui2 Sheet (`pages/v2/home/HabitsSheet.tsx`,
+  lazy). Then `pages/v2/home/HomeClasses.tsx`: a member — their class(es) as rows; teachers — the classes they lead, admins — every
+  class (`useManagedClasses`) as ONE fold „კლასები · N“ (`ClassesHead`), shut at first, kept for the visit (`sg-home-classes-open`),
+  with the coming birthdays' gold row first inside it (`BirthdaysSoon row`; `quiet` while shut — it draws nothing but the staff's
+  phone notices go on); the class rows and their chats' listeners mount only while open. A teacher's only class is not folded.
 - „გზა“ (`gz` with no mapItem) opens „საგანძური“ directly (`SagandzuriPage`, no ←); `GzaList` is no longer drawn (its rows' screens
   still open by mapItem). „სამოსი“ = a pill under the profile's name (`ChokhaThumb`, `pages/v2/gza/ChokhaThumb.tsx`); its row in
   „ჩემი“ is gone.
@@ -2215,7 +2219,9 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   always IN the grapes — a name tag under a plain bunch was refused). Left to right: „გალობა“, „სიმღერა“, „ლოცვანი“ (`BUNCH_SPOT` in
   HomeV2View) and „გაკვეთილი“ on the right, which still opens the letters. Those three sections left the home bar's menu
   (`VINE_SECTIONS`); `useSections` (SectionsMenu) gives both the menu's rows and the bunches' taps, with the admin's switches. The
-  picture's own bunches were all taken out of `public/home/vine.png`. Don't restyle the grapes unasked.
+  picture's own bunches were all taken out of `public/home/vine.png`. Don't restyle the grapes unasked. The grapes light up softly
+  in turn, one bunch at a time — a round of the vine is 24 s, a bunch every 6 s (`BUNCH_WAVE` → LettersBunch `wave`; index.css
+  `sg-grape-glow`; the user, the same night: „ძალიან ბრჭყვიალებს, შეამცირე“) — don't make it livelier unasked.
 - **No bottom menu on phones, „წერილები“ as a grape bunch, the library's themes on its front, the AI teacher renamed (2026-11-21**,
   the user: „პროფილის ღილაკი ზევით აიტანე … ლუპა დაპატარავე … სიტყვა წერილები მარცვლებში ჩაწერე ასო ასო და გააცოცხლე მტევანი“; „საპატრიარქო
   ბიბლიოთეკა წაშალე … კატეგორიები გარე უჯრაზევე“; „სადაც AI მასწავლებელი აწერია ყველგან დააწერე ავტომატური სასწავლო პროგრამა“): phones

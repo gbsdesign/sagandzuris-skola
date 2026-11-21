@@ -45,11 +45,12 @@ export const HomeV2: React.FC = () => {
         bunches={bunches}
         letters={lettersItem ? { unread: places.unread, onOpen: () => places.go(lettersItem) } : undefined}
       >
-        {/* my class (a member) or the classes I lead (teachers, admins) — compact; staff see the coming birthdays as the
-            classes card's first row (BirthdaysSoon row) */}
-        <HomeClasses />
-        {/* the kanon of a psalter-group member, „ჩვევები“ (a window) and the member's own buttons — no heading */}
+        {/* the quick buttons first (2026-11-22, the user: „სწრაფი ღილაკები ზევით აიტანე, კლასების ზემოთ“): the kanon of a
+            psalter-group member, „ჩვევები“ (a window) and the member's own buttons — no heading */}
         <ShortcutShelf habits />
+        {/* under them my class (a member) or, for teachers and admins, the classes they lead as a fold with the coming
+            birthdays inside (HomeClasses) */}
+        <HomeClasses />
       </HomeV2View>
       <Toast message={soon || ''} type="info" isVisible={!!soon} onClose={() => setSoon(null)} />
       {next.learnPiece && (

@@ -286,8 +286,9 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile'; habits?: bo
     }
   };
 
+  // the new home (`habits`): right under the vine since 2026-11-22, so no gap of its own on top
   return (
-    <section className={variant === 'home' ? 'relative mt-6 w-[calc(100%+2.5rem)] sm:w-full max-w-md text-left' : 'rounded-3xl bg-white/80 ring-1 ring-[#e8dcc8] p-4 sm:p-5'}>
+    <section className={variant === 'home' ? `relative ${withHabits ? '' : 'mt-6 '}w-[calc(100%+2.5rem)] sm:w-full max-w-md text-left` : 'rounded-3xl bg-white/80 ring-1 ring-[#e8dcc8] p-4 sm:p-5'}>
       {(!withHabits || editing) && <div className="flex items-center gap-2 mb-2.5 px-0.5">
         <h2 className="flex-1 min-w-0">
           <span className="block font-serif-ge text-[15px] font-bold text-[#4a3426]">ჩემი ღილაკები</span>
