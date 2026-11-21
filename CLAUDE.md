@@ -2220,4 +2220,8 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   `useNavPlaces`). The library's front (`v2/library/Front.tsx`) has no „საპატრიარქოს ბიბლიოთეკა“ cover: „წიგნები თემებით“ = a row a
   `P_CATEGORIES` entry (reordered) → `patriarq:<category>`; a bare `patriarq` shows the front. The app says „ავტომატური სასწავლო პროგრამა“
   (declined: -ს / -მა / -ის / -თან) wherever it said „AI მასწავლებელი“ — never write the old name again.
-
+- **The whole path in the chat's fold (2026-11-21 night**, the user: „გზას რომ ჩახსნიდი … ჩამოსაშლელად პირდაპირ ჩათში“, answer „მთელი
+  გზა, როგორც გზის გვერდზე“): `ChatPath` — the student's own side unfolds the whole „საგანძური“ page (`SagandzuriPage bare`, lazy: no
+  bar, the ✎ by „ჩემი საგალობლები“; numbers, assignments, chips, flights, ოსტატობა); the teacher's side keeps its ჩათვლა / დამატება /
+  დავალებად მიცემა and gets the two numbers, the bar and the service chips (`gza/chips.ts` `chipsOf`, shared with the page). The fold
+  scrolls inside up to 72dvh.

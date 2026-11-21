@@ -15,9 +15,9 @@ import { usePathMarks } from '../../../hooks/usePathMarks';
 import { usePathItemOpener } from '../../../hooks/usePathItemOpener';
 import { useAccess } from '../../../hooks/useAccess';
 import { pearlOf, type PearlState } from '../../../utils/pathPearls';
-import { OTHER_CHANTS } from '../../../utils/pathChests';
 import { sortPathItems, usesVoices, voicesOf, type PathItem, type Voice } from '../../../utils/pathItems';
-import { SERVICE_LISTS, findVersion } from '../../../data/chantLookup';
+import { findVersion } from '../../../data/chantLookup';
+import { chipsOf } from './chips';
 import { aiVoices } from '../../../utils/aiPass';
 import { openExam } from '../gamocda/open';
 import { useExamRecord } from '../gamocda/useExamRecord';
@@ -100,6 +100,8 @@ const Stat: React.FC<{ value: string; label: string }> = ({ value, label }) => (
 /** The page as the board draws it — everything by props. */
 export const SagandzuriView: React.FC<{
   onBack?: () => void;
+  /** inside the chat's fold (2026-11-21): no page bar — the ✎ stands by „ჩემი საგალობლები“ */
+  bare?: boolean;
   learned: number;
   total: number;
   voices: number;
@@ -127,7 +129,7 @@ export const SagandzuriView: React.FC<{
   onExam?: (id: string, voice: Voice) => void;
   mastery?: { level: number; pct: number; onOpen: () => void };
 }> = ({
-  onBack, learned, total, voices, voiceSlots, plus, work, chips, chip, onChip, items, onFirstStep, locked, editing, onEdit,
+  bare, onBack, learned, total, voices, voiceSlots, plus, work, chips, chip, onChip, items, onFirstStep, locked, editing, onEdit,
   onVoice, onRemove, onPearl, pearl, onClosePearl, onSharePearl, onExam, mastery,
 }) => {
   const [more, setMore] = useState(false);
@@ -180,14 +182,16 @@ export const SagandzuriView: React.FC<{
     );
   };
 
+  const edit = items.length ? (
+    <RoundButton label={editing ? 'მზადაა' : 'სიის შეცვლა'} tone={editing ? 'wine' : 'surf'} aria-pressed={editing} onClick={onEdit}
+      size={bare ? 36 : 44} className="[&_svg]:size-[18px]">
+      {editing ? <Check strokeWidth={2.4} /> : <Pencil strokeWidth={1.75} />}
+    </RoundButton>
+  ) : undefined;
+
   return (
-    <div className="flex w-full flex-col pb-4">
-      <TopBar title="საგანძური" onBack={onBack} right={items.length ? (
-        <RoundButton label={editing ? 'მზადაა' : 'სიის შეცვლა'} tone={editing ? 'wine' : 'surf'} aria-pressed={editing} onClick={onEdit}
-          className="[&_svg]:size-[18px]">
-          {editing ? <Check strokeWidth={2.4} /> : <Pencil strokeWidth={1.75} />}
-        </RoundButton>
-      ) : undefined} />
+    <div className={cx('flex w-full flex-col', bare ? 'pb-1' : 'pb-4')}>
+      {!bare && <TopBar title="საგანძური" onBack={onBack} right={edit} />}
 
       <div className="flex flex-col gap-2 pt-0.5">
         {/* data-help: the ready answers of „მკითხე“ that speak of each part (pages/v2/mkitkhe/light.ts lights it) */}
@@ -204,7 +208,7 @@ export const SagandzuriView: React.FC<{
         {/* the assignments keep the list's spacing inside their mark; nothing to do = no box at all */}
         {work && <div data-help="16" className="flex flex-col gap-2 rounded-card empty:hidden">{work}</div>}
 
-        <SectionLabel label="ჩემი საგალობლები" />
+        <SectionLabel label="ჩემი საგალობლები" right={bare ? edit : undefined} />
         {items.length > 0 ? (
           <>
             {chips.length > 2 && <Chips items={chips} value={chip} onChange={id => { setMore(false); onChip(id); }} label="ჩემი საგალობლები" />}
@@ -271,12 +275,9 @@ export const SagandzuriView: React.FC<{
 };
 
 const KIND_WORD: Record<string, string> = { simghera: 'სიმღერა', mtkmeli: 'მთქმელი', sakravebi: 'საკრავი' };
-const CHIP_ORDER = [...SERVICE_LISTS.map(([s]) => `s:${s}`), 'other', 'songs', 'poems'];
-const chipLabel = (id: string) =>
-  id.startsWith('s:') ? id.slice(2) : id === 'other' ? OTHER_CHANTS : id === 'songs' ? 'სიმღერები' : id === 'poems' ? 'მთქმელი' : id;
 
 /** „საგანძური“ with the member's own path (a guest's device path too). */
-export const SagandzuriPage: React.FC<{ onBack?: () => void; onMastery: () => void }> = ({ onBack, onMastery }) => {
+export const SagandzuriPage: React.FC<{ onBack?: () => void; onMastery: () => void; bare?: boolean }> = ({ onBack, onMastery, bare }) => {
   const { stats, count } = useLearnCount();
   const { selectedChantVariants, saveVariantsToFirestoreAndStorage } = useChants();
   const { navigateTo } = useNavigation();
@@ -324,14 +325,7 @@ export const SagandzuriPage: React.FC<{ onBack?: () => void; onMastery: () => vo
       };
     })), [stats, confirmed, openerOf]);
 
-  const chips = useMemo(() => {
-    const n = new Map<string, number>();
-    for (const it of items) n.set(it.chip, (n.get(it.chip) ?? 0) + 1);
-    return [
-      { id: 'all', label: 'ყველა' },
-      ...CHIP_ORDER.filter(id => n.has(id)).map(id => ({ id, label: `${chipLabel(id)} · ${n.get(id)}` })),
-    ];
-  }, [items]);
+  const chips = useMemo(() => chipsOf(items.map(it => it.chip)), [items]);
   const current = chips.some(c => c.id === chip) ? chip : 'all';
 
   const endFlight = useCallback(() => setFlight(null), []);
@@ -368,6 +362,7 @@ export const SagandzuriPage: React.FC<{ onBack?: () => void; onMastery: () => vo
   return (
     <>
       <SagandzuriView
+        bare={bare}
         onBack={onBack}
         learned={count.learned}
         total={count.total}

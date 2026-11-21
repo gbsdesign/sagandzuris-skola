@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { BookOpen, Check, ChevronDown, ClipboardList, Lock, Plus, Trash2 } from 'lucide-react';
+import React, { Suspense, useEffect, useMemo, useState } from 'react';
+import { BookOpen, Check, ChevronDown, ClipboardList, Plus, Trash2 } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { useAuth, useChants, useNavigation } from '../../../context';
@@ -17,19 +17,26 @@ import {
 } from '../../../utils/pathItems';
 import { filterValidSoft } from '../../../utils/variantValidationLazy';
 import { errorText } from '../../../utils/errorText';
-import { Chips, Dot, Helper, Note, Press, Row, Rows, Sheet, cx, FOCUS } from '../../../components/ui2';
+import { Bar, Card, Chips, Dot, Helper, Note, Press, Row, Rows, Sheet, cx, FOCUS } from '../../../components/ui2';
+import { chestIdOf } from '../../../components/pearls/LearnChests';
+import { Waiting } from '../../../components/shell/PageSkeleton';
+import { chipsOf } from '../gza/chips';
 import { SearchBox } from '../klasi/teacher/SearchBox';
+
+// the student's own fold = the whole „საგანძური“ page without its bar (the user, 2026-11-21: „გზას რომ ჩახსნიდი … ჩამოსაშლელად
+// პირდაპირ ჩათში“, answer „მთელი გზა, როგორც გზის გვერდზე“) — loaded only when the fold opens
+const SagandzuriPage = React.lazy(() => import('../gza/Sagandzuri').then(m => ({ default: m.SagandzuriPage })));
 
 // „რა ისწავლა · რას სწავლობს“ at the top of a private chat (2026-11-21, the user: „მაღლა ჩამოსაშლელი სია … საგანძურის გზა …
 // აქედანვე შეიძლებოდეს სიის ცვლილება, დამატება, წაშლა, ჩათვლა“; answers „ორივეს · ოთხივე · დაკეცილი ერთი ხაზი · პირდაპირ აპში“).
 // One folded line under the chat's head; a tap unfolds the student's path as on „საგანძური“ (pearl, name, voices 1 · 2 · 3).
 // The teacher's (or the administration's) side: a voice's tap = „ჩათვლა“ (a mark the student had not made is made too), a tap
 // on a counted voice takes it off (with „გაუქმება“); „+ დამატება“ puts a chant on the path; a tap on a name opens its window:
-// notes, „დავალებად მიცემა“ (the chat's 📎 window, already on that chant), „სიიდან ამოშლა“. The student's side: their own
-// path, voices marked as on „საგანძური“ (the teacher's lock holds), a name opens its notes.
+// notes, „დავალებად მიცემა“ (the chat's 📎 window, already on that chant), „სიიდან ამოშლა“; on top the two numbers and the bar,
+// chips by service, as on „საგანძური“. The student's side (since the evening of 2026-11-21): the whole „საგანძური“ page in the
+// fold — numbers, assignments, chips, the list with its flights, ✎, ოსტატობა.
 
 type Mark = 'off' | 'on' | 'ok';
-type Filter = 'all' | 'learning' | 'learned';
 
 const MARK_LOOK: Record<Mark, string> = {
   ok: 'bg-leaf text-white',
@@ -48,6 +55,8 @@ interface Item {
   pearl: PearlState;
   voiced: boolean;
   marks: Mark[];
+  /** its chip (a service, the songs, the poems) */
+  chip: string;
 }
 
 const KIND_WORD: Record<string, string> = { simghera: 'სიმღერა', mtkmeli: 'მთქმელი', sakravebi: 'საკრავი' };
@@ -70,6 +79,7 @@ const itemsOf = (path: PathMap, all: Record<string, Voice[]>): Item[] =>
       pearl: pearlOf(it, ok),
       voiced,
       marks: (voiced ? VOICES : (['1'] as Voice[])).map((v): Mark => (ok.includes(v) ? 'ok' : have.includes(v) ? 'on' : 'off')),
+      chip: chestIdOf(id),
     };
   });
 
@@ -86,6 +96,13 @@ const useStudentPath = (uid: string, on: boolean) => {
   }, [uid, on]);
   return map;
 };
+
+const Stat: React.FC<{ value: string; label: string }> = ({ value, label }) => (
+  <div className="flex flex-col">
+    <span className="text-hero leading-[1.1] font-bold tracking-tight tabular-nums">{value}</span>
+    <span className="text-meta text-mut">{label}</span>
+  </div>
+);
 
 const Token: React.FC<{ item: Item; size: number }> = ({ item, size }) =>
   item.token === 'pearl'
@@ -110,7 +127,7 @@ export const ChatPath: React.FC<{
   const opener = usePathItemOpener();
   const { navigateTo, openMapItem, currentPage } = useNavigation();
   const [open, setOpen] = useState(false);
-  const [filter, setFilter] = useState<Filter>('all');
+  const [chip, setChip] = useState('all');
   const [picked, setPicked] = useState<string | null>(null);
   const [adding, setAdding] = useState(false);
   const [err, setErr] = useState('');
@@ -119,7 +136,11 @@ export const ChatPath: React.FC<{
   const items = useMemo(() => (path ? itemsOf(path, allConf) : []), [path, allConf]);
   const learned = items.filter(i => i.pearl === 'shining');
   const learning = items.filter(i => i.pearl !== 'shining');
-  const shown = filter === 'learned' ? learned : filter === 'learning' ? learning : items;
+  const chips = useMemo(() => chipsOf(items.map(i => i.chip)), [items]);
+  const current = chips.some(c => c.id === chip) ? chip : 'all';
+  const shown = current === 'all' ? items : items.filter(i => i.chip === current);
+  const voiceSlots = items.reduce((n, i) => n + (i.voiced ? i.marks.length : 0), 0);
+  const voices = items.reduce((n, i) => n + (i.voiced ? i.marks.filter(m => m !== 'off').length : 0), 0);
   const locked = !!lock?.on;
 
   if (!user || (editor && path === null)) return null;
@@ -180,9 +201,9 @@ export const ChatPath: React.FC<{
 
   const pickedItem = picked ? items.find(i => i.id === picked) ?? null : null;
   const pickedOpen = pickedItem ? opener(pickedItem.id) : null;
-  const toSagandzuri = () => {
+  const toMastery = () => {
     if (currentPage !== 'gz') navigateTo('gz');
-    openMapItem('sagandzuri');
+    openMapItem('ostatoba');
   };
 
   const row = (item: Item) => {
@@ -249,33 +270,35 @@ export const ChatPath: React.FC<{
         <ChevronDown aria-hidden="true" className={cx('size-5 shrink-0 text-mut transition-transform', open && 'rotate-180')} />
       </Press>
 
-      {open && (
-        <div className="mt-2 flex max-h-[46dvh] flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain">
+      {open && !editor && (
+        <div className="mt-2 max-h-[72dvh] overflow-x-hidden overflow-y-auto overscroll-contain px-0.5">
+          <Suspense fallback={<Waiting />}>
+            <SagandzuriPage bare onMastery={toMastery} />
+          </Suspense>
+        </div>
+      )}
+
+      {open && editor && (
+        <div className="mt-2 flex max-h-[72dvh] flex-col gap-2 overflow-x-hidden overflow-y-auto overscroll-contain">
           {items.length > 0 && (
-            <div className="shrink-0 px-4">
-            <Chips<Filter>
-              label="რომელი"
-              value={filter}
-              onChange={setFilter}
-              items={[
-                { id: 'all', label: `ყველა · ${items.length}` },
-                { id: 'learning', label: `სწავლობს · ${learning.length}` },
-                { id: 'learned', label: `ისწავლა · ${learned.length}` },
-              ]}
-            />
+            <Card pad="none" className="flex shrink-0 flex-col gap-2.5 px-[18px] py-4">
+              <div className="flex items-start gap-7">
+                <Stat value={`${learned.length} / ${items.length}`} label="საგალობელი" />
+                {voiceSlots > 0 && <Stat value={`${voices} / ${voiceSlots}`} label="ხმა" />}
+              </div>
+              <Bar value={voiceSlots ? voices / voiceSlots : learned.length / items.length} h={8} />
+            </Card>
+          )}
+          {chips.length > 2 && (
+            <div className="shrink-0 px-1">
+              <Chips items={chips} value={current} onChange={setChip} label={`${studentName}-ის საგალობლები`} />
             </div>
           )}
-          {!editor && locked && <Helper icon={<Lock />}>მონიშვნას ახლა მასწავლებელი აკეთებს</Helper>}
-          {editor && items.length > 0 && <Helper icon={<Check />}>ხმაზე შეხება — ჩათვლა. კიდევ ერთხელ — მოხსნა.</Helper>}
+          {items.length > 0 && <Helper icon={<Check />}>ხმაზე შეხება — ჩათვლა. კიდევ ერთხელ — მოხსნა.</Helper>}
           {err && <Note className="text-danger">{err}</Note>}
           {shown.length > 0 && <Rows className="shrink-0">{shown.map(row)}</Rows>}
-          {items.length > 0 && shown.length === 0 && <Note>{filter === 'learned' ? 'ჯერ არაფერია ჩათვლილი.' : 'ყველაფერი ჩათვლილია.'}</Note>}
           <Rows className="shrink-0">
-            {editor ? (
-              <Row lead={<Dot icon={<Plus />} />} title="დამატება" sub="საგალობელი, სიმღერა, ლექსი" onClick={() => setAdding(true)} />
-            ) : (
-              <Row lead={<Dot icon={<BookOpen />} />} title="საგანძურში გახსნა" onClick={toSagandzuri} />
-            )}
+            <Row lead={<Dot icon={<Plus />} />} title="დამატება" sub="საგალობელი, სიმღერა, ლექსი" onClick={() => setAdding(true)} />
           </Rows>
         </div>
       )}
