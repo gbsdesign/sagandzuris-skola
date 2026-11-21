@@ -1,12 +1,14 @@
 import React from 'react';
-import { ChevronRight, NotebookPen, type LucideIcon } from 'lucide-react';
-import { Counter, Press, cx, FOCUS } from '../../../components/ui2';
+import { ArrowRight, NotebookPen, type LucideIcon } from 'lucide-react';
+import { Press, cx, FOCUS, FOCUS_IN } from '../../../components/ui2';
 
 // The new look's home page. Since 2026-11-22 it has no vine and no grapes (the user: „ყურძენი და ხე მოაცილო, თანამედროვე
 // ღილაკები დახატო … პირველი მთავარი ღილაკი არის მიმდინარე გაკვეთილი, მერე გალობა სიმღერა ლოცვა, შემდეგ დაბლა სხვა ღილაკები
 // მცირედ“): one holy father's saying in a white card, then one big wine button „მიმდინარე გაკვეთილი“ (it opens what the vine's
 // „გაკვეთილი“ bunch opened — a student's teacher chat, everyone else the letters), then three tiles (გალობა · სიმღერა · ლოცვანი),
-// then the other sections as small buttons, two in a row. Pure: everything comes by props (HomeV2 is the wrapper with the app's data).
+// then the other sections as small buttons, two in a row in one card. The same evening (the user: „დახვეწე დიზაინი უფრო
+// თანამედროვედ“): the wine button got a soft fall of light and a white arrow, the marks became rounded squares.
+// Pure: everything comes by props (HomeV2 is the wrapper with the app's data).
 
 export interface HomeTile {
   id: string;
@@ -43,13 +45,18 @@ const QuoteMark: React.FC = () => (
 const SOFT: Record<string, string> = { 'მედავითნეობა': 'მედავით\u00adნეობა', 'ბიბლიოთეკა': 'ბიბლიო\u00adთეკა', 'ვიდეოთეკა': 'ვიდეო\u00adთეკა' };
 const soft = (word: string) => SOFT[word] ?? word;
 
-const tileLook = cx('flex cursor-pointer flex-col items-center justify-center bg-surf text-center select-none transition active:scale-95', FOCUS);
+/** a round mark's quiet version: the colour's pale ground under an icon of the colour itself (the small buttons) */
+const SOFT_TONE: Record<string, string> = {
+  'bg-wine': 'bg-tint text-wine', 'bg-leaf': 'bg-leaf-tint text-leaf-ink', 'bg-gold': 'bg-gold-tint text-gold-ink',
+  'bg-sea': 'bg-sea-tint text-sea', 'bg-plum': 'bg-plum/15 text-plum', 'bg-clay': 'bg-clay/15 text-clay',
+};
 
+/** the section's mark: a rounded square — full colour on the big tiles, the pale ground on the small buttons */
 const Mark: React.FC<{ tile: HomeTile; big?: boolean }> = ({ tile, big }) => (
   <span aria-hidden="true" className={cx(
-    'flex shrink-0 items-center justify-center rounded-full text-white',
-    big ? 'size-12 [&_svg]:size-6' : 'size-icon [&_svg]:size-[18px]',
-    tile.soon ? 'bg-dim' : tile.tone,
+    'flex shrink-0 items-center justify-center rounded-field',
+    big ? 'size-11 [&_svg]:size-[22px]' : 'size-icon [&_svg]:size-[18px]',
+    tile.soon ? 'bg-soft text-mut' : big ? cx(tile.tone, 'text-white') : SOFT_TONE[tile.tone] ?? 'bg-soft text-ink',
   )}>
     <tile.Icon strokeWidth={2} />
   </span>
@@ -69,33 +76,41 @@ export const HomeV2View: React.FC<HomeV2ViewProps> = ({ saying, lesson, main, mo
       </div>
     </figure>
 
-    {/* the main button: where my learning is now */}
+    {/* the main button: where my learning is now — wine with a soft fall of light, two pale rings behind */}
     {lesson && (
       <Press
         onClick={lesson.onOpen}
         aria-label={lesson.unread ? `მიმდინარე გაკვეთილი, ${lesson.unread} ახალი წერილი` : 'მიმდინარე გაკვეთილი'}
         className={cx(
-          'relative flex min-h-[84px] w-full cursor-pointer items-center gap-3 rounded-card bg-wine px-4 py-4 text-left text-white shadow-wine select-none',
-          'transition hover:bg-wine-deep active:scale-[0.98]', FOCUS,
+          'group relative flex min-h-[96px] w-full cursor-pointer items-center gap-3.5 overflow-hidden rounded-card bg-linear-to-br from-wine to-wine-deep',
+          'py-4 pr-4 pl-4 text-left text-white shadow-wine select-none transition active:scale-[0.98]', FOCUS,
         )}
       >
-        <span aria-hidden="true" className="relative flex size-12 shrink-0 items-center justify-center rounded-full bg-white/15 [&_svg]:size-6">
+        <span aria-hidden="true" className="pointer-events-none absolute -top-14 -right-10 size-44 rounded-full bg-white/8" />
+        <span aria-hidden="true" className="pointer-events-none absolute -right-4 -bottom-16 size-32 rounded-full bg-white/6" />
+        <span aria-hidden="true" className="flex size-12 shrink-0 items-center justify-center rounded-field bg-white/15 ring-1 ring-white/20 [&_svg]:size-6">
           <NotebookPen strokeWidth={2} />
-          {lesson.unread > 0 && <Counter n={lesson.unread} className="absolute -top-1 -right-1 ring-2 ring-wine" />}
         </span>
-        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-          <span className="text-head leading-tight font-bold">მიმდინარე გაკვეთილი</span>
-          {lesson.unread > 0 && <span className="text-meta font-medium text-white/85">{lesson.unread} ახალი წერილი</span>}
+        <span className="relative flex min-w-0 flex-1 flex-col gap-1">
+          <span className="text-title leading-tight font-bold tracking-[-0.01em]">მიმდინარე გაკვეთილი</span>
+          {lesson.unread > 0 && (
+            <span className="self-start rounded-full bg-white/15 px-2.5 py-0.5 text-cap font-semibold">{lesson.unread} ახალი წერილი</span>
+          )}
         </span>
-        <ChevronRight aria-hidden="true" strokeWidth={2.25} className="size-5 shrink-0 text-white/80" />
+        <span aria-hidden="true" className="relative flex size-tap shrink-0 items-center justify-center rounded-full bg-surf text-wine shadow-knob transition group-active:translate-x-0.5 [&_svg]:size-5">
+          <ArrowRight strokeWidth={2.5} />
+        </span>
       </Press>
     )}
 
-    {/* გალობა · სიმღერა · ლოცვანი */}
+    {/* გალობა · სიმღერა · ლოცვანი: white tiles, the mark above, the name under it on the left */}
     {main.length > 0 && (
       <div className={cx('grid gap-2.5', main.length === 3 ? 'grid-cols-3' : main.length === 2 ? 'grid-cols-2' : 'grid-cols-1')}>
         {main.map(t => (
-          <Press key={t.id} onClick={t.onOpen} className={cx(tileLook, 'min-h-[104px] gap-2 rounded-card px-2 py-3.5')}>
+          <Press key={t.id} onClick={t.onOpen} className={cx(
+            'flex min-h-[112px] cursor-pointer flex-col items-start justify-between gap-3 rounded-card bg-surf p-3.5 text-left shadow-lift select-none',
+            'transition active:scale-95', FOCUS,
+          )}>
             <Mark tile={t} big />
             <span className="flex flex-col">
               <span className={cx('text-lead leading-tight font-bold', t.soon ? 'text-mut' : 'text-ink')}>{t.word}</span>
@@ -106,21 +121,24 @@ export const HomeV2View: React.FC<HomeV2ViewProps> = ({ saying, lesson, main, mo
       </div>
     )}
 
-    {/* the other sections, small: two in a row, a round mark and the name side by side */}
+    {/* the other sections: one white card under a small name, two in a row, a pale mark beside each name */}
     {more.length > 0 && (
-      <div className="grid grid-cols-2 gap-2">
-        {more.map(t => (
-          <Press key={t.id} onClick={t.onOpen} className={cx(
-            'flex min-h-[56px] cursor-pointer items-center gap-2 rounded-tile bg-surf py-2 pr-2.5 pl-2 text-left select-none transition active:scale-95', FOCUS,
-          )}>
-            <Mark tile={t} />
-            <span className="flex min-w-0 flex-col">
-              <span className={cx('text-body leading-tight font-bold hyphens-manual', t.soon ? 'text-mut' : 'text-ink')}>{soft(t.word)}</span>
-              {t.soon && <span className="text-cap leading-tight font-semibold text-mut">მალე</span>}
-            </span>
-          </Press>
-        ))}
-      </div>
+      <section aria-label="სხვა განყოფილებები" className="flex flex-col gap-1.5 pt-1">
+        <h2 className="m-0 px-2 text-meta font-semibold text-mut">სხვა განყოფილებები</h2>
+        <div className="grid grid-cols-2 gap-1 rounded-card bg-surf p-1.5">
+          {more.map(t => (
+            <Press key={t.id} onClick={t.onOpen} className={cx(
+              'flex min-h-tap-lg cursor-pointer items-center gap-2.5 rounded-tile py-1.5 pr-2 pl-1.5 text-left select-none transition-colors active:bg-soft', FOCUS_IN,
+            )}>
+              <Mark tile={t} />
+              <span className="flex min-w-0 flex-col">
+                <span className={cx('text-body leading-tight font-semibold hyphens-manual', t.soon ? 'text-mut' : 'text-ink')}>{soft(t.word)}</span>
+                {t.soon && <span className="text-cap leading-tight font-semibold text-mut">მალე</span>}
+              </span>
+            </Press>
+          ))}
+        </div>
+      </section>
     )}
 
     {children && <div className="flex flex-col items-center gap-3 px-1 pt-1">{children}</div>}
