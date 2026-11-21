@@ -6,7 +6,7 @@ import { SAYINGS_ABOVE } from '../../../data/sayings';
 import { HomeV2View } from './HomeV2View';
 import { useNextStep } from './useNextStep';
 import { useSayingSlot } from './useSayingSlot';
-import { HomeClasses, useHomeAiShown } from './HomeClasses';
+import { HomeClasses } from './HomeClasses';
 import { useNavPlaces } from '../../../components/shell/BottomNav';
 
 // The home page in the new look (redesign stage 4, boards x-mtavari + x-ultra-gaagrdzele): the app draws the home bar above
@@ -21,9 +21,8 @@ export const HomeV2: React.FC = () => {
   const slot = useSayingSlot();
   const saying = SAYINGS_ABOVE[slot % SAYINGS_ABOVE.length];
   const next = useNextStep();
-  // a member's AI line stands under the vine — the qvevri does not repeat it
-  const aiRow = useHomeAiShown();
-  const step = aiRow && next.step?.kind === 'ai' ? null : next.step;
+  // the day lesson is the shelf's „ავტო გაკვეთილი“ tile (2026-11-21) — the qvevri never shows it (useNextStep)
+  const step = next.step;
   // „წერილები“ = the vine's grape bunch (the phone's bottom menu is gone since 2026-11-21): the same tap as the menu's was
   const places = useNavPlaces();
   const lettersItem = places.shown.find(it => it.id === 'messages');
@@ -42,9 +41,9 @@ export const HomeV2: React.FC = () => {
       >
         {/* birthdays: within five days for teachers and admins, today's for members */}
         {access.on('birthdays') && <BirthdaysSoon />}
-        {/* my class and the AI teacher (a member) or the classes I lead (teachers, admins) */}
+        {/* my class (a member) or the classes I lead (teachers, admins) — compact */}
         <HomeClasses />
-        {/* the kanon of a psalter-group member, „ჩვევები“ (a window) and the member's own buttons — no heading */}
+        {/* the kanon of a psalter-group member, „ჩვევები“ (a window), „ავტო გაკვეთილი“ and the member's own buttons — no heading */}
         <ShortcutShelf habits />
       </HomeV2View>
       {next.learnPiece && (

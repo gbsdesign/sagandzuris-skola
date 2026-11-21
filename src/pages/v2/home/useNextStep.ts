@@ -112,7 +112,7 @@ export const useNextStep = (): { step: NextStep | null; go: () => void; learnPie
     : pickNext({
       lesson,
       fresh: !Object.keys(rec.learning).length && !rec.aiLast && !rec.aiDays,
-      ai: { on: aiOn, doneToday: rec.aiLast === today, minutes: lessonMinutes() },
+      ai: { on: aiOn, doneToday: rec.aiLast === today, minutes: lessonMinutes(), onShelf: true },
       galobaOpen,
       reviews,
       recent,
