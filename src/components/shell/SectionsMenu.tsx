@@ -36,18 +36,14 @@ const ITEMS: Item[] = [
 /** „ხალხური“'s first tab, as KhalkhuriV2 reads it for the visit */
 const folkTab = (tab: 'songs' | 'poets') => { try { sessionStorage.setItem('sg-khalkhuri-tab', tab); } catch { /* storage off */ } };
 
-export const SectionsMenu: React.FC<{ onSoon: (text: string) => void }> = ({ onSoon }) => {
-  const [open, setOpen] = useState(false);
+/** the sections written into the home vine's grape bunches (pages/v2/home) — the menu leaves them out (2026-11-21, the user:
+    „დანარჩენ მტევნებზე გადაანაწილე გალობა, სიმღერა, ლოცვანი და განყოფილებებიდან ჩახსენი“) */
+export const VINE_SECTIONS = ['galoba', 'simghera', 'lotsvani'];
+
+/** the sections with the admin's switches applied, and what a tap on one does — the menu's rows and the vine's bunches */
+export const useSections = (onSoon: (text: string) => void, close: () => void = () => {}) => {
   const access = useAccess();
   const { navigateTo, openMapItem } = useNavigation();
-  useBackToClose(open, () => setOpen(false));
-
-  useEffect(() => {
-    if (!open) return;
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [open]);
 
   const go: Record<string, () => void> = {
     galoba: () => navigateTo('galoba'),
@@ -68,13 +64,30 @@ export const SectionsMenu: React.FC<{ onSoon: (text: string) => void }> = ({ onS
 
   const pick = (it: Item, state: string) => {
     triggerHaptic(10);
-    if (state === 'soon') { setOpen(false); onSoon(`„${it.label}“ ჯერ მზადდება — მალე დაემატება`); return; }
+    if (state === 'soon') { close(); onSoon(`„${it.label}“ ჯერ მზადდება — მალე დაემატება`); return; }
     // a closed page that has no page of its own to say so asks at once; the others open their own closed page
-    if (state === 'locked' && it.id === 'lotsvani') { setOpen(false); askSignIn(it.label); return; }
+    if (state === 'locked' && it.id === 'lotsvani') { close(); askSignIn(it.label); return; }
     // the menu's own history step is left behind and skipped on the way back (utils/backToClose)
-    setOpen(false);
+    close();
     go[it.id]();
   };
+  return { rows, pick };
+};
+
+export const SectionsMenu: React.FC<{ onSoon: (text: string) => void }> = ({ onSoon }) => {
+  const [open, setOpen] = useState(false);
+  useBackToClose(open, () => setOpen(false));
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') setOpen(false); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [open]);
+
+  const all = useSections(onSoon, () => setOpen(false));
+  const pick = all.pick;
+  const rows = all.rows.filter(r => !VINE_SECTIONS.includes(r.it.id));
 
   return (
     <>
