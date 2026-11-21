@@ -9,17 +9,19 @@ export const DRIVE_KEY = 'AIzaSyCJ0rb9N2NF07-3kOhu7EQIithBWYTsLsE';
 
 export interface PCategory { id: string; folder: string; title: string; note: string }
 
+/** since 2026-11-21 the categories stand right on the library's front (no „საპატრიარქოს ბიბლიოთეკა“ cover — the user: „წაშალო და
+ *  ხელახლა დაალაგო კატეგორიები … გარე უჯრაზევე“), in this order: Scripture and the fathers first, the other languages last */
 export const P_CATEGORIES: PCategory[] = [
   { id: 'bible', folder: '1v-pf1dw-lI-ImECyp4lASnJE_4wXs1Ez', title: 'ბიბლია და წმიდა წერილი', note: 'განმარტებები, აპოკრიფები' },
-  { id: 'prayer', folder: '1J1ooAc15bZjetH-VoyYWcDcHunWYDsjM', title: 'ლოცვანი და გალობა', note: 'ტიპიკონი, ჟამნი, კურთხევანი' },
-  { id: 'ilia', folder: '11amYsWHqCR_uJz6AO8fgb5SaG6RJ1RNx', title: 'ილია II — ეპისტოლეები', note: 'საშობაო და სააღდგომო' },
-  { id: 'saints', folder: '1ZNK_BK1pklwZ5j_mjHI1zGiCKqJ-AhPQ', title: 'წმიდანთა ცხოვრებანი', note: 'მოწამეები, ღირსი მამები' },
   { id: 'fathers', folder: '1QR-__fjWTr_uEoT6m1OqzkxLowO3qHJv', title: 'ღვთისმეტყველება და წმიდა მამები', note: 'ქადაგებანი, სწავლანი' },
+  { id: 'saints', folder: '1ZNK_BK1pklwZ5j_mjHI1zGiCKqJ-AhPQ', title: 'წმიდანთა ცხოვრებანი', note: 'მოწამეები, ღირსი მამები' },
+  { id: 'prayer', folder: '1J1ooAc15bZjetH-VoyYWcDcHunWYDsjM', title: 'ლოცვანი და გალობა', note: 'ტიპიკონი, ჟამნი, კურთხევანი' },
   { id: 'history', folder: '1B35bUfxfFv0zvclhfkbaWQa2wSp4rfw9', title: 'ეკლესიის ისტორია', note: 'ავტოკეფალია, პატრიარქები' },
+  { id: 'ilia', folder: '11amYsWHqCR_uJz6AO8fgb5SaG6RJ1RNx', title: 'ილია II — ეპისტოლეები', note: 'საშობაო და სააღდგომო' },
   { id: 'art', folder: '1LrrDlxlYFCfmYDmlwZUXQyJ76p4AfShK', title: 'ხელოვნება და ხუროთმოძღვრება', note: 'ხატი, ფრესკა, ტაძრები' },
-  { id: 'journals', folder: '1pgKwZc78LHhOSWkJzgZ-KmhDNHu0YiGz', title: 'ჟურნალები და კალენდრები', note: 'საეკლესიო კალენდრები' },
-  { id: 'words', folder: '1NlLa0Pnh8EtwH0UCJALmrP9lKCv2sjDj', title: 'ლექსიკონები და ენა', note: 'ანბანი, ხუცური' },
   { id: 'culture', folder: '1yRgU4yAAQ6yMBjjwlmYFGTdJys90OxIj', title: 'ლიტერატურა და კულტურა', note: 'მწერლობა, ისტორია, ფილოსოფია' },
+  { id: 'words', folder: '1NlLa0Pnh8EtwH0UCJALmrP9lKCv2sjDj', title: 'ლექსიკონები და ენა', note: 'ანბანი, ხუცური' },
+  { id: 'journals', folder: '1pgKwZc78LHhOSWkJzgZ-KmhDNHu0YiGz', title: 'ჟურნალები და კალენდრები', note: 'საეკლესიო კალენდრები' },
   { id: 'ru', folder: '1JFB6WeQ5-XcqeyZbh4J_oz143AGW6zZj', title: 'რუსულ ენაზე', note: 'სულიერი მოამბე, კირიონ II' },
   { id: 'other', folder: '1Rq8mXZUOi4QQP1LScvimApnm3xGZ7xmp', title: 'სხვა ენებზე', note: 'ინგლისური, ბერძნული' },
 ];

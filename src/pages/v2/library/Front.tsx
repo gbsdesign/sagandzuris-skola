@@ -1,5 +1,8 @@
 import React, { useState } from 'react';
-import { BookOpen, CalendarDays, ChevronDown, ChevronRight, Disc3, Headphones, LoaderCircle, Music } from 'lucide-react';
+import {
+  BookOpen, BookText, CalendarDays, ChevronDown, ChevronRight, Disc3, Feather, Globe, Headphones, Landmark, Languages, Library, LoaderCircle,
+  Music, Palette, ScrollText, Sparkles,
+} from 'lucide-react';
 import { useAuth, useNavigation } from '../../../context';
 import { useAccess } from '../../../hooks/useAccess';
 import { useMembership } from '../../../utils/memberAccess';
@@ -7,6 +10,8 @@ import { askSignIn } from '../../../components/access/SignInPrompt';
 import { openChurchCalendar, todayIso } from '../../../data/churchCalendar';
 import { CHANT_ALBUMS } from '../../../data/chantAlbums';
 import { BOOKS } from '../../../data/libraryBooks';
+import { P_CATEGORIES } from '../../../data/patriarchLibrary';
+import { keptCount } from '../../library/PatriarchLibrary';
 import { useShownAlbums } from '../../../components/maps/CentreAlbums';
 import { OfflineButton } from '../../../components/offline/OfflineButton';
 import { Dot, Hero, Press, Row, Rows, SectionLabel, Small, TopBar, cx } from '../../../components/ui2';
@@ -20,7 +25,7 @@ import { Page } from './parts';
 // x-biblioteka — the library's front room in the new look: where the reader stopped (a wine card), the books as cloth covers
 // three to a row, all on one screen (no wooden board, plates or lamp), then the recordings and the church calendar.
 
-type CoverId = 'prayers' | 'book' | 'lives' | 'feasts' | 'sasuliero' | 'patriarq' | 'paisi' | 'tsinaprebi';
+type CoverId = 'prayers' | 'book' | 'lives' | 'feasts' | 'sasuliero' | 'paisi' | 'tsinaprebi';
 
 /** the cloth: a design-rule colour under index.css `.sg-cloth`'s weave and shade (`-deep`: the bright ones, a darker cloth) */
 const COVERS: { id: CoverId; title: string; cloth: string }[] = [
@@ -30,11 +35,16 @@ const COVERS: { id: CoverId; title: string; cloth: string }[] = [
   // soft hyphens: a long word breaks as a book would break it
   { id: 'feasts', title: 'დღესას­წაულები', cloth: 'bg-gold sg-cloth-deep' },
   { id: 'sasuliero', title: 'სასულიერო წიგნები', cloth: 'bg-clay sg-cloth-deep' },
-  { id: 'patriarq', title: 'საპატრიარ­ქოს ბიბლიოთეკა', cloth: 'bg-wine-deep' },
   { id: 'paisi', title: 'ვიდეო­თეკა', cloth: 'bg-plum sg-cloth-deep' },
   { id: 'tsinaprebi', title: 'გაიცანი წინაპრები', cloth: 'bg-ink' },
 ];
 const DEFAULT_ORDER = COVERS.map(c => c.id);
+
+/** the Patriarchate library's categories, right on the front since 2026-11-21 (its own cover is gone) — a mark each */
+const CAT_ICON: Record<string, React.ReactNode> = {
+  bible: <BookOpen />, fathers: <Feather />, saints: <Sparkles />, prayer: <Music />, history: <Landmark />, ilia: <ScrollText />,
+  art: <Palette />, culture: <Library />, words: <Languages />, journals: <CalendarDays />, ru: <Globe />, other: <Globe />,
+};
 
 const Cover: React.FC<{ title: string; cloth: string; onOpen: () => void; className?: string }> = ({ title, cloth, onOpen, className }) => (
   <Press
@@ -138,6 +148,20 @@ export const Front: React.FC<{ onOpen: (id: string) => void }> = ({ onOpen }) =>
           />
         ))}
       </div>
+
+      {/* the Patriarchate library's books by theme (2026-11-21, the user: „საპატრიარქო ბიბლიოთეკა წაშალო და ხელახლა დაალაგო
+          კატეგორიები … გარე უჯრაზევე … მარტივად“): a row a category opens its books (`patriarq:<category>`) */}
+      <SectionLabel label="წიგნები თემებით" className="mt-1" />
+      <Rows>
+        {P_CATEGORIES.map(c => {
+          const n = keptCount(c);
+          return (
+            <Row key={c.id} lead={<Dot icon={CAT_ICON[c.id] ?? <BookText />} />} title={c.title} wrap
+              sub={`${c.note}${n ? ` · ${n} წიგნი` : ''}`}
+              onClick={() => { triggerHaptic(10); onOpen(`patriarq:${c.id}`); }} />
+          );
+        })}
+      </Rows>
 
       {(user || recordings || folk.length > 0) && (
         <>
