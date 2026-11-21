@@ -37,7 +37,9 @@
 - **Ready → merge it yourself, then say it in red.** When a chat's work is finished and its PR is ready (local checks
   pass, GitHub checks green, no conflict), merge it right away — PRs that change `firestore.rules` too — and end the reply
   with „🔴 **შეერთდა** — PR #N“ (Markdown has no red text, so the red circle + bold). Never write „შესაერთებელია“ and wait;
-  only if merging is impossible (red check, conflict) say why. (The user's rule, 2026-10-27, widened 2026-10-28; repeated
+  only if merging is impossible (red check, conflict) say why. **A red check that main itself already fails** (the same tests
+  red on main's own last state — e.g. after the daily books' or calendar's automatic update) is not this PR's: merge anyway and
+  say it in one line (the user, 2026-11-21: „ჩაიწერე წესებში რომ ავტომატურად შეაერთო და მომწერო წითლად რომ შეერთდა“). (The user's rule, 2026-10-27, widened 2026-10-28; repeated
   2026-11-21: „ჩაწერე წესებში რო სუ შეაერთო“ — this is his standing permission to merge every finished PR; in a cloud session
   merge with `gh api -X PUT repos/gbsdesign/sagandzuris-skola/pulls/<N>/merge -f merge_method=squash`.)
 
