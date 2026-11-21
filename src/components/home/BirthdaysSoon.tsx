@@ -14,7 +14,7 @@ import { triggerHaptic } from '../../utils/haptics';
 const STAFF_DAYS = 5;
 const NOTIFY_AT = [5, 3, 1];
 
-export const BirthdaysSoon: React.FC<{ className?: string; compact?: boolean }> = ({ className, compact }) => {
+export const BirthdaysSoon: React.FC<{ className?: string; compact?: boolean; row?: boolean }> = ({ className, compact, row }) => {
   const { user, isTeacher } = useAuth();
   const { isMember } = useMembership();
   const { navigateTo } = useNavigation();
@@ -52,6 +52,28 @@ export const BirthdaysSoon: React.FC<{ className?: string; compact?: boolean }> 
   }, [isTeacher, key]);
 
   if (!isTeacher || !coming.length) return null;
+  // the classes card's first row (2026-11-22, the user: „დაბადების დღეები კლასებს თავში გამოჩნდეს“): a pale gold line
+  // with the classes' look — a round cake, the name and when, „+N“ when more are coming
+  if (row) {
+    const first = coming[0];
+    return (
+      <button
+        type="button"
+        onClick={() => { triggerHaptic(8); navigateTo('birthdays'); }}
+        aria-label="დაბადების დღეები"
+        className="flex min-h-[54px] w-full cursor-pointer items-center gap-3 bg-gold-tint py-1.5 pr-2.5 pl-3 text-left transition-colors active:bg-soft"
+      >
+        <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-surf text-gold">
+          {first.name ? <Sparkles aria-hidden="true" className="size-4" /> : <Cake aria-hidden="true" className="size-4" />}
+        </span>
+        <span className="flex min-w-0 flex-1 items-baseline gap-1.5 text-body leading-tight text-gold-ink">
+          <b className="min-w-0 truncate font-semibold text-ink">{first.b.name}</b>
+          <span className="shrink-0 whitespace-nowrap">· {first.name ? 'ანგელოზის დღე, ' : ''}{inDaysText(first.days)}{coming.length > 1 ? ` · +${coming.length - 1}` : ''}</span>
+        </span>
+        <ChevronRight aria-hidden="true" className="size-4 shrink-0 text-mut/70" strokeWidth={2} />
+      </button>
+    );
+  }
   // the new home: one small gold pill (2026-11-22, the user: „პატარა და კომპაქტურად“)
   if (compact) {
     const first = coming[0];
