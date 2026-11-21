@@ -29,7 +29,7 @@ const chance = (seed: number, i: number, salt: number) => {
   return v - Math.floor(v);
 };
 
-interface Grape { x: number; y: number; r: number; tone: number; letter?: string; speck?: boolean }
+interface Grape { x: number; y: number; r: number; tone: number; letter?: string }
 
 /** A bunch as it grows (the user: „არაბუნებრივად არის მტევნები … დახვეწე, გაალამაზე, მაოკოხტავე“): the lettered grapes row by row,
     none quite like its neighbour — a little off its place, a little bigger or smaller, smaller towards the tip, each of its own
@@ -52,7 +52,6 @@ const bunchOf = (word: string) => {
         r: size * (0.96 + chance(seed, i, 3) * 0.09),
         tone: Math.floor(chance(seed, i, 4) * 3),
         letter: letters[i],
-        speck: chance(seed, i, 5) > 0.55,
       });
       i += 1;
     });
@@ -79,12 +78,10 @@ const GrapeDraw: React.FC<{ g: Grape; shiny?: boolean; dim?: boolean }> = ({ g, 
     <circle cx={g.x} cy={g.y} r={g.r} fill={`url(#sg-grape-${g.tone})`} />
     <circle cx={g.x} cy={g.y} r={g.r} fill="url(#sg-grape-bloom)" />
     {dim && <circle cx={g.x} cy={g.y} r={g.r} className="sg-grape-shade" />}
-    {g.speck && <circle cx={g.x + g.r * 0.6} cy={g.y - g.r * 0.6} r={0.8} className="sg-grape-speck" />}
     <ellipse
       cx={g.x - g.r * 0.5} cy={g.y - g.r * 0.62} rx={g.r * (shiny ? 0.26 : 0.2)} ry={g.r * (shiny ? 0.13 : 0.1)}
-      fill={COLOR.surf} opacity={dim ? 0.3 : shiny ? 0.9 : 0.6} transform={`rotate(-38 ${g.x - g.r * 0.5} ${g.y - g.r * 0.62})`}
+      fill={COLOR.surf} opacity={dim ? 0.25 : shiny ? 0.8 : 0.45} transform={`rotate(-38 ${g.x - g.r * 0.5} ${g.y - g.r * 0.62})`}
     />
-    {shiny && !dim && <circle cx={g.x + g.r * 0.62} cy={g.y + g.r * 0.62} r={1.2} fill={COLOR.surf} opacity={0.55} />}
   </>
 );
 
@@ -129,7 +126,7 @@ export const LettersBunch: React.FC<{
           <path d="M51 3 C60 -1 66 5 61 10 C58 13 54 10 57 7" fill="none" className="sg-bunch-stalk" strokeWidth={1.3} strokeLinecap="round" />
           {back.map((g, i) => <GrapeDraw key={i} g={g} dim />)}
           {front.map((g, i) => (
-            <g key={i} className="sg-grape" style={{ animationDelay: `${i * 0.42}s` }}>
+            <g key={i} className="sg-grape" style={{ animationDelay: `${i * 0.5}s` }}>
               <GrapeDraw g={g} shiny={shiny} />
             </g>
           ))}
@@ -137,7 +134,7 @@ export const LettersBunch: React.FC<{
           {front.map((g, i) => (
             <text
               key={i} x={g.x} y={g.y + 0.6} textAnchor="middle" dominantBaseline="central"
-              className="sg-grape-letter" fontSize={19.5} fontWeight={700} style={{ animationDelay: `${i * 0.42}s` }}
+              className="sg-grape-letter" fontSize={19} fontWeight={700}
             >{g.letter}</text>
           ))}
         </svg>

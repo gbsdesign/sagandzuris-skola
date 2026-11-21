@@ -104,12 +104,8 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
 /* the home vine's „წერილები“ bunch (pages/v2/home/LettersBunch.tsx): the grapes light up one after another, letter by letter;
    with new letters the bunch hops now and then */
 @keyframes sg-grape-glow {
-  0%, 16%, 100% { transform: scale(1); filter: none; }
-  7% { transform: scale(1.1); filter: brightness(1.08) drop-shadow(0 0 3px rgba(246, 212, 138, 0.9)); }
-}
-@keyframes sg-grape-letter {
-  0%, 16%, 100% { fill: #1f1304; }
-  7% { fill: #000; }
+  0%, 12%, 100% { filter: none; }
+  6% { filter: brightness(1.07); }
 }
 @keyframes sg-bunch-hop {
   0%, 72%, 100% { translate: 0 0; }
@@ -118,23 +114,21 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
   90% { translate: 0 -3px; }
   95% { translate: 0 0; }
 }
-/* ripe amber-green grapes' colours (after the user's photo), three ripenesses — golden, greener, rosier: the lit side, the skin,
-   the rim; the bloom's dust; a grape's shadow on those behind; a freckle; the letter; the stalk */
-.sg-grape-lit-0 { stop-color: #faf1c8; } .sg-grape-skin-0 { stop-color: #dcc67c; } .sg-grape-rim-0 { stop-color: #b08a4e; }
-.sg-grape-lit-1 { stop-color: #f4f1c2; } .sg-grape-skin-1 { stop-color: #cfca7e; } .sg-grape-rim-1 { stop-color: #9c9550; }
-.sg-grape-lit-2 { stop-color: #fbe9c6; } .sg-grape-skin-2 { stop-color: #e0b982; } .sg-grape-rim-2 { stop-color: #b47f55; }
-.sg-grape-dust { stop-color: #e9a98a; }
-.sg-grape-shade { fill: #4a3210; opacity: 0.2; }
-.sg-grape-speck { fill: #7a5524; opacity: 0.45; }
-/* the letter must read at a glance: almost black, with a pale rim that lifts it off the grape */
-.sg-grape-letter { fill: #1f1304; paint-order: stroke; stroke: rgba(255, 250, 232, 0.85); stroke-width: 2.4px; stroke-linejoin: round; }
-.sg-bunch-stalk { stroke: #7d6a45; }
-.sg-bunch-knot { fill: #6e5b3d; }
-.sg-grape { transform-box: fill-box; transform-origin: center; animation: sg-grape-glow 5.4s ease-in-out infinite; }
-.sg-grape-letter { animation: sg-grape-letter 5.4s ease-in-out infinite; animation-delay: inherit; }
+/* ripe pale-gold grapes (after the user's photo), soft and matte (the user: „ხელოვნურია, თვალს ღლის“) — three ripenesses that
+   differ only a little: the lit side, the skin, the rim; the bloom's dust; a grape's shadow on those behind; the letter (plain
+   dark brown); the stalk. A grape only brightens a touch in its turn, slowly — nothing grows or flashes. */
+.sg-grape-lit-0 { stop-color: #faf6dc; } .sg-grape-skin-0 { stop-color: #e6dca4; } .sg-grape-rim-0 { stop-color: #c9b678; }
+.sg-grape-lit-1 { stop-color: #f7f6d8; } .sg-grape-skin-1 { stop-color: #e0dea4; } .sg-grape-rim-1 { stop-color: #bfbb78; }
+.sg-grape-lit-2 { stop-color: #fbf3da; } .sg-grape-skin-2 { stop-color: #ead8a6; } .sg-grape-rim-2 { stop-color: #cdae7c; }
+.sg-grape-dust { stop-color: #e2b08c; }
+.sg-grape-shade { fill: #5a4418; opacity: 0.12; }
+.sg-grape-letter { fill: #3b2a0b; }
+.sg-bunch-stalk { stroke: #8a7850; }
+.sg-bunch-knot { fill: #7c6a48; }
+.sg-grape { animation: sg-grape-glow 9s ease-in-out infinite; }
 .sg-bunch-hop { animation: sg-bunch-hop 2.8s ease-in-out infinite; }
 @media (prefers-reduced-motion: reduce) {
-  .sg-grape, .sg-grape-letter, .sg-bunch-hop { animation: none; }
+  .sg-grape, .sg-bunch-hop { animation: none; }
 }
 
 /* home-page plate ornaments: gentle idle motion + staggered entrance (still when reduced motion is asked) */
