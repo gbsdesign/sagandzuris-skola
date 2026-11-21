@@ -34,7 +34,7 @@ export type BunchId = 'galoba' | 'simghera' | 'lotsvani';
 
 /** where the picture's own bunches hung: the stem's top, in % of the picture */
 const BUNCH_SPOT: Record<BunchId, React.CSSProperties> = {
-  galoba: { left: '64.6%', top: '15.4%' },
+  galoba: { left: '58.5%', top: '12.5%' },
   simghera: { left: '14.5%', top: '19.5%' },
   lotsvani: { left: '37.5%', top: '30.2%' },
 };
@@ -179,9 +179,9 @@ export const HomeV2View: React.FC<HomeV2ViewProps> = ({ saying, labels, abituri,
 
           {/* words in the grapes, where the picture's own bunches hung: the first one („გაკვეთილი“) opens the letters, the others
               their sections; they sway out of step */}
-          {letters && <LettersBunch word="გაკვეთილი" label="წერილები" shiny unread={letters.unread} onOpen={letters.onOpen} className="z-1 w-[23%]" style={{ left: '68.9%', top: '32.4%' }} />}
+          {letters && <LettersBunch word="გაკვეთილი" label="წერილები" unread={letters.unread} onOpen={letters.onOpen} className="z-1 w-[22%]" style={{ left: '71%', top: '34.8%' }} />}
           {bunches?.map((b, i) => (
-            <LettersBunch key={b.id} word={b.word} onOpen={b.onOpen} className="z-1 w-[23%]" style={{ ...BUNCH_SPOT[b.id], animationDelay: `${-(i + 1) * 0.9}s` }} />
+            <LettersBunch key={b.id} word={b.word} onOpen={b.onOpen} className="z-1 w-[22%]" style={{ ...BUNCH_SPOT[b.id], animationDelay: `${-(i + 1) * 0.9}s` }} />
           ))}
 
           {/* „გააგრძელე“ on the qvevri: one thing, where I stopped */}
