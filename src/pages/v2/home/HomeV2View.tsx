@@ -1,46 +1,35 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
-import { BookOpen, Calendar, CircleCheck, Dice4, GraduationCap, MapPin, Music, Sparkles, type LucideIcon } from 'lucide-react';
-import { Press, cx, FOCUS } from '../../../components/ui2';
-import type { NextKind, NextStep } from './nextStep';
-import { LettersBunch } from './LettersBunch';
+import React from 'react';
+import { ChevronRight, NotebookPen, type LucideIcon } from 'lucide-react';
+import { Counter, Press, cx, FOCUS } from '../../../components/ui2';
 
-// The new look's home page (boards x-mtavari, x-ultra-gaagrdzele, x-ultra-gaagrdzele-2): one holy father's saying in a white
-// card, the vine with its labels as white chips (the same picture and places as the old GrapeNav), and on the qvevri one
-// „გააგრძელე“ button that shows where I stopped. Pure: everything comes by props (HomeV2 is the wrapper with the app's data).
-// The labels are placed in % of the picture, so the vine keeps the board's look on any phone: under the board's 374px it
-// and its labels grow smaller together (never under 80 % — the words stay ≥ 12px).
+// The new look's home page. Since 2026-11-22 it has no vine and no grapes (the user: „ყურძენი და ხე მოაცილო, თანამედროვე
+// ღილაკები დახატო … პირველი მთავარი ღილაკი არის მიმდინარე გაკვეთილი, მერე გალობა სიმღერა ლოცვა, შემდეგ დაბლა სხვა ღილაკები
+// მცირედ“): one holy father's saying in a white card, then one big wine button „მიმდინარე გაკვეთილი“ (it opens what the vine's
+// „გაკვეთილი“ bunch opened — a student's teacher chat, everyone else the letters), then three tiles (გალობა · სიმღერა · ლოცვანი),
+// then the other sections as small buttons, two in a row. Pure: everything comes by props (HomeV2 is the wrapper with the app's data).
 
-export type SpotId = 'simghera' | 'chvevebi' | 'eklesiebi' | 'galoba' | 'biblioteka' | 'tamashebi';
-
-export interface VineLabel {
-  id: SpotId;
-  /** the admin set it „მალე“: the label says so under its name, a tap only tells */
+export interface HomeTile {
+  id: string;
+  word: string;
+  Icon: LucideIcon;
+  /** the round mark's colour (a design rules' ground: bg-wine, bg-leaf …) */
+  tone: string;
+  /** the admin set it „მალე“: the tile says so, a tap only tells */
   soon?: boolean;
+  onOpen: () => void;
 }
 
-interface Spot { label: string; x: number; y: number; tone?: string; Icon?: LucideIcon }
-
-/** x/y = the label's centre in % of the picture (public/home/vine.png, 1033×1390), as on the boards */
-export const SPOTS: Record<SpotId, Spot> = {
-  simghera: { label: 'ხალხური', x: 29, y: 14, tone: 'bg-leaf', Icon: Music },
-  chvevebi: { label: 'ჩვევები', x: 66, y: 7, tone: 'bg-gold', Icon: CircleCheck },
-  eklesiebi: { label: 'ტაძრები', x: 82, y: 20, tone: 'bg-clay', Icon: MapPin },
-  galoba: { label: 'ღვთისმსახურება', x: 56, y: 33 },
-  biblioteka: { label: 'ლოცვანი', x: 19, y: 52, tone: 'bg-gold', Icon: BookOpen },
-  tamashebi: { label: 'სახალისო', x: 81, y: 51, tone: 'bg-sea', Icon: Dice4 },
-};
-
-export type BunchId = 'galoba' | 'simghera' | 'lotsvani';
-
-/** where the picture's own bunches hung: the stem's top, in % of the picture */
-const BUNCH_SPOT: Record<BunchId, React.CSSProperties> = {
-  galoba: { left: '14.5%', top: '19.5%' },
-  simghera: { left: '37.5%', top: '30.2%' },
-  lotsvani: { left: '64.6%', top: '13.2%' },
-};
-
-/** the boards' vine box: 374px wide (the 358px column + 8px each side) */
-const BOARD_W = 374;
+export interface HomeV2ViewProps {
+  saying: { text: string; author: string };
+  /** „მიმდინარე გაკვეთილი“: none — the button is not drawn (a member with no letters) */
+  lesson?: { unread: number; onOpen: () => void };
+  /** the three big tiles: გალობა · სიმღერა · ლოცვანი (a hidden section is left out) */
+  main: HomeTile[];
+  /** the other sections, small, two in a row */
+  more: HomeTile[];
+  /** under the buttons: the classes card and the member's own buttons */
+  children?: React.ReactNode;
+}
 
 /** the boards' quote mark (lucide's `Quote` is a heavier, filled shape) */
 const QuoteMark: React.FC = () => (
@@ -50,168 +39,90 @@ const QuoteMark: React.FC = () => (
   </svg>
 );
 
-/** the boards' play mark: a smaller triangle than lucide's `Play` */
-const PlayMark: React.FC = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M8.5 5.5v13l10.5-6.5z" />
-  </svg>
+/** the long names may break here on the narrowest phones (with a hyphen), never anywhere else */
+const SOFT: Record<string, string> = { 'მედავითნეობა': 'მედავით\u00adნეობა', 'ბიბლიოთეკა': 'ბიბლიო\u00adთეკა', 'ვიდეოთეკა': 'ვიდეო\u00adთეკა' };
+const soft = (word: string) => SOFT[word] ?? word;
+
+const tileLook = cx('flex cursor-pointer flex-col items-center justify-center bg-surf text-center select-none transition active:scale-95', FOCUS);
+
+const Mark: React.FC<{ tile: HomeTile; big?: boolean }> = ({ tile, big }) => (
+  <span aria-hidden="true" className={cx(
+    'flex shrink-0 items-center justify-center rounded-full text-white',
+    big ? 'size-12 [&_svg]:size-6' : 'size-icon [&_svg]:size-[18px]',
+    tile.soon ? 'bg-dim' : tile.tone,
+  )}>
+    <tile.Icon strokeWidth={2} />
+  </span>
 );
 
-const NEXT_ICON: Record<NextKind, React.ReactNode> = {
-  lesson: <Calendar strokeWidth={2} />,
-  start: <Sparkles strokeWidth={2} />,
-  ai: <Sparkles strokeWidth={2} />,
-  review: <PlayMark />,
-  learn: <PlayMark />,
-  book: <BookOpen strokeWidth={2} />,
-};
-
-export interface HomeV2ViewProps {
-  saying: { text: string; author: string };
-  /** the vine's labels to draw (the hidden ones left out), in the boards' order */
-  labels: VineLabel[];
-  /** „აბიტური“ hangs under „ღვთისმსახურება“ */
-  abituri: boolean;
-  onLabel: (id: SpotId) => void;
-  onAbituri: () => void;
-  /** the one thing „გააგრძელე“ shows; none — no button */
-  next: NextStep | null;
-  onNext: () => void;
-  /** „წერილები“ as the grape bunch right of the trunk (2026-11-21); none — the bunch is not drawn */
-  letters?: { unread: number; onOpen: () => void };
-  /** the sections written into the vine's other bunches (2026-11-21); a hidden section is left out */
-  bunches?: { id: BunchId; word: string; onOpen: () => void }[];
-  /** under the vine: the birthdays' line and the member's own buttons */
-  children?: React.ReactNode;
-}
-
-/** the vine's scale: 1 at the board's width and wider, smaller on a narrower phone, never under 0.8 */
-const useVineScale = () => {
-  const box = useRef<HTMLDivElement>(null);
-  const [k, setK] = useState(1);
-  useLayoutEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    const set = () => setK(Math.min(1, Math.max(0.8, el.clientWidth / BOARD_W)));
-    set();
-    if (typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(set);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  return { box, k };
-};
-
-// sg-keep-text: the labels hang on the picture, so a bigger text size (design/look.ts) leaves them as they are
-const SWAY = 'vine-sway sg-keep-text absolute -translate-x-1/2 -translate-y-1/2';
-
-const chipLook = cx(
-  'flex h-[46px] items-center gap-2 rounded-full bg-surf pr-3.5 pl-2 whitespace-nowrap shadow-lift select-none',
-  'cursor-pointer transition active:scale-95', FOCUS,
-);
-
-export const HomeV2View: React.FC<HomeV2ViewProps> = ({ saying, labels, abituri, onLabel, onAbituri, next, onNext, letters, bunches, children }) => {
-  const { box, k } = useVineScale();
-  return (
-    // -mt-0.5: the app frame gives the home 4px under its bar, the boards 2px
-    <div className="mx-auto -mt-0.5 flex w-full max-w-lg flex-col gap-2">
-      {/* one saying, changing every quarter hour */}
-      <figure className="m-0 flex shrink-0 items-start gap-3 rounded-card bg-surf px-4 py-3.5">
-        <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-wine text-white [&_svg]:size-4">
-          <QuoteMark />
-        </span>
-        <div className="flex min-w-0 flex-col gap-1">
-          <blockquote className="m-0 text-body leading-[1.45] wrap-break-word text-ink">{saying.text}</blockquote>
-          <figcaption className="text-meta font-medium text-wine">— {saying.author}</figcaption>
-        </div>
-      </figure>
-
-      {/* the vine: 8px wider than the column on each side, as on the boards */}
-      <div className="-mx-2 flex shrink-0 justify-center">
-        <div ref={box} className="relative aspect-[1033/1390] w-full select-none">
-          <img src="/home/vine.png" alt="" aria-hidden="true" draggable={false} className="sg-vine-img absolute inset-0 size-full opacity-80 saturate-85" />
-
-          {labels.map(({ id, soon }, i) => {
-            const s = SPOTS[id];
-            // the sway turns a label round its top, so the scale does too: its centre is moved back down by what it lost
-            const half = id === 'galoba' ? 27 : 23;
-            const place: React.CSSProperties = {
-              left: `${s.x}%`, top: k < 1 ? `calc(${s.y}% + ${((1 - k) * half).toFixed(1)}px)` : `${s.y}%`, scale: k, animationDelay: `${-i * 0.7}s`,
-            };
-            if (id === 'galoba') {
-              return (
-                <div key={id} className={cx(SWAY, 'z-2')} style={place}>
-                  <Press onClick={() => onLabel(id)} className={cx(
-                    'relative z-2 flex h-[54px] flex-col items-center justify-center rounded-full bg-wine px-[22px] whitespace-nowrap text-white shadow-wine select-none',
-                    'cursor-pointer transition hover:bg-wine-deep active:scale-95', FOCUS,
-                  )}>
-                    <span className="text-head leading-tight font-bold tracking-[-0.01em]">{s.label}</span>
-                    {soon && <span className="text-cap leading-none font-semibold text-white/85">მალე</span>}
-                  </Press>
-                  {/* „აბიტური“: a tab under the pill's left side, swaying with it */}
-                  {abituri && (
-                    <Press onClick={onAbituri} className={cx(
-                      'absolute top-full left-2 z-1 -mt-1.5 flex h-[46px] items-center gap-1.5 rounded-t-chip rounded-b-tile bg-surf pt-2 pr-3.5 pl-3',
-                      'text-meta font-bold whitespace-nowrap text-wine shadow-lift select-none cursor-pointer transition active:scale-95', FOCUS,
-                    )}>
-                      <GraduationCap aria-hidden="true" strokeWidth={2} className="size-4 shrink-0" />
-                      აბიტური
-                    </Press>
-                  )}
-                </div>
-              );
-            }
-            const Icon = s.Icon!;
-            return (
-              <div key={id} className={SWAY} style={place}>
-                <Press onClick={() => onLabel(id)} className={chipLook}>
-                  <span aria-hidden="true" className={cx('flex size-[30px] shrink-0 items-center justify-center rounded-full text-white [&_svg]:size-4', s.tone)}>
-                    <Icon strokeWidth={2} />
-                  </span>
-                  <span className="flex flex-col">
-                    <span className={cx('text-body leading-tight font-bold', soon ? 'text-mut' : 'text-ink')}>{s.label}</span>
-                    {soon && <span className="text-cap leading-none font-semibold text-mut">მალე</span>}
-                  </span>
-                </Press>
-              </div>
-            );
-          })}
-
-          {/* words in the grapes, where the picture's own bunches hung: the first one („გაკვეთილი“) opens the letters, the others
-              their sections; they sway out of step */}
-          {letters && <LettersBunch word="გაკვეთილი" label="წერილები" unread={letters.unread} onOpen={letters.onOpen} className="z-1 w-[23%]" style={{ left: '68.9%', top: '32.4%' }} />}
-          {bunches?.map((b, i) => (
-            <LettersBunch key={b.id} word={b.word} onOpen={b.onOpen} className="z-1 w-[23%]" style={{ ...BUNCH_SPOT[b.id], animationDelay: `${-(i + 1) * 0.9}s` }} />
-          ))}
-
-          {/* „გააგრძელე“ on the qvevri: one thing, where I stopped */}
-          {next && (
-            <Press
-              key={next.kind}
-              onClick={onNext}
-              aria-label={`${next.kicker}: ${next.what}${next.tail ?? ''}`}
-              className={cx(
-                // as wide as the screen less 4px a side at most (the boards' AI line needs 382px of a 390px phone)
-                'sg-in absolute top-[81%] left-1/2 z-2 flex h-[60px] max-w-[calc(100%+8px)] -translate-x-1/2 -translate-y-1/2 items-center gap-2',
-                'rounded-full bg-surf pr-[18px] pl-2 text-left whitespace-nowrap shadow-lift select-none cursor-pointer transition active:scale-[0.97]', FOCUS,
-              )}
-            >
-              <span aria-hidden="true" className="flex size-tap shrink-0 items-center justify-center rounded-full bg-tint text-wine [&_svg]:size-[18px]">
-                {NEXT_ICON[next.kind]}
-              </span>
-              <span className="flex min-w-0 flex-col">
-                <span className="truncate text-meta leading-tight font-semibold text-mut">{next.kicker}</span>
-                <span className="flex min-w-0 text-body leading-tight font-bold whitespace-pre text-ink">
-                  <span className="truncate">{next.what}</span>
-                  {next.tail && <span className="shrink-0">{next.tail}</span>}
-                </span>
-              </span>
-            </Press>
-          )}
-        </div>
+export const HomeV2View: React.FC<HomeV2ViewProps> = ({ saying, lesson, main, more, children }) => (
+  // -mt-0.5: the app frame gives the home 4px under its bar, the boards 2px
+  <div className="mx-auto -mt-0.5 flex w-full max-w-lg flex-col gap-3">
+    {/* one saying, changing every quarter hour */}
+    <figure className="m-0 flex shrink-0 items-start gap-3 rounded-card bg-surf px-4 py-3.5">
+      <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-wine text-white [&_svg]:size-4">
+        <QuoteMark />
+      </span>
+      <div className="flex min-w-0 flex-col gap-1">
+        <blockquote className="m-0 text-body leading-[1.45] wrap-break-word text-ink">{saying.text}</blockquote>
+        <figcaption className="text-meta font-medium text-wine">— {saying.author}</figcaption>
       </div>
+    </figure>
 
-      {children && <div className="flex flex-col items-center gap-3 px-1 pt-2">{children}</div>}
-    </div>
-  );
-};
+    {/* the main button: where my learning is now */}
+    {lesson && (
+      <Press
+        onClick={lesson.onOpen}
+        aria-label={lesson.unread ? `მიმდინარე გაკვეთილი, ${lesson.unread} ახალი წერილი` : 'მიმდინარე გაკვეთილი'}
+        className={cx(
+          'relative flex min-h-[84px] w-full cursor-pointer items-center gap-3 rounded-card bg-wine px-4 py-4 text-left text-white shadow-wine select-none',
+          'transition hover:bg-wine-deep active:scale-[0.98]', FOCUS,
+        )}
+      >
+        <span aria-hidden="true" className="relative flex size-12 shrink-0 items-center justify-center rounded-full bg-white/15 [&_svg]:size-6">
+          <NotebookPen strokeWidth={2} />
+          {lesson.unread > 0 && <Counter n={lesson.unread} className="absolute -top-1 -right-1 ring-2 ring-wine" />}
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+          <span className="text-head leading-tight font-bold">მიმდინარე გაკვეთილი</span>
+          {lesson.unread > 0 && <span className="text-meta font-medium text-white/85">{lesson.unread} ახალი წერილი</span>}
+        </span>
+        <ChevronRight aria-hidden="true" strokeWidth={2.25} className="size-5 shrink-0 text-white/80" />
+      </Press>
+    )}
+
+    {/* გალობა · სიმღერა · ლოცვანი */}
+    {main.length > 0 && (
+      <div className={cx('grid gap-2.5', main.length === 3 ? 'grid-cols-3' : main.length === 2 ? 'grid-cols-2' : 'grid-cols-1')}>
+        {main.map(t => (
+          <Press key={t.id} onClick={t.onOpen} className={cx(tileLook, 'min-h-[104px] gap-2 rounded-card px-2 py-3.5')}>
+            <Mark tile={t} big />
+            <span className="flex flex-col">
+              <span className={cx('text-lead leading-tight font-bold', t.soon ? 'text-mut' : 'text-ink')}>{t.word}</span>
+              {t.soon && <span className="text-cap leading-tight font-semibold text-mut">მალე</span>}
+            </span>
+          </Press>
+        ))}
+      </div>
+    )}
+
+    {/* the other sections, small: two in a row, a round mark and the name side by side */}
+    {more.length > 0 && (
+      <div className="grid grid-cols-2 gap-2">
+        {more.map(t => (
+          <Press key={t.id} onClick={t.onOpen} className={cx(
+            'flex min-h-[56px] cursor-pointer items-center gap-2 rounded-tile bg-surf py-2 pr-2.5 pl-2 text-left select-none transition active:scale-95', FOCUS,
+          )}>
+            <Mark tile={t} />
+            <span className="flex min-w-0 flex-col">
+              <span className={cx('text-body leading-tight font-bold hyphens-manual', t.soon ? 'text-mut' : 'text-ink')}>{soft(t.word)}</span>
+              {t.soon && <span className="text-cap leading-tight font-semibold text-mut">მალე</span>}
+            </span>
+          </Press>
+        ))}
+      </div>
+    )}
+
+    {children && <div className="flex flex-col items-center gap-3 px-1 pt-1">{children}</div>}
+  </div>
+);

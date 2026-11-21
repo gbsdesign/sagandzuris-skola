@@ -36,11 +36,11 @@ const ITEMS: Item[] = [
 /** „ხალხური“'s first tab, as KhalkhuriV2 reads it for the visit */
 const folkTab = (tab: 'songs' | 'poets') => { try { sessionStorage.setItem('sg-khalkhuri-tab', tab); } catch { /* storage off */ } };
 
-/** the sections written into the home vine's grape bunches (pages/v2/home) — the menu leaves them out (2026-11-21, the user:
-    „დანარჩენ მტევნებზე გადაანაწილე გალობა, სიმღერა, ლოცვანი და განყოფილებებიდან ჩახსენი“) */
-export const VINE_SECTIONS = ['galoba', 'simghera', 'lotsvani'];
+/** the home page's three big tiles (pages/v2/home) — the menu leaves them out (2026-11-21, the user: „დანარჩენ მტევნებზე
+    გადაანაწილე გალობა, სიმღერა, ლოცვანი და განყოფილებებიდან ჩახსენი“; since 2026-11-22 tiles in place of the vine's bunches) */
+export const HOME_MAIN_SECTIONS = ['galoba', 'simghera', 'lotsvani'];
 
-/** the sections with the admin's switches applied, and what a tap on one does — the menu's rows and the vine's bunches */
+/** the sections with the admin's switches applied, and what a tap on one does — the menu's rows and the home page's buttons */
 export const useSections = (onSoon: (text: string) => void, close: () => void = () => {}) => {
   const access = useAccess();
   const { navigateTo, openMapItem } = useNavigation();
@@ -87,7 +87,7 @@ export const SectionsMenu: React.FC<{ onSoon: (text: string) => void }> = ({ onS
 
   const all = useSections(onSoon, () => setOpen(false));
   const pick = all.pick;
-  const rows = all.rows.filter(r => !VINE_SECTIONS.includes(r.it.id));
+  const rows = all.rows.filter(r => !HOME_MAIN_SECTIONS.includes(r.it.id));
 
   return (
     <>
