@@ -11,7 +11,7 @@ import { georgiaToday } from '../../utils/psalter';
 import { showSundayEntry } from '../../utils/sundayReady';
 
 // The ways into the AI teacher's day lesson: one wine line at the top of „საგანძურის გზა“ (the canvas's gza) and the
-// card on top of „ოსტატობა“ (ostatoba). Shown while the switch „AI მასწავლებელი“ allows (admins first), for a member's
+// card on top of „ოსტატობა“ (ostatoba). Shown while the switch „ავტომატური სასწავლო პროგრამა“ allows (admins first), for a member's
 // own page only — never on a student's page a teacher opened.
 
 const useLessonShown = () => {
@@ -46,7 +46,7 @@ export const SundayLink: React.FC<{ className?: string; before?: () => void }> =
   );
 };
 
-/** „დღის გაკვეთილი · 10 წუთი — AI მასწავლებელთან“, one line */
+/** „დღის გაკვეთილი · 10 წუთი — ავტომატურ სასწავლო პროგრამასთან“, one line */
 export const TodayLessonStrip: React.FC<{ className?: string }> = ({ className }) => {
   if (!useLessonShown()) return null;
   return (
@@ -60,7 +60,7 @@ export const TodayLessonStrip: React.FC<{ className?: string }> = ({ className }
       </span>
       <span className="min-w-0 flex-1">
         <span className="block truncate text-lead font-bold">დღის გაკვეთილი · 10 წუთი</span>
-        <span className="block truncate text-meta text-white/85">AI მასწავლებელთან</span>
+        <span className="block truncate text-meta text-white/85">ავტომატურ სასწავლო პროგრამასთან</span>
       </span>
       <ChevronRight aria-hidden="true" className="size-[18px] shrink-0" />
     </Press>
@@ -74,7 +74,7 @@ export const TodayLessonHero: React.FC<{ className?: string }> = ({ className })
   if (!useLessonShown()) return null;
   return (
     <>
-    <Hero className={className} kicker="დღის გაკვეთილი · 10 წუთი" title="AI მასწავლებელთან" sub="გახურება · გამეორება · ახალი ფრაზა · გალობა"
+    <Hero className={className} kicker="დღის გაკვეთილი · 10 წუთი" title="ავტომატურ სასწავლო პროგრამასთან" sub="გახურება · გამეორება · ახალი ფრაზა · გალობა"
       action={{ label: 'დაიწყე', icon: <Play fill="currentColor" />, onClick: openAiLesson }} />
     <SundayLink />
     </>

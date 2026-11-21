@@ -2,7 +2,7 @@ import type { Voice } from './pathItems';
 
 // The AI teacher's exam (AI step 3, boards x-ai-gamocda-tsin / x-ai-gamocda): a member sings a chant's voice whole, at its real
 // tempo, with the other voices sounding and no hints; the phone counts the notes. Passed = the pearl of that voice shines as if a
-// teacher confirmed it („ჩათვალა AI მასწავლებელმა“); the teacher may hear the take and take the pass off — the last word is theirs.
+// teacher confirmed it („ჩათვალა ავტომატურმა სასწავლო პროგრამამ“); the teacher may hear the take and take the pass off — the last word is theirs.
 // Kept in the member's own record: students/{uid}.aiPass { [variantId]: { [voice]: { at, hit, total } } } and the day of the last
 // try a voice: students/{uid}.examTries { "<variantId>:<voice>": day } (one exam a day a voice; tries are not counted).
 

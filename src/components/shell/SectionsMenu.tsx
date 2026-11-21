@@ -83,12 +83,12 @@ export const SectionsMenu: React.FC<{ onSoon: (text: string) => void }> = ({ onS
         aria-expanded={open}
         aria-haspopup="true"
         className={cx(
-          'flex h-tap min-w-0 cursor-pointer items-center gap-1.5 rounded-full bg-surf pr-3 pl-4 text-ink shadow-lift select-none transition active:scale-[0.97]',
+          'flex h-tap min-w-0 cursor-pointer items-center gap-1 rounded-full bg-surf pr-2.5 pl-3.5 text-ink shadow-lift select-none transition active:scale-[0.97] max-[389px]:gap-0.5 max-[389px]:pr-2 max-[389px]:pl-3',
           FOCUS,
         )}
       >
-        <span className="truncate text-lead font-bold">განყოფილებები</span>
-        <ChevronDown aria-hidden="true" strokeWidth={2.25} className={cx('size-[18px] shrink-0 text-wine transition-transform', open && 'rotate-180')} />
+        <span className="truncate text-lead font-bold max-[389px]:text-body">განყოფილებები</span>
+        <ChevronDown aria-hidden="true" strokeWidth={2.25} className={cx('size-[18px] shrink-0 text-wine transition-transform max-[389px]:size-4', open && 'rotate-180')} />
       </Press>
 
       {open && (

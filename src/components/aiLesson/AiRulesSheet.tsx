@@ -15,7 +15,7 @@ import { PHRASE_KINDS, PHRASE_MAX, VOICE_SENTENCE_LIST, sentenceHash, type Phras
 import { playSample, savePhraseText, usePhraseTexts, useTeacherVoiceHere, useVoiceIndex, useVoiceSettings } from './TeacherVoice';
 import { Area, Bar, Button, Card, Dot, Note, Press, RoundButton, Row, Rows, Sheet, Stepper, ToggleRow, WrapChips, cx } from '../ui2';
 
-// „AI მასწავლებელი · სკოლის წესები“ (the canvas's ai-tsesebi; admins, from ⚙ „სკოლა“): this month's spending against
+// „ავტომატური სასწავლო პროგრამა · სკოლის წესები“ (the canvas's ai-tsesebi; admins, from ⚙ „სკოლა“): this month's spending against
 // the budget, and the three rules — the day lesson for everyone or admins only (the switch `aiTeacher` of
 // settings/sections), a hint before the answer, and no AI in the kids' mode. „მზა ფრაზები“ lists the teacher's ready
 // sentences (utils/teacherVoice.ts), each rewordable by the school (settings/aiPhrases, board x-ai-prazebi); „პატარა
@@ -65,7 +65,7 @@ export const AiRulesView: React.FC<{
   const spent = usage.calls * EST_USD_PER_CALL;
   return (
     <>
-      <Sheet open={open && !phrases && !rulesOpen} title="AI მასწავლებელი" onClose={onClose}>
+      <Sheet open={open && !phrases && !rulesOpen} title="ავტომატური სასწავლო პროგრამა" onClose={onClose}>
         <div className="-mx-4 flex max-h-[70dvh] flex-col gap-3 overflow-y-auto px-4 pb-1">
           <Card pad="none" className="px-[18px] pt-4 pb-4">
             <button type="button" className="block w-full cursor-pointer text-left" onClick={() => setBudgetOpen(o => !o)} aria-expanded={budgetOpen}>
@@ -94,7 +94,7 @@ export const AiRulesView: React.FC<{
             )}
           </Card>
           <Rows>
-            <ToggleRow lead={<Dot icon={<Sparkles />} />} title="AI მასწავლებელი"
+            <ToggleRow lead={<Dot icon={<Sparkles />} />} title="ავტომატური სასწავლო პროგრამა"
               sub={forAll ? 'ჩართულია მთელ სკოლაში' : 'ჯერ მხოლოდ ადმინებთან'}
               on={forAll} onChange={setForAll} />
             <ToggleRow lead={<Dot icon={<Hand />} />} title="ჯერ მინიშნება" sub="პასუხს პირდაპირ არ ამბობს"
@@ -114,7 +114,7 @@ export const AiRulesView: React.FC<{
             )}
           </Rows>
           {studio}
-          <Note>AI მასწავლებელი პროგრამაა. ნოტებს ტელეფონი ითვლის, AI მხოლოდ სიტყვებს წერს.</Note>
+          <Note>ავტომატური სასწავლო პროგრამა ადამიანი არ არის. ნოტებს ტელეფონი ითვლის, AI მხოლოდ სიტყვებს წერს.</Note>
         </div>
       </Sheet>
       <Sheet open={open && phrases} title="მზა ფრაზები" onClose={() => setPhrases(false)}>

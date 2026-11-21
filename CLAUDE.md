@@ -37,7 +37,9 @@
 - **Ready → merge it yourself, then say it in red.** When a chat's work is finished and its PR is ready (local checks
   pass, GitHub checks green, no conflict), merge it right away — PRs that change `firestore.rules` too — and end the reply
   with „🔴 **შეერთდა** — PR #N“ (Markdown has no red text, so the red circle + bold). Never write „შესაერთებელია“ and wait;
-  only if merging is impossible (red check, conflict) say why. (The user's rule, 2026-10-27, widened 2026-10-28; repeated
+  only if merging is impossible (red check, conflict) say why. **A red check that main itself already fails** (the same tests
+  red on main's own last state — e.g. after the daily books' or calendar's automatic update) is not this PR's: merge anyway and
+  say it in one line (the user, 2026-11-21: „ჩაიწერე წესებში რომ ავტომატურად შეაერთო და მომწერო წითლად რომ შეერთდა“). (The user's rule, 2026-10-27, widened 2026-10-28; repeated
   2026-11-21: „ჩაწერე წესებში რო სუ შეაერთო“ — this is his standing permission to merge every finished PR; in a cloud session
   merge with `gh api -X PUT repos/gbsdesign/sagandzuris-skola/pulls/<N>/merge -f merge_method=squash`.)
 
@@ -2211,3 +2213,15 @@ listens (Gemini through Firebase AI Logic). 8 calls on Android (wake lock, push,
 
 Pending small tasks the user mentioned: remove the old Drive `ნოტები` sheets from `chantMediaRegistry.ts`
 (only when the user asks); bind mp3s for the folk songs marked `pendingWma` once uploaded to Drive.
+
+- **No bottom menu on phones, „წერილები“ as a grape bunch, the library's themes on its front, the AI teacher renamed (2026-11-21**,
+  the user: „პროფილის ღილაკი ზევით აიტანე … ლუპა დაპატარავე … სიტყვა წერილები მარცვლებში ჩაწერე ასო ასო და გააცოცხლე მტევანი“; „საპატრიარქო
+  ბიბლიოთეკა წაშალე … კატეგორიები გარე უჯრაზევე“; „სადაც AI მასწავლებელი აწერია ყველგან დააწერე ავტომატური სასწავლო პროგრამა“): phones
+  draw no `BottomNav` (App mounts only `AppBadge` for the icon's count; `TOP_PAGES` is empty, so gz, messages and profile have „უკან“);
+  the home bar = logo · „განყოფილებები ▾“ · 🔍 · 👤 (my photo) · 🔔, all 36 px (`HomeBar`); the computer's `DeskBar` is unchanged. The vine's
+  right bunch was taken out of `public/home/vine.png` and is drawn by `v2/home/LettersBunch.tsx` (8 grapes 3·2·2·1 = წ ე რ ი ლ ე ბ ი,
+  sways, `sg-grape` lights them in turn, `sg-bunch-hop` + a count while letters wait; a tap = the old menu's „წერილები“ via
+  `useNavPlaces`). The library's front (`v2/library/Front.tsx`) has no „საპატრიარქოს ბიბლიოთეკა“ cover: „წიგნები თემებით“ = a row a
+  `P_CATEGORIES` entry (reordered) → `patriarq:<category>`; a bare `patriarq` shows the front. The app says „ავტომატური სასწავლო პროგრამა“
+  (declined: -ს / -მა / -ის / -თან) wherever it said „AI მასწავლებელი“ — never write the old name again.
+

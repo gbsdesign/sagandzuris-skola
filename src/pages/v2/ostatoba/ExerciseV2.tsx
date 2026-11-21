@@ -14,7 +14,7 @@ import { RunResultV2, ScoringCard, TakeCard, micLine } from './ExerciseParts';
 
 // „სავარჯიშო“ of a drill (board x-ostatoba-savarjisho): one step on screen — the steps as short lines on top, the step's ring
 // and its one sentence —, then the switches „ტიუნერი“ (the microphone: my note against the one to sing, and a take to send)
-// and „AI მასწავლებლის შეფასება“ (the next start is a scored run: notes and rhythm scored in the browser, a tip's take heard
+// and „ავტომატური სასწავლო პროგრამის შეფასება“ (the next start is a scored run: notes and rhythm scored in the browser, a tip's take heard
 // by the AI teacher), the voice's kind, and two buttons at the bottom. All the steps are in „ნაბიჯი N / M ▾“. The logic is
 // the old screen's (components/mastery/useExercise, useMicTake).
 
@@ -110,7 +110,7 @@ export const ExerciseV2: React.FC<{ drill: Drill }> = ({ drill }) => {
               onChange={on => { if (on) void mic.start(); else void mic.stop(); }} />
           )}
           {can && (
-            <ToggleRow lead={<Dot icon={<Sparkles />} />} title={kind === 'ai' ? 'AI მასწავლებლის შეფასება' : 'შეფასება'} sub={scoreSub}
+            <ToggleRow lead={<Dot icon={<Sparkles />} />} title={kind === 'ai' ? 'ავტომატური სასწავლო პროგრამის შეფასება' : 'შეფასება'} sub={scoreSub}
               wrap on={scoreMode} disabled={running} onChange={setScoreMode} />
           )}
           {ex.pitched && (

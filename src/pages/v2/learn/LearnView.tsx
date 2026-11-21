@@ -143,7 +143,7 @@ export const LearnView: React.FC<LearnViewProps> = p => (p.stop ? (
     {p.ai && (p.ai.text || p.ai.problem) && (
       p.ai.problem ? <Warn>{p.ai.problem}</Warn> : (
         <Card>
-          <p className="mb-1.5 flex items-center gap-1.5 text-meta font-bold text-wine"><Sparkles className="size-4" />AI მასწავლებელი</p>
+          <p className="mb-1.5 flex items-center gap-1.5 text-meta font-bold text-wine"><Sparkles className="size-4" />ავტომატური სასწავლო პროგრამა</p>
           <p className="text-body leading-relaxed whitespace-pre-line text-ink">{p.ai.text}</p>
         </Card>
       )

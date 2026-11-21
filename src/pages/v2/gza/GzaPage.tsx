@@ -45,5 +45,5 @@ export const GzaPage: React.FC = () => {
   if (mapItem === EXTRA_ITEM) return <ExtraScreen />;
   // since 2026-11-21 the path opens straight on „საგანძური“ (the user: „საგანძურის გზაზე კი პირდაპირ საგანძური იხსნებოდეს
   // დანარჩენი ჩახსენი“): the outfit is under the profile's name, the habits and the classes on the home page
-  return <SagandzuriPage onMastery={() => openMapItem('ostatoba')} />;
+  return <SagandzuriPage onBack={handleGoBack} onMastery={() => openMapItem('ostatoba')} />;
 };

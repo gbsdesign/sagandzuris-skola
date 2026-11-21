@@ -10,7 +10,7 @@ import { useUnreadCounts, type CountAsk } from '../../../hooks/useUnreadCounts';
 import { useAccess } from '../../../hooks/useAccess';
 import { nextLessonShort } from '../klasi/ClassesList';
 
-// The home's classes (2026-11-21, the user: „მთავარ გვერდზე მოსწავლეს უჩანდეს თავისი კლასის ღილაკი და AI მასწავლებელი …
+// The home's classes (2026-11-21, the user: „მთავარ გვერდზე მოსწავლეს უჩანდეს თავისი კლასის ღილაკი და ავტომატური სასწავლო პროგრამა …
 // ადმინებს და მასწავლებლებს მთავარ გვერდზე გამოუჩინე ლამაზად გახსნილი კლასების სია“; the path's „კლასი“ row is gone):
 // a member — their class(es) and the AI teacher's day lesson; a teacher — the classes they lead; an admin — every class.
 
@@ -78,7 +78,7 @@ const MemberHome: React.FC = () => {
     <Rows className="w-full">
       {classes.length > 0 && <ClassRows classes={classes} />}
       {ai && (
-        <Row lead={<Dot icon={<Sparkles />} color="wine" size={40} />} title="AI მასწავლებელი" sub="დღის გაკვეთილი · 10 წუთი" onClick={openAiLesson} />
+        <Row lead={<Dot icon={<Sparkles />} color="wine" size={40} />} title="ავტომატური სასწავლო პროგრამა" sub="დღის გაკვეთილი · 10 წუთი" onClick={openAiLesson} />
       )}
     </Rows>
   );

@@ -48,13 +48,12 @@ import { useAssistantOpen } from './pages/v2/damkhmare/open';
 import { useMkitkheOpen } from './pages/v2/mkitkhe/open';
 import { AI_REPORT } from './pages/v2/klasi/nav';
 import { useAccess } from './hooks/useAccess';
-import { setNewLook, useNavHidden } from './design/newLook';
+import { setNewLook } from './design/newLook';
 import { setNewEar } from './utils/earChoice';
-import { BottomNav, DeskBar } from './components/shell/BottomNav';
+import { AppBadge, DeskBar } from './components/shell/BottomNav';
 import { HomeBar } from './components/shell/HomeBar';
 import { ShellLinks } from './components/shell/ShellLinks';
 import { Waiting } from './components/shell/PageSkeleton';
-import { NO_NAV } from './components/shell/tabs';
 // the AI teacher's day lesson loads only when opened
 const AiLesson = React.lazy(() => import('./components/aiLesson/AiLesson').then(m => ({ default: m.AiLesson })));
 const MyVoiceHost = React.lazy(() => import('./components/aiLesson/MyVoiceHost').then(m => ({ default: m.MyVoiceHost })));
@@ -122,14 +121,12 @@ function AppContent() {
     if (window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) return;
     el.animate([{ opacity: 0, transform: 'translateY(8px)' }, { opacity: 1, transform: 'none' }], { duration: 220, easing: 'cubic-bezier(0.22, 1, 0.36, 1)' });
   }, [currentPage, newLook]);
-  const navHidden = useNavHidden();
   // a page this person may not open is drawn as the home page in its place (AppRouter) — then the frame is the home's
   // too: a guest who reloaded /p/search or /p/settings got the home page with no bar on top and no menu below
   const pageAccess = access.page(currentPage);
   const homeInPlace = currentPage !== 'home'
     && (pageAccess === 'hidden' || pageAccess === 'soon' || (currentPage === 'settings' && !user));
   const framePage = homeInPlace ? 'home' : currentPage;
-  const nav = newLook && !NO_NAV.includes(framePage) && !navHidden;
   // live recordings are for members a superadmin let in with them (set before the tree below renders)
   const membership = useMembership();
   setRecordingsHidden(!user || !membership.can('recordings'));
@@ -304,7 +301,7 @@ function AppContent() {
       {newLook ? framePage === 'home' && <HomeBar logoUrl={currentLogo} /> : <Header logoUrl={currentLogo} />}
 
       <main className={newLook
-        ? `flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 flex flex-col ${framePage === 'home' ? 'pt-1' : 'pt-[calc(env(safe-area-inset-top,0px)+4px)]'} ${nav ? 'pb-[calc(env(safe-area-inset-bottom,0px)+104px)] lg:pb-[calc(env(safe-area-inset-bottom,0px)+24px)]' : 'pb-[calc(env(safe-area-inset-bottom,0px)+24px)]'} ${framePage === 'home' ? 'lg:pt-4' : ''}`
+        ? `flex-1 max-w-6xl w-full mx-auto px-4 sm:px-6 flex flex-col ${framePage === 'home' ? 'pt-1' : 'pt-[calc(env(safe-area-inset-top,0px)+4px)]'} pb-[calc(env(safe-area-inset-bottom,0px)+24px)] ${framePage === 'home' ? 'lg:pt-4' : ''}`
         : 'flex-1 max-w-6xl w-full mx-auto p-4 sm:p-6 md:p-8 flex flex-col'}>
         <div ref={pageRef} className="w-full max-w-4xl mx-auto">
           {/* „მიმდინარეობს დამატება“ while a superadmin has not decided on a new member */}
@@ -321,7 +318,8 @@ function AppContent() {
 
       {/* the new look keeps only the footer's church calendar (its links moved to the settings page) */}
       <Footer logoUrl={currentLogo} bare={newLook} />
-      {nav && <BottomNav />}
+      {/* phones have no bottom menu since 2026-11-21 (profile and 🔍 in the home bar, „წერილები“ on the vine) */}
+      {newLook && user && <AppBadge />}
       {newLook && <ShellLinks />}
 
       <ErrorBoundary>

@@ -48,7 +48,7 @@ export const TeacherVoiceView: React.FC<{
           <RoundButton label="უკან" onClick={onBack}><ArrowLeft /></RoundButton>
           <div className="min-w-0 flex-1 pl-0.5">
             <h1 className="truncate text-title font-bold leading-tight tracking-tight">მასწავლებლის ხმა</h1>
-            <div className="truncate text-meta text-mut">AI მასწავლებელი</div>
+            <div className="truncate text-meta text-mut">ავტომატური სასწავლო პროგრამა</div>
           </div>
         </header>
         <section className="flex shrink-0 items-start gap-2.5 rounded-card bg-tint py-3.5 pr-2 pl-4" aria-label="ნიმუში">

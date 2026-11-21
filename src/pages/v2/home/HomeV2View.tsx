@@ -2,6 +2,7 @@ import React, { useLayoutEffect, useRef, useState } from 'react';
 import { BookOpen, Calendar, CircleCheck, Dice4, GraduationCap, MapPin, Music, Sparkles, type LucideIcon } from 'lucide-react';
 import { Press, cx, FOCUS } from '../../../components/ui2';
 import type { NextKind, NextStep } from './nextStep';
+import { LettersBunch } from './LettersBunch';
 
 // The new look's home page (boards x-mtavari, x-ultra-gaagrdzele, x-ultra-gaagrdzele-2): one holy father's saying in a white
 // card, the vine with its labels as white chips (the same picture and places as the old GrapeNav), and on the qvevri one
@@ -67,6 +68,8 @@ export interface HomeV2ViewProps {
   /** the one thing „გააგრძელე“ shows; none — no button */
   next: NextStep | null;
   onNext: () => void;
+  /** „წერილები“ as the grape bunch right of the trunk (2026-11-21); none — the bunch is not drawn */
+  letters?: { unread: number; onOpen: () => void };
   /** under the vine: the birthdays' line and the member's own buttons */
   children?: React.ReactNode;
 }
@@ -96,7 +99,7 @@ const chipLook = cx(
   'cursor-pointer transition active:scale-95', FOCUS,
 );
 
-export const HomeV2View: React.FC<HomeV2ViewProps> = ({ saying, labels, abituri, onLabel, onAbituri, next, onNext, children }) => {
+export const HomeV2View: React.FC<HomeV2ViewProps> = ({ saying, labels, abituri, onLabel, onAbituri, next, onNext, letters, children }) => {
   const { box, k } = useVineScale();
   return (
     // -mt-0.5: the app frame gives the home 4px under its bar, the boards 2px
@@ -162,6 +165,9 @@ export const HomeV2View: React.FC<HomeV2ViewProps> = ({ saying, labels, abituri,
               </div>
             );
           })}
+
+          {/* „წერილები“: the bunch the picture's own grapes hung in (x 632–792, y 483–635 of 1033 × 1390) */}
+          {letters && <LettersBunch unread={letters.unread} onOpen={letters.onOpen} className="z-1 w-[23%]" style={{ left: '68.9%', top: '32.4%' }} />}
 
           {/* „გააგრძელე“ on the qvevri: one thing, where I stopped */}
           {next && (

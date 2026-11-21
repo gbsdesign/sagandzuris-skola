@@ -6,7 +6,7 @@ import { aiGate, HINT_FIRST_LINE, noteAiCall, readHintsFirst } from './aiRules';
 import { aiNotesFor } from './aiTeacherNotes';
 import { parseQuestions, type PrepQuestion } from './lessonPrep';
 
-// „AI მასწავლებელი“ in the pearls game and the learning mode: Gemini (through Firebase AI Logic, the same App Check pass as the chokha
+// „ავტომატური სასწავლო პროგრამა“ in the pearls game and the learning mode: Gemini (through Firebase AI Logic, the same App Check pass as the chokha
 // try-on) listens to a member's take of a pearl's phrase and answers in Georgian: what went well, the one thing to
 // fix, a small exercise. A few a day per device (the owner and superadmins: no limit); nothing is kept.
 
@@ -29,11 +29,11 @@ export class AiTeacherError extends Error {
 }
 
 export const AI_PROBLEM_TEXT: Record<AiTeacherProblem, string> = {
-  setup: 'AI მასწავლებელი ჯერ არ არის ჩართული — მალე ჩაირთვება.',
-  'no-credits': 'AI მასწავლებელი დღეს დაიღალა — ხვალ სცადე.',
-  offline: 'ინტერნეტი არ არის — AI მასწავლებელს ინტერნეტი სჭირდება.',
+  setup: 'ავტომატური სასწავლო პროგრამა ჯერ არ არის ჩართული — მალე ჩაირთვება.',
+  'no-credits': 'ავტომატური სასწავლო პროგრამა დღეს დაიღალა — ხვალ სცადე.',
+  offline: 'ინტერნეტი არ არის — ავტომატურ სასწავლო პროგრამას ინტერნეტი სჭირდება.',
   failed: 'პასუხი ვერ მოვიდა — ცოტა ხანში კიდევ სცადე.',
-  'no-tries': `დღეს AI მასწავლებელს ${AI_TEACHER_DAILY}-ჯერ უკვე ჰკითხე — ხვალ ისევ შეგეძლება.`,
+  'no-tries': `დღეს ავტომატურ სასწავლო პროგრამას ${AI_TEACHER_DAILY}-ჯერ უკვე ჰკითხე — ხვალ ისევ შეგეძლება.`,
   // the school's rules (utils/aiRules.ts)
   kids: 'საბავშვო რეჟიმში AI არ ერთვება. შესწორებები მზა ფრაზებით მოდის.',
   budget: 'ამ თვის AI-ს ლიმიტი ამოიწურა. მომავალ თვეს ისევ ჩაირთვება.',

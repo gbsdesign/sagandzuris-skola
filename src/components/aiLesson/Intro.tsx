@@ -10,7 +10,7 @@ import { Bottom, TeacherSays } from './parts';
 
 export interface IntroAnswers { before?: Before; minutes?: Minutes; goal?: Goal }
 
-const SAY = 'გამარჯობა! მე AI მასწავლებელი ვარ. გალობას ნაბიჯ-ნაბიჯ გასწავლი. ჯერ სამი რამ მითხარი.';
+const SAY = 'გამარჯობა! მე ავტომატური სასწავლო პროგრამა ვარ. გალობას ნაბიჯ-ნაბიჯ გასწავლი. ჯერ სამი რამ მითხარი.';
 
 const BEFORE_ITEMS: ChipItem<Before>[] = BEFORE_OPTIONS.map(o => ({ id: o.id, label: o.label }));
 const MINUTE_ITEMS: ChipItem<`${Minutes}`>[] = MINUTE_OPTIONS.map(m => ({ id: `${m}`, label: `${m}` }));
@@ -36,7 +36,7 @@ export const IntroView: React.FC<{
   const ready = !!value.before && !!value.minutes && !!value.goal;
   return (
     <>
-      <TopBar title="გაცნობა" sub="AI მასწავლებელი" onBack={onBack} className="px-4" />
+      <TopBar title="გაცნობა" sub="ავტომატური სასწავლო პროგრამა" onBack={onBack} className="px-4" />
       <div className="flex flex-col gap-3 px-4 pt-0.5 pb-4">
         <TeacherSays text={SAY} sub="პროგრამა ვარ, არა ადამიანი">{SAY}</TeacherSays>
         <OneOf label="გიგალობია ადრე?" items={BEFORE_ITEMS} value={value.before} onPick={before => onChange({ ...value, before })} />

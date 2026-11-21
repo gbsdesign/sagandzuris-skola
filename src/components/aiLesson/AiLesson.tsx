@@ -474,14 +474,14 @@ export const StartScreen: React.FC<{
       <RoundButton label="უკან" onClick={onBack}><ArrowLeft /></RoundButton>
       <div className="min-w-0 flex-1 pl-0.5">
         <h1 className="truncate text-title font-bold leading-tight tracking-tight">დღის გაკვეთილი</h1>
-        <div className="text-meta text-mut">{weekday} · AI მასწავლებელი</div>
+        <div className="text-meta text-mut">{weekday} · ავტომატური სასწავლო პროგრამა</div>
       </div>
       {onVoice && <RoundButton label="ჩემი ხმა" onClick={onVoice}><BookOpen /></RoundButton>}
     </header>
     <div className="flex flex-col gap-3 px-4 pb-4">
       <Seg label="გაკვეთილის სიგრძე" items={[{ id: '5', label: '5 წუთი' }, { id: '10', label: '10 წუთი' }]}
         value={String(length) as '5' | '10'} onChange={v => setLength(v === '5' ? 5 : 10)} />
-      <TeacherSays text={say || undefined} sub="AI მასწავლებელი პროგრამაა, არა ადამიანი">{say || 'გაკვეთილს ვამზადებ…'}</TeacherSays>
+      <TeacherSays text={say || undefined} sub="ეს პროგრამაა, არა ადამიანი">{say || 'გაკვეთილს ვამზადებ…'}</TeacherSays>
       <Rows>
         {rows.map(([title, sub], i) => <Row key={title} lead={<Num n={i + 1} on={i === 0} />} title={title} sub={sub} wrap right={null} />)}
       </Rows>

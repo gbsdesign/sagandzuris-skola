@@ -180,7 +180,7 @@ export const ProgramView: React.FC<ProgramViewProps> = ({
             <Rows>
               <Row
                 lead={<Dot icon={<Sparkles />} size={40} />}
-                title="მოემზადე AI მასწავლებელთან"
+                title="მოემზადე ავტომატურ სასწავლო პროგრამასთან"
                 sub={count ? `10 წუთი · ამ ${NUM_WORDS[count] ?? count} საგალობლიდან` : '10 წუთი'}
                 wrap
                 onClick={onAi}

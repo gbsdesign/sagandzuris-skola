@@ -43,7 +43,7 @@ export const ScoringCard: React.FC<{
           </p>
         </div>
       )}
-      {kind === 'ai' && <p className="text-meta leading-snug text-mut">გაიარე ყველა ნაბიჯი — ბოლოს AI მასწავლებელი მოუსმენს ჩანაწერს.</p>}
+      {kind === 'ai' && <p className="text-meta leading-snug text-mut">გაიარე ყველა ნაბიჯი — ბოლოს ავტომატური სასწავლო პროგრამა მოუსმენს ჩანაწერს.</p>}
       <Button kind="quiet" size="md" icon={<X />} onClick={onStop} className="self-start">შეწყვეტა</Button>
     </Card>
   );
@@ -55,7 +55,7 @@ export const RunResultV2: React.FC<{ result: RunResult; best: number | undefined
     return (
       <>
         <p className="text-head font-bold">სავარჯიშო ჩაიწერა</p>
-        <p className="text-meta text-mut">{result.busy ? 'ჩანაწერი მზადდება…' : 'AI მასწავლებელი მხოლოდ შესულ წევრებს უსმენს.'}</p>
+        <p className="text-meta text-mut">{result.busy ? 'ჩანაწერი მზადდება…' : 'ავტომატური სასწავლო პროგრამა მხოლოდ შესულ წევრებს უსმენს.'}</p>
         {result.problem && <p className="text-meta text-danger">{result.problem}</p>}
       </>
     );
@@ -63,7 +63,7 @@ export const RunResultV2: React.FC<{ result: RunResult; best: number | undefined
   const pct = result.kind === 'pct' ? result.pct : result.score ?? 0;
   return (
     <>
-      <p className="text-meta font-semibold text-mut">{result.kind === 'ai' ? 'AI მასწავლებლის შეფასება' : 'შენი შედეგი'}</p>
+      <p className="text-meta font-semibold text-mut">{result.kind === 'ai' ? 'ავტომატური სასწავლო პროგრამის შეფასება' : 'შენი შედეგი'}</p>
       <p className={cx('text-hero font-bold tabular-nums', SCORE_TEXT[scoreTone(pct)])}>{pct}%</p>
       <p className="text-body font-semibold">
         {result.record ? 'ახალი საუკეთესო შედეგი!' : best !== undefined ? `შენი საუკეთესო: ${best}%` : ''}

@@ -13,7 +13,7 @@ import { AnswerBody, GoButton, MyBubble, Pills, QuestionRows, ReplyBubble, Topic
 
 // „მკითხე“ (boards x-ultra-mkitkhe-1 start · x-ultra-mkitkhe ready answer · -3 AI's answer · -4 not about the app · -5 the AI's
 // day is over): a question typed, said or picked → a ready answer first (free, offline too), only when none is near → the AI
-// (while „AI მასწავლებელი“ is open for the person, ten a day). Every answer: one to three short sentences and
+// (while „ავტომატური სასწავლო პროგრამა“ is open for the person, ten a day). Every answer: one to three short sentences and
 // „გადამიყვანე იქ“. A question of faith is not answered — the priest's matter.
 
 type Reply =

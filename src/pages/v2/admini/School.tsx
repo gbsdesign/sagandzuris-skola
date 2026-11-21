@@ -98,7 +98,7 @@ const SchoolHome: React.FC = () => {
       </Rows>
       <SectionLabel label="სწავლება და ციფრები" />
       <Rows>
-        <Row lead={<Dot icon={<Sparkles />} />} title="AI მასწავლებელი" sub="წესები და ბიუჯეტი" onClick={() => setAiRules(true)} />
+        <Row lead={<Dot icon={<Sparkles />} />} title="ავტომატური სასწავლო პროგრამა" sub="წესები და ბიუჯეტი" onClick={() => setAiRules(true)} />
         {row('numbers', <BarChart3 />, 'სკოლის ზრდა', `ამ თვეში ${newThisMonth} ახალი · ჟურნალები · ასლი`)}
       </Rows>
       <AiRulesSheet open={aiRules} onClose={() => setAiRules(false)} onMessage={say} />

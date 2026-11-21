@@ -187,8 +187,8 @@ const AiPart: React.FC<{
       </Rows>}
       {skipped.length > 0 && (
         <Note>{active.length
-          ? `AI მასწავლებელთან ამ კვირაში არ უვარჯიშია: ${skipped.map(r => r.name.split(' ')[0]).join(', ')}.`
-          : 'AI მასწავლებელთან ამ კვირაში არავის უვარჯიშია.'}</Note>
+          ? `ავტომატურ სასწავლო პროგრამასთან ამ კვირაში არ უვარჯიშია: ${skipped.map(r => r.name.split(' ')[0]).join(', ')}.`
+          : 'ავტომატურ სასწავლო პროგრამასთან ამ კვირაში არავის უვარჯიშია.'}</Note>
       )}
       {active.length > 0 && <Helper icon={<Info />}>შეეხე სახელს: მოუსმენ საუკეთესო ჩანაწერს და ნახავ, რა უთხრა AI-მ.</Helper>}
       {(stuck.length > 0 || erred.length > 0 || passes.length > 0) && (

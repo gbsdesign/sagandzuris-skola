@@ -7,9 +7,10 @@ import { HomeV2View } from './HomeV2View';
 import { useNextStep } from './useNextStep';
 import { useSayingSlot } from './useSayingSlot';
 import { HomeClasses, useHomeAiShown } from './HomeClasses';
+import { useNavPlaces } from '../../../components/shell/BottomNav';
 
 // The home page in the new look (redesign stage 4, boards x-mtavari + x-ultra-gaagrdzele): the app draws the home bar above
-// it and the bottom menu under it. Since 2026-11-21 the vine has no labels (the user: „მთავარ გვერდზე ყველა ღილაკი
+// it (with 👤 and 🔍 since 2026-11-21 — phones have no bottom menu any more; „წერილები“ is the vine's grape bunch). Since 2026-11-21 the vine has no labels (the user: „მთავარ გვერდზე ყველა ღილაკი
 // მოიხსნას“) — the sections live in the home bar's menu (components/shell/SectionsMenu), the habits in the shelf's
 // „ჩვევები“ window.
 
@@ -23,6 +24,9 @@ export const HomeV2: React.FC = () => {
   // a member's AI line stands under the vine — the qvevri does not repeat it
   const aiRow = useHomeAiShown();
   const step = aiRow && next.step?.kind === 'ai' ? null : next.step;
+  // „წერილები“ = the vine's grape bunch (the phone's bottom menu is gone since 2026-11-21): the same tap as the menu's was
+  const places = useNavPlaces();
+  const lettersItem = places.shown.find(it => it.id === 'messages');
 
   return (
     <>
@@ -34,6 +38,7 @@ export const HomeV2: React.FC = () => {
         onAbituri={() => {}}
         next={step}
         onNext={next.go}
+        letters={lettersItem ? { unread: places.unread, onOpen: () => places.go(lettersItem) } : undefined}
       >
         {/* birthdays: within five days for teachers and admins, today's for members */}
         {access.on('birthdays') && <BirthdaysSoon />}

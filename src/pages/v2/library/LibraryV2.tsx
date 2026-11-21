@@ -11,6 +11,7 @@ import { CommemorationButton } from '../../../components/prayers/CommemorationBu
 import type { BookNav } from '../../library/BookHead';
 import { PrayersTab } from '../../library/PrayersTab';
 import { PatriarchLibrary } from '../../library/PatriarchLibrary';
+import { P_CATEGORIES } from '../../../data/patriarchLibrary';
 import { lastChapter } from '../../library/readingPlace';
 import { ChantAlbumPage } from '../../galoba/ChantAlbumPage';
 import { SongAlbumPage } from '../../../components/maps/SongAlbumPage';
@@ -93,7 +94,9 @@ export const LibraryV2: React.FC = () => {
     );
   }
 
-  if (!open) return <Front onOpen={openMapItem} />;
+  // the Patriarchate library has no front of its own since 2026-11-21: its categories are rows on the library's front, so an old
+  // „patriarq“ step (or link) shows the front
+  if (!open || (open === 'patriarq' && !part)) return <Front onOpen={openMapItem} />;
 
   return (
     <div key={open}>
@@ -104,7 +107,7 @@ export const LibraryV2: React.FC = () => {
         : open === 'patriarq' ? (
           // the Patriarchate's library: its own lists and books under the new bar
           <Page>
-            <TopBar title="საპატრიარქოს ბიბლიოთეკა" onBack={handleGoBack} />
+            <TopBar title={P_CATEGORIES.find(c => c.id === part?.split(':')[0])?.title ?? 'ბიბლიოთეკა'} onBack={handleGoBack} />
             <PatriarchLibrary nav={nav} />
           </Page>
         )

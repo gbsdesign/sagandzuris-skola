@@ -999,7 +999,7 @@ function summaryLines({ items, lessons = [], held = 0, ai = null, reviews = 0, b
   if (items.lesson) for (const l of lessons.slice(0, 2)) lines.push(`გაკვეთილი დღეს ${l.start}${l.note ? ` · ${l.note}` : ''}`);
   if (items.chat && held > 0) lines.push(plural(held, 'ახალი წერილი'));
   if (items.day) {
-    if (ai) lines.push(`დღის გაკვეთილი: ${ai} წუთი AI მასწავლებელთან`);
+    if (ai) lines.push(`დღის გაკვეთილი: ${ai} წუთი ავტომატურ სასწავლო პროგრამასთან`);
     else if (reviews > 0) lines.push(`გასამეორებელი: ${plural(reviews, 'საგალობელი')}`);
   }
   if (items.birthdays && birthdays.length) lines.push(`დღეს ${birthdays.slice(0, 2).join(', ')}${birthdays.length > 2 ? ` და კიდევ ${birthdays.length - 2}` : ''} — დაბადების დღე`);

@@ -15,7 +15,7 @@ import type { Who } from './usePlayer';
 // „პატარა თეორია“ (board x-ai-teoria): when the new phrase shows a rule the member has not met (utils/aiTheory.ts), a sheet
 // rises once — the term, what it means, where it is in this phrase, „მაგალითი“ (that place on the synthesizer) and
 // „გასაგებია“. Each rule once a member: students.aiNote.seen (a guest: this device). The school may reword a term and its
-// meaning: settings/aiTheory { texts: { [id]: { term, meaning } } } (admins write settings/*; ⚙ „სკოლა“ → AI მასწავლებელი).
+// meaning: settings/aiTheory { texts: { [id]: { term, meaning } } } (admins write settings/*; ⚙ „სკოლა“ → ავტომატური სასწავლო პროგრამა).
 
 export const THEORY_ICON: Record<TheoryId, React.ReactNode> = {
   long: <Hourglass />, leap: <MoveUpRight />, rest: <Wind />, recite: <Equal />, drone: <AudioWaveform />, half: <ArrowUpDown />,

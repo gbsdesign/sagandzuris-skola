@@ -19,7 +19,7 @@ export const PlanView: React.FC<{
   onStart: () => void;
 }> = ({ goal, pace, rows, onBack, onChange, onStart }) => (
   <>
-    <TopBar className="px-4" title="შენი გეგმა" sub="AI მასწავლებელმა შეადგინა" onBack={onBack} />
+    <TopBar className="px-4" title="შენი გეგმა" sub="ავტომატურმა სასწავლო პროგრამამ შეადგინა" onBack={onBack} />
     <div className="flex flex-col gap-3 px-4 pt-0.5 pb-4">
       <Card pad="none" className="px-[18px] py-4">
         <div className="text-meta font-semibold text-mut">მიზანი</div>

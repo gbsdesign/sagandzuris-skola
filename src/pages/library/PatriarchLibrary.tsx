@@ -50,6 +50,12 @@ const readCache = (folder: string): { t: number; files: DFile[] } | null => {
   try { return JSON.parse(localStorage.getItem(cacheKey(folder)) || 'null'); } catch { return null; }
 };
 
+/** how many books a category has, from the list kept on this device (none asked of Drive — the library's front shows it) */
+export const keptCount = (c: PCategory): number | undefined => {
+  const k = readCache(c.folder);
+  return k ? toBooks(k.files).length : undefined;
+};
+
 /** a category's books, from the device first and from Drive when the kept list is older than 6 hours */
 const useFolders = (cats: PCategory[]) => {
   const [lists, setLists] = useState<Record<string, DFile[] | 'error'>>(() => {
