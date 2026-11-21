@@ -118,13 +118,17 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
   90% { translate: 0 -3px; }
   95% { translate: 0 0; }
 }
-/* a ripe amber-green grape's colours (after the user's photo): the lit side, the skin, the rim, its edge, the bloom's dust */
-.sg-grape-lit { stop-color: #f6eec4; }
-.sg-grape-skin { stop-color: #d9c377; }
-.sg-grape-rim { stop-color: #b98f52; }
-.sg-grape-edge { stroke: #a37b45; }
+/* ripe amber-green grapes' colours (after the user's photo), three ripenesses — golden, greener, rosier: the lit side, the skin,
+   the rim; the bloom's dust; a grape's shadow on those behind; a freckle; the letter; the stalk */
+.sg-grape-lit-0 { stop-color: #faf1c8; } .sg-grape-skin-0 { stop-color: #dcc67c; } .sg-grape-rim-0 { stop-color: #b08a4e; }
+.sg-grape-lit-1 { stop-color: #f4f1c2; } .sg-grape-skin-1 { stop-color: #cfca7e; } .sg-grape-rim-1 { stop-color: #9c9550; }
+.sg-grape-lit-2 { stop-color: #fbe9c6; } .sg-grape-skin-2 { stop-color: #e0b982; } .sg-grape-rim-2 { stop-color: #b47f55; }
 .sg-grape-dust { stop-color: #e9a98a; }
-.sg-grape-letter { fill: #4a3210; }
+.sg-grape-shade { fill: #4a3210; opacity: 0.2; }
+.sg-grape-speck { fill: #7a5524; opacity: 0.45; }
+.sg-grape-letter { fill: #45300f; }
+.sg-bunch-stalk { stroke: #7d6a45; }
+.sg-bunch-knot { fill: #6e5b3d; }
 .sg-grape { transform-box: fill-box; transform-origin: center; animation: sg-grape-glow 5.4s ease-in-out infinite; }
 .sg-grape-letter { animation: sg-grape-letter 5.4s ease-in-out infinite; animation-delay: inherit; }
 .sg-bunch-hop { animation: sg-bunch-hop 2.8s ease-in-out infinite; }

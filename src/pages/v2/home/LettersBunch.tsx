@@ -9,28 +9,84 @@ import { COLOR } from '../../../design/tokens';
 // first one („გაკვეთილი“, which still opens the letters) to shine a little (`shiny`). All the picture's own bunches were taken
 // out of public/home/vine.png. A bunch sways, its grapes light up in turn; a count and a hop while letters wait.
 
-const R = 16.5;
+const R = 16;
 
 /** how many grapes a row: 3 · 2 · 1 for six letters, 3 · 3 · 1 for seven, 3 · 3 · 2 · 1 for nine */
 const rowsOf = (n: number): number[] => {
   const rows: number[] = [];
   let left = n;
-  while (left > 3) {
-    // the last rows taper: … 2 · 1 when three are left over after the threes, otherwise the rest
-    if (left === 6 || left === 5) { rows.push(3); left -= 3; continue; }
-    if (left === 4) { rows.push(3); left -= 3; continue; }
-    rows.push(3); left -= 3;
-  }
+  while (left > 3) { rows.push(3); left -= 3; }
   if (left === 3 && rows.length > 0) rows.push(2, 1);
   else if (left > 0) rows.push(left);
   return rows;
 };
 
-const XS: Record<number, number[]> = { 1: [50], 2: [35, 65], 3: [18, 50, 82] };
+const XS: Record<number, number[]> = { 1: [50], 2: [35, 65], 3: [19, 50, 81] };
 
-/** the grapes' centres in the drawing's units (100 wide; the stem's top at 0) */
-const grapesOf = (n: number): [number, number][] =>
-  rowsOf(n).flatMap((count, r) => XS[count].map((x, i): [number, number] => [x, 30 + r * 26.5 - (count === 3 && i === 1 ? 2 : 0)]));
+/** a steady „chance“ for the i-th grape of a word (0…1): the same bunch is drawn the same way every time */
+const chance = (seed: number, i: number, salt: number) => {
+  const v = Math.sin(seed * 12.9898 + i * 78.233 + salt * 37.719) * 43758.5453;
+  return v - Math.floor(v);
+};
+
+interface Grape { x: number; y: number; r: number; tone: number; letter?: string; speck?: boolean }
+
+/** A bunch as it grows (the user: „არაბუნებრივად არის მტევნები … დახვეწე, გაალამაზე, მაოკოხტავე“): the lettered grapes row by row,
+    none quite like its neighbour — a little off its place, a little bigger or smaller, smaller towards the tip, each of its own
+    ripeness — and small plain grapes behind them that fill the shoulders, the sides and the tip. In the drawing's units (100 wide). */
+const bunchOf = (word: string) => {
+  const letters = [...word];
+  const seed = letters.reduce((sum, ch) => sum + ch.charCodeAt(0), 0);
+  const rows = rowsOf(letters.length);
+  const front: Grape[] = [];
+  const back: Grape[] = [];
+  let i = 0;
+  rows.forEach((count, row) => {
+    const y = 31 + row * 25.5;
+    // towards the tip the grapes are a little smaller
+    const size = R * (1 - row * 0.025);
+    XS[count].forEach((x, col) => {
+      front.push({
+        x: x + (chance(seed, i, 1) - 0.5) * 3,
+        y: y + (chance(seed, i, 2) - 0.5) * 3 - (count === 3 && col === 1 ? 2.5 : 0),
+        r: size * (0.96 + chance(seed, i, 3) * 0.09),
+        tone: Math.floor(chance(seed, i, 4) * 3),
+        letter: letters[i],
+        speck: chance(seed, i, 5) > 0.55,
+      });
+      i += 1;
+    });
+    // behind: a grape peeps out on each side where the next row is narrower, so the bunch narrows softly, not in steps
+    const next = rows[row + 1] ?? 0;
+    const edge = XS[count];
+    if (count - next >= 1 && count > 1) {
+      const dx = count - next >= 2 ? 15 : 9;
+      back.push({ x: edge[0] + dx - 4, y: y + 17, r: R * 0.6, tone: (row + 1) % 3 }, { x: edge[count - 1] - dx + 4, y: y + 17.5, r: R * 0.58, tone: (row + 2) % 3 });
+    }
+  });
+  // the shoulders by the stem, and one small grape at the very tip
+  back.push({ x: 36, y: 17, r: R * 0.55, tone: 1 }, { x: 64, y: 16, r: R * 0.6, tone: 2 });
+  const last = front[front.length - 1];
+  back.push({ x: last.x + 3, y: last.y + last.r + 3, r: R * 0.5, tone: 0 });
+  const h = last.y + last.r + 3 + R * 0.5 + 2;
+  return { front, back, h };
+};
+
+const GrapeDraw: React.FC<{ g: Grape; shiny?: boolean; dim?: boolean }> = ({ g, shiny, dim }) => (
+  <>
+    {/* its shadow on the grapes behind */}
+    <ellipse cx={g.x + 1} cy={g.y + 2} rx={g.r} ry={g.r} className="sg-grape-shade" />
+    <circle cx={g.x} cy={g.y} r={g.r} fill={`url(#sg-grape-${g.tone})`} />
+    <circle cx={g.x} cy={g.y} r={g.r} fill="url(#sg-grape-bloom)" />
+    {dim && <circle cx={g.x} cy={g.y} r={g.r} className="sg-grape-shade" />}
+    {g.speck && <circle cx={g.x + g.r * 0.45} cy={g.y - g.r * 0.5} r={0.9} className="sg-grape-speck" />}
+    <ellipse
+      cx={g.x - g.r * 0.4} cy={g.y - g.r * 0.5} rx={g.r * (shiny ? 0.3 : 0.22)} ry={g.r * (shiny ? 0.17 : 0.12)}
+      fill={COLOR.surf} opacity={dim ? 0.3 : shiny ? 0.9 : 0.6} transform={`rotate(-32 ${g.x - g.r * 0.4} ${g.y - g.r * 0.5})`}
+    />
+    {shiny && !dim && <circle cx={g.x + g.r * 0.48} cy={g.y + g.r * 0.5} r={1.3} fill={COLOR.surf} opacity={0.55} />}
+  </>
+);
 
 export const LettersBunch: React.FC<{
   word: string;
@@ -43,9 +99,7 @@ export const LettersBunch: React.FC<{
   className?: string;
   style?: React.CSSProperties;
 }> = ({ word, label = word, shiny, unread = 0, onOpen, className, style }) => {
-  const letters = [...word];
-  const grapes = grapesOf(letters.length);
-  const h = grapes[grapes.length - 1][1] + R + 1;
+  const { front, back, h } = bunchOf(word);
   return (
     <div className={cx('vine-sway sg-keep-text absolute -translate-x-1/2', className)} style={style}>
       <Press
@@ -55,31 +109,32 @@ export const LettersBunch: React.FC<{
       >
         <svg viewBox={`0 0 100 ${h}`} className="block w-full overflow-visible" aria-hidden="true">
           <defs>
-            {/* a real grape's skin (the colours are in index.css): light falls from the upper left, the rim goes darker */}
-            <radialGradient id="sg-grape" cx="36%" cy="30%" r="78%">
-              <stop offset="0%" className="sg-grape-lit" />
-              <stop offset="42%" className="sg-grape-skin" />
-              <stop offset="100%" className="sg-grape-rim" />
-            </radialGradient>
+            {/* three ripenesses of a real grape's skin (the colours are in index.css): light from the upper left, a darker rim */}
+            {[0, 1, 2].map(t => (
+              <radialGradient key={t} id={`sg-grape-${t}`} cx="36%" cy="30%" r="80%">
+                <stop offset="0%" className={`sg-grape-lit-${t}`} />
+                <stop offset="45%" className={`sg-grape-skin-${t}`} />
+                <stop offset="100%" className={`sg-grape-rim-${t}`} />
+              </radialGradient>
+            ))}
             {/* the bloom: the dusty blush on a ripe grape, strongest below */}
             <linearGradient id="sg-grape-bloom" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="35%" className="sg-grape-dust" stopOpacity={0} />
-              <stop offset="100%" className="sg-grape-dust" stopOpacity={0.3} />
+              <stop offset="40%" className="sg-grape-dust" stopOpacity={0} />
+              <stop offset="100%" className="sg-grape-dust" stopOpacity={0.28} />
             </linearGradient>
           </defs>
-          {/* the stem from the branch, and a little curl of tendril */}
-          <path d="M50 -6 C50 4 49 10 50 16" fill="none" stroke={COLOR.mut} strokeWidth={5} strokeLinecap="round" />
-          <path d="M51 4 C60 0 66 6 61 11 C58 14 54 11 57 8" fill="none" stroke={COLOR.mut} strokeWidth={1.6} strokeLinecap="round" />
-          {grapes.map(([x, y], i) => (
+          {/* the stalk from the branch, bent as it hangs, with its knot and a curl of tendril */}
+          <path d="M50 -7 C47 0 54 7 50 17" fill="none" className="sg-bunch-stalk" strokeWidth={3.6} strokeLinecap="round" />
+          <circle cx={50} cy={-6} r={2.6} className="sg-bunch-knot" />
+          <path d="M51 3 C60 -1 66 5 61 10 C58 13 54 10 57 7" fill="none" className="sg-bunch-stalk" strokeWidth={1.3} strokeLinecap="round" />
+          {back.map((g, i) => <GrapeDraw key={i} g={g} dim />)}
+          {front.map((g, i) => (
             <g key={i} className="sg-grape" style={{ animationDelay: `${i * 0.42}s` }}>
-              <circle cx={x} cy={y} r={R} fill="url(#sg-grape)" className="sg-grape-edge" strokeWidth={0.8} />
-              <circle cx={x} cy={y} r={R} fill="url(#sg-grape-bloom)" />
-              <ellipse cx={x - 6.5} cy={y - 8} rx={shiny ? 4.6 : 3.4} ry={shiny ? 2.7 : 2} fill={COLOR.surf} opacity={shiny ? 0.9 : 0.55} transform={`rotate(-30 ${x - 6.5} ${y - 8})`} />
-              {shiny && <circle cx={x + 7.5} cy={y + 8.5} r={1.5} fill={COLOR.surf} opacity={0.6} />}
+              <GrapeDraw g={g} shiny={shiny} />
               <text
-                x={x} y={y + 0.5} textAnchor="middle" dominantBaseline="central"
-                className="sg-grape-letter" fontSize={18} fontWeight={700}
-              >{letters[i]}</text>
+                x={g.x} y={g.y + 0.6} textAnchor="middle" dominantBaseline="central"
+                className="sg-grape-letter" fontSize={16.5} fontWeight={700}
+              >{g.letter}</text>
             </g>
           ))}
         </svg>
