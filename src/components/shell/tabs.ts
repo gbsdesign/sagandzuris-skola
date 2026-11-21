@@ -20,5 +20,7 @@ export const tabOf = (page: PageType, mapItem: string | null): Tab => {
 /** pages with a field or tools of their own at the bottom, or a whole-screen task: the menu steps aside */
 export const NO_NAV: PageType[] = ['dm', 'student', 'settings', 'search'];
 
-/** the menu's own pages: a big name and no „უკან“ (the menu is the way out) */
-export const TOP_PAGES: PageType[] = ['gz', 'messages', 'profile'];
+/** the menu's own pages: a big name and no „უკან“ (the menu is the way out). None since 2026-11-21: the phone's bottom menu
+ *  is gone (the user: „პროფილის ღილაკი ზევით აიტანე … ლუპა დაპატარავე და ზევით აიტანე“ — both in the home bar now, „წერილები“
+ *  is the vine's grape bunch, „გზა“ opens from the chat), so every page has its „უკან“ */
+export const TOP_PAGES: PageType[] = [];

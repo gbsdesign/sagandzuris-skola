@@ -101,6 +101,29 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
 @media (prefers-reduced-motion: reduce) {
   .vine-sway { animation: none; }
 }
+/* the home vine's „წერილები“ bunch (pages/v2/home/LettersBunch.tsx): the grapes light up one after another, letter by letter;
+   with new letters the bunch hops now and then */
+@keyframes sg-grape-glow {
+  0%, 16%, 100% { transform: scale(1); filter: none; }
+  7% { transform: scale(1.13); filter: brightness(1.32) drop-shadow(0 0 3px rgba(246, 212, 138, 0.95)); }
+}
+@keyframes sg-grape-letter {
+  0%, 16%, 100% { fill: #fff; }
+  7% { fill: #ffe9b0; }
+}
+@keyframes sg-bunch-hop {
+  0%, 72%, 100% { translate: 0 0; }
+  78% { translate: 0 -7px; }
+  84% { translate: 0 0; }
+  90% { translate: 0 -3px; }
+  95% { translate: 0 0; }
+}
+.sg-grape { transform-box: fill-box; transform-origin: center; animation: sg-grape-glow 5.4s ease-in-out infinite; }
+.sg-grape-letter { animation: sg-grape-letter 5.4s ease-in-out infinite; animation-delay: inherit; }
+.sg-bunch-hop { animation: sg-bunch-hop 2.8s ease-in-out infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .sg-grape, .sg-grape-letter, .sg-bunch-hop { animation: none; }
+}
 
 /* home-page plate ornaments: gentle idle motion + staggered entrance (still when reduced motion is asked) */
 @keyframes orn-in { from { opacity: 0; scale: 0.6; } to { opacity: 1; scale: 1; } }

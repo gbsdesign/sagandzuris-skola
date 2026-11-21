@@ -25,8 +25,8 @@ const ITEMS: { id: Tab; label: string; icon: React.ReactNode; page: PageType }[]
 
 export { ITEMS as NAV_ITEMS };
 
-/** the menu's places and what a tap does, one for the bottom pill and the computer's top bar */
-const useNavPlaces = () => {
+/** the menu's places and what a tap does: the computer's top bar, the home bar's 👤 / 🔍 and the vine's „წერილები“ bunch */
+export const useNavPlaces = () => {
   const { user } = useAuth();
   const { currentPage, mapItem, navigateTo, openDm } = useNavigation();
   const { openModal } = useModal();
@@ -74,14 +74,21 @@ const useNavPlaces = () => {
   return { shown, on, unread, go, find: search ? find : undefined, page: currentPage };
 };
 
-export const BottomNav: React.FC = () => {
-  const { shown, on, unread, go, find } = useNavPlaces();
-  // the app's icon shows how many chats wait (stage 4e; the Badging API — installed apps on Android, iPhone and computers)
+/** Since 2026-11-21 phones have no bottom menu (the user: profile and search up in the home bar, „წერილები“ on the vine's
+ *  grape bunch, „გზა“ from the chat); the pill below stays only for the design gallery. This keeps its one other job: the
+ *  app's icon shows how many chats wait (stage 4e; the Badging API — installed apps on Android, iPhone and computers). */
+export const AppBadge: React.FC = () => {
+  const unread = useUnreadParts().total;
   useEffect(() => {
     const nav = navigator as Navigator & { setAppBadge?: (n?: number) => Promise<void>; clearAppBadge?: () => Promise<void> };
     if (!nav.setAppBadge) return;
     void (unread > 0 ? nav.setAppBadge(unread) : nav.clearAppBadge?.())?.catch(() => { /* not allowed here */ });
   }, [unread]);
+  return null;
+};
+
+export const BottomNav: React.FC = () => {
+  const { shown, on, unread, go, find } = useNavPlaces();
   return <BottomNavView items={shown} active={on} unread={unread} onGo={go} onSearch={find ? () => find() : undefined} />;
 };
 

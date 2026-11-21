@@ -422,8 +422,14 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
 
   const list = (
     <div className="flex min-w-0 flex-col gap-3 pb-4 lg:min-h-0 lg:overflow-y-auto">
+      {/* since 2026-11-21 the list has its „უკან“ (the phone's bottom menu is gone); a computer keeps its top bar */}
       <PageHead
-        title="წერილები"
+        title={wide ? 'წერილები' : (
+          <span className="flex items-center gap-2.5">
+            <RoundButton label="უკან" onClick={handleGoBack}><ArrowLeft aria-hidden="true" strokeWidth={1.75} /></RoundButton>
+            წერილები
+          </span>
+        )}
         right={(
           <>
             {eye}

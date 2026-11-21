@@ -1,15 +1,21 @@
 import React, { useState } from 'react';
-import { Bell } from 'lucide-react';
-import { useNavigation } from '../../context';
+import { Bell, Search, User } from 'lucide-react';
+import { useAuth, useNavigation } from '../../context';
+import { useAccess } from '../../hooks/useAccess';
+import { useShownPhoto } from '../../hooks/useMyPhoto';
 import { useMyNotices } from '../../hooks/useShellCounts';
+import { openSignIn } from '../access/SignInPrompt';
 import { triggerHaptic } from '../../utils/haptics';
+import { setPendingQuery } from '../../utils/searchOpen';
 import { RoundButton } from '../ui2';
 import { useDesk } from './BottomNav';
 import { SectionsMenu } from './SectionsMenu';
 import { Toast } from '../ui/Toast';
 
 // The home page's bar in the new look (redesign stage 2, the prototype `mtavari`): the school's logo, the sections' menu in
-// place of its name since 2026-11-21 (SectionsMenu), and the 🔔
+// place of its name since 2026-11-21 (SectionsMenu), a small 🔍 and the 👤 (the profile, with my photo) — both came up from
+// the phone's bottom menu the same evening (the user: „პროფილის ღილაკი ზევით აიტანე … ლუპა დაპატარავე და ზევით აიტანე
+// პროფილის გვერდით“) —, and the 🔔
 // with the number of notices that came since I last looked; a tap opens the notices page. A computer (lg and up) has the
 // top bar instead (BottomNav's DeskBar: the same logo, name and 🔔).
 
@@ -17,25 +23,58 @@ export const HomeBar: React.FC<{ logoUrl: string }> = ({ logoUrl }) => (useDesk(
 
 const HomeBarLive: React.FC<{ logoUrl: string }> = ({ logoUrl }) => {
   const { navigateTo } = useNavigation();
+  const { user } = useAuth();
+  const access = useAccess();
+  const photo = useShownPhoto(user?.uid, user?.photoURL);
   const { count } = useMyNotices();
   const [soon, setSoon] = useState<string | null>(null);
+  // as the bottom menu did: a guest is asked to sign in; a member not let in yet has no search; the kids' mode no profile
+  const onSearch = !user || access.can('search') ? () => {
+    triggerHaptic(10);
+    if (!user) { openSignIn(); return; }
+    setPendingQuery('');
+    navigateTo('search');
+  } : undefined;
+  const onProfile = access.kids ? undefined : () => {
+    triggerHaptic(10);
+    if (!user) { openSignIn(); return; }
+    navigateTo('profile');
+    window.scrollTo({ top: 0 });
+  };
   return (
     <>
       <HomeBarView logoUrl={logoUrl} count={count} onBell={() => { triggerHaptic(10); navigateTo('notices'); }}
+        onSearch={onSearch} onProfile={onProfile} photo={photo}
         menu={<SectionsMenu onSoon={setSoon} />} />
       <Toast message={soon || ''} type="info" isVisible={!!soon} onClose={() => setSoon(null)} />
     </>
   );
 };
 
-export const HomeBarView: React.FC<{ logoUrl: string; count: number; onBell: () => void; menu?: React.ReactNode }> = ({ logoUrl, count, onBell, menu }) => (
+export const HomeBarView: React.FC<{
+  logoUrl: string; count: number; onBell: () => void; menu?: React.ReactNode;
+  onSearch?: () => void; onProfile?: () => void; photo?: string;
+}> = ({ logoUrl, count, onBell, menu, onSearch, onProfile, photo }) => (
   <header className="safe-top lg:hidden">
-    <div className="relative mx-auto flex w-full max-w-4xl items-center gap-2.5 px-4 pt-3.5 pb-2.5">
-      <img src={logoUrl} alt="საგანძურის სკოლის ლოგო" className="size-tap shrink-0 rounded-field bg-surf object-cover" referrerPolicy="no-referrer" />
+    <div className="relative mx-auto flex w-full max-w-4xl items-center gap-2 px-4 pt-3.5 pb-2.5 max-[389px]:gap-1.5 max-[389px]:px-3">
+      <img src={logoUrl} alt="საგანძურის სკოლის ლოგო" className="size-tap shrink-0 rounded-field bg-surf object-cover max-[389px]:size-10" referrerPolicy="no-referrer" />
       {menu
         ? <div className="flex min-w-0 flex-1">{menu}</div>
         : <div className="min-w-0 flex-1 truncate text-head font-bold tracking-tight">საგანძურის სკოლა</div>}
-      <RoundButton label="შეტყობინებები" badge={count} onClick={onBell}>
+      {/* 36px rounds (a 44px finger still hits them), so „განყოფილებები“ keeps its whole name on a phone */}
+      {onSearch && (
+        <RoundButton label="ძებნა" size={36} onClick={onSearch}>
+          <Search strokeWidth={2} />
+        </RoundButton>
+      )}
+      {onProfile && (
+        <RoundButton label="პროფილი" size={36} onClick={onProfile} className="overflow-visible">
+          {photo
+            ? <img src={photo} alt="" aria-hidden="true" className="size-full rounded-full object-cover" referrerPolicy="no-referrer" />
+            : <User strokeWidth={1.75} />}
+        </RoundButton>
+      )}
+      <RoundButton label="შეტყობინებები" size={36} badge={count} onClick={onBell}>
         <Bell strokeWidth={1.75} />
       </RoundButton>
     </div>

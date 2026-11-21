@@ -17,8 +17,8 @@ import { useFabShown } from './fabPref';
 const KEY = 'sg-program-fab';
 const SIZE = 52;
 const EDGE = 8;
-/** over the bottom menu by default */
-const DEFAULT = { right: 16, bottom: 104 };
+/** near the bottom right by default (the phone's bottom menu is gone since 2026-11-21) */
+const DEFAULT = { right: 16, bottom: 24 };
 
 interface Spot { right: number; bottom: number }
 
