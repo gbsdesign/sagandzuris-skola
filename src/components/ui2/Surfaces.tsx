@@ -47,9 +47,11 @@ export const PageHead: React.FC<{ title: React.ReactNode; kicker?: React.ReactNo
  *  own) uses `PageHead` instead: a big name and no „უკან“. */
 export const TopBar: React.FC<{
   title: React.ReactNode; sub?: React.ReactNode; onBack?: () => void; right?: React.ReactNode; className?: string;
+  /** a smaller name (an open chat's head, 2026-11-21: „სახელები … მცირედ და კომპაქტურად“) */
+  small?: boolean;
   /** in place of the name: a search field (the search page) */
   children?: React.ReactNode;
-}> = ({ title, sub, onBack, right, className, children }) => (
+}> = ({ title, sub, onBack, right, className, small, children }) => (
   <header className={cx('flex shrink-0 items-center gap-2.5 pt-3.5 pb-2.5', className)}>
     {onBack && (
       <RoundButton label="უკან" onClick={onBack}>
@@ -59,7 +61,7 @@ export const TopBar: React.FC<{
     {children ?? (
       <div className="min-w-0 flex-1 pl-0.5">
         {/* a long name or small line takes a second line instead of ending in „…“ (four with a big text size — .sg-fit2) */}
-        <h1 className="sg-fit2 line-clamp-2 text-title leading-tight font-bold tracking-tight wrap-break-word">{title}</h1>
+        <h1 className={cx('sg-fit2 line-clamp-2 leading-tight font-bold tracking-tight wrap-break-word', small ? 'text-head' : 'text-title')}>{title}</h1>
         {sub && <div className="sg-fit2 line-clamp-2 text-meta leading-snug text-mut wrap-break-word">{sub}</div>}
       </div>
     )}

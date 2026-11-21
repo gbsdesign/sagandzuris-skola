@@ -239,12 +239,12 @@ export const ChatPath: React.FC<{
       <Press
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
-        className={cx('flex min-h-tap-lg w-full cursor-pointer items-center gap-3 rounded-tile bg-surf px-4 text-left transition active:bg-soft', FOCUS)}
+        className={cx('flex min-h-tap w-full cursor-pointer items-center gap-2.5 rounded-tile bg-surf px-4 text-left transition active:bg-soft', FOCUS)}
       >
         <span className="flex size-6 shrink-0 items-center justify-center"><PearlIcon state="shining" size={18} /></span>
-        <span className="flex min-w-0 flex-1 flex-col py-1.5">
-          <span className="text-cap font-bold text-mut">{editor ? `${studentName} — საგანძური` : 'ჩემი საგანძური'}</span>
-          <span className="text-body text-mut">{line}</span>
+        <span className="flex min-w-0 flex-1 flex-col py-1">
+          <span className="truncate text-cap font-semibold text-mut">{editor ? `${studentName} — საგანძური` : 'ჩემი საგანძური'}</span>
+          <span className="text-meta text-mut">{line}</span>
         </span>
         <ChevronDown aria-hidden="true" className={cx('size-5 shrink-0 text-mut transition-transform', open && 'rotate-180')} />
       </Press>
