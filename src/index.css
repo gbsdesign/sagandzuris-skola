@@ -108,8 +108,8 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
   7% { transform: scale(1.1); filter: brightness(1.08) drop-shadow(0 0 3px rgba(246, 212, 138, 0.9)); }
 }
 @keyframes sg-grape-letter {
-  0%, 16%, 100% { fill: #4a3210; }
-  7% { fill: #2a1a04; }
+  0%, 16%, 100% { fill: #1f1304; }
+  7% { fill: #000; }
 }
 @keyframes sg-bunch-hop {
   0%, 72%, 100% { translate: 0 0; }
@@ -126,7 +126,8 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
 .sg-grape-dust { stop-color: #e9a98a; }
 .sg-grape-shade { fill: #4a3210; opacity: 0.2; }
 .sg-grape-speck { fill: #7a5524; opacity: 0.45; }
-.sg-grape-letter { fill: #45300f; }
+/* the letter must read at a glance: almost black, with a pale rim that lifts it off the grape */
+.sg-grape-letter { fill: #1f1304; paint-order: stroke; stroke: rgba(255, 250, 232, 0.85); stroke-width: 2.4px; stroke-linejoin: round; }
 .sg-bunch-stalk { stroke: #7d6a45; }
 .sg-bunch-knot { fill: #6e5b3d; }
 .sg-grape { transform-box: fill-box; transform-origin: center; animation: sg-grape-glow 5.4s ease-in-out infinite; }
