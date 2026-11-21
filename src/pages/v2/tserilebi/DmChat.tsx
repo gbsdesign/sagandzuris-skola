@@ -176,6 +176,7 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
               student={student}
               studentName={thread.names[student] || (canPin ? other.name : '') || 'მოსწავლე'}
               editor={canPin}
+              classId={thread.classId || ''}
               onAssign={canPin ? e => { setPreset(e); setPinning(true); } : undefined}
             />
           )}
