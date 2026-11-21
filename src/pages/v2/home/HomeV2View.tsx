@@ -30,6 +30,15 @@ export const SPOTS: Record<SpotId, Spot> = {
   tamashebi: { label: 'სახალისო', x: 81, y: 51, tone: 'bg-sea', Icon: Dice4 },
 };
 
+export type BunchId = 'galoba' | 'simghera' | 'lotsvani';
+
+/** where the picture's own bunches hung: the stem's top, in % of the picture */
+const BUNCH_SPOT: Record<BunchId, React.CSSProperties> = {
+  galoba: { left: '64.6%', top: '15.4%' },
+  simghera: { left: '14.5%', top: '19.5%' },
+  lotsvani: { left: '37.5%', top: '30.2%' },
+};
+
 /** the boards' vine box: 374px wide (the 358px column + 8px each side) */
 const BOARD_W = 374;
 
@@ -70,6 +79,8 @@ export interface HomeV2ViewProps {
   onNext: () => void;
   /** „წერილები“ as the grape bunch right of the trunk (2026-11-21); none — the bunch is not drawn */
   letters?: { unread: number; onOpen: () => void };
+  /** the sections written into the vine's other bunches (2026-11-21); a hidden section is left out */
+  bunches?: { id: BunchId; word: string; onOpen: () => void }[];
   /** under the vine: the birthdays' line and the member's own buttons */
   children?: React.ReactNode;
 }
@@ -99,7 +110,7 @@ const chipLook = cx(
   'cursor-pointer transition active:scale-95', FOCUS,
 );
 
-export const HomeV2View: React.FC<HomeV2ViewProps> = ({ saying, labels, abituri, onLabel, onAbituri, next, onNext, letters, children }) => {
+export const HomeV2View: React.FC<HomeV2ViewProps> = ({ saying, labels, abituri, onLabel, onAbituri, next, onNext, letters, bunches, children }) => {
   const { box, k } = useVineScale();
   return (
     // -mt-0.5: the app frame gives the home 4px under its bar, the boards 2px
@@ -166,8 +177,12 @@ export const HomeV2View: React.FC<HomeV2ViewProps> = ({ saying, labels, abituri,
             );
           })}
 
-          {/* „წერილები“: the bunch the picture's own grapes hung in (x 632–792, y 483–635 of 1033 × 1390) */}
-          {letters && <LettersBunch unread={letters.unread} onOpen={letters.onOpen} className="z-1 w-[23%]" style={{ left: '68.9%', top: '32.4%' }} />}
+          {/* words in the grapes, where the picture's own bunches hung: the first one („გაკვეთილი“) opens the letters, the others
+              their sections; they sway out of step */}
+          {letters && <LettersBunch word="გაკვეთილი" label="წერილები" shiny unread={letters.unread} onOpen={letters.onOpen} className="z-1 w-[23%]" style={{ left: '68.9%', top: '32.4%' }} />}
+          {bunches?.map((b, i) => (
+            <LettersBunch key={b.id} word={b.word} onOpen={b.onOpen} className="z-1 w-[23%]" style={{ ...BUNCH_SPOT[b.id], animationDelay: `${-(i + 1) * 0.9}s` }} />
+          ))}
 
           {/* „გააგრძელე“ on the qvevri: one thing, where I stopped */}
           {next && (

@@ -2210,6 +2210,12 @@ listens (Gemini through Firebase AI Logic). 8 calls on Android (wake lock, push,
 Pending small tasks the user mentioned: remove the old Drive `ნოტები` sheets from `chantMediaRegistry.ts`
 (only when the user asks); bind mp3s for the folk songs marked `pendingWma` once uploaded to Drive.
 
+- **Words in the vine's grapes (2026-11-21, late)**: the user wants every word written INTO the grapes, letter by letter (a name tag
+  under a plain bunch was refused: „წერილები უნდა ეწეროს მარცვლებში!“). `v2/home/LettersBunch.tsx` draws any word (3·2·1, 3·3·1,
+  3·3·2·1) with grapes painted after his photo — ripe amber, dark letters (colours in `index.css`, `sg-grape-*`). Four bunches, where
+  the picture's own hung (all taken out of `public/home/vine.png`): „გაკვეთილი“ (his word; it still opens the letters, and is
+  `shiny`), „გალობა“, „სიმღერა“, „ლოცვანი“ (`BUNCH_SPOT` in HomeV2View). Those three left the home bar's menu (`VINE_SECTIONS`);
+  `useSections` (SectionsMenu) gives both the menu's rows and the bunches' taps, with the admin's switches.
 - **No bottom menu on phones, „წერილები“ as a grape bunch, the library's themes on its front, the AI teacher renamed (2026-11-21**,
   the user: „პროფილის ღილაკი ზევით აიტანე … ლუპა დაპატარავე … სიტყვა წერილები მარცვლებში ჩაწერე ასო ასო და გააცოცხლე მტევანი“; „საპატრიარქო
   ბიბლიოთეკა წაშალე … კატეგორიები გარე უჯრაზევე“; „სადაც AI მასწავლებელი აწერია ყველგან დააწერე ავტომატური სასწავლო პროგრამა“): phones
