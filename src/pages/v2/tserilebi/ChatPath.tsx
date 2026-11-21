@@ -1,8 +1,10 @@
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
-import { BookOpen, Check, ChevronDown, ClipboardList, Plus, Trash2 } from 'lucide-react';
+import { BookOpen, Check, ChevronDown, ClipboardList, Cog, Plus, Trash2 } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebase';
-import { useAuth, useChants, useNavigation } from '../../../context';
+import { useAuth, useChants, useNavigation, useViewing } from '../../../context';
+import { useAccess } from '../../../hooks/useAccess';
+import { openAiLesson } from '../../../components/aiLesson/open';
 import { PearlIcon } from '../../../components/pearls/PearlIcon';
 import { TokenIcon } from '../../../components/pearls/Tokens';
 import { writePath } from '../../../components/admin/MemberPathEditor';
@@ -143,6 +145,9 @@ export const ChatPath: React.FC<{
   const voices = items.reduce((n, i) => n + (i.voiced ? i.marks.filter(m => m !== 'off').length : 0), 0);
   const locked = !!lock?.on;
 
+  const viewing = useViewing();
+  const access = useAccess();
+  const autoLesson = !viewing && access.on('aiTeacher');
   if (!user || (editor && path === null)) return null;
 
   const save = (next: PathMap) => writePath(student, next).catch(e => setErr('ვერ შეინახა: ' + errorText(e)));
@@ -257,10 +262,12 @@ export const ChatPath: React.FC<{
 
   return (
     <div className="px-3.5 pb-2">
+      {/* the strip a little narrower, „ავტო გაკვეთილი“ right of it (2026-11-21, the user: „აი აქ მარჯვნივ … შეავიწროვე და მარჯვნივ ჩასვი“) */}
+      <div className="flex items-stretch gap-2">
       <Press
         onClick={() => setOpen(o => !o)}
         aria-expanded={open}
-        className={cx('flex min-h-tap w-full cursor-pointer items-center gap-2.5 rounded-tile bg-surf px-4 text-left transition active:bg-soft', FOCUS)}
+        className={cx('flex min-h-tap min-w-0 flex-1 cursor-pointer items-center gap-2.5 rounded-tile bg-surf px-4 text-left transition active:bg-soft', FOCUS)}
       >
         <span className="flex size-6 shrink-0 items-center justify-center"><PearlIcon state="shining" size={18} /></span>
         <span className="flex min-w-0 flex-1 flex-col py-1">
@@ -269,6 +276,17 @@ export const ChatPath: React.FC<{
         </span>
         <ChevronDown aria-hidden="true" className={cx('size-5 shrink-0 text-mut transition-transform', open && 'rotate-180')} />
       </Press>
+      {autoLesson && (
+        <Press
+          onClick={openAiLesson}
+          aria-label="ავტო გაკვეთილი — ავტომატური სასწავლო პროგრამის დღის გაკვეთილი"
+          className={cx('flex w-[92px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-tile bg-surf px-1.5 py-1.5 text-center text-wine transition active:bg-soft', FOCUS)}
+        >
+          <Cog aria-hidden="true" className="size-5 shrink-0" strokeWidth={2} />
+          <span className="text-cap leading-tight font-semibold">ავტო<br />გაკვეთილი</span>
+        </Press>
+      )}
+      </div>
 
       {open && !editor && (
         <div className="mt-2 max-h-[72dvh] overflow-x-hidden overflow-y-auto overscroll-contain px-0.5">
