@@ -1,5 +1,5 @@
 import React, { useMemo, useRef, useState } from 'react';
-import { BarChart3, Camera, ChevronRight, LayoutGrid, Settings, Shield, Trash2, Users } from 'lucide-react';
+import { BarChart3, Camera, ChevronRight, Compass, LayoutGrid, Settings, Shield, Trash2, Users } from 'lucide-react';
 import { useAuth, useNavigation, useViewing } from '../../../context';
 import {
   Avatar, Badge, Card, Dot, PageHead, Press, Row, Rows, RoundButton, SectionLabel, Sheet, Stats,
@@ -24,6 +24,7 @@ import { ScheduleScreen } from './Schedule';
 import { ButtonsScreen } from './Buttons';
 import { HelpButton } from '../mkitkhe/HelpButton';
 import { ChokhaThumb } from '../gza/ChokhaThumb';
+import { useLearnCount } from '../gza/useGza';
 
 // x-propili — „პროფილი“ in the new look (the bottom menu's own page): me and this month's three numbers on top, then five
 // rows — my class, my voice (the AI teacher's), my outfit, my home buttons — and the settings and the admin panel. What
@@ -72,6 +73,7 @@ const ProfileMain: React.FC = () => {
   const me = useProfileDoc();
   const admin = useAdminEntry();
   const samosi = useSamosiSummary();
+  const { count: learnCount } = useLearnCount();
   const classes = useAllMyClasses();
   const { list } = useMyShortcuts(user?.uid);
   const [cropFile, setCropFile] = useState<File | null>(null);
@@ -146,6 +148,13 @@ const ProfileMain: React.FC = () => {
 
           <SectionLabel label="ჩემი" />
           <Rows>
+            {/* „გზა“ = „საგანძური“ (2026-11-22, the user: „გზის ღილაკი აღადგინე … ეს გვერდი იხსნებოდეს ისევ ოღონდ პროფილში“ —
+                the bottom menu, its old place, is gone on phones) */}
+            {access.section('gza') !== 'hidden' && (
+              <Row lead={<Dot icon={<Compass />} />} title="გზა"
+                sub={learnCount.total ? `საგანძური · ${learnCount.learned} / ${learnCount.total} საგალობელი` : 'საგანძური'}
+                onClick={() => openGz('sagandzuri')} />
+            )}
             {access.on('classes') && classes.length > 0 && (
               <Row lead={<Dot icon={<Users />} />} title={classes.length > 1 ? 'ჩემი კლასები' : 'ჩემი კლასი'}
                 sub={classes.length > 1 ? classes.map(c => c.name).join(' · ') : classes[0].name}

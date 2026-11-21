@@ -1968,6 +1968,9 @@
   skips its own AI step); teachers — the classes they lead, admins — every class (`useManagedClasses`). Then `ShortcutShelf habits`:
   no „ჩემი ღილაკები“ heading (✎ only while editing — a long press), the kanon tile only for a psalter member with a kanon (the plain
   `special:kathisma` button is dropped there), and a „ჩვევები“ tile → today's habits in a ui2 Sheet (`pages/v2/home/HabitsSheet.tsx`, lazy).
+- **„გზა“ in the profile (2026-11-22**, the user: „გზის ღილაკი აღადგინე … ეს გვერდი იხსნებოდეს ისევ ოღონდ პროფილში“): phones lost the
+  bottom menu in #327, so the profile's „ჩემი“ starts with a row „გზა“ (compass, „საგანძური · N / M საგალობელი“ — `useLearnCount`)
+  that opens gz `sagandzuri`; shown while section `gza` is not hidden.
 - „გზა“ (`gz` with no mapItem) opens „საგანძური“ directly (`SagandzuriPage`, no ←); `GzaList` is no longer drawn (its rows' screens
   still open by mapItem). „სამოსი“ = a pill under the profile's name (`ChokhaThumb`, `pages/v2/gza/ChokhaThumb.tsx`); its row in
   „ჩემი“ is gone.
