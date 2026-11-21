@@ -121,8 +121,8 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
 .sg-grape-lit-1 { stop-color: #f7f6d8; } .sg-grape-skin-1 { stop-color: #e0dea4; } .sg-grape-rim-1 { stop-color: #bfbb78; }
 .sg-grape-lit-2 { stop-color: #fbf3da; } .sg-grape-skin-2 { stop-color: #ead8a6; } .sg-grape-rim-2 { stop-color: #cdae7c; }
 .sg-grape-dust { stop-color: #e2b08c; }
-.sg-grape-shade { fill: #5a4418; opacity: 0.12; }
-.sg-grape-letter { paint-order: stroke; stroke: rgba(12, 16, 30, 0.55); stroke-width: 5px; stroke-linejoin: round; }
+.sg-grape-shade { fill: #0b1020; opacity: 0.28; }
+.sg-grape-letter { paint-order: stroke; stroke: rgba(10, 14, 28, 0.5); stroke-width: 1.6px; stroke-linejoin: round; }
 .sg-bunch-stalk { stroke: #8a7850; }
 .sg-bunch-knot { fill: #7c6a48; }
 .sg-grape { animation: sg-grape-glow 9s ease-in-out infinite; }
