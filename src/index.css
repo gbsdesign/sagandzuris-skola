@@ -105,11 +105,11 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
    with new letters the bunch hops now and then */
 @keyframes sg-grape-glow {
   0%, 16%, 100% { transform: scale(1); filter: none; }
-  7% { transform: scale(1.13); filter: brightness(1.32) drop-shadow(0 0 3px rgba(246, 212, 138, 0.95)); }
+  7% { transform: scale(1.1); filter: brightness(1.08) drop-shadow(0 0 3px rgba(246, 212, 138, 0.9)); }
 }
 @keyframes sg-grape-letter {
-  0%, 16%, 100% { fill: #fff; }
-  7% { fill: #ffe9b0; }
+  0%, 16%, 100% { fill: #4a3210; }
+  7% { fill: #2a1a04; }
 }
 @keyframes sg-bunch-hop {
   0%, 72%, 100% { translate: 0 0; }
@@ -118,6 +118,13 @@ html.khutsuri :is(h1, h2, h3) { font-family: "SG Asomtavruli", var(--font-serif-
   90% { translate: 0 -3px; }
   95% { translate: 0 0; }
 }
+/* a ripe amber-green grape's colours (after the user's photo): the lit side, the skin, the rim, its edge, the bloom's dust */
+.sg-grape-lit { stop-color: #f6eec4; }
+.sg-grape-skin { stop-color: #d9c377; }
+.sg-grape-rim { stop-color: #b98f52; }
+.sg-grape-edge { stroke: #a37b45; }
+.sg-grape-dust { stop-color: #e9a98a; }
+.sg-grape-letter { fill: #4a3210; }
 .sg-grape { transform-box: fill-box; transform-origin: center; animation: sg-grape-glow 5.4s ease-in-out infinite; }
 .sg-grape-letter { animation: sg-grape-letter 5.4s ease-in-out infinite; animation-delay: inherit; }
 .sg-bunch-hop { animation: sg-bunch-hop 2.8s ease-in-out infinite; }
