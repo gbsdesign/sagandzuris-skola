@@ -115,7 +115,7 @@ export const pickNext = (x: NextInput): { step: NextStep; piece?: string; classI
   if (x.fresh && (x.ai.on || x.galobaOpen)) {
     return { step: { kind: 'start', kicker: 'დაიწყე აქედან', what: x.ai.on ? 'გაიცანი ავტომატური სასწავლო პროგრამა' : 'გალობის სწავლა' } };
   }
-  // the day lesson has its own „ავტო გაკვეთილი“ tile under the vine (2026-11-21) — the qvevri does not repeat it
+  // the day lesson has its own „ავტო გაკვეთილი“ button beside the chat's path strip (2026-11-21) — the qvevri does not repeat it
   if (x.ai.on && !x.ai.doneToday && !x.ai.onShelf) {
     return { step: { kind: 'ai', kicker: 'დღის გაკვეთილი · ავტომატური სასწავლო პროგრამა', what: `${x.ai.minutes} წუთი · გამეორება და ახალი ფრაზა` } };
   }

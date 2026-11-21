@@ -1,7 +1,6 @@
 import React, { Suspense, lazy, useLayoutEffect, useMemo, useRef, useState } from 'react';
-import { BookMarked, BookOpen, CalendarDays, Check, Clock, Compass, Feather, GraduationCap, Library, Moon, Music, Music2, Music4, Pencil, Plus, ScrollText, Sparkles, Star, Sun, Users, X, Pin, PinOff, Guitar, Church, NotebookPen, HandHeart, Flame, Heart, MessageCircle, ListMusic, School, ClipboardList, ClipboardCheck, CalendarClock, Settings2, Cake, ChevronDown, ChevronUp, MonitorPlay, Cog } from 'lucide-react';
-import { useAuth, useChants, useNavigation, useViewing } from '../../context';
-import { openAiLesson } from '../aiLesson/open';
+import { BookMarked, BookOpen, CalendarDays, Check, Clock, Compass, Feather, GraduationCap, Library, Moon, Music, Music2, Music4, Pencil, Plus, ScrollText, Sparkles, Star, Sun, Users, X, Pin, PinOff, Guitar, Church, NotebookPen, HandHeart, Flame, Heart, MessageCircle, ListMusic, School, ClipboardList, ClipboardCheck, CalendarClock, Settings2, Cake, ChevronDown, ChevronUp, MonitorPlay } from 'lucide-react';
+import { useAuth, useChants, useNavigation } from '../../context';
 import { useNotes } from '../../context/NotesContext';
 import { dayKey } from '../../utils/habitsWeek';
 import { openChurchCalendar, todayIso } from '../../data/churchCalendar';
@@ -184,10 +183,6 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile'; habits?: bo
   const [habitsOpen, setHabitsOpen] = useState(false);
   const habitsToday = useHabitsToday();
   const habitsTile = !!withHabits && variant === 'home' && !!user && access.section('chvevebi') === 'open';
-  // „ავტო გაკვეთილი“ (2026-11-21, the user: „ავტო გაკვეთილი მოხსენი მთავარიდან და მიაბი მარჯვენა მხარეს“): the automatic
-  // program's day lesson as a tile right of „ჩვევები“ — no longer the big line on the qvevri / under the classes
-  const viewing = useViewing();
-  const aiTile = !!withHabits && variant === 'home' && !!user && !viewing && access.on('aiTeacher');
   const { groups } = useMyPsalterGroups(user?.uid);
   // my own habits too: a habit button ticks or opens the habit as I set it up
   const myHabits = useMyHabits(user?.uid).groups.flatMap(g => g.items);
@@ -230,7 +225,7 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile'; habits?: bo
   });
 
   if (!user || !loaded) return null;
-  if (variant === 'home' && ids.length === 0 && readingIn.length === 0 && !habitsTile && !aiTile) return null;
+  if (variant === 'home' && ids.length === 0 && readingIn.length === 0 && !habitsTile) return null;
 
   const save = (next: string[]) => saveShortcuts(user.uid, keptKathisma ? [...next, 'special:kathisma'] : next).catch(() => {});
   const remove = (id: string) => { triggerHaptic(12); save(ids.filter(x => x !== id)); };
@@ -322,16 +317,6 @@ export const ShortcutShelf: React.FC<{ variant?: 'home' | 'profile'; habits?: bo
               <TileIcon><Sparkles /></TileIcon>
               <TileName label="ჩვევები" room="tight" />
               <span className="ml-auto shrink-0 text-xs font-bold tabular-nums text-[#8a7a6a]">{habitsToday.done}/{habitsToday.done + habitsToday.left}</span>
-            </button>
-          </li>
-        )}
-        {aiTile && !editing && (
-          <li className="relative">
-            <button type="button" onClick={() => { triggerHaptic(10); openAiLesson(); }}
-              aria-label="ავტო გაკვეთილი — ავტომატური სასწავლო პროგრამის დღის გაკვეთილი"
-              className={`${tileClass('paper', false)} hover:ring-[#7a2028]/35 active:scale-[0.97]`}>
-              <TileIcon><Cog /></TileIcon>
-              <TileName label="ავტო გაკვეთილი" room="tight" />
             </button>
           </li>
         )}

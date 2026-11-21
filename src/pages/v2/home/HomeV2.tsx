@@ -21,7 +21,7 @@ export const HomeV2: React.FC = () => {
   const slot = useSayingSlot();
   const saying = SAYINGS_ABOVE[slot % SAYINGS_ABOVE.length];
   const next = useNextStep();
-  // the day lesson is the shelf's „ავტო გაკვეთილი“ tile (2026-11-21) — the qvevri never shows it (useNextStep)
+  // the day lesson is „ავტო გაკვეთილი“ beside the chat's path strip (2026-11-21) — the qvevri never shows it (useNextStep)
   const step = next.step;
   // „წერილები“ = the vine's grape bunch (the phone's bottom menu is gone since 2026-11-21): the same tap as the menu's was
   const places = useNavPlaces();
@@ -43,7 +43,7 @@ export const HomeV2: React.FC = () => {
         {access.on('birthdays') && <BirthdaysSoon />}
         {/* my class (a member) or the classes I lead (teachers, admins) — compact */}
         <HomeClasses />
-        {/* the kanon of a psalter-group member, „ჩვევები“ (a window), „ავტო გაკვეთილი“ and the member's own buttons — no heading */}
+        {/* the kanon of a psalter-group member, „ჩვევები“ (a window) and the member's own buttons — no heading */}
         <ShortcutShelf habits />
       </HomeV2View>
       {next.learnPiece && (
