@@ -22,7 +22,8 @@ export const HomeV2: React.FC = () => {
   const saying = SAYINGS_ABOVE[slot % SAYINGS_ABOVE.length];
   const next = useNextStep();
   // the day lesson is „ავტო გაკვეთილი“ beside the chat's path strip (2026-11-21) — the qvevri never shows it (useNextStep)
-  const step = next.step;
+  // the qvevri's card („დღეს გასამეორებელი“ …) is gone since 2026-11-22 (the user: „მაგ ადგილას არაფერი არ დავინახო, მოხსენი“)
+  const step = null;
   // „წერილები“ = the vine's grape bunch (the phone's bottom menu is gone since 2026-11-21): the same tap as the menu's was
   const places = useNavPlaces();
   const lettersItem = places.shown.find(it => it.id === 'messages');
@@ -39,8 +40,8 @@ export const HomeV2: React.FC = () => {
         onNext={next.go}
         letters={lettersItem ? { unread: places.unread, onOpen: () => places.go(lettersItem) } : undefined}
       >
-        {/* birthdays: within five days for teachers and admins, today's for members */}
-        {access.on('birthdays') && <BirthdaysSoon />}
+        {/* birthdays: teachers and admins only, within five days — one small pill */}
+        {access.on('birthdays') && <BirthdaysSoon compact />}
         {/* my class (a member) or the classes I lead (teachers, admins) — compact */}
         <HomeClasses />
         {/* the kanon of a psalter-group member, „ჩვევები“ (a window) and the member's own buttons — no heading */}

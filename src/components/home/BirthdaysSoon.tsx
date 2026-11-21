@@ -7,14 +7,14 @@ import { useMembership } from '../../utils/memberAccess';
 import { triggerHaptic } from '../../utils/haptics';
 
 // The home page's gold line for birthdays and name days („ანგელოზის დღე“): teachers and admins see who has one within
-// five days (with the age), members only today's. A tap opens „დაბადების დღეები“. For staff it also shows a phone
+// five days (with the age); since 2026-11-22 members see none (the user: „დაბადება მარტო მასწავლებელი ხედავდეს“). A tap opens „დაბადების დღეები“. For staff it also shows a phone
 // notification 5, 3 and 1 days before (once a day, while the app is opened that day; a push even with the app closed
 // needs the reminders Worker).
 
 const STAFF_DAYS = 5;
 const NOTIFY_AT = [5, 3, 1];
 
-export const BirthdaysSoon: React.FC<{ className?: string }> = ({ className }) => {
+export const BirthdaysSoon: React.FC<{ className?: string; compact?: boolean }> = ({ className, compact }) => {
   const { user, isTeacher } = useAuth();
   const { isMember } = useMembership();
   const { navigateTo } = useNavigation();
@@ -51,7 +51,24 @@ export const BirthdaysSoon: React.FC<{ className?: string }> = ({ className }) =
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isTeacher, key]);
 
-  if (!coming.length) return null;
+  if (!isTeacher || !coming.length) return null;
+  // the new home: one small gold pill (2026-11-22, the user: „პატარა და კომპაქტურად“)
+  if (compact) {
+    const first = coming[0];
+    return (
+      <button
+        type="button"
+        onClick={() => { triggerHaptic(8); navigateTo('birthdays'); }}
+        aria-label="დაბადების დღეები"
+        className={`inline-flex h-10 max-w-full items-center gap-2 rounded-full pl-3 pr-2 bg-[#f7e8c6] ring-1 ring-[#d9b46a]/70 text-[13px] leading-none text-[#5a3d14] cursor-pointer active:scale-[0.98] transition sg-in ${className || ''}`}
+      >
+        {first.name ? <Sparkles className="w-4 h-4 shrink-0 text-[#9a6a1c]" /> : <Cake className="w-4 h-4 shrink-0 text-[#9a6a1c]" />}
+        <b className="min-w-0 truncate font-bold">{first.b.name}</b>
+        <span className="shrink-0 whitespace-nowrap">· {first.name ? 'ანგელოზის დღე, ' : ''}{inDaysText(first.days)}{coming.length > 1 ? ` · +${coming.length - 1}` : ''}</span>
+        <ChevronRight className="w-4 h-4 shrink-0 text-[#b08a4a]" />
+      </button>
+    );
+  }
   return (
     <button
       type="button"
