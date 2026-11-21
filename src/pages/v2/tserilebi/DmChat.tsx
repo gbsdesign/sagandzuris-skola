@@ -62,6 +62,7 @@ export const ChatHead: React.FC<{
       sub={sub}
       onBack={wide ? undefined : onBack}
       right={right}
+      small
     />
   </div>
 );
