@@ -8,6 +8,7 @@ import { classChatBase, isClassUnread, useChatSeen, useClassLasts } from '../../
 import { useUnreadCounts, type CountAsk } from '../../../hooks/useUnreadCounts';
 import { useAccess } from '../../../hooks/useAccess';
 import { nextLessonShort } from '../klasi/ClassesList';
+import { BirthdaysSoon } from '../../../components/home/BirthdaysSoon';
 
 // The home's classes (2026-11-21, the user: „მთავარ გვერდზე მოსწავლეს უჩანდეს თავისი კლასის ღილაკი და ავტომატური სასწავლო პროგრამა …
 // ადმინებს და მასწავლებლებს მთავარ გვერდზე გამოუჩინე ლამაზად გახსნილი კლასების სია“; the path's „კლასი“ row is gone):
@@ -59,11 +60,15 @@ const ClassRows: React.FC<{ classes: SchoolClass[] }> = ({ classes }) => {
 
 const StaffClasses: React.FC = () => {
   const { classes } = useManagedClasses();
-  if (!classes.length) return null;
+  const access = useAccess();
+  const birthdays = access.on('birthdays');
+  // no classes: the birthdays keep their small pill
+  if (!classes.length) return birthdays ? <BirthdaysSoon compact /> : null;
   return (
     <section className="flex w-full flex-col gap-2">
       <SectionLabel label={`კლასები · ${classes.length}`} />
-      <Rows><ClassRows classes={classes} /></Rows>
+      {/* birthdays: the card's first row (2026-11-22, the user: „დაბადების დღეები კლასებს თავში გამოჩნდეს“) */}
+      <Rows>{birthdays && <BirthdaysSoon row />}<ClassRows classes={classes} /></Rows>
     </section>
   );
 };

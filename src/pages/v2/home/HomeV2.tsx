@@ -1,6 +1,4 @@
 import React, { Suspense } from 'react';
-import { useAccess } from '../../../hooks/useAccess';
-import { BirthdaysSoon } from '../../../components/home/BirthdaysSoon';
 import { ShortcutShelf } from '../../../components/home/ShortcutShelf';
 import { SAYINGS_ABOVE } from '../../../data/sayings';
 import { HomeV2View } from './HomeV2View';
@@ -17,7 +15,6 @@ import { useNavPlaces } from '../../../components/shell/BottomNav';
 const LearnOpen = React.lazy(() => import('./LearnOpen'));
 
 export const HomeV2: React.FC = () => {
-  const access = useAccess();
   const slot = useSayingSlot();
   const saying = SAYINGS_ABOVE[slot % SAYINGS_ABOVE.length];
   const next = useNextStep();
@@ -40,9 +37,8 @@ export const HomeV2: React.FC = () => {
         onNext={next.go}
         letters={lettersItem ? { unread: places.unread, onOpen: () => places.go(lettersItem) } : undefined}
       >
-        {/* birthdays: teachers and admins only, within five days — one small pill */}
-        {access.on('birthdays') && <BirthdaysSoon compact />}
-        {/* my class (a member) or the classes I lead (teachers, admins) — compact */}
+        {/* my class (a member) or the classes I lead (teachers, admins) — compact; staff see the coming birthdays as the
+            classes card's first row (BirthdaysSoon row) */}
         <HomeClasses />
         {/* the kanon of a psalter-group member, „ჩვევები“ (a window) and the member's own buttons — no heading */}
         <ShortcutShelf habits />
