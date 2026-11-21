@@ -1,5 +1,5 @@
 import React, { Suspense, useEffect, useMemo, useState } from 'react';
-import { BookOpen, Check, ChevronDown, ClipboardList, Cog, Plus, Trash2 } from 'lucide-react';
+import { BookOpen, Check, ChevronDown, ClipboardList, Cog, GraduationCap, Plus, Trash2 } from 'lucide-react';
 import { doc, onSnapshot } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { useAuth, useChants, useNavigation, useViewing } from '../../../context';
@@ -24,6 +24,8 @@ import { chestIdOf } from '../../../components/pearls/LearnChests';
 import { Waiting } from '../../../components/shell/PageSkeleton';
 import { chipsOf } from '../gza/chips';
 import { SearchBox } from '../klasi/teacher/SearchBox';
+import { studentItem } from '../klasi/nav';
+import { pathSummary, recordFromDoc } from '../../../utils/masteryPath';
 
 // the student's own fold = the whole „საგანძური“ page without its bar (the user, 2026-11-21: „გზას რომ ჩახსნიდი … ჩამოსაშლელად
 // პირდაპირ ჩათში“, answer „მთელი გზა, როგორც გზის გვერდზე“) — loaded only when the fold opens
@@ -87,16 +89,19 @@ const itemsOf = (path: PathMap, all: Record<string, Voice[]>): Item[] =>
 
 /** the student's path, live (a teacher's or an admin's look) */
 const useStudentPath = (uid: string, on: boolean) => {
-  const [map, setMap] = useState<PathMap | null>(null);
+  const [rec, setRec] = useState<{ map: PathMap; data: Record<string, unknown> } | null>(null);
   useEffect(() => {
-    if (!on || !uid) { setMap(null); return; }
+    if (!on || !uid) { setRec(null); return; }
     return onSnapshot(
       doc(db, 'students', uid),
-      snap => setMap(((snap.exists() && snap.data().selectedChantVariants) || {}) as PathMap),
-      () => setMap({}),
+      snap => {
+        const data = (snap.exists() ? snap.data() : {}) as Record<string, unknown>;
+        setRec({ map: (data.selectedChantVariants || {}) as PathMap, data });
+      },
+      () => setRec({ map: {}, data: {} }),
     );
   }, [uid, on]);
-  return map;
+  return rec;
 };
 
 const Stat: React.FC<{ value: string; label: string }> = ({ value, label }) => (
@@ -116,18 +121,21 @@ export const ChatPath: React.FC<{
   student: string;
   studentName: string;
   editor: boolean;
+  /** the chat's class (the student's page opens under it) */
+  classId?: string;
   /** the chat's 📎 window opened on this chant („დავალებად მიცემა“) */
   onAssign?: (e: CatalogEntry) => void;
-}> = ({ student, studentName, editor, onAssign }) => {
+}> = ({ student, studentName, editor, classId = '', onAssign }) => {
   const { user } = useAuth();
   const own = useChants().selectedChantVariants;
   const marks = usePathMarks();
-  const theirs = useStudentPath(student, editor);
+  const theirRec = useStudentPath(student, editor);
+  const theirs = theirRec?.map ?? null;
   const teacherConf = useConfirmations(editor ? student : null);
   const allConf = useConfirmations(student, { withAi: true });
   const lock = useMarksLock(student);
   const opener = usePathItemOpener();
-  const { navigateTo, openMapItem, currentPage } = useNavigation();
+  const { navigateTo, openMapItem, openStudent, currentPage } = useNavigation();
   const [open, setOpen] = useState(false);
   const [chip, setChip] = useState('all');
   const [picked, setPicked] = useState<string | null>(null);
@@ -148,6 +156,8 @@ export const ChatPath: React.FC<{
   const viewing = useViewing();
   const access = useAccess();
   const autoLesson = !viewing && access.on('aiTeacher');
+  // the student's „ოსტატობა“ on the teacher's side too (2026-11-22, the user: „მთელი გზა აბა სადაა ოსტატობა?“)
+  const theirMastery = useMemo(() => (editor && theirRec ? pathSummary(recordFromDoc(theirRec.data)) : null), [editor, theirRec]);
   if (!user || (editor && path === null)) return null;
 
   const save = (next: PathMap) => writePath(student, next).catch(e => setErr('ვერ შეინახა: ' + errorText(e)));
@@ -318,6 +328,12 @@ export const ChatPath: React.FC<{
           <Rows className="shrink-0">
             <Row lead={<Dot icon={<Plus />} />} title="დამატება" sub="საგალობელი, სიმღერა, ლექსი" onClick={() => setAdding(true)} />
           </Rows>
+          {theirMastery && access.on('manera') && (
+            <Rows className="mt-1 shrink-0">
+              <Row lead={<Dot icon={<GraduationCap />} />} title="ოსტატობა" sub={`დონე ${theirMastery.level} · ${theirMastery.pct}%`}
+                onClick={() => { openStudent(student, classId); openMapItem(studentItem(student, classId, 'ostatoba')); }} />
+            </Rows>
+          )}
         </div>
       )}
 
