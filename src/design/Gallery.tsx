@@ -129,7 +129,7 @@ export const Gallery: React.FC = () => {
           <Row lead={<Dot icon={<Trash2 />} color="soft" />} title="ანგარიშის წაშლა" tone="danger" onClick={() => undefined} />
         </Rows>
         <Rows>
-          <Row wrap lead={<Dot icon={<Sparkles />} color="plum" />} title="მითითება AI მასწავლებელს" sub="ამ კვირას „მხოლოდ-შობილი“ — მეორე ხმა, ნელა, ორჯერ" onClick={() => undefined} />
+          <Row wrap lead={<Dot icon={<Sparkles />} color="plum" />} title="მითითება ავტომატურ სასწავლო პროგრამას" sub="ამ კვირას „მხოლოდ-შობილი“ — მეორე ხმა, ნელა, ორჯერ" onClick={() => undefined} />
         </Rows>
         <Card className="flex flex-col gap-3">
           <div className="flex items-center gap-2.5">

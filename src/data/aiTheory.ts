@@ -1,7 +1,7 @@
 // „პატარა თეორია“ of the AI lesson (board x-ai-teoria): a rule meets the member where the phrase has it — one sentence on
 // what it is, one on where it is in this phrase. Only what the book notes can show (pitch, start, length of each note;
 // the books' data has no fermata, tie, bar line or key signature): utils/aiTheory.ts finds them. The school may reword the
-// term and its meaning (⚙ „სკოლა“ → AI მასწავლებელი → „პატარა თეორია“, settings/aiTheory); the place sentence stays here:
+// term and its meaning (⚙ „სკოლა“ → ავტომატური სასწავლო პროგრამა → „პატარა თეორია“, settings/aiTheory); the place sentence stays here:
 // `{on}` = „მესამე ნოტზეა“, `{between}` = „მეორე და მესამე ნოტს შორისაა“, `{after}` = „მეორე ნოტის შემდეგაა“.
 // Ids stay: a member's record keeps the ones already shown (students.aiNote.seen).
 

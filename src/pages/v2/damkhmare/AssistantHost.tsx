@@ -4,7 +4,7 @@ import { AssistantScreen } from './AssistantScreen';
 import { useAssistantAllowed, type AssistantRequest } from './open';
 
 /** Mounted in App: `{assistant && <Suspense><AssistantHost req={assistant} onClose={close} /></Suspense>}`. Over everything but
- *  the kit's sheets (z 80), so its own sheets open above it. Only teachers and admins while „AI მასწავლებელი“ is open. */
+ *  the kit's sheets (z 80), so its own sheets open above it. Only teachers and admins while „ავტომატური სასწავლო პროგრამა“ is open. */
 export const AssistantHost: React.FC<{ req: AssistantRequest; onClose: (then?: () => void) => void }> = ({ req, onClose }) => {
   const allowed = useAssistantAllowed();
   if (!allowed) return null;

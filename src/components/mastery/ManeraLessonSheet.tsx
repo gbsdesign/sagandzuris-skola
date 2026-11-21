@@ -254,7 +254,7 @@ const ExerciseView: React.FC<{ drill: Drill }> = ({ drill }) => {
                 ? 'გაიარე სავარჯიშო მიკროფონით — აპი მოგისმენს, რამდენად ზუსტად აიღე ნოტები, და ბოლოს % გამოჩნდება.'
                 : kind === 'rhythm'
                   ? 'მეტრონომი ერთ ტაქტს ჩაგითვლის და ჩუმდება — შენ ინარჩუნებ ტემპს. აპი ტაშს მოისმენს და ბოლოს % გამოჩნდება.'
-                  : 'გაიარე სავარჯიშო მიკროფონით — ბოლოს AI მასწავლებელი მოუსმენს და შეგაფასებს.')}
+                  : 'გაიარე სავარჯიშო მიკროფონით — ბოლოს ავტომატური სასწავლო პროგრამა მოუსმენს და შეგაფასებს.')}
             </p>
           </div>
           <Btn icon={<Gauge />} onClick={() => (nl && kind === 'ai' && user ? showAi({ kind: 'intro' }) : (restart(), void beginScored()))}>შეფასებით</Btn>
@@ -479,7 +479,7 @@ const ScoringPanel: React.FC<{
           </p>
         </div>
       )}
-      {kind === 'ai' && <p className="text-[12.5px] leading-snug text-[#8a7a6a]">გაიარე ყველა ნაბიჯი — ბოლოს AI მასწავლებელი მოუსმენს ჩანაწერს.</p>}
+      {kind === 'ai' && <p className="text-[12.5px] leading-snug text-[#8a7a6a]">გაიარე ყველა ნაბიჯი — ბოლოს ავტომატური სასწავლო პროგრამა მოუსმენს ჩანაწერს.</p>}
       <Btn kind="ghost" size="sm" icon={<X />} onClick={onStop}>შეწყვეტა</Btn>
     </div>
   );
@@ -495,9 +495,9 @@ const RunResultView: React.FC<{ result: RunResult; best: number | undefined; tri
         <Sparkles className="w-9 h-9 mx-auto text-[#7a2028]" />
         <p className="font-serif-ge text-[17px] font-bold text-[#4a3426]">სავარჯიშო ჩაიწერა</p>
         {!signedIn ? (
-          <p className="text-[13px] text-[#8a7a6a]">AI მასწავლებელი მხოლოდ შესულ წევრებს უსმენს.</p>
+          <p className="text-[13px] text-[#8a7a6a]">ავტომატური სასწავლო პროგრამა მხოლოდ შესულ წევრებს უსმენს.</p>
         ) : r.busy ? (
-          <p className="text-[14px] font-semibold text-[#8a7a6a]">{r.mp3 ? 'AI მასწავლებელი უსმენს…' : 'ჩანაწერი მზადდება…'}</p>
+          <p className="text-[14px] font-semibold text-[#8a7a6a]">{r.mp3 ? 'ავტომატური სასწავლო პროგრამა უსმენს…' : 'ჩანაწერი მზადდება…'}</p>
         ) : r.mp3 ? (
           <>
             <Btn size="lg" icon={<Sparkles />} disabled={triesLeft <= 0} onClick={onAsk}>AI-ს შეფასება</Btn>
@@ -512,7 +512,7 @@ const RunResultView: React.FC<{ result: RunResult; best: number | undefined; tri
   const record = result.record;
   return (
     <div className="space-y-2">
-      <p className="text-[12px] font-bold uppercase tracking-wide text-[#8a7a6a]">{result.kind === 'ai' ? 'AI მასწავლებლის შეფასება' : 'შენი შედეგი'}</p>
+      <p className="text-[12px] font-bold uppercase tracking-wide text-[#8a7a6a]">{result.kind === 'ai' ? 'ავტომატური სასწავლო პროგრამის შეფასება' : 'შენი შედეგი'}</p>
       <p className={`text-[52px] leading-none font-black tabular-nums ${tone(pct)}`}>{pct}%</p>
       <p className="text-[13.5px] font-semibold text-[#4a3426]">
         {record ? (pct >= 80 ? 'ახალი საუკეთესო შედეგი! 🎉' : 'ახალი საუკეთესო შედეგი!') : best !== undefined ? `შენი საუკეთესო: ${best}%` : ''}

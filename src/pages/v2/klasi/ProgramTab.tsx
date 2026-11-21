@@ -382,7 +382,7 @@ const GroupRow: React.FC<{ group: NonNullable<ReturnType<typeof useClassGroup>>;
   );
 };
 
-/** x-klasi — „✦ მითითება AI მასწავლებელს“: shown to a member while the class or they have a note; opens the day's lesson. */
+/** x-klasi — „✦ მითითება ავტომატურ სასწავლო პროგრამას“: shown to a member while the class or they have a note; opens the day's lesson. */
 const AiNoteRow: React.FC<{ cls: SchoolClass; uid?: string }> = ({ cls, uid }) => {
   const on = useAccess().on('aiTeacher');
   const notes = useMemberNotes(cls.id, uid, on);
@@ -391,7 +391,7 @@ const AiNoteRow: React.FC<{ cls: SchoolClass; uid?: string }> = ({ cls, uid }) =
     <Rows>
       <Row
         lead={<Dot icon={<Sparkles />} size={40} />}
-        title="მითითება AI მასწავლებელს"
+        title="მითითება ავტომატურ სასწავლო პროგრამას"
         sub={`ამ კვირას: „${notes[0].note.text}“`}
         onClick={openAiLesson}
       />

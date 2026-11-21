@@ -62,7 +62,7 @@ export const TeacherSays: React.FC<{ children: React.ReactNode; sub?: React.Reac
     window.speechSynthesis.speak(u);
   };
   return (
-    <Card pad="none" className={cx('bg-tint px-3.5 py-3.5', className)} aria-label="AI მასწავლებელი ამბობს" aria-live="polite">
+    <Card pad="none" className={cx('bg-tint px-3.5 py-3.5', className)} aria-label="ავტომატური სასწავლო პროგრამა ამბობს" aria-live="polite">
       <div className="flex items-start gap-2.5">
         <Dot icon={<Sparkles />} size={36} />
         <div className="min-w-0 flex-1 pt-1.5">

@@ -26,7 +26,7 @@ export const AdminHome: React.FC = () => {
   const [q, setQ] = useKeptText('home');
   const [filters, setFilters] = useState(false);
   const line = usePersonLine();
-  // „სკოლის AI დამხმარე“ (pages/v2/damkhmare): only while the school's „AI მასწავლებელი“ switch is open
+  // „სკოლის AI დამხმარე“ (pages/v2/damkhmare): only while the school's „ავტომატური სასწავლო პროგრამა“ switch is open
   const assistant = useAssistantAllowed();
 
   const usersIn = !d.loading && !d.failed.users;

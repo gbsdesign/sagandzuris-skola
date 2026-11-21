@@ -33,7 +33,7 @@ const ProgramCard: React.FC<{ done: boolean }> = ({ done }) => (
   <div className="flex shrink-0 items-center gap-3 rounded-card bg-tint px-4 py-3.5">
     <span aria-hidden="true" className="flex size-9 shrink-0 items-center justify-center text-wine [&_svg]:size-[22px]"><Sparkles /></span>
     <span className="flex min-w-0 flex-col">
-      <span className="text-lead font-bold wrap-break-word">{done ? 'AI მასწავლებელმა მოგისმინა' : 'AI მასწავლებელი მოგისმენს'}</span>
+      <span className="text-lead font-bold wrap-break-word">{done ? 'ავტომატურმა სასწავლო პროგრამამ მოგისმინა' : 'ავტომატური სასწავლო პროგრამა მოგისმენს'}</span>
       <span className="text-meta text-mut">ეს პროგრამაა და არა ადამიანი</span>
     </span>
   </div>

@@ -497,7 +497,7 @@ export const LearnEasy: React.FC<{
     if (taken) {
       quiet.push({ label: 'მომისმინე', icon: <Headphones />, run: singing.playTake });
       if (uid) quiet.push({
-        label: `${ai.busy ? 'უსმენს…' : 'AI მასწავლებელი'}${Number.isFinite(aiLeft) && !ai.busy ? ` · ${aiLeft}` : ''}`,
+        label: `${ai.busy ? 'უსმენს…' : 'ავტომატური სასწავლო პროგრამა'}${Number.isFinite(aiLeft) && !ai.busy ? ` · ${aiLeft}` : ''}`,
         icon: <Sparkles />, run: askAi, disabled: ai.busy || aiLeft <= 0,
       });
       if (uid && sent !== 'yes') quiet.push({ label: sent === 'busy' ? 'იგზავნება…' : 'გაუგზავნე მასწავლებელს', icon: <Send />, run: send, disabled: sent === 'busy' });
@@ -724,13 +724,13 @@ export const LearnEasy: React.FC<{
               <SmallBtn wide onClick={singing.playTake} icon={<Headphones className="w-4 h-4" />}>მომისმინე</SmallBtn>
               {uid && (
                 <SmallBtn wide onClick={askAi} disabled={ai.busy || aiLeft <= 0} icon={<Sparkles className="w-4 h-4" />}>
-                  {ai.busy ? 'უსმენს…' : 'AI მასწავლებელი'}{Number.isFinite(aiLeft) && !ai.busy ? ` · ${aiLeft}` : ''}
+                  {ai.busy ? 'უსმენს…' : 'ავტომატური სასწავლო პროგრამა'}{Number.isFinite(aiLeft) && !ai.busy ? ` · ${aiLeft}` : ''}
                 </SmallBtn>
               )}
             </div>
             {(ai.text || ai.problem) && (
               <div className={`rounded-xl p-3.5 ${ai.problem ? 'bg-amber-50 ring-1 ring-amber-200' : 'bg-[#fbf6ec] ring-1 ring-[#e8dcc8]'}`}>
-                {ai.text && <p className="mb-1.5 flex items-center gap-1.5 text-[13px] font-bold text-[#7a2028]"><Sparkles className="w-4 h-4" />AI მასწავლებელი</p>}
+                {ai.text && <p className="mb-1.5 flex items-center gap-1.5 text-[13px] font-bold text-[#7a2028]"><Sparkles className="w-4 h-4" />ავტომატური სასწავლო პროგრამა</p>}
                 <p className="text-[14px] leading-relaxed text-[#4a3426] whitespace-pre-line">{ai.text || ai.problem}</p>
               </div>
             )}

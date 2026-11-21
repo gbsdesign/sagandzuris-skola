@@ -414,7 +414,7 @@ export const lastSeenWord = (at: string, today: string) => {
   return d <= 0 ? 'ბოლოს დღეს' : d === 1 ? 'ბოლოს გუშინ' : `ბოლოს ${d} დღის წინ`;
 };
 
-/** Every ready sentence the teacher says, by kind (the school's rules show them: ⚙ „სკოლა“ → AI მასწავლებელი →
+/** Every ready sentence the teacher says, by kind (the school's rules show them: ⚙ „სკოლა“ → ავტომატური სასწავლო პროგრამა →
  *  „მზა ფრაზები“). A note's place and a count change by the take; the examples show one. */
 export const READY_SENTENCES: { title: string; lines: string[] }[] = [
   { title: 'გაკვეთილის დასაწყისი', lines: [
@@ -449,7 +449,7 @@ export const READY_SENTENCES: { title: string; lines: string[] }[] = [
     'პირველი მარგალიტი შენია! „ალილუია“ „ნასწავლში“ ჩაიწერა — შენი ხმით.',
   ] },
   // AI step 2 (utils/aiPlan.ts, components/aiLesson): the first meeting, the voice check, the first week, the weak spot
-  { title: 'გაცნობა', lines: ['გამარჯობა! მე AI მასწავლებელი ვარ. გალობას ნაბიჯ-ნაბიჯ გასწავლი. ჯერ სამი რამ მითხარი.'] },
+  { title: 'გაცნობა', lines: ['გამარჯობა! მე ავტომატური სასწავლო პროგრამა ვარ. გალობას ნაბიჯ-ნაბიჯ გასწავლი. ჯერ სამი რამ მითხარი.'] },
   { title: 'ხმის შემოწმება', lines: [
     'ორ წუთში გავიგებ, როგორ ჟღერს შენი ხმა. უბრალოდ იმღერე, როგორც გამოგდის — აქ შეცდომა არ არსებობს.',
     'კარგი სმენა გაქვს. ნოტსაც იჭერ და გაგონილსაც იმეორებ — პირველი დონიდან დავიწყებთ.',

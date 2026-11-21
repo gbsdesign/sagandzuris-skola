@@ -113,10 +113,10 @@ export interface NextInput {
 export const pickNext = (x: NextInput): { step: NextStep; piece?: string; classId?: string } | null | 'wait' => {
   if (x.lesson) return { step: { kind: 'lesson', kicker: 'დღეს გაკვეთილია', what: `${x.lesson.start} · ${x.lesson.where}` }, classId: x.lesson.classId };
   if (x.fresh && (x.ai.on || x.galobaOpen)) {
-    return { step: { kind: 'start', kicker: 'დაიწყე აქედან', what: x.ai.on ? 'გაიცანი AI მასწავლებელი' : 'გალობის სწავლა' } };
+    return { step: { kind: 'start', kicker: 'დაიწყე აქედან', what: x.ai.on ? 'გაიცანი ავტომატური სასწავლო პროგრამა' : 'გალობის სწავლა' } };
   }
   if (x.ai.on && !x.ai.doneToday) {
-    return { step: { kind: 'ai', kicker: 'დღის გაკვეთილი · AI მასწავლებელი', what: `${x.ai.minutes} წუთი · გამეორება და ახალი ფრაზა` } };
+    return { step: { kind: 'ai', kicker: 'დღის გაკვეთილი · ავტომატური სასწავლო პროგრამა', what: `${x.ai.minutes} წუთი · გამეორება და ახალი ფრაზა` } };
   }
   for (const r of x.reviews) {
     const name = x.nameOf(r.piece);

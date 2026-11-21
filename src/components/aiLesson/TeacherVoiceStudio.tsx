@@ -9,7 +9,7 @@ import { VOICE_SENTENCES, VOICE_WORD, sentenceHash, type VoiceKind } from '../..
 import { clipUrl, loadVoiceIndex, useVoiceIndex, type VoiceIndex } from './TeacherVoice';
 import { MAKE_PROBLEM_TEXT, MakeError, makeVoiceClip } from './TeacherVoiceMake';
 
-// „მასწავლებლის ხმის სახელოსნო“ — the owner's alone (⚙ „სკოლა“ → AI მასწავლებელი): every ready sentence in a woman's and
+// „მასწავლებლის ხმის სახელოსნო“ — the owner's alone (⚙ „სკოლა“ → ავტომატური სასწავლო პროგრამა): every ready sentence in a woman's and
 // a man's voice, made by Gemini's Live API (TeacherVoiceMake) and kept in aiVoice/*; each one heard and made again at will,
 // „ყველა დარჩენილის ჩაწერა“ goes through the rest one by one. A count „N / M ჩაწერილია“ on top.
 

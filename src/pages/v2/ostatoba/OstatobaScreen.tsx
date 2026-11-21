@@ -150,7 +150,7 @@ export const OstatobaScreen: React.FC = () => {
             sub={plan.items.length ? `${plan.done} / ${plan.items.length} · ~${plan.minutes} წთ` : 'დღეს გეგმა არ არის'}
             disabled={!plan.items.length} onClick={() => setSheet('plan')} />
           {aiShown && (
-            <Row lead={<Dot icon={<Volume2 />} />} title="მასწავლებლის ხმა" sub="AI მასწავლებელი: ხმა და ტემპი"
+            <Row lead={<Dot icon={<Volume2 />} />} title="მასწავლებლის ხმა" sub="ავტომატური სასწავლო პროგრამა: ხმა და ტემპი"
               onClick={() => { setSheet(null); setVoice(true); }} />
           )}
         </Rows>

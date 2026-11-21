@@ -9,7 +9,7 @@ import { speechSupported, setVoiceCommandsOn, useVoiceCommandsOn } from './Voice
 import { useTeacherVoiceHere, useVoiceSettings } from './TeacherVoice';
 
 // The AI lesson's three helpers of AI step 4 in one place: „ჰკითხე“ (AskSheet), „ხმით მართვა“ (VoiceCommands) and
-// „მასწავლებლის ხმა“ (TeacherVoice*). Shown only while the switch „AI მასწავლებელი“ is on for the person and never in
+// „მასწავლებლის ხმა“ (TeacherVoice*). Shown only while the switch „ავტომატური სასწავლო პროგრამა“ is on for the person and never in
 // the kids' mode; the voice commands and the teacher's voice are quiet in church mode and during a call.
 
 /** church mode, when the notes' context is there (it always is in the app) */

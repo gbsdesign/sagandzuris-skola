@@ -4,7 +4,7 @@ import { AI_TEACHER_MODEL } from '../../../utils/aiTeacher';
 import { aiGate, noteAiCall } from '../../../utils/aiRules';
 import { mkAiCount, mkAiLeft, mkPrompt, parseMkReply, type MkAiReply } from '../../../utils/mkitkhe';
 
-// „მკითხე“'s second step: only when no ready answer was found, only while the school's „AI მასწავლებელი“ is open for the
+// „მკითხე“'s second step: only when no ready answer was found, only while the school's „ავტომატური სასწავლო პროგრამა“ is open for the
 // person. The same Gemini call as the AI teacher's (utils/aiTeacher.ts: Firebase AI Logic behind App Check), counted in the
 // school's month budget (utils/aiRules — the kids' mode gets none) and ten a day on the device (utils/mkitkhe `mkAiLeft`).
 

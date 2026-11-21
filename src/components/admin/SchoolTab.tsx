@@ -125,7 +125,7 @@ export const SchoolSheet: React.FC<{ users: UserRecord[]; classes: SchoolClass[]
           <button type="button" onClick={() => setAiRules(true)} className="w-full flex items-center gap-3 min-h-[44px] text-left cursor-pointer">
             <RowIcon><Sparkles /></RowIcon>
             <span className="flex-1 min-w-0">
-              <span className="block font-serif-ge text-[16px] font-bold text-[#4a3426] leading-snug">AI მასწავლებელი</span>
+              <span className="block font-serif-ge text-[16px] font-bold text-[#4a3426] leading-snug">ავტომატური სასწავლო პროგრამა</span>
               <span className="block text-[12.5px] text-[#8a7a6a] leading-snug mt-0.5">სკოლის წესები და ბიუჯეტი</span>
             </span>
             <ChevronRight className="w-[18px] h-[18px] text-[#8a7a6a] shrink-0" />

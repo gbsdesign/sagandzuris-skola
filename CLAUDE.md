@@ -2211,3 +2211,15 @@ listens (Gemini through Firebase AI Logic). 8 calls on Android (wake lock, push,
 
 Pending small tasks the user mentioned: remove the old Drive `ნოტები` sheets from `chantMediaRegistry.ts`
 (only when the user asks); bind mp3s for the folk songs marked `pendingWma` once uploaded to Drive.
+
+- **No bottom menu on phones, „წერილები“ as a grape bunch, the library's themes on its front, the AI teacher renamed (2026-11-21**,
+  the user: „პროფილის ღილაკი ზევით აიტანე … ლუპა დაპატარავე … სიტყვა წერილები მარცვლებში ჩაწერე ასო ასო და გააცოცხლე მტევანი“; „საპატრიარქო
+  ბიბლიოთეკა წაშალე … კატეგორიები გარე უჯრაზევე“; „სადაც AI მასწავლებელი აწერია ყველგან დააწერე ავტომატური სასწავლო პროგრამა“): phones
+  draw no `BottomNav` (App mounts only `AppBadge` for the icon's count; `TOP_PAGES` is empty, so gz, messages and profile have „უკან“);
+  the home bar = logo · „განყოფილებები ▾“ · 🔍 · 👤 (my photo) · 🔔, all 36 px (`HomeBar`); the computer's `DeskBar` is unchanged. The vine's
+  right bunch was taken out of `public/home/vine.png` and is drawn by `v2/home/LettersBunch.tsx` (8 grapes 3·2·2·1 = წ ე რ ი ლ ე ბ ი,
+  sways, `sg-grape` lights them in turn, `sg-bunch-hop` + a count while letters wait; a tap = the old menu's „წერილები“ via
+  `useNavPlaces`). The library's front (`v2/library/Front.tsx`) has no „საპატრიარქოს ბიბლიოთეკა“ cover: „წიგნები თემებით“ = a row a
+  `P_CATEGORIES` entry (reordered) → `patriarq:<category>`; a bare `patriarq` shows the front. The app says „ავტომატური სასწავლო პროგრამა“
+  (declined: -ს / -მა / -ის / -თან) wherever it said „AI მასწავლებელი“ — never write the old name again.
+

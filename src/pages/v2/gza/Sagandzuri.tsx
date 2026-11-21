@@ -54,7 +54,7 @@ export interface TreasureItem {
 export interface PearlInfo {
   id?: string;
   name: string;
-  /** voices the AI teacher passed (shown as „ჩათვალა AI მასწავლებელმა“) */
+  /** voices the AI teacher passed (shown as „ჩათვალა ავტომატურმა სასწავლო პროგრამამ“) */
   aiVoices?: Voice[];
   /** voices marked and not yet counted that the member can sit the AI teacher's exam in */
   examVoices?: Voice[];
@@ -239,7 +239,7 @@ export const SagandzuriView: React.FC<{
                 <span className="text-lead font-bold">{(() => {
                   const ok = pearl.marks.flatMap((m, i) => (m === 'ok' ? [String(i + 1) as Voice] : []));
                   const byAi = ok.filter(v => pearl.aiVoices?.includes(v));
-                  return ok.length === 0 ? 'ჯერ არავის ჩაუთვლია' : byAi.length === ok.length ? 'AI მასწავლებელმა ჩათვალა' : 'მასწავლებელმა ჩათვალა';
+                  return ok.length === 0 ? 'ჯერ არავის ჩაუთვლია' : byAi.length === ok.length ? 'ავტომატურმა სასწავლო პროგრამამ ჩათვალა' : 'მასწავლებელმა ჩათვალა';
                 })()}</span>
                 <span className="text-meta text-mut">
                   {pearl.pearl === 'shining' ? 'მარგალიტი ბრწყინავს' : pearl.pearl === 'polished' ? 'გაპრიალებულია — შენ მონიშნე' : 'ჯერ არ არის ნასწავლი'}
@@ -255,7 +255,7 @@ export const SagandzuriView: React.FC<{
             {pearl.id && onExam && !!pearl.examVoices?.length && (
               <Rows>
                 {pearl.examVoices.map(v => (
-                  <Row key={v} lead={<Dot icon={<Mic />} />} title={`გამოცდა · ${['I', 'II', 'III'][Number(v) - 1]} ხმა`} sub="AI მასწავლებელი ჩათვლის"
+                  <Row key={v} lead={<Dot icon={<Mic />} />} title={`გამოცდა · ${['I', 'II', 'III'][Number(v) - 1]} ხმა`} sub="ავტომატური სასწავლო პროგრამა ჩათვლის"
                     onClick={() => onExam(pearl.id as string, v)} />
                 ))}
               </Rows>

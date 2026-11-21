@@ -457,14 +457,14 @@ export const SingPanel: React.FC<{
               <Btn kind="ghost" icon={<Headphones />} onClick={playTake}>მომისმინე</Btn>
               {uid && (
                 <Btn kind="soft" icon={<Sparkles />} onClick={askAi} disabled={ai.busy || left <= 0}>
-                  {ai.busy ? 'უსმენს…' : 'AI მასწავლებელი'}{Number.isFinite(left) && !ai.busy ? ` · ${left}` : ''}
+                  {ai.busy ? 'უსმენს…' : 'ავტომატური სასწავლო პროგრამა'}{Number.isFinite(left) && !ai.busy ? ` · ${left}` : ''}
                 </Btn>
               )}
             </div>
           )}
           {(ai.text || ai.problem) && (
             <div className={`rounded-xl p-3.5 ${ai.problem ? 'bg-amber-50 ring-1 ring-amber-200' : 'bg-[#fbf6ec] ring-1 ring-[#e8dcc8]'}`}>
-              {ai.text && <p className="mb-1.5 flex items-center gap-1.5 text-[13px] font-bold text-[#7a2028]"><Sparkles className="w-4 h-4" />AI მასწავლებელი</p>}
+              {ai.text && <p className="mb-1.5 flex items-center gap-1.5 text-[13px] font-bold text-[#7a2028]"><Sparkles className="w-4 h-4" />ავტომატური სასწავლო პროგრამა</p>}
               <p className="text-[14px] leading-relaxed text-[#4a3426] whitespace-pre-line">{ai.text || ai.problem}</p>
             </div>
           )}

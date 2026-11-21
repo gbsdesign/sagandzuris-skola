@@ -63,7 +63,7 @@ export const ExamView: React.FC<ExamViewProps> = ({
         {won ? (
           <>
             <p className="mt-3 text-lead font-bold text-wine">მარგალიტი აბრწყინდა</p>
-            <p className="text-meta text-mut">ჩათვალა AI მასწავლებელმა</p>
+            <p className="text-meta text-mut">ჩათვალა ავტომატურმა სასწავლო პროგრამამ</p>
           </>
         ) : (
           <p className="mt-3 max-w-[300px] text-lead font-semibold leading-[1.4]">{missSentence(hit, total)}</p>

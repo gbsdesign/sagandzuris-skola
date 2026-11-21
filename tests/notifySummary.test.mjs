@@ -36,7 +36,7 @@ test('summaryLines: only the chosen parts, nothing to say = nothing', () => {
   assert.deepEqual(lines, [
     'გაკვეთილი დღეს 18:00 · სამების ტაძარი',
     '3 ახალი წერილი',
-    'დღის გაკვეთილი: 10 წუთი AI მასწავლებელთან',
+    'დღის გაკვეთილი: 10 წუთი ავტომატურ სასწავლო პროგრამასთან',
     'დღეს ლუკა — დაბადების დღე',
   ]);
   assert.deepEqual(summaryLines({ items: { ...items, day: true }, reviews: 2 }), ['გასამეორებელი: 2 საგალობელი']);

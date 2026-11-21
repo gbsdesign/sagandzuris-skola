@@ -23,7 +23,7 @@ export const openAssistant = (req: AssistantRequest = {}) => {
   window.dispatchEvent(new Event(EVENT));
 };
 
-/** Who may use it: teachers and admins, while the school's „AI მასწავლებელი“ switch is open for them. */
+/** Who may use it: teachers and admins, while the school's „ავტომატური სასწავლო პროგრამა“ switch is open for them. */
 export const useAssistantAllowed = () => {
   const { user, isTeacher } = useAuth();
   const { on } = useAccess();
