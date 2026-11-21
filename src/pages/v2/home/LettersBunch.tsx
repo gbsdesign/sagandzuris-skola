@@ -31,7 +31,10 @@ export const LettersBunch: React.FC<{
   className?: string;
   style?: React.CSSProperties;
 }> = ({ word, label = word, unread = 0, onOpen, className, style }) => {
-  const letters = [...word];
+  // seven letters: the last two share the last grape, so the bunch is 3 · 2 · 1 like „გალობა“ (the user, 2026-11-22: „ბოლო 2 ასო 1
+  // მარცვალში ჩატიე, რომ ლამაზად აეწყოს“)
+  const all = [...word];
+  const letters = all.length === 7 ? [...all.slice(0, 5), all[5] + all[6]] : all;
   const grapes = grapesOf(letters.length);
   const h = grapes[grapes.length - 1][1] + R + 1;
   return (
@@ -58,7 +61,7 @@ export const LettersBunch: React.FC<{
             <ellipse cx={x - 6} cy={y - 7} rx={3.6} ry={2.2} fill={COLOR.surf} opacity={0.17} />
             <text
               x={x} y={y + 0.5} textAnchor="middle" dominantBaseline="central"
-              className="sg-grape-letter" fontSize={18} fontWeight={700} fill={COLOR.surf}
+              className="sg-grape-letter" fontSize={letters[i].length > 1 ? 13.5 : 18} fontWeight={700} fill={COLOR.surf}
             >{letters[i]}</text>
           </g>
         ))}
