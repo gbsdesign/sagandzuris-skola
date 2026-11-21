@@ -98,7 +98,7 @@ export interface NextInput {
   /** nothing started: no learning record and no AI lesson day */
   fresh: boolean;
   /** the AI teacher's switch is on for me, and whether today's lesson is done; its length (the member's choice) */
-  ai: { on: boolean; doneToday: boolean; minutes: 5 | 10 };
+  ai: { on: boolean; doneToday: boolean; minutes: 5 | 10; onShelf?: boolean };
   /** the chants' page may be opened (a new member without the AI teacher starts there) */
   galobaOpen: boolean;
   reviews: { piece: string; count: number }[];
@@ -115,7 +115,8 @@ export const pickNext = (x: NextInput): { step: NextStep; piece?: string; classI
   if (x.fresh && (x.ai.on || x.galobaOpen)) {
     return { step: { kind: 'start', kicker: 'დაიწყე აქედან', what: x.ai.on ? 'გაიცანი ავტომატური სასწავლო პროგრამა' : 'გალობის სწავლა' } };
   }
-  if (x.ai.on && !x.ai.doneToday) {
+  // the day lesson has its own „ავტო გაკვეთილი“ tile under the vine (2026-11-21) — the qvevri does not repeat it
+  if (x.ai.on && !x.ai.doneToday && !x.ai.onShelf) {
     return { step: { kind: 'ai', kicker: 'დღის გაკვეთილი · ავტომატური სასწავლო პროგრამა', what: `${x.ai.minutes} წუთი · გამეორება და ახალი ფრაზა` } };
   }
   for (const r of x.reviews) {
