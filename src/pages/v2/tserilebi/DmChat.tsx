@@ -55,11 +55,11 @@ export const ChatHead: React.FC<{
 }> = ({ title, sub, onBack, wide, right, onOpen }) => (
   <div className="px-3.5">
     <TopBar
-      // a long name takes a second line instead of ending in „…“
+      // the name and the small line each on one line (2026-11-22, the user: „სახელი მინდა სიგრძეზე ეწეროს“)
       title={onOpen
-        ? <Press onClick={onOpen} className={cx('line-clamp-2 max-w-full cursor-pointer text-left font-bold whitespace-normal wrap-break-word')}>{title}</Press>
-        : <span className="line-clamp-2 whitespace-normal wrap-break-word">{title}</span>}
-      sub={sub}
+        ? <Press onClick={onOpen} className={cx('block max-w-full cursor-pointer truncate text-left text-lead font-bold')}>{title}</Press>
+        : <span className="block truncate text-lead">{title}</span>}
+      sub={<span className="block truncate">{sub}</span>}
       onBack={wide ? undefined : onBack}
       right={right}
       small

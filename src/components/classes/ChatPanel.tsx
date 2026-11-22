@@ -1,9 +1,9 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useBackToClose } from '../../utils/backToClose';
 import { useNotes } from '../../context/NotesContext';
-import { MessageCircle, Music2, Mic, Paperclip, Send, Square, X, Trash2, Play, Pause, Loader2, Clock, Phone, CheckCheck } from 'lucide-react';
+import { MessageCircle, Music2, Mic, Paperclip, Send, Smile, Square, X, Trash2, Play, Pause, Loader2, Clock, Phone, CheckCheck } from 'lucide-react';
 import {
-  sendTextMessage, sendVoiceMessage, deleteMessage, loadVoiceUrl, ChatMessage, ChatAuthor,
+  sendTextMessage, sendVoiceMessage, deleteMessage, loadVoiceUrl, toggleHeart, ChatMessage, ChatAuthor,
 } from '../../hooks/useClassChat';
 import {
   startVoiceRecording, voiceRecordingSupported, VOICE_MAX_SECONDS, WAVE_BARS, VoiceRecording, VoiceTake,
@@ -14,7 +14,24 @@ import { MONTHS_GE } from '../../utils/dateNames';
 import { ROOM_GAME_INFO, parseChatRoomRef } from '../../data/roomGames';
 import { ROOM_GAME_ICON } from '../games/roomGameIcons';
 import { DrawRiddle } from './DrawRiddle';
-import { Button, Press, RoundButton } from '../ui2';
+import { Button, Press, RoundButton, Sheet } from '../ui2';
+
+// Messenger's ways (2026-11-22, the user: „როგორც მესენჯერს აქვს … სმს-ებზე დაგულების ფუნქცია … ემოჯის გაგზავნის ფუნქცია“; answers
+// „მხოლოდ გული ❤️ · დაჭერა + ორჯერ შეხება · პანელი + დიდი ❤️“): a ❤️ on a message (held long → „❤️“ under it, or two taps), the
+// hearts' count under the bubble (a tap names who), an emoji panel from the field's 😊, one tap sends a big ❤️, and a message of
+// one to three emoji is drawn big without its bubble
+const EMOJIS = [
+  '😀', '😂', '🥰', '😍', '😊', '😉', '😎', '🤗', '🥳', '😇', '🙂', '😅', '🤔', '😮', '😢', '😭',
+  '😡', '👍', '👏', '🙏', '💪', '🙌', '👋', '🤝', '👌', '💯', '✅', '✨', '🔥', '🎉', '🎶', '🎵',
+  '🎤', '❤️', '🧡', '💛', '💚', '💙', '💜', '🤍', '🌹', '🌸', '☀️', '🌙', '⭐', '🍇', '☕', '📖',
+];
+const EMOJI_ONLY = /^(?:\p{Extended_Pictographic}(?:\uFE0F|\p{Emoji_Modifier}|\u200D\p{Extended_Pictographic}\uFE0F?)*\s*){1,3}$/u;
+const emojiCount = (t: string) => (EMOJI_ONLY.test(t.trim()) ? [...t.trim().matchAll(/\p{Extended_Pictographic}/gu)].length : 0);
+/** a message that is only emoji (1–3) is drawn big */
+export const bigEmoji = (t: string) => {
+  const n = emojiCount(t);
+  return n === 1 ? 'text-[52px] leading-[1.1]' : n > 1 ? 'text-[40px] leading-[1.15]' : '';
+};
 
 const clock = (s: number) => `${Math.floor(s / 60)}:${String(Math.floor(s % 60)).padStart(2, '0')}`;
 export const hhmm = (d: Date) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
@@ -293,11 +310,22 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const [active, setActive] = useState<string | null>(null);
   // a picked message (its „წაშლა“ showing): the phone's back lets it go instead of leaving the chat
   useBackToClose(!!active, () => setActive(null));
+  const [emojiOpen, setEmojiOpen] = useState(false);
+  useBackToClose(emojiOpen, () => setEmojiOpen(false));
+  // whose hearts are listed (a tap on a message's ❤️ count)
+  const [heartsOf, setHeartsOf] = useState<ChatMessage | null>(null);
+  const lastTap = useRef<{ id: string; t: number } | null>(null);
+  const caret = useRef<number | null>(null);
+  const heart = (m: ChatMessage) => {
+    triggerHaptic(15);
+    setActive(null);
+    toggleHeart(base, m, author.uid).catch(e => { console.warn('heart: ', e?.code || e); setErr('გული ვერ დაისვა.'); });
+  };
   // a long press (half a second, the finger kept still) or a right click picks a message; a tap on the picked one lets
   // it go; a press on its play button or a link does not count
   const hold = useRef<number | null>(null);
   const stopHold = () => { if (hold.current) window.clearTimeout(hold.current); hold.current = null; };
-  const holdToPick = (id: string) => ({
+  const holdToPick = (id: string, hearted: ChatMessage | null = null) => ({
     onPointerDown: (e: React.PointerEvent) => {
       if (e.pointerType === 'mouse' || (e.target as HTMLElement).closest('button, a, input')) return;
       stopHold();
@@ -313,7 +341,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       setActive(id);
     },
     onClick: (e: React.MouseEvent) => {
-      if (active === id && !(e.target as HTMLElement).closest('button, a')) setActive(null);
+      if ((e.target as HTMLElement).closest('button, a')) return;
+      // two taps in a row put (or take back) a ❤️
+      if (hearted) {
+        const now = Date.now();
+        if (lastTap.current?.id === id && now - lastTap.current.t < 320) { lastTap.current = null; heart(hearted); return; }
+        lastTap.current = { id, t: now };
+      }
+      if (active === id) setActive(null);
     },
   });
   const rec = useRef<VoiceRecording | null>(null);
@@ -343,21 +378,35 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
   useEffect(() => () => { rec.current?.cancel(); }, []);
 
-  const sendText = async () => {
-    const t = text.trim();
+  // `given`: a ready text (the big ❤️) — the field keeps what is typed
+  const sendText = async (given?: string) => {
+    const t = (given ?? text).trim();
     if (!t) return;
-    setText('');
+    if (given === undefined) {
+      setText('');
+      caret.current = null;
+      if (field.current) field.current.style.height = '';
+    } else triggerHaptic(15);
     setErr('');
     stick.current = true;
-    if (field.current) field.current.style.height = '';
     try {
       await sendTextMessage(base, author, t);
       onSent?.('text', t);
     } catch (e) {
       console.warn('chat: ', e);
       setErr('შეტყობინება ვერ გაიგზავნა. სცადეთ თავიდან.');
-      setText(t);
+      if (given === undefined) setText(t);
     }
+  };
+
+  // an emoji from the panel goes where the cursor was
+  const addEmoji = (e: string) => {
+    const at = Math.min(caret.current ?? text.length, text.length);
+    const next = (text.slice(0, at) + e + text.slice(at)).slice(0, 2000);
+    caret.current = at + e.length;
+    setText(next);
+    const el = field.current;
+    if (el) requestAnimationFrame(() => grow(el));
   };
 
   const startRecording = async () => {
@@ -478,19 +527,49 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         const newDay = !!m.at && (!prev?.at || prev.at.toDateString() !== m.at.toDateString());
         const first = newDay || prev?.uid !== m.uid || (!!prev && isCall(prev) !== isCall(m));
         const canDel = !readOnly && canDelete(m);
+        const heartable = !readOnly && !m.pending && !m.pinned && !isCall(m) && m.kind !== 'game';
+        const hearts = m.hearts ?? [];
+        const mineHeart = hearts.includes(author.uid);
+        const pick = canDel || heartable ? holdToPick(m.id, heartable ? m : null) : {};
         const named = typeof showNames === 'function' ? showNames(m) : showNames;
         const card = renderCard?.(m, mine) ?? null;
         const openPerson = named && !mine && first ? personOpener?.(m) ?? null : null;
         const dayLine = newDay && (
           <p className="my-3 text-center text-cap font-bold text-mut">{dayLabel(m.at!)}</p>
         );
-        const removeBtn = active === m.id && (
+        const removeBtn = active === m.id && (heartable || canDel) && (
+          <div className="mt-1.5 flex items-center gap-1.5">
+            {heartable && (
+              <button
+                type="button"
+                onClick={() => heart(m)}
+                aria-label={mineHeart ? 'გულის მოხსნა' : 'გული'}
+                className={`h-icon px-3 rounded-full bg-surf shadow-lift text-meta font-semibold inline-flex items-center gap-1.5 cursor-pointer active:scale-95 ${mineHeart ? 'text-mut ring-1 ring-wine/30' : 'text-ink'}`}
+              >
+                <span aria-hidden="true" className="text-lead leading-none">❤️</span>{mineHeart && 'მოხსნა'}
+              </button>
+            )}
+            {canDel && (
+              <button
+                type="button"
+                onClick={() => remove(m)}
+                className="h-icon px-3.5 rounded-full bg-surf shadow-lift text-meta font-semibold text-danger inline-flex items-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <Trash2 className="w-4 h-4" /> წაშლა
+              </button>
+            )}
+          </div>
+        );
+        // the hearts under the bubble, on its corner: ❤️ and how many; a tap names who
+        const heartPill = hearts.length > 0 && (
           <button
             type="button"
-            onClick={() => remove(m)}
-            className="mt-1.5 h-icon px-3.5 rounded-full bg-surf shadow-lift text-meta font-semibold text-danger inline-flex items-center gap-1.5 cursor-pointer active:scale-95"
+            onClick={() => setHeartsOf(m)}
+            aria-label={`გული · ${hearts.length}`}
+            className={`relative z-[1] -mt-2 inline-flex h-6 cursor-pointer items-center gap-0.5 rounded-full bg-surf px-1.5 text-cap font-bold text-ink shadow-lift ring-1 ring-line ${mine ? 'mr-2' : 'ml-2'}`}
           >
-            <Trash2 className="w-4 h-4" /> წაშლა
+            <span aria-hidden="true" className="leading-none">❤️</span>
+            {hearts.length > 1 && <span className="tabular-nums">{hearts.length}</span>}
           </button>
         );
         // how a call ended (board x-zari-chatshi): „ზარი დასრულდა · 12 წუთი“, or „გამოტოვებული ზარი“ with „დაურეკე“ (the one
@@ -551,6 +630,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
           );
         }
         const stamp = `text-cap leading-none ${mine ? 'text-white/80' : 'text-mut'}`;
+        const big = m.kind === 'text' ? bigEmoji(m.text) : '';
         return (
           <React.Fragment key={m.id}>
             {dayLine}
@@ -565,14 +645,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   </p>
                 )}
                 {card ? (
-                  <div {...(canDel ? holdToPick(m.id) : {})} className={`w-full ${canDel ? '[-webkit-touch-callout:none]' : ''}`}>{card}</div>
+                  <div {...pick} className={`w-full ${canDel || heartable ? '[-webkit-touch-callout:none] select-none' : ''}`}>{card}</div>
                 ) : (
                 <div
-                  // a long press on the message (as in any messenger; a right click on a computer) shows „წაშლა“ under
-                  // it; a plain tap does nothing, so playing a voice message or opening a link never shows it
-                  {...(canDel ? holdToPick(m.id) : {})}
-                  className={`rounded-tile px-3.5 py-2 ${canDel ? '[-webkit-touch-callout:none]' : ''} ${
-                    mine
+                  // a long press on the message (as in any messenger; a right click on a computer) shows „❤️“ and
+                  // „წაშლა“ under it, two taps put a ❤️; playing a voice message or opening a link never does
+                  {...pick}
+                  className={`rounded-tile ${big ? 'px-1' : 'px-3.5 py-2'} ${canDel || heartable ? '[-webkit-touch-callout:none]' : ''} ${
+                    big ? '' : mine
                       ? `bg-wine text-white ${first ? 'rounded-tr-chip' : ''}`
                       : `bg-surf text-ink ${first ? 'rounded-tl-chip' : ''}`
                   }`}
@@ -605,6 +685,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                     <div className="py-1">
                       <VoicePlayer seconds={m.seconds} wave={m.wave} onDark={mine} getUrl={() => loadVoiceUrl(base, m)} meta={sentAt(m)} />
                     </div>
+                  ) : big ? (
+                    <>
+                      <p className={`select-none whitespace-pre-wrap ${big}`}>{m.text}</p>
+                      <p className="flex justify-end text-cap leading-none text-mut">{sentAt(m)}</p>
+                    </>
                   ) : (
                     <>
                       <p className="whitespace-pre-wrap break-words text-body"><Linkified text={m.text} mine={mine} /></p>
@@ -613,6 +698,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   )}
                 </div>
                 )}
+                {heartPill}
                 {seenId === m.id && (
                   <p className="mt-1 px-1 flex items-center gap-1 text-cap font-semibold text-mut">
                     <CheckCheck className="w-3.5 h-3.5 text-wine" /> ნანახია
@@ -649,6 +735,19 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
 
       {err && <p className="px-5 pt-3 text-meta text-danger">{err}</p>}
 
+      {emojiOpen && !readOnly && mode.k === 'idle' && (
+        <div className="px-3 pt-2 sm:px-4">
+          <div role="group" aria-label="ემოჯი" className="grid max-h-48 grid-cols-8 gap-0.5 overflow-y-auto overscroll-contain rounded-card bg-surf p-1.5">
+            {EMOJIS.map(e => (
+              <button key={e} type="button" onClick={() => addEmoji(e)} aria-label={e}
+                className="flex h-11 cursor-pointer items-center justify-center rounded-field text-[26px] leading-none transition active:scale-90 active:bg-soft">
+                {e}
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
+
       {readOnly ? (
         <p className="px-5 py-4 text-center text-meta text-mut">მხოლოდ სანახავად</p>
       ) : (
@@ -660,21 +759,41 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 <Paperclip />
               </RoundButton>
             )}
-            <textarea
-              ref={field}
-              rows={1}
-              value={text}
-              onChange={e => { setText(e.target.value); grow(e.target); }}
-              onKeyDown={onKeyDown}
-              maxLength={2000}
-              placeholder="შეტყობინება"
-              aria-label="შეტყობინება"
-              className="flex-1 min-w-0 resize-none rounded-full bg-surf px-4 py-3 min-h-tap-lg text-lead text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-wine/35"
-            />
-            {text.trim() || !canRecord ? (
-              <RoundButton size={48} tone="wine" label="გაგზავნა" onClick={sendText} disabled={!text.trim()}><Send /></RoundButton>
+            <div className="relative flex-1 min-w-0">
+              <textarea
+                ref={field}
+                rows={1}
+                value={text}
+                onChange={e => { setText(e.target.value); caret.current = e.target.selectionStart; grow(e.target); }}
+                onSelect={e => { caret.current = e.currentTarget.selectionStart; }}
+                onFocus={() => setEmojiOpen(false)}
+                onKeyDown={onKeyDown}
+                maxLength={2000}
+                placeholder="შეტყობინება"
+                aria-label="შეტყობინება"
+                className="block w-full resize-none rounded-full bg-surf py-3 pr-12 pl-4 min-h-tap-lg text-lead text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-wine/35"
+              />
+              {/* 😊 inside the field opens the emoji panel (in place of the phone's keyboard) */}
+              <button
+                type="button"
+                onClick={() => { triggerHaptic(8); if (!emojiOpen) field.current?.blur(); setEmojiOpen(v => !v); }}
+                aria-label={emojiOpen ? 'ემოჯის დახურვა' : 'ემოჯი'}
+                aria-expanded={emojiOpen}
+                className={`absolute right-1 bottom-1 flex size-10 cursor-pointer items-center justify-center rounded-full transition active:scale-95 ${emojiOpen ? 'text-wine' : 'text-mut'}`}
+              >
+                <Smile className="size-[22px]" />
+              </button>
+            </div>
+            {text.trim() ? (
+              <RoundButton size={48} tone="wine" label="გაგზავნა" onClick={() => sendText()}><Send /></RoundButton>
             ) : (
-              <RoundButton size={48} tone="wine" label="ხმოვანი შეტყობინების ჩაწერა" onClick={startRecording}><Mic /></RoundButton>
+              <>
+                {canRecord && <RoundButton size={48} tone="wine" label="ხმოვანი შეტყობინების ჩაწერა" onClick={startRecording}><Mic /></RoundButton>}
+                {/* one tap sends a big ❤️ (as Messenger's) */}
+                <RoundButton size={48} label="❤️ გაგზავნა" onClick={() => sendText('❤️')}>
+                  <span aria-hidden="true" className="text-[26px] leading-none">❤️</span>
+                </RoundButton>
+              </>
             )}
           </>
         )}
@@ -708,6 +827,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         )}
       </div>
       )}
+
+      {/* who put a ❤️ on a message */}
+      <Sheet open={!!heartsOf} onClose={() => setHeartsOf(null)} title={`❤️ · ${heartsOf?.hearts?.length ?? 0}`}>
+        <ul className="flex flex-col gap-1 pb-1">
+          {(heartsOf?.hearts ?? []).map(h => {
+            const who = h === author.uid ? 'შენ' : messages.find(x => x.uid === h)?.name || 'წევრი';
+            return (
+              <li key={h} className="flex min-h-tap items-center gap-2.5 rounded-field bg-surf px-3.5 text-lead">
+                <span aria-hidden="true">❤️</span><span className="min-w-0 truncate">{who}</span>
+              </li>
+            );
+          })}
+        </ul>
+      </Sheet>
     </section>
   );
 };

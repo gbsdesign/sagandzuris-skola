@@ -2258,6 +2258,19 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   cog is only its sign (no words), a round button at that row's right end, under the phone (`ClassChatTools end` = `AssistantButton`;
   the user: „წარწერა მოაცილე … ყურმილის დაბლა ჩასვი“), for the class's teachers/admins while `useAssistantAllowed`. The name held long opens the class
   page's „მეტი“ (`ClassMoreSheet openItem` — its program / report / AI-note rows open the class page first, then the item).
+- **Hearts and emoji in the chats (2026-11-22**, the user: „როგორც მესენჯერს აქვს … სმს-ებზე დაგულების ფუნქცია … ემოჯის გაგზავნის
+  ფუნქცია“, answers „მხოლოდ გული ❤️ · დაჭერა + ორჯერ შეხება · პანელი + დიდი ❤️ · კლასის ჩათები ყველა თავში“): `ChatPanel` (both chats,
+  both looks) — a message's `hearts` (uids; `toggleHeart` in useClassChat, `arrayUnion`/`arrayRemove`; rules `heartOnly()`: only
+  `hearts` changes and only one's own uid, class and private messages; tests in the rules test). A long press shows „❤️“ (and „წაშლა“
+  for one's own) under the message, two taps within 320 ms toggle the heart; the count sits on the bubble's corner, a tap lists who
+  (a Sheet; names from the chat's own messages). Not on calls, game cards, a class's pins or sending messages; a heart's write does
+  not make a message „sending“ again (useChat keeps `pending` false once arrived). The field's 😊 opens an emoji panel (`EMOJIS`,
+  inserted at the cursor, the field's focus closes it, „უკან“ too); an empty field shows the mic and a big ❤️ that sends „❤️“; a
+  message of 1–3 emoji is drawn big without its bubble (`bigEmoji`). The letters' list: every class one sees (the chips — for admins
+  every class) has its chat on top, never hidden (no swipe, no „დამალვა“ — `ChatMenu keep`); a student's row on a teacher's / the
+  administration's side shows their pearls (`usePearlTotals`: items with a voice marked, each student's record read once in 3 min;
+  a softly shining `PearlIcon` + the number, under the date). The private chat's head: the name and its small line on one line each;
+  „ავტ.პროგ.“ is only its sign now — a round 👩‍🏫 button (the user picked that emoji), no words.
 - **The whole path in the chat's fold (2026-11-21 night**, the user: „გზას რომ ჩახსნიდი … ჩამოსაშლელად პირდაპირ ჩათში“, answer „მთელი
   გზა, როგორც გზის გვერდზე“): `ChatPath` — the student's own side unfolds the whole „საგანძური“ page (`SagandzuriPage bare`, lazy: no
   bar, the ✎ by „ჩემი საგალობლები“; numbers, assignments, chips, flights, ოსტატობა); the teacher's side keeps its ჩათვლა / დამატება /

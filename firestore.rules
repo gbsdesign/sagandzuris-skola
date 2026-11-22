@@ -27,6 +27,13 @@ service cloud.firestore {
     function incoming() { return request.resource.data; }
     function existing() { return resource.data; }
     function changed() { return incoming().diff(existing()).affectedKeys(); }
+    // a ❤️ on a chat message (2026-11-22): one adds or takes back only one's own uid in its `hearts`
+    function heartOnly() {
+      return changed().hasOnly(['hearts'])
+        && incoming().hearts is list && incoming().hearts.size() <= 300
+        && incoming().hearts.toSet().difference(existing().get('hearts', []).toSet()).hasOnly([uid()])
+        && existing().get('hearts', []).toSet().difference(incoming().hearts.toSet()).hasOnly([uid()]);
+    }
 
     // A teacher's (or an admin's) card for one member in a chat (2026-11-04, hooks/useChatPins.ts): a comment ('note') or
     // an assignment ('work' — it points at the real one in classes/{wcls}/assignments). In a class's chat it lives in
@@ -497,6 +504,7 @@ service cloud.firestore {
           && (incoming().kind != 'draw' || (incoming().ink is string && incoming().ink.size() <= 40000
             && incoming().ans is string && incoming().ans.size() <= 200
             && incoming().theme is string && incoming().theme.size() <= 40));
+        allow update: if inClass() && heartOnly();
         allow delete: if isAdmin() || teachesClass() || (isSignedIn() && existing().uid == uid());
       }
 
@@ -757,6 +765,7 @@ service cloud.firestore {
               || (incoming().kind in ['note', 'work'] && incoming().teacher == true && kindOf(thread()) != 'peer'
                   && incoming().to in thread().members && incoming().to != uid() && pinCard(incoming())))
           && incoming().text is string && incoming().text.size() <= 2000;
+        allow update: if inThread() && stillLinked() && heartOnly();
         allow delete: if isSuperAdmin() || (isSignedIn() && existing().uid == uid());
       }
 

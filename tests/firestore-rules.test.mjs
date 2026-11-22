@@ -197,6 +197,15 @@ await t('student cannot ring in another name', assertFails(updateDoc(doc(stu3, '
 await t('teacher answers', assertSucceeds(setDoc(doc(tch2, 'dms', 'tch2_stu3', 'messages', 'm4'), msg('tch2', true))));
 await t('teacher starts a call', assertSucceeds(setDoc(doc(tch2, 'dms', 'tch2_stu3', 'messages', 'm5'), msg('tch2', true, 'call'))));
 await t('student marks own reading', assertSucceeds(updateDoc(doc(stu3, 'dms', 'tch2_stu3'), { 'read.stu3': serverTimestamp() })));
+// a ❤️ on a message (2026-11-22): only one's own place in `hearts`, nothing else of the message
+const heartAt = c => doc(c, 'dms', 'tch2_stu3', 'messages', 'm4');
+await t('student puts a heart on the teacher\'s message', assertSucceeds(updateDoc(heartAt(stu3), { hearts: arrayUnion('stu3') })));
+await t('nobody hearts in another\'s name', assertFails(updateDoc(heartAt(stu3), { hearts: arrayUnion('tch2') })));
+await t('a heart changes nothing else', assertFails(updateDoc(heartAt(stu3), { text: 'სხვა' })));
+await t('teacher hearts too', assertSucceeds(updateDoc(heartAt(tch2), { hearts: arrayUnion('tch2') })));
+await t('student cannot take the teacher\'s heart back', assertFails(updateDoc(heartAt(stu3), { hearts: ['stu3'] })));
+await t('student takes own heart back', assertSucceeds(updateDoc(heartAt(stu3), { hearts: arrayRemove('stu3') })));
+await t('an outsider cannot heart', assertFails(updateDoc(heartAt(stu2), { hearts: arrayUnion('stu2') })));
 // the administration's chat: the member only answers a call; an admin rings, by voice or video
 const adminDm = { kind: 'admin', members: ['stu3'], names: {}, photos: {}, createdAt: serverTimestamp(), lastAt: null, lastBy: '', lastText: '', read: {} };
 await t('member opens the administration chat', assertSucceeds(setDoc(doc(stu3, 'dms', 'a_stu3'), adminDm)));
@@ -518,6 +527,8 @@ await t('an outsider cannot see the call', assertFails(getDocs(collection(gout, 
 const gameMsg = (extra = {}) => ({ uid: 'gp1', name: 'H', photoURL: '', teacher: false, kind: 'game', text: '🌙', room: 'r1', createdAt: serverTimestamp(), ...extra });
 await t('the invitation goes into the class chat', assertSucceeds(setDoc(doc(gp1, 'classes', 'cg', 'messages', 'gm1'), gameMsg())));
 await t('an invitation names its room', assertFails(setDoc(doc(gp1, 'classes', 'cg', 'messages', 'gm2'), gameMsg({ room: 7 }))));
+await t('a classmate hearts a class message', assertSucceeds(updateDoc(doc(gp2, 'classes', 'cg', 'messages', 'gm1'), { hearts: arrayUnion('gp2') })));
+await t('an outsider cannot heart a class message', assertFails(updateDoc(doc(gout, 'classes', 'cg', 'messages', 'gm1'), { hearts: arrayUnion('gout') })));
 await t('the host closes the room', assertSucceeds(deleteDoc(doc(gp1, G, 'r1'))));
 // the quick games (2026-10-31): a room of each, answers with their time, up to 40 players
 await t('a member opens a quick game room', assertSucceeds(setDoc(doc(gp1, G, 'q1'), room('gp1', { game: 'kutkhe' }))));

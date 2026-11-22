@@ -2,6 +2,7 @@ import React from 'react';
 import { CalendarClock, Check, CheckCheck, Eye, EyeOff, GraduationCap, ListChecks, Mic, Pin, PinOff, ShieldCheck, Users } from 'lucide-react';
 import { Badge, Button, cx, Dot, Press, Sheet, Small } from '../../../components/ui2';
 import { useLongPress } from '../../../hooks/useLongPress';
+import { PearlIcon } from '../../../components/pearls/PearlIcon';
 import { SwipeRow, type SwipeSide } from '../../../components/ui/SwipeRow';
 import { ClassLogo } from '../../../components/classes/ClassLogo';
 import type { LessonSlot, SchoolClass } from '../../../hooks/useClasses';
@@ -48,9 +49,11 @@ export const ChatRow: React.FC<{
   tick?: React.ReactNode;
   /** a third line under the last message (a class's lesson times) */
   extra?: React.ReactNode;
+  /** a student's pearls (their path's items with a voice known), on the row's right under the date */
+  pearls?: number;
   onClick: () => void; onMenu?: () => void;
   left?: SwipeSide; right?: SwipeSide;
-}> = ({ face, name, last, time, unread, active, busy, pinned, group, count, tick, extra, onClick, onMenu, left, right }) => {
+}> = ({ face, name, last, time, unread, active, busy, pinned, group, count, tick, extra, pearls, onClick, onMenu, left, right }) => {
   const press = useLongPress(() => onMenu?.());
   const button = (
     <Press
@@ -77,6 +80,13 @@ export const ChatRow: React.FC<{
             {last}
           </span>
           <span className="flex shrink-0 items-center gap-1.5">
+            {/* the student's pearls: one softly shining pearl and the number (2026-11-22, „კოხტად … მკრთალად ბრწყინავდეს“) */}
+            {!!pearls && (
+              <span aria-label={`მარგალიტი · ${pearls}`} title={`${pearls} მარგალიტი`}
+                className="inline-flex items-center gap-0.5 text-cap font-bold text-mut tabular-nums">
+                <PearlIcon state="shining" size={18} seed={String(pearls)} />{pearls}
+              </span>
+            )}
             {unread && (count ? <Badge n={count} /> : <span aria-label="წაუკითხავი" className="size-2.5 rounded-full bg-danger" />)}
             {pinned && <Pin aria-label="მიმაგრებული" className="size-4 rotate-45 text-mut" />}
           </span>
@@ -195,7 +205,7 @@ export const ClassPick: React.FC<{
 
 // ---- a long press (or a right click) on a chat ------------------------------------------------------------------
 
-export interface MenuChat { id: string; name: string; pinned: boolean; unread: boolean; hidden: boolean }
+export interface MenuChat { id: string; name: string; pinned: boolean; unread: boolean; hidden: boolean; /** a class's chat: never hidden */ keep?: boolean }
 
 export const ChatMenu: React.FC<{
   chat: MenuChat | null; onClose: () => void; onPin: () => void; onRead: () => void; onHide: () => void;
@@ -207,10 +217,15 @@ export const ChatMenu: React.FC<{
           {chat.pinned ? 'მიმაგრების მოხსნა' : 'თავში მიმაგრება'}
         </Button>
         {chat.unread && <Button kind="ghost" full icon={<CheckCheck />} onClick={onRead}>წაკითხულად მონიშვნა</Button>}
-        <Button kind="ghost" full icon={chat.hidden ? <Eye /> : <EyeOff />} onClick={onHide}>
-          {chat.hidden ? 'სიაში დაბრუნება' : 'სიიდან დამალვა'}
-        </Button>
-        {!chat.hidden && <p className="px-1.5 text-meta text-mut">დამალული ჩათი ახალ წერილზე თავისით დაბრუნდება.</p>}
+        {/* a class's chat stays in the list (`keep`) — no hiding */}
+        {!chat.keep && (
+          <>
+            <Button kind="ghost" full icon={chat.hidden ? <Eye /> : <EyeOff />} onClick={onHide}>
+              {chat.hidden ? 'სიაში დაბრუნება' : 'სიიდან დამალვა'}
+            </Button>
+            {!chat.hidden && <p className="px-1.5 text-meta text-mut">დამალული ჩათი ახალ წერილზე თავისით დაბრუნდება.</p>}
+          </>
+        )}
       </div>
     )}
   </Sheet>

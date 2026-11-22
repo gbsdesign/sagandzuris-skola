@@ -19,8 +19,7 @@ import {
 } from '../../../utils/pathItems';
 import { filterValidSoft } from '../../../utils/variantValidationLazy';
 import { errorText } from '../../../utils/errorText';
-import { Bar, Card, Chips, Dot, Helper, Note, Press, Row, Rows, Sheet, cx, FOCUS } from '../../../components/ui2';
-import { GearSpark } from '../damkhmare/GearSpark';
+import { Bar, Card, Chips, Dot, Helper, Note, Press, RoundButton, Row, Rows, Sheet, cx, FOCUS } from '../../../components/ui2';
 import { chestIdOf } from '../../../components/pearls/LearnChests';
 import { Waiting } from '../../../components/shell/PageSkeleton';
 import { chipsOf } from '../gza/chips';
@@ -149,8 +148,12 @@ export const PathSigns: React.FC<{ open: boolean; onToggle: () => void }> = ({ o
     <>
       <HeadSign icon={<PearlIcon state="shining" size={18} />} word="გზა" label={open ? 'გზის დაკეცვა' : 'გზა — ისწავლა · სწავლობს'}
         onClick={onToggle} active={open} expanded={open} />
+      {/* the automatic teaching program: only its sign, a teacher at the board (2026-11-22, the user: „ავტ.პროგ. ტექსტი წაშალე და
+          მარტო ლოგო დატოვე … ეს ლოგო სმაილებიდან“ — 👩‍🏫) */}
       {autoLesson && (
-        <HeadSign icon={<GearSpark />} word="ავტ.პროგ." label="ავტომატური სასწავლო პროგრამა — დღის გაკვეთილი" onClick={openAiLesson} />
+        <RoundButton label="ავტომატური სასწავლო პროგრამა — დღის გაკვეთილი" onClick={openAiLesson}>
+          <span aria-hidden="true" className="text-title leading-none">👩‍🏫</span>
+        </RoundButton>
       )}
     </>
   );
