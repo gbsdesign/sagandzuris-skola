@@ -17,7 +17,8 @@ import { useSections } from '../hooks/useSections';
 // Members from before this (a students document but no memberAccess) keep everything; staff never wait.
 
 export type FeatureId = SectionId | 'recordings' | 'classes' | 'messages' | 'search' | 'calendar' | 'samosiPhoto';
-export type MemberStatus = 'pending' | 'approved' | 'rejected';
+/** 'suspended' / 'deleted' (2026-11-22, utils/memberRemoval.ts): a superadmin stopped or removed the member — they are signed out */
+export type MemberStatus = 'pending' | 'approved' | 'rejected' | 'suspended' | 'deleted';
 
 export interface FeatureDef { id: FeatureId; label: string; text: string }
 

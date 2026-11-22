@@ -18,6 +18,8 @@ export const MembershipGate: React.FC = () => {
   const { user, signOutUser } = useAuth();
   const { status } = useMembership();
   const [refused, setRefused] = useState(false);
+  // a superadmin stopped (a „404“, as if broken — the user's wish) or deleted the member (utils/memberRemoval.ts)
+  const [stopped, setStopped] = useState<'suspended' | 'deleted' | null>(null);
   const [welcome, setWelcome] = useState(false);
   const last = useRef(status);
 
@@ -28,9 +30,36 @@ export const MembershipGate: React.FC = () => {
       setRefused(true);
       void signOutUser();
     }
+    if ((status === 'suspended' || status === 'deleted') && user) {
+      setStopped(status);
+      void signOutUser();
+    }
     if (status === 'approved' && before === 'pending') setWelcome(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status, user]);
+
+  if (stopped === 'suspended') {
+    return (
+      <div role="alertdialog" aria-modal="true" className="fixed inset-0 z-[120] flex flex-col items-center justify-center gap-3 bg-page px-8 text-center safe-x">
+        <p className="text-hero font-bold tracking-widest text-mut">404</p>
+        <p className="text-lead font-bold text-ink">გვერდი ვერ ჩაიტვირთა</p>
+        <p className="max-w-xs text-body text-mut">მოხდა ტექნიკური ხარვეზი. გთხოვთ, სცადოთ მოგვიანებით.</p>
+        <button type="button" onClick={() => window.location.reload()}
+          className="mt-2 h-tap cursor-pointer rounded-full bg-surf px-6 text-body font-semibold text-ink ring-1 ring-line">თავიდან ცდა</button>
+      </div>
+    );
+  }
+  if (stopped === 'deleted') {
+    return (
+      <div role="alertdialog" aria-modal="true" className="fixed inset-0 z-[120] flex flex-col items-center justify-center gap-3 bg-page px-8 text-center safe-x">
+        <ShieldAlert className="size-12 text-wine" aria-hidden="true" />
+        <p className="text-title font-bold text-ink">თქვენი ანგარიში წაშლილია</p>
+        <p className="max-w-xs text-body text-mut">ანგარიში სკოლიდან წაიშალა. კითხვის შემთხვევაში დაუკავშირდით სკოლის ადმინისტრაციას.</p>
+        <button type="button" onClick={() => setStopped(null)}
+          className="mt-2 h-tap cursor-pointer rounded-full bg-surf px-6 text-body font-semibold text-ink ring-1 ring-line">გასაგებია</button>
+      </div>
+    );
+  }
 
   if (refused) {
     return (

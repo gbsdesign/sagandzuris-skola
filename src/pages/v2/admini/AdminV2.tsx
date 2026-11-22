@@ -15,6 +15,7 @@ import { Waiting } from '../../../components/shell/PageSkeleton';
 
 const ClassesScreen = lazy(() => import('./Classes').then(m => ({ default: m.ClassesScreen })));
 const TeachersScreen = lazy(() => import('./Teachers').then(m => ({ default: m.TeachersScreen })));
+const DeletedScreen = React.lazy(() => import('./Deleted').then(x => ({ default: x.DeletedScreen })));
 const PickScreen = lazy(() => import('./Pick').then(m => ({ default: m.PickScreen })));
 const SchoolRoute = lazy(() => import('./School').then(m => ({ default: m.SchoolRoute })));
 
@@ -81,6 +82,7 @@ export const AdminV2: React.FC = () => {
   else if (step.at === 'pick') body = lazyPart(<PickScreen />);
   else if (step.at === 'classes') body = lazyPart(<ClassesScreen archive={step.archive} />);
   else if (step.at === 'teachers') body = lazyPart(<TeachersScreen />);
+  else if (step.at === 'deleted') body = lazyPart(<DeletedScreen />);
   else if (step.at === 'school') body = lazyPart(<SchoolRoute part={step.part} />);
   else body = <AdminHome />;
 

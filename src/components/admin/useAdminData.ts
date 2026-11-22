@@ -132,8 +132,10 @@ export const useAdminData = () => {
     void recordWeek(growth.weeks, n).catch(() => {});
   }, [ready, broken, growth.loaded, growth.weeks, left, users, staff]);
 
+  // a member a superadmin deleted from the school lives only in „წაშლილები“ (utils/memberRemoval.ts)
+  const kept = useMemo(() => users.filter(u => access[u.userId]?.status !== 'deleted'), [users, access]);
   return {
-    users, staff, loading, staffLoaded, failed, classes, archived, loadingClasses, classesFailed, groups, access, decisions,
+    users: kept, staff, loading, staffLoaded, failed, classes, archived, loadingClasses, classesFailed, groups, access, decisions,
     accessLoaded, left, test, waiting, leaders, classesWithoutTeacher, membersWithoutClass, teachersWithoutClass, ready, broken,
   };
 };

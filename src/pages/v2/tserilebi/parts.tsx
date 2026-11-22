@@ -267,7 +267,9 @@ export interface MenuChat { id: string; name: string; pinned: boolean; unread: b
 
 export const ChatMenu: React.FC<{
   chat: MenuChat | null; onClose: () => void; onPin: () => void; onRead: () => void; onHide: () => void;
-}> = ({ chat, onClose, onPin, onRead, onHide }) => (
+  /** the superadmin's part under it (MemberActions) — a member's row */
+  extra?: React.ReactNode;
+}> = ({ chat, onClose, onPin, onRead, onHide, extra }) => (
   <Sheet open={!!chat} onClose={onClose} title={chat?.name || ''}>
     {chat && (
       <div className="flex flex-col gap-2.5">
@@ -281,9 +283,10 @@ export const ChatMenu: React.FC<{
             <Button kind="ghost" full icon={chat.hidden ? <Eye /> : <EyeOff />} onClick={onHide}>
               {chat.hidden ? 'სიაში დაბრუნება' : 'სიიდან დამალვა'}
             </Button>
-            {!chat.hidden && <p className="px-1.5 text-meta text-mut">დამალული ჩათი ახალ წერილზე თავისით დაბრუნდება.</p>}
+            {!chat.hidden && <p className="px-1.5 text-meta text-mut">დამალული ჩათი სიის ბოლოში გადადის და ახალ წერილზე თავისით დაბრუნდება.</p>}
           </>
         )}
+        {extra}
       </div>
     )}
   </Sheet>

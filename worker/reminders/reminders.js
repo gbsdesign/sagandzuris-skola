@@ -48,6 +48,7 @@
 //   prayer hour's text worked out here (a browser's service worker works it out itself from an empty push).
 // • POST /delete-account { token } (2026-11-05): „ანგარიშის წაშლა“ — the person's own records, their place in classes and
 //   psalter groups, their devices here, and last their sign-in. Messages written in chats stay.
+// • POST /delete-member { token, uid } (2026-11-22): a superadmin does the same for a member already marked deleted.
 //
 // Bindings (wrangler.toml): D1 database DB (schema.sql), KV namespace REMINDERS (old storage, read once to
 // move the subscriptions into D1), vars VAPID_PUBLIC_KEY, FIREBASE_PROJECT_ID, FIRESTORE_DB,
@@ -1687,6 +1688,35 @@ async function deleteAccount(request, env) {
   } catch {
     return [401, 'bad token'];
   }
+  await wipeAccount(env, uid);
+  return [200, 'ok'];
+}
+
+// POST /delete-member { token, uid } (2026-11-22): a superadmin deletes a member for good from the „წაშლილები“ list — the same
+// wipe as one's own „ანგარიშის წაშლა“. Only a member already marked deleted (memberAccess status 'deleted'), never staff.
+const OWNER_EMAIL = 'mr.gabunia@gmail.com';
+async function deleteMember(request, env) {
+  const body = await readJson(request);
+  let claims;
+  try {
+    claims = await verifyIdClaims(env, body && body.token);
+  } catch {
+    return [401, 'bad token'];
+  }
+  const uid = typeof body?.uid === 'string' && /^[A-Za-z0-9_-]{6,128}$/.test(body.uid) ? body.uid : '';
+  if (!uid || uid === claims.sub) return [400, 'uid'];
+  const email = claims.email_verified ? String(claims.email || '').toLowerCase() : '';
+  const role = email ? (await fsGet(env, `admins/${email}`, ['role']))?.role : null;
+  if (email !== OWNER_EMAIL && role !== 'superadmin') return [403, 'not a superadmin'];
+  const access = await fsGet(env, `memberAccess/${uid}`, ['status']);
+  if (access?.status !== 'deleted') return [409, 'not deleted'];
+  const staff = await fsList(env, 'admins', ['userId']);
+  if (staff.some((a) => a.userId === uid)) return [403, 'staff'];
+  await wipeAccount(env, uid);
+  return [200, 'ok'];
+}
+
+async function wipeAccount(env, uid) {
   const writes = [];
   for (const [col, sub] of OWN_SUBS) {
     for (const d of await fsList(env, `${col}/${uid}/${sub}`, ['__none__'])) writes.push({ delete: docName(env, `${col}/${uid}/${sub}/${d.id}`) });
@@ -1721,8 +1751,8 @@ async function deleteAccount(request, env) {
     headers: { Authorization: `Bearer ${await accessToken(env, CLOUD)}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({ localId: uid }),
   });
-  if (!res.ok) throw new Error(`auth delete ${res.status} ${(await res.text()).slice(0, 200)}`);
-  return [200, 'ok'];
+  // a sign-in already gone is fine
+  if (!res.ok && res.status !== 400) throw new Error(`auth delete ${res.status} ${(await res.text()).slice(0, 200)}`);
 }
 
 export default {
@@ -1733,7 +1763,7 @@ export default {
     const url = new URL(request.url);
     const routes = {
       '/subscribe': subscribe, '/account': account, '/group-event': groupEvent, '/access-request': accessRequest, '/game-invite': gameInvite,
-      '/ring': ring, '/chat-notify': chatNotify, '/announce': announce, '/decline': decline, '/delete-account': deleteAccount,
+      '/ring': ring, '/chat-notify': chatNotify, '/announce': announce, '/decline': decline, '/delete-account': deleteAccount, '/delete-member': deleteMember,
       '/widget/link': widgetLink, '/widget/summary': widgetSummary, '/notify-prefs': notifyPrefs,
     };
     // the app's widgets send no Origin: their secret is the proof

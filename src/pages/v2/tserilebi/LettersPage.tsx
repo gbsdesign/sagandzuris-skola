@@ -29,12 +29,14 @@ import { BirthdaysSoon } from '../../../components/home/BirthdaysSoon';
 import { ChatMenu, ChatRow, ClassTimes, hideSide, LastLine, NameMark, readSide, Tick } from './parts';
 import { ClassMoreSheet } from '../klasi/teacher/More';
 import { keepClassTab, studentItem, type ClassTab } from '../klasi/nav';
+import { useRemovedMembers } from '../../../utils/removedMembers';
 import { GearSpark } from '../damkhmare/GearSpark';
 import { openAssistant, useAssistantAllowed } from '../damkhmare/open';
 import { useLongPress } from '../../../hooks/useLongPress';
 import { TimetableSheet } from '../klasi/teacher/Timetable';
 import { usePearlTotals } from './usePearlTotals';
 
+const MemberActions = React.lazy(() => import('./MemberActions').then(m => ({ default: m.MemberActions })));
 const StudentOutfitSheet = React.lazy(() => import('./StudentOutfit').then(m => ({ default: m.StudentOutfitSheet })));
 // the psalter group, unfolded under the list's head (its „📖 ფს.ჯ.“ button) — loaded only when it opens
 const PsalterFold = React.lazy(() => import('../psalmuni/PsalterScreen').then(m => ({ default: m.PsalterFold })));
@@ -100,6 +102,8 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const [chip, setChip] = useState('all');
   const [opening, setOpening] = useState<string | null>(null);
   const [err, setErr] = useState('');
+  // the superadmin's last change to a member (MemberActions)
+  const [note, setNote] = useState('');
   const [writing, setWriting] = useState(false);
   const seen = useChatSeen(uid);
 
@@ -136,6 +140,8 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const [psalterOpen, setPsalterOpen] = useState(false);
   const nameHold = useLongPress(() => { if (moreFor) setMoreOf(moreFor); });
   const assistantOn = useAssistantAllowed();
+  // members a superadmin deleted from the school: out of every list
+  const removed = useRemovedMembers();
   const classUnread = (c: SchoolClass) => isClassUnread(lasts[c.id], seen[c.id], uid) && open !== CLASS_PREFIX + c.id;
   const dmUnread = (t: DirectThread) => isUnread(t, uid) && open !== t.id;
   const asks: CountAsk[] = overview ? [] : [
@@ -232,6 +238,8 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
     pinned: boolean; hidden: boolean; unread: boolean; teacher: boolean; node: React.ReactNode;
     /** a class's chat: its members (for the birthdays row over it) */
     cls?: string[];
+    /** a member's chat on the staff side: who (the superadmin's menu part) */
+    student?: { uid: string; name: string; photoURL?: string };
   };
   const items: Item[] = [];
   const rowProps = (key: string, lastMs: number, pinned: boolean, hidden: boolean, unread: boolean, keep = false) => ({
@@ -295,9 +303,12 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       const hidden = isHidden(prefs, t.id, lastMs);
       const seenAt = seenByOther(t, uid);
       const mark = t.kind === 'admin' ? 'admin' : t.kind === 'teach' && t.teacherUid !== uid ? 'teacher' : undefined;
+      const studentUid = studentOf(t);
+      if (studentUid && removed.has(studentUid)) continue;
       items.push({
         key: t.id, name, at: (t.lastAt || t.createdAt)?.getTime() ?? 0, lastMs, empty: !t.lastText, pinned, hidden, unread,
         teacher: plainMember && mark === 'teacher',
+        student: studentUid ? { uid: studentUid, name: t.names[studentUid] || name, photoURL: t.photos[studentUid] || o.photoURL } : undefined,
         node: (
           <ChatRow
             key={t.id}
@@ -566,6 +577,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       {!brandNew && <SearchLine value={q} onChange={setQ} />}
       {/* the class chips are gone (2026-11-22, the user: „კლასების გადამრთველები მოხსენი ყველა-სიანის ჩათვლით“) — a class row's ▾ */}
       {err && <p role="alert" className="px-1.5 text-body text-danger">{err}</p>}
+      {note && <p role="status" className="px-1.5 text-body font-semibold text-leaf">{note}</p>}
 
       {busyList && items.length === 0 && overviewRows.length === 0 ? (
         <Waiting field={false} />
@@ -655,6 +667,12 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
           if (menuItem) { if (menuItem.hidden) unhide(menuItem.key); else hideIt(menuItem.key, menuItem.lastMs); }
           setMenuKey(null);
         }}
+        extra={isSuperAdmin && menuItem?.student ? (
+          <React.Suspense fallback={null}>
+            <MemberActions member={menuItem.student} classes={known}
+              onDone={m => { setMenuKey(null); setNote(m); }} />
+          </React.Suspense>
+        ) : undefined}
       />
     </div>
   );

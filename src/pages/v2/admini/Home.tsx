@@ -1,5 +1,5 @@
 import React, { useMemo, useState } from 'react';
-import { ChevronRight, CircleCheck, ListFilter, SlidersHorizontal, WifiOff } from 'lucide-react';
+import { ChevronRight, CircleCheck, ListFilter, SlidersHorizontal, Trash2, WifiOff } from 'lucide-react';
 import { GearSpark } from '../damkhmare/GearSpark';
 import { useAuth } from '../../../context';
 import {
@@ -23,6 +23,7 @@ export const FILTER_NAMES: Partial<Record<Filter, string>> = {
 export const AdminHome: React.FC = () => {
   const { isOwner, isSuperAdmin } = useAuth();
   const { d, test, go, back } = useAdmin();
+  const deletedN = Object.values(d.access).filter(a => a.status === 'deleted').length;
   const [q, setQ] = useKeptText('home');
   const [filters, setFilters] = useState(false);
   const line = usePersonLine();
@@ -100,6 +101,12 @@ export const AdminHome: React.FC = () => {
       {assistant && (
         <Rows>
           <Row lead={<Dot icon={<GearSpark />} />} title="ავტომატური პროგრამა" sub="სთხოვე სიტყვებით — კლასი, წერილები, გეგმა" wrap onClick={() => openAssistant({ page: 'admin' })} />
+        </Rows>
+      )}
+
+      {isSuperAdmin && deletedN > 0 && (
+        <Rows>
+          <Row lead={<Dot icon={<Trash2 />} />} title={`წაშლილები · ${deletedN}`} sub="აღდგენა ან სამუდამოდ წაშლა" onClick={() => go('deleted')} />
         </Rows>
       )}
 
