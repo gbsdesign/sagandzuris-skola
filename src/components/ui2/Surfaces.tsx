@@ -115,12 +115,15 @@ export const Hero: React.FC<{
   action?: { label: string; icon?: React.ReactNode; onClick?: () => void; href?: string };
   children?: React.ReactNode;
   className?: string;
-}> = ({ kicker, title, sub, action, children, className }) => (
+  /** a small round button in the top right corner (e.g. the psalter card's ✎) */
+  corner?: React.ReactNode;
+}> = ({ kicker, title, sub, action, children, className, corner }) => (
   <section className={cx('relative flex shrink-0 flex-col gap-0.5 overflow-hidden rounded-card bg-wine px-5 pt-[18px] pb-5 text-white', className)}>
     <span aria-hidden="true" className="pointer-events-none absolute -top-[60px] -right-[50px] size-[200px] rounded-full bg-white/7" />
     <span aria-hidden="true" className="pointer-events-none absolute -top-5 -right-2.5 size-[110px] rounded-full bg-white/7" />
-    {kicker && <div className="relative text-meta font-semibold text-white/85">{kicker}</div>}
-    <h2 className="relative text-title font-bold leading-tight wrap-break-word">{title}</h2>
+    {corner && <div className="absolute top-3 right-3 z-[1]">{corner}</div>}
+    {kicker && <div className={cx('relative text-meta font-semibold text-white/85', !!corner && 'pr-11')}>{kicker}</div>}
+    <h2 className={cx('relative text-title font-bold leading-tight wrap-break-word', !!corner && 'pr-11')}>{title}</h2>
     {sub && <div className="relative text-meta text-white/85 wrap-break-word">{sub}</div>}
     {children && <div className="relative">{children}</div>}
     {action && (

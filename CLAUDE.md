@@ -2292,6 +2292,12 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   გვერდით“): a round 📖 before the 👁 (anyone in a group — `useMyPsalterGroups` —, while section `medavitneoba` is open) unfolds
   `PsalterFold` (PsalterScreen.tsx: the page's `Body` without its bar, lazy) under the head; „ვინ რომელ კანონს“ / „ეს წრე“ open page
   `psalter` on them.
+- **The psalter card's ✎ (2026-11-22**, the user: „მოხაზული ფუნქციები პატარა ფანქარით ჩასვი მაღლა მარჯვნივ … ციფრზე დაჭერისას
+  პირდაპირ ფსალმუნს ხსნიდეს, დიდხანს დაჭერისას … წაკითხულად; სიტყვა წაიკითხე მოხსენი“): `Body`'s rows (ვინ რომელ კანონს, ეს წრე,
+  ვერ ვკითხულობ, შეხსენება) moved into a sheet behind a round ✎ in the wine card's top right (`Hero corner`); a leader who
+  doesn't read keeps the two links inline. A number's tap opens the kanon; a long press marks it read / takes the mark back
+  (same rights as the window), else opens the old `KanonSheet`. „დაბრუნება“ of a taken kanon is now a row in the ✎ sheet. The
+  card's „წაიკითხე“ is a round 📖 only.
 - **The whole path in the chat's fold (2026-11-21 night**, the user: „გზას რომ ჩახსნიდი … ჩამოსაშლელად პირდაპირ ჩათში“, answer „მთელი
   გზა, როგორც გზის გვერდზე“): `ChatPath` — the student's own side unfolds the whole „საგანძური“ page (`SagandzuriPage bare`, lazy: no
   bar, the ✎ by „ჩემი საგალობლები“; numbers, assignments, chips, flights, ოსტატობა); the teacher's side keeps its ჩათვლა / დამატება /
