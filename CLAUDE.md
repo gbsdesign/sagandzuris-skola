@@ -26,8 +26,12 @@
   (one short round, recommended option first), even when the user says „აბა შენ იცი“.
 - **Ask which files before heavy processing** when a request names files vaguely — the user was once charged
   for scanning the wrong books.
-- **Visual quality matters**: this is a school app shown to students. Think the design through, check it at
-  390px phone width before presenting. Rough visuals get rejected.
+- **Visual quality matters**: this is a school app shown to students. Think the design through for a 390px phone. Rough
+  visuals get rejected.
+- **No preview pictures — build it straight into the app (the user's rule, 2026-11-22: „ამას რომ აწყობ … ხარჯავ უფრო მეტ დროს
+  და ფულს, პირდაპირ აპში ააწყე … არ მინდა ჩვენება“).** Don't draw screenshots, mock pages or preview images of a change (no
+  headless-browser shots, no sample HTML) and don't send them to the user — make the change in the app, run only the needed
+  checks, merge, and say in one line what changed. Only when the user himself asks to see a picture or a prototype.
 - **Roomy UI**: comfortable controls (play ~44–48px, icon buttons 36px); fit phones by wrapping, never by shrinking.
 - **Never auto-scroll** a player to the playing line. No octave-leap checks in note audits.
 - Never put the user's email in request headers/URLs (e.g. API User-Agent).
