@@ -11,7 +11,7 @@ import { useCall, useLivePeers, setCallSmall } from '../../../utils/callSession'
 import { startChatCall, answerChatCall, mayStartChatCall } from '../../../components/calls/callActions';
 import { ChatPanel, firstName } from '../../../components/classes/ChatPanel';
 import type { CatalogEntry } from '../../../utils/pathItems';
-import { ChatPath } from './ChatPath';
+import { ChatPath, PathSigns } from './ChatPath';
 import { PinCard } from '../../../components/classes/PinCard';
 import { PinSheet } from '../../../components/classes/PinSheet';
 import { pinPreview, sendDmPin } from '../../../hooks/useChatPins';
@@ -83,6 +83,8 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
   const [pinning, setPinning] = useState(false);
   // „დავალებად მიცემა“ from the path's fold: the 📎 window already on that chant
   const [preset, setPreset] = useState<CatalogEntry | null>(null);
+  // the chat whose path is dropped under the head (the head's „გზა“; another chat opens folded)
+  const [pathOpenIn, setPathOpenIn] = useState('');
 
   useEffect(() => {
     if (thread && canWrite && isUnread(thread, uid)) markRead(thread, uid).catch(e => console.warn('dm: ', e?.code || e));
@@ -130,6 +132,7 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
   // „რა ისწავლა · რას სწავლობს“ over the messages: the teacher's (the administration's) side changes it, the student sees their own
   const self = !!student && student === uid && (thread.kind === 'teach' || thread.kind === 'admin');
   const pathFold = canWrite && (canPin || self);
+  const pathOpen = pathFold && pathOpenIn === thread.id;
 
   return (
     <ChatPanel
@@ -161,16 +164,20 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
             wide={wide}
             onOpen={canPin ? () => openStudent(student, thread.classId || '') : undefined}
             right={canWrite ? (
-              <CallButton
-                base={dmBase(thread.id)}
-                canStart={canStart}
-                canVideo
-                onStart={kind => startChatCall(thread, user, kind)}
-                onJoin={joinCall}
-              />
+              <>
+                {/* „გზა“ and „ავტ.პროგ.“ before the phone (2026-11-22, the user: „ყურმილის წინ ნიშნებად გადაიტანე“) */}
+                {pathFold && <PathSigns open={pathOpen} onToggle={() => setPathOpenIn(pathOpen ? '' : thread.id)} />}
+                <CallButton
+                  base={dmBase(thread.id)}
+                  canStart={canStart}
+                  canVideo
+                  onStart={kind => startChatCall(thread, user, kind)}
+                  onJoin={joinCall}
+                />
+              </>
             ) : undefined}
           />
-          {pathFold && (
+          {pathOpen && (
             <ChatPath
               key={student}
               student={student}
