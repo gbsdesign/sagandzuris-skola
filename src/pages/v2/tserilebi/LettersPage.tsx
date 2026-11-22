@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ChevronDown, Eye, EyeOff, Loader2, MessageCircle, PenLine, Search, Users, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Eye, EyeOff, Loader2, MessageCircle, PenLine, Search, X } from 'lucide-react';
 import { Waiting } from '../../../components/shell/PageSkeleton';
 import { useAuth, useNavigation } from '../../../context';
 import { useMyClasses, useTeachingClasses, useAllClasses } from '../../../hooks/useClasses';
@@ -27,7 +27,7 @@ import { BirthdaysSoon } from '../../../components/home/BirthdaysSoon';
 import { ChatMenu, ChatRow, ClassChatTools, ClassPick, ClassTimes, hideSide, LastLine, NameMark, readSide, Tick } from './parts';
 import { ClassMoreSheet } from '../klasi/teacher/More';
 import { keepClassTab, type ClassTab } from '../klasi/nav';
-import { openAssistant, useAssistantAllowed } from '../damkhmare/open';
+import { AssistantButton } from '../damkhmare/AssistantButton';
 import { useLongPress } from '../../../hooks/useLongPress';
 import { TimetableSheet } from '../klasi/teacher/Timetable';
 
@@ -111,7 +111,6 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const [timesOf, setTimesOf] = useState<string | null>(null);
   // the open class chat: its „მეტი“ (the name held long) and the program's cog
   const [moreOf, setMoreOf] = useState<string | null>(null);
-  const autoAllowed = useAssistantAllowed();
   const nameHold = useLongPress(() => { if (moreFor) setMoreOf(moreFor); });
   const classUnread = (c: SchoolClass) => isClassUnread(lasts[c.id], seen[c.id], uid) && open !== CLASS_PREFIX + c.id;
   const dmUnread = (t: DirectThread) => isUnread(t, uid) && open !== t.id;
@@ -233,12 +232,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
           <ChatRow
             key={id}
             face={<ClassLogo name={c.name} logo={c.logo} className="size-12 text-title" />}
-            name={(
-              <span className="flex min-w-0 items-center gap-1.5">
-                <Users aria-label="კლასის ჩათი" className="size-[18px] shrink-0 text-wine" strokeWidth={2} />
-                <span className="min-w-0 truncate">{c.name}</span>
-              </span>
-            )}
+            name={c.name}
             group
             last={last ? <LastLine who={last.uid === uid ? 'შენ:' : undefined} text={last.text} /> : `კლასის ჩათი · ${c.members.length} წევრი`}
             time={when(last?.at ?? null)}
@@ -312,8 +306,6 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
     items.sort((a, b) => Number(!!b.cls) - Number(!!a.cls) || pinRank(a) - pinRank(b) || Number(b.teacher) - Number(a.teacher) || Number(a.empty) - Number(b.empty) || b.at - a.at);
   }
   const shownItems = items.filter(i => !i.hidden || needle);
-  const classItems = shownItems.filter(i => i.cls);
-  const peopleItems = shownItems.filter(i => !i.cls);
   const hiddenItems = needle ? [] : items.filter(i => i.hidden);
   const menuItem = menuKey ? items.find(i => i.key === menuKey) ?? null : null;
   const unreadIn = (cid: string) => {
@@ -425,7 +417,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         timetable={false}
         under={(
           <ClassChatTools
-            auto={moreFor && autoAllowed ? () => openAssistant({ classId: openCls.id, page: 'class' }) : undefined}
+            end={moreFor ? <AssistantButton classId={openCls.id} /> : undefined}
             program={() => classOn(openCls.id, 'program')}
             members={moreFor ? () => classOn(openCls.id, 'people') : undefined}
           />
@@ -514,20 +506,14 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         <p className="px-4 py-10 text-center text-body text-mut">{needle ? 'ვერავინ მოიძებნა.' : 'ამ კლასში ჩათი ჯერ არ არის.'}</p>
       ) : (
         <>
-          {classItems.length > 0 && (
+          {shownItems.length > 0 && (
             <>
-              <SectionLabel label="კლასის ჩათები" />
-              {/* the classes' chats in their own pale wine card, so they read as group chats at a glance (2026-11-22);
-                  over each one its own members' coming birthdays (the teachers' look; none → nothing) */}
-              <div className="flex shrink-0 flex-col divide-y divide-wine/10 overflow-hidden rounded-card bg-tint ring-1 ring-wine/15">
-                {classItems.map(i => <React.Fragment key={i.key}><BirthdaysSoon row only={i.cls} />{i.node}</React.Fragment>)}
-              </div>
-            </>
-          )}
-          {peopleItems.length > 0 && (
-            <>
-              <SectionLabel label={classItems.length > 0 ? 'პირადი ჩათები' : 'ჩათები'} />
-              <Rows>{peopleItems.map(i => i.node)}</Rows>
+              <SectionLabel label="ჩათები" />
+              {/* one list (the user: „ესეთი დაყოფა არ მინდა“): the class chats first, each in its thin dark-blue frame, with its own
+                  members' coming birthdays over it (the teachers' look; none → nothing) */}
+              <Rows>{shownItems.map(i => (i.cls
+                ? <React.Fragment key={i.key}><BirthdaysSoon row only={i.cls} />{i.node}</React.Fragment>
+                : i.node))}</Rows>
             </>
           )}
           {hiddenItems.length > 0 && (
