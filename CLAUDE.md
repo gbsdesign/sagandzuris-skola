@@ -2305,8 +2305,11 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   card's „წაიკითხე“ is a round 📖 only.
 - **The „სწავლა“ list's head (2026-11-22**, the user: „ეს ღილაკები მოხსენი ხოლო იმას ფს.ჯ. დაუწერე გვერდთან“): the 👁 (all chats,
   only to look) and ✎ (new letter) are gone; the psalter group's 📖 is a pill with „ფს.ჯ.“ written beside it (the teacher's
-  „დასწრება“ stays; that evening it moved to the class's „მეტი“). The open class chat's tool row lost „წევრები“ (only „პროგრამა“ +
-  the cog; the user: „ეს მოხსენი“), and the class rows on the list are tighter (`ChatRow group`: 40px logo, less padding, 20px
+  „დასწრება“ stays; that evening it moved to the class's „მეტი“). The open class chat's tool row lost „წევრები“ (the user: „ეს
+  მოხსენი“) and „პროგრამა“ became a round sign before the phone (`ClassChat headTools`; „სიტყვა მოაცილე … ყურმილის წინ“) — the row
+  keeps only the cog. A class row's long press opens the class's „მეტი“ (its leaders) and class chats can't be pinned — pins only
+  for people (the user: „მიმაგრება დარჩეს მხოლოდ ინდივიდუალურ წევრებზე“); „მეტი“ got „სასწავლო პროგრამა“ (the class page on its
+  program tab, `askClassTab`) and the old row is „პროგრამის დალაგება“. And the class rows on the list are tighter (`ChatRow group`: 40px logo, less padding, 20px
   time pills; a class nobody wrote in yet shows its times in the second line — the user: „უფრო კომპაქტური … ბევრი არაფერი არ ჩაერიო“).
 - **The whole path in the chat's fold (2026-11-21 night**, the user: „გზას რომ ჩახსნიდი … ჩამოსაშლელად პირდაპირ ჩათში“, answer „მთელი
   გზა, როგორც გზის გვერდზე“): `ChatPath` — the student's own side unfolds the whole „საგანძური“ page (`SagandzuriPage bare`, lazy: no

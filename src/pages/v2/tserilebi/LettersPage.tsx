@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, BookOpen, ChevronDown, EyeOff, Loader2, MessageCircle, Search, X } from 'lucide-react';
+import { ArrowLeft, BookOpen, ChevronDown, EyeOff, ListChecks, Loader2, MessageCircle, Search, X } from 'lucide-react';
 import { Waiting } from '../../../components/shell/PageSkeleton';
 import { useAuth, useNavigation } from '../../../context';
 import { useMyClasses, useTeachingClasses, useAllClasses } from '../../../hooks/useClasses';
@@ -26,7 +26,7 @@ import {
 } from '../../../components/ui2';
 import { DmChat } from './DmChat';
 import { BirthdaysSoon } from '../../../components/home/BirthdaysSoon';
-import { ChatMenu, ChatRow, ClassChatTools, ClassPick, ClassTimes, hideSide, LastLine, NameMark, readSide, Tick } from './parts';
+import { ChatMenu, ChatRow, ClassPick, ClassTimes, hideSide, LastLine, NameMark, readSide, Tick } from './parts';
 import { ClassMoreSheet } from '../klasi/teacher/More';
 import { keepClassTab, type ClassTab } from '../klasi/nav';
 import { AssistantButton } from '../damkhmare/AssistantButton';
@@ -247,8 +247,11 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       const id = CLASS_PREFIX + c.id;
       const unread = classUnread(c);
       const lastMs = last?.at?.getTime() ?? 0;
-      const pinned = prefs.pins.includes(id);
-      const editTimes = isAdmin || c.teacherIds.includes(uid) ? () => setTimesOf(c.id) : undefined;
+      // no pinning for a class's chat (2026-11-22, the user: „მიმაგრება დარჩეს მხოლოდ ინდივიდუალურ წევრებზე“) — they stand on top
+      // anyway; a long press opens the class's „მეტი“ for its teachers and admins
+      const pinned = false;
+      const leads = isAdmin || c.teacherIds.includes(uid);
+      const editTimes = leads ? () => setTimesOf(c.id) : undefined;
       const times = c.schedule.length > 0 || !!editTimes;
       // a class's chat is never hidden: one hidden before comes back
       const hidden = false;
@@ -269,6 +272,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             time={when(last?.at ?? null)}
             extra={last && times ? <ClassTimes slots={c.schedule} onEdit={editTimes} /> : undefined}
             {...rowProps(id, lastMs, pinned, hidden, unread, true)}
+            onMenu={leads ? () => setMoreOf(c.id) : undefined}
           />
         ),
       });
@@ -448,12 +452,9 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         timetable={false}
         under={(
           <>
-            <ClassChatTools
-              end={moreFor ? <AssistantButton classId={openCls.id} /> : undefined}
-              program={() => setProgramIn(programIn === openCls.id ? '' : openCls.id)}
-              programOpen={programIn === openCls.id}
-              // „წევრები“ left this row (2026-11-22, the user: „ეს მოხსენი“) — the class page's members open from „გვერდი ›“
-            />
+            {/* „წევრები“ left (the user: „ეს მოხსენი“) and „პროგრამა“ is a round sign before the phone (`headTools`; the user:
+                „პროგრამა სიტყვა მოაცილე და ლოგო დატოვე და აიტანე ყურმილის წინ“) — this row keeps only the program's cog */}
+            {moreFor && <div className="flex justify-end"><AssistantButton classId={openCls.id} /></div>}
             {/* the program unfolds here, under the head, and scrolls inside (the chat stays below it) */}
             {programIn === openCls.id && (
               <div className="mt-1.5 flex max-h-[60dvh] flex-col gap-2.5 overflow-x-hidden overflow-y-auto overscroll-contain pb-1">
@@ -463,6 +464,14 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
               </div>
             )}
           </>
+        )}
+        headTools={(
+          <RoundButton label={programIn === openCls.id ? 'სასწავლო პროგრამის დაკეცვა' : 'სასწავლო პროგრამა'}
+            tone={programIn === openCls.id ? 'wine' : 'surf'} aria-expanded={programIn === openCls.id}
+            className={programIn === openCls.id ? undefined : '[&_svg]:text-wine'}
+            onClick={() => setProgramIn(programIn === openCls.id ? '' : openCls.id)}>
+            <ListChecks aria-hidden="true" strokeWidth={2} />
+          </RoundButton>
         )}
         title={
           <div className="flex min-w-0 flex-1 items-center gap-2.5">
