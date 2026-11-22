@@ -20,7 +20,7 @@ export interface AccessRecord {
 export interface DecisionRecord { by?: string; at?: string }
 
 export const toAccess = (d: any): AccessRecord => ({
-  status: d.status === 'approved' || d.status === 'rejected' ? d.status : 'pending',
+  status: ['approved', 'rejected', 'suspended', 'deleted'].includes(d.status) ? d.status : 'pending',
   features: d.features === 'all' ? 'all' : Array.isArray(d.features) ? d.features : [],
   requestedAt: d.requestedAt,
   attempts: d.attempts,

@@ -213,7 +213,7 @@ export const useFirstMeeting = () => {
   const show = !!uid && !!user && data !== undefined && !closed && prefilled
     && !(notes || programOpen || church)
     // one a superadmin refused is signed out at once (MembershipGate): nothing to fill in
-    && membership !== 'rejected'
+    && membership !== 'rejected' && membership !== 'suspended' && membership !== 'deleted'
     && !meetingDone(data);
 
   const isNew = !hasGeorgianName(profile) && !data?.firstMeeting;

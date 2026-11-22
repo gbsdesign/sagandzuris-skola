@@ -2332,6 +2332,18 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   for teachers and admins (`lesson.onProgram` = `openProgram`, „დღევანდელი წირვა“). The psalter page has no ⋯: the group's settings (`ParamsSheet`)
   open from the ✎ sheet's row „ჯგუფის პარამეტრები“ (leaders), on the page and in the „სწავლა“ fold alike. The class chat's program fold is `ProgramTab compact` (one header line
   with „N / M“, a thin bar, „+“ beside the ☁, tighter rows, no psalter row).
+  open from the ✎ sheet's row „ჯგუფის პარამეტრები“ (leaders), on the page and in the „სწავლა“ fold alike.
+- **A superadmin's hand on a member (2026-11-22**, the user: „წაშლა სკოლიდან … შეჩერება დროებით … 404 … წაშლილებში … აღდგენა ან სამუდამოდ
+  წაშლა … კლასიდან კლასში ან კლასის გარეშე“; answers „მხოლოდ სუპერადმინებს · ანგარიში და ყველა მონაცემი · ძველიდან ამოვიდეს, ახალში
+  შევიდეს“): a member's row's long press (`ChatMenu extra` → `tserilebi/MemberActions.tsx`, superadmins only) = „კლასის შეცვლა“ (out of
+  every class, into the picked one, or „კლასის გარეშე“ — `moveMember`), „დროებით შეჩერება“ / „შეჩერების მოხსნა“ and „სკოლიდან წაშლა“.
+  `utils/memberRemoval.ts`: `memberAccess.status` 'suspended' | 'deleted' (+ `before` = the old status and features, `removed {at, by,
+  classes}`); `MembershipGate` shows the suspended a full-screen „404 · გვერდი ვერ ჩაიტვირთა“ (the user's wish) and the deleted „თქვენი
+  ანგარიში წაშლილია“, and signs them out. A deleted member leaves every class and goes into `settings/removedMembers.uids`
+  (`utils/removedMembers.ts`) — the letters' list hides them; the admin panel drops them from its lists and shows a row „წაშლილები · N“
+  → mapItem `deleted` (`admini/Deleted.tsx`: „აღდგენა“ = the old access + classes back; „სამუდამოდ“ = the reminders Worker's
+  `/delete-member` — superadmins (owner e-mail or `admins/{email}.role`), only a member already 'deleted', never staff — the same
+  `wipeAccount` as one's own „ანგარიშის წაშლა“; chat messages stay). No rules change (superadmins already write `memberAccess`).
 - **The whole path in the chat's fold (2026-11-21 night**, the user: „გზას რომ ჩახსნიდი … ჩამოსაშლელად პირდაპირ ჩათში“, answer „მთელი
   გზა, როგორც გზის გვერდზე“): `ChatPath` — the student's own side unfolds the whole „საგანძური“ page (`SagandzuriPage bare`, lazy: no
   bar, the ✎ by „ჩემი საგალობლები“; numbers, assignments, chips, flights, ოსტატობა); the teacher's side keeps its ჩათვლა / დამატება /
