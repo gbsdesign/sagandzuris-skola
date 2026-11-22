@@ -52,6 +52,10 @@ export const HomeBarView: React.FC<{
   <header className="safe-top lg:hidden">
     <div className="relative mx-auto flex w-full max-w-4xl items-center gap-2 px-4 pt-3.5 pb-2.5 max-[389px]:gap-1.5 max-[389px]:px-3">
       <img src={logoUrl} alt="საგანძურის სკოლის ლოგო" className="size-tap shrink-0 rounded-field bg-surf object-cover max-[389px]:size-10" referrerPolicy="no-referrer" />
+      {/* the 🔔 stands right by the logo, before the name (2026-11-22, the user's mark on the screenshot) */}
+      <RoundButton label="შეტყობინებები" size={36} badge={count} onClick={onBell}>
+        <Bell strokeWidth={1.75} />
+      </RoundButton>
       {menu
         ? <div className="flex min-w-0 flex-1">{menu}</div>
         : <div className="min-w-0 flex-1 truncate text-head font-bold tracking-tight">საგანძურის სკოლა</div>}
@@ -68,9 +72,6 @@ export const HomeBarView: React.FC<{
             : <User strokeWidth={1.75} />}
         </RoundButton>
       )}
-      <RoundButton label="შეტყობინებები" size={36} badge={count} onClick={onBell}>
-        <Bell strokeWidth={1.75} />
-      </RoundButton>
     </div>
   </header>
 );

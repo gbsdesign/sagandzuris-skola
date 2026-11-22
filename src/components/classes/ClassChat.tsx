@@ -67,7 +67,9 @@ export const CallBanner: React.FC<{ people: number; since: number; onHide: () =>
   </div>
 );
 
-export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fill?: boolean; chain?: boolean; timetable?: boolean; compact?: boolean; bare?: boolean; under?: React.ReactNode; headTools?: React.ReactNode }> = ({ cls, title, fill, chain, timetable = true, compact = false, bare = false, under, headTools }) => {
+export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fill?: boolean; chain?: boolean; timetable?: boolean; compact?: boolean; bare?: boolean; under?: React.ReactNode; headTools?: React.ReactNode;
+  /** a small sign after the field's microphone (the letters' cog) */
+  extraTool?: { label: string; icon: React.ReactNode; onClick: () => void } }> = ({ cls, title, fill, chain, timetable = true, compact = false, bare = false, under, headTools, extraTool }) => {
   const { user, isAdmin: isSchoolAdmin } = useAuth();
   const { openDm, openStudent } = useNavigation();
   // this class's teachers (and the school's admins) speak as teachers here
@@ -144,6 +146,7 @@ export const ClassChat: React.FC<{ cls: SchoolClass; title?: React.ReactNode; fi
     <ChatPanel
       base={base}
       author={author}
+      extraTool={extraTool}
       messages={shown}
       loading={loading}
       error={error}

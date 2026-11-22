@@ -277,6 +277,8 @@ export interface ChatPanelProps {
   renderCard?: (m: ChatMessage, mine: boolean) => React.ReactNode | null;
   /** a teacher's (an admin's) 📎 beside the field: a comment or an assignment for one member */
   onAttach?: () => void;
+  /** one more small sign after the microphone (the class chat's „ავტომატური პროგრამა“ cog for its leaders, 2026-11-22) */
+  extraTool?: { label: string; icon: React.ReactNode; onClick: () => void };
   /** how a message is deleted, when not among the chat's own messages (a class's pins) */
   onDelete?: (m: ChatMessage) => Promise<void>;
   /** a teacher's (an admin's) tap on a member's photo or name: their own page (null = not a member's message) */
@@ -288,6 +290,16 @@ const HoverDelete: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   <button type="button" onClick={onClick} aria-label="შეტყობინების წაშლა" title="წაშლა"
     className="self-center w-9 h-9 shrink-0 rounded-full flex items-center justify-center text-faint hover:text-danger hover:bg-soft opacity-0 group-hover:opacity-100 focus-visible:opacity-100 transition cursor-pointer [@media(hover:none)]:hidden">
     <Trash2 className="w-4 h-4" />
+  </button>
+);
+
+/** a small sign of the field's row: 32px, its finger area 36×44 (2026-11-22, the user: „უფრო კომპაქტური და დახვეწილი“) */
+const ToolSign: React.FC<{ label: string; onClick: () => void; children: React.ReactNode; keepFocus?: boolean }> = ({ label, onClick, children, keepFocus }) => (
+  <button type="button" aria-label={label} title={label} onClick={() => { triggerHaptic(8); onClick(); }}
+    // the › leaves the finger in the field, so the row does not jump under the tap
+    onPointerDown={keepFocus ? e => e.preventDefault() : undefined}
+    className="relative flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-wine transition before:absolute before:-inset-x-0.5 before:-inset-y-1.5 active:scale-95 active:bg-ink/5 focus-visible:outline-2 focus-visible:outline-wine/60 [&_svg]:size-[21px]">
+    {children}
   </button>
 );
 
@@ -305,7 +317,7 @@ const staffName = (name: string | undefined, label: string) => (name?.trim() ? `
 export const ChatPanel: React.FC<ChatPanelProps> = ({
   base, author, messages, loading, error, header, isCall = NEVER, callTitle, onJoinCall, callLive = true, onCallBack, onOpenGame, canDelete,
   showNames = false, seenAt = null, onSent, listClassName = 'h-[56vh] min-h-[300px] max-h-[560px]', readOnly = false,
-  staffLabel = 'მასწავლებელი', fill = false, chain = false, listTop, renderCard, onAttach, onDelete, personOpener,
+  staffLabel = 'მასწავლებელი', fill = false, chain = false, listTop, renderCard, onAttach, extraTool, onDelete, personOpener,
 }) => {
   const [text, setText] = useState('');
   const [mode, setMode] = useState<Mode>({ k: 'idle' });
@@ -318,6 +330,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   useBackToClose(emojiOpen, () => setEmojiOpen(false));
   // Messenger's row (2026-11-22): + (a file; a teacher's card too) · camera · gallery · voice, folded to one › while typing
   const [toolsOpen, setToolsOpen] = useState(false);
+  // the finger is in the field: the small signs fold to one › so the field is wide
+  const [typing, setTyping] = useState(false);
   const [plusOpen, setPlusOpen] = useState(false);
   const [quickOpen, setQuickOpen] = useState(false);
   const [quick, setQuick] = useQuickEmoji();
@@ -810,7 +824,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       {readOnly ? (
         <p className="px-5 py-4 text-center text-meta text-mut">მხოლოდ სანახავად</p>
       ) : (
-      <div className="p-3 sm:px-4 flex items-end gap-2">
+      <div className="px-2 py-2.5 sm:px-4 flex items-end gap-1.5">
         {mode.k === 'idle' && upload && (
           <div className={`${pill} flex-1 min-w-0 justify-center gap-2 px-4 text-meta text-mut`}>
             <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
@@ -823,19 +837,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
             <input ref={camIn} type="file" accept="image/*" capture="environment" hidden onChange={e => picked(e, sendPhotos)} />
             <input ref={galIn} type="file" accept="image/*" multiple hidden onChange={e => picked(e, sendPhotos)} />
             <input ref={fileIn} type="file" hidden onChange={e => picked(e, f => sendFile(f[0]))} />
-            {text.trim() && !toolsOpen ? (
-              <RoundButton size={36} tone="plain" label="ფოტო, ფაილი, ხმა" className="mb-1.5 text-wine" onClick={() => setToolsOpen(true)}>
-                <ChevronRight />
-              </RoundButton>
+            {/* compact (2026-11-22, the user: „ჩათის ღილაკები უფრო კომპაქტური და დახვეწილი … წერილის დასაწერი ადგილი ვიწროა“):
+                small signs side by side, and while the field is in use (typed in or the finger in it) they fold to one › */}
+            {(text.trim() || typing) && !toolsOpen ? (
+              <ToolSign keepFocus label="ფოტო, ფაილი, ხმა" onClick={() => setToolsOpen(true)}><ChevronRight /></ToolSign>
             ) : (
-              <div className="mb-1.5 flex shrink-0 items-center gap-1">
-                <RoundButton size={36} tone="plain" className="text-wine" label={onAttach ? 'ფაილი ან ბარათი მოსწავლეს' : 'ფაილის გაგზავნა'}
+              <div className="mb-2 flex shrink-0 items-center">
+                <ToolSign label={onAttach ? 'ფაილი ან ბარათი მოსწავლეს' : 'ფაილის გაგზავნა'}
                   onClick={() => (onAttach ? setPlusOpen(true) : fileIn.current?.click())}>
                   <Plus />
-                </RoundButton>
-                <RoundButton size={36} tone="plain" className="text-wine" label="ფოტოს გადაღება" onClick={() => camIn.current?.click()}><Camera /></RoundButton>
-                <RoundButton size={36} tone="plain" className="text-wine" label="ფოტო გალერეიდან" onClick={() => galIn.current?.click()}><ImageIcon /></RoundButton>
-                {canRecord && <RoundButton size={36} tone="plain" className="text-wine" label="ხმოვანი შეტყობინების ჩაწერა" onClick={startRecording}><Mic /></RoundButton>}
+                </ToolSign>
+                <ToolSign label="ფოტოს გადაღება" onClick={() => camIn.current?.click()}><Camera /></ToolSign>
+                <ToolSign label="ფოტო გალერეიდან" onClick={() => galIn.current?.click()}><ImageIcon /></ToolSign>
+                {canRecord && <ToolSign label="ხმოვანი შეტყობინების ჩაწერა" onClick={startRecording}><Mic /></ToolSign>}
+                {extraTool && <ToolSign label={extraTool.label} onClick={extraTool.onClick}>{extraTool.icon}</ToolSign>}
               </div>
             )}
             <div className="relative flex-1 min-w-0">
@@ -845,12 +860,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 value={text}
                 onChange={e => { setText(e.target.value); setToolsOpen(false); caret.current = e.target.selectionStart; grow(e.target); }}
                 onSelect={e => { caret.current = e.currentTarget.selectionStart; }}
-                onFocus={() => setEmojiOpen(false)}
+                onFocus={() => { setEmojiOpen(false); setTyping(true); setToolsOpen(false); }}
+                onBlur={() => setTyping(false)}
                 onKeyDown={onKeyDown}
                 maxLength={2000}
                 placeholder="წერილი"
                 aria-label="წერილი"
-                className="block w-full resize-none rounded-full bg-surf py-3 pr-11 pl-4 min-h-tap-lg text-lead text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-wine/35"
+                className="block w-full resize-none rounded-[22px] bg-surf py-2.5 pr-10 pl-3.5 min-h-tap text-lead text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-wine/35"
               />
               {/* 😊 inside the field opens the emoji panel (in place of the phone's keyboard) */}
               <button
@@ -858,7 +874,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 onClick={() => { triggerHaptic(8); if (!emojiOpen) field.current?.blur(); setEmojiOpen(v => !v); }}
                 aria-label={emojiOpen ? 'ემოჯის დახურვა' : 'ემოჯი'}
                 aria-expanded={emojiOpen}
-                className={`absolute right-1 bottom-1 flex size-10 cursor-pointer items-center justify-center rounded-full transition active:scale-95 ${emojiOpen ? 'text-wine' : 'text-mut'}`}
+                className={`absolute right-0.5 bottom-0.5 flex size-10 cursor-pointer items-center justify-center rounded-full transition active:scale-95 ${emojiOpen ? 'text-wine' : 'text-mut'}`}
               >
                 <Smile className="size-[22px]" />
               </button>

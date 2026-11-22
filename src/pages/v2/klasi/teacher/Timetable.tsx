@@ -18,18 +18,20 @@ const sortSlots = (list: LessonSlot[]) =>
 export const slotTime = (s: LessonSlot) => `${s.start}${s.end ? ` – ${s.end}` : ''}`;
 const slotLine = (s: LessonSlot) => [slotTime(s), s.note?.trim()].filter(Boolean).join(' · ');
 
+// the lesson's window, tidied (2026-11-22, the user: „ეს პანელი ძალიან უაზროდ არის დახვეწე“): the week as one row of seven round
+// days, the two times in boxes side by side, the place in a box; „მზადაა“ big, the delete a quiet red line under it
+const DAY_SHORT = ['კვ', 'ორ', 'სა', 'ოთ', 'ხუ', 'პა', 'შა'];
+
+const Label: React.FC<{ children: React.ReactNode }> = ({ children }) => (
+  <span className="pl-1 text-meta font-semibold text-mut">{children}</span>
+);
+
+const BOX = 'h-12 w-full min-w-0 rounded-field bg-page px-3.5 text-lead text-ink outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine/60';
+
 const TimeField: React.FC<{ label: string; value: string; onChange: (v: string) => void }> = ({ label, value, onChange }) => (
   <label className="flex min-w-0 flex-1 flex-col gap-1.5">
-    <span className="pl-1.5 text-meta font-semibold text-mut">{label}</span>
-    <input
-      type="time"
-      value={value}
-      onChange={e => onChange(e.target.value)}
-      className={cx(
-        'h-[52px] w-full min-w-0 rounded-full bg-surf px-[18px] text-lead text-ink',
-        'outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine/60',
-      )}
-    />
+    <Label>{label}</Label>
+    <input type="time" value={value} onChange={e => onChange(e.target.value)} className={cx(BOX, 'text-center tabular-nums')} />
   </label>
 );
 
@@ -72,24 +74,38 @@ export const TimetableSheet: React.FC<{ cls: SchoolClass; open: boolean; onClose
   if (one) {
     return (
       <Sheet open={open} onClose={onClose} title="გაკვეთილი">
-        <Card className="flex flex-col gap-3">
-          <div className="flex flex-col gap-1.5">
-            <span className="pl-1.5 text-meta font-semibold text-mut">დღე</span>
-            <WrapChips
-              label="დღე"
-              items={ORDER.map(d => ({ id: String(d), label: WEEKDAYS_GE[d] }))}
-              value={[String(one.day)]}
-              onChange={next => patch({ day: Number(next.find(x => x !== String(one.day)) ?? one.day) })}
-            />
+        <Card className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2">
+            <Label>დღე · <span className="text-ink">{WEEKDAYS_GE[one.day]}</span></Label>
+            <div role="radiogroup" aria-label="დღე" className="grid grid-cols-7 gap-1">
+              {ORDER.map(d => (
+                <button key={d} type="button" role="radio" aria-checked={one.day === d} aria-label={WEEKDAYS_GE[d]}
+                  onClick={() => patch({ day: d })}
+                  className={cx(
+                    'flex aspect-square max-h-11 w-full cursor-pointer items-center justify-center rounded-full text-meta font-bold transition active:scale-95',
+                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-wine/60',
+                    one.day === d ? 'bg-wine text-white' : 'bg-page text-ink',
+                  )}>
+                  {DAY_SHORT[d]}
+                </button>
+              ))}
+            </div>
           </div>
           <div className="flex gap-2.5">
             <TimeField label="დაწყება" value={one.start} onChange={v => patch({ start: v })} />
             <TimeField label="დასრულება" value={one.end || ''} onChange={v => patch({ end: v })} />
           </div>
-          <Field label="ადგილი" value={one.note || ''} onChange={v => patch({ note: v })} placeholder="არასავალდებულო" />
+          <label className="flex flex-col gap-1.5">
+            <Label>ადგილი</Label>
+            <input value={one.note || ''} onChange={e => patch({ note: e.target.value })} placeholder="არასავალდებულო" maxLength={80}
+              className={cx(BOX, 'placeholder:text-faint')} />
+          </label>
         </Card>
-        <Button kind="ghost" full icon={<Trash2 />} className="text-danger" onClick={remove}>გაკვეთილის წაშლა</Button>
         <Button full icon={<Check />} onClick={() => setAt(null)}>მზადაა</Button>
+        <button type="button" onClick={remove}
+          className="mx-auto flex h-tap cursor-pointer items-center gap-1.5 rounded-full px-4 text-meta font-bold text-danger transition active:bg-danger/10 [&_svg]:size-4">
+          <Trash2 aria-hidden="true" /> გაკვეთილის წაშლა
+        </button>
       </Sheet>
     );
   }

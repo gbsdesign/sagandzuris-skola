@@ -1,5 +1,5 @@
 import React from 'react';
-import { CalendarClock, Check, CheckCheck, Eye, EyeOff, GraduationCap, ListChecks, Mic, Pin, PinOff, ShieldCheck, Users } from 'lucide-react';
+import { CalendarClock, Check, CheckCheck, ChevronDown, Eye, EyeOff, GraduationCap, ListChecks, Mic, Pin, PinOff, ShieldCheck, Users } from 'lucide-react';
 import { Badge, Button, cx, Dot, Press, Sheet, Small } from '../../../components/ui2';
 import { useLongPress } from '../../../hooks/useLongPress';
 import { PearlIcon } from '../../../components/pearls/PearlIcon';
@@ -51,9 +51,12 @@ export const ChatRow: React.FC<{
   extra?: React.ReactNode;
   /** a student's pearls (their path's items with a voice known), on the row's right under the date */
   pearls?: number;
+  /** a class's ▾ on its row: shows only its members' chats under the classes (2026-11-22, the user: „ჩამოსაშლელი ისარი … მხოლოდ
+   *  მაგ ჩათის წევრები გამოჩნდნენ … თუ არცერთი არ არის დაჭერილი მაშინ ყველა“) */
+  fold?: { open: boolean; onToggle: () => void };
   onClick: () => void; onMenu?: () => void;
   left?: SwipeSide; right?: SwipeSide;
-}> = ({ face, name, last, time, unread, active, busy, pinned, group, count, tick, extra, pearls, onClick, onMenu, left, right }) => {
+}> = ({ face, name, last, time, unread, active, busy, pinned, group, count, tick, extra, pearls, fold, onClick, onMenu, left, right }) => {
   const press = useLongPress(() => onMenu?.());
   const button = (
     <Press
@@ -92,6 +95,22 @@ export const ChatRow: React.FC<{
             )}
             {unread && (count ? <Badge n={count} /> : <span aria-label="წაუკითხავი" className="size-2.5 rounded-full bg-danger" />)}
             {pinned && <Pin aria-label="მიმაგრებული" className="size-4 rotate-45 text-mut" />}
+            {fold && (
+              // inside the row's button, so a span that keeps the tap to itself
+              <span role="button" tabIndex={0} aria-expanded={fold.open}
+                aria-label={fold.open ? 'ყველა ჩათის ჩვენება' : 'მხოლოდ ამ კლასის წევრები'}
+                title={fold.open ? 'ყველა ჩათის ჩვენება' : 'მხოლოდ ამ კლასის წევრები'}
+                onPointerDown={e => e.stopPropagation()}
+                onClick={e => { e.stopPropagation(); e.preventDefault(); triggerHaptic(8); fold.onToggle(); }}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); fold.onToggle(); } }}
+                className={cx(
+                  'relative -my-1.5 flex size-8 shrink-0 cursor-pointer items-center justify-center rounded-full transition active:scale-95',
+                  'before:absolute before:-inset-1.5 focus-visible:outline-2 focus-visible:outline-wine/60',
+                  fold.open ? 'bg-wine text-white' : 'bg-tint text-wine',
+                )}>
+                <ChevronDown aria-hidden="true" strokeWidth={2.25} className={cx('size-[18px] transition-transform', fold.open && 'rotate-180')} />
+              </span>
+            )}
           </span>
         </span>
         {extra}

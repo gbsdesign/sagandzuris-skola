@@ -2309,7 +2309,14 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   მოხსენი“) and „პროგრამა“ became a round sign before the phone (`ClassChat headTools`; „სიტყვა მოაცილე … ყურმილის წინ“) — the row
   keeps only the cog. A class row's long press opens the class's „მეტი“ (its leaders) and class chats can't be pinned — pins only
   for people (the user: „მიმაგრება დარჩეს მხოლოდ ინდივიდუალურ წევრებზე“); „მეტი“ got „სასწავლო პროგრამა“ (the class page on its
-  program tab, `askClassTab`) and the old row is „პროგრამის დალაგება“. And the class rows on the list are tighter (`ChatRow group`: 40px logo, less padding, 20px
+  program tab, `askClassTab`) and the old row is „პროგრამის დალაგება“. Later that evening: the cog went down after the field's
+  microphone (`ChatPanel extraTool`); the field's row is compact — 32px signs (`ToolSign`, finger area 36×44) folding to one ›
+  while the finger is in the field (`typing`), so the field is wide (the user: „კბილანა მიკროფონის შემდეგ … ღილაკები უფრო
+  კომპაქტური … წერილის დასაწერი ადგილი ვიწროა“); the class chips on top of the list are gone — each class row has a ▾ (`ChatRow
+  fold`) that shows only its members' chats under the classes, none open = all (the user: „ჩამოსაშლელი ისარი … კლასების
+  გადამრთველები მოხსენი“); the lesson's window (`klasi/teacher/Timetable.tsx`) = seven round days in one row, the times and the
+  place in boxes, „მზადაა“ then a quiet red „წაშლა“ (the user: „ეს პანელი ძალიან უაზროდ არის დახვეწე“); the home bar's 🔔 stands
+  right by the logo, before the name (`HomeBar`, the user's mark). And the class rows on the list are tighter (`ChatRow group`: 40px logo, less padding, 20px
   time pills; a class nobody wrote in yet shows its times in the second line — the user: „უფრო კომპაქტური … ბევრი არაფერი არ ჩაერიო“).
 - **The whole path in the chat's fold (2026-11-21 night**, the user: „გზას რომ ჩახსნიდი … ჩამოსაშლელად პირდაპირ ჩათში“, answer „მთელი
   გზა, როგორც გზის გვერდზე“): `ChatPath` — the student's own side unfolds the whole „საგანძური“ page (`SagandzuriPage bare`, lazy: no
