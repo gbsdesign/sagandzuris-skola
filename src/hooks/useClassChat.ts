@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import {
-  addDoc, Bytes, collection, doc, getDoc, limit, onSnapshot, orderBy, query, QueryDocumentSnapshot, serverTimestamp, updateDoc, writeBatch,
+  addDoc, arrayRemove, arrayUnion, Bytes, collection, doc, getDoc, limit, onSnapshot, orderBy, query, QueryDocumentSnapshot, serverTimestamp,
+  updateDoc, writeBatch,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import type { VoiceTake } from '../utils/voiceRecorder';
@@ -50,6 +51,8 @@ export interface ChatMessage {
    *  talked, `missed` = nobody answered) — the call's own first message then steps aside (ChatPanel) */
   end?: boolean;
   missed?: boolean;
+  /** who put a ❤️ on it (2026-11-22, the user: „სმს-ებზე დაგულების ფუნქცია … როგორც მესენჯერს აქვს“) */
+  hearts?: string[];
 }
 
 const str = (v: unknown) => (typeof v === 'string' ? v : '');
@@ -86,6 +89,7 @@ export const toChatMessage = (d: QueryDocumentSnapshot, pinned = false): ChatMes
     pinned,
     end: m.end === true,
     missed: m.missed === true,
+    hearts: Array.isArray(m.hearts) ? m.hearts.filter((x: unknown): x is string => typeof x === 'string') : [],
   };
 };
 
@@ -226,7 +230,10 @@ export const useChat = (base?: string | null) => {
         const list = snap.docs.map(d => {
           const fresh = toChatMessage(d);
           const old = known.get(d.id);
-          const m = old && old.pending === fresh.pending && old.at?.getTime() === fresh.at?.getTime() ? old : fresh;
+          // a ❤️ put on an arrived message is a write too: it does not make the message „sending“ again
+          if (old && !old.pending) fresh.pending = false;
+          const m = old && old.pending === fresh.pending && old.at?.getTime() === fresh.at?.getTime()
+            && (old.hearts ?? []).join() === (fresh.hearts ?? []).join() ? old : fresh;
           next.set(d.id, m);
           return m;
         }).reverse();
@@ -294,6 +301,10 @@ export const sendVoiceMessage = async (base: string, author: ChatAuthor, { mp3, 
   await batch.commit();
   void notifyChat(base, ref.id);
 };
+
+/** My ❤️ on a message, put or taken back (the rules let me change only my own place in `hearts`). */
+export const toggleHeart = (base: string, m: ChatMessage, uid: string) =>
+  updateDoc(doc(messagesOf(base), m.id), { hearts: (m.hearts ?? []).includes(uid) ? arrayRemove(uid) : arrayUnion(uid) });
 
 export const deleteMessage = async (base: string, m: ChatMessage) => {
   const batch = writeBatch(db);

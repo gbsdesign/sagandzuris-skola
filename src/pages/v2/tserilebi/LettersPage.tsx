@@ -30,6 +30,7 @@ import { keepClassTab, type ClassTab } from '../klasi/nav';
 import { AssistantButton } from '../damkhmare/AssistantButton';
 import { useLongPress } from '../../../hooks/useLongPress';
 import { TimetableSheet } from '../klasi/teacher/Timetable';
+import { usePearlTotals } from './usePearlTotals';
 
 const MONTHS = ['იან', 'თებ', 'მარ', 'აპრ', 'მაი', 'ივნ', 'ივლ', 'აგვ', 'სექ', 'ოქტ', 'ნოე', 'დეკ'];
 // today: the time; earlier: the day and a short month („10 ნოე“) — one short line at a row's end
@@ -98,7 +99,9 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
     if (uid && !isTeacher && kidsOn !== flagged) syncKidsFlag(uid, kidsOn);
   }, [uid, isTeacher, kidsOn, flagged]);
 
-  const classRows = known.filter(c => mine.some(m => m.id === c.id) || chip === c.id);
+  // every class one sees in the chips has its chat in the list, always on top and never hidden (2026-11-22, the user: „ყველა
+  // კლასის ჩათი … ყოველთვის თავში … დამალვა ვეღარ მოხერხდეს“) — for admins that is every class of the school
+  const classRows = known;
   const lasts = useClassLasts(classRows.map(c => c.id));
   const openClassId = open?.startsWith(CLASS_PREFIX) ? open.slice(CLASS_PREFIX.length) : null;
   const openKnown = openClassId ? known.find(c => c.id === openClassId) : undefined;
@@ -123,6 +126,11 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       ? [{ id: t.id, base: dmBase(t.id), since: readSince(t, uid)?.getTime() ?? 0, upTo: t.lastAt.getTime() }] : [])),
   ];
   const counts = useUnreadCounts(asks);
+  // the students' pearls on their rows (a teacher's or the administration's side only)
+  const studentOf = (t: DirectThread): string | null =>
+    t.kind === 'teach' ? (t.teacherUid === uid ? t.studentUid || null : null)
+      : t.kind === 'admin' && isAdmin && !t.members.includes(uid) ? t.members[0] ?? null : null;
+  const pearls = usePearlTotals(isTeacher || isAdmin ? threads.map(studentOf).filter((x): x is string => !!x) : []);
 
   if (!user) return null;
   // the class page on one of its tabs (the chat's „პროგრამა“ · „წევრები“)
@@ -205,14 +213,14 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
     cls?: string[];
   };
   const items: Item[] = [];
-  const rowProps = (key: string, lastMs: number, pinned: boolean, hidden: boolean, unread: boolean) => ({
+  const rowProps = (key: string, lastMs: number, pinned: boolean, hidden: boolean, unread: boolean, keep = false) => ({
     pinned,
     unread,
     count: counts[key],
     active: !!open && open === key && wide,
     onClick: () => { if (hidden) unhide(key); go(key); },
     onMenu: () => setMenuKey(key),
-    left: hidden ? undefined : hideSide(() => hideIt(key, lastMs)),
+    left: hidden || keep ? undefined : hideSide(() => hideIt(key, lastMs)),
     right: unread ? readSide(() => readIt(key)) : undefined,
   });
 
@@ -224,7 +232,8 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
       const unread = classUnread(c);
       const lastMs = last?.at?.getTime() ?? 0;
       const pinned = prefs.pins.includes(id);
-      const hidden = isHidden(prefs, id, lastMs);
+      // a class's chat is never hidden: one hidden before comes back
+      const hidden = false;
       items.push({
         key: id, name: c.name, at: lastMs, lastMs, empty: !last, pinned, hidden, unread, teacher: false,
         cls: [...c.memberIds, ...c.teacherIds],
@@ -238,7 +247,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             time={when(last?.at ?? null)}
             extra={<ClassTimes slots={c.schedule}
               onEdit={isAdmin || c.teacherIds.includes(uid) ? () => setTimesOf(c.id) : undefined} />}
-            {...rowProps(id, lastMs, pinned, hidden, unread)}
+            {...rowProps(id, lastMs, pinned, hidden, unread, true)}
           />
         ),
       });
@@ -269,6 +278,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             last={t.lastText ? <LastLine who={who} text={t.lastText} /> : 'ჯერ შეტყობინება არ არის'}
             time={when(t.lastAt)}
             tick={t.lastText && lastIsMine(t, uid) ? <Tick seen={!!seenAt && !!t.lastAt && seenAt >= t.lastAt} /> : null}
+            pearls={(() => { const s = studentOf(t); return s ? pearls[s] : undefined; })()}
             {...rowProps(t.id, lastMs, pinned, hidden, unread)}
           />
         ),
@@ -554,7 +564,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         <NewLetter render={contacts} />
       </Sheet>
       <ChatMenu
-        chat={menuItem && { id: menuItem.key, name: menuItem.name, pinned: menuItem.pinned, unread: menuItem.unread, hidden: menuItem.hidden }}
+        chat={menuItem && { id: menuItem.key, name: menuItem.name, pinned: menuItem.pinned, unread: menuItem.unread, hidden: menuItem.hidden, keep: !!menuItem.cls }}
         onClose={() => setMenuKey(null)}
         onPin={() => { if (menuItem) pinIt(menuItem.key, menuItem.pinned); setMenuKey(null); }}
         onRead={() => { if (menuItem) readIt(menuItem.key); setMenuKey(null); }}
