@@ -527,3 +527,12 @@ evening in his temple = vespers alone (matins in the morning), „სხვა �
   look keeps its links.
 - Still open: the common services have no ikos; a second rank „ექვსიანი“ is not told apart from a plain day; with the great
   doxology the tibikon sings the typika at the liturgy — the app keeps the daily antiphons on weekdays (the user's temple).
+
+- **„საგალობლები“ list (2026-11-22**, the user: „ტიპიკონის მიხედვით თავიდან თავად ალაგებდეს … მე შემეძლოს დალაგება … ლადოს ღილაკი …
+  ვერსიებიდან მოვნიშნავ სასურველს და მონიშნულები დარჩება“): `v2/medavitne/DayPlan.tsx` under the day card — the open service's chants
+  in the steps' order (`autoChants`, only chants with book notes), a ⋮⋮ handle drags one (kept per day·service in
+  `students.dayPlan {"<iso>~<service>": ids}`, guests for the visit; „ტიპიკონით დალაგება“ drops it); a tap unfolds the versions with a
+  tick each — `students.chantPicks {chantId: vids}`, for every day; ticked first, then the week's tone; ♪ opens the notes.
+  „ლადოს პროგრამა“ (superadmins, the Worker's `/lado` via `askLado` in `damkhmare/ask.ts`) sends the day's calendar text, tone, rank,
+  the steps and the offered chants (the service's lists, `OFFER`) and keeps the ids it returns as that day's order (+ its note).
+  Rules `utils/dayPlanRules.ts` + `tests/dayPlan.test.ts`. No rules change (a member writes their own record).
