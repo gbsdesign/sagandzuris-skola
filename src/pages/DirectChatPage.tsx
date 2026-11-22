@@ -153,6 +153,7 @@ export const DirectChat: React.FC<{ id: string; classes: SchoolClass[]; logoUrl?
     <ChatPanel
       base={dmBase(thread.id)}
       author={author}
+      canPin={canWrite}
       messages={messages}
       loading={loading}
       error={error}
@@ -169,7 +170,7 @@ export const DirectChat: React.FC<{ id: string; classes: SchoolClass[]; logoUrl?
       canDelete={m => m.uid === uid}
       renderCard={m => (m.kind === 'note' || m.kind === 'work' ? <PinCard m={m} forMe={m.to === uid} /> : null)}
       onAttach={canPin ? () => setPinning(true) : undefined}
-      onSent={(kind, text) => noteSent(thread, uid, kind === 'voice' ? VOICE_PREVIEW : text).catch(e => console.warn('dm: ', e?.code || e))}
+      onSent={(kind, text) => noteSent(thread, uid, kind === 'voice' ? (text ? `🎤 ${text}` : VOICE_PREVIEW) : text).catch(e => console.warn('dm: ', e?.code || e))}
       header={
         <div className="flex items-center gap-2 px-3 sm:px-4 py-3">
           <PaneTitle face={face} title={title} sub={sub} onBack={onBack} onOpen={canPin ? () => openStudent(student, thread.classId || '') : undefined} />

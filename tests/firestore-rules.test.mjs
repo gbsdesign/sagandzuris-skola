@@ -71,6 +71,9 @@ await t('teacher cannot change teachers', assertFails(updateDoc(doc(tch, 'classe
 await t('teacher cannot create class', assertFails(setDoc(doc(tch, 'classes', 'c9'), { name: 'X', memberIds: [], members: [], teacherIds: ['tch'] })));
 await t('admin creates class', assertSucceeds(setDoc(doc(adm, 'classes', 'c3'), { name: 'X', memberIds: [], members: [], teacherIds: ['tch2'] })));
 await t('member cannot edit program', assertFails(updateDoc(doc(stu, 'classes', 'c1'), { program: [] })));
+await t('teacher pins chat messages', assertSucceeds(updateDoc(doc(tch, 'classes', 'c1'), { topPins: ['m1', 'm2'] })));
+await t('no more than seven pins', assertFails(updateDoc(doc(tch, 'classes', 'c1'), { topPins: ['1', '2', '3', '4', '5', '6', '7', '8'] })));
+await t('member cannot pin in the class chat', assertFails(updateDoc(doc(stu, 'classes', 'c1'), { topPins: ['m1'] })));
 await t('member cannot add themself', assertFails(updateDoc(doc(stu2, 'classes', 'c1'), { memberIds: arrayUnion('stu2'), members: arrayUnion({ uid: 'stu2', name: 'S2' }) })));
 await t('teacher adds a member', assertSucceeds(updateDoc(doc(tch, 'classes', 'c1'), { memberIds: arrayUnion('stu3'), members: arrayUnion({ uid: 'stu3', name: 'S3' }) })));
 await t('teacher links to new member', assertSucceeds(setDoc(doc(tch, 'students', 'stu3'), { teacherIds: arrayUnion('tch'), teacherVia: 'c1' }, { merge: true })));
@@ -190,6 +193,8 @@ await t('two students cannot chat', assertFails(setDoc(doc(stu3, 'dms', 'stu2_st
 await t('classmates cannot open a private chat', assertFails(setDoc(doc(stu3, 'dms', 'p_stu2_stu3'), { kind: 'peer', members: ['stu2', 'stu3'], classId: 'c9', names: {}, photos: {}, createdAt: serverTimestamp(), lastAt: null, lastBy: '', lastText: '', read: {} })));
 await t('student opens chat with own teacher', assertSucceeds(setDoc(doc(stu3, 'dms', 'tch2_stu3'), dm())));
 await t('student writes to own teacher', assertSucceeds(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm1'), msg('stu3', false))));
+await t('student pins a message in own private chat', assertSucceeds(updateDoc(doc(stu3, 'dms', 'tch2_stu3'), { topPins: ['m1'] })));
+await t('no more than seven pins in a private chat', assertFails(updateDoc(doc(stu3, 'dms', 'tch2_stu3'), { topPins: ['1', '2', '3', '4', '5', '6', '7', '8'] })));
 await t('student cannot pose as teacher', assertFails(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm2'), msg('stu3', true))));
 await t('student starts a call', assertSucceeds(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm3'), msg('stu3', false, 'call'))));
 await t('student rings the teacher by video', assertSucceeds(updateDoc(doc(stu3, 'dms', 'tch2_stu3'), { callAt: serverTimestamp(), callBy: 'stu3', callKind: 'video' })));

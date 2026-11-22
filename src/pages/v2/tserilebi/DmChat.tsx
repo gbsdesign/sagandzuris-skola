@@ -142,6 +142,7 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
     <ChatPanel
       base={dmBase(thread.id)}
       author={author}
+      canPin={canWrite}
       messages={messages}
       loading={loading}
       error={error}
@@ -161,7 +162,7 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
       extraTool={canWrite && assistantOn
         ? { label: 'ავტომატური პროგრამა', icon: <GearSpark />, onClick: () => openAssistant({ classId: thread.classId || undefined, page: 'dm' }) }
         : undefined}
-      onSent={(kind, text) => noteSent(thread, uid, kind === 'voice' ? VOICE_PREVIEW : text).catch(e => console.warn('dm: ', e?.code || e))}
+      onSent={(kind, text) => noteSent(thread, uid, kind === 'voice' ? (text ? `🎤 ${text}` : VOICE_PREVIEW) : text).catch(e => console.warn('dm: ', e?.code || e))}
       header={
         <>
           <ChatHead
