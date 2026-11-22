@@ -26,10 +26,11 @@ import {
 } from '../../../components/ui2';
 import { DmChat } from './DmChat';
 import { BirthdaysSoon } from '../../../components/home/BirthdaysSoon';
-import { ChatMenu, ChatRow, ClassPick, ClassTimes, hideSide, LastLine, NameMark, readSide, Tick } from './parts';
+import { ChatMenu, ChatRow, ClassTimes, hideSide, LastLine, NameMark, readSide, Tick } from './parts';
 import { ClassMoreSheet } from '../klasi/teacher/More';
 import { keepClassTab, type ClassTab } from '../klasi/nav';
-import { AssistantButton } from '../damkhmare/AssistantButton';
+import { GearSpark } from '../damkhmare/GearSpark';
+import { openAssistant, useAssistantAllowed } from '../damkhmare/open';
 import { useLongPress } from '../../../hooks/useLongPress';
 import { TimetableSheet } from '../klasi/teacher/Timetable';
 import { usePearlTotals } from './usePearlTotals';
@@ -131,6 +132,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
   const psalterOn = psalterGroups.length > 0 && access.section('medavitneoba') === 'open';
   const [psalterOpen, setPsalterOpen] = useState(false);
   const nameHold = useLongPress(() => { if (moreFor) setMoreOf(moreFor); });
+  const assistantOn = useAssistantAllowed();
   const classUnread = (c: SchoolClass) => isClassUnread(lasts[c.id], seen[c.id], uid) && open !== CLASS_PREFIX + c.id;
   const dmUnread = (t: DirectThread) => isUnread(t, uid) && open !== t.id;
   const asks: CountAsk[] = overview ? [] : [
@@ -242,7 +244,8 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
 
   if (!overview) {
     for (const c of classRows) {
-      if (!inChip(c.id) || !matches(c.name)) continue;
+      // every class row stays; its ▾ picks whose chats show under them (the chips on top are gone)
+      if (!matches(c.name)) continue;
       const last = lasts[c.id];
       const id = CLASS_PREFIX + c.id;
       const unread = classUnread(c);
@@ -273,6 +276,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             extra={last && times ? <ClassTimes slots={c.schedule} onEdit={editTimes} /> : undefined}
             {...rowProps(id, lastMs, pinned, hidden, unread, true)}
             onMenu={leads ? () => setMoreOf(c.id) : undefined}
+            fold={{ open: chip === c.id, onToggle: () => setChip(chip === c.id ? 'all' : c.id) }}
           />
         ),
       });
@@ -431,7 +435,6 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
     );
   };
 
-  const chips = known.length > 1 ? known : [];
   const busyList = overview ? all.loading : loading;
   const empty = !busyList && items.length === 0 && overviewRows.length === 0;
   const brandNew = empty && !needle && !overview && chip === 'all';
@@ -452,9 +455,8 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         timetable={false}
         under={(
           <>
-            {/* „წევრები“ left (the user: „ეს მოხსენი“) and „პროგრამა“ is a round sign before the phone (`headTools`; the user:
-                „პროგრამა სიტყვა მოაცილე და ლოგო დატოვე და აიტანე ყურმილის წინ“) — this row keeps only the program's cog */}
-            {moreFor && <div className="flex justify-end"><AssistantButton classId={openCls.id} /></div>}
+            {/* „წევრები“ left (the user: „ეს მოხსენი“), „პროგრამა“ is a round sign before the phone (`headTools`; „ლოგო დატოვე და
+                აიტანე ყურმილის წინ“) and the cog went down after the field's microphone (`extraTool`; „კბილანა მიკროფონის შემდეგ“) */}
             {/* the program unfolds here, under the head, and scrolls inside (the chat stays below it) */}
             {programIn === openCls.id && (
               <div className="mt-1.5 flex max-h-[60dvh] flex-col gap-2.5 overflow-x-hidden overflow-y-auto overscroll-contain pb-1">
@@ -465,6 +467,9 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
             )}
           </>
         )}
+        extraTool={moreFor && assistantOn
+          ? { label: 'ავტომატური პროგრამა', icon: <GearSpark />, onClick: () => openAssistant({ classId: openCls.id, page: 'class' }) }
+          : undefined}
         headTools={(
           <RoundButton label={programIn === openCls.id ? 'სასწავლო პროგრამის დაკეცვა' : 'სასწავლო პროგრამა'}
             tone={programIn === openCls.id ? 'wine' : 'surf'} aria-expanded={programIn === openCls.id}
@@ -539,7 +544,7 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         </React.Suspense>
       )}
       {!brandNew && <SearchLine value={q} onChange={setQ} />}
-      {!brandNew && chips.length > 0 && <div><ClassPick classes={chips} chip={chip} onPick={setChip} unreadIn={unreadIn} /></div>}
+      {/* the class chips are gone (2026-11-22, the user: „კლასების გადამრთველები მოხსენი ყველა-სიანის ჩათვლით“) — a class row's ▾ */}
       {err && <p role="alert" className="px-1.5 text-body text-danger">{err}</p>}
 
       {busyList && items.length === 0 && overviewRows.length === 0 ? (
@@ -575,6 +580,9 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
               <Rows>{shownItems.map(i => (i.cls
                 ? <React.Fragment key={i.key}><BirthdaysSoon row only={i.cls} />{i.node}</React.Fragment>
                 : i.node))}</Rows>
+              {chip !== 'all' && !shownItems.some(i => !i.cls) && (
+                <p className="px-4 py-3 text-center text-meta text-mut">ამ კლასის წევრებთან ჩათი ჯერ არ არის.</p>
+              )}
             </>
           )}
           {hiddenItems.length > 0 && (
