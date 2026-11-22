@@ -2011,9 +2011,12 @@
   counted from the scope, no AI call; „კი, მოამზადე“ only prepares a plan that still waits for „კი“), `nextSteps` under an answer.
   The cog can be switched off on a device (`damkhmare/fabPref.ts`, `sg-program-fab-off`; the user: „გათიშვა და ჩართვა შემეძლოს … რომ
   ეკრანებზე არ მიედოს“): „პარამეტრები“ → „მცურავი კბილანა“ (superadmins only), and the small window's round „დამალვა“ (with „გაუქმება“).
-- Not built yet: the other „AI“ words in the app (~70 files; „AI მასწავლებელი“ → „ავტომატური მასწავლებელი“), the engine switch
-  „გუგლის პროგრამა · ლადოს პროგრამა“ (Lado = Claude; needs the user's API credit linked and a server-side key — never a key in the
-  app), memory, photos and files, the students' program, layout by words. Don't raise Google's under-18 rule again (the user: „მე
+- **Engine switch (2026-11-22, the user: „ჩართე ხოდა ლადო“):** superadmins see „გუგლის პროგრამა · ლადოს პროგრამა“ (`Seg`) under the
+  assistant's head (`damkhmare/enginePref.ts`, `sg-program-engine`, Lado by default); everyone else always asks Google. Lado = Claude
+  (`claude-sonnet-5-5`) through the reminders Worker's `POST /lado { token, prompt }` (owner/superadmins only, checked on the server).
+  The key is the GitHub secret `ANTHROPIC_API_KEY`, put into the Worker by `reminders-worker.yml` on every run — never in the app. It
+  spends the Max plan's monthly API credit ($100, no rollover); when it is gone the call answers 402 → „დაიღალა“, nothing is charged.
+- Not built yet: the other „AI“ words in the app (~70 files; „AI მასწავლებელი“ → „ავტომატური მასწავლებელი“), memory, photos and files, the students' program, layout by words. Don't raise Google's under-18 rule again (the user: „მე
   ვიდარდებ“).
 
 ## Plan part 1 (built 2026-10-06, branch `claude/peaceful-dijkstra-9lbmeb`, PR gbsdesign/sagandzuris-skola#1)

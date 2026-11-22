@@ -96,3 +96,17 @@ jobs:
             echo "::warning::The Worker has no FIREBASE_SA and the secret FIREBASE_SERVICE_ACCOUNT is missing — group, assignment and admin reminders stay off."
           fi
           has VAPID_PRIVATE_JWK || echo "::warning::The Worker has no VAPID_PRIVATE_JWK — no push can be sent until it is set."
+
+      # „ლადოს პროგრამა“ (POST /lado): the Claude key from the GitHub secret ANTHROPIC_API_KEY, given on every run so a new
+      # key put into GitHub reaches the Worker at once; the value is never printed
+      - name: Give the Worker the Claude key
+        if: steps.key.outputs.ok == 'true'
+        working-directory: worker/reminders
+        env:
+          AK: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: |
+          if [ -n "$AK" ]; then
+            printf '%s' "$AK" | wrangler secret put ANTHROPIC_API_KEY
+          else
+            echo "::warning::The secret ANTHROPIC_API_KEY is missing — „ლადოს პროგრამა“ stays off."
+          fi
