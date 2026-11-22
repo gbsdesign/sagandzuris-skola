@@ -28,7 +28,7 @@ const withWhy = (e: AiTeacherError, why: string) => Object.assign(e, { why });
 const LADO_SERVER = 'https://sagandzuri-reminders.mr-gabunia.workers.dev/lado';
 
 // „ლადოს პროგრამა“: the same prompt to Claude through the Worker (the key stays there); its answer is the JSON as text
-const askLado = async (prompt: string): Promise<string> => {
+export const askLado = async (prompt: string): Promise<string> => {
   const user = auth.currentUser;
   if (!user) throw new AiTeacherError('setup');
   let res: Response;
