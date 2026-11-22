@@ -12,6 +12,8 @@ import { startChatCall, answerChatCall, mayStartChatCall } from '../../../compon
 import { ChatPanel, firstName } from '../../../components/classes/ChatPanel';
 import type { CatalogEntry } from '../../../utils/pathItems';
 import { ChatPath, PathSigns } from './ChatPath';
+import { GearSpark } from '../damkhmare/GearSpark';
+import { openAssistant, useAssistantAllowed } from '../damkhmare/open';
 import { PinCard } from '../../../components/classes/PinCard';
 import { PinSheet } from '../../../components/classes/PinSheet';
 import { pinPreview, sendDmPin } from '../../../hooks/useChatPins';
@@ -85,6 +87,8 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
   const [preset, setPreset] = useState<CatalogEntry | null>(null);
   // the chat whose path is dropped under the head (the head's „გზა“; another chat opens folded)
   const [pathOpenIn, setPathOpenIn] = useState('');
+  // the program's cog after the field's microphone, as in a class chat (2026-11-22, the user's mark „აი აქ“) — teachers and admins
+  const assistantOn = useAssistantAllowed();
 
   useEffect(() => {
     if (thread && canWrite && isUnread(thread, uid)) markRead(thread, uid).catch(e => console.warn('dm: ', e?.code || e));
@@ -154,6 +158,9 @@ export const DmChat: React.FC<{ id: string; classes: SchoolClass[]; wide: boolea
       canDelete={m => m.uid === uid}
       renderCard={m => (m.kind === 'note' || m.kind === 'work' ? <PinCard m={m} forMe={m.to === uid} /> : null)}
       onAttach={canPin ? () => setPinning(true) : undefined}
+      extraTool={canWrite && assistantOn
+        ? { label: 'ავტომატური პროგრამა', icon: <GearSpark />, onClick: () => openAssistant({ classId: thread.classId || undefined, page: 'dm' }) }
+        : undefined}
       onSent={(kind, text) => noteSent(thread, uid, kind === 'voice' ? VOICE_PREVIEW : text).catch(e => console.warn('dm: ', e?.code || e))}
       header={
         <>
