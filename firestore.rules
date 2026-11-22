@@ -326,8 +326,9 @@ service cloud.firestore {
     }
 
     // ---- "ჩემი სამოსი"'s real parts (src/utils/samosiProof.ts, 2026-11-08) -----------------------------------------
-    // The small photo of a part the member owns for real, kept once the AI saw it. The member keeps it; they, their
-    // teachers and admins see it; a teacher or an admin may take a wrong one away.
+    // The small photo of a part the member owns for real, kept once the AI saw it. The member keeps it — or, since
+    // 2026-11-22, their teacher or an admin photographs it for them; they, their teachers and admins see it; a teacher
+    // or an admin may take a wrong one away.
     match /samosiProof/{userId}/parts/{partId} {
       function teachesStudent() {
         return isTeacher()
@@ -335,7 +336,7 @@ service cloud.firestore {
       }
       function isSelf() { return isSignedIn() && uid() == userId; }
       allow read: if isSelf() || isAdmin() || teachesStudent();
-      allow create, update: if isSelf()
+      allow create, update: if (isSelf() || isAdmin() || teachesStudent())
         && request.resource.data.keys().hasOnly(['image', 'at'])
         && request.resource.data.image is bytes && request.resource.data.image.size() < 200000;
       allow delete: if isSelf() || isAdmin() || teachesStudent();
