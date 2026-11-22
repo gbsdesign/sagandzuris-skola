@@ -698,7 +698,7 @@
   4973525522189619825). The Java `namespace` stays `ge.sagandzureli.app`; the shortcuts' `targetPackage`, the file provider and the
   Firebase app („Sagandzuri Skola Android“, `1:781443193404:android:933a1cc80e10f903738139`, upload key's SHA-1 in it) follow the
   new id. `sgApp.pkg` tells the site which app it runs in (`openInApp`); `assetlinks.json` lists both. Signed with the same upload
-  key from Drive. Add the Play signing key's SHA-1/256 (Play Console → App integrity) to the Firebase app and `assetlinks.json`.
+  key from Drive. The Play signing key (SHA-1 `5E:3B:…:D5:B2`) is in the Firebase app, its SHA-256 in `assetlinks.json`.
 - **iPhone app** (App Store, `ios/`, 2026-11-05; published under the user's friend's Apple developer account — the user is an
   Admin of that team): the live site https://sagandzureli.ge in the app's own WKWebView (site updates need no app update), bundle
   `ge.sagandzureli.app`, iPhone only, iOS 16+. Swift in `ios/Sagandzuri/`; the Xcode project, Info.plist and entitlements are made
