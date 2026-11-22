@@ -6,8 +6,8 @@ import { Press, cx, FOCUS, FOCUS_IN } from '../../../components/ui2';
 // ღილაკები დახატო … პირველი მთავარი ღილაკი არის მიმდინარე გაკვეთილი, მერე გალობა სიმღერა ლოცვა, შემდეგ დაბლა სხვა ღილაკები
 // მცირედ“), then „დახვეწე … უფრო თანამედროვედ“ and „ულტრა თანამედროვე მინდა“ the same night:
 // - one holy father's saying in a quiet white card;
-// - „მიმდინარე გაკვეთილი“: a big wine card with a warm glow and big letters (it opens what the vine's „გაკვეთილი“ bunch
-//   opened — a student's teacher chat, everyone else the letters);
+// - „გაკვეთილი“ (until 2026-11-22 „მიმდინარე გაკვეთილი“): a compact wine row with a warm glow (it opens what the vine's
+//   „გაკვეთილი“ bunch opened — a student's teacher chat, everyone else the letters);
 // - გალობა · სიმღერა · ლოცვანი as a mosaic: გალობა tall on the left, the other two stacked on the right;
 // - the other sections as an app grid in one white card: a colour square with a gloss, the name under it.
 // Pure: everything comes by props (HomeV2 is the wrapper with the app's data).
@@ -25,7 +25,7 @@ export interface HomeTile {
 
 export interface HomeV2ViewProps {
   saying: { text: string; author: string };
-  /** „მიმდინარე გაკვეთილი“: none — the card is not drawn (a member with no letters) */
+  /** „გაკვეთილი“: none — the card is not drawn (a member with no letters) */
   lesson?: { unread: number; onOpen: () => void };
   /** the three big tiles: გალობა · სიმღერა · ლოცვანი (a hidden section is left out) */
   main: HomeTile[];
@@ -102,42 +102,36 @@ export const HomeV2View: React.FC<HomeV2ViewProps> = ({ saying, lesson, main, mo
       <figcaption className="relative text-meta font-semibold text-wine">— {saying.author}</figcaption>
     </figure>
 
-    {/* the main card: where my learning is now — deep wine, a warm glow behind, two fine rings, big letters */}
+    {/* the main card: where my learning is now — deep wine, a warm glow behind, one compact row (2026-11-22, the user:
+        „მარტო გაკვეთილი ეწეროს … უფრო კომპაქტური გახადე“): the mark, „გაკვეთილი“ (new letters under it), the arrow */}
     {lesson && (
       <Press
         onClick={lesson.onOpen}
-        aria-label={lesson.unread ? `მიმდინარე გაკვეთილი, ${lesson.unread} ახალი წერილი` : 'მიმდინარე გაკვეთილი'}
+        aria-label={lesson.unread ? `გაკვეთილი, ${lesson.unread} ახალი წერილი` : 'გაკვეთილი'}
         style={rise(1)}
         className={cx(
-          'sg-up group relative isolate flex min-h-[148px] w-full cursor-pointer flex-col justify-between gap-4 overflow-hidden rounded-card',
-          'bg-linear-to-br from-wine to-wine-deep p-5 text-left text-white shadow-wine select-none transition active:scale-[0.98]', FOCUS,
+          'sg-up group relative isolate flex min-h-[76px] w-full cursor-pointer items-center gap-3.5 overflow-hidden rounded-card',
+          'bg-linear-to-br from-wine to-wine-deep px-4 py-3.5 text-left text-white shadow-wine select-none transition active:scale-[0.98]', FOCUS,
         )}
       >
-        <span aria-hidden="true" className="pointer-events-none absolute -top-24 -right-16 -z-1 size-60 rounded-full bg-blush/35 blur-3xl" />
-        <span aria-hidden="true" className="pointer-events-none absolute -bottom-28 -left-16 -z-1 size-56 rounded-full bg-gold/30 blur-3xl" />
-        <span aria-hidden="true" className="pointer-events-none absolute -right-12 -bottom-16 -z-1 size-48 rounded-full border border-white/12" />
-        <span aria-hidden="true" className="pointer-events-none absolute -right-3 -bottom-7 -z-1 size-28 rounded-full border border-white/10" />
+        <span aria-hidden="true" className="pointer-events-none absolute -top-20 -right-10 -z-1 size-44 rounded-full bg-blush/35 blur-3xl" />
+        <span aria-hidden="true" className="pointer-events-none absolute -bottom-20 -left-10 -z-1 size-40 rounded-full bg-gold/30 blur-3xl" />
+        <span aria-hidden="true" className="pointer-events-none absolute -right-8 -bottom-14 -z-1 size-32 rounded-full border border-white/12" />
 
-        <span className="flex items-start justify-between gap-3">
-          <span aria-hidden="true" className="flex size-11 items-center justify-center rounded-field bg-white/15 ring-1 ring-white/25 backdrop-blur-md [&_svg]:size-[22px]">
-            <NotebookPen strokeWidth={2} />
-          </span>
+        <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-field bg-white/15 ring-1 ring-white/25 backdrop-blur-md [&_svg]:size-[22px]">
+          <NotebookPen strokeWidth={2} />
+        </span>
+        <span className="flex min-w-0 flex-1 flex-col">
+          <span className="text-title leading-tight font-bold tracking-[-0.01em]">გაკვეთილი</span>
           {lesson.unread > 0 && (
-            <span className="flex h-7 items-center gap-1.5 rounded-full bg-white/15 pr-3 pl-2 text-cap font-semibold ring-1 ring-white/25 backdrop-blur-md">
-              <span aria-hidden="true" className="size-2 rounded-full bg-blush" />
+            <span className="flex items-center gap-1.5 text-cap leading-tight font-semibold text-white/85">
+              <span aria-hidden="true" className="size-2 shrink-0 rounded-full bg-blush" />
               {lesson.unread} ახალი წერილი
             </span>
           )}
         </span>
-
-        <span className="flex items-end justify-between gap-3">
-          <span className="flex flex-col text-hero leading-[1.08] font-bold tracking-[-0.02em]">
-            <span>მიმდინარე</span>
-            <span>გაკვეთილი</span>
-          </span>
-          <span aria-hidden="true" className="flex size-12 shrink-0 items-center justify-center rounded-full bg-surf text-wine shadow-knob transition group-active:scale-90 [&_svg]:size-[22px]">
-            <ArrowUpRight strokeWidth={2.5} />
-          </span>
+        <span aria-hidden="true" className="flex size-11 shrink-0 items-center justify-center rounded-full bg-surf text-wine shadow-knob transition group-active:scale-90 [&_svg]:size-5">
+          <ArrowUpRight strokeWidth={2.5} />
         </span>
       </Press>
     )}
