@@ -88,7 +88,7 @@ export const readSide = (run: () => void): SwipeSide => ({
   label: 'წაკითხულად', icon: <CheckCheck className="size-5" />, tone: 'bg-leaf text-white', run,
 });
 
-// ---- the class filter: a row of class pills, „ყველა“ first ---------------------------------------------------------
+// ---- the class filter: class pills two a row, „ყველა“ first (2026-11-22, the user: „შემოკლებული ჩანდეს ნახევრად … ლამაზად“) ---------------------------------------------------------
 
 export const ClassPick: React.FC<{
   classes: SchoolClass[]; chip: string; onPick: (id: string) => void; unreadIn?: (classId: string) => number;
@@ -97,10 +97,10 @@ export const ClassPick: React.FC<{
   const pill = (id: string, lead: React.ReactNode, name: string, n = 0) => {
     const on = chip === id;
     return (
-      <Press key={id} aria-pressed={on} onClick={() => pick(id)}
-        className="group flex h-tap max-w-full min-w-0 shrink-0 cursor-pointer items-center rounded-full focus-visible:outline-none">
+      <Press key={id} aria-pressed={on} onClick={() => pick(id)} title={name}
+        className="group flex h-tap w-full min-w-0 cursor-pointer items-center rounded-full focus-visible:outline-none">
         <span className={cx(
-          'flex h-10 max-w-full min-w-0 items-center gap-2 rounded-full py-1 pr-3.5 pl-1 text-body transition group-active:scale-[0.97]',
+          'flex h-10 w-full min-w-0 items-center gap-2 rounded-full py-1 pr-3.5 pl-1 text-body transition group-active:scale-[0.97]',
           'group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-wine/60',
           on ? 'bg-wine font-bold text-white' : 'bg-surf font-semibold text-ink',
         )}>
@@ -112,7 +112,7 @@ export const ClassPick: React.FC<{
     );
   };
   return (
-    <div role="group" aria-label="რომელი კლასის ჩათები" className="flex flex-wrap gap-x-2 gap-y-1">
+    <div role="group" aria-label="რომელი კლასის ჩათები" className="grid grid-cols-2 gap-x-2 gap-y-1">
       {pill('all', <Dot icon={<Users />} color="sea" size={30} />, 'ყველა')}
       {classes.map(c => pill(c.id, <ClassLogo name={c.name} logo={c.logo} className="size-8 shrink-0 text-meta" />, c.name, unreadIn?.(c.id)))}
     </div>
