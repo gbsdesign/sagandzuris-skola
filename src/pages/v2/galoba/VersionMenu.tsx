@@ -1,27 +1,35 @@
-import React, { useState } from 'react';
-import { Bookmark, BookmarkCheck, CalendarDays, ChevronLeft, GraduationCap, ListPlus, Music, UserRound } from 'lucide-react';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import React, { useEffect, useMemo, useState } from 'react';
+import { Bookmark, BookmarkCheck, CalendarDays, Check, ChevronLeft, GraduationCap, ListPlus, UserRound, Users } from 'lucide-react';
+import { FieldPath, deleteField, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../../firebase';
 import { useAuth, useChants } from '../../../context';
 import { useNotes } from '../../../context/NotesContext';
 import { useManagedClasses, type SchoolClass } from '../../../hooks/useClasses';
 import { saveClassProgram } from '../../../components/admin/ClassesAdmin';
-import { Avatar, Dot, Helper, Row, Rows, Sheet } from '../../../components/ui2';
+import { Avatar, Dot, Field, Helper, Row, Rows, SectionLabel, Sheet } from '../../../components/ui2';
 import { ClassLogo } from '../../../components/classes/ClassLogo';
 import type { ChantItem, ChantVariant } from '../../../data';
 import { versionTitle } from '../../../data/tsirvaChants';
 import { addDayChant, removeDayChant, tbilisiToday, useDayChants } from '../../../utils/dayChants';
+import { shownName, useDirectory } from '../../../utils/directory';
+import { kaName } from '../../../utils/georgianName';
 import { triggerHaptic } from '../../../utils/haptics';
 import { errorText } from '../../../utils/errorText';
 
 // A version card's long press (2026-11-22, the user: „დიდხანს დაჭერისას ამოვიდეს ფანჯარა … კლასის პროგრამაში და ინდივიდუალურ
 // პროგრამაშიც მიმაგრება … დღის მსახურებაში მონიშვნა“): my treasury (the old 🔖), today's liturgy (the old ≡+, the regent), today's
-// day service, and for teachers and admins a class's program or one student's path.
+// day service, and for teachers and admins one way „კლასს ან მოსწავლეს“ (the same evening, the user: „მოსწავლეზე მიმაგრება არ
+// მუშაობს … კლასის გარეშე წევრები არ ჩანს … გაორებული ფუნქციები“): the class list once, a class = its whole program on top and
+// each member's path under it, each line saying whether it is there; an admin also gets the members of no class.
 
-type Step = { at: 'main' } | { at: 'class' } | { at: 'who' } | { at: 'student'; cls: SchoolClass };
+type Step = { at: 'main' } | { at: 'classes' } | { at: 'class'; cls: SchoolClass } | { at: 'loose' };
+/** a member's path: has it / hasn't / could not be read */
+type Has = 'yes' | 'no' | 'err';
+type Person = { uid: string; name: string; photo?: string };
+
 
 export const VersionMenu: React.FC<{ chant: ChantItem; variant: ChantVariant; hasNotes: boolean; onClose: () => void }> = ({ chant, variant, hasNotes, onClose }) => {
-  const { user, isTeacher } = useAuth();
+  const { user, isTeacher, isAdmin } = useAuth();
   const { selectedChantVariants = {}, toggleVariantSelection } = useChants();
   const { liturgy } = useNotes();
   const { classes } = useManagedClasses();
@@ -30,6 +38,9 @@ export const VersionMenu: React.FC<{ chant: ChantItem; variant: ChantVariant; ha
   const [note, setNote] = useState('');
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState('');
+  const [has, setHas] = useState<Record<string, Has>>({});
+  const [find, setFind] = useState('');
+  const { people } = useDirectory(isAdmin && step.at === 'loose');
 
   const id = variant.id;
   const title = versionTitle(chant, variant);
@@ -40,44 +51,90 @@ export const VersionMenu: React.FC<{ chant: ChantItem; variant: ChantVariant; ha
   const said = (t: string) => { triggerHaptic(10); setErr(''); setNote(t); };
   const failed = (e: unknown) => { setNote(''); setErr('ვერ შეინახა: ' + errorText(e)); };
 
+  // the members of no class (admins): everyone in the directory who is in no class's list, nor teaches one
+  const loose = useMemo<Person[]>(() => {
+    if (step.at !== 'loose') return [];
+    const inClass = new Set(classes.flatMap(c => [...c.memberIds, ...c.teacherIds]));
+    const q = find.trim().toLowerCase();
+    return people
+      .filter(p => !inClass.has(p.uid) && p.uid !== user?.uid)
+      .map(p => ({ uid: p.uid, name: shownName(p), photo: p.photoURL }))
+      .filter(p => !q || p.name.toLowerCase().includes(q));
+  }, [step.at, people, classes, find, user?.uid]);
+
+  // a class's members: whether each has this version on their path, read once the class opens
+  const classUids = step.at === 'class' ? step.cls.members.map(m => m.uid).join(',') : '';
+  useEffect(() => {
+    if (!classUids) return;
+    let live = true;
+    for (const uid of classUids.split(',')) {
+      getDoc(doc(db, 'students', uid)).then(
+        s => { if (live) setHas(h => ({ ...h, [uid]: (s.data()?.selectedChantVariants ?? {})[id] ? 'yes' : 'no' })); },
+        () => { if (live) setHas(h => ({ ...h, [uid]: 'err' })); },
+      );
+    }
+    return () => { live = false; };
+  }, [classUids, id]);
+
   const toggleClass = async (cls: SchoolClass) => {
-    const has = cls.program.some(p => p.id === id);
+    const there = cls.program.some(p => p.id === id);
     setBusy(cls.id);
     try {
-      const next = has ? cls.program.filter(p => p.id !== id) : [...cls.program, { id, title, code: variant.code }];
+      const next = there ? cls.program.filter(p => p.id !== id) : [...cls.program, { id, title, code: variant.code }];
       const why = await saveClassProgram(cls, next);
-      if (why) setErr(String(why)); else said(has ? `${cls.name} — პროგრამიდან ამოვიდა` : `${cls.name} — პროგრამაში ჩაჯდა`);
+      if (why) { setNote(''); setErr(String(why)); } else said(there ? 'კლასის პროგრამიდან ამოვიდა' : 'კლასის პროგრამაში ჩაჯდა');
     } catch (e) { failed(e); }
     setBusy('');
   };
 
-  const addToStudent = async (uid: string, name: string) => {
-    setBusy(uid);
+  // puts the version on a member's path or takes it off; an unknown state is read first
+  const togglePerson = async (p: Person) => {
+    setBusy(p.uid);
     try {
-      const ref = doc(db, 'students', uid);
-      const snap = await getDoc(ref);
-      const path = (snap.data()?.selectedChantVariants ?? {}) as Record<string, unknown>;
-      if (path[id]) said(`${name}-ს უკვე აქვს გზაზე`);
-      else {
+      const ref = doc(db, 'students', p.uid);
+      let now = has[p.uid];
+      if (now !== 'yes' && now !== 'no') {
+        const snap = await getDoc(ref);
+        now = (snap.data()?.selectedChantVariants ?? {})[id] ? 'yes' : 'no';
+      }
+      if (now === 'yes') {
+        await updateDoc(ref, new FieldPath('selectedChantVariants', id), deleteField());
+        setHas(h => ({ ...h, [p.uid]: 'no' }));
+        said(`${p.name} — გზიდან ამოვიდა`);
+      } else {
         const item = { variantId: id, chantId: chant.id, chantName: chant.title, code: variant.code, label: variant.label, fullTitle: title, isLearned: false, voices: [] };
         await setDoc(ref, { selectedChantVariants: { [id]: item } }, { merge: true });
-        said(`${name} — გზაზე ჩაჯდა`);
+        setHas(h => ({ ...h, [p.uid]: 'yes' }));
+        said(`${p.name} — გზაზე ჩაჯდა`);
       }
     } catch (e) { failed(e); }
     setBusy('');
   };
 
-  const back = step.at === 'student' ? () => setStep({ at: 'who' }) : () => setStep({ at: 'main' });
-  const head = step.at !== 'main' && (
-    <Rows>
-      <Row lead={<Dot icon={<ChevronLeft />} />} title="უკან" right={null} onClick={() => { setNote(''); setErr(''); back(); }} />
-    </Rows>
-  );
+  const go = (s: Step) => { setNote(''); setErr(''); setFind(''); setStep(s); };
+  const back = step.at === 'class' || step.at === 'loose' ? () => go({ at: 'classes' }) : () => go({ at: 'main' });
+
+  const personRow = (p: Person) => {
+    const h = has[p.uid];
+    const sub = busy === p.uid ? 'ინახება…' : h === 'yes' ? 'გზაზეა — შეხებით ამოვა' : h === 'no' ? 'შეხებით ჩაჯდება გზაზე' : h === 'err' ? 'ვერ წავიკითხე — შეხებით სცადე' : step.at === 'class' ? '…' : undefined;
+    return (
+      <Row key={p.uid} lead={<Avatar name={p.name} photo={p.photo} size={40} />} title={p.name} sub={sub}
+        right={h === 'yes' ? <Check className="size-5 shrink-0 text-leaf" aria-label="გზაზეა" /> : null}
+        disabled={!!busy} onClick={() => void togglePerson(p)} />
+    );
+  };
 
   return (
     <Sheet open title={title} onClose={onClose}>
       <div className="flex flex-col gap-2.5">
-        {head}
+        {step.at !== 'main' && (
+          <Rows>
+            <Row lead={<Dot icon={<ChevronLeft />} />} title="უკან" right={null} onClick={back} />
+          </Rows>
+        )}
+        {note && <p className="px-1 text-meta font-semibold text-leaf" role="status">{note}</p>}
+        {err && <p className="px-1 text-meta font-semibold text-danger" role="alert">{err}</p>}
+
         {step.at === 'main' && (
           <Rows>
             <Row lead={<Dot icon={mine ? <BookmarkCheck /> : <Bookmark />} color={mine ? 'leaf' : undefined} />}
@@ -95,40 +152,57 @@ export const VersionMenu: React.FC<{ chant: ChantItem; variant: ChantVariant; ha
                 onClick={() => (inDay ? removeDayChant(user.uid, today, id) : addDayChant(user.uid, today, id))
                   .then(() => said(inDay ? 'დღის მსახურებიდან ამოვიდა' : 'დღის მსახურებაში ჩაჯდა'), failed)} />
             )}
-            {isTeacher && classes.length > 0 && (
-              <>
-                <Row lead={<Dot icon={<GraduationCap />} />} title="კლასის პროგრამაში მიმაგრება" onClick={() => { setNote(''); setStep({ at: 'class' }); }} />
-                <Row lead={<Dot icon={<UserRound />} />} title="მოსწავლის გზაზე მიმაგრება" onClick={() => { setNote(''); setStep({ at: 'who' }); }} />
-              </>
+            {isTeacher && (classes.length > 0 || isAdmin) && (
+              <Row lead={<Dot icon={<GraduationCap />} />} title="კლასს ან მოსწავლეს მიმაგრება" sub="პროგრამაში ან მოსწავლის გზაზე"
+                onClick={() => go({ at: 'classes' })} />
             )}
           </Rows>
         )}
-        {(step.at === 'class' || step.at === 'who') && (
+
+        {step.at === 'classes' && (
           <Rows>
             {classes.map(cls => {
-              const has = step.at === 'class' && cls.program.some(p => p.id === id);
+              const there = cls.program.some(p => p.id === id);
               return (
                 <Row key={cls.id} lead={<ClassLogo name={cls.name} logo={cls.logo} className="size-10 shrink-0" />} title={cls.name}
-                  sub={step.at === 'class' ? (has ? 'პროგრამაშია — შეხებით ამოვა' : `${cls.program.length} საგალობელი`) : `${cls.members.length} მოსწავლე`}
-                  right={step.at === 'class' ? (has ? <Music className="size-5 text-wine" aria-hidden="true" /> : null) : undefined}
-                  disabled={!!busy}
-                  onClick={() => (step.at === 'class' ? void toggleClass(cls) : setStep({ at: 'student', cls }))} />
+                  sub={[there && 'პროგრამაშია', `${cls.members.length} მოსწავლე`].filter(Boolean).join(' · ')}
+                  onClick={() => go({ at: 'class', cls })} />
               );
             })}
+            {isAdmin && (
+              <Row lead={<Dot icon={<Users />} />} title="კლასის გარეშე წევრები" onClick={() => go({ at: 'loose' })} />
+            )}
           </Rows>
         )}
-        {step.at === 'student' && (
-          step.cls.members.length === 0 ? <Helper>ამ კლასში მოსწავლე არ არის.</Helper> : (
-            <Rows>
-              {step.cls.members.map(m => (
-                <Row key={m.uid} lead={<Avatar name={m.name} photo={m.photoURL} size={40} />} title={m.name} right={null}
-                  disabled={!!busy} onClick={() => void addToStudent(m.uid, m.name)} />
-              ))}
-            </Rows>
-          )
+
+        {step.at === 'class' && (() => {
+          const cls = classes.find(c => c.id === step.cls.id) ?? step.cls;
+          const there = cls.program.some(p => p.id === id);
+          return (
+            <>
+              <Rows>
+                <Row lead={<Dot icon={<GraduationCap />} color={there ? 'wine' : undefined} />}
+                  title={there ? 'კლასის პროგრამიდან ამოღება' : 'მთელი კლასის პროგრამაში დამატება'}
+                  sub={busy === cls.id ? 'ინახება…' : there ? 'პროგრამაშია' : `${cls.program.length} საგალობელი პროგრამაში`}
+                  right={there ? <Check className="size-5 shrink-0 text-wine" aria-label="პროგრამაშია" /> : null}
+                  disabled={!!busy} onClick={() => void toggleClass(cls)} />
+              </Rows>
+              <SectionLabel label={<span className="flex items-center gap-1.5"><UserRound className="size-4" aria-hidden="true" />მოსწავლის გზაზე</span>} />
+              {cls.members.length === 0 ? <Helper>ამ კლასში მოსწავლე არ არის.</Helper> : (
+                <Rows>{cls.members.map(m => personRow({ uid: m.uid, name: kaName(m.name), photo: m.photoURL }))}</Rows>
+              )}
+            </>
+          );
+        })()}
+
+        {step.at === 'loose' && (
+          <>
+            <Field label="ძებნა" type="search" value={find} onChange={setFind} placeholder="სახელი" />
+            {loose.length === 0 ? <Helper>{find ? 'ვერ მოიძებნა.' : 'კლასის გარეშე წევრი არ არის.'}</Helper> : (
+              <Rows>{loose.map(personRow)}</Rows>
+            )}
+          </>
         )}
-        {note && <p className="px-1 text-meta font-semibold text-leaf">{note}</p>}
-        {err && <p className="px-1 text-meta font-semibold text-danger">{err}</p>}
       </div>
     </Sheet>
   );
