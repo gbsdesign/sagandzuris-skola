@@ -1,5 +1,6 @@
 import React from 'react';
-import { CalendarClock, Check, CheckCheck, Eye, EyeOff, GraduationCap, Mic, Pin, PinOff, ShieldCheck, Users } from 'lucide-react';
+import { CalendarClock, Check, CheckCheck, Eye, EyeOff, GraduationCap, ListChecks, Mic, Pin, PinOff, ShieldCheck, Users } from 'lucide-react';
+import { GearSpark } from '../damkhmare/GearSpark';
 import { Badge, Button, cx, Dot, Press, Sheet, Small } from '../../../components/ui2';
 import { useLongPress } from '../../../hooks/useLongPress';
 import { SwipeRow, type SwipeSide } from '../../../components/ui/SwipeRow';
@@ -112,13 +113,40 @@ export const ClassTimes: React.FC<{ slots: LessonSlot[]; onEdit?: () => void }> 
       <CalendarClock aria-hidden="true" className="size-4 shrink-0 text-wine" strokeWidth={2} />
       {sortSlots(slots).map((s, i) => (
         <span key={i} className={cx(
-          'inline-flex h-6 items-center rounded-full px-2 text-[12px] leading-none font-bold whitespace-nowrap tabular-nums',
+          'inline-flex h-6 items-center rounded-full px-2 text-cap leading-none font-bold whitespace-nowrap tabular-nums',
           s === next ? 'bg-wine text-white' : 'bg-surf text-ink ring-1 ring-wine/15',
         )}>{DAY_SHORT[s.day]} {s.start}</span>
       ))}
     </span>
   );
 };
+
+// ---- the open class chat's buttons under its name (2026-11-22, the user: „ავტო პროგრამის, პროგრამის და წევრები ღილაკები
+// გადმოიტანე ჩათის სახელის ქვეშ“): small pills in one row; „წევრები“ and the program's cog only for its teachers and admins ----
+
+const ToolPill: React.FC<{ icon: React.ReactNode; label: string; onClick: () => void }> = ({ icon, label, onClick }) => (
+  <Press onClick={() => { triggerHaptic(8); onClick(); }}
+    className="group flex h-tap min-w-0 cursor-pointer items-center rounded-full focus-visible:outline-none">
+    <span className={cx(
+      'flex h-9 min-w-0 items-center gap-1.5 rounded-full bg-surf py-1 pr-3.5 pl-2.5 text-meta font-bold text-ink transition',
+      'group-active:scale-[0.97] group-active:bg-soft group-focus-visible:outline-2 group-focus-visible:outline-offset-2 group-focus-visible:outline-wine/60',
+      '[&_svg]:size-[18px] [&_svg]:shrink-0 [&_svg]:text-wine',
+    )}>
+      {icon}
+      <span className="min-w-0 truncate">{label}</span>
+    </span>
+  </Press>
+);
+
+export const ClassChatTools: React.FC<{
+  auto?: () => void; program: () => void; members?: () => void;
+}> = ({ auto, program, members }) => (
+  <div role="group" aria-label="კლასის ღილაკები" className="flex flex-wrap items-center gap-x-1.5">
+    {auto && <ToolPill icon={<GearSpark />} label="ავტ. პროგრამა" onClick={auto} />}
+    <ToolPill icon={<ListChecks strokeWidth={2} />} label="პროგრამა" onClick={program} />
+    {members && <ToolPill icon={<Users strokeWidth={2} />} label="წევრები" onClick={members} />}
+  </div>
+);
 
 // swipe sides
 export const hideSide = (run: () => void): SwipeSide => ({

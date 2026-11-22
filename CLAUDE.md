@@ -2252,7 +2252,11 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   (start only, the next one filled, no „N დღეში“); a long press on them opens `ScheduleSheet` for the class's teachers/admins (no ✎;
   they stop the row's own long press/swipe). The open class chat's head is compact (logo 32px, name 15px up to 2 lines, „N წევრი ·
   გვერდი ›“). The list's page name and the home's main button say **„სწავლა“** (was „წერილები“ / „გაკვეთილი“; the user: „სწავლა
-  დააწერე აქაც და შიგნითაც“).
+  დააწერე აქაც და შიგნითაც“). The times' long press opens the class page's own `TimetableSheet` (`klasi/teacher/Timetable.tsx`, edit).
+  Under the open class chat's name (`ClassChat under`) one row of pills (`ClassChatTools` in `parts.tsx`): „ავტ. პროგრამა“ (the cog,
+  `openAssistant`, while `useAssistantAllowed`) · „პროგრამა“ · „წევრები“ — the last two open the class page on that tab
+  (`keepClassTab` + `openClass`); the cog and „წევრები“ only for the class's teachers/admins. The name held long opens the class
+  page's „მეტი“ (`ClassMoreSheet openItem` — its program / report / AI-note rows open the class page first, then the item).
 - **The whole path in the chat's fold (2026-11-21 night**, the user: „გზას რომ ჩახსნიდი … ჩამოსაშლელად პირდაპირ ჩათში“, answer „მთელი
   გზა, როგორც გზის გვერდზე“): `ChatPath` — the student's own side unfolds the whole „საგანძური“ page (`SagandzuriPage bare`, lazy: no
   bar, the ✎ by „ჩემი საგალობლები“; numbers, assignments, chips, flights, ოსტატობა); the teacher's side keeps its ჩათვლა / დამატება /

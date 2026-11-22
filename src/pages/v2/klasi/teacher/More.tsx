@@ -45,7 +45,9 @@ const useGroupLine = (cls: SchoolClass) => {
   return { group, line: group ? (loading ? 'იტვირთება…' : `წაკითხულია ${readCount(slots)} / ${KATHISMA_COUNT}`) : 'ჯერ არ არის — შექმნა' };
 };
 
-export const ClassMoreSheet: React.FC<{ cls: SchoolClass; open: boolean; onClose: () => void }> = ({ cls, open, onClose }) => {
+/** `openItem`: how one of the class page's screens opens (default: here, on the class page; the letters' class chat
+ *  opens the class page first — 2026-11-22, the chat's name held long opens this sheet). */
+export const ClassMoreSheet: React.FC<{ cls: SchoolClass; open: boolean; onClose: () => void; openItem?: (item: string) => void }> = ({ cls, open, onClose, openItem }) => {
   const { isAdmin } = useAuth();
   const aiOn = useAccess().on('aiTeacher');
   const { openMapItem, navigateTo, handleGoBack } = useNavigation();
@@ -55,6 +57,7 @@ export const ClassMoreSheet: React.FC<{ cls: SchoolClass; open: boolean; onClose
   const [sub, setSub] = useState<Sub | null>(null);
   const [problem, setProblem] = useState('');
 
+  const go = (item: string) => (openItem ? openItem(item) : openMapItem(item));
   const back = () => setSub(null);
   const closeAll = () => { setSub(null); setProblem(''); onClose(); };
 
@@ -83,10 +86,10 @@ export const ClassMoreSheet: React.FC<{ cls: SchoolClass; open: boolean; onClose
           <Row lead={<Dot icon={<Church />} />} title="დღევანდელი წირვა" sub="პროგრამა ტაძრისთვის" onClick={() => { closeAll(); openProgram(); }} />
           <Row lead={<Dot icon={<Pencil />} />} title="სახელი და ლოგო" onClick={() => setSub('name')} />
           <Row lead={<Dot icon={<CalendarDays />} />} title="გაკვეთილების ცხრილი" sub={timetableLine(cls.schedule)} onClick={() => setSub('time')} />
-          <Row lead={<Dot icon={<ListChecks />} />} title="სასწავლო პროგრამა" sub={`${cls.program.length} საგალობელი`} onClick={() => { closeAll(); openMapItem(CLASS_ORDER); }} />
-          <Row lead={<Dot icon={<ClipboardCheck />} />} title="კვირის შეჯამება" sub="ვინ ივარჯიშა · დასწრება · მზა წერილი" wrap onClick={() => { closeAll(); openMapItem(AI_REPORT); }} />
+          <Row lead={<Dot icon={<ListChecks />} />} title="სასწავლო პროგრამა" sub={`${cls.program.length} საგალობელი`} onClick={() => { closeAll(); go(CLASS_ORDER); }} />
+          <Row lead={<Dot icon={<ClipboardCheck />} />} title="კვირის შეჯამება" sub="ვინ ივარჯიშა · დასწრება · მზა წერილი" wrap onClick={() => { closeAll(); go(AI_REPORT); }} />
           {aiOn && (
-            <Row lead={<Dot icon={<Sparkles />} />} title="ავტომატური სასწავლო პროგრამა" sub="მითითება AI-ს" onClick={() => { closeAll(); openMapItem(AI_NOTE); }} />
+            <Row lead={<Dot icon={<Sparkles />} />} title="ავტომატური სასწავლო პროგრამა" sub="მითითება AI-ს" onClick={() => { closeAll(); go(AI_NOTE); }} />
           )}
           <Row lead={<Dot icon={<UserPlus />} />} title="წევრის დამატება" onClick={() => setSub('member')} />
           {isAdmin && (
