@@ -1,217 +1,179 @@
-import React, { useLayoutEffect, useRef, useState } from 'react';
-import { BookOpen, Calendar, CircleCheck, Dice4, GraduationCap, MapPin, Music, Sparkles, type LucideIcon } from 'lucide-react';
-import { Press, cx, FOCUS } from '../../../components/ui2';
-import type { NextKind, NextStep } from './nextStep';
-import { LettersBunch } from './LettersBunch';
+import React from 'react';
+import { ArrowUpRight, NotebookPen, type LucideIcon } from 'lucide-react';
+import { Press, cx, FOCUS, FOCUS_IN } from '../../../components/ui2';
 
-// The new look's home page (boards x-mtavari, x-ultra-gaagrdzele, x-ultra-gaagrdzele-2): one holy father's saying in a white
-// card, the vine with its labels as white chips (the same picture and places as the old GrapeNav), and on the qvevri one
-// „გააგრძელე“ button that shows where I stopped. Pure: everything comes by props (HomeV2 is the wrapper with the app's data).
-// The labels are placed in % of the picture, so the vine keeps the board's look on any phone: under the board's 374px it
-// and its labels grow smaller together (never under 80 % — the words stay ≥ 12px).
+// The new look's home page. Since 2026-11-22 it has no vine and no grapes (the user: „ყურძენი და ხე მოაცილო, თანამედროვე
+// ღილაკები დახატო … პირველი მთავარი ღილაკი არის მიმდინარე გაკვეთილი, მერე გალობა სიმღერა ლოცვა, შემდეგ დაბლა სხვა ღილაკები
+// მცირედ“), then „დახვეწე … უფრო თანამედროვედ“ and „ულტრა თანამედროვე მინდა“ the same night:
+// - one holy father's saying in a quiet white card;
+// - „მიმდინარე გაკვეთილი“: a big wine card with a warm glow and big letters (it opens what the vine's „გაკვეთილი“ bunch
+//   opened — a student's teacher chat, everyone else the letters);
+// - გალობა · სიმღერა · ლოცვანი as a mosaic: გალობა tall on the left, the other two stacked on the right;
+// - the other sections as an app grid in one white card: a colour square with a gloss, the name under it.
+// Pure: everything comes by props (HomeV2 is the wrapper with the app's data).
 
-export type SpotId = 'simghera' | 'chvevebi' | 'eklesiebi' | 'galoba' | 'biblioteka' | 'tamashebi';
-
-export interface VineLabel {
-  id: SpotId;
-  /** the admin set it „მალე“: the label says so under its name, a tap only tells */
+export interface HomeTile {
+  id: string;
+  word: string;
+  Icon: LucideIcon;
+  /** the section's colour (a design rules' ground: bg-wine, bg-leaf …) */
+  tone: string;
+  /** the admin set it „მალე“: the tile says so, a tap only tells */
   soon?: boolean;
+  onOpen: () => void;
 }
 
-interface Spot { label: string; x: number; y: number; tone?: string; Icon?: LucideIcon }
-
-/** x/y = the label's centre in % of the picture (public/home/vine.png, 1033×1390), as on the boards */
-export const SPOTS: Record<SpotId, Spot> = {
-  simghera: { label: 'ხალხური', x: 29, y: 14, tone: 'bg-leaf', Icon: Music },
-  chvevebi: { label: 'ჩვევები', x: 66, y: 7, tone: 'bg-gold', Icon: CircleCheck },
-  eklesiebi: { label: 'ტაძრები', x: 82, y: 20, tone: 'bg-clay', Icon: MapPin },
-  galoba: { label: 'ღვთისმსახურება', x: 56, y: 33 },
-  biblioteka: { label: 'ლოცვანი', x: 19, y: 52, tone: 'bg-gold', Icon: BookOpen },
-  tamashebi: { label: 'სახალისო', x: 81, y: 51, tone: 'bg-sea', Icon: Dice4 },
-};
-
-export type BunchId = 'galoba' | 'simghera' | 'lotsvani';
-
-/** where the picture's own bunches hung: the stem's top, in % of the picture */
-const BUNCH_SPOT: Record<BunchId, React.CSSProperties> = {
-  galoba: { left: '14.5%', top: '19.5%' },
-  simghera: { left: '37.5%', top: '30.2%' },
-  lotsvani: { left: '64.6%', top: '13.2%' },
-};
-
-/** the boards' vine box: 374px wide (the 358px column + 8px each side) */
-const BOARD_W = 374;
+export interface HomeV2ViewProps {
+  saying: { text: string; author: string };
+  /** „მიმდინარე გაკვეთილი“: none — the card is not drawn (a member with no letters) */
+  lesson?: { unread: number; onOpen: () => void };
+  /** the three big tiles: გალობა · სიმღერა · ლოცვანი (a hidden section is left out) */
+  main: HomeTile[];
+  /** the other sections, small, four in a row */
+  more: HomeTile[];
+  /** under the buttons: the classes card and the member's own buttons */
+  children?: React.ReactNode;
+}
 
 /** the boards' quote mark (lucide's `Quote` is a heavier, filled shape) */
-const QuoteMark: React.FC = () => (
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+const QuoteMark: React.FC<{ className?: string }> = ({ className }) => (
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className={className}>
     <path d="M10 7H6a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h3v1a3 3 0 0 1-3 3" />
     <path d="M19 7h-4a1 1 0 0 0-1 1v4a1 1 0 0 0 1 1h3v1a3 3 0 0 1-3 3" />
   </svg>
 );
 
-/** the boards' play mark: a smaller triangle than lucide's `Play` */
-const PlayMark: React.FC = () => (
-  <svg viewBox="0 0 24 24" fill="currentColor" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-    <path d="M8.5 5.5v13l10.5-6.5z" />
-  </svg>
+/** each colour's look: the square's light-to-deep fall, a tile's whisper of it, and the big faint icon in a tile's corner */
+const LOOK: Record<string, { fall: string; wash: string; ghost: string }> = {
+  'bg-wine': { fall: 'from-wine/75 to-wine-deep', wash: 'to-tint', ghost: 'text-wine/10' },
+  'bg-leaf': { fall: 'from-leaf/75 to-leaf-ink', wash: 'to-leaf-tint', ghost: 'text-leaf/10' },
+  'bg-gold': { fall: 'from-gold/75 to-gold-ink', wash: 'to-gold-tint', ghost: 'text-gold/12' },
+  'bg-sea': { fall: 'from-sea/70 to-sea', wash: 'to-sea-tint', ghost: 'text-sea/10' },
+  'bg-plum': { fall: 'from-plum/70 to-plum', wash: 'to-plum/10', ghost: 'text-plum/10' },
+  'bg-clay': { fall: 'from-clay/70 to-clay', wash: 'to-clay/10', ghost: 'text-clay/10' },
+};
+const lookOf = (tone: string) => LOOK[tone] ?? LOOK['bg-wine'];
+
+/** the long names may break here on the narrowest phones (with a hyphen), never anywhere else */
+const SOFT: Record<string, string> = { 'მედავითნეობა': 'მედავით­ნეობა', 'ბიბლიოთეკა': 'ბიბლიო­თეკა', 'ვიდეოთეკა': 'ვიდეო­თეკა' };
+const soft = (word: string) => SOFT[word] ?? word;
+
+/** a section's mark: a rounded square falling from light to deep, a soft gloss over its top half */
+const Glyph: React.FC<{ tile: HomeTile; size: 'lg' | 'md' | 'sm' }> = ({ tile, size }) => (
+  <span aria-hidden="true" className={cx(
+    'relative flex shrink-0 items-center justify-center overflow-hidden rounded-field text-white ring-1 ring-white/15 ring-inset',
+    size === 'lg' ? 'size-13 [&_svg]:size-[26px]' : size === 'md' ? 'size-11 [&_svg]:size-[22px]' : 'size-11 [&_svg]:size-5',
+    tile.soon ? 'bg-dim' : cx('bg-linear-to-br', lookOf(tile.tone).fall),
+  )}>
+    <span className="pointer-events-none absolute inset-x-0 top-0 h-1/2 bg-linear-to-b from-white/25 to-transparent" />
+    <tile.Icon strokeWidth={2} className="relative" />
+  </span>
 );
 
-const NEXT_ICON: Record<NextKind, React.ReactNode> = {
-  lesson: <Calendar strokeWidth={2} />,
-  start: <Sparkles strokeWidth={2} />,
-  ai: <Sparkles strokeWidth={2} />,
-  review: <PlayMark />,
-  learn: <PlayMark />,
-  book: <BookOpen strokeWidth={2} />,
-};
-
-export interface HomeV2ViewProps {
-  saying: { text: string; author: string };
-  /** the vine's labels to draw (the hidden ones left out), in the boards' order */
-  labels: VineLabel[];
-  /** „აბიტური“ hangs under „ღვთისმსახურება“ */
-  abituri: boolean;
-  onLabel: (id: SpotId) => void;
-  onAbituri: () => void;
-  /** the one thing „გააგრძელე“ shows; none — no button */
-  next: NextStep | null;
-  onNext: () => void;
-  /** „წერილები“ as the grape bunch right of the trunk (2026-11-21); none — the bunch is not drawn */
-  letters?: { unread: number; onOpen: () => void };
-  /** the sections written into the vine's other bunches (2026-11-21); a hidden section is left out */
-  bunches?: { id: BunchId; word: string; onOpen: () => void }[];
-  /** under the vine: the birthdays' line and the member's own buttons */
-  children?: React.ReactNode;
-}
-
-/** the vine's scale: 1 at the board's width and wider, smaller on a narrower phone, never under 0.8 */
-const useVineScale = () => {
-  const box = useRef<HTMLDivElement>(null);
-  const [k, setK] = useState(1);
-  useLayoutEffect(() => {
-    const el = box.current;
-    if (!el) return;
-    const set = () => setK(Math.min(1, Math.max(0.8, el.clientWidth / BOARD_W)));
-    set();
-    if (typeof ResizeObserver === 'undefined') return;
-    const ro = new ResizeObserver(set);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, []);
-  return { box, k };
-};
-
-// sg-keep-text: the labels hang on the picture, so a bigger text size (design/look.ts) leaves them as they are
-const SWAY = 'vine-sway sg-keep-text absolute -translate-x-1/2 -translate-y-1/2';
-
-const chipLook = cx(
-  'flex h-[46px] items-center gap-2 rounded-full bg-surf pr-3.5 pl-2 whitespace-nowrap shadow-lift select-none',
-  'cursor-pointer transition active:scale-95', FOCUS,
+/** one of გალობა · სიმღერა · ლოცვანი: the mark above, the name at the foot, the section's icon faint and large in the corner */
+const MainTile: React.FC<{ tile: HomeTile; tall?: boolean; className?: string; style?: React.CSSProperties }> = ({ tile, tall, className, style }) => (
+  <Press onClick={tile.onOpen} style={style} className={cx(
+    'sg-up group relative isolate flex cursor-pointer flex-col items-start justify-between gap-3 overflow-hidden rounded-card bg-linear-to-b from-surf from-40% p-4 text-left shadow-lift select-none',
+    'transition active:scale-[0.97]', tile.soon ? 'to-surf' : lookOf(tile.tone).wash, tall ? 'min-h-[204px]' : 'min-h-[97px] p-3.5', FOCUS, className,
+  )}>
+    <tile.Icon aria-hidden="true" strokeWidth={1.5} className={cx(
+      'pointer-events-none absolute -z-1 -rotate-12', tall ? '-right-6 -bottom-6 size-36' : '-right-3 -bottom-4 size-20',
+      tile.soon ? 'text-dim/40' : lookOf(tile.tone).ghost,
+    )} />
+    <Glyph tile={tile} size={tall ? 'lg' : 'md'} />
+    <span className="flex flex-col">
+      <span className={cx('leading-tight font-bold tracking-[-0.01em]', tall ? 'text-title' : 'text-lead', tile.soon ? 'text-mut' : 'text-ink')}>{tile.word}</span>
+      {tile.soon && <span className="text-cap leading-tight font-semibold text-mut">მალე</span>}
+    </span>
+  </Press>
 );
 
-export const HomeV2View: React.FC<HomeV2ViewProps> = ({ saying, labels, abituri, onLabel, onAbituri, next, onNext, letters, bunches, children }) => {
-  const { box, k } = useVineScale();
-  return (
-    // -mt-0.5: the app frame gives the home 4px under its bar, the boards 2px
-    <div className="mx-auto -mt-0.5 flex w-full max-w-lg flex-col gap-2">
-      {/* one saying, changing every quarter hour */}
-      <figure className="m-0 flex shrink-0 items-start gap-3 rounded-card bg-surf px-4 py-3.5">
-        <span aria-hidden="true" className="flex size-8 shrink-0 items-center justify-center rounded-full bg-wine text-white [&_svg]:size-4">
-          <QuoteMark />
-        </span>
-        <div className="flex min-w-0 flex-col gap-1">
-          <blockquote className="m-0 text-body leading-[1.45] wrap-break-word text-ink">{saying.text}</blockquote>
-          <figcaption className="text-meta font-medium text-wine">— {saying.author}</figcaption>
-        </div>
-      </figure>
+/** a step's delay for the page's gentle rise on opening */
+const rise = (i: number): React.CSSProperties => ({ animationDelay: `${i * 45}ms` });
 
-      {/* the vine: 8px wider than the column on each side, as on the boards */}
-      <div className="-mx-2 flex shrink-0 justify-center">
-        <div ref={box} className="relative aspect-[1033/1390] w-full select-none">
-          <img src="/home/vine.png" alt="" aria-hidden="true" draggable={false} className="sg-vine-img absolute inset-0 size-full opacity-80 saturate-85" />
+export const HomeV2View: React.FC<HomeV2ViewProps> = ({ saying, lesson, main, more, children }) => (
+  // -mt-0.5: the app frame gives the home 4px under its bar, the boards 2px
+  <div className="mx-auto -mt-0.5 flex w-full max-w-lg flex-col gap-3">
+    {/* one saying, changing every quarter hour: a quiet card, a large faint quote mark in its lower corner (under the short
+        author's line, so it never lies under the words) */}
+    <figure className="sg-up relative m-0 flex shrink-0 flex-col gap-1.5 overflow-hidden rounded-card bg-surf px-5 py-4" style={rise(0)}>
+      <QuoteMark className="pointer-events-none absolute right-3 -bottom-3 size-16 text-wine/10" />
+      <blockquote className="relative m-0 text-body leading-[1.5] wrap-break-word text-ink">{saying.text}</blockquote>
+      <figcaption className="relative text-meta font-semibold text-wine">— {saying.author}</figcaption>
+    </figure>
 
-          {labels.map(({ id, soon }, i) => {
-            const s = SPOTS[id];
-            // the sway turns a label round its top, so the scale does too: its centre is moved back down by what it lost
-            const half = id === 'galoba' ? 27 : 23;
-            const place: React.CSSProperties = {
-              left: `${s.x}%`, top: k < 1 ? `calc(${s.y}% + ${((1 - k) * half).toFixed(1)}px)` : `${s.y}%`, scale: k, animationDelay: `${-i * 0.7}s`,
-            };
-            if (id === 'galoba') {
-              return (
-                <div key={id} className={cx(SWAY, 'z-2')} style={place}>
-                  <Press onClick={() => onLabel(id)} className={cx(
-                    'relative z-2 flex h-[54px] flex-col items-center justify-center rounded-full bg-wine px-[22px] whitespace-nowrap text-white shadow-wine select-none',
-                    'cursor-pointer transition hover:bg-wine-deep active:scale-95', FOCUS,
-                  )}>
-                    <span className="text-head leading-tight font-bold tracking-[-0.01em]">{s.label}</span>
-                    {soon && <span className="text-cap leading-none font-semibold text-white/85">მალე</span>}
-                  </Press>
-                  {/* „აბიტური“: a tab under the pill's left side, swaying with it */}
-                  {abituri && (
-                    <Press onClick={onAbituri} className={cx(
-                      'absolute top-full left-2 z-1 -mt-1.5 flex h-[46px] items-center gap-1.5 rounded-t-chip rounded-b-tile bg-surf pt-2 pr-3.5 pl-3',
-                      'text-meta font-bold whitespace-nowrap text-wine shadow-lift select-none cursor-pointer transition active:scale-95', FOCUS,
-                    )}>
-                      <GraduationCap aria-hidden="true" strokeWidth={2} className="size-4 shrink-0" />
-                      აბიტური
-                    </Press>
-                  )}
-                </div>
-              );
-            }
-            const Icon = s.Icon!;
-            return (
-              <div key={id} className={SWAY} style={place}>
-                <Press onClick={() => onLabel(id)} className={chipLook}>
-                  <span aria-hidden="true" className={cx('flex size-[30px] shrink-0 items-center justify-center rounded-full text-white [&_svg]:size-4', s.tone)}>
-                    <Icon strokeWidth={2} />
-                  </span>
-                  <span className="flex flex-col">
-                    <span className={cx('text-body leading-tight font-bold', soon ? 'text-mut' : 'text-ink')}>{s.label}</span>
-                    {soon && <span className="text-cap leading-none font-semibold text-mut">მალე</span>}
-                  </span>
-                </Press>
-              </div>
-            );
-          })}
+    {/* the main card: where my learning is now — deep wine, a warm glow behind, two fine rings, big letters */}
+    {lesson && (
+      <Press
+        onClick={lesson.onOpen}
+        aria-label={lesson.unread ? `მიმდინარე გაკვეთილი, ${lesson.unread} ახალი წერილი` : 'მიმდინარე გაკვეთილი'}
+        style={rise(1)}
+        className={cx(
+          'sg-up group relative isolate flex min-h-[148px] w-full cursor-pointer flex-col justify-between gap-4 overflow-hidden rounded-card',
+          'bg-linear-to-br from-wine to-wine-deep p-5 text-left text-white shadow-wine select-none transition active:scale-[0.98]', FOCUS,
+        )}
+      >
+        <span aria-hidden="true" className="pointer-events-none absolute -top-24 -right-16 -z-1 size-60 rounded-full bg-blush/35 blur-3xl" />
+        <span aria-hidden="true" className="pointer-events-none absolute -bottom-28 -left-16 -z-1 size-56 rounded-full bg-gold/30 blur-3xl" />
+        <span aria-hidden="true" className="pointer-events-none absolute -right-12 -bottom-16 -z-1 size-48 rounded-full border border-white/12" />
+        <span aria-hidden="true" className="pointer-events-none absolute -right-3 -bottom-7 -z-1 size-28 rounded-full border border-white/10" />
 
-          {/* words in the grapes, where the picture's own bunches hung: the first one („გაკვეთილი“) opens the letters, the others
-              their sections; they sway out of step */}
-          {letters && <LettersBunch word="გაკვეთილი" label="წერილები" unread={letters.unread} onOpen={letters.onOpen} className="z-1 w-[23%]" style={{ left: '68.9%', top: '32.4%' }} />}
-          {bunches?.map((b, i) => (
-            <LettersBunch key={b.id} word={b.word} onOpen={b.onOpen} className="z-1 w-[23%]" style={{ ...BUNCH_SPOT[b.id], animationDelay: `${-(i + 1) * 0.9}s` }} />
-          ))}
-
-          {/* „გააგრძელე“ on the qvevri: one thing, where I stopped */}
-          {next && (
-            <Press
-              key={next.kind}
-              onClick={onNext}
-              aria-label={`${next.kicker}: ${next.what}${next.tail ?? ''}`}
-              className={cx(
-                // as wide as the screen less 4px a side at most (the boards' AI line needs 382px of a 390px phone)
-                'sg-in absolute top-[81%] left-1/2 z-2 flex h-[60px] max-w-[calc(100%+8px)] -translate-x-1/2 -translate-y-1/2 items-center gap-2',
-                'rounded-full bg-surf pr-[18px] pl-2 text-left whitespace-nowrap shadow-lift select-none cursor-pointer transition active:scale-[0.97]', FOCUS,
-              )}
-            >
-              <span aria-hidden="true" className="flex size-tap shrink-0 items-center justify-center rounded-full bg-tint text-wine [&_svg]:size-[18px]">
-                {NEXT_ICON[next.kind]}
-              </span>
-              <span className="flex min-w-0 flex-col">
-                <span className="truncate text-meta leading-tight font-semibold text-mut">{next.kicker}</span>
-                <span className="flex min-w-0 text-body leading-tight font-bold whitespace-pre text-ink">
-                  <span className="truncate">{next.what}</span>
-                  {next.tail && <span className="shrink-0">{next.tail}</span>}
-                </span>
-              </span>
-            </Press>
+        <span className="flex items-start justify-between gap-3">
+          <span aria-hidden="true" className="flex size-11 items-center justify-center rounded-field bg-white/15 ring-1 ring-white/25 backdrop-blur-md [&_svg]:size-[22px]">
+            <NotebookPen strokeWidth={2} />
+          </span>
+          {lesson.unread > 0 && (
+            <span className="flex h-7 items-center gap-1.5 rounded-full bg-white/15 pr-3 pl-2 text-cap font-semibold ring-1 ring-white/25 backdrop-blur-md">
+              <span aria-hidden="true" className="size-2 rounded-full bg-blush" />
+              {lesson.unread} ახალი წერილი
+            </span>
           )}
-        </div>
-      </div>
+        </span>
 
-      {children && <div className="flex flex-col items-center gap-3 px-1 pt-2">{children}</div>}
-    </div>
-  );
-};
+        <span className="flex items-end justify-between gap-3">
+          <span className="flex flex-col text-hero leading-[1.08] font-bold tracking-[-0.02em]">
+            <span>მიმდინარე</span>
+            <span>გაკვეთილი</span>
+          </span>
+          <span aria-hidden="true" className="flex size-12 shrink-0 items-center justify-center rounded-full bg-surf text-wine shadow-knob transition group-active:scale-90 [&_svg]:size-[22px]">
+            <ArrowUpRight strokeWidth={2.5} />
+          </span>
+        </span>
+      </Press>
+    )}
+
+    {/* გალობა · სიმღერა · ლოცვანი — a mosaic: გალობა tall on the left, the other two stacked on the right */}
+    {main.length === 3 ? (
+      <div className="grid grid-cols-2 gap-2.5">
+        <MainTile tile={main[0]} tall className="row-span-2" style={rise(2)} />
+        <MainTile tile={main[1]} style={rise(3)} />
+        <MainTile tile={main[2]} style={rise(4)} />
+      </div>
+    ) : main.length > 0 && (
+      <div className={cx('grid gap-2.5', main.length === 2 ? 'grid-cols-2' : 'grid-cols-1')}>
+        {main.map((t, i) => <MainTile key={t.id} tile={t} style={rise(2 + i)} />)}
+      </div>
+    )}
+
+    {/* the other sections: an app grid in one white card, four in a row */}
+    {more.length > 0 && (
+      <section aria-label="სხვა განყოფილებები" className="sg-up flex flex-col gap-2 pt-1" style={rise(5)}>
+        <h2 className="m-0 px-2 text-meta font-semibold text-mut">სხვა განყოფილებები</h2>
+        <div className="grid grid-cols-4 gap-y-1 rounded-card bg-surf p-1.5">
+          {more.map(t => (
+            <Press key={t.id} onClick={t.onOpen} className={cx(
+              'flex min-h-[90px] cursor-pointer flex-col items-center justify-start gap-1.5 rounded-tile pt-2.5 pb-2 text-center select-none',
+              'transition active:scale-95 active:bg-soft', FOCUS_IN,
+            )}>
+              <Glyph tile={t} size="sm" />
+              <span className={cx('text-cap leading-tight font-semibold hyphens-manual', t.soon ? 'text-mut' : 'text-ink')}>{soft(t.word)}</span>
+              {t.soon && <span className="-mt-1 text-cap leading-tight text-mut">მალე</span>}
+            </Press>
+          ))}
+        </div>
+      </section>
+    )}
+
+    {children && <div className="flex flex-col items-center gap-3 px-1 pt-1">{children}</div>}
+  </div>
+);
