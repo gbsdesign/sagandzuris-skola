@@ -2273,6 +2273,21 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   administration's side shows their pearls (`usePearlTotals`: items with a voice marked, each student's record read once in 3 min;
   a softly shining `PearlIcon` + the number, under the date). The private chat's head: the name and its small line on one line each;
   „ავტ.პროგ.“ is only its sign now — a round 👩‍🏫 button (the user picked that emoji), no words.
+- **Photos, files and the quick button in the chats (2026-11-22**, the user: „გაგზავნის ისარი ჩასვი … დიდხანს დაჭერისას ფანჯარა და
+  სმაილის შეცვლა … თავდაპირველად ისარი ყველგან … ფოტოს ატვირთვა, გადაღება, ვოისი და ფაილი“ as Messenger's; answers „10 მბ-მდე ·
+  ბარათი „+“-ში“): `ChatPanel`'s row = + (a file; with `onAttach` a sheet: ფაილი · ბარათი მოსწავლეს) · 📷 (`capture`) · 🖼 (≤ 10) ·
+  🎤, folded to one › while typing; the field says „წერილი“; the right button is the arrow, a long press picks the device's quick
+  emoji (`ChatMedia.tsx` `QuickSheet`, `sg-chat-quick`; none = the arrow, which on an empty field only focuses it). Kinds `photo`
+  (`utils/chatPhoto.ts`: ≤ 1600 px ~2 MB JPEG in parts + a ≤ 55 000-letter `thumb` in the message, `w`/`h`) and `file` (`fname`,
+  `size` ≤ 10 MB, `mime`) keep their bytes in the voice messages' `voice/{msg}_{n}` parts, written eight a batch with the message
+  last (`sendWithParts`); `text` = „📷 ფოტო“ / „📎 name“ so lists and phone notices need nothing new; rules `mediaFields`. A photo
+  opens full screen (`PhotoViewer`, ⬇), a file downloads by a tap.
+- **„დასწრება“ (2026-11-22**, the user: „გაუგებარია … მარტივად კლასების მიხედვით ვნიშნავდე … სტატისტიკასაც ვხედავდე … დასწრების
+  ღილაკი მიამაგრე“): `pages/v2/daswreba/AttendanceSheet.tsx` — class chips · „მონიშვნა“ (lesson day ‹ ›, „ყველა მოვიდა“, a tap on a
+  name) · „სტატისტიკა“ (`utils/attendanceStats.ts` + test: the class's share, each member's share and the newest lessons missed in a
+  row, the lessons — a tap marks that day). Opened from the „სწავლა“ head (📅, the classes one leads; admins all) and the class's
+  „წევრები“ row (the old card and the ✓ on every name are gone). On every class row the calendar sign is a button for its leaders —
+  a tap opens the timetable, a class with none says „გაკვეთილის დანიშვნა“.
 - **The psalter group on the „სწავლა“ list (2026-11-22**, the user: „ამას მინდა დაბლა შლიდეს მათთვის ვინც ფსალმუნთა ჯგუფშია სწავლის
   გვერდით“): a round 📖 before the 👁 (anyone in a group — `useMyPsalterGroups` —, while section `medavitneoba` is open) unfolds
   `PsalterFold` (PsalterScreen.tsx: the page's `Body` without its bar, lazy) under the head; „ვინ რომელ კანონს“ / „ეს წრე“ open page

@@ -206,6 +206,14 @@ await t('teacher hearts too', assertSucceeds(updateDoc(heartAt(tch2), { hearts: 
 await t('student cannot take the teacher\'s heart back', assertFails(updateDoc(heartAt(stu3), { hearts: ['stu3'] })));
 await t('student takes own heart back', assertSucceeds(updateDoc(heartAt(stu3), { hearts: arrayRemove('stu3') })));
 await t('an outsider cannot heart', assertFails(updateDoc(heartAt(stu2), { hearts: arrayUnion('stu2') })));
+// a photo and a file in a chat (2026-11-22): the photo's small picture, the file's name / size / type, the parts' count
+await t('student sends a photo', assertSucceeds(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'p1'),
+  { ...msg('stu3', false, 'photo'), thumb: 'data:image/jpeg;base64,AAAA', w: 1600, h: 1200, mime: 'image/jpeg', parts: 1 })));
+await t('a photo without its picture is refused', assertFails(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'p2'), { ...msg('stu3', false, 'photo'), parts: 1 })));
+await t('student sends a file', assertSucceeds(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'p3'),
+  { ...msg('stu3', false, 'file'), fname: 'ნოტები.pdf', size: 2400000, mime: 'application/pdf', parts: 4 })));
+await t('a file over 10 MB is refused', assertFails(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'p4'),
+  { ...msg('stu3', false, 'file'), fname: 'დიდი.zip', size: 20000000, mime: 'application/zip', parts: 16 })));
 // the administration's chat: the member only answers a call; an admin rings, by voice or video
 const adminDm = { kind: 'admin', members: ['stu3'], names: {}, photos: {}, createdAt: serverTimestamp(), lastAt: null, lastBy: '', lastText: '', read: {} };
 await t('member opens the administration chat', assertSucceeds(setDoc(doc(stu3, 'dms', 'a_stu3'), adminDm)));

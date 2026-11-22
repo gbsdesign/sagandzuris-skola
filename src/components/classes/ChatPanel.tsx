@@ -1,9 +1,11 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useBackToClose } from '../../utils/backToClose';
 import { useNotes } from '../../context/NotesContext';
-import { MessageCircle, Music2, Mic, Paperclip, Send, Smile, Square, X, Trash2, Play, Pause, Loader2, Clock, Phone, CheckCheck } from 'lucide-react';
+import { MessageCircle, Music2, Mic, Paperclip, Send, Smile, Square, X, Trash2, Play, Pause, Loader2, Clock, Phone, CheckCheck, Plus, Camera, Image as ImageIcon, ChevronRight, ClipboardList } from 'lucide-react';
+import { useLongPress } from '../../hooks/useLongPress';
+import { FileBubble, PhotoBubble, QuickSheet, useQuickEmoji } from './ChatMedia';
 import {
-  sendTextMessage, sendVoiceMessage, deleteMessage, loadVoiceUrl, toggleHeart, ChatMessage, ChatAuthor,
+  sendTextMessage, sendVoiceMessage, sendPhotoMessage, sendFileMessage, FILE_MAX, deleteMessage, loadVoiceUrl, toggleHeart, ChatMessage, ChatAuthor,
 } from '../../hooks/useClassChat';
 import {
   startVoiceRecording, voiceRecordingSupported, VOICE_MAX_SECONDS, WAVE_BARS, VoiceRecording, VoiceTake,
@@ -312,6 +314,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   useBackToClose(!!active, () => setActive(null));
   const [emojiOpen, setEmojiOpen] = useState(false);
   useBackToClose(emojiOpen, () => setEmojiOpen(false));
+  // Messenger's row (2026-11-22): + (a file; a teacher's card too) · camera · gallery · voice, folded to one › while typing
+  const [toolsOpen, setToolsOpen] = useState(false);
+  const [plusOpen, setPlusOpen] = useState(false);
+  const [quickOpen, setQuickOpen] = useState(false);
+  const [quick, setQuick] = useQuickEmoji();
+  const quickHold = useLongPress(() => setQuickOpen(true));
+  const [upload, setUpload] = useState<{ label: string; pct: number } | null>(null);
+  const camIn = useRef<HTMLInputElement>(null);
+  const galIn = useRef<HTMLInputElement>(null);
+  const fileIn = useRef<HTMLInputElement>(null);
   // whose hearts are listed (a tap on a message's ❤️ count)
   const [heartsOf, setHeartsOf] = useState<ChatMessage | null>(null);
   const lastTap = useRef<{ id: string; t: number } | null>(null);
@@ -397,6 +409,46 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       setErr('შეტყობინება ვერ გაიგზავნა. სცადეთ თავიდან.');
       if (given === undefined) setText(t);
     }
+  };
+
+  // photos (the camera's one, or up to ten from the gallery) and a file ≤ 10 MB, one message each
+  const sendPhotos = async (files: File[]) => {
+    const list = files.filter(f => f.type.startsWith('image/') || !f.type).slice(0, 10);
+    if (!list.length) return;
+    setErr('');
+    stick.current = true;
+    for (let i = 0; i < list.length; i++) {
+      setUpload({ label: list.length > 1 ? `ფოტო ${i + 1} / ${list.length}` : 'ფოტო', pct: 0 });
+      try {
+        await sendPhotoMessage(base, author, list[i], pct => setUpload(u => (u ? { ...u, pct } : u)));
+        onSent?.('text', '📷 ფოტო');
+      } catch (e) {
+        console.warn('chat photo: ', e);
+        setErr('ფოტო ვერ გაიგზავნა. სცადე ხელახლა.');
+        break;
+      }
+    }
+    setUpload(null);
+  };
+  const sendFile = async (f: File | undefined) => {
+    if (!f) return;
+    if (f.size > FILE_MAX) { setErr('ფაილი 10 მბ-ზე დიდია — აირჩიე უფრო პატარა.'); return; }
+    setErr('');
+    stick.current = true;
+    setUpload({ label: 'ფაილი', pct: 0 });
+    try {
+      await sendFileMessage(base, author, f, pct => setUpload(u => (u ? { ...u, pct } : u)));
+      onSent?.('text', `📎 ${f.name}`);
+    } catch (e) {
+      console.warn('chat file: ', e);
+      setErr('ფაილი ვერ გაიგზავნა. სცადე ხელახლა.');
+    }
+    setUpload(null);
+  };
+  const picked = (e: React.ChangeEvent<HTMLInputElement>, then: (files: File[]) => void) => {
+    const files = Array.from(e.target.files ?? []);
+    e.target.value = '';
+    if (files.length) then(files);
   };
 
   // an emoji from the panel goes where the cursor was
@@ -631,6 +683,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         }
         const stamp = `text-cap leading-none ${mine ? 'text-white/80' : 'text-mut'}`;
         const big = m.kind === 'text' ? bigEmoji(m.text) : '';
+        const photo = m.kind === 'photo';
         return (
           <React.Fragment key={m.id}>
             {dayLine}
@@ -651,7 +704,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                   // a long press on the message (as in any messenger; a right click on a computer) shows „❤️“ and
                   // „წაშლა“ under it, two taps put a ❤️; playing a voice message or opening a link never does
                   {...pick}
-                  className={`rounded-tile ${big ? 'px-1' : 'px-3.5 py-2'} ${canDel || heartable ? '[-webkit-touch-callout:none]' : ''} ${
+                  className={`rounded-tile ${big ? 'px-1' : photo ? 'p-1' : 'px-3.5 py-2'} ${canDel || heartable ? '[-webkit-touch-callout:none]' : ''} ${
                     big ? '' : mine
                       ? `bg-wine text-white ${first ? 'rounded-tr-chip' : ''}`
                       : `bg-surf text-ink ${first ? 'rounded-tl-chip' : ''}`
@@ -681,6 +734,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                       mine={mine}
                       meta={<p className={`flex justify-end ${stamp}`}>{sentAt(m)}</p>}
                     />
+                  ) : photo ? (
+                    <PhotoBubble m={m} base={base} stamp="text-cap leading-none" meta={sentAt(m)} />
+                  ) : m.kind === 'file' ? (
+                    <FileBubble m={m} base={base} mine={mine} stamp={stamp} meta={sentAt(m)} />
                   ) : m.kind === 'voice' ? (
                     <div className="py-1">
                       <VoicePlayer seconds={m.seconds} wave={m.wave} onDark={mine} getUrl={() => loadVoiceUrl(base, m)} meta={sentAt(m)} />
@@ -752,26 +809,46 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         <p className="px-5 py-4 text-center text-meta text-mut">მხოლოდ სანახავად</p>
       ) : (
       <div className="p-3 sm:px-4 flex items-end gap-2">
-        {mode.k === 'idle' && (
+        {mode.k === 'idle' && upload && (
+          <div className={`${pill} flex-1 min-w-0 justify-center gap-2 px-4 text-meta text-mut`}>
+            <Loader2 className="w-4 h-4 shrink-0 animate-spin" />
+            <span className="truncate">იგზავნება {upload.label}… {Math.round(upload.pct * 100)}%</span>
+          </div>
+        )}
+        {mode.k === 'idle' && !upload && (
           <>
-            {onAttach && (
-              <RoundButton size={48} label="მოსწავლისთვის კომენტარი ან დავალება" onClick={onAttach}>
-                <Paperclip />
+            {/* the hidden pickers: the camera, the gallery (several photos), any file */}
+            <input ref={camIn} type="file" accept="image/*" capture="environment" hidden onChange={e => picked(e, sendPhotos)} />
+            <input ref={galIn} type="file" accept="image/*" multiple hidden onChange={e => picked(e, sendPhotos)} />
+            <input ref={fileIn} type="file" hidden onChange={e => picked(e, f => sendFile(f[0]))} />
+            {text.trim() && !toolsOpen ? (
+              <RoundButton size={36} tone="plain" label="ფოტო, ფაილი, ხმა" className="mb-1.5 text-wine" onClick={() => setToolsOpen(true)}>
+                <ChevronRight />
               </RoundButton>
+            ) : (
+              <div className="mb-1.5 flex shrink-0 items-center gap-1">
+                <RoundButton size={36} tone="plain" className="text-wine" label={onAttach ? 'ფაილი ან ბარათი მოსწავლეს' : 'ფაილის გაგზავნა'}
+                  onClick={() => (onAttach ? setPlusOpen(true) : fileIn.current?.click())}>
+                  <Plus />
+                </RoundButton>
+                <RoundButton size={36} tone="plain" className="text-wine" label="ფოტოს გადაღება" onClick={() => camIn.current?.click()}><Camera /></RoundButton>
+                <RoundButton size={36} tone="plain" className="text-wine" label="ფოტო გალერეიდან" onClick={() => galIn.current?.click()}><ImageIcon /></RoundButton>
+                {canRecord && <RoundButton size={36} tone="plain" className="text-wine" label="ხმოვანი შეტყობინების ჩაწერა" onClick={startRecording}><Mic /></RoundButton>}
+              </div>
             )}
             <div className="relative flex-1 min-w-0">
               <textarea
                 ref={field}
                 rows={1}
                 value={text}
-                onChange={e => { setText(e.target.value); caret.current = e.target.selectionStart; grow(e.target); }}
+                onChange={e => { setText(e.target.value); setToolsOpen(false); caret.current = e.target.selectionStart; grow(e.target); }}
                 onSelect={e => { caret.current = e.currentTarget.selectionStart; }}
                 onFocus={() => setEmojiOpen(false)}
                 onKeyDown={onKeyDown}
                 maxLength={2000}
-                placeholder="შეტყობინება"
-                aria-label="შეტყობინება"
-                className="block w-full resize-none rounded-full bg-surf py-3 pr-12 pl-4 min-h-tap-lg text-lead text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-wine/35"
+                placeholder="წერილი"
+                aria-label="წერილი"
+                className="block w-full resize-none rounded-full bg-surf py-3 pr-11 pl-4 min-h-tap-lg text-lead text-ink placeholder:text-faint focus:outline-none focus:ring-2 focus:ring-wine/35"
               />
               {/* 😊 inside the field opens the emoji panel (in place of the phone's keyboard) */}
               <button
@@ -784,17 +861,18 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 <Smile className="size-[22px]" />
               </button>
             </div>
-            {text.trim() ? (
-              <RoundButton size={48} tone="wine" label="გაგზავნა" onClick={() => sendText()}><Send /></RoundButton>
-            ) : (
-              <>
-                {canRecord && <RoundButton size={48} tone="wine" label="ხმოვანი შეტყობინების ჩაწერა" onClick={startRecording}><Mic /></RoundButton>}
-                {/* one tap sends a big ❤️ (as Messenger's) */}
-                <RoundButton size={48} label="❤️ გაგზავნა" onClick={() => sendText('❤️')}>
-                  <span aria-hidden="true" className="text-[26px] leading-none">❤️</span>
-                </RoundButton>
-              </>
-            )}
+            {/* the quick button: the arrow sends the text; on an empty field the chosen emoji (none chosen = the arrow, which
+                only puts the finger in the field). A long press chooses (2026-11-22) */}
+            <RoundButton
+              {...quickHold}
+              size={44}
+              tone={text.trim() || !quick ? 'wine' : 'surf'}
+              label={text.trim() ? 'გაგზავნა' : quick ? `${quick} გაგზავნა (დიდხანს — შეცვლა)` : 'გაგზავნა (დიდხანს — სწრაფი ემოჯი)'}
+              className="mb-0.5 [-webkit-touch-callout:none]"
+              onClick={() => (text.trim() ? sendText() : quick ? sendText(quick) : field.current?.focus())}
+            >
+              {text.trim() || !quick ? <Send /> : <span aria-hidden="true" className="text-title leading-none">{quick}</span>}
+            </RoundButton>
           </>
         )}
 
@@ -828,6 +906,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       </div>
       )}
 
+      <QuickSheet open={quickOpen} quick={quick} onPick={setQuick} onClose={() => setQuickOpen(false)} />
+      {onAttach && (
+        <Sheet open={plusOpen} onClose={() => setPlusOpen(false)} title="გაგზავნა">
+          <div className="flex flex-col gap-2 pb-1">
+            <Button full kind="ghost" icon={<Paperclip />} onClick={() => { fileIn.current?.click(); setPlusOpen(false); }}>ფაილი (10 მბ-მდე)</Button>
+            <Button full kind="ghost" icon={<ClipboardList />} onClick={() => { setPlusOpen(false); onAttach(); }}>ბარათი მოსწავლეს — კომენტარი ან დავალება</Button>
+          </div>
+        </Sheet>
+      )}
       {/* who put a ❤️ on a message */}
       <Sheet open={!!heartsOf} onClose={() => setHeartsOf(null)} title={`❤️ · ${heartsOf?.hearts?.length ?? 0}`}>
         <ul className="flex flex-col gap-1 pb-1">
