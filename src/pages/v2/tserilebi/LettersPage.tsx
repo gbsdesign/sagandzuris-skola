@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { ArrowLeft, ChevronDown, Eye, EyeOff, Loader2, MessageCircle, PenLine, Search, X } from 'lucide-react';
+import { ArrowLeft, ChevronDown, Eye, EyeOff, Loader2, MessageCircle, PenLine, Search, Users, X } from 'lucide-react';
 import { Waiting } from '../../../components/shell/PageSkeleton';
 import { useAuth, useNavigation } from '../../../context';
 import { useMyClasses, useTeachingClasses, useAllClasses } from '../../../hooks/useClasses';
@@ -218,7 +218,13 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
           <ChatRow
             key={id}
             face={<ClassLogo name={c.name} logo={c.logo} className="size-12 text-title" />}
-            name={c.name}
+            name={(
+              <span className="flex min-w-0 items-center gap-1.5">
+                <Users aria-label="კლასის ჩათი" className="size-[18px] shrink-0 text-wine" strokeWidth={2} />
+                <span className="min-w-0 truncate">{c.name}</span>
+              </span>
+            )}
+            group
             last={last ? <LastLine who={last.uid === uid ? 'შენ:' : undefined} text={last.text} /> : `კლასის ჩათი · ${c.members.length} წევრი`}
             time={when(last?.at ?? null)}
             {...rowProps(id, lastMs, pinned, hidden, unread)}
@@ -282,12 +288,15 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         }
       }
     }
-    // the classes' chats first (2026-11-22, the user: „თითოეული კლასის ჩათი … სიის თავში … იმ წევრების თავზე“), then pinned
-    // (the newest pin on top), then a student's teachers, then the chats with messages, newest first, then the empty ones
+    // the classes' chats first, always, whoever wrote last (2026-11-22, the user: „თითოეული კლასის ჩათი … სიის თავში“, again: „სულ
+    // თავში იყოს ყოველთვის მიუხედავად იმისა ვინ მომწერა“) — they stand in their own pale card; then pinned (the newest pin on top),
+    // then a student's teachers, then the chats with messages, the newest message first („ვინც მომწერა, ზემოთ“), then the empty ones
     const pinRank = (i: Item) => (i.pinned ? prefs.pins.indexOf(i.key) : PIN_MAX);
     items.sort((a, b) => Number(!!b.cls) - Number(!!a.cls) || pinRank(a) - pinRank(b) || Number(b.teacher) - Number(a.teacher) || Number(a.empty) - Number(b.empty) || b.at - a.at);
   }
   const shownItems = items.filter(i => !i.hidden || needle);
+  const classItems = shownItems.filter(i => i.cls);
+  const peopleItems = shownItems.filter(i => !i.cls);
   const hiddenItems = needle ? [] : items.filter(i => i.hidden);
   const menuItem = menuKey ? items.find(i => i.key === menuKey) ?? null : null;
   const unreadIn = (cid: string) => {
@@ -475,13 +484,20 @@ export const LettersPage: React.FC<{ logoUrl?: string }> = ({ logoUrl }) => {
         <p className="px-4 py-10 text-center text-body text-mut">{needle ? 'ვერავინ მოიძებნა.' : 'ამ კლასში ჩათი ჯერ არ არის.'}</p>
       ) : (
         <>
-          {shownItems.length > 0 && (
+          {classItems.length > 0 && (
             <>
-              <SectionLabel label="ჩათები" />
-              {/* over each class's chat: its own members' coming birthdays (the teachers' look; none → nothing) */}
-              <Rows>{shownItems.map(i => (i.cls
-                ? <React.Fragment key={i.key}><BirthdaysSoon row only={i.cls} />{i.node}</React.Fragment>
-                : i.node))}</Rows>
+              <SectionLabel label="კლასის ჩათები" />
+              {/* the classes' chats in their own pale wine card, so they read as group chats at a glance (2026-11-22);
+                  over each one its own members' coming birthdays (the teachers' look; none → nothing) */}
+              <div className="flex shrink-0 flex-col divide-y divide-wine/10 overflow-hidden rounded-card bg-tint ring-1 ring-wine/15">
+                {classItems.map(i => <React.Fragment key={i.key}><BirthdaysSoon row only={i.cls} />{i.node}</React.Fragment>)}
+              </div>
+            </>
+          )}
+          {peopleItems.length > 0 && (
+            <>
+              <SectionLabel label={classItems.length > 0 ? 'პირადი ჩათები' : 'ჩათები'} />
+              <Rows>{peopleItems.map(i => i.node)}</Rows>
             </>
           )}
           {hiddenItems.length > 0 && (

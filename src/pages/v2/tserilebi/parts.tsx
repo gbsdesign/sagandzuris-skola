@@ -39,12 +39,14 @@ export const LastLine: React.FC<{ who?: string; text: string }> = ({ who, text }
 export const ChatRow: React.FC<{
   face: React.ReactNode; name: React.ReactNode; last: React.ReactNode; time?: string;
   unread?: boolean; active?: boolean; busy?: boolean; pinned?: boolean;
+  /** a class's chat: drawn on the accent's pale ground (2026-11-22, the user: „განსხვავებულად გამოკვეთე რომ ეტყობოდეს“) */
+  group?: boolean;
   /** how many wait (0 / none while not counted = a dot) */
   count?: number;
   tick?: React.ReactNode;
   onClick: () => void; onMenu?: () => void;
   left?: SwipeSide; right?: SwipeSide;
-}> = ({ face, name, last, time, unread, active, busy, pinned, count, tick, onClick, onMenu, left, right }) => {
+}> = ({ face, name, last, time, unread, active, busy, pinned, group, count, tick, onClick, onMenu, left, right }) => {
   const press = useLongPress(() => onMenu?.());
   const button = (
     <Press
@@ -55,7 +57,7 @@ export const ChatRow: React.FC<{
       className={cx(
         'flex min-h-row w-full cursor-pointer items-center gap-3 py-2.5 pr-4 pl-3.5 text-left text-ink transition-colors select-none',
         'disabled:cursor-default disabled:opacity-60 [-webkit-touch-callout:none]',
-        active ? 'bg-tint' : 'active:bg-soft',
+        group ? (active ? 'bg-wine/15' : 'bg-tint active:bg-wine/10') : active ? 'bg-tint' : 'active:bg-soft',
       )}
     >
       {face}
@@ -77,7 +79,7 @@ export const ChatRow: React.FC<{
       </span>
     </Press>
   );
-  return left || right ? <SwipeRow left={left} right={right} faceBg="bg-surf" className="rounded-none">{button}</SwipeRow> : button;
+  return left || right ? <SwipeRow left={left} right={right} faceBg={group ? 'bg-tint' : 'bg-surf'} className="rounded-none">{button}</SwipeRow> : button;
 };
 
 // swipe sides

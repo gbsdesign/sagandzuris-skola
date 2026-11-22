@@ -2243,7 +2243,10 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   … დაბადების დღეები კლასის თავზე … მარტო იმ კლასის წევრები“): `HomeV2` no longer draws `HomeClasses` (file kept, unused). In
   `LettersPage` class chat items (`Item.cls` = the class's members + teachers) sort before every other chat; over each one
   `BirthdaysSoon row only={cls}` shows that class's coming birthdays (still teachers/admins only). The open class chat's head
-  (logo + name) opens the class page (`openClass`) — the class page's way in now.
+  (logo + name) opens the class page (`openClass`) — the class page's way in now. **Same day, later** (the user: „სულ თავში იყოს
+  ყოველთვის … განსხვავებულად გამოკვეთე … სხვა ხალხი … ვინც მომწერა ზემოთ“): the class chats stand in their own section „კლასის
+  ჩათები“ — a pale wine card (`bg-tint`, `ring-wine/15`), `ChatRow group` (tinted row, a wine 👥 before the name) —, the rest under
+  „პირადი ჩათები“, newest message first (pins / a student's teachers still before them).
 - **The whole path in the chat's fold (2026-11-21 night**, the user: „გზას რომ ჩახსნიდი … ჩამოსაშლელად პირდაპირ ჩათში“, answer „მთელი
   გზა, როგორც გზის გვერდზე“): `ChatPath` — the student's own side unfolds the whole „საგანძური“ page (`SagandzuriPage bare`, lazy: no
   bar, the ✎ by „ჩემი საგალობლები“; numbers, assignments, chips, flights, ოსტატობა); the teacher's side keeps its ჩათვლა / დამატება /
