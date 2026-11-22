@@ -25,8 +25,12 @@ import { ProgramAddSheet } from './teacher/ProgramAdd';
 import { ProgramOfflineSheet } from './ProgramOfflineSheet';
 import { openAiLesson } from '../../../components/aiLesson/open';
 import { useMemberNotes } from '../aiklasi/useAiNotes';
+import { saveClassProgram } from '../../../components/admin/ClassesAdmin';
+import { askConfirm, offerUndo } from '../../../components/ui/kit';
+import { errorText } from '../../../utils/errorText';
+import { ArrangeSheet, Held } from './ArrangeSheet';
 
-type Listed = ProgramItem & { id: string; key: string };
+type Listed = ProgramItem & { id: string; key: string; at: number };
 type Knower = { m: SchoolClass['members'][number]; ok: boolean; me: boolean };
 
 const VOICE_NAME: Record<Voice, string> = { '1': 'პირველი ხმა', '2': 'მეორე ხმა', '3': 'მესამე ხმა' };
@@ -57,11 +61,13 @@ export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean; compact?
   const [assigning, setAssigning] = useState<CatalogEntry | null>(null);
   const [done, setDone] = useState('');
   const [offlineOpen, setOfflineOpen] = useState(false);
+  const [arranging, setArranging] = useState<string | null>(null);
+  const [arrangeErr, setArrangeErr] = useState('');
   const iAmMember = !!user && cls.memberIds.includes(user.uid);
   const { openMapItem } = useNavigation();
   const aiOn = useAccess().on('aiTeacher');
 
-  const listed: Listed[] = cls.program.flatMap((p, i) => (p.id ? [{ ...p, id: p.id, key: `${i}:${p.id}` }] : []));
+  const listed: Listed[] = cls.program.flatMap((p, i) => (p.id ? [{ ...p, id: p.id, key: `${i}:${p.id}`, at: i }] : []));
   const free = cls.program.filter(p => !p.id);
   const offline = useProgramOffline(listed.map(p => p.id));
   const mine = (id: string) => (iAmMember ? ownVoices(selectedChantVariants, confirmed, id) : { known: [] as Voice[], confirmed: [] as Voice[] });
@@ -96,6 +102,34 @@ export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean; compact?
   const voiceSlots = cats.reduce((a, c) => a + c.voiceSlots, 0);
   const word = cats.every(c => c.id === 'galoba') ? 'საგალობელი' : 'ნაწარმოები';
 
+  // a teacher's long press on a line: move it among its kind's lines, or take it off the program (with „გაუქმება“)
+  const saveProgram = (next: ProgramItem[]) => {
+    setArrangeErr('');
+    return saveClassProgram(cls, next)
+      .then(why => { if (why) setArrangeErr(String(why)); })
+      .catch(e => setArrangeErr('ვერ შეინახა: ' + errorText(e)));
+  };
+  const arrangedItem = arranging ? listed.find(p => p.id === arranging) ?? null : null;
+  const arrangedGroup = arrangedItem ? cats.find(c => c.id === categoryOf(arrangedItem.id))?.items ?? [] : [];
+  const arrangedAt = arrangedItem ? arrangedGroup.findIndex(p => p.id === arrangedItem.id) : -1;
+  const moveLine = (dir: -1 | 1) => {
+    const other = arrangedGroup[arrangedAt + dir];
+    if (!arrangedItem || !other) return;
+    const next = [...cls.program];
+    [next[arrangedItem.at], next[other.at]] = [next[other.at], next[arrangedItem.at]];
+    void saveProgram(next);
+  };
+  const deleteLine = async () => {
+    if (!arrangedItem) return;
+    const name = programLines(arrangedItem).title;
+    const ok = await askConfirm({ title: `წავშალო „${name}“ პროგრამიდან?`, ok: 'წაშლა', danger: true });
+    if (!ok) return;
+    const before = cls.program;
+    setArranging(null);
+    await saveProgram(before.filter((_, i) => i !== arrangedItem.at));
+    offerUndo('პროგრამიდან წაიშალა', () => { void saveClassProgram(cls, before).catch(() => {}); });
+  };
+
   const line = (p: Listed) => {
     const lines = programLines(p);
     const voiced = usesVoices(p.id);
@@ -118,10 +152,11 @@ export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean; compact?
         ? <span className="flex shrink-0 items-center gap-1 text-meta font-semibold text-wine"><Check className="size-4" aria-hidden="true" />ტელეფონშია</span>
         : <span className="shrink-0 text-meta text-mut">იწერება…</span>;
     }
-    return (
+    const row = (
       <Row key={p.key} title={lines.title} sub={[lines.sub, p.note].filter(Boolean).join(' · ') || undefined} right={right} onClick={() => setShown(p.key)} aria-haspopup="dialog"
         className={compact ? 'min-h-0! py-1.5!' : undefined} />
     );
+    return canEdit ? <Held key={p.key} onLong={() => setArranging(p.id)}>{row}</Held> : row;
   };
   const open = listed.find(p => p.key === shown);
 
@@ -192,6 +227,12 @@ export const ProgramTab: React.FC<{ cls: SchoolClass; canEdit: boolean; compact?
         <ProgramOfflineSheet open={offlineOpen} onClose={() => setOfflineOpen(false)} o={offline} classId={cls.id} word={word} />
       )}
       {done && <Note>{done}</Note>}
+      {arrangeErr && <Note className="text-danger">{arrangeErr}</Note>}
+      {canEdit && (
+        <ArrangeSheet open={!!arrangedItem} title={arrangedItem ? programLines(arrangedItem).title : ''}
+          at={arrangedAt} count={arrangedGroup.length} onMove={moveLine} onDelete={() => { void deleteLine(); }}
+          deleteSub="მთელი კლასის პროგრამიდან" onClose={() => setArranging(null)} />
+      )}
 
       {!compact && <PsalterRow cls={cls} canLead={canEdit} />}
       {iAmMember && !canEdit && <AiNoteRow cls={cls} uid={user?.uid} />}
