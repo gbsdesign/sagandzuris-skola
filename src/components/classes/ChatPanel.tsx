@@ -1,12 +1,12 @@
 import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { useBackToClose } from '../../utils/backToClose';
 import { useNotes } from '../../context/NotesContext';
-import { MessageCircle, Music2, Mic, Paperclip, Send, Smile, Square, X, Trash2, Play, Pause, Loader2, Clock, Phone, CheckCheck, Plus, Camera, Image as ImageIcon, ChevronRight, ClipboardList, Pin, PinOff, Forward, ChevronDown } from 'lucide-react';
+import { MessageCircle, Music2, Mic, Paperclip, Send, Smile, Square, X, Trash2, Play, Pause, Loader2, Clock, Phone, CheckCheck, Plus, Camera, Image as ImageIcon, ChevronRight, ClipboardList, Pin, PinOff, Forward, ChevronDown, Reply, Link2 } from 'lucide-react';
 import { useLongPress } from '../../hooks/useLongPress';
 import { FileBubble, PhotoBubble, QuickSheet, useQuickEmoji } from './ChatMedia';
 import {
   sendTextMessage, sendVoiceMessage, sendPhotoMessage, sendFileMessage, FILE_MAX, deleteMessage, loadVoiceUrl, toggleHeart, ChatMessage, ChatAuthor,
-  useTopPins, setTopPin, TOP_PINS_MAX, VOICE_TITLE_MAX,
+  useTopPins, setTopPin, TOP_PINS_MAX, VOICE_TITLE_MAX, messagePreview, replyOf, FORWARDABLE, type ChatReply,
 } from '../../hooks/useClassChat';
 import {
   startVoiceRecording, voiceRecordingSupported, VOICE_MAX_SECONDS, WAVE_BARS, VoiceRecording, VoiceTake,
@@ -322,17 +322,24 @@ const NEVER = () => false;
 /** the first name of a sender, as the line above a run of messages shows it */
 export const firstName = (name: string) => name.trim().split(/\s+/)[0] || name;
 
-/** a pinned message in one short line */
-const pinPreview = (m: ChatMessage) =>
-  m.kind === 'voice' ? `🎤 ${m.text || `ხმოვანი · ${Math.round(m.seconds)} წმ`}`
-  : m.kind === 'photo' ? '📷 ფოტო'
-  : m.kind === 'file' ? `📎 ${m.fileName || 'ფაილი'}`
-  : m.kind === 'draw' ? '🎨 ნახატი'
-  : m.text || '…';
+/** a message's first link, named by its site („youtube.com“) */
+const linkOf = (text: string): { url: string; name: string } | null => {
+  const url = text.match(/https?:\/\/[^\s]+/)?.[0];
+  if (!url) return null;
+  try { return { url, name: new URL(url).hostname.replace(/^www\./, '') }; } catch { return null; }
+};
+
 /** the whole name over a run of messages — the surname after the name (2026-11-22, the user: „გვარის ეწეროს სახელის მერე ჩათში“) */
 const senderName = (name: string) => name.trim().replace(/\s+/g, ' ') || name;
 /** a teacher's or an admin's line over their message: „გიორგი ბერიძე (ადმინი)“ (2026-11-21, the user: „სახელი ჩანდეს“) */
 const staffName = (name: string | undefined, label: string) => (name?.trim() ? `${senderName(name)} (${label})` : label);
+
+const LinkPill: React.FC<{ link: { url: string; name: string } }> = ({ link }) => (
+  <a href={link.url} target="_blank" rel="noopener noreferrer" onClick={e => e.stopPropagation()}
+    className="inline-flex h-8 max-w-[45%] shrink-0 items-center gap-1 rounded-full bg-tint px-2.5 text-cap font-bold text-wine active:scale-95">
+    <Link2 className="size-3.5 shrink-0" aria-hidden="true" /><span className="truncate">{link.name}</span>
+  </a>
+);
 
 // A chat: text and voice messages (a class's chat, or a teacher's private chat with a student).
 export const ChatPanel: React.FC<ChatPanelProps> = ({
@@ -355,6 +362,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
   const [pinAt, setPinAt] = useState(0);
   const [pinsOpen, setPinsOpen] = useState(false);
   const [forwarding, setForwarding] = useState<ChatMessage | null>(null);
+  const [replyTo, setReplyTo] = useState<ChatReply | null>(null);
+  useBackToClose(pinsOpen, () => setPinsOpen(false));
   const [note, setNote] = useState('');
   const [voiceTitle, setVoiceTitle] = useState('');
   const [lit, setLit] = useState<string | null>(null);
@@ -381,6 +390,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       setLit(m.id);
       window.setTimeout(() => setLit(l => (l === m.id ? null : l)), 1400);
     } else setPinsOpen(true);
+  };
+  // a reply's quote: its message in the list, lit a moment (nothing when it is too old to be loaded)
+  const goToMessage = (id: string) => {
+    const el = list.current?.querySelector<HTMLElement>(`[data-mid="${id}"]`);
+    if (!el) return;
+    stick.current = false;
+    el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+    setLit(id);
+    window.setTimeout(() => setLit(l => (l === id ? null : l)), 1400);
+  };
+  const startReply = (m: ChatMessage) => {
+    setActive(null);
+    setReplyTo(replyOf(m));
+    window.setTimeout(() => field.current?.focus(), 50);
   };
   // Messenger's row (2026-11-22): + (a file; a teacher's card too) · camera · gallery · voice, folded to one › while typing
   const [toolsOpen, setToolsOpen] = useState(false);
@@ -472,7 +495,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     setErr('');
     stick.current = true;
     try {
-      await sendTextMessage(base, author, t);
+      await sendTextMessage(base, author, t, replyTo);
+      setReplyTo(null);
       onSent?.('text', t);
     } catch (e) {
       console.warn('chat: ', e);
@@ -490,7 +514,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     for (let i = 0; i < list.length; i++) {
       setUpload({ label: list.length > 1 ? `ფოტო ${i + 1} / ${list.length}` : 'ფოტო', pct: 0 });
       try {
-        await sendPhotoMessage(base, author, list[i], pct => setUpload(u => (u ? { ...u, pct } : u)));
+        await sendPhotoMessage(base, author, list[i], pct => setUpload(u => (u ? { ...u, pct } : u)), i === 0 ? replyTo : null);
+        if (i === 0) setReplyTo(null);
         onSent?.('text', '📷 ფოტო');
       } catch (e) {
         console.warn('chat photo: ', e);
@@ -507,7 +532,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     stick.current = true;
     setUpload({ label: 'ფაილი', pct: 0 });
     try {
-      await sendFileMessage(base, author, f, pct => setUpload(u => (u ? { ...u, pct } : u)));
+      await sendFileMessage(base, author, f, pct => setUpload(u => (u ? { ...u, pct } : u)), replyTo);
+      setReplyTo(null);
       onSent?.('text', `📎 ${f.name}`);
     } catch (e) {
       console.warn('chat file: ', e);
@@ -580,7 +606,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
     setErr('');
     stick.current = true;
     try {
-      await sendVoiceMessage(base, author, take, voiceTitle);
+      await sendVoiceMessage(base, author, take, voiceTitle, replyTo);
+      setReplyTo(null);
       onSent?.('voice', voiceTitle.trim());
       setVoiceTitle('');
       URL.revokeObjectURL(url);
@@ -654,7 +681,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
         const heartable = !readOnly && !m.pending && !m.pinned && !isCall(m) && m.kind !== 'game';
         const pinnable = canPin && heartable;
         const isPinned = pinIds.includes(m.id);
-        const forwardable = heartable && mine && m.kind === 'voice';
+        const forwardable = heartable && FORWARDABLE.includes(m.kind);
         const hearts = m.hearts ?? [];
         const mineHeart = hearts.includes(author.uid);
         const pick = canDel || heartable ? holdToPick(m.id, heartable ? m : null) : {};
@@ -675,6 +702,11 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                 className={`h-icon px-3 rounded-full bg-surf shadow-lift text-meta font-semibold inline-flex items-center gap-1.5 cursor-pointer active:scale-95 ${mineHeart ? 'text-mut ring-1 ring-wine/30' : 'text-ink'}`}
               >
                 <span aria-hidden="true" className="text-lead leading-none">❤️</span>{mineHeart && 'მოხსნა'}
+              </button>
+            )}
+            {heartable && (
+              <button type="button" onClick={() => startReply(m)} className={`${menuPill} text-ink`}>
+                <Reply className="size-4" />პასუხი
               </button>
             )}
             {pinnable && (
@@ -796,6 +828,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
                       : `bg-surf text-ink ${first ? 'rounded-tl-chip' : ''}`
                   }`}
                 >
+                  {m.re && (
+                    <button type="button" onClick={e => { e.stopPropagation(); goToMessage(m.re!.id); }}
+                      className={`mb-1.5 block w-full max-w-[260px] cursor-pointer rounded-chip border-l-[3px] px-2.5 py-1 text-left ${mine ? 'border-white/70 bg-white/15' : 'border-wine bg-soft'}`}>
+                      <span className={`block truncate text-cap font-bold ${mine ? 'text-white' : 'text-wine'}`}>{senderName(m.re.name) || 'შეტყობინება'}</span>
+                      <span className={`block truncate text-cap ${mine ? 'text-white/85' : 'text-mut'}`}>{m.re.text}</span>
+                    </button>
+                  )}
                   {m.kind === 'game' ? (
                     <div className="py-1 flex flex-col gap-2.5">
                       <GameCardTitle room={m.room} mine={mine} />
@@ -858,7 +897,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       })()}
       </>
   )), [messages, loading, error, listTop, active, seenId, lastCallId, callLive, callTitle, readOnly, showNames, staffLabel, onCallBack,
-    author.uid, base, isCall, canDelete, renderCard, personOpener, onOpenGame, onJoinCall, onDelete, canPin, pinIds, lit]); // eslint-disable-line react-hooks/exhaustive-deps
+    author.uid, base, isCall, canDelete, renderCard, personOpener, onOpenGame, onJoinCall, onDelete, canPin, pinIds, lit, replyTo]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const pill = 'min-h-tap-lg rounded-full bg-surf flex items-center';
 
@@ -869,22 +908,61 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       {top.pinned.length > 0 && (() => {
         const i = pinAt % top.pinned.length;
         const p = top.pinned[i];
+        const link = linkOf(p.text);
         return (
-          <div className="mx-2 mt-1 flex min-h-tap items-center gap-1 rounded-field bg-surf pl-3 pr-1 shadow-lift sm:mx-4">
-            <button
-              type="button"
-              onClick={() => { goToPin(p); setPinAt(i + 1); }}
-              aria-label={`მიმაგრებული ${i + 1} / ${top.pinned.length}: ${pinPreview(p)}`}
-              className="flex min-h-tap min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
-            >
-              <Pin className="size-4 shrink-0 text-wine" aria-hidden="true" />
-              {top.pinned.length > 1 && <span className="shrink-0 text-cap font-bold tabular-nums text-wine">{i + 1}/{top.pinned.length}</span>}
-              <span className="min-w-0 truncate text-meta font-semibold text-ink">{pinPreview(p)}</span>
-            </button>
-            <button type="button" onClick={() => setPinsOpen(true)} aria-label="ყველა მიმაგრებული"
-              className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-mut active:scale-95">
-              <ChevronDown className="size-5" />
-            </button>
+          <div className="relative z-[2] mx-2 mt-1 sm:mx-4">
+            <div className={`flex min-h-tap items-center gap-1.5 bg-surf pl-3 pr-1 shadow-lift ${pinsOpen ? 'rounded-t-field' : 'rounded-field'}`}>
+              <button
+                type="button"
+                onClick={() => { if (pinsOpen) { setPinsOpen(false); return; } goToPin(p); setPinAt(i + 1); }}
+                aria-label={`მიმაგრებული ${i + 1} / ${top.pinned.length}: ${messagePreview(p)}`}
+                className="flex min-h-tap min-w-0 flex-1 cursor-pointer items-center gap-2 text-left"
+              >
+                <Pin className="size-4 shrink-0 text-wine" aria-hidden="true" />
+                {top.pinned.length > 1 && !pinsOpen && <span className="shrink-0 text-cap font-bold tabular-nums text-wine">{i + 1}/{top.pinned.length}</span>}
+                <span className="min-w-0 truncate text-meta font-semibold text-ink">{pinsOpen ? `მიმაგრებული · ${top.pinned.length}` : messagePreview(p)}</span>
+              </button>
+              {link && !pinsOpen && <LinkPill link={link} />}
+              <button type="button" onClick={() => setPinsOpen(v => !v)} aria-label={pinsOpen ? 'ჩაკეცვა' : 'ყველა მიმაგრებული'} aria-expanded={pinsOpen}
+                className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-mut active:scale-95">
+                <ChevronDown className={`size-5 transition-transform ${pinsOpen ? 'rotate-180' : ''}`} />
+              </button>
+            </div>
+            {/* every pinned message, unfolded right under the line (not a window) */}
+            {pinsOpen && (
+              <ul className="absolute inset-x-0 top-full max-h-[55dvh] divide-y divide-line overflow-y-auto overscroll-contain rounded-b-field bg-surf shadow-lift">
+                {top.pinned.map(q => {
+                  const qLink = linkOf(q.text);
+                  return (
+                    <li key={q.id} className="flex items-center gap-2 py-2 pl-3 pr-1">
+                      <div className="min-w-0 flex-1">
+                        {q.kind === 'voice' ? (
+                          <>
+                            {q.text && <p className="truncate text-meta font-bold text-ink">{q.text}</p>}
+                            <VoicePlayer seconds={q.seconds} wave={q.wave} getUrl={() => loadVoiceUrl(base, q)} />
+                          </>
+                        ) : (
+                          <button type="button" onClick={() => { setPinsOpen(false); window.setTimeout(() => goToPin(q), 150); }}
+                            className="block w-full cursor-pointer text-left">
+                            <span className="line-clamp-2 break-words text-body text-ink">{messagePreview(q)}</span>
+                          </button>
+                        )}
+                        <span className="mt-0.5 flex items-center gap-2 text-cap text-mut">
+                          <span className="min-w-0 truncate">{senderName(q.name)}{q.at ? ` · ${sentAt(q)}` : ''}</span>
+                          {qLink && <LinkPill link={qLink} />}
+                        </span>
+                      </div>
+                      {canPin && (
+                        <button type="button" onClick={() => togglePin(q)} aria-label="მიმაგრების მოხსნა"
+                          className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-mut active:scale-95">
+                          <PinOff className="size-[18px]" />
+                        </button>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
           </div>
         );
       })()}
@@ -913,6 +991,20 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
               </button>
             ))}
           </div>
+        </div>
+      )}
+
+      {!readOnly && replyTo && (mode.k === 'idle' || mode.k === 'preview') && (
+        <div className="mx-2 mt-2 flex items-center gap-2 rounded-field border-l-[3px] border-wine bg-surf py-1.5 pl-3 pr-1 sm:mx-4">
+          <Reply className="size-4 shrink-0 text-wine" aria-hidden="true" />
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-cap font-bold text-wine">პასუხი · {senderName(replyTo.name) || 'შეტყობინება'}</p>
+            <p className="truncate text-meta text-mut">{replyTo.text}</p>
+          </div>
+          <button type="button" onClick={() => setReplyTo(null)} aria-label="პასუხის გაუქმება"
+            className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-mut active:scale-95">
+            <X className="size-[18px]" />
+          </button>
         </div>
       )}
 
@@ -1033,33 +1125,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({
       )}
 
       <QuickSheet open={quickOpen} quick={quick} onPick={setQuick} onClose={() => setQuickOpen(false)} />
-      {/* every pinned message: a voice plays right here; a tap on the rest goes to it; ✕ takes the pin off */}
-      <Sheet open={pinsOpen} onClose={() => setPinsOpen(false)} title={`მიმაგრებული · ${top.pinned.length}`}>
-        <ul className="flex flex-col gap-1.5 pb-1">
-          {top.pinned.map(p => (
-            <li key={p.id} className="flex items-center gap-2 rounded-field bg-surf py-1.5 pl-3 pr-1">
-              {p.kind === 'voice' ? (
-                <div className="min-w-0 flex-1">
-                  {p.text && <p className="truncate text-meta font-bold text-ink">{p.text}</p>}
-                  <VoicePlayer seconds={p.seconds} wave={p.wave} getUrl={() => loadVoiceUrl(base, p)} meta={senderName(p.name)} />
-                </div>
-              ) : (
-                <button type="button" onClick={() => { setPinsOpen(false); window.setTimeout(() => goToPin(p), 250); }}
-                  className="min-h-tap min-w-0 flex-1 cursor-pointer text-left">
-                  <span className="line-clamp-2 break-words text-lead text-ink">{pinPreview(p)}</span>
-                  <span className="block text-cap text-mut">{senderName(p.name)}{p.at ? ` · ${sentAt(p)}` : ''}</span>
-                </button>
-              )}
-              {canPin && (
-                <button type="button" onClick={() => togglePin(p)} aria-label="მიმაგრების მოხსნა"
-                  className="flex size-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-mut active:scale-95">
-                  <PinOff className="size-[18px]" />
-                </button>
-              )}
-            </li>
-          ))}
-        </ul>
-      </Sheet>
       {forwarding && (
         <React.Suspense fallback={null}>
           <ForwardSheet m={forwarding} fromBase={base} onClose={() => setForwarding(null)}

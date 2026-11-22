@@ -62,7 +62,22 @@ export interface ChatMessage {
   mime?: string;
   /** who put a ❤️ on it (2026-11-22, the user: „სმს-ებზე დაგულების ფუნქცია … როგორც მესენჯერს აქვს“) */
   hearts?: string[];
+  /** the message this one answers (2026-11-22, as Messenger's „Replying to“): its id, writer and one short line */
+  re?: ChatReply;
 }
+
+export interface ChatReply { id: string; name: string; text: string }
+
+/** a message in one short line (the pinned bar, a reply's quote, the chat lists) */
+export const messagePreview = (m: Pick<ChatMessage, 'kind' | 'text' | 'seconds' | 'fileName'>) =>
+  m.kind === 'voice' ? `🎤 ${m.text || `ხმოვანი · ${Math.round(m.seconds)} წმ`}`
+  : m.kind === 'photo' ? '📷 ფოტო'
+  : m.kind === 'file' ? `📎 ${m.fileName || 'ფაილი'}`
+  : m.kind === 'draw' ? '🎨 ნახატი'
+  : m.text || '…';
+
+/** what a reply keeps of the message it answers */
+export const replyOf = (m: ChatMessage): ChatReply => ({ id: m.id, name: m.name.slice(0, 80), text: messagePreview(m).slice(0, 140) });
 
 const str = (v: unknown) => (typeof v === 'string' ? v : '');
 const KINDS = ['voice', 'call', 'game', 'draw', 'note', 'work', 'photo', 'file'] as const;
@@ -105,6 +120,7 @@ export const toChatMessage = (d: QueryDocumentSnapshot, pinned = false): ChatMes
     size: typeof m.size === 'number' ? m.size : 0,
     mime: str(m.mime),
     hearts: Array.isArray(m.hearts) ? m.hearts.filter((x: unknown): x is string => typeof x === 'string') : [],
+    re: m.re && typeof m.re === 'object' && typeof m.re.id === 'string' ? { id: m.re.id, name: str(m.re.name), text: str(m.re.text) } : undefined,
   };
 };
 
@@ -272,8 +288,10 @@ const stamp = (author: ChatAuthor) => ({
 });
 
 // after a message is written, the chat's other people see it on their phones (utils/groupPush notifyChat; best effort)
-export const sendTextMessage = async (base: string, author: ChatAuthor, text: string) => {
-  const ref = await addDoc(messagesOf(base), { ...stamp(author), kind: 'text', text: text.slice(0, 2000) });
+const reField = (re?: ChatReply | null) => (re ? { re } : {});
+
+export const sendTextMessage = async (base: string, author: ChatAuthor, text: string, re?: ChatReply | null) => {
+  const ref = await addDoc(messagesOf(base), { ...stamp(author), kind: 'text', text: text.slice(0, 2000), ...reField(re) });
   void notifyChat(base, ref.id);
 };
 
@@ -307,7 +325,7 @@ export const sendCallEndMessage = async (base: string, author: ChatAuthor, o: { 
 /** a voice message's title (an instruction written above it before it is sent — 2026-11-22) */
 export const VOICE_TITLE_MAX = 200;
 
-export const sendVoiceMessage = async (base: string, author: ChatAuthor, { mp3, seconds, wave }: VoiceTake, title = '') => {
+export const sendVoiceMessage = async (base: string, author: ChatAuthor, { mp3, seconds, wave }: VoiceTake, title = '', re?: ChatReply | null) => {
   const bytes = new Uint8Array(await mp3.arrayBuffer());
   const ref = doc(messagesOf(base));
   const batch = writeBatch(db);
@@ -315,7 +333,7 @@ export const sendVoiceMessage = async (base: string, author: ChatAuthor, { mp3, 
   for (let i = 0; i < bytes.length; i += PART_BYTES, parts++) {
     batch.set(voicePart(base, ref.id, parts), { uid: author.uid, data: Bytes.fromUint8Array(bytes.subarray(i, i + PART_BYTES)) });
   }
-  batch.set(ref, { ...stamp(author), kind: 'voice', text: title.trim().slice(0, VOICE_TITLE_MAX), seconds: Math.round(seconds * 10) / 10, wave, parts });
+  batch.set(ref, { ...stamp(author), kind: 'voice', text: title.trim().slice(0, VOICE_TITLE_MAX), seconds: Math.round(seconds * 10) / 10, wave, parts, ...reField(re) });
   await batch.commit();
   void notifyChat(base, ref.id);
 };
@@ -349,29 +367,39 @@ const sendWithParts = async (base: string, author: ChatAuthor, bytes: Uint8Array
   void notifyChat(base, ref.id);
 };
 
-export const sendPhotoMessage = async (base: string, author: ChatAuthor, file: File, onPct?: (p: number) => void) => {
+export const sendPhotoMessage = async (base: string, author: ChatAuthor, file: File, onPct?: (p: number) => void, re?: ChatReply | null) => {
   const { preparePhoto } = await import('../utils/chatPhoto');
   const p = await preparePhoto(file);
   const bytes = new Uint8Array(await p.full.arrayBuffer());
-  await sendWithParts(base, author, bytes, { kind: 'photo', text: '📷 ფოტო', thumb: p.thumb, w: p.w, h: p.h, mime: 'image/jpeg' }, onPct);
+  await sendWithParts(base, author, bytes, { kind: 'photo', text: '📷 ფოტო', thumb: p.thumb, w: p.w, h: p.h, mime: 'image/jpeg', ...reField(re) }, onPct);
 };
 
-export const sendFileMessage = async (base: string, author: ChatAuthor, file: File, onPct?: (p: number) => void) => {
+export const sendFileMessage = async (base: string, author: ChatAuthor, file: File, onPct?: (p: number) => void, re?: ChatReply | null) => {
   if (file.size > FILE_MAX) throw new Error('too big');
   const bytes = new Uint8Array(await file.arrayBuffer());
   const name = (file.name || 'ფაილი').slice(0, 200);
   await sendWithParts(base, author, bytes, {
-    kind: 'file', text: `📎 ${name}`, fname: name, size: file.size, mime: (file.type || 'application/octet-stream').slice(0, 100),
+    kind: 'file', text: `📎 ${name}`, fname: name, size: file.size, mime: (file.type || 'application/octet-stream').slice(0, 100), ...reField(re),
   }, onPct);
 };
 
-/** One of my voice messages sent on into another chat (a class's or a private one — 2026-11-22, the user: „ვოისებს … გადაზიარების
- *  ფუნქცია რომ კლასებში ან სხვა მოსწავლეს გადავუგზავნო“): its MP3 put together again and written there as a new message, with
- *  its title. */
-export const forwardVoice = async (fromBase: string, m: ChatMessage, toBase: string, author: ChatAuthor) => {
-  const url = await loadVoiceUrl(fromBase, m);
+/** Any message (a text, a voice, a photo, a file) sent on into another chat (2026-11-22, the user: „ნებისმიერი შეტყობინების
+ *  გადაგზავნა“): its bytes put together again and written there as my new message. */
+export const FORWARDABLE: ChatMessage['kind'][] = ['text', 'voice', 'photo', 'file'];
+
+export const forwardMessage = async (fromBase: string, m: ChatMessage, toBase: string, author: ChatAuthor) => {
+  if (m.kind === 'text') {
+    await sendTextMessage(toBase, author, m.text);
+    return;
+  }
+  const url = m.kind === 'voice' ? await loadVoiceUrl(fromBase, m) : await loadPartsUrl(fromBase, m, m.mime || 'application/octet-stream');
   const bytes = new Uint8Array(await (await fetch(url)).arrayBuffer());
-  await sendWithParts(toBase, author, bytes, { kind: 'voice', text: m.text.slice(0, VOICE_TITLE_MAX), seconds: m.seconds, wave: m.wave });
+  const fields = m.kind === 'voice'
+    ? { kind: 'voice', text: m.text.slice(0, VOICE_TITLE_MAX), seconds: m.seconds, wave: m.wave }
+    : m.kind === 'photo'
+      ? { kind: 'photo', text: '📷 ფოტო', thumb: m.thumb || '', w: m.w || 0, h: m.h || 0, mime: m.mime || 'image/jpeg' }
+      : { kind: 'file', text: m.text, fname: (m.fileName || 'ფაილი').slice(0, 200), size: m.size || bytes.length, mime: (m.mime || 'application/octet-stream').slice(0, 100) };
+  await sendWithParts(toBase, author, bytes, fields);
 };
 
 // ---- messages pinned on top of a chat (2026-11-22, the user: „ჩათის თავში … შეტყობინებების აპინვა“; answers: in a class only its

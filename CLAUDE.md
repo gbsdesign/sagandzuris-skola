@@ -2379,3 +2379,10 @@ Pending small tasks the user mentioned: remove the old Drive `ნოტები
   (my own voice) · წაშლა. A voice take gets a one-line title before „გაგზავნა“ (the message's `text`, ≤ `VOICE_TITLE_MAX` 200, drawn
   bold over the player; list lines „🎤 title“). „გადაგზავნა“ = `ChatForward.tsx` (lazy): my classes' chats + my private chats (no
   peer), several at once, `forwardVoice` copies the MP3 parts into a new message with its title.
+- **Reply, any message forwarded, pins unfold in place (2026-11-22 evening**, the user's Messenger screenshot: „ნებისმიერი შეტყობინების
+  გადაგზავნა და დარეფლება … აპინულზე ლინკის სახელი … ფანჯარა კი არ ამოხტეს არამედ ჩამოიშალოს … კოხტა“): a held message's menu =
+  ❤️ · პასუხი · მიმაგრება · გადაგზავნა · წაშლა. „პასუხი“ puts a bar over the field („პასუხი · name“ + the line, ✕) and the next text /
+  voice / first photo / file carries `re {id, name, text}` (`replyOf`, `messagePreview` in useClassChat; rules `replyOk`, test); the
+  bubble shows the quote on top, a tap goes to it (`goToMessage`, lit gold). „გადაგზავნა“ = any text, voice, photo or file
+  (`FORWARDABLE`, `forwardMessage` copies the parts). The pinned line shows a link's site as a pill that opens it (`linkOf`, `LinkPill`);
+  ▾ unfolds every pin right under the line (no Sheet; „უკან“ folds it), each with its sender · time, link pill and unpin.

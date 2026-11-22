@@ -193,6 +193,8 @@ await t('two students cannot chat', assertFails(setDoc(doc(stu3, 'dms', 'stu2_st
 await t('classmates cannot open a private chat', assertFails(setDoc(doc(stu3, 'dms', 'p_stu2_stu3'), { kind: 'peer', members: ['stu2', 'stu3'], classId: 'c9', names: {}, photos: {}, createdAt: serverTimestamp(), lastAt: null, lastBy: '', lastText: '', read: {} })));
 await t('student opens chat with own teacher', assertSucceeds(setDoc(doc(stu3, 'dms', 'tch2_stu3'), dm())));
 await t('student writes to own teacher', assertSucceeds(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm1'), msg('stu3', false))));
+await t('student answers a message', assertSucceeds(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm2'), { ...msg('stu3', false), re: { id: 'm1', name: 'S', text: 'hi' } })));
+await t('a reply keeps only its three fields', assertFails(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm3'), { ...msg('stu3', false), re: { id: 'm1', name: 'S', text: 'hi', x: 1 } })));
 await t('student pins a message in own private chat', assertSucceeds(updateDoc(doc(stu3, 'dms', 'tch2_stu3'), { topPins: ['m1'] })));
 await t('no more than seven pins in a private chat', assertFails(updateDoc(doc(stu3, 'dms', 'tch2_stu3'), { topPins: ['1', '2', '3', '4', '5', '6', '7', '8'] })));
 await t('student cannot pose as teacher', assertFails(setDoc(doc(stu3, 'dms', 'tch2_stu3', 'messages', 'm2'), msg('stu3', true))));
