@@ -129,7 +129,7 @@ const HeadSign: React.FC<{ icon: React.ReactNode; word: string; label: string; o
     aria-expanded={expanded}
     title={label}
     className={cx(
-      'flex h-tap min-w-[52px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-[14px] px-1.5 transition active:scale-95',
+      'flex h-tap min-w-[52px] shrink-0 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-field px-1.5 transition active:scale-95',
       active ? 'bg-tint text-wine' : 'bg-surf text-wine',
       FOCUS,
     )}
