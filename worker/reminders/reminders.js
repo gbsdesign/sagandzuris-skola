@@ -49,6 +49,9 @@
 // • POST /delete-account { token } (2026-11-05): „ანგარიშის წაშლა“ — the person's own records, their place in classes and
 //   psalter groups, their devices here, and last their sign-in. Messages written in chats stay.
 // • POST /delete-member { token, uid } (2026-11-22): a superadmin does the same for a member already marked deleted.
+// • POST /lado { token, prompt } (2026-11-22): „ლადოს პროგრამა“ — the school assistant's Claude engine, superadmins only.
+//   The key ANTHROPIC_API_KEY lives only here (given by the workflow from the GitHub secret of the same name), never in
+//   the app; it spends the Max plan's monthly API credit. Answers { text } (the model's JSON as text).
 //
 // Bindings (wrangler.toml): D1 database DB (schema.sql), KV namespace REMINDERS (old storage, read once to
 // move the subscriptions into D1), vars VAPID_PUBLIC_KEY, FIREBASE_PROJECT_ID, FIRESTORE_DB,
@@ -1755,6 +1758,47 @@ async function wipeAccount(env, uid) {
   if (!res.ok && res.status !== 400) throw new Error(`auth delete ${res.status} ${(await res.text()).slice(0, 200)}`);
 }
 
+// POST /lado { token, prompt } (2026-11-22): „ლადოს პროგრამა“ — the assistant's prompt (utils/aiAssistant assistantPrompt) goes
+// to Claude with the school's own key; only the owner and superadmins may spend it. Errors in words the app maps:
+// 402 no-credits (the month's credit is gone — it stops, nothing is charged), 429 busy, 503 setup (no key / a bad key).
+const LADO_MODEL = 'claude-sonnet-5-5';
+async function lado(request, env) {
+  const body = await readJson(request);
+  let claims;
+  try {
+    claims = await verifyIdClaims(env, body && body.token);
+  } catch {
+    return [401, 'bad token'];
+  }
+  const prompt = typeof body?.prompt === 'string' ? body.prompt : '';
+  if (!prompt || prompt.length > 120000) return [400, 'prompt'];
+  const email = claims.email_verified ? String(claims.email || '').toLowerCase() : '';
+  const role = email && email !== OWNER_EMAIL ? (await fsGet(env, `admins/${email}`, ['role']))?.role : null;
+  if (email !== OWNER_EMAIL && role !== 'superadmin') return [403, 'not a superadmin'];
+  if (!env.ANTHROPIC_API_KEY) return [503, 'setup'];
+  const res = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'x-api-key': env.ANTHROPIC_API_KEY, 'anthropic-version': '2023-06-01', 'content-type': 'application/json' },
+    body: JSON.stringify({
+      model: LADO_MODEL,
+      max_tokens: 4096,
+      system: 'You are the school app\'s assistant. Follow the instructions in the message exactly. Reply with the JSON object only — no code fences, no words around it.',
+      messages: [{ role: 'user', content: prompt }],
+    }),
+  });
+  const data = await res.json().catch(() => null);
+  if (!res.ok) {
+    const msg = String(data?.error?.message || '');
+    console.warn('lado:', res.status, msg.slice(0, 200));
+    if (res.status === 402 || /credit|balance|billing/i.test(msg)) return [402, 'no-credits'];
+    if (res.status === 429 || res.status === 529) return [429, 'busy'];
+    if (res.status === 401 || res.status === 403) return [503, 'setup'];
+    return [502, 'failed'];
+  }
+  const text = (data?.content || []).filter((b) => b.type === 'text').map((b) => b.text).join('').trim();
+  return [200, JSON.stringify({ text }), 'application/json'];
+}
+
 export default {
   async fetch(request, env) {
     const origin = request.headers.get('Origin') || '';
@@ -1763,7 +1807,7 @@ export default {
     const url = new URL(request.url);
     const routes = {
       '/subscribe': subscribe, '/account': account, '/group-event': groupEvent, '/access-request': accessRequest, '/game-invite': gameInvite,
-      '/ring': ring, '/chat-notify': chatNotify, '/announce': announce, '/decline': decline, '/delete-account': deleteAccount, '/delete-member': deleteMember,
+      '/ring': ring, '/chat-notify': chatNotify, '/announce': announce, '/decline': decline, '/delete-account': deleteAccount, '/delete-member': deleteMember, '/lado': lado,
       '/widget/link': widgetLink, '/widget/summary': widgetSummary, '/notify-prefs': notifyPrefs,
     };
     // the app's widgets send no Origin: their secret is the proof

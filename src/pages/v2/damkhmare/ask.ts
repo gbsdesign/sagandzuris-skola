@@ -1,4 +1,6 @@
 import { getApp } from 'firebase/app';
+import { auth } from '../../../firebase';
+import type { Engine } from './enginePref';
 import { startAppCheck } from '../../../utils/samosiTryOn';
 import { aiGate, noteAiCall } from '../../../utils/aiRules';
 import { AI_TEACHER_MODEL, AiTeacherError, type AiTeacherProblem } from '../../../utils/aiTeacher';
@@ -19,11 +21,41 @@ export const ASSISTANT_PROBLEM_TEXT: Record<AiTeacherProblem, string> = {
 
 const offline = () => navigator.onLine === false;
 
-export const askAssistant = async (uid: string, scope: AssistantScope, history: Turn[], ask: string): Promise<Answer> => {
+const LADO_SERVER = 'https://sagandzuri-reminders.mr-gabunia.workers.dev/lado';
+
+// „ლადოს პროგრამა“: the same prompt to Claude through the Worker (the key stays there); its answer is the JSON as text
+const askLado = async (prompt: string): Promise<string> => {
+  const user = auth.currentUser;
+  if (!user) throw new AiTeacherError('setup');
+  let res: Response;
+  try {
+    res = await fetch(LADO_SERVER, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ token: await user.getIdToken(), prompt }),
+    });
+  } catch {
+    throw new AiTeacherError(offline() ? 'offline' : 'failed');
+  }
+  if (res.status === 402 || res.status === 429) throw new AiTeacherError('no-credits');
+  if (res.status === 503 || res.status === 403 || res.status === 404) throw new AiTeacherError('setup');
+  if (!res.ok) throw new AiTeacherError('failed');
+  const data = await res.json().catch(() => null) as { text?: string } | null;
+  return String(data?.text || '').trim();
+};
+
+export const askAssistant = async (uid: string, scope: AssistantScope, history: Turn[], ask: string, engine: Engine = 'google'): Promise<Answer> => {
   if (offline()) throw new AiTeacherError('offline');
   const stop = await aiGate(uid);
   if (stop) throw new AiTeacherError(stop);
   let raw = '';
+  if (engine === 'lado') {
+    raw = await askLado(assistantPrompt(scope, history, ask));
+    const answer = parseAnswer(raw);
+    if (!answer) throw new AiTeacherError('failed');
+    noteAiCall(uid);
+    return answer;
+  }
   try {
     await startAppCheck();
     const { getAI, getGenerativeModel, GoogleAIBackend } = await import('firebase/ai');

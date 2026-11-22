@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronRight, Eye, EyeOff, LayoutGrid, Loader2, Mic, Pencil } from 'lucide-react';
-import { useNavigation } from '../../../context';
-import { Button, Dot, Duo, Helper, Note, Press, RoundButton, TopBar, cx } from '../../../components/ui2';
+import { useAuth, useNavigation } from '../../../context';
+import { Button, Dot, Duo, Helper, Note, Press, RoundButton, Seg, TopBar, cx } from '../../../components/ui2';
 import { triggerHaptic } from '../../../utils/haptics';
 import { aiGate } from '../../../utils/aiRules';
 import { AiTeacherError } from '../../../utils/aiTeacher';
@@ -13,6 +13,7 @@ import { PlanCard, type PlanState } from './PlanCard';
 import { useAssistantScope } from './useScope';
 import { GearSpark } from './GearSpark';
 import { setFabShown } from './fabPref';
+import { setEngine, useEngine, type Engine } from './enginePref';
 import { offerUndo } from '../../../components/ui/kit';
 import { nextSteps, noticedIn, offersFor, pageName } from '../../../utils/programOffers';
 
@@ -59,6 +60,10 @@ export const AssistantScreen: React.FC<{
   classId?: string; page?: string; mini?: boolean; onClose: (then?: () => void) => void;
 }> = ({ classId, page, mini, onClose }) => {
   const { openClass } = useNavigation();
+  const { isSuperAdmin } = useAuth();
+  // „გუგლის პროგრამა · ლადოს პროგრამა“: superadmins choose (enginePref); everyone else asks Google
+  const picked = useEngine();
+  const engine: Engine = isSuperAdmin ? picked : 'google';
   const { scope: seen, me, ready } = useAssistantScope(classId);
   // the open page in words: the program is told it, and the ready requests follow it
   const scope = useMemo(() => {
@@ -66,9 +71,10 @@ export const AssistantScreen: React.FC<{
     return page ? { ...seen, page: pageName(page, cls) } : seen;
   }, [seen, page]);
   const deps = useMemo<AssistantDeps>(() => ({
-    gate: aiGate, ask: askAssistant, letters: sendLetters, toClass: sendToClass, makeClass, openClass,
-  }), [openClass]);
-  return <AssistantPanel scope={scope} me={me} ready={ready} deps={deps} pageId={page} mini={mini} onClose={onClose} />;
+    gate: aiGate, ask: (uid, sc, h, t) => askAssistant(uid, sc, h, t, engine), letters: sendLetters, toClass: sendToClass, makeClass, openClass,
+  }), [openClass, engine]);
+  return <AssistantPanel scope={scope} me={me} ready={ready} deps={deps} pageId={page} mini={mini} onClose={onClose}
+    engine={isSuperAdmin ? engine : undefined} />;
 };
 
 export const AssistantPanel: React.FC<{
@@ -80,8 +86,10 @@ export const AssistantPanel: React.FC<{
   pageId?: string;
   /** the floating cog's small window: a shorter head */
   mini?: boolean;
+  /** the engine switch (superadmins only): shown under the head when given */
+  engine?: Engine;
   onClose: (then?: () => void) => void;
-}> = ({ scope, me, ready, deps, pageId, mini, onClose }) => {
+}> = ({ scope, me, ready, deps, pageId, mini, engine, onClose }) => {
   const [items, setItems] = useState<Item[]>([]);
   const [text, setText] = useState('');
   const [busy, setBusy] = useState(false);
@@ -260,6 +268,10 @@ export const AssistantPanel: React.FC<{
               <EyeOff aria-hidden="true" strokeWidth={1.75} />
             </RoundButton>
           ) : undefined} />
+        {engine && (
+          <Seg label="რომელი პროგრამა" className="mb-2" value={engine} onChange={setEngine}
+            items={[{ id: 'google', label: 'გუგლის პროგრამა' }, { id: 'lado', label: 'ლადოს პროგრამა' }]} />
+        )}
       </div>
 
       <div ref={scroller} className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto overscroll-contain px-4 pt-0.5 pb-4">
